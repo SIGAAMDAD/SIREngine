@@ -275,6 +275,8 @@ typedef void*(*NGLloadproc)(const char *name);
     NGL( void, glBindBufferBase, GLenum target, GLuint index, GLuint buffer ) \
     NGL( void, glCreateBuffers, GLsizei n, GLuint *buffers ) \
     NGL( void, glGetBufferParameteriv, GLenum target, GLenum value, GLint *data ) \
+    NGL( void, glCopyBufferSubData, GLenum readTarget, GLenum writeTarget, GLintptr readOffset, GLintptr writeOffset, \
+        GLsizeiptr size  )
 
 #define NGL_VertexShaderARB_Procs \
     NGL( void, glBindAttribLocationARB, GLhandleARB programObj, GLuint index, const GLcharARB *name) \
