@@ -1,0 +1,18 @@
+{
+    "Shaders": [
+        {
+            "Id": "Sprite",
+            "File": "Sprite",
+            "Passes": [
+                {
+                    "Stage": "Vertex",
+                    "Input": [
+                        { "Type": "vec3", "Name": "a_Position" },
+                        { "Type": "vec2", "Name": "a_TexCoords" },
+                        { "Type": "vec4", "Name": "a_Color" }
+                    ]
+                }
+            ]
+        }
+    ]
+}
