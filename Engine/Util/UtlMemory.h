@@ -6,6 +6,7 @@
 #include <Engine/Core/SIREngine.h>
 
 
+/*
 //-----------------------------------------------------------------------------
 // The UtlMemory class:
 // A growable memory class which doubles in size by default.
@@ -160,7 +161,7 @@ SIRENGINE_FORCEINLINE UtlMemory<T>::~UtlMemory()
 }
 
 template<typename T>
-SIRENGINE_FORCEINLINE void UtlMemory<T>::Init( uint64_t nGrowSize /*= 0*/, uint64_t nInitSize /*= 0*/ )
+SIRENGINE_FORCEINLINE void UtlMemory<T>::Init( uint64_t nGrowSize, uint64_t nInitSize )
 {
 	Purge();
 
@@ -483,41 +484,60 @@ SIRENGINE_FORCEINLINE void UtlMemory<T>::Purge( uint64_t numElements )
 	// allocation > 0, shrink it down
 	m_pMemory = (T *)realloc( m_pMemory, m_nAllocationCount * sizeof( T ) );
 }
+*/
 
 
 class UtlMallocAllocator
 {
 public:
-    UtlMallocAllocator( void ) {
-    }
-    ~UtlMallocAllocator() {
-    }
+    inline UtlMallocAllocator( void )
+	{ }
+	inline UtlMallocAllocator( const char *pAllocatorName)
+	{ }
+    ~UtlMallocAllocator()
+	{ }
 
-    SIRENGINE_FORCEINLINE void *Allocate( size_t nBytes ) {
-        return malloc( nBytes );
-    }
-    SIRENGINE_FORCEINLINE void ReleaseMemory( void *pBuffer ) {
-        if ( pBuffer ) {
-            free( pBuffer );
-        }
-    }
+    inline void *allocate( size_t nSize, size_t nAlignment = 16, size_t nOffset = 16 )
+	{ return malloc( nSize ); }
+    inline void deallocate( void *pMemory, size_t nSize = 0 )
+	{ free( pMemory ); }
 };
 
-template<typename T>
+class UtlGenericAllocator
+{
+public:
+	inline UtlGenericAllocator( void )
+	{ }
+	inline UtlGenericAllocator( const char *pAllocatorName )
+	{ }
+    ~UtlGenericAllocator()
+	{ }
+
+    inline void *allocate( size_t nSize, size_t nAlignment = 16, size_t nOffset = 16 )
+	{ return new char[ nSize ]; }
+    inline void deallocate( void *pMemory, size_t nSize = 0 )
+	{ delete[] (char *)pMemory; }
+};
+
+template<typename AllocatorType>
 class UtlAllocatorAdaptor
 {
 public:
-    UtlAllocatorAdaptor( void );
-    ~UtlAllocatorAdaptor();
+    inline UtlAllocatorAdaptor( void )
+	{ }
+	inline UtlAllocatorAdaptor( const char *pAllocatorName )
+	{ }
+    ~UtlAllocatorAdaptor()
+	{ }
 
-    inline void *allocate( size_t size ) {
-        return m_Allocator.Allocate( size );
+    inline void *allocate( size_t nSize, size_t nAlignment = 16, size_t nOffset = 16 ) {
+        return m_Allocator.Alloc( nSize );
     }
-    inline void deallocate( void *mem ) {
-        m_Allocator.ReleaseMemory( mem );
+    inline void deallocate( void *pMemory, size_t nSize = 0 ) {
+        m_Allocator.Free( pMemory );
     }
 private:
-    T m_Allocator;
+    AllocatorType m_Allocator;
 };
 
 #endif

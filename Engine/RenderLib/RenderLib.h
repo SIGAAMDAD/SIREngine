@@ -44,4 +44,6 @@ private:
     void PostProcess( void );
 };
 
+extern CRenderer *g_pRenderLib;
+
 #endif

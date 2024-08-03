@@ -3,7 +3,8 @@
 
 #pragma once
 
-#include "../RenderCommon.h"
+#include <Engine/Core/SIREngine.h>
+#include <Engine/RenderLib/RenderCommon.h>
 
 class IRenderBuffer
 {
@@ -14,8 +15,9 @@ public:
     virtual ~IRenderBuffer()
     { }
 
+    static IRenderBuffer *Create( GPUBufferType_t nType, uint64_t nSize );
+
     virtual const char *GetName( void ) const;
-    virtual uint64_t GetSize( void ) const;
     virtual GPUBufferType_t GetType( void ) const;
 
     virtual void Init( void ) = 0;

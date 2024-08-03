@@ -3,8 +3,11 @@
 
 #pragma once
 
+#include <Engine/Core/SIREngine.h>
+#include <Engine/RenderLib/RenderCommon.h>
 #include "VKCommon.h"
 #include "../RenderBuffer.h"
+#include "VKContext.h"
 
 class VKBuffer : public IRenderBuffer
 {
@@ -24,10 +27,10 @@ public:
     SIRENGINE_FORCEINLINE virtual uint64_t GetSize( void ) const override
     { return m_nBufferSize; }
 
-    virtual void Copy( const IRenderBuffer& other ) override;
-    virtual void Clear( void ) override;
-    virtual void Resize( uint64_t nSize ) override;
-    virtual void SwapData( VKPipelineSet_t *pSet );
+    virtual void Copy( const IRenderBuffer& other ) override { }
+    virtual void Clear( void ) override { }
+    virtual void Resize( uint64_t nSize ) override { }
+    virtual void SwapData( VKPipelineSet_t *pSet ) { }
 
     SIRENGINE_FORCEINLINE VkBuffer GetVKObject( void )
     { return m_pBuffer; }
@@ -42,6 +45,7 @@ public:
         }
     }
 protected:
+    
     VkBuffer m_pBuffer;
     VmaAllocation m_Allocation;
     void *m_pMappedGPUBuffer;

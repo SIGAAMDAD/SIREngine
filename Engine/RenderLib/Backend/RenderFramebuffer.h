@@ -3,7 +3,8 @@
 
 #pragma once
 
-#include "../RenderCommon.h"
+#include <Engine/Core/SIREngine.h>
+#include <Engine/RenderLib/RenderCommon.h>
 
 #define MAX_FRAMEBUFFER_COLOR_ATTACHMENTS 16
 

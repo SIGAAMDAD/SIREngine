@@ -1,9 +1,12 @@
 #include <Engine/RenderLib/RenderCommon.h>
 #include <Engine/RenderLib/RenderLib.h>
+#include "Backend/RenderContext.h"
 
-CVar<int32_t> render_DrawMode( "renderlib.DrawMode", "0", 0, "", CVG_RENDERER );
-CVar<int32_t> render_WindowMode( "renderlib.WindowMode", "0", 0, "", CVG_RENDERER );
-CVar<int32_t> render_TextureDetail( "renderlib.TextureDetail", "", 0, "", CVG_RENDERER );
+//CVar<int32_t> render_DrawMode( "renderlib.DrawMode", "0", 0, "", CVG_RENDERER );
+//CVar<int32_t> render_WindowMode( "renderlib.WindowMode", "0", 0, "", CVG_RENDERER );
+//CVar<int32_t> render_TextureDetail( "renderlib.TextureDetail", "", 0, "", CVG_RENDERER );
+
+IRenderContext *g_pRenderContext;
 
 CVar<uint32_t> render_AntiAliasingType(
     "r.AntiAliasingType",
@@ -31,11 +34,38 @@ CRenderer::~CRenderer()
 {
 }
 
-SIRENGINE_EXPORT_DEMANGLE void CRenderer::Init( void )
+const char *CRenderer::GetName( void ) const
 {
-
+    return "RenderLib";
 }
 
-SIRENGINE_EXPORT_DEMANGLE void CRenderer::Shutdown( void )
+bool CRenderer::IsActive( void ) const
+{
+    return false;
+}
+
+uint32_t CRenderer::GetState( void ) const
+{
+    return 0;
+}
+
+void CRenderer::Init( void )
 {
 }
+
+void CRenderer::Shutdown( void )
+{
+}
+
+void CRenderer::Frame( int64_t msec )
+{
+}
+
+void CRenderer::SaveGame( void )
+{
+}
+
+void CRenderer::LoadGame( void )
+{
+}
+

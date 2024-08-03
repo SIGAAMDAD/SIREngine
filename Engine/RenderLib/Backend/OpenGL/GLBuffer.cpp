@@ -1,3 +1,4 @@
+#include "../RenderBuffer.h"
 #include "GLBuffer.h"
 
 GLBuffer::GLBuffer( GPUBufferType_t nType )
@@ -6,9 +7,20 @@ GLBuffer::GLBuffer( GPUBufferType_t nType )
     Init();
 }
 
+GLBuffer::GLBuffer( GPUBufferType_t nType, uint64_t nSize )
+    : m_nBufferUsage( GL_DYNAMIC_DRAW )
+{
+    Init( nSize );
+}
+
 GLBuffer::~GLBuffer()
 {
     Shutdown();
+}
+
+void GLBuffer::Copy( const IRenderBuffer& other )
+{
+    
 }
 
 void GLBuffer::Init( void )
@@ -34,6 +46,27 @@ void GLBuffer::Init( void )
     nglBindBuffer( m_nBufferTarget, 0 );
 }
 
+void GLBuffer::Init( uint64_t nBytes )
+{
+    switch ( m_nType ) {
+    case BUFFER_TYPE_VERTEX:
+        m_nBufferTarget = GL_ARRAY_BUFFER;
+        break;
+    case BUFFER_TYPE_INDEX:
+        m_nBufferTarget = GL_ELEMENT_ARRAY_BUFFER;
+        break;
+    case BUFFER_TYPE_UNIFORM:
+        m_nBufferTarget = GL_UNIFORM_BUFFER;
+        break;
+    };
+
+    nglCreateBuffers( 1, &m_hBufferID );
+    nglBindBuffer( m_nBufferTarget, m_hBufferID );
+    nglBufferData( m_nBufferTarget, nBytes, NULL, GL_DYNAMIC_DRAW );
+    nglBindBuffer( m_nBufferTarget, 0 );
+}
+
+
 void GLBuffer::Shutdown( void )
 {
     nglDeleteBuffers( 1, &m_hBufferID );
@@ -56,12 +89,12 @@ void GLBuffer::SwapData( GLPipelineSet_t *pSet )
         void *pMappedBuffer = nglMapBufferRange( m_nBufferTarget, 0, m_nBufferSize, GL_MAP_WRITE_BIT
             | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT );
         if ( pMappedBuffer ) {
-            memcpy( pMappedBuffer, pData, m_nBufferSize );
+//            memcpy( pMappedBuffer, pData, m_nBufferSize );
         }
         nglUnmapBuffer( m_nBufferTarget );
     } else {
         nglBufferData( m_nBufferTarget, m_nBufferSize, NULL, m_nBufferUsage );
-        nglBufferSubData( m_nBufferTarget, 0, m_nBufferSize, pData );
+//        nglBufferSubData( m_nBufferTarget, 0, m_nBufferSize, pData );
     }
 
     nglBindBuffer( m_nBufferTarget, 0 );

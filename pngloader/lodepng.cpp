@@ -6800,16 +6800,16 @@ const char* lodepng_error_text(unsigned code) {
 namespace lodepng {
 
 #ifdef LODEPNG_COMPILE_DISK
-unsigned load_file(CVector<unsigned char>& buffer, const CFilePath& filename) {
+unsigned load_file(CVector<unsigned char>& buffer, const FileSystem::CFilePath& filename) {
   long size = lodepng_filesize(filename.c_str());
   if(size < 0) return 78;
-  buffer.Resize((size_t)size);
+  buffer.resize((size_t)size);
   return size == 0 ? 0 : lodepng_buffer_file(&buffer[0], (size_t)size, filename.c_str());
 }
 
 /*write given buffer to the file, overwriting the file, it doesn't append to it.*/
-unsigned save_file(const CVector<unsigned char>& buffer, const CFilePath& filename) {
-  return lodepng_save_file(buffer.IsEmpty() ? 0 : &buffer[0], buffer.Size(), filename.c_str());
+unsigned save_file(const CVector<unsigned char>& buffer, const FileSystem::CFilePath& filename) {
+  return lodepng_save_file(buffer.empty() ? 0 : &buffer[0], buffer.size(), filename.c_str());
 }
 #endif /* LODEPNG_COMPILE_DISK */
 
@@ -6821,7 +6821,7 @@ unsigned decompress(CVector<unsigned char>& out, const unsigned char* in, size_t
   size_t buffersize = 0;
   unsigned error = zlib_decompress(&buffer, &buffersize, 0, in, insize, &settings);
   if(buffer) {
-    out.Append(buffer, &buffer[buffersize]);
+    out.insert(out.end(), buffer, &buffer[buffersize]);
     lodepng_free(buffer);
   }
   return error;
@@ -6829,7 +6829,7 @@ unsigned decompress(CVector<unsigned char>& out, const unsigned char* in, size_t
 
 unsigned decompress(CVector<unsigned char>& out, const CVector<unsigned char>& in,
                     const LodePNGDecompressSettings& settings) {
-  return decompress(out, in.IsEmpty() ? 0 : &in[0], in.Size(), settings);
+  return decompress(out, in.empty() ? 0 : &in[0], in.size(), settings);
 }
 #endif /* LODEPNG_COMPILE_DECODER */
 
@@ -6840,7 +6840,7 @@ unsigned compress(CVector<unsigned char>& out, const unsigned char* in, size_t i
   size_t buffersize = 0;
   unsigned error = zlib_compress(&buffer, &buffersize, in, insize, &settings);
   if(buffer) {
-    out.Append(buffer, &buffer[buffersize]);
+    out.insert(out.end(), buffer, &buffer[buffersize]);
     lodepng_free(buffer);
   }
   return error;
@@ -6848,7 +6848,7 @@ unsigned compress(CVector<unsigned char>& out, const unsigned char* in, size_t i
 
 unsigned compress(CVector<unsigned char>& out, const CVector<unsigned char>& in,
                   const LodePNGCompressSettings& settings) {
-  return compress(out, in.IsEmpty() ? 0 : &in[0], in.Size(), settings);
+  return compress(out, in.empty() ? 0 : &in[0], in.size(), settings);
 }
 #endif /* LODEPNG_COMPILE_ENCODER */
 #endif /* LODEPNG_COMPILE_ZLIB */
@@ -6885,7 +6885,7 @@ unsigned decode(CVector<unsigned char>& out, unsigned& w, unsigned& h, const uns
     state.info_raw.colortype = colortype;
     state.info_raw.bitdepth = bitdepth;
     size_t buffersize = lodepng_get_raw_size(w, h, &state.info_raw);
-    out.Append(buffer, &buffer[buffersize]);
+    out.insert(out.end(), buffer, &buffer[buffersize]);
   }
   lodepng_free(buffer);
   return error;
@@ -6893,7 +6893,7 @@ unsigned decode(CVector<unsigned char>& out, unsigned& w, unsigned& h, const uns
 
 unsigned decode(CVector<unsigned char>& out, unsigned& w, unsigned& h,
                 const CVector<unsigned char>& in, LodePNGColorType colortype, unsigned bitdepth) {
-  return decode(out, w, h, in.IsEmpty() ? 0 : &in[0], (unsigned)in.Size(), colortype, bitdepth);
+  return decode(out, w, h, in.empty() ? 0 : &in[0], (unsigned)in.size(), colortype, bitdepth);
 }
 
 unsigned decode(CVector<unsigned char>& out, unsigned& w, unsigned& h,
@@ -6903,7 +6903,7 @@ unsigned decode(CVector<unsigned char>& out, unsigned& w, unsigned& h,
   unsigned error = lodepng_decode(&buffer, &w, &h, &state, in, insize);
   if(buffer && !error) {
     size_t buffersize = lodepng_get_raw_size(w, h, &state.info_raw);
-    out.Append(buffer, &buffer[buffersize]);
+    out.insert(out.end(), buffer, &buffer[buffersize]);
   }
   lodepng_free(buffer);
   return error;
@@ -6912,11 +6912,11 @@ unsigned decode(CVector<unsigned char>& out, unsigned& w, unsigned& h,
 unsigned decode(CVector<unsigned char>& out, unsigned& w, unsigned& h,
                 State& state,
                 const CVector<unsigned char>& in) {
-  return decode(out, w, h, state, in.IsEmpty() ? 0 : &in[0], in.Size());
+  return decode(out, w, h, state, in.empty() ? 0 : &in[0], in.size());
 }
 
 #ifdef LODEPNG_COMPILE_DISK
-unsigned decode(CVector<unsigned char>& out, unsigned& w, unsigned& h, const CFilePath& filename,
+unsigned decode(CVector<unsigned char>& out, unsigned& w, unsigned& h, const FileSystem::CFilePath& filename,
                 LodePNGColorType colortype, unsigned bitdepth) {
   CVector<unsigned char> buffer;
   /* safe output values in case error happens */
@@ -6935,7 +6935,7 @@ unsigned encode(CVector<unsigned char>& out, const unsigned char* in, unsigned w
   size_t buffersize;
   unsigned error = lodepng_encode_memory(&buffer, &buffersize, in, w, h, colortype, bitdepth);
   if(buffer) {
-    out.Append(buffer, &buffer[buffersize]);
+    out.insert(out.end(), buffer, &buffer[buffersize]);
     lodepng_free(buffer);
   }
   return error;
@@ -6944,8 +6944,8 @@ unsigned encode(CVector<unsigned char>& out, const unsigned char* in, unsigned w
 unsigned encode(CVector<unsigned char>& out,
                 const CVector<unsigned char>& in, unsigned w, unsigned h,
                 LodePNGColorType colortype, unsigned bitdepth) {
-  if(lodepng_get_raw_size_lct(w, h, colortype, bitdepth) > in.Size()) return 84;
-  return encode(out, in.IsEmpty() ? 0 : &in[0], w, h, colortype, bitdepth);
+  if(lodepng_get_raw_size_lct(w, h, colortype, bitdepth) > in.size()) return 84;
+  return encode(out, in.empty() ? 0 : &in[0], w, h, colortype, bitdepth);
 }
 
 unsigned encode(CVector<unsigned char>& out,
@@ -6955,7 +6955,7 @@ unsigned encode(CVector<unsigned char>& out,
   size_t buffersize;
   unsigned error = lodepng_encode(&buffer, &buffersize, in, w, h, &state);
   if(buffer) {
-    out.Append(buffer, &buffer[buffersize]);
+    out.insert(out.end(), buffer, &buffer[buffersize]);
     lodepng_free(buffer);
   }
   return error;
@@ -6964,12 +6964,12 @@ unsigned encode(CVector<unsigned char>& out,
 unsigned encode(CVector<unsigned char>& out,
                 const CVector<unsigned char>& in, unsigned w, unsigned h,
                 State& state) {
-  if(lodepng_get_raw_size(w, h, &state.info_raw) > in.Size()) return 84;
-  return encode(out, in.IsEmpty() ? 0 : &in[0], w, h, state);
+  if(lodepng_get_raw_size(w, h, &state.info_raw) > in.size()) return 84;
+  return encode(out, in.empty() ? 0 : &in[0], w, h, state);
 }
 
 #ifdef LODEPNG_COMPILE_DISK
-unsigned encode(const CFilePath& filename,
+unsigned encode(const FileSystem::CFilePath& filename,
                 const unsigned char* in, unsigned w, unsigned h,
                 LodePNGColorType colortype, unsigned bitdepth) {
   CVector<unsigned char> buffer;
@@ -6978,11 +6978,11 @@ unsigned encode(const CFilePath& filename,
   return error;
 }
 
-unsigned encode(const CFilePath& filename,
+unsigned encode(const FileSystem::CFilePath& filename,
                 const CVector<unsigned char>& in, unsigned w, unsigned h,
                 LodePNGColorType colortype, unsigned bitdepth) {
-  if(lodepng_get_raw_size_lct(w, h, colortype, bitdepth) > in.Size()) return 84;
-  return encode(filename, in.IsEmpty() ? 0 : &in[0], w, h, colortype, bitdepth);
+  if(lodepng_get_raw_size_lct(w, h, colortype, bitdepth) > in.size()) return 84;
+  return encode(filename, in.empty() ? 0 : &in[0], w, h, colortype, bitdepth);
 }
 #endif /* LODEPNG_COMPILE_DISK */
 #endif /* LODEPNG_COMPILE_ENCODER */

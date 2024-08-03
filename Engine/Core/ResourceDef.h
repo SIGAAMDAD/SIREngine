@@ -10,7 +10,9 @@
 typedef enum {
     RES_SHADER,
     RES_SOUND,
-    RES_MAP
+    RES_MAP,
+
+    RES_INVALID
 } resourceType_t;
 
 typedef enum {
@@ -22,8 +24,11 @@ typedef enum {
 class IResourceDef
 {
 public:
-    IResourceDef( void );
-    virtual ~IResourceDef();
+    IResourceDef( void )
+        : m_nType( RES_INVALID ), m_nState( RS_INVALID )
+    { }
+    virtual ~IResourceDef()
+    { }
 
     virtual const char *GetName( void ) const = 0;
     virtual bool IsValid( void ) const = 0;
@@ -38,15 +43,20 @@ protected:
 class CResourceDef : public IResourceDef
 {
 public:
-    CResourceDef( void );
-    virtual ~CResourceDef() override;
+    CResourceDef( void )
+    { }
+    virtual ~CResourceDef() override
+    { }
 };
 
 class CResourceTextDef : public IResourceDef
 {
 public:
-    CResourceTextDef( void );
-    virtual ~CResourceTextDef() override;
+    CResourceTextDef( void )
+        : m_pBuffer( NULL ), m_nBufLength( 0 )
+    { }
+    virtual ~CResourceTextDef() override
+    { }
 
     virtual uint64_t GetTextLength( void ) const = 0;
     virtual const char *GetText( void ) const = 0;

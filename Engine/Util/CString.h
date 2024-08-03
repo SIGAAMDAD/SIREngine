@@ -4,9 +4,59 @@
 #pragma once
 
 #include <Engine/Core/SIREngine.h>
+#include <Engine/Core/ResourceDef.h>
+#include <EASTL/allocator_malloc.h>
+#include <EASTL/fixed_string.h>
 
+class CString : public eastl::fixed_string<char, MAX_RESOURCE_PATH, true, eastl::allocator_malloc<char>>
+{
+public:
+    typedef eastl::fixed_string<char, MAX_RESOURCE_PATH, true, eastl::allocator_malloc<char>> base_type;
+
+    inline CString( void )
+        : base_type()
+    { }
+    inline CString( const char *pString )
+        : base_type( pString )
+    { }
+    inline CString( const CString& other )
+        : base_type( other )
+    { }
+    inline CString( CString&& other )
+        : base_type( eastl::move( other ) )
+    { }
+
+    inline const CString& operator=( const CString& other )
+    {
+        base_type::operator=( other );
+        return *this;
+    }
+    inline const CString& operator=( CString&& other )
+    {
+        base_type::operator=( eastl::move( other ) );
+        return *this;
+    }
+};
+
+/* FIXME: needs better implementation
+
+template<typename CharType>
 class CString
 {
+public:
+    typedef CharType value_type;
+    typedef CharType* pointer;
+    typedef const CharType* const_pointer;
+    typedef CharType& reference;
+    typedef const CharType& const_reference;
+    typedef CharType* iterator;
+    typedef const CharType* const_iterator;
+    typedef CReverseIterator<CharType> reverse_iterator;
+    typedef const CReverseIterator<const CharType> const_reverse_iterator;
+    typedef size_t size_type;
+    typedef ptrdiff_t difference_type;
+
+    static const size_type npos = (size_type)-1;
 public:
     CString( void );
     CString( const char *pString );
@@ -56,6 +106,8 @@ public:
     char *end( void );
     const char *begin( void ) const;
     const char *end( void ) const;
+
+    void SetPointer( char *pData, uint64_t nLength, uint64_t nAllocated );
 
     uint64_t Size( void ) const;
     uint64_t Length( void ) const;
@@ -174,16 +226,23 @@ SIRENGINE_FORCEINLINE CString CString::operator+( const CString& other ) const
     CString str;
     size_t nLength;
 
-    nLength = m_nLength + other.Size();
+    nLength = m_nLength + other.Size() + 1;
     str.Resize( nLength );
-    SIREngine_snprintf( str.GetBuffer(), str.Size(), "%s%s", m_pBuffer, other.c_str() );
+    SIREngine_snprintf( str.GetBuffer(), str.Size(), "%s%s", m_pBuffer, other );
 
     return str;
 }
 
 SIRENGINE_FORCEINLINE CString CString::operator+( const char *other ) const
 {
+    CString str;
+    size_t nLength;
 
+    nLength = m_nLength + strlen( other ) + 1;
+    str.Resize( nLength );
+    SIREngine_snprintf( str.GetBuffer(), str.Size(), "%s%s", m_pBuffer, other );
+
+    return str;
 }
 
 SIRENGINE_FORCEINLINE bool CString::operator==( const CString& other ) const
@@ -305,6 +364,13 @@ SIRENGINE_FORCEINLINE const char *CString::GetBuffer( void ) const {
     return m_pBuffer;
 }
 
+SIRENGINE_FORCEINLINE void CString::SetPointer( char *pData, uint64_t nLength, uint64_t nAllocated )
+{
+    m_pBuffer = pData;
+    m_nLength = nLength;
+    m_nAllocated = nAllocated;
+}
+
 SIRENGINE_FORCEINLINE uint64_t CString::Size( void ) const {
     return m_nLength;
 }
@@ -339,7 +405,12 @@ SIRENGINE_FORCEINLINE void CString::Move( CString&& other )
     other.m_nAllocated = 0;
 }
 
-SIRENGINE_FORCEINLINE void CString::Assign( const char *other, uint64_t nChars )
+SIRENGINE_FORCEINLINE void CString::Assign( const CString& other, uint64_t nChars = 0 )
+{
+    Assign( other.c_str() );
+}
+
+SIRENGINE_FORCEINLINE void CString::Assign( const char *other, uint64_t nChars = 0 )
 {
     if ( !other ) {
         nChars = 0;
@@ -347,8 +418,26 @@ SIRENGINE_FORCEINLINE void CString::Assign( const char *other, uint64_t nChars )
         nChars = strlen( other );
     }
 
+    Clear();
     EnsureAllocated( nChars );
     memcpy( m_pBuffer, other, nChars );
+}
+
+SIRENGINE_FORCEINLINE void CString::Append( const CString& other )
+{
+    Append( other.c_str() );
+}
+
+SIRENGINE_FORCEINLINE void CString::Append( const char *other )
+{
+    uint64_t nLength;
+
+    nLength = strlen( other );
+    EnsureAllocated( nLength + 1 );
+
+    m_nLength += nLength;
+
+    strncat( m_pBuffer, other, nLength );
 }
 
 SIRENGINE_FORCEINLINE bool CString::Empty( void ) const {
@@ -434,5 +523,6 @@ CString& CString::append_sprintf( const char *fmt, ... ) SIRENGINE_ATTRIBUTE(for
 
     return *this;
 }
+*/
 
 #endif

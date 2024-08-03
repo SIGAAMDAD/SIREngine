@@ -1,32 +1,35 @@
 #include "VKShader.h"
+#include "VKContext.h"
+#include <Engine/Core/FileSystem/MemoryFile.h>
 
 VKShader::VKShader( const RenderShaderInit_t& shaderInfo )
 {
     VkShaderStageFlagBits stage;
     const char *pSuffix;
 
+    SIRENGINE_LOG( "Allocating VkShaderModule object \"%s\"", shaderInfo.pName );
     switch ( shaderInfo.nType ) {
     case ST_FRAGMENT:
         stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-        pSuffix = "FP";
+        pSuffix = ".frag";
         break;
     case ST_VERTEX:
         stage = VK_SHADER_STAGE_VERTEX_BIT;
-        pSuffix = "VP";
+        pSuffix = ".vert";
         break;
     case ST_TESSELATION:
         stage = VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
-        pSuffix = "TESS";
+        pSuffix = ".tess_control";
         break;
     case ST_GEOMETRY:
         stage = VK_SHADER_STAGE_GEOMETRY_BIT;
-        pSuffix = "GP";
+        pSuffix = ".geom";
         break;
     default:
-        g_pApplication->Error( "" );
+        g_pApplication->Error( "Invalid Shader Type %i", shaderInfo.nType );
     };
 
-    CMemoryFile file( SIRENGINE_TEMP_VSTRING( "%s%s", shaderInfo.pName, pSuffix ) );
+    CMemoryFile file( SIRENGINE_TEMP_VSTRING( "Resources/Shaders/Vulkan/%s%s.spv", shaderInfo.pName, pSuffix ) );
 
     VkShaderModuleCreateInfo moduleInfo;
     memset( &moduleInfo, 0, sizeof( moduleInfo ) );
@@ -34,9 +37,7 @@ VKShader::VKShader( const RenderShaderInit_t& shaderInfo )
     moduleInfo.codeSize = file.GetSize();
     moduleInfo.pCode = (const uint32_t *)file.GetBuffer();
 
-    if ( vkCreateShaderModule( g_pVKContext->GetDevice(), &moduleInfo, NULL, &m_hModule ) != VK_SUCCESS ) {
-        g_pApplication->Error( "" );
-    }
+    VK_CALL( vkCreateShaderModule( g_pVKContext->GetDevice(), &moduleInfo, NULL, &m_hModule ) );
 }
 
 VKShader::~VKShader()

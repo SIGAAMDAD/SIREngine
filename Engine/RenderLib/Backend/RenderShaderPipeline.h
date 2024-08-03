@@ -3,33 +3,18 @@
 
 #pragma once
 
-#include "RenderCommon.h"
-#include "RenderVertexArray.h"
-#include "RenderProgram.h"
-#include "../DrawBuffer.h"
-
-typedef struct {
-    alignas( 16 ) glm::mat4 u_ModelViewProjection;
-} VertexInput_Uniform_t;
-
-
-typedef struct {
-    UniformInfo_t *pUniforms;
-} VertexRenderPass_t;
-
-typedef struct {
-    uint32_t nEnabledVertexAttributes;
-    IRenderProgram *pShader;
-
-    VertexRenderPass_t *pRenderPasses;
-    uint64_t nRenderPassCount;
-} VertexInputDescription_t;
+#include <Engine/Core/SIREngine.h>
+#include <Engine/RenderLib/RenderCommon.h>
+#include <Engine/RenderLib/DrawBuffer.h>
 
 class IRenderShaderPipeline
 {
 public:
-    IRenderShaderPipeline( void );
-    virtual ~IRenderShaderPipeline();
+    IRenderShaderPipeline( void )
+        : m_nIndexCount( 0 ), m_nVertexCount( 0 ), m_nUsedPipeline( 0 )
+    { }
+    virtual ~IRenderShaderPipeline()
+    { }
 
     virtual uint64_t AddVertexAttribSet( const VertexInputDescription_t& vertexInput ) = 0;
     virtual void SetShaderInputState( uint64_t nCacheID ) = 0;
@@ -40,7 +25,7 @@ public:
     SIRENGINE_FORCEINLINE uint64_t GetCurrentPipeline( void ) const
     { return m_nUsedPipeline; }
 
-    static const uint64_t INVALID_PIPELINE_CACHE_ID = SIRENGINE_UINT64_MAX;
+    static const uint64_t INVALID_PIPELINE_CACHE_ID = (uint64_t)-1;
 protected:
     uint64_t m_nIndexCount;
     uint64_t m_nVertexCount;

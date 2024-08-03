@@ -26,7 +26,8 @@ public:
 };
 
 namespace PlatformTypes {
-    typedef SRWLOCK mutex_t;
+    typedef CRITICAL_SECTION mutex_t;
+    typedef SRWLOCK rwlock_t;
     typedef CONDITION_VARIABLE condition_variable_t;
     typedef HANDLE thread_t;
     typedef HANDLE file_t;

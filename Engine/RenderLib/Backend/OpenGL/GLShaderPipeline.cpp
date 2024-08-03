@@ -1,4 +1,5 @@
 #include "GLShaderPipeline.h"
+#include "GLBuffer.h"
 
 static const GLenum attribTypeGL[ NUMATTRIBTYPES ] = {
     GL_INT,
@@ -42,7 +43,7 @@ GLShaderPipeline::GLShaderPipeline( void )
     input.pVertexAttribs = szDefaultVertexAttribs;
     input.nAttribCount = SIREngine_StaticArrayLength( szDefaultVertexAttribs );
     input.pShader = m_pDefaultShader;
-    m_pPipelineArray = dynamic_cast<GLVertexArray *>( IRenderVertexArray::Create( input ) );
+    m_pPipelineArray = new GLVertexArray( input );
 
     //
     // initialize GL state vertex pointers
@@ -50,7 +51,7 @@ GLShaderPipeline::GLShaderPipeline( void )
     // on and off, but we'll never change the actual
     // layout of the shader input
     //
-    dynamic_cast<GLBuffer *>( m_pPipelineArray->GetVertexBuffer() )->Bind();
+    m_pPipelineArray->GetVertexBuffer()->Bind();
     for ( i = 0; i < SIREngine_StaticArrayLength( szDefaultVertexAttribs ); i++ ) {
         nglEnableVertexArrayAttrib( m_pPipelineArray->GetGLObject(), szDefaultVertexAttribs[i].nShaderBinding );
         nglVertexAttribPointer(
@@ -62,7 +63,7 @@ GLShaderPipeline::GLShaderPipeline( void )
             (const GLvoid *)szDefaultVertexAttribs[i].nOffset
         );
     }
-    dynamic_cast<GLBuffer *>( m_pPipelineArray->GetVertexBuffer() )->Unbind();
+    m_pPipelineArray->GetVertexBuffer()->Unbind();
 }
 
 GLShaderPipeline::~GLShaderPipeline()
@@ -76,13 +77,15 @@ uint64_t GLShaderPipeline::AddVertexAttribSet( const VertexInputDescription_t& v
     uint64_t nCacheID;
     GLPipelineSet_t *pSet;
 
-    m_PipelineCache.Emplace();
-    pSet = &m_PipelineCache.Last();
+    m_PipelineCache.emplace_back();
+    pSet = &m_PipelineCache.back();
 
     pSet->pShader = dynamic_cast<GLProgram *>( vertexInput.pShader );
     pSet->nEnabledAttribs = vertexInput.nEnabledVertexAttributes;
 
-    nCacheID = m_PipelineCache.Size();
+    nCacheID = m_PipelineCache.size();
+
+    return nCacheID;
 }
 
 void GLShaderPipeline::SetShaderInputState( uint64_t nCacheID )

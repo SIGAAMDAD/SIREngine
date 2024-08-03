@@ -3,13 +3,17 @@
 
 #pragma once
 
-#include "../RenderCommon.h"
+#include <Engine/Core/SIREngine.h>
+#include <Engine/RenderLib/RenderCommon.h>
 
 class IRenderShaderBuffer
 {
 public:
-    IRenderShaderBuffer( void );
-    virtual ~IRenderShaderBuffer();
+    IRenderShaderBuffer( void )
+        : m_pShader( NULL ), m_nProgramBinding( 0 )
+    { }
+    virtual ~IRenderShaderBuffer()
+    { }
 protected:
     IRenderProgram *m_pShader;
     uint32_t m_nProgramBinding;

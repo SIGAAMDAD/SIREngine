@@ -5,49 +5,61 @@
 
 #include <Engine/Util/CString.h>
 
-class CFilePath : public CString
-{
-public:
-    CFilePath( void )
-        : CString()
-    { }
-    CFilePath( const char *pString )
-        : CString( pString )
-    { }
-    CFilePath( const CFilePath& other )
-        : CString( other )
-    { }
-    CFilePath( CFilePath&& other )
-        : CString( other )
-    { }
-    ~CFilePath()
-    { }
-
-    SIRENGINE_FORCEINLINE CString GetExtension( void ) const
+namespace FileSystem {
+    class CFilePath : public CString
     {
-        const char *dot = strrchr( m_pBuffer, '.' ), *slash;
-    	if ( dot && ( ( slash = strrchr( m_pBuffer, '/' ) ) == NULL || slash < dot ) ) {
-    		return dot + 1;
-        } else {
-    		return "";
-        }
-    }
-    SIRENGINE_FORCEINLINE void StripExtension( void )
-    {
-        const char *dot = strrchr( m_pBuffer, '.' ), *slash;
+    public:
+        CFilePath( void )
+            : CString()
+        { }
+        CFilePath( const char *pString )
+            : CString( pString )
+        { }
+        CFilePath( const CFilePath& other )
+            : CString( other )
+        { }
+        CFilePath( CFilePath&& other )
+            : CString( eastl::move( other ) )
+        { }
 
-	    if ( dot && ( ( slash = strrchr( m_pBuffer, '/' ) ) == NULL || slash < dot ) ) {
-	    	m_nLength = ( m_nLength < dot - m_pBuffer + 1 ? m_nLength : dot - m_pBuffer + 1 );
+        SIRENGINE_FORCEINLINE const CFilePath& operator=( const CFilePath& other )
+        {
+            CString::operator=( other );
+            return *this;
         }
-	    if ( m_nLength > 1 ) {
-	    	m_pBuffer[ m_nLength - 1 ] = '\0';
+        SIRENGINE_FORCEINLINE const CFilePath& operator=( CFilePath&& other )
+        {
+            CString::operator=( eastl::move( other ) );
+            return *this;
         }
-    }
+    
+        SIRENGINE_FORCEINLINE static CString GetExtension( const char *pszFilePath )
+        {
+            const char *dot = strrchr( pszFilePath, '.' ), *slash;
+        	if ( dot && ( ( slash = strrchr( pszFilePath, '/' ) ) == NULL || slash < dot ) ) {
+        		return dot + 1;
+            }
+            return "";
 
-    SIRENGINE_FORCEINLINE CString& GetString( void )
-    { return *dynamic_cast<CString *>( this ); }
-    SIRENGINE_FORCEINLINE const CString& GetString( void ) const
-    { return *dynamic_cast<const CString *>( this ); }
+        }
+        SIRENGINE_FORCEINLINE void StripExtension( void )
+        {
+            const char *dot = strrchr( data(), '.' ), *slash;
+
+    	    if ( dot && ( ( slash = strrchr( data(), '/' ) ) == NULL || slash < dot ) ) {
+    	        internalLayout().SetSize(
+                    ( size() < dot - data() + 1 ? size() : dot - data() + 1 ) );
+            }
+    	    if ( size() > 1 ) {
+    	    	internalLayout().BeginPtr()[ size() - 1 ] = '\0';
+            }
+        }
+
+        SIRENGINE_FORCEINLINE CString& GetString( void )
+        { return *dynamic_cast<CString *>( this ); }
+        SIRENGINE_FORCEINLINE const CString& GetString( void ) const
+        { return *dynamic_cast<const CString *>( this ); }
+    };
 };
 
 #endif

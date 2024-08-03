@@ -3,20 +3,18 @@
 
 #pragma once
 
-#include "../RenderProgram.h"
+#include <Engine/Core/SIREngine.h>
+#include <Engine/RenderLib/RenderCommon.h>
 #include "VKCommon.h"
+#include "../RenderProgram.h"
 
 class VKProgram : public IRenderProgram
 {
 public:
     VKProgram( const RenderProgramInit_t& programInfo );
-    virtual ~VKProgram();
+    virtual ~VKProgram() override;
 
-    virtual IRenderShader *GetVertexShader( void ) override;
-    virtual IRenderShader *GetPixelShader( void ) override;
-
-    virtual const IRenderShader *GetVertexShader( void ) const override;
-    virtual const IRenderShader *GetPixelShader( void ) const override;
+    virtual bool Load( void ) override { return false; }
 };
 
 #endif

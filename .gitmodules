@@ -4,3 +4,9 @@
 [submodule "json"]
 	path = json
 	url = https://github.com/nlohmann/json.git
+[submodule "angelscript-mirror"]
+	path = angelscript-mirror
+	url = https://github.com/codecat/angelscript-mirror.git
+[submodule "asmjit"]
+	path = asmjit
+	url = https://github.com/asmjit/asmjit.git

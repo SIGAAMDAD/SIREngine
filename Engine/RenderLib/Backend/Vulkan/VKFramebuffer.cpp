@@ -1,11 +1,12 @@
 #include "VKFramebuffer.h"
+#include "VKContext.h"
 
 VKFramebuffer::VKFramebuffer( const FramebufferInfo_t& info )
 {
     uint64_t i;
     TextureInit_t textureInfo;
 
-    m_Attachments.Resize( info.nAttachmentCount );
+    m_Attachments.resize( info.nAttachmentCount );
 
     textureInfo.nWidth = info.nWidth;
     textureInfo.nHeight = info.nHeight;
@@ -34,10 +35,8 @@ VKFramebuffer::VKFramebuffer( const FramebufferInfo_t& info )
     memset( &framebufferInfo, 0, sizeof( framebufferInfo ) );
     framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
     framebufferInfo.renderPass = NULL;
-    framebufferInfo.attachmentCount = m_Attachments.Size();
-    framebufferInfo.pAttachments = m_Attachments.GetBuffer();
-
-    
+    framebufferInfo.attachmentCount = m_Attachments.size();
+    framebufferInfo.pAttachments = m_Attachments.data();
 }
 
 VKFramebuffer::~VKFramebuffer()

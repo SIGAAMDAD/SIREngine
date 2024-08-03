@@ -6,193 +6,279 @@
 #include <Engine/Core/SIREngine.h>
 #include "CReverseIterator.h"
 
-template<typename T, uint64_t nItems, uint64_t nAlignment = alignof( T )>
+template<typename T, size_t N, uint64_t nAlignment = alignof( T )>
 class alignas( nAlignment ) CStaticArray
 {
 public:
-    CStaticArray( void );
-    CStaticArray( const std::initializer_list<T>& data )
-    {
-        size_t i;
-        const auto it = data.begin();
+    typedef CStaticArray<T, N, nAlignment> this_type;
+    typedef T value_type;
+    typedef value_type& reference;
+    typedef const value_type& const_reference;
+    typedef value_type* iterator;
+    typedef const value_type* const_iterator;
+    typedef CReverseIterator<value_type> reverse_iterator;
+    typedef CReverseIterator<const value_type> const_reverse_iterator;
+    typedef size_t size_type;
+    typedef ptrdiff_t difference_type;
+public:
+    void fill( const value_type& value );
+    void swap( this_type& other );
 
-        for ( i = 0; i < data.size(); i++, it++ ) {
-            m_Storage.szElements[ i ] = it;
-        }
-    }
-    CStaticArray( const CStaticArray& other ) = default;
-    CStaticArray( CStaticArray&& other ) = default;
-    ~CStaticArray();
+    SIRENGINE_CONSTEXPR iterator begin( void );
+    SIRENGINE_CONSTEXPR const_iterator begin( void ) const;
+    SIRENGINE_CONSTEXPR const_iterator cbegin( void ) const;
 
-    friend bool operator==( const CStaticArray& a, const CStaticArray& b );
+    SIRENGINE_CONSTEXPR iterator end( void );
+    SIRENGINE_CONSTEXPR const_iterator end( void ) const;
+    SIRENGINE_CONSTEXPR const_iterator cend( void ) const;
 
-    const CStaticArray& operator=( const CStaticArray& other ) = default;
-    const CStaticArray& operator=( CStaticArray&& other ) = default;
+    SIRENGINE_CONSTEXPR reverse_iterator rbegin( void );
+    SIRENGINE_CONSTEXPR const_reverse_iterator rbegin( void ) const;
+    SIRENGINE_CONSTEXPR const_reverse_iterator crbegin( void ) const;
 
-    bool operator!=( const CStaticArray& other ) const;
+    SIRENGINE_CONSTEXPR reverse_iterator rend( void );
+    SIRENGINE_CONSTEXPR const_reverse_iterator rend( void ) const;
+    SIRENGINE_CONSTEXPR const_reverse_iterator crend( void ) const;
 
-    bool IsEmpty( void ) const;
+    SIRENGINE_CONSTEXPR bool empty( void ) const;
+    SIRENGINE_CONSTEXPR size_type size( void ) const;
+    
+    SIRENGINE_CONSTEXPR T *data( void );
+    SIRENGINE_CONSTEXPR const T *data( void ) const;
 
-    T& operator[]( uint64_t nIndex );
-    const T& operator[]( uint64_t nIndex ) const;
+    SIRENGINE_CONSTEXPR reference operator[]( size_type nIndex );
+    SIRENGINE_CONSTEXPR const_reference operator[]( size_type nIndex ) const;
+    SIRENGINE_CONSTEXPR reference at( size_type nIndex );
+    SIRENGINE_CONSTEXPR const_reference at( size_type nIndex ) const;
 
-    T& At( uint64_t nIndex );
-    const T& At( uint64_t nIndex ) const;
+    SIRENGINE_CONSTEXPR reference front( void );
+    SIRENGINE_CONSTEXPR const_reference front( void ) const;
 
-    T *GetBuffer( void );
-    const T *GetBuffer( void ) const;
-
-    uint64_t Size( void ) const;
-
-    T *begin( void );
-    T *end( void );
-    const T *begin( void ) const;
-    const T *end( void ) const;
-
-    CReverseIterator<T>& rbegin( void );
-    CReverseIterator<T>& rend( void );
-    CReverseIterator<const T>& rbegin( void ) const;
-    CReverseIterator<const T>& rend( void ) const;
-private:
-    typedef struct alignas( nAlignment ) ArrayStorageElementAligned {
-        ArrayStorageElementAligned( void )
-        { }
-
-        template<typename... Args>
-        explicit ArrayStorageElementAligned( T, uint64_t, Args&&... args )
-            : data( std::forward<Args>( args )... )
-        { }
-
-        T data;
-    } ArrayStorageElementAligned_t;
-
-    typedef struct ArrayStorage {
-        ArrayStorage()
-            : szElements()
-        { }
-
-        ArrayStorageElementAligned_t szElements[ nItems ];
-    } ArrayStorage_t;
-
-    ArrayStorage_t m_Storage;
+    SIRENGINE_CONSTEXPR reference back( void );
+    SIRENGINE_CONSTEXPR const_reference back( void ) const;
+public:
+    // intentionally public so that we can use
+    // aggregate initialization
+    value_type m_Data[ N ? N : 1 ];
 };
 
-template<typename T, uint64_t nItems, uint64_t nAlignment>
-SIRENGINE_FORCEINLINE bool CStaticArray<T, nItems, nAlignment>::operator!=( const CStaticArray& other ) const
+template<typename T, size_t N, uint64_t nAlignment>
+inline void CStaticArray<T, N, nAlignment>::fill( const value_type& value )
 {
-    for ( uint64_t i = 0; i < nItems; i++ ) {
-        if ( !( (*this)[ i ] == other[ i ] ) ) {
-            return true;
-        }
-    }
-    return false;
+    eastl::fill_n( &m_Data[0], N, value );
 }
 
-template<typename T, uint64_t nItems, uint64_t nAlignment>
-SIRENGINE_FORCEINLINE bool CStaticArray<T, nItems, nAlignment>::IsEmpty( void ) const
+template<typename T, size_t N, uint64_t nAlignment>
+inline void CStaticArray<T, N, nAlignment>::swap( this_type& other )
 {
-    return nItems == 0;
+    eastl::swap_ranges( &m_Data[0], &m_Data[N], &other.m_Data[0] );
 }
 
-template<typename T, uint64_t nItems, uint64_t nAlignment>
-SIRENGINE_FORCEINLINE T& CStaticArray<T, nItems, nAlignment>::operator[]( uint64_t nIndex )
+template<typename T, size_t N, uint64_t nAlignment>
+SIRENGINE_CONSTEXPR inline typename CStaticArray<T, N, nAlignment>::iterator
+CStaticArray<T, N, nAlignment>::begin( void )
 {
-    return m_Storage.szElements[ nIndex ];
+    return &m_Data[0];
 }
 
-template<typename T, uint64_t nItems, uint64_t nAlignment>
-SIRENGINE_FORCEINLINE const T& CStaticArray<T, nItems, nAlignment>::operator[]( uint64_t nIndex ) const
+template<typename T, size_t N, uint64_t nAlignment>
+SIRENGINE_CONSTEXPR inline typename CStaticArray<T, N, nAlignment>::const_iterator
+CStaticArray<T, N, nAlignment>::begin( void ) const
 {
-    return m_Storage.szElements[ nIndex ];
+    return &m_Data[0];
 }
 
-template<typename T, uint64_t nItems, uint64_t nAlignment>
-SIRENGINE_FORCEINLINE T& CStaticArray<T, nItems, nAlignment>::At( uint64_t nIndex )
+template<typename T, size_t N, uint64_t nAlignment>
+SIRENGINE_CONSTEXPR inline typename CStaticArray<T, N, nAlignment>::const_iterator
+CStaticArray<T, N, nAlignment>::cbegin( void ) const
 {
-    return m_Storage.szElements[ nIndex ];
+    return &m_Data[0];
 }
 
-template<typename T, uint64_t nItems, uint64_t nAlignment>
-SIRENGINE_FORCEINLINE const T& CStaticArray<T, nItems, nAlignment>::At( uint64_t nIndex ) const
+template<typename T, size_t N, uint64_t nAlignment>
+SIRENGINE_CONSTEXPR inline typename CStaticArray<T, N, nAlignment>::iterator
+CStaticArray<T, N, nAlignment>::end( void )
 {
-    return m_Storage.szElements[ nIndex ];
+    return &m_Data[N];
 }
 
-template<typename T, uint64_t nItems, uint64_t nAlignment>
-SIRENGINE_FORCEINLINE T *CStaticArray<T, nItems, nAlignment>::GetBuffer( void )
+template<typename T, size_t N, uint64_t nAlignment>
+SIRENGINE_CONSTEXPR inline typename CStaticArray<T, N, nAlignment>::const_iterator
+CStaticArray<T, N, nAlignment>::end( void ) const
 {
-    return m_Storage.szElements;
+    return &m_Data[N];
 }
 
-template<typename T, uint64_t nItems, uint64_t nAlignment>
-SIRENGINE_FORCEINLINE const T *CStaticArray<T, nItems, nAlignment>::GetBuffer( void ) const
+template<typename T, size_t N, uint64_t nAlignment>
+SIRENGINE_CONSTEXPR inline typename CStaticArray<T, N, nAlignment>::const_iterator
+CStaticArray<T, N, nAlignment>::cend( void ) const
 {
-    return m_Storage.szElements;
+    return &m_Data[N];
 }
 
-template<typename T, uint64_t nItems, uint64_t nAlignment>
-SIRENGINE_FORCEINLINE uint64_t CStaticArray<T, nItems, nAlignment>::Size( void ) const
+template<typename T, size_t N, uint64_t nAlignment>
+SIRENGINE_CONSTEXPR inline typename CStaticArray<T, N, nAlignment>::reverse_iterator
+CStaticArray<T, N, nAlignment>::rbegin( void )
 {
-    return nItems;
+    return reverse_iterator( &m_Data[N] );
 }
 
-template<typename T, uint64_t nItems, uint64_t nAlignment>
-SIRENGINE_FORCEINLINE T *CStaticArray<T, nItems, nAlignment>::begin( void )
+template<typename T, size_t N, uint64_t nAlignment>
+SIRENGINE_CONSTEXPR inline typename CStaticArray<T, N, nAlignment>::const_reverse_iterator
+CStaticArray<T, N, nAlignment>::rbegin( void ) const
 {
-    return m_Storage.szElements;
+    return const_reverse_iterator( &m_Data[N] );
 }
 
-template<typename T, uint64_t nItems, uint64_t nAlignment>
-SIRENGINE_FORCEINLINE T *CStaticArray<T, nItems, nAlignment>::end( void )
+template<typename T, size_t N, uint64_t nAlignment>
+SIRENGINE_CONSTEXPR inline typename CStaticArray<T, N, nAlignment>::const_reverse_iterator
+CStaticArray<T, N, nAlignment>::crbegin( void ) const
 {
-    return m_Storage.szElements + nItems;
+    return const_reverse_iterator( &m_Data[N] );
 }
 
-template<typename T, uint64_t nItems, uint64_t nAlignment>
-SIRENGINE_FORCEINLINE const T *CStaticArray<T, nItems, nAlignment>::begin( void ) const
+template<typename T, size_t N, uint64_t nAlignment>
+SIRENGINE_CONSTEXPR inline typename CStaticArray<T, N, nAlignment>::reverse_iterator
+CStaticArray<T, N, nAlignment>::rend( void )
 {
-    return begin();
+    return reverse_iterator( &m_Data[0] );
 }
 
-template<typename T, uint64_t nItems, uint64_t nAlignment>
-SIRENGINE_FORCEINLINE const T *CStaticArray<T, nItems, nAlignment>::end( void ) const
+template<typename T, size_t N, uint64_t nAlignment>
+SIRENGINE_CONSTEXPR inline typename CStaticArray<T, N, nAlignment>::const_reverse_iterator
+CStaticArray<T, N, nAlignment>::rend( void ) const
 {
-    return end();
+    return const_reverse_iterator( &m_Data[0] );
 }
 
-template<typename T, uint64_t nItems, uint64_t nAlignment>
-SIRENGINE_FORCEINLINE CReverseIterator<T>& CStaticArray<T, nItems, nAlignment>::rbegin( void )
+template<typename T, size_t N, uint64_t nAlignment>
+SIRENGINE_CONSTEXPR inline typename CStaticArray<T, N, nAlignment>::const_reverse_iterator
+CStaticArray<T, N, nAlignment>::crend( void ) const
 {
-    return CReverseIterator<T>( end() );
+    return const_reverse_iterator( &m_Data[0] );
 }
 
-template<typename T, uint64_t nItems, uint64_t nAlignment>
-SIRENGINE_FORCEINLINE CReverseIterator<T>& CStaticArray<T, nItems, nAlignment>::rend( void )
+template<typename T, size_t N, uint64_t nAlignment>
+SIRENGINE_CONSTEXPR inline typename CStaticArray<T, N, nAlignment>::size_type
+CStaticArray<T, N, nAlignment>::size( void ) const
 {
-    return CReverseIterator<T>( begin() );
+    return (size_type)N;
 }
 
-template<typename T, uint64_t nItems, uint64_t nAlignment>
-SIRENGINE_FORCEINLINE CReverseIterator<const T>& CStaticArray<T, nItems, nAlignment>::rbegin( void ) const
+template<typename T, size_t N, uint64_t nAlignment>
+SIRENGINE_CONSTEXPR inline bool CStaticArray<T, N, nAlignment>::empty( void ) const
 {
-    return CReverseIterator<T>( end() );
+    return ( N == 0 );
 }
 
-template<typename T, uint64_t nItems, uint64_t nAlignment>
-SIRENGINE_FORCEINLINE CReverseIterator<const T>& CStaticArray<T, nItems, nAlignment>::rend( void ) const
+template<typename T, size_t N, uint64_t nAlignment>
+SIRENGINE_CONSTEXPR inline typename CStaticArray<T, N, nAlignment>::reference
+CStaticArray<T, N, nAlignment>::operator[]( size_type nIndex )
 {
-    return CReverseIterator<T>( begin() );
+    return m_Data[ nIndex ];
 }
 
-template<typename T, uint64_t nItems, uint64_t nAlignment>
-SIRENGINE_FORCEINLINE bool operator==( const CStaticArray<T, nItems, nAlignment>& a, const CStaticArray<T, nItems, nAlignment>& b )
+template<typename T, size_t N, uint64_t nAlignment>
+SIRENGINE_CONSTEXPR inline typename CStaticArray<T, N, nAlignment>::const_reference
+CStaticArray<T, N, nAlignment>::operator[]( size_type nIndex ) const
 {
-    for ( uint64_t i = 0; i < nItems; ++i ) {
-        if ( !( a[ i ] == b[ i ] ) ) {
-            return false;
-        }
-    }
-    return true;
+    return m_Data[ nIndex ];
+}
+
+template<typename T, size_t N, uint64_t nAlignment>
+SIRENGINE_CONSTEXPR inline typename CStaticArray<T, N, nAlignment>::reference
+CStaticArray<T, N, nAlignment>::at( size_type nIndex )
+{
+    return m_Data[ nIndex ];
+}
+
+template<typename T, size_t N, uint64_t nAlignment>
+SIRENGINE_CONSTEXPR inline typename CStaticArray<T, N, nAlignment>::const_reference
+CStaticArray<T, N, nAlignment>::at( size_type nIndex ) const
+{
+    return m_Data[ nIndex ];
+}
+
+template<typename T, size_t N, uint64_t nAlignment>
+SIRENGINE_CONSTEXPR inline typename CStaticArray<T, N, nAlignment>::reference
+CStaticArray<T, N, nAlignment>::front( void )
+{
+    return m_Data[ 0 ];
+}
+
+template<typename T, size_t N, uint64_t nAlignment>
+SIRENGINE_CONSTEXPR inline typename CStaticArray<T, N, nAlignment>::const_reference
+CStaticArray<T, N, nAlignment>::front( void ) const
+{
+    return m_Data[ 0 ];
+}
+
+template<typename T, size_t N, uint64_t nAlignment>
+SIRENGINE_CONSTEXPR inline typename CStaticArray<T, N, nAlignment>::reference
+CStaticArray<T, N, nAlignment>::back( void )
+{
+    return m_Data[ N - 1 ];
+}
+
+template<typename T, size_t N, uint64_t nAlignment>
+SIRENGINE_CONSTEXPR inline typename CStaticArray<T, N, nAlignment>::const_reference
+CStaticArray<T, N, nAlignment>::back( void ) const
+{
+    return m_Data[ N - 1 ];
+}
+
+template<typename T, size_t N, uint64_t nAlignment>
+SIRENGINE_CONSTEXPR inline T *CStaticArray<T, N, nAlignment>::data( void )
+{
+    return m_Data;
+}
+
+template<typename T, size_t N, uint64_t nAlignment>
+SIRENGINE_CONSTEXPR inline const T *CStaticArray<T, N, nAlignment>::data( void ) const
+{
+    return m_Data;
+}
+
+template<typename T, size_t N, uint64_t nAlignment>
+SIRENGINE_CONSTEXPR inline bool operator==( const CStaticArray<T, N, nAlignment>& a, const CStaticArray<T, N, nAlignment>& b )
+{
+	return eastl::equal( &a.m_Data[0], &a.m_Data[N], &b.m_Data[0] );
+}
+
+template<typename T, size_t N, uint64_t nAlignment>
+SIRENGINE_CONSTEXPR inline bool operator<( const CStaticArray<T, N, nAlignment>& a, const CStaticArray<T, N, nAlignment>& b )
+{
+	return eastl::lexicographical_compare( &a.m_Data[0], &a.m_Data[N], &b.m_Data[0], &b.m_Data[N] );
+}
+
+template<typename T, size_t N, uint64_t nAlignment>
+SIRENGINE_CONSTEXPR inline bool operator!=( const CStaticArray<T, N, nAlignment>& a, const CStaticArray<T, N, nAlignment>& b )
+{
+	return !eastl::equal( &a.m_Data[0], &a.m_Data[N], &b.m_Data[0] );
+}
+
+template<typename T, size_t N, uint64_t nAlignment>
+SIRENGINE_CONSTEXPR inline bool operator>( const CStaticArray<T, N, nAlignment>& a, const CStaticArray<T, N, nAlignment>& b )
+{
+	return eastl::lexicographical_compare( &b.m_Data[0], &b.m_Data[N], &a.m_Data[0], &a.m_Data[N] );
+}
+
+template<typename T, size_t N, uint64_t nAlignment>
+SIRENGINE_CONSTEXPR inline bool operator<=( const CStaticArray<T, N, nAlignment>& a, const CStaticArray<T, N, nAlignment>& b )
+{
+	return !eastl::lexicographical_compare( &b.m_Data[0], &b.m_Data[N], &a.m_Data[0], &a.m_Data[N] );
+}
+
+template<typename T, size_t N, uint64_t nAlignment>
+SIRENGINE_CONSTEXPR inline bool operator>=( const CStaticArray<T, N, nAlignment>& a, const CStaticArray<T, N, nAlignment>& b )
+{
+	return !eastl::lexicographical_compare( &a.m_Data[0], &a.m_Data[N], &b.m_Data[0], &b.m_Data[N] );
+}
+
+template<typename T, size_t N, uint64_t nAlignment>
+inline void swap( CStaticArray<T, N, nAlignment>& a, CStaticArray<T, N, nAlignment>& b )
+{
+	eastl::swap_ranges( &a.m_Data[0], &a.m_Data[N], &b.m_Data[0] );
 }
 
 #endif

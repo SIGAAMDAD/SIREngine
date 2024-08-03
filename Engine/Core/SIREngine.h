@@ -11,29 +11,52 @@
 #include <stddef.h>
 #include "stb_sprintf.h"
 
-#include <type_traits>
-#include <forward_list>
-#include <EASTL/type_traits.h>
-
 #include <Engine/Core/Compiler.h>
 #include <Engine/Core/Config.h>
 #include <Engine/Core/Platform.h>
 #include <Engine/Core/Types.h>
-#include <Engine/Core/Util.h>
 
+#define SIRENGINE_REPLACE_NEW_AND_DELETE
 #include <Engine/Memory/Memory.h>
+
+#include <type_traits>
+#include <forward_list>
+#include <EASTL/type_traits.h>
+
+#include <EASTL/vector.h>
+#include <EASTL/vector_map.h>
+#include <EASTL/string.h>
+#include <EASTL/unique_ptr.h>
+#include <EASTL/unordered_map.h>
+#include <EASTL/map.h>
+#include <EASTL/algorithm.h>
+#include <EASTL/sort.h>
+
+#include <Engine/Util/CReverseIterator.h>
+#include <Engine/Util/CString.h>
+#include <Engine/Util/CVector.h>
+#include <Engine/Util/CStaticArray.h>
+#include <Engine/Util/CConstList.h>
+
+#include <Engine/Core/Util.h>
 
 #include <Engine/Core/ResourceDef.h>
 #include <Engine/Core/ResourceManager.h>
-#include <Engine/Core/Application/GenericPlatform/GenericApplication.h>
 
-#if defined(SIRENGINE_PLATFORM_WINDOWS)
-    #include <Engine/Core/Application/Windows/WindowsApplication.h>
-#elif defined(SIRENGINE_PLATFORM_ANDROID)
-    #include <Engine/Core/Application/Android/AndroidApplication.h>
-#elif defined(SIRENGINE_PLATFORM_LINUX)
-    #include <Engine/Core/Application/Posix/PosixApplication.h>
-#endif
+typedef struct {
+    const char *pszWindowName;
+    const char *pszAppName;
+    uint64_t nAppVersion;
+    
+    int nWindowPosX;
+    int nWindowPosY;
+    int nWindowWidth;
+    int nWindowHeight;
+
+    unsigned eWindowFlags;
+} ApplicationInfo_t;
+
+#include "Application/GenericPlatform/GenericApplication.h"
 
 #if defined(SIRENGINE_USE_GLM_MATH)
     #include <glm/glm.hpp>
@@ -62,5 +85,7 @@
 #define SIRENGINE_VERSION_PATCH 0
 #define SIRENGINE_VERSION SIRENGINE_MAKE_VERSION( SIRENGINE_VERSION_MAJOR, SIRENGINE_VERSION_MINOR, SIRENGINE_VERSION_PATCH )
 #define SIRENGINE_VERSION_STRING "SIR Engine v" SIRENGINE_XSTRING( SIRENGINE_VERSION_MAJOR ) "." SIRENGINE_XSTRING( SIRENGINE_VERSION_MINOR ) "." SIRENGINE_XSTRING( SIRENGINE_VERSION_PATCH ) ""
+
+#include "Logging/Logger.h"
 
 #endif

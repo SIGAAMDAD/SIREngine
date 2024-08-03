@@ -1,20 +1,20 @@
 #include "ImageLoader.h"
 
-CImageLoader::CImageLoader( const CFilePath& filePath )
+CImageLoader::CImageLoader( const FileSystem::CFilePath& filePath )
 {
-    const CString ext = filePath.GetExtension();
+    const CString ext = FileSystem::CFilePath::GetExtension( filePath.c_str() );
     bool (*LoadFunc)( const CMemoryFile&, CVector<uint8_t>&, uint32_t&, uint32_t&, uint32_t& );
 
     if ( ext == "tga" ) {
-        LoadFunc = LoadTGA;
+//        LoadFunc = LoadTGA;
     } else if ( ext == "jpg" || ext == "jpeg" ) {
-        LoadFunc = LoadJpeg;
+//        LoadFunc = LoadJpeg;
     } else if ( ext == "bmp" ) {
-        LoadFunc = LoadBMP;
+//        LoadFunc = LoadBMP;
     } else if ( ext == "png" ) {
         LoadFunc = LoadPNG;
     } else if ( ext == "pcx" ) {
-        LoadFunc = LoadPCX;
+//        LoadFunc = LoadPCX;
     } else {
         g_pApplication->Error( "" );
     }

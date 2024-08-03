@@ -1,15 +1,111 @@
 #include "GLTexture.h"
+#include "GLContext.h"
 
-GLTexture::GLTexture( void )
+CVar<bool32> r_UsePixelBufferObjects(
+    "r.OpenGL.UsePixelBufferObjects",
+    0,
+    Cvar_Save,
+    "Enables usage of OpenGL pixel buffers for texture streaming\n"
+    "instead of traditional texture usage (fire-and-forget)\n",
+    CVG_RENDERER
+);
+
+static GLenum GetImageGPUFormat( uint32_t nChannels )
+{
+    GLenum format;
+
+    if ( nChannels == 3 ) {
+        if ( r_UseHDRTextures.GetValue() ) {
+            format = GL_RGB16F;
+        } else {
+            format = GL_RGB8;
+        }
+    } else {
+        if ( r_UseHDRTextures.GetValue() ) {
+            format = GL_RGBA16F;
+        } else {
+            format = GL_RGBA8;
+        }
+    }
+    return format;
+}
+
+GLTexture::GLTexture( const TextureInit_t& textureInfo )
 {
     nglGenTextures( 1, &m_nTextureID );
+    if ( r_UsePixelBufferObjects.GetValue() ) {
+        nglCreateBuffers( SIREngine_StaticArrayLength( m_hBufferID ), m_hBufferID );
+    }
+
+    Upload( textureInfo );
 }
 
 GLTexture::~GLTexture()
 {
-    nglDeleteBuffers( 1, &m_nTextureID );
+    if ( r_UsePixelBufferObjects.GetValue() ) {
+        nglDeleteBuffers( SIREngine_StaticArrayLength( m_hBufferID ), m_hBufferID );
+    }
+    nglDeleteTextures( 1, &m_nTextureID );
 }
 
-void GLTexture::Upload( void )
+
+// source: http://www.songho.ca/opengl/gl_pbo.html
+void GLTexture::StreamBuffer( void )
 {
+    void *pMappedBuffer;
+    GLint nextIndex;
+
+    m_nBufferIndex = ( m_nBufferIndex + 1 ) % 2;
+    nextIndex = ( m_nBufferIndex + 1 ) % 2;
+
+    nglBindTexture( GL_TEXTURE_2D, m_nTextureID );
+
+    nglBindBuffer( GL_PIXEL_UNPACK_BUFFER, m_hBufferID[ m_nBufferIndex ] );
+    // copy pixels from PBO to texture object
+    // use offset instead of pointer
+    nglTexSubImage2D( GL_TEXTURE_2D, 0, 0, 0, m_nWidth, m_nHeight, m_nGLTextureFormat, GL_UNSIGNED_BYTE, NULL );
+    nglBindBuffer( GL_PIXEL_UNPACK_BUFFER, 0 );
+
+    nglBindBuffer( GL_PIXEL_UNPACK_BUFFER, m_hBufferID[ nextIndex ] );
+    
+    // orphan the buffer to avoid a sync issue
+    if ( r_UseMappedBufferObjects.GetValue() ) {
+        nglInvalidateBufferData( m_hBufferID[ nextIndex ] );
+        pMappedBuffer = nglMapBuffer( GL_PIXEL_UNPACK_BUFFER, GL_WRITE_ONLY | GL_MAP_PERSISTENT_BIT
+            | GL_MAP_COHERENT_BIT );
+        if ( pMappedBuffer ) {
+            memcpy( pMappedBuffer, m_ImageData.GetBuffer(), m_ImageData.GetSize() );    
+            nglUnmapBuffer( GL_PIXEL_UNPACK_BUFFER );
+        }
+    } else {
+        nglBufferData( GL_PIXEL_UNPACK_BUFFER, m_ImageData.GetSize(), NULL, GL_STREAM_DRAW );
+        nglBufferSubData( GL_PIXEL_UNPACK_BUFFER, 0, m_ImageData.GetSize(), m_ImageData.GetBuffer() );
+    }
+    nglBindBuffer( GL_PIXEL_UNPACK_BUFFER, 0 );
+}
+
+void GLTexture::Upload( const TextureInit_t& textureInfo )
+{
+    nglBindTexture( GL_TEXTURE_2D, m_nTextureID );
+    if ( textureInfo.bIsGPUOnly ) {
+    } else {
+        m_ImageData = eastl::move( CImageLoader( textureInfo.filePath ) );
+
+        if ( r_UsePixelBufferObjects.GetValue() ) {
+            for ( auto& it : m_hBufferID ) {
+                nglBindBuffer( GL_PIXEL_UNPACK_BUFFER, it );
+                if ( r_UseMappedBufferObjects.GetValue() ) {
+                    nglBufferStorage( GL_PIXEL_UNPACK_BUFFER, m_ImageData.GetSize(), m_ImageData.GetBuffer(),
+                        GL_WRITE_ONLY | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT );
+                } else {
+                    nglBufferData( GL_PIXEL_UNPACK_BUFFER, m_ImageData.GetSize(), NULL, GL_STREAM_DRAW );
+                }
+                nglBindBuffer( GL_PIXEL_UNPACK_BUFFER, 0 );
+            }
+        }
+        nglTexImage2D( GL_TEXTURE_2D, 0, GetImageGPUFormat( m_ImageData.GetChannels() ),
+            m_ImageData.GetWidth(), m_ImageData.GetHeight(), 0, m_ImageData.GetChannels() == 3 ? GL_RGB : GL_RGBA,
+            GL_UNSIGNED_BYTE, m_ImageData.GetBuffer() );
+    }
+    nglBindTexture( GL_TEXTURE_2D, 0 );
 }

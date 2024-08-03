@@ -3,22 +3,18 @@
 
 #pragma once
 
-#include "../RenderCommon.h"
-#include "GLShader.h"
+#include <Engine/Core/SIREngine.h>
+#include <Engine/RenderLib/RenderCommon.h>
+#include "GLCommon.h"
+#include "../RenderProgram.h"
 
 class GLProgram : public IRenderProgram
 {
 public:
-    GLProgram( const char *pszShaderName );
-    virtual ~GLProgram();
+    GLProgram( const RenderProgramInit_t& programInfo );
+    virtual ~GLProgram() override;
 
-    virtual GLShader *GetVertexShader( void ) override;
-    virtual GLShader *GetPixelShader( void ) override;
-
-    virtual const GLShader *GetVertexShader( void ) const override;
-    virtual const GLShader *GetPixelShader( void ) const override;
-
-    virtual bool Load( void ) override;
+    virtual bool Load( void ) override { return false; }
 
     SIRENGINE_FORCEINLINE GLuint GetProgramID( void ) const
     { return m_hProgramID; }

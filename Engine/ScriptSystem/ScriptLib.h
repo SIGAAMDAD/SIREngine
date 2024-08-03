@@ -1,9 +1,11 @@
 #ifndef __SIRENGINE_SCRIPTLIB_HPP__
 #define __SIRENGINE_SCRIPTLIB_HPP__
 
-#pragma once
-
 #include <Engine/Core/EngineApp.h>
+
+#if defined(SIR_ENGINE_PRAGMA_ONCE_SUPPORTED)
+    #pragma once
+#endif
 
 class CScriptLib : public IEngineApp
 {

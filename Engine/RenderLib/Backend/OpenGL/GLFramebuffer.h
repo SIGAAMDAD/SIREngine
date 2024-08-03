@@ -3,8 +3,10 @@
 
 #pragma once
 
-#include "../RenderFramebuffer.h"
+#include <Engine/Core/SIREngine.h>
+#include <Engine/RenderLib/RenderCommon.h>
 #include "GLCommon.h"
+#include "../RenderFramebuffer.h"
 
 typedef struct {
     FramebufferAttachmentType_t nType;

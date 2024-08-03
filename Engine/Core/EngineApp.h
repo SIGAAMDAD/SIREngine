@@ -4,13 +4,15 @@
 #pragma once
 
 #include <Engine/Core/SIREngine.h>
-#include <Engine/Core/CvarSystem.h>
+#include <Engine/Core/ConsoleManager.h>
 
 class IEngineApp
 {
 public:
-    IEngineApp( void );
-    virtual ~IEngineApp();
+    IEngineApp( void )
+    { }
+    virtual ~IEngineApp()
+    { }
 
     virtual const char *GetName( void ) const = 0;
     virtual bool IsActive( void ) const = 0;

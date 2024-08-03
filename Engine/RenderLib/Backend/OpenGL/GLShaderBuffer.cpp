@@ -1,24 +1,27 @@
 #include "GLShaderBuffer.h"
+#include "GLProgram.h"
 
 GLShaderBuffer::GLShaderBuffer( GLPipelineSet_t *pPipeline, uint32_t nProgramBinding )
-    : GLBuffer( BUFFER_TYPE_UNIFORM ), m_pPipeline( pPipeline )
+    : m_pPipeline( pPipeline )
 {
     GLProgram *program;
 
+    m_pBuffer = new GLBuffer( BUFFER_TYPE_UNIFORM );
     m_nProgramBinding = nProgramBinding;
 
     program = pPipeline->pShader;
 
-    nglBindBuffer( m_nBufferTarget, m_hBufferID );
-    nglUniformBlockBinding( program->GetProgramID(), nProgramBinding, pPipeline->dataInputBuffers.Size() );
-    nglBindBufferRange( m_nBufferTarget, 0, m_hBufferID, 0, m_nBufferSize );
-    nglBindBufferBase( m_nBufferTarget, 0, m_hBufferID );
-    nglBindBuffer( m_nBufferTarget, 0 );
+    m_pBuffer->Bind();
+    nglUniformBlockBinding( program->GetProgramID(), nProgramBinding, pPipeline->dataInputBuffers.size() );
+    nglBindBufferRange( m_pBuffer->GetGLTarget(), 0, m_pBuffer->GetGLObject(), 0, m_pBuffer->GetSize() );
+    nglBindBufferBase( m_pBuffer->GetGLTarget(), 0, m_pBuffer->GetSize() );
+    m_pBuffer->Unbind();
 
-    pPipeline->dataInputBuffers.Push( this );
+    pPipeline->dataInputBuffers.emplace_back( this );
 }
 
 GLShaderBuffer::~GLShaderBuffer()
 {
+    delete m_pBuffer;
 }
 

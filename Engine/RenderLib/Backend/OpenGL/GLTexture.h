@@ -3,19 +3,29 @@
 
 #pragma once
 
+#include <Engine/Core/SIREngine.h>
+#include <Engine/RenderLib/RenderCommon.h>
 #include "GLCommon.h"
-#include <Engine/RenderLib/RenderTexture.h>
+#include "../RenderTexture.h"
+#include "../ImageLoader.h"
 
 class GLTexture : public IRenderTexture
 {
 public:
-    GLTexture( void );
-    virtual ~GLTexture() override;
+    GLTexture( const TextureInit_t& textureInfo );
+    virtual ~GLTexture();
 
+    virtual void StreamBuffer( void ) override;
 private:
-    virtual void Upload( void ) override;
+    virtual void Upload( const TextureInit_t& textureInfo ) override;
 
     GLuint m_nTextureID;
+    GLuint m_hBufferID[2];
+    GLint m_nBufferIndex;
+
+    GLenum m_nGLTextureFormat;
+
+    CImageLoader m_ImageData;
 };
 
 #endif

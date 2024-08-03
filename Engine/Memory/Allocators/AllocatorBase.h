@@ -8,8 +8,11 @@
 class IAllocatorBase
 {
 public:
-    IAllocatorBase( const char *pAllocatorName );
-    virtual ~IAllocatorBase();
+    IAllocatorBase( const char *pAllocatorName )
+        : m_pAllocatorName( pAllocatorName )
+    { }
+    virtual ~IAllocatorBase()
+    { }
 
     virtual void Init( void ) = 0;
     virtual void Shutdown( void ) = 0;
@@ -22,11 +25,6 @@ public:
 protected:
     const char *m_pAllocatorName;
 };
-
-SIRENGINE_FORCEINLINE IAllocatorBase::IAllocatorBase( const char *pAllocatorName )
-    : m_pAllocatorName( pAllocatorName )
-{
-}
 
 SIRENGINE_FORCEINLINE const char *IAllocatorBase::GetName( void ) const
 {

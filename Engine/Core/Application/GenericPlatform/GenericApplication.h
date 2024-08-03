@@ -3,8 +3,11 @@
 
 #pragma once
 
+#include <Engine/Core/SIREngine.h>
 #include <Engine/Core/EngineApp.h>
-#include <Engine/RenderLib/Backend/RenderContext.h>
+#include <Engine/Util/CString.h>
+#include <Engine/Util/CVector.h>
+#include <Engine/Core/FileSystem/FilePath.h>
 
 typedef struct {
 
@@ -17,62 +20,112 @@ typedef enum {
     RAPI_SOFTWARE
 } RenderAPIType_t;
 
+typedef enum {
+    FileMode_ReadOnly,
+    FileMode_WriteOnly,
+    FileMode_Append,
+    FileMode_ReadWrite,
+} FileMode_t;
+
+typedef enum {
+    Crash_SegmentationViolation,
+    Crash_BusError,
+    Crash_Assertion,
+    Crash_Engine,
+} CrashType_t;
+
 class IGenericApplication
 {
 public:
-    IGenericApplication( const ApplicationInfo_t& appInfo, const CVector<CString>& cmdLine );
+    IGenericApplication( void );
     virtual ~IGenericApplication();
 
-    const ApplicationInfo_t& GetAppInfo( void ) const;
-    const CVector<CString>& GetCommandLine( void ) const;
-    RenderAPIType_t GetRenderAPI( void ) const;
+    SIRENGINE_FORCEINLINE ApplicationInfo_t& GetAppInfo( void )
+    { return m_ApplicationInfo; }
+    SIRENGINE_FORCEINLINE const ApplicationInfo_t& GetAppInfo( void ) const
+    { return m_ApplicationInfo; }
+    SIRENGINE_FORCEINLINE const CVector<CString>& GetCommandLine( void ) const
+    { return m_CommandLineArgs; } 
+    SIRENGINE_FORCEINLINE RenderAPIType_t GetRenderAPI( void ) const
+    { return m_nRendererType; }
+    SIRENGINE_FORCEINLINE const FileSystem::CFilePath& GetGamePath( void ) const
+    { return m_GamePath; }
 
-    void Error( const char *fmt, ... ) SIRENGINE_ATTRIBUTE(format(printf, 2, 3));
-    void Warning( const char *fmt, ... ) SIRENGINE_ATTRIBUTE(format(printf, 2, 3));
-    void Log( const char *fmt, ... ) SIRENGINE_ATTRIBUTE(format(printf, 2, 3));
+    SIRENGINE_FORCEINLINE void SetCommandLine( const CVector<CString>& commandLine )
+    { m_CommandLineArgs = eastl::move( commandLine ); }
+    SIRENGINE_FORCEINLINE void SetApplicationArgs( const ApplicationInfo_t& appInfo )
+    { m_ApplicationInfo = appInfo; }
 
     virtual void Init( void );
+    virtual void Shutdown( void );
     virtual void Run( void );
 
     virtual FILE *OpenFile( const CString& filePath, const char *mode ) = 0;
 
     virtual size_t GetOSPageSize( void ) const = 0;
 
-    virtual size_t GetAllocSize( void *pBuffer ) const = 0;
-    virtual void *VirtualAlloc( size_t nSize, size_t nAlignment ) = 0;
-    virtual void VirtualFree( void *pBuffer ) = 0;
+    virtual void *OpenDLL( const char *pName ) = 0;
+    virtual void CloseDLL( void *pDLLHandle ) = 0;
+    virtual void *GetProcAddress( void *pDLLHandle, const char *pProcName ) = 0;
 
-    virtual void *FileOpen( const CString& filePath ) = 0;
+    virtual size_t GetAllocSize( void *pBuffer ) const = 0;
+    virtual void *VirtualAlloc( size_t *nSize, size_t nAlignment ) = 0;
+    virtual void VirtualFree( void *pBuffer ) = 0;
+    virtual void CommitMemory( void *pMemory, size_t nOffset, size_t nSize ) = 0;
+    virtual void DecommitMemory( void *pMemory, size_t nOffset, size_t nSize ) = 0;
+    virtual void SetMemoryReadOnly( void *pMemory, size_t nOffset, size_t nSize ) = 0;
+
+    SIRENGINE_FORCEINLINE virtual void CommitByAddress( void *pMemory, size_t nSize )
+    { CommitMemory( pMemory, (size_t)( ( (byte *)pMemory ) - ( (byte *)pMemory ) ), nSize ); }
+    SIRENGINE_FORCEINLINE virtual void DecommitByAddress( void *pMemory, size_t nSize )
+    { DecommitMemory( pMemory, (size_t)( ( (byte *)pMemory ) - ( (byte *)pMemory ) ), nSize ); }
+
+    virtual void *FileOpen( const CString& filePath, FileMode_t nMode ) = 0;
     virtual void FileClose( void *hFile ) = 0;
     virtual size_t FileWrite( const void *pBuffer, size_t nBytes, void *hFile ) = 0;
     virtual size_t FileRead( void *pBuffer, size_t nBytes, void *hFile ) = 0;
     virtual size_t FileTell( void *hFile ) = 0;
     virtual size_t FileLength( void *hFile ) = 0;
 
+    virtual const CVector<FileSystem::CFilePath>& ListFiles( const FileSystem::CFilePath& dir, bool bDirectoryOnly = false ) = 0;
+
     virtual void MutexLock( void * ) = 0;
     virtual void MutexUnlock( void * ) = 0;
+    virtual bool MutexTryLock( void * ) = 0;
+    virtual void MutexInit( void * ) = 0;
+    virtual void MutexShutdown( void * ) = 0;
+    virtual void MutexRWUnlock( void * ) = 0;
+    virtual void MutexWriteLock( void * ) = 0;
+    virtual void MutexReadLock( void * ) = 0;
+    virtual bool MutexRWTryReadLock( void * ) = 0;
+    virtual bool MutexRWTryWriteLock( void * ) = 0;
+    virtual void MutexRWInit( void * ) = 0;
+    virtual void MutexRWShutdown( void * ) = 0;
+
+    virtual void ConditionVarWait( void *, void * ) = 0;
+
+    virtual void ConditionVarInit( void * ) = 0;
+    virtual void ConditionVarShutdown( void * ) = 0;
+
+    virtual void ThreadStart( void *pThread, ThreadFunc_t pFunction ) = 0;
+    virtual void ThreadJoin( void *pThread, uint64_t nTimeout = SIRENGINE_UINT64_MAX ) = 0;
+
+    virtual void OnOutOfMemory( void ) = 0;
+
+    static CrashType_t nEngineCrashReason;
 protected:
     ApplicationInfo_t m_ApplicationInfo;
     RenderAPIType_t m_nRendererType;
 
+    FileSystem::CFilePath m_GamePath;
+
     CVector<CString> m_CommandLineArgs;
 };
 
-extern IGenericApplication *g_pApplication;
 
-SIRENGINE_FORCEINLINE const CVector<CString>& IGenericApplication::GetCommandLine( void ) const
-{
-    return m_CommandLineArgs;
-}
-
-SIRENGINE_FORCEINLINE const ApplicationInfo_t& IGenericApplication::GetAppInfo( void ) const
-{
-    return m_ApplicationInfo;
-}
-
-SIRENGINE_FORCEINLINE RenderAPIType_t IGenericApplication::GetRenderAPI( void ) const
-{
-    return m_nRendererType;
-}
+#if defined(SIRENGINE_PLATFORM_WINDOWS)
+#elif defined(SIRENGINE_PLATFORM_LINUX)
+    #include <Engine/Core/Application/Posix/PosixApplication.h>
+#endif
 
 #endif

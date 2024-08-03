@@ -3,19 +3,26 @@
 
 #pragma once
 
+#include <Engine/Core/SIREngine.h>
 #include <Engine/RenderLib/RenderCommon.h>
 #include "VKCommon.h"
+#include "../RenderTexture.h"
+#include "../ImageLoader.h"
 
 class VKTexture : public IRenderTexture
 {
 public:
     VKTexture( const TextureInit_t& textureInfo );
-    virtual ~VKTexture() override;
+    virtual ~VKTexture();
+
+    virtual void StreamBuffer( void ) override;
 private:
     virtual void Upload( const TextureInit_t& textureInfo ) override;
 
     VkImage m_hImage;
     VmaAllocation m_hImageMemory;
+
+    CImageLoader m_ImageData;
 };
 
 #endif

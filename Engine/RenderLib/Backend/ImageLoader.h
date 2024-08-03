@@ -5,17 +5,43 @@
 
 #include "../RenderCommon.h"
 #include <Engine/Core/FileSystem/FilePath.h>
+#include <Engine/Core/FileSystem/MemoryFile.h>
 
 class CImageLoader
 {
 public:
-    CImageLoader( const CFilePath& filePath );
+    CImageLoader( void )
+        : m_nWidth( 0 ), m_nHeight( 0 ), m_nSamples( 0 )
+    { }
+    CImageLoader( CImageLoader&& other )
+        : m_ImageBuffer( eastl::move( other.m_ImageBuffer ) ),
+        m_nWidth( other.m_nWidth ), m_nHeight( other.m_nHeight ),
+        m_nSamples( 0 )
+    { }
+    CImageLoader( const FileSystem::CFilePath& filePath );
     ~CImageLoader();
 
+    inline const CImageLoader& operator=( const CImageLoader& other )
+    {
+        m_ImageBuffer = other.m_ImageBuffer;
+        m_nWidth = other.m_nWidth;
+        m_nHeight = other.m_nHeight;
+        m_nSamples = other.m_nSamples;
+        return *this;
+    }
+    inline const CImageLoader& operator=( CImageLoader&& other )
+    {
+        m_ImageBuffer = eastl::move( other.m_ImageBuffer );
+        m_nWidth = other.m_nWidth;
+        m_nHeight = other.m_nHeight;
+        m_nSamples = other.m_nSamples;
+        return *this;
+    }
+
     SIRENGINE_FORCEINLINE void *GetBuffer( void )
-    { return m_ImageBuffer.GetBuffer(); }
+    { return m_ImageBuffer.data(); }
     SIRENGINE_FORCEINLINE const void *GetBuffer( void ) const
-    { return m_ImageBuffer.GetBuffer(); }
+    { return m_ImageBuffer.data(); }
     SIRENGINE_FORCEINLINE uint32_t GetWidth( void ) const
     { return m_nWidth; }
     SIRENGINE_FORCEINLINE uint32_t GetHeight( void ) const
@@ -24,7 +50,7 @@ public:
     { return m_nSamples; }
 
     SIRENGINE_FORCEINLINE size_t GetSize( void ) const
-    { return m_ImageBuffer.Size(); }
+    { return m_ImageBuffer.size(); }
 private:
     static bool LoadJpeg( const CMemoryFile& fileBuffer, CVector<uint8_t>& outBuffer,
         uint32_t& nWidth, uint32_t& nHeight, uint32_t& nSamples );

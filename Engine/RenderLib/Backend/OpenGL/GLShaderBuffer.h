@@ -3,20 +3,21 @@
 
 #pragma once
 
-#include "../RenderShaderBuffer.h"
+#include <Engine/Core/SIREngine.h>
+#include <Engine/RenderLib/RenderCommon.h>
 #include "GLCommon.h"
-#include "GLProgram.h"
+#include "../RenderShaderBuffer.h"
 #include "GLBuffer.h"
-#include "GLShaderPipeline.h"
 
-class GLShaderBuffer : public IRenderShaderBuffer, GLBuffer
+class GLShaderBuffer : public IRenderShaderBuffer
 {
 public:
     GLShaderBuffer( GLPipelineSet_t *pPipeline, uint32_t nProgramBinding );
     virtual ~GLShaderBuffer() override;
 
-    void SwapData( GLPipelineSet_t *pSet ) override;
+    void SwapData( GLPipelineSet_t *pSet ) {}
 private:
+    GLBuffer *m_pBuffer;
     GLPipelineSet_t *m_pPipeline;
 };
 

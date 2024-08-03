@@ -1,6 +1,6 @@
 #include "GLProgram.h"
 
-GLProgram::GLProgram( const char *pszShaderName )
+GLProgram::GLProgram( const RenderProgramInit_t& programInfo )
 {
     m_hProgramID = nglCreateProgram();
 }

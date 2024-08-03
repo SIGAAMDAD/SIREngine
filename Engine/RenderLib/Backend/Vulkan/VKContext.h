@@ -3,22 +3,19 @@
 
 #pragma once
 
+#include <Engine/Core/SIREngine.h>
+#include <Engine/RenderLib/RenderCommon.h>
 #include "VKCommon.h"
-#include <Engine/Util/CVector.h>
-#include <Engine/Util/CStaticArray.h>
+#include "../RenderContext.h"
+#include "VKProgram.h"
+#include "VKTexture.h"
+#include <Engine/Memory/Backend/TagArenaAllocator.h>
+#include <Engine/Memory/Allocators/SlabAllocator.h>
 
-#include "VKSwapChain.h"
-
-typedef struct {
-    bool32 bHasGraphicsFamily;
-    uint32_t nGraphicsFamily;
-    bool32 bHasPresentFamily;
-    uint32_t nPresentFamily;
-
-    bool IsComplete( void ) const {
-        return bHasGraphicsFamily && bHasPresentFamily;
-    }
-} QueueFamilyIndices_t;
+typedef struct VKMemoryUsage : public GPUMemoryUsage {
+    uint32_t allocationCount;
+    uint32_t blockCount;
+} VKMemoryUsage_t;
 
 class VKContext : public IRenderContext
 {
@@ -28,6 +25,7 @@ public:
 
     virtual void SetupShaderPipeline( void ) override;
     virtual void SwapBuffers( void ) override;
+    virtual void BeginFrame( void );
     virtual void CompleteRenderPass( IRenderShaderPipeline *pShaderPipeline ) override;
 
     virtual void *Alloc( size_t nBytes, size_t nAligment = 16 ) override;
@@ -35,18 +33,23 @@ public:
 
     SIRENGINE_FORCEINLINE VkDevice GetDevice( void )
     { return m_hDevice; }
+    SIRENGINE_FORCEINLINE VkPhysicalDevice GetPhysicalDevice( void )
+    { return m_hPhysicalDevice; }
     SIRENGINE_FORCEINLINE VkSurfaceKHR GetSurface( void )
     { return m_hSurface; }
     SIRENGINE_FORCEINLINE VmaAllocator GetAllocator( void )
     { return m_hAllocator; }
 
     SIRENGINE_FORCEINLINE CVector<VkImage>& GetSwapChainImages( void )
-    { return m_pSwapChain->GetSwapChainImages(); }
+    { return m_SwapChainImages; }
     SIRENGINE_FORCEINLINE CVector<VkImageView>& GetSwapChainImageViews( void )
-    { return m_pSwapChain->GetSwapChainImageViews(); }
+    { return m_SwapChainImageViews; }
 
     SIRENGINE_FORCEINLINE VkRenderPass GetRenderPass( void )
     { return m_hRenderPass; }
+
+    void AllocateBuffer( VkBuffer *pBuffer, VkDeviceSize nSize, VkBufferUsageFlags nUsage,
+        VkMemoryPropertyFlags memProperties );
 
     VkFormat GetSupportedFormat( const VkFormat *pFormats, uint64_t nFormatCount, VkImageTiling nTiling,
         VkFormatFeatureFlags nFeatures ) const;
@@ -58,6 +61,16 @@ public:
     VkPresentModeKHR ChooseSwapPresentMode( const VkPresentModeKHR *pAvailablePresentModes,
         uint32_t nAvailablePresentModes );
     VkExtent2D ChooseSwapExtent( const VkSurfaceCapabilitiesKHR& capabilities, int nWidth, int nHeight );
+
+    virtual IRenderProgram *AllocateProgram( const RenderProgramInit_t& programInfo ) override;
+    virtual IRenderShader *AllocateShader( const RenderShaderInit_t& shaderInit ) override;
+    virtual IRenderBuffer *AllocateBuffer( GPUBufferType_t nType, uint64_t nSize ) override;
+    virtual IRenderTexture *AllocateTexture( const TextureInit_t& textureInfo ) override;
+
+    virtual const GPUMemoryUsage_t GetMemoryUsage( void ) override;
+    virtual void PrintMemoryInfo( void ) const override;
+
+    void LockPipeline( void );
 private:
     virtual void GetGPUExtensionList( void ) override;
 
@@ -66,8 +79,14 @@ private:
     void InitPhysicalVKDevice( void );
     void InitCommandPool( void );
     void InitRenderPass( void );
+    void InitSwapChain( void );
+
+    void RecreateSwapChain( void );
+    void ShutdownSwapChain( void );
 
     void CheckExtensionsSupported( void );
+
+    VkDebugUtilsMessengerEXT m_hDebugHandler;
 
     VkInstance m_hInstance;
     VkSurfaceKHR m_hSurface;
@@ -77,17 +96,45 @@ private:
     VkPipelineLayout m_hPipelineLayout;
     VkRenderPass m_hRenderPass;
     VkCommandPool m_hCommandPool;
-    VkCommandBuffer m_hCommandBuffer;
-    VkFence m_hInFlightFence;
+    VkCommandBuffer m_hCommandBuffers[ VK_MAX_FRAMES_IN_FLIGHT ];
+    VkFence m_hInFlightFences[ VK_MAX_FRAMES_IN_FLIGHT ];
+    VkSemaphore m_hRenderFinished[ VK_MAX_FRAMES_IN_FLIGHT ];
     VmaAllocator m_hAllocator;
 
-    VKSwapChain *m_pSwapChain;
+    VkSemaphore m_hSwapChainImageAvailable[ VK_MAX_FRAMES_IN_FLIGHT ];
+    CVector<VkImage> m_SwapChainImages;
+    CVector<VkImageView> m_SwapChainImageViews;
+    CVector<VkFramebuffer> m_SwapChainFramebuffers;
+    CVector<VmaAllocation> m_SwapChainImageAllocations;
+    VkSwapchainKHR m_hSwapChain;
+    VkFormat m_nSwapChainFormat;
+    VkExtent2D m_nSwapChainExtent;
+
+    VkImageView m_UniformDiffuseMap;
+    VkImageView m_UniformNormalMap;
+    VkImageView m_UniformSpecularMap;
+    VKTexture *m_pDiffuseMap;
+    VKTexture *m_pNormalMap;
+    VKTexture *m_pSpecularMap;
 
     VkQueue m_hGraphicsQueue;
     VkQueue m_hPresentQueue;
 
+    VKProgram *m_pGenericShader;
+
+    VmaVirtualBlock m_hVirtualMemory;
+
+    CTagArenaAllocator *m_pTagAllocator;
+
     CVector<VkExtensionProperties> m_Extensions;
+
+    uint32_t m_nCurrentFrameIndex;
+    uint32_t m_nImageFrameIndex;
 };
+
+extern PFN_vkCreateSwapchainKHR fn_vkCreateSwapchainKHR;
+extern PFN_vkCmdPushDescriptorSetKHR fn_vkCmdPushDescriptorSetKHR;
+extern PFN_vkCreateDescriptorUpdateTemplateKHR fn_vkCreateDescriptorUpdateTemplateKHR;
 
 extern VKContext *g_pVKContext;
 

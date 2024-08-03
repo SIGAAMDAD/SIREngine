@@ -1,17 +1,21 @@
 #include "VKShaderBuffer.h"
 
-extern CVar<uint32_t> e_MaxFPS;
-
-VKShaderBuffer::VKShaderBuffer( VKPipelineSet_t *pPipeline, uint32_t nProgramBinding )
-    : VKBuffer( BUFFER_TYPE_UNIFORM ), m_pPipeline( pPipeline )
+VKShaderBuffer::VKShaderBuffer(
+    VKPipelineSet_t *pPipeline, uint32_t nProgramBinding,
+    VkDescriptorSetLayoutBinding *pLayoutBindings
+)
+    : m_pPipeline( pPipeline )
 {
     uint32_t i;
     VKBuffer *pBuffer;
     VkDescriptorSetLayout *pLayouts;
 
     switch ( szDefaultUniforms[nProgramBinding].nType ) {
-    case UniformType_Buffer:
+    case UniformType_StaticBuffer:
         m_nType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        break;
+    case UniformType_DynamicBuffer:
+        m_nType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
         break;
     case UniformType_Sampler:
         m_nType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -20,26 +24,13 @@ VKShaderBuffer::VKShaderBuffer( VKPipelineSet_t *pPipeline, uint32_t nProgramBin
 
     m_nProgramBinding = szDefaultUniforms[nProgramBinding].nIndex;
 
-    pLayouts = (VkDescriptorSetLayout *)alloca( sizeof( *pLayouts ) * e_MaxFPS.GetValue() );
+    m_ShaderBuffers.reserve( VK_MAX_FRAMES_IN_FLIGHT );
 
-    VkDescriptorSetAllocateInfo allocInfo;
-    memset( &allocInfo, 0, sizeof( allocInfo ) );
-    allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    allocInfo.descriptorPool = pPipeline->hDescriptorPool;
-    allocInfo.descriptorSetCount = e_MaxFPS.GetValue();
-    allocInfo.pSetLayouts = pLayouts;
-
-    m_DescriptorSets.Resize( e_MaxFPS.GetValue() );
-    if ( vkAllocateDescriptorSets( g_pVKContext->GetDevice(), &allocInfo, m_DescriptorSets.GetBuffer() ) != VK_SUCCESS ) {
-
-    }
-
-    m_ShaderBuffers.Reserve( e_MaxFPS.GetValue() );
-
-    for ( i = 0; i < e_MaxFPS.GetValue(); i++ ) {
+    for ( i = 0; i < VK_MAX_FRAMES_IN_FLIGHT; i++ ) {
         pBuffer = new VKBuffer( BUFFER_TYPE_UNIFORM );
-        m_ShaderBuffers.Push( pBuffer );
+        m_ShaderBuffers.emplace_back( pBuffer );
 
+    /*
         VkWriteDescriptorSet descriptorWrite;
         memset( &descriptorWrite, 0, sizeof( descriptorWrite ) );
         descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -71,6 +62,7 @@ VKShaderBuffer::VKShaderBuffer( VKPipelineSet_t *pPipeline, uint32_t nProgramBin
         };
 
         vkUpdateDescriptorSets( g_pVKContext->GetDevice(), 1, &descriptorWrite, 0, NULL );
+        */
     }
 }
 
@@ -82,7 +74,7 @@ void VKShaderBuffer::SwapData( VKPipelineSet_t *pSet )
 {
     uint32_t i;
 
-    for ( i = 0; i < e_MaxFPS.GetValue(); i++ ) {
+    for ( i = 0; i < VK_MAX_FRAMES_IN_FLIGHT; i++ ) {
         VkWriteDescriptorSet descriptorWrite;
         memset( &descriptorWrite, 0, sizeof( descriptorWrite ) );
         descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -93,7 +85,8 @@ void VKShaderBuffer::SwapData( VKPipelineSet_t *pSet )
         descriptorWrite.descriptorCount = 1;
 
         switch ( szDefaultUniforms[i].nType ) {
-        case UniformType_Buffer: {
+        case UniformType_DynamicBuffer:
+        case UniformType_StaticBuffer: {
             static VkDescriptorBufferInfo bufferInfo;
             memset( &bufferInfo, 0, sizeof( bufferInfo ) );
             bufferInfo.buffer = m_ShaderBuffers[i]->GetVKObject();

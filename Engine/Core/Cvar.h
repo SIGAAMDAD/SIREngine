@@ -35,15 +35,31 @@ typedef enum {
     CVT_MAX
 } CvarType_t;
 
-template<typename T>
-class CVar
+class IConsoleVar
 {
 public:
-    inline CVar( void )
+    IConsoleVar( void )
     { }
-    inline CVar( const char *pszName, const T defaultValue, uint32_t iFlags, const char *pszDescription, CvarGroup_t nGroup )
-        : m_Name( pszName ), m_Description( pszDescription ), m_Value( defaultValue ),
-        m_nGroup( nGroup ), m_iFlags( iFlags )
+    IConsoleVar( const char *pName, const char *pDescription, uint32_t iFlags, CvarGroup_t nGroup )
+        : m_Name( pName ), m_Description( pDescription ), m_iFlags( iFlags ), m_nGroup( nGroup )
+    { }
+    ~IConsoleVar()
+    { }
+protected:
+    CString m_Name;
+    CString m_Description;
+    uint32_t m_iFlags;
+    CvarGroup_t m_nGroup;
+};
+
+template<typename T>
+class CVar : public IConsoleVar
+{
+public:
+    CVar( void )
+    { }
+    CVar( const char *pName, const T defaultValue, uint32_t iFlags, const char *pDescription, CvarGroup_t nGroup )
+        : IConsoleVar( pName, pDescription, iFlags, nGroup ), m_Value( defaultValue )
     { }
     ~CVar()
     { }
@@ -51,18 +67,13 @@ public:
     T GetValue( void ) const;
     T& GetRef( void );
     const T& GetRef( void ) const;
+
+    void SetValue( const T& value );
     
     const CString& GetName( void ) const;
     const CString& GetDescription( void ) const;
 private:
-    CString m_Name;
-    CString m_Description;
-    CVar *m_pNext;
-    CVar *m_pPrev;
     T m_Value;
-
-    CvarGroup_t m_nGroup;
-    uint32_t m_iFlags;
 };
 
 template<typename T>
@@ -76,6 +87,10 @@ SIRENGINE_FORCEINLINE T& CVar<T>::GetRef( void )
 template<typename T>
 SIRENGINE_FORCEINLINE const T& CVar<T>::GetRef( void ) const
 { return m_Value; }
+
+template<typename T>
+SIRENGINE_FORCEINLINE void CVar<T>::SetValue( const T& value )
+{ m_Value = value; }
 
 template<typename T>
 SIRENGINE_FORCEINLINE const CString& CVar<T>::GetName( void ) const

@@ -1,7 +1,8 @@
 #include "RenderLib.h"
 
-SIRENGINE_EXPORT_DEMANGLE void PostProcess_()
+void PostProcess_SuperSample( void )
 {
+    
 }
 
 SIRENGINE_EXPORT_DEMANGLE void CRenderer::PostProcess( void )

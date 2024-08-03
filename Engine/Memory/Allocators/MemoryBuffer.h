@@ -6,7 +6,7 @@
 #include <Engine/Core/SIREngine.h>
 #include <Engine/Util/CVector.h>
 
-template<typename T, typename AllocatorType = UtlMemory<T>>
+template<typename T, typename AllocatorType = UtlMallocAllocator>
 class IMemoryBuffer
 {
 public:
@@ -19,7 +19,7 @@ public:
         : m_Data( other.m_Data )
     { }
     virtual ~IMemoryBuffer()
-    { m_Data.Clear(); }
+    { m_Data.clear(); }
 
     virtual const IMemoryBuffer<T, AllocatorType>& operator=( const IMemoryBuffer<T, AllocatorType>& other );
     virtual const IMemoryBuffer<T, AllocatorType>& operator=( IMemoryBuffer<T, AllocatorType>&& other );
@@ -31,8 +31,8 @@ public:
 
     virtual T *GetBuffer( void );
     virtual const T *GetBuffer( void ) const;
-    virtual CVector<T, AllocatorType, uint64_t>& GetObjectBuffer( void );
-    virtual const CVector<T, AllocatorType, uint64_t>& GetObjectBuffer( void ) const;
+    virtual CVector<T, AllocatorType>& GetObjectBuffer( void );
+    virtual const CVector<T, AllocatorType>& GetObjectBuffer( void ) const;
 
     virtual uint64_t GetSize( void ) const;
 protected:
@@ -57,14 +57,15 @@ inline const IMemoryBuffer<T, AllocatorType>& IMemoryBuffer<T, AllocatorType>::o
 template<typename T, typename AllocatorType>
 inline T *IMemoryBuffer<T, AllocatorType>::ReleaseOwnership( uint64_t& nSize, uint64_t& nAllocated )
 {
-    return m_Data.ReleaseOwnership( nSize, nAllocated );
+    return NULL;
+//    return m_Data.ReleaseOwnership( nSize, nAllocated );
 }
 
 template<typename T, typename AllocatorType>
 inline void IMemoryBuffer<T, AllocatorType>::Set( const T *pNewData, uint64_t nItems )
 {
-    m_Data.Clear();
-    m_Data.Insert( pNewData, nItems );
+    m_Data.clear();
+    m_Data.insert( m_Data.end(), pNewData, pNewData + nItems );
 }
 
 template<typename T, typename AllocatorType>
@@ -76,23 +77,23 @@ inline void IMemoryBuffer<T, AllocatorType>::Set( const IMemoryBuffer<T, Allocat
 template<typename T, typename AllocatorType>
 inline T *IMemoryBuffer<T, AllocatorType>::GetBuffer( void )
 {
-    return m_Data.GetBuffer();
+    return m_Data.data();
 }
 
 template<typename T, typename AllocatorType>
 inline const T *IMemoryBuffer<T, AllocatorType>::GetBuffer( void ) const
 {
-    return m_Data.GetBuffer();
+    return m_Data.data();
 }
 
 template<typename T, typename AllocatorType>
-inline CVector<T, AllocatorType, uint64_t>& IMemoryBuffer<T, AllocatorType>::GetObjectBuffer( void )
+inline CVector<T, AllocatorType>& IMemoryBuffer<T, AllocatorType>::GetObjectBuffer( void )
 {
     return m_Data;
 }
 
 template<typename T, typename AllocatorType>
-inline const CVector<T, AllocatorType, uint64_t>& IMemoryBuffer<T, AllocatorType>::GetObjectBuffer( void ) const
+inline const CVector<T, AllocatorType>& IMemoryBuffer<T, AllocatorType>::GetObjectBuffer( void ) const
 {
     return m_Data;
 }
@@ -100,7 +101,7 @@ inline const CVector<T, AllocatorType, uint64_t>& IMemoryBuffer<T, AllocatorType
 template<typename T, typename AllocatorType>
 inline uint64_t IMemoryBuffer<T, AllocatorType>::GetSize( void ) const
 {
-    return m_Data.Size();
+    return m_Data.size();
 }
 
 template<typename T>

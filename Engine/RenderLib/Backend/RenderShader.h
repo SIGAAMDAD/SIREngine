@@ -3,24 +3,8 @@
 
 #pragma once
 
+#include <Engine/Core/SIREngine.h>
 #include <Engine/RenderLib/RenderCommon.h>
-#include <Engine/Core/FileSystem/MemoryFile.h>
-
-typedef enum {
-    ST_VERTEX,
-    ST_FRAGMENT,
-    ST_GEOMETRY,
-    ST_TESSELATION,
-
-    ST_PIXEL = ST_FRAGMENT,
-
-    ST_INVALID
-} RenderShaderType_t;
-
-typedef struct {
-    const char *pName;
-    RenderShaderType_t nType;
-} RenderShaderInit_t;
 
 class IRenderShader : public CResourceDef
 {

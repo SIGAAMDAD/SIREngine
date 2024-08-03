@@ -11,24 +11,25 @@
 class CMemoryFile : public IMemoryBuffer<uint8_t, UtlMallocAllocator>
 {
 public:
-    CMemoryFile( const CString& filePath )
+    CMemoryFile( const FileSystem::CFilePath& filePath )
     { Open( filePath ); }
     virtual ~CMemoryFile() override
     { }
 
-    bool Open( const CString& filePath );
+    bool Open( const FileSystem::CFilePath& filePath );
 };
 
-bool CMemoryFile::Open( const CString& filePath )
+inline bool CMemoryFile::Open( const FileSystem::CFilePath& filePath )
 {
-    CFileReader file( filePath );
+    FileSystem::CFileReader file( filePath );
 
     if ( !file.IsOpen() ) {
+        SIRENGINE_WARNING( "Error opening file '%s'\n", filePath.c_str() );
         return false;
     }
 
-    m_Data.Resize( file.GetLength() );
-    file.Read( m_Data.GetBuffer(), m_Data.Size() );
+    m_Data.resize( file.GetLength() );
+    file.Read( m_Data.data(), m_Data.size() );
 
     return true;
 }

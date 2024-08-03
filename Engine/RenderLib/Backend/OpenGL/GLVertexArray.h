@@ -3,20 +3,43 @@
 
 #pragma once
 
-#include "../RenderVertexArray.h"
+#include <Engine/Core/SIREngine.h>
+#include <Engine/RenderLib/RenderCommon.h>
+#include "GLCommon.h"
 #include "GLBuffer.h"
 
-class GLVertexArray : public IRenderVertexArray
+class GLVertexArray
 {
 public:
-    GLVertexArray( void );
-    virtual ~GLVertexArray() override;
-
-    virtual void SetVertexAttribs( const VertexAttribInfo_t *vertexAttribs, uint64_t nAttribCount ) override;
+    GLVertexArray( const RenderPipelineInputSet_t& createInfo );
+    ~GLVertexArray();
 
     SIRENGINE_FORCEINLINE GLuint GetGLObject( void ) const
     { return m_hVertexArrayID; }
+
+    SIRENGINE_FORCEINLINE GLBuffer *GetVertexBuffer( void )
+    { return m_pVertexBuffer; }
+    SIRENGINE_FORCEINLINE GLBuffer *GetIndexBuffer( void )
+    { return m_pIndexBuffer; }
+
+    SIRENGINE_FORCEINLINE void Bind( void )
+    {
+        nglBindVertexArray( m_hVertexArrayID );
+        m_pVertexBuffer->Bind();
+        m_pIndexBuffer->Bind();
+    }
+    SIRENGINE_FORCEINLINE void Unbind( void )
+    {
+        nglBindVertexArray( 0 );
+        m_pVertexBuffer->Unbind();
+        m_pIndexBuffer->Unbind();
+    }
 private:
+    GLBuffer *m_pVertexBuffer;
+    GLBuffer *m_pIndexBuffer;
+    const VertexAttribInfo_t *m_pVertexAttribs;
+    uint64_t m_nAttribCount;
+
     GLuint m_hVertexArrayID;
 };
 

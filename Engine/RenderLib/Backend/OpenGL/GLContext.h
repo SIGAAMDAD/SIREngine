@@ -3,6 +3,9 @@
 
 #pragma once
 
+#include <Engine/Core/SIREngine.h>
+#include <Engine/RenderLib/RenderCommon.h>
+#include "GLCommon.h"
 #include "../RenderContext.h"
 
 class GLContext : public IRenderContext
@@ -17,13 +20,29 @@ public:
 
     virtual void *Alloc( size_t nBytes, size_t nAligment = 16 ) override;
     virtual void Free( void *pBuffer ) override;
+
+    virtual const GPUMemoryUsage_t GetMemoryUsage( void ) override;
+    virtual void PrintMemoryInfo( void ) const override;
+
+    virtual IRenderProgram *AllocateProgram( const RenderProgramInit_t& programInfo ) override;
+    virtual IRenderShader *AllocateShader( const RenderShaderInit_t& shaderInit ) override;
+    virtual IRenderBuffer *AllocateBuffer( GPUBufferType_t nType, uint64_t nSize ) override;
+    virtual IRenderTexture *AllocateTexture( const TextureInit_t& textureInfo ) override;
 private:
     virtual void GetGPUExtensionList( void ) override;
 
     void InitGLProcs( void );
     void CheckExtensionsSupport( void );
 
+    char m_szGLSLVersion[1024];
+    char m_szDriverVersion[1024];
+    char m_szRendererString[1024];
+    char m_szVendorString[1024];
+
     SDL_GLContext m_pGLContext;
 };
+
+extern CVar<bool32> r_UsePixelBufferObjects;
+extern CVar<bool32> r_UseMappedBufferObjects;
 
 #endif

@@ -3,18 +3,12 @@
 
 #pragma once
 
-#include "../RenderCommon.h"
+#include <Engine/Core/SIREngine.h>
+#include <Engine/RenderLib/RenderCommon.h>
 #include "GLCommon.h"
+#include "../RenderShaderPipeline.h"
 #include "GLProgram.h"
 #include "GLVertexArray.h"
-#include "GLShaderBuffer.h"
-
-typedef struct {
-    GLProgram *pShader;
-    uint32_t nEnabledAttribs;
-
-    CVector<GLShaderBuffer *> dataInputBuffers;
-} GLPipelineSet_t;
 
 class GLShaderPipeline : public IRenderShaderPipeline
 {
@@ -28,6 +22,8 @@ public:
 
     SIRENGINE_FORCEINLINE GLPipelineSet_t *GetPipelineData( void )
     { return &m_PipelineCache[ m_nUsedPipeline ]; }
+    SIRENGINE_FORCEINLINE GLVertexArray *GetVertexArray( void )
+    { return m_pPipelineArray; }
 private:
     void UpdateVertexPointers( const GLPipelineSet_t *pSet );
 

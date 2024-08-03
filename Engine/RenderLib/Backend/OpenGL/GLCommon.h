@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include <Engine/Core/SIREngine.h>
 #include <Engine/RenderLib/RenderCommon.h>
 
 #if defined( _WIN32 )
@@ -214,7 +215,8 @@ typedef void*(*NGLloadproc)(const char *name);
     NGL( void, glDeleteSamplers, GLsizei n, const GLuint *samplers ) \
     NGL( void, glSamplerParameteri, GLuint sampler, GLenum pname, GLint param ) \
     NGL( void, glSamplerParameterf, GLuint sampler, GLenum pname, GLfloat param ) \
-    NGL( void, glGenerateMipmap, GLenum target )
+    NGL( void, glGenerateMipmap, GLenum target ) \
+    NGL( void, glBufferPageCommitmentARB, GLenum target, GLintptr offset, GLsizeiptr size, GLboolean commit )
 
 #define NGL_FBO_Procs \
     NGL( void, glGenFramebuffers, GLsizei n, GLuint *buffers ) \
@@ -341,5 +343,15 @@ NGL_ARB_sync
 #undef NGL
 
 #define LOAD_GL_PROCS( procs ) procs
+
+class GLProgram;
+class GLShaderBuffer;
+
+typedef struct GLPipelineSet {
+    GLProgram *pShader;
+    uint32_t nEnabledAttribs;
+
+    CVector<GLShaderBuffer *> dataInputBuffers;
+} GLPipelineSet_t;
 
 #endif
