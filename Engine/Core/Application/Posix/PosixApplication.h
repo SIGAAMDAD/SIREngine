@@ -13,9 +13,7 @@ public:
     CPosixApplication( void );
     virtual ~CPosixApplication() override;
 
-    void Error( const char *fmt, ... ) SIRENGINE_ATTRIBUTE(format(printf, 2, 3));
-    void Warning( const char *fmt, ... ) SIRENGINE_ATTRIBUTE(format(printf, 2, 3));
-    void Log( const char *fmt, ... ) SIRENGINE_ATTRIBUTE(format(printf, 2, 3));
+    virtual void Error( const char *pError ) override;
 
     virtual size_t GetOSPageSize( void ) const override;
 
@@ -39,28 +37,10 @@ public:
     virtual size_t FileTell( void *hFile ) override;
     virtual size_t FileLength( void *hFile ) override;
 
-    virtual void MutexLock( void *pMutex ) override;
-    virtual void MutexUnlock( void *pMutex ) override;
-    virtual bool MutexTryLock( void *pMutex ) override;
-    virtual void MutexInit( void *pMutex ) override;
-    virtual void MutexShutdown( void *pMutex ) override;
-    virtual void MutexRWUnlock( void *pMutex ) override;
-    virtual void MutexWriteLock( void *pMutex ) override;
-    virtual void MutexReadLock( void *pMutex ) override;
-    virtual bool MutexRWTryReadLock( void *pMutex ) override;
-    virtual bool MutexRWTryWriteLock( void *pMutex ) override;
-    virtual void MutexRWInit( void *pMutex ) override;
-    virtual void MutexRWShutdown( void *pMutex ) override;
+    virtual void ThreadStart( void *pThread, CThread *pObject, void (CThread::*pFunction)( void ) ) override;
+    virtual void ThreadJoin( void *pThread, CThread *pObject, uint64_t nTimeout = SIRENGINE_UINT64_MAX ) override;
 
-    virtual void ConditionVarWait( void *pCoditionVariable, void *pMutex ) override;
-
-    virtual void ConditionVarInit( void *pConditionVariable ) override;
-    virtual void ConditionVarShutdown( void *pConditionVariable ) override;
-
-    virtual void ThreadStart( void *pThread, ThreadFunc_t pFunction ) override;
-    virtual void ThreadJoin( void *pThread, uint64_t nTimeout = SIRENGINE_UINT64_MAX ) override;
-
-    virtual const CVector<FileSystem::CFilePath>& ListFiles( const FileSystem::CFilePath& dir, bool bDirectoryOnly = false ) override;
+    virtual CVector<FileSystem::CFilePath> ListFiles( const FileSystem::CFilePath& dir, bool bDirectoryOnly = false ) override;
 
     virtual void OnOutOfMemory( void ) override;
 
@@ -70,19 +50,9 @@ public:
     static size_t nOOMBackupSize;
 private:
     bool32 m_bBacktraceError;
-
+    
     void GetPwd( void );
     static void *ThreadFunction( void *pArgument );
 };
-
-namespace PlatformTypes {
-    typedef pthread_mutex_t mutex_t;
-    typedef pthread_rwlock_t rwlock_t;
-    typedef pthread_cond_t condition_variable_t;
-    typedef pthread_t thread_t;
-    typedef int file_t;
-};
-
-extern CPosixApplication *g_pApplication;
 
 #endif

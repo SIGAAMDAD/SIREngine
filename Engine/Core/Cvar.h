@@ -56,48 +56,64 @@ template<typename T>
 class CVar : public IConsoleVar
 {
 public:
-    CVar( void )
+    inline CVar( void )
     { }
-    CVar( const char *pName, const T defaultValue, uint32_t iFlags, const char *pDescription, CvarGroup_t nGroup )
+    inline CVar( const char *pName, const T defaultValue, uint32_t iFlags, const char *pDescription, CvarGroup_t nGroup )
         : IConsoleVar( pName, pDescription, iFlags, nGroup ), m_Value( defaultValue )
     { }
-    ~CVar()
+    inline ~CVar()
     { }
 
-    T GetValue( void ) const;
-    T& GetRef( void );
-    const T& GetRef( void ) const;
+    inline T GetValue( void ) const
+    { return m_Value; }
+    inline T& GetRef( void )
+    { return m_Value; }
+    inline const T& GetRef( void ) const
+    { return m_Value; }
 
-    void SetValue( const T& value );
-    
-    const CString& GetName( void ) const;
-    const CString& GetDescription( void ) const;
+    inline void SetValue( const T& value )
+    { m_Value = value; }
+    inline void SetValue( T&& value )
+    { m_Value = eastl::move( value ); }
+
+    inline const CString& GetName( void ) const
+    { return m_Name; }
+    inline const CString& GetDescription( void ) const
+    { return m_Description; }
 private:
     T m_Value;
 };
 
 template<typename T>
-SIRENGINE_FORCEINLINE T CVar<T>::GetValue( void ) const
-{ return m_Value; }
+class CVarRef : public IConsoleVar
+{
+public:
+    inline CVarRef( void )
+    { }
+    inline CVarRef( const char *pName, T& valueRef, uint32_t iFlags, const char *pDescription, CvarGroup_t nGroup )
+        : IConsoleVar( pName, pDescription, iFlags, nGroup ), m_pRefValue( eastl::addressof( valueRef ) )
+    { }
+    inline ~CVarRef()
+    { }
 
-template<typename T>
-SIRENGINE_FORCEINLINE T& CVar<T>::GetRef( void )
-{ return m_Value; }
+    inline T GetValue( void ) const
+    { return *m_pRefValue; }
+    inline T& GetRef( void )
+    { return *m_pRefValue; }
+    inline const T& GetRef( void ) const
+    { return *m_pRefValue; }
 
-template<typename T>
-SIRENGINE_FORCEINLINE const T& CVar<T>::GetRef( void ) const
-{ return m_Value; }
+    inline void SetValue( const T& value )
+    { *m_pRefValue = value; }
+    inline void SetValue( T&& value )
+    { *m_pRefValue = eastl::move( value ); }
 
-template<typename T>
-SIRENGINE_FORCEINLINE void CVar<T>::SetValue( const T& value )
-{ m_Value = value; }
-
-template<typename T>
-SIRENGINE_FORCEINLINE const CString& CVar<T>::GetName( void ) const
-{ return m_Name; }
-
-template<typename T>
-SIRENGINE_FORCEINLINE const CString& CVar<T>::GetDescription( void ) const
-{ return m_Description; }
+    inline const CString& GetName( void ) const
+    { return m_Name; }
+    inline const CString& GetDescription( void ) const
+    { return m_Description; }
+private:
+    T *m_pRefValue;
+};
 
 #endif

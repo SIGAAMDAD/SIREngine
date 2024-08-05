@@ -37,8 +37,6 @@ LD_LIBS =-lGL -lSDL2 -lvulkan libEASTL.a -lbacktrace -Wl,-rpath='.' -lboost_atom
 MAKE=make
 MKDIR=mkdir -p
 
--include UnrealLibs.txt
-
 .PHONY: all clean targets makedirs default
 
 SRC=\
@@ -49,6 +47,9 @@ SRC=\
 	$(O)/Engine/Memory/Allocators/VirtualStackAllocator.o \
 	\
 	$(O)/Engine/Memory/Backend/TagArenaAllocator.o \
+	$(O)/Engine/Memory/Memory.o \
+	\
+	$(O)/Engine/Core/FileSystem/FileSystem.o \
 	\
 	$(O)/Engine/Core/Logging/Logger.o \
 	\
@@ -84,6 +85,10 @@ SRC=\
 	$(O)/Engine/RenderLib/Backend/ImageLib/LoadPNG.o \
 	\
 	$(O)/pngloader/lodepng.o \
+	\
+	$(O)/Engine/Core/SmMalloc/smmalloc_generic.o \
+	$(O)/Engine/Core/SmMalloc/smmalloc_tls.o \
+	$(O)/Engine/Core/SmMalloc/smmalloc.o \
 
 VERTEX_SPIRV_FILES=\
 	Resources/Shaders/Vulkan/Generic.vert.spv \
@@ -101,10 +106,12 @@ makedirs:
 	@if [ ! -d $(O)/pngloader ];then mkdir $(O)/pngloader;fi
 	@if [ ! -d $(O)/Engine ];then mkdir $(O)/Engine;fi
 	@if [ ! -d $(O)/Engine/Core/ ];then mkdir $(O)/Engine/Core;fi
+	@if [ ! -d $(O)/Engine/Core/SmMalloc ];then mkdir $(O)/Engine/Core/SmMalloc;fi
 	@if [ ! -d $(O)/Engine/Memory ];then mkdir $(O)/Engine/Memory;fi
 	@if [ ! -d $(O)/Engine/Memory/Allocators ];then mkdir $(O)/Engine/Memory/Allocators;fi
 	@if [ ! -d $(O)/Engine/Memory/Backend ];then mkdir $(O)/Engine/Memory/Backend;fi
 	@if [ ! -d $(O)/Engine/Core/Logging ];then mkdir $(O)/Engine/Core/Logging;fi
+	@if [ ! -d $(O)/Engine/Core/FileSystem ];then mkdir $(O)/Engine/Core/FileSystem;fi
 	@if [ ! -d $(O)/Engine/Core/Application/ ];then mkdir $(O)/Engine/Core/Application;fi
 	@if [ ! -d $(O)/Engine/Core/Application/GenericPlatform/ ];then mkdir $(O)/Engine/Core/Application/GenericPlatform/;fi
 	@if [ ! -d $(O)/Engine/Core/Application/Posix/ ];then mkdir $(O)/Engine/Core/Application/Posix/;fi
@@ -155,7 +162,7 @@ $(O)/Engine/Memory/Allocators/%.o: Engine/Memory/Allocators/%.cpp
 	$(CC) $(CFLAGS) -o $@ -c $<
 $(O)/Engine/Memory/Backend/%.o: Engine/Memory/Backend/%.cpp
 	$(CC) $(CFLAGS) -o $@ -c $<
-$(O)/Engine/Core/Application/GenericApplication/%.o: Engine/Application/GenericApplication/%.cpp
+$(O)/Engine/Memory/%.o: Engine/Memory/%.cpp
 	$(CC) $(CFLAGS) -o $@ -c $<
 $(O)/Engine/Core/Application/Posix/%.o: Engine/Application/Posix/%.cpp
 	$(CC) $(CFLAGS) -o $@ -c $<

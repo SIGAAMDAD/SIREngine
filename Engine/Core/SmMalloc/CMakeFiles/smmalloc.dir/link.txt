@@ -1,0 +1,2 @@
+/usr/bin/ar qc libsmmalloc.a CMakeFiles/smmalloc.dir/smmalloc.o CMakeFiles/smmalloc.dir/smmalloc_generic.o CMakeFiles/smmalloc.dir/smmalloc_tls.o
+/usr/bin/ranlib libsmmalloc.a

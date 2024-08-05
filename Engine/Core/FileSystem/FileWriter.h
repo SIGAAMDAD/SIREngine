@@ -5,12 +5,18 @@
 
 #include "FileStream.h"
 
-class CFileWriter : public IFileStream
-{
-public:
-    CFileWriter( void );
-    virtual ~CFileWriter() override;
-private:
+namespace FileSystem {
+    class CFileWriter : public IFileStream
+    {
+    public:
+        CFileWriter( void );
+        virtual ~CFileWriter() override;
+
+        size_t Write( const void *pBuffer, size_t nBytes );
+        void Flush( void );
+    private:
+        FILE *m_hFile;
+    };
 };
 
 #endif

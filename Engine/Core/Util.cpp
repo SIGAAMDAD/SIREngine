@@ -32,16 +32,31 @@ size_t SIRENGINE_ATTRIBUTE(format(printf, 3, 4)) SIREngine_snprintf( char *pszBu
     return nLength;
 }
 
+size_t SIRENGINE_ATTRIBUTE(format(printf, 3, 4)) SIREngine_snprintf_append( char *pszBuffer, size_t nMaxSize, const char *fmt, ... )
+{
+	va_list argptr;
+	char szBuffer[20000];
+    size_t nLength;
+
+    va_start( argptr, fmt );
+    nLength = SIREngine_Vsnprintf( szBuffer, sizeof( szBuffer ) - 1, fmt, argptr );
+    va_end( argptr );
+
+	strncat( pszBuffer, szBuffer, nMaxSize );
+
+    return nLength;
+}
+
 void SIREngine_strncpyz( char *pDest, const char *pSource, size_t nLength )
 {
     if ( !pDest ) {
-        g_pApplication->Error( "SIREngine_strncpyz: NULL destination" );
+        SIRENGINE_ERROR( "SIREngine_strncpyz: NULL destination" );
     }
     if ( !pSource ) {
-        g_pApplication->Error( "SIREngine_strmcpyz: NULL source" );
+        SIRENGINE_ERROR( "SIREngine_strmcpyz: NULL source" );
     }
     if ( nLength < 1 ) {
-        g_pApplication->Error( "SIREngine_strncpyz: funny length" );
+        SIRENGINE_ERROR( "SIREngine_strncpyz: funny length" );
     }
 
     strncpy( pDest, pSource, nLength - 1 );

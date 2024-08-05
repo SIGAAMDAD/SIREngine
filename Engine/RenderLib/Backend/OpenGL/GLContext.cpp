@@ -34,7 +34,7 @@ GLContext::GLContext( const ApplicationInfo_t& appInfo )
 {
     m_pGLContext = SDL_GL_CreateContext( m_pWindow );
     if ( !m_pGLContext ) {
-        g_pApplication->Error( "SDL_GL_CreateContext failed: %s", SDL_GetError() );
+        SIRENGINE_ERROR( "SDL_GL_CreateContext failed: %s", SDL_GetError() );
     }
     SIRENGINE_LOG( "Created SDL2 OpenGL Context" );
 

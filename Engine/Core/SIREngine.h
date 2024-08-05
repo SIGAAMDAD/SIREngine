@@ -32,11 +32,15 @@
 #include <EASTL/algorithm.h>
 #include <EASTL/sort.h>
 
+#include "Logging/Logger.h"
+
 #include <Engine/Util/CReverseIterator.h>
 #include <Engine/Util/CString.h>
 #include <Engine/Util/CVector.h>
 #include <Engine/Util/CStaticArray.h>
 #include <Engine/Util/CConstList.h>
+
+#include <Engine/Memory/Backend/TagArenaAllocator.h>
 
 #include <Engine/Core/Util.h>
 
@@ -85,7 +89,5 @@ typedef struct {
 #define SIRENGINE_VERSION_PATCH 0
 #define SIRENGINE_VERSION SIRENGINE_MAKE_VERSION( SIRENGINE_VERSION_MAJOR, SIRENGINE_VERSION_MINOR, SIRENGINE_VERSION_PATCH )
 #define SIRENGINE_VERSION_STRING "SIR Engine v" SIRENGINE_XSTRING( SIRENGINE_VERSION_MAJOR ) "." SIRENGINE_XSTRING( SIRENGINE_VERSION_MINOR ) "." SIRENGINE_XSTRING( SIRENGINE_VERSION_PATCH ) ""
-
-#include "Logging/Logger.h"
 
 #endif

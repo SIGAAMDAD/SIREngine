@@ -123,6 +123,9 @@ VKShaderPipeline::VKShaderPipeline( void )
     samplerNearestLinearInfo.maxAnisotropy = 1.0f;
     samplerNearestLinearInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
     VK_CALL( vkCreateSampler( g_pVKContext->GetDevice(), &samplerNearestLinearInfo, NULL, &m_Samplers[3] ) );
+
+    m_pVertexBuffer = dynamic_cast<VKBuffer *>( IRenderBuffer::Create( BUFFER_TYPE_VERTEX, 256*1024*1024 ) );
+    m_pIndexBuffer = dynamic_cast<VKBuffer *>( IRenderBuffer::Create( BUFFER_TYPE_INDEX, 256*1024*1024 ) );
 }
 
 VKShaderPipeline::~VKShaderPipeline()
@@ -162,8 +165,8 @@ void VKShaderPipeline::ClearPipelineCache( void )
         if ( it->hDescriptorPool ) {
             vkDestroyDescriptorPool( g_pVKContext->GetDevice(), it->hDescriptorPool, NULL );
         }
-        g_pVKContext->Free( it->pDescriptorSetLayouts );
-        g_pVKContext->Free( it->pDescriptorSets );
+        delete[] it->pDescriptorSetLayouts;
+        delete[] it->pDescriptorSets;
     }
     m_PipelineCache.clear();
 }
@@ -183,7 +186,7 @@ uint64_t VKShaderPipeline::AddVertexAttribSet( const VertexInputDescription_t& v
     nSize += SIRENGINE_PAD( sizeof( *pSet->pAttributes ) * nAttribCount, sizeof( uintptr_t ) );
     nSize += SIRENGINE_PAD( sizeof( *pSet->pBindings ) * nAttribCount, sizeof( uintptr_t ) );
 
-    pSet = (VKPipelineSet_t *)g_pVKContext->Alloc( nSize );
+    pSet = (VKPipelineSet_t *)g_pVKContext->Alloc( nSize, 16 );
     pSet->pAttributes = (VkVertexInputAttributeDescription *)( pSet + 1 );
     pSet->pBindings = (VkVertexInputBindingDescription *)( pSet->pAttributes + nAttribCount );
 
@@ -214,10 +217,6 @@ uint64_t VKShaderPipeline::AddVertexAttribSet( const VertexInputDescription_t& v
     SIRENGINE_LOG( "Using %lu VertexInput Attributes.", nAttribCount );
 
     pSet->nAttribCount = nAttribCount;
-
-    {
-        
-    }
     
     {
         AllocateUniformBufferLayout( pSet, vertexInput );
@@ -381,7 +380,7 @@ void VKShaderPipeline::SaveVulkanPipelineCache( void )
     void *pDataBuffer;
 
     vkGetPipelineCacheData( g_pVKContext->GetDevice(), m_hVulkanDataCache, &nDataSize, NULL );
-    pDataBuffer = g_pVKContext->Alloc( nDataSize );
+    pDataBuffer = new char[ nDataSize ];
     vkGetPipelineCacheData( g_pVKContext->GetDevice(), m_hVulkanDataCache, &nDataSize, pDataBuffer );
 }
 
@@ -430,9 +429,9 @@ void VKShaderPipeline::AllocateUniformBufferLayout( VKPipelineSet_t *pSet, const
     
     VK_CALL( vkCreateDescriptorPool( g_pVKContext->GetDevice(), &poolInfo, NULL, &pSet->hDescriptorPool ) );
     
-    pSet->pDescriptorSetLayouts = (VkDescriptorSetLayout *)g_pVKContext->Alloc( sizeof( *pSet->pDescriptorSetLayouts ) * VK_MAX_FRAMES_IN_FLIGHT );
-    pSet->pDescriptorSets = (VkDescriptorSet *)g_pVKContext->Alloc( sizeof( *pSet->pDescriptorSets ) * VK_MAX_FRAMES_IN_FLIGHT );
-    
+    pSet->pDescriptorSetLayouts = new VkDescriptorSetLayout[ sizeof( *pSet->pDescriptorSetLayouts ) * VK_MAX_FRAMES_IN_FLIGHT ];
+    pSet->pDescriptorSets = new VkDescriptorSet[ sizeof( *pSet->pDescriptorSets ) * VK_MAX_FRAMES_IN_FLIGHT ];
+
     pLayoutBindings = (VkDescriptorSetLayoutBinding *)alloca( sizeof( *pLayoutBindings ) * pSet->nUniformCount );
     memset( pLayoutBindings, 0, sizeof( *pLayoutBindings ) * pSet->nUniformCount );
 

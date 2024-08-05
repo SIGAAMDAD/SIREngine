@@ -8,6 +8,7 @@
 #include <Engine/Util/CString.h>
 #include <Engine/Util/CVector.h>
 #include <Engine/Core/FileSystem/FilePath.h>
+#include <Engine/Core/Logging/Logger.h>
 
 typedef struct {
 
@@ -34,11 +35,15 @@ typedef enum {
     Crash_Engine,
 } CrashType_t;
 
+class CThread;
+
 class IGenericApplication
 {
 public:
     IGenericApplication( void );
     virtual ~IGenericApplication();
+
+    virtual void Error( const char *pError ) = 0;
 
     SIRENGINE_FORCEINLINE ApplicationInfo_t& GetAppInfo( void )
     { return m_ApplicationInfo; }
@@ -87,28 +92,10 @@ public:
     virtual size_t FileTell( void *hFile ) = 0;
     virtual size_t FileLength( void *hFile ) = 0;
 
-    virtual const CVector<FileSystem::CFilePath>& ListFiles( const FileSystem::CFilePath& dir, bool bDirectoryOnly = false ) = 0;
+    virtual CVector<FileSystem::CFilePath> ListFiles( const FileSystem::CFilePath& dir, bool bDirectoryOnly = false ) = 0;
 
-    virtual void MutexLock( void * ) = 0;
-    virtual void MutexUnlock( void * ) = 0;
-    virtual bool MutexTryLock( void * ) = 0;
-    virtual void MutexInit( void * ) = 0;
-    virtual void MutexShutdown( void * ) = 0;
-    virtual void MutexRWUnlock( void * ) = 0;
-    virtual void MutexWriteLock( void * ) = 0;
-    virtual void MutexReadLock( void * ) = 0;
-    virtual bool MutexRWTryReadLock( void * ) = 0;
-    virtual bool MutexRWTryWriteLock( void * ) = 0;
-    virtual void MutexRWInit( void * ) = 0;
-    virtual void MutexRWShutdown( void * ) = 0;
-
-    virtual void ConditionVarWait( void *, void * ) = 0;
-
-    virtual void ConditionVarInit( void * ) = 0;
-    virtual void ConditionVarShutdown( void * ) = 0;
-
-    virtual void ThreadStart( void *pThread, ThreadFunc_t pFunction ) = 0;
-    virtual void ThreadJoin( void *pThread, uint64_t nTimeout = SIRENGINE_UINT64_MAX ) = 0;
+    virtual void ThreadStart( void *pThread, CThread *, void (CThread::*pFunction)( void ) ) = 0;
+    virtual void ThreadJoin( void *pThread, CThread *, uint64_t nTimeout = SIRENGINE_UINT64_MAX ) = 0;
 
     virtual void OnOutOfMemory( void ) = 0;
 
@@ -122,10 +109,14 @@ protected:
     CVector<CString> m_CommandLineArgs;
 };
 
+extern IGenericApplication *g_pApplication;
 
 #if defined(SIRENGINE_PLATFORM_WINDOWS)
 #elif defined(SIRENGINE_PLATFORM_LINUX)
     #include <Engine/Core/Application/Posix/PosixApplication.h>
+    #include <Engine/Core/Application/Posix/PosixTypes.h>
 #endif
+
+#include <Engine/Core/FileSystem/FileSystem.h>
 
 #endif

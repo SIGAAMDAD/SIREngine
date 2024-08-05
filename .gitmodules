@@ -10,3 +10,6 @@
 [submodule "asmjit"]
 	path = asmjit
 	url = https://github.com/asmjit/asmjit.git
+[submodule "smmalloc"]
+	path = smmalloc
+	url = https://github.com/SergeyMakeev/smmalloc.git

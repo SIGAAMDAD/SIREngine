@@ -35,17 +35,26 @@ public:
     virtual void GetMemoryStatus( size_t *pUsedMemory, size_t *pFreeMemory ) = 0;
 };
 
+#ifdef USE_ARENA_ALLOC
 extern IMemAlloc *g_pMemAlloc;
+#elif defined(USE_SMMALLOC)
+#include <Engine/Core/SmMalloc/smmalloc.h>
+extern sm_allocator g_pMemAlloc;
+#endif
 
-#if defined(SIRENGINE_REPLACE_NEW_AND_DELETE)
+#if defined(SIRENGINE_REPLACE_NEW_AND_DELETE) && !defined(SIRENGINE_NEW_AND_DELETE_OVERRIDE)
 #include <new>
 #undef new
 #undef delete
 
+extern void *Mem_Alloc( size_t nBytes, size_t nAlignment );
+extern void Mem_Free( void *pMemory );
+
 SIRENGINE_FORCEINLINE void *operator new( size_t nSize )
-{ return g_pMemAlloc->Alloc( nSize ); }
+{ return Mem_Alloc( nSize, 16 ); }
+
 SIRENGINE_FORCEINLINE void *operator new( size_t nSize, size_t alignment )
-{ return g_pMemAlloc->Alloc( SIRENGINE_PAD( nSize, alignment ) ); }
+{ return Mem_Alloc( nSize, alignment ); }
 
 SIRENGINE_FORCEINLINE void *operator new[]( size_t nSize )
 { return ::operator new( nSize ); }
@@ -63,7 +72,7 @@ SIRENGINE_FORCEINLINE void *operator new[]( size_t nSize, size_t alignment, cons
 { return ::operator new[]( nSize, alignment ); }
 
 SIRENGINE_FORCEINLINE void operator delete( void *pMemory ) noexcept
-{ g_pMemAlloc->Free( pMemory ); }
+{ Mem_Free( pMemory ); }
 
 SIRENGINE_FORCEINLINE void operator delete[]( void *pMemory ) noexcept
 { ::operator delete( pMemory ); }

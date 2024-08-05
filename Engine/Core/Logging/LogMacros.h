@@ -7,5 +7,9 @@
     CLogManager::g_Logger.LogInfo( __FILE__, __LINE__, __VA_ARGS__ )
 #define SIRENGINE_WARNING( ... ) \
     CLogManager::g_Logger.LogWarning( __FILE__, __LINE__, __VA_ARGS__ )
+#define SIRENGINE_ERROR( ... ) \
+    CLogManager::g_Logger.LogError( __FILE__, __LINE__, __VA_ARGS__ )
+
+#define SIRENGINE_LOG_LEVEL( level, ... )
 
 #endif

@@ -15,8 +15,6 @@ typedef enum {
     MEMTAG_COUNT
 } MemTag_t;
 
-#include "MemAlloc.h"
-
 #if defined(SIRENGINE_MEMORY_DEBUG)
 #define Mem_Alloc( size ) Mem_AllocDebug( size, __FILE__, __FUNC__, __LINE__ )
 #define Mem_Free( ptr ) Mem_FreeDebug( ptr, __FILE__, __FUNC__, __LINE__ )
@@ -29,6 +27,9 @@ void SIRENGINE_DLL_EXPORT Mem_Free( void *pMemory );
 
 void SIRENGINE_DLL_EXPORT Mem_Init( void );
 void SIRENGINE_DLL_EXPORT Mem_Shutdown( void );
-void SIRENGINE_DLL_EXPORT Mem_ClearTagMemory( uint64_t iTag );
+void SIRENGINE_DLL_EXPORT *Mem_Alloc( size_t nBytes, size_t nAlignment );
+void SIRENGINE_DLL_EXPORT Mem_Free( void *pMemory );
+
+#include "MemAlloc.h"
 
 #endif

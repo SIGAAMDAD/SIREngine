@@ -26,7 +26,7 @@ VKShader::VKShader( const RenderShaderInit_t& shaderInfo )
         pSuffix = ".geom";
         break;
     default:
-        g_pApplication->Error( "Invalid Shader Type %i", shaderInfo.nType );
+        SIRENGINE_ERROR( "Invalid Shader Type %i", shaderInfo.nType );
     };
 
     CMemoryFile file( SIRENGINE_TEMP_VSTRING( "Resources/Shaders/Vulkan/%s%s.spv", shaderInfo.pName, pSuffix ) );

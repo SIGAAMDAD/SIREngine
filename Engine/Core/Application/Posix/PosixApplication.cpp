@@ -11,13 +11,13 @@
 #include <malloc.h>
 #include <errno.h>
 #include <Engine/Memory/Backend/TagArenaAllocator.h>
+#include <Engine/Core/ThreadSystem/Thread.h>
 #include <fcntl.h>
 #include <dirent.h>
 #include <libgen.h>
+#include <SDL2/SDL_stdinc.h>
 
 #define OOM_MEMORY_BACKUP_POOL_SIZE 4*1024
-
-CPosixApplication *g_pApplication;
 
 void *CPosixApplication::pOOMBackup;
 size_t CPosixApplication::nOOMBackupSize;
@@ -141,13 +141,13 @@ void CPosixApplication::CatchSignal( int nSignum )
 {
     switch ( nSignum ) {
     case SIGSEGV:
-        g_pApplication->Error( "Segmentation Violation Caught" );
+        SIRENGINE_ERROR( "Segmentation Violation Caught" );
         break;
     case SIGBUS:
-        g_pApplication->Error( "Bus Error Caught" );
+        SIRENGINE_ERROR( "Bus Error Caught" );
         break;
     case SIGABRT:
-        g_pApplication->Error( "Caught assertion" );
+        SIRENGINE_ERROR( "Caught assertion" );
         break;
     };
 }
@@ -167,43 +167,16 @@ CPosixApplication::~CPosixApplication()
 {
 }
 
-void SIRENGINE_ATTRIBUTE(format(printf, 2, 3)) CPosixApplication::Error( const char *fmt, ... )
+void CPosixApplication::Error( const char *pError )
 {
-    va_list argptr;
-    char buf[8192];
     char msg[1024];
-    int len;
+    int length;
 
-    va_start( argptr, fmt );
-    SIREngine_Vsnprintf( msg, sizeof( msg ) - 1, fmt, argptr );
-    va_end( argptr );
-
-    len = SIREngine_snprintf( buf, sizeof( buf ) - 1, "ERROR: %s\n", msg );
-
-    write( STDERR_FILENO, buf, len );
+    length = SIREngine_snprintf( msg, sizeof( msg ) - 1, "ERROR: %s\n", pError );
+    write( STDERR_FILENO, msg, length );
 
     DumpStacktrace();
     _Exit( EXIT_FAILURE );
-}
-
-void SIRENGINE_ATTRIBUTE(format(printf, 2, 3)) CPosixApplication::Warning( const char *fmt, ... )
-{
-    va_list argptr;
-
-    fprintf( stderr, "WARNING: " );
-
-    va_start( argptr, fmt );
-    vfprintf( stderr, fmt, argptr );
-    va_end( argptr );
-}
-
-void SIRENGINE_ATTRIBUTE(format(printf, 2, 3)) CPosixApplication::Log( const char *fmt, ... )
-{
-    va_list argptr;
-
-    va_start( argptr, fmt );
-    vfprintf( stdout, fmt, argptr );
-    va_end( argptr );
 }
 
 void *CPosixApplication::OpenDLL( const char *pName )
@@ -212,7 +185,7 @@ void *CPosixApplication::OpenDLL( const char *pName )
     char szPath[ SIRENGINE_MAX_OSPATH ];
 
     if ( !pName || !*pName ) {
-        Error( "OpenDLL: invalid name" );
+        SIRENGINE_ERROR( "OpenDLL: invalid name" );
     }
 
     // dlopen requires the dll's path to start with a "./"
@@ -298,7 +271,7 @@ void *CPosixApplication::VirtualAlloc( size_t *nSize, size_t nAlignment )
 
     pMemory = mmap( NULL, *nSize, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0 );
     if ( pMemory == MAP_FAILED || pMemory == NULL ) {
-        Error( "mmap failed: %s", strerror( errno ) );
+        SIRENGINE_ERROR( "mmap failed: %s", strerror( errno ) );
     }
     *(size_t *)pMemory = *nSize;
 
@@ -309,153 +282,57 @@ void CPosixApplication::VirtualFree( void *pBuffer )
 {
     size_t *nSize = ( (size_t *)pBuffer - 1 );
     if ( munmap( nSize, *nSize ) == -1 ) {
-        Error( "munmap failed: %s", strerror( errno ) );
+        SIRENGINE_ERROR( "munmap failed: %s", strerror( errno ) );
     }
 }
 
 void CPosixApplication::CommitMemory( void *pMemory, size_t nOffset, size_t nSize )
 {
     if ( madvise( ( (uint8_t *)pMemory ) + nOffset, nSize, MADV_WILLNEED ) != 0 ) {
-        Error( "madvise failed: %s", strerror( errno ) );
+        SIRENGINE_ERROR( "madvise( 0x%lx, %lu, MADV_WILLNEED ) failed: %s", (uintptr_t)(( (uint8_t *)pMemory ) + nOffset ), nSize,
+            strerror( errno ) );
     }
 }
 
 void CPosixApplication::DecommitMemory( void *pMemory, size_t nOffset, size_t nSize )
 {
     if ( madvise( ( (uint8_t *)pMemory ) + nOffset, nSize, MADV_DONTNEED ) != 0 ) {
-        Error( "madvise failed: %s", strerror( errno ) );
+        SIRENGINE_ERROR( "madvise failed: %s", strerror( errno ) );
     }
 }
 
 void CPosixApplication::SetMemoryReadOnly( void *pMemory, size_t nOffset, size_t nSize )
 {
     if ( mprotect( ( (byte *)pMemory ) + nOffset, nSize, PROT_READ ) == -1 ) {
-        Error( "mprotect failed: %s", strerror( errno ) );
-    }
-}
-
-void CPosixApplication::MutexLock( void *pMutex )
-{
-    if ( pthread_mutex_lock( (pthread_mutex_t *)pMutex ) == -1 ) {
-        Error( "pthread_mutex_lock failed: %s", strerror( errno ) );
-    }
-}
-
-void CPosixApplication::MutexUnlock( void *pMutex )
-{
-    if ( pthread_mutex_unlock( (pthread_mutex_t *)pMutex ) == -1 ) {
-        Error( "pthread_mutex_unlock failed: %s", strerror( errno ) );
-    }
-}
-
-bool CPosixApplication::MutexTryLock( void *pMutex )
-{
-    return pthread_mutex_trylock( (pthread_mutex_t *)pMutex );
-}
-
-void CPosixApplication::MutexInit( void *pMutex )
-{
-    if ( pthread_mutex_init( (pthread_mutex_t *)pMutex, NULL ) == -1 ) {
-
-    }
-}
-
-void CPosixApplication::MutexShutdown( void *pMutex )
-{
-    if ( pthread_mutex_destroy( (pthread_mutex_t *)pMutex ) == -1 ) {
-
-    }
-}
-
-void CPosixApplication::MutexRWUnlock( void *pMutex )
-{
-    if ( pthread_rwlock_unlock( (pthread_rwlock_t *)pMutex ) == -1 ) {
-
-    }
-}
-
-void CPosixApplication::MutexWriteLock( void *pMutex )
-{
-    if ( pthread_rwlock_wrlock( (pthread_rwlock_t *)pMutex ) == -1 ) {
-
-    }
-}
-
-void CPosixApplication::MutexReadLock( void *pMutex )
-{
-    if ( pthread_rwlock_rdlock( (pthread_rwlock_t *)pMutex ) == -1 ) {
-
-    }
-}
-
-bool CPosixApplication::MutexRWTryWriteLock( void *pMutex )
-{
-    if ( pthread_rwlock_trywrlock( (pthread_rwlock_t *)pMutex ) == -1 ) {
-
-    }
-}
-
-bool CPosixApplication::MutexRWTryReadLock( void *pMutex )
-{
-    if ( pthread_rwlock_tryrdlock( (pthread_rwlock_t *)pMutex ) == -1 ) {
-        
-    }
-}
-
-void CPosixApplication::MutexRWInit( void *pMutex )
-{
-    if ( pthread_rwlock_init( (pthread_rwlock_t *)pMutex, NULL ) == -1 ) {
-
-    }
-}
-
-void CPosixApplication::MutexRWShutdown( void *pMutex )
-{
-    if ( pthread_rwlock_destroy( (pthread_rwlock_t *)pMutex ) == -1 ) {
-
-    }
-}
-
-void CPosixApplication::ConditionVarWait( void *pConditionVar, void *pMutex )
-{
-    pthread_cond_wait( (pthread_cond_t *)pConditionVar, (pthread_mutex_t *)pMutex );
-}
-
-void CPosixApplication::ConditionVarInit( void *pConditionVar )
-{
-    if ( pthread_cond_init( (pthread_cond_t *)pConditionVar, NULL ) == -1 ) {
-
-    }
-}
-
-void CPosixApplication::ConditionVarShutdown( void *pConditionVar )
-{
-    if ( pthread_cond_destroy( (pthread_cond_t *)pConditionVar ) == -1 ) {
-
+        SIRENGINE_ERROR( "mprotect failed: %s", strerror( errno ) );
     }
 }
 
 void *CPosixApplication::ThreadFunction( void *pArgument )
 {
-    ThreadFunc_t pFunction = *(ThreadFunc_t *)pArgument;
-    pFunction();
+    CThread *pObject = (CThread *)pArgument;
+    pObject->RunThread();
     return NULL;
 }
 
-void CPosixApplication::ThreadStart( void *pThread, ThreadFunc_t pFunction )
+void CPosixApplication::ThreadStart( void *pThread, CThread *pObject, void (CThread::*pFunction)( void ) )
 {
-    if ( pthread_create( (pthread_t *)pThread, NULL, CPosixApplication::ThreadFunction, &pFunction ) == -1 ) {
+    SIRENGINE_LOG( "Running thread '%s'", pObject->GetName().c_str() );
+    if ( pthread_create( (pthread_t *)pThread, NULL, CPosixApplication::ThreadFunction, (void *)pObject ) == -1 ) {
+        SIRENGINE_ERROR( "pthread_create failed: %s", strerror( errno ) );
     }
 }
 
-void CPosixApplication::ThreadJoin( void *pThread, uint64_t nTimeout )
+void CPosixApplication::ThreadJoin( void *pThread, CThread *pObject, uint64_t nTimeout )
 {
     void *pReturn;
     struct timespec ts;
 
     ts.tv_nsec = nTimeout * 1000000;
 
+    SIRENGINE_LOG( "Joining thread '%s'...", pObject->GetName().c_str() );
     pthread_timedjoin_np( *(pthread_t *)pThread, &pReturn, &ts );
+    SIRENGINE_LOG( "Thread joined." );
 }
 
 FILE *CPosixApplication::OpenFile( const CString& filePath, const char *mode )
@@ -500,7 +377,7 @@ void CPosixApplication::FileClose( void *hFile )
 
     if ( fd != -1 ) {
         if ( close( fd ) != 0 ) {
-            Error( "Failure closing file %i", fd );
+            SIRENGINE_ERROR( "Failure closing file %i", fd );
         }
     }
 }
@@ -511,7 +388,7 @@ size_t CPosixApplication::FileWrite( const void *pBuffer, size_t nBytes, void *h
 
     const ssize_t nBytesWritten = write( (int)(uintptr_t)hFile, pBuffer, nBytes );
     if ( nBytesWritten == -1 ) {
-        Error( "Error writing %lu bytes from source 0x%lx to file", nBytes, (uintptr_t)pBuffer );
+        SIRENGINE_ERROR( "Error writing %lu bytes from source 0x%lx to file", nBytes, (uintptr_t)pBuffer );
     }
     return (size_t)nBytesWritten;
 }
@@ -522,7 +399,7 @@ size_t CPosixApplication::FileRead( void *pBuffer, size_t nBytes, void *hFile )
 
     const ssize_t nBytesRead = read( (int)(uintptr_t)hFile, pBuffer, nBytes );
     if ( nBytesRead == -1 ) {
-        Error( "Error reading %lu bytes to source 0x%lx from file", nBytes, (uintptr_t)pBuffer );
+        SIRENGINE_ERROR( "Error reading %lu bytes to source 0x%lx from file", nBytes, (uintptr_t)pBuffer );
     }
     return nBytesRead;
 }
@@ -609,28 +486,32 @@ void CPosixApplication::ListFiles( CVector<FileSystem::CFilePath>& fileList, con
 }
 */
 
-const CVector<FileSystem::CFilePath>& CPosixApplication::ListFiles( const FileSystem::CFilePath& directory, bool bDirectoryOnly )
+CVector<FileSystem::CFilePath> CPosixApplication::ListFiles( const FileSystem::CFilePath& directory, bool bDirectoryOnly )
 {
-    static CVector<FileSystem::CFilePath> files;
+    CVector<FileSystem::CFilePath> files;
     DIR *dir;
     char szSearchPath[ SIRENGINE_MAX_OSPATH*2+1 ];
     char szDirectory[ SIRENGINE_MAX_OSPATH*2+1 ];
     struct dirent *d;
-    struct stat64 buf;
+    struct stat buf;
 
     if ( ( dir = opendir( directory.c_str() ) ) == NULL ) {
-        SIRENGINE_WARNING( "Error opening directory \"%s\"", directory.c_str() );
+        SIRENGINE_ERROR( "Error opening directory \"%s\"", directory.c_str() );
         return files;
     }
 
-    files.reserve( 256 );
     while ( ( d = readdir( dir ) ) != NULL ) {
         SIREngine_snprintf( szSearchPath, sizeof( szSearchPath ) - 1, "%s/%s", directory.c_str(), d->d_name );
-        if ( stat64( szSearchPath, &buf ) == -1 ) {
+        if ( stat( szSearchPath, &buf ) == -1 ) {
             continue;
         }
 
-        if ( ( bDirectoryOnly && !( buf.st_mode & S_IFDIR ) ) || ( !bDirectoryOnly && ( buf.st_mode & S_IFDIR ) ) ) {
+        if ( ( bDirectoryOnly && !( buf.st_mode & S_IFDIR ) ) || ( !bDirectoryOnly && ( buf.st_mode & S_IFDIR ) )
+            || ( bDirectoryOnly && ( buf.st_mode & S_IFREG ) ) )
+        {
+            continue;
+        }
+        else if ( d->d_name[0] == '.' || ( d->d_name[0] == '.' && d->d_name[1] == '.' ) ) {
             continue;
         }
 
@@ -648,7 +529,7 @@ const CVector<FileSystem::CFilePath>& CPosixApplication::ListFiles( const FileSy
 
 void CPosixApplication::OnOutOfMemory( void )
 {
-    Error( "Allocation Failed!" );
+    SIRENGINE_ERROR( "Allocation Failed!" );
 }
 
 void CPosixApplication::GetPwd( void )
@@ -677,16 +558,11 @@ int main( int argc, char **argv )
     ApplicationInfo_t appInfo{};
 
     g_pApplication = new ( malloc( sizeof( CPosixApplication ) ) ) CPosixApplication();
-    g_pMemAlloc = new ( malloc( sizeof( CTagArenaAllocator ) ) ) CTagArenaAllocator( "MainArena", 256*1024*1024 );
+    Mem_Init();
 
     commandLine.reserve( argc );
     for ( i = 0; i < argc; i++ ) {
         commandLine.emplace_back( argv[i] );
-    }
-
-    const CVector<FileSystem::CFilePath>& files = g_pApplication->ListFiles( g_pApplication->GetGamePath() );
-    for ( const auto& it : files ) {
-        SIRENGINE_LOG( "Found file \"%s\"", it.c_str() );
     }
 
     g_pApplication->SetApplicationArgs( appInfo );
@@ -701,5 +577,8 @@ int main( int argc, char **argv )
 
     free( CPosixApplication::pOOMBackup );
 
+    _Exit( EXIT_SUCCESS );
+
+    // never reached
     return EXIT_SUCCESS;
 }

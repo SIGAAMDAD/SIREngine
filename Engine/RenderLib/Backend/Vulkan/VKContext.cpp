@@ -4,9 +4,6 @@
 #include <EASTL/array.h>
 #define VMA_IMPLEMENTATION
 #include <vk_mem_alloc.h>
-#define JEMALLOC_NO_RENAME
-#include <jemalloc/jemalloc.h>
-
 #include "VKShader.h"
 
 VKContext *g_pVKContext;
@@ -108,7 +105,7 @@ void VkError( const char *pCall, VkResult nResult )
     if ( nResult == VK_ERROR_UNKNOWN ) {
         SIRENGINE_WARNING( "%s: VK_ERROR_UNKNOWN", pCall );
     } else {
-        g_pApplication->Error( "%s: %s (%u)", pCall, pError->pString, pError->nError );
+        SIRENGINE_ERROR( "%s: %s (%u)", pCall, pError->pString, pError->nError );
     }
 }
 
@@ -389,10 +386,6 @@ VKContext::VKContext( const ApplicationInfo_t& appInfo )
 {
     SIRENGINE_LOG( "Initializing VKContext" );
 
-//    m_pArenaAllocator = CTagArenaAllocator::CreateTagAllocator( 2*1024*1024 );
-//    m_pResourceAllocator = new CVirtualStackAllocator( "VulkanVirtualCache", 2*1024*1024, EVirtualStackAllocatorDecommitMode::AllOnDestruction );
-    m_pTagAllocator = new CTagArenaAllocator( "VulkanCacheAllocator", 56*1024 );
-
     InitWindowInstance();
     InitPhysicalVKDevice();
     InitLogicalDevice();
@@ -431,8 +424,6 @@ VKContext::~VKContext()
     vkDestroyDevice( m_hDevice, NULL );
     vkDestroyInstance( m_hInstance, NULL );
     vmaDestroyAllocator( m_hAllocator );
-
-    delete m_pTagAllocator;
 }
 
 void VKContext::RecreateSwapChain( void )
@@ -783,11 +774,11 @@ void VKContext::InitWindowInstance( void )
     };
 
     if ( !SDL_Vulkan_GetInstanceExtensions( m_pWindow, &nExtensionCount, NULL ) ) {
-        g_pApplication->Error( "SDL_Vulkan_GetInstanceExtensions failed: %s", SDL_GetError() );
+        SIRENGINE_ERROR( "SDL_Vulkan_GetInstanceExtensions failed: %s", SDL_GetError() );
     }
     pExtensionList = (const char **)alloca( sizeof( *pExtensionList ) * nExtensionCount );
     if ( !SDL_Vulkan_GetInstanceExtensions( m_pWindow, &nExtensionCount, pExtensionList ) ) {
-        g_pApplication->Error( "SDL_Vulkan_GetInstanceExtensions failed: %s", SDL_GetError() );
+        SIRENGINE_ERROR( "SDL_Vulkan_GetInstanceExtensions failed: %s", SDL_GetError() );
     }
 
     nUsedExtensions = ( nExtensionCount + SIREngine_StaticArrayLength( szRequiredExtensions ) );
@@ -833,7 +824,7 @@ void VKContext::InitWindowInstance( void )
     SIRENGINE_LOG( "VKContext Instance created." );
 
     if ( !SDL_Vulkan_CreateSurface( m_pWindow, m_hInstance, &m_hSurface ) ) {
-        g_pApplication->Error( "SDL_Vulkan_CreateSurface failed: %s", SDL_GetError() );
+        SIRENGINE_ERROR( "SDL_Vulkan_CreateSurface failed: %s", SDL_GetError() );
     }
     SIRENGINE_LOG( "VKContext VkSurfaceKHR allocated." );
 }
@@ -1210,7 +1201,7 @@ void VKContext::BeginFrame( void )
         RecreateSwapChain();
         return;
     } else if ( nResult != VK_SUCCESS && nResult != VK_SUBOPTIMAL_KHR ) {
-        g_pApplication->Error( "Error acquiring Vulkan swapchain image" );
+        SIRENGINE_ERROR( "Error acquiring Vulkan swapchain image" );
     }
     
     VK_CALL( vkResetFences( m_hDevice, 1, &m_hInFlightFences[ m_nCurrentFrameIndex ] ) );
@@ -1266,7 +1257,7 @@ void VKContext::SwapBuffers( void )
         /* frameBufferResized = false; */
         RecreateSwapChain();
     } else if ( nResult != VK_SUCCESS ) {
-        g_pApplication->Error( "Error presenting Vulkan swapchain image" );
+        SIRENGINE_ERROR( "Error presenting Vulkan swapchain image" );
     }
 
     m_nCurrentFrameIndex = ( m_nCurrentFrameIndex + 1 ) % VK_MAX_FRAMES_IN_FLIGHT;
@@ -1278,8 +1269,7 @@ void *VKContext::Alloc( size_t nBytes, size_t nAlignment )
     void **pStoredPtr;
     const size_t adjustedAlignment = ( nAlignment > sizeof( void * ) ) ? nAlignment : sizeof( void * );
 
-//	p = malloc( nBytes + adjustedAlignment + sizeof( void * ) );
-    p = m_pTagAllocator->Alloc( nBytes );
+	p = new char[ nBytes + adjustedAlignment + sizeof( void * ) ];
 	/*
     pPlusPointerSize = (void *)( (uintptr_t)p + sizeof( void * ) );
 	pAligned = (void *)( ( (uintptr_t)pPlusPointerSize + adjustedAlignment - 1 ) & ~( adjustedAlignment - 1 ) );
@@ -1299,7 +1289,7 @@ void VKContext::Free( void *pBuffer )
 {
     if ( pBuffer != NULL ) {
 //		void *pOriginalAllocation = *( (void **)pBuffer - 1 );
-        m_pTagAllocator->Free( pBuffer );
+        delete[] (char *)pBuffer;
 	} else {
         SIRENGINE_WARNING( "VKContext::Free: NULL pointer" );
     }
@@ -1336,7 +1326,7 @@ void VKContext::GetGPUExtensionList( void )
             "vkCreateSwapchainKHR"
         );
         if ( !fn_vkCreateSwapchainKHR ) {
-            g_pApplication->Error( "couldn't get vkCreateSwapchainKHR!" );
+            SIRENGINE_ERROR( "couldn't get vkCreateSwapchainKHR!" );
         }
     }
 
@@ -1346,7 +1336,7 @@ void VKContext::GetGPUExtensionList( void )
         "vkCmdPushDescriptorSetKHR"
     );
     if ( !fn_vkCmdPushDescriptorSetKHR  ) {
-        g_pApplication->Error( "couldn't get vkCmdPushDescriptorSetKHR!" );
+        SIRENGINE_ERROR( "couldn't get vkCmdPushDescriptorSetKHR!" );
     }
 
     SIRENGINE_LOG( "Fetching vkCreateDescriptorUpdateTemplateKHR..." );
@@ -1355,7 +1345,7 @@ void VKContext::GetGPUExtensionList( void )
         "vkCreateDescriptorUpdateTemplateKHR"
     );
     if ( !fn_vkCreateDescriptorUpdateTemplateKHR  ) {
-        g_pApplication->Error( "couldn't get vkCreateDescriptorUpdateTemplateKHR!" );
+        SIRENGINE_ERROR( "couldn't get vkCreateDescriptorUpdateTemplateKHR!" );
     }
 
     {
@@ -1383,7 +1373,7 @@ void VKContext::GetGPUExtensionList( void )
             "vkDestroyDebugUtilsMessengerEXT"
         );
         if ( !fn_vkDestroyDebugUtilsMessengerEXT ) {
-            g_pApplication->Error( "Failed to get Vulkan Instance Function proc \"vkDestroyDebugUtilsMessengerEXT\"" );
+            SIRENGINE_ERROR( "Failed to get Vulkan Instance Function proc \"vkDestroyDebugUtilsMessengerEXT\"" );
         }
 
         SIRENGINE_LOG( "Initialized VK_EXT_DEBUG_UTILS." );
@@ -1392,7 +1382,7 @@ void VKContext::GetGPUExtensionList( void )
 
 void VKContext::SetupShaderPipeline( void )
 {
-    m_hShaderPipeline = new ( Alloc( sizeof( VKShaderPipeline ) ) ) VKShaderPipeline();
+    m_hShaderPipeline = new VKShaderPipeline();
 
     RenderProgramInit_t programInfo;
     programInfo.nShaderPasses = 1;
@@ -1493,20 +1483,20 @@ void VKContext::PrintMemoryInfo( void ) const
 
 IRenderProgram *VKContext::AllocateProgram( const RenderProgramInit_t& programInfo )
 {
-    return new ( Alloc( sizeof( VKProgram ) ) ) VKProgram( programInfo );
+    return new VKProgram( programInfo );
 }
 
 IRenderShader *VKContext::AllocateShader( const RenderShaderInit_t& shaderInit )
 {
-    return new ( Alloc( sizeof( VKShader ) ) ) VKShader( shaderInit );
+    return new VKShader( shaderInit );
 }
 
 IRenderBuffer *VKContext::AllocateBuffer( GPUBufferType_t nType, uint64_t nSize )
 {
-    return new ( Alloc( sizeof( VKBuffer ) ) ) VKBuffer( nType, nSize );
+    return new VKBuffer( nType, nSize );
 }
 
 IRenderTexture *VKContext::AllocateTexture( const TextureInit_t& textureInfo )
 {
-    return new ( Alloc( sizeof( VKTexture ) ) ) VKTexture( textureInfo );
+    return new VKTexture( textureInfo );
 }

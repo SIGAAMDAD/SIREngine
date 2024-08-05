@@ -113,7 +113,7 @@ IRenderContext::IRenderContext( const ApplicationInfo_t& appInfo )
         m_AppInfo.nWindowWidth, m_AppInfo.nWindowHeight,
         windowFlags );
     if ( !m_pWindow ) {
-        g_pApplication->Error( "SDL_CreateWindow failed: %s", SDL_GetError() );
+        SIRENGINE_ERROR( "SDL_CreateWindow failed: %s", SDL_GetError() );
     }
 }
 

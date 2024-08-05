@@ -38,6 +38,18 @@ public:
     }
 };
 
+namespace eastl {
+    template<> struct hash<CString> {
+		size_t operator()( const CString& str ) const {
+			const unsigned char *p = (const unsigned char *)str.c_str(); // To consider: limit p to at most 256 chars.
+			unsigned int c, result = 2166136261U; // We implement an FNV-like string hash.
+			while((c = *p++) != 0) // Using '!=' disables compiler warnings.
+				result = (result * 16777619) ^ c;
+			return (size_t)result;
+		}
+	};
+};
+
 /* FIXME: needs better implementation
 
 template<typename CharType>

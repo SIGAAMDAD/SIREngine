@@ -7,8 +7,10 @@
     #pragma once
 #endif
 
+#include "../Memory.h"
 #include "../MemAlloc.h"
-
+#include <Engine/Util/CString.h>
+#include <EASTL/unordered_map.h>
 
 #define USE_MEMSTATIC 1
 #define USE_MULTI_SEGMENT 1
@@ -37,38 +39,7 @@
 #define TAG_FREE 0
 #define TAG_STATIC 1
 
-typedef struct memblock_s {
-	struct memblock_s	*next, *prev;
-	uint64_t	size;	// including the header and possibly tiny fragments
-	uint32_t	tag;	// a tag of 0 is a free block
-	uint32_t	id;		// should be ZONEID
-#if defined(SIRENGINE_MEMORY_DEBUG)
-	zonedebug_t d;
-#endif
-} memblock_t;
-
-typedef struct freeblock_s {
-	struct freeblock_s *prev;
-	struct freeblock_s *next;
-} freeblock_t;
-
-typedef struct memzone_s {
-	uint64_t	size;			// total bytes malloced, including header
-	uint64_t	used;			// total bytes used
-	memblock_t	blocklist;	// start / end cap for linked list
-#if defined(USE_MULTI_SEGMENT)
-	memblock_t	dummy0;		// just to allocate some space before freelist
-	freeblock_t	freelist_tiny;
-	memblock_t	dummy1;
-	freeblock_t	freelist_small;
-	memblock_t	dummy2;
-	freeblock_t	freelist_medium;
-	memblock_t	dummy3;
-	freeblock_t	freelist;
-#else
-	memblock_t	*rover;
-#endif
-} memzone_t;
+typedef struct memzone_s memzone_t;
 
 class CTagArenaAllocator : public IMemAlloc
 {
@@ -100,7 +71,7 @@ public:
 
     virtual void GetMemoryStatus( size_t *pUsedMemory, size_t *pFreeMemory ) override;
 
-    void AllocateTagGroup( const char *pName, uint64_t nTag );
+    uint64_t AllocateTagGroup( const char *pName );
     void ClearTagGroup( uint64_t nTag );
 
     static int nMinFragment;

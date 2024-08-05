@@ -124,13 +124,13 @@ private:
 
     VmaVirtualBlock m_hVirtualMemory;
 
-    CTagArenaAllocator *m_pTagAllocator;
-
     CVector<VkExtensionProperties> m_Extensions;
 
     uint32_t m_nCurrentFrameIndex;
     uint32_t m_nImageFrameIndex;
 };
+
+extern CTagArenaAllocator *VK_pTagAllocator;
 
 extern PFN_vkCreateSwapchainKHR fn_vkCreateSwapchainKHR;
 extern PFN_vkCmdPushDescriptorSetKHR fn_vkCmdPushDescriptorSetKHR;

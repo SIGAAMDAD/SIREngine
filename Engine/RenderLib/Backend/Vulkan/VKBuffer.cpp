@@ -21,7 +21,7 @@ uint32_t GetMemoryType( uint32_t nTypeFilter, VkMemoryPropertyFlags props )
         }
     }
 
-    g_pApplication->Error( "VKContext::GetMemoryType: couldn't find a suitable Vulkan Buffer Memory type!" );
+    SIRENGINE_ERROR( "VKContext::GetMemoryType: couldn't find a suitable Vulkan Buffer Memory type!" );
     return 0;
 }
 

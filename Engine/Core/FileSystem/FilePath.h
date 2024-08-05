@@ -48,7 +48,7 @@ namespace FileSystem {
 
     	    if ( dot && ( ( slash = strrchr( data(), '/' ) ) == NULL || slash < dot ) ) {
     	        internalLayout().SetSize(
-                    ( size() < dot - data() + 1 ? size() : dot - data() + 1 ) );
+                    ( size() < (uintptr_t)( dot - data() ) + 1 ? size() : dot - data() + 1 ) );
             }
     	    if ( size() > 1 ) {
     	    	internalLayout().BeginPtr()[ size() - 1 ] = '\0';

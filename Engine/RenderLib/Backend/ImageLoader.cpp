@@ -16,12 +16,12 @@ CImageLoader::CImageLoader( const FileSystem::CFilePath& filePath )
     } else if ( ext == "pcx" ) {
 //        LoadFunc = LoadPCX;
     } else {
-        g_pApplication->Error( "" );
+        SIRENGINE_ERROR( "Invalid image format for file '%s'", filePath.c_str() );
     }
 
     CMemoryFile file( filePath );
     if ( !LoadFunc( file, m_ImageBuffer, m_nWidth, m_nHeight, m_nSamples ) ) {
-        g_pApplication->Warning( "" );
+        SIRENGINE_WARNING( "Error loading image file '%s'", filePath.c_str() );
     }
 }
 

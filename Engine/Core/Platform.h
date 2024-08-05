@@ -19,6 +19,7 @@
 
     #define SIRENGINE_STDOUT_HANDLE (void *)STDOUT_HANDLE
     #define SIRENGINE_STDERR_HANDLE (void *)STDERR_HANDLE
+    #define SIRENGINE_INVALID_HANDLE INVALID_HANDLE
 #elif defined(__unix__)
     #if defined(__ANDROID__)
         #define SIRENGINE_PLATFORM_NAME "Android"
@@ -28,6 +29,8 @@
         #define SIRENGINE_PLATFORM_LINUX 1
     #endif
 
+    #define SIRENGINE_PLATFORM_POSIX 1
+
     #include <unistd.h>
 
     #if !defined(O_BINARY)
@@ -36,6 +39,7 @@
 
     #define SIRENGINE_STDOUT_HANDLE (void *)STDOUT_FILENO
     #define SIRENGINE_STDERR_HANDLE (void *)STDERR_FILENO
+    #define SIRENGINE_INVALID_HANDLE (int)(-1)
 #endif
 
 #endif

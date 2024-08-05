@@ -7,6 +7,7 @@
 
 extern const char *SIRENGINE_ATTRIBUTE(format(printf, 1, 2)) SIRENGINE_TEMP_VSTRING( const char *fmt, ... );
 extern size_t SIRENGINE_ATTRIBUTE(format(printf, 3, 4)) SIREngine_snprintf( char *pszBuffer, size_t nMaxSize, const char *fmt, ... );
+extern size_t SIRENGINE_ATTRIBUTE(format(printf, 3, 4)) SIREngine_snprintf_append( char *pszBuffer, size_t nMaxSize, const char *fmt, ... );
 
 extern void SIREngine_strncpyz( char *pDest, const char *pSource, size_t nLength );
 extern int SIREngine_stricmp( const char *pString1, const char *pString2 );
