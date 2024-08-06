@@ -47,7 +47,7 @@ namespace eastl
 	/// but users can define their own allocators which do have move functions and 
 	/// the eastl containers are compatible with such allocators (i.e. nothing unexpected
 	/// will happen).
-	//
+	///
 	class EASTL_API allocator
 	{
 	public:
@@ -70,15 +70,16 @@ namespace eastl
 		#endif
 	};
 
-	constexpr bool operator==(const allocator& a, const allocator& b);
-	constexpr bool operator!=(const allocator& a, const allocator& b);
-
+	bool operator==(const allocator& a, const allocator& b);
+#if !defined(EA_COMPILER_HAS_THREE_WAY_COMPARISON)
+	bool operator!=(const allocator& a, const allocator& b);
+#endif
 
 
 	/// dummy_allocator
 	///
 	/// Defines an allocator which does nothing. It returns NULL from allocate calls.
-	//
+	///
 	class EASTL_API dummy_allocator
 	{
 	public:
@@ -96,9 +97,10 @@ namespace eastl
 		void        set_name(const char*) { }
 	};
 
-	inline EA_CPP14_CONSTEXPR bool operator==(const dummy_allocator&, const dummy_allocator&) { return true;  }
-	inline EA_CPP14_CONSTEXPR bool operator!=(const dummy_allocator&, const dummy_allocator&) { return false; }
-
+	inline bool operator==(const dummy_allocator&, const dummy_allocator&) { return true;  }
+#if !defined(EA_COMPILER_HAS_THREE_WAY_COMPARISON)
+	inline bool operator!=(const dummy_allocator&, const dummy_allocator&) { return false; }
+#endif
 
 
 	/// Defines a static default allocator which is constant across all types.
@@ -183,12 +185,14 @@ namespace eastl
 			#endif
 		}
 
+
 		inline allocator::allocator(const allocator& EASTL_NAME(alloc))
 		{
 			#if EASTL_NAME_ENABLED
 				mpName = alloc.mpName;
 			#endif
 		}
+
 
 		inline allocator::allocator(const allocator&, const char* EASTL_NAME(pName))
 		{
@@ -197,6 +201,7 @@ namespace eastl
 			#endif
 		}
 
+
 		inline allocator& allocator::operator=(const allocator& EASTL_NAME(alloc))
 		{
 			#if EASTL_NAME_ENABLED
@@ -204,6 +209,7 @@ namespace eastl
 			#endif
 			return *this;
 		}
+
 
 		inline const char* allocator::get_name() const
 		{
@@ -214,12 +220,14 @@ namespace eastl
 			#endif
 		}
 
+
 		inline void allocator::set_name(const char* EASTL_NAME(pName))
 		{
 			#if EASTL_NAME_ENABLED
 				mpName = pName;
 			#endif
 		}
+
 
 		inline void* allocator::allocate(size_t n, int flags)
 		{
@@ -228,6 +236,7 @@ namespace eastl
 			#else
 				#define pName EASTL_ALLOCATOR_DEFAULT_NAME
 			#endif
+
 			#if EASTL_DLL
 				return allocate(n, EASTL_SYSTEM_ALLOCATOR_MIN_ALIGNMENT, 0, flags);
 			#elif (EASTL_DEBUGPARAMS_LEVEL <= 0)
@@ -238,6 +247,7 @@ namespace eastl
 				return ::new(   pName, flags, 0, __FILE__, __LINE__) char[n];
 			#endif
 		}
+
 
 		inline void* allocator::allocate(size_t n, size_t alignment, size_t offset, int flags)
 		{
@@ -267,8 +277,10 @@ namespace eastl
 			#else
 				return ::new(alignment, offset,    pName, flags, 0, __FILE__, __LINE__) char[n];
 			#endif
+
 			#undef pName  // See above for the definition of this.
 		}
+
 
 		inline void allocator::deallocate(void* p, size_t)
 		{
@@ -283,16 +295,18 @@ namespace eastl
 			#endif
 		}
 
-		inline constexpr bool operator==(const allocator&, const allocator&)
+
+		inline bool operator==(const allocator&, const allocator&)
 		{
 			return true; // All allocators are considered equal, as they merely use global new/delete.
 		}
 
-		inline constexpr bool operator!=(const allocator&, const allocator&)
+#if !defined(EA_COMPILER_HAS_THREE_WAY_COMPARISON)
+		inline bool operator!=(const allocator&, const allocator&)
 		{
 			return false; // All allocators are considered equal, as they merely use global new/delete.
 		}
-
+#endif
 
 	} // namespace eastl
 
@@ -365,7 +379,6 @@ namespace eastl
 
 
 #endif // Header include guard
-
 
 
 

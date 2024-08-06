@@ -1,35 +1,21 @@
 #ifndef __SIRENGINE_FILESYSTEM_H__
 #define __SIRENGINE_FILESYSTEM_H__
 
-#pragma once
-
 #include <Engine/Core/SIREngine.h>
+
+#if defined(SIRENGINE_PRAGMA_ONCE_SUPPORTED)
+    #pragma once
+#endif
+
 #include "FilePath.h"
 #include "SearchPath.h"
 #include "FileReader.h"
 #include "FileWriter.h"
+#include "FileList.h"
 
 class CTagArenaAllocator;
 
 namespace FileSystem {
-    class CDirectory {
-        friend class CFileSystem;
-    public:
-        CDirectory( const CFilePath& basePath )
-            : m_BasePath( eastl::move( basePath ) )
-        { }
-        ~CDirectory()
-        { }
-
-        SIRENGINE_FORCEINLINE const CFilePath& GetBasePath( void ) const
-        { return m_BasePath; }
-        SIRENGINE_FORCEINLINE const CVector<CFilePath>& GetFiles( void ) const
-        { return m_FileList; }
-    private:
-        CFilePath m_BasePath;
-        CVector<CFilePath> m_FileList;
-    };
-
     class CFileSystem
     {
     public:
@@ -42,21 +28,22 @@ namespace FileSystem {
         { return m_ConfigPath; }
 
         CFileWriter *OpenFileWriter( const CFilePath& filePath );
+        CFileReader *OpenFileReader( const CFilePath& filePath );
 
-        void LoadFile( const CFilePath& fileName );
+        void LoadFile( const CFilePath& fileName, CVector<uint8_t>& outBuffer );
 
-        CVector<CFilePath>& ListFiles();
-    private:
-        void AddSearchPath( const CFilePath& path, const CFilePath& dir );
+        CFileList *ListFiles( const CFilePath& directory, const char *pExtension ) const;
+        const char *BuildSearchPath( const CFilePath& basePath, const CString& fileName ) const;
+    private:;
         void InitDirectoryCache( void );
-        void LoadFileTree( CDirectory *pDirectory );
+        void LoadFileTree( CFileList *pDirectory );
 
         CFilePath m_CurrentPath;
 
         CFilePath m_ResourcePath;
         CFilePath m_ConfigPath;
 
-        eastl::unordered_map<CString, CDirectory *> m_DirectoryCache;
+        eastl::unordered_map<CFilePath, CFileList *> m_DirectoryCache;
 
         SearchPath_t *m_pSearchPaths;
 

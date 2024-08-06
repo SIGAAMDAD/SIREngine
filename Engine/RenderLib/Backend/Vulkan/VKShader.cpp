@@ -37,12 +37,12 @@ VKShader::VKShader( const RenderShaderInit_t& shaderInfo )
     moduleInfo.codeSize = file.GetSize();
     moduleInfo.pCode = (const uint32_t *)file.GetBuffer();
 
-    VK_CALL( vkCreateShaderModule( g_pVKContext->GetDevice(), &moduleInfo, NULL, &m_hModule ) );
+    VK_CALL( vkCreateShaderModule( g_pVKContext->GetDevice(), &moduleInfo, g_pVKContext->GetAllocationCallbacks(), &m_hModule ) );
 }
 
 VKShader::~VKShader()
 {
     if ( m_hModule ) {
-        vkDestroyShaderModule( g_pVKContext->GetDevice(), m_hModule, NULL );
+        vkDestroyShaderModule( g_pVKContext->GetDevice(), m_hModule, g_pVKContext->GetAllocationCallbacks() );
     }
 }

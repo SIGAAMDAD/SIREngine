@@ -1,9 +1,12 @@
 #ifndef __GENERIC_APPLICATION_H__
 #define __GENERIC_APPLICATION_H__
 
-#pragma once
-
 #include <Engine/Core/SIREngine.h>
+
+#if defined(SIRENGINE_PRAGMA_ONCE_SUPPORTED)
+    #pragma once
+#endif
+
 #include <Engine/Core/EngineApp.h>
 #include <Engine/Util/CString.h>
 #include <Engine/Util/CVector.h>

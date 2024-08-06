@@ -1,7 +1,11 @@
 #ifndef __WINDOWS_APPLICATION_H__
 #define __WINDOWS_APPLICATION_H__
 
-#pragma once
+#include <Engine/Core/SIREngine.h>
+
+#if defined(SIRENGINE_PRAGMA_ONCE_SUPPORTED)
+    #pragma once
+#endif
 
 #include <Engine/Core/Application/GenericPlatform/GenericApplication.h>
 #if !defined(WIN32_LEAN_AND_MEAN)

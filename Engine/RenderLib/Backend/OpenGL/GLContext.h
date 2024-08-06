@@ -6,6 +6,7 @@
 #include <Engine/Core/SIREngine.h>
 #include <Engine/RenderLib/RenderCommon.h>
 #include "GLCommon.h"
+#include "GLTexture.h"
 #include "../RenderContext.h"
 
 class GLContext : public IRenderContext
@@ -13,6 +14,9 @@ class GLContext : public IRenderContext
 public:
     GLContext( const ApplicationInfo_t& appInfo );
     virtual ~GLContext() override;
+
+    virtual void Init( void ) override;
+    virtual void Shutdown( void ) override;
 
     virtual void SetupShaderPipeline( void ) override;
     virtual void SwapBuffers( void ) override;
@@ -26,7 +30,7 @@ public:
 
     virtual IRenderProgram *AllocateProgram( const RenderProgramInit_t& programInfo ) override;
     virtual IRenderShader *AllocateShader( const RenderShaderInit_t& shaderInit ) override;
-    virtual IRenderBuffer *AllocateBuffer( GPUBufferType_t nType, uint64_t nSize ) override;
+    virtual IRenderBuffer *AllocateBuffer( GPUBufferType_t nType, GPUBufferUsage_t nUsage, uint64_t nSize ) override;
     virtual IRenderTexture *AllocateTexture( const TextureInit_t& textureInfo ) override;
 private:
     virtual void GetGPUExtensionList( void ) override;
@@ -40,6 +44,8 @@ private:
     char m_szVendorString[1024];
 
     SDL_GLContext m_pGLContext;
+
+    static CVector<GLTexture *> g_EvictionLRUCache;
 };
 
 extern CVar<bool32> r_UsePixelBufferObjects;

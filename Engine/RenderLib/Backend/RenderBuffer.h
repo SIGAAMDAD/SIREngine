@@ -9,19 +9,19 @@
 class IRenderBuffer
 {
 public:
-    IRenderBuffer( void )
-        : m_nBufferSize( 0 ), m_nType( BUFFER_TYPE_NONE )
+    IRenderBuffer( GPUBufferType_t nType, GPUBufferUsage_t nUsage )
+        : m_nBufferSize( 0 ), m_nType( nType ), m_nUsage( nUsage )
     { }
     virtual ~IRenderBuffer()
     { }
 
-    static IRenderBuffer *Create( GPUBufferType_t nType, uint64_t nSize );
+    static IRenderBuffer *Create( GPUBufferType_t nType, GPUBufferUsage_t nUsage, uint64_t nSize );
 
     virtual const char *GetName( void ) const;
     virtual GPUBufferType_t GetType( void ) const;
+    virtual GPUBufferUsage_t GetUsage( void ) const;
 
-    virtual void Init( void ) = 0;
-    virtual void Init( uint64_t nItems ) = 0;
+    virtual void Init( const void *pBuffer, uint64_t nSize ) = 0;
     virtual void Shutdown( void ) = 0;
 
     virtual void Copy( const IRenderBuffer& other ) = 0;
@@ -35,6 +35,7 @@ protected:
     CString m_BufferName;
     uint64_t m_nBufferSize;
     GPUBufferType_t m_nType;
+    GPUBufferUsage_t m_nUsage;
 };
 
 SIRENGINE_FORCEINLINE const char *IRenderBuffer::GetName( void ) const
@@ -50,6 +51,11 @@ SIRENGINE_FORCEINLINE uint64_t IRenderBuffer::GetSize( void ) const
 SIRENGINE_FORCEINLINE GPUBufferType_t IRenderBuffer::GetType( void ) const
 {
     return m_nType;
+}
+
+SIRENGINE_FORCEINLINE GPUBufferUsage_t IRenderBuffer::GetUsage( void ) const
+{
+    return m_nUsage;
 }
 
 #endif

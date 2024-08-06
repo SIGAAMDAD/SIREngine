@@ -35,6 +35,9 @@ public:
     IRenderContext( const ApplicationInfo_t& appInfo );
     virtual ~IRenderContext();
 
+    virtual void Init( void ) = 0;
+    virtual void Shutdown( void ) = 0;
+
     virtual void SetupShaderPipeline( void ) = 0;
     virtual void SwapBuffers( void ) = 0;
     virtual void CompleteRenderPass( IRenderShaderPipeline *pShaderPipeline ) = 0;
@@ -46,7 +49,7 @@ public:
 
     virtual IRenderProgram *AllocateProgram( const RenderProgramInit_t& programInfo ) = 0;
     virtual IRenderShader *AllocateShader( const RenderShaderInit_t& shaderInit ) = 0;
-    virtual IRenderBuffer *AllocateBuffer( GPUBufferType_t nType, uint64_t nSize ) = 0;
+    virtual IRenderBuffer *AllocateBuffer( GPUBufferType_t nType, GPUBufferUsage_t nUsage, uint64_t nSize ) = 0;
     virtual IRenderTexture *AllocateTexture( const TextureInit_t& textureInfo ) = 0;
 
     virtual const GPUMemoryUsage_t GetMemoryUsage( void ) = 0;

@@ -4,12 +4,20 @@
 #pragma once
 
 #define SIRENGINE_LOG( ... ) \
-    CLogManager::g_Logger.LogInfo( __FILE__, __LINE__, __VA_ARGS__ )
+    CLogManager::g_Logger.LogInfo( { __FILE__, SIRENGINE_FUNC_NAME, __LINE__ }, __VA_ARGS__ )
 #define SIRENGINE_WARNING( ... ) \
-    CLogManager::g_Logger.LogWarning( __FILE__, __LINE__, __VA_ARGS__ )
+    CLogManager::g_Logger.LogWarning( { __FILE__, SIRENGINE_FUNC_NAME, __LINE__ }, __VA_ARGS__ )
 #define SIRENGINE_ERROR( ... ) \
-    CLogManager::g_Logger.LogError( __FILE__, __LINE__, __VA_ARGS__ )
+    CLogManager::g_Logger.LogError( { __FILE__, SIRENGINE_FUNC_NAME, __LINE__ }, __VA_ARGS__ )
 
-#define SIRENGINE_LOG_LEVEL( level, ... )
+#define SIRENGINE_NOTIFICATION( message ) \
+    CLogManager::g_Logger.SendNotification( { __FILE__, SIRENGINE_FUNC_NAME, __LINE__ }, message )
+
+#define SIRENGINE_LOG_LEVEL( Category, Level, ... ) \
+    CLogManager::g_Logger.LogCategory( { __FILE__, SIRENGINE_FUNC_NAME, __LINE__ }, __VA_ARGS__ )
+
+#define SIRENGINE_DEFINE_LOG_CATEGORY( Category, Verbosity )
+#define SIRENGINE_SILENCE_LOG_CATEGORY( Category )
+#define SIRENGINE_SET_LOG_CATEGORY_VERBOSITY( Category, Verbosity )
 
 #endif

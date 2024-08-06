@@ -21,7 +21,6 @@
 #define MEM_ALIGN		64
 #define MIN_FRAGMENT	64
 
-#if defined(USE_MULTI_SEGMENT)
 #if 1 // forward lookup, faster allocation
 #define DIRECTION next
 // we may have up to 4 lists to group free blocks by size
@@ -34,17 +33,25 @@
 #define SMALL_SIZE	128
 #define MEDIUM_SIZE	256
 #endif
-#endif
 
 #define TAG_FREE 0
 #define TAG_STATIC 1
+
+typedef enum {
+    // sets a deallocated block's memory to scramble to weed out bugs
+    ARENA_SCRAMBLE_ON_DEALLOC   = 0x10,
+    
+    // initializes all allocations to 0
+    ARENA_INIT_ON_ALLOC         = 0x20,
+
+} ArenaAllocOptions_t;
 
 typedef struct memzone_s memzone_t;
 
 class CTagArenaAllocator : public IMemAlloc
 {
 public:
-    CTagArenaAllocator( const char *pName, uint64_t nSize );
+    CTagArenaAllocator( const char *pName, uint64_t nSize, uint64_t nFlags = ARENA_INIT_ON_ALLOC | ARENA_SCRAMBLE_ON_DEALLOC );
     virtual ~CTagArenaAllocator() override;
 
 	virtual void Shutdown( void ) override;
@@ -79,7 +86,6 @@ public:
 private:
     const char *m_pName;
     memzone_t *m_pZone;
-
     eastl::unordered_map<uint64_t, CString> m_TagList;
 };
 

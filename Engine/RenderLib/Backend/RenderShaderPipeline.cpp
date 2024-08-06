@@ -13,5 +13,5 @@ const UniformInfo_t szDefaultUniforms[ NumUniforms ] = {
     { "u_NormalMap", Uniform_NormalMap, UniformType_Sampler, ST_FRAGMENT, sizeof( uint32_t ), 1 },
     { "u_SpecularMap", Uniform_SpecularMap, UniformType_Sampler, ST_FRAGMENT, sizeof( uint32_t ), 1 },
     { "u_LightBuffer", Uniform_LightBuffer, UniformType_DynamicBuffer, ST_FRAGMENT, sizeof( LightBuffer_Uniform_t ), 1 },
-    { "u_VertexInput", Uniform_VertexInputBuffer, UniformType_StaticBuffer, ST_VERTEX, sizeof( VertexInput_Uniform_t ), 1 },
+    { "u_VertexInput", Uniform_VertexInput, UniformType_StaticBuffer, ST_VERTEX, sizeof( VertexInput_Uniform_t ), 1 },
 };

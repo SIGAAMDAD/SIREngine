@@ -13,3 +13,9 @@
 [submodule "smmalloc"]
 	path = smmalloc
 	url = https://github.com/SergeyMakeev/smmalloc.git
+[submodule "spdlog"]
+	path = spdlog
+	url = https://github.com/gabime/spdlog
+[submodule "inih"]
+	path = inih
+	url = https://github.com/benhoyt/inih.git

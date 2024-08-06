@@ -5,12 +5,14 @@
 
 #include "FileSystem/FilePath.h"
 #include "SIREngine.h"
-#include <nlohmann/json.hpp>
+#include "Serialization/Ini/IniSerializer.h"
 
 class CEngineConfigManager
 {
 public:
-    CEngineConfigManager( void );
+    CEngineConfigManager( void )
+    {
+    }
     ~CEngineConfigManager();
 
     bool Load( const FileSystem::CFilePath& configPath );

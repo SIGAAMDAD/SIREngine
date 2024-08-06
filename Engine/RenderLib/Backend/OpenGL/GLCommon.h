@@ -3,7 +3,6 @@
 
 #pragma once
 
-#include <Engine/Core/SIREngine.h>
 #include <Engine/RenderLib/RenderCommon.h>
 
 #if defined( _WIN32 )
@@ -28,7 +27,11 @@
 #include <OpenGL/glext.h>
 #endif
 
-#pragma once
+#include <Engine/Core/SIREngine.h>
+
+#if defined(SIRENGINE_PRAGMA_ONCE_SUPPORTED)
+    #pragma once
+#endif
 
 typedef void (APIENTRY *GLDEBUGPROC)(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar *message, const void *userParam);
 typedef void (APIENTRY *GLDEBUGPROCAMD)(GLuint id, GLenum category, GLenum severity, GLsizei length, const GLchar *message, GLvoid *userParam);
@@ -344,12 +347,17 @@ NGL_ARB_sync
 
 #define LOAD_GL_PROCS( procs ) procs
 
+#include "../../DrawBuffer.h"
+
 class GLProgram;
 class GLShaderBuffer;
 
 typedef struct GLPipelineSet {
     GLProgram *pShader;
     uint32_t nEnabledAttribs;
+
+    const Poly_t *pPolyList;
+    uint64_t nPolyCount;
 
     CVector<GLShaderBuffer *> dataInputBuffers;
 } GLPipelineSet_t;

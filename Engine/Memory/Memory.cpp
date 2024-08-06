@@ -31,6 +31,15 @@ void *Mem_Alloc( size_t nBytes, size_t nAlignment )
 #endif
 }
 
+void *Mem_Alloc( size_t nBytes )
+{
+#if defined(USE_ARENA_ALLOC)
+    return g_pMemAlloc->Alloc( nBytes );
+#elif defined(USE_SMMALLOC)
+    return _sm_malloc( g_pMemAlloc, nBytes, 16 );
+#endif
+}
+
 void Mem_Free( void *pMemory )
 {
 #if defined(USE_ARENA_ALLOC)

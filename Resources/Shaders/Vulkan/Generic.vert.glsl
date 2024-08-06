@@ -8,7 +8,7 @@ layout( location = 2 ) in vec4 a_Color;
 layout( location = 0 ) out vec4 v_Color;
 layout( location = 1 ) out vec2 v_TexCoords;
 
-layout( push_constant ) uniform u_VertexInput {
+layout( std140, binding = 4 ) uniform u_VertexInput {
     layout( offset = 0 ) mat4 u_ModelViewProjection;
 } VertexInput;
 

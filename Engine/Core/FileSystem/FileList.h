@@ -12,10 +12,21 @@
 namespace FileSystem {
     class CFileList
     {
+        friend class CFileSystem;
     public:
-        CFileList( void );
-        ~CFileList();
+        CFileList( const CFilePath& filePath )
+            : m_BasePath( filePath )
+        { }
+        CFileList( const CFilePath& filePath, const CVector<CFilePath>& fileList )
+            : m_BasePath( eastl::move( filePath ) ), m_List( eastl::move( fileList ) )
+        { }
+        CFileList( void )
+        { }
+        ~CFileList()
+        { }
 
+        SIRENGINE_FORCEINLINE const CFilePath& GetPath( void ) const
+        { return m_BasePath; }
         SIRENGINE_FORCEINLINE const CVector<CFilePath>& GetList( void ) const
         { return m_List; }
     private:

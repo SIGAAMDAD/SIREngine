@@ -59,10 +59,10 @@ SIRENGINE_FORCEINLINE uint64_t NumVertexAttribs( const VertexInputDescription_t&
 
 VKShaderPipeline::VKShaderPipeline( void )
 {
-//    VkPipelineCacheCreateInfo pipelineCacheInfo;
-//    memset( &pipelineCacheInfo, 0, sizeof( pipelineCacheInfo ) );
-//    pipelineCacheInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
-//    VK_CALL( vkCreatePipelineCache( g_pVKContext->GetDevice(), &pipelineCacheInfo, NULL, &m_hVulkanDataCache ) );
+    VkPipelineCacheCreateInfo pipelineCacheInfo;
+    memset( &pipelineCacheInfo, 0, sizeof( pipelineCacheInfo ) );
+    pipelineCacheInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
+    VK_CALL( vkCreatePipelineCache( g_pVKContext->GetDevice(), &pipelineCacheInfo, g_pVKContext->GetAllocationCallbacks(), &m_hVulkanDataCache ) );
 
     VkSamplerCreateInfo samplerBilinearInfo;
     memset( &samplerBilinearInfo, 0, sizeof( samplerBilinearInfo ) );
@@ -77,7 +77,7 @@ VKShaderPipeline::VKShaderPipeline( void )
     samplerBilinearInfo.maxLod = 1.0f;
     samplerBilinearInfo.maxAnisotropy = 1.0f;
     samplerBilinearInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
-    VK_CALL( vkCreateSampler( g_pVKContext->GetDevice(), &samplerBilinearInfo, NULL, &m_Samplers[0] ) );
+    VK_CALL( vkCreateSampler( g_pVKContext->GetDevice(), &samplerBilinearInfo, g_pVKContext->GetAllocationCallbacks(), &m_Samplers[0] ) );
 
     VkSamplerCreateInfo samplerNearestInfo;
     memset( &samplerNearestInfo, 0, sizeof( samplerNearestInfo ) );
@@ -92,7 +92,7 @@ VKShaderPipeline::VKShaderPipeline( void )
     samplerNearestInfo.maxLod = 1.0f;
     samplerNearestInfo.maxAnisotropy = 1.0f;
     samplerNearestInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
-    VK_CALL( vkCreateSampler( g_pVKContext->GetDevice(), &samplerNearestInfo, NULL, &m_Samplers[1] ) );
+    VK_CALL( vkCreateSampler( g_pVKContext->GetDevice(), &samplerNearestInfo, g_pVKContext->GetAllocationCallbacks(), &m_Samplers[1] ) );
 
     VkSamplerCreateInfo samplerLinearNearestInfo;
     memset( &samplerLinearNearestInfo, 0, sizeof( samplerLinearNearestInfo ) );
@@ -107,7 +107,7 @@ VKShaderPipeline::VKShaderPipeline( void )
     samplerLinearNearestInfo.maxLod = 1.0f;
     samplerLinearNearestInfo.maxAnisotropy = 1.0f;
     samplerLinearNearestInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
-    VK_CALL( vkCreateSampler( g_pVKContext->GetDevice(), &samplerLinearNearestInfo, NULL, &m_Samplers[2] ) );
+    VK_CALL( vkCreateSampler( g_pVKContext->GetDevice(), &samplerLinearNearestInfo, g_pVKContext->GetAllocationCallbacks(), &m_Samplers[2] ) );
 
     VkSamplerCreateInfo samplerNearestLinearInfo;
     memset( &samplerNearestLinearInfo, 0, sizeof( samplerNearestLinearInfo ) );
@@ -122,25 +122,15 @@ VKShaderPipeline::VKShaderPipeline( void )
     samplerNearestLinearInfo.maxLod = 1.0f;
     samplerNearestLinearInfo.maxAnisotropy = 1.0f;
     samplerNearestLinearInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
-    VK_CALL( vkCreateSampler( g_pVKContext->GetDevice(), &samplerNearestLinearInfo, NULL, &m_Samplers[3] ) );
+    VK_CALL( vkCreateSampler( g_pVKContext->GetDevice(), &samplerNearestLinearInfo, g_pVKContext->GetAllocationCallbacks(), &m_Samplers[3] ) );
 
-    m_pVertexBuffer = dynamic_cast<VKBuffer *>( IRenderBuffer::Create( BUFFER_TYPE_VERTEX, 256*1024*1024 ) );
-    m_pIndexBuffer = dynamic_cast<VKBuffer *>( IRenderBuffer::Create( BUFFER_TYPE_INDEX, 256*1024*1024 ) );
+    m_pVertexBuffer = dynamic_cast<VKBuffer *>( IRenderBuffer::Create( BUFFER_TYPE_VERTEX, BufferUsage_Stream, 64*1024 ) );
+    m_pIndexBuffer = dynamic_cast<VKBuffer *>( IRenderBuffer::Create( BUFFER_TYPE_INDEX, BufferUsage_Stream, 64*1024 ) );
 }
 
 VKShaderPipeline::~VKShaderPipeline()
 {
     ClearPipelineCache();
-
-    for ( auto& it : m_Samplers ) {
-        if ( it ) {
-            vkDestroySampler( g_pVKContext->GetDevice(), it, NULL );
-        }
-    }
-
-    if ( m_hVulkanDataCache ) {
-        vkDestroyPipelineCache( g_pVKContext->GetDevice(), m_hVulkanDataCache, NULL );
-    }
 
     delete m_pVertexBuffer;
     delete m_pIndexBuffer;
@@ -150,23 +140,33 @@ void VKShaderPipeline::ClearPipelineCache( void )
 {
     uint32_t i;
 
+    if ( m_hVulkanDataCache ) {
+        vkDestroyPipelineCache( g_pVKContext->GetDevice(), m_hVulkanDataCache, g_pVKContext->GetAllocationCallbacks() );
+    }
+
     for ( auto it : m_PipelineCache ) {
         if ( it->hLayout ) {
-            vkDestroyPipelineLayout( g_pVKContext->GetDevice(), it->hLayout, NULL );
+            vkDestroyPipelineLayout( g_pVKContext->GetDevice(), it->hLayout, g_pVKContext->GetAllocationCallbacks() );
         }
         if ( it->hPipeline ) {
-            vkDestroyPipeline( g_pVKContext->GetDevice(), it->hPipeline, NULL );
+            vkDestroyPipeline( g_pVKContext->GetDevice(), it->hPipeline, g_pVKContext->GetAllocationCallbacks() );
         }
         for ( i = 0; i < VK_MAX_FRAMES_IN_FLIGHT; i++ ) {
             if ( it->pDescriptorSetLayouts[i] ) {
-                vkDestroyDescriptorSetLayout( g_pVKContext->GetDevice(), it->pDescriptorSetLayouts[i], NULL );
+                vkDestroyDescriptorSetLayout( g_pVKContext->GetDevice(), it->pDescriptorSetLayouts[i], g_pVKContext->GetAllocationCallbacks() );
             }
         }
         if ( it->hDescriptorPool ) {
-            vkDestroyDescriptorPool( g_pVKContext->GetDevice(), it->hDescriptorPool, NULL );
+            vkDestroyDescriptorPool( g_pVKContext->GetDevice(), it->hDescriptorPool, g_pVKContext->GetAllocationCallbacks() );
         }
         delete[] it->pDescriptorSetLayouts;
         delete[] it->pDescriptorSets;
+    }
+
+    for ( auto& it : m_Samplers ) {
+        if ( it ) {
+            vkDestroySampler( g_pVKContext->GetDevice(), it, g_pVKContext->GetAllocationCallbacks() );
+        }
     }
     m_PipelineCache.clear();
 }
@@ -225,10 +225,11 @@ uint64_t VKShaderPipeline::AddVertexAttribSet( const VertexInputDescription_t& v
         memset( &createInfo, 0, sizeof( createInfo ) );
         createInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
         createInfo.pushConstantRangeCount = 0;
+        createInfo.pPushConstantRanges = NULL;
         createInfo.setLayoutCount = VK_MAX_FRAMES_IN_FLIGHT;
         createInfo.pSetLayouts = pSet->pDescriptorSetLayouts;
 
-        VK_CALL( vkCreatePipelineLayout( g_pVKContext->GetDevice(), &createInfo, NULL, &pSet->hLayout ) );
+        VK_CALL( vkCreatePipelineLayout( g_pVKContext->GetDevice(), &createInfo, g_pVKContext->GetAllocationCallbacks(), &pSet->hLayout ) );
         SIRENGINE_LOG( "Created VkPipelineLayout" );
     }
 
@@ -337,7 +338,8 @@ uint64_t VKShaderPipeline::AddVertexAttribSet( const VertexInputDescription_t& v
         pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
         pipelineInfo.basePipelineIndex = -1;
 
-        VK_CALL( vkCreateGraphicsPipelines( g_pVKContext->GetDevice(), NULL, 1, &pipelineInfo, NULL, &pSet->hPipeline ) );
+        VK_CALL( vkCreateGraphicsPipelines( g_pVKContext->GetDevice(), NULL, 1, &pipelineInfo, g_pVKContext->GetAllocationCallbacks(),
+            &pSet->hPipeline ) );
         SIRENGINE_LOG( "Finalized VkPipeline." );
     }
 #if !defined(SIRENGINE_USE_VK_DESCRIPTOR_POOLS)
@@ -360,7 +362,8 @@ uint64_t VKShaderPipeline::AddVertexAttribSet( const VertexInputDescription_t& v
         templateInfo.templateType = VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_PUSH_DESCRIPTORS_KHR;
         templateInfo.set = 0;
 
-        VK_CALL( fn_vkCreateDescriptorUpdateTemplateKHR( g_pVKContext->GetDevice(), &templateInfo, NULL, &pSet->hUpdateTemplate ) );
+        VK_CALL( fn_vkCreateDescriptorUpdateTemplateKHR( g_pVKContext->GetDevice(), &templateInfo, g_pVKContext->GetAllocationCallbacks(),
+            &pSet->hUpdateTemplate ) );
         SIRENGINE_LOG( "Allocated VkDescriptorUpdateTemplate." );
     }
 #endif
@@ -382,6 +385,8 @@ void VKShaderPipeline::SaveVulkanPipelineCache( void )
     vkGetPipelineCacheData( g_pVKContext->GetDevice(), m_hVulkanDataCache, &nDataSize, NULL );
     pDataBuffer = new char[ nDataSize ];
     vkGetPipelineCacheData( g_pVKContext->GetDevice(), m_hVulkanDataCache, &nDataSize, pDataBuffer );
+
+    delete[] (char *)pDataBuffer;
 }
 
 static uint32_t GetDescriptorPoolUniformTypeCount( uint32_t nType, const VertexInputDescription_t& vertexInput )
@@ -408,7 +413,7 @@ void VKShaderPipeline::AllocateUniformBufferLayout( VKPipelineSet_t *pSet, const
 
     const VkDescriptorType szUniformDescriptorTypes[ NumUniformTypes ] = {
         VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC,
+        VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
         VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
     };
 
@@ -427,7 +432,7 @@ void VKShaderPipeline::AllocateUniformBufferLayout( VKPipelineSet_t *pSet, const
     poolInfo.poolSizeCount = NumUniformTypes;
     poolInfo.pPoolSizes = szPoolSizes;
     
-    VK_CALL( vkCreateDescriptorPool( g_pVKContext->GetDevice(), &poolInfo, NULL, &pSet->hDescriptorPool ) );
+    VK_CALL( vkCreateDescriptorPool( g_pVKContext->GetDevice(), &poolInfo, g_pVKContext->GetAllocationCallbacks(), &pSet->hDescriptorPool ) );
     
     pSet->pDescriptorSetLayouts = new VkDescriptorSetLayout[ sizeof( *pSet->pDescriptorSetLayouts ) * VK_MAX_FRAMES_IN_FLIGHT ];
     pSet->pDescriptorSets = new VkDescriptorSet[ sizeof( *pSet->pDescriptorSets ) * VK_MAX_FRAMES_IN_FLIGHT ];
@@ -464,7 +469,8 @@ void VKShaderPipeline::AllocateUniformBufferLayout( VKPipelineSet_t *pSet, const
     setLayoutInfo.pBindings = pLayoutBindings;
 
     for ( i = 0; i < VK_MAX_FRAMES_IN_FLIGHT; i++ ) {
-        VK_CALL( vkCreateDescriptorSetLayout( g_pVKContext->GetDevice(), &setLayoutInfo, NULL, &pSet->pDescriptorSetLayouts[ i ] ) );
+        VK_CALL( vkCreateDescriptorSetLayout( g_pVKContext->GetDevice(), &setLayoutInfo, g_pVKContext->GetAllocationCallbacks(),
+            &pSet->pDescriptorSetLayouts[ i ] ) );
     }
 
     VkDescriptorSetAllocateInfo allocInfo;

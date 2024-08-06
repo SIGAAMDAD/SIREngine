@@ -18,6 +18,12 @@ typedef enum {
 #define ST_PIXLE ST_FRAGMENT
 
 typedef enum {
+    BufferUsage_Stream,
+    BufferUsage_Dynamic,
+    BufferUsage_Constant
+} GPUBufferUsage_t;
+
+typedef enum {
     BUFFER_TYPE_VERTEX,
     BUFFER_TYPE_INDEX,
     BUFFER_TYPE_UNIFORM,
@@ -37,7 +43,7 @@ typedef enum {
     Uniform_SpecularMap,
     Uniform_LightBuffer,
 
-    Uniform_VertexInputBuffer,
+    Uniform_VertexInput,
 
     NumUniforms
 } UniformNum_t;
@@ -178,7 +184,7 @@ typedef struct {
 } VertexInputDescription_t;
 
 typedef struct {
-    alignas( 16 ) glm::mat4 u_ModelViewProjection;
+    glm::mat4 u_ModelViewProjection;
 } VertexInput_Uniform_t;
 
 typedef struct {

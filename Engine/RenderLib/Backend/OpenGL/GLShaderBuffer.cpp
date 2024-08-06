@@ -1,12 +1,13 @@
 #include "GLShaderBuffer.h"
 #include "GLProgram.h"
+#include "../RenderShaderPipeline.h"
 
 GLShaderBuffer::GLShaderBuffer( GLPipelineSet_t *pPipeline, uint32_t nProgramBinding )
     : m_pPipeline( pPipeline )
 {
     GLProgram *program;
 
-    m_pBuffer = new GLBuffer( BUFFER_TYPE_UNIFORM );
+    m_pBuffer = new GLBuffer( BUFFER_TYPE_UNIFORM, BufferUsage_Stream, szDefaultUniforms[ nProgramBinding ].nSize );
     m_nProgramBinding = nProgramBinding;
 
     program = pPipeline->pShader;

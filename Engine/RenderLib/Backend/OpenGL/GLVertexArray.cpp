@@ -3,8 +3,8 @@
 
 GLVertexArray::GLVertexArray( const RenderPipelineInputSet_t& createInfo )
 {
-    m_pVertexBuffer = new GLBuffer( BUFFER_TYPE_VERTEX );
-    m_pIndexBuffer = new GLBuffer( BUFFER_TYPE_INDEX );
+    m_pVertexBuffer = new GLBuffer( BUFFER_TYPE_VERTEX, BufferUsage_Dynamic, 2*1024*1024 );
+    m_pIndexBuffer = new GLBuffer( BUFFER_TYPE_INDEX, BufferUsage_Dynamic, 2*1024*1024 );
 
     m_pVertexAttribs = createInfo.pVertexAttribs;
     m_nAttribCount = createInfo.nAttribCount;

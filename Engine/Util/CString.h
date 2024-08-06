@@ -16,6 +16,12 @@ public:
     inline CString( void )
         : base_type()
     { }
+    inline CString( const base_type& other )
+        : base_type( other )
+    { }
+    inline CString( base_type&& other )
+        : base_type( eastl::move( other ) )
+    { }
     inline CString( const char *pString )
         : base_type( pString )
     { }
@@ -24,6 +30,11 @@ public:
     { }
     inline CString( CString&& other )
         : base_type( eastl::move( other ) )
+    { }
+    inline CString( const char *pString, size_t nChars )
+        : base_type( pString, nChars )
+    { }
+    inline ~CString()
     { }
 
     inline const CString& operator=( const CString& other )
@@ -35,6 +46,20 @@ public:
     {
         base_type::operator=( eastl::move( other ) );
         return *this;
+    }
+
+    inline void ToLower( void )
+    {
+        for ( auto it = internalLayout().BeginPtr(); it != internalLayout().EndPtr(); it++ ) {
+            *it = tolower( *it );
+        }
+    }
+
+    inline void ToUpper( void )
+    {
+        for ( auto it = internalLayout().BeginPtr(); it != internalLayout().EndPtr(); it++ ) {
+            *it = toupper( *it );
+        }
     }
 };
 

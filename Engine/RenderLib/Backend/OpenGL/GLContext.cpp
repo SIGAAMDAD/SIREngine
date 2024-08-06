@@ -10,7 +10,9 @@
 #include "GLVertexArray.h"
 #include "GLShaderPipeline.h"
 
-CVar<int> r_UseShaderStorageBufferObjects(
+CVector<GLTexture *> GLContext::g_EvictionLRUCache;
+
+CVar<bool32> r_UseShaderStorageBufferObjects(
     "r.OpenGL.UseShaderStorageBufferObjects",
     0,
     Cvar_Default,
@@ -23,7 +25,39 @@ CVar<bool32> r_UseMappedBufferObjects(
     "r.OpenGL.UseMappedBufferObjects",
     0,
     Cvar_Save,
-    "Allow usage of the extension GL_ARB_map_buffer_range and GL_ARB_buffer_storage",
+    "Use glMapBuffer instead of glBufferSubData, GL_ARB_map_buffer_range must be available on this device.",
+    CVG_RENDERER
+);
+CVar<uint32_t> r_GLTetureMinLRUSize(
+    "r.OpenGL.TextureMinLRUSize",
+    528,
+    Cvar_Save | Cvar_Developer,
+    "Sets the maximum number of textures that can be in GPU memory\n"
+    "before the engine begins purging memory.\n",
+    CVG_RENDERER
+);
+
+extern CVar<bool32> r_IgnoreShaderCompilerFailure;
+extern CVar<bool32> r_IgnoreShaderLinkFailure;
+extern CVar<bool32> r_EnableShaderLRU;
+
+/* TODO: make this a little bit more relevant
+uint32_t g_nMaxSubDataSize = 2*1024*1024;
+CVarRef<uint32_t> r_MaxSubBufferSize(
+    "r.OpenGL.MaxSubBufferSize",
+    g_nMaxSubDataSize,
+    Cvar_Developer,
+    "Sets the maximum amount of data the can be sent per glBufferSubData call.",
+    CVG_RENDERER
+);
+*/
+
+bool32 g_bUseBufferDiscard = true;
+CVarRef<bool32> r_UseBufferDiscard(
+    "r.OpenGL.UseBufferDiscard",
+    g_bUseBufferDiscard,
+    Cvar_Developer,
+    "Toggles buffer orphaning for faster OpenGL synching.",
     CVG_RENDERER
 );
 
@@ -31,6 +65,21 @@ extern CVar<bool32> r_UsePixelBufferObjects;
 
 GLContext::GLContext( const ApplicationInfo_t& appInfo )
     : IRenderContext( appInfo )
+{
+    g_ConsoleManager.RegisterCVar( &r_UseBufferDiscard );
+    g_ConsoleManager.RegisterCVar( &r_UseShaderStorageBufferObjects );
+    g_ConsoleManager.RegisterCVar( &r_GLTetureMinLRUSize );
+    g_ConsoleManager.RegisterCVar( &r_UseMappedBufferObjects );
+    g_ConsoleManager.RegisterCVar( &r_UsePixelBufferObjects );
+    g_ConsoleManager.RegisterCVar( &r_TextureStreamingBudget );
+    g_ConsoleManager.RegisterCVar( &r_UseHDRTextures );
+}
+
+GLContext::~GLContext()
+{
+}
+
+void GLContext::Init( void )
 {
     m_pGLContext = SDL_GL_CreateContext( m_pWindow );
     if ( !m_pGLContext ) {
@@ -63,7 +112,7 @@ GLContext::GLContext( const ApplicationInfo_t& appInfo )
     CheckExtensionsSupport();
 }
 
-GLContext::~GLContext()
+void GLContext::Shutdown( void )
 {
     if ( m_pGLContext ) {
         SDL_GL_DeleteContext( m_pGLContext );
@@ -94,6 +143,12 @@ void GLContext::SwapBuffers( void )
     SDL_GL_SwapWindow( m_pWindow );
 
     nglClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+
+    for ( uint32_t nEvictionCount = 0; g_EvictionLRUCache.size() > r_GLTetureMinLRUSize.GetValue(); nEvictionCount++ ) {
+        GLTexture *pTexture = g_EvictionLRUCache.back();
+        pTexture->EvictGLResource();
+        g_EvictionLRUCache.pop_back();
+    }
 }
 
 void GLContext::CompleteRenderPass( IRenderShaderPipeline *pShaderPipeline )
@@ -169,9 +224,9 @@ IRenderShader *GLContext::AllocateShader( const RenderShaderInit_t& shaderInit )
     return new ( m_pResourceAllocator->Allocate( sizeof( GLShader ) ) ) GLShader( shaderInit );
 }
 
-IRenderBuffer *GLContext::AllocateBuffer( GPUBufferType_t nType, uint64_t nSize )
+IRenderBuffer *GLContext::AllocateBuffer( GPUBufferType_t nType, GPUBufferUsage_t nUsage, uint64_t nSize )
 {
-    return new ( m_pResourceAllocator->Allocate( sizeof( GLBuffer ) ) ) GLBuffer( nType, nSize );
+    return new ( m_pResourceAllocator->Allocate( sizeof( GLBuffer ) ) ) GLBuffer( nType, nUsage, nSize );
 }
 
 IRenderTexture *GLContext::AllocateTexture( const TextureInit_t& textureInfo )

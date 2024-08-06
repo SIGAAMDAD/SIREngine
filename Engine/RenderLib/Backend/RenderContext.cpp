@@ -158,14 +158,15 @@ IRenderContext *IRenderContext::CreateRenderContext( void )
         pAppInfo->eWindowFlags |= WF_OPENGL_CONTEXT;
         g_pRenderContext = new GLContext( *pAppInfo );
     }
+    g_pRenderContext->Init();
     g_pRenderContext->SetupShaderPipeline();
 
     return g_pRenderContext;
 }
 
-IRenderBuffer *IRenderBuffer::Create( GPUBufferType_t nType, uint64_t nSize )
+IRenderBuffer *IRenderBuffer::Create( GPUBufferType_t nType, GPUBufferUsage_t nUsage, uint64_t nSize )
 {
-    return g_pRenderContext->AllocateBuffer( nType, nSize );
+    return g_pRenderContext->AllocateBuffer( nType, nUsage, nSize );
 }
 
 IRenderShader *IRenderShader::Create( const RenderShaderInit_t& shaderInit )

@@ -4,13 +4,21 @@
 #define UNOWNED    ((void *)666)
 #define ZONEID     0xa21d49
 
+CVar<uint64_t> mem_NewSegmentSize(
+	"mem.NewSegmentSize",
+	8*1024*1024, // originally 1<<21
+	Cvar_Save,
+	"Sets the size of each new arena segment allocated.",
+	CVG_SYSTEMINFO
+);
+
 int CTagArenaAllocator::nMinFragment = MIN_FRAGMENT;
 
 typedef struct memblock_s {
 	struct memblock_s		*next, *prev;
-	CThreadAtomic<uint64_t>	size;	// including the header and possibly tiny fragments
-	CThreadAtomic<uint64_t>	tag;	// a tag of 0 is a free block
-	CThreadAtomic<int64_t>	id;		// should be ZONEID
+	uint64_t				size;	// including the header and possibly tiny fragments
+	uint64_t				tag;	// a tag of 0 is a free block
+	int64_t					id;		// should be ZONEID
 #if defined(SIRENGINE_MEMORY_DEBUG)
 	zonedebug_t d;
 #endif
@@ -22,11 +30,11 @@ typedef struct freeblock_s {
 } freeblock_t;
 
 typedef struct memzone_s {
-	CThreadAtomic<uint64_t>	size;			// total bytes malloced, including header
-	CThreadAtomic<uint64_t>	used;			// total bytes used
-	memblock_t				blocklist;		// start / end cap for linked list
-#if defined(USE_MULTI_SEGMENT)
-	memblock_t				dummy0;		// just to allocate some space before freelist
+	uint64_t				size;
+	uint64_t				used;
+	memblock_t				blocklist;
+#ifdef USE_MULTI_SEGMENT
+	memblock_t				dummy0;			// just to allocate some space before freelist
 	freeblock_t				freelist_tiny;
 	memblock_t				dummy1;
 	freeblock_t				freelist_small;
@@ -40,19 +48,18 @@ typedef struct memzone_s {
 	CThreadMutex 			allocLock;
 	CThreadMutex			deallocLock;
 } memzone_t;
-
 #ifdef USE_MULTI_SEGMENT
 
-static void InitFree( memzone_t *zone, freeblock_t *fb )
+static void InitFree( freeblock_t *fb )
 {
-	memblock_t *block = (memblock_t *)( (byte *)fb - sizeof( memblock_t ) );
+	memblock_t *block = (memblock_t*)( (byte*)fb - sizeof( memblock_t ) );
 	memset( block, 0, sizeof( *block ) );
 }
 
 
-static void RemoveFree( memzone_t *zone, memblock_t *block )
+static void RemoveFree( memblock_t *block )
 {
-	freeblock_t *fb = (freeblock_t *)( block + 1 );
+	freeblock_t *fb = (freeblock_t*)( block + 1 );
 	freeblock_t *prev;
 	freeblock_t *next;
 
@@ -74,7 +81,6 @@ static void InsertFree( memzone_t *zone, memblock_t *block )
 {
 	freeblock_t *fb = (freeblock_t*)( block + 1 );
 	freeblock_t *prev, *next;
-
 #ifdef TINY_SIZE
 	if ( block->size <= TINY_SIZE )
 		prev = &zone->freelist_tiny;
@@ -128,45 +134,46 @@ static freeblock_t *NewBlock( memzone_t *zone, uint64_t size )
 	prev = zone->blocklist.prev;
 	next = prev->next;
 
-	size = SIRENGINE_PAD( size, 1<<21 ); // round up to 2M blocks
+//	size = SIRENGINE_PAD( size, 1<<21 ); // round up to 2M blocks
+	size = SIRENGINE_PAD( size, mem_NewSegmentSize.GetValue() );
+
 	// allocate separator block before new free block
 	alloc_size = size + sizeof( *sep );
 
-	sep = (memblock_t *)calloc( alloc_size, 1 );
-//	sep = (memblock_t *)g_pApplication->VirtualAlloc( &alloc_size, 64 );
+	sep = (memblock_t *)g_pApplication->VirtualAlloc( &alloc_size, 64 );
+//	sep = (memblock_t *)calloc( alloc_size, 1 );
 	if ( sep == NULL ) {
-		g_pApplication->OnOutOfMemory();
+		SIRENGINE_ERROR( "Z_Malloc: failed on allocation of %lu bytes", size );
 		return NULL;
 	}
+	memset( sep, 0, alloc_size );
 	block = sep+1;
 
-//	g_pApplication->CommitMemory( sep, 0, alloc_size );
+	g_pApplication->CommitMemory( sep, 0, alloc_size );
 
-	{
-		// link separator with prev
-		prev->next = sep;
-		sep->prev = prev;
+	// link separator with prev
+	prev->next = sep;
+	sep->prev = prev;
 
-		// link separator with block
-		sep->next = block;
-		block->prev = sep;
+	// link separator with block
+	sep->next = block;
+	block->prev = sep;
 
-		// link block with next
-		block->next = next;
-		next->prev = block;
+	// link block with next
+	block->next = next;
+	next->prev = block;
 
-		sep->tag.store( TAG_STATIC ); // in-use block
-		sep->id.store( -ZONEID );
-		sep->size.store( 0 );
+	sep->tag = TAG_STATIC; // in-use block
+	sep->id = -ZONEID;
+	sep->size = 0;
 
-		block->tag.store( TAG_FREE );
-		block->id.store( ZONEID );
-		block->size.store( size );
+	block->tag = TAG_FREE;
+	block->id = ZONEID;
+	block->size = size;
 
-		// update zone statistics
-		zone->size.fetch_add( alloc_size );
-		zone->used.fetch_add( sizeof( *sep ) );
-	}
+	// update zone statistics
+	zone->size += alloc_size;
+	zone->used += sizeof( *sep );
 
 	InsertFree( zone, block );
 
@@ -222,7 +229,7 @@ static memblock_t *SearchFree( memzone_t *zone, uint64_t size )
 		}
 		base = (memblock_t *)( (byte *) fb - sizeof( *base ) );
 		fb = fb->DIRECTION;
-		if ( base->size.load() >= size ) {
+		if ( base->size >= size ) {
 			return base;
 		}
 	}
@@ -238,8 +245,8 @@ Z_ClearZone
 */
 static void Z_ClearZone( memzone_t *zone, memzone_t *head, uint64_t size, uint64_t segnum )
 {
-	memblock_t *block;
-	int min_fragment;
+	memblock_t	*block;
+	uint64_t min_fragment;
 
 #ifdef USE_MULTI_SEGMENT
 	min_fragment = sizeof( memblock_t ) + sizeof( freeblock_t );
@@ -247,46 +254,46 @@ static void Z_ClearZone( memzone_t *zone, memzone_t *head, uint64_t size, uint64
 	min_fragment = sizeof( memblock_t );
 #endif
 
-	CThreadAutoLock<CThreadMutex> _( zone->allocLock );
 	if ( CTagArenaAllocator::nMinFragment < min_fragment ) {
 		// in debug mode size of memblock_t may exceed MIN_FRAGMENT
 		CTagArenaAllocator::nMinFragment = SIRENGINE_PAD( min_fragment, sizeof( intptr_t ) );
-		SIRENGINE_LOG( "minFragment adjusted to %i bytes", CTagArenaAllocator::nMinFragment );
+		SIRENGINE_LOG( "CTagArenaAllocator::nMinFragment adjusted to %i bytes", CTagArenaAllocator::nMinFragment );
 	}
 
 	// set the entire zone to one free block
 	zone->blocklist.next = zone->blocklist.prev = block = (memblock_t *)( zone + 1 );
-	zone->blocklist.tag.store( TAG_STATIC ); // in use block
-	zone->blocklist.id.store( -ZONEID );
-	zone->blocklist.size.store( 0 );
+	zone->blocklist.tag = TAG_STATIC; // in use block
+	zone->blocklist.id = -ZONEID;
+	zone->blocklist.size = 0;
 #ifndef USE_MULTI_SEGMENT
 	zone->rover = block;
 #endif
-	zone->size.store( size );
-	zone->used.store( 0 );
+	zone->size = size;
+	zone->used = 0;
 
 	block->prev = block->next = &zone->blocklist;
-	block->tag.store( TAG_FREE );	// free block
-	block->id.store( ZONEID );
+	block->tag = TAG_FREE;	// free block
+	block->id = ZONEID;
 
-	block->size.store( size - sizeof( memzone_t ) );
+	block->size = size - sizeof(memzone_t);
 
 #ifdef USE_MULTI_SEGMENT
-	InitFree( zone, &zone->freelist );
+	InitFree( &zone->freelist );
 	zone->freelist.next = zone->freelist.prev = &zone->freelist;
 
-	InitFree( zone, &zone->freelist_medium );
+	InitFree( &zone->freelist_medium );
 	zone->freelist_medium.next = zone->freelist_medium.prev = &zone->freelist_medium;
 
-	InitFree( zone, &zone->freelist_small );
+	InitFree( &zone->freelist_small );
 	zone->freelist_small.next = zone->freelist_small.prev = &zone->freelist_small;
 
-	InitFree( zone, &zone->freelist_tiny );
+	InitFree( &zone->freelist_tiny );
 	zone->freelist_tiny.next = zone->freelist_tiny.prev = &zone->freelist_tiny;
 
 	InsertFree( zone, block );
 #endif
 }
+
 
 /*
 ========================
@@ -295,17 +302,15 @@ Z_AvailableZoneMemory
 */
 static uint64_t Z_AvailableZoneMemory( const memzone_t *zone ) {
 #ifdef USE_MULTI_SEGMENT
-	return ( 1024 * 1024 * 1024 ); // unlimited
+	return (1024*1024*1024); // unlimited
 #else
-	return zone->size.load() - zone->used.load();
+	return zone->size - zone->used;
 #endif
 }
 
-
-
 static void MergeBlock( memblock_t *curr_free, const memblock_t *next )
 {
-	curr_free->size.fetch_add( next->size );
+	curr_free->size += next->size;
 	curr_free->next = next->next;
 	curr_free->next->prev = curr_free;
 }
@@ -321,61 +326,58 @@ void Z_Free( memzone_t *zone, void *ptr ) {
 
 	if ( !ptr ) {
 		SIRENGINE_WARNING( "Z_Free: NULL pointer" );
+		return;
 	}
 
-	CThreadAutoLock<CThreadMutex> _( zone->deallocLock );
-
-	block = (memblock_t *) ( (byte *)ptr - sizeof(memblock_t));
-	if ( block->id.load() != ZONEID ) {
+	block = (memblock_t *) ( (byte *)ptr - sizeof( memblock_t ) );
+	if ( block->id != ZONEID ) {
 		SIRENGINE_ERROR( "Z_Free: freed a pointer without ZONEID" );
 	}
 
-	if ( block->tag.load() == TAG_FREE ) {
+	if ( block->tag == TAG_FREE ) {
 		SIRENGINE_ERROR( "Z_Free: freed a freed pointer" );
 	}
 
 	// check the memory trash tester
 #ifdef USE_TRASH_TEST
-	if ( *(int32_t *)((byte *)block + block->size.load() - 4 ) != ZONEID ) {
+	if ( *(int32_t *)((byte *)block + block->size - 4 ) != ZONEID ) {
 		SIRENGINE_ERROR( "Z_Free: memory block wrote past end" );
 	}
 #endif
 
-	{
-		zone->used.fetch_sub( block->size.load() );
+	CThreadAutoLock<CThreadMutex> lock( zone->allocLock );
+	zone->used -= block->size;
 
-		// set the block to something that should cause problems
-		// if it is referenced...
-		memset( ptr, 0xaa, block->size - sizeof( *block ) );
+	// set the block to something that should cause problems
+	// if it is referenced...
+//	memset( ptr, 0xaa, block->size - sizeof( *block ) );
 
-		block->tag.store( TAG_FREE ); // mark as free
-		block->id.store( ZONEID );
+	block->tag = TAG_FREE; // mark as free
+	block->id = ZONEID;
 
-		other = block->prev;
-		if ( other->tag == TAG_FREE ) {
+	other = block->prev;
+	if ( other->tag == TAG_FREE ) {
 #ifdef USE_MULTI_SEGMENT
-			RemoveFree( zone, other );
+		RemoveFree( other );
 #endif
-			// merge with previous free block
-			MergeBlock( other, block );
+		// merge with previous free block
+		MergeBlock( other, block );
 #ifndef USE_MULTI_SEGMENT
-			if ( block == zone->rover ) {
-				zone->rover = other;
-			}
-#endif
-			block = other;
+		if ( block == zone->rover ) {
+			zone->rover = other;
 		}
-
-#ifndef USE_MULTI_SEGMENT
-		zone->rover = block;
 #endif
+		block = other;
 	}
 
-	other = block->next;
+#ifndef USE_MULTI_SEGMENT
+	zone->rover = block;
+#endif
 
-	if ( other->tag.load() == TAG_FREE ) {
+	other = block->next;
+	if ( other->tag == TAG_FREE ) {
 #ifdef USE_MULTI_SEGMENT
-		RemoveFree( zone, other );
+		RemoveFree( other );
 #endif
 		// merge the next free block onto the end
 		MergeBlock( block, other );
@@ -396,14 +398,13 @@ uint64_t Z_FreeTags( memzone_t *zone, uint64_t tag )
 {
 	uint64_t count;
 	uint64_t size;
-	memblock_t *block, *freed;
+	memblock_t	*block, *freed;
 
 	count = 0;
 	size = 0;
-	CThreadAutoLock<CThreadMutex> _( zone->deallocLock );
 	for ( block = zone->blocklist.next ; ; ) {
-		if ( block->tag.load() == tag && block->id.load() == ZONEID ) {
-			if ( block->prev->tag.load() == TAG_FREE ) {
+		if ( block->tag == tag && block->id == ZONEID ) {
+			if ( block->prev->tag == TAG_FREE ) {
 				freed = block->prev;  // current block will be merged with previous
 			} else {
 				freed = block; // will leave in place
@@ -411,7 +412,6 @@ uint64_t Z_FreeTags( memzone_t *zone, uint64_t tag )
 			
 			size += block->size;
 			Z_Free( zone, (void *)( block + 1 ) );
-
 			block = freed;
 			count++;
 		}
@@ -437,7 +437,7 @@ void *Z_AllocDebug( memzone_t *zone, uint64_t size, uint64_t tag, const char *la
 void *Z_Alloc( memzone_t *zone, uint64_t size, uint64_t tag )
 #endif
 {
-	int extra;
+	uint32_t extra;
 #ifdef SIRENGINE_MEMORY_DEBUG
 	uint64_t allocSize;
 #endif
@@ -449,13 +449,14 @@ void *Z_Alloc( memzone_t *zone, uint64_t size, uint64_t tag )
 	if ( tag == TAG_FREE ) {
 		SIRENGINE_ERROR( "Z_Malloc: tried to use with TAG_FREE" );
 	}
+
 #ifdef SIRENGINE_MEMORY_DEBUG
 	allocSize = size;
 #endif
 
 #ifdef USE_MULTI_SEGMENT
-	if ( size < ( sizeof( freeblock_t ) ) ) {
-		size = ( sizeof( freeblock_t ) );
+	if ( size < (sizeof( freeblock_t ) ) ) {
+		size = (sizeof( freeblock_t ) );
 	}
 #endif
 
@@ -468,13 +469,14 @@ void *Z_Alloc( memzone_t *zone, uint64_t size, uint64_t tag )
 	size += 4;					// space for memory trash tester
 #endif
 
-	size = SIRENGINE_PAD( size, sizeof( uintptr_t ) ); // align to 32/64 bit boundary
+	size = SIRENGINE_PAD( size, sizeof( uintptr_t ) );		// align to 32/64 bit boundary
 
-	CThreadAutoLock<CThreadMutex> _( zone->allocLock );
+	CThreadAutoLock<CThreadMutex> lock( zone->allocLock );
+
 #ifdef USE_MULTI_SEGMENT
 	base = SearchFree( zone, size );
 
-	RemoveFree( zone, base );
+	RemoveFree( base );
 #else
 
 	base = rover = zone->rover;
@@ -485,10 +487,11 @@ void *Z_Alloc( memzone_t *zone, uint64_t size, uint64_t tag )
 			// scanned all the way around the list
 #ifdef SIRENGINE_MEMORY_DEBUG
 			Z_LogHeap();
-			SIRENGINE_ERROR( "Z_Malloc: failed on allocation of %lu bytes from the %s zone: %s, line: %d (%s)",
-								size, zone == smallzone ? "small" : "main", file, line, label );
+			SIRENGINE_ERROR( "Z_Malloc: failed on allocation of %lu bytes: %s, line: %d (%s)",
+								size, file, line, label );
 #else
-			SIRENGINE_ERROR( "Z_Malloc: failed on allocation of %lu bytes from the %s zone" );
+			SIRENGINE_ERROR( "Z_Malloc: failed on allocation of %lu bytes",
+								size );
 #endif
 			return NULL;
 		}
@@ -497,26 +500,25 @@ void *Z_Alloc( memzone_t *zone, uint64_t size, uint64_t tag )
 		} else {
 			rover = rover->next;
 		}
-	} while ( base->tag.load() != TAG_FREE || base->size.load() < size );
+	} while (base->tag != TAG_FREE || base->size < size);
 #endif
 
 	//
 	// found a block big enough
 	//
-
-	extra = base->size.load() - size;
+	extra = base->size - size;
 	if ( extra >= CTagArenaAllocator::nMinFragment ) {
 		memblock_t *fragment;
 		// there will be a free fragment after the allocated block
 		fragment = (memblock_t *)( (byte *)base + size );
-		fragment->size.store( extra );
-		fragment->tag.store( TAG_FREE ); // free block
-		fragment->id.store( ZONEID );
+		fragment->size = extra;
+		fragment->tag = TAG_FREE; // free block
+		fragment->id = ZONEID;
 		fragment->prev = base;
 		fragment->next = base->next;
 		fragment->next->prev = fragment;
 		base->next = fragment;
-		base->size.store( size );
+		base->size = size;
 #ifdef USE_MULTI_SEGMENT
 		InsertFree( zone, fragment );
 #endif
@@ -525,10 +527,10 @@ void *Z_Alloc( memzone_t *zone, uint64_t size, uint64_t tag )
 #ifndef USE_MULTI_SEGMENT
 	zone->rover = base->next;	// next allocation will start looking here
 #endif
-	zone->used.fetch_add( base->size.load() );
+	zone->used += base->size;
 
-	base->tag.store( tag );		// no longer a free block
-	base->id.store( ZONEID );
+	base->tag = tag;			// no longer a free block
+	base->id = ZONEID;
 
 #ifdef SIRENGINE_MEMORY_DEBUG
 	base->d.label = label;
@@ -539,21 +541,21 @@ void *Z_Alloc( memzone_t *zone, uint64_t size, uint64_t tag )
 
 #ifdef USE_TRASH_TEST
 	// marker for memory trash testing
-	*(int32_t *)( (byte *)base + base->size.load() - 4 ) = ZONEID;
+	*(int32_t *)((byte *)base + base->size - 4) = ZONEID;
 #endif
 
-	return (void *)( base + 1 );
+	return (void *) ( base + 1 );
 }
 
 #ifdef SIRENGINE_MEMORY_DEBUG
 void *Z_ReallocDebug( memzone_t *zone, void *ptr, uint64_t nsize, uint64_t tag, const char *label, const char *file, uint32_t line ) {
 	void *p;
 
-	p = Z_AllocDebug( zone, nsize, tag, label, file, line );
-	if ( ptr ) {
-		memblock_t *block = (memblock_t *)( (byte *)ptr - sizeof( memblock_t ) );
-		memcpy( p, ptr, block->size.load() <= nsize ? nsize : block->size.load() );
-		Z_Free( zone, ptr );
+	p = Z_AllocDebug( nsize, tag, label, file, line );
+	if (ptr) {
+		memblock_t *block = (memblock_t *)((byte *)ptr - sizeof(memblock_t));
+		memcpy(p, ptr, block->size <= nsize ? nsize : block->size);
+		Z_Free(ptr);
 	}
 	return p;
 }
@@ -562,9 +564,9 @@ void *Z_Realloc( memzone_t *zone, void *ptr, uint64_t nsize, uint64_t tag ) {
 	void *p;
 
 	p = Z_Alloc( zone, nsize, tag );
-	if ( ptr ) {
-		memblock_t *block = (memblock_t *)( (byte *)ptr - sizeof( memblock_t ) );
-		memcpy( p, ptr, block->size.load() <= nsize ? nsize : block->size.load() );
+	if (ptr) {
+		memblock_t *block = (memblock_t *)((byte *)ptr - sizeof(memblock_t));
+		memcpy( p, ptr, block->size <= nsize ? nsize : block->size );
 		Z_Free( zone, ptr );
 	}
 	return p;
@@ -586,40 +588,37 @@ void *Z_Malloc( memzone_t *zone, uint64_t size, uint64_t tag ) {
 }
 #endif
 
-
 /*
 ========================
 Z_CheckHeap
 ========================
 */
-void Z_CheckHeap( memzone_t *zone )
+void Z_CheckHeap( const memzone_t *zone )
 {
 	const memblock_t *block;
 
-	CThreadAutoLock<CThreadMutex> _( zone->allocLock );
 	for ( block = zone->blocklist.next ; ; ) {
 		if ( block->next == &zone->blocklist ) {
 			break;	// all blocks have been hit
 		}
-		if ( (byte *)block + block->size.load() != (byte *)block->next) {
+		if ( (byte *)block + block->size != (byte *)block->next ) {
 #ifdef USE_MULTI_SEGMENT
 			const memblock_t *next = block->next;
-			if ( next->size.load() == 0 && next->id.load() == -ZONEID && next->tag.load() == TAG_STATIC ) {
+			if ( next->size == 0 && next->id == -ZONEID && next->tag == TAG_STATIC ) {
 				block = next; // new zone segment
 			} else
 #endif
 			SIRENGINE_ERROR( "Z_CheckHeap: block size does not touch the next block" );
 		}
-		if ( block->next->prev != block) {
+		if ( block->next->prev != block ) {
 			SIRENGINE_ERROR( "Z_CheckHeap: next block doesn't have proper back link" );
 		}
-		if ( block->tag.load() == TAG_FREE && block->next->tag.load() == TAG_FREE ) {
+		if ( block->tag == TAG_FREE && block->next->tag == TAG_FREE ) {
 			SIRENGINE_ERROR( "Z_CheckHeap: two consecutive free blocks" );
 		}
 		block = block->next;
 	}
 }
-
 
 /*
 ========================
@@ -684,11 +683,11 @@ void Z_LogZoneHeap( memzone_t *zone, const char *name )
 	*/
 }
 
-CTagArenaAllocator::CTagArenaAllocator( const char *pName, uint64_t nSize )
+CTagArenaAllocator::CTagArenaAllocator( const char *pName, uint64_t nSize, uint64_t nFlags )
 {
 	m_pName = pName;
-//	m_pZone = (memzone_t *)g_pApplication->VirtualAlloc( &nSize, 64 );
-	m_pZone = (memzone_t *)calloc( 1, nSize );
+	m_pZone = (memzone_t *)g_pApplication->VirtualAlloc( &nSize, 64 );
+//	m_pZone = (memzone_t *)calloc( 1, nSize );
 	if ( !m_pZone ) {
 		g_pApplication->OnOutOfMemory();
 	}
@@ -709,12 +708,13 @@ void CTagArenaAllocator::Shutdown( void )
 		if ( block->next == &m_pZone->blocklist ) {
 			break;	// all blocks have been hit
 		}
-		if ( (byte *)block + block->size.load() != (byte *)block->next ) {
+		if ( (byte *)block + block->size != (byte *)block->next ) {
 #ifdef USE_MULTI_SEGMENT
 			memblock_t *next = block->next;
-			if ( next->size.load() == 0 && next->id.load() == -ZONEID && next->tag.load() == TAG_STATIC ) {
+			if ( next->size == 0 && next->id == -ZONEID && next->tag == TAG_STATIC ) {
 				if ( seg ) {
-					::free( seg );
+					g_pApplication->VirtualFree( seg );
+//					::free( seg );
 				}
 				seg = next;
 				block = next; // new zone segment
@@ -722,16 +722,16 @@ void CTagArenaAllocator::Shutdown( void )
 #endif
 			SIRENGINE_ERROR( "Z_CheckHeap: block size does not touch the next block" );
 		}
-		if ( block->next->prev != block) {
+		if ( block->next->prev != block ) {
 			SIRENGINE_ERROR( "Z_CheckHeap: next block doesn't have proper back link" );
 		}
-		if ( block->tag.load() == TAG_FREE && block->next->tag.load() == TAG_FREE ) {
+		if ( block->tag == TAG_FREE && block->next->tag == TAG_FREE ) {
 			SIRENGINE_ERROR( "Z_CheckHeap: two consecutive free blocks" );
 		}
 		block = block->next;
 	}
-//	g_pApplication->VirtualFree( m_pZone );
-	::free( m_pZone );
+	g_pApplication->VirtualFree( m_pZone );
+//	::free( m_pZone );
 }
 
 void *CTagArenaAllocator::Alloc( size_t nSize )
@@ -776,13 +776,13 @@ void CTagArenaAllocator::Free( void *pMemory, const char *pFileName, uint64_t nL
 
 size_t CTagArenaAllocator::GetAllocSize( void *pMemory )
 {
-	const memblock_t *block = (const memblock_t *)pMemory;
+	const memblock_t *block = (const memblock_t *)pMemory - 1;
 
-	if ( block->id.load() != ZONEID ) {
-		SIRENGINE_ERROR( "CTagArenaAllocator::GetAllocSize: not a memblock" );
+	if ( block->id != ZONEID ) {
+		SIRENGINE_ERROR( "CTagArenaAllocator::GetAllocSize: not a memblock, id = %li", block->id );
 	}
 
-	return block->size.load();
+	return block->size;
 }
 
 void CTagArenaAllocator::DumpStats( void )
@@ -802,7 +802,7 @@ bool CTagArenaAllocator::IsDebugHeap( void ) const
 void CTagArenaAllocator::GetMemoryStatus( size_t *pUsedMemory, size_t *pFreeMemory )
 {
 	*pFreeMemory = Z_AvailableZoneMemory( m_pZone );
-	*pUsedMemory = m_pZone->used.load();
+	*pUsedMemory = m_pZone->used;
 }
 
 uint64_t CTagArenaAllocator::AllocateTagGroup( const char *pName )

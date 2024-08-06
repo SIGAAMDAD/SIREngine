@@ -7,28 +7,36 @@
 #include "FileStream.h"
 
 namespace FileSystem {
-    class CFileReader
+    class CFileReader : public IFileStream
     {
     public:
         CFileReader( void )
-            : m_hFileHandle( NULL )
         { }
+        CFileReader( CFileReader& other )
+        {
+            m_FilePath = eastl::move( other.m_FilePath );
+            m_hFileHandle = other.m_hFileHandle;
+        }
         CFileReader( const CFilePath& filePath )
-            : m_FilePath( filePath )
         { Open( filePath ); }
-        ~CFileReader()
+        virtual ~CFileReader() override
         { Close(); }
 
-        bool Open( const CFilePath& filePath );
-        void Close( void );
-        bool IsOpen( void ) const;
+        SIRENGINE_FORCEINLINE CFileReader& operator=( CFileReader& other )
+        {
+            m_FilePath = eastl::move( other.m_FilePath );
+            m_hFileHandle = other.m_hFileHandle;
+            return *this;
+        }
+
+        virtual bool Open( const CFilePath& filePath ) override;
+        virtual void Close( void ) override;
+        virtual bool IsOpen( void ) const override;
+
+        virtual size_t GetPosition( void ) const override;
+        virtual size_t GetLength( void ) const override;
 
         size_t Read( void *pBuffer, size_t nBytes );
-        size_t GetPosition( void ) const;
-        size_t GetLength( void ) const;
-    private:
-        CFilePath m_FilePath;
-        FILE *m_hFileHandle;
     };
 };
 

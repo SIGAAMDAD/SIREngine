@@ -83,6 +83,27 @@
     #endif
 #endif
 
+// Resolve which function signature macro will be used. Note that this only
+// is resolved when the (pre)compiler starts, so the syntax highlighting
+// could mark the wrong one in your editor!
+#if defined(__GNUC__) || (defined(__MWERKS__) && (__MWERKS__ >= 0x3000)) || (defined(__ICC) && (__ICC >= 600)) || defined(__ghs__)
+	#define SIRENGINE_FUNC_NAME __PRETTY_FUNCTION__
+#elif defined(__DMC__) && (__DMC__ >= 0x810)
+	#define SIRENGINE_FUNC_NAME __PRETTY_FUNCTION__
+#elif (defined(__FUNCSIG__) || (_MSC_VER))
+	#define SIRENGINE_FUNC_NAME __FUNCSIG__
+#elif (defined(__INTEL_COMPILER) && (__INTEL_COMPILER >= 600)) || (defined(__IBMCPP__) && (__IBMCPP__ >= 500))
+	#define SIRENGINE_FUNC_NAME __FUNCTION__
+#elif defined(__BORLANDC__) && (__BORLANDC__ >= 0x550)
+	#define SIRENGINE_FUNC_NAME __FUNC__
+#elif defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199901)
+	#define SIRENGINE_FUNC_NAME __func__
+#elif defined(__cplusplus) && (__cplusplus >= 201103)
+	#define SIRENGINE_FUNC_NAME __func__
+#else
+	#define SIRENGINE_FUNC_NAME "SIRENGINE_FUNC_NAME unknown!"
+#endif
+
 #if !defined(SIRENGINE_ATTRIBUTE)
     #if defined(SIRENGINE_COMPILER_GCC)
         #define SIRENGINE_ATTRIBUTE(x) __attribute__((x))

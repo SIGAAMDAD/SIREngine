@@ -17,9 +17,13 @@ public:
     ~CJsonCache()
     { }
 
-    nlohmann::json& GetJsonObject( const FileSystem::CFilePath& filePath );
+    static void InitJSonCache( void );
+    static const nlohmann::json& GetJsonObject( const FileSystem::CFilePath& filePath );
 private:
     eastl::unordered_map<FileSystem::CFilePath, nlohmann::json> m_JsonCache;
+    const nlohmann::json emptyJSon{};
 };
+
+extern CJsonCache *g_pJSonCache;
 
 #endif

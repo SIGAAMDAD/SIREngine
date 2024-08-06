@@ -22,6 +22,9 @@ class VKContext : public IRenderContext
 public:
     VKContext( const ApplicationInfo_t& appInfo );
     virtual ~VKContext() override;
+    
+    virtual void Init( void ) override;
+    virtual void Shutdown( void ) override;
 
     virtual void SetupShaderPipeline( void ) override;
     virtual void SwapBuffers( void ) override;
@@ -45,6 +48,9 @@ public:
     SIRENGINE_FORCEINLINE CVector<VkImageView>& GetSwapChainImageViews( void )
     { return m_SwapChainImageViews; }
 
+    SIRENGINE_FORCEINLINE const VkAllocationCallbacks *GetAllocationCallbacks( void ) const
+    { return &m_AllocationCallbacks; }
+
     SIRENGINE_FORCEINLINE VkRenderPass GetRenderPass( void )
     { return m_hRenderPass; }
 
@@ -64,7 +70,7 @@ public:
 
     virtual IRenderProgram *AllocateProgram( const RenderProgramInit_t& programInfo ) override;
     virtual IRenderShader *AllocateShader( const RenderShaderInit_t& shaderInit ) override;
-    virtual IRenderBuffer *AllocateBuffer( GPUBufferType_t nType, uint64_t nSize ) override;
+    virtual IRenderBuffer *AllocateBuffer( GPUBufferType_t nType, GPUBufferUsage_t nUsage, uint64_t nSize ) override;
     virtual IRenderTexture *AllocateTexture( const TextureInit_t& textureInfo ) override;
 
     virtual const GPUMemoryUsage_t GetMemoryUsage( void ) override;
@@ -86,7 +92,11 @@ private:
 
     void CheckExtensionsSupported( void );
 
+    CTagArenaAllocator *m_pTagAllocator;
+
     VkDebugUtilsMessengerEXT m_hDebugHandler;
+
+    VkAllocationCallbacks m_AllocationCallbacks;
 
     VkInstance m_hInstance;
     VkSurfaceKHR m_hSurface;

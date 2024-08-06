@@ -1,7 +1,11 @@
 #ifndef __SIRENGINE_DRAWBUFFER_H__
 #define __SIRENGINE_DRAWBUFFER_H__
 
-#pragma once
+#include <Engine/Core/SIREngine.h>
+
+#if defined(SIRENGINE_PRAGMA_ONCE_SUPPORTED)
+    #pragma once
+#endif
 
 #include "RenderLib.h"
 #include <EASTL/stack.h>

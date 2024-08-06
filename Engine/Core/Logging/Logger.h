@@ -6,11 +6,36 @@
 #include <Engine/Core/SIREngine.h>
 #include <EASTL/queue.h>
 
-enum class ELogLevel {
-    Pendantic,
-    Verbose,
-    Developer
+namespace ELogLevel {
+    enum Type : uint8_t {
+        NoLogging = 0,
+
+        Fatal,
+        Error,
+        Warning,
+        Developer,
+        Info,
+        Verbose,
+        Spam,
+
+        All = Spam,
+        NumLevels,
+        VerbosityMask   = 0xf,
+		BreakOnLog		= 0x40
+    };
 };
+
+static_assert( ELogLevel::NumLevels - 1 < ELogLevel::VerbosityMask, "Bad verbosity mask." );
+
+typedef struct LogData {
+    LogData( const char *_pFileName, const char *_pFunction, uint64_t _nLineNumber )
+        : pFileName( _pFileName ), pFunction( _pFunction ), nLineNumber( _nLineNumber )
+    { }
+    
+    const char *pFileName;
+    const char *pFunction;
+    uint64_t nLineNumber;
+} LogData_t;
 
 class CLogManager
 {
@@ -18,12 +43,10 @@ public:
     CLogManager( void );
     ~CLogManager();
 
-    void LogInfo( const char *pFileName, uint64_t nFileNumber,
-        const char *fmt, ... ) SIRENGINE_ATTRIBUTE(format(printf, 4, 5));
-    void LogWarning( const char *pFileName, uint64_t nFileNumber,
-        const char *fmt, ... ) SIRENGINE_ATTRIBUTE(format(printf, 4, 5));
-    void LogError( const char *pFileName, uint64_t nFileNumber,
-        const char *fmt, ... ) SIRENGINE_ATTRIBUTE(format(printf, 4, 5));
+    void LogInfo( const LogData_t& data, const char *fmt, ... ) SIRENGINE_ATTRIBUTE(format(printf, 3, 4));
+    void LogWarning( const LogData_t& data, const char *fmt, ... ) SIRENGINE_ATTRIBUTE(format(printf, 3, 4));
+    void LogError( const LogData_t& data, const char *fmt, ... ) SIRENGINE_ATTRIBUTE(format(printf, 3, 4));
+    void SendNotification( const LogData_t& data, const char *pString );
 
     static void LaunchLoggingThread( void );
     static void ShutdownLogger( void );

@@ -1,0 +1,177 @@
+[14:29:01] Initializing Directory Cache...
+[14:29:01] GameDirectory: /media/noah/ab8ebf4d-ded3-46a9-983a-3545cd58109e/noah/Projects/SIR-Engine
+[14:29:01] Got 2 Directories.
+[14:29:01] Loading directory tree "/media/noah/ab8ebf4d-ded3-46a9-983a-3545cd58109e/noah/Projects/SIR-Engine/Resources/Shaders"
+[14:29:01] Loading directory tree "/media/noah/ab8ebf4d-ded3-46a9-983a-3545cd58109e/noah/Projects/SIR-Engine/Resources/Shaders/Vulkan"
+[14:29:01] Loading directory tree "/media/noah/ab8ebf4d-ded3-46a9-983a-3545cd58109e/noah/Projects/SIR-Engine/Resources/Shaders/OpenGL"
+[14:29:01] Loading directory tree "/media/noah/ab8ebf4d-ded3-46a9-983a-3545cd58109e/noah/Projects/SIR-Engine/Resources/Shaders/D3D11"
+[14:29:01] Loading directory tree "/media/noah/ab8ebf4d-ded3-46a9-983a-3545cd58109e/noah/Projects/SIR-Engine/Resources/Scripts"
+[14:29:01] Creating SDL2 window instance:
+[14:29:01]  IsFullscreen: FALSE
+[14:29:01]  IsBorderless: FALSE
+[14:29:01]  Width: 1920
+[14:29:01]  Height: 1080
+[14:29:01]  ContextType: Vulkan
+[14:29:01] Initializing VKContext
+[14:29:01] Found 2 Extensions.
+[14:29:01] Using Vulkan Instance Extensions:
+[14:29:01] - "VK_KHR_surface"
+[14:29:01] - "VK_KHR_xlib_surface"
+[14:29:01] - "VK_KHR_get_physical_device_properties2"
+[14:29:01] - "VK_EXT_debug_utils"
+[14:29:01] Fetching VulkanInstance extensions...
+[14:29:01] VKContext Instance created.
+[14:29:01] VKContext VkSurfaceKHR allocated.
+[14:29:01] VkPhysicalDevice Score: 2300115
+[14:29:01] Vulkan Driver Query:
+[14:29:01]   Device Name: NVIDIA GeForce RTX 3060
+[14:29:01]   Device ID: 9476
+[14:29:01]   Device Type: Dedicated Graphics Card
+[14:29:01]   Driver Version: 2328527232
+[14:29:01]   Vulkan API Version: 4206870
+[14:29:01]   Pipeline Cache UUID: íSk·¡â·Ø0ÄÙWÕ_4
+[14:29:01] (LIMITS)
+[14:29:01]  - maxColorAttachments: 8
+[14:29:01]  - maxDescriptorSetStorageBuffers: 1048576
+[14:29:01]  - maxDescriptorSetInputAttachments: 1048576
+[14:29:01]  - maxDescriptorSetSampledImages: 1048576
+[14:29:01]  - maxDescriptorSetSamplers: 1048576
+[14:29:01]  - maxDescriptorSetStorageBuffersDynamic: 16
+[14:29:01]  - maxDescriptorSetStorageImages: 1048576
+[14:29:01]  - maxDescriptorSetUniformBuffers: 1048576
+[14:29:01]  - maxDescriptorSetUniformBuffersDynamic: 15
+[14:29:01]  - maxFramebufferWidth: 32768
+[14:29:01]  - maxFramebufferHeight: 32768
+[14:29:01]  - maxImageDimension2D: 32768
+[14:29:01]  - maxUniformBufferRange: 65536
+[14:29:01]  - maxVertexInputAttributeOffset: 2047
+[14:29:01]  - maxVertexInputAttributes: 32
+[14:29:01]  - maxVertexInputBindings: 32
+[14:29:01]  - maxVertexInputBindingStride: 2048
+[14:29:01]  - maxVertexOutputComponents: 128
+[14:29:01] VkPhysicalDevice Score: 2055011
+[14:29:01] Vulkan Driver Query:
+[14:29:01]   Device Name: llvmpipe (LLVM 15.0.7, 256 bits)
+[14:29:01]   Device ID: 0
+[14:29:01]   Device Type: CPU/Software Rendering
+[14:29:01]   Driver Version: 1
+[14:29:01]   Vulkan API Version: 4206847
+[14:29:01]   Vendor: Mesa (NVidia)
+[14:29:01]   Pipeline Cache UUID: 23.2.1-1ubuntu3.
+[14:29:01] (LIMITS)
+[14:29:01]  - maxColorAttachments: 8
+[14:29:01]  - maxDescriptorSetStorageBuffers: 1000000
+[14:29:01]  - maxDescriptorSetInputAttachments: 1000000
+[14:29:01]  - maxDescriptorSetSampledImages: 1000000
+[14:29:01]  - maxDescriptorSetSamplers: 1000000
+[14:29:01]  - maxDescriptorSetStorageBuffersDynamic: 1000000
+[14:29:01]  - maxDescriptorSetStorageImages: 1000000
+[14:29:01]  - maxDescriptorSetUniformBuffers: 1000000
+[14:29:01]  - maxDescriptorSetUniformBuffersDynamic: 1000000
+[14:29:01]  - maxFramebufferWidth: 16384
+[14:29:01]  - maxFramebufferHeight: 16384
+[14:29:01]  - maxImageDimension2D: 16384
+[14:29:01]  - maxUniformBufferRange: 65536
+[14:29:01]  - maxVertexInputAttributeOffset: 2047
+[14:29:01]  - maxVertexInputAttributes: 32
+[14:29:01]  - maxVertexInputBindings: 32
+[14:29:01]  - maxVertexInputBindingStride: 2048
+[14:29:01]  - maxVertexOutputComponents: 128
+[14:29:01] Vulkan Driver Query:
+[14:29:01]   Device Name: NVIDIA GeForce RTX 3060
+[14:29:01]   Device ID: 9476
+[14:29:01]   Device Type: Dedicated Graphics Card
+[14:29:01]   Driver Version: 2328527232
+[14:29:01]   Vulkan API Version: 4206870
+[14:29:01]   Pipeline Cache UUID: íSk·¡â·Ø0ÄÙWÕ_4
+[14:29:01] (LIMITS)
+[14:29:01]  - maxColorAttachments: 8
+[14:29:01]  - maxDescriptorSetStorageBuffers: 1048576
+[14:29:01]  - maxDescriptorSetInputAttachments: 1048576
+[14:29:01]  - maxDescriptorSetSampledImages: 1048576
+[14:29:01]  - maxDescriptorSetSamplers: 1048576
+[14:29:01]  - maxDescriptorSetStorageBuffersDynamic: 16
+[14:29:01]  - maxDescriptorSetStorageImages: 1048576
+[14:29:01]  - maxDescriptorSetUniformBuffers: 1048576
+[14:29:01]  - maxDescriptorSetUniformBuffersDynamic: 15
+[14:29:01]  - maxFramebufferWidth: 32768
+[14:29:01]  - maxFramebufferHeight: 32768
+[14:29:01]  - maxImageDimension2D: 32768
+[14:29:01]  - maxUniformBufferRange: 65536
+[14:29:01]  - maxVertexInputAttributeOffset: 2047
+[14:29:01]  - maxVertexInputAttributes: 32
+[14:29:01]  - maxVertexInputBindings: 32
+[14:29:01]  - maxVertexInputBindingStride: 2048
+[14:29:01]  - maxVertexOutputComponents: 128
+[14:29:01] Using Vulkan Extension "VK_KHR_16bit_storage"
+[14:29:01] Using Vulkan Extension "VK_KHR_descriptor_update_template"
+[14:29:01] Using Vulkan Extension "VK_KHR_get_memory_requirements2"
+[14:29:01] Using Vulkan Extension "VK_KHR_maintenance1"
+[14:29:01] Using Vulkan Extension "VK_KHR_maintenance2"
+[14:29:01] Using Vulkan Extension "VK_KHR_maintenance3"
+[14:29:01] Using Vulkan Extension "VK_KHR_push_descriptor"
+[14:29:01] Using Vulkan Extension "VK_KHR_shader_float_controls"
+[14:29:01] Using Vulkan Extension "VK_KHR_spirv_1_4"
+[14:29:01] Using Vulkan Extension "VK_KHR_storage_buffer_storage_class"
+[14:29:01] Using Vulkan Extension "VK_KHR_swapchain"
+[14:29:01] Using Vulkan Extension "VK_KHR_vulkan_memory_model"
+[14:29:01] Using Vulkan Extension "VK_EXT_descriptor_indexing"
+[14:29:01] Using Vulkan Extension "VK_EXT_memory_budget"
+[14:29:01] Using Vulkan Extension "VK_EXT_memory_priority"
+[14:29:01] Using Vulkan Extension "VK_EXT_pageable_device_local_memory"
+[14:29:02] Fetching vkCreateSwapchainKHR...
+[14:29:02] Fetching vkCmdPushDescriptorSetKHR...
+[14:29:02] Fetching vkCreateDescriptorUpdateTemplateKHR...
+[14:29:02] Checking for VK_EXT_DEBUG_UTILS...
+[14:29:02] Initialized VK_EXT_DEBUG_UTILS.
+[14:29:02] Allocated VkRenderPass.
+[14:29:02] Allocated VKSwapchainKHR Object 0.
+[14:29:02] Allocated SwapChain VkImageView Object 0.
+[14:29:02] Allocated SwapChain VkImageView Object 1.
+[14:29:02] Allocated SwapChain VkImageView Object 2.
+[14:29:02] Allocated SwapChain VkFramebuffer Object 0.
+[14:29:02] Allocated SwapChain VkFramebuffer Object 1.
+[14:29:02] Allocated SwapChain VkFramebuffer Object 2.
+[14:29:02] Allocating VkShaderModule object "Generic"
+[14:29:02] Allocating VkShaderModule object "Generic"
+[14:29:02] Creating Vulkan Pipeline Input Set...
+[14:29:02] Allocated VertexInput Attribute Layout...
+[14:29:02] - Pipeline VertexInput Attribute "a_Position" enabled
+[14:29:02] - Pipeline VertexInput Attribute "a_TexCoords" enabled
+[14:29:02] - Pipeline VertexInput Attribute "a_Color" enabled
+[14:29:02] Using 3 VertexInput Attributes.
+[14:29:02] Allocating UniformBuffer Layout...
+[14:29:02] Created VkPipelineLayout
+[14:29:02] Finalized VkPipeline.
+[14:29:02] Loading Engine Configuration...
+[14:29:02] Done.
+[14:29:02] Vulkan Memory Usage:
+[14:29:02]  Memory Heap 0:
+[14:29:02]  - Flags: 
+[14:29:02]  - Size: 23 Gb
+[14:29:02]  Memory Heap 1:
+[14:29:02]  - Flags: (Device Local) 
+[14:29:02]  - Size: 12 Gb
+[14:29:02]  Memory Heap 2:
+[14:29:02]  - Flags: (Device Local) 
+[14:29:02]  - Size: 12 Gb
+[14:29:02]  Memory Heap 3:
+[14:29:02]  - Flags: (Host Coherent) (Host Visible) 
+[14:29:02]  - Size: 23 Gb
+[14:29:02]  Memory Heap 4:
+[14:29:02]  - Flags: (Host Cached) (Host Coherent) (Host Visible) 
+[14:29:02]  - Size: 23 Gb
+[14:29:02]  Memory Heap 5:
+[14:29:02]  - Flags: (Device Local) (Host Coherent) (Host Visible) 
+[14:29:02]  - Size: 246 Mb
+[14:29:02] Vma (Vulkan Memory Allocator) Memory Usage:
+[14:29:02]  Memory Heap 0:
+[14:29:02]  - Largest Allocation: 64 Kb
+[14:29:02]  - Smallest Allocation: 64 Kb
+[14:29:02]  - Unused Fragment Count: 1
+[14:29:02]  - Unused Largest Fragment: 15 Mb
+[14:29:02]  - Unused Smallest Fragment: 15 Mb
+[14:29:02]  - Total Allocated CPU Memory: 128 Kb
+[14:29:02]  - Alllocation Count: 2
+[14:29:02]  - Driver Allocated Used CPU Memory: 16 Mb
+[14:29:02]  - Driver Allocated Unused CPU Memory: 15 Mb

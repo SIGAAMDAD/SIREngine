@@ -11,12 +11,10 @@
 class GLBuffer : public IRenderBuffer
 {
 public:
-    GLBuffer( GPUBufferType_t nType );
-    GLBuffer( GPUBufferType_t nType, uint64_t nSize );
+    GLBuffer( GPUBufferType_t nType, GPUBufferUsage_t nUsage, uint64_t nSize );
     virtual ~GLBuffer() override;
 
-    virtual void Init( void ) override;
-    virtual void Init( uint64_t nItems ) override;
+    virtual void Init( const void *pBuffer, uint64_t nSize ) override;
     virtual void Shutdown( void ) override;
 
     virtual void *GetBuffer( void ) override { return NULL; }
@@ -34,7 +32,7 @@ public:
     SIRENGINE_FORCEINLINE GLenum GetGLTarget( void ) const
     { return m_nBufferTarget; }
     SIRENGINE_FORCEINLINE GLenum GetGLUsage( void ) const
-    { return m_nBufferUsage; }
+    { return m_nGLUsage; }
     SIRENGINE_FORCEINLINE void Bind( void ) const
     { nglBindBuffer( m_nBufferTarget, m_hBufferID ); }
     SIRENGINE_FORCEINLINE void Unbind( void ) const
@@ -42,7 +40,7 @@ public:
 private:
     GLuint m_hBufferID;
     GLenum m_nBufferTarget;
-    GLenum m_nBufferUsage;
+    GLenum m_nGLUsage;
 };
 
 #endif

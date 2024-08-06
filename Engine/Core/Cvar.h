@@ -5,10 +5,12 @@
 
 #include "SIREngine.h"
 #include <Engine/Util/CString.h>
+#include "FileSystem/FilePath.h"
 
 typedef enum {
     Cvar_Save       = 0x0001,
     Cvar_ReadOnly   = 0x0002,
+    Cvar_Developer  = 0x0004,
     
     Cvar_Default    = 0x0000
 } CvarFlags_t;
@@ -25,14 +27,15 @@ typedef enum {
 } CvarGroup_t;
 
 typedef enum {
-    CVT_NONE,
-    CVT_INT,
-    CVT_FLOAT,
-    CVT_STRING,
-    CVT_BOOL,
-    CVT_FILEPATH,
+    CvarType_Invalid,
+    CvarType_Int,
+    CvarType_UInt,
+    CvarType_Float,
+    CvarType_String,
+    CvarType_Bool,
+    CvarType_FilePath,
 
-    CVT_MAX
+    CvarType_Max
 } CvarType_t;
 
 class IConsoleVar
@@ -45,11 +48,32 @@ public:
     { }
     ~IConsoleVar()
     { }
+
+    inline CvarType_t GetType( void ) const
+    { return m_nType; }
+    inline uint32_t GetFlags( void ) const
+    { return m_iFlags; }
+    inline CvarGroup_t GetGroup( void ) const
+    { return m_nGroup; }
+    inline const CString& GetName( void ) const
+    { return m_Name; }
+    inline const CString& GetDescription( void ) const
+    { return m_Description; }
+
+    virtual const CString GetStringValue( void ) const = 0;
+
+    virtual void SetValue( int32_t nValue ) {}
+    virtual void SetValue( uint32_t nValue ) {}
+    virtual void SetValue( float nValue ) {}
+    virtual void SetValue( bool bValue ) {}
+    virtual void SetValue( const CString& value ) {}
+    virtual void SetValue( const FileSystem::CFilePath& value ) {}
 protected:
     CString m_Name;
     CString m_Description;
     uint32_t m_iFlags;
     CvarGroup_t m_nGroup;
+    CvarType_t m_nType;
 };
 
 template<typename T>
@@ -60,9 +84,56 @@ public:
     { }
     inline CVar( const char *pName, const T defaultValue, uint32_t iFlags, const char *pDescription, CvarGroup_t nGroup )
         : IConsoleVar( pName, pDescription, iFlags, nGroup ), m_Value( defaultValue )
-    { }
+    {
+        if constexpr ( std::is_same<T, int32_t>() ) {
+            m_nType = CvarType_Int;
+        }
+        else if constexpr ( std::is_same<T, uint32_t>() ) {
+            m_nType = CvarType_UInt;
+        }
+        else if constexpr ( std::is_same<T, float>() ) {
+            m_nType = CvarType_Float;
+        }
+        else if constexpr ( std::is_same<T, bool32>() || std::is_same<T, bool>() ) {
+            m_nType = CvarType_Bool;
+        }
+        else if constexpr ( std::is_same<T, CString>() ) {
+            m_nType = CvarType_String;
+        }
+        else if constexpr ( std::is_same<T, FileSystem::CFilePath>() ) {
+            m_nType = CvarType_FilePath;
+        }
+        else {
+            m_nType = CvarType_Invalid;
+        }
+    }
     inline ~CVar()
     { }
+
+    inline virtual const CString GetStringValue( void ) const override
+    {
+        if constexpr ( std::is_same<T, int32_t>() ) {
+            return SIRENGINE_TEMP_VSTRING( "%i", m_Value );
+        }
+        else if constexpr ( std::is_same<T, uint32_t>() ) {
+            return SIRENGINE_TEMP_VSTRING( "%u", m_Value );
+        }
+        else if constexpr ( std::is_same<T, float>() ) {
+            return SIRENGINE_TEMP_VSTRING( "%0.02f", m_Value );
+        }
+        else if constexpr ( std::is_same<T, bool32>() || std::is_same<T, bool>() ) {
+            return SIRENGINE_TEMP_VSTRING( "%s", m_Value ? "true" : "false" );
+        }
+        else if constexpr ( std::is_same<T, CString>() ) {
+            return m_Value;
+        }
+        else if constexpr ( std::is_same<T, FileSystem::CFilePath>() ) {
+            return m_Value;
+        }
+        else {
+            return "";
+        }
+    }
 
     inline T GetValue( void ) const
     { return m_Value; }
@@ -76,10 +147,37 @@ public:
     inline void SetValue( T&& value )
     { m_Value = eastl::move( value ); }
 
-    inline const CString& GetName( void ) const
-    { return m_Name; }
-    inline const CString& GetDescription( void ) const
-    { return m_Description; }
+    virtual void SetValue( int32_t nValue ) override
+    {
+        if constexpr ( std::is_same<T, int32_t>() ) {
+            m_Value = nValue;
+        }
+    }
+    virtual void SetValue( uint32_t nValue ) override {
+        if constexpr ( std::is_same<T, uint32_t>() ) {
+            m_Value = nValue;
+        }
+    }
+    virtual void SetValue( float nValue ) override {
+        if constexpr ( std::is_same<T, float>() ) {
+            m_Value = nValue;
+        }
+    }
+    virtual void SetValue( bool bValue ) override {
+        if constexpr ( std::is_same<T, bool32>() || std::is_same<T, bool>() ) {
+            m_Value = bValue;
+        }
+    }
+    virtual void SetValue( const CString& value ) override {
+        if constexpr ( std::is_same<T, CString>() ) {
+            m_Value = value;
+        }
+    }
+    virtual void SetValue( const FileSystem::CFilePath& value ) override {
+        if constexpr ( std::is_same<T, FileSystem::CFilePath>() ) {
+            m_Value = value;
+        }
+    }
 private:
     T m_Value;
 };
@@ -92,9 +190,56 @@ public:
     { }
     inline CVarRef( const char *pName, T& valueRef, uint32_t iFlags, const char *pDescription, CvarGroup_t nGroup )
         : IConsoleVar( pName, pDescription, iFlags, nGroup ), m_pRefValue( eastl::addressof( valueRef ) )
-    { }
+    {
+        if constexpr ( std::is_same<T, int32_t>() ) {
+            m_nType = CvarType_Int;
+        }
+        else if constexpr ( std::is_same<T, uint32_t>() ) {
+            m_nType = CvarType_UInt;
+        }
+        else if constexpr ( std::is_same<T, float>() ) {
+            m_nType = CvarType_Float;
+        }
+        else if constexpr ( std::is_same<T, bool32>() || std::is_same<T, bool>() ) {
+            m_nType = CvarType_Bool;
+        }
+        else if constexpr ( std::is_same<T, CString>() ) {
+            m_nType = CvarType_String;
+        }
+        else if constexpr ( std::is_same<T, FileSystem::CFilePath>() ) {
+            m_nType = CvarType_FilePath;
+        }
+        else {
+            m_nType = CvarType_Invalid;
+        }
+    }
     inline ~CVarRef()
     { }
+
+    inline virtual const CString GetStringValue( void ) const override
+    {
+        if constexpr ( std::is_same<T, int32_t>() ) {
+            return SIRENGINE_TEMP_VSTRING( "%i", *m_pRefValue );
+        }
+        else if constexpr ( std::is_same<T, uint32_t>() ) {
+            return SIRENGINE_TEMP_VSTRING( "%u", *m_pRefValue );
+        }
+        else if constexpr ( std::is_same<T, float>() ) {
+            return SIRENGINE_TEMP_VSTRING( "%0.02f", *m_pRefValue );
+        }
+        else if constexpr ( std::is_same<T, bool32>() || std::is_same<T, bool>() ) {
+            return SIRENGINE_TEMP_VSTRING( "%s", *m_pRefValue ? "true" : "false" );
+        }
+        else if constexpr ( std::is_same<T, CString>() ) {
+            return *m_pRefValue;
+        }
+        else if constexpr ( std::is_same<T, FileSystem::CFilePath>() ) {
+            return *m_pRefValue;
+        }
+        else {
+            return "";
+        }
+    }
 
     inline T GetValue( void ) const
     { return *m_pRefValue; }
@@ -108,10 +253,37 @@ public:
     inline void SetValue( T&& value )
     { *m_pRefValue = eastl::move( value ); }
 
-    inline const CString& GetName( void ) const
-    { return m_Name; }
-    inline const CString& GetDescription( void ) const
-    { return m_Description; }
+    virtual void SetValue( int32_t nValue ) override
+    {
+        if constexpr ( std::is_same<T, int32_t>() ) {
+            *m_pRefValue = nValue;
+        }
+    }
+    virtual void SetValue( uint32_t nValue ) override {
+        if constexpr ( std::is_same<T, uint32_t>() ) {
+            *m_pRefValue = nValue;
+        }
+    }
+    virtual void SetValue( float nValue ) override {
+        if constexpr ( std::is_same<T, float>() ) {
+            *m_pRefValue = nValue;
+        }
+    }
+    virtual void SetValue( bool bValue ) override {
+        if constexpr ( std::is_same<T, bool32>() || std::is_same<T, bool>() ) {
+            *m_pRefValue = bValue;
+        }
+    }
+    virtual void SetValue( const CString& value ) override {
+        if constexpr ( std::is_same<T, CString>() ) {
+            *m_pRefValue = value;
+        }
+    }
+    virtual void SetValue( const FileSystem::CFilePath& value ) override {
+        if constexpr ( std::is_same<T, FileSystem::CFilePath>() ) {
+            *m_pRefValue = value;
+        }
+    }
 private:
     T *m_pRefValue;
 };

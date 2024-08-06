@@ -1,9 +1,11 @@
 #ifndef __UTL_MEMORY_HPP__
 #define __UTL_MEMORY_HPP__
 
-#pragma once
-
 #include <Engine/Core/SIREngine.h>
+
+#if defined(SIRENGINE_PRAGMA_ONCE_SUPPORTED)
+    #pragma once
+#endif
 
 
 /*
@@ -519,7 +521,7 @@ public:
 	{ delete[] (char *)pMemory; }
 };
 
-template<typename AllocatorType>
+template<typename AllocatorType, typename T = uint8_t>
 class UtlAllocatorAdaptor
 {
 public:

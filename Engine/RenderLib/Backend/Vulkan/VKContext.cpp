@@ -381,10 +381,65 @@ VkExtent2D VKContext::ChooseSwapExtent( const VkSurfaceCapabilitiesKHR& capabili
     }
 }
 
+static void *Vulkan_Allocate( void *pUserData, size_t nSize, size_t nAlignment, VkSystemAllocationScope scope )
+{
+    void *pBuffer;
+
+#if 0
+    pBuffer = g_pMemAlloc->Alloc( nSize );
+#else
+    pBuffer = malloc( nSize );
+#endif
+
+    return pBuffer;
+}
+
+static void Vulkan_Free( void *pUserData, void *pMemory )
+{
+#if 0
+    g_pMemAlloc->Free( pMemory );
+#else
+    ::free( pMemory );
+#endif
+}
+
+static void *Vulkan_Reallocate( void *pUserData, void *pOriginal, size_t nSize, size_t nAlignment, VkSystemAllocationScope scope )
+{
+    void *pBuffer;
+
+#if 0
+    pBuffer = g_pMemAlloc->Realloc( pOriginal, nSize );
+//    if ( pOriginal ) {
+//        size_t nAllocSize = g_pMemAlloc->GetAllocSize( pOriginal );
+//		memcpy( pBuffer, pOriginal, nAllocSize <= nSize ? nSize : nAllocSize );
+//        g_pMemAlloc->Free( pOriginal );
+//	}
+#else
+    pBuffer = realloc( pOriginal, nSize );
+#endif
+
+    return pBuffer;
+}
+
 VKContext::VKContext( const ApplicationInfo_t& appInfo )
     : IRenderContext( appInfo )
 {
+}
+
+VKContext::~VKContext()
+{
+}
+
+void VKContext::Init( void )
+{
     SIRENGINE_LOG( "Initializing VKContext" );
+
+    memset( &m_AllocationCallbacks, 0, sizeof( m_AllocationCallbacks ) );
+    m_AllocationCallbacks.pfnAllocation = Vulkan_Allocate;
+    m_AllocationCallbacks.pfnFree = Vulkan_Free;
+    m_AllocationCallbacks.pfnReallocation = Vulkan_Reallocate;
+
+    m_nCurrentFrameIndex = 0;
 
     InitWindowInstance();
     InitPhysicalVKDevice();
@@ -393,7 +448,7 @@ VKContext::VKContext( const ApplicationInfo_t& appInfo )
     InitSwapChain();
 }
 
-VKContext::~VKContext()
+void VKContext::Shutdown( void )
 {
     PrintMemoryInfo();
 
@@ -405,25 +460,25 @@ VKContext::~VKContext()
 
     ShutdownSwapChain();
 
-    vkDestroyFence( m_hDevice, m_hInFlightFences[0], NULL );
-    vkDestroyFence( m_hDevice, m_hInFlightFences[1], NULL );
-
-    vkDestroySemaphore( m_hDevice, m_hRenderFinished[0], NULL );
-    vkDestroySemaphore( m_hDevice, m_hRenderFinished[1], NULL );
-
-    vkDestroySemaphore( m_hDevice, m_hSwapChainImageAvailable[0], NULL );
-    vkDestroySemaphore( m_hDevice, m_hSwapChainImageAvailable[1], NULL );
-
-    vkDestroyRenderPass( m_hDevice, m_hRenderPass, NULL );
-    vkDestroyPipelineLayout( m_hDevice, m_hPipelineLayout, NULL );
-
-    vkDestroyCommandPool( m_hDevice, m_hCommandPool, NULL );
-
-    fn_vkDestroyDebugUtilsMessengerEXT( m_hInstance, m_hDebugHandler, NULL );
-    vkDestroySurfaceKHR( m_hInstance, m_hSurface, NULL );
-    vkDestroyDevice( m_hDevice, NULL );
-    vkDestroyInstance( m_hInstance, NULL );
     vmaDestroyAllocator( m_hAllocator );
+
+    vkDestroyFence( m_hDevice, m_hInFlightFences[0], GetAllocationCallbacks() );
+    vkDestroyFence( m_hDevice, m_hInFlightFences[1], GetAllocationCallbacks() );
+
+    vkDestroySemaphore( m_hDevice, m_hRenderFinished[0], GetAllocationCallbacks() );
+    vkDestroySemaphore( m_hDevice, m_hRenderFinished[1], GetAllocationCallbacks() );
+
+    vkDestroySemaphore( m_hDevice, m_hSwapChainImageAvailable[0], GetAllocationCallbacks() );
+    vkDestroySemaphore( m_hDevice, m_hSwapChainImageAvailable[1], GetAllocationCallbacks() );
+
+    vkDestroyRenderPass( m_hDevice, m_hRenderPass, GetAllocationCallbacks() );
+
+    vkDestroyCommandPool( m_hDevice, m_hCommandPool, GetAllocationCallbacks() );
+
+    fn_vkDestroyDebugUtilsMessengerEXT( m_hInstance, m_hDebugHandler, GetAllocationCallbacks() );
+    vkDestroySurfaceKHR( m_hInstance, m_hSurface, NULL );
+    vkDestroyDevice( m_hDevice, GetAllocationCallbacks() );
+    vkDestroyInstance( m_hInstance, GetAllocationCallbacks() );
 }
 
 void VKContext::RecreateSwapChain( void )
@@ -674,7 +729,7 @@ void VKContext::InitSwapChain( void )
     createInfo.clipped = VK_TRUE;
     createInfo.oldSwapchain = VK_NULL_HANDLE;
 
-    VK_CALL( fn_vkCreateSwapchainKHR( m_hDevice, &createInfo, NULL, &m_hSwapChain ) );
+    VK_CALL( fn_vkCreateSwapchainKHR( m_hDevice, &createInfo, GetAllocationCallbacks(), &m_hSwapChain ) );
 
     VK_CALL( vkGetSwapchainImagesKHR( m_hDevice, m_hSwapChain, &nImageCount, NULL ) );
     m_SwapChainImages.resize( nImageCount );
@@ -704,7 +759,7 @@ void VKContext::InitSwapChain( void )
         imageViewInfo.subresourceRange.baseArrayLayer = 0;
         imageViewInfo.subresourceRange.layerCount = 1;
 
-        VK_CALL( vkCreateImageView( m_hDevice, &imageViewInfo, NULL, &m_SwapChainImageViews[i] ) );
+        VK_CALL( vkCreateImageView( m_hDevice, &imageViewInfo, GetAllocationCallbacks(), &m_SwapChainImageViews[i] ) );
 
         SIRENGINE_LOG( "Allocated SwapChain VkImageView Object %u.", i );
     }
@@ -726,7 +781,7 @@ void VKContext::InitSwapChain( void )
         framebufferInfo.height = g_pApplication->GetAppInfo().nWindowHeight;
         framebufferInfo.layers = 1;
 
-        VK_CALL( vkCreateFramebuffer( m_hDevice, &framebufferInfo, NULL, &m_SwapChainFramebuffers[i] ) );
+        VK_CALL( vkCreateFramebuffer( m_hDevice, &framebufferInfo, GetAllocationCallbacks(), &m_SwapChainFramebuffers[i] ) );
         SIRENGINE_LOG( "Allocated SwapChain VkFramebuffer Object %u.", i );
     }
 }
@@ -735,7 +790,7 @@ void VKContext::ShutdownSwapChain( void )
 {
     for ( auto it : m_SwapChainImageViews ) {
         if ( it ) {
-            vkDestroyImageView( m_hDevice, it, NULL );
+            vkDestroyImageView( m_hDevice, it, GetAllocationCallbacks() );
         }
     }
     m_SwapChainImageViews.clear();
@@ -750,12 +805,12 @@ void VKContext::ShutdownSwapChain( void )
 
     for ( auto it : m_SwapChainFramebuffers ) {
         if ( it ) {
-            vkDestroyFramebuffer( m_hDevice, it, NULL );
+            vkDestroyFramebuffer( m_hDevice, it, GetAllocationCallbacks() );
         }
     }
 
     if ( m_hSwapChain ) {
-        vkDestroySwapchainKHR( m_hDevice, m_hSwapChain, NULL );
+        vkDestroySwapchainKHR( m_hDevice, m_hSwapChain, GetAllocationCallbacks() );
     }
 }
 
@@ -820,7 +875,7 @@ void VKContext::InitWindowInstance( void )
     createInfo.enabledLayerCount = SIREngine_StaticArrayLength( szLayers );
     createInfo.ppEnabledLayerNames = szLayers;
 
-    VK_CALL( vkCreateInstance( &createInfo, NULL, &m_hInstance ) );
+    VK_CALL( vkCreateInstance( &createInfo, GetAllocationCallbacks(), &m_hInstance ) );
     SIRENGINE_LOG( "VKContext Instance created." );
 
     if ( !SDL_Vulkan_CreateSurface( m_pWindow, m_hInstance, &m_hSurface ) ) {
@@ -839,7 +894,7 @@ void VKContext::InitCommandPool( void )
     poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
     poolInfo.queueFamilyIndex = indices.nGraphicsFamily;
 
-    VK_CALL( vkCreateCommandPool( m_hDevice, &poolInfo, NULL, &m_hCommandPool ) );
+    VK_CALL( vkCreateCommandPool( m_hDevice, &poolInfo, GetAllocationCallbacks(), &m_hCommandPool ) );
     SIRENGINE_LOG( "Allocated VkCommandPool Object." );
 
     VkCommandBufferAllocateInfo allocInfo;
@@ -861,14 +916,14 @@ void VKContext::InitCommandPool( void )
     fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-    VK_CALL( vkCreateFence( m_hDevice, &fenceInfo, NULL, &m_hInFlightFences[0] ) );
-    VK_CALL( vkCreateFence( m_hDevice, &fenceInfo, NULL, &m_hInFlightFences[1] ) );
+    VK_CALL( vkCreateFence( m_hDevice, &fenceInfo, GetAllocationCallbacks(), &m_hInFlightFences[0] ) );
+    VK_CALL( vkCreateFence( m_hDevice, &fenceInfo, GetAllocationCallbacks(), &m_hInFlightFences[1] ) );
 
-    VK_CALL( vkCreateSemaphore( m_hDevice, &semaphoreInfo, NULL, &m_hSwapChainImageAvailable[0] ) );
-    VK_CALL( vkCreateSemaphore( m_hDevice, &semaphoreInfo, NULL, &m_hSwapChainImageAvailable[1] ) );
+    VK_CALL( vkCreateSemaphore( m_hDevice, &semaphoreInfo, GetAllocationCallbacks(), &m_hSwapChainImageAvailable[0] ) );
+    VK_CALL( vkCreateSemaphore( m_hDevice, &semaphoreInfo, GetAllocationCallbacks(), &m_hSwapChainImageAvailable[1] ) );
 
-    VK_CALL( vkCreateSemaphore( m_hDevice, &semaphoreInfo, NULL, &m_hRenderFinished[0] ) );
-    VK_CALL( vkCreateSemaphore( m_hDevice, &semaphoreInfo, NULL, &m_hRenderFinished[1] ) );
+    VK_CALL( vkCreateSemaphore( m_hDevice, &semaphoreInfo, GetAllocationCallbacks(), &m_hRenderFinished[0] ) );
+    VK_CALL( vkCreateSemaphore( m_hDevice, &semaphoreInfo, GetAllocationCallbacks(), &m_hRenderFinished[1] ) );
 
     SIRENGINE_LOG( "Allocated Vulkan Synchronization Objects." );
 }
@@ -972,7 +1027,7 @@ void VKContext::InitLogicalDevice( void )
     createInfo.ppEnabledLayerNames = szLayers;
 
     assert( m_hPhysicalDevice );
-    VK_CALL( vkCreateDevice( m_hPhysicalDevice, &createInfo, NULL, &m_hDevice ) );
+    VK_CALL( vkCreateDevice( m_hPhysicalDevice, &createInfo, GetAllocationCallbacks(), &m_hDevice ) );
 
     vkGetDeviceQueue( m_hDevice, indices.nGraphicsFamily, 0, &m_hGraphicsQueue );
     vkGetDeviceQueue( m_hDevice, indices.nPresentFamily, 0, &m_hPresentQueue );
@@ -1080,7 +1135,7 @@ void VKContext::InitRenderPass( void )
     renderPassInfo.subpassCount = 1;
     renderPassInfo.pSubpasses = &subPass;
 
-    VK_CALL( vkCreateRenderPass( m_hDevice, &renderPassInfo, NULL, &m_hRenderPass ) );
+    VK_CALL( vkCreateRenderPass( m_hDevice, &renderPassInfo, GetAllocationCallbacks(), &m_hRenderPass ) );
     SIRENGINE_LOG( "Allocated VkRenderPass." );
 }
 
@@ -1270,7 +1325,6 @@ void *VKContext::Alloc( size_t nBytes, size_t nAlignment )
     const size_t adjustedAlignment = ( nAlignment > sizeof( void * ) ) ? nAlignment : sizeof( void * );
 
 	p = new char[ nBytes + adjustedAlignment + sizeof( void * ) ];
-	/*
     pPlusPointerSize = (void *)( (uintptr_t)p + sizeof( void * ) );
 	pAligned = (void *)( ( (uintptr_t)pPlusPointerSize + adjustedAlignment - 1 ) & ~( adjustedAlignment - 1 ) );
 				
@@ -1279,17 +1333,15 @@ void *VKContext::Alloc( size_t nBytes, size_t nAlignment )
     *( pStoredPtr ) = p;
 
     assert( ( (size_t)pAligned & ~( nAlignment - 1 ) ) == (size_t)pAligned );
-    */
 
-    return p;
-//    return pAligned;
+    return pAligned;
 }
 
 void VKContext::Free( void *pBuffer )
 {
     if ( pBuffer != NULL ) {
-//		void *pOriginalAllocation = *( (void **)pBuffer - 1 );
-        delete[] (char *)pBuffer;
+        uintptr_t nOffset = *( ( (char *)pBuffer ) - 1 );
+        delete[] ( (char *)pBuffer - nOffset );
 	} else {
         SIRENGINE_WARNING( "VKContext::Free: NULL pointer" );
     }
@@ -1421,16 +1473,16 @@ static const char *GetVulkanMemoryFlagsString( VkMemoryPropertyFlags flags )
 
     szBuffer[0] = '\0';
     if ( flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT ) {
-        strncat( szBuffer, "Device Local ", sizeof( szBuffer ) - 1 );
+        strncat( szBuffer, "(Device Local) ", sizeof( szBuffer ) - 1 );
     }
     if ( flags & VK_MEMORY_PROPERTY_HOST_CACHED_BIT ) {
-        strncat( szBuffer, "Host Cached ", sizeof( szBuffer ) - 1 );
+        strncat( szBuffer, "(Host Cached) ", sizeof( szBuffer ) - 1 );
     }
     if ( flags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT ) {
-        strncat( szBuffer, "Host Coherent ", sizeof( szBuffer ) - 1 );
+        strncat( szBuffer, "(Host Coherent) ", sizeof( szBuffer ) - 1 );
     }
     if ( flags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT ) {
-        strncat( szBuffer, "Host Visible ", sizeof( szBuffer ) - 1 );
+        strncat( szBuffer, "(Host Visible) ", sizeof( szBuffer ) - 1 );
     }
     
     return szBuffer;
@@ -1447,9 +1499,9 @@ void VKContext::PrintMemoryInfo( void ) const
     for ( i = 0; i < memProperties.memoryTypeCount; i++ ) {
         const VkMemoryHeap *pHeapData = &memProperties.memoryHeaps[ memProperties.memoryTypes[i].heapIndex ];
 
-        SIRENGINE_LOG( " Memory Heap %u:", memProperties.memoryTypes[i].heapIndex );
+        SIRENGINE_LOG( " Memory Heap %u:", i );
         SIRENGINE_LOG( " - Flags: %s", GetVulkanMemoryFlagsString( memProperties.memoryTypes[i].propertyFlags ) );
-        SIRENGINE_LOG( " - Size: %lu", pHeapData->size );
+        SIRENGINE_LOG( " - Size: %s", SIREngine_GetMemoryString( pHeapData->size ) );
     }
 
     VmaTotalStatistics memDetails;
@@ -1491,9 +1543,9 @@ IRenderShader *VKContext::AllocateShader( const RenderShaderInit_t& shaderInit )
     return new VKShader( shaderInit );
 }
 
-IRenderBuffer *VKContext::AllocateBuffer( GPUBufferType_t nType, uint64_t nSize )
+IRenderBuffer *VKContext::AllocateBuffer( GPUBufferType_t nType, GPUBufferUsage_t nUsage, uint64_t nSize )
 {
-    return new VKBuffer( nType, nSize );
+    return new VKBuffer( nType, nUsage, nSize );
 }
 
 IRenderTexture *VKContext::AllocateTexture( const TextureInit_t& textureInfo )

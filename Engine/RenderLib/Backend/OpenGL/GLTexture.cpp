@@ -1,6 +1,8 @@
 #include "GLTexture.h"
 #include "GLContext.h"
 
+extern uint64_t g_nFrameNumber;
+
 CVar<bool32> r_UsePixelBufferObjects(
     "r.OpenGL.UsePixelBufferObjects",
     0,
@@ -82,6 +84,8 @@ void GLTexture::StreamBuffer( void )
         nglBufferSubData( GL_PIXEL_UNPACK_BUFFER, 0, m_ImageData.GetSize(), m_ImageData.GetBuffer() );
     }
     nglBindBuffer( GL_PIXEL_UNPACK_BUFFER, 0 );
+
+    m_nFrameLastRendered = g_nFrameNumber;
 }
 
 void GLTexture::Upload( const TextureInit_t& textureInfo )
@@ -108,4 +112,21 @@ void GLTexture::Upload( const TextureInit_t& textureInfo )
             GL_UNSIGNED_BYTE, m_ImageData.GetBuffer() );
     }
     nglBindTexture( GL_TEXTURE_2D, 0 );
+}
+
+void GLTexture::EvictGLResource( void )
+{
+    if ( m_bCanCreateAsEvicted && m_bInGPUMemory ) {
+        if ( CanBeEvicted() ) {
+            nglDeleteTextures( 1, &m_nTextureID );
+
+            m_bInGPUMemory = false;
+            nglGenTextures( 1, &m_nTextureID );
+        }
+    }
+}
+
+bool GLTexture::CanBeEvicted( void ) const
+{
+    return m_bCanCreateAsEvicted;
 }

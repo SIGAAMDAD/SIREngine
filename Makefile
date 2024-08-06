@@ -51,9 +51,16 @@ SRC=\
 	\
 	$(O)/Engine/Core/FileSystem/FileSystem.o \
 	\
+	$(O)/Engine/Core/Serialization/JSon/JsonCache.o \
+	\
+	$(O)/Engine/Core/Serialization/Ini/IniReader.o \
+	$(O)/Engine/Core/Serialization/Ini/IniWriter.o \
+	$(O)/Engine/Core/Serialization/Ini/ini.o \
+	\
 	$(O)/Engine/Core/Logging/Logger.o \
 	\
 	$(O)/Engine/Core/Util.o \
+	$(O)/Engine/Core/ConsoleManager.o \
 	\
 	$(O)/Engine/RenderLib/DrawBuffer.o \
 	$(O)/Engine/RenderLib/RenderMain.o \
@@ -106,6 +113,9 @@ makedirs:
 	@if [ ! -d $(O)/pngloader ];then mkdir $(O)/pngloader;fi
 	@if [ ! -d $(O)/Engine ];then mkdir $(O)/Engine;fi
 	@if [ ! -d $(O)/Engine/Core/ ];then mkdir $(O)/Engine/Core;fi
+	@if [ ! -d $(O)/Engine/Core/Serialization ];then mkdir $(O)/Engine/Core/Serialization;fi
+	@if [ ! -d $(O)/Engine/Core/Serialization/Ini ];then mkdir $(O)/Engine/Core/Serialization/Ini;fi
+	@if [ ! -d $(O)/Engine/Core/Serialization/JSon ];then mkdir $(O)/Engine/Core/Serialization/JSon;fi
 	@if [ ! -d $(O)/Engine/Core/SmMalloc ];then mkdir $(O)/Engine/Core/SmMalloc;fi
 	@if [ ! -d $(O)/Engine/Memory ];then mkdir $(O)/Engine/Memory;fi
 	@if [ ! -d $(O)/Engine/Memory/Allocators ];then mkdir $(O)/Engine/Memory/Allocators;fi
@@ -157,6 +167,8 @@ Resources/Shaders/Vulkan/%.vert.spv: Resources/Shaders/Vulkan/%.vert.glsl
 $(O)/pngloader/%.o: pngloader/%.cpp
 	$(CC) $(CFLAGS) -o $@ -c $<
 $(O)/Engine/Core/%.o: Engine/Core/%.cpp
+	$(CC) $(CFLAGS) -o $@ -c $<
+$(O)/Engine/Core/%.o: Engine/Core/%.c
 	$(CC) $(CFLAGS) -o $@ -c $<
 $(O)/Engine/Memory/Allocators/%.o: Engine/Memory/Allocators/%.cpp
 	$(CC) $(CFLAGS) -o $@ -c $<

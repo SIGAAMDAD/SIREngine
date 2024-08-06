@@ -37,11 +37,13 @@ VKFramebuffer::VKFramebuffer( const FramebufferInfo_t& info )
     framebufferInfo.renderPass = NULL;
     framebufferInfo.attachmentCount = m_Attachments.size();
     framebufferInfo.pAttachments = m_Attachments.data();
+
+    VK_CALL( vkCreateFramebuffer( g_pVKContext->GetDevice(), &framebufferInfo, g_pVKContext->GetAllocationCallbacks(), &m_hFramebuffer ) );
 }
 
 VKFramebuffer::~VKFramebuffer()
 {
     if ( m_hFramebuffer ) {
-        vkDestroyFramebuffer( g_pVKContext->GetDevice(), m_hFramebuffer, NULL );
+        vkDestroyFramebuffer( g_pVKContext->GetDevice(), m_hFramebuffer, g_pVKContext->GetAllocationCallbacks() );
     }
 }

@@ -27,7 +27,7 @@ VKShaderBuffer::VKShaderBuffer(
     m_ShaderBuffers.reserve( VK_MAX_FRAMES_IN_FLIGHT );
 
     for ( i = 0; i < VK_MAX_FRAMES_IN_FLIGHT; i++ ) {
-        pBuffer = new VKBuffer( BUFFER_TYPE_UNIFORM );
+        pBuffer = dynamic_cast<VKBuffer *>( IRenderBuffer::Create( BUFFER_TYPE_UNIFORM, BufferUsage_Stream, 2*1024 ) );
         m_ShaderBuffers.emplace_back( pBuffer );
 
     /*

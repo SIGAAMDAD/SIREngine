@@ -551,6 +551,16 @@ void CPosixApplication::GetPwd( void )
     m_GamePath = pwd;
 }
 
+static void *Mem_ClearedAlloc( size_t nMembers, size_t nCount )
+{
+    return memset( Mem_Alloc( nMembers * nCount, 16 ), 0, nMembers * nCount );
+}
+
+static void *Mem_Realloc( void *pOriginal, size_t newSize )
+{
+    return g_pMemAlloc->Realloc( pOriginal, newSize );
+}
+
 int main( int argc, char **argv )
 {
     int i;

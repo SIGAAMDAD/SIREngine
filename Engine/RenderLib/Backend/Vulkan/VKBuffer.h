@@ -12,12 +12,10 @@
 class VKBuffer : public IRenderBuffer
 {
 public:
-    VKBuffer( GPUBufferType_t nType, uint64_t nSize );
-    VKBuffer( GPUBufferType_t nType );
+    VKBuffer( GPUBufferType_t nType, GPUBufferUsage_t nUsage, uint64_t nSize );
     virtual ~VKBuffer() override;
 
-    virtual void Init( void ) override;
-    virtual void Init( uint64_t nItems ) override;
+    virtual void Init( const void *pBuffer, uint64_t nSize ) override;
     virtual void Shutdown( void ) override;
 
     SIRENGINE_FORCEINLINE virtual void *GetBuffer( void ) override

@@ -1,6 +1,6 @@
 #include "GLShader.h"
 
-static CVar<bool32> r_IgnoreShaderLinkFailure(
+CVar<bool32> r_IgnoreShaderLinkFailure(
     "r.OpenGL.IgnoreShaderLinkFailure",
     0,
     Cvar_Default,
@@ -9,8 +9,7 @@ static CVar<bool32> r_IgnoreShaderLinkFailure(
     "  1: Ignore link failures. this may allow a program to continue but could lead to undefined rendering behaviour.",
     CVG_RENDERER
 );
-
-static CVar<bool32> r_IgnoreShaderCompilerFailure(
+CVar<bool32> r_IgnoreShaderCompilerFailure(
     "r.OpenGL.IgnoreShaderCompilerFailure",
     0,
     Cvar_Default,
