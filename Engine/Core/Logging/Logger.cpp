@@ -52,7 +52,7 @@ static CVar<uint32_t> e_LogLevel(
 
 static CVar<bool32> e_LogToFile(
     "e.LogToFile",
-    1,
+    true,
     Cvar_Save,
     "Outputs log data to a file.",
     CVG_SYSTEMINFO

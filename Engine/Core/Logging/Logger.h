@@ -7,7 +7,7 @@
 #include <EASTL/queue.h>
 
 namespace ELogLevel {
-    enum Type : uint8_t {
+    enum Type : uint32_t {
         NoLogging = 0,
 
         Fatal,
