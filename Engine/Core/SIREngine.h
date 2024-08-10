@@ -2,7 +2,7 @@
 #define __SIRENGINE_H__
 
 #if defined(SIRENGINE_PRAGMA_ONCE_SUPPORTED)
-    #pragma once
+	#pragma once
 #endif
 
 #include <stdint.h>
@@ -50,33 +50,20 @@
 #include <Engine/Core/ResourceManager.h>
 
 #include "Application/GenericPlatform/GenericApplication.h"
-
-#if defined(SIRENGINE_USE_GLM_MATH)
-    #include <glm/glm.hpp>
-
-    using CVec2 = glm::vec2;
-    using CVec3 = glm::vec3;
-    using CVec4 = glm::vec4;
-    using CUVec2 = glm::uvec2;
-    using CUVec3 = glm::uvec3;
-    using CUVec4 = glm::uvec4;
-    using CIVec2 = glm::ivec2;
-    using CIVec3 = glm::ivec3;
-    using CIVec4 = glm::ivec4;
-#else
-    #include "MathLib/MathLib.h"
-#endif
+#include "MathLib/Types.h"
 
 #define SIRENGINE_XSTRING_HELPER( x ) #x
 #define SIRENGINE_XSTRING( x ) SIRENGINE_XSTRING_HELPER( x )
 
 #define SIRENGINE_MAKE_VERSION( major, minor, patch ) \
-    ((((uint32_t)(major)) << 22) | (((uint32_t)(minor)) << 12) | ((uint32_t)(patch)))
+	((((uint32_t)(major)) << 22) | (((uint32_t)(minor)) << 12) | ((uint32_t)(patch)))
 
 #define SIRENGINE_VERSION_MAJOR 2
 #define SIRENGINE_VERSION_MINOR 0
 #define SIRENGINE_VERSION_PATCH 0
 #define SIRENGINE_VERSION SIRENGINE_MAKE_VERSION( SIRENGINE_VERSION_MAJOR, SIRENGINE_VERSION_MINOR, SIRENGINE_VERSION_PATCH )
 #define SIRENGINE_VERSION_STRING "SIR Engine v" SIRENGINE_XSTRING( SIRENGINE_VERSION_MAJOR ) "." SIRENGINE_XSTRING( SIRENGINE_VERSION_MINOR ) "." SIRENGINE_XSTRING( SIRENGINE_VERSION_PATCH ) ""
+
+//#define SIRENGINE_DEPRECATED( version, str )
 
 #endif

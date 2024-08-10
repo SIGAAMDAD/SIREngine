@@ -2,7 +2,7 @@
 #define __SIRENGINE_UTIL_H__
 
 #if defined(SIRENGINE_PRAGMA_ONCE_SUPPORTED)
-    #pragma once
+	#pragma once
 #endif
 
 #include "Compiler.h"
@@ -27,5 +27,10 @@ bool String_HasPatterns( const CString& str );
 #define SIREngine_BoolToString( value ) ( ( value ) ? "true" : "false" )
 #define SIREngine_StaticArrayLength( arr ) ( sizeof( arr ) / sizeof( *arr ) )
 #define SIREngine_CreateStackObject( objType, ... ) new ( alloca( sizeof( objType ) ) ) objType( __VA_ARGS__ )
+
+SIRENGINE_CONSTEXPR bool static_equal( const char *str1, const char *str2 )
+{
+	return ( *str1 == *str2 ) && ( *str1 == '\0' || static_equal( str1 + 1, str2 + 1 ) );
+}
 
 #endif

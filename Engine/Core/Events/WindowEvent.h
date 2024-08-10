@@ -14,8 +14,9 @@ typedef enum {
     WindowEvent_Closed,
     WindowEvent_Resized,
     WindowEvent_Moved,
-    WindowEvent_Hidden,
-    WindowEvent_Focus,
+    WindowEvent_Shown,
+    WindowEvent_MouseFocus,
+    WindowEvent_KeyboardFocus,
 } WindowEventType_t;
 
 class CWindowEvent : public IEventBase

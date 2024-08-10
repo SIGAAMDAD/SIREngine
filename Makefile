@@ -77,6 +77,8 @@ SRC=\
 	\
 	$(O)/Engine/Core/Events/EventManager.o \
 	\
+	$(O)/Engine/Core/Input/InputManager.o \
+	\
 	$(O)/Engine/Core/Util.o \
 	$(O)/Engine/Core/ConsoleManager.o \
 	\
@@ -132,6 +134,7 @@ makedirs:
 	@if [ ! -d $(O)/Engine ];then mkdir $(O)/Engine;fi
 	@if [ ! -d $(O)/Engine/Core/ ];then mkdir $(O)/Engine/Core;fi
 	@if [ ! -d $(O)/Engine/Core/Events ];then mkdir $(O)/Engine/Core/Events;fi
+	@if [ ! -d $(O)/Engine/Core/Input ];then mkdir $(O)/Engine/Core/Input;fi
 	@if [ ! -d $(O)/Engine/Core/Serialization ];then mkdir $(O)/Engine/Core/Serialization;fi
 	@if [ ! -d $(O)/Engine/Core/Serialization/TBon ];then mkdir $(O)/Engine/Core/Serialization/TBon;fi
 	@if [ ! -d $(O)/Engine/Core/Serialization/Ini ];then mkdir $(O)/Engine/Core/Serialization/Ini;fi

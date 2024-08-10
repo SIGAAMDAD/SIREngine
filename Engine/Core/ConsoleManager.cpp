@@ -31,7 +31,13 @@ CConsoleManager::CConsoleManager( void )
 CConsoleManager::~CConsoleManager()
 {
     for ( auto& it : m_ObjectList ) {
-        delete it.second;
+        if ( it.second->AsVariable() ) {
+            if ( it.second->AsVariable()->GetGroup() == CVG_USERINFO || it.second->AsVariable()->GetGroup() == CVG_NONE ) {
+                delete it.second; // runtime allocated cvar
+            }
+        } else {
+            delete it.second; // command
+        }
     }
     if ( m_pConfigLoader ) {
         delete m_pConfigLoader;
@@ -178,8 +184,8 @@ IConsoleVar *CConsoleManager::RegisterCVar( const char *pName, const CString& va
         return it->second->AsVariable();
     }
 
-    IConsoleVar *pCvar = new CVar<bool>( pName, value, nFlags, pDescription, nGroup );
-    SIRENGINE_LOG( "Registered CVarRef object \"%s\" with defaultValue \"%s\"", pName, value );
+    IConsoleVar *pCvar = new CVar<CString>( pName, value, nFlags, pDescription, nGroup );
+    SIRENGINE_LOG( "Registered CVarRef object \"%s\" with defaultValue \"%s\"", pName, value.c_str() );
 
     m_ObjectList.try_emplace( pName, pCvar );
 
@@ -341,7 +347,7 @@ IConsoleVar *CConsoleManager::RegisterCVarRef( const char *pName, CString& value
     }
 
     IConsoleVar *pCvar = new CVarRef<CString>( pName, value, nFlags, pDescription, nGroup );
-    SIRENGINE_LOG( "Registered CVarRef object \"%s\" with defaultValue \"%s\"", pName, value );
+    SIRENGINE_LOG( "Registered CVarRef object \"%s\" with defaultValue \"%s\"", pName, value.c_str() );
 
     m_ObjectList.try_emplace( pName, pCvar );
 

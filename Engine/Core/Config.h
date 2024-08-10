@@ -21,6 +21,8 @@
     #define SIRENGINE_USE_MATHLIB 1
 #endif
 
+#define SIRENGINE_MAX_COOP_PLAYERS 4
+
 #define USE_ARENA_ALLOC 1
 
 #endif

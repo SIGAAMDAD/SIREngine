@@ -4,6 +4,7 @@
 #include <Engine/Core/Serialization/JSon/JsonCache.h>
 #include <Engine/Core/FileSystem/FileSystem.h>
 #include <Engine/Core/Events/EventManager.h>
+#include <Engine/Core/Input/InputManager.h>
 
 IGenericApplication *g_pApplication;
 FileSystem::CFileSystem *g_pFileSystem;
@@ -554,7 +555,6 @@ CString IGenericApplication::GetCommandParmValue( const CString& name ) const
 void IGenericApplication::QuitGame( const IEventBase *pEventData )
 {
 	assert( pEventData->GetType() == EventType_Quit );
-	SIRENGINE_LOG( "QuitEvent sent." );
 	g_pApplication->Shutdown();
 }
 
@@ -575,7 +575,9 @@ void IGenericApplication::Init( void )
     e_MaxFPS.Register();
     e_FrameNumber.Register();
 
+	m_ApplicationSystems.reserve( 2 );
 	m_ApplicationSystems.try_emplace( CEventManager::Get().GetName(), eastl::addressof( CEventManager::Get() ) );
+	m_ApplicationSystems.try_emplace( CInputManager::Get().GetName(), eastl::addressof( CInputManager::Get() ) );
 
     g_pRenderContext = IRenderContext::CreateRenderContext();
 

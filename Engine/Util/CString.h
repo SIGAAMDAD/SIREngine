@@ -38,8 +38,9 @@ public:
     inline ~CString()
     { }
 
-    inline operator const char *( void ) const
-    { return c_str(); }
+    // FIXME: broken, just returns a jargled mess
+//    inline operator const char *( void ) const
+//    { return internalLayout().BeginPtr(); }
 
     inline const CString& operator=( const CString& other )
     {
