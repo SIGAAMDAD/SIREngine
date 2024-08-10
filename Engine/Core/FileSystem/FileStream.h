@@ -1,8 +1,6 @@
 #ifndef __SIRENGINE_FILESTREAM_H__
 #define __SIRENGINE_FILESTREAM_H__
 
-#include <Engine/Core/SIREngine.h>
-
 #if defined(SIRENGINE_PRAGMA_ONCE_SUPPORTED)
     #pragma once
 #endif

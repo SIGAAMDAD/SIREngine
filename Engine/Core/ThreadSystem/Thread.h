@@ -1,19 +1,16 @@
 #ifndef __SIRENGINE_THREAD_H__
 #define __SIRENGINE_THREAD_H__
 
-#include <Engine/Core/SIREngine.h>
-
 #if defined(SIRENGINE_PRAGMA_ONCE_SUPPORTED)
     #pragma once
 #endif
 
-
-#include <Engine/Core/SIREngine.h>
 #include <Engine/Core/Application/GenericPlatform/GenericApplication.h>
 #include <Engine/Core/Logging/Logger.h>
 
 #if defined(SIRENGINE_PLATFORM_WINDOWS)
 #else
+    #include <Engine/Core/Application/Posix/PosixApplication.h>
     #include <Engine/Core/Application/Posix/PosixTypes.h>
     #include <errno.h>
     #include <pthread.h>

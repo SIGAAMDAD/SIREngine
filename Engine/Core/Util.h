@@ -1,9 +1,12 @@
 #ifndef __SIRENGINE_UTIL_H__
 #define __SIRENGINE_UTIL_H__
 
-#pragma once
+#if defined(SIRENGINE_PRAGMA_ONCE_SUPPORTED)
+    #pragma once
+#endif
 
-#include <Engine/Core/SIREngine.h>
+#include "Compiler.h"
+#include <Engine/Util/CString.h>
 
 extern const char *SIRENGINE_ATTRIBUTE(format(printf, 1, 2)) SIRENGINE_TEMP_VSTRING( const char *fmt, ... );
 extern size_t SIRENGINE_ATTRIBUTE(format(printf, 3, 4)) SIREngine_snprintf( char *pszBuffer, size_t nMaxSize, const char *fmt, ... );
@@ -21,6 +24,8 @@ int String_Filter( const CString& filter, const char *name );
 int String_FilterPath( const CString& filter, const CString& name );
 bool String_HasPatterns( const CString& str );
 
+#define SIREngine_BoolToString( value ) ( ( value ) ? "true" : "false" )
 #define SIREngine_StaticArrayLength( arr ) ( sizeof( arr ) / sizeof( *arr ) )
+#define SIREngine_CreateStackObject( objType, ... ) new ( alloca( sizeof( objType ) ) ) objType( __VA_ARGS__ )
 
 #endif

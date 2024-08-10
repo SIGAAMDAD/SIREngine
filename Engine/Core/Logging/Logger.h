@@ -1,9 +1,13 @@
 #ifndef __SIRENGINE_LOGGER_H__
 #define __SIRENGINE_LOGGER_H__
 
-#pragma once
+#if defined(SIRENGINE_PRAGMA_ONCE_SUPPORTED)
+    #pragma once
+#endif
 
-#include <Engine/Core/SIREngine.h>
+#include <stdint.h>
+#include <Engine/Core/Types.h>
+#include <Engine/Core/Compiler.h>
 #include <EASTL/queue.h>
 
 namespace ELogLevel {
@@ -46,7 +50,7 @@ public:
     void LogInfo( const LogData_t& data, const char *fmt, ... ) SIRENGINE_ATTRIBUTE(format(printf, 3, 4));
     void LogWarning( const LogData_t& data, const char *fmt, ... ) SIRENGINE_ATTRIBUTE(format(printf, 3, 4));
     void LogError( const LogData_t& data, const char *fmt, ... ) SIRENGINE_ATTRIBUTE(format(printf, 3, 4));
-    void SendNotification( const LogData_t& data, const char *pString );
+    void SendNotification( const LogData_t& data, const char *fmt, ... ) SIRENGINE_ATTRIBUTE(format(printf, 3, 4));
 
     static void LaunchLoggingThread( void );
     static void ShutdownLogger( void );

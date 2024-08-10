@@ -1,7 +1,9 @@
 #ifndef __RENDER_TEXTURE_H__
 #define __RENDER_TEXTURE_H__
 
-#pragma once
+#if defined(SIRENGINE_PRAGMA_ONCE_SUPPORTED)
+    #pragma once
+#endif
 
 #include <Engine/RenderLib/RenderCommon.h>
 #include <Engine/RenderLib/RenderCommon.h>
@@ -32,7 +34,7 @@ protected:
     TextureImageFormat_t m_ImageFormat;
 };
 
-extern CVar<uint64_t> r_TextureStreamingBudget;
+extern CVar<int32_t> r_TextureStreamingBudget;
 extern CVar<bool32> r_UseHDRTextures;
 
 #endif

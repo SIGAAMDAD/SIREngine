@@ -1,8 +1,6 @@
 #ifndef __WINDOWS_APPLICATION_H__
 #define __WINDOWS_APPLICATION_H__
 
-#include <Engine/Core/SIREngine.h>
-
 #if defined(SIRENGINE_PRAGMA_ONCE_SUPPORTED)
     #pragma once
 #endif

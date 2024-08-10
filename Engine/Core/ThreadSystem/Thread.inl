@@ -1,3 +1,4 @@
+
 SIRENGINE_FORCEINLINE CThreadMutex::CThreadMutex( void )
 {
 #if defined(SIRENGINE_PLATFORM_WINDOWS)

@@ -1,12 +1,11 @@
 #ifndef __SIRENGINE_JSON_CACHE_H__
 #define __SIRENGINE_JSON_CACHE_H__
 
-#include <Engine/Core/SIREngine.h>
-
 #if defined(SIRENGINE_PRAGMA_ONCE_SUPPORTED)
     #pragma once
 #endif
 
+#include <Engine/Core/SIREngine.h>
 #include <nlohmann/json.hpp>
 
 class CJsonCache

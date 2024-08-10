@@ -1,7 +1,9 @@
 #ifndef __MEMALLOC_H__
 #define __MEMALLOC_H__
 
-#pragma once
+#if defined(SIRENGINE_PRAGMA_ONCE_SUPPORTED)
+    #pragma once
+#endif
 
 #include "Memory.h"
 

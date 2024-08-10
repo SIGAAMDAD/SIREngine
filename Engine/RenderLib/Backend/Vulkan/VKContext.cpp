@@ -441,6 +441,9 @@ void VKContext::Init( void )
 
     m_nCurrentFrameIndex = 0;
 
+    r_TextureStreamingBudget.Register();
+    r_UseHDRTextures.Register();
+
     InitWindowInstance();
     InitPhysicalVKDevice();
     InitLogicalDevice();

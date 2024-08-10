@@ -1,7 +1,9 @@
 #ifndef __SIRENGINE_CONFIG_HPP__
 #define __SIRENGINE_CONFIG_HPP__
 
-#pragma once
+#if defined(SIRENGINE_PRAGMA_ONCE_SUPPORTED)
+    #pragma once
+#endif
 
 #if !defined(SIRENGINE_MALLOC_OVERRIDE)
     #define SIRENGINE_MALLOC( size ) Mem_Alloc( size )

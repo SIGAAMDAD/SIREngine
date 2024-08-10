@@ -1,7 +1,9 @@
 #ifndef __PLATFORM_CONFIG_H__
 #define __PLATFORM_CONFIG_H__
 
-#pragma once
+#if defined(SIRENGINE_PRAGMA_ONCE_SUPPORTED)
+    #pragma once
+#endif
 
 #if defined(__CYGWIN__)
     #define SIRENGINE_PLATFORM_CYGWIN 1

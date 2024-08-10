@@ -1,7 +1,9 @@
 #ifndef __RENDER_UNIFORM_CACHE_H__
 #define __RENDER_UNIFORM_CACHE_H__
 
-#pragma once
+#if defined(SIRENGINE_PRAGMA_ONCE_SUPPORTED)
+    #pragma once
+#endif
 
 #include "../RenderCommon.h"
 #include <EASTL/unordered_map.h>

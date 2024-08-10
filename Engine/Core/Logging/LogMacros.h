@@ -1,7 +1,9 @@
 #ifndef __SIRENGINE_LOGMACROS_H__
 #define __SIRENGINE_LOGMACROS_H__
 
-#pragma once
+#if defined(SIRENGINE_PRAGMA_ONCE_SUPPORTED)
+    #pragma once
+#endif
 
 #define SIRENGINE_LOG( ... ) \
     CLogManager::g_Logger.LogInfo( { __FILE__, SIRENGINE_FUNC_NAME, __LINE__ }, __VA_ARGS__ )
@@ -10,8 +12,8 @@
 #define SIRENGINE_ERROR( ... ) \
     CLogManager::g_Logger.LogError( { __FILE__, SIRENGINE_FUNC_NAME, __LINE__ }, __VA_ARGS__ )
 
-#define SIRENGINE_NOTIFICATION( message ) \
-    CLogManager::g_Logger.SendNotification( { __FILE__, SIRENGINE_FUNC_NAME, __LINE__ }, message )
+#define SIRENGINE_NOTIFICATION( ... ) \
+    CLogManager::g_Logger.SendNotification( { __FILE__, SIRENGINE_FUNC_NAME, __LINE__ }, __VA_ARGS__ )
 
 #define SIRENGINE_LOG_LEVEL( Category, Level, ... ) \
     CLogManager::g_Logger.LogCategory( { __FILE__, SIRENGINE_FUNC_NAME, __LINE__ }, __VA_ARGS__ )

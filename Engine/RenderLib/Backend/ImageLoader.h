@@ -1,7 +1,9 @@
-#ifndef __IMAGE_LOADER_H__
-#define __IMAGE_LOADER_H__
+#ifndef __SIRENGINE_IMAGE_LOADER_H__
+#define __SIRENGINE_IMAGE_LOADER_H__
 
-#pragma once
+#if defined(SIRENGINE_PRAGMA_ONCE_SUPPORTED)
+    #pragma once
+#endif
 
 #include "../RenderCommon.h"
 #include <Engine/Core/FileSystem/FilePath.h>

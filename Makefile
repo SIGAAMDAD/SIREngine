@@ -26,13 +26,25 @@ endif
 CC		=g++
 
 INCLUDE	=\
-	-I. \
+	-I. `pkg-config --cflags gtk+-3.0` \
+	`pkg-config --cflags pango`
 
-CFLAGS	=-Ofast -g -Og -std=c++17 $(INCLUDE) $(DEFINES) -Wall
+WARNINGS=\
+	-Wnon-virtual-dtor \
+	-Wnull-dereference \
+	-Wcast-align \
+	-Wduplicated-cond \
+	-Wduplicated-branches \
+	-Wlogical-op \
+	-Wno-format \
+	-Werror=pointer-arith \
+	-Werror=write-strings
+
+CFLAGS	=-Ofast -g -Og -std=c++17 $(INCLUDE) $(DEFINES) $(WARNINGS)
 O		=obj
 EXE		=SIREngineApplication
 LIB		=libSIREngine.so
-LD_LIBS =-lGL -lSDL2 -lvulkan libEASTL.a -lbacktrace -Wl,-rpath='.' -lboost_atomic-mt-x64
+LD_LIBS =-lGL -lSDL2 -lvulkan libEASTL.a -lbacktrace `pkg-config --libs gtk+-3.0` -Wl,-rpath='.' -lboost_atomic-mt-x64
 
 MAKE=make
 MKDIR=mkdir -p
@@ -42,6 +54,7 @@ MKDIR=mkdir -p
 SRC=\
 	$(O)/Engine/Core/Application/GenericPlatform/GenericApplication.o \
 	$(O)/Engine/Core/Application/Posix/PosixApplication.o \
+	$(O)/Engine/Core/Application/Posix/PosixCrashHandler.o \
 	\
 	$(O)/Engine/Memory/Allocators/SlabAllocator.o \
 	$(O)/Engine/Memory/Allocators/VirtualStackAllocator.o \
@@ -50,6 +63,7 @@ SRC=\
 	$(O)/Engine/Memory/Memory.o \
 	\
 	$(O)/Engine/Core/FileSystem/FileSystem.o \
+	$(O)/Engine/Core/FileSystem/FileCache.o \
 	\
 	$(O)/Engine/Core/Serialization/JSon/JsonCache.o \
 	\
@@ -57,7 +71,11 @@ SRC=\
 	$(O)/Engine/Core/Serialization/Ini/IniWriter.o \
 	$(O)/Engine/Core/Serialization/Ini/ini.o \
 	\
+	$(O)/Engine/Core/Serialization/TBon/TBonSerializer.o \
+	\
 	$(O)/Engine/Core/Logging/Logger.o \
+	\
+	$(O)/Engine/Core/Events/EventManager.o \
 	\
 	$(O)/Engine/Core/Util.o \
 	$(O)/Engine/Core/ConsoleManager.o \
@@ -113,7 +131,9 @@ makedirs:
 	@if [ ! -d $(O)/pngloader ];then mkdir $(O)/pngloader;fi
 	@if [ ! -d $(O)/Engine ];then mkdir $(O)/Engine;fi
 	@if [ ! -d $(O)/Engine/Core/ ];then mkdir $(O)/Engine/Core;fi
+	@if [ ! -d $(O)/Engine/Core/Events ];then mkdir $(O)/Engine/Core/Events;fi
 	@if [ ! -d $(O)/Engine/Core/Serialization ];then mkdir $(O)/Engine/Core/Serialization;fi
+	@if [ ! -d $(O)/Engine/Core/Serialization/TBon ];then mkdir $(O)/Engine/Core/Serialization/TBon;fi
 	@if [ ! -d $(O)/Engine/Core/Serialization/Ini ];then mkdir $(O)/Engine/Core/Serialization/Ini;fi
 	@if [ ! -d $(O)/Engine/Core/Serialization/JSon ];then mkdir $(O)/Engine/Core/Serialization/JSon;fi
 	@if [ ! -d $(O)/Engine/Core/SmMalloc ];then mkdir $(O)/Engine/Core/SmMalloc;fi

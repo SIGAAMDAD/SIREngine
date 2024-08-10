@@ -1,12 +1,55 @@
 #ifndef __SHADER_CACHE_H__
 #define __SHADER_CACHE_H__
 
-#pragma once
+#if defined(SIRENGINE_PRAGMA_ONCE_SUPPORTED)
+    #pragma once
+#endif
+
+#include <Engine/Core/ResourceDef.h>
+#include "Backend/RenderContext.h"
+#include "Backend/RenderShader.h"
+#include <EASTL/shared_ptr.h>
+
+class CShaderData
+{
+public:
+    CShaderData( const eastl::shared_ptr<CResourceDef>& pMaterial )
+        : m_pMaterial( pMaterial )
+    {
+        RenderProgramInit_t init;
+        init.pName = pMaterial->GetName();
+        m_pShader = g_pRenderContext->AllocateProgram( init );
+    }
+    ~CShaderData()
+    { delete m_pShader; }
+
+    inline const eastl::shared_ptr<CResourceDef>& GetMaterial( void ) const
+    { return m_pMaterial; }
+    inline const IRenderProgram *GetCacheData( void ) const
+    { return m_pShader; }
+
+    inline eastl::shared_ptr<CResourceDef>& GetMaterial( void )
+    { return m_pMaterial; }
+    inline IRenderProgram *GetCacheData( void )
+    { return m_pShader; }
+private:
+    eastl::shared_ptr<CResourceDef> m_pMaterial;
+    IRenderProgram *m_pShader;
+};
 
 class CShaderCache
 {
 public:
+    CShaderCache( void );
+    ~CShaderCache();
+
+    inline bool IsShaderCompiled( const CString& materialName ) const
+    { return m_CacheData.find( materialName ) != m_CacheData.end(); }
+
+    // compiles the material's shader if not already loaded
+    const eastl::shared_ptr<CResourceDef>& GetShader( const CString& materialName );
 private:
+    eastl::unordered_map<CString, CShaderData> m_CacheData;
 };
 
 #endif

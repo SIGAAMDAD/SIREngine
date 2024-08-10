@@ -1,7 +1,9 @@
 #ifndef __CLINKED_LIST_H__
 #define __CLINKED_LIST_H__
 
-#pragma once
+#if defined(SIRENGINE_PRAGMA_ONCE_SUPPORTED)
+    #pragma once
+#endif
 
 template<typename T>
 struct LinkedListNodeDoubleLinked {

@@ -1,8 +1,6 @@
 #ifndef __UTL_MEMORY_HPP__
 #define __UTL_MEMORY_HPP__
 
-#include <Engine/Core/SIREngine.h>
-
 #if defined(SIRENGINE_PRAGMA_ONCE_SUPPORTED)
     #pragma once
 #endif

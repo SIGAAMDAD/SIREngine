@@ -174,7 +174,7 @@ void VKShaderPipeline::ClearPipelineCache( void )
 uint64_t VKShaderPipeline::AddVertexAttribSet( const VertexInputDescription_t& vertexInput )
 {
     uint64_t nCacheID;
-    uint64_t nSize, nAttribCount, i, j;
+    uint64_t nSize, nAttribCount, i;
     VKPipelineSet_t *pSet;
 
     nAttribCount = NumVertexAttribs( vertexInput );

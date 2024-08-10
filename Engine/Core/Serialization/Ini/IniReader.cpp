@@ -1,13 +1,19 @@
 #include "IniSerializer.h"
 #include "ini.h"
+#include <Engine/Core/FileSystem/MemoryFile.h>
 
 bool CIniSerializer::Load( const FileSystem::CFilePath& filePath )
 {
-    FileSystem::CFileReader *hFile = g_pFileSystem->OpenFileReader( filePath );
+    m_FilePath = filePath;
+    CMemoryFile file( filePath );
 
-    if ( hFile ) {
-        m_nError = ini_parse( hFile->GetPath().c_str(), ValueHandler, this );
-        delete hFile;
+    SIRENGINE_LOG( "Processing ini file \"%s\"", filePath.c_str() );
+
+    if ( file.GetSize() ) {
+        m_nError = ini_parse_string( (const char *)file.GetBuffer(), CIniSerializer::ValueHandler, this );
+        if ( m_nError > 0 ) {
+            SIRENGINE_WARNING( "Error while parsing .ini file \"%s\" (error count = %i)", filePath.c_str(), m_nError );
+        }
         return true;
     } else {
         SIRENGINE_WARNING( "Error loading .ini file \"%s\"", filePath.c_str() );
@@ -116,12 +122,19 @@ bool CIniSerializer::HasValue( const CString& section, const CString& name ) con
 int CIniSerializer::ValueHandler( void *user, const char *section, const char *name,
                             const char *value )
 {
-    if ( !name ) { // Happens when INI_CALL_HANDLER_ON_NEW_SECTION enabled
-        return 1;
-    }
+//    if ( !name ) { // Happens when INI_CALL_HANDLER_ON_NEW_SECTION enabled
+//        return 1;
+//    }
+
+    SIRENGINE_LOG( "Got section '%s', variable '%s' = '%s'", section, name, value );
 
     CIniSerializer *reader = (CIniSerializer *)user;
     
-    reader->m_Values[ section ].try_emplace( name, value );
+    if ( reader->m_Values.find( section ) == reader->m_Values.end() ) {
+        reader->m_Values.try_emplace( section );
+    }
+    if ( name && value ) {
+        reader->m_Values.at( section ).try_emplace( name, value );
+    }
     return 1;
 }

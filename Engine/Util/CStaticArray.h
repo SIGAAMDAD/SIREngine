@@ -1,7 +1,9 @@
 #ifndef __CSTATICARRAY_H__
 #define __CSTATICARRAY_H__
 
-#pragma once
+#if defined(SIRENGINE_PRAGMA_ONCE_SUPPORTED)
+    #pragma once
+#endif
 
 #include <Engine/Core/SIREngine.h>
 #include "CReverseIterator.h"

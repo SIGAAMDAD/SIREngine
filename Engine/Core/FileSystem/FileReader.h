@@ -1,7 +1,9 @@
 #ifndef __SIRENGINE_FILEREADER_H__
 #define __SIRENGINE_FILEREADER_H__
 
-#pragma once
+#if defined(SIRENGINE_PRAGMA_ONCE_SUPPORTED)
+    #pragma once
+#endif
 
 #include "FilePath.h"
 #include "FileStream.h"
@@ -16,6 +18,7 @@ namespace FileSystem {
         {
             m_FilePath = eastl::move( other.m_FilePath );
             m_hFileHandle = other.m_hFileHandle;
+            other.m_hFileHandle = NULL;
         }
         CFileReader( const CFilePath& filePath )
         { Open( filePath ); }

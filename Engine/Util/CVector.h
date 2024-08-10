@@ -1,9 +1,10 @@
 #ifndef __CVECTOR_H__
 #define __CVECTOR_H__
 
-#pragma once
+#if defined(SIRENGINE_PRAGMA_ONCE_SUPPORTED)
+    #pragma once
+#endif
 
-#include <Engine/Core/SIREngine.h>
 #include <Engine/Util/UtlMemory.h>
 #include <initializer_list>
 #include <EASTL/vector.h>

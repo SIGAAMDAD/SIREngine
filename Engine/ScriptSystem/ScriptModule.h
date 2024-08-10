@@ -1,7 +1,9 @@
 #ifndef __SIRENGINE_SCRIPT_MODULE_HPP__
 #define __SIRENGINE_SCRIPT_MODULE_HPP__
 
-#pragma once
+#if defined(SIRENGINE_PRAGMA_ONCE_SUPPORTED)
+    #pragma once
+#endif
 
 #include <Engine/Core/SIREngine.h>
 #include <Engine/ScriptSystem/ScriptLib.h>

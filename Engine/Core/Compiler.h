@@ -1,9 +1,12 @@
 #ifndef __COMPILER_CONFIG_HPP__
 #define __COMPILER_CONFIG_HPP__
 
-#pragma once
+#if defined(SIRENGINE_PRAGMA_ONCE_SUPPORTED)
+    #pragma once
+#endif
 
 #include "Platform.h"
+#include <stdint.h>
 
 #if defined(__ARMCC_VERSION)
     #define SIRENGINE_COMPILER_RVCT 1
@@ -117,18 +120,6 @@
         #define SIRENGINE_FORCEINLINE __forceinline
     #elif defined(SIRENGINE_COMPILER_GCC)
         #define SIRENGINE_FORCEINLINE __attribute__((always_inline)) inline
-    #endif
-#endif
-
-#if !defined(SIRENGINE_EXPORT)
-    #if defined(SIRENGINE_COMPILER_MSVC)
-        #if defined(SIRENGINE_DLL_EXPORTS)
-            #define SIRENGINE_EXPORT __declspec(dllexport)
-        #else
-            #define SIRENGINE_EXPORT __declspec(dllimport)
-        #endif
-    #elif defined(SIRENGINE_COMPILER_GCC)
-        #define SIRENGINE_EXPORT __attribute__((visibility("default")))
     #endif
 #endif
 

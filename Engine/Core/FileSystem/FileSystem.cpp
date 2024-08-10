@@ -6,6 +6,8 @@ using namespace FileSystem;
 CFileSystem::CFileSystem( void )
 {
     InitDirectoryCache();
+
+    m_FileCache.emplace_back( new CFileCache( "Resources/Shaders/Vulkan" ) );
 }
 
 CFileSystem::~CFileSystem()
@@ -16,7 +18,7 @@ void CFileSystem::LoadFileTree( CFileList *pDirectory )
 {
     SIRENGINE_LOG( "Loading directory tree \"%s\"", pDirectory->GetPath().c_str() );
 
-    pDirectory->m_List = eastl::move( g_pApplication->ListFiles( pDirectory->GetPath(), true ) );
+    pDirectory->m_List = eastl::move( g_pApplication->ListFiles( pDirectory->GetPath(), false ) );
     m_DirectoryCache.try_emplace( pDirectory->GetPath(), pDirectory );
 
     const CVector<CFilePath> subDirs = eastl::move( g_pApplication->ListFiles( pDirectory->GetPath(), true ) );
@@ -37,17 +39,13 @@ void CFileSystem::InitDirectoryCache( void )
 
     m_CurrentPath = g_pApplication->GetGamePath();
 
-    const CVector<CFilePath> resourceDirList = eastl::move( g_pApplication->ListFiles( BuildSearchPath( "Resources", "" ), true ) );
-    const CVector<CFilePath> configDirList = eastl::move( g_pApplication->ListFiles( BuildSearchPath( "Config", "" ), true ) );
+    const CVector<CFilePath> dirList = eastl::move( g_pApplication->ListFiles( g_pApplication->GetGamePath(), true ) );
 
-    m_DirectoryCache.reserve( resourceDirList.size() + configDirList.size() );
+    m_DirectoryCache.reserve( dirList.size() );
 
-    SIRENGINE_LOG( "Got %lu Directories.", resourceDirList.size() + configDirList.size() );
+    SIRENGINE_LOG( "Got %lu Directories.", dirList.size() );
 
-    for ( const auto& it : resourceDirList ) {
-        LoadFileTree( new CFileList( it ) );
-    }
-    for ( const auto& it : configDirList ) {
+    for ( const auto& it : dirList ) {
         LoadFileTree( new CFileList( it ) );
     }
 }
@@ -59,7 +57,7 @@ CFileWriter *CFileSystem::OpenFileWriter( const CFilePath& filePath )
 
     pSearchPath = BuildSearchPath( m_CurrentPath, filePath.c_str() );
 
-    SIRENGINE_LOG( "Attempting file open at \"%s\" for CFileWriter", pSearchPath );
+    SIRENGINE_NOTIFICATION( "Attempting file open at \"%s\" for CFileWriter", pSearchPath );
 
     hFile = new CFileWriter( pSearchPath );
     if ( hFile->IsOpen() ) {
@@ -78,7 +76,7 @@ CFileReader *CFileSystem::OpenFileReader( const CFilePath& filePath )
     for ( const auto& it : m_DirectoryCache ) {
         pSearchPath = BuildSearchPath( it.second->GetPath(), filePath.c_str() );
 
-        SIRENGINE_LOG( "Attempting file open at \"%s\" for CFileReader", pSearchPath );
+        SIRENGINE_NOTIFICATION( "Attempting file open at \"%s\" for CFileReader", pSearchPath );
 
         if ( hFile.Open( pSearchPath ) ) {
             break;

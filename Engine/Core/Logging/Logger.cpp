@@ -1,11 +1,12 @@
-#define SIRENGINE_NEW_AND_DELETE_OVERRIDE
 #include "Logger.h"
 #include <Engine/Core/ThreadSystem/Thread.h>
 #include <unistd.h>
 #include <time.h>
 #include <string.h>
 #include <EASTL/fixed_vector.h>
-#include <boost/lockfree/queue.hpp>
+#include <Engine/Core/Util.h>
+#include <Engine/Core/FileSystem/FileSystem.h>
+#include <Engine/Core/ConsoleManager.h>
 
 #define TTY_COLOR_BLACK "30"
 #define TTY_COLOR_RED "31"
@@ -84,10 +85,10 @@ CLogManager::~CLogManager()
 
 void CLogManager::LaunchLoggingThread( void )
 {
-    g_ConsoleManager.RegisterCVar( &e_LogLevel );
-    g_ConsoleManager.RegisterCVar( &e_LogToFile );
-    g_ConsoleManager.RegisterCVar( &e_LogIncludeFileInfo );
-    g_ConsoleManager.RegisterCVar( &e_LogIncludeTimeInfo );
+    e_LogLevel.Register();
+    e_LogToFile.Register();
+    e_LogIncludeFileInfo.Register();
+    e_LogIncludeTimeInfo.Register();
 
     if ( e_LogToFile.GetValue() ) {
         s_pLogFile = g_pFileSystem->OpenFileWriter( "Config/debug.log" );
@@ -122,9 +123,9 @@ static const char *GetTime( void )
 void SIRENGINE_ATTRIBUTE(format(printf, 3, 4)) CLogManager::LogInfo( const LogData_t& data,
     const char *fmt, ... )
 {
-//    if ( e_LogLevel.GetValue() < ELogLevel::Info ) {
-//        return;
-//    }
+    if ( e_LogLevel.GetValue() < ELogLevel::Info ) {
+        return;
+    }
 
     va_list argptr;
     char msg[8192];
@@ -148,9 +149,9 @@ void SIRENGINE_ATTRIBUTE(format(printf, 3, 4)) CLogManager::LogInfo( const LogDa
 void SIRENGINE_ATTRIBUTE(format(printf, 3, 4)) CLogManager::LogWarning( const LogData_t& data,
     const char *fmt, ... )
 {
-//    if ( e_LogLevel.GetValue() < ELogLevel::Warning ) {
-//        return;
-//    }
+    if ( e_LogLevel.GetValue() < ELogLevel::Warning ) {
+        return;
+    }
 
     va_list argptr;
     char msg[8192];
@@ -164,6 +165,33 @@ void SIRENGINE_ATTRIBUTE(format(printf, 3, 4)) CLogManager::LogWarning( const Lo
     len = SIREngine_snprintf( buf, sizeof( buf ) - 1,
         "\x1B[" TTY_COLOR_RED "m WARNING \x1B[" TTY_COLOR_YELLOW "m"
         " %s %s \x1B[0m\n", GetExtraString( data.pFileName, data.pFunction, data.nLineNumber ), msg );
+    
+    CThreadAutoLock<CThreadMutex> _( s_LoggerLock );
+    g_pApplication->FileWrite( buf, len, SIRENGINE_STDOUT_HANDLE );
+    if ( s_pLogFile ) {
+        s_pLogFile->Write( buf, len );
+    }
+}
+
+void SIRENGINE_ATTRIBUTE(format(printf, 3, 4)) CLogManager::SendNotification( const LogData_t& data,
+    const char *fmt, ... )
+{
+    if ( e_LogLevel.GetValue() < ELogLevel::Spam ) {
+        return;
+    }
+
+    va_list argptr;
+    char msg[8192];
+    char buf[20000];
+    int len;
+
+    va_start( argptr, fmt );
+    SIREngine_Vsnprintf( msg, sizeof( msg ) - 1, fmt, argptr );
+    va_end( argptr );
+
+    len = SIREngine_snprintf( buf, sizeof( buf ) - 1, "[NOTIFICATION] %s %s\n",
+        GetExtraString( data.pFileName, data.pFunction, data.nLineNumber ),
+        msg );
     
     CThreadAutoLock<CThreadMutex> _( s_LoggerLock );
     g_pApplication->FileWrite( buf, len, SIRENGINE_STDOUT_HANDLE );

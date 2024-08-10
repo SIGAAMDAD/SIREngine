@@ -1,8 +1,6 @@
 #ifndef __SIRENGINE_FILESYSTEM_H__
 #define __SIRENGINE_FILESYSTEM_H__
 
-#include <Engine/Core/SIREngine.h>
-
 #if defined(SIRENGINE_PRAGMA_ONCE_SUPPORTED)
     #pragma once
 #endif
@@ -12,6 +10,7 @@
 #include "FileReader.h"
 #include "FileWriter.h"
 #include "FileList.h"
+#include "FileCache.h"
 
 class CTagArenaAllocator;
 
@@ -34,7 +33,7 @@ namespace FileSystem {
 
         CFileList *ListFiles( const CFilePath& directory, const char *pExtension ) const;
         const char *BuildSearchPath( const CFilePath& basePath, const CString& fileName ) const;
-    private:;
+    private:
         void InitDirectoryCache( void );
         void LoadFileTree( CFileList *pDirectory );
 
@@ -42,6 +41,8 @@ namespace FileSystem {
 
         CFilePath m_ResourcePath;
         CFilePath m_ConfigPath;
+
+        CVector<CFileCache *> m_FileCache;
 
         eastl::unordered_map<CFilePath, CFileList *> m_DirectoryCache;
 

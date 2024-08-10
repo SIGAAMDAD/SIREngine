@@ -1,12 +1,11 @@
 #ifndef __SIRENGINE_INI_SERIALIZER_H__
 #define __SIRENGINE_INI_SERIALIZER_H__
 
-#include <Engine/Core/SIREngine.h>
-
 #if defined(SIRENGINE_PRAGMA_ONCE_SUPPORTED)
     #pragma once
 #endif
 
+#include <Engine/Core/FileSystem/FilePath.h>
 #include "../SerializerBase.h"
 
 class CIniSerializer : public ISerializerBase
@@ -15,7 +14,7 @@ public:
     CIniSerializer( void )
     { }
     CIniSerializer( const FileSystem::CFilePath& filePath )
-    { m_FilePath = filePath; }
+    { Load( filePath ); }
     virtual ~CIniSerializer() override
     { }
 

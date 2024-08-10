@@ -1,9 +1,10 @@
 #ifndef __UTL_STRING_HPP__
 #define __UTL_STRING_HPP__
 
-#pragma once
+#if defined(SIRENGINE_PRAGMA_ONCE_SUPPORTED)
+    #pragma once
+#endif
 
-#include <Engine/Core/SIREngine.h>
 #include <Engine/Core/ResourceDef.h>
 #include <EASTL/allocator_malloc.h>
 #include <EASTL/fixed_string.h>
@@ -37,6 +38,9 @@ public:
     inline ~CString()
     { }
 
+    inline operator const char *( void ) const
+    { return c_str(); }
+
     inline const CString& operator=( const CString& other )
     {
         base_type::operator=( other );
@@ -59,6 +63,19 @@ public:
     {
         for ( auto it = internalLayout().BeginPtr(); it != internalLayout().EndPtr(); it++ ) {
             *it = toupper( *it );
+        }
+    }
+
+    inline void StripLeading( const char *pString )
+    {
+        const uint64_t nLength = strlen( pString );
+
+        if ( nLength > 0 ) {
+            while ( !compare( 0, nLength, pString ) ) {
+                memmove( internalLayout().BeginPtr(), internalLayout().BeginPtr() + nLength,
+                    internalLayout().GetSize() - nLength + 1 );
+                internalLayout().SetSize( internalLayout().GetSize() - nLength );
+            }
         }
     }
 };

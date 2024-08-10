@@ -1,7 +1,9 @@
 #ifndef __CRBTREE_H__
 #define __CRBTREE_H__
 
-#pragma once
+#if defined(SIRENGINE_PRAGMA_ONCE_SUPPORTED)
+    #pragma once
+#endif
 
 template<typename T>
 class CDefOps

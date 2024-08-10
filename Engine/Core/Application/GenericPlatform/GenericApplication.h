@@ -1,17 +1,16 @@
 #ifndef __GENERIC_APPLICATION_H__
 #define __GENERIC_APPLICATION_H__
 
-#include <Engine/Core/SIREngine.h>
-
 #if defined(SIRENGINE_PRAGMA_ONCE_SUPPORTED)
     #pragma once
 #endif
 
-#include <Engine/Core/EngineApp.h>
 #include <Engine/Util/CString.h>
 #include <Engine/Util/CVector.h>
-#include <Engine/Core/FileSystem/FilePath.h>
 #include <Engine/Core/Logging/Logger.h>
+#include <Engine/Core/FileSystem/FilePath.h>
+#include <Engine/Core/Events/EventBase.h>
+#include <EASTL/unordered_map.h>
 
 typedef struct {
 
@@ -20,6 +19,7 @@ typedef struct {
 typedef enum {
     RAPI_OPENGL,
     RAPI_VULKAN,
+    RAPI_OPENGLES,
     RAPI_D3D11,
     RAPI_SOFTWARE
 } RenderAPIType_t;
@@ -40,6 +40,21 @@ typedef enum {
 
 class CThread;
 
+typedef struct {
+    const char *pszWindowName;
+    const char *pszAppName;
+    uint64_t nAppVersion;
+    
+    int nWindowPosX;
+    int nWindowPosY;
+    int nWindowWidth;
+    int nWindowHeight;
+
+    unsigned eWindowFlags;
+} ApplicationInfo_t;
+
+class IEngineApp;
+
 class IGenericApplication
 {
 public:
@@ -52,6 +67,8 @@ public:
     { return m_ApplicationInfo; }
     SIRENGINE_FORCEINLINE const ApplicationInfo_t& GetAppInfo( void ) const
     { return m_ApplicationInfo; }
+    SIRENGINE_FORCEINLINE CVector<CString>& GetCommandLine( void )
+    { return m_CommandLineArgs; } 
     SIRENGINE_FORCEINLINE const CVector<CString>& GetCommandLine( void ) const
     { return m_CommandLineArgs; } 
     SIRENGINE_FORCEINLINE RenderAPIType_t GetRenderAPI( void ) const
@@ -63,6 +80,10 @@ public:
     { m_CommandLineArgs = eastl::move( commandLine ); }
     SIRENGINE_FORCEINLINE void SetApplicationArgs( const ApplicationInfo_t& appInfo )
     { m_ApplicationInfo = appInfo; }
+
+    void ShowErrorWindow( const char *pErrorString );
+    bool CheckCommandParm( const CString& name ) const;
+    CString GetCommandParmValue( const CString& name ) const;
 
     virtual void Init( void );
     virtual void Shutdown( void );
@@ -83,6 +104,9 @@ public:
     virtual void DecommitMemory( void *pMemory, size_t nOffset, size_t nSize ) = 0;
     virtual void SetMemoryReadOnly( void *pMemory, size_t nOffset, size_t nSize ) = 0;
 
+    virtual void *MapFile( void *hFile, size_t *pSize ) = 0;
+    virtual void UnmapFile( void *pMemory, size_t nSize ) = 0;
+
     SIRENGINE_FORCEINLINE virtual void CommitByAddress( void *pMemory, size_t nSize )
     { CommitMemory( pMemory, (size_t)( ( (byte *)pMemory ) - ( (byte *)pMemory ) ), nSize ); }
     SIRENGINE_FORCEINLINE virtual void DecommitByAddress( void *pMemory, size_t nSize )
@@ -92,6 +116,7 @@ public:
     virtual void FileClose( void *hFile ) = 0;
     virtual size_t FileWrite( const void *pBuffer, size_t nBytes, void *hFile ) = 0;
     virtual size_t FileRead( void *pBuffer, size_t nBytes, void *hFile ) = 0;
+    virtual size_t FileSeek( void *hFile, size_t nOffset, int whence ) = 0;
     virtual size_t FileTell( void *hFile ) = 0;
     virtual size_t FileLength( void *hFile ) = 0;
 
@@ -100,26 +125,32 @@ public:
     virtual void ThreadStart( void *pThread, CThread *, void (CThread::*pFunction)( void ) ) = 0;
     virtual void ThreadJoin( void *pThread, CThread *, uint64_t nTimeout = SIRENGINE_UINT64_MAX ) = 0;
 
+    virtual double GetCPUFrequency( void ) = 0;
+    virtual uint32_t GetNumberOfCores( void ) = 0;
+
     virtual void OnOutOfMemory( void ) = 0;
 
     static CrashType_t nEngineCrashReason;
 protected:
+    static void QuitGame( const IEventBase *pEventData );
+
     ApplicationInfo_t m_ApplicationInfo;
     RenderAPIType_t m_nRendererType;
 
     FileSystem::CFilePath m_GamePath;
 
     CVector<CString> m_CommandLineArgs;
+    eastl::unordered_map<CString, IEngineApp *> m_ApplicationSystems;
 };
 
 extern IGenericApplication *g_pApplication;
 
+#if !defined(PLATFORM_HEADER)
 #if defined(SIRENGINE_PLATFORM_WINDOWS)
 #elif defined(SIRENGINE_PLATFORM_LINUX)
     #include <Engine/Core/Application/Posix/PosixApplication.h>
     #include <Engine/Core/Application/Posix/PosixTypes.h>
 #endif
-
-#include <Engine/Core/FileSystem/FileSystem.h>
+#endif
 
 #endif

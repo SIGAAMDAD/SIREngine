@@ -13,12 +13,12 @@ public:
     CJsonReader( void );
     virtual ~CJsonReader() override;
 
-    virtual bool Load( const CString& fileName ) override;
-    virtual bool Save( void ) override;
+    virtual bool Load( const FileSystem::CFilePath& fileName ) override;
+    virtual bool Save( const FileSystem::CFilePath& filePath ) override;
 private:
     bool Parse( const CMemoryFile& fileData );
 
-    CVector<CJsonObject> m_Objects;
+    eastl::unordered_map<CString, CJsonObject> m_Objects;
 };
 
 #endif

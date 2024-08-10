@@ -1,12 +1,13 @@
-#ifndef __SERIALIZER_BASE_H__
-#define __SERIALIZER_BASE_H__
+#ifndef __SIRENGINE_SERIALIZER_BASE_H__
+#define __SIRENGINE_SERIALIZER_BASE_H__
 
-#pragma once
+#if defined(SIRENGINE_PRAGMA_ONCE_SUPPORTED)
+    #pragma once
+#endif
 
-#include <Engine/Core/SIREngine.h>
 #include <Engine/Util/CString.h>
-#include <Engine/Core/FileSystem/FileSystem.h>
 #include <Engine/Core/FileSystem/FilePath.h>
+#include <EASTL/unordered_map.h>
 
 class ISerializerBase
 {

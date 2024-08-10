@@ -26,6 +26,8 @@ extern "C" {
 //#define INI_HANDLER_LINENO 0
 #endif
 
+#define INI_CALL_HANDLER_ON_NEW_SECTION 1
+
 /* Visibility symbols, required for Windows DLLs */
 #ifndef INI_API
 #if defined _WIN32 || defined __CYGWIN__

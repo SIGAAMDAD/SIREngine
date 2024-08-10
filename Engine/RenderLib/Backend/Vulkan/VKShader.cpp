@@ -29,7 +29,7 @@ VKShader::VKShader( const RenderShaderInit_t& shaderInfo )
         SIRENGINE_ERROR( "Invalid Shader Type %i", shaderInfo.nType );
     };
 
-    CMemoryFile file( SIRENGINE_TEMP_VSTRING( "Resources/Shaders/Vulkan/%s%s.spv", shaderInfo.pName, pSuffix ) );
+    CMemoryFile file( SIRENGINE_TEMP_VSTRING( "Shaders/Vulkan/%s%s.spv", shaderInfo.pName, pSuffix ) );
 
     VkShaderModuleCreateInfo moduleInfo;
     memset( &moduleInfo, 0, sizeof( moduleInfo ) );

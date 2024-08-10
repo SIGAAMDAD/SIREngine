@@ -1,7 +1,9 @@
 #ifndef __D3D_BUFFER_H__
 #define __D3D_BUFFER_H__
 
-#pragma once
+#if defined(SIRENGINE_PRAGMA_ONCE_SUPPORTED)
+    #pragma once
+#endif
 
 #include "../RenderBuffer.h"
 #include <d3d11.h>

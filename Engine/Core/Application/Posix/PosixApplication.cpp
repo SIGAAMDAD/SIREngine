@@ -3,11 +3,9 @@
 #include <malloc.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <signal.h>
 #include <dlfcn.h>
 #include <execinfo.h>
 #include <backtrace.h>
-#include <cxxabi.h>
 #include <malloc.h>
 #include <errno.h>
 #include <Engine/Memory/Backend/TagArenaAllocator.h>
@@ -16,17 +14,12 @@
 #include <dirent.h>
 #include <libgen.h>
 #include <SDL2/SDL_stdinc.h>
+#include <SDL2/SDL_events.h>
+#include <sys/wait.h>
+#include <sys/time.h>
 
-#define OOM_MEMORY_BACKUP_POOL_SIZE 4*1024
-
-void *CPosixApplication::pOOMBackup;
-size_t CPosixApplication::nOOMBackupSize;
-
-#define MAX_SYMBOL_LENGTH 4096
-
-static bool32 g_bBacktraceError = false;
-static FILE *g_pBacktraceOutput = NULL;
-static backtrace_state *g_pBacktraceState = NULL;
+char **myargv;
+int myargc;
 
 void *operator new[]( size_t nBytes, char const *, int, unsigned int, char const *, int )
 {
@@ -38,128 +31,11 @@ void *operator new[]( size_t nBytes, unsigned long, unsigned long, char const*, 
     return ::operator new[]( nBytes );
 }
 
-static void bt_error_callback( void *data, const char *msg, int errnum )
-{
-    fprintf( stderr, "libbacktrace ERROR: %d - %s\n", errnum, msg );
-    g_bBacktraceError = true;
-}
-
-static void bt_syminfo_callback( void *data, uintptr_t pc, const char *symname,
-								 uintptr_t symval, uintptr_t symsize )
-{
-    if ( g_bBacktraceError ) {
-        return;
-    }
-
-	if ( symname != NULL ) {
-		int status;
-		// [glnomad] 10/6/2023: fixed buffer instead of malloc'd buffer, risky however
-		char name[MAX_SYMBOL_LENGTH];
-		memset( name, 0, sizeof( name ) );
-		size_t length = sizeof( name );
-		abi::__cxa_demangle( symname, name, &length, &status );
-		if ( name[0] ) {
-			symname = name;
-		}
-		if ( g_pBacktraceOutput ) {
-			fprintf( g_pBacktraceOutput, "  %-8zu %s\n", pc, symname );
-		}
-		fprintf( stdout, "  %-8zu %s\n", pc, symname );
-	} else {
-		if ( g_pBacktraceOutput ) {
-			fprintf( g_pBacktraceOutput, "%-8zu (unknown symbol)\n", pc );
-		}
-		fprintf( stdout, "  %-8zu (unknown symbol)\n", pc );
-	}
-}
-
-static int bt_pcinfo_callback( void *data, uintptr_t pc, const char *filename, int lineno, const char *function )
-{
-    if ( g_bBacktraceError ) {
-        return 0;
-    }
-
-	if ( data != NULL ) {
-		int *hadInfo = (int *)data;
-		*hadInfo = (function != NULL);
-	}
-
-	if ( function != NULL ) {
-		int status;
-		// [glnomad] 10/6/2023: fixed buffer instead of malloc'd buffer, risky however
-		char name[MAX_SYMBOL_LENGTH];
-		memset( name, 0, sizeof( name ) );
-		size_t length = sizeof( name );
-		abi::__cxa_demangle( function, name, &length, &status );
-		if ( name[0] ) {
-			function = name;
-		}
-
-		const char *fileNameSrc = strstr( filename, "/src/" );
-		if ( fileNameSrc != NULL ) {
-			filename = fileNameSrc+1; // I want "src/bla/blub.cpp:42"
-		}
-		if ( g_pBacktraceOutput ) {
-			fprintf( g_pBacktraceOutput, "  %-8zu %-16s:%-8d %s\n", pc, filename, lineno, function );
-		}
-		fprintf( stdout, "  %-8zu %-16s:%-8d %s\n", pc, filename, lineno, function );
-	}
-
-	return 0;
-}
-
-static void bt_error_dummy( void *data, const char *msg, int errnum )
-{
-	//CrashPrintf("ERROR-DUMMY: %d - %s\n", errnum, msg);
-}
-
-static int bt_simple_callback( void *data, uintptr_t pc )
-{
-	int pcInfoWorked;
-
-    pcInfoWorked = 0;
-	// if this fails, the executable doesn't have debug info, that's ok (=> use bt_error_dummy())
-	backtrace_pcinfo( g_pBacktraceState, pc, bt_pcinfo_callback, bt_error_dummy, &pcInfoWorked );
-	if ( !pcInfoWorked ) { // no debug info? use normal symbols instead
-		// yes, it would be easier to call backtrace_syminfo() in bt_pcinfo_callback() if function == NULL,
-		// but some libbacktrace versions (e.g. in Ubuntu 18.04's g++-7) don't call bt_pcinfo_callback
-		// at all if no debug info was available - which is also the reason backtrace_full() can't be used..
-		backtrace_syminfo( g_pBacktraceState, pc, bt_syminfo_callback, bt_error_callback, NULL );
-	}
-
-	return 0;
-}
-
-void DumpStacktrace( void )
-{
-    if ( g_pBacktraceState != NULL ) {
-        backtrace_simple( g_pBacktraceState, 2, bt_simple_callback, bt_error_callback, NULL );
-    }
-}
-
-void CPosixApplication::CatchSignal( int nSignum )
-{
-    switch ( nSignum ) {
-    case SIGSEGV:
-        SIRENGINE_ERROR( "Segmentation Violation Caught" );
-        break;
-    case SIGBUS:
-        SIRENGINE_ERROR( "Bus Error Caught" );
-        break;
-    case SIGABRT:
-        SIRENGINE_ERROR( "Caught assertion" );
-        break;
-    };
-}
+extern "C" void InitCrashHandler( void );
+extern "C" void DumpStacktrace( void );
 
 CPosixApplication::CPosixApplication()
 {
-    signal( SIGSEGV, CPosixApplication::CatchSignal );
-    signal( SIGABRT, CPosixApplication::CatchSignal );
-    signal( SIGBUS, CPosixApplication::CatchSignal );
-
-    g_pBacktraceState = backtrace_create_state( "SIREngine", false, bt_error_callback, NULL );
-
     GetPwd();
 }
 
@@ -176,6 +52,7 @@ void CPosixApplication::Error( const char *pError )
     write( STDERR_FILENO, msg, length );
 
     DumpStacktrace();
+    ShowErrorWindow( msg );
     _Exit( EXIT_FAILURE );
 }
 
@@ -259,6 +136,31 @@ size_t CPosixApplication::GetAllocSize( void *pBuffer ) const
     return nSize;
 }
 
+void *CPosixApplication::MapFile( void *hFile, size_t *pSize )
+{
+    void *pMemory;
+
+    const size_t pos = FileTell( (void *)hFile );
+    FileSeek( (void *)hFile, 0, SEEK_END );
+    *pSize = FileTell( (void *)hFile );
+    FileSeek( (void *)hFile, pos, SEEK_SET );
+
+    pMemory = mmap( NULL, *pSize, PROT_WRITE | PROT_READ, MAP_SHARED | MAP_ANON, (PlatformTypes::file_t)(uintptr_t)hFile, 0 );
+    if ( pMemory == MAP_FAILED || pMemory == NULL ) {
+        SIRENGINE_WARNING( "Error mapping file into memory: %s", strerror( errno ) );
+        return NULL;
+    }
+
+    return pMemory;
+}
+
+void CPosixApplication::UnmapFile( void *pMemory, size_t nSize )
+{
+    if ( munmap( pMemory, nSize ) == -1 ) {
+
+    }
+}
+
 void *CPosixApplication::VirtualAlloc( size_t *nSize, size_t nAlignment )
 {
     void *pMemory;
@@ -340,6 +242,11 @@ FILE *CPosixApplication::OpenFile( const CString& filePath, const char *mode )
     return fopen( filePath.c_str(), mode );
 }
 
+size_t CPosixApplication::FileSeek( void *hFile, size_t nOffset, int whence )
+{
+    return lseek( (PlatformTypes::file_t)(uintptr_t)hFile, nOffset, whence );
+}
+
 void *CPosixApplication::FileOpen( const CString& filePath, FileMode_t nMode )
 {
     PlatformTypes::file_t hFile;
@@ -361,9 +268,12 @@ void *CPosixApplication::FileOpen( const CString& filePath, FileMode_t nMode )
         break;
     };
 
-    hFile = open64( filePath.c_str(), flags );
+    hFile = open( filePath.c_str(), flags );
     if ( hFile == -1 ) {
         SIRENGINE_WARNING( "Error opening file \"%s\" in mode 0x%x", filePath.c_str(), (unsigned)flags );
+    }
+    if ( chmod( filePath.c_str(), 0777 ) == -1 ) {
+        SIRENGINE_WARNING( "Error changing permissions for file \"%s\": %s", filePath.c_str(), strerror( errno ) );
     }
 
     return (void *)(uintptr_t)hFile;
@@ -371,7 +281,7 @@ void *CPosixApplication::FileOpen( const CString& filePath, FileMode_t nMode )
 
 void CPosixApplication::FileClose( void *hFile )
 {
-    assert( hFile );
+    assert( hFile != (void *)-1 );
 
     const int fd = (uintptr_t)hFile;
 
@@ -384,7 +294,7 @@ void CPosixApplication::FileClose( void *hFile )
 
 size_t CPosixApplication::FileWrite( const void *pBuffer, size_t nBytes, void *hFile )
 {
-    assert( hFile );
+    assert( hFile != (void *)-1 );
 
     const ssize_t nBytesWritten = write( (int)(uintptr_t)hFile, pBuffer, nBytes );
     if ( nBytesWritten == -1 ) {
@@ -395,7 +305,7 @@ size_t CPosixApplication::FileWrite( const void *pBuffer, size_t nBytes, void *h
 
 size_t CPosixApplication::FileRead( void *pBuffer, size_t nBytes, void *hFile )
 {
-    assert( hFile );
+    assert( hFile != (void *)-1 );
 
     const ssize_t nBytesRead = read( (int)(uintptr_t)hFile, pBuffer, nBytes );
     if ( nBytesRead == -1 ) {
@@ -406,7 +316,8 @@ size_t CPosixApplication::FileRead( void *pBuffer, size_t nBytes, void *hFile )
 
 size_t CPosixApplication::FileTell( void *hFile )
 {
-    assert( hFile );
+    assert( hFile != (void *)-1 );
+    return lseek( (PlatformTypes::file_t)(uintptr_t)hFile, 0, SEEK_CUR );
 }
 
 size_t CPosixApplication::FileLength( void *hFile )
@@ -551,6 +462,178 @@ void CPosixApplication::GetPwd( void )
     m_GamePath = pwd;
 }
 
+#define rdtsc( x ) \
+    __asm__ __volatile__ ( "rdtsc" : "=A" ( x ) )
+
+class CTimeVal
+{
+public:
+    CTimeVal( void ) = default;
+    CTimeVal& operator=( const CTimeVal& val ) { m_TimeVal = val.m_TimeVal; return *this; }
+    inline double operator-( const CTimeVal& left ) {
+        uint64_t left_us = (uint64_t)left.m_TimeVal.tv_sec * 1000000 + left.m_TimeVal.tv_usec;
+	    uint64_t right_us = (uint64_t)m_TimeVal.tv_sec * 1000000 + m_TimeVal.tv_usec;
+	    uint64_t diff_us = left_us - right_us;
+	    return diff_us / 1000000.0f;
+    }
+
+    timeval m_TimeVal;
+};
+
+// Compute the positive difference between two 64 bit numbers.
+static inline double diff( double v1, double v2 ) {
+    double d = v1 - v2;
+    return d >= 0 ? d : -d;
+}
+
+
+#if defined(SIRENGINE_PLATFORM_APPLE)
+double GetCPUFreqFromPROC( void )
+{
+    int mib[2] = { CTL_HW, HW_CPU_FREQ };
+    uint64_t frequency = 0;
+    size_t len = sizeof( frequency );
+
+    if ( sysctl( mib, 2, &frequency, &len, NULL, 0 ) == -1 ) {
+        return 0;
+    }
+    return (double)frequency;
+}
+#else
+double GetCPUFreqFromPROC( void )
+{
+    double mhz = 0;
+    char line[1024], *s, search_str[] = "cpu MHz";
+    FILE *fp; 
+    
+    // open proc/cpuinfo
+    if ( ( fp = fopen( "/proc/cpuinfo", "r" ) ) == NULL ) {
+	    return 0;
+    }
+
+    // ignore all lines until we reach MHz information
+    while ( fgets( line, 1024, fp ) != NULL ) { 
+    	if ( strstr( line, search_str ) != NULL ) {
+	        // ignore all characters in line up to :
+	        for ( s = line; *s && ( *s != ':' ); ++s )
+                ;
+	        // get MHz number
+	        if ( *s && ( sscanf( s+1, "%lf", &mhz ) == 1 ) ) {
+		        break;
+            }
+	    }
+    }
+
+    if ( fp ) {
+        fclose( fp );
+    }
+
+    return mhz * 1000000.0f;
+}
+#endif
+
+
+double CPosixApplication::GetCPUFrequency( void )
+{
+#if defined(SIRENGINE_PLATFORM_LINUX)
+	const char *pFreq = getenv( "CPU_MHZ" );
+	if ( pFreq ) {
+		double retVal = 1000000.0f;
+		return retVal * (double)atoll( pFreq );
+	}
+#endif
+
+    // Compute the period. Loop until we get 3 consecutive periods that
+    // are the same to within a small error. The error is chosen
+    // to be +/- 0.02% on a P-200.
+    const double error = 40000.0f;
+    const int max_iterations = 600;
+    int count;
+    double period, period1 = error * 2, period2 = 0,  period3 = 0;
+
+    for ( count = 0; count < max_iterations; count++ ) {
+        CTimeVal start_time, end_time;
+        uint64_t start_tsc, end_tsc;
+
+        gettimeofday( &start_time.m_TimeVal, 0 );
+        rdtsc( start_tsc );
+        usleep( 5000 ); // sleep for 5 msec
+        gettimeofday( &end_time.m_TimeVal, 0 );
+        rdtsc( end_tsc );
+
+        period3 = ( end_tsc - start_tsc) / (end_time - start_time );
+        if ( diff( period1, period2 ) <= error && diff( period2, period3 ) <= error && diff( period1, period3 ) <= error ) {
+ 	        break;
+        }
+        period1 = period2;
+        period2 = period3;
+    }
+
+    if ( count == max_iterations ) {
+	    return GetCPUFreqFromPROC(); // fall back to /proc
+    }
+
+    // Set the period to the average period measured.
+    period = ( period1 + period2 + period3 ) / 3;
+
+    // Some Pentiums have broken TSCs that increment very
+    // slowly or unevenly. 
+    if ( period < 10000000.0f ) {
+	    return GetCPUFreqFromPROC(); // fall back to /proc
+    }
+
+    return period;
+}
+
+bool CPosixApplication::IsRunningOnChromiumOS( void ) const
+{
+    bool bRetValue = false;
+    int nSystemVendorFile = open( "/sys/class/dmi/id/sys_vendor", O_RDONLY );
+
+    if ( nSystemVendorFile >= 0 ) {
+        char szLineBuffer[128];
+        ssize_t nLength = read( nSystemVendorFile, szLineBuffer, sizeof( szLineBuffer ) );
+
+        if ( nLength > 0 ) {
+            bRetValue = !SIREngine_stricmp( szLineBuffer, "ChromiumOS" );
+        }
+
+        close( nSystemVendorFile );
+    }
+    return bRetValue;
+}
+
+uint32_t CPosixApplication::GetNumberOfCoresIncludingHyperThreading( void )
+{
+    static uint32_t nCoreIds = 0;
+    if ( nCoreIds == 0 ) {
+        cpu_set_t availableCPUsMask;
+        CPU_ZERO( &availableCPUsMask );
+
+        if ( sched_getaffinity( 0, sizeof( availableCPUsMask ), &availableCPUsMask ) != 0 ) {
+            nCoreIds = 0; // we are running on something, right?
+        } else {
+            nCoreIds = CPU_COUNT( &availableCPUsMask );
+        }
+
+        uint32_t nLimitCount = 32768;
+        if ( eastl::find( m_CommandLineArgs.cbegin(), m_CommandLineArgs.cend(), "-corelimit=" ) ) {
+
+        }
+    }
+}
+
+uint32_t CPosixApplication::GetNumberOfCores( void )
+{
+    static uint32_t nCoreCount = 0;
+
+    if ( nCoreCount == 0 ) {
+        if ( eastl::find( m_CommandLineArgs.cbegin(), m_CommandLineArgs.cend(), "usehyperthreading" ) != m_CommandLineArgs.cend() ) {
+            nCoreCount = GetNumberOfCoresIncludingHyperThreading();
+        }
+    }
+}
+
 static void *Mem_ClearedAlloc( size_t nMembers, size_t nCount )
 {
     return memset( Mem_Alloc( nMembers * nCount, 16 ), 0, nMembers * nCount );
@@ -567,6 +650,12 @@ int main( int argc, char **argv )
     CVector<CString> commandLine;
     ApplicationInfo_t appInfo{};
 
+    myargc = argc;
+    myargv = argv;
+
+    seteuid( getuid() );
+    setenv( "LC_NUMERIC", "C", 1 );
+
     g_pApplication = new ( malloc( sizeof( CPosixApplication ) ) ) CPosixApplication();
     Mem_Init();
 
@@ -575,11 +664,10 @@ int main( int argc, char **argv )
         commandLine.emplace_back( argv[i] );
     }
 
+    InitCrashHandler();
+
     g_pApplication->SetApplicationArgs( appInfo );
     g_pApplication->SetCommandLine( commandLine );
-
-    CPosixApplication::nOOMBackupSize = OOM_MEMORY_BACKUP_POOL_SIZE;
-    CPosixApplication::pOOMBackup = malloc( CPosixApplication::nOOMBackupSize );
 
     g_pApplication->Init();
     g_pApplication->Run();

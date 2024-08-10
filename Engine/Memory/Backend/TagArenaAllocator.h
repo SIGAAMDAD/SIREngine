@@ -1,8 +1,6 @@
 #ifndef __SIRENGINE_TAG_ARENA_ALLOCATOR_H__
 #define __SIRENGINE_TAG_ARENA_ALLOCATOR_H__
 
-#include <Engine/Core/SIREngine.h>
-
 #if defined(SIRENGINE_PRAGMA_ONCE_SUPPORTED)
     #pragma once
 #endif
@@ -11,6 +9,7 @@
 #include "../MemAlloc.h"
 #include <Engine/Util/CString.h>
 #include <EASTL/unordered_map.h>
+#include <Engine/Core/ConsoleManager.h>
 
 #define USE_MEMSTATIC 1
 #define USE_MULTI_SEGMENT 1

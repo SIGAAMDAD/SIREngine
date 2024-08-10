@@ -1,7 +1,9 @@
 #ifndef __GL_MEGATEXTURE_H__
 #define __GL_MEGATEXTURE_H__
 
-#pragma once
+#if defined(SIRENGINE_PRAGMA_ONCE_SUPPORTED)
+    #pragma once
+#endif
 
 
 #endif

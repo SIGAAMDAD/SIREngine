@@ -181,8 +181,10 @@ int ini_parse_stream(ini_reader reader, void* stream, ini_handler handler,
 #endif
             /* Non-blank line with leading whitespace, treat as continuation
                of previous name's value (as per Python configparser). */
-            if (!HANDLER(user, section, prev_name, start) && !error)
+            if (!HANDLER(user, section, prev_name, start) && !error) {
                 error = lineno;
+                fprintf( stdout, "error handling multiline variable '%s' at line %i\n", name, lineno );
+            }
         }
 #endif
         else if (*start == '[') {
@@ -193,13 +195,16 @@ int ini_parse_stream(ini_reader reader, void* stream, ini_handler handler,
                 ini_strncpy0(section, start + 1, sizeof(section));
                 *prev_name = '\0';
 #ifdef INI_CALL_HANDLER_ON_NEW_SECTION
-                if (!HANDLER(user, section, NULL, NULL) && !error)
+                if (!HANDLER(user, section, NULL, NULL) && !error) {
                     error = lineno;
+                    fprintf( stdout, "failure handling section '%s' at line %i\n", section, lineno );
+                }
 #endif
             }
             else if (!error) {
                 /* No ']' found on section line */
                 error = lineno;
+                fprintf( stdout, "missing ']' at end of section definition at line %i\n", lineno );
             }
         }
         else if (*start) {
@@ -219,25 +224,32 @@ int ini_parse_stream(ini_reader reader, void* stream, ini_handler handler,
 
                 /* Valid name[=:]value pair found, call handler */
                 ini_strncpy0(prev_name, name, sizeof(prev_name));
-                if (!HANDLER(user, section, name, value) && !error)
+                if (!HANDLER(user, section, name, value) && !error) {
                     error = lineno;
+                    fprintf( stdout, "error handling variable '%s' at line %i\n", name, lineno );
+                }
             }
             else if (!error) {
                 /* No '=' or ':' found on name[=:]value line */
 #ifdef INI_ALLOW_NO_VALUE
                 *end = '\0';
                 name = ini_rstrip(start);
-                if (!HANDLER(user, section, name, NULL) && !error)
+                if (!HANDLER(user, section, name, NULL) && !error) {
                     error = lineno;
+                    fprintf( stdout, "error handling variable '%s' at line %i\n", name, lineno );
+                }
 #else
+                fprintf( stdout, "missing value for variable at line %i\n", lineno );
                 error = lineno;
 #endif
             }
         }
 
 #ifdef INI_STOP_ON_FIRST_ERROR
-        if (error)
+        if (error) {
+            fprintf( stdout, "error at first sight\n" );
             break;
+        }
 #endif
     }
 
@@ -261,8 +273,10 @@ int ini_parse(const char* filename, ini_handler handler, void* user)
     int error;
 
     file = fopen( filename, "r" );
-    if (!file)
+    if (!file) {
+        fprintf( stderr, "couldn't open file '%s'\n", filename );
         return -1;
+    }
     error = ini_parse_file(file, handler, user);
     fclose(file);
     return error;

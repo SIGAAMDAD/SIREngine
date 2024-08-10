@@ -1,7 +1,9 @@
-#ifndef __RENDER_CONTEXT_H__
-#define __RENDER_CONTEXT_H__
+#ifndef __SIRENGINE_RENDER_CONTEXT_H__
+#define __SIRENGINE_RENDER_CONTEXT_H__
 
-#pragma once
+#if defined(SIRENGINE_PRAGMA_ONCE_SUPPORTED)
+    #pragma once
+#endif
 
 #include <Engine/RenderLib/RenderCommon.h>
 #include <Engine/Core/SIREngine.h>
@@ -34,6 +36,9 @@ class IRenderContext
 public:
     IRenderContext( const ApplicationInfo_t& appInfo );
     virtual ~IRenderContext();
+
+    SIRENGINE_FORCEINLINE SDL_Window *GetWindowHandle( void )
+    { return m_pWindow; }
 
     virtual void Init( void ) = 0;
     virtual void Shutdown( void ) = 0;

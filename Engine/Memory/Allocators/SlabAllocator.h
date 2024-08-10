@@ -1,7 +1,9 @@
 #ifndef __SIRENGINE_SLAB_ALLOCATOR_HPP__
 #define __SIRENGINE_SLAB_ALLOCATOR_HPP__
 
-#pragma once
+#if defined(SIRENGINE_PRAGMA_ONCE_SUPPORTED)
+    #pragma once
+#endif
 
 #include <Engine/Memory/Allocators/AllocatorBase.h>
 

@@ -1,12 +1,11 @@
 #ifndef __SIRENGINE_FILEPATH_H__
 #define __SIRENGINE_FILEPATH_H__
 
-#include <Engine/Core/SIREngine.h>
-
 #if defined(SIRENGINE_PRAGMA_ONCE_SUPPORTED)
     #pragma once
 #endif
 
+#include <Engine/Core/Compiler.h>
 #include <Engine/Util/CString.h>
 
 namespace FileSystem {

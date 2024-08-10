@@ -12,6 +12,27 @@
 
 CVector<GLTexture *> GLContext::g_EvictionLRUCache;
 
+CVar<bool32> r_GLES(
+    "r.OpenGL.ES",
+    0,
+    Cvar_Save,
+    "Enables OpenGL ES",
+    CVG_RENDERER
+);
+CVar<int> r_GLVersionMajor(
+    "r.OpenGL.VersionMajor",
+    4,
+    Cvar_Save,
+    "Sets OpenGL major version",
+    CVG_RENDERER
+);
+CVar<int> r_GLVersionMinor(
+    "r.OpenGL.VersionMinor",
+    5,
+    Cvar_Save,
+    "Sets OpenGL minor version",
+    CVG_RENDERER
+);
 CVar<bool32> r_UseShaderStorageBufferObjects(
     "r.OpenGL.UseShaderStorageBufferObjects",
     0,
@@ -66,13 +87,14 @@ extern CVar<bool32> r_UsePixelBufferObjects;
 GLContext::GLContext( const ApplicationInfo_t& appInfo )
     : IRenderContext( appInfo )
 {
-    g_ConsoleManager.RegisterCVar( &r_UseBufferDiscard );
-    g_ConsoleManager.RegisterCVar( &r_UseShaderStorageBufferObjects );
-    g_ConsoleManager.RegisterCVar( &r_GLTetureMinLRUSize );
-    g_ConsoleManager.RegisterCVar( &r_UseMappedBufferObjects );
-    g_ConsoleManager.RegisterCVar( &r_UsePixelBufferObjects );
-    g_ConsoleManager.RegisterCVar( &r_TextureStreamingBudget );
-    g_ConsoleManager.RegisterCVar( &r_UseHDRTextures );
+    r_UseBufferDiscard.Register();
+    r_UseShaderStorageBufferObjects.Register();
+    r_GLTetureMinLRUSize.Register();
+    r_UseMappedBufferObjects.Register();
+    r_UsePixelBufferObjects.Register();
+    r_GLES.Register();
+    r_GLVersionMajor.Register();
+    r_GLVersionMinor.Register();
 }
 
 GLContext::~GLContext()
@@ -88,6 +110,20 @@ void GLContext::Init( void )
     SIRENGINE_LOG( "Created SDL2 OpenGL Context" );
 
     SDL_GL_MakeCurrent( m_pWindow, m_pGLContext );
+
+    SDL_GL_SetAttribute( SDL_GL_DEPTH_SIZE, 24 );
+    SDL_GL_SetAttribute( SDL_GL_STENCIL_SIZE, 8 );
+    SDL_GL_SetAttribute( SDL_GL_DOUBLEBUFFER, 1 );
+
+    if ( r_GLES.GetValue() ) {
+        SDL_GL_SetAttribute( SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES );
+        SDL_GL_SetAttribute( SDL_GL_CONTEXT_MAJOR_VERSION, 3 );
+        SDL_GL_SetAttribute( SDL_GL_CONTEXT_MINOR_VERSION, 0 );
+    } else {
+        SDL_GL_SetAttribute( SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE );
+        SDL_GL_SetAttribute( SDL_GL_CONTEXT_MAJOR_VERSION, r_GLVersionMajor.GetValue() );
+        SDL_GL_SetAttribute( SDL_GL_CONTEXT_MINOR_VERSION, r_GLVersionMinor.GetValue() );
+    }
     
     InitGLProcs();
     SIRENGINE_LOG( "Loaded GL Procs" );

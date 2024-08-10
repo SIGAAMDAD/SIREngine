@@ -1,7 +1,9 @@
 #ifndef __SIRENGINE_H__
 #define __SIRENGINE_H__
 
-#pragma once
+#if defined(SIRENGINE_PRAGMA_ONCE_SUPPORTED)
+    #pragma once
+#endif
 
 #include <stdint.h>
 #include <string.h>
@@ -46,19 +48,6 @@
 
 #include <Engine/Core/ResourceDef.h>
 #include <Engine/Core/ResourceManager.h>
-
-typedef struct {
-    const char *pszWindowName;
-    const char *pszAppName;
-    uint64_t nAppVersion;
-    
-    int nWindowPosX;
-    int nWindowPosY;
-    int nWindowWidth;
-    int nWindowHeight;
-
-    unsigned eWindowFlags;
-} ApplicationInfo_t;
 
 #include "Application/GenericPlatform/GenericApplication.h"
 

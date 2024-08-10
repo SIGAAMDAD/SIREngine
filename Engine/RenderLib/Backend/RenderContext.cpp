@@ -26,11 +26,11 @@
 #include "Vulkan/VKShaderPipeline.h"
 #include "Vulkan/VKTexture.h"
 
-CVar<uint64_t> r_TextureStreamingBudget(
+CVar<int32_t> r_TextureStreamingBudget(
     "r.TextureStreamingBudget",
-    1000,
+    256,
     Cvar_Save,
-    "Sets the engine's GPU texture buffer streaming limit",
+    "Sets the engine's GPU texture buffer streaming limit. Set in MiB",
     CVG_RENDERER
 );
 CVar<bool32> r_UseHDRTextures(
@@ -123,6 +123,9 @@ IRenderContext::~IRenderContext() {
     }
 }
 
+extern CVar<bool32> e_Fullscreen;
+extern CVar<uint32_t> e_RenderAPI;
+
 IRenderContext *IRenderContext::CreateRenderContext( void )
 {
     ApplicationInfo_t *pAppInfo;
@@ -130,26 +133,33 @@ IRenderContext *IRenderContext::CreateRenderContext( void )
     const CVector<CString>& cmdLine = g_pApplication->GetCommandLine();
     pAppInfo = eastl::addressof( g_pApplication->GetAppInfo() );
 
+    r_TextureStreamingBudget.Register();
+    r_UseHDRTextures.Register();
+    r_WindowWidth.Register();
+    r_WindowHeight.Register();
+
     pAppInfo->nWindowWidth = r_WindowWidth.GetValue();
     pAppInfo->nWindowHeight = r_WindowHeight.GetValue();
     pAppInfo->nWindowPosX = 0;
     pAppInfo->nWindowPosY = 0;
 
-    if ( eastl::find( cmdLine.begin(), cmdLine.end(), "-nofullscreen" ) != cmdLine.end() ) {
+    const CString renderAPI = g_pApplication->GetCommandParmValue( "-renderer=" );
+
+    if ( g_pApplication->CheckCommandParm( "-nofullscreen" ) || e_Fullscreen.GetValue() ) {
         pAppInfo->eWindowFlags &= ~WF_MODE_FULLSCREEN;
         pAppInfo->eWindowFlags |= WF_MODE_WINDOWED;
     }
 
-    if ( eastl::find( cmdLine.begin(), cmdLine.end(), "-renderer=opengl" ) != cmdLine.end() ) {
+    if ( e_RenderAPI.GetValue() == RAPI_OPENGL || renderAPI == "opengl" ) {
         pAppInfo->eWindowFlags |= WF_OPENGL_CONTEXT;
         g_pRenderContext = new GLContext( *pAppInfo );
     }
-    else if ( eastl::find( cmdLine.begin(), cmdLine.end(), "-renderer=vulkan" ) != cmdLine.end() ) {
+    else if ( e_RenderAPI.GetValue() == RAPI_VULKAN || renderAPI == "vulkan" ) {
         pAppInfo->eWindowFlags |= WF_VULKAN_CONTEXT;
         g_pRenderContext = new VKContext( *pAppInfo );
         g_pVKContext = dynamic_cast<VKContext *>( g_pRenderContext );
     }
-    else if ( eastl::find( cmdLine.begin(), cmdLine.end(), "-renderer=d3d11" ) != cmdLine.end() ) {
+    else if ( e_RenderAPI.GetValue() == RAPI_D3D11 || renderAPI == "directx11" ) {
 #if defined(SIRENGINE_PLATFORM_WINDOWS)
 #else
 #endif

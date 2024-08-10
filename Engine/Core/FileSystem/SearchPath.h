@@ -1,7 +1,9 @@
 #ifndef __SIRENGINE_SEARCHPATH_H__
 #define __SIRENGINE_SEARCHPATH_H__
 
-#pragma once
+#if defined(SIRENGINE_PRAGMA_ONCE_SUPPORTED)
+    #pragma once
+#endif
 
 #include "FilePath.h"
 
