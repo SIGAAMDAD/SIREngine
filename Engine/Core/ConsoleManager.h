@@ -74,6 +74,9 @@ public:
 	CConsoleManager( void );
 	~CConsoleManager();
 
+	//
+	// these functions are mainly for the editor and the module system's usage
+	//
 	IConsoleVar *RegisterCVar( const char *pName, bool bValue, uint32_t nFlags, const char *pDescription, CvarGroup_t nGroup );
 	IConsoleVar *RegisterCVar( const char *pName, uint32_t nValue, uint32_t nFlags, const char *pDescription, CvarGroup_t nGroup );
 	IConsoleVar *RegisterCVar( const char *pName, uint64_t nValue, uint32_t nFlags, const char *pDescription, CvarGroup_t nGroup );
@@ -82,9 +85,6 @@ public:
 	IConsoleVar *RegisterCVar( const char *pName, float fValue, uint32_t nFlags, const char *pDescription, CvarGroup_t nGroup );
 	IConsoleVar *RegisterCVar( const char *pName, const CString& value, uint32_t nFlags, const char *pDescription, CvarGroup_t nGroup );
 
-	// internal engine use only
-	void RegisterCVarDefaultValue( IConsoleVar *pCvar );
-
 	IConsoleVar *RegisterCVarRef( const char *pName, bool& bValue, uint32_t nFlags, const char *pDescription, CvarGroup_t nGroup );
 	IConsoleVar *RegisterCVarRef( const char *pName, uint32_t& nValue, uint32_t nFlags, const char *pDescription, CvarGroup_t nGroup );
 	IConsoleVar *RegisterCVarRef( const char *pName, uint64_t& nValue, uint32_t nFlags, const char *pDescription, CvarGroup_t nGroup );
@@ -92,6 +92,9 @@ public:
 	IConsoleVar *RegisterCVarRef( const char *pName, int64_t& nValue, uint32_t nFlags, const char *pDescription, CvarGroup_t nGroup );
 	IConsoleVar *RegisterCVarRef( const char *pName, float& fValue, uint32_t nFlags, const char *pDescription, CvarGroup_t nGroup );
 	IConsoleVar *RegisterCVarRef( const char *pName, CString& value, uint32_t nFlags, const char *pDescription, CvarGroup_t nGroup );
+
+	// internal engine use only
+	void RegisterCVarDefaultValue( IConsoleVar *pCvar );
 
 	void RegisterConsoleCommand( IConsoleCmd *pCommand );
 

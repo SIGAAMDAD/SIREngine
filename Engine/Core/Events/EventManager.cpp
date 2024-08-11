@@ -285,6 +285,9 @@ void CEventManager::PumpEvents( void )
 		case SDL_CONTROLLERDEVICEREMAPPED:
 		case SDL_KEYMAPCHANGED:
 			break;
+		
+		case SDL_CLIPBOARDUPDATE:
+			break;
 
 #if defined(SIRENGINE_PLATFORM_IOS)
 		case SDL_APP_TERMINATING:

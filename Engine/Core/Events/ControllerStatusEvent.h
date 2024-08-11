@@ -13,13 +13,15 @@ class CControllerStatusEvent : public IEventBase
 {
 public:
 	CControllerStatusEvent( const SDL_Event& eventData, bool bStatus )
-		: m_bStatus( bStatus )
+		: m_bStatus( bStatus ), m_nDeviceID( eventData.cdevice.which )
 	{ }
 	virtual ~CControllerStatusEvent() override
 	{ }
 
 	SIRENGINE_FORCEINLINE bool IsDeviceAdded( void ) const
 	{ return m_bStatus; }
+	SIRENGINE_FORCEINLINE int32_t GetDeviceID( void ) const
+	{ return m_nDeviceID; }
 
 	virtual void Send( void ) override
 	{ }
@@ -30,6 +32,7 @@ public:
 	{ return EventType_ControllerStatus; }
 private:
 	bool32 m_bStatus;
+	int32_t m_nDeviceID;
 };
 
 #endif

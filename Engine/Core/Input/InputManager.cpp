@@ -53,8 +53,12 @@ void CInputDevice::InitKeyboard( void )
 
 void CInputDevice::InitController( void )
 {
-	m_pJoystick = SDL_JoystickOpen( m_nDeviceIndex );
-	if ( !m_pJoystick ) {
+	if ( !m_pController ) {
+		m_pController = new JoystickData_t;
+	}
+
+	m_pController->m_pJoystick = SDL_JoystickOpen( m_nDeviceIndex );
+	if ( !m_pController->m_pJoystick ) {
 	#if defined(SIRENGINE_PLATFORM_PC)
 		// on pc we can just default to the keyboard
 		SIRENGINE_WARNING( "Error opening Joystick device at %i: %s", m_nDeviceIndex, SDL_GetError() );
@@ -75,34 +79,34 @@ void CInputDevice::InitController( void )
 		return;
 	}
 	if ( SDL_IsGameController( m_nDeviceIndex ) ) {
-		m_pGamepad = SDL_GameControllerOpen( m_nDeviceIndex );
-		if ( !m_pGamepad ) {
+		m_pController->m_pGamepad = SDL_GameControllerOpen( m_nDeviceIndex );
+		if ( !m_pController->m_pGamepad ) {
 			SIRENGINE_LOG( "Unable to open GameController device at %i: %s", m_nDeviceIndex, SDL_GetError() );
 		}
 	}
 
-	SDL_JoystickSetPlayerIndex( m_pJoystick, m_nDeviceIndex );
-	if ( m_pGamepad ) {
-		SDL_GameControllerSetPlayerIndex( m_pGamepad, m_nDeviceIndex );
+	SDL_JoystickSetPlayerIndex( m_pController->m_pJoystick, m_nDeviceIndex );
+	if ( m_pController->m_pGamepad ) {
+		SDL_GameControllerSetPlayerIndex( m_pController->m_pGamepad, m_nDeviceIndex );
 	}
 
 	SIRENGINE_LOG( "Joystick Device %i opened.", m_nDeviceIndex );
-	SIRENGINE_LOG( "  NAME: %s", SDL_JoystickName( m_pJoystick ) );
-	SIRENGINE_LOG( "  AXES: %i", SDL_JoystickNumAxes( m_pJoystick ) );
-	SIRENGINE_LOG( "  BALLS: %i", SDL_JoystickNumBalls( m_pJoystick ) );
-	SIRENGINE_LOG( "  BUTTONS: %i", SDL_JoystickNumButtons( m_pJoystick ) );
-	SIRENGINE_LOG( "  HATS: %i", SDL_JoystickNumHats( m_pJoystick ) );
+	SIRENGINE_LOG( "  NAME: %s", SDL_JoystickName( m_pController->m_pJoystick ) );
+	SIRENGINE_LOG( "  AXES: %i", SDL_JoystickNumAxes( m_pController->m_pJoystick ) );
+	SIRENGINE_LOG( "  BALLS: %i", SDL_JoystickNumBalls( m_pController->m_pJoystick ) );
+	SIRENGINE_LOG( "  BUTTONS: %i", SDL_JoystickNumButtons( m_pController->m_pJoystick ) );
+	SIRENGINE_LOG( "  HATS: %i", SDL_JoystickNumHats( m_pController->m_pJoystick ) );
 	SIRENGINE_LOG( "  INSTANCE ID: %i", SDL_JoystickGetDeviceInstanceID( m_nDeviceIndex ) );
-	SIRENGINE_LOG( "  IS_GAMEPAD: %s", m_pGamepad ? "Yes" : "No" );
+	SIRENGINE_LOG( "  IS_GAMEPAD: %s", m_pController->m_pGamepad ? "Yes" : "No" );
 
 	if ( g_bHapticEnabled ) {
-		m_pHaptic = SDL_HapticOpen( m_nDeviceIndex );
-		if ( !m_pHaptic ) {
+		m_pController->m_pHaptic = SDL_HapticOpen( m_nDeviceIndex );
+		if ( !m_pController->m_pHaptic ) {
 			SIRENGINE_WARNING( "Error opening Haptic device at %i: %s", m_nDeviceIndex, SDL_GetError() );
 			return;
 		}
-		if ( SDL_HapticRumbleSupported( m_pHaptic ) ) {
-			if ( SDL_HapticRumbleInit( m_pHaptic ) < 0 ) {
+		if ( SDL_HapticRumbleSupported( m_pController->m_pHaptic ) ) {
+			if ( SDL_HapticRumbleInit( m_pController->m_pHaptic ) < 0 ) {
 				SIRENGINE_ERROR( "Error initializing Rumble effect for Haptic device at %i: %s", m_nDeviceIndex, SDL_GetError() );
 			}
 		} else {
@@ -131,24 +135,30 @@ void CInputDevice::Init( EType nInitialType, int32_t nIndex )
 
 void CInputDevice::Shutdown( void )
 {
-	if ( m_pJoystick ) {
-		SDL_JoystickClose( m_pJoystick );
-		m_pJoystick = NULL;
-	}
-	if ( m_pGamepad ) {
-		SDL_GameControllerClose( m_pGamepad );
-		m_pGamepad = NULL;
-	}
-	if ( m_pHaptic ) {
-		SDL_HapticClose( m_pHaptic );
-		m_pHaptic = NULL;
+	if ( m_pController ) {
+		if ( m_pController->m_pJoystick ) {
+			SDL_JoystickClose( m_pController->m_pJoystick );
+			m_pController->m_pJoystick = NULL;
+		}
+		if ( m_pController->m_pGamepad ) {
+			SDL_GameControllerClose( m_pController->m_pGamepad );
+			m_pController->m_pGamepad = NULL;
+		}
+		if ( m_pController->m_pHaptic ) {
+			SDL_HapticClose( m_pController->m_pHaptic );
+			m_pController->m_pHaptic = NULL;
+		}
+		delete m_pController;
 	}
 }
 
 void CInputDevice::ApplyHaptic( int32_t nDuration, float nIntensity )
 {
-	if ( m_pHaptic ) {
-		SDL_HapticRumblePlay( m_pHaptic, nIntensity, nDuration );
+	if ( !m_pController ) {
+		return;
+	}
+	if ( m_pController->m_pHaptic ) {
+		SDL_HapticRumblePlay( m_pController->m_pHaptic, nIntensity, nDuration );
 	}
 }
 
@@ -184,6 +194,14 @@ void CInputManager::Init( void )
 			SIRENGINE_LOG( "SDL_GameController SubSystem Initialized." );
 		}
 	}
+	if ( !SDL_WasInit( SDL_INIT_HAPTIC ) ) {
+		SIRENGINE_LOG( "SDL_InitSubSystem( SDL_INIT_HAPTIC )" );
+		if ( SDL_InitSubSystem( SDL_INIT_HAPTIC ) < 0 ) {
+			SIRENGINE_WARNING( "SDL_INIT_HAPTIC Failed: %s", SDL_GetError() );
+		} else {
+			SIRENGINE_LOG( "SDL_Haptic SubSystem Initialized." );
+		}
+	}
 
 	in_InputDeviceCount.Register();
 	in_JoystickDeviceCount.Register();
@@ -193,17 +211,21 @@ void CInputManager::Init( void )
 	in_JoystickDeviceCount.SetValue( SDL_NumJoysticks() );
 	in_HapticDeviceCount.SetValue( SDL_NumHaptics() );
 
+	g_nInputDeviceCount = 0;
+
 	// initialize all input devices as controllers (the first one is always a keyboard on PC however)
 	// corrections to this will be adjustable in settings
 	memset( m_szInputDevices.data(), 0, sizeof( CInputDevice ) * m_szInputDevices.size() );
 
 #if defined(SIRENGINE_PLATFORM_PC)
 	m_szInputDevices[i].Init( CInputDevice::EType::Keyboard, 0 );
+	g_nInputDeviceCount++;
 	for ( i = 1; i < in_JoystickDeviceCount.GetValue(); i++ ) {
 		if ( i - 1 > g_nJoystickDeviceCount ) {
 			break; // no more devices available
 		}
 		m_szInputDevices[i].Init( CInputDevice::EType::Controller, i );
+		g_nInputDeviceCount++;
 	}
 #elif defined(SIRENGINE_PLATFORM_CONSOLE)
 	for ( i = 0; i < m_szInputDevices.size(); i++ ) {
@@ -211,10 +233,12 @@ void CInputManager::Init( void )
 			break; // no more devices available
 		}
 		m_szInputDevices[i].Init( CInputDevice::EType::Controller, i );
+		g_nInputDeviceCount++;
 	}
 #elif defined(SIRENGINE_PLATFORM_MOBILE)
 	// only one input device possible
 	m_szInputDevices[0].Init( CInputDevice::EType::TouchScreen, 0 );
+	g_nInputDeviceCount++;
 #endif
 
 	// should this be just a warning?
@@ -230,6 +254,9 @@ void CInputManager::Init( void )
 	) );
 	CEventManager::Get().AddEventListener( eastl::make_shared<CEventListener>(
 		"GamepadEventListener", EventType_Gamepad, CInputManager::GamepadEventListener
+	) );
+	CEventManager::Get().AddEventListener( eastl::make_shared<CEventListener>(
+		"ControllerStatusListener", EventType_ControllerStatus, CInputManager::ControllerStatusListener
 	) );
 }
 
@@ -287,6 +314,36 @@ void CInputManager::ControllerStatusListener( const IEventBase *pEventData )
 	const CControllerStatusEvent *pStatusEvent = dynamic_cast<const CControllerStatusEvent *>( pEventData );
 
 	if ( pStatusEvent->IsDeviceAdded() ) {
-//		pStatusEvent->GetData().cdevice.which
+		CInputManager::Get().AddController( pStatusEvent->GetDeviceID() );
+	} else {
+		CInputManager::Get().RemoveController( pStatusEvent->GetDeviceID() );
 	}
+}
+
+void CInputManager::AddController( int32_t nDeviceID )
+{
+	if ( g_nInputDeviceCount == SIRENGINE_MAX_COOP_PLAYERS ) {
+		SIRENGINE_WARNING( "Not enough player slots for device %i", nDeviceID );
+		return;
+	}
+
+	SIRENGINE_LOG( "Connecting controller at device slot %i...", nDeviceID );
+	m_szInputDevices[ nDeviceID ].Init( CInputDevice::EType::Controller, nDeviceID );
+	g_nInputDeviceCount++;
+}
+
+void CInputManager::RemoveController( int32_t nDeviceID )
+{
+	if ( g_nInputDeviceCount == 0 ) {
+		SIRENGINE_ERROR( "CInputManager::RemoveController: InputDevice count is 0" );
+	}
+
+	SIRENGINE_LOG( "Removing controlller at device slot %i...", nDeviceID );
+
+	SDL_Joystick *pJoystick = SDL_JoystickFromInstanceID( nDeviceID );
+	if ( !pJoystick ) {
+		SIRENGINE_WARNING( "No joystick for instanceID %i", nDeviceID );
+		return;
+	}
+	g_nInputDeviceCount--;
 }
