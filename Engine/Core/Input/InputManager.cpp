@@ -1,6 +1,7 @@
 #include <Engine/Core/Events/EventManager.h>
 #include "InputManager.h"
 #include <SDL2/SDL.h>
+#include <Engine/Core/Events/ControllerStatusEvent.h>
 
 CInputManager CInputManager::g_InputManager;
 
@@ -91,6 +92,7 @@ void CInputDevice::InitController( void )
 	SIRENGINE_LOG( "  BALLS: %i", SDL_JoystickNumBalls( m_pJoystick ) );
 	SIRENGINE_LOG( "  BUTTONS: %i", SDL_JoystickNumButtons( m_pJoystick ) );
 	SIRENGINE_LOG( "  HATS: %i", SDL_JoystickNumHats( m_pJoystick ) );
+	SIRENGINE_LOG( "  INSTANCE ID: %i", SDL_JoystickGetDeviceInstanceID( m_nDeviceIndex ) );
 	SIRENGINE_LOG( "  IS_GAMEPAD: %s", m_pGamepad ? "Yes" : "No" );
 
 	if ( g_bHapticEnabled ) {
@@ -256,9 +258,12 @@ void CInputManager::Frame( int64_t msec )
 {
 	uint32_t i;
 
+	SDL_LockJoysticks();
 	for ( i = 0; i < g_nInputDeviceCount; i++ ) {
 
 	}
+	SDL_UnlockJoysticks();
+
 }
 
 void CInputManager::SaveGame( void )
@@ -275,4 +280,13 @@ void CInputManager::KeyboardEventListener( const IEventBase *pEventData )
 
 void CInputManager::GamepadEventListener( const IEventBase *pEventData )
 {
+}
+
+void CInputManager::ControllerStatusListener( const IEventBase *pEventData )
+{
+	const CControllerStatusEvent *pStatusEvent = dynamic_cast<const CControllerStatusEvent *>( pEventData );
+
+	if ( pStatusEvent->IsDeviceAdded() ) {
+//		pStatusEvent->GetData().cdevice.which
+	}
 }

@@ -5,7 +5,11 @@
 	#pragma once
 #endif
 
+#include <SDL2/SDL_events.h>
+
 typedef enum : uint32_t {
+	EventType_None,
+
 	EventType_Key,
 	EventType_Mouse,
 	EventType_Gamepad,
@@ -31,10 +35,13 @@ public:
 	virtual ~IEventBase()
 	{ }
 
-	virtual void Send( void ) = 0;
+	virtual void Send( void )
+	{ }
 
-	virtual const char *GetName( void ) const = 0;
-	virtual EventType_t GetType( void ) const = 0;
+	virtual const char *GetName( void ) const
+	{ return "NullEvent"; }
+	virtual EventType_t GetType( void ) const
+	{ return EventType_None; }
 };
 
 class CQuitEvent : public IEventBase

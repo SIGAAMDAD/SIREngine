@@ -4,6 +4,9 @@
 #include "KeyEvent.h"
 #include "WindowEvent.h"
 #include "TouchEvent.h"
+#include "ControllerStatusEvent.h"
+#include "MouseEvent.h"
+#include "GamepadEvent.h"
 
 CEventManager CEventManager::g_EventManager;
 CQuitEvent CEventManager::g_QuitEvent;
@@ -34,9 +37,9 @@ void CEventManager::Init( void )
 
 	e_MaxPushedEvents.Register();
 
-	m_nEventsHead = 0;
-	m_nEventsTail = 0;
-	m_EventList.resize( g_nMaxPushedEvents );
+	m_nBufferedEventsHead = 0;
+	m_nBufferedEventsTail = 0;
+	m_EventBuffer.resize( g_nMaxPushedEvents );
 }
 
 void CEventManager::Shutdown( void )
@@ -45,15 +48,130 @@ void CEventManager::Shutdown( void )
 
 void CEventManager::Frame( int64_t msec )
 {
-	IEventBase *pEvent;
-	SDL_Event event;
-
 	// we will be using SDL until further notice
+
+	PumpEvents();
+
+	while ( 1 ) {
+		const CEventData& event = GetEvent();
+
+		// nothing left
+		if ( event.GetType() == EventType_None ) {
+			break;
+		}
+
+		for ( auto& it : m_EventBindings[ event.GetType() ] ) {
+			it.second->Dispatch( event.GetData() );
+		}
+	}
+}
+
+void CEventManager::SaveGame( void )
+{
+}
+
+void CEventManager::LoadGame( void )
+{
+}
+
+const CEventData& CEventManager::GetEvent( void )
+{
+	uint64_t nEventTime;
+
+	// do we have data?
+	if ( m_nBufferedEventsHead - m_nBufferedEventsTail > 0 ) {
+		return m_EventBuffer[ ( m_nBufferedEventsTail++ ) & ( g_nMaxPushedEvents - 1 ) ];
+	}
+
+	PumpEvents();
+
+	nEventTime = time( NULL );
+
+	// do we have data?
+	if ( m_nBufferedEventsHead - m_nBufferedEventsTail > 0 ) {
+		return m_EventBuffer[ ( m_nBufferedEventsTail++ ) & ( g_nMaxPushedEvents - 1 ) ];
+	}
+
+	// create an empty event
+	static CEventData emptyEvent = CreateEmptyEvent();
+	return emptyEvent;
+}
+
+void CEventManager::AddEventListener( const eastl::shared_ptr<IEventListener>& listener )
+{
+	if ( listener->GetType() > m_EventBindings.size() ) {
+		SIRENGINE_ERROR( "EventListener Object has unregistered EventType_t %i", listener->GetType() );
+	}
+	if ( m_EventBindings[ listener->GetType() ].find( listener->GetName() ) != m_EventBindings[ listener->GetType() ].end() ) {
+		SIRENGINE_WARNING( "EventListener Object \"%s\" already added.", listener->GetName() );
+		return;
+	}
+	m_EventBindings[ listener->GetType() ].try_emplace( listener->GetName(), listener );
+	SIRENGINE_LOG( "Registered IEventListener Object \"%s\" for event type %i", listener->GetName().c_str(), listener->GetType() );
+}
+
+void CEventManager::PushEvent( uint64_t nTime, const CEventData& pData )
+{
+	m_EventBuffer[ m_nBufferedEventsHead & ( g_nMaxPushedEvents - 1 ) ] = pData;
+
+	if ( m_nBufferedEventsHead - m_nBufferedEventsTail >= g_nMaxPushedEvents ) {
+		// overflow
+		m_nBufferedEventsTail++;
+	}
+	m_nBufferedEventsHead++;
+}
+
+CEventData CEventManager::CreateKeyEvent( const SDL_Event& eventData, bool bState, KeyNum_t nKeyID )
+{
+	return CKeyEvent( eventData, bState, nKeyID );
+}
+
+CEventData CEventManager::CreateWindowEvent( const SDL_Event& eventData, WindowEventType_t nEventType, int32_t nValue1, int32_t nValue2 )
+{
+	return CWindowEvent( eventData, nEventType, nValue1, nValue2 );
+}
+
+CEventData CEventManager::CreateTouchEvent( const SDL_Event& eventData, float x, float y, uint32_t nFingerState )
+{
+	FingerState_t nState;
+	switch ( nFingerState ) {
+	case SDL_FINGERDOWN:
+		nState = Finger_Down;
+	case SDL_FINGERUP:
+		nState = Finger_Up;
+		break;
+	case SDL_FINGERMOTION:
+		nState = Finger_Motion;
+		break;
+	default:
+		SIRENGINE_ERROR( "CEventManager::CreateTouchEvent: invalid touch finger event type %u", nFingerState );
+	};
+	return CTouchEvent( eventData, x, y, nState );
+}
+
+CEventData CEventManager::CreateControllerStatusEvent( const SDL_Event& eventData, bool bStatus )
+{
+	return CControllerStatusEvent( eventData, bStatus );
+}
+
+CEventData CEventManager::CreateMouseEvent( const SDL_Event& eventData, int x, int y )
+{
+	return CMouseEvent( eventData, x, y );
+}
+
+CEventData CEventManager::CreateEmptyEvent( void )
+{
+	return CEventData( IEventBase() );
+}
+
+void CEventManager::PumpEvents( void )
+{
+	SDL_Event event;
 
 	while ( SDL_PollEvent( &event ) ) {
 		switch ( event.type ) {
 		case SDL_QUIT:
-			PushEvent( &g_QuitEvent );
+			PushEvent( 0, g_QuitEvent );
 			break;
 		
 		case SDL_WINDOWEVENT: {
@@ -62,36 +180,36 @@ void CEventManager::Frame( int64_t msec )
 				break; // is this just a fancy SDL_QUIT?
 			
 			case SDL_WINDOWEVENT_FOCUS_GAINED:
-				PushEvent( CreateWindowEvent( WindowEvent_KeyboardFocus, true, 0 ) );
+				PushEvent( 0, CreateWindowEvent( event, WindowEvent_KeyboardFocus, true, 0 ) );
 				break;
 			case SDL_WINDOWEVENT_FOCUS_LOST:
-				PushEvent( CreateWindowEvent( WindowEvent_KeyboardFocus, false, 0 ) );
+				PushEvent( 0, CreateWindowEvent( event, WindowEvent_KeyboardFocus, false, 0 ) );
 				break;
 			
 			case SDL_WINDOWEVENT_LEAVE:
-				PushEvent( CreateWindowEvent( WindowEvent_MouseFocus, false, 0 ) );
+				PushEvent( 0, CreateWindowEvent( event, WindowEvent_MouseFocus, false, 0 ) );
 				break;
 			case SDL_WINDOWEVENT_ENTER:
-				PushEvent( CreateWindowEvent( WindowEvent_MouseFocus, true, 0 ) );
+				PushEvent( 0, CreateWindowEvent( event, WindowEvent_MouseFocus, true, 0 ) );
 				break;
 
 			// these are triggered by the same action
 			case SDL_WINDOWEVENT_HIDDEN:
 			case SDL_WINDOWEVENT_MINIMIZED:
-				PushEvent( CreateWindowEvent( WindowEvent_Minimized, 0, 0 ) );
+				PushEvent( 0, CreateWindowEvent( event, WindowEvent_Minimized, 0, 0 ) );
 				break;
 			
 			case SDL_WINDOWEVENT_SHOWN:
-				PushEvent( CreateWindowEvent( WindowEvent_Shown, 0, 0 ) );
+				PushEvent( 0, CreateWindowEvent( event, WindowEvent_Shown, 0, 0 ) );
 				break;
 			case SDL_WINDOWEVENT_MAXIMIZED:
-				PushEvent( CreateWindowEvent( WindowEvent_Maximized, 0, 0 ) );
+				PushEvent( 0, CreateWindowEvent( event, WindowEvent_Maximized, 0, 0 ) );
 				break;
 			case SDL_WINDOWEVENT_RESIZED:
-				PushEvent( CreateWindowEvent( WindowEvent_Resized, event.window.data1, event.window.data2 ) );
+				PushEvent( 0, CreateWindowEvent( event, WindowEvent_Resized, event.window.data1, event.window.data2 ) );
 				break;
 			case SDL_WINDOWEVENT_MOVED:
-				PushEvent( CreateWindowEvent( WindowEvent_Moved, event.window.data1, event.window.data2 ) );
+				PushEvent( 0, CreateWindowEvent( event, WindowEvent_Moved, event.window.data1, event.window.data2 ) );
 				break;
 			};
 			break; }
@@ -99,9 +217,6 @@ void CEventManager::Frame( int64_t msec )
 		case SDL_CONTROLLERAXISMOTION:
 		case SDL_CONTROLLERBUTTONDOWN:
 		case SDL_CONTROLLERBUTTONUP:
-		case SDL_CONTROLLERDEVICEADDED:
-		case SDL_CONTROLLERDEVICEREMOVED:
-		case SDL_CONTROLLERDEVICEREMAPPED:
 		case SDL_CONTROLLERTOUCHPADDOWN:
 		case SDL_CONTROLLERTOUCHPADMOTION:
 		case SDL_CONTROLLERTOUCHPADUP:
@@ -119,27 +234,38 @@ void CEventManager::Frame( int64_t msec )
 			break;
 
 		case SDL_KEYDOWN:
-			PushEvent( CreateKeyEvent( true, event.key.keysym.sym ) );
+			PushEvent( 0, CreateKeyEvent( event, true, event.key.keysym.sym ) );
 			break;
 		case SDL_KEYUP:
-			PushEvent( CreateKeyEvent( false, event.key.keysym.sym ) );
+			PushEvent( 0, CreateKeyEvent( event, false, event.key.keysym.sym ) );
 			break;
 		case SDL_TEXTEDITING:
 		case SDL_TEXTINPUT:
 			break;
 		
 		case SDL_MOUSEMOTION:
+			PushEvent( 0, CreateMouseEvent( event, event.motion.x, event.motion.y ) );
 			break;
 		case SDL_MOUSEBUTTONDOWN:
-			break;
-		case SDL_MOUSEBUTTONUP:
-			break;
+		case SDL_MOUSEBUTTONUP: {
+			KeyNum_t b;
+
+			switch ( event.button.button ) {
+			case SDL_BUTTON_LEFT:	b = Key_MouseLeft; break;
+			case SDL_BUTTON_MIDDLE:	b = Key_MouseMiddle; break;
+			case SDL_BUTTON_RIGHT:	b = Key_MouseRight; break;
+			case SDL_BUTTON_X1:		b = Key_MouseButton4; break;
+			case SDL_BUTTON_X2:		b = Key_MouseButton5; break;
+			};
+			PushEvent( 0, CreateKeyEvent( event, event.type == SDL_MOUSEBUTTONDOWN, b ) );
+			break; }
 		case SDL_MOUSEWHEEL:
+			PushEvent( 0, CreateKeyEvent( event, true, CKeyEvent::SDLKeyToEngineKey( event ) ) );
+			PushEvent( 0, CreateKeyEvent( event, false, CKeyEvent::SDLKeyToEngineKey( event ) ) );
 			break;
 
 #if !defined(SIRENGINE_PLATFORM_PC)
 		case SDL_FINGERDOWN:
-			event.tfinger.x;
 			break;
 		case SDL_FINGERUP:
 			break;
@@ -152,6 +278,11 @@ void CEventManager::Frame( int64_t msec )
 			break;
 		case SDL_JOYDEVICEREMOVED:
 			break;
+		case SDL_CONTROLLERDEVICEADDED:
+		case SDL_CONTROLLERDEVICEREMOVED:
+			PushEvent( 0, CreateControllerStatusEvent( event, event.cdevice.type == SDL_CONTROLLERDEVICEADDED ) );
+			break;
+		case SDL_CONTROLLERDEVICEREMAPPED:
 		case SDL_KEYMAPCHANGED:
 			break;
 
@@ -166,71 +297,4 @@ void CEventManager::Frame( int64_t msec )
 			break;
 		};
 	}
-}
-
-void CEventManager::SaveGame( void )
-{
-}
-
-void CEventManager::LoadGame( void )
-{
-}
-
-void CEventManager::AddEventListener( const eastl::shared_ptr<IEventListener>& listener )
-{
-	if ( listener->GetType() > m_EventBindings.size() ) {
-		SIRENGINE_ERROR( "EventListener Object has unregistered EventType_t %i", listener->GetType() );
-	}
-	if ( m_EventBindings[ listener->GetType() ].find( listener->GetName() ) != m_EventBindings[ listener->GetType() ].end() ) {
-		SIRENGINE_WARNING( "EventListener Object \"%s\" already added.", listener->GetName() );
-		return;
-	}
-	m_EventBindings[ listener->GetType() ].try_emplace( listener->GetName(), listener );
-	SIRENGINE_LOG( "Registered IEventListener Object \"%s\" for event type %i", listener->GetName().c_str(), listener->GetType() );
-}
-
-void CEventManager::PushEvent( IEventBase *pEvent )
-{
-	m_EventList[ m_nEventsHead & ( g_nMaxPushedEvents - 1 ) ] = pEvent;
-
-	if ( m_nEventsHead - m_nEventsTail >= g_nMaxPushedEvents ) {
-		// overflow
-		m_nEventsTail++;
-	}
-	m_nEventsHead++;
-
-	for ( auto& it : m_EventBindings[ pEvent->GetType() ] ) {
-		it.second->Dispatch( pEvent );
-	}
-}
-
-IEventBase *CEventManager::CreateKeyEvent( bool bState, SDL_Keycode nKeyID )
-{
-	static IEventBase *pBase = SIREngine_CreateStackObject( CKeyEvent, bState, nKeyID );
-	return pBase;
-}
-
-IEventBase *CEventManager::CreateWindowEvent( WindowEventType_t nEventType, int32_t nValue1, int32_t nValue2 )
-{
-	static IEventBase *pBase = SIREngine_CreateStackObject( CWindowEvent, nEventType, nValue1, nValue2 );
-	return pBase;
-}
-
-IEventBase *CEventManager::CreateTouchEvent( float x, float y, uint32_t nFingerState )
-{
-	FingerState_t nState;
-	switch ( nFingerState ) {
-	case SDL_FINGERDOWN:
-		nState = Finger_Down;
-	case SDL_FINGERUP:
-		nState = Finger_Up;
-		break;
-	case SDL_FINGERMOTION:
-		nState = Finger_Motion;
-		break;
-	default:
-		SIRENGINE_ERROR( "CEventManager::CreateTouchEvent: invalid touch finger event type %u", nFingerState );
-	};
-	static IEventBase *pBase = SIREngine_CreateStackObject( CTouchEvent, x, y, nState );
-	return pBase;
 }

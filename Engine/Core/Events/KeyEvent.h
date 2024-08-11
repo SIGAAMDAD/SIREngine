@@ -6,16 +6,15 @@
 #endif
 
 #include <Engine/Core/Compiler.h>
+#include <Engine/Core/Types.h>
 #include "EventBase.h"
 #include <SDL2/SDL_keyboard.h>
 #include "KeyCodes.h"
 
-extern const KeyNum_t SDLToKeynumTable[ NumKeyIds ];
-
 class CKeyEvent : public IEventBase
 {
 public:
-	CKeyEvent( bool bState, SDL_Keycode nKeyID )
+	CKeyEvent( const SDL_Event& eventData, bool bState, KeyNum_t nKeyID )
 		: m_bDown( bState ), m_nKeyValue( nKeyID )
 	{ }
 	virtual ~CKeyEvent() override
@@ -29,10 +28,10 @@ public:
 	SIRENGINE_FORCEINLINE virtual EventType_t GetType( void ) const override
 	{ return EventType_Key; }
 
-	static KeyNum_t SDLKeyToEngineKey( SDL_Keysym *pKeysym );
+	static KeyNum_t SDLKeyToEngineKey( const SDL_Event& eventData );
 private:
 	bool32 m_bDown;
-	uint32_t m_nKeyValue;
+	KeyNum_t m_nKeyValue;
 };
 
 #endif

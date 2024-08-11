@@ -22,7 +22,7 @@ typedef enum {
 class CWindowEvent : public IEventBase
 {
 public:
-    CWindowEvent( WindowEventType_t nType, int32_t value1, int32_t value2 )
+    CWindowEvent( const SDL_Event& eventData, WindowEventType_t nType, int32_t value1, int32_t value2 )
         : m_nEventType( nType ), m_nValue1( value1 ), m_nValue2( value2 )
     { }
     virtual ~CWindowEvent() override

@@ -78,6 +78,9 @@ public:
 private:
 	static void KeyboardEventListener( const IEventBase *pEventData );
 	static void GamepadEventListener( const IEventBase *pEventData );
+    static void ControllerStatusListener( const IEventBase *pEventData );
+
+    void AddController( int32_t nDeviceID );
 
 	CStaticArray<CInputDevice, SIRENGINE_MAX_COOP_PLAYERS> m_szInputDevices;
 

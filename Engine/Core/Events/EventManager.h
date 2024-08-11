@@ -10,6 +10,9 @@
 #include "WindowEvent.h"
 #include <SDL2/SDL_keycode.h>
 #include <EASTL/shared_ptr.h>
+#include "EventData.h"
+
+#include "KeyCodes.h"
 
 class IEventListener
 {
@@ -75,25 +78,29 @@ public:
 	virtual void LoadGame( void ) override;
 
 	void AddEventListener( const eastl::shared_ptr<IEventListener>& listener );
-	void PushEvent( IEventBase *pEvent );
+	void PushEvent( uint64_t nTime, const CEventData& pData );
 
-	static IEventBase *CreateKeyEvent( bool bState, SDL_Keycode nKeyID );
-	static IEventBase *CreateWindowEvent( WindowEventType_t nEventType, int32_t nValue1, int32_t nValue2 );
-	static IEventBase *CreateGamepadEvent( );
-	static IEventBase *CreateJoystickEvent( );
-	static IEventBase *CreateTouchEvent( float x, float y, uint32_t nFingerState );
-	static IEventBase *CreateMouseEvent();
-	static IEventBase *CreateActionEvent();
-	static IEventBase *CreateControllerStatusEvent( bool bStatus );
+	static CEventData CreateKeyEvent( const SDL_Event& eventData, bool bState, KeyNum_t nKeyID );
+	static CEventData CreateWindowEvent( const SDL_Event& eventData, WindowEventType_t nEventType, int32_t nValue1, int32_t nValue2 );
+	static CEventData CreateGamepadEvent( const SDL_Event& eventData );
+	static CEventData CreateJoystickEvent( const SDL_Event& eventData );
+	static CEventData CreateTouchEvent( const SDL_Event& eventData, float x, float y, uint32_t nFingerState );
+	static CEventData CreateMouseEvent( const SDL_Event& eventData, int x, int y );
+	static CEventData CreateActionEvent( const SDL_Event& eventData );
+	static CEventData CreateControllerStatusEvent( const SDL_Event& eventData, bool bStatus );
+	static CEventData CreateEmptyEvent( void );
 
 	SIRENGINE_FORCEINLINE static CEventManager& Get( void )
 	{ return g_EventManager; }
 private:
+	void PumpEvents( void );
+	const CEventData& GetEvent( void );
+
 	CStaticArray<CEventListenerList, NumEventTypes> m_EventBindings;
 
-	CVector<IEventBase *> m_EventList;
-	uint64_t m_nEventsHead;
-	uint64_t m_nEventsTail;
+	CVector<CEventData> m_EventBuffer;
+	int64_t m_nBufferedEventsHead;
+	int64_t m_nBufferedEventsTail;
 
 	static CEventManager g_EventManager;
 	static CQuitEvent g_QuitEvent;

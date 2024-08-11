@@ -18,7 +18,7 @@ typedef enum {
 class CTouchEvent : public IEventBase
 {
 public:
-	CTouchEvent( float x, float y, FingerState_t nState )
+	CTouchEvent( const SDL_Event& eventData, float x, float y, FingerState_t nState )
 		: m_Position( x, y ), m_nState( nState )
 	{ }
 	virtual ~CTouchEvent() override

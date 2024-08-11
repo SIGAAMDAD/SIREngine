@@ -5,15 +5,16 @@
 	#pragma once
 #endif
 
+#include <Engine/Core/Compiler.h>
 #include "EventBase.h"
 #include "KeyCodes.h"
-#include <SDL2/SDL_events.h>
 #include <SDL2/SDL_gamecontroller.h>
 
 class CGamepadEvent : public IEventBase
 {
 public:
-	CGamepadEvent( const SDL_Event *pEventData );
+	CGamepadEvent( const SDL_Event& eventData )
+	{ }
 	virtual ~CGamepadEvent() override
 	{ }
 

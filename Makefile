@@ -76,6 +76,7 @@ SRC=\
 	$(O)/Engine/Core/Logging/Logger.o \
 	\
 	$(O)/Engine/Core/Events/EventManager.o \
+	$(O)/Engine/Core/Events/KeyEvent.o \
 	\
 	$(O)/Engine/Core/Input/InputManager.o \
 	\
