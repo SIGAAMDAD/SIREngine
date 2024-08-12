@@ -109,7 +109,7 @@ const char *SIREngine_GetMemoryString( size_t nBytes )
 SIRENGINE_EXPORT_DEMANGLE void SIREngine_AssertionFailure( const char *pAssertion, const char *pFileName, uint64_t nLineNumber )
 {
     printf( "Assertion failure [%s:%lu] -> %s\n", pFileName, nLineNumber, pAssertion );
-    delete g_pApplication;
+    delete SIREngine::Application::g_pApplication;
     exit( EXIT_FAILURE );
 }
 

@@ -2,6 +2,9 @@
 #include "GLProgram.h"
 #include "../RenderShaderPipeline.h"
 
+using namespace SIREngine;
+using namespace SIREngine::RenderLib::Backend::OpenGL;
+
 GLShaderBuffer::GLShaderBuffer( GLPipelineSet_t *pPipeline, uint32_t nProgramBinding )
     : m_pPipeline( pPipeline )
 {

@@ -1,5 +1,7 @@
 #include "RenderLib.h"
 
+using namespace SIREngine::RenderLib;
+
 void PostProcess_SuperSample( void )
 {
     

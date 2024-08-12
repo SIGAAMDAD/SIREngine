@@ -10,22 +10,24 @@
 #include "GLCommon.h"
 #include "../RenderShader.h"
 
-class GLShader : public IRenderShader
-{
-public:
-    GLShader( const RenderShaderInit_t& shaderInfo );
-    virtual ~GLShader() override;
+namespace SIREngine::RenderLib::Backend::OpenGL {
+    class GLShader : public Backend::IRenderShader
+    {
+    public:
+        GLShader( const RenderShaderInit_t& shaderInfo );
+        virtual ~GLShader() override;
 
-    virtual const char *GetName( void ) const override { return m_szName; }
-    virtual bool IsValid( void ) const override { return false; }
-    virtual void Reload( void ) override { }
-    virtual void Release( void ) override { }
+        virtual const char *GetName( void ) const override { return m_szName; }
+        virtual bool IsValid( void ) const override { return false; }
+        virtual void Reload( void ) override { }
+        virtual void Release( void ) override { }
 
-    virtual RenderShaderType_t GetType( void ) const override { return m_nType; }
-private:
-    virtual bool Load( const char *pszFilePath ) override { return false; }
+        virtual RenderShaderType_t GetType( void ) const override { return m_nType; }
+    private:
+        virtual bool Load( const char *pszFilePath ) override { return false; }
 
-    GLuint m_hShaderID;
+        GLuint m_hShaderID;
+    };
 };
 
 #endif

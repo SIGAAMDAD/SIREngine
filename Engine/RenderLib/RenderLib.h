@@ -10,42 +10,44 @@
 #include <Engine/Core/EngineApp.h>
 #include <Engine/RenderLib/RenderCommon.h>
 
-typedef enum {
-    AntiAlias_None,
-    
-    AntiAlias_2xMSAA,
-    AntiAlias_4xMSAA,
-    AntiAlias_8xMSAA,
-    AntiAlias_16xMSAA,
-    AntiAlias_32xMSAA,
-    AntiAlias_2xSSAA,
-    AntiAlias_4xSSAA,
-    AntiAlias_SMAA,
-    AntiAlias_FXAA,
+namespace SIREngine::RenderLib {
+    typedef enum {
+        AntiAlias_None,
 
-    NumAntiAliasTypes
-} AntiAliasingType_t;
+        AntiAlias_2xMSAA,
+        AntiAlias_4xMSAA,
+        AntiAlias_8xMSAA,
+        AntiAlias_16xMSAA,
+        AntiAlias_32xMSAA,
+        AntiAlias_2xSSAA,
+        AntiAlias_4xSSAA,
+        AntiAlias_SMAA,
+        AntiAlias_FXAA,
 
-class CRenderer : public IEngineApp
-{
-public:
-    CRenderer( void );
-    virtual ~CRenderer();
+        NumAntiAliasTypes
+    } AntiAliasingType_t;
 
-    virtual const char *GetName( void ) const override;
-    virtual bool IsActive( void ) const override;
-    virtual uint32_t GetState( void ) const override;
+    class CRenderer : public IEngineApp
+    {
+    public:
+        CRenderer( void );
+        virtual ~CRenderer();
 
-    virtual void Init( void ) override;
-    virtual void Shutdown( void ) override;
-    virtual void Frame( int64_t msec ) override;
+        virtual const char *GetName( void ) const override;
+        virtual bool IsActive( void ) const override;
+        virtual uint32_t GetState( void ) const override;
 
-    virtual void SaveGame( void ) override;
-    virtual void LoadGame( void ) override;
-private:
-    void PostProcess( void );
+        virtual void Init( void ) override;
+        virtual void Shutdown( void ) override;
+        virtual void Frame( int64_t msec ) override;
+
+        virtual void SaveGame( void ) override;
+        virtual void LoadGame( void ) override;
+    private:
+        void PostProcess( void );
+    };
+
+    extern CRenderer *g_pRenderLib;
 };
-
-extern CRenderer *g_pRenderLib;
 
 #endif

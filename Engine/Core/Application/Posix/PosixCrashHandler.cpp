@@ -11,6 +11,9 @@ static char argv0[4096];
 
 #define OOM_MEMORY_BACKUP_POOL_SIZE 4*1024
 
+using namespace SIREngine;
+using namespace SIREngine::Application;
+
 void *CPosixApplication::pOOMBackup;
 size_t CPosixApplication::nOOMBackupSize;
 

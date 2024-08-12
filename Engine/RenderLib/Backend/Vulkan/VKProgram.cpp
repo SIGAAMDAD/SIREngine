@@ -2,6 +2,8 @@
 #include "VKShader.h"
 #include "VKContext.h"
 
+using namespace SIREngine::RenderLib::Backend::Vulkan;
+
 VKProgram::VKProgram( const RenderProgramInit_t& programInfo )
 {
     RenderShaderInit_t shaderInfo;

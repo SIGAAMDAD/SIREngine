@@ -8,17 +8,19 @@
 #include <Engine/Core/SIREngine.h>
 #include <Engine/RenderLib/RenderCommon.h>
 
-class IRenderShaderBuffer
-{
-public:
-    IRenderShaderBuffer( void )
-        : m_pShader( NULL ), m_nProgramBinding( 0 )
-    { }
-    virtual ~IRenderShaderBuffer()
-    { }
-protected:
-    IRenderProgram *m_pShader;
-    uint32_t m_nProgramBinding;
+namespace SIREngine::RenderLib::Backend {
+    class IRenderShaderBuffer
+    {
+    public:
+        IRenderShaderBuffer( void )
+            : m_pShader( NULL ), m_nProgramBinding( 0 )
+        { }
+        virtual ~IRenderShaderBuffer()
+        { }
+    protected:
+        IRenderProgram *m_pShader;
+        uint32_t m_nProgramBinding;
+    };
 };
 
 #endif

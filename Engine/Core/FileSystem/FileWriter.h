@@ -8,7 +8,7 @@
 #include <Engine/Core/Logging/Logger.h>
 #include "FileStream.h"
 
-namespace FileSystem {
+namespace SIREngine::FileSystem {
     class CFileWriter : public IFileStream
     {
     public:

@@ -3,6 +3,9 @@
 #include <Engine/Core/FileSystem/FileSystem.h>
 #include <errno.h>
 
+using namespace SIREngine::Serialization;
+using namespace SIREngine;
+
 bool CIniSerializer::Save( const FileSystem::CFilePath& filePath )
 {
     m_FilePath = filePath;

@@ -4,6 +4,8 @@
 #define UNOWNED    ((void *)666)
 #define ZONEID     0xa21d49
 
+using namespace SIREngine;
+
 CVar<uint64_t> mem_NewSegmentSize(
 	"mem.NewSegmentSize",
 	8*1024*1024, // originally 1<<21
@@ -140,7 +142,7 @@ static freeblock_t *NewBlock( memzone_t *zone, uint64_t size )
 	// allocate separator block before new free block
 	alloc_size = size + sizeof( *sep );
 
-	sep = (memblock_t *)g_pApplication->VirtualAlloc( &alloc_size, 64 );
+	sep = (memblock_t *)Application::Get()->VirtualAlloc( &alloc_size, 64 );
 //	sep = (memblock_t *)calloc( alloc_size, 1 );
 	if ( sep == NULL ) {
 		SIRENGINE_ERROR( "Z_Malloc: failed on allocation of %lu bytes", size );
@@ -149,7 +151,7 @@ static freeblock_t *NewBlock( memzone_t *zone, uint64_t size )
 	memset( sep, 0, alloc_size );
 	block = sep+1;
 
-	g_pApplication->CommitMemory( sep, 0, alloc_size );
+	Application::Get()->CommitMemory( sep, 0, alloc_size );
 
 	// link separator with prev
 	prev->next = sep;
@@ -686,10 +688,10 @@ void Z_LogZoneHeap( memzone_t *zone, const char *name )
 CTagArenaAllocator::CTagArenaAllocator( const char *pName, uint64_t nSize, uint64_t nFlags )
 {
 	m_pName = pName;
-	m_pZone = (memzone_t *)g_pApplication->VirtualAlloc( &nSize, 64 );
+	m_pZone = (memzone_t *)Application::Get()->VirtualAlloc( &nSize, 64 );
 //	m_pZone = (memzone_t *)calloc( 1, nSize );
 	if ( !m_pZone ) {
-		g_pApplication->OnOutOfMemory();
+		Application::Get()->OnOutOfMemory();
 	}
 
 	Z_ClearZone( m_pZone, m_pZone, nSize, 1 );
@@ -713,7 +715,7 @@ void CTagArenaAllocator::Shutdown( void )
 			memblock_t *next = block->next;
 			if ( next->size == 0 && next->id == -ZONEID && next->tag == TAG_STATIC ) {
 				if ( seg ) {
-					g_pApplication->VirtualFree( seg );
+					Application::Get()->VirtualFree( seg );
 //					::free( seg );
 				}
 				seg = next;
@@ -730,7 +732,7 @@ void CTagArenaAllocator::Shutdown( void )
 		}
 		block = block->next;
 	}
-	g_pApplication->VirtualFree( m_pZone );
+	Application::Get()->VirtualFree( m_pZone );
 //	::free( m_pZone );
 }
 

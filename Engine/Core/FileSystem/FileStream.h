@@ -8,7 +8,7 @@
 #include <Engine/Util/CString.h>
 #include "FilePath.h"
 
-namespace FileSystem {
+namespace SIREngine::FileSystem {
     class IFileStream
     {
     public:

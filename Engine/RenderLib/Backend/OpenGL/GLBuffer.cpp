@@ -2,6 +2,8 @@
 #include "GLBuffer.h"
 #include "GLContext.h"
 
+using namespace SIREngine::RenderLib::Backend::OpenGL;
+
 extern bool32 g_bUseBufferDiscard;
 
 GLBuffer::GLBuffer( GPUBufferType_t nType, GPUBufferUsage_t nUsage, uint64_t nSize )

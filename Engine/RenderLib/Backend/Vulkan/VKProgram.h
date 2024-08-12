@@ -10,13 +10,15 @@
 #include "VKCommon.h"
 #include "../RenderProgram.h"
 
-class VKProgram : public IRenderProgram
-{
-public:
-    VKProgram( const RenderProgramInit_t& programInfo );
-    virtual ~VKProgram() override;
+namespace SIREngine::RenderLib::Backend::Vulkan {
+    class VKProgram : public Backend::IRenderProgram
+    {
+    public:
+        VKProgram( const RenderProgramInit_t& programInfo );
+        virtual ~VKProgram() override;
 
-    virtual bool Load( void ) override { return false; }
+        virtual bool Load( void ) override { return false; }
+    };
 };
 
 #endif

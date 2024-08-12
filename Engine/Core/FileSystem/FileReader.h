@@ -8,7 +8,7 @@
 #include "FilePath.h"
 #include "FileStream.h"
 
-namespace FileSystem {
+namespace SIREngine::FileSystem {
     class CFileReader : public IFileStream
     {
     public:

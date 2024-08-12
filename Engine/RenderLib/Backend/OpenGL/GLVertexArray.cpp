@@ -1,6 +1,8 @@
 #include "GLVertexArray.h"
 #include "GLBuffer.h"
 
+using namespace SIREngine::RenderLib::Backend::OpenGL;
+
 GLVertexArray::GLVertexArray( const RenderPipelineInputSet_t& createInfo )
 {
     m_pVertexBuffer = new GLBuffer( BUFFER_TYPE_VERTEX, BufferUsage_Dynamic, 2*1024*1024 );

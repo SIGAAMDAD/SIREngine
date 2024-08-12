@@ -6,46 +6,58 @@
 #include <Engine/Core/Events/EventManager.h>
 #include <Engine/Core/Input/InputManager.h>
 
-IGenericApplication *g_pApplication;
-FileSystem::CFileSystem *g_pFileSystem;
+using namespace SIREngine;
+using namespace SIREngine::Application;
+using namespace SIREngine::Events;
+using namespace SIREngine::Input;
+using namespace SIREngine::RenderLib;
+using namespace SIREngine::Logging;
+
+SIREngine::FileSystem::CFileSystem *g_pFileSystem;
 
 uint32_t g_nMaxFPS = 60;
+
+namespace SIREngine::RenderLib::Backend {
+	CVar<bool32> e_Fullscreen(
+		"e.Fullscreen",
+		false,
+		Cvar_Save,
+		"Sets the engine's window to fullscreen.",
+		CVG_RENDERER
+	);
+	CVar<uint32_t> e_RenderAPI(
+		"e.RenderAPI",
+		0,
+		Cvar_Save,
+		"Sets the Rendering API used by the engine."
+		"  0: OpenGL\n"
+		"  1: Vulkan\n"
+		"  2: OpenGL ES\n"
+		"  3: DirectX 11\n"
+		"  4: Software",
+		CVG_RENDERER
+	);
+};
+
+namespace SIREngine::Application {
+
+IGenericApplication *g_pApplication;
+
 CVarRef<uint32_t> e_MaxFPS(
-    "e.MaxFPS",
-    g_nMaxFPS,
-    Cvar_Save,
-    "Sets the engine's maximum screen refresh rate (frames per second).",
-    CVG_SYSTEMINFO
+	"e.MaxFPS",
+	g_nMaxFPS,
+	Cvar_Save,
+	"Sets the engine's maximum screen refresh rate (frames per second).",
+	CVG_SYSTEMINFO
 );
 
 uint64_t g_nFrameNumber = 0;
 CVarRef<uint64_t> e_FrameNumber(
-    "e.FrameNumber",
-    g_nFrameNumber,
-    Cvar_Default,
-    "The current frame index.",
-    CVG_NONE
-);
-
-CVar<uint32_t> e_RenderAPI(
-    "e.RenderAPI",
-    0,
-    Cvar_Save,
-    "Sets the Rendering API used by the engine."
-    "  0: OpenGL\n"
-    "  1: Vulkan\n"
-    "  2: OpenGL ES\n"
-    "  3: DirectX 11\n"
-    "  4: Software",
-    CVG_RENDERER
-);
-
-CVar<bool32> e_Fullscreen(
-    "e.Fullscreen",
-    false,
-    Cvar_Save,
-    "Sets the engine's window to fullscreen.",
-    CVG_RENDERER
+	"e.FrameNumber",
+	g_nFrameNumber,
+	Cvar_Default,
+	"The current frame index.",
+	CVG_NONE
 );
 
 #include <gtk/gtk.h>
@@ -151,12 +163,9 @@ public:
 class ZUIVBox : public ZUIWidget
 {
 public:
-	ZUIVBox()
+	ZUIVBox( void )
 	{
-		if (gtk_box_new) // Gtk3
-			widget = gtk_box_new (GTK_ORIENTATION_VERTICAL, 10);
-		else if (gtk_vbox_new) // Gtk2
-			widget = gtk_vbox_new (FALSE, 10);
+		widget = gtk_box_new (GTK_ORIENTATION_VERTICAL, 10);
 	}
 
 	void PackStart(ZUIWidget* child, bool expand, bool fill, int padding)
@@ -176,14 +185,8 @@ public:
 	ZUILabel(const char* text)
 	{
 		widget = gtk_label_new (text);
-
-		if (gtk_widget_set_halign && gtk_widget_set_valign) // Gtk3
-		{
-			gtk_widget_set_halign (widget, GTK_ALIGN_START);
-			gtk_widget_set_valign (widget, GTK_ALIGN_START);
-		}
-		else if (gtk_misc_set_alignment && gtk_misc_get_type) // Gtk2
-			gtk_misc_set_alignment (GTK_MISC(widget), 0, 0);
+		gtk_widget_set_halign (widget, GTK_ALIGN_START);
+		gtk_widget_set_valign (widget, GTK_ALIGN_START);
 	}
 };
 
@@ -202,7 +205,7 @@ public:
 				filepart = options[i].c_str();
 			} else {
 				filepart++;
-            }
+			}
 			gtk_list_store_append( store, &iter );
 			gtk_list_store_set( store, &iter,
 				0, filepart,
@@ -276,10 +279,7 @@ public:
 	ZUIHBox()
 	{
 		// Create the hbox for the bottom row.
-		if (gtk_box_new) // Gtk3
-			widget = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 0);
-		else if (gtk_hbox_new) // Gtk2
-			widget = gtk_hbox_new (FALSE, 0);
+		widget = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 0);
 	}
 
 	void PackStart(ZUIWidget* child, bool expand, bool fill, int padding)
@@ -339,15 +339,11 @@ public:
 class ZUIButtonBox : public ZUIWidget
 {
 public:
-	ZUIButtonBox()
+	ZUIButtonBox( void )
 	{
-		if (gtk_button_box_new) // Gtk3
-			widget = gtk_button_box_new (GTK_ORIENTATION_HORIZONTAL);
-		else if (gtk_hbutton_box_new) // Gtk2
-			widget = gtk_hbutton_box_new ();
-
-		gtk_button_box_set_layout (GTK_BUTTON_BOX(widget), GTK_BUTTONBOX_END);
-		gtk_box_set_spacing (GTK_BOX(widget), 10);
+		widget = gtk_button_box_new( GTK_ORIENTATION_HORIZONTAL );
+		gtk_button_box_set_layout( GTK_BUTTON_BOX( widget ), GTK_BUTTONBOX_END );
+		gtk_box_set_spacing( GTK_BOX( widget ), 10 );
 	}
 
 	void PackStart(ZUIWidget* child, bool expand, bool fill, int padding)
@@ -368,8 +364,7 @@ public:
 	{
 		widget = gtk_button_new_with_label (text);
 
-		if (defaultButton)
-		{
+		if (defaultButton) {
 			gtk_widget_set_can_default (widget, true);
 		}
 	}
@@ -402,184 +397,185 @@ IGenericApplication::~IGenericApplication()
 
 void IGenericApplication::Shutdown( void )
 {
-    g_pRenderContext->Shutdown();
-    CConsoleManager::Get().SaveConfig();
+	CConsoleManager::Get().SaveConfig();
 
 	for ( auto& it : m_ApplicationSystems ) {
 		it.second->Shutdown();
 	}
 
-    delete g_pRenderContext;
-    delete g_pFileSystem;
+	delete g_pRenderLib;
+	delete g_pFileSystem;
 
-    CLogManager::ShutdownLogger();
-    Mem_Shutdown();
+	CLogManager::ShutdownLogger();
+	Mem_Shutdown();
 
 	_Exit( EXIT_SUCCESS );
 }
 
 static void SetCommandLineArg( const CString& arg )
 {
-    auto it = eastl::find( g_pApplication->GetCommandLine().begin(), g_pApplication->GetCommandLine().end(), arg );
-    if ( it != g_pApplication->GetCommandLine().end() ) {
-        // already set at the command line, replace it
-        *it = arg;
-    } else {
-        g_pApplication->GetCommandLine().emplace_back( arg );
-    }
+	auto it = eastl::find( Application::Get()->GetCommandLine().begin(), Application::Get()->GetCommandLine().end(), arg );
+	if ( it != Application::Get()->GetCommandLine().end() ) {
+		// already set at the command line, replace it
+		*it = arg;
+	} else {
+		Application::Get()->GetCommandLine().emplace_back( arg );
+	}
 }
 
 static int LauncherWindow( void )
 {
-    char **argv;
-    int argc;
-    int close_style;
+	char **argv;
+	int argc;
+	int close_style;
 
-    argv = NULL;
-    argc = 0;
-    if ( gtk_init_check( &argc, &argv ) == 0 )  {
-        SIRENGINE_ERROR( "Failed initializing GTK+ 3.0!" );
-    }
+	argv = NULL;
+	argc = 0;
+	if ( gtk_init_check( &argc, &argv ) == 0 )  {
+		SIRENGINE_ERROR( "Failed initializing GTK+ 3.0!" );
+	}
 
-    ZUIWindow window( "SIREngine Launcher" );
-    ZUIVBox vbox;
+	ZUIWindow window( "SIREngine Launcher" );
+	ZUIVBox vbox;
 
-    ZUIHBox hboxOptions;
+	ZUIHBox hboxOptions;
 
-    ZUIVBox vboxVideo;
-    ZUILabel videoSettings( "Video Settings" );
-    ZUIRadioButton opengl( "OpenGL" );
-    ZUIRadioButton vulkan( &opengl, "Vulkan" );
-    ZUIRadioButton software( &opengl, "Software" );
+	ZUIVBox vboxVideo;
+	ZUILabel videoSettings( "Video Settings" );
+	ZUIRadioButton opengl( "OpenGL" );
+	ZUIRadioButton vulkan( &opengl, "Vulkan" );
+	ZUIRadioButton software( &opengl, "Software" );
 #if defined(SIRENGINE_PLATFORM_WINDOWS)
-    ZUIRadioButton directx( &opengl, "DirectX 11" );
+	ZUIRadioButton directx( &opengl, "DirectX 11" );
 #endif
-    ZUIRadioButton openglES( &opengl, "OpenGL ES" );
-    ZUICheckButton fullscreen( "Fullscreen" );
+	ZUIRadioButton openglES( &opengl, "OpenGL ES" );
+	ZUICheckButton fullscreen( "Fullscreen" );
 
-    ZUIHBox hboxButtons;
+	ZUIHBox hboxButtons;
 
-    ZUIButtonBox bbox;
+	ZUIButtonBox bbox;
 	ZUIButton playButton( "Launch", true );
 	ZUIButton exitButton( "Cancel", false );
 
-    window.AddWidget( &vbox );
-    vbox.PackEnd( &hboxButtons, false, false, 0 );
+	window.AddWidget( &vbox );
+	vbox.PackEnd( &hboxButtons, false, false, 0 );
 	vbox.PackEnd( &hboxOptions, false, false, 0 );
 	hboxOptions.PackStart( &vboxVideo, false, false, 15 );
 	vboxVideo.PackStart( &videoSettings, false, false, 0 );
 	vboxVideo.PackStart( &opengl, false, false, 0 );
 	vboxVideo.PackStart( &vulkan, false, false, 0 );
-    vboxVideo.PackStart( &software, false, false, 0 );
+	vboxVideo.PackStart( &software, false, false, 0 );
 #if defined(SIRENGINE_PLATFORM_WINDOWS)
-    vboxVideo.PackStart( &directx, false, false, 0 );
+	vboxVideo.PackStart( &directx, false, false, 0 );
 #endif
 	vboxVideo.PackStart( &openglES, false, false, 0 );
 	vboxVideo.PackStart( &fullscreen, false, false, 15 );
-    hboxButtons.PackStart( &bbox, true, true, 0 );
+	hboxButtons.PackStart( &bbox, true, true, 0 );
 	bbox.PackStart( &playButton, false, false, 0 );
 	bbox.PackEnd( &exitButton, false, false, 0 );
 
-    switch ( e_RenderAPI.GetValue() ) {
-    case RAPI_OPENGL:
-        opengl.SetChecked( true );
-        break;
-    case RAPI_VULKAN:
-        vulkan.SetChecked( true );
-        break;
-    case RAPI_OPENGLES:
-        openglES.SetChecked( true );
-        break;
+	switch ( RenderLib::Backend::e_RenderAPI.GetValue() ) {
+	case RAPI_OPENGL:
+		opengl.SetChecked( true );
+		break;
+	case RAPI_VULKAN:
+		vulkan.SetChecked( true );
+		break;
+	case RAPI_OPENGLES:
+		openglES.SetChecked( true );
+		break;
 #if defined(SIRENGINE_PLATFORM_WINDOWS)
-    case RAPI_D3D11:
-        directx.SetChecked( true );
-        break;
+	case RAPI_D3D11:
+		directx.SetChecked( true );
+		break;
 #endif
-    case RAPI_SOFTWARE:
-        software.SetChecked( true );
-        break;
-    };
+	case RAPI_SOFTWARE:
+		software.SetChecked( true );
+		break;
+	};
 
-    fullscreen.SetChecked( e_Fullscreen.GetValue() );
+	fullscreen.SetChecked( RenderLib::Backend::e_Fullscreen.GetValue() );
 
-    playButton.GrabDefault();
+	playButton.GrabDefault();
 
-    close_style = 0;
-    playButton.ConnectClickedOK( &close_style );
+	close_style = 0;
+	playButton.ConnectClickedOK( &close_style );
 	exitButton.ConnectClickedExit( &window );
 
-    playButton.GrabDefault();
+	playButton.GrabDefault();
 
-    window.RunModal();
+	window.RunModal();
 
-    if ( close_style == 1 ) {
-        if ( opengl.GetChecked() ) {
-            e_RenderAPI.SetValue( RAPI_OPENGL );
-        } else if ( vulkan.GetChecked() ) {
-            e_RenderAPI.SetValue( RAPI_VULKAN );
-        } else if ( openglES.GetChecked() ) {
-            e_RenderAPI.SetValue( RAPI_OPENGLES );
-        } else if ( software.GetChecked() ) {
-            e_RenderAPI.SetValue( RAPI_SOFTWARE );
-        }
+	if ( close_style == 1 ) {
+		if ( opengl.GetChecked() ) {
+			RenderLib::Backend::e_RenderAPI.SetValue( RAPI_OPENGL );
+		} else if ( vulkan.GetChecked() ) {
+			RenderLib::Backend::e_RenderAPI.SetValue( RAPI_VULKAN );
+		} else if ( openglES.GetChecked() ) {
+			RenderLib::Backend::e_RenderAPI.SetValue( RAPI_OPENGLES );
+		} else if ( software.GetChecked() ) {
+			RenderLib::Backend::e_RenderAPI.SetValue( RAPI_SOFTWARE );
+		}
 
-        e_Fullscreen.SetValue( fullscreen.GetChecked() );
+		RenderLib::Backend::e_Fullscreen.SetValue( fullscreen.GetChecked() );
 
-        return 1;
-    }
+		return 1;
+	}
 
-    return -1;
+	return -1;
 }
 
 bool IGenericApplication::CheckCommandParm( const CString& name ) const
 {
-    return eastl::find( m_CommandLineArgs.cbegin(), m_CommandLineArgs.cend(), name ) != m_CommandLineArgs.cend();
+	return eastl::find( m_CommandLineArgs.cbegin(), m_CommandLineArgs.cend(), name ) != m_CommandLineArgs.cend();
 }
 
 CString IGenericApplication::GetCommandParmValue( const CString& name ) const
 {
-    auto it = m_CommandLineArgs.cbegin();
-    for ( ; it != m_CommandLineArgs.cend(); ++it ) {
-        if ( !strncmp( it->c_str(), name.c_str(), name.size() ) ) {
-            break;
-        }
-    }
-    if ( it == m_CommandLineArgs.cend() ) {
-        return ""; // empty value simply means defaulted
-    }
+	auto it = m_CommandLineArgs.cbegin();
+	for ( ; it != m_CommandLineArgs.cend(); ++it ) {
+		if ( !strncmp( it->c_str(), name.c_str(), name.size() ) ) {
+			break;
+		}
+	}
+	if ( it == m_CommandLineArgs.cend() ) {
+		return ""; // empty value simply means defaulted
+	}
 
-    const size_t pos = it->find_last_of( '=' ) + 1;
-    return it->substr( pos, it->size() - pos );
+	const size_t pos = it->find_last_of( '=' ) + 1;
+	return it->substr( pos, it->size() - pos );
 }
 
 void IGenericApplication::QuitGame( const IEventBase *pEventData )
 {
 	assert( pEventData->GetType() == EventType_Quit );
-	g_pApplication->Shutdown();
+	Application::Get()->Shutdown();
 }
 
 void IGenericApplication::Init( void )
 {
-    //
-    // initialize the engine
-    //
-    g_pFileSystem = new FileSystem::CFileSystem();
+	//
+	// initialize the engine
+	//
+	g_pFileSystem = new FileSystem::CFileSystem();
 
-    CConsoleManager::Get().LoadConfig();
-    CLogManager::LaunchLoggingThread();
-    if ( LauncherWindow() == -1 ) {
-        Shutdown();
-        return;
-    }
+	CConsoleManager::Get().LoadConfig();
+	CLogManager::LaunchLoggingThread();
+	if ( LauncherWindow() == -1 ) {
+		Shutdown();
+		return;
+	}
 
-    e_MaxFPS.Register();
-    e_FrameNumber.Register();
+	e_MaxFPS.Register();
+	e_FrameNumber.Register();
+	RenderLib::Backend::e_RenderAPI.Register();
+
+	g_pRenderLib = new CRenderer();
 
 	m_ApplicationSystems.reserve( 2 );
 	m_ApplicationSystems.try_emplace( CEventManager::Get().GetName(), eastl::addressof( CEventManager::Get() ) );
 	m_ApplicationSystems.try_emplace( CInputManager::Get().GetName(), eastl::addressof( CInputManager::Get() ) );
-
-    g_pRenderContext = IRenderContext::CreateRenderContext();
+	m_ApplicationSystems.try_emplace( g_pRenderLib->GetName(), g_pRenderLib );
 
 	for ( auto& it : m_ApplicationSystems ) {
 		it.second->Init();
@@ -621,3 +617,5 @@ void IGenericApplication::Run( void )
 void IGenericApplication::OnOutOfMemory( void )
 {
 }
+
+};

@@ -1,5 +1,7 @@
 #include "VirtualStackAllocator.h"
 
+using namespace SIREngine;
+
 template<typename T>
 static inline T *OffsetPointer( T *pStart, size_t nOffset )
 { return (T *)( (intptr_t)( pStart ) + nOffset ); }
@@ -11,10 +13,10 @@ static inline ptrdiff_t PointerDifference(T *pEnd, U *pStart )
 CVirtualStackAllocator::CVirtualStackAllocator( const char *pAllocatorName, size_t nRequestedSize,EVirtualStackAllocatorDecommitMode decommitMode )
     : IAllocatorBase( pAllocatorName ), m_DecommitMode( decommitMode )
 {
-    m_nTotalReservationSize = SIRENGINE_PAD( nRequestedSize, g_pApplication->GetOSPageSize() );
+    m_nTotalReservationSize = SIRENGINE_PAD( nRequestedSize, Application::Get()->GetOSPageSize() );
 
     if ( m_nTotalReservationSize > 0 ) {
-        m_pMemory = g_pApplication->VirtualAlloc( &m_nTotalReservationSize, 64 );
+        m_pMemory = Application::Get()->VirtualAlloc( &m_nTotalReservationSize, 64 );
         m_pNextUncommittedPage = m_pMemory;
         m_pNextAllocationStart = m_pNextUncommittedPage;
         m_pRecentHighWaterMark = m_pNextUncommittedPage;
@@ -24,7 +26,7 @@ CVirtualStackAllocator::CVirtualStackAllocator( const char *pAllocatorName, size
 CVirtualStackAllocator::~CVirtualStackAllocator()
 {
     if ( m_pNextUncommittedPage != NULL ) {
-        g_pApplication->VirtualFree( m_pMemory );
+        Application::Get()->VirtualFree( m_pMemory );
     }
 }
 
@@ -37,7 +39,7 @@ void *CVirtualStackAllocator::Allocate( uint64_t nBytes, uint64_t nAlignment )
         void *pUsableMemoryEnd = (void *)OffsetPointer( m_pMemory, m_nTotalReservationSize );
 
         if ( pAllocationEnd > pUsableMemoryEnd ) {
-            g_pApplication->OnOutOfMemory();
+            Application::Get()->OnOutOfMemory();
         }
 
         // after the high water mark is established, needing to commit pages should be rare
@@ -45,14 +47,14 @@ void *CVirtualStackAllocator::Allocate( uint64_t nBytes, uint64_t nAlignment )
             // we need to commit some more pages. Let's see how many
 			const uintptr_t nRequiredAdditionalCommit = PointerDifference( pAllocationEnd, m_pNextUncommittedPage );
 
-			const size_t nSizeToCommit = SIRENGINE_PAD( nRequiredAdditionalCommit, g_pApplication->GetOSPageSize() );
-			g_pApplication->CommitByAddress( m_pNextUncommittedPage, nSizeToCommit );
+			const size_t nSizeToCommit = SIRENGINE_PAD( nRequiredAdditionalCommit, Application::Get()->GetOSPageSize() );
+			Application::Get()->CommitByAddress( m_pNextUncommittedPage, nSizeToCommit );
 
-			m_pNextUncommittedPage = (void *)SIRENGINE_PAD( (uintptr_t)pAllocationEnd, g_pApplication->GetOSPageSize() );
+			m_pNextUncommittedPage = (void *)SIRENGINE_PAD( (uintptr_t)pAllocationEnd, Application::Get()->GetOSPageSize() );
         }
 
         if ( (byte *)pAllocationEnd > (byte *)m_pRecentHighWaterMark ) {
-            m_pRecentHighWaterMark = (void *)SIRENGINE_PAD( (uintptr_t)pAllocationEnd, g_pApplication->GetOSPageSize() );
+            m_pRecentHighWaterMark = (void *)SIRENGINE_PAD( (uintptr_t)pAllocationEnd, Application::Get()->GetOSPageSize() );
         }
 
         m_pNextAllocationStart = pAllocationEnd;
@@ -64,7 +66,7 @@ void *CVirtualStackAllocator::Allocate( uint64_t nBytes, uint64_t nAlignment )
 void CVirtualStackAllocator::DecommitUnusedPages( void )
 {
     if ( m_DecommitMode == EVirtualStackAllocatorDecommitMode::AllOnStackEmpty ) {
-        g_pApplication->DecommitMemory( m_pMemory, 0, m_nVirtualMemorySize );
+        Application::Get()->DecommitMemory( m_pMemory, 0, m_nVirtualMemorySize );
         m_pNextUncommittedPage = m_pMemory;
     }
     else if ( m_DecommitMode == EVirtualStackAllocatorDecommitMode::ExcessOnStackEmpty ) {
@@ -76,7 +78,7 @@ void CVirtualStackAllocator::DecommitUnusedPages( void )
 		const ptrdiff_t nMinimumToDecommit = PointerDifference( m_pNextUncommittedPage, m_pMemory ) / 4;
 		if ( nAmountToFree > nMinimumToDecommit ) {
 			// we have used less memory this time than the last time, decommit the excess
-			g_pApplication->DecommitByAddress( m_pRecentHighWaterMark, nAmountToFree );
+			Application::Get()->DecommitByAddress( m_pRecentHighWaterMark, nAmountToFree );
 			m_pNextUncommittedPage = m_pRecentHighWaterMark;
 		}
     }

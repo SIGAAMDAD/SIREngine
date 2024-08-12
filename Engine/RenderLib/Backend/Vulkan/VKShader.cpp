@@ -2,6 +2,9 @@
 #include "VKContext.h"
 #include <Engine/Core/FileSystem/MemoryFile.h>
 
+using namespace SIREngine::FileSystem;
+using namespace SIREngine::RenderLib::Backend::Vulkan;
+
 VKShader::VKShader( const RenderShaderInit_t& shaderInfo )
 {
     VkShaderStageFlagBits stage;

@@ -11,32 +11,34 @@
 #include "FileReader.h"
 #include "FileSystem.h"
 
-class CMemoryFile : public IMemoryBuffer<uint8_t, UtlMallocAllocator>
-{
-public:
-    CMemoryFile( const FileSystem::CFilePath& filePath )
-    { Open( filePath ); }
-    virtual ~CMemoryFile() override
-    { }
+namespace SIREngine::FileSystem {
+    class CMemoryFile : public IMemoryBuffer<uint8_t, UtlMallocAllocator>
+    {
+    public:
+        CMemoryFile( const FileSystem::CFilePath& filePath )
+        { Open( filePath ); }
+        virtual ~CMemoryFile() override
+        { }
 
-    bool Open( const FileSystem::CFilePath& filePath );
-};
+        bool Open( const FileSystem::CFilePath& filePath );
+    };
 
-inline bool CMemoryFile::Open( const FileSystem::CFilePath& filePath )
-{
-    FileSystem::CFileReader *hFile = g_pFileSystem->OpenFileReader( filePath );
+    inline bool CMemoryFile::Open( const FileSystem::CFilePath& filePath )
+    {
+        FileSystem::CFileReader *hFile = g_pFileSystem->OpenFileReader( filePath );
 
-    if ( !hFile ) {
-        SIRENGINE_WARNING( "Error opening file '%s'\n", filePath.c_str() );
-        return false;
+        if ( !hFile ) {
+            SIRENGINE_WARNING( "Error opening file '%s'\n", filePath.c_str() );
+            return false;
+        }
+
+        m_Data.resize( hFile->GetLength() );
+        hFile->Read( m_Data.data(), m_Data.size() );
+
+        delete hFile;
+
+        return true;
     }
-
-    m_Data.resize( hFile->GetLength() );
-    hFile->Read( m_Data.data(), m_Data.size() );
-
-    delete hFile;
-
-    return true;
-}
+};
 
 #endif

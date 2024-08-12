@@ -1,5 +1,7 @@
 #include <Engine/Memory/Allocators/SlabAllocator.h>
 
+using namespace SIREngine;
+
 template<typename AllocatorType>
 void CSlabAllocator<AllocatorType>::Init( uint64_t nBytes )
 {

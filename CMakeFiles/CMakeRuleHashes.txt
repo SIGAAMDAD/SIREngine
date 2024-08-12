@@ -1,0 +1,5 @@
+# Hashes of file build rules.
+0f27f038a84465fef29979273d800dd9 CMakeFiles/clean-all
+5214099266f6705ba38879062aece146 CMakeFiles/shaders
+35b1760561d1f5b4627e116b5cbe23ad Resources/Shaders/Vulkan/Generic.frag.spv
+5d3bb1ca322a3a6212af36a344b17dbd Resources/Shaders/Vulkan/Generic.vert.spv

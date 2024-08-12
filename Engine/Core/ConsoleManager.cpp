@@ -1,6 +1,8 @@
 #include "ConsoleManager.h"
 #include <locale.h>
 
+using namespace SIREngine;
+
 CConsoleManager CConsoleManager::g_ConsoleManager;
 
 static const char *GetConfigSectionName( CvarGroup_t nGroup )
@@ -357,6 +359,22 @@ IConsoleVar *CConsoleManager::RegisterCVarRef( const char *pName, CString& value
 
 void CConsoleManager::RegisterConsoleCommand( IConsoleCmd *pCommand )
 {
+    CThreadAutoLock<CThreadMutex> _( m_hObjectLock );
+
+    auto it = m_ObjectList.find( pCommand->GetName() );
+    if ( it != m_ObjectList.end() ) {
+        SIRENGINE_WARNING( "IConsoleObject \"%s\" already registered", pCommand->GetName().c_str() );
+        if ( !it->second->AsCommand() ) {
+            SIRENGINE_ERROR( "CConsoleManager::RegisterConsoleCommand: called on IConsoleObject that isn't a valid command" );
+        }
+    }
+
+    m_ObjectList.try_emplace( pCommand->GetName(), pCommand );
+}
+
+IConsoleCmd *CConsoleManager::GetConsoleCommand( const CString& commandName )
+{
+
 }
 /*
 void CConsoleManager::RegisterCVar( IConsoleVar *pCvar )
@@ -398,7 +416,7 @@ void CConsoleManager::LoadConfig( void )
 
     SIRENGINE_LOG( "Loading Engine Configuration..." );
     
-    m_pConfigLoader = new CIniSerializer( "EngineData.ini" );
+    m_pConfigLoader = new Serialization::CIniSerializer( "EngineData.ini" );
 
     for ( auto& it : m_ObjectList ) {
         if ( !it.second->AsVariable() ) {

@@ -11,20 +11,22 @@
 #include "../RenderTexture.h"
 #include "../ImageLoader.h"
 
-class VKTexture : public IRenderTexture
-{
-public:
-    VKTexture( const TextureInit_t& textureInfo );
-    virtual ~VKTexture();
+namespace SIREngine::RenderLib::Backend::Vulkan {
+    class VKTexture : public Backend::IRenderTexture
+    {
+    public:
+        VKTexture( const TextureInit_t& textureInfo );
+        virtual ~VKTexture();
 
-    virtual void StreamBuffer( void ) override;
-private:
-    virtual void Upload( const TextureInit_t& textureInfo ) override;
+        virtual void StreamBuffer( void ) override;
+    private:
+        virtual void Upload( const TextureInit_t& textureInfo ) override;
 
-    VkImage m_hImage;
-    VmaAllocation m_hImageMemory;
+        VkImage m_hImage;
+        VmaAllocation m_hImageMemory;
 
-    CImageLoader m_ImageData;
+        CImageLoader m_ImageData;
+    };
 };
 
 #endif

@@ -5,7 +5,7 @@
     #pragma once
 #endif
 
-namespace PlatformTypes {
+namespace SIREngine::PlatformTypes {
     typedef pthread_mutex_t mutex_t;
     typedef pthread_rwlock_t rwlock_t;
     typedef pthread_cond_t condition_variable_t;

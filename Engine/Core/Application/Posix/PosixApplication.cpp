@@ -18,6 +18,9 @@
 #include <sys/wait.h>
 #include <sys/time.h>
 
+using namespace SIREngine;
+using namespace SIREngine::Application;
+
 char **myargv;
 int myargc;
 

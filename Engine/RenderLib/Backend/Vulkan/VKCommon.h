@@ -33,65 +33,67 @@
 #define VK_MAX_FRAMES_IN_FLIGHT 2
 #define SIRENGINE_USE_VK_DESCRIPTOR_POOLS 1
 
-typedef struct {
-    VkSurfaceCapabilitiesKHR capabilities;
-    VkSurfaceFormatKHR *pFormats;
-    VkPresentModeKHR *pPresentModes;
-    uint32_t nFormats;
-    uint32_t nPresentModes;
-} SwapChainSupportInfo_t;
+namespace SIREngine::RenderLib::Backend::Vulkan {
+    typedef struct {
+        VkSurfaceCapabilitiesKHR capabilities;
+        VkSurfaceFormatKHR *pFormats;
+        VkPresentModeKHR *pPresentModes;
+        uint32_t nFormats;
+        uint32_t nPresentModes;
+    } SwapChainSupportInfo_t;
 
-typedef struct {
-    bool32 bHasGraphicsFamily;
-    uint32_t nGraphicsFamily;
-    bool32 bHasPresentFamily;
-    uint32_t nPresentFamily;
+    typedef struct {
+        bool32 bHasGraphicsFamily;
+        uint32_t nGraphicsFamily;
+        bool32 bHasPresentFamily;
+        uint32_t nPresentFamily;
 
-    bool IsComplete( void ) const {
-        return bHasGraphicsFamily && bHasPresentFamily;
+        bool IsComplete( void ) const {
+            return bHasGraphicsFamily && bHasPresentFamily;
+        }
+    } QueueFamilyIndices_t;
+
+    class VKShaderBuffer;
+
+    typedef struct {
+        VkPipeline hPipeline;
+        VkPipelineLayout hLayout;
+        VkDescriptorSet *pDescriptorSets;
+        VkDescriptorSetLayout *pDescriptorSetLayouts;
+    #if defined(SIRENGINE_USE_VK_DESCRIPTOR_POOLS)
+        VkDescriptorPool hDescriptorPool;
+    #else
+        VkDescriptorUpdateTemplate hUpdateTemplate;
+    #endif
+
+        VKShaderBuffer **pShaderBuffers;
+        uint64_t nShaderBufferCount;
+
+        VkVertexInputAttributeDescription *pAttributes;
+        VkVertexInputBindingDescription *pBindings;
+
+        uint32_t nAttribCount;
+        uint32_t nBindingCount;
+        uint32_t nUniformCount;
+    } VKPipelineSet_t;
+
+    typedef struct VKDescriptorCache {
+        VkDescriptorSet *pSets;
+        VkDescriptorSetLayout *pLayouts;
+        VkDescriptorPool hPool;
+
+        uint64_t nSetCount;
+    } VKDescriptorCache_t;
+
+    extern void VkError( const char *pCall, VkResult nResult );
+
+    SIRENGINE_FORCEINLINE void VkCall( const char *pCall, VkResult nResult )
+    {
+        if ( nResult != VK_SUCCESS ) {
+            VkError( pCall, nResult );
+        }
     }
-} QueueFamilyIndices_t;
-
-class VKShaderBuffer;
-
-typedef struct {
-    VkPipeline hPipeline;
-    VkPipelineLayout hLayout;
-    VkDescriptorSet *pDescriptorSets;
-    VkDescriptorSetLayout *pDescriptorSetLayouts;
-#if defined(SIRENGINE_USE_VK_DESCRIPTOR_POOLS)
-    VkDescriptorPool hDescriptorPool;
-#else
-    VkDescriptorUpdateTemplate hUpdateTemplate;
-#endif
-
-    VKShaderBuffer **pShaderBuffers;
-    uint64_t nShaderBufferCount;
-
-    VkVertexInputAttributeDescription *pAttributes;
-    VkVertexInputBindingDescription *pBindings;
-
-    uint32_t nAttribCount;
-    uint32_t nBindingCount;
-    uint32_t nUniformCount;
-} VKPipelineSet_t;
-
-typedef struct VKDescriptorCache {
-    VkDescriptorSet *pSets;
-    VkDescriptorSetLayout *pLayouts;
-    VkDescriptorPool hPool;
-
-    uint64_t nSetCount;
-} VKDescriptorCache_t;
-
-extern void VkError( const char *pCall, VkResult nResult );
-
-SIRENGINE_FORCEINLINE void VkCall( const char *pCall, VkResult nResult )
-{
-    if ( nResult != VK_SUCCESS ) {
-        VkError( pCall, nResult );
-    }
-}
+};
 
 #define VK_CALL( call ) VkCall( #call, call )
 

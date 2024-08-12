@@ -8,33 +8,35 @@
 #include <Engine/RenderLib/RenderCommon.h>
 #include <Engine/RenderLib/RenderCommon.h>
 
-class IRenderTexture : public CResourceDef
-{
-public:
-    IRenderTexture( void )
-        : CResourceDef(), m_nWidth( 0 ), m_nHeight( 0 ), m_ImageFormat( TF_INVALID )
-    { }
-    virtual ~IRenderTexture()
-    { }
+namespace SIREngine::RenderLib::Backend {
+    class IRenderTexture : public CResourceDef
+    {
+    public:
+        IRenderTexture( void )
+            : CResourceDef(), m_nWidth( 0 ), m_nHeight( 0 ), m_ImageFormat( TF_INVALID )
+        { }
+        virtual ~IRenderTexture()
+        { }
 
-    static IRenderTexture *Create( const TextureInit_t& textureInfo );
+        static IRenderTexture *Create( const TextureInit_t& textureInfo );
 
-    virtual void StreamBuffer( void ) = 0;
+        virtual void StreamBuffer( void ) = 0;
 
-    virtual const char *GetName( void ) const override { return m_szName; }
-    virtual bool IsValid( void ) const override { return false; }
-    virtual void Reload( void ) override { }
-    virtual void Release( void ) override { }
-protected:
-    virtual void Upload( const TextureInit_t& textureInfo ) = 0;
+        virtual const char *GetName( void ) const override { return m_szName; }
+        virtual bool IsValid( void ) const override { return false; }
+        virtual void Reload( void ) override { }
+        virtual void Release( void ) override { }
+    protected:
+        virtual void Upload( const TextureInit_t& textureInfo ) = 0;
 
-    uint32_t m_nWidth;
-    uint32_t m_nHeight;
+        uint32_t m_nWidth;
+        uint32_t m_nHeight;
 
-    TextureImageFormat_t m_ImageFormat;
+        TextureImageFormat_t m_ImageFormat;
+    };
+
+    extern CVar<int32_t> r_TextureStreamingBudget;
+    extern CVar<bool32> r_UseHDRTextures;
 };
-
-extern CVar<int32_t> r_TextureStreamingBudget;
-extern CVar<bool32> r_UseHDRTextures;
 
 #endif

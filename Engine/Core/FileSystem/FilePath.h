@@ -8,7 +8,7 @@
 #include <Engine/Core/Compiler.h>
 #include <Engine/Util/CString.h>
 
-namespace FileSystem {
+namespace SIREngine::FileSystem {
     class CFilePath : public CString
     {
     public:
@@ -80,8 +80,8 @@ namespace FileSystem {
 };
 
 namespace eastl {
-    template<> struct hash<FileSystem::CFilePath> {
-		size_t operator()( const FileSystem::CFilePath& str ) const {
+    template<> struct hash<SIREngine::FileSystem::CFilePath> {
+		size_t operator()( const SIREngine::FileSystem::CFilePath& str ) const {
 			const unsigned char *p = (const unsigned char *)str.c_str(); // To consider: limit p to at most 256 chars.
 			unsigned int c, result = 2166136261U; // We implement an FNV-like string hash.
 			while((c = *p++) != 0) // Using '!=' disables compiler warnings.

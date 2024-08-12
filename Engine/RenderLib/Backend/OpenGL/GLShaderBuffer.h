@@ -11,16 +11,18 @@
 #include "../RenderShaderBuffer.h"
 #include "GLBuffer.h"
 
-class GLShaderBuffer : public IRenderShaderBuffer
-{
-public:
-    GLShaderBuffer( GLPipelineSet_t *pPipeline, uint32_t nProgramBinding );
-    virtual ~GLShaderBuffer() override;
+namespace SIREngine::RenderLib::Backend::OpenGL {
+    class GLShaderBuffer : public Backend::IRenderShaderBuffer
+    {
+    public:
+        GLShaderBuffer( GLPipelineSet_t *pPipeline, uint32_t nProgramBinding );
+        virtual ~GLShaderBuffer() override;
 
-    void SwapData( GLPipelineSet_t *pSet ) {}
-private:
-    GLBuffer *m_pBuffer;
-    GLPipelineSet_t *m_pPipeline;
+        void SwapData( GLPipelineSet_t *pSet ) {}
+    private:
+        GLBuffer *m_pBuffer;
+        GLPipelineSet_t *m_pPipeline;
+    };
 };
 
 #endif

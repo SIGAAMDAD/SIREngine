@@ -8,7 +8,7 @@
 #include <Engine/Util/CVector.h>
 #include "FilePath.h"
 
-namespace FileSystem {
+namespace SIREngine::FileSystem {
     class CFileList
     {
         friend class CFileSystem;

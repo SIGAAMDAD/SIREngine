@@ -2,6 +2,11 @@
 #include "ini.h"
 #include <Engine/Core/FileSystem/MemoryFile.h>
 
+using namespace SIREngine::FileSystem;
+using namespace SIREngine;
+
+namespace SIREngine::Serialization {
+
 bool CIniSerializer::Load( const FileSystem::CFilePath& filePath )
 {
     m_FilePath = filePath;
@@ -10,7 +15,7 @@ bool CIniSerializer::Load( const FileSystem::CFilePath& filePath )
     SIRENGINE_LOG( "Processing ini file \"%s\"", filePath.c_str() );
 
     if ( file.GetSize() ) {
-        m_nError = ini_parse_string( (const char *)file.GetBuffer(), CIniSerializer::ValueHandler, this );
+        m_nError = ::ini_parse_string( (const char *)file.GetBuffer(), CIniSerializer::ValueHandler, this );
         if ( m_nError > 0 ) {
             SIRENGINE_WARNING( "Error while parsing .ini file \"%s\" (error count = %i)", filePath.c_str(), m_nError );
         }
@@ -96,9 +101,8 @@ bool CIniSerializer::GetBool( const CString& section, const CString& name ) cons
         return true;
     } else if ( valstr == "false" || valstr == "no" || valstr == "0" || valstr == "off" ) {
         return false;
-    } else {
-        return false;
     }
+    return false;
 }
 
 bool CIniSerializer::HasSection( const CString& section ) const
@@ -138,3 +142,5 @@ int CIniSerializer::ValueHandler( void *user, const char *section, const char *n
     }
     return 1;
 }
+
+};

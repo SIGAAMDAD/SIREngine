@@ -2,7 +2,9 @@
 #include "FileCache.h"
 #include <Engine/Core/Application/GenericPlatform/GenericApplication.h>
 
-using namespace FileSystem;
+using namespace SIREngine;
+using namespace SIREngine::Application;
+using namespace SIREngine::FileSystem;
 
 CFileCache::CFileCache( const FileSystem::CFilePath& directory )
 {
@@ -15,8 +17,8 @@ CFileCache::~CFileCache()
         if ( it.second.hFile == (void *)SIRENGINE_INVALID_HANDLE ) {
             continue;
         }
-        g_pApplication->UnmapFile( it.second.pMemory, it.second.nSize );
-        g_pApplication->FileClose( (void *)it.second.hFile );
+        Application::Get()->UnmapFile( it.second.pMemory, it.second.nSize );
+        Application::Get()->FileClose( (void *)it.second.hFile );
     }
 }
 
@@ -24,7 +26,7 @@ void CFileCache::AllocateCache( const FileSystem::CFilePath& directory )
 {
     size_t i, nCachedBytes;
     FileCacheEntry_t *pCacheEntry;
-    CVector<CFilePath> fileList = eastl::move( g_pApplication->ListFiles( directory, false ) );
+    CVector<CFilePath> fileList = eastl::move( Application::Get()->ListFiles( directory, false ) );
 
     SIRENGINE_LOG( "Allocating file cache in directory \"%s\"", directory.c_str() );
 
@@ -42,7 +44,7 @@ void CFileCache::AllocateCache( const FileSystem::CFilePath& directory )
 
 void CFileCache::MapFile( const FileSystem::CFilePath& filePath, FileCacheEntry_t *pCacheEntry )
 {
-    pCacheEntry->hFile = g_pApplication->FileOpen( filePath, FileMode_ReadOnly );
+    pCacheEntry->hFile = Application::Get()->FileOpen( filePath, FileMode_ReadOnly );
 
     SIRENGINE_LOG( "Caching file \"%s\"...", filePath.c_str() );
 
@@ -52,10 +54,10 @@ void CFileCache::MapFile( const FileSystem::CFilePath& filePath, FileCacheEntry_
         return;
     }
 
-    pCacheEntry->pMemory = g_pApplication->MapFile( pCacheEntry->hFile, &pCacheEntry->nSize );
+    pCacheEntry->pMemory = Application::Get()->MapFile( pCacheEntry->hFile, &pCacheEntry->nSize );
     if ( !pCacheEntry->pMemory ) {
         SIRENGINE_WARNING( "Error mapping file" );
-        g_pApplication->FileClose( pCacheEntry->hFile );
+        Application::Get()->FileClose( pCacheEntry->hFile );
         return;
     }
 }

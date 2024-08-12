@@ -1,5 +1,7 @@
 #include "KeyEvent.h"
 
+using namespace SIREngine::Events;
+
 KeyNum_t CKeyEvent::SDLKeyToEngineKey( const SDL_Event& eventData )
 {
 	KeyNum_t key = 0;

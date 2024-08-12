@@ -11,27 +11,29 @@
 #include "../RenderShaderBuffer.h"
 #include "VKBuffer.h"
 
-class VKShaderBuffer : public IRenderShaderBuffer
-{
-public:
-    VKShaderBuffer( VKPipelineSet_t *pPipeline, uint32_t nProgramBinding,
-        VkDescriptorSetLayoutBinding *pLayoutBindings );
-    virtual ~VKShaderBuffer() override;
+namespace SIREngine::RenderLib::Backend::Vulkan {
+    class VKShaderBuffer : public Backend::IRenderShaderBuffer
+    {
+    public:
+        VKShaderBuffer( VKPipelineSet_t *pPipeline, uint32_t nProgramBinding,
+            VkDescriptorSetLayoutBinding *pLayoutBindings );
+        virtual ~VKShaderBuffer() override;
 
-    SIRENGINE_FORCEINLINE VkBuffer GetVKObject( void )
-    { return m_pBuffer->GetVKObject(); }
+        SIRENGINE_FORCEINLINE VkBuffer GetVKObject( void )
+        { return m_pBuffer->GetVKObject(); }
 
-    SIRENGINE_FORCEINLINE CVector<VkDescriptorSet>& GetDescriptorSets( void )
-    { return m_DescriptorSets; }
+        SIRENGINE_FORCEINLINE CVector<VkDescriptorSet>& GetDescriptorSets( void )
+        { return m_DescriptorSets; }
 
-    void SwapData( VKPipelineSet_t *pSet );
-private:
-    VKBuffer *m_pBuffer;
-    CVector<VkDescriptorSet> m_DescriptorSets;
-    CVector<VKBuffer *> m_ShaderBuffers;
-    VkDescriptorType m_nType;
+        void SwapData( VKPipelineSet_t *pSet );
+    private:
+        VKBuffer *m_pBuffer;
+        CVector<VkDescriptorSet> m_DescriptorSets;
+        CVector<VKBuffer *> m_ShaderBuffers;
+        VkDescriptorType m_nType;
 
-    VKPipelineSet_t *m_pPipeline;
+        VKPipelineSet_t *m_pPipeline;
+    };
 };
 
 #endif

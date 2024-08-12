@@ -1,6 +1,9 @@
 #include "GLShaderPipeline.h"
 #include "GLBuffer.h"
 
+using namespace SIREngine::RenderLib::Backend::OpenGL;
+using namespace SIREngine::RenderLib;
+
 static const GLenum attribTypeGL[ NUMATTRIBTYPES ] = {
     GL_INT,
     GL_FLOAT,

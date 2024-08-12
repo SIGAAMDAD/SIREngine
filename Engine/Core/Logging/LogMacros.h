@@ -6,17 +6,17 @@
 #endif
 
 #define SIRENGINE_LOG( ... ) \
-    CLogManager::g_Logger.LogInfo( { __FILE__, SIRENGINE_FUNC_NAME, __LINE__ }, __VA_ARGS__ )
+    SIREngine::Logging::CLogManager::g_Logger.LogInfo( { __FILE__, SIRENGINE_FUNC_NAME, __LINE__ }, __VA_ARGS__ )
 #define SIRENGINE_WARNING( ... ) \
-    CLogManager::g_Logger.LogWarning( { __FILE__, SIRENGINE_FUNC_NAME, __LINE__ }, __VA_ARGS__ )
+    SIREngine::Logging::CLogManager::g_Logger.LogWarning( { __FILE__, SIRENGINE_FUNC_NAME, __LINE__ }, __VA_ARGS__ )
 #define SIRENGINE_ERROR( ... ) \
-    CLogManager::g_Logger.LogError( { __FILE__, SIRENGINE_FUNC_NAME, __LINE__ }, __VA_ARGS__ )
+    SIREngine::Logging::CLogManager::g_Logger.LogError( { __FILE__, SIRENGINE_FUNC_NAME, __LINE__ }, __VA_ARGS__ )
 
 #define SIRENGINE_NOTIFICATION( ... ) \
-    CLogManager::g_Logger.SendNotification( { __FILE__, SIRENGINE_FUNC_NAME, __LINE__ }, __VA_ARGS__ )
+    SIREngine::Logging::CLogManager::g_Logger.SendNotification( { __FILE__, SIRENGINE_FUNC_NAME, __LINE__ }, __VA_ARGS__ )
 
 #define SIRENGINE_LOG_LEVEL( Category, Level, ... ) \
-    CLogManager::g_Logger.LogCategory( { __FILE__, SIRENGINE_FUNC_NAME, __LINE__ }, __VA_ARGS__ )
+    SIREngine::Logging::CLogManager::g_Logger.LogCategory( { __FILE__, SIRENGINE_FUNC_NAME, __LINE__ }, __VA_ARGS__ )
 
 #define SIRENGINE_DEFINE_LOG_CATEGORY( Category, Verbosity )
 #define SIRENGINE_SILENCE_LOG_CATEGORY( Category )

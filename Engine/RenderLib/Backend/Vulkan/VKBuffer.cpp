@@ -1,6 +1,8 @@
 #include "VKBuffer.h"
 #include "VKContext.h"
 
+using namespace SIREngine::RenderLib::Backend::Vulkan;
+
 static const char *szBufferTypes[] = {
     "VERTEX",
     "INDEX",

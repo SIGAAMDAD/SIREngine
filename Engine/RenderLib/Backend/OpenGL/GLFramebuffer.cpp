@@ -1,6 +1,8 @@
 #include "GLFramebuffer.h"
 
-extern CVar<uint32_t> render_AntiAliasingType;
+using namespace SIREngine::RenderLib::Backend::OpenGL;
+
+namespace SIREngine::RenderLib { extern SIREngine::CVar<uint32_t> render_AntiAliasingType; };
 
 GLFramebuffer::GLFramebuffer( const FramebufferInfo_t& info )
 {

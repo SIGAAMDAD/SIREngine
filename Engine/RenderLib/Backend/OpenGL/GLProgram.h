@@ -10,18 +10,20 @@
 #include "GLCommon.h"
 #include "../RenderProgram.h"
 
-class GLProgram : public IRenderProgram
-{
-public:
-    GLProgram( const RenderProgramInit_t& programInfo );
-    virtual ~GLProgram() override;
+namespace SIREngine::RenderLib::Backend::OpenGL {
+    class GLProgram : public Backend::IRenderProgram
+    {
+    public:
+        GLProgram( const RenderProgramInit_t& programInfo );
+        virtual ~GLProgram() override;
 
-    virtual bool Load( void ) override { return false; }
+        virtual bool Load( void ) override { return false; }
 
-    SIRENGINE_FORCEINLINE GLuint GetProgramID( void ) const
-    { return m_hProgramID; }
-private:
-    GLuint m_hProgramID;
+        SIRENGINE_FORCEINLINE GLuint GetProgramID( void ) const
+        { return m_hProgramID; }
+    private:
+        GLuint m_hProgramID;
+    };
 };
 
 #endif

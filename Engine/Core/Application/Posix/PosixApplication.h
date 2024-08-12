@@ -24,6 +24,8 @@
 #include <signal.h>
 #endif
 
+namespace SIREngine::Application {
+
 class CPosixApplication : public IGenericApplication
 {
 public:
@@ -81,6 +83,8 @@ private:
     
     void GetPwd( void );
     static void *ThreadFunction( void *pArgument );
+};
+
 };
 
 #endif

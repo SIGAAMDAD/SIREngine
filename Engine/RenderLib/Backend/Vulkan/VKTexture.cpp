@@ -2,6 +2,8 @@
 #include "VKTexture.h"
 #include "../ImageLoader.h"
 
+using namespace SIREngine::RenderLib::Backend::Vulkan;
+
 VKTexture::VKTexture( const TextureInit_t& textureInfo )
 {
     Upload( textureInfo );

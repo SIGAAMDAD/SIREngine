@@ -10,6 +10,8 @@
 #include "KeyCodes.h"
 #include <SDL2/SDL_gamecontroller.h>
 
+namespace SIREngine::Events {
+
 class CGamepadEvent : public IEventBase
 {
 public:
@@ -27,6 +29,8 @@ public:
 	{ return EventType_Gamepad; }
 private:
 	KeyNum_t m_nButton;
+};
+
 };
 
 #endif

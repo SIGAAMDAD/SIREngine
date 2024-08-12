@@ -18,6 +18,8 @@
 
 #include <EASTL/atomic.h>
 
+namespace SIREngine {
+
 template<typename T>
 using CThreadAtomic = eastl::atomic<T>;
 
@@ -140,10 +142,10 @@ public:
     inline void Start( Fn&& fn, Args&&... args )
     {
         m_RunFunc = [&]( void ) -> void { fn( std::forward<Args>( args )... ); };
-        g_pApplication->ThreadStart( (void *)&m_hThreadID, this, &CThread::RunThread );
+        Application::g_pApplication->ThreadStart( (void *)&m_hThreadID, this, &CThread::RunThread );
     }
     inline void Join( uint64_t nTimeout = SIRENGINE_UINT64_MAX )
-    { g_pApplication->ThreadJoin( (void *)&m_hThreadID, this, nTimeout ); }
+    { Application::g_pApplication->ThreadJoin( (void *)&m_hThreadID, this, nTimeout ); }
 
     // should only ever be called by IGenericApplication
     inline void RunThread( void )
@@ -155,5 +157,7 @@ private:
 };
 
 #include "Thread.inl"
+
+};
 
 #endif

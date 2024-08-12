@@ -1,5 +1,8 @@
 #include "GLProgram.h"
 
+using namespace SIREngine;
+using namespace SIREngine::RenderLib::Backend::OpenGL;
+
 CVar<bool32> r_EnableShaderLRU(
     "r.OpenGL.EnableProgramLRU",
     0,

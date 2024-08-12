@@ -4,6 +4,10 @@
 #include "VKShaderBuffer.h"
 #include "VKContext.h"
 
+using namespace SIREngine::RenderLib::Backend::Vulkan;
+using namespace SIREngine::RenderLib::Backend;
+using namespace SIREngine::RenderLib;
+
 static const VkFormat attribTypeVK[ NUMATTRIBTYPES ] = {
     VK_FORMAT_R32_SINT,
     VK_FORMAT_R32_SFLOAT,

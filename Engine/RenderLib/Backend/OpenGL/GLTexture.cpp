@@ -1,9 +1,13 @@
 #include "GLTexture.h"
 #include "GLContext.h"
 
-extern uint64_t g_nFrameNumber;
+using namespace SIREngine;
+using namespace SIREngine::RenderLib::Backend;
+using namespace SIREngine::RenderLib::Backend::OpenGL;
 
-CVar<bool32> r_UsePixelBufferObjects(
+extern uint64_t SIREngine::Application::g_nFrameNumber;
+
+CVar<bool32> SIREngine::RenderLib::Backend::OpenGL::r_UsePixelBufferObjects(
     "r.OpenGL.UsePixelBufferObjects",
     0,
     Cvar_Save,
@@ -85,7 +89,7 @@ void GLTexture::StreamBuffer( void )
     }
     nglBindBuffer( GL_PIXEL_UNPACK_BUFFER, 0 );
 
-    m_nFrameLastRendered = g_nFrameNumber;
+    m_nFrameLastRendered = Application::g_nFrameNumber;
 }
 
 void GLTexture::Upload( const TextureInit_t& textureInfo )

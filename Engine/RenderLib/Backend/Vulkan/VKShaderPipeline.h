@@ -11,35 +11,37 @@
 #include "../RenderShaderPipeline.h"
 #include "VKBuffer.h"
 
-class VKShaderPipeline : public IRenderShaderPipeline
-{
-public:
-    VKShaderPipeline( void );
-    virtual ~VKShaderPipeline() override;
+namespace SIREngine::RenderLib::Backend::Vulkan {
+    class VKShaderPipeline : public Backend::IRenderShaderPipeline
+    {
+    public:
+        VKShaderPipeline( void );
+        virtual ~VKShaderPipeline() override;
 
-    virtual uint64_t AddVertexAttribSet( const VertexInputDescription_t& vertexInput ) override;
-    virtual void SetShaderInputState( uint64_t nCacheID ) override;
-    virtual void ResetPipelineState( void ) override;
+        virtual uint64_t AddVertexAttribSet( const VertexInputDescription_t& vertexInput ) override;
+        virtual void SetShaderInputState( uint64_t nCacheID ) override;
+        virtual void ResetPipelineState( void ) override;
 
-    SIRENGINE_FORCEINLINE VKPipelineSet_t *GetPipelineData( void )
-    { return m_PipelineCache[ m_nUsedPipeline ]; }
+        SIRENGINE_FORCEINLINE VKPipelineSet_t *GetPipelineData( void )
+        { return m_PipelineCache[ m_nUsedPipeline ]; }
 
-    void ClearPipelineCache( void );
-private:
-    void AllocateUniformBufferLayout( VKPipelineSet_t *pSet, const VertexInputDescription_t& vertexInput );
+        void ClearPipelineCache( void );
+    private:
+        void AllocateUniformBufferLayout( VKPipelineSet_t *pSet, const VertexInputDescription_t& vertexInput );
 
-    void LoadVulkanPipelineCache( void );
-    void SaveVulkanPipelineCache( void );
+        void LoadVulkanPipelineCache( void );
+        void SaveVulkanPipelineCache( void );
 
-    uint64_t CheckVulkanCacheForSet( const VertexInputDescription_t& vertexInput );
+        uint64_t CheckVulkanCacheForSet( const VertexInputDescription_t& vertexInput );
 
-    CVector<VKPipelineSet_t *> m_PipelineCache;
+        CVector<VKPipelineSet_t *> m_PipelineCache;
 
-    VKBuffer *m_pVertexBuffer;
-    VKBuffer *m_pIndexBuffer;
+        VKBuffer *m_pVertexBuffer;
+        VKBuffer *m_pIndexBuffer;
 
-    VkPipelineCache m_hVulkanDataCache;
-    VkSampler m_Samplers[4];
+        VkPipelineCache m_hVulkanDataCache;
+        VkSampler m_Samplers[4];
+    };
 };
 
 #endif

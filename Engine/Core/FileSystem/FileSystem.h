@@ -14,7 +14,7 @@
 
 class CTagArenaAllocator;
 
-namespace FileSystem {
+namespace SIREngine::FileSystem {
     class CFileSystem
     {
     public:
@@ -55,6 +55,6 @@ namespace FileSystem {
     };
 };
 
-extern FileSystem::CFileSystem *g_pFileSystem;
+extern SIREngine::FileSystem::CFileSystem *g_pFileSystem;
 
 #endif

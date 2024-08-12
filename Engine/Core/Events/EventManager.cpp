@@ -8,6 +8,9 @@
 #include "MouseEvent.h"
 #include "GamepadEvent.h"
 
+using namespace SIREngine;
+using namespace SIREngine::Events;
+
 CEventManager CEventManager::g_EventManager;
 CQuitEvent CEventManager::g_QuitEvent;
 

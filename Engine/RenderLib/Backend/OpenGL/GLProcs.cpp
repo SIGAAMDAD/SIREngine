@@ -19,6 +19,8 @@ NGL_ARB_map_buffer_range
 NGL_ARB_sync
 #undef NGL
 
+using namespace SIREngine::RenderLib::Backend::OpenGL;
+
 void GLContext::InitGLProcs( void )
 {
 #define NGL( ret, name, ... ) \

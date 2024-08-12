@@ -8,23 +8,25 @@
 #include <Engine/Core/SIREngine.h>
 #include <Engine/RenderLib/RenderCommon.h>
 
-class IRenderShader : public CResourceDef
-{
-public:
-    IRenderShader( void )
-        : m_nType( ST_INVALID )
-    { }
-    virtual ~IRenderShader()
-    { }
+namespace SIREngine::RenderLib::Backend {
+    class IRenderShader : public CResourceDef
+    {
+    public:
+        IRenderShader( void )
+            : m_nType( ST_INVALID )
+        { }
+        virtual ~IRenderShader()
+        { }
 
-    static IRenderShader *Create( const RenderShaderInit_t& shaderInit );
+        static IRenderShader *Create( const RenderShaderInit_t& shaderInit );
 
-    virtual RenderShaderType_t GetType( void ) const = 0;
-    virtual const char *GetName( void ) const = 0;
-protected:
-    virtual bool Load( const char *pszFilePath ) = 0;
+        virtual RenderShaderType_t GetType( void ) const = 0;
+        virtual const char *GetName( void ) const = 0;
+    protected:
+        virtual bool Load( const char *pszFilePath ) = 0;
 
-    RenderShaderType_t m_nType;
+        RenderShaderType_t m_nType;
+    };
 };
 
 #endif

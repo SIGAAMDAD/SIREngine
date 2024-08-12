@@ -7,6 +7,8 @@
 
 #include <SDL2/SDL_events.h>
 
+namespace SIREngine::Events {
+
 typedef enum : uint32_t {
 	EventType_None,
 
@@ -59,6 +61,8 @@ public:
 	{ return "QuitEvent"; }
 	virtual EventType_t GetType( void ) const override
 	{ return EventType_Quit; }
+};
+
 };
 
 #endif

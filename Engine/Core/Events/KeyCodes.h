@@ -7,6 +7,8 @@
 
 #include <Engine/Core/Compiler.h>
 
+namespace SIREngine::Events {
+
 typedef uint32_t KeyNum_t;
 
 // keys should be passed as lowercased ASCII
@@ -180,5 +182,6 @@ enum : uint32_t {
 	GamePad_Cross = GamePad_Button_Down,
 };
 
+};
 
 #endif

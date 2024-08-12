@@ -1,5 +1,9 @@
 #include "ImageLoader.h"
 
+using namespace SIREngine::FileSystem;
+
+namespace SIREngine::RenderLib::Backend {
+
 CImageLoader::CImageLoader( const FileSystem::CFilePath& filePath )
 {
     const CString ext = FileSystem::CFilePath::GetExtension( filePath.c_str() );
@@ -28,3 +32,5 @@ CImageLoader::CImageLoader( const FileSystem::CFilePath& filePath )
 CImageLoader::~CImageLoader()
 {
 }
+
+};

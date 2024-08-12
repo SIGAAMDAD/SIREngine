@@ -7,7 +7,7 @@
 
 #include "FilePath.h"
 
-namespace FileSystem {
+namespace SIREngine::FileSystem {
     typedef struct Directory {
         CFilePath path;
         CFilePath gamedir;

@@ -8,21 +8,23 @@
 #include <Engine/Core/SIREngine.h>
 #include <nlohmann/json.hpp>
 
-class CJsonCache
-{
-public:
-    CJsonCache( void )
-    { }
-    ~CJsonCache()
-    { }
+namespace SIREngine::Serialization {
+    class CJsonCache
+    {
+    public:
+        CJsonCache( void )
+        { }
+        ~CJsonCache()
+        { }
 
-    static void InitJSonCache( void );
-    static const nlohmann::json& GetJsonObject( const FileSystem::CFilePath& filePath );
-private:
-    eastl::unordered_map<FileSystem::CFilePath, nlohmann::json> m_JsonCache;
-    const nlohmann::json emptyJSon{};
+        static void InitJSonCache( void );
+        static const nlohmann::json& GetJsonObject( const FileSystem::CFilePath& filePath );
+    private:
+        eastl::unordered_map<FileSystem::CFilePath, nlohmann::json> m_JsonCache;
+        const nlohmann::json emptyJSon{};
+    };
+
+    extern CJsonCache *g_pJSonCache;
 };
-
-extern CJsonCache *g_pJSonCache;
 
 #endif

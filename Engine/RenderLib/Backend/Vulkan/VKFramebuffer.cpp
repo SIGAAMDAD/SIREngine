@@ -1,6 +1,8 @@
 #include "VKFramebuffer.h"
 #include "VKContext.h"
 
+using namespace SIREngine::RenderLib::Backend::Vulkan;
+
 VKFramebuffer::VKFramebuffer( const FramebufferInfo_t& info )
 {
     uint64_t i;

@@ -1,5 +1,8 @@
 #include "GLShader.h"
 
+using namespace SIREngine;
+using namespace SIREngine::RenderLib::Backend::OpenGL;
+
 CVar<bool32> r_IgnoreShaderLinkFailure(
     "r.OpenGL.IgnoreShaderLinkFailure",
     0,

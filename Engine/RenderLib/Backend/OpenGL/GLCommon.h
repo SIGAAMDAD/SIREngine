@@ -351,17 +351,19 @@ NGL_ARB_sync
 
 #include "../../DrawBuffer.h"
 
-class GLProgram;
-class GLShaderBuffer;
+namespace SIREngine::RenderLib::Backend::OpenGL {
+    class GLProgram;
+    class GLShaderBuffer;
 
-typedef struct GLPipelineSet {
-    GLProgram *pShader;
-    uint32_t nEnabledAttribs;
+    typedef struct GLPipelineSet {
+        GLProgram *pShader;
+        uint32_t nEnabledAttribs;
 
-    const Poly_t *pPolyList;
-    uint64_t nPolyCount;
+        const Poly_t *pPolyList;
+        uint64_t nPolyCount;
 
-    CVector<GLShaderBuffer *> dataInputBuffers;
-} GLPipelineSet_t;
+        CVector<GLShaderBuffer *> dataInputBuffers;
+    } GLPipelineSet_t;
+};
 
 #endif

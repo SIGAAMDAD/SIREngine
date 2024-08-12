@@ -1,6 +1,9 @@
 #include "TBonSerializer.h"
 #include <Engine/Core/FileSystem/MemoryFile.h>
 
+using namespace SIREngine::FileSystem;
+using namespace SIREngine::Serialization;
+
 CTBonSerializer::CTBonSerializer( void )
 {
     m_Base.SetName( "BaseObject#obj_072746663334546B" );

@@ -267,7 +267,7 @@ NOTE: Wide-character filenames are not supported, you can use an external method
 to handle such files and decode in-memory.
 */
 unsigned decode(CVector<unsigned char>& out, unsigned& w, unsigned& h,
-                const FileSystem::CFilePath& filename,
+                const SIREngine::FileSystem::CFilePath& filename,
                 LodePNGColorType colortype = LCT_RGBA, unsigned bitdepth = 8);
 #endif /* LODEPNG_COMPILE_DISK */
 #endif /* LODEPNG_COMPILE_DECODER */
@@ -291,10 +291,10 @@ NOTE: This overwrites existing files without warning!
 NOTE: Wide-character filenames are not supported, you can use an external method
 to handle such files and decode in-memory.
 */
-unsigned encode(const FileSystem::CFilePath& filename,
+unsigned encode(const SIREngine::FileSystem::CFilePath& filename,
                 const unsigned char* in, unsigned w, unsigned h,
                 LodePNGColorType colortype = LCT_RGBA, unsigned bitdepth = 8);
-unsigned encode(const FileSystem::CFilePath& filename,
+unsigned encode(const SIREngine::FileSystem::CFilePath& filename,
                 const CVector<unsigned char>& in, unsigned w, unsigned h,
                 LodePNGColorType colortype = LCT_RGBA, unsigned bitdepth = 8);
 #endif /* LODEPNG_COMPILE_DISK */
@@ -1129,7 +1129,7 @@ return value: error code (0 means ok)
 NOTE: Wide-character filenames are not supported, you can use an external method
 to handle such files and decode in-memory
 */
-unsigned load_file(CVector<unsigned char>& buffer, const FileSystem::CFilePath& filename);
+unsigned load_file(CVector<unsigned char>& buffer, const SIREngine::FileSystem::CFilePath& filename);
 
 /*
 Save the binary data in an CVector to a file on disk. The file is overwritten
@@ -1138,7 +1138,7 @@ without warning.
 NOTE: Wide-character filenames are not supported, you can use an external method
 to handle such files and encode in-memory
 */
-unsigned save_file(const CVector<unsigned char>& buffer, const FileSystem::CFilePath& filename);
+unsigned save_file(const CVector<unsigned char>& buffer, const SIREngine::FileSystem::CFilePath& filename);
 #endif /* LODEPNG_COMPILE_DISK */
 #endif /* LODEPNG_COMPILE_PNG */
 
@@ -1760,7 +1760,7 @@ encoder and decoder, this makes a large difference.
 
 Make sure that LodePNG is compiled with the same compiler of the same version
 and with the same settings as the rest of the program, or the interfaces with
-CVectors and FileSystem::CFilePaths in C++ can be incompatible.
+CVectors and SIREngine::FileSystem::CFilePaths in C++ can be incompatible.
 
 CHAR_BITS must be 8 or higher, because LodePNG uses unsigned chars for octets.
 

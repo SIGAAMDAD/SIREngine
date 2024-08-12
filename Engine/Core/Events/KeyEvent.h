@@ -11,27 +11,34 @@
 #include <SDL2/SDL_keyboard.h>
 #include "KeyCodes.h"
 
-class CKeyEvent : public IEventBase
-{
-public:
-	CKeyEvent( const SDL_Event& eventData, bool bState, KeyNum_t nKeyID )
-		: m_bDown( bState ), m_nKeyValue( nKeyID )
-	{ }
-	virtual ~CKeyEvent() override
-	{ }
+namespace SIREngine::Events {
+	class CKeyEvent : public IEventBase
+	{
+	public:
+		CKeyEvent( const SDL_Event& eventData, bool bState, KeyNum_t nKeyID )
+			: m_bDown( bState ), m_nKeyValue( nKeyID )
+		{ }
+		virtual ~CKeyEvent() override
+		{ }
 
-	virtual void Send( void ) override
-	{ }
+		virtual void Send( void ) override
+		{ }
 
-	SIRENGINE_FORCEINLINE virtual const char *GetName( void ) const override
-	{ return "KeyEvent"; }
-	SIRENGINE_FORCEINLINE virtual EventType_t GetType( void ) const override
-	{ return EventType_Key; }
+		SIRENGINE_FORCEINLINE virtual const char *GetName( void ) const override
+		{ return "KeyEvent"; }
+		SIRENGINE_FORCEINLINE virtual EventType_t GetType( void ) const override
+		{ return EventType_Key; }
 
-	static KeyNum_t SDLKeyToEngineKey( const SDL_Event& eventData );
-private:
-	bool32 m_bDown;
-	KeyNum_t m_nKeyValue;
+		SIRENGINE_FORCEINLINE bool IsPressed( void ) const
+		{ return m_bDown; }
+		SIRENGINE_FORCEINLINE KeyNum_t GetKey( void ) const
+		{ return m_nKeyValue; }
+
+		static KeyNum_t SDLKeyToEngineKey( const SDL_Event& eventData );
+	private:
+		bool32 m_bDown;
+		KeyNum_t m_nKeyValue;
+	};
 };
 
 #endif

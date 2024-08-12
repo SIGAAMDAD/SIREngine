@@ -3,6 +3,10 @@
 #include <SDL2/SDL.h>
 #include <Engine/Core/Events/ControllerStatusEvent.h>
 
+using namespace SIREngine::Events;
+using namespace SIREngine::Input;
+using namespace SIREngine;
+
 CInputManager CInputManager::g_InputManager;
 
 int32_t g_nInputDeviceCount = 0;
@@ -89,6 +93,13 @@ void CInputDevice::InitController( void )
 	if ( m_pController->m_pGamepad ) {
 		SDL_GameControllerSetPlayerIndex( m_pController->m_pGamepad, m_nDeviceIndex );
 	}
+	if ( SDL_JoystickSetLED( m_pController->m_pJoystick, 255, 0, 0 ) == -1 ) {
+		SIRENGINE_NOTIFICATION( "Joystick Device %i doesn't have modifyable LEDs", m_nDeviceIndex );
+	}
+	if ( SDL_JoystickGetPlayerIndex( m_pController->m_pJoystick ) != m_nDeviceIndex ) {
+		SIRENGINE_ERROR( "Joystick Device %i doesn't have the correct player index", m_nDeviceIndex );
+	}
+	m_pController->m_hJoystickID = SDL_JoystickGetDeviceInstanceID( m_nDeviceIndex );
 
 	SIRENGINE_LOG( "Joystick Device %i opened.", m_nDeviceIndex );
 	SIRENGINE_LOG( "  NAME: %s", SDL_JoystickName( m_pController->m_pJoystick ) );
@@ -110,7 +121,7 @@ void CInputDevice::InitController( void )
 				SIRENGINE_ERROR( "Error initializing Rumble effect for Haptic device at %i: %s", m_nDeviceIndex, SDL_GetError() );
 			}
 		} else {
-			SIRENGINE_LOG( "Haptic Rumble effect isn't supported for device at %i", m_nDeviceIndex );
+			SIRENGINE_LOG( "Haptic Rumble effect isn't supported for Joystick Device at %i", m_nDeviceIndex );
 		}
 	}
 }
@@ -149,6 +160,7 @@ void CInputDevice::Shutdown( void )
 			m_pController->m_pHaptic = NULL;
 		}
 		delete m_pController;
+		m_pController = NULL;
 	}
 }
 
@@ -303,24 +315,83 @@ void CInputManager::LoadGame( void )
 
 void CInputManager::KeyboardEventListener( const IEventBase *pEventData )
 {
+	const CKeyEvent *pKeyEvent = dynamic_cast<const CKeyEvent *>( pEventData );
+
+	if ( pKeyEvent->IsPressed() ) {
+
+	} else {
+
+	}
 }
 
 void CInputManager::GamepadEventListener( const IEventBase *pEventData )
 {
+	const CGamepadEvent *pGamePadEvent = dynamic_cast<const CGamepadEvent *>( pEventData );
+
+
 }
 
 void CInputManager::ControllerStatusListener( const IEventBase *pEventData )
 {
 	const CControllerStatusEvent *pStatusEvent = dynamic_cast<const CControllerStatusEvent *>( pEventData );
 
+	SDL_LockJoysticks();
 	if ( pStatusEvent->IsDeviceAdded() ) {
-		CInputManager::Get().AddController( pStatusEvent->GetDeviceID() );
+		CInputManager::Get().OnAddController( pStatusEvent->GetDeviceID() );
 	} else {
-		CInputManager::Get().RemoveController( pStatusEvent->GetDeviceID() );
+		CInputManager::Get().OnRemoveController( pStatusEvent->GetDeviceID() );
 	}
+	SDL_UnlockJoysticks();
 }
 
-void CInputManager::AddController( int32_t nDeviceID )
+CInputDevice *CInputManager::GetKeyboard( void )
+{
+	int32_t i;
+
+	for ( i = 0; i < g_nInputDeviceCount; i++ ) {
+		if ( m_szInputDevices[ i ].GetType() == CInputDevice::EType::Keyboard ) {
+			return &m_szInputDevices[ i ];
+		}
+	}
+
+	SIRENGINE_ERROR( "CInputManager::GetKeyboard: no keyboard found" );
+}
+
+void CInputManager::OnKeyDown( KeyNum_t nKeyID )
+{
+	CInputDevice *pKeyboard = GetKeyboard();
+	eastl::unique_ptr<CBindSet>& pBindings = pKeyboard->GetBindings();
+
+	if ( !pBindings ) {
+		SIRENGINE_ERROR( "CInputManager::OnKeyDown: No bindset mapping for keyboard!" );
+	}
+
+	KeyBind_t *pBind = pBindings->GetBind( nKeyID );
+	if ( !pBind ) {
+		return; // do nothing
+	}
+
+	pBind->pDownCommand->Execute();
+}
+
+void CInputManager::OnKeyUp( KeyNum_t nKeyID )
+{
+	CInputDevice *pKeyboard = GetKeyboard();
+	eastl::unique_ptr<CBindSet>& pBindings = pKeyboard->GetBindings();
+
+	if ( !pBindings ) {
+		SIRENGINE_ERROR( "CInputManager::OnKeyUp: No bindset mapping for keyboard!" );
+	}
+
+	KeyBind_t *pBind = pBindings->GetBind( nKeyID );
+	if ( !pBind ) {
+		return; // do nothing
+	}
+
+	pBind->pUpCommand->Execute();
+}
+
+void CInputManager::OnAddController( int32_t nDeviceID )
 {
 	if ( g_nInputDeviceCount == SIRENGINE_MAX_COOP_PLAYERS ) {
 		SIRENGINE_WARNING( "Not enough player slots for device %i", nDeviceID );
@@ -328,22 +399,30 @@ void CInputManager::AddController( int32_t nDeviceID )
 	}
 
 	SIRENGINE_LOG( "Connecting controller at device slot %i...", nDeviceID );
+	if ( m_szInputDevices[ nDeviceID ].ValidController() ) {
+		// this is caused by the event callback being triggered during the first couple frames,
+		// we'll simply ignore the call
+		return;
+	}
 	m_szInputDevices[ nDeviceID ].Init( CInputDevice::EType::Controller, nDeviceID );
 	g_nInputDeviceCount++;
 }
 
-void CInputManager::RemoveController( int32_t nDeviceID )
+void CInputManager::OnRemoveController( int32_t nDeviceID )
 {
+	int32_t i;
+
 	if ( g_nInputDeviceCount == 0 ) {
-		SIRENGINE_ERROR( "CInputManager::RemoveController: InputDevice count is 0" );
+		SIRENGINE_ERROR( "CInputManager::OnRemoveController: InputDevice count is 0" );
 	}
 
-	SIRENGINE_LOG( "Removing controlller at device slot %i...", nDeviceID );
-
-	SDL_Joystick *pJoystick = SDL_JoystickFromInstanceID( nDeviceID );
-	if ( !pJoystick ) {
-		SIRENGINE_WARNING( "No joystick for instanceID %i", nDeviceID );
-		return;
+	for ( i = 0; i < g_nInputDeviceCount; i++ ) {
+		if ( m_szInputDevices[ i ].GetInstanceID() == nDeviceID ) {
+			SIRENGINE_LOG( "Removing controlller at device slot %i...", m_szInputDevices[ i ].GetIndex() );
+			m_szInputDevices[ i ].Shutdown();
+			g_nInputDeviceCount--;
+			return;
+		}
 	}
-	g_nInputDeviceCount--;
+	SIRENGINE_ERROR( "CInputManager::OnRemoveController: invalid Joystick InstanceID %i", nDeviceID );
 }

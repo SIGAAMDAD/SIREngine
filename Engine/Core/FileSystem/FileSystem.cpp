@@ -1,13 +1,19 @@
 #include "FileSystem.h"
 #include <Engine/Memory/Backend/TagArenaAllocator.h>
 
-using namespace FileSystem;
+using namespace SIREngine::Application;
+using namespace SIREngine::FileSystem;
 
 CFileSystem::CFileSystem( void )
 {
     InitDirectoryCache();
 
-    m_FileCache.emplace_back( new CFileCache( "Resources/Shaders/Vulkan" ) );
+    //
+    // initialize the file cache
+    //
+
+    SIRENGINE_LOG( "Caching shaders..." );
+//    m_FileCache.emplace_back( new CFileCache( "Resources/Shaders/%s", g_pApplication->GetRenderString() ) );
 }
 
 CFileSystem::~CFileSystem()

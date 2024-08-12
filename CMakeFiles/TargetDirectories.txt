@@ -1,0 +1,9 @@
+/home/noah/Projects/SIR-Engine/CMakeFiles/SIREngineApplication.dir
+/home/noah/Projects/SIR-Engine/CMakeFiles/shaders.dir
+/home/noah/Projects/SIR-Engine/CMakeFiles/clean-all.dir
+/home/noah/Projects/SIR-Engine/CMakeFiles/edit_cache.dir
+/home/noah/Projects/SIR-Engine/CMakeFiles/rebuild_cache.dir
+/home/noah/Projects/SIR-Engine/CMakeFiles/list_install_components.dir
+/home/noah/Projects/SIR-Engine/CMakeFiles/install.dir
+/home/noah/Projects/SIR-Engine/CMakeFiles/install/local.dir
+/home/noah/Projects/SIR-Engine/CMakeFiles/install/strip.dir

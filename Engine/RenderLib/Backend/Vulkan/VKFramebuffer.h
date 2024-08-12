@@ -10,18 +10,20 @@
 #include "VKCommon.h"
 #include "../RenderFramebuffer.h"
 
-class VKFramebuffer : public IRenderFramebuffer
-{
-public:
-    VKFramebuffer( const FramebufferInfo_t& info );
-    virtual ~VKFramebuffer() override;
+namespace SIREngine::RenderLib::Backend::Vulkan {
+    class VKFramebuffer : public IRenderFramebuffer
+    {
+    public:
+        VKFramebuffer( const FramebufferInfo_t& info );
+        virtual ~VKFramebuffer() override;
 
-    virtual void Blit( IRenderFramebuffer& dst ) override { }
-    virtual void Draw( void ) const override { }
-private:
-    VkFramebuffer m_hFramebuffer;
-    CVector<VkImageView> m_Attachments;
-    CVector<VkImage> m_ColorAttachments;
+        virtual void Blit( IRenderFramebuffer& dst ) override { }
+        virtual void Draw( void ) const override { }
+    private:
+        VkFramebuffer m_hFramebuffer;
+        CVector<VkImageView> m_Attachments;
+        CVector<VkImage> m_ColorAttachments;
+    };
 };
 
 #endif

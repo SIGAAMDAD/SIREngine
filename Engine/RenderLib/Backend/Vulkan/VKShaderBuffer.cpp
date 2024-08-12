@@ -1,5 +1,7 @@
 #include "VKShaderBuffer.h"
 
+using namespace SIREngine::RenderLib::Backend::Vulkan;
+
 VKShaderBuffer::VKShaderBuffer(
     VKPipelineSet_t *pPipeline, uint32_t nProgramBinding,
     VkDescriptorSetLayoutBinding *pLayoutBindings

@@ -14,6 +14,8 @@
 
 #include "KeyCodes.h"
 
+namespace SIREngine::Events {
+
 class IEventListener
 {
 public:
@@ -104,6 +106,8 @@ private:
 
 	static CEventManager g_EventManager;
 	static CQuitEvent g_QuitEvent;
+};
+
 };
 
 #endif

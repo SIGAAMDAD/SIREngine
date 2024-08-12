@@ -9,7 +9,7 @@
 #include "FilePath.h"
 #include <EASTL/unordered_map.h>
 
-namespace FileSystem {
+namespace SIREngine::FileSystem {
     typedef struct FileCacheEntry {
         void *pMemory;
         size_t nSize;

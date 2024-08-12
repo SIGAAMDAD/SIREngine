@@ -26,6 +26,16 @@
 #include "Vulkan/VKShaderPipeline.h"
 #include "Vulkan/VKTexture.h"
 
+using namespace SIREngine;
+using namespace SIREngine::RenderLib::Backend::OpenGL;
+using namespace SIREngine::RenderLib::Backend::Vulkan;
+using namespace SIREngine::RenderLib::Backend;
+using namespace SIREngine::Application;
+
+namespace SIREngine::RenderLib::Backend {
+
+IRenderContext *g_pRenderContext;
+
 CVar<int32_t> r_TextureStreamingBudget(
     "r.TextureStreamingBudget",
     256,
@@ -130,8 +140,8 @@ IRenderContext *IRenderContext::CreateRenderContext( void )
 {
     ApplicationInfo_t *pAppInfo;
 
-    const CVector<CString>& cmdLine = g_pApplication->GetCommandLine();
-    pAppInfo = eastl::addressof( g_pApplication->GetAppInfo() );
+    const CVector<CString>& cmdLine = Application::Get()->GetCommandLine();
+    pAppInfo = eastl::addressof( Application::Get()->GetAppInfo() );
 
     r_TextureStreamingBudget.Register();
     r_UseHDRTextures.Register();
@@ -143,20 +153,20 @@ IRenderContext *IRenderContext::CreateRenderContext( void )
     pAppInfo->nWindowPosX = 0;
     pAppInfo->nWindowPosY = 0;
 
-    const CString renderAPI = g_pApplication->GetCommandParmValue( "-renderer=" );
+    const CString renderAPI = Application::Get()->GetCommandParmValue( "-renderer=" );
 
-    if ( g_pApplication->CheckCommandParm( "-nofullscreen" ) || e_Fullscreen.GetValue() ) {
+    if ( Application::Get()->CheckCommandParm( "-nofullscreen" ) || e_Fullscreen.GetValue() ) {
         pAppInfo->eWindowFlags &= ~WF_MODE_FULLSCREEN;
         pAppInfo->eWindowFlags |= WF_MODE_WINDOWED;
     }
 
     if ( e_RenderAPI.GetValue() == RAPI_OPENGL || renderAPI == "opengl" ) {
         pAppInfo->eWindowFlags |= WF_OPENGL_CONTEXT;
-        g_pRenderContext = new GLContext( *pAppInfo );
+        g_pRenderContext = new OpenGL::GLContext( *pAppInfo );
     }
     else if ( e_RenderAPI.GetValue() == RAPI_VULKAN || renderAPI == "vulkan" ) {
         pAppInfo->eWindowFlags |= WF_VULKAN_CONTEXT;
-        g_pRenderContext = new VKContext( *pAppInfo );
+        g_pRenderContext = new Vulkan::VKContext( *pAppInfo );
         g_pVKContext = dynamic_cast<VKContext *>( g_pRenderContext );
     }
     else if ( e_RenderAPI.GetValue() == RAPI_D3D11 || renderAPI == "directx11" ) {
@@ -166,7 +176,7 @@ IRenderContext *IRenderContext::CreateRenderContext( void )
     }
     else {
         pAppInfo->eWindowFlags |= WF_OPENGL_CONTEXT;
-        g_pRenderContext = new GLContext( *pAppInfo );
+        g_pRenderContext = new OpenGL::GLContext( *pAppInfo );
     }
     g_pRenderContext->Init();
     g_pRenderContext->SetupShaderPipeline();
@@ -193,3 +203,5 @@ IRenderTexture *IRenderTexture::Create( const TextureInit_t& textureInfo )
 {
     return g_pRenderContext->AllocateTexture( textureInfo );
 }
+
+};

@@ -9,36 +9,38 @@
 #include <Engine/RenderLib/RenderCommon.h>
 #include "RenderShader.h"
 
-class IRenderProgram
-{
-public:
-    IRenderProgram( void )
-        : m_pVertexShader( NULL ), m_pFragmentShader( NULL )
-    { }
-    virtual ~IRenderProgram()
-    { }
+namespace SIREngine::RenderLib::Backend {
+    class IRenderProgram
+    {
+    public:
+        IRenderProgram( void )
+            : m_pVertexShader( NULL ), m_pFragmentShader( NULL )
+        { }
+        virtual ~IRenderProgram()
+        { }
 
-    SIRENGINE_FORCEINLINE const CString& GetName( void ) const
-    { return m_Name; }
+        SIRENGINE_FORCEINLINE const CString& GetName( void ) const
+        { return m_Name; }
 
-    static IRenderProgram *Create( const RenderProgramInit_t& programInfo );
+        static IRenderProgram *Create( const RenderProgramInit_t& programInfo );
 
-    SIRENGINE_FORCEINLINE virtual IRenderShader *GetVertexShader( void )
-    { return m_pVertexShader; }
-    SIRENGINE_FORCEINLINE virtual IRenderShader *GetPixelShader( void )
-    { return m_pFragmentShader; }
+        SIRENGINE_FORCEINLINE virtual IRenderShader *GetVertexShader( void )
+        { return m_pVertexShader; }
+        SIRENGINE_FORCEINLINE virtual IRenderShader *GetPixelShader( void )
+        { return m_pFragmentShader; }
 
-    SIRENGINE_FORCEINLINE virtual const IRenderShader *GetVertexShader( void ) const
-    { return m_pVertexShader; }
-    SIRENGINE_FORCEINLINE virtual const IRenderShader *GetPixelShader( void ) const
-    { return m_pFragmentShader; }
+        SIRENGINE_FORCEINLINE virtual const IRenderShader *GetVertexShader( void ) const
+        { return m_pVertexShader; }
+        SIRENGINE_FORCEINLINE virtual const IRenderShader *GetPixelShader( void ) const
+        { return m_pFragmentShader; }
 
-    virtual bool Load( void ) = 0;
-protected:
-    CString m_Name;
+        virtual bool Load( void ) = 0;
+    protected:
+        CString m_Name;
 
-    IRenderShader *m_pVertexShader;
-    IRenderShader *m_pFragmentShader;
+        IRenderShader *m_pVertexShader;
+        IRenderShader *m_pFragmentShader;
+    };
 };
 
 #endif

@@ -6,6 +6,13 @@
 #include <vk_mem_alloc.h>
 #include "VKShader.h"
 
+using namespace SIREngine;
+using namespace SIREngine::RenderLib::Backend;
+using namespace SIREngine::RenderLib::Backend::Vulkan;
+using namespace SIREngine::Application;
+
+namespace SIREngine::RenderLib::Backend::Vulkan {
+
 VKContext *g_pVKContext;
 
 PFN_vkCreateSwapchainKHR fn_vkCreateSwapchainKHR = NULL;
@@ -441,8 +448,8 @@ void VKContext::Init( void )
 
     m_nCurrentFrameIndex = 0;
 
-    r_TextureStreamingBudget.Register();
-    r_UseHDRTextures.Register();
+    RenderLib::Backend::r_TextureStreamingBudget.Register();
+    RenderLib::Backend::r_UseHDRTextures.Register();
 
     InitWindowInstance();
     InitPhysicalVKDevice();
@@ -1555,3 +1562,5 @@ IRenderTexture *VKContext::AllocateTexture( const TextureInit_t& textureInfo )
 {
     return new VKTexture( textureInfo );
 }
+
+};
