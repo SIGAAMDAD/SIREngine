@@ -30,6 +30,8 @@ void SIRENGINE_DLL_EXPORT Mem_Free( void *pMemory );
 void SIRENGINE_DLL_EXPORT Mem_Init( void );
 void SIRENGINE_DLL_EXPORT Mem_Shutdown( void );
 void SIRENGINE_DLL_EXPORT *Mem_Alloc( size_t nBytes, size_t nAlignment );
+void SIRENGINE_DLL_EXPORT *Mem_Realloc( void *pOriginal, size_t nBytes );
+void SIRENGINE_DLL_EXPORT *Mem_ClearedAlloc( size_t nBytes );
 void SIRENGINE_DLL_EXPORT Mem_Free( void *pMemory );
 
 #include "MemAlloc.h"

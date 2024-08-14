@@ -29,7 +29,7 @@ void CSlabAllocator<AllocatorType>::Shutdown( void )
 }
 
 template<typename AllocatorType>
-void *CSlabAllocator<AllocatorType>::Allocate( uint64_t nBytes )
+void *CSlabAllocator<AllocatorType>::Allocate( uint64_t nBytes, uint64_t nAlignment )
 {
     void *pBuffer;
 

@@ -1,260 +1,202 @@
 #include "FileSystem.h"
 #include <Engine/Memory/Backend/TagArenaAllocator.h>
+#include "MemoryFile.h"
 
 using namespace SIREngine::Application;
 using namespace SIREngine::FileSystem;
 
 CFileSystem::CFileSystem( void )
 {
-    InitDirectoryCache();
-
-    //
-    // initialize the file cache
-    //
-
-    SIRENGINE_LOG( "Caching shaders..." );
-//    m_FileCache.emplace_back( new CFileCache( "Resources/Shaders/%s", g_pApplication->GetRenderString() ) );
+	InitDirectoryCache();
 }
 
 CFileSystem::~CFileSystem()
 {
 }
 
+void CFileSystem::AddCacheDirectory( const CFilePath& directory )
+{
+	m_FileCache.emplace_back( new CFileCache( directory ) );
+}
+
 void CFileSystem::LoadFileTree( CFileList *pDirectory )
 {
-    SIRENGINE_LOG( "Loading directory tree \"%s\"", pDirectory->GetPath().c_str() );
+	SIRENGINE_LOG( "Loading directory tree \"%s\"", pDirectory->GetPath().c_str() );
 
-    pDirectory->m_List = eastl::move( g_pApplication->ListFiles( pDirectory->GetPath(), false ) );
-    m_DirectoryCache.try_emplace( pDirectory->GetPath(), pDirectory );
+	pDirectory->m_List = eastl::move( g_pApplication->ListFiles( pDirectory->GetPath(), false ) );
+	m_DirectoryCache.try_emplace( pDirectory->GetPath(), pDirectory );
 
-    const CVector<CFilePath> subDirs = eastl::move( g_pApplication->ListFiles( pDirectory->GetPath(), true ) );
-    m_DirectoryCache.reserve( subDirs.size() );
+	const CVector<CFilePath> subDirs = eastl::move( g_pApplication->ListFiles( pDirectory->GetPath(), true ) );
+	m_DirectoryCache.reserve( subDirs.size() );
 
-    for ( const auto& it : subDirs ) {
-        // recurse
-        LoadFileTree( new CFileList( it ) );
-    }
+	for ( const auto& it : subDirs ) {
+		// recurse
+		LoadFileTree( new CFileList( it ) );
+	}
 }
 
 void CFileSystem::InitDirectoryCache( void )
 {
-    const char *pszSearchPath;
+	const char *pszSearchPath;
 
-    SIRENGINE_LOG( "Initializing Directory Cache..." );
-    SIRENGINE_LOG( "GameDirectory: %s", g_pApplication->GetGamePath().c_str() );
+	SIRENGINE_LOG( "Initializing Directory Cache..." );
+	SIRENGINE_LOG( "GameDirectory: %s", g_pApplication->GetGamePath().c_str() );
 
-    m_CurrentPath = g_pApplication->GetGamePath();
+	m_CurrentPath = g_pApplication->GetGamePath();
 
-    const CVector<CFilePath> dirList = eastl::move( g_pApplication->ListFiles( g_pApplication->GetGamePath(), true ) );
+	const CVector<CFilePath> dirList = eastl::move( g_pApplication->ListFiles( g_pApplication->GetGamePath(), true ) );
 
-    m_DirectoryCache.reserve( dirList.size() );
+	m_DirectoryCache.reserve( dirList.size() );
 
-    SIRENGINE_LOG( "Got %lu Directories.", dirList.size() );
+	SIRENGINE_LOG( "Got %lu Directories.", dirList.size() );
 
-    for ( const auto& it : dirList ) {
-        LoadFileTree( new CFileList( it ) );
-    }
+	for ( const auto& it : dirList ) {
+		LoadFileTree( new CFileList( it ) );
+	}
+}
+
+void CFileSystem::CreateDirectoryTree( const char *pDirectoryPath )
+{
+	char szPath[ SIRENGINE_MAX_OSPATH*2+1 ];
+	char *ofs;
+
+	SIREngine_strncpyz( szPath, pDirectoryPath, sizeof( szPath ) );
+
+	for ( ofs = szPath + 1; *ofs; ofs++ ) {
+		if ( *ofs == SIRENGINE_PATH_SEPERATOR ) {
+			// create the directory
+			*ofs = '\0';
+			Application::Get()->CreateDirectory( szPath );
+			*ofs = SIRENGINE_PATH_SEPERATOR;
+		}
+	}
 }
 
 CFileWriter *CFileSystem::OpenFileWriter( const CFilePath& filePath )
 {
-    CFileWriter *hFile;
-    const char *pSearchPath;
+	CFileWriter *hFile;
+	const char *pSearchPath;
 
-    pSearchPath = BuildSearchPath( m_CurrentPath, filePath.c_str() );
+	pSearchPath = BuildSearchPath( m_CurrentPath, filePath.c_str() );
 
-    SIRENGINE_NOTIFICATION( "Attempting file open at \"%s\" for CFileWriter", pSearchPath );
+	SIRENGINE_NOTIFICATION( "Attempting file open at \"%s\" for CFileWriter", pSearchPath );
 
-    hFile = new CFileWriter( pSearchPath );
-    if ( hFile->IsOpen() ) {
-        return hFile;
-    }
+	hFile = new CFileWriter( pSearchPath );
+	if ( hFile->IsOpen() ) {
+		return hFile;
+	} else {
+		CreateDirectoryTree( pSearchPath );
 
-    delete hFile;
-    return NULL;
+		hFile->Open( pSearchPath );
+		if ( hFile->IsOpen() ) {
+			return hFile;
+		}
+	}
+
+	delete hFile;
+	return NULL;
+}
+
+void CFileSystem::LoadFile( const CFilePath& filePath, uint8_t **pOutBuffer, uint64_t *nSize )
+{
+	FileCacheEntry_t *pCacheEntry;
+
+	SIRENGINE_LOG( "Loading CacheFile \"%s\"...", filePath.c_str() );
+
+	for ( const auto& it : m_FileCache ) {
+		pCacheEntry = it->GetFile( filePath );
+		if ( pCacheEntry ) {
+			break;
+		}
+	}
+
+	if ( pCacheEntry ) {
+		*pOutBuffer = (uint8_t *)pCacheEntry->pMemory;
+		*nSize = pCacheEntry->nSize;
+	}
+	else {
+		*pOutBuffer = NULL;
+		*nSize = 0;
+	}
 }
 
 CFileReader *CFileSystem::OpenFileReader( const CFilePath& filePath )
 {
-    CFileReader hFile;
-    const char *pSearchPath;
+	CFileReader hFile;
+	const char *pSearchPath;
 
-    for ( const auto& it : m_DirectoryCache ) {
-        pSearchPath = BuildSearchPath( it.second->GetPath(), filePath.c_str() );
+	for ( const auto& it : m_DirectoryCache ) {
+		pSearchPath = BuildSearchPath( it.second->GetPath(), filePath.c_str() );
 
-        SIRENGINE_NOTIFICATION( "Attempting file open at \"%s\" for CFileReader", pSearchPath );
+		SIRENGINE_NOTIFICATION( "Attempting file open at \"%s\" for CFileReader", pSearchPath );
 
-        if ( hFile.Open( pSearchPath ) ) {
-            break;
-        }
-    }
+		if ( hFile.Open( pSearchPath ) ) {
+			break;
+		}
+	}
 
-    if ( hFile.IsOpen() ) {
-        return new CFileReader( hFile );
-    }
-    return NULL;
+	if ( hFile.IsOpen() ) {
+		return new CFileReader( hFile );
+	}
+	return NULL;
 }
 
-CFileList *CFileSystem::ListFiles( const CFilePath& directory, const char *pExtension ) const
+CFileList *CFileSystem::ListFiles( const CFilePath& directory, const char *pExtension, bool bDirectoryOnly ) const
 {
-    CFileList *fileList;
-    uint64_t nFiles;
-    const char *path;
+	CFileList *fileList;
+	uint64_t nFiles;
+	const char *path;
 
-    path = BuildSearchPath( directory, "" );
+	path = BuildSearchPath( directory, "" );
 
-    const auto& it = m_DirectoryCache.find( path );
-    if ( it == m_DirectoryCache.cend() ) {
-        SIRENGINE_WARNING( "Invalid search directory \"%s\"", path );
-        return NULL;
-    }
+	const auto& it = m_DirectoryCache.find( path );
+	if ( it == m_DirectoryCache.cend() ) {
+		SIRENGINE_WARNING( "Invalid search directory \"%s\"", path );
+		return NULL;
+	}
 
-    nFiles = 0;
-    for ( const auto& file : it->second->GetList() ) {
-        if ( SIREngine_stricmp( CFilePath::GetExtension( file.c_str() ).c_str(), pExtension ) == 0 ) {
-            nFiles++;
-        }
-    }
+	if ( !bDirectoryOnly ) {
+		nFiles = 0;
+		for ( const auto& file : it->second->GetList() ) {
+			if ( SIREngine_stricmp( CFilePath::GetExtension( file.c_str() ).c_str(), pExtension ) == 0 ) {
+				nFiles++;
+			}
+		}
+	}
+	else {
+		nFiles = it->second->GetSubDirs().size();
+	}
 
-    fileList = new CFileList( directory );
-    fileList->m_List.reserve( nFiles );
-    for ( const auto& file : it->second->GetList() ) {
-        if ( SIREngine_stricmp( CFilePath::GetExtension( file.c_str() ).c_str(), pExtension ) == 0 ) {
-            fileList->m_List.emplace_back( file );
-        }
-    }
+	fileList = new CFileList( directory );
+	if ( bDirectoryOnly ) {
+		fileList->m_SubDirs = it->second->GetSubDirs();
+	}
+	else {
+		fileList->m_List.reserve( nFiles );
+		for ( const auto& file : it->second->GetList() ) {
+			if ( SIREngine_stricmp( CFilePath::GetExtension( file.c_str() ).c_str(), pExtension ) == 0 ) {
+				fileList->m_List.emplace_back( file );
+			}
+		}
+	}
 
-    return fileList;
+	return fileList;
 }
 
 const char *CFileSystem::BuildSearchPath( const CFilePath& basePath, const CString& fileName ) const
 {
-    static char szSearchPath[4][ SIRENGINE_MAX_OSPATH*2+1 ];
-    static int toggleBit = 0;
-    char *pString;
+	static char szSearchPath[4][ SIRENGINE_MAX_OSPATH*2+1 ];
+	static int toggleBit = 0;
+	char *pString;
 
-    toggleBit++;
-    pString = szSearchPath[ toggleBit % 4 ];
+	toggleBit++;
+	pString = szSearchPath[ toggleBit % 4 ];
 
-    if ( fileName.size() ) {
-        SIREngine_snprintf( pString, sizeof( *szSearchPath ) - 1, "%s/%s", basePath.c_str(), fileName.c_str() );
-    } else {
-        SIREngine_snprintf( pString, sizeof( *szSearchPath ) - 1, "%s", basePath.c_str() );
-    }
+	if ( fileName.size() ) {
+		SIREngine_snprintf( pString, sizeof( *szSearchPath ) - 1, "%s/%s", basePath.c_str(), fileName.c_str() );
+	} else {
+		SIREngine_snprintf( pString, sizeof( *szSearchPath ) - 1, "%s", basePath.c_str() );
+	}
 
-    return pString;
-}
-
-bool CFileReader::Open( const CFilePath& filePath )
-{
-    m_hFileHandle = g_pApplication->OpenFile( filePath, "rb" );
-    return m_hFileHandle != NULL;
-}
-
-void CFileReader::Close( void )
-{
-    if ( m_hFileHandle != NULL ) {
-        fclose( m_hFileHandle );
-        m_hFileHandle = NULL;
-    }
-}
-
-bool CFileReader::IsOpen( void ) const
-{
-    return m_hFileHandle != NULL;
-}
-
-size_t CFileReader::Read( void *pBuffer, size_t nBytes )
-{
-    return fread( pBuffer, nBytes, 1, m_hFileHandle );
-}
-
-size_t CFileReader::GetPosition( void ) const
-{
-    if ( !m_hFileHandle ) {
-        SIRENGINE_WARNING( "CFileReader::GetPosition: NULL handle" );
-        return 0;
-    }
-    return ftell( m_hFileHandle );
-}
-
-size_t CFileReader::GetLength( void ) const
-{
-    if ( !m_hFileHandle ) {
-        SIRENGINE_WARNING( "CFileReader::GetLength: NULL handle" );
-        return 0;
-    }
-    FILE *hFile = const_cast<FILE *>( m_hFileHandle );
-    if ( hFile ) {
-        size_t nLength = 0;
-        size_t nPosition = GetPosition();
-
-        fseek( m_hFileHandle, 0L, SEEK_END );
-        nLength = ftell( m_hFileHandle );
-        fseek( m_hFileHandle, nPosition, SEEK_SET );
-
-        return nLength;
-    } else {
-    }
-    return 0;
-}
-
-bool CFileWriter::Open( const CFilePath& filePath )
-{
-    SIRENGINE_LOG( "Opening file \"%s\"...", filePath.c_str() );
-    m_hFileHandle = fopen( filePath.c_str(), "w" );
-    return m_hFileHandle != NULL;
-}
-
-size_t CFileWriter::Write( const void *pBuffer, size_t nBytes )
-{
-    const uint8_t *buf = (const uint8_t *)pBuffer;
-    size_t nRemaining, nBlockSize, nWritten;
-    int tries;
-
-    if ( m_hFileHandle == NULL ) {
-        return 0;
-    }
-    if ( !pBuffer || !nBytes ) {
-        return 0;
-    }
-
-    nRemaining = nBytes;
-    tries = 0;
-
-    while ( nRemaining ) {
-        nBlockSize = nRemaining;
-        nWritten = fwrite( buf, 1, nBlockSize, m_hFileHandle );
-        if ( nWritten == 0 ) {
-            if ( !tries ) {
-                tries = 1;
-            } else {
-                SIRENGINE_WARNING( "CFileWriter::Write: wrote 0 bytes" );
-                return 0;
-            }
-        }
-
-        buf += nWritten;
-        nRemaining -= nWritten;
-    }
-
-    return nBytes;
-}
-
-void SIRENGINE_ATTRIBUTE(format(printf, 2, 3)) CFileWriter::Printf( const char *fmt, ... )
-{
-    va_list argptr;
-    char msg[8192];
-    int length;
-
-    va_start( argptr, fmt );
-    length = SIREngine_Vsnprintf( msg, sizeof( msg ) - 1, fmt, argptr );
-    va_end( argptr );
-
-    Write( msg, length );
-}
-
-void CFileWriter::Flush( void )
-{
-    fflush( m_hFileHandle );
+	return pString;
 }

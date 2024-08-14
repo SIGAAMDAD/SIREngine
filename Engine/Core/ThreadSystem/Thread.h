@@ -2,7 +2,7 @@
 #define __SIRENGINE_THREAD_H__
 
 #if defined(SIRENGINE_PRAGMA_ONCE_SUPPORTED)
-    #pragma once
+	#pragma once
 #endif
 
 #include <Engine/Core/Application/GenericPlatform/GenericApplication.h>
@@ -10,10 +10,10 @@
 
 #if defined(SIRENGINE_PLATFORM_WINDOWS)
 #else
-    #include <Engine/Core/Application/Posix/PosixApplication.h>
-    #include <Engine/Core/Application/Posix/PosixTypes.h>
-    #include <errno.h>
-    #include <pthread.h>
+	#include <Engine/Core/Application/Posix/PosixApplication.h>
+	#include <Engine/Core/Application/Posix/PosixTypes.h>
+	#include <errno.h>
+	#include <pthread.h>
 #endif
 
 #include <EASTL/atomic.h>
@@ -31,38 +31,38 @@ public:
 class CThreadMutex
 {
 public:
-    CThreadMutex( void );
-    ~CThreadMutex();
+	CThreadMutex( void );
+	~CThreadMutex();
 
-    void Lock( void );
-    void Unlock( void );
-    bool TryLock( void );
+	void Lock( void );
+	void Unlock( void );
+	bool TryLock( void );
 
-    void Lock( void ) const;
-    void Unlock( void ) const;
-    bool TryLock( void ) const;
+	void Lock( void ) const;
+	void Unlock( void ) const;
+	bool TryLock( void ) const;
 private:
-    PlatformTypes::mutex_t m_hLock;
+	PlatformTypes::mutex_t m_hLock;
 #if defined(SIRENGINE_PLATFORM_POSIX)
-    pthread_mutexattr_t m_hAttribs;
+	pthread_mutexattr_t m_hAttribs;
 #endif
 };
 
 class CThreadRWLock
 {
 public:
-    CThreadRWLock( void );
-    ~CThreadRWLock();
+	CThreadRWLock( void );
+	~CThreadRWLock();
 
-    void WriteLock( void );
-    void ReadLock( void );
-    void Unlock( void );
-    bool TryWriteLock( void );
-    bool TryReadLock( void );
+	void WriteLock( void );
+	void ReadLock( void );
+	void Unlock( void );
+	bool TryWriteLock( void );
+	bool TryReadLock( void );
 private:
-    PlatformTypes::rwlock_t m_hRWLock;
+	PlatformTypes::rwlock_t m_hRWLock;
 #if defined(SIRENGINE_PLATFORM_POSIX)
-    pthread_rwlockattr_t m_hAttribs;
+	pthread_rwlockattr_t m_hAttribs;
 #endif
 };
 
@@ -70,90 +70,118 @@ template<typename Mutex>
 class CThreadAutoLock
 {
 public:
-    SIRENGINE_FORCEINLINE CThreadAutoLock( Mutex& mutex )
-        : m_pLock( eastl::addressof( mutex ) )
-    { Lock(); }
-    SIRENGINE_FORCEINLINE ~CThreadAutoLock()
-    { Unlock(); }
+	SIRENGINE_FORCEINLINE CThreadAutoLock( Mutex& mutex )
+		: m_pLock( eastl::addressof( mutex ) )
+	{ Lock(); }
+	SIRENGINE_FORCEINLINE ~CThreadAutoLock()
+	{ Unlock(); }
 
-    SIRENGINE_FORCEINLINE void Lock( void )
-    { m_pLock->Lock(); }
-    SIRENGINE_FORCEINLINE void Unlock( void )
-    { m_pLock->Unlock(); }
+	SIRENGINE_FORCEINLINE void Lock( void )
+	{ m_pLock->Lock(); }
+	SIRENGINE_FORCEINLINE void Unlock( void )
+	{ m_pLock->Unlock(); }
 private:
-    Mutex *m_pLock;
+	Mutex *m_pLock;
 };
 
 class CThreadAutoWriteLock
 {
 public:
-    SIRENGINE_FORCEINLINE CThreadAutoWriteLock( CThreadRWLock& mutex )
-        : m_pLock( eastl::addressof( mutex ) )
-    { Lock(); }
-    SIRENGINE_FORCEINLINE ~CThreadAutoWriteLock()
-    { Unlock(); }
+	SIRENGINE_FORCEINLINE CThreadAutoWriteLock( CThreadRWLock& mutex )
+		: m_pLock( eastl::addressof( mutex ) )
+	{ Lock(); }
+	SIRENGINE_FORCEINLINE ~CThreadAutoWriteLock()
+	{ Unlock(); }
 
-    SIRENGINE_FORCEINLINE void Lock( void )
-    { m_pLock->WriteLock(); }
-    SIRENGINE_FORCEINLINE void Unlock( void )
-    { m_pLock->Unlock(); }
+	SIRENGINE_FORCEINLINE void Lock( void )
+	{ m_pLock->WriteLock(); }
+	SIRENGINE_FORCEINLINE void Unlock( void )
+	{ m_pLock->Unlock(); }
 private:
-    CThreadRWLock *m_pLock;
+	CThreadRWLock *m_pLock;
 };
 
 class CThreadAutoReadLock
 {
 public:
-    SIRENGINE_FORCEINLINE CThreadAutoReadLock( CThreadRWLock& mutex )
-        : m_pLock( eastl::addressof( mutex ) )
-    { Lock(); }
-    SIRENGINE_FORCEINLINE ~CThreadAutoReadLock()
-    { Unlock(); }
+	SIRENGINE_FORCEINLINE CThreadAutoReadLock( CThreadRWLock& mutex )
+		: m_pLock( eastl::addressof( mutex ) )
+	{ Lock(); }
+	SIRENGINE_FORCEINLINE ~CThreadAutoReadLock()
+	{ Unlock(); }
 
-    SIRENGINE_FORCEINLINE void Lock( void )
-    { m_pLock->ReadLock(); }
-    SIRENGINE_FORCEINLINE void Unlock( void )
-    { m_pLock->Unlock(); }
+	SIRENGINE_FORCEINLINE void Lock( void )
+	{ m_pLock->ReadLock(); }
+	SIRENGINE_FORCEINLINE void Unlock( void )
+	{ m_pLock->Unlock(); }
 private:
-    CThreadRWLock *m_pLock;
+	CThreadRWLock *m_pLock;
 };
 
 class CThread
 {
 public:
-    CThread( const CString& name )
-        : m_Name( name ), m_hThreadID( 0 )
-    {
+	CThread( const CString& name )
+		: m_Name( name ), m_hThreadID( 0 )
+	{
 #ifdef USE_SMMALLOC
-        _sm_allocator_thread_cache_create( g_pMemAlloc, sm::CacheWarmupOptions::CACHE_HOT, { 256, 256, 256, 256 } );
+		_sm_allocator_thread_cache_create( g_pMemAlloc, sm::CacheWarmupOptions::CACHE_HOT, { 256, 256, 256, 256 } );
 #endif
-    }
-    ~CThread()
-    {
+	}
+	~CThread()
+	{
 #ifdef USE_SMMALLOC
-        _sm_allocator_thread_cache_destroy( g_pMemAlloc );
+		_sm_allocator_thread_cache_destroy( g_pMemAlloc );
 #endif
-    }
+	}
 
-    SIRENGINE_FORCEINLINE const CString& GetName( void ) const
-    { return m_Name; }
+	SIRENGINE_FORCEINLINE const CString& GetName( void ) const
+	{ return m_Name; }
 
-    template<typename Fn, typename... Args>
-    inline void Start( Fn&& fn, Args&&... args )
-    {
-        m_RunFunc = [&]( void ) -> void { fn( std::forward<Args>( args )... ); };
-        Application::g_pApplication->ThreadStart( (void *)&m_hThreadID, this, &CThread::RunThread );
-    }
-    inline void Join( uint64_t nTimeout = SIRENGINE_UINT64_MAX )
-    { Application::g_pApplication->ThreadJoin( (void *)&m_hThreadID, this, nTimeout ); }
+	template<typename Fn, typename... Args>
+	inline void Start( Fn&& fn, Args&&... args )
+	{
+	
+		m_RunFunc = [&]( void ) -> void { fn( std::forward<Args>( args )... ); };
+#if defined(SIRENGINE_PLATFORM_WINDOWS)
+#elif defined(SIRENGINE_PLATFORM_POSIX)
+//      Application::g_pApplication->ThreadStart( (void *)&m_hThreadID, this, &CThread::RunThread );
+		SIRENGINE_LOG( "Running thread '%s'", m_Name.c_str() );
+		if ( pthread_create( &m_hThreadID, NULL, CThread::ThreadFunction, (void *)this ) == -1 ) {
+			SIRENGINE_ERROR( "pthread_create failed: %s", strerror( errno ) );
+		}
+#endif
+	}
+	inline void Join( uint64_t nTimeout = SIRENGINE_UINT64_MAX )
+	{
+#if defined(SIRENGINE_PLATFORM_WINDOWS)
+#elif defined(SIRENGINE_PLATFORM_POSIX)
+//        Application::g_pApplication->ThreadJoin( (void *)&m_hThreadID, this, nTimeout );
+		void *pReturn;
+	    struct timespec ts;
 
-    // should only ever be called by IGenericApplication
-    inline void RunThread( void )
-    { m_RunFunc(); }
+	    ts.tv_nsec = nTimeout * 1000000;
+
+	    SIRENGINE_LOG( "Joining thread '%s'...", m_Name.c_str() );
+	    pthread_timedjoin_np( m_hThreadID, &pReturn, &ts );
+	    SIRENGINE_LOG( "Thread joined." );
+#endif
+	}
+
+	// should only ever be called by IGenericApplication
+	inline void RunThread( void )
+	{ m_RunFunc(); }
 private:
-    CString m_Name;
-    PlatformTypes::thread_t m_hThreadID;
-    eastl::function<void()> m_RunFunc;
+	CString m_Name;
+	PlatformTypes::thread_t m_hThreadID;
+	eastl::function<void()> m_RunFunc;
+
+	static void *ThreadFunction( void *pArgument )
+	{
+		CThread *pObject = (CThread *)pArgument;
+		pObject->RunThread();
+		return NULL;
+	}
 };
 
 #include "Thread.inl"

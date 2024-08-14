@@ -7,12 +7,16 @@
 
 #include <Engine/RenderLib/RenderCommon.h>
 #include <Engine/Core/SIREngine.h>
-#include <SDL2/SDL.h>
 #include "RenderBuffer.h"
 #include "RenderTexture.h"
 #include "RenderShader.h"
 #include "RenderShaderPipeline.h"
 #include <Engine/Memory/Allocators/VirtualStackAllocator.h>
+#if defined(SIRENGINE_BUILD_RENDERLIB_GLFW3)
+#include <GLFW/glfw3.h>
+#else
+#include <SDL2/SDL.h>
+#endif
 
 #define WF_OPENGL_CONTEXT               0x000100
 #define WF_VULKAN_CONTEXT               0x000200
@@ -32,13 +36,19 @@ namespace SIREngine::RenderLib::Backend {
 		uint32_t totalMemory;
 	} GPUMemoryUsage_t;
 
+#if defined(SIRENGINE_BUILD_RENDERLIB_GLFW3)
+	using NativeWindow_t = GLFWwindow *;
+#else
+	using NativeWindow_t = SDL_Window *;
+#endif
+
 	class IRenderContext
 	{
 	public:
 		IRenderContext( const Application::ApplicationInfo_t& appInfo );
 		virtual ~IRenderContext();
 
-		SIRENGINE_FORCEINLINE SDL_Window *GetWindowHandle( void )
+		SIRENGINE_FORCEINLINE NativeWindow_t GetWindowHandle( void )
 		{ return m_pWindow; }
 
 		virtual void Init( void ) = 0;
@@ -65,7 +75,7 @@ namespace SIREngine::RenderLib::Backend {
 		virtual void GetGPUExtensionList( void ) = 0;
 
 		Application::ApplicationInfo_t m_AppInfo;
-		SDL_Window *m_pWindow;
+		NativeWindow_t m_pWindow;
 
 		CVirtualStackAllocator *m_pResourceAllocator;
 

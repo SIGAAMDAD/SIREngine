@@ -20,10 +20,17 @@ public:
     virtual ~CSlabAllocator() override
     { Shutdown(); }
 
+    SIRENGINE_FORCEINLINE virtual uint64_t BytesUsed( void ) const override
+    { return m_nUsed; }
+
+    virtual void Init( void ) override
+    { }
     virtual void Init( uint64_t nBytes );
     virtual void Shutdown( void ) override;
 
-    virtual void *Allocate( uint64_t nBytes );
+    virtual void *Allocate( uint64_t nBytes, uint64_t nAlignment = 16 ) override;
+    virtual void Deallocate( void *pMemory ) override
+    { }
 
     void Reset( void );
 

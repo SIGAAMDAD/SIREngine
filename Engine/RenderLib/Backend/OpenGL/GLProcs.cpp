@@ -23,9 +23,15 @@ using namespace SIREngine::RenderLib::Backend::OpenGL;
 
 void GLContext::InitGLProcs( void )
 {
+#if !defined(SIRENGINE_BUILD_RENDERLIB_GLFW3)
 #define NGL( ret, name, ... ) \
     n ## name = ( PFN ## name )SDL_GL_GetProcAddress( #name ); \
     if ( !n ## name ) { SIRENGINE_WARNING( "Couldn't load GL function proc \"" #name "\"" ); }
+#else
+#define NGL( ret, name, ... ) \
+    n ## name = ( PFN ## name )glfwGetProcAddress( #name ); \
+    if ( !n ## name ) { SIRENGINE_WARNING( "Couldn't load GL function proc \"" #name "\"" ); }
+#endif
 
     NGL_Core_Procs
     NGL_Buffer_Procs

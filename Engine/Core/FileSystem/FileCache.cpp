@@ -17,7 +17,8 @@ CFileCache::~CFileCache()
         if ( it.second.hFile == (void *)SIRENGINE_INVALID_HANDLE ) {
             continue;
         }
-        Application::Get()->UnmapFile( it.second.pMemory, it.second.nSize );
+        delete[] (char *)it.second.pMemory;
+//        Application::Get()->UnmapFile( it.second.pMemory, it.second.nSize );
         Application::Get()->FileClose( (void *)it.second.hFile );
     }
 }
@@ -54,10 +55,14 @@ void CFileCache::MapFile( const FileSystem::CFilePath& filePath, FileCacheEntry_
         return;
     }
 
-    pCacheEntry->pMemory = Application::Get()->MapFile( pCacheEntry->hFile, &pCacheEntry->nSize );
-    if ( !pCacheEntry->pMemory ) {
-        SIRENGINE_WARNING( "Error mapping file" );
-        Application::Get()->FileClose( pCacheEntry->hFile );
-        return;
-    }
+    pCacheEntry->nSize = Application::Get()->FileLength( pCacheEntry->hFile );
+    pCacheEntry->pMemory = new char[ pCacheEntry->nSize ];
+    Application::Get()->FileRead( pCacheEntry->pMemory, pCacheEntry->nSize, pCacheEntry->hFile );
+
+//    pCacheEntry->pMemory = Application::Get()->MapFile( pCacheEntry->hFile, &pCacheEntry->nSize );
+//    if ( !pCacheEntry->pMemory ) {
+//        SIRENGINE_WARNING( "Error mapping file" );
+//        Application::Get()->FileClose( pCacheEntry->hFile );
+//        return;
+//    }
 }

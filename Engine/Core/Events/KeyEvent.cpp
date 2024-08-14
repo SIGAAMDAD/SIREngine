@@ -1,7 +1,11 @@
 #include "KeyEvent.h"
+#if defined(SIRENGINE_BUILD_RENDERLIB_GLFW3)
+#include <GLFW/glfw3.h>
+#endif
 
 using namespace SIREngine::Events;
 
+#if !defined(SIRENGINE_BUILD_RENDERLIB_GLFW3)
 KeyNum_t CKeyEvent::SDLKeyToEngineKey( const SDL_Event& eventData )
 {
 	KeyNum_t key = 0;
@@ -31,10 +35,8 @@ KeyNum_t CKeyEvent::SDLKeyToEngineKey( const SDL_Event& eventData )
 
 		case SDLK_SLASH:		key = Key_Slash; break;
 		case SDLK_BACKSLASH:	key = Key_BackSlash; break;
-		case SDLK_ASTERISK:		key = Key_Asterisk; break;
 		case SDLK_LEFTBRACKET:	key = Key_OpenBracket; break;
 		case SDLK_RIGHTBRACKET:	key = Key_CloseBracket; break;
-		case SDLK_PLUS:			key = Key_Plus; break;
 
 		case SDLK_PRINTSCREEN:	key = Key_Screenshot; break;
 		case SDLK_HOME:			key = Key_Home; break;
@@ -69,3 +71,64 @@ KeyNum_t CKeyEvent::SDLKeyToEngineKey( const SDL_Event& eventData )
 
 	return key;
 }
+#else
+KeyNum_t CKeyEvent::GLFW3KeyToEngineKey( int key, int mods )
+{
+	KeyNum_t keyNum = 0;
+	if ( key >= GLFW_KEY_0 && key <= GLFW_KEY_9 ) {
+		keyNum = Key_0 + ( key + GLFW_KEY_0 );
+	}
+	if ( key >= GLFW_KEY_A && key <= GLFW_KEY_Z ) {
+		keyNum = Key_A + ( key - GLFW_KEY_A );
+	}
+	else {
+		switch ( key ) {
+		case GLFW_KEY_LEFT_SHIFT:
+		case GLFW_KEY_RIGHT_SHIFT:		keyNum = Key_Shift; break;
+		case GLFW_KEY_LEFT_CONTROL:
+		case GLFW_KEY_RIGHT_CONTROL:	keyNum = Key_Ctrl; break;
+		case GLFW_KEY_LEFT_ALT:
+		case GLFW_KEY_RIGHT_ALT:		keyNum = Key_Alt; break;
+		case GLFW_KEY_BACKSPACE:		keyNum = Key_Backspace; break;
+		case GLFW_KEY_SPACE:			keyNum = Key_Space; break;
+		case GLFW_KEY_TAB:				keyNum = Key_Tab; break;
+
+		case GLFW_KEY_SLASH:			keyNum = Key_Slash; break;
+		case GLFW_KEY_BACKSLASH:		keyNum = Key_BackSlash; break;
+		case GLFW_KEY_LEFT_BRACKET:		keyNum = Key_OpenBracket; break;
+		case GLFW_KEY_RIGHT_BRACKET:	keyNum = Key_CloseBracket; break;
+
+		case GLFW_KEY_PRINT_SCREEN:		keyNum = Key_Screenshot; break;
+		case GLFW_KEY_HOME:				keyNum = Key_Home; break;
+		case GLFW_KEY_END:				keyNum = Key_End; break;
+		case GLFW_KEY_PAGE_DOWN:		keyNum = Key_PageDown; break;
+		case GLFW_KEY_PAGE_UP:			keyNum = Key_PageUp; break;
+		case GLFW_KEY_INSERT:			keyNum = Key_Insert; break;
+		case GLFW_KEY_DELETE:			keyNum = Key_Delete; break;
+		case GLFW_KEY_SCROLL_LOCK:		keyNum = Key_ScrollLock; break;
+		case GLFW_KEY_CAPS_LOCK:		keyNum = Key_CapsLock;
+
+		case GLFW_KEY_F1:				keyNum = Key_F1; break;
+		case GLFW_KEY_F2:				keyNum = Key_F2; break;
+		case GLFW_KEY_F3:				keyNum = Key_F3; break;
+		case GLFW_KEY_F4:				keyNum = Key_F4; break;
+		case GLFW_KEY_F5:				keyNum = Key_F5; break;
+		case GLFW_KEY_F6:				keyNum = Key_F6; break;
+		case GLFW_KEY_F7:				keyNum = Key_F7; break;
+		case GLFW_KEY_F8:				keyNum = Key_F8; break;
+		case GLFW_KEY_F9:				keyNum = Key_F9; break;
+		case GLFW_KEY_F10:				keyNum = Key_F10; break;
+		case GLFW_KEY_F11:				keyNum = Key_F11; break;
+		case GLFW_KEY_F12:				keyNum = Key_F12; break;
+		default:
+			break;
+		};
+	}
+	if ( key == GLFW_KEY_GRAVE_ACCENT ) {
+		// console key, cannot be rebound
+		keyNum = Key_Console;
+	}
+
+	return keyNum;
+}
+#endif

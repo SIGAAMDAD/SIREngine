@@ -142,8 +142,8 @@ static freeblock_t *NewBlock( memzone_t *zone, uint64_t size )
 	// allocate separator block before new free block
 	alloc_size = size + sizeof( *sep );
 
-	sep = (memblock_t *)Application::Get()->VirtualAlloc( &alloc_size, 64 );
-//	sep = (memblock_t *)calloc( alloc_size, 1 );
+//	sep = (memblock_t *)Application::Get()->VirtualAlloc( &alloc_size, 64 );
+	sep = (memblock_t *)calloc( alloc_size, 1 );
 	if ( sep == NULL ) {
 		SIRENGINE_ERROR( "Z_Malloc: failed on allocation of %lu bytes", size );
 		return NULL;
@@ -151,7 +151,7 @@ static freeblock_t *NewBlock( memzone_t *zone, uint64_t size )
 	memset( sep, 0, alloc_size );
 	block = sep+1;
 
-	Application::Get()->CommitMemory( sep, 0, alloc_size );
+//	Application::Get()->CommitMemory( sep, 0, alloc_size );
 
 	// link separator with prev
 	prev->next = sep;
@@ -629,28 +629,27 @@ Z_LogZoneHeap
 */
 void Z_LogZoneHeap( memzone_t *zone, const char *name )
 {
-	/*
-#ifdef SIRENGINE_MEMORY_DEBUG
 	char dump[32], *ptr;
 	uint32_t i, j;
-#endif
 	memblock_t	*block;
-	char buf[4096];
 	uint64_t size, allocSize, numBlocks;
-	uint64_t len;
 
 	size = numBlocks = 0;
-#ifdef SIRENGINE_MEMORY_DEBUG
 	allocSize = 0;
-#endif
-	len = SIREngine_snprintf( buf, sizeof(buf), "\r\n================\r\n%s log\r\n================\r\n", name );
-	FS_Write( buf, len, logfile );
+
+	SIRENGINE_LOG( "================" );
+	SIRENGINE_LOG( "%s log", name );
+	SIRENGINE_LOG( "================" );
 	for ( block = zone->blocklist.next ; ; ) {
 		if ( block->tag != TAG_FREE ) {
-#ifdef SIRENGINE_MEMORY_DEBUG
 			ptr = ((char *) block) + sizeof(memblock_t);
 			j = 0;
-			for (i = 0; i < 20 && i < block->d.allocSize; i++) {
+#ifdef SIRENGINE_MEMORY_DEBUG
+			for (i = 0; i < 20 && i < block->d.allocSize; i++)
+#else
+			for ( i = 0; i < 20 && i < block->size; i++ )
+#endif
+			{
 				if (ptr[i] >= 32 && ptr[i] < 127) {
 					dump[j++] = ptr[i];
 				}
@@ -659,9 +658,12 @@ void Z_LogZoneHeap( memzone_t *zone, const char *name )
 				}
 			}
 			dump[j] = '\0';
-			len = SIREngine_snprintf(buf, sizeof(buf), "size = %-8lu: %-8s, line: %4u (%s) [%s]\r\n", block->d.allocSize, block->d.file, block->d.line, block->d.label, dump);
-			FS_Write( buf, len, logfile );
+#ifdef SIRENGINE_MEMORY_DEBUG
+			SIRENGINE_LOG( "size = %-8lu: %-8s, line: %4u (%s) [%s]", block->d.allocSize, block->d.file, block->d.line, block->d.label, dump );
 			allocSize += block->d.allocSize;
+#else
+			SIRENGINE_LOG( "size = %-8lu [%s]", block->size, dump );
+			allocSize += block->size;
 #endif
 			size += block->size;
 			numBlocks++;
@@ -677,19 +679,16 @@ void Z_LogZoneHeap( memzone_t *zone, const char *name )
 #else
 	allocSize = numBlocks * sizeof(memblock_t); // + 32 bit alignment
 #endif
-	len = SIREngine_snprintf( buf, sizeof( buf ), "%lu %s memory in %lu blocks\r\n", size, name, numBlocks );
-	FS_Write( buf, len, logfile );
-	len = SIREngine_snprintf( buf, sizeof( buf ), "%lu %s memory overhead\r\n", size - allocSize, name );
-	FS_Write( buf, len, logfile );
-	FS_Flush( logfile );
-	*/
+	
+	SIRENGINE_LOG( "%lu %s memory in %lu blocks", size, name, numBlocks );
+	SIRENGINE_LOG( "%lu %s memory overhead", size - allocSize, name );
 }
 
 CTagArenaAllocator::CTagArenaAllocator( const char *pName, uint64_t nSize, uint64_t nFlags )
 {
 	m_pName = pName;
-	m_pZone = (memzone_t *)Application::Get()->VirtualAlloc( &nSize, 64 );
-//	m_pZone = (memzone_t *)calloc( 1, nSize );
+//	m_pZone = (memzone_t *)Application::Get()->VirtualAlloc( &nSize, 64 );
+	m_pZone = (memzone_t *)calloc( 1, nSize );
 	if ( !m_pZone ) {
 		Application::Get()->OnOutOfMemory();
 	}
@@ -715,8 +714,8 @@ void CTagArenaAllocator::Shutdown( void )
 			memblock_t *next = block->next;
 			if ( next->size == 0 && next->id == -ZONEID && next->tag == TAG_STATIC ) {
 				if ( seg ) {
-					Application::Get()->VirtualFree( seg );
-//					::free( seg );
+//					Application::Get()->VirtualFree( seg );
+					::free( seg );
 				}
 				seg = next;
 				block = next; // new zone segment
@@ -732,8 +731,8 @@ void CTagArenaAllocator::Shutdown( void )
 		}
 		block = block->next;
 	}
-	Application::Get()->VirtualFree( m_pZone );
-//	::free( m_pZone );
+//	Application::Get()->VirtualFree( m_pZone );
+	::free( m_pZone );
 }
 
 void *CTagArenaAllocator::Alloc( size_t nSize )

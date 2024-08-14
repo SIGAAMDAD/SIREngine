@@ -53,32 +53,6 @@ CMAKE_CXX_FLAGS_RELEASE:STRING=-O3 -DNDEBUG
 //Flags used by the CXX compiler during RELWITHDEBINFO builds.
 CMAKE_CXX_FLAGS_RELWITHDEBINFO:STRING=-O2 -g -DNDEBUG
 
-//C compiler
-CMAKE_C_COMPILER:FILEPATH=/usr/bin/cc
-
-//A wrapper around 'ar' adding the appropriate '--plugin' option
-// for the GCC compiler
-CMAKE_C_COMPILER_AR:FILEPATH=/usr/bin/gcc-ar-11
-
-//A wrapper around 'ranlib' adding the appropriate '--plugin' option
-// for the GCC compiler
-CMAKE_C_COMPILER_RANLIB:FILEPATH=/usr/bin/gcc-ranlib-11
-
-//Flags used by the C compiler during all build types.
-CMAKE_C_FLAGS:STRING=
-
-//Flags used by the C compiler during DEBUG builds.
-CMAKE_C_FLAGS_DEBUG:STRING=-g
-
-//Flags used by the C compiler during MINSIZEREL builds.
-CMAKE_C_FLAGS_MINSIZEREL:STRING=-Os -DNDEBUG
-
-//Flags used by the C compiler during RELEASE builds.
-CMAKE_C_FLAGS_RELEASE:STRING=-O3 -DNDEBUG
-
-//Flags used by the C compiler during RELWITHDEBINFO builds.
-CMAKE_C_FLAGS_RELWITHDEBINFO:STRING=-O2 -g -DNDEBUG
-
 //Path to a program.
 CMAKE_DLLTOOL:FILEPATH=CMAKE_DLLTOOL-NOTFOUND
 
@@ -224,11 +198,17 @@ CMAKE_STRIP:FILEPATH=/usr/bin/strip
 // Studio IDE projects all commands are done without /nologo.
 CMAKE_VERBOSE_MAKEFILE:BOOL=FALSE
 
+//Path to a library.
+FREETYPE2_LIBRARY:FILEPATH=FREETYPE2_LIBRARY-NOTFOUND
+
 //Arguments to supply to pkg-config
 PKG_CONFIG_ARGN:STRING=
 
 //pkg-config executable
 PKG_CONFIG_EXECUTABLE:FILEPATH=/usr/bin/pkg-config
+
+//Path to a library.
+SDL2_LIBRARY:FILEPATH=SDL2_LIBRARY-NOTFOUND
 
 //Value Computed by CMake
 SIREngineApplication_BINARY_DIR:STATIC=/home/noah/Projects/SIR-Engine
@@ -239,14 +219,8 @@ SIREngineApplication_IS_TOP_LEVEL:STATIC=ON
 //Value Computed by CMake
 SIREngineApplication_SOURCE_DIR:STATIC=/home/noah/Projects/SIR-Engine
 
-//Value Computed by CMake
-SIREngine_BINARY_DIR:STATIC=/home/noah/Projects/SIR-Engine
-
-//Value Computed by CMake
-SIREngine_IS_TOP_LEVEL:STATIC=ON
-
-//Value Computed by CMake
-SIREngine_SOURCE_DIR:STATIC=/home/noah/Projects/SIR-Engine
+//Path to a library.
+pkgcfg_lib_FREETYPE2_freetype:FILEPATH=/usr/local/lib/libfreetype.so
 
 //Path to a library.
 pkgcfg_lib_GTK3_atk-1.0:FILEPATH=/usr/lib/x86_64-linux-gnu/libatk-1.0.so
@@ -296,6 +270,9 @@ pkgcfg_lib_PANGO_harfbuzz:FILEPATH=/usr/lib/x86_64-linux-gnu/libharfbuzz.so
 //Path to a library.
 pkgcfg_lib_PANGO_pango-1.0:FILEPATH=/usr/lib/x86_64-linux-gnu/libpango-1.0.so
 
+//Path to a library.
+pkgcfg_lib_SDL2_SDL2:FILEPATH=/usr/local/lib/libSDL2.so
+
 
 ########################
 # INTERNAL cache entries
@@ -337,22 +314,6 @@ CMAKE_CXX_FLAGS_MINSIZEREL-ADVANCED:INTERNAL=1
 CMAKE_CXX_FLAGS_RELEASE-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: CMAKE_CXX_FLAGS_RELWITHDEBINFO
 CMAKE_CXX_FLAGS_RELWITHDEBINFO-ADVANCED:INTERNAL=1
-//ADVANCED property for variable: CMAKE_C_COMPILER
-CMAKE_C_COMPILER-ADVANCED:INTERNAL=1
-//ADVANCED property for variable: CMAKE_C_COMPILER_AR
-CMAKE_C_COMPILER_AR-ADVANCED:INTERNAL=1
-//ADVANCED property for variable: CMAKE_C_COMPILER_RANLIB
-CMAKE_C_COMPILER_RANLIB-ADVANCED:INTERNAL=1
-//ADVANCED property for variable: CMAKE_C_FLAGS
-CMAKE_C_FLAGS-ADVANCED:INTERNAL=1
-//ADVANCED property for variable: CMAKE_C_FLAGS_DEBUG
-CMAKE_C_FLAGS_DEBUG-ADVANCED:INTERNAL=1
-//ADVANCED property for variable: CMAKE_C_FLAGS_MINSIZEREL
-CMAKE_C_FLAGS_MINSIZEREL-ADVANCED:INTERNAL=1
-//ADVANCED property for variable: CMAKE_C_FLAGS_RELEASE
-CMAKE_C_FLAGS_RELEASE-ADVANCED:INTERNAL=1
-//ADVANCED property for variable: CMAKE_C_FLAGS_RELWITHDEBINFO
-CMAKE_C_FLAGS_RELWITHDEBINFO-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: CMAKE_DLLTOOL
 CMAKE_DLLTOOL-ADVANCED:INTERNAL=1
 //Executable file format
@@ -444,20 +405,49 @@ CMAKE_STRIP-ADVANCED:INTERNAL=1
 CMAKE_UNAME:INTERNAL=/usr/bin/uname
 //ADVANCED property for variable: CMAKE_VERBOSE_MAKEFILE
 CMAKE_VERBOSE_MAKEFILE-ADVANCED:INTERNAL=1
-//Test CXX_FLAGS_DEBUG
-CXX_FLAGS_DEBUG:INTERNAL=1
-//Test CXX_FLAGS_FAST
-CXX_FLAGS_FAST:INTERNAL=1
-//Test CXX_FLAGS_STD
-CXX_FLAGS_STD:INTERNAL=1
 //Details about finding PkgConfig
 FIND_PACKAGE_MESSAGE_DETAILS_PkgConfig:INTERNAL=[/usr/bin/pkg-config][v0.29.2()]
-GTK3_CFLAGS:INTERNAL=-pthread;-I/usr/local/include/freetype2;-I/usr/include/gtk-3.0;-I/usr/include/at-spi2-atk/2.0;-I/usr/include/at-spi-2.0;-I/usr/include/dbus-1.0;-I/usr/lib/x86_64-linux-gnu/dbus-1.0/include;-I/usr/include/gtk-3.0;-I/usr/include/gio-unix-2.0;-I/usr/include/cairo;-I/usr/include/pango-1.0;-I/usr/include/harfbuzz;-I/usr/include/pango-1.0;-I/usr/include/fribidi;-I/usr/include/harfbuzz;-I/usr/include/atk-1.0;-I/usr/include/cairo;-I/usr/include/pixman-1;-I/usr/include/uuid;-I/usr/include/gdk-pixbuf-2.0;-I/usr/include/libpng16;-I/usr/include/x86_64-linux-gnu;-I/usr/include/libmount;-I/usr/include/blkid;-I/usr/include/glib-2.0;-I/usr/lib/x86_64-linux-gnu/glib-2.0/include
+FREETYPE2_CFLAGS:INTERNAL=-I/usr/local/include/freetype2;-I/usr/include/libpng16;-I/usr/include/harfbuzz;-I/usr/include/glib-2.0;-I/usr/lib/x86_64-linux-gnu/glib-2.0/include
+FREETYPE2_CFLAGS_I:INTERNAL=
+FREETYPE2_CFLAGS_OTHER:INTERNAL=
+FREETYPE2_FOUND:INTERNAL=1
+FREETYPE2_INCLUDEDIR:INTERNAL=/usr/local/include
+FREETYPE2_INCLUDE_DIRS:INTERNAL=/usr/local/include/freetype2;/usr/include/libpng16;/usr/include/harfbuzz;/usr/include/glib-2.0;/usr/lib/x86_64-linux-gnu/glib-2.0/include
+FREETYPE2_LDFLAGS:INTERNAL=-L/usr/local/lib;-lfreetype
+FREETYPE2_LDFLAGS_OTHER:INTERNAL=
+FREETYPE2_LIBDIR:INTERNAL=/usr/local/lib
+FREETYPE2_LIBRARIES:INTERNAL=freetype
+FREETYPE2_LIBRARY_DIRS:INTERNAL=/usr/local/lib
+FREETYPE2_LIBS:INTERNAL=
+FREETYPE2_LIBS_L:INTERNAL=
+FREETYPE2_LIBS_OTHER:INTERNAL=
+FREETYPE2_LIBS_PATHS:INTERNAL=
+FREETYPE2_MODULE_NAME:INTERNAL=freetype2
+FREETYPE2_PREFIX:INTERNAL=/usr/local
+FREETYPE2_STATIC_CFLAGS:INTERNAL=-I/usr/local/include/freetype2;-I/usr/include/libpng16;-I/usr/include/harfbuzz;-I/usr/include/glib-2.0;-I/usr/lib/x86_64-linux-gnu/glib-2.0/include
+FREETYPE2_STATIC_CFLAGS_I:INTERNAL=
+FREETYPE2_STATIC_CFLAGS_OTHER:INTERNAL=
+FREETYPE2_STATIC_INCLUDE_DIRS:INTERNAL=/usr/local/include/freetype2;/usr/include/libpng16;/usr/include/harfbuzz;/usr/include/glib-2.0;/usr/lib/x86_64-linux-gnu/glib-2.0/include
+FREETYPE2_STATIC_LDFLAGS:INTERNAL=-L/usr/local/lib;-L/usr/lib/x86_64-linux-gnu;-lfreetype;-lbz2;-lpng16;-lm;-lz;-lm;-lz;-lharfbuzz;-lm;-lglib-2.0;-pthread;-lm;-lpcre;-lgraphite2;-lbrotlidec;-lbrotlicommon
+FREETYPE2_STATIC_LDFLAGS_OTHER:INTERNAL=-pthread
+FREETYPE2_STATIC_LIBDIR:INTERNAL=
+FREETYPE2_STATIC_LIBRARIES:INTERNAL=freetype;bz2;png16;m;z;m;z;harfbuzz;m;glib-2.0;m;pcre;graphite2;brotlidec;brotlicommon
+FREETYPE2_STATIC_LIBRARY_DIRS:INTERNAL=/usr/local/lib;/usr/lib/x86_64-linux-gnu
+FREETYPE2_STATIC_LIBS:INTERNAL=
+FREETYPE2_STATIC_LIBS_L:INTERNAL=
+FREETYPE2_STATIC_LIBS_OTHER:INTERNAL=
+FREETYPE2_STATIC_LIBS_PATHS:INTERNAL=
+FREETYPE2_VERSION:INTERNAL=26.1.20
+FREETYPE2_freetype2_INCLUDEDIR:INTERNAL=
+FREETYPE2_freetype2_LIBDIR:INTERNAL=
+FREETYPE2_freetype2_PREFIX:INTERNAL=
+FREETYPE2_freetype2_VERSION:INTERNAL=
+GTK3_CFLAGS:INTERNAL=-pthread;-I/usr/local/include/freetype2;-I/usr/include/gtk-3.0;-I/usr/include/at-spi2-atk/2.0;-I/usr/include/at-spi-2.0;-I/usr/include/dbus-1.0;-I/usr/lib/x86_64-linux-gnu/dbus-1.0/include;-I/usr/include/gtk-3.0;-I/usr/include/gio-unix-2.0;-I/usr/include/cairo;-I/usr/include/pango-1.0;-I/usr/include/harfbuzz;-I/usr/include/pango-1.0;-I/usr/include/fribidi;-I/usr/include/atk-1.0;-I/usr/include/cairo;-I/usr/include/pixman-1;-I/usr/include/uuid;-I/usr/include/harfbuzz;-I/usr/include/gdk-pixbuf-2.0;-I/usr/include/libpng16;-I/usr/include/x86_64-linux-gnu;-I/usr/include/libmount;-I/usr/include/blkid;-I/usr/include/glib-2.0;-I/usr/lib/x86_64-linux-gnu/glib-2.0/include
 GTK3_CFLAGS_I:INTERNAL=
 GTK3_CFLAGS_OTHER:INTERNAL=-pthread
 GTK3_FOUND:INTERNAL=1
 GTK3_INCLUDEDIR:INTERNAL=/usr/include
-GTK3_INCLUDE_DIRS:INTERNAL=/usr/local/include/freetype2;/usr/include/gtk-3.0;/usr/include/at-spi2-atk/2.0;/usr/include/at-spi-2.0;/usr/include/dbus-1.0;/usr/lib/x86_64-linux-gnu/dbus-1.0/include;/usr/include/gtk-3.0;/usr/include/gio-unix-2.0;/usr/include/cairo;/usr/include/pango-1.0;/usr/include/harfbuzz;/usr/include/pango-1.0;/usr/include/fribidi;/usr/include/harfbuzz;/usr/include/atk-1.0;/usr/include/cairo;/usr/include/pixman-1;/usr/include/uuid;/usr/include/gdk-pixbuf-2.0;/usr/include/libpng16;/usr/include/x86_64-linux-gnu;/usr/include/libmount;/usr/include/blkid;/usr/include/glib-2.0;/usr/lib/x86_64-linux-gnu/glib-2.0/include
+GTK3_INCLUDE_DIRS:INTERNAL=/usr/local/include/freetype2;/usr/include/gtk-3.0;/usr/include/at-spi2-atk/2.0;/usr/include/at-spi-2.0;/usr/include/dbus-1.0;/usr/lib/x86_64-linux-gnu/dbus-1.0/include;/usr/include/gtk-3.0;/usr/include/gio-unix-2.0;/usr/include/cairo;/usr/include/pango-1.0;/usr/include/harfbuzz;/usr/include/pango-1.0;/usr/include/fribidi;/usr/include/atk-1.0;/usr/include/cairo;/usr/include/pixman-1;/usr/include/uuid;/usr/include/harfbuzz;/usr/include/gdk-pixbuf-2.0;/usr/include/libpng16;/usr/include/x86_64-linux-gnu;/usr/include/libmount;/usr/include/blkid;/usr/include/glib-2.0;/usr/lib/x86_64-linux-gnu/glib-2.0/include
 GTK3_LDFLAGS:INTERNAL=-L/usr/lib/x86_64-linux-gnu;-lgtk-3;-lgdk-3;-lpangocairo-1.0;-lpango-1.0;-lharfbuzz;-latk-1.0;-lcairo-gobject;-lcairo;-lgdk_pixbuf-2.0;-lgio-2.0;-lgobject-2.0;-lglib-2.0
 GTK3_LDFLAGS_OTHER:INTERNAL=
 GTK3_LIBDIR:INTERNAL=/usr/lib/x86_64-linux-gnu
@@ -469,14 +459,14 @@ GTK3_LIBS_OTHER:INTERNAL=
 GTK3_LIBS_PATHS:INTERNAL=
 GTK3_MODULE_NAME:INTERNAL=gtk+-3.0
 GTK3_PREFIX:INTERNAL=/usr
-GTK3_STATIC_CFLAGS:INTERNAL=-pthread;-I/usr/local/include/freetype2;-I/usr/include/gtk-3.0;-I/usr/include/at-spi2-atk/2.0;-I/usr/include/at-spi-2.0;-I/usr/include/dbus-1.0;-I/usr/lib/x86_64-linux-gnu/dbus-1.0/include;-I/usr/include/gtk-3.0;-I/usr/include/gio-unix-2.0;-I/usr/include/cairo;-I/usr/include/pango-1.0;-I/usr/include/harfbuzz;-I/usr/include/pango-1.0;-I/usr/include/fribidi;-I/usr/include/harfbuzz;-I/usr/include/atk-1.0;-I/usr/include/cairo;-I/usr/include/pixman-1;-I/usr/include/uuid;-I/usr/include/gdk-pixbuf-2.0;-I/usr/include/libpng16;-I/usr/include/x86_64-linux-gnu;-I/usr/include/libmount;-I/usr/include/blkid;-I/usr/include/glib-2.0;-I/usr/lib/x86_64-linux-gnu/glib-2.0/include
+GTK3_STATIC_CFLAGS:INTERNAL=-pthread;-I/usr/local/include/freetype2;-I/usr/include/gtk-3.0;-I/usr/include/at-spi2-atk/2.0;-I/usr/include/at-spi-2.0;-I/usr/include/dbus-1.0;-I/usr/lib/x86_64-linux-gnu/dbus-1.0/include;-I/usr/include/gtk-3.0;-I/usr/include/gio-unix-2.0;-I/usr/include/cairo;-I/usr/include/pango-1.0;-I/usr/include/harfbuzz;-I/usr/include/pango-1.0;-I/usr/include/fribidi;-I/usr/include/atk-1.0;-I/usr/include/cairo;-I/usr/include/pixman-1;-I/usr/include/uuid;-I/usr/include/harfbuzz;-I/usr/include/gdk-pixbuf-2.0;-I/usr/include/libpng16;-I/usr/include/x86_64-linux-gnu;-I/usr/include/libmount;-I/usr/include/blkid;-I/usr/include/glib-2.0;-I/usr/lib/x86_64-linux-gnu/glib-2.0/include
 GTK3_STATIC_CFLAGS_I:INTERNAL=
 GTK3_STATIC_CFLAGS_OTHER:INTERNAL=-pthread
-GTK3_STATIC_INCLUDE_DIRS:INTERNAL=/usr/local/include/freetype2;/usr/include/gtk-3.0;/usr/include/at-spi2-atk/2.0;/usr/include/at-spi-2.0;/usr/include/dbus-1.0;/usr/lib/x86_64-linux-gnu/dbus-1.0/include;/usr/include/gtk-3.0;/usr/include/gio-unix-2.0;/usr/include/cairo;/usr/include/pango-1.0;/usr/include/harfbuzz;/usr/include/pango-1.0;/usr/include/fribidi;/usr/include/harfbuzz;/usr/include/atk-1.0;/usr/include/cairo;/usr/include/pixman-1;/usr/include/uuid;/usr/include/gdk-pixbuf-2.0;/usr/include/libpng16;/usr/include/x86_64-linux-gnu;/usr/include/libmount;/usr/include/blkid;/usr/include/glib-2.0;/usr/lib/x86_64-linux-gnu/glib-2.0/include
-GTK3_STATIC_LDFLAGS:INTERNAL=-L/usr/local/lib;-L/usr/lib/x86_64-linux-gnu;-L/usr/lib;-L/usr/lib/x86_64-linux-gnu;-lgtk-3;-latk-bridge-2.0;-latspi;-lXtst;-ldbus-1;-lsystemd;-Wl,--export-dynamic;-lgdk-3;-lXinerama;-lXi;-lXrandr;-lXcursor;-lXcomposite;-lXdamage;-lXfixes;-lxkbcommon;-lwayland-cursor;-lwayland-egl;-lwayland-client;-lm;-pthread;-lepoxy;-ldl;-lGL;-lEGL;-lpangocairo-1.0;-lm;-lpangoft2-1.0;-lm;-lharfbuzz-gobject;-lpango-1.0;-lm;-lfribidi;-lthai;-ldatrie;-lXft;-lharfbuzz;-lm;-lgraphite2;-latk-1.0;-lcairo-gobject;-lcairo;-lz;-lpixman-1;-lfontconfig;-luuid;-lexpat;-lm;-lfreetype;-lbz2;-lxcb-shm;-lxcb-render;-lXrender;-lXext;-lX11;-lpthread;-lxcb;-lXau;-lXdmcp;-lgdk_pixbuf-2.0;-lm;-lpng16;-lm;-lz;-lm;-ljpeg;-ltiff;-lwebp;-lzstd;-llzma;-ljbig;-ljpeg;-ldeflate;-lz;-lm;-lgio-2.0;-lgmodule-2.0;-pthread;-lz;-lmount;-ldl;-lblkid;-lselinux;-lsepol;-lpcre2-8;-lgobject-2.0;-lffi;-lglib-2.0;-pthread;-lm;-lpcre
+GTK3_STATIC_INCLUDE_DIRS:INTERNAL=/usr/local/include/freetype2;/usr/include/gtk-3.0;/usr/include/at-spi2-atk/2.0;/usr/include/at-spi-2.0;/usr/include/dbus-1.0;/usr/lib/x86_64-linux-gnu/dbus-1.0/include;/usr/include/gtk-3.0;/usr/include/gio-unix-2.0;/usr/include/cairo;/usr/include/pango-1.0;/usr/include/harfbuzz;/usr/include/pango-1.0;/usr/include/fribidi;/usr/include/atk-1.0;/usr/include/cairo;/usr/include/pixman-1;/usr/include/uuid;/usr/include/harfbuzz;/usr/include/gdk-pixbuf-2.0;/usr/include/libpng16;/usr/include/x86_64-linux-gnu;/usr/include/libmount;/usr/include/blkid;/usr/include/glib-2.0;/usr/lib/x86_64-linux-gnu/glib-2.0/include
+GTK3_STATIC_LDFLAGS:INTERNAL=-L/usr/local/lib;-L/usr/lib/x86_64-linux-gnu;-L/usr/lib;-L/usr/lib/x86_64-linux-gnu;-lgtk-3;-latk-bridge-2.0;-latspi;-lXtst;-ldbus-1;-lsystemd;-Wl,--export-dynamic;-lgdk-3;-lXinerama;-lXi;-lXrandr;-lXcursor;-lXcomposite;-lXdamage;-lXfixes;-lxkbcommon;-lwayland-cursor;-lwayland-egl;-lwayland-client;-lm;-pthread;-lepoxy;-ldl;-lGL;-lEGL;-lpangocairo-1.0;-lm;-lpangoft2-1.0;-lm;-lharfbuzz-gobject;-lpango-1.0;-lm;-lfribidi;-lthai;-ldatrie;-lXft;-latk-1.0;-lcairo-gobject;-lcairo;-lz;-lpixman-1;-lfontconfig;-luuid;-lexpat;-lm;-lfreetype;-lbz2;-lharfbuzz;-lm;-lgraphite2;-lbrotlidec;-lbrotlicommon;-lxcb-shm;-lxcb-render;-lXrender;-lXext;-lX11;-lpthread;-lxcb;-lXau;-lXdmcp;-lgdk_pixbuf-2.0;-lm;-lpng16;-lm;-lz;-lm;-ljpeg;-ltiff;-lwebp;-lzstd;-llzma;-ljbig;-ljpeg;-ldeflate;-lz;-lm;-lgio-2.0;-lgmodule-2.0;-pthread;-lz;-lmount;-ldl;-lblkid;-lselinux;-lsepol;-lpcre2-8;-lgobject-2.0;-lffi;-lglib-2.0;-pthread;-lm;-lpcre
 GTK3_STATIC_LDFLAGS_OTHER:INTERNAL=-Wl,--export-dynamic;-pthread
 GTK3_STATIC_LIBDIR:INTERNAL=
-GTK3_STATIC_LIBRARIES:INTERNAL=gtk-3;atk-bridge-2.0;atspi;Xtst;dbus-1;systemd;gdk-3;Xinerama;Xi;Xrandr;Xcursor;Xcomposite;Xdamage;Xfixes;xkbcommon;wayland-cursor;wayland-egl;wayland-client;m;epoxy;dl;GL;EGL;pangocairo-1.0;m;pangoft2-1.0;m;harfbuzz-gobject;pango-1.0;m;fribidi;thai;datrie;Xft;harfbuzz;m;graphite2;atk-1.0;cairo-gobject;cairo;z;pixman-1;fontconfig;uuid;expat;m;freetype;bz2;xcb-shm;xcb-render;Xrender;Xext;X11;pthread;xcb;Xau;Xdmcp;gdk_pixbuf-2.0;m;png16;m;z;m;jpeg;tiff;webp;zstd;lzma;jbig;jpeg;deflate;z;m;gio-2.0;gmodule-2.0;z;mount;dl;blkid;selinux;sepol;pcre2-8;gobject-2.0;ffi;glib-2.0;m;pcre
+GTK3_STATIC_LIBRARIES:INTERNAL=gtk-3;atk-bridge-2.0;atspi;Xtst;dbus-1;systemd;gdk-3;Xinerama;Xi;Xrandr;Xcursor;Xcomposite;Xdamage;Xfixes;xkbcommon;wayland-cursor;wayland-egl;wayland-client;m;epoxy;dl;GL;EGL;pangocairo-1.0;m;pangoft2-1.0;m;harfbuzz-gobject;pango-1.0;m;fribidi;thai;datrie;Xft;atk-1.0;cairo-gobject;cairo;z;pixman-1;fontconfig;uuid;expat;m;freetype;bz2;harfbuzz;m;graphite2;brotlidec;brotlicommon;xcb-shm;xcb-render;Xrender;Xext;X11;pthread;xcb;Xau;Xdmcp;gdk_pixbuf-2.0;m;png16;m;z;m;jpeg;tiff;webp;zstd;lzma;jbig;jpeg;deflate;z;m;gio-2.0;gmodule-2.0;z;mount;dl;blkid;selinux;sepol;pcre2-8;gobject-2.0;ffi;glib-2.0;m;pcre
 GTK3_STATIC_LIBRARY_DIRS:INTERNAL=/usr/local/lib;/usr/lib/x86_64-linux-gnu;/usr/lib;/usr/lib/x86_64-linux-gnu
 GTK3_STATIC_LIBS:INTERNAL=
 GTK3_STATIC_LIBS_L:INTERNAL=
@@ -508,10 +498,10 @@ PANGO_STATIC_CFLAGS:INTERNAL=-pthread;-I/usr/local/include/freetype2;-I/usr/incl
 PANGO_STATIC_CFLAGS_I:INTERNAL=
 PANGO_STATIC_CFLAGS_OTHER:INTERNAL=-pthread
 PANGO_STATIC_INCLUDE_DIRS:INTERNAL=/usr/local/include/freetype2;/usr/include/pango-1.0;/usr/include/libmount;/usr/include/blkid;/usr/include/fribidi;/usr/include/cairo;/usr/include/pixman-1;/usr/include/uuid;/usr/include/harfbuzz;/usr/include/glib-2.0;/usr/lib/x86_64-linux-gnu/glib-2.0/include;/usr/include/libpng16
-PANGO_STATIC_LDFLAGS:INTERNAL=-L/usr/local/lib;-L/usr/lib/x86_64-linux-gnu;-L/usr/lib;-L/usr/lib/x86_64-linux-gnu;-lpango-1.0;-lm;-lgio-2.0;-lgmodule-2.0;-pthread;-lmount;-ldl;-lblkid;-lselinux;-lsepol;-lpcre2-8;-lfribidi;-lthai;-ldatrie;-lXft;-lcairo;-lz;-lpixman-1;-lfontconfig;-luuid;-lexpat;-lm;-lxcb-shm;-lxcb-render;-lXrender;-lXext;-lX11;-lpthread;-lxcb;-lXau;-lXdmcp;-lgobject-2.0;-lffi;-lharfbuzz;-lm;-lglib-2.0;-pthread;-lm;-lpcre;-lfreetype;-lbz2;-lpng16;-lm;-lz;-lm;-lz;-lgraphite2
+PANGO_STATIC_LDFLAGS:INTERNAL=-L/usr/local/lib;-L/usr/lib/x86_64-linux-gnu;-L/usr/lib;-L/usr/lib/x86_64-linux-gnu;-lpango-1.0;-lm;-lgio-2.0;-lgmodule-2.0;-pthread;-lmount;-ldl;-lblkid;-lselinux;-lsepol;-lpcre2-8;-lfribidi;-lthai;-ldatrie;-lXft;-lcairo;-lz;-lpixman-1;-lfontconfig;-luuid;-lexpat;-lm;-lxcb-shm;-lxcb-render;-lXrender;-lXext;-lX11;-lpthread;-lxcb;-lXau;-lXdmcp;-lgobject-2.0;-lffi;-lharfbuzz;-lm;-lglib-2.0;-pthread;-lm;-lpcre;-lfreetype;-lbz2;-lpng16;-lm;-lz;-lm;-lz;-lbrotlidec;-lbrotlicommon;-lgraphite2
 PANGO_STATIC_LDFLAGS_OTHER:INTERNAL=-pthread
 PANGO_STATIC_LIBDIR:INTERNAL=
-PANGO_STATIC_LIBRARIES:INTERNAL=pango-1.0;m;gio-2.0;gmodule-2.0;mount;dl;blkid;selinux;sepol;pcre2-8;fribidi;thai;datrie;Xft;cairo;z;pixman-1;fontconfig;uuid;expat;m;xcb-shm;xcb-render;Xrender;Xext;X11;pthread;xcb;Xau;Xdmcp;gobject-2.0;ffi;harfbuzz;m;glib-2.0;m;pcre;freetype;bz2;png16;m;z;m;z;graphite2
+PANGO_STATIC_LIBRARIES:INTERNAL=pango-1.0;m;gio-2.0;gmodule-2.0;mount;dl;blkid;selinux;sepol;pcre2-8;fribidi;thai;datrie;Xft;cairo;z;pixman-1;fontconfig;uuid;expat;m;xcb-shm;xcb-render;Xrender;Xext;X11;pthread;xcb;Xau;Xdmcp;gobject-2.0;ffi;harfbuzz;m;glib-2.0;m;pcre;freetype;bz2;png16;m;z;m;z;brotlidec;brotlicommon;graphite2
 PANGO_STATIC_LIBRARY_DIRS:INTERNAL=/usr/local/lib;/usr/lib/x86_64-linux-gnu;/usr/lib;/usr/lib/x86_64-linux-gnu
 PANGO_STATIC_LIBS:INTERNAL=
 PANGO_STATIC_LIBS_L:INTERNAL=
@@ -526,10 +516,51 @@ PANGO_pango_VERSION:INTERNAL=
 PKG_CONFIG_ARGN-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: PKG_CONFIG_EXECUTABLE
 PKG_CONFIG_EXECUTABLE-ADVANCED:INTERNAL=1
+SDL2_CFLAGS:INTERNAL=-D_REENTRANT;-I/usr/local/include;-I/usr/local/include/SDL2
+SDL2_CFLAGS_I:INTERNAL=
+SDL2_CFLAGS_OTHER:INTERNAL=-D_REENTRANT
+SDL2_FOUND:INTERNAL=1
+SDL2_INCLUDEDIR:INTERNAL=/usr/local/include
+SDL2_INCLUDE_DIRS:INTERNAL=/usr/local/include;/usr/local/include/SDL2
+SDL2_LDFLAGS:INTERNAL=-L/usr/local/lib;-Wl,-rpath,/usr/local/lib;-Wl,--enable-new-dtags;-lSDL2
+SDL2_LDFLAGS_OTHER:INTERNAL=-Wl,-rpath,/usr/local/lib;-Wl,--enable-new-dtags
+SDL2_LIBDIR:INTERNAL=/usr/local/lib
+SDL2_LIBRARIES:INTERNAL=SDL2
+SDL2_LIBRARY_DIRS:INTERNAL=/usr/local/lib
+SDL2_LIBS:INTERNAL=
+SDL2_LIBS_L:INTERNAL=
+SDL2_LIBS_OTHER:INTERNAL=
+SDL2_LIBS_PATHS:INTERNAL=
+SDL2_MODULE_NAME:INTERNAL=sdl2
+SDL2_PREFIX:INTERNAL=/usr/local
+SDL2_STATIC_CFLAGS:INTERNAL=-D_REENTRANT;-I/usr/local/include;-I/usr/local/include/SDL2
+SDL2_STATIC_CFLAGS_I:INTERNAL=
+SDL2_STATIC_CFLAGS_OTHER:INTERNAL=-D_REENTRANT
+SDL2_STATIC_INCLUDE_DIRS:INTERNAL=/usr/local/include;/usr/local/include/SDL2
+SDL2_STATIC_LDFLAGS:INTERNAL=-L/usr/local/lib;-Wl,-rpath,/usr/local/lib;-Wl,--enable-new-dtags;-lSDL2;-lm;-lpthread
+SDL2_STATIC_LDFLAGS_OTHER:INTERNAL=-Wl,-rpath,/usr/local/lib;-Wl,--enable-new-dtags
+SDL2_STATIC_LIBDIR:INTERNAL=
+SDL2_STATIC_LIBRARIES:INTERNAL=SDL2;m;pthread
+SDL2_STATIC_LIBRARY_DIRS:INTERNAL=/usr/local/lib
+SDL2_STATIC_LIBS:INTERNAL=
+SDL2_STATIC_LIBS_L:INTERNAL=
+SDL2_STATIC_LIBS_OTHER:INTERNAL=
+SDL2_STATIC_LIBS_PATHS:INTERNAL=
+SDL2_VERSION:INTERNAL=2.30.0
+SDL2_sdl2_INCLUDEDIR:INTERNAL=
+SDL2_sdl2_LIBDIR:INTERNAL=
+SDL2_sdl2_PREFIX:INTERNAL=
+SDL2_sdl2_VERSION:INTERNAL=
+__pkg_config_arguments_FREETYPE2:INTERNAL=REQUIRED;freetype2
 __pkg_config_arguments_GTK3:INTERNAL=REQUIRED;gtk+-3.0
 __pkg_config_arguments_PANGO:INTERNAL=REQUIRED;pango
+__pkg_config_arguments_SDL2:INTERNAL=REQUIRED;sdl2
+__pkg_config_checked_FREETYPE2:INTERNAL=1
 __pkg_config_checked_GTK3:INTERNAL=1
 __pkg_config_checked_PANGO:INTERNAL=1
+__pkg_config_checked_SDL2:INTERNAL=1
+//ADVANCED property for variable: pkgcfg_lib_FREETYPE2_freetype
+pkgcfg_lib_FREETYPE2_freetype-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: pkgcfg_lib_GTK3_atk-1.0
 pkgcfg_lib_GTK3_atk-1.0-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: pkgcfg_lib_GTK3_cairo
@@ -562,5 +593,7 @@ pkgcfg_lib_PANGO_gobject-2.0-ADVANCED:INTERNAL=1
 pkgcfg_lib_PANGO_harfbuzz-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: pkgcfg_lib_PANGO_pango-1.0
 pkgcfg_lib_PANGO_pango-1.0-ADVANCED:INTERNAL=1
-prefix_result:INTERNAL=/usr/lib/x86_64-linux-gnu
+//ADVANCED property for variable: pkgcfg_lib_SDL2_SDL2
+pkgcfg_lib_SDL2_SDL2-ADVANCED:INTERNAL=1
+prefix_result:INTERNAL=/usr/local/lib
 

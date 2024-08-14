@@ -30,27 +30,12 @@ namespace SIREngine::FileSystem {
         void Printf( const char *fmt, ... ) SIRENGINE_ATTRIBUTE(format(printf, 2, 3));
 
         virtual bool Open( const CFilePath& filePath ) override;
-        virtual void Close( void ) override
-        {
-            if ( m_hFileHandle != NULL ) {
-                fclose( m_hFileHandle );
-                m_hFileHandle = NULL;
-            }
-        }
+        virtual void Close( void ) override;
         virtual bool IsOpen( void ) const override
         { return m_hFileHandle != NULL; }
         virtual size_t GetPosition( void ) const override
         { return ftell( m_hFileHandle ); }
-        virtual size_t GetLength( void ) const override
-        {
-            const size_t pos = GetPosition();
-            
-            fseek( m_hFileHandle, 0L, SEEK_END );
-            const size_t len = ftell( m_hFileHandle );
-            fseek( m_hFileHandle, pos, SEEK_SET );
-
-            return len;
-        }
+        virtual size_t GetLength( void ) const override;
     };
 };
 

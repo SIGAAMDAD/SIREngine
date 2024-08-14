@@ -17,12 +17,14 @@ endif()
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(GTK3 REQUIRED gtk+-3.0)
 pkg_check_modules(PANGO REQUIRED pango)
+pkg_check_modules(FREETYPE2 REQUIRED freetype2)
+pkg_check_modules(SDL2 REQUIRED sdl2)
 
 # Include directories
-include_directories(${GTK3_INCLUDE_DIRS} ${PANGO_INCLUDE_DIRS})
+include_directories(${GTK3_INCLUDE_DIRS} ${PANGO_INCLUDE_DIRS} ${SDL2_INCLUDE_DIRS} ${FREETYPE2_INCLUDE_DIRS})
 
 # Link directories
-link_directories(${GTK3_LIBRARY_DIRS} ${PANGO_LIBRARY_DIRS})
+link_directories(${GTK3_LIBRARY_DIRS} ${PANGO_LIBRARY_DIRS} ${SDL2_LIBRARY_DIRS} ${FREETYPE2_LIBRARY_DIRS})
 
 # Source files
 set(SOURCE_FILES
@@ -83,11 +85,12 @@ add_executable(SIREngineApplication ${SOURCE_FILES})
 target_link_libraries(SIREngineApplication
 	${GTK3_LIBRARIES}
 	${PANGO_LIBRARIES}
+	${SDL2_LIBRARIES}
 	-lGL
-	-lSDL2
 	-lvulkan
 	${CMAKE_SOURCE_DIR}/libEASTL.a
 	-lbacktrace
+	-lfreetype
 	-lboost_atomic-mt-x64
 	-lboost_thread-mt-x64
 	-lboost_chrono-mt-x64

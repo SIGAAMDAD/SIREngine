@@ -2,7 +2,7 @@
 #define __GL_CONTEXT_H__
 
 #if defined(SIRENGINE_PRAGMA_ONCE_SUPPORTED)
-    #pragma once
+	#pragma once
 #endif
 
 #include <Engine/Core/SIREngine.h>
@@ -12,48 +12,51 @@
 #include "../RenderContext.h"
 
 namespace SIREngine::RenderLib::Backend::OpenGL {
-    class GLContext : public Backend::IRenderContext
-    {
-    public:
-        GLContext( const Application::ApplicationInfo_t& appInfo );
-        virtual ~GLContext() override;
+	class GLContext : public Backend::IRenderContext
+	{
+	public:
+		GLContext( const Application::ApplicationInfo_t& appInfo );
+		virtual ~GLContext() override;
 
-        virtual void Init( void ) override;
-        virtual void Shutdown( void ) override;
+		SIRENGINE_FORCEINLINE SDL_GLContext GetInternalContext( void )
+		{ return m_pGLContext; }
 
-        virtual void SetupShaderPipeline( void ) override;
-        virtual void SwapBuffers( void ) override;
-        virtual void BeginFrame( void ) override;
-        virtual void CompleteRenderPass( IRenderShaderPipeline *pShaderPipeline ) override;
+		virtual void Init( void ) override;
+		virtual void Shutdown( void ) override;
 
-        virtual void *Alloc( size_t nBytes, size_t nAligment = 16 ) override;
-        virtual void Free( void *pBuffer ) override;
+		virtual void SetupShaderPipeline( void ) override;
+		virtual void SwapBuffers( void ) override;
+		virtual void BeginFrame( void ) override;
+		virtual void CompleteRenderPass( IRenderShaderPipeline *pShaderPipeline ) override;
 
-        virtual const GPUMemoryUsage_t GetMemoryUsage( void ) override;
-        virtual void PrintMemoryInfo( void ) const override;
+		virtual void *Alloc( size_t nBytes, size_t nAligment = 16 ) override;
+		virtual void Free( void *pBuffer ) override;
 
-        virtual Backend::IRenderProgram *AllocateProgram( const RenderProgramInit_t& programInfo ) override;
-        virtual Backend::IRenderShader *AllocateShader( const RenderShaderInit_t& shaderInit ) override;
-        virtual Backend::IRenderBuffer *AllocateBuffer( GPUBufferType_t nType, GPUBufferUsage_t nUsage, uint64_t nSize ) override;
-        virtual Backend::IRenderTexture *AllocateTexture( const TextureInit_t& textureInfo ) override;
-    private:
-        virtual void GetGPUExtensionList( void ) override;
+		virtual const GPUMemoryUsage_t GetMemoryUsage( void ) override;
+		virtual void PrintMemoryInfo( void ) const override;
 
-        void InitGLProcs( void );
-        void CheckExtensionsSupport( void );
+		virtual Backend::IRenderProgram *AllocateProgram( const RenderProgramInit_t& programInfo ) override;
+		virtual Backend::IRenderShader *AllocateShader( const RenderShaderInit_t& shaderInit ) override;
+		virtual Backend::IRenderBuffer *AllocateBuffer( GPUBufferType_t nType, GPUBufferUsage_t nUsage, uint64_t nSize ) override;
+		virtual Backend::IRenderTexture *AllocateTexture( const TextureInit_t& textureInfo ) override;
+	private:
+		virtual void GetGPUExtensionList( void ) override;
 
-        char m_szGLSLVersion[1024];
-        char m_szDriverVersion[1024];
-        char m_szRendererString[1024];
-        char m_szVendorString[1024];
+		void InitGLProcs( void );
+		void CheckExtensionsSupport( void );
 
-        SDL_GLContext m_pGLContext;
+		char m_szGLSLVersion[1024];
+		char m_szDriverVersion[1024];
+		char m_szRendererString[1024];
+		char m_szVendorString[1024];
 
-        static CVector<GLTexture *> g_EvictionLRUCache;
-    };
+		SDL_GLContext m_pGLContext;
 
-    extern CVar<bool32> r_UsePixelBufferObjects;
-    extern CVar<bool32> r_UseMappedBufferObjects;
+		static CVector<GLTexture *> g_EvictionLRUCache;
+	};
+
+	extern CVar<bool32> r_UsePixelBufferObjects;
+	extern CVar<bool32> r_UseMappedBufferObjects;
 };
 
 #endif

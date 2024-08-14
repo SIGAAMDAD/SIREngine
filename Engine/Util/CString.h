@@ -42,6 +42,11 @@ public:
 //    inline operator const char *( void ) const
 //    { return internalLayout().BeginPtr(); }
 
+    inline const CString& operator=( char c )
+    {
+        base_type::operator=( c );
+        return *this;
+    }
     inline const CString& operator=( const CString& other )
     {
         base_type::operator=( other );

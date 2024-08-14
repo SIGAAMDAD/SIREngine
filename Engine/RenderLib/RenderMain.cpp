@@ -68,8 +68,15 @@ void CRenderer::Shutdown( void )
 
 void CRenderer::Frame( int64_t msec )
 {
-	Backend::g_pRenderContext->BeginFrame();
+}
 
+void CRenderer::BeginFrame( void )
+{
+	Backend::g_pRenderContext->BeginFrame();
+}
+
+void CRenderer::EndFrame( void )
+{
 	Backend::g_pRenderContext->SwapBuffers();
 }
 

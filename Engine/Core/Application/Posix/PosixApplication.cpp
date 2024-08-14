@@ -24,16 +24,6 @@ using namespace SIREngine::Application;
 char **myargv;
 int myargc;
 
-void *operator new[]( size_t nBytes, char const *, int, unsigned int, char const *, int )
-{
-    return ::operator new[]( nBytes );
-}
-
-void *operator new[]( size_t nBytes, unsigned long, unsigned long, char const*, int, unsigned int, char const*, int )
-{
-    return ::operator new[]( nBytes );
-}
-
 extern "C" void InitCrashHandler( void );
 extern "C" void DumpStacktrace( void );
 
@@ -325,6 +315,12 @@ size_t CPosixApplication::FileTell( void *hFile )
 
 size_t CPosixApplication::FileLength( void *hFile )
 {
+    const size_t pos = FileTell( hFile );
+    FileSeek( hFile, 0, SEEK_END );
+    const size_t nLength = FileTell( hFile );
+    FileSeek( hFile, pos, SEEK_SET );
+
+    return nLength;
 }
 
 /*
@@ -439,6 +435,19 @@ CVector<FileSystem::CFilePath> CPosixApplication::ListFiles( const FileSystem::C
     } );
 
     return files;
+}
+
+bool CPosixApplication::CreateDirectory( const char *pDirectoryPath )
+{
+    int ret = mkdir( pDirectoryPath, 0777 );
+    if ( mkdir( pDirectoryPath, 0777 ) != 0 ) {
+        if ( errno == EEXIST ) {
+            return true;
+        } else {
+            SIRENGINE_ERROR( "CreateDirectory: Error creating directory \"%s\" - %s", pDirectoryPath, strerror( errno ) );
+        }
+    }
+    return true;
 }
 
 void CPosixApplication::OnOutOfMemory( void )
@@ -635,16 +644,6 @@ uint32_t CPosixApplication::GetNumberOfCores( void )
             nCoreCount = GetNumberOfCoresIncludingHyperThreading();
         }
     }
-}
-
-static void *Mem_ClearedAlloc( size_t nMembers, size_t nCount )
-{
-    return memset( Mem_Alloc( nMembers * nCount, 16 ), 0, nMembers * nCount );
-}
-
-static void *Mem_Realloc( void *pOriginal, size_t newSize )
-{
-    return g_pMemAlloc->Realloc( pOriginal, newSize );
 }
 
 int main( int argc, char **argv )

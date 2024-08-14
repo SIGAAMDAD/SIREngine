@@ -2,7 +2,7 @@
 #define __SIRENGINE_MODULE_MANAGER_H__
 
 #if defined(SIRENGINE_PRAGMA_ONCE_SUPPORTED)
-    #pragma once
+	#pragma once
 #endif
 
 #include <Engine/Util/CVector.h>
@@ -13,21 +13,22 @@
 class CModuleInfo
 {
 public:
-    CModuleInfo( void );
-    ~CModuleInfo();
+	CModuleInfo( void );
+	~CModuleInfo();
 
-    template<typename Fn>
-    void LoadProc( Fn*&& fn );
+	template<typename Fn>
+	void LoadProc( Fn*&& fn );
 private:
-    char m_szName[ SIRENGINE_MAX_OSPATH ];
+	char m_szName[ SIRENGINE_MAX_OSPATH ];
+//    CVector<> m_LoadedProcs;
 };
 
 class CModuleManager
 {
 public:
-    eastl::shared_ptr<CModuleInfo> GetModule( const CString& moduleName );
+	eastl::shared_ptr<CModuleInfo> GetModule( const CString& moduleName );
 private:
-    CVector<eastl::shared_ptr<CModuleInfo>> m_LoadedModules;
+	CVector<eastl::shared_ptr<CModuleInfo>> m_LoadedModules;
 };
 
 #endif

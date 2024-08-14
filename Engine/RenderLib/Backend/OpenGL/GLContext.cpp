@@ -110,6 +110,7 @@ GLContext::~GLContext()
 
 void GLContext::Init( void )
 {
+#if !defined(SIRENGINE_BUILD_RENDERLIB_GLFW3)
 	m_pGLContext = SDL_GL_CreateContext( m_pWindow );
 	if ( !m_pGLContext ) {
 		SIRENGINE_ERROR( "SDL_GL_CreateContext failed: %s", SDL_GetError() );
@@ -131,6 +132,26 @@ void GLContext::Init( void )
 		SDL_GL_SetAttribute( SDL_GL_CONTEXT_MAJOR_VERSION, r_GLVersionMajor.GetValue() );
 		SDL_GL_SetAttribute( SDL_GL_CONTEXT_MINOR_VERSION, r_GLVersionMinor.GetValue() );
 	}
+#else
+	glfwInitHint( GLFW_DOUBLEBUFFER, GLFW_TRUE );
+	glfwInitHint( GLFW_DEPTH_BITS, 24 );
+	glfwInitHint( GLFW_STENCIL_BITS, 8 );
+	glfwInitHint( GLFW_CONTEXT_VERSION_MAJOR, r_GLVersionMajor.GetValue() );
+	glfwInitHint( GLFW_CONTEXT_VERSION_MINOR, r_GLVersionMinor.GetValue() );
+	glfwInitHint( GLFW_CONTEXT_CREATION_API, GLFW_NATIVE_CONTEXT_API );
+	if ( glfwInit() == GLFW_FALSE ) {
+		SIRENGINE_ERROR( "glfwInit failed" );
+	}
+
+	m_pWindow = glfwCreateWindow( m_AppInfo.nWindowWidth, m_AppInfo.nWindowHeight, m_AppInfo.pszWindowName, NULL, NULL );
+	if ( !m_pWindow ) {
+		const char *description;
+		glfwGetError( &description );
+		SIRENGINE_ERROR( "glfwCreateWindow failed: %s", description );
+	}
+
+	glfwMakeContextCurrent( m_pWindow );
+#endif
 	
 	InitGLProcs();
 	SIRENGINE_LOG( "Loaded GL Procs" );
@@ -157,9 +178,15 @@ void GLContext::Init( void )
 
 void GLContext::Shutdown( void )
 {
+#if defined(SIRENGINE_BUILD_RENDERLIB_GLFW3)
+	glfwMakeContextCurrent( NULL );
+	glfwDestroyWindow( m_pWindow );
+#else
+	SDL_GL_MakeCurrent( m_pWindow, NULL );
 	if ( m_pGLContext ) {
 		SDL_GL_DeleteContext( m_pGLContext );
 	}
+#endif
 }
 
 void GLContext::CheckExtensionsSupport( void )
@@ -183,19 +210,19 @@ void GLContext::SetupShaderPipeline( void )
 
 void GLContext::BeginFrame( void )
 {
-	nglClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
-
-	nglBegin( GL_TRIANGLE_FAN );
-	nglVertex3f( -0.5f,  0.5f, 0.0f );
-	nglVertex3f(  0.5f,  0.5f, 0.0f );
-	nglVertex3f(  0.5f, -0.5f, 0.0f );
-	nglVertex3f( -0.5f, -0.5f, 0.0f );
-	nglEnd();
+	nglClear( GL_COLOR_BUFFER_BIT );
+	nglClearColor( 0.1f, 0.1f, 0.1f, 1.0f );
+	nglViewport( 0, 0, m_AppInfo.nWindowWidth, m_AppInfo.nWindowHeight );
 }
 
 void GLContext::SwapBuffers( void )
 {
+#if !defined(SIRENGINE_BUILD_RENDERLIB_GLFW3)
+	SDL_GL_MakeCurrent( m_pWindow, m_pGLContext );
 	SDL_GL_SwapWindow( m_pWindow );
+#else
+	glfwSwapBuffers( m_pWindow );
+#endif
 
 	for ( uint32_t nEvictionCount = 0; g_EvictionLRUCache.size() > r_GLTetureMinLRUSize.GetValue(); nEvictionCount++ ) {
 		GLTexture *pTexture = g_EvictionLRUCache.back();

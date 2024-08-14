@@ -410,13 +410,13 @@ void CConsoleManager::RegisterCVar( IConsoleVar *pCvar )
 }
 */
 
-void CConsoleManager::LoadConfig( void )
+void CConsoleManager::LoadConfig( const FileSystem::CFilePath& filePath )
 {
     const char *pSectionName;
 
     SIRENGINE_LOG( "Loading Engine Configuration..." );
     
-    m_pConfigLoader = new Serialization::CIniSerializer( "EngineData.ini" );
+    m_pConfigLoader = new Serialization::CIniSerializer( filePath );
 
     for ( auto& it : m_ObjectList ) {
         if ( !it.second->AsVariable() ) {
@@ -455,7 +455,7 @@ void CConsoleManager::LoadConfig( void )
     SIRENGINE_LOG( "Done." );
 }
 
-void CConsoleManager::SaveConfig( void ) const
+void CConsoleManager::SaveConfig( const FileSystem::CFilePath& filePath ) const
 {
     SIRENGINE_LOG( "Saving Engine Configuration..." );
     for ( const auto& var : m_ObjectList ) {
@@ -471,7 +471,7 @@ void CConsoleManager::SaveConfig( void ) const
         m_pConfigLoader->SetValue( GetConfigSectionName( pCvar->GetGroup() ), pCvar->GetName(), pCvar->GetStringValue() );
     }
 
-    if ( !m_pConfigLoader->Save( "Config/EngineData.ini" ) ) {
+    if ( !m_pConfigLoader->Save( filePath ) ) {
         SIRENGINE_WARNING( "Error saving engine configuration file!" );
     }
 }

@@ -19,3 +19,10 @@
 [submodule "inih"]
 	path = inih
 	url = https://github.com/benhoyt/inih.git
+[submodule "imgui-node-editor"]
+	path = imgui-node-editor
+	url = https://github.com/thedmd/imgui-node-editor.git
+[submodule "imgui"]
+	path = imgui
+	url = https://github.com/ocornut/imgui.git
+	branch = docking

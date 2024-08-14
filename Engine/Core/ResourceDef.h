@@ -14,6 +14,7 @@ typedef enum {
     RES_SHADER,
     RES_SOUND,
     RES_MAP,
+    RES_FONT,
 
     RES_INVALID
 } resourceType_t;

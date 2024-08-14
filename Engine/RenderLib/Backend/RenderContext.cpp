@@ -78,6 +78,7 @@ static const char *GetContextType( unsigned flags )
 IRenderContext::IRenderContext( const ApplicationInfo_t& appInfo )
     : m_AppInfo( appInfo )
 {
+#if !defined(SIRENGINE_BUILD_RENDERLIB_GLFW3)
     unsigned windowFlags;
 
     windowFlags = 0;
@@ -117,6 +118,10 @@ IRenderContext::IRenderContext( const ApplicationInfo_t& appInfo )
     SIRENGINE_LOG( " Height: %u", m_AppInfo.nWindowHeight );
     SIRENGINE_LOG( " ContextType: %s", GetContextType( windowFlags ) );
 
+#if defined(SIRENGINE_BUILD_EDITOR)
+    windowFlags |= SDL_WINDOW_SHOWN;
+#endif
+
     m_pWindow = SDL_CreateWindow(
         m_AppInfo.pszWindowName,
         m_AppInfo.nWindowPosX, m_AppInfo.nWindowPosY,
@@ -125,12 +130,16 @@ IRenderContext::IRenderContext( const ApplicationInfo_t& appInfo )
     if ( !m_pWindow ) {
         SIRENGINE_ERROR( "SDL_CreateWindow failed: %s", SDL_GetError() );
     }
+#else
+#endif
 }
 
 IRenderContext::~IRenderContext() {
+#if !defined(SIRENGINE_BUILD_RENDERLIB_GLFW3)
     if ( m_pWindow != NULL ) {
         SDL_DestroyWindow( m_pWindow );
     }
+#endif
 }
 
 extern CVar<bool32> e_Fullscreen;

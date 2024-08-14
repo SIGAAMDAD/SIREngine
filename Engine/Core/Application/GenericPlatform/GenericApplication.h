@@ -99,6 +99,7 @@ namespace SIREngine::Application {
 		virtual void CloseDLL( void *pDLLHandle ) = 0;
 		virtual void *GetProcAddress( void *pDLLHandle, const char *pProcName ) = 0;
 
+
 		virtual size_t GetAllocSize( void *pBuffer ) const = 0;
 		virtual void *VirtualAlloc( size_t *nSize, size_t nAlignment ) = 0;
 		virtual void VirtualFree( void *pBuffer ) = 0;
@@ -126,6 +127,8 @@ namespace SIREngine::Application {
 
 		virtual void ThreadStart( void *pThread, SIREngine::CThread *, void (SIREngine::CThread::*pFunction)( void ) ) = 0;
 		virtual void ThreadJoin( void *pThread, SIREngine::CThread *, uint64_t nTimeout = SIRENGINE_UINT64_MAX ) = 0;
+
+		virtual bool CreateDirectory( const char *pDirectoryPath ) = 0;
 
 		virtual double GetCPUFrequency( void ) = 0;
 		virtual uint32_t GetNumberOfCores( void ) = 0;

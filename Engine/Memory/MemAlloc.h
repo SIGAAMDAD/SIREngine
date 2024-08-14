@@ -38,7 +38,9 @@ public:
 };
 
 #ifdef USE_ARENA_ALLOC
-extern IMemAlloc *g_pMemAlloc;
+extern IMemAlloc *g_pMemAlloc; // medium heap
+extern IMemAlloc *g_pSmallHeap;
+extern IMemAlloc *g_pLargeHeap;
 #elif defined(USE_SMMALLOC)
 #include <Engine/Core/SmMalloc/smmalloc.h>
 extern sm_allocator g_pMemAlloc;

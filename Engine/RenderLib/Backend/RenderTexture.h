@@ -20,14 +20,16 @@ namespace SIREngine::RenderLib::Backend {
 
         static IRenderTexture *Create( const TextureInit_t& textureInfo );
 
-        virtual void StreamBuffer( void ) = 0;
+        virtual void StreamBuffer( void )
+        { }
 
         virtual const char *GetName( void ) const override { return m_szName; }
         virtual bool IsValid( void ) const override { return false; }
         virtual void Reload( void ) override { }
         virtual void Release( void ) override { }
     protected:
-        virtual void Upload( const TextureInit_t& textureInfo ) = 0;
+        virtual void Upload( const TextureInit_t& textureInfo )
+        { }
 
         uint32_t m_nWidth;
         uint32_t m_nHeight;

@@ -13,8 +13,8 @@ namespace SIREngine::Events {
 	class CControllerStatusEvent : public IEventBase
 	{
 	public:
-		CControllerStatusEvent( const SDL_Event& eventData, bool bStatus )
-			: m_bStatus( bStatus ), m_nDeviceID( eventData.cdevice.which )
+		CControllerStatusEvent( bool bStatus, int32_t nDeviceID )
+			: m_bStatus( bStatus ), m_nDeviceID( nDeviceID )
 		{ }
 		virtual ~CControllerStatusEvent() override
 		{ }

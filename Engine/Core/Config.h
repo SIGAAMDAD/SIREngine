@@ -5,6 +5,19 @@
     #pragma once
 #endif
 
+#if !defined(SIRENGINE_BUILD_TYPE)
+    #error "SIRENGINE_BUILD_TYPE must be defined!"
+#endif
+
+#define SIRENGINE_BUILD_TYPE_ENGINE 0
+#define SIRENGINE_BUILD_TYPE_EDITOR 1
+
+#if SIRENGINE_BUILD_TYPE == SIRENGINE_BUILD_TYPE_ENGINE
+    #define SIRENGINE_BUILD_ENGINE 1
+#elif SIRENGINE_BUILD_TYPE == SIRENGINE_BUILD_TYPE_EDITOR
+    #define SIRENGINE_BUILD_EDITOR 1
+#endif
+
 #if !defined(SIRENGINE_MALLOC_OVERRIDE)
     #define SIRENGINE_MALLOC( size ) Mem_Alloc( size )
 #endif

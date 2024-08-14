@@ -82,14 +82,14 @@ public:
 	void AddEventListener( const eastl::shared_ptr<IEventListener>& listener );
 	void PushEvent( uint64_t nTime, const CEventData& pData );
 
-	static CEventData CreateKeyEvent( const SDL_Event& eventData, bool bState, KeyNum_t nKeyID );
-	static CEventData CreateWindowEvent( const SDL_Event& eventData, WindowEventType_t nEventType, int32_t nValue1, int32_t nValue2 );
-	static CEventData CreateGamepadEvent( const SDL_Event& eventData );
-	static CEventData CreateJoystickEvent( const SDL_Event& eventData );
-	static CEventData CreateTouchEvent( const SDL_Event& eventData, float x, float y, uint32_t nFingerState );
-	static CEventData CreateMouseEvent( const SDL_Event& eventData, int x, int y );
-	static CEventData CreateActionEvent( const SDL_Event& eventData );
-	static CEventData CreateControllerStatusEvent( const SDL_Event& eventData, bool bStatus );
+	static CEventData CreateKeyEvent( bool bState, KeyNum_t nKeyID );
+	static CEventData CreateWindowEvent( WindowEventType_t nEventType, int32_t nValue1, int32_t nValue2 );
+	static CEventData CreateGamepadEvent( void );
+	static CEventData CreateJoystickEvent( void );
+	static CEventData CreateTouchEvent( float x, float y, uint32_t nFingerState );
+	static CEventData CreateMouseEvent( int x, int y );
+	static CEventData CreateActionEvent( void );
+	static CEventData CreateControllerStatusEvent( bool bStatus, int32_t nDeviceID );
 	static CEventData CreateEmptyEvent( void );
 
 	SIRENGINE_FORCEINLINE static CEventManager& Get( void )

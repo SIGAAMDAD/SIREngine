@@ -6,6 +6,10 @@
 #include <Engine/Core/Events/EventManager.h>
 #include <Engine/Core/Input/InputManager.h>
 
+#if defined(SIRENGINE_BUILD_EDITOR)
+#include <Editor/Application/Application.h>
+#endif
+
 using namespace SIREngine;
 using namespace SIREngine::Application;
 using namespace SIREngine::Events;
@@ -386,7 +390,6 @@ public:
 	}
 };
 
-
 IGenericApplication::IGenericApplication( void )
 {
 }
@@ -397,7 +400,7 @@ IGenericApplication::~IGenericApplication()
 
 void IGenericApplication::Shutdown( void )
 {
-	CConsoleManager::Get().SaveConfig();
+	CConsoleManager::Get().SaveConfig( "Config/EngineData.ini" );
 
 	for ( auto& it : m_ApplicationSystems ) {
 		it.second->Shutdown();
@@ -435,6 +438,7 @@ static int LauncherWindow( void )
 		SIRENGINE_ERROR( "Failed initializing GTK+ 3.0!" );
 	}
 
+#if defined(SIRENGINE_BUILD_ENGINE)
 	ZUIWindow window( "SIREngine Launcher" );
 	ZUIVBox vbox;
 
@@ -523,6 +527,9 @@ static int LauncherWindow( void )
 	}
 
 	return -1;
+#else
+	return 1;
+#endif
 }
 
 bool IGenericApplication::CheckCommandParm( const CString& name ) const
@@ -559,12 +566,17 @@ void IGenericApplication::Init( void )
 	//
 	g_pFileSystem = new FileSystem::CFileSystem();
 
-	CConsoleManager::Get().LoadConfig();
+	CConsoleManager::Get().LoadConfig( "EngineData.ini" );
 	CLogManager::LaunchLoggingThread();
 	if ( LauncherWindow() == -1 ) {
 		Shutdown();
 		return;
 	}
+
+#if defined(SIRENGINE_BUILD_EDITOR)
+	m_ApplicationInfo.pszAppName = "Valden";
+	m_ApplicationInfo.pszWindowName = "Valden";
+#endif
 
 	e_MaxFPS.Register();
 	e_FrameNumber.Register();
@@ -572,10 +584,13 @@ void IGenericApplication::Init( void )
 
 	g_pRenderLib = new CRenderer();
 
-	m_ApplicationSystems.reserve( 2 );
+	m_ApplicationSystems.reserve( 4 );
 	m_ApplicationSystems.try_emplace( CEventManager::Get().GetName(), eastl::addressof( CEventManager::Get() ) );
 	m_ApplicationSystems.try_emplace( CInputManager::Get().GetName(), eastl::addressof( CInputManager::Get() ) );
 	m_ApplicationSystems.try_emplace( g_pRenderLib->GetName(), g_pRenderLib );
+#if defined(SIRENGINE_BUILD_EDITOR)
+	m_ApplicationSystems.try_emplace( Valden::CEditorApplication::Get().GetName(), eastl::addressof( Valden::CEditorApplication::Get() ) );
+#endif
 
 	for ( auto& it : m_ApplicationSystems ) {
 		it.second->Init();
@@ -584,6 +599,14 @@ void IGenericApplication::Init( void )
 	CEventManager::Get().AddEventListener( eastl::make_shared<CEventListener>(
 		"ApplicationListener", EventType_Quit, IGenericApplication::QuitGame
 	) );
+
+	SIRENGINE_LOG( "SIREngine MetaData:" );
+	SIRENGINE_LOG( "  Version: %s", SIRENGINE_VERSION_STRING );
+#if defined(SIRENGINE_BUILD_ENGINE)
+	SIRENGINE_LOG( "  SIRENGINE_BUILD_TYPE: Engine" );
+#elif defined(SIRENGINE_BUILD_EDITOR)
+	SIRENGINE_LOG( "  SIRENGINE_BUILD_TYPE: Editor" );
+#endif
 }
 
 void IGenericApplication::ShowErrorWindow( const char *pErrorString )
@@ -608,9 +631,11 @@ void IGenericApplication::ShowErrorWindow( const char *pErrorString )
 void IGenericApplication::Run( void )
 {
 	while ( 1 ) {
+		g_pRenderLib->BeginFrame();
 		for ( auto& it : m_ApplicationSystems ) {
 			it.second->Frame( 0 );
 		}
+		g_pRenderLib->EndFrame();
 	}
 }
 

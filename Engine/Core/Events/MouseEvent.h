@@ -13,7 +13,7 @@ namespace SIREngine::Events {
 	class CMouseEvent : public IEventBase
 	{
 	public:
-		CMouseEvent( const SDL_Event& eventData, int x, int y )
+		CMouseEvent( int x, int y )
 			: m_Delta( x, y )
 		{ }
 		virtual ~CMouseEvent() override

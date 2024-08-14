@@ -195,9 +195,9 @@ void SIRENGINE_ATTRIBUTE(format(printf, 3, 4)) CLogManager::LogWarning( const Lo
 void SIRENGINE_ATTRIBUTE(format(printf, 3, 4)) CLogManager::SendNotification( const LogData_t& data,
 	const char *fmt, ... )
 {
-	if ( e_LogLevel.GetValue() < ELogLevel::Spam ) {
-		return;
-	}
+//	if ( e_LogLevel.GetValue() < ELogLevel::Spam ) {
+//		return;
+//	}
 
 	va_list argptr;
 	char msg[8192];

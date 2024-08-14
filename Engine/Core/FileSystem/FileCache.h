@@ -28,9 +28,9 @@ namespace SIREngine::FileSystem {
         CFileCache( const CFilePath& directory );
         ~CFileCache();
 
-        inline const FileCacheEntry_t *GetFile( const CFilePath& filePath ) const
+        inline FileCacheEntry_t *GetFile( const CFilePath& filePath )
         {
-            const auto& it = m_CacheList.find( filePath );
+            auto it = m_CacheList.find( filePath );
             if ( it != m_CacheList.cend() ) {
                 return &it->second;
             }

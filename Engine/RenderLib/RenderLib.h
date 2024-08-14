@@ -41,6 +41,9 @@ namespace SIREngine::RenderLib {
         virtual void Shutdown( void ) override;
         virtual void Frame( int64_t msec ) override;
 
+        void BeginFrame( void );
+        void EndFrame( void );
+
         virtual void SaveGame( void ) override;
         virtual void LoadGame( void ) override;
     private:

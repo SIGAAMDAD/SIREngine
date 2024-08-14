@@ -1,0 +1,8 @@
+/home/noah/Projects/SIR-Engine/Editor/CMakeFiles/ValdenApp.dir
+/home/noah/Projects/SIR-Engine/Editor/CMakeFiles/clean-all.dir
+/home/noah/Projects/SIR-Engine/Editor/CMakeFiles/edit_cache.dir
+/home/noah/Projects/SIR-Engine/Editor/CMakeFiles/rebuild_cache.dir
+/home/noah/Projects/SIR-Engine/Editor/CMakeFiles/list_install_components.dir
+/home/noah/Projects/SIR-Engine/Editor/CMakeFiles/install.dir
+/home/noah/Projects/SIR-Engine/Editor/CMakeFiles/install/local.dir
+/home/noah/Projects/SIR-Engine/Editor/CMakeFiles/install/strip.dir

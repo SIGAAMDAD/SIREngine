@@ -1,12 +1,20 @@
 #include "EventManager.h"
 #include <Engine/RenderLib/Backend/RenderContext.h>
+#if !defined(SIRENGINE_BUILD_RENDERLIB_GLFW3)
 #include <SDL2/SDL_events.h>
+#else
+#include <GLFW/glfw3.h>
+#include <imgui/backends/imgui_impl_glfw.h>
+#endif
 #include "KeyEvent.h"
 #include "WindowEvent.h"
 #include "TouchEvent.h"
 #include "ControllerStatusEvent.h"
 #include "MouseEvent.h"
 #include "GamepadEvent.h"
+#if defined(SIRENGINE_BUILD_EDITOR)
+#include <imgui/backends/imgui_impl_sdl2.h>
+#endif
 
 using namespace SIREngine;
 using namespace SIREngine::Events;
@@ -43,6 +51,37 @@ void CEventManager::Init( void )
 	m_nBufferedEventsHead = 0;
 	m_nBufferedEventsTail = 0;
 	m_EventBuffer.resize( g_nMaxPushedEvents );
+
+#if defined(SIRENGINE_BUILD_RENDERLIB_GLFW3)
+//	glfwSetCursorPosCallback( RenderLib::Backend::GetRenderContext()->GetWindowHandle(),
+//		[]( GLFWwindow *pWindow, double xpos, double ypos ) -> void {
+//			CEventManager::Get().PushEvent( 0, CreateMouseEvent( xpos, ypos ) );
+//		} );
+//	glfwSetKeyCallback( RenderLib::Backend::GetRenderContext()->GetWindowHandle(),
+//		[]( GLFWwindow *pWindow, int key, int scancode, int action, int mods ) -> void {
+//			CEventManager::Get().PushEvent( 0, CreateKeyEvent( action == GLFW_PRESS, CKeyEvent::GLFW3KeyToEngineKey( key, mods ) ) );
+//		} );
+	glfwSetWindowCloseCallback( RenderLib::Backend::GetRenderContext()->GetWindowHandle(),
+		[]( GLFWwindow *pWindow ) -> void {
+			CEventManager::Get().PushEvent( 0, CreateWindowEvent( WindowEvent_Closed, 0, 0 ) );
+		} );
+	glfwSetWindowMaximizeCallback( RenderLib::Backend::GetRenderContext()->GetWindowHandle(),
+		[]( GLFWwindow *pWindow, int maximized ) -> void {
+			CEventManager::Get().PushEvent( 0, CreateWindowEvent( maximized ? WindowEvent_Maximized : WindowEvent_Minimized, 0, 0 ) );
+		} );
+	glfwSetWindowPosCallback( RenderLib::Backend::GetRenderContext()->GetWindowHandle(),
+		[]( GLFWwindow *pWindow, int xpos, int ypos ) -> void {
+			CEventManager::Get().PushEvent( 0, CreateWindowEvent( WindowEvent_Moved, xpos, ypos ) );
+		} );
+	glfwSetWindowSizeCallback( RenderLib::Backend::GetRenderContext()->GetWindowHandle(),
+		[]( GLFWwindow *pWindow, int width, int height ) -> void {
+			CEventManager::Get().PushEvent( 0, CreateWindowEvent( WindowEvent_Resized, width, height ) );
+		} );
+//	glfwSetScrollCallback( RenderLib::Backend::GetRenderContext()->GetWindowHandle(),
+//		[]( GLFWwindow *pWindow, double xoffset, double yoffset ) -> void {
+//			CEventManager::Get().PushEvent( 0, CreateWindowEvent( maximized ? WindowEvent_Maximized : WindowEvent_Minimized, 0, 0 ) );
+//		} );
+#endif
 }
 
 void CEventManager::Shutdown( void )
@@ -53,7 +92,11 @@ void CEventManager::Frame( int64_t msec )
 {
 	// we will be using SDL until further notice
 
+#if !defined(SIRENGINE_BUILD_RENDERLIB_GLFW3)
 	PumpEvents();
+#else
+	glfwPollEvents();
+#endif
 
 	while ( 1 ) {
 		const CEventData& event = GetEvent();
@@ -86,7 +129,11 @@ const CEventData& CEventManager::GetEvent( void )
 		return m_EventBuffer[ ( m_nBufferedEventsTail++ ) & ( g_nMaxPushedEvents - 1 ) ];
 	}
 
+#if !defined(SIRENGINE_BUILD_RENDERLIB_GLFW3)
 	PumpEvents();
+#else
+	glfwPollEvents();
+#endif
 
 	nEventTime = time( NULL );
 
@@ -124,17 +171,17 @@ void CEventManager::PushEvent( uint64_t nTime, const CEventData& pData )
 	m_nBufferedEventsHead++;
 }
 
-CEventData CEventManager::CreateKeyEvent( const SDL_Event& eventData, bool bState, KeyNum_t nKeyID )
+CEventData CEventManager::CreateKeyEvent( bool bState, KeyNum_t nKeyID )
 {
-	return CKeyEvent( eventData, bState, nKeyID );
+	return CKeyEvent( bState, nKeyID );
 }
 
-CEventData CEventManager::CreateWindowEvent( const SDL_Event& eventData, WindowEventType_t nEventType, int32_t nValue1, int32_t nValue2 )
+CEventData CEventManager::CreateWindowEvent( WindowEventType_t nEventType, int32_t nValue1, int32_t nValue2 )
 {
-	return CWindowEvent( eventData, nEventType, nValue1, nValue2 );
+	return CWindowEvent( nEventType, nValue1, nValue2 );
 }
 
-CEventData CEventManager::CreateTouchEvent( const SDL_Event& eventData, float x, float y, uint32_t nFingerState )
+CEventData CEventManager::CreateTouchEvent( float x, float y, uint32_t nFingerState )
 {
 	FingerState_t nState;
 	switch ( nFingerState ) {
@@ -149,17 +196,17 @@ CEventData CEventManager::CreateTouchEvent( const SDL_Event& eventData, float x,
 	default:
 		SIRENGINE_ERROR( "CEventManager::CreateTouchEvent: invalid touch finger event type %u", nFingerState );
 	};
-	return CTouchEvent( eventData, x, y, nState );
+	return CTouchEvent( x, y, nState );
 }
 
-CEventData CEventManager::CreateControllerStatusEvent( const SDL_Event& eventData, bool bStatus )
+CEventData CEventManager::CreateControllerStatusEvent( bool bStatus, int32_t nDeviceID )
 {
-	return CControllerStatusEvent( eventData, bStatus );
+	return CControllerStatusEvent( bStatus, nDeviceID );
 }
 
-CEventData CEventManager::CreateMouseEvent( const SDL_Event& eventData, int x, int y )
+CEventData CEventManager::CreateMouseEvent( int x, int y )
 {
-	return CMouseEvent( eventData, x, y );
+	return CMouseEvent( x, y );
 }
 
 CEventData CEventManager::CreateEmptyEvent( void )
@@ -167,11 +214,15 @@ CEventData CEventManager::CreateEmptyEvent( void )
 	return CEventData( IEventBase() );
 }
 
+#if !defined(SIRENGINE_BUILD_RENDERLIB_GLFW3)
 void CEventManager::PumpEvents( void )
 {
 	SDL_Event event;
 
 	while ( SDL_PollEvent( &event ) ) {
+#if defined(SIRENGINE_BUILD_EDITOR)
+		ImGui_ImplSDL2_ProcessEvent( &event );
+#endif
 		switch ( event.type ) {
 		case SDL_QUIT:
 			PushEvent( 0, g_QuitEvent );
@@ -183,36 +234,36 @@ void CEventManager::PumpEvents( void )
 				break; // is this just a fancy SDL_QUIT?
 			
 			case SDL_WINDOWEVENT_FOCUS_GAINED:
-				PushEvent( 0, CreateWindowEvent( event, WindowEvent_KeyboardFocus, true, 0 ) );
+				PushEvent( 0, CreateWindowEvent( WindowEvent_KeyboardFocus, true, 0 ) );
 				break;
 			case SDL_WINDOWEVENT_FOCUS_LOST:
-				PushEvent( 0, CreateWindowEvent( event, WindowEvent_KeyboardFocus, false, 0 ) );
+				PushEvent( 0, CreateWindowEvent( WindowEvent_KeyboardFocus, false, 0 ) );
 				break;
 			
 			case SDL_WINDOWEVENT_LEAVE:
-				PushEvent( 0, CreateWindowEvent( event, WindowEvent_MouseFocus, false, 0 ) );
+				PushEvent( 0, CreateWindowEvent( WindowEvent_MouseFocus, false, 0 ) );
 				break;
 			case SDL_WINDOWEVENT_ENTER:
-				PushEvent( 0, CreateWindowEvent( event, WindowEvent_MouseFocus, true, 0 ) );
+				PushEvent( 0, CreateWindowEvent( WindowEvent_MouseFocus, true, 0 ) );
 				break;
 
 			// these are triggered by the same action
 			case SDL_WINDOWEVENT_HIDDEN:
 			case SDL_WINDOWEVENT_MINIMIZED:
-				PushEvent( 0, CreateWindowEvent( event, WindowEvent_Minimized, 0, 0 ) );
+				PushEvent( 0, CreateWindowEvent( WindowEvent_Minimized, 0, 0 ) );
 				break;
 			
 			case SDL_WINDOWEVENT_SHOWN:
-				PushEvent( 0, CreateWindowEvent( event, WindowEvent_Shown, 0, 0 ) );
+				PushEvent( 0, CreateWindowEvent( WindowEvent_Shown, 0, 0 ) );
 				break;
 			case SDL_WINDOWEVENT_MAXIMIZED:
-				PushEvent( 0, CreateWindowEvent( event, WindowEvent_Maximized, 0, 0 ) );
+				PushEvent( 0, CreateWindowEvent( WindowEvent_Maximized, 0, 0 ) );
 				break;
 			case SDL_WINDOWEVENT_RESIZED:
-				PushEvent( 0, CreateWindowEvent( event, WindowEvent_Resized, event.window.data1, event.window.data2 ) );
+				PushEvent( 0, CreateWindowEvent( WindowEvent_Resized, event.window.data1, event.window.data2 ) );
 				break;
 			case SDL_WINDOWEVENT_MOVED:
-				PushEvent( 0, CreateWindowEvent( event, WindowEvent_Moved, event.window.data1, event.window.data2 ) );
+				PushEvent( 0, CreateWindowEvent( WindowEvent_Moved, event.window.data1, event.window.data2 ) );
 				break;
 			};
 			break; }
@@ -237,17 +288,17 @@ void CEventManager::PumpEvents( void )
 			break;
 
 		case SDL_KEYDOWN:
-			PushEvent( 0, CreateKeyEvent( event, true, event.key.keysym.sym ) );
+			PushEvent( 0, CreateKeyEvent( true, event.key.keysym.sym ) );
 			break;
 		case SDL_KEYUP:
-			PushEvent( 0, CreateKeyEvent( event, false, event.key.keysym.sym ) );
+			PushEvent( 0, CreateKeyEvent( false, event.key.keysym.sym ) );
 			break;
 		case SDL_TEXTEDITING:
 		case SDL_TEXTINPUT:
 			break;
 		
 		case SDL_MOUSEMOTION:
-			PushEvent( 0, CreateMouseEvent( event, event.motion.x, event.motion.y ) );
+			PushEvent( 0, CreateMouseEvent( event.motion.x, event.motion.y ) );
 			break;
 		case SDL_MOUSEBUTTONDOWN:
 		case SDL_MOUSEBUTTONUP: {
@@ -260,11 +311,11 @@ void CEventManager::PumpEvents( void )
 			case SDL_BUTTON_X1:		b = Key_MouseButton4; break;
 			case SDL_BUTTON_X2:		b = Key_MouseButton5; break;
 			};
-			PushEvent( 0, CreateKeyEvent( event, event.type == SDL_MOUSEBUTTONDOWN, b ) );
+			PushEvent( 0, CreateKeyEvent( event.type == SDL_MOUSEBUTTONDOWN, b ) );
 			break; }
 		case SDL_MOUSEWHEEL:
-			PushEvent( 0, CreateKeyEvent( event, true, CKeyEvent::SDLKeyToEngineKey( event ) ) );
-			PushEvent( 0, CreateKeyEvent( event, false, CKeyEvent::SDLKeyToEngineKey( event ) ) );
+			PushEvent( 0, CreateKeyEvent( true, CKeyEvent::SDLKeyToEngineKey( event ) ) );
+			PushEvent( 0, CreateKeyEvent( false, CKeyEvent::SDLKeyToEngineKey( event ) ) );
 			break;
 
 #if !defined(SIRENGINE_PLATFORM_PC)
@@ -283,7 +334,7 @@ void CEventManager::PumpEvents( void )
 			break;
 		case SDL_CONTROLLERDEVICEADDED:
 		case SDL_CONTROLLERDEVICEREMOVED:
-			PushEvent( 0, CreateControllerStatusEvent( event, event.cdevice.type == SDL_CONTROLLERDEVICEADDED ) );
+			PushEvent( 0, CreateControllerStatusEvent( event.cdevice.type == SDL_CONTROLLERDEVICEADDED, event.cdevice.which ) );
 			break;
 		case SDL_CONTROLLERDEVICEREMAPPED:
 		case SDL_KEYMAPCHANGED:
@@ -304,3 +355,4 @@ void CEventManager::PumpEvents( void )
 		};
 	}
 }
+#endif

@@ -100,8 +100,8 @@ namespace SIREngine {
 		void RegisterConsoleCommand( IConsoleCmd *pCommand );
 		IConsoleCmd *GetConsoleCommand( const CString& commandName );
 
-		void LoadConfig( void );
-		void SaveConfig( void ) const;
+		void LoadConfig( const FileSystem::CFilePath& filePath );
+		void SaveConfig( const FileSystem::CFilePath& filePath ) const;
 
 		void ExecuteCommand( const char *pText );
 		void CommandCompletion( void );

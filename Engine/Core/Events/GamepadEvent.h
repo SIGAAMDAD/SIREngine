@@ -15,7 +15,7 @@ namespace SIREngine::Events {
 class CGamepadEvent : public IEventBase
 {
 public:
-	CGamepadEvent( const SDL_Event& eventData )
+	CGamepadEvent( void )
 	{ }
 	virtual ~CGamepadEvent() override
 	{ }

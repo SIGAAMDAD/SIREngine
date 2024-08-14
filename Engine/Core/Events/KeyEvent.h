@@ -15,7 +15,7 @@ namespace SIREngine::Events {
 	class CKeyEvent : public IEventBase
 	{
 	public:
-		CKeyEvent( const SDL_Event& eventData, bool bState, KeyNum_t nKeyID )
+		CKeyEvent( bool bState, KeyNum_t nKeyID )
 			: m_bDown( bState ), m_nKeyValue( nKeyID )
 		{ }
 		virtual ~CKeyEvent() override
@@ -34,7 +34,11 @@ namespace SIREngine::Events {
 		SIRENGINE_FORCEINLINE KeyNum_t GetKey( void ) const
 		{ return m_nKeyValue; }
 
+#if !defined(SIRENGINE_BUILD_RENDERLIB_GLFW3)
 		static KeyNum_t SDLKeyToEngineKey( const SDL_Event& eventData );
+#else
+		static KeyNum_t GLFW3KeyToEngineKey( int key, int mods );
+#endif
 	private:
 		bool32 m_bDown;
 		KeyNum_t m_nKeyValue;
