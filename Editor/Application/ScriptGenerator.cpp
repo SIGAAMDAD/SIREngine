@@ -26,13 +26,13 @@ static void WriteBranch( eastl::string& buffer, uint64_t& nDepth, const Node_t& 
 
 void CScriptGenerator::Write( void )
 {
-	SIREngine::asIScriptFunction *p;
+	asIScriptFunction *p;
 	eastl::string buffer;
 
 	buffer.reserve( 2*1024*1024 );
 
 	for ( const auto& it : m_Objects ) {
-		SIREngine::FileSystem::CFileWriter *hFile = g_pFileSystem->OpenFileWriter(
+		FileSystem::CFileWriter *hFile = g_pFileSystem->OpenFileWriter(
 			SIRENGINE_TEMP_VSTRING( ".../%s.as", it->data.name.c_str() ) );
 
 		if ( !hFile ) {

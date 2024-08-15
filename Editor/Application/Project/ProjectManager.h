@@ -35,6 +35,7 @@ namespace Valden {
 
 		static eastl::unique_ptr<CProjectManager> g_pProjectManager;
 	};
+	SIRENGINE_DECLARE_LOG_CATEGORY( ProjectManager, ELogLevel::Type::Info );
 };
 
 #endif

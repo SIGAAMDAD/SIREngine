@@ -211,6 +211,30 @@ Application/Application.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/Application/Application.cpp.s
 .PHONY : Application/Application.cpp.s
 
+Application/ContentBrowser.o: Application/ContentBrowser.cpp.o
+.PHONY : Application/ContentBrowser.o
+
+# target to build an object file
+Application/ContentBrowser.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/Application/ContentBrowser.cpp.o
+.PHONY : Application/ContentBrowser.cpp.o
+
+Application/ContentBrowser.i: Application/ContentBrowser.cpp.i
+.PHONY : Application/ContentBrowser.i
+
+# target to preprocess a source file
+Application/ContentBrowser.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/Application/ContentBrowser.cpp.i
+.PHONY : Application/ContentBrowser.cpp.i
+
+Application/ContentBrowser.s: Application/ContentBrowser.cpp.s
+.PHONY : Application/ContentBrowser.s
+
+# target to generate assembly for a file
+Application/ContentBrowser.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/Application/ContentBrowser.cpp.s
+.PHONY : Application/ContentBrowser.cpp.s
+
 Application/Project/ProjectData.o: Application/Project/ProjectData.cpp.o
 .PHONY : Application/Project/ProjectData.o
 
@@ -1692,6 +1716,9 @@ help:
 	@echo "... Application/Application.o"
 	@echo "... Application/Application.i"
 	@echo "... Application/Application.s"
+	@echo "... Application/ContentBrowser.o"
+	@echo "... Application/ContentBrowser.i"
+	@echo "... Application/ContentBrowser.s"
 	@echo "... Application/Project/ProjectData.o"
 	@echo "... Application/Project/ProjectData.i"
 	@echo "... Application/Project/ProjectData.s"

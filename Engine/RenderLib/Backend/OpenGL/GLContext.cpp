@@ -296,20 +296,20 @@ void GLContext::PrintMemoryInfo( void ) const
 
 IRenderProgram *GLContext::AllocateProgram( const RenderProgramInit_t& programInfo )
 {
-	return new ( m_pResourceAllocator->Allocate( sizeof( GLProgram ) ) ) GLProgram( programInfo );
+	return new GLProgram( programInfo );
 }
 
 IRenderShader *GLContext::AllocateShader( const RenderShaderInit_t& shaderInit )
 {
-	return new ( m_pResourceAllocator->Allocate( sizeof( GLShader ) ) ) GLShader( shaderInit );
+	return new GLShader( shaderInit );
 }
 
 IRenderBuffer *GLContext::AllocateBuffer( GPUBufferType_t nType, GPUBufferUsage_t nUsage, uint64_t nSize )
 {
-	return new ( m_pResourceAllocator->Allocate( sizeof( GLBuffer ) ) ) GLBuffer( nType, nUsage, nSize );
+	return new GLBuffer( nType, nUsage, nSize );
 }
 
 IRenderTexture *GLContext::AllocateTexture( const TextureInit_t& textureInfo )
 {
-	return new ( m_pResourceAllocator->Allocate( sizeof( GLTexture ) ) ) GLTexture( textureInfo );
+	return new GLTexture( textureInfo );
 }

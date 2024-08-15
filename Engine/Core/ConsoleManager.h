@@ -171,13 +171,11 @@ namespace SIREngine {
 		CvarType_t m_nType;
 		IConsoleObject *m_pObject;
 	};
-
+	
 	template<typename T>
 	class CVar : public IConsoleVar
 	{
 	public:
-		inline CVar( void )
-		{ }
 		inline CVar( const char *pName, const T defaultValue, uint32_t iFlags, const char *pDescription, CvarGroup_t nGroup )
 			: IConsoleVar( pName, pDescription, iFlags, nGroup ), m_Value( defaultValue )
 		{
@@ -286,8 +284,6 @@ namespace SIREngine {
 	class CVarRef : public IConsoleVar
 	{
 	public:
-		inline CVarRef( void )
-		{ }
 		inline CVarRef( const char *pName, T& valueRef, uint32_t iFlags, const char *pDescription, CvarGroup_t nGroup )
 			: IConsoleVar( pName, pDescription, iFlags, nGroup ), m_pRefValue( eastl::addressof( valueRef ) )
 		{

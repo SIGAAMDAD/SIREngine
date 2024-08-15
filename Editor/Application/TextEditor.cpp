@@ -2974,10 +2974,10 @@ const CTextEditor::LanguageDefinition& CTextEditor::LanguageDefinition::AngelScr
 
 CTextEditorManager CTextEditorManager::g_TextManager;
 
-void CTextEditorManager::OpenScript( const SIREngine::FileSystem::CFilePath& filePath )
+void CTextEditorManager::OpenScript( const FileSystem::CFilePath& filePath )
 {
 	TabData<CTextEditor> editor;
-	SIREngine::FileSystem::CMemoryFile file( filePath );
+	FileSystem::CMemoryFile file( filePath );
 
 	editor.pData = new CTextEditor();
 	editor.pData->SetText( (const char *)file.GetBuffer() );
@@ -3006,6 +3006,10 @@ void CTextEditorManager::Draw( void )
 		}
 	}
 	ImGui::End();
+}
+
+void CTextEditorManager::Dock( void )
+{
 }
 
 void CTextEditorManager::Init( void )

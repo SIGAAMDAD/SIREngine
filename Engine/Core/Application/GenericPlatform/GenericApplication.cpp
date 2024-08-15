@@ -15,7 +15,6 @@ using namespace SIREngine::Application;
 using namespace SIREngine::Events;
 using namespace SIREngine::Input;
 using namespace SIREngine::RenderLib;
-using namespace SIREngine::Logging;
 
 SIREngine::FileSystem::CFileSystem *g_pFileSystem;
 

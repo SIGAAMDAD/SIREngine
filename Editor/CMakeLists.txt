@@ -36,6 +36,7 @@ set(SOURCE_FILES
 	Application/Project/ProjectData.cpp
 	Application/Project/ProjectManager.cpp
 	Application/Project/ProjectLoader.cpp
+	Application/ContentBrowser.cpp
 	Application/SceneView.cpp
 	Application/Application.cpp
 	Application/TextEditor.cpp
@@ -112,6 +113,7 @@ target_link_libraries(ValdenApp
 	-lglfw
 	-lGL
 	-lvulkan
+	-lnotify
 	${CMAKE_SOURCE_DIR}/../libEASTL.a
 	-lbacktrace
 	-lfreetype

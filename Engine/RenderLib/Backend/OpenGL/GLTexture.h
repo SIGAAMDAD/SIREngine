@@ -22,6 +22,9 @@ namespace SIREngine::RenderLib::Backend::OpenGL {
         void EvictGLResource( void );
 
         virtual void StreamBuffer( void ) override;
+
+        SIRENGINE_FORCEINLINE GLuint GetOpenGLHandle( void ) const
+        { return m_nTextureID; }
     private:
         virtual void Upload( const TextureInit_t& textureInfo ) override;
 

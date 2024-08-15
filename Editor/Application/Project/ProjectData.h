@@ -22,8 +22,7 @@ namespace Valden {
 		CString ProjectName;
 		CString Description;
 
-		SIREngine::FileSystem::CFilePath CustomDirectory;
-		bool bUseCustomDirectory;
+		FileSystem::CFilePath Directory;
 
 		bool bDisableStdOut;
 		bool bDisableStdErr;
@@ -37,16 +36,20 @@ namespace Valden {
 		CProjectData( void );
 		~CProjectData();
 
+		inline const FileSystem::CFilePath& GetPath( void ) const
+		{ return m_Info.Directory; }
+
 		inline void SetName( const CString& name )
 		{ m_Info.ProjectName = name; }
 		inline const CString& GetName( void ) const
 		{ return m_Info.ProjectName; }
 
+		void InitDirectoryStructure( void );
 		void Save( void );
 		bool Load( const CString& projectName );
 	private:
 		ProjectInfo_t m_Info;
-		SIREngine::Serialization::CIniSerializer *m_pIniData;
+		Serialization::CIniSerializer *m_pIniData;
 	};
 };
 

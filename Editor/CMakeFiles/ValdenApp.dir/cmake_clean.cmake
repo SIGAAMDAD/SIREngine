@@ -1,6 +1,8 @@
 file(REMOVE_RECURSE
   "CMakeFiles/ValdenApp.dir/Application/Application.cpp.o"
   "CMakeFiles/ValdenApp.dir/Application/Application.cpp.o.d"
+  "CMakeFiles/ValdenApp.dir/Application/ContentBrowser.cpp.o"
+  "CMakeFiles/ValdenApp.dir/Application/ContentBrowser.cpp.o.d"
   "CMakeFiles/ValdenApp.dir/Application/Project/ProjectData.cpp.o"
   "CMakeFiles/ValdenApp.dir/Application/Project/ProjectData.cpp.o.d"
   "CMakeFiles/ValdenApp.dir/Application/Project/ProjectLoader.cpp.o"

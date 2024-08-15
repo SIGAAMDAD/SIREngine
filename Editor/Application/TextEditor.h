@@ -7,7 +7,7 @@
 #include <EASTL/unordered_set.h>
 #include <EASTL/array.h>
 #include <regex>
-#include "TabSelect.h"
+#include "Util/TabSelect.h"
 
 namespace Valden {
 	class CTextEditor
@@ -398,8 +398,9 @@ namespace Valden {
 		{ }
 
 		virtual void Draw( void ) override;
+		virtual void Dock( void ) override;
 
-		void OpenScript( const SIREngine::FileSystem::CFilePath& filePath );
+		void OpenScript( const FileSystem::CFilePath& filePath );
 
 		SIRENGINE_FORCEINLINE CTextEditorManager& Get( void )
 		{ return g_TextManager; }

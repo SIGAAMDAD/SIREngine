@@ -22,10 +22,10 @@
 #define TTY_COLOR_WHITE "0"
 
 using namespace SIREngine;
-using namespace SIREngine::Logging;
+using namespace SIREngine;
 using namespace SIREngine::Application;
 
-SIREngine::Logging::CLogManager CLogManager::g_Logger;
+SIREngine::CLogManager CLogManager::g_Logger;
 
 struct CMessage {
 	CMessage( void )
@@ -85,6 +85,20 @@ static CVarRef<bool32> e_LogIncludeTimeInfo(
 	CVG_SYSTEMINFO
 );
 
+CLogCategory::CLogCategory( const CString& categoryName, ELogLevel::Type nDefaultVerbosity )
+	: m_nVerbosityLevel( nDefaultVerbosity ),
+	m_Name( categoryName )
+{
+}
+
+CLogCategory::~CLogCategory()
+{
+}
+
+void CLogCategory::SetVerbosity( ELogLevel::Type nVerbosity )
+{
+}
+
 CLogManager::CLogManager( void )
 {
 }
@@ -100,7 +114,6 @@ void CLogManager::LaunchLoggingThread( void )
 	e_LogIncludeFileInfo.Register();
 	e_LogIncludeTimeInfo.Register();
 
-//	LogMessageQueue.reserve( 1024 );
 	s_bExitApp.store( false );
 
 	s_pLogThread = new ( malloc( sizeof( CThread ) ) ) CThread( "LoggingThread" );
@@ -125,14 +138,15 @@ void CLogManager::ShutdownLogger( void )
 
 static const char *GetTime( void )
 {
-	static char szBuffer[64];
+	static char szBuffer[128];
 	time_t current;
 	struct tm ts;
 
 	current = time( NULL );
 	localtime_r( &current, &ts );
 
-	strftime( szBuffer, sizeof( szBuffer ) - 1, "%H:%M:%S", &ts );
+	strftime( szBuffer, sizeof( szBuffer ) - 1, "%Y.%m.%d-%H.%M.%S", &ts );
+	SIREngine_snprintf_append( szBuffer, sizeof( szBuffer ) - 1, ":%3li", current );
 
 	return szBuffer;
 }
@@ -156,11 +170,6 @@ void SIRENGINE_ATTRIBUTE(format(printf, 3, 4)) CLogManager::LogInfo( const LogDa
 	len = SIREngine_snprintf( buf, sizeof( buf ) - 1, "%s %s\n", GetExtraString( data.pFileName, data.pFunction, data.nLineNumber ),
 		msg );
 	
-//    CThreadAutoLock<CThreadMutex> _( s_LoggerLock );
-//    g_pApplication->FileWrite( buf, len, SIRENGINE_STDOUT_HANDLE );
-//    if ( s_pLogFile ) {
-//        s_pLogFile->Write( buf, len );
-//    }
 	LogMessageQueue.push( CMessage( buf ) );
 }
 
@@ -184,20 +193,15 @@ void SIRENGINE_ATTRIBUTE(format(printf, 3, 4)) CLogManager::LogWarning( const Lo
 		"\x1B[" TTY_COLOR_RED "m WARNING \x1B[" TTY_COLOR_YELLOW "m"
 		" %s %s \x1B[0m\n", GetExtraString( data.pFileName, data.pFunction, data.nLineNumber ), msg );
 	
-//    CThreadAutoLock<CThreadMutex> _( s_LoggerLock );
-//    g_pApplication->FileWrite( buf, len, SIRENGINE_STDOUT_HANDLE );
-//    if ( s_pLogFile ) {
-//        s_pLogFile->Write( buf, len );
-//    }
 	LogMessageQueue.push( CMessage( buf ) );
 }
 
 void SIRENGINE_ATTRIBUTE(format(printf, 3, 4)) CLogManager::SendNotification( const LogData_t& data,
 	const char *fmt, ... )
 {
-//	if ( e_LogLevel.GetValue() < ELogLevel::Spam ) {
-//		return;
-//	}
+	if ( e_LogLevel.GetValue() < ELogLevel::Spam ) {
+		return;
+	}
 
 	va_list argptr;
 	char msg[8192];
@@ -212,12 +216,45 @@ void SIRENGINE_ATTRIBUTE(format(printf, 3, 4)) CLogManager::SendNotification( co
 		GetExtraString( data.pFileName, data.pFunction, data.nLineNumber ),
 		msg );
 	
-//    CThreadAutoLock<CThreadMutex> _( s_LoggerLock );
-//    g_pApplication->FileWrite( buf, len, SIRENGINE_STDOUT_HANDLE );
-//    if ( s_pLogFile ) {
-//        s_pLogFile->Write( buf, len );
-//    }
 	LogMessageQueue.push( CMessage( buf ) );
+}
+
+void SIRENGINE_ATTRIBUTE(format(printf, 3, 4)) CLogManager::LogCategory( const LogData_t& data, const char *fmt, ... )
+{
+	if ( ( data.pCategory->GetVerbosity() & ELogLevel::VerbosityMask ) < data.nLevel ) {
+		return;
+	}
+
+	va_list argptr;
+	char msg[8192];
+	char buf[20000];
+	int len;
+
+	va_start( argptr, fmt );
+	SIREngine_Vsnprintf( msg, sizeof( msg ) - 1, fmt, argptr );
+	va_end( argptr );
+
+	switch ( ( data.pCategory->GetVerbosity() & ELogLevel::VerbosityMask ) ) {
+	case ELogLevel::Error:
+	case ELogLevel::Warning:
+		len = SIREngine_snprintf( buf, sizeof( buf ) - 1,
+			"\x1B[" TTY_COLOR_RED "m WARNING \x1B[" TTY_COLOR_YELLOW "m"
+			" %s%s: %s \x1B[0m\n"
+			, GetExtraString( data.pFileName, data.pFunction, data.nLineNumber ), data.pCategory->GetCategoryName().c_str(), msg
+		);
+		break;
+	case ELogLevel::Info:
+	case ELogLevel::Verbose:
+	case ELogLevel::Spam:
+		len = SIREngine_snprintf( buf, sizeof( buf ) - 1, "%s%s: %s\n",
+		GetExtraString( data.pFileName, data.pFunction, data.nLineNumber ),
+		data.pCategory->GetCategoryName().c_str(),
+		msg );
+		break;
+	};
+	
+	LogMessageQueue.push( CMessage( buf ) );
+
 }
 
 void SIRENGINE_ATTRIBUTE(format(printf, 3, 4)) CLogManager::LogError( const LogData_t& data, const char *fmt, ... )

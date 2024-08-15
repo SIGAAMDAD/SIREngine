@@ -1,12 +1,12 @@
 [ScriptConfig]
 AllowUnsafeReferences=false
-OptimizeByteCode=false
 MaxStackSize=0
+OptimizeByteCode=false
 AllowCompilerWarnings=false
 AllowIntegerDivision=false
 
 [ProjectConfig]
 DisableStdOut=false
-Name=Unnamed
 DisableStdErr=false
+Name=Unnamed
 

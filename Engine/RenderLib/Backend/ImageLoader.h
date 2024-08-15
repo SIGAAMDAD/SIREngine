@@ -54,6 +54,8 @@ namespace SIREngine::RenderLib::Backend {
 
         SIRENGINE_FORCEINLINE size_t GetSize( void ) const
         { return m_ImageBuffer.size(); }
+
+        bool Load( const FileSystem::CFilePath& filePath );
     private:
         static bool LoadJpeg( const FileSystem::CMemoryFile& fileBuffer, CVector<uint8_t>& outBuffer,
             uint32_t& nWidth, uint32_t& nHeight, uint32_t& nSamples );

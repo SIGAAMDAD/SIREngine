@@ -14,7 +14,6 @@ void CProjectManager::LoadProjectCache( const char *pBuffer, uint64_t nSize )
 			data = nlohmann::json::parse( pBuffer, pBuffer + nSize );
 		} catch ( const nlohmann::json::exception& e ) {
 			SIRENGINE_WARNING( "Error parsing Valden/Projects/Cached.json (%i:%s)", e.id, e.what() );
-			SIRENGINE_LOG( "JSON DUMP: %s", (const char *)pBuffer );
 		}
 	}
 
@@ -24,10 +23,10 @@ void CProjectManager::LoadProjectCache( const char *pBuffer, uint64_t nSize )
 		}
 		for ( const auto& it : data.at( "Projects" ) ) {
 			const std::string projectName = it.get<std::string>();
-			if ( !g_pProjectManager->Load( SIREngine::FileSystem::CFilePath( SIRENGINE_TEMP_VSTRING( "Valden/Projects/%s",
+			if ( !g_pProjectManager->Load( FileSystem::CFilePath( SIRENGINE_TEMP_VSTRING( "Valden/Projects/%s",
 				projectName.c_str() ) ) ) )
 			{
-				SIRENGINE_WARNING( "Error loading project \"%s\"!", projectName.c_str() );
+				SIRENGINE_LOG_LEVEL( ProjectManager, ELogLevel::Warning, "Error loading project \"%s\"!", projectName.c_str() );
 			}
 		}
 	}

@@ -9,6 +9,16 @@
 #include <EASTL/unique_ptr.h>
 #include <glm/glm.hpp>
 #include <imgui/imgui.h>
+#include "../IconsFontAwesomeEditor.h"
+#include "IconsFontAwesome5.h"
+#include <Engine/Core/ConsoleManager.h>
+#include "ImGuiNotify.hpp"
+
+#include <Engine/RenderLib/Backend/OpenGL/GLTexture.h>
+#define IMGUI_TEXTURE_ID( texture ) (ImTextureID)( (uintptr_t)dynamic_cast<RenderLib::Backend::OpenGL::GLTexture *>( texture )->GetOpenGLHandle() )
+
+using namespace SIREngine;
+
 
 namespace Valden {
 	class IEditorWidget
@@ -21,11 +31,12 @@ namespace Valden {
 		{ }
 
 		virtual void Draw( void ) = 0;
+		virtual void Dock( void ) = 0;
 	protected:
 		const char *m_pLabel;
 	};
 
-	class CEditorApplication : public SIREngine::IEngineApp
+	class CEditorApplication : public IEngineApp
 	{
 	public:
 		CEditorApplication( void )
@@ -47,16 +58,35 @@ namespace Valden {
         virtual uint32_t GetState( void ) const override
 		{ return 0; }
 
+		void DockWindowLeft( const char *pWindowLabel );
+		void DockWindowRight( const char *pWindowLabel );
+		void DockWindowTop( const char *pWindowLabel );
+		void DockWindowBottom( const char *pWindowLabel );
+
 		SIRENGINE_FORCEINLINE static CEditorApplication& Get( void )
 		{ return g_Application; }
 		
 		SIRENGINE_FORCEINLINE void AddWidget( IEditorWidget *pWidget )
 		{ m_Widgets.emplace_back( pWidget ); }
 	private:
+		void DrawMainMenuBar( void );
+		void DrawBottomMenu( void );
+		void DrawProjectSettings( void );
+		void DrawEditorSettings( void );
+
 		CVector<IEditorWidget *> m_Widgets;
+		CVector<CString> m_RecentProjects;
+
+		ImGuiID m_nTopDockID;
+		ImGuiID m_nBottomDockID;
+		ImGuiID m_nLeftDockID;
+		ImGuiID m_nRightDockID;
 
 		static CEditorApplication g_Application;
 	};
+
+	extern CVar<uint32_t> AutoSaveTime;
+	extern CVar<bool> AutoSaveEnabled;
 };
 
 namespace ImGui {

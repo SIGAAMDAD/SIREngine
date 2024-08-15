@@ -9,12 +9,13 @@
 #include "TextEditor.h"
 #include "Project/ProjectManager.h"
 #include "SceneView.h"
+#include "ContentBrowser.h"
 #include <Engine/Core/Events/EventManager.h>
 #include <string.h>
 #include <Engine/RenderLib/RenderLib.h>
 #include <Engine/RenderLib/Backend/RenderContext.h>
 #include <Engine/RenderLib/Backend/OpenGL/GLContext.h>
-#include <GLFW/glfw3.h>
+#include <libnotify/notify.h>
 
 #include "Roboto-Regular.embed"
 
@@ -88,11 +89,34 @@ bool InputTextWithHint(const char* label, const char* hint, eastl::string *str, 
 
 namespace Valden {
 
+CVar<uint32_t> AutoSaveTime(
+	"valden.AutoSaveTime",
+	100000,
+	Cvar_Save,
+	"Sets the amount of time between editor autosaves",
+	CVG_USERINFO
+);
+CVar<bool> AutoSaveEnabled(
+	"valden.AutoSaveEnabled",
+	true,
+	Cvar_Save,
+	"Enables editor autosaving",
+	CVG_USERINFO
+);
+
 CEditorApplication CEditorApplication::g_Application;
 
 void CEditorApplication::Init( void )
 {
 	SIRENGINE_LOG( "Initializing Editor Instance..." );
+
+//	notify_init( "Valden" );
+//	NotifyNotification *n = notify_notification_new( "Testing", "test message", NULL );
+//	notify_notification_add_action( n, "ACTION", "FUCK IT", []( _NotifyNotification *n, char *, gpointer ) -> void {},
+//		NULL, free );
+//	notify_notification_set_timeout( n, 20000 );
+//	notify_notification_show( n, NULL );
+////	notify_notification_set_urgency( n, NOTIFY_URGENCY_CRITICAL );
 
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
@@ -113,9 +137,8 @@ void CEditorApplication::Init( void )
 		style.Colors[ ImGuiCol_WindowBg ].w = 1.0f;
 	}
 
-//	ImGui_ImplGlfw_InitForOpenGL( SIREngine::RenderLib::Backend::GetRenderContext()->GetWindowHandle(), true );
-	ImGui_ImplSDL2_InitForOpenGL( SIREngine::RenderLib::Backend::GetRenderContext()->GetWindowHandle(),
-		dynamic_cast<SIREngine::RenderLib::Backend::OpenGL::GLContext *>( SIREngine::RenderLib::Backend::GetRenderContext() )->GetInternalContext() );
+	ImGui_ImplSDL2_InitForOpenGL( RenderLib::Backend::GetRenderContext()->GetWindowHandle(),
+		dynamic_cast<RenderLib::Backend::OpenGL::GLContext *>( RenderLib::Backend::GetRenderContext() )->GetInternalContext() );
 	ImGui_ImplOpenGL3_Init( "#version 330" );
 	SIRENGINE_LOG( "ImGui OpenGL3 & SDL2 backend allocated." );
 
@@ -127,24 +150,70 @@ void CEditorApplication::Init( void )
 	ImFont *robotoFont = io.Fonts->AddFontFromMemoryTTF( (void *)g_RobotoRegular, sizeof( g_RobotoRegular ), 20.0f, &fontConfig );
 	io.FontDefault = robotoFont;
 
+	float iconFontSize = 32.0f * 2.0f / 3.0f;
+
+	{
+		static const ImWchar szIconRanges[] = { ICON_MIN_FA_EDITOR, ICON_MAX_FA_EDITOR, 0 };
+		fontConfig.MergeMode = true;
+		fontConfig.PixelSnapH = true;
+		fontConfig.GlyphMinAdvanceX = iconFontSize;
+		io.Fonts->AddFontFromFileTTF( "IconsFontAwesomeEditor.ttf", iconFontSize, &fontConfig, szIconRanges );
+	}
+	{
+		static const ImWchar szIconRanges[] = { ICON_MIN_FA, ICON_MAX_16_FA, 0 };
+		fontConfig.MergeMode = true;
+		fontConfig.PixelSnapH = true;
+		fontConfig.GlyphMinAdvanceX = iconFontSize;
+		io.Fonts->AddFontFromFileTTF( FONT_ICON_FILE_NAME_FAS, iconFontSize, &fontConfig, szIconRanges );
+	}
+
 	ImGui::GetIO().Fonts->Build();
+
+	g_pFileSystem->AddCacheDirectory( "Valden/Bitmaps" );
 
 	CTextEditorManager::Init();
 	CProjectManager::Init();
 	CSceneView::Init();
+	CContentBrowser::Init();
 }
 
 void CEditorApplication::Frame( int64_t msec )
 {
 	ImGuiIO& io = ImGui::GetIO();
 
-	io.DisplaySize.x = SIREngine::Application::Get()->GetAppInfo().nWindowWidth;
-	io.DisplaySize.y = SIREngine::Application::Get()->GetAppInfo().nWindowHeight;
+	io.DisplaySize.x = Application::Get()->GetAppInfo().nWindowWidth;
+	io.DisplaySize.y = Application::Get()->GetAppInfo().nWindowHeight;
 	io.DisplayFramebufferScale = io.DisplaySize;
 
 	ImGui_ImplOpenGL3_NewFrame();
 	ImGui_ImplSDL2_NewFrame();
 	ImGui::NewFrame();
+
+	ImGuiStyle& style = ImGui::GetStyle();
+
+	ImGui::PushStyleColor( ImGuiCol_FrameBg,
+		ImVec4( style.Colors[ ImGuiCol_FrameBg ].x,
+				style.Colors[ ImGuiCol_FrameBg ].y,
+				style.Colors[ ImGuiCol_FrameBg ].z,
+				1.0f ) );
+	
+	ImGui::PushStyleColor( ImGuiCol_FrameBgActive,
+		ImVec4( style.Colors[ ImGuiCol_FrameBgActive ].x,
+				style.Colors[ ImGuiCol_FrameBgActive ].y,
+				style.Colors[ ImGuiCol_FrameBgActive ].z,
+				1.0f ) );
+	
+	ImGui::PushStyleColor( ImGuiCol_FrameBgHovered,
+		ImVec4( style.Colors[ ImGuiCol_FrameBgHovered ].x,
+				style.Colors[ ImGuiCol_FrameBgHovered ].y,
+				style.Colors[ ImGuiCol_FrameBgHovered ].z,
+				1.0f ) );
+	
+	ImGui::PushStyleColor( ImGuiCol_WindowBg,
+		ImVec4( style.Colors[ ImGuiCol_WindowBg ].x,
+				style.Colors[ ImGuiCol_WindowBg ].y,
+				style.Colors[ ImGuiCol_WindowBg ].z,
+				1.0f ) );
 
 	{
 		ImVec2 size;
@@ -161,23 +230,24 @@ void CEditorApplication::Frame( int64_t msec )
 		ImGui::SetNextWindowPos( viewport->WorkPos );
 		ImGui::SetNextWindowSize( viewport->WorkSize );
 		ImGui::SetNextWindowViewport( viewport->ID );
-		ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
-		ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+		ImGui::PushStyleVar( ImGuiStyleVar_WindowRounding, 0.0f );
+		ImGui::PushStyleVar( ImGuiStyleVar_WindowBorderSize, 0.0f );
 		window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize;
 		window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
 
 		// When using ImGuiDockNodeFlags_PassthruCentralNode, DockSpace() will render our background
 		// and handle the pass-thru hole, so we ask Begin() to not render a background.
-		if (dockspace_flags & ImGuiDockNodeFlags_PassthruCentralNode)
+		if ( dockspace_flags & ImGuiDockNodeFlags_PassthruCentralNode ) {
 			window_flags |= ImGuiWindowFlags_NoBackground;
+		}
 
 		// Important: note that we proceed even if Begin() returns false (aka window is collapsed).
 		// This is because we want to keep our DockSpace() active. If a DockSpace() is inactive,
 		// all active windows docked into it will lose their parent and become undocked.
 		// We cannot preserve the docking relationship between an active window and an inactive docking, otherwise
 		// any change of dockspace/settings would lead to windows being stuck in limbo and never being visible.
-		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-		ImGui::Begin("DockSpace Demo", nullptr, window_flags);
+		ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2( 0.0f, 0.0f ) );
+		ImGui::Begin( "DockSpace Demo", nullptr, window_flags );
 		ImGui::SetWindowSize( viewport->Size );
 		ImGui::PopStyleVar();
 		
@@ -206,23 +276,12 @@ void CEditorApplication::Frame( int64_t msec )
 		it->Draw();
 	}
 
-	ImGui::BeginMainMenuBar();
-	if ( ImGui::BeginMenu( "File" ) ) {
-		if ( ImGui::MenuItem( "Open Script" ) ) {
-			
-		}
-		ImGui::EndMenu();
-	}
-	if ( ImGui::BeginMenu( "Edit" ) ) {
-		ImGui::EndMenu();
-	}
-	if ( ImGui::BeginMenu( "Project" ) ) {
-		ImGui::EndMenu();
-	}
-	if ( ImGui::BeginMenu( "Help" ) ) {
-		ImGui::EndMenu();
-	}
-	ImGui::EndMainMenuBar();
+	DrawMainMenuBar();
+	DrawBottomMenu();
+
+	ImGui::RenderNotifications();
+
+	ImGui::PopStyleColor( 4 );
 
 	ImGui::Render();
 	ImDrawData *pDrawData = ImGui::GetDrawData();
@@ -235,6 +294,180 @@ void CEditorApplication::Frame( int64_t msec )
 		ImGui::UpdatePlatformWindows();
 		ImGui::RenderPlatformWindowsDefault();
 	}
+}
+
+void CEditorApplication::DrawEditorSettings( void )
+{
+//	ImGui::Begin( "Valden Preferences", NULL, ImGuiWindowFlags_ );
+}
+
+void CEditorApplication::DrawMainMenuBar( void )
+{
+	ImGui::BeginMainMenuBar();
+	if ( ImGui::BeginMenu( "File" ) ) {
+		
+		ImGui::SeparatorText( "Open" );
+		ImGui::Indent( 0.5f );
+		if ( ImGui::MenuItem( ICON_FA_FOLDER_PLUS "New Scene", "CTRL+N" ) ) {
+		}
+		if ( ImGui::MenuItem( ICON_FA_FOLDER_OPEN "Open Scene" ) ) {
+		}
+		ImGui::Unindent( 0.5f );
+
+
+		ImGui::SeparatorText( "Save" );
+		ImGui::Indent( 0.5f );
+		if ( ImGui::MenuItem( ICON_FA_SAVE "Save Scene", "CTRL+S" ) ) {
+		}
+		if ( ImGui::MenuItem( ICON_FA_SAVE "Save Scene As...", "CTRL+SHIFT+S" ) ) {
+		}
+		if ( ImGui::MenuItem( "Save All", "CTRL+ALT+S" ) ) {
+		}
+		ImGui::Unindent( 0.5f );
+
+		ImGui::SeparatorText( "Project" );
+		ImGui::Indent( 0.5f );
+		if ( ImGui::MenuItem( ICON_FA_FOLDER_PLUS "New Project" ) ) {
+		}
+		if ( ImGui::MenuItem( ICON_FA_FOLDER_OPEN "Open Project" ) ) {
+		}
+		if ( ImGui::BeginMenu( "Recent Projects" ) ) {
+			if ( m_RecentProjects.empty() ) {
+				ImGui::MenuItem( "No Recent Projects" );
+			} else {
+				for ( auto& it : m_RecentProjects ) {
+					if ( ImGui::MenuItem( it.c_str() ) ) {
+
+					}
+				}
+			}
+			ImGui::EndMenu();
+		}
+		ImGui::Unindent( 0.5f );
+
+		ImGui::SeparatorText( ICON_FA_FILE_IMPORT "Import/Export" );
+		ImGui::Indent( 0.5f );
+		if ( ImGui::MenuItem( ICON_FA_FILE_IMPORT "Import Into Scene..." ) ) {
+		}
+		if ( ImGui::MenuItem( ICON_FA_FILE_EXPORT "Export All..." ) ) {
+		}
+		ImGui::Unindent( 0.5f );
+
+		ImGui::SeparatorText( "Exit" );
+		ImGui::Indent( 0.5f );
+		if ( ImGui::MenuItem( ICON_FA_CROSS "Exit" ) ) {
+			Application::Get()->Shutdown();
+		}
+		ImGui::Unindent( 0.5f );
+
+		ImGui::EndMenu();
+	}
+	if ( ImGui::BeginMenu( "Edit" ) ) {
+		ImGui::SeparatorText( "Edit" );
+		ImGui::Indent( 0.5f );
+		if ( ImGui::MenuItem( ICON_FA_CUT "Cut", "CTRL+X" ) ) {
+		}
+		if ( ImGui::MenuItem( ICON_FA_COPY "Copy", "CTRL+C" ) ) {
+		}
+		if ( ImGui::MenuItem( ICON_FA_PASTE "Paste", "CTRL+V" ) ) {
+		}
+		ImGui::Unindent( 0.5f );
+
+		ImGui::SeparatorText( "Configuration" );
+		ImGui::Indent( 0.5f );
+		if ( ImGui::MenuItem( ICON__GEAR "Editor Settings" ) ) {
+		}
+		if ( ImGui::MenuItem( "Project Settings" ) ) {
+		}
+		if ( ImGui::MenuItem( "Plugins" ) ) {
+		}
+		ImGui::Unindent( 0.5f );
+
+		ImGui::EndMenu();
+	}
+	if ( ImGui::BeginMenu( "Project" ) ) {
+		ImGui::EndMenu();
+	}
+	if ( ImGui::BeginMenu( "Help" ) ) {
+		ImGui::EndMenu();
+	}
+	ImGui::EndMainMenuBar();
+}
+
+void CEditorApplication::DrawBottomMenu( void )
+{
+	ImGui::Begin( "##BottomMenuWidget", NULL, ImGuiWindowFlags_NoCollapse );
+
+	if ( ImGui::BeginTable( "##BottomMenuWidgetTable", 3 ) ) {
+		ImGui::TableNextColumn();
+		if ( ImGui::MenuItem( "Command Console" ) ) {
+
+		}
+
+		ImGui::TableNextColumn();
+		if ( ImGui::MenuItem( "Log Output" ) ) {
+
+		}
+
+		ImGui::TableNextColumn();
+		if ( ImGui::MenuItem( "Content Browser" ) ) {
+		}
+		ImGui::EndTable();
+	}
+
+	ImGui::End();
+}
+
+void CEditorApplication::DockWindowLeft( const char *pWindowLabel )
+{
+	ImGuiID nDockID = ImGui::DockSpaceOverViewport( ImGui::GetWindowDockID(), ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode );
+
+	ImGui::DockBuilderRemoveNode( nDockID );
+	ImGui::DockBuilderAddNode( nDockID );
+	ImGui::DockBuilderSetNodeSize( nDockID, ImGui::GetMainViewport()->Size );
+	
+	ImGui::DockBuilderSplitNode( nDockID, ImGuiDir_Left, 0.5f, &m_nLeftDockID, &m_nRightDockID );
+	ImGui::DockBuilderSplitNode( nDockID, ImGuiDir_Up, 0.5f, &m_nTopDockID, &m_nBottomDockID );
+	ImGui::DockBuilderDockWindow( pWindowLabel, m_nLeftDockID );
+}
+
+void CEditorApplication::DockWindowRight( const char *pWindowLabel )
+{
+	ImGuiID nDockID = ImGui::DockSpaceOverViewport( ImGui::GetWindowDockID(), ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode );
+
+	ImGui::DockBuilderRemoveNode( nDockID );
+	ImGui::DockBuilderAddNode( nDockID );
+	ImGui::DockBuilderSetNodeSize( nDockID, ImGui::GetMainViewport()->Size );
+	
+	ImGui::DockBuilderSplitNode( nDockID, ImGuiDir_Left, 0.5f, &m_nLeftDockID, &m_nRightDockID );
+	ImGui::DockBuilderSplitNode( nDockID, ImGuiDir_Up, 0.5f, &m_nTopDockID, &m_nBottomDockID );
+	ImGui::DockBuilderDockWindow( pWindowLabel, m_nRightDockID );
+}
+
+void CEditorApplication::DockWindowTop( const char *pWindowLabel )
+{
+	ImGuiID nDockID = ImGui::DockSpaceOverViewport( ImGui::GetWindowDockID(), ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode );
+
+	ImGui::DockBuilderRemoveNode( nDockID );
+	ImGui::DockBuilderAddNode( nDockID );
+	ImGui::DockBuilderSetNodeSize( nDockID, ImGui::GetMainViewport()->Size );
+	
+	ImGui::DockBuilderSplitNode( nDockID, ImGuiDir_Left, 0.5f, &m_nLeftDockID, &m_nRightDockID );
+	ImGui::DockBuilderSplitNode( nDockID, ImGuiDir_Up, 0.5f, &m_nTopDockID, &m_nBottomDockID );
+	ImGui::DockBuilderDockWindow( pWindowLabel, m_nTopDockID );
+}
+
+void CEditorApplication::DockWindowBottom( const char *pWindowLabel )
+{
+	ImGuiID nDockID = ImGui::DockSpaceOverViewport( ImGui::GetWindowDockID(), ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode );
+
+	ImGui::DockBuilderRemoveNode( nDockID );
+	ImGui::DockBuilderAddNode( nDockID );
+	ImGui::DockBuilderSetNodeSize( nDockID, ImGui::GetMainViewport()->Size );
+	
+	ImGui::DockBuilderSplitNode( nDockID, ImGuiDir_Left, 0.5f, &m_nLeftDockID, &m_nRightDockID );
+	ImGui::DockBuilderSplitNode( nDockID, ImGuiDir_Up, 0.5f, &m_nTopDockID, &m_nBottomDockID );
+	ImGui::DockBuilderDockWindow( pWindowLabel, m_nBottomDockID );
 }
 
 void CEditorApplication::Shutdown( void )

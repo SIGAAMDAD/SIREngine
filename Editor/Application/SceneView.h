@@ -6,6 +6,7 @@
 #include "Application.h"
 #include "AssetLib/TextureAtlas.h"
 #include <EASTL/shared_ptr.h>
+#include "Util/FileTreeView.h"
 
 namespace Valden {
 	enum class ESceneObjectType {
@@ -55,8 +56,9 @@ namespace Valden {
 		{ }
 
 		virtual void Draw( void ) override;
+		virtual void Dock( void ) override;
 
-		bool LoadScene( const SIREngine::FileSystem::CFilePath& directory );
+		bool LoadScene( const FileSystem::CFilePath& directory );
 		void Create( const CString& name );
 
 		static void Init( void );
@@ -66,8 +68,8 @@ namespace Valden {
 	private:
 		void DrawObject( CSceneObject& object );
 
-		CVector<CSceneObject> m_Resources;
-		CVector<CSceneObject> m_SceneData;
+		CFileTreeView<false, true> m_Resources;
+		CFileTreeView<false, true> m_SceneObjects;
 
 		static eastl::unique_ptr<CSceneView> g_pSceneView;
 	};

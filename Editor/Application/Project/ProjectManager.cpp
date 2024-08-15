@@ -4,6 +4,7 @@
 namespace Valden {
 
 eastl::unique_ptr<CProjectManager> CProjectManager::g_pProjectManager;
+SIRENGINE_DEFINE_LOG_CATEGORY( ProjectManager, ELogLevel::Type::Info );
 
 CProjectManager::CProjectManager( void )
 {
@@ -15,7 +16,7 @@ CProjectManager::~CProjectManager()
 
 void CProjectManager::SaveCache( void )
 {
-	SIREngine::FileSystem::CFileWriter *hFile = g_pFileSystem->OpenFileWriter( "Valden/Projects/Cached.json" );
+	FileSystem::CFileWriter *hFile = g_pFileSystem->OpenFileWriter( "Valden/Projects/Cached.json" );
 
 	SIRENGINE_LOG( "Saving ProjectCache..." );
 
@@ -48,11 +49,11 @@ void CProjectManager::Init( void )
 {
 	g_pProjectManager = eastl::make_unique<CProjectManager>();
 
-	SIRENGINE_LOG( "Loading ProjectCache..." );
+	SIRENGINE_LOG_LEVEL( ProjectManager, ELogLevel::Info, "Loading ProjectCache..." );
 
 	g_pFileSystem->AddCacheDirectory( "Valden/Projects" );
 
-	SIREngine::FileSystem::CMemoryFile file( "Valden/Projects/Cached.json" );
+	FileSystem::CMemoryFile file( "Valden/Projects/Cached.json" );
 	g_pProjectManager->LoadProjectCache( (const char *)file.GetBuffer(), file.GetSize() );
 }
 
@@ -75,21 +76,23 @@ bool CProjectManager::Load( const CString& projectName )
 	return true;
 }
 
-bool CProjectManager::Load( const SIREngine::FileSystem::CFilePath& directory )
+bool CProjectManager::Load( const FileSystem::CFilePath& directory )
 {
 	const CString projectName = directory.GetFileName();
 	if ( IsProjectLoaded( projectName ) ) {
 		return true;
 	}
 
-	SIRENGINE_LOG( "Loading project from \"%s\"...", directory.c_str() );
-	SIREngine::FileSystem::CFilePath path = directory;
+	SIRENGINE_LOG_LEVEL( ProjectManager, ELogLevel::Info, "Loading project from \"%s\"...", directory.c_str() );
+	FileSystem::CFilePath path = directory;
 	const size_t pos = path.find_last_of( SIRENGINE_PATH_SEPERATOR );
 	path[ pos ] = '\0';
 
 	g_pFileSystem->AddCacheDirectory( path );
 	eastl::shared_ptr<CProjectData>& project = m_ProjectCache.emplace_back( eastl::make_shared<CProjectData>() );
 	project->Load( projectName );
+	
+	m_pCurrentProject = project;
 
 	return true;
 }
@@ -98,9 +101,12 @@ void CProjectManager::Create( const CString& projectName )
 {
 	eastl::shared_ptr<CProjectData>& project = m_ProjectCache.emplace_back( eastl::make_shared<CProjectData>() );
 
-	SIRENGINE_LOG( "Created project \"%s\".", projectName.c_str() );
+	SIRENGINE_LOG_LEVEL( ProjectManager, ELogLevel::Info, "Created project \"%s\".", projectName.c_str() );
 	project->SetName( projectName );
 	project->Save();
+	project->InitDirectoryStructure();
+	
+	m_pCurrentProject = project;
 }
 
 };

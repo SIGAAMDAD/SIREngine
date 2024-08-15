@@ -6,7 +6,16 @@ namespace SIREngine::RenderLib::Backend {
 
 CImageLoader::CImageLoader( const FileSystem::CFilePath& filePath )
 {
-    const CString ext = FileSystem::CFilePath::GetExtension( filePath.c_str() );
+	Load( filePath );
+}
+
+CImageLoader::~CImageLoader()
+{
+}
+
+bool CImageLoader::Load( const FileSystem::CFilePath& filePath )
+{
+	const CString ext = FileSystem::CFilePath::GetExtension( filePath.c_str() );
     bool (*LoadFunc)( const CMemoryFile&, CVector<uint8_t>&, uint32_t&, uint32_t&, uint32_t& );
 
     if ( ext == "tga" ) {
@@ -24,13 +33,17 @@ CImageLoader::CImageLoader( const FileSystem::CFilePath& filePath )
     }
 
     CMemoryFile file( filePath );
+	if ( !file.GetSize() ) {
+		SIRENGINE_WARNING( "Error loading image file \"%s\", couldn't load the file", filePath.c_str() );
+		return false;
+	}
     if ( !LoadFunc( file, m_ImageBuffer, m_nWidth, m_nHeight, m_nSamples ) ) {
         SIRENGINE_WARNING( "Error loading image file '%s'", filePath.c_str() );
+		return false;
     }
-}
+    SIRENGINE_LOG( "Loaded image file \"%s\".", filePath.c_str() );
 
-CImageLoader::~CImageLoader()
-{
+	return true;
 }
 
 };

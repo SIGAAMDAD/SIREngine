@@ -9,6 +9,7 @@ set(CMAKE_DEPENDS_LANGUAGES
 # The set of dependency files which are needed:
 set(CMAKE_DEPENDS_DEPENDENCY_FILES
   "/home/noah/Projects/SIR-Engine/Editor/Application/Application.cpp" "CMakeFiles/ValdenApp.dir/Application/Application.cpp.o" "gcc" "CMakeFiles/ValdenApp.dir/Application/Application.cpp.o.d"
+  "/home/noah/Projects/SIR-Engine/Editor/Application/ContentBrowser.cpp" "CMakeFiles/ValdenApp.dir/Application/ContentBrowser.cpp.o" "gcc" "CMakeFiles/ValdenApp.dir/Application/ContentBrowser.cpp.o.d"
   "/home/noah/Projects/SIR-Engine/Editor/Application/Project/ProjectData.cpp" "CMakeFiles/ValdenApp.dir/Application/Project/ProjectData.cpp.o" "gcc" "CMakeFiles/ValdenApp.dir/Application/Project/ProjectData.cpp.o.d"
   "/home/noah/Projects/SIR-Engine/Editor/Application/Project/ProjectLoader.cpp" "CMakeFiles/ValdenApp.dir/Application/Project/ProjectLoader.cpp.o" "gcc" "CMakeFiles/ValdenApp.dir/Application/Project/ProjectLoader.cpp.o.d"
   "/home/noah/Projects/SIR-Engine/Editor/Application/Project/ProjectManager.cpp" "CMakeFiles/ValdenApp.dir/Application/Project/ProjectManager.cpp.o" "gcc" "CMakeFiles/ValdenApp.dir/Application/Project/ProjectManager.cpp.o.d"

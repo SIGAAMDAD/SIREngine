@@ -1,4 +1,6 @@
 #include "SceneView.h"
+#include <imgui/imgui.h>
+#include <imgui/imgui_internal.h>
 
 namespace Valden {
 
@@ -21,18 +23,30 @@ void CSceneView::Init( void )
 
 	CEditorApplication::Get().AddWidget( g_pSceneView.get() );
 	g_pSceneView->Create( "UnnamedScene" );
+
+	g_pSceneView->m_Resources.GetBase().DirectoryName = "Resources";
+	g_pSceneView->m_SceneObjects.GetBase().DirectoryName = "Scene Objects";
+}
+
+void CSceneView::Dock( void )
+{
+	CEditorApplication::Get().DockWindowRight( "Scene View##SceneViewWindow" );
 }
 
 void CSceneView::Draw( void )
 {
 	ImGui::Begin( "Scene View##SceneViewWindow", NULL );
+	
+	if ( ImGui::BeginTabBar( "##SceneViewQuickTabUtil" ) ) {
+//		ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0.0f, 1.0f, 0.0f, 1.0f ) );
+		if ( ImGui::BeginTabItem( ICON_FA_PLUS "Add" ) ) {
+			ImGui::EndTabItem();
+		}
+		ImGui::EndTabBar();
+	}
 
-	if ( ImGui::TreeNodeEx( (void *)"Resources", ImGuiTreeNodeFlags_OpenOnArrow, "Resources" ) ) {
-		ImGui::TreePop();
-	}
-	if ( ImGui::TreeNodeEx( (void *)"SceneData", ImGuiTreeNodeFlags_OpenOnArrow, "Scene Objects" ) ) {
-		ImGui::TreePop();
-	}
+	m_Resources.Draw();
+	m_SceneObjects.Draw();
 
 	ImGui::End();
 }

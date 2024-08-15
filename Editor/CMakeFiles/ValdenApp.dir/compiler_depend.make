@@ -243,14 +243,14 @@ CMakeFiles/ValdenApp.dir/Application/Application.cpp.o: Application/Application.
   /home/noah/Projects/SIR-Engine/Engine/Core/Logging/Logger.h \
   /home/noah/Projects/SIR-Engine/EASTL/queue.h \
   /home/noah/Projects/SIR-Engine/EASTL/deque.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
-  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CString.h \
   /home/noah/Projects/SIR-Engine/Engine/Core/ResourceDef.h \
   /home/noah/Projects/SIR-Engine/EASTL/allocator_malloc.h \
   /usr/include/malloc.h \
   /home/noah/Projects/SIR-Engine/EASTL/fixed_string.h \
   /home/noah/Projects/SIR-Engine/EASTL/internal/fixed_pool.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
+  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CVector.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/UtlMemory.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CStaticArray.h \
@@ -621,9 +621,61 @@ CMakeFiles/ValdenApp.dir/Application/Application.cpp.o: Application/Application.
   /home/noah/Projects/SIR-Engine/Engine/Core/EngineApp.h \
   /home/noah/Projects/SIR-Engine/imgui/imgui.h \
   /home/noah/Projects/SIR-Engine/imgui/imconfig.h \
-  /home/noah/Projects/SIR-Engine/imgui/backends/imgui_impl_opengl3.h \
-  /home/noah/Projects/SIR-Engine/imgui/backends/imgui_impl_glfw.h \
-  /home/noah/Projects/SIR-Engine/imgui/backends/imgui_impl_sdl2.h \
+  IconsFontAwesomeEditor.h \
+  Application/IconsFontAwesome5.h \
+  Application/ImGuiNotify.hpp \
+  /usr/include/c++/11/vector \
+  /usr/include/c++/11/bits/stl_uninitialized.h \
+  /usr/include/c++/11/bits/stl_vector.h \
+  /usr/include/c++/11/bits/stl_bvector.h \
+  /usr/include/c++/11/bits/functional_hash.h \
+  /usr/include/c++/11/bits/vector.tcc \
+  /usr/include/c++/11/string \
+  /usr/include/c++/11/bits/stringfwd.h \
+  /usr/include/c++/11/bits/char_traits.h \
+  /usr/include/c++/11/bits/postypes.h \
+  /usr/include/c++/11/cwchar \
+  /usr/include/c++/11/bits/localefwd.h \
+  /usr/include/x86_64-linux-gnu/c++/11/bits/c++locale.h \
+  /usr/include/c++/11/clocale \
+  /usr/include/locale.h \
+  /usr/include/x86_64-linux-gnu/bits/locale.h \
+  /usr/include/c++/11/iosfwd \
+  /usr/include/c++/11/cctype \
+  /usr/include/c++/11/bits/ostream_insert.h \
+  /usr/include/c++/11/bits/cxxabi_forced.h \
+  /usr/include/c++/11/bits/basic_string.h \
+  /usr/include/c++/11/ext/atomicity.h \
+  /usr/include/x86_64-linux-gnu/c++/11/bits/gthr.h \
+  /usr/include/x86_64-linux-gnu/c++/11/bits/gthr-default.h \
+  /usr/include/x86_64-linux-gnu/c++/11/bits/atomic_word.h \
+  /usr/include/x86_64-linux-gnu/sys/single_threaded.h \
+  /usr/include/c++/11/string_view \
+  /usr/include/c++/11/bits/string_view.tcc \
+  /usr/include/c++/11/ext/string_conversions.h \
+  /usr/include/c++/11/cstdio \
+  /usr/include/c++/11/cerrno \
+  /usr/include/c++/11/bits/charconv.h \
+  /usr/include/c++/11/bits/basic_string.tcc \
+  /usr/include/c++/11/chrono \
+  /usr/include/c++/11/ratio \
+  /usr/include/c++/11/ctime \
+  /usr/include/c++/11/bits/parse_numbers.h \
+  /usr/include/c++/11/functional \
+  /usr/include/c++/11/bits/refwrap.h \
+  /usr/include/c++/11/bits/std_function.h \
+  /usr/include/c++/11/unordered_map \
+  /usr/include/c++/11/bits/hashtable.h \
+  /usr/include/c++/11/bits/hashtable_policy.h \
+  /usr/include/c++/11/bits/enable_special_members.h \
+  /usr/include/c++/11/bits/node_handle.h \
+  /usr/include/c++/11/bits/unordered_map.h \
+  /usr/include/c++/11/bits/erase_if.h \
+  /usr/include/c++/11/bits/stl_algo.h \
+  /usr/include/c++/11/bits/algorithmfwd.h \
+  /usr/include/c++/11/bits/stl_heap.h \
+  /usr/include/c++/11/bits/stl_tempbuf.h \
+  /usr/include/c++/11/bits/uniform_int_dist.h \
   /home/noah/Projects/SIR-Engine/imgui/imgui_internal.h \
   /usr/lib/gcc/x86_64-linux-gnu/11/include/immintrin.h \
   /usr/lib/gcc/x86_64-linux-gnu/11/include/x86gprintrin.h \
@@ -710,63 +762,37 @@ CMakeFiles/ValdenApp.dir/Application/Application.cpp.o: Application/Application.
   /usr/lib/gcc/x86_64-linux-gnu/11/include/prfchwintrin.h \
   /usr/lib/gcc/x86_64-linux-gnu/11/include/keylockerintrin.h \
   /home/noah/Projects/SIR-Engine/imgui/imstb_textedit.h \
+  /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLTexture.h \
+  /home/noah/Projects/SIR-Engine/Engine/RenderLib/RenderCommon.h \
+  /home/noah/Projects/SIR-Engine/Engine/RenderLib/RenderLib.h \
+  /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLCommon.h \
+  /usr/include/GL/gl.h \
+  /usr/include/GL/glext.h \
+  /usr/include/KHR/khrplatform.h \
+  /usr/include/GL/glcorearb.h \
+  /home/noah/Projects/SIR-Engine/Engine/RenderLib/DrawBuffer.h \
+  /home/noah/Projects/SIR-Engine/EASTL/stack.h \
+  /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/RenderTexture.h \
+  /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLoader.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/FileSystem/MemoryFile.h \
+  /home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/SlabAllocator.h \
+  /home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/AllocatorBase.h \
+  /home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/MemoryBuffer.h \
+  /home/noah/Projects/SIR-Engine/EASTL/bonus/lru_cache.h \
+  /home/noah/Projects/SIR-Engine/EASTL/list.h \
+  /home/noah/Projects/SIR-Engine/EASTL/optional.h \
+  /home/noah/Projects/SIR-Engine/imgui/backends/imgui_impl_opengl3.h \
+  /home/noah/Projects/SIR-Engine/imgui/backends/imgui_impl_glfw.h \
+  /home/noah/Projects/SIR-Engine/imgui/backends/imgui_impl_sdl2.h \
   Application/TextEditor.h \
   /home/noah/Projects/SIR-Engine/EASTL/unordered_set.h \
   /home/noah/Projects/SIR-Engine/EASTL/hash_set.h \
   /home/noah/Projects/SIR-Engine/EASTL/array.h \
   /usr/include/c++/11/regex \
   /usr/include/c++/11/algorithm \
-  /usr/include/c++/11/bits/stl_algo.h \
-  /usr/include/c++/11/bits/algorithmfwd.h \
-  /usr/include/c++/11/bits/stl_heap.h \
-  /usr/include/c++/11/bits/stl_tempbuf.h \
-  /usr/include/c++/11/bits/uniform_int_dist.h \
   /usr/include/c++/11/pstl/glue_algorithm_defs.h \
-  /usr/include/c++/11/functional \
-  /usr/include/c++/11/bits/functional_hash.h \
-  /usr/include/c++/11/bits/refwrap.h \
-  /usr/include/c++/11/bits/std_function.h \
-  /usr/include/c++/11/unordered_map \
-  /usr/include/c++/11/bits/hashtable.h \
-  /usr/include/c++/11/bits/hashtable_policy.h \
-  /usr/include/c++/11/bits/enable_special_members.h \
-  /usr/include/c++/11/bits/node_handle.h \
-  /usr/include/c++/11/bits/unordered_map.h \
-  /usr/include/c++/11/bits/erase_if.h \
-  /usr/include/c++/11/vector \
-  /usr/include/c++/11/bits/stl_uninitialized.h \
-  /usr/include/c++/11/bits/stl_vector.h \
-  /usr/include/c++/11/bits/stl_bvector.h \
-  /usr/include/c++/11/bits/vector.tcc \
   /usr/include/c++/11/pstl/execution_defs.h \
   /usr/include/c++/11/bitset \
-  /usr/include/c++/11/string \
-  /usr/include/c++/11/bits/stringfwd.h \
-  /usr/include/c++/11/bits/char_traits.h \
-  /usr/include/c++/11/bits/postypes.h \
-  /usr/include/c++/11/cwchar \
-  /usr/include/c++/11/bits/localefwd.h \
-  /usr/include/x86_64-linux-gnu/c++/11/bits/c++locale.h \
-  /usr/include/c++/11/clocale \
-  /usr/include/locale.h \
-  /usr/include/x86_64-linux-gnu/bits/locale.h \
-  /usr/include/c++/11/iosfwd \
-  /usr/include/c++/11/cctype \
-  /usr/include/c++/11/bits/ostream_insert.h \
-  /usr/include/c++/11/bits/cxxabi_forced.h \
-  /usr/include/c++/11/bits/basic_string.h \
-  /usr/include/c++/11/ext/atomicity.h \
-  /usr/include/x86_64-linux-gnu/c++/11/bits/gthr.h \
-  /usr/include/x86_64-linux-gnu/c++/11/bits/gthr-default.h \
-  /usr/include/x86_64-linux-gnu/c++/11/bits/atomic_word.h \
-  /usr/include/x86_64-linux-gnu/sys/single_threaded.h \
-  /usr/include/c++/11/string_view \
-  /usr/include/c++/11/bits/string_view.tcc \
-  /usr/include/c++/11/ext/string_conversions.h \
-  /usr/include/c++/11/cstdio \
-  /usr/include/c++/11/cerrno \
-  /usr/include/c++/11/bits/charconv.h \
-  /usr/include/c++/11/bits/basic_string.tcc \
   /usr/include/c++/11/iterator \
   /usr/include/c++/11/bits/stream_iterator.h \
   /usr/include/c++/11/bits/streambuf_iterator.h \
@@ -791,7 +817,6 @@ CMakeFiles/ValdenApp.dir/Application/Application.cpp.o: Application/Application.
   /usr/include/x86_64-linux-gnu/c++/11/bits/ctype_inline.h \
   /usr/include/c++/11/bits/locale_facets.tcc \
   /usr/include/c++/11/bits/locale_facets_nonio.h \
-  /usr/include/c++/11/ctime \
   /usr/include/x86_64-linux-gnu/c++/11/bits/time_members.h \
   /usr/include/x86_64-linux-gnu/c++/11/bits/messages_members.h \
   /usr/include/libintl.h \
@@ -843,7 +868,7 @@ CMakeFiles/ValdenApp.dir/Application/Application.cpp.o: Application/Application.
   /usr/include/c++/11/bits/regex.tcc \
   /usr/include/c++/11/bits/regex_executor.h \
   /usr/include/c++/11/bits/regex_executor.tcc \
-  Application/TabSelect.h \
+  Application/Util/TabSelect.h \
   Application/Project/ProjectManager.h \
   Application/Project/ProjectData.h \
   /home/noah/Projects/SIR-Engine/EASTL/shared_ptr.h \
@@ -886,9 +911,6 @@ CMakeFiles/ValdenApp.dir/Application/Application.cpp.o: Application/Application.
   /usr/include/boost/system/detail/system_category_posix.hpp \
   /usr/include/boost/system/detail/std_interoperability.hpp \
   /usr/include/c++/11/mutex \
-  /usr/include/c++/11/chrono \
-  /usr/include/c++/11/ratio \
-  /usr/include/c++/11/bits/parse_numbers.h \
   /usr/include/c++/11/bits/std_mutex.h \
   /usr/include/c++/11/bits/unique_lock.h \
   /usr/include/boost/config/abi_prefix.hpp \
@@ -1346,6 +1368,96 @@ CMakeFiles/ValdenApp.dir/Application/Application.cpp.o: Application/Application.
   /home/noah/Projects/SIR-Engine/EASTL/internal/enable_shared.h \
   Application/SceneView.h \
   Application/AssetLib/TextureAtlas.h \
+  Application/Util/FileTreeView.h \
+  Application/ContentBrowser.h \
+  /usr/include/boost/filesystem.hpp \
+  /usr/include/boost/filesystem/config.hpp \
+  /usr/include/boost/filesystem/path.hpp \
+  /usr/include/boost/filesystem/path_traits.hpp \
+  /usr/include/c++/11/list \
+  /usr/include/c++/11/bits/stl_list.h \
+  /usr/include/c++/11/bits/list.tcc \
+  /usr/include/boost/iterator/iterator_facade.hpp \
+  /usr/include/boost/iterator/interoperable.hpp \
+  /usr/include/boost/iterator/detail/config_def.hpp \
+  /usr/include/boost/iterator/detail/config_undef.hpp \
+  /usr/include/boost/iterator/iterator_traits.hpp \
+  /usr/include/boost/iterator/iterator_categories.hpp \
+  /usr/include/boost/mpl/placeholders.hpp \
+  /usr/include/boost/mpl/arg.hpp \
+  /usr/include/boost/mpl/arg_fwd.hpp \
+  /usr/include/boost/mpl/aux_/na_assert.hpp \
+  /usr/include/boost/mpl/assert.hpp \
+  /usr/include/boost/mpl/aux_/config/gpu.hpp \
+  /usr/include/boost/mpl/aux_/config/pp_counter.hpp \
+  /usr/include/boost/mpl/aux_/arity_spec.hpp \
+  /usr/include/boost/mpl/aux_/arg_typedef.hpp \
+  /usr/include/boost/mpl/aux_/preprocessed/gcc/arg.hpp \
+  /usr/include/boost/mpl/aux_/preprocessed/gcc/placeholders.hpp \
+  /usr/include/boost/iterator/detail/facade_iterator_category.hpp \
+  /usr/include/boost/core/use_default.hpp \
+  /usr/include/boost/type_traits/is_const.hpp \
+  /usr/include/boost/detail/indirect_traits.hpp \
+  /usr/include/boost/type_traits/is_pointer.hpp \
+  /usr/include/boost/type_traits/is_volatile.hpp \
+  /usr/include/boost/type_traits/is_member_function_pointer.hpp \
+  /usr/include/boost/type_traits/detail/is_member_function_pointer_cxx_11.hpp \
+  /usr/include/boost/type_traits/is_member_pointer.hpp \
+  /usr/include/boost/type_traits/remove_pointer.hpp \
+  /usr/include/boost/detail/select_type.hpp \
+  /usr/include/boost/iterator/detail/enable_if.hpp \
+  /usr/include/boost/type_traits/add_const.hpp \
+  /usr/include/boost/type_traits/remove_const.hpp \
+  /usr/include/boost/type_traits/is_pod.hpp \
+  /usr/include/boost/type_traits/is_scalar.hpp \
+  /usr/include/boost/mpl/always.hpp \
+  /usr/include/boost/mpl/apply.hpp \
+  /usr/include/boost/mpl/apply_fwd.hpp \
+  /usr/include/boost/mpl/aux_/preprocessed/gcc/apply_fwd.hpp \
+  /usr/include/boost/mpl/lambda.hpp \
+  /usr/include/boost/mpl/bind.hpp \
+  /usr/include/boost/mpl/bind_fwd.hpp \
+  /usr/include/boost/mpl/aux_/config/bind.hpp \
+  /usr/include/boost/mpl/aux_/preprocessed/gcc/bind_fwd.hpp \
+  /usr/include/boost/mpl/next.hpp \
+  /usr/include/boost/mpl/next_prior.hpp \
+  /usr/include/boost/mpl/aux_/common_name_wknd.hpp \
+  /usr/include/boost/mpl/protect.hpp \
+  /usr/include/boost/mpl/aux_/preprocessed/gcc/bind.hpp \
+  /usr/include/boost/mpl/aux_/full_lambda.hpp \
+  /usr/include/boost/mpl/quote.hpp \
+  /usr/include/boost/mpl/aux_/has_type.hpp \
+  /usr/include/boost/mpl/aux_/config/bcc.hpp \
+  /usr/include/boost/mpl/aux_/preprocessed/gcc/quote.hpp \
+  /usr/include/boost/mpl/aux_/template_arity.hpp \
+  /usr/include/boost/mpl/aux_/preprocessed/gcc/template_arity.hpp \
+  /usr/include/boost/mpl/aux_/preprocessed/gcc/full_lambda.hpp \
+  /usr/include/boost/mpl/aux_/preprocessed/gcc/apply.hpp \
+  /usr/include/boost/io/quoted.hpp \
+  /usr/include/boost/io/detail/buffer_fill.hpp \
+  /usr/include/boost/io/detail/ostream_guard.hpp \
+  /usr/include/boost/io/ios_state.hpp \
+  /usr/include/boost/io_fwd.hpp \
+  /usr/include/boost/functional/hash_fwd.hpp \
+  /usr/include/boost/container_hash/hash_fwd.hpp \
+  /usr/include/boost/filesystem/exception.hpp \
+  /usr/include/boost/smart_ptr/intrusive_ptr.hpp \
+  /usr/include/boost/config/no_tr1/functional.hpp \
+  /usr/include/boost/smart_ptr/intrusive_ref_counter.hpp \
+  /usr/include/boost/smart_ptr/detail/atomic_count.hpp \
+  /usr/include/boost/smart_ptr/detail/atomic_count_gcc_atomic.hpp \
+  /usr/include/boost/filesystem/directory.hpp \
+  /usr/include/boost/filesystem/file_status.hpp \
+  /usr/include/boost/detail/bitmask.hpp \
+  /usr/include/boost/core/scoped_enum.hpp \
+  /usr/include/boost/filesystem/operations.hpp \
+  /usr/include/boost/filesystem/convenience.hpp \
+  /usr/include/boost/filesystem/string_file.hpp \
+  /usr/include/boost/filesystem/fstream.hpp \
+  /usr/include/c++/11/fstream \
+  /usr/include/x86_64-linux-gnu/c++/11/bits/basic_file.h \
+  /usr/include/x86_64-linux-gnu/c++/11/bits/c++io.h \
+  /usr/include/c++/11/bits/fstream.tcc \
   /home/noah/Projects/SIR-Engine/Engine/Core/Events/EventManager.h \
   /home/noah/Projects/SIR-Engine/Engine/Core/Events/WindowEvent.h \
   /usr/local/include/SDL2/SDL_keycode.h \
@@ -1358,18 +1470,11 @@ CMakeFiles/ValdenApp.dir/Application/Application.cpp.o: Application/Application.
   /home/noah/Projects/SIR-Engine/Engine/Core/Events/GamepadEvent.h \
   /usr/local/include/SDL2/SDL_gamecontroller.h \
   /home/noah/Projects/SIR-Engine/Engine/Core/Events/TouchEvent.h \
-  /home/noah/Projects/SIR-Engine/EASTL/optional.h \
-  /home/noah/Projects/SIR-Engine/Engine/RenderLib/RenderLib.h \
-  /home/noah/Projects/SIR-Engine/Engine/RenderLib/RenderCommon.h \
   /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/RenderContext.h \
   /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/RenderBuffer.h \
-  /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/RenderTexture.h \
   /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/RenderShader.h \
   /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/RenderShaderPipeline.h \
-  /home/noah/Projects/SIR-Engine/Engine/RenderLib/DrawBuffer.h \
-  /home/noah/Projects/SIR-Engine/EASTL/stack.h \
   /home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/VirtualStackAllocator.h \
-  /home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/AllocatorBase.h \
   /usr/local/include/SDL2/SDL.h \
   /usr/local/include/SDL2/SDL_main.h \
   /usr/local/include/SDL2/SDL_assert.h \
@@ -1396,20 +1501,1746 @@ CMakeFiles/ValdenApp.dir/Application/Application.cpp.o: Application/Application.
   /usr/local/include/SDL2/SDL_locale.h \
   /usr/local/include/SDL2/SDL_misc.h \
   /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLContext.h \
+  /usr/include/libnotify/notify.h \
+  /usr/include/glib-2.0/glib.h \
+  /usr/include/glib-2.0/glib/galloca.h \
+  /usr/include/glib-2.0/glib/gtypes.h \
+  /usr/lib/x86_64-linux-gnu/glib-2.0/include/glibconfig.h \
+  /usr/include/glib-2.0/glib/gmacros.h \
+  /usr/include/glib-2.0/glib/gversionmacros.h \
+  /usr/include/glib-2.0/glib/garray.h \
+  /usr/include/glib-2.0/glib/gasyncqueue.h \
+  /usr/include/glib-2.0/glib/gthread.h \
+  /usr/include/glib-2.0/glib/gatomic.h \
+  /usr/include/glib-2.0/glib/glib-typeof.h \
+  /usr/include/glib-2.0/glib/gerror.h \
+  /usr/include/glib-2.0/glib/gquark.h \
+  /usr/include/glib-2.0/glib/gutils.h \
+  /usr/include/glib-2.0/glib/gbacktrace.h \
+  /usr/include/glib-2.0/glib/gbase64.h \
+  /usr/include/glib-2.0/glib/gbitlock.h \
+  /usr/include/glib-2.0/glib/gbookmarkfile.h \
+  /usr/include/glib-2.0/glib/gdatetime.h \
+  /usr/include/glib-2.0/glib/gtimezone.h \
+  /usr/include/glib-2.0/glib/gbytes.h \
+  /usr/include/glib-2.0/glib/gcharset.h \
+  /usr/include/glib-2.0/glib/gchecksum.h \
+  /usr/include/glib-2.0/glib/gconvert.h \
+  /usr/include/glib-2.0/glib/gdataset.h \
+  /usr/include/glib-2.0/glib/gdate.h \
+  /usr/include/glib-2.0/glib/gdir.h \
+  /usr/include/dirent.h \
+  /usr/include/x86_64-linux-gnu/bits/dirent.h \
+  /usr/include/x86_64-linux-gnu/bits/dirent_ext.h \
+  /usr/include/glib-2.0/glib/genviron.h \
+  /usr/include/glib-2.0/glib/gfileutils.h \
+  /usr/include/glib-2.0/glib/ggettext.h \
+  /usr/include/glib-2.0/glib/ghash.h \
+  /usr/include/glib-2.0/glib/glist.h \
+  /usr/include/glib-2.0/glib/gmem.h \
+  /usr/include/glib-2.0/glib/gnode.h \
+  /usr/include/glib-2.0/glib/ghmac.h \
+  /usr/include/glib-2.0/glib/gchecksum.h \
+  /usr/include/glib-2.0/glib/ghook.h \
+  /usr/include/glib-2.0/glib/ghostutils.h \
+  /usr/include/glib-2.0/glib/giochannel.h \
+  /usr/include/glib-2.0/glib/gmain.h \
+  /usr/include/glib-2.0/glib/gpoll.h \
+  /usr/include/glib-2.0/glib/gslist.h \
+  /usr/include/glib-2.0/glib/gstring.h \
+  /usr/include/glib-2.0/glib/gunicode.h \
+  /usr/include/glib-2.0/glib/gkeyfile.h \
+  /usr/include/glib-2.0/glib/gmappedfile.h \
+  /usr/include/glib-2.0/glib/gmarkup.h \
+  /usr/include/glib-2.0/glib/gmessages.h \
+  /usr/include/glib-2.0/glib/gvariant.h \
+  /usr/include/glib-2.0/glib/gvarianttype.h \
+  /usr/include/glib-2.0/glib/goption.h \
+  /usr/include/glib-2.0/glib/gpattern.h \
+  /usr/include/glib-2.0/glib/gprimes.h \
+  /usr/include/glib-2.0/glib/gqsort.h \
+  /usr/include/glib-2.0/glib/gqueue.h \
+  /usr/include/glib-2.0/glib/grand.h \
+  /usr/include/glib-2.0/glib/grcbox.h \
+  /usr/include/glib-2.0/glib/grefcount.h \
+  /usr/include/glib-2.0/glib/grefstring.h \
+  /usr/include/glib-2.0/glib/gmem.h \
+  /usr/include/glib-2.0/glib/gmacros.h \
+  /usr/include/glib-2.0/glib/gregex.h \
+  /usr/include/glib-2.0/glib/gscanner.h \
+  /usr/include/glib-2.0/glib/gsequence.h \
+  /usr/include/glib-2.0/glib/gshell.h \
+  /usr/include/glib-2.0/glib/gslice.h \
+  /usr/include/glib-2.0/glib/gspawn.h \
+  /usr/include/glib-2.0/glib/gstrfuncs.h \
+  /usr/include/glib-2.0/glib/gstringchunk.h \
+  /usr/include/glib-2.0/glib/gstrvbuilder.h \
+  /usr/include/glib-2.0/glib/gtestutils.h \
+  /usr/include/glib-2.0/glib/gthreadpool.h \
+  /usr/include/glib-2.0/glib/gtimer.h \
+  /usr/include/glib-2.0/glib/gtrashstack.h \
+  /usr/include/glib-2.0/glib/gtree.h \
+  /usr/include/glib-2.0/glib/guri.h \
+  /usr/include/glib-2.0/glib/guuid.h \
+  /usr/include/glib-2.0/glib/gversion.h \
+  /usr/include/glib-2.0/glib/deprecated/gallocator.h \
+  /usr/include/glib-2.0/glib/deprecated/gcache.h \
+  /usr/include/glib-2.0/glib/deprecated/gcompletion.h \
+  /usr/include/glib-2.0/glib/deprecated/gmain.h \
+  /usr/include/glib-2.0/glib/deprecated/grel.h \
+  /usr/include/glib-2.0/glib/deprecated/gthread.h \
+  /usr/include/glib-2.0/glib/glib-autocleanups.h \
+  /usr/include/libnotify/notification.h \
+  /usr/include/glib-2.0/glib-object.h \
+  /usr/include/glib-2.0/gobject/gbinding.h \
+  /usr/include/glib-2.0/gobject/gobject.h \
+  /usr/include/glib-2.0/gobject/gtype.h \
+  /usr/include/glib-2.0/gobject/gvalue.h \
+  /usr/include/glib-2.0/gobject/gparam.h \
+  /usr/include/glib-2.0/gobject/gclosure.h \
+  /usr/include/glib-2.0/gobject/gsignal.h \
+  /usr/include/glib-2.0/gobject/gmarshal.h \
+  /usr/include/glib-2.0/gobject/gboxed.h \
+  /usr/include/glib-2.0/gobject/glib-types.h \
+  /usr/include/glib-2.0/gobject/gbindinggroup.h \
+  /usr/include/glib-2.0/gobject/genums.h \
+  /usr/include/glib-2.0/gobject/glib-enumtypes.h \
+  /usr/include/glib-2.0/gobject/gparamspecs.h \
+  /usr/include/glib-2.0/gobject/gsignalgroup.h \
+  /usr/include/glib-2.0/gobject/gsourceclosure.h \
+  /usr/include/glib-2.0/gobject/gtypemodule.h \
+  /usr/include/glib-2.0/gobject/gtypeplugin.h \
+  /usr/include/glib-2.0/gobject/gvaluearray.h \
+  /usr/include/glib-2.0/gobject/gvaluetypes.h \
+  /usr/include/glib-2.0/gobject/gobject-autocleanups.h \
+  /usr/include/gdk-pixbuf-2.0/gdk-pixbuf/gdk-pixbuf.h \
+  /usr/include/gdk-pixbuf-2.0/gdk-pixbuf/gdk-pixbuf-macros.h \
+  /usr/include/gdk-pixbuf-2.0/gdk-pixbuf/gdk-pixbuf-features.h \
+  /usr/include/gdk-pixbuf-2.0/gdk-pixbuf/gdk-pixbuf-core.h \
+  /usr/include/glib-2.0/gio/gio.h \
+  /usr/include/glib-2.0/gio/giotypes.h \
+  /usr/include/glib-2.0/gio/gioenums.h \
+  /usr/include/glib-2.0/gio/gaction.h \
+  /usr/include/glib-2.0/gio/gactiongroup.h \
+  /usr/include/glib-2.0/gio/gactiongroupexporter.h \
+  /usr/include/glib-2.0/gio/gactionmap.h \
+  /usr/include/glib-2.0/gio/gappinfo.h \
+  /usr/include/glib-2.0/gio/gapplication.h \
+  /usr/include/glib-2.0/gio/gapplicationcommandline.h \
+  /usr/include/glib-2.0/gio/gasyncinitable.h \
+  /usr/include/glib-2.0/gio/ginitable.h \
+  /usr/include/glib-2.0/gio/gasyncresult.h \
+  /usr/include/glib-2.0/gio/gbufferedinputstream.h \
+  /usr/include/glib-2.0/gio/gfilterinputstream.h \
+  /usr/include/glib-2.0/gio/ginputstream.h \
+  /usr/include/glib-2.0/gio/gbufferedoutputstream.h \
+  /usr/include/glib-2.0/gio/gfilteroutputstream.h \
+  /usr/include/glib-2.0/gio/goutputstream.h \
+  /usr/include/glib-2.0/gio/gbytesicon.h \
+  /usr/include/glib-2.0/gio/gcancellable.h \
+  /usr/include/glib-2.0/gio/gcharsetconverter.h \
+  /usr/include/glib-2.0/gio/gconverter.h \
+  /usr/include/glib-2.0/gio/gcontenttype.h \
+  /usr/include/glib-2.0/gio/gconverterinputstream.h \
+  /usr/include/glib-2.0/gio/gconverteroutputstream.h \
+  /usr/include/glib-2.0/gio/gcredentials.h \
+  /usr/include/glib-2.0/gio/gdatagrambased.h \
+  /usr/include/glib-2.0/gio/gdatainputstream.h \
+  /usr/include/glib-2.0/gio/gdataoutputstream.h \
+  /usr/include/glib-2.0/gio/gdbusactiongroup.h \
+  /usr/include/glib-2.0/gio/giotypes.h \
+  /usr/include/glib-2.0/gio/gdbusaddress.h \
+  /usr/include/glib-2.0/gio/gdbusauthobserver.h \
+  /usr/include/glib-2.0/gio/gdbusconnection.h \
+  /usr/include/glib-2.0/gio/gdbuserror.h \
+  /usr/include/glib-2.0/gio/gdbusinterface.h \
+  /usr/include/glib-2.0/gio/gdbusinterfaceskeleton.h \
+  /usr/include/glib-2.0/gio/gdbusintrospection.h \
+  /usr/include/glib-2.0/gio/gdbusmenumodel.h \
+  /usr/include/glib-2.0/gio/gdbusmessage.h \
+  /usr/include/glib-2.0/gio/gdbusmethodinvocation.h \
+  /usr/include/glib-2.0/gio/gdbusnameowning.h \
+  /usr/include/glib-2.0/gio/gdbusnamewatching.h \
+  /usr/include/glib-2.0/gio/gdbusobject.h \
+  /usr/include/glib-2.0/gio/gdbusobjectmanager.h \
+  /usr/include/glib-2.0/gio/gdbusobjectmanagerclient.h \
+  /usr/include/glib-2.0/gio/gdbusobjectmanagerserver.h \
+  /usr/include/glib-2.0/gio/gdbusobjectproxy.h \
+  /usr/include/glib-2.0/gio/gdbusobjectskeleton.h \
+  /usr/include/glib-2.0/gio/gdbusproxy.h \
+  /usr/include/glib-2.0/gio/gdbusserver.h \
+  /usr/include/glib-2.0/gio/gdbusutils.h \
+  /usr/include/glib-2.0/gio/gdebugcontroller.h \
+  /usr/include/glib-2.0/gio/gdebugcontrollerdbus.h \
+  /usr/include/glib-2.0/gio/gdrive.h \
+  /usr/include/glib-2.0/gio/gdtlsclientconnection.h \
+  /usr/include/glib-2.0/gio/gdtlsconnection.h \
+  /usr/include/glib-2.0/gio/gdtlsserverconnection.h \
+  /usr/include/glib-2.0/gio/gemblemedicon.h \
+  /usr/include/glib-2.0/gio/gicon.h \
+  /usr/include/glib-2.0/gio/gemblem.h \
+  /usr/include/glib-2.0/gio/gfile.h \
+  /usr/include/glib-2.0/gio/gfileattribute.h \
+  /usr/include/glib-2.0/gio/gfileenumerator.h \
+  /usr/include/glib-2.0/gio/gfileicon.h \
+  /usr/include/glib-2.0/gio/gfileinfo.h \
+  /usr/include/glib-2.0/gio/gfileinputstream.h \
+  /usr/include/glib-2.0/gio/gfileiostream.h \
+  /usr/include/glib-2.0/gio/giostream.h \
+  /usr/include/glib-2.0/gio/gioerror.h \
+  /usr/include/glib-2.0/gio/gfilemonitor.h \
+  /usr/include/glib-2.0/gio/gfilenamecompleter.h \
+  /usr/include/glib-2.0/gio/gfileoutputstream.h \
+  /usr/include/glib-2.0/gio/ginetaddress.h \
+  /usr/include/glib-2.0/gio/ginetaddressmask.h \
+  /usr/include/glib-2.0/gio/ginetsocketaddress.h \
+  /usr/include/glib-2.0/gio/gsocketaddress.h \
+  /usr/include/glib-2.0/gio/gioenumtypes.h \
+  /usr/include/glib-2.0/gio/giomodule.h \
+  /usr/include/glib-2.0/gmodule.h \
+  /usr/include/glib-2.0/gio/gioscheduler.h \
+  /usr/include/glib-2.0/gio/glistmodel.h \
+  /usr/include/glib-2.0/gio/gliststore.h \
+  /usr/include/glib-2.0/gio/gloadableicon.h \
+  /usr/include/glib-2.0/gio/gmemoryinputstream.h \
+  /usr/include/glib-2.0/gio/gmemorymonitor.h \
+  /usr/include/glib-2.0/gio/gmemoryoutputstream.h \
+  /usr/include/glib-2.0/gio/gmenu.h \
+  /usr/include/glib-2.0/gio/gmenumodel.h \
+  /usr/include/glib-2.0/gio/gmenuexporter.h \
+  /usr/include/glib-2.0/gio/gmount.h \
+  /usr/include/glib-2.0/gio/gmountoperation.h \
+  /usr/include/glib-2.0/gio/gnativesocketaddress.h \
+  /usr/include/glib-2.0/gio/gnativevolumemonitor.h \
+  /usr/include/glib-2.0/gio/gvolumemonitor.h \
+  /usr/include/glib-2.0/gio/gnetworkaddress.h \
+  /usr/include/glib-2.0/gio/gnetworkmonitor.h \
+  /usr/include/glib-2.0/gio/gnetworkservice.h \
+  /usr/include/glib-2.0/gio/gnotification.h \
+  /usr/include/glib-2.0/gio/gpermission.h \
+  /usr/include/glib-2.0/gio/gpollableinputstream.h \
+  /usr/include/glib-2.0/gio/gpollableoutputstream.h \
+  /usr/include/glib-2.0/gio/gpollableutils.h \
+  /usr/include/glib-2.0/gio/gpowerprofilemonitor.h \
+  /usr/include/glib-2.0/gio/gpropertyaction.h \
+  /usr/include/glib-2.0/gio/gproxy.h \
+  /usr/include/glib-2.0/gio/gproxyaddress.h \
+  /usr/include/glib-2.0/gio/gproxyaddressenumerator.h \
+  /usr/include/glib-2.0/gio/gsocketaddressenumerator.h \
+  /usr/include/glib-2.0/gio/gproxyresolver.h \
+  /usr/include/glib-2.0/gio/gremoteactiongroup.h \
+  /usr/include/glib-2.0/gio/gresolver.h \
+  /usr/include/glib-2.0/gio/gresource.h \
+  /usr/include/glib-2.0/gio/gseekable.h \
+  /usr/include/glib-2.0/gio/gsettings.h \
+  /usr/include/glib-2.0/gio/gsettingsschema.h \
+  /usr/include/glib-2.0/gio/gsimpleaction.h \
+  /usr/include/glib-2.0/gio/gsimpleactiongroup.h \
+  /usr/include/glib-2.0/gio/gactiongroup.h \
+  /usr/include/glib-2.0/gio/gactionmap.h \
+  /usr/include/glib-2.0/gio/gsimpleasyncresult.h \
+  /usr/include/glib-2.0/gio/gsimpleiostream.h \
+  /usr/include/glib-2.0/gio/gsimplepermission.h \
+  /usr/include/glib-2.0/gio/gsimpleproxyresolver.h \
+  /usr/include/glib-2.0/gio/gsocket.h \
+  /usr/include/glib-2.0/gio/gsocketclient.h \
+  /usr/include/glib-2.0/gio/gsocketconnectable.h \
+  /usr/include/glib-2.0/gio/gsocketconnection.h \
+  /usr/include/glib-2.0/gio/gsocketcontrolmessage.h \
+  /usr/include/glib-2.0/gio/gsocketlistener.h \
+  /usr/include/glib-2.0/gio/gsocketservice.h \
+  /usr/include/glib-2.0/gio/gsrvtarget.h \
+  /usr/include/glib-2.0/gio/gsubprocess.h \
+  /usr/include/glib-2.0/gio/gsubprocesslauncher.h \
+  /usr/include/glib-2.0/gio/gtask.h \
+  /usr/include/glib-2.0/gio/gtcpconnection.h \
+  /usr/include/glib-2.0/gio/gtcpwrapperconnection.h \
+  /usr/include/glib-2.0/gio/gtestdbus.h \
+  /usr/include/glib-2.0/gio/gthemedicon.h \
+  /usr/include/glib-2.0/gio/gthreadedsocketservice.h \
+  /usr/include/glib-2.0/gio/gtlsbackend.h \
+  /usr/include/glib-2.0/gio/gtlscertificate.h \
+  /usr/include/glib-2.0/gio/gtlsclientconnection.h \
+  /usr/include/glib-2.0/gio/gtlsconnection.h \
+  /usr/include/glib-2.0/gio/gtlsdatabase.h \
+  /usr/include/glib-2.0/gio/gtlsfiledatabase.h \
+  /usr/include/glib-2.0/gio/gtlsinteraction.h \
+  /usr/include/glib-2.0/gio/gtlspassword.h \
+  /usr/include/glib-2.0/gio/gtlsserverconnection.h \
+  /usr/include/glib-2.0/gio/gvfs.h \
+  /usr/include/glib-2.0/gio/gvolume.h \
+  /usr/include/glib-2.0/gio/gzlibcompressor.h \
+  /usr/include/glib-2.0/gio/gzlibdecompressor.h \
+  /usr/include/glib-2.0/gio/gio-autocleanups.h \
+  /usr/include/gdk-pixbuf-2.0/gdk-pixbuf/gdk-pixbuf-transform.h \
+  /usr/include/gdk-pixbuf-2.0/gdk-pixbuf/gdk-pixbuf-animation.h \
+  /usr/include/gdk-pixbuf-2.0/gdk-pixbuf/gdk-pixbuf-simple-anim.h \
+  /usr/include/gdk-pixbuf-2.0/gdk-pixbuf/gdk-pixbuf-io.h \
+  /usr/include/gdk-pixbuf-2.0/gdk-pixbuf/gdk-pixbuf-loader.h \
+  /usr/include/gdk-pixbuf-2.0/gdk-pixbuf/gdk-pixbuf-enum-types.h \
+  /usr/include/gdk-pixbuf-2.0/gdk-pixbuf/gdk-pixbuf-autocleanups.h \
+  /usr/include/libnotify/notify-enum-types.h \
+  /usr/include/libnotify/notify-features.h \
+  Application/Roboto-Regular.embed
+
+CMakeFiles/ValdenApp.dir/Application/ContentBrowser.cpp.o: Application/ContentBrowser.cpp \
+  /usr/include/stdc-predef.h \
+  Application/ContentBrowser.h \
+  Application/Application.h \
+  /home/noah/Projects/SIR-Engine/Engine/Memory/Memory.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/SIREngine.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/stdint.h \
+  /usr/include/stdint.h \
+  /usr/include/x86_64-linux-gnu/bits/libc-header-start.h \
+  /usr/include/features.h \
+  /usr/include/features-time64.h \
+  /usr/include/x86_64-linux-gnu/bits/wordsize.h \
+  /usr/include/x86_64-linux-gnu/bits/timesize.h \
+  /usr/include/x86_64-linux-gnu/sys/cdefs.h \
+  /usr/include/x86_64-linux-gnu/bits/long-double.h \
+  /usr/include/x86_64-linux-gnu/gnu/stubs.h \
+  /usr/include/x86_64-linux-gnu/gnu/stubs-64.h \
+  /usr/include/x86_64-linux-gnu/bits/types.h \
+  /usr/include/x86_64-linux-gnu/bits/typesizes.h \
+  /usr/include/x86_64-linux-gnu/bits/time64.h \
+  /usr/include/x86_64-linux-gnu/bits/wchar.h \
+  /usr/include/x86_64-linux-gnu/bits/stdint-intn.h \
+  /usr/include/x86_64-linux-gnu/bits/stdint-uintn.h \
+  /usr/include/string.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/stddef.h \
+  /usr/include/x86_64-linux-gnu/bits/types/locale_t.h \
+  /usr/include/x86_64-linux-gnu/bits/types/__locale_t.h \
+  /usr/include/strings.h \
+  /usr/include/x86_64-linux-gnu/bits/strings_fortified.h \
+  /usr/include/x86_64-linux-gnu/bits/string_fortified.h \
+  /usr/include/c++/11/stdlib.h \
+  /usr/include/c++/11/cstdlib \
+  /usr/include/x86_64-linux-gnu/c++/11/bits/c++config.h \
+  /usr/include/x86_64-linux-gnu/c++/11/bits/os_defines.h \
+  /usr/include/x86_64-linux-gnu/c++/11/bits/cpu_defines.h \
+  /usr/include/c++/11/pstl/pstl_config.h \
+  /usr/include/stdlib.h \
+  /usr/include/x86_64-linux-gnu/bits/waitflags.h \
+  /usr/include/x86_64-linux-gnu/bits/waitstatus.h \
+  /usr/include/x86_64-linux-gnu/bits/floatn.h \
+  /usr/include/x86_64-linux-gnu/bits/floatn-common.h \
+  /usr/include/x86_64-linux-gnu/sys/types.h \
+  /usr/include/x86_64-linux-gnu/bits/types/clock_t.h \
+  /usr/include/x86_64-linux-gnu/bits/types/clockid_t.h \
+  /usr/include/x86_64-linux-gnu/bits/types/time_t.h \
+  /usr/include/x86_64-linux-gnu/bits/types/timer_t.h \
+  /usr/include/endian.h \
+  /usr/include/x86_64-linux-gnu/bits/endian.h \
+  /usr/include/x86_64-linux-gnu/bits/endianness.h \
+  /usr/include/x86_64-linux-gnu/bits/byteswap.h \
+  /usr/include/x86_64-linux-gnu/bits/uintn-identity.h \
+  /usr/include/x86_64-linux-gnu/sys/select.h \
+  /usr/include/x86_64-linux-gnu/bits/select.h \
+  /usr/include/x86_64-linux-gnu/bits/types/sigset_t.h \
+  /usr/include/x86_64-linux-gnu/bits/types/__sigset_t.h \
+  /usr/include/x86_64-linux-gnu/bits/types/struct_timeval.h \
+  /usr/include/x86_64-linux-gnu/bits/types/struct_timespec.h \
+  /usr/include/x86_64-linux-gnu/bits/select2.h \
+  /usr/include/x86_64-linux-gnu/bits/pthreadtypes.h \
+  /usr/include/x86_64-linux-gnu/bits/thread-shared-types.h \
+  /usr/include/x86_64-linux-gnu/bits/pthreadtypes-arch.h \
+  /usr/include/x86_64-linux-gnu/bits/atomic_wide_counter.h \
+  /usr/include/x86_64-linux-gnu/bits/struct_mutex.h \
+  /usr/include/x86_64-linux-gnu/bits/struct_rwlock.h \
+  /usr/include/alloca.h \
+  /usr/include/x86_64-linux-gnu/bits/stdlib-bsearch.h \
+  /usr/include/x86_64-linux-gnu/bits/stdlib-float.h \
+  /usr/include/x86_64-linux-gnu/bits/stdlib.h \
+  /usr/include/c++/11/bits/std_abs.h \
+  /usr/include/stdio.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/stdarg.h \
+  /usr/include/x86_64-linux-gnu/bits/types/__fpos_t.h \
+  /usr/include/x86_64-linux-gnu/bits/types/__mbstate_t.h \
+  /usr/include/x86_64-linux-gnu/bits/types/__fpos64_t.h \
+  /usr/include/x86_64-linux-gnu/bits/types/__FILE.h \
+  /usr/include/x86_64-linux-gnu/bits/types/FILE.h \
+  /usr/include/x86_64-linux-gnu/bits/types/struct_FILE.h \
+  /usr/include/x86_64-linux-gnu/bits/types/cookie_io_functions_t.h \
+  /usr/include/x86_64-linux-gnu/bits/stdio_lim.h \
+  /usr/include/x86_64-linux-gnu/bits/stdio.h \
+  /usr/include/x86_64-linux-gnu/bits/stdio2.h \
+  /usr/include/assert.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/stb_sprintf.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Compiler.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Platform.h \
+  /usr/include/unistd.h \
+  /usr/include/x86_64-linux-gnu/bits/posix_opt.h \
+  /usr/include/x86_64-linux-gnu/bits/environments.h \
+  /usr/include/x86_64-linux-gnu/bits/confname.h \
+  /usr/include/x86_64-linux-gnu/bits/getopt_posix.h \
+  /usr/include/x86_64-linux-gnu/bits/getopt_core.h \
+  /usr/include/x86_64-linux-gnu/bits/unistd.h \
+  /usr/include/x86_64-linux-gnu/bits/unistd_ext.h \
+  /usr/include/linux/close_range.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Config.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Platform.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Types.h \
+  /usr/include/c++/11/type_traits \
+  /usr/include/c++/11/forward_list \
+  /usr/include/c++/11/bits/forward_list.h \
+  /usr/include/c++/11/initializer_list \
+  /usr/include/c++/11/bits/stl_iterator_base_types.h \
+  /usr/include/c++/11/bits/stl_iterator.h \
+  /usr/include/c++/11/bits/cpp_type_traits.h \
+  /usr/include/c++/11/ext/type_traits.h \
+  /usr/include/c++/11/bits/move.h \
+  /usr/include/c++/11/bits/ptr_traits.h \
+  /usr/include/c++/11/bits/stl_algobase.h \
+  /usr/include/c++/11/bits/functexcept.h \
+  /usr/include/c++/11/bits/exception_defines.h \
+  /usr/include/c++/11/ext/numeric_traits.h \
+  /usr/include/c++/11/bits/stl_pair.h \
+  /usr/include/c++/11/bits/stl_iterator_base_funcs.h \
+  /usr/include/c++/11/bits/concept_check.h \
+  /usr/include/c++/11/debug/assertions.h \
+  /usr/include/c++/11/debug/debug.h \
+  /usr/include/c++/11/bits/predefined_ops.h \
+  /usr/include/c++/11/bits/stl_function.h \
+  /usr/include/c++/11/backward/binders.h \
+  /usr/include/c++/11/bits/allocator.h \
+  /usr/include/x86_64-linux-gnu/c++/11/bits/c++allocator.h \
+  /usr/include/c++/11/ext/new_allocator.h \
+  /usr/include/c++/11/new \
+  /usr/include/c++/11/bits/exception.h \
+  /usr/include/c++/11/bits/memoryfwd.h \
+  /usr/include/c++/11/ext/alloc_traits.h \
+  /usr/include/c++/11/bits/alloc_traits.h \
+  /usr/include/c++/11/bits/stl_construct.h \
+  /usr/include/c++/11/ext/aligned_buffer.h \
+  /usr/include/c++/11/bits/range_access.h \
+  /usr/include/c++/11/bits/forward_list.tcc \
+  /home/noah/Projects/SIR-Engine/EASTL/type_traits.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/config.h \
+  /home/noah/Projects/SIR-Engine/EABase/eabase.h \
+  /home/noah/Projects/SIR-Engine/EABase/config/eacompiler.h \
+  /home/noah/Projects/SIR-Engine/EABase/config/eaplatform.h \
+  /usr/include/c++/11/cstddef \
+  /home/noah/Projects/SIR-Engine/EABase/config/eacompilertraits.h \
+  /home/noah/Projects/SIR-Engine/EABase/version.h \
+  /home/noah/Projects/SIR-Engine/EABase/eaunits.h \
+  /usr/include/inttypes.h \
+  /usr/include/c++/11/math.h \
+  /usr/include/c++/11/cmath \
+  /usr/include/math.h \
+  /usr/include/x86_64-linux-gnu/bits/math-vector.h \
+  /usr/include/x86_64-linux-gnu/bits/libm-simd-decl-stubs.h \
+  /usr/include/x86_64-linux-gnu/bits/flt-eval-method.h \
+  /usr/include/x86_64-linux-gnu/bits/fp-logb.h \
+  /usr/include/x86_64-linux-gnu/bits/fp-fast.h \
+  /usr/include/x86_64-linux-gnu/bits/mathcalls-helper-functions.h \
+  /usr/include/x86_64-linux-gnu/bits/mathcalls.h \
+  /usr/include/x86_64-linux-gnu/bits/mathcalls-narrow.h \
+  /usr/include/x86_64-linux-gnu/bits/iscanonical.h \
+  /usr/include/c++/11/bits/specfun.h \
+  /usr/include/c++/11/limits \
+  /usr/include/c++/11/tr1/gamma.tcc \
+  /usr/include/c++/11/tr1/special_function_util.h \
+  /usr/include/c++/11/tr1/bessel_function.tcc \
+  /usr/include/c++/11/tr1/beta_function.tcc \
+  /usr/include/c++/11/tr1/ell_integral.tcc \
+  /usr/include/c++/11/tr1/exp_integral.tcc \
+  /usr/include/c++/11/tr1/hypergeometric.tcc \
+  /usr/include/c++/11/tr1/legendre_function.tcc \
+  /usr/include/c++/11/tr1/modified_bessel_func.tcc \
+  /usr/include/c++/11/tr1/poly_hermite.tcc \
+  /usr/include/c++/11/tr1/poly_laguerre.tcc \
+  /usr/include/c++/11/tr1/riemann_zeta.tcc \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/float.h \
+  /home/noah/Projects/SIR-Engine/EABase/int128.h \
+  /home/noah/Projects/SIR-Engine/EABase/eahave.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/type_fundamental.h \
+  /home/noah/Projects/SIR-Engine/EABase/nullptr.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/type_transformations.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/limits.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/syslimits.h \
+  /usr/include/limits.h \
+  /usr/include/x86_64-linux-gnu/bits/posix1_lim.h \
+  /usr/include/x86_64-linux-gnu/bits/local_lim.h \
+  /usr/include/linux/limits.h \
+  /usr/include/x86_64-linux-gnu/bits/pthread_stack_min-dynamic.h \
+  /usr/include/x86_64-linux-gnu/bits/posix2_lim.h \
+  /usr/include/x86_64-linux-gnu/bits/xopen_lim.h \
+  /usr/include/x86_64-linux-gnu/bits/uio_lim.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/type_properties.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/type_compound.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/type_pod.h \
+  /home/noah/Projects/SIR-Engine/EASTL/vector.h \
+  /home/noah/Projects/SIR-Engine/EASTL/allocator.h \
+  /home/noah/Projects/SIR-Engine/EASTL/iterator.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/move_help.h \
+  /home/noah/Projects/SIR-Engine/EASTL/initializer_list.h \
+  /home/noah/Projects/SIR-Engine/EASTL/algorithm.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/copy_help.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/fill_help.h \
+  /home/noah/Projects/SIR-Engine/EASTL/functional.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/functional_base.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/memory_base.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/mem_fn.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/function.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/function_detail.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/function_help.h \
+  /home/noah/Projects/SIR-Engine/EASTL/utility.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/integer_sequence.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/tuple_fwd_decls.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/in_place_t.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/piecewise_construct_t.h \
+  /usr/include/c++/11/tuple \
+  /usr/include/c++/11/utility \
+  /usr/include/c++/11/bits/stl_relops.h \
+  /usr/include/c++/11/array \
+  /usr/include/c++/11/bits/uses_allocator.h \
+  /usr/include/c++/11/bits/invoke.h \
+  /usr/include/c++/11/typeinfo \
+  /usr/include/c++/11/bits/hash_bytes.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/generic_iterator.h \
+  /home/noah/Projects/SIR-Engine/EASTL/random.h \
+  /home/noah/Projects/SIR-Engine/EASTL/numeric_limits.h \
+  /home/noah/Projects/SIR-Engine/EASTL/memory.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/pair_fwd_decls.h \
+  /home/noah/Projects/SIR-Engine/EASTL/bonus/compressed_pair.h \
+  /home/noah/Projects/SIR-Engine/EASTL/bonus/call_traits.h \
+  /home/noah/Projects/SIR-Engine/EASTL/vector_map.h \
+  /home/noah/Projects/SIR-Engine/EASTL/string.h \
+  /usr/include/ctype.h \
+  /usr/include/wchar.h \
+  /usr/include/x86_64-linux-gnu/bits/types/wint_t.h \
+  /usr/include/x86_64-linux-gnu/bits/types/mbstate_t.h \
+  /usr/include/x86_64-linux-gnu/bits/wchar2.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/char_traits.h \
+  /home/noah/Projects/SIR-Engine/EASTL/string_view.h \
+  /home/noah/Projects/SIR-Engine/EASTL/unique_ptr.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/smart_ptr.h \
+  /home/noah/Projects/SIR-Engine/EASTL/unordered_map.h \
+  /home/noah/Projects/SIR-Engine/EASTL/hash_map.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/hashtable.h \
+  /home/noah/Projects/SIR-Engine/EASTL/tuple.h \
+  /home/noah/Projects/SIR-Engine/EASTL/map.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/red_black_tree.h \
+  /home/noah/Projects/SIR-Engine/EASTL/sort.h \
+  /home/noah/Projects/SIR-Engine/EASTL/heap.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/Logger.h \
+  /home/noah/Projects/SIR-Engine/EASTL/queue.h \
+  /home/noah/Projects/SIR-Engine/EASTL/deque.h \
+  /home/noah/Projects/SIR-Engine/Engine/Util/CString.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/ResourceDef.h \
+  /home/noah/Projects/SIR-Engine/EASTL/allocator_malloc.h \
+  /usr/include/malloc.h \
+  /home/noah/Projects/SIR-Engine/EASTL/fixed_string.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/fixed_pool.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
+  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
+  /home/noah/Projects/SIR-Engine/Engine/Util/CVector.h \
+  /home/noah/Projects/SIR-Engine/Engine/Util/UtlMemory.h \
+  /home/noah/Projects/SIR-Engine/Engine/Util/CStaticArray.h \
+  /home/noah/Projects/SIR-Engine/Engine/Util/CConstList.h \
+  /home/noah/Projects/SIR-Engine/Engine/Memory/Backend/TagArenaAllocator.h \
+  /home/noah/Projects/SIR-Engine/Engine/Memory/Memory.h \
+  /home/noah/Projects/SIR-Engine/Engine/Memory/MemAlloc.h \
+  /home/noah/Projects/SIR-Engine/Engine/Memory/Memory.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/ConsoleManager.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/SIREngine.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Serialization/Ini/IniSerializer.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/FileSystem/FilePath.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Serialization/SerializerBase.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/ThreadSystem/Thread.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Application/GenericPlatform/GenericApplication.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Events/EventBase.h \
+  /usr/local/include/SDL2/SDL_events.h \
+  /usr/local/include/SDL2/SDL_stdinc.h \
+  /usr/local/include/SDL2/SDL_config.h \
+  /usr/local/include/SDL2/SDL_platform.h \
+  /usr/local/include/SDL2/begin_code.h \
+  /usr/local/include/SDL2/close_code.h \
+  /usr/local/include/SDL2/SDL_error.h \
+  /usr/local/include/SDL2/SDL_video.h \
+  /usr/local/include/SDL2/SDL_pixels.h \
+  /usr/local/include/SDL2/SDL_endian.h \
+  /usr/local/include/SDL2/SDL_rect.h \
+  /usr/local/include/SDL2/SDL_rwops.h \
+  /usr/local/include/SDL2/SDL_surface.h \
+  /usr/local/include/SDL2/SDL_blendmode.h \
+  /usr/local/include/SDL2/SDL_keyboard.h \
+  /usr/local/include/SDL2/SDL_keycode.h \
+  /usr/local/include/SDL2/SDL_scancode.h \
+  /usr/local/include/SDL2/SDL_mouse.h \
+  /usr/local/include/SDL2/SDL_joystick.h \
+  /usr/local/include/SDL2/SDL_guid.h \
+  /usr/local/include/SDL2/SDL_mutex.h \
+  /usr/local/include/SDL2/SDL_gamecontroller.h \
+  /usr/local/include/SDL2/SDL_sensor.h \
+  /usr/local/include/SDL2/SDL_quit.h \
+  /usr/local/include/SDL2/SDL_gesture.h \
+  /usr/local/include/SDL2/SDL_touch.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Application/Posix/PosixApplication.h \
+  /usr/include/pthread.h \
+  /usr/include/sched.h \
+  /usr/include/x86_64-linux-gnu/bits/sched.h \
+  /usr/include/x86_64-linux-gnu/bits/types/struct_sched_param.h \
+  /usr/include/x86_64-linux-gnu/bits/cpu-set.h \
+  /usr/include/time.h \
+  /usr/include/x86_64-linux-gnu/bits/time.h \
+  /usr/include/x86_64-linux-gnu/bits/timex.h \
+  /usr/include/x86_64-linux-gnu/bits/types/struct_tm.h \
+  /usr/include/x86_64-linux-gnu/bits/types/struct_itimerspec.h \
+  /usr/include/x86_64-linux-gnu/bits/setjmp.h \
+  /usr/include/x86_64-linux-gnu/bits/types/struct___jmp_buf_tag.h \
+  /usr/include/x86_64-linux-gnu/sys/prctl.h \
+  /usr/include/linux/prctl.h \
+  /usr/include/linux/types.h \
+  /usr/include/x86_64-linux-gnu/asm/types.h \
+  /usr/include/asm-generic/types.h \
+  /usr/include/asm-generic/int-ll64.h \
+  /usr/include/x86_64-linux-gnu/asm/bitsperlong.h \
+  /usr/include/asm-generic/bitsperlong.h \
+  /usr/include/linux/posix_types.h \
+  /usr/include/linux/stddef.h \
+  /usr/include/x86_64-linux-gnu/asm/posix_types.h \
+  /usr/include/x86_64-linux-gnu/asm/posix_types_64.h \
+  /usr/include/asm-generic/posix_types.h \
+  /usr/include/signal.h \
+  /usr/include/x86_64-linux-gnu/bits/signum-generic.h \
+  /usr/include/x86_64-linux-gnu/bits/signum-arch.h \
+  /usr/include/x86_64-linux-gnu/bits/types/sig_atomic_t.h \
+  /usr/include/x86_64-linux-gnu/bits/types/siginfo_t.h \
+  /usr/include/x86_64-linux-gnu/bits/types/__sigval_t.h \
+  /usr/include/x86_64-linux-gnu/bits/siginfo-arch.h \
+  /usr/include/x86_64-linux-gnu/bits/siginfo-consts.h \
+  /usr/include/x86_64-linux-gnu/bits/siginfo-consts-arch.h \
+  /usr/include/x86_64-linux-gnu/bits/types/sigval_t.h \
+  /usr/include/x86_64-linux-gnu/bits/types/sigevent_t.h \
+  /usr/include/x86_64-linux-gnu/bits/sigevent-consts.h \
+  /usr/include/x86_64-linux-gnu/bits/sigaction.h \
+  /usr/include/x86_64-linux-gnu/bits/sigcontext.h \
+  /usr/include/x86_64-linux-gnu/bits/types/stack_t.h \
+  /usr/include/x86_64-linux-gnu/sys/ucontext.h \
+  /usr/include/x86_64-linux-gnu/bits/sigstack.h \
+  /usr/include/x86_64-linux-gnu/bits/sigstksz.h \
+  /usr/include/x86_64-linux-gnu/bits/ss_flags.h \
+  /usr/include/x86_64-linux-gnu/bits/types/struct_sigstack.h \
+  /usr/include/x86_64-linux-gnu/bits/sigthread.h \
+  /usr/include/x86_64-linux-gnu/bits/signal_ext.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Application/Posix/PosixTypes.h \
+  /usr/include/errno.h \
+  /usr/include/x86_64-linux-gnu/bits/errno.h \
+  /usr/include/linux/errno.h \
+  /usr/include/x86_64-linux-gnu/asm/errno.h \
+  /usr/include/asm-generic/errno.h \
+  /usr/include/asm-generic/errno-base.h \
+  /usr/include/x86_64-linux-gnu/bits/types/error_t.h \
+  /home/noah/Projects/SIR-Engine/EASTL/atomic.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/gcc/compiler_gcc.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/gcc/compiler_gcc_fetch_add.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/gcc/compiler_gcc_fetch_sub.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/gcc/compiler_gcc_fetch_and.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/gcc/compiler_gcc_fetch_xor.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/gcc/compiler_gcc_fetch_or.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/gcc/compiler_gcc_add_fetch.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/gcc/compiler_gcc_sub_fetch.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/gcc/compiler_gcc_and_fetch.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/gcc/compiler_gcc_xor_fetch.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/gcc/compiler_gcc_or_fetch.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/gcc/compiler_gcc_exchange.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/gcc/compiler_gcc_cmpxchg_weak.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/gcc/compiler_gcc_cmpxchg_strong.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/gcc/compiler_gcc_load.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/gcc/compiler_gcc_store.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/gcc/compiler_gcc_barrier.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/gcc/compiler_gcc_cpu_pause.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/gcc/compiler_gcc_signal_fence.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/gcc/compiler_gcc_thread_fence.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler_fetch_add.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler_fetch_sub.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler_fetch_and.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler_fetch_xor.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler_fetch_or.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler_add_fetch.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler_sub_fetch.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler_and_fetch.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler_xor_fetch.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler_or_fetch.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler_exchange.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler_cmpxchg_weak.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler_cmpxchg_strong.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler_load.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler_store.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler_barrier.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler_cpu_pause.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler_memory_barrier.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler_signal_fence.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler_thread_fence.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/arch.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/x86/arch_x86.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/x86/arch_x86_fetch_add.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/x86/arch_x86_fetch_sub.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/x86/arch_x86_fetch_and.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/x86/arch_x86_fetch_xor.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/x86/arch_x86_fetch_or.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/x86/arch_x86_add_fetch.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/x86/arch_x86_sub_fetch.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/x86/arch_x86_and_fetch.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/x86/arch_x86_xor_fetch.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/x86/arch_x86_or_fetch.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/x86/arch_x86_exchange.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/x86/arch_x86_cmpxchg_weak.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/x86/arch_x86_cmpxchg_strong.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/x86/arch_x86_memory_barrier.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/x86/arch_x86_thread_fence.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/x86/arch_x86_load.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/x86/arch_x86_store.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/arch_fetch_add.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/arch_fetch_sub.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/arch_fetch_and.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/arch_fetch_xor.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/arch_fetch_or.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/arch_add_fetch.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/arch_sub_fetch.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/arch_and_fetch.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/arch_xor_fetch.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/arch_or_fetch.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/arch_exchange.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/arch_cmpxchg_weak.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/arch_cmpxchg_strong.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/arch_load.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/arch_store.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/arch_compiler_barrier.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/arch_cpu_pause.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/arch_memory_barrier.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/arch_signal_fence.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/arch_thread_fence.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_base.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_fetch_add.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_fetch_sub.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_fetch_and.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_fetch_xor.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_fetch_or.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_add_fetch.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_sub_fetch.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_and_fetch.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_xor_fetch.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_or_fetch.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_exchange.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_cmpxchg_weak.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_cmpxchg_strong.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_load.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_store.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_compiler_barrier.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_cpu_pause.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_memory_barrier.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_signal_fence.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_thread_fence.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_casts.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_memory_order.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_asserts.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_size_aligned.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_push_compiler_options.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_pop_compiler_options.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_base_width.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_integral.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_pointer.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_standalone.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_flag.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_flag_standalone.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/ThreadSystem/Thread.inl \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Util.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Compiler.h \
+  /home/noah/Projects/SIR-Engine/angelscript/angelscript.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/ResourceManager.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/MathLib/Types.h \
+  /usr/include/glm/glm.hpp \
+  /usr/include/glm/detail/_fixes.hpp \
+  /usr/include/glm/detail/setup.hpp \
+  /usr/include/c++/11/cassert \
+  /usr/include/glm/simd/platform.h \
+  /usr/include/c++/11/cstdint \
+  /usr/include/c++/11/climits \
+  /usr/include/c++/11/cfloat \
+  /usr/include/glm/fwd.hpp \
+  /usr/include/glm/detail/qualifier.hpp \
+  /usr/include/glm/detail/setup.hpp \
+  /usr/include/glm/vec2.hpp \
+  /usr/include/glm/ext/vector_bool2.hpp \
+  /usr/include/glm/detail/type_vec2.hpp \
+  /usr/include/glm/detail/type_vec2.inl \
+  /usr/include/glm/detail/compute_vector_relational.hpp \
+  /usr/include/glm/ext/vector_bool2_precision.hpp \
+  /usr/include/glm/ext/vector_float2.hpp \
+  /usr/include/glm/ext/vector_float2_precision.hpp \
+  /usr/include/glm/ext/vector_double2.hpp \
+  /usr/include/glm/ext/vector_double2_precision.hpp \
+  /usr/include/glm/ext/vector_int2.hpp \
+  /usr/include/glm/ext/vector_int2_sized.hpp \
+  /usr/include/glm/ext/scalar_int_sized.hpp \
+  /usr/include/glm/detail/setup.hpp \
+  /usr/include/glm/ext/vector_uint2.hpp \
+  /usr/include/glm/ext/vector_uint2_sized.hpp \
+  /usr/include/glm/ext/scalar_uint_sized.hpp \
+  /usr/include/glm/vec3.hpp \
+  /usr/include/glm/ext/vector_bool3.hpp \
+  /usr/include/glm/detail/type_vec3.hpp \
+  /usr/include/glm/detail/type_vec3.inl \
+  /usr/include/glm/ext/vector_bool3_precision.hpp \
+  /usr/include/glm/ext/vector_float3.hpp \
+  /usr/include/glm/ext/vector_float3_precision.hpp \
+  /usr/include/glm/ext/vector_double3.hpp \
+  /usr/include/glm/ext/vector_double3_precision.hpp \
+  /usr/include/glm/ext/vector_int3.hpp \
+  /usr/include/glm/ext/vector_int3_sized.hpp \
+  /usr/include/glm/ext/vector_uint3.hpp \
+  /usr/include/glm/ext/vector_uint3_sized.hpp \
+  /usr/include/glm/vec4.hpp \
+  /usr/include/glm/ext/vector_bool4.hpp \
+  /usr/include/glm/detail/type_vec4.hpp \
+  /usr/include/glm/detail/type_vec4.inl \
+  /usr/include/glm/ext/vector_bool4_precision.hpp \
+  /usr/include/glm/ext/vector_float4.hpp \
+  /usr/include/glm/ext/vector_float4_precision.hpp \
+  /usr/include/glm/ext/vector_double4.hpp \
+  /usr/include/glm/ext/vector_double4_precision.hpp \
+  /usr/include/glm/ext/vector_int4.hpp \
+  /usr/include/glm/ext/vector_int4_sized.hpp \
+  /usr/include/glm/ext/vector_uint4.hpp \
+  /usr/include/glm/ext/vector_uint4_sized.hpp \
+  /usr/include/glm/mat2x2.hpp \
+  /usr/include/glm/ext/matrix_double2x2.hpp \
+  /usr/include/glm/detail/type_mat2x2.hpp \
+  /usr/include/glm/detail/type_mat2x2.inl \
+  /usr/include/glm/matrix.hpp \
+  /usr/include/glm/mat2x3.hpp \
+  /usr/include/glm/ext/matrix_double2x3.hpp \
+  /usr/include/glm/detail/type_mat2x3.hpp \
+  /usr/include/glm/detail/type_mat2x3.inl \
+  /usr/include/glm/ext/matrix_double2x3_precision.hpp \
+  /usr/include/glm/ext/matrix_float2x3.hpp \
+  /usr/include/glm/ext/matrix_float2x3_precision.hpp \
+  /usr/include/glm/mat2x4.hpp \
+  /usr/include/glm/ext/matrix_double2x4.hpp \
+  /usr/include/glm/detail/type_mat2x4.hpp \
+  /usr/include/glm/detail/type_mat2x4.inl \
+  /usr/include/glm/ext/matrix_double2x4_precision.hpp \
+  /usr/include/glm/ext/matrix_float2x4.hpp \
+  /usr/include/glm/ext/matrix_float2x4_precision.hpp \
+  /usr/include/glm/mat3x2.hpp \
+  /usr/include/glm/ext/matrix_double3x2.hpp \
+  /usr/include/glm/detail/type_mat3x2.hpp \
+  /usr/include/glm/detail/type_mat3x2.inl \
+  /usr/include/glm/ext/matrix_double3x2_precision.hpp \
+  /usr/include/glm/ext/matrix_float3x2.hpp \
+  /usr/include/glm/ext/matrix_float3x2_precision.hpp \
+  /usr/include/glm/mat3x3.hpp \
+  /usr/include/glm/ext/matrix_double3x3.hpp \
+  /usr/include/glm/detail/type_mat3x3.hpp \
+  /usr/include/glm/detail/type_mat3x3.inl \
+  /usr/include/glm/ext/matrix_double3x3_precision.hpp \
+  /usr/include/glm/ext/matrix_float3x3.hpp \
+  /usr/include/glm/ext/matrix_float3x3_precision.hpp \
+  /usr/include/glm/mat3x4.hpp \
+  /usr/include/glm/ext/matrix_double3x4.hpp \
+  /usr/include/glm/detail/type_mat3x4.hpp \
+  /usr/include/glm/detail/type_mat3x4.inl \
+  /usr/include/glm/ext/matrix_double3x4_precision.hpp \
+  /usr/include/glm/ext/matrix_float3x4.hpp \
+  /usr/include/glm/ext/matrix_float3x4_precision.hpp \
+  /usr/include/glm/mat4x2.hpp \
+  /usr/include/glm/ext/matrix_double4x2.hpp \
+  /usr/include/glm/detail/type_mat4x2.hpp \
+  /usr/include/glm/detail/type_mat4x2.inl \
+  /usr/include/glm/ext/matrix_double4x2_precision.hpp \
+  /usr/include/glm/ext/matrix_float4x2.hpp \
+  /usr/include/glm/ext/matrix_float4x2_precision.hpp \
+  /usr/include/glm/mat4x3.hpp \
+  /usr/include/glm/ext/matrix_double4x3.hpp \
+  /usr/include/glm/detail/type_mat4x3.hpp \
+  /usr/include/glm/detail/type_mat4x3.inl \
+  /usr/include/glm/ext/matrix_double4x3_precision.hpp \
+  /usr/include/glm/ext/matrix_float4x3.hpp \
+  /usr/include/glm/ext/matrix_float4x3_precision.hpp \
+  /usr/include/glm/mat4x4.hpp \
+  /usr/include/glm/ext/matrix_double4x4.hpp \
+  /usr/include/glm/detail/type_mat4x4.hpp \
+  /usr/include/glm/detail/type_mat4x4.inl \
+  /usr/include/glm/ext/matrix_double4x4_precision.hpp \
+  /usr/include/glm/ext/matrix_float4x4.hpp \
+  /usr/include/glm/ext/matrix_float4x4_precision.hpp \
+  /usr/include/glm/detail/func_matrix.inl \
+  /usr/include/glm/geometric.hpp \
+  /usr/include/glm/detail/func_geometric.inl \
+  /usr/include/glm/exponential.hpp \
+  /usr/include/glm/detail/type_vec1.hpp \
+  /usr/include/glm/detail/type_vec1.inl \
+  /usr/include/glm/detail/func_exponential.inl \
+  /usr/include/glm/vector_relational.hpp \
+  /usr/include/glm/detail/func_vector_relational.inl \
+  /usr/include/glm/detail/_vectorize.hpp \
+  /usr/include/glm/common.hpp \
+  /usr/include/glm/detail/func_common.inl \
+  /usr/include/glm/detail/compute_common.hpp \
+  /usr/include/glm/ext/matrix_double2x2_precision.hpp \
+  /usr/include/glm/ext/matrix_float2x2.hpp \
+  /usr/include/glm/ext/matrix_float2x2_precision.hpp \
+  /usr/include/glm/trigonometric.hpp \
+  /usr/include/glm/detail/func_trigonometric.inl \
+  /usr/include/glm/packing.hpp \
+  /usr/include/glm/detail/func_packing.inl \
+  /usr/include/glm/detail/type_half.hpp \
+  /usr/include/glm/detail/type_half.inl \
+  /usr/include/glm/integer.hpp \
+  /usr/include/glm/detail/func_integer.inl \
+  /home/noah/Projects/SIR-Engine/Engine/Core/FileSystem/FileSystem.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/FileSystem/SearchPath.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/FileSystem/FileReader.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/FileSystem/FileStream.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/FileSystem/FileWriter.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/FileSystem/FileList.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/FileSystem/FileCache.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/EngineApp.h \
+  /home/noah/Projects/SIR-Engine/imgui/imgui.h \
+  /home/noah/Projects/SIR-Engine/imgui/imconfig.h \
+  IconsFontAwesomeEditor.h \
+  Application/IconsFontAwesome5.h \
+  Application/ImGuiNotify.hpp \
+  /usr/include/c++/11/vector \
+  /usr/include/c++/11/bits/stl_uninitialized.h \
+  /usr/include/c++/11/bits/stl_vector.h \
+  /usr/include/c++/11/bits/stl_bvector.h \
+  /usr/include/c++/11/bits/functional_hash.h \
+  /usr/include/c++/11/bits/vector.tcc \
+  /usr/include/c++/11/string \
+  /usr/include/c++/11/bits/stringfwd.h \
+  /usr/include/c++/11/bits/char_traits.h \
+  /usr/include/c++/11/bits/postypes.h \
+  /usr/include/c++/11/cwchar \
+  /usr/include/c++/11/bits/localefwd.h \
+  /usr/include/x86_64-linux-gnu/c++/11/bits/c++locale.h \
+  /usr/include/c++/11/clocale \
+  /usr/include/locale.h \
+  /usr/include/x86_64-linux-gnu/bits/locale.h \
+  /usr/include/c++/11/iosfwd \
+  /usr/include/c++/11/cctype \
+  /usr/include/c++/11/bits/ostream_insert.h \
+  /usr/include/c++/11/bits/cxxabi_forced.h \
+  /usr/include/c++/11/bits/basic_string.h \
+  /usr/include/c++/11/ext/atomicity.h \
+  /usr/include/x86_64-linux-gnu/c++/11/bits/gthr.h \
+  /usr/include/x86_64-linux-gnu/c++/11/bits/gthr-default.h \
+  /usr/include/x86_64-linux-gnu/c++/11/bits/atomic_word.h \
+  /usr/include/x86_64-linux-gnu/sys/single_threaded.h \
+  /usr/include/c++/11/string_view \
+  /usr/include/c++/11/bits/string_view.tcc \
+  /usr/include/c++/11/ext/string_conversions.h \
+  /usr/include/c++/11/cstdio \
+  /usr/include/c++/11/cerrno \
+  /usr/include/c++/11/bits/charconv.h \
+  /usr/include/c++/11/bits/basic_string.tcc \
+  /usr/include/c++/11/chrono \
+  /usr/include/c++/11/ratio \
+  /usr/include/c++/11/ctime \
+  /usr/include/c++/11/bits/parse_numbers.h \
+  /usr/include/c++/11/functional \
+  /usr/include/c++/11/bits/refwrap.h \
+  /usr/include/c++/11/bits/std_function.h \
+  /usr/include/c++/11/unordered_map \
+  /usr/include/c++/11/bits/hashtable.h \
+  /usr/include/c++/11/bits/hashtable_policy.h \
+  /usr/include/c++/11/bits/enable_special_members.h \
+  /usr/include/c++/11/bits/node_handle.h \
+  /usr/include/c++/11/bits/unordered_map.h \
+  /usr/include/c++/11/bits/erase_if.h \
+  /usr/include/c++/11/bits/stl_algo.h \
+  /usr/include/c++/11/bits/algorithmfwd.h \
+  /usr/include/c++/11/bits/stl_heap.h \
+  /usr/include/c++/11/bits/stl_tempbuf.h \
+  /usr/include/c++/11/bits/uniform_int_dist.h \
+  /home/noah/Projects/SIR-Engine/imgui/imgui_internal.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/immintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/x86gprintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/ia32intrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/adxintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/bmiintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/bmi2intrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/cetintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/cldemoteintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/clflushoptintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/clwbintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/clzerointrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/enqcmdintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/fxsrintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/lzcntintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/lwpintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/movdirintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/mwaitintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/mwaitxintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/pconfigintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/popcntintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/pkuintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/rdseedintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/rtmintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/serializeintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/sgxintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/tbmintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/tsxldtrkintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/uintrintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/waitpkgintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/wbnoinvdintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/xsaveintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/xsavecintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/xsaveoptintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/xsavesintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/xtestintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/hresetintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/mmintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/xmmintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/mm_malloc.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/emmintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/pmmintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/tmmintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/smmintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/wmmintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avxintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avxvnniintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx2intrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512fintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512erintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512pfintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512cdintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vlintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512bwintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512dqintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vlbwintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vldqintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512ifmaintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512ifmavlintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vbmiintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vbmivlintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx5124fmapsintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx5124vnniwintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vpopcntdqintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vbmi2intrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vbmi2vlintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vnniintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vnnivlintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vpopcntdqvlintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512bitalgintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vp2intersectintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vp2intersectvlintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/shaintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/fmaintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/f16cintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/gfniintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/vaesintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/vpclmulqdqintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512bf16vlintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512bf16intrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/amxtileintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/amxint8intrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/amxbf16intrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/prfchwintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/keylockerintrin.h \
+  /home/noah/Projects/SIR-Engine/imgui/imstb_textedit.h \
+  /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLTexture.h \
+  /home/noah/Projects/SIR-Engine/Engine/RenderLib/RenderCommon.h \
+  /home/noah/Projects/SIR-Engine/Engine/RenderLib/RenderLib.h \
   /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLCommon.h \
   /usr/include/GL/gl.h \
   /usr/include/GL/glext.h \
   /usr/include/KHR/khrplatform.h \
   /usr/include/GL/glcorearb.h \
-  /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLTexture.h \
+  /home/noah/Projects/SIR-Engine/Engine/RenderLib/DrawBuffer.h \
+  /home/noah/Projects/SIR-Engine/EASTL/stack.h \
+  /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/RenderTexture.h \
   /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLoader.h \
   /home/noah/Projects/SIR-Engine/Engine/Core/FileSystem/MemoryFile.h \
   /home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/SlabAllocator.h \
+  /home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/AllocatorBase.h \
   /home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/MemoryBuffer.h \
   /home/noah/Projects/SIR-Engine/EASTL/bonus/lru_cache.h \
   /home/noah/Projects/SIR-Engine/EASTL/list.h \
-  /usr/include/GLFW/glfw3.h \
-  Application/Roboto-Regular.embed
+  /home/noah/Projects/SIR-Engine/EASTL/optional.h \
+  Application/Util/FileTreeView.h \
+  /usr/include/boost/filesystem.hpp \
+  /usr/include/boost/filesystem/config.hpp \
+  /usr/include/boost/config.hpp \
+  /usr/include/boost/config/user.hpp \
+  /usr/include/boost/config/detail/select_compiler_config.hpp \
+  /usr/include/boost/config/compiler/gcc.hpp \
+  /usr/include/boost/config/detail/select_stdlib_config.hpp \
+  /usr/include/c++/11/version \
+  /usr/include/boost/config/stdlib/libstdcpp3.hpp \
+  /usr/include/boost/config/detail/select_platform_config.hpp \
+  /usr/include/boost/config/platform/linux.hpp \
+  /usr/include/boost/config/detail/posix_features.hpp \
+  /usr/include/boost/config/detail/suffix.hpp \
+  /usr/include/boost/config/helper_macros.hpp \
+  /usr/include/boost/system/api_config.hpp \
+  /usr/include/boost/detail/workaround.hpp \
+  /usr/include/boost/config/workaround.hpp \
+  /usr/include/boost/config/auto_link.hpp \
+  /usr/include/boost/filesystem/path.hpp \
+  /usr/include/boost/assert.hpp \
+  /usr/include/boost/filesystem/path_traits.hpp \
+  /usr/include/boost/type_traits/is_array.hpp \
+  /usr/include/boost/type_traits/integral_constant.hpp \
+  /usr/include/boost/type_traits/decay.hpp \
+  /usr/include/boost/type_traits/is_function.hpp \
+  /usr/include/boost/type_traits/detail/config.hpp \
+  /usr/include/boost/version.hpp \
+  /usr/include/boost/type_traits/detail/is_function_cxx_11.hpp \
+  /usr/include/boost/type_traits/remove_bounds.hpp \
+  /usr/include/boost/type_traits/remove_extent.hpp \
+  /usr/include/boost/type_traits/add_pointer.hpp \
+  /usr/include/boost/type_traits/remove_reference.hpp \
+  /usr/include/boost/type_traits/remove_cv.hpp \
+  /usr/include/boost/system/error_code.hpp \
+  /usr/include/boost/system/detail/config.hpp \
+  /usr/include/boost/cstdint.hpp \
+  /usr/include/c++/11/ostream \
+  /usr/include/c++/11/ios \
+  /usr/include/c++/11/exception \
+  /usr/include/c++/11/bits/exception_ptr.h \
+  /usr/include/c++/11/bits/cxxabi_init_exception.h \
+  /usr/include/c++/11/bits/nested_exception.h \
+  /usr/include/c++/11/bits/ios_base.h \
+  /usr/include/c++/11/bits/locale_classes.h \
+  /usr/include/c++/11/bits/locale_classes.tcc \
+  /usr/include/c++/11/system_error \
+  /usr/include/x86_64-linux-gnu/c++/11/bits/error_constants.h \
+  /usr/include/c++/11/stdexcept \
+  /usr/include/c++/11/streambuf \
+  /usr/include/c++/11/bits/streambuf.tcc \
+  /usr/include/c++/11/bits/basic_ios.h \
+  /usr/include/c++/11/bits/locale_facets.h \
+  /usr/include/c++/11/cwctype \
+  /usr/include/wctype.h \
+  /usr/include/x86_64-linux-gnu/bits/wctype-wchar.h \
+  /usr/include/x86_64-linux-gnu/c++/11/bits/ctype_base.h \
+  /usr/include/c++/11/bits/streambuf_iterator.h \
+  /usr/include/x86_64-linux-gnu/c++/11/bits/ctype_inline.h \
+  /usr/include/c++/11/bits/locale_facets.tcc \
+  /usr/include/c++/11/bits/basic_ios.tcc \
+  /usr/include/c++/11/bits/ostream.tcc \
+  /usr/include/c++/11/cstring \
+  /usr/include/boost/cerrno.hpp \
+  /usr/include/boost/system/detail/generic_category.hpp \
+  /usr/include/boost/system/detail/system_category_posix.hpp \
+  /usr/include/boost/system/detail/std_interoperability.hpp \
+  /usr/include/c++/11/map \
+  /usr/include/c++/11/bits/stl_tree.h \
+  /usr/include/c++/11/bits/stl_map.h \
+  /usr/include/c++/11/bits/stl_multimap.h \
+  /usr/include/c++/11/memory \
+  /usr/include/c++/11/bits/stl_raw_storage_iter.h \
+  /usr/include/c++/11/bits/align.h \
+  /usr/include/c++/11/bit \
+  /usr/include/c++/11/bits/unique_ptr.h \
+  /usr/include/c++/11/bits/shared_ptr.h \
+  /usr/include/c++/11/bits/shared_ptr_base.h \
+  /usr/include/c++/11/bits/allocated_ptr.h \
+  /usr/include/c++/11/ext/concurrence.h \
+  /usr/include/c++/11/bits/shared_ptr_atomic.h \
+  /usr/include/c++/11/bits/atomic_base.h \
+  /usr/include/c++/11/bits/atomic_lockfree_defines.h \
+  /usr/include/c++/11/backward/auto_ptr.h \
+  /usr/include/c++/11/pstl/glue_memory_defs.h \
+  /usr/include/c++/11/pstl/execution_defs.h \
+  /usr/include/c++/11/mutex \
+  /usr/include/c++/11/bits/std_mutex.h \
+  /usr/include/c++/11/bits/unique_lock.h \
+  /usr/include/boost/core/enable_if.hpp \
+  /usr/include/c++/11/list \
+  /usr/include/c++/11/bits/stl_list.h \
+  /usr/include/c++/11/bits/list.tcc \
+  /usr/include/c++/11/iterator \
+  /usr/include/c++/11/bits/stream_iterator.h \
+  /usr/include/c++/11/locale \
+  /usr/include/c++/11/bits/locale_facets_nonio.h \
+  /usr/include/x86_64-linux-gnu/c++/11/bits/time_members.h \
+  /usr/include/x86_64-linux-gnu/c++/11/bits/messages_members.h \
+  /usr/include/libintl.h \
+  /usr/include/c++/11/bits/codecvt.h \
+  /usr/include/c++/11/bits/locale_facets_nonio.tcc \
+  /usr/include/c++/11/bits/locale_conv.h \
+  /usr/include/boost/config/abi_prefix.hpp \
+  /usr/include/boost/config/abi_suffix.hpp \
+  /usr/include/boost/system/system_error.hpp \
+  /usr/include/boost/iterator/iterator_facade.hpp \
+  /usr/include/boost/iterator/interoperable.hpp \
+  /usr/include/boost/mpl/bool.hpp \
+  /usr/include/boost/mpl/bool_fwd.hpp \
+  /usr/include/boost/mpl/aux_/adl_barrier.hpp \
+  /usr/include/boost/mpl/aux_/config/adl.hpp \
+  /usr/include/boost/mpl/aux_/config/msvc.hpp \
+  /usr/include/boost/mpl/aux_/config/intel.hpp \
+  /usr/include/boost/mpl/aux_/config/gcc.hpp \
+  /usr/include/boost/mpl/aux_/config/workaround.hpp \
+  /usr/include/boost/mpl/integral_c_tag.hpp \
+  /usr/include/boost/mpl/aux_/config/static_constant.hpp \
+  /usr/include/boost/mpl/or.hpp \
+  /usr/include/boost/mpl/aux_/config/use_preprocessed.hpp \
+  /usr/include/boost/mpl/aux_/nested_type_wknd.hpp \
+  /usr/include/boost/mpl/aux_/na_spec.hpp \
+  /usr/include/boost/mpl/lambda_fwd.hpp \
+  /usr/include/boost/mpl/void_fwd.hpp \
+  /usr/include/boost/mpl/aux_/na.hpp \
+  /usr/include/boost/mpl/aux_/na_fwd.hpp \
+  /usr/include/boost/mpl/aux_/config/ctps.hpp \
+  /usr/include/boost/mpl/aux_/config/lambda.hpp \
+  /usr/include/boost/mpl/aux_/config/ttp.hpp \
+  /usr/include/boost/mpl/int.hpp \
+  /usr/include/boost/mpl/int_fwd.hpp \
+  /usr/include/boost/mpl/aux_/nttp_decl.hpp \
+  /usr/include/boost/mpl/aux_/config/nttp.hpp \
+  /usr/include/boost/mpl/aux_/integral_wrapper.hpp \
+  /usr/include/boost/mpl/aux_/static_cast.hpp \
+  /usr/include/boost/preprocessor/cat.hpp \
+  /usr/include/boost/preprocessor/config/config.hpp \
+  /usr/include/boost/mpl/aux_/lambda_arity_param.hpp \
+  /usr/include/boost/mpl/aux_/template_arity_fwd.hpp \
+  /usr/include/boost/mpl/aux_/arity.hpp \
+  /usr/include/boost/mpl/aux_/config/dtp.hpp \
+  /usr/include/boost/mpl/aux_/preprocessor/params.hpp \
+  /usr/include/boost/mpl/aux_/config/preprocessor.hpp \
+  /usr/include/boost/preprocessor/comma_if.hpp \
+  /usr/include/boost/preprocessor/punctuation/comma_if.hpp \
+  /usr/include/boost/preprocessor/control/if.hpp \
+  /usr/include/boost/preprocessor/control/iif.hpp \
+  /usr/include/boost/preprocessor/logical/bool.hpp \
+  /usr/include/boost/preprocessor/facilities/empty.hpp \
+  /usr/include/boost/preprocessor/punctuation/comma.hpp \
+  /usr/include/boost/preprocessor/repeat.hpp \
+  /usr/include/boost/preprocessor/repetition/repeat.hpp \
+  /usr/include/boost/preprocessor/debug/error.hpp \
+  /usr/include/boost/preprocessor/detail/auto_rec.hpp \
+  /usr/include/boost/preprocessor/tuple/eat.hpp \
+  /usr/include/boost/preprocessor/inc.hpp \
+  /usr/include/boost/preprocessor/arithmetic/inc.hpp \
+  /usr/include/boost/mpl/aux_/preprocessor/enum.hpp \
+  /usr/include/boost/mpl/aux_/preprocessor/def_params_tail.hpp \
+  /usr/include/boost/mpl/limits/arity.hpp \
+  /usr/include/boost/preprocessor/logical/and.hpp \
+  /usr/include/boost/preprocessor/logical/bitand.hpp \
+  /usr/include/boost/preprocessor/identity.hpp \
+  /usr/include/boost/preprocessor/facilities/identity.hpp \
+  /usr/include/boost/preprocessor/empty.hpp \
+  /usr/include/boost/preprocessor/arithmetic/add.hpp \
+  /usr/include/boost/preprocessor/arithmetic/dec.hpp \
+  /usr/include/boost/preprocessor/control/while.hpp \
+  /usr/include/boost/preprocessor/list/fold_left.hpp \
+  /usr/include/boost/preprocessor/list/detail/fold_left.hpp \
+  /usr/include/boost/preprocessor/control/expr_iif.hpp \
+  /usr/include/boost/preprocessor/list/adt.hpp \
+  /usr/include/boost/preprocessor/detail/is_binary.hpp \
+  /usr/include/boost/preprocessor/detail/check.hpp \
+  /usr/include/boost/preprocessor/logical/compl.hpp \
+  /usr/include/boost/preprocessor/list/fold_right.hpp \
+  /usr/include/boost/preprocessor/list/detail/fold_right.hpp \
+  /usr/include/boost/preprocessor/list/reverse.hpp \
+  /usr/include/boost/preprocessor/control/detail/while.hpp \
+  /usr/include/boost/preprocessor/tuple/elem.hpp \
+  /usr/include/boost/preprocessor/facilities/expand.hpp \
+  /usr/include/boost/preprocessor/facilities/overload.hpp \
+  /usr/include/boost/preprocessor/variadic/size.hpp \
+  /usr/include/boost/preprocessor/tuple/rem.hpp \
+  /usr/include/boost/preprocessor/tuple/detail/is_single_return.hpp \
+  /usr/include/boost/preprocessor/variadic/elem.hpp \
+  /usr/include/boost/preprocessor/arithmetic/sub.hpp \
+  /usr/include/boost/mpl/aux_/config/eti.hpp \
+  /usr/include/boost/mpl/aux_/config/overload_resolution.hpp \
+  /usr/include/boost/mpl/aux_/lambda_support.hpp \
+  /usr/include/boost/mpl/aux_/include_preprocessed.hpp \
+  /usr/include/boost/mpl/aux_/config/compiler.hpp \
+  /usr/include/boost/preprocessor/stringize.hpp \
+  /usr/include/boost/mpl/aux_/preprocessed/gcc/or.hpp \
+  /usr/include/boost/type_traits/is_convertible.hpp \
+  /usr/include/boost/type_traits/intrinsics.hpp \
+  /usr/include/boost/type_traits/is_complete.hpp \
+  /usr/include/boost/type_traits/declval.hpp \
+  /usr/include/boost/type_traits/add_rvalue_reference.hpp \
+  /usr/include/boost/type_traits/is_void.hpp \
+  /usr/include/boost/type_traits/is_reference.hpp \
+  /usr/include/boost/type_traits/is_lvalue_reference.hpp \
+  /usr/include/boost/type_traits/is_rvalue_reference.hpp \
+  /usr/include/boost/type_traits/detail/yes_no_type.hpp \
+  /usr/include/boost/static_assert.hpp \
+  /usr/include/boost/type_traits/is_arithmetic.hpp \
+  /usr/include/boost/type_traits/is_integral.hpp \
+  /usr/include/boost/type_traits/is_floating_point.hpp \
+  /usr/include/boost/type_traits/is_abstract.hpp \
+  /usr/include/boost/type_traits/add_lvalue_reference.hpp \
+  /usr/include/boost/type_traits/add_reference.hpp \
+  /usr/include/boost/iterator/detail/config_def.hpp \
+  /usr/include/boost/iterator/detail/config_undef.hpp \
+  /usr/include/boost/iterator/iterator_traits.hpp \
+  /usr/include/boost/iterator/iterator_categories.hpp \
+  /usr/include/boost/mpl/eval_if.hpp \
+  /usr/include/boost/mpl/if.hpp \
+  /usr/include/boost/mpl/aux_/value_wknd.hpp \
+  /usr/include/boost/mpl/aux_/config/integral.hpp \
+  /usr/include/boost/mpl/identity.hpp \
+  /usr/include/boost/mpl/placeholders.hpp \
+  /usr/include/boost/mpl/arg.hpp \
+  /usr/include/boost/mpl/arg_fwd.hpp \
+  /usr/include/boost/mpl/aux_/na_assert.hpp \
+  /usr/include/boost/mpl/assert.hpp \
+  /usr/include/boost/mpl/not.hpp \
+  /usr/include/boost/mpl/aux_/yes_no.hpp \
+  /usr/include/boost/mpl/aux_/config/arrays.hpp \
+  /usr/include/boost/mpl/aux_/config/gpu.hpp \
+  /usr/include/boost/mpl/aux_/config/pp_counter.hpp \
+  /usr/include/boost/mpl/aux_/arity_spec.hpp \
+  /usr/include/boost/mpl/aux_/arg_typedef.hpp \
+  /usr/include/boost/mpl/aux_/preprocessed/gcc/arg.hpp \
+  /usr/include/boost/mpl/aux_/preprocessed/gcc/placeholders.hpp \
+  /usr/include/boost/iterator/detail/facade_iterator_category.hpp \
+  /usr/include/boost/core/use_default.hpp \
+  /usr/include/boost/mpl/and.hpp \
+  /usr/include/boost/mpl/aux_/preprocessed/gcc/and.hpp \
+  /usr/include/boost/type_traits/is_same.hpp \
+  /usr/include/boost/type_traits/is_const.hpp \
+  /usr/include/boost/detail/indirect_traits.hpp \
+  /usr/include/boost/type_traits/is_pointer.hpp \
+  /usr/include/boost/type_traits/is_class.hpp \
+  /usr/include/boost/type_traits/is_volatile.hpp \
+  /usr/include/boost/type_traits/is_member_function_pointer.hpp \
+  /usr/include/boost/type_traits/detail/is_member_function_pointer_cxx_11.hpp \
+  /usr/include/boost/type_traits/is_member_pointer.hpp \
+  /usr/include/boost/type_traits/remove_pointer.hpp \
+  /usr/include/boost/detail/select_type.hpp \
+  /usr/include/boost/iterator/detail/enable_if.hpp \
+  /usr/include/boost/core/addressof.hpp \
+  /usr/include/boost/type_traits/add_const.hpp \
+  /usr/include/boost/type_traits/remove_const.hpp \
+  /usr/include/boost/type_traits/is_pod.hpp \
+  /usr/include/boost/type_traits/is_scalar.hpp \
+  /usr/include/boost/type_traits/is_enum.hpp \
+  /usr/include/boost/mpl/always.hpp \
+  /usr/include/boost/mpl/aux_/preprocessor/default_params.hpp \
+  /usr/include/boost/mpl/apply.hpp \
+  /usr/include/boost/mpl/apply_fwd.hpp \
+  /usr/include/boost/mpl/aux_/preprocessed/gcc/apply_fwd.hpp \
+  /usr/include/boost/mpl/apply_wrap.hpp \
+  /usr/include/boost/mpl/aux_/has_apply.hpp \
+  /usr/include/boost/mpl/has_xxx.hpp \
+  /usr/include/boost/mpl/aux_/type_wrapper.hpp \
+  /usr/include/boost/mpl/aux_/config/has_xxx.hpp \
+  /usr/include/boost/mpl/aux_/config/msvc_typename.hpp \
+  /usr/include/boost/preprocessor/array/elem.hpp \
+  /usr/include/boost/preprocessor/array/data.hpp \
+  /usr/include/boost/preprocessor/array/size.hpp \
+  /usr/include/boost/preprocessor/repetition/enum_params.hpp \
+  /usr/include/boost/preprocessor/repetition/enum_trailing_params.hpp \
+  /usr/include/boost/mpl/aux_/config/has_apply.hpp \
+  /usr/include/boost/mpl/aux_/msvc_never_true.hpp \
+  /usr/include/boost/mpl/aux_/preprocessed/gcc/apply_wrap.hpp \
+  /usr/include/boost/mpl/lambda.hpp \
+  /usr/include/boost/mpl/bind.hpp \
+  /usr/include/boost/mpl/bind_fwd.hpp \
+  /usr/include/boost/mpl/aux_/config/bind.hpp \
+  /usr/include/boost/mpl/aux_/preprocessed/gcc/bind_fwd.hpp \
+  /usr/include/boost/mpl/next.hpp \
+  /usr/include/boost/mpl/next_prior.hpp \
+  /usr/include/boost/mpl/aux_/common_name_wknd.hpp \
+  /usr/include/boost/mpl/protect.hpp \
+  /usr/include/boost/mpl/aux_/preprocessed/gcc/bind.hpp \
+  /usr/include/boost/mpl/aux_/full_lambda.hpp \
+  /usr/include/boost/mpl/quote.hpp \
+  /usr/include/boost/mpl/void.hpp \
+  /usr/include/boost/mpl/aux_/has_type.hpp \
+  /usr/include/boost/mpl/aux_/config/bcc.hpp \
+  /usr/include/boost/mpl/aux_/preprocessed/gcc/quote.hpp \
+  /usr/include/boost/mpl/aux_/template_arity.hpp \
+  /usr/include/boost/mpl/aux_/preprocessed/gcc/template_arity.hpp \
+  /usr/include/boost/mpl/aux_/preprocessed/gcc/full_lambda.hpp \
+  /usr/include/boost/mpl/aux_/preprocessed/gcc/apply.hpp \
+  /usr/include/boost/io/quoted.hpp \
+  /usr/include/boost/io/detail/buffer_fill.hpp \
+  /usr/include/boost/io/detail/ostream_guard.hpp \
+  /usr/include/boost/io/ios_state.hpp \
+  /usr/include/boost/io_fwd.hpp \
+  /usr/include/boost/functional/hash_fwd.hpp \
+  /usr/include/boost/container_hash/hash_fwd.hpp \
+  /usr/include/c++/11/algorithm \
+  /usr/include/c++/11/pstl/glue_algorithm_defs.h \
+  /usr/include/boost/filesystem/exception.hpp \
+  /usr/include/boost/smart_ptr/intrusive_ptr.hpp \
+  /usr/include/boost/smart_ptr/detail/sp_convertible.hpp \
+  /usr/include/boost/smart_ptr/detail/sp_nullptr_t.hpp \
+  /usr/include/boost/smart_ptr/detail/sp_noexcept.hpp \
+  /usr/include/boost/config/no_tr1/functional.hpp \
+  /usr/include/boost/smart_ptr/detail/operator_bool.hpp \
+  /usr/include/boost/smart_ptr/intrusive_ref_counter.hpp \
+  /usr/include/boost/smart_ptr/detail/atomic_count.hpp \
+  /usr/include/boost/smart_ptr/detail/sp_has_gcc_intrinsics.hpp \
+  /usr/include/boost/smart_ptr/detail/sp_has_sync_intrinsics.hpp \
+  /usr/include/boost/smart_ptr/detail/atomic_count_gcc_atomic.hpp \
+  /usr/include/boost/filesystem/directory.hpp \
+  /usr/include/boost/filesystem/file_status.hpp \
+  /usr/include/boost/detail/bitmask.hpp \
+  /usr/include/boost/core/scoped_enum.hpp \
+  /usr/include/boost/filesystem/operations.hpp \
+  /usr/include/boost/filesystem/convenience.hpp \
+  /usr/include/boost/filesystem/string_file.hpp \
+  /usr/include/boost/filesystem/fstream.hpp \
+  /usr/include/c++/11/fstream \
+  /usr/include/c++/11/istream \
+  /usr/include/c++/11/bits/istream.tcc \
+  /usr/include/x86_64-linux-gnu/c++/11/bits/basic_file.h \
+  /usr/include/x86_64-linux-gnu/c++/11/bits/c++io.h \
+  /usr/include/c++/11/bits/fstream.tcc \
+  Application/Project/ProjectManager.h \
+  Application/Project/ProjectData.h \
+  /home/noah/Projects/SIR-Engine/EASTL/shared_ptr.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/thread_support.h \
+  /usr/include/boost/thread/mutex.hpp \
+  /usr/include/boost/thread/detail/platform.hpp \
+  /usr/include/boost/config/requires_threads.hpp \
+  /usr/include/boost/thread/pthread/mutex.hpp \
+  /usr/include/boost/thread/detail/config.hpp \
+  /usr/include/boost/thread/detail/thread_safety.hpp \
+  /usr/include/boost/throw_exception.hpp \
+  /usr/include/boost/assert/source_location.hpp \
+  /usr/include/boost/current_function.hpp \
+  /usr/include/boost/exception/exception.hpp \
+  /usr/include/boost/core/ignore_unused.hpp \
+  /usr/include/boost/thread/exceptions.hpp \
+  /usr/include/boost/thread/lock_types.hpp \
+  /usr/include/boost/thread/detail/move.hpp \
+  /usr/include/boost/type_traits/conditional.hpp \
+  /usr/include/boost/thread/detail/delete.hpp \
+  /usr/include/boost/move/utility.hpp \
+  /usr/include/boost/move/detail/config_begin.hpp \
+  /usr/include/boost/move/detail/workaround.hpp \
+  /usr/include/boost/move/utility_core.hpp \
+  /usr/include/boost/move/core.hpp \
+  /usr/include/boost/move/detail/config_end.hpp \
+  /usr/include/boost/move/detail/meta_utils.hpp \
+  /usr/include/boost/move/detail/meta_utils_core.hpp \
+  /usr/include/boost/move/traits.hpp \
+  /usr/include/boost/move/detail/type_traits.hpp \
+  /usr/include/boost/thread/lock_options.hpp \
+  /usr/include/boost/thread/lockable_traits.hpp \
+  /usr/include/boost/thread/thread_time.hpp \
+  /usr/include/boost/date_time/time_clock.hpp \
+  /usr/include/boost/date_time/c_time.hpp \
+  /usr/include/boost/date_time/compiler_config.hpp \
+  /usr/include/boost/date_time/locale_config.hpp \
+  /usr/include/x86_64-linux-gnu/sys/time.h \
+  /usr/include/boost/shared_ptr.hpp \
+  /usr/include/boost/smart_ptr/shared_ptr.hpp \
+  /usr/include/boost/smart_ptr/detail/shared_count.hpp \
+  /usr/include/boost/smart_ptr/bad_weak_ptr.hpp \
+  /usr/include/boost/smart_ptr/detail/sp_counted_base.hpp \
+  /usr/include/boost/smart_ptr/detail/sp_counted_base_gcc_atomic.hpp \
+  /usr/include/boost/smart_ptr/detail/sp_typeinfo_.hpp \
+  /usr/include/boost/smart_ptr/detail/sp_counted_impl.hpp \
+  /usr/include/boost/checked_delete.hpp \
+  /usr/include/boost/core/checked_delete.hpp \
+  /usr/include/boost/smart_ptr/detail/sp_disable_deprecated.hpp \
+  /usr/include/boost/smart_ptr/detail/spinlock_pool.hpp \
+  /usr/include/boost/smart_ptr/detail/spinlock.hpp \
+  /usr/include/boost/smart_ptr/detail/spinlock_gcc_atomic.hpp \
+  /usr/include/boost/smart_ptr/detail/yield_k.hpp \
+  /usr/include/boost/smart_ptr/detail/sp_thread_pause.hpp \
+  /usr/include/boost/smart_ptr/detail/sp_thread_sleep.hpp \
+  /usr/include/boost/config/pragma_message.hpp \
+  /usr/include/boost/smart_ptr/detail/local_sp_deleter.hpp \
+  /usr/include/boost/smart_ptr/detail/local_counted_base.hpp \
+  /usr/include/boost/date_time/microsec_time_clock.hpp \
+  /usr/include/boost/date_time/posix_time/posix_time_types.hpp \
+  /usr/include/boost/date_time/posix_time/ptime.hpp \
+  /usr/include/boost/date_time/posix_time/posix_time_system.hpp \
+  /usr/include/boost/date_time/posix_time/posix_time_config.hpp \
+  /usr/include/boost/limits.hpp \
+  /usr/include/boost/config/no_tr1/cmath.hpp \
+  /usr/include/boost/date_time/time_duration.hpp \
+  /usr/include/boost/date_time/special_defs.hpp \
+  /usr/include/boost/date_time/time_defs.hpp \
+  /usr/include/boost/operators.hpp \
+  /usr/include/boost/date_time/time_resolution_traits.hpp \
+  /usr/include/boost/date_time/int_adapter.hpp \
+  /usr/include/boost/date_time/gregorian/gregorian_types.hpp \
+  /usr/include/boost/date_time/date.hpp \
+  /usr/include/boost/date_time/year_month_day.hpp \
+  /usr/include/boost/date_time/period.hpp \
+  /usr/include/boost/date_time/gregorian/greg_calendar.hpp \
+  /usr/include/boost/date_time/gregorian/greg_weekday.hpp \
+  /usr/include/boost/date_time/constrained_value.hpp \
+  /usr/include/boost/type_traits/is_base_of.hpp \
+  /usr/include/boost/type_traits/is_base_and_derived.hpp \
+  /usr/include/boost/date_time/date_defs.hpp \
+  /usr/include/boost/date_time/gregorian/greg_day_of_year.hpp \
+  /usr/include/boost/date_time/gregorian_calendar.hpp \
+  /usr/include/boost/date_time/gregorian_calendar.ipp \
+  /usr/include/boost/date_time/gregorian/greg_ymd.hpp \
+  /usr/include/boost/date_time/gregorian/greg_day.hpp \
+  /usr/include/boost/date_time/gregorian/greg_year.hpp \
+  /usr/include/boost/date_time/gregorian/greg_month.hpp \
+  /usr/include/boost/date_time/gregorian/greg_duration.hpp \
+  /usr/include/boost/date_time/date_duration.hpp \
+  /usr/include/boost/date_time/date_duration_types.hpp \
+  /usr/include/boost/date_time/gregorian/greg_duration_types.hpp \
+  /usr/include/boost/date_time/gregorian/greg_date.hpp \
+  /usr/include/boost/date_time/adjust_functors.hpp \
+  /usr/include/boost/date_time/wrapping_int.hpp \
+  /usr/include/boost/date_time/date_generators.hpp \
+  /usr/include/c++/11/sstream \
+  /usr/include/c++/11/bits/sstream.tcc \
+  /usr/include/boost/date_time/date_clock_device.hpp \
+  /usr/include/boost/date_time/date_iterator.hpp \
+  /usr/include/boost/date_time/time_system_split.hpp \
+  /usr/include/boost/date_time/time_system_counted.hpp \
+  /usr/include/boost/date_time/time.hpp \
+  /usr/include/boost/date_time/posix_time/date_duration_operators.hpp \
+  /usr/include/boost/date_time/posix_time/posix_time_duration.hpp \
+  /usr/include/boost/numeric/conversion/cast.hpp \
+  /usr/include/boost/type.hpp \
+  /usr/include/boost/numeric/conversion/converter.hpp \
+  /usr/include/boost/numeric/conversion/conversion_traits.hpp \
+  /usr/include/boost/numeric/conversion/detail/conversion_traits.hpp \
+  /usr/include/boost/numeric/conversion/detail/meta.hpp \
+  /usr/include/boost/mpl/equal_to.hpp \
+  /usr/include/boost/mpl/aux_/comparison_op.hpp \
+  /usr/include/boost/mpl/aux_/numeric_op.hpp \
+  /usr/include/boost/mpl/numeric_cast.hpp \
+  /usr/include/boost/mpl/tag.hpp \
+  /usr/include/boost/mpl/aux_/has_tag.hpp \
+  /usr/include/boost/mpl/aux_/numeric_cast_utils.hpp \
+  /usr/include/boost/mpl/aux_/config/forwarding.hpp \
+  /usr/include/boost/mpl/aux_/msvc_eti_base.hpp \
+  /usr/include/boost/mpl/aux_/is_msvc_eti_arg.hpp \
+  /usr/include/boost/mpl/aux_/preprocessed/gcc/equal_to.hpp \
+  /usr/include/boost/numeric/conversion/detail/int_float_mixture.hpp \
+  /usr/include/boost/numeric/conversion/int_float_mixture_enum.hpp \
+  /usr/include/boost/mpl/integral_c.hpp \
+  /usr/include/boost/mpl/integral_c_fwd.hpp \
+  /usr/include/boost/numeric/conversion/detail/sign_mixture.hpp \
+  /usr/include/boost/numeric/conversion/sign_mixture_enum.hpp \
+  /usr/include/boost/numeric/conversion/detail/udt_builtin_mixture.hpp \
+  /usr/include/boost/numeric/conversion/udt_builtin_mixture_enum.hpp \
+  /usr/include/boost/numeric/conversion/detail/is_subranged.hpp \
+  /usr/include/boost/mpl/multiplies.hpp \
+  /usr/include/boost/mpl/times.hpp \
+  /usr/include/boost/mpl/aux_/arithmetic_op.hpp \
+  /usr/include/boost/mpl/aux_/largest_int.hpp \
+  /usr/include/boost/mpl/aux_/preprocessed/gcc/times.hpp \
+  /usr/include/boost/mpl/less.hpp \
+  /usr/include/boost/mpl/aux_/preprocessed/gcc/less.hpp \
+  /usr/include/boost/numeric/conversion/converter_policies.hpp \
+  /usr/include/boost/numeric/conversion/detail/converter.hpp \
+  /usr/include/boost/numeric/conversion/bounds.hpp \
+  /usr/include/boost/numeric/conversion/detail/bounds.hpp \
+  /usr/include/boost/numeric/conversion/numeric_cast_traits.hpp \
+  /usr/include/boost/numeric/conversion/detail/numeric_cast_traits.hpp \
+  /usr/include/boost/numeric/conversion/detail/preprocessed/numeric_cast_traits_common.hpp \
+  /usr/include/boost/numeric/conversion/detail/preprocessed/numeric_cast_traits_long_long.hpp \
+  /usr/include/boost/date_time/posix_time/time_period.hpp \
+  /usr/include/boost/date_time/time_iterator.hpp \
+  /usr/include/boost/date_time/dst_rules.hpp \
+  /usr/include/boost/chrono/time_point.hpp \
+  /usr/include/boost/chrono/duration.hpp \
+  /usr/include/boost/chrono/config.hpp \
+  /usr/include/boost/predef.h \
+  /usr/include/boost/predef/language.h \
+  /usr/include/boost/predef/language/stdc.h \
+  /usr/include/boost/predef/version_number.h \
+  /usr/include/boost/predef/make.h \
+  /usr/include/boost/predef/detail/test.h \
+  /usr/include/boost/predef/language/stdcpp.h \
+  /usr/include/boost/predef/language/objc.h \
+  /usr/include/boost/predef/language/cuda.h \
+  /usr/include/boost/predef/architecture.h \
+  /usr/include/boost/predef/architecture/alpha.h \
+  /usr/include/boost/predef/architecture/arm.h \
+  /usr/include/boost/predef/architecture/blackfin.h \
+  /usr/include/boost/predef/architecture/convex.h \
+  /usr/include/boost/predef/architecture/ia64.h \
+  /usr/include/boost/predef/architecture/m68k.h \
+  /usr/include/boost/predef/architecture/mips.h \
+  /usr/include/boost/predef/architecture/parisc.h \
+  /usr/include/boost/predef/architecture/ppc.h \
+  /usr/include/boost/predef/architecture/ptx.h \
+  /usr/include/boost/predef/architecture/pyramid.h \
+  /usr/include/boost/predef/architecture/riscv.h \
+  /usr/include/boost/predef/architecture/rs6k.h \
+  /usr/include/boost/predef/architecture/sparc.h \
+  /usr/include/boost/predef/architecture/superh.h \
+  /usr/include/boost/predef/architecture/sys370.h \
+  /usr/include/boost/predef/architecture/sys390.h \
+  /usr/include/boost/predef/architecture/x86.h \
+  /usr/include/boost/predef/architecture/x86/32.h \
+  /usr/include/boost/predef/architecture/x86/64.h \
+  /usr/include/boost/predef/architecture/z.h \
+  /usr/include/boost/predef/compiler.h \
+  /usr/include/boost/predef/compiler/borland.h \
+  /usr/include/boost/predef/compiler/clang.h \
+  /usr/include/boost/predef/compiler/comeau.h \
+  /usr/include/boost/predef/compiler/compaq.h \
+  /usr/include/boost/predef/compiler/diab.h \
+  /usr/include/boost/predef/compiler/digitalmars.h \
+  /usr/include/boost/predef/compiler/dignus.h \
+  /usr/include/boost/predef/compiler/edg.h \
+  /usr/include/boost/predef/compiler/ekopath.h \
+  /usr/include/boost/predef/compiler/gcc_xml.h \
+  /usr/include/boost/predef/compiler/gcc.h \
+  /usr/include/boost/predef/detail/comp_detected.h \
+  /usr/include/boost/predef/compiler/greenhills.h \
+  /usr/include/boost/predef/compiler/hp_acc.h \
+  /usr/include/boost/predef/compiler/iar.h \
+  /usr/include/boost/predef/compiler/ibm.h \
+  /usr/include/boost/predef/compiler/intel.h \
+  /usr/include/boost/predef/compiler/kai.h \
+  /usr/include/boost/predef/compiler/llvm.h \
+  /usr/include/boost/predef/compiler/metaware.h \
+  /usr/include/boost/predef/compiler/metrowerks.h \
+  /usr/include/boost/predef/compiler/microtec.h \
+  /usr/include/boost/predef/compiler/mpw.h \
+  /usr/include/boost/predef/compiler/nvcc.h \
+  /usr/include/boost/predef/compiler/palm.h \
+  /usr/include/boost/predef/compiler/pgi.h \
+  /usr/include/boost/predef/compiler/sgi_mipspro.h \
+  /usr/include/boost/predef/compiler/sunpro.h \
+  /usr/include/boost/predef/compiler/tendra.h \
+  /usr/include/boost/predef/compiler/visualc.h \
+  /usr/include/boost/predef/compiler/watcom.h \
+  /usr/include/boost/predef/library.h \
+  /usr/include/boost/predef/library/c.h \
+  /usr/include/boost/predef/library/c/_prefix.h \
+  /usr/include/boost/predef/detail/_cassert.h \
+  /usr/include/boost/predef/library/c/cloudabi.h \
+  /usr/include/boost/predef/library/c/gnu.h \
+  /usr/include/boost/predef/library/c/uc.h \
+  /usr/include/boost/predef/library/c/vms.h \
+  /usr/include/boost/predef/library/c/zos.h \
+  /usr/include/boost/predef/library/std.h \
+  /usr/include/boost/predef/library/std/_prefix.h \
+  /usr/include/boost/predef/detail/_exception.h \
+  /usr/include/boost/predef/library/std/cxx.h \
+  /usr/include/boost/predef/library/std/dinkumware.h \
+  /usr/include/boost/predef/library/std/libcomo.h \
+  /usr/include/boost/predef/library/std/modena.h \
+  /usr/include/boost/predef/library/std/msl.h \
+  /usr/include/boost/predef/library/std/roguewave.h \
+  /usr/include/boost/predef/library/std/sgi.h \
+  /usr/include/boost/predef/library/std/stdcpp3.h \
+  /usr/include/boost/predef/library/std/stlport.h \
+  /usr/include/boost/predef/library/std/vacpp.h \
+  /usr/include/boost/predef/os.h \
+  /usr/include/boost/predef/os/aix.h \
+  /usr/include/boost/predef/os/amigaos.h \
+  /usr/include/boost/predef/os/beos.h \
+  /usr/include/boost/predef/os/bsd.h \
+  /usr/include/boost/predef/os/macos.h \
+  /usr/include/boost/predef/os/ios.h \
+  /usr/include/boost/predef/os/bsd/bsdi.h \
+  /usr/include/boost/predef/os/bsd/dragonfly.h \
+  /usr/include/boost/predef/os/bsd/free.h \
+  /usr/include/boost/predef/os/bsd/open.h \
+  /usr/include/boost/predef/os/bsd/net.h \
+  /usr/include/boost/predef/os/cygwin.h \
+  /usr/include/boost/predef/os/haiku.h \
+  /usr/include/boost/predef/os/hpux.h \
+  /usr/include/boost/predef/os/irix.h \
+  /usr/include/boost/predef/os/linux.h \
+  /usr/include/boost/predef/detail/os_detected.h \
+  /usr/include/boost/predef/os/os400.h \
+  /usr/include/boost/predef/os/qnxnto.h \
+  /usr/include/boost/predef/os/solaris.h \
+  /usr/include/boost/predef/os/unix.h \
+  /usr/include/boost/predef/os/vms.h \
+  /usr/include/boost/predef/os/windows.h \
+  /usr/include/boost/predef/other.h \
+  /usr/include/boost/predef/other/endian.h \
+  /usr/include/boost/predef/platform/android.h \
+  /usr/include/boost/predef/platform.h \
+  /usr/include/boost/predef/platform/cloudabi.h \
+  /usr/include/boost/predef/platform/mingw.h \
+  /usr/include/boost/predef/platform/mingw32.h \
+  /usr/include/boost/predef/platform/mingw64.h \
+  /usr/include/boost/predef/platform/windows_uwp.h \
+  /usr/include/boost/predef/platform/windows_desktop.h \
+  /usr/include/boost/predef/platform/windows_phone.h \
+  /usr/include/boost/predef/platform/windows_server.h \
+  /usr/include/boost/predef/platform/windows_store.h \
+  /usr/include/boost/predef/platform/windows_system.h \
+  /usr/include/boost/predef/platform/windows_runtime.h \
+  /usr/include/boost/predef/platform/ios.h \
+  /usr/include/boost/predef/hardware.h \
+  /usr/include/boost/predef/hardware/simd.h \
+  /usr/include/boost/predef/hardware/simd/x86.h \
+  /usr/include/boost/predef/hardware/simd/x86/versions.h \
+  /usr/include/boost/predef/hardware/simd/x86_amd.h \
+  /usr/include/boost/predef/hardware/simd/x86_amd/versions.h \
+  /usr/include/boost/predef/hardware/simd/arm.h \
+  /usr/include/boost/predef/hardware/simd/arm/versions.h \
+  /usr/include/boost/predef/hardware/simd/ppc.h \
+  /usr/include/boost/predef/hardware/simd/ppc/versions.h \
+  /usr/include/boost/predef/version.h \
+  /usr/include/boost/chrono/detail/static_assert.hpp \
+  /usr/include/boost/mpl/logical.hpp \
+  /usr/include/boost/ratio/ratio.hpp \
+  /usr/include/boost/ratio/config.hpp \
+  /usr/include/boost/ratio/detail/mpl/abs.hpp \
+  /usr/include/boost/ratio/detail/mpl/sign.hpp \
+  /usr/include/boost/ratio/detail/mpl/gcd.hpp \
+  /usr/include/boost/mpl/aux_/config/dependent_nttp.hpp \
+  /usr/include/boost/ratio/detail/mpl/lcm.hpp \
+  /usr/include/boost/integer_traits.hpp \
+  /usr/include/boost/ratio/ratio_fwd.hpp \
+  /usr/include/boost/ratio/detail/overflow_helpers.hpp \
+  /usr/include/boost/type_traits/common_type.hpp \
+  /usr/include/boost/type_traits/detail/mp_defer.hpp \
+  /usr/include/boost/type_traits/is_unsigned.hpp \
+  /usr/include/boost/chrono/detail/is_evenly_divisible_by.hpp \
+  /usr/include/boost/utility/enable_if.hpp \
+  /usr/include/boost/thread/xtime.hpp \
+  /usr/include/boost/date_time/posix_time/conversion.hpp \
+  /usr/include/boost/date_time/filetime_functions.hpp \
+  /usr/include/boost/date_time/gregorian/conversion.hpp \
+  /usr/include/boost/thread/detail/platform_time.hpp \
+  /usr/include/boost/chrono/system_clocks.hpp \
+  /usr/include/boost/chrono/detail/system.hpp \
+  /usr/include/boost/chrono/clock_string.hpp \
+  /usr/include/boost/chrono/ceil.hpp \
+  /usr/include/boost/thread/pthread/pthread_mutex_scoped_lock.hpp \
+  /usr/include/boost/thread/pthread/pthread_helpers.hpp \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/enable_shared.h \
+  /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/RenderContext.h \
+  /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/RenderBuffer.h \
+  /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/RenderShader.h \
+  /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/RenderShaderPipeline.h \
+  /home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/VirtualStackAllocator.h \
+  /usr/local/include/SDL2/SDL.h \
+  /usr/local/include/SDL2/SDL_main.h \
+  /usr/local/include/SDL2/SDL_assert.h \
+  /usr/local/include/SDL2/SDL_atomic.h \
+  /usr/local/include/SDL2/SDL_audio.h \
+  /usr/local/include/SDL2/SDL_thread.h \
+  /usr/local/include/SDL2/SDL_clipboard.h \
+  /usr/local/include/SDL2/SDL_cpuinfo.h \
+  /usr/local/include/SDL2/SDL_events.h \
+  /usr/local/include/SDL2/SDL_filesystem.h \
+  /usr/local/include/SDL2/SDL_haptic.h \
+  /usr/local/include/SDL2/SDL_hidapi.h \
+  /usr/local/include/SDL2/SDL_hints.h \
+  /usr/local/include/SDL2/SDL_loadso.h \
+  /usr/local/include/SDL2/SDL_log.h \
+  /usr/local/include/SDL2/SDL_messagebox.h \
+  /usr/local/include/SDL2/SDL_metal.h \
+  /usr/local/include/SDL2/SDL_power.h \
+  /usr/local/include/SDL2/SDL_render.h \
+  /usr/local/include/SDL2/SDL_shape.h \
+  /usr/local/include/SDL2/SDL_system.h \
+  /usr/local/include/SDL2/SDL_timer.h \
+  /usr/local/include/SDL2/SDL_version.h \
+  /usr/local/include/SDL2/SDL_locale.h \
+  /usr/local/include/SDL2/SDL_misc.h
 
 CMakeFiles/ValdenApp.dir/Application/Project/ProjectData.cpp.o: Application/Project/ProjectData.cpp \
   /usr/include/stdc-predef.h \
@@ -2029,7 +3860,716 @@ CMakeFiles/ValdenApp.dir/Application/Project/ProjectData.cpp.o: Application/Proj
   /home/noah/Projects/SIR-Engine/Engine/Core/FileSystem/FileCache.h \
   /home/noah/Projects/SIR-Engine/Engine/Core/EngineApp.h \
   /home/noah/Projects/SIR-Engine/imgui/imgui.h \
-  /home/noah/Projects/SIR-Engine/imgui/imconfig.h
+  /home/noah/Projects/SIR-Engine/imgui/imconfig.h \
+  IconsFontAwesomeEditor.h \
+  Application/IconsFontAwesome5.h \
+  Application/ImGuiNotify.hpp \
+  /usr/include/c++/11/vector \
+  /usr/include/c++/11/bits/stl_uninitialized.h \
+  /usr/include/c++/11/bits/stl_vector.h \
+  /usr/include/c++/11/bits/stl_bvector.h \
+  /usr/include/c++/11/bits/functional_hash.h \
+  /usr/include/c++/11/bits/vector.tcc \
+  /usr/include/c++/11/string \
+  /usr/include/c++/11/bits/stringfwd.h \
+  /usr/include/c++/11/bits/char_traits.h \
+  /usr/include/c++/11/bits/postypes.h \
+  /usr/include/c++/11/cwchar \
+  /usr/include/c++/11/bits/localefwd.h \
+  /usr/include/x86_64-linux-gnu/c++/11/bits/c++locale.h \
+  /usr/include/c++/11/clocale \
+  /usr/include/locale.h \
+  /usr/include/x86_64-linux-gnu/bits/locale.h \
+  /usr/include/c++/11/iosfwd \
+  /usr/include/c++/11/cctype \
+  /usr/include/c++/11/bits/ostream_insert.h \
+  /usr/include/c++/11/bits/cxxabi_forced.h \
+  /usr/include/c++/11/bits/basic_string.h \
+  /usr/include/c++/11/ext/atomicity.h \
+  /usr/include/x86_64-linux-gnu/c++/11/bits/gthr.h \
+  /usr/include/x86_64-linux-gnu/c++/11/bits/gthr-default.h \
+  /usr/include/x86_64-linux-gnu/c++/11/bits/atomic_word.h \
+  /usr/include/x86_64-linux-gnu/sys/single_threaded.h \
+  /usr/include/c++/11/string_view \
+  /usr/include/c++/11/bits/string_view.tcc \
+  /usr/include/c++/11/ext/string_conversions.h \
+  /usr/include/c++/11/cstdio \
+  /usr/include/c++/11/cerrno \
+  /usr/include/c++/11/bits/charconv.h \
+  /usr/include/c++/11/bits/basic_string.tcc \
+  /usr/include/c++/11/chrono \
+  /usr/include/c++/11/ratio \
+  /usr/include/c++/11/ctime \
+  /usr/include/c++/11/bits/parse_numbers.h \
+  /usr/include/c++/11/functional \
+  /usr/include/c++/11/bits/refwrap.h \
+  /usr/include/c++/11/bits/std_function.h \
+  /usr/include/c++/11/unordered_map \
+  /usr/include/c++/11/bits/hashtable.h \
+  /usr/include/c++/11/bits/hashtable_policy.h \
+  /usr/include/c++/11/bits/enable_special_members.h \
+  /usr/include/c++/11/bits/node_handle.h \
+  /usr/include/c++/11/bits/unordered_map.h \
+  /usr/include/c++/11/bits/erase_if.h \
+  /usr/include/c++/11/bits/stl_algo.h \
+  /usr/include/c++/11/bits/algorithmfwd.h \
+  /usr/include/c++/11/bits/stl_heap.h \
+  /usr/include/c++/11/bits/stl_tempbuf.h \
+  /usr/include/c++/11/bits/uniform_int_dist.h \
+  /home/noah/Projects/SIR-Engine/imgui/imgui_internal.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/immintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/x86gprintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/ia32intrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/adxintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/bmiintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/bmi2intrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/cetintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/cldemoteintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/clflushoptintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/clwbintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/clzerointrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/enqcmdintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/fxsrintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/lzcntintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/lwpintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/movdirintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/mwaitintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/mwaitxintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/pconfigintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/popcntintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/pkuintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/rdseedintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/rtmintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/serializeintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/sgxintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/tbmintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/tsxldtrkintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/uintrintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/waitpkgintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/wbnoinvdintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/xsaveintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/xsavecintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/xsaveoptintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/xsavesintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/xtestintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/hresetintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/mmintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/xmmintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/mm_malloc.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/emmintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/pmmintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/tmmintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/smmintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/wmmintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avxintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avxvnniintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx2intrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512fintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512erintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512pfintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512cdintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vlintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512bwintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512dqintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vlbwintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vldqintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512ifmaintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512ifmavlintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vbmiintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vbmivlintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx5124fmapsintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx5124vnniwintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vpopcntdqintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vbmi2intrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vbmi2vlintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vnniintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vnnivlintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vpopcntdqvlintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512bitalgintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vp2intersectintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vp2intersectvlintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/shaintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/fmaintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/f16cintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/gfniintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/vaesintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/vpclmulqdqintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512bf16vlintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512bf16intrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/amxtileintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/amxint8intrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/amxbf16intrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/prfchwintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/keylockerintrin.h \
+  /home/noah/Projects/SIR-Engine/imgui/imstb_textedit.h \
+  /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLTexture.h \
+  /home/noah/Projects/SIR-Engine/Engine/RenderLib/RenderCommon.h \
+  /home/noah/Projects/SIR-Engine/Engine/RenderLib/RenderLib.h \
+  /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLCommon.h \
+  /usr/include/GL/gl.h \
+  /usr/include/GL/glext.h \
+  /usr/include/KHR/khrplatform.h \
+  /usr/include/GL/glcorearb.h \
+  /home/noah/Projects/SIR-Engine/Engine/RenderLib/DrawBuffer.h \
+  /home/noah/Projects/SIR-Engine/EASTL/stack.h \
+  /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/RenderTexture.h \
+  /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLoader.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/FileSystem/MemoryFile.h \
+  /home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/SlabAllocator.h \
+  /home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/AllocatorBase.h \
+  /home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/MemoryBuffer.h \
+  /home/noah/Projects/SIR-Engine/EASTL/bonus/lru_cache.h \
+  /home/noah/Projects/SIR-Engine/EASTL/list.h \
+  /home/noah/Projects/SIR-Engine/EASTL/optional.h \
+  Application/Project/ProjectManager.h \
+  /home/noah/Projects/SIR-Engine/EASTL/shared_ptr.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/thread_support.h \
+  /usr/include/boost/thread/mutex.hpp \
+  /usr/include/boost/thread/detail/platform.hpp \
+  /usr/include/boost/config.hpp \
+  /usr/include/boost/config/user.hpp \
+  /usr/include/boost/config/detail/select_compiler_config.hpp \
+  /usr/include/boost/config/compiler/gcc.hpp \
+  /usr/include/boost/config/detail/select_stdlib_config.hpp \
+  /usr/include/c++/11/version \
+  /usr/include/boost/config/stdlib/libstdcpp3.hpp \
+  /usr/include/boost/config/detail/select_platform_config.hpp \
+  /usr/include/boost/config/platform/linux.hpp \
+  /usr/include/boost/config/detail/posix_features.hpp \
+  /usr/include/boost/config/detail/suffix.hpp \
+  /usr/include/boost/config/helper_macros.hpp \
+  /usr/include/boost/config/requires_threads.hpp \
+  /usr/include/boost/thread/pthread/mutex.hpp \
+  /usr/include/boost/thread/detail/config.hpp \
+  /usr/include/boost/detail/workaround.hpp \
+  /usr/include/boost/config/workaround.hpp \
+  /usr/include/boost/thread/detail/thread_safety.hpp \
+  /usr/include/boost/config/auto_link.hpp \
+  /usr/include/boost/assert.hpp \
+  /usr/include/boost/throw_exception.hpp \
+  /usr/include/boost/assert/source_location.hpp \
+  /usr/include/boost/current_function.hpp \
+  /usr/include/boost/cstdint.hpp \
+  /usr/include/c++/11/exception \
+  /usr/include/c++/11/bits/exception_ptr.h \
+  /usr/include/c++/11/bits/cxxabi_init_exception.h \
+  /usr/include/c++/11/bits/nested_exception.h \
+  /usr/include/boost/exception/exception.hpp \
+  /usr/include/boost/core/ignore_unused.hpp \
+  /usr/include/boost/thread/exceptions.hpp \
+  /usr/include/c++/11/stdexcept \
+  /usr/include/boost/system/system_error.hpp \
+  /usr/include/boost/system/error_code.hpp \
+  /usr/include/boost/system/api_config.hpp \
+  /usr/include/boost/system/detail/config.hpp \
+  /usr/include/c++/11/ostream \
+  /usr/include/c++/11/ios \
+  /usr/include/c++/11/bits/ios_base.h \
+  /usr/include/c++/11/bits/locale_classes.h \
+  /usr/include/c++/11/bits/locale_classes.tcc \
+  /usr/include/c++/11/system_error \
+  /usr/include/x86_64-linux-gnu/c++/11/bits/error_constants.h \
+  /usr/include/c++/11/streambuf \
+  /usr/include/c++/11/bits/streambuf.tcc \
+  /usr/include/c++/11/bits/basic_ios.h \
+  /usr/include/c++/11/bits/locale_facets.h \
+  /usr/include/c++/11/cwctype \
+  /usr/include/wctype.h \
+  /usr/include/x86_64-linux-gnu/bits/wctype-wchar.h \
+  /usr/include/x86_64-linux-gnu/c++/11/bits/ctype_base.h \
+  /usr/include/c++/11/bits/streambuf_iterator.h \
+  /usr/include/x86_64-linux-gnu/c++/11/bits/ctype_inline.h \
+  /usr/include/c++/11/bits/locale_facets.tcc \
+  /usr/include/c++/11/bits/basic_ios.tcc \
+  /usr/include/c++/11/bits/ostream.tcc \
+  /usr/include/c++/11/cstring \
+  /usr/include/boost/cerrno.hpp \
+  /usr/include/boost/system/detail/generic_category.hpp \
+  /usr/include/boost/system/detail/system_category_posix.hpp \
+  /usr/include/boost/system/detail/std_interoperability.hpp \
+  /usr/include/c++/11/map \
+  /usr/include/c++/11/bits/stl_tree.h \
+  /usr/include/c++/11/bits/stl_map.h \
+  /usr/include/c++/11/bits/stl_multimap.h \
+  /usr/include/c++/11/memory \
+  /usr/include/c++/11/bits/stl_raw_storage_iter.h \
+  /usr/include/c++/11/bits/align.h \
+  /usr/include/c++/11/bit \
+  /usr/include/c++/11/bits/unique_ptr.h \
+  /usr/include/c++/11/bits/shared_ptr.h \
+  /usr/include/c++/11/bits/shared_ptr_base.h \
+  /usr/include/c++/11/bits/allocated_ptr.h \
+  /usr/include/c++/11/ext/concurrence.h \
+  /usr/include/c++/11/bits/shared_ptr_atomic.h \
+  /usr/include/c++/11/bits/atomic_base.h \
+  /usr/include/c++/11/bits/atomic_lockfree_defines.h \
+  /usr/include/c++/11/backward/auto_ptr.h \
+  /usr/include/c++/11/pstl/glue_memory_defs.h \
+  /usr/include/c++/11/pstl/execution_defs.h \
+  /usr/include/c++/11/mutex \
+  /usr/include/c++/11/bits/std_mutex.h \
+  /usr/include/c++/11/bits/unique_lock.h \
+  /usr/include/boost/config/abi_prefix.hpp \
+  /usr/include/boost/config/abi_suffix.hpp \
+  /usr/include/boost/thread/lock_types.hpp \
+  /usr/include/boost/thread/detail/move.hpp \
+  /usr/include/boost/core/enable_if.hpp \
+  /usr/include/boost/type_traits/is_convertible.hpp \
+  /usr/include/boost/type_traits/intrinsics.hpp \
+  /usr/include/boost/type_traits/detail/config.hpp \
+  /usr/include/boost/version.hpp \
+  /usr/include/boost/type_traits/integral_constant.hpp \
+  /usr/include/boost/type_traits/is_complete.hpp \
+  /usr/include/boost/type_traits/declval.hpp \
+  /usr/include/boost/type_traits/add_rvalue_reference.hpp \
+  /usr/include/boost/type_traits/is_void.hpp \
+  /usr/include/boost/type_traits/is_reference.hpp \
+  /usr/include/boost/type_traits/is_lvalue_reference.hpp \
+  /usr/include/boost/type_traits/is_rvalue_reference.hpp \
+  /usr/include/boost/type_traits/remove_reference.hpp \
+  /usr/include/boost/type_traits/is_function.hpp \
+  /usr/include/boost/type_traits/detail/is_function_cxx_11.hpp \
+  /usr/include/boost/type_traits/detail/yes_no_type.hpp \
+  /usr/include/boost/type_traits/is_array.hpp \
+  /usr/include/boost/static_assert.hpp \
+  /usr/include/boost/type_traits/is_arithmetic.hpp \
+  /usr/include/boost/type_traits/is_integral.hpp \
+  /usr/include/boost/type_traits/is_floating_point.hpp \
+  /usr/include/boost/type_traits/is_abstract.hpp \
+  /usr/include/boost/type_traits/add_lvalue_reference.hpp \
+  /usr/include/boost/type_traits/add_reference.hpp \
+  /usr/include/boost/type_traits/remove_cv.hpp \
+  /usr/include/boost/type_traits/decay.hpp \
+  /usr/include/boost/type_traits/remove_bounds.hpp \
+  /usr/include/boost/type_traits/remove_extent.hpp \
+  /usr/include/boost/type_traits/add_pointer.hpp \
+  /usr/include/boost/type_traits/conditional.hpp \
+  /usr/include/boost/thread/detail/delete.hpp \
+  /usr/include/boost/move/utility.hpp \
+  /usr/include/boost/move/detail/config_begin.hpp \
+  /usr/include/boost/move/detail/workaround.hpp \
+  /usr/include/boost/move/utility_core.hpp \
+  /usr/include/boost/move/core.hpp \
+  /usr/include/boost/move/detail/config_end.hpp \
+  /usr/include/boost/move/detail/meta_utils.hpp \
+  /usr/include/boost/move/detail/meta_utils_core.hpp \
+  /usr/include/boost/move/traits.hpp \
+  /usr/include/boost/move/detail/type_traits.hpp \
+  /usr/include/boost/thread/lock_options.hpp \
+  /usr/include/boost/thread/lockable_traits.hpp \
+  /usr/include/boost/thread/thread_time.hpp \
+  /usr/include/boost/date_time/time_clock.hpp \
+  /usr/include/boost/date_time/c_time.hpp \
+  /usr/include/boost/date_time/compiler_config.hpp \
+  /usr/include/boost/date_time/locale_config.hpp \
+  /usr/include/x86_64-linux-gnu/sys/time.h \
+  /usr/include/boost/shared_ptr.hpp \
+  /usr/include/boost/smart_ptr/shared_ptr.hpp \
+  /usr/include/boost/smart_ptr/detail/shared_count.hpp \
+  /usr/include/boost/smart_ptr/bad_weak_ptr.hpp \
+  /usr/include/boost/smart_ptr/detail/sp_counted_base.hpp \
+  /usr/include/boost/smart_ptr/detail/sp_has_gcc_intrinsics.hpp \
+  /usr/include/boost/smart_ptr/detail/sp_has_sync_intrinsics.hpp \
+  /usr/include/boost/smart_ptr/detail/sp_counted_base_gcc_atomic.hpp \
+  /usr/include/boost/smart_ptr/detail/sp_typeinfo_.hpp \
+  /usr/include/boost/smart_ptr/detail/sp_counted_impl.hpp \
+  /usr/include/boost/smart_ptr/detail/sp_noexcept.hpp \
+  /usr/include/boost/checked_delete.hpp \
+  /usr/include/boost/core/checked_delete.hpp \
+  /usr/include/boost/core/addressof.hpp \
+  /usr/include/boost/smart_ptr/detail/sp_disable_deprecated.hpp \
+  /usr/include/boost/smart_ptr/detail/sp_convertible.hpp \
+  /usr/include/boost/smart_ptr/detail/sp_nullptr_t.hpp \
+  /usr/include/boost/smart_ptr/detail/spinlock_pool.hpp \
+  /usr/include/boost/smart_ptr/detail/spinlock.hpp \
+  /usr/include/boost/smart_ptr/detail/spinlock_gcc_atomic.hpp \
+  /usr/include/boost/smart_ptr/detail/yield_k.hpp \
+  /usr/include/boost/smart_ptr/detail/sp_thread_pause.hpp \
+  /usr/include/boost/smart_ptr/detail/sp_thread_sleep.hpp \
+  /usr/include/boost/config/pragma_message.hpp \
+  /usr/include/c++/11/algorithm \
+  /usr/include/c++/11/pstl/glue_algorithm_defs.h \
+  /usr/include/boost/smart_ptr/detail/operator_bool.hpp \
+  /usr/include/boost/smart_ptr/detail/local_sp_deleter.hpp \
+  /usr/include/boost/smart_ptr/detail/local_counted_base.hpp \
+  /usr/include/boost/date_time/microsec_time_clock.hpp \
+  /usr/include/boost/date_time/posix_time/posix_time_types.hpp \
+  /usr/include/boost/date_time/posix_time/ptime.hpp \
+  /usr/include/boost/date_time/posix_time/posix_time_system.hpp \
+  /usr/include/boost/date_time/posix_time/posix_time_config.hpp \
+  /usr/include/boost/limits.hpp \
+  /usr/include/boost/config/no_tr1/cmath.hpp \
+  /usr/include/boost/date_time/time_duration.hpp \
+  /usr/include/boost/date_time/special_defs.hpp \
+  /usr/include/boost/date_time/time_defs.hpp \
+  /usr/include/boost/operators.hpp \
+  /usr/include/c++/11/iterator \
+  /usr/include/c++/11/bits/stream_iterator.h \
+  /usr/include/boost/date_time/time_resolution_traits.hpp \
+  /usr/include/boost/date_time/int_adapter.hpp \
+  /usr/include/boost/date_time/gregorian/gregorian_types.hpp \
+  /usr/include/boost/date_time/date.hpp \
+  /usr/include/boost/date_time/year_month_day.hpp \
+  /usr/include/boost/date_time/period.hpp \
+  /usr/include/boost/date_time/gregorian/greg_calendar.hpp \
+  /usr/include/boost/date_time/gregorian/greg_weekday.hpp \
+  /usr/include/boost/date_time/constrained_value.hpp \
+  /usr/include/boost/type_traits/is_base_of.hpp \
+  /usr/include/boost/type_traits/is_base_and_derived.hpp \
+  /usr/include/boost/type_traits/is_same.hpp \
+  /usr/include/boost/type_traits/is_class.hpp \
+  /usr/include/boost/date_time/date_defs.hpp \
+  /usr/include/boost/date_time/gregorian/greg_day_of_year.hpp \
+  /usr/include/boost/date_time/gregorian_calendar.hpp \
+  /usr/include/boost/date_time/gregorian_calendar.ipp \
+  /usr/include/boost/date_time/gregorian/greg_ymd.hpp \
+  /usr/include/boost/date_time/gregorian/greg_day.hpp \
+  /usr/include/boost/date_time/gregorian/greg_year.hpp \
+  /usr/include/boost/date_time/gregorian/greg_month.hpp \
+  /usr/include/boost/date_time/gregorian/greg_duration.hpp \
+  /usr/include/boost/date_time/date_duration.hpp \
+  /usr/include/boost/date_time/date_duration_types.hpp \
+  /usr/include/boost/date_time/gregorian/greg_duration_types.hpp \
+  /usr/include/boost/date_time/gregorian/greg_date.hpp \
+  /usr/include/boost/date_time/adjust_functors.hpp \
+  /usr/include/boost/date_time/wrapping_int.hpp \
+  /usr/include/boost/date_time/date_generators.hpp \
+  /usr/include/c++/11/sstream \
+  /usr/include/c++/11/istream \
+  /usr/include/c++/11/bits/istream.tcc \
+  /usr/include/c++/11/bits/sstream.tcc \
+  /usr/include/boost/date_time/date_clock_device.hpp \
+  /usr/include/boost/date_time/date_iterator.hpp \
+  /usr/include/boost/date_time/time_system_split.hpp \
+  /usr/include/boost/date_time/time_system_counted.hpp \
+  /usr/include/boost/date_time/time.hpp \
+  /usr/include/boost/date_time/posix_time/date_duration_operators.hpp \
+  /usr/include/boost/date_time/posix_time/posix_time_duration.hpp \
+  /usr/include/boost/numeric/conversion/cast.hpp \
+  /usr/include/boost/type.hpp \
+  /usr/include/boost/numeric/conversion/converter.hpp \
+  /usr/include/boost/numeric/conversion/conversion_traits.hpp \
+  /usr/include/boost/numeric/conversion/detail/conversion_traits.hpp \
+  /usr/include/boost/numeric/conversion/detail/meta.hpp \
+  /usr/include/boost/mpl/if.hpp \
+  /usr/include/boost/mpl/aux_/value_wknd.hpp \
+  /usr/include/boost/mpl/aux_/static_cast.hpp \
+  /usr/include/boost/mpl/aux_/config/workaround.hpp \
+  /usr/include/boost/mpl/aux_/config/integral.hpp \
+  /usr/include/boost/mpl/aux_/config/msvc.hpp \
+  /usr/include/boost/mpl/aux_/config/eti.hpp \
+  /usr/include/boost/mpl/aux_/na_spec.hpp \
+  /usr/include/boost/mpl/lambda_fwd.hpp \
+  /usr/include/boost/mpl/void_fwd.hpp \
+  /usr/include/boost/mpl/aux_/adl_barrier.hpp \
+  /usr/include/boost/mpl/aux_/config/adl.hpp \
+  /usr/include/boost/mpl/aux_/config/intel.hpp \
+  /usr/include/boost/mpl/aux_/config/gcc.hpp \
+  /usr/include/boost/mpl/aux_/na.hpp \
+  /usr/include/boost/mpl/bool.hpp \
+  /usr/include/boost/mpl/bool_fwd.hpp \
+  /usr/include/boost/mpl/integral_c_tag.hpp \
+  /usr/include/boost/mpl/aux_/config/static_constant.hpp \
+  /usr/include/boost/mpl/aux_/na_fwd.hpp \
+  /usr/include/boost/mpl/aux_/config/ctps.hpp \
+  /usr/include/boost/mpl/aux_/config/lambda.hpp \
+  /usr/include/boost/mpl/aux_/config/ttp.hpp \
+  /usr/include/boost/mpl/int.hpp \
+  /usr/include/boost/mpl/int_fwd.hpp \
+  /usr/include/boost/mpl/aux_/nttp_decl.hpp \
+  /usr/include/boost/mpl/aux_/config/nttp.hpp \
+  /usr/include/boost/mpl/aux_/integral_wrapper.hpp \
+  /usr/include/boost/preprocessor/cat.hpp \
+  /usr/include/boost/preprocessor/config/config.hpp \
+  /usr/include/boost/mpl/aux_/lambda_arity_param.hpp \
+  /usr/include/boost/mpl/aux_/template_arity_fwd.hpp \
+  /usr/include/boost/mpl/aux_/arity.hpp \
+  /usr/include/boost/mpl/aux_/config/dtp.hpp \
+  /usr/include/boost/mpl/aux_/preprocessor/params.hpp \
+  /usr/include/boost/mpl/aux_/config/preprocessor.hpp \
+  /usr/include/boost/preprocessor/comma_if.hpp \
+  /usr/include/boost/preprocessor/punctuation/comma_if.hpp \
+  /usr/include/boost/preprocessor/control/if.hpp \
+  /usr/include/boost/preprocessor/control/iif.hpp \
+  /usr/include/boost/preprocessor/logical/bool.hpp \
+  /usr/include/boost/preprocessor/facilities/empty.hpp \
+  /usr/include/boost/preprocessor/punctuation/comma.hpp \
+  /usr/include/boost/preprocessor/repeat.hpp \
+  /usr/include/boost/preprocessor/repetition/repeat.hpp \
+  /usr/include/boost/preprocessor/debug/error.hpp \
+  /usr/include/boost/preprocessor/detail/auto_rec.hpp \
+  /usr/include/boost/preprocessor/tuple/eat.hpp \
+  /usr/include/boost/preprocessor/inc.hpp \
+  /usr/include/boost/preprocessor/arithmetic/inc.hpp \
+  /usr/include/boost/mpl/aux_/preprocessor/enum.hpp \
+  /usr/include/boost/mpl/aux_/preprocessor/def_params_tail.hpp \
+  /usr/include/boost/mpl/limits/arity.hpp \
+  /usr/include/boost/preprocessor/logical/and.hpp \
+  /usr/include/boost/preprocessor/logical/bitand.hpp \
+  /usr/include/boost/preprocessor/identity.hpp \
+  /usr/include/boost/preprocessor/facilities/identity.hpp \
+  /usr/include/boost/preprocessor/empty.hpp \
+  /usr/include/boost/preprocessor/arithmetic/add.hpp \
+  /usr/include/boost/preprocessor/arithmetic/dec.hpp \
+  /usr/include/boost/preprocessor/control/while.hpp \
+  /usr/include/boost/preprocessor/list/fold_left.hpp \
+  /usr/include/boost/preprocessor/list/detail/fold_left.hpp \
+  /usr/include/boost/preprocessor/control/expr_iif.hpp \
+  /usr/include/boost/preprocessor/list/adt.hpp \
+  /usr/include/boost/preprocessor/detail/is_binary.hpp \
+  /usr/include/boost/preprocessor/detail/check.hpp \
+  /usr/include/boost/preprocessor/logical/compl.hpp \
+  /usr/include/boost/preprocessor/list/fold_right.hpp \
+  /usr/include/boost/preprocessor/list/detail/fold_right.hpp \
+  /usr/include/boost/preprocessor/list/reverse.hpp \
+  /usr/include/boost/preprocessor/control/detail/while.hpp \
+  /usr/include/boost/preprocessor/tuple/elem.hpp \
+  /usr/include/boost/preprocessor/facilities/expand.hpp \
+  /usr/include/boost/preprocessor/facilities/overload.hpp \
+  /usr/include/boost/preprocessor/variadic/size.hpp \
+  /usr/include/boost/preprocessor/tuple/rem.hpp \
+  /usr/include/boost/preprocessor/tuple/detail/is_single_return.hpp \
+  /usr/include/boost/preprocessor/variadic/elem.hpp \
+  /usr/include/boost/preprocessor/arithmetic/sub.hpp \
+  /usr/include/boost/mpl/aux_/config/overload_resolution.hpp \
+  /usr/include/boost/mpl/aux_/lambda_support.hpp \
+  /usr/include/boost/mpl/eval_if.hpp \
+  /usr/include/boost/mpl/equal_to.hpp \
+  /usr/include/boost/mpl/aux_/comparison_op.hpp \
+  /usr/include/boost/mpl/aux_/numeric_op.hpp \
+  /usr/include/boost/mpl/numeric_cast.hpp \
+  /usr/include/boost/mpl/apply_wrap.hpp \
+  /usr/include/boost/mpl/aux_/has_apply.hpp \
+  /usr/include/boost/mpl/has_xxx.hpp \
+  /usr/include/boost/mpl/aux_/type_wrapper.hpp \
+  /usr/include/boost/mpl/aux_/yes_no.hpp \
+  /usr/include/boost/mpl/aux_/config/arrays.hpp \
+  /usr/include/boost/mpl/aux_/config/has_xxx.hpp \
+  /usr/include/boost/mpl/aux_/config/msvc_typename.hpp \
+  /usr/include/boost/preprocessor/array/elem.hpp \
+  /usr/include/boost/preprocessor/array/data.hpp \
+  /usr/include/boost/preprocessor/array/size.hpp \
+  /usr/include/boost/preprocessor/repetition/enum_params.hpp \
+  /usr/include/boost/preprocessor/repetition/enum_trailing_params.hpp \
+  /usr/include/boost/mpl/aux_/config/has_apply.hpp \
+  /usr/include/boost/mpl/aux_/msvc_never_true.hpp \
+  /usr/include/boost/mpl/aux_/config/use_preprocessed.hpp \
+  /usr/include/boost/mpl/aux_/include_preprocessed.hpp \
+  /usr/include/boost/mpl/aux_/config/compiler.hpp \
+  /usr/include/boost/preprocessor/stringize.hpp \
+  /usr/include/boost/mpl/aux_/preprocessed/gcc/apply_wrap.hpp \
+  /usr/include/boost/mpl/tag.hpp \
+  /usr/include/boost/mpl/void.hpp \
+  /usr/include/boost/mpl/aux_/has_tag.hpp \
+  /usr/include/boost/mpl/aux_/numeric_cast_utils.hpp \
+  /usr/include/boost/mpl/aux_/config/forwarding.hpp \
+  /usr/include/boost/mpl/aux_/msvc_eti_base.hpp \
+  /usr/include/boost/mpl/aux_/is_msvc_eti_arg.hpp \
+  /usr/include/boost/mpl/aux_/preprocessed/gcc/equal_to.hpp \
+  /usr/include/boost/mpl/not.hpp \
+  /usr/include/boost/mpl/aux_/nested_type_wknd.hpp \
+  /usr/include/boost/mpl/and.hpp \
+  /usr/include/boost/mpl/aux_/preprocessed/gcc/and.hpp \
+  /usr/include/boost/mpl/identity.hpp \
+  /usr/include/boost/numeric/conversion/detail/int_float_mixture.hpp \
+  /usr/include/boost/numeric/conversion/int_float_mixture_enum.hpp \
+  /usr/include/boost/mpl/integral_c.hpp \
+  /usr/include/boost/mpl/integral_c_fwd.hpp \
+  /usr/include/boost/numeric/conversion/detail/sign_mixture.hpp \
+  /usr/include/boost/numeric/conversion/sign_mixture_enum.hpp \
+  /usr/include/boost/numeric/conversion/detail/udt_builtin_mixture.hpp \
+  /usr/include/boost/numeric/conversion/udt_builtin_mixture_enum.hpp \
+  /usr/include/boost/numeric/conversion/detail/is_subranged.hpp \
+  /usr/include/boost/mpl/multiplies.hpp \
+  /usr/include/boost/mpl/times.hpp \
+  /usr/include/boost/mpl/aux_/arithmetic_op.hpp \
+  /usr/include/boost/mpl/aux_/largest_int.hpp \
+  /usr/include/boost/mpl/aux_/preprocessed/gcc/times.hpp \
+  /usr/include/boost/mpl/aux_/preprocessor/default_params.hpp \
+  /usr/include/boost/mpl/less.hpp \
+  /usr/include/boost/mpl/aux_/preprocessed/gcc/less.hpp \
+  /usr/include/boost/numeric/conversion/converter_policies.hpp \
+  /usr/include/boost/numeric/conversion/detail/converter.hpp \
+  /usr/include/boost/numeric/conversion/bounds.hpp \
+  /usr/include/boost/numeric/conversion/detail/bounds.hpp \
+  /usr/include/boost/numeric/conversion/numeric_cast_traits.hpp \
+  /usr/include/boost/numeric/conversion/detail/numeric_cast_traits.hpp \
+  /usr/include/boost/numeric/conversion/detail/preprocessed/numeric_cast_traits_common.hpp \
+  /usr/include/boost/numeric/conversion/detail/preprocessed/numeric_cast_traits_long_long.hpp \
+  /usr/include/boost/date_time/posix_time/time_period.hpp \
+  /usr/include/boost/date_time/time_iterator.hpp \
+  /usr/include/boost/date_time/dst_rules.hpp \
+  /usr/include/boost/chrono/time_point.hpp \
+  /usr/include/boost/chrono/duration.hpp \
+  /usr/include/boost/chrono/config.hpp \
+  /usr/include/boost/predef.h \
+  /usr/include/boost/predef/language.h \
+  /usr/include/boost/predef/language/stdc.h \
+  /usr/include/boost/predef/version_number.h \
+  /usr/include/boost/predef/make.h \
+  /usr/include/boost/predef/detail/test.h \
+  /usr/include/boost/predef/language/stdcpp.h \
+  /usr/include/boost/predef/language/objc.h \
+  /usr/include/boost/predef/language/cuda.h \
+  /usr/include/boost/predef/architecture.h \
+  /usr/include/boost/predef/architecture/alpha.h \
+  /usr/include/boost/predef/architecture/arm.h \
+  /usr/include/boost/predef/architecture/blackfin.h \
+  /usr/include/boost/predef/architecture/convex.h \
+  /usr/include/boost/predef/architecture/ia64.h \
+  /usr/include/boost/predef/architecture/m68k.h \
+  /usr/include/boost/predef/architecture/mips.h \
+  /usr/include/boost/predef/architecture/parisc.h \
+  /usr/include/boost/predef/architecture/ppc.h \
+  /usr/include/boost/predef/architecture/ptx.h \
+  /usr/include/boost/predef/architecture/pyramid.h \
+  /usr/include/boost/predef/architecture/riscv.h \
+  /usr/include/boost/predef/architecture/rs6k.h \
+  /usr/include/boost/predef/architecture/sparc.h \
+  /usr/include/boost/predef/architecture/superh.h \
+  /usr/include/boost/predef/architecture/sys370.h \
+  /usr/include/boost/predef/architecture/sys390.h \
+  /usr/include/boost/predef/architecture/x86.h \
+  /usr/include/boost/predef/architecture/x86/32.h \
+  /usr/include/boost/predef/architecture/x86/64.h \
+  /usr/include/boost/predef/architecture/z.h \
+  /usr/include/boost/predef/compiler.h \
+  /usr/include/boost/predef/compiler/borland.h \
+  /usr/include/boost/predef/compiler/clang.h \
+  /usr/include/boost/predef/compiler/comeau.h \
+  /usr/include/boost/predef/compiler/compaq.h \
+  /usr/include/boost/predef/compiler/diab.h \
+  /usr/include/boost/predef/compiler/digitalmars.h \
+  /usr/include/boost/predef/compiler/dignus.h \
+  /usr/include/boost/predef/compiler/edg.h \
+  /usr/include/boost/predef/compiler/ekopath.h \
+  /usr/include/boost/predef/compiler/gcc_xml.h \
+  /usr/include/boost/predef/compiler/gcc.h \
+  /usr/include/boost/predef/detail/comp_detected.h \
+  /usr/include/boost/predef/compiler/greenhills.h \
+  /usr/include/boost/predef/compiler/hp_acc.h \
+  /usr/include/boost/predef/compiler/iar.h \
+  /usr/include/boost/predef/compiler/ibm.h \
+  /usr/include/boost/predef/compiler/intel.h \
+  /usr/include/boost/predef/compiler/kai.h \
+  /usr/include/boost/predef/compiler/llvm.h \
+  /usr/include/boost/predef/compiler/metaware.h \
+  /usr/include/boost/predef/compiler/metrowerks.h \
+  /usr/include/boost/predef/compiler/microtec.h \
+  /usr/include/boost/predef/compiler/mpw.h \
+  /usr/include/boost/predef/compiler/nvcc.h \
+  /usr/include/boost/predef/compiler/palm.h \
+  /usr/include/boost/predef/compiler/pgi.h \
+  /usr/include/boost/predef/compiler/sgi_mipspro.h \
+  /usr/include/boost/predef/compiler/sunpro.h \
+  /usr/include/boost/predef/compiler/tendra.h \
+  /usr/include/boost/predef/compiler/visualc.h \
+  /usr/include/boost/predef/compiler/watcom.h \
+  /usr/include/boost/predef/library.h \
+  /usr/include/boost/predef/library/c.h \
+  /usr/include/boost/predef/library/c/_prefix.h \
+  /usr/include/boost/predef/detail/_cassert.h \
+  /usr/include/boost/predef/library/c/cloudabi.h \
+  /usr/include/boost/predef/library/c/gnu.h \
+  /usr/include/boost/predef/library/c/uc.h \
+  /usr/include/boost/predef/library/c/vms.h \
+  /usr/include/boost/predef/library/c/zos.h \
+  /usr/include/boost/predef/library/std.h \
+  /usr/include/boost/predef/library/std/_prefix.h \
+  /usr/include/boost/predef/detail/_exception.h \
+  /usr/include/boost/predef/library/std/cxx.h \
+  /usr/include/boost/predef/library/std/dinkumware.h \
+  /usr/include/boost/predef/library/std/libcomo.h \
+  /usr/include/boost/predef/library/std/modena.h \
+  /usr/include/boost/predef/library/std/msl.h \
+  /usr/include/boost/predef/library/std/roguewave.h \
+  /usr/include/boost/predef/library/std/sgi.h \
+  /usr/include/boost/predef/library/std/stdcpp3.h \
+  /usr/include/boost/predef/library/std/stlport.h \
+  /usr/include/boost/predef/library/std/vacpp.h \
+  /usr/include/boost/predef/os.h \
+  /usr/include/boost/predef/os/aix.h \
+  /usr/include/boost/predef/os/amigaos.h \
+  /usr/include/boost/predef/os/beos.h \
+  /usr/include/boost/predef/os/bsd.h \
+  /usr/include/boost/predef/os/macos.h \
+  /usr/include/boost/predef/os/ios.h \
+  /usr/include/boost/predef/os/bsd/bsdi.h \
+  /usr/include/boost/predef/os/bsd/dragonfly.h \
+  /usr/include/boost/predef/os/bsd/free.h \
+  /usr/include/boost/predef/os/bsd/open.h \
+  /usr/include/boost/predef/os/bsd/net.h \
+  /usr/include/boost/predef/os/cygwin.h \
+  /usr/include/boost/predef/os/haiku.h \
+  /usr/include/boost/predef/os/hpux.h \
+  /usr/include/boost/predef/os/irix.h \
+  /usr/include/boost/predef/os/linux.h \
+  /usr/include/boost/predef/detail/os_detected.h \
+  /usr/include/boost/predef/os/os400.h \
+  /usr/include/boost/predef/os/qnxnto.h \
+  /usr/include/boost/predef/os/solaris.h \
+  /usr/include/boost/predef/os/unix.h \
+  /usr/include/boost/predef/os/vms.h \
+  /usr/include/boost/predef/os/windows.h \
+  /usr/include/boost/predef/other.h \
+  /usr/include/boost/predef/other/endian.h \
+  /usr/include/boost/predef/platform/android.h \
+  /usr/include/boost/predef/platform.h \
+  /usr/include/boost/predef/platform/cloudabi.h \
+  /usr/include/boost/predef/platform/mingw.h \
+  /usr/include/boost/predef/platform/mingw32.h \
+  /usr/include/boost/predef/platform/mingw64.h \
+  /usr/include/boost/predef/platform/windows_uwp.h \
+  /usr/include/boost/predef/platform/windows_desktop.h \
+  /usr/include/boost/predef/platform/windows_phone.h \
+  /usr/include/boost/predef/platform/windows_server.h \
+  /usr/include/boost/predef/platform/windows_store.h \
+  /usr/include/boost/predef/platform/windows_system.h \
+  /usr/include/boost/predef/platform/windows_runtime.h \
+  /usr/include/boost/predef/platform/ios.h \
+  /usr/include/boost/predef/hardware.h \
+  /usr/include/boost/predef/hardware/simd.h \
+  /usr/include/boost/predef/hardware/simd/x86.h \
+  /usr/include/boost/predef/hardware/simd/x86/versions.h \
+  /usr/include/boost/predef/hardware/simd/x86_amd.h \
+  /usr/include/boost/predef/hardware/simd/x86_amd/versions.h \
+  /usr/include/boost/predef/hardware/simd/arm.h \
+  /usr/include/boost/predef/hardware/simd/arm/versions.h \
+  /usr/include/boost/predef/hardware/simd/ppc.h \
+  /usr/include/boost/predef/hardware/simd/ppc/versions.h \
+  /usr/include/boost/predef/version.h \
+  /usr/include/boost/chrono/detail/static_assert.hpp \
+  /usr/include/boost/mpl/logical.hpp \
+  /usr/include/boost/mpl/or.hpp \
+  /usr/include/boost/mpl/aux_/preprocessed/gcc/or.hpp \
+  /usr/include/boost/ratio/ratio.hpp \
+  /usr/include/boost/ratio/config.hpp \
+  /usr/include/boost/ratio/detail/mpl/abs.hpp \
+  /usr/include/boost/ratio/detail/mpl/sign.hpp \
+  /usr/include/boost/ratio/detail/mpl/gcd.hpp \
+  /usr/include/boost/mpl/aux_/config/dependent_nttp.hpp \
+  /usr/include/boost/ratio/detail/mpl/lcm.hpp \
+  /usr/include/boost/integer_traits.hpp \
+  /usr/include/boost/ratio/ratio_fwd.hpp \
+  /usr/include/boost/ratio/detail/overflow_helpers.hpp \
+  /usr/include/boost/type_traits/common_type.hpp \
+  /usr/include/boost/type_traits/detail/mp_defer.hpp \
+  /usr/include/boost/type_traits/is_unsigned.hpp \
+  /usr/include/boost/type_traits/is_enum.hpp \
+  /usr/include/boost/chrono/detail/is_evenly_divisible_by.hpp \
+  /usr/include/boost/utility/enable_if.hpp \
+  /usr/include/boost/thread/xtime.hpp \
+  /usr/include/boost/date_time/posix_time/conversion.hpp \
+  /usr/include/boost/date_time/filetime_functions.hpp \
+  /usr/include/boost/date_time/gregorian/conversion.hpp \
+  /usr/include/boost/thread/detail/platform_time.hpp \
+  /usr/include/boost/chrono/system_clocks.hpp \
+  /usr/include/boost/chrono/detail/system.hpp \
+  /usr/include/boost/chrono/clock_string.hpp \
+  /usr/include/boost/chrono/ceil.hpp \
+  /usr/include/boost/thread/pthread/pthread_mutex_scoped_lock.hpp \
+  /usr/include/boost/thread/pthread/pthread_helpers.hpp \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/enable_shared.h
 
 CMakeFiles/ValdenApp.dir/Application/Project/ProjectLoader.cpp.o: Application/Project/ProjectLoader.cpp \
   /usr/include/stdc-predef.h \
@@ -2274,14 +4814,14 @@ CMakeFiles/ValdenApp.dir/Application/Project/ProjectLoader.cpp.o: Application/Pr
   /home/noah/Projects/SIR-Engine/Engine/Core/Logging/Logger.h \
   /home/noah/Projects/SIR-Engine/EASTL/queue.h \
   /home/noah/Projects/SIR-Engine/EASTL/deque.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
-  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CString.h \
   /home/noah/Projects/SIR-Engine/Engine/Core/ResourceDef.h \
   /home/noah/Projects/SIR-Engine/EASTL/allocator_malloc.h \
   /usr/include/malloc.h \
   /home/noah/Projects/SIR-Engine/EASTL/fixed_string.h \
   /home/noah/Projects/SIR-Engine/EASTL/internal/fixed_pool.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
+  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CVector.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/UtlMemory.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CStaticArray.h \
@@ -2652,6 +5192,166 @@ CMakeFiles/ValdenApp.dir/Application/Project/ProjectLoader.cpp.o: Application/Pr
   /home/noah/Projects/SIR-Engine/Engine/Core/EngineApp.h \
   /home/noah/Projects/SIR-Engine/imgui/imgui.h \
   /home/noah/Projects/SIR-Engine/imgui/imconfig.h \
+  IconsFontAwesomeEditor.h \
+  Application/IconsFontAwesome5.h \
+  Application/ImGuiNotify.hpp \
+  /usr/include/c++/11/vector \
+  /usr/include/c++/11/bits/stl_uninitialized.h \
+  /usr/include/c++/11/bits/stl_vector.h \
+  /usr/include/c++/11/bits/stl_bvector.h \
+  /usr/include/c++/11/bits/functional_hash.h \
+  /usr/include/c++/11/bits/vector.tcc \
+  /usr/include/c++/11/string \
+  /usr/include/c++/11/bits/stringfwd.h \
+  /usr/include/c++/11/bits/char_traits.h \
+  /usr/include/c++/11/bits/postypes.h \
+  /usr/include/c++/11/cwchar \
+  /usr/include/c++/11/bits/localefwd.h \
+  /usr/include/x86_64-linux-gnu/c++/11/bits/c++locale.h \
+  /usr/include/c++/11/clocale \
+  /usr/include/locale.h \
+  /usr/include/x86_64-linux-gnu/bits/locale.h \
+  /usr/include/c++/11/iosfwd \
+  /usr/include/c++/11/cctype \
+  /usr/include/c++/11/bits/ostream_insert.h \
+  /usr/include/c++/11/bits/cxxabi_forced.h \
+  /usr/include/c++/11/bits/basic_string.h \
+  /usr/include/c++/11/ext/atomicity.h \
+  /usr/include/x86_64-linux-gnu/c++/11/bits/gthr.h \
+  /usr/include/x86_64-linux-gnu/c++/11/bits/gthr-default.h \
+  /usr/include/x86_64-linux-gnu/c++/11/bits/atomic_word.h \
+  /usr/include/x86_64-linux-gnu/sys/single_threaded.h \
+  /usr/include/c++/11/string_view \
+  /usr/include/c++/11/bits/string_view.tcc \
+  /usr/include/c++/11/ext/string_conversions.h \
+  /usr/include/c++/11/cstdio \
+  /usr/include/c++/11/cerrno \
+  /usr/include/c++/11/bits/charconv.h \
+  /usr/include/c++/11/bits/basic_string.tcc \
+  /usr/include/c++/11/chrono \
+  /usr/include/c++/11/ratio \
+  /usr/include/c++/11/ctime \
+  /usr/include/c++/11/bits/parse_numbers.h \
+  /usr/include/c++/11/functional \
+  /usr/include/c++/11/bits/refwrap.h \
+  /usr/include/c++/11/bits/std_function.h \
+  /usr/include/c++/11/unordered_map \
+  /usr/include/c++/11/bits/hashtable.h \
+  /usr/include/c++/11/bits/hashtable_policy.h \
+  /usr/include/c++/11/bits/enable_special_members.h \
+  /usr/include/c++/11/bits/node_handle.h \
+  /usr/include/c++/11/bits/unordered_map.h \
+  /usr/include/c++/11/bits/erase_if.h \
+  /usr/include/c++/11/bits/stl_algo.h \
+  /usr/include/c++/11/bits/algorithmfwd.h \
+  /usr/include/c++/11/bits/stl_heap.h \
+  /usr/include/c++/11/bits/stl_tempbuf.h \
+  /usr/include/c++/11/bits/uniform_int_dist.h \
+  /home/noah/Projects/SIR-Engine/imgui/imgui_internal.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/immintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/x86gprintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/ia32intrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/adxintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/bmiintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/bmi2intrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/cetintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/cldemoteintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/clflushoptintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/clwbintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/clzerointrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/enqcmdintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/fxsrintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/lzcntintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/lwpintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/movdirintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/mwaitintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/mwaitxintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/pconfigintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/popcntintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/pkuintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/rdseedintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/rtmintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/serializeintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/sgxintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/tbmintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/tsxldtrkintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/uintrintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/waitpkgintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/wbnoinvdintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/xsaveintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/xsavecintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/xsaveoptintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/xsavesintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/xtestintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/hresetintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/mmintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/xmmintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/mm_malloc.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/emmintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/pmmintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/tmmintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/smmintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/wmmintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avxintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avxvnniintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx2intrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512fintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512erintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512pfintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512cdintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vlintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512bwintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512dqintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vlbwintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vldqintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512ifmaintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512ifmavlintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vbmiintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vbmivlintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx5124fmapsintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx5124vnniwintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vpopcntdqintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vbmi2intrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vbmi2vlintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vnniintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vnnivlintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vpopcntdqvlintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512bitalgintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vp2intersectintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vp2intersectvlintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/shaintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/fmaintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/f16cintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/gfniintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/vaesintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/vpclmulqdqintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512bf16vlintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512bf16intrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/amxtileintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/amxint8intrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/amxbf16intrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/prfchwintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/keylockerintrin.h \
+  /home/noah/Projects/SIR-Engine/imgui/imstb_textedit.h \
+  /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLTexture.h \
+  /home/noah/Projects/SIR-Engine/Engine/RenderLib/RenderCommon.h \
+  /home/noah/Projects/SIR-Engine/Engine/RenderLib/RenderLib.h \
+  /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLCommon.h \
+  /usr/include/GL/gl.h \
+  /usr/include/GL/glext.h \
+  /usr/include/KHR/khrplatform.h \
+  /usr/include/GL/glcorearb.h \
+  /home/noah/Projects/SIR-Engine/Engine/RenderLib/DrawBuffer.h \
+  /home/noah/Projects/SIR-Engine/EASTL/stack.h \
+  /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/RenderTexture.h \
+  /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLoader.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/FileSystem/MemoryFile.h \
+  /home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/SlabAllocator.h \
+  /home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/AllocatorBase.h \
+  /home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/MemoryBuffer.h \
+  /home/noah/Projects/SIR-Engine/EASTL/bonus/lru_cache.h \
+  /home/noah/Projects/SIR-Engine/EASTL/list.h \
+  /home/noah/Projects/SIR-Engine/EASTL/optional.h \
   Application/Project/ProjectData.h \
   /home/noah/Projects/SIR-Engine/EASTL/shared_ptr.h \
   /home/noah/Projects/SIR-Engine/EASTL/internal/thread_support.h \
@@ -2681,10 +5381,6 @@ CMakeFiles/ValdenApp.dir/Application/Project/ProjectLoader.cpp.o: Application/Pr
   /usr/include/boost/assert/source_location.hpp \
   /usr/include/boost/current_function.hpp \
   /usr/include/boost/cstdint.hpp \
-  /usr/include/c++/11/iosfwd \
-  /usr/include/c++/11/bits/stringfwd.h \
-  /usr/include/c++/11/bits/postypes.h \
-  /usr/include/c++/11/cwchar \
   /usr/include/c++/11/exception \
   /usr/include/c++/11/bits/exception_ptr.h \
   /usr/include/c++/11/bits/cxxabi_init_exception.h \
@@ -2692,30 +5388,6 @@ CMakeFiles/ValdenApp.dir/Application/Project/ProjectLoader.cpp.o: Application/Pr
   /usr/include/boost/exception/exception.hpp \
   /usr/include/boost/core/ignore_unused.hpp \
   /usr/include/boost/thread/exceptions.hpp \
-  /usr/include/c++/11/string \
-  /usr/include/c++/11/bits/char_traits.h \
-  /usr/include/c++/11/bits/localefwd.h \
-  /usr/include/x86_64-linux-gnu/c++/11/bits/c++locale.h \
-  /usr/include/c++/11/clocale \
-  /usr/include/locale.h \
-  /usr/include/x86_64-linux-gnu/bits/locale.h \
-  /usr/include/c++/11/cctype \
-  /usr/include/c++/11/bits/ostream_insert.h \
-  /usr/include/c++/11/bits/cxxabi_forced.h \
-  /usr/include/c++/11/bits/basic_string.h \
-  /usr/include/c++/11/ext/atomicity.h \
-  /usr/include/x86_64-linux-gnu/c++/11/bits/gthr.h \
-  /usr/include/x86_64-linux-gnu/c++/11/bits/gthr-default.h \
-  /usr/include/x86_64-linux-gnu/c++/11/bits/atomic_word.h \
-  /usr/include/x86_64-linux-gnu/sys/single_threaded.h \
-  /usr/include/c++/11/string_view \
-  /usr/include/c++/11/bits/functional_hash.h \
-  /usr/include/c++/11/bits/string_view.tcc \
-  /usr/include/c++/11/ext/string_conversions.h \
-  /usr/include/c++/11/cstdio \
-  /usr/include/c++/11/cerrno \
-  /usr/include/c++/11/bits/charconv.h \
-  /usr/include/c++/11/bits/basic_string.tcc \
   /usr/include/c++/11/stdexcept \
   /usr/include/boost/system/system_error.hpp \
   /usr/include/boost/system/error_code.hpp \
@@ -2741,26 +5413,6 @@ CMakeFiles/ValdenApp.dir/Application/Project/ProjectLoader.cpp.o: Application/Pr
   /usr/include/c++/11/bits/locale_facets.tcc \
   /usr/include/c++/11/bits/basic_ios.tcc \
   /usr/include/c++/11/bits/ostream.tcc \
-  /usr/include/c++/11/functional \
-  /usr/include/c++/11/bits/refwrap.h \
-  /usr/include/c++/11/bits/std_function.h \
-  /usr/include/c++/11/unordered_map \
-  /usr/include/c++/11/bits/hashtable.h \
-  /usr/include/c++/11/bits/hashtable_policy.h \
-  /usr/include/c++/11/bits/enable_special_members.h \
-  /usr/include/c++/11/bits/node_handle.h \
-  /usr/include/c++/11/bits/unordered_map.h \
-  /usr/include/c++/11/bits/erase_if.h \
-  /usr/include/c++/11/vector \
-  /usr/include/c++/11/bits/stl_uninitialized.h \
-  /usr/include/c++/11/bits/stl_vector.h \
-  /usr/include/c++/11/bits/stl_bvector.h \
-  /usr/include/c++/11/bits/vector.tcc \
-  /usr/include/c++/11/bits/stl_algo.h \
-  /usr/include/c++/11/bits/algorithmfwd.h \
-  /usr/include/c++/11/bits/stl_heap.h \
-  /usr/include/c++/11/bits/stl_tempbuf.h \
-  /usr/include/c++/11/bits/uniform_int_dist.h \
   /usr/include/c++/11/cstring \
   /usr/include/boost/cerrno.hpp \
   /usr/include/boost/system/detail/generic_category.hpp \
@@ -2786,10 +5438,6 @@ CMakeFiles/ValdenApp.dir/Application/Project/ProjectLoader.cpp.o: Application/Pr
   /usr/include/c++/11/pstl/glue_memory_defs.h \
   /usr/include/c++/11/pstl/execution_defs.h \
   /usr/include/c++/11/mutex \
-  /usr/include/c++/11/chrono \
-  /usr/include/c++/11/ratio \
-  /usr/include/c++/11/ctime \
-  /usr/include/c++/11/bits/parse_numbers.h \
   /usr/include/c++/11/bits/std_mutex.h \
   /usr/include/c++/11/bits/unique_lock.h \
   /usr/include/boost/config/abi_prefix.hpp \
@@ -3528,14 +6176,14 @@ CMakeFiles/ValdenApp.dir/Application/Project/ProjectManager.cpp.o: Application/P
   /home/noah/Projects/SIR-Engine/Engine/Core/Logging/Logger.h \
   /home/noah/Projects/SIR-Engine/EASTL/queue.h \
   /home/noah/Projects/SIR-Engine/EASTL/deque.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
-  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CString.h \
   /home/noah/Projects/SIR-Engine/Engine/Core/ResourceDef.h \
   /home/noah/Projects/SIR-Engine/EASTL/allocator_malloc.h \
   /usr/include/malloc.h \
   /home/noah/Projects/SIR-Engine/EASTL/fixed_string.h \
   /home/noah/Projects/SIR-Engine/EASTL/internal/fixed_pool.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
+  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CVector.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/UtlMemory.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CStaticArray.h \
@@ -3906,6 +6554,166 @@ CMakeFiles/ValdenApp.dir/Application/Project/ProjectManager.cpp.o: Application/P
   /home/noah/Projects/SIR-Engine/Engine/Core/EngineApp.h \
   /home/noah/Projects/SIR-Engine/imgui/imgui.h \
   /home/noah/Projects/SIR-Engine/imgui/imconfig.h \
+  IconsFontAwesomeEditor.h \
+  Application/IconsFontAwesome5.h \
+  Application/ImGuiNotify.hpp \
+  /usr/include/c++/11/vector \
+  /usr/include/c++/11/bits/stl_uninitialized.h \
+  /usr/include/c++/11/bits/stl_vector.h \
+  /usr/include/c++/11/bits/stl_bvector.h \
+  /usr/include/c++/11/bits/functional_hash.h \
+  /usr/include/c++/11/bits/vector.tcc \
+  /usr/include/c++/11/string \
+  /usr/include/c++/11/bits/stringfwd.h \
+  /usr/include/c++/11/bits/char_traits.h \
+  /usr/include/c++/11/bits/postypes.h \
+  /usr/include/c++/11/cwchar \
+  /usr/include/c++/11/bits/localefwd.h \
+  /usr/include/x86_64-linux-gnu/c++/11/bits/c++locale.h \
+  /usr/include/c++/11/clocale \
+  /usr/include/locale.h \
+  /usr/include/x86_64-linux-gnu/bits/locale.h \
+  /usr/include/c++/11/iosfwd \
+  /usr/include/c++/11/cctype \
+  /usr/include/c++/11/bits/ostream_insert.h \
+  /usr/include/c++/11/bits/cxxabi_forced.h \
+  /usr/include/c++/11/bits/basic_string.h \
+  /usr/include/c++/11/ext/atomicity.h \
+  /usr/include/x86_64-linux-gnu/c++/11/bits/gthr.h \
+  /usr/include/x86_64-linux-gnu/c++/11/bits/gthr-default.h \
+  /usr/include/x86_64-linux-gnu/c++/11/bits/atomic_word.h \
+  /usr/include/x86_64-linux-gnu/sys/single_threaded.h \
+  /usr/include/c++/11/string_view \
+  /usr/include/c++/11/bits/string_view.tcc \
+  /usr/include/c++/11/ext/string_conversions.h \
+  /usr/include/c++/11/cstdio \
+  /usr/include/c++/11/cerrno \
+  /usr/include/c++/11/bits/charconv.h \
+  /usr/include/c++/11/bits/basic_string.tcc \
+  /usr/include/c++/11/chrono \
+  /usr/include/c++/11/ratio \
+  /usr/include/c++/11/ctime \
+  /usr/include/c++/11/bits/parse_numbers.h \
+  /usr/include/c++/11/functional \
+  /usr/include/c++/11/bits/refwrap.h \
+  /usr/include/c++/11/bits/std_function.h \
+  /usr/include/c++/11/unordered_map \
+  /usr/include/c++/11/bits/hashtable.h \
+  /usr/include/c++/11/bits/hashtable_policy.h \
+  /usr/include/c++/11/bits/enable_special_members.h \
+  /usr/include/c++/11/bits/node_handle.h \
+  /usr/include/c++/11/bits/unordered_map.h \
+  /usr/include/c++/11/bits/erase_if.h \
+  /usr/include/c++/11/bits/stl_algo.h \
+  /usr/include/c++/11/bits/algorithmfwd.h \
+  /usr/include/c++/11/bits/stl_heap.h \
+  /usr/include/c++/11/bits/stl_tempbuf.h \
+  /usr/include/c++/11/bits/uniform_int_dist.h \
+  /home/noah/Projects/SIR-Engine/imgui/imgui_internal.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/immintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/x86gprintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/ia32intrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/adxintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/bmiintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/bmi2intrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/cetintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/cldemoteintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/clflushoptintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/clwbintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/clzerointrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/enqcmdintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/fxsrintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/lzcntintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/lwpintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/movdirintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/mwaitintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/mwaitxintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/pconfigintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/popcntintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/pkuintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/rdseedintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/rtmintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/serializeintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/sgxintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/tbmintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/tsxldtrkintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/uintrintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/waitpkgintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/wbnoinvdintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/xsaveintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/xsavecintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/xsaveoptintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/xsavesintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/xtestintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/hresetintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/mmintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/xmmintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/mm_malloc.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/emmintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/pmmintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/tmmintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/smmintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/wmmintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avxintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avxvnniintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx2intrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512fintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512erintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512pfintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512cdintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vlintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512bwintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512dqintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vlbwintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vldqintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512ifmaintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512ifmavlintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vbmiintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vbmivlintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx5124fmapsintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx5124vnniwintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vpopcntdqintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vbmi2intrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vbmi2vlintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vnniintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vnnivlintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vpopcntdqvlintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512bitalgintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vp2intersectintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vp2intersectvlintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/shaintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/fmaintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/f16cintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/gfniintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/vaesintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/vpclmulqdqintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512bf16vlintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512bf16intrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/amxtileintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/amxint8intrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/amxbf16intrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/prfchwintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/keylockerintrin.h \
+  /home/noah/Projects/SIR-Engine/imgui/imstb_textedit.h \
+  /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLTexture.h \
+  /home/noah/Projects/SIR-Engine/Engine/RenderLib/RenderCommon.h \
+  /home/noah/Projects/SIR-Engine/Engine/RenderLib/RenderLib.h \
+  /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLCommon.h \
+  /usr/include/GL/gl.h \
+  /usr/include/GL/glext.h \
+  /usr/include/KHR/khrplatform.h \
+  /usr/include/GL/glcorearb.h \
+  /home/noah/Projects/SIR-Engine/Engine/RenderLib/DrawBuffer.h \
+  /home/noah/Projects/SIR-Engine/EASTL/stack.h \
+  /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/RenderTexture.h \
+  /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLoader.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/FileSystem/MemoryFile.h \
+  /home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/SlabAllocator.h \
+  /home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/AllocatorBase.h \
+  /home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/MemoryBuffer.h \
+  /home/noah/Projects/SIR-Engine/EASTL/bonus/lru_cache.h \
+  /home/noah/Projects/SIR-Engine/EASTL/list.h \
+  /home/noah/Projects/SIR-Engine/EASTL/optional.h \
   Application/Project/ProjectData.h \
   /home/noah/Projects/SIR-Engine/EASTL/shared_ptr.h \
   /home/noah/Projects/SIR-Engine/EASTL/internal/thread_support.h \
@@ -3935,10 +6743,6 @@ CMakeFiles/ValdenApp.dir/Application/Project/ProjectManager.cpp.o: Application/P
   /usr/include/boost/assert/source_location.hpp \
   /usr/include/boost/current_function.hpp \
   /usr/include/boost/cstdint.hpp \
-  /usr/include/c++/11/iosfwd \
-  /usr/include/c++/11/bits/stringfwd.h \
-  /usr/include/c++/11/bits/postypes.h \
-  /usr/include/c++/11/cwchar \
   /usr/include/c++/11/exception \
   /usr/include/c++/11/bits/exception_ptr.h \
   /usr/include/c++/11/bits/cxxabi_init_exception.h \
@@ -3946,30 +6750,6 @@ CMakeFiles/ValdenApp.dir/Application/Project/ProjectManager.cpp.o: Application/P
   /usr/include/boost/exception/exception.hpp \
   /usr/include/boost/core/ignore_unused.hpp \
   /usr/include/boost/thread/exceptions.hpp \
-  /usr/include/c++/11/string \
-  /usr/include/c++/11/bits/char_traits.h \
-  /usr/include/c++/11/bits/localefwd.h \
-  /usr/include/x86_64-linux-gnu/c++/11/bits/c++locale.h \
-  /usr/include/c++/11/clocale \
-  /usr/include/locale.h \
-  /usr/include/x86_64-linux-gnu/bits/locale.h \
-  /usr/include/c++/11/cctype \
-  /usr/include/c++/11/bits/ostream_insert.h \
-  /usr/include/c++/11/bits/cxxabi_forced.h \
-  /usr/include/c++/11/bits/basic_string.h \
-  /usr/include/c++/11/ext/atomicity.h \
-  /usr/include/x86_64-linux-gnu/c++/11/bits/gthr.h \
-  /usr/include/x86_64-linux-gnu/c++/11/bits/gthr-default.h \
-  /usr/include/x86_64-linux-gnu/c++/11/bits/atomic_word.h \
-  /usr/include/x86_64-linux-gnu/sys/single_threaded.h \
-  /usr/include/c++/11/string_view \
-  /usr/include/c++/11/bits/functional_hash.h \
-  /usr/include/c++/11/bits/string_view.tcc \
-  /usr/include/c++/11/ext/string_conversions.h \
-  /usr/include/c++/11/cstdio \
-  /usr/include/c++/11/cerrno \
-  /usr/include/c++/11/bits/charconv.h \
-  /usr/include/c++/11/bits/basic_string.tcc \
   /usr/include/c++/11/stdexcept \
   /usr/include/boost/system/system_error.hpp \
   /usr/include/boost/system/error_code.hpp \
@@ -3995,26 +6775,6 @@ CMakeFiles/ValdenApp.dir/Application/Project/ProjectManager.cpp.o: Application/P
   /usr/include/c++/11/bits/locale_facets.tcc \
   /usr/include/c++/11/bits/basic_ios.tcc \
   /usr/include/c++/11/bits/ostream.tcc \
-  /usr/include/c++/11/functional \
-  /usr/include/c++/11/bits/refwrap.h \
-  /usr/include/c++/11/bits/std_function.h \
-  /usr/include/c++/11/unordered_map \
-  /usr/include/c++/11/bits/hashtable.h \
-  /usr/include/c++/11/bits/hashtable_policy.h \
-  /usr/include/c++/11/bits/enable_special_members.h \
-  /usr/include/c++/11/bits/node_handle.h \
-  /usr/include/c++/11/bits/unordered_map.h \
-  /usr/include/c++/11/bits/erase_if.h \
-  /usr/include/c++/11/vector \
-  /usr/include/c++/11/bits/stl_uninitialized.h \
-  /usr/include/c++/11/bits/stl_vector.h \
-  /usr/include/c++/11/bits/stl_bvector.h \
-  /usr/include/c++/11/bits/vector.tcc \
-  /usr/include/c++/11/bits/stl_algo.h \
-  /usr/include/c++/11/bits/algorithmfwd.h \
-  /usr/include/c++/11/bits/stl_heap.h \
-  /usr/include/c++/11/bits/stl_tempbuf.h \
-  /usr/include/c++/11/bits/uniform_int_dist.h \
   /usr/include/c++/11/cstring \
   /usr/include/boost/cerrno.hpp \
   /usr/include/boost/system/detail/generic_category.hpp \
@@ -4040,1237 +6800,6 @@ CMakeFiles/ValdenApp.dir/Application/Project/ProjectManager.cpp.o: Application/P
   /usr/include/c++/11/pstl/glue_memory_defs.h \
   /usr/include/c++/11/pstl/execution_defs.h \
   /usr/include/c++/11/mutex \
-  /usr/include/c++/11/chrono \
-  /usr/include/c++/11/ratio \
-  /usr/include/c++/11/ctime \
-  /usr/include/c++/11/bits/parse_numbers.h \
-  /usr/include/c++/11/bits/std_mutex.h \
-  /usr/include/c++/11/bits/unique_lock.h \
-  /usr/include/boost/config/abi_prefix.hpp \
-  /usr/include/boost/config/abi_suffix.hpp \
-  /usr/include/boost/thread/lock_types.hpp \
-  /usr/include/boost/thread/detail/move.hpp \
-  /usr/include/boost/core/enable_if.hpp \
-  /usr/include/boost/type_traits/is_convertible.hpp \
-  /usr/include/boost/type_traits/intrinsics.hpp \
-  /usr/include/boost/type_traits/detail/config.hpp \
-  /usr/include/boost/version.hpp \
-  /usr/include/boost/type_traits/integral_constant.hpp \
-  /usr/include/boost/type_traits/is_complete.hpp \
-  /usr/include/boost/type_traits/declval.hpp \
-  /usr/include/boost/type_traits/add_rvalue_reference.hpp \
-  /usr/include/boost/type_traits/is_void.hpp \
-  /usr/include/boost/type_traits/is_reference.hpp \
-  /usr/include/boost/type_traits/is_lvalue_reference.hpp \
-  /usr/include/boost/type_traits/is_rvalue_reference.hpp \
-  /usr/include/boost/type_traits/remove_reference.hpp \
-  /usr/include/boost/type_traits/is_function.hpp \
-  /usr/include/boost/type_traits/detail/is_function_cxx_11.hpp \
-  /usr/include/boost/type_traits/detail/yes_no_type.hpp \
-  /usr/include/boost/type_traits/is_array.hpp \
-  /usr/include/boost/static_assert.hpp \
-  /usr/include/boost/type_traits/is_arithmetic.hpp \
-  /usr/include/boost/type_traits/is_integral.hpp \
-  /usr/include/boost/type_traits/is_floating_point.hpp \
-  /usr/include/boost/type_traits/is_abstract.hpp \
-  /usr/include/boost/type_traits/add_lvalue_reference.hpp \
-  /usr/include/boost/type_traits/add_reference.hpp \
-  /usr/include/boost/type_traits/remove_cv.hpp \
-  /usr/include/boost/type_traits/decay.hpp \
-  /usr/include/boost/type_traits/remove_bounds.hpp \
-  /usr/include/boost/type_traits/remove_extent.hpp \
-  /usr/include/boost/type_traits/add_pointer.hpp \
-  /usr/include/boost/type_traits/conditional.hpp \
-  /usr/include/boost/thread/detail/delete.hpp \
-  /usr/include/boost/move/utility.hpp \
-  /usr/include/boost/move/detail/config_begin.hpp \
-  /usr/include/boost/move/detail/workaround.hpp \
-  /usr/include/boost/move/utility_core.hpp \
-  /usr/include/boost/move/core.hpp \
-  /usr/include/boost/move/detail/config_end.hpp \
-  /usr/include/boost/move/detail/meta_utils.hpp \
-  /usr/include/boost/move/detail/meta_utils_core.hpp \
-  /usr/include/boost/move/traits.hpp \
-  /usr/include/boost/move/detail/type_traits.hpp \
-  /usr/include/boost/thread/lock_options.hpp \
-  /usr/include/boost/thread/lockable_traits.hpp \
-  /usr/include/boost/thread/thread_time.hpp \
-  /usr/include/boost/date_time/time_clock.hpp \
-  /usr/include/boost/date_time/c_time.hpp \
-  /usr/include/boost/date_time/compiler_config.hpp \
-  /usr/include/boost/date_time/locale_config.hpp \
-  /usr/include/x86_64-linux-gnu/sys/time.h \
-  /usr/include/boost/shared_ptr.hpp \
-  /usr/include/boost/smart_ptr/shared_ptr.hpp \
-  /usr/include/boost/smart_ptr/detail/shared_count.hpp \
-  /usr/include/boost/smart_ptr/bad_weak_ptr.hpp \
-  /usr/include/boost/smart_ptr/detail/sp_counted_base.hpp \
-  /usr/include/boost/smart_ptr/detail/sp_has_gcc_intrinsics.hpp \
-  /usr/include/boost/smart_ptr/detail/sp_has_sync_intrinsics.hpp \
-  /usr/include/boost/smart_ptr/detail/sp_counted_base_gcc_atomic.hpp \
-  /usr/include/boost/smart_ptr/detail/sp_typeinfo_.hpp \
-  /usr/include/boost/smart_ptr/detail/sp_counted_impl.hpp \
-  /usr/include/boost/smart_ptr/detail/sp_noexcept.hpp \
-  /usr/include/boost/checked_delete.hpp \
-  /usr/include/boost/core/checked_delete.hpp \
-  /usr/include/boost/core/addressof.hpp \
-  /usr/include/boost/smart_ptr/detail/sp_disable_deprecated.hpp \
-  /usr/include/boost/smart_ptr/detail/sp_convertible.hpp \
-  /usr/include/boost/smart_ptr/detail/sp_nullptr_t.hpp \
-  /usr/include/boost/smart_ptr/detail/spinlock_pool.hpp \
-  /usr/include/boost/smart_ptr/detail/spinlock.hpp \
-  /usr/include/boost/smart_ptr/detail/spinlock_gcc_atomic.hpp \
-  /usr/include/boost/smart_ptr/detail/yield_k.hpp \
-  /usr/include/boost/smart_ptr/detail/sp_thread_pause.hpp \
-  /usr/include/boost/smart_ptr/detail/sp_thread_sleep.hpp \
-  /usr/include/boost/config/pragma_message.hpp \
-  /usr/include/c++/11/algorithm \
-  /usr/include/c++/11/pstl/glue_algorithm_defs.h \
-  /usr/include/boost/smart_ptr/detail/operator_bool.hpp \
-  /usr/include/boost/smart_ptr/detail/local_sp_deleter.hpp \
-  /usr/include/boost/smart_ptr/detail/local_counted_base.hpp \
-  /usr/include/boost/date_time/microsec_time_clock.hpp \
-  /usr/include/boost/date_time/posix_time/posix_time_types.hpp \
-  /usr/include/boost/date_time/posix_time/ptime.hpp \
-  /usr/include/boost/date_time/posix_time/posix_time_system.hpp \
-  /usr/include/boost/date_time/posix_time/posix_time_config.hpp \
-  /usr/include/boost/limits.hpp \
-  /usr/include/boost/config/no_tr1/cmath.hpp \
-  /usr/include/boost/date_time/time_duration.hpp \
-  /usr/include/boost/date_time/special_defs.hpp \
-  /usr/include/boost/date_time/time_defs.hpp \
-  /usr/include/boost/operators.hpp \
-  /usr/include/c++/11/iterator \
-  /usr/include/c++/11/bits/stream_iterator.h \
-  /usr/include/boost/date_time/time_resolution_traits.hpp \
-  /usr/include/boost/date_time/int_adapter.hpp \
-  /usr/include/boost/date_time/gregorian/gregorian_types.hpp \
-  /usr/include/boost/date_time/date.hpp \
-  /usr/include/boost/date_time/year_month_day.hpp \
-  /usr/include/boost/date_time/period.hpp \
-  /usr/include/boost/date_time/gregorian/greg_calendar.hpp \
-  /usr/include/boost/date_time/gregorian/greg_weekday.hpp \
-  /usr/include/boost/date_time/constrained_value.hpp \
-  /usr/include/boost/type_traits/is_base_of.hpp \
-  /usr/include/boost/type_traits/is_base_and_derived.hpp \
-  /usr/include/boost/type_traits/is_same.hpp \
-  /usr/include/boost/type_traits/is_class.hpp \
-  /usr/include/boost/date_time/date_defs.hpp \
-  /usr/include/boost/date_time/gregorian/greg_day_of_year.hpp \
-  /usr/include/boost/date_time/gregorian_calendar.hpp \
-  /usr/include/boost/date_time/gregorian_calendar.ipp \
-  /usr/include/boost/date_time/gregorian/greg_ymd.hpp \
-  /usr/include/boost/date_time/gregorian/greg_day.hpp \
-  /usr/include/boost/date_time/gregorian/greg_year.hpp \
-  /usr/include/boost/date_time/gregorian/greg_month.hpp \
-  /usr/include/boost/date_time/gregorian/greg_duration.hpp \
-  /usr/include/boost/date_time/date_duration.hpp \
-  /usr/include/boost/date_time/date_duration_types.hpp \
-  /usr/include/boost/date_time/gregorian/greg_duration_types.hpp \
-  /usr/include/boost/date_time/gregorian/greg_date.hpp \
-  /usr/include/boost/date_time/adjust_functors.hpp \
-  /usr/include/boost/date_time/wrapping_int.hpp \
-  /usr/include/boost/date_time/date_generators.hpp \
-  /usr/include/c++/11/sstream \
-  /usr/include/c++/11/istream \
-  /usr/include/c++/11/bits/istream.tcc \
-  /usr/include/c++/11/bits/sstream.tcc \
-  /usr/include/boost/date_time/date_clock_device.hpp \
-  /usr/include/boost/date_time/date_iterator.hpp \
-  /usr/include/boost/date_time/time_system_split.hpp \
-  /usr/include/boost/date_time/time_system_counted.hpp \
-  /usr/include/boost/date_time/time.hpp \
-  /usr/include/boost/date_time/posix_time/date_duration_operators.hpp \
-  /usr/include/boost/date_time/posix_time/posix_time_duration.hpp \
-  /usr/include/boost/numeric/conversion/cast.hpp \
-  /usr/include/boost/type.hpp \
-  /usr/include/boost/numeric/conversion/converter.hpp \
-  /usr/include/boost/numeric/conversion/conversion_traits.hpp \
-  /usr/include/boost/numeric/conversion/detail/conversion_traits.hpp \
-  /usr/include/boost/numeric/conversion/detail/meta.hpp \
-  /usr/include/boost/mpl/if.hpp \
-  /usr/include/boost/mpl/aux_/value_wknd.hpp \
-  /usr/include/boost/mpl/aux_/static_cast.hpp \
-  /usr/include/boost/mpl/aux_/config/workaround.hpp \
-  /usr/include/boost/mpl/aux_/config/integral.hpp \
-  /usr/include/boost/mpl/aux_/config/msvc.hpp \
-  /usr/include/boost/mpl/aux_/config/eti.hpp \
-  /usr/include/boost/mpl/aux_/na_spec.hpp \
-  /usr/include/boost/mpl/lambda_fwd.hpp \
-  /usr/include/boost/mpl/void_fwd.hpp \
-  /usr/include/boost/mpl/aux_/adl_barrier.hpp \
-  /usr/include/boost/mpl/aux_/config/adl.hpp \
-  /usr/include/boost/mpl/aux_/config/intel.hpp \
-  /usr/include/boost/mpl/aux_/config/gcc.hpp \
-  /usr/include/boost/mpl/aux_/na.hpp \
-  /usr/include/boost/mpl/bool.hpp \
-  /usr/include/boost/mpl/bool_fwd.hpp \
-  /usr/include/boost/mpl/integral_c_tag.hpp \
-  /usr/include/boost/mpl/aux_/config/static_constant.hpp \
-  /usr/include/boost/mpl/aux_/na_fwd.hpp \
-  /usr/include/boost/mpl/aux_/config/ctps.hpp \
-  /usr/include/boost/mpl/aux_/config/lambda.hpp \
-  /usr/include/boost/mpl/aux_/config/ttp.hpp \
-  /usr/include/boost/mpl/int.hpp \
-  /usr/include/boost/mpl/int_fwd.hpp \
-  /usr/include/boost/mpl/aux_/nttp_decl.hpp \
-  /usr/include/boost/mpl/aux_/config/nttp.hpp \
-  /usr/include/boost/mpl/aux_/integral_wrapper.hpp \
-  /usr/include/boost/preprocessor/cat.hpp \
-  /usr/include/boost/preprocessor/config/config.hpp \
-  /usr/include/boost/mpl/aux_/lambda_arity_param.hpp \
-  /usr/include/boost/mpl/aux_/template_arity_fwd.hpp \
-  /usr/include/boost/mpl/aux_/arity.hpp \
-  /usr/include/boost/mpl/aux_/config/dtp.hpp \
-  /usr/include/boost/mpl/aux_/preprocessor/params.hpp \
-  /usr/include/boost/mpl/aux_/config/preprocessor.hpp \
-  /usr/include/boost/preprocessor/comma_if.hpp \
-  /usr/include/boost/preprocessor/punctuation/comma_if.hpp \
-  /usr/include/boost/preprocessor/control/if.hpp \
-  /usr/include/boost/preprocessor/control/iif.hpp \
-  /usr/include/boost/preprocessor/logical/bool.hpp \
-  /usr/include/boost/preprocessor/facilities/empty.hpp \
-  /usr/include/boost/preprocessor/punctuation/comma.hpp \
-  /usr/include/boost/preprocessor/repeat.hpp \
-  /usr/include/boost/preprocessor/repetition/repeat.hpp \
-  /usr/include/boost/preprocessor/debug/error.hpp \
-  /usr/include/boost/preprocessor/detail/auto_rec.hpp \
-  /usr/include/boost/preprocessor/tuple/eat.hpp \
-  /usr/include/boost/preprocessor/inc.hpp \
-  /usr/include/boost/preprocessor/arithmetic/inc.hpp \
-  /usr/include/boost/mpl/aux_/preprocessor/enum.hpp \
-  /usr/include/boost/mpl/aux_/preprocessor/def_params_tail.hpp \
-  /usr/include/boost/mpl/limits/arity.hpp \
-  /usr/include/boost/preprocessor/logical/and.hpp \
-  /usr/include/boost/preprocessor/logical/bitand.hpp \
-  /usr/include/boost/preprocessor/identity.hpp \
-  /usr/include/boost/preprocessor/facilities/identity.hpp \
-  /usr/include/boost/preprocessor/empty.hpp \
-  /usr/include/boost/preprocessor/arithmetic/add.hpp \
-  /usr/include/boost/preprocessor/arithmetic/dec.hpp \
-  /usr/include/boost/preprocessor/control/while.hpp \
-  /usr/include/boost/preprocessor/list/fold_left.hpp \
-  /usr/include/boost/preprocessor/list/detail/fold_left.hpp \
-  /usr/include/boost/preprocessor/control/expr_iif.hpp \
-  /usr/include/boost/preprocessor/list/adt.hpp \
-  /usr/include/boost/preprocessor/detail/is_binary.hpp \
-  /usr/include/boost/preprocessor/detail/check.hpp \
-  /usr/include/boost/preprocessor/logical/compl.hpp \
-  /usr/include/boost/preprocessor/list/fold_right.hpp \
-  /usr/include/boost/preprocessor/list/detail/fold_right.hpp \
-  /usr/include/boost/preprocessor/list/reverse.hpp \
-  /usr/include/boost/preprocessor/control/detail/while.hpp \
-  /usr/include/boost/preprocessor/tuple/elem.hpp \
-  /usr/include/boost/preprocessor/facilities/expand.hpp \
-  /usr/include/boost/preprocessor/facilities/overload.hpp \
-  /usr/include/boost/preprocessor/variadic/size.hpp \
-  /usr/include/boost/preprocessor/tuple/rem.hpp \
-  /usr/include/boost/preprocessor/tuple/detail/is_single_return.hpp \
-  /usr/include/boost/preprocessor/variadic/elem.hpp \
-  /usr/include/boost/preprocessor/arithmetic/sub.hpp \
-  /usr/include/boost/mpl/aux_/config/overload_resolution.hpp \
-  /usr/include/boost/mpl/aux_/lambda_support.hpp \
-  /usr/include/boost/mpl/eval_if.hpp \
-  /usr/include/boost/mpl/equal_to.hpp \
-  /usr/include/boost/mpl/aux_/comparison_op.hpp \
-  /usr/include/boost/mpl/aux_/numeric_op.hpp \
-  /usr/include/boost/mpl/numeric_cast.hpp \
-  /usr/include/boost/mpl/apply_wrap.hpp \
-  /usr/include/boost/mpl/aux_/has_apply.hpp \
-  /usr/include/boost/mpl/has_xxx.hpp \
-  /usr/include/boost/mpl/aux_/type_wrapper.hpp \
-  /usr/include/boost/mpl/aux_/yes_no.hpp \
-  /usr/include/boost/mpl/aux_/config/arrays.hpp \
-  /usr/include/boost/mpl/aux_/config/has_xxx.hpp \
-  /usr/include/boost/mpl/aux_/config/msvc_typename.hpp \
-  /usr/include/boost/preprocessor/array/elem.hpp \
-  /usr/include/boost/preprocessor/array/data.hpp \
-  /usr/include/boost/preprocessor/array/size.hpp \
-  /usr/include/boost/preprocessor/repetition/enum_params.hpp \
-  /usr/include/boost/preprocessor/repetition/enum_trailing_params.hpp \
-  /usr/include/boost/mpl/aux_/config/has_apply.hpp \
-  /usr/include/boost/mpl/aux_/msvc_never_true.hpp \
-  /usr/include/boost/mpl/aux_/config/use_preprocessed.hpp \
-  /usr/include/boost/mpl/aux_/include_preprocessed.hpp \
-  /usr/include/boost/mpl/aux_/config/compiler.hpp \
-  /usr/include/boost/preprocessor/stringize.hpp \
-  /usr/include/boost/mpl/aux_/preprocessed/gcc/apply_wrap.hpp \
-  /usr/include/boost/mpl/tag.hpp \
-  /usr/include/boost/mpl/void.hpp \
-  /usr/include/boost/mpl/aux_/has_tag.hpp \
-  /usr/include/boost/mpl/aux_/numeric_cast_utils.hpp \
-  /usr/include/boost/mpl/aux_/config/forwarding.hpp \
-  /usr/include/boost/mpl/aux_/msvc_eti_base.hpp \
-  /usr/include/boost/mpl/aux_/is_msvc_eti_arg.hpp \
-  /usr/include/boost/mpl/aux_/preprocessed/gcc/equal_to.hpp \
-  /usr/include/boost/mpl/not.hpp \
-  /usr/include/boost/mpl/aux_/nested_type_wknd.hpp \
-  /usr/include/boost/mpl/and.hpp \
-  /usr/include/boost/mpl/aux_/preprocessed/gcc/and.hpp \
-  /usr/include/boost/mpl/identity.hpp \
-  /usr/include/boost/numeric/conversion/detail/int_float_mixture.hpp \
-  /usr/include/boost/numeric/conversion/int_float_mixture_enum.hpp \
-  /usr/include/boost/mpl/integral_c.hpp \
-  /usr/include/boost/mpl/integral_c_fwd.hpp \
-  /usr/include/boost/numeric/conversion/detail/sign_mixture.hpp \
-  /usr/include/boost/numeric/conversion/sign_mixture_enum.hpp \
-  /usr/include/boost/numeric/conversion/detail/udt_builtin_mixture.hpp \
-  /usr/include/boost/numeric/conversion/udt_builtin_mixture_enum.hpp \
-  /usr/include/boost/numeric/conversion/detail/is_subranged.hpp \
-  /usr/include/boost/mpl/multiplies.hpp \
-  /usr/include/boost/mpl/times.hpp \
-  /usr/include/boost/mpl/aux_/arithmetic_op.hpp \
-  /usr/include/boost/mpl/aux_/largest_int.hpp \
-  /usr/include/boost/mpl/aux_/preprocessed/gcc/times.hpp \
-  /usr/include/boost/mpl/aux_/preprocessor/default_params.hpp \
-  /usr/include/boost/mpl/less.hpp \
-  /usr/include/boost/mpl/aux_/preprocessed/gcc/less.hpp \
-  /usr/include/boost/numeric/conversion/converter_policies.hpp \
-  /usr/include/boost/numeric/conversion/detail/converter.hpp \
-  /usr/include/boost/numeric/conversion/bounds.hpp \
-  /usr/include/boost/numeric/conversion/detail/bounds.hpp \
-  /usr/include/boost/numeric/conversion/numeric_cast_traits.hpp \
-  /usr/include/boost/numeric/conversion/detail/numeric_cast_traits.hpp \
-  /usr/include/boost/numeric/conversion/detail/preprocessed/numeric_cast_traits_common.hpp \
-  /usr/include/boost/numeric/conversion/detail/preprocessed/numeric_cast_traits_long_long.hpp \
-  /usr/include/boost/date_time/posix_time/time_period.hpp \
-  /usr/include/boost/date_time/time_iterator.hpp \
-  /usr/include/boost/date_time/dst_rules.hpp \
-  /usr/include/boost/chrono/time_point.hpp \
-  /usr/include/boost/chrono/duration.hpp \
-  /usr/include/boost/chrono/config.hpp \
-  /usr/include/boost/predef.h \
-  /usr/include/boost/predef/language.h \
-  /usr/include/boost/predef/language/stdc.h \
-  /usr/include/boost/predef/version_number.h \
-  /usr/include/boost/predef/make.h \
-  /usr/include/boost/predef/detail/test.h \
-  /usr/include/boost/predef/language/stdcpp.h \
-  /usr/include/boost/predef/language/objc.h \
-  /usr/include/boost/predef/language/cuda.h \
-  /usr/include/boost/predef/architecture.h \
-  /usr/include/boost/predef/architecture/alpha.h \
-  /usr/include/boost/predef/architecture/arm.h \
-  /usr/include/boost/predef/architecture/blackfin.h \
-  /usr/include/boost/predef/architecture/convex.h \
-  /usr/include/boost/predef/architecture/ia64.h \
-  /usr/include/boost/predef/architecture/m68k.h \
-  /usr/include/boost/predef/architecture/mips.h \
-  /usr/include/boost/predef/architecture/parisc.h \
-  /usr/include/boost/predef/architecture/ppc.h \
-  /usr/include/boost/predef/architecture/ptx.h \
-  /usr/include/boost/predef/architecture/pyramid.h \
-  /usr/include/boost/predef/architecture/riscv.h \
-  /usr/include/boost/predef/architecture/rs6k.h \
-  /usr/include/boost/predef/architecture/sparc.h \
-  /usr/include/boost/predef/architecture/superh.h \
-  /usr/include/boost/predef/architecture/sys370.h \
-  /usr/include/boost/predef/architecture/sys390.h \
-  /usr/include/boost/predef/architecture/x86.h \
-  /usr/include/boost/predef/architecture/x86/32.h \
-  /usr/include/boost/predef/architecture/x86/64.h \
-  /usr/include/boost/predef/architecture/z.h \
-  /usr/include/boost/predef/compiler.h \
-  /usr/include/boost/predef/compiler/borland.h \
-  /usr/include/boost/predef/compiler/clang.h \
-  /usr/include/boost/predef/compiler/comeau.h \
-  /usr/include/boost/predef/compiler/compaq.h \
-  /usr/include/boost/predef/compiler/diab.h \
-  /usr/include/boost/predef/compiler/digitalmars.h \
-  /usr/include/boost/predef/compiler/dignus.h \
-  /usr/include/boost/predef/compiler/edg.h \
-  /usr/include/boost/predef/compiler/ekopath.h \
-  /usr/include/boost/predef/compiler/gcc_xml.h \
-  /usr/include/boost/predef/compiler/gcc.h \
-  /usr/include/boost/predef/detail/comp_detected.h \
-  /usr/include/boost/predef/compiler/greenhills.h \
-  /usr/include/boost/predef/compiler/hp_acc.h \
-  /usr/include/boost/predef/compiler/iar.h \
-  /usr/include/boost/predef/compiler/ibm.h \
-  /usr/include/boost/predef/compiler/intel.h \
-  /usr/include/boost/predef/compiler/kai.h \
-  /usr/include/boost/predef/compiler/llvm.h \
-  /usr/include/boost/predef/compiler/metaware.h \
-  /usr/include/boost/predef/compiler/metrowerks.h \
-  /usr/include/boost/predef/compiler/microtec.h \
-  /usr/include/boost/predef/compiler/mpw.h \
-  /usr/include/boost/predef/compiler/nvcc.h \
-  /usr/include/boost/predef/compiler/palm.h \
-  /usr/include/boost/predef/compiler/pgi.h \
-  /usr/include/boost/predef/compiler/sgi_mipspro.h \
-  /usr/include/boost/predef/compiler/sunpro.h \
-  /usr/include/boost/predef/compiler/tendra.h \
-  /usr/include/boost/predef/compiler/visualc.h \
-  /usr/include/boost/predef/compiler/watcom.h \
-  /usr/include/boost/predef/library.h \
-  /usr/include/boost/predef/library/c.h \
-  /usr/include/boost/predef/library/c/_prefix.h \
-  /usr/include/boost/predef/detail/_cassert.h \
-  /usr/include/boost/predef/library/c/cloudabi.h \
-  /usr/include/boost/predef/library/c/gnu.h \
-  /usr/include/boost/predef/library/c/uc.h \
-  /usr/include/boost/predef/library/c/vms.h \
-  /usr/include/boost/predef/library/c/zos.h \
-  /usr/include/boost/predef/library/std.h \
-  /usr/include/boost/predef/library/std/_prefix.h \
-  /usr/include/boost/predef/detail/_exception.h \
-  /usr/include/boost/predef/library/std/cxx.h \
-  /usr/include/boost/predef/library/std/dinkumware.h \
-  /usr/include/boost/predef/library/std/libcomo.h \
-  /usr/include/boost/predef/library/std/modena.h \
-  /usr/include/boost/predef/library/std/msl.h \
-  /usr/include/boost/predef/library/std/roguewave.h \
-  /usr/include/boost/predef/library/std/sgi.h \
-  /usr/include/boost/predef/library/std/stdcpp3.h \
-  /usr/include/boost/predef/library/std/stlport.h \
-  /usr/include/boost/predef/library/std/vacpp.h \
-  /usr/include/boost/predef/os.h \
-  /usr/include/boost/predef/os/aix.h \
-  /usr/include/boost/predef/os/amigaos.h \
-  /usr/include/boost/predef/os/beos.h \
-  /usr/include/boost/predef/os/bsd.h \
-  /usr/include/boost/predef/os/macos.h \
-  /usr/include/boost/predef/os/ios.h \
-  /usr/include/boost/predef/os/bsd/bsdi.h \
-  /usr/include/boost/predef/os/bsd/dragonfly.h \
-  /usr/include/boost/predef/os/bsd/free.h \
-  /usr/include/boost/predef/os/bsd/open.h \
-  /usr/include/boost/predef/os/bsd/net.h \
-  /usr/include/boost/predef/os/cygwin.h \
-  /usr/include/boost/predef/os/haiku.h \
-  /usr/include/boost/predef/os/hpux.h \
-  /usr/include/boost/predef/os/irix.h \
-  /usr/include/boost/predef/os/linux.h \
-  /usr/include/boost/predef/detail/os_detected.h \
-  /usr/include/boost/predef/os/os400.h \
-  /usr/include/boost/predef/os/qnxnto.h \
-  /usr/include/boost/predef/os/solaris.h \
-  /usr/include/boost/predef/os/unix.h \
-  /usr/include/boost/predef/os/vms.h \
-  /usr/include/boost/predef/os/windows.h \
-  /usr/include/boost/predef/other.h \
-  /usr/include/boost/predef/other/endian.h \
-  /usr/include/boost/predef/platform/android.h \
-  /usr/include/boost/predef/platform.h \
-  /usr/include/boost/predef/platform/cloudabi.h \
-  /usr/include/boost/predef/platform/mingw.h \
-  /usr/include/boost/predef/platform/mingw32.h \
-  /usr/include/boost/predef/platform/mingw64.h \
-  /usr/include/boost/predef/platform/windows_uwp.h \
-  /usr/include/boost/predef/platform/windows_desktop.h \
-  /usr/include/boost/predef/platform/windows_phone.h \
-  /usr/include/boost/predef/platform/windows_server.h \
-  /usr/include/boost/predef/platform/windows_store.h \
-  /usr/include/boost/predef/platform/windows_system.h \
-  /usr/include/boost/predef/platform/windows_runtime.h \
-  /usr/include/boost/predef/platform/ios.h \
-  /usr/include/boost/predef/hardware.h \
-  /usr/include/boost/predef/hardware/simd.h \
-  /usr/include/boost/predef/hardware/simd/x86.h \
-  /usr/include/boost/predef/hardware/simd/x86/versions.h \
-  /usr/include/boost/predef/hardware/simd/x86_amd.h \
-  /usr/include/boost/predef/hardware/simd/x86_amd/versions.h \
-  /usr/include/boost/predef/hardware/simd/arm.h \
-  /usr/include/boost/predef/hardware/simd/arm/versions.h \
-  /usr/include/boost/predef/hardware/simd/ppc.h \
-  /usr/include/boost/predef/hardware/simd/ppc/versions.h \
-  /usr/include/boost/predef/version.h \
-  /usr/include/boost/chrono/detail/static_assert.hpp \
-  /usr/include/boost/mpl/logical.hpp \
-  /usr/include/boost/mpl/or.hpp \
-  /usr/include/boost/mpl/aux_/preprocessed/gcc/or.hpp \
-  /usr/include/boost/ratio/ratio.hpp \
-  /usr/include/boost/ratio/config.hpp \
-  /usr/include/boost/ratio/detail/mpl/abs.hpp \
-  /usr/include/boost/ratio/detail/mpl/sign.hpp \
-  /usr/include/boost/ratio/detail/mpl/gcd.hpp \
-  /usr/include/boost/mpl/aux_/config/dependent_nttp.hpp \
-  /usr/include/boost/ratio/detail/mpl/lcm.hpp \
-  /usr/include/boost/integer_traits.hpp \
-  /usr/include/boost/ratio/ratio_fwd.hpp \
-  /usr/include/boost/ratio/detail/overflow_helpers.hpp \
-  /usr/include/boost/type_traits/common_type.hpp \
-  /usr/include/boost/type_traits/detail/mp_defer.hpp \
-  /usr/include/boost/type_traits/is_unsigned.hpp \
-  /usr/include/boost/type_traits/is_enum.hpp \
-  /usr/include/boost/chrono/detail/is_evenly_divisible_by.hpp \
-  /usr/include/boost/utility/enable_if.hpp \
-  /usr/include/boost/thread/xtime.hpp \
-  /usr/include/boost/date_time/posix_time/conversion.hpp \
-  /usr/include/boost/date_time/filetime_functions.hpp \
-  /usr/include/boost/date_time/gregorian/conversion.hpp \
-  /usr/include/boost/thread/detail/platform_time.hpp \
-  /usr/include/boost/chrono/system_clocks.hpp \
-  /usr/include/boost/chrono/detail/system.hpp \
-  /usr/include/boost/chrono/clock_string.hpp \
-  /usr/include/boost/chrono/ceil.hpp \
-  /usr/include/boost/thread/pthread/pthread_mutex_scoped_lock.hpp \
-  /usr/include/boost/thread/pthread/pthread_helpers.hpp \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/enable_shared.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/FileSystem/MemoryFile.h \
-  /home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/SlabAllocator.h \
-  /home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/AllocatorBase.h \
-  /home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/MemoryBuffer.h
-
-CMakeFiles/ValdenApp.dir/Application/SceneView.cpp.o: Application/SceneView.cpp \
-  /usr/include/stdc-predef.h \
-  Application/SceneView.h \
-  Application/Application.h \
-  /home/noah/Projects/SIR-Engine/Engine/Memory/Memory.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/SIREngine.h \
-  /usr/lib/gcc/x86_64-linux-gnu/11/include/stdint.h \
-  /usr/include/stdint.h \
-  /usr/include/x86_64-linux-gnu/bits/libc-header-start.h \
-  /usr/include/features.h \
-  /usr/include/features-time64.h \
-  /usr/include/x86_64-linux-gnu/bits/wordsize.h \
-  /usr/include/x86_64-linux-gnu/bits/timesize.h \
-  /usr/include/x86_64-linux-gnu/sys/cdefs.h \
-  /usr/include/x86_64-linux-gnu/bits/long-double.h \
-  /usr/include/x86_64-linux-gnu/gnu/stubs.h \
-  /usr/include/x86_64-linux-gnu/gnu/stubs-64.h \
-  /usr/include/x86_64-linux-gnu/bits/types.h \
-  /usr/include/x86_64-linux-gnu/bits/typesizes.h \
-  /usr/include/x86_64-linux-gnu/bits/time64.h \
-  /usr/include/x86_64-linux-gnu/bits/wchar.h \
-  /usr/include/x86_64-linux-gnu/bits/stdint-intn.h \
-  /usr/include/x86_64-linux-gnu/bits/stdint-uintn.h \
-  /usr/include/string.h \
-  /usr/lib/gcc/x86_64-linux-gnu/11/include/stddef.h \
-  /usr/include/x86_64-linux-gnu/bits/types/locale_t.h \
-  /usr/include/x86_64-linux-gnu/bits/types/__locale_t.h \
-  /usr/include/strings.h \
-  /usr/include/x86_64-linux-gnu/bits/strings_fortified.h \
-  /usr/include/x86_64-linux-gnu/bits/string_fortified.h \
-  /usr/include/c++/11/stdlib.h \
-  /usr/include/c++/11/cstdlib \
-  /usr/include/x86_64-linux-gnu/c++/11/bits/c++config.h \
-  /usr/include/x86_64-linux-gnu/c++/11/bits/os_defines.h \
-  /usr/include/x86_64-linux-gnu/c++/11/bits/cpu_defines.h \
-  /usr/include/c++/11/pstl/pstl_config.h \
-  /usr/include/stdlib.h \
-  /usr/include/x86_64-linux-gnu/bits/waitflags.h \
-  /usr/include/x86_64-linux-gnu/bits/waitstatus.h \
-  /usr/include/x86_64-linux-gnu/bits/floatn.h \
-  /usr/include/x86_64-linux-gnu/bits/floatn-common.h \
-  /usr/include/x86_64-linux-gnu/sys/types.h \
-  /usr/include/x86_64-linux-gnu/bits/types/clock_t.h \
-  /usr/include/x86_64-linux-gnu/bits/types/clockid_t.h \
-  /usr/include/x86_64-linux-gnu/bits/types/time_t.h \
-  /usr/include/x86_64-linux-gnu/bits/types/timer_t.h \
-  /usr/include/endian.h \
-  /usr/include/x86_64-linux-gnu/bits/endian.h \
-  /usr/include/x86_64-linux-gnu/bits/endianness.h \
-  /usr/include/x86_64-linux-gnu/bits/byteswap.h \
-  /usr/include/x86_64-linux-gnu/bits/uintn-identity.h \
-  /usr/include/x86_64-linux-gnu/sys/select.h \
-  /usr/include/x86_64-linux-gnu/bits/select.h \
-  /usr/include/x86_64-linux-gnu/bits/types/sigset_t.h \
-  /usr/include/x86_64-linux-gnu/bits/types/__sigset_t.h \
-  /usr/include/x86_64-linux-gnu/bits/types/struct_timeval.h \
-  /usr/include/x86_64-linux-gnu/bits/types/struct_timespec.h \
-  /usr/include/x86_64-linux-gnu/bits/select2.h \
-  /usr/include/x86_64-linux-gnu/bits/pthreadtypes.h \
-  /usr/include/x86_64-linux-gnu/bits/thread-shared-types.h \
-  /usr/include/x86_64-linux-gnu/bits/pthreadtypes-arch.h \
-  /usr/include/x86_64-linux-gnu/bits/atomic_wide_counter.h \
-  /usr/include/x86_64-linux-gnu/bits/struct_mutex.h \
-  /usr/include/x86_64-linux-gnu/bits/struct_rwlock.h \
-  /usr/include/alloca.h \
-  /usr/include/x86_64-linux-gnu/bits/stdlib-bsearch.h \
-  /usr/include/x86_64-linux-gnu/bits/stdlib-float.h \
-  /usr/include/x86_64-linux-gnu/bits/stdlib.h \
-  /usr/include/c++/11/bits/std_abs.h \
-  /usr/include/stdio.h \
-  /usr/lib/gcc/x86_64-linux-gnu/11/include/stdarg.h \
-  /usr/include/x86_64-linux-gnu/bits/types/__fpos_t.h \
-  /usr/include/x86_64-linux-gnu/bits/types/__mbstate_t.h \
-  /usr/include/x86_64-linux-gnu/bits/types/__fpos64_t.h \
-  /usr/include/x86_64-linux-gnu/bits/types/__FILE.h \
-  /usr/include/x86_64-linux-gnu/bits/types/FILE.h \
-  /usr/include/x86_64-linux-gnu/bits/types/struct_FILE.h \
-  /usr/include/x86_64-linux-gnu/bits/types/cookie_io_functions_t.h \
-  /usr/include/x86_64-linux-gnu/bits/stdio_lim.h \
-  /usr/include/x86_64-linux-gnu/bits/stdio.h \
-  /usr/include/x86_64-linux-gnu/bits/stdio2.h \
-  /usr/include/assert.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/stb_sprintf.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/Compiler.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/Platform.h \
-  /usr/include/unistd.h \
-  /usr/include/x86_64-linux-gnu/bits/posix_opt.h \
-  /usr/include/x86_64-linux-gnu/bits/environments.h \
-  /usr/include/x86_64-linux-gnu/bits/confname.h \
-  /usr/include/x86_64-linux-gnu/bits/getopt_posix.h \
-  /usr/include/x86_64-linux-gnu/bits/getopt_core.h \
-  /usr/include/x86_64-linux-gnu/bits/unistd.h \
-  /usr/include/x86_64-linux-gnu/bits/unistd_ext.h \
-  /usr/include/linux/close_range.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/Config.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/Platform.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/Types.h \
-  /usr/include/c++/11/type_traits \
-  /usr/include/c++/11/forward_list \
-  /usr/include/c++/11/bits/forward_list.h \
-  /usr/include/c++/11/initializer_list \
-  /usr/include/c++/11/bits/stl_iterator_base_types.h \
-  /usr/include/c++/11/bits/stl_iterator.h \
-  /usr/include/c++/11/bits/cpp_type_traits.h \
-  /usr/include/c++/11/ext/type_traits.h \
-  /usr/include/c++/11/bits/move.h \
-  /usr/include/c++/11/bits/ptr_traits.h \
-  /usr/include/c++/11/bits/stl_algobase.h \
-  /usr/include/c++/11/bits/functexcept.h \
-  /usr/include/c++/11/bits/exception_defines.h \
-  /usr/include/c++/11/ext/numeric_traits.h \
-  /usr/include/c++/11/bits/stl_pair.h \
-  /usr/include/c++/11/bits/stl_iterator_base_funcs.h \
-  /usr/include/c++/11/bits/concept_check.h \
-  /usr/include/c++/11/debug/assertions.h \
-  /usr/include/c++/11/debug/debug.h \
-  /usr/include/c++/11/bits/predefined_ops.h \
-  /usr/include/c++/11/bits/stl_function.h \
-  /usr/include/c++/11/backward/binders.h \
-  /usr/include/c++/11/bits/allocator.h \
-  /usr/include/x86_64-linux-gnu/c++/11/bits/c++allocator.h \
-  /usr/include/c++/11/ext/new_allocator.h \
-  /usr/include/c++/11/new \
-  /usr/include/c++/11/bits/exception.h \
-  /usr/include/c++/11/bits/memoryfwd.h \
-  /usr/include/c++/11/ext/alloc_traits.h \
-  /usr/include/c++/11/bits/alloc_traits.h \
-  /usr/include/c++/11/bits/stl_construct.h \
-  /usr/include/c++/11/ext/aligned_buffer.h \
-  /usr/include/c++/11/bits/range_access.h \
-  /usr/include/c++/11/bits/forward_list.tcc \
-  /home/noah/Projects/SIR-Engine/EASTL/type_traits.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/config.h \
-  /home/noah/Projects/SIR-Engine/EABase/eabase.h \
-  /home/noah/Projects/SIR-Engine/EABase/config/eacompiler.h \
-  /home/noah/Projects/SIR-Engine/EABase/config/eaplatform.h \
-  /usr/include/c++/11/cstddef \
-  /home/noah/Projects/SIR-Engine/EABase/config/eacompilertraits.h \
-  /home/noah/Projects/SIR-Engine/EABase/version.h \
-  /home/noah/Projects/SIR-Engine/EABase/eaunits.h \
-  /usr/include/inttypes.h \
-  /usr/include/c++/11/math.h \
-  /usr/include/c++/11/cmath \
-  /usr/include/math.h \
-  /usr/include/x86_64-linux-gnu/bits/math-vector.h \
-  /usr/include/x86_64-linux-gnu/bits/libm-simd-decl-stubs.h \
-  /usr/include/x86_64-linux-gnu/bits/flt-eval-method.h \
-  /usr/include/x86_64-linux-gnu/bits/fp-logb.h \
-  /usr/include/x86_64-linux-gnu/bits/fp-fast.h \
-  /usr/include/x86_64-linux-gnu/bits/mathcalls-helper-functions.h \
-  /usr/include/x86_64-linux-gnu/bits/mathcalls.h \
-  /usr/include/x86_64-linux-gnu/bits/mathcalls-narrow.h \
-  /usr/include/x86_64-linux-gnu/bits/iscanonical.h \
-  /usr/include/c++/11/bits/specfun.h \
-  /usr/include/c++/11/limits \
-  /usr/include/c++/11/tr1/gamma.tcc \
-  /usr/include/c++/11/tr1/special_function_util.h \
-  /usr/include/c++/11/tr1/bessel_function.tcc \
-  /usr/include/c++/11/tr1/beta_function.tcc \
-  /usr/include/c++/11/tr1/ell_integral.tcc \
-  /usr/include/c++/11/tr1/exp_integral.tcc \
-  /usr/include/c++/11/tr1/hypergeometric.tcc \
-  /usr/include/c++/11/tr1/legendre_function.tcc \
-  /usr/include/c++/11/tr1/modified_bessel_func.tcc \
-  /usr/include/c++/11/tr1/poly_hermite.tcc \
-  /usr/include/c++/11/tr1/poly_laguerre.tcc \
-  /usr/include/c++/11/tr1/riemann_zeta.tcc \
-  /usr/lib/gcc/x86_64-linux-gnu/11/include/float.h \
-  /home/noah/Projects/SIR-Engine/EABase/int128.h \
-  /home/noah/Projects/SIR-Engine/EABase/eahave.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/type_fundamental.h \
-  /home/noah/Projects/SIR-Engine/EABase/nullptr.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/type_transformations.h \
-  /usr/lib/gcc/x86_64-linux-gnu/11/include/limits.h \
-  /usr/lib/gcc/x86_64-linux-gnu/11/include/syslimits.h \
-  /usr/include/limits.h \
-  /usr/include/x86_64-linux-gnu/bits/posix1_lim.h \
-  /usr/include/x86_64-linux-gnu/bits/local_lim.h \
-  /usr/include/linux/limits.h \
-  /usr/include/x86_64-linux-gnu/bits/pthread_stack_min-dynamic.h \
-  /usr/include/x86_64-linux-gnu/bits/posix2_lim.h \
-  /usr/include/x86_64-linux-gnu/bits/xopen_lim.h \
-  /usr/include/x86_64-linux-gnu/bits/uio_lim.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/type_properties.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/type_compound.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/type_pod.h \
-  /home/noah/Projects/SIR-Engine/EASTL/vector.h \
-  /home/noah/Projects/SIR-Engine/EASTL/allocator.h \
-  /home/noah/Projects/SIR-Engine/EASTL/iterator.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/move_help.h \
-  /home/noah/Projects/SIR-Engine/EASTL/initializer_list.h \
-  /home/noah/Projects/SIR-Engine/EASTL/algorithm.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/copy_help.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/fill_help.h \
-  /home/noah/Projects/SIR-Engine/EASTL/functional.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/functional_base.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/memory_base.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/mem_fn.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/function.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/function_detail.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/function_help.h \
-  /home/noah/Projects/SIR-Engine/EASTL/utility.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/integer_sequence.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/tuple_fwd_decls.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/in_place_t.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/piecewise_construct_t.h \
-  /usr/include/c++/11/tuple \
-  /usr/include/c++/11/utility \
-  /usr/include/c++/11/bits/stl_relops.h \
-  /usr/include/c++/11/array \
-  /usr/include/c++/11/bits/uses_allocator.h \
-  /usr/include/c++/11/bits/invoke.h \
-  /usr/include/c++/11/typeinfo \
-  /usr/include/c++/11/bits/hash_bytes.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/generic_iterator.h \
-  /home/noah/Projects/SIR-Engine/EASTL/random.h \
-  /home/noah/Projects/SIR-Engine/EASTL/numeric_limits.h \
-  /home/noah/Projects/SIR-Engine/EASTL/memory.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/pair_fwd_decls.h \
-  /home/noah/Projects/SIR-Engine/EASTL/bonus/compressed_pair.h \
-  /home/noah/Projects/SIR-Engine/EASTL/bonus/call_traits.h \
-  /home/noah/Projects/SIR-Engine/EASTL/vector_map.h \
-  /home/noah/Projects/SIR-Engine/EASTL/string.h \
-  /usr/include/ctype.h \
-  /usr/include/wchar.h \
-  /usr/include/x86_64-linux-gnu/bits/types/wint_t.h \
-  /usr/include/x86_64-linux-gnu/bits/types/mbstate_t.h \
-  /usr/include/x86_64-linux-gnu/bits/wchar2.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/char_traits.h \
-  /home/noah/Projects/SIR-Engine/EASTL/string_view.h \
-  /home/noah/Projects/SIR-Engine/EASTL/unique_ptr.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/smart_ptr.h \
-  /home/noah/Projects/SIR-Engine/EASTL/unordered_map.h \
-  /home/noah/Projects/SIR-Engine/EASTL/hash_map.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/hashtable.h \
-  /home/noah/Projects/SIR-Engine/EASTL/tuple.h \
-  /home/noah/Projects/SIR-Engine/EASTL/map.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/red_black_tree.h \
-  /home/noah/Projects/SIR-Engine/EASTL/sort.h \
-  /home/noah/Projects/SIR-Engine/EASTL/heap.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/Logger.h \
-  /home/noah/Projects/SIR-Engine/EASTL/queue.h \
-  /home/noah/Projects/SIR-Engine/EASTL/deque.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
-  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
-  /home/noah/Projects/SIR-Engine/Engine/Util/CString.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/ResourceDef.h \
-  /home/noah/Projects/SIR-Engine/EASTL/allocator_malloc.h \
-  /usr/include/malloc.h \
-  /home/noah/Projects/SIR-Engine/EASTL/fixed_string.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/fixed_pool.h \
-  /home/noah/Projects/SIR-Engine/Engine/Util/CVector.h \
-  /home/noah/Projects/SIR-Engine/Engine/Util/UtlMemory.h \
-  /home/noah/Projects/SIR-Engine/Engine/Util/CStaticArray.h \
-  /home/noah/Projects/SIR-Engine/Engine/Util/CConstList.h \
-  /home/noah/Projects/SIR-Engine/Engine/Memory/Backend/TagArenaAllocator.h \
-  /home/noah/Projects/SIR-Engine/Engine/Memory/Memory.h \
-  /home/noah/Projects/SIR-Engine/Engine/Memory/MemAlloc.h \
-  /home/noah/Projects/SIR-Engine/Engine/Memory/Memory.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/ConsoleManager.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/SIREngine.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/Serialization/Ini/IniSerializer.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/FileSystem/FilePath.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/Serialization/SerializerBase.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/ThreadSystem/Thread.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/Application/GenericPlatform/GenericApplication.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/Events/EventBase.h \
-  /usr/local/include/SDL2/SDL_events.h \
-  /usr/local/include/SDL2/SDL_stdinc.h \
-  /usr/local/include/SDL2/SDL_config.h \
-  /usr/local/include/SDL2/SDL_platform.h \
-  /usr/local/include/SDL2/begin_code.h \
-  /usr/local/include/SDL2/close_code.h \
-  /usr/local/include/SDL2/SDL_error.h \
-  /usr/local/include/SDL2/SDL_video.h \
-  /usr/local/include/SDL2/SDL_pixels.h \
-  /usr/local/include/SDL2/SDL_endian.h \
-  /usr/local/include/SDL2/SDL_rect.h \
-  /usr/local/include/SDL2/SDL_rwops.h \
-  /usr/local/include/SDL2/SDL_surface.h \
-  /usr/local/include/SDL2/SDL_blendmode.h \
-  /usr/local/include/SDL2/SDL_keyboard.h \
-  /usr/local/include/SDL2/SDL_keycode.h \
-  /usr/local/include/SDL2/SDL_scancode.h \
-  /usr/local/include/SDL2/SDL_mouse.h \
-  /usr/local/include/SDL2/SDL_joystick.h \
-  /usr/local/include/SDL2/SDL_guid.h \
-  /usr/local/include/SDL2/SDL_mutex.h \
-  /usr/local/include/SDL2/SDL_gamecontroller.h \
-  /usr/local/include/SDL2/SDL_sensor.h \
-  /usr/local/include/SDL2/SDL_quit.h \
-  /usr/local/include/SDL2/SDL_gesture.h \
-  /usr/local/include/SDL2/SDL_touch.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/Application/Posix/PosixApplication.h \
-  /usr/include/pthread.h \
-  /usr/include/sched.h \
-  /usr/include/x86_64-linux-gnu/bits/sched.h \
-  /usr/include/x86_64-linux-gnu/bits/types/struct_sched_param.h \
-  /usr/include/x86_64-linux-gnu/bits/cpu-set.h \
-  /usr/include/time.h \
-  /usr/include/x86_64-linux-gnu/bits/time.h \
-  /usr/include/x86_64-linux-gnu/bits/timex.h \
-  /usr/include/x86_64-linux-gnu/bits/types/struct_tm.h \
-  /usr/include/x86_64-linux-gnu/bits/types/struct_itimerspec.h \
-  /usr/include/x86_64-linux-gnu/bits/setjmp.h \
-  /usr/include/x86_64-linux-gnu/bits/types/struct___jmp_buf_tag.h \
-  /usr/include/x86_64-linux-gnu/sys/prctl.h \
-  /usr/include/linux/prctl.h \
-  /usr/include/linux/types.h \
-  /usr/include/x86_64-linux-gnu/asm/types.h \
-  /usr/include/asm-generic/types.h \
-  /usr/include/asm-generic/int-ll64.h \
-  /usr/include/x86_64-linux-gnu/asm/bitsperlong.h \
-  /usr/include/asm-generic/bitsperlong.h \
-  /usr/include/linux/posix_types.h \
-  /usr/include/linux/stddef.h \
-  /usr/include/x86_64-linux-gnu/asm/posix_types.h \
-  /usr/include/x86_64-linux-gnu/asm/posix_types_64.h \
-  /usr/include/asm-generic/posix_types.h \
-  /usr/include/signal.h \
-  /usr/include/x86_64-linux-gnu/bits/signum-generic.h \
-  /usr/include/x86_64-linux-gnu/bits/signum-arch.h \
-  /usr/include/x86_64-linux-gnu/bits/types/sig_atomic_t.h \
-  /usr/include/x86_64-linux-gnu/bits/types/siginfo_t.h \
-  /usr/include/x86_64-linux-gnu/bits/types/__sigval_t.h \
-  /usr/include/x86_64-linux-gnu/bits/siginfo-arch.h \
-  /usr/include/x86_64-linux-gnu/bits/siginfo-consts.h \
-  /usr/include/x86_64-linux-gnu/bits/siginfo-consts-arch.h \
-  /usr/include/x86_64-linux-gnu/bits/types/sigval_t.h \
-  /usr/include/x86_64-linux-gnu/bits/types/sigevent_t.h \
-  /usr/include/x86_64-linux-gnu/bits/sigevent-consts.h \
-  /usr/include/x86_64-linux-gnu/bits/sigaction.h \
-  /usr/include/x86_64-linux-gnu/bits/sigcontext.h \
-  /usr/include/x86_64-linux-gnu/bits/types/stack_t.h \
-  /usr/include/x86_64-linux-gnu/sys/ucontext.h \
-  /usr/include/x86_64-linux-gnu/bits/sigstack.h \
-  /usr/include/x86_64-linux-gnu/bits/sigstksz.h \
-  /usr/include/x86_64-linux-gnu/bits/ss_flags.h \
-  /usr/include/x86_64-linux-gnu/bits/types/struct_sigstack.h \
-  /usr/include/x86_64-linux-gnu/bits/sigthread.h \
-  /usr/include/x86_64-linux-gnu/bits/signal_ext.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/Application/Posix/PosixTypes.h \
-  /usr/include/errno.h \
-  /usr/include/x86_64-linux-gnu/bits/errno.h \
-  /usr/include/linux/errno.h \
-  /usr/include/x86_64-linux-gnu/asm/errno.h \
-  /usr/include/asm-generic/errno.h \
-  /usr/include/asm-generic/errno-base.h \
-  /usr/include/x86_64-linux-gnu/bits/types/error_t.h \
-  /home/noah/Projects/SIR-Engine/EASTL/atomic.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/gcc/compiler_gcc.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/gcc/compiler_gcc_fetch_add.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/gcc/compiler_gcc_fetch_sub.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/gcc/compiler_gcc_fetch_and.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/gcc/compiler_gcc_fetch_xor.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/gcc/compiler_gcc_fetch_or.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/gcc/compiler_gcc_add_fetch.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/gcc/compiler_gcc_sub_fetch.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/gcc/compiler_gcc_and_fetch.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/gcc/compiler_gcc_xor_fetch.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/gcc/compiler_gcc_or_fetch.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/gcc/compiler_gcc_exchange.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/gcc/compiler_gcc_cmpxchg_weak.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/gcc/compiler_gcc_cmpxchg_strong.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/gcc/compiler_gcc_load.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/gcc/compiler_gcc_store.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/gcc/compiler_gcc_barrier.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/gcc/compiler_gcc_cpu_pause.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/gcc/compiler_gcc_signal_fence.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/gcc/compiler_gcc_thread_fence.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler_fetch_add.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler_fetch_sub.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler_fetch_and.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler_fetch_xor.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler_fetch_or.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler_add_fetch.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler_sub_fetch.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler_and_fetch.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler_xor_fetch.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler_or_fetch.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler_exchange.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler_cmpxchg_weak.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler_cmpxchg_strong.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler_load.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler_store.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler_barrier.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler_cpu_pause.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler_memory_barrier.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler_signal_fence.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler_thread_fence.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/arch.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/x86/arch_x86.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/x86/arch_x86_fetch_add.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/x86/arch_x86_fetch_sub.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/x86/arch_x86_fetch_and.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/x86/arch_x86_fetch_xor.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/x86/arch_x86_fetch_or.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/x86/arch_x86_add_fetch.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/x86/arch_x86_sub_fetch.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/x86/arch_x86_and_fetch.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/x86/arch_x86_xor_fetch.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/x86/arch_x86_or_fetch.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/x86/arch_x86_exchange.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/x86/arch_x86_cmpxchg_weak.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/x86/arch_x86_cmpxchg_strong.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/x86/arch_x86_memory_barrier.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/x86/arch_x86_thread_fence.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/x86/arch_x86_load.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/x86/arch_x86_store.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/arch_fetch_add.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/arch_fetch_sub.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/arch_fetch_and.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/arch_fetch_xor.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/arch_fetch_or.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/arch_add_fetch.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/arch_sub_fetch.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/arch_and_fetch.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/arch_xor_fetch.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/arch_or_fetch.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/arch_exchange.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/arch_cmpxchg_weak.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/arch_cmpxchg_strong.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/arch_load.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/arch_store.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/arch_compiler_barrier.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/arch_cpu_pause.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/arch_memory_barrier.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/arch_signal_fence.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/arch_thread_fence.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_base.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_fetch_add.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_fetch_sub.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_fetch_and.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_fetch_xor.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_fetch_or.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_add_fetch.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_sub_fetch.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_and_fetch.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_xor_fetch.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_or_fetch.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_exchange.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_cmpxchg_weak.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_cmpxchg_strong.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_load.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_store.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_compiler_barrier.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_cpu_pause.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_memory_barrier.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_signal_fence.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_thread_fence.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_casts.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_memory_order.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_asserts.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_size_aligned.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_push_compiler_options.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_pop_compiler_options.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_base_width.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_integral.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_pointer.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_standalone.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_flag.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_flag_standalone.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/ThreadSystem/Thread.inl \
-  /home/noah/Projects/SIR-Engine/Engine/Core/Util.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/Compiler.h \
-  /home/noah/Projects/SIR-Engine/angelscript/angelscript.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/ResourceManager.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/MathLib/Types.h \
-  /usr/include/glm/glm.hpp \
-  /usr/include/glm/detail/_fixes.hpp \
-  /usr/include/glm/detail/setup.hpp \
-  /usr/include/c++/11/cassert \
-  /usr/include/glm/simd/platform.h \
-  /usr/include/c++/11/cstdint \
-  /usr/include/c++/11/climits \
-  /usr/include/c++/11/cfloat \
-  /usr/include/glm/fwd.hpp \
-  /usr/include/glm/detail/qualifier.hpp \
-  /usr/include/glm/detail/setup.hpp \
-  /usr/include/glm/vec2.hpp \
-  /usr/include/glm/ext/vector_bool2.hpp \
-  /usr/include/glm/detail/type_vec2.hpp \
-  /usr/include/glm/detail/type_vec2.inl \
-  /usr/include/glm/detail/compute_vector_relational.hpp \
-  /usr/include/glm/ext/vector_bool2_precision.hpp \
-  /usr/include/glm/ext/vector_float2.hpp \
-  /usr/include/glm/ext/vector_float2_precision.hpp \
-  /usr/include/glm/ext/vector_double2.hpp \
-  /usr/include/glm/ext/vector_double2_precision.hpp \
-  /usr/include/glm/ext/vector_int2.hpp \
-  /usr/include/glm/ext/vector_int2_sized.hpp \
-  /usr/include/glm/ext/scalar_int_sized.hpp \
-  /usr/include/glm/detail/setup.hpp \
-  /usr/include/glm/ext/vector_uint2.hpp \
-  /usr/include/glm/ext/vector_uint2_sized.hpp \
-  /usr/include/glm/ext/scalar_uint_sized.hpp \
-  /usr/include/glm/vec3.hpp \
-  /usr/include/glm/ext/vector_bool3.hpp \
-  /usr/include/glm/detail/type_vec3.hpp \
-  /usr/include/glm/detail/type_vec3.inl \
-  /usr/include/glm/ext/vector_bool3_precision.hpp \
-  /usr/include/glm/ext/vector_float3.hpp \
-  /usr/include/glm/ext/vector_float3_precision.hpp \
-  /usr/include/glm/ext/vector_double3.hpp \
-  /usr/include/glm/ext/vector_double3_precision.hpp \
-  /usr/include/glm/ext/vector_int3.hpp \
-  /usr/include/glm/ext/vector_int3_sized.hpp \
-  /usr/include/glm/ext/vector_uint3.hpp \
-  /usr/include/glm/ext/vector_uint3_sized.hpp \
-  /usr/include/glm/vec4.hpp \
-  /usr/include/glm/ext/vector_bool4.hpp \
-  /usr/include/glm/detail/type_vec4.hpp \
-  /usr/include/glm/detail/type_vec4.inl \
-  /usr/include/glm/ext/vector_bool4_precision.hpp \
-  /usr/include/glm/ext/vector_float4.hpp \
-  /usr/include/glm/ext/vector_float4_precision.hpp \
-  /usr/include/glm/ext/vector_double4.hpp \
-  /usr/include/glm/ext/vector_double4_precision.hpp \
-  /usr/include/glm/ext/vector_int4.hpp \
-  /usr/include/glm/ext/vector_int4_sized.hpp \
-  /usr/include/glm/ext/vector_uint4.hpp \
-  /usr/include/glm/ext/vector_uint4_sized.hpp \
-  /usr/include/glm/mat2x2.hpp \
-  /usr/include/glm/ext/matrix_double2x2.hpp \
-  /usr/include/glm/detail/type_mat2x2.hpp \
-  /usr/include/glm/detail/type_mat2x2.inl \
-  /usr/include/glm/matrix.hpp \
-  /usr/include/glm/mat2x3.hpp \
-  /usr/include/glm/ext/matrix_double2x3.hpp \
-  /usr/include/glm/detail/type_mat2x3.hpp \
-  /usr/include/glm/detail/type_mat2x3.inl \
-  /usr/include/glm/ext/matrix_double2x3_precision.hpp \
-  /usr/include/glm/ext/matrix_float2x3.hpp \
-  /usr/include/glm/ext/matrix_float2x3_precision.hpp \
-  /usr/include/glm/mat2x4.hpp \
-  /usr/include/glm/ext/matrix_double2x4.hpp \
-  /usr/include/glm/detail/type_mat2x4.hpp \
-  /usr/include/glm/detail/type_mat2x4.inl \
-  /usr/include/glm/ext/matrix_double2x4_precision.hpp \
-  /usr/include/glm/ext/matrix_float2x4.hpp \
-  /usr/include/glm/ext/matrix_float2x4_precision.hpp \
-  /usr/include/glm/mat3x2.hpp \
-  /usr/include/glm/ext/matrix_double3x2.hpp \
-  /usr/include/glm/detail/type_mat3x2.hpp \
-  /usr/include/glm/detail/type_mat3x2.inl \
-  /usr/include/glm/ext/matrix_double3x2_precision.hpp \
-  /usr/include/glm/ext/matrix_float3x2.hpp \
-  /usr/include/glm/ext/matrix_float3x2_precision.hpp \
-  /usr/include/glm/mat3x3.hpp \
-  /usr/include/glm/ext/matrix_double3x3.hpp \
-  /usr/include/glm/detail/type_mat3x3.hpp \
-  /usr/include/glm/detail/type_mat3x3.inl \
-  /usr/include/glm/ext/matrix_double3x3_precision.hpp \
-  /usr/include/glm/ext/matrix_float3x3.hpp \
-  /usr/include/glm/ext/matrix_float3x3_precision.hpp \
-  /usr/include/glm/mat3x4.hpp \
-  /usr/include/glm/ext/matrix_double3x4.hpp \
-  /usr/include/glm/detail/type_mat3x4.hpp \
-  /usr/include/glm/detail/type_mat3x4.inl \
-  /usr/include/glm/ext/matrix_double3x4_precision.hpp \
-  /usr/include/glm/ext/matrix_float3x4.hpp \
-  /usr/include/glm/ext/matrix_float3x4_precision.hpp \
-  /usr/include/glm/mat4x2.hpp \
-  /usr/include/glm/ext/matrix_double4x2.hpp \
-  /usr/include/glm/detail/type_mat4x2.hpp \
-  /usr/include/glm/detail/type_mat4x2.inl \
-  /usr/include/glm/ext/matrix_double4x2_precision.hpp \
-  /usr/include/glm/ext/matrix_float4x2.hpp \
-  /usr/include/glm/ext/matrix_float4x2_precision.hpp \
-  /usr/include/glm/mat4x3.hpp \
-  /usr/include/glm/ext/matrix_double4x3.hpp \
-  /usr/include/glm/detail/type_mat4x3.hpp \
-  /usr/include/glm/detail/type_mat4x3.inl \
-  /usr/include/glm/ext/matrix_double4x3_precision.hpp \
-  /usr/include/glm/ext/matrix_float4x3.hpp \
-  /usr/include/glm/ext/matrix_float4x3_precision.hpp \
-  /usr/include/glm/mat4x4.hpp \
-  /usr/include/glm/ext/matrix_double4x4.hpp \
-  /usr/include/glm/detail/type_mat4x4.hpp \
-  /usr/include/glm/detail/type_mat4x4.inl \
-  /usr/include/glm/ext/matrix_double4x4_precision.hpp \
-  /usr/include/glm/ext/matrix_float4x4.hpp \
-  /usr/include/glm/ext/matrix_float4x4_precision.hpp \
-  /usr/include/glm/detail/func_matrix.inl \
-  /usr/include/glm/geometric.hpp \
-  /usr/include/glm/detail/func_geometric.inl \
-  /usr/include/glm/exponential.hpp \
-  /usr/include/glm/detail/type_vec1.hpp \
-  /usr/include/glm/detail/type_vec1.inl \
-  /usr/include/glm/detail/func_exponential.inl \
-  /usr/include/glm/vector_relational.hpp \
-  /usr/include/glm/detail/func_vector_relational.inl \
-  /usr/include/glm/detail/_vectorize.hpp \
-  /usr/include/glm/common.hpp \
-  /usr/include/glm/detail/func_common.inl \
-  /usr/include/glm/detail/compute_common.hpp \
-  /usr/include/glm/ext/matrix_double2x2_precision.hpp \
-  /usr/include/glm/ext/matrix_float2x2.hpp \
-  /usr/include/glm/ext/matrix_float2x2_precision.hpp \
-  /usr/include/glm/trigonometric.hpp \
-  /usr/include/glm/detail/func_trigonometric.inl \
-  /usr/include/glm/packing.hpp \
-  /usr/include/glm/detail/func_packing.inl \
-  /usr/include/glm/detail/type_half.hpp \
-  /usr/include/glm/detail/type_half.inl \
-  /usr/include/glm/integer.hpp \
-  /usr/include/glm/detail/func_integer.inl \
-  /home/noah/Projects/SIR-Engine/Engine/Core/FileSystem/FileSystem.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/FileSystem/SearchPath.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/FileSystem/FileReader.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/FileSystem/FileStream.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/FileSystem/FileWriter.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/FileSystem/FileList.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/FileSystem/FileCache.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/EngineApp.h \
-  /home/noah/Projects/SIR-Engine/imgui/imgui.h \
-  /home/noah/Projects/SIR-Engine/imgui/imconfig.h \
-  Application/AssetLib/TextureAtlas.h \
-  /home/noah/Projects/SIR-Engine/EASTL/shared_ptr.h \
-  /home/noah/Projects/SIR-Engine/EASTL/internal/thread_support.h \
-  /usr/include/boost/thread/mutex.hpp \
-  /usr/include/boost/thread/detail/platform.hpp \
-  /usr/include/boost/config.hpp \
-  /usr/include/boost/config/user.hpp \
-  /usr/include/boost/config/detail/select_compiler_config.hpp \
-  /usr/include/boost/config/compiler/gcc.hpp \
-  /usr/include/boost/config/detail/select_stdlib_config.hpp \
-  /usr/include/c++/11/version \
-  /usr/include/boost/config/stdlib/libstdcpp3.hpp \
-  /usr/include/boost/config/detail/select_platform_config.hpp \
-  /usr/include/boost/config/platform/linux.hpp \
-  /usr/include/boost/config/detail/posix_features.hpp \
-  /usr/include/boost/config/detail/suffix.hpp \
-  /usr/include/boost/config/helper_macros.hpp \
-  /usr/include/boost/config/requires_threads.hpp \
-  /usr/include/boost/thread/pthread/mutex.hpp \
-  /usr/include/boost/thread/detail/config.hpp \
-  /usr/include/boost/detail/workaround.hpp \
-  /usr/include/boost/config/workaround.hpp \
-  /usr/include/boost/thread/detail/thread_safety.hpp \
-  /usr/include/boost/config/auto_link.hpp \
-  /usr/include/boost/assert.hpp \
-  /usr/include/boost/throw_exception.hpp \
-  /usr/include/boost/assert/source_location.hpp \
-  /usr/include/boost/current_function.hpp \
-  /usr/include/boost/cstdint.hpp \
-  /usr/include/c++/11/iosfwd \
-  /usr/include/c++/11/bits/stringfwd.h \
-  /usr/include/c++/11/bits/postypes.h \
-  /usr/include/c++/11/cwchar \
-  /usr/include/c++/11/exception \
-  /usr/include/c++/11/bits/exception_ptr.h \
-  /usr/include/c++/11/bits/cxxabi_init_exception.h \
-  /usr/include/c++/11/bits/nested_exception.h \
-  /usr/include/boost/exception/exception.hpp \
-  /usr/include/boost/core/ignore_unused.hpp \
-  /usr/include/boost/thread/exceptions.hpp \
-  /usr/include/c++/11/string \
-  /usr/include/c++/11/bits/char_traits.h \
-  /usr/include/c++/11/bits/localefwd.h \
-  /usr/include/x86_64-linux-gnu/c++/11/bits/c++locale.h \
-  /usr/include/c++/11/clocale \
-  /usr/include/locale.h \
-  /usr/include/x86_64-linux-gnu/bits/locale.h \
-  /usr/include/c++/11/cctype \
-  /usr/include/c++/11/bits/ostream_insert.h \
-  /usr/include/c++/11/bits/cxxabi_forced.h \
-  /usr/include/c++/11/bits/basic_string.h \
-  /usr/include/c++/11/ext/atomicity.h \
-  /usr/include/x86_64-linux-gnu/c++/11/bits/gthr.h \
-  /usr/include/x86_64-linux-gnu/c++/11/bits/gthr-default.h \
-  /usr/include/x86_64-linux-gnu/c++/11/bits/atomic_word.h \
-  /usr/include/x86_64-linux-gnu/sys/single_threaded.h \
-  /usr/include/c++/11/string_view \
-  /usr/include/c++/11/bits/functional_hash.h \
-  /usr/include/c++/11/bits/string_view.tcc \
-  /usr/include/c++/11/ext/string_conversions.h \
-  /usr/include/c++/11/cstdio \
-  /usr/include/c++/11/cerrno \
-  /usr/include/c++/11/bits/charconv.h \
-  /usr/include/c++/11/bits/basic_string.tcc \
-  /usr/include/c++/11/stdexcept \
-  /usr/include/boost/system/system_error.hpp \
-  /usr/include/boost/system/error_code.hpp \
-  /usr/include/boost/system/api_config.hpp \
-  /usr/include/boost/system/detail/config.hpp \
-  /usr/include/c++/11/ostream \
-  /usr/include/c++/11/ios \
-  /usr/include/c++/11/bits/ios_base.h \
-  /usr/include/c++/11/bits/locale_classes.h \
-  /usr/include/c++/11/bits/locale_classes.tcc \
-  /usr/include/c++/11/system_error \
-  /usr/include/x86_64-linux-gnu/c++/11/bits/error_constants.h \
-  /usr/include/c++/11/streambuf \
-  /usr/include/c++/11/bits/streambuf.tcc \
-  /usr/include/c++/11/bits/basic_ios.h \
-  /usr/include/c++/11/bits/locale_facets.h \
-  /usr/include/c++/11/cwctype \
-  /usr/include/wctype.h \
-  /usr/include/x86_64-linux-gnu/bits/wctype-wchar.h \
-  /usr/include/x86_64-linux-gnu/c++/11/bits/ctype_base.h \
-  /usr/include/c++/11/bits/streambuf_iterator.h \
-  /usr/include/x86_64-linux-gnu/c++/11/bits/ctype_inline.h \
-  /usr/include/c++/11/bits/locale_facets.tcc \
-  /usr/include/c++/11/bits/basic_ios.tcc \
-  /usr/include/c++/11/bits/ostream.tcc \
-  /usr/include/c++/11/functional \
-  /usr/include/c++/11/bits/refwrap.h \
-  /usr/include/c++/11/bits/std_function.h \
-  /usr/include/c++/11/unordered_map \
-  /usr/include/c++/11/bits/hashtable.h \
-  /usr/include/c++/11/bits/hashtable_policy.h \
-  /usr/include/c++/11/bits/enable_special_members.h \
-  /usr/include/c++/11/bits/node_handle.h \
-  /usr/include/c++/11/bits/unordered_map.h \
-  /usr/include/c++/11/bits/erase_if.h \
-  /usr/include/c++/11/vector \
-  /usr/include/c++/11/bits/stl_uninitialized.h \
-  /usr/include/c++/11/bits/stl_vector.h \
-  /usr/include/c++/11/bits/stl_bvector.h \
-  /usr/include/c++/11/bits/vector.tcc \
-  /usr/include/c++/11/bits/stl_algo.h \
-  /usr/include/c++/11/bits/algorithmfwd.h \
-  /usr/include/c++/11/bits/stl_heap.h \
-  /usr/include/c++/11/bits/stl_tempbuf.h \
-  /usr/include/c++/11/bits/uniform_int_dist.h \
-  /usr/include/c++/11/cstring \
-  /usr/include/boost/cerrno.hpp \
-  /usr/include/boost/system/detail/generic_category.hpp \
-  /usr/include/boost/system/detail/system_category_posix.hpp \
-  /usr/include/boost/system/detail/std_interoperability.hpp \
-  /usr/include/c++/11/map \
-  /usr/include/c++/11/bits/stl_tree.h \
-  /usr/include/c++/11/bits/stl_map.h \
-  /usr/include/c++/11/bits/stl_multimap.h \
-  /usr/include/c++/11/memory \
-  /usr/include/c++/11/bits/stl_raw_storage_iter.h \
-  /usr/include/c++/11/bits/align.h \
-  /usr/include/c++/11/bit \
-  /usr/include/c++/11/bits/unique_ptr.h \
-  /usr/include/c++/11/bits/shared_ptr.h \
-  /usr/include/c++/11/bits/shared_ptr_base.h \
-  /usr/include/c++/11/bits/allocated_ptr.h \
-  /usr/include/c++/11/ext/concurrence.h \
-  /usr/include/c++/11/bits/shared_ptr_atomic.h \
-  /usr/include/c++/11/bits/atomic_base.h \
-  /usr/include/c++/11/bits/atomic_lockfree_defines.h \
-  /usr/include/c++/11/backward/auto_ptr.h \
-  /usr/include/c++/11/pstl/glue_memory_defs.h \
-  /usr/include/c++/11/pstl/execution_defs.h \
-  /usr/include/c++/11/mutex \
-  /usr/include/c++/11/chrono \
-  /usr/include/c++/11/ratio \
-  /usr/include/c++/11/ctime \
-  /usr/include/c++/11/bits/parse_numbers.h \
   /usr/include/c++/11/bits/std_mutex.h \
   /usr/include/c++/11/bits/unique_lock.h \
   /usr/include/boost/config/abi_prefix.hpp \
@@ -5735,9 +7264,9 @@ CMakeFiles/ValdenApp.dir/Application/SceneView.cpp.o: Application/SceneView.cpp 
   /usr/include/boost/thread/pthread/pthread_helpers.hpp \
   /home/noah/Projects/SIR-Engine/EASTL/internal/enable_shared.h
 
-CMakeFiles/ValdenApp.dir/Application/TextEditor.cpp.o: Application/TextEditor.cpp \
+CMakeFiles/ValdenApp.dir/Application/SceneView.cpp.o: Application/SceneView.cpp \
   /usr/include/stdc-predef.h \
-  Application/TextEditor.h \
+  Application/SceneView.h \
   Application/Application.h \
   /home/noah/Projects/SIR-Engine/Engine/Memory/Memory.h \
   /home/noah/Projects/SIR-Engine/Engine/Core/SIREngine.h \
@@ -5978,14 +7507,14 @@ CMakeFiles/ValdenApp.dir/Application/TextEditor.cpp.o: Application/TextEditor.cp
   /home/noah/Projects/SIR-Engine/Engine/Core/Logging/Logger.h \
   /home/noah/Projects/SIR-Engine/EASTL/queue.h \
   /home/noah/Projects/SIR-Engine/EASTL/deque.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
-  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CString.h \
   /home/noah/Projects/SIR-Engine/Engine/Core/ResourceDef.h \
   /home/noah/Projects/SIR-Engine/EASTL/allocator_malloc.h \
   /usr/include/malloc.h \
   /home/noah/Projects/SIR-Engine/EASTL/fixed_string.h \
   /home/noah/Projects/SIR-Engine/EASTL/internal/fixed_pool.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
+  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CVector.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/UtlMemory.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CStaticArray.h \
@@ -6356,35 +7885,15 @@ CMakeFiles/ValdenApp.dir/Application/TextEditor.cpp.o: Application/TextEditor.cp
   /home/noah/Projects/SIR-Engine/Engine/Core/EngineApp.h \
   /home/noah/Projects/SIR-Engine/imgui/imgui.h \
   /home/noah/Projects/SIR-Engine/imgui/imconfig.h \
-  /home/noah/Projects/SIR-Engine/EASTL/unordered_set.h \
-  /home/noah/Projects/SIR-Engine/EASTL/hash_set.h \
-  /home/noah/Projects/SIR-Engine/EASTL/array.h \
-  /usr/include/c++/11/regex \
-  /usr/include/c++/11/algorithm \
-  /usr/include/c++/11/bits/stl_algo.h \
-  /usr/include/c++/11/bits/algorithmfwd.h \
-  /usr/include/c++/11/bits/stl_heap.h \
-  /usr/include/c++/11/bits/stl_tempbuf.h \
-  /usr/include/c++/11/bits/uniform_int_dist.h \
-  /usr/include/c++/11/pstl/glue_algorithm_defs.h \
-  /usr/include/c++/11/functional \
-  /usr/include/c++/11/bits/functional_hash.h \
-  /usr/include/c++/11/bits/refwrap.h \
-  /usr/include/c++/11/bits/std_function.h \
-  /usr/include/c++/11/unordered_map \
-  /usr/include/c++/11/bits/hashtable.h \
-  /usr/include/c++/11/bits/hashtable_policy.h \
-  /usr/include/c++/11/bits/enable_special_members.h \
-  /usr/include/c++/11/bits/node_handle.h \
-  /usr/include/c++/11/bits/unordered_map.h \
-  /usr/include/c++/11/bits/erase_if.h \
+  IconsFontAwesomeEditor.h \
+  Application/IconsFontAwesome5.h \
+  Application/ImGuiNotify.hpp \
   /usr/include/c++/11/vector \
   /usr/include/c++/11/bits/stl_uninitialized.h \
   /usr/include/c++/11/bits/stl_vector.h \
   /usr/include/c++/11/bits/stl_bvector.h \
+  /usr/include/c++/11/bits/functional_hash.h \
   /usr/include/c++/11/bits/vector.tcc \
-  /usr/include/c++/11/pstl/execution_defs.h \
-  /usr/include/c++/11/bitset \
   /usr/include/c++/11/string \
   /usr/include/c++/11/bits/stringfwd.h \
   /usr/include/c++/11/bits/char_traits.h \
@@ -6412,6 +7921,1470 @@ CMakeFiles/ValdenApp.dir/Application/TextEditor.cpp.o: Application/TextEditor.cp
   /usr/include/c++/11/cerrno \
   /usr/include/c++/11/bits/charconv.h \
   /usr/include/c++/11/bits/basic_string.tcc \
+  /usr/include/c++/11/chrono \
+  /usr/include/c++/11/ratio \
+  /usr/include/c++/11/ctime \
+  /usr/include/c++/11/bits/parse_numbers.h \
+  /usr/include/c++/11/functional \
+  /usr/include/c++/11/bits/refwrap.h \
+  /usr/include/c++/11/bits/std_function.h \
+  /usr/include/c++/11/unordered_map \
+  /usr/include/c++/11/bits/hashtable.h \
+  /usr/include/c++/11/bits/hashtable_policy.h \
+  /usr/include/c++/11/bits/enable_special_members.h \
+  /usr/include/c++/11/bits/node_handle.h \
+  /usr/include/c++/11/bits/unordered_map.h \
+  /usr/include/c++/11/bits/erase_if.h \
+  /usr/include/c++/11/bits/stl_algo.h \
+  /usr/include/c++/11/bits/algorithmfwd.h \
+  /usr/include/c++/11/bits/stl_heap.h \
+  /usr/include/c++/11/bits/stl_tempbuf.h \
+  /usr/include/c++/11/bits/uniform_int_dist.h \
+  /home/noah/Projects/SIR-Engine/imgui/imgui_internal.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/immintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/x86gprintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/ia32intrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/adxintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/bmiintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/bmi2intrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/cetintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/cldemoteintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/clflushoptintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/clwbintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/clzerointrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/enqcmdintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/fxsrintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/lzcntintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/lwpintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/movdirintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/mwaitintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/mwaitxintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/pconfigintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/popcntintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/pkuintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/rdseedintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/rtmintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/serializeintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/sgxintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/tbmintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/tsxldtrkintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/uintrintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/waitpkgintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/wbnoinvdintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/xsaveintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/xsavecintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/xsaveoptintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/xsavesintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/xtestintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/hresetintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/mmintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/xmmintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/mm_malloc.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/emmintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/pmmintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/tmmintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/smmintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/wmmintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avxintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avxvnniintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx2intrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512fintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512erintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512pfintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512cdintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vlintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512bwintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512dqintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vlbwintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vldqintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512ifmaintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512ifmavlintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vbmiintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vbmivlintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx5124fmapsintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx5124vnniwintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vpopcntdqintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vbmi2intrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vbmi2vlintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vnniintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vnnivlintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vpopcntdqvlintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512bitalgintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vp2intersectintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vp2intersectvlintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/shaintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/fmaintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/f16cintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/gfniintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/vaesintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/vpclmulqdqintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512bf16vlintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512bf16intrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/amxtileintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/amxint8intrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/amxbf16intrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/prfchwintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/keylockerintrin.h \
+  /home/noah/Projects/SIR-Engine/imgui/imstb_textedit.h \
+  /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLTexture.h \
+  /home/noah/Projects/SIR-Engine/Engine/RenderLib/RenderCommon.h \
+  /home/noah/Projects/SIR-Engine/Engine/RenderLib/RenderLib.h \
+  /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLCommon.h \
+  /usr/include/GL/gl.h \
+  /usr/include/GL/glext.h \
+  /usr/include/KHR/khrplatform.h \
+  /usr/include/GL/glcorearb.h \
+  /home/noah/Projects/SIR-Engine/Engine/RenderLib/DrawBuffer.h \
+  /home/noah/Projects/SIR-Engine/EASTL/stack.h \
+  /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/RenderTexture.h \
+  /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLoader.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/FileSystem/MemoryFile.h \
+  /home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/SlabAllocator.h \
+  /home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/AllocatorBase.h \
+  /home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/MemoryBuffer.h \
+  /home/noah/Projects/SIR-Engine/EASTL/bonus/lru_cache.h \
+  /home/noah/Projects/SIR-Engine/EASTL/list.h \
+  /home/noah/Projects/SIR-Engine/EASTL/optional.h \
+  Application/AssetLib/TextureAtlas.h \
+  /home/noah/Projects/SIR-Engine/EASTL/shared_ptr.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/thread_support.h \
+  /usr/include/boost/thread/mutex.hpp \
+  /usr/include/boost/thread/detail/platform.hpp \
+  /usr/include/boost/config.hpp \
+  /usr/include/boost/config/user.hpp \
+  /usr/include/boost/config/detail/select_compiler_config.hpp \
+  /usr/include/boost/config/compiler/gcc.hpp \
+  /usr/include/boost/config/detail/select_stdlib_config.hpp \
+  /usr/include/c++/11/version \
+  /usr/include/boost/config/stdlib/libstdcpp3.hpp \
+  /usr/include/boost/config/detail/select_platform_config.hpp \
+  /usr/include/boost/config/platform/linux.hpp \
+  /usr/include/boost/config/detail/posix_features.hpp \
+  /usr/include/boost/config/detail/suffix.hpp \
+  /usr/include/boost/config/helper_macros.hpp \
+  /usr/include/boost/config/requires_threads.hpp \
+  /usr/include/boost/thread/pthread/mutex.hpp \
+  /usr/include/boost/thread/detail/config.hpp \
+  /usr/include/boost/detail/workaround.hpp \
+  /usr/include/boost/config/workaround.hpp \
+  /usr/include/boost/thread/detail/thread_safety.hpp \
+  /usr/include/boost/config/auto_link.hpp \
+  /usr/include/boost/assert.hpp \
+  /usr/include/boost/throw_exception.hpp \
+  /usr/include/boost/assert/source_location.hpp \
+  /usr/include/boost/current_function.hpp \
+  /usr/include/boost/cstdint.hpp \
+  /usr/include/c++/11/exception \
+  /usr/include/c++/11/bits/exception_ptr.h \
+  /usr/include/c++/11/bits/cxxabi_init_exception.h \
+  /usr/include/c++/11/bits/nested_exception.h \
+  /usr/include/boost/exception/exception.hpp \
+  /usr/include/boost/core/ignore_unused.hpp \
+  /usr/include/boost/thread/exceptions.hpp \
+  /usr/include/c++/11/stdexcept \
+  /usr/include/boost/system/system_error.hpp \
+  /usr/include/boost/system/error_code.hpp \
+  /usr/include/boost/system/api_config.hpp \
+  /usr/include/boost/system/detail/config.hpp \
+  /usr/include/c++/11/ostream \
+  /usr/include/c++/11/ios \
+  /usr/include/c++/11/bits/ios_base.h \
+  /usr/include/c++/11/bits/locale_classes.h \
+  /usr/include/c++/11/bits/locale_classes.tcc \
+  /usr/include/c++/11/system_error \
+  /usr/include/x86_64-linux-gnu/c++/11/bits/error_constants.h \
+  /usr/include/c++/11/streambuf \
+  /usr/include/c++/11/bits/streambuf.tcc \
+  /usr/include/c++/11/bits/basic_ios.h \
+  /usr/include/c++/11/bits/locale_facets.h \
+  /usr/include/c++/11/cwctype \
+  /usr/include/wctype.h \
+  /usr/include/x86_64-linux-gnu/bits/wctype-wchar.h \
+  /usr/include/x86_64-linux-gnu/c++/11/bits/ctype_base.h \
+  /usr/include/c++/11/bits/streambuf_iterator.h \
+  /usr/include/x86_64-linux-gnu/c++/11/bits/ctype_inline.h \
+  /usr/include/c++/11/bits/locale_facets.tcc \
+  /usr/include/c++/11/bits/basic_ios.tcc \
+  /usr/include/c++/11/bits/ostream.tcc \
+  /usr/include/c++/11/cstring \
+  /usr/include/boost/cerrno.hpp \
+  /usr/include/boost/system/detail/generic_category.hpp \
+  /usr/include/boost/system/detail/system_category_posix.hpp \
+  /usr/include/boost/system/detail/std_interoperability.hpp \
+  /usr/include/c++/11/map \
+  /usr/include/c++/11/bits/stl_tree.h \
+  /usr/include/c++/11/bits/stl_map.h \
+  /usr/include/c++/11/bits/stl_multimap.h \
+  /usr/include/c++/11/memory \
+  /usr/include/c++/11/bits/stl_raw_storage_iter.h \
+  /usr/include/c++/11/bits/align.h \
+  /usr/include/c++/11/bit \
+  /usr/include/c++/11/bits/unique_ptr.h \
+  /usr/include/c++/11/bits/shared_ptr.h \
+  /usr/include/c++/11/bits/shared_ptr_base.h \
+  /usr/include/c++/11/bits/allocated_ptr.h \
+  /usr/include/c++/11/ext/concurrence.h \
+  /usr/include/c++/11/bits/shared_ptr_atomic.h \
+  /usr/include/c++/11/bits/atomic_base.h \
+  /usr/include/c++/11/bits/atomic_lockfree_defines.h \
+  /usr/include/c++/11/backward/auto_ptr.h \
+  /usr/include/c++/11/pstl/glue_memory_defs.h \
+  /usr/include/c++/11/pstl/execution_defs.h \
+  /usr/include/c++/11/mutex \
+  /usr/include/c++/11/bits/std_mutex.h \
+  /usr/include/c++/11/bits/unique_lock.h \
+  /usr/include/boost/config/abi_prefix.hpp \
+  /usr/include/boost/config/abi_suffix.hpp \
+  /usr/include/boost/thread/lock_types.hpp \
+  /usr/include/boost/thread/detail/move.hpp \
+  /usr/include/boost/core/enable_if.hpp \
+  /usr/include/boost/type_traits/is_convertible.hpp \
+  /usr/include/boost/type_traits/intrinsics.hpp \
+  /usr/include/boost/type_traits/detail/config.hpp \
+  /usr/include/boost/version.hpp \
+  /usr/include/boost/type_traits/integral_constant.hpp \
+  /usr/include/boost/type_traits/is_complete.hpp \
+  /usr/include/boost/type_traits/declval.hpp \
+  /usr/include/boost/type_traits/add_rvalue_reference.hpp \
+  /usr/include/boost/type_traits/is_void.hpp \
+  /usr/include/boost/type_traits/is_reference.hpp \
+  /usr/include/boost/type_traits/is_lvalue_reference.hpp \
+  /usr/include/boost/type_traits/is_rvalue_reference.hpp \
+  /usr/include/boost/type_traits/remove_reference.hpp \
+  /usr/include/boost/type_traits/is_function.hpp \
+  /usr/include/boost/type_traits/detail/is_function_cxx_11.hpp \
+  /usr/include/boost/type_traits/detail/yes_no_type.hpp \
+  /usr/include/boost/type_traits/is_array.hpp \
+  /usr/include/boost/static_assert.hpp \
+  /usr/include/boost/type_traits/is_arithmetic.hpp \
+  /usr/include/boost/type_traits/is_integral.hpp \
+  /usr/include/boost/type_traits/is_floating_point.hpp \
+  /usr/include/boost/type_traits/is_abstract.hpp \
+  /usr/include/boost/type_traits/add_lvalue_reference.hpp \
+  /usr/include/boost/type_traits/add_reference.hpp \
+  /usr/include/boost/type_traits/remove_cv.hpp \
+  /usr/include/boost/type_traits/decay.hpp \
+  /usr/include/boost/type_traits/remove_bounds.hpp \
+  /usr/include/boost/type_traits/remove_extent.hpp \
+  /usr/include/boost/type_traits/add_pointer.hpp \
+  /usr/include/boost/type_traits/conditional.hpp \
+  /usr/include/boost/thread/detail/delete.hpp \
+  /usr/include/boost/move/utility.hpp \
+  /usr/include/boost/move/detail/config_begin.hpp \
+  /usr/include/boost/move/detail/workaround.hpp \
+  /usr/include/boost/move/utility_core.hpp \
+  /usr/include/boost/move/core.hpp \
+  /usr/include/boost/move/detail/config_end.hpp \
+  /usr/include/boost/move/detail/meta_utils.hpp \
+  /usr/include/boost/move/detail/meta_utils_core.hpp \
+  /usr/include/boost/move/traits.hpp \
+  /usr/include/boost/move/detail/type_traits.hpp \
+  /usr/include/boost/thread/lock_options.hpp \
+  /usr/include/boost/thread/lockable_traits.hpp \
+  /usr/include/boost/thread/thread_time.hpp \
+  /usr/include/boost/date_time/time_clock.hpp \
+  /usr/include/boost/date_time/c_time.hpp \
+  /usr/include/boost/date_time/compiler_config.hpp \
+  /usr/include/boost/date_time/locale_config.hpp \
+  /usr/include/x86_64-linux-gnu/sys/time.h \
+  /usr/include/boost/shared_ptr.hpp \
+  /usr/include/boost/smart_ptr/shared_ptr.hpp \
+  /usr/include/boost/smart_ptr/detail/shared_count.hpp \
+  /usr/include/boost/smart_ptr/bad_weak_ptr.hpp \
+  /usr/include/boost/smart_ptr/detail/sp_counted_base.hpp \
+  /usr/include/boost/smart_ptr/detail/sp_has_gcc_intrinsics.hpp \
+  /usr/include/boost/smart_ptr/detail/sp_has_sync_intrinsics.hpp \
+  /usr/include/boost/smart_ptr/detail/sp_counted_base_gcc_atomic.hpp \
+  /usr/include/boost/smart_ptr/detail/sp_typeinfo_.hpp \
+  /usr/include/boost/smart_ptr/detail/sp_counted_impl.hpp \
+  /usr/include/boost/smart_ptr/detail/sp_noexcept.hpp \
+  /usr/include/boost/checked_delete.hpp \
+  /usr/include/boost/core/checked_delete.hpp \
+  /usr/include/boost/core/addressof.hpp \
+  /usr/include/boost/smart_ptr/detail/sp_disable_deprecated.hpp \
+  /usr/include/boost/smart_ptr/detail/sp_convertible.hpp \
+  /usr/include/boost/smart_ptr/detail/sp_nullptr_t.hpp \
+  /usr/include/boost/smart_ptr/detail/spinlock_pool.hpp \
+  /usr/include/boost/smart_ptr/detail/spinlock.hpp \
+  /usr/include/boost/smart_ptr/detail/spinlock_gcc_atomic.hpp \
+  /usr/include/boost/smart_ptr/detail/yield_k.hpp \
+  /usr/include/boost/smart_ptr/detail/sp_thread_pause.hpp \
+  /usr/include/boost/smart_ptr/detail/sp_thread_sleep.hpp \
+  /usr/include/boost/config/pragma_message.hpp \
+  /usr/include/c++/11/algorithm \
+  /usr/include/c++/11/pstl/glue_algorithm_defs.h \
+  /usr/include/boost/smart_ptr/detail/operator_bool.hpp \
+  /usr/include/boost/smart_ptr/detail/local_sp_deleter.hpp \
+  /usr/include/boost/smart_ptr/detail/local_counted_base.hpp \
+  /usr/include/boost/date_time/microsec_time_clock.hpp \
+  /usr/include/boost/date_time/posix_time/posix_time_types.hpp \
+  /usr/include/boost/date_time/posix_time/ptime.hpp \
+  /usr/include/boost/date_time/posix_time/posix_time_system.hpp \
+  /usr/include/boost/date_time/posix_time/posix_time_config.hpp \
+  /usr/include/boost/limits.hpp \
+  /usr/include/boost/config/no_tr1/cmath.hpp \
+  /usr/include/boost/date_time/time_duration.hpp \
+  /usr/include/boost/date_time/special_defs.hpp \
+  /usr/include/boost/date_time/time_defs.hpp \
+  /usr/include/boost/operators.hpp \
+  /usr/include/c++/11/iterator \
+  /usr/include/c++/11/bits/stream_iterator.h \
+  /usr/include/boost/date_time/time_resolution_traits.hpp \
+  /usr/include/boost/date_time/int_adapter.hpp \
+  /usr/include/boost/date_time/gregorian/gregorian_types.hpp \
+  /usr/include/boost/date_time/date.hpp \
+  /usr/include/boost/date_time/year_month_day.hpp \
+  /usr/include/boost/date_time/period.hpp \
+  /usr/include/boost/date_time/gregorian/greg_calendar.hpp \
+  /usr/include/boost/date_time/gregorian/greg_weekday.hpp \
+  /usr/include/boost/date_time/constrained_value.hpp \
+  /usr/include/boost/type_traits/is_base_of.hpp \
+  /usr/include/boost/type_traits/is_base_and_derived.hpp \
+  /usr/include/boost/type_traits/is_same.hpp \
+  /usr/include/boost/type_traits/is_class.hpp \
+  /usr/include/boost/date_time/date_defs.hpp \
+  /usr/include/boost/date_time/gregorian/greg_day_of_year.hpp \
+  /usr/include/boost/date_time/gregorian_calendar.hpp \
+  /usr/include/boost/date_time/gregorian_calendar.ipp \
+  /usr/include/boost/date_time/gregorian/greg_ymd.hpp \
+  /usr/include/boost/date_time/gregorian/greg_day.hpp \
+  /usr/include/boost/date_time/gregorian/greg_year.hpp \
+  /usr/include/boost/date_time/gregorian/greg_month.hpp \
+  /usr/include/boost/date_time/gregorian/greg_duration.hpp \
+  /usr/include/boost/date_time/date_duration.hpp \
+  /usr/include/boost/date_time/date_duration_types.hpp \
+  /usr/include/boost/date_time/gregorian/greg_duration_types.hpp \
+  /usr/include/boost/date_time/gregorian/greg_date.hpp \
+  /usr/include/boost/date_time/adjust_functors.hpp \
+  /usr/include/boost/date_time/wrapping_int.hpp \
+  /usr/include/boost/date_time/date_generators.hpp \
+  /usr/include/c++/11/sstream \
+  /usr/include/c++/11/istream \
+  /usr/include/c++/11/bits/istream.tcc \
+  /usr/include/c++/11/bits/sstream.tcc \
+  /usr/include/boost/date_time/date_clock_device.hpp \
+  /usr/include/boost/date_time/date_iterator.hpp \
+  /usr/include/boost/date_time/time_system_split.hpp \
+  /usr/include/boost/date_time/time_system_counted.hpp \
+  /usr/include/boost/date_time/time.hpp \
+  /usr/include/boost/date_time/posix_time/date_duration_operators.hpp \
+  /usr/include/boost/date_time/posix_time/posix_time_duration.hpp \
+  /usr/include/boost/numeric/conversion/cast.hpp \
+  /usr/include/boost/type.hpp \
+  /usr/include/boost/numeric/conversion/converter.hpp \
+  /usr/include/boost/numeric/conversion/conversion_traits.hpp \
+  /usr/include/boost/numeric/conversion/detail/conversion_traits.hpp \
+  /usr/include/boost/numeric/conversion/detail/meta.hpp \
+  /usr/include/boost/mpl/if.hpp \
+  /usr/include/boost/mpl/aux_/value_wknd.hpp \
+  /usr/include/boost/mpl/aux_/static_cast.hpp \
+  /usr/include/boost/mpl/aux_/config/workaround.hpp \
+  /usr/include/boost/mpl/aux_/config/integral.hpp \
+  /usr/include/boost/mpl/aux_/config/msvc.hpp \
+  /usr/include/boost/mpl/aux_/config/eti.hpp \
+  /usr/include/boost/mpl/aux_/na_spec.hpp \
+  /usr/include/boost/mpl/lambda_fwd.hpp \
+  /usr/include/boost/mpl/void_fwd.hpp \
+  /usr/include/boost/mpl/aux_/adl_barrier.hpp \
+  /usr/include/boost/mpl/aux_/config/adl.hpp \
+  /usr/include/boost/mpl/aux_/config/intel.hpp \
+  /usr/include/boost/mpl/aux_/config/gcc.hpp \
+  /usr/include/boost/mpl/aux_/na.hpp \
+  /usr/include/boost/mpl/bool.hpp \
+  /usr/include/boost/mpl/bool_fwd.hpp \
+  /usr/include/boost/mpl/integral_c_tag.hpp \
+  /usr/include/boost/mpl/aux_/config/static_constant.hpp \
+  /usr/include/boost/mpl/aux_/na_fwd.hpp \
+  /usr/include/boost/mpl/aux_/config/ctps.hpp \
+  /usr/include/boost/mpl/aux_/config/lambda.hpp \
+  /usr/include/boost/mpl/aux_/config/ttp.hpp \
+  /usr/include/boost/mpl/int.hpp \
+  /usr/include/boost/mpl/int_fwd.hpp \
+  /usr/include/boost/mpl/aux_/nttp_decl.hpp \
+  /usr/include/boost/mpl/aux_/config/nttp.hpp \
+  /usr/include/boost/mpl/aux_/integral_wrapper.hpp \
+  /usr/include/boost/preprocessor/cat.hpp \
+  /usr/include/boost/preprocessor/config/config.hpp \
+  /usr/include/boost/mpl/aux_/lambda_arity_param.hpp \
+  /usr/include/boost/mpl/aux_/template_arity_fwd.hpp \
+  /usr/include/boost/mpl/aux_/arity.hpp \
+  /usr/include/boost/mpl/aux_/config/dtp.hpp \
+  /usr/include/boost/mpl/aux_/preprocessor/params.hpp \
+  /usr/include/boost/mpl/aux_/config/preprocessor.hpp \
+  /usr/include/boost/preprocessor/comma_if.hpp \
+  /usr/include/boost/preprocessor/punctuation/comma_if.hpp \
+  /usr/include/boost/preprocessor/control/if.hpp \
+  /usr/include/boost/preprocessor/control/iif.hpp \
+  /usr/include/boost/preprocessor/logical/bool.hpp \
+  /usr/include/boost/preprocessor/facilities/empty.hpp \
+  /usr/include/boost/preprocessor/punctuation/comma.hpp \
+  /usr/include/boost/preprocessor/repeat.hpp \
+  /usr/include/boost/preprocessor/repetition/repeat.hpp \
+  /usr/include/boost/preprocessor/debug/error.hpp \
+  /usr/include/boost/preprocessor/detail/auto_rec.hpp \
+  /usr/include/boost/preprocessor/tuple/eat.hpp \
+  /usr/include/boost/preprocessor/inc.hpp \
+  /usr/include/boost/preprocessor/arithmetic/inc.hpp \
+  /usr/include/boost/mpl/aux_/preprocessor/enum.hpp \
+  /usr/include/boost/mpl/aux_/preprocessor/def_params_tail.hpp \
+  /usr/include/boost/mpl/limits/arity.hpp \
+  /usr/include/boost/preprocessor/logical/and.hpp \
+  /usr/include/boost/preprocessor/logical/bitand.hpp \
+  /usr/include/boost/preprocessor/identity.hpp \
+  /usr/include/boost/preprocessor/facilities/identity.hpp \
+  /usr/include/boost/preprocessor/empty.hpp \
+  /usr/include/boost/preprocessor/arithmetic/add.hpp \
+  /usr/include/boost/preprocessor/arithmetic/dec.hpp \
+  /usr/include/boost/preprocessor/control/while.hpp \
+  /usr/include/boost/preprocessor/list/fold_left.hpp \
+  /usr/include/boost/preprocessor/list/detail/fold_left.hpp \
+  /usr/include/boost/preprocessor/control/expr_iif.hpp \
+  /usr/include/boost/preprocessor/list/adt.hpp \
+  /usr/include/boost/preprocessor/detail/is_binary.hpp \
+  /usr/include/boost/preprocessor/detail/check.hpp \
+  /usr/include/boost/preprocessor/logical/compl.hpp \
+  /usr/include/boost/preprocessor/list/fold_right.hpp \
+  /usr/include/boost/preprocessor/list/detail/fold_right.hpp \
+  /usr/include/boost/preprocessor/list/reverse.hpp \
+  /usr/include/boost/preprocessor/control/detail/while.hpp \
+  /usr/include/boost/preprocessor/tuple/elem.hpp \
+  /usr/include/boost/preprocessor/facilities/expand.hpp \
+  /usr/include/boost/preprocessor/facilities/overload.hpp \
+  /usr/include/boost/preprocessor/variadic/size.hpp \
+  /usr/include/boost/preprocessor/tuple/rem.hpp \
+  /usr/include/boost/preprocessor/tuple/detail/is_single_return.hpp \
+  /usr/include/boost/preprocessor/variadic/elem.hpp \
+  /usr/include/boost/preprocessor/arithmetic/sub.hpp \
+  /usr/include/boost/mpl/aux_/config/overload_resolution.hpp \
+  /usr/include/boost/mpl/aux_/lambda_support.hpp \
+  /usr/include/boost/mpl/eval_if.hpp \
+  /usr/include/boost/mpl/equal_to.hpp \
+  /usr/include/boost/mpl/aux_/comparison_op.hpp \
+  /usr/include/boost/mpl/aux_/numeric_op.hpp \
+  /usr/include/boost/mpl/numeric_cast.hpp \
+  /usr/include/boost/mpl/apply_wrap.hpp \
+  /usr/include/boost/mpl/aux_/has_apply.hpp \
+  /usr/include/boost/mpl/has_xxx.hpp \
+  /usr/include/boost/mpl/aux_/type_wrapper.hpp \
+  /usr/include/boost/mpl/aux_/yes_no.hpp \
+  /usr/include/boost/mpl/aux_/config/arrays.hpp \
+  /usr/include/boost/mpl/aux_/config/has_xxx.hpp \
+  /usr/include/boost/mpl/aux_/config/msvc_typename.hpp \
+  /usr/include/boost/preprocessor/array/elem.hpp \
+  /usr/include/boost/preprocessor/array/data.hpp \
+  /usr/include/boost/preprocessor/array/size.hpp \
+  /usr/include/boost/preprocessor/repetition/enum_params.hpp \
+  /usr/include/boost/preprocessor/repetition/enum_trailing_params.hpp \
+  /usr/include/boost/mpl/aux_/config/has_apply.hpp \
+  /usr/include/boost/mpl/aux_/msvc_never_true.hpp \
+  /usr/include/boost/mpl/aux_/config/use_preprocessed.hpp \
+  /usr/include/boost/mpl/aux_/include_preprocessed.hpp \
+  /usr/include/boost/mpl/aux_/config/compiler.hpp \
+  /usr/include/boost/preprocessor/stringize.hpp \
+  /usr/include/boost/mpl/aux_/preprocessed/gcc/apply_wrap.hpp \
+  /usr/include/boost/mpl/tag.hpp \
+  /usr/include/boost/mpl/void.hpp \
+  /usr/include/boost/mpl/aux_/has_tag.hpp \
+  /usr/include/boost/mpl/aux_/numeric_cast_utils.hpp \
+  /usr/include/boost/mpl/aux_/config/forwarding.hpp \
+  /usr/include/boost/mpl/aux_/msvc_eti_base.hpp \
+  /usr/include/boost/mpl/aux_/is_msvc_eti_arg.hpp \
+  /usr/include/boost/mpl/aux_/preprocessed/gcc/equal_to.hpp \
+  /usr/include/boost/mpl/not.hpp \
+  /usr/include/boost/mpl/aux_/nested_type_wknd.hpp \
+  /usr/include/boost/mpl/and.hpp \
+  /usr/include/boost/mpl/aux_/preprocessed/gcc/and.hpp \
+  /usr/include/boost/mpl/identity.hpp \
+  /usr/include/boost/numeric/conversion/detail/int_float_mixture.hpp \
+  /usr/include/boost/numeric/conversion/int_float_mixture_enum.hpp \
+  /usr/include/boost/mpl/integral_c.hpp \
+  /usr/include/boost/mpl/integral_c_fwd.hpp \
+  /usr/include/boost/numeric/conversion/detail/sign_mixture.hpp \
+  /usr/include/boost/numeric/conversion/sign_mixture_enum.hpp \
+  /usr/include/boost/numeric/conversion/detail/udt_builtin_mixture.hpp \
+  /usr/include/boost/numeric/conversion/udt_builtin_mixture_enum.hpp \
+  /usr/include/boost/numeric/conversion/detail/is_subranged.hpp \
+  /usr/include/boost/mpl/multiplies.hpp \
+  /usr/include/boost/mpl/times.hpp \
+  /usr/include/boost/mpl/aux_/arithmetic_op.hpp \
+  /usr/include/boost/mpl/aux_/largest_int.hpp \
+  /usr/include/boost/mpl/aux_/preprocessed/gcc/times.hpp \
+  /usr/include/boost/mpl/aux_/preprocessor/default_params.hpp \
+  /usr/include/boost/mpl/less.hpp \
+  /usr/include/boost/mpl/aux_/preprocessed/gcc/less.hpp \
+  /usr/include/boost/numeric/conversion/converter_policies.hpp \
+  /usr/include/boost/numeric/conversion/detail/converter.hpp \
+  /usr/include/boost/numeric/conversion/bounds.hpp \
+  /usr/include/boost/numeric/conversion/detail/bounds.hpp \
+  /usr/include/boost/numeric/conversion/numeric_cast_traits.hpp \
+  /usr/include/boost/numeric/conversion/detail/numeric_cast_traits.hpp \
+  /usr/include/boost/numeric/conversion/detail/preprocessed/numeric_cast_traits_common.hpp \
+  /usr/include/boost/numeric/conversion/detail/preprocessed/numeric_cast_traits_long_long.hpp \
+  /usr/include/boost/date_time/posix_time/time_period.hpp \
+  /usr/include/boost/date_time/time_iterator.hpp \
+  /usr/include/boost/date_time/dst_rules.hpp \
+  /usr/include/boost/chrono/time_point.hpp \
+  /usr/include/boost/chrono/duration.hpp \
+  /usr/include/boost/chrono/config.hpp \
+  /usr/include/boost/predef.h \
+  /usr/include/boost/predef/language.h \
+  /usr/include/boost/predef/language/stdc.h \
+  /usr/include/boost/predef/version_number.h \
+  /usr/include/boost/predef/make.h \
+  /usr/include/boost/predef/detail/test.h \
+  /usr/include/boost/predef/language/stdcpp.h \
+  /usr/include/boost/predef/language/objc.h \
+  /usr/include/boost/predef/language/cuda.h \
+  /usr/include/boost/predef/architecture.h \
+  /usr/include/boost/predef/architecture/alpha.h \
+  /usr/include/boost/predef/architecture/arm.h \
+  /usr/include/boost/predef/architecture/blackfin.h \
+  /usr/include/boost/predef/architecture/convex.h \
+  /usr/include/boost/predef/architecture/ia64.h \
+  /usr/include/boost/predef/architecture/m68k.h \
+  /usr/include/boost/predef/architecture/mips.h \
+  /usr/include/boost/predef/architecture/parisc.h \
+  /usr/include/boost/predef/architecture/ppc.h \
+  /usr/include/boost/predef/architecture/ptx.h \
+  /usr/include/boost/predef/architecture/pyramid.h \
+  /usr/include/boost/predef/architecture/riscv.h \
+  /usr/include/boost/predef/architecture/rs6k.h \
+  /usr/include/boost/predef/architecture/sparc.h \
+  /usr/include/boost/predef/architecture/superh.h \
+  /usr/include/boost/predef/architecture/sys370.h \
+  /usr/include/boost/predef/architecture/sys390.h \
+  /usr/include/boost/predef/architecture/x86.h \
+  /usr/include/boost/predef/architecture/x86/32.h \
+  /usr/include/boost/predef/architecture/x86/64.h \
+  /usr/include/boost/predef/architecture/z.h \
+  /usr/include/boost/predef/compiler.h \
+  /usr/include/boost/predef/compiler/borland.h \
+  /usr/include/boost/predef/compiler/clang.h \
+  /usr/include/boost/predef/compiler/comeau.h \
+  /usr/include/boost/predef/compiler/compaq.h \
+  /usr/include/boost/predef/compiler/diab.h \
+  /usr/include/boost/predef/compiler/digitalmars.h \
+  /usr/include/boost/predef/compiler/dignus.h \
+  /usr/include/boost/predef/compiler/edg.h \
+  /usr/include/boost/predef/compiler/ekopath.h \
+  /usr/include/boost/predef/compiler/gcc_xml.h \
+  /usr/include/boost/predef/compiler/gcc.h \
+  /usr/include/boost/predef/detail/comp_detected.h \
+  /usr/include/boost/predef/compiler/greenhills.h \
+  /usr/include/boost/predef/compiler/hp_acc.h \
+  /usr/include/boost/predef/compiler/iar.h \
+  /usr/include/boost/predef/compiler/ibm.h \
+  /usr/include/boost/predef/compiler/intel.h \
+  /usr/include/boost/predef/compiler/kai.h \
+  /usr/include/boost/predef/compiler/llvm.h \
+  /usr/include/boost/predef/compiler/metaware.h \
+  /usr/include/boost/predef/compiler/metrowerks.h \
+  /usr/include/boost/predef/compiler/microtec.h \
+  /usr/include/boost/predef/compiler/mpw.h \
+  /usr/include/boost/predef/compiler/nvcc.h \
+  /usr/include/boost/predef/compiler/palm.h \
+  /usr/include/boost/predef/compiler/pgi.h \
+  /usr/include/boost/predef/compiler/sgi_mipspro.h \
+  /usr/include/boost/predef/compiler/sunpro.h \
+  /usr/include/boost/predef/compiler/tendra.h \
+  /usr/include/boost/predef/compiler/visualc.h \
+  /usr/include/boost/predef/compiler/watcom.h \
+  /usr/include/boost/predef/library.h \
+  /usr/include/boost/predef/library/c.h \
+  /usr/include/boost/predef/library/c/_prefix.h \
+  /usr/include/boost/predef/detail/_cassert.h \
+  /usr/include/boost/predef/library/c/cloudabi.h \
+  /usr/include/boost/predef/library/c/gnu.h \
+  /usr/include/boost/predef/library/c/uc.h \
+  /usr/include/boost/predef/library/c/vms.h \
+  /usr/include/boost/predef/library/c/zos.h \
+  /usr/include/boost/predef/library/std.h \
+  /usr/include/boost/predef/library/std/_prefix.h \
+  /usr/include/boost/predef/detail/_exception.h \
+  /usr/include/boost/predef/library/std/cxx.h \
+  /usr/include/boost/predef/library/std/dinkumware.h \
+  /usr/include/boost/predef/library/std/libcomo.h \
+  /usr/include/boost/predef/library/std/modena.h \
+  /usr/include/boost/predef/library/std/msl.h \
+  /usr/include/boost/predef/library/std/roguewave.h \
+  /usr/include/boost/predef/library/std/sgi.h \
+  /usr/include/boost/predef/library/std/stdcpp3.h \
+  /usr/include/boost/predef/library/std/stlport.h \
+  /usr/include/boost/predef/library/std/vacpp.h \
+  /usr/include/boost/predef/os.h \
+  /usr/include/boost/predef/os/aix.h \
+  /usr/include/boost/predef/os/amigaos.h \
+  /usr/include/boost/predef/os/beos.h \
+  /usr/include/boost/predef/os/bsd.h \
+  /usr/include/boost/predef/os/macos.h \
+  /usr/include/boost/predef/os/ios.h \
+  /usr/include/boost/predef/os/bsd/bsdi.h \
+  /usr/include/boost/predef/os/bsd/dragonfly.h \
+  /usr/include/boost/predef/os/bsd/free.h \
+  /usr/include/boost/predef/os/bsd/open.h \
+  /usr/include/boost/predef/os/bsd/net.h \
+  /usr/include/boost/predef/os/cygwin.h \
+  /usr/include/boost/predef/os/haiku.h \
+  /usr/include/boost/predef/os/hpux.h \
+  /usr/include/boost/predef/os/irix.h \
+  /usr/include/boost/predef/os/linux.h \
+  /usr/include/boost/predef/detail/os_detected.h \
+  /usr/include/boost/predef/os/os400.h \
+  /usr/include/boost/predef/os/qnxnto.h \
+  /usr/include/boost/predef/os/solaris.h \
+  /usr/include/boost/predef/os/unix.h \
+  /usr/include/boost/predef/os/vms.h \
+  /usr/include/boost/predef/os/windows.h \
+  /usr/include/boost/predef/other.h \
+  /usr/include/boost/predef/other/endian.h \
+  /usr/include/boost/predef/platform/android.h \
+  /usr/include/boost/predef/platform.h \
+  /usr/include/boost/predef/platform/cloudabi.h \
+  /usr/include/boost/predef/platform/mingw.h \
+  /usr/include/boost/predef/platform/mingw32.h \
+  /usr/include/boost/predef/platform/mingw64.h \
+  /usr/include/boost/predef/platform/windows_uwp.h \
+  /usr/include/boost/predef/platform/windows_desktop.h \
+  /usr/include/boost/predef/platform/windows_phone.h \
+  /usr/include/boost/predef/platform/windows_server.h \
+  /usr/include/boost/predef/platform/windows_store.h \
+  /usr/include/boost/predef/platform/windows_system.h \
+  /usr/include/boost/predef/platform/windows_runtime.h \
+  /usr/include/boost/predef/platform/ios.h \
+  /usr/include/boost/predef/hardware.h \
+  /usr/include/boost/predef/hardware/simd.h \
+  /usr/include/boost/predef/hardware/simd/x86.h \
+  /usr/include/boost/predef/hardware/simd/x86/versions.h \
+  /usr/include/boost/predef/hardware/simd/x86_amd.h \
+  /usr/include/boost/predef/hardware/simd/x86_amd/versions.h \
+  /usr/include/boost/predef/hardware/simd/arm.h \
+  /usr/include/boost/predef/hardware/simd/arm/versions.h \
+  /usr/include/boost/predef/hardware/simd/ppc.h \
+  /usr/include/boost/predef/hardware/simd/ppc/versions.h \
+  /usr/include/boost/predef/version.h \
+  /usr/include/boost/chrono/detail/static_assert.hpp \
+  /usr/include/boost/mpl/logical.hpp \
+  /usr/include/boost/mpl/or.hpp \
+  /usr/include/boost/mpl/aux_/preprocessed/gcc/or.hpp \
+  /usr/include/boost/ratio/ratio.hpp \
+  /usr/include/boost/ratio/config.hpp \
+  /usr/include/boost/ratio/detail/mpl/abs.hpp \
+  /usr/include/boost/ratio/detail/mpl/sign.hpp \
+  /usr/include/boost/ratio/detail/mpl/gcd.hpp \
+  /usr/include/boost/mpl/aux_/config/dependent_nttp.hpp \
+  /usr/include/boost/ratio/detail/mpl/lcm.hpp \
+  /usr/include/boost/integer_traits.hpp \
+  /usr/include/boost/ratio/ratio_fwd.hpp \
+  /usr/include/boost/ratio/detail/overflow_helpers.hpp \
+  /usr/include/boost/type_traits/common_type.hpp \
+  /usr/include/boost/type_traits/detail/mp_defer.hpp \
+  /usr/include/boost/type_traits/is_unsigned.hpp \
+  /usr/include/boost/type_traits/is_enum.hpp \
+  /usr/include/boost/chrono/detail/is_evenly_divisible_by.hpp \
+  /usr/include/boost/utility/enable_if.hpp \
+  /usr/include/boost/thread/xtime.hpp \
+  /usr/include/boost/date_time/posix_time/conversion.hpp \
+  /usr/include/boost/date_time/filetime_functions.hpp \
+  /usr/include/boost/date_time/gregorian/conversion.hpp \
+  /usr/include/boost/thread/detail/platform_time.hpp \
+  /usr/include/boost/chrono/system_clocks.hpp \
+  /usr/include/boost/chrono/detail/system.hpp \
+  /usr/include/boost/chrono/clock_string.hpp \
+  /usr/include/boost/chrono/ceil.hpp \
+  /usr/include/boost/thread/pthread/pthread_mutex_scoped_lock.hpp \
+  /usr/include/boost/thread/pthread/pthread_helpers.hpp \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/enable_shared.h \
+  Application/Util/FileTreeView.h
+
+CMakeFiles/ValdenApp.dir/Application/TextEditor.cpp.o: Application/TextEditor.cpp \
+  /usr/include/stdc-predef.h \
+  Application/TextEditor.h \
+  Application/Application.h \
+  /home/noah/Projects/SIR-Engine/Engine/Memory/Memory.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/SIREngine.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/stdint.h \
+  /usr/include/stdint.h \
+  /usr/include/x86_64-linux-gnu/bits/libc-header-start.h \
+  /usr/include/features.h \
+  /usr/include/features-time64.h \
+  /usr/include/x86_64-linux-gnu/bits/wordsize.h \
+  /usr/include/x86_64-linux-gnu/bits/timesize.h \
+  /usr/include/x86_64-linux-gnu/sys/cdefs.h \
+  /usr/include/x86_64-linux-gnu/bits/long-double.h \
+  /usr/include/x86_64-linux-gnu/gnu/stubs.h \
+  /usr/include/x86_64-linux-gnu/gnu/stubs-64.h \
+  /usr/include/x86_64-linux-gnu/bits/types.h \
+  /usr/include/x86_64-linux-gnu/bits/typesizes.h \
+  /usr/include/x86_64-linux-gnu/bits/time64.h \
+  /usr/include/x86_64-linux-gnu/bits/wchar.h \
+  /usr/include/x86_64-linux-gnu/bits/stdint-intn.h \
+  /usr/include/x86_64-linux-gnu/bits/stdint-uintn.h \
+  /usr/include/string.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/stddef.h \
+  /usr/include/x86_64-linux-gnu/bits/types/locale_t.h \
+  /usr/include/x86_64-linux-gnu/bits/types/__locale_t.h \
+  /usr/include/strings.h \
+  /usr/include/x86_64-linux-gnu/bits/strings_fortified.h \
+  /usr/include/x86_64-linux-gnu/bits/string_fortified.h \
+  /usr/include/c++/11/stdlib.h \
+  /usr/include/c++/11/cstdlib \
+  /usr/include/x86_64-linux-gnu/c++/11/bits/c++config.h \
+  /usr/include/x86_64-linux-gnu/c++/11/bits/os_defines.h \
+  /usr/include/x86_64-linux-gnu/c++/11/bits/cpu_defines.h \
+  /usr/include/c++/11/pstl/pstl_config.h \
+  /usr/include/stdlib.h \
+  /usr/include/x86_64-linux-gnu/bits/waitflags.h \
+  /usr/include/x86_64-linux-gnu/bits/waitstatus.h \
+  /usr/include/x86_64-linux-gnu/bits/floatn.h \
+  /usr/include/x86_64-linux-gnu/bits/floatn-common.h \
+  /usr/include/x86_64-linux-gnu/sys/types.h \
+  /usr/include/x86_64-linux-gnu/bits/types/clock_t.h \
+  /usr/include/x86_64-linux-gnu/bits/types/clockid_t.h \
+  /usr/include/x86_64-linux-gnu/bits/types/time_t.h \
+  /usr/include/x86_64-linux-gnu/bits/types/timer_t.h \
+  /usr/include/endian.h \
+  /usr/include/x86_64-linux-gnu/bits/endian.h \
+  /usr/include/x86_64-linux-gnu/bits/endianness.h \
+  /usr/include/x86_64-linux-gnu/bits/byteswap.h \
+  /usr/include/x86_64-linux-gnu/bits/uintn-identity.h \
+  /usr/include/x86_64-linux-gnu/sys/select.h \
+  /usr/include/x86_64-linux-gnu/bits/select.h \
+  /usr/include/x86_64-linux-gnu/bits/types/sigset_t.h \
+  /usr/include/x86_64-linux-gnu/bits/types/__sigset_t.h \
+  /usr/include/x86_64-linux-gnu/bits/types/struct_timeval.h \
+  /usr/include/x86_64-linux-gnu/bits/types/struct_timespec.h \
+  /usr/include/x86_64-linux-gnu/bits/select2.h \
+  /usr/include/x86_64-linux-gnu/bits/pthreadtypes.h \
+  /usr/include/x86_64-linux-gnu/bits/thread-shared-types.h \
+  /usr/include/x86_64-linux-gnu/bits/pthreadtypes-arch.h \
+  /usr/include/x86_64-linux-gnu/bits/atomic_wide_counter.h \
+  /usr/include/x86_64-linux-gnu/bits/struct_mutex.h \
+  /usr/include/x86_64-linux-gnu/bits/struct_rwlock.h \
+  /usr/include/alloca.h \
+  /usr/include/x86_64-linux-gnu/bits/stdlib-bsearch.h \
+  /usr/include/x86_64-linux-gnu/bits/stdlib-float.h \
+  /usr/include/x86_64-linux-gnu/bits/stdlib.h \
+  /usr/include/c++/11/bits/std_abs.h \
+  /usr/include/stdio.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/stdarg.h \
+  /usr/include/x86_64-linux-gnu/bits/types/__fpos_t.h \
+  /usr/include/x86_64-linux-gnu/bits/types/__mbstate_t.h \
+  /usr/include/x86_64-linux-gnu/bits/types/__fpos64_t.h \
+  /usr/include/x86_64-linux-gnu/bits/types/__FILE.h \
+  /usr/include/x86_64-linux-gnu/bits/types/FILE.h \
+  /usr/include/x86_64-linux-gnu/bits/types/struct_FILE.h \
+  /usr/include/x86_64-linux-gnu/bits/types/cookie_io_functions_t.h \
+  /usr/include/x86_64-linux-gnu/bits/stdio_lim.h \
+  /usr/include/x86_64-linux-gnu/bits/stdio.h \
+  /usr/include/x86_64-linux-gnu/bits/stdio2.h \
+  /usr/include/assert.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/stb_sprintf.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Compiler.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Platform.h \
+  /usr/include/unistd.h \
+  /usr/include/x86_64-linux-gnu/bits/posix_opt.h \
+  /usr/include/x86_64-linux-gnu/bits/environments.h \
+  /usr/include/x86_64-linux-gnu/bits/confname.h \
+  /usr/include/x86_64-linux-gnu/bits/getopt_posix.h \
+  /usr/include/x86_64-linux-gnu/bits/getopt_core.h \
+  /usr/include/x86_64-linux-gnu/bits/unistd.h \
+  /usr/include/x86_64-linux-gnu/bits/unistd_ext.h \
+  /usr/include/linux/close_range.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Config.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Platform.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Types.h \
+  /usr/include/c++/11/type_traits \
+  /usr/include/c++/11/forward_list \
+  /usr/include/c++/11/bits/forward_list.h \
+  /usr/include/c++/11/initializer_list \
+  /usr/include/c++/11/bits/stl_iterator_base_types.h \
+  /usr/include/c++/11/bits/stl_iterator.h \
+  /usr/include/c++/11/bits/cpp_type_traits.h \
+  /usr/include/c++/11/ext/type_traits.h \
+  /usr/include/c++/11/bits/move.h \
+  /usr/include/c++/11/bits/ptr_traits.h \
+  /usr/include/c++/11/bits/stl_algobase.h \
+  /usr/include/c++/11/bits/functexcept.h \
+  /usr/include/c++/11/bits/exception_defines.h \
+  /usr/include/c++/11/ext/numeric_traits.h \
+  /usr/include/c++/11/bits/stl_pair.h \
+  /usr/include/c++/11/bits/stl_iterator_base_funcs.h \
+  /usr/include/c++/11/bits/concept_check.h \
+  /usr/include/c++/11/debug/assertions.h \
+  /usr/include/c++/11/debug/debug.h \
+  /usr/include/c++/11/bits/predefined_ops.h \
+  /usr/include/c++/11/bits/stl_function.h \
+  /usr/include/c++/11/backward/binders.h \
+  /usr/include/c++/11/bits/allocator.h \
+  /usr/include/x86_64-linux-gnu/c++/11/bits/c++allocator.h \
+  /usr/include/c++/11/ext/new_allocator.h \
+  /usr/include/c++/11/new \
+  /usr/include/c++/11/bits/exception.h \
+  /usr/include/c++/11/bits/memoryfwd.h \
+  /usr/include/c++/11/ext/alloc_traits.h \
+  /usr/include/c++/11/bits/alloc_traits.h \
+  /usr/include/c++/11/bits/stl_construct.h \
+  /usr/include/c++/11/ext/aligned_buffer.h \
+  /usr/include/c++/11/bits/range_access.h \
+  /usr/include/c++/11/bits/forward_list.tcc \
+  /home/noah/Projects/SIR-Engine/EASTL/type_traits.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/config.h \
+  /home/noah/Projects/SIR-Engine/EABase/eabase.h \
+  /home/noah/Projects/SIR-Engine/EABase/config/eacompiler.h \
+  /home/noah/Projects/SIR-Engine/EABase/config/eaplatform.h \
+  /usr/include/c++/11/cstddef \
+  /home/noah/Projects/SIR-Engine/EABase/config/eacompilertraits.h \
+  /home/noah/Projects/SIR-Engine/EABase/version.h \
+  /home/noah/Projects/SIR-Engine/EABase/eaunits.h \
+  /usr/include/inttypes.h \
+  /usr/include/c++/11/math.h \
+  /usr/include/c++/11/cmath \
+  /usr/include/math.h \
+  /usr/include/x86_64-linux-gnu/bits/math-vector.h \
+  /usr/include/x86_64-linux-gnu/bits/libm-simd-decl-stubs.h \
+  /usr/include/x86_64-linux-gnu/bits/flt-eval-method.h \
+  /usr/include/x86_64-linux-gnu/bits/fp-logb.h \
+  /usr/include/x86_64-linux-gnu/bits/fp-fast.h \
+  /usr/include/x86_64-linux-gnu/bits/mathcalls-helper-functions.h \
+  /usr/include/x86_64-linux-gnu/bits/mathcalls.h \
+  /usr/include/x86_64-linux-gnu/bits/mathcalls-narrow.h \
+  /usr/include/x86_64-linux-gnu/bits/iscanonical.h \
+  /usr/include/c++/11/bits/specfun.h \
+  /usr/include/c++/11/limits \
+  /usr/include/c++/11/tr1/gamma.tcc \
+  /usr/include/c++/11/tr1/special_function_util.h \
+  /usr/include/c++/11/tr1/bessel_function.tcc \
+  /usr/include/c++/11/tr1/beta_function.tcc \
+  /usr/include/c++/11/tr1/ell_integral.tcc \
+  /usr/include/c++/11/tr1/exp_integral.tcc \
+  /usr/include/c++/11/tr1/hypergeometric.tcc \
+  /usr/include/c++/11/tr1/legendre_function.tcc \
+  /usr/include/c++/11/tr1/modified_bessel_func.tcc \
+  /usr/include/c++/11/tr1/poly_hermite.tcc \
+  /usr/include/c++/11/tr1/poly_laguerre.tcc \
+  /usr/include/c++/11/tr1/riemann_zeta.tcc \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/float.h \
+  /home/noah/Projects/SIR-Engine/EABase/int128.h \
+  /home/noah/Projects/SIR-Engine/EABase/eahave.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/type_fundamental.h \
+  /home/noah/Projects/SIR-Engine/EABase/nullptr.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/type_transformations.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/limits.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/syslimits.h \
+  /usr/include/limits.h \
+  /usr/include/x86_64-linux-gnu/bits/posix1_lim.h \
+  /usr/include/x86_64-linux-gnu/bits/local_lim.h \
+  /usr/include/linux/limits.h \
+  /usr/include/x86_64-linux-gnu/bits/pthread_stack_min-dynamic.h \
+  /usr/include/x86_64-linux-gnu/bits/posix2_lim.h \
+  /usr/include/x86_64-linux-gnu/bits/xopen_lim.h \
+  /usr/include/x86_64-linux-gnu/bits/uio_lim.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/type_properties.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/type_compound.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/type_pod.h \
+  /home/noah/Projects/SIR-Engine/EASTL/vector.h \
+  /home/noah/Projects/SIR-Engine/EASTL/allocator.h \
+  /home/noah/Projects/SIR-Engine/EASTL/iterator.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/move_help.h \
+  /home/noah/Projects/SIR-Engine/EASTL/initializer_list.h \
+  /home/noah/Projects/SIR-Engine/EASTL/algorithm.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/copy_help.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/fill_help.h \
+  /home/noah/Projects/SIR-Engine/EASTL/functional.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/functional_base.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/memory_base.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/mem_fn.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/function.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/function_detail.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/function_help.h \
+  /home/noah/Projects/SIR-Engine/EASTL/utility.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/integer_sequence.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/tuple_fwd_decls.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/in_place_t.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/piecewise_construct_t.h \
+  /usr/include/c++/11/tuple \
+  /usr/include/c++/11/utility \
+  /usr/include/c++/11/bits/stl_relops.h \
+  /usr/include/c++/11/array \
+  /usr/include/c++/11/bits/uses_allocator.h \
+  /usr/include/c++/11/bits/invoke.h \
+  /usr/include/c++/11/typeinfo \
+  /usr/include/c++/11/bits/hash_bytes.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/generic_iterator.h \
+  /home/noah/Projects/SIR-Engine/EASTL/random.h \
+  /home/noah/Projects/SIR-Engine/EASTL/numeric_limits.h \
+  /home/noah/Projects/SIR-Engine/EASTL/memory.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/pair_fwd_decls.h \
+  /home/noah/Projects/SIR-Engine/EASTL/bonus/compressed_pair.h \
+  /home/noah/Projects/SIR-Engine/EASTL/bonus/call_traits.h \
+  /home/noah/Projects/SIR-Engine/EASTL/vector_map.h \
+  /home/noah/Projects/SIR-Engine/EASTL/string.h \
+  /usr/include/ctype.h \
+  /usr/include/wchar.h \
+  /usr/include/x86_64-linux-gnu/bits/types/wint_t.h \
+  /usr/include/x86_64-linux-gnu/bits/types/mbstate_t.h \
+  /usr/include/x86_64-linux-gnu/bits/wchar2.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/char_traits.h \
+  /home/noah/Projects/SIR-Engine/EASTL/string_view.h \
+  /home/noah/Projects/SIR-Engine/EASTL/unique_ptr.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/smart_ptr.h \
+  /home/noah/Projects/SIR-Engine/EASTL/unordered_map.h \
+  /home/noah/Projects/SIR-Engine/EASTL/hash_map.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/hashtable.h \
+  /home/noah/Projects/SIR-Engine/EASTL/tuple.h \
+  /home/noah/Projects/SIR-Engine/EASTL/map.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/red_black_tree.h \
+  /home/noah/Projects/SIR-Engine/EASTL/sort.h \
+  /home/noah/Projects/SIR-Engine/EASTL/heap.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/Logger.h \
+  /home/noah/Projects/SIR-Engine/EASTL/queue.h \
+  /home/noah/Projects/SIR-Engine/EASTL/deque.h \
+  /home/noah/Projects/SIR-Engine/Engine/Util/CString.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/ResourceDef.h \
+  /home/noah/Projects/SIR-Engine/EASTL/allocator_malloc.h \
+  /usr/include/malloc.h \
+  /home/noah/Projects/SIR-Engine/EASTL/fixed_string.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/fixed_pool.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
+  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
+  /home/noah/Projects/SIR-Engine/Engine/Util/CVector.h \
+  /home/noah/Projects/SIR-Engine/Engine/Util/UtlMemory.h \
+  /home/noah/Projects/SIR-Engine/Engine/Util/CStaticArray.h \
+  /home/noah/Projects/SIR-Engine/Engine/Util/CConstList.h \
+  /home/noah/Projects/SIR-Engine/Engine/Memory/Backend/TagArenaAllocator.h \
+  /home/noah/Projects/SIR-Engine/Engine/Memory/Memory.h \
+  /home/noah/Projects/SIR-Engine/Engine/Memory/MemAlloc.h \
+  /home/noah/Projects/SIR-Engine/Engine/Memory/Memory.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/ConsoleManager.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/SIREngine.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Serialization/Ini/IniSerializer.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/FileSystem/FilePath.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Serialization/SerializerBase.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/ThreadSystem/Thread.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Application/GenericPlatform/GenericApplication.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Events/EventBase.h \
+  /usr/local/include/SDL2/SDL_events.h \
+  /usr/local/include/SDL2/SDL_stdinc.h \
+  /usr/local/include/SDL2/SDL_config.h \
+  /usr/local/include/SDL2/SDL_platform.h \
+  /usr/local/include/SDL2/begin_code.h \
+  /usr/local/include/SDL2/close_code.h \
+  /usr/local/include/SDL2/SDL_error.h \
+  /usr/local/include/SDL2/SDL_video.h \
+  /usr/local/include/SDL2/SDL_pixels.h \
+  /usr/local/include/SDL2/SDL_endian.h \
+  /usr/local/include/SDL2/SDL_rect.h \
+  /usr/local/include/SDL2/SDL_rwops.h \
+  /usr/local/include/SDL2/SDL_surface.h \
+  /usr/local/include/SDL2/SDL_blendmode.h \
+  /usr/local/include/SDL2/SDL_keyboard.h \
+  /usr/local/include/SDL2/SDL_keycode.h \
+  /usr/local/include/SDL2/SDL_scancode.h \
+  /usr/local/include/SDL2/SDL_mouse.h \
+  /usr/local/include/SDL2/SDL_joystick.h \
+  /usr/local/include/SDL2/SDL_guid.h \
+  /usr/local/include/SDL2/SDL_mutex.h \
+  /usr/local/include/SDL2/SDL_gamecontroller.h \
+  /usr/local/include/SDL2/SDL_sensor.h \
+  /usr/local/include/SDL2/SDL_quit.h \
+  /usr/local/include/SDL2/SDL_gesture.h \
+  /usr/local/include/SDL2/SDL_touch.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Application/Posix/PosixApplication.h \
+  /usr/include/pthread.h \
+  /usr/include/sched.h \
+  /usr/include/x86_64-linux-gnu/bits/sched.h \
+  /usr/include/x86_64-linux-gnu/bits/types/struct_sched_param.h \
+  /usr/include/x86_64-linux-gnu/bits/cpu-set.h \
+  /usr/include/time.h \
+  /usr/include/x86_64-linux-gnu/bits/time.h \
+  /usr/include/x86_64-linux-gnu/bits/timex.h \
+  /usr/include/x86_64-linux-gnu/bits/types/struct_tm.h \
+  /usr/include/x86_64-linux-gnu/bits/types/struct_itimerspec.h \
+  /usr/include/x86_64-linux-gnu/bits/setjmp.h \
+  /usr/include/x86_64-linux-gnu/bits/types/struct___jmp_buf_tag.h \
+  /usr/include/x86_64-linux-gnu/sys/prctl.h \
+  /usr/include/linux/prctl.h \
+  /usr/include/linux/types.h \
+  /usr/include/x86_64-linux-gnu/asm/types.h \
+  /usr/include/asm-generic/types.h \
+  /usr/include/asm-generic/int-ll64.h \
+  /usr/include/x86_64-linux-gnu/asm/bitsperlong.h \
+  /usr/include/asm-generic/bitsperlong.h \
+  /usr/include/linux/posix_types.h \
+  /usr/include/linux/stddef.h \
+  /usr/include/x86_64-linux-gnu/asm/posix_types.h \
+  /usr/include/x86_64-linux-gnu/asm/posix_types_64.h \
+  /usr/include/asm-generic/posix_types.h \
+  /usr/include/signal.h \
+  /usr/include/x86_64-linux-gnu/bits/signum-generic.h \
+  /usr/include/x86_64-linux-gnu/bits/signum-arch.h \
+  /usr/include/x86_64-linux-gnu/bits/types/sig_atomic_t.h \
+  /usr/include/x86_64-linux-gnu/bits/types/siginfo_t.h \
+  /usr/include/x86_64-linux-gnu/bits/types/__sigval_t.h \
+  /usr/include/x86_64-linux-gnu/bits/siginfo-arch.h \
+  /usr/include/x86_64-linux-gnu/bits/siginfo-consts.h \
+  /usr/include/x86_64-linux-gnu/bits/siginfo-consts-arch.h \
+  /usr/include/x86_64-linux-gnu/bits/types/sigval_t.h \
+  /usr/include/x86_64-linux-gnu/bits/types/sigevent_t.h \
+  /usr/include/x86_64-linux-gnu/bits/sigevent-consts.h \
+  /usr/include/x86_64-linux-gnu/bits/sigaction.h \
+  /usr/include/x86_64-linux-gnu/bits/sigcontext.h \
+  /usr/include/x86_64-linux-gnu/bits/types/stack_t.h \
+  /usr/include/x86_64-linux-gnu/sys/ucontext.h \
+  /usr/include/x86_64-linux-gnu/bits/sigstack.h \
+  /usr/include/x86_64-linux-gnu/bits/sigstksz.h \
+  /usr/include/x86_64-linux-gnu/bits/ss_flags.h \
+  /usr/include/x86_64-linux-gnu/bits/types/struct_sigstack.h \
+  /usr/include/x86_64-linux-gnu/bits/sigthread.h \
+  /usr/include/x86_64-linux-gnu/bits/signal_ext.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Application/Posix/PosixTypes.h \
+  /usr/include/errno.h \
+  /usr/include/x86_64-linux-gnu/bits/errno.h \
+  /usr/include/linux/errno.h \
+  /usr/include/x86_64-linux-gnu/asm/errno.h \
+  /usr/include/asm-generic/errno.h \
+  /usr/include/asm-generic/errno-base.h \
+  /usr/include/x86_64-linux-gnu/bits/types/error_t.h \
+  /home/noah/Projects/SIR-Engine/EASTL/atomic.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/gcc/compiler_gcc.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/gcc/compiler_gcc_fetch_add.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/gcc/compiler_gcc_fetch_sub.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/gcc/compiler_gcc_fetch_and.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/gcc/compiler_gcc_fetch_xor.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/gcc/compiler_gcc_fetch_or.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/gcc/compiler_gcc_add_fetch.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/gcc/compiler_gcc_sub_fetch.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/gcc/compiler_gcc_and_fetch.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/gcc/compiler_gcc_xor_fetch.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/gcc/compiler_gcc_or_fetch.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/gcc/compiler_gcc_exchange.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/gcc/compiler_gcc_cmpxchg_weak.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/gcc/compiler_gcc_cmpxchg_strong.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/gcc/compiler_gcc_load.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/gcc/compiler_gcc_store.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/gcc/compiler_gcc_barrier.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/gcc/compiler_gcc_cpu_pause.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/gcc/compiler_gcc_signal_fence.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/gcc/compiler_gcc_thread_fence.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler_fetch_add.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler_fetch_sub.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler_fetch_and.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler_fetch_xor.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler_fetch_or.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler_add_fetch.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler_sub_fetch.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler_and_fetch.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler_xor_fetch.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler_or_fetch.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler_exchange.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler_cmpxchg_weak.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler_cmpxchg_strong.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler_load.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler_store.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler_barrier.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler_cpu_pause.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler_memory_barrier.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler_signal_fence.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler_thread_fence.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/arch.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/x86/arch_x86.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/x86/arch_x86_fetch_add.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/x86/arch_x86_fetch_sub.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/x86/arch_x86_fetch_and.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/x86/arch_x86_fetch_xor.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/x86/arch_x86_fetch_or.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/x86/arch_x86_add_fetch.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/x86/arch_x86_sub_fetch.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/x86/arch_x86_and_fetch.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/x86/arch_x86_xor_fetch.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/x86/arch_x86_or_fetch.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/x86/arch_x86_exchange.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/x86/arch_x86_cmpxchg_weak.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/x86/arch_x86_cmpxchg_strong.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/x86/arch_x86_memory_barrier.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/x86/arch_x86_thread_fence.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/x86/arch_x86_load.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/x86/arch_x86_store.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/arch_fetch_add.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/arch_fetch_sub.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/arch_fetch_and.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/arch_fetch_xor.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/arch_fetch_or.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/arch_add_fetch.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/arch_sub_fetch.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/arch_and_fetch.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/arch_xor_fetch.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/arch_or_fetch.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/arch_exchange.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/arch_cmpxchg_weak.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/arch_cmpxchg_strong.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/arch_load.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/arch_store.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/arch_compiler_barrier.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/arch_cpu_pause.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/arch_memory_barrier.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/arch_signal_fence.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/arch_thread_fence.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_base.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_fetch_add.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_fetch_sub.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_fetch_and.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_fetch_xor.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_fetch_or.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_add_fetch.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_sub_fetch.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_and_fetch.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_xor_fetch.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_or_fetch.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_exchange.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_cmpxchg_weak.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_cmpxchg_strong.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_load.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_store.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_compiler_barrier.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_cpu_pause.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_memory_barrier.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_signal_fence.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_thread_fence.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_casts.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_memory_order.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_asserts.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_size_aligned.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_push_compiler_options.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_pop_compiler_options.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_base_width.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_integral.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_pointer.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_standalone.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_flag.h \
+  /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_flag_standalone.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/ThreadSystem/Thread.inl \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Util.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Compiler.h \
+  /home/noah/Projects/SIR-Engine/angelscript/angelscript.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/ResourceManager.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/MathLib/Types.h \
+  /usr/include/glm/glm.hpp \
+  /usr/include/glm/detail/_fixes.hpp \
+  /usr/include/glm/detail/setup.hpp \
+  /usr/include/c++/11/cassert \
+  /usr/include/glm/simd/platform.h \
+  /usr/include/c++/11/cstdint \
+  /usr/include/c++/11/climits \
+  /usr/include/c++/11/cfloat \
+  /usr/include/glm/fwd.hpp \
+  /usr/include/glm/detail/qualifier.hpp \
+  /usr/include/glm/detail/setup.hpp \
+  /usr/include/glm/vec2.hpp \
+  /usr/include/glm/ext/vector_bool2.hpp \
+  /usr/include/glm/detail/type_vec2.hpp \
+  /usr/include/glm/detail/type_vec2.inl \
+  /usr/include/glm/detail/compute_vector_relational.hpp \
+  /usr/include/glm/ext/vector_bool2_precision.hpp \
+  /usr/include/glm/ext/vector_float2.hpp \
+  /usr/include/glm/ext/vector_float2_precision.hpp \
+  /usr/include/glm/ext/vector_double2.hpp \
+  /usr/include/glm/ext/vector_double2_precision.hpp \
+  /usr/include/glm/ext/vector_int2.hpp \
+  /usr/include/glm/ext/vector_int2_sized.hpp \
+  /usr/include/glm/ext/scalar_int_sized.hpp \
+  /usr/include/glm/detail/setup.hpp \
+  /usr/include/glm/ext/vector_uint2.hpp \
+  /usr/include/glm/ext/vector_uint2_sized.hpp \
+  /usr/include/glm/ext/scalar_uint_sized.hpp \
+  /usr/include/glm/vec3.hpp \
+  /usr/include/glm/ext/vector_bool3.hpp \
+  /usr/include/glm/detail/type_vec3.hpp \
+  /usr/include/glm/detail/type_vec3.inl \
+  /usr/include/glm/ext/vector_bool3_precision.hpp \
+  /usr/include/glm/ext/vector_float3.hpp \
+  /usr/include/glm/ext/vector_float3_precision.hpp \
+  /usr/include/glm/ext/vector_double3.hpp \
+  /usr/include/glm/ext/vector_double3_precision.hpp \
+  /usr/include/glm/ext/vector_int3.hpp \
+  /usr/include/glm/ext/vector_int3_sized.hpp \
+  /usr/include/glm/ext/vector_uint3.hpp \
+  /usr/include/glm/ext/vector_uint3_sized.hpp \
+  /usr/include/glm/vec4.hpp \
+  /usr/include/glm/ext/vector_bool4.hpp \
+  /usr/include/glm/detail/type_vec4.hpp \
+  /usr/include/glm/detail/type_vec4.inl \
+  /usr/include/glm/ext/vector_bool4_precision.hpp \
+  /usr/include/glm/ext/vector_float4.hpp \
+  /usr/include/glm/ext/vector_float4_precision.hpp \
+  /usr/include/glm/ext/vector_double4.hpp \
+  /usr/include/glm/ext/vector_double4_precision.hpp \
+  /usr/include/glm/ext/vector_int4.hpp \
+  /usr/include/glm/ext/vector_int4_sized.hpp \
+  /usr/include/glm/ext/vector_uint4.hpp \
+  /usr/include/glm/ext/vector_uint4_sized.hpp \
+  /usr/include/glm/mat2x2.hpp \
+  /usr/include/glm/ext/matrix_double2x2.hpp \
+  /usr/include/glm/detail/type_mat2x2.hpp \
+  /usr/include/glm/detail/type_mat2x2.inl \
+  /usr/include/glm/matrix.hpp \
+  /usr/include/glm/mat2x3.hpp \
+  /usr/include/glm/ext/matrix_double2x3.hpp \
+  /usr/include/glm/detail/type_mat2x3.hpp \
+  /usr/include/glm/detail/type_mat2x3.inl \
+  /usr/include/glm/ext/matrix_double2x3_precision.hpp \
+  /usr/include/glm/ext/matrix_float2x3.hpp \
+  /usr/include/glm/ext/matrix_float2x3_precision.hpp \
+  /usr/include/glm/mat2x4.hpp \
+  /usr/include/glm/ext/matrix_double2x4.hpp \
+  /usr/include/glm/detail/type_mat2x4.hpp \
+  /usr/include/glm/detail/type_mat2x4.inl \
+  /usr/include/glm/ext/matrix_double2x4_precision.hpp \
+  /usr/include/glm/ext/matrix_float2x4.hpp \
+  /usr/include/glm/ext/matrix_float2x4_precision.hpp \
+  /usr/include/glm/mat3x2.hpp \
+  /usr/include/glm/ext/matrix_double3x2.hpp \
+  /usr/include/glm/detail/type_mat3x2.hpp \
+  /usr/include/glm/detail/type_mat3x2.inl \
+  /usr/include/glm/ext/matrix_double3x2_precision.hpp \
+  /usr/include/glm/ext/matrix_float3x2.hpp \
+  /usr/include/glm/ext/matrix_float3x2_precision.hpp \
+  /usr/include/glm/mat3x3.hpp \
+  /usr/include/glm/ext/matrix_double3x3.hpp \
+  /usr/include/glm/detail/type_mat3x3.hpp \
+  /usr/include/glm/detail/type_mat3x3.inl \
+  /usr/include/glm/ext/matrix_double3x3_precision.hpp \
+  /usr/include/glm/ext/matrix_float3x3.hpp \
+  /usr/include/glm/ext/matrix_float3x3_precision.hpp \
+  /usr/include/glm/mat3x4.hpp \
+  /usr/include/glm/ext/matrix_double3x4.hpp \
+  /usr/include/glm/detail/type_mat3x4.hpp \
+  /usr/include/glm/detail/type_mat3x4.inl \
+  /usr/include/glm/ext/matrix_double3x4_precision.hpp \
+  /usr/include/glm/ext/matrix_float3x4.hpp \
+  /usr/include/glm/ext/matrix_float3x4_precision.hpp \
+  /usr/include/glm/mat4x2.hpp \
+  /usr/include/glm/ext/matrix_double4x2.hpp \
+  /usr/include/glm/detail/type_mat4x2.hpp \
+  /usr/include/glm/detail/type_mat4x2.inl \
+  /usr/include/glm/ext/matrix_double4x2_precision.hpp \
+  /usr/include/glm/ext/matrix_float4x2.hpp \
+  /usr/include/glm/ext/matrix_float4x2_precision.hpp \
+  /usr/include/glm/mat4x3.hpp \
+  /usr/include/glm/ext/matrix_double4x3.hpp \
+  /usr/include/glm/detail/type_mat4x3.hpp \
+  /usr/include/glm/detail/type_mat4x3.inl \
+  /usr/include/glm/ext/matrix_double4x3_precision.hpp \
+  /usr/include/glm/ext/matrix_float4x3.hpp \
+  /usr/include/glm/ext/matrix_float4x3_precision.hpp \
+  /usr/include/glm/mat4x4.hpp \
+  /usr/include/glm/ext/matrix_double4x4.hpp \
+  /usr/include/glm/detail/type_mat4x4.hpp \
+  /usr/include/glm/detail/type_mat4x4.inl \
+  /usr/include/glm/ext/matrix_double4x4_precision.hpp \
+  /usr/include/glm/ext/matrix_float4x4.hpp \
+  /usr/include/glm/ext/matrix_float4x4_precision.hpp \
+  /usr/include/glm/detail/func_matrix.inl \
+  /usr/include/glm/geometric.hpp \
+  /usr/include/glm/detail/func_geometric.inl \
+  /usr/include/glm/exponential.hpp \
+  /usr/include/glm/detail/type_vec1.hpp \
+  /usr/include/glm/detail/type_vec1.inl \
+  /usr/include/glm/detail/func_exponential.inl \
+  /usr/include/glm/vector_relational.hpp \
+  /usr/include/glm/detail/func_vector_relational.inl \
+  /usr/include/glm/detail/_vectorize.hpp \
+  /usr/include/glm/common.hpp \
+  /usr/include/glm/detail/func_common.inl \
+  /usr/include/glm/detail/compute_common.hpp \
+  /usr/include/glm/ext/matrix_double2x2_precision.hpp \
+  /usr/include/glm/ext/matrix_float2x2.hpp \
+  /usr/include/glm/ext/matrix_float2x2_precision.hpp \
+  /usr/include/glm/trigonometric.hpp \
+  /usr/include/glm/detail/func_trigonometric.inl \
+  /usr/include/glm/packing.hpp \
+  /usr/include/glm/detail/func_packing.inl \
+  /usr/include/glm/detail/type_half.hpp \
+  /usr/include/glm/detail/type_half.inl \
+  /usr/include/glm/integer.hpp \
+  /usr/include/glm/detail/func_integer.inl \
+  /home/noah/Projects/SIR-Engine/Engine/Core/FileSystem/FileSystem.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/FileSystem/SearchPath.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/FileSystem/FileReader.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/FileSystem/FileStream.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/FileSystem/FileWriter.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/FileSystem/FileList.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/FileSystem/FileCache.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/EngineApp.h \
+  /home/noah/Projects/SIR-Engine/imgui/imgui.h \
+  /home/noah/Projects/SIR-Engine/imgui/imconfig.h \
+  IconsFontAwesomeEditor.h \
+  Application/IconsFontAwesome5.h \
+  Application/ImGuiNotify.hpp \
+  /usr/include/c++/11/vector \
+  /usr/include/c++/11/bits/stl_uninitialized.h \
+  /usr/include/c++/11/bits/stl_vector.h \
+  /usr/include/c++/11/bits/stl_bvector.h \
+  /usr/include/c++/11/bits/functional_hash.h \
+  /usr/include/c++/11/bits/vector.tcc \
+  /usr/include/c++/11/string \
+  /usr/include/c++/11/bits/stringfwd.h \
+  /usr/include/c++/11/bits/char_traits.h \
+  /usr/include/c++/11/bits/postypes.h \
+  /usr/include/c++/11/cwchar \
+  /usr/include/c++/11/bits/localefwd.h \
+  /usr/include/x86_64-linux-gnu/c++/11/bits/c++locale.h \
+  /usr/include/c++/11/clocale \
+  /usr/include/locale.h \
+  /usr/include/x86_64-linux-gnu/bits/locale.h \
+  /usr/include/c++/11/iosfwd \
+  /usr/include/c++/11/cctype \
+  /usr/include/c++/11/bits/ostream_insert.h \
+  /usr/include/c++/11/bits/cxxabi_forced.h \
+  /usr/include/c++/11/bits/basic_string.h \
+  /usr/include/c++/11/ext/atomicity.h \
+  /usr/include/x86_64-linux-gnu/c++/11/bits/gthr.h \
+  /usr/include/x86_64-linux-gnu/c++/11/bits/gthr-default.h \
+  /usr/include/x86_64-linux-gnu/c++/11/bits/atomic_word.h \
+  /usr/include/x86_64-linux-gnu/sys/single_threaded.h \
+  /usr/include/c++/11/string_view \
+  /usr/include/c++/11/bits/string_view.tcc \
+  /usr/include/c++/11/ext/string_conversions.h \
+  /usr/include/c++/11/cstdio \
+  /usr/include/c++/11/cerrno \
+  /usr/include/c++/11/bits/charconv.h \
+  /usr/include/c++/11/bits/basic_string.tcc \
+  /usr/include/c++/11/chrono \
+  /usr/include/c++/11/ratio \
+  /usr/include/c++/11/ctime \
+  /usr/include/c++/11/bits/parse_numbers.h \
+  /usr/include/c++/11/functional \
+  /usr/include/c++/11/bits/refwrap.h \
+  /usr/include/c++/11/bits/std_function.h \
+  /usr/include/c++/11/unordered_map \
+  /usr/include/c++/11/bits/hashtable.h \
+  /usr/include/c++/11/bits/hashtable_policy.h \
+  /usr/include/c++/11/bits/enable_special_members.h \
+  /usr/include/c++/11/bits/node_handle.h \
+  /usr/include/c++/11/bits/unordered_map.h \
+  /usr/include/c++/11/bits/erase_if.h \
+  /usr/include/c++/11/bits/stl_algo.h \
+  /usr/include/c++/11/bits/algorithmfwd.h \
+  /usr/include/c++/11/bits/stl_heap.h \
+  /usr/include/c++/11/bits/stl_tempbuf.h \
+  /usr/include/c++/11/bits/uniform_int_dist.h \
+  /home/noah/Projects/SIR-Engine/imgui/imgui_internal.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/immintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/x86gprintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/ia32intrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/adxintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/bmiintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/bmi2intrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/cetintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/cldemoteintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/clflushoptintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/clwbintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/clzerointrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/enqcmdintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/fxsrintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/lzcntintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/lwpintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/movdirintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/mwaitintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/mwaitxintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/pconfigintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/popcntintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/pkuintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/rdseedintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/rtmintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/serializeintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/sgxintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/tbmintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/tsxldtrkintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/uintrintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/waitpkgintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/wbnoinvdintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/xsaveintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/xsavecintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/xsaveoptintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/xsavesintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/xtestintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/hresetintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/mmintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/xmmintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/mm_malloc.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/emmintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/pmmintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/tmmintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/smmintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/wmmintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avxintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avxvnniintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx2intrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512fintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512erintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512pfintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512cdintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vlintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512bwintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512dqintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vlbwintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vldqintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512ifmaintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512ifmavlintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vbmiintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vbmivlintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx5124fmapsintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx5124vnniwintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vpopcntdqintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vbmi2intrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vbmi2vlintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vnniintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vnnivlintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vpopcntdqvlintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512bitalgintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vp2intersectintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vp2intersectvlintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/shaintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/fmaintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/f16cintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/gfniintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/vaesintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/vpclmulqdqintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512bf16vlintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512bf16intrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/amxtileintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/amxint8intrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/amxbf16intrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/prfchwintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/keylockerintrin.h \
+  /home/noah/Projects/SIR-Engine/imgui/imstb_textedit.h \
+  /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLTexture.h \
+  /home/noah/Projects/SIR-Engine/Engine/RenderLib/RenderCommon.h \
+  /home/noah/Projects/SIR-Engine/Engine/RenderLib/RenderLib.h \
+  /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLCommon.h \
+  /usr/include/GL/gl.h \
+  /usr/include/GL/glext.h \
+  /usr/include/KHR/khrplatform.h \
+  /usr/include/GL/glcorearb.h \
+  /home/noah/Projects/SIR-Engine/Engine/RenderLib/DrawBuffer.h \
+  /home/noah/Projects/SIR-Engine/EASTL/stack.h \
+  /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/RenderTexture.h \
+  /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLoader.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/FileSystem/MemoryFile.h \
+  /home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/SlabAllocator.h \
+  /home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/AllocatorBase.h \
+  /home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/MemoryBuffer.h \
+  /home/noah/Projects/SIR-Engine/EASTL/bonus/lru_cache.h \
+  /home/noah/Projects/SIR-Engine/EASTL/list.h \
+  /home/noah/Projects/SIR-Engine/EASTL/optional.h \
+  /home/noah/Projects/SIR-Engine/EASTL/unordered_set.h \
+  /home/noah/Projects/SIR-Engine/EASTL/hash_set.h \
+  /home/noah/Projects/SIR-Engine/EASTL/array.h \
+  /usr/include/c++/11/regex \
+  /usr/include/c++/11/algorithm \
+  /usr/include/c++/11/pstl/glue_algorithm_defs.h \
+  /usr/include/c++/11/pstl/execution_defs.h \
+  /usr/include/c++/11/bitset \
   /usr/include/c++/11/iterator \
   /usr/include/c++/11/bits/stream_iterator.h \
   /usr/include/c++/11/bits/streambuf_iterator.h \
@@ -6436,7 +9409,6 @@ CMakeFiles/ValdenApp.dir/Application/TextEditor.cpp.o: Application/TextEditor.cp
   /usr/include/x86_64-linux-gnu/c++/11/bits/ctype_inline.h \
   /usr/include/c++/11/bits/locale_facets.tcc \
   /usr/include/c++/11/bits/locale_facets_nonio.h \
-  /usr/include/c++/11/ctime \
   /usr/include/x86_64-linux-gnu/c++/11/bits/time_members.h \
   /usr/include/x86_64-linux-gnu/c++/11/bits/messages_members.h \
   /usr/include/libintl.h \
@@ -6488,13 +9460,9 @@ CMakeFiles/ValdenApp.dir/Application/TextEditor.cpp.o: Application/TextEditor.cp
   /usr/include/c++/11/bits/regex.tcc \
   /usr/include/c++/11/bits/regex_executor.h \
   /usr/include/c++/11/bits/regex_executor.tcc \
-  Application/TabSelect.h \
+  Application/Util/TabSelect.h \
   /home/noah/Projects/SIR-Engine/EASTL/chrono.h \
-  /home/noah/Projects/SIR-Engine/EASTL/ratio.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/FileSystem/MemoryFile.h \
-  /home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/SlabAllocator.h \
-  /home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/AllocatorBase.h \
-  /home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/MemoryBuffer.h
+  /home/noah/Projects/SIR-Engine/EASTL/ratio.h
 
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/Core/Application/GenericPlatform/GenericApplication.cpp.o: /home/noah/Projects/SIR-Engine/Engine/Core/Application/GenericPlatform/GenericApplication.cpp \
   /usr/include/stdc-predef.h \
@@ -6717,6 +9685,7 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/Core/Application/G
   /home/noah/Projects/SIR-Engine/EASTL/queue.h \
   /home/noah/Projects/SIR-Engine/EASTL/deque.h \
   /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/Logger.h \
   /home/noah/Projects/SIR-Engine/Engine/Core/FileSystem/FilePath.h \
   /home/noah/Projects/SIR-Engine/Engine/Core/Events/EventBase.h \
   /usr/local/include/SDL2/SDL_events.h \
@@ -7887,6 +10856,23 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/Core/Application/G
   Application/Application.h \
   /home/noah/Projects/SIR-Engine/imgui/imgui.h \
   /home/noah/Projects/SIR-Engine/imgui/imconfig.h \
+  IconsFontAwesomeEditor.h \
+  Application/IconsFontAwesome5.h \
+  Application/ImGuiNotify.hpp \
+  /home/noah/Projects/SIR-Engine/imgui/imgui_internal.h \
+  /home/noah/Projects/SIR-Engine/imgui/imstb_textedit.h \
+  /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLTexture.h \
+  /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLCommon.h \
+  /usr/include/GL/gl.h \
+  /usr/include/GL/glext.h \
+  /usr/include/KHR/khrplatform.h \
+  /usr/include/GL/glcorearb.h \
+  /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLoader.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/FileSystem/MemoryFile.h \
+  /home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/SlabAllocator.h \
+  /home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/MemoryBuffer.h \
+  /home/noah/Projects/SIR-Engine/EASTL/bonus/lru_cache.h \
+  /home/noah/Projects/SIR-Engine/EASTL/list.h \
   /usr/include/gtk-3.0/gtk/gtk.h \
   /usr/include/gtk-3.0/gdk/gdk.h \
   /usr/include/gtk-3.0/gdk/gdkconfig.h \
@@ -8770,6 +11756,7 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/Core/Application/P
   /home/noah/Projects/SIR-Engine/EASTL/queue.h \
   /home/noah/Projects/SIR-Engine/EASTL/deque.h \
   /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/Logger.h \
   /home/noah/Projects/SIR-Engine/Engine/Core/FileSystem/FilePath.h \
   /home/noah/Projects/SIR-Engine/Engine/Core/Events/EventBase.h \
   /usr/local/include/SDL2/SDL_events.h \
@@ -9411,6 +12398,7 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/Core/Application/P
   /home/noah/Projects/SIR-Engine/EASTL/queue.h \
   /home/noah/Projects/SIR-Engine/EASTL/deque.h \
   /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/Logger.h \
   /home/noah/Projects/SIR-Engine/Engine/Core/FileSystem/FilePath.h \
   /home/noah/Projects/SIR-Engine/Engine/Core/Events/EventBase.h \
   /usr/local/include/SDL2/SDL_events.h \
@@ -9752,14 +12740,14 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/Core/ConsoleManage
   /home/noah/Projects/SIR-Engine/Engine/Core/Logging/Logger.h \
   /home/noah/Projects/SIR-Engine/EASTL/queue.h \
   /home/noah/Projects/SIR-Engine/EASTL/deque.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
-  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CString.h \
   /home/noah/Projects/SIR-Engine/Engine/Core/ResourceDef.h \
   /home/noah/Projects/SIR-Engine/EASTL/allocator_malloc.h \
   /usr/include/malloc.h \
   /home/noah/Projects/SIR-Engine/EASTL/fixed_string.h \
   /home/noah/Projects/SIR-Engine/EASTL/internal/fixed_pool.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
+  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CVector.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/UtlMemory.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CStaticArray.h \
@@ -10363,14 +13351,14 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/Core/Events/EventM
   /home/noah/Projects/SIR-Engine/Engine/Core/Logging/Logger.h \
   /home/noah/Projects/SIR-Engine/EASTL/queue.h \
   /home/noah/Projects/SIR-Engine/EASTL/deque.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
-  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CString.h \
   /home/noah/Projects/SIR-Engine/Engine/Core/ResourceDef.h \
   /home/noah/Projects/SIR-Engine/EASTL/allocator_malloc.h \
   /usr/include/malloc.h \
   /home/noah/Projects/SIR-Engine/EASTL/fixed_string.h \
   /home/noah/Projects/SIR-Engine/EASTL/internal/fixed_pool.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
+  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CVector.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/UtlMemory.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CStaticArray.h \
@@ -13059,8 +16047,6 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/Core/FileSystem/Fi
   /home/noah/Projects/SIR-Engine/EASTL/internal/pair_fwd_decls.h \
   /usr/include/c++/11/stdlib.h \
   /usr/include/c++/11/cstdlib \
-  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/FileSystem/FileStream.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CString.h \
   /home/noah/Projects/SIR-Engine/Engine/Core/ResourceDef.h \
   /home/noah/Projects/SIR-Engine/EASTL/allocator_malloc.h \
@@ -13089,6 +16075,9 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/Core/FileSystem/Fi
   /home/noah/Projects/SIR-Engine/EASTL/internal/char_traits.h \
   /home/noah/Projects/SIR-Engine/EASTL/string_view.h \
   /home/noah/Projects/SIR-Engine/EASTL/internal/fixed_pool.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/Logger.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/FileSystem/FileStream.h \
   /home/noah/Projects/SIR-Engine/Engine/Core/FileSystem/FilePath.h \
   /home/noah/Projects/SIR-Engine/Engine/Core/SIREngine.h \
   /usr/include/assert.h \
@@ -13724,14 +16713,14 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/Core/Input/InputMa
   /home/noah/Projects/SIR-Engine/Engine/Core/Logging/Logger.h \
   /home/noah/Projects/SIR-Engine/EASTL/queue.h \
   /home/noah/Projects/SIR-Engine/EASTL/deque.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
-  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CString.h \
   /home/noah/Projects/SIR-Engine/Engine/Core/ResourceDef.h \
   /home/noah/Projects/SIR-Engine/EASTL/allocator_malloc.h \
   /usr/include/malloc.h \
   /home/noah/Projects/SIR-Engine/EASTL/fixed_string.h \
   /home/noah/Projects/SIR-Engine/EASTL/internal/fixed_pool.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
+  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CVector.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/UtlMemory.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CStaticArray.h \
@@ -15004,9 +17993,6 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/Core/Logging/Logge
   /home/noah/Projects/SIR-Engine/EASTL/internal/pair_fwd_decls.h \
   /usr/include/c++/11/stdlib.h \
   /usr/include/c++/11/cstdlib \
-  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/ThreadSystem/Thread.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/Application/GenericPlatform/GenericApplication.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CString.h \
   /home/noah/Projects/SIR-Engine/Engine/Core/ResourceDef.h \
   /home/noah/Projects/SIR-Engine/EASTL/allocator_malloc.h \
@@ -15035,6 +18021,9 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/Core/Logging/Logge
   /home/noah/Projects/SIR-Engine/EASTL/internal/char_traits.h \
   /home/noah/Projects/SIR-Engine/EASTL/string_view.h \
   /home/noah/Projects/SIR-Engine/EASTL/internal/fixed_pool.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/ThreadSystem/Thread.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Application/GenericPlatform/GenericApplication.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CVector.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/UtlMemory.h \
   /home/noah/Projects/SIR-Engine/EASTL/vector.h \
@@ -17707,14 +20696,14 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/Core/Serialization
   /home/noah/Projects/SIR-Engine/Engine/Core/Logging/Logger.h \
   /home/noah/Projects/SIR-Engine/EASTL/queue.h \
   /home/noah/Projects/SIR-Engine/EASTL/deque.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
-  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CString.h \
   /home/noah/Projects/SIR-Engine/Engine/Core/ResourceDef.h \
   /home/noah/Projects/SIR-Engine/EASTL/allocator_malloc.h \
   /usr/include/malloc.h \
   /home/noah/Projects/SIR-Engine/EASTL/fixed_string.h \
   /home/noah/Projects/SIR-Engine/EASTL/internal/fixed_pool.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
+  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CVector.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/UtlMemory.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CStaticArray.h \
@@ -20117,14 +23106,14 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/Core/Util.cpp.o: /
   /home/noah/Projects/SIR-Engine/Engine/Core/Logging/Logger.h \
   /home/noah/Projects/SIR-Engine/EASTL/queue.h \
   /home/noah/Projects/SIR-Engine/EASTL/deque.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
-  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CString.h \
   /home/noah/Projects/SIR-Engine/Engine/Core/ResourceDef.h \
   /home/noah/Projects/SIR-Engine/EASTL/allocator_malloc.h \
   /usr/include/malloc.h \
   /home/noah/Projects/SIR-Engine/EASTL/fixed_string.h \
   /home/noah/Projects/SIR-Engine/EASTL/internal/fixed_pool.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
+  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CVector.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/UtlMemory.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CStaticArray.h \
@@ -20727,14 +23716,14 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/
   /home/noah/Projects/SIR-Engine/Engine/Core/Logging/Logger.h \
   /home/noah/Projects/SIR-Engine/EASTL/queue.h \
   /home/noah/Projects/SIR-Engine/EASTL/deque.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
-  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CString.h \
   /home/noah/Projects/SIR-Engine/Engine/Core/ResourceDef.h \
   /home/noah/Projects/SIR-Engine/EASTL/allocator_malloc.h \
   /usr/include/malloc.h \
   /home/noah/Projects/SIR-Engine/EASTL/fixed_string.h \
   /home/noah/Projects/SIR-Engine/EASTL/internal/fixed_pool.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
+  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CVector.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/UtlMemory.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CStaticArray.h \
@@ -21339,14 +24328,14 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/
   /home/noah/Projects/SIR-Engine/Engine/Core/Logging/Logger.h \
   /home/noah/Projects/SIR-Engine/EASTL/queue.h \
   /home/noah/Projects/SIR-Engine/EASTL/deque.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
-  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CString.h \
   /home/noah/Projects/SIR-Engine/Engine/Core/ResourceDef.h \
   /home/noah/Projects/SIR-Engine/EASTL/allocator_malloc.h \
   /usr/include/malloc.h \
   /home/noah/Projects/SIR-Engine/EASTL/fixed_string.h \
   /home/noah/Projects/SIR-Engine/EASTL/internal/fixed_pool.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
+  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CVector.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/UtlMemory.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CStaticArray.h \
@@ -21949,14 +24938,14 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/Memory/Backend/Tag
   /home/noah/Projects/SIR-Engine/Engine/Core/Logging/Logger.h \
   /home/noah/Projects/SIR-Engine/EASTL/queue.h \
   /home/noah/Projects/SIR-Engine/EASTL/deque.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
-  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CString.h \
   /home/noah/Projects/SIR-Engine/Engine/Core/ResourceDef.h \
   /home/noah/Projects/SIR-Engine/EASTL/allocator_malloc.h \
   /usr/include/malloc.h \
   /home/noah/Projects/SIR-Engine/EASTL/fixed_string.h \
   /home/noah/Projects/SIR-Engine/EASTL/internal/fixed_pool.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
+  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CVector.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/UtlMemory.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CStaticArray.h \
@@ -22558,14 +25547,14 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/Memory/Memory.cpp.
   /home/noah/Projects/SIR-Engine/Engine/Core/Logging/Logger.h \
   /home/noah/Projects/SIR-Engine/EASTL/queue.h \
   /home/noah/Projects/SIR-Engine/EASTL/deque.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
-  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CString.h \
   /home/noah/Projects/SIR-Engine/Engine/Core/ResourceDef.h \
   /home/noah/Projects/SIR-Engine/EASTL/allocator_malloc.h \
   /usr/include/malloc.h \
   /home/noah/Projects/SIR-Engine/EASTL/fixed_string.h \
   /home/noah/Projects/SIR-Engine/EASTL/internal/fixed_pool.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
+  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CVector.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/UtlMemory.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CStaticArray.h \
@@ -23171,14 +26160,14 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/
   /home/noah/Projects/SIR-Engine/Engine/Core/Logging/Logger.h \
   /home/noah/Projects/SIR-Engine/EASTL/queue.h \
   /home/noah/Projects/SIR-Engine/EASTL/deque.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
-  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CString.h \
   /home/noah/Projects/SIR-Engine/Engine/Core/ResourceDef.h \
   /home/noah/Projects/SIR-Engine/EASTL/allocator_malloc.h \
   /usr/include/malloc.h \
   /home/noah/Projects/SIR-Engine/EASTL/fixed_string.h \
   /home/noah/Projects/SIR-Engine/EASTL/internal/fixed_pool.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
+  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CVector.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/UtlMemory.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CStaticArray.h \
@@ -23550,7 +26539,12 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/
   /home/noah/Projects/SIR-Engine/Engine/Core/FileSystem/FileWriter.h \
   /home/noah/Projects/SIR-Engine/Engine/Core/FileSystem/FileList.h \
   /home/noah/Projects/SIR-Engine/Engine/Core/FileSystem/FileCache.h \
-  /home/noah/Projects/SIR-Engine/pngloader/lodepng.h
+  /home/noah/Projects/SIR-Engine/pngloader/lodepng.h \
+  /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/stb_image.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/emmintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/xmmintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/mmintrin.h \
+  /usr/lib/gcc/x86_64-linux-gnu/11/include/mm_malloc.h
 
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLoader.cpp.o: /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLoader.cpp \
   /usr/include/stdc-predef.h \
@@ -23796,14 +26790,14 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/
   /home/noah/Projects/SIR-Engine/Engine/Core/Logging/Logger.h \
   /home/noah/Projects/SIR-Engine/EASTL/queue.h \
   /home/noah/Projects/SIR-Engine/EASTL/deque.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
-  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CString.h \
   /home/noah/Projects/SIR-Engine/Engine/Core/ResourceDef.h \
   /home/noah/Projects/SIR-Engine/EASTL/allocator_malloc.h \
   /usr/include/malloc.h \
   /home/noah/Projects/SIR-Engine/EASTL/fixed_string.h \
   /home/noah/Projects/SIR-Engine/EASTL/internal/fixed_pool.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
+  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CVector.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/UtlMemory.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CStaticArray.h \
@@ -24419,14 +27413,14 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/
   /home/noah/Projects/SIR-Engine/Engine/Core/Logging/Logger.h \
   /home/noah/Projects/SIR-Engine/EASTL/queue.h \
   /home/noah/Projects/SIR-Engine/EASTL/deque.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
-  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CString.h \
   /home/noah/Projects/SIR-Engine/Engine/Core/ResourceDef.h \
   /home/noah/Projects/SIR-Engine/EASTL/allocator_malloc.h \
   /usr/include/malloc.h \
   /home/noah/Projects/SIR-Engine/EASTL/fixed_string.h \
   /home/noah/Projects/SIR-Engine/EASTL/internal/fixed_pool.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
+  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CVector.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/UtlMemory.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CStaticArray.h \
@@ -25171,14 +28165,14 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/
   /home/noah/Projects/SIR-Engine/Engine/Core/Logging/Logger.h \
   /home/noah/Projects/SIR-Engine/EASTL/queue.h \
   /home/noah/Projects/SIR-Engine/EASTL/deque.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
-  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CString.h \
   /home/noah/Projects/SIR-Engine/Engine/Core/ResourceDef.h \
   /home/noah/Projects/SIR-Engine/EASTL/allocator_malloc.h \
   /usr/include/malloc.h \
   /home/noah/Projects/SIR-Engine/EASTL/fixed_string.h \
   /home/noah/Projects/SIR-Engine/EASTL/internal/fixed_pool.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
+  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CVector.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/UtlMemory.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CStaticArray.h \
@@ -25928,14 +28922,14 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/
   /home/noah/Projects/SIR-Engine/Engine/Core/Logging/Logger.h \
   /home/noah/Projects/SIR-Engine/EASTL/queue.h \
   /home/noah/Projects/SIR-Engine/EASTL/deque.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
-  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CString.h \
   /home/noah/Projects/SIR-Engine/Engine/Core/ResourceDef.h \
   /home/noah/Projects/SIR-Engine/EASTL/allocator_malloc.h \
   /usr/include/malloc.h \
   /home/noah/Projects/SIR-Engine/EASTL/fixed_string.h \
   /home/noah/Projects/SIR-Engine/EASTL/internal/fixed_pool.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
+  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CVector.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/UtlMemory.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CStaticArray.h \
@@ -26549,14 +29543,14 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/
   /home/noah/Projects/SIR-Engine/Engine/Core/Logging/Logger.h \
   /home/noah/Projects/SIR-Engine/EASTL/queue.h \
   /home/noah/Projects/SIR-Engine/EASTL/deque.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
-  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CString.h \
   /home/noah/Projects/SIR-Engine/Engine/Core/ResourceDef.h \
   /home/noah/Projects/SIR-Engine/EASTL/allocator_malloc.h \
   /usr/include/malloc.h \
   /home/noah/Projects/SIR-Engine/EASTL/fixed_string.h \
   /home/noah/Projects/SIR-Engine/EASTL/internal/fixed_pool.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
+  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CVector.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/UtlMemory.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CStaticArray.h \
@@ -27299,14 +30293,14 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/
   /home/noah/Projects/SIR-Engine/Engine/Core/Logging/Logger.h \
   /home/noah/Projects/SIR-Engine/EASTL/queue.h \
   /home/noah/Projects/SIR-Engine/EASTL/deque.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
-  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CString.h \
   /home/noah/Projects/SIR-Engine/Engine/Core/ResourceDef.h \
   /home/noah/Projects/SIR-Engine/EASTL/allocator_malloc.h \
   /usr/include/malloc.h \
   /home/noah/Projects/SIR-Engine/EASTL/fixed_string.h \
   /home/noah/Projects/SIR-Engine/EASTL/internal/fixed_pool.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
+  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CVector.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/UtlMemory.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CStaticArray.h \
@@ -27920,14 +30914,14 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/
   /home/noah/Projects/SIR-Engine/Engine/Core/Logging/Logger.h \
   /home/noah/Projects/SIR-Engine/EASTL/queue.h \
   /home/noah/Projects/SIR-Engine/EASTL/deque.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
-  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CString.h \
   /home/noah/Projects/SIR-Engine/Engine/Core/ResourceDef.h \
   /home/noah/Projects/SIR-Engine/EASTL/allocator_malloc.h \
   /usr/include/malloc.h \
   /home/noah/Projects/SIR-Engine/EASTL/fixed_string.h \
   /home/noah/Projects/SIR-Engine/EASTL/internal/fixed_pool.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
+  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CVector.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/UtlMemory.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CStaticArray.h \
@@ -28540,14 +31534,14 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/
   /home/noah/Projects/SIR-Engine/Engine/Core/Logging/Logger.h \
   /home/noah/Projects/SIR-Engine/EASTL/queue.h \
   /home/noah/Projects/SIR-Engine/EASTL/deque.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
-  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CString.h \
   /home/noah/Projects/SIR-Engine/Engine/Core/ResourceDef.h \
   /home/noah/Projects/SIR-Engine/EASTL/allocator_malloc.h \
   /usr/include/malloc.h \
   /home/noah/Projects/SIR-Engine/EASTL/fixed_string.h \
   /home/noah/Projects/SIR-Engine/EASTL/internal/fixed_pool.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
+  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CVector.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/UtlMemory.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CStaticArray.h \
@@ -29166,14 +32160,14 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/
   /home/noah/Projects/SIR-Engine/Engine/Core/Logging/Logger.h \
   /home/noah/Projects/SIR-Engine/EASTL/queue.h \
   /home/noah/Projects/SIR-Engine/EASTL/deque.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
-  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CString.h \
   /home/noah/Projects/SIR-Engine/Engine/Core/ResourceDef.h \
   /home/noah/Projects/SIR-Engine/EASTL/allocator_malloc.h \
   /usr/include/malloc.h \
   /home/noah/Projects/SIR-Engine/EASTL/fixed_string.h \
   /home/noah/Projects/SIR-Engine/EASTL/internal/fixed_pool.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
+  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CVector.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/UtlMemory.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CStaticArray.h \
@@ -29792,14 +32786,14 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/
   /home/noah/Projects/SIR-Engine/Engine/Core/Logging/Logger.h \
   /home/noah/Projects/SIR-Engine/EASTL/queue.h \
   /home/noah/Projects/SIR-Engine/EASTL/deque.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
-  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CString.h \
   /home/noah/Projects/SIR-Engine/Engine/Core/ResourceDef.h \
   /home/noah/Projects/SIR-Engine/EASTL/allocator_malloc.h \
   /usr/include/malloc.h \
   /home/noah/Projects/SIR-Engine/EASTL/fixed_string.h \
   /home/noah/Projects/SIR-Engine/EASTL/internal/fixed_pool.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
+  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CVector.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/UtlMemory.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CStaticArray.h \
@@ -30542,14 +33536,14 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/
   /home/noah/Projects/SIR-Engine/Engine/Core/Logging/Logger.h \
   /home/noah/Projects/SIR-Engine/EASTL/queue.h \
   /home/noah/Projects/SIR-Engine/EASTL/deque.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
-  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CString.h \
   /home/noah/Projects/SIR-Engine/Engine/Core/ResourceDef.h \
   /home/noah/Projects/SIR-Engine/EASTL/allocator_malloc.h \
   /usr/include/malloc.h \
   /home/noah/Projects/SIR-Engine/EASTL/fixed_string.h \
   /home/noah/Projects/SIR-Engine/EASTL/internal/fixed_pool.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
+  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CVector.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/UtlMemory.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CStaticArray.h \
@@ -31163,14 +34157,14 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/
   /home/noah/Projects/SIR-Engine/Engine/Core/Logging/Logger.h \
   /home/noah/Projects/SIR-Engine/EASTL/queue.h \
   /home/noah/Projects/SIR-Engine/EASTL/deque.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
-  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CString.h \
   /home/noah/Projects/SIR-Engine/Engine/Core/ResourceDef.h \
   /home/noah/Projects/SIR-Engine/EASTL/allocator_malloc.h \
   /usr/include/malloc.h \
   /home/noah/Projects/SIR-Engine/EASTL/fixed_string.h \
   /home/noah/Projects/SIR-Engine/EASTL/internal/fixed_pool.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
+  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CVector.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/UtlMemory.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CStaticArray.h \
@@ -32047,14 +35041,14 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/
   /home/noah/Projects/SIR-Engine/Engine/Core/Logging/Logger.h \
   /home/noah/Projects/SIR-Engine/EASTL/queue.h \
   /home/noah/Projects/SIR-Engine/EASTL/deque.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
-  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CString.h \
   /home/noah/Projects/SIR-Engine/Engine/Core/ResourceDef.h \
   /home/noah/Projects/SIR-Engine/EASTL/allocator_malloc.h \
   /usr/include/malloc.h \
   /home/noah/Projects/SIR-Engine/EASTL/fixed_string.h \
   /home/noah/Projects/SIR-Engine/EASTL/internal/fixed_pool.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
+  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CVector.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/UtlMemory.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CStaticArray.h \
@@ -32661,14 +35655,14 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/
   /home/noah/Projects/SIR-Engine/Engine/Core/Logging/Logger.h \
   /home/noah/Projects/SIR-Engine/EASTL/queue.h \
   /home/noah/Projects/SIR-Engine/EASTL/deque.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
-  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CString.h \
   /home/noah/Projects/SIR-Engine/Engine/Core/ResourceDef.h \
   /home/noah/Projects/SIR-Engine/EASTL/allocator_malloc.h \
   /usr/include/malloc.h \
   /home/noah/Projects/SIR-Engine/EASTL/fixed_string.h \
   /home/noah/Projects/SIR-Engine/EASTL/internal/fixed_pool.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
+  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CVector.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/UtlMemory.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CStaticArray.h \
@@ -33521,14 +36515,14 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/
   /home/noah/Projects/SIR-Engine/Engine/Core/Logging/Logger.h \
   /home/noah/Projects/SIR-Engine/EASTL/queue.h \
   /home/noah/Projects/SIR-Engine/EASTL/deque.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
-  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CString.h \
   /home/noah/Projects/SIR-Engine/Engine/Core/ResourceDef.h \
   /home/noah/Projects/SIR-Engine/EASTL/allocator_malloc.h \
   /usr/include/malloc.h \
   /home/noah/Projects/SIR-Engine/EASTL/fixed_string.h \
   /home/noah/Projects/SIR-Engine/EASTL/internal/fixed_pool.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
+  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CVector.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/UtlMemory.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CStaticArray.h \
@@ -34394,14 +37388,14 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/
   /home/noah/Projects/SIR-Engine/Engine/Core/Logging/Logger.h \
   /home/noah/Projects/SIR-Engine/EASTL/queue.h \
   /home/noah/Projects/SIR-Engine/EASTL/deque.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
-  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CString.h \
   /home/noah/Projects/SIR-Engine/Engine/Core/ResourceDef.h \
   /home/noah/Projects/SIR-Engine/EASTL/allocator_malloc.h \
   /usr/include/malloc.h \
   /home/noah/Projects/SIR-Engine/EASTL/fixed_string.h \
   /home/noah/Projects/SIR-Engine/EASTL/internal/fixed_pool.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
+  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CVector.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/UtlMemory.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CStaticArray.h \
@@ -35255,14 +38249,14 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/
   /home/noah/Projects/SIR-Engine/Engine/Core/Logging/Logger.h \
   /home/noah/Projects/SIR-Engine/EASTL/queue.h \
   /home/noah/Projects/SIR-Engine/EASTL/deque.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
-  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CString.h \
   /home/noah/Projects/SIR-Engine/Engine/Core/ResourceDef.h \
   /home/noah/Projects/SIR-Engine/EASTL/allocator_malloc.h \
   /usr/include/malloc.h \
   /home/noah/Projects/SIR-Engine/EASTL/fixed_string.h \
   /home/noah/Projects/SIR-Engine/EASTL/internal/fixed_pool.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
+  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CVector.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/UtlMemory.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CStaticArray.h \
@@ -36115,14 +39109,14 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/
   /home/noah/Projects/SIR-Engine/Engine/Core/Logging/Logger.h \
   /home/noah/Projects/SIR-Engine/EASTL/queue.h \
   /home/noah/Projects/SIR-Engine/EASTL/deque.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
-  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CString.h \
   /home/noah/Projects/SIR-Engine/Engine/Core/ResourceDef.h \
   /home/noah/Projects/SIR-Engine/EASTL/allocator_malloc.h \
   /usr/include/malloc.h \
   /home/noah/Projects/SIR-Engine/EASTL/fixed_string.h \
   /home/noah/Projects/SIR-Engine/EASTL/internal/fixed_pool.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
+  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CVector.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/UtlMemory.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CStaticArray.h \
@@ -36975,14 +39969,14 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/
   /home/noah/Projects/SIR-Engine/Engine/Core/Logging/Logger.h \
   /home/noah/Projects/SIR-Engine/EASTL/queue.h \
   /home/noah/Projects/SIR-Engine/EASTL/deque.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
-  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CString.h \
   /home/noah/Projects/SIR-Engine/Engine/Core/ResourceDef.h \
   /home/noah/Projects/SIR-Engine/EASTL/allocator_malloc.h \
   /usr/include/malloc.h \
   /home/noah/Projects/SIR-Engine/EASTL/fixed_string.h \
   /home/noah/Projects/SIR-Engine/EASTL/internal/fixed_pool.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
+  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CVector.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/UtlMemory.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CStaticArray.h \
@@ -37837,14 +40831,14 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/
   /home/noah/Projects/SIR-Engine/Engine/Core/Logging/Logger.h \
   /home/noah/Projects/SIR-Engine/EASTL/queue.h \
   /home/noah/Projects/SIR-Engine/EASTL/deque.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
-  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CString.h \
   /home/noah/Projects/SIR-Engine/Engine/Core/ResourceDef.h \
   /home/noah/Projects/SIR-Engine/EASTL/allocator_malloc.h \
   /usr/include/malloc.h \
   /home/noah/Projects/SIR-Engine/EASTL/fixed_string.h \
   /home/noah/Projects/SIR-Engine/EASTL/internal/fixed_pool.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
+  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CVector.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/UtlMemory.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CStaticArray.h \
@@ -38701,14 +41695,14 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/
   /home/noah/Projects/SIR-Engine/Engine/Core/Logging/Logger.h \
   /home/noah/Projects/SIR-Engine/EASTL/queue.h \
   /home/noah/Projects/SIR-Engine/EASTL/deque.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
-  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CString.h \
   /home/noah/Projects/SIR-Engine/Engine/Core/ResourceDef.h \
   /home/noah/Projects/SIR-Engine/EASTL/allocator_malloc.h \
   /usr/include/malloc.h \
   /home/noah/Projects/SIR-Engine/EASTL/fixed_string.h \
   /home/noah/Projects/SIR-Engine/EASTL/internal/fixed_pool.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
+  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CVector.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/UtlMemory.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CStaticArray.h \
@@ -39561,14 +42555,14 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/DrawBuff
   /home/noah/Projects/SIR-Engine/Engine/Core/Logging/Logger.h \
   /home/noah/Projects/SIR-Engine/EASTL/queue.h \
   /home/noah/Projects/SIR-Engine/EASTL/deque.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
-  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CString.h \
   /home/noah/Projects/SIR-Engine/Engine/Core/ResourceDef.h \
   /home/noah/Projects/SIR-Engine/EASTL/allocator_malloc.h \
   /usr/include/malloc.h \
   /home/noah/Projects/SIR-Engine/EASTL/fixed_string.h \
   /home/noah/Projects/SIR-Engine/EASTL/internal/fixed_pool.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
+  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CVector.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/UtlMemory.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CStaticArray.h \
@@ -40174,14 +43168,14 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/RenderMa
   /home/noah/Projects/SIR-Engine/Engine/Core/Logging/Logger.h \
   /home/noah/Projects/SIR-Engine/EASTL/queue.h \
   /home/noah/Projects/SIR-Engine/EASTL/deque.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
-  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CString.h \
   /home/noah/Projects/SIR-Engine/Engine/Core/ResourceDef.h \
   /home/noah/Projects/SIR-Engine/EASTL/allocator_malloc.h \
   /usr/include/malloc.h \
   /home/noah/Projects/SIR-Engine/EASTL/fixed_string.h \
   /home/noah/Projects/SIR-Engine/EASTL/internal/fixed_pool.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
+  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CVector.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/UtlMemory.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CStaticArray.h \
@@ -42177,14 +45171,14 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/pngloader/lodepng.cpp.o: 
   /home/noah/Projects/SIR-Engine/Engine/Core/Logging/Logger.h \
   /home/noah/Projects/SIR-Engine/EASTL/queue.h \
   /home/noah/Projects/SIR-Engine/EASTL/deque.h \
-  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
-  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CString.h \
   /home/noah/Projects/SIR-Engine/Engine/Core/ResourceDef.h \
   /home/noah/Projects/SIR-Engine/EASTL/allocator_malloc.h \
   /usr/include/malloc.h \
   /home/noah/Projects/SIR-Engine/EASTL/fixed_string.h \
   /home/noah/Projects/SIR-Engine/EASTL/internal/fixed_pool.h \
+  /home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h \
+  /home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CVector.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/UtlMemory.h \
   /home/noah/Projects/SIR-Engine/Engine/Util/CStaticArray.h \
@@ -42624,6 +45618,8 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/pngloader/lodepng.cpp.o: 
 
 /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLoader.cpp:
 
+/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/stb_image.h:
+
 /home/noah/Projects/SIR-Engine/Engine/Memory/Backend/TagArenaAllocator.cpp:
 
 /home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/VirtualStackAllocator.cpp:
@@ -42680,8 +45676,6 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/pngloader/lodepng.cpp.o: 
 
 /usr/include/boost/type_index.hpp:
 
-/usr/include/boost/config/no_tr1/functional.hpp:
-
 /usr/include/boost/function/detail/prologue.hpp:
 
 /usr/include/boost/optional/detail/optional_swap.hpp:
@@ -42710,37 +45704,19 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/pngloader/lodepng.cpp.o: 
 
 /usr/include/boost/optional/optional.hpp:
 
+/usr/include/boost/optional.hpp:
+
 /usr/include/boost/thread/executors/generic_executor_ref.hpp:
 
 /usr/include/boost/thread/executor.hpp:
 
 /usr/include/boost/smart_ptr/scoped_array.hpp:
 
-/usr/include/boost/iterator/detail/enable_if.hpp:
-
-/usr/include/boost/detail/select_type.hpp:
-
-/usr/include/boost/iterator/detail/facade_iterator_category.hpp:
-
-/usr/include/boost/iterator/iterator_traits.hpp:
-
-/usr/include/boost/core/use_default.hpp:
-
 /usr/include/boost/smart_ptr/make_shared_object.hpp:
 
 /usr/include/boost/iterator/iterator_adaptor.hpp:
 
-/usr/include/boost/iterator/detail/config_undef.hpp:
-
-/usr/include/boost/iterator/detail/config_def.hpp:
-
-/usr/include/boost/iterator/iterator_categories.hpp:
-
-/usr/include/boost/iterator/advance.hpp:
-
 /usr/include/boost/type_traits/has_minus_assign.hpp:
-
-/usr/include/boost/type_traits/remove_pointer.hpp:
 
 /usr/include/boost/type_traits/has_plus_assign.hpp:
 
@@ -42783,8 +45759,6 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/pngloader/lodepng.cpp.o: 
 /usr/include/boost/thread/exceptional_ptr.hpp:
 
 /usr/include/boost/preprocessor/repetition/repeat_from_to.hpp:
-
-/usr/include/boost/utility/swap.hpp:
 
 /usr/include/boost/type_traits/function_traits.hpp:
 
@@ -42886,8 +45860,6 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/pngloader/lodepng.cpp.o: 
 
 /usr/include/boost/atomic/detail/type_traits/make_unsigned.hpp:
 
-/usr/include/boost/type_traits/add_const.hpp:
-
 /usr/include/boost/atomic/detail/type_traits/make_signed.hpp:
 
 /usr/include/boost/type_traits/is_signed.hpp:
@@ -42982,10 +45954,6 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/pngloader/lodepng.cpp.o: 
 
 /usr/include/boost/container_hash/detail/hash_float.hpp:
 
-/usr/include/boost/container_hash/hash_fwd.hpp:
-
-/usr/include/boost/io/ios_state.hpp:
-
 /usr/include/boost/bind/bind_mf_cc.hpp:
 
 /usr/include/boost/visit_each.hpp:
@@ -42998,29 +45966,83 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/pngloader/lodepng.cpp.o: 
 
 /usr/include/boost/bind/mem_fn.hpp:
 
-/usr/include/boost/mpl/apply_wrap.hpp:
+/usr/include/boost/bind/bind.hpp:
 
-/usr/include/gtk-3.0/gdk/gdktypes.h:
+/usr/include/boost/core/ref.hpp:
 
-/usr/include/boost/mpl/aux_/comparison_op.hpp:
+/usr/include/boost/thread/detail/is_convertible.hpp:
 
-/usr/include/boost/preprocessor/variadic/elem.hpp:
+/usr/include/boost/thread/detail/invoke.hpp:
 
-/usr/include/boost/preprocessor/tuple/rem.hpp:
+/usr/include/boost/thread/pthread/thread_heap_alloc.hpp:
 
-/usr/include/boost/preprocessor/facilities/overload.hpp:
+/usr/include/boost/thread/detail/thread_heap_alloc.hpp:
 
-/usr/include/glib-2.0/gio/gdbusmethodinvocation.h:
+/usr/include/boost/type_traits/type_with_alignment.hpp:
 
-/usr/include/boost/preprocessor/tuple/elem.hpp:
+/usr/include/boost/thread/interruption.hpp:
 
-/usr/include/boost/preprocessor/list/reverse.hpp:
+/usr/include/boost/thread/detail/thread.hpp:
+
+/usr/include/boost/smart_ptr/weak_ptr.hpp:
+
+/usr/include/boost/smart_ptr/enable_shared_from_this.hpp:
+
+/usr/include/boost/enable_shared_from_this.hpp:
+
+/usr/include/boost/thread/detail/lockable_wrapper.hpp:
+
+/usr/include/boost/thread/lock_guard.hpp:
+
+/usr/include/boost/thread/pthread/thread_data.hpp:
+
+/usr/include/boost/thread.hpp:
+
+/usr/include/boost/lockfree/lockfree_forward.hpp:
+
+/usr/include/boost/lockfree/detail/prefix.hpp:
+
+/usr/include/boost/lockfree/detail/tagged_ptr.hpp:
+
+/usr/include/boost/parameter/aux_/tagged_argument.hpp:
+
+/usr/include/boost/parameter/aux_/tag.hpp:
+
+/usr/include/boost/parameter/aux_/pack/tag_keyword_arg.hpp:
+
+/usr/include/boost/parameter/aux_/pack/item.hpp:
+
+/usr/include/boost/move/detail/unique_ptr_meta_utils.hpp:
+
+/usr/include/boost/parameter/aux_/pack/make_items.hpp:
+
+/usr/include/boost/parameter/aux_/pack/predicate.hpp:
+
+/usr/include/boost/parameter/aux_/pack/as_parameter_requirements.hpp:
+
+/usr/include/boost/parameter/aux_/pack/make_deduced_items.hpp:
+
+/usr/include/boost/parameter/aux_/pack/make_parameter_spec_items.hpp:
+
+/usr/include/boost/parameter/aux_/pack/tag_deduced.hpp:
+
+/usr/include/boost/parameter/aux_/pack/deduce_tag.hpp:
+
+/usr/include/boost/parameter/aux_/pack/insert_tagged.hpp:
+
+/usr/include/boost/parameter/aux_/is_tagged_argument.hpp:
+
+/usr/include/boost/parameter/aux_/pack/is_named_argument.hpp:
+
+/usr/include/boost/parameter/optional.hpp:
+
+/usr/include/boost/parameter/required.hpp:
+
+/usr/include/boost/parameter/aux_/use_default.hpp:
 
 /usr/include/boost/preprocessor/logical/compl.hpp:
 
 /usr/include/boost/preprocessor/detail/check.hpp:
-
-/usr/include/boost/mpl/aux_/type_wrapper.hpp:
 
 /usr/include/boost/preprocessor/list/adt.hpp:
 
@@ -43066,10 +46088,6 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/pngloader/lodepng.cpp.o: 
 
 /usr/include/gdk-pixbuf-2.0/gdk-pixbuf/gdk-pixbuf.h:
 
-/usr/include/boost/mpl/aux_/na.hpp:
-
-/usr/include/gtk-3.0/gtk/gtkshortcutswindow.h:
-
 /usr/include/pango-1.0/pango/pango-utils.h:
 
 /usr/include/boost/mpl/aux_/config/eti.hpp:
@@ -43078,9 +46096,9 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/pngloader/lodepng.cpp.o: 
 
 /usr/include/boost/numeric/conversion/conversion_traits.hpp:
 
-/usr/local/include/SDL2/SDL_version.h:
-
 /usr/include/boost/mpl/aux_/config/pp_counter.hpp:
+
+/usr/local/include/SDL2/SDL_version.h:
 
 /usr/include/boost/type.hpp:
 
@@ -43176,10 +46194,6 @@ Application/Project/ProjectData.h:
 
 /usr/include/boost/smart_ptr/detail/shared_count.hpp:
 
-/usr/include/boost/detail/indirect_traits.hpp:
-
-/usr/include/boost/core/checked_delete.hpp:
-
 /usr/include/boost/date_time/c_time.hpp:
 
 /home/noah/Projects/SIR-Engine/EASTL/internal/type_properties.h:
@@ -43207,12 +46221,6 @@ Application/Project/ProjectData.h:
 /usr/include/boost/move/detail/config_end.hpp:
 
 /usr/include/glm/mat2x4.hpp:
-
-/usr/include/boost/preprocessor/tuple/detail/is_single_return.hpp:
-
-/usr/local/include/SDL2/SDL_config.h:
-
-/usr/include/glib-2.0/gio/gsocket.h:
 
 /usr/include/boost/predef/os/amigaos.h:
 
@@ -43244,8 +46252,6 @@ Application/Project/ProjectData.h:
 
 /usr/include/boost/type_traits/is_destructible.hpp:
 
-/usr/include/boost/version.hpp:
-
 /usr/include/boost/thread/lock_types.hpp:
 
 /usr/include/asm-generic/bitsperlong.h:
@@ -43253,12 +46259,6 @@ Application/Project/ProjectData.h:
 /usr/include/boost/mpl/aux_/preprocessed/gcc/or.hpp:
 
 /usr/include/c++/11/bits/std_mutex.h:
-
-/usr/include/c++/11/bits/parse_numbers.h:
-
-/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/RenderShaderBuffer.h:
-
-/usr/include/gtk-3.0/gtk/gtkliststore.h:
 
 /usr/include/glm/detail/func_packing.inl:
 
@@ -43302,6 +46302,8 @@ Application/Project/ProjectData.h:
 
 /usr/include/boost/mpl/aux_/preprocessor/enum.hpp:
 
+/usr/include/boost/iterator/iterator_categories.hpp:
+
 /usr/include/boost/smart_ptr/detail/sp_convertible.hpp:
 
 /usr/include/boost/config/platform/linux.hpp:
@@ -43318,7 +46320,15 @@ Application/Project/ProjectData.h:
 
 /usr/include/boost/config/user.hpp:
 
+/usr/include/boost/thread/cv_status.hpp:
+
+/home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/arch_exchange.h:
+
+/usr/include/boost/iterator/detail/config_def.hpp:
+
 Application/Project/ProjectManager.h:
+
+/usr/include/boost/parameter/aux_/default.hpp:
 
 /usr/include/glm/detail/type_mat2x3.hpp:
 
@@ -43342,7 +46352,9 @@ Application/Project/ProjectManager.h:
 
 /usr/include/pango-1.0/pango/pango-break.h:
 
-/usr/include/c++/11/bits/stl_tree.h:
+/usr/include/boost/parameter/binding.hpp:
+
+/usr/include/boost/date_time/microsec_time_clock.hpp:
 
 /usr/include/c++/11/map:
 
@@ -43428,10 +46440,6 @@ Application/Project/ProjectManager.h:
 
 /usr/include/x86_64-linux-gnu/c++/11/bits/time_members.h:
 
-/usr/include/boost/system/system_error.hpp:
-
-/usr/include/gtk-3.0/gtk/gtkcellrenderer.h:
-
 /usr/include/c++/11/bits/locale_facets_nonio.h:
 
 /usr/include/x86_64-linux-gnu/c++/11/bits/ctype_inline.h:
@@ -43457,6 +46465,282 @@ Application/Project/ProjectManager.h:
 /usr/include/c++/11/stdexcept:
 
 /usr/include/c++/11/bits/locale_classes.h:
+
+/usr/include/boost/mpl/aux_/msvc_never_true.hpp:
+
+/usr/include/boost/date_time/date_duration_types.hpp:
+
+/usr/include/boost/mpl/aux_/nttp_decl.hpp:
+
+/usr/include/boost/type_traits/is_convertible.hpp:
+
+/usr/include/c++/11/regex:
+
+/usr/include/x86_64-linux-gnu/c++/11/bits/gthr.h:
+
+/usr/include/pango-1.0/pango/pango-glyph.h:
+
+Application/TextEditor.h:
+
+/usr/include/glib-2.0/gio/gloadableicon.h:
+
+/home/noah/Projects/SIR-Engine/EASTL/list.h:
+
+/usr/include/boost/bind/bind_cc.hpp:
+
+/home/noah/Projects/SIR-Engine/EASTL/bonus/lru_cache.h:
+
+/usr/include/gtk-3.0/gtk/gtkdialog.h:
+
+/usr/include/boost/mpl/aux_/na.hpp:
+
+/usr/include/gtk-3.0/gtk/gtkshortcutswindow.h:
+
+/usr/include/gtk-3.0/gtk/gtkcellareacontext.h:
+
+/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLoader.h:
+
+/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/RenderTexture.h:
+
+/usr/include/boost/version.hpp:
+
+/usr/include/GL/glcorearb.h:
+
+/usr/include/KHR/khrplatform.h:
+
+/usr/include/glib-2.0/gio/gmenu.h:
+
+/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLCommon.h:
+
+/home/noah/Projects/SIR-Engine/Engine/RenderLib/RenderLib.h:
+
+/usr/lib/gcc/x86_64-linux-gnu/11/include/avxintrin.h:
+
+/home/noah/Projects/SIR-Engine/imgui/imstb_textedit.h:
+
+/usr/include/boost/mpl/int_fwd.hpp:
+
+/usr/lib/gcc/x86_64-linux-gnu/11/include/keylockerintrin.h:
+
+/usr/include/boost/system/error_code.hpp:
+
+/usr/lib/gcc/x86_64-linux-gnu/11/include/prfchwintrin.h:
+
+/usr/include/boost/operators.hpp:
+
+/usr/include/c++/11/bits/shared_ptr_base.h:
+
+/usr/include/gdk-pixbuf-2.0/gdk-pixbuf/gdk-pixbuf-animation.h:
+
+/usr/include/boost/type_traits/is_unsigned.hpp:
+
+/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLContext.h:
+
+/usr/include/c++/11/deque:
+
+/usr/lib/gcc/x86_64-linux-gnu/11/include/avx512bf16vlintrin.h:
+
+/usr/include/boost/mpl/aux_/arity.hpp:
+
+/usr/include/glib-2.0/gio/gaction.h:
+
+/usr/include/c++/11/bits/streambuf_iterator.h:
+
+/usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vp2intersectvlintrin.h:
+
+/usr/include/boost/none_t.hpp:
+
+/usr/include/glib-2.0/gio/gfilterinputstream.h:
+
+/usr/include/boost/date_time/posix_time/posix_time_system.hpp:
+
+/usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vp2intersectintrin.h:
+
+/usr/include/boost/mp11/detail/mp_copy_if.hpp:
+
+/usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vpopcntdqvlintrin.h:
+
+/usr/include/x86_64-linux-gnu/bits/fp-logb.h:
+
+/usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vnniintrin.h:
+
+/home/noah/Projects/SIR-Engine/EASTL/algorithm.h:
+
+/usr/include/x86_64-linux-gnu/sys/mman.h:
+
+/usr/include/boost/predef/library/c/vms.h:
+
+/usr/include/glib-2.0/glib/glib-typeof.h:
+
+/usr/include/harfbuzz/hb-shape.h:
+
+/usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vpopcntdqintrin.h:
+
+/usr/lib/gcc/x86_64-linux-gnu/11/include/avx5124vnniwintrin.h:
+
+/usr/include/gtk-3.0/gtk/gtkappchooser.h:
+
+/usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vbmivlintrin.h:
+
+/usr/include/boost/bind/placeholders.hpp:
+
+/usr/include/gtk-3.0/gtk/gtkrecentchoosermenu.h:
+
+/usr/include/boost/date_time/gregorian/greg_date.hpp:
+
+/usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vbmiintrin.h:
+
+/usr/include/c++/11/new:
+
+/usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vlintrin.h:
+
+/usr/include/gtk-3.0/gtk/gtkcelllayout.h:
+
+/usr/include/boost/mpl/find_if.hpp:
+
+/usr/include/boost/parameter/config.hpp:
+
+/usr/include/boost/type_traits/is_void.hpp:
+
+/usr/lib/gcc/x86_64-linux-gnu/11/include/smmintrin.h:
+
+/usr/include/boost/config/abi_suffix.hpp:
+
+/usr/include/boost/optional/detail/optional_factory_support.hpp:
+
+/usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vnnivlintrin.h:
+
+/usr/lib/gcc/x86_64-linux-gnu/11/include/tmmintrin.h:
+
+/usr/include/boost/smart_ptr/detail/atomic_count.hpp:
+
+/usr/include/glib-2.0/gobject/gtype.h:
+
+/usr/local/include/SDL2/begin_code.h:
+
+/usr/lib/gcc/x86_64-linux-gnu/11/include/pmmintrin.h:
+
+/usr/include/boost/preprocessor/cat.hpp:
+
+/usr/include/boost/exception/detail/exception_ptr.hpp:
+
+/usr/include/c++/11/bits/istream.tcc:
+
+/usr/lib/gcc/x86_64-linux-gnu/11/include/xmmintrin.h:
+
+/home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h:
+
+/usr/lib/gcc/x86_64-linux-gnu/11/include/xsaveoptintrin.h:
+
+/usr/include/boost/preprocessor/iterate.hpp:
+
+/usr/include/x86_64-linux-gnu/bits/types/sig_atomic_t.h:
+
+/usr/include/gtk-3.0/gtk/deprecated/gtktable.h:
+
+/usr/lib/gcc/x86_64-linux-gnu/11/include/wbnoinvdintrin.h:
+
+/usr/include/glib-2.0/glib/deprecated/grel.h:
+
+/usr/include/boost/type_traits/add_reference.hpp:
+
+/usr/include/boost/type_traits/integral_constant.hpp:
+
+/usr/include/c++/11/bits/regex.h:
+
+/usr/include/boost/predef/library/std/stdcpp3.h:
+
+/usr/lib/gcc/x86_64-linux-gnu/11/include/sgxintrin.h:
+
+/usr/include/boost/mpl/aux_/preprocessed/gcc/apply_fwd.hpp:
+
+/usr/include/gtk-3.0/gtk/gtktextbufferrichtext.h:
+
+/usr/lib/gcc/x86_64-linux-gnu/11/include/pconfigintrin.h:
+
+/usr/include/boost/config/detail/posix_features.hpp:
+
+/usr/lib/gcc/x86_64-linux-gnu/11/include/mwaitintrin.h:
+
+/usr/lib/gcc/x86_64-linux-gnu/11/include/clzerointrin.h:
+
+/usr/lib/gcc/x86_64-linux-gnu/11/include/clwbintrin.h:
+
+/usr/lib/gcc/x86_64-linux-gnu/11/include/clflushoptintrin.h:
+
+/usr/include/boost/throw_exception.hpp:
+
+/usr/include/x86_64-linux-gnu/bits/select.h:
+
+/usr/include/glib-2.0/glib/deprecated/gcache.h:
+
+/usr/lib/gcc/x86_64-linux-gnu/11/include/bmiintrin.h:
+
+/usr/include/glm/mat4x3.hpp:
+
+/usr/include/boost/predef/detail/test.h:
+
+/home/noah/Projects/SIR-Engine/EASTL/array.h:
+
+/usr/include/boost/smart_ptr/detail/sp_noexcept.hpp:
+
+/usr/lib/gcc/x86_64-linux-gnu/11/include/adxintrin.h:
+
+/usr/lib/gcc/x86_64-linux-gnu/11/include/ia32intrin.h:
+
+/usr/lib/gcc/x86_64-linux-gnu/11/include/x86gprintrin.h:
+
+/usr/lib/gcc/x86_64-linux-gnu/11/include/immintrin.h:
+
+/usr/include/c++/11/bits/uniform_int_dist.h:
+
+/usr/include/boost/type_traits/is_member_function_pointer.hpp:
+
+/usr/include/c++/11/bits/stl_tempbuf.h:
+
+/usr/include/glib-2.0/gio/gproxyresolver.h:
+
+/usr/include/c++/11/bits/erase_if.h:
+
+/usr/include/c++/11/bits/unordered_map.h:
+
+Application/Project/ProjectManager.cpp:
+
+/usr/include/boost/preprocessor/control/iif.hpp:
+
+/usr/include/gtk-3.0/gtk/gtkactionbar.h:
+
+/usr/include/c++/11/bits/hashtable_policy.h:
+
+/usr/include/glm/detail/type_vec2.inl:
+
+/usr/include/boost/mp11/integral.hpp:
+
+/usr/include/c++/11/bits/hashtable.h:
+
+/usr/include/boost/align/alignment_of.hpp:
+
+/usr/include/c++/11/unordered_map:
+
+/usr/include/c++/11/functional:
+
+/usr/include/gtk-3.0/gdk/gdkevents.h:
+
+/home/noah/Projects/SIR-Engine/imgui/imgui.h:
+
+/usr/include/c++/11/bits/parse_numbers.h:
+
+/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/RenderShaderBuffer.h:
+
+/usr/include/gtk-3.0/gtk/gtkliststore.h:
+
+/usr/include/boost/system/system_error.hpp:
+
+/usr/lib/gcc/x86_64-linux-gnu/11/include/avx512bwintrin.h:
+
+/usr/include/c++/11/ctime:
+
+/usr/include/gtk-3.0/gtk/gtkcellrenderer.h:
 
 /usr/include/c++/11/bits/basic_string.tcc:
 
@@ -43496,13 +46780,11 @@ Application/Project/ProjectManager.h:
 
 /usr/include/gtk-3.0/gtk/gtkscrollbar.h:
 
+/usr/lib/gcc/x86_64-linux-gnu/11/include/waitpkgintrin.h:
+
+/usr/include/x86_64-linux-gnu/sys/single_threaded.h:
+
 /usr/include/x86_64-linux-gnu/c++/11/bits/atomic_word.h:
-
-/usr/include/x86_64-linux-gnu/c++/11/bits/gthr.h:
-
-/usr/include/c++/11/regex:
-
-/usr/include/pango-1.0/pango/pango-glyph.h:
 
 /usr/include/glm/detail/_fixes.hpp:
 
@@ -43514,13 +46796,35 @@ Application/Project/ProjectManager.h:
 
 /usr/include/cairo/cairo-version.h:
 
+/usr/include/c++/11/bits/cxxabi_forced.h:
+
 /usr/include/c++/11/cctype:
+
+/usr/lib/gcc/x86_64-linux-gnu/11/include/fmaintrin.h:
+
+/usr/include/boost/mpl/integral_c_tag.hpp:
+
+/usr/include/gtk-3.0/gtk/gtkimcontextinfo.h:
+
+/usr/include/c++/11/cwchar:
+
+/usr/include/GL/gl.h:
 
 /usr/include/c++/11/bits/postypes.h:
 
 /usr/include/x86_64-linux-gnu/bits/struct_rwlock.h:
 
 /usr/include/gtk-3.0/gtk/gtkcellrenderertoggle.h:
+
+/usr/include/x86_64-linux-gnu/asm/posix_types_64.h:
+
+/usr/lib/gcc/x86_64-linux-gnu/11/include/cetintrin.h:
+
+/usr/include/c++/11/bits/stringfwd.h:
+
+/home/noah/Projects/SIR-Engine/imgui/backends/imgui_impl_sdl2.h:
+
+/usr/include/c++/11/bits/functional_hash.h:
 
 /usr/include/c++/11/bits/stl_bvector.h:
 
@@ -43529,260 +46833,6 @@ Application/Project/ProjectManager.h:
 /usr/include/glib-2.0/gio/gapplicationcommandline.h:
 
 /usr/include/gtk-3.0/gtk/gtkcellrendererpixbuf.h:
-
-/usr/include/c++/11/bits/erase_if.h:
-
-/usr/include/c++/11/bits/unordered_map.h:
-
-Application/Project/ProjectManager.cpp:
-
-/usr/include/boost/preprocessor/control/iif.hpp:
-
-/usr/include/gtk-3.0/gtk/gtkactionbar.h:
-
-/usr/include/c++/11/bits/hashtable_policy.h:
-
-/usr/include/glm/detail/type_vec2.inl:
-
-/usr/include/boost/mp11/integral.hpp:
-
-/usr/include/c++/11/bits/hashtable.h:
-
-/usr/include/boost/align/alignment_of.hpp:
-
-/usr/include/c++/11/unordered_map:
-
-/usr/include/c++/11/functional:
-
-/usr/include/gtk-3.0/gdk/gdkevents.h:
-
-/home/noah/Projects/SIR-Engine/imgui/imgui.h:
-
-/usr/include/boost/mpl/aux_/msvc_never_true.hpp:
-
-/usr/include/c++/11/bits/uniform_int_dist.h:
-
-/usr/include/boost/type_traits/is_member_function_pointer.hpp:
-
-/usr/include/c++/11/bits/stl_tempbuf.h:
-
-/usr/include/glib-2.0/gio/gproxyresolver.h:
-
-/usr/include/c++/11/bits/cxxabi_forced.h:
-
-/usr/include/boost/date_time/date_duration_types.hpp:
-
-/usr/include/boost/mpl/aux_/nttp_decl.hpp:
-
-/usr/include/boost/type_traits/is_convertible.hpp:
-
-/usr/include/boost/preprocessor/control/detail/while.hpp:
-
-Application/TextEditor.h:
-
-/home/noah/Projects/SIR-Engine/imgui/imstb_textedit.h:
-
-/usr/include/boost/mpl/int_fwd.hpp:
-
-/usr/lib/gcc/x86_64-linux-gnu/11/include/keylockerintrin.h:
-
-/usr/include/boost/system/error_code.hpp:
-
-/usr/lib/gcc/x86_64-linux-gnu/11/include/prfchwintrin.h:
-
-/usr/include/boost/operators.hpp:
-
-/usr/include/boost/predef/language.h:
-
-/usr/include/c++/11/bits/shared_ptr_base.h:
-
-/usr/include/gdk-pixbuf-2.0/gdk-pixbuf/gdk-pixbuf-animation.h:
-
-/usr/include/boost/type_traits/is_unsigned.hpp:
-
-/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLContext.h:
-
-/usr/include/c++/11/deque:
-
-/usr/lib/gcc/x86_64-linux-gnu/11/include/avx512bf16vlintrin.h:
-
-/usr/include/boost/mpl/aux_/arity.hpp:
-
-/usr/include/glib-2.0/gio/gaction.h:
-
-/usr/include/c++/11/bits/streambuf_iterator.h:
-
-/usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vp2intersectvlintrin.h:
-
-/usr/include/boost/none_t.hpp:
-
-/usr/include/glib-2.0/gio/gfilterinputstream.h:
-
-/usr/include/boost/date_time/posix_time/posix_time_system.hpp:
-
-/usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vp2intersectintrin.h:
-
-/usr/include/boost/mp11/detail/mp_copy_if.hpp:
-
-/usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vpopcntdqvlintrin.h:
-
-/home/noah/Projects/SIR-Engine/EASTL/algorithm.h:
-
-/usr/include/x86_64-linux-gnu/sys/mman.h:
-
-/usr/include/boost/predef/library/c/vms.h:
-
-/usr/include/glib-2.0/glib/glib-typeof.h:
-
-/usr/include/harfbuzz/hb-shape.h:
-
-/usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vpopcntdqintrin.h:
-
-/usr/lib/gcc/x86_64-linux-gnu/11/include/avx5124vnniwintrin.h:
-
-/usr/include/gtk-3.0/gtk/gtkappchooser.h:
-
-/usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vbmivlintrin.h:
-
-/usr/include/boost/bind/placeholders.hpp:
-
-/usr/include/gtk-3.0/gtk/gtkrecentchoosermenu.h:
-
-/usr/include/boost/date_time/gregorian/greg_date.hpp:
-
-/usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vbmiintrin.h:
-
-/usr/include/c++/11/ctime:
-
-/usr/lib/gcc/x86_64-linux-gnu/11/include/avx512bwintrin.h:
-
-/usr/include/c++/11/new:
-
-/usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vlintrin.h:
-
-/usr/include/gtk-3.0/gtk/gtkcelllayout.h:
-
-/usr/include/boost/mpl/find_if.hpp:
-
-/usr/include/c++/11/cwchar:
-
-/usr/lib/gcc/x86_64-linux-gnu/11/include/fmaintrin.h:
-
-/usr/include/boost/mpl/integral_c_tag.hpp:
-
-/usr/include/gtk-3.0/gtk/gtkimcontextinfo.h:
-
-/usr/include/boost/parameter/config.hpp:
-
-/usr/lib/gcc/x86_64-linux-gnu/11/include/avxintrin.h:
-
-/home/noah/Projects/SIR-Engine/Engine/RenderLib/RenderLib.h:
-
-/usr/include/boost/type_traits/is_void.hpp:
-
-/usr/lib/gcc/x86_64-linux-gnu/11/include/smmintrin.h:
-
-/usr/include/boost/config/abi_suffix.hpp:
-
-/usr/include/boost/optional/detail/optional_factory_support.hpp:
-
-/usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vnnivlintrin.h:
-
-/usr/lib/gcc/x86_64-linux-gnu/11/include/tmmintrin.h:
-
-/usr/include/glib-2.0/gobject/gtype.h:
-
-/usr/local/include/SDL2/begin_code.h:
-
-/usr/lib/gcc/x86_64-linux-gnu/11/include/pmmintrin.h:
-
-/usr/include/boost/preprocessor/cat.hpp:
-
-/usr/include/boost/exception/detail/exception_ptr.hpp:
-
-/usr/include/c++/11/bits/istream.tcc:
-
-/usr/lib/gcc/x86_64-linux-gnu/11/include/xmmintrin.h:
-
-/home/noah/Projects/SIR-Engine/Engine/Core/Logging/LogMacros.h:
-
-/usr/lib/gcc/x86_64-linux-gnu/11/include/xsaveoptintrin.h:
-
-/usr/include/boost/preprocessor/iterate.hpp:
-
-/usr/include/x86_64-linux-gnu/bits/types/sig_atomic_t.h:
-
-/usr/include/gtk-3.0/gtk/deprecated/gtktable.h:
-
-/usr/include/x86_64-linux-gnu/asm/posix_types_64.h:
-
-/usr/lib/gcc/x86_64-linux-gnu/11/include/wbnoinvdintrin.h:
-
-/usr/include/glib-2.0/glib/deprecated/grel.h:
-
-/usr/include/x86_64-linux-gnu/sys/single_threaded.h:
-
-/usr/lib/gcc/x86_64-linux-gnu/11/include/waitpkgintrin.h:
-
-/usr/include/boost/type_traits/add_reference.hpp:
-
-/usr/include/boost/type_traits/integral_constant.hpp:
-
-/usr/include/c++/11/bits/regex.h:
-
-/usr/include/boost/predef/library/std/stdcpp3.h:
-
-/usr/lib/gcc/x86_64-linux-gnu/11/include/sgxintrin.h:
-
-/usr/include/gtk-3.0/gtk/gtktextbufferrichtext.h:
-
-/usr/include/boost/mpl/aux_/preprocessed/gcc/apply_fwd.hpp:
-
-/usr/lib/gcc/x86_64-linux-gnu/11/include/pconfigintrin.h:
-
-/usr/include/boost/config/detail/posix_features.hpp:
-
-/usr/lib/gcc/x86_64-linux-gnu/11/include/mwaitintrin.h:
-
-/usr/lib/gcc/x86_64-linux-gnu/11/include/clzerointrin.h:
-
-/usr/lib/gcc/x86_64-linux-gnu/11/include/clwbintrin.h:
-
-/usr/lib/gcc/x86_64-linux-gnu/11/include/clflushoptintrin.h:
-
-/usr/include/boost/throw_exception.hpp:
-
-/usr/include/x86_64-linux-gnu/bits/select.h:
-
-/usr/include/glib-2.0/glib/deprecated/gcache.h:
-
-/usr/include/c++/11/bits/stringfwd.h:
-
-/usr/lib/gcc/x86_64-linux-gnu/11/include/cetintrin.h:
-
-/usr/lib/gcc/x86_64-linux-gnu/11/include/bmiintrin.h:
-
-/usr/include/glm/mat4x3.hpp:
-
-/usr/include/boost/predef/detail/test.h:
-
-/home/noah/Projects/SIR-Engine/EASTL/array.h:
-
-/usr/include/boost/smart_ptr/detail/sp_noexcept.hpp:
-
-/usr/lib/gcc/x86_64-linux-gnu/11/include/adxintrin.h:
-
-/usr/lib/gcc/x86_64-linux-gnu/11/include/ia32intrin.h:
-
-/usr/lib/gcc/x86_64-linux-gnu/11/include/x86gprintrin.h:
-
-/usr/lib/gcc/x86_64-linux-gnu/11/include/immintrin.h:
-
-/usr/include/c++/11/bits/functional_hash.h:
-
-/home/noah/Projects/SIR-Engine/imgui/backends/imgui_impl_sdl2.h:
-
-/usr/include/glib-2.0/gio/gloadableicon.h:
 
 /usr/include/boost/config/requires_threads.hpp:
 
@@ -43816,11 +46866,13 @@ Application/TextEditor.h:
 
 /usr/include/boost/type_traits/remove_bounds.hpp:
 
+/home/noah/Projects/SIR-Engine/EASTL/optional.h:
+
+/usr/include/boost/mpl/logical.hpp:
+
 /usr/include/gtk-3.0/gtk/gtkborder.h:
 
 /usr/include/glm/packing.hpp:
-
-/usr/include/boost/lockfree/detail/tagged_ptr.hpp:
 
 /usr/include/glm/trigonometric.hpp:
 
@@ -43896,10 +46948,6 @@ Application/TextEditor.h:
 
 /usr/include/c++/11/iosfwd:
 
-/usr/include/glm/ext/matrix_double4x3_precision.hpp:
-
-/usr/include/boost/thread/detail/thread.hpp:
-
 /usr/include/c++/11/bits/node_handle.h:
 
 /usr/include/glib-2.0/gio/gdbusconnection.h:
@@ -43915,8 +46963,6 @@ Application/TextEditor.h:
 /home/noah/Projects/SIR-Engine/Engine/Core/Events/KeyEvent.cpp:
 
 /usr/include/glm/ext/matrix_float4x2.hpp:
-
-/usr/include/c++/11/bits/regex_constants.h:
 
 /usr/include/glib-2.0/gio/gtlscertificate.h:
 
@@ -43934,17 +46980,13 @@ Application/TextEditor.h:
 
 /usr/include/gtk-3.0/gtk/gtkmodules.h:
 
-/usr/include/boost/optional.hpp:
-
-Application/TabSelect.h:
-
-/usr/include/glib-2.0/gio/giotypes.h:
-
-/usr/include/glib-2.0/gio/gdbusobject.h:
-
 /usr/include/boost/date_time/posix_time/ptime.hpp:
 
 /usr/include/c++/11/pstl/glue_memory_defs.h:
+
+/usr/include/strings.h:
+
+/usr/include/glm/ext/matrix_float3x4_precision.hpp:
 
 /usr/include/boost/smart_ptr/detail/spinlock_pool.hpp:
 
@@ -43988,31 +47030,33 @@ Application/TabSelect.h:
 
 /usr/include/glm/ext/matrix_double3x2_precision.hpp:
 
+/usr/include/boost/iterator/detail/facade_iterator_category.hpp:
+
 /home/noah/Projects/SIR-Engine/Engine/Core/ConsoleManager.h:
 
 /home/noah/Projects/SIR-Engine/Engine/Core/FileSystem/FileSystem.h:
 
 /usr/include/c++/11/math.h:
 
-/usr/include/GLFW/glfw3.h:
-
 /home/noah/Projects/SIR-Engine/Engine/Core/EngineApp.h:
 
 /home/noah/Projects/SIR-Engine/Engine/Util/CConstList.h:
 
+/usr/include/boost/parameter/aux_/pack/deduced_item.hpp:
+
+/usr/include/c++/11/pstl/execution_defs.h:
+
 /usr/include/c++/11/tr1/ell_integral.tcc:
-
-/usr/include/c++/11/bits/string_view.tcc:
-
-/home/noah/Projects/SIR-Engine/Engine/Core/ResourceDef.h:
-
-/home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h:
 
 /usr/include/boost/mpl/aux_/na_fwd.hpp:
 
 /home/noah/Projects/SIR-Engine/EASTL/numeric_limits.h:
 
 /usr/include/gtk-3.0/gtk/deprecated/gtkarrow.h:
+
+/usr/include/c++/11/bits/string_view.tcc:
+
+/home/noah/Projects/SIR-Engine/Engine/Core/ResourceDef.h:
 
 /usr/include/glm/exponential.hpp:
 
@@ -44044,6 +47088,8 @@ Application/TabSelect.h:
 
 /usr/include/boost/parameter/aux_/tagged_argument_fwd.hpp:
 
+/usr/include/x86_64-linux-gnu/bits/local_lim.h:
+
 /usr/include/features.h:
 
 /usr/lib/gcc/x86_64-linux-gnu/11/include/shaintrin.h:
@@ -44051,8 +47097,6 @@ Application/TabSelect.h:
 /usr/include/c++/11/bits/hash_bytes.h:
 
 /usr/include/boost/mpl/size_t_fwd.hpp:
-
-/usr/include/GL/glcorearb.h:
 
 /usr/include/c++/11/bits/invoke.h:
 
@@ -44076,7 +47120,7 @@ Application/TabSelect.h:
 
 /usr/include/boost/mpl/integral_c.hpp:
 
-/usr/include/boost/parameter/required.hpp:
+/home/noah/Projects/SIR-Engine/Engine/RenderLib/RenderCommon.h:
 
 /usr/include/boost/mpl/aux_/config/workaround.hpp:
 
@@ -44104,7 +47148,7 @@ Application/TabSelect.h:
 
 /usr/include/glm/detail/type_mat3x2.inl:
 
-/usr/include/boost/mpl/aux_/numeric_op.hpp:
+/usr/include/libnotify/notify.h:
 
 /usr/include/linux/posix_types.h:
 
@@ -44113,8 +47157,6 @@ Application/TabSelect.h:
 /home/noah/Projects/SIR-Engine/EASTL/internal/functional_base.h:
 
 /home/noah/Projects/SIR-Engine/EASTL/internal/fill_help.h:
-
-/usr/include/boost/mpl/aux_/config/overload_resolution.hpp:
 
 /usr/include/c++/11/optional:
 
@@ -44188,8 +47230,6 @@ Application/TabSelect.h:
 
 /usr/include/x86_64-linux-gnu/bits/pthread_stack_min-dynamic.h:
 
-/usr/include/boost/parameter/aux_/pack/as_parameter_requirements.hpp:
-
 /usr/include/x86_64-linux-gnu/bits/stdio_lim.h:
 
 /usr/include/x86_64-linux-gnu/c++/11/bits/c++config.h:
@@ -44208,6 +47248,14 @@ Application/TabSelect.h:
 
 /usr/include/c++/11/bits/stl_relops.h:
 
+/usr/include/boost/ref.hpp:
+
+/usr/include/boost/preprocessor/detail/is_binary.hpp:
+
+/usr/include/boost/parameter/aux_/pack/tag_template_keyword_arg.hpp:
+
+/home/noah/Projects/SIR-Engine/EASTL/memory.h:
+
 /usr/include/c++/11/debug/debug.h:
 
 /usr/include/boost/type_traits/remove_extent.hpp:
@@ -44225,6 +47273,10 @@ Application/TabSelect.h:
 /usr/include/gtk-3.0/gtk/gtkscrolledwindow.h:
 
 /usr/include/boost/predef/compiler/kai.h:
+
+/home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/MemoryBuffer.h:
+
+/home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/gcc/compiler_gcc_fetch_or.h:
 
 /usr/include/boost/atomic/detail/type_traits/is_function.hpp:
 
@@ -44314,12 +47366,6 @@ Application/TabSelect.h:
 
 /usr/include/gtk-3.0/gtk/deprecated/gtkimagemenuitem.h:
 
-/usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vnniintrin.h:
-
-/usr/include/x86_64-linux-gnu/bits/fp-logb.h:
-
-/usr/include/boost/parameter/aux_/default.hpp:
-
 /usr/include/x86_64-linux-gnu/bits/pthreadtypes.h:
 
 /usr/include/c++/11/ext/string_conversions.h:
@@ -44352,9 +47398,7 @@ Application/TabSelect.h:
 
 /usr/include/x86_64-linux-gnu/bits/libm-simd-decl-stubs.h:
 
-/home/noah/Projects/SIR-Engine/EASTL/memory.h:
-
-/usr/include/boost/parameter/aux_/pack/tag_template_keyword_arg.hpp:
+/usr/include/boost/detail/select_type.hpp:
 
 /usr/include/boost/assert.hpp:
 
@@ -44369,6 +47413,12 @@ Application/TabSelect.h:
 /usr/include/boost/mpl/lambda_fwd.hpp:
 
 /usr/include/inttypes.h:
+
+/usr/local/include/SDL2/SDL_config.h:
+
+/usr/include/boost/preprocessor/tuple/detail/is_single_return.hpp:
+
+/usr/include/glib-2.0/gio/gsocket.h:
 
 /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_xor_fetch.h:
 
@@ -44407,6 +47457,8 @@ Application/Project/ProjectLoader.cpp:
 /usr/include/boost/parameter/aux_/pack/parameter_requirements.hpp:
 
 /usr/include/boost/type_traits/is_floating_point.hpp:
+
+/usr/include/c++/11/bits/fstream.tcc:
 
 /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler_signal_fence.h:
 
@@ -44472,6 +47524,8 @@ Application/Project/ProjectLoader.cpp:
 
 /usr/include/boost/mpl/begin_end.hpp:
 
+Application/IconsFontAwesome5.h:
+
 /usr/lib/gcc/x86_64-linux-gnu/11/include/lwpintrin.h:
 
 /usr/include/c++/11/bits/exception_defines.h:
@@ -44496,11 +47550,7 @@ Application/Project/ProjectLoader.cpp:
 
 /usr/include/x86_64-linux-gnu/bits/libc-header-start.h:
 
-/usr/include/boost/parameter/aux_/is_tagged_argument.hpp:
-
 /usr/include/x86_64-linux-gnu/sys/types.h:
-
-/usr/include/boost/smart_ptr/enable_shared_from_this.hpp:
 
 /usr/include/boost/mpl/aux_/config/msvc.hpp:
 
@@ -44515,6 +47565,12 @@ Application/Project/ProjectLoader.cpp:
 /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_flag_standalone.h:
 
 /usr/include/boost/mpl/next.hpp:
+
+/usr/include/boost/type_index/type_index_facade.hpp:
+
+/usr/include/boost/parameter/aux_/pack/satisfies.hpp:
+
+/usr/include/gtk-3.0/gtk/gtkvolumebutton.h:
 
 /usr/include/boost/parameter/aux_/has_nested_template_fn.hpp:
 
@@ -44535,6 +47591,8 @@ Application/Project/ProjectLoader.cpp:
 /usr/include/boost/move/utility_core.hpp:
 
 /usr/include/boost/type_traits/is_enum.hpp:
+
+Application/Util/FileTreeView.h:
 
 /usr/include/c++/11/bits/vector.tcc:
 
@@ -44573,8 +47631,6 @@ Application/Project/ProjectLoader.cpp:
 /usr/include/boost/align/align_up.hpp:
 
 /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_store.h:
-
-/usr/include/boost/preprocessor/arithmetic/sub.hpp:
 
 /usr/include/c++/11/initializer_list:
 
@@ -44634,11 +47690,17 @@ Application/Project/ProjectLoader.cpp:
 
 /usr/include/boost/numeric/conversion/converter_policies.hpp:
 
+/usr/include/boost/filesystem/convenience.hpp:
+
 /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/gcc/compiler_gcc_thread_fence.h:
 
 /usr/include/x86_64-linux-gnu/bits/types/clock_t.h:
 
+/usr/include/boost/iterator/detail/config_undef.hpp:
+
 /usr/include/c++/11/stdlib.h:
+
+/usr/include/boost/config/no_tr1/functional.hpp:
 
 /usr/include/boost/date_time/time_duration.hpp:
 
@@ -44688,13 +47750,11 @@ Application/Project/ProjectLoader.cpp:
 
 /usr/include/x86_64-linux-gnu/bits/strings_fortified.h:
 
+/usr/include/boost/mpl/aux_/preprocessed/gcc/quote.hpp:
+
 /home/noah/Projects/SIR-Engine/EASTL/deque.h:
 
 /usr/include/glib-2.0/glib/gtypes.h:
-
-/usr/include/boost/mpl/aux_/preprocessed/gcc/quote.hpp:
-
-/usr/include/boost/thread/lock_guard.hpp:
 
 /home/noah/Projects/SIR-Engine/Engine/Core/SmMalloc/smmalloc.cpp:
 
@@ -44719,8 +47779,6 @@ Application/Project/ProjectLoader.cpp:
 /usr/include/glm/detail/func_geometric.inl:
 
 /usr/include/boost/thread/exceptions.hpp:
-
-/usr/include/boost/parameter/aux_/use_default.hpp:
 
 /usr/local/include/SDL2/SDL_mutex.h:
 
@@ -44842,10 +47900,6 @@ Application/Project/ProjectLoader.cpp:
 
 /home/noah/Projects/SIR-Engine/angelscript/angelscript.h:
 
-/usr/include/x86_64-linux-gnu/bits/atomic_wide_counter.h:
-
-/usr/include/boost/mpl/aux_/lambda_support.hpp:
-
 /home/noah/Projects/SIR-Engine/EASTL/allocator.h:
 
 /usr/include/boost/thread/detail/thread_interruption.hpp:
@@ -44868,8 +47922,6 @@ Application/Project/ProjectLoader.cpp:
 
 /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler_sub_fetch.h:
 
-/usr/include/x86_64-linux-gnu/bits/local_lim.h:
-
 /usr/include/x86_64-linux-gnu/bits/types/cookie_io_functions_t.h:
 
 /home/noah/Projects/SIR-Engine/EASTL/internal/config.h:
@@ -44882,16 +47934,6 @@ Application/Project/ProjectLoader.cpp:
 
 /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros.h:
 
-/usr/include/glm/ext/matrix_float3x4_precision.hpp:
-
-/usr/include/strings.h:
-
-/usr/include/boost/bind/bind_cc.hpp:
-
-/home/noah/Projects/SIR-Engine/EASTL/bonus/lru_cache.h:
-
-/usr/include/gtk-3.0/gtk/gtkdialog.h:
-
 /usr/include/glm/detail/type_mat4x3.hpp:
 
 /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512cdintrin.h:
@@ -44903,6 +47945,10 @@ Application/Project/ProjectLoader.cpp:
 /usr/include/boost/thread/futures/launch.hpp:
 
 /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_size_aligned.h:
+
+/usr/include/c++/11/bits/stl_tree.h:
+
+/usr/include/boost/filesystem/operations.hpp:
 
 /usr/include/boost/thread/pthread/mutex.hpp:
 
@@ -44941,8 +47987,6 @@ Application/Project/ProjectLoader.cpp:
 /usr/lib/gcc/x86_64-linux-gnu/11/include/stdarg.h:
 
 /usr/include/x86_64-linux-gnu/bits/ss_flags.h:
-
-/usr/include/boost/core/ref.hpp:
 
 /usr/include/boost/smart_ptr/detail/local_counted_base.hpp:
 
@@ -45002,8 +48046,6 @@ Application/Project/ProjectLoader.cpp:
 
 /home/noah/Projects/SIR-Engine/EASTL/internal/generic_iterator.h:
 
-/usr/include/boost/preprocessor/variadic/size.hpp:
-
 /home/noah/Projects/SIR-Engine/Engine/Core/Types.h:
 
 /usr/local/include/SDL2/SDL_surface.h:
@@ -45034,9 +48076,7 @@ Application/Project/ProjectLoader.cpp:
 
 /usr/include/c++/11/memory:
 
-/home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/arch_exchange.h:
-
-/usr/include/boost/thread/cv_status.hpp:
+/usr/include/boost/core/use_default.hpp:
 
 /usr/include/glm/ext/matrix_double2x4.hpp:
 
@@ -45050,6 +48090,8 @@ Application/Project/ProjectLoader.cpp:
 
 /usr/include/x86_64-linux-gnu/bits/unistd.h:
 
+/usr/include/libnotify/notify-enum-types.h:
+
 /usr/include/boost/atomic/detail/type_traits/is_integral.hpp:
 
 /usr/include/glm/ext/vector_int2.hpp:
@@ -45061,6 +48103,8 @@ Application/Project/ProjectLoader.cpp:
 /usr/include/glib-2.0/gobject/gsourceclosure.h:
 
 /usr/include/glib-2.0/gio/gasyncinitable.h:
+
+/usr/include/boost/io/ios_state.hpp:
 
 /usr/local/include/SDL2/SDL_metal.h:
 
@@ -45090,10 +48134,6 @@ Application/Project/ProjectLoader.cpp:
 
 /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_cmpxchg_strong.h:
 
-/usr/include/pango-1.0/pango/pango-matrix.h:
-
-/usr/include/glm/ext/matrix_double2x2.hpp:
-
 /usr/include/x86_64-linux-gnu/bits/sigthread.h:
 
 /usr/include/glm/ext/matrix_double4x2_precision.hpp:
@@ -45113,8 +48153,6 @@ Application/Project/ProjectLoader.cpp:
 /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_flag.h:
 
 /usr/include/c++/11/bits/fs_ops.h:
-
-/usr/include/boost/bind/bind.hpp:
 
 /usr/include/c++/11/climits:
 
@@ -45252,6 +48290,12 @@ Application/Project/ProjectLoader.cpp:
 
 /usr/include/boost/mpl/key_type_fwd.hpp:
 
+/usr/include/boost/system/detail/std_interoperability.hpp:
+
+/home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/SlabAllocator.h:
+
+/usr/include/glib-2.0/glib/galloca.h:
+
 /usr/include/c++/11/bits/locale_conv.h:
 
 /usr/local/include/SDL2/SDL_blendmode.h:
@@ -45297,6 +48341,14 @@ Application/Project/ProjectLoader.cpp:
 /usr/include/boost/date_time/gregorian/greg_ymd.hpp:
 
 /usr/include/x86_64-linux-gnu/sys/prctl.h:
+
+/usr/include/boost/thread/pthread/condition_variable_fwd.hpp:
+
+/usr/include/linux/types.h:
+
+/home/noah/Projects/SIR-Engine/Engine/Core/FileSystem/MemoryFile.h:
+
+/home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler_thread_fence.h:
 
 /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_memory_barrier.h:
 
@@ -45394,8 +48446,6 @@ Application/Application.cpp:
 
 /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler_or_fetch.h:
 
-/usr/include/boost/thread/detail/thread_heap_alloc.hpp:
-
 /usr/lib/gcc/x86_64-linux-gnu/11/include/vpclmulqdqintrin.h:
 
 /usr/include/c++/11/bits/regex_error.h:
@@ -45409,6 +48459,8 @@ Application/Application.cpp:
 /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_signal_fence.h:
 
 /usr/include/asm-generic/types.h:
+
+/usr/include/boost/filesystem/path.hpp:
 
 /usr/include/c++/11/bits/localefwd.h:
 
@@ -45432,7 +48484,15 @@ Application/Application.cpp:
 
 /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler.h:
 
+/usr/include/GL/glext.h:
+
+/usr/include/gtk-3.0/gtk/gtkcalendar.h:
+
 /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/gcc/compiler_gcc_and_fetch.h:
+
+/home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/x86/arch_x86_cmpxchg_strong.h:
+
+/home/noah/Projects/SIR-Engine/Engine/Core/FileSystem/FileCache.h:
 
 /usr/include/atk-1.0/atk/atkstateset.h:
 
@@ -45449,10 +48509,6 @@ Application/Application.cpp:
 /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_exchange.h:
 
 /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/gcc/compiler_gcc_load.h:
-
-/usr/include/gdk-pixbuf-2.0/gdk-pixbuf/gdk-pixbuf-io.h:
-
-/usr/include/boost/mpl/aux_/has_apply.hpp:
 
 /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler_fetch_or.h:
 
@@ -45484,6 +48540,8 @@ Application/Application.cpp:
 
 /usr/include/boost/date_time/wrapping_int.hpp:
 
+IconsFontAwesomeEditor.h:
+
 /usr/include/boost/preprocessor/arithmetic/dec.hpp:
 
 /usr/include/boost/smart_ptr/allocate_shared_array.hpp:
@@ -45501,8 +48559,6 @@ Application/Application.cpp:
 /usr/include/boost/predef/architecture/pyramid.h:
 
 /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler_store.h:
-
-/usr/include/boost/parameter/optional.hpp:
 
 /usr/lib/gcc/x86_64-linux-gnu/11/include/xsavesintrin.h:
 
@@ -45528,7 +48584,7 @@ Application/Application.cpp:
 
 /usr/include/boost/date_time/date_generators.hpp:
 
-/usr/include/boost/enable_shared_from_this.hpp:
+Application/ImGuiNotify.hpp:
 
 /usr/include/boost/thread/detail/config.hpp:
 
@@ -45588,12 +48644,6 @@ Application/Application.cpp:
 
 /home/noah/Projects/SIR-Engine/EASTL/bonus/compressed_pair.h:
 
-/home/noah/Projects/SIR-Engine/Engine/Core/FileSystem/FileCache.h:
-
-/home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/x86/arch_x86_cmpxchg_strong.h:
-
-/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLCommon.h:
-
 /home/noah/Projects/SIR-Engine/Engine/Core/Application/Posix/PosixApplication.h:
 
 /usr/include/boost/mpl/apply_fwd.hpp:
@@ -45612,9 +48662,9 @@ Application/Application.cpp:
 
 /home/noah/Projects/SIR-Engine/Engine/Core/Config.h:
 
-/usr/include/boost/iterator/iterator_facade.hpp:
+/usr/include/boost/parameter/aux_/set.hpp:
 
-/usr/include/boost/config/detail/suffix.hpp:
+/home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/arch_signal_fence.h:
 
 /usr/include/glib-2.0/gobject/gmarshal.h:
 
@@ -45629,8 +48679,6 @@ Application/Application.cpp:
 /usr/include/atk-1.0/atk/atkobject.h:
 
 /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_fetch_and.h:
-
-/usr/include/boost/mpl/equal_to.hpp:
 
 /usr/include/boost/thread/detail/variadic_footer.hpp:
 
@@ -45672,10 +48720,6 @@ Application/Application.cpp:
 
 /usr/include/boost/date_time/constrained_value.hpp:
 
-/usr/include/boost/mpl/numeric_cast.hpp:
-
-/usr/include/gtk-3.0/gtk/gtktextattributes.h:
-
 /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_pop_compiler_options.h:
 
 /usr/include/x86_64-linux-gnu/bits/stdlib.h:
@@ -45696,9 +48740,15 @@ Application/Application.cpp:
 
 /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/gcc/compiler_gcc_signal_fence.h:
 
+/usr/include/gtk-3.0/gtk/gtktreestore.h:
+
+/usr/include/x86_64-linux-gnu/c++/11/bits/c++io.h:
+
 /usr/include/c++/11/cassert:
 
 /usr/include/c++/11/bits/locale_facets.tcc:
+
+/usr/include/boost/smart_ptr/intrusive_ref_counter.hpp:
 
 /usr/include/glm/detail/qualifier.hpp:
 
@@ -45818,6 +48868,54 @@ Application/Application.cpp:
 
 /usr/include/x86_64-linux-gnu/bits/types/struct_iovec.h:
 
+/usr/include/boost/preprocessor/list/reverse.hpp:
+
+/usr/include/boost/preprocessor/control/detail/while.hpp:
+
+/usr/include/boost/preprocessor/tuple/elem.hpp:
+
+/usr/include/glib-2.0/gio/gdbusmethodinvocation.h:
+
+/usr/include/boost/preprocessor/facilities/overload.hpp:
+
+/usr/include/boost/preprocessor/variadic/size.hpp:
+
+/usr/include/boost/preprocessor/tuple/rem.hpp:
+
+/usr/include/boost/preprocessor/variadic/elem.hpp:
+
+/usr/include/boost/preprocessor/arithmetic/sub.hpp:
+
+/usr/include/boost/mpl/aux_/config/overload_resolution.hpp:
+
+/usr/include/x86_64-linux-gnu/bits/atomic_wide_counter.h:
+
+/usr/include/boost/mpl/aux_/lambda_support.hpp:
+
+/usr/include/boost/mpl/equal_to.hpp:
+
+/usr/include/boost/mpl/aux_/comparison_op.hpp:
+
+/usr/include/boost/mpl/aux_/numeric_op.hpp:
+
+/usr/include/gtk-3.0/gtk/gtktextattributes.h:
+
+/usr/include/boost/mpl/numeric_cast.hpp:
+
+/usr/include/gtk-3.0/gdk/gdktypes.h:
+
+/usr/include/boost/mpl/apply_wrap.hpp:
+
+/usr/include/glm/ext/matrix_double2x2.hpp:
+
+/usr/include/pango-1.0/pango/pango-matrix.h:
+
+/usr/include/gdk-pixbuf-2.0/gdk-pixbuf/gdk-pixbuf-io.h:
+
+/usr/include/boost/mpl/aux_/has_apply.hpp:
+
+/usr/include/boost/mpl/aux_/type_wrapper.hpp:
+
 /usr/include/c++/11/bits/shared_ptr.h:
 
 /usr/include/boost/mpl/aux_/config/msvc_typename.hpp:
@@ -45835,6 +48933,10 @@ Application/Application.cpp:
 /usr/include/boost/mpl/aux_/adl_barrier.hpp:
 
 /usr/include/boost/mpl/aux_/include_preprocessed.hpp:
+
+/usr/include/boost/core/checked_delete.hpp:
+
+/usr/include/boost/detail/indirect_traits.hpp:
 
 /usr/include/x86_64-linux-gnu/bits/stdio.h:
 
@@ -45910,9 +49012,9 @@ Application/Application.cpp:
 
 /usr/include/boost/numeric/conversion/detail/bounds.hpp:
 
-/usr/include/c++/11/bits/stl_multimap.h:
-
 /usr/include/boost/thread/thread.hpp:
+
+/usr/include/c++/11/bits/stl_multimap.h:
 
 /usr/include/boost/numeric/conversion/numeric_cast_traits.hpp:
 
@@ -46006,8 +49108,6 @@ Application/Application.cpp:
 
 /usr/include/boost/predef/architecture/sparc.h:
 
-/usr/include/boost/parameter/aux_/pack/item.hpp:
-
 /usr/include/boost/predef/architecture/sys370.h:
 
 /usr/include/glib-2.0/glib/ghostutils.h:
@@ -46022,7 +49122,11 @@ Application/Application.cpp:
 
 /usr/include/boost/predef/compiler.h:
 
-/usr/include/boost/predef/compiler/compaq.h:
+/usr/include/glm/detail/func_matrix.inl:
+
+/usr/include/c++/11/bits/list.tcc:
+
+/usr/include/boost/predef/compiler/comeau.h:
 
 /usr/include/gtk-3.0/gtk/gtksearchbar.h:
 
@@ -46160,10 +49264,6 @@ Application/Application.cpp:
 
 /usr/include/boost/predef/os/bsd/bsdi.h:
 
-/usr/include/boost/iterator/interoperable.hpp:
-
-/usr/include/boost/predef/os/bsd/dragonfly.h:
-
 /usr/include/c++/11/ext/concurrence.h:
 
 /usr/include/boost/predef/os/bsd/free.h:
@@ -46173,8 +49273,6 @@ Application/Application.cpp:
 /usr/include/boost/type_traits/remove_const.hpp:
 
 /usr/include/boost/predef/os/bsd/open.h:
-
-/home/noah/Projects/SIR-Engine/EASTL/chrono.h:
 
 /usr/include/glib-2.0/gio/gbufferedoutputstream.h:
 
@@ -46204,6 +49302,10 @@ Application/Application.cpp:
 
 /usr/include/boost/predef/os/solaris.h:
 
+/usr/include/c++/11/bits/regex_constants.h:
+
+/usr/include/boost/smart_ptr/intrusive_ptr.hpp:
+
 /usr/include/boost/predef/os/windows.h:
 
 /usr/include/boost/predef/other.h:
@@ -46220,9 +49322,9 @@ Application/Application.cpp:
 
 /usr/include/boost/mpl/always.hpp:
 
-/usr/local/include/SDL2/SDL_touch.h:
-
 /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vldqintrin.h:
+
+/usr/local/include/SDL2/SDL_touch.h:
 
 /usr/include/boost/predef/platform/mingw.h:
 
@@ -46233,12 +49335,6 @@ Application/Application.cpp:
 /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/RenderBuffer.h:
 
 /usr/include/boost/predef/platform/windows_phone.h:
-
-/home/noah/Projects/SIR-Engine/EASTL/ratio.h:
-
-/usr/include/boost/type_traits/is_lvalue_reference.hpp:
-
-/usr/include/boost/predef/platform/windows_store.h:
 
 /usr/include/boost/predef/platform/windows_runtime.h:
 
@@ -46260,8 +49356,6 @@ Application/Application.cpp:
 
 /usr/include/boost/type_traits/is_pointer.hpp:
 
-/usr/include/boost/lockfree/lockfree_forward.hpp:
-
 /usr/include/boost/predef/hardware/simd/x86_amd.h:
 
 /usr/include/boost/lockfree/policies.hpp:
@@ -46273,16 +49367,6 @@ Application/Application.cpp:
 /usr/include/boost/predef/hardware/simd/arm/versions.h:
 
 /usr/include/boost/predef/version.h:
-
-/usr/include/boost/mpl/logical.hpp:
-
-/home/noah/Projects/SIR-Engine/EASTL/optional.h:
-
-/usr/include/glm/detail/func_matrix.inl:
-
-/usr/include/boost/predef/compiler/comeau.h:
-
-/usr/include/c++/11/bits/list.tcc:
 
 /usr/include/boost/mpl/or.hpp:
 
@@ -46336,9 +49420,177 @@ Application/SceneView.h:
 
 Application/AssetLib/TextureAtlas.h:
 
-/home/noah/Projects/SIR-Engine/Engine/Core/Events/EventManager.h:
+Application/ContentBrowser.h:
 
-/home/noah/Projects/SIR-Engine/Engine/Core/Events/KeyEvent.h:
+/usr/include/boost/type_traits/is_lvalue_reference.hpp:
+
+/home/noah/Projects/SIR-Engine/EASTL/ratio.h:
+
+/usr/include/boost/predef/platform/windows_store.h:
+
+/usr/include/boost/filesystem.hpp:
+
+/usr/include/boost/filesystem/config.hpp:
+
+/usr/lib/gcc/x86_64-linux-gnu/11/include/stdint.h:
+
+/usr/include/boost/predef/platform/windows_uwp.h:
+
+/usr/include/atk-1.0/atk/atkhyperlinkimpl.h:
+
+/usr/include/gtk-3.0/gtk/gtkmenutoolbutton.h:
+
+/usr/include/boost/predef/compiler/compaq.h:
+
+/usr/include/boost/filesystem/path_traits.hpp:
+
+/usr/include/glib-2.0/gio/gpowerprofilemonitor.h:
+
+/usr/include/c++/11/list:
+
+/usr/include/c++/11/bits/stl_list.h:
+
+/usr/include/atk-1.0/atk/atknoopobject.h:
+
+/usr/include/boost/config/detail/suffix.hpp:
+
+/usr/include/boost/iterator/iterator_facade.hpp:
+
+/usr/include/gtk-3.0/gtk/deprecated/gtkactivatable.h:
+
+/usr/include/boost/predef/os/bsd/dragonfly.h:
+
+/usr/include/boost/iterator/interoperable.hpp:
+
+/home/noah/Projects/SIR-Engine/EASTL/internal/type_transformations.h:
+
+/usr/lib/gcc/x86_64-linux-gnu/11/include/tsxldtrkintrin.h:
+
+/usr/include/gtk-3.0/gdk/gdkframeclock.h:
+
+/usr/include/boost/iterator/iterator_traits.hpp:
+
+/usr/include/boost/smart_ptr/detail/atomic_count_gcc_atomic.hpp:
+
+/usr/include/x86_64-linux-gnu/bits/byteswap.h:
+
+/usr/include/boost/mpl/placeholders.hpp:
+
+/home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler_fetch_sub.h:
+
+/usr/include/gtk-3.0/gtk/gtkinfobar.h:
+
+/usr/include/boost/mpl/arg.hpp:
+
+/usr/include/boost/type_traits/has_trivial_assign.hpp:
+
+/usr/include/boost/mpl/arg_fwd.hpp:
+
+/usr/include/boost/mpl/assert.hpp:
+
+/usr/include/glib-2.0/glib/gchecksum.h:
+
+/usr/include/boost/mpl/aux_/config/gpu.hpp:
+
+/usr/include/boost/mpl/aux_/arity_spec.hpp:
+
+/usr/include/boost/mpl/aux_/arg_typedef.hpp:
+
+/usr/include/boost/lockfree/detail/copy_payload.hpp:
+
+/usr/include/boost/mpl/and.hpp:
+
+/usr/include/boost/mpl/aux_/preprocessed/gcc/arg.hpp:
+
+/usr/include/boost/type_traits/detail/is_member_function_pointer_cxx_11.hpp:
+
+/usr/include/boost/type_traits/remove_pointer.hpp:
+
+/usr/include/boost/iterator/detail/enable_if.hpp:
+
+/usr/include/boost/type_traits/add_const.hpp:
+
+/usr/include/boost/type_traits/is_pod.hpp:
+
+/usr/include/boost/core/is_same.hpp:
+
+/usr/include/pango-1.0/pango/pango-layout.h:
+
+/usr/lib/gcc/x86_64-linux-gnu/11/include/avx5124fmapsintrin.h:
+
+/usr/include/boost/mpl/apply.hpp:
+
+/usr/include/boost/mpl/lambda.hpp:
+
+/usr/include/X11/Xosdefs.h:
+
+/usr/lib/gcc/x86_64-linux-gnu/11/include/avx512ifmaintrin.h:
+
+/usr/include/boost/mpl/bind_fwd.hpp:
+
+/usr/include/boost/mpl/aux_/config/bind.hpp:
+
+/usr/include/boost/mpl/aux_/common_name_wknd.hpp:
+
+/usr/include/gtk-3.0/gtk/gtkcheckbutton.h:
+
+/usr/include/boost/mpl/aux_/config/bcc.hpp:
+
+/usr/include/c++/11/bits/stl_stack.h:
+
+/usr/include/c++/11/tr1/beta_function.tcc:
+
+/usr/include/glib-2.0/gio/gmemoryinputstream.h:
+
+/usr/include/boost/atomic/detail/gcc_atomic_memory_order_utils.hpp:
+
+/home/noah/Projects/SIR-Engine/Engine/Core/Input/BindingManager.h:
+
+/usr/include/boost/config.hpp:
+
+/home/noah/Projects/SIR-Engine/Engine/Core/Events/EventManager.cpp:
+
+/usr/include/glm/ext/matrix_float4x3.hpp:
+
+/usr/include/boost/mpl/aux_/preprocessed/gcc/template_arity.hpp:
+
+/usr/include/boost/mpl/aux_/preprocessed/gcc/full_lambda.hpp:
+
+/usr/include/boost/thread/executors/executor.hpp:
+
+/home/noah/Projects/SIR-Engine/Engine/Core/Application/GenericPlatform/GenericApplication.cpp:
+
+/usr/include/gtk-3.0/gtk/gtktextbuffer.h:
+
+/usr/include/boost/mpl/aux_/preprocessed/gcc/apply.hpp:
+
+/home/noah/Projects/SIR-Engine/EASTL/chrono.h:
+
+/usr/include/boost/io/quoted.hpp:
+
+/usr/include/x86_64-linux-gnu/bits/mman-map-flags-generic.h:
+
+/usr/include/glm/ext/matrix_double4x3_precision.hpp:
+
+/usr/include/boost/io/detail/buffer_fill.hpp:
+
+/usr/include/boost/utility/swap.hpp:
+
+/usr/include/boost/io/detail/ostream_guard.hpp:
+
+/usr/include/boost/functional/hash_fwd.hpp:
+
+/usr/include/glib-2.0/glib/gmacros.h:
+
+/usr/include/boost/container_hash/hash_fwd.hpp:
+
+/usr/include/boost/mpl/quote.hpp:
+
+/usr/include/boost/filesystem/exception.hpp:
+
+/usr/include/boost/filesystem/directory.hpp:
+
+/usr/include/boost/filesystem/file_status.hpp:
 
 /usr/include/c++/11/variant:
 
@@ -46346,11 +49598,29 @@ Application/Application.h:
 
 /home/noah/Projects/SIR-Engine/Engine/Core/Events/KeyCodes.h:
 
-/home/noah/Projects/SIR-Engine/Engine/RenderLib/RenderCommon.h:
+/usr/include/boost/filesystem/string_file.hpp:
+
+/usr/include/boost/predef/language.h:
+
+/usr/include/boost/filesystem/fstream.hpp:
+
+/usr/include/boost/iterator/advance.hpp:
+
+/usr/include/c++/11/fstream:
+
+/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKContext.h:
+
+/usr/include/gtk-3.0/gtk/deprecated/gtkvseparator.h:
+
+/home/noah/Projects/SIR-Engine/Engine/Util/CReverseIterator.h:
+
+/usr/include/x86_64-linux-gnu/c++/11/bits/basic_file.h:
+
+/home/noah/Projects/SIR-Engine/Engine/Core/Events/EventManager.h:
+
+/home/noah/Projects/SIR-Engine/Engine/Core/Events/KeyEvent.h:
 
 /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/RenderContext.h:
-
-/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/RenderTexture.h:
 
 /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/RenderShader.h:
 
@@ -46374,6 +49644,8 @@ Application/Application.h:
 
 /usr/local/include/SDL2/SDL_clipboard.h:
 
+Application/Util/TabSelect.h:
+
 /usr/local/include/SDL2/SDL_log.h:
 
 /usr/include/boost/parameter/aux_/result_of0.hpp:
@@ -46390,153 +49662,9 @@ Application/Application.h:
 
 /usr/local/include/SDL2/SDL_misc.h:
 
-/usr/include/GL/gl.h:
-
-/usr/include/GL/glext.h:
-
-/usr/include/gtk-3.0/gtk/gtkcalendar.h:
-
-/usr/include/KHR/khrplatform.h:
-
-/usr/include/glib-2.0/gio/gmenu.h:
-
-/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLoader.h:
-
-/home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler_thread_fence.h:
-
-/home/noah/Projects/SIR-Engine/Engine/Core/FileSystem/MemoryFile.h:
-
-/usr/include/gtk-3.0/gtk/gtkcellareacontext.h:
-
-/usr/include/boost/system/detail/std_interoperability.hpp:
-
-/home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/SlabAllocator.h:
-
-/usr/include/glib-2.0/glib/galloca.h:
-
-/home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/gcc/compiler_gcc_fetch_or.h:
-
-/home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/MemoryBuffer.h:
-
-/home/noah/Projects/SIR-Engine/EASTL/list.h:
-
-Application/Roboto-Regular.embed:
-
-/usr/include/boost/type_traits/is_reference.hpp:
-
-Application/Project/ProjectData.cpp:
-
-/usr/include/boost/atomic/detail/type_traits/is_trivially_copyable.hpp:
-
-/usr/include/gtk-3.0/gtk/gtkgesturezoom.h:
-
-json/single_include/nlohmann/json.hpp:
-
-/usr/include/boost/thread/detail/make_tuple_indices.hpp:
-
-/usr/include/c++/11/valarray:
-
-/usr/include/execinfo.h:
-
-/usr/include/c++/11/bits/locale_facets.h:
-
-/usr/include/c++/11/bits/valarray_array.tcc:
-
-/usr/include/gtk-3.0/gtk/gtkcellview.h:
-
-/usr/include/x86_64-linux-gnu/bits/mathcalls-helper-functions.h:
-
-/usr/include/c++/11/bits/valarray_after.h:
-
-/usr/include/c++/11/bits/gslice.h:
-
-/usr/include/boost/mpl/aux_/config/arrays.hpp:
-
-/usr/include/glib-2.0/gio/gdbusmenumodel.h:
-
-/usr/include/gtk-3.0/gtk/gtkappchooserwidget.h:
-
-/usr/include/gtk-3.0/gtk/gtkcolorutils.h:
-
-/usr/include/c++/11/bits/gslice_array.h:
-
-/usr/include/c++/11/bits/indirect_array.h:
-
-/usr/include/c++/11/filesystem:
-
-/usr/include/boost/predef/architecture.h:
-
-/usr/include/c++/11/bits/fs_dir.h:
-
-/usr/include/boost/mpl/long.hpp:
-
-/usr/include/c++/11/bits/stl_numeric.h:
-
-/usr/include/x86_64-linux-gnu/bits/types/stack_t.h:
-
-/usr/include/gtk-3.0/gdk/gdkcairo.h:
-
-/usr/include/c++/11/any:
-
-/usr/include/boost/atomic/detail/extra_operations_fwd.hpp:
-
-/usr/include/gtk-3.0/gtk/deprecated/gtkstyleproperties.h:
-
-Application/SceneView.cpp:
-
-Application/TextEditor.cpp:
-
-/usr/include/boost/thread/executors/executor.hpp:
-
-/home/noah/Projects/SIR-Engine/Engine/Core/Application/GenericPlatform/GenericApplication.cpp:
-
-/usr/include/gtk-3.0/gtk/gtktextbuffer.h:
-
-/usr/include/boost/mpl/aux_/preprocessed/gcc/full_lambda.hpp:
-
-/usr/include/glm/ext/vector_uint4.hpp:
-
-/home/noah/Projects/SIR-Engine/nlohmann/json.hpp:
-
-/home/noah/Projects/SIR-Engine/EASTL/any.h:
-
-/home/noah/Projects/SIR-Engine/Engine/Core/Input/InputManager.h:
-
-/usr/include/boost/atomic/detail/gcc_atomic_memory_order_utils.hpp:
-
-/home/noah/Projects/SIR-Engine/Engine/Core/Input/BindingManager.h:
-
-/usr/include/c++/11/bits/stl_stack.h:
-
-/usr/include/c++/11/tr1/beta_function.tcc:
-
-/usr/include/glib-2.0/gio/gmemoryinputstream.h:
-
-/usr/include/boost/config.hpp:
-
-/home/noah/Projects/SIR-Engine/Engine/Core/Events/EventManager.cpp:
-
-/usr/include/boost/mpl/aux_/config/bcc.hpp:
-
-/usr/include/glib-2.0/gio/gioenums.h:
-
-/usr/include/gtk-3.0/gdk/gdk.h:
-
-/usr/include/gtk-3.0/gdk/gdkconfig.h:
-
-/usr/include/glib-2.0/gio/gdebugcontroller.h:
-
-/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPNG.cpp:
-
-/usr/include/boost/mpl/order_fwd.hpp:
-
-/usr/include/boost/mpl/deref.hpp:
-
 /usr/include/asm-generic/int-ll64.h:
 
 /usr/include/glib-2.0/glib.h:
-
-/usr/include/glib-2.0/glib/gmacros.h:
 
 /usr/include/boost/atomic/detail/wait_ops_emulated.hpp:
 
@@ -46577,10 +49705,6 @@ Application/TextEditor.cpp:
 /usr/include/boost/atomic/detail/futex.hpp:
 
 /usr/include/gtk-3.0/gtk/deprecated/gtkvpaned.h:
-
-/usr/include/glib-2.0/glib/gchecksum.h:
-
-/usr/include/boost/mpl/assert.hpp:
 
 /usr/include/glib-2.0/glib/gdate.h:
 
@@ -46640,10 +49764,6 @@ Application/TextEditor.cpp:
 
 /usr/include/glib-2.0/glib/gmessages.h:
 
-/usr/include/c++/11/codecvt:
-
-/usr/include/pango-1.0/pango/pango-fontmap.h:
-
 /usr/include/glib-2.0/glib/gvariant.h:
 
 /usr/include/glib-2.0/glib/goption.h:
@@ -46698,9 +49818,7 @@ Application/TextEditor.cpp:
 
 /usr/include/glib-2.0/glib/glib-autocleanups.h:
 
-/usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vbmi2intrin.h:
-
-/usr/include/gtk-3.0/gdk/gdkapplaunchcontext.h:
+/usr/include/libnotify/notification.h:
 
 /usr/include/glib-2.0/glib-object.h:
 
@@ -46734,11 +49852,25 @@ Application/TextEditor.cpp:
 
 /usr/include/atk-1.0/atk/atkdocument.h:
 
+/usr/include/gdk-pixbuf-2.0/gdk-pixbuf/gdk-pixbuf-macros.h:
+
+/usr/include/gdk-pixbuf-2.0/gdk-pixbuf/gdk-pixbuf-features.h:
+
+/usr/include/stdc-predef.h:
+
+/usr/include/gdk-pixbuf-2.0/gdk-pixbuf/gdk-pixbuf-core.h:
+
+/usr/include/glib-2.0/gio/giotypes.h:
+
+/usr/include/glib-2.0/gio/gdbusobject.h:
+
+/usr/include/glib-2.0/gio/gioenums.h:
+
+/usr/include/x86_64-linux-gnu/bits/fcntl-linux.h:
+
 /usr/include/gtk-3.0/gtk/gtkscale.h:
 
 /usr/include/boost/mpl/aux_/has_tag.hpp:
-
-/usr/include/x86_64-linux-gnu/bits/fcntl-linux.h:
 
 /usr/include/glib-2.0/gio/gactiongroup.h:
 
@@ -46820,6 +49952,16 @@ Application/TextEditor.cpp:
 
 /usr/include/glib-2.0/gio/gdbusinterfaceskeleton.h:
 
+/usr/include/boost/mpl/aux_/config/arrays.hpp:
+
+/usr/include/glib-2.0/gio/gdbusmenumodel.h:
+
+/usr/include/c++/11/bits/gslice.h:
+
+/usr/include/gtk-3.0/gtk/gtkappchooserwidget.h:
+
+/usr/include/gtk-3.0/gtk/gtkcolorutils.h:
+
 /usr/include/asm-generic/posix_types.h:
 
 /usr/include/glib-2.0/gio/gdbusnamewatching.h:
@@ -46846,7 +49988,15 @@ Application/TextEditor.cpp:
 
 /usr/include/glib-2.0/gio/gdbusserver.h:
 
-/usr/include/boost/type_traits/detail/is_member_function_pointer_cxx_11.hpp:
+/usr/include/glib-2.0/gio/gdebugcontroller.h:
+
+/usr/include/gtk-3.0/gdk/gdkconfig.h:
+
+/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPNG.cpp:
+
+/usr/include/boost/mpl/order_fwd.hpp:
+
+/usr/include/boost/mpl/deref.hpp:
 
 /usr/include/glib-2.0/gio/gdebugcontrollerdbus.h:
 
@@ -46918,8 +50068,6 @@ Application/TextEditor.cpp:
 
 /usr/include/glib-2.0/gio/gliststore.h:
 
-/usr/include/boost/thread.hpp:
-
 /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_or_fetch.h:
 
 /usr/include/glib-2.0/gio/gmemoryoutputstream.h:
@@ -46949,8 +50097,6 @@ Application/TextEditor.cpp:
 /home/noah/Projects/SIR-Engine/Engine/Core/FileSystem/FileCache.cpp:
 
 /usr/include/glib-2.0/gio/gpermission.h:
-
-/usr/include/glib-2.0/gio/gpowerprofilemonitor.h:
 
 /usr/include/linux/stddef.h:
 
@@ -47023,6 +50169,102 @@ Application/TextEditor.cpp:
 /home/noah/Projects/SIR-Engine/EASTL/internal/atomic/atomic_macros/atomic_macros_cmpxchg_weak.h:
 
 /usr/include/glib-2.0/gio/gvfs.h:
+
+/usr/include/gdk-pixbuf-2.0/gdk-pixbuf/gdk-pixbuf-simple-anim.h:
+
+/usr/include/gdk-pixbuf-2.0/gdk-pixbuf/gdk-pixbuf-enum-types.h:
+
+/usr/include/gdk-pixbuf-2.0/gdk-pixbuf/gdk-pixbuf-autocleanups.h:
+
+/usr/include/boost/preprocessor/logical/and.hpp:
+
+/usr/include/gtk-3.0/gtk/gtkcellarea.h:
+
+/usr/include/boost/mpl/long_fwd.hpp:
+
+/usr/include/libnotify/notify-features.h:
+
+Application/Roboto-Regular.embed:
+
+Application/ContentBrowser.cpp:
+
+/usr/include/boost/type_traits/is_reference.hpp:
+
+Application/Project/ProjectData.cpp:
+
+/usr/include/boost/atomic/detail/type_traits/is_trivially_copyable.hpp:
+
+/usr/include/gtk-3.0/gtk/gtkgesturezoom.h:
+
+json/single_include/nlohmann/json.hpp:
+
+/usr/include/boost/thread/detail/make_tuple_indices.hpp:
+
+/usr/include/c++/11/valarray:
+
+/usr/include/execinfo.h:
+
+/usr/include/c++/11/bits/locale_facets.h:
+
+/usr/include/c++/11/bits/valarray_array.tcc:
+
+/usr/include/gtk-3.0/gtk/gtkcellview.h:
+
+/usr/include/x86_64-linux-gnu/bits/mathcalls-helper-functions.h:
+
+/usr/include/c++/11/bits/valarray_after.h:
+
+/usr/include/c++/11/bits/gslice_array.h:
+
+/usr/include/c++/11/bits/indirect_array.h:
+
+/usr/include/c++/11/filesystem:
+
+/usr/include/pango-1.0/pango/pango-fontmap.h:
+
+/usr/include/c++/11/codecvt:
+
+/usr/include/boost/predef/architecture.h:
+
+/usr/include/c++/11/bits/fs_dir.h:
+
+/usr/include/boost/mpl/long.hpp:
+
+/usr/include/c++/11/bits/stl_numeric.h:
+
+/usr/include/x86_64-linux-gnu/bits/types/stack_t.h:
+
+/usr/include/gtk-3.0/gdk/gdkcairo.h:
+
+/usr/include/c++/11/any:
+
+/usr/include/boost/atomic/detail/extra_operations_fwd.hpp:
+
+/usr/include/gtk-3.0/gtk/deprecated/gtkstyleproperties.h:
+
+Application/SceneView.cpp:
+
+Application/TextEditor.cpp:
+
+/usr/include/glm/ext/vector_uint4.hpp:
+
+/home/noah/Projects/SIR-Engine/nlohmann/json.hpp:
+
+/home/noah/Projects/SIR-Engine/EASTL/any.h:
+
+/home/noah/Projects/SIR-Engine/Engine/Core/Input/InputManager.h:
+
+/usr/include/gtk-3.0/gdk/gdk.h:
+
+/usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vbmi2intrin.h:
+
+/usr/include/gtk-3.0/gdk/gdkapplaunchcontext.h:
+
+/usr/include/locale.h:
+
+/usr/include/boost/type_traits/is_volatile.hpp:
+
+/usr/include/pango-1.0/pango/pango.h:
 
 /usr/include/x86_64-linux-gnu/bits/wordsize.h:
 
@@ -47104,12 +50346,6 @@ Application/TextEditor.cpp:
 
 /usr/include/pango-1.0/pango/pango-glyph-item.h:
 
-/usr/include/boost/core/is_same.hpp:
-
-/usr/include/pango-1.0/pango/pango-layout.h:
-
-/usr/include/boost/type_traits/is_pod.hpp:
-
 /usr/include/pango-1.0/pango/pango-tabs.h:
 
 /usr/include/pango-1.0/pango/pango-renderer.h:
@@ -47146,12 +50382,6 @@ Application/TextEditor.cpp:
 
 /usr/include/gtk-3.0/gdk/gdkdrawingcontext.h:
 
-/home/noah/Projects/SIR-Engine/EASTL/internal/type_transformations.h:
-
-/usr/lib/gcc/x86_64-linux-gnu/11/include/tsxldtrkintrin.h:
-
-/usr/include/gtk-3.0/gdk/gdkframeclock.h:
-
 /usr/include/boost/cerrno.hpp:
 
 /usr/include/glib-2.0/gio/gresource.h:
@@ -47159,22 +50389,6 @@ Application/TextEditor.cpp:
 /usr/include/gtk-3.0/gdk/gdkframetimings.h:
 
 /usr/include/gtk-3.0/gdk/deprecated/gdkcolor.h:
-
-/usr/include/boost/lockfree/detail/prefix.hpp:
-
-/usr/include/gdk-pixbuf-2.0/gdk-pixbuf/gdk-pixbuf-macros.h:
-
-/usr/include/gdk-pixbuf-2.0/gdk-pixbuf/gdk-pixbuf-features.h:
-
-/usr/include/stdc-predef.h:
-
-/usr/include/gdk-pixbuf-2.0/gdk-pixbuf/gdk-pixbuf-core.h:
-
-/usr/include/gdk-pixbuf-2.0/gdk-pixbuf/gdk-pixbuf-simple-anim.h:
-
-/usr/include/gdk-pixbuf-2.0/gdk-pixbuf/gdk-pixbuf-enum-types.h:
-
-/usr/include/gdk-pixbuf-2.0/gdk-pixbuf/gdk-pixbuf-autocleanups.h:
 
 /usr/include/X11/X.h:
 
@@ -47207,14 +50421,6 @@ Application/TextEditor.cpp:
 /usr/include/gtk-3.0/gdk/gdkmain.h:
 
 /usr/include/gtk-3.0/gdk/gdkpango.h:
-
-/usr/include/c++/11/pstl/execution_defs.h:
-
-/usr/include/boost/parameter/aux_/pack/deduced_item.hpp:
-
-/usr/include/boost/type_traits/type_with_alignment.hpp:
-
-/usr/include/boost/thread/interruption.hpp:
 
 /usr/include/gtk-3.0/gdk/gdkselection.h:
 
@@ -47272,19 +50478,7 @@ Application/TextEditor.cpp:
 
 /usr/include/boost/mpl/aux_/has_begin.hpp:
 
-/usr/lib/gcc/x86_64-linux-gnu/11/include/stdint.h:
-
-/usr/include/boost/predef/platform/windows_uwp.h:
-
-/usr/include/atk-1.0/atk/atkhyperlinkimpl.h:
-
-/usr/include/gtk-3.0/gtk/gtkmenutoolbutton.h:
-
 /usr/include/atk-1.0/atk/atkimage.h:
-
-/usr/include/atk-1.0/atk/atknoopobject.h:
-
-/usr/include/c++/11/bits/stl_list.h:
 
 /usr/include/boost/mpl/distance.hpp:
 
@@ -47318,6 +50512,18 @@ Application/TextEditor.cpp:
 
 /usr/include/gtk-3.0/gtk/gtkaccellabel.h:
 
+/usr/include/boost/exception/detail/is_output_streamable.hpp:
+
+/usr/include/boost/atomic/detail/core_operations_fwd.hpp:
+
+/usr/include/boost/thread/thread_only.hpp:
+
+/usr/include/glm/ext/matrix_float3x3_precision.hpp:
+
+/usr/local/include/SDL2/SDL_cpuinfo.h:
+
+/usr/include/gtk-3.0/gtk/gtklabel.h:
+
 /usr/include/boost/mpl/find.hpp:
 
 /usr/include/gtk-3.0/gtk/deprecated/gtkmisc.h:
@@ -47335,12 +50541,6 @@ Application/TextEditor.cpp:
 /usr/include/gtk-3.0/gtk/gtkappchooserbutton.h:
 
 /usr/include/gtk-3.0/gtk/gtktreeview.h:
-
-/usr/include/boost/preprocessor/logical/and.hpp:
-
-/usr/include/boost/mpl/long_fwd.hpp:
-
-/usr/include/gtk-3.0/gtk/gtkcellarea.h:
 
 /usr/include/gtk-3.0/gtk/gtkdnd.h:
 
@@ -47392,13 +50592,11 @@ Application/TextEditor.cpp:
 
 /usr/include/boost/assert/source_location.hpp:
 
+/usr/include/boost/detail/bitmask.hpp:
+
 /usr/local/include/SDL2/SDL_haptic.h:
 
 /usr/include/gtk-3.0/gtk/gtkcellrendererspin.h:
-
-/usr/include/gtk-3.0/gtk/gtkcheckbutton.h:
-
-/usr/include/boost/mpl/aux_/common_name_wknd.hpp:
 
 /usr/include/gtk-3.0/gtk/gtktoolshell.h:
 
@@ -47421,8 +50619,6 @@ Application/TextEditor.cpp:
 /usr/include/c++/11/bits/specfun.h:
 
 /usr/include/gtk-3.0/gtk/gtkdragsource.h:
-
-/usr/include/boost/parameter/aux_/pack/tag_keyword_arg.hpp:
 
 /usr/include/gtk-3.0/gtk/gtkeventcontroller.h:
 
@@ -47554,6 +50750,14 @@ Application/TextEditor.cpp:
 
 /usr/include/gtk-3.0/gtk/gtkrecentmanager.h:
 
+/usr/include/boost/function.hpp:
+
+/usr/include/boost/mpl/aux_/template_arity_fwd.hpp:
+
+/usr/include/boost/mpl/aux_/has_type.hpp:
+
+/usr/include/gtk-3.0/gtk/gtkrecentfilter.h:
+
 /usr/include/gtk-3.0/gtk/gtkaccessible.h:
 
 /usr/include/gtk-3.0/gtk/gtkrecentchooserdialog.h:
@@ -47565,6 +50769,10 @@ Application/TextEditor.cpp:
 /usr/include/gtk-3.0/gtk/gtkseparator.h:
 
 /usr/include/gtk-3.0/gtk/deprecated/gtkhscrollbar.h:
+
+/usr/include/boost/parameter/aux_/always_true_predicate.hpp:
+
+/usr/include/gtk-3.0/gtk/gtkseparatormenuitem.h:
 
 /usr/include/gtk-3.0/gtk/gtkseparatortoolitem.h:
 
@@ -47600,13 +50808,7 @@ Application/TextEditor.cpp:
 
 /usr/include/gtk-3.0/gtk/gtktreeselection.h:
 
-/usr/include/gtk-3.0/gtk/gtktreestore.h:
-
 /usr/include/gtk-3.0/gtk/gtkviewport.h:
-
-/usr/include/gtk-3.0/gtk/gtkseparatormenuitem.h:
-
-/usr/include/boost/parameter/aux_/always_true_predicate.hpp:
 
 /usr/include/boost/swap.hpp:
 
@@ -47617,8 +50819,6 @@ Application/TextEditor.cpp:
 /usr/include/c++/11/bits/ostream_insert.h:
 
 /usr/include/gtk-3.0/gtk/gtkwindowgroup.h:
-
-/usr/include/gtk-3.0/gtk/deprecated/gtkactivatable.h:
 
 /usr/include/x86_64-linux-gnu/bits/environments.h:
 
@@ -47662,17 +50862,19 @@ Application/TextEditor.cpp:
 
 /usr/include/gtk-3.0/gtk/deprecated/gtkvbbox.h:
 
-/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKContext.h:
+/usr/include/boost/mpl/aux_/arithmetic_op.hpp:
 
-/usr/include/gtk-3.0/gtk/deprecated/gtkvseparator.h:
+/usr/include/c++/11/algorithm:
+
+/usr/include/boost/type_traits/is_member_pointer.hpp:
+
+/usr/include/gtk-3.0/gtk/deprecated/gtkvscrollbar.h:
 
 /usr/include/glib-2.0/glib/gcharset.h:
 
 /usr/include/gtk-3.0/gtk/gtk-autocleanups.h:
 
 /usr/include/x86_64-linux-gnu/bits/mman.h:
-
-/usr/include/x86_64-linux-gnu/bits/mman-map-flags-generic.h:
 
 /usr/include/x86_64-linux-gnu/bits/statx.h:
 
@@ -47716,35 +50918,9 @@ Application/TextEditor.cpp:
 
 /usr/include/boost/core/pointer_traits.hpp:
 
-/usr/include/boost/type_traits/has_trivial_assign.hpp:
-
-/home/noah/Projects/SIR-Engine/EASTL/internal/atomic/compiler/compiler_fetch_sub.h:
-
-/usr/include/gtk-3.0/gtk/gtkinfobar.h:
-
-/usr/include/boost/mpl/arg.hpp:
-
-/usr/include/boost/mpl/aux_/arithmetic_op.hpp:
-
-/usr/include/c++/11/algorithm:
-
-/usr/include/gtk-3.0/gtk/deprecated/gtkvscrollbar.h:
-
-/usr/include/boost/type_traits/is_member_pointer.hpp:
-
-/usr/include/locale.h:
-
-/usr/include/pango-1.0/pango/pango.h:
-
-/usr/include/boost/type_traits/is_volatile.hpp:
-
 /usr/lib/gcc/x86_64-linux-gnu/11/include/xsaveintrin.h:
 
 /usr/include/c++/11/atomic:
-
-/usr/include/boost/lockfree/detail/copy_payload.hpp:
-
-/usr/include/boost/mpl/aux_/arg_typedef.hpp:
 
 /usr/include/boost/lockfree/detail/freelist.hpp:
 
@@ -47830,47 +51006,9 @@ Application/TextEditor.cpp:
 
 /usr/include/boost/parameter/aux_/augment_predicate.hpp:
 
-/usr/include/boost/mpl/lambda.hpp:
-
-/usr/include/X11/Xosdefs.h:
-
-/usr/lib/gcc/x86_64-linux-gnu/11/include/avx512ifmaintrin.h:
-
-/usr/include/boost/mpl/bind_fwd.hpp:
-
-/usr/include/boost/mpl/aux_/config/bind.hpp:
-
-/usr/include/x86_64-linux-gnu/bits/byteswap.h:
-
-/usr/include/boost/mpl/placeholders.hpp:
-
-/usr/include/boost/mpl/arg_fwd.hpp:
-
-/usr/include/boost/mpl/aux_/config/gpu.hpp:
-
-/usr/include/boost/mpl/aux_/arity_spec.hpp:
-
-/usr/include/boost/mpl/and.hpp:
-
-/usr/include/boost/mpl/aux_/preprocessed/gcc/arg.hpp:
-
-/usr/include/boost/mpl/quote.hpp:
-
-/usr/include/boost/function.hpp:
-
-/usr/include/boost/mpl/aux_/template_arity_fwd.hpp:
-
-/usr/include/gtk-3.0/gtk/gtkrecentfilter.h:
-
-/usr/include/boost/mpl/aux_/has_type.hpp:
-
-/usr/include/glm/ext/matrix_float4x3.hpp:
-
-/usr/include/boost/mpl/aux_/preprocessed/gcc/template_arity.hpp:
+/usr/include/boost/parameter/aux_/unwrap_cv_reference.hpp:
 
 /usr/include/boost/exception/exception.hpp:
-
-/usr/include/boost/parameter/aux_/unwrap_cv_reference.hpp:
 
 /usr/include/boost/mpl/begin_end_fwd.hpp:
 
@@ -47898,12 +51036,6 @@ Application/TextEditor.cpp:
 
 /usr/include/boost/mpl/value_type_fwd.hpp:
 
-/usr/lib/gcc/x86_64-linux-gnu/11/include/avx5124fmapsintrin.h:
-
-/usr/include/boost/mpl/apply.hpp:
-
-/usr/include/boost/mpl/aux_/preprocessed/gcc/apply.hpp:
-
 /usr/include/gtk-3.0/gtk/gtkversion.h:
 
 /usr/include/boost/mp11/detail/mp_remove_if.hpp:
@@ -47927,73 +51059,3 @@ Application/TextEditor.cpp:
 /home/noah/Projects/SIR-Engine/Engine/Core/Serialization/JSon/JsonCache.h:
 
 /usr/include/boost/parameter/aux_/pack/tag_type.hpp:
-
-/usr/include/boost/parameter/aux_/pack/is_named_argument.hpp:
-
-/usr/include/boost/parameter/aux_/pack/insert_tagged.hpp:
-
-/home/noah/Projects/SIR-Engine/EASTL/internal/atomic/arch/arch_signal_fence.h:
-
-/usr/include/boost/parameter/aux_/set.hpp:
-
-/usr/include/boost/parameter/aux_/pack/deduce_tag.hpp:
-
-/usr/include/boost/parameter/aux_/pack/tag_deduced.hpp:
-
-/usr/include/boost/parameter/aux_/pack/make_parameter_spec_items.hpp:
-
-/usr/include/boost/parameter/aux_/pack/make_deduced_items.hpp:
-
-/usr/include/boost/type_index/type_index_facade.hpp:
-
-/usr/include/gtk-3.0/gtk/gtkvolumebutton.h:
-
-/usr/include/boost/parameter/aux_/pack/satisfies.hpp:
-
-/usr/include/boost/parameter/aux_/pack/predicate.hpp:
-
-/usr/include/boost/move/detail/unique_ptr_meta_utils.hpp:
-
-/usr/include/boost/parameter/aux_/pack/make_items.hpp:
-
-/usr/include/boost/parameter/aux_/tag.hpp:
-
-/usr/include/boost/parameter/aux_/tagged_argument.hpp:
-
-/usr/include/boost/date_time/microsec_time_clock.hpp:
-
-/usr/include/boost/parameter/binding.hpp:
-
-/usr/include/boost/exception/detail/is_output_streamable.hpp:
-
-/usr/include/boost/atomic/detail/core_operations_fwd.hpp:
-
-/usr/include/glm/ext/matrix_float3x3_precision.hpp:
-
-/usr/local/include/SDL2/SDL_cpuinfo.h:
-
-/usr/include/gtk-3.0/gtk/gtklabel.h:
-
-/usr/include/boost/thread/thread_only.hpp:
-
-/usr/include/boost/thread/pthread/thread_data.hpp:
-
-/usr/include/boost/thread/detail/lockable_wrapper.hpp:
-
-/usr/include/linux/types.h:
-
-/usr/include/boost/thread/pthread/condition_variable_fwd.hpp:
-
-/usr/include/boost/smart_ptr/weak_ptr.hpp:
-
-/usr/include/boost/thread/pthread/thread_heap_alloc.hpp:
-
-/usr/include/boost/thread/detail/invoke.hpp:
-
-/usr/include/boost/thread/detail/is_convertible.hpp:
-
-/usr/include/c++/11/list:
-
-/usr/include/boost/preprocessor/detail/is_binary.hpp:
-
-/usr/include/boost/ref.hpp:
