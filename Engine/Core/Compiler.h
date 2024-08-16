@@ -164,6 +164,15 @@
 	#endif
 #endif
 
+#if !defined(SIRENGINE_CACHE_PREFETCH)
+	#if defined(SIRENGINE_COMPILER_GCC)
+		#define SIRENGINE_CACHE_PREFETCH( addr, len ) (__builtin_prefetch( (const void *)( addr ), \
+                                                ( ( len ) >> 2 ) & 1, ( len ) & 0x3 ) )
+	#else
+		#define SIRENGINE_CACHE_PREFETCH( addr, len ) _mm_prefetch( addr, len )
+	#endif
+#endif
+
 #if !defined(SIRENGINE_MAX_OSPATH)
 	#if defined(SIRENGINE_PLATFORM_WINDOWS)
 		#define SIRENGINE_MAX_OSPATH MAX_PATH

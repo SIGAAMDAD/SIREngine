@@ -145,7 +145,7 @@ static freeblock_t *NewBlock( memzone_t *zone, uint64_t size )
 //	sep = (memblock_t *)Application::Get()->VirtualAlloc( &alloc_size, 64 );
 	sep = (memblock_t *)calloc( alloc_size, 1 );
 	if ( sep == NULL ) {
-		SIRENGINE_ERROR( "Z_Malloc: failed on allocation of %lu bytes", size );
+		Application::Get()->OnOutOfMemory( alloc_size, Application::Get()->GetOSPageSize() );
 		return NULL;
 	}
 	memset( sep, 0, alloc_size );
@@ -259,7 +259,7 @@ static void Z_ClearZone( memzone_t *zone, memzone_t *head, uint64_t size, uint64
 	if ( CTagArenaAllocator::nMinFragment < min_fragment ) {
 		// in debug mode size of memblock_t may exceed MIN_FRAGMENT
 		CTagArenaAllocator::nMinFragment = SIRENGINE_PAD( min_fragment, sizeof( intptr_t ) );
-		SIRENGINE_LOG( "CTagArenaAllocator::nMinFragment adjusted to %i bytes", CTagArenaAllocator::nMinFragment );
+		SIRENGINE_LOG_LEVEL( Memory, ELogLevel::Developer, "CTagArenaAllocator::nMinFragment adjusted to %i bytes", CTagArenaAllocator::nMinFragment );
 	}
 
 	// set the entire zone to one free block
@@ -327,7 +327,7 @@ void Z_Free( memzone_t *zone, void *ptr ) {
 	memblock_t *block, *other;
 
 	if ( !ptr ) {
-		SIRENGINE_WARNING( "Z_Free: NULL pointer" );
+		SIRENGINE_LOG_LEVEL( Memory, ELogLevel::Warning, "Z_Free: NULL pointer" );
 		return;
 	}
 
@@ -422,7 +422,7 @@ uint64_t Z_FreeTags( memzone_t *zone, uint64_t tag )
 		}
 		block = block->next;
 	}
-	SIRENGINE_LOG( "Z_FreeTags: tag %i, %lu bytes released.", (int)tag, size );
+	SIRENGINE_LOG_LEVEL( Memory, ELogLevel::Developer, "Z_FreeTags: tag %i, %lu bytes released.", (int)tag, size );
 
 	return count;
 }
@@ -637,9 +637,9 @@ void Z_LogZoneHeap( memzone_t *zone, const char *name )
 	size = numBlocks = 0;
 	allocSize = 0;
 
-	SIRENGINE_LOG( "================" );
-	SIRENGINE_LOG( "%s log", name );
-	SIRENGINE_LOG( "================" );
+	SIRENGINE_LOG_LEVEL( Memory, ELogLevel::Info, "================" );
+	SIRENGINE_LOG_LEVEL( Memory, ELogLevel::Info, "%s log", name );
+	SIRENGINE_LOG_LEVEL( Memory, ELogLevel::Info, "================" );
 	for ( block = zone->blocklist.next ; ; ) {
 		if ( block->tag != TAG_FREE ) {
 			ptr = ((char *) block) + sizeof(memblock_t);
@@ -659,10 +659,11 @@ void Z_LogZoneHeap( memzone_t *zone, const char *name )
 			}
 			dump[j] = '\0';
 #ifdef SIRENGINE_MEMORY_DEBUG
-			SIRENGINE_LOG( "size = %-8lu: %-8s, line: %4u (%s) [%s]", block->d.allocSize, block->d.file, block->d.line, block->d.label, dump );
+			SIRENGINE_LOG_LEVEL( Memory, ELogLevel::Info, "size = %-8lu: %-8s, line: %4u (%s) [%s]",
+				block->d.allocSize, block->d.file, block->d.line, block->d.label, dump );
 			allocSize += block->d.allocSize;
 #else
-			SIRENGINE_LOG( "size = %-8lu [%s]", block->size, dump );
+			SIRENGINE_LOG_LEVEL( Memory, ELogLevel::Info, "size = %-8lu [%s]", block->size, dump );
 			allocSize += block->size;
 #endif
 			size += block->size;
@@ -680,8 +681,8 @@ void Z_LogZoneHeap( memzone_t *zone, const char *name )
 	allocSize = numBlocks * sizeof(memblock_t); // + 32 bit alignment
 #endif
 	
-	SIRENGINE_LOG( "%lu %s memory in %lu blocks", size, name, numBlocks );
-	SIRENGINE_LOG( "%lu %s memory overhead", size - allocSize, name );
+	SIRENGINE_LOG_LEVEL( Memory, ELogLevel::Info, "%lu %s memory in %lu blocks", size, name, numBlocks );
+	SIRENGINE_LOG_LEVEL( Memory, ELogLevel::Info, "%lu %s memory overhead", size - allocSize, name );
 }
 
 CTagArenaAllocator::CTagArenaAllocator( const char *pName, uint64_t nSize, uint64_t nFlags )
@@ -690,7 +691,7 @@ CTagArenaAllocator::CTagArenaAllocator( const char *pName, uint64_t nSize, uint6
 //	m_pZone = (memzone_t *)Application::Get()->VirtualAlloc( &nSize, 64 );
 	m_pZone = (memzone_t *)calloc( 1, nSize );
 	if ( !m_pZone ) {
-		Application::Get()->OnOutOfMemory();
+		Application::Get()->OnOutOfMemory( nSize, 64 );
 	}
 
 	Z_ClearZone( m_pZone, m_pZone, nSize, 1 );
@@ -812,7 +813,7 @@ uint64_t CTagArenaAllocator::AllocateTagGroup( const char *pName )
 
 	if ( m_TagList.find( nTag ) == m_TagList.end() ) {
 		m_TagList[ nTag ] = pName;
-		SIRENGINE_LOG( "Added memoryTag group \"%s\" to tagged arena zone allocator \"%s\"", pName, m_pName );
+		SIRENGINE_LOG_LEVEL( Memory, ELogLevel::Info, "Added memoryTag group \"%s\" to tagged arena zone allocator \"%s\"", pName, m_pName );
 	}
 
 	return nTag;
@@ -823,7 +824,7 @@ void CTagArenaAllocator::ClearTagGroup( uint64_t nTag )
 	if ( m_TagList.find( nTag ) != m_TagList.end() ) {
 		Z_FreeTags( m_pZone, nTag );
 	} else {
-		SIRENGINE_WARNING( "CTagArenaAllocator::ClearTagGroup: no such tag %lu in arena \"%s\"", nTag, m_pName );
+		SIRENGINE_LOG_LEVEL( Memory, ELogLevel::Warning, "CTagArenaAllocator::ClearTagGroup: no such tag %lu in arena \"%s\"", nTag, m_pName );
 	}
 }
 

@@ -44,6 +44,7 @@ namespace SIREngine::RenderLib::Backend {
 
 namespace SIREngine::Application {
 
+CThreadAtomic<bool> g_bExitApp( false );
 IGenericApplication *g_pApplication;
 
 CVarRef<uint32_t> e_MaxFPS(
@@ -399,6 +400,9 @@ IGenericApplication::~IGenericApplication()
 
 void IGenericApplication::Shutdown( void )
 {
+	
+	g_bExitApp.store( true );
+
 	CConsoleManager::Get().SaveConfig( "Config/EngineData.ini" );
 
 	for ( auto& it : m_ApplicationSystems ) {
@@ -606,6 +610,16 @@ void IGenericApplication::Init( void )
 #elif defined(SIRENGINE_BUILD_EDITOR)
 	SIRENGINE_LOG( "  SIRENGINE_BUILD_TYPE: Editor" );
 #endif
+	MemoryStats_t stats = Application::Get()->GetMemoryStats();
+	SIRENGINE_LOG( "[OS Memory Statistics]" );
+	SIRENGINE_LOG( "  Total Physical RAM: %s", SIREngine_GetMemoryString( stats.nTotalPhysical ) );
+	SIRENGINE_LOG( "  Available Physical RAM: %s", SIREngine_GetMemoryString( stats.nAvailablePhysical ) );
+	SIRENGINE_LOG( "  Available Virtual RAM: %s", SIREngine_GetMemoryString( stats.nAvailableVirtual ) );
+	SIRENGINE_LOG( "  Peak Used Physical RAM: %s", SIREngine_GetMemoryString( stats.nPeakUsedPhysical ) );
+	SIRENGINE_LOG( "  Peak Used Virtual RAM: %s", SIREngine_GetMemoryString( stats.nPeakUsedVirtual ) );
+	SIRENGINE_LOG( "  Used Physical RAM: %s", SIREngine_GetMemoryString( stats.nUsedPhysical ) );
+	SIRENGINE_LOG( "  Used Virtual RAM: %s", SIREngine_GetMemoryString( stats.nUsedVirtual ) );
+
 }
 
 void IGenericApplication::ShowErrorWindow( const char *pErrorString )
@@ -638,7 +652,7 @@ void IGenericApplication::Run( void )
 	}
 }
 
-void IGenericApplication::OnOutOfMemory( void )
+void IGenericApplication::OnOutOfMemory( uint64_t nSize, uint64_t nAlignment )
 {
 }
 

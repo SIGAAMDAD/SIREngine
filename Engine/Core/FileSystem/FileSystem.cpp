@@ -19,19 +19,24 @@ void CFileSystem::AddCacheDirectory( const CFilePath& directory )
 	m_FileCache.emplace_back( new CFileCache( directory ) );
 }
 
-void CFileSystem::LoadFileTree( CFileList *pDirectory )
+void CFileSystem::LoadFileTree( const FileSystem::CFilePath& directory )
 {
-	SIRENGINE_LOG( "Loading directory tree \"%s\"", pDirectory->GetPath().c_str() );
+	CFileList *pDirectory;
 
-	pDirectory->m_List = eastl::move( g_pApplication->ListFiles( pDirectory->GetPath(), false ) );
-	m_DirectoryCache.try_emplace( pDirectory->GetPath(), pDirectory );
+	SIRENGINE_LOG( "Loading directory tree \"%s\"", directory.c_str() );
 
-	const CVector<CFilePath> subDirs = eastl::move( g_pApplication->ListFiles( pDirectory->GetPath(), true ) );
+	const CVector<CFilePath> fileList = eastl::move( g_pApplication->ListFiles( directory, false ) );
+
+	pDirectory = new CFileList( directory );
+	pDirectory->m_List = eastl::move( fileList );
+	m_DirectoryCache.try_emplace( directory, pDirectory );
+
+	const CVector<CFilePath> subDirs = eastl::move( g_pApplication->ListFiles( directory, true ) );
 	m_DirectoryCache.reserve( subDirs.size() );
 
 	for ( const auto& it : subDirs ) {
 		// recurse
-		LoadFileTree( new CFileList( it ) );
+		LoadFileTree( it );
 	}
 }
 
@@ -51,7 +56,7 @@ void CFileSystem::InitDirectoryCache( void )
 	SIRENGINE_LOG( "Got %lu Directories.", dirList.size() );
 
 	for ( const auto& it : dirList ) {
-		LoadFileTree( new CFileList( it ) );
+		LoadFileTree( it );
 	}
 }
 
@@ -141,7 +146,7 @@ CFileReader *CFileSystem::OpenFileReader( const CFilePath& filePath )
 	return NULL;
 }
 
-CFileList *CFileSystem::ListFiles( const CFilePath& directory, const char *pExtension, bool bDirectoryOnly ) const
+CFileList *CFileSystem::ListFiles( const CFilePath& directory, const char *pExtension, bool bDirectoryOnly )
 {
 	CFileList *fileList;
 	uint64_t nFiles;
@@ -151,14 +156,27 @@ CFileList *CFileSystem::ListFiles( const CFilePath& directory, const char *pExte
 
 	const auto& it = m_DirectoryCache.find( path );
 	if ( it == m_DirectoryCache.cend() ) {
-		SIRENGINE_WARNING( "Invalid search directory \"%s\"", path );
+		LoadFileTree( directory );
+		
+		const auto& it = m_DirectoryCache.find( path );
+		if ( it == m_DirectoryCache.cend() ) {
+			SIRENGINE_WARNING( "Invalid search directory \"%s\"", path );
+		}
 		return NULL;
+	}
+
+	if ( !pExtension ) {
+		pExtension = "";
 	}
 
 	if ( !bDirectoryOnly ) {
 		nFiles = 0;
 		for ( const auto& file : it->second->GetList() ) {
-			if ( SIREngine_stricmp( CFilePath::GetExtension( file.c_str() ).c_str(), pExtension ) == 0 ) {
+			if ( *pExtension != '\0' ) {
+				if ( SIREngine_stricmp( CFilePath::GetExtension( file.c_str() ).c_str(), pExtension ) == 0 ) {
+					nFiles++;
+				}
+			} else {
 				nFiles++;
 			}
 		}
@@ -174,7 +192,11 @@ CFileList *CFileSystem::ListFiles( const CFilePath& directory, const char *pExte
 	else {
 		fileList->m_List.reserve( nFiles );
 		for ( const auto& file : it->second->GetList() ) {
-			if ( SIREngine_stricmp( CFilePath::GetExtension( file.c_str() ).c_str(), pExtension ) == 0 ) {
+			if ( *pExtension != '\0' ) {
+				if ( SIREngine_stricmp( CFilePath::GetExtension( file.c_str() ).c_str(), pExtension ) == 0 ) {
+					fileList->m_List.emplace_back( file );
+				}
+			} else {
 				fileList->m_List.emplace_back( file );
 			}
 		}

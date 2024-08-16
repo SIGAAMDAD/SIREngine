@@ -6,6 +6,7 @@
 #endif
 
 #include <Engine/Core/SIREngine.h>
+#include <Engine/Core/Logging/Logger.h>
 
 typedef enum {
     MEMTAG_RENDERER,
@@ -34,6 +35,7 @@ void SIRENGINE_DLL_EXPORT *Mem_Realloc( void *pOriginal, size_t nBytes );
 void SIRENGINE_DLL_EXPORT *Mem_ClearedAlloc( size_t nBytes );
 void SIRENGINE_DLL_EXPORT Mem_Free( void *pMemory );
 
+SIRENGINE_DECLARE_LOG_CATEGORY( Memory, ELogLevel::Warning );
 #include "MemAlloc.h"
 
 #endif

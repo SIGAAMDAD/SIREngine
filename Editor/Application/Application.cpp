@@ -8,14 +8,16 @@
 #include <Engine/Core/Util.h>
 #include "TextEditor.h"
 #include "Project/ProjectManager.h"
+#include "StatsWindow.h"
 #include "SceneView.h"
-#include "ContentBrowser.h"
+#include "ContentBrowser/ContentBrowser.h"
 #include <Engine/Core/Events/EventManager.h>
 #include <string.h>
 #include <Engine/RenderLib/RenderLib.h>
 #include <Engine/RenderLib/Backend/RenderContext.h>
 #include <Engine/RenderLib/Backend/OpenGL/GLContext.h>
 #include <libnotify/notify.h>
+#include <implot/implot.h>
 
 #include "Roboto-Regular.embed"
 
@@ -166,7 +168,6 @@ void CEditorApplication::Init( void )
 		fontConfig.GlyphMinAdvanceX = iconFontSize;
 		io.Fonts->AddFontFromFileTTF( FONT_ICON_FILE_NAME_FAS, iconFontSize, &fontConfig, szIconRanges );
 	}
-
 	ImGui::GetIO().Fonts->Build();
 
 	g_pFileSystem->AddCacheDirectory( "Valden/Bitmaps" );
@@ -174,7 +175,11 @@ void CEditorApplication::Init( void )
 	CTextEditorManager::Init();
 	CProjectManager::Init();
 	CSceneView::Init();
-	CContentBrowser::Init();
+	ContentBrowser::CContentBrowser::Init();
+
+	ImPlot::CreateContext();
+
+	AddWidget( &CStatsWindow::Get() );
 }
 
 void CEditorApplication::Frame( int64_t msec )
@@ -298,7 +303,20 @@ void CEditorApplication::Frame( int64_t msec )
 
 void CEditorApplication::DrawEditorSettings( void )
 {
-//	ImGui::Begin( "Valden Preferences", NULL, ImGuiWindowFlags_ );
+	if ( !m_bEditorSettingsActive ) {
+		return;
+	}
+	if ( ImGui::Begin( "Valden Preferences", &m_bEditorSettingsActive, ImGuiWindowFlags_NoCollapse ) ) {
+		if ( ImGui::BeginTable( "##ValdenPreferencesCategoriesTable", 2 ) ) {
+			
+			ImGui::TableNextColumn();
+			if ( ImGui::CollapsingHeader( "Project##ValdenProjectPrefencesHeader" ) ) {
+			}
+
+			ImGui::EndTable();
+		}
+		ImGui::End();
+	}
 }
 
 void CEditorApplication::DrawMainMenuBar( void )
@@ -376,8 +394,10 @@ void CEditorApplication::DrawMainMenuBar( void )
 		ImGui::SeparatorText( "Configuration" );
 		ImGui::Indent( 0.5f );
 		if ( ImGui::MenuItem( ICON__GEAR "Editor Settings" ) ) {
+			m_bEditorSettingsActive = true;
 		}
 		if ( ImGui::MenuItem( "Project Settings" ) ) {
+			m_bProjectSettingsActive = true;
 		}
 		if ( ImGui::MenuItem( "Plugins" ) ) {
 		}
@@ -386,6 +406,12 @@ void CEditorApplication::DrawMainMenuBar( void )
 		ImGui::EndMenu();
 	}
 	if ( ImGui::BeginMenu( "Project" ) ) {
+		ImGui::EndMenu();
+	}
+	if ( ImGui::BeginMenu( "View" ) ) {
+		if ( ImGui::MenuItem( "Statistics" ) ) {
+			CStatsWindow::Get().SetActive();
+		}
 		ImGui::EndMenu();
 	}
 	if ( ImGui::BeginMenu( "Help" ) ) {
@@ -475,6 +501,8 @@ void CEditorApplication::Shutdown( void )
 	m_Widgets.clear();
 
 	CProjectManager::SaveCache();
+
+	ImPlot::DestroyContext();
 
 	ImGui_ImplOpenGL3_Shutdown();
 	ImGui_ImplSDL2_Shutdown();

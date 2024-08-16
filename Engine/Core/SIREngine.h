@@ -43,11 +43,7 @@
 #include <Engine/Util/CConstList.h>
 
 #include <Engine/Memory/Backend/TagArenaAllocator.h>
-
 #include <Engine/Core/Util.h>
-
-#include <Engine/Core/ResourceDef.h>
-#include <Engine/Core/ResourceManager.h>
 
 #include "Application/GenericPlatform/GenericApplication.h"
 #include "MathLib/Types.h"

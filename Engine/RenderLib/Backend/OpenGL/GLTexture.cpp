@@ -94,7 +94,7 @@ void GLTexture::StreamBuffer( void )
 
 void GLTexture::Upload( const TextureInit_t& textureInfo )
 {
-	nglBindTexture( GL_TEXTURE_2D, m_nTextureID );
+	GL_CALL( nglBindTexture( GL_TEXTURE_2D, m_nTextureID ) );
 	if ( textureInfo.bIsGPUOnly ) {
 	} else {
 		m_ImageData.Load( textureInfo.filePath );
@@ -111,11 +111,20 @@ void GLTexture::Upload( const TextureInit_t& textureInfo )
 				nglBindBuffer( GL_PIXEL_UNPACK_BUFFER, 0 );
 			}
 		}
-		nglTexImage2D( GL_TEXTURE_2D, 0, GetImageGPUFormat( m_ImageData.GetChannels() ),
-			m_ImageData.GetWidth(), m_ImageData.GetHeight(), 0, m_ImageData.GetChannels() == 3 ? GL_RGB : GL_RGBA,
-			GL_UNSIGNED_BYTE, m_ImageData.GetBuffer() );
+		GL_CALL( nglTexImage2D( GL_TEXTURE_2D, 0, GetImageGPUFormat( m_ImageData.GetChannels() ),
+			m_ImageData.GetWidth(), m_ImageData.GetHeight(), 0, GL_RGBA,
+			GL_UNSIGNED_BYTE, m_ImageData.GetBuffer() ) );
+		SIRENGINE_LOG_LEVEL( RenderBackend, ELogLevel::Info, "Created OpenGL GPU Texture: (size) %ux%u, 0x%lx",
+			m_ImageData.GetWidth(), m_ImageData.GetHeight(),
+			(uintptr_t)m_ImageData.GetBuffer() );
+		
+		GL_CALL( nglTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR ) );
+		GL_CALL( nglTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR ) );
+		GL_CALL( nglTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT ) );
+		GL_CALL( nglTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT ) );
+		GL_CALL( nglTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0 ) );
 	}
-	nglBindTexture( GL_TEXTURE_2D, 0 );
+	GL_CALL( nglBindTexture( GL_TEXTURE_2D, 0 ) );
 }
 
 void GLTexture::EvictGLResource( void )

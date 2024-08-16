@@ -9,11 +9,26 @@
 typedef struct FileView {
 	CString DirectoryName;
 	CString Path;
+	FileView *Parent;
 	CVector<FileView> Directories;
 	CVector<CString> FileList;
+
+	inline bool operator==( const FileView& other ) const
+	{ return DirectoryName == other.DirectoryName && Path == other.Path; }
+	inline bool HasChild( const FileView& fileView ) const
+	{ return eastl::find( Directories.cbegin(), Directories.cend(), fileView ) != Directories.cend(); }
+	inline bool HasParent( const FileView *fileView ) const
+	{
+		for ( FileView *it = Parent; it != NULL; it = it->Parent ) {
+			if ( it == fileView ) {
+				return true;
+			}
+		}
+		return false;
+	}
 } FileView_t;
 
-template<bool bIncludeFiles, bool bShowFullTooltipPath>
+template<bool bIncludeFiles, bool bShowFullTooltipPath, bool bDrawFiles>
 class CFileTreeView
 {
 public:
@@ -23,10 +38,10 @@ public:
 	~CFileTreeView()
 	{ }
 
-	inline void Draw( void )
+	inline void Draw( void (*UtilityPopup)( const CString&, bool, FileView_t * ) )
 	{
 		for ( auto& it : m_FileList.Directories ) {
-			DrawDirectory( it );
+			DrawDirectory( it, UtilityPopup );
 		}
 	}
 
@@ -34,6 +49,8 @@ public:
 	{ return m_pSelectedDir != NULL; }
 	inline FileView_t *GetSelectedDir( void ) const
 	{ return m_pSelectedDir; }
+	inline void SetSelectedDir( FileView_t *pDirectory )
+	{ m_pSelectedDir = pDirectory; }
 
 	inline bool HasSelected( void ) const
 	{ return m_pSelected != NULL; }
@@ -51,12 +68,21 @@ public:
 			pView = &pOwner->Directories.emplace_back();
 		} else {
 			pView = &m_FileList.Directories.emplace_back();
+			pOwner = &m_FileList;
 		}
-		pView->DirectoryName = name;
+		pView->Path = name;
+		pView->Parent = pOwner;
+		pView->DirectoryName = strrchr( name.c_str(), '/' ) + 1;
 
 		if SIRENGINE_CONSTEXPR ( bIncludeFiles ) {
 			// don't just fetch folder names
+			g_pFileSystem->AddCacheDirectory( name.c_str() );
 			SIREngine::FileSystem::CFileList *fileList = g_pFileSystem->ListFiles( name.c_str(), "" );
+
+			if ( !fileList ) {
+				SIRENGINE_WARNING( "Got 0 files for directory \"%s\".", name.c_str() );
+				return *pView;
+			}
 			pView->FileList.reserve( fileList->GetList().size() );
 
 			for ( const auto& it : fileList->GetList() ) {
@@ -79,53 +105,103 @@ public:
 		return NULL;
 	}
 
-	inline void AddSubDirectory( FileView_t& fileView, const CString& name )
-	{
-		fileView.Directories.emplace_back();
-		fileView.Directories.back().Path = name;
-		fileView.Directories.back().DirectoryName = name;
-		SIRENGINE_LOG( "Added SubDirectory \"%s\" to FileView \"%s\".", fileView.Directories.back().Path.c_str(),
-			fileView.DirectoryName.c_str() );
-	}
+	inline FileView_t& AddSubDirectory( FileView_t& fileView, const CString& name )
+	{ return AddDirectory( name, &fileView ); }
 private:
-	void DrawDirectory( FileView_t& fileView )
+	void DrawDirectory( FileView_t& fileView, void (*UtilityPopup)( const CString&, bool, FileView_t * ) )
 	{
-		if ( ImGui::TreeNodeEx( (void *)fileView.DirectoryName.c_str(),
-			ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_OpenOnArrow |
-			( m_pSelectedDir == &fileView ? ImGuiTreeNodeFlags_Selected : ImGuiTreeNodeFlags_None ),
+		ImGuiTreeNodeFlags treeNodeFlags = ImGuiTreeNodeFlags_None;
+		if ( !fileView.Directories.empty() ) {
+			treeNodeFlags |= ImGuiTreeNodeFlags_OpenOnArrow;
+		} else {
+			treeNodeFlags |= ImGuiTreeNodeFlags_Leaf;
+		}
+		if ( m_pSelectedDir == &fileView ) {
+			treeNodeFlags |= ImGuiTreeNodeFlags_Selected;
+		}
+
+		if ( ImGui::TreeNodeEx( (void *)fileView.DirectoryName.c_str(), treeNodeFlags,
 			ICON_FA_FOLDER "%s", fileView.DirectoryName.c_str() ) )
 		{
 			if ( ImGui::IsItemClicked( ImGuiMouseButton_Left ) ) {
 				m_pSelectedDir = &fileView;
-				SIRENGINE_LOG( "Activating FileTree Item \"%s\".", fileView.DirectoryName.c_str() );
+			}
+			if ( UtilityPopup ) {
+				if ( ImGui::IsItemClicked( ImGuiMouseButton_Right ) ) {
+					ImGui::OpenPopup( "File Utilities##FileTreeDirectoryUtilities" );
+					m_MousePopupPosition = ImGui::GetMousePos();
+					m_pPopupFile = &fileView.Path;
+					m_bPopupIsDirectory = true;
+				}
+				if ( ImGui::BeginPopup( "File Utilities##FileTreeDirectoryUtilities" ) ) {
+					ImGui::SetWindowPos( m_MousePopupPosition );
+					ImGui::SetWindowFocus();
+					UtilityPopup( *m_pPopupFile, m_bPopupIsDirectory, &fileView );
+					ImGui::EndPopup();
+				}
 			}
 			if ( ImGui::IsItemHovered( ImGuiHoveredFlags_DelayNone | ImGuiHoveredFlags_AllowWhenDisabled ) ) {
 				ImGui::SetTooltip( fileView.Path.c_str() );
 			}
 			for ( auto& dir : fileView.Directories ) {
-				DrawDirectory( dir );
+				DrawDirectory( dir, UtilityPopup );
 			}
-			for ( auto& file : fileView.FileList ) {
-				const char *pFileName = strrchr( file.c_str(), '/' ) + 1;
-				if ( ImGui::Selectable( pFileName, ( m_pSelected == &file ) ) ) {
-					m_pSelected = &file;
-				}
-				if ( ImGui::IsItemHovered( ImGuiHoveredFlags_DelayNone | ImGuiHoveredFlags_AllowWhenDisabled ) ) {
-					if SIRENGINE_CONSTEXPR ( bShowFullTooltipPath ) {
-						ImGui::SetTooltip( file.c_str() );
-					} else {
-						ImGui::SetTooltip( pFileName );
+			if SIRENGINE_CONSTEXPR ( bDrawFiles ) {
+				for ( auto& file : fileView.FileList ) {
+					const char *pFileName = strrchr( file.c_str(), '/' ) + 1;
+					if ( ImGui::Selectable( pFileName, ( m_pSelected == &file ) ) ) {
+						m_pSelected = &file;
+					}
+					if ( ImGui::IsItemHovered( ImGuiHoveredFlags_DelayNone | ImGuiHoveredFlags_AllowWhenDisabled ) ) {
+						if SIRENGINE_CONSTEXPR ( bShowFullTooltipPath ) {
+							ImGui::SetTooltip( file.c_str() );
+						} else {
+							ImGui::SetTooltip( pFileName );
+						}
+					}
+					if ( UtilityPopup ) {
+						if ( ImGui::IsItemClicked( ImGuiMouseButton_Right ) ) {
+							ImGui::OpenPopup( "File Utilities##FileTreeFileUtilities" );
+							m_MousePopupPosition = ImGui::GetMousePos();
+							m_pPopupFile = &file;
+							m_bPopupIsDirectory = false;
+						}
+						if ( ImGui::BeginPopup( "File Utilities##FileTreeFileUtilities" ) ) {
+							ImGui::SetWindowPos( m_MousePopupPosition );
+							ImGui::SetWindowFocus();
+							UtilityPopup( *m_pPopupFile, m_bPopupIsDirectory, NULL );
+							ImGui::EndPopup();
+						}
 					}
 				}
 			}
-
 			ImGui::TreePop();
+		}
+		else {
+			if ( UtilityPopup ) {
+				if ( ImGui::IsItemClicked( ImGuiMouseButton_Right ) ) {
+					ImGui::OpenPopup( "File Utilities##FileTreeDirectoryUtilities" );
+					m_MousePopupPosition = ImGui::GetMousePos();
+					m_pPopupFile = &fileView.Path;
+					m_bPopupIsDirectory = true;
+				}
+				if ( ImGui::BeginPopup( "File Utilities##FileTreeDirectoryUtilities" ) ) {
+					ImGui::SetWindowPos( m_MousePopupPosition );
+					ImGui::SetWindowFocus();
+					UtilityPopup( *m_pPopupFile, m_bPopupIsDirectory, &fileView );
+					ImGui::EndPopup();
+				}
+			}
 		}
 	}
 
 	FileView_t m_FileList;
 	FileView_t *m_pSelectedDir;
 	CString *m_pSelected;
+
+	CString *m_pPopupFile;
+	ImVec2 m_MousePopupPosition;
+	bool m_bPopupIsDirectory;
 };
 
 #endif

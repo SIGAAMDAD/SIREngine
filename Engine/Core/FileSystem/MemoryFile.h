@@ -5,7 +5,7 @@
 	#pragma once
 #endif
 
-#include <Engine/Memory/Allocators/SlabAllocator.h>
+#include <Engine/Memory/Allocators/HunkAllocator.h>
 #include <Engine/Memory/Allocators/MemoryBuffer.h>
 #include "FileStream.h"
 #include "FileReader.h"

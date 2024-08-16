@@ -23,9 +23,6 @@ void CSceneView::Init( void )
 
 	CEditorApplication::Get().AddWidget( g_pSceneView.get() );
 	g_pSceneView->Create( "UnnamedScene" );
-
-	g_pSceneView->m_Resources.GetBase().DirectoryName = "Resources";
-	g_pSceneView->m_SceneObjects.GetBase().DirectoryName = "Scene Objects";
 }
 
 void CSceneView::Dock( void )
@@ -44,9 +41,6 @@ void CSceneView::Draw( void )
 		}
 		ImGui::EndTabBar();
 	}
-
-	m_Resources.Draw();
-	m_SceneObjects.Draw();
 
 	ImGui::End();
 }

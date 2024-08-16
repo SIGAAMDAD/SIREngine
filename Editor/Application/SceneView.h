@@ -68,9 +68,6 @@ namespace Valden {
 	private:
 		void DrawObject( CSceneObject& object );
 
-		CFileTreeView<false, true> m_Resources;
-		CFileTreeView<false, true> m_SceneObjects;
-
 		static eastl::unique_ptr<CSceneView> g_pSceneView;
 	};
 };

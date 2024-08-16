@@ -11,27 +11,28 @@
 #include <EASTL/queue.h>
 #include <Engine/Util/CString.h>
 
-namespace SIREngine {
-	namespace ELogLevel {
-		enum Type : uint32_t {
-			NoLogging = 0,
+namespace ELogLevel {
+	enum Type : uint32_t {
+		NoLogging = 0,
 
-			Fatal,
-			Error,
-			Warning,
-			Developer,
-			Info,
-			Verbose,
-			Spam,
+		Fatal,
+		Error,
+		Warning,
+		Developer,
+		Info,
+		Verbose,
+		Spam,
 
-			All = Spam,
-			NumLevels,
-			VerbosityMask   = 0xf,
-			BreakOnLog		= 0x40
-		};
+		All = Spam,
+		NumLevels,
+		VerbosityMask   = 0xf,
+		BreakOnLog		= 0x40
 	};
+};
 
-	static_assert( ELogLevel::NumLevels - 1 < ELogLevel::VerbosityMask, "Bad verbosity mask." );
+static_assert( ELogLevel::NumLevels - 1 < ELogLevel::VerbosityMask, "Bad verbosity mask." );
+
+namespace SIREngine {
 
 	class CLogCategory
 	{

@@ -9,15 +9,17 @@
 #include "GLTexture.h"
 #include "GLVertexArray.h"
 #include "GLShaderPipeline.h"
+#include <Engine/Core/ThreadSystem/Thread.h>
 
 using namespace SIREngine;
 using namespace SIREngine::RenderLib;
 using namespace SIREngine::RenderLib::Backend;
-using namespace SIREngine::RenderLib::Backend::OpenGL;
-
-CVector<GLTexture *> GLContext::g_EvictionLRUCache;
 
 namespace SIREngine::RenderLib::Backend::OpenGL {
+
+	CVector<GLTexture *> GLContext::g_EvictionLRUCache;
+	CThread s_RenderThread( "GLBackendThread" );
+
 	CVar<bool32> r_GLES(
 		"r.OpenGL.ES",
 		0,
@@ -27,14 +29,14 @@ namespace SIREngine::RenderLib::Backend::OpenGL {
 	);
 	CVar<int> r_GLVersionMajor(
 		"r.OpenGL.VersionMajor",
-		4,
+		3,
 		Cvar_Save,
 		"Sets OpenGL major version",
 		CVG_RENDERER
 	);
 	CVar<int> r_GLVersionMinor(
 		"r.OpenGL.VersionMinor",
-		5,
+		3,
 		Cvar_Save,
 		"Sets OpenGL minor version",
 		CVG_RENDERER
@@ -89,7 +91,45 @@ CVarRef<bool32> r_UseBufferDiscard(
 	CVG_RENDERER
 );
 
+namespace SIREngine::Application { extern CThreadAtomic<bool> g_bExitApp; };
 extern CVar<bool32> r_UsePixelBufferObjects;
+
+namespace SIREngine::RenderLib::Backend::OpenGL {
+
+void GLError( const char *pCall, GLenum nResult )
+{
+	switch ( nResult ) {
+	case GL_OUT_OF_MEMORY:
+		SIRENGINE_ERROR( "%s = GL_OUT_OF_MEMORY", pCall );
+		break; // TODO: write some eviction functions
+	case GL_INVALID_ENUM:
+		SIRENGINE_WARNING( "%s = GL_INVALID_ENUM", pCall );
+		break;
+	case GL_INVALID_INDEX:
+		SIRENGINE_WARNING( "%s = GL_INVALID_INDEX", pCall );
+		break;
+	case GL_INVALID_OPERATION:
+		SIRENGINE_WARNING( "%s = GL_INVALID_OPERATION", pCall );
+		break;
+	case GL_INVALID_VALUE:
+		SIRENGINE_WARNING( "%s = GL_INVALID_VALUE", pCall );
+		break;
+	case GL_STACK_OVERFLOW:
+		SIRENGINE_WARNING( "%s = GL_STACK_OVERFLOW", pCall );
+		break;
+	case GL_STACK_UNDERFLOW:
+		SIRENGINE_WARNING( "%s = GL_STACK_UNDERFLOW", pCall );
+		break;
+	case GL_CONTEXT_LOST:
+		SIRENGINE_WARNING( "%s = GL_CONTEXT_LOST", pCall );
+		break;
+	case GL_INVALID_FRAMEBUFFER_OPERATION:
+		SIRENGINE_WARNING( "%s = GL_INVALID_FRAMEBUFFER_OPERATION", pCall );
+		break;
+	default:
+		SIRENGINE_WARNING( "Unknown GLError 0x%x after \"%s\"", nResult, pCall );
+	};
+}
 
 GLContext::GLContext( const Application::ApplicationInfo_t& appInfo )
 	: IRenderContext( appInfo )
@@ -115,7 +155,7 @@ void GLContext::Init( void )
 	if ( !m_pGLContext ) {
 		SIRENGINE_ERROR( "SDL_GL_CreateContext failed: %s", SDL_GetError() );
 	}
-	SIRENGINE_LOG( "Created SDL2 OpenGL Context" );
+	SIRENGINE_LOG_LEVEL( RenderBackend, ELogLevel::Info, "Created SDL2 OpenGL Context" );
 
 	SDL_GL_MakeCurrent( m_pWindow, m_pGLContext );
 
@@ -154,7 +194,7 @@ void GLContext::Init( void )
 #endif
 	
 	InitGLProcs();
-	SIRENGINE_LOG( "Loaded GL Procs" );
+	SIRENGINE_LOG_LEVEL( RenderBackend, ELogLevel::Info, "Loaded GL Procs" );
 
 	SIREngine_strncpyz( m_szGLSLVersion, (const char *)nglGetString( GL_SHADING_LANGUAGE_VERSION ),
 		sizeof( m_szGLSLVersion ) );
@@ -165,11 +205,12 @@ void GLContext::Init( void )
 	SIREngine_strncpyz( m_szRendererString, (const char *)nglGetString( GL_RENDERER ),
 		sizeof( m_szRendererString ) );
 	
-	SIRENGINE_LOG( "OpenGL Driver Query:" );
-	SIRENGINE_LOG( " Driver Version: %s", m_szDriverVersion );
-	SIRENGINE_LOG( " Shader Language Version (GLSL): %s", m_szGLSLVersion );
-	SIRENGINE_LOG( " Vendor: %s", m_szVendorString );
-	SIRENGINE_LOG( " Renderer: %s", m_szRendererString );
+	SIRENGINE_LOG_LEVEL( RenderBackend, ELogLevel::Info, "OpenGL Driver Query:" );
+	SIRENGINE_LOG_LEVEL( RenderBackend, ELogLevel::Info, " Driver Version: %s", m_szDriverVersion );
+	SIRENGINE_LOG_LEVEL( RenderBackend, ELogLevel::Info, " Shader Language Version (GLSL): %s", m_szGLSLVersion );
+	SIRENGINE_LOG_LEVEL( RenderBackend, ELogLevel::Info, " Vendor: %s", m_szVendorString );
+	SIRENGINE_LOG_LEVEL( RenderBackend, ELogLevel::Info, " Renderer: %s", m_szRendererString );
+	SIRENGINE_LOG_LEVEL( RenderBackend, ELogLevel::Info, " SDL2 GLVersion Hint: v%i.%i", r_GLVersionMajor.GetValue(), r_GLVersionMinor.GetValue() );
 
 	GetGPUExtensionList();
 
@@ -198,7 +239,7 @@ void GLContext::CheckExtensionsSupport( void )
 
 	if ( GPUHasExtension( "GL_ARB_pixel_buffer_object" ) ) {
 		r_UsePixelBufferObjects.SetValue( true );
-		SIRENGINE_LOG( "Using GL_ARB_pixel_buffer_object." );
+		SIRENGINE_LOG_LEVEL( RenderBackend, ELogLevel::Info, "Using GL_ARB_pixel_buffer_object." );
 	} else {
 		SIRENGINE_WARNING( "GL_ARB_pixel_buffer_object not found, texture streaming objects not available." );
 	}
@@ -210,13 +251,15 @@ void GLContext::SetupShaderPipeline( void )
 
 void GLContext::BeginFrame( void )
 {
-	nglClear( GL_COLOR_BUFFER_BIT );
-	nglClearColor( 0.1f, 0.1f, 0.1f, 1.0f );
-	nglViewport( 0, 0, m_AppInfo.nWindowWidth, m_AppInfo.nWindowHeight );
+	GL_CALL( nglClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT ) );
+	GL_CALL( nglClearColor( 0.1f, 0.1f, 0.1f, 1.0f ) );
+	GL_CALL( nglViewport( 0, 0, Application::Get()->GetAppInfo().nWindowWidth, Application::Get()->GetAppInfo().nWindowHeight ) );
+	GL_CALL( nglScissor( 0, 0, Application::Get()->GetAppInfo().nWindowWidth, Application::Get()->GetAppInfo().nWindowHeight ) );
 }
 
 void GLContext::SwapBuffers( void )
 {
+	nglFlush();
 #if !defined(SIRENGINE_BUILD_RENDERLIB_GLFW3)
 	SDL_GL_MakeCurrent( m_pWindow, m_pGLContext );
 	SDL_GL_SwapWindow( m_pWindow );
@@ -243,7 +286,7 @@ void GLContext::CompleteRenderPass( IRenderShaderPipeline *pShaderPipeline )
 
 	pRenderData->GetVertexArray()->Bind();
 
-	nglDrawElements( GL_TRIANGLES, pRenderData->GetIndexCount(), GL_UNSIGNED_INT, NULL );
+	GL_CALL( nglDrawElements( GL_TRIANGLES, pRenderData->GetIndexCount(), GL_UNSIGNED_INT, NULL ) );
 
 	pRenderData->GetVertexArray()->Unbind();
 }
@@ -257,11 +300,13 @@ void GLContext::GetGPUExtensionList( void )
 	char szExtensionName[128];
 
 	SIREngine_strncpyz( szExtensions, (const char *)nglGetString( GL_EXTENSIONS ), sizeof( szExtensions ) );
-	nglGetIntegerv( GL_NUM_EXTENSIONS, &nExtensionCount );
+	GL_CALL( nglGetIntegerv( GL_NUM_EXTENSIONS, &nExtensionCount ) );
+	SIRENGINE_LOG_LEVEL( RenderBackend, ELogLevel::Info, "Found %i OpenGL Extensions", nExtensionCount );
+	SIRENGINE_LOG_LEVEL( RenderBackend, ELogLevel::Info, "Got OpenGL Extensions: %s", szExtensions );
 
 	m_GPUExtensionList.reserve( nExtensionCount );
 	pSrc = szExtensions;
-	for ( i = 0; i < nExtensionCount; i++ ) {
+	for ( pSrc = szExtensions; *pSrc; ) {
 		pDest = szExtensionName;
 		while ( *pSrc != ' ' ) {
 			*pDest++ = *pSrc++;
@@ -270,7 +315,7 @@ void GLContext::GetGPUExtensionList( void )
 		*pDest++ = '\0';
 		m_GPUExtensionList.emplace_back( szExtensionName );
 
-		SIRENGINE_LOG( "Found OpenGL Extension \"%s\"", szExtensionName );
+		SIRENGINE_LOG_LEVEL( RenderBackend, ELogLevel::Info, "Found OpenGL Extension \"%s\"", szExtensionName );
 	}
 }
 
@@ -313,3 +358,5 @@ IRenderTexture *GLContext::AllocateTexture( const TextureInit_t& textureInfo )
 {
 	return new GLTexture( textureInfo );
 }
+
+};

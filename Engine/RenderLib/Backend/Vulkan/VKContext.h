@@ -12,7 +12,7 @@
 #include "VKProgram.h"
 #include "VKTexture.h"
 #include <Engine/Memory/Backend/TagArenaAllocator.h>
-#include <Engine/Memory/Allocators/SlabAllocator.h>
+#include <Engine/Memory/Allocators/HunkAllocator.h>
 
 namespace SIREngine::RenderLib::Backend::Vulkan {
     typedef struct VKMemoryUsage : public GPUMemoryUsage {

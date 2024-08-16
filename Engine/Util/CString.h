@@ -5,7 +5,7 @@
     #pragma once
 #endif
 
-#include <Engine/Core/ResourceDef.h>
+#include <Engine/Core/Config.h>
 #include <EASTL/allocator_malloc.h>
 #include <EASTL/fixed_string.h>
 

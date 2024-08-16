@@ -45,6 +45,8 @@ public:
 	virtual void *MapFile( void *hFile, size_t *pSize ) override;
 	virtual void UnmapFile( void *pMemory, size_t nSize ) override;
 
+	virtual void GetFileStats( const CString& fileName, FileInfo_t *pInfo ) override;
+
 	virtual size_t GetAllocSize( void *pBuffer ) const override;
 	virtual void *VirtualAlloc( size_t *nSize, size_t nAlignment ) override;
 	virtual void VirtualFree( void *pBuffer ) override;
@@ -60,6 +62,9 @@ public:
 	virtual size_t FileTell( void *hFile ) override;
 	virtual size_t FileLength( void *hFile ) override;
 
+	virtual const MemoryConstants_t& GetMemoryConstants( void ) override;
+	virtual MemoryStats_t GetMemoryStats( void ) override;
+
 	virtual void ThreadStart( void *pThread, CThread *pObject, void (CThread::*pFunction)( void ) ) override;
 	virtual void ThreadJoin( void *pThread, CThread *pObject, uint64_t nTimeout = SIRENGINE_UINT64_MAX ) override;
 
@@ -67,7 +72,7 @@ public:
 
 	virtual CVector<FileSystem::CFilePath> ListFiles( const FileSystem::CFilePath& dir, bool bDirectoryOnly = false ) override;
 
-	virtual void OnOutOfMemory( void ) override;
+	virtual void OnOutOfMemory( uint64_t nSize, uint64_t nAlignment ) override;
 
 	virtual double GetCPUFrequency( void ) override;
 	virtual uint32_t GetNumberOfCores( void ) override;
@@ -81,6 +86,9 @@ public:
 	static void *pOOMBackup;
 	static size_t nOOMBackupSize;
 private:
+	uint64_t m_nOOMAllocationSize;
+	uint64_t m_nOOMAllocationAlignment;
+
 	bool32 m_bBacktraceError;
 	
 	void GetPwd( void );

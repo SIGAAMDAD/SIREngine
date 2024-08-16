@@ -615,6 +615,14 @@ CMakeFiles/SIREngineApplication.dir/Engine/Core/Application/GenericPlatform/Gene
  /usr/include/glm/detail/func_integer.inl
  /home/noah/Projects/SIR-Engine/Engine/RenderLib/RenderLib.h
  /home/noah/Projects/SIR-Engine/Engine/Core/EngineApp.h
+ /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/RenderBuffer.h
+ /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/RenderTexture.h
+ /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/RenderShader.h
+ /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/RenderShaderPipeline.h
+ /home/noah/Projects/SIR-Engine/Engine/RenderLib/DrawBuffer.h
+ /home/noah/Projects/SIR-Engine/EASTL/stack.h
+ /home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/VirtualStackAllocator.h
+ /home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/AllocatorBase.h
  /usr/local/include/SDL2/SDL.h
  /usr/local/include/SDL2/SDL_main.h
  /usr/local/include/SDL2/SDL_assert.h
@@ -724,14 +732,6 @@ CMakeFiles/SIREngineApplication.dir/Engine/Core/Application/GenericPlatform/Gene
  /usr/local/include/SDL2/SDL_version.h
  /usr/local/include/SDL2/SDL_locale.h
  /usr/local/include/SDL2/SDL_misc.h
- /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/RenderBuffer.h
- /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/RenderTexture.h
- /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/RenderShader.h
- /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/RenderShaderPipeline.h
- /home/noah/Projects/SIR-Engine/Engine/RenderLib/DrawBuffer.h
- /home/noah/Projects/SIR-Engine/EASTL/stack.h
- /home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/VirtualStackAllocator.h
- /home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/AllocatorBase.h
  /home/noah/Projects/SIR-Engine/Engine/Core/Serialization/JSon/JsonCache.h
  /home/noah/Projects/SIR-Engine/nlohmann/json.hpp
  /usr/include/c++/11/algorithm

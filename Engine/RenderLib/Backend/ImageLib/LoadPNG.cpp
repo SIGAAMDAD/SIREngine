@@ -1,7 +1,7 @@
 #include "../ImageLoader.h"
 #include <pngloader/lodepng.h>
-#define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
+#include "../RenderContext.h"
 
 using namespace SIREngine::FileSystem;
 using namespace SIREngine;
@@ -14,9 +14,9 @@ bool CImageLoader::LoadPNG( const CMemoryFile& fileBuffer, CVector<uint8_t>& out
 	int w, h, channels;
 	byte *pOut;
 	
-	pOut = stbi_load_from_memory( fileBuffer.GetBuffer(), fileBuffer.GetSize(), &w, &h, &channels, 3 );
+	pOut = stbi_load_from_memory( fileBuffer.GetBuffer(), fileBuffer.GetSize(), &w, &h, &channels, 4 );
 	if ( !pOut ) {
-		SIRENGINE_WARNING( "Error loading image file with stb_image: %s", stbi_failure_reason() );
+		SIRENGINE_LOG_LEVEL( RenderBackend, ELogLevel::Warning, "Error loading image file with stb_image: %s", stbi_failure_reason() );
 		return false;
 	}
 
@@ -25,6 +25,8 @@ bool CImageLoader::LoadPNG( const CMemoryFile& fileBuffer, CVector<uint8_t>& out
 	nWidth = w;
 	nHeight = h;
 	nSamples = channels;
+
+	stbi_image_free( pOut );
 
 //    lodepng::decode( outBuffer, nWidth, nHeight, fileBuffer.GetBuffer(), fileBuffer.GetSize() );
 

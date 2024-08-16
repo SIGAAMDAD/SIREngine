@@ -5,8 +5,15 @@
     #pragma once
 #endif
 
-class CSoundSystem
-{
+#include <Engine/Core/EngineApp.h>
+
+namespace SIREngine::SoundSystem {
+    class CSoundSystem : public IEngineApp
+    {
+    public:
+
+    private:
+    };
 };
 
 #endif

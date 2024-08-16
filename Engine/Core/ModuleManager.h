@@ -10,25 +10,30 @@
 #include <Engine/Core/Compiler.h>
 #include <EASTL/shared_ptr.h>
 
-class CModuleInfo
-{
-public:
-	CModuleInfo( void );
-	~CModuleInfo();
+namespace SIREngine {
+	class CModuleInfo
+	{
+	public:
+		CModuleInfo( void );
+		~CModuleInfo();
 
-	template<typename Fn>
-	void LoadProc( Fn*&& fn );
-private:
-	char m_szName[ SIRENGINE_MAX_OSPATH ];
-//    CVector<> m_LoadedProcs;
-};
+		template<typename Fn>
+		void LoadFunction( const CString& funcName, Fn*&& fn )
+		{
+			*fn = Application::Get()->GetProcAddress(  );
+		}
+	private:
+		char m_szName[ SIRENGINE_MAX_OSPATH ];
+	//    CVector<> m_LoadedProcs;
+	};
 
-class CModuleManager
-{
-public:
-	eastl::shared_ptr<CModuleInfo> GetModule( const CString& moduleName );
-private:
-	CVector<eastl::shared_ptr<CModuleInfo>> m_LoadedModules;
+	class CModuleManager
+	{
+	public:
+		eastl::shared_ptr<CModuleInfo> GetModule( const CString& moduleName );
+	private:
+		CVector<eastl::shared_ptr<CModuleInfo>> m_LoadedModules;
+	};
 };
 
 #endif

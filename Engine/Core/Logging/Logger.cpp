@@ -40,12 +40,12 @@ struct CMessage {
 	uint64_t nStringLength;
 };
 
+namespace SIREngine::Application { extern CThreadAtomic<bool> g_bExitApp; };
 static CThread *s_pLogThread;
 static boost::lockfree::queue<CMessage, boost::lockfree::capacity<1024>> LogMessageQueue;
 //static eastl::fixed_vector<CMessage, 256> LogMessageQueue;
 static CThreadMutex s_LoggerLock;
 static FileSystem::CFileWriter *s_pLogFile;
-static CThreadAtomic<bool> s_bExitApp;
 
 // if true, each log will include the call source
 bool32 CLogManager::bLogIncludeFileInfo = false;
@@ -114,8 +114,6 @@ void CLogManager::LaunchLoggingThread( void )
 	e_LogIncludeFileInfo.Register();
 	e_LogIncludeTimeInfo.Register();
 
-	s_bExitApp.store( false );
-
 	s_pLogThread = new ( malloc( sizeof( CThread ) ) ) CThread( "LoggingThread" );
 	s_pLogThread->Start( CLogManager::LogThread );
 
@@ -129,7 +127,6 @@ void CLogManager::ShutdownLogger( void )
 	if ( s_pLogFile ) {
 		delete s_pLogFile;
 	}
-	s_bExitApp.store( true );
 	if ( s_pLogThread ) {
 		s_pLogThread->Join();
 		free( s_pLogThread );
@@ -236,9 +233,15 @@ void SIRENGINE_ATTRIBUTE(format(printf, 3, 4)) CLogManager::LogCategory( const L
 
 	switch ( ( data.pCategory->GetVerbosity() & ELogLevel::VerbosityMask ) ) {
 	case ELogLevel::Error:
+		len = SIREngine_snprintf( buf, sizeof( buf ) - 1,
+			"\x1B[" TTY_COLOR_RED "mERROR \x1B[" TTY_COLOR_YELLOW "m"
+			" %s%s: %s \x1B[0m\n"
+			, GetExtraString( data.pFileName, data.pFunction, data.nLineNumber ), data.pCategory->GetCategoryName().c_str(), msg
+		);
+		break;
 	case ELogLevel::Warning:
 		len = SIREngine_snprintf( buf, sizeof( buf ) - 1,
-			"\x1B[" TTY_COLOR_RED "m WARNING \x1B[" TTY_COLOR_YELLOW "m"
+			"\x1B[" TTY_COLOR_RED "mWARNING \x1B[" TTY_COLOR_YELLOW "m"
 			" %s%s: %s \x1B[0m\n"
 			, GetExtraString( data.pFileName, data.pFunction, data.nLineNumber ), data.pCategory->GetCategoryName().c_str(), msg
 		);
@@ -246,10 +249,26 @@ void SIRENGINE_ATTRIBUTE(format(printf, 3, 4)) CLogManager::LogCategory( const L
 	case ELogLevel::Info:
 	case ELogLevel::Verbose:
 	case ELogLevel::Spam:
-		len = SIREngine_snprintf( buf, sizeof( buf ) - 1, "%s%s: %s\n",
-		GetExtraString( data.pFileName, data.pFunction, data.nLineNumber ),
-		data.pCategory->GetCategoryName().c_str(),
-		msg );
+		len = SIREngine_snprintf( buf, sizeof( buf ) - 1,
+			"%s%s: %s\n"
+			, GetExtraString( data.pFileName, data.pFunction, data.nLineNumber ),
+			data.pCategory->GetCategoryName().c_str(), msg
+		);
+		break;
+	case ELogLevel::Developer:
+		len = SIREngine_snprintf( buf, sizeof( buf ) - 1,
+			"\x1B[" TTY_COLOR_CYAN "mDEVELOPER \x1B[" TTY_COLOR_MAGENTA "m"
+			" %s%s: %s \x1B[0m\n"
+			, GetExtraString( data.pFileName, data.pFunction, data.nLineNumber ), data.pCategory->GetCategoryName().c_str(), msg
+		);
+		break;
+	case ELogLevel::Fatal:
+		len = SIREngine_snprintf( buf, sizeof( buf ) - 1,
+			"\x1B[" TTY_COLOR_RED "mFATAL ERROR \x1B[" TTY_COLOR_RED "m"
+			" %s%s: %s \x1B[0m\n"
+			, GetExtraString( data.pFileName, data.pFunction, data.nLineNumber ), data.pCategory->GetCategoryName().c_str(), msg
+		);
+		Application::Get()->Shutdown();
 		break;
 	};
 	
@@ -270,7 +289,7 @@ void SIRENGINE_ATTRIBUTE(format(printf, 3, 4)) CLogManager::LogError( const LogD
 	SIREngine_Vsnprintf( msg, sizeof( msg ) - 1, fmt, argptr );
 	va_end( argptr );
 
-	s_bExitApp.store( true );
+	Application::g_bExitApp.store( true );
 
 	g_pApplication->Error( msg );
 }
@@ -295,7 +314,7 @@ void CLogManager::LogThread( void )
 	CThreadMutex lock;
 	CMessage queueMessage;
 
-	while ( !s_bExitApp.load() ) {
+	while ( !Application::g_bExitApp.load() ) {
 		if ( LogMessageQueue.pop( queueMessage ) ) {
 //		    CThreadAutoLock<CThreadMutex> _( s_LoggerLock );
 		    g_pApplication->FileWrite( queueMessage.szMessage, queueMessage.nStringLength, SIRENGINE_STDOUT_HANDLE );

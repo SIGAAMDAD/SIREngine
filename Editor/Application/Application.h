@@ -15,7 +15,9 @@
 #include "ImGuiNotify.hpp"
 
 #include <Engine/RenderLib/Backend/OpenGL/GLTexture.h>
-#define IMGUI_TEXTURE_ID( texture ) (ImTextureID)( (uintptr_t)dynamic_cast<RenderLib::Backend::OpenGL::GLTexture *>( texture )->GetOpenGLHandle() )
+#define IMGUI_TEXTURE_ID( texture ) (ImTextureID)(intptr_t)( dynamic_cast<RenderLib::Backend::OpenGL::GLTexture *>( texture )->GetOpenGLHandle() )
+
+#define ITEM_TOOLTIP_STRING( ... ) if ( ImGui::IsItemHovered( ImGuiHoveredFlags_DelayNone ) ) { ImGui::SetTooltip( __VA_ARGS__ ); }
 
 using namespace SIREngine;
 
@@ -81,6 +83,9 @@ namespace Valden {
 		ImGuiID m_nBottomDockID;
 		ImGuiID m_nLeftDockID;
 		ImGuiID m_nRightDockID;
+
+		bool m_bProjectSettingsActive;
+		bool m_bEditorSettingsActive;
 
 		static CEditorApplication g_Application;
 	};

@@ -36,8 +36,11 @@ set(SOURCE_FILES
 	Application/Project/ProjectData.cpp
 	Application/Project/ProjectManager.cpp
 	Application/Project/ProjectLoader.cpp
-	Application/ContentBrowser.cpp
+	Application/ContentBrowser/ContentBrowser.cpp
+	Application/ContentBrowser/BrowserInstance.cpp
+	Application/ContentBrowser/FileView.cpp
 	Application/SceneView.cpp
+	Application/StatsWindow.cpp
 	Application/Application.cpp
 	Application/TextEditor.cpp
 	../imgui/imgui.cpp
@@ -46,6 +49,8 @@ set(SOURCE_FILES
 	../imgui/imgui_widgets.cpp
 	../imgui/backends/imgui_impl_opengl3.cpp
 	../imgui/backends/imgui_impl_sdl2.cpp
+	implot/implot.cpp
+	implot/implot_items.cpp
 #	../imgui-node-editor/crude_json.cpp
 #	../imgui-node-editor/imgui_canvas.cpp
 #	../imgui-node-editor/imgui_node_editor_api.cpp
@@ -53,7 +58,7 @@ set(SOURCE_FILES
 	../Engine/Core/Application/GenericPlatform/GenericApplication.cpp
 	../Engine/Core/Application/Posix/PosixApplication.cpp
 	../Engine/Core/Application/Posix/PosixCrashHandler.cpp
-	../Engine/Memory/Allocators/SlabAllocator.cpp
+	../Engine/Memory/Allocators/HunkAllocator.cpp
 	../Engine/Memory/Allocators/VirtualStackAllocator.cpp
 	../Engine/Memory/Backend/TagArenaAllocator.cpp
 	../Engine/Memory/Memory.cpp
@@ -74,7 +79,12 @@ set(SOURCE_FILES
 	../Engine/Core/ConsoleManager.cpp
 	../Engine/RenderLib/DrawBuffer.cpp
 	../Engine/RenderLib/RenderMain.cpp
+	../Engine/RenderLib/Backend/ImageLib/LoadSVG.cpp
 	../Engine/RenderLib/Backend/ImageLib/LoadPNG.cpp
+	../Engine/RenderLib/Backend/ImageLib/LoadBMP.cpp
+	../Engine/RenderLib/Backend/ImageLib/LoadJpeg.cpp
+	../Engine/RenderLib/Backend/ImageLib/LoadTGA.cpp
+	../Engine/RenderLib/Backend/ImageLib/LoadPCX.cpp
 	../Engine/RenderLib/Backend/ImageLoader.cpp
 	../Engine/RenderLib/Backend/RenderContext.cpp
 	../Engine/RenderLib/Backend/RenderShaderPipeline.cpp

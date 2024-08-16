@@ -5,7 +5,7 @@
 	#pragma once
 #endif
 
-#include <Engine/Core/EngineApp.h>
+#include "../EngineApp.h"
 #include "EventBase.h"
 #include "WindowEvent.h"
 #include <SDL2/SDL_keycode.h>

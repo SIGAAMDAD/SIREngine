@@ -14,6 +14,7 @@ void CProjectManager::LoadProjectCache( const char *pBuffer, uint64_t nSize )
 			data = nlohmann::json::parse( pBuffer, pBuffer + nSize );
 		} catch ( const nlohmann::json::exception& e ) {
 			SIRENGINE_WARNING( "Error parsing Valden/Projects/Cached.json (%i:%s)", e.id, e.what() );
+			SIRENGINE_LOG( "Json Dump: %s", pBuffer );
 		}
 	}
 

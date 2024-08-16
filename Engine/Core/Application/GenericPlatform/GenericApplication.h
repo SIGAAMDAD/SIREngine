@@ -18,10 +18,6 @@ namespace SIREngine {
 };
 
 namespace SIREngine::Application {
-	typedef struct {
-
-	} MemoryStats_t;
-
 	typedef enum {
 		RAPI_OPENGL,
 		RAPI_VULKAN,
@@ -45,6 +41,48 @@ namespace SIREngine::Application {
 	} CrashType_t;
 
 	typedef struct {
+		/** The amount of physical memory currently available, in bytes. */
+		uint64_t nAvailablePhysical;
+
+		/** The amount of virtual memory currently available, in bytes. */
+		uint64_t nAvailableVirtual;
+
+		/** The amount of physical memory used by the process, in bytes. */
+		uint64_t nUsedPhysical;
+
+		/** The peak amount of physical memory used by the process, in bytes. */
+		uint64_t nPeakUsedPhysical;
+
+		/** Total amount of virtual memory used by the process. */
+		uint64_t nUsedVirtual;
+
+		/** The peak amount of virtual memory used by the process. */
+		uint64_t nPeakUsedVirtual;
+
+		uint64_t nTotalPhysical;
+
+		/** Memory pressure states, useful for platforms in which the available memory estimate
+		 	may not take in to account memory reclaimable from closing inactive processes or resorting to swap. */
+		enum class EMemoryPressureStatus : uint8_t
+		{ 
+			Unknown,
+			Nominal,
+			Warning,
+			Critical, // high risk of OOM conditions
+		};
+	} MemoryStats_t;
+
+	typedef struct {
+		uint64_t nTotalPhysical;
+		uint64_t nTotalVirtual;
+
+		uint64_t nPageSize;
+		uint64_t nAddressLimit;
+
+		uint64_t nTotalPhysicalGB;
+	} MemoryConstants_t;
+
+	typedef struct {
 		const char *pszWindowName;
 		const char *pszAppName;
 		uint64_t nAppVersion;
@@ -56,6 +94,10 @@ namespace SIREngine::Application {
 
 		unsigned eWindowFlags;
 	} ApplicationInfo_t;
+
+	typedef struct {
+		uint64_t nSize;
+	} FileInfo_t;
 
 	class IGenericApplication
 	{
@@ -91,6 +133,8 @@ namespace SIREngine::Application {
 		virtual void Shutdown( void );
 		virtual void Run( void );
 
+		virtual void GetFileStats( const CString& fileName, FileInfo_t *pInfo ) = 0;
+
 		virtual FILE *OpenFile( const CString& filePath, const char *mode ) = 0;
 
 		virtual size_t GetOSPageSize( void ) const = 0;
@@ -98,7 +142,6 @@ namespace SIREngine::Application {
 		virtual void *OpenDLL( const char *pName ) = 0;
 		virtual void CloseDLL( void *pDLLHandle ) = 0;
 		virtual void *GetProcAddress( void *pDLLHandle, const char *pProcName ) = 0;
-
 
 		virtual size_t GetAllocSize( void *pBuffer ) const = 0;
 		virtual void *VirtualAlloc( size_t *nSize, size_t nAlignment ) = 0;
@@ -123,6 +166,9 @@ namespace SIREngine::Application {
 		virtual size_t FileTell( void *hFile ) = 0;
 		virtual size_t FileLength( void *hFile ) = 0;
 
+		virtual const MemoryConstants_t& GetMemoryConstants( void ) = 0;
+		virtual MemoryStats_t GetMemoryStats( void ) = 0;
+
 		virtual CVector<FileSystem::CFilePath> ListFiles( const FileSystem::CFilePath& dir, bool bDirectoryOnly = false ) = 0;
 
 		virtual void ThreadStart( void *pThread, SIREngine::CThread *, void (SIREngine::CThread::*pFunction)( void ) ) = 0;
@@ -133,7 +179,7 @@ namespace SIREngine::Application {
 		virtual double GetCPUFrequency( void ) = 0;
 		virtual uint32_t GetNumberOfCores( void ) = 0;
 
-		virtual void OnOutOfMemory( void ) = 0;
+		virtual void OnOutOfMemory( uint64_t nSize, uint64_t nAlignment ) = 0;
 
 		static CrashType_t nEngineCrashReason;
 	protected:

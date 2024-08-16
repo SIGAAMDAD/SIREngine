@@ -211,29 +211,77 @@ Application/Application.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/Application/Application.cpp.s
 .PHONY : Application/Application.cpp.s
 
-Application/ContentBrowser.o: Application/ContentBrowser.cpp.o
-.PHONY : Application/ContentBrowser.o
+Application/ContentBrowser/BrowserInstance.o: Application/ContentBrowser/BrowserInstance.cpp.o
+.PHONY : Application/ContentBrowser/BrowserInstance.o
 
 # target to build an object file
-Application/ContentBrowser.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/Application/ContentBrowser.cpp.o
-.PHONY : Application/ContentBrowser.cpp.o
+Application/ContentBrowser/BrowserInstance.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/Application/ContentBrowser/BrowserInstance.cpp.o
+.PHONY : Application/ContentBrowser/BrowserInstance.cpp.o
 
-Application/ContentBrowser.i: Application/ContentBrowser.cpp.i
-.PHONY : Application/ContentBrowser.i
+Application/ContentBrowser/BrowserInstance.i: Application/ContentBrowser/BrowserInstance.cpp.i
+.PHONY : Application/ContentBrowser/BrowserInstance.i
 
 # target to preprocess a source file
-Application/ContentBrowser.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/Application/ContentBrowser.cpp.i
-.PHONY : Application/ContentBrowser.cpp.i
+Application/ContentBrowser/BrowserInstance.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/Application/ContentBrowser/BrowserInstance.cpp.i
+.PHONY : Application/ContentBrowser/BrowserInstance.cpp.i
 
-Application/ContentBrowser.s: Application/ContentBrowser.cpp.s
-.PHONY : Application/ContentBrowser.s
+Application/ContentBrowser/BrowserInstance.s: Application/ContentBrowser/BrowserInstance.cpp.s
+.PHONY : Application/ContentBrowser/BrowserInstance.s
 
 # target to generate assembly for a file
-Application/ContentBrowser.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/Application/ContentBrowser.cpp.s
-.PHONY : Application/ContentBrowser.cpp.s
+Application/ContentBrowser/BrowserInstance.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/Application/ContentBrowser/BrowserInstance.cpp.s
+.PHONY : Application/ContentBrowser/BrowserInstance.cpp.s
+
+Application/ContentBrowser/ContentBrowser.o: Application/ContentBrowser/ContentBrowser.cpp.o
+.PHONY : Application/ContentBrowser/ContentBrowser.o
+
+# target to build an object file
+Application/ContentBrowser/ContentBrowser.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/Application/ContentBrowser/ContentBrowser.cpp.o
+.PHONY : Application/ContentBrowser/ContentBrowser.cpp.o
+
+Application/ContentBrowser/ContentBrowser.i: Application/ContentBrowser/ContentBrowser.cpp.i
+.PHONY : Application/ContentBrowser/ContentBrowser.i
+
+# target to preprocess a source file
+Application/ContentBrowser/ContentBrowser.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/Application/ContentBrowser/ContentBrowser.cpp.i
+.PHONY : Application/ContentBrowser/ContentBrowser.cpp.i
+
+Application/ContentBrowser/ContentBrowser.s: Application/ContentBrowser/ContentBrowser.cpp.s
+.PHONY : Application/ContentBrowser/ContentBrowser.s
+
+# target to generate assembly for a file
+Application/ContentBrowser/ContentBrowser.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/Application/ContentBrowser/ContentBrowser.cpp.s
+.PHONY : Application/ContentBrowser/ContentBrowser.cpp.s
+
+Application/ContentBrowser/FileView.o: Application/ContentBrowser/FileView.cpp.o
+.PHONY : Application/ContentBrowser/FileView.o
+
+# target to build an object file
+Application/ContentBrowser/FileView.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/Application/ContentBrowser/FileView.cpp.o
+.PHONY : Application/ContentBrowser/FileView.cpp.o
+
+Application/ContentBrowser/FileView.i: Application/ContentBrowser/FileView.cpp.i
+.PHONY : Application/ContentBrowser/FileView.i
+
+# target to preprocess a source file
+Application/ContentBrowser/FileView.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/Application/ContentBrowser/FileView.cpp.i
+.PHONY : Application/ContentBrowser/FileView.cpp.i
+
+Application/ContentBrowser/FileView.s: Application/ContentBrowser/FileView.cpp.s
+.PHONY : Application/ContentBrowser/FileView.s
+
+# target to generate assembly for a file
+Application/ContentBrowser/FileView.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/Application/ContentBrowser/FileView.cpp.s
+.PHONY : Application/ContentBrowser/FileView.cpp.s
 
 Application/Project/ProjectData.o: Application/Project/ProjectData.cpp.o
 .PHONY : Application/Project/ProjectData.o
@@ -330,6 +378,30 @@ Application/SceneView.s: Application/SceneView.cpp.s
 Application/SceneView.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/Application/SceneView.cpp.s
 .PHONY : Application/SceneView.cpp.s
+
+Application/StatsWindow.o: Application/StatsWindow.cpp.o
+.PHONY : Application/StatsWindow.o
+
+# target to build an object file
+Application/StatsWindow.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/Application/StatsWindow.cpp.o
+.PHONY : Application/StatsWindow.cpp.o
+
+Application/StatsWindow.i: Application/StatsWindow.cpp.i
+.PHONY : Application/StatsWindow.i
+
+# target to preprocess a source file
+Application/StatsWindow.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/Application/StatsWindow.cpp.i
+.PHONY : Application/StatsWindow.cpp.i
+
+Application/StatsWindow.s: Application/StatsWindow.cpp.s
+.PHONY : Application/StatsWindow.s
+
+# target to generate assembly for a file
+Application/StatsWindow.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/Application/StatsWindow.cpp.s
+.PHONY : Application/StatsWindow.cpp.s
 
 Application/TextEditor.o: Application/TextEditor.cpp.o
 .PHONY : Application/TextEditor.o
@@ -859,29 +931,29 @@ home/noah/Projects/SIR-Engine/Engine/Core/Util.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/Core/Util.cpp.s
 .PHONY : home/noah/Projects/SIR-Engine/Engine/Core/Util.cpp.s
 
-home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/SlabAllocator.o: home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/SlabAllocator.cpp.o
-.PHONY : home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/SlabAllocator.o
+home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/HunkAllocator.o: home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/HunkAllocator.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/HunkAllocator.o
 
 # target to build an object file
-home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/SlabAllocator.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/SlabAllocator.cpp.o
-.PHONY : home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/SlabAllocator.cpp.o
+home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/HunkAllocator.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/HunkAllocator.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/HunkAllocator.cpp.o
 
-home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/SlabAllocator.i: home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/SlabAllocator.cpp.i
-.PHONY : home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/SlabAllocator.i
+home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/HunkAllocator.i: home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/HunkAllocator.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/HunkAllocator.i
 
 # target to preprocess a source file
-home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/SlabAllocator.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/SlabAllocator.cpp.i
-.PHONY : home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/SlabAllocator.cpp.i
+home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/HunkAllocator.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/HunkAllocator.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/HunkAllocator.cpp.i
 
-home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/SlabAllocator.s: home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/SlabAllocator.cpp.s
-.PHONY : home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/SlabAllocator.s
+home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/HunkAllocator.s: home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/HunkAllocator.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/HunkAllocator.s
 
 # target to generate assembly for a file
-home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/SlabAllocator.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/SlabAllocator.cpp.s
-.PHONY : home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/SlabAllocator.cpp.s
+home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/HunkAllocator.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/HunkAllocator.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/HunkAllocator.cpp.s
 
 home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/VirtualStackAllocator.o: home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/VirtualStackAllocator.cpp.o
 .PHONY : home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/VirtualStackAllocator.o
@@ -955,6 +1027,78 @@ home/noah/Projects/SIR-Engine/Engine/Memory/Memory.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/Memory/Memory.cpp.s
 .PHONY : home/noah/Projects/SIR-Engine/Engine/Memory/Memory.cpp.s
 
+home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadBMP.o: home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadBMP.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadBMP.o
+
+# target to build an object file
+home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadBMP.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadBMP.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadBMP.cpp.o
+
+home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadBMP.i: home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadBMP.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadBMP.i
+
+# target to preprocess a source file
+home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadBMP.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadBMP.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadBMP.cpp.i
+
+home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadBMP.s: home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadBMP.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadBMP.s
+
+# target to generate assembly for a file
+home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadBMP.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadBMP.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadBMP.cpp.s
+
+home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadJpeg.o: home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadJpeg.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadJpeg.o
+
+# target to build an object file
+home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadJpeg.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadJpeg.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadJpeg.cpp.o
+
+home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadJpeg.i: home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadJpeg.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadJpeg.i
+
+# target to preprocess a source file
+home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadJpeg.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadJpeg.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadJpeg.cpp.i
+
+home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadJpeg.s: home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadJpeg.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadJpeg.s
+
+# target to generate assembly for a file
+home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadJpeg.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadJpeg.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadJpeg.cpp.s
+
+home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPCX.o: home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPCX.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPCX.o
+
+# target to build an object file
+home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPCX.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPCX.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPCX.cpp.o
+
+home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPCX.i: home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPCX.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPCX.i
+
+# target to preprocess a source file
+home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPCX.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPCX.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPCX.cpp.i
+
+home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPCX.s: home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPCX.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPCX.s
+
+# target to generate assembly for a file
+home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPCX.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPCX.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPCX.cpp.s
+
 home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPNG.o: home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPNG.cpp.o
 .PHONY : home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPNG.o
 
@@ -978,6 +1122,54 @@ home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPNG.s: home/
 home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPNG.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPNG.cpp.s
 .PHONY : home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPNG.cpp.s
+
+home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadSVG.o: home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadSVG.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadSVG.o
+
+# target to build an object file
+home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadSVG.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadSVG.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadSVG.cpp.o
+
+home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadSVG.i: home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadSVG.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadSVG.i
+
+# target to preprocess a source file
+home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadSVG.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadSVG.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadSVG.cpp.i
+
+home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadSVG.s: home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadSVG.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadSVG.s
+
+# target to generate assembly for a file
+home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadSVG.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadSVG.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadSVG.cpp.s
+
+home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadTGA.o: home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadTGA.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadTGA.o
+
+# target to build an object file
+home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadTGA.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadTGA.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadTGA.cpp.o
+
+home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadTGA.i: home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadTGA.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadTGA.i
+
+# target to preprocess a source file
+home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadTGA.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadTGA.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadTGA.cpp.i
+
+home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadTGA.s: home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadTGA.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadTGA.s
+
+# target to generate assembly for a file
+home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadTGA.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadTGA.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadTGA.cpp.s
 
 home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLoader.o: home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLoader.cpp.o
 .PHONY : home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLoader.o
@@ -1699,6 +1891,54 @@ home/noah/Projects/SIR-Engine/pngloader/lodepng.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/pngloader/lodepng.cpp.s
 .PHONY : home/noah/Projects/SIR-Engine/pngloader/lodepng.cpp.s
 
+implot/implot.o: implot/implot.cpp.o
+.PHONY : implot/implot.o
+
+# target to build an object file
+implot/implot.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/implot/implot.cpp.o
+.PHONY : implot/implot.cpp.o
+
+implot/implot.i: implot/implot.cpp.i
+.PHONY : implot/implot.i
+
+# target to preprocess a source file
+implot/implot.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/implot/implot.cpp.i
+.PHONY : implot/implot.cpp.i
+
+implot/implot.s: implot/implot.cpp.s
+.PHONY : implot/implot.s
+
+# target to generate assembly for a file
+implot/implot.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/implot/implot.cpp.s
+.PHONY : implot/implot.cpp.s
+
+implot/implot_items.o: implot/implot_items.cpp.o
+.PHONY : implot/implot_items.o
+
+# target to build an object file
+implot/implot_items.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/implot/implot_items.cpp.o
+.PHONY : implot/implot_items.cpp.o
+
+implot/implot_items.i: implot/implot_items.cpp.i
+.PHONY : implot/implot_items.i
+
+# target to preprocess a source file
+implot/implot_items.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/implot/implot_items.cpp.i
+.PHONY : implot/implot_items.cpp.i
+
+implot/implot_items.s: implot/implot_items.cpp.s
+.PHONY : implot/implot_items.s
+
+# target to generate assembly for a file
+implot/implot_items.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/implot/implot_items.cpp.s
+.PHONY : implot/implot_items.cpp.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -1716,9 +1956,15 @@ help:
 	@echo "... Application/Application.o"
 	@echo "... Application/Application.i"
 	@echo "... Application/Application.s"
-	@echo "... Application/ContentBrowser.o"
-	@echo "... Application/ContentBrowser.i"
-	@echo "... Application/ContentBrowser.s"
+	@echo "... Application/ContentBrowser/BrowserInstance.o"
+	@echo "... Application/ContentBrowser/BrowserInstance.i"
+	@echo "... Application/ContentBrowser/BrowserInstance.s"
+	@echo "... Application/ContentBrowser/ContentBrowser.o"
+	@echo "... Application/ContentBrowser/ContentBrowser.i"
+	@echo "... Application/ContentBrowser/ContentBrowser.s"
+	@echo "... Application/ContentBrowser/FileView.o"
+	@echo "... Application/ContentBrowser/FileView.i"
+	@echo "... Application/ContentBrowser/FileView.s"
 	@echo "... Application/Project/ProjectData.o"
 	@echo "... Application/Project/ProjectData.i"
 	@echo "... Application/Project/ProjectData.s"
@@ -1731,6 +1977,9 @@ help:
 	@echo "... Application/SceneView.o"
 	@echo "... Application/SceneView.i"
 	@echo "... Application/SceneView.s"
+	@echo "... Application/StatsWindow.o"
+	@echo "... Application/StatsWindow.i"
+	@echo "... Application/StatsWindow.s"
 	@echo "... Application/TextEditor.o"
 	@echo "... Application/TextEditor.i"
 	@echo "... Application/TextEditor.s"
@@ -1797,9 +2046,9 @@ help:
 	@echo "... home/noah/Projects/SIR-Engine/Engine/Core/Util.o"
 	@echo "... home/noah/Projects/SIR-Engine/Engine/Core/Util.i"
 	@echo "... home/noah/Projects/SIR-Engine/Engine/Core/Util.s"
-	@echo "... home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/SlabAllocator.o"
-	@echo "... home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/SlabAllocator.i"
-	@echo "... home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/SlabAllocator.s"
+	@echo "... home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/HunkAllocator.o"
+	@echo "... home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/HunkAllocator.i"
+	@echo "... home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/HunkAllocator.s"
 	@echo "... home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/VirtualStackAllocator.o"
 	@echo "... home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/VirtualStackAllocator.i"
 	@echo "... home/noah/Projects/SIR-Engine/Engine/Memory/Allocators/VirtualStackAllocator.s"
@@ -1809,9 +2058,24 @@ help:
 	@echo "... home/noah/Projects/SIR-Engine/Engine/Memory/Memory.o"
 	@echo "... home/noah/Projects/SIR-Engine/Engine/Memory/Memory.i"
 	@echo "... home/noah/Projects/SIR-Engine/Engine/Memory/Memory.s"
+	@echo "... home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadBMP.o"
+	@echo "... home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadBMP.i"
+	@echo "... home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadBMP.s"
+	@echo "... home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadJpeg.o"
+	@echo "... home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadJpeg.i"
+	@echo "... home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadJpeg.s"
+	@echo "... home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPCX.o"
+	@echo "... home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPCX.i"
+	@echo "... home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPCX.s"
 	@echo "... home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPNG.o"
 	@echo "... home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPNG.i"
 	@echo "... home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPNG.s"
+	@echo "... home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadSVG.o"
+	@echo "... home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadSVG.i"
+	@echo "... home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadSVG.s"
+	@echo "... home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadTGA.o"
+	@echo "... home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadTGA.i"
+	@echo "... home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadTGA.s"
 	@echo "... home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLoader.o"
 	@echo "... home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLoader.i"
 	@echo "... home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLoader.s"
@@ -1902,6 +2166,12 @@ help:
 	@echo "... home/noah/Projects/SIR-Engine/pngloader/lodepng.o"
 	@echo "... home/noah/Projects/SIR-Engine/pngloader/lodepng.i"
 	@echo "... home/noah/Projects/SIR-Engine/pngloader/lodepng.s"
+	@echo "... implot/implot.o"
+	@echo "... implot/implot.i"
+	@echo "... implot/implot.s"
+	@echo "... implot/implot_items.o"
+	@echo "... implot/implot_items.i"
+	@echo "... implot/implot_items.s"
 .PHONY : help
 
 

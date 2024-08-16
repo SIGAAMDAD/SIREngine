@@ -32,11 +32,11 @@ namespace SIREngine::FileSystem {
 		void LoadFile( const CFilePath& fileName, uint8_t **pOutBuffer, uint64_t *nOutSize );
 		void AddCacheDirectory( const CFilePath& directory );
 
-		CFileList *ListFiles( const CFilePath& directory, const char *pExtension, bool bDirectoryOnly = false ) const;
+		CFileList *ListFiles( const CFilePath& directory, const char *pExtension, bool bDirectoryOnly = false );
 		const char *BuildSearchPath( const CFilePath& basePath, const CString& fileName ) const;
 	private:
 		void InitDirectoryCache( void );
-		void LoadFileTree( CFileList *pDirectory );
+		void LoadFileTree( const FileSystem::CFilePath& directory );
 		
 		void CreateDirectoryTree( const char *pDirectoryPath );
 

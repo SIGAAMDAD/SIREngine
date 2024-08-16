@@ -85,6 +85,7 @@ namespace SIREngine::RenderLib::Backend {
 	};
 
 	extern IRenderContext *g_pRenderContext;
+	SIRENGINE_DECLARE_LOG_CATEGORY( RenderBackend, ELogLevel::Info );
 
 	SIRENGINE_FORCEINLINE IRenderContext *GetRenderContext( void ) {
 		return g_pRenderContext;

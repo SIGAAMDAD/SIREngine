@@ -364,6 +364,18 @@ namespace SIREngine::RenderLib::Backend::OpenGL {
 
         CVector<GLShaderBuffer *> dataInputBuffers;
     } GLPipelineSet_t;
+
+    extern void GLError( const char *pCall, GLenum nResult );
+
+    SIRENGINE_FORCEINLINE void GLCall( const char *pCall )
+    {
+        GLenum nResult = nglGetError();
+        if ( nResult != GL_NO_ERROR ) {
+            GLError( pCall, nResult );
+        }
+    }
 };
+
+#define GL_CALL( call ) call; SIREngine::RenderLib::Backend::OpenGL::GLCall( #call )
 
 #endif

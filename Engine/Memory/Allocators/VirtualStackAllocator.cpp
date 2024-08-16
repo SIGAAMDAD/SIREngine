@@ -39,7 +39,7 @@ void *CVirtualStackAllocator::Allocate( uint64_t nBytes, uint64_t nAlignment )
         void *pUsableMemoryEnd = (void *)OffsetPointer( m_pMemory, m_nTotalReservationSize );
 
         if ( pAllocationEnd > pUsableMemoryEnd ) {
-            Application::Get()->OnOutOfMemory();
+            Application::Get()->OnOutOfMemory( nBytes, nAlignment );
         }
 
         // after the high water mark is established, needing to commit pages should be rare

@@ -26,3 +26,6 @@
 	path = imgui
 	url = https://github.com/ocornut/imgui.git
 	branch = docking
+[submodule "Editor/implot"]
+	path = Editor/implot
+	url = https://github.com/epezent/implot.git

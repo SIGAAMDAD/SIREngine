@@ -34,6 +34,8 @@ using namespace SIREngine::Application;
 
 namespace SIREngine::RenderLib::Backend {
 
+SIRENGINE_DEFINE_LOG_CATEGORY( RenderBackend, ELogLevel::Info );
+
 IRenderContext *g_pRenderContext;
 
 CVar<int32_t> r_TextureStreamingBudget(
@@ -111,12 +113,12 @@ IRenderContext::IRenderContext( const ApplicationInfo_t& appInfo )
         windowFlags |= SDL_WINDOW_BORDERLESS;
     }
 
-    SIRENGINE_LOG( "Creating SDL2 window instance:" );
-    SIRENGINE_LOG( " IsFullscreen: %s", windowFlags & SDL_WINDOW_FULLSCREEN ? "TRUE" : "FALSE" );
-    SIRENGINE_LOG( " IsBorderless: %s", windowFlags & SDL_WINDOW_BORDERLESS ? "TRUE" : "FALSE" );
-    SIRENGINE_LOG( " Width: %u", m_AppInfo.nWindowWidth );
-    SIRENGINE_LOG( " Height: %u", m_AppInfo.nWindowHeight );
-    SIRENGINE_LOG( " ContextType: %s", GetContextType( windowFlags ) );
+    SIRENGINE_LOG_LEVEL( RenderBackend, ELogLevel::Info, "Creating SDL2 window instance:" );
+    SIRENGINE_LOG_LEVEL( RenderBackend, ELogLevel::Info, " IsFullscreen: %s", windowFlags & SDL_WINDOW_FULLSCREEN ? "TRUE" : "FALSE" );
+    SIRENGINE_LOG_LEVEL( RenderBackend, ELogLevel::Info, " IsBorderless: %s", windowFlags & SDL_WINDOW_BORDERLESS ? "TRUE" : "FALSE" );
+    SIRENGINE_LOG_LEVEL( RenderBackend, ELogLevel::Info, " Width: %u", m_AppInfo.nWindowWidth );
+    SIRENGINE_LOG_LEVEL( RenderBackend, ELogLevel::Info, " Height: %u", m_AppInfo.nWindowHeight );
+    SIRENGINE_LOG_LEVEL( RenderBackend, ELogLevel::Info, " ContextType: %s", GetContextType( windowFlags ) );
 
 #if defined(SIRENGINE_BUILD_EDITOR)
     windowFlags |= SDL_WINDOW_SHOWN;
