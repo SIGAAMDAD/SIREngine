@@ -562,12 +562,37 @@ void IGenericApplication::QuitGame( const IEventBase *pEventData )
 	Application::Get()->Shutdown();
 }
 
+static const char *GetCompileString( void )
+{
+	static char szBuffer[1024];
+
+	szBuffer[0] = '\0';
+
+#if defined(SIRENGINE_PLATFORM_32BIT)
+	SIREngine_snprintf_append( szBuffer, sizeof( szBuffer ) - 1, "(32-Bit)" );
+#elif defined(SIRENGINE_PLATFORM_64BIT)
+	SIREngine_snprintf_append( szBuffer, sizeof( szBuffer ) - 1, "(64-Bit)" );
+#endif
+	SIREngine_snprintf_append( szBuffer, sizeof( szBuffer ) - 1, " " SIRENGINE_COMPILER_NAME " " __DATE__ " " __TIME__ );
+
+	return szBuffer;
+}
+
 void IGenericApplication::Init( void )
 {
 	//
 	// initialize the engine
 	//
 	g_pFileSystem = new FileSystem::CFileSystem();
+
+	SIRENGINE_LOG( "SIREngine MetaData:" );
+	SIRENGINE_LOG( "  Engine Version: %s", SIRENGINE_VERSION_STRING );
+	SIRENGINE_LOG( "  Compile Info: %s", GetCompileString() );
+#if defined(SIRENGINE_BUILD_ENGINE)
+	SIRENGINE_LOG( "  SIRENGINE_BUILD_TYPE: Engine" );
+#elif defined(SIRENGINE_BUILD_EDITOR)
+	SIRENGINE_LOG( "  SIRENGINE_BUILD_TYPE: Editor" );
+#endif
 
 	CConsoleManager::Get().LoadConfig( "EngineData.ini" );
 	CLogManager::LaunchLoggingThread();
@@ -603,13 +628,6 @@ void IGenericApplication::Init( void )
 		"ApplicationListener", EventType_Quit, IGenericApplication::QuitGame
 	) );
 
-	SIRENGINE_LOG( "SIREngine MetaData:" );
-	SIRENGINE_LOG( "  Version: %s", SIRENGINE_VERSION_STRING );
-#if defined(SIRENGINE_BUILD_ENGINE)
-	SIRENGINE_LOG( "  SIRENGINE_BUILD_TYPE: Engine" );
-#elif defined(SIRENGINE_BUILD_EDITOR)
-	SIRENGINE_LOG( "  SIRENGINE_BUILD_TYPE: Editor" );
-#endif
 	MemoryStats_t stats = Application::Get()->GetMemoryStats();
 	SIRENGINE_LOG( "[OS Memory Statistics]" );
 	SIRENGINE_LOG( "  Total Physical RAM: %s", SIREngine_GetMemoryString( stats.nTotalPhysical ) );
@@ -649,6 +667,7 @@ void IGenericApplication::Run( void )
 			it.second->Frame( 0 );
 		}
 		g_pRenderLib->EndFrame();
+		g_nFrameNumber++;
 	}
 }
 

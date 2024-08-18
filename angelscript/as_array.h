@@ -173,7 +173,7 @@ void asCArray<T>::PushLast(const T &element)
 		if( maxLength == 0 )
 			Allocate(1, false);
 		else
-			Allocate(2*maxLength, true);
+			Allocate(4*maxLength, true);
 
 		if( length == maxLength )
 		{

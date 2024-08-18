@@ -379,6 +379,78 @@ Application/SceneView.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/Application/SceneView.cpp.s
 .PHONY : Application/SceneView.cpp.s
 
+Application/ScriptLib/ScriptCompiler.o: Application/ScriptLib/ScriptCompiler.cpp.o
+.PHONY : Application/ScriptLib/ScriptCompiler.o
+
+# target to build an object file
+Application/ScriptLib/ScriptCompiler.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/Application/ScriptLib/ScriptCompiler.cpp.o
+.PHONY : Application/ScriptLib/ScriptCompiler.cpp.o
+
+Application/ScriptLib/ScriptCompiler.i: Application/ScriptLib/ScriptCompiler.cpp.i
+.PHONY : Application/ScriptLib/ScriptCompiler.i
+
+# target to preprocess a source file
+Application/ScriptLib/ScriptCompiler.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/Application/ScriptLib/ScriptCompiler.cpp.i
+.PHONY : Application/ScriptLib/ScriptCompiler.cpp.i
+
+Application/ScriptLib/ScriptCompiler.s: Application/ScriptLib/ScriptCompiler.cpp.s
+.PHONY : Application/ScriptLib/ScriptCompiler.s
+
+# target to generate assembly for a file
+Application/ScriptLib/ScriptCompiler.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/Application/ScriptLib/ScriptCompiler.cpp.s
+.PHONY : Application/ScriptLib/ScriptCompiler.cpp.s
+
+Application/ScriptLib/ScriptObject.o: Application/ScriptLib/ScriptObject.cpp.o
+.PHONY : Application/ScriptLib/ScriptObject.o
+
+# target to build an object file
+Application/ScriptLib/ScriptObject.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/Application/ScriptLib/ScriptObject.cpp.o
+.PHONY : Application/ScriptLib/ScriptObject.cpp.o
+
+Application/ScriptLib/ScriptObject.i: Application/ScriptLib/ScriptObject.cpp.i
+.PHONY : Application/ScriptLib/ScriptObject.i
+
+# target to preprocess a source file
+Application/ScriptLib/ScriptObject.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/Application/ScriptLib/ScriptObject.cpp.i
+.PHONY : Application/ScriptLib/ScriptObject.cpp.i
+
+Application/ScriptLib/ScriptObject.s: Application/ScriptLib/ScriptObject.cpp.s
+.PHONY : Application/ScriptLib/ScriptObject.s
+
+# target to generate assembly for a file
+Application/ScriptLib/ScriptObject.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/Application/ScriptLib/ScriptObject.cpp.s
+.PHONY : Application/ScriptLib/ScriptObject.cpp.s
+
+Application/ScriptLib/ScriptTextEditor.o: Application/ScriptLib/ScriptTextEditor.cpp.o
+.PHONY : Application/ScriptLib/ScriptTextEditor.o
+
+# target to build an object file
+Application/ScriptLib/ScriptTextEditor.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/Application/ScriptLib/ScriptTextEditor.cpp.o
+.PHONY : Application/ScriptLib/ScriptTextEditor.cpp.o
+
+Application/ScriptLib/ScriptTextEditor.i: Application/ScriptLib/ScriptTextEditor.cpp.i
+.PHONY : Application/ScriptLib/ScriptTextEditor.i
+
+# target to preprocess a source file
+Application/ScriptLib/ScriptTextEditor.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/Application/ScriptLib/ScriptTextEditor.cpp.i
+.PHONY : Application/ScriptLib/ScriptTextEditor.cpp.i
+
+Application/ScriptLib/ScriptTextEditor.s: Application/ScriptLib/ScriptTextEditor.cpp.s
+.PHONY : Application/ScriptLib/ScriptTextEditor.s
+
+# target to generate assembly for a file
+Application/ScriptLib/ScriptTextEditor.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/Application/ScriptLib/ScriptTextEditor.cpp.s
+.PHONY : Application/ScriptLib/ScriptTextEditor.cpp.s
+
 Application/StatsWindow.o: Application/StatsWindow.cpp.o
 .PHONY : Application/StatsWindow.o
 
@@ -402,30 +474,6 @@ Application/StatsWindow.s: Application/StatsWindow.cpp.s
 Application/StatsWindow.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/Application/StatsWindow.cpp.s
 .PHONY : Application/StatsWindow.cpp.s
-
-Application/TextEditor.o: Application/TextEditor.cpp.o
-.PHONY : Application/TextEditor.o
-
-# target to build an object file
-Application/TextEditor.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/Application/TextEditor.cpp.o
-.PHONY : Application/TextEditor.cpp.o
-
-Application/TextEditor.i: Application/TextEditor.cpp.i
-.PHONY : Application/TextEditor.i
-
-# target to preprocess a source file
-Application/TextEditor.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/Application/TextEditor.cpp.i
-.PHONY : Application/TextEditor.cpp.i
-
-Application/TextEditor.s: Application/TextEditor.cpp.s
-.PHONY : Application/TextEditor.s
-
-# target to generate assembly for a file
-Application/TextEditor.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/Application/TextEditor.cpp.s
-.PHONY : Application/TextEditor.cpp.s
 
 home/noah/Projects/SIR-Engine/Engine/Core/Application/GenericPlatform/GenericApplication.o: home/noah/Projects/SIR-Engine/Engine/Core/Application/GenericPlatform/GenericApplication.cpp.o
 .PHONY : home/noah/Projects/SIR-Engine/Engine/Core/Application/GenericPlatform/GenericApplication.o
@@ -1723,6 +1771,702 @@ home/noah/Projects/SIR-Engine/Engine/RenderLib/RenderMain.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/RenderMain.cpp.s
 .PHONY : home/noah/Projects/SIR-Engine/Engine/RenderLib/RenderMain.cpp.s
 
+home/noah/Projects/SIR-Engine/angelscript/as_atomic.o: home/noah/Projects/SIR-Engine/angelscript/as_atomic.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_atomic.o
+
+# target to build an object file
+home/noah/Projects/SIR-Engine/angelscript/as_atomic.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_atomic.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_atomic.cpp.o
+
+home/noah/Projects/SIR-Engine/angelscript/as_atomic.i: home/noah/Projects/SIR-Engine/angelscript/as_atomic.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_atomic.i
+
+# target to preprocess a source file
+home/noah/Projects/SIR-Engine/angelscript/as_atomic.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_atomic.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_atomic.cpp.i
+
+home/noah/Projects/SIR-Engine/angelscript/as_atomic.s: home/noah/Projects/SIR-Engine/angelscript/as_atomic.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_atomic.s
+
+# target to generate assembly for a file
+home/noah/Projects/SIR-Engine/angelscript/as_atomic.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_atomic.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_atomic.cpp.s
+
+home/noah/Projects/SIR-Engine/angelscript/as_builder.o: home/noah/Projects/SIR-Engine/angelscript/as_builder.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_builder.o
+
+# target to build an object file
+home/noah/Projects/SIR-Engine/angelscript/as_builder.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_builder.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_builder.cpp.o
+
+home/noah/Projects/SIR-Engine/angelscript/as_builder.i: home/noah/Projects/SIR-Engine/angelscript/as_builder.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_builder.i
+
+# target to preprocess a source file
+home/noah/Projects/SIR-Engine/angelscript/as_builder.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_builder.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_builder.cpp.i
+
+home/noah/Projects/SIR-Engine/angelscript/as_builder.s: home/noah/Projects/SIR-Engine/angelscript/as_builder.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_builder.s
+
+# target to generate assembly for a file
+home/noah/Projects/SIR-Engine/angelscript/as_builder.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_builder.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_builder.cpp.s
+
+home/noah/Projects/SIR-Engine/angelscript/as_bytecode.o: home/noah/Projects/SIR-Engine/angelscript/as_bytecode.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_bytecode.o
+
+# target to build an object file
+home/noah/Projects/SIR-Engine/angelscript/as_bytecode.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_bytecode.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_bytecode.cpp.o
+
+home/noah/Projects/SIR-Engine/angelscript/as_bytecode.i: home/noah/Projects/SIR-Engine/angelscript/as_bytecode.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_bytecode.i
+
+# target to preprocess a source file
+home/noah/Projects/SIR-Engine/angelscript/as_bytecode.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_bytecode.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_bytecode.cpp.i
+
+home/noah/Projects/SIR-Engine/angelscript/as_bytecode.s: home/noah/Projects/SIR-Engine/angelscript/as_bytecode.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_bytecode.s
+
+# target to generate assembly for a file
+home/noah/Projects/SIR-Engine/angelscript/as_bytecode.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_bytecode.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_bytecode.cpp.s
+
+home/noah/Projects/SIR-Engine/angelscript/as_callfunc.o: home/noah/Projects/SIR-Engine/angelscript/as_callfunc.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_callfunc.o
+
+# target to build an object file
+home/noah/Projects/SIR-Engine/angelscript/as_callfunc.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_callfunc.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_callfunc.cpp.o
+
+home/noah/Projects/SIR-Engine/angelscript/as_callfunc.i: home/noah/Projects/SIR-Engine/angelscript/as_callfunc.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_callfunc.i
+
+# target to preprocess a source file
+home/noah/Projects/SIR-Engine/angelscript/as_callfunc.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_callfunc.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_callfunc.cpp.i
+
+home/noah/Projects/SIR-Engine/angelscript/as_callfunc.s: home/noah/Projects/SIR-Engine/angelscript/as_callfunc.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_callfunc.s
+
+# target to generate assembly for a file
+home/noah/Projects/SIR-Engine/angelscript/as_callfunc.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_callfunc.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_callfunc.cpp.s
+
+home/noah/Projects/SIR-Engine/angelscript/as_callfunc_x86.o: home/noah/Projects/SIR-Engine/angelscript/as_callfunc_x86.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_callfunc_x86.o
+
+# target to build an object file
+home/noah/Projects/SIR-Engine/angelscript/as_callfunc_x86.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_callfunc_x86.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_callfunc_x86.cpp.o
+
+home/noah/Projects/SIR-Engine/angelscript/as_callfunc_x86.i: home/noah/Projects/SIR-Engine/angelscript/as_callfunc_x86.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_callfunc_x86.i
+
+# target to preprocess a source file
+home/noah/Projects/SIR-Engine/angelscript/as_callfunc_x86.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_callfunc_x86.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_callfunc_x86.cpp.i
+
+home/noah/Projects/SIR-Engine/angelscript/as_callfunc_x86.s: home/noah/Projects/SIR-Engine/angelscript/as_callfunc_x86.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_callfunc_x86.s
+
+# target to generate assembly for a file
+home/noah/Projects/SIR-Engine/angelscript/as_callfunc_x86.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_callfunc_x86.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_callfunc_x86.cpp.s
+
+home/noah/Projects/SIR-Engine/angelscript/as_compiler.o: home/noah/Projects/SIR-Engine/angelscript/as_compiler.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_compiler.o
+
+# target to build an object file
+home/noah/Projects/SIR-Engine/angelscript/as_compiler.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_compiler.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_compiler.cpp.o
+
+home/noah/Projects/SIR-Engine/angelscript/as_compiler.i: home/noah/Projects/SIR-Engine/angelscript/as_compiler.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_compiler.i
+
+# target to preprocess a source file
+home/noah/Projects/SIR-Engine/angelscript/as_compiler.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_compiler.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_compiler.cpp.i
+
+home/noah/Projects/SIR-Engine/angelscript/as_compiler.s: home/noah/Projects/SIR-Engine/angelscript/as_compiler.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_compiler.s
+
+# target to generate assembly for a file
+home/noah/Projects/SIR-Engine/angelscript/as_compiler.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_compiler.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_compiler.cpp.s
+
+home/noah/Projects/SIR-Engine/angelscript/as_configgroup.o: home/noah/Projects/SIR-Engine/angelscript/as_configgroup.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_configgroup.o
+
+# target to build an object file
+home/noah/Projects/SIR-Engine/angelscript/as_configgroup.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_configgroup.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_configgroup.cpp.o
+
+home/noah/Projects/SIR-Engine/angelscript/as_configgroup.i: home/noah/Projects/SIR-Engine/angelscript/as_configgroup.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_configgroup.i
+
+# target to preprocess a source file
+home/noah/Projects/SIR-Engine/angelscript/as_configgroup.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_configgroup.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_configgroup.cpp.i
+
+home/noah/Projects/SIR-Engine/angelscript/as_configgroup.s: home/noah/Projects/SIR-Engine/angelscript/as_configgroup.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_configgroup.s
+
+# target to generate assembly for a file
+home/noah/Projects/SIR-Engine/angelscript/as_configgroup.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_configgroup.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_configgroup.cpp.s
+
+home/noah/Projects/SIR-Engine/angelscript/as_context.o: home/noah/Projects/SIR-Engine/angelscript/as_context.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_context.o
+
+# target to build an object file
+home/noah/Projects/SIR-Engine/angelscript/as_context.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_context.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_context.cpp.o
+
+home/noah/Projects/SIR-Engine/angelscript/as_context.i: home/noah/Projects/SIR-Engine/angelscript/as_context.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_context.i
+
+# target to preprocess a source file
+home/noah/Projects/SIR-Engine/angelscript/as_context.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_context.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_context.cpp.i
+
+home/noah/Projects/SIR-Engine/angelscript/as_context.s: home/noah/Projects/SIR-Engine/angelscript/as_context.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_context.s
+
+# target to generate assembly for a file
+home/noah/Projects/SIR-Engine/angelscript/as_context.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_context.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_context.cpp.s
+
+home/noah/Projects/SIR-Engine/angelscript/as_datatype.o: home/noah/Projects/SIR-Engine/angelscript/as_datatype.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_datatype.o
+
+# target to build an object file
+home/noah/Projects/SIR-Engine/angelscript/as_datatype.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_datatype.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_datatype.cpp.o
+
+home/noah/Projects/SIR-Engine/angelscript/as_datatype.i: home/noah/Projects/SIR-Engine/angelscript/as_datatype.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_datatype.i
+
+# target to preprocess a source file
+home/noah/Projects/SIR-Engine/angelscript/as_datatype.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_datatype.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_datatype.cpp.i
+
+home/noah/Projects/SIR-Engine/angelscript/as_datatype.s: home/noah/Projects/SIR-Engine/angelscript/as_datatype.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_datatype.s
+
+# target to generate assembly for a file
+home/noah/Projects/SIR-Engine/angelscript/as_datatype.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_datatype.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_datatype.cpp.s
+
+home/noah/Projects/SIR-Engine/angelscript/as_gc.o: home/noah/Projects/SIR-Engine/angelscript/as_gc.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_gc.o
+
+# target to build an object file
+home/noah/Projects/SIR-Engine/angelscript/as_gc.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_gc.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_gc.cpp.o
+
+home/noah/Projects/SIR-Engine/angelscript/as_gc.i: home/noah/Projects/SIR-Engine/angelscript/as_gc.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_gc.i
+
+# target to preprocess a source file
+home/noah/Projects/SIR-Engine/angelscript/as_gc.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_gc.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_gc.cpp.i
+
+home/noah/Projects/SIR-Engine/angelscript/as_gc.s: home/noah/Projects/SIR-Engine/angelscript/as_gc.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_gc.s
+
+# target to generate assembly for a file
+home/noah/Projects/SIR-Engine/angelscript/as_gc.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_gc.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_gc.cpp.s
+
+home/noah/Projects/SIR-Engine/angelscript/as_generic.o: home/noah/Projects/SIR-Engine/angelscript/as_generic.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_generic.o
+
+# target to build an object file
+home/noah/Projects/SIR-Engine/angelscript/as_generic.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_generic.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_generic.cpp.o
+
+home/noah/Projects/SIR-Engine/angelscript/as_generic.i: home/noah/Projects/SIR-Engine/angelscript/as_generic.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_generic.i
+
+# target to preprocess a source file
+home/noah/Projects/SIR-Engine/angelscript/as_generic.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_generic.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_generic.cpp.i
+
+home/noah/Projects/SIR-Engine/angelscript/as_generic.s: home/noah/Projects/SIR-Engine/angelscript/as_generic.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_generic.s
+
+# target to generate assembly for a file
+home/noah/Projects/SIR-Engine/angelscript/as_generic.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_generic.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_generic.cpp.s
+
+home/noah/Projects/SIR-Engine/angelscript/as_globalproperty.o: home/noah/Projects/SIR-Engine/angelscript/as_globalproperty.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_globalproperty.o
+
+# target to build an object file
+home/noah/Projects/SIR-Engine/angelscript/as_globalproperty.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_globalproperty.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_globalproperty.cpp.o
+
+home/noah/Projects/SIR-Engine/angelscript/as_globalproperty.i: home/noah/Projects/SIR-Engine/angelscript/as_globalproperty.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_globalproperty.i
+
+# target to preprocess a source file
+home/noah/Projects/SIR-Engine/angelscript/as_globalproperty.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_globalproperty.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_globalproperty.cpp.i
+
+home/noah/Projects/SIR-Engine/angelscript/as_globalproperty.s: home/noah/Projects/SIR-Engine/angelscript/as_globalproperty.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_globalproperty.s
+
+# target to generate assembly for a file
+home/noah/Projects/SIR-Engine/angelscript/as_globalproperty.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_globalproperty.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_globalproperty.cpp.s
+
+home/noah/Projects/SIR-Engine/angelscript/as_memory.o: home/noah/Projects/SIR-Engine/angelscript/as_memory.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_memory.o
+
+# target to build an object file
+home/noah/Projects/SIR-Engine/angelscript/as_memory.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_memory.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_memory.cpp.o
+
+home/noah/Projects/SIR-Engine/angelscript/as_memory.i: home/noah/Projects/SIR-Engine/angelscript/as_memory.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_memory.i
+
+# target to preprocess a source file
+home/noah/Projects/SIR-Engine/angelscript/as_memory.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_memory.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_memory.cpp.i
+
+home/noah/Projects/SIR-Engine/angelscript/as_memory.s: home/noah/Projects/SIR-Engine/angelscript/as_memory.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_memory.s
+
+# target to generate assembly for a file
+home/noah/Projects/SIR-Engine/angelscript/as_memory.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_memory.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_memory.cpp.s
+
+home/noah/Projects/SIR-Engine/angelscript/as_module.o: home/noah/Projects/SIR-Engine/angelscript/as_module.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_module.o
+
+# target to build an object file
+home/noah/Projects/SIR-Engine/angelscript/as_module.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_module.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_module.cpp.o
+
+home/noah/Projects/SIR-Engine/angelscript/as_module.i: home/noah/Projects/SIR-Engine/angelscript/as_module.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_module.i
+
+# target to preprocess a source file
+home/noah/Projects/SIR-Engine/angelscript/as_module.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_module.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_module.cpp.i
+
+home/noah/Projects/SIR-Engine/angelscript/as_module.s: home/noah/Projects/SIR-Engine/angelscript/as_module.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_module.s
+
+# target to generate assembly for a file
+home/noah/Projects/SIR-Engine/angelscript/as_module.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_module.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_module.cpp.s
+
+home/noah/Projects/SIR-Engine/angelscript/as_objecttype.o: home/noah/Projects/SIR-Engine/angelscript/as_objecttype.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_objecttype.o
+
+# target to build an object file
+home/noah/Projects/SIR-Engine/angelscript/as_objecttype.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_objecttype.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_objecttype.cpp.o
+
+home/noah/Projects/SIR-Engine/angelscript/as_objecttype.i: home/noah/Projects/SIR-Engine/angelscript/as_objecttype.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_objecttype.i
+
+# target to preprocess a source file
+home/noah/Projects/SIR-Engine/angelscript/as_objecttype.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_objecttype.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_objecttype.cpp.i
+
+home/noah/Projects/SIR-Engine/angelscript/as_objecttype.s: home/noah/Projects/SIR-Engine/angelscript/as_objecttype.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_objecttype.s
+
+# target to generate assembly for a file
+home/noah/Projects/SIR-Engine/angelscript/as_objecttype.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_objecttype.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_objecttype.cpp.s
+
+home/noah/Projects/SIR-Engine/angelscript/as_outputbuffer.o: home/noah/Projects/SIR-Engine/angelscript/as_outputbuffer.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_outputbuffer.o
+
+# target to build an object file
+home/noah/Projects/SIR-Engine/angelscript/as_outputbuffer.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_outputbuffer.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_outputbuffer.cpp.o
+
+home/noah/Projects/SIR-Engine/angelscript/as_outputbuffer.i: home/noah/Projects/SIR-Engine/angelscript/as_outputbuffer.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_outputbuffer.i
+
+# target to preprocess a source file
+home/noah/Projects/SIR-Engine/angelscript/as_outputbuffer.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_outputbuffer.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_outputbuffer.cpp.i
+
+home/noah/Projects/SIR-Engine/angelscript/as_outputbuffer.s: home/noah/Projects/SIR-Engine/angelscript/as_outputbuffer.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_outputbuffer.s
+
+# target to generate assembly for a file
+home/noah/Projects/SIR-Engine/angelscript/as_outputbuffer.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_outputbuffer.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_outputbuffer.cpp.s
+
+home/noah/Projects/SIR-Engine/angelscript/as_parser.o: home/noah/Projects/SIR-Engine/angelscript/as_parser.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_parser.o
+
+# target to build an object file
+home/noah/Projects/SIR-Engine/angelscript/as_parser.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_parser.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_parser.cpp.o
+
+home/noah/Projects/SIR-Engine/angelscript/as_parser.i: home/noah/Projects/SIR-Engine/angelscript/as_parser.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_parser.i
+
+# target to preprocess a source file
+home/noah/Projects/SIR-Engine/angelscript/as_parser.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_parser.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_parser.cpp.i
+
+home/noah/Projects/SIR-Engine/angelscript/as_parser.s: home/noah/Projects/SIR-Engine/angelscript/as_parser.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_parser.s
+
+# target to generate assembly for a file
+home/noah/Projects/SIR-Engine/angelscript/as_parser.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_parser.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_parser.cpp.s
+
+home/noah/Projects/SIR-Engine/angelscript/as_restore.o: home/noah/Projects/SIR-Engine/angelscript/as_restore.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_restore.o
+
+# target to build an object file
+home/noah/Projects/SIR-Engine/angelscript/as_restore.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_restore.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_restore.cpp.o
+
+home/noah/Projects/SIR-Engine/angelscript/as_restore.i: home/noah/Projects/SIR-Engine/angelscript/as_restore.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_restore.i
+
+# target to preprocess a source file
+home/noah/Projects/SIR-Engine/angelscript/as_restore.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_restore.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_restore.cpp.i
+
+home/noah/Projects/SIR-Engine/angelscript/as_restore.s: home/noah/Projects/SIR-Engine/angelscript/as_restore.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_restore.s
+
+# target to generate assembly for a file
+home/noah/Projects/SIR-Engine/angelscript/as_restore.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_restore.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_restore.cpp.s
+
+home/noah/Projects/SIR-Engine/angelscript/as_scriptcode.o: home/noah/Projects/SIR-Engine/angelscript/as_scriptcode.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_scriptcode.o
+
+# target to build an object file
+home/noah/Projects/SIR-Engine/angelscript/as_scriptcode.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_scriptcode.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_scriptcode.cpp.o
+
+home/noah/Projects/SIR-Engine/angelscript/as_scriptcode.i: home/noah/Projects/SIR-Engine/angelscript/as_scriptcode.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_scriptcode.i
+
+# target to preprocess a source file
+home/noah/Projects/SIR-Engine/angelscript/as_scriptcode.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_scriptcode.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_scriptcode.cpp.i
+
+home/noah/Projects/SIR-Engine/angelscript/as_scriptcode.s: home/noah/Projects/SIR-Engine/angelscript/as_scriptcode.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_scriptcode.s
+
+# target to generate assembly for a file
+home/noah/Projects/SIR-Engine/angelscript/as_scriptcode.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_scriptcode.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_scriptcode.cpp.s
+
+home/noah/Projects/SIR-Engine/angelscript/as_scriptengine.o: home/noah/Projects/SIR-Engine/angelscript/as_scriptengine.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_scriptengine.o
+
+# target to build an object file
+home/noah/Projects/SIR-Engine/angelscript/as_scriptengine.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_scriptengine.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_scriptengine.cpp.o
+
+home/noah/Projects/SIR-Engine/angelscript/as_scriptengine.i: home/noah/Projects/SIR-Engine/angelscript/as_scriptengine.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_scriptengine.i
+
+# target to preprocess a source file
+home/noah/Projects/SIR-Engine/angelscript/as_scriptengine.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_scriptengine.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_scriptengine.cpp.i
+
+home/noah/Projects/SIR-Engine/angelscript/as_scriptengine.s: home/noah/Projects/SIR-Engine/angelscript/as_scriptengine.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_scriptengine.s
+
+# target to generate assembly for a file
+home/noah/Projects/SIR-Engine/angelscript/as_scriptengine.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_scriptengine.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_scriptengine.cpp.s
+
+home/noah/Projects/SIR-Engine/angelscript/as_scriptfunction.o: home/noah/Projects/SIR-Engine/angelscript/as_scriptfunction.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_scriptfunction.o
+
+# target to build an object file
+home/noah/Projects/SIR-Engine/angelscript/as_scriptfunction.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_scriptfunction.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_scriptfunction.cpp.o
+
+home/noah/Projects/SIR-Engine/angelscript/as_scriptfunction.i: home/noah/Projects/SIR-Engine/angelscript/as_scriptfunction.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_scriptfunction.i
+
+# target to preprocess a source file
+home/noah/Projects/SIR-Engine/angelscript/as_scriptfunction.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_scriptfunction.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_scriptfunction.cpp.i
+
+home/noah/Projects/SIR-Engine/angelscript/as_scriptfunction.s: home/noah/Projects/SIR-Engine/angelscript/as_scriptfunction.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_scriptfunction.s
+
+# target to generate assembly for a file
+home/noah/Projects/SIR-Engine/angelscript/as_scriptfunction.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_scriptfunction.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_scriptfunction.cpp.s
+
+home/noah/Projects/SIR-Engine/angelscript/as_scriptnode.o: home/noah/Projects/SIR-Engine/angelscript/as_scriptnode.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_scriptnode.o
+
+# target to build an object file
+home/noah/Projects/SIR-Engine/angelscript/as_scriptnode.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_scriptnode.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_scriptnode.cpp.o
+
+home/noah/Projects/SIR-Engine/angelscript/as_scriptnode.i: home/noah/Projects/SIR-Engine/angelscript/as_scriptnode.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_scriptnode.i
+
+# target to preprocess a source file
+home/noah/Projects/SIR-Engine/angelscript/as_scriptnode.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_scriptnode.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_scriptnode.cpp.i
+
+home/noah/Projects/SIR-Engine/angelscript/as_scriptnode.s: home/noah/Projects/SIR-Engine/angelscript/as_scriptnode.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_scriptnode.s
+
+# target to generate assembly for a file
+home/noah/Projects/SIR-Engine/angelscript/as_scriptnode.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_scriptnode.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_scriptnode.cpp.s
+
+home/noah/Projects/SIR-Engine/angelscript/as_scriptobject.o: home/noah/Projects/SIR-Engine/angelscript/as_scriptobject.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_scriptobject.o
+
+# target to build an object file
+home/noah/Projects/SIR-Engine/angelscript/as_scriptobject.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_scriptobject.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_scriptobject.cpp.o
+
+home/noah/Projects/SIR-Engine/angelscript/as_scriptobject.i: home/noah/Projects/SIR-Engine/angelscript/as_scriptobject.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_scriptobject.i
+
+# target to preprocess a source file
+home/noah/Projects/SIR-Engine/angelscript/as_scriptobject.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_scriptobject.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_scriptobject.cpp.i
+
+home/noah/Projects/SIR-Engine/angelscript/as_scriptobject.s: home/noah/Projects/SIR-Engine/angelscript/as_scriptobject.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_scriptobject.s
+
+# target to generate assembly for a file
+home/noah/Projects/SIR-Engine/angelscript/as_scriptobject.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_scriptobject.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_scriptobject.cpp.s
+
+home/noah/Projects/SIR-Engine/angelscript/as_string.o: home/noah/Projects/SIR-Engine/angelscript/as_string.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_string.o
+
+# target to build an object file
+home/noah/Projects/SIR-Engine/angelscript/as_string.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_string.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_string.cpp.o
+
+home/noah/Projects/SIR-Engine/angelscript/as_string.i: home/noah/Projects/SIR-Engine/angelscript/as_string.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_string.i
+
+# target to preprocess a source file
+home/noah/Projects/SIR-Engine/angelscript/as_string.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_string.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_string.cpp.i
+
+home/noah/Projects/SIR-Engine/angelscript/as_string.s: home/noah/Projects/SIR-Engine/angelscript/as_string.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_string.s
+
+# target to generate assembly for a file
+home/noah/Projects/SIR-Engine/angelscript/as_string.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_string.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_string.cpp.s
+
+home/noah/Projects/SIR-Engine/angelscript/as_string_util.o: home/noah/Projects/SIR-Engine/angelscript/as_string_util.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_string_util.o
+
+# target to build an object file
+home/noah/Projects/SIR-Engine/angelscript/as_string_util.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_string_util.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_string_util.cpp.o
+
+home/noah/Projects/SIR-Engine/angelscript/as_string_util.i: home/noah/Projects/SIR-Engine/angelscript/as_string_util.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_string_util.i
+
+# target to preprocess a source file
+home/noah/Projects/SIR-Engine/angelscript/as_string_util.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_string_util.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_string_util.cpp.i
+
+home/noah/Projects/SIR-Engine/angelscript/as_string_util.s: home/noah/Projects/SIR-Engine/angelscript/as_string_util.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_string_util.s
+
+# target to generate assembly for a file
+home/noah/Projects/SIR-Engine/angelscript/as_string_util.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_string_util.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_string_util.cpp.s
+
+home/noah/Projects/SIR-Engine/angelscript/as_thread.o: home/noah/Projects/SIR-Engine/angelscript/as_thread.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_thread.o
+
+# target to build an object file
+home/noah/Projects/SIR-Engine/angelscript/as_thread.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_thread.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_thread.cpp.o
+
+home/noah/Projects/SIR-Engine/angelscript/as_thread.i: home/noah/Projects/SIR-Engine/angelscript/as_thread.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_thread.i
+
+# target to preprocess a source file
+home/noah/Projects/SIR-Engine/angelscript/as_thread.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_thread.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_thread.cpp.i
+
+home/noah/Projects/SIR-Engine/angelscript/as_thread.s: home/noah/Projects/SIR-Engine/angelscript/as_thread.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_thread.s
+
+# target to generate assembly for a file
+home/noah/Projects/SIR-Engine/angelscript/as_thread.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_thread.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_thread.cpp.s
+
+home/noah/Projects/SIR-Engine/angelscript/as_tokenizer.o: home/noah/Projects/SIR-Engine/angelscript/as_tokenizer.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_tokenizer.o
+
+# target to build an object file
+home/noah/Projects/SIR-Engine/angelscript/as_tokenizer.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_tokenizer.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_tokenizer.cpp.o
+
+home/noah/Projects/SIR-Engine/angelscript/as_tokenizer.i: home/noah/Projects/SIR-Engine/angelscript/as_tokenizer.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_tokenizer.i
+
+# target to preprocess a source file
+home/noah/Projects/SIR-Engine/angelscript/as_tokenizer.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_tokenizer.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_tokenizer.cpp.i
+
+home/noah/Projects/SIR-Engine/angelscript/as_tokenizer.s: home/noah/Projects/SIR-Engine/angelscript/as_tokenizer.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_tokenizer.s
+
+# target to generate assembly for a file
+home/noah/Projects/SIR-Engine/angelscript/as_tokenizer.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_tokenizer.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_tokenizer.cpp.s
+
+home/noah/Projects/SIR-Engine/angelscript/as_typeinfo.o: home/noah/Projects/SIR-Engine/angelscript/as_typeinfo.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_typeinfo.o
+
+# target to build an object file
+home/noah/Projects/SIR-Engine/angelscript/as_typeinfo.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_typeinfo.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_typeinfo.cpp.o
+
+home/noah/Projects/SIR-Engine/angelscript/as_typeinfo.i: home/noah/Projects/SIR-Engine/angelscript/as_typeinfo.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_typeinfo.i
+
+# target to preprocess a source file
+home/noah/Projects/SIR-Engine/angelscript/as_typeinfo.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_typeinfo.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_typeinfo.cpp.i
+
+home/noah/Projects/SIR-Engine/angelscript/as_typeinfo.s: home/noah/Projects/SIR-Engine/angelscript/as_typeinfo.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_typeinfo.s
+
+# target to generate assembly for a file
+home/noah/Projects/SIR-Engine/angelscript/as_typeinfo.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_typeinfo.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_typeinfo.cpp.s
+
+home/noah/Projects/SIR-Engine/angelscript/as_variablescope.o: home/noah/Projects/SIR-Engine/angelscript/as_variablescope.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_variablescope.o
+
+# target to build an object file
+home/noah/Projects/SIR-Engine/angelscript/as_variablescope.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_variablescope.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_variablescope.cpp.o
+
+home/noah/Projects/SIR-Engine/angelscript/as_variablescope.i: home/noah/Projects/SIR-Engine/angelscript/as_variablescope.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_variablescope.i
+
+# target to preprocess a source file
+home/noah/Projects/SIR-Engine/angelscript/as_variablescope.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_variablescope.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_variablescope.cpp.i
+
+home/noah/Projects/SIR-Engine/angelscript/as_variablescope.s: home/noah/Projects/SIR-Engine/angelscript/as_variablescope.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_variablescope.s
+
+# target to generate assembly for a file
+home/noah/Projects/SIR-Engine/angelscript/as_variablescope.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_variablescope.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/angelscript/as_variablescope.cpp.s
+
 home/noah/Projects/SIR-Engine/imgui/backends/imgui_impl_opengl3.o: home/noah/Projects/SIR-Engine/imgui/backends/imgui_impl_opengl3.cpp.o
 .PHONY : home/noah/Projects/SIR-Engine/imgui/backends/imgui_impl_opengl3.o
 
@@ -1977,12 +2721,18 @@ help:
 	@echo "... Application/SceneView.o"
 	@echo "... Application/SceneView.i"
 	@echo "... Application/SceneView.s"
+	@echo "... Application/ScriptLib/ScriptCompiler.o"
+	@echo "... Application/ScriptLib/ScriptCompiler.i"
+	@echo "... Application/ScriptLib/ScriptCompiler.s"
+	@echo "... Application/ScriptLib/ScriptObject.o"
+	@echo "... Application/ScriptLib/ScriptObject.i"
+	@echo "... Application/ScriptLib/ScriptObject.s"
+	@echo "... Application/ScriptLib/ScriptTextEditor.o"
+	@echo "... Application/ScriptLib/ScriptTextEditor.i"
+	@echo "... Application/ScriptLib/ScriptTextEditor.s"
 	@echo "... Application/StatsWindow.o"
 	@echo "... Application/StatsWindow.i"
 	@echo "... Application/StatsWindow.s"
-	@echo "... Application/TextEditor.o"
-	@echo "... Application/TextEditor.i"
-	@echo "... Application/TextEditor.s"
 	@echo "... home/noah/Projects/SIR-Engine/Engine/Core/Application/GenericPlatform/GenericApplication.o"
 	@echo "... home/noah/Projects/SIR-Engine/Engine/Core/Application/GenericPlatform/GenericApplication.i"
 	@echo "... home/noah/Projects/SIR-Engine/Engine/Core/Application/GenericPlatform/GenericApplication.s"
@@ -2145,6 +2895,93 @@ help:
 	@echo "... home/noah/Projects/SIR-Engine/Engine/RenderLib/RenderMain.o"
 	@echo "... home/noah/Projects/SIR-Engine/Engine/RenderLib/RenderMain.i"
 	@echo "... home/noah/Projects/SIR-Engine/Engine/RenderLib/RenderMain.s"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_atomic.o"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_atomic.i"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_atomic.s"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_builder.o"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_builder.i"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_builder.s"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_bytecode.o"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_bytecode.i"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_bytecode.s"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_callfunc.o"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_callfunc.i"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_callfunc.s"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_callfunc_x86.o"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_callfunc_x86.i"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_callfunc_x86.s"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_compiler.o"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_compiler.i"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_compiler.s"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_configgroup.o"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_configgroup.i"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_configgroup.s"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_context.o"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_context.i"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_context.s"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_datatype.o"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_datatype.i"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_datatype.s"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_gc.o"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_gc.i"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_gc.s"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_generic.o"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_generic.i"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_generic.s"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_globalproperty.o"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_globalproperty.i"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_globalproperty.s"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_memory.o"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_memory.i"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_memory.s"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_module.o"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_module.i"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_module.s"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_objecttype.o"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_objecttype.i"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_objecttype.s"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_outputbuffer.o"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_outputbuffer.i"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_outputbuffer.s"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_parser.o"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_parser.i"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_parser.s"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_restore.o"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_restore.i"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_restore.s"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_scriptcode.o"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_scriptcode.i"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_scriptcode.s"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_scriptengine.o"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_scriptengine.i"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_scriptengine.s"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_scriptfunction.o"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_scriptfunction.i"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_scriptfunction.s"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_scriptnode.o"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_scriptnode.i"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_scriptnode.s"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_scriptobject.o"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_scriptobject.i"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_scriptobject.s"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_string.o"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_string.i"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_string.s"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_string_util.o"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_string_util.i"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_string_util.s"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_thread.o"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_thread.i"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_thread.s"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_tokenizer.o"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_tokenizer.i"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_tokenizer.s"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_typeinfo.o"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_typeinfo.i"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_typeinfo.s"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_variablescope.o"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_variablescope.i"
+	@echo "... home/noah/Projects/SIR-Engine/angelscript/as_variablescope.s"
 	@echo "... home/noah/Projects/SIR-Engine/imgui/backends/imgui_impl_opengl3.o"
 	@echo "... home/noah/Projects/SIR-Engine/imgui/backends/imgui_impl_opengl3.i"
 	@echo "... home/noah/Projects/SIR-Engine/imgui/backends/imgui_impl_opengl3.s"

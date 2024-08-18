@@ -11,6 +11,7 @@
 namespace SIREngine {
 	class CMaterial;
 	class CSoundShader;
+	class CResourceDef;
 
 	class CResourceManager : public IEngineApp
 	{
@@ -27,16 +28,18 @@ namespace SIREngine {
 		const char *GetResourceNameFromType( uint32_t nType ) const;
 		uint32_t GetResourceTypeFromName( const char *pTypeName ) const;
 
-		const eastl::shared_ptr<CMaterial>& FindMaterial( const CString& name, bool bMakeDefault = true );
-		const eastl::shared_ptr<CSoundShader>& FindSound( const CString& name, bool bMakeDefault = true );
+		const CMaterial *FindMaterial( const CString& name, bool bMakeDefault = true );
+		const CSoundShader *FindSound( const CString& name, bool bMakeDefault = true );
+		const CResourceDef *FindResource( const CString& name );
 	private:
 		typedef struct {
 			FileSystem::CFilePath m_Path;
 			CString m_DirectoryName;
 		} ResourceFolder_t;
-
 		CVector<ResourceFolder_t> m_ResourcePaths;
 	};
+
+	SIRENGINE_DECLARE_LOG_CATEGORY( SyncedResourceLoader, ELogLevel::Info );
 };
 
 #endif

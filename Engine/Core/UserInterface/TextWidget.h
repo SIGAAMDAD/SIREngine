@@ -7,7 +7,7 @@
 
 #include "Widget.h"
 
-namespace GUILib {
+namespace SIREngine::GUILib {
 	class CTextWidget : public IWidgetBase
 	{
 	public:	

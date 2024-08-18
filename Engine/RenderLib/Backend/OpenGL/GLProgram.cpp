@@ -1,32 +1,47 @@
 #include "GLProgram.h"
+#include <EASTL/bonus/lru_cache.h>
 
 using namespace SIREngine;
 using namespace SIREngine::RenderLib::Backend::OpenGL;
 
 CVar<bool32> r_EnableShaderLRU(
-    "r.OpenGL.EnableProgramLRU",
-    0,
-    Cvar_Save,
-    "OpenGL program LRU cache.\n"
-    "For use only when the driver can only support a fixed amount of active GL programs.\n"
-    "  0: disabled\n"
-    "  1: when the LRU cache limits are reached, the oldest GL program(s) will be deleted to make room. Expect hitching if requested shader is not in LRU cache.\n",
-    CVG_RENDERER
+	"r.OpenGL.EnableProgramLRU",
+	0,
+	Cvar_Save,
+	"OpenGL program LRU cache.\n"
+	"For use only when the driver can only support a fixed amount of active GL programs.\n"
+	"  0: disabled\n"
+	"  1: when the LRU cache limits are reached, the oldest GL program(s) will be deleted to make room. Expect hitching if requested shader is not in LRU cache.\n",
+	CVG_RENDERER
 );
 CVar<bool32> r_ShaderLRUMaxProgramCount(
-    "r.OpenGL.ProgramLRUMaxCount",
-    1000,
-    Cvar_Save,
-    "Limits the maximum number of active OpenGL shaders at one time, Set to 0 to disable the LRU cache.\n",
-    CVG_RENDERER
+	"r.OpenGL.ProgramLRUMaxCount",
+	1000,
+	Cvar_Save,
+	"Limits the maximum number of active OpenGL shaders at one time, Set to 0 to disable the LRU cache.\n",
+	CVG_RENDERER
 );
+
+class CProgramLRUCache
+{
+public:
+	CProgramLRUCache( void )
+		: m_CachedPrograms( r_ShaderLRUMaxProgramCount.GetValue() )
+	{ }
+	~CProgramLRUCache()
+	{ }
+
+	
+private:
+	eastl::lru_cache<CString, GLProgram *> m_CachedPrograms;
+};
 
 GLProgram::GLProgram( const RenderProgramInit_t& programInfo )
 {
-    m_hProgramID = nglCreateProgram();
+	m_hProgramID = nglCreateProgram();
 }
 
 GLProgram::~GLProgram()
 {
-    nglDeleteProgram( m_hProgramID );
+	nglDeleteProgram( m_hProgramID );
 }

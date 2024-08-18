@@ -540,4 +540,10 @@ private:
     AllocatorType m_Allocator;
 };
 
+#define SIRENGINE_CONVERT_TO_FIXED_VECTOR_ALLOCATOR( Container, AllocatorTemplate, Allocator, NodeType ) \
+	eastl::fixed_vector_allocator<sizeof( NodeType ), 1024, EASTL_ALIGN_OF( NodeType ), 0, true, typeof( AllocatorTemplate )> allocator; \
+	AllocatorTemplate.m_pBase = Allocator; \
+	allocator.set_overflow_allocator( AllocatorTemplate ); \
+	Container.set_allocator( allocator );
+
 #endif

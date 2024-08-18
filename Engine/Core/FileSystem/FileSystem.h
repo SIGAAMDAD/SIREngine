@@ -11,6 +11,8 @@
 #include "FileWriter.h"
 #include "FileList.h"
 #include "FileCache.h"
+#include <Engine/Util/CHashMap.h>
+#include <Engine/Memory/Allocators/VirtualStackAllocator.h>
 
 class CTagArenaAllocator;
 
@@ -25,6 +27,15 @@ namespace SIREngine::FileSystem {
 		{ return m_ResourcePath; }
 		SIRENGINE_FORCEINLINE const CFilePath& GetConfigPath( void ) const
 		{ return m_ConfigPath; }
+		SIRENGINE_FORCEINLINE CFileCache *GetFileCache( const CFilePath& filePath )
+		{
+			for ( auto& it : m_FileCache ) {
+				if ( it.second->GetFile( filePath ) ) {
+					return it.second;
+				}
+			}
+			return NULL;
+		}
 
 		CFileWriter *OpenFileWriter( const CFilePath& filePath );
 		CFileReader *OpenFileReader( const CFilePath& filePath );
@@ -45,7 +56,7 @@ namespace SIREngine::FileSystem {
 		CFilePath m_ResourcePath;
 		CFilePath m_ConfigPath;
 
-		CVector<CFileCache *> m_FileCache;
+		eastl::unordered_map<CFilePath, CFileCache *> m_FileCache;
 
 		eastl::unordered_map<CFilePath, CFileList *> m_DirectoryCache;
 
@@ -54,7 +65,6 @@ namespace SIREngine::FileSystem {
 		static uint64_t nFileSystemTag;
 		static uint64_t nDirectoryCacheTag;
 		static uint64_t nFileDataTag;
-		static CTagArenaAllocator *pArenaAllocator;
 	};
 };
 

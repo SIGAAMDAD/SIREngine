@@ -6,9 +6,9 @@
 #endif
 
 #include <EASTL/unique_ptr.h>
-#include <Engine/Memory/Allocators/SlabAllocator.h>
+#include <Engine/Memory/Allocators/HunkAllocator.h>
 
-namespace GUILib {
+namespace SIREngine::GUILib {
 	class CInstance
 	{
 	public:

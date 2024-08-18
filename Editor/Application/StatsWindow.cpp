@@ -1,5 +1,6 @@
 #include "StatsWindow.h"
 #include <implot/implot.h>
+#include <Engine/Memory/MemoryStats.h>
 
 namespace Valden {
 
@@ -52,6 +53,29 @@ void CStatsWindow::Draw( void )
 		ImGui::Text( "\tAvailable Virtual RAM: %s", SIREngine_GetMemoryString( MemoryStats.nAvailableVirtual ) );
 
 		ImGui::End();
+	}
+	if ( ImGui::Begin( "Allocator Statistics", NULL, ImGuiWindowFlags_NoCollapse ) ) {
+		if ( ImGui::BeginTable( "Allocation Calls", 4 ) ) {
+			AllocationCall_t allocInfo, emptyAllocInfo;
+			for ( int i = 0; i < 10; i++ ) {
+				allocInfo = CGlobalMemoryStats::Get().GetLastAlloc();
+				if ( memcmp( &allocInfo, &emptyAllocInfo, sizeof( allocInfo ) ) == 0 ) {
+					break; // no more allocations
+				}
+
+				ImGui::TableNextColumn();
+				ImGui::Text( "Size: %lu", allocInfo.nSize );
+				ImGui::TableNextColumn();
+				ImGui::Text( "Alignment: %lu", allocInfo.nAlignment );
+				ImGui::TableNextColumn();
+				ImGui::Text( "FrameNumber: %lu", allocInfo.nFrameNumber );
+				ImGui::TableNextColumn();
+				ImGui::Text( "IsRealloc: %s", SIREngine_BoolToString( allocInfo.bIsRealloc ) );
+
+				ImGui::TableNextRow();
+			}
+			ImGui::EndTable();
+		}
 	}
 }
 

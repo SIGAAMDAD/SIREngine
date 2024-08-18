@@ -1,8 +1,21 @@
 #include <Engine/Memory/Memory.h>
 #include <Engine/Memory/MemAlloc.h>
 #include <Engine/Core/Logging/Logger.h>
+#include <Engine/Core/ConsoleManager.h>
+#include "MemoryStats.h"
+
+CGlobalMemoryStats CGlobalMemoryStats::g_MemStats;
 
 SIRENGINE_DEFINE_LOG_CATEGORY( Memory, ELogLevel::Warning );
+
+static uint64_t s_nArenaDefaultSize = 72ull;
+SIREngine::CVarRef<uint64_t> mem_StartingArenaSize(
+	"mem.StartingArenaSize",
+	s_nArenaDefaultSize,
+	SIREngine::Cvar_Save | SIREngine::Cvar_Developer,
+	"Sets the size of the main memory arena to be allocated in MiB.",
+	SIREngine::CVG_SYSTEMINFO
+);
 
 IMemAlloc *g_pMemAlloc;
 
@@ -17,56 +30,38 @@ void *operator new[]( size_t nBytes, unsigned long, unsigned long, char const*, 
 }
 
 void Mem_Init( void )
-{
-#if defined(USE_ARENA_ALLOC)
-	g_pMemAlloc = ::new ( malloc( sizeof( CTagArenaAllocator ) ) ) CTagArenaAllocator( "MainArena", 72ull * 1024 * 1024 );
-#elif defined(USE_SMMALLOC)
-	g_pMemAlloc = _sm_allocator_create( 2, ( 72 * 1024 * 1024 ) );
-#endif
+{ 
+//	static IMemAlloc *pAlloc = new ( malloc( sizeof( CTagArenaAllocator ) ) ) CTagArenaAllocator( "MainArena",
+//		s_nArenaDefaultSize * 1024 * 1024 );
+
+	g_pMemAlloc = new ( malloc( sizeof( CTagArenaAllocator ) ) ) CTagArenaAllocator( "MainArena",
+		s_nArenaDefaultSize * 1024 * 1024 );
 }
 
 void Mem_Shutdown( void )
 {
-#if defined(USE_ARENA_ALLOC)
 	g_pMemAlloc->Shutdown();
-	free( g_pMemAlloc );
-#elif defined(USE_SMMALLOC)
-	_sm_allocator_destroy( g_pMemAlloc );
-#endif
 }
 
 void *Mem_Alloc( size_t nBytes, size_t nAlignment )
 {
-#if defined(USE_ARENA_ALLOC)
-	return Mem_Alloc( nBytes );
-#elif defined(USE_SMMALLOC)
-	return _sm_malloc( g_pMemAlloc, nBytes, nAlignment );
-#endif
+//	CGlobalMemoryStats::Get().AddMalloc( nBytes, nAlignment, SIREngine::Application::g_nFrameNumber, true );
+	return malloc( nBytes );
+//	return Mem_Alloc( SIRENGINE_PAD( nBytes, nAlignment ) );
 }
 
 void *Mem_Alloc( size_t nBytes )
 {
-#if defined(USE_ARENA_ALLOC)
-//	if ( !( nBytes & ~256 ) ) {
-//		return g_pSmallHeap->Alloc( nBytes );
-//	}
-//	if ( !( nBytes & SIRENGINE_UINT32_MAX ) ) {
-//		return g_pMemAlloc->Alloc( nBytes );
-//	}
-//	return g_pLargeHeap->Alloc( nBytes );
-	return g_pMemAlloc->Alloc( nBytes );
-#elif defined(USE_SMMALLOC)
-	return _sm_malloc( g_pMemAlloc, nBytes, 16 );
-#endif
+//	CGlobalMemoryStats::Get().AddMalloc( nBytes, 16, SIREngine::Application::g_nFrameNumber, false );
+	return malloc( nBytes );
+//	return g_pMemAlloc->Alloc( nBytes );
 }
 
 void *Mem_Realloc( void *pOriginal, size_t nBytes )
 {
-#if defined(USE_ARENA_ALLOC)
-	return g_pMemAlloc->Realloc( pOriginal, nBytes );
-#elif defined(USE_SMMALLOC)
-	return _sm_realloc( g_pMemAlloc, nBytes, 16 );
-#endif
+//	CGlobalMemoryStats::Get().AddMalloc( nBytes, 16, SIREngine::Application::g_nFrameNumber, true );
+//	CGlobalMemoryStats::Get().AddFree( g_pMemAlloc->GetAllocSize( pOriginal ), (uintptr_t)pOriginal, SIREngine::Application::g_nFrameNumber );
+//	return g_pMemAlloc->Realloc( pOriginal, nBytes );
 }
 
 void *Mem_ClearedAlloc( size_t nBytes )
@@ -76,9 +71,59 @@ void *Mem_ClearedAlloc( size_t nBytes )
 
 void Mem_Free( void *pMemory )
 {
-#if defined(USE_ARENA_ALLOC)
-	g_pMemAlloc->Free( pMemory );
-#elif defined(USE_SMMALLOC)
-	_sm_free( g_pMemAlloc, pMemory );
-#endif
+//	CGlobalMemoryStats::Get().AddFree( g_pMemAlloc->GetAllocSize( pMemory ), (uintptr_t)pMemory, SIREngine::Application::g_nFrameNumber );
+	free( pMemory );
+//	g_pMemAlloc->Free( pMemory );
 }
+
+#if defined(SIRENGINE_DEBUG)
+void CGlobalMemoryStats::AddFree( size_t nSize, uintptr_t pAddress, size_t nFrameNumber, const char *pFileName, const char *pFuncName,
+	size_t nLineNumber )
+{
+	if ( m_Deallocations.size() == 256 ) {
+		m_Deallocations.pop_front();
+	}
+	m_FrameMemCalls.nFreeCalls++;
+	FreeCall_t& freeInfo = m_Deallocations.push_back( { nSize, pAddress, nFrameNumber } );
+	freeInfo.SetDebugInfo( pFileName, pFuncName, nLineNumber );
+}
+#else
+void CGlobalMemoryStats::AddFree( size_t nSize, uintptr_t pAddress, size_t nFrameNumber )
+{
+	if ( m_Deallocations.size() == 256 ) {
+		m_Deallocations.pop_front();
+	}
+	m_FrameMemCalls.nFreeCalls++;
+	m_Deallocations.push_back( { nSize, pAddress, nFrameNumber } );
+}
+#endif
+
+#if defined(SIRENGINE_DEBUG)
+void CGlobalMemoryStats::AddMalloc( size_t nSize, size_t nAlignment, size_t nFrameNumber, bool bIsRealloc, const char *pFileName, const char *pFuncName,
+	size_t nLineNumber )
+{
+	if ( bIsRealloc ) {
+		m_FrameMemCalls.nReallocCalls++;
+	} else {
+		m_FrameMemCalls.nMallocCalls++;
+	}
+	if ( m_Allocations.size() == 256 ) {
+		m_Allocations.pop_front();
+	}
+	AllocationCall_t& allocInfo = m_Allocations.push_back( { nSize, nAlignment, nFrameNumber, bIsRealloc } );
+	allocInfo.SetDebugInfo( pFileName, pFuncName, nLineNumber );
+}
+#else
+void CGlobalMemoryStats::AddMalloc( size_t nSize, size_t nAlignment, size_t nFrameNumber, bool bIsRealloc )
+{
+	if ( bIsRealloc ) {
+		m_FrameMemCalls.nReallocCalls++;
+	} else {
+		m_FrameMemCalls.nMallocCalls++;
+	}
+	if ( m_Allocations.size() == 256 ) {
+		m_Allocations.pop_front();
+	}
+	m_Allocations.push_back( { nSize, nAlignment, nFrameNumber, bIsRealloc } );
+}
+#endif

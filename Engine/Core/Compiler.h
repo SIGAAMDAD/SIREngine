@@ -26,6 +26,9 @@
 	#define SIRENGINE_COMPILER_NAME "clang"
 #endif
 
+#define SIRENGINE_XSTRING_HELPER( x ) #x
+#define SIRENGINE_XSTRING( x ) SIRENGINE_XSTRING_HELPER( x )
+
 #if defined(__cplusplus)
 	#if __cplusplus == 1
 		#error Please use a modern version of C++

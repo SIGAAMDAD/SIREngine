@@ -7,13 +7,14 @@
 
 #include <Engine/Core/ResourceDef.h>
 #include <Engine/Core/FileSystem/FileSystem.h>
+#include <Engine/Core/FileSystem/MemoryFile.h>
 #include <imgui/imgui.h>
 
-namespace GUILib {
+namespace SIREngine::GUILib {
 	class CFont : public CResourceDef
 	{
 	public:
-		CFont( const SIREngine::FileSystem::CFilePath& filePath );
+		CFont( const FileSystem::CFilePath& filePath );
 		virtual ~CFont() override;
 
 		virtual const char *GetName( void ) const override;
@@ -21,6 +22,7 @@ namespace GUILib {
 	    virtual void Reload( void ) override;
 	    virtual void Release( void ) override;
 	private:
+		FileSystem::CMemoryFile m_FontData;
 		ImFont *m_pFont;
 	};
 };

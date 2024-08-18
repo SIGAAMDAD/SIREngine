@@ -1,10 +1,11 @@
 #include "SceneView.h"
+#include "ScriptLib/ScriptCompiler.h"
 #include <imgui/imgui.h>
 #include <imgui/imgui_internal.h>
 
 namespace Valden {
 
-eastl::unique_ptr<CSceneView> CSceneView::g_pSceneView;
+CUniquePtr<CSceneView> CSceneView::g_pSceneView;
 
 void CSceneView::DrawObject( CSceneObject& object )
 {
@@ -19,9 +20,9 @@ void CSceneView::Create( const CString& name )
 
 void CSceneView::Init( void )
 {
-	g_pSceneView = eastl::make_unique<CSceneView>();
+	g_pSceneView = new CSceneView();
 
-	CEditorApplication::Get().AddWidget( g_pSceneView.get() );
+	CEditorApplication::Get().AddWidget( g_pSceneView.Get() );
 	g_pSceneView->Create( "UnnamedScene" );
 }
 
@@ -40,6 +41,14 @@ void CSceneView::Draw( void )
 			ImGui::EndTabItem();
 		}
 		ImGui::EndTabBar();
+	}
+	if ( ImGui::TreeNodeEx( (void *)"Scripts", ImGuiTreeNodeFlags_OpenOnArrow, "Script Classes" ) ) {
+		for ( auto& it : CScriptCompiler::GetObjects() ) {
+			if ( ImGui::Selectable( it.GetName().c_str(), ( CScriptCompiler::GetEditorClass() == &it ) ) ) {
+				CScriptCompiler::SetEdit( it );
+			}
+		}
+		ImGui::TreePop();
 	}
 
 	ImGui::End();

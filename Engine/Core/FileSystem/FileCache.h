@@ -36,6 +36,9 @@ namespace SIREngine::FileSystem {
             }
             return NULL;
         }
+
+        void LoadCachedFile( const CFilePath& filePath );
+        void ReleaseCachedFile( const CFilePath& filePath );
     private:
         void AllocateCache( const CFilePath& directory );
         void MapFile( const CFilePath& filePath, FileCacheEntry_t *pCacheEntry );

@@ -43,6 +43,11 @@ namespace Valden {
 		{ m_Info.ProjectName = name; }
 		inline const CString& GetName( void ) const
 		{ return m_Info.ProjectName; }
+		
+		inline void SetModified( bool bModified )
+		{ m_bModified = bModified; }
+		inline bool IsModified( void ) const
+		{ return m_bModified; }
 
 		void InitDirectoryStructure( void );
 		void Save( void );
@@ -50,6 +55,8 @@ namespace Valden {
 	private:
 		ProjectInfo_t m_Info;
 		Serialization::CIniSerializer *m_pIniData;
+
+		bool m_bModified;
 	};
 };
 

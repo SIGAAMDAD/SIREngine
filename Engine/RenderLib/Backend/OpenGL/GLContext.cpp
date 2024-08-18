@@ -319,9 +319,8 @@ void GLContext::GetGPUExtensionList( void )
 	}
 }
 
-void *GLContext::Alloc( size_t nBytes, size_t nAligment )
+void *GLContext::Alloc( size_t nBytes, size_t nAlignment )
 {
-	void *pBuffer;
 	return malloc( nBytes );
 }
 
@@ -332,6 +331,18 @@ void GLContext::Free( void *pBuffer )
 
 const GPUMemoryUsage_t GLContext::GetMemoryUsage( void )
 {
+	GPUMemoryUsage_t MemUsage;
+	GLint nValue;
+
+	nglGetIntegerv( GL_GPU_MEMORY_INFO_CURRENT_AVAILABLE_VIDMEM_NVX, &nValue );
+	MemUsage.remainingMemory = nValue;
+
+	nglGetIntegerv( GL_GPU_MEMORY_INFO_TOTAL_AVAILABLE_MEMORY_NVX, &nValue );
+	MemUsage.totalMemory = nValue;
+
+	MemUsage.usedMemory = MemUsage.totalMemory - MemUsage.remainingMemory;
+	
+	return MemUsage;
 }
 
 void GLContext::PrintMemoryInfo( void ) const
@@ -341,22 +352,22 @@ void GLContext::PrintMemoryInfo( void ) const
 
 IRenderProgram *GLContext::AllocateProgram( const RenderProgramInit_t& programInfo )
 {
-	return new GLProgram( programInfo );
+	return new ( Alloc( sizeof( GLProgram ) ) ) GLProgram( programInfo );
 }
 
 IRenderShader *GLContext::AllocateShader( const RenderShaderInit_t& shaderInit )
 {
-	return new GLShader( shaderInit );
+	return new ( Alloc( sizeof( GLShader ) ) ) GLShader( shaderInit );
 }
 
 IRenderBuffer *GLContext::AllocateBuffer( GPUBufferType_t nType, GPUBufferUsage_t nUsage, uint64_t nSize )
 {
-	return new GLBuffer( nType, nUsage, nSize );
+	return new ( Alloc( sizeof( GLBuffer ) ) ) GLBuffer( nType, nUsage, nSize );
 }
 
 IRenderTexture *GLContext::AllocateTexture( const TextureInit_t& textureInfo )
 {
-	return new GLTexture( textureInfo );
+	return new ( Alloc( sizeof( GLTexture ) ) ) GLTexture( textureInfo );
 }
 
 };

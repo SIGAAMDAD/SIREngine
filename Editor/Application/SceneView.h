@@ -36,14 +36,14 @@ namespace Valden {
 		{ return m_nType; }
 		inline const CString& GetName( void ) const
 		{ return m_Name; }
-		inline eastl::shared_ptr<CResourceDef>& GetResource( void )
-		{ return m_Data; }
-		inline const eastl::shared_ptr<CResourceDef>& GetResource( void ) const
-		{ return m_Data; }
+		inline CResourceDef *GetResource( void )
+		{ return m_pData; }
+		inline const CResourceDef *GetResource( void ) const
+		{ return m_pData; }
 	private:
 		CString m_Name;
 		ESceneObjectType m_nType;
-		eastl::shared_ptr<CResourceDef> m_Data;
+		CResourceDef *m_pData;
 	};
 
 	class CSceneView : public IEditorWidget
@@ -60,15 +60,16 @@ namespace Valden {
 
 		bool LoadScene( const FileSystem::CFilePath& directory );
 		void Create( const CString& name );
+		void AddObject( ESceneObjectType nType );
 
 		static void Init( void );
 
-		SIRENGINE_FORCEINLINE static eastl::unique_ptr<CSceneView>& Get( void )
+		SIRENGINE_FORCEINLINE static CUniquePtr<CSceneView>& Get( void )
 		{ return g_pSceneView; }
 	private:
 		void DrawObject( CSceneObject& object );
 
-		static eastl::unique_ptr<CSceneView> g_pSceneView;
+		static CUniquePtr<CSceneView> g_pSceneView;
 	};
 };
 

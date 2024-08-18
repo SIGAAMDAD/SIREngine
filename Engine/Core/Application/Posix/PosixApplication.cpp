@@ -162,7 +162,7 @@ void *CPosixApplication::MapFile( void *hFile, size_t *pSize )
 void CPosixApplication::UnmapFile( void *pMemory, size_t nSize )
 {
 	if ( munmap( pMemory, nSize ) == -1 ) {
-
+		OnOutOfMemory( nSize, 64 );
 	}
 }
 
@@ -170,7 +170,7 @@ void *CPosixApplication::VirtualAlloc( size_t *nSize, size_t nAlignment )
 {
 	void *pMemory;
 
-	*nSize = SIRENGINE_PAD( *nSize + sizeof( size_t ), nAlignment );
+	*nSize = SIRENGINE_PAD( *nSize, nAlignment );
 	if ( *nSize % GetOSPageSize() ) {
 		// ensure that the allocation is aligned by the OS page size
 		*nSize = SIRENGINE_PAD( *nSize, GetOSPageSize() );
@@ -178,18 +178,16 @@ void *CPosixApplication::VirtualAlloc( size_t *nSize, size_t nAlignment )
 
 	pMemory = mmap( NULL, *nSize, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0 );
 	if ( pMemory == MAP_FAILED || pMemory == NULL ) {
-		SIRENGINE_ERROR( "mmap failed: %s", strerror( errno ) );
+		OnOutOfMemory( *nSize, nAlignment );
 	}
-	*(size_t *)pMemory = *nSize;
 
-	return (void *)( (size_t *)pMemory + 1 );
+	return pMemory;
 }
 
-void CPosixApplication::VirtualFree( void *pBuffer )
+void CPosixApplication::VirtualFree( void *pBuffer, size_t nSize )
 {
-	size_t *nSize = ( (size_t *)pBuffer - 1 );
-	if ( munmap( nSize, *nSize ) == -1 ) {
-		SIRENGINE_ERROR( "munmap failed: %s", strerror( errno ) );
+	if ( munmap( pBuffer, nSize ) == -1 ) {
+		OnOutOfMemory( nSize, GetOSPageSize() );
 	}
 }
 
@@ -721,6 +719,8 @@ void CPosixApplication::GetPwd( void )
 {
 	char pwd[ SIRENGINE_MAX_OSPATH ];
 
+	memset( pwd, 0, sizeof( pwd ) );
+
 	// more reliable, linux-specific
 	if ( readlink( "/proc/self/exe", pwd, sizeof( pwd ) - 1 ) != -1 ) {
 		pwd[ sizeof( pwd ) - 1 ] = '\0';
@@ -923,12 +923,12 @@ int main( int argc, char **argv )
 	g_pApplication = new ( malloc( sizeof( CPosixApplication ) ) ) CPosixApplication();
 	Mem_Init();
 
+	InitCrashHandler();
+
 	commandLine.reserve( argc );
 	for ( i = 0; i < argc; i++ ) {
 		commandLine.emplace_back( argv[i] );
 	}
-
-	InitCrashHandler();
 
 	g_pApplication->SetApplicationArgs( appInfo );
 	g_pApplication->SetCommandLine( commandLine );

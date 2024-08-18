@@ -2,16 +2,20 @@
 #define __SIRENGINE_SCRIPT_MODULE_HPP__
 
 #if defined(SIRENGINE_PRAGMA_ONCE_SUPPORTED)
-    #pragma once
+	#pragma once
 #endif
 
-#include <Engine/Core/SIREngine.h>
-#include <Engine/ScriptSystem/ScriptLib.h>
+#include <Engine/Core/ResourceDef.h>
+#include "ScriptLib.h"
 
-class CScriptModule : public CResourceDef
-{
-public:
-private:
+namespace SIREngine::ScriptLib {	
+	class CScriptModule : public CResourceDef
+	{
+	public:
+	private:
+		CUniquePtr<asIScriptModule> m_pScriptModule;
+		asIScriptContext *m_pScriptContext;
+	};
 };
 
 #endif

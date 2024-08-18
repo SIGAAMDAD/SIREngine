@@ -10,6 +10,10 @@ namespace SIREngine {
 		CompiledScript
 	};
 
+	typedef struct {
+		
+	};
+
 	class CAssetFile
 	{
 	public:

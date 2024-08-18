@@ -3,7 +3,8 @@
 #include "MemoryFile.h"
 
 using namespace SIREngine::Application;
-using namespace SIREngine::FileSystem;
+
+namespace SIREngine::FileSystem {
 
 CFileSystem::CFileSystem( void )
 {
@@ -16,7 +17,11 @@ CFileSystem::~CFileSystem()
 
 void CFileSystem::AddCacheDirectory( const CFilePath& directory )
 {
-	m_FileCache.emplace_back( new CFileCache( directory ) );
+	if ( m_FileCache.find( directory ) != m_FileCache.end() ) {
+		SIRENGINE_WARNING( "CFileSystem::AddCacheDirectory: directory \"%s\" already in cache.", directory.c_str() );
+		return;
+	}
+	m_FileCache.try_emplace( directory, new CFileCache( directory ) );
 }
 
 void CFileSystem::LoadFileTree( const FileSystem::CFilePath& directory )
@@ -109,7 +114,7 @@ void CFileSystem::LoadFile( const CFilePath& filePath, uint8_t **pOutBuffer, uin
 	SIRENGINE_LOG( "Loading CacheFile \"%s\"...", filePath.c_str() );
 
 	for ( const auto& it : m_FileCache ) {
-		pCacheEntry = it->GetFile( filePath );
+		pCacheEntry = it.second->GetFile( filePath );
 		if ( pCacheEntry ) {
 			break;
 		}
@@ -222,3 +227,5 @@ const char *CFileSystem::BuildSearchPath( const CFilePath& basePath, const CStri
 
 	return pString;
 }
+
+};

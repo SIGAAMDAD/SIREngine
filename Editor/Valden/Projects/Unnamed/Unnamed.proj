@@ -5,8 +5,8 @@ DisableStdErr=false
 
 [ScriptConfig]
 AllowUnsafeReferences=false
-OptimizeByteCode=false
-MaxStackSize=0
-AllowCompilerWarnings=false
+OptimizeByteCode=true
+MaxStackSize=1128267776
+AllowCompilerWarnings=true
 AllowIntegerDivision=false
 

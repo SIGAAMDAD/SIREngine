@@ -49,7 +49,7 @@ public:
 
 	virtual size_t GetAllocSize( void *pBuffer ) const override;
 	virtual void *VirtualAlloc( size_t *nSize, size_t nAlignment ) override;
-	virtual void VirtualFree( void *pBuffer ) override;
+	virtual void VirtualFree( void *pBuffer, size_t nSize ) override;
 	virtual void CommitMemory( void *pMemory, size_t nOffset, size_t nSize ) override;
 	virtual void DecommitMemory( void *pMemory, size_t nOffset, size_t nSize ) override;
 	virtual void SetMemoryReadOnly( void *pMemory, size_t nOffset, size_t nSize ) override;

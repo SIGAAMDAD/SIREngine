@@ -30,6 +30,44 @@ CFileCache::~CFileCache()
 	}
 }
 
+void CFileCache::LoadCachedFile( const CFilePath& filePath )
+{
+	FileCacheEntry_t *pCacheEntry;
+
+	auto it = m_CacheList.find( filePath );
+    if ( it == m_CacheList.cend() ) {
+		pCacheEntry = &m_CacheList.try_emplace( filePath ).first->second;
+    } else {
+		pCacheEntry = &it->second;
+	}
+
+	if ( pCacheEntry->hFile != (void *)SIRENGINE_INVALID_HANDLE || pCacheEntry->pMemory != NULL ) {
+		SIRENGINE_WARNING( "CFileCache::LoadCachedFile: resource \"%s\" already loaded (remapping)", filePath.c_str() );
+	}
+	MapFile( filePath, pCacheEntry );
+}
+
+void CFileCache::ReleaseCachedFile( const CFilePath& filePath )
+{
+    auto it = m_CacheList.find( filePath );
+    if ( it == m_CacheList.cend() ) {
+		SIRENGINE_WARNING( "CFileCache::ReleaseCachedFile: invalid path \"%s\", no such file!", filePath.c_str() );
+		return;
+    }
+
+	if ( it->second.hFile == (void *)SIRENGINE_INVALID_HANDLE ) {
+		SIRENGINE_WARNING( "CFileCache::ReleaseCachedFile: cached file \"%s\" already released.", filePath.c_str() );
+		return;
+	}
+#if defined(SIRENGINE_NO_FILE_MAPPING)
+	delete[] (char *)it.second.pMemory;
+#else
+	Application::Get()->UnmapFile( it->second.pMemory, it->second.nSize );
+	Application::Get()->FileClose( it->second.hFile );
+#endif
+	it->second.hFile = (void *)SIRENGINE_INVALID_HANDLE;
+}
+
 void CFileCache::AllocateCache( const FileSystem::CFilePath& directory )
 {
 	size_t i, nCachedBytes;

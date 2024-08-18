@@ -26,7 +26,7 @@ CVirtualStackAllocator::CVirtualStackAllocator( const char *pAllocatorName, size
 CVirtualStackAllocator::~CVirtualStackAllocator()
 {
     if ( m_pNextUncommittedPage != NULL ) {
-        Application::Get()->VirtualFree( m_pMemory );
+        Application::Get()->VirtualFree( m_pMemory, m_nVirtualMemorySize );
     }
 }
 

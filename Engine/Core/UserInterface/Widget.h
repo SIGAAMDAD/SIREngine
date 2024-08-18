@@ -7,7 +7,7 @@
 
 #include <Engine/Util/CString.h>
 
-namespace GUILib {
+namespace SIREngine::GUILib {
 	class IWidgetBase
 	{
 	public:

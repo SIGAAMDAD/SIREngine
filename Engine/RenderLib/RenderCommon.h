@@ -21,6 +21,15 @@ namespace SIREngine::RenderLib {
     #define ST_PIXLE ST_FRAGMENT
 
     typedef enum {
+        Detail_VeryLow,
+        Detail_Low,
+        Detail_Medium,
+        Detail_High,
+        Detail_VeryHigh,
+        Detail_Extreme
+    } RenderDetail_t;
+
+    typedef enum {
         BufferUsage_Stream,
         BufferUsage_Dynamic,
         BufferUsage_Constant

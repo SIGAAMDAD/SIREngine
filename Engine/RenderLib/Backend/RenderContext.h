@@ -11,6 +11,7 @@
 #include "RenderTexture.h"
 #include "RenderShader.h"
 #include "RenderShaderPipeline.h"
+#include <EASTL/fixed_vector.h>
 #include <Engine/Memory/Allocators/VirtualStackAllocator.h>
 #if defined(SIRENGINE_BUILD_RENDERLIB_GLFW3)
 #include <GLFW/glfw3.h>
@@ -74,14 +75,17 @@ namespace SIREngine::RenderLib::Backend {
 	protected:
 		virtual void GetGPUExtensionList( void ) = 0;
 
+		static void *VirtualPoolAllocate( size_t nSize );
+		static void *VirtualPoolClearedAllocate( size_t nElems, size_t nSize );
+		static void *VirtualPoolReallocate( void *pOriginalPointer, size_t nSize );
+		static void VirtualPoolFree( void *pMemory );
+
 		Application::ApplicationInfo_t m_AppInfo;
 		NativeWindow_t m_pWindow;
 
-		CVirtualStackAllocator *m_pResourceAllocator;
-
 		IRenderShaderPipeline *m_hShaderPipeline;
 
-		CVector<CString> m_GPUExtensionList;
+		eastl::fixed_vector<CString, 1024, true, MemoryAllocator<char>> m_GPUExtensionList;
 	};
 
 	extern IRenderContext *g_pRenderContext;

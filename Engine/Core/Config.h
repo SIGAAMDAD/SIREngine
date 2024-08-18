@@ -9,6 +9,14 @@
     #error "SIRENGINE_BUILD_TYPE must be defined!"
 #endif
 
+#if !defined(SIRENGINE_BUILD_MONOLITHIC)
+    #error "SIRENGINE_BUILD_MONOLITHIC must be defined to either 0 or 1"
+#endif
+
+#if !defined(SIRENGINE_BUILD_PLUGIN_SUPPORT)
+    #error "SIRENGINE_BUILD_PLUGIN_SUPPORT must be defined to either 0 or 1"
+#endif
+
 #define SIRENGINE_BUILD_TYPE_ENGINE 0
 #define SIRENGINE_BUILD_TYPE_EDITOR 1
 
@@ -32,6 +40,11 @@
 
 #if !defined(SIRENGINE_USE_GLM)
     #define SIRENGINE_USE_MATHLIB 1
+#endif
+
+#if !defined(SIRENGINE_FORCE_ANSI_ALLOCATOR)
+    // set to true to force use of malloc() and free() instead of IMemAlloc 
+    #define SIRENGINE_FORCE_ANSI_ALLOCATOR 0
 #endif
 
 #if !defined(MAX_RESOURCE_PATH)

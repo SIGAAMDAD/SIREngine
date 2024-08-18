@@ -13,7 +13,7 @@
 #include <Engine/Core/MathLib/Types.h>
 #include "Font.h"
 
-namespace GUILib {
+namespace SIREngine::GUILib {
 	/*
 	typedef struct {
 		CIVec2 size;
@@ -33,14 +33,14 @@ namespace GUILib {
 		CTextManager( void );
 		~CTextManager();
 
-		eastl::shared_ptr<CFont> LoadFont( const SIREngine::FileSystem::CFilePath& fontFile );
+		CFont *LoadFont( const FileSystem::CFilePath& fontFile );
 
 		SIRENGINE_FORCEINLINE static eastl::unique_ptr<CTextManager>& Get( void )
 		{ return g_pFontManager; }
 	private:
 		static void LoadThread( void );
 
-		eastl::unordered_map<SIREngine::FileSystem::CFilePath, eastl::shared_ptr<CFont>> m_FontCache;
+		eastl::unordered_map<FileSystem::CFilePath, CFont *> m_FontCache;
 		
 		static eastl::unique_ptr<CTextManager> g_pFontManager;
 	};

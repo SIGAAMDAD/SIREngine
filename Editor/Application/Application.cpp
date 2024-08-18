@@ -6,10 +6,11 @@
 #include <imgui/backends/imgui_impl_sdl2.h>
 #include <imgui/imgui_internal.h>
 #include <Engine/Core/Util.h>
-#include "TextEditor.h"
+#include "ScriptLib/ScriptTextEditor.h"
 #include "Project/ProjectManager.h"
 #include "StatsWindow.h"
 #include "SceneView.h"
+#include "ScriptLib/ScriptCompiler.h"
 #include "ContentBrowser/ContentBrowser.h"
 #include <Engine/Core/Events/EventManager.h>
 #include <string.h>
@@ -25,7 +26,7 @@ namespace ImGui {
 
 struct InputTextCallback_UserData
 {
-    eastl::string*            Str;
+	CString*            Str;
     ImGuiInputTextCallback  ChainCallback;
     void*                   ChainCallbackUserData;
 };
@@ -37,7 +38,7 @@ static int InputTextCallback(ImGuiInputTextCallbackData* data)
     {
         // Resize string callback
         // If for some reason we refuse the new length (BufTextLen) and/or capacity (BufSize) we need to set them back to what we want.
-        eastl::string* str = user_data->Str;
+        CString* str = user_data->Str;
         IM_ASSERT(data->Buf == str->c_str());
         str->resize(data->BufTextLen);
         data->Buf = (char*)str->c_str();
@@ -51,7 +52,7 @@ static int InputTextCallback(ImGuiInputTextCallbackData* data)
     return 0;
 }
 
-bool InputText(const char* label, eastl::string *str, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback, void* user_data)
+bool InputText(const char* label, CString *str, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback, void* user_data)
 {
     IM_ASSERT((flags & ImGuiInputTextFlags_CallbackResize) == 0);
     flags |= ImGuiInputTextFlags_CallbackResize;
@@ -63,7 +64,7 @@ bool InputText(const char* label, eastl::string *str, ImGuiInputTextFlags flags,
     return InputText(label, (char*)str->c_str(), str->capacity() + 1, flags, InputTextCallback, &cb_user_data);
 }
 
-bool InputTextMultiline(const char* label, eastl::string *str, const ImVec2& size, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback, void* user_data)
+bool InputTextMultiline(const char* label, CString *str, const ImVec2& size, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback, void* user_data)
 {
     IM_ASSERT((flags & ImGuiInputTextFlags_CallbackResize) == 0);
     flags |= ImGuiInputTextFlags_CallbackResize;
@@ -75,7 +76,7 @@ bool InputTextMultiline(const char* label, eastl::string *str, const ImVec2& siz
     return InputTextMultiline(label, (char*)str->c_str(), str->capacity() + 1, size, flags, InputTextCallback, &cb_user_data);
 }
 
-bool InputTextWithHint(const char* label, const char* hint, eastl::string *str, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback, void* user_data)
+bool InputTextWithHint(const char* label, const char* hint, CString *str, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback, void* user_data)
 {
     IM_ASSERT((flags & ImGuiInputTextFlags_CallbackResize) == 0);
     flags |= ImGuiInputTextFlags_CallbackResize;
@@ -90,6 +91,14 @@ bool InputTextWithHint(const char* label, const char* hint, eastl::string *str, 
 };
 
 namespace Valden {
+
+typedef struct {
+	uint32_t nKey0;
+	uint32_t nKey1;
+	eastl::function<void()> Func;
+} ShortCut_t;
+
+static CHashMap<CString, ShortCut_t> s_Shortcuts;
 
 CVar<uint32_t> AutoSaveTime(
 	"valden.AutoSaveTime",
@@ -111,14 +120,6 @@ CEditorApplication CEditorApplication::g_Application;
 void CEditorApplication::Init( void )
 {
 	SIRENGINE_LOG( "Initializing Editor Instance..." );
-
-//	notify_init( "Valden" );
-//	NotifyNotification *n = notify_notification_new( "Testing", "test message", NULL );
-//	notify_notification_add_action( n, "ACTION", "FUCK IT", []( _NotifyNotification *n, char *, gpointer ) -> void {},
-//		NULL, free );
-//	notify_notification_set_timeout( n, 20000 );
-//	notify_notification_show( n, NULL );
-////	notify_notification_set_urgency( n, NOTIFY_URGENCY_CRITICAL );
 
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
@@ -176,10 +177,43 @@ void CEditorApplication::Init( void )
 	CProjectManager::Init();
 	CSceneView::Init();
 	ContentBrowser::CContentBrowser::Init();
+	CScriptCompiler::Get().Init();
 
+	s_Shortcuts.reserve( 4 );
+	s_Shortcuts[ "Save" ] =			{ .nKey0 = ImGuiKey_S, .nKey1 = 0, .Func = [this]( void ) -> void { SaveProject(); } };
+	s_Shortcuts[ "Save All" ] = 	{ .nKey0 = ImGuiKey_S, .nKey1 = ImGuiKey_LeftShift, .Func = [this]( void ) -> void { SaveProject(); } };
+	s_Shortcuts[ "New Level" ] =	{ .nKey0 = ImGuiKey_N, .nKey1 = 0, .Func = [this]( void ) -> void {  } };
+	s_Shortcuts[ "Open Level" ] =	{ .nKey0 = ImGuiKey_O, .nKey1 = 0, .Func = [this]( void ) -> void {  } };
+	
 	ImPlot::CreateContext();
 
 	AddWidget( &CStatsWindow::Get() );
+}
+
+static void CheckAutoSave( void )
+{
+	if ( !AutoSaveEnabled.GetValue() ) {
+		return;
+	}
+
+	static time_t nStart = 0;
+	time_t now;
+
+	time( &now );
+
+	if ( CProjectManager::Get()->GetProject()->IsModified() && !nStart ) {
+		nStart = now;
+		return;
+	}
+
+	if ( ( now - nStart ) > ( 60 * AutoSaveTime.GetValue() ) && CProjectManager::Get()->GetProject()->IsModified() ) {
+		SIRENGINE_LOG( "Beginning AutoSave..." );
+		ImGui::InsertNotification( { ImGuiToastType::Info, 1000, "Autosaving..." } );
+		CEditorApplication::Get().SaveProject();
+		SIRENGINE_LOG( "AutoSave Completed." );
+
+		nStart = now;
+	}
 }
 
 void CEditorApplication::Frame( int64_t msec )
@@ -219,6 +253,8 @@ void CEditorApplication::Frame( int64_t msec )
 				style.Colors[ ImGuiCol_WindowBg ].y,
 				style.Colors[ ImGuiCol_WindowBg ].z,
 				1.0f ) );
+
+	CheckAutoSave();
 
 	{
 		ImVec2 size;
@@ -283,6 +319,24 @@ void CEditorApplication::Frame( int64_t msec )
 
 	DrawMainMenuBar();
 	DrawBottomMenu();
+	DrawViewport();
+
+	//
+	// check for shortcuts
+	//
+	if ( ImGui::IsKeyDown( ImGuiKey_LeftCtrl ) ) {
+		for ( auto it = s_Shortcuts.cbegin(); it != s_Shortcuts.end(); it++ ) {
+			if ( ImGui::IsKeyDown( (ImGuiKey)it->second.nKey0 ) ) {
+				if ( it->second.nKey1 != 0 ) {
+					if ( ImGui::IsKeyDown( (ImGuiKey)it->second.nKey1 ) ) {
+						it->second.Func();
+					}
+				} else {
+					it->second.Func();
+				}
+			}
+		}
+	}
 
 	ImGui::RenderNotifications();
 
@@ -306,12 +360,75 @@ void CEditorApplication::DrawEditorSettings( void )
 	if ( !m_bEditorSettingsActive ) {
 		return;
 	}
+
 	if ( ImGui::Begin( "Valden Preferences", &m_bEditorSettingsActive, ImGuiWindowFlags_NoCollapse ) ) {
 		if ( ImGui::BeginTable( "##ValdenPreferencesCategoriesTable", 2 ) ) {
+			ImGui::EndTable();
+		}
+		ImGui::End();
+	}
+}
+
+void CEditorApplication::DrawProjectSettings( void )
+{
+	static int nSelectedPreference = 0;
+	if ( !m_bProjectSettingsActive ) {
+		return;
+	}
+
+	if ( ImGui::Begin( "Project Settings", &m_bProjectSettingsActive, ImGuiWindowFlags_NoCollapse ) ) {
+		if ( ImGui::BeginTable( "##ProjectPreferencesCategoriesTable", 2 ) ) {
 			
 			ImGui::TableNextColumn();
-			if ( ImGui::CollapsingHeader( "Project##ValdenProjectPrefencesHeader" ) ) {
+
+			if ( ImGui::CollapsingHeader( "Scripting" ) ) {
+				ImGui::Indent( 0.75f );
+				if ( ImGui::MenuItem( "Compiler" ) ) {
+					nSelectedPreference = 0;
+				}
+				ImGui::Unindent( 0.75f );
 			}
+
+			if ( ImGui::CollapsingHeader( "Graphics" ) ) {
+				ImGui::Indent( 0.75f );
+				if ( ImGui::MenuItem( "Performance" ) ) {
+					nSelectedPreference = 2;
+				}
+				if ( ImGui::MenuItem( "Memory" ) ) {
+					nSelectedPreference = 3;
+				}
+				ImGui::Unindent( 0.75f );
+			}
+
+			ImGui::TableNextColumn();
+			
+			switch ( nSelectedPreference ) {
+			case 0: { // General
+
+				break; }
+			case 1: { // Graphics:Performance
+				ImGui::BeginTable( "##GraphicsQualityPreferencesTable", 2 );
+
+				ImGui::TableNextColumn();
+				ImGui::TextUnformatted( "Anti Aliasing" );
+
+				ImGui::TableNextColumn();
+				ImGui::TextUnformatted( "Anisotropic Filtering" );
+
+				ImGui::TableNextColumn();
+
+				ImGui::EndTable();
+
+				ImGui::BeginTable( "##GraphicsQualityPreferencesSelectTable", 4 );
+
+				ImGui::EndTable();
+				break; }
+			case 2: { // Graphics:Memory
+				if ( ImGui::SliderInt( "GPU Hardware Buffer Max Size", NULL, 0, 10*1024*1024 ) ) {
+
+				}
+				break; }
+			};
 
 			ImGui::EndTable();
 		}
@@ -322,6 +439,7 @@ void CEditorApplication::DrawEditorSettings( void )
 void CEditorApplication::DrawMainMenuBar( void )
 {
 	ImGui::BeginMainMenuBar();
+	ImGui::SetWindowFontScale( ImGui::GetFont()->Scale * 1.20f );
 	if ( ImGui::BeginMenu( "File" ) ) {
 		
 		ImGui::SeparatorText( "Open" );
@@ -363,7 +481,7 @@ void CEditorApplication::DrawMainMenuBar( void )
 		}
 		ImGui::Unindent( 0.5f );
 
-		ImGui::SeparatorText( ICON_FA_FILE_IMPORT "Import/Export" );
+		ImGui::SeparatorText( "Import/Export" );
 		ImGui::Indent( 0.5f );
 		if ( ImGui::MenuItem( ICON_FA_FILE_IMPORT "Import Into Scene..." ) ) {
 		}
@@ -396,7 +514,7 @@ void CEditorApplication::DrawMainMenuBar( void )
 		if ( ImGui::MenuItem( ICON__GEAR "Editor Settings" ) ) {
 			m_bEditorSettingsActive = true;
 		}
-		if ( ImGui::MenuItem( "Project Settings" ) ) {
+		if ( ImGui::MenuItem( ICON__GEAR "Project Settings" ) ) {
 			m_bProjectSettingsActive = true;
 		}
 		if ( ImGui::MenuItem( "Plugins" ) ) {
@@ -417,7 +535,39 @@ void CEditorApplication::DrawMainMenuBar( void )
 	if ( ImGui::BeginMenu( "Help" ) ) {
 		ImGui::EndMenu();
 	}
+	ImGui::SetWindowFontScale( 1.0f );
 	ImGui::EndMainMenuBar();
+}
+
+void CEditorApplication::DrawViewport( void )
+{
+	ImGui::Begin( "##ValdenMainViewportTopBar", NULL, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_MenuBar
+		| ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove );
+	if ( ImGui::BeginMenuBar() ) {
+		if ( ImGui::MenuItem( ICON_FA_SAVE, "CTRL+S" ) ) {
+
+		}
+		if ( ImGui::BeginMenu( ICON_FA_PLUS_SQUARE ) ) {
+			if ( ImGui::MenuItem( "Add Script Class" ) ) {
+				CScriptCompiler::Get().AddClass();
+			}
+			ImGui::EndMenu();
+		}
+		if ( ImGui::MenuItem( ICON_FA_PLAY ) ) {
+
+		}
+		if ( ImGui::MenuItem( ICON_FA_ANGLE_DOUBLE_RIGHT ) ) {
+
+		}
+		if ( ImGui::MenuItem( ICON_FA_PAUSE ) ) {
+
+		}
+		ImGui::EndMenuBar();
+	}
+	ImGui::End();
+
+	ImGui::Begin( "##Valden" );
+	ImGui::End();
 }
 
 void CEditorApplication::DrawBottomMenu( void )
@@ -494,6 +644,27 @@ void CEditorApplication::DockWindowBottom( const char *pWindowLabel )
 	ImGui::DockBuilderSplitNode( nDockID, ImGuiDir_Left, 0.5f, &m_nLeftDockID, &m_nRightDockID );
 	ImGui::DockBuilderSplitNode( nDockID, ImGuiDir_Up, 0.5f, &m_nTopDockID, &m_nBottomDockID );
 	ImGui::DockBuilderDockWindow( pWindowLabel, m_nBottomDockID );
+}
+
+void CEditorApplication::SaveProject( void )
+{
+	if ( !CProjectManager::Get()->GetProject()->IsModified() ) {
+		return;
+	}
+
+	CProjectManager::Get()->GetProject()->SetModified( false );
+
+	SIRENGINE_LOG( "Saving Project \"%s\" Disk...", CProjectManager::Get()->GetProject()->GetName().c_str() );
+
+	CProjectManager::Get()->GetProject()->Save();
+
+	SIRENGINE_LOG( "Writing %lu ScriptClasses...", CScriptCompiler::GetObjects().size() );
+	for ( auto& it : CScriptCompiler::GetObjects() ) {
+		it.Save();
+	}
+	CTextEditorManager::Get().Update();
+
+	SIRENGINE_LOG( "Done." );
 }
 
 void CEditorApplication::Shutdown( void )

@@ -1,10 +1,11 @@
 #include "Font.h"
 #include <Engine/Core/Util.h>
-#include <Engine/Core/FileSystem/MemoryFile.h>
+#include "../ResourceManager.h"
 
-namespace GUILib {
+namespace SIREngine::GUILib {
 
-CFont::CFont( const SIREngine::FileSystem::CFilePath& filePath )
+CFont::CFont( const FileSystem::CFilePath& filePath )
+	: m_FontData( filePath )
 {
 	m_nType = RES_FONT;
 	m_nState = RS_INVALID;
@@ -24,17 +25,13 @@ const char *CFont::GetName( void ) const
 
 bool CFont::IsValid( void ) const
 {
-	return m_pFont != NULL;
+	return m_pFont != NULL && m_FontData.GetSize() != 0;
 }
 
 void CFont::Reload( void )
 {
-	SIREngine::FileSystem::CMemoryFile file( m_szName );
-
-	SIRENGINE_LOG( "Loading font \"%s\"...", m_szName );
-
-	if ( !file.GetSize() ) {
-		SIRENGINE_WARNING( "CFont::Reload: Error loading font file!" );
+	if ( !m_FontData.GetSize() ) {
+		SIRENGINE_LOG_LEVEL( SyncedResourceLoader, ELogLevel::Warning, "CFont::Reload: Error loading font file!" );
 		return;
 	}
 
@@ -42,9 +39,10 @@ void CFont::Reload( void )
 	memset( &config, 0, sizeof( config ) );
 	config.FontDataOwnedByAtlas = false;
 
-	m_pFont = ImGui::GetIO().Fonts->AddFontFromMemoryTTF( const_cast<uint8_t *>( file.GetBuffer() ), file.GetSize(), 16.0f, &config );
+	m_pFont = ImGui::GetIO().Fonts->AddFontFromMemoryTTF( const_cast<uint8_t *>( m_FontData.GetBuffer() ), m_FontData.GetSize(),
+		16.0f, &config );
 	if ( !m_pFont ) {
-		SIRENGINE_WARNING( "Error creating ImGui Font object!" );
+		SIRENGINE_LOG_LEVEL( SyncedResourceLoader, ELogLevel::Warning, "Error creating ImGui Font object!" );
 		m_nState = RS_DEFAULTED;
 		return;
 	}
@@ -54,6 +52,11 @@ void CFont::Reload( void )
 
 void CFont::Release( void )
 {
+	if ( m_FontData.GetSize() ) {
+		m_FontData.Release();
+	}
+	ImGui::GetIO().Fonts->Fonts.erase( &m_pFont );
+	m_pFont = NULL;
 }
 
 };

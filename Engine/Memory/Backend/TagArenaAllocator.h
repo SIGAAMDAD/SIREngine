@@ -42,7 +42,6 @@ typedef enum {
     
     // initializes all allocations to 0
     ARENA_INIT_ON_ALLOC         = 0x20,
-
 } ArenaAllocOptions_t;
 
 typedef struct memzone_s memzone_t;

@@ -5,7 +5,7 @@
 
 template<typename T>
 struct TabData {
-	eastl::string name;
+	CString name;
 	T *pData;
 	bool bOpened;
 };
@@ -39,16 +39,19 @@ public:
 				}
 
 				if ( !it.bOpened ) {
+					TabData<T> *Old = m_pCurrent;
 					if ( m_pCurrent == &it ) {
 						if ( m_pCurrent == m_Items.begin() && m_Items.size() > 1 ) {
 							m_pCurrent++;
 						} else if ( m_pCurrent == m_Items.end() - 1 && m_Items.size() > 1 ) {
 							m_pCurrent--;
+						} else if ( m_Items.size() == 1 ) {
+							m_pCurrent = NULL;
 						}
 					}
+					m_Items.erase( Old );
 				}
 			}
-
 			ImGui::EndTabBar();
 		}
 
@@ -56,7 +59,7 @@ public:
 	}
 
 private:
-	eastl::vector<TabData<T>> m_Items;
+	CVector<TabData<T>> m_Items;
 	TabData<T> *m_pCurrent;
 };
 

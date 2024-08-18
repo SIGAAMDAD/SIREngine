@@ -5,14 +5,14 @@
     #pragma once
 #endif
 
-#include <Engine/Util/UtlMemory.h>
+#include <Engine/Memory/Memory.h>
 #include <initializer_list>
 #include <EASTL/vector.h>
 
 //template<typename T, typename AllocatorType = UtlMallocAllocator>
 //using CVector = eastl::vector<T, AllocatorType>;
 
-template<typename T, typename AllocatorType = UtlMallocAllocator>
+template<typename T, typename AllocatorType = eastl::allocator>
 class CVector : public eastl::vector<T, AllocatorType>
 {
 public:

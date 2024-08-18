@@ -3,6 +3,8 @@
 
 namespace SIREngine {
 
+SIRENGINE_DEFINE_LOG_CATEGORY( SyncedResourceLoader, ELogLevel::Info );
+
 CResourceManager::CResourceManager( void )
 {
 	m_ResourcePaths.reserve( 4 );

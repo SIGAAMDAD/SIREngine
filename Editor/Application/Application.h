@@ -3,7 +3,6 @@
 
 #pragma once
 
-#include <Engine/Memory/Memory.h>
 #include <Engine/Core/FileSystem/FileSystem.h>
 #include <Engine/Core/EngineApp.h>
 #include <EASTL/unique_ptr.h>
@@ -13,14 +12,16 @@
 #include "IconsFontAwesome5.h"
 #include <Engine/Core/ConsoleManager.h>
 #include "ImGuiNotify.hpp"
+#include <Engine/Util/CUniquePtr.h>
 
 #include <Engine/RenderLib/Backend/OpenGL/GLTexture.h>
 #define IMGUI_TEXTURE_ID( texture ) (ImTextureID)(intptr_t)( dynamic_cast<RenderLib::Backend::OpenGL::GLTexture *>( texture )->GetOpenGLHandle() )
 
 #define ITEM_TOOLTIP_STRING( ... ) if ( ImGui::IsItemHovered( ImGuiHoveredFlags_DelayNone ) ) { ImGui::SetTooltip( __VA_ARGS__ ); }
 
-using namespace SIREngine;
+#include <Engine/Memory/Memory.h>
 
+using namespace SIREngine;
 
 namespace Valden {
 	class IEditorWidget
@@ -65,6 +66,8 @@ namespace Valden {
 		void DockWindowTop( const char *pWindowLabel );
 		void DockWindowBottom( const char *pWindowLabel );
 
+		void SaveProject( void );
+
 		SIRENGINE_FORCEINLINE static CEditorApplication& Get( void )
 		{ return g_Application; }
 		
@@ -75,6 +78,7 @@ namespace Valden {
 		void DrawBottomMenu( void );
 		void DrawProjectSettings( void );
 		void DrawEditorSettings( void );
+		void DrawViewport( void );
 
 		CVector<IEditorWidget *> m_Widgets;
 		CVector<CString> m_RecentProjects;

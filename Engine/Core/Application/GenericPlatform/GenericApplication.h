@@ -11,6 +11,7 @@
 #include <Engine/Core/FileSystem/FilePath.h>
 #include <Engine/Core/Events/EventBase.h>
 #include <EASTL/unordered_map.h>
+#include <Engine/Util/CStackVector.h>
 
 namespace SIREngine {
 	class CThread;
@@ -63,8 +64,7 @@ namespace SIREngine::Application {
 
 		/** Memory pressure states, useful for platforms in which the available memory estimate
 		 	may not take in to account memory reclaimable from closing inactive processes or resorting to swap. */
-		enum class EMemoryPressureStatus : uint8_t
-		{ 
+		enum class EMemoryPressureStatus : uint8_t {
 			Unknown,
 			Nominal,
 			Warning,
@@ -97,6 +97,9 @@ namespace SIREngine::Application {
 
 	typedef struct {
 		uint64_t nSize;
+
+		uint64_t nCreatedTime;
+		uint64_t nModifiedTime;
 	} FileInfo_t;
 
 	class IGenericApplication
@@ -145,7 +148,7 @@ namespace SIREngine::Application {
 
 		virtual size_t GetAllocSize( void *pBuffer ) const = 0;
 		virtual void *VirtualAlloc( size_t *nSize, size_t nAlignment ) = 0;
-		virtual void VirtualFree( void *pBuffer ) = 0;
+		virtual void VirtualFree( void *pBuffer, size_t nSize ) = 0;
 		virtual void CommitMemory( void *pMemory, size_t nOffset, size_t nSize ) = 0;
 		virtual void DecommitMemory( void *pMemory, size_t nOffset, size_t nSize ) = 0;
 		virtual void SetMemoryReadOnly( void *pMemory, size_t nOffset, size_t nSize ) = 0;

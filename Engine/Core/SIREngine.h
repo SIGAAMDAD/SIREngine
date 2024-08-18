@@ -48,9 +48,6 @@
 #include "Application/GenericPlatform/GenericApplication.h"
 #include "MathLib/Types.h"
 
-#define SIRENGINE_XSTRING_HELPER( x ) #x
-#define SIRENGINE_XSTRING( x ) SIRENGINE_XSTRING_HELPER( x )
-
 #define SIRENGINE_MAKE_VERSION( major, minor, patch ) \
 	((((uint32_t)(major)) << 22) | (((uint32_t)(minor)) << 12) | ((uint32_t)(patch)))
 

@@ -23,26 +23,25 @@ pkg_check_modules(FREETYPE2 REQUIRED freetype2)
 # Include directories
 include_directories(${GTK3_INCLUDE_DIRS} ${PANGO_INCLUDE_DIRS} ${SDL2_INCLUDE_DIRS} ../)
 
-add_definitions(-DSIRENGINE_BUILD_TYPE=1)
+add_definitions(-DSIRENGINE_BUILD_TYPE=1 -DSIRENGINE_BUILD_PLUGIN_SUPPORT=1 -DSIRENGINE_BUILD_MONOLITHIC=0 -DAS_MAX_PORTABILITY)
 
 # Link directories
 link_directories(${GTK3_LIBRARY_DIRS} ${PANGO_LIBRARY_DIRS} ${SDL2_LIBRARY_DIRS})
 
 # Source files
 set(SOURCE_FILES
-#	Application/ScriptGenerator.cpp
-#	Application/NodeEditor/NodeEditor.cpp
-#	Application/NodeEditor/NodeBuilder.cpp
 	Application/Project/ProjectData.cpp
 	Application/Project/ProjectManager.cpp
 	Application/Project/ProjectLoader.cpp
 	Application/ContentBrowser/ContentBrowser.cpp
 	Application/ContentBrowser/BrowserInstance.cpp
 	Application/ContentBrowser/FileView.cpp
+	Application/ScriptLib/ScriptCompiler.cpp
+	Application/ScriptLib/ScriptObject.cpp
+	Application/ScriptLib/ScriptTextEditor.cpp
 	Application/SceneView.cpp
 	Application/StatsWindow.cpp
 	Application/Application.cpp
-	Application/TextEditor.cpp
 	../imgui/imgui.cpp
 	../imgui/imgui_draw.cpp
 	../imgui/imgui_tables.cpp
@@ -51,10 +50,6 @@ set(SOURCE_FILES
 	../imgui/backends/imgui_impl_sdl2.cpp
 	implot/implot.cpp
 	implot/implot_items.cpp
-#	../imgui-node-editor/crude_json.cpp
-#	../imgui-node-editor/imgui_canvas.cpp
-#	../imgui-node-editor/imgui_node_editor_api.cpp
-#	../imgui-node-editor/imgui_node_editor.cpp
 	../Engine/Core/Application/GenericPlatform/GenericApplication.cpp
 	../Engine/Core/Application/Posix/PosixApplication.cpp
 	../Engine/Core/Application/Posix/PosixCrashHandler.cpp
@@ -110,6 +105,35 @@ set(SOURCE_FILES
 	../Engine/Core/SmMalloc/smmalloc_generic.cpp
 	../Engine/Core/SmMalloc/smmalloc_tls.cpp
 	../Engine/Core/SmMalloc/smmalloc.cpp
+	../angelscript/as_atomic.cpp
+	../angelscript/as_builder.cpp
+	../angelscript/as_bytecode.cpp
+	../angelscript/as_callfunc_x86.cpp
+	../angelscript/as_callfunc.cpp
+	../angelscript/as_compiler.cpp
+	../angelscript/as_configgroup.cpp
+	../angelscript/as_context.cpp
+	../angelscript/as_datatype.cpp
+	../angelscript/as_gc.cpp
+	../angelscript/as_generic.cpp
+	../angelscript/as_globalproperty.cpp
+	../angelscript/as_memory.cpp
+	../angelscript/as_module.cpp
+	../angelscript/as_objecttype.cpp
+	../angelscript/as_outputbuffer.cpp
+	../angelscript/as_parser.cpp
+	../angelscript/as_restore.cpp
+	../angelscript/as_scriptcode.cpp
+	../angelscript/as_scriptengine.cpp
+	../angelscript/as_scriptfunction.cpp
+	../angelscript/as_scriptnode.cpp
+	../angelscript/as_scriptobject.cpp
+	../angelscript/as_string_util.cpp
+	../angelscript/as_string.cpp
+	../angelscript/as_thread.cpp
+	../angelscript/as_tokenizer.cpp
+	../angelscript/as_typeinfo.cpp
+	../angelscript/as_variablescope.cpp
 )
 
 # Add executable

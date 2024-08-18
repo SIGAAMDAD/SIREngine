@@ -29,7 +29,7 @@ namespace SIREngine::RenderLib::Backend::OpenGL {
 		virtual void BeginFrame( void ) override;
 		virtual void CompleteRenderPass( IRenderShaderPipeline *pShaderPipeline ) override;
 
-		virtual void *Alloc( size_t nBytes, size_t nAligment = 16 ) override;
+		virtual void *Alloc( size_t nBytes, size_t nAlignment = 16 ) override;
 		virtual void Free( void *pBuffer ) override;
 
 		virtual const GPUMemoryUsage_t GetMemoryUsage( void ) override;
@@ -54,6 +54,8 @@ namespace SIREngine::RenderLib::Backend::OpenGL {
 //		SDL_GLContext m_pRenderContext;
 //		SDL_GLContext m_pLoadContext;
 		SDL_GLContext m_pGLContext;
+
+//		CTagArenaAllocatorTemplate<char> m_ContainerAllocator;
 
 		static CVector<GLTexture *> g_EvictionLRUCache;
 	};

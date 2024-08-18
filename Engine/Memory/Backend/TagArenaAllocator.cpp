@@ -18,6 +18,7 @@ int CTagArenaAllocator::nMinFragment = MIN_FRAGMENT;
 
 typedef struct memblock_s {
 	struct memblock_s		*next, *prev;
+	uint64_t				sepSize;
 	uint64_t				size;	// including the header and possibly tiny fragments
 	uint64_t				tag;	// a tag of 0 is a free block
 	int64_t					id;		// should be ZONEID
@@ -142,6 +143,8 @@ static freeblock_t *NewBlock( memzone_t *zone, uint64_t size )
 	// allocate separator block before new free block
 	alloc_size = size + sizeof( *sep );
 
+	SIRENGINE_LOG_LEVEL( Memory, ELogLevel::Info, "Allocating new arena zone segment, size:%lu", alloc_size );
+
 //	sep = (memblock_t *)Application::Get()->VirtualAlloc( &alloc_size, 64 );
 	sep = (memblock_t *)calloc( alloc_size, 1 );
 	if ( sep == NULL ) {
@@ -152,6 +155,8 @@ static freeblock_t *NewBlock( memzone_t *zone, uint64_t size )
 	block = sep+1;
 
 //	Application::Get()->CommitMemory( sep, 0, alloc_size );
+
+	sep->sepSize = alloc_size;
 
 	// link separator with prev
 	prev->next = sep;
@@ -352,7 +357,7 @@ void Z_Free( memzone_t *zone, void *ptr ) {
 
 	// set the block to something that should cause problems
 	// if it is referenced...
-//	memset( ptr, 0xaa, block->size - sizeof( *block ) );
+	memset( ptr, 0xaa, block->size - sizeof( *block ) );
 
 	block->tag = TAG_FREE; // mark as free
 	block->id = ZONEID;
@@ -715,7 +720,7 @@ void CTagArenaAllocator::Shutdown( void )
 			memblock_t *next = block->next;
 			if ( next->size == 0 && next->id == -ZONEID && next->tag == TAG_STATIC ) {
 				if ( seg ) {
-//					Application::Get()->VirtualFree( seg );
+//					Application::Get()->VirtualFree( seg, seg->sepSize );
 					::free( seg );
 				}
 				seg = next;
@@ -732,7 +737,7 @@ void CTagArenaAllocator::Shutdown( void )
 		}
 		block = block->next;
 	}
-//	Application::Get()->VirtualFree( m_pZone );
+//	Application::Get()->VirtualFree( m_pZone, m_pZone->size );
 	::free( m_pZone );
 }
 

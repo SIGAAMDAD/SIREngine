@@ -36,7 +36,8 @@ namespace Valden::ContentBrowser {
 	{
 	public:
 		CFileView( CBrowserInstance *pInstance )
-			: m_pSelected( NULL ), m_pInstance( pInstance )
+			: m_pInstance( pInstance ), m_pPopupDir( NULL ), m_pSelectedDir( NULL ), m_pSelected( NULL ),
+			m_pPopupFile( NULL ), m_MousePopupPosition( { 0, 0 } ), m_bPopupIsDirectory( false )
 		{ }
 		~CFileView()
 		{ }
