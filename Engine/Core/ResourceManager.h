@@ -15,6 +15,9 @@ namespace SIREngine {
 	class CResourceDef;
 
 	typedef struct ResourceLoader {
+		ResourceLoader( const char *pFilePath, CResourceDef *pResource, ResourceType_t Type )
+			: FilePath( pFilePath ), ResourceData( pResource ), nType( Type )
+		{ }
 		ResourceLoader( void )
 		{ }
 		~ResourceLoader()

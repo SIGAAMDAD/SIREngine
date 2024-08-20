@@ -113,6 +113,9 @@ namespace SIREngine {
 		{ return m_pTexture != NULL; }
 		virtual void Reload( const FileSystem::CFilePath& filePath ) override;
 		virtual void Release( void ) override;
+		
+		SIRENGINE_FORCEINLINE RenderLib::Backend::IRenderTexture *GetTexture( void )
+		{ return m_pTexture; }
 	private:
 		RenderLib::Backend::IRenderTexture *m_pTexture;
 	};

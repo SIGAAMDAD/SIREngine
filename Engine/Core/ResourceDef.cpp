@@ -24,6 +24,9 @@ void CMaterial::Reload( const FileSystem::CFilePath& filePath )
 	textureInfo.bIsGPUOnly = false;
 	textureInfo.nChannels = 4;
 	textureInfo.filePath = filePath;
+	textureInfo.nFormat = TF_RGBA;
+
+	SIRENGINE_LOG( "Loading Material \"%s\"...", filePath.c_str() );
 
 	m_pTexture = RenderLib::Backend::GetRenderContext()->AllocateTexture( textureInfo );
 }

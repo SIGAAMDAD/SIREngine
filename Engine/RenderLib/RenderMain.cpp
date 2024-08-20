@@ -74,10 +74,6 @@ void CRenderer::FinalizeTextures( void )
 {
 	SIRENGINE_LOG( "Finalizing Textures..." );
 
-	for ( auto& it : Backend::g_pRenderContext->GetTextures() ) {
-		it.second->Upload();
-	}
-
 	SIRENGINE_LOG( "Done." );
 }
 

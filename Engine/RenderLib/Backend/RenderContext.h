@@ -59,6 +59,7 @@ namespace SIREngine::RenderLib::Backend {
 		virtual void SwapBuffers( void ) = 0;
 		virtual void BeginFrame( void ) = 0;
 		virtual void CompleteRenderPass( IRenderShaderPipeline *pShaderPipeline ) = 0;
+		virtual void FinalizeResources( void ) = 0;
 
 		virtual void *Alloc( size_t nBytes, size_t nAligment = 16 ) = 0;
 		virtual void Free( void *pBuffer ) = 0;

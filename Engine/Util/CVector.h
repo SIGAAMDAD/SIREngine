@@ -82,4 +82,12 @@ private:
     */
 };
 
+template<typename T, typename Allocator>
+class CVectorRef : public CVector<T, Allocator>
+{
+public:
+    CVectorRef( CVector<T, Allocator>& )
+    {}
+};
+
 #endif

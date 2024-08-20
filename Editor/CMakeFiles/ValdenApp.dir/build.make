@@ -755,10 +755,52 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/RenderMa
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/RenderMain.cpp.s"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/noah/Projects/SIR-Engine/Engine/RenderLib/RenderMain.cpp -o CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/RenderMain.cpp.s
 
+CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadTGA.cpp.o: CMakeFiles/ValdenApp.dir/flags.make
+CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadTGA.cpp.o: /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadTGA.cpp
+CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadTGA.cpp.o: CMakeFiles/ValdenApp.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_50) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadTGA.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadTGA.cpp.o -MF CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadTGA.cpp.o.d -o CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadTGA.cpp.o -c /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadTGA.cpp
+
+CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadTGA.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadTGA.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadTGA.cpp > CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadTGA.cpp.i
+
+CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadTGA.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadTGA.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadTGA.cpp -o CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadTGA.cpp.s
+
+CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPNG.cpp.o: CMakeFiles/ValdenApp.dir/flags.make
+CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPNG.cpp.o: /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPNG.cpp
+CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPNG.cpp.o: CMakeFiles/ValdenApp.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_51) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPNG.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPNG.cpp.o -MF CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPNG.cpp.o.d -o CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPNG.cpp.o -c /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPNG.cpp
+
+CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPNG.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPNG.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPNG.cpp > CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPNG.cpp.i
+
+CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPNG.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPNG.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPNG.cpp -o CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPNG.cpp.s
+
+CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadJpeg.cpp.o: CMakeFiles/ValdenApp.dir/flags.make
+CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadJpeg.cpp.o: /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadJpeg.cpp
+CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadJpeg.cpp.o: CMakeFiles/ValdenApp.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_52) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadJpeg.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadJpeg.cpp.o -MF CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadJpeg.cpp.o.d -o CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadJpeg.cpp.o -c /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadJpeg.cpp
+
+CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadJpeg.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadJpeg.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadJpeg.cpp > CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadJpeg.cpp.i
+
+CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadJpeg.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadJpeg.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadJpeg.cpp -o CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadJpeg.cpp.s
+
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLoader.cpp.o: CMakeFiles/ValdenApp.dir/flags.make
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLoader.cpp.o: /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLoader.cpp
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLoader.cpp.o: CMakeFiles/ValdenApp.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_50) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLoader.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_53) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLoader.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLoader.cpp.o -MF CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLoader.cpp.o.d -o CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLoader.cpp.o -c /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLoader.cpp
 
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLoader.cpp.i: cmake_force
@@ -772,7 +814,7 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/RenderContext.cpp.o: CMakeFiles/ValdenApp.dir/flags.make
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/RenderContext.cpp.o: /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/RenderContext.cpp
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/RenderContext.cpp.o: CMakeFiles/ValdenApp.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_51) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/RenderContext.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_54) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/RenderContext.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/RenderContext.cpp.o -MF CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/RenderContext.cpp.o.d -o CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/RenderContext.cpp.o -c /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/RenderContext.cpp
 
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/RenderContext.cpp.i: cmake_force
@@ -786,7 +828,7 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/RenderShaderPipeline.cpp.o: CMakeFiles/ValdenApp.dir/flags.make
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/RenderShaderPipeline.cpp.o: /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/RenderShaderPipeline.cpp
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/RenderShaderPipeline.cpp.o: CMakeFiles/ValdenApp.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_52) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/RenderShaderPipeline.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_55) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/RenderShaderPipeline.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/RenderShaderPipeline.cpp.o -MF CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/RenderShaderPipeline.cpp.o.d -o CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/RenderShaderPipeline.cpp.o -c /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/RenderShaderPipeline.cpp
 
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/RenderShaderPipeline.cpp.i: cmake_force
@@ -800,7 +842,7 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLBuffer.cpp.o: CMakeFiles/ValdenApp.dir/flags.make
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLBuffer.cpp.o: /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLBuffer.cpp
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLBuffer.cpp.o: CMakeFiles/ValdenApp.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_53) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLBuffer.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_56) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLBuffer.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLBuffer.cpp.o -MF CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLBuffer.cpp.o.d -o CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLBuffer.cpp.o -c /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLBuffer.cpp
 
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLBuffer.cpp.i: cmake_force
@@ -814,7 +856,7 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLContext.cpp.o: CMakeFiles/ValdenApp.dir/flags.make
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLContext.cpp.o: /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLContext.cpp
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLContext.cpp.o: CMakeFiles/ValdenApp.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_54) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLContext.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_57) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLContext.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLContext.cpp.o -MF CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLContext.cpp.o.d -o CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLContext.cpp.o -c /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLContext.cpp
 
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLContext.cpp.i: cmake_force
@@ -828,7 +870,7 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLFramebuffer.cpp.o: CMakeFiles/ValdenApp.dir/flags.make
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLFramebuffer.cpp.o: /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLFramebuffer.cpp
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLFramebuffer.cpp.o: CMakeFiles/ValdenApp.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_55) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLFramebuffer.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_58) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLFramebuffer.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLFramebuffer.cpp.o -MF CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLFramebuffer.cpp.o.d -o CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLFramebuffer.cpp.o -c /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLFramebuffer.cpp
 
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLFramebuffer.cpp.i: cmake_force
@@ -842,7 +884,7 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLProcs.cpp.o: CMakeFiles/ValdenApp.dir/flags.make
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLProcs.cpp.o: /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLProcs.cpp
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLProcs.cpp.o: CMakeFiles/ValdenApp.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_56) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLProcs.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_59) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLProcs.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLProcs.cpp.o -MF CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLProcs.cpp.o.d -o CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLProcs.cpp.o -c /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLProcs.cpp
 
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLProcs.cpp.i: cmake_force
@@ -856,7 +898,7 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLProgram.cpp.o: CMakeFiles/ValdenApp.dir/flags.make
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLProgram.cpp.o: /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLProgram.cpp
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLProgram.cpp.o: CMakeFiles/ValdenApp.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_57) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLProgram.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_60) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLProgram.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLProgram.cpp.o -MF CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLProgram.cpp.o.d -o CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLProgram.cpp.o -c /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLProgram.cpp
 
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLProgram.cpp.i: cmake_force
@@ -870,7 +912,7 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLShader.cpp.o: CMakeFiles/ValdenApp.dir/flags.make
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLShader.cpp.o: /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLShader.cpp
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLShader.cpp.o: CMakeFiles/ValdenApp.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_58) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLShader.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_61) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLShader.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLShader.cpp.o -MF CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLShader.cpp.o.d -o CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLShader.cpp.o -c /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLShader.cpp
 
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLShader.cpp.i: cmake_force
@@ -884,7 +926,7 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLShaderBuffer.cpp.o: CMakeFiles/ValdenApp.dir/flags.make
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLShaderBuffer.cpp.o: /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLShaderBuffer.cpp
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLShaderBuffer.cpp.o: CMakeFiles/ValdenApp.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_59) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLShaderBuffer.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_62) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLShaderBuffer.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLShaderBuffer.cpp.o -MF CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLShaderBuffer.cpp.o.d -o CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLShaderBuffer.cpp.o -c /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLShaderBuffer.cpp
 
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLShaderBuffer.cpp.i: cmake_force
@@ -898,7 +940,7 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLShaderPipeline.cpp.o: CMakeFiles/ValdenApp.dir/flags.make
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLShaderPipeline.cpp.o: /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLShaderPipeline.cpp
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLShaderPipeline.cpp.o: CMakeFiles/ValdenApp.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_60) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLShaderPipeline.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_63) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLShaderPipeline.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLShaderPipeline.cpp.o -MF CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLShaderPipeline.cpp.o.d -o CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLShaderPipeline.cpp.o -c /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLShaderPipeline.cpp
 
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLShaderPipeline.cpp.i: cmake_force
@@ -912,7 +954,7 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLTexture.cpp.o: CMakeFiles/ValdenApp.dir/flags.make
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLTexture.cpp.o: /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLTexture.cpp
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLTexture.cpp.o: CMakeFiles/ValdenApp.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_61) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLTexture.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_64) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLTexture.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLTexture.cpp.o -MF CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLTexture.cpp.o.d -o CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLTexture.cpp.o -c /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLTexture.cpp
 
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLTexture.cpp.i: cmake_force
@@ -926,7 +968,7 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLVertexArray.cpp.o: CMakeFiles/ValdenApp.dir/flags.make
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLVertexArray.cpp.o: /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLVertexArray.cpp
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLVertexArray.cpp.o: CMakeFiles/ValdenApp.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_62) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLVertexArray.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_65) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLVertexArray.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLVertexArray.cpp.o -MF CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLVertexArray.cpp.o.d -o CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLVertexArray.cpp.o -c /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLVertexArray.cpp
 
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/OpenGL/GLVertexArray.cpp.i: cmake_force
@@ -940,7 +982,7 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKBuffer.cpp.o: CMakeFiles/ValdenApp.dir/flags.make
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKBuffer.cpp.o: /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKBuffer.cpp
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKBuffer.cpp.o: CMakeFiles/ValdenApp.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_63) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKBuffer.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_66) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKBuffer.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKBuffer.cpp.o -MF CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKBuffer.cpp.o.d -o CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKBuffer.cpp.o -c /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKBuffer.cpp
 
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKBuffer.cpp.i: cmake_force
@@ -954,7 +996,7 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKContext.cpp.o: CMakeFiles/ValdenApp.dir/flags.make
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKContext.cpp.o: /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKContext.cpp
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKContext.cpp.o: CMakeFiles/ValdenApp.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_64) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKContext.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_67) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKContext.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKContext.cpp.o -MF CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKContext.cpp.o.d -o CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKContext.cpp.o -c /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKContext.cpp
 
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKContext.cpp.i: cmake_force
@@ -968,7 +1010,7 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKFramebuffer.cpp.o: CMakeFiles/ValdenApp.dir/flags.make
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKFramebuffer.cpp.o: /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKFramebuffer.cpp
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKFramebuffer.cpp.o: CMakeFiles/ValdenApp.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_65) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKFramebuffer.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_68) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKFramebuffer.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKFramebuffer.cpp.o -MF CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKFramebuffer.cpp.o.d -o CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKFramebuffer.cpp.o -c /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKFramebuffer.cpp
 
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKFramebuffer.cpp.i: cmake_force
@@ -982,7 +1024,7 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKProgram.cpp.o: CMakeFiles/ValdenApp.dir/flags.make
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKProgram.cpp.o: /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKProgram.cpp
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKProgram.cpp.o: CMakeFiles/ValdenApp.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_66) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKProgram.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_69) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKProgram.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKProgram.cpp.o -MF CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKProgram.cpp.o.d -o CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKProgram.cpp.o -c /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKProgram.cpp
 
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKProgram.cpp.i: cmake_force
@@ -996,7 +1038,7 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKShader.cpp.o: CMakeFiles/ValdenApp.dir/flags.make
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKShader.cpp.o: /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKShader.cpp
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKShader.cpp.o: CMakeFiles/ValdenApp.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_67) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKShader.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_70) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKShader.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKShader.cpp.o -MF CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKShader.cpp.o.d -o CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKShader.cpp.o -c /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKShader.cpp
 
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKShader.cpp.i: cmake_force
@@ -1010,7 +1052,7 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKShaderBuffer.cpp.o: CMakeFiles/ValdenApp.dir/flags.make
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKShaderBuffer.cpp.o: /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKShaderBuffer.cpp
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKShaderBuffer.cpp.o: CMakeFiles/ValdenApp.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_68) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKShaderBuffer.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_71) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKShaderBuffer.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKShaderBuffer.cpp.o -MF CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKShaderBuffer.cpp.o.d -o CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKShaderBuffer.cpp.o -c /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKShaderBuffer.cpp
 
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKShaderBuffer.cpp.i: cmake_force
@@ -1024,7 +1066,7 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKShaderPipeline.cpp.o: CMakeFiles/ValdenApp.dir/flags.make
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKShaderPipeline.cpp.o: /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKShaderPipeline.cpp
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKShaderPipeline.cpp.o: CMakeFiles/ValdenApp.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_69) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKShaderPipeline.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_72) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKShaderPipeline.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKShaderPipeline.cpp.o -MF CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKShaderPipeline.cpp.o.d -o CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKShaderPipeline.cpp.o -c /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKShaderPipeline.cpp
 
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKShaderPipeline.cpp.i: cmake_force
@@ -1038,7 +1080,7 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKTexture.cpp.o: CMakeFiles/ValdenApp.dir/flags.make
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKTexture.cpp.o: /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKTexture.cpp
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKTexture.cpp.o: CMakeFiles/ValdenApp.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_70) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKTexture.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_73) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKTexture.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKTexture.cpp.o -MF CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKTexture.cpp.o.d -o CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKTexture.cpp.o -c /home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKTexture.cpp
 
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/Vulkan/VKTexture.cpp.i: cmake_force
@@ -1052,7 +1094,7 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/pngloader/lodepng.cpp.o: CMakeFiles/ValdenApp.dir/flags.make
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/pngloader/lodepng.cpp.o: /home/noah/Projects/SIR-Engine/pngloader/lodepng.cpp
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/pngloader/lodepng.cpp.o: CMakeFiles/ValdenApp.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_71) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/pngloader/lodepng.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_74) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/pngloader/lodepng.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/pngloader/lodepng.cpp.o -MF CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/pngloader/lodepng.cpp.o.d -o CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/pngloader/lodepng.cpp.o -c /home/noah/Projects/SIR-Engine/pngloader/lodepng.cpp
 
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/pngloader/lodepng.cpp.i: cmake_force
@@ -1066,7 +1108,7 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/pngloader/lodepng.cpp.s: 
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/Core/SmMalloc/smmalloc_generic.cpp.o: CMakeFiles/ValdenApp.dir/flags.make
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/Core/SmMalloc/smmalloc_generic.cpp.o: /home/noah/Projects/SIR-Engine/Engine/Core/SmMalloc/smmalloc_generic.cpp
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/Core/SmMalloc/smmalloc_generic.cpp.o: CMakeFiles/ValdenApp.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_72) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/Core/SmMalloc/smmalloc_generic.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_75) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/Core/SmMalloc/smmalloc_generic.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/Core/SmMalloc/smmalloc_generic.cpp.o -MF CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/Core/SmMalloc/smmalloc_generic.cpp.o.d -o CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/Core/SmMalloc/smmalloc_generic.cpp.o -c /home/noah/Projects/SIR-Engine/Engine/Core/SmMalloc/smmalloc_generic.cpp
 
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/Core/SmMalloc/smmalloc_generic.cpp.i: cmake_force
@@ -1080,7 +1122,7 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/Core/SmMalloc/smma
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/Core/SmMalloc/smmalloc_tls.cpp.o: CMakeFiles/ValdenApp.dir/flags.make
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/Core/SmMalloc/smmalloc_tls.cpp.o: /home/noah/Projects/SIR-Engine/Engine/Core/SmMalloc/smmalloc_tls.cpp
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/Core/SmMalloc/smmalloc_tls.cpp.o: CMakeFiles/ValdenApp.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_73) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/Core/SmMalloc/smmalloc_tls.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_76) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/Core/SmMalloc/smmalloc_tls.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/Core/SmMalloc/smmalloc_tls.cpp.o -MF CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/Core/SmMalloc/smmalloc_tls.cpp.o.d -o CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/Core/SmMalloc/smmalloc_tls.cpp.o -c /home/noah/Projects/SIR-Engine/Engine/Core/SmMalloc/smmalloc_tls.cpp
 
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/Core/SmMalloc/smmalloc_tls.cpp.i: cmake_force
@@ -1094,7 +1136,7 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/Core/SmMalloc/smma
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/Core/SmMalloc/smmalloc.cpp.o: CMakeFiles/ValdenApp.dir/flags.make
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/Core/SmMalloc/smmalloc.cpp.o: /home/noah/Projects/SIR-Engine/Engine/Core/SmMalloc/smmalloc.cpp
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/Core/SmMalloc/smmalloc.cpp.o: CMakeFiles/ValdenApp.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_74) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/Core/SmMalloc/smmalloc.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_77) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/Core/SmMalloc/smmalloc.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/Core/SmMalloc/smmalloc.cpp.o -MF CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/Core/SmMalloc/smmalloc.cpp.o.d -o CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/Core/SmMalloc/smmalloc.cpp.o -c /home/noah/Projects/SIR-Engine/Engine/Core/SmMalloc/smmalloc.cpp
 
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/Core/SmMalloc/smmalloc.cpp.i: cmake_force
@@ -1108,7 +1150,7 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/Core/SmMalloc/smma
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_atomic.cpp.o: CMakeFiles/ValdenApp.dir/flags.make
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_atomic.cpp.o: /home/noah/Projects/SIR-Engine/angelscript/as_atomic.cpp
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_atomic.cpp.o: CMakeFiles/ValdenApp.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_75) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_atomic.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_78) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_atomic.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_atomic.cpp.o -MF CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_atomic.cpp.o.d -o CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_atomic.cpp.o -c /home/noah/Projects/SIR-Engine/angelscript/as_atomic.cpp
 
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_atomic.cpp.i: cmake_force
@@ -1122,7 +1164,7 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_atomic.cpp
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_builder.cpp.o: CMakeFiles/ValdenApp.dir/flags.make
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_builder.cpp.o: /home/noah/Projects/SIR-Engine/angelscript/as_builder.cpp
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_builder.cpp.o: CMakeFiles/ValdenApp.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_76) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_builder.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_79) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_builder.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_builder.cpp.o -MF CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_builder.cpp.o.d -o CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_builder.cpp.o -c /home/noah/Projects/SIR-Engine/angelscript/as_builder.cpp
 
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_builder.cpp.i: cmake_force
@@ -1136,7 +1178,7 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_builder.cp
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_bytecode.cpp.o: CMakeFiles/ValdenApp.dir/flags.make
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_bytecode.cpp.o: /home/noah/Projects/SIR-Engine/angelscript/as_bytecode.cpp
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_bytecode.cpp.o: CMakeFiles/ValdenApp.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_77) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_bytecode.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_80) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_bytecode.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_bytecode.cpp.o -MF CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_bytecode.cpp.o.d -o CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_bytecode.cpp.o -c /home/noah/Projects/SIR-Engine/angelscript/as_bytecode.cpp
 
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_bytecode.cpp.i: cmake_force
@@ -1150,7 +1192,7 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_bytecode.c
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_callfunc_x86.cpp.o: CMakeFiles/ValdenApp.dir/flags.make
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_callfunc_x86.cpp.o: /home/noah/Projects/SIR-Engine/angelscript/as_callfunc_x86.cpp
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_callfunc_x86.cpp.o: CMakeFiles/ValdenApp.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_78) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_callfunc_x86.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_81) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_callfunc_x86.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_callfunc_x86.cpp.o -MF CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_callfunc_x86.cpp.o.d -o CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_callfunc_x86.cpp.o -c /home/noah/Projects/SIR-Engine/angelscript/as_callfunc_x86.cpp
 
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_callfunc_x86.cpp.i: cmake_force
@@ -1164,7 +1206,7 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_callfunc_x
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_callfunc.cpp.o: CMakeFiles/ValdenApp.dir/flags.make
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_callfunc.cpp.o: /home/noah/Projects/SIR-Engine/angelscript/as_callfunc.cpp
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_callfunc.cpp.o: CMakeFiles/ValdenApp.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_79) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_callfunc.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_82) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_callfunc.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_callfunc.cpp.o -MF CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_callfunc.cpp.o.d -o CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_callfunc.cpp.o -c /home/noah/Projects/SIR-Engine/angelscript/as_callfunc.cpp
 
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_callfunc.cpp.i: cmake_force
@@ -1178,7 +1220,7 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_callfunc.c
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_compiler.cpp.o: CMakeFiles/ValdenApp.dir/flags.make
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_compiler.cpp.o: /home/noah/Projects/SIR-Engine/angelscript/as_compiler.cpp
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_compiler.cpp.o: CMakeFiles/ValdenApp.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_80) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_compiler.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_83) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_compiler.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_compiler.cpp.o -MF CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_compiler.cpp.o.d -o CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_compiler.cpp.o -c /home/noah/Projects/SIR-Engine/angelscript/as_compiler.cpp
 
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_compiler.cpp.i: cmake_force
@@ -1192,7 +1234,7 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_compiler.c
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_configgroup.cpp.o: CMakeFiles/ValdenApp.dir/flags.make
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_configgroup.cpp.o: /home/noah/Projects/SIR-Engine/angelscript/as_configgroup.cpp
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_configgroup.cpp.o: CMakeFiles/ValdenApp.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_81) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_configgroup.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_84) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_configgroup.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_configgroup.cpp.o -MF CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_configgroup.cpp.o.d -o CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_configgroup.cpp.o -c /home/noah/Projects/SIR-Engine/angelscript/as_configgroup.cpp
 
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_configgroup.cpp.i: cmake_force
@@ -1206,7 +1248,7 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_configgrou
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_context.cpp.o: CMakeFiles/ValdenApp.dir/flags.make
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_context.cpp.o: /home/noah/Projects/SIR-Engine/angelscript/as_context.cpp
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_context.cpp.o: CMakeFiles/ValdenApp.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_82) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_context.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_85) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_context.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_context.cpp.o -MF CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_context.cpp.o.d -o CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_context.cpp.o -c /home/noah/Projects/SIR-Engine/angelscript/as_context.cpp
 
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_context.cpp.i: cmake_force
@@ -1220,7 +1262,7 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_context.cp
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_datatype.cpp.o: CMakeFiles/ValdenApp.dir/flags.make
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_datatype.cpp.o: /home/noah/Projects/SIR-Engine/angelscript/as_datatype.cpp
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_datatype.cpp.o: CMakeFiles/ValdenApp.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_83) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_datatype.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_86) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_datatype.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_datatype.cpp.o -MF CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_datatype.cpp.o.d -o CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_datatype.cpp.o -c /home/noah/Projects/SIR-Engine/angelscript/as_datatype.cpp
 
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_datatype.cpp.i: cmake_force
@@ -1234,7 +1276,7 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_datatype.c
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_gc.cpp.o: CMakeFiles/ValdenApp.dir/flags.make
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_gc.cpp.o: /home/noah/Projects/SIR-Engine/angelscript/as_gc.cpp
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_gc.cpp.o: CMakeFiles/ValdenApp.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_84) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_gc.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_87) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_gc.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_gc.cpp.o -MF CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_gc.cpp.o.d -o CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_gc.cpp.o -c /home/noah/Projects/SIR-Engine/angelscript/as_gc.cpp
 
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_gc.cpp.i: cmake_force
@@ -1248,7 +1290,7 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_gc.cpp.s: 
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_generic.cpp.o: CMakeFiles/ValdenApp.dir/flags.make
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_generic.cpp.o: /home/noah/Projects/SIR-Engine/angelscript/as_generic.cpp
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_generic.cpp.o: CMakeFiles/ValdenApp.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_85) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_generic.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_88) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_generic.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_generic.cpp.o -MF CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_generic.cpp.o.d -o CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_generic.cpp.o -c /home/noah/Projects/SIR-Engine/angelscript/as_generic.cpp
 
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_generic.cpp.i: cmake_force
@@ -1262,7 +1304,7 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_generic.cp
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_globalproperty.cpp.o: CMakeFiles/ValdenApp.dir/flags.make
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_globalproperty.cpp.o: /home/noah/Projects/SIR-Engine/angelscript/as_globalproperty.cpp
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_globalproperty.cpp.o: CMakeFiles/ValdenApp.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_86) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_globalproperty.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_89) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_globalproperty.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_globalproperty.cpp.o -MF CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_globalproperty.cpp.o.d -o CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_globalproperty.cpp.o -c /home/noah/Projects/SIR-Engine/angelscript/as_globalproperty.cpp
 
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_globalproperty.cpp.i: cmake_force
@@ -1276,7 +1318,7 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_globalprop
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_memory.cpp.o: CMakeFiles/ValdenApp.dir/flags.make
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_memory.cpp.o: /home/noah/Projects/SIR-Engine/angelscript/as_memory.cpp
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_memory.cpp.o: CMakeFiles/ValdenApp.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_87) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_memory.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_90) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_memory.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_memory.cpp.o -MF CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_memory.cpp.o.d -o CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_memory.cpp.o -c /home/noah/Projects/SIR-Engine/angelscript/as_memory.cpp
 
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_memory.cpp.i: cmake_force
@@ -1290,7 +1332,7 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_memory.cpp
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_module.cpp.o: CMakeFiles/ValdenApp.dir/flags.make
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_module.cpp.o: /home/noah/Projects/SIR-Engine/angelscript/as_module.cpp
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_module.cpp.o: CMakeFiles/ValdenApp.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_88) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_module.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_91) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_module.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_module.cpp.o -MF CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_module.cpp.o.d -o CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_module.cpp.o -c /home/noah/Projects/SIR-Engine/angelscript/as_module.cpp
 
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_module.cpp.i: cmake_force
@@ -1304,7 +1346,7 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_module.cpp
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_objecttype.cpp.o: CMakeFiles/ValdenApp.dir/flags.make
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_objecttype.cpp.o: /home/noah/Projects/SIR-Engine/angelscript/as_objecttype.cpp
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_objecttype.cpp.o: CMakeFiles/ValdenApp.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_89) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_objecttype.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_92) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_objecttype.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_objecttype.cpp.o -MF CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_objecttype.cpp.o.d -o CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_objecttype.cpp.o -c /home/noah/Projects/SIR-Engine/angelscript/as_objecttype.cpp
 
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_objecttype.cpp.i: cmake_force
@@ -1318,7 +1360,7 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_objecttype
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_outputbuffer.cpp.o: CMakeFiles/ValdenApp.dir/flags.make
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_outputbuffer.cpp.o: /home/noah/Projects/SIR-Engine/angelscript/as_outputbuffer.cpp
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_outputbuffer.cpp.o: CMakeFiles/ValdenApp.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_90) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_outputbuffer.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_93) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_outputbuffer.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_outputbuffer.cpp.o -MF CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_outputbuffer.cpp.o.d -o CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_outputbuffer.cpp.o -c /home/noah/Projects/SIR-Engine/angelscript/as_outputbuffer.cpp
 
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_outputbuffer.cpp.i: cmake_force
@@ -1332,7 +1374,7 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_outputbuff
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_parser.cpp.o: CMakeFiles/ValdenApp.dir/flags.make
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_parser.cpp.o: /home/noah/Projects/SIR-Engine/angelscript/as_parser.cpp
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_parser.cpp.o: CMakeFiles/ValdenApp.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_91) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_parser.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_94) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_parser.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_parser.cpp.o -MF CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_parser.cpp.o.d -o CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_parser.cpp.o -c /home/noah/Projects/SIR-Engine/angelscript/as_parser.cpp
 
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_parser.cpp.i: cmake_force
@@ -1346,7 +1388,7 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_parser.cpp
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_restore.cpp.o: CMakeFiles/ValdenApp.dir/flags.make
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_restore.cpp.o: /home/noah/Projects/SIR-Engine/angelscript/as_restore.cpp
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_restore.cpp.o: CMakeFiles/ValdenApp.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_92) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_restore.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_95) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_restore.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_restore.cpp.o -MF CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_restore.cpp.o.d -o CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_restore.cpp.o -c /home/noah/Projects/SIR-Engine/angelscript/as_restore.cpp
 
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_restore.cpp.i: cmake_force
@@ -1360,7 +1402,7 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_restore.cp
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_scriptcode.cpp.o: CMakeFiles/ValdenApp.dir/flags.make
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_scriptcode.cpp.o: /home/noah/Projects/SIR-Engine/angelscript/as_scriptcode.cpp
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_scriptcode.cpp.o: CMakeFiles/ValdenApp.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_93) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_scriptcode.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_96) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_scriptcode.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_scriptcode.cpp.o -MF CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_scriptcode.cpp.o.d -o CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_scriptcode.cpp.o -c /home/noah/Projects/SIR-Engine/angelscript/as_scriptcode.cpp
 
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_scriptcode.cpp.i: cmake_force
@@ -1374,7 +1416,7 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_scriptcode
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_scriptengine.cpp.o: CMakeFiles/ValdenApp.dir/flags.make
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_scriptengine.cpp.o: /home/noah/Projects/SIR-Engine/angelscript/as_scriptengine.cpp
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_scriptengine.cpp.o: CMakeFiles/ValdenApp.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_94) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_scriptengine.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_97) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_scriptengine.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_scriptengine.cpp.o -MF CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_scriptengine.cpp.o.d -o CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_scriptengine.cpp.o -c /home/noah/Projects/SIR-Engine/angelscript/as_scriptengine.cpp
 
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_scriptengine.cpp.i: cmake_force
@@ -1388,7 +1430,7 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_scriptengi
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_scriptfunction.cpp.o: CMakeFiles/ValdenApp.dir/flags.make
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_scriptfunction.cpp.o: /home/noah/Projects/SIR-Engine/angelscript/as_scriptfunction.cpp
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_scriptfunction.cpp.o: CMakeFiles/ValdenApp.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_95) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_scriptfunction.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_98) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_scriptfunction.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_scriptfunction.cpp.o -MF CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_scriptfunction.cpp.o.d -o CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_scriptfunction.cpp.o -c /home/noah/Projects/SIR-Engine/angelscript/as_scriptfunction.cpp
 
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_scriptfunction.cpp.i: cmake_force
@@ -1402,7 +1444,7 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_scriptfunc
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_scriptnode.cpp.o: CMakeFiles/ValdenApp.dir/flags.make
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_scriptnode.cpp.o: /home/noah/Projects/SIR-Engine/angelscript/as_scriptnode.cpp
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_scriptnode.cpp.o: CMakeFiles/ValdenApp.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_96) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_scriptnode.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_99) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_scriptnode.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_scriptnode.cpp.o -MF CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_scriptnode.cpp.o.d -o CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_scriptnode.cpp.o -c /home/noah/Projects/SIR-Engine/angelscript/as_scriptnode.cpp
 
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_scriptnode.cpp.i: cmake_force
@@ -1416,7 +1458,7 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_scriptnode
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_scriptobject.cpp.o: CMakeFiles/ValdenApp.dir/flags.make
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_scriptobject.cpp.o: /home/noah/Projects/SIR-Engine/angelscript/as_scriptobject.cpp
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_scriptobject.cpp.o: CMakeFiles/ValdenApp.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_97) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_scriptobject.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_100) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_scriptobject.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_scriptobject.cpp.o -MF CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_scriptobject.cpp.o.d -o CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_scriptobject.cpp.o -c /home/noah/Projects/SIR-Engine/angelscript/as_scriptobject.cpp
 
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_scriptobject.cpp.i: cmake_force
@@ -1430,7 +1472,7 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_scriptobje
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_string_util.cpp.o: CMakeFiles/ValdenApp.dir/flags.make
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_string_util.cpp.o: /home/noah/Projects/SIR-Engine/angelscript/as_string_util.cpp
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_string_util.cpp.o: CMakeFiles/ValdenApp.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_98) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_string_util.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_101) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_string_util.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_string_util.cpp.o -MF CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_string_util.cpp.o.d -o CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_string_util.cpp.o -c /home/noah/Projects/SIR-Engine/angelscript/as_string_util.cpp
 
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_string_util.cpp.i: cmake_force
@@ -1444,7 +1486,7 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_string_uti
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_string.cpp.o: CMakeFiles/ValdenApp.dir/flags.make
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_string.cpp.o: /home/noah/Projects/SIR-Engine/angelscript/as_string.cpp
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_string.cpp.o: CMakeFiles/ValdenApp.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_99) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_string.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_102) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_string.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_string.cpp.o -MF CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_string.cpp.o.d -o CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_string.cpp.o -c /home/noah/Projects/SIR-Engine/angelscript/as_string.cpp
 
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_string.cpp.i: cmake_force
@@ -1458,7 +1500,7 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_string.cpp
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_thread.cpp.o: CMakeFiles/ValdenApp.dir/flags.make
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_thread.cpp.o: /home/noah/Projects/SIR-Engine/angelscript/as_thread.cpp
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_thread.cpp.o: CMakeFiles/ValdenApp.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_100) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_thread.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_103) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_thread.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_thread.cpp.o -MF CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_thread.cpp.o.d -o CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_thread.cpp.o -c /home/noah/Projects/SIR-Engine/angelscript/as_thread.cpp
 
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_thread.cpp.i: cmake_force
@@ -1472,7 +1514,7 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_thread.cpp
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_tokenizer.cpp.o: CMakeFiles/ValdenApp.dir/flags.make
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_tokenizer.cpp.o: /home/noah/Projects/SIR-Engine/angelscript/as_tokenizer.cpp
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_tokenizer.cpp.o: CMakeFiles/ValdenApp.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_101) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_tokenizer.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_104) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_tokenizer.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_tokenizer.cpp.o -MF CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_tokenizer.cpp.o.d -o CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_tokenizer.cpp.o -c /home/noah/Projects/SIR-Engine/angelscript/as_tokenizer.cpp
 
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_tokenizer.cpp.i: cmake_force
@@ -1486,7 +1528,7 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_tokenizer.
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_typeinfo.cpp.o: CMakeFiles/ValdenApp.dir/flags.make
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_typeinfo.cpp.o: /home/noah/Projects/SIR-Engine/angelscript/as_typeinfo.cpp
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_typeinfo.cpp.o: CMakeFiles/ValdenApp.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_102) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_typeinfo.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_105) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_typeinfo.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_typeinfo.cpp.o -MF CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_typeinfo.cpp.o.d -o CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_typeinfo.cpp.o -c /home/noah/Projects/SIR-Engine/angelscript/as_typeinfo.cpp
 
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_typeinfo.cpp.i: cmake_force
@@ -1500,7 +1542,7 @@ CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_typeinfo.c
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_variablescope.cpp.o: CMakeFiles/ValdenApp.dir/flags.make
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_variablescope.cpp.o: /home/noah/Projects/SIR-Engine/angelscript/as_variablescope.cpp
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_variablescope.cpp.o: CMakeFiles/ValdenApp.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_103) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_variablescope.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_106) "Building CXX object CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_variablescope.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_variablescope.cpp.o -MF CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_variablescope.cpp.o.d -o CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_variablescope.cpp.o -c /home/noah/Projects/SIR-Engine/angelscript/as_variablescope.cpp
 
 CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/angelscript/as_variablescope.cpp.i: cmake_force
@@ -1562,6 +1604,9 @@ ValdenApp_OBJECTS = \
 "CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/Core/ConsoleManager.cpp.o" \
 "CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/DrawBuffer.cpp.o" \
 "CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/RenderMain.cpp.o" \
+"CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadTGA.cpp.o" \
+"CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPNG.cpp.o" \
+"CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadJpeg.cpp.o" \
 "CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLoader.cpp.o" \
 "CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/RenderContext.cpp.o" \
 "CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/RenderShaderPipeline.cpp.o" \
@@ -1669,6 +1714,9 @@ ValdenApp: CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/Core/Ut
 ValdenApp: CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/Core/ConsoleManager.cpp.o
 ValdenApp: CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/DrawBuffer.cpp.o
 ValdenApp: CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/RenderMain.cpp.o
+ValdenApp: CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadTGA.cpp.o
+ValdenApp: CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPNG.cpp.o
+ValdenApp: CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadJpeg.cpp.o
 ValdenApp: CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLoader.cpp.o
 ValdenApp: CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/RenderContext.cpp.o
 ValdenApp: CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/RenderShaderPipeline.cpp.o
@@ -1727,7 +1775,7 @@ ValdenApp: CMakeFiles/ValdenApp.dir/build.make
 ValdenApp: ../libEASTL.a
 ValdenApp: ../libEASTL.a
 ValdenApp: CMakeFiles/ValdenApp.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_104) "Linking CXX executable ValdenApp"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/home/noah/Projects/SIR-Engine/Editor/CMakeFiles --progress-num=$(CMAKE_PROGRESS_107) "Linking CXX executable ValdenApp"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/ValdenApp.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.

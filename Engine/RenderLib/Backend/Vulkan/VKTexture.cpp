@@ -6,7 +6,7 @@ using namespace SIREngine::RenderLib::Backend::Vulkan;
 
 VKTexture::VKTexture( const TextureInit_t& textureInfo )
 {
-	LoadFile( textureInfo );
+	Upload( textureInfo );
 }
 
 VKTexture::~VKTexture()
@@ -27,22 +27,14 @@ void VKTexture::StreamBuffer( void )
 	}
 }
 
-void VKTexture::LoadFile( const TextureInit_t& textureInfo )
-{
-	m_bIsGPUOnly = textureInfo.bIsGPUOnly;
-	m_ImageFormat = textureInfo.nFormat;
-
-	m_ImageData.Load( textureInfo.filePath );
-}
-
-void VKTexture::Upload( void )
+void VKTexture::Upload( const TextureInit_t& textureInfo )
 {
 	VkImageCreateInfo imageInfo;
 	memset( &imageInfo, 0, sizeof( imageInfo ) );
 	imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
 	imageInfo.imageType = VK_IMAGE_TYPE_2D;
-	imageInfo.extent.width = m_ImageData.GetWidth();
-	imageInfo.extent.height = m_ImageData.GetHeight();
+	imageInfo.extent.width = textureInfo.nWidth;
+	imageInfo.extent.height = textureInfo.nHeight;
 	imageInfo.extent.depth = 1;
 	imageInfo.mipLevels = 1;
 	imageInfo.arrayLayers = 1;
@@ -110,6 +102,8 @@ void VKTexture::Upload( void )
 		VK_CALL( vmaCreateImage( g_pVKContext->GetAllocator(), &imageInfo, &allocInfo, &m_hImage, &m_hImageMemory, NULL ) );
 	}
 	else {
+		m_ImageData.Load( textureInfo.filePath) ;
+
 		m_nWidth = m_ImageData.GetWidth();
 		m_nHeight = m_ImageData.GetHeight();
 

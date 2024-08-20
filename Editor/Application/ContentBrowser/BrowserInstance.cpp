@@ -206,34 +206,30 @@ void CBrowserInstance::Draw( void )
 						nDiskSize = fileInfo->second.nDiskSize;
 					}
 
-					pIcon = Cast<CMaterial>( CContentBrowser::Get().m_pDirectoryIcon );
-
-			/*
 					switch ( nType ) {
 					case EContentType::File:
 					default:
-						pIcon = CContentBrowser::Get().m_pFileIcon;
+						pIcon = Cast<CMaterial>( CContentBrowser::Get().m_pFileIcon );
 						break;
 					case EContentType::IniFile:
-						pIcon = CContentBrowser::Get().m_pIniFileIcon;
+						pIcon = Cast<CMaterial>( CContentBrowser::Get().m_pIniFileIcon );
 						break;
 					case EContentType::CsvFile:
-						pIcon = CContentBrowser::Get().m_pCsvFileIcon;
+						pIcon = Cast<CMaterial>( CContentBrowser::Get().m_pCsvFileIcon );
 						break;
 					case EContentType::JsonFile:
-						pIcon = CContentBrowser::Get().m_pJsonFileIcon;
+						pIcon = Cast<CMaterial>( CContentBrowser::Get().m_pJsonFileIcon );
 						break;
 					case EContentType::XmlFile:
-						pIcon = CContentBrowser::Get().m_pXmlFileIcon;
+						pIcon = Cast<CMaterial>( CContentBrowser::Get().m_pXmlFileIcon );
 						break;
 					case EContentType::Audio:
-						pIcon = CContentBrowser::Get().m_pAudioIcon;
+						pIcon = Cast<CMaterial>( CContentBrowser::Get().m_pAudioIcon );
 						break;
 					case EContentType::Material:
-						pIcon = CContentBrowser::Get().m_pMaterialIcon;
+						pIcon = Cast<CMaterial>( CContentBrowser::Get().m_pMaterialIcon );
 						break;
 					};
-					*/
 
 					if ( ImGui::ImageButtonEx( ImGui::GetID( pIcon ), IMGUI_TEXTURE_ID( pIcon ),
 						{ ThumbnailSize.GetValue(), ThumbnailSize.GetValue() }, { 0, 0 }, { 1, 1 }, { 0, 0, 0, 0 }, { 1, 1, 1, 1 },

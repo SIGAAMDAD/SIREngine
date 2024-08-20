@@ -24,8 +24,8 @@ CResourceManager::~CResourceManager()
 void CResourceManager::AddResource( ResourceLoader_t& resourceData )
 {
 	SIRENGINE_LOG_LEVEL( SyncedResourceLoader, ELogLevel::Info, "- Loading CResourceDef \"%s\"...", resourceData.FilePath.c_str() );
-	CThreadAutoLock<CThreadMutex> _( s_LoadMutex );
-	s_ResourceQueue.emplace_back( resourceData );
+
+	resourceData.ResourceData->Reload( resourceData.FilePath );
 }
 
 void CResourceManager::LoadThread( void )
@@ -53,15 +53,10 @@ void CResourceManager::LoadThread( void )
 
 void CResourceManager::BeginLoad( void )
 {
-//	m_ResourcePaths.reserve( 4 );
-//	RegisterResourceFolder( "Resources/Shaders/Vulkan", ".spv" );
-//	RegisterResourceFolder( "Resources/Shaders/OpenGL", ".glsl" );
-//	RegisterResourceFolder( "Resources/Shaders/D3D11", ".hlsl" );
-
 	s_ResourceQueue.reserve( 2048 );
 
 	s_bDoneLoading.store( false );
-	s_LoaderThread.Start( CResourceManager::LoadThread );
+//	s_LoaderThread.Start( CResourceManager::LoadThread );
 }
 
 void CResourceManager::EndLoad( void )
@@ -70,13 +65,11 @@ void CResourceManager::EndLoad( void )
 
 	// give it a little bit of time to finish up anything
 	// its working on
-	s_LoaderThread.Join();
+//	s_LoaderThread.Join();
 }
 
 void CResourceManager::RegisterResourceFolder( const char *pDirectory, const char *pExtension )
 {
-//	g_pFileSystem->AddCacheDirectory( pDirectory );
-//	m_ResourcePaths.emplace_back( pDirectory );
 }
 
 };

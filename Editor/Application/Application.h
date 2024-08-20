@@ -15,7 +15,9 @@
 #include <Engine/Util/CUniquePtr.h>
 
 #include <Engine/RenderLib/Backend/OpenGL/GLTexture.h>
-#define IMGUI_TEXTURE_ID( texture ) (ImTextureID)(intptr_t)( dynamic_cast<RenderLib::Backend::OpenGL::GLTexture *>( texture )->GetOpenGLHandle() )
+
+#define IMGUI_TEXTURE_ID( texture ) \
+	(ImTextureID)(intptr_t)( Cast<RenderLib::Backend::OpenGL::GLTexture>( Cast<CMaterial>( texture )->GetTexture() )->GetOpenGLHandle() )
 
 #define ITEM_TOOLTIP_STRING( ... ) if ( ImGui::IsItemHovered( ImGuiHoveredFlags_DelayNone ) ) { ImGui::SetTooltip( __VA_ARGS__ ); }
 

@@ -33,6 +33,8 @@ namespace SIREngine::RenderLib::Backend::Vulkan {
         virtual void SwapBuffers( void ) override;
         virtual void BeginFrame( void ) override;
         virtual void CompleteRenderPass( Backend::IRenderShaderPipeline *pShaderPipeline ) override;
+        virtual void FinalizeResources( void ) override
+        { }
 
         virtual void *Alloc( size_t nBytes, size_t nAligment = 16 ) override;
         virtual void Free( void *pBuffer ) override;

@@ -79,6 +79,9 @@ set(SOURCE_FILES
 	../Engine/Core/ConsoleManager.cpp
 	../Engine/RenderLib/DrawBuffer.cpp
 	../Engine/RenderLib/RenderMain.cpp
+	../Engine/RenderLib/Backend/ImageLib/LoadTGA.cpp
+	../Engine/RenderLib/Backend/ImageLib/LoadPNG.cpp
+	../Engine/RenderLib/Backend/ImageLib/LoadJpeg.cpp
 	../Engine/RenderLib/Backend/ImageLoader.cpp
 	../Engine/RenderLib/Backend/RenderContext.cpp
 	../Engine/RenderLib/Backend/RenderShaderPipeline.cpp

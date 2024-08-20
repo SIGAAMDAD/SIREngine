@@ -59,7 +59,6 @@ namespace SIREngine::RenderLib::Backend {
 		bool Load( const uint8_t *pBuffer, uint64_t nSize );
 		bool Load( const FileSystem::CFilePath& filePath );
 	private:
-		/*
 		static bool LoadJpeg( const uint8_t *fileBuffer, uint64_t nSize, CVector<uint8_t>& outBuffer,
 			uint32_t& nWidth, uint32_t& nHeight, uint32_t& nSamples );
 		static bool LoadPNG( const uint8_t *fileBuffer, uint64_t nSize, CVector<uint8_t>& outBuffer,
@@ -72,7 +71,6 @@ namespace SIREngine::RenderLib::Backend {
 			uint32_t& nWidth, uint32_t& nHeight, uint32_t& nSamples );
 		static bool LoadSVG( const uint8_t *fileBuffer, uint64_t nSize, CVector<uint8_t>& outBuffer,
 			uint32_t& nWidth, uint32_t& nHeight, uint32_t& nSamples );
-		*/
 
 		CVector<uint8_t> m_ImageBuffer;
 		uint32_t m_nWidth;

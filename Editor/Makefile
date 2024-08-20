@@ -1171,6 +1171,78 @@ home/noah/Projects/SIR-Engine/Engine/Memory/Memory.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/Memory/Memory.cpp.s
 .PHONY : home/noah/Projects/SIR-Engine/Engine/Memory/Memory.cpp.s
 
+home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadJpeg.o: home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadJpeg.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadJpeg.o
+
+# target to build an object file
+home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadJpeg.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadJpeg.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadJpeg.cpp.o
+
+home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadJpeg.i: home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadJpeg.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadJpeg.i
+
+# target to preprocess a source file
+home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadJpeg.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadJpeg.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadJpeg.cpp.i
+
+home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadJpeg.s: home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadJpeg.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadJpeg.s
+
+# target to generate assembly for a file
+home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadJpeg.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadJpeg.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadJpeg.cpp.s
+
+home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPNG.o: home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPNG.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPNG.o
+
+# target to build an object file
+home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPNG.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPNG.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPNG.cpp.o
+
+home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPNG.i: home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPNG.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPNG.i
+
+# target to preprocess a source file
+home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPNG.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPNG.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPNG.cpp.i
+
+home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPNG.s: home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPNG.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPNG.s
+
+# target to generate assembly for a file
+home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPNG.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPNG.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPNG.cpp.s
+
+home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadTGA.o: home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadTGA.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadTGA.o
+
+# target to build an object file
+home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadTGA.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadTGA.cpp.o
+.PHONY : home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadTGA.cpp.o
+
+home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadTGA.i: home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadTGA.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadTGA.i
+
+# target to preprocess a source file
+home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadTGA.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadTGA.cpp.i
+.PHONY : home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadTGA.cpp.i
+
+home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadTGA.s: home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadTGA.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadTGA.s
+
+# target to generate assembly for a file
+home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadTGA.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ValdenApp.dir/build.make CMakeFiles/ValdenApp.dir/home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadTGA.cpp.s
+.PHONY : home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadTGA.cpp.s
+
 home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLoader.o: home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLoader.cpp.o
 .PHONY : home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLoader.o
 
@@ -2796,6 +2868,15 @@ help:
 	@echo "... home/noah/Projects/SIR-Engine/Engine/Memory/Memory.o"
 	@echo "... home/noah/Projects/SIR-Engine/Engine/Memory/Memory.i"
 	@echo "... home/noah/Projects/SIR-Engine/Engine/Memory/Memory.s"
+	@echo "... home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadJpeg.o"
+	@echo "... home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadJpeg.i"
+	@echo "... home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadJpeg.s"
+	@echo "... home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPNG.o"
+	@echo "... home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPNG.i"
+	@echo "... home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadPNG.s"
+	@echo "... home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadTGA.o"
+	@echo "... home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadTGA.i"
+	@echo "... home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLib/LoadTGA.s"
 	@echo "... home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLoader.o"
 	@echo "... home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLoader.i"
 	@echo "... home/noah/Projects/SIR-Engine/Engine/RenderLib/Backend/ImageLoader.s"

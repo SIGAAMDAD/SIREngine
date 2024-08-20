@@ -32,8 +32,10 @@ bool CImageLoader::Load( const uint8_t *pBuffer, uint64_t nSize )
 		return false;
 	}
 
-	m_ImageBuffer.resize( w * h * channels );
-	memcpy( m_ImageBuffer.data(), pOut, w * h * channels );
+	m_ImageBuffer.reserve( w * h * channels );
+	m_ImageBuffer.insert( m_ImageBuffer.end(), pOut, pOut + ( w * h * channels ) );
+//	m_ImageBuffer.resize( w * h * channels );
+//	memcpy( m_ImageBuffer.data(), pOut, ( w * h ) * channels );
 	m_nWidth = w;
 	m_nHeight = h;
 	m_nSamples = channels;
@@ -45,14 +47,25 @@ bool CImageLoader::Load( const uint8_t *pBuffer, uint64_t nSize )
 
 bool CImageLoader::Load( const FileSystem::CFilePath& filePath )
 {
-	CMemoryFile file( filePath );
+	const CString extension = FileSystem::CFilePath::GetExtension( filePath.c_str() );
+	bool (*LoadFunc)( const uint8_t *fileBuffer, uint64_t nSize, CVector<uint8_t>& outBuffer,
+			uint32_t& nWidth, uint32_t& nHeight, uint32_t& nSamples );
+		
+	if ( extension == "png" ) {
+		LoadFunc = LoadPNG;
+	} else if ( extension == "tga" ) {
+		LoadFunc = LoadTGA;
+	} else if ( extension == "jpg" || extension == "jpeg" ) {
+		LoadFunc = LoadJpeg;
+	}
 
+	CMemoryFile file( filePath );
 	if ( !file.GetSize() ) {
 		SIRENGINE_WARNING( "Error loading image file \"%s\", couldn't load the file", filePath.c_str() );
 		return false;
 	}
 	
-	if ( !Load( file.GetBuffer(), file.GetSize() ) ) {
+	if ( !LoadFunc( file.GetBuffer(), file.GetSize(), m_ImageBuffer, m_nWidth, m_nHeight, m_nSamples ) ) {
 		return false;
 	}
 

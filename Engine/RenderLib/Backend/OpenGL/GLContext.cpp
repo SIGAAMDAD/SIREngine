@@ -103,31 +103,31 @@ void GLError( const char *pCall, GLenum nResult )
 		SIRENGINE_ERROR( "%s = GL_OUT_OF_MEMORY", pCall );
 		break; // TODO: write some eviction functions
 	case GL_INVALID_ENUM:
-		SIRENGINE_WARNING( "%s = GL_INVALID_ENUM", pCall );
+		SIRENGINE_ERROR( "%s = GL_INVALID_ENUM", pCall );
 		break;
 	case GL_INVALID_INDEX:
-		SIRENGINE_WARNING( "%s = GL_INVALID_INDEX", pCall );
+		SIRENGINE_ERROR( "%s = GL_INVALID_INDEX", pCall );
 		break;
 	case GL_INVALID_OPERATION:
-		SIRENGINE_WARNING( "%s = GL_INVALID_OPERATION", pCall );
+		SIRENGINE_ERROR( "%s = GL_INVALID_OPERATION", pCall );
 		break;
 	case GL_INVALID_VALUE:
-		SIRENGINE_WARNING( "%s = GL_INVALID_VALUE", pCall );
+		SIRENGINE_ERROR( "%s = GL_INVALID_VALUE", pCall );
 		break;
 	case GL_STACK_OVERFLOW:
-		SIRENGINE_WARNING( "%s = GL_STACK_OVERFLOW", pCall );
+		SIRENGINE_ERROR( "%s = GL_STACK_OVERFLOW", pCall );
 		break;
 	case GL_STACK_UNDERFLOW:
-		SIRENGINE_WARNING( "%s = GL_STACK_UNDERFLOW", pCall );
+		SIRENGINE_ERROR( "%s = GL_STACK_UNDERFLOW", pCall );
 		break;
 	case GL_CONTEXT_LOST:
-		SIRENGINE_WARNING( "%s = GL_CONTEXT_LOST", pCall );
+		SIRENGINE_ERROR( "%s = GL_CONTEXT_LOST", pCall );
 		break;
 	case GL_INVALID_FRAMEBUFFER_OPERATION:
-		SIRENGINE_WARNING( "%s = GL_INVALID_FRAMEBUFFER_OPERATION", pCall );
+		SIRENGINE_ERROR( "%s = GL_INVALID_FRAMEBUFFER_OPERATION", pCall );
 		break;
 	default:
-		SIRENGINE_WARNING( "Unknown GLError 0x%x after \"%s\"", nResult, pCall );
+		SIRENGINE_ERROR( "Unknown GLError 0x%x after \"%s\"", nResult, pCall );
 	};
 }
 
@@ -253,6 +253,11 @@ void GLContext::SetupShaderPipeline( void )
 {
 }
 
+void GLContext::FinalizeResources( void )
+{
+	nglFinish();
+}
+
 void GLContext::BeginFrame( void )
 {
 	GL_CALL( nglClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT ) );
@@ -371,7 +376,9 @@ IRenderBuffer *GLContext::AllocateBuffer( GPUBufferType_t nType, GPUBufferUsage_
 
 IRenderTexture *GLContext::AllocateTexture( const TextureInit_t& textureInfo )
 {
-	return m_Textures.try_emplace( textureInfo.filePath ).first->second = new ( Alloc( sizeof( GLTexture ) ) ) GLTexture( textureInfo );
+	IRenderTexture *pTexture = new ( Alloc( sizeof( GLTexture ) ) ) GLTexture( textureInfo );
+	m_Textures.try_emplace( textureInfo.filePath ).first->second = pTexture;
+	return pTexture;
 }
 
 };
