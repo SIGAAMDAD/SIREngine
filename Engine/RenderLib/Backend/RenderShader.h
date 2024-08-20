@@ -9,7 +9,7 @@
 #include <Engine/RenderLib/RenderCommon.h>
 
 namespace SIREngine::RenderLib::Backend {
-    class IRenderShader : public CResourceDef
+    class IRenderShader
     {
     public:
         IRenderShader( void )
@@ -21,10 +21,12 @@ namespace SIREngine::RenderLib::Backend {
         static IRenderShader *Create( const RenderShaderInit_t& shaderInit );
 
         virtual RenderShaderType_t GetType( void ) const = 0;
-        virtual const char *GetName( void ) const = 0;
+        inline virtual const char *GetName( void ) const
+        { return m_szName; }
     protected:
         virtual bool Load( const char *pszFilePath ) = 0;
 
+        char m_szName[ MAX_RESOURCE_PATH ];
         RenderShaderType_t m_nType;
     };
 };

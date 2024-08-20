@@ -7,13 +7,13 @@ using namespace SIREngine;
 
 namespace SIREngine::RenderLib::Backend {
 
-bool CImageLoader::LoadPCX( const CMemoryFile& fileBuffer, CVector<uint8_t>& outBuffer,
+bool CImageLoader::LoadPCX( const uint8_t *fileBuffer, uint64_t nSize, CVector<uint8_t>& outBuffer,
 	uint32_t& nWidth, uint32_t& nHeight, uint32_t& nSamples )
 {
 	int w, h, channels;
 	byte *pOut;
 	
-	pOut = stbi_load_from_memory( fileBuffer.GetBuffer(), fileBuffer.GetSize(), &w, &h, &channels, 3 );
+	pOut = stbi_load_from_memory( fileBuffer, nSize, &w, &h, &channels, 3 );
 	if ( !pOut ) {
 		SIRENGINE_LOG_LEVEL( RenderBackend, ELogLevel::Warning, "Error loading image file with stb_image: %s", stbi_failure_reason() );
 		return false;

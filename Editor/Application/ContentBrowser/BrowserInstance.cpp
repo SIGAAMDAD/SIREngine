@@ -1,6 +1,7 @@
 #include "ContentBrowser.h"
 #include "BrowserInstance.h"
 #include "../Project/ProjectManager.h"
+#include <Engine/Core/ResourceDef.h>
 
 namespace Valden::ContentBrowser {
 
@@ -26,16 +27,18 @@ void CBrowserInstance::Init( const FileSystem::CFilePath& directory )
 
 void CBrowserInstance::AddSubDir( FileView_t& Parent, const CString& dirName )
 {
-	SIRENGINE_LOG_LEVEL( ContentBrowser, ELogLevel::Info, "Adding AssetTree SubDir \"%s\" to ContentBrowser Cache...", 
+	SIRENGINE_LOG_LEVEL( ContentBrowser, ELogLevel::Verbose, "Adding AssetTree SubDir \"%s\" to ContentBrowser Cache...", 
 		SIRENGINE_TEMP_VSTRING( "%s/%s", Parent.Path.c_str(), dirName.c_str() ) );
-	
-	m_AssetTree.AddSubDirectory( Parent, SIRENGINE_TEMP_VSTRING( "%s/%s", Parent.Path.c_str(), dirName.c_str() ) );
+
+	FileView_t& subDir = m_AssetTree.AddSubDirectory( Parent, SIRENGINE_TEMP_VSTRING( "%s/%s", Parent.Path.c_str(), dirName.c_str() ) );
+
 	AddCacheDir( Parent );
+	AddCacheDir( subDir );
 }
 
 void CBrowserInstance::LoadDirectoryTree( const FileSystem::CFilePath& directory )
 {
-	SIRENGINE_LOG_LEVEL( ContentBrowser, ELogLevel::Info, "Adding AssetTree \"%s\" to ContentBrowser Cache...", directory.c_str() );
+	SIRENGINE_LOG_LEVEL( ContentBrowser, ELogLevel::Verbose, "Adding AssetTree \"%s\" to ContentBrowser Cache...", directory.c_str() );
 
 	const CString dirName = directory;
 	m_AssetTree.GetBase().Path = dirName;
@@ -69,11 +72,21 @@ void CBrowserInstance::AddCacheDir( const FileView_t& fileView )
 				|| extension == "pcx" || extension == "bmp" || extension == "dds" )
 			{
 				fileData.nType = EContentType::Material;
+			} else if ( extension == "json" ) {
+				fileData.nType = EContentType::JsonFile;
+			} else if ( extension == "csv" ) {
+				fileData.nType = EContentType::CsvFile;
+			} else if ( extension == "ini" ) {
+				fileData.nType = EContentType::IniFile;
+			} else if ( extension == "xml" ) {
+				fileData.nType = EContentType::XmlFile;
+			} else if ( extension == "as" ) {
+				fileData.nType = EContentType::ScriptClass;
 			} else {
 				fileData.nType = EContentType::File;
 			}
 
-			SIRENGINE_LOG_LEVEL( ContentBrowser, ELogLevel::Info, "Added cached file data for \"%s\"", file.c_str() );
+			SIRENGINE_LOG_LEVEL( ContentBrowser, ELogLevel::Verbose, "Added cached file data for \"%s\"", file.c_str() );
 			m_FileDatas.try_emplace( file, fileData );
 		}
 //		g_pFileSystem->AddCacheDirectory( it.Path.c_str() );
@@ -96,12 +109,47 @@ void CBrowserInstance::Draw( void )
 
 	}
 	ImGui::SameLine();
-	if ( ImGui::Button( ICON_FA_ARROW_CIRCLE_LEFT ) ) {
-		
+
+	bool bPushedColor = false;
+	FileView_t *history = m_HistoryBuffer.GetBack();
+
+	if ( !m_HistoryBuffer.CanGoBack() ) {
+		bPushedColor = true;
+		ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0.90f, 0.90f, 0.90f, 1.0f ) );
+		ImGui::PushStyleColor( ImGuiCol_ButtonActive, ImVec4( 0.90f, 0.90f, 0.90f, 1.0f ) );
+		ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ImVec4( 0.90f, 0.90f, 0.90f, 1.0f ) );
+	}
+	if ( ImGui::Button( ICON_FA_ARROW_CIRCLE_LEFT ) && history ) {
+		m_HistoryBuffer.GoBack();
+		m_AssetTree.SetSelectedDir( history );
+	}
+	if ( bPushedColor ) {
+		ImGui::PopStyleColor( 3 );
+	} else if ( m_HistoryBuffer.CanGoBack() ) {
+		ITEM_TOOLTIP_STRING( "Go back to %s",
+			strstr( m_HistoryBuffer.GetBack()->Path.c_str(),
+			SIRENGINE_TEMP_VSTRING( "/%s", CProjectManager::Get()->GetProject()->GetName().c_str() ) ) );
 	}
 	ImGui::SameLine();
-	if ( ImGui::Button( ICON_FA_ARROW_CIRCLE_RIGHT ) ) {
 
+	bPushedColor = false;
+	history = m_HistoryBuffer.GetForward();
+	if ( !m_HistoryBuffer.CanGoForward() ) {
+		bPushedColor = true;
+		ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0.90f, 0.90f, 0.90f, 1.0f ) );
+		ImGui::PushStyleColor( ImGuiCol_ButtonActive, ImVec4( 0.90f, 0.90f, 0.90f, 1.0f ) );
+		ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ImVec4( 0.90f, 0.90f, 0.90f, 1.0f ) );
+	}
+	if ( ImGui::Button( ICON_FA_ARROW_CIRCLE_RIGHT ) && history ) {
+		m_HistoryBuffer.GoForward();
+		m_AssetTree.SetSelectedDir( history );
+	}
+	if ( bPushedColor ) {
+		ImGui::PopStyleColor( 3 );
+	} else if ( m_HistoryBuffer.CanGoForward() ) {
+		ITEM_TOOLTIP_STRING( "Go to %s",
+			strstr( m_HistoryBuffer.GetForward()->Path.c_str(),
+			SIRENGINE_TEMP_VSTRING( "/%s", CProjectManager::Get()->GetProject()->GetName().c_str() ) ) );
 	}
 	ImGui::SameLine();
 	if ( ImGui::Button( ICON_FA_FOLDER ) ) {
@@ -146,14 +194,37 @@ void CBrowserInstance::Draw( void )
 				for ( auto& file : pDirectory->FileList ) {
 					ImGui::PushID( file.c_str() );
 
-					RenderLib::Backend::IRenderTexture *pIcon;
+					CMaterial *pIcon;
 					const char *pFilePath = strstr( file.c_str(), CProjectManager::Get()->GetProject()->GetName().c_str() ) - 1;
 					const auto& fileInfo = m_FileDatas.find( file );
 
-					switch ( fileInfo->second.nType ) {
+					EContentType nType = EContentType::File;
+					uint64_t nDiskSize = 0;
+
+					if ( fileInfo != m_FileDatas.cend() ) {
+						nType = fileInfo->second.nType;
+						nDiskSize = fileInfo->second.nDiskSize;
+					}
+
+					pIcon = Cast<CMaterial>( CContentBrowser::Get().m_pDirectoryIcon );
+
+			/*
+					switch ( nType ) {
 					case EContentType::File:
 					default:
 						pIcon = CContentBrowser::Get().m_pFileIcon;
+						break;
+					case EContentType::IniFile:
+						pIcon = CContentBrowser::Get().m_pIniFileIcon;
+						break;
+					case EContentType::CsvFile:
+						pIcon = CContentBrowser::Get().m_pCsvFileIcon;
+						break;
+					case EContentType::JsonFile:
+						pIcon = CContentBrowser::Get().m_pJsonFileIcon;
+						break;
+					case EContentType::XmlFile:
+						pIcon = CContentBrowser::Get().m_pXmlFileIcon;
 						break;
 					case EContentType::Audio:
 						pIcon = CContentBrowser::Get().m_pAudioIcon;
@@ -162,6 +233,7 @@ void CBrowserInstance::Draw( void )
 						pIcon = CContentBrowser::Get().m_pMaterialIcon;
 						break;
 					};
+					*/
 
 					if ( ImGui::ImageButtonEx( ImGui::GetID( pIcon ), IMGUI_TEXTURE_ID( pIcon ),
 						{ ThumbnailSize.GetValue(), ThumbnailSize.GetValue() }, { 0, 0 }, { 1, 1 }, { 0, 0, 0, 0 }, { 1, 1, 1, 1 },
@@ -198,9 +270,24 @@ void CBrowserInstance::Draw( void )
 							ImGui::Text( "Resource Filepath Length: %lu/%lu", strlen( pFilePath ), MAX_RESOURCE_PATH );
 							ImGui::TextUnformatted( "Content Type: " );
 							ImGui::SameLine();
-							switch ( fileInfo->second.nType ) {
+							switch ( nType ) {
+							case EContentType::JsonFile:
+								ImGui::TextUnformatted( "JSon Data" );
+								break;
+							case EContentType::XmlFile:
+								ImGui::TextUnformatted( "XML Data" );
+								break;
+							case EContentType::IniFile:
+								ImGui::TextUnformatted( "Ini Data" );
+								break;
+							case EContentType::CsvFile:
+								ImGui::TextUnformatted( "CSV Data" );
+								break;
 							case EContentType::Audio:
 								ImGui::TextUnformatted( "Audio" );
+								break;
+							case EContentType::ScriptClass:
+								ImGui::TextUnformatted( "Script Class" );
 								break;
 							case EContentType::File:
 								ImGui::TextUnformatted( "Misc. File" );
@@ -209,11 +296,11 @@ void CBrowserInstance::Draw( void )
 								ImGui::TextUnformatted( "Animation" );
 								break;
 							};
-							ImGui::Text( "Disk Size: %lu", fileInfo->second.nDiskSize );
+							ImGui::Text( "Disk Size: %lu", nDiskSize );
 							ImGui::EndTooltip();
 						}
 					}
-					ImGui::TextUnformatted( pFilePath );
+					ImGui::TextWrapped( "%s", pFilePath );
 					ImGui::PopID();
 					ImGui::TableNextColumn();
 				}
@@ -224,7 +311,9 @@ void CBrowserInstance::Draw( void )
 						{ ThumbnailSize.GetValue(), ThumbnailSize.GetValue() }, { 0, 0 }, { 1, 1 }, { 0, 0, 0, 0 }, { 1, 1, 1, 1 },
 						ImGuiButtonFlags_PressedOnDoubleClick ) )
 					{
-						m_AssetTree.SetSelected( &directory );
+						SIRENGINE_LOG( "Setting directory to \"%s\"", directory.Path.c_str() );
+						m_AssetTree.SetSelectedDir( &directory );
+						m_HistoryBuffer.AddHistoryData( &directory );
 					}
 					if ( ImGui::IsItemClicked( ImGuiMouseButton_Right ) ) {
 						ImGui::OpenPopup( "Folder Utilities##ContentBrowserDirectoryUtilities" );

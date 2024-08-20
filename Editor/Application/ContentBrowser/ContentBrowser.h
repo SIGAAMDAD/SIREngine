@@ -6,7 +6,13 @@
 #include "../Application.h"
 #include <Engine/RenderLib/Backend/RenderTexture.h>
 #include "BrowserInstance.h"
-#include <EASTL/shared_ptr.h>
+#include <Engine/Core/ResourceDef.h>
+
+/*
+* TODO: rewrite the CBrowserInstance class so that we're only loading the
+* directory tree once and not reloading and reallocating (possibly) hundreds
+* of copies of the same filepaths
+*/
 
 namespace Valden::ContentBrowser {
 	class CContentBrowser : public IEditorWidget
@@ -29,10 +35,15 @@ namespace Valden::ContentBrowser {
 	private:
 		CVector<eastl::unique_ptr<CBrowserInstance>> m_Windows;
 
-		RenderLib::Backend::IRenderTexture *m_pDirectoryIcon;
-		RenderLib::Backend::IRenderTexture *m_pFileIcon;
-		RenderLib::Backend::IRenderTexture *m_pAudioIcon;
-		RenderLib::Backend::IRenderTexture *m_pMaterialIcon;
+		CResourceDef *m_pDirectoryIcon;
+		CResourceDef *m_pFileIcon;
+		CResourceDef *m_pAudioIcon;
+		CResourceDef *m_pMaterialIcon;
+
+		CResourceDef *m_pJsonFileIcon;
+		CResourceDef *m_pIniFileIcon;
+		CResourceDef *m_pCsvFileIcon;
+		CResourceDef *m_pXmlFileIcon;
 
 		static CContentBrowser g_ContentBrowser;
 	};

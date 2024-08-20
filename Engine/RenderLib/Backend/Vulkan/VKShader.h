@@ -17,11 +17,6 @@ namespace SIREngine::RenderLib::Backend::Vulkan {
         VKShader( const RenderShaderInit_t& shaderInfo );
         virtual ~VKShader() override;
 
-        virtual const char *GetName( void ) const override { return m_szName; }
-        virtual bool IsValid( void ) const override { return false; }
-        virtual void Reload( void ) override { }
-        virtual void Release( void ) override { }
-
         virtual RenderShaderType_t GetType( void ) const override
         { return m_nType; }
 

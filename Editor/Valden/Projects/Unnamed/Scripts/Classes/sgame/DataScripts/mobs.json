@@ -1,0 +1,119 @@
+{
+	"MobInfo": [
+		{
+			"Name": "Zurgut Grunt",
+			"Type": "mob_grunt",
+			"Health": 24,
+			"ArmorType": "None",
+			"SoundTolerance": 24.0,
+			"SoundRangeX": 8,
+			"SoundRangeY": 8,
+			"Width": 1.0,
+			"Height": 1.0,
+			"SightRadius": 5.2,
+			"SightRange": 10.0,
+			"DetectionRangeX": 8.0,
+			"DetectionRangeY": 8.0,
+			"WaitTics": 15,
+			"SpriteOffsetX": 0,
+			"SpriteOffsetY": 0,
+			"Sprite": "sprites/mobs/grunt",
+			"WakeupSfx": "sfx/mobs/detection.ogg",
+			"PainSfx": "sfx/mobs/pain0.wav",
+			"DieSfx": "sfx/mobs/die1.ogg",
+			"MoveSfx": "sfx/mobs/grunt_move.ogg",
+			"Flags": "None",
+			"Speed": [ 1.75, 1.75, 5.5 ],
+			"AttackData": [
+				{
+					"Id": "MOB_GRUNT_ATTACK_BOMB",
+					"Type": "Melee",
+					"Method": "AreaOfEffect",
+					"Damage": 60.0,
+					"Range": 15.0,
+					"Effects": "sgame.effect_entity_stun",
+					"CanParry": false,
+					"SpriteOffsetX": 0,
+					"SpriteOffsetY": 0,
+					"Cooldown": 0,
+					"Duration": 1000,
+					"Sprite": "sprites/mobs/grunt"
+				},
+				{
+					"Id": "MOB_GRUNT_ATTACK_HAMMERTIME",
+					"Type": "Melee",
+					"Method": "AreaOfEffect",
+					"Damage": 40.0,
+					"Range": 5.0,
+					"State": "FightMelee",
+					"CanParry": true,
+					"SpriteOffsetX": 0,
+					"SpriteOffsetY": 0,
+					"Cooldown": 1000,
+					"Duration": 1000,
+					"Sprite": "sprites/mobs/grunt"
+				}
+			]
+		},
+		{
+			"Name": "Mercenary",
+			"Type": "mob_mercenary",
+			"Health": 50,
+			"ArmorType": "Light",
+			"Width": 1.0,
+			"Height": 1.0,
+			"WaitTics": 15,
+			"SpriteOffsetX": 0,
+			"SpriteOffsetY": 0,
+			"Sounds": {
+				"Wakeup": "sfx/mobs/detection.ogg",
+				"Pain": "sfx/mobs/pain.ogg",
+				"Die": "sfx/mobs/die0.ogg"
+			},
+			"Sprite": "sprites/mobs/mercenary",
+			"Flags": "None",
+			"Speed": [ 1.0, 1.0, 2.0 ],
+			"Detection": {
+				"SightRadius": 3.5,
+				"SightRange": 13.0,
+				"DetectionRangeX": 8.0,
+				"DetectionRangeY": 8.0,
+				"SoundTolerance": 14.0,
+				"SoundRangeX": 10,
+				"SoundRangeY": 10
+			},
+			"AttackData": [
+				{
+					"Id": "MOB_MERC_ATTACK_SLAP",
+					"Type": "Melee",
+					"Method": "RayCast",
+					"Damage": 43.0,
+					"Range": 1.0,
+					"Effects": "sgame.effect_entity_stun",
+					"CanParry": true,
+					"State": "FightMelee",
+					"SpriteOffsetX": 0,
+					"SpriteOffsetY": 0,
+					"Cooldown": 2000,
+					"Duration": 1000,
+					"Sprite": "sprites/mobs/mercenary"
+				},
+				{
+					"Id": "MOB_MERC_ATTACK_SHOOT",
+					"Type": "Missile",
+					"Method": "Hitscan",
+					"Damage": 10.0,
+					"Range": 15.0,
+					"BulletType": "Shell",
+					"BulletCount": 5,
+					"CanParry": true,
+					"SpriteOffsetX": 0,
+					"SpriteOffsetY": 0,
+					"Cooldown": 2000,
+					"Duration": 2000,
+					"Sprite": "sprites/mobs/mercenary"
+				}
+			]
+		}
+	]
+}

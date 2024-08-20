@@ -51,8 +51,6 @@ namespace SIREngine::RenderLib::Backend::OpenGL {
 		char m_szRendererString[1024];
 		char m_szVendorString[1024];
 
-//		SDL_GLContext m_pRenderContext;
-//		SDL_GLContext m_pLoadContext;
 		SDL_GLContext m_pGLContext;
 
 //		CTagArenaAllocatorTemplate<char> m_ContainerAllocator;

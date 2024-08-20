@@ -13,6 +13,7 @@ namespace SIREngine::RenderLib::Backend {
 	class CImageLoader
 	{
 	public:
+		CImageLoader( const uint8_t *pBuffer, uint64_t nSize );
 		CImageLoader( void )
 			: m_nWidth( 0 ), m_nHeight( 0 ), m_nSamples( 0 )
 		{ }
@@ -55,20 +56,23 @@ namespace SIREngine::RenderLib::Backend {
 		SIRENGINE_FORCEINLINE size_t GetSize( void ) const
 		{ return m_ImageBuffer.size(); }
 
+		bool Load( const uint8_t *pBuffer, uint64_t nSize );
 		bool Load( const FileSystem::CFilePath& filePath );
 	private:
-		static bool LoadJpeg( const FileSystem::CMemoryFile& fileBuffer, CVector<uint8_t>& outBuffer,
+		/*
+		static bool LoadJpeg( const uint8_t *fileBuffer, uint64_t nSize, CVector<uint8_t>& outBuffer,
 			uint32_t& nWidth, uint32_t& nHeight, uint32_t& nSamples );
-		static bool LoadPNG( const FileSystem::CMemoryFile& fileBuffer, CVector<uint8_t>& outBuffer,
+		static bool LoadPNG( const uint8_t *fileBuffer, uint64_t nSize, CVector<uint8_t>& outBuffer,
 			uint32_t& nWidth, uint32_t& nHeight, uint32_t& nSamples );
-		static bool LoadTGA( const FileSystem::CMemoryFile& fileBuffer, CVector<uint8_t>& outBuffer,
+		static bool LoadTGA( const uint8_t *fileBuffer, uint64_t nSize, CVector<uint8_t>& outBuffer,
 			uint32_t& nWidth, uint32_t& nHeight, uint32_t& nSamples );
-		static bool LoadPCX( const FileSystem::CMemoryFile& fileBuffer, CVector<uint8_t>& outBuffer,
+		static bool LoadPCX( const uint8_t *fileBuffer, uint64_t nSize, CVector<uint8_t>& outBuffer,
 			uint32_t& nWidth, uint32_t& nHeight, uint32_t& nSamples );
-		static bool LoadBMP( const FileSystem::CMemoryFile& fileBuffer, CVector<uint8_t>& outBuffer,
+		static bool LoadBMP( const uint8_t *fileBuffer, uint64_t nSize, CVector<uint8_t>& outBuffer,
 			uint32_t& nWidth, uint32_t& nHeight, uint32_t& nSamples );
-		static bool LoadSVG( const FileSystem::CMemoryFile& fileBuffer, CVector<uint8_t>& outBuffer,
+		static bool LoadSVG( const uint8_t *fileBuffer, uint64_t nSize, CVector<uint8_t>& outBuffer,
 			uint32_t& nWidth, uint32_t& nHeight, uint32_t& nSamples );
+		*/
 
 		CVector<uint8_t> m_ImageBuffer;
 		uint32_t m_nWidth;

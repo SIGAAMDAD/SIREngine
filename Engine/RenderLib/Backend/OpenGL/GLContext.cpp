@@ -151,17 +151,17 @@ GLContext::~GLContext()
 void GLContext::Init( void )
 {
 #if !defined(SIRENGINE_BUILD_RENDERLIB_GLFW3)
-	m_pGLContext = SDL_GL_CreateContext( m_pWindow );
-	if ( !m_pGLContext ) {
-		SIRENGINE_ERROR( "SDL_GL_CreateContext failed: %s", SDL_GetError() );
-	}
-	SIRENGINE_LOG_LEVEL( RenderBackend, ELogLevel::Info, "Created SDL2 OpenGL Context" );
-
-	SDL_GL_MakeCurrent( m_pWindow, m_pGLContext );
-
 	SDL_GL_SetAttribute( SDL_GL_DEPTH_SIZE, 24 );
 	SDL_GL_SetAttribute( SDL_GL_STENCIL_SIZE, 8 );
 	SDL_GL_SetAttribute( SDL_GL_DOUBLEBUFFER, 1 );
+	SDL_GL_SetAttribute( SDL_GL_ACCELERATED_VISUAL, 1 );
+	SDL_GL_SetAttribute( SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1 );
+
+	m_pGLContext = SDL_GL_CreateContext( m_pWindow );
+	if ( !m_pGLContext ) {
+		SIRENGINE_ERROR( "SDL_GL_CreateContext (RenderContext) failed: %s", SDL_GetError() );
+	}
+	SIRENGINE_LOG_LEVEL( RenderBackend, ELogLevel::Info, "Created SDL2 OpenGL Context" );
 
 	if ( r_GLES.GetValue() ) {
 		SDL_GL_SetAttribute( SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES );
@@ -172,6 +172,8 @@ void GLContext::Init( void )
 		SDL_GL_SetAttribute( SDL_GL_CONTEXT_MAJOR_VERSION, r_GLVersionMajor.GetValue() );
 		SDL_GL_SetAttribute( SDL_GL_CONTEXT_MINOR_VERSION, r_GLVersionMinor.GetValue() );
 	}
+
+	SDL_GL_MakeCurrent( m_pWindow, m_pGLContext );
 #else
 	glfwInitHint( GLFW_DOUBLEBUFFER, GLFW_TRUE );
 	glfwInitHint( GLFW_DEPTH_BITS, 24 );
@@ -215,6 +217,8 @@ void GLContext::Init( void )
 	GetGPUExtensionList();
 
 	CheckExtensionsSupport();
+
+	m_Textures.reserve( 2048 );
 }
 
 void GLContext::Shutdown( void )
@@ -259,9 +263,9 @@ void GLContext::BeginFrame( void )
 
 void GLContext::SwapBuffers( void )
 {
+	SDL_GL_MakeCurrent( m_pWindow, m_pGLContext );
 	nglFlush();
 #if !defined(SIRENGINE_BUILD_RENDERLIB_GLFW3)
-	SDL_GL_MakeCurrent( m_pWindow, m_pGLContext );
 	SDL_GL_SwapWindow( m_pWindow );
 #else
 	glfwSwapBuffers( m_pWindow );
@@ -321,12 +325,12 @@ void GLContext::GetGPUExtensionList( void )
 
 void *GLContext::Alloc( size_t nBytes, size_t nAlignment )
 {
-	return malloc( nBytes );
+	return Mem_Alloc( nBytes );
 }
 
 void GLContext::Free( void *pBuffer )
 {
-	free( pBuffer );
+	Mem_Free( pBuffer );
 }
 
 const GPUMemoryUsage_t GLContext::GetMemoryUsage( void )
@@ -367,7 +371,7 @@ IRenderBuffer *GLContext::AllocateBuffer( GPUBufferType_t nType, GPUBufferUsage_
 
 IRenderTexture *GLContext::AllocateTexture( const TextureInit_t& textureInfo )
 {
-	return new ( Alloc( sizeof( GLTexture ) ) ) GLTexture( textureInfo );
+	return m_Textures.try_emplace( textureInfo.filePath ).first->second = new ( Alloc( sizeof( GLTexture ) ) ) GLTexture( textureInfo );
 }
 
 };

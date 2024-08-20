@@ -36,6 +36,8 @@ namespace SIREngine::FileSystem {
 			}
 			return NULL;
 		}
+		SIRENGINE_FORCEINLINE const CHashMap<CFilePath, CFileCache *>& GetFileCache( void ) const
+		{ return m_FileCache; }
 
 		CFileWriter *OpenFileWriter( const CFilePath& filePath );
 		CFileReader *OpenFileReader( const CFilePath& filePath );
@@ -56,11 +58,9 @@ namespace SIREngine::FileSystem {
 		CFilePath m_ResourcePath;
 		CFilePath m_ConfigPath;
 
-		eastl::unordered_map<CFilePath, CFileCache *> m_FileCache;
+		CHashMap<CFilePath, CFileCache *> m_FileCache;
 
-		eastl::unordered_map<CFilePath, CFileList *> m_DirectoryCache;
-
-		SearchPath_t *m_pSearchPaths;
+		CHashMap<CFilePath, CFileList *> m_DirectoryCache;
 
 		static uint64_t nFileSystemTag;
 		static uint64_t nDirectoryCacheTag;

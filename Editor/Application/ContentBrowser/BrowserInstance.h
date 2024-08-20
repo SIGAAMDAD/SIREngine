@@ -5,7 +5,7 @@
 
 #include "../Application.h"
 #include "FileView.h"
-#include <EASTL/shared_ptr.h>
+#include "BrowserHistory.h"
 
 namespace Valden::ContentBrowser {
 	typedef struct ViewFavorite {
@@ -22,6 +22,12 @@ namespace Valden::ContentBrowser {
 		Material,
 		Audio,
 		Animation,
+		ScriptClass,
+		DataFile,
+		JsonFile,
+		XmlFile,
+		CsvFile,
+		IniFile
 	};
 
 	typedef struct FileInfo {
@@ -52,10 +58,11 @@ namespace Valden::ContentBrowser {
 
 		void DrawDirectoryTree( FileView_t& fileView );
 
+		CBrowserHistory m_HistoryBuffer;
 		CVector<ViewFavorite_t> m_Favorites;
 		CFileView m_AssetTree;
 
-		eastl::unordered_map<CString, FileInfo_t> m_FileDatas;
+		CHashMap<CString, FileInfo_t> m_FileDatas;
 
 		ImVec2 m_MousePopupPosition;
 		CString *m_pPopupFile;

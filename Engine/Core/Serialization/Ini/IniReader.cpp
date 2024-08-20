@@ -107,7 +107,7 @@ bool CIniSerializer::GetBool( const CString& section, const CString& name ) cons
 
 bool CIniSerializer::HasSection( const CString& section ) const
 {
-    eastl::unordered_map<CString, eastl::unordered_map<CString, CString>>::const_iterator pos = m_Values.find( section );
+    CHashMap<CString, CHashMap<CString, CString>>::const_iterator pos = m_Values.find( section );
     
     if ( pos == m_Values.end() ) {
         return false;

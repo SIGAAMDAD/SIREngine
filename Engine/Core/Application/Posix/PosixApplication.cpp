@@ -237,6 +237,7 @@ void CPosixApplication::ThreadJoin( void *pThread, CThread *pObject, uint64_t nT
 
 	SIRENGINE_LOG( "Joining thread '%s'...", pObject->GetName().c_str() );
 	pthread_timedjoin_np( *(pthread_t *)pThread, &pReturn, &ts );
+//	pthread_join( *(pthread_t *)pThread, &pReturn );
 	SIRENGINE_LOG( "Thread joined." );
 }
 
@@ -467,7 +468,7 @@ struct FProcField
 	uint64_t *Addr = NULL;
 	uint32_t NameLen = 0;
 
-	FProcField( const char *NameIn, uint64_t *AddrIn)
+	FProcField( const char *NameIn, uint64_t *AddrIn )
 		: Name(NameIn), Addr(AddrIn)
 	{
 		NameLen = strlen( Name );

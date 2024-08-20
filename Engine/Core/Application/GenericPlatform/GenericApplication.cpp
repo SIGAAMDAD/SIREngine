@@ -5,6 +5,7 @@
 #include <Engine/Core/FileSystem/FileSystem.h>
 #include <Engine/Core/Events/EventManager.h>
 #include <Engine/Core/Input/InputManager.h>
+#include <Engine/Core/ResourceManager.h>
 
 #if defined(SIRENGINE_BUILD_EDITOR)
 #include <Editor/Application/Application.h>
@@ -400,7 +401,6 @@ IGenericApplication::~IGenericApplication()
 
 void IGenericApplication::Shutdown( void )
 {
-	
 	g_bExitApp.store( true );
 
 	CConsoleManager::Get().SaveConfig( "Config/EngineData.ini" );
@@ -410,9 +410,11 @@ void IGenericApplication::Shutdown( void )
 	}
 
 	delete g_pRenderLib;
-	delete g_pFileSystem;
 
 	CLogManager::ShutdownLogger();
+
+	delete g_pFileSystem;
+
 	Mem_Shutdown();
 
 	_Exit( EXIT_SUCCESS );
@@ -585,6 +587,8 @@ void IGenericApplication::Init( void )
 	//
 	g_pFileSystem = new FileSystem::CFileSystem();
 
+	CResourceManager::Get().BeginLoad();
+
 	SIRENGINE_LOG( "SIREngine MetaData:" );
 	SIRENGINE_LOG( "  Engine Version: %s", SIRENGINE_VERSION_STRING );
 	SIRENGINE_LOG( "  Compile Info: %s", GetCompileString() );
@@ -638,10 +642,15 @@ void IGenericApplication::Init( void )
 	SIRENGINE_LOG( "  Used Physical RAM: %s", SIREngine_GetMemoryString( stats.nUsedPhysical ) );
 	SIRENGINE_LOG( "  Used Virtual RAM: %s", SIREngine_GetMemoryString( stats.nUsedVirtual ) );
 
+	CResourceManager::Get().EndLoad();
+
+	// submit texture data to the gpu
+	g_pRenderLib->FinalizeTextures();
 }
 
 void IGenericApplication::ShowErrorWindow( const char *pErrorString )
 {
+#if 1
 	ZUIWindow window( "Fatal Error" );
 	ZUIVBox vbox;
 	ZUILabel label( pErrorString );
@@ -657,6 +666,22 @@ void IGenericApplication::ShowErrorWindow( const char *pErrorString )
 
 	exitButton.GrabDefault();
 	window.RunModal();
+#else
+    int buttonid = 0;
+    SDL_MessageBoxData boxData = { 0 };
+    SDL_MessageBoxButtonData buttonData[] = {
+        { SDL_MESSAGEBOX_BUTTON_RETURNKEY_DEFAULT, 1, "OK"      },
+        { SDL_MESSAGEBOX_BUTTON_ESCAPEKEY_DEFAULT, 0, "Cancel"  },
+    };
+
+    boxData.window = RenderLib::Backend::GetRenderContext()->GetWindowHandle();
+    boxData.title = "Internal Engine Error";
+    boxData.message = pErrorString;
+    boxData.numbuttons = 1;
+    boxData.buttons = buttonData;
+
+    SDL_ShowMessageBox( &boxData, &buttonid );
+#endif
 }
 
 void IGenericApplication::Run( void )

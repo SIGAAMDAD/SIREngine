@@ -2,7 +2,7 @@
 #define __SIRENGINE_TAG_ARENA_ALLOCATOR_H__
 
 #if defined(SIRENGINE_PRAGMA_ONCE_SUPPORTED)
-    #pragma once
+	#pragma once
 #endif
 
 #include "../Memory.h"
@@ -37,11 +37,11 @@
 #define TAG_STATIC 1
 
 typedef enum {
-    // sets a deallocated block's memory to scramble to weed out bugs
-    ARENA_SCRAMBLE_ON_DEALLOC   = 0x10,
-    
-    // initializes all allocations to 0
-    ARENA_INIT_ON_ALLOC         = 0x20,
+	// sets a deallocated block's memory to scramble to weed out bugs
+	ARENA_SCRAMBLE_ON_DEALLOC   = 0x10,
+	
+	// initializes all allocations to 0
+	ARENA_INIT_ON_ALLOC         = 0x20,
 } ArenaAllocOptions_t;
 
 typedef struct memzone_s memzone_t;
@@ -49,42 +49,42 @@ typedef struct memzone_s memzone_t;
 class CTagArenaAllocator : public IMemAlloc
 {
 public:
-    CTagArenaAllocator( const char *pName, uint64_t nSize, uint64_t nFlags = ARENA_INIT_ON_ALLOC | ARENA_SCRAMBLE_ON_DEALLOC );
-    virtual ~CTagArenaAllocator() override;
+	CTagArenaAllocator( const char *pName, uint64_t nSize, uint64_t nFlags = ARENA_INIT_ON_ALLOC | ARENA_SCRAMBLE_ON_DEALLOC );
+	virtual ~CTagArenaAllocator() override;
 
 	virtual void Shutdown( void ) override;
 
-    // Release versions
+	// Release versions
 	virtual void *Alloc( size_t nSize ) override;
 	virtual void *Realloc( void *pMemory, size_t nSize ) override;
 	virtual void Free( void *pMemory ) override;
 
-    virtual void *Alloc( size_t nSize, uint64_t nTag );
+	virtual void *Alloc( size_t nSize, uint64_t nTag );
 	virtual void *Realloc( void *pMemory, size_t nSize, uint64_t nTag );
 
 	// Debug versions
-    virtual void *Alloc( size_t nSize, const char *pFileName, uint64_t nLineNumber ) override;
-    virtual void *Realloc( void *pMemory, size_t nSize, const char *pFileName, uint64_t nLineNumber ) override;
-    virtual void  Free( void *pMemory, const char *pFileName, uint64_t nLineNumber ) override;
+	virtual void *Alloc( size_t nSize, const char *pFileName, uint64_t nLineNumber ) override;
+	virtual void *Realloc( void *pMemory, size_t nSize, const char *pFileName, uint64_t nLineNumber ) override;
+	virtual void  Free( void *pMemory, const char *pFileName, uint64_t nLineNumber ) override;
 
-    virtual size_t GetAllocSize( void *pMemory ) override;
+	virtual size_t GetAllocSize( void *pMemory ) override;
 
-    virtual void DumpStats( void ) override;
+	virtual void DumpStats( void ) override;
 	virtual void DumpStatsFileBase( char const *pchFileBase ) override;
 
-    virtual bool IsDebugHeap( void ) const override;
+	virtual bool IsDebugHeap( void ) const override;
 
-    virtual void GetMemoryStatus( size_t *pUsedMemory, size_t *pFreeMemory ) override;
+	virtual void GetMemoryStatus( size_t *pUsedMemory, size_t *pFreeMemory ) override;
 
-    uint64_t AllocateTagGroup( const char *pName );
-    void ClearTagGroup( uint64_t nTag );
+	uint64_t AllocateTagGroup( const char *pName );
+	void ClearTagGroup( uint64_t nTag );
 
-    static int nMinFragment;
-    static uint64_t nPageSize;
+	static int nMinFragment;
+	static uint64_t nPageSize;
 private:
-    const char *m_pName;
-    memzone_t *m_pZone;
-    eastl::unordered_map<uint64_t, CString> m_TagList;
+	const char *m_pName;
+	memzone_t *m_pZone;
+	eastl::unordered_map<uint64_t, CString> m_TagList;
 };
 
 #endif

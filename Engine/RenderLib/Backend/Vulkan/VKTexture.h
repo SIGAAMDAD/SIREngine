@@ -19,11 +19,14 @@ namespace SIREngine::RenderLib::Backend::Vulkan {
         virtual ~VKTexture();
 
         virtual void StreamBuffer( void ) override;
-    private:
-        virtual void Upload( const TextureInit_t& textureInfo ) override;
 
+        virtual void LoadFile( const TextureInit_t& textureInfo ) override;
+		virtual void Upload( void ) override;
+    private:
         VkImage m_hImage;
         VmaAllocation m_hImageMemory;
+        bool32 m_bIsGPUOnly;
+        TextureImageFormat_t m_nImageFormat;
 
         CImageLoader m_ImageData;
     };

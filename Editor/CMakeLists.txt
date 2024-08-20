@@ -30,15 +30,18 @@ link_directories(${GTK3_LIBRARY_DIRS} ${PANGO_LIBRARY_DIRS} ${SDL2_LIBRARY_DIRS}
 
 # Source files
 set(SOURCE_FILES
+	scriptbuilder/scriptbuilder.cpp
 	Application/Project/ProjectData.cpp
 	Application/Project/ProjectManager.cpp
 	Application/Project/ProjectLoader.cpp
 	Application/ContentBrowser/ContentBrowser.cpp
+	Application/ContentBrowser/BrowserHistory.cpp
 	Application/ContentBrowser/BrowserInstance.cpp
 	Application/ContentBrowser/FileView.cpp
 	Application/ScriptLib/ScriptCompiler.cpp
 	Application/ScriptLib/ScriptObject.cpp
 	Application/ScriptLib/ScriptTextEditor.cpp
+	Application/ScriptLib/ScriptNameSpaces.cpp
 	Application/SceneView.cpp
 	Application/StatsWindow.cpp
 	Application/Application.cpp
@@ -57,6 +60,8 @@ set(SOURCE_FILES
 	../Engine/Memory/Allocators/VirtualStackAllocator.cpp
 	../Engine/Memory/Backend/TagArenaAllocator.cpp
 	../Engine/Memory/Memory.cpp
+	../Engine/Core/ResourceManager.cpp
+	../Engine/Core/ResourceDef.cpp
 	../Engine/Core/FileSystem/FileReader.cpp
 	../Engine/Core/FileSystem/FileWriter.cpp
 	../Engine/Core/FileSystem/FileSystem.cpp
@@ -74,12 +79,6 @@ set(SOURCE_FILES
 	../Engine/Core/ConsoleManager.cpp
 	../Engine/RenderLib/DrawBuffer.cpp
 	../Engine/RenderLib/RenderMain.cpp
-	../Engine/RenderLib/Backend/ImageLib/LoadSVG.cpp
-	../Engine/RenderLib/Backend/ImageLib/LoadPNG.cpp
-	../Engine/RenderLib/Backend/ImageLib/LoadBMP.cpp
-	../Engine/RenderLib/Backend/ImageLib/LoadJpeg.cpp
-	../Engine/RenderLib/Backend/ImageLib/LoadTGA.cpp
-	../Engine/RenderLib/Backend/ImageLib/LoadPCX.cpp
 	../Engine/RenderLib/Backend/ImageLoader.cpp
 	../Engine/RenderLib/Backend/RenderContext.cpp
 	../Engine/RenderLib/Backend/RenderShaderPipeline.cpp

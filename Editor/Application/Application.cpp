@@ -549,7 +549,7 @@ void CEditorApplication::DrawViewport( void )
 		}
 		if ( ImGui::BeginMenu( ICON_FA_PLUS_SQUARE ) ) {
 			if ( ImGui::MenuItem( "Add Script Class" ) ) {
-				CScriptCompiler::Get().AddClass();
+				CSceneView::Get()->AddObject( "New Class", ESceneObjectType::ScriptClass );
 			}
 			ImGui::EndMenu();
 		}
@@ -660,9 +660,11 @@ void CEditorApplication::SaveProject( void )
 
 	SIRENGINE_LOG( "Writing %lu ScriptClasses...", CScriptCompiler::GetObjects().size() );
 	for ( auto& it : CScriptCompiler::GetObjects() ) {
-		it.Save();
+		it->Save();
 	}
 	CTextEditorManager::Get().Update();
+
+//	CScriptCompiler::Get().Compile();
 
 	SIRENGINE_LOG( "Done." );
 }

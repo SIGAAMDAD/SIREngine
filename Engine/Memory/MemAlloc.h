@@ -110,6 +110,10 @@ struct MemoryAllocator
 	{ }
 };
 
+#if !SIRENGINE_FORCE_ANSI_ALLOCATOR
+	#define SIRENGINE_REPLACE_NEW_AND_DELETE
+#endif
+
 #if defined(SIRENGINE_REPLACE_NEW_AND_DELETE) && !defined(SIRENGINE_NEW_AND_DELETE_OVERRIDE)
 #include <new>
 #undef new

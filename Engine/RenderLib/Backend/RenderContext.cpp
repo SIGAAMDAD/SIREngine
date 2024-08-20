@@ -158,7 +158,7 @@ IRenderContext::IRenderContext( const ApplicationInfo_t& appInfo )
 	SIRENGINE_LOG_LEVEL( RenderBackend, ELogLevel::Info, " ContextType: %s", GetContextType( windowFlags ) );
 
 #if defined(SIRENGINE_BUILD_EDITOR)
-	windowFlags |= SDL_WINDOW_SHOWN;
+	windowFlags |= SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE;
 #endif
 
 	m_pWindow = SDL_CreateWindow(

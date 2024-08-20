@@ -21,6 +21,11 @@ namespace Valden {
 		bool Load( const CString& projectName );
 		bool Load( const SIREngine::FileSystem::CFilePath& projectName );
 
+		SIRENGINE_FORCEINLINE const char *BuildProjectPath( const char *pDirectory, const char *pFileName ) const
+		{ return SIRENGINE_TEMP_VSTRING( "Valden/Projects/%s/%s/%s", GetProject()->GetName().c_str(), pDirectory, pFileName ); }
+		SIRENGINE_FORCEINLINE const char *BuildProjectPath( const char *pDirectory ) const
+		{ return SIRENGINE_TEMP_VSTRING( "Valden/Projects/%s/%s", GetProject()->GetName().c_str(), pDirectory ); }
+
 		SIRENGINE_FORCEINLINE const eastl::shared_ptr<CProjectData>& GetProject( void ) const
 		{ return m_pCurrentProject; }
 

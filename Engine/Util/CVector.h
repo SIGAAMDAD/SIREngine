@@ -12,7 +12,7 @@
 //template<typename T, typename AllocatorType = UtlMallocAllocator>
 //using CVector = eastl::vector<T, AllocatorType>;
 
-template<typename T, typename AllocatorType = eastl::allocator>
+template<typename T, typename AllocatorType = MemoryAllocator<char>>
 class CVector : public eastl::vector<T, AllocatorType>
 {
 public:

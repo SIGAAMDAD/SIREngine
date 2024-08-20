@@ -6,6 +6,8 @@ using namespace SIREngine::Application;
 
 namespace SIREngine::FileSystem {
 
+SIRENGINE_DEFINE_LOG_CATEGORY( FileSystem, ELogLevel::Info );
+
 CFileSystem::CFileSystem( void )
 {
 	InitDirectoryCache();
@@ -18,7 +20,8 @@ CFileSystem::~CFileSystem()
 void CFileSystem::AddCacheDirectory( const CFilePath& directory )
 {
 	if ( m_FileCache.find( directory ) != m_FileCache.end() ) {
-		SIRENGINE_WARNING( "CFileSystem::AddCacheDirectory: directory \"%s\" already in cache.", directory.c_str() );
+		SIRENGINE_LOG_LEVEL( FileSystem, ELogLevel::Warning, "CFileSystem::AddCacheDirectory: directory \"%s\" already in cache.",
+			directory.c_str() );
 		return;
 	}
 	m_FileCache.try_emplace( directory, new CFileCache( directory ) );
@@ -28,7 +31,7 @@ void CFileSystem::LoadFileTree( const FileSystem::CFilePath& directory )
 {
 	CFileList *pDirectory;
 
-	SIRENGINE_LOG( "Loading directory tree \"%s\"", directory.c_str() );
+	SIRENGINE_LOG_LEVEL( FileSystem, ELogLevel::Info, "Loading directory tree \"%s\"", directory.c_str() );
 
 	const CVector<CFilePath> fileList = eastl::move( g_pApplication->ListFiles( directory, false ) );
 
@@ -37,9 +40,10 @@ void CFileSystem::LoadFileTree( const FileSystem::CFilePath& directory )
 	m_DirectoryCache.try_emplace( directory, pDirectory );
 
 	const CVector<CFilePath> subDirs = eastl::move( g_pApplication->ListFiles( directory, true ) );
-	m_DirectoryCache.reserve( subDirs.size() );
+	pDirectory->m_SubDirs = eastl::move( subDirs );
+	m_DirectoryCache.reserve( pDirectory->m_SubDirs.size() );
 
-	for ( const auto& it : subDirs ) {
+	for ( const auto& it : pDirectory->m_SubDirs ) {
 		// recurse
 		LoadFileTree( it );
 	}
@@ -49,8 +53,8 @@ void CFileSystem::InitDirectoryCache( void )
 {
 	const char *pszSearchPath;
 
-	SIRENGINE_LOG( "Initializing Directory Cache..." );
-	SIRENGINE_LOG( "GameDirectory: %s", g_pApplication->GetGamePath().c_str() );
+	SIRENGINE_LOG_LEVEL( FileSystem, ELogLevel::Info, "Initializing Directory Cache..." );
+	SIRENGINE_LOG_LEVEL( FileSystem, ELogLevel::Info, "GameDirectory: %s", g_pApplication->GetGamePath().c_str() );
 
 	m_CurrentPath = g_pApplication->GetGamePath();
 
@@ -58,7 +62,7 @@ void CFileSystem::InitDirectoryCache( void )
 
 	m_DirectoryCache.reserve( dirList.size() );
 
-	SIRENGINE_LOG( "Got %lu Directories.", dirList.size() );
+	SIRENGINE_LOG_LEVEL( FileSystem, ELogLevel::Info, "Got %lu Directories.", dirList.size() );
 
 	for ( const auto& it : dirList ) {
 		LoadFileTree( it );
@@ -89,7 +93,7 @@ CFileWriter *CFileSystem::OpenFileWriter( const CFilePath& filePath )
 
 	pSearchPath = BuildSearchPath( m_CurrentPath, filePath.c_str() );
 
-	SIRENGINE_NOTIFICATION( "Attempting file open at \"%s\" for CFileWriter", pSearchPath );
+	SIRENGINE_LOG_LEVEL( FileSystem, ELogLevel::Verbose, "Attempting file open at \"%s\" for CFileWriter", pSearchPath );
 
 	hFile = new CFileWriter( pSearchPath );
 	if ( hFile->IsOpen() ) {
@@ -111,7 +115,7 @@ void CFileSystem::LoadFile( const CFilePath& filePath, uint8_t **pOutBuffer, uin
 {
 	FileCacheEntry_t *pCacheEntry;
 
-	SIRENGINE_LOG( "Loading CacheFile \"%s\"...", filePath.c_str() );
+	SIRENGINE_LOG_LEVEL( FileSystem, ELogLevel::Info, "Loading CacheFile \"%s\"...", filePath.c_str() );
 
 	for ( const auto& it : m_FileCache ) {
 		pCacheEntry = it.second->GetFile( filePath );
@@ -138,7 +142,7 @@ CFileReader *CFileSystem::OpenFileReader( const CFilePath& filePath )
 	for ( const auto& it : m_DirectoryCache ) {
 		pSearchPath = BuildSearchPath( it.second->GetPath(), filePath.c_str() );
 
-		SIRENGINE_NOTIFICATION( "Attempting file open at \"%s\" for CFileReader", pSearchPath );
+		SIRENGINE_LOG_LEVEL( FileSystem, ELogLevel::Verbose, "Attempting file open at \"%s\" for CFileReader", pSearchPath );
 
 		if ( hFile.Open( pSearchPath ) ) {
 			break;
@@ -165,7 +169,7 @@ CFileList *CFileSystem::ListFiles( const CFilePath& directory, const char *pExte
 		
 		const auto& it = m_DirectoryCache.find( path );
 		if ( it == m_DirectoryCache.cend() ) {
-			SIRENGINE_WARNING( "Invalid search directory \"%s\"", path );
+			SIRENGINE_LOG_LEVEL( FileSystem, ELogLevel::Warning, "Invalid search directory \"%s\"", path );
 		}
 		return NULL;
 	}

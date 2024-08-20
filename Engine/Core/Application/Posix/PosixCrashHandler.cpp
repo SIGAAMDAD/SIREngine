@@ -24,22 +24,22 @@ static const char s_szForkError[] = "!!! Failed to fork debug process\n";
 static const char s_szExecError[] = "!!! Failed to exec debug process\n";
 
 static struct {
-    int signum;
-    pid_t pid;
-    int hasSigInfo;
-    siginfo_t siginfo;
-    char szBuffer[4096];
+	int signum;
+	pid_t pid;
+	int hasSigInfo;
+	siginfo_t siginfo;
+	char szBuffer[4096];
 } crash_info;
 
 static const struct {
-    const char *name;
-    int signum;
+	const char *name;
+	int signum;
 } signals[] = {
-    { "Segmentation fault", SIGSEGV },
-    { "Illegal instruction", SIGILL },
-    { "FPU exception", SIGFPE },
-    { "System BUS error", SIGBUS },
-    { NULL, 0 }
+	{ "Segmentation fault", SIGSEGV },
+	{ "Illegal instruction", SIGILL },
+	{ "FPU exception", SIGFPE },
+	{ "System BUS error", SIGBUS },
+	{ NULL, 0 }
 };
 
 static const struct {
@@ -102,8 +102,8 @@ static int (*cc_user_info)( char *, char * );
 
 extern "C" int I_FileAvailable( const char *filename )
 {
-    char szCommand[4096];
-    snprintf( szCommand, sizeof( szCommand ) - 1, "which %s >/dev/null 2>&1", filename );
+	char szCommand[4096];
+	snprintf( szCommand, sizeof( szCommand ) - 1, "which %s >/dev/null 2>&1", filename );
 
 	if ( FILE* f = popen( szCommand, "r" ) ) {
 		int status = pclose( f );
@@ -124,28 +124,28 @@ static void gdb_info( pid_t pid )
 	strcpy( respfile, "gdb-respfile-XXXXXX" );
 	if ( ( fd = mkstemp( respfile ) ) >= 0 && ( f = fdopen( fd, "w" ) ) != NULL ) {
 		fprintf( f, "attach %d\n"
-		           "shell echo \"\"\n"
-		           "shell echo \"* Loaded Libraries\"\n"
-		           "info sharedlibrary\n"
-		           "shell echo \"\"\n"
-		           "shell echo \"* Threads\"\n"
-		           "info threads\n"
-		           "shell echo \"\"\n"
-		           "shell echo \"* FPU Status\"\n"
-		           "info float\n"
-		           "shell echo \"\"\n"
-		           "shell echo \"* Registers\"\n"
-		           "info registers\n"
-		           "shell echo \"\"\n"
-		           "shell echo \"* Backtrace\"\n"
-		           "thread apply all backtrace full\n"
-		           "detach\n"
-		           "quit\n", pid );
+				   "shell echo \"\"\n"
+				   "shell echo \"* Loaded Libraries\"\n"
+				   "info sharedlibrary\n"
+				   "shell echo \"\"\n"
+				   "shell echo \"* Threads\"\n"
+				   "info threads\n"
+				   "shell echo \"\"\n"
+				   "shell echo \"* FPU Status\"\n"
+				   "info float\n"
+				   "shell echo \"\"\n"
+				   "shell echo \"* Registers\"\n"
+				   "info registers\n"
+				   "shell echo \"\"\n"
+				   "shell echo \"* Backtrace\"\n"
+				   "thread apply all backtrace full\n"
+				   "detach\n"
+				   "quit\n", pid );
 		fclose( f );
 
 		/* Run gdb and print process info. */
 		snprintf( cmd_buf, sizeof( cmd_buf ), "gdb --quiet --batch --command=%s", respfile );
-		SIRENGINE_LOG( "Executing: %s", cmd_buf );
+		printf( "Executing: %s\n", cmd_buf );
 		fflush( stdout );
 
 		system( cmd_buf );
@@ -158,7 +158,7 @@ static void gdb_info( pid_t pid )
 			close( fd );
 			remove( respfile );
 		}
-		SIRENGINE_LOG( "!!! Could not create gdb command file" );
+		printf( "!!! Could not create gdb command file\n" );
 	}
 	fflush( stdout );
 }
@@ -171,16 +171,16 @@ static backtrace_state *g_pBacktraceState = NULL;
 
 static void bt_error_callback( void *data, const char *msg, int errnum )
 {
-    SIRENGINE_WARNING( "libbacktrace ERROR: %d - %s", errnum, msg );
-    g_bBacktraceError = true;
+	SIRENGINE_WARNING( "libbacktrace ERROR: %d - %s", errnum, msg );
+	g_bBacktraceError = true;
 }
 
 static void bt_syminfo_callback( void *data, uintptr_t pc, const char *symname,
 								 uintptr_t symval, uintptr_t symsize )
 {
-    if ( g_bBacktraceError ) {
-        return;
-    }
+	if ( g_bBacktraceError ) {
+		return;
+	}
 
 	if ( symname != NULL ) {
 		int status;
@@ -206,9 +206,9 @@ static void bt_syminfo_callback( void *data, uintptr_t pc, const char *symname,
 
 static int bt_pcinfo_callback( void *data, uintptr_t pc, const char *filename, int lineno, const char *function )
 {
-    if ( g_bBacktraceError ) {
-        return 0;
-    }
+	if ( g_bBacktraceError ) {
+		return 0;
+	}
 
 	if ( data != NULL ) {
 		int *hadInfo = (int *)data;
@@ -248,7 +248,7 @@ static int bt_simple_callback( void *data, uintptr_t pc )
 {
 	int pcInfoWorked;
 
-    pcInfoWorked = 0;
+	pcInfoWorked = 0;
 	// if this fails, the executable doesn't have debug info, that's ok (=> use bt_error_dummy())
 	backtrace_pcinfo( g_pBacktraceState, pc, bt_pcinfo_callback, bt_error_dummy, &pcInfoWorked );
 	if ( !pcInfoWorked ) { // no debug info? use normal symbols instead
@@ -263,71 +263,71 @@ static int bt_simple_callback( void *data, uintptr_t pc )
 
 extern "C" void DumpStacktrace( void )
 {
-    if ( g_pBacktraceState != NULL ) {
-        backtrace_simple( g_pBacktraceState, 3, bt_simple_callback, bt_error_callback, NULL );
-    }
+	if ( g_pBacktraceState != NULL ) {
+		backtrace_simple( g_pBacktraceState, 3, bt_simple_callback, bt_error_callback, NULL );
+	}
 }
 
 void CPosixApplication::CatchSignal( int nSignum, siginfo_t *pSigInfo, void *pContext )
 {
-    pid_t debugPid;
-    int fd[2];
+	pid_t debugPid;
+	int fd[2];
 
-    // make sure the effective uid is the real uid
-    if ( getuid() != geteuid() ) {
-        raise( nSignum );
-        return;
-    }
+	// make sure the effective uid is the real uid
+	if ( getuid() != geteuid() ) {
+		raise( nSignum );
+		return;
+	}
 
-    g_pApplication->FileWrite( s_szFatalError, sizeof( s_szFatalError ) - 1, SIRENGINE_STDERR_HANDLE );
-    if ( pipe( fd ) == -1 ) {
-        g_pApplication->FileWrite( s_szPipeError, sizeof( s_szPipeError ) - 1, SIRENGINE_STDERR_HANDLE );
-        raise( nSignum );
-        return;
-    }
+	g_pApplication->FileWrite( s_szFatalError, sizeof( s_szFatalError ) - 1, SIRENGINE_STDERR_HANDLE );
+	if ( pipe( fd ) == -1 ) {
+		g_pApplication->FileWrite( s_szPipeError, sizeof( s_szPipeError ) - 1, SIRENGINE_STDERR_HANDLE );
+		raise( nSignum );
+		return;
+	}
 
-    crash_info.signum = nSignum;
-    crash_info.pid = getpid();
-    crash_info.hasSigInfo = !!pSigInfo;
-    if ( pSigInfo ) {
-        crash_info.siginfo = *pSigInfo;
-    }
-    if ( cc_user_info ) {
-        cc_user_info( crash_info.szBuffer, crash_info.szBuffer + sizeof( crash_info.szBuffer ) );
-    }
+	crash_info.signum = nSignum;
+	crash_info.pid = getpid();
+	crash_info.hasSigInfo = !!pSigInfo;
+	if ( pSigInfo ) {
+		crash_info.siginfo = *pSigInfo;
+	}
+	if ( cc_user_info ) {
+		cc_user_info( crash_info.szBuffer, crash_info.szBuffer + sizeof( crash_info.szBuffer ) );
+	}
 
-    switch ( ( debugPid = fork() ) ) {
-    case -1:
-        g_pApplication->FileWrite( s_szForkError, sizeof( s_szForkError ) - 1, SIRENGINE_STDERR_HANDLE );
-        raise( nSignum );
-        return;
-    case 0:
-        dup2( fd[0], STDIN_FILENO );
-        close( fd[0] );
-        close( fd[1] );
+	switch ( ( debugPid = fork() ) ) {
+	case -1:
+		g_pApplication->FileWrite( s_szForkError, sizeof( s_szForkError ) - 1, SIRENGINE_STDERR_HANDLE );
+		raise( nSignum );
+		return;
+	case 0:
+		dup2( fd[0], STDIN_FILENO );
+		close( fd[0] );
+		close( fd[1] );
 
-        execl( argv0, argv0, s_szCrashSwitch, NULL );
-        
-        g_pApplication->FileWrite( s_szExecError, sizeof( s_szExecError ) - 1, SIRENGINE_STDERR_HANDLE );
-        _exit( EXIT_FAILURE );
-    default:
+		execl( argv0, argv0, s_szCrashSwitch, NULL );
+		
+		g_pApplication->FileWrite( s_szExecError, sizeof( s_szExecError ) - 1, SIRENGINE_STDERR_HANDLE );
+		_exit( EXIT_FAILURE );
+	default:
 #if defined(SIRENGINE_PLATFORM_LINUX)
-        prctl( PR_SET_PTRACER, debugPid, 0, 0, 0 );
+		prctl( PR_SET_PTRACER, debugPid, 0, 0, 0 );
 #endif
-        g_pApplication->FileWrite( &crash_info, sizeof( crash_info ), (void *)(uintptr_t)fd[1] );
-        close( fd[0] );
-        close( fd[1] );
+		g_pApplication->FileWrite( &crash_info, sizeof( crash_info ), (void *)(uintptr_t)fd[1] );
+		close( fd[0] );
+		close( fd[1] );
 
-        // wait, we'll be killed when gdb is done
-        do {
-            int status;
-            if ( waitpid( debugPid, &status, 0 ) == debugPid && ( WIFEXITED( status ) || WIFSIGNALED( status ) ) ) {
-                // the debug process died before it could kill us
-                raise( nSignum );
-                break;
-            }
-        } while ( 1 );
-    };
+		// wait, we'll be killed when gdb is done
+		do {
+			int status;
+			if ( waitpid( debugPid, &status, 0 ) == debugPid && ( WIFEXITED( status ) || WIFSIGNALED( status ) ) ) {
+				// the debug process died before it could kill us
+				raise( nSignum );
+				break;
+			}
+		} while ( 1 );
+	};
 }
 
 static void sys_info( void )
@@ -343,7 +343,7 @@ static void crash_handler( const char *logfile )
 	int i;
 
 	if ( fread( &crash_info, sizeof( crash_info ), 1, stdin ) != 1 ) {
-		SIRENGINE_LOG( "!!! Failed to retrieve info from crashed process\n" );
+		printf( "!!! Failed to retrieve info from crashed process\n" );
 		exit( 1 );
 	}
 
@@ -370,9 +370,9 @@ static void crash_handler( const char *logfile )
 				if ( sigfpe_codes[i].code == crash_info.siginfo.si_code ) {
 					sigdesc = sigfpe_codes[i].name;
 					break;
-		    	}
-		    }
-		    break;
+				}
+			}
+			break;
 		case SIGILL:
 			for ( i = 0; sigill_codes[i].name; ++i ) {
 				if ( sigill_codes[i].code == crash_info.siginfo.si_code ) {
@@ -392,27 +392,27 @@ static void crash_handler( const char *logfile )
 		}
 	}
 
-    DumpStacktrace();
+	DumpStacktrace();
 
-	SIRENGINE_LOG( "%s (signal %i)", sigdesc, crash_info.signum );
+	printf( "%s (signal %i)\n", sigdesc, crash_info.signum );
 	if ( crash_info.hasSigInfo ) {
-		SIRENGINE_LOG( "Address: %p\n", crash_info.siginfo.si_addr );
-    }
+		printf( "Address: %p\n\n", crash_info.siginfo.si_addr );
+	}
 
 	if ( logfile ) {
 		/* Create crash log file and redirect shell output to it */
 		if ( freopen( logfile, "wa", stdout ) != stdout ) {
-			SIRENGINE_WARNING( "!!! Could not create %s following signal\n", logfile );
+			printf( "!!! Could not create %s following signal\n", logfile );
 			exit( 1 );
 		}
-		SIRENGINE_LOG( "Generating %s and killing process %d, please wait... ", logfile, crash_info.pid );
+		printf( "Generating %s and killing process %d, please wait... ", logfile, crash_info.pid );
 
-		SIRENGINE_LOG( "*** Fatal Error ***\n"
-		       "%s (signal %i)\n", sigdesc, crash_info.signum );
+		printf( "*** Fatal Error ***\n"
+			   "%s (signal %i)\n", sigdesc, crash_info.signum );
 		if ( crash_info.hasSigInfo ) {
-			SIRENGINE_LOG( "Address: %p\n", crash_info.siginfo.si_addr );
-        }
-        SIRENGINE_LOG( "" );
+			printf( "Address: %p\n", crash_info.siginfo.si_addr );
+		}
+		printf( "" );
 		fflush( stdout );
 	}
 
@@ -431,12 +431,14 @@ static void crash_handler( const char *logfile )
 		char buf[512];
 
 		if ( I_FileAvailable( "gxmessage" ) ) {
-            SIREngine_snprintf( buf, sizeof( buf ) - 1, "gxmessage -buttons \"Okay:0\" -geometry 800x600 -title \"Fatal Error\" -center -file \"%s\"", logfile );
-        } else if ( I_FileAvailable( "kdialog" ) ) {
-            SIREngine_snprintf( buf, sizeof( buf ) - 1, "kdialog --title \"Fatal Error\" --textbox \"%s\" 800 600", logfile );
-        } else {
+			SIREngine_snprintf( buf, sizeof( buf ) - 1, "gxmessage -buttons \"Okay:0\" -geometry 800x600 -title \"Fatal Error\" -center -file \"%s\"", logfile );
+		}
+		else if ( I_FileAvailable( "kdialog" ) ) {
+			SIREngine_snprintf( buf, sizeof( buf ) - 1, "kdialog --title \"Fatal Error\" --textbox \"%s\" 800 600", logfile );
+		}
+		else {
 			SIREngine_snprintf( buf, sizeof( buf ) - 1, "xmessage -buttons \"Okay:0\" -center -file \"%s\"", logfile );
-        }
+		}
 
 		system( buf );
 	}
@@ -448,19 +450,19 @@ int cc_install_handlers( int argc, char **argv, int num_signals, int *signals, c
 	struct sigaction sa;
 	stack_t altss;
 	int retval;
-    static char *altstack = (char *)alloca( SIGSTKSZ );
+	static char *altstack = (char *)alloca( SIGSTKSZ );
 
 	if ( argc == 2 && strcmp( argv[1], s_szCrashSwitch ) == 0 ) {
 		crash_handler( logfile );
-    }
+	}
 
 	cc_user_info = user_info;
 
 	if ( argv[0][0] == '/' ) {
-        snprintf( argv0, sizeof( argv0 ), "%s", argv[0] );
-    } else {
+		snprintf( argv0, sizeof( argv0 ), "%s", argv[0] );
+	} else {
 		getcwd( argv0, sizeof( argv0 ) );
-        retval = strlen( argv0 );
+		retval = strlen( argv0 );
 		snprintf( argv0 + retval, sizeof( argv0 ) - retval, "/%s", argv[0] );
 	}
 
@@ -479,7 +481,7 @@ int cc_install_handlers( int argc, char **argv, int num_signals, int *signals, c
 	retval = 0;
 	while ( num_signals-- ) {
 		if ( ( *signals != SIGSEGV && *signals != SIGILL && *signals != SIGFPE &&
-		    *signals != SIGBUS ) || sigaction( *signals, &sa, NULL ) == -1 )
+			*signals != SIGBUS ) || sigaction( *signals, &sa, NULL ) == -1 )
 		{
 			*signals = 0;
 			retval = -1;
@@ -494,22 +496,22 @@ extern char **myargv;
 
 static int GetCrashInfo( char *pBuffer, char *pEnd )
 {
-    return strlen( pBuffer );
+	return strlen( pBuffer );
 }
 
 extern "C" void InitCrashHandler( void )
 {
-    SIRENGINE_LOG( "Initializing Platform Crash Handler..." );
+	SIRENGINE_LOG( "Initializing Platform Crash Handler..." );
 
-    g_pBacktraceState = backtrace_create_state( "SIREngine", false, bt_error_callback, NULL );
+	g_pBacktraceState = backtrace_create_state( "SIREngine", false, bt_error_callback, NULL );
 
 #if !defined(SIRENGINE_PLATFORM_APPLE)
-    {
+	{
 		int s[4] = { SIGSEGV, SIGILL, SIGFPE, SIGBUS };
 		cc_install_handlers( myargc, myargv, 4, s, "SIREngine-crash.log", GetCrashInfo );
 	}
 #endif
 
-    CPosixApplication::nOOMBackupSize = OOM_MEMORY_BACKUP_POOL_SIZE;
-    CPosixApplication::pOOMBackup = malloc( CPosixApplication::nOOMBackupSize );
+	CPosixApplication::nOOMBackupSize = OOM_MEMORY_BACKUP_POOL_SIZE;
+	CPosixApplication::pOOMBackup = malloc( CPosixApplication::nOOMBackupSize );
 }

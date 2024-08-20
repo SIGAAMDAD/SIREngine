@@ -61,6 +61,9 @@ namespace Valden::ContentBrowser {
 		inline FileView_t& AddDirectory( const CString& name, FileView_t *pOwner = NULL )
 		{
 			FileView_t *pView = NULL;
+			if ( ( pView = GetDirectory( name ) ) != NULL ) {
+				return *pView; // already added
+			}
 			if ( pOwner ) {
 				pView = &pOwner->Directories.emplace_back();
 			} else {
@@ -73,34 +76,39 @@ namespace Valden::ContentBrowser {
 
 			SIRENGINE_LOG_LEVEL( ContentBrowser, ELogLevel::Info, "Added Directory \"%s\" to FileView Cache.", name.c_str() );
 
-			// don't just fetch folder names
 			g_pFileSystem->AddCacheDirectory( name.c_str() );
-			SIREngine::FileSystem::CFileList *fileList = g_pFileSystem->ListFiles( name.c_str(), "" );
+			
+			SIREngine::FileSystem::CFileList *fileList = g_pFileSystem->ListFiles( name.c_str(), NULL );
 
 			if ( !fileList ) {
 				SIRENGINE_WARNING( "Got 0 files for directory \"%s\".", name.c_str() );
-				return *pView;
 			}
-			pView->FileList.reserve( fileList->GetList().size() );
-
-			for ( const auto& it : fileList->GetList() ) {
-				pView->FileList.emplace_back( it.c_str() );
+			else {
+				pView->FileList.reserve( fileList->GetList().size() );
+				for ( const auto& it : fileList->GetList() ) {
+					pView->FileList.emplace_back( it.c_str() );
+				}
+				delete fileList;
 			}
 
-			delete fileList;
+			SIREngine::FileSystem::CFileList *dirList = g_pFileSystem->ListFiles( name.c_str(), NULL, true );
+
+			if ( !dirList ) {
+				SIRENGINE_WARNING( "Got 0 subdirectories for directory \"%s\".", name.c_str() );
+			}
+			else {
+				pView->Directories.reserve( dirList->GetSubDirs().size() );
+				for ( const auto& it : dirList->GetSubDirs() ) {
+					AddDirectory( it.c_str(), pView );
+				}
+				delete dirList;
+			}
 
 			return *pView;
 		}
 
 		inline FileView_t *GetDirectory( const CString& name )
-		{
-			for ( auto& it : m_FileList.Directories ) {
-				if ( it.Path == name ) {
-					return &it;
-				}
-			}
-			return NULL;
-		}
+		{ return SearchForDir( m_FileList, name ); }
 
 		inline FileView_t& AddSubDirectory( FileView_t& fileView, const CString& name )
 		{ return AddDirectory( name, &fileView ); }
@@ -112,6 +120,17 @@ namespace Valden::ContentBrowser {
 			}
 		}
 	private:
+		inline FileView_t *SearchForDir( FileView_t& Parent, const CString& dirName )
+		{
+			for ( auto& it : Parent.Directories ) {
+				if ( it.Path == dirName || it.DirectoryName.find( dirName ) != CString::npos ) {
+					return &it;
+				}
+				SearchForDir( it, dirName );
+			}
+			return NULL;
+		}
+
 		void DrawDirectoryTree( FileView_t& fileView );
 		void DrawPopup( void );
 

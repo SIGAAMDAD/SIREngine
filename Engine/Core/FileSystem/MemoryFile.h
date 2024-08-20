@@ -21,7 +21,7 @@ namespace SIREngine::FileSystem {
 		CMemoryFile( void )
 		{ }
 		~CMemoryFile()
-		{ }
+		{ Release(); }
 
 		SIRENGINE_FORCEINLINE const FileSystem::CFilePath& GetPath( void ) const
 		{ return m_FilePath; }

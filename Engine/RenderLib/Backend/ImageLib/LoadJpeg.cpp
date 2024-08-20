@@ -7,7 +7,7 @@ using namespace SIREngine;
 
 namespace SIREngine::RenderLib::Backend {
 
-bool CImageLoader::LoadJpeg( const CMemoryFile& fileBuffer, CVector<uint8_t>& outBuffer,
+bool CImageLoader::LoadJpeg( const uint8_t *fileBuffer, uint64_t nSize, CVector<uint8_t>& outBuffer,
 	uint32_t& nWidth, uint32_t& nHeight, uint32_t& nSamples )
 {
 	int w, h, channels;

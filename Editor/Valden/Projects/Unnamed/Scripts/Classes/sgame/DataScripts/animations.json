@@ -1,0 +1,67 @@
+{
+	"AnimationInfo": [
+		{
+			"State": "mob_grunt_idle",
+			"TicRate": "35",
+			"FlipFlop": "false",
+			"Frames": "1",
+			"Shader": "sprites/mobs/grunt_idle"
+		},
+		{
+			"State": "mob_grunt_move",
+			"TicRate": "35",
+			"FlipFlop": "true",
+			"Frames": "1",
+			"Shader": "sprites/mobs/grunt_move"
+		},
+		{
+			"State": "player_ground_idle",
+			"TicRate": "60",
+			"FlipFlop": "false",
+			"Frames": "3",
+			"Shader": "sprites/player/raio_torso"
+		},
+		{
+			"State": "player_dash",
+			"TicRate": "20",
+			"FlipFlop": "false",
+			"Frames": "1",
+			"Shader": "sprites/player/raio_torso"
+		},
+		{
+			"State": "player_ground_move",
+			"TicRate": "1",
+			"FlipFlop": "true",
+			"Frames": "2",
+			"Shader": "sprites/player/raio_legs"
+		},
+		{
+			"State": "player_air_idle",
+			"TicRate": "1",
+			"FlipFlop": "false",
+			"Frames": "1",
+			"Shader": "sprites/player/raio_legs"
+		},
+		{
+			"State": "player_air_move",
+			"TicRate": "1",
+			"FlipFlop": "false",
+			"Frames": "1",
+			"Shader": "sprites/player/raio_legs"
+		},
+		{
+			"State": "player_air_stunned",
+			"TicRate": "1",
+			"FlipFlop": "false",
+			"Frames": "1",
+			"Shader": "sprites/player/raio_legs"
+		},
+		{
+			"State": "player_melee",
+			"TicRate": "1",
+			"FlipFlop": "false",
+			"Frames": "3",
+			"Shader": "sprites/player/raio_torso"
+		}
+	]
+}

@@ -9,11 +9,11 @@
 #include <Engine/RenderLib/RenderCommon.h>
 
 namespace SIREngine::RenderLib::Backend {
-    class IRenderTexture : public CResourceDef
+    class IRenderTexture
     {
     public:
         IRenderTexture( void )
-            : CResourceDef(), m_nWidth( 0 ), m_nHeight( 0 ), m_ImageFormat( TF_INVALID )
+            : m_nWidth( 0 ), m_nHeight( 0 ), m_ImageFormat( TF_INVALID )
         { }
         virtual ~IRenderTexture()
         { }
@@ -23,14 +23,16 @@ namespace SIREngine::RenderLib::Backend {
         virtual void StreamBuffer( void )
         { }
 
-        virtual const char *GetName( void ) const override { return m_szName; }
-        virtual bool IsValid( void ) const override { return false; }
-        virtual void Reload( void ) override { }
-        virtual void Release( void ) override { }
-    protected:
-        virtual void Upload( const TextureInit_t& textureInfo )
+        /**
+         * @brief Loads the texture's data into memory on the SyncedLoaderThread
+         * @param in const TextureInit_t& textureInfo
+         * @return
+        */
+        virtual void LoadFile( const TextureInit_t& textureInfo )
         { }
-
+        virtual void Upload( void )
+        { }
+    protected:
         uint32_t m_nWidth;
         uint32_t m_nHeight;
 

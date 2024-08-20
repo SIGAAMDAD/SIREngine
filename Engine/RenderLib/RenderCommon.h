@@ -6,8 +6,8 @@
 #endif
 
 #include <Engine/Core/SIREngine.h>
-#include <Engine/Core/ResourceDef.h>
 #include "RenderLib.h"
+#include <Engine/Core/FileSystem/MemoryFile.h>
 
 namespace SIREngine::RenderLib {
     typedef enum {

@@ -70,6 +70,17 @@ void CRenderer::Frame( int64_t msec )
 {
 }
 
+void CRenderer::FinalizeTextures( void )
+{
+	SIRENGINE_LOG( "Finalizing Textures..." );
+
+	for ( auto& it : Backend::g_pRenderContext->GetTextures() ) {
+		it.second->Upload();
+	}
+
+	SIRENGINE_LOG( "Done." );
+}
+
 void CRenderer::BeginFrame( void )
 {
 	Backend::g_pRenderContext->BeginFrame();

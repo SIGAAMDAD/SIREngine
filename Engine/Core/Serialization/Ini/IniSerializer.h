@@ -7,6 +7,7 @@
 
 #include <Engine/Core/FileSystem/FilePath.h>
 #include "../SerializerBase.h"
+#include <Engine/Util/CHashMap.h>
 
 namespace SIREngine::Serialization {
     class CIniSerializer : public ISerializerBase
@@ -46,7 +47,7 @@ namespace SIREngine::Serialization {
         virtual bool Save( const FileSystem::CFilePath& filePath ) override;
     private:
         int m_nError;
-        eastl::unordered_map<CString, eastl::unordered_map<CString, CString>> m_Values;
+        CHashMap<CString, CHashMap<CString, CString>> m_Values;
 
         static int ValueHandler( void *user, const char *section, const char *name,
                                 const char *value );

@@ -1,0 +1,88 @@
+{
+	"ItemInfo": [
+		{
+			"Type": "Powerup",
+			"Id": "powerup_a",
+			"Name": "Trigger Happy",
+			"Effect": "sgame.toggle_powerup 0",
+			"Duration": 50,
+			"Icon": "icons/iconpw_pewpew",
+			"SpriteOffsetX": 0,
+			"SpriteOffsetY": 0,
+			"Width": 0.9,
+			"Height": 0.9,
+			"PickupSfx": "sfx/misc/getpw.wav"
+		},
+		{
+			"Type": "Powerup",
+			"Id": "powerup_b",
+			"Name": "Endless Anger",
+			"Effect": "sgame.toggle_powerup 1",
+			"Duration": 5,
+			"Icon": "icons/iconpw_angry",
+			"SpriteOffsetX": 0,
+			"SpriteOffsetY": 0,
+			"Width": 0.9,
+			"Height": 0.9,
+			"PickupSfx": "sfx/misc/getpw.wav"
+		},
+		{
+			"Type": "Consumable",
+			"Id": "item_stimpack",
+			"Name": "Stim Pack",
+			"Effect": "sgame.add_health_mult 5.0",
+			"Icon": "icons/icon_healthpack",
+			"SpriteOffsetX": 0,
+			"SpriteOffsetY": 0,
+			"Width": 0.9,
+			"Height": 0.9,
+			"PickupSfx": "sfx/misc/getitem.ogg",
+			"UseSfx": "sfx/players/StimPack_Activate1.wav",
+			"EquipSfx": "sfx/misc/getitem.ogg"
+		},
+		{
+			"Type": "Consumable",
+			"Id": "item_ammopack",
+			"Name": "Bullets",
+			"Effect": "add_player_ammo bullet 15",
+			"SpriteOffsetX": 0,
+			"SpriteOffsetY": 0,
+			"Width": 0.9,
+			"Height": 0.9,
+			"PickupSfx": "sfx/misc/getitem.ogg"
+		},
+		{
+			"Type": "Consumable",
+			"Id": "item_shellpack",
+			"Name": "Shells",
+			"Effect": "sgame.add_player_ammo shell 12",
+			"SpriteOffsetX": 0,
+			"SpriteOffsetY": 0,
+			"Width": 0.9,
+			"Height": 0.9,
+			"PickupSfx": "sfx/misc/getitem.ogg"
+		},
+		{
+			"Type": "Consumable",
+			"Id": "item_rocketpack",
+			"Name": "Rockets",
+			"Effect": "sgame.add_player_ammo rocket 5",
+			"SpriteOffsetX": 0,
+			"SpriteOffsetY": 0,
+			"Width": 0.9,
+			"Height": 0.9,
+			"PickupSfx": "sfx/misc/getitem.ogg"
+		},
+		{
+			"Type": "Consumable",
+			"Id": "item_grenadepack",
+			"Name": "Grenades",
+			"Effect": "sgame.add_player_ammo grenade 5",
+			"SpriteOffsetX": 0,
+			"SpriteOffsetY": 0,
+			"Width": 0.9,
+			"Height": 0.9,
+			"PickupSfx": "sfx/misc/getitem.ogg"
+		}
+	]
+}

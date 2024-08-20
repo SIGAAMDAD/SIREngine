@@ -72,6 +72,9 @@ namespace SIREngine::RenderLib::Backend {
 
 		virtual const GPUMemoryUsage_t GetMemoryUsage( void ) = 0;
 		virtual void PrintMemoryInfo( void ) const = 0;
+
+		SIRENGINE_FORCEINLINE CHashMap<FileSystem::CFilePath, IRenderTexture *>& GetTextures( void )
+		{ return m_Textures; }
 	protected:
 		virtual void GetGPUExtensionList( void ) = 0;
 
@@ -84,6 +87,7 @@ namespace SIREngine::RenderLib::Backend {
 		NativeWindow_t m_pWindow;
 
 		IRenderShaderPipeline *m_hShaderPipeline;
+		CHashMap<FileSystem::CFilePath, IRenderTexture *> m_Textures;
 
 		eastl::fixed_vector<CString, 1024, true, MemoryAllocator<char>> m_GPUExtensionList;
 	};

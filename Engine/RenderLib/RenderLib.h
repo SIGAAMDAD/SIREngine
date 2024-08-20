@@ -43,6 +43,7 @@ namespace SIREngine::RenderLib {
 
         void BeginFrame( void );
         void EndFrame( void );
+        void FinalizeTextures( void );
 
         virtual void SaveGame( void ) override;
         virtual void LoadGame( void ) override;

@@ -7,7 +7,7 @@
 
 #include "SIREngine.h"
 #include <Engine/Core/Serialization/Ini/IniSerializer.h>
-#include <EASTL/unordered_map.h>
+#include <Engine/Util/CHashMap.h>
 #include "ThreadSystem/Thread.h"
 #include "Util.h"
 
@@ -111,7 +111,7 @@ namespace SIREngine {
 	private:
 		const char *SkipWhitespace( const char *pText );
 
-		eastl::unordered_map<CString, IConsoleObject *> m_ObjectList;
+		CHashMap<CString, IConsoleObject *> m_ObjectList;
 		CThreadMutex m_hObjectLock;
 
 		CStaticArray<char, MAX_COMMAND_BUFFER> m_CommandLine;

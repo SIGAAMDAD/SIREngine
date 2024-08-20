@@ -3,6 +3,7 @@
 #include "FileView.h"
 #include <Engine/RenderLib/Backend/RenderContext.h>
 #include <Engine/RenderLib/Backend/OpenGL/GLCommon.h>
+#include <Engine/Core/ResourceManager.h>
 
 namespace Valden::ContentBrowser {
 
@@ -26,25 +27,28 @@ void CContentBrowser::Init( void )
 		SIRENGINE_TEMP_VSTRING( "%s/Assets", g_ContentBrowser.m_Windows.back()->GetBaseDir().Path.c_str() )
 	);
 	
-	g_ContentBrowser.m_Windows.back()->AddSubDir( *AssetDir, "Audio" );
-	g_ContentBrowser.m_Windows.back()->AddSubDir( *AssetDir, "Actors" );
-	g_ContentBrowser.m_Windows.back()->AddSubDir( *AssetDir, "Maps" );
-	g_ContentBrowser.m_Windows.back()->AddSubDir( *AssetDir, "Textures" );
-
 	g_ContentBrowser.m_Windows.back()->AddSubDir( g_ContentBrowser.m_Windows.back()->GetBaseDir(), "Scripts" );
 	FileView_t *ScriptDir = g_ContentBrowser.m_Windows.back()->GetDirectory(
 		SIRENGINE_TEMP_VSTRING( "%s/Scripts", g_ContentBrowser.m_Windows.back()->GetBaseDir().Path.c_str() )
 	);
 
-	g_ContentBrowser.m_Windows.back()->AddSubDir( *ScriptDir, "Classes" );
-
 	RenderLib::TextureInit_t textureInfo;
 
-	memset( &textureInfo, 0, sizeof( textureInfo ) );
-	textureInfo.filePath = "Valden/Bitmaps/DirectoryIcon.png";
-	textureInfo.nFormat = RenderLib::TF_RGBA;
-	g_ContentBrowser.m_pDirectoryIcon = RenderLib::Backend::GetRenderContext()->AllocateTexture( textureInfo );
+	g_ContentBrowser.m_pDirectoryIcon = new CMaterial( "Valden/Bitmaps/DirectoryIcon.png" );
 
+	ResourceLoader_t directoryLoader;
+	directoryLoader.FilePath = "Valden/Bitmaps/DirectoryIcon.png";
+	directoryLoader.nType = RES_MATERIAL;
+	directoryLoader.ResourceData = Cast<CResourceDef>( g_ContentBrowser.m_pDirectoryIcon );
+
+	CResourceManager::Get().AddResource( directoryLoader );
+
+	//memset( &textureInfo, 0, sizeof( textureInfo ) );
+	//textureInfo.filePath = "Valden/Bitmaps/DirectoryIcon.png";
+	//textureInfo.nFormat = RenderLib::TF_RGBA;
+	//g_ContentBrowser.m_pDirectoryIcon = RenderLib::Backend::GetRenderContext()->AllocateTexture( textureInfo );
+
+	/*
 	memset( &textureInfo, 0, sizeof( textureInfo ) );
 	textureInfo.filePath = "Valden/Bitmaps/FileIcon.png";
 	textureInfo.nFormat = RenderLib::TF_RGBA;
@@ -59,6 +63,27 @@ void CContentBrowser::Init( void )
 	textureInfo.filePath = "Valden/Bitmaps/MaterialIcon.png";
 	textureInfo.nFormat = RenderLib::TF_RGBA;
 	g_ContentBrowser.m_pMaterialIcon = RenderLib::Backend::GetRenderContext()->AllocateTexture( textureInfo );
+
+	memset( &textureInfo, 0, sizeof( textureInfo ) );
+	textureInfo.filePath = "Valden/Bitmaps/JsonIcon.png";
+	textureInfo.nFormat = RenderLib::TF_RGBA;
+	g_ContentBrowser.m_pJsonFileIcon = RenderLib::Backend::GetRenderContext()->AllocateTexture( textureInfo );
+
+	memset( &textureInfo, 0, sizeof( textureInfo ) );
+	textureInfo.filePath = "Valden/Bitmaps/CsvIcon.png";
+	textureInfo.nFormat = RenderLib::TF_RGBA;
+	g_ContentBrowser.m_pCsvFileIcon = RenderLib::Backend::GetRenderContext()->AllocateTexture( textureInfo );
+
+	memset( &textureInfo, 0, sizeof( textureInfo ) );
+	textureInfo.filePath = "Valden/Bitmaps/XmlIcon.png";
+	textureInfo.nFormat = RenderLib::TF_RGBA;
+	g_ContentBrowser.m_pXmlFileIcon = RenderLib::Backend::GetRenderContext()->AllocateTexture( textureInfo );
+
+	memset( &textureInfo, 0, sizeof( textureInfo ) );
+	textureInfo.filePath = "Valden/Bitmaps/IniIcon.png";
+	textureInfo.nFormat = RenderLib::TF_RGBA;
+	g_ContentBrowser.m_pIniFileIcon = RenderLib::Backend::GetRenderContext()->AllocateTexture( textureInfo );
+	*/
 
 	ThumbnailSize.Register();
 }

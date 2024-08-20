@@ -45,23 +45,17 @@ void Mem_Shutdown( void )
 
 void *Mem_Alloc( size_t nBytes, size_t nAlignment )
 {
-//	CGlobalMemoryStats::Get().AddMalloc( nBytes, nAlignment, SIREngine::Application::g_nFrameNumber, true );
-	return malloc( nBytes );
-//	return Mem_Alloc( SIRENGINE_PAD( nBytes, nAlignment ) );
+	return Mem_Alloc( SIRENGINE_PAD( nBytes, nAlignment ) );
 }
 
 void *Mem_Alloc( size_t nBytes )
 {
-//	CGlobalMemoryStats::Get().AddMalloc( nBytes, 16, SIREngine::Application::g_nFrameNumber, false );
-	return malloc( nBytes );
-//	return g_pMemAlloc->Alloc( nBytes );
+	return g_pMemAlloc->Alloc( nBytes );
 }
 
 void *Mem_Realloc( void *pOriginal, size_t nBytes )
 {
-//	CGlobalMemoryStats::Get().AddMalloc( nBytes, 16, SIREngine::Application::g_nFrameNumber, true );
-//	CGlobalMemoryStats::Get().AddFree( g_pMemAlloc->GetAllocSize( pOriginal ), (uintptr_t)pOriginal, SIREngine::Application::g_nFrameNumber );
-//	return g_pMemAlloc->Realloc( pOriginal, nBytes );
+	return g_pMemAlloc->Realloc( pOriginal, nBytes );
 }
 
 void *Mem_ClearedAlloc( size_t nBytes )
@@ -71,9 +65,9 @@ void *Mem_ClearedAlloc( size_t nBytes )
 
 void Mem_Free( void *pMemory )
 {
-//	CGlobalMemoryStats::Get().AddFree( g_pMemAlloc->GetAllocSize( pMemory ), (uintptr_t)pMemory, SIREngine::Application::g_nFrameNumber );
-	free( pMemory );
-//	g_pMemAlloc->Free( pMemory );
+	if ( pMemory ) {
+		g_pMemAlloc->Free( pMemory );
+	}
 }
 
 #if defined(SIRENGINE_DEBUG)

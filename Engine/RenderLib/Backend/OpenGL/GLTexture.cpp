@@ -5,6 +5,8 @@ using namespace SIREngine;
 using namespace SIREngine::RenderLib::Backend;
 using namespace SIREngine::RenderLib::Backend::OpenGL;
 
+static CThreadMutex s_TextureLock;
+
 extern uint64_t SIREngine::Application::g_nFrameNumber;
 
 CVar<bool32> SIREngine::RenderLib::Backend::OpenGL::r_UsePixelBufferObjects(
@@ -37,21 +39,19 @@ static GLenum GetImageGPUFormat( uint32_t nChannels )
 }
 
 GLTexture::GLTexture( const TextureInit_t& textureInfo )
+	: m_nTextureID( 0 )
 {
-	nglGenTextures( 1, &m_nTextureID );
-	if ( r_UsePixelBufferObjects.GetValue() ) {
-		nglCreateBuffers( SIREngine_StaticArrayLength( m_hBufferID ), m_hBufferID );
-	}
-
-	Upload( textureInfo );
+	LoadFile( textureInfo );
 }
 
 GLTexture::~GLTexture()
 {
-	if ( r_UsePixelBufferObjects.GetValue() ) {
-		nglDeleteBuffers( SIREngine_StaticArrayLength( m_hBufferID ), m_hBufferID );
+	if ( m_nTextureID == 0 ) {
+		if ( r_UsePixelBufferObjects.GetValue() ) {
+			nglDeleteBuffers( SIREngine_StaticArrayLength( m_hBufferID ), m_hBufferID );
+		}
+		nglDeleteTextures( 1, &m_nTextureID );
 	}
-	nglDeleteTextures( 1, &m_nTextureID );
 }
 
 
@@ -92,43 +92,53 @@ void GLTexture::StreamBuffer( void )
 	m_nFrameLastRendered = Application::g_nFrameNumber;
 }
 
-void GLTexture::Upload( const TextureInit_t& textureInfo )
+void GLTexture::LoadFile( const TextureInit_t& textureInfo )
 {
-	GL_CALL( nglBindTexture( GL_TEXTURE_2D, m_nTextureID ) );
-	if ( textureInfo.bIsGPUOnly ) {
-	} else {
-		m_ImageData.Load( textureInfo.filePath );
-		
+	m_ImageData.Load( textureInfo.filePath );
+}
+
+void GLTexture::Upload( void )
+{
+	if ( m_nTextureID == 0 ) {
+		GL_CALL( nglGenTextures( 1, &m_nTextureID ) );
 		if ( r_UsePixelBufferObjects.GetValue() ) {
-			for ( auto& it : m_hBufferID ) {
-				nglBindBuffer( GL_PIXEL_UNPACK_BUFFER, it );
-				if ( r_UseMappedBufferObjects.GetValue() ) {
-					nglBufferStorage( GL_PIXEL_UNPACK_BUFFER, m_ImageData.GetSize(), m_ImageData.GetBuffer(),
-						GL_WRITE_ONLY | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT );
-				} else {
-					nglBufferData( GL_PIXEL_UNPACK_BUFFER, m_ImageData.GetSize(), NULL, GL_STREAM_DRAW );
-				}
-				nglBindBuffer( GL_PIXEL_UNPACK_BUFFER, 0 );
-			}
+			GL_CALL( nglCreateBuffers( SIREngine_StaticArrayLength( m_hBufferID ), m_hBufferID ) );
 		}
-		GL_CALL( nglTexImage2D( GL_TEXTURE_2D, 0, GetImageGPUFormat( m_ImageData.GetChannels() ),
-			m_ImageData.GetWidth(), m_ImageData.GetHeight(), 0, GL_RGBA,
-			GL_UNSIGNED_BYTE, m_ImageData.GetBuffer() ) );
-		SIRENGINE_LOG_LEVEL( RenderBackend, ELogLevel::Info, "Created OpenGL GPU Texture: (size) %ux%u, 0x%lx",
-			m_ImageData.GetWidth(), m_ImageData.GetHeight(),
-			(uintptr_t)m_ImageData.GetBuffer() );
-		
-		GL_CALL( nglTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR ) );
-		GL_CALL( nglTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR ) );
-		GL_CALL( nglTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT ) );
-		GL_CALL( nglTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT ) );
-		GL_CALL( nglTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0 ) );
+		GL_CALL( nglBindTexture( GL_TEXTURE_2D, m_nTextureID ) );
 	}
+	
+	if ( r_UsePixelBufferObjects.GetValue() ) {
+		for ( auto& it : m_hBufferID ) {
+			nglBindBuffer( GL_PIXEL_UNPACK_BUFFER, it );
+			if ( r_UseMappedBufferObjects.GetValue() ) {
+				nglBufferStorage( GL_PIXEL_UNPACK_BUFFER, m_ImageData.GetSize(), m_ImageData.GetBuffer(),
+					GL_WRITE_ONLY | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT );
+			} else {
+				nglBufferData( GL_PIXEL_UNPACK_BUFFER, m_ImageData.GetSize(), NULL, GL_STREAM_DRAW );
+			}
+			nglBindBuffer( GL_PIXEL_UNPACK_BUFFER, 0 );
+		}
+	}
+	GL_CALL( nglTexImage2D( GL_TEXTURE_2D, 0, GetImageGPUFormat( m_ImageData.GetChannels() ),
+		m_ImageData.GetWidth(), m_ImageData.GetHeight(), 0, GL_RGBA,
+		GL_UNSIGNED_BYTE, m_ImageData.GetBuffer() ) );
+	SIRENGINE_LOG_LEVEL( RenderBackend, ELogLevel::Info, "Created OpenGL GPU Texture: (size) %ux%u, 0x%lx",
+		m_ImageData.GetWidth(), m_ImageData.GetHeight(),
+		(uintptr_t)m_ImageData.GetBuffer() );
+	
+	GL_CALL( nglTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR ) );
+	GL_CALL( nglTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR ) );
+	GL_CALL( nglTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT ) );
+	GL_CALL( nglTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT ) );
+	GL_CALL( nglTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0 ) );
+
 	GL_CALL( nglBindTexture( GL_TEXTURE_2D, 0 ) );
 }
 
 void GLTexture::EvictGLResource( void )
 {
+	CThreadAutoLock<CThreadMutex> _( s_TextureLock );
+
 	if ( m_bCanCreateAsEvicted && m_bInGPUMemory ) {
 		if ( CanBeEvicted() ) {
 			nglDeleteTextures( 1, &m_nTextureID );

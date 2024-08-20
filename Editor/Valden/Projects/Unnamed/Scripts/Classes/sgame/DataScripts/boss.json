@@ -1,0 +1,29 @@
+{
+    "BossInfo": [
+        {
+            "Name": "Death",
+            "Phases": [
+                {
+                    "AttackData": [
+                        {
+
+                        }
+                    ]
+                },
+                {
+
+                }
+            ]
+        },
+        {
+            "Name": "Gursgo",
+            "Phases": [
+                {
+                    "AttackData": [
+
+                    ]
+                }
+            ]
+        }
+    ]
+}

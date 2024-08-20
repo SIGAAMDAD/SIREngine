@@ -5,45 +5,91 @@
 
 #include "Application.h"
 #include "AssetLib/TextureAtlas.h"
-#include <EASTL/shared_ptr.h>
 #include "Util/FileTreeView.h"
 
 namespace Valden {
-	enum class ESceneObjectType {
-		TextureAtlas,
-		TextureImage,
-		TextureNoise,
-		Animation,
-		Text,
-		Shape,
-		Actor,
-		Item,
-		SyncPoint,
-		Light,
+	namespace ESceneObjectType {
+		enum : uint32_t {
+			None,
+			TextureAtlas,
+			TextureImage,
+			TextureNoise,
+			Animation,
+			Text,
+			Shape,
+			Actor,
+			Item,
+			SyncPoint,
+			Light,
+
+			ScriptNameSpace,
+			ScriptClass,
+
+			NumTypes
+		};
 	};
 
-	class CSceneObject
+	class ISceneObject
 	{
 	public:
-		CSceneObject( void )
+		ISceneObject( const CString& name )
+			: m_Name( name )
 		{ }
-		~CSceneObject()
+		virtual ~ISceneObject()
 		{ }
 
-		bool Load( void );
+		virtual bool Load( void )
+		{ return false; }
 
-		inline ESceneObjectType GetType( void ) const
-		{ return m_nType; }
+		virtual inline uint32_t GetType( void ) const
+		{ return ESceneObjectType::None; }
 		inline const CString& GetName( void ) const
+		{ return m_Name; }
+		inline CString& GetName( void )
 		{ return m_Name; }
 		inline CResourceDef *GetResource( void )
 		{ return m_pData; }
 		inline const CResourceDef *GetResource( void ) const
 		{ return m_pData; }
-	private:
+	protected:
 		CString m_Name;
-		ESceneObjectType m_nType;
 		CResourceDef *m_pData;
+	};
+
+	class CScriptObject;
+	class CScriptNameSpace : public ISceneObject
+	{
+	public:
+		CScriptNameSpace( const CString& name )
+			: ISceneObject( name )
+		{ }
+		virtual ~CScriptNameSpace() override
+		{ }
+
+		virtual bool Load( void ) override
+		{ return true; }
+
+		inline void RemoveClass( CScriptObject *pClass )
+		{ eastl::erase( m_Children, (ISceneObject *)pClass ); }
+		inline void AddChildNameSpace( CScriptNameSpace *pChild )
+		{ m_Children.emplace_back( pChild ); }
+		inline void AddClass( CScriptObject *pClass )
+		{ m_Children.emplace_back( pClass ); }
+		inline CScriptNameSpace *GetChildNameSpace( const CString& name )
+		{
+			for ( auto& it : m_Children ) {
+				if ( it->GetName() == name && it->GetType() == ESceneObjectType::ScriptNameSpace ) {
+					return Cast<CScriptNameSpace>( it );
+				}
+			}
+			return NULL;
+		}
+		virtual inline uint32_t GetType( void ) const override
+		{ return ESceneObjectType::ScriptNameSpace; }
+		inline CVector<ISceneObject *>& GetClasses( void )
+		{ return m_Children; }
+	private:
+		CVector<ISceneObject *> m_Children;
 	};
 
 	class CSceneView : public IEditorWidget
@@ -60,14 +106,25 @@ namespace Valden {
 
 		bool LoadScene( const FileSystem::CFilePath& directory );
 		void Create( const CString& name );
-		void AddObject( ESceneObjectType nType );
+		void Save( void );
+
+		void RemoveObject( ISceneObject *pObject );
+		void AddObject( const CString& name, uint32_t nType );
+		inline void PushObject( ISceneObject *pObject )
+		{ m_SceneObjects[ pObject->GetType() ].emplace_back( pObject ); }
 
 		static void Init( void );
 
 		SIRENGINE_FORCEINLINE static CUniquePtr<CSceneView>& Get( void )
 		{ return g_pSceneView; }
 	private:
-		void DrawObject( CSceneObject& object );
+		void DrawObject( ISceneObject *pObject );
+
+		CStaticArray<CVector<ISceneObject *>, ESceneObjectType::NumTypes> m_SceneObjects;
+
+		bool32 m_bRenaming;
+		CString *m_pRenameTarget;
+		ISceneObject *m_pEditTarget;
 
 		static CUniquePtr<CSceneView> g_pSceneView;
 	};

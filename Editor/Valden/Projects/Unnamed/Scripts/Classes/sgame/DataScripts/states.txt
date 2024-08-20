@@ -1,0 +1,21 @@
+{
+    "StateInfo"
+    {
+        {
+            "Id" "player_idle"
+            "Tics" "2"
+            "BaseNum" "ST_PLAYR_IDLE"
+            "Entity" "player"
+            "NextState" "this"
+            "SpriteOffset" 0 0
+        }
+        {
+            "Id" "player_ground_move"
+            "Tics" "10"
+            "BaseNum" "ST_PLAYR_LEGS_IDLE_GROUND"
+            "Entity" "player"
+            "NextState" "player_idle"
+            "SpriteOffset" 1 0
+        }
+    }
+}

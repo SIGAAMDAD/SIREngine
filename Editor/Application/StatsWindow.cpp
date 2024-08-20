@@ -1,6 +1,8 @@
 #include "StatsWindow.h"
+#include "Project/ProjectManager.h"
 #include <implot/implot.h>
 #include <Engine/Memory/MemoryStats.h>
+#include <EABase/int128.h>
 
 namespace Valden {
 
@@ -21,6 +23,9 @@ void CStatsWindow::Draw( void )
 {
 	const Application::MemoryConstants_t MemoryConstants = Application::Get()->GetMemoryConstants();
 	const Application::MemoryStats_t MemoryStats = Application::Get()->GetMemoryStats();
+	uint64_t nTotalMemory;
+	uint64_t nTotalFiles;
+	uint64_t nTotalFolders;
 
 	{
 		const uint64_t nIndex = m_nCaptureFrame++;
@@ -29,8 +34,64 @@ void CStatsWindow::Draw( void )
 		m_szPhysicalMemoryUsage[ nIndex % MAX_CAPTURE_FRAMES ] = MemoryStats.nUsedPhysical;
 	}
 
+	nTotalFolders = g_pFileSystem->GetFileCache().size();
+	nTotalFiles = 0;
+	nTotalMemory = 0;
+	for ( const auto& it : g_pFileSystem->GetFileCache() ) {
+		nTotalFiles += it.second->GetCachedFiles().size();
+		for ( const auto& file : it.second->GetCachedFiles() ) {
+			nTotalMemory += file.second.nSize;
+		}
+	}
+
 	if ( !m_bActive ) {
 		return;
+	}
+
+	if ( ImGui::Begin( "FileCache Statistics", NULL, ImGuiWindowFlags_NoCollapse ) ) {
+		ImGui::SeparatorText( "Total Statistics" );
+		ImGui::Text( "Total Cached Memory: %s", SIREngine_GetMemoryString( (double)nTotalMemory ) );
+		ImGui::Text( "Total Cached Files: %lu", nTotalFiles );
+		ImGui::Text( "Total Cached Folders: %lu", nTotalFolders );
+		ImGui::Separator();
+
+		if ( ImGui::BeginTable( "##FileCacheListStatistics", 2, ImGuiTableFlags_Resizable ) ) {
+			for ( const auto& it : g_pFileSystem->GetFileCache() ) {
+				ImGui::TableNextColumn();
+				if ( ImGui::CollapsingHeader( it.first.c_str() ) ) {
+					ImGui::TableNextColumn();
+					if ( ImGui::BeginTable( "##FileCacheListStatistics_Table", 3, ImGuiTableFlags_Resizable ) ) {
+						ImGui::TableNextColumn();
+						ImGui::TextUnformatted( ICON_FA_FILE_ARCHIVE "File Path" );
+						ImGui::TableNextColumn();
+						ImGui::TextUnformatted( "Size (B)" );
+						ImGui::TableNextColumn();
+						ImGui::TextUnformatted( "Mapped Address" );
+						ImGui::TableNextRow();
+
+						ImGui::Separator();
+
+						for ( const auto& file : it.second->GetCachedFiles() ) {
+							ImGui::TableNextColumn();
+							ImGui::TextUnformatted( file.first.c_str() );
+
+							ImGui::TableNextColumn();
+							ImGui::Text( "%s", SIREngine_GetMemoryString( (double)file.second.nSize ) );
+
+							ImGui::TableNextColumn();
+							ImGui::Text( "0x%lx", file.second.pMemory );
+
+							ImGui::TableNextRow();
+						}
+						ImGui::EndTable();
+					}
+				}
+
+				ImGui::TableNextRow();
+			}
+			ImGui::EndTable();
+		}
+		ImGui::End();
 	}
 
 	if ( ImGui::Begin( "Engine Statistics", &m_bActive, ImGuiWindowFlags_NoCollapse ) ) {
@@ -53,29 +114,6 @@ void CStatsWindow::Draw( void )
 		ImGui::Text( "\tAvailable Virtual RAM: %s", SIREngine_GetMemoryString( MemoryStats.nAvailableVirtual ) );
 
 		ImGui::End();
-	}
-	if ( ImGui::Begin( "Allocator Statistics", NULL, ImGuiWindowFlags_NoCollapse ) ) {
-		if ( ImGui::BeginTable( "Allocation Calls", 4 ) ) {
-			AllocationCall_t allocInfo, emptyAllocInfo;
-			for ( int i = 0; i < 10; i++ ) {
-				allocInfo = CGlobalMemoryStats::Get().GetLastAlloc();
-				if ( memcmp( &allocInfo, &emptyAllocInfo, sizeof( allocInfo ) ) == 0 ) {
-					break; // no more allocations
-				}
-
-				ImGui::TableNextColumn();
-				ImGui::Text( "Size: %lu", allocInfo.nSize );
-				ImGui::TableNextColumn();
-				ImGui::Text( "Alignment: %lu", allocInfo.nAlignment );
-				ImGui::TableNextColumn();
-				ImGui::Text( "FrameNumber: %lu", allocInfo.nFrameNumber );
-				ImGui::TableNextColumn();
-				ImGui::Text( "IsRealloc: %s", SIREngine_BoolToString( allocInfo.bIsRealloc ) );
-
-				ImGui::TableNextRow();
-			}
-			ImGui::EndTable();
-		}
 	}
 }
 

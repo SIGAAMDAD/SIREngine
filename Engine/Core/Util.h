@@ -16,6 +16,7 @@ extern void SIREngine_strncpyz( char *pDest, const char *pSource, size_t nLength
 extern int SIREngine_stricmp( const char *pString1, const char *pString2 );
 extern const char *SIREngine_stristr( const char *pHaystack, const char *pNeedle );
 extern const char *SIREngine_GetMemoryString( size_t nBytes );
+extern const char *SIREngine_GetMemoryString( double nBytes );
 
 const CString String_Contains( const CString& str1, const CString& str2, uint64_t len2 );
 bool String_FilterExt( const CString& filter, const char *name );
@@ -27,6 +28,10 @@ bool String_HasPatterns( const CString& str );
 #define SIREngine_BoolToString( value ) ( ( value ) ? "true" : "false" )
 #define SIREngine_StaticArrayLength( arr ) ( sizeof( arr ) / sizeof( *arr ) )
 #define SIREngine_CreateStackObject( objType, ... ) new ( alloca( sizeof( objType ) ) ) objType( __VA_ARGS__ )
+
+template<typename SubClass, typename BaseClass>
+inline SubClass *Cast( BaseClass *pClass )
+{ return dynamic_cast<SubClass *>( pClass ); }
 
 SIRENGINE_CONSTEXPR bool static_equal( const char *str1, const char *str2 )
 {

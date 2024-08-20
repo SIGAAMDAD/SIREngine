@@ -53,7 +53,7 @@ void SIREngine_strncpyz( char *pDest, const char *pSource, size_t nLength )
         SIRENGINE_ERROR( "SIREngine_strncpyz: NULL destination" );
     }
     if ( !pSource ) {
-        SIRENGINE_ERROR( "SIREngine_strmcpyz: NULL source" );
+        SIRENGINE_ERROR( "SIREngine_strncpyz: NULL source" );
     }
     if ( nLength < 1 ) {
         SIRENGINE_ERROR( "SIREngine_strncpyz: funny length" );
@@ -86,7 +86,7 @@ const char *SIREngine_GetMemoryString( size_t nBytes )
     static char szBuffer[64];
     const char *pSuffix;
 
-    pSuffix = "";
+    pSuffix = "B";
     if ( nBytes > 1024 ) {
         nBytes /= 1024;
         pSuffix = "Kb";
@@ -102,6 +102,31 @@ const char *SIREngine_GetMemoryString( size_t nBytes )
 
     memset( szBuffer, 0, sizeof( szBuffer ) );
     SIREngine_snprintf( szBuffer, sizeof( szBuffer ) - 1, "%lu %s", nBytes, pSuffix );
+
+    return szBuffer;
+}
+
+const char *SIREngine_GetMemoryString( double nBytes )
+{
+    static char szBuffer[64];
+    const char *pSuffix;
+
+    pSuffix = "B";
+    if ( nBytes > 1024.0f ) {
+        nBytes /= 1024.0f;
+        pSuffix = "Kb";
+    }
+    if ( nBytes > 1024.0f ) {
+        nBytes /= 1024.0f;
+        pSuffix = "Mb";
+    }
+    if ( nBytes > 1024.0f ) {
+        nBytes /= 1024.0f;
+        pSuffix = "Gb";
+    }
+
+    memset( szBuffer, 0, sizeof( szBuffer ) );
+    SIREngine_snprintf( szBuffer, sizeof( szBuffer ) - 1, "%0.4f %s", nBytes, pSuffix );
 
     return szBuffer;
 }

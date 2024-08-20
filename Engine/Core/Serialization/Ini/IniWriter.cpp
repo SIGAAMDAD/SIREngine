@@ -1,3 +1,4 @@
+#include <Engine/Memory/Memory.h>
 #include "IniSerializer.h"
 #include <Engine/Core/FileSystem/FileWriter.h>
 #include <Engine/Core/FileSystem/FileSystem.h>
@@ -13,7 +14,7 @@ bool CIniSerializer::Save( const FileSystem::CFilePath& filePath )
     const char *str;
 
     if ( !pFile ) {
-        SIRENGINE_WARNING( "Error opening write-only .ini file \"%s\": %s", filePath.c_str(), strerror( errno ) );
+        SIRENGINE_WARNING( "Error opening write-only .ini file \"%s\"", filePath.c_str() );
         return false;
     }
 
