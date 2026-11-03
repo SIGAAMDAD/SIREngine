@@ -14,6 +14,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Audio/FMOD/SIRFMODBankStore.h>
+#include <Audio/FMOD/SIRFMODPackageLoader.h>
+#include <Audio/SIRAudioResources.h>
 #include <Audio/SIRAudioSystem.h>
 #include <stdlib.h>
 #include <string.h>
@@ -69,6 +71,8 @@ typedef struct sirFMODBankFixture_s
 	uint32_t nFailPreload;
 	uint32_t nFailMembership;
 	uint32_t nFailSample;
+	uint32_t nFailBankB;
+	uint32_t nFailBankBWithHandle;
 	bool bBankA;
 	bool bBankB;
 	bool bStudio;
@@ -199,6 +203,16 @@ static int32_t testLoadBank( void *pData, void *pStudio, const char *szPath, voi
 		return 0;
 	}
 	if ( strcmp( szPath, "B.bank" ) == 0 ) {
+		if ( pFixture->nFailBankB != 0 ) {
+			--pFixture->nFailBankB;
+			return -51;
+		}
+		if ( pFixture->nFailBankBWithHandle != 0 ) {
+			--pFixture->nFailBankBWithHandle;
+			pFixture->bBankB = true;
+			*ppBank = &pFixture->bBankB;
+			return -52;
+		}
 		pFixture->bBankB = true;
 		*ppBank = &pFixture->bBankB;
 		return 0;
@@ -355,11 +369,108 @@ static void testBankFailures( const sirContainerAllocator_t *pAllocator )
 	checkBank( context.shutdown() == SIR_FMOD_OK );
 }
 
+typedef struct sirFMODPackageTestManifest_s
+{
+	sirAudioManifestHeader_t header;
+	sirAudioPackageRecord_t packages[2];
+	uint64_t dependencies[1];
+} sirFMODPackageTestManifest_t;
+
+static sirFMODPackageTestManifest_t makePackageManifest( void ) noexcept
+{
+	sirFMODPackageTestManifest_t image = {};
+	image.header.nMagic = SIR_AUDIO_MANIFEST_MAGIC;
+	image.header.nTotalBytes = sizeof( image );
+	image.header.nPackageCount = 2;
+	image.header.nDependencyCount = 1;
+	image.header.nVersion = SIR_AUDIO_MANIFEST_VERSION;
+	image.header.nHeaderBytes = sizeof( image.header );
+	image.header.eProvider = SIR_AUDIO_PROVIDER_FMOD;
+	image.header.nEndianness = SIR_AUDIO_MANIFEST_LITTLE_ENDIAN;
+	image.packages[0] = { 1, 101, 0, 0, 0 };
+	image.packages[1] = { 2, 102, 0, 0, 1 };
+	image.dependencies[0] = 1;
+	image.header.nContentHash = SIRAudioResourceStore::hashPayload( ( const uint8_t * )&image + sizeof( image.header.nContentHash ),
+	                                                                sizeof( image ) - sizeof( image.header.nContentHash ) );
+	return image;
+}
+
+static sirAudioResult_t testResolvePackagePath( void *, uint64_t nPackageId, uint64_t nProviderKey, const char **pszBankPath ) noexcept
+{
+	if ( nPackageId == 1 && nProviderKey == 101 ) {
+		*pszBankPath = "A.bank";
+		return SIR_AUDIO_OK;
+	}
+	if ( nPackageId == 2 && nProviderKey == 102 ) {
+		*pszBankPath = "B.bank";
+		return SIR_AUDIO_OK;
+	}
+	return SIR_AUDIO_INVALID_ARGUMENT;
+}
+
+static void testManifestPackageLoading( const sirContainerAllocator_t *pAllocator )
+{
+	sirFMODBankFixture_t fixture = {};
+	SIRFMODContext context;
+	const sirFMODContextConfig_t contextConfig = { 16, -1, 1, 1, 0, 0 };
+	checkBank( context.initialize( contextConfig, makeStudioOps( &fixture ) ) == SIR_FMOD_OK );
+	SIRFMODVoiceBackend voices;
+	checkBank( voices.configure( &context, pAllocator, makeVoiceOps( &fixture ), 2 ) == SIR_AUDIO_OK );
+	SIRAudioSystem audio;
+	const sirAudioSystemConfig_t audioConfig = { 1, 0, 4, 2, 2, 0 };
+	checkBank( audio.initialize( audioConfig, pAllocator, SIRFMODVoiceBackend::getBackendOps(), &voices ) == SIR_AUDIO_OK );
+	SIRFMODBankStore banks;
+	checkBank( banks.initialize( &context, &voices, pAllocator, makeBankOps( &fixture ), 2, 1 ) == SIR_AUDIO_OK );
+	SIRAudioResourceStore manifest;
+	sirFMODPackageTestManifest_t image = makePackageManifest();
+	checkBank( manifest.load( &image, sizeof( image ), SIR_AUDIO_PROVIDER_FMOD, 0, pAllocator ) == SIR_AUDIO_MANIFEST_OK );
+	checkBank( manifest.getPackageCount() == 2 );
+	sirAudioPackageRecord_t package = {};
+	uint64_t nDependency = 0;
+	checkBank( manifest.getPackageAt( 1, package ) && package.nPackageId == 2 );
+	checkBank( manifest.getPackageDependency( 2, 0, nDependency ) && nDependency == 1 );
+	checkBank( !manifest.getPackageDependency( 2, 1, nDependency ) );
+	checkBank( !manifest.getPackageAt( 2, package ) );
+	SIRFMODPackageLoader loader;
+	checkBank( loader.initialize( &manifest, &banks, pAllocator, { nullptr, testResolvePackagePath } ) == SIR_AUDIO_OK );
+	checkBank( loader.loadPackage( 2, false ) == SIR_AUDIO_OK );
+	checkBank( loader.getLoadedCount() == 2 && fixture.bBankA && fixture.bBankB );
+	checkBank( loader.loadPackage( 2, true ) == SIR_AUDIO_OK && fixture.nPreloads == 2 );
+	checkBank( loader.loadPackage( 2, true ) == SIR_AUDIO_OK && fixture.nPreloads == 2 );
+	checkBank( loader.loadPackage( 999, false ) == SIR_AUDIO_INVALID_HANDLE );
+	checkBank( loader.unloadAll() == SIR_AUDIO_OK );
+	checkBank( loader.getLoadedCount() == 0 && !fixture.bBankA && !fixture.bBankB );
+
+	fixture.nFailBankB = 1;
+	checkBank( loader.loadPackage( 2, false ) == SIR_AUDIO_BACKEND_ERROR );
+	checkBank( loader.getLastFailedPackageId() == 2 );
+	checkBank( loader.getLoadedCount() == 0 && banks.getLoadedBankCount() == 0 );
+	checkBank( !fixture.bBankA && !fixture.bBankB );
+	fixture.nFailBankBWithHandle = 1;
+	fixture.nFailUnload = 1;
+	checkBank( loader.loadPackage( 2, false ) == SIR_AUDIO_BACKEND_ERROR );
+	checkBank( loader.getLoadedCount() == 2 && banks.getLoadedBankCount() == 2 );
+	checkBank( loader.loadPackage( 2, false ) == SIR_AUDIO_BUSY );
+	checkBank( loader.unloadAll() == SIR_AUDIO_OK );
+	checkBank( loader.getLoadedCount() == 0 && !fixture.bBankA && !fixture.bBankB );
+	checkBank( loader.loadPackage( 2, false ) == SIR_AUDIO_OK );
+	image = makePackageManifest();
+	checkBank( manifest.load( &image, sizeof( image ), SIR_AUDIO_PROVIDER_FMOD, 0, pAllocator ) == SIR_AUDIO_MANIFEST_OK );
+	checkBank( loader.loadPackage( 2, false ) == SIR_AUDIO_NOT_INITIALIZED );
+	checkBank( loader.shutdown() == SIR_AUDIO_OK );
+	checkBank( banks.shutdown() == SIR_AUDIO_OK );
+	manifest.shutdown();
+	audio.shutdown();
+	checkBank( context.shutdown() == SIR_FMOD_OK );
+	checkBank( !fixture.bStudio );
+}
+
 int main( void )
 {
 	const sirContainerAllocator_t allocator = { nullptr, testBankAllocate, testBankFree, 0, 0 };
 	testBankLifecycle( &allocator );
 	testBankFailures( &allocator );
+	testManifestPackageLoading( &allocator );
 	checkBank( s_nAllocatedBlocks == 0 );
 	return 0;
 }

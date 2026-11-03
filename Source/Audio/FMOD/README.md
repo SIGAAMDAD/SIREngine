@@ -111,3 +111,33 @@ This slice intentionally does not expose FMOD SDK types in portable
 `Source/Audio/` headers. Cooked manifest dependencies, GRDG residency,
 audio-streaming policy, device loss and real-bank FMOD SDK execution remain
 separate acceptance gates.
+
+
+## Wave D — cooked package dependency loading
+
+`SIRFMODPackageLoader` connects the verified v1 audio manifest to
+`SIRFMODBankStore` through an explicit provider-key-to-bank-path resolver.
+It walks package dependencies iteratively in postorder and loads each
+dependency before the requesting package. The plan, traversal frames, loaded
+order, and package states are allocated once through the caller's Core
+allocator. Playback hot paths do not call the resolver or allocate.
+
+- A successful load is idempotent; common dependencies are loaded only once.
+- Failed loads roll back only banks first acquired by that call, in reverse
+  dependency order. Failed FMOD loads returning native handles are tracked
+  as quarantined ownership until a successful retry unload.
+- Native unload failures retain the remaining handles and return an error.
+  `unloadAll` retries reverse-order retirement without accessing the
+  manifest. A loaded manifest can be re-cooked only after the old epoch
+  owner is quiesced; stale epochs reject further loads.
+- The loader is the sole **bank-load owner** for its `SIRFMODBankStore`;
+  external bank modifications are detected by count mismatch. The Studio
+  context and bank store must outlive the loader.
+- Paths are resolved synchronously from the cooked provider package keys;
+  the manifest's numeric keys are never interpreted as pointers or paths.
+
+This slice provides dependency-first *loading* and reverse-order
+`unloadAll`, not per-root reference-counted residency or async streaming.
+GRDG publication, automatic event-path binding and production cooker
+integration remain later work. The existing `audio.fmod.bank-residency`
+test fixture exercises the manifest and real bank-store contracts.
