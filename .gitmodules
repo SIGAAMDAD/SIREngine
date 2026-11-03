@@ -145,3 +145,9 @@
 [submodule "ThirdParty/libbacktrace"]
 	path = ThirdParty/libbacktrace
 	url = https://github.com/ianlancetaylor/libbacktrace.git
+[submodule "ThirdParty/GoogleTest"]
+	path = ThirdParty/GoogleTest
+	url = https://github.com/google/googletest.git
+[submodule "ThirdParty/GoogleBenchmark"]
+	path = ThirdParty/GoogleBenchmark
+	url = https://github.com/google/benchmark.git

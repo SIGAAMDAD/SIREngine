@@ -66,6 +66,8 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+      - name: Fetch pinned GoogleTest for native C++17 tests
+        run: git submodule update --init ThirdParty/GoogleTest
       - name: Set up MSVC compiler environment
         if: runner.os == 'Windows'
         uses: ilammy/msvc-dev-cmd@v1
@@ -77,7 +79,7 @@ jobs:
           restore-keys: |
             sir-fbuild-v1.20-${{ runner.os }}-dev-
       - name: Configure native engine
-        run: cmake --preset "${{ matrix.preset }}"
+        run: cmake --preset "${{ matrix.preset }}" -DSIR_WITH_GOOGLETEST=ON
       - name: Compile engine and tests
         run: cmake --build --preset "${{ matrix.preset }}"
       - name: Run native tests
