@@ -105,6 +105,8 @@ typedef struct sirMemoryStats_s
 typedef struct sirPageBackingStats_s
 {
 	uint64_t nManagedCommittedBytes;
+	uint64_t nPendingDecommitBytes;
+	uint64_t nRetainedReuseBytes;
 	uint64_t nSuccessfulCommitCalls;
 	uint64_t nSuccessfulDecommitCalls;
 	uint64_t nFailedCommitCalls;
@@ -115,6 +117,14 @@ typedef struct sirPageBackingStats_s
 	uint64_t nNoopDecommitBytes;
 	uint64_t nCommitBudgetDenials;
 } sirPageBackingStats_t;
+
+typedef struct sirPageDrainReport_s
+{
+	uint64_t nDecommittedBytes;
+	uint64_t nRemainingPendingBytes;
+	uint32_t nCompletedRuns;
+	uint32_t nFailedRuns;
+} sirPageDrainReport_t;
 
 // One OS reservation, one commit authority, stable segment descriptors.
 // Initialize once. All segment objects and metadata live inside the reservation.
@@ -150,6 +160,8 @@ public:
 
 	sirMemoryStats_t getStats( void ) const;
 	sirPageBackingStats_t getPageBackingStats( void ) const;
+	// Cold, bounded drain called only after allocator-owner retirement.
+	sirPageDrainReport_t drainPendingDecommits( uint64_t nMaxBytes );
 	bool initTraceBuffer( uint32_t nEntries );
 	uint32_t copyTrace( sirMemoryTraceEvent_t *pOutput, uint32_t nCapacity ) const;
 	uint64_t getPageSize( void ) const;
@@ -159,6 +171,14 @@ private:
 
 	bool commit( SIRMemorySegment *pSegment, uint64_t nOffset, uint64_t nBytes );
 	bool decommit( SIRMemorySegment *pSegment, uint64_t nOffset, uint64_t nBytes );
+	bool bindRetirementOwner( SIRMemorySegment *pSegment, uint32_t nOwnerId, uint32_t nOwnerGeneration );
+	bool retireIdleRange( SIRMemorySegment *pSegment, uint64_t nOffset, uint64_t nBytes, uint32_t nOwnerId,
+	                      uint32_t nOwnerGeneration );
+	bool cancelRetiredRange( SIRMemorySegment *pSegment, uint64_t nOffset, uint64_t nBytes, uint32_t nOwnerId,
+	                        uint32_t nOwnerGeneration );
+	uint64_t countPendingPages( const SIRMemorySegment *pSegment, uint64_t nFirstPage, uint64_t nPageCount ) const;
+	void markPendingPages( SIRMemorySegment *pSegment, uint64_t nFirstPage, uint64_t nPageCount, bool bPending );
+	void clearPendingPages( SIRMemorySegment *pSegment, uint64_t nFirstPage, uint64_t nPageCount, bool bReused );
 	uint64_t getSegmentCommittedBytes( const SIRMemorySegment *pSegment ) const;
 	void *allocateMetadataLocked( uint64_t nBytes, uint64_t nAlignment, sirMemoryDomain_t eDomain );
 	uint64_t countCommittedPages( const SIRMemorySegment *pSegment, uint64_t nFirstPage, uint64_t nPageCount ) const;
@@ -178,6 +198,8 @@ private:
 	uint64_t m_nCommitCallCount;
 	uint64_t m_nDecommitCallCount;
 	uint64_t m_nDecommittedBytes;
+	uint64_t m_nPendingDecommitBytes;
+	uint64_t m_nRetainedReuseBytes;
 	uint64_t m_nFailedCommitCalls;
 	uint64_t m_nFailedDecommitCalls;
 	uint64_t m_nNoopCommitRequests;
