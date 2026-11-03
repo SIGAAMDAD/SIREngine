@@ -50,6 +50,11 @@ add_test(NAME profiling.benchmark-comparison
 
 add_executable(SIRThreadingPrimitiveTests SIRThreadingPrimitiveTests.cpp)
 target_link_libraries(SIRThreadingPrimitiveTests PRIVATE SIR::Core)
+# Clang's libstdc++ implementation of std::atomic::is_lock_free() calls
+# __atomic_is_lock_free, supplied by libatomic on Linux.
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    target_link_libraries(SIRThreadingPrimitiveTests PRIVATE atomic)
+endif()
 add_test(NAME core.threading.primitives COMMAND SIRThreadingPrimitiveTests)
 sir_configure_owned_target(SIRThreadingPrimitiveTests)
 
