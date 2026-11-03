@@ -39,6 +39,14 @@ private:
 	uint32_t m_iHead = 0;
 	const sirContainerAllocator_t *m_pAllocator;
 
+	uint32_t wrapIndex( uint64_t iIndex ) const noexcept
+	{
+		if ( ( m_nCapacity & ( m_nCapacity - 1 ) ) == 0 ) {
+			return ( uint32_t )iIndex & ( m_nCapacity - 1 );
+		}
+		return ( uint32_t )( iIndex >= m_nCapacity ? iIndex - m_nCapacity : iIndex );
+	}
+
 public:
 	explicit SIRRingBuffer( const sirContainerAllocator_t *pAllocator ) noexcept : m_pAllocator( pAllocator )
 	{
@@ -95,12 +103,12 @@ public:
 
 	T *back( void ) noexcept
 	{
-		return m_nSize == 0 ? nullptr : &m_pData[( ( uint64_t )m_iHead + m_nSize - 1 ) % m_nCapacity];
+		return m_nSize == 0 ? nullptr : &m_pData[wrapIndex( ( uint64_t )m_iHead + m_nSize - 1 )];
 	}
 
 	const T *back( void ) const noexcept
 	{
-		return m_nSize == 0 ? nullptr : &m_pData[( ( uint64_t )m_iHead + m_nSize - 1 ) % m_nCapacity];
+		return m_nSize == 0 ? nullptr : &m_pData[wrapIndex( ( uint64_t )m_iHead + m_nSize - 1 )];
 	}
 
 	template <typename... Args>
@@ -137,7 +145,7 @@ public:
 		if ( m_nSize == m_nCapacity ) {
 			return SIR_CONTAINER_FULL;
 		}
-		uint32_t iSlot = ( ( uint64_t )m_iHead + m_nSize ) % m_nCapacity;
+		uint32_t iSlot = wrapIndex( ( uint64_t )m_iHead + m_nSize );
 		new ( m_pData + iSlot ) T( std::forward<Args>( args )... );
 		++m_nSize;
 		return SIR_CONTAINER_OK;
@@ -158,7 +166,7 @@ public:
 			return SIR_CONTAINER_EMPTY;
 		}
 		m_pData[m_iHead].~T();
-		m_iHead = ( m_iHead + 1 ) % m_nCapacity;
+		m_iHead = wrapIndex( ( uint64_t )m_iHead + 1 );
 		--m_nSize;
 		return SIR_CONTAINER_OK;
 	}
@@ -168,7 +176,7 @@ public:
 		if ( m_nSize == 0 ) {
 			return SIR_CONTAINER_EMPTY;
 		}
-		uint32_t iLast = ( ( uint64_t )m_iHead + m_nSize - 1 ) % m_nCapacity;
+		uint32_t iLast = wrapIndex( ( uint64_t )m_iHead + m_nSize - 1 );
 		m_pData[iLast].~T();
 		--m_nSize;
 		return SIR_CONTAINER_OK;

@@ -71,6 +71,19 @@ private:
 		}
 	}
 
+	bool ownsAddress( const void *pAddress ) const noexcept
+	{
+		if ( m_pBlock == nullptr || pAddress == nullptr ) {
+			return false;
+		}
+		size_t nOffset = 0;
+		size_t nBytes = 0;
+		layout( m_nCapacity, &nOffset, &nBytes );
+		uintptr_t nAddress = ( uintptr_t )pAddress;
+		uintptr_t nStart = ( uintptr_t )m_pBlock;
+		return nAddress >= nStart && nAddress - nStart < nBytes;
+	}
+
 	uint32_t locate( const K &key ) const
 	{
 		if ( m_nCapacity == 0 ) {
@@ -154,7 +167,19 @@ private:
 			if ( eResult != SIR_CONTAINER_OK ) {
 				return eResult;
 			}
-			eResult = rehash( nNeeded > m_nCapacity ? nNeeded : m_nCapacity );
+			uint32_t nCapacity = nNeeded > m_nCapacity ? nNeeded : m_nCapacity;
+			if ( ownsAddress( &key ) ) {
+				if constexpr ( std::is_copy_constructible<K>::value ) {
+					K staged( key );
+					eResult = rehash( nCapacity );
+					if ( eResult != SIR_CONTAINER_OK ) {
+						return eResult;
+					}
+					return insertInternal( std::move( staged ), pInserted );
+				}
+				return SIR_CONTAINER_INVALID_ARGUMENT;
+			}
+			eResult = rehash( nCapacity );
 			if ( eResult != SIR_CONTAINER_OK ) {
 				return eResult;
 			}

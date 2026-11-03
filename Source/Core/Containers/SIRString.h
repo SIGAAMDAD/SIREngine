@@ -77,16 +77,24 @@ public:
 		if ( bAliased && ( uint64_t )iSource + nBytes > m_bytes.getSize() ) {
 			return SIR_CONTAINER_INVALID_ARGUMENT;
 		}
-		sirContainerResult_t eResult = m_bytes.tryReserve( nOldLength + nBytes + 1 );
+		uint32_t nRequired = nOldLength + nBytes + 1;
+		if ( nRequired > m_bytes.getCapacity() ) {
+			uint32_t nGrowth = 0;
+			sirContainerResult_t eGrowth = SIRVectorStorage::calculateGrowth( m_bytes.getCapacity(), nRequired, &nGrowth );
+			if ( eGrowth != SIR_CONTAINER_OK ) {
+				return eGrowth;
+			}
+			sirContainerResult_t eReserve = m_bytes.tryReserve( nGrowth );
+			if ( eReserve != SIR_CONTAINER_OK ) {
+				return eReserve;
+			}
+		}
+		sirContainerResult_t eResult = m_bytes.tryResize( nRequired );
 		if ( eResult != SIR_CONTAINER_OK ) {
 			return eResult;
 		}
 		if ( bAliased ) {
 			pBytes = m_bytes.data() + iSource;
-		}
-		// Grow the constructed character range before copying overlapping bytes.
-		for ( uint32_t iExtra = 0; iExtra < nBytes; ++iExtra ) {
-			m_bytes.tryEmplaceBack( '\0' );
 		}
 		memmove( m_bytes.data() + nOldLength, pBytes, nBytes );
 		m_bytes.data()[nOldLength + nBytes] = '\0';
@@ -108,23 +116,17 @@ public:
 		if ( bAliased && ( uint64_t )iSource + nBytes > m_bytes.getSize() ) {
 			return SIR_CONTAINER_INVALID_ARGUMENT;
 		}
-		sirContainerResult_t eResult = m_bytes.tryReserve( nBytes + 1 );
+		sirContainerResult_t eResult = m_bytes.tryResize( nBytes + 1 );
 		if ( eResult != SIR_CONTAINER_OK ) {
 			return eResult;
 		}
 		if ( bAliased ) {
 			pBytes = m_bytes.data() + iSource;
 		}
-		while ( m_bytes.getSize() < nBytes + 1 ) {
-			m_bytes.tryEmplaceBack( '\0' );
-		}
 		if ( nBytes != 0 ) {
 			memmove( m_bytes.data(), pBytes, nBytes );
 		}
 		m_bytes.data()[nBytes] = '\0';
-		while ( m_bytes.getSize() > nBytes + 1 ) {
-			m_bytes.tryPopBack();
-		}
 		return SIR_CONTAINER_OK;
 	}
 

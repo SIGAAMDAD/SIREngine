@@ -54,6 +54,53 @@ private:
 		return m_pData == inlineData();
 	}
 
+	template <typename... Args>
+	sirContainerResult_t growAndEmplace( Args &&...args )
+	{
+		if ( m_nSize == UINT32_MAX ) {
+			return SIR_CONTAINER_SIZE_OVERFLOW;
+		}
+		static_assert( SIRLifetimeOps<T>::CAN_RELOCATE, "Growth requires copy or nothrow move construction" );
+		uint32_t nGrowth = 0;
+		sirContainerResult_t eResult = SIRVectorStorage::calculateGrowth( m_nCapacity, m_nSize + 1, &nGrowth );
+		if ( eResult != SIR_CONTAINER_OK ) {
+			return eResult;
+		}
+		size_t nBytes = 0;
+		if ( !SIRRawStorage::checkedMultiply( nGrowth, sizeof( T ), &nBytes ) ) {
+			return SIR_CONTAINER_SIZE_OVERFLOW;
+		}
+		void *pStorage = nullptr;
+		eResult = SIRRawStorage::tryAllocate( m_pAllocator, nBytes, alignof( T ), &pStorage );
+		if ( eResult != SIR_CONTAINER_OK ) {
+			return eResult;
+		}
+		T *pNewData = ( T * )pStorage;
+		// Construct before relocating: arguments may refer into the old array.
+		try {
+			new ( pNewData + m_nSize ) T( std::forward<Args>( args )... );
+		} catch ( ... ) {
+			SIRRawStorage::deallocate( m_pAllocator, pNewData, nBytes, alignof( T ) );
+			throw;
+		}
+		try {
+			SIRLifetimeOps<T>::relocate( pNewData, m_pData, m_nSize );
+		} catch ( ... ) {
+			pNewData[m_nSize].~T();
+			SIRRawStorage::deallocate( m_pAllocator, pNewData, nBytes, alignof( T ) );
+			throw;
+		}
+		SIRLifetimeOps<T>::destroy( m_pData, m_nSize );
+		if ( !isInline() ) {
+			SIRRawStorage::deallocate( m_pAllocator, m_pData, ( size_t )m_nCapacity * sizeof( T ), alignof( T ) );
+		}
+		m_pData = pNewData;
+		m_nCapacity = nGrowth;
+		++m_nSize;
+		return SIR_CONTAINER_OK;
+	}
+
+
 public:
 	explicit SIRInlineVector( const sirContainerAllocator_t *pAllocator ) noexcept
 		: m_pData( inlineData() ), m_nSize( 0 ), m_nCapacity( N ), m_pAllocator( pAllocator )
@@ -152,23 +199,12 @@ public:
 	template <typename... Args>
 	sirContainerResult_t tryEmplaceBack( Args &&...args )
 	{
-		if ( m_nSize == UINT32_MAX ) {
-			return SIR_CONTAINER_SIZE_OVERFLOW;
+		if ( m_nSize < m_nCapacity ) {
+			new ( m_pData + m_nSize ) T( std::forward<Args>( args )... );
+			++m_nSize;
+			return SIR_CONTAINER_OK;
 		}
-		if ( m_nSize == m_nCapacity ) {
-			uint32_t nGrowth = 0;
-			sirContainerResult_t eResult = SIRVectorStorage::calculateGrowth( m_nCapacity, m_nSize + 1, &nGrowth );
-			if ( eResult != SIR_CONTAINER_OK ) {
-				return eResult;
-			}
-			eResult = tryReserve( nGrowth );
-			if ( eResult != SIR_CONTAINER_OK ) {
-				return eResult;
-			}
-		}
-		new ( m_pData + m_nSize ) T( std::forward<Args>( args )... );
-		++m_nSize;
-		return SIR_CONTAINER_OK;
+		return growAndEmplace( std::forward<Args>( args )... );
 	}
 
 	sirContainerResult_t tryPushBack( const T &value )
@@ -213,7 +249,12 @@ public:
 			return SIR_CONTAINER_OK;
 		}
 		if ( nSize > m_nCapacity ) {
-			sirContainerResult_t eResult = tryReserve( nSize );
+			uint32_t nGrowth = 0;
+			sirContainerResult_t eResult = SIRVectorStorage::calculateGrowth( m_nCapacity, nSize, &nGrowth );
+			if ( eResult != SIR_CONTAINER_OK ) {
+				return eResult;
+			}
+			eResult = tryReserve( nGrowth );
 			if ( eResult != SIR_CONTAINER_OK ) {
 				return eResult;
 			}

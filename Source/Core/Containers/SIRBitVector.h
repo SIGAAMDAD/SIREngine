@@ -50,18 +50,9 @@ public:
 	sirContainerResult_t tryResize( uint32_t nBits )
 	{
 		uint32_t nWords = ( uint32_t )( ( ( uint64_t )nBits + 63 ) / 64 );
-		if ( nWords > m_words.getSize() ) {
-			sirContainerResult_t eResult = m_words.tryReserve( nWords );
-			if ( eResult != SIR_CONTAINER_OK ) {
-				return eResult;
-			}
-			while ( m_words.getSize() < nWords ) {
-				m_words.tryEmplaceBack( 0ull );
-			}
-		} else {
-			while ( m_words.getSize() > nWords ) {
-				m_words.tryPopBack();
-			}
+		sirContainerResult_t eResult = m_words.tryResize( nWords );
+		if ( eResult != SIR_CONTAINER_OK ) {
+			return eResult;
 		}
 		m_nBits = nBits;
 		if ( nWords != 0 ) {

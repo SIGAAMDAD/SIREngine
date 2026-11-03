@@ -158,16 +158,14 @@ private:
 			freeTable( pNewBlock, nNewCapacity );
 			throw;
 		}
+		uint32_t nOldSize = m_nSize;
 		clear();
 		freeTable( m_pBlock, m_nCapacity );
 		m_pBlock = pNewBlock;
 		m_pControl = pNewControl;
 		m_pEntries = pNewEntries;
 		m_nCapacity = nNewCapacity;
-		// Restore count from published controls after old nodes are destroyed.
-		for ( uint32_t iIndex = 0; iIndex < nNewCapacity; ++iIndex ) {
-			m_nSize += pNewControl[iIndex] == SIRHashProbe::OCCUPIED ? 1u : 0u;
-		}
+		m_nSize = nOldSize;
 		return SIR_CONTAINER_OK;
 	}
 
@@ -191,14 +189,14 @@ private:
 			}
 			// Rebuild tombstones at the current capacity, unless the live load requires growth.
 			uint32_t nCapacity = nNeeded > m_nCapacity ? nNeeded : m_nCapacity;
-			if ( ownsAddress( &value ) ) {
-				if constexpr ( std::is_copy_constructible<V>::value ) {
-					V staged( value );
+			if ( ownsAddress( &key ) || ownsAddress( &value ) ) {
+				if constexpr ( std::is_copy_constructible<K>::value && std::is_copy_constructible<V>::value ) {
+					Pair staged( key, value );
 					eResult = rehash( nCapacity );
 					if ( eResult != SIR_CONTAINER_OK ) {
 						return eResult;
 					}
-					return insertInternal( std::forward<KeyArg>( key ), std::move( staged ), pInserted );
+					return insertInternal( std::move( staged.first ), std::move( staged.second ), pInserted );
 				}
 				return SIR_CONTAINER_INVALID_ARGUMENT;
 			}

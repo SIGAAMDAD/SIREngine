@@ -53,9 +53,30 @@ public:
 		return SIR_CONTAINER_OK;
 	}
 
+	static size_t mixHash( size_t nHash ) noexcept
+	{
+#if SIZE_MAX > UINT32_MAX
+		uint64_t nMixed = ( uint64_t )nHash;
+		nMixed ^= nMixed >> 30;
+		nMixed *= UINT64_C( 0xbf58476d1ce4e5b9 );
+		nMixed ^= nMixed >> 27;
+		nMixed *= UINT64_C( 0x94d049bb133111eb );
+		nMixed ^= nMixed >> 31;
+		return ( size_t )nMixed;
+#else
+		uint32_t nMixed = ( uint32_t )nHash;
+		nMixed ^= nMixed >> 16;
+		nMixed *= UINT32_C( 0x85ebca6b );
+		nMixed ^= nMixed >> 13;
+		nMixed *= UINT32_C( 0xc2b2ae35 );
+		nMixed ^= nMixed >> 16;
+		return ( size_t )nMixed;
+#endif
+	}
+
 	static uint32_t firstIndex( size_t nHash, uint32_t nCapacity ) noexcept
 	{
-		return ( uint32_t )( nHash & ( nCapacity - 1 ) );
+		return ( uint32_t )( mixHash( nHash ) & ( nCapacity - 1 ) );
 	}
 };
 

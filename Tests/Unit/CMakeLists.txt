@@ -24,3 +24,8 @@ add_executable(SIRContainerExtendedTests SIRContainerExtendedTests.cpp)
 target_link_libraries(SIRContainerExtendedTests PRIVATE SIR::Core)
 add_test(NAME core.containers.extended COMMAND SIRContainerExtendedTests)
 sir_configure_owned_target(SIRContainerExtendedTests)
+
+add_executable(SIRContainerOptimizationTests SIRContainerOptimizationTests.cpp)
+target_link_libraries(SIRContainerOptimizationTests PRIVATE SIR::Core)
+add_test(NAME core.containers.optimization COMMAND SIRContainerOptimizationTests)
+sir_configure_owned_target(SIRContainerOptimizationTests)

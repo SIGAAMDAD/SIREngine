@@ -26,6 +26,9 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Core/Containers/SIRContainerResult.h>
 #include <stdint.h>
+#if defined( _MSC_VER )
+#include <intrin.h>
+#endif
 
 class SIRBitWords
 {
@@ -53,12 +56,21 @@ public:
 		if ( nWord == 0 ) {
 			return 64;
 		}
-		uint32_t iBit = 0;
-		while ( ( nWord & 1 ) == 0 ) {
-			nWord >>= 1;
-			++iBit;
+#if defined( _MSC_VER ) && defined( _M_X64 )
+		unsigned long iBit = 0;
+		_BitScanForward64( &iBit, nWord );
+		return ( uint32_t )iBit;
+#elif defined( _MSC_VER )
+		unsigned long iBit = 0;
+		if ( ( uint32_t )nWord != 0 ) {
+			_BitScanForward( &iBit, ( uint32_t )nWord );
+			return ( uint32_t )iBit;
 		}
-		return iBit;
+		_BitScanForward( &iBit, ( uint32_t )( nWord >> 32 ) );
+		return ( uint32_t )iBit + 32;
+#else
+		return ( uint32_t )__builtin_ctzll( nWord );
+#endif
 	}
 };
 
