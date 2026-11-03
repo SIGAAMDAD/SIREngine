@@ -26,7 +26,6 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Core/Containers/SIRVectorStorage.h>
 
-
 #include <assert.h>
 #include <new>
 #include <type_traits>
