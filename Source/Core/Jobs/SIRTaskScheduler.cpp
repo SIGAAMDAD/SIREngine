@@ -679,6 +679,23 @@ sirTaskState_t SIRTaskScheduler::getState( sirTaskHandle_t task ) noexcept
 	return eState;
 }
 
+bool SIRTaskScheduler::queryTask( sirTaskHandle_t task, sirTaskState_t *pState, sirTaskExecutor_t *pExecutor ) noexcept
+{
+	if ( pState == nullptr || pExecutor == nullptr ) {
+		return false;
+	}
+	m_Mutex.lock();
+	if ( !isCurrentHandleLocked( task ) ) {
+		m_Mutex.unlock();
+		return false;
+	}
+	const sirTaskSlot_t &slot = m_pSlots[task.nSlot];
+	*pState = slot.eState;
+	*pExecutor = slot.eExecutor;
+	m_Mutex.unlock();
+	return true;
+}
+
 bool SIRTaskScheduler::waitTask( sirTaskHandle_t task ) noexcept
 {
 	if ( s_pRunningScheduler == this || m_nWorkerCount == 0 ) {

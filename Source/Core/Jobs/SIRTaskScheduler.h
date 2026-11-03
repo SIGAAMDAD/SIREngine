@@ -91,6 +91,8 @@ public:
 	bool cancel( sirTaskHandle_t task ) noexcept;
 	bool isCancellationRequested( sirTaskHandle_t task ) noexcept;
 	sirTaskState_t getState( sirTaskHandle_t task ) noexcept;
+	// Read state and executor under one lock for provider ownership checks.
+	bool queryTask( sirTaskHandle_t task, sirTaskState_t *pState, sirTaskExecutor_t *pExecutor ) noexcept;
 	// Blocking wait is valid only from a non-worker thread and for CPU tasks.
 	bool waitTask( sirTaskHandle_t task ) noexcept;
 	bool releaseTask( sirTaskHandle_t task ) noexcept;
