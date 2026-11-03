@@ -75,6 +75,10 @@ public:
 	{
 		return m_ring.tryPopFront();
 	}
+	void clearAndRelease( void ) noexcept
+	{
+		m_ring.clearAndRelease();
+	}
 	void clear( void ) noexcept
 	{
 		m_ring.clear();
