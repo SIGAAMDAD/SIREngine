@@ -40,7 +40,8 @@ static bool sirAlignUpChecked( uint64_t nValue, uint64_t nAlignment, uint64_t *p
 SIRMemoryManager::SIRMemoryManager( void )
     : m_pBase( nullptr ), m_pSegments( nullptr ), m_nPageSize( 0 ), m_nPageShift( 0 ), m_nReservedBytes( 0 ), m_nCommitBudgetBytes( 0 ),
       m_nMaximumCommitBudgetBytes( 0 ), m_nCommitDeniedCount( 0 ), m_nCommitCallCount( 0 ), m_nDecommitCallCount( 0 ),
-      m_nDecommittedBytes( 0 ), m_nTraceDroppedCount( 0 ), m_nTraceSequence( 0 ), m_pTrace( nullptr ), m_nTraceCapacity( 0 ),
+      m_nDecommittedBytes( 0 ), m_nFailedCommitCalls( 0 ), m_nFailedDecommitCalls( 0 ), m_nNoopCommitRequests( 0 ),
+      m_nNoopDecommitRequests( 0 ), m_nNoopCommitBytes( 0 ), m_nNoopDecommitBytes( 0 ), m_nTraceDroppedCount( 0 ), m_nTraceSequence( 0 ), m_pTrace( nullptr ), m_nTraceCapacity( 0 ),
       m_nTraceCount( 0 ), m_nDomainCommittedBytes{}, m_nDomainMetadataCommittedBytes{}, m_nDomainPeakCommittedBytes{},
       m_nDomainCommitLimits{}, m_nCommittedBytes( 0 ), m_nPeakCommittedBytes( 0 ), m_nMetadataBytes( 0 ), m_nMetadataCommittedBytes( 0 ),
       m_nMetadataOffset( 0 ), m_nRecyclableFloor( 0 ), m_nRecyclableCommittedBytes( 0 ), m_nRecyclableUsedBytes( 0 ),
@@ -121,6 +122,12 @@ bool SIRMemoryManager::initBudgeted( const sirMemoryConfig_t &config, const sirM
 	m_nCommitCallCount = 0;
 	m_nDecommitCallCount = 0;
 	m_nDecommittedBytes = 0;
+	m_nFailedCommitCalls = 0;
+	m_nFailedDecommitCalls = 0;
+	m_nNoopCommitRequests = 0;
+	m_nNoopDecommitRequests = 0;
+	m_nNoopCommitBytes = 0;
+	m_nNoopDecommitBytes = 0;
 	m_nTraceDroppedCount = 0;
 	m_nTraceSequence = 0;
 	m_pTrace = nullptr;
@@ -204,6 +211,12 @@ void SIRMemoryManager::shutdown( void )
 	m_nCommitCallCount = 0;
 	m_nDecommitCallCount = 0;
 	m_nDecommittedBytes = 0;
+	m_nFailedCommitCalls = 0;
+	m_nFailedDecommitCalls = 0;
+	m_nNoopCommitRequests = 0;
+	m_nNoopDecommitRequests = 0;
+	m_nNoopCommitBytes = 0;
+	m_nNoopDecommitBytes = 0;
 	m_nTraceDroppedCount = 0;
 	m_nTraceSequence = 0;
 	m_pTrace = nullptr;
@@ -554,6 +567,8 @@ bool SIRMemoryManager::commit( SIRMemorySegment *pSegment, uint64_t nOffset, uin
 	const uint64_t nPreviouslyCommitted = countCommittedPages( pSegment, nFirst, nPages );
 	const uint64_t nAdditionalBytes = ( nPages - nPreviouslyCommitted ) * m_nPageSize;
 	if ( nAdditionalBytes == 0 ) {
+		++m_nNoopCommitRequests;
+		m_nNoopCommitBytes += nBytes;
 		return true;
 	}
 
@@ -568,6 +583,7 @@ bool SIRMemoryManager::commit( SIRMemorySegment *pSegment, uint64_t nOffset, uin
 	}
 
 	if ( !SIRVirtualMemory::commit( pSegment->m_pBase + nOffset, nBytes ) ) {
+		++m_nFailedCommitCalls;
 		return false;
 	}
 
@@ -599,10 +615,13 @@ bool SIRMemoryManager::decommit( SIRMemorySegment *pSegment, uint64_t nOffset, u
 	const uint64_t nPages = nBytes >> m_nPageShift;
 	const uint64_t nCommittedPages = countCommittedPages( pSegment, nFirst, nPages );
 	if ( nCommittedPages == 0 ) {
+		++m_nNoopDecommitRequests;
+		m_nNoopDecommitBytes += nBytes;
 		return true;
 	}
 
 	if ( !SIRVirtualMemory::decommit( pSegment->m_pBase + nOffset, nBytes ) ) {
+		++m_nFailedDecommitCalls;
 		return false;
 	}
 
@@ -639,6 +658,13 @@ sirMemoryStats_t SIRMemoryManager::getStats( void ) const
 	         m_nDecommittedBytes,
 	         m_nMetadataOffset + m_nRecyclableUsedBytes,
 	         m_nTraceDroppedCount };
+}
+
+sirPageBackingStats_t SIRMemoryManager::getPageBackingStats( void ) const
+{
+	std::lock_guard<SIRMutex> lock( m_Mutex );
+	return { m_nCommittedBytes, m_nCommitCallCount, m_nDecommitCallCount, m_nFailedCommitCalls, m_nFailedDecommitCalls,
+	         m_nNoopCommitRequests, m_nNoopDecommitRequests, m_nNoopCommitBytes, m_nNoopDecommitBytes, m_nCommitDeniedCount };
 }
 
 uint64_t SIRMemoryManager::getPageSize( void ) const

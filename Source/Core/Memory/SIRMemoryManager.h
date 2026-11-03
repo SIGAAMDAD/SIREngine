@@ -100,6 +100,22 @@ typedef struct sirMemoryStats_s
 	uint64_t nTraceDroppedCount;
 } sirMemoryStats_t;
 
+// Backing activity counts OS calls separately from requests avoided by the
+// manager's page bitmap. Managed committed bytes are not physical resident RAM.
+typedef struct sirPageBackingStats_s
+{
+	uint64_t nManagedCommittedBytes;
+	uint64_t nSuccessfulCommitCalls;
+	uint64_t nSuccessfulDecommitCalls;
+	uint64_t nFailedCommitCalls;
+	uint64_t nFailedDecommitCalls;
+	uint64_t nNoopCommitRequests;
+	uint64_t nNoopDecommitRequests;
+	uint64_t nNoopCommitBytes;
+	uint64_t nNoopDecommitBytes;
+	uint64_t nCommitBudgetDenials;
+} sirPageBackingStats_t;
+
 // One OS reservation, one commit authority, stable segment descriptors.
 // Initialize once. All segment objects and metadata live inside the reservation.
 // Segment layout never changes; segment creation and page-state changes are cold.
@@ -133,6 +149,7 @@ public:
 	bool releaseRecyclableMetadataPage( void *pPage, sirMemoryDomain_t eDomain = SIR_MEMORY_DOMAIN_GAMEPLAY );
 
 	sirMemoryStats_t getStats( void ) const;
+	sirPageBackingStats_t getPageBackingStats( void ) const;
 	bool initTraceBuffer( uint32_t nEntries );
 	uint32_t copyTrace( sirMemoryTraceEvent_t *pOutput, uint32_t nCapacity ) const;
 	uint64_t getPageSize( void ) const;
@@ -161,6 +178,12 @@ private:
 	uint64_t m_nCommitCallCount;
 	uint64_t m_nDecommitCallCount;
 	uint64_t m_nDecommittedBytes;
+	uint64_t m_nFailedCommitCalls;
+	uint64_t m_nFailedDecommitCalls;
+	uint64_t m_nNoopCommitRequests;
+	uint64_t m_nNoopDecommitRequests;
+	uint64_t m_nNoopCommitBytes;
+	uint64_t m_nNoopDecommitBytes;
 	uint64_t m_nTraceDroppedCount;
 	uint64_t m_nTraceSequence;
 	sirMemoryTraceEvent_t *m_pTrace;
