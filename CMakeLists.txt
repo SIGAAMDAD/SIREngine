@@ -12,6 +12,7 @@ option(SIR_WITH_FMOD "Resolve the external FMOD Studio API" OFF)
 option(SIR_WITH_WWISE "Resolve the external Wwise SDK" OFF)
 option(SIR_WITH_OPENAL "Resolve a system OpenAL implementation" OFF)
 
+include(Build/CMake/SIRBuildOptions.cmake)
 include(Build/CMake/SIRDependencies.cmake)
 include(Build/CMake/SIRAudio.cmake)
 add_subdirectory(Engine/Source/Core)

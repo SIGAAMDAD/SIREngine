@@ -28,12 +28,17 @@ jobs:
       matrix:
         include:
           - os: ubuntu-24.04
-            preset: linux-release
+            preset: profile
           - os: windows-2022
-            preset: windows-release
-    env:
-      SCCACHE_GHA_ENABLED: 'true'
-      SCCACHE_GHA_VERSION: sir-native-v1-${{ matrix.os }}-release
+            preset: profile
+          - os: ubuntu-24.04
+            preset: release
+          - os: windows-2022
+            preset: release
+          - os: ubuntu-24.04
+            preset: asan
+          - os: ubuntu-24.04
+            preset: ubsan
     steps:
       - uses: actions/checkout@v4
         with:
@@ -41,35 +46,52 @@ jobs:
       - name: Set up MSVC compiler environment
         if: runner.os == 'Windows'
         uses: ilammy/msvc-dev-cmd@v1
-      - uses: jwlawson/actions-setup-cmake@v2.2.0
+      - uses: ./.github/actions/setup-build-tools
+      - uses: actions/cache@v4
         with:
-          cmake-version: '4.4.5'
-      - uses: mozilla-actions/sccache-action@v0.0.11
+          path: .cache/fastbuild
+          key: sir-fbuild-v1.20-${{ runner.os }}-${{ matrix.preset }}-${{ github.sha }}
+          restore-keys: |
+            sir-fbuild-v1.20-${{ runner.os }}-${{ matrix.preset }}-
       - name: Configure native engine
-        run: cmake --preset "${{ matrix.preset }}" -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
+        run: cmake --preset "${{ matrix.preset }}"
       - name: Compile native engine
-        run: cmake --build --preset "${{ matrix.preset }}" --parallel 2
+        run: cmake --build --preset "${{ matrix.preset }}"
       - name: Run release tests
         run: ctest --preset "${{ matrix.preset }}"
-      - name: Package native executable
-        run: cmake --build --preset "${{ matrix.preset }}" --target package
+      - name: Package release executable
+        if: matrix.preset == 'release'
+        run: cmake --build --preset release --target package
       - uses: actions/upload-artifact@v4
+        if: matrix.preset == 'release'
         with:
           name: sirengine-${{ matrix.os }}-native
-          path: out/${{ matrix.preset }}/SIREngine-*.zip
+          path: out/**/SIREngine-*.zip
           if-no-files-found: error
           retention-days: 7
-      - name: Compiler-cache statistics
-        if: always()
-        run: sccache --show-stats
 
   macos-preview:
     if: github.event_name == 'workflow_dispatch' && inputs.macos_preview
     runs-on: macos-15
     timeout-minutes: 45
-    env:
-      SCCACHE_GHA_ENABLED: 'true'
-      SCCACHE_GHA_VERSION: sir-native-v1-macos-preview
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-build-tools
+      - uses: actions/cache@v4
+        with:
+          path: .cache/fastbuild
+          key: sir-fbuild-v1.20-macos-preview-${{ github.sha }}
+          restore-keys: |
+            sir-fbuild-v1.20-macos-preview-
+      - run: cmake --preset macos-preview
+      - run: cmake --build --preset macos-preview
+      - run: ctest --preset macos-preview
+
+  clang-tooling:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
         with:
@@ -77,7 +99,10 @@ jobs:
       - uses: jwlawson/actions-setup-cmake@v2.2.0
         with:
           cmake-version: '4.4.5'
-      - uses: mozilla-actions/sccache-action@v0.0.11
-      - run: cmake --preset macos-preview -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
-      - run: cmake --build --preset macos-preview --parallel 2
-      - run: ctest --preset macos-preview
+      - run: cmake --preset tooling
+        env:
+          CC: clang
+          CXX: clang++
+      - run: cmake --build --preset tooling --parallel 2
+      - run: ctest --preset tooling
+      - run: test -s out/Linux/tooling/compile_commands.json

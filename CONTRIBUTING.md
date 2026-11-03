@@ -6,7 +6,7 @@ SIREngine targets a reusable Godot-derived engine, not a one-game mod collection
 
 1. Open an issue or ADR for substantive cross-subsystem changes; identify affected ownership, memory domains, platform targets and acceptance tests.
 2. Create a focused branch from `develop`. Keep one dependency-closed implementation change per reviewable commit. Use Conventional Commits (`feat(core): ...`, `fix(rendering): ...`, `build(ci): ...`), <=72-character header.
-3. Run local CMake configure/build/CTest, pinned clang-format and the repository hygiene check. For Godot changes, run the source checkout's pinned formatting/pre-commit tools and its own SCons compile matrix.
+3. Run the `dev` CMake/FASTBuild preset, CTest, pinned clang-format and native repository hygiene checks. Validate changed engine targets with the appropriate CMake compilation profile.
 4. Include actual compiler/link output and platform tests. A source audit or formatted patch without a real build is not a completed implementation.
 5. Open a pull request against `develop` with a concise change contract, tested configs, performance/memory impact and unresolved gaps. Do not upload binary build outputs.
 

@@ -24,17 +24,17 @@ Development is grouped into four [milestones](Docs/Milestones/README.md): portin
 
 ## Building
 
-Requirements: CMake 4.4.5, a C++17 compiler, Ninja, and Git. The native foundation build has no mandatory external SDK or scripting runtime.
+Requirements: CMake 4.4.5, FASTBuild 1.20, a C++17 compiler, and Git. Ninja is optional for compiler tooling. The native foundation build has no mandatory external SDK or scripting runtime.
 
 ```sh
 git clone --branch develop https://github.com/SIGAAMDAD/SIREngine.git
 cd SIREngine
-cmake --preset linux-ci
-cmake --build --preset linux-ci
-ctest --preset linux-ci
+cmake --preset dev
+cmake --build --preset dev
+ctest --preset dev
 ```
 
-Use `windows-ci` on Windows. `linux-release` and `windows-release` produce release-configured binaries, and `cmake --build --preset linux-release --target package` packages the executable. macOS is an experimental build target. Optional dependencies are fetched separately for the corresponding development milestones.
+The same `dev` preset works on Windows and Linux. `debug`, `profile` and `release` provide other build types; `cmake --build --preset release --target package` packages the executable. macOS is an experimental build target. Optional dependencies are fetched separately for the corresponding development milestones.
 
 ## Source organization
 

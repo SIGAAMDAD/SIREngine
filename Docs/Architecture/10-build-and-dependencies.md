@@ -12,29 +12,29 @@
 - `Upstream/` contains pinned Godot, NomadFramework and Terrain3D sources for forthcoming migrations; none is linked into the bootstrap executable.
 - `ThirdParty/` contains pinned EASTL, EABase and EAAssert; EASTL is opt-in through `SIR_WITH_EASTL`.
 
-CMake **4.4.5** is the required build-system release; C++17 is mandatory and compiler extensions are disabled. Ninja is used by the provided presets. Foundation builds require no Python package installer or SCons. As long as parts of Godot's original build remain unported, their source reference still relies on its upstream SCons graph; the new native launcher does not invoke it.
+CMake **4.4.5** is the required build-system release; C++17 is mandatory and compiler extensions are disabled. FASTBuild 1.20 executes the primary CMake presets, with persistent incremental dependency tracking, a local object cache, and optional distributed workers. The Ninja `tooling` preset supplies per-file Clang compilation databases. No native build invokes Python or SCons. As long as parts of Godot's original build remain unported, their source reference still relies on its upstream SCons graph; the new native launcher does not invoke it.
 
 ## Commands
 
 ```sh
 git clone --branch develop https://github.com/SIGAAMDAD/SIREngine.git
 cd SIREngine
-cmake --preset linux-ci
-cmake --build --preset linux-ci
-ctest --preset linux-ci
+cmake --preset dev
+cmake --build --preset dev
+ctest --preset dev
 
-cmake --preset linux-release
-cmake --build --preset linux-release
-ctest --preset linux-release
-cmake --build --preset linux-release --target package
+cmake --preset release
+cmake --build --preset release
+ctest --preset release
+cmake --build --preset release --target package
 ```
 
-Use the Windows presets on Windows; macOS remains an experimental manual build target.
+The same developer presets work on Windows and Linux. Other presets: `debug`, `profile`, `release-ipo`, `bulk`, `asan`, `ubsan`, and Ninja `tooling`. Configure a profile once, then rebuild incrementally. macOS remains an experimental manual build target.
 
 ## CI/CD
 
-`.github/workflows/ci.yml` runs repository hygiene, pinned clang-format and native Debug compiler/link/CTest gates on Linux and Windows. It installs CMake with a dedicated GitHub Action rather than a Python package. The source-format job currently invokes `python3 -m pip` only to obtain the pinned clang-format binary; the CMake build and native test jobs do not invoke Python.
+`.github/workflows/ci.yml` runs repository hygiene, pinned clang-format and native Debug compiler/link/CTest gates on Linux and Windows. The formatting job downloads and verifies the pinned native clang-format executable directly, without invoking Python or a package manager. A dedicated action installs CMake and FASTBuild on the build runners.
 
-`.github/workflows/nightly.yml` compiles Release builds on both platforms, runs CTest, packages the executable and uploads retained artifacts. Compiler caching uses `mozilla-actions/sccache-action` and distinct platform/configuration cache namespaces. The cache stores compiled outputs, while fresh CMake configuration and test runs remain source-specific. macOS can be enabled manually.
+`.github/workflows/nightly.yml` compiles Release builds on both platforms, runs CTest, packages the executable and uploads retained artifacts. FASTBuild's native compilation cache uses distinct platform/configuration namespaces. Nightly also runs profiling and Linux sanitizers; the Ninja tooling job exports `compile_commands.json`. The cache stores object outputs, not relocated dependency databases. macOS can be enabled manually.
 
 No assertion of successful remote CI is implied by committed workflows; acceptance is based on actual GitHub job results.

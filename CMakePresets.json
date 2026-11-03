@@ -1,52 +1,255 @@
 {
   "version": 8,
-  "cmakeMinimumRequired": { "major": 4, "minor": 4, "patch": 5 },
+  "cmakeMinimumRequired": {
+    "major": 4,
+    "minor": 4,
+    "patch": 5
+  },
   "configurePresets": [
     {
-      "name": "linux-ci",
-      "displayName": "Linux native C++17 debug",
-      "generator": "Ninja",
-      "binaryDir": "${sourceDir}/out/linux-ci",
-      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug", "SIR_BUILD_TESTS": "ON" }
+      "name": "fast-base",
+      "hidden": true,
+      "generator": "FASTBuild",
+      "binaryDir": "${sourceDir}/out/${hostSystemName}/${presetName}",
+      "cacheVariables": {
+        "CMAKE_CXX_STANDARD": "17",
+        "CMAKE_FASTBUILD_CACHE_PATH": "${sourceDir}/.cache/fastbuild",
+        "SIR_BUILD_TESTS": "ON",
+        "SIR_ENABLE_UNITY": "OFF",
+        "SIR_ENABLE_PCH": "OFF",
+        "SIR_ENABLE_IPO": "OFF"
+      }
     },
     {
-      "name": "windows-ci",
-      "displayName": "Windows native C++17 debug",
-      "generator": "Ninja",
-      "binaryDir": "${sourceDir}/out/windows-ci",
-      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug", "SIR_BUILD_TESTS": "ON" }
+      "name": "dev",
+      "inherits": "fast-base",
+      "displayName": "FASTBuild incremental developer",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "SIR_FAST_ITERATION": "ON"
+      }
     },
     {
-      "name": "linux-release",
-      "inherits": "linux-ci",
-      "binaryDir": "${sourceDir}/out/linux-release",
-      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release", "SIR_BUILD_TESTS": "ON" }
+      "name": "debug",
+      "inherits": "fast-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
     },
     {
-      "name": "windows-release",
-      "inherits": "windows-ci",
-      "binaryDir": "${sourceDir}/out/windows-release",
-      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release", "SIR_BUILD_TESTS": "ON" }
+      "name": "profile",
+      "inherits": "fast-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+      }
+    },
+    {
+      "name": "release",
+      "inherits": "fast-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "release-ipo",
+      "inherits": "release",
+      "cacheVariables": {
+        "SIR_ENABLE_IPO": "ON"
+      }
+    },
+    {
+      "name": "bulk",
+      "inherits": "release",
+      "cacheVariables": {
+        "SIR_ENABLE_UNITY": "ON"
+      }
+    },
+    {
+      "name": "asan",
+      "inherits": "fast-base",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "SIR_ENABLE_ASAN": "ON"
+      }
+    },
+    {
+      "name": "ubsan",
+      "inherits": "fast-base",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "SIR_ENABLE_UBSAN": "ON"
+      }
     },
     {
       "name": "macos-preview",
-      "inherits": "linux-ci",
-      "displayName": "Experimental macOS native C++17 build",
-      "binaryDir": "${sourceDir}/out/macos-preview"
+      "inherits": "dev",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      }
+    },
+    {
+      "name": "tooling",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/out/${hostSystemName}/tooling",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "SIR_FAST_ITERATION": "ON",
+        "SIR_ENABLE_UNITY": "OFF",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
     }
   ],
   "buildPresets": [
-    { "name": "linux-ci", "configurePreset": "linux-ci" },
-    { "name": "windows-ci", "configurePreset": "windows-ci" },
-    { "name": "linux-release", "configurePreset": "linux-release" },
-    { "name": "windows-release", "configurePreset": "windows-release" },
-    { "name": "macos-preview", "configurePreset": "macos-preview" }
+    {
+      "name": "dev",
+      "configurePreset": "dev",
+      "nativeToolOptions": [
+        "-cache"
+      ]
+    },
+    {
+      "name": "debug",
+      "configurePreset": "debug",
+      "nativeToolOptions": [
+        "-cache"
+      ]
+    },
+    {
+      "name": "profile",
+      "configurePreset": "profile",
+      "nativeToolOptions": [
+        "-cache"
+      ]
+    },
+    {
+      "name": "release",
+      "configurePreset": "release",
+      "nativeToolOptions": [
+        "-cache"
+      ]
+    },
+    {
+      "name": "release-ipo",
+      "configurePreset": "release-ipo",
+      "nativeToolOptions": [
+        "-cache"
+      ]
+    },
+    {
+      "name": "bulk",
+      "configurePreset": "bulk",
+      "nativeToolOptions": [
+        "-cache"
+      ]
+    },
+    {
+      "name": "asan",
+      "configurePreset": "asan",
+      "nativeToolOptions": [
+        "-cache"
+      ]
+    },
+    {
+      "name": "ubsan",
+      "configurePreset": "ubsan",
+      "nativeToolOptions": [
+        "-cache"
+      ]
+    },
+    {
+      "name": "macos-preview",
+      "configurePreset": "macos-preview",
+      "nativeToolOptions": [
+        "-cache"
+      ]
+    },
+    {
+      "name": "tooling",
+      "configurePreset": "tooling"
+    }
   ],
   "testPresets": [
-    { "name": "linux-ci", "configurePreset": "linux-ci", "output": { "outputOnFailure": true } },
-    { "name": "windows-ci", "configurePreset": "windows-ci", "output": { "outputOnFailure": true } },
-    { "name": "linux-release", "configurePreset": "linux-release", "output": { "outputOnFailure": true } },
-    { "name": "windows-release", "configurePreset": "windows-release", "output": { "outputOnFailure": true } },
-    { "name": "macos-preview", "configurePreset": "macos-preview", "output": { "outputOnFailure": true } }
+    {
+      "name": "dev",
+      "configurePreset": "dev",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "debug",
+      "configurePreset": "debug",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "profile",
+      "configurePreset": "profile",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "release",
+      "configurePreset": "release",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "release-ipo",
+      "configurePreset": "release-ipo",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "bulk",
+      "configurePreset": "bulk",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "asan",
+      "configurePreset": "asan",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "ubsan",
+      "configurePreset": "ubsan",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "macos-preview",
+      "configurePreset": "macos-preview",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "tooling",
+      "configurePreset": "tooling",
+      "output": {
+        "outputOnFailure": true
+      }
+    }
   ]
 }
