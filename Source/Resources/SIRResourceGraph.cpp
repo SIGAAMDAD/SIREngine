@@ -139,11 +139,11 @@ SIRResourceGraph::SIRResourceGraph( const SIRResourceGraphConfig &rConfig ) noex
     : m_Config( rConfig ), m_Writer( *this ), m_OwnerThread( std::this_thread::get_id() ), m_nActiveReaders( 0 ),
       m_KeyIndexAllocator{ this, allocateKeyIndex, releaseKeyIndex, rConfig.m_nMetadataDomain, 0x47524447U },
       m_KeyIndex( &m_KeyIndexAllocator ), m_pSlots( nullptr ), m_pStaging( nullptr ), m_pProviderPins( nullptr ),
-      m_pReverseEdges( nullptr ), m_pReadKeyIndex( nullptr ), m_nReadKeyIndexCapacity( 0 ), m_pReverseBuckets( nullptr ), m_nReverseBucketCount( 0 ), m_nMaxDependencyEdges( 0 ),
-      m_iFreeReverseEdge( UINT32_MAX ), m_nActiveReverseEdges( 0 ), m_nChangeSequence( 0 ), m_pInvalidations( nullptr ),
-      m_nMaxInvalidationEvents( 0 ), m_nTotalInvalidations( 0 ), m_pTraversalQueue( nullptr ), m_nTraversalStamp( 0 ),
-      m_pSharedChunks( nullptr ), m_pRetired( nullptr ), m_nCommittedBytes( 0 ), m_nPeakCommittedBytes( 0 ), m_nPayloadBytes( 0 ),
-      m_nUniqueChunks( 0 ), m_nRetiredRecords( 0 ), m_bReady( false )
+      m_pReverseEdges( nullptr ), m_pReadKeyIndex( nullptr ), m_nReadKeyIndexCapacity( 0 ), m_pReverseBuckets( nullptr ),
+      m_nReverseBucketCount( 0 ), m_nMaxDependencyEdges( 0 ), m_iFreeReverseEdge( UINT32_MAX ), m_nActiveReverseEdges( 0 ),
+      m_nChangeSequence( 0 ), m_pInvalidations( nullptr ), m_nMaxInvalidationEvents( 0 ), m_nTotalInvalidations( 0 ),
+      m_pTraversalQueue( nullptr ), m_nTraversalStamp( 0 ), m_pSharedChunks( nullptr ), m_pRetired( nullptr ), m_nCommittedBytes( 0 ),
+      m_nPeakCommittedBytes( 0 ), m_nPayloadBytes( 0 ), m_nUniqueChunks( 0 ), m_nRetiredRecords( 0 ), m_bReady( false )
 {
 	if ( !m_Config.m_Allocator.m_pfnAllocate || !m_Config.m_Allocator.m_pfnFree || !m_Config.m_nMaxResources || !m_Config.m_nMaxStaging ||
 	     !m_Config.m_nMaxProviderPins || m_Config.m_nMaxResources > INT32_MAX ) {
@@ -244,8 +244,8 @@ SIRResourceGraph::~SIRResourceGraph( void ) noexcept
 			m_pReadKeyIndex[iCell].~sirReadKeyIndexCell_t();
 		}
 	}
-	release( m_pReadKeyIndex, ( uint64_t )m_nReadKeyIndexCapacity * sizeof( sirReadKeyIndexCell_t ),
-	         alignof( sirReadKeyIndexCell_t ), m_Config.m_nMetadataDomain );
+	release( m_pReadKeyIndex, ( uint64_t )m_nReadKeyIndexCapacity * sizeof( sirReadKeyIndexCell_t ), alignof( sirReadKeyIndexCell_t ),
+	         m_Config.m_nMetadataDomain );
 	release( m_pReverseBuckets, ( uint64_t )m_nReverseBucketCount * sizeof( uint32_t ), alignof( uint32_t ), m_Config.m_nMetadataDomain );
 	release( m_pReverseEdges, ( uint64_t )m_nMaxDependencyEdges * sizeof( SIRReverseDependencyEdge ), alignof( SIRReverseDependencyEdge ),
 	         m_Config.m_nMetadataDomain );
@@ -426,9 +426,7 @@ void SIRResourceGraph::publishRecord( uint32_t iSlot, SIRPublishedResourceRecord
 	}
 }
 
-
-void SIRResourceGraph::updateReadKeyIndex( const SIRPublishedResourceRecord *pPrior,
-                                           const SIRPublishedResourceRecord *pPublished ) noexcept
+void SIRResourceGraph::updateReadKeyIndex( const SIRPublishedResourceRecord *pPrior, const SIRPublishedResourceRecord *pPublished ) noexcept
 {
 	if ( pPrior == nullptr && pPublished == nullptr ) {
 		return;

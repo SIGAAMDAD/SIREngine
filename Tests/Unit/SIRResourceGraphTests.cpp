@@ -705,8 +705,7 @@ static void testAtomicReadIndexCollisionsAndChurn( void )
 				while ( bRunning.load( std::memory_order_acquire ) ) {
 					SIRResourceReadScope scope( graph );
 					SIRResourceHandle hFound = {};
-					if ( graph.find( scope, keys[1], &hFound ) != SIR_RESOURCE_RESULT_SUCCESS ||
-					     hFound.m_nSlot != handles[1].m_nSlot ) {
+					if ( graph.find( scope, keys[1], &hFound ) != SIR_RESOURCE_RESULT_SUCCESS || hFound.m_nSlot != handles[1].m_nSlot ) {
 						nFailures.fetch_add( 1, std::memory_order_relaxed );
 					}
 					SIRResourceView view;
