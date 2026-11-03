@@ -26,6 +26,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <stdio.h>
 
+#if defined( SIR_INPUT_X11_AVAILABLE )
+#include <Core/Platform/Linux/SIRLinuxX11Input.h>
+#endif
+
 static bool testLifecycle( void )
 {
 	SIRInputSystem input;
@@ -405,6 +409,167 @@ static bool testEvdevWatchLifecycle( void )
 }
 #endif
 
+#if defined( SIR_INPUT_X11_AVAILABLE )
+static bool testX11DesktopRouting( void )
+{
+	SIRInputSystem input;
+	SIRLinuxX11Input x11( input );
+	if ( SIRLinuxX11Input::enableDetectableAutoRepeat( nullptr ) ||
+	     ( SIRLinuxX11Input::requiredEventMask() & ( KeyPressMask | KeyReleaseMask | FocusChangeMask ) ) !=
+	         ( KeyPressMask | KeyReleaseMask | FocusChangeMask ) ) {
+		return false;
+	}
+	if ( x11.bind( 0, 101, 102 ) || !x11.bind( ( Window )42, 101, 102 ) || x11.bind( ( Window )42, 101, 102 ) ||
+	     input.getActiveDeviceCount() != 2 ) {
+		return false;
+	}
+	sirInputDeviceHandle_t hKeyboard = {};
+	sirInputDeviceHandle_t hMouse = {};
+	if ( !input.findDevice( SIR_INPUT_DEVICE_KEYBOARD, 101, &hKeyboard ) || !input.findDevice( SIR_INPUT_DEVICE_MOUSE, 102, &hMouse ) ) {
+		return false;
+	}
+	XEvent event = {};
+	event.type = KeyPress;
+	event.xkey.window = ( Window )42;
+	event.xkey.keycode = 38;
+	if ( x11.handleEvent( event ) ) {
+		return false; // Focus is mandatory for desktop delivery.
+	}
+	event.type = FocusIn;
+	event.xfocus.window = ( Window )7;
+	if ( x11.handleEvent( event ) ) {
+		return false; // Wrong window is ignored.
+	}
+	event.xfocus.window = ( Window )42;
+	if ( !x11.handleEvent( event ) ) {
+		return false;
+	}
+	event.type = KeyPress;
+	event.xkey.window = ( Window )42;
+	event.xkey.keycode = 38;
+	if ( !x11.handleEvent( event ) ) {
+		return false;
+	}
+	event.type = KeyRelease;
+	if ( !x11.handleEvent( event ) ) {
+		return false;
+	}
+	event.type = ButtonPress;
+	event.xbutton.window = ( Window )42;
+	event.xbutton.button = Button3;
+	if ( !x11.handleEvent( event ) ) {
+		return false;
+	}
+	event.type = ButtonRelease;
+	if ( !x11.handleEvent( event ) ) {
+		return false;
+	}
+	event.type = ButtonPress;
+	event.xbutton.button = Button4;
+	if ( !x11.handleEvent( event ) ) {
+		return false;
+	}
+	event.type = MotionNotify;
+	event.xmotion.window = ( Window )42;
+	event.xmotion.x_root = 100;
+	event.xmotion.y_root = 70;
+	if ( !x11.handleEvent( event ) ) {
+		return false;
+	}
+	event.xmotion.x_root = 111;
+	event.xmotion.y_root = 65;
+	if ( !x11.handleEvent( event ) ) {
+		return false;
+	}
+	sirInputDeviceState_t keyboard = {};
+	sirInputDeviceState_t mouse = {};
+	if ( !input.getState( hKeyboard, &keyboard ) || !input.getState( hMouse, &mouse ) ||
+	     ( keyboard.nPressed[38 / 32] & ( 1U << ( 38 % 32 ) ) ) == 0 || ( keyboard.nReleased[38 / 32] & ( 1U << ( 38 % 32 ) ) ) == 0 ||
+	     mouse.nMouseDeltaX != 11 || mouse.nMouseDeltaY != -5 || ( mouse.nPressed[0] & ( 1U << 1 ) ) == 0 ||
+	     ( mouse.nReleased[0] & ( 1U << 1 ) ) == 0 ) {
+		return false;
+	}
+	uint32_t nKeyboardEdges = 0;
+	uint32_t nWheel = 0;
+	uint32_t nPointer = 0;
+	sirInputEvent_t recorded = {};
+	while ( input.pollEvent( &recorded ) ) {
+		if ( recorded.eKind == SIR_INPUT_EVENT_BUTTON && recorded.eDeviceKind == SIR_INPUT_DEVICE_KEYBOARD ) {
+			++nKeyboardEdges;
+		}
+		if ( recorded.eKind == SIR_INPUT_EVENT_WHEEL && recorded.nCode == 0 && recorded.nValue == 120 ) {
+			++nWheel;
+		}
+		if ( recorded.eKind == SIR_INPUT_EVENT_POINTER && recorded.nValue == 11 && recorded.nValueY == -5 ) {
+			++nPointer;
+		}
+	}
+	if ( nKeyboardEdges != 2 || nWheel != 1 || nPointer != 1 ) {
+		return false;
+	}
+	event.type = KeyPress;
+	event.xkey.window = ( Window )42;
+	event.xkey.keycode = 40;
+	if ( !x11.handleEvent( event ) ) {
+		return false;
+	}
+	event.type = FocusOut;
+	event.xfocus.window = ( Window )42;
+	if ( !x11.handleEvent( event ) || !input.getState( hKeyboard, &keyboard ) || keyboard.nButtons[40 / 32] != 0 ) {
+		return false;
+	}
+	event.type = KeyPress;
+	if ( x11.handleEvent( event ) ) {
+		return false;
+	}
+	x11.shutdown();
+	return input.getActiveDeviceCount() == 0 && !input.getState( hKeyboard, &keyboard );
+}
+
+static bool testX11FocusOverflowRecovery( void )
+{
+	SIRInputSystem input;
+	SIRLinuxX11Input x11( input );
+	if ( !x11.bind( ( Window )64, 601, 602 ) ) {
+		return false;
+	}
+	sirInputDeviceHandle_t hKeyboard = {};
+	sirInputDeviceHandle_t hMouse = {};
+	if ( !input.findDevice( SIR_INPUT_DEVICE_KEYBOARD, 601, &hKeyboard ) || !input.findDevice( SIR_INPUT_DEVICE_MOUSE, 602, &hMouse ) ) {
+		return false;
+	}
+	XEvent event = {};
+	event.type = FocusIn;
+	event.xfocus.window = ( Window )64;
+	if ( !x11.handleEvent( event ) || !input.pushButton( hKeyboard, 38, true, 0 ) ) {
+		return false;
+	}
+	for ( uint32_t i = 0; i < SIR_INPUT_MAX_EVENTS - 3; ++i ) {
+		if ( !input.pushPointer( hMouse, 1, 0, 0 ) ) {
+			return false;
+		}
+	}
+	event.type = FocusOut;
+	event.xfocus.window = ( Window )64;
+	if ( !x11.handleEvent( event ) || input.isOverflowed() ) {
+		return false;
+	}
+	sirInputDeviceState_t keyboard = {};
+	if ( !input.getState( hKeyboard, &keyboard ) || keyboard.nButtons[38 / 32] != 0 ) {
+		return false;
+	}
+	uint32_t nResync = 0;
+	sirInputEvent_t received = {};
+	while ( input.pollEvent( &received ) ) {
+		if ( received.eKind != SIR_INPUT_EVENT_RESYNC ) {
+			return false;
+		}
+		++nResync;
+	}
+	return nResync == 2;
+}
+#endif
+
 int main( void )
 {
 	bool bPassed = testLifecycle() && testTransitions() && testPointerAndAnalog() && testQueuePressure() && testGamepadSamples() &&
@@ -414,6 +579,9 @@ int main( void )
 	SIRLinuxEvdevInput controller( input );
 	bPassed = bPassed && !controller.openDevice( "/dev/null" ) && controller.discover( "/not/a/real/input/path" ) == 0 &&
 	          controller.getDeviceCount() == 0 && testEvdevMappings() && testEvdevWatchLifecycle();
+#endif
+#if defined( SIR_INPUT_X11_AVAILABLE )
+	bPassed = bPassed && testX11DesktopRouting() && testX11FocusOverflowRecovery();
 #endif
 	if ( !bPassed ) {
 		fputs( "SIRInputTests failed\n", stderr );

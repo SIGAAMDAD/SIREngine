@@ -34,6 +34,17 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         Linux/SIRPlatformProcessLinux.cpp
         Linux/SIRLinuxEvdevInput.cpp
     )
+    # X11 is a native, optional desktop adapter. The engine window owner
+    # supplies XEvents; controller evdev support does not depend on X11.
+    option(SIR_WITH_X11_INPUT "Compile the native X11 desktop input adapter when available" ON)
+    if(SIR_WITH_X11_INPUT)
+        find_package(X11 QUIET)
+        if(X11_FOUND)
+            list(APPEND SIR_CORE_PLATFORM_OS Linux/SIRLinuxX11Input.cpp)
+            target_link_libraries(SIRCore PRIVATE X11::X11)
+            target_compile_definitions(SIRCore PUBLIC SIR_INPUT_X11_AVAILABLE=1)
+        endif()
+    endif()
 else()
     message(FATAL_ERROR "SIRCore platform services currently support Windows and Linux")
 endif()
