@@ -24,15 +24,15 @@ SIRSharedMemoryPool::SIRSharedMemoryPool( void ) : m_pSegment( nullptr ), m_nCur
 
 bool SIRSharedMemoryPool::init( SIRMemorySegment *pSegment )
 {
-	if ( m_pSegment != nullptr || pSegment == nullptr || pSegment->getBase() == nullptr ||
-	     pSegment->getCommittedBytes() != 0 || !SIR_IS_POWER_OF_TWO( pSegment->getPageSize() ) ) {
+	if ( m_pSegment != nullptr || pSegment == nullptr || pSegment->getBase() == nullptr || pSegment->getCommittedBytes() != 0 ||
+	     !SIR_IS_POWER_OF_TWO( pSegment->getPageSize() ) ) {
 		return false;
 	}
 	m_pSegment = pSegment;
 	return true;
 }
 
-bool SIRSharedMemoryPool::allocateRegion( uint64_t nBytes, sirSharedMemoryRegion_t& region )
+bool SIRSharedMemoryPool::allocateRegion( uint64_t nBytes, sirSharedMemoryRegion_t &region )
 {
 	if ( m_pSegment == nullptr || nBytes == 0 ) {
 		return false;
@@ -50,16 +50,14 @@ bool SIRSharedMemoryPool::allocateRegion( uint64_t nBytes, sirSharedMemoryRegion
 	return true;
 }
 
-bool SIRSharedMemoryPool::releaseLastRegion( const sirSharedMemoryRegion_t& region )
+bool SIRSharedMemoryPool::releaseLastRegion( const sirSharedMemoryRegion_t &region )
 {
-	if ( region.pSegment != m_pSegment || region.nReservedBytes == 0 ||
-	     region.nReservedBytes > m_nCursor ||
+	if ( region.pSegment != m_pSegment || region.nReservedBytes == 0 || region.nReservedBytes > m_nCursor ||
 	     region.nOffsetBytes != m_nCursor - region.nReservedBytes ) {
 		return false;
 	}
 	// Decommit only the carved pages. No live client may retain pointers.
-	if ( region.pSegment->getCommittedBytes() != 0 &&
-	     !region.pSegment->decommit( region.nOffsetBytes, region.nReservedBytes ) ) {
+	if ( region.pSegment->getCommittedBytes() != 0 && !region.pSegment->decommit( region.nOffsetBytes, region.nReservedBytes ) ) {
 		return false;
 	}
 	m_nCursor = region.nOffsetBytes;
@@ -76,7 +74,7 @@ SIRMemorySegment *SIRSharedMemoryPool::getSegment( void ) const
 	return m_pSegment;
 }
 
-void *SIRSharedMemoryPool::getBase( const sirSharedMemoryRegion_t& region )
+void *SIRSharedMemoryPool::getBase( const sirSharedMemoryRegion_t &region )
 {
 	if ( region.pSegment == nullptr || region.nOffsetBytes > region.pSegment->getReservedBytes() ||
 	     region.nReservedBytes > region.pSegment->getReservedBytes() - region.nOffsetBytes ) {
@@ -85,19 +83,17 @@ void *SIRSharedMemoryPool::getBase( const sirSharedMemoryRegion_t& region )
 	return static_cast<uint8_t *>( region.pSegment->getBase() ) + region.nOffsetBytes;
 }
 
-bool SIRSharedMemoryPool::commit( const sirSharedMemoryRegion_t& region, uint64_t nOffset, uint64_t nBytes )
+bool SIRSharedMemoryPool::commit( const sirSharedMemoryRegion_t &region, uint64_t nOffset, uint64_t nBytes )
 {
-	if ( getBase( region ) == nullptr || nOffset > region.nReservedBytes ||
-	     nBytes > region.nReservedBytes - nOffset ) {
+	if ( getBase( region ) == nullptr || nOffset > region.nReservedBytes || nBytes > region.nReservedBytes - nOffset ) {
 		return false;
 	}
 	return nBytes == 0 || region.pSegment->commit( region.nOffsetBytes + nOffset, nBytes );
 }
 
-bool SIRSharedMemoryPool::decommit( const sirSharedMemoryRegion_t& region, uint64_t nOffset, uint64_t nBytes )
+bool SIRSharedMemoryPool::decommit( const sirSharedMemoryRegion_t &region, uint64_t nOffset, uint64_t nBytes )
 {
-	if ( getBase( region ) == nullptr || nOffset > region.nReservedBytes ||
-	     nBytes > region.nReservedBytes - nOffset ) {
+	if ( getBase( region ) == nullptr || nOffset > region.nReservedBytes || nBytes > region.nReservedBytes - nOffset ) {
 		return false;
 	}
 	return nBytes == 0 || region.pSegment->decommit( region.nOffsetBytes + nOffset, nBytes );

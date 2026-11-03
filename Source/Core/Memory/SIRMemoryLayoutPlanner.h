@@ -29,29 +29,31 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 typedef struct sirMemoryLayoutEntry_s
 {
-    uint64_t nReserveBytes;
-    uint64_t nCommitLimitBytes;
-    uint64_t nAllocatorMetadataBytes;
-    bool bBuddyPowerOfTwo;
-    bool bUse32BitOffsets;
+	uint64_t nReserveBytes;
+	uint64_t nCommitLimitBytes;
+	uint64_t nAllocatorMetadataBytes;
+	bool bBuddyPowerOfTwo;
+	bool bUse32BitOffsets;
 } sirMemoryLayoutEntry_t;
 
 typedef struct sirMemoryLayoutResult_s
 {
-    uint64_t nReservedDataBytes;
-    uint64_t nEstimatedMetadataBytes;
-    uint64_t nRemainingDataBytes;
-    uint32_t nSegmentCount;
+	uint64_t nReservedDataBytes;
+	uint64_t nEstimatedMetadataBytes;
+	uint64_t nRemainingDataBytes;
+	uint32_t nSegmentCount;
 } sirMemoryLayoutResult_t;
 
 // Dry run: never reserves, commits, or publishes any address or segment.
 class SIRMemoryLayoutPlanner
 {
 public:
-    static uint64_t estimateCompactBucketMetadata( uint64_t nSegmentBytes, uint32_t nSlabBytes, uint32_t nWorkerSeats, uint32_t nAlignment );
-    static uint64_t estimateCompactBucketColdMetadata( uint64_t nSegmentBytes,
-        uint32_t nSlabBytes, uint32_t nWorkerSeats, uint32_t nAlignment );
-    static bool preflight( const sirMemoryConfig_t& config, const sirMemoryBudgetProfile_t& budget, const sirMemoryLayoutEntry_t *pEntries, uint32_t nEntryCount, sirMemoryLayoutResult_t *pResult );
+	static uint64_t estimateCompactBucketMetadata( uint64_t nSegmentBytes, uint32_t nSlabBytes, uint32_t nWorkerSeats,
+	                                               uint32_t nAlignment );
+	static uint64_t estimateCompactBucketColdMetadata( uint64_t nSegmentBytes, uint32_t nSlabBytes, uint32_t nWorkerSeats,
+	                                                   uint32_t nAlignment );
+	static bool preflight( const sirMemoryConfig_t &config, const sirMemoryBudgetProfile_t &budget, const sirMemoryLayoutEntry_t *pEntries,
+	                       uint32_t nEntryCount, sirMemoryLayoutResult_t *pResult );
 };
 
 #endif // __SIRENGINE_SIRMEMORYLAYOUTPLANNER_H__

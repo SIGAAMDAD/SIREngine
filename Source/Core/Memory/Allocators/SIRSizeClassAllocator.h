@@ -37,33 +37,32 @@ class SIRMemorySegment;
 class SIRSizeClassAllocator
 {
 public:
-    static constexpr uint32_t SIR_SIZE_CLASS_COUNT = 8;
-    static constexpr uint32_t SIR_FINE_SIZE_CLASS_COUNT = 32;
+	static constexpr uint32_t SIR_SIZE_CLASS_COUNT = 8;
+	static constexpr uint32_t SIR_FINE_SIZE_CLASS_COUNT = 32;
 
-    SIRSizeClassAllocator( void );
-    SIRSizeClassAllocator( const SIRSizeClassAllocator& ) = delete;
-    SIRSizeClassAllocator& operator=( const SIRSizeClassAllocator& ) = delete;
+	SIRSizeClassAllocator( void );
+	SIRSizeClassAllocator( const SIRSizeClassAllocator & ) = delete;
+	SIRSizeClassAllocator &operator=( const SIRSizeClassAllocator & ) = delete;
 
-    bool init( SIRMemorySegment *const *ppSegments );
-    bool initFine( SIRMemorySegment *const *ppSegments );
-    void *alloc( uint32_t nBytes );
-    bool free( void *pMemory, uint32_t nBytes );
-    bool precommitClass( uint32_t nClass, uint32_t nSlots );
-    bool shutdown( void );
-    static uint32_t getClassIndex( uint32_t nBytes );
-    static uint32_t getClassBytes( uint32_t nClass );
-    static uint32_t getFineClassIndex( uint32_t nBytes );
-    static uint32_t getFineClassBytes( uint32_t nClass );
-    uint32_t getActiveClassCount( void ) const;
+	bool init( SIRMemorySegment *const *ppSegments );
+	bool initFine( SIRMemorySegment *const *ppSegments );
+	void *alloc( uint32_t nBytes );
+	bool free( void *pMemory, uint32_t nBytes );
+	bool precommitClass( uint32_t nClass, uint32_t nSlots );
+	bool shutdown( void );
+	static uint32_t getClassIndex( uint32_t nBytes );
+	static uint32_t getClassBytes( uint32_t nClass );
+	static uint32_t getFineClassIndex( uint32_t nBytes );
+	static uint32_t getFineClassBytes( uint32_t nClass );
+	uint32_t getActiveClassCount( void ) const;
 
 private:
-    bool initInternal( SIRMemorySegment *const *ppSegments,
-                       uint32_t nClassCount, bool bFineGrained );
+	bool initInternal( SIRMemorySegment *const *ppSegments, uint32_t nClassCount, bool bFineGrained );
 
-    SIRPoolAllocator *m_pPools;
-    uint32_t m_nInitialized;
-    uint32_t m_nClassCount;
-    bool m_bFineGrained;
+	SIRPoolAllocator *m_pPools;
+	uint32_t m_nInitialized;
+	uint32_t m_nClassCount;
+	bool m_bFineGrained;
 };
 
 #endif // __SIRENGINE_SIRSIZECLASSALLOCATOR_H__

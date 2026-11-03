@@ -95,7 +95,7 @@ public:
 	SIRMemoryPressureCoordinator( void );
 
 	bool init( SIRMemoryManager *pManager, uint32_t nOwnerCapacity );
-	bool registerOwner( const sirReclaimOwnerConfig_t& config, uint32_t *pIndex );
+	bool registerOwner( const sirReclaimOwnerConfig_t &config, uint32_t *pIndex );
 	bool requestReclaim( uint64_t nTargetBytes );
 	uint64_t serviceOwner( uint32_t nIndex );
 	uint32_t findNextPendingOwner( uint32_t nMaxPriority = UINT32_MAX ) const;
@@ -104,9 +104,8 @@ public:
 	bool shutdown( void );
 
 private:
-
-	bool trimOwner( sirOwner_t& owner, uint64_t nTargetBytes );
-	uint64_t countOwnerCommitted( const sirOwner_t& owner ) const;
+	bool trimOwner( sirOwner_t &owner, uint64_t nTargetBytes );
+	uint64_t countOwnerCommitted( const sirOwner_t &owner ) const;
 
 	SIRMemoryManager *m_pManager;
 	sirOwner_t *m_pOwners;

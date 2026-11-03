@@ -18,10 +18,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 uint32_t SIRHeapBlock::size( const sirHeapBlock_t *pBlock ) noexcept
 {
-    return pBlock->nSizeAndFlags & ~15u;
+	return pBlock->nSizeAndFlags & ~15u;
 }
 
 bool SIRHeapBlock::isFree( const sirHeapBlock_t *pBlock ) noexcept
 {
-    return ( pBlock->nSizeAndFlags & FREE ) != 0;
+	return ( pBlock->nSizeAndFlags & FREE ) != 0;
 }

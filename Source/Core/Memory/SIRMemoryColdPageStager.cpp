@@ -18,8 +18,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Core/Memory/SIRMemoryManager.h>
 #include <Core/Memory/SIRMemorySegment.h>
 
-SIRMemoryColdPageStager::SIRMemoryColdPageStager( void )
-    : m_pRanges( nullptr ), m_nCapacity( 0 ), m_nCount( 0 ), m_pManager( nullptr )
+SIRMemoryColdPageStager::SIRMemoryColdPageStager( void ) : m_pRanges( nullptr ), m_nCapacity( 0 ), m_nCount( 0 ), m_pManager( nullptr )
 {
 }
 
@@ -28,8 +27,8 @@ bool SIRMemoryColdPageStager::init( SIRMemoryManager *pManager, uint32_t nCapaci
 	if ( m_pRanges != nullptr || pManager == nullptr || nCapacity == 0 ) {
 		return false;
 	}
-	const uint64_t nBytes = ( (uint64_t)( nCapacity ) ) * sizeof( sirStageRange_t );
-	sirStageRange_t *pRanges = ( (sirStageRange_t *)( pManager->allocateMetadata( nBytes, alignof( sirStageRange_t ) ) ) );
+	const uint64_t nBytes = ( ( uint64_t )( nCapacity ) ) * sizeof( sirStageRange_t );
+	sirStageRange_t *pRanges = ( ( sirStageRange_t * )( pManager->allocateMetadata( nBytes, alignof( sirStageRange_t ) ) ) );
 	if ( pRanges == nullptr ) {
 		return false;
 	}
@@ -47,16 +46,17 @@ bool SIRMemoryColdPageStager::add( SIRMemorySegment *pSegment, uint64_t nOffset,
 	if ( pSegment->getManager() != m_pManager ) {
 		return false;
 	}
-	if ( m_nCount == m_nCapacity || nBytes == 0 || nOffset > pSegment->getReservedBytes() || nBytes > pSegment->getReservedBytes() - nOffset || ( ( nOffset | nBytes ) & ( pSegment->getPageSize() - 1 ) ) != 0 ) {
+	if ( m_nCount == m_nCapacity || nBytes == 0 || nOffset > pSegment->getReservedBytes() ||
+	     nBytes > pSegment->getReservedBytes() - nOffset || ( ( nOffset | nBytes ) & ( pSegment->getPageSize() - 1 ) ) != 0 ) {
 		return false;
 	}
 	if ( m_nCount != 0 ) {
-		const sirStageRange_t& prev = m_pRanges[ m_nCount - 1 ];
+		const sirStageRange_t &prev = m_pRanges[m_nCount - 1];
 		if ( prev.pSegment == pSegment && nOffset < prev.nOffset ) {
 			return false;
 		}
 	}
-	m_pRanges[ m_nCount++ ] = { pSegment, nOffset, nBytes };
+	m_pRanges[m_nCount++] = { pSegment, nOffset, nBytes };
 	return true;
 }
 
@@ -65,13 +65,12 @@ sirColdStageReport_t SIRMemoryColdPageStager::commitStaged( void )
 	sirColdStageReport_t result = { 0, 0, 0, UINT32_MAX };
 	uint32_t i = 0;
 	while ( i < m_nCount ) {
-		SIRMemorySegment *pSegment = m_pRanges[ i ].pSegment;
-		uint64_t nFirst = m_pRanges[ i ].nOffset;
-		uint64_t nEnd = nFirst + m_pRanges[ i ].nBytes;
+		SIRMemorySegment *pSegment = m_pRanges[i].pSegment;
+		uint64_t nFirst = m_pRanges[i].nOffset;
+		uint64_t nEnd = nFirst + m_pRanges[i].nBytes;
 		++i;
-		while ( i < m_nCount && m_pRanges[ i ].pSegment == pSegment &&
-		        m_pRanges[ i ].nOffset <= nEnd ) {
-			const uint64_t nNextEnd = m_pRanges[ i ].nOffset + m_pRanges[ i ].nBytes;
+		while ( i < m_nCount && m_pRanges[i].pSegment == pSegment && m_pRanges[i].nOffset <= nEnd ) {
+			const uint64_t nNextEnd = m_pRanges[i].nOffset + m_pRanges[i].nBytes;
 			if ( nNextEnd > nEnd ) {
 				nEnd = nNextEnd;
 			}

@@ -54,8 +54,8 @@ public:
 	bool add( SIRMemorySegment *pSegment, uint64_t nOffset, uint64_t nBytes );
 	sirColdStageReport_t commitStaged( void );
 	void clear( void );
-private:
 
+private:
 	sirStageRange_t *m_pRanges;
 	uint32_t m_nCapacity;
 	uint32_t m_nCount;

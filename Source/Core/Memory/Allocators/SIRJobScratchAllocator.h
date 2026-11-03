@@ -32,44 +32,44 @@ of merchantability, fitness for a particular purpose and noninfringement.
 class SIRMemorySegment;
 class SIRMemoryManager;
 
-typedef struct sirJobScratchToken_s {
-    uint32_t nSlot;
-    uint32_t nGeneration;
+typedef struct sirJobScratchToken_s
+{
+	uint32_t nSlot;
+	uint32_t nGeneration;
 } sirJobScratchToken_t;
 
 // Job owns the token, not the OS worker or fiber. A job must serialize its
 // alloc/rewind and completion when migrating from one thread to another.
-typedef struct sirJobSlot_s {
-    SIRLinearAllocator Linear;
-    SIRAtomic<uint32_t> nState;
-    SIRAtomic<uint64_t> nPeakUsage;
-    uint32_t nGeneration;
-    sirJobSlot_s( void );
+typedef struct sirJobSlot_s
+{
+	SIRLinearAllocator Linear;
+	SIRAtomic<uint32_t> nState;
+	SIRAtomic<uint64_t> nPeakUsage;
+	uint32_t nGeneration;
+	sirJobSlot_s( void );
 } sirJobSlot_t;
 
 class SIRJobScratchAllocator
 {
 public:
-    SIRJobScratchAllocator( void );
-    bool init( SIRMemorySegment *const *ppSegments, uint32_t nSlots );
-    sirJobScratchToken_t beginJob( uint32_t nSlot );
-    void *alloc( sirJobScratchToken_t token, uint64_t nBytes,
-                 uint64_t nAlignment = 16 );
-    uint64_t mark( sirJobScratchToken_t token ) const;
-    bool rewind( sirJobScratchToken_t token, uint64_t nMark );
-    bool precommit( sirJobScratchToken_t token, uint64_t nBytes );
-    bool completeJob( sirJobScratchToken_t token, bool bDecommit = false );
-    bool completeJobRetaining( sirJobScratchToken_t token, uint64_t nWarmBytes );
-    bool shutdown( void );
-    uint64_t getPeakUsageBytes( void ) const;
+	SIRJobScratchAllocator( void );
+	bool init( SIRMemorySegment *const *ppSegments, uint32_t nSlots );
+	sirJobScratchToken_t beginJob( uint32_t nSlot );
+	void *alloc( sirJobScratchToken_t token, uint64_t nBytes, uint64_t nAlignment = 16 );
+	uint64_t mark( sirJobScratchToken_t token ) const;
+	bool rewind( sirJobScratchToken_t token, uint64_t nMark );
+	bool precommit( sirJobScratchToken_t token, uint64_t nBytes );
+	bool completeJob( sirJobScratchToken_t token, bool bDecommit = false );
+	bool completeJobRetaining( sirJobScratchToken_t token, uint64_t nWarmBytes );
+	bool shutdown( void );
+	uint64_t getPeakUsageBytes( void ) const;
 
 private:
-
-    bool isActive( sirJobScratchToken_t token ) const;
-    bool finishJob( sirJobScratchToken_t token, uint64_t nWarmBytes );
-    sirJobSlot_t *m_pSlots;
-    uint32_t m_nSlotCount;
-    SIRAtomic<uint64_t> m_nPeakUsage;
+	bool isActive( sirJobScratchToken_t token ) const;
+	bool finishJob( sirJobScratchToken_t token, uint64_t nWarmBytes );
+	sirJobSlot_t *m_pSlots;
+	uint32_t m_nSlotCount;
+	SIRAtomic<uint64_t> m_nPeakUsage;
 };
 
 #endif // __SIRENGINE_SIRJOBSCRATCHALLOCATOR_H__

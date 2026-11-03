@@ -42,15 +42,16 @@ class SIRSharedMemoryPool
 public:
 	SIRSharedMemoryPool( void );
 	bool init( SIRMemorySegment *pSegment );
-	bool allocateRegion( uint64_t nBytes, sirSharedMemoryRegion_t& region );
+	bool allocateRegion( uint64_t nBytes, sirSharedMemoryRegion_t &region );
 	// Cold rollback only; the caller must release all borrowers first.
-	bool releaseLastRegion( const sirSharedMemoryRegion_t& region );
+	bool releaseLastRegion( const sirSharedMemoryRegion_t &region );
 	uint64_t getAvailableBytes( void ) const;
 	SIRMemorySegment *getSegment( void ) const;
 
-	static void *getBase( const sirSharedMemoryRegion_t& region );
-	static bool commit( const sirSharedMemoryRegion_t& region, uint64_t nOffset, uint64_t nBytes );
-	static bool decommit( const sirSharedMemoryRegion_t& region, uint64_t nOffset, uint64_t nBytes );
+	static void *getBase( const sirSharedMemoryRegion_t &region );
+	static bool commit( const sirSharedMemoryRegion_t &region, uint64_t nOffset, uint64_t nBytes );
+	static bool decommit( const sirSharedMemoryRegion_t &region, uint64_t nOffset, uint64_t nBytes );
+
 private:
 	SIRMemorySegment *m_pSegment;
 	uint64_t m_nCursor;
