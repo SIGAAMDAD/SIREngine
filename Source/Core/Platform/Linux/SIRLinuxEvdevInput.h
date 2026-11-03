@@ -23,22 +23,31 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #endif
 
 #include <Core/Platform/SIRInput.h>
+#include <Core/Platform/SIRInputControllerProfiles.h>
 
 typedef struct sirEvdevAxisCalibration_s
 {
 	int32_t nMin;
 	int32_t nMax;
+	uint16_t nNativeCode;
+	bool bInvert;
 	bool bValid;
 } sirEvdevAxisCalibration_t;
+
+// Oversized or truncated evdev reports trigger a full hardware resynchronization.
+constexpr uint32_t SIR_EVDEV_MAX_FRAME_EVENTS = 64;
 
 typedef struct sirEvdevSlot_s
 {
 	sirInputDeviceHandle_t hDevice;
 	int nFd;
 	uint64_t nDeviceId;
+	const sirInputControllerProfile_t *pProfile;
 	bool bDesynchronized;
 	bool bHatDPad;
 	bool bCanRumble;
+	uint32_t nFrameCount;
+	sirInputGamepadFrameEvent_t frame[SIR_EVDEV_MAX_FRAME_EVENTS];
 	int nEffectId;
 	char szPath[512];
 	sirEvdevAxisCalibration_t axes[SIR_GAMEPAD_AXIS_COUNT];
@@ -55,6 +64,7 @@ public:
 	~SIRLinuxEvdevInput();
 
 	bool openDevice( const char *pszPath ) noexcept;
+	bool registerProfile( const sirInputControllerProfile_t &profile ) noexcept;
 	uint32_t discover( const char *pszDirectory = "/dev/input" ) noexcept;
 	bool watchDirectory( const char *pszDirectory = "/dev/input" ) noexcept;
 	bool isWatching( void ) const noexcept;
@@ -68,11 +78,15 @@ public:
 
 private:
 	bool resynchronize( sirEvdevSlot_t &slot ) noexcept;
-	bool processHat( sirEvdevSlot_t &slot, uint16_t nCode, int32_t nValue, uint64_t nTimestampNs ) noexcept;
+	int16_t mapDeviceButton( const sirEvdevSlot_t &slot, uint16_t nCode ) const noexcept;
+	int16_t mapDeviceAxis( const sirEvdevSlot_t &slot, uint16_t nCode ) const noexcept;
+	bool appendFrameEvent( sirEvdevSlot_t &slot, sirInputEventKind_t eKind, uint16_t nCode, int32_t nValue ) noexcept;
+	bool stageHat( sirEvdevSlot_t &slot, uint16_t nCode, int32_t nValue ) noexcept;
 	void closeSlot( sirEvdevSlot_t &slot ) noexcept;
 	void pumpHotplug( void ) noexcept;
 
 	SIRInputSystem &m_Input;
+	SIRInputControllerProfiles m_Profiles;
 	sirEvdevSlot_t m_Devices[SIR_INPUT_MAX_DEVICES];
 	uint32_t m_nDeviceCount;
 	int m_nNotifyFd;

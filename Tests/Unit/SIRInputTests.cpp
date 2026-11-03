@@ -14,6 +14,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Core/Platform/SIRInput.h>
+#include <Core/Platform/SIRInputControllerProfiles.h>
 #if defined( __linux__ )
 #include <Core/Platform/Linux/SIRLinuxEvdevInput.h>
 #include <fcntl.h>
@@ -232,6 +233,125 @@ static bool testAtomicSampleOverflow( void )
 	return nResync == 2 && input.submitGamepadSample( hPad, sample, 60 );
 }
 
+static bool testNativeGamepadProfiles( void )
+{
+	SIRInputControllerProfiles profiles;
+	sirInputControllerProfile_t profile = {};
+	profile.nVendor = 0x054c;
+	profile.nProduct = 0x09cc;
+	profile.nBus = 0;
+	profile.nButtonCount = 2;
+	profile.buttons[0] = { 304, SIR_GAMEPAD_BUTTON_EAST };
+	profile.buttons[1] = { 305, SIR_GAMEPAD_BUTTON_SOUTH };
+	profile.nAxisCount = SIR_GAMEPAD_AXIS_COUNT;
+	for ( uint16_t i = 0; i < SIR_GAMEPAD_AXIS_COUNT; ++i ) {
+		profile.axes[i] = { ( uint16_t )( i + 12 ), i, i == SIR_GAMEPAD_AXIS_LEFT_Y };
+	}
+	if ( !profiles.addProfile( profile ) || profiles.addProfile( profile ) || profiles.getCount() != 1 ) {
+		return false;
+	}
+	const sirInputControllerProfile_t *pGeneric = profiles.findProfile( 3, 0x054c, 0x09cc );
+	if ( pGeneric == nullptr || SIRInputControllerProfiles::findButton( *pGeneric, 304 ) != SIR_GAMEPAD_BUTTON_EAST ||
+	     SIRInputControllerProfiles::findAxis( *pGeneric, 15 ) != 3 || SIRInputControllerProfiles::findButton( *pGeneric, 999 ) != -1 ||
+	     profiles.findProfile( 3, 1, 1 ) != nullptr ) {
+		return false;
+	}
+	profile.nBus = 3;
+	profile.buttons[0].nLogicalCode = SIR_GAMEPAD_BUTTON_WEST;
+	if ( !profiles.addProfile( profile ) || profiles.findProfile( 3, 0x054c, 0x09cc ) == pGeneric ||
+	     profiles.findProfile( 5, 0x054c, 0x09cc ) != pGeneric ) {
+		return false;
+	}
+	sirInputControllerProfile_t invalid = profile;
+	invalid.nBus = 5;
+	invalid.axes[1].nNativeCode = invalid.axes[0].nNativeCode;
+	if ( profiles.addProfile( invalid ) ) {
+		return false;
+	}
+	invalid = profile;
+	invalid.nBus = 5;
+	invalid.buttons[1].nLogicalCode = invalid.buttons[0].nLogicalCode;
+	if ( profiles.addProfile( invalid ) ) {
+		return false;
+	}
+	invalid = profile;
+	invalid.nBus = 5;
+	invalid.axes[0].nLogicalCode = 99;
+	if ( profiles.addProfile( invalid ) ) {
+		return false;
+	}
+	invalid = profile;
+	invalid.nBus = 5;
+	invalid.axes[SIR_GAMEPAD_AXIS_LEFT_TRIGGER].bInvert = true;
+	if ( profiles.addProfile( invalid ) ) {
+		return false;
+	}
+	return profiles.getCount() == 2;
+}
+
+static bool testNativeGamepadFrame( void )
+{
+	SIRInputSystem input;
+	sirInputDeviceHandle_t hPad = {};
+	if ( !input.addDevice( SIR_INPUT_DEVICE_GAMEPAD, 77, &hPad ) ) {
+		return false;
+	}
+	sirInputEvent_t out = {};
+	input.pollEvent( &out );
+	const sirInputGamepadFrameEvent_t events[] = {
+	    { SIR_GAMEPAD_BUTTON_SOUTH, 1, SIR_INPUT_EVENT_BUTTON },  { SIR_GAMEPAD_BUTTON_SOUTH, 0, SIR_INPUT_EVENT_BUTTON },
+	    { SIR_GAMEPAD_AXIS_LEFT_X, 22000, SIR_INPUT_EVENT_AXIS }, { SIR_GAMEPAD_AXIS_LEFT_X, 0, SIR_INPUT_EVENT_AXIS },
+	    { SIR_GAMEPAD_BUTTON_EAST, 1, SIR_INPUT_EVENT_BUTTON },   { 23, -900000, SIR_INPUT_EVENT_AXIS } // Extended hardware axis.
+	};
+	if ( !input.submitGamepadFrame( hPad, events, 6, 405 ) ) {
+		return false;
+	}
+	for ( uint32_t i = 0; i < 6; ++i ) {
+		if ( !input.pollEvent( &out ) || out.eKind != events[i].eKind || out.nCode != events[i].nCode || out.nValue != events[i].nValue ||
+		     out.nTimestampNs != 405 ) {
+			return false;
+		}
+	}
+	if ( input.pollEvent( &out ) ) {
+		return false;
+	}
+	sirInputDeviceState_t state = {};
+	const uint32_t nSouthMask = UINT32_C( 1 ) << SIR_GAMEPAD_BUTTON_SOUTH;
+	const uint32_t nEastMask = UINT32_C( 1 ) << SIR_GAMEPAD_BUTTON_EAST;
+	if ( !input.getState( hPad, &state ) || ( state.nPressed[0] & nSouthMask ) == 0 || ( state.nReleased[0] & nSouthMask ) == 0 ||
+	     ( state.nButtons[0] & nEastMask ) == 0 || state.nAxes[23] != -900000 ) {
+		return false;
+	}
+	const sirInputGamepadFrameEvent_t invalid[] = { { SIR_GAMEPAD_BUTTON_NORTH, 1, SIR_INPUT_EVENT_BUTTON },
+	                                                { SIR_GAMEPAD_AXIS_LEFT_TRIGGER, -1, SIR_INPUT_EVENT_AXIS } };
+	if ( input.submitGamepadFrame( hPad, invalid, 2, 406 ) || input.submitGamepadFrame( hPad, nullptr, 1, 407 ) ||
+	     input.pollEvent( &out ) || !input.getState( hPad, &state ) ||
+	     ( state.nButtons[0] & ( UINT32_C( 1 ) << SIR_GAMEPAD_BUTTON_NORTH ) ) != 0 ) {
+		return false;
+	}
+	if ( !input.submitGamepadFrame( hPad, nullptr, 0, 408 ) ) {
+		return false;
+	}
+	// Flood a second device to leave just one event slot, then submit two edges.
+	sirInputDeviceHandle_t hMouse = {};
+	if ( !input.addDevice( SIR_INPUT_DEVICE_MOUSE, 88, &hMouse ) ) {
+		return false;
+	}
+	for ( uint32_t i = 0; i < SIR_INPUT_MAX_EVENTS - 2; ++i ) {
+		if ( !input.pushPointer( hMouse, 1, 1, i + 1 ) ) {
+			return false;
+		}
+	}
+	const sirInputGamepadFrameEvent_t overflow[] = { { SIR_GAMEPAD_BUTTON_WEST, 1, SIR_INPUT_EVENT_BUTTON },
+	                                                 { SIR_GAMEPAD_BUTTON_WEST, 0, SIR_INPUT_EVENT_BUTTON } };
+	if ( input.submitGamepadFrame( hPad, overflow, 2, 500 ) || !input.isOverflowed() || !input.getState( hPad, &state ) ||
+	     ( state.nPressed[0] & ( UINT32_C( 1 ) << SIR_GAMEPAD_BUTTON_WEST ) ) != 0 || !input.resynchronizeDevice( hPad ) ||
+	     input.isOverflowed() ) {
+		return false;
+	}
+	return true;
+}
+
 #if defined( __linux__ )
 static bool testEvdevMappings( void )
 {
@@ -288,7 +408,7 @@ static bool testEvdevWatchLifecycle( void )
 int main( void )
 {
 	bool bPassed = testLifecycle() && testTransitions() && testPointerAndAnalog() && testQueuePressure() && testGamepadSamples() &&
-	               testAtomicSampleOverflow();
+	               testAtomicSampleOverflow() && testNativeGamepadFrame() && testNativeGamepadProfiles();
 #if defined( __linux__ )
 	SIRInputSystem input;
 	SIRLinuxEvdevInput controller( input );

@@ -105,6 +105,15 @@ typedef struct sirInputEvent_s
 	sirInputDeviceKind_t eDeviceKind;
 } sirInputEvent_t;
 
+// One EV_SYN-delimited batch preserves all digital edges, even when a
+// press and release arrive in the same native controller packet.
+typedef struct sirInputGamepadFrameEvent_s
+{
+	uint16_t nCode;
+	int32_t nValue;
+	sirInputEventKind_t eKind;
+} sirInputGamepadFrameEvent_t;
+
 typedef struct sirInputDeviceState_s
 {
 	uint64_t nNativeId;
@@ -139,6 +148,8 @@ public:
 	bool removeDevice( sirInputDeviceHandle_t hDevice ) noexcept;
 	bool pushButton( sirInputDeviceHandle_t hDevice, uint16_t nCode, bool bPressed, uint64_t nTimestampNs ) noexcept;
 	bool submitGamepadSample( sirInputDeviceHandle_t hDevice, const sirInputGamepadSample_t &sample, uint64_t nTimestampNs ) noexcept;
+	bool submitGamepadFrame( sirInputDeviceHandle_t hDevice, const sirInputGamepadFrameEvent_t *pEvents, uint32_t nCount,
+	                         uint64_t nTimestampNs ) noexcept;
 	bool pushAxis( sirInputDeviceHandle_t hDevice, uint16_t nAxis, int32_t nValue, uint64_t nTimestampNs ) noexcept;
 	bool pushPointer( sirInputDeviceHandle_t hDevice, int32_t nDeltaX, int32_t nDeltaY, uint64_t nTimestampNs ) noexcept;
 	bool pushWheel( sirInputDeviceHandle_t hDevice, uint16_t nAxis, int32_t nDelta, uint64_t nTimestampNs ) noexcept;
