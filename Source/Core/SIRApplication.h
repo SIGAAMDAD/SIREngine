@@ -24,6 +24,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #endif
 // clang-format on
 
+#include <Core/Events/SIREventRegistry.h>
+
 typedef enum sirAppState_e : uint8_t
 {
 	SIR_APP_UNINITIALIZED = 0,
@@ -36,6 +38,7 @@ class SIRApplication
 private:
 	sirAppState_t m_eState;
 	uint64_t m_nTicks;
+	SIREventRegistry m_EventRegistry;
 
 public:
 	SIRApplication( void ) noexcept;
@@ -44,6 +47,7 @@ public:
 	void shutdown( void ) noexcept;
 	sirAppState_t getState( void ) const noexcept;
 	uint64_t getTickCount( void ) const noexcept;
+	SIREventRegistry &getEventRegistry( void ) noexcept;
 };
 
 #endif // __SIRENGINE_SIRAPPLICATION_H__
