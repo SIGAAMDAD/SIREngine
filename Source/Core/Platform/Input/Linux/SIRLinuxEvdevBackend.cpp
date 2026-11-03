@@ -25,7 +25,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <sys/stat.h>
 #include <unistd.h>
 
-SIRLinuxEvdevBackend::SIRLinuxEvdevBackend( void ) noexcept : m_Slots{}, m_szDirectory{}, m_nWatchFd( -1 ), m_nWatch( -1 )
+SIRLinuxEvdevBackend::SIRLinuxEvdevBackend( void ) noexcept
+    : m_Slots{}, m_Profiles(), m_bProfilesFrozen( false ), m_szDirectory{}, m_nWatchFd( -1 ), m_nWatch( -1 )
 {
 	for ( uint32_t i = 0; i < SIR_INPUT_EVDEV_CAPACITY; ++i ) {
 		m_Slots[i].nFd = -1;
@@ -98,6 +99,39 @@ int16_t SIRLinuxEvdevBackend::mapAxis( uint16_t nNative ) noexcept
 	default:
 		return -1;
 	}
+}
+
+bool SIRLinuxEvdevBackend::addProfile( const sirInputControllerProfile_t &profile ) noexcept
+{
+	if ( m_bProfilesFrozen ) {
+		return false;
+	}
+	for ( uint32_t i = 0; i < SIR_INPUT_EVDEV_CAPACITY; ++i ) {
+		if ( m_Slots[i].bOpen ) {
+			return false;
+		}
+	}
+	return m_Profiles.add( profile );
+}
+
+int16_t SIRLinuxEvdevBackend::resolveButton( const sirInputEvdevSlot_t &slot, uint16_t nCode ) noexcept
+{
+	if ( slot.bHasProfile ) {
+		const int16_t nMapped = SIRInputControllerProfiles::button( slot.profile, nCode );
+		if ( nMapped >= 0 || slot.profile.bReplaceButtons ) {
+			return nMapped;
+		}
+		// A generic fallback cannot also own a logical control explicitly
+		// claimed by the selected device profile.
+		const int16_t nFallback = mapButton( nCode );
+		for ( uint16_t i = 0; i < slot.profile.nButtonCount; ++i ) {
+			if ( nFallback == ( int16_t )slot.profile.buttons[i].nLogicalCode ) {
+				return -1;
+			}
+		}
+		return nFallback;
+	}
+	return mapButton( nCode );
 }
 
 int32_t SIRLinuxEvdevBackend::normalize( int32_t nValue, int32_t nMinimum, int32_t nMaximum, bool bTrigger ) noexcept
@@ -177,21 +211,66 @@ bool SIRLinuxEvdevBackend::openDevice( SIRInputService &service, const char *psz
 	slot.id = idOut;
 	slot.nNative = nNative;
 	memcpy( slot.szPath, pszPath, strlen( pszPath ) + 1 );
+	input_id deviceIdentity = {};
+	if ( ioctl( nFd, EVIOCGID, &deviceIdentity ) == 0 ) {
+		const sirInputControllerProfile_t *pProfile =
+		    m_Profiles.find( deviceIdentity.bustype, deviceIdentity.vendor, deviceIdentity.product );
+		if ( pProfile != nullptr ) {
+			slot.profile = *pProfile;
+			slot.bHasProfile = true;
+		}
+	}
 	unsigned long nFF[( FF_MAX + sizeof( unsigned long ) * 8 ) / ( sizeof( unsigned long ) * 8 )] = {};
 	slot.bHatDPad =
-	    ( nKeyBits[BTN_DPAD_UP / ( sizeof( unsigned long ) * 8 )] & ( 1UL << ( BTN_DPAD_UP % ( sizeof( unsigned long ) * 8 ) ) ) ) == 0;
+	    ( nKeyBits[BTN_DPAD_UP / ( sizeof( unsigned long ) * 8 )] & ( 1UL << ( BTN_DPAD_UP % ( sizeof( unsigned long ) * 8 ) ) ) ) == 0 &&
+	    ( !slot.bHasProfile || !slot.profile.bReplaceButtons );
+	if ( slot.bHasProfile ) {
+		for ( uint16_t i = 0; i < slot.profile.nButtonCount; ++i ) {
+			if ( slot.profile.buttons[i].nLogicalCode >= SIR_INPUT_PAD_DPAD_UP &&
+			     slot.profile.buttons[i].nLogicalCode <= SIR_INPUT_PAD_DPAD_RIGHT ) {
+				slot.bHatDPad = false;
+			}
+		}
+	}
 	slot.bCanRumble =
 	    bWrite && ioctl( nFd, EVIOCGBIT( EV_FF, sizeof( nFF ) ), nFF ) >= 0 &&
 	    ( nFF[FF_RUMBLE / ( sizeof( unsigned long ) * 8 )] & ( 1UL << ( FF_RUMBLE % ( sizeof( unsigned long ) * 8 ) ) ) ) != 0;
-	const uint16_t nCodes[] = { ABS_X, ABS_Y, ABS_RX, ABS_RY, ABS_Z, ABS_RZ };
+	uint16_t nCodes[SIR_INPUT_AXIS_COUNT] = { ABS_X, ABS_Y, ABS_RX, ABS_RY, ABS_Z, ABS_RZ };
+	bool bInvert[SIR_INPUT_AXIS_COUNT] = { false, true, false, true, false, false };
+	bool bExplicit[SIR_INPUT_AXIS_COUNT] = {};
+	if ( slot.bHasProfile ) {
+		if ( slot.profile.bReplaceAxes ) {
+			for ( uint16_t i = 0; i < SIR_INPUT_AXIS_COUNT; ++i ) {
+				nCodes[i] = UINT16_MAX;
+			}
+		}
+		for ( uint16_t i = 0; i < slot.profile.nAxisCount; ++i ) {
+			const sirInputControllerAxisBinding_t &binding = slot.profile.axes[i];
+			nCodes[binding.nLogicalCode] = binding.nNativeCode;
+			bInvert[binding.nLogicalCode] = binding.bInvert;
+			bExplicit[binding.nLogicalCode] = true;
+		}
+		// An overridden hardware axis must have exactly one logical owner.
+		for ( uint16_t i = 0; i < SIR_INPUT_AXIS_COUNT; ++i ) {
+			if ( bExplicit[i] || nCodes[i] == UINT16_MAX ) {
+				continue;
+			}
+			for ( uint16_t j = 0; j < SIR_INPUT_AXIS_COUNT; ++j ) {
+				if ( bExplicit[j] && nCodes[i] == nCodes[j] ) {
+					nCodes[i] = UINT16_MAX;
+					break;
+				}
+			}
+		}
+	}
 	for ( uint16_t i = 0; i < SIR_INPUT_AXIS_COUNT; ++i ) {
 		input_absinfo axis = {};
 		const uint16_t nCode = nCodes[i];
-		const bool bValid = ioctl( nFd, EVIOCGABS( nCode ), &axis ) == 0 && axis.maximum > axis.minimum;
-		slot.axes[i] = { axis.minimum, axis.maximum, nCode, i >= SIR_INPUT_AXIS_LT, bValid };
+		const bool bValid = nCode != UINT16_MAX && ioctl( nFd, EVIOCGABS( nCode ), &axis ) == 0 && axis.maximum > axis.minimum;
+		slot.axes[i] = { axis.minimum, axis.maximum, nCode, i >= SIR_INPUT_AXIS_LT, bValid, bInvert[i] };
 	}
 	// Initial snapshot from actual evdev state, not assumed-neutral inputs.
-	if ( !requery( service, slot ) ) {
+	if ( !requery( service, slot, false ) ) {
 		closeDevice( service, slot );
 		return false;
 	}
@@ -218,6 +297,7 @@ bool SIRLinuxEvdevBackend::discover( SIRInputService &service, const char *pszDi
 	if ( pDir == nullptr ) {
 		return false;
 	}
+	m_bProfilesFrozen = true;
 	while ( dirent *pEntry = readdir( pDir ) ) {
 		if ( strncmp( pEntry->d_name, "event", 5 ) != 0 ) {
 			continue;
@@ -232,9 +312,9 @@ bool SIRLinuxEvdevBackend::discover( SIRInputService &service, const char *pszDi
 	return true;
 }
 
-bool SIRLinuxEvdevBackend::requery( SIRInputService &service, sirInputEvdevSlot_t &slot ) noexcept
+bool SIRLinuxEvdevBackend::requery( SIRInputService &service, sirInputEvdevSlot_t &slot, bool bReset ) noexcept
 {
-	if ( !service.loseState( id(), slot.id ) ) {
+	if ( bReset && !service.loseState( id(), slot.id ) ) {
 		return false;
 	}
 	unsigned long nKeys[( KEY_MAX + sizeof( unsigned long ) * 8 ) / ( sizeof( unsigned long ) * 8 )] = {};
@@ -244,7 +324,7 @@ bool SIRLinuxEvdevBackend::requery( SIRInputService &service, sirInputEvdevSlot_
 		return false;
 	}
 	for ( uint16_t nCode = BTN_GAMEPAD; nCode < KEY_MAX && nCount < SIR_INPUT_EVDEV_REPORT_CAPACITY; ++nCode ) {
-		const int16_t nLogical = mapButton( nCode );
+		const int16_t nLogical = resolveButton( slot, nCode );
 		if ( nLogical >= 0 ) {
 			const bool bPressed =
 			    ( nKeys[nCode / ( sizeof( unsigned long ) * 8 )] & ( 1UL << ( nCode % ( sizeof( unsigned long ) * 8 ) ) ) ) != 0;
@@ -258,7 +338,7 @@ bool SIRLinuxEvdevBackend::requery( SIRInputService &service, sirInputEvdevSlot_
 			input_absinfo axis = {};
 			if ( ioctl( slot.nFd, EVIOCGABS( slot.axes[i].nCode ), &axis ) == 0 ) {
 				int32_t nValue = normalize( axis.value, slot.axes[i].nMinimum, slot.axes[i].nMaximum, slot.axes[i].bTrigger );
-				if ( i == SIR_INPUT_AXIS_LY || i == SIR_INPUT_AXIS_RY ) {
+				if ( slot.axes[i].bInvert ) {
 					nValue = -nValue;
 				}
 				changes[nCount++] = { SIR_INPUT_AXIS, i, nValue };
@@ -342,7 +422,7 @@ void SIRLinuxEvdevBackend::pollHotplug( SIRInputService &service ) noexcept
 void SIRLinuxEvdevBackend::resynchronize( SIRInputService &service ) noexcept
 {
 	for ( uint32_t i = 0; i < SIR_INPUT_EVDEV_CAPACITY; ++i ) {
-		if ( m_Slots[i].bOpen && !requery( service, m_Slots[i] ) ) {
+		if ( m_Slots[i].bOpen && !requery( service, m_Slots[i], false ) ) {
 			m_Slots[i].bDesynchronized = true;
 		}
 	}
@@ -379,7 +459,7 @@ void SIRLinuxEvdevBackend::sample( SIRInputService &service ) noexcept
 				if ( slot.bDesynchronized ) {
 					slot.bDesynchronized = false;
 					slot.nPending = 0;
-					requery( service, slot );
+					requery( service, slot, true );
 				} else if ( slot.nPending != 0 ) {
 					service.emitControls( id(), slot.id, slot.pending, slot.nPending );
 					slot.nPending = 0;
@@ -390,7 +470,7 @@ void SIRLinuxEvdevBackend::sample( SIRInputService &service ) noexcept
 				continue;
 			}
 			if ( event.type == EV_KEY ) {
-				const int16_t nMapped = mapButton( event.code );
+				const int16_t nMapped = resolveButton( slot, event.code );
 				if ( nMapped >= 0 && event.value <= 1 &&
 				     ( !slot.bHatDPad || nMapped < SIR_INPUT_PAD_DPAD_UP || nMapped > SIR_INPUT_PAD_DPAD_RIGHT ) ) {
 					queueChange( slot, SIR_INPUT_BUTTON, ( uint16_t )nMapped, event.value );
@@ -414,14 +494,16 @@ void SIRLinuxEvdevBackend::sample( SIRInputService &service ) noexcept
 					}
 					continue;
 				}
-				const int16_t nMapped = mapAxis( event.code );
-				if ( nMapped >= 0 && slot.axes[nMapped].bValid ) {
-					const sirInputEvdevAxis_t &axis = slot.axes[nMapped];
-					int32_t nNormalized = normalize( event.value, axis.nMinimum, axis.nMaximum, axis.bTrigger );
-					if ( nMapped == SIR_INPUT_AXIS_LY || nMapped == SIR_INPUT_AXIS_RY ) {
-						nNormalized = -nNormalized;
+				for ( uint16_t iAxis = 0; iAxis < SIR_INPUT_AXIS_COUNT; ++iAxis ) {
+					const sirInputEvdevAxis_t &axis = slot.axes[iAxis];
+					if ( axis.bValid && axis.nCode == event.code ) {
+						int32_t nNormalized = normalize( event.value, axis.nMinimum, axis.nMaximum, axis.bTrigger );
+						if ( axis.bInvert ) {
+							nNormalized = -nNormalized;
+						}
+						queueChange( slot, SIR_INPUT_AXIS, iAxis, nNormalized );
+						break;
 					}
-					queueChange( slot, SIR_INPUT_AXIS, ( uint16_t )nMapped, nNormalized );
 				}
 			}
 		}

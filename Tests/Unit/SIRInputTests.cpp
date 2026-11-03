@@ -14,9 +14,12 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Core/Platform/Input/SIRInputService.h>
+#include <Core/Platform/Input/SIRInputControllerProfiles.h>
 #if defined( __linux__ )
 #include <Core/Platform/Input/Linux/SIRLinuxEvdevBackend.h>
 #include <linux/input.h>
+#include <stdlib.h>
+#include <unistd.h>
 #endif
 #if defined( SIR_INPUT_X11_AVAILABLE )
 #include <Core/Platform/Input/Linux/SIRLinuxX11Backend.h>
@@ -166,6 +169,144 @@ static bool testInvalidAndStale( void )
 	       p->events[1].eSignal == SIR_INPUT_DISCONNECTED && !p->nConnected[h.nSlot];
 }
 
+static bool testControllerProfileRegistry( void )
+{
+	SIRInputControllerProfiles profiles;
+	sirInputControllerProfile_t generic = {};
+	generic.nVendor = 0x054c;
+	generic.nProduct = 0x0ce6;
+	generic.nButtonCount = 2;
+	generic.buttons[0] = { 304, SIR_INPUT_PAD_EAST };
+	generic.buttons[1] = { 305, SIR_INPUT_PAD_SOUTH };
+	generic.nAxisCount = 2;
+	generic.axes[0] = { 6, SIR_INPUT_AXIS_LX, false };
+	generic.axes[1] = { 7, SIR_INPUT_AXIS_LY, true };
+	generic.bReplaceButtons = true;
+	generic.bReplaceAxes = true;
+	if ( !profiles.add( generic ) || profiles.add( generic ) || profiles.count() != 1 ) {
+		return false;
+	}
+	const sirInputControllerProfile_t *pGeneric = profiles.find( 3, 0x054c, 0x0ce6 );
+	bool bInvert = false;
+	if ( pGeneric == nullptr || SIRInputControllerProfiles::button( *pGeneric, 304 ) != SIR_INPUT_PAD_EAST ||
+	     SIRInputControllerProfiles::button( *pGeneric, 0 ) != -1 ||
+	     SIRInputControllerProfiles::axis( *pGeneric, 7, &bInvert ) != SIR_INPUT_AXIS_LY || !bInvert ||
+	     profiles.find( 3, 0x045e, 0x0ce6 ) != nullptr ) {
+		return false;
+	}
+	sirInputControllerProfile_t exact = generic;
+	exact.nBus = 3;
+	exact.buttons[0].nLogicalCode = SIR_INPUT_PAD_WEST;
+	if ( !profiles.add( exact ) || profiles.find( 3, generic.nVendor, generic.nProduct ) == pGeneric ||
+	     profiles.find( 5, generic.nVendor, generic.nProduct ) != pGeneric ) {
+		return false;
+	}
+	sirInputControllerProfile_t invalid = generic;
+	invalid.nBus = 5;
+	invalid.buttons[1].nNativeCode = invalid.buttons[0].nNativeCode;
+	if ( profiles.add( invalid ) ) {
+		return false;
+	}
+	invalid = generic;
+	invalid.nBus = 5;
+	invalid.buttons[1].nLogicalCode = invalid.buttons[0].nLogicalCode;
+	if ( profiles.add( invalid ) ) {
+		return false;
+	}
+	invalid = generic;
+	invalid.nBus = 5;
+	invalid.axes[1].nNativeCode = invalid.axes[0].nNativeCode;
+	if ( profiles.add( invalid ) ) {
+		return false;
+	}
+	invalid = generic;
+	invalid.nBus = 5;
+	invalid.axes[1].nLogicalCode = invalid.axes[0].nLogicalCode;
+	if ( profiles.add( invalid ) ) {
+		return false;
+	}
+	invalid = generic;
+	invalid.nBus = 5;
+	invalid.axes[1].nLogicalCode = SIR_INPUT_AXIS_LT;
+	if ( profiles.add( invalid ) ) {
+		return false;
+	}
+	invalid = generic;
+	invalid.nBus = 5;
+	invalid.nAxisCount = SIR_INPUT_AXIS_COUNT + 1;
+	if ( profiles.add( invalid ) ) {
+		return false;
+	}
+	invalid = generic;
+	invalid.nBus = 5;
+	invalid.nButtonCount = SIR_INPUT_CONTROLLER_BUTTON_MAP_CAPACITY + 1;
+	if ( profiles.add( invalid ) ) {
+		return false;
+	}
+	if ( profiles.count() != 2 ) {
+		return false;
+	}
+	// A missing mapping must leave the caller's output unchanged.
+	bInvert = true;
+	if ( SIRInputControllerProfiles::axis( *pGeneric, 700, &bInvert ) != -1 || !bInvert ) {
+		return false;
+	}
+	invalid = generic;
+	invalid.nBus = 5;
+	invalid.nVendor = 0;
+	if ( profiles.add( invalid ) ) {
+		return false;
+	}
+#if defined( __linux__ )
+	SIRLinuxEvdevBackend backend;
+	if ( !backend.addProfile( generic ) || backend.addProfile( generic ) ) {
+		return false;
+	}
+	SIRInputService input;
+	if ( !input.attach( backend ) || !input.begin( 1 ) ) {
+		return false;
+	}
+	char szDirectory[] = "/tmp/sir-input-profiles-XXXXXX";
+	if ( mkdtemp( szDirectory ) == nullptr ) {
+		return false;
+	}
+	const bool bDiscovered = backend.discover( input, szDirectory );
+	const bool bRejectedLate = !backend.addProfile( exact );
+	input.shutdown();
+	const bool bRemoved = rmdir( szDirectory ) == 0;
+	if ( !bDiscovered || !bRejectedLate || !bRemoved ) {
+		return false;
+	}
+#endif
+	return true;
+}
+
+static bool testDeviceResyncAccounted( void )
+{
+	SIRInputService input;
+	SIRInputTestBackend backend;
+	if ( !input.attach( backend ) || !input.begin( 8 ) ) {
+		return false;
+	}
+	sirInputDeviceId_t keyboard = {};
+	if ( !input.connect( { 0, 912, SIR_INPUT_TEST, SIR_INPUT_KEYBOARD }, &keyboard ) ) {
+		return false;
+	}
+	const sirInputControlChange_t press = { SIR_INPUT_BUTTON, 30, 1 };
+	if ( !input.emitControls( SIR_INPUT_TEST, keyboard, &press, 1 ) || !input.loseState( SIR_INPUT_TEST, keyboard ) || !input.publish() ) {
+		return false;
+	}
+	const sirInputFrame_t *p = input.frame();
+	if ( p == nullptr || p->nResyncCount != 1 || p->nCount != 3 || p->state[keyboard.nSlot].nHeld[0] != 0 ) {
+		return false;
+	}
+	if ( !input.begin( 9 ) || !input.publish() ) {
+		return false;
+	}
+	p = input.frame();
+	return p != nullptr && p->nResyncCount == 0 && p->nCount == 0;
+}
+
 #if defined( __linux__ )
 static bool testEvdevCodes( void )
 {
@@ -209,7 +350,8 @@ static bool testX11Adapter( void )
 
 int main( void )
 {
-	const bool bOkay = testOwnershipAndGeneration() && testFrameBoundaries() && testAtomicOverflowAndRecovery() && testInvalidAndStale()
+	const bool bOkay = testOwnershipAndGeneration() && testFrameBoundaries() && testAtomicOverflowAndRecovery() && testInvalidAndStale() &&
+	                   testControllerProfileRegistry() && testDeviceResyncAccounted()
 #if defined( __linux__ )
 	                   && testEvdevCodes()
 #endif

@@ -24,7 +24,7 @@ Native paths:
 - Linux: `Input/Linux/SIRLinuxX11Backend`, `SIRLinuxEvdevBackend`.
 - Wayland, GameInput, extended Windows/Linux HID, text/IME, sensor APIs and SDL3 ports are subsequent native backend work. SDL3 is reserved for non-Windows/Linux targets.
 
-**Breaking source transition:** The previous `SIRInputSystem`, `SIRInputCoordinator`, `SIRInputControllerProfiles`, and their native collector APIs are deleted. There is no source or binary bridge, no forwarding shim, and no old-name aliases. Tests target only the new API. CMake registers only new translation units.
+**Early-development source replacement:** The previous `SIRInputSystem`, `SIRInputCoordinator`, `SIRInputControllerProfiles`, and their native collector APIs are deleted. There is no source or binary bridge, no forwarding shim, and no old-name aliases. Tests target only the new API. CMake registers only new translation units.
 
 ## Tick and device lifecycle
 
@@ -47,4 +47,10 @@ Run focused C++17 `SIRInputTests` for device ownership, physical identity collis
 
 ## Before merge
 
-Require a source-tree audit with zero references to superseded input declarations, source-level compiler tests for Windows/Linux native TUs, repository pinned style test, complete CI matrix, and platform/window service integration tests. This redesign intentionally breaks any existing callers of the retired interface; the inspected branch's current launcher does not own a window or call that interface.
+Require a source-tree audit with zero references to superseded input declarations, source-level compiler tests for Windows/Linux native TUs, repository pinned style test, complete CI matrix, and platform/window service integration tests. The inspected branch has no consumers of the retired interface; the launcher does not yet own a window or call this subsystem.
+
+## First-party native controller profiles and state recovery
+
+The Linux evdev backend accepts validated, fixed-capacity controller profiles registered before discovery. Selection uses the native `EVIOCGID` bus/vendor/product triple, with exact bus matches ahead of transport-independent matches. Each device copies its selected mapping at open. Profiles can replace native button and axis assignments, while the generic Linux gamepad layout remains the fallback for unrecognized hardware. Runtime evdev samples and authoritative state re-query use the identical selected mapping. This is an in-memory registry; authored/cooked profile serialization remains outstanding.
+
+A frame that overflows its bounded event buffer must be recovered before publishing or beginning another tick. Explicit per-device resynchronization increments the frame resynchronization counter; the backend retains responsibility for re-reading hardware state.
