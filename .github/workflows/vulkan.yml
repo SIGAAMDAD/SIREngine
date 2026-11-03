@@ -31,6 +31,25 @@ jobs:
       - name: Configure native Vulkan backend
         run: cmake --preset tooling -DSIR_WITH_VULKAN=ON -DSIR_WITH_GOOGLETEST=OFF
       - name: Compile Vulkan and native tests
-        run: cmake --build --preset tooling --target SIRVulkanDeviceTests
+        run: cmake --build --preset tooling --target SIRVulkanDeviceTests SIRVulkanContractTests
       - name: Headless Vulkan/VMA unit smoke
-        run: ctest --preset tooling --output-on-failure -R '^render[.]vulkan[.]headless$'
+        run: ctest --preset tooling --output-on-failure -R '^render[.]vulkan[.]'
+
+  vulkan-windows:
+    runs-on: windows-2022
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Fetch pinned Vulkan dependencies
+        run: git submodule update --init ThirdParty/VulkanHeaders ThirdParty/VulkanMemoryAllocator
+      - name: Set up MSVC compiler environment
+        uses: ilammy/msvc-dev-cmd@v1
+      - uses: ./.github/actions/setup-build-tools
+      - name: Configure native Vulkan backend
+        run: cmake --preset dev -DSIR_WITH_VULKAN=ON -DSIR_WITH_GOOGLETEST=OFF
+      - name: Compile Vulkan and native tests
+        run: cmake --build --preset dev --target SIRVulkanDeviceTests SIRVulkanContractTests
+      - name: Validate contract paths and hardware-dependent smoke
+        run: ctest --preset dev --output-on-failure -R '^render[.]vulkan[.]'
