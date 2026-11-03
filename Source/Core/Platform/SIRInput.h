@@ -18,9 +18,11 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <SIRPCH.hpp>
 
+// clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
 	#pragma once
 #endif
+// clang-format on
 
 constexpr uint32_t SIR_INPUT_MAX_DEVICES = 32;
 constexpr uint32_t SIR_INPUT_MAX_EVENTS = 1024;
@@ -155,6 +157,14 @@ public:
 	bool pushWheel( sirInputDeviceHandle_t hDevice, uint16_t nAxis, int32_t nDelta, uint64_t nTimestampNs ) noexcept;
 	bool pollEvent( sirInputEvent_t *pEvent ) noexcept;
 	bool getState( sirInputDeviceHandle_t hDevice, sirInputDeviceState_t *pState ) const noexcept;
+	bool isDeviceActive( sirInputDeviceHandle_t hDevice ) const noexcept;
+
+	// Source-style tick snapshot: the owner publishes after collecting native
+	// input. beginTick() clears live transient edges for the next tick without
+	// changing the published frame. All methods remain owner-thread-only.
+	bool publishTick( uint64_t nTick ) noexcept;
+	bool getPublishedState( sirInputDeviceHandle_t hDevice, sirInputDeviceState_t *pState ) const noexcept;
+	uint64_t getPublishedTick( void ) const noexcept;
 	bool isOverflowed( void ) const noexcept;
 	bool resynchronizeDevice( sirInputDeviceHandle_t hDevice ) noexcept;
 	uint32_t getActiveDeviceCount( void ) const noexcept;
@@ -175,6 +185,12 @@ private:
 	uint32_t m_nCount;
 	uint32_t m_nActiveDevices;
 	bool m_bOverflowed;
+
+	// Fixed storage; no allocation or pointer lifetime crosses a tick boundary.
+	// Slots retain the generation they had at publication, even after removal.
+	sirInputDeviceSlot_t m_Published[SIR_INPUT_MAX_DEVICES];
+	uint64_t m_nPublishedTick;
+	bool m_bHasPublished;
 };
 
 #endif // __SIRENGINE_SIRINPUT_H__

@@ -91,8 +91,7 @@ uint32_t SIRWindowsXInput::poll( void ) noexcept
 		XINPUT_STATE state = {};
 		const DWORD nResult = pGet( iUser, &state );
 		sirXInputSlot_t &slot = m_Devices[iUser];
-		sirInputDeviceState_t current = {};
-		if ( slot.bActive && !m_Input.getState( slot.hDevice, &current ) ) {
+		if ( slot.bActive && !m_Input.isDeviceActive( slot.hDevice ) ) {
 			slot.bActive = false;
 		}
 		if ( nResult == ERROR_DEVICE_NOT_CONNECTED ) {

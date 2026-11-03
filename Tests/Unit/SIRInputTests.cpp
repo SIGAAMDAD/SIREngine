@@ -134,8 +134,8 @@ static bool testQueuePressure( void )
 			return false;
 		}
 	}
-	if ( input.pushButton( hKeyboard, 1, false, 100000 ) || !input.isOverflowed() || !input.resynchronizeDevice( hKeyboard ) ||
-	     input.isOverflowed() ) {
+	if ( input.pushButton( hKeyboard, 1, false, 100000 ) || !input.isOverflowed() || input.publishTick( 1 ) ||
+	     !input.resynchronizeDevice( hKeyboard ) || input.isOverflowed() ) {
 		return false;
 	}
 	sirInputEvent_t event = {};
@@ -570,10 +570,59 @@ static bool testX11FocusOverflowRecovery( void )
 }
 #endif
 
+// Source Engine-style current/queued frame semantics: the published frame
+// remains stable while the owner changes live state for the following tick.
+static bool testPublishedTickState( void )
+{
+	SIRInputSystem input;
+	sirInputDeviceHandle_t hKeyboard = {};
+	if ( !input.addDevice( SIR_INPUT_DEVICE_KEYBOARD, 990, &hKeyboard ) || !input.isDeviceActive( hKeyboard ) ||
+	     input.getPublishedTick() != 0 ) {
+		return false;
+	}
+	input.beginTick();
+	if ( !input.pushButton( hKeyboard, 42, true, 100 ) || !input.publishTick( 1 ) || input.publishTick( 1 ) ||
+	     input.getPublishedTick() != 1 ) {
+		return false;
+	}
+	const uint32_t nMask = UINT32_C( 1 ) << ( 42 % 32 );
+	sirInputDeviceState_t first = {};
+	if ( !input.getPublishedState( hKeyboard, &first ) || ( first.nPressed[42 / 32] & nMask ) == 0 ||
+	     ( first.nButtons[42 / 32] & nMask ) == 0 ) {
+		return false;
+	}
+	input.beginTick();
+	if ( !input.pushButton( hKeyboard, 42, false, 101 ) ) {
+		return false;
+	}
+	sirInputDeviceState_t published = {};
+	sirInputDeviceState_t live = {};
+	if ( !input.getPublishedState( hKeyboard, &published ) || !input.getState( hKeyboard, &live ) ||
+	     ( published.nButtons[42 / 32] & nMask ) == 0 || ( live.nButtons[42 / 32] & nMask ) != 0 ||
+	     ( live.nReleased[42 / 32] & nMask ) == 0 ) {
+		return false;
+	}
+	// Removing and reusing a device slot must not alias the earlier frame.
+	if ( !input.removeDevice( hKeyboard ) || input.isDeviceActive( hKeyboard ) || !input.getPublishedState( hKeyboard, &published ) ) {
+		return false;
+	}
+	sirInputDeviceHandle_t hNew = {};
+	if ( !input.addDevice( SIR_INPUT_DEVICE_KEYBOARD, 990, &hNew ) || hNew.nSlot != hKeyboard.nSlot ||
+	     hNew.nGeneration == hKeyboard.nGeneration || input.getPublishedState( hNew, &published ) ) {
+		return false;
+	}
+	if ( !input.publishTick( 2 ) || input.getPublishedState( hKeyboard, &published ) || !input.getPublishedState( hNew, &published ) ||
+	     input.publishTick( 1 ) ) {
+		return false;
+	}
+	input.shutdown();
+	return input.getPublishedTick() == 0 && !input.getPublishedState( hNew, &published ) && !input.isDeviceActive( hNew );
+}
+
 int main( void )
 {
-	bool bPassed = testLifecycle() && testTransitions() && testPointerAndAnalog() && testQueuePressure() && testGamepadSamples() &&
-	               testAtomicSampleOverflow() && testNativeGamepadFrame() && testNativeGamepadProfiles();
+	bool bPassed = testPublishedTickState() && testLifecycle() && testTransitions() && testPointerAndAnalog() && testQueuePressure() &&
+	               testGamepadSamples() && testAtomicSampleOverflow() && testNativeGamepadFrame() && testNativeGamepadProfiles();
 #if defined( __linux__ )
 	SIRInputSystem input;
 	SIRLinuxEvdevInput controller( input );

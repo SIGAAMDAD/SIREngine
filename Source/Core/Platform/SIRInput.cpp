@@ -18,7 +18,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <limits.h>
 
 SIRInputSystem::SIRInputSystem( void ) noexcept
-    : m_Devices{}, m_Events{}, m_nSequence( 0 ), m_nRead( 0 ), m_nWrite( 0 ), m_nCount( 0 ), m_nActiveDevices( 0 ), m_bOverflowed( false )
+    : m_Devices{}, m_Events{}, m_nSequence( 0 ), m_nRead( 0 ), m_nWrite( 0 ), m_nCount( 0 ), m_nActiveDevices( 0 ), m_bOverflowed( false ),
+      m_Published{}, m_nPublishedTick( 0 ), m_bHasPublished( false )
 {
 	for ( uint32_t i = 0; i < SIR_INPUT_MAX_DEVICES; ++i ) {
 		m_Devices[i].nGeneration = 1;
@@ -307,6 +308,43 @@ bool SIRInputSystem::getState( sirInputDeviceHandle_t hDevice, sirInputDeviceSta
 	return true;
 }
 
+bool SIRInputSystem::isDeviceActive( sirInputDeviceHandle_t hDevice ) const noexcept
+{
+	return isValid( hDevice );
+}
+
+bool SIRInputSystem::publishTick( uint64_t nTick ) noexcept
+{
+	if ( nTick == 0 || m_bOverflowed || ( m_bHasPublished && nTick <= m_nPublishedTick ) ) {
+		return false;
+	}
+	// Like Source Engine's queued/current states, keep one stable tick view
+	// while the input owner prepares the next live state. Never publish
+	// native handles or references to mutable state.
+	memcpy( m_Published, m_Devices, sizeof( m_Devices ) );
+	m_nPublishedTick = nTick;
+	m_bHasPublished = true;
+	return true;
+}
+
+bool SIRInputSystem::getPublishedState( sirInputDeviceHandle_t hDevice, sirInputDeviceState_t *pState ) const noexcept
+{
+	if ( pState == nullptr || !m_bHasPublished || hDevice.nSlot >= SIR_INPUT_MAX_DEVICES ) {
+		return false;
+	}
+	const sirInputDeviceSlot_t &slot = m_Published[hDevice.nSlot];
+	if ( !slot.bActive || slot.nGeneration != hDevice.nGeneration ) {
+		return false;
+	}
+	*pState = slot.state;
+	return true;
+}
+
+uint64_t SIRInputSystem::getPublishedTick( void ) const noexcept
+{
+	return m_bHasPublished ? m_nPublishedTick : 0;
+}
+
 bool SIRInputSystem::isOverflowed( void ) const noexcept
 {
 	return m_bOverflowed;
@@ -395,4 +433,6 @@ void SIRInputSystem::shutdown( void ) noexcept
 	m_nRead = m_nWrite = m_nCount = 0;
 	m_nActiveDevices = 0;
 	m_bOverflowed = false;
+	m_bHasPublished = false;
+	m_nPublishedTick = 0;
 }
