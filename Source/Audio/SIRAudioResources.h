@@ -170,6 +170,9 @@ public:
 	uint64_t getBuildFingerprint( void ) const noexcept;
 	bool findEvent( uint64_t nEventId, sirAudioEventRecord_t &event, sirAudioEventHandle_t *pHandle = nullptr ) const noexcept;
 	bool resolveEvent( sirAudioEventHandle_t hEvent, sirAudioEventRecord_t &event ) const noexcept;
+	uint32_t getPackageCount( void ) const noexcept;
+	bool getPackageAt( uint32_t iPackage, sirAudioPackageRecord_t &package ) const noexcept;
+	bool getPackageDependency( uint64_t nPackageId, uint32_t iDependency, uint64_t &nDependencyId ) const noexcept;
 	bool findPackage( uint64_t nPackageId, sirAudioPackageRecord_t &package, sirAudioPackageHandle_t *pHandle = nullptr ) const noexcept;
 	bool resolvePackage( sirAudioPackageHandle_t hPackage, sirAudioPackageRecord_t &package ) const noexcept;
 	bool findControl( uint64_t nControlId, sirAudioControlRecord_t &control ) const noexcept;

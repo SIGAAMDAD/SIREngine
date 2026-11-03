@@ -394,6 +394,35 @@ uint64_t SIRAudioResourceStore::getBuildFingerprint( void ) const noexcept
 	return m_Header.nBuildFingerprint;
 }
 
+uint32_t SIRAudioResourceStore::getPackageCount( void ) const noexcept
+{
+	return m_pBytes == nullptr ? 0 : m_Header.nPackageCount;
+}
+
+bool SIRAudioResourceStore::getPackageAt( uint32_t iPackage, sirAudioPackageRecord_t &package ) const noexcept
+{
+	if ( m_pBytes == nullptr || iPackage >= m_Header.nPackageCount ) {
+		return false;
+	}
+	readAudioPackage( m_pBytes, m_nPackageOffset, iPackage, package );
+	return true;
+}
+
+bool SIRAudioResourceStore::getPackageDependency( uint64_t nPackageId, uint32_t iDependency, uint64_t &nDependencyId ) const noexcept
+{
+	uint32_t iPackage = 0;
+	if ( !findPackageIndex( nPackageId, iPackage ) ) {
+		return false;
+	}
+	sirAudioPackageRecord_t package = {};
+	readAudioPackage( m_pBytes, m_nPackageOffset, iPackage, package );
+	if ( iDependency >= package.nDependencyCount ) {
+		return false;
+	}
+	nDependencyId = readAudioDependency( m_pBytes, m_nDependencyOffset, package.iDependencyStart + iDependency );
+	return true;
+}
+
 bool SIRAudioResourceStore::findPackageIndex( uint64_t nPackageId, uint32_t &iPackage ) const noexcept
 {
 	return m_pBytes != nullptr && findAudioPackageIndex( m_pBytes, m_nPackageOffset, m_Header.nPackageCount, nPackageId, iPackage );
