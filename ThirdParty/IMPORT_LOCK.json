@@ -1,0 +1,324 @@
+{
+  "schema": 1,
+  "description": "Pinned upstream source gitlinks in SIREngine. No implicit build or vendor license replacement.",
+  "base_commit": "a3f50fec3f9b09331da6fb0f1cefc4ae20001a97",
+  "entries": [
+    {
+      "path": "ThirdParty/Zstd",
+      "url": "https://github.com/meta/zstd.git",
+      "sha": "49cf51799ea051457f57243527aa2058f999f005",
+      "ref": "dev",
+      "category": "compression"
+    },
+    {
+      "path": "ThirdParty/LZ4",
+      "url": "https://github.com/lz4/lz4.git",
+      "sha": "4fab7ab18e89095bda933ac2de6d261c5a009085",
+      "ref": "dev",
+      "category": "compression"
+    },
+    {
+      "path": "ThirdParty/xxHash",
+      "url": "https://github.com/Cyan4973/xxHash.git",
+      "sha": "2ec67caeb18ec15ae60c0853174331089acddfc0",
+      "ref": "dev",
+      "category": "compression"
+    },
+    {
+      "path": "ThirdParty/VulkanMemoryAllocator",
+      "url": "https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git",
+      "sha": "0f1a757da579831283413295cc7f3b47eb521c77",
+      "ref": "master",
+      "category": "graphics"
+    },
+    {
+      "path": "ThirdParty/D3D12MemoryAllocator",
+      "url": "https://github.com/GPUOpen-LibrariesAndSDKs/D3D12MemoryAllocator.git",
+      "sha": "1753823e86d274ae1a2a55e6b9f9d206c3c30945",
+      "ref": "master",
+      "category": "graphics"
+    },
+    {
+      "path": "ThirdParty/KTXSoftware",
+      "url": "https://github.com/KhronosGroup/KTX-Software.git",
+      "sha": "e0e9868d82b00e6fac6a1aff55759a7cf77fe5f6",
+      "ref": "main",
+      "category": "textures"
+    },
+    {
+      "path": "ThirdParty/DirectXShaderCompiler",
+      "url": "https://github.com/microsoft/DirectXShaderCompiler.git",
+      "sha": "e55cdd3729d9b4ea04a38cd4fe173f4fdc8bfa83",
+      "ref": "main",
+      "category": "shaders"
+    },
+    {
+      "path": "ThirdParty/BasisUniversal",
+      "url": "https://github.com/BinomialLLC/basis_universal.git",
+      "sha": "073eb6a0a34a23d77e75e54f41dcd9653a52da83",
+      "ref": "master",
+      "category": "textures"
+    },
+    {
+      "path": "ThirdParty/SPIRVTools",
+      "url": "https://github.com/KhronosGroup/SPIRV-Tools.git",
+      "sha": "efadd8a7fa2a8dd26567694dfcb5d9b5f36d4ca4",
+      "ref": "main",
+      "category": "shaders"
+    },
+    {
+      "path": "ThirdParty/SPIRVReflect",
+      "url": "https://github.com/KhronosGroup/SPIRV-Reflect.git",
+      "sha": "6002a58dfc83cad60f206c5fc99b5a39d1623dcb",
+      "ref": "main",
+      "category": "shaders"
+    },
+    {
+      "path": "ThirdParty/SPIRVCross",
+      "url": "https://github.com/KhronosGroup/SPIRV-Cross.git",
+      "sha": "57e4efcc84112abcd426dc5ec248b5339bee04f2",
+      "ref": "main",
+      "category": "shaders"
+    },
+    {
+      "path": "ThirdParty/SQLite",
+      "url": "https://github.com/sqlite/sqlite.git",
+      "sha": "7b667bbf9fadc419b56b953dbe066afe534e2646",
+      "ref": "master",
+      "category": "data"
+    },
+    {
+      "path": "ThirdParty/VulkanHeaders",
+      "url": "https://github.com/KhronosGroup/Vulkan-Headers.git",
+      "sha": "9fbc2a782ee3f8a4db64e7d991e23da75e893f44",
+      "ref": "main",
+      "category": "graphics"
+    },
+    {
+      "path": "ThirdParty/DirectXHeaders",
+      "url": "https://github.com/microsoft/DirectX-Headers.git",
+      "sha": "faf928dc6feb8b86e9e3d6a39fc5171de7d8ac36",
+      "ref": "main",
+      "category": "graphics"
+    },
+    {
+      "path": "ThirdParty/glslang",
+      "url": "https://github.com/KhronosGroup/glslang.git",
+      "sha": "1309390fdbc3aaa96abad02190772bf7cdf25331",
+      "ref": "main",
+      "category": "shaders"
+    },
+    {
+      "path": "ThirdParty/SPIRVHeaders",
+      "url": "https://github.com/KhronosGroup/SPIRV-Headers.git",
+      "sha": "fef168c54ed2e37c314eb251806aaf9877f38465",
+      "ref": "main",
+      "category": "shaders"
+    },
+    {
+      "path": "ThirdParty/Compressonator",
+      "url": "https://github.com/GPUOpen-Tools/compressonator.git",
+      "sha": "095a143ad8cfbf9ed5afa4ea63c735bfd0fd04dd",
+      "ref": "master",
+      "category": "textures"
+    },
+    {
+      "path": "ThirdParty/etcpak",
+      "url": "https://github.com/wolfpld/etcpak.git",
+      "sha": "3d716e1550023dc5ff8b602636af8b76584e0b66",
+      "ref": "master",
+      "category": "textures"
+    },
+    {
+      "path": "ThirdParty/CVTT",
+      "url": "https://github.com/elasota/ConvectionKernels.git",
+      "sha": "350416daa4e98f1c17ffc273b134d0120a2ef230",
+      "ref": "master",
+      "category": "textures"
+    },
+    {
+      "path": "ThirdParty/ASTCEncoder",
+      "url": "https://github.com/ARM-software/astc-encoder.git",
+      "sha": "d0f91386350222fcbf6da533c0f7a3f9b5c6b783",
+      "ref": "main",
+      "category": "textures"
+    },
+    {
+      "path": "ThirdParty/FidelityFX",
+      "url": "https://github.com/GPUOpen-LibrariesAndSDKs/FidelityFX-SDK.git",
+      "sha": "7539ae8b6568ad29ed78a753404351daf3b5cca7",
+      "ref": "main",
+      "category": "graphics"
+    },
+    {
+      "path": "ThirdParty/SMAA",
+      "url": "https://github.com/iryoku/smaa.git",
+      "sha": "71c806a838bdd7d517df19192a20f0c61b3ca29d",
+      "ref": "master",
+      "category": "graphics"
+    },
+    {
+      "path": "ThirdParty/XeSS",
+      "url": "https://github.com/intel/xess.git",
+      "sha": "de0fb9c1c510661c571164e1418ceca8101dab69",
+      "ref": "main",
+      "category": "graphics"
+    },
+    {
+      "path": "ThirdParty/Streamline",
+      "url": "https://github.com/NVIDIA-RTX/Streamline.git",
+      "sha": "625db07d4bca5abc67d781c42af7e7fb0761f1b6",
+      "ref": "main",
+      "category": "graphics"
+    },
+    {
+      "path": "ThirdParty/ufbx",
+      "url": "https://github.com/ufbx/ufbx.git",
+      "sha": "5955c5c0b042ac2dc6f32955ab206aaec0620cfc",
+      "ref": "main",
+      "category": "importers"
+    },
+    {
+      "path": "ThirdParty/fastgltf",
+      "url": "https://github.com/spnda/fastgltf.git",
+      "sha": "705564d4d54500ae88befb0db9e361e447923655",
+      "ref": "v0.9.1",
+      "category": "importers"
+    },
+    {
+      "path": "ThirdParty/libpng",
+      "url": "https://github.com/pnggroup/libpng.git",
+      "sha": "ac0c3532476fa4876a83a279127840741cf216f2",
+      "ref": "libpng16",
+      "category": "images"
+    },
+    {
+      "path": "ThirdParty/libjpeg-turbo",
+      "url": "https://github.com/libjpeg-turbo/libjpeg-turbo.git",
+      "sha": "9dd0b49901fa25ed0fa2b2d40f6bd6a41accc80d",
+      "ref": "main",
+      "category": "images"
+    },
+    {
+      "path": "ThirdParty/libwebp",
+      "url": "https://github.com/webmproject/libwebp.git",
+      "sha": "1844042d1ca751e62e61df7617dba19c98588339",
+      "ref": "main",
+      "category": "images"
+    },
+    {
+      "path": "ThirdParty/tinyexr",
+      "url": "https://github.com/syoyo/tinyexr.git",
+      "sha": "010383f267cba709568319fabe5c13b4b2c3188e",
+      "ref": "release",
+      "category": "images"
+    },
+    {
+      "path": "ThirdParty/zlib",
+      "url": "https://github.com/madler/zlib.git",
+      "sha": "67ebacb61f15fceeb8638546eb54a899edd54341",
+      "ref": "develop",
+      "category": "compression"
+    },
+    {
+      "path": "ThirdParty/libavif",
+      "url": "https://github.com/AOMediaCodec/libavif.git",
+      "sha": "6ab82d534323f9f99b2a056b3f9c8fae8075f16b",
+      "ref": "main",
+      "category": "images"
+    },
+    {
+      "path": "ThirdParty/FreeType",
+      "url": "https://github.com/freetype/freetype.git",
+      "sha": "36db6edb8415850f85690e28fb98b68d5f92440d",
+      "ref": "master",
+      "category": "text"
+    },
+    {
+      "path": "ThirdParty/HarfBuzz",
+      "url": "https://github.com/harfbuzz/harfbuzz.git",
+      "sha": "df9e6d15140d6bc5e983dcb5508ad254e76c8a0e",
+      "ref": "main",
+      "category": "text"
+    },
+    {
+      "path": "ThirdParty/msdfgen",
+      "url": "https://github.com/Chlumsky/msdfgen.git",
+      "sha": "1c106ed8117893bf943e577f62eb0665fb271e46",
+      "ref": "master",
+      "category": "text"
+    },
+    {
+      "path": "ThirdParty/AccessKit",
+      "url": "https://github.com/AccessKit/accesskit.git",
+      "sha": "f3026222559c7f5f46d8f25cb7404de68eb149f0",
+      "ref": "main",
+      "category": "platform"
+    },
+    {
+      "path": "ThirdParty/SDL3",
+      "url": "https://github.com/libsdl-org/SDL.git",
+      "sha": "d6fbbbe14dddfa09d6168267a0fcd39dea5a398a",
+      "ref": "main",
+      "category": "platform"
+    },
+    {
+      "path": "ThirdParty/HIDAPI",
+      "url": "https://github.com/libusb/hidapi.git",
+      "sha": "852cc68b8e0e4c7eba0815ef992951cd8b75c55b",
+      "ref": "master",
+      "category": "platform"
+    },
+    {
+      "path": "ThirdParty/curl",
+      "url": "https://github.com/curl/curl.git",
+      "sha": "f0da5390ad9d380807cc83e600196809df8bb96b",
+      "ref": "master",
+      "category": "network"
+    },
+    {
+      "path": "ThirdParty/mbedTLS",
+      "url": "https://github.com/Mbed-TLS/mbedtls.git",
+      "sha": "aaa713bc57d776a8b33761778b8b1edba2f6c4e1",
+      "ref": "development",
+      "category": "network"
+    },
+    {
+      "path": "ThirdParty/libogg",
+      "url": "https://github.com/xiph/ogg.git",
+      "sha": "06a5e0262cdc28aa4ae6797627a783b5010440f0",
+      "ref": "main",
+      "category": "audio"
+    },
+    {
+      "path": "ThirdParty/libvorbis",
+      "url": "https://github.com/xiph/vorbis.git",
+      "sha": "1b75110b5a2754ba1931d82dd83cb822b266a21d",
+      "ref": "main",
+      "category": "audio"
+    },
+    {
+      "path": "ThirdParty/Opus",
+      "url": "https://github.com/xiph/opus.git",
+      "sha": "677070ed0c35fc52a634f4be845aa426ea3a1689",
+      "ref": "main",
+      "category": "audio"
+    },
+    {
+      "path": "ThirdParty/libbacktrace",
+      "url": "https://github.com/ianlancetaylor/libbacktrace.git",
+      "sha": "0b9b49cf4a2c9229fc052d6716e1528b2f23e91a",
+      "ref": "master",
+      "category": "diagnostics"
+    }
+  ],
+  "external_sdks": [
+    {
+      "path": "ThirdParty/Steamworks",
+      "name": "Steamworks SDK",
+      "status": "not vendored; licensed download through Valve Steamworks partner portal"
+    }
+  ],
+  "source_loader_policy": "Engine-owned OpenGL and Vulkan entrypoint loaders; no glad/volk dependency",
+  "source_commit": "5d5beee72b845c1efcc2f9757b42039cd97df4bd"
+}
