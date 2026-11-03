@@ -96,6 +96,15 @@ struct SIRReverseDependencyEdge
 	uint32_t m_iNextFree;
 };
 
+// Lock-free readers probe immutable record pointers. The only mutable state
+// in each cell is one atomic word; 0 means never used and 1 is a tombstone.
+typedef struct sirReadKeyIndexCell_s
+{
+	std::atomic<uintptr_t> nRecord;
+} sirReadKeyIndexCell_t;
+
+static_assert( alignof( SIRPublishedResourceRecord ) > 1, "Read index reserves pointer value 1 as a tombstone" );
+
 static bool sameKey( const SIRResourceKey &rA, const SIRResourceKey &rB ) noexcept
 {
 	return rA.m_nAssetId == rB.m_nAssetId && rA.m_nTypeId == rB.m_nTypeId && rA.m_nVariantId == rB.m_nVariantId;
@@ -130,7 +139,7 @@ SIRResourceGraph::SIRResourceGraph( const SIRResourceGraphConfig &rConfig ) noex
     : m_Config( rConfig ), m_Writer( *this ), m_OwnerThread( std::this_thread::get_id() ), m_nActiveReaders( 0 ),
       m_KeyIndexAllocator{ this, allocateKeyIndex, releaseKeyIndex, rConfig.m_nMetadataDomain, 0x47524447U },
       m_KeyIndex( &m_KeyIndexAllocator ), m_pSlots( nullptr ), m_pStaging( nullptr ), m_pProviderPins( nullptr ),
-      m_pReverseEdges( nullptr ), m_pReverseBuckets( nullptr ), m_nReverseBucketCount( 0 ), m_nMaxDependencyEdges( 0 ),
+      m_pReverseEdges( nullptr ), m_pReadKeyIndex( nullptr ), m_nReadKeyIndexCapacity( 0 ), m_pReverseBuckets( nullptr ), m_nReverseBucketCount( 0 ), m_nMaxDependencyEdges( 0 ),
       m_iFreeReverseEdge( UINT32_MAX ), m_nActiveReverseEdges( 0 ), m_nChangeSequence( 0 ), m_pInvalidations( nullptr ),
       m_nMaxInvalidationEvents( 0 ), m_nTotalInvalidations( 0 ), m_pTraversalQueue( nullptr ), m_nTraversalStamp( 0 ),
       m_pSharedChunks( nullptr ), m_pRetired( nullptr ), m_nCommittedBytes( 0 ), m_nPeakCommittedBytes( 0 ), m_nPayloadBytes( 0 ),
@@ -153,22 +162,25 @@ SIRResourceGraph::SIRResourceGraph( const SIRResourceGraphConfig &rConfig ) noex
 	}
 	m_nMaxInvalidationEvents = ( uint32_t )nDesiredEvents;
 	m_nReverseBucketCount = m_Config.m_nMaxResources * 2 + 1;
+	m_nReadKeyIndexCapacity = m_nReverseBucketCount;
 	const uint64_t nSlots = ( uint64_t )m_Config.m_nMaxResources * sizeof( SIRGraphSlot );
 	const uint64_t nStaging = ( uint64_t )m_Config.m_nMaxStaging * sizeof( SIRStagingSlot );
 	const uint64_t nPins = ( uint64_t )m_Config.m_nMaxProviderPins * sizeof( SIRProviderPinSlot );
 	const uint64_t nEdges = ( uint64_t )m_nMaxDependencyEdges * sizeof( SIRReverseDependencyEdge );
 	const uint64_t nBuckets = ( uint64_t )m_nReverseBucketCount * sizeof( uint32_t );
 	const uint64_t nEvents = ( uint64_t )m_nMaxInvalidationEvents * sizeof( SIRResourceInvalidationEvent );
+	const uint64_t nReadCells = ( uint64_t )m_nReadKeyIndexCapacity * sizeof( sirReadKeyIndexCell_t );
 	m_pSlots = ( SIRGraphSlot * )allocate( nSlots, alignof( SIRGraphSlot ), m_Config.m_nMetadataDomain );
 	m_pStaging = ( SIRStagingSlot * )allocate( nStaging, alignof( SIRStagingSlot ), m_Config.m_nMetadataDomain );
 	m_pProviderPins = ( SIRProviderPinSlot * )allocate( nPins, alignof( SIRProviderPinSlot ), m_Config.m_nMetadataDomain );
 	m_pReverseEdges = ( SIRReverseDependencyEdge * )allocate( nEdges, alignof( SIRReverseDependencyEdge ), m_Config.m_nMetadataDomain );
+	m_pReadKeyIndex = ( sirReadKeyIndexCell_t * )allocate( nReadCells, alignof( sirReadKeyIndexCell_t ), m_Config.m_nMetadataDomain );
 	m_pReverseBuckets = ( uint32_t * )allocate( nBuckets, alignof( uint32_t ), m_Config.m_nMetadataDomain );
 	m_pInvalidations =
 	    ( SIRResourceInvalidationEvent * )allocate( nEvents, alignof( SIRResourceInvalidationEvent ), m_Config.m_nMetadataDomain );
 	m_pTraversalQueue = ( uint32_t * )allocate( ( uint64_t )m_Config.m_nMaxResources * sizeof( uint32_t ), alignof( uint32_t ),
 	                                            m_Config.m_nMetadataDomain );
-	if ( !m_pSlots || !m_pStaging || !m_pProviderPins || !m_pReverseEdges || !m_pReverseBuckets || !m_pInvalidations ||
+	if ( !m_pSlots || !m_pStaging || !m_pProviderPins || !m_pReverseEdges || !m_pReadKeyIndex || !m_pReverseBuckets || !m_pInvalidations ||
 	     !m_pTraversalQueue ) {
 		return;
 	}
@@ -177,6 +189,10 @@ SIRResourceGraph::SIRResourceGraph( const SIRResourceGraphConfig &rConfig ) noex
 	}
 	memset( m_pStaging, 0, ( size_t )nStaging );
 	memset( m_pProviderPins, 0, ( size_t )nPins );
+	for ( uint32_t iCell = 0; iCell < m_nReadKeyIndexCapacity; ++iCell ) {
+		new ( &m_pReadKeyIndex[iCell] ) sirReadKeyIndexCell_t();
+		m_pReadKeyIndex[iCell].nRecord.store( 0, std::memory_order_relaxed );
+	}
 	memset( m_pReverseBuckets, 0xff, ( size_t )nBuckets );
 	memset( m_pInvalidations, 0, ( size_t )nEvents );
 	for ( uint32_t iEdge = 0; iEdge < m_nMaxDependencyEdges; ++iEdge ) {
@@ -223,6 +239,13 @@ SIRResourceGraph::~SIRResourceGraph( void ) noexcept
 	}
 	release( m_pInvalidations, ( uint64_t )m_nMaxInvalidationEvents * sizeof( SIRResourceInvalidationEvent ),
 	         alignof( SIRResourceInvalidationEvent ), m_Config.m_nMetadataDomain );
+	if ( m_pReadKeyIndex != nullptr && m_bReady ) {
+		for ( uint32_t iCell = 0; iCell < m_nReadKeyIndexCapacity; ++iCell ) {
+			m_pReadKeyIndex[iCell].~sirReadKeyIndexCell_t();
+		}
+	}
+	release( m_pReadKeyIndex, ( uint64_t )m_nReadKeyIndexCapacity * sizeof( sirReadKeyIndexCell_t ),
+	         alignof( sirReadKeyIndexCell_t ), m_Config.m_nMetadataDomain );
 	release( m_pReverseBuckets, ( uint64_t )m_nReverseBucketCount * sizeof( uint32_t ), alignof( uint32_t ), m_Config.m_nMetadataDomain );
 	release( m_pReverseEdges, ( uint64_t )m_nMaxDependencyEdges * sizeof( SIRReverseDependencyEdge ), alignof( SIRReverseDependencyEdge ),
 	         m_Config.m_nMetadataDomain );
@@ -393,6 +416,7 @@ void SIRResourceGraph::pushRetired( SIRPublishedResourceRecord *pRecord ) noexce
 void SIRResourceGraph::publishRecord( uint32_t iSlot, SIRPublishedResourceRecord *pRecord ) noexcept
 {
 	SIRPublishedResourceRecord *pPrior = m_pSlots[iSlot].m_pPublished.exchange( pRecord, std::memory_order_seq_cst );
+	updateReadKeyIndex( pPrior, pRecord );
 	pushRetired( pPrior );
 	// This notification also covers availability transitions for missing optional
 	// dependencies and in-place eviction/failure state revisions.
@@ -400,6 +424,45 @@ void SIRResourceGraph::publishRecord( uint32_t iSlot, SIRPublishedResourceRecord
 	if ( pChanged != nullptr ) {
 		invalidateReverseDependents( pChanged->m_Info.m_Key );
 	}
+}
+
+
+void SIRResourceGraph::updateReadKeyIndex( const SIRPublishedResourceRecord *pPrior,
+                                           const SIRPublishedResourceRecord *pPublished ) noexcept
+{
+	if ( pPrior == nullptr && pPublished == nullptr ) {
+		return;
+	}
+	const SIRResourceKey &rKey = pPublished != nullptr ? pPublished->m_Info.m_Key : pPrior->m_Info.m_Key;
+	const uintptr_t nPublished = pPublished != nullptr ? ( uintptr_t )pPublished : ( uintptr_t )1;
+	uint32_t iCell = ( uint32_t )( SIRResourceKeyHash{}( rKey ) % m_nReadKeyIndexCapacity );
+	uint32_t iFirstTombstone = UINT32_MAX;
+	for ( uint32_t nProbe = 0; nProbe < m_nReadKeyIndexCapacity; ++nProbe ) {
+		sirReadKeyIndexCell_t &rCell = m_pReadKeyIndex[iCell];
+		const uintptr_t nCurrent = rCell.nRecord.load( std::memory_order_relaxed );
+		if ( nCurrent > 1 && sameKey( ( ( const SIRPublishedResourceRecord * )nCurrent )->m_Info.m_Key, rKey ) ) {
+			rCell.nRecord.store( nPublished, std::memory_order_seq_cst );
+			return;
+		}
+		if ( nCurrent == 1 && iFirstTombstone == UINT32_MAX ) {
+			iFirstTombstone = iCell;
+		}
+		if ( nCurrent == 0 ) {
+			if ( pPublished != nullptr ) {
+				const uint32_t iDestination = iFirstTombstone != UINT32_MAX ? iFirstTombstone : iCell;
+				m_pReadKeyIndex[iDestination].nRecord.store( nPublished, std::memory_order_seq_cst );
+			}
+			return;
+		}
+		iCell = iCell + 1 == m_nReadKeyIndexCapacity ? 0 : iCell + 1;
+	}
+	if ( pPublished != nullptr && iFirstTombstone != UINT32_MAX ) {
+		m_pReadKeyIndex[iFirstTombstone].nRecord.store( nPublished, std::memory_order_seq_cst );
+		return;
+	}
+	// More than half the table is reserved as slack. Exhaustion here would
+	// indicate broken writer ownership or a failed index mutation.
+	abort();
 }
 
 SIRResourceResult SIRResourceGraph::checkHandle( SIRResourceHandle hResource, SIRPublishedResourceRecord **pRecord ) const noexcept
@@ -1121,12 +1184,20 @@ SIRResourceResult SIRResourceGraph::find( const SIRResourceReadScope &rScope, co
 	if ( !rScope.isActive() || rScope.m_pGraph != this || !pHandle || !rKey.m_nTypeId ) {
 		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
 	}
-	for ( uint32_t iSlot = 0; iSlot < m_Config.m_nMaxResources; ++iSlot ) {
-		const SIRPublishedResourceRecord *pRecord = m_pSlots[iSlot].m_pPublished.load( std::memory_order_seq_cst );
-		if ( pRecord && sameKey( pRecord->m_Info.m_Key, rKey ) ) {
-			*pHandle = pRecord->m_Handle;
-			return SIR_RESOURCE_RESULT_SUCCESS;
+	uint32_t iCell = ( uint32_t )( SIRResourceKeyHash{}( rKey ) % m_nReadKeyIndexCapacity );
+	for ( uint32_t nProbe = 0; nProbe < m_nReadKeyIndexCapacity; ++nProbe ) {
+		const uintptr_t nRecord = m_pReadKeyIndex[iCell].nRecord.load( std::memory_order_seq_cst );
+		if ( nRecord == 0 ) {
+			return SIR_RESOURCE_RESULT_INVALID_HANDLE;
 		}
+		if ( nRecord > 1 ) {
+			const SIRPublishedResourceRecord *pRecord = ( const SIRPublishedResourceRecord * )nRecord;
+			if ( sameKey( pRecord->m_Info.m_Key, rKey ) ) {
+				*pHandle = pRecord->m_Handle;
+				return SIR_RESOURCE_RESULT_SUCCESS;
+			}
+		}
+		iCell = iCell + 1 == m_nReadKeyIndexCapacity ? 0 : iCell + 1;
 	}
 	return SIR_RESOURCE_RESULT_INVALID_HANDLE;
 }

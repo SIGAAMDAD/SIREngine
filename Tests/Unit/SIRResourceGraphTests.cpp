@@ -628,6 +628,112 @@ static void testInvalidationJournalOverflowAndResume( void )
 	REQUIRE( alloc.m_nOutstanding.load() == 0 );
 }
 
+static void testAtomicReadIndexCollisionsAndChurn( void )
+{
+	SIRTestAllocatorStats alloc = {};
+	{
+		SIRResourceGraph graph( testConfig( alloc, 64 ) );
+		REQUIRE( graph.isReady() );
+		SIRResourceGraphWriter *pWriter = graph.getWriter();
+		REQUIRE( pWriter != nullptr );
+		const uint32_t nBucketCount = 129;
+		const uint32_t nCollisionBucket = ( uint32_t )( SIRResourceKeyHash{}( key( 1000 ) ) % nBucketCount );
+		SIRResourceKey keys[8] = {};
+		SIRResourceHandle handles[8] = {};
+		uint32_t nKeys = 0;
+		for ( uint64_t nAsset = 1000; nAsset < 100000 && nKeys < 8; ++nAsset ) {
+			SIRResourceKey candidate = key( nAsset );
+			if ( SIRResourceKeyHash{}( candidate ) % nBucketCount == nCollisionBucket ) {
+				keys[nKeys++] = candidate;
+			}
+		}
+		REQUIRE( nKeys == 8 );
+		for ( uint32_t i = 0; i < nKeys; ++i ) {
+			SIRResourcePublication publication = { keys[i], SIR_RESOURCE_KIND_COMPOSITION, 1, 1, nullptr, 0, nullptr, 0 };
+			REQUIRE( pWriter->publish( publication, &handles[i] ) == SIR_RESOURCE_RESULT_SUCCESS );
+		}
+		{
+			SIRResourceReadScope scope( graph );
+			for ( uint32_t i = 0; i < nKeys; ++i ) {
+				SIRResourceHandle hFound = {};
+				REQUIRE( graph.find( scope, keys[i], &hFound ) == SIR_RESOURCE_RESULT_SUCCESS );
+				REQUIRE( hFound.m_nSlot == handles[i].m_nSlot && hFound.m_nGeneration == handles[i].m_nGeneration );
+			}
+		}
+		for ( uint32_t i = 0; i < nKeys; i += 2 ) {
+			REQUIRE( pWriter->retire( handles[i] ) == SIR_RESOURCE_RESULT_SUCCESS );
+		}
+		{
+			SIRResourceReadScope scope( graph );
+			for ( uint32_t i = 0; i < nKeys; ++i ) {
+				SIRResourceHandle hFound = {};
+				const SIRResourceResult eExpected = i % 2 == 0 ? SIR_RESOURCE_RESULT_INVALID_HANDLE : SIR_RESOURCE_RESULT_SUCCESS;
+				REQUIRE( graph.find( scope, keys[i], &hFound ) == eExpected );
+			}
+		}
+		SIRResourceKey replacements[4] = {};
+		SIRResourceHandle replacementHandles[4] = {};
+		uint32_t nReplacement = 0;
+		for ( uint64_t nAsset = 100001; nAsset < 200000 && nReplacement < 4; ++nAsset ) {
+			SIRResourceKey candidate = key( nAsset );
+			if ( SIRResourceKeyHash{}( candidate ) % nBucketCount == nCollisionBucket ) {
+				replacements[nReplacement] = candidate;
+				SIRResourcePublication publication = { candidate, SIR_RESOURCE_KIND_COMPOSITION, 1, 1, nullptr, 0, nullptr, 0 };
+				REQUIRE( pWriter->publish( publication, &replacementHandles[nReplacement] ) == SIR_RESOURCE_RESULT_SUCCESS );
+				++nReplacement;
+			}
+		}
+		REQUIRE( nReplacement == 4 );
+		{
+			SIRResourceReadScope scope( graph );
+			for ( uint32_t i = 0; i < nReplacement; ++i ) {
+				SIRResourceHandle hFound = {};
+				REQUIRE( graph.find( scope, replacements[i], &hFound ) == SIR_RESOURCE_RESULT_SUCCESS );
+				REQUIRE( hFound.m_nGeneration == replacementHandles[i].m_nGeneration );
+			}
+			for ( uint32_t i = 1; i < nKeys; i += 2 ) {
+				SIRResourceHandle hFound = {};
+				REQUIRE( graph.find( scope, keys[i], &hFound ) == SIR_RESOURCE_RESULT_SUCCESS );
+			}
+		}
+
+		std::atomic<bool> bRunning{ true };
+		std::atomic<uint32_t> nFailures{ 0 };
+		std::thread readers[4];
+		for ( std::thread &rThread : readers ) {
+			rThread = std::thread( [&]() {
+				while ( bRunning.load( std::memory_order_acquire ) ) {
+					SIRResourceReadScope scope( graph );
+					SIRResourceHandle hFound = {};
+					if ( graph.find( scope, keys[1], &hFound ) != SIR_RESOURCE_RESULT_SUCCESS ||
+					     hFound.m_nSlot != handles[1].m_nSlot ) {
+						nFailures.fetch_add( 1, std::memory_order_relaxed );
+					}
+					SIRResourceView view;
+					if ( graph.resolve( scope, handles[1], &view ) != SIR_RESOURCE_RESULT_SUCCESS ) {
+						nFailures.fetch_add( 1, std::memory_order_relaxed );
+					}
+				}
+			} );
+		}
+		for ( uint32_t i = 0; i < 100; ++i ) {
+			SIRResourcePublication publication = { keys[1], SIR_RESOURCE_KIND_COMPOSITION, 1, 1, nullptr, 0, nullptr, 0 };
+			REQUIRE( pWriter->publishExpected( publication, i + 1, &handles[1] ) == SIR_RESOURCE_RESULT_SUCCESS );
+			REQUIRE( pWriter->retire( replacementHandles[0] ) == SIR_RESOURCE_RESULT_SUCCESS );
+			REQUIRE( pWriter->publish( { replacements[0], SIR_RESOURCE_KIND_COMPOSITION, 1, 1, nullptr, 0, nullptr, 0 },
+			                           &replacementHandles[0] ) == SIR_RESOURCE_RESULT_SUCCESS );
+			( void )pWriter->collectRetired( 10 );
+		}
+		bRunning.store( false, std::memory_order_release );
+		for ( std::thread &rThread : readers ) {
+			rThread.join();
+		}
+		REQUIRE( nFailures.load() == 0 );
+		REQUIRE( graph.getStats().m_nLiveResources == 8 );
+	}
+	REQUIRE( alloc.m_nOutstanding.load() == 0 );
+}
+
 int main( void )
 {
 	testScopeLifetimeAndDeduplication();
@@ -641,6 +747,7 @@ int main( void )
 	testReverseDependenciesAndTransitiveInvalidation();
 	testReverseDependencyCapacityRollback();
 	testInvalidationJournalOverflowAndResume();
+	testAtomicReadIndexCollisionsAndChurn();
 	printf( "PASS: GRDG resource registry, publication, deduplication, lifetime, concurrency\n" );
 	return 0;
 }

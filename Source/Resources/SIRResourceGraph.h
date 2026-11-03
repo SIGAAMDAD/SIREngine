@@ -38,6 +38,7 @@ struct SIRGraphSlot;
 struct SIRStagingSlot;
 struct SIRProviderPinSlot;
 struct SIRReverseDependencyEdge;
+typedef struct sirReadKeyIndexCell_s sirReadKeyIndexCell_t;
 
 // The key index belongs exclusively to the GRDG writer. Concurrent readers
 // still resolve through published slots under their read scopes.
@@ -167,6 +168,8 @@ private:
 	SIRStagingSlot *m_pStaging;
 	SIRProviderPinSlot *m_pProviderPins;
 	SIRReverseDependencyEdge *m_pReverseEdges;
+	sirReadKeyIndexCell_t *m_pReadKeyIndex;
+	uint32_t m_nReadKeyIndexCapacity;
 	uint32_t *m_pReverseBuckets;
 	uint32_t m_nReverseBucketCount;
 	uint32_t m_nMaxDependencyEdges;
@@ -215,6 +218,7 @@ private:
 	void removeReverseEdges( uint32_t iSourceSlot ) noexcept;
 	void addReverseEdges( uint32_t iSourceSlot, const SIRResourceDependency *pEdges, uint32_t nEdges ) noexcept;
 	void invalidateReverseDependents( const SIRResourceKey &rChangedKey ) noexcept;
+	void updateReadKeyIndex( const SIRPublishedResourceRecord *pPrior, const SIRPublishedResourceRecord *pPublished ) noexcept;
 
 public:
 	explicit SIRResourceGraph( const SIRResourceGraphConfig &rConfig ) noexcept;
