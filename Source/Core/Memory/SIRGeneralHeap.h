@@ -26,6 +26,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // clang-format on
 
 #include <Core/Platform/SIRSync.h>
+#include <Core/Memory/SIRMemoryManager.h>
 
 class SIRCompactBucketAllocator;
 class SIRFreeListAllocator;
@@ -69,6 +70,7 @@ public:
 	SIRGeneralHeap &operator=( const SIRGeneralHeap & ) = delete;
 
 	bool init( const sirGeneralHeapConfig_t &config );
+	bool isConfiguredForDomain( sirMemoryDomain_t eDomain ) const noexcept;
 	// Worker entry/exit can be explicitly tied to the engine worker lifecycle.
 	bool attachThread( void );
 	bool detachThread( void );
