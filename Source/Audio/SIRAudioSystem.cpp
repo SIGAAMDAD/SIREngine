@@ -28,10 +28,11 @@ SIRAudioSystem::~SIRAudioSystem( void ) noexcept
 sirAudioResult_t SIRAudioSystem::initialize( const sirAudioSystemConfig_t &config, const sirContainerAllocator_t *pAllocator,
                                              const sirAudioBackendOps_t &backend, void *pBackendContext ) noexcept
 {
-	if ( m_bInitialized || m_pPlaying != nullptr || backend.nAbiVersion != 1 || backend.initialize == nullptr || backend.shutdown == nullptr ||
-	     backend.submit == nullptr || backend.drainCompletions == nullptr || backend.update == nullptr || backend.getCapabilities == nullptr ||
-	     pBackendContext == nullptr || config.nMaxPlaying == 0 || config.nMaxPlaying > UINT32_MAX / 2 ||
-	     config.nCommandCapacity < 2 || config.nCriticalCapacity < 2 || config.nCompletionCapacity < 2 ) {
+	if ( m_bInitialized || m_pPlaying != nullptr || backend.nAbiVersion != 1 || backend.initialize == nullptr ||
+	     backend.shutdown == nullptr || backend.submit == nullptr || backend.drainCompletions == nullptr || backend.update == nullptr ||
+	     backend.getCapabilities == nullptr || pBackendContext == nullptr || config.nMaxPlaying == 0 ||
+	     config.nMaxPlaying > UINT32_MAX / 2 || config.nCommandCapacity < 2 || config.nCriticalCapacity < 2 ||
+	     config.nCompletionCapacity < 2 ) {
 		return SIR_AUDIO_INVALID_ARGUMENT;
 	}
 	size_t nBytes = 0;
@@ -80,7 +81,7 @@ void SIRAudioSystem::shutdown( void ) noexcept
 	m_CriticalCommands.shutdown();
 	if ( m_pPlaying != nullptr ) {
 		SIRRawStorage::deallocate( m_pAllocator, m_pPlaying, ( size_t )m_nPlayingCapacity * sizeof( sirPlayingSlot_t ),
-	                                  alignof( sirPlayingSlot_t ) );
+		                           alignof( sirPlayingSlot_t ) );
 	}
 	m_pPlaying = nullptr;
 	m_pAllocator = nullptr;
