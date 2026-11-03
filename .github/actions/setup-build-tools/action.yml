@@ -1,0 +1,45 @@
+name: Setup SIREngine build tools
+description: Install pinned CMake and FASTBuild without Python
+inputs:
+  cmake-version:
+    description: Required CMake
+    default: '4.4.5'
+  fastbuild-version:
+    description: Required FASTBuild
+    default: '1.20'
+runs:
+  using: composite
+  steps:
+    - uses: jwlawson/actions-setup-cmake@v2
+      with:
+        cmake-version: ${{ inputs.cmake-version }}
+    - name: Install FASTBuild
+      shell: bash
+      env:
+        VERSION: ${{ inputs.fastbuild-version }}
+      run: |
+        set -euo pipefail
+        case "${RUNNER_OS}" in
+          Linux) package="FASTBuild-Linux-x64-v${VERSION}.zip" ;;
+          Windows) package="FASTBuild-Windows-x64-v${VERSION}.zip" ;;
+          macOS) package="FASTBuild-OSX-x64+ARM-v${VERSION}.zip" ;;
+          *) exit 1 ;;
+        esac
+        root="${RUNNER_TEMP}/sir-fastbuild"
+        mkdir -p "${root}/unpack" "${root}/bin"
+        curl -fsSL --retry 3 "https://www.fastbuild.org/downloads/v${VERSION}/${package}" -o "${root}/archive.zip"
+        unzip -q "${root}/archive.zip" -d "${root}/unpack"
+        binary="$(find "${root}/unpack" -type f \( -name FBuild.exe -o -name fbuild -o -name FBuild \) -print -quit)"
+        test -n "${binary}"
+        if [ "${RUNNER_OS}" = Windows ]; then
+          cp "${binary}" "${root}/bin/FBuild.exe"
+        else
+          cp "${binary}" "${root}/bin/fbuild"
+          chmod +x "${root}/bin/fbuild"
+        fi
+        echo "${root}/bin" >> "${GITHUB_PATH}"
+    - name: Verify installed toolchain
+      shell: bash
+      run: |
+        cmake --version
+        if [ "${RUNNER_OS}" = Windows ]; then FBuild.exe -version; else fbuild -version; fi

@@ -1,0 +1,84 @@
+name: SIREngine CI
+
+on:
+  push:
+    branches: [develop]
+  pull_request:
+    branches: [develop, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sir-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  source:
+    name: Source hygiene and formatting
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Validate tracked paths and pins
+        run: cmake -P Build/CMake/CIHygiene.cmake
+      - name: Install native clang-format 22.1.5
+        shell: bash
+        run: |
+          set -euo pipefail
+          metadata="${RUNNER_TEMP}/clang-format.json"
+          archive="${RUNNER_TEMP}/clang-format.zip"
+          bindir="${RUNNER_TEMP}/native-tools"
+          mkdir -p "${bindir}"
+          curl -fsSL --retry 3 https://pypi.org/pypi/clang-format/22.1.5/json -o "${metadata}"
+          filter='.urls[] | select(.filename | contains("manylinux_2_27_x86_64"))'
+          url="$(jq -er "${filter} | .url" "${metadata}")"
+          digest="$(jq -er "${filter} | .digests.sha256" "${metadata}")"
+          curl -fsSL --retry 3 "${url}" -o "${archive}"
+          printf '%s  %s\n' "${digest}" "${archive}" | sha256sum -c -
+          binary="$(unzip -Z1 "${archive}" | grep -E '/bin/clang-format$' | head -n 1)"
+          test -n "${binary}"
+          unzip -p "${archive}" "${binary}" > "${bindir}/clang-format"
+          chmod +x "${bindir}/clang-format"
+          "${bindir}/clang-format" --version
+          echo "${bindir}" >> "${GITHUB_PATH}"
+      - name: Check C++ formatting
+        run: cmake -P Build/CMake/CIFormat.cmake
+
+  native:
+    name: Native C++17 / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            preset: dev
+          - os: windows-2022
+            preset: dev
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up MSVC compiler environment
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+      - uses: ./.github/actions/setup-build-tools
+      - uses: actions/cache@v4
+        with:
+          path: .cache/fastbuild
+          key: sir-fbuild-v1.20-${{ runner.os }}-dev-${{ github.sha }}
+          restore-keys: |
+            sir-fbuild-v1.20-${{ runner.os }}-dev-
+      - name: Configure native engine
+        run: cmake --preset "${{ matrix.preset }}"
+      - name: Compile engine and tests
+        run: cmake --build --preset "${{ matrix.preset }}"
+      - name: Run native tests
+        run: ctest --preset "${{ matrix.preset }}"
+      - name: Verify no-op incremental rebuild
+        run: cmake --build --preset dev

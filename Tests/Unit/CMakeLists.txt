@@ -1,0 +1,11 @@
+add_executable(SIRApplicationTests SIRApplicationTests.cpp)
+target_link_libraries(SIRApplicationTests PRIVATE SIR::Core)
+add_test(NAME core.application.lifecycle COMMAND SIRApplicationTests)
+add_test(NAME launcher.version COMMAND SIREngine --version)
+set_tests_properties(launcher.version PROPERTIES PASS_REGULAR_EXPRESSION "SIREngine native foundation")
+add_test(NAME launcher.help COMMAND SIREngine --help)
+set_tests_properties(launcher.help PROPERTIES PASS_REGULAR_EXPRESSION "Usage: SIREngine")
+add_test(NAME launcher.unknown-option COMMAND SIREngine --unknown)
+set_tests_properties(launcher.unknown-option PROPERTIES WILL_FAIL TRUE)
+
+sir_configure_owned_target(SIRApplicationTests)

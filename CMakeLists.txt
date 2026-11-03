@@ -1,0 +1,31 @@
+cmake_minimum_required(VERSION 4.4.5)
+project(SIREngine VERSION 0.1.0 LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+option(SIR_BUILD_TESTS "Build and register native unit tests" ON)
+option(SIR_WITH_EASTL "Build pinned EASTL for future ported systems" OFF)
+option(SIR_WITH_FMOD "Resolve the external FMOD Studio API" OFF)
+option(SIR_WITH_WWISE "Resolve the external Wwise SDK" OFF)
+option(SIR_WITH_OPENAL "Resolve a system OpenAL implementation" OFF)
+
+include(Build/CMake/SIRBuildOptions.cmake)
+include(Build/CMake/SIRDependencies.cmake)
+include(Build/CMake/SIRAudio.cmake)
+add_subdirectory(Source)
+
+if(SIR_BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(Tests/Unit)
+    add_subdirectory(Tests/Dependencies)
+endif()
+
+include(GNUInstallDirs)
+install(TARGETS SIREngine RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
+set(CPACK_PACKAGE_NAME "SIREngine")
+set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
+set(CPACK_GENERATOR "ZIP")
+include(CPack)

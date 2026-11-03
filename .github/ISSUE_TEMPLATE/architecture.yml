@@ -1,0 +1,23 @@
+name: "Architecture / feature request"
+description: "Propose a new interface, capability or owned subsystem change"
+title: "feat: "
+body:
+  - type: textarea
+    id: contract
+    attributes:
+      label: "Required behavior and existing contract"
+      description: "Link docs/architecture or a proposed ADR"
+    validations:
+      required: true
+  - type: textarea
+    id: ownership
+    attributes:
+      label: "Source ownership, resource lifetimes, memory domains and dependencies"
+    validations:
+      required: true
+  - type: textarea
+    id: tests
+    attributes:
+      label: "Concrete acceptance tests and target platforms"
+    validations:
+      required: true
