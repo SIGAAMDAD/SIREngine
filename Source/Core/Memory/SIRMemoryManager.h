@@ -172,10 +172,8 @@ private:
 	bool commit( SIRMemorySegment *pSegment, uint64_t nOffset, uint64_t nBytes );
 	bool decommit( SIRMemorySegment *pSegment, uint64_t nOffset, uint64_t nBytes );
 	bool bindRetirementOwner( SIRMemorySegment *pSegment, uint32_t nOwnerId, uint32_t nOwnerGeneration );
-	bool retireIdleRange( SIRMemorySegment *pSegment, uint64_t nOffset, uint64_t nBytes, uint32_t nOwnerId,
-	                      uint32_t nOwnerGeneration );
-	bool cancelRetiredRange( SIRMemorySegment *pSegment, uint64_t nOffset, uint64_t nBytes, uint32_t nOwnerId,
-	                        uint32_t nOwnerGeneration );
+	bool retireIdleRange( SIRMemorySegment *pSegment, uint64_t nOffset, uint64_t nBytes, uint32_t nOwnerId, uint32_t nOwnerGeneration );
+	bool cancelRetiredRange( SIRMemorySegment *pSegment, uint64_t nOffset, uint64_t nBytes, uint32_t nOwnerId, uint32_t nOwnerGeneration );
 	uint64_t countPendingPages( const SIRMemorySegment *pSegment, uint64_t nFirstPage, uint64_t nPageCount ) const;
 	void markPendingPages( SIRMemorySegment *pSegment, uint64_t nFirstPage, uint64_t nPageCount, bool bPending );
 	void clearPendingPages( SIRMemorySegment *pSegment, uint64_t nFirstPage, uint64_t nPageCount, bool bReused );

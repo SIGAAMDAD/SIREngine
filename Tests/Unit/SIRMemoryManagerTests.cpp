@@ -197,14 +197,13 @@ static bool testBackingTelemetry( void )
 		return false;
 	}
 	const sirPageBackingStats_t original = memory.getPageBackingStats();
-	if ( !pSegment->commit( 0, nPage ) || !pSegment->commit( 0, nPage ) ||
-	     pSegment->commit( nPage, nPage ) || !pSegment->decommit( 0, nPage ) || !pSegment->decommit( 0, nPage ) ) {
+	if ( !pSegment->commit( 0, nPage ) || !pSegment->commit( 0, nPage ) || pSegment->commit( nPage, nPage ) ||
+	     !pSegment->decommit( 0, nPage ) || !pSegment->decommit( 0, nPage ) ) {
 		return false;
 	}
 	const sirPageBackingStats_t stats = memory.getPageBackingStats();
 	if ( stats.nNoopCommitRequests != original.nNoopCommitRequests + 1 ||
-	     stats.nNoopDecommitRequests != original.nNoopDecommitRequests + 1 ||
-	     stats.nNoopCommitBytes != original.nNoopCommitBytes + nPage ||
+	     stats.nNoopDecommitRequests != original.nNoopDecommitRequests + 1 || stats.nNoopCommitBytes != original.nNoopCommitBytes + nPage ||
 	     stats.nNoopDecommitBytes != original.nNoopDecommitBytes + nPage ||
 	     stats.nSuccessfulCommitCalls != original.nSuccessfulCommitCalls + 1 ||
 	     stats.nSuccessfulDecommitCalls != original.nSuccessfulDecommitCalls + 1 ||
@@ -216,7 +215,6 @@ static bool testBackingTelemetry( void )
 	const sirPageBackingStats_t cleared = memory.getPageBackingStats();
 	return cleared.nManagedCommittedBytes == 0 && cleared.nNoopCommitRequests == 0 && cleared.nSuccessfulCommitCalls == 0;
 }
-
 
 static bool testRetainedPageBacking( void )
 {
@@ -240,12 +238,10 @@ static bool testRetainedPageBacking( void )
 		return false;
 	}
 	const sirPageBackingStats_t before = memory.getPageBackingStats();
-	if ( before.nPendingDecommitBytes != nPage ||
-	     pSegment->commit( nPage * 2, nPage ) || pBytes[0] != 0xA5 ) {
+	if ( before.nPendingDecommitBytes != nPage || pSegment->commit( nPage * 2, nPage ) || pBytes[0] != 0xA5 ) {
 		return false;
 	}
-	if ( pSegment->cancelRetiredRange( 0, nPage, 7, 12 ) ||
-	     !pSegment->commit( 0, nPage ) || pBytes[0] != 0xA5 ||
+	if ( pSegment->cancelRetiredRange( 0, nPage, 7, 12 ) || !pSegment->commit( 0, nPage ) || pBytes[0] != 0xA5 ||
 	     memory.getPageBackingStats().nPendingDecommitBytes != 0 ) {
 		return false;
 	}
@@ -253,16 +249,15 @@ static bool testRetainedPageBacking( void )
 		return false;
 	}
 	const sirPageDrainReport_t drained = memory.drainPendingDecommits( nPage );
-	if ( drained.nDecommittedBytes != nPage || drained.nRemainingPendingBytes != nPage ||
-	     drained.nCompletedRuns != 1 || drained.nFailedRuns != 0 || pSegment->getCommittedBytes() != nPage ) {
+	if ( drained.nDecommittedBytes != nPage || drained.nRemainingPendingBytes != nPage || drained.nCompletedRuns != 1 ||
+	     drained.nFailedRuns != 0 || pSegment->getCommittedBytes() != nPage ) {
 		return false;
 	}
-	if ( !pSegment->cancelRetiredRange( nPage, nPage, 7, 11 ) ||
-	     memory.getPageBackingStats().nPendingDecommitBytes != 0 || pBytes[nPage] != 0x5A ) {
+	if ( !pSegment->cancelRetiredRange( nPage, nPage, 7, 11 ) || memory.getPageBackingStats().nPendingDecommitBytes != 0 ||
+	     pBytes[nPage] != 0x5A ) {
 		return false;
 	}
-	if ( !pSegment->commit( 0, nPage ) || pBytes[0] != 0 ||
-	     memory.getPageBackingStats().nRetainedReuseBytes < nPage * 2 ) {
+	if ( !pSegment->commit( 0, nPage ) || pBytes[0] != 0 || memory.getPageBackingStats().nRetainedReuseBytes < nPage * 2 ) {
 		return false;
 	}
 	if ( !pSegment->decommit( 0, nPage * 2 ) || memory.getPageBackingStats().nPendingDecommitBytes != 0 ) {

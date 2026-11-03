@@ -1,6 +1,8 @@
 /*
 ===========================================================================
+
 SIREngine MPLv2 Source Code
+
 Copyright (C) 2023-2027 Noah Van Til
 
 This Source Code Form is subject to the terms of the Mozilla Public
@@ -40,8 +42,9 @@ static bool sirAlignUpChecked( uint64_t nValue, uint64_t nAlignment, uint64_t *p
 SIRMemoryManager::SIRMemoryManager( void )
     : m_pBase( nullptr ), m_pSegments( nullptr ), m_nPageSize( 0 ), m_nPageShift( 0 ), m_nReservedBytes( 0 ), m_nCommitBudgetBytes( 0 ),
       m_nMaximumCommitBudgetBytes( 0 ), m_nCommitDeniedCount( 0 ), m_nCommitCallCount( 0 ), m_nDecommitCallCount( 0 ),
-      m_nDecommittedBytes( 0 ), m_nPendingDecommitBytes( 0 ), m_nRetainedReuseBytes( 0 ), m_nFailedCommitCalls( 0 ), m_nFailedDecommitCalls( 0 ), m_nNoopCommitRequests( 0 ),
-      m_nNoopDecommitRequests( 0 ), m_nNoopCommitBytes( 0 ), m_nNoopDecommitBytes( 0 ), m_nTraceDroppedCount( 0 ), m_nTraceSequence( 0 ), m_pTrace( nullptr ), m_nTraceCapacity( 0 ),
+      m_nDecommittedBytes( 0 ), m_nPendingDecommitBytes( 0 ), m_nRetainedReuseBytes( 0 ), m_nFailedCommitCalls( 0 ),
+      m_nFailedDecommitCalls( 0 ), m_nNoopCommitRequests( 0 ), m_nNoopDecommitRequests( 0 ), m_nNoopCommitBytes( 0 ),
+      m_nNoopDecommitBytes( 0 ), m_nTraceDroppedCount( 0 ), m_nTraceSequence( 0 ), m_pTrace( nullptr ), m_nTraceCapacity( 0 ),
       m_nTraceCount( 0 ), m_nDomainCommittedBytes{}, m_nDomainMetadataCommittedBytes{}, m_nDomainPeakCommittedBytes{},
       m_nDomainCommitLimits{}, m_nCommittedBytes( 0 ), m_nPeakCommittedBytes( 0 ), m_nMetadataBytes( 0 ), m_nMetadataCommittedBytes( 0 ),
       m_nMetadataOffset( 0 ), m_nRecyclableFloor( 0 ), m_nRecyclableCommittedBytes( 0 ), m_nRecyclableUsedBytes( 0 ),
@@ -677,9 +680,9 @@ sirMemoryStats_t SIRMemoryManager::getStats( void ) const
 sirPageBackingStats_t SIRMemoryManager::getPageBackingStats( void ) const
 {
 	std::lock_guard<SIRMutex> lock( m_Mutex );
-	return { m_nCommittedBytes, m_nPendingDecommitBytes, m_nRetainedReuseBytes, m_nCommitCallCount, m_nDecommitCallCount,
-	         m_nFailedCommitCalls, m_nFailedDecommitCalls, m_nNoopCommitRequests, m_nNoopDecommitRequests,
-	         m_nNoopCommitBytes, m_nNoopDecommitBytes, m_nCommitDeniedCount };
+	return { m_nCommittedBytes,       m_nPendingDecommitBytes, m_nRetainedReuseBytes,  m_nCommitCallCount,
+	         m_nDecommitCallCount,    m_nFailedCommitCalls,    m_nFailedDecommitCalls, m_nNoopCommitRequests,
+	         m_nNoopDecommitRequests, m_nNoopCommitBytes,      m_nNoopDecommitBytes,   m_nCommitDeniedCount };
 }
 
 uint64_t SIRMemoryManager::getPageSize( void ) const
@@ -689,9 +692,9 @@ uint64_t SIRMemoryManager::getPageSize( void ) const
 }
 
 SIRMemorySegment::SIRMemorySegment( void )
-    : m_pManager( nullptr ), m_pBase( nullptr ), m_pCommittedBits( nullptr ), m_pPendingDecommitBits( nullptr ),
-      m_nRetirementOwnerId( 0 ), m_nRetirementOwnerGeneration( 0 ), m_nReservedBytes( 0 ), m_nCommittedBytes( 0 ),
-      m_nCommitLimitBytes( 0 ), m_nPageCount( 0 ), m_eDomain( SIR_MEMORY_DOMAIN_GODOT ), m_szName{}
+    : m_pManager( nullptr ), m_pBase( nullptr ), m_pCommittedBits( nullptr ), m_pPendingDecommitBits( nullptr ), m_nRetirementOwnerId( 0 ),
+      m_nRetirementOwnerGeneration( 0 ), m_nReservedBytes( 0 ), m_nCommittedBytes( 0 ), m_nCommitLimitBytes( 0 ), m_nPageCount( 0 ),
+      m_eDomain( SIR_MEMORY_DOMAIN_GODOT ), m_szName{}
 {
 }
 
@@ -760,7 +763,6 @@ bool SIRMemorySegment::cancelRetiredRange( uint64_t nOffset, uint64_t nBytes, ui
 	return m_pManager != nullptr && m_pManager->cancelRetiredRange( this, nOffset, nBytes, nOwnerId, nOwnerGeneration );
 }
 
-
 uint64_t SIRMemoryManager::countPendingPages( const SIRMemorySegment *pSegment, uint64_t nFirstPage, uint64_t nPageCount ) const
 {
 	uint64_t nCount = 0;
@@ -805,8 +807,8 @@ void SIRMemoryManager::clearPendingPages( SIRMemorySegment *pSegment, uint64_t n
 bool SIRMemoryManager::bindRetirementOwner( SIRMemorySegment *pSegment, uint32_t nOwnerId, uint32_t nOwnerGeneration )
 {
 	std::lock_guard<SIRMutex> lock( m_Mutex );
-	if ( m_pBase == nullptr || pSegment == nullptr || pSegment->m_pManager != this ||
-	     nOwnerId == 0 || nOwnerGeneration == 0 || pSegment->m_nRetirementOwnerId != 0 ) {
+	if ( m_pBase == nullptr || pSegment == nullptr || pSegment->m_pManager != this || nOwnerId == 0 || nOwnerGeneration == 0 ||
+	     pSegment->m_nRetirementOwnerId != 0 ) {
 		return false;
 	}
 	pSegment->m_nRetirementOwnerId = nOwnerId;
@@ -815,20 +817,18 @@ bool SIRMemoryManager::bindRetirementOwner( SIRMemorySegment *pSegment, uint32_t
 }
 
 bool SIRMemoryManager::retireIdleRange( SIRMemorySegment *pSegment, uint64_t nOffset, uint64_t nBytes, uint32_t nOwnerId,
-                                       uint32_t nOwnerGeneration )
+                                        uint32_t nOwnerGeneration )
 {
 	std::lock_guard<SIRMutex> lock( m_Mutex );
-	if ( m_pBase == nullptr || pSegment == nullptr || pSegment->m_pManager != this ||
-	     nOwnerId == 0 || pSegment->m_nRetirementOwnerId != nOwnerId ||
-	     pSegment->m_nRetirementOwnerGeneration != nOwnerGeneration ||
-	     nBytes == 0 || ( ( nOffset | nBytes ) & ( m_nPageSize - 1 ) ) != 0 ||
-	     nOffset > pSegment->m_nReservedBytes || nBytes > pSegment->m_nReservedBytes - nOffset ) {
+	if ( m_pBase == nullptr || pSegment == nullptr || pSegment->m_pManager != this || nOwnerId == 0 ||
+	     pSegment->m_nRetirementOwnerId != nOwnerId || pSegment->m_nRetirementOwnerGeneration != nOwnerGeneration || nBytes == 0 ||
+	     ( ( nOffset | nBytes ) & ( m_nPageSize - 1 ) ) != 0 || nOffset > pSegment->m_nReservedBytes ||
+	     nBytes > pSegment->m_nReservedBytes - nOffset ) {
 		return false;
 	}
 	const uint64_t nFirst = nOffset >> m_nPageShift;
 	const uint64_t nPages = nBytes >> m_nPageShift;
-	if ( countCommittedPages( pSegment, nFirst, nPages ) != nPages ||
-	     countPendingPages( pSegment, nFirst, nPages ) != 0 ) {
+	if ( countCommittedPages( pSegment, nFirst, nPages ) != nPages || countPendingPages( pSegment, nFirst, nPages ) != 0 ) {
 		return false;
 	}
 	markPendingPages( pSegment, nFirst, nPages, true );
@@ -840,11 +840,10 @@ bool SIRMemoryManager::cancelRetiredRange( SIRMemorySegment *pSegment, uint64_t 
                                            uint32_t nOwnerGeneration )
 {
 	std::lock_guard<SIRMutex> lock( m_Mutex );
-	if ( m_pBase == nullptr || pSegment == nullptr || pSegment->m_pManager != this ||
-	     nOwnerId == 0 || pSegment->m_nRetirementOwnerId != nOwnerId ||
-	     pSegment->m_nRetirementOwnerGeneration != nOwnerGeneration ||
-	     nBytes == 0 || ( ( nOffset | nBytes ) & ( m_nPageSize - 1 ) ) != 0 ||
-	     nOffset > pSegment->m_nReservedBytes || nBytes > pSegment->m_nReservedBytes - nOffset ) {
+	if ( m_pBase == nullptr || pSegment == nullptr || pSegment->m_pManager != this || nOwnerId == 0 ||
+	     pSegment->m_nRetirementOwnerId != nOwnerId || pSegment->m_nRetirementOwnerGeneration != nOwnerGeneration || nBytes == 0 ||
+	     ( ( nOffset | nBytes ) & ( m_nPageSize - 1 ) ) != 0 || nOffset > pSegment->m_nReservedBytes ||
+	     nBytes > pSegment->m_nReservedBytes - nOffset ) {
 		return false;
 	}
 	const uint64_t nFirst = nOffset >> m_nPageShift;
