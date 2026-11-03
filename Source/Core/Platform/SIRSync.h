@@ -24,15 +24,15 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #endif
 // clang-format on
 
-#if defined(_WIN32)
-	#ifndef WIN32_LEAN_AND_MEAN
-		#define WIN32_LEAN_AND_MEAN
-	#endif
-	#include <Windows.h>
-#elif defined(__linux__)
-	#include <pthread.h>
+#if defined( _WIN32 )
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <Windows.h>
+#elif defined( __linux__ )
+#include <pthread.h>
 #else
-	#error "SIREngine synchronization requires a Windows or Linux backend"
+#error "SIREngine synchronization requires a Windows or Linux backend"
 #endif
 
 #include <atomic>
@@ -52,7 +52,7 @@ public:
 
 private:
 	friend class SIRConditionVariable;
-#if defined(_WIN32)
+#if defined( _WIN32 )
 	SRWLOCK m_hMutex;
 #else
 	pthread_mutex_t m_hMutex;
@@ -71,7 +71,7 @@ public:
 	void unlock( void ) noexcept;
 
 private:
-#if defined(_WIN32)
+#if defined( _WIN32 )
 	CRITICAL_SECTION m_hMutex;
 #else
 	pthread_mutex_t m_hMutex;
@@ -90,7 +90,7 @@ public:
 	void notifyAll( void ) noexcept;
 
 private:
-#if defined(_WIN32)
+#if defined( _WIN32 )
 	CONDITION_VARIABLE m_hCondition;
 #else
 	pthread_cond_t m_hCondition;

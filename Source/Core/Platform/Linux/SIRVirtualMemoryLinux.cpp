@@ -21,14 +21,14 @@ of merchantability, fitness for a particular purpose and noninfringement.
 static bool validPageRange( const void *pAddress, size_t nBytes ) noexcept
 {
 	const size_t nPageSize = SIRVirtualMemory::getPageSize();
-	return pAddress != nullptr && nPageSize != 0 && nBytes != 0 &&
-		( (uintptr_t)pAddress % nPageSize ) == 0 && ( nBytes % nPageSize ) == 0;
+	return pAddress != nullptr && nPageSize != 0 && nBytes != 0 && ( ( uintptr_t )pAddress % nPageSize ) == 0 &&
+	       ( nBytes % nPageSize ) == 0;
 }
 
 size_t SIRVirtualMemory::getPageSize( void ) noexcept
 {
 	static const long s_nPageSize = sysconf( _SC_PAGESIZE );
-	return s_nPageSize > 0 ? (size_t)s_nPageSize : 0;
+	return s_nPageSize > 0 ? ( size_t )s_nPageSize : 0;
 }
 
 size_t SIRVirtualMemory::getAllocationGranularity( void ) noexcept
@@ -62,8 +62,13 @@ bool SIRVirtualMemory::decommit( void *pAddress, size_t nBytes ) noexcept
 	if ( mprotect( pAddress, nBytes, PROT_NONE ) != 0 ) {
 		return false;
 	}
-	// Drop physical backing while retaining the virtual address range.
-	return madvise( pAddress, nBytes, MADV_DONTNEED ) == 0;
+	// A failed discard must restore accessibility: the memory owner will
+	// retain these pages as committed when this call reports failure.
+	if ( madvise( pAddress, nBytes, MADV_DONTNEED ) != 0 ) {
+		mprotect( pAddress, nBytes, PROT_READ | PROT_WRITE );
+		return false;
+	}
+	return true;
 }
 
 bool SIRVirtualMemory::release( void *pAddress, size_t nBytes ) noexcept
@@ -81,11 +86,20 @@ bool SIRVirtualMemory::protect( void *pAddress, size_t nBytes, sirMemoryProtecti
 	}
 	int nFlags = PROT_NONE;
 	switch ( eProtection ) {
-		case SIR_MEMORY_NO_ACCESS: nFlags = PROT_NONE; break;
-		case SIR_MEMORY_READ_ONLY: nFlags = PROT_READ; break;
-		case SIR_MEMORY_READ_WRITE: nFlags = PROT_READ | PROT_WRITE; break;
-		case SIR_MEMORY_READ_EXECUTE: nFlags = PROT_READ | PROT_EXEC; break;
-		default: return false;
+	case SIR_MEMORY_NO_ACCESS:
+		nFlags = PROT_NONE;
+		break;
+	case SIR_MEMORY_READ_ONLY:
+		nFlags = PROT_READ;
+		break;
+	case SIR_MEMORY_READ_WRITE:
+		nFlags = PROT_READ | PROT_WRITE;
+		break;
+	case SIR_MEMORY_READ_EXECUTE:
+		nFlags = PROT_READ | PROT_EXEC;
+		break;
+	default:
+		return false;
 	}
 	return mprotect( pAddress, nBytes, nFlags ) == 0;
 }

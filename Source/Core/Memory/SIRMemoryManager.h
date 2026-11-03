@@ -107,31 +107,27 @@ class SIRMemoryManager
 {
 public:
 	SIRMemoryManager( void );
-	explicit SIRMemoryManager( const sirMemoryConfig_t& config );
-	SIRMemoryManager( const sirMemoryConfig_t& config,
-	                  const sirMemoryBudgetProfile_t& budget );
+	explicit SIRMemoryManager( const sirMemoryConfig_t &config );
+	SIRMemoryManager( const sirMemoryConfig_t &config, const sirMemoryBudgetProfile_t &budget );
 	~SIRMemoryManager();
 
-	SIRMemoryManager( const SIRMemoryManager& ) = delete;
-	SIRMemoryManager& operator=( const SIRMemoryManager& ) = delete;
+	SIRMemoryManager( const SIRMemoryManager & ) = delete;
+	SIRMemoryManager &operator=( const SIRMemoryManager & ) = delete;
 
-	bool init( const sirMemoryConfig_t& config );
-	bool initBudgeted( const sirMemoryConfig_t& config,
-	                   const sirMemoryBudgetProfile_t& budget );
+	bool init( const sirMemoryConfig_t &config );
+	bool initBudgeted( const sirMemoryConfig_t &config, const sirMemoryBudgetProfile_t &budget );
 	bool setCommitBudgetBytes( uint64_t nNewBudget );
 	bool isInitialized( void ) const;
 	void shutdown( void );
 
-	SIRMemorySegment *createSegment( const char *pszName, uint64_t nBytes,
-	                                 uint64_t nCommitLimitBytes = 0,
+	SIRMemorySegment *createSegment( const char *pszName, uint64_t nBytes, uint64_t nCommitLimitBytes = 0,
 	                                 sirMemoryDomain_t eDomain = SIR_MEMORY_DOMAIN_GAMEPLAY );
 	bool setDomainCommitLimit( sirMemoryDomain_t eDomain, uint64_t nLimitBytes );
 	sirMemoryDomainStats_t getDomainStats( sirMemoryDomain_t eDomain ) const;
 
 	// Initialization-time allocator metadata, backed by the SAME reservation.
 	// Bump-only storage; individual allocations are not freed until shutdown().
-	void *allocateMetadata( uint64_t nBytes, uint64_t nAlignment,
-	                      sirMemoryDomain_t eDomain = SIR_MEMORY_DOMAIN_GAMEPLAY );
+	void *allocateMetadata( uint64_t nBytes, uint64_t nAlignment, sirMemoryDomain_t eDomain = SIR_MEMORY_DOMAIN_GAMEPLAY );
 	// Manager-owned, page-granular recyclable metadata in the same reservation.
 	void *allocateRecyclableMetadataPage( sirMemoryDomain_t eDomain = SIR_MEMORY_DOMAIN_GAMEPLAY );
 	bool releaseRecyclableMetadataPage( void *pPage, sirMemoryDomain_t eDomain = SIR_MEMORY_DOMAIN_GAMEPLAY );
@@ -147,13 +143,10 @@ private:
 	bool commit( SIRMemorySegment *pSegment, uint64_t nOffset, uint64_t nBytes );
 	bool decommit( SIRMemorySegment *pSegment, uint64_t nOffset, uint64_t nBytes );
 	uint64_t getSegmentCommittedBytes( const SIRMemorySegment *pSegment ) const;
-	void *allocateMetadataLocked( uint64_t nBytes, uint64_t nAlignment,
-	                            sirMemoryDomain_t eDomain );
-	uint64_t countCommittedPages( const SIRMemorySegment *pSegment,
-	                              uint64_t nFirstPage, uint64_t nPageCount ) const;
+	void *allocateMetadataLocked( uint64_t nBytes, uint64_t nAlignment, sirMemoryDomain_t eDomain );
+	uint64_t countCommittedPages( const SIRMemorySegment *pSegment, uint64_t nFirstPage, uint64_t nPageCount ) const;
 	void recordTraceLocked( uint32_t nType, uint64_t nBytes, uint32_t nSegment );
-	void markCommittedPages( SIRMemorySegment *pSegment, uint64_t nFirstPage,
-	                         uint64_t nPageCount, bool bCommitted );
+	void markCommittedPages( SIRMemorySegment *pSegment, uint64_t nFirstPage, uint64_t nPageCount, bool bCommitted );
 
 	mutable SIRMutex m_Mutex;
 	uint8_t *m_pBase;
@@ -173,10 +166,10 @@ private:
 	sirMemoryTraceEvent_t *m_pTrace;
 	uint32_t m_nTraceCapacity;
 	uint32_t m_nTraceCount;
-	uint64_t m_nDomainCommittedBytes[ SIR_MEMORY_DOMAIN_COUNT ];
-	uint64_t m_nDomainMetadataCommittedBytes[ SIR_MEMORY_DOMAIN_COUNT ];
-	uint64_t m_nDomainPeakCommittedBytes[ SIR_MEMORY_DOMAIN_COUNT ];
-	uint64_t m_nDomainCommitLimits[ SIR_MEMORY_DOMAIN_COUNT ];
+	uint64_t m_nDomainCommittedBytes[SIR_MEMORY_DOMAIN_COUNT];
+	uint64_t m_nDomainMetadataCommittedBytes[SIR_MEMORY_DOMAIN_COUNT];
+	uint64_t m_nDomainPeakCommittedBytes[SIR_MEMORY_DOMAIN_COUNT];
+	uint64_t m_nDomainCommitLimits[SIR_MEMORY_DOMAIN_COUNT];
 	uint64_t m_nCommittedBytes;
 	uint64_t m_nPeakCommittedBytes;
 	uint64_t m_nMetadataBytes;

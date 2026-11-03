@@ -23,5 +23,5 @@ uint64_t SIRPlatformTime::getMonotonicNanoseconds( void ) noexcept
 	if ( clock_gettime( CLOCK_MONOTONIC, &time ) != 0 ) {
 		return 0;
 	}
-	return (uint64_t)time.tv_sec * UINT64_C(1000000000) + (uint64_t)time.tv_nsec;
+	return ( uint64_t )time.tv_sec * UINT64_C( 1000000000 ) + ( uint64_t )time.tv_nsec;
 }

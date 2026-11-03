@@ -26,15 +26,15 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <atomic>
 
-#if defined(_WIN32)
-	#ifndef WIN32_LEAN_AND_MEAN
-		#define WIN32_LEAN_AND_MEAN
-	#endif
-	#include <Windows.h>
-#elif defined(__linux__)
-	#include <pthread.h>
+#if defined( _WIN32 )
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <Windows.h>
+#elif defined( __linux__ )
+#include <pthread.h>
 #else
-	#error "SIREngine threads require a Windows or Linux backend"
+#error "SIREngine threads require a Windows or Linux backend"
 #endif
 
 // Thread object must outlive its callback. Destruction joins the worker.
@@ -54,7 +54,7 @@ public:
 	bool isAlive( void ) const noexcept;
 
 private:
-#if defined(_WIN32)
+#if defined( _WIN32 )
 	static DWORD WINAPI threadEntry( LPVOID pUserData );
 	HANDLE m_hThread;
 	DWORD m_nThreadId;

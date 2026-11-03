@@ -66,7 +66,7 @@ static bool parseKibField( const char *szData, const char *szKey, uint64_t *pByt
 			if ( pEnd[0] != 'k' || pEnd[1] != 'B' ) {
 				return false;
 			}
-			*pBytes = (uint64_t)nKib * 1024U;
+			*pBytes = ( uint64_t )nKib * 1024U;
 			return true;
 		}
 		const char *pEnd = strchr( pLine, '\n' );
@@ -96,7 +96,7 @@ static bool readUnsignedFile( const char *szPath, uint64_t *pNumber ) noexcept
 	if ( *pEnd != '\0' ) {
 		return false;
 	}
-	*pNumber = (uint64_t)nValue;
+	*pNumber = ( uint64_t )nValue;
 	return true;
 }
 
@@ -112,17 +112,17 @@ bool SIRPlatformMemory::querySystem( sirSystemMemoryStats_t *pStats ) noexcept
 	}
 
 	sirSystemMemoryStats_t stats = {};
-	stats.nTotalPhysicalBytes = (uint64_t)system.totalram * system.mem_unit;
-	stats.nAvailablePhysicalBytes = (uint64_t)system.freeram * system.mem_unit;
-	stats.nTotalSwapBytes = (uint64_t)system.totalswap * system.mem_unit;
-	stats.nAvailableSwapBytes = (uint64_t)system.freeswap * system.mem_unit;
+	stats.nTotalPhysicalBytes = ( uint64_t )system.totalram * system.mem_unit;
+	stats.nAvailablePhysicalBytes = ( uint64_t )system.freeram * system.mem_unit;
+	stats.nTotalSwapBytes = ( uint64_t )system.totalswap * system.mem_unit;
+	stats.nAvailableSwapBytes = ( uint64_t )system.freeswap * system.mem_unit;
 	stats.nValidFields |= SIR_SYSTEM_MEMORY_SWAP;
 	uint64_t nAvailable = 0;
 	if ( parseKibField( szMeminfo, "MemAvailable:", &nAvailable ) ) {
 		stats.nAvailablePhysicalBytes = nAvailable;
 	}
 	if ( parseKibField( szMeminfo, "CommitLimit:", &stats.nCommitLimitBytes ) &&
-		parseKibField( szMeminfo, "Committed_AS:", &stats.nCommittedBytes ) ) {
+	     parseKibField( szMeminfo, "Committed_AS:", &stats.nCommittedBytes ) ) {
 		stats.nValidFields |= SIR_SYSTEM_MEMORY_COMMIT;
 	}
 
@@ -130,11 +130,10 @@ bool SIRPlatformMemory::querySystem( sirSystemMemoryStats_t *pStats ) noexcept
 	// the cgroup namespace presents the process at its root. More complex
 	// mount mappings are deliberately reported as unavailable.
 	char szCgroup[1024];
-	if ( readFile( "/proc/self/cgroup", szCgroup, sizeof( szCgroup ) ) &&
-		strncmp( szCgroup, "0::/", 4 ) == 0 && ( szCgroup[4] == '\n' || szCgroup[4] == '\0' ) ) {
+	if ( readFile( "/proc/self/cgroup", szCgroup, sizeof( szCgroup ) ) && strncmp( szCgroup, "0::/", 4 ) == 0 &&
+	     ( szCgroup[4] == '\n' || szCgroup[4] == '\0' ) ) {
 		uint64_t nGroupLimit = 0;
-		if ( readUnsignedFile( "/sys/fs/cgroup/memory.max", &nGroupLimit ) && nGroupLimit != 0 &&
-			nGroupLimit != UINT64_MAX ) {
+		if ( readUnsignedFile( "/sys/fs/cgroup/memory.max", &nGroupLimit ) && nGroupLimit != 0 && nGroupLimit != UINT64_MAX ) {
 			stats.nGroupMemoryLimitBytes = nGroupLimit;
 			stats.nValidFields |= SIR_SYSTEM_MEMORY_GROUP_LIMIT;
 		}
@@ -172,7 +171,7 @@ bool SIRPlatformMemory::queryProcess( sirProcessMemoryStats_t *pStats ) noexcept
 	}
 	struct rusage usage = {};
 	if ( getrusage( RUSAGE_SELF, &usage ) == 0 ) {
-		stats.nPageFaultCount = (uint64_t)usage.ru_minflt + (uint64_t)usage.ru_majflt;
+		stats.nPageFaultCount = ( uint64_t )usage.ru_minflt + ( uint64_t )usage.ru_majflt;
 		stats.nValidFields |= SIR_PROCESS_MEMORY_PAGE_FAULTS;
 	}
 	if ( ( stats.nValidFields & SIR_PROCESS_MEMORY_RESIDENT ) == 0 ) {

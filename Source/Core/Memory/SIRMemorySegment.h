@@ -33,37 +33,36 @@ class SIRMemoryManager;
 class SIRMemorySegment
 {
 public:
-    SIRMemorySegment( void );
-    SIRMemorySegment( const SIRMemorySegment& ) = delete;
-    SIRMemorySegment& operator=( const SIRMemorySegment& ) = delete;
+	SIRMemorySegment( void );
+	SIRMemorySegment( const SIRMemorySegment & ) = delete;
+	SIRMemorySegment &operator=( const SIRMemorySegment & ) = delete;
 
-
-    void *getBase( void ) const;
-    const char *getName( void ) const;
-    uint64_t getPageSize( void ) const;
-    uint64_t getReservedBytes( void ) const;
-    uint64_t getCommittedBytes( void ) const;
-    uint64_t getCommitLimitBytes( void ) const;
+	void *getBase( void ) const;
+	const char *getName( void ) const;
+	uint64_t getPageSize( void ) const;
+	uint64_t getReservedBytes( void ) const;
+	uint64_t getCommittedBytes( void ) const;
+	uint64_t getCommitLimitBytes( void ) const;
 	sirMemoryDomain_t getDomain( void ) const;
 
-    // Offsets and sizes must be multiples of the OS page size.
-    bool commit( uint64_t nOffset, uint64_t nBytes );
-    bool decommit( uint64_t nOffset, uint64_t nBytes );
+	// Offsets and sizes must be multiples of the OS page size.
+	bool commit( uint64_t nOffset, uint64_t nBytes );
+	bool decommit( uint64_t nOffset, uint64_t nBytes );
 
-    SIRMemoryManager *getManager( void ) const;
+	SIRMemoryManager *getManager( void ) const;
 
 private:
-    friend class SIRMemoryManager;
+	friend class SIRMemoryManager;
 
-    SIRMemoryManager *m_pManager;
-    uint8_t *m_pBase;
-    uint64_t *m_pCommittedBits;
-    uint64_t m_nReservedBytes;
-    uint64_t m_nCommittedBytes;
-    uint64_t m_nCommitLimitBytes;
-    uint64_t m_nPageCount;
+	SIRMemoryManager *m_pManager;
+	uint8_t *m_pBase;
+	uint64_t *m_pCommittedBits;
+	uint64_t m_nReservedBytes;
+	uint64_t m_nCommittedBytes;
+	uint64_t m_nCommitLimitBytes;
+	uint64_t m_nPageCount;
 	sirMemoryDomain_t m_eDomain;
-    char m_szName[32];
+	char m_szName[32];
 };
 
 #endif // __SIRENGINE_SIRMEMORYSEGMENT_H__

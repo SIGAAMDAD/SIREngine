@@ -1,6 +1,6 @@
 # 16 - Native platform services
 
-**Implementation:** Windows/Linux runtime foundation, split by responsibility. C++17, global namespace, OS includes confined to implementation files. The existing `SIRPlatformUtils` method names remain a thin transitional ABI facade; new consumers include only the owning service header.
+**Implementation:** Windows/Linux runtime foundation, split by responsibility. C++17, global namespace. Most platform interfaces keep OS includes in implementations; the low-level thread and synchronization headers retain native handle types pending an ABI-preserving abstraction. The existing `SIRPlatformUtils` method names remain a thin transitional ABI facade; new consumers include only the owning service header.
 
 | Class | Ownership | Windows translation unit | Linux translation unit |
 | --- | --- | --- | --- |

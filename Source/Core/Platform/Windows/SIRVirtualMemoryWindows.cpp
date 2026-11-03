@@ -16,7 +16,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Core/Platform/SIRVirtualMemory.h>
 
 #ifndef WIN32_LEAN_AND_MEAN
-	#define WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
 #endif
 #include <Windows.h>
 
@@ -33,17 +33,17 @@ static const SYSTEM_INFO *getSystemMemoryInfo( void ) noexcept
 static bool validPageRange( const void *pAddress, size_t nBytes ) noexcept
 {
 	const size_t nPageSize = SIRVirtualMemory::getPageSize();
-	return pAddress != nullptr && nPageSize != 0 && nBytes != 0 &&
-		( (uintptr_t)pAddress % nPageSize ) == 0 && ( nBytes % nPageSize ) == 0;
+	return pAddress != nullptr && nPageSize != 0 && nBytes != 0 && ( ( uintptr_t )pAddress % nPageSize ) == 0 &&
+	       ( nBytes % nPageSize ) == 0;
 }
 
 size_t SIRVirtualMemory::getPageSize( void ) noexcept
 {
-	return (size_t)getSystemMemoryInfo()->dwPageSize;
+	return ( size_t )getSystemMemoryInfo()->dwPageSize;
 }
 size_t SIRVirtualMemory::getAllocationGranularity( void ) noexcept
 {
-	return (size_t)getSystemMemoryInfo()->dwAllocationGranularity;
+	return ( size_t )getSystemMemoryInfo()->dwAllocationGranularity;
 }
 
 void *SIRVirtualMemory::reserve( size_t nBytes ) noexcept
@@ -87,11 +87,20 @@ bool SIRVirtualMemory::protect( void *pAddress, size_t nBytes, sirMemoryProtecti
 	}
 	DWORD nFlags = PAGE_NOACCESS;
 	switch ( eProtection ) {
-		case SIR_MEMORY_NO_ACCESS: nFlags = PAGE_NOACCESS; break;
-		case SIR_MEMORY_READ_ONLY: nFlags = PAGE_READONLY; break;
-		case SIR_MEMORY_READ_WRITE: nFlags = PAGE_READWRITE; break;
-		case SIR_MEMORY_READ_EXECUTE: nFlags = PAGE_EXECUTE_READ; break;
-		default: return false;
+	case SIR_MEMORY_NO_ACCESS:
+		nFlags = PAGE_NOACCESS;
+		break;
+	case SIR_MEMORY_READ_ONLY:
+		nFlags = PAGE_READONLY;
+		break;
+	case SIR_MEMORY_READ_WRITE:
+		nFlags = PAGE_READWRITE;
+		break;
+	case SIR_MEMORY_READ_EXECUTE:
+		nFlags = PAGE_EXECUTE_READ;
+		break;
+	default:
+		return false;
 	}
 	DWORD nPrevious = 0;
 	return VirtualProtect( pAddress, nBytes, nFlags, &nPrevious ) != FALSE;

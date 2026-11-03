@@ -19,12 +19,12 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <stdlib.h>
 
 SIRThread::SIRThread( void ) noexcept
-#if defined(_WIN32)
-	: m_hThread( nullptr ), m_nThreadId( 0 ),
+#if defined( _WIN32 )
+    : m_hThread( nullptr ), m_nThreadId( 0 ),
 #else
-	: m_hThread{},
+    : m_hThread{},
 #endif
-	  m_pFunction( nullptr ), m_pUserData( nullptr ), m_bAlive( false ), m_bJoinable( false )
+      m_pFunction( nullptr ), m_pUserData( nullptr ), m_bAlive( false ), m_bJoinable( false )
 {
 }
 
@@ -44,7 +44,7 @@ bool SIRThread::start( threadFunction_t pFunction, void *pUserData ) noexcept
 	m_pFunction = pFunction;
 	m_pUserData = pUserData;
 	m_bAlive.store( true, std::memory_order_release );
-#if defined(_WIN32)
+#if defined( _WIN32 )
 	DWORD nThreadId = 0;
 	HANDLE hThread = CreateThread( nullptr, 0, &SIRThread::threadEntry, this, 0, &nThreadId );
 	if ( hThread == nullptr ) {
@@ -70,7 +70,7 @@ bool SIRThread::join( void ) noexcept
 	if ( !m_bJoinable ) {
 		return true;
 	}
-#if defined(_WIN32)
+#if defined( _WIN32 )
 	if ( GetCurrentThreadId() == m_nThreadId || WaitForSingleObject( m_hThread, INFINITE ) != WAIT_OBJECT_0 ) {
 		return false;
 	}
@@ -99,16 +99,16 @@ bool SIRThread::isAlive( void ) const noexcept
 	return m_bAlive.load( std::memory_order_acquire );
 }
 
-#if defined(_WIN32)
+#if defined( _WIN32 )
 DWORD WINAPI SIRThread::threadEntry( LPVOID pUserData )
 #else
 void *SIRThread::threadEntry( void *pUserData )
 #endif
 {
-	SIRThread *pThread = (SIRThread *)pUserData;
+	SIRThread *pThread = ( SIRThread * )pUserData;
 	pThread->m_pFunction( pThread->m_pUserData );
 	pThread->m_bAlive.store( false, std::memory_order_release );
-#if defined(_WIN32)
+#if defined( _WIN32 )
 	return 0;
 #else
 	return nullptr;
