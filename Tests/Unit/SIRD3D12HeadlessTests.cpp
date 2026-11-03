@@ -18,8 +18,6 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <stdio.h>
 #include <string.h>
 
-
-
 static bool testAsyncCopyQueue( SIRD3D12Device &device )
 {
 	SIRD3D12Transfers &transfers = device.getTransfers();
@@ -75,8 +73,7 @@ static bool testAsyncCopyQueue( SIRD3D12Device &device )
 			}
 		} else {
 			uint32_t szOutput[128] = {};
-			if ( !transfers.receive( ticket, szOutput, sizeof( szOutput ) ) ||
-			     memcmp( szPayload, szOutput, ( size_t )nBytes ) != 0 ) {
+			if ( !transfers.receive( ticket, szOutput, sizeof( szOutput ) ) || memcmp( szPayload, szOutput, ( size_t )nBytes ) != 0 ) {
 				return false;
 			}
 		}

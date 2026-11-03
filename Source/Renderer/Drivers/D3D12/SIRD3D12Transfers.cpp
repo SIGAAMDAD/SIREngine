@@ -28,8 +28,7 @@ SIRD3D12Transfers::~SIRD3D12Transfers( void ) noexcept
 
 bool SIRD3D12Transfers::initialize( ID3D12Device *pDevice, SIRD3D12Memory *pMemory ) noexcept
 {
-	if ( isReady() || m_pQueue != nullptr || m_bSubmissionUnsafe || pDevice == nullptr || pMemory == nullptr ||
-	     !pMemory->isReady() ) {
+	if ( isReady() || m_pQueue != nullptr || m_bSubmissionUnsafe || pDevice == nullptr || pMemory == nullptr || !pMemory->isReady() ) {
 		m_nLastError = E_INVALIDARG;
 		return false;
 	}
@@ -64,7 +63,7 @@ bool SIRD3D12Transfers::initialize( ID3D12Device *pDevice, SIRD3D12Memory *pMemo
 			return false;
 		}
 		m_nLastError = pDevice->CreateCommandList( 0, D3D12_COMMAND_LIST_TYPE_COPY, pSlot->pAllocator.Get(), nullptr,
-		                                          IID_PPV_ARGS( pSlot->pCommands.GetAddressOf() ) );
+		                                           IID_PPV_ARGS( pSlot->pCommands.GetAddressOf() ) );
 		if ( FAILED( m_nLastError ) ) {
 			shutdown();
 			return false;
@@ -74,14 +73,14 @@ bool SIRD3D12Transfers::initialize( ID3D12Device *pDevice, SIRD3D12Memory *pMemo
 			shutdown();
 			return false;
 		}
-		m_nLastError = pDevice->CreateCommandAllocator( D3D12_COMMAND_LIST_TYPE_COPY,
-		                                               IID_PPV_ARGS( pSlot->pReadbackAllocator.GetAddressOf() ) );
+		m_nLastError =
+		    pDevice->CreateCommandAllocator( D3D12_COMMAND_LIST_TYPE_COPY, IID_PPV_ARGS( pSlot->pReadbackAllocator.GetAddressOf() ) );
 		if ( FAILED( m_nLastError ) ) {
 			shutdown();
 			return false;
 		}
 		m_nLastError = pDevice->CreateCommandList( 0, D3D12_COMMAND_LIST_TYPE_COPY, pSlot->pReadbackAllocator.Get(), nullptr,
-		                                          IID_PPV_ARGS( pSlot->pReadbackCommands.GetAddressOf() ) );
+		                                           IID_PPV_ARGS( pSlot->pReadbackCommands.GetAddressOf() ) );
 		if ( FAILED( m_nLastError ) ) {
 			shutdown();
 			return false;
@@ -208,18 +207,15 @@ bool SIRD3D12Transfers::growSlot( sirD3D12TransferSlot_t *pSlot, uint64_t nBytes
 	Microsoft::WRL::ComPtr<D3D12MA::Allocation> pUpload;
 	Microsoft::WRL::ComPtr<D3D12MA::Allocation> pDevice;
 	Microsoft::WRL::ComPtr<D3D12MA::Allocation> pReadback;
-	m_nLastError = m_pMemory->createBuffer( D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ, nBytes,
-	                                        pUpload.GetAddressOf() );
+	m_nLastError = m_pMemory->createBuffer( D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ, nBytes, pUpload.GetAddressOf() );
 	if ( FAILED( m_nLastError ) ) {
 		return false;
 	}
-	m_nLastError = m_pMemory->createBuffer( D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_COMMON, nBytes,
-	                                        pDevice.GetAddressOf() );
+	m_nLastError = m_pMemory->createBuffer( D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_COMMON, nBytes, pDevice.GetAddressOf() );
 	if ( FAILED( m_nLastError ) ) {
 		return false;
 	}
-	m_nLastError = m_pMemory->createBuffer( D3D12_HEAP_TYPE_READBACK, D3D12_RESOURCE_STATE_COPY_DEST, nBytes,
-	                                        pReadback.GetAddressOf() );
+	m_nLastError = m_pMemory->createBuffer( D3D12_HEAP_TYPE_READBACK, D3D12_RESOURCE_STATE_COPY_DEST, nBytes, pReadback.GetAddressOf() );
 	if ( FAILED( m_nLastError ) ) {
 		return false;
 	}
