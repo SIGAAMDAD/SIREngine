@@ -75,8 +75,8 @@ bool SIRD3D12Device::initialize( bool bUseWarp ) noexcept
 	} else {
 		for ( UINT iAdapter = 0;; ++iAdapter ) {
 			Microsoft::WRL::ComPtr<IDXGIAdapter4> pCandidate;
-			const HRESULT nEnumResult = m_pFactory->EnumAdapterByGpuPreference(
-			    iAdapter, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS( pCandidate.GetAddressOf() ) );
+			const HRESULT nEnumResult = m_pFactory->EnumAdapterByGpuPreference( iAdapter, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE,
+			                                                                    IID_PPV_ARGS( pCandidate.GetAddressOf() ) );
 			if ( nEnumResult == DXGI_ERROR_NOT_FOUND ) {
 				break;
 			}
@@ -91,8 +91,8 @@ bool SIRD3D12Device::initialize( bool bUseWarp ) noexcept
 			}
 
 			Microsoft::WRL::ComPtr<ID3D12Device> pCandidateDevice;
-			const HRESULT nDeviceResult = D3D12CreateDevice( pCandidate.Get(), D3D_FEATURE_LEVEL_12_0,
-			                                                 IID_PPV_ARGS( pCandidateDevice.GetAddressOf() ) );
+			const HRESULT nDeviceResult =
+			    D3D12CreateDevice( pCandidate.Get(), D3D_FEATURE_LEVEL_12_0, IID_PPV_ARGS( pCandidateDevice.GetAddressOf() ) );
 			if ( SUCCEEDED( nDeviceResult ) ) {
 				m_pAdapter = pCandidate;
 				m_pDevice = pCandidateDevice;
@@ -223,8 +223,8 @@ bool SIRD3D12Device::copyRoundTripForTest( const void *pInput, void *pOutput, ui
 	Microsoft::WRL::ComPtr<ID3D12Resource> pUpload;
 	Microsoft::WRL::ComPtr<ID3D12Resource> pDeviceBuffer;
 	Microsoft::WRL::ComPtr<ID3D12Resource> pReadback;
-	m_nLastError = createBootstrapBuffer( m_pDevice.Get(), D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ, nBytes,
-	                                      pUpload.GetAddressOf() );
+	m_nLastError =
+	    createBootstrapBuffer( m_pDevice.Get(), D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ, nBytes, pUpload.GetAddressOf() );
 	if ( FAILED( m_nLastError ) ) {
 		return false;
 	}
@@ -255,7 +255,7 @@ bool SIRD3D12Device::copyRoundTripForTest( const void *pInput, void *pOutput, ui
 		return false;
 	}
 	m_nLastError = m_pDevice->CreateCommandList( 0, D3D12_COMMAND_LIST_TYPE_DIRECT, pAllocator.Get(), nullptr,
-	                                            IID_PPV_ARGS( pCommands.GetAddressOf() ) );
+	                                             IID_PPV_ARGS( pCommands.GetAddressOf() ) );
 	if ( FAILED( m_nLastError ) ) {
 		return false;
 	}

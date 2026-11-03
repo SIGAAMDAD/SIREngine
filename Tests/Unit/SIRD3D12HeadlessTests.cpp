@@ -45,22 +45,18 @@ int main( void )
 		szInput[iWord] = 0x12345678U ^ ( iWord * 1337U );
 	}
 	if ( device.copyRoundTripForTest( nullptr, szOutput, sizeof( szInput ) ) ||
-	     device.copyRoundTripForTest( szInput, nullptr, sizeof( szInput ) ) ||
-	     device.copyRoundTripForTest( szInput, szOutput, 0 ) ) {
+	     device.copyRoundTripForTest( szInput, nullptr, sizeof( szInput ) ) || device.copyRoundTripForTest( szInput, szOutput, 0 ) ) {
 		fputs( "D3D12 invalid transfer accepted\n", stderr );
 		return 1;
 	}
 
-	if ( !device.copyRoundTripForTest( szInput, szOutput, sizeof( szInput ) ) ||
-	     memcmp( szInput, szOutput, sizeof( szInput ) ) != 0 ) {
-		fprintf( stderr, "D3D12 upload/device/readback round trip failed: HRESULT 0x%08lx\n",
-		         ( unsigned long )device.getLastError() );
+	if ( !device.copyRoundTripForTest( szInput, szOutput, sizeof( szInput ) ) || memcmp( szInput, szOutput, sizeof( szInput ) ) != 0 ) {
+		fprintf( stderr, "D3D12 upload/device/readback round trip failed: HRESULT 0x%08lx\n", ( unsigned long )device.getLastError() );
 		return 1;
 	}
 
 	// DXGI memory-budget reporting can be unavailable for software adapters.
-	if ( device.queryLocalMemory( &memory ) && memory.nCurrentUsageBytes > memory.nBudgetBytes &&
-	     memory.nBudgetBytes != 0 ) {
+	if ( device.queryLocalMemory( &memory ) && memory.nCurrentUsageBytes > memory.nBudgetBytes && memory.nBudgetBytes != 0 ) {
 		fputs( "D3D12 memory report is inconsistent\n", stderr );
 		return 1;
 	}
