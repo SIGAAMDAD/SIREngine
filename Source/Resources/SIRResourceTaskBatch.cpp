@@ -37,8 +37,8 @@ typedef struct sirResourceTaskEdge_s
 
 SIRResourceTaskBatch::SIRResourceTaskBatch( SIRResourceGraph &rGraph, const sirResourceTaskConfig_t &rConfig ) noexcept
     : m_pGraph( &rGraph ), m_pWriter( rGraph.getWriter() ), m_Config( rConfig ), m_OwnerThread( std::this_thread::get_id() ),
-      m_pNodes( nullptr ), m_pEdges( nullptr ), m_pPlan( nullptr ), m_Completions(), m_Stats{}, m_nMaxInFlight( 0 ),
-      m_bReady( false ), m_bDispatching( false )
+      m_pNodes( nullptr ), m_pEdges( nullptr ), m_pPlan( nullptr ), m_Completions(), m_Stats{}, m_nMaxInFlight( 0 ), m_bReady( false ),
+      m_bDispatching( false )
 {
 	if ( !rGraph.isReady() || m_pWriter == nullptr || !rConfig.allocator.m_pfnAllocate || !rConfig.allocator.m_pfnFree ||
 	     !rConfig.callbacks.pfnSubmit || rConfig.nMaxTasks == 0 || rConfig.nMaxTasks > INT32_MAX ) {
@@ -58,12 +58,11 @@ SIRResourceTaskBatch::SIRResourceTaskBatch( SIRResourceGraph &rGraph, const sirR
 		return;
 	}
 	m_pNodes = ( sirResourceTaskNode_t * )m_Config.allocator.m_pfnAllocate( m_Config.allocator.m_pContext, nNodesBytes,
-	                                                                       alignof( sirResourceTaskNode_t ), m_Config.nMetadataDomain );
+	                                                                        alignof( sirResourceTaskNode_t ), m_Config.nMetadataDomain );
 	m_pEdges = ( sirResourceTaskEdge_t * )m_Config.allocator.m_pfnAllocate( m_Config.allocator.m_pContext, nEdgeBytes,
-	                                                                       alignof( sirResourceTaskEdge_t ), m_Config.nMetadataDomain );
-	m_pPlan = ( SIRResourceDependencyPlanEntry * )m_Config.allocator.m_pfnAllocate( m_Config.allocator.m_pContext, nPlanBytes,
-	                                                                                alignof( SIRResourceDependencyPlanEntry ),
-	                                                                                m_Config.nMetadataDomain );
+	                                                                        alignof( sirResourceTaskEdge_t ), m_Config.nMetadataDomain );
+	m_pPlan = ( SIRResourceDependencyPlanEntry * )m_Config.allocator.m_pfnAllocate(
+	    m_Config.allocator.m_pContext, nPlanBytes, alignof( SIRResourceDependencyPlanEntry ), m_Config.nMetadataDomain );
 	m_bReady = m_pNodes != nullptr && m_pEdges != nullptr && m_pPlan != nullptr;
 }
 
@@ -100,18 +99,18 @@ void SIRResourceTaskBatch::releaseMetadata( void ) noexcept
 	const uint64_t nEdgeBytes = ( uint64_t )m_Config.nMaxEdges * sizeof( sirResourceTaskEdge_t );
 	const uint64_t nPlanBytes = ( uint64_t )m_Config.nMaxTasks * sizeof( SIRResourceDependencyPlanEntry );
 	if ( m_pPlan != nullptr ) {
-		m_Config.allocator.m_pfnFree( m_Config.allocator.m_pContext, m_pPlan, nPlanBytes,
-		                             alignof( SIRResourceDependencyPlanEntry ), m_Config.nMetadataDomain );
+		m_Config.allocator.m_pfnFree( m_Config.allocator.m_pContext, m_pPlan, nPlanBytes, alignof( SIRResourceDependencyPlanEntry ),
+		                              m_Config.nMetadataDomain );
 		m_pPlan = nullptr;
 	}
 	if ( m_pEdges != nullptr ) {
-		m_Config.allocator.m_pfnFree( m_Config.allocator.m_pContext, m_pEdges, nEdgeBytes,
-		                             alignof( sirResourceTaskEdge_t ), m_Config.nMetadataDomain );
+		m_Config.allocator.m_pfnFree( m_Config.allocator.m_pContext, m_pEdges, nEdgeBytes, alignof( sirResourceTaskEdge_t ),
+		                              m_Config.nMetadataDomain );
 		m_pEdges = nullptr;
 	}
 	if ( m_pNodes != nullptr ) {
-		m_Config.allocator.m_pfnFree( m_Config.allocator.m_pContext, m_pNodes, nNodesBytes,
-		                             alignof( sirResourceTaskNode_t ), m_Config.nMetadataDomain );
+		m_Config.allocator.m_pfnFree( m_Config.allocator.m_pContext, m_pNodes, nNodesBytes, alignof( sirResourceTaskNode_t ),
+		                              m_Config.nMetadataDomain );
 		m_pNodes = nullptr;
 	}
 	m_bReady = false;
@@ -281,8 +280,8 @@ SIRResourceResult SIRResourceTaskBatch::dispatchReady( uint32_t nBudget, uint32_
 		if ( m_Stats.nInFlight >= m_nMaxInFlight ) {
 			break;
 		}
-		const sirResourceTaskWorkItem_t work = {
-		    rNode.plan.hResource, rNode.plan.nRevision, ( ( uint64_t )m_Stats.nBatchGeneration << 32 ) | ( uint64_t )( iNode + 1 ) };
+		const sirResourceTaskWorkItem_t work = { rNode.plan.hResource, rNode.plan.nRevision,
+		                                         ( ( uint64_t )m_Stats.nBatchGeneration << 32 ) | ( uint64_t )( iNode + 1 ) };
 		const SIRResourceResult eValid = validateWorkItem( work );
 		if ( eValid != SIR_RESOURCE_RESULT_SUCCESS ) {
 			skipPending();

@@ -905,7 +905,6 @@ static void testDeterministicDependencyOrderCompilation( void )
 	REQUIRE( alloc.m_nOutstanding.load() == 0 );
 }
 
-
 typedef struct sirTaskTestRecorder_s
 {
 	sirResourceTaskWorkItem_t items[32];
@@ -941,7 +940,7 @@ static sirResourceTaskConfig_t taskTestConfig( SIRTestAllocatorStats &rAlloc, si
 }
 
 static SIRResourceHandle publishTaskNode( SIRResourceGraphWriter &rWriter, uint64_t nAsset,
-                                         const SIRResourceDependency *pDependencies = nullptr, uint32_t nDependencies = 0 ) noexcept
+                                          const SIRResourceDependency *pDependencies = nullptr, uint32_t nDependencies = 0 ) noexcept
 {
 	SIRResourcePublication pub = { key( nAsset ), SIR_RESOURCE_KIND_COMPOSITION, 1, 1, nullptr, 0, pDependencies, nDependencies };
 	SIRResourceHandle hResult = {};
@@ -959,7 +958,7 @@ static void testTaskDispatchDependenciesAndConcurrentCompletions( void )
 		const SIRResourceHandle hA = publishTaskNode( *pWriter, 801 );
 		const SIRResourceHandle hB = publishTaskNode( *pWriter, 802 );
 		SIRResourceDependency edgesC[2] = { { key( 801 ), SIR_RESOURCE_EDGE_KIND_REQUIRED, {} },
-		                                   { key( 802 ), SIR_RESOURCE_EDGE_KIND_REQUIRED, {} } };
+		                                    { key( 802 ), SIR_RESOURCE_EDGE_KIND_REQUIRED, {} } };
 		const SIRResourceHandle hC = publishTaskNode( *pWriter, 803, edgesC, 2 );
 		const SIRResourceDependency edgeD = { key( 803 ), SIR_RESOURCE_EDGE_KIND_REQUIRED, {} };
 		const SIRResourceHandle hD = publishTaskNode( *pWriter, 804, &edgeD, 1 );
@@ -1025,7 +1024,7 @@ static void testTaskCancellationStaleRevisionAndBackpressure( void )
 		const SIRResourceHandle hA = publishTaskNode( *pWriter, 901 );
 		const SIRResourceHandle hB = publishTaskNode( *pWriter, 902 );
 		SIRResourceDependency edges[2] = { { key( 901 ), SIR_RESOURCE_EDGE_KIND_REQUIRED, {} },
-		                                  { key( 902 ), SIR_RESOURCE_EDGE_KIND_REQUIRED, {} } };
+		                                   { key( 902 ), SIR_RESOURCE_EDGE_KIND_REQUIRED, {} } };
 		const SIRResourceHandle hRoot = publishTaskNode( *pWriter, 903, edges, 2 );
 		sirTaskTestRecorder_t recorder = {};
 		recorder.nRejectNext = 1;
@@ -1072,7 +1071,7 @@ static void testTaskEdgeBudgetAndWriterAccess( void )
 		publishTaskNode( *pWriter, 951 );
 		publishTaskNode( *pWriter, 952 );
 		SIRResourceDependency edges[2] = { { key( 951 ), SIR_RESOURCE_EDGE_KIND_REQUIRED, {} },
-		                                  { key( 952 ), SIR_RESOURCE_EDGE_KIND_REQUIRED, {} } };
+		                                   { key( 952 ), SIR_RESOURCE_EDGE_KIND_REQUIRED, {} } };
 		const SIRResourceHandle hRoot = publishTaskNode( *pWriter, 953, edges, 2 );
 		sirTaskTestRecorder_t recorder = {};
 		SIRResourceTaskBatch batch( graph, taskTestConfig( alloc, recorder, 1 ) );
