@@ -25,9 +25,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 static bool readTopologyNumber( uint32_t nCPU, const char *szField, uint32_t *pValue ) noexcept
 {
 	char szPath[160];
-	const int nPathLength = snprintf( szPath, sizeof( szPath ),
-		"/sys/devices/system/cpu/cpu%u/topology/%s", nCPU, szField );
-	if ( nPathLength <= 0 || (size_t)nPathLength >= sizeof( szPath ) ) {
+	const int nPathLength = snprintf( szPath, sizeof( szPath ), "/sys/devices/system/cpu/cpu%u/topology/%s", nCPU, szField );
+	if ( nPathLength <= 0 || ( size_t )nPathLength >= sizeof( szPath ) ) {
 		return false;
 	}
 	FILE *pFile = fopen( szPath, "r" );
@@ -40,7 +39,7 @@ static bool readTopologyNumber( uint32_t nCPU, const char *szField, uint32_t *pV
 	if ( nResult != 1 ) {
 		return false;
 	}
-	*pValue = (uint32_t)nParsed;
+	*pValue = ( uint32_t )nParsed;
 	return true;
 }
 
@@ -50,7 +49,7 @@ bool SIRCPUInfo::queryTopology( sirCPUInfo_t *pInfo ) noexcept
 	CPU_ZERO( &allowed );
 	if ( sched_getaffinity( 0, sizeof( allowed ), &allowed ) != 0 ) {
 		const long nOnline = sysconf( _SC_NPROCESSORS_ONLN );
-		pInfo->nLogicalProcessorCount = nOnline > 0 ? (uint32_t)nOnline : 1;
+		pInfo->nLogicalProcessorCount = nOnline > 0 ? ( uint32_t )nOnline : 1;
 		return true;
 	}
 	uint64_t szCoreKeys[CPU_SETSIZE] = {};
@@ -58,18 +57,17 @@ bool SIRCPUInfo::queryTopology( sirCPUInfo_t *pInfo ) noexcept
 	uint32_t nLogical = 0;
 	bool bTopologyComplete = true;
 	for ( uint32_t iCPU = 0; iCPU < CPU_SETSIZE; ++iCPU ) {
-		if ( !CPU_ISSET( (int)iCPU, &allowed ) ) {
+		if ( !CPU_ISSET( ( int )iCPU, &allowed ) ) {
 			continue;
 		}
 		++nLogical;
 		uint32_t nPackage = 0;
 		uint32_t nCore = 0;
-		if ( !readTopologyNumber( iCPU, "physical_package_id", &nPackage ) ||
-			!readTopologyNumber( iCPU, "core_id", &nCore ) ) {
+		if ( !readTopologyNumber( iCPU, "physical_package_id", &nPackage ) || !readTopologyNumber( iCPU, "core_id", &nCore ) ) {
 			bTopologyComplete = false;
 			continue;
 		}
-		const uint64_t nKey = ( (uint64_t)nPackage << 32 ) | nCore;
+		const uint64_t nKey = ( ( uint64_t )nPackage << 32 ) | nCore;
 		bool bSeen = false;
 		for ( uint32_t iCore = 0; iCore < nCores; ++iCore ) {
 			if ( szCoreKeys[iCore] == nKey ) {

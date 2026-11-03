@@ -22,19 +22,24 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <cstring>
 #include <mutex>
-#include <limits>
 #include <new>
 
 
-// Internal checked callers validate overflow before rounding.
 static bool sirIsPowerOfTwo( uint64_t nValue ) noexcept
 {
     return nValue != 0 && ( nValue & ( nValue - 1 ) ) == 0;
 }
 
-static uint64_t sirAlignUp( uint64_t nValue, uint64_t nAlignment ) noexcept
+static bool sirAlignUpChecked( uint64_t nValue, uint64_t nAlignment, uint64_t *pResult ) noexcept
 {
-    return ( nValue + nAlignment - 1 ) & ~( nAlignment - 1 );
+    if ( pResult == nullptr || !sirIsPowerOfTwo( nAlignment ) ||
+         nAlignment > UINTPTR_MAX || nValue > UINTPTR_MAX - ( nAlignment - 1 ) )
+    {
+        return false;
+    }
+
+    *pResult = ( nValue + nAlignment - 1 ) & ~( nAlignment - 1 );
+    return true;
 }
 
 SIRMemoryManager::SIRMemoryManager( void )
@@ -120,20 +125,11 @@ bool SIRMemoryManager::initBudgeted( const sirMemoryConfig_t& config,
 
     uint64_t nReserve = 0;
     uint64_t nMetadata = 0;
-    if ( !sirIsPowerOfTwo( nPageSize ) ||
-         ( uint64_t )( nPageSize ) > UINTPTR_MAX ||
-         ( uint64_t )( config.nReserveBytes ) > UINTPTR_MAX - ( ( uint64_t )( nPageSize ) - 1 ) )
+    if ( !sirAlignUpChecked( config.nReserveBytes, nPageSize, &nReserve ) ||
+         !sirAlignUpChecked( config.nMetadataBytes, nPageSize, &nMetadata ) )
     {
         return false;
     }
-    nReserve = sirAlignUp( config.nReserveBytes, nPageSize );
-    if ( !sirIsPowerOfTwo( nPageSize ) ||
-         ( uint64_t )( nPageSize ) > UINTPTR_MAX ||
-         ( uint64_t )( config.nMetadataBytes ) > UINTPTR_MAX - ( ( uint64_t )( nPageSize ) - 1 ) )
-    {
-        return false;
-    }
-    nMetadata = sirAlignUp( config.nMetadataBytes, nPageSize );
     if ( nMetadata == 0 ||
          nReserve <= nMetadata ||
          budget.nInitialCommitBudgetBytes == 0 ||
@@ -197,14 +193,23 @@ bool SIRMemoryManager::initBudgeted( const sirMemoryConfig_t& config,
 
     const uint64_t nDescriptorBytes =
         ( ( uint64_t ) ( config.nMaxSegments ) ) * sizeof( SIRMemorySegment );
-    m_pSegments = ( ( SIRMemorySegment * ) ( allocateMetadataLocked( nDescriptorBytes, alignof( SIRMemorySegment ), SIR_MEMORY_DOMAIN_GAMEPLAY ) ) );
+    m_pSegments = ( ( SIRMemorySegment * ) ( allocateMetadataLocked( nDescriptorBytes, alignof( SIRMemorySegment ), SIR_MEMORY_DOMAIN_CORE ) ) );
     m_pRecyclableStates = ( ( uint8_t * ) ( allocateMetadataLocked(
-        nMetadata / nPageSize, alignof( uint8_t ), SIR_MEMORY_DOMAIN_GAMEPLAY ) ) );
+        nMetadata / nPageSize, alignof( uint8_t ), SIR_MEMORY_DOMAIN_CORE ) ) );
 
     if ( m_pSegments == nullptr || m_pRecyclableStates == nullptr )
     {
         SIRVirtualMemory::release( m_pBase, m_nReservedBytes );
         m_pBase = nullptr;
+        m_pSegments = nullptr;
+        m_nSegmentCount = 0;
+        for ( uint32_t iDomain = 0; iDomain < SIR_MEMORY_DOMAIN_COUNT; ++iDomain )
+        {
+            m_nDomainCommittedBytes[iDomain] = 0;
+            m_nDomainMetadataCommittedBytes[iDomain] = 0;
+            m_nDomainPeakCommittedBytes[iDomain] = 0;
+            m_nDomainCommitLimits[iDomain] = 0;
+        }
         m_nReservedBytes = 0;
         m_nCommittedBytes = 0;
         m_nPeakCommittedBytes = 0;
@@ -289,13 +294,10 @@ SIRMemorySegment *SIRMemoryManager::createSegment( const char *pszName,
     }
 
     uint64_t nCapacity = 0;
-    if ( !sirIsPowerOfTwo( m_nPageSize ) ||
-         ( uint64_t )( m_nPageSize ) > UINTPTR_MAX ||
-         ( uint64_t )( nBytes ) > UINTPTR_MAX - ( ( uint64_t )( m_nPageSize ) - 1 ) )
+    if ( !sirAlignUpChecked( nBytes, m_nPageSize, &nCapacity ) )
     {
         return nullptr;
     }
-    nCapacity = sirAlignUp( nBytes, m_nPageSize );
     if ( nCapacity == 0 ||
          nCapacity > m_nReservedBytes - m_nSegmentCursor )
     {
@@ -305,13 +307,10 @@ SIRMemorySegment *SIRMemoryManager::createSegment( const char *pszName,
     uint64_t nLimit = nCapacity;
     if ( nCommitLimitBytes != 0 )
     {
-        if ( !sirIsPowerOfTwo( m_nPageSize ) ||
-             ( uint64_t )( m_nPageSize ) > UINTPTR_MAX ||
-             ( uint64_t )( nCommitLimitBytes ) > UINTPTR_MAX - ( ( uint64_t )( m_nPageSize ) - 1 ) )
+        if ( !sirAlignUpChecked( nCommitLimitBytes, m_nPageSize, &nLimit ) )
         {
             return nullptr;
         }
-        nLimit = sirAlignUp( nCommitLimitBytes, m_nPageSize );
         if ( nLimit > nCapacity )
         {
             return nullptr;
@@ -320,7 +319,7 @@ SIRMemorySegment *SIRMemoryManager::createSegment( const char *pszName,
 
     const uint64_t nPages = nCapacity / m_nPageSize;
     const uint64_t nWords = ( nPages / 64 ) + ( ( nPages % 64 ) != 0 ? 1 : 0 );
-    if ( nWords > std::numeric_limits<uint64_t>::max() / sizeof( uint64_t ) )
+    if ( nWords > UINT64_MAX / sizeof( uint64_t ) )
     {
         return nullptr;
     }
@@ -340,8 +339,13 @@ SIRMemorySegment *SIRMemoryManager::createSegment( const char *pszName,
     pSegment->m_nCommitLimitBytes = nLimit;
     pSegment->m_nPageCount = nPages;
     pSegment->m_eDomain = eDomain;
-    std::strncpy( pSegment->m_szName, pszName, sizeof( pSegment->m_szName ) - 1 );
-    pSegment->m_szName[sizeof( pSegment->m_szName ) - 1] = '\0';
+    uint32_t iName = 0;
+    const uint32_t nNameCapacity = ( uint32_t )sizeof( pSegment->m_szName );
+    for ( ; iName + 1 < nNameCapacity && pszName[iName] != '\0'; ++iName )
+    {
+        pSegment->m_szName[iName] = pszName[iName];
+    }
+    pSegment->m_szName[iName] = '\0';
 
     m_nSegmentCursor += nCapacity;
     ++m_nSegmentCount;
@@ -515,13 +519,10 @@ void *SIRMemoryManager::allocateMetadataLocked( uint64_t nBytes, uint64_t nAlign
 
     const uintptr_t nCurrent = ( ( uintptr_t ) ( m_pBase ) ) + m_nMetadataOffset;
     uint64_t nAlignedAddress = 0;
-    if ( !sirIsPowerOfTwo( nAlignment ) ||
-         ( uint64_t )( nAlignment ) > UINTPTR_MAX ||
-         ( uint64_t )( nCurrent ) > UINTPTR_MAX - ( ( uint64_t )( nAlignment ) - 1 ) )
+    if ( !sirAlignUpChecked( nCurrent, nAlignment, &nAlignedAddress ) )
     {
         return nullptr;
     }
-    nAlignedAddress = sirAlignUp( nCurrent, nAlignment );
     if ( nAlignedAddress < ( ( uintptr_t ) ( m_pBase ) ) )
     {
         return nullptr;
@@ -537,13 +538,10 @@ void *SIRMemoryManager::allocateMetadataLocked( uint64_t nBytes, uint64_t nAlign
 
     const uint64_t nEndOffset = nAlignedOffset + nBytes;
     uint64_t nNewCommittedBytes = 0;
-    if ( !sirIsPowerOfTwo( m_nPageSize ) ||
-         ( uint64_t )( m_nPageSize ) > UINTPTR_MAX ||
-         ( uint64_t )( nEndOffset ) > UINTPTR_MAX - ( ( uint64_t )( m_nPageSize ) - 1 ) )
+    if ( !sirAlignUpChecked( nEndOffset, m_nPageSize, &nNewCommittedBytes ) )
     {
         return nullptr;
     }
-    nNewCommittedBytes = sirAlignUp( nEndOffset, m_nPageSize );
 
     if ( nNewCommittedBytes > m_nMetadataCommittedBytes )
     {
@@ -582,9 +580,7 @@ void *SIRMemoryManager::allocateMetadataLocked( uint64_t nBytes, uint64_t nAlign
     m_nMetadataOffset = nEndOffset;
     recordTraceLocked( SIR_MEMORY_TRACE_METADATA, nBytes, UINT32_MAX );
     void *pMemory = m_pBase + nAlignedOffset;
-#ifndef SIR_MEMORY_EXPERIMENT_SKIP_METADATA_ZEROING
     std::memset( pMemory, 0, ( ( size_t ) ( nBytes ) ) );
-#endif
     return pMemory;
 }
 
@@ -794,6 +790,7 @@ sirMemoryStats_t SIRMemoryManager::getStats( void ) const
 
 uint64_t SIRMemoryManager::getPageSize( void ) const
 {
+    std::lock_guard<SIRMutex> lock( m_Mutex );
     return m_nPageSize;
 }
 
@@ -910,7 +907,7 @@ bool SIRMemoryManager::initTraceBuffer( uint32_t nEntries )
     }
     m_pTrace = ( ( sirMemoryTraceEvent_t * ) ( allocateMetadataLocked( ( ( uint64_t ) ( nEntries ) ) *
                                 sizeof( sirMemoryTraceEvent_t ),
-                                alignof( sirMemoryTraceEvent_t ), SIR_MEMORY_DOMAIN_GAMEPLAY ) ) );
+                                alignof( sirMemoryTraceEvent_t ), SIR_MEMORY_DOMAIN_CORE ) ) );
     if ( m_pTrace == nullptr )
     {
         return false;

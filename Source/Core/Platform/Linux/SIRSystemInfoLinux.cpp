@@ -32,9 +32,9 @@ bool SIRSystemInfo::query( sirSystemInfo_t *pInfo ) noexcept
 	}
 	sirSystemInfo_t info = {};
 	info.eOS = SIR_OS_LINUX;
-#if defined(__x86_64__)
+#if defined( __x86_64__ )
 	info.eArchitecture = SIR_ARCH_X64;
-#elif defined(__aarch64__)
+#elif defined( __aarch64__ )
 	info.eArchitecture = SIR_ARCH_ARM64;
 #endif
 	memcpy( info.szOSName, "Linux", 6 );
@@ -43,12 +43,12 @@ bool SIRSystemInfo::query( sirSystemInfo_t *pInfo ) noexcept
 		return false;
 	}
 	info.szHostName[sizeof( info.szHostName ) - 1] = '\0';
-	info.nProcessId = (uint64_t)getpid();
-	info.nPageSize = (uint32_t)SIRVirtualMemory::getPageSize();
-	info.nAllocationGranularity = (uint32_t)SIRVirtualMemory::getAllocationGranularity();
+	info.nProcessId = ( uint64_t )getpid();
+	info.nPageSize = ( uint32_t )SIRVirtualMemory::getPageSize();
+	info.nAllocationGranularity = ( uint32_t )SIRVirtualMemory::getAllocationGranularity();
 	struct sysinfo system = {};
 	if ( sysinfo( &system ) == 0 && system.uptime > 0 ) {
-		info.nUptimeSeconds = (uint64_t)system.uptime;
+		info.nUptimeSeconds = ( uint64_t )system.uptime;
 	}
 	if ( info.nPageSize == 0 ) {
 		return false;

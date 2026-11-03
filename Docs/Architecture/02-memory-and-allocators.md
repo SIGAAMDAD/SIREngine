@@ -29,3 +29,11 @@ The engine must support multiple **game-specific** budget configurations. The No
 ## Acceptance
 
 An allocation trace must cover startup, editor import, scene load, streaming traversal, destruction, save/load and shutdown. Compare allocation paths against an exhaustive object/source inventory, then run long-lived soak tests and stress/failure injection. A clean trace needs no unexplained untracked CPU allocations and no unreclaimed pages outside declared caches. Report real peaks, not estimates based on the sum of subsystem names.
+
+## Core metadata ownership
+
+Manager-internal segment descriptors, metadata page-state bookkeeping and trace
+buffers are committed to the `CORE` memory domain. Caller-provided metadata
+allocations and recyclable pages retain the explicitly selected domain.
+Allocation counts and requested-byte attribution beyond page-level backing
+commit remain future work.

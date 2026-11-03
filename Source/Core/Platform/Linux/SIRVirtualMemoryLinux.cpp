@@ -62,8 +62,13 @@ bool SIRVirtualMemory::decommit( void *pAddress, size_t nBytes ) noexcept
 	if ( mprotect( pAddress, nBytes, PROT_NONE ) != 0 ) {
 		return false;
 	}
-	// Drop physical backing while retaining the virtual address range.
-	return madvise( pAddress, nBytes, MADV_DONTNEED ) == 0;
+	// A failed discard must restore accessibility: the memory owner will
+	// retain these pages as committed when this call reports failure.
+	if ( madvise( pAddress, nBytes, MADV_DONTNEED ) != 0 ) {
+		mprotect( pAddress, nBytes, PROT_READ | PROT_WRITE );
+		return false;
+	}
+	return true;
 }
 
 bool SIRVirtualMemory::release( void *pAddress, size_t nBytes ) noexcept

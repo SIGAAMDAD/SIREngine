@@ -23,15 +23,15 @@ of merchantability, fitness for a particular purpose and noninfringement.
 uint32_t SIRPlatformProcess::getLogicalProcessorCount( void ) noexcept
 {
 	const long nCount = sysconf( _SC_NPROCESSORS_ONLN );
-	return nCount > 0 ? (uint32_t)nCount : 1;
+	return nCount > 0 ? ( uint32_t )nCount : 1;
 }
 
 void SIRPlatformProcess::cpuRelax( void ) noexcept
 {
-#if defined(__x86_64__) || defined(__i386__)
+#if defined( __x86_64__ ) || defined( __i386__ )
 	__builtin_ia32_pause();
-#elif defined(__aarch64__)
-	__asm__ volatile("yield");
+#elif defined( __aarch64__ )
+	__asm__ volatile( "yield" );
 #endif
 }
 
@@ -42,7 +42,7 @@ void SIRPlatformProcess::yieldThread( void ) noexcept
 
 void SIRPlatformProcess::sleepThread( uint32_t nMilliseconds ) noexcept
 {
-	timespec request = { (time_t)( nMilliseconds / 1000 ), (long)( nMilliseconds % 1000 ) * 1000000L };
+	timespec request = { ( time_t )( nMilliseconds / 1000 ), ( long )( nMilliseconds % 1000 ) * 1000000L };
 	while ( nanosleep( &request, &request ) != 0 && errno == EINTR ) {
 	}
 }

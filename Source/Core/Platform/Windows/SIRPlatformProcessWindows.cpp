@@ -16,14 +16,14 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Core/Platform/SIRPlatformProcess.h>
 
 #ifndef WIN32_LEAN_AND_MEAN
-	#define WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
 #endif
 #include <Windows.h>
 
 uint32_t SIRPlatformProcess::getLogicalProcessorCount( void ) noexcept
 {
 	const DWORD nCount = GetActiveProcessorCount( ALL_PROCESSOR_GROUPS );
-	return nCount > 0 ? (uint32_t)nCount : 1;
+	return nCount > 0 ? ( uint32_t )nCount : 1;
 }
 
 void SIRPlatformProcess::cpuRelax( void ) noexcept
