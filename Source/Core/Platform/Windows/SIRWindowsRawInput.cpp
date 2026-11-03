@@ -138,3 +138,12 @@ void SIRWindowsRawInput::shutdown( void ) noexcept
 	RegisterRawInputDevices( devices, 2, sizeof( devices[0] ) );
 	m_pWindow = nullptr;
 }
+
+bool SIRWindowsRawInput::ownsDevice( sirInputDeviceHandle_t hDevice ) const noexcept
+{
+	if ( m_pWindow == nullptr ) {
+		return false;
+	}
+	sirInputDeviceState_t state = {};
+	return m_Input.getState( hDevice, &state ) && ( state.eKind == SIR_INPUT_DEVICE_KEYBOARD || state.eKind == SIR_INPUT_DEVICE_MOUSE );
+}
