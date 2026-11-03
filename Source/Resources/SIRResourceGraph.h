@@ -37,6 +37,7 @@ struct SIRSharedResourceChunk;
 struct SIRGraphSlot;
 struct SIRStagingSlot;
 struct SIRProviderPinSlot;
+struct SIRReverseDependencyEdge;
 
 // The key index belongs exclusively to the GRDG writer. Concurrent readers
 // still resolve through published slots under their read scopes.
@@ -79,6 +80,8 @@ typedef struct sirResourceGraphConfig_s
 	uint32_t m_nMaxStaging;
 	uint32_t m_nMaxProviderPins;
 	uint64_t m_nMaxCommittedBytes;
+	// Zero selects a bounded default of four dependency edges per resource.
+	uint32_t m_nMaxDependencyEdges;
 } sirResourceGraphConfig_t;
 typedef sirResourceGraphConfig_t SIRResourceGraphConfig;
 
@@ -91,6 +94,8 @@ typedef struct sirResourceGraphStats_s
 	uint32_t m_nUniqueChunks;
 	uint32_t m_nRetiredRecords;
 	uint32_t m_nActiveReaders;
+	uint32_t m_nIndexedDependencyEdges;
+	uint64_t m_nChangeSequence;
 } sirResourceGraphStats_t;
 typedef sirResourceGraphStats_t SIRResourceGraphStats;
 
@@ -117,6 +122,11 @@ public:
 	SIRResourceResult evictChunk( SIRResourceHandle hResource, SIRResourceChunkId id ) noexcept;
 	SIRResourceResult retire( SIRResourceHandle hResource ) noexcept;
 	uint32_t collectRetired( uint32_t nMaxRecords ) noexcept;
+	// Writer-side reverse dependency lookups. An undersized output returns
+	// OUT_OF_BUDGET and still reports the full deduplicated count.
+	SIRResourceResult collectDependents( const SIRResourceKey &rTarget, SIRResourceHandle *pHandles, uint32_t nCapacity,
+	                                     uint32_t *pTotal ) noexcept;
+	SIRResourceResult getInvalidationSequence( SIRResourceHandle hResource, uint64_t *pSequence ) noexcept;
 
 	friend class SIRResourceGraph;
 };
@@ -137,6 +147,13 @@ private:
 	SIRGraphSlot *m_pSlots;
 	SIRStagingSlot *m_pStaging;
 	SIRProviderPinSlot *m_pProviderPins;
+	SIRReverseDependencyEdge *m_pReverseEdges;
+	uint32_t *m_pReverseBuckets;
+	uint32_t m_nReverseBucketCount;
+	uint32_t m_nMaxDependencyEdges;
+	uint32_t m_iFreeReverseEdge;
+	uint32_t m_nActiveReverseEdges;
+	uint64_t m_nChangeSequence;
 	uint32_t *m_pTraversalQueue;
 	uint32_t m_nTraversalStamp;
 	SIRSharedResourceChunk *m_pSharedChunks;
@@ -172,6 +189,10 @@ private:
 	                                    SIRPublishedResourceRecord **pReplacement ) noexcept;
 	void releaseStagingSlot( uint32_t iSlot ) noexcept;
 	uint32_t collectRetiredInternal( uint32_t nMaxRecords ) noexcept;
+	bool canReplaceReverseEdges( uint32_t iSourceSlot, uint32_t nNewEdges ) const noexcept;
+	void removeReverseEdges( uint32_t iSourceSlot ) noexcept;
+	void addReverseEdges( uint32_t iSourceSlot, const SIRResourceDependency *pEdges, uint32_t nEdges ) noexcept;
+	void invalidateReverseDependents( const SIRResourceKey &rChangedKey ) noexcept;
 
 public:
 	explicit SIRResourceGraph( const SIRResourceGraphConfig &rConfig ) noexcept;

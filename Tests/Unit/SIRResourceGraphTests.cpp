@@ -438,6 +438,135 @@ static void testExpectedRevisionPublication( void )
 	REQUIRE( alloc.m_nOutstanding.load() == 0 );
 }
 
+static void testReverseDependenciesAndTransitiveInvalidation( void )
+{
+	SIRTestAllocatorStats alloc = {};
+	{
+		SIRResourceGraph graph( testConfig( alloc, 16 ) );
+		REQUIRE( graph.isReady() );
+		SIRResourceGraphWriter *pWriter = graph.getWriter();
+		REQUIRE( pWriter != nullptr );
+		SIRResourcePublication base = { key( 1 ), SIR_RESOURCE_KIND_COMPOSITION, 1, 1, nullptr, 0, nullptr, 0 };
+		SIRResourceHandle hA = {};
+		SIRResourceHandle hD = {};
+		SIRResourceHandle hB = {};
+		SIRResourceHandle hC = {};
+		SIRResourceHandle hE = {};
+		SIRResourceHandle hMissing = {};
+		REQUIRE( pWriter->publish( base, &hA ) == SIR_RESOURCE_RESULT_SUCCESS );
+		base.m_Key = key( 4 );
+		REQUIRE( pWriter->publish( base, &hD ) == SIR_RESOURCE_RESULT_SUCCESS );
+		SIRResourceDependency onA[2] = { { key( 1 ), SIR_RESOURCE_EDGE_KIND_REQUIRED, {} },
+		                                 { key( 1 ), SIR_RESOURCE_EDGE_KIND_OPTIONAL, {} } };
+		base.m_Key = key( 2 );
+		base.m_pDependencies = onA;
+		base.m_nDependencyCount = 2;
+		REQUIRE( pWriter->publish( base, &hB ) == SIR_RESOURCE_RESULT_SUCCESS );
+		SIRResourceDependency onB = { key( 2 ), SIR_RESOURCE_EDGE_KIND_REQUIRED, {} };
+		base.m_Key = key( 3 );
+		base.m_pDependencies = &onB;
+		base.m_nDependencyCount = 1;
+		REQUIRE( pWriter->publish( base, &hC ) == SIR_RESOURCE_RESULT_SUCCESS );
+		SIRResourceDependency onMissing = { key( 999 ), SIR_RESOURCE_EDGE_KIND_OPTIONAL, {} };
+		base.m_Key = key( 5 );
+		base.m_pDependencies = &onMissing;
+		REQUIRE( pWriter->publish( base, &hE ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( graph.getStats().m_nIndexedDependencyEdges == 4 );
+
+		uint32_t nRequired = 0;
+		REQUIRE( pWriter->collectDependents( key( 1 ), nullptr, 0, &nRequired ) == SIR_RESOURCE_RESULT_OUT_OF_BUDGET );
+		REQUIRE( nRequired == 1 ); // Duplicate edges must not duplicate handles.
+		SIRResourceHandle found[2] = {};
+		REQUIRE( pWriter->collectDependents( key( 1 ), found, 2, &nRequired ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( nRequired == 1 && found[0].m_nSlot == hB.m_nSlot );
+		REQUIRE( pWriter->collectDependents( key( 2 ), found, 2, &nRequired ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( nRequired == 1 && found[0].m_nSlot == hC.m_nSlot );
+
+		uint64_t nB = UINT64_MAX;
+		uint64_t nC = UINT64_MAX;
+		uint64_t nD = UINT64_MAX;
+		uint64_t nE = UINT64_MAX;
+		REQUIRE( pWriter->getInvalidationSequence( hB, &nB ) == SIR_RESOURCE_RESULT_SUCCESS && nB == 0 );
+		REQUIRE( pWriter->getInvalidationSequence( hC, &nC ) == SIR_RESOURCE_RESULT_SUCCESS && nC == 0 );
+		base = { key( 1 ), SIR_RESOURCE_KIND_COMPOSITION, 1, 1, nullptr, 0, nullptr, 0 };
+		REQUIRE( pWriter->publishExpected( base, 1, &hA ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( pWriter->getInvalidationSequence( hB, &nB ) == SIR_RESOURCE_RESULT_SUCCESS && nB > 0 );
+		REQUIRE( pWriter->getInvalidationSequence( hC, &nC ) == SIR_RESOURCE_RESULT_SUCCESS && nC == nB );
+		REQUIRE( pWriter->getInvalidationSequence( hD, &nD ) == SIR_RESOURCE_RESULT_SUCCESS && nD == 0 );
+		REQUIRE( pWriter->getInvalidationSequence( hE, &nE ) == SIR_RESOURCE_RESULT_SUCCESS && nE == 0 );
+
+		SIRResourceDependency onD = { key( 4 ), SIR_RESOURCE_EDGE_KIND_REQUIRED, {} };
+		base.m_Key = key( 2 );
+		base.m_pDependencies = &onD;
+		base.m_nDependencyCount = 1;
+		REQUIRE( pWriter->publishExpected( base, 1, &hB ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( graph.getStats().m_nIndexedDependencyEdges == 3 );
+		REQUIRE( pWriter->getInvalidationSequence( hB, &nB ) == SIR_RESOURCE_RESULT_SUCCESS && nB == 0 );
+		REQUIRE( pWriter->collectDependents( key( 1 ), found, 2, &nRequired ) == SIR_RESOURCE_RESULT_SUCCESS && nRequired == 0 );
+		REQUIRE( pWriter->collectDependents( key( 4 ), found, 2, &nRequired ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( nRequired == 1 && found[0].m_nSlot == hB.m_nSlot );
+
+		REQUIRE( pWriter->retire( hD ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( pWriter->getInvalidationSequence( hB, &nB ) == SIR_RESOURCE_RESULT_SUCCESS && nB > 0 );
+		REQUIRE( pWriter->getInvalidationSequence( hC, &nC ) == SIR_RESOURCE_RESULT_SUCCESS && nC == nB );
+		base = { key( 999 ), SIR_RESOURCE_KIND_COMPOSITION, 1, 1, nullptr, 0, nullptr, 0 };
+		REQUIRE( pWriter->publish( base, &hMissing ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( pWriter->getInvalidationSequence( hE, &nE ) == SIR_RESOURCE_RESULT_SUCCESS && nE > 0 );
+		REQUIRE( pWriter->retire( hB ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( pWriter->getInvalidationSequence( hB, &nB ) == SIR_RESOURCE_RESULT_INVALID_HANDLE );
+		REQUIRE( pWriter->collectDependents( key( 4 ), found, 2, &nRequired ) == SIR_RESOURCE_RESULT_SUCCESS && nRequired == 0 );
+		REQUIRE( graph.getStats().m_nIndexedDependencyEdges == 2 );
+
+		std::atomic<uint32_t> eOther{ 0 };
+		std::thread other( [&]() {
+			uint32_t nTotal = 0;
+			eOther.store( pWriter->collectDependents( key( 999 ), nullptr, 0, &nTotal ) );
+		} );
+		other.join();
+		REQUIRE( eOther.load() == SIR_RESOURCE_RESULT_WRITER_VIOLATION );
+	}
+	REQUIRE( alloc.m_nOutstanding.load() == 0 );
+}
+
+static void testReverseDependencyCapacityRollback( void )
+{
+	SIRTestAllocatorStats alloc = {};
+	{
+		SIRResourceGraphConfig config = testConfig( alloc, 6 );
+		config.m_nMaxDependencyEdges = 1;
+		SIRResourceGraph graph( config );
+		REQUIRE( graph.isReady() );
+		SIRResourceGraphWriter *pWriter = graph.getWriter();
+		REQUIRE( pWriter != nullptr );
+		SIRResourcePublication pub = { key( 40 ), SIR_RESOURCE_KIND_COMPOSITION, 1, 1, nullptr, 0, nullptr, 0 };
+		SIRResourceHandle hA = {};
+		SIRResourceHandle hB = {};
+		SIRResourceHandle hC = {};
+		SIRResourceHandle hD = {};
+		REQUIRE( pWriter->publish( pub, &hA ) == SIR_RESOURCE_RESULT_SUCCESS );
+		pub.m_Key = key( 41 );
+		REQUIRE( pWriter->publish( pub, &hB ) == SIR_RESOURCE_RESULT_SUCCESS );
+		SIRResourceDependency onA = { key( 40 ), SIR_RESOURCE_EDGE_KIND_REQUIRED, {} };
+		pub.m_Key = key( 42 );
+		pub.m_pDependencies = &onA;
+		pub.m_nDependencyCount = 1;
+		REQUIRE( pWriter->publish( pub, &hC ) == SIR_RESOURCE_RESULT_SUCCESS );
+		SIRResourceDependency onB = { key( 41 ), SIR_RESOURCE_EDGE_KIND_REQUIRED, {} };
+		pub.m_Key = key( 43 );
+		pub.m_pDependencies = &onB;
+		REQUIRE( pWriter->publish( pub, &hD ) == SIR_RESOURCE_RESULT_OUT_OF_BUDGET );
+		REQUIRE( graph.getStats().m_nIndexedDependencyEdges == 1 );
+		REQUIRE( graph.getStats().m_nLiveResources == 3 );
+		REQUIRE( pWriter->retire( hC ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( graph.getStats().m_nIndexedDependencyEdges == 0 );
+		REQUIRE( pWriter->publish( pub, &hD ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( graph.getStats().m_nIndexedDependencyEdges == 1 );
+		REQUIRE( pWriter->retire( hD ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( graph.getStats().m_nIndexedDependencyEdges == 0 );
+	}
+	REQUIRE( alloc.m_nOutstanding.load() == 0 );
+}
+
 int main( void )
 {
 	testScopeLifetimeAndDeduplication();
@@ -448,6 +577,8 @@ int main( void )
 	testConcurrentReadersAndWriterBoundary();
 	testIndexedKeyLookupAndGenerationReuse();
 	testExpectedRevisionPublication();
+	testReverseDependenciesAndTransitiveInvalidation();
+	testReverseDependencyCapacityRollback();
 	printf( "PASS: GRDG resource registry, publication, deduplication, lifetime, concurrency\n" );
 	return 0;
 }
