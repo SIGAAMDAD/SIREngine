@@ -55,8 +55,7 @@ int main( void )
 			szInput[iWord] = ( iPass * 0x9e3779b9U ) ^ ( iWord * 1337U );
 		}
 		memset( szOutput, 0, sizeof( szOutput ) );
-		if ( !device.copyRoundTripForTest( szInput, szOutput, sizeof( szInput ) ) ||
-		     memcmp( szInput, szOutput, sizeof( szInput ) ) != 0 ) {
+		if ( !device.copyRoundTripForTest( szInput, szOutput, sizeof( szInput ) ) || memcmp( szInput, szOutput, sizeof( szInput ) ) != 0 ) {
 			fprintf( stderr, "D3D12 pooled command / D3D12MA transfer failed at pass %u: HRESULT 0x%08lx\n", iPass,
 			         ( unsigned long )device.getLastError() );
 			return 1;

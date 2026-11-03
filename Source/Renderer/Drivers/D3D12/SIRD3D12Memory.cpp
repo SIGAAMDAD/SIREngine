@@ -57,7 +57,7 @@ bool SIRD3D12Memory::isReady( void ) const noexcept
 }
 
 HRESULT SIRD3D12Memory::createBuffer( D3D12_HEAP_TYPE eHeapType, D3D12_RESOURCE_STATES eInitialState, uint64_t nBytes,
-                                     D3D12MA::Allocation **ppAllocation ) noexcept
+                                      D3D12MA::Allocation **ppAllocation ) noexcept
 {
 	if ( ppAllocation == nullptr ) {
 		m_nLastError = E_POINTER;
