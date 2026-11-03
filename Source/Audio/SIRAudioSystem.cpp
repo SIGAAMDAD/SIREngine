@@ -29,9 +29,9 @@ SIRAudioSystem::~SIRAudioSystem( void ) noexcept
 sirAudioResult_t SIRAudioSystem::initialize( const sirAudioSystemConfig_t &config, const sirContainerAllocator_t *pAllocator,
                                              const sirAudioBackendOps_t &backend, void *pBackendContext ) noexcept
 {
-	if ( m_bInitialized || m_pPlaying != nullptr || backend.nAbiVersion != 2 || backend.submitSpatial == nullptr || backend.initialize == nullptr ||
-	     backend.shutdown == nullptr || backend.submit == nullptr || backend.drainCompletions == nullptr || backend.update == nullptr ||
-	     backend.getCapabilities == nullptr || pBackendContext == nullptr || config.nMaxPlaying == 0 ||
+	if ( m_bInitialized || m_pPlaying != nullptr || backend.nAbiVersion != 2 || backend.submitSpatial == nullptr ||
+	     backend.initialize == nullptr || backend.shutdown == nullptr || backend.submit == nullptr || backend.drainCompletions == nullptr ||
+	     backend.update == nullptr || backend.getCapabilities == nullptr || pBackendContext == nullptr || config.nMaxPlaying == 0 ||
 	     config.nMaxPlaying > UINT32_MAX / 2 || config.nCommandCapacity < 2 || config.nCriticalCapacity < 2 ||
 	     config.nCompletionCapacity < 2 ) {
 		return SIR_AUDIO_INVALID_ARGUMENT;
@@ -106,11 +106,11 @@ void SIRAudioSystem::shutdown( void ) noexcept
 	m_CriticalCommands.shutdown();
 	if ( m_pEmitters != nullptr ) {
 		SIRRawStorage::deallocate( m_pAllocator, m_pEmitters, ( size_t )m_nEmitterCapacity * sizeof( sirAudioSpatialSlot_t ),
-		                          alignof( sirAudioSpatialSlot_t ) );
+		                           alignof( sirAudioSpatialSlot_t ) );
 	}
 	if ( m_pListeners != nullptr ) {
 		SIRRawStorage::deallocate( m_pAllocator, m_pListeners, ( size_t )m_nListenerCapacity * sizeof( sirAudioSpatialSlot_t ),
-		                          alignof( sirAudioSpatialSlot_t ) );
+		                           alignof( sirAudioSpatialSlot_t ) );
 	}
 	m_pEmitters = nullptr;
 	m_pListeners = nullptr;
@@ -150,8 +150,8 @@ bool SIRAudioSystem::isValidListener( sirAudioListenerHandle_t hListener ) const
 
 void SIRAudioSystem::markTerminal( sirAudioPlayingSlot_t &slot, sirAudioPlaybackState_t eState ) noexcept
 {
-	if ( slot.eState != SIR_AUDIO_PLAYBACK_FINISHED && slot.eState != SIR_AUDIO_PLAYBACK_FAILED &&
-	     slot.hEmitter.nEpoch == m_nEpoch && slot.hEmitter.nSlot < m_nEmitterCapacity ) {
+	if ( slot.eState != SIR_AUDIO_PLAYBACK_FINISHED && slot.eState != SIR_AUDIO_PLAYBACK_FAILED && slot.hEmitter.nEpoch == m_nEpoch &&
+	     slot.hEmitter.nSlot < m_nEmitterCapacity ) {
 		sirAudioSpatialSlot_t &emitter = m_pEmitters[slot.hEmitter.nSlot];
 		if ( emitter.nGeneration == slot.hEmitter.nGeneration && emitter.nActiveVoices != 0 ) {
 			--emitter.nActiveVoices;
@@ -190,8 +190,7 @@ static bool isValidAudioAttributes( const sirAudioAttributes_t &attributes ) noe
 	return true;
 }
 
-sirAudioResult_t SIRAudioSystem::enqueue( sirAudioCommand_t &command, bool bCritical,
-                                            const sirAudioAttributes_t *pAttributes ) noexcept
+sirAudioResult_t SIRAudioSystem::enqueue( sirAudioCommand_t &command, bool bCritical, const sirAudioAttributes_t *pAttributes ) noexcept
 {
 	if ( !m_bInitialized ) {
 		return SIR_AUDIO_NOT_INITIALIZED;
@@ -364,6 +363,13 @@ sirAudioResult_t SIRAudioSystem::registerListener( sirAudioListenerHandle_t &hLi
 		return SIR_AUDIO_NOT_INITIALIZED;
 	}
 	for ( uint32_t nAttempt = 0; nAttempt < m_nListenerCapacity; ++nAttempt ) {
+/home/runner/work/SIREngine/SIREngine/Source/Audio/SIRAudioSystem.h:91:71: error: code should be clang-formatted [-Wclang-format-violations]
+        sirAudioResult_t enqueue( sirAudioCommand_t &command, bool bCritical,
+                                                                             ^
+CMake Warning at Build/CMake/CIFormat.cmake:34 (message):
+  Formatting error: Source/Audio/SIRAudioSystem.h
+
+
 		const uint32_t iSlot = ( m_nNextListenerSlot + nAttempt ) % m_nListenerCapacity;
 		sirAudioSpatialSlot_t &slot = m_pListeners[iSlot];
 		if ( slot.eState != SIR_AUDIO_SPATIAL_FREE || slot.nGeneration == UINT32_MAX ) {
@@ -393,7 +399,8 @@ sirAudioResult_t SIRAudioSystem::releaseListener( sirAudioListenerHandle_t hList
 	return eResult;
 }
 
-sirAudioResult_t SIRAudioSystem::setListenerAttributes( sirAudioListenerHandle_t hListener, const sirAudioAttributes_t &attributes ) noexcept
+sirAudioResult_t SIRAudioSystem::setListenerAttributes( sirAudioListenerHandle_t hListener,
+                                                        const sirAudioAttributes_t &attributes ) noexcept
 {
 	if ( !isValidListener( hListener ) ) {
 		return SIR_AUDIO_INVALID_HANDLE;
@@ -526,10 +533,10 @@ uint32_t SIRAudioSystem::update( void ) noexcept
 	// before the critical stop created by the same logical owner.
 	for ( uint32_t nIndex = 0; nIndex < m_Commands.getCapacity() && m_Commands.tryPop( packet ); ++nIndex ) {
 		command = packet.command;
-		const bool bSpatial = command.eType == SIR_AUDIO_COMMAND_SET_ATTRIBUTES ||
-		                      command.eType == SIR_AUDIO_COMMAND_SET_LISTENER_ATTRIBUTES;
-		const sirAudioResult_t eResult = bSpatial ? m_Backend.submitSpatial( m_pBackendContext, &command, &packet.attributes ) :
-		                                                m_Backend.submit( m_pBackendContext, &command, 1 );
+		const bool bSpatial =
+		    command.eType == SIR_AUDIO_COMMAND_SET_ATTRIBUTES || command.eType == SIR_AUDIO_COMMAND_SET_LISTENER_ATTRIBUTES;
+		const sirAudioResult_t eResult = bSpatial ? m_Backend.submitSpatial( m_pBackendContext, &command, &packet.attributes )
+		                                          : m_Backend.submit( m_pBackendContext, &command, 1 );
 		if ( eResult != SIR_AUDIO_OK && eResult != SIR_AUDIO_PENDING ) {
 			failSubmission( command );
 		}

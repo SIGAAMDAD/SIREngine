@@ -38,7 +38,7 @@ typedef struct sirAudioBackendOps_s
 	uint64_t ( *getCapabilities )( const void *pContext ) noexcept;
 	// ABI v2: attributes are valid for the duration of this call only.
 	sirAudioResult_t ( *submitSpatial )( void *pContext, const sirAudioCommand_t *pCommand,
-	                                    const sirAudioAttributes_t *pAttributes ) noexcept;
+	                                     const sirAudioAttributes_t *pAttributes ) noexcept;
 } sirAudioBackendOps_t;
 
 #endif // __SIRENGINE_SIRAUDIOBACKEND_H__

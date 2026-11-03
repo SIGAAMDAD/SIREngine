@@ -21,7 +21,14 @@ SIRAudioMockBackend::SIRAudioMockBackend( const sirContainerAllocator_t *pAlloca
 
 sirAudioBackendOps_t SIRAudioMockBackend::getOps( void ) noexcept
 {
-	return { 2, initializeCallback, shutdownCallback, submitCallback, drainCallback, updateCallback, capabilitiesCallback, submitSpatialCallback };
+	return { 2,
+	         initializeCallback,
+	         shutdownCallback,
+	         submitCallback,
+	         drainCallback,
+	         updateCallback,
+	         capabilitiesCallback,
+	         submitSpatialCallback };
 }
 
 sirAudioResult_t SIRAudioMockBackend::initializeCallback( void *pContext, const sirAudioBackendConfig_t *pConfig ) noexcept
@@ -40,6 +47,10 @@ sirAudioResult_t SIRAudioMockBackend::initializeCallback( void *pContext, const 
 void SIRAudioMockBackend::shutdownCallback( void *pContext ) noexcept
 {
 	SIRAudioMockBackend *pBackend = ( SIRAudioMockBackend * )pContext;
+CMake Warning at Build/CMake/CIFormat.cmake:34 (message):
+  Formatting error: Tests/Unit/SIRAudioMockBackend.cpp
+
+
 	if ( pBackend != nullptr ) {
 		pBackend->m_bInitialized = false;
 		pBackend->m_bFailNextPlay = false;
@@ -58,8 +69,8 @@ sirAudioResult_t SIRAudioMockBackend::submitCallback( void *pContext, const sirA
 	for ( uint32_t iCommand = 0; iCommand < nCount; ++iCommand ) {
 		const sirAudioCommand_t &command = pCommands[iCommand];
 		++pBackend->m_nSubmitted;
-		if ( ( command.eType == SIR_AUDIO_COMMAND_RELEASE_EMITTER ||
-		       command.eType == SIR_AUDIO_COMMAND_RELEASE_LISTENER ) && pBackend->m_bFailNextRelease ) {
+		if ( ( command.eType == SIR_AUDIO_COMMAND_RELEASE_EMITTER || command.eType == SIR_AUDIO_COMMAND_RELEASE_LISTENER ) &&
+		     pBackend->m_bFailNextRelease ) {
 			pBackend->m_bFailNextRelease = false;
 			return SIR_AUDIO_BACKEND_ERROR;
 		}
