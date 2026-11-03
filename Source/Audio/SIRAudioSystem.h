@@ -35,9 +35,12 @@ class SIRAudioSystem
 private:
 	typedef struct sirPlayingSlot_s
 	{
+		uint64_t nStartSequence;
+		uint64_t nStopSequence;
 		uint32_t nGeneration;
 		sirAudioPlaybackState_t eState;
-		uint8_t nReserved[3];
+		sirAudioPlaybackState_t eStateBeforeStop;
+		uint8_t nReserved[2];
 	} sirPlayingSlot_t;
 
 	sirPlayingSlot_t *m_pPlaying = nullptr;
@@ -55,6 +58,8 @@ private:
 	bool isValid( sirAudioPlayingHandle_t hPlaying ) const noexcept;
 	sirAudioResult_t enqueue( sirAudioCommand_t &command, bool bCritical ) noexcept;
 	void applyCompletion( const sirAudioCompletion_t &completion ) noexcept;
+	void failSubmission( const sirAudioCommand_t &command ) noexcept;
+	void drainCompletions( void ) noexcept;
 
 public:
 	SIRAudioSystem( void ) noexcept = default;

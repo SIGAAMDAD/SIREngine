@@ -135,6 +135,8 @@ sirAudioResult_t SIRAudioSystem::playEvent( uint64_t nEventId, sirAudioEmitterHa
 			return eResult;
 		}
 		slot.nGeneration = candidate.nGeneration;
+		slot.nStartSequence = command.nSequence;
+		slot.nStopSequence = 0;
 		slot.eState = SIR_AUDIO_PLAYBACK_QUEUED;
 		m_nNextSlot = iSlot + 1 == m_nPlayingCapacity ? 0 : iSlot + 1;
 		hPlaying = candidate;
@@ -149,7 +151,8 @@ sirAudioResult_t SIRAudioSystem::stopEvent( sirAudioPlayingHandle_t hPlaying, si
 		return SIR_AUDIO_INVALID_HANDLE;
 	}
 	if ( m_pPlaying[hPlaying.nSlot].eState == SIR_AUDIO_PLAYBACK_FINISHED ||
-	     m_pPlaying[hPlaying.nSlot].eState == SIR_AUDIO_PLAYBACK_FAILED ) {
+	     m_pPlaying[hPlaying.nSlot].eState == SIR_AUDIO_PLAYBACK_FAILED ||
+	     m_pPlaying[hPlaying.nSlot].eState == SIR_AUDIO_PLAYBACK_STOPPING ) {
 		return SIR_AUDIO_INVALID_HANDLE;
 	}
 	sirAudioCommand_t command = {};
@@ -158,14 +161,19 @@ sirAudioResult_t SIRAudioSystem::stopEvent( sirAudioPlayingHandle_t hPlaying, si
 	command.eStopMode = eMode;
 	const sirAudioResult_t eResult = enqueue( command, true );
 	if ( eResult == SIR_AUDIO_PENDING ) {
-		m_pPlaying[hPlaying.nSlot].eState = SIR_AUDIO_PLAYBACK_STOPPING;
+		sirPlayingSlot_t &slot = m_pPlaying[hPlaying.nSlot];
+		slot.nStopSequence = command.nSequence;
+		slot.eStateBeforeStop = slot.eState;
+		slot.eState = SIR_AUDIO_PLAYBACK_STOPPING;
 	}
 	return eResult;
 }
 
 sirAudioResult_t SIRAudioSystem::setParameter( sirAudioPlayingHandle_t hPlaying, uint64_t nParameterId, float fValue ) noexcept
 {
-	if ( !isValid( hPlaying ) ) {
+	if ( !isValid( hPlaying ) || m_pPlaying[hPlaying.nSlot].eState == SIR_AUDIO_PLAYBACK_FINISHED ||
+	     m_pPlaying[hPlaying.nSlot].eState == SIR_AUDIO_PLAYBACK_FAILED ||
+	     m_pPlaying[hPlaying.nSlot].eState == SIR_AUDIO_PLAYBACK_STOPPING ) {
 		return SIR_AUDIO_INVALID_HANDLE;
 	}
 	if ( nParameterId == 0 ) {
@@ -226,42 +234,49 @@ void SIRAudioSystem::applyCompletion( const sirAudioCompletion_t &completion ) n
 	}
 	sirPlayingSlot_t &slot = m_pPlaying[completion.hPlaying.nSlot];
 	if ( completion.eType == SIR_AUDIO_COMPLETION_STARTED ) {
-		if ( slot.eState == SIR_AUDIO_PLAYBACK_QUEUED ) {
-			slot.eState = SIR_AUDIO_PLAYBACK_PLAYING;
+		if ( completion.nSequence == slot.nStartSequence ) {
+			if ( slot.eState == SIR_AUDIO_PLAYBACK_QUEUED ) {
+				slot.eState = SIR_AUDIO_PLAYBACK_PLAYING;
+			} else if ( slot.eState == SIR_AUDIO_PLAYBACK_STOPPING && slot.eStateBeforeStop == SIR_AUDIO_PLAYBACK_QUEUED ) {
+				slot.eStateBeforeStop = SIR_AUDIO_PLAYBACK_PLAYING;
+			}
 		}
 	} else if ( completion.eType == SIR_AUDIO_COMPLETION_FAILED ) {
-		slot.eState = SIR_AUDIO_PLAYBACK_FAILED;
-	} else if ( completion.eType == SIR_AUDIO_COMPLETION_FINISHED || completion.eType == SIR_AUDIO_COMPLETION_STOPPED ) {
-		slot.eState = SIR_AUDIO_PLAYBACK_FINISHED;
+		if ( completion.nSequence == slot.nStartSequence ) {
+			slot.eState = SIR_AUDIO_PLAYBACK_FAILED;
+		} else if ( completion.nSequence == slot.nStopSequence && slot.eState == SIR_AUDIO_PLAYBACK_STOPPING ) {
+			slot.eState = slot.eStateBeforeStop;
+			slot.nStopSequence = 0;
+		}
+	} else if ( completion.eType == SIR_AUDIO_COMPLETION_STOPPED ) {
+		if ( completion.nSequence == slot.nStopSequence && slot.eState == SIR_AUDIO_PLAYBACK_STOPPING ) {
+			slot.eState = SIR_AUDIO_PLAYBACK_FINISHED;
+		}
+	} else if ( completion.eType == SIR_AUDIO_COMPLETION_FINISHED ) {
+		if ( completion.nSequence == slot.nStartSequence &&
+		     ( slot.eState == SIR_AUDIO_PLAYBACK_PLAYING || slot.eState == SIR_AUDIO_PLAYBACK_STOPPING ) ) {
+			slot.eState = SIR_AUDIO_PLAYBACK_FINISHED;
+		}
 	}
 }
 
-uint32_t SIRAudioSystem::update( void ) noexcept
+void SIRAudioSystem::failSubmission( const sirAudioCommand_t &command ) noexcept
 {
-	if ( !m_bInitialized ) {
-		return 0;
+	if ( !isValid( command.hPlaying ) ) {
+		return;
 	}
-	uint32_t nProcessed = 0;
-	sirAudioCommand_t command = {};
-	// Start commands are dispatched before critical stop commands in the
-	// same update, so play-then-stop does not race native event creation.
-	while ( m_Commands.tryPop( command ) ) {
-		const sirAudioResult_t eResult = m_Backend.submit( m_pBackendContext, &command, 1 );
-		if ( eResult != SIR_AUDIO_OK && eResult != SIR_AUDIO_PENDING ) {
-			const sirAudioCompletion_t failure = { command.hPlaying, command.nSequence, eResult, SIR_AUDIO_COMPLETION_FAILED, {} };
-			applyCompletion( failure );
-		}
-		++nProcessed;
+	sirPlayingSlot_t &slot = m_pPlaying[command.hPlaying.nSlot];
+	if ( command.eType == SIR_AUDIO_COMMAND_PLAY && slot.nStartSequence == command.nSequence ) {
+		slot.eState = SIR_AUDIO_PLAYBACK_FAILED;
+	} else if ( command.eType == SIR_AUDIO_COMMAND_STOP && slot.eState == SIR_AUDIO_PLAYBACK_STOPPING &&
+	            slot.nStopSequence == command.nSequence ) {
+		slot.eState = slot.eStateBeforeStop;
+		slot.nStopSequence = 0;
 	}
-	while ( m_CriticalCommands.tryPop( command ) ) {
-		const sirAudioResult_t eResult = m_Backend.submit( m_pBackendContext, &command, 1 );
-		if ( eResult != SIR_AUDIO_OK && eResult != SIR_AUDIO_PENDING ) {
-			const sirAudioCompletion_t failure = { command.hPlaying, command.nSequence, eResult, SIR_AUDIO_COMPLETION_FAILED, {} };
-			applyCompletion( failure );
-		}
-		++nProcessed;
-	}
-	m_Backend.update( m_pBackendContext );
+}
+
+void SIRAudioSystem::drainCompletions( void ) noexcept
+{
 	sirAudioCompletion_t completions[16] = {};
 	uint32_t nCount = 0;
 	do {
@@ -273,5 +288,37 @@ uint32_t SIRAudioSystem::update( void ) noexcept
 			applyCompletion( completions[iCompletion] );
 		}
 	} while ( nCount == 16 );
+}
+
+uint32_t SIRAudioSystem::update( void ) noexcept
+{
+	if ( !m_bInitialized ) {
+		return 0;
+	}
+	uint32_t nProcessed = 0;
+	sirAudioCommand_t command = {};
+	// A finite normal-queue budget prevents continuously producing threads from
+	// keeping this update loop alive indefinitely. Play is always dispatched
+	// before the critical stop created by the same logical owner.
+	for ( uint32_t nIndex = 0; nIndex < m_Commands.getCapacity() && m_Commands.tryPop( command ); ++nIndex ) {
+		const sirAudioResult_t eResult = m_Backend.submit( m_pBackendContext, &command, 1 );
+		if ( eResult != SIR_AUDIO_OK && eResult != SIR_AUDIO_PENDING ) {
+			failSubmission( command );
+		}
+		// The mock backend and real SDK adapters must never silently drop an
+		// accepted completion. Drain between dispatches to bound queue pressure.
+		drainCompletions();
+		++nProcessed;
+	}
+	for ( uint32_t nIndex = 0; nIndex < m_CriticalCommands.getCapacity() && m_CriticalCommands.tryPop( command ); ++nIndex ) {
+		const sirAudioResult_t eResult = m_Backend.submit( m_pBackendContext, &command, 1 );
+		if ( eResult != SIR_AUDIO_OK && eResult != SIR_AUDIO_PENDING ) {
+			failSubmission( command );
+		}
+		drainCompletions();
+		++nProcessed;
+	}
+	m_Backend.update( m_pBackendContext );
+	drainCompletions();
 	return nProcessed;
 }
