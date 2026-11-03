@@ -190,7 +190,8 @@ void SIRConditionVariable::notifyAll( void ) noexcept
 }
 
 SIRSpinLock::SIRSpinLock( void ) noexcept
-{}
+{
+}
 
 void SIRSpinLock::lock( void ) noexcept
 {

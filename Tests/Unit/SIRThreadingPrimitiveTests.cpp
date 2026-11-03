@@ -1,4 +1,5 @@
 /*
+
 ===========================================================================
 SIREngine MPLv2 Source Code
 Copyright (C) 2023-2027 Noah Van Til
@@ -55,7 +56,7 @@ static bool testAtomicOrders( void )
 	if ( nState.exchange( 11, SIR_MEMORY_ORDER_RELEASE ) != 15 || nState.load( SIR_MEMORY_ORDER_ACQUIRE ) != 11 ) {
 		return false;
 	}
-	if ( (nState &= 7) != 3 || (nState |= 16) != 19 || (nState ^= 2) != 17 ) {
+	if ( ( nState &= 7 ) != 3 || ( nState |= 16 ) != 19 || ( nState ^= 2 ) != 17 ) {
 		return false;
 	}
 	if ( ++nState != 18 || nState++ != 18 || --nState != 18 || nState-- != 18 || nState.load() != 17 ) {
@@ -89,7 +90,7 @@ static bool testAtomicOrders( void )
 	if ( pValue.fetchSub( 1 ) != szValues + 2 || pValue.load() != szValues + 1 ) {
 		return false;
 	}
-	if ( (pValue += 2) != szValues + 3 || pValue-- != szValues + 3 || pValue.load() != szValues + 2 ) {
+	if ( ( pValue += 2 ) != szValues + 3 || pValue-- != szValues + 3 || pValue.load() != szValues + 2 ) {
 		return false;
 	}
 
@@ -161,7 +162,7 @@ static bool testConcurrentAtomic( void )
 	constexpr uint32_t N_INCREMENTS = 50000;
 	std::thread workers[N_THREADS];
 	for ( uint32_t iThread = 0; iThread < N_THREADS; ++iThread ) {
-		workers[iThread] = std::thread( [&counter]() {
+		workers[iThread] = std::thread( [&counter, N_INCREMENTS]() {
 			for ( uint32_t iIncrement = 0; iIncrement < N_INCREMENTS; ++iIncrement ) {
 				counter.fetchAdd( 1, SIR_MEMORY_ORDER_RELAXED );
 			}
@@ -181,7 +182,7 @@ static bool testConcurrentSpinLock( void )
 	constexpr uint32_t N_INCREMENTS = 30000;
 	std::thread workers[N_THREADS];
 	for ( uint32_t iThread = 0; iThread < N_THREADS; ++iThread ) {
-		workers[iThread] = std::thread( [&spin, &nCounter]() {
+		workers[iThread] = std::thread( [&spin, &nCounter, N_INCREMENTS]() {
 			for ( uint32_t iIncrement = 0; iIncrement < N_INCREMENTS; ++iIncrement ) {
 				SIRScopedLock<SIRSpinLock> guard( spin );
 				++nCounter;
@@ -196,7 +197,8 @@ static bool testConcurrentSpinLock( void )
 
 int main( void )
 {
-	if ( !testAtomicOrders() || !testScopedLock() || !testReleaseAcquirePublication() || !testConcurrentAtomic() || !testConcurrentSpinLock() ) {
+	if ( !testAtomicOrders() || !testScopedLock() || !testReleaseAcquirePublication() || !testConcurrentAtomic() ||
+	     !testConcurrentSpinLock() ) {
 		fputs( "SIRThreadingPrimitiveTests failed\n", stderr );
 		return 1;
 	}

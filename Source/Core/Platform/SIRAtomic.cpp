@@ -16,7 +16,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Core/Platform/SIRAtomic.h>
 
 SIRAtomicFlag::SIRAtomicFlag( void ) noexcept : m_bValue( false )
-{}
+{
+}
 
 bool SIRAtomicFlag::test( sirMemoryOrder_t eOrder ) const noexcept
 {
@@ -37,4 +38,3 @@ bool SIRAtomicFlag::isLockFree( void ) const noexcept
 {
 	return m_bValue.isLockFree();
 }
-

@@ -73,7 +73,8 @@ private:
 };
 
 template <typename Lockable>
-SIRConditionalScopedLock<Lockable>::SIRConditionalScopedLock( Lockable &lock, bool bEnabled ) noexcept : m_Lock( lock ), m_bEnabled( bEnabled )
+SIRConditionalScopedLock<Lockable>::SIRConditionalScopedLock( Lockable &lock, bool bEnabled ) noexcept
+    : m_Lock( lock ), m_bEnabled( bEnabled )
 {
 	if ( m_bEnabled ) {
 		m_Lock.lock();

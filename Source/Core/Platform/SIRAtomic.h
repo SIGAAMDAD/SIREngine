@@ -54,12 +54,17 @@ public:
 constexpr std::memory_order SIRAtomicOrder::toNative( sirMemoryOrder_t eOrder ) noexcept
 {
 	switch ( eOrder ) {
-		case SIR_MEMORY_ORDER_RELAXED: return std::memory_order_relaxed;
-		case SIR_MEMORY_ORDER_ACQUIRE: return std::memory_order_acquire;
-		case SIR_MEMORY_ORDER_RELEASE: return std::memory_order_release;
-		case SIR_MEMORY_ORDER_ACQUIRE_RELEASE: return std::memory_order_acq_rel;
-		case SIR_MEMORY_ORDER_SEQUENTIAL:
-		default: return std::memory_order_seq_cst;
+	case SIR_MEMORY_ORDER_RELAXED:
+		return std::memory_order_relaxed;
+	case SIR_MEMORY_ORDER_ACQUIRE:
+		return std::memory_order_acquire;
+	case SIR_MEMORY_ORDER_RELEASE:
+		return std::memory_order_release;
+	case SIR_MEMORY_ORDER_ACQUIRE_RELEASE:
+		return std::memory_order_acq_rel;
+	case SIR_MEMORY_ORDER_SEQUENTIAL:
+	default:
+		return std::memory_order_seq_cst;
 	}
 }
 
@@ -83,13 +88,16 @@ constexpr sirMemoryOrder_t SIRAtomicOrder::normalizeFailure( sirMemoryOrder_t eS
 	}
 
 	switch ( eSuccessOrder ) {
-		case SIR_MEMORY_ORDER_RELAXED: return SIR_MEMORY_ORDER_RELAXED;
-		case SIR_MEMORY_ORDER_RELEASE: return SIR_MEMORY_ORDER_RELAXED;
-		case SIR_MEMORY_ORDER_ACQUIRE:
-		case SIR_MEMORY_ORDER_ACQUIRE_RELEASE:
-			return eFailureOrder == SIR_MEMORY_ORDER_SEQUENTIAL ? SIR_MEMORY_ORDER_ACQUIRE : eFailureOrder;
-		case SIR_MEMORY_ORDER_SEQUENTIAL:
-		default: return eFailureOrder;
+	case SIR_MEMORY_ORDER_RELAXED:
+		return SIR_MEMORY_ORDER_RELAXED;
+	case SIR_MEMORY_ORDER_RELEASE:
+		return SIR_MEMORY_ORDER_RELAXED;
+	case SIR_MEMORY_ORDER_ACQUIRE:
+	case SIR_MEMORY_ORDER_ACQUIRE_RELEASE:
+		return eFailureOrder == SIR_MEMORY_ORDER_SEQUENTIAL ? SIR_MEMORY_ORDER_ACQUIRE : eFailureOrder;
+	case SIR_MEMORY_ORDER_SEQUENTIAL:
+	default:
+		return eFailureOrder;
 	}
 }
 
@@ -112,10 +120,10 @@ public:
 	typedef T value_type;
 
 	static_assert( std::is_arithmetic<T>::value || std::is_enum<T>::value || std::is_pointer<T>::value,
-		"SIRAtomic accepts arithmetic, enum, or pointer types" );
+	               "SIRAtomic accepts arithmetic, enum, or pointer types" );
 	static_assert( !std::is_const<T>::value && !std::is_volatile<T>::value, "SIRAtomic requires mutable storage" );
 	static_assert( sizeof( T ) == 1 || sizeof( T ) == 2 || sizeof( T ) == 4 || sizeof( T ) == 8,
-		"SIRAtomic only supports 1/2/4/8 byte values" );
+	               "SIRAtomic only supports 1/2/4/8 byte values" );
 	static_assert( std::atomic<T>::is_always_lock_free, "SIRAtomic requires a lock-free atomic for this target" );
 
 	SIRAtomic( void ) noexcept;
@@ -133,44 +141,86 @@ public:
 	bool compareExchangeWeak( T &expected, T desired, sirMemoryOrder_t eOrder = SIR_MEMORY_ORDER_SEQUENTIAL ) noexcept;
 	bool compareExchangeWeak( T &expected, T desired, sirMemoryOrder_t eSuccess, sirMemoryOrder_t eFailure ) noexcept;
 
-	template <typename U = T, typename std::enable_if<std::is_same<U, T>::value && (std::is_integral<U>::value || std::is_floating_point<U>::value) && !std::is_same<U, bool>::value, int>::type = 0>
+	template <typename U = T,
+	          typename std::enable_if<std::is_same<U, T>::value && ( std::is_integral<U>::value || std::is_floating_point<U>::value ) &&
+	                                      !std::is_same<U, bool>::value,
+	                                  int>::type = 0>
 	T fetchAdd( T amount, sirMemoryOrder_t eOrder = SIR_MEMORY_ORDER_SEQUENTIAL ) noexcept;
-	template <typename U = T, typename std::enable_if<std::is_same<U, T>::value && (std::is_integral<U>::value || std::is_floating_point<U>::value) && !std::is_same<U, bool>::value, int>::type = 0>
+	template <typename U = T,
+	          typename std::enable_if<std::is_same<U, T>::value && ( std::is_integral<U>::value || std::is_floating_point<U>::value ) &&
+	                                      !std::is_same<U, bool>::value,
+	                                  int>::type = 0>
 	T fetchSub( T amount, sirMemoryOrder_t eOrder = SIR_MEMORY_ORDER_SEQUENTIAL ) noexcept;
-	template <typename U = T, typename std::enable_if<std::is_same<U, T>::value && std::is_integral<U>::value && !std::is_same<U, bool>::value, int>::type = 0>
+	template <typename U = T, typename std::enable_if<
+	                              std::is_same<U, T>::value && std::is_integral<U>::value && !std::is_same<U, bool>::value, int>::type = 0>
 	T fetchAnd( T mask, sirMemoryOrder_t eOrder = SIR_MEMORY_ORDER_SEQUENTIAL ) noexcept;
-	template <typename U = T, typename std::enable_if<std::is_same<U, T>::value && std::is_integral<U>::value && !std::is_same<U, bool>::value, int>::type = 0>
+	template <typename U = T, typename std::enable_if<
+	                              std::is_same<U, T>::value && std::is_integral<U>::value && !std::is_same<U, bool>::value, int>::type = 0>
 	T fetchOr( T mask, sirMemoryOrder_t eOrder = SIR_MEMORY_ORDER_SEQUENTIAL ) noexcept;
-	template <typename U = T, typename std::enable_if<std::is_same<U, T>::value && std::is_integral<U>::value && !std::is_same<U, bool>::value, int>::type = 0>
+	template <typename U = T, typename std::enable_if<
+	                              std::is_same<U, T>::value && std::is_integral<U>::value && !std::is_same<U, bool>::value, int>::type = 0>
 	T fetchXor( T mask, sirMemoryOrder_t eOrder = SIR_MEMORY_ORDER_SEQUENTIAL ) noexcept;
 
-	template <typename U = T, typename std::enable_if<std::is_same<U, T>::value && std::is_pointer<U>::value && std::is_object<typename std::remove_pointer<U>::type>::value, int>::type = 0>
+	template <typename U = T, typename std::enable_if<std::is_same<U, T>::value && std::is_pointer<U>::value &&
+	                                                      std::is_object<typename std::remove_pointer<U>::type>::value,
+	                                                  int>::type = 0>
 	T fetchAdd( ptrdiff_t nAmount, sirMemoryOrder_t eOrder = SIR_MEMORY_ORDER_SEQUENTIAL ) noexcept;
-	template <typename U = T, typename std::enable_if<std::is_same<U, T>::value && std::is_pointer<U>::value && std::is_object<typename std::remove_pointer<U>::type>::value, int>::type = 0>
+	template <typename U = T, typename std::enable_if<std::is_same<U, T>::value && std::is_pointer<U>::value &&
+	                                                      std::is_object<typename std::remove_pointer<U>::type>::value,
+	                                                  int>::type = 0>
 	T fetchSub( ptrdiff_t nAmount, sirMemoryOrder_t eOrder = SIR_MEMORY_ORDER_SEQUENTIAL ) noexcept;
 
-	template <typename U = T, typename std::enable_if<std::is_same<U, T>::value && (std::is_integral<U>::value || std::is_floating_point<U>::value) && !std::is_same<U, bool>::value, int>::type = 0>
+	template <typename U = T,
+	          typename std::enable_if<std::is_same<U, T>::value && ( std::is_integral<U>::value || std::is_floating_point<U>::value ) &&
+	                                      !std::is_same<U, bool>::value,
+	                                  int>::type = 0>
 	T operator+=( T amount ) noexcept;
-	template <typename U = T, typename std::enable_if<std::is_same<U, T>::value && (std::is_integral<U>::value || std::is_floating_point<U>::value) && !std::is_same<U, bool>::value, int>::type = 0>
+	template <typename U = T,
+	          typename std::enable_if<std::is_same<U, T>::value && ( std::is_integral<U>::value || std::is_floating_point<U>::value ) &&
+	                                      !std::is_same<U, bool>::value,
+	                                  int>::type = 0>
 	T operator-=( T amount ) noexcept;
-	template <typename U = T, typename std::enable_if<std::is_same<U, T>::value && std::is_integral<U>::value && !std::is_same<U, bool>::value, int>::type = 0>
+	template <typename U = T, typename std::enable_if<
+	                              std::is_same<U, T>::value && std::is_integral<U>::value && !std::is_same<U, bool>::value, int>::type = 0>
 	T operator&=( T mask ) noexcept;
-	template <typename U = T, typename std::enable_if<std::is_same<U, T>::value && std::is_integral<U>::value && !std::is_same<U, bool>::value, int>::type = 0>
+	template <typename U = T, typename std::enable_if<
+	                              std::is_same<U, T>::value && std::is_integral<U>::value && !std::is_same<U, bool>::value, int>::type = 0>
 	T operator|=( T mask ) noexcept;
-	template <typename U = T, typename std::enable_if<std::is_same<U, T>::value && std::is_integral<U>::value && !std::is_same<U, bool>::value, int>::type = 0>
+	template <typename U = T, typename std::enable_if<
+	                              std::is_same<U, T>::value && std::is_integral<U>::value && !std::is_same<U, bool>::value, int>::type = 0>
 	T operator^=( T mask ) noexcept;
-	template <typename U = T, typename std::enable_if<std::is_same<U, T>::value && std::is_pointer<U>::value && std::is_object<typename std::remove_pointer<U>::type>::value, int>::type = 0>
+	template <typename U = T, typename std::enable_if<std::is_same<U, T>::value && std::is_pointer<U>::value &&
+	                                                      std::is_object<typename std::remove_pointer<U>::type>::value,
+	                                                  int>::type = 0>
 	T operator+=( ptrdiff_t nAmount ) noexcept;
-	template <typename U = T, typename std::enable_if<std::is_same<U, T>::value && std::is_pointer<U>::value && std::is_object<typename std::remove_pointer<U>::type>::value, int>::type = 0>
+	template <typename U = T, typename std::enable_if<std::is_same<U, T>::value && std::is_pointer<U>::value &&
+	                                                      std::is_object<typename std::remove_pointer<U>::type>::value,
+	                                                  int>::type = 0>
 	T operator-=( ptrdiff_t nAmount ) noexcept;
 
-	template <typename U = T, typename std::enable_if<std::is_same<U, T>::value && ((std::is_integral<U>::value && !std::is_same<U, bool>::value) || (std::is_pointer<U>::value && std::is_object<typename std::remove_pointer<U>::type>::value)), int>::type = 0>
+	template <typename U = T,
+	          typename std::enable_if<std::is_same<U, T>::value &&
+	                                      ( ( std::is_integral<U>::value && !std::is_same<U, bool>::value ) ||
+	                                        ( std::is_pointer<U>::value && std::is_object<typename std::remove_pointer<U>::type>::value ) ),
+	                                  int>::type = 0>
 	T operator++( void ) noexcept;
-	template <typename U = T, typename std::enable_if<std::is_same<U, T>::value && ((std::is_integral<U>::value && !std::is_same<U, bool>::value) || (std::is_pointer<U>::value && std::is_object<typename std::remove_pointer<U>::type>::value)), int>::type = 0>
+	template <typename U = T,
+	          typename std::enable_if<std::is_same<U, T>::value &&
+	                                      ( ( std::is_integral<U>::value && !std::is_same<U, bool>::value ) ||
+	                                        ( std::is_pointer<U>::value && std::is_object<typename std::remove_pointer<U>::type>::value ) ),
+	                                  int>::type = 0>
 	T operator++( int ) noexcept;
-	template <typename U = T, typename std::enable_if<std::is_same<U, T>::value && ((std::is_integral<U>::value && !std::is_same<U, bool>::value) || (std::is_pointer<U>::value && std::is_object<typename std::remove_pointer<U>::type>::value)), int>::type = 0>
+	template <typename U = T,
+	          typename std::enable_if<std::is_same<U, T>::value &&
+	                                      ( ( std::is_integral<U>::value && !std::is_same<U, bool>::value ) ||
+	                                        ( std::is_pointer<U>::value && std::is_object<typename std::remove_pointer<U>::type>::value ) ),
+	                                  int>::type = 0>
 	T operator--( void ) noexcept;
-	template <typename U = T, typename std::enable_if<std::is_same<U, T>::value && ((std::is_integral<U>::value && !std::is_same<U, bool>::value) || (std::is_pointer<U>::value && std::is_object<typename std::remove_pointer<U>::type>::value)), int>::type = 0>
+	template <typename U = T,
+	          typename std::enable_if<std::is_same<U, T>::value &&
+	                                      ( ( std::is_integral<U>::value && !std::is_same<U, bool>::value ) ||
+	                                        ( std::is_pointer<U>::value && std::is_object<typename std::remove_pointer<U>::type>::value ) ),
+	                                  int>::type = 0>
 	T operator--( int ) noexcept;
 
 	T operator=( T value ) noexcept;
@@ -184,11 +234,13 @@ private:
 
 template <typename T>
 SIRAtomic<T>::SIRAtomic( void ) noexcept : m_value( T{} )
-{}
+{
+}
 
 template <typename T>
 SIRAtomic<T>::SIRAtomic( T value ) noexcept : m_value( value )
-{}
+{
+}
 
 template <typename T>
 T SIRAtomic<T>::load( sirMemoryOrder_t eOrder ) const noexcept
@@ -218,7 +270,8 @@ template <typename T>
 bool SIRAtomic<T>::compareExchangeStrong( T &expected, T desired, sirMemoryOrder_t eSuccess, sirMemoryOrder_t eFailure ) noexcept
 {
 	const sirMemoryOrder_t eNormalized = SIRAtomicOrder::normalizeFailure( eSuccess, eFailure );
-	return m_value.compare_exchange_strong( expected, desired, SIRAtomicOrder::toNative( eSuccess ), SIRAtomicOrder::toNative( eNormalized ) );
+	return m_value.compare_exchange_strong( expected, desired, SIRAtomicOrder::toNative( eSuccess ),
+	                                        SIRAtomicOrder::toNative( eNormalized ) );
 }
 
 template <typename T>
@@ -231,17 +284,21 @@ template <typename T>
 bool SIRAtomic<T>::compareExchangeWeak( T &expected, T desired, sirMemoryOrder_t eSuccess, sirMemoryOrder_t eFailure ) noexcept
 {
 	const sirMemoryOrder_t eNormalized = SIRAtomicOrder::normalizeFailure( eSuccess, eFailure );
-	return m_value.compare_exchange_weak( expected, desired, SIRAtomicOrder::toNative( eSuccess ), SIRAtomicOrder::toNative( eNormalized ) );
+	return m_value.compare_exchange_weak( expected, desired, SIRAtomicOrder::toNative( eSuccess ),
+	                                      SIRAtomicOrder::toNative( eNormalized ) );
 }
 
 template <typename T>
-template <typename U, typename std::enable_if<std::is_same<U, T>::value && (std::is_integral<U>::value || std::is_floating_point<U>::value) && !std::is_same<U, bool>::value, int>::type>
+template <typename U,
+          typename std::enable_if<std::is_same<U, T>::value && ( std::is_integral<U>::value || std::is_floating_point<U>::value ) &&
+                                      !std::is_same<U, bool>::value,
+                                  int>::type>
 T SIRAtomic<T>::fetchAdd( T amount, sirMemoryOrder_t eOrder ) noexcept
 {
 	if constexpr ( std::is_floating_point<U>::value ) {
 		T expected = load( SIR_MEMORY_ORDER_RELAXED );
 		for ( ;; ) {
-			const T desired = (T)( expected + amount );
+			const T desired = ( T )( expected + amount );
 			if ( compareExchangeWeak( expected, desired, eOrder ) ) {
 				return expected;
 			}
@@ -252,13 +309,16 @@ T SIRAtomic<T>::fetchAdd( T amount, sirMemoryOrder_t eOrder ) noexcept
 }
 
 template <typename T>
-template <typename U, typename std::enable_if<std::is_same<U, T>::value && (std::is_integral<U>::value || std::is_floating_point<U>::value) && !std::is_same<U, bool>::value, int>::type>
+template <typename U,
+          typename std::enable_if<std::is_same<U, T>::value && ( std::is_integral<U>::value || std::is_floating_point<U>::value ) &&
+                                      !std::is_same<U, bool>::value,
+                                  int>::type>
 T SIRAtomic<T>::fetchSub( T amount, sirMemoryOrder_t eOrder ) noexcept
 {
 	if constexpr ( std::is_floating_point<U>::value ) {
 		T expected = load( SIR_MEMORY_ORDER_RELAXED );
 		for ( ;; ) {
-			const T desired = (T)( expected - amount );
+			const T desired = ( T )( expected - amount );
 			if ( compareExchangeWeak( expected, desired, eOrder ) ) {
 				return expected;
 			}
@@ -269,120 +329,156 @@ T SIRAtomic<T>::fetchSub( T amount, sirMemoryOrder_t eOrder ) noexcept
 }
 
 template <typename T>
-template <typename U, typename std::enable_if<std::is_same<U, T>::value && std::is_integral<U>::value && !std::is_same<U, bool>::value, int>::type>
+template <typename U,
+          typename std::enable_if<std::is_same<U, T>::value && std::is_integral<U>::value && !std::is_same<U, bool>::value, int>::type>
 T SIRAtomic<T>::fetchAnd( T mask, sirMemoryOrder_t eOrder ) noexcept
 {
 	return m_value.fetch_and( mask, SIRAtomicOrder::toNative( eOrder ) );
 }
 
 template <typename T>
-template <typename U, typename std::enable_if<std::is_same<U, T>::value && std::is_integral<U>::value && !std::is_same<U, bool>::value, int>::type>
+template <typename U,
+          typename std::enable_if<std::is_same<U, T>::value && std::is_integral<U>::value && !std::is_same<U, bool>::value, int>::type>
 T SIRAtomic<T>::fetchOr( T mask, sirMemoryOrder_t eOrder ) noexcept
 {
 	return m_value.fetch_or( mask, SIRAtomicOrder::toNative( eOrder ) );
 }
 
 template <typename T>
-template <typename U, typename std::enable_if<std::is_same<U, T>::value && std::is_integral<U>::value && !std::is_same<U, bool>::value, int>::type>
+template <typename U,
+          typename std::enable_if<std::is_same<U, T>::value && std::is_integral<U>::value && !std::is_same<U, bool>::value, int>::type>
 T SIRAtomic<T>::fetchXor( T mask, sirMemoryOrder_t eOrder ) noexcept
 {
 	return m_value.fetch_xor( mask, SIRAtomicOrder::toNative( eOrder ) );
 }
 
 template <typename T>
-template <typename U, typename std::enable_if<std::is_same<U, T>::value && std::is_pointer<U>::value && std::is_object<typename std::remove_pointer<U>::type>::value, int>::type>
+template <typename U, typename std::enable_if<std::is_same<U, T>::value && std::is_pointer<U>::value &&
+                                                  std::is_object<typename std::remove_pointer<U>::type>::value,
+                                              int>::type>
 T SIRAtomic<T>::fetchAdd( ptrdiff_t nAmount, sirMemoryOrder_t eOrder ) noexcept
 {
 	return m_value.fetch_add( nAmount, SIRAtomicOrder::toNative( eOrder ) );
 }
 
 template <typename T>
-template <typename U, typename std::enable_if<std::is_same<U, T>::value && std::is_pointer<U>::value && std::is_object<typename std::remove_pointer<U>::type>::value, int>::type>
+template <typename U, typename std::enable_if<std::is_same<U, T>::value && std::is_pointer<U>::value &&
+                                                  std::is_object<typename std::remove_pointer<U>::type>::value,
+                                              int>::type>
 T SIRAtomic<T>::fetchSub( ptrdiff_t nAmount, sirMemoryOrder_t eOrder ) noexcept
 {
 	return m_value.fetch_sub( nAmount, SIRAtomicOrder::toNative( eOrder ) );
 }
 
 template <typename T>
-template <typename U, typename std::enable_if<std::is_same<U, T>::value && (std::is_integral<U>::value || std::is_floating_point<U>::value) && !std::is_same<U, bool>::value, int>::type>
+template <typename U,
+          typename std::enable_if<std::is_same<U, T>::value && ( std::is_integral<U>::value || std::is_floating_point<U>::value ) &&
+                                      !std::is_same<U, bool>::value,
+                                  int>::type>
 T SIRAtomic<T>::operator+=( T amount ) noexcept
 {
 	if constexpr ( std::is_floating_point<U>::value ) {
-		return (T)( fetchAdd( amount ) + amount );
+		return ( T )( fetchAdd( amount ) + amount );
 	} else {
 		return m_value += amount;
 	}
 }
 
 template <typename T>
-template <typename U, typename std::enable_if<std::is_same<U, T>::value && (std::is_integral<U>::value || std::is_floating_point<U>::value) && !std::is_same<U, bool>::value, int>::type>
+template <typename U,
+          typename std::enable_if<std::is_same<U, T>::value && ( std::is_integral<U>::value || std::is_floating_point<U>::value ) &&
+                                      !std::is_same<U, bool>::value,
+                                  int>::type>
 T SIRAtomic<T>::operator-=( T amount ) noexcept
 {
 	if constexpr ( std::is_floating_point<U>::value ) {
-		return (T)( fetchSub( amount ) - amount );
+		return ( T )( fetchSub( amount ) - amount );
 	} else {
 		return m_value -= amount;
 	}
 }
 
 template <typename T>
-template <typename U, typename std::enable_if<std::is_same<U, T>::value && std::is_integral<U>::value && !std::is_same<U, bool>::value, int>::type>
+template <typename U,
+          typename std::enable_if<std::is_same<U, T>::value && std::is_integral<U>::value && !std::is_same<U, bool>::value, int>::type>
 T SIRAtomic<T>::operator&=( T mask ) noexcept
 {
 	return m_value &= mask;
 }
 
 template <typename T>
-template <typename U, typename std::enable_if<std::is_same<U, T>::value && std::is_integral<U>::value && !std::is_same<U, bool>::value, int>::type>
+template <typename U,
+          typename std::enable_if<std::is_same<U, T>::value && std::is_integral<U>::value && !std::is_same<U, bool>::value, int>::type>
 T SIRAtomic<T>::operator|=( T mask ) noexcept
 {
 	return m_value |= mask;
 }
 
 template <typename T>
-template <typename U, typename std::enable_if<std::is_same<U, T>::value && std::is_integral<U>::value && !std::is_same<U, bool>::value, int>::type>
+template <typename U,
+          typename std::enable_if<std::is_same<U, T>::value && std::is_integral<U>::value && !std::is_same<U, bool>::value, int>::type>
 T SIRAtomic<T>::operator^=( T mask ) noexcept
 {
 	return m_value ^= mask;
 }
 
 template <typename T>
-template <typename U, typename std::enable_if<std::is_same<U, T>::value && std::is_pointer<U>::value && std::is_object<typename std::remove_pointer<U>::type>::value, int>::type>
+template <typename U, typename std::enable_if<std::is_same<U, T>::value && std::is_pointer<U>::value &&
+                                                  std::is_object<typename std::remove_pointer<U>::type>::value,
+                                              int>::type>
 T SIRAtomic<T>::operator+=( ptrdiff_t nAmount ) noexcept
 {
 	return m_value += nAmount;
 }
 
 template <typename T>
-template <typename U, typename std::enable_if<std::is_same<U, T>::value && std::is_pointer<U>::value && std::is_object<typename std::remove_pointer<U>::type>::value, int>::type>
+template <typename U, typename std::enable_if<std::is_same<U, T>::value && std::is_pointer<U>::value &&
+                                                  std::is_object<typename std::remove_pointer<U>::type>::value,
+                                              int>::type>
 T SIRAtomic<T>::operator-=( ptrdiff_t nAmount ) noexcept
 {
 	return m_value -= nAmount;
 }
 
 template <typename T>
-template <typename U, typename std::enable_if<std::is_same<U, T>::value && ((std::is_integral<U>::value && !std::is_same<U, bool>::value) || (std::is_pointer<U>::value && std::is_object<typename std::remove_pointer<U>::type>::value)), int>::type>
+template <typename U,
+          typename std::enable_if<std::is_same<U, T>::value &&
+                                      ( ( std::is_integral<U>::value && !std::is_same<U, bool>::value ) ||
+                                        ( std::is_pointer<U>::value && std::is_object<typename std::remove_pointer<U>::type>::value ) ),
+                                  int>::type>
 T SIRAtomic<T>::operator++( void ) noexcept
 {
 	return ++m_value;
 }
 
 template <typename T>
-template <typename U, typename std::enable_if<std::is_same<U, T>::value && ((std::is_integral<U>::value && !std::is_same<U, bool>::value) || (std::is_pointer<U>::value && std::is_object<typename std::remove_pointer<U>::type>::value)), int>::type>
+template <typename U,
+          typename std::enable_if<std::is_same<U, T>::value &&
+                                      ( ( std::is_integral<U>::value && !std::is_same<U, bool>::value ) ||
+                                        ( std::is_pointer<U>::value && std::is_object<typename std::remove_pointer<U>::type>::value ) ),
+                                  int>::type>
 T SIRAtomic<T>::operator++( int ) noexcept
 {
 	return m_value++;
 }
 
 template <typename T>
-template <typename U, typename std::enable_if<std::is_same<U, T>::value && ((std::is_integral<U>::value && !std::is_same<U, bool>::value) || (std::is_pointer<U>::value && std::is_object<typename std::remove_pointer<U>::type>::value)), int>::type>
+template <typename U,
+          typename std::enable_if<std::is_same<U, T>::value &&
+                                      ( ( std::is_integral<U>::value && !std::is_same<U, bool>::value ) ||
+                                        ( std::is_pointer<U>::value && std::is_object<typename std::remove_pointer<U>::type>::value ) ),
+                                  int>::type>
 T SIRAtomic<T>::operator--( void ) noexcept
 {
 	return --m_value;
 }
 
 template <typename T>
-template <typename U, typename std::enable_if<std::is_same<U, T>::value && ((std::is_integral<U>::value && !std::is_same<U, bool>::value) || (std::is_pointer<U>::value && std::is_object<typename std::remove_pointer<U>::type>::value)), int>::type>
+template <typename U,
+          typename std::enable_if<std::is_same<U, T>::value &&
+                                      ( ( std::is_integral<U>::value && !std::is_same<U, bool>::value ) ||
+                                        ( std::is_pointer<U>::value && std::is_object<typename std::remove_pointer<U>::type>::value ) ),
+                                  int>::type>
 T SIRAtomic<T>::operator--( int ) noexcept
 {
 	return m_value--;
