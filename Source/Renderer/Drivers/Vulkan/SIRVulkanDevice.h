@@ -67,6 +67,7 @@ typedef struct sirVulkanBuffer_s
 {
 	VkBuffer hBuffer;
 	VmaAllocation pAllocation;
+	VmaAllocator pOwnerAllocator;
 	VkDeviceSize nSize;
 	bool bHostVisible;
 } sirVulkanBuffer_t;

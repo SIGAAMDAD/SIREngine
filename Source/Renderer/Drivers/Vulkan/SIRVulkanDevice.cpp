@@ -289,7 +289,8 @@ sirVulkanResult_t SIRVulkanDevice::createBuffer( uint64_t nBytes, VkBufferUsageF
 	if ( !m_bReady ) {
 		return SIR_VULKAN_INVALID_STATE;
 	}
-	if ( pBuffer == nullptr || nBytes == 0 || nUsage == 0 || pBuffer->hBuffer != VK_NULL_HANDLE || pBuffer->pAllocation != nullptr ) {
+	if ( pBuffer == nullptr || nBytes == 0 || nUsage == 0 || pBuffer->hBuffer != VK_NULL_HANDLE || pBuffer->pAllocation != nullptr ||
+	     pBuffer->pOwnerAllocator != nullptr ) {
 		return SIR_VULKAN_INVALID_ARGUMENT;
 	}
 
@@ -311,6 +312,7 @@ sirVulkanResult_t SIRVulkanDevice::createBuffer( uint64_t nBytes, VkBufferUsageF
 		return SIR_VULKAN_ALLOCATION_FAILED;
 	}
 
+	pBuffer->pOwnerAllocator = m_Allocator;
 	pBuffer->nSize = ( VkDeviceSize )nBytes;
 	pBuffer->bHostVisible = bHostVisible;
 	++m_nLiveBuffers;
@@ -322,8 +324,8 @@ sirVulkanResult_t SIRVulkanDevice::writeBuffer( sirVulkanBuffer_t *pBuffer, uint
 	if ( !m_bReady ) {
 		return SIR_VULKAN_INVALID_STATE;
 	}
-	if ( pBuffer == nullptr || pBuffer->pAllocation == nullptr || !pBuffer->bHostVisible || pData == nullptr || nBytes == 0 ||
-	     nOffset > pBuffer->nSize || nBytes > pBuffer->nSize - nOffset ) {
+	if ( pBuffer == nullptr || pBuffer->pAllocation == nullptr || pBuffer->pOwnerAllocator != m_Allocator || !pBuffer->bHostVisible ||
+	     pData == nullptr || nBytes == 0 || nOffset > pBuffer->nSize || nBytes > pBuffer->nSize - nOffset ) {
 		return SIR_VULKAN_INVALID_ARGUMENT;
 	}
 	void *pMapped = nullptr;
@@ -342,7 +344,8 @@ sirVulkanResult_t SIRVulkanDevice::destroyIdleBuffer( sirVulkanBuffer_t *pBuffer
 	if ( !m_bReady ) {
 		return SIR_VULKAN_INVALID_STATE;
 	}
-	if ( pBuffer == nullptr || pBuffer->hBuffer == VK_NULL_HANDLE || pBuffer->pAllocation == nullptr || m_nLiveBuffers == 0 ) {
+	if ( pBuffer == nullptr || pBuffer->hBuffer == VK_NULL_HANDLE || pBuffer->pAllocation == nullptr ||
+	     pBuffer->pOwnerAllocator != m_Allocator || m_nLiveBuffers == 0 ) {
 		return SIR_VULKAN_INVALID_ARGUMENT;
 	}
 	vmaDestroyBuffer( m_Allocator, pBuffer->hBuffer, pBuffer->pAllocation );
