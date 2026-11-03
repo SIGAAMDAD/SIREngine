@@ -363,19 +363,17 @@ static bool testDeferredMultiQueueRetirement( SIRD3D12Device &device )
 	}
 	sirD3D12CompletionSet_t computed = {};
 	sirD3D12CompletionSet_t submitted = {};
-	if ( !device.submitComputeAfterCopy( ticket, &computed ) ||
-	     !device.submitGraphicsAfterCompute( computed, &submitted ) ) {
+	if ( !device.submitComputeAfterCopy( ticket, &computed ) || !device.submitGraphicsAfterCompute( computed, &submitted ) ) {
 		return false;
 	}
-	if ( !testRetirementInvalidCompletions( device, submitted ) ||
-	     !testRetirementQueueCapacity( device, submitted ) || !testRetirementCollect( device, submitted ) ) {
+	if ( !testRetirementInvalidCompletions( device, submitted ) || !testRetirementQueueCapacity( device, submitted ) ||
+	     !testRetirementCollect( device, submitted ) ) {
 		return false;
 	}
 
 	bool bComplete = false;
 	if ( !device.pollCompletionSet( submitted, &bComplete ) || !bComplete ||
-	     !device.getTransfers().receive( ticket, szOutput, sizeof( szOutput ) ) ||
-	     memcmp( szInput, szOutput, sizeof( szInput ) ) != 0 ) {
+	     !device.getTransfers().receive( ticket, szOutput, sizeof( szOutput ) ) || memcmp( szInput, szOutput, sizeof( szInput ) ) != 0 ) {
 		return false;
 	}
 

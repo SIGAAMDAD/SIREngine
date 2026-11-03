@@ -766,8 +766,8 @@ bool SIRD3D12Device::submitGraphicsAfterCompute( const sirD3D12CompletionSet_t &
 	return snapshotCompletionSet( pSet ) && pSet->nGraphicsFence == nGraphicsFence;
 }
 
-bool SIRD3D12Device::createNativeBuffer( D3D12_HEAP_TYPE eHeapType, D3D12_RESOURCE_STATES eInitialState,
-                                         uint64_t nBytes, D3D12MA::Allocation **ppAllocation ) noexcept
+bool SIRD3D12Device::createNativeBuffer( D3D12_HEAP_TYPE eHeapType, D3D12_RESOURCE_STATES eInitialState, uint64_t nBytes,
+                                         D3D12MA::Allocation **ppAllocation ) noexcept
 {
 	if ( ppAllocation == nullptr ) {
 		m_nLastError = E_POINTER;
@@ -783,8 +783,7 @@ bool SIRD3D12Device::createNativeBuffer( D3D12_HEAP_TYPE eHeapType, D3D12_RESOUR
 	return SUCCEEDED( m_nLastError ) && *ppAllocation != nullptr;
 }
 
-bool SIRD3D12Device::retireNativeAllocation( D3D12MA::Allocation **ppAllocation,
-                                              const sirD3D12CompletionSet_t &completion ) noexcept
+bool SIRD3D12Device::retireNativeAllocation( D3D12MA::Allocation **ppAllocation, const sirD3D12CompletionSet_t &completion ) noexcept
 {
 	if ( ppAllocation == nullptr || *ppAllocation == nullptr || !isReady() ) {
 		m_nLastError = E_INVALIDARG;
