@@ -126,3 +126,17 @@ only with `SIR_WITH_FMOD=ON`; SDK-free tests cover its owned lifecycle.
 Events must be registered once their FMOD banks are resident. Bank/GRDG
 integration, actual SDK execution, spatial updates and parameter bindings
 remain separate acceptance work.
+
+
+## Wave D — FMOD bank-store integration
+
+`FMOD/SIRFMODBankStore` provides bounded, allocator-owned bank and
+event-binding tables, metadata load/unload, optional asynchronous sample
+preloading and membership-checked registration with the existing voice
+backend. Unloading refuses active voices and preserves native handles on
+failure. The FMOD SDK implementation is enabled only by `SIR_WITH_FMOD`.
+
+The cooked manifest's provider/package identity and dependency ordering
+must be used by the caller when deciding which bank to load. Automatic
+GRDG resource publication, asynchronous bank streaming, and real-SDK
+bank fixture tests are not included in this change.

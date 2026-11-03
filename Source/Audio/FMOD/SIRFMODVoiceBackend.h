@@ -107,6 +107,8 @@ public:
 	                            uint32_t nMaxRegisteredEvents ) noexcept;
 	sirAudioResult_t registerEvent( uint64_t nEventId, const char *szPath ) noexcept;
 	sirAudioResult_t unregisterEvent( uint64_t nEventId ) noexcept;
+	bool isInitialized( void ) const noexcept;
+	bool isEventInUse( uint64_t nEventId ) const noexcept;
 	uint32_t getActiveVoiceCount( void ) const noexcept;
 	int32_t getLastNativeResult( void ) const noexcept;
 	static sirAudioBackendOps_t getBackendOps( void ) noexcept;

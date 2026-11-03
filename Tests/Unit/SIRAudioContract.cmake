@@ -24,3 +24,8 @@ add_executable(SIRFMODVoiceBackendTests SIRFMODVoiceBackendTests.cpp)
 target_link_libraries(SIRFMODVoiceBackendTests PRIVATE SIR::FMODContext)
 add_test(NAME audio.fmod.voice-lifecycle COMMAND SIRFMODVoiceBackendTests)
 sir_configure_owned_target(SIRFMODVoiceBackendTests)
+
+add_executable(SIRFMODBankStoreTests SIRFMODBankStoreTests.cpp)
+target_link_libraries(SIRFMODBankStoreTests PRIVATE SIR::FMODContext)
+add_test(NAME audio.fmod.bank-residency COMMAND SIRFMODBankStoreTests)
+sir_configure_owned_target(SIRFMODBankStoreTests)
