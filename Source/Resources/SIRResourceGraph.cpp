@@ -111,7 +111,9 @@ SIRResourceGraphWriter::SIRResourceGraphWriter( SIRResourceGraph &rGraph ) noexc
 }
 
 SIRResourceGraph::SIRResourceGraph( const SIRResourceGraphConfig &rConfig ) noexcept
-    : m_Config( rConfig ), m_Writer( *this ), m_OwnerThread( std::this_thread::get_id() ), m_nActiveReaders( 0 ), m_pSlots( nullptr ),
+    : m_Config( rConfig ), m_Writer( *this ), m_OwnerThread( std::this_thread::get_id() ), m_nActiveReaders( 0 ),
+      m_KeyIndexAllocator{ this, allocateKeyIndex, releaseKeyIndex, rConfig.m_nMetadataDomain, 0x47524447U },
+      m_KeyIndex( &m_KeyIndexAllocator ), m_pSlots( nullptr ),
       m_pStaging( nullptr ), m_pProviderPins( nullptr ), m_pTraversalQueue( nullptr ), m_nTraversalStamp( 0 ), m_pSharedChunks( nullptr ),
       m_pRetired( nullptr ), m_nCommittedBytes( 0 ), m_nPeakCommittedBytes( 0 ), m_nPayloadBytes( 0 ), m_nUniqueChunks( 0 ),
       m_nRetiredRecords( 0 ), m_bReady( false )
@@ -136,6 +138,9 @@ SIRResourceGraph::SIRResourceGraph( const SIRResourceGraphConfig &rConfig ) noex
 	}
 	memset( m_pStaging, 0, ( size_t )nStaging );
 	memset( m_pProviderPins, 0, ( size_t )nPins );
+	if ( m_KeyIndex.tryReserve( m_Config.m_nMaxResources ) != SIR_CONTAINER_OK ) {
+		return;
+	}
 	m_bReady = true;
 }
 
@@ -178,6 +183,23 @@ SIRResourceGraph::~SIRResourceGraph( void ) noexcept
 	release( m_pStaging, ( uint64_t )m_Config.m_nMaxStaging * sizeof( SIRStagingSlot ), alignof( SIRStagingSlot ),
 	         m_Config.m_nMetadataDomain );
 	release( m_pSlots, ( uint64_t )m_Config.m_nMaxResources * sizeof( SIRGraphSlot ), alignof( SIRGraphSlot ), m_Config.m_nMetadataDomain );
+}
+
+void *SIRResourceGraph::allocateKeyIndex( void *pContext, size_t nBytes, size_t nAlignment ) noexcept
+{
+	SIRResourceGraph *pGraph = ( SIRResourceGraph * )pContext;
+	if ( pGraph == nullptr || nAlignment > UINT32_MAX ) {
+		return nullptr;
+	}
+	return pGraph->allocate( ( uint64_t )nBytes, ( uint32_t )nAlignment, pGraph->m_Config.m_nMetadataDomain );
+}
+
+void SIRResourceGraph::releaseKeyIndex( void *pContext, void *pData, size_t nBytes, size_t nAlignment ) noexcept
+{
+	SIRResourceGraph *pGraph = ( SIRResourceGraph * )pContext;
+	if ( pGraph != nullptr && pData != nullptr ) {
+		pGraph->release( pData, ( uint64_t )nBytes, ( uint32_t )nAlignment, pGraph->m_Config.m_nMetadataDomain );
+	}
 }
 
 void *SIRResourceGraph::allocate( uint64_t nSize, uint32_t nAlignment, uint32_t nDomain ) noexcept
@@ -232,21 +254,14 @@ SIRResourceGraphStats SIRResourceGraph::getStats( void ) const noexcept
 	result.m_nPayloadBytes = m_nPayloadBytes;
 	result.m_nUniqueChunks = m_nUniqueChunks;
 	result.m_nRetiredRecords = m_nRetiredRecords;
-	for ( uint32_t iSlot = 0; iSlot < m_Config.m_nMaxResources; ++iSlot ) {
-		result.m_nLiveResources += m_pSlots[iSlot].m_pPublished.load( std::memory_order_seq_cst ) != nullptr ? 1 : 0;
-	}
+	result.m_nLiveResources = m_KeyIndex.getSize();
 	return result;
 }
 
 int32_t SIRResourceGraph::findSlot( const SIRResourceKey &rKey ) const noexcept
 {
-	for ( uint32_t iSlot = 0; iSlot < m_Config.m_nMaxResources; ++iSlot ) {
-		const SIRPublishedResourceRecord *pRecord = m_pSlots[iSlot].m_pPublished.load( std::memory_order_seq_cst );
-		if ( pRecord && sameKey( pRecord->m_Info.m_Key, rKey ) ) {
-			return ( int32_t )iSlot;
-		}
-	}
-	return -1;
+	const uint32_t *pSlot = m_KeyIndex.find( rKey );
+	return pSlot != nullptr ? ( int32_t )*pSlot : -1;
 }
 
 int32_t SIRResourceGraph::findEmptySlot( void ) const noexcept
@@ -362,6 +377,10 @@ SIRResourceResult SIRResourceGraphWriter::request( const SIRResourceKey &rKey, S
 	pRecord->m_Info.m_Key = rKey;
 	pRecord->m_Info.m_eState = SIR_RESOURCE_STATE_REQUESTED;
 	pRecord->m_Handle = { ( uint32_t )iSlot, m_pGraph->m_pSlots[iSlot].m_nNextGeneration, rKey.m_nTypeId, 0 };
+	if ( m_pGraph->m_KeyIndex.tryInsert( rKey, ( uint32_t )iSlot ) != SIR_CONTAINER_OK ) {
+		m_pGraph->destroyRecord( pRecord );
+		return SIR_RESOURCE_RESULT_OUT_OF_BUDGET;
+	}
 	m_pGraph->m_pSlots[iSlot].m_nNextGeneration = nextGeneration( pRecord->m_Handle.m_nGeneration );
 	m_pGraph->publishRecord( ( uint32_t )iSlot, pRecord );
 	*pHandle = pRecord->m_Handle;
@@ -649,6 +668,10 @@ SIRResourceResult SIRResourceGraphWriter::publish( const SIRResourcePublication 
 			return eResult;
 		}
 	}
+	if ( !pPrior && m_pGraph->m_KeyIndex.tryInsert( rPublication.m_Key, ( uint32_t )iSlot ) != SIR_CONTAINER_OK ) {
+		m_pGraph->abandonUnpublishedRecord( pRecord );
+		return SIR_RESOURCE_RESULT_OUT_OF_BUDGET;
+	}
 	m_pGraph->adoptPublishedRecordChunks( pRecord );
 	if ( !pPrior ) {
 		m_pGraph->m_pSlots[iSlot].m_nNextGeneration = nextGeneration( pRecord->m_Handle.m_nGeneration );
@@ -750,6 +773,9 @@ SIRResourceResult SIRResourceGraphWriter::retire( SIRResourceHandle hResource ) 
 	SIRResourceResult eResult = m_pGraph->checkHandle( hResource, &pRecord );
 	if ( eResult != SIR_RESOURCE_RESULT_SUCCESS ) {
 		return eResult;
+	}
+	if ( !m_pGraph->m_KeyIndex.erase( pRecord->m_Info.m_Key ) ) {
+		return SIR_RESOURCE_RESULT_FAILED;
 	}
 	m_pGraph->publishRecord( hResource.m_nSlot, nullptr );
 	return SIR_RESOURCE_RESULT_SUCCESS;

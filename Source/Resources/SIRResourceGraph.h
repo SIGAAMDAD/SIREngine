@@ -25,6 +25,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // clang-format on
 
 #include "SIRResourceViews.h"
+#include <Core/Containers/SIRFlatHashMap.h>
 
 #include <atomic>
 #include <mutex>
@@ -36,6 +37,30 @@ struct SIRSharedResourceChunk;
 struct SIRGraphSlot;
 struct SIRStagingSlot;
 struct SIRProviderPinSlot;
+
+// The key index belongs exclusively to the GRDG writer. Concurrent readers
+// still resolve through published slots under their read scopes.
+class SIRResourceKeyHash
+{
+public:
+	size_t operator()( const SIRResourceKey &rKey ) const noexcept
+	{
+		uint64_t nHash = rKey.m_nAssetId;
+		nHash ^= ( uint64_t )rKey.m_nTypeId * UINT64_C( 0x9e3779b97f4a7c15 );
+		nHash ^= ( uint64_t )rKey.m_nVariantId * UINT64_C( 0xc2b2ae3d27d4eb4f );
+		return ( size_t )nHash;
+	}
+};
+
+class SIRResourceKeyEqual
+{
+public:
+	bool operator()( const SIRResourceKey &rLeft, const SIRResourceKey &rRight ) const noexcept
+	{
+		return rLeft.m_nAssetId == rRight.m_nAssetId && rLeft.m_nTypeId == rRight.m_nTypeId &&
+		       rLeft.m_nVariantId == rRight.m_nVariantId;
+	}
+};
 
 // All GRDG allocations use this supplied domain-aware allocator. There is no
 // implicit malloc/new fallback. NMDMemory supplies these callbacks when ported.
@@ -104,6 +129,8 @@ private:
 	std::thread::id m_OwnerThread;
 	mutable std::atomic<uint32_t> m_nActiveReaders;
 	mutable std::mutex m_PinMutex;
+	sirContainerAllocator_t m_KeyIndexAllocator;
+	SIRFlatHashMap<SIRResourceKey, uint32_t, SIRResourceKeyHash, SIRResourceKeyEqual> m_KeyIndex;
 	SIRGraphSlot *m_pSlots;
 	SIRStagingSlot *m_pStaging;
 	SIRProviderPinSlot *m_pProviderPins;
@@ -118,6 +145,8 @@ private:
 	uint32_t m_nRetiredRecords;
 	bool m_bReady;
 
+	static void *allocateKeyIndex( void *pContext, size_t nBytes, size_t nAlignment ) noexcept;
+	static void releaseKeyIndex( void *pContext, void *pData, size_t nBytes, size_t nAlignment ) noexcept;
 	void *allocate( uint64_t nSize, uint32_t nAlignment, uint32_t nDomain ) noexcept;
 	void release( void *pData, uint64_t nSize, uint32_t nAlignment, uint32_t nDomain ) noexcept;
 	bool isWriterThread( void ) const noexcept;
