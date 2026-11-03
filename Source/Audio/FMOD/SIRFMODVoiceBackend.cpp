@@ -410,6 +410,21 @@ sirAudioResult_t SIRFMODVoiceBackend::submitSpatialCallback( void *, const sirAu
 	return SIR_AUDIO_UNSUPPORTED;
 }
 
+bool SIRFMODVoiceBackend::isInitialized( void ) const noexcept
+{
+	return m_bInitialized;
+}
+
+bool SIRFMODVoiceBackend::isEventInUse( uint64_t nEventId ) const noexcept
+{
+	for ( uint32_t iVoice = 0; iVoice < m_nVoiceCapacity; ++iVoice ) {
+		if ( m_pVoices[iVoice].pInstance != nullptr && m_pVoices[iVoice].nEventId == nEventId ) {
+			return true;
+		}
+	}
+	return false;
+}
+
 uint32_t SIRFMODVoiceBackend::getActiveVoiceCount( void ) const noexcept
 {
 	uint32_t nCount = 0;
