@@ -23,10 +23,9 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
-#if defined(_MSC_VER)
+#if defined( _MSC_VER )
 #include <malloc.h>
 #endif
-
 
 static void sirTestCheck( bool bSuccess, const char *pszExpression, int nLine )
 {
@@ -36,7 +35,7 @@ static void sirTestCheck( bool bSuccess, const char *pszExpression, int nLine )
 	}
 }
 
-#define SIR_TEST_CHECK(expression) sirTestCheck( ( expression ), #expression, __LINE__ )
+#define SIR_TEST_CHECK( expression ) sirTestCheck( ( expression ), #expression, __LINE__ )
 
 typedef struct sirDifferentialMemory_s
 {
@@ -50,7 +49,7 @@ static void *diffAllocate( void *pContext, size_t nBytes, size_t nAlignment )
 		nAlignment = sizeof( void * );
 	}
 	void *pMemory = nullptr;
-#if defined(_MSC_VER)
+#if defined( _MSC_VER )
 	pMemory = _aligned_malloc( nBytes, nAlignment );
 #else
 	if ( posix_memalign( &pMemory, nAlignment, nBytes ) != 0 ) {
@@ -71,7 +70,7 @@ static void diffFree( void *pContext, void *pMemory, size_t nBytes, size_t )
 	SIR_TEST_CHECK( pMemoryInfo->nLiveBytes >= nBytes && pMemoryInfo->nActive > 0 );
 	pMemoryInfo->nLiveBytes -= nBytes;
 	--pMemoryInfo->nActive;
-#if defined(_MSC_VER)
+#if defined( _MSC_VER )
 	_aligned_free( pMemory );
 #else
 	free( pMemory );
@@ -80,7 +79,10 @@ static void diffFree( void *pContext, void *pMemory, size_t nBytes, size_t )
 
 typedef struct sirCollisionHash_s
 {
-	size_t operator()( uint32_t nKey ) const noexcept { return ( nKey >> 3 ) & 15u; }
+	size_t operator()( uint32_t nKey ) const noexcept
+	{
+		return ( nKey >> 3 ) & 15u;
+	}
 } sirCollisionHash_t;
 
 static uint32_t nextRandom( uint32_t *pState ) noexcept

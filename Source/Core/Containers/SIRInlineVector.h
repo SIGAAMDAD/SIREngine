@@ -100,10 +100,9 @@ private:
 		return SIR_CONTAINER_OK;
 	}
 
-
 public:
 	explicit SIRInlineVector( const sirContainerAllocator_t *pAllocator ) noexcept
-		: m_pData( inlineData() ), m_nSize( 0 ), m_nCapacity( N ), m_pAllocator( pAllocator )
+	    : m_pData( inlineData() ), m_nSize( 0 ), m_nCapacity( N ), m_pAllocator( pAllocator )
 	{
 	}
 
@@ -162,7 +161,7 @@ public:
 	sirContainerFootprint_t getFootprint( void ) const noexcept
 	{
 		return { ( uint64_t )N * sizeof( T ), isInline() ? 0u : ( uint64_t )m_nCapacity * sizeof( T ), 0, 0,
-			( uint64_t )m_nSize * sizeof( T ) };
+		         ( uint64_t )m_nSize * sizeof( T ) };
 	}
 
 	sirContainerResult_t tryReserve( uint32_t nCapacity )

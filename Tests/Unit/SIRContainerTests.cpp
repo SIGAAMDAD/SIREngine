@@ -29,7 +29,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Core/Containers/SIRVector.h>
 #include <stdio.h>
 #include <stdlib.h>
-#if defined(_MSC_VER)
+#if defined( _MSC_VER )
 #include <malloc.h>
 #endif
 #include <limits>
@@ -45,8 +45,7 @@ static void sirTestCheck( bool bSuccess, const char *pszExpression, int nLine )
 	}
 }
 
-#define SIR_TEST_CHECK(expression) sirTestCheck( ( expression ), #expression, __LINE__ )
-
+#define SIR_TEST_CHECK( expression ) sirTestCheck( ( expression ), #expression, __LINE__ )
 
 typedef struct sirTestAllocator_s
 {
@@ -68,7 +67,7 @@ static void *testAllocate( void *pContext, size_t nBytes, size_t nAlignment )
 		nAlignment = sizeof( void * );
 	}
 	void *pMemory = nullptr;
-#if defined(_MSC_VER)
+#if defined( _MSC_VER )
 	pMemory = _aligned_malloc( nBytes, nAlignment );
 	if ( pMemory == nullptr ) {
 		return nullptr;
@@ -91,7 +90,7 @@ static void testDeallocate( void *pContext, void *pMemory, size_t nBytes, size_t
 	++pState->nDeallocations;
 	SIR_TEST_CHECK( nBytes <= pState->nLiveBytes );
 	pState->nLiveBytes -= nBytes;
-#if defined(_MSC_VER)
+#if defined( _MSC_VER )
 	_aligned_free( pMemory );
 #else
 	free( pMemory );
@@ -106,7 +105,10 @@ public:
 	int m_nValue;
 	static bool s_bThrowOnCopy;
 
-	explicit SIRTestLiveObject( int nValue ) : m_nValue( nValue ) { ++s_nLive; }
+	explicit SIRTestLiveObject( int nValue ) : m_nValue( nValue )
+	{
+		++s_nLive;
+	}
 	SIRTestLiveObject( const SIRTestLiveObject &other ) : m_nValue( other.m_nValue )
 	{
 		if ( s_bThrowOnCopy ) {
@@ -114,8 +116,15 @@ public:
 		}
 		++s_nLive;
 	}
-	SIRTestLiveObject( SIRTestLiveObject &&other ) noexcept( false ) : m_nValue( other.m_nValue ) { ++s_nLive; }
-	~SIRTestLiveObject( void ) noexcept { --s_nLive; ++s_nDestroyed; }
+	SIRTestLiveObject( SIRTestLiveObject &&other ) noexcept( false ) : m_nValue( other.m_nValue )
+	{
+		++s_nLive;
+	}
+	~SIRTestLiveObject( void ) noexcept
+	{
+		--s_nLive;
+		++s_nDestroyed;
+	}
 };
 int SIRTestLiveObject::s_nLive = 0;
 int SIRTestLiveObject::s_nDestroyed = 0;

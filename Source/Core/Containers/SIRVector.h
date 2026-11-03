@@ -83,10 +83,9 @@ private:
 		return SIR_CONTAINER_OK;
 	}
 
-
 public:
 	explicit SIRVector( const sirContainerAllocator_t *pAllocator ) noexcept
-		: m_pData( nullptr ), m_nSize( 0 ), m_nCapacity( 0 ), m_pAllocator( pAllocator )
+	    : m_pData( nullptr ), m_nSize( 0 ), m_nCapacity( 0 ), m_pAllocator( pAllocator )
 	{
 	}
 
@@ -100,7 +99,7 @@ public:
 	SIRVector &operator=( const SIRVector & ) = delete;
 
 	SIRVector( SIRVector &&other ) noexcept
-		: m_pData( other.m_pData ), m_nSize( other.m_nSize ), m_nCapacity( other.m_nCapacity ), m_pAllocator( other.m_pAllocator )
+	    : m_pData( other.m_pData ), m_nSize( other.m_nSize ), m_nCapacity( other.m_nCapacity ), m_pAllocator( other.m_pAllocator )
 	{
 		other.m_pData = nullptr;
 		other.m_nSize = 0;

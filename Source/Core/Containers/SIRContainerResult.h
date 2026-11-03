@@ -1,6 +1,8 @@
 /*
 ===========================================================================
 SIREngine MPLv2 Source Code
+
+
 Copyright (C) 2023-2027 Noah Van Til
 
 This Source Code Form is subject to the terms of the Mozilla Public
@@ -41,8 +43,8 @@ typedef enum sirContainerResult_e : uint8_t
 typedef struct sirContainerAllocator_s
 {
 	void *pContext;
-	void *(*pfnAllocate)( void *pContext, size_t nBytes, size_t nAlignment );
-	void (*pfnDeallocate)( void *pContext, void *pMemory, size_t nBytes, size_t nAlignment );
+	void *( *pfnAllocate )( void *pContext, size_t nBytes, size_t nAlignment );
+	void ( *pfnDeallocate )( void *pContext, void *pMemory, size_t nBytes, size_t nAlignment );
 	uint32_t nDomainId;
 	uint32_t nOwnerTag;
 } sirContainerAllocator_t;

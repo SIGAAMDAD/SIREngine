@@ -209,7 +209,7 @@ private:
 
 public:
 	explicit SIRFlatHashSet( const sirContainerAllocator_t *pAllocator, Hash hash = Hash(), Equal equal = Equal() )
-		: m_pAllocator( pAllocator ), m_hash( std::move( hash ) ), m_equal( std::move( equal ) )
+	    : m_pAllocator( pAllocator ), m_hash( std::move( hash ) ), m_equal( std::move( equal ) )
 	{
 	}
 

@@ -58,7 +58,7 @@ public:
 	}
 
 	static sirContainerResult_t tryAllocate( const sirContainerAllocator_t *pAllocator, size_t nBytes, size_t nAlignment,
-		void **ppMemory ) noexcept
+	                                         void **ppMemory ) noexcept
 	{
 		if ( ppMemory == nullptr ) {
 			return SIR_CONTAINER_INVALID_ARGUMENT;

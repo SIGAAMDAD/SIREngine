@@ -31,7 +31,13 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <malloc.h>
 #endif
 
-#define SIR_CHECK( condition ) do { if ( !( condition ) ) { fprintf( stderr, "Container regression failed at line %d: %s\n", __LINE__, #condition ); abort(); } } while ( 0 )
+#define SIR_CHECK( condition )                                                                                                             \
+	do {                                                                                                                                   \
+		if ( !( condition ) ) {                                                                                                            \
+			fprintf( stderr, "Container regression failed at line %d: %s\n", __LINE__, #condition );                                       \
+			abort();                                                                                                                       \
+		}                                                                                                                                  \
+	} while ( 0 )
 
 typedef struct sirOptimizationTestMemory_s
 {
@@ -83,7 +89,10 @@ public:
 	static bool s_bFail;
 	int m_nValue;
 
-	explicit SIRTestCopyFailure( int nValue ) : m_nValue( nValue ) { ++s_nLive; }
+	explicit SIRTestCopyFailure( int nValue ) : m_nValue( nValue )
+	{
+		++s_nLive;
+	}
 	SIRTestCopyFailure( const SIRTestCopyFailure &other ) : m_nValue( other.m_nValue )
 	{
 		if ( s_bFail ) {
@@ -91,8 +100,14 @@ public:
 		}
 		++s_nLive;
 	}
-	SIRTestCopyFailure( SIRTestCopyFailure &&other ) noexcept( false ) : m_nValue( other.m_nValue ) { ++s_nLive; }
-	~SIRTestCopyFailure( void ) noexcept { --s_nLive; }
+	SIRTestCopyFailure( SIRTestCopyFailure &&other ) noexcept( false ) : m_nValue( other.m_nValue )
+	{
+		++s_nLive;
+	}
+	~SIRTestCopyFailure( void ) noexcept
+	{
+		--s_nLive;
+	}
 };
 uint32_t SIRTestCopyFailure::s_nLive = 0;
 bool SIRTestCopyFailure::s_bFail = false;
