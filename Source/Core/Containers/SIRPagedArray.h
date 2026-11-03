@@ -119,7 +119,7 @@ public:
         for ( uint32_t iPage = 0; iPage < m_pages.getSize(); ++iPage ) {
             SIRRawStorage::deallocate( m_pAllocator, m_pages[iPage], nPageBytes, alignof( T ) );
         }
-        m_pages.clear();
+        m_pages = SIRVector<T *>( m_pAllocator );
     }
 };
 

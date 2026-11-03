@@ -133,6 +133,7 @@ int main( void )
         CHECK( pages.tryGet( 6 )->m_nValue == 99 );
         pages.clearAndRelease();
         CHECK( pages.getPageCount() == 0 );
+        CHECK( state.nLiveBytes == 0 );
         state.nFailures = 1;
         CHECK( pages.tryEmplaceBack( 42 ) == SIR_CONTAINER_OUT_OF_MEMORY );
         CHECK( pages.getSize() == 0 && pages.getPageCount() == 0 );
