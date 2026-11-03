@@ -26,16 +26,16 @@ static SIRAtomic<uint64_t> s_nNextVulkanSerial( 1 );
 SIRVulkanDevice::SIRVulkanDevice( void ) noexcept
     : m_Library{ nullptr }, m_pfnGetInstanceProcAddr( nullptr ), m_pfnGetDeviceProcAddr( nullptr ), m_pfnDestroyInstance( nullptr ),
       m_pfnEnumeratePhysicalDevices( nullptr ), m_pfnGetPhysicalDeviceProperties( nullptr ),
-      m_pfnGetPhysicalDeviceQueueFamilyProperties( nullptr ), m_pfnGetPhysicalDeviceMemoryProperties( nullptr ), m_pfnGetPhysicalDeviceFeatures2( nullptr ),
-      m_pfnCreateDevice( nullptr ), m_pfnDestroyDevice( nullptr ), m_pfnGetDeviceQueue( nullptr ), m_pfnDeviceWaitIdle( nullptr ),
-      m_pfnCreateCommandPool( nullptr ), m_pfnDestroyCommandPool( nullptr ), m_pfnAllocateCommandBuffers( nullptr ),
-      m_pfnResetCommandBuffer( nullptr ), m_pfnBeginCommandBuffer( nullptr ), m_pfnEndCommandBuffer( nullptr ),
-      m_pfnCmdPipelineBarrier2( nullptr ), m_pfnCmdCopyBuffer2( nullptr ), m_pfnQueueSubmit2( nullptr ),
+      m_pfnGetPhysicalDeviceQueueFamilyProperties( nullptr ), m_pfnGetPhysicalDeviceMemoryProperties( nullptr ),
+      m_pfnGetPhysicalDeviceFeatures2( nullptr ), m_pfnCreateDevice( nullptr ), m_pfnDestroyDevice( nullptr ),
+      m_pfnGetDeviceQueue( nullptr ), m_pfnDeviceWaitIdle( nullptr ), m_pfnCreateCommandPool( nullptr ), m_pfnDestroyCommandPool( nullptr ),
+      m_pfnAllocateCommandBuffers( nullptr ), m_pfnResetCommandBuffer( nullptr ), m_pfnBeginCommandBuffer( nullptr ),
+      m_pfnEndCommandBuffer( nullptr ), m_pfnCmdPipelineBarrier2( nullptr ), m_pfnCmdCopyBuffer2( nullptr ), m_pfnQueueSubmit2( nullptr ),
       m_pfnCreateSemaphore( nullptr ), m_pfnDestroySemaphore( nullptr ), m_pfnGetSemaphoreCounterValue( nullptr ),
-      m_pfnWaitSemaphores( nullptr ), m_Instance( VK_NULL_HANDLE ),
-      m_PhysicalDevice( VK_NULL_HANDLE ), m_Device( VK_NULL_HANDLE ), m_GraphicsQueue( VK_NULL_HANDLE ), m_Allocator( nullptr ),
-      m_TransferCommandPool( VK_NULL_HANDLE ), m_TransferTimeline( VK_NULL_HANDLE ), m_TransferSlots{}, m_nDeviceSerial( 0 ),
-      m_nLastTransferValue( 0 ), m_iNextTransferSlot( 0 ), m_bDeviceLost( false ), m_Adapter{}, m_nLiveBuffers( 0 ), m_bReady( false )
+      m_pfnWaitSemaphores( nullptr ), m_Instance( VK_NULL_HANDLE ), m_PhysicalDevice( VK_NULL_HANDLE ), m_Device( VK_NULL_HANDLE ),
+      m_GraphicsQueue( VK_NULL_HANDLE ), m_Allocator( nullptr ), m_TransferCommandPool( VK_NULL_HANDLE ),
+      m_TransferTimeline( VK_NULL_HANDLE ), m_TransferSlots{}, m_nDeviceSerial( 0 ), m_nLastTransferValue( 0 ), m_iNextTransferSlot( 0 ),
+      m_bDeviceLost( false ), m_Adapter{}, m_nLiveBuffers( 0 ), m_bReady( false )
 {
 }
 

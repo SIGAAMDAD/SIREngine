@@ -83,8 +83,7 @@ int main( void )
 	if ( device.submitBufferCopy( &buffer, 0, &gpu, 0, 128, &first ) != SIR_VULKAN_SUCCESS || first.nValue == 0 ) {
 		return 14;
 	}
-	if ( device.submitBufferCopy( &gpu, 0, &readback, 0, 128, &second ) != SIR_VULKAN_SUCCESS ||
-	     second.nValue <= first.nValue ) {
+	if ( device.submitBufferCopy( &gpu, 0, &readback, 0, 128, &second ) != SIR_VULKAN_SUCCESS || second.nValue <= first.nValue ) {
 		return 15;
 	}
 	bool bCompleted = false;
@@ -103,8 +102,7 @@ int main( void )
 	     device.submitBufferCopy( &readback, 0, &gpu, 0, 128, &invalid ) != SIR_VULKAN_INVALID_ARGUMENT ) {
 		return 18;
 	}
-	if ( device.destroyIdleBuffer( &gpu ) != SIR_VULKAN_SUCCESS ||
-	     device.destroyIdleBuffer( &readback ) != SIR_VULKAN_SUCCESS ) {
+	if ( device.destroyIdleBuffer( &gpu ) != SIR_VULKAN_SUCCESS || device.destroyIdleBuffer( &readback ) != SIR_VULKAN_SUCCESS ) {
 		return 19;
 	}
 	if ( device.destroyIdleBuffer( &buffer ) != SIR_VULKAN_SUCCESS || buffer.pAllocation != nullptr ||

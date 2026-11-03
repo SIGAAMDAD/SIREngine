@@ -105,8 +105,7 @@ bool SIRVulkanDevice::isBufferIdle( const sirVulkanBuffer_t *pBuffer ) const noe
 		return true;
 	}
 	uint64_t nCompleted = 0;
-	return m_pfnGetSemaphoreCounterValue( m_Device, m_TransferTimeline, &nCompleted ) == VK_SUCCESS &&
-	       nCompleted >= pBuffer->nLastGpuUse;
+	return m_pfnGetSemaphoreCounterValue( m_Device, m_TransferTimeline, &nCompleted ) == VK_SUCCESS && nCompleted >= pBuffer->nLastGpuUse;
 }
 
 sirVulkanResult_t SIRVulkanDevice::queryCompletion( const sirVulkanCompletion_t *pCompletion, bool *pComplete ) const noexcept
@@ -117,8 +116,8 @@ sirVulkanResult_t SIRVulkanDevice::queryCompletion( const sirVulkanCompletion_t 
 	if ( !m_bReady || m_bDeviceLost ) {
 		return SIR_VULKAN_INVALID_STATE;
 	}
-	if ( pCompletion == nullptr || pComplete == nullptr || pCompletion->nDeviceSerial != m_nDeviceSerial ||
-	     pCompletion->nValue == 0 || pCompletion->nValue > m_nLastTransferValue ) {
+	if ( pCompletion == nullptr || pComplete == nullptr || pCompletion->nDeviceSerial != m_nDeviceSerial || pCompletion->nValue == 0 ||
+	     pCompletion->nValue > m_nLastTransferValue ) {
 		return SIR_VULKAN_INVALID_ARGUMENT;
 	}
 	uint64_t nCompleted = 0;
@@ -135,8 +134,8 @@ sirVulkanResult_t SIRVulkanDevice::waitCompletion( const sirVulkanCompletion_t *
 	if ( !m_bReady || m_bDeviceLost ) {
 		return SIR_VULKAN_INVALID_STATE;
 	}
-	if ( pCompletion == nullptr || pCompletion->nDeviceSerial != m_nDeviceSerial ||
-	     pCompletion->nValue == 0 || pCompletion->nValue > m_nLastTransferValue ) {
+	if ( pCompletion == nullptr || pCompletion->nDeviceSerial != m_nDeviceSerial || pCompletion->nValue == 0 ||
+	     pCompletion->nValue > m_nLastTransferValue ) {
 		return SIR_VULKAN_INVALID_ARGUMENT;
 	}
 
@@ -158,8 +157,8 @@ sirVulkanResult_t SIRVulkanDevice::readBuffer( sirVulkanBuffer_t *pBuffer, uint6
 		return SIR_VULKAN_INVALID_STATE;
 	}
 	if ( pBuffer == nullptr || pBuffer->pAllocation == nullptr || pBuffer->pOwnerAllocator != m_Allocator ||
-	     pBuffer->nDeviceSerial != m_nDeviceSerial || !pBuffer->bHostVisible || pData == nullptr ||
-	     nBytes == 0 || nOffset > pBuffer->nSize || nBytes > pBuffer->nSize - nOffset ) {
+	     pBuffer->nDeviceSerial != m_nDeviceSerial || !pBuffer->bHostVisible || pData == nullptr || nBytes == 0 ||
+	     nOffset > pBuffer->nSize || nBytes > pBuffer->nSize - nOffset ) {
 		return SIR_VULKAN_INVALID_ARGUMENT;
 	}
 	if ( !isBufferIdle( pBuffer ) ) {
@@ -178,9 +177,9 @@ sirVulkanResult_t SIRVulkanDevice::readBuffer( sirVulkanBuffer_t *pBuffer, uint6
 	return eResult == VK_SUCCESS ? SIR_VULKAN_SUCCESS : SIR_VULKAN_NATIVE_FAILURE;
 }
 
-sirVulkanResult_t SIRVulkanDevice::submitBufferCopy( sirVulkanBuffer_t *pSource, uint64_t nSourceOffset,
-                                                     sirVulkanBuffer_t *pDestination, uint64_t nDestinationOffset,
-                                                     uint64_t nBytes, sirVulkanCompletion_t *pCompletion ) noexcept
+sirVulkanResult_t SIRVulkanDevice::submitBufferCopy( sirVulkanBuffer_t *pSource, uint64_t nSourceOffset, sirVulkanBuffer_t *pDestination,
+                                                     uint64_t nDestinationOffset, uint64_t nBytes,
+                                                     sirVulkanCompletion_t *pCompletion ) noexcept
 {
 	if ( pCompletion != nullptr ) {
 		memset( pCompletion, 0, sizeof( *pCompletion ) );
@@ -193,14 +192,13 @@ sirVulkanResult_t SIRVulkanDevice::submitBufferCopy( sirVulkanBuffer_t *pSource,
 	     pSource->nDeviceSerial != m_nDeviceSerial || pDestination->nDeviceSerial != m_nDeviceSerial ) {
 		return SIR_VULKAN_INVALID_ARGUMENT;
 	}
-	if ( pSource->hBuffer == VK_NULL_HANDLE || pDestination->hBuffer == VK_NULL_HANDLE ||
-	     pSource->hBuffer == pDestination->hBuffer || nBytes == 0 ||
-	     ( pSource->nUsage & VK_BUFFER_USAGE_TRANSFER_SRC_BIT ) == 0 ||
+	if ( pSource->hBuffer == VK_NULL_HANDLE || pDestination->hBuffer == VK_NULL_HANDLE || pSource->hBuffer == pDestination->hBuffer ||
+	     nBytes == 0 || ( pSource->nUsage & VK_BUFFER_USAGE_TRANSFER_SRC_BIT ) == 0 ||
 	     ( pDestination->nUsage & VK_BUFFER_USAGE_TRANSFER_DST_BIT ) == 0 ) {
 		return SIR_VULKAN_INVALID_ARGUMENT;
 	}
-	if ( nSourceOffset > pSource->nSize || nBytes > pSource->nSize - nSourceOffset ||
-	     nDestinationOffset > pDestination->nSize || nBytes > pDestination->nSize - nDestinationOffset ) {
+	if ( nSourceOffset > pSource->nSize || nBytes > pSource->nSize - nSourceOffset || nDestinationOffset > pDestination->nSize ||
+	     nBytes > pDestination->nSize - nDestinationOffset ) {
 		return SIR_VULKAN_INVALID_ARGUMENT;
 	}
 	if ( m_nLastTransferValue == UINT64_MAX ) {

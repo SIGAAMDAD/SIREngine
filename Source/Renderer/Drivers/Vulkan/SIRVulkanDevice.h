@@ -162,7 +162,7 @@ public:
 	sirVulkanResult_t destroyIdleBuffer( sirVulkanBuffer_t *pBuffer ) noexcept;
 	sirVulkanResult_t readBuffer( sirVulkanBuffer_t *pBuffer, uint64_t nOffset, void *pData, uint64_t nBytes ) noexcept;
 	sirVulkanResult_t submitBufferCopy( sirVulkanBuffer_t *pSource, uint64_t nSourceOffset, sirVulkanBuffer_t *pDestination,
-	                                   uint64_t nDestinationOffset, uint64_t nBytes, sirVulkanCompletion_t *pCompletion ) noexcept;
+	                                    uint64_t nDestinationOffset, uint64_t nBytes, sirVulkanCompletion_t *pCompletion ) noexcept;
 	sirVulkanResult_t queryCompletion( const sirVulkanCompletion_t *pCompletion, bool *pComplete ) const noexcept;
 	sirVulkanResult_t waitCompletion( const sirVulkanCompletion_t *pCompletion, uint64_t nTimeoutNs ) const noexcept;
 };
