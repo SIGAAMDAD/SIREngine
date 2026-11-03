@@ -21,3 +21,10 @@ corresponding cooked schemas and subsystem adapters are established.
 
 See [resource interfaces and graph](../../Docs/Architecture/19-grdg-resource-interfaces.md)
 and `Tests/Unit/SIRResourceGraphTests.cpp`.
+
+The optional `SIRResourceMemoryAdapter` binds resource graph allocation callbacks
+onto actual `SIRGeneralHeap` instances after verifying each heap's memory domain.
+Metadata and streaming allocations can use separate tracked domains. The adapter
+and its bound heaps must outlive every graph borrowing the callback context.
+The native `resources.memory.domains` test exercises publication, provider pins,
+retirement and rejection of an unbound domain against real Core heaps.
