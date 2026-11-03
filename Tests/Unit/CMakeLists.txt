@@ -47,3 +47,8 @@ add_test(NAME profiling.benchmark-comparison
         "-DSIR_ROOT=${PROJECT_SOURCE_DIR}"
         "-DSIR_TEST_ROOT=${PROJECT_BINARY_DIR}/RegressionSmoke"
         -P "${PROJECT_SOURCE_DIR}/Tests/Benchmarks/GoogleBenchmarkCompareTests.cmake")
+
+add_executable(SIRThreadingPrimitiveTests SIRThreadingPrimitiveTests.cpp)
+target_link_libraries(SIRThreadingPrimitiveTests PRIVATE SIR::Core)
+add_test(NAME core.threading.primitives COMMAND SIRThreadingPrimitiveTests)
+sir_configure_owned_target(SIRThreadingPrimitiveTests)
