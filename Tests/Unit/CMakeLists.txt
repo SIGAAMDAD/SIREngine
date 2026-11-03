@@ -94,3 +94,13 @@ add_executable(SIRTaskSchedulerTests SIRTaskSchedulerTests.cpp)
 target_link_libraries(SIRTaskSchedulerTests PRIVATE SIR::Core)
 add_test(NAME core.jobs.scheduler COMMAND SIRTaskSchedulerTests)
 sir_configure_owned_target(SIRTaskSchedulerTests)
+
+add_executable(SIRTaskGraphTests SIRTaskGraphTests.cpp)
+target_link_libraries(SIRTaskGraphTests PRIVATE SIR::Core)
+add_test(NAME core.jobs.graph COMMAND SIRTaskGraphTests)
+sir_configure_owned_target(SIRTaskGraphTests)
+
+add_executable(SIRTaskProviderTests SIRTaskProviderTests.cpp)
+target_link_libraries(SIRTaskProviderTests PRIVATE SIR::Core)
+add_test(NAME core.jobs.provider COMMAND SIRTaskProviderTests)
+sir_configure_owned_target(SIRTaskProviderTests)
