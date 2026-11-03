@@ -19,3 +19,8 @@ add_executable(SIRContainerDifferentialTests SIRContainerDifferentialTests.cpp)
 target_link_libraries(SIRContainerDifferentialTests PRIVATE SIR::Core)
 add_test(NAME core.containers.differential COMMAND SIRContainerDifferentialTests)
 sir_configure_owned_target(SIRContainerDifferentialTests)
+
+add_executable(SIRContainerExtendedTests SIRContainerExtendedTests.cpp)
+target_link_libraries(SIRContainerExtendedTests PRIVATE SIR::Core)
+add_test(NAME core.containers.extended COMMAND SIRContainerExtendedTests)
+sir_configure_owned_target(SIRContainerExtendedTests)
