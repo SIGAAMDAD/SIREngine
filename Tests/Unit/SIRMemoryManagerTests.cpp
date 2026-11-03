@@ -184,10 +184,43 @@ static bool testFailedInitializationRecovery( void )
 	return memory.getPageSize() == 0 && !memory.isInitialized();
 }
 
+static bool testBackingTelemetry( void )
+{
+	const uint64_t nPage = SIRVirtualMemory::getPageSize();
+	SIRMemoryManager memory;
+	const sirMemoryConfig_t config = { nPage * 128, nPage * 32, nPage * 8, 4 };
+	if ( !memory.init( config ) ) {
+		return false;
+	}
+	SIRMemorySegment *pSegment = memory.createSegment( "telemetry", nPage * 4, nPage, SIR_MEMORY_DOMAIN_STREAMING );
+	if ( pSegment == nullptr ) {
+		return false;
+	}
+	const sirPageBackingStats_t original = memory.getPageBackingStats();
+	if ( !pSegment->commit( 0, nPage ) || !pSegment->commit( 0, nPage ) ||
+	     pSegment->commit( nPage, nPage ) || !pSegment->decommit( 0, nPage ) || !pSegment->decommit( 0, nPage ) ) {
+		return false;
+	}
+	const sirPageBackingStats_t stats = memory.getPageBackingStats();
+	if ( stats.nNoopCommitRequests != original.nNoopCommitRequests + 1 ||
+	     stats.nNoopDecommitRequests != original.nNoopDecommitRequests + 1 ||
+	     stats.nNoopCommitBytes != original.nNoopCommitBytes + nPage ||
+	     stats.nNoopDecommitBytes != original.nNoopDecommitBytes + nPage ||
+	     stats.nSuccessfulCommitCalls != original.nSuccessfulCommitCalls + 1 ||
+	     stats.nSuccessfulDecommitCalls != original.nSuccessfulDecommitCalls + 1 ||
+	     stats.nCommitBudgetDenials != original.nCommitBudgetDenials + 1 ||
+	     stats.nManagedCommittedBytes != original.nManagedCommittedBytes ) {
+		return false;
+	}
+	memory.shutdown();
+	const sirPageBackingStats_t cleared = memory.getPageBackingStats();
+	return cleared.nManagedCommittedBytes == 0 && cleared.nNoopCommitRequests == 0 && cleared.nSuccessfulCommitCalls == 0;
+}
+
 int main( void )
 {
 	if ( !testMemoryBudget() || !testCoreDomainMetadata() || !testBitmapAndRecommit() || !testOversizedRequests() ||
-	     !testFailedInitializationRecovery() ) {
+	     !testFailedInitializationRecovery() || !testBackingTelemetry() ) {
 		fputs( "SIR memory owner test failed\n", stderr );
 		return 1;
 	}
