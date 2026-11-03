@@ -50,17 +50,16 @@ static bool sameDerivedHandle( const SIRResourceHandle &rA, const SIRResourceHan
 
 static bool sameDerivedKey( const SIRDerivedResourceKey &rA, const SIRDerivedResourceKey &rB ) noexcept
 {
-	return sameDerivedHandle( rA.m_Resource, rB.m_Resource ) && rA.m_nRevision == rB.m_nRevision &&
-	       rA.m_nProviderId == rB.m_nProviderId && rA.m_nRepresentationId == rB.m_nRepresentationId &&
-	       rA.m_nVariantId == rB.m_nVariantId;
+	return sameDerivedHandle( rA.m_Resource, rB.m_Resource ) && rA.m_nRevision == rB.m_nRevision && rA.m_nProviderId == rB.m_nProviderId &&
+	       rA.m_nRepresentationId == rB.m_nRepresentationId && rA.m_nVariantId == rB.m_nVariantId;
 }
 
 SIRResourceDerivedRegistry::SIRResourceDerivedRegistry( SIRResourceGraph &rGraph, const SIRResourceDerivedConfig &rConfig ) noexcept
     : m_pGraph( &rGraph ), m_Config( rConfig ), m_OwnerThread( std::this_thread::get_id() ), m_pProviders( nullptr ),
       m_pRepresentations( nullptr ), m_Stats{}, m_nTrackedBytes( 0 ), m_bReady( false )
 {
-	if ( !rGraph.isReady() || !rConfig.allocator.m_pfnAllocate || !rConfig.allocator.m_pfnFree ||
-	     !rConfig.nMaxProviders || !rConfig.nMaxRepresentations || !rConfig.nMaxTrackedBytes ) {
+	if ( !rGraph.isReady() || !rConfig.allocator.m_pfnAllocate || !rConfig.allocator.m_pfnFree || !rConfig.nMaxProviders ||
+	     !rConfig.nMaxRepresentations || !rConfig.nMaxTrackedBytes ) {
 		return;
 	}
 	const uint64_t nProviderBytes = ( uint64_t )rConfig.nMaxProviders * sizeof( sirDerivedProviderSlot_t );
@@ -100,14 +99,14 @@ void SIRResourceDerivedRegistry::releaseMetadata( void ) noexcept
 {
 	if ( m_pRepresentations != nullptr ) {
 		m_Config.allocator.m_pfnFree( m_Config.allocator.m_pContext, m_pRepresentations,
-		                            ( uint64_t )m_Config.nMaxRepresentations * sizeof( sirDerivedRepresentationSlot_t ),
-		                            alignof( sirDerivedRepresentationSlot_t ), m_Config.nMetadataDomain );
+		                              ( uint64_t )m_Config.nMaxRepresentations * sizeof( sirDerivedRepresentationSlot_t ),
+		                              alignof( sirDerivedRepresentationSlot_t ), m_Config.nMetadataDomain );
 		m_pRepresentations = nullptr;
 	}
 	if ( m_pProviders != nullptr ) {
 		m_Config.allocator.m_pfnFree( m_Config.allocator.m_pContext, m_pProviders,
-		                            ( uint64_t )m_Config.nMaxProviders * sizeof( sirDerivedProviderSlot_t ),
-		                            alignof( sirDerivedProviderSlot_t ), m_Config.nMetadataDomain );
+		                              ( uint64_t )m_Config.nMaxProviders * sizeof( sirDerivedProviderSlot_t ),
+		                              alignof( sirDerivedProviderSlot_t ), m_Config.nMetadataDomain );
 		m_pProviders = nullptr;
 	}
 	m_bReady = false;
@@ -159,8 +158,7 @@ SIRResourceResult SIRResourceDerivedRegistry::registerProvider( uint32_t nProvid
 	return SIR_RESOURCE_RESULT_OUT_OF_BUDGET;
 }
 
-SIRResourceResult SIRResourceDerivedRegistry::registerRepresentation( const SIRResourceReadScope &rScope,
-                                                                      const SIRResourceView &rSource,
+SIRResourceResult SIRResourceDerivedRegistry::registerRepresentation( const SIRResourceReadScope &rScope, const SIRResourceView &rSource,
                                                                       const SIRDerivedResourceRegistration &rRegistration,
                                                                       SIRDerivedResourceHandle *pHandle ) noexcept
 {
@@ -168,8 +166,7 @@ SIRResourceResult SIRResourceDerivedRegistry::registerRepresentation( const SIRR
 		return SIR_RESOURCE_RESULT_WRITER_VIOLATION;
 	}
 	if ( !m_bReady || !pHandle || !rRegistration.m_nNativeToken || !rRegistration.m_Key.m_nRevision ||
-	     !rRegistration.m_Key.m_nRepresentationId || rRegistration.m_Key.m_nReserved ||
-	     rRegistration.m_Key.m_Resource.m_nReserved ) {
+	     !rRegistration.m_Key.m_nRepresentationId || rRegistration.m_Key.m_nReserved || rRegistration.m_Key.m_Resource.m_nReserved ) {
 		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
 	}
 	const SIRDerivedResourceAccounting &rAccounting = rRegistration.m_Accounting;
@@ -316,7 +313,7 @@ SIRResourceResult SIRResourceDerivedRegistry::updateCompletedFence( uint32_t nPr
 }
 
 SIRResourceResult SIRResourceDerivedRegistry::getAccounting( SIRDerivedResourceHandle hRepresentation,
-                                                              SIRDerivedResourceAccounting *pAccounting ) const noexcept
+                                                             SIRDerivedResourceAccounting *pAccounting ) const noexcept
 {
 	if ( !isWriterThread() ) {
 		return SIR_RESOURCE_RESULT_WRITER_VIOLATION;

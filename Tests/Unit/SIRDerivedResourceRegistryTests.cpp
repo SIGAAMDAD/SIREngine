@@ -130,8 +130,8 @@ static SIRResourceHandle publishSource( SIRResourceGraphWriter &rWriter, uint64_
 	return handle;
 }
 
-static SIRDerivedResourceRegistration derived( SIRResourceHandle hSource, uint64_t nRevision, uint32_t nProvider,
-                                              uint32_t nRepresentation, uint64_t nToken, uint64_t nCommitted ) noexcept
+static SIRDerivedResourceRegistration derived( SIRResourceHandle hSource, uint64_t nRevision, uint32_t nProvider, uint32_t nRepresentation,
+                                               uint64_t nToken, uint64_t nCommitted ) noexcept
 {
 	SIRDerivedResourceRegistration registration = {};
 	registration.m_Key = { hSource, nRevision, nProvider, nRepresentation, 0, 0 };
@@ -227,9 +227,7 @@ static void testRetryStaleGenerationAndWriterBoundary( void )
 		REQUIRE( registry.registerProvider( 7, { &provider, releaseNative } ) == SIR_RESOURCE_RESULT_SUCCESS );
 
 		std::atomic<uint32_t> result{ 0 };
-		std::thread unauthorized( [&registry, &result]() {
-			result.store( ( uint32_t )registry.updateCompletedFence( 7, 10 ) );
-		} );
+		std::thread unauthorized( [&registry, &result]() { result.store( ( uint32_t )registry.updateCompletedFence( 7, 10 ) ); } );
 		unauthorized.join();
 		REQUIRE( result.load() == SIR_RESOURCE_RESULT_WRITER_VIOLATION );
 
