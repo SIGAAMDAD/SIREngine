@@ -19,3 +19,8 @@ if(SIR_WITH_FMOD)
     add_test(NAME audio.fmod.native-context COMMAND SIRFMODNativeSmokeTests)
     sir_configure_owned_target(SIRFMODNativeSmokeTests)
 endif()
+
+add_executable(SIRFMODVoiceBackendTests SIRFMODVoiceBackendTests.cpp)
+target_link_libraries(SIRFMODVoiceBackendTests PRIVATE SIR::FMODContext)
+add_test(NAME audio.fmod.voice-lifecycle COMMAND SIRFMODVoiceBackendTests)
+sir_configure_owned_target(SIRFMODVoiceBackendTests)

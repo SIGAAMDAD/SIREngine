@@ -115,3 +115,14 @@ no-sound selection, update, release and restart. Its callback-injected
 controller runs an SDK-free lifecycle test. The real `FMOD::Studio::System`
 bridge is linked only when `SIR_WITH_FMOD=ON`, together with a no-sound
 runtime smoke test. See `FMOD/README.md` for ownership and verification.
+
+
+## Wave C — FMOD event playback implementation
+
+`FMOD/SIRFMODVoiceBackend` implements the portable audio backend ABI for
+pre-registered native FMOD event descriptions, fixed-capacity voice slots,
+natural completion and stop/release handling. The native bridge is compiled
+only with `SIR_WITH_FMOD=ON`; SDK-free tests cover its owned lifecycle.
+Events must be registered once their FMOD banks are resident. Bank/GRDG
+integration, actual SDK execution, spatial updates and parameter bindings
+remain separate acceptance work.

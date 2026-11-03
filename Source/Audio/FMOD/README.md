@@ -41,3 +41,29 @@ actual driver count and surfaces native errors.
   and `-DSIR_FMOD_SDK_ROOT=/path/to/sdk`, build, and run the FMOD tests.
 - Native bank/event ownership, live device-lost callback recovery, FMOD
   memory-domain callbacks, and hardware audio playback remain later waves.
+
+
+## Wave C — event-instance voice lifecycle
+
+`SIRFMODVoiceBackend` implements `sirAudioBackendOps_t` using a
+fixed-capacity native instance table indexed by the portable playing handle's
+slot, a sorted registry of pre-resolved native event descriptions, and a
+preallocated completion ring. It borrows the initialized `SIRFMODContext`
+and must shut down before that context. Registration by event path is an
+owner-thread operation performed **after** the event's FMOD bank is loaded;
+no string lookup occurs in the playback hot path.
+
+Play creates and starts a Studio event instance and posts STARTED. Natural
+stop or a requested stop is detected by owner-thread polling after Studio
+update; the event is then released and FINISHED/STOPPED is posted with the
+original command sequence. Failed native release preserves the voice slot
+for retry. Each accepted voice reserves space for its terminal completion,
+preventing silent queue loss. Event descriptions cannot be unregistered
+while their instances are active; unregister them before bank unload.
+
+The SDK-only `SIRFMODVoiceNativeApi.cpp` provides the real
+`getEvent`, `createInstance`, `start`, `stop`, `getPlaybackState`,
+and `release` calls. SDK-free fixture tests cover playback, natural
+completion, stop failure/retry, release failure/retry, lookup failures,
+resource capacity and completion reservation. Bank ingestion, GRDG
+publication, spatial application and parameter bindings remain pending.
