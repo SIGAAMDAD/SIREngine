@@ -497,6 +497,20 @@ bool SIRD3D12Device::retireDirectComputeDependency( void ) noexcept
 	return true;
 }
 
+void SIRD3D12Device::releaseRetiredAllocations( bool bCompletionProven ) noexcept
+{
+	for ( uint32_t iEntry = 0; iEntry < m_nRetiredAllocationCount; ++iEntry ) {
+		D3D12MA::Allocation *pAllocation = m_szRetiredAllocations[iEntry].pAllocation;
+		if ( bCompletionProven && pAllocation != nullptr ) {
+			pAllocation->Release();
+		}
+		// On an uncertain queue completion, intentionally abandon the
+		// allocation with its underlying D3D12MA allocator and GPU device.
+		m_szRetiredAllocations[iEntry] = {};
+	}
+	m_nRetiredAllocationCount = 0;
+}
+
 void SIRD3D12Device::shutdown( void ) noexcept
 {
 	// DIRECT can wait on COMPUTE, and COMPUTE can wait on COPY.
@@ -505,7 +519,9 @@ void SIRD3D12Device::shutdown( void ) noexcept
 	const bool bCopySafe = waitForPendingCopy();
 	const bool bComputeSafe = m_ComputeQueue.shutdown();
 	const bool bTransferSafe = m_Transfers.shutdown();
-	if ( bDirectSafe && bCopySafe && bComputeSafe && bTransferSafe ) {
+	const bool bAllQueuesSafe = bDirectSafe && bCopySafe && bComputeSafe && bTransferSafe;
+	releaseRetiredAllocations( bAllQueuesSafe );
+	if ( bAllQueuesSafe ) {
 		releasePendingCopy();
 		m_pCopyCommands.Reset();
 		m_pCopyAllocator.Reset();
@@ -748,6 +764,88 @@ bool SIRD3D12Device::submitGraphicsAfterCompute( const sirD3D12CompletionSet_t &
 	++m_nNextFenceValue;
 	m_nLastError = S_OK;
 	return snapshotCompletionSet( pSet ) && pSet->nGraphicsFence == nGraphicsFence;
+}
+
+bool SIRD3D12Device::createNativeBuffer( D3D12_HEAP_TYPE eHeapType, D3D12_RESOURCE_STATES eInitialState,
+                                         uint64_t nBytes, D3D12MA::Allocation **ppAllocation ) noexcept
+{
+	if ( ppAllocation == nullptr ) {
+		m_nLastError = E_POINTER;
+		return false;
+	}
+	*ppAllocation = nullptr;
+	if ( !isReady() ) {
+		m_nLastError = E_FAIL;
+		return false;
+	}
+
+	m_nLastError = m_Memory.createBuffer( eHeapType, eInitialState, nBytes, ppAllocation );
+	return SUCCEEDED( m_nLastError ) && *ppAllocation != nullptr;
+}
+
+bool SIRD3D12Device::retireNativeAllocation( D3D12MA::Allocation **ppAllocation,
+                                              const sirD3D12CompletionSet_t &completion ) noexcept
+{
+	if ( ppAllocation == nullptr || *ppAllocation == nullptr || !isReady() ) {
+		m_nLastError = E_INVALIDARG;
+		return false;
+	}
+	if ( m_nRetiredAllocationCount >= s_nRetirementCapacity ) {
+		m_nLastError = HRESULT_FROM_WIN32( ERROR_BUSY );
+		return false;
+	}
+
+	bool bCompleted = false;
+	if ( !pollCompletionSet( completion, &bCompleted ) ) {
+		return false;
+	}
+
+	const uint32_t iEntry = m_nRetiredAllocationCount;
+	m_szRetiredAllocations[iEntry].pAllocation = *ppAllocation;
+	m_szRetiredAllocations[iEntry].nCompletion = completion;
+	++m_nRetiredAllocationCount;
+	*ppAllocation = nullptr;
+	m_nLastError = S_OK;
+	return true;
+}
+
+uint32_t SIRD3D12Device::collectRetiredAllocations( void ) noexcept
+{
+	if ( !isReady() ) {
+		m_nLastError = E_FAIL;
+		return 0;
+	}
+
+	uint32_t nCollected = 0;
+	uint32_t iEntry = 0;
+	while ( iEntry < m_nRetiredAllocationCount ) {
+		bool bCompleted = false;
+		if ( !pollCompletionSet( m_szRetiredAllocations[iEntry].nCompletion, &bCompleted ) ) {
+			return nCollected;
+		}
+		if ( !bCompleted ) {
+			++iEntry;
+			continue;
+		}
+
+		m_szRetiredAllocations[iEntry].pAllocation->Release();
+		--m_nRetiredAllocationCount;
+		m_szRetiredAllocations[iEntry] = m_szRetiredAllocations[m_nRetiredAllocationCount];
+		m_szRetiredAllocations[m_nRetiredAllocationCount] = {};
+		++nCollected;
+	}
+	m_nLastError = S_OK;
+	return nCollected;
+}
+
+uint32_t SIRD3D12Device::getRetiredAllocationCount( void ) const noexcept
+{
+	return m_nRetiredAllocationCount;
+}
+
+uint32_t SIRD3D12Device::getRetirementCapacity( void ) const noexcept
+{
+	return s_nRetirementCapacity;
 }
 
 bool SIRD3D12Device::copyRoundTripForTest( const void *pInput, void *pOutput, uint64_t nBytes ) noexcept

@@ -83,3 +83,12 @@ The DIRECT queue retains an owned COM reference to the COMPUTE fence until its m
 Shutdown drains the DIRECT queue before COMPUTE, then COPY; it only releases the device and D3D12MA backing after all queue completions are proven. WARP tests execute 48 COPY -> COMPUTE -> DIRECT chains and compare the original payload against readback. Future fence targets, zero fence targets, stale device generations and null results are rejected.
 
 Actual shader execution, FrameGraph barriers and GPU physical backing-ledger integration are separate milestones.
+
+
+## Bounded multi-queue resource retirement
+
+The native D3D12 device now maintains a fixed-capacity deferred-retirement list of D3D12MA allocations. The `retireNativeAllocation` API accepts a unique allocation owner and a generation-checked `sirD3D12CompletionSet_t`. Registration transfers ownership only on success; a rejected registration leaves the allocation with its caller. The capacity is 32 allocations for the initial headless bootstrap, with explicit `ERROR_BUSY` when full.
+
+`collectRetiredAllocations` never waits for GPU execution. It checks the recorded graphics, compute and copy fences, releasing each owned allocation only after **all three** reach the registered completion values. A pending entry stays allocated. The collection list is compacted without dynamic allocation. During shutdown, the engine drains DIRECT → COMPUTE → COPY and then releases every registered allocation before destroying D3D12MA. If completion cannot be proven, allocations and their allocator are deliberately abandoned rather than destroyed while referenced by GPU work.
+
+Windows WARP tests cover 32 registered allocations against a COPY → COMPUTE → DIRECT completion set, capacity overflow, invalid and future fence values, stale device generations, reclamation counts, empty collection and uncollected resources on shutdown. These are native backend ownership contracts; GRDG will later supply canonical resource identity, backing-byte accounting, and configurable retirement capacity.

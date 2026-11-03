@@ -62,6 +62,12 @@ typedef struct sirD3D12CompletionSet_s
 	uint64_t nCopyFence;
 } sirD3D12CompletionSet_t;
 
+typedef struct sirD3D12RetiredAllocation_s
+{
+	D3D12MA::Allocation *pAllocation;
+	sirD3D12CompletionSet_t nCompletion;
+} sirD3D12RetiredAllocation_t;
+
 // Native single-caller COMPUTE queue. An empty command-list marker verifies
 // submission and fence ownership until compiled compute PSOs become available.
 class SIRD3D12ComputeQueue
@@ -102,6 +108,9 @@ public:
 class SIRD3D12Device
 {
 private:
+	static constexpr uint32_t s_nRetirementCapacity = 32;
+	sirD3D12RetiredAllocation_t m_szRetiredAllocations[s_nRetirementCapacity] = {};
+	uint32_t m_nRetiredAllocationCount = 0;
 	Microsoft::WRL::ComPtr<IDXGIFactory6> m_pFactory;
 	Microsoft::WRL::ComPtr<IDXGIAdapter4> m_pAdapter;
 	Microsoft::WRL::ComPtr<ID3D12Device> m_pDevice;
@@ -128,6 +137,7 @@ private:
 	bool waitForPendingCopy( void ) noexcept;
 	bool retireDirectComputeDependency( void ) noexcept;
 	void releasePendingCopy( void ) noexcept;
+	void releaseRetiredAllocations( bool bCompletionProven ) noexcept;
 
 public:
 	SIRD3D12Device( void ) noexcept;
@@ -151,6 +161,15 @@ public:
 	bool submitComputeAfterCopy( sirD3D12TransferTicket_t ticket, sirD3D12CompletionSet_t *pSet ) noexcept;
 	bool submitGraphicsAfterCompute( const sirD3D12CompletionSet_t &computeSet, sirD3D12CompletionSet_t *pSet ) noexcept;
 	bool waitForGraphicsFence( uint64_t nFenceValue, uint32_t nTimeoutMs ) noexcept;
+
+	// Native-only resource ownership; never pass D3D12MA pointers into GRDG.
+	bool createNativeBuffer( D3D12_HEAP_TYPE eHeapType, D3D12_RESOURCE_STATES eInitialState, uint64_t nBytes,
+	                         D3D12MA::Allocation **ppAllocation ) noexcept;
+	// Transfers the allocation's sole owner on success; otherwise the caller retains it.
+	bool retireNativeAllocation( D3D12MA::Allocation **ppAllocation, const sirD3D12CompletionSet_t &completion ) noexcept;
+	uint32_t collectRetiredAllocations( void ) noexcept;
+	uint32_t getRetiredAllocationCount( void ) const noexcept;
+	uint32_t getRetirementCapacity( void ) const noexcept;
 
 	// Synchronous diagnostic fixture only; production transfers will use pooled,
 	// asynchronous allocations and queue-completion tokens.

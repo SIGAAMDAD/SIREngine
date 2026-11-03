@@ -267,6 +267,131 @@ static bool testComputeToDirectGpuWait( SIRD3D12Device &device )
 	return true;
 }
 
+static bool testRetirementInvalidCompletions( SIRD3D12Device &device, const sirD3D12CompletionSet_t &set )
+{
+	D3D12MA::Allocation *pInvalid = nullptr;
+	if ( !device.createNativeBuffer( D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_COMMON, 4096, &pInvalid ) ) {
+		return false;
+	}
+
+	sirD3D12CompletionSet_t invalid = set;
+	invalid.nDeviceGeneration = 0;
+	const bool bStaleAccepted = device.retireNativeAllocation( &pInvalid, invalid );
+	if ( bStaleAccepted || pInvalid == nullptr ) {
+		if ( pInvalid != nullptr ) {
+			pInvalid->Release();
+		}
+		return false;
+	}
+
+	invalid = set;
+	++invalid.nGraphicsFence;
+	const bool bFutureAccepted = device.retireNativeAllocation( &pInvalid, invalid );
+	const bool bNullAccepted = device.retireNativeAllocation( nullptr, set );
+	const bool bValidRejection = !bFutureAccepted && !bNullAccepted && pInvalid != nullptr;
+	if ( pInvalid != nullptr ) {
+		pInvalid->Release();
+	}
+	return bValidRejection;
+}
+
+static bool testRetirementQueueCapacity( SIRD3D12Device &device, const sirD3D12CompletionSet_t &set )
+{
+	const uint32_t nCapacity = device.getRetirementCapacity();
+	for ( uint32_t iEntry = 0; iEntry < nCapacity; ++iEntry ) {
+		D3D12MA::Allocation *pAllocation = nullptr;
+		if ( !device.createNativeBuffer( D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_COMMON, 256, &pAllocation ) ) {
+			return false;
+		}
+		if ( !device.retireNativeAllocation( &pAllocation, set ) || pAllocation != nullptr ) {
+			if ( pAllocation != nullptr ) {
+				pAllocation->Release();
+			}
+			return false;
+		}
+	}
+	if ( device.getRetiredAllocationCount() != nCapacity ) {
+		return false;
+	}
+
+	D3D12MA::Allocation *pOverflow = nullptr;
+	if ( !device.createNativeBuffer( D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_COMMON, 256, &pOverflow ) ) {
+		return false;
+	}
+	const bool bAcceptedOverflow = device.retireNativeAllocation( &pOverflow, set );
+	const bool bRejectedSafely = !bAcceptedOverflow && pOverflow != nullptr;
+	if ( pOverflow != nullptr ) {
+		pOverflow->Release();
+	}
+	return bRejectedSafely;
+}
+
+static bool testRetirementCollect( SIRD3D12Device &device, const sirD3D12CompletionSet_t &set )
+{
+	const uint32_t nCapacity = device.getRetirementCapacity();
+	const uint32_t nEarlyCollected = device.collectRetiredAllocations();
+	if ( nEarlyCollected > nCapacity || device.getRetiredAllocationCount() + nEarlyCollected != nCapacity ) {
+		return false;
+	}
+	if ( !device.waitForGraphicsFence( set.nGraphicsFence, 15000 ) ) {
+		return false;
+	}
+
+	const uint32_t nLateCollected = device.collectRetiredAllocations();
+	if ( nEarlyCollected + nLateCollected != nCapacity || device.getRetiredAllocationCount() != 0 ||
+	     device.collectRetiredAllocations() != 0 ) {
+		return false;
+	}
+	return true;
+}
+
+static bool testDeferredMultiQueueRetirement( SIRD3D12Device &device )
+{
+	if ( device.getRetirementCapacity() != 32 || device.getRetiredAllocationCount() != 0 ) {
+		return false;
+	}
+
+	uint32_t szInput[64] = {};
+	uint32_t szOutput[64] = {};
+	for ( uint32_t iWord = 0; iWord < 64; ++iWord ) {
+		szInput[iWord] = ( iWord * 0x9e3779b9U ) ^ 0x55aabb11U;
+	}
+
+	sirD3D12TransferTicket_t ticket = {};
+	if ( !device.getTransfers().submit( szInput, sizeof( szInput ), &ticket ) ) {
+		return false;
+	}
+	sirD3D12CompletionSet_t computed = {};
+	sirD3D12CompletionSet_t submitted = {};
+	if ( !device.submitComputeAfterCopy( ticket, &computed ) ||
+	     !device.submitGraphicsAfterCompute( computed, &submitted ) ) {
+		return false;
+	}
+	if ( !testRetirementInvalidCompletions( device, submitted ) ||
+	     !testRetirementQueueCapacity( device, submitted ) || !testRetirementCollect( device, submitted ) ) {
+		return false;
+	}
+
+	bool bComplete = false;
+	if ( !device.pollCompletionSet( submitted, &bComplete ) || !bComplete ||
+	     !device.getTransfers().receive( ticket, szOutput, sizeof( szOutput ) ) ||
+	     memcmp( szInput, szOutput, sizeof( szInput ) ) != 0 ) {
+		return false;
+	}
+
+	// The registered allocation must be retired by shutdown even when
+	// the caller never explicitly invokes collectRetiredAllocations().
+	D3D12MA::Allocation *pLast = nullptr;
+	if ( !device.createNativeBuffer( D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_COMMON, 512, &pLast ) ) {
+		return false;
+	}
+	const bool bTransferred = device.retireNativeAllocation( &pLast, submitted );
+	if ( !bTransferred && pLast != nullptr ) {
+		pLast->Release();
+	}
+	return bTransferred && pLast == nullptr && device.getRetiredAllocationCount() == 1;
+}
+
 int main( void )
 {
 	SIRD3D12Device device;
@@ -336,6 +461,11 @@ int main( void )
 		return 1;
 	}
 
+	if ( !testDeferredMultiQueueRetirement( device ) ) {
+		fputs( "D3D12 multi-queue allocation retirement failed\n", stderr );
+		return 1;
+	}
+
 	sirD3D12CompletionSet_t oldSet = {};
 	if ( !testComputeAndCompletions( device, &oldSet ) ) {
 		fputs( "D3D12 compute / multi-queue completion test failed\n", stderr );
@@ -344,7 +474,8 @@ int main( void )
 
 	device.shutdown();
 	device.shutdown();
-	if ( device.isReady() || device.copyRoundTripForTest( szInput, szOutput, sizeof( szInput ) ) ) {
+	if ( device.getRetiredAllocationCount() != 0 || device.isReady() ||
+	     device.copyRoundTripForTest( szInput, szOutput, sizeof( szInput ) ) ) {
 		fputs( "D3D12 accepted an operation after shutdown\n", stderr );
 		return 1;
 	}
@@ -352,6 +483,18 @@ int main( void )
 		fputs( "D3D12 WARP reinitialization failed\n", stderr );
 		return 1;
 	}
+	D3D12MA::Allocation *pOldGeneration = nullptr;
+	if ( !device.createNativeBuffer( D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_COMMON, 256, &pOldGeneration ) ) {
+		return 1;
+	}
+	if ( device.retireNativeAllocation( &pOldGeneration, oldSet ) || pOldGeneration == nullptr ) {
+		if ( pOldGeneration != nullptr ) {
+			pOldGeneration->Release();
+		}
+		return 1;
+	}
+	pOldGeneration->Release();
+
 	sirD3D12CompletionSet_t fresh = {};
 	bool bCompleted = false;
 	if ( !device.snapshotCompletionSet( &fresh ) || fresh.nDeviceGeneration == oldSet.nDeviceGeneration ||
