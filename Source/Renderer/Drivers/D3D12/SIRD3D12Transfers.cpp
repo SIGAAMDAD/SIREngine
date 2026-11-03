@@ -195,8 +195,7 @@ bool SIRD3D12Transfers::getCompletedFence( uint64_t *pCompletedFence ) const noe
 	return *pCompletedFence != UINT64_MAX;
 }
 
-bool SIRD3D12Transfers::queryDependency( sirD3D12TransferTicket_t ticket, ID3D12Fence **ppFence,
-	                                           uint64_t *pFenceValue ) const noexcept
+bool SIRD3D12Transfers::queryDependency( sirD3D12TransferTicket_t ticket, ID3D12Fence **ppFence, uint64_t *pFenceValue ) const noexcept
 {
 	if ( ppFence == nullptr || pFenceValue == nullptr ) {
 		return false;
@@ -209,8 +208,7 @@ bool SIRD3D12Transfers::queryDependency( sirD3D12TransferTicket_t ticket, ID3D12
 	}
 
 	const sirD3D12TransferSlot_t *pSlot = &m_szSlots[ticket.iSlot];
-	if ( !pSlot->bOccupied || pSlot->nSerial != ticket.nSerial || pSlot->nFence == 0 ||
-	     pSlot->nFence > m_nLastSubmittedFence ) {
+	if ( !pSlot->bOccupied || pSlot->nSerial != ticket.nSerial || pSlot->nFence == 0 || pSlot->nFence > m_nLastSubmittedFence ) {
 		return false;
 	}
 

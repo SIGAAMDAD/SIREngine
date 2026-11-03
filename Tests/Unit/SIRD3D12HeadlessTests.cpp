@@ -172,12 +172,11 @@ static bool testCopyToComputeGpuWait( SIRD3D12Device &device )
 		sirD3D12TransferTicket_t forged = ticket;
 		++forged.nSerial;
 		sirD3D12CompletionSet_t completed = {};
-		if ( device.submitComputeAfterCopy( forged, &completed ) ||
-		     device.submitComputeAfterCopy( ticket, nullptr ) ) {
+		if ( device.submitComputeAfterCopy( forged, &completed ) || device.submitComputeAfterCopy( ticket, nullptr ) ) {
 			return false;
 		}
-		if ( !device.submitComputeAfterCopy( ticket, &completed ) || completed.nComputeFence == 0 ||
-		     completed.nCopyFence == 0 || completed.nDeviceGeneration == 0 ) {
+		if ( !device.submitComputeAfterCopy( ticket, &completed ) || completed.nComputeFence == 0 || completed.nCopyFence == 0 ||
+		     completed.nDeviceGeneration == 0 ) {
 			return false;
 		}
 
@@ -188,12 +187,10 @@ static bool testCopyToComputeGpuWait( SIRD3D12Device &device )
 		}
 		bool bCopyDone = false;
 		bool bAllDone = false;
-		if ( !transfers.poll( ticket, &bCopyDone ) || !bCopyDone ||
-		     !device.pollCompletionSet( completed, &bAllDone ) || !bAllDone ) {
+		if ( !transfers.poll( ticket, &bCopyDone ) || !bCopyDone || !device.pollCompletionSet( completed, &bAllDone ) || !bAllDone ) {
 			return false;
 		}
-		if ( !transfers.receive( ticket, szOutput, sizeof( szOutput ) ) ||
-		     memcmp( szInput, szOutput, ( size_t )nBytes ) != 0 ) {
+		if ( !transfers.receive( ticket, szOutput, sizeof( szOutput ) ) || memcmp( szInput, szOutput, ( size_t )nBytes ) != 0 ) {
 			return false;
 		}
 		if ( device.submitComputeAfterCopy( ticket, &completed ) ) {
