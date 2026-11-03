@@ -74,3 +74,14 @@ Read scopes keep old records alive until quiescence, so concurrent readers
 can safely inspect a cell during mutation without acquiring a shared lock.
 The existing `SIRFlatHashMap` remains the private single-writer index.
 This is a bounded key-lookup implementation, not an epoch reclamation scheme.
+
+Per-read-scope epoch announcements now replace global all-reader quiescence
+as the collection criterion. Read scopes claim one fixed, metadata-domain
+allocated slot; the writer stamps retired immutable records with their
+publication epoch and collects each retired record once all remaining readers
+are newer than that record, subject to provider pins. A reader entering while
+the writer advances an epoch retries its announcement; an entering/reserved
+slot conservatively blocks collection. The configured capacity is
+`nMaxReaders` (zero defaults to 64); excess scopes report inactive. This
+permits reclamation of old revisions while unrelated newer readers remain
+active. This does not change the immutable views' scope-lifetime contract.

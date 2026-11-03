@@ -50,6 +50,7 @@ struct SIRPublishedResourceRecord
 	SIRRecordChunk *m_pChunks;
 	SIRResourceDependency *m_pDependencies;
 	SIRPublishedResourceRecord *m_pRetiredNext;
+	uint64_t nRetireEpoch;
 	uint64_t m_nAllocationBytes;
 	uint32_t m_nProviderPins; // Protected by the graph's pin mutex.
 };
@@ -136,7 +137,8 @@ SIRResourceGraphWriter::SIRResourceGraphWriter( SIRResourceGraph &rGraph ) noexc
 }
 
 SIRResourceGraph::SIRResourceGraph( const SIRResourceGraphConfig &rConfig ) noexcept
-    : m_Config( rConfig ), m_Writer( *this ), m_OwnerThread( std::this_thread::get_id() ), m_nActiveReaders( 0 ),
+    : m_Config( rConfig ), m_Writer( *this ), m_OwnerThread( std::this_thread::get_id() ), m_nActiveReaders( 0 ), m_pReaderEpochs( nullptr ),
+      m_nPublicationEpoch( 1 ), m_nMaxReaders( 0 ),
       m_KeyIndexAllocator{ this, allocateKeyIndex, releaseKeyIndex, rConfig.m_nMetadataDomain, 0x47524447U },
       m_KeyIndex( &m_KeyIndexAllocator ), m_pSlots( nullptr ), m_pStaging( nullptr ), m_pProviderPins( nullptr ),
       m_pReverseEdges( nullptr ), m_pReadKeyIndex( nullptr ), m_nReadKeyIndexCapacity( 0 ), m_pReverseBuckets( nullptr ),
@@ -163,6 +165,7 @@ SIRResourceGraph::SIRResourceGraph( const SIRResourceGraphConfig &rConfig ) noex
 	m_nMaxInvalidationEvents = ( uint32_t )nDesiredEvents;
 	m_nReverseBucketCount = m_Config.m_nMaxResources * 2 + 1;
 	m_nReadKeyIndexCapacity = m_nReverseBucketCount;
+	m_nMaxReaders = m_Config.nMaxReaders != 0 ? m_Config.nMaxReaders : 64;
 	const uint64_t nSlots = ( uint64_t )m_Config.m_nMaxResources * sizeof( SIRGraphSlot );
 	const uint64_t nStaging = ( uint64_t )m_Config.m_nMaxStaging * sizeof( SIRStagingSlot );
 	const uint64_t nPins = ( uint64_t )m_Config.m_nMaxProviderPins * sizeof( SIRProviderPinSlot );
@@ -170,17 +173,20 @@ SIRResourceGraph::SIRResourceGraph( const SIRResourceGraphConfig &rConfig ) noex
 	const uint64_t nBuckets = ( uint64_t )m_nReverseBucketCount * sizeof( uint32_t );
 	const uint64_t nEvents = ( uint64_t )m_nMaxInvalidationEvents * sizeof( SIRResourceInvalidationEvent );
 	const uint64_t nReadCells = ( uint64_t )m_nReadKeyIndexCapacity * sizeof( sirReadKeyIndexCell_t );
+	const uint64_t nReaderBytes = ( uint64_t )m_nMaxReaders * sizeof( std::atomic<uint64_t> );
 	m_pSlots = ( SIRGraphSlot * )allocate( nSlots, alignof( SIRGraphSlot ), m_Config.m_nMetadataDomain );
 	m_pStaging = ( SIRStagingSlot * )allocate( nStaging, alignof( SIRStagingSlot ), m_Config.m_nMetadataDomain );
 	m_pProviderPins = ( SIRProviderPinSlot * )allocate( nPins, alignof( SIRProviderPinSlot ), m_Config.m_nMetadataDomain );
 	m_pReverseEdges = ( SIRReverseDependencyEdge * )allocate( nEdges, alignof( SIRReverseDependencyEdge ), m_Config.m_nMetadataDomain );
 	m_pReadKeyIndex = ( sirReadKeyIndexCell_t * )allocate( nReadCells, alignof( sirReadKeyIndexCell_t ), m_Config.m_nMetadataDomain );
+	m_pReaderEpochs = ( std::atomic<uint64_t> * )allocate( nReaderBytes, alignof( std::atomic<uint64_t> ),
+	                                                      m_Config.m_nMetadataDomain );
 	m_pReverseBuckets = ( uint32_t * )allocate( nBuckets, alignof( uint32_t ), m_Config.m_nMetadataDomain );
 	m_pInvalidations =
 	    ( SIRResourceInvalidationEvent * )allocate( nEvents, alignof( SIRResourceInvalidationEvent ), m_Config.m_nMetadataDomain );
 	m_pTraversalQueue = ( uint32_t * )allocate( ( uint64_t )m_Config.m_nMaxResources * sizeof( uint32_t ), alignof( uint32_t ),
 	                                            m_Config.m_nMetadataDomain );
-	if ( !m_pSlots || !m_pStaging || !m_pProviderPins || !m_pReverseEdges || !m_pReadKeyIndex || !m_pReverseBuckets || !m_pInvalidations ||
+	if ( !m_pSlots || !m_pStaging || !m_pProviderPins || !m_pReverseEdges || !m_pReadKeyIndex || !m_pReaderEpochs || !m_pReverseBuckets || !m_pInvalidations ||
 	     !m_pTraversalQueue ) {
 		return;
 	}
@@ -189,6 +195,10 @@ SIRResourceGraph::SIRResourceGraph( const SIRResourceGraphConfig &rConfig ) noex
 	}
 	memset( m_pStaging, 0, ( size_t )nStaging );
 	memset( m_pProviderPins, 0, ( size_t )nPins );
+	for ( uint32_t iReader = 0; iReader < m_nMaxReaders; ++iReader ) {
+		new ( &m_pReaderEpochs[iReader] ) std::atomic<uint64_t>();
+		m_pReaderEpochs[iReader].store( 0, std::memory_order_relaxed );
+	}
 	for ( uint32_t iCell = 0; iCell < m_nReadKeyIndexCapacity; ++iCell ) {
 		new ( &m_pReadKeyIndex[iCell] ) sirReadKeyIndexCell_t();
 		m_pReadKeyIndex[iCell].nRecord.store( 0, std::memory_order_relaxed );
@@ -210,6 +220,13 @@ SIRResourceGraph::~SIRResourceGraph( void ) noexcept
 	// Destruction with live scopes or pins is a caller lifetime violation.
 	if ( m_nActiveReaders.load( std::memory_order_seq_cst ) != 0 ) {
 		abort();
+	}
+	if ( m_pReaderEpochs != nullptr && m_bReady ) {
+		for ( uint32_t iReader = 0; iReader < m_nMaxReaders; ++iReader ) {
+			if ( m_pReaderEpochs[iReader].load( std::memory_order_seq_cst ) != 0 ) {
+				abort();
+			}
+		}
 	}
 	if ( m_pProviderPins ) {
 		for ( uint32_t iPin = 0; iPin < m_Config.m_nMaxProviderPins; ++iPin ) {
@@ -237,6 +254,13 @@ SIRResourceGraph::~SIRResourceGraph( void ) noexcept
 			releaseStagingSlot( iSlot );
 		}
 	}
+	if ( m_pReaderEpochs != nullptr && m_bReady ) {
+		for ( uint32_t iReader = 0; iReader < m_nMaxReaders; ++iReader ) {
+			m_pReaderEpochs[iReader].~atomic();
+		}
+	}
+	release( m_pReaderEpochs, ( uint64_t )m_nMaxReaders * sizeof( std::atomic<uint64_t> ),
+	         alignof( std::atomic<uint64_t> ), m_Config.m_nMetadataDomain );
 	release( m_pInvalidations, ( uint64_t )m_nMaxInvalidationEvents * sizeof( SIRResourceInvalidationEvent ),
 	         alignof( SIRResourceInvalidationEvent ), m_Config.m_nMetadataDomain );
 	if ( m_pReadKeyIndex != nullptr && m_bReady ) {
@@ -319,6 +343,8 @@ SIRResourceGraphStats SIRResourceGraph::getStats( void ) const noexcept
 {
 	SIRResourceGraphStats result = {};
 	result.m_nActiveReaders = m_nActiveReaders.load( std::memory_order_seq_cst );
+	result.nMaxReaders = m_nMaxReaders;
+	result.nPublicationEpoch = m_nPublicationEpoch.load( std::memory_order_seq_cst );
 	if ( !isWriterThread() ) {
 		return result;
 	}
@@ -407,6 +433,7 @@ void SIRResourceGraph::destroyRecord( SIRPublishedResourceRecord *pRecord ) noex
 void SIRResourceGraph::pushRetired( SIRPublishedResourceRecord *pRecord ) noexcept
 {
 	if ( pRecord ) {
+		pRecord->nRetireEpoch = m_nPublicationEpoch.load( std::memory_order_seq_cst );
 		pRecord->m_pRetiredNext = m_pRetired;
 		m_pRetired = pRecord;
 		++m_nRetiredRecords;
@@ -415,6 +442,10 @@ void SIRResourceGraph::pushRetired( SIRPublishedResourceRecord *pRecord ) noexce
 
 void SIRResourceGraph::publishRecord( uint32_t iSlot, SIRPublishedResourceRecord *pRecord ) noexcept
 {
+	const uint64_t nEpoch = m_nPublicationEpoch.load( std::memory_order_seq_cst );
+	if ( nEpoch >= UINT64_MAX - 1 ) {
+		abort();
+	}
 	SIRPublishedResourceRecord *pPrior = m_pSlots[iSlot].m_pPublished.exchange( pRecord, std::memory_order_seq_cst );
 	updateReadKeyIndex( pPrior, pRecord );
 	pushRetired( pPrior );
@@ -424,6 +455,9 @@ void SIRResourceGraph::publishRecord( uint32_t iSlot, SIRPublishedResourceRecord
 	if ( pChanged != nullptr ) {
 		invalidateReverseDependents( pChanged->m_Info.m_Key );
 	}
+	// The new epoch becomes visible only after both published pointers and
+	// the reader-side key index have stopped exposing the retired record.
+	m_nPublicationEpoch.store( nEpoch + 1, std::memory_order_seq_cst );
 }
 
 void SIRResourceGraph::updateReadKeyIndex( const SIRPublishedResourceRecord *pPrior, const SIRPublishedResourceRecord *pPublished ) noexcept
@@ -1129,8 +1163,16 @@ uint32_t SIRResourceGraph::collectRetiredInternal( uint32_t nMaxRecords ) noexce
 		return 0;
 	}
 	std::lock_guard<std::mutex> pinLock( m_PinMutex );
-	if ( m_nActiveReaders.load( std::memory_order_seq_cst ) != 0 ) {
-		return 0;
+	uint64_t nOldestReaderEpoch = UINT64_MAX;
+	for ( uint32_t iReader = 0; iReader < m_nMaxReaders; ++iReader ) {
+		const uint64_t nReaderEpoch = m_pReaderEpochs[iReader].load( std::memory_order_seq_cst );
+		if ( nReaderEpoch == UINT64_MAX ) {
+			// A scope is entering and has not stabilized its publication epoch.
+			return 0;
+		}
+		if ( nReaderEpoch != 0 && nReaderEpoch < nOldestReaderEpoch ) {
+			nOldestReaderEpoch = nReaderEpoch;
+		}
 	}
 	uint32_t nCollected = 0;
 	uint32_t nVisited = 0;
@@ -1138,7 +1180,7 @@ uint32_t SIRResourceGraph::collectRetiredInternal( uint32_t nMaxRecords ) noexce
 	while ( *pLink && nVisited < nMaxRecords ) {
 		++nVisited;
 		SIRPublishedResourceRecord *pCurrent = *pLink;
-		if ( pCurrent->m_nProviderPins ) {
+		if ( pCurrent->m_nProviderPins || pCurrent->nRetireEpoch >= nOldestReaderEpoch ) {
 			pLink = &pCurrent->m_pRetiredNext;
 			continue;
 		}
@@ -1158,15 +1200,39 @@ uint32_t SIRResourceGraphWriter::collectRetired( uint32_t nMaxRecords ) noexcept
 SIRResourceReadScope::SIRResourceReadScope( const SIRResourceGraph &rGraph ) noexcept
     : m_pGraph( rGraph.isReady() ? &rGraph : nullptr ), m_nReaderToken( 0 )
 {
-	if ( m_pGraph ) {
-		m_pGraph->m_nActiveReaders.fetch_add( 1, std::memory_order_seq_cst );
-		m_nReaderToken = 1;
+	if ( m_pGraph == nullptr ) {
+		return;
 	}
+	for ( uint32_t iReader = 0; iReader < m_pGraph->m_nMaxReaders; ++iReader ) {
+		uint64_t nVacant = 0;
+		if ( !m_pGraph->m_pReaderEpochs[iReader].compare_exchange_strong( nVacant, UINT64_MAX, std::memory_order_seq_cst ) ) {
+			continue;
+		}
+		// Claim first, then announce an epoch. If the writer advances while
+		// we enter, retry until a stable epoch is announced. The reserved
+		// sentinel prevents collection during this transition.
+		for ( ;; ) {
+			const uint64_t nEpoch = m_pGraph->m_nPublicationEpoch.load( std::memory_order_seq_cst );
+			m_pGraph->m_pReaderEpochs[iReader].store( nEpoch, std::memory_order_seq_cst );
+			if ( nEpoch == m_pGraph->m_nPublicationEpoch.load( std::memory_order_seq_cst ) ) {
+				break;
+			}
+			m_pGraph->m_pReaderEpochs[iReader].store( UINT64_MAX, std::memory_order_seq_cst );
+		}
+		m_nReaderToken = ( uint64_t )iReader + 1;
+		m_pGraph->m_nActiveReaders.fetch_add( 1, std::memory_order_seq_cst );
+		return;
+	}
+	// The fixed reader scope table is full. Callers already validate
+	// isActive() before dereferencing resources or using borrowed views.
+	m_pGraph = nullptr;
 }
 
 SIRResourceReadScope::~SIRResourceReadScope( void ) noexcept
 {
-	if ( m_nReaderToken ) {
+	if ( m_nReaderToken != 0 ) {
+		const uint32_t iReader = ( uint32_t )( m_nReaderToken - 1 );
+		m_pGraph->m_pReaderEpochs[iReader].store( 0, std::memory_order_seq_cst );
 		m_pGraph->m_nActiveReaders.fetch_sub( 1, std::memory_order_seq_cst );
 	}
 }

@@ -733,6 +733,92 @@ static void testAtomicReadIndexCollisionsAndChurn( void )
 	REQUIRE( alloc.m_nOutstanding.load() == 0 );
 }
 
+
+static void testEpochReclamationWithOverlappingScopes( void )
+{
+	SIRTestAllocatorStats alloc = {};
+	{
+		SIRResourceGraphConfig config = testConfig( alloc );
+		config.nMaxReaders = 3;
+		SIRResourceGraph graph( config );
+		REQUIRE( graph.isReady() );
+		SIRResourceGraphWriter *pWriter = graph.getWriter();
+		REQUIRE( pWriter != nullptr );
+
+		const SIRResourceHandle hResource = publishText( *pWriter, key( 700 ), "version-one", 1700 );
+		alignas( SIRResourceReadScope ) unsigned char szOldScope[sizeof( SIRResourceReadScope )];
+		SIRResourceReadScope *pOldScope = new ( szOldScope ) SIRResourceReadScope( graph );
+		REQUIRE( pOldScope->isActive() );
+		SIRResourceView oldView;
+		REQUIRE( graph.resolve( *pOldScope, hResource, &oldView ) == SIR_RESOURCE_RESULT_SUCCESS );
+		SIRResourceConstBytes oldBytes = {};
+		REQUIRE( oldView.getChunk( { 0 }, &oldBytes ) == SIR_RESOURCE_RESULT_SUCCESS );
+
+		publishText( *pWriter, key( 700 ), "version-two", 1701 );
+		SIRResourcePinHandle hProviderPin = {};
+		{
+			SIRResourceReadScope newerScope( graph );
+			REQUIRE( newerScope.isActive() );
+			SIRResourceView newerView;
+			REQUIRE( graph.resolve( newerScope, hResource, &newerView ) == SIR_RESOURCE_RESULT_SUCCESS );
+			REQUIRE( newerView.getRevision() == 2 );
+			SIRResourceConstBytes newerBytes = {};
+			REQUIRE( newerView.getChunk( { 0 }, &newerBytes ) == SIR_RESOURCE_RESULT_SUCCESS );
+			REQUIRE( strcmp( ( const char * )newerBytes.m_pData, "version-two" ) == 0 );
+			REQUIRE( graph.pinForProvider( newerScope, newerView, 9, &hProviderPin ) == SIR_RESOURCE_RESULT_SUCCESS );
+
+			publishText( *pWriter, key( 700 ), "version-three", 1702 );
+			REQUIRE( graph.getStats().nPublicationEpoch >= 4 );
+			REQUIRE( graph.getStats().m_nRetiredRecords == 2 );
+			REQUIRE( graph.getStats().m_nActiveReaders == 2 );
+			REQUIRE( pWriter->collectRetired( 8 ) == 0 );
+			REQUIRE( strcmp( ( const char * )oldBytes.m_pData, "version-one" ) == 0 );
+
+			pOldScope->~SIRResourceReadScope();
+			REQUIRE( graph.getStats().m_nActiveReaders == 1 );
+			REQUIRE( pWriter->collectRetired( 8 ) == 1 );
+			REQUIRE( graph.getStats().m_nRetiredRecords == 1 );
+			REQUIRE( strcmp( ( const char * )newerBytes.m_pData, "version-two" ) == 0 );
+		}
+		REQUIRE( graph.getStats().m_nActiveReaders == 0 );
+		REQUIRE( pWriter->collectRetired( 8 ) == 0 );
+		REQUIRE( graph.getStats().m_nRetiredRecords == 1 );
+		REQUIRE( graph.releaseProviderPin( hProviderPin ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( pWriter->collectRetired( 8 ) == 1 );
+		REQUIRE( graph.getStats().m_nRetiredRecords == 0 );
+		REQUIRE( pWriter->retire( hResource ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( pWriter->collectRetired( 8 ) == 1 );
+	}
+	REQUIRE( alloc.m_nOutstanding.load() == 0 );
+}
+
+static void testReaderEpochSlotExhaustion( void )
+{
+	SIRTestAllocatorStats alloc = {};
+	{
+		SIRResourceGraphConfig config = testConfig( alloc );
+		config.nMaxReaders = 2;
+		SIRResourceGraph graph( config );
+		REQUIRE( graph.isReady() );
+		REQUIRE( graph.getStats().nMaxReaders == 2 );
+		{
+			SIRResourceReadScope first( graph );
+			SIRResourceReadScope second( graph );
+			SIRResourceReadScope exhausted( graph );
+			REQUIRE( first.isActive() && second.isActive() );
+			REQUIRE( !exhausted.isActive() );
+			REQUIRE( graph.getStats().m_nActiveReaders == 2 );
+			SIRResourceHandle hMissing = {};
+			REQUIRE( graph.find( exhausted, key( 123 ), &hMissing ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		}
+		REQUIRE( graph.getStats().m_nActiveReaders == 0 );
+		SIRResourceReadScope recovered( graph );
+		REQUIRE( recovered.isActive() );
+		REQUIRE( graph.getStats().m_nActiveReaders == 1 );
+	}
+	REQUIRE( alloc.m_nOutstanding.load() == 0 );
+}
+
 int main( void )
 {
 	testScopeLifetimeAndDeduplication();
@@ -747,6 +833,8 @@ int main( void )
 	testReverseDependencyCapacityRollback();
 	testInvalidationJournalOverflowAndResume();
 	testAtomicReadIndexCollisionsAndChurn();
+	testEpochReclamationWithOverlappingScopes();
+	testReaderEpochSlotExhaustion();
 	printf( "PASS: GRDG resource registry, publication, deduplication, lifetime, concurrency\n" );
 	return 0;
 }

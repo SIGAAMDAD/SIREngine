@@ -40,8 +40,8 @@ struct SIRProviderPinSlot;
 struct SIRReverseDependencyEdge;
 typedef struct sirReadKeyIndexCell_s sirReadKeyIndexCell_t;
 
-// The key index belongs exclusively to the GRDG writer. Concurrent readers
-// still resolve through published slots under their read scopes.
+// Writer lookup uses the flat hash map; readers use separately preallocated
+// atomic key cells protected by the graph's read-scope lifetime protocol.
 class SIRResourceKeyHash
 {
 public:
@@ -85,6 +85,9 @@ typedef struct sirResourceGraphConfig_s
 	uint32_t m_nMaxDependencyEdges;
 	// Zero selects a bounded default of four journal entries per resource.
 	uint32_t m_nMaxInvalidationEvents;
+	// Zero defaults to 64 concurrent or nested read scopes. Each scope owns
+	// one epoch slot; exhausted scopes are inactive until a slot is released.
+	uint32_t nMaxReaders;
 } sirResourceGraphConfig_t;
 typedef sirResourceGraphConfig_t SIRResourceGraphConfig;
 
@@ -101,6 +104,8 @@ typedef struct sirResourceGraphStats_s
 	uint64_t m_nChangeSequence;
 	uint64_t m_nTotalInvalidationEvents;
 	uint32_t m_nBufferedInvalidationEvents;
+	uint32_t nMaxReaders;
+	uint64_t nPublicationEpoch;
 } sirResourceGraphStats_t;
 
 // Bounded journal notifications. A change may invalidate several resources;
@@ -161,6 +166,11 @@ private:
 	SIRResourceGraphWriter m_Writer;
 	std::thread::id m_OwnerThread;
 	mutable std::atomic<uint32_t> m_nActiveReaders;
+	// Slot value 0 is vacant; UINT64_MAX reserves a slot during entry.
+	// Published epochs protect older immutable records from reclamation.
+	mutable std::atomic<uint64_t> *m_pReaderEpochs;
+	std::atomic<uint64_t> m_nPublicationEpoch;
+	uint32_t m_nMaxReaders;
 	mutable std::mutex m_PinMutex;
 	sirContainerAllocator_t m_KeyIndexAllocator;
 	SIRFlatHashMap<SIRResourceKey, uint32_t, SIRResourceKeyHash, SIRResourceKeyEqual> m_KeyIndex;
