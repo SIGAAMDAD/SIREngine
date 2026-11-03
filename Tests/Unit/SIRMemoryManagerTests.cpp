@@ -197,14 +197,13 @@ static bool testBackingTelemetry( void )
 		return false;
 	}
 	const sirPageBackingStats_t original = memory.getPageBackingStats();
-	if ( !pSegment->commit( 0, nPage ) || !pSegment->commit( 0, nPage ) ||
-	     pSegment->commit( nPage, nPage ) || !pSegment->decommit( 0, nPage ) || !pSegment->decommit( 0, nPage ) ) {
+	if ( !pSegment->commit( 0, nPage ) || !pSegment->commit( 0, nPage ) || pSegment->commit( nPage, nPage ) ||
+	     !pSegment->decommit( 0, nPage ) || !pSegment->decommit( 0, nPage ) ) {
 		return false;
 	}
 	const sirPageBackingStats_t stats = memory.getPageBackingStats();
 	if ( stats.nNoopCommitRequests != original.nNoopCommitRequests + 1 ||
-	     stats.nNoopDecommitRequests != original.nNoopDecommitRequests + 1 ||
-	     stats.nNoopCommitBytes != original.nNoopCommitBytes + nPage ||
+	     stats.nNoopDecommitRequests != original.nNoopDecommitRequests + 1 || stats.nNoopCommitBytes != original.nNoopCommitBytes + nPage ||
 	     stats.nNoopDecommitBytes != original.nNoopDecommitBytes + nPage ||
 	     stats.nSuccessfulCommitCalls != original.nSuccessfulCommitCalls + 1 ||
 	     stats.nSuccessfulDecommitCalls != original.nSuccessfulDecommitCalls + 1 ||
@@ -217,10 +216,60 @@ static bool testBackingTelemetry( void )
 	return cleared.nManagedCommittedBytes == 0 && cleared.nNoopCommitRequests == 0 && cleared.nSuccessfulCommitCalls == 0;
 }
 
+static bool testRetainedPageBacking( void )
+{
+	const uint64_t nPage = SIRVirtualMemory::getPageSize();
+	SIRMemoryManager memory;
+	const sirMemoryConfig_t config = { nPage * 128, nPage * 32, nPage * 8, 4 };
+	if ( !memory.init( config ) ) {
+		return false;
+	}
+	SIRMemorySegment *pSegment = memory.createSegment( "retained", nPage * 6, nPage * 2, SIR_MEMORY_DOMAIN_STREAMING );
+	if ( pSegment == nullptr || !memory.setDomainCommitLimit( SIR_MEMORY_DOMAIN_STREAMING, nPage * 3 ) ||
+	     !pSegment->commit( 0, nPage * 2 ) ) {
+		return false;
+	}
+	uint8_t *pBytes = ( uint8_t * )pSegment->getBase();
+	pBytes[0] = 0xA5;
+	pBytes[nPage] = 0x5A;
+	if ( pSegment->retireIdleRange( 0, nPage, 7, 11 ) || !pSegment->bindRetirementOwner( 7, 11 ) ||
+	     pSegment->bindRetirementOwner( 7, 12 ) || pSegment->retireIdleRange( 0, nPage, 7, 12 ) ||
+	     !pSegment->retireIdleRange( 0, nPage, 7, 11 ) || pSegment->retireIdleRange( 0, nPage, 7, 11 ) ) {
+		return false;
+	}
+	const sirPageBackingStats_t before = memory.getPageBackingStats();
+	if ( before.nPendingDecommitBytes != nPage || pSegment->commit( nPage * 2, nPage ) || pBytes[0] != 0xA5 ) {
+		return false;
+	}
+	if ( pSegment->cancelRetiredRange( 0, nPage, 7, 12 ) || !pSegment->commit( 0, nPage ) || pBytes[0] != 0xA5 ||
+	     memory.getPageBackingStats().nPendingDecommitBytes != 0 ) {
+		return false;
+	}
+	if ( !pSegment->retireIdleRange( 0, nPage * 2, 7, 11 ) ) {
+		return false;
+	}
+	const sirPageDrainReport_t drained = memory.drainPendingDecommits( nPage );
+	if ( drained.nDecommittedBytes != nPage || drained.nRemainingPendingBytes != nPage || drained.nCompletedRuns != 1 ||
+	     drained.nFailedRuns != 0 || pSegment->getCommittedBytes() != nPage ) {
+		return false;
+	}
+	if ( !pSegment->cancelRetiredRange( nPage, nPage, 7, 11 ) || memory.getPageBackingStats().nPendingDecommitBytes != 0 ||
+	     pBytes[nPage] != 0x5A ) {
+		return false;
+	}
+	if ( !pSegment->commit( 0, nPage ) || pBytes[0] != 0 || memory.getPageBackingStats().nRetainedReuseBytes < nPage * 2 ) {
+		return false;
+	}
+	if ( !pSegment->decommit( 0, nPage * 2 ) || memory.getPageBackingStats().nPendingDecommitBytes != 0 ) {
+		return false;
+	}
+	return true;
+}
+
 int main( void )
 {
 	if ( !testMemoryBudget() || !testCoreDomainMetadata() || !testBitmapAndRecommit() || !testOversizedRequests() ||
-	     !testFailedInitializationRecovery() || !testBackingTelemetry() ) {
+	     !testFailedInitializationRecovery() || !testBackingTelemetry() || !testRetainedPageBacking() ) {
 		fputs( "SIR memory owner test failed\n", stderr );
 		return 1;
 	}
