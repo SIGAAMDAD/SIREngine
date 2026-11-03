@@ -25,6 +25,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // clang-format on
 
 #include <Core/Containers/SIRVectorStorage.h>
+
+
 #include <assert.h>
 #include <new>
 #include <type_traits>
@@ -315,7 +317,7 @@ public:
 	sirContainerResult_t tryResizeForOverwrite( uint32_t nSize )
 	{
 		static_assert( std::is_trivially_default_constructible<T>::value && std::is_trivially_destructible<T>::value,
-			"Uninitialized growth is restricted to trivial element types" );
+		               "Uninitialized growth is restricted to trivial element types" );
 		if ( nSize <= m_nSize ) {
 			m_nSize = nSize;
 			return SIR_CONTAINER_OK;
