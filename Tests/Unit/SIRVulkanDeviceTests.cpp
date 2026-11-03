@@ -26,8 +26,7 @@ int main( void )
 		return 1;
 	}
 	const sirVulkanResult_t eInit = device.initialize();
-	if ( eInit == SIR_VULKAN_LOADER_UNAVAILABLE || eInit == SIR_VULKAN_API_UNSUPPORTED ||
-	     eInit == SIR_VULKAN_DEVICE_UNAVAILABLE ) {
+	if ( eInit == SIR_VULKAN_LOADER_UNAVAILABLE || eInit == SIR_VULKAN_API_UNSUPPORTED || eInit == SIR_VULKAN_DEVICE_UNAVAILABLE ) {
 		printf( "SKIP: Vulkan 1.4 loader/device unavailable (result %u)\n", ( unsigned )eInit );
 		return 77;
 	}
@@ -35,8 +34,8 @@ int main( void )
 		fprintf( stderr, "Vulkan initialization failed: %u\n", ( unsigned )eInit );
 		return 2;
 	}
-	if ( device.initialize() != SIR_VULKAN_INVALID_STATE || !device.queryAdapter( &adapter ) ||
-	     adapter.nApiVersion < VK_API_VERSION_1_4 || adapter.nMemoryHeapCount == 0 ) {
+	if ( device.initialize() != SIR_VULKAN_INVALID_STATE || !device.queryAdapter( &adapter ) || adapter.nApiVersion < VK_API_VERSION_1_4 ||
+	     adapter.nMemoryHeapCount == 0 ) {
 		return 3;
 	}
 

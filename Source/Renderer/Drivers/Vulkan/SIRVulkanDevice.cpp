@@ -85,9 +85,10 @@ bool SIRVulkanDevice::chooseAdapter( void ) noexcept
 			if ( families[iFamily].queueCount == 0 || ( families[iFamily].queueFlags & VK_QUEUE_GRAPHICS_BIT ) == 0 ) {
 				continue;
 			}
-			const uint32_t nScore = properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU ? 4 :
-			                        properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU ? 3 :
-			                        properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU ? 2 : 1;
+			const uint32_t nScore = properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU     ? 4
+			                        : properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU ? 3
+			                        : properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU    ? 2
+			                                                                                          : 1;
 			if ( nScore <= nBestScore ) {
 				break;
 			}
@@ -125,7 +126,7 @@ sirVulkanResult_t SIRVulkanDevice::initialize( void ) noexcept
 		return SIR_VULKAN_INVALID_STATE;
 	}
 
-#if defined(_WIN32)
+#if defined( _WIN32 )
 	const char *szLoader = "vulkan-1.dll";
 #else
 	const char *szLoader = "libvulkan.so.1";
@@ -283,7 +284,7 @@ bool SIRVulkanDevice::queryMemoryStats( sirVulkanMemoryStats_t *pStats ) const n
 }
 
 sirVulkanResult_t SIRVulkanDevice::createBuffer( uint64_t nBytes, VkBufferUsageFlags nUsage, bool bHostVisible,
-                                                sirVulkanBuffer_t *pBuffer ) noexcept
+                                                 sirVulkanBuffer_t *pBuffer ) noexcept
 {
 	if ( !m_bReady ) {
 		return SIR_VULKAN_INVALID_STATE;
@@ -316,8 +317,7 @@ sirVulkanResult_t SIRVulkanDevice::createBuffer( uint64_t nBytes, VkBufferUsageF
 	return SIR_VULKAN_SUCCESS;
 }
 
-sirVulkanResult_t SIRVulkanDevice::writeBuffer( sirVulkanBuffer_t *pBuffer, uint64_t nOffset, const void *pData,
-                                               uint64_t nBytes ) noexcept
+sirVulkanResult_t SIRVulkanDevice::writeBuffer( sirVulkanBuffer_t *pBuffer, uint64_t nOffset, const void *pData, uint64_t nBytes ) noexcept
 {
 	if ( !m_bReady ) {
 		return SIR_VULKAN_INVALID_STATE;
