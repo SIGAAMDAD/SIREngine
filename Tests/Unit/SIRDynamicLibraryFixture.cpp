@@ -13,10 +13,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#if defined(_WIN32)
-	#define SIR_TEST_EXPORT __declspec(dllexport)
+#if defined( _WIN32 )
+#define SIR_TEST_EXPORT __declspec( dllexport )
 #else
-	#define SIR_TEST_EXPORT __attribute__((visibility("default")))
+#define SIR_TEST_EXPORT __attribute__( ( visibility( "default" ) ) )
 #endif
 
 extern "C" SIR_TEST_EXPORT int sirPlatformTestValue( void ) noexcept

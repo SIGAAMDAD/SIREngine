@@ -106,7 +106,7 @@ static bool testCoreDomainMetadata( void )
 		return false;
 	}
 	if ( memory.getDomainStats( SIR_MEMORY_DOMAIN_NETWORKING ).nCommittedBytes != 0 ||
-		memory.getDomainStats( SIR_MEMORY_DOMAIN_STREAMING ).nCommittedBytes != 0 ) {
+	     memory.getDomainStats( SIR_MEMORY_DOMAIN_STREAMING ).nCommittedBytes != 0 ) {
 		return false;
 	}
 	return true;
@@ -133,7 +133,7 @@ static bool testBitmapAndRecommit( void )
 	if ( !pSegment->decommit( nPage * 63, nPage * 65 ) || pSegment->getCommittedBytes() != nPage * 15 ) {
 		return false;
 	}
-	uint8_t *pAddress = (uint8_t *)pSegment->getBase();
+	uint8_t *pAddress = ( uint8_t * )pSegment->getBase();
 	pAddress[nPage * 62] = 0xA5;
 	if ( !pSegment->decommit( nPage * 60, nPage * 3 ) || !pSegment->commit( nPage * 62, nPage ) ) {
 		return false;
@@ -159,15 +159,13 @@ static bool testOversizedRequests( void )
 		return false;
 	}
 	if ( memory.createSegment( "overflow", UINT64_MAX ) != nullptr ||
-		memory.createSegment( "overflow", nPage * 4, UINT64_MAX ) != nullptr ||
-		memory.allocateMetadata( UINT64_MAX, 8 ) != nullptr ||
-		memory.allocateMetadata( 8, 3 ) != nullptr ) {
+	     memory.createSegment( "overflow", nPage * 4, UINT64_MAX ) != nullptr || memory.allocateMetadata( UINT64_MAX, 8 ) != nullptr ||
+	     memory.allocateMetadata( 8, 3 ) != nullptr ) {
 		return false;
 	}
 	const char *szLongName = "SIR_SEGMENT_NAME_LONGER_THAN_THE_32_BYTE_STORAGE_ARRAY";
 	SIRMemorySegment *pSegment = memory.createSegment( szLongName, nPage * 4 );
-	return pSegment != nullptr && strlen( pSegment->getName() ) == 31 &&
-		strncmp( pSegment->getName(), szLongName, 31 ) == 0;
+	return pSegment != nullptr && strlen( pSegment->getName() ) == 31 && strncmp( pSegment->getName(), szLongName, 31 ) == 0;
 }
 
 static bool testFailedInitializationRecovery( void )
@@ -188,8 +186,8 @@ static bool testFailedInitializationRecovery( void )
 
 int main( void )
 {
-	if ( !testMemoryBudget() || !testCoreDomainMetadata() ||
-		!testBitmapAndRecommit() || !testOversizedRequests() || !testFailedInitializationRecovery() ) {
+	if ( !testMemoryBudget() || !testCoreDomainMetadata() || !testBitmapAndRecommit() || !testOversizedRequests() ||
+	     !testFailedInitializationRecovery() ) {
 		fputs( "SIR memory owner test failed\n", stderr );
 		return 1;
 	}

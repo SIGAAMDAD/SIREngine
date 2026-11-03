@@ -22,9 +22,9 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 extern "C" int __wrap_madvise( void *pAddress, size_t nBytes, int nAdvice ) noexcept
 {
-	(void)pAddress;
-	(void)nBytes;
-	(void)nAdvice;
+	( void )pAddress;
+	( void )nBytes;
+	( void )nAdvice;
 	errno = EIO;
 	return -1;
 }
@@ -37,7 +37,7 @@ int main( void )
 		return 1;
 	}
 
-	volatile uint8_t *pBytes = (volatile uint8_t *)pAddress;
+	volatile uint8_t *pBytes = ( volatile uint8_t * )pAddress;
 	pBytes[0] = 0x5A;
 	if ( SIRVirtualMemory::decommit( pAddress, nPage ) || pBytes[0] != 0x5A ) {
 		fputs( "failed decommit damaged committed page\n", stderr );

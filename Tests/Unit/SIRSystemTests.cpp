@@ -35,12 +35,12 @@ typedef struct sirTestWorker_s
 	SIRConditionVariable ready;
 	bool bRelease = false;
 	bool bStarted = false;
-	std::atomic<uint32_t> nRuns{0};
+	std::atomic<uint32_t> nRuns{ 0 };
 } sirTestWorker_t;
 
 static void runWorker( void *pUserData )
 {
-	sirTestWorker_t *pWorker = (sirTestWorker_t *)pUserData;
+	sirTestWorker_t *pWorker = ( sirTestWorker_t * )pUserData;
 	pWorker->mutex.lock();
 	pWorker->bStarted = true;
 	pWorker->ready.notifyOne();
@@ -63,8 +63,8 @@ static bool testVirtualMemory( void )
 	}
 	bool bSuccess = SIRPlatformUtils::commitVirtualMemory( pAddress, nPage );
 	if ( bSuccess ) {
-		((uint8_t *)pAddress)[0] = 0x5a;
-		bSuccess = ((uint8_t *)pAddress)[0] == 0x5a;
+		( ( uint8_t * )pAddress )[0] = 0x5a;
+		bSuccess = ( ( uint8_t * )pAddress )[0] == 0x5a;
 	}
 	if ( bSuccess ) {
 		bSuccess = SIRPlatformUtils::protectVirtualMemory( pAddress, nPage, SIR_MEMORY_READ_ONLY );
@@ -89,7 +89,7 @@ static bool testDynamicLibrary( void )
 	if ( SIRPlatformUtils::loadDynamicLibrary( nullptr, &library ) ) {
 		return false;
 	}
-#if defined(_WIN32)
+#if defined( _WIN32 )
 	const char *szName = "kernel32.dll";
 	const char *szSymbol = "GetCurrentProcessId";
 #else
@@ -98,7 +98,7 @@ static bool testDynamicLibrary( void )
 #endif
 	if ( !SIRPlatformUtils::loadDynamicLibrary( szName, &library ) ) {
 		char szError[256];
-		SIRPlatformUtils::getDynamicLibraryError( szError, sizeof(szError) );
+		SIRPlatformUtils::getDynamicLibraryError( szError, sizeof( szError ) );
 		fprintf( stderr, "Library load: %s\n", szError );
 		return false;
 	}
@@ -163,12 +163,11 @@ static bool testLocks( void )
 static bool testSeparatedServices( void )
 {
 	const size_t nPage = SIRVirtualMemory::getPageSize();
-	if ( nPage == 0 || nPage != SIRPlatformUtils::getPageSize() ||
-		SIRVirtualMemory::getAllocationGranularity() < nPage ) {
+	if ( nPage == 0 || nPage != SIRPlatformUtils::getPageSize() || SIRVirtualMemory::getAllocationGranularity() < nPage ) {
 		return false;
 	}
 	if ( SIRVirtualMemory::reserve( 0 ) != nullptr || SIRVirtualMemory::commit( nullptr, nPage ) ||
-		SIRVirtualMemory::protect( nullptr, nPage, SIR_MEMORY_READ_ONLY ) ) {
+	     SIRVirtualMemory::protect( nullptr, nPage, SIR_MEMORY_READ_ONLY ) ) {
 		return false;
 	}
 	void *pAddress = SIRVirtualMemory::reserve( nPage * 2 );
@@ -177,11 +176,11 @@ static bool testSeparatedServices( void )
 	}
 	bool bSuccess = SIRVirtualMemory::commit( pAddress, nPage );
 	if ( bSuccess ) {
-		((uint8_t *)pAddress)[0] = 0x48;
-		bSuccess = ((uint8_t *)pAddress)[0] == 0x48;
+		( ( uint8_t * )pAddress )[0] = 0x48;
+		bSuccess = ( ( uint8_t * )pAddress )[0] == 0x48;
 	}
 	if ( bSuccess ) {
-		bSuccess = !SIRVirtualMemory::protect( pAddress, nPage, (sirMemoryProtection_t)255 );
+		bSuccess = !SIRVirtualMemory::protect( pAddress, nPage, ( sirMemoryProtection_t )255 );
 	}
 	if ( bSuccess ) {
 		bSuccess = SIRVirtualMemory::decommit( pAddress, nPage );
@@ -199,7 +198,7 @@ static bool testSeparatedServices( void )
 	if ( !SIRDynamicLibrary::getLastError( szError, sizeof( szError ) ) || szError[0] == '\0' ) {
 		return false;
 	}
-#if defined(_WIN32)
+#if defined( _WIN32 )
 	const char *szName = "kernel32.dll";
 	const char *szSymbol = "GetCurrentProcessId";
 #else
@@ -225,7 +224,7 @@ static bool testSeparatedServices( void )
 		return false;
 	}
 	typedef int ( *sirTestModuleFunction_t )( void );
-	sirTestModuleFunction_t pValue = (sirTestModuleFunction_t)SIRDynamicLibrary::findSymbol( &module, "sirPlatformTestValue" );
+	sirTestModuleFunction_t pValue = ( sirTestModuleFunction_t )SIRDynamicLibrary::findSymbol( &module, "sirPlatformTestValue" );
 	const bool bModuleCalled = pValue != nullptr && pValue() == 42;
 	if ( !SIRDynamicLibrary::unload( &module ) || !bModuleCalled ) {
 		return false;
@@ -238,7 +237,6 @@ static bool testSeparatedServices( void )
 	const uint64_t nAfter = SIRPlatformTime::getMonotonicNanoseconds();
 	return nBefore > 0 && nAfter >= nBefore && SIRPlatformProcess::getLogicalProcessorCount() > 0;
 }
-
 
 static bool testOperatingSystemMemory( void )
 {
@@ -253,8 +251,7 @@ static bool testOperatingSystemMemory( void )
 	if ( system.nTotalPhysicalBytes == 0 || system.nAvailablePhysicalBytes > system.nTotalPhysicalBytes ) {
 		return false;
 	}
-	if ( ( system.nValidFields & SIR_SYSTEM_MEMORY_SWAP ) != 0 &&
-		system.nAvailableSwapBytes > system.nTotalSwapBytes ) {
+	if ( ( system.nValidFields & SIR_SYSTEM_MEMORY_SWAP ) != 0 && system.nAvailableSwapBytes > system.nTotalSwapBytes ) {
 		return false;
 	}
 	if ( ( system.nValidFields & SIR_SYSTEM_MEMORY_GROUP_LIMIT ) != 0 && system.nGroupMemoryLimitBytes == 0 ) {
@@ -263,12 +260,10 @@ static bool testOperatingSystemMemory( void )
 	if ( ( process.nValidFields & SIR_PROCESS_MEMORY_RESIDENT ) == 0 || process.nResidentBytes == 0 ) {
 		return false;
 	}
-	if ( ( process.nValidFields & SIR_PROCESS_MEMORY_PEAK_RESIDENT ) != 0 &&
-		process.nPeakResidentBytes < process.nResidentBytes ) {
+	if ( ( process.nValidFields & SIR_PROCESS_MEMORY_PEAK_RESIDENT ) != 0 && process.nPeakResidentBytes < process.nResidentBytes ) {
 		return false;
 	}
-	if ( ( process.nValidFields & SIR_PROCESS_MEMORY_VIRTUAL_ADDRESS ) != 0 &&
-		process.nVirtualAddressBytes < process.nResidentBytes ) {
+	if ( ( process.nValidFields & SIR_PROCESS_MEMORY_VIRTUAL_ADDRESS ) != 0 && process.nVirtualAddressBytes < process.nResidentBytes ) {
 		return false;
 	}
 	// A live process can grow between snapshots; do not assert an allocation-sized RSS delta.
@@ -277,7 +272,7 @@ static bool testOperatingSystemMemory( void )
 	if ( pMemory == nullptr ) {
 		return false;
 	}
-	( (volatile uint8_t *)pMemory )[0] = 0x42;
+	( ( volatile uint8_t * )pMemory )[0] = 0x42;
 	sirProcessMemoryStats_t later = {};
 	const bool bObserved = SIRPlatformMemory::queryProcess( &later );
 	const bool bReleased = SIRVirtualMemory::freePages( pMemory, nPage );
@@ -296,15 +291,13 @@ static bool testCPUInformation( void )
 	if ( cpu.nPhysicalCoreCount > cpu.nLogicalProcessorCount ) {
 		return false;
 	}
-	if ( ( cpu.nFeatures & SIR_CPU_FEATURE_AVX2 ) != 0 &&
-		( cpu.nFeatures & SIR_CPU_FEATURE_AVX ) == 0 ) {
+	if ( ( cpu.nFeatures & SIR_CPU_FEATURE_AVX2 ) != 0 && ( cpu.nFeatures & SIR_CPU_FEATURE_AVX ) == 0 ) {
 		return false;
 	}
-	if ( ( cpu.nFeatures & SIR_CPU_FEATURE_FMA ) != 0 &&
-		( cpu.nFeatures & SIR_CPU_FEATURE_AVX ) == 0 ) {
+	if ( ( cpu.nFeatures & SIR_CPU_FEATURE_FMA ) != 0 && ( cpu.nFeatures & SIR_CPU_FEATURE_AVX ) == 0 ) {
 		return false;
 	}
-#if defined(__x86_64__) || defined(_M_X64)
+#if defined( __x86_64__ ) || defined( _M_X64 )
 	if ( cpu.szVendor[0] == '\0' || cpu.szBrand[0] == '\0' ) {
 		return false;
 	}
@@ -321,14 +314,13 @@ static bool testSystemInformation( void )
 	if ( !SIRSystemInfo::query( &info ) ) {
 		return false;
 	}
-	if ( info.nProcessId == 0 || info.nPageSize != SIRVirtualMemory::getPageSize() ||
-		info.nAllocationGranularity < info.nPageSize ) {
+	if ( info.nProcessId == 0 || info.nPageSize != SIRVirtualMemory::getPageSize() || info.nAllocationGranularity < info.nPageSize ) {
 		return false;
 	}
 	if ( info.szOSName[0] == '\0' || info.szHostName[0] == '\0' || info.eArchitecture == SIR_ARCH_UNKNOWN ) {
 		return false;
 	}
-#if defined(_WIN32)
+#if defined( _WIN32 )
 	return info.eOS == SIR_OS_WINDOWS;
 #else
 	return info.eOS == SIR_OS_LINUX && info.szOSRelease[0] != '\0';
@@ -338,7 +330,7 @@ static bool testSystemInformation( void )
 int main( void )
 {
 	if ( !testVirtualMemory() || !testDynamicLibrary() || !testThreading() || !testLocks() || !testSeparatedServices() ||
-		!testOperatingSystemMemory() || !testCPUInformation() || !testSystemInformation() ) {
+	     !testOperatingSystemMemory() || !testCPUInformation() || !testSystemInformation() ) {
 		fputs( "SIRSystemTests failed\n", stderr );
 		return 1;
 	}
