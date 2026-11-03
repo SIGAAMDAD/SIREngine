@@ -1,7 +1,8 @@
 # SIREngine review ownership
 * @SIGAAMDAD
 /Engine/Source/ @SIGAAMDAD
-/Modules/ @SIGAAMDAD
+/Engine/Source/Runtime/Terrain/ @SIGAAMDAD
+/Engine/Source/Editor/Terrain/ @SIGAAMDAD
 /Build/ @SIGAAMDAD
 /Docs/ @SIGAAMDAD
 /.github/workflows/ @SIGAAMDAD

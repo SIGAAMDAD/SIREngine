@@ -1,14 +1,14 @@
-# Milestone 2 — Port Godot engine startup and editor functionality to SIREngine
+# Milestone 2 - Port Godot startup and editor functionality
 
-**Status:** not started. **Source reference:** `Upstream/Godot` at the pinned fork commit.
+**Status:** planned.
 
-Port the essential platform entrypoints, main-loop initialization, object/type registration, resource loading, scene construction and editor application plumbing into the SIREngine source tree. The retained Godot-derived editor workflow must be implemented as native SIREngine CMake targets. Startup, tool invocation and error handling must remain explicit and testable.
+Port the Godot-derived application lifecycle, platform entrypoints, object/type registration, resource loading, scene construction and integrated editor into SIREngine's first-party source tree. Preserve useful editor behavior and asset workflow contracts while adapting internal ownership and the build graph.
 
 ## Deliverables
 
-1. Source/ABI inventory of startup, application lifecycle, object/class database, scene tree, editor modules, and generated build artifacts.
-2. Independently built native engine and editor targets registered through CMake, with correct dependencies and generated source rules.
-3. Editor boot, scene load/save, import, inspection and shutdown acceptance tests on Windows and Linux.
-4. A documented replacement for each imported source/build responsibility and preservation of applicable upstream copyright and license notices.
+1. Source/ABI inventory of application startup, class registration, scene tree, editor modules, serialization and generated build steps, verified against the selected Godot source revision.
+2. Native CMake targets for the application runtime and editor, with required dependency and generated-source rules.
+3. Windows/Linux editor startup, scene import, save/load, inspector, tool invocation, and shutdown tests.
+4. Source-level attribution, copyright and license preservation for the implementation brought into this repository.
 
-**Exit gate:** a native SIREngine editor can launch and execute representative authoring workflows using the SIREngine build system. The first-stage `SIRApplication` bootstrap is infrastructure, not completion of this milestone.
+**Exit criteria:** the SIREngine editor starts, imports and saves representative content, and shuts down correctly using the native build system. The existing Core/Launcher bootstrap is not the editor implementation.

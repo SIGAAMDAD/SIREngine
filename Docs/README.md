@@ -1,33 +1,31 @@
 # SIREngine documentation
 
-The technical documentation separates implemented source, architectural contracts, and staged migration work. The native C++17 foundation is buildable; the inherited Godot, Terrain3D, and NomadFramework repositories are currently pinned references under `Upstream/`.
+Architecture documents distinguish the native C++17 foundation from systems still under development. `Engine/Source/` is the authority for first-party engine code. External engine references are consulted during planned source ports without being tracked as nested source repositories.
 
-## Milestones
+## Implementation milestones
 
-The project's four implementation milestones are recorded in [the milestone index](Milestones/README.md):
+1. [NomadFramework C++ services](Milestones/01-NomadFramework.md)
+2. [Godot-derived startup and editor](Milestones/02-Godot-Startup-Editor.md)
+3. [SIREngine Terrain](Milestones/03-Terrain.md)
+4. [Global Resource Dependency Graph](Milestones/04-GRDG.md)
 
-1. [Port NomadFramework C++ systems](Milestones/01-NomadFramework.md)
-2. [Port Godot startup and editor](Milestones/02-Godot-Startup-Editor.md)
-3. [Port Terrain3D](Milestones/03-Terrain3D.md)
-4. [Begin GRDG development](Milestones/04-GRDG.md)
+## Architectural specifications
 
-## Architecture contracts
-
-| Contract | Document |
+| System | Specification |
 | --- | --- |
-| Engine identity and design scope | [00 - Vision](Architecture/00-vision.md) |
-| System boundaries and dependency direction | [01 - Boundaries](Architecture/01-system-boundaries.md) |
-| Memory ownership and allocation domains | [02 - Memory](Architecture/02-memory-and-allocators.md) |
-| Resource ownership and publication | [03 - GRDG](Architecture/03-grdg.md) |
-| C++17 container and allocator policy | [04 - Containers](Architecture/04-containers.md) |
-| Rendering drivers and resource views | [05 - Rendering](Architecture/05-rendering-backends.md) |
-| Audio provider boundaries | [06 - Audio](Architecture/06-audio-backends.md) |
-| Editor, cooking and shipping data | [07 - Runtime data](Architecture/07-editor-cooking-runtime.md) |
-| Job scheduling and concurrency | [08 - Threading](Architecture/08-threading-and-jobs.md) |
-| Windows, Linux and macOS | [09 - Platforms](Architecture/09-platform-support.md) |
-| Build systems and dependencies | [10 - Build](Architecture/10-build-and-dependencies.md) |
-| Testing and acceptance evidence | [11 - Validation](Architecture/11-acceptance-and-validation.md) |
-| Reusable interfaces and game modules | [12 - Integration](Architecture/12-game-integration.md) |
-| Engine source migration | [13 - Migration](Architecture/13-migration-plan.md) |
+| Identity and goals | [00 - Vision](Architecture/00-vision.md) |
+| Engine boundaries | [01 - Boundaries](Architecture/01-system-boundaries.md) |
+| Memory ownership | [02 - Memory](Architecture/02-memory-and-allocators.md) |
+| Shared resources | [03 - GRDG](Architecture/03-grdg.md) |
+| Containers and allocators | [04 - Containers](Architecture/04-containers.md) |
+| Rendering | [05 - Rendering](Architecture/05-rendering-backends.md) |
+| Audio | [06 - Audio](Architecture/06-audio-backends.md) |
+| Editor and cooked runtime | [07 - Editor/runtime](Architecture/07-editor-cooking-runtime.md) |
+| Threading and jobs | [08 - Threading](Architecture/08-threading-and-jobs.md) |
+| Platform targets | [09 - Platforms](Architecture/09-platform-support.md) |
+| Build and dependencies | [10 - Build](Architecture/10-build-and-dependencies.md) |
+| Verification | [11 - Validation](Architecture/11-acceptance-and-validation.md) |
+| Game integration | [12 - Integration](Architecture/12-game-integration.md) |
+| Migration sequence | [13 - Migration](Architecture/13-migration-plan.md) |
 
-See [C++ standards](Standards/cpp.md) and [architecture decisions](Decisions/0001-source-strategy.md) for established conventions and provenance.
+See [engineering standards](Standards/cpp.md), [architectural decisions](Decisions/0001-source-strategy.md), and [the milestone index](Milestones/README.md).

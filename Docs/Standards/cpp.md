@@ -1,6 +1,6 @@
 # SIREngine-owned C++17 standard
 
-**Scope:** first-party `Engine/Source/`, `Modules/`, `Tests/` and future `Tools/` C++ sources. `Upstream/` and `ThirdParty/` retain their own formatting and API conventions unless source is expressly ported and adapted.
+**Scope:** first-party `Engine/Source/`, `Tests/` and future `Tools/` C++ sources. Externally licensed libraries under `ThirdParty/` retain their own API and formatting conventions.
 
 ## Code and formatting
 
@@ -18,4 +18,4 @@
 
 Do not introduce speculative engine-wide container aliases or hidden allocator routing. The old experimental `SIRContainers.h` is removed. First-party systems may link pinned EASTL when a real consumer and its allocator policy exist.
 
-Imported Godot/NomadFramework/Terrain3D code must retain required ABI and serialization contracts. Review source hashes, ownership and allocation lifetimes, test affected source translation units under the actual target config, and run exact-source formatting and compiler/link validation before acceptance.
+Imported engine and framework code must preserve required ABI, source provenance and serialization contracts. Review source hashes, ownership and allocation lifetimes, test affected source translation units under the actual target config, and run exact-source formatting and compiler/link validation before acceptance.

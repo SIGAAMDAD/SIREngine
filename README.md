@@ -18,7 +18,7 @@ These are design goals, not a claim that all of the corresponding systems have b
 
 ## Development status
 
-The `develop` branch is a fresh C++17 and CMake foundation. It builds a small native application and unit tests without compiling the upstream engines. Godot, NomadFramework, and Terrain3D are available as pinned source references for the scheduled ports. The editor and complete game runtime are not yet part of the native executable.
+The `develop` branch is a C++17 and CMake foundation with a minimal native application and unit tests. The complete editor and runtime are being developed as SIREngine-owned systems. Terrain is a built-in runtime subsystem alongside rendering, physics, audio and resource management; the terrain runtime and editor tools are still under development.
 
 Development is grouped into four [milestones](Docs/Milestones/README.md): porting reusable native framework systems, bringing over engine startup and editor functionality, integrating terrain tooling, and starting the shared resource graph. Further architectural details and implementation status are maintained in [Docs](Docs/README.md).
 
@@ -41,15 +41,13 @@ The same `dev` preset works on Windows and Linux. `debug`, `profile` and `releas
 | Directory | Purpose |
 | --- | --- |
 | `Engine/Source/Core/` | Native foundation and common services |
-| `Engine/Source/Runtime/` | Runtime subsystems and backend integrations |
+| `Engine/Source/Runtime/` | Built-in runtime subsystems, including terrain, and backend integrations |
 | `Engine/Source/Editor/` | Editor and authoring functionality |
 | `Engine/Source/Developer/` | Diagnostics and developer-facing support |
 | `Engine/Source/Programs/` | Executables and command-line programs |
 | `Engine/Source/Platform/` | Platform-specific implementations |
-| `Modules/` | Optional engine modules |
 | `Build/` | CMake, toolchain and automation infrastructure |
 | `ThirdParty/` | Pinned dependencies |
-| `Upstream/` | Pinned source references for migration |
 | `Tests/` | Native unit and integration tests |
 | `Docs/` | Architecture, standards, decisions and milestones |
 

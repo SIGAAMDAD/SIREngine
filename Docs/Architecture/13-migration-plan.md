@@ -1,12 +1,12 @@
-# 13 - Engine migration plan
+# 13 - Native engine migration sequence
 
-**Status:** C++17 native bootstrap implemented; four source-port milestones scheduled.
+**Status:** C++17 Core/Launcher bootstrap implemented; four integration milestones scheduled.
 
-The new repository separates first-party `Engine/Source/`, optional `Modules/`, external libraries `ThirdParty/`, and pinned source-origin references `Upstream/`. Original upstream trees are not linked into the native launcher until specific interfaces and source dependencies are ported.
+First-party engine implementation is kept under `Engine/Source/`. Required third-party *libraries* live under `ThirdParty/`; source revisions and archives consulted for migration are validated separately before selected code is integrated into the engine. Terrain is part of the built-in runtime, not a detachable extension.
 
-1. **[Port NomadFramework C++ systems](../Milestones/01-NomadFramework.md)** - Establish reusable native Core services and appropriate allocator ownership from the authenticated sources. Carry source provenance, C++17 integration, tests and Windows/Linux compilation.
-2. **[Port Godot startup and editor](../Milestones/02-Godot-Startup-Editor.md)** - Introduce the real Godot-derived application lifecycle, platform entrypoints, object/scene services, editor functionality and CMake build registrations into SIREngine-owned code.
-3. **[Port Terrain3D](../Milestones/03-Terrain3D.md)** - Integrate the retained terrain editing and runtime systems, source shader dependencies and serialized-region behavior.
-4. **[Begin GRDG development](../Milestones/04-GRDG.md)** - Implement and test canonical resource identities, one-writer/multiple-reader published records and explicit reclamation as the first independent resource-graph slice.
+1. **[Port NomadFramework C++ services](../Milestones/01-NomadFramework.md)** — portable Core utilities, allocation services, and reusable framework infrastructure with verified source and licensing.
+2. **[Port Godot-derived startup and editor](../Milestones/02-Godot-Startup-Editor.md)** — engine lifecycle, registration, scene and editor capabilities, native build graph, and Windows/Linux editor acceptance.
+3. **[Integrate the built-in Terrain system](../Milestones/03-Terrain.md)** — region storage, materials, brush and erosion tooling, clipmap/LOD streaming, collision and editor/runtime parity.
+4. **[Begin the GRDG](../Milestones/04-GRDG.md)** — canonical resource identities, single-writer publication, multiple-reader access, dependency metadata, and tested reclamation.
 
-Do not complete a milestone by importing source files that do not build or by replacing verified upstream behavior with an untested approximation. Memory and allocator integration remains a shared contract across the ports; the full graph-wide consumer migration extends beyond the fourth milestone.
+Each integration slice includes real source, CMake registration, API/ABI compatibility where applicable, allocation and ownership evidence, and executable tests. Remove superseded code only after its consumers are migrated. Central resource ownership remains a cross-cutting concern through all milestones.

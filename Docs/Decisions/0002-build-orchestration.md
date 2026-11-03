@@ -1,8 +1,10 @@
-# ADR-0002 - Native CMake targets with separately pinned source inputs
+# ADR-0002 - Native CMake build and dependency boundaries
 
-- Date: 2026-11-02
-- Status: active
+- **Date:** 2026-11-02
+- **Status:** accepted
 
-CMake 4.4.5 is the entrypoint for the first-party SIREngine C++17 application, core libraries, native tests and packages. External engine source is kept as pinned Git references under `Upstream/` until ported into native CMake targets. The inherited SCons build is not invoked by the bootstrap and remains available only within the Godot source reference for source comparisons.
+CMake 4.4.5 is the entrypoint for the first-party C++17 engine, unit tests, packaging, and build configurations. FASTBuild is the primary compilation backend in the current presets. Ninja is available for tooling and compilation-database generation. The foundation does not require Python or SCons.
 
-The dependency graph is explicit: Core builds independently, the Launcher links Core, and optional library adapters enter the build only when needed. Platform-specific editor, graphics, terrain and other subsystems are introduced at their corresponding milestones, with compile/link and behavioral evidence. Native Linux/Windows Debug and Release configurations run in CI; compiler outputs are cached without treating a cache hit as a passed test.
+Imported engine subsystems are added as real CMake targets in the first-party source hierarchy, with explicit dependencies, generated-source rules and platform/compiler configurations. Terrain is a built-in runtime system and will receive native target registrations as part of its implementation milestone.
+
+Third-party runtime libraries are kept under `ThirdParty/` or resolved through supported SDK discovery. The CI matrix retains Windows/Linux native Debug and Release gates, formatting, compiler caching and independent tests. A cache hit is not proof of runtime correctness.

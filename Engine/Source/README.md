@@ -1,12 +1,14 @@
 # Engine source
 
-Native C++17 SIREngine sources are partitioned by role:
+Native C++17 SIREngine source is divided by responsibility:
 
-- `Core/`: platform-neutral foundation, memory, containers, system services and jobs.
-- `Runtime/`: graphics, resources, world, animation, audio, physics, networking and scripting.
-- `Editor/`: authoring application, scene editing, asset tools and inspection.
-- `Developer/`: profiling, diagnostics and development-time services.
-- `Programs/`: native applications and content tools.
-- `Platform/`: Windows, Linux, and (after those ports) macOS-specific services.
+- `Core/`: portable foundation, allocation domains, math, containers, job scheduling and common services.
+- `Runtime/`: built-in terrain, graphics, resources, world, animation, audio, physics, networking and scripting.
+- `Editor/`: scene tools, import pipelines, terrain editing and authoring UI.
+- `Developer/`: diagnostics and profiling.
+- `Programs/`: engine executables and command-line tools.
+- `Platform/`: Windows, Linux and later macOS.
 
-The current compiled program is a minimal native lifecycle bootstrap in `Core/` and `Programs/Launcher/`. Other directories are reserved for actual ports and do not claim complete subsystems.
+Terrain is a built-in runtime system under `Runtime/Terrain/`, with integrated editor tooling under `Editor/Terrain/`; it is not an optional extension.
+
+The native Core/Launcher bootstrap is currently built. Other systems are added as source and acceptance tests are ported.

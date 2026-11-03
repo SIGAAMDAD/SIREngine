@@ -1,25 +1,30 @@
-# 01 - SIREngine system boundaries
+# 01 - Engine dependency and ownership boundaries
 
-**Status:** target dependency model, with a minimal native Core implemented.
+**Status:** target architecture; portable Core and Launcher bootstrap available.
 
 ```text
-Applications and game modules
-          |
-Editor / Programs / Tools / Developer
-          |
-        Runtime
-    /   /   |   \
- Resource  World  Rendering  Audio  Physics ...
-          |
-         Core
-          |
-     Platform / OS
+Application/game
+      |
+Editor / Programs / Developer tools
+      |
+   Runtime
+  /  |   \_________________________________
+Terrain World Rendering Resources Physics Audio ...
+      |
+     Core
+      |
+Platform / operating system
 ```
 
-`Engine/Source/Core/` owns the portable foundation: initialization, interfaces, memory services, containers, threading, mathematics, logging, filesystem and basic types as individual systems are ported. `Engine/Source/Runtime/` houses render and audio backends, physics, resources, world/streaming, networking, animation and scripting. `Engine/Source/Editor/`, `Developer/`, `Programs/` and `Platform/` are distinct build boundaries. `Modules/` is reserved for optional plugins such as Terrain3D.
+- `Engine/Source/Core/`: portable memory, jobs, containers, mathematics and common engine services.
+- `Engine/Source/Runtime/`: built-in systems for terrain, resources, graphics, physics, world state, animation, audio, networking and scripting.
+- `Engine/Source/Editor/`: editing and import tools, including built-in terrain authoring.
+- `Engine/Source/Developer/` and `Programs/`: diagnostics, processing utilities and executable entrypoints.
+- `Engine/Source/Platform/`: OS-specific services.
+- `ThirdParty/`: version-pinned third-party libraries used by explicit engine integrations.
 
-The portable Core has no dependency on renderer, editor, gameplay or third-party scene-object APIs. Runtime uses Core and applicable platform services. Editor consumes runtime interfaces; backend-specific details are kept behind driver interfaces. Static objects can be cooked into compact runtime representations without sacrificing editor round-tripping.
+Terrain is engine-owned at `Engine/Source/Runtime/Terrain/`, with editor tooling at `Engine/Source/Editor/Terrain/`. Its CPU state and region formats belong to Terrain; rendering, physics, navigation and the resource graph consume well-defined interfaces rather than introducing competing terrain authorities.
 
-`Upstream/Godot/`, `Upstream/NomadFramework/` and `Upstream/Terrain3D/` are pinned source references, not built dependencies of the native launcher. They become first-party SIREngine code only through independently validated migration slices. Source trees are not accepted as implemented by creating folders or CMake targets.
+Portable Core cannot depend on rendering, Terrain, the editor or game-specific systems. Runtime systems use Core and platform interfaces, while the editor consumes runtime APIs. Each subsystem declares mutable state ownership, allocation domains, reader lifetimes, serialization boundaries and shutdown ordering.
 
-All stateful systems define a single mutating owner, scoped reader lifetimes, allocation domain, serialization/versioning contract where applicable, shutdown order and failure behavior. Shared resource identity eventually belongs to GRDG.
+Porting external implementations is a source-level migration into the appropriate engine directories, with native compilation, license preservation and appropriate tests. The source directory alone is not implementation evidence.

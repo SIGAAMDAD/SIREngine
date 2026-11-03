@@ -1,12 +1,12 @@
-# Development milestones
+# Implementation milestones
 
-The four milestones are ordered by dependency. Their titles represent the agreed direction; the integration work is tracked by source changes and executable acceptance tests, not by directory placeholders.
+The four milestones are ordered by major dependencies. Milestones describe real source integration and acceptance, not directory creation.
 
 | Order | Milestone | Status |
 | --- | --- | --- |
-| 1 | [Port NomadFramework C++ systems to SIREngine](01-NomadFramework.md) | Not started |
-| 2 | [Port Godot engine startup and editor functionality to SIREngine](02-Godot-Startup-Editor.md) | Not started |
-| 3 | [Port Terrain3D to SIREngine](03-Terrain3D.md) | Not started |
-| 4 | [Begin GRDG development](04-GRDG.md) | Not started |
+| 1 | [Port NomadFramework C++ systems to SIREngine](01-NomadFramework.md) | Planned |
+| 2 | [Port Godot engine startup and editor functionality to SIREngine](02-Godot-Startup-Editor.md) | Planned |
+| 3 | [Integrate the built-in SIREngine Terrain system](03-Terrain.md) | Planned |
+| 4 | [Begin development of the GRDG](04-GRDG.md) | Planned |
 
-The native bootstrap, CMake, tests and CI underpin these milestones but are not substitutes for any of them. The `Upstream/` submodules are reference material and are not linked into the native build.
+The native Core and Launcher are a working bootstrap for these milestones. Terrain belongs permanently to `Engine/Source/Runtime/Terrain/` and its tools to `Engine/Source/Editor/Terrain/`.

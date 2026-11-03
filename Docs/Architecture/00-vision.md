@@ -18,6 +18,6 @@ The project is organized as reusable engine infrastructure, not a collection of 
 
 ## Current architecture
 
-`Engine/Source/` contains owned C++17 code for the core, runtime, editor, developer tooling, programs and platforms. `Upstream/` holds pinned sources for deliberate ports, and `Modules/` contains optional integrated engine components. The current native executable is a lifecycle bootstrap, not a completed editor or replacement for the inherited engine.
+`Engine/Source/` contains SIREngine-owned C++17 Core, Runtime, Editor, Developer, Programs and Platform code. Terrain is a built-in system under `Engine/Source/Runtime/Terrain/`, with authoring tools under `Engine/Source/Editor/Terrain/`. `ThirdParty/` is reserved for external libraries. The current native executable implements the lifecycle bootstrap, with editor and other runtime systems still to be ported.
 
 The [milestone index](../Milestones/README.md) specifies the next four engineering stages.

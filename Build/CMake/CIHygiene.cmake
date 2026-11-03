@@ -14,26 +14,35 @@ set(sirRequired
     Engine/Source/Core/Public/SIR/Core/SIRApplication.h
     Engine/Source/Core/Private/SIRApplication.cpp
     .github/workflows/ci.yml .github/workflows/nightly.yml
-    Docs/Milestones/README.md)
+    Docs/Milestones/README.md
+    Docs/Milestones/03-Terrain.md
+    Engine/Source/Runtime/Terrain/README.md)
 foreach(sirPath IN LISTS sirRequired)
     if(NOT sirPath IN_LIST sirFiles)
         message(FATAL_ERROR "Required source missing: ${sirPath}")
     endif()
 endforeach()
+set(sirAllowedDirectories .github Build Docs Engine Tests ThirdParty Tools)
 foreach(sirPath IN LISTS sirFiles)
     if(sirPath MATCHES "^(out/|build/|CMakeFiles/|\\.vs/|include/|src/|scripts/|engine/|third_party/|tests/)")
         message(FATAL_ERROR "Obsolete/generated directory tracked: ${sirPath}")
+    endif()
+    if(sirPath MATCHES "^[^/]+/")
+        string(REGEX REPLACE "/.*$" "" sirRootPath "${sirPath}")
+        if(NOT sirRootPath IN_LIST sirAllowedDirectories)
+            message(FATAL_ERROR "Unexpected top-level source directory: ${sirPath}")
+        endif()
     endif()
     string(TOLOWER "${sirPath}" sirLower)
     if(sirLower MATCHES "\\.(exe|dll|so|dylib|pdb|obj|o|spv|pyc|log)$")
         message(FATAL_ERROR "Generated artifact tracked: ${sirPath}")
     endif()
 endforeach()
-foreach(sirModule IN ITEMS Upstream/Godot Upstream/NomadFramework Upstream/Terrain3D ThirdParty/EASTL ThirdParty/EABase ThirdParty/EAAssert)
+foreach(sirModule IN ITEMS ThirdParty/EASTL ThirdParty/EABase ThirdParty/EAAssert)
     execute_process(COMMAND "${GIT_EXECUTABLE}" -C "${SIR_ROOT}" ls-files --stage -- "${sirModule}"
         RESULT_VARIABLE sirStatus OUTPUT_VARIABLE sirStage)
     if(NOT sirStatus EQUAL 0 OR NOT sirStage MATCHES "^160000 [0-9a-f]+ 0[	 ]")
         message(FATAL_ERROR "Source dependency must be pinned: ${sirModule}")
     endif()
 endforeach()
-message(STATUS "PASS: native source hygiene and six pinned gitlinks")
+message(STATUS "PASS: native source hygiene and three pinned third-party gitlinks")

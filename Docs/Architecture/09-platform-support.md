@@ -2,13 +2,13 @@
 
 **Status:** release policy and target plan.
 
-| Platform | Foundation C++ CI | Godot editor nightly | SIR runtime release gate | Target graphics |
+| Platform | Foundation C++ CI | Native Release nightly | SIR runtime release gate | Target graphics |
 | --- | --- | --- | --- | --- |
 | Windows x86-64 | Required | Required | Required after integration | D3D12, Vulkan 1.4+, OpenGL 4.6 |
 | Linux x86-64 | Required | Required | Required after integration | Vulkan 1.4+, OpenGL 4.6 |
 | macOS | Manual preview only | Deferred | Deferred | Native strategy to be decided after other OS targets |
 
-The foundation smoke test validates C++17, EASTL and the CMake entrypoint; it is not a claim that SIR resource and renderer integration works. Nightly Godot editor builds test the pinned fork and catch upstream/regression failures. The future SIR runtime release gate also requires actual graphics-driver startup and representative scene loading.
+The foundation C++17 Core/Launcher tests verify compilation, linking and startup contracts, not a complete editor or renderer. Native Release builds and packaging run at night for Windows and Linux. Editor and native graphics acceptance will be added when those systems have been ported and can be exercised on their target platforms.
 
 ## OS boundary
 

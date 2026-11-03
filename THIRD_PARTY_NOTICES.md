@@ -1,9 +1,9 @@
 # Third-party licenses and source provenance
 
-SIREngine is a Godot-derived project. The reference source under `Upstream/Godot` is pinned to the maintainers' Godot fork and retains the original Godot copyright, MIT licensing, and bundled third-party notices. The `Upstream/NomadFramework` and `Upstream/Terrain3D` references retain their respective upstream license and contributor notices.
+SIREngine is derived from Godot and is independently developed as a reusable engine. Code brought in during the engine and framework migration must retain applicable original copyright, licensing and source provenance. A future source port must review the exact origin and license before importing it into first-party code.
 
-EASTL, EABase and EAAssert are pinned under `ThirdParty/`; their source distributions contain their respective license notices. No third-party reference is silently relicensed by the SIREngine root license.
+The `ThirdParty/` directory currently contains pinned EASTL, EABase and EAAssert dependencies. Each retains its own copyright and license notices. These library components are the repository's externally versioned dependencies.
 
-FMOD Studio and Wwise require separately acquired SDK licenses; those SDKs and their binaries are not committed to this repository. OpenAL is resolved through a platform-installed implementation.
+FMOD Studio and Wwise require separately acquired SDK licenses, and their proprietary SDK binaries are not committed. OpenAL implementations use their respective licenses.
 
-The root `LICENSE` retains the existing SIREngine repository license document. Verify source-level licensing and notices for any future adapted or copied implementation before distribution.
+The root [LICENSE](LICENSE) is the SIREngine repository's existing license text. This inventory does not replace attribution and license checks required for future source imports.
