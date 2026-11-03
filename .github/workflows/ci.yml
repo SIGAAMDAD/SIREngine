@@ -49,7 +49,7 @@ jobs:
           "${bindir}/clang-format" --version
           echo "${bindir}" >> "${GITHUB_PATH}"
       - name: Check C++ formatting
-        run: cmake -P Build/CMake/CIFormat.cmake
+        run: cmake "-DSIR_CLANG_FORMAT=${RUNNER_TEMP}/native-tools/clang-format" -P Build/CMake/CIFormat.cmake
 
   native:
     name: Native C++17 / ${{ matrix.os }}
