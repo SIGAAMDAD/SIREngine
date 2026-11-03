@@ -93,7 +93,8 @@ private:
 			if ( SIRHashProbe::getControl<bCompactControl>( m_pControl, iIndex ) == SIRHashProbe::EMPTY ) {
 				return UINT32_MAX;
 			}
-			if ( SIRHashProbe::getControl<bCompactControl>( m_pControl, iIndex ) == SIRHashProbe::OCCUPIED && m_equal( m_pKeys[iIndex], key ) ) {
+			if ( SIRHashProbe::getControl<bCompactControl>( m_pControl, iIndex ) == SIRHashProbe::OCCUPIED &&
+			     m_equal( m_pKeys[iIndex], key ) ) {
 				return iIndex;
 			}
 			iIndex = ( iIndex + 1 ) & ( m_nCapacity - 1 );
@@ -207,7 +208,7 @@ private:
 
 public:
 	explicit SIRFlatHashSet( const sirContainerAllocator_t *pAllocator, Hash hash = Hash(), Equal equal = Equal() )
-		: m_pAllocator( pAllocator ), m_hash( std::move( hash ) ), m_equal( std::move( equal ) )
+	    : m_pAllocator( pAllocator ), m_hash( std::move( hash ) ), m_equal( std::move( equal ) )
 	{
 	}
 
