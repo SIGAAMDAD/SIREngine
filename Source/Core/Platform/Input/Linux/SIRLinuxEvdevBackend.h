@@ -24,6 +24,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Core/Platform/Input/SIRInputBackend.h>
 #include <Core/Platform/Input/SIRInputService.h>
+#include <Core/Platform/Input/SIRInputControllerProfiles.h>
 
 constexpr uint32_t SIR_INPUT_EVDEV_CAPACITY = 16;
 constexpr uint32_t SIR_INPUT_EVDEV_REPORT_CAPACITY = 96;
@@ -35,6 +36,7 @@ typedef struct sirInputEvdevAxis_s
 	uint16_t nCode;
 	bool bTrigger;
 	bool bValid;
+	bool bInvert;
 } sirInputEvdevAxis_t;
 
 typedef struct sirInputEvdevSlot_s
@@ -50,7 +52,9 @@ typedef struct sirInputEvdevSlot_s
 	int8_t nHatY;
 	bool bDesynchronized;
 	bool bOpen;
+	bool bHasProfile;
 	char szPath[512];
+	sirInputControllerProfile_t profile;
 	sirInputControlChange_t pending[SIR_INPUT_EVDEV_REPORT_CAPACITY];
 	sirInputEvdevAxis_t axes[SIR_INPUT_AXIS_COUNT];
 } sirInputEvdevSlot_t;
@@ -66,17 +70,21 @@ public:
 	bool vibrate( sirInputDeviceId_t id, uint16_t nLeft, uint16_t nRight ) noexcept override;
 	void stop( SIRInputService &service ) noexcept override;
 	bool discover( SIRInputService &service, const char *pszDir = "/dev/input" ) noexcept;
+	bool addProfile( const sirInputControllerProfile_t &profile ) noexcept;
 	static int16_t mapButton( uint16_t nNative ) noexcept;
 	static int16_t mapAxis( uint16_t nNative ) noexcept;
 	static int32_t normalize( int32_t nValue, int32_t nMinimum, int32_t nMaximum, bool bTrigger ) noexcept;
 
 private:
 	bool openDevice( SIRInputService &service, const char *pszPath ) noexcept;
-	bool requery( SIRInputService &service, sirInputEvdevSlot_t &slot ) noexcept;
+	bool requery( SIRInputService &service, sirInputEvdevSlot_t &slot, bool bReset ) noexcept;
 	void closeDevice( SIRInputService &service, sirInputEvdevSlot_t &slot ) noexcept;
 	void pollHotplug( SIRInputService &service ) noexcept;
 	bool queueChange( sirInputEvdevSlot_t &slot, sirInputSignal_t eSignal, uint16_t nCode, int32_t nValue ) noexcept;
+	static int16_t resolveButton( const sirInputEvdevSlot_t &slot, uint16_t nCode ) noexcept;
 	sirInputEvdevSlot_t m_Slots[SIR_INPUT_EVDEV_CAPACITY];
+	SIRInputControllerProfiles m_Profiles;
+	bool m_bProfilesFrozen;
 	char m_szDirectory[512];
 	int m_nWatchFd;
 	int m_nWatch;
