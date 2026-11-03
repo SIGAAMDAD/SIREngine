@@ -24,6 +24,26 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Core/Platform/SIRInput.h>
 
+typedef struct sirEvdevAxisCalibration_s
+{
+	int32_t nMin;
+	int32_t nMax;
+	bool bValid;
+} sirEvdevAxisCalibration_t;
+
+typedef struct sirEvdevSlot_s
+{
+	sirInputDeviceHandle_t hDevice;
+	int nFd;
+	uint64_t nDeviceId;
+	bool bDesynchronized;
+	bool bHatDPad;
+	bool bCanRumble;
+	int nEffectId;
+	char szPath[512];
+	sirEvdevAxisCalibration_t axes[SIR_GAMEPAD_AXIS_COUNT];
+} sirEvdevSlot_t;
+
 // Nonblocking evdev controller backend. The caller owns discovery timing and
 // calls pump() from the SIRInputSystem owner thread.
 class SIRLinuxEvdevInput
@@ -36,25 +56,28 @@ public:
 
 	bool openDevice( const char *pszPath ) noexcept;
 	uint32_t discover( const char *pszDirectory = "/dev/input" ) noexcept;
+	bool watchDirectory( const char *pszDirectory = "/dev/input" ) noexcept;
+	bool isWatching( void ) const noexcept;
 	uint32_t pump( void ) noexcept;
+	static int16_t mapButton( uint16_t nNativeCode ) noexcept;
+	static int16_t mapAxis( uint16_t nNativeCode ) noexcept;
+	static int32_t normalizeAxis( int32_t nValue, int32_t nMinimum, int32_t nMaximum, bool bTrigger ) noexcept;
 	uint32_t getDeviceCount( void ) const noexcept;
+	bool setVibration( sirInputDeviceHandle_t hDevice, uint16_t nStrong, uint16_t nWeak, uint16_t nDurationMs ) noexcept;
 	void shutdown( void ) noexcept;
 
 private:
-	typedef struct sirEvdevSlot_s
-	{
-		sirInputDeviceHandle_t hDevice;
-		int nFd;
-		uint64_t nDeviceId;
-		bool bDesynchronized;
-	} sirEvdevSlot_t;
-
 	bool resynchronize( sirEvdevSlot_t &slot ) noexcept;
+	bool processHat( sirEvdevSlot_t &slot, uint16_t nCode, int32_t nValue, uint64_t nTimestampNs ) noexcept;
 	void closeSlot( sirEvdevSlot_t &slot ) noexcept;
+	void pumpHotplug( void ) noexcept;
 
 	SIRInputSystem &m_Input;
 	sirEvdevSlot_t m_Devices[SIR_INPUT_MAX_DEVICES];
 	uint32_t m_nDeviceCount;
+	int m_nNotifyFd;
+	int m_nNotifyWatch;
+	char m_szWatchDirectory[512];
 };
 
 #endif // __SIRENGINE_SIRLINUXEVDEVINPUT_H__

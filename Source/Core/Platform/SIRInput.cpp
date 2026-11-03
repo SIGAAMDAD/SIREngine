@@ -69,7 +69,7 @@ bool SIRInputSystem::addDevice( sirInputDeviceKind_t eKind, uint64_t nNativeId, 
 		return false;
 	}
 	for ( uint32_t i = 0; i < SIR_INPUT_MAX_DEVICES; ++i ) {
-		sirDeviceSlot_t &slot = m_Devices[i];
+		sirInputDeviceSlot_t &slot = m_Devices[i];
 		if ( slot.bActive ) {
 			continue;
 		}
@@ -90,7 +90,7 @@ bool SIRInputSystem::removeDevice( sirInputDeviceHandle_t hDevice ) noexcept
 	if ( !isValid( hDevice ) ) {
 		return false;
 	}
-	sirDeviceSlot_t &slot = m_Devices[hDevice.nSlot];
+	sirInputDeviceSlot_t &slot = m_Devices[hDevice.nSlot];
 	sirInputEvent_t event = { resolveTime( 0 ), ++m_nSequence, hDevice, 0, 0, 0, SIR_INPUT_EVENT_DISCONNECTED, slot.state.eKind };
 	const bool bQueued = enqueue( event );
 	memset( &slot.state, 0, sizeof( slot.state ) );
@@ -126,6 +126,51 @@ bool SIRInputSystem::pushButton( sirInputDeviceHandle_t hDevice, uint16_t nCode,
 	} else {
 		state.nButtons[nWord] &= ~nMask;
 		state.nReleased[nWord] |= nMask;
+	}
+	return true;
+}
+
+bool SIRInputSystem::submitGamepadSample( sirInputDeviceHandle_t hDevice, const sirInputGamepadSample_t &sample,
+                                          uint64_t nTimestampNs ) noexcept
+{
+	if ( !isValid( hDevice ) || m_Devices[hDevice.nSlot].state.eKind != SIR_INPUT_DEVICE_GAMEPAD || m_bOverflowed ||
+	     ( sample.nButtons >> SIR_GAMEPAD_BUTTON_COUNT ) != 0 ) {
+		return false;
+	}
+	for ( uint32_t iAxis = 0; iAxis < SIR_GAMEPAD_AXIS_COUNT; ++iAxis ) {
+		const bool bTrigger = iAxis >= SIR_GAMEPAD_AXIS_LEFT_TRIGGER;
+		if ( sample.nAxes[iAxis] > 32767 || sample.nAxes[iAxis] < ( bTrigger ? 0 : -32767 ) ) {
+			return false;
+		}
+	}
+	const sirInputDeviceState_t &state = m_Devices[hDevice.nSlot].state;
+	uint32_t nPending = 0;
+	uint32_t nChanges = state.nButtons[0] ^ sample.nButtons;
+	while ( nChanges != 0 ) {
+		nChanges &= nChanges - 1;
+		++nPending;
+	}
+	for ( uint32_t iAxis = 0; iAxis < SIR_GAMEPAD_AXIS_COUNT; ++iAxis ) {
+		if ( state.nAxes[iAxis] != sample.nAxes[iAxis] ) {
+			++nPending;
+		}
+	}
+	// Preflight the whole sample: partial gamepad packets are not published.
+	if ( nPending > SIR_INPUT_MAX_EVENTS - m_nCount ) {
+		m_bOverflowed = true;
+		return false;
+	}
+	for ( uint16_t iButton = 0; iButton < SIR_GAMEPAD_BUTTON_COUNT; ++iButton ) {
+		const uint32_t nMask = UINT32_C( 1 ) << iButton;
+		if ( ( ( state.nButtons[0] ^ sample.nButtons ) & nMask ) != 0 &&
+		     !pushButton( hDevice, iButton, ( sample.nButtons & nMask ) != 0, nTimestampNs ) ) {
+			return false;
+		}
+	}
+	for ( uint16_t iAxis = 0; iAxis < SIR_GAMEPAD_AXIS_COUNT; ++iAxis ) {
+		if ( !pushAxis( hDevice, iAxis, sample.nAxes[iAxis], nTimestampNs ) ) {
+			return false;
+		}
 	}
 	return true;
 }
@@ -224,6 +269,10 @@ bool SIRInputSystem::resynchronizeDevice( sirInputDeviceHandle_t hDevice ) noexc
 			}
 		}
 		return true;
+	}
+	if ( m_nCount == SIR_INPUT_MAX_EVENTS ) {
+		m_bOverflowed = true;
+		return false;
 	}
 	sirInputDeviceState_t &state = m_Devices[hDevice.nSlot].state;
 	memset( state.nButtons, 0, sizeof( state.nButtons ) );

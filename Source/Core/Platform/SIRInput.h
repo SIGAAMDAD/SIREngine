@@ -35,6 +35,47 @@ typedef enum sirInputDeviceKind_e : uint8_t
 	SIR_INPUT_DEVICE_GAMEPAD = 2
 } sirInputDeviceKind_t;
 
+// Canonical gamepad controls shared by all native backends. Gamepad axis
+// values use signed [-32767, 32767] sticks and [0, 32767] triggers.
+typedef enum sirInputGamepadButton_e : uint8_t
+{
+	SIR_GAMEPAD_BUTTON_SOUTH = 0,
+	SIR_GAMEPAD_BUTTON_EAST = 1,
+	SIR_GAMEPAD_BUTTON_WEST = 2,
+	SIR_GAMEPAD_BUTTON_NORTH = 3,
+	SIR_GAMEPAD_BUTTON_LEFT_SHOULDER = 4,
+	SIR_GAMEPAD_BUTTON_RIGHT_SHOULDER = 5,
+	SIR_GAMEPAD_BUTTON_BACK = 6,
+	SIR_GAMEPAD_BUTTON_START = 7,
+	SIR_GAMEPAD_BUTTON_GUIDE = 8,
+	SIR_GAMEPAD_BUTTON_LEFT_THUMB = 9,
+	SIR_GAMEPAD_BUTTON_RIGHT_THUMB = 10,
+	SIR_GAMEPAD_BUTTON_DPAD_UP = 11,
+	SIR_GAMEPAD_BUTTON_DPAD_DOWN = 12,
+	SIR_GAMEPAD_BUTTON_DPAD_LEFT = 13,
+	SIR_GAMEPAD_BUTTON_DPAD_RIGHT = 14,
+	SIR_GAMEPAD_BUTTON_LEFT_TRIGGER_DIGITAL = 15,
+	SIR_GAMEPAD_BUTTON_RIGHT_TRIGGER_DIGITAL = 16,
+	SIR_GAMEPAD_BUTTON_COUNT = 17
+} sirInputGamepadButton_t;
+
+typedef enum sirInputGamepadAxis_e : uint8_t
+{
+	SIR_GAMEPAD_AXIS_LEFT_X = 0,
+	SIR_GAMEPAD_AXIS_LEFT_Y = 1,
+	SIR_GAMEPAD_AXIS_RIGHT_X = 2,
+	SIR_GAMEPAD_AXIS_RIGHT_Y = 3,
+	SIR_GAMEPAD_AXIS_LEFT_TRIGGER = 4,
+	SIR_GAMEPAD_AXIS_RIGHT_TRIGGER = 5,
+	SIR_GAMEPAD_AXIS_COUNT = 6
+} sirInputGamepadAxis_t;
+
+typedef struct sirInputGamepadSample_s
+{
+	uint32_t nButtons;
+	int32_t nAxes[SIR_GAMEPAD_AXIS_COUNT];
+} sirInputGamepadSample_t;
+
 typedef enum sirInputEventKind_e : uint8_t
 {
 	SIR_INPUT_EVENT_CONNECTED = 0,
@@ -76,6 +117,14 @@ typedef struct sirInputDeviceState_s
 	sirInputDeviceKind_t eKind;
 } sirInputDeviceState_t;
 
+// Runtime-only descriptor; the input owner stores these in one fixed table.
+typedef struct sirInputDeviceSlot_s
+{
+	sirInputDeviceState_t state;
+	uint32_t nGeneration;
+	bool bActive;
+} sirInputDeviceSlot_t;
+
 // The owner thread calls all methods. Native collectors must not call this
 // concurrently: threaded backends need a separately synchronized ingress.
 class SIRInputSystem
@@ -89,6 +138,7 @@ public:
 	bool findDevice( sirInputDeviceKind_t eKind, uint64_t nNativeId, sirInputDeviceHandle_t *pHandle ) const noexcept;
 	bool removeDevice( sirInputDeviceHandle_t hDevice ) noexcept;
 	bool pushButton( sirInputDeviceHandle_t hDevice, uint16_t nCode, bool bPressed, uint64_t nTimestampNs ) noexcept;
+	bool submitGamepadSample( sirInputDeviceHandle_t hDevice, const sirInputGamepadSample_t &sample, uint64_t nTimestampNs ) noexcept;
 	bool pushAxis( sirInputDeviceHandle_t hDevice, uint16_t nAxis, int32_t nValue, uint64_t nTimestampNs ) noexcept;
 	bool pushPointer( sirInputDeviceHandle_t hDevice, int32_t nDeltaX, int32_t nDeltaY, uint64_t nTimestampNs ) noexcept;
 	bool pushWheel( sirInputDeviceHandle_t hDevice, uint16_t nAxis, int32_t nDelta, uint64_t nTimestampNs ) noexcept;
@@ -102,18 +152,11 @@ public:
 	void shutdown( void ) noexcept;
 
 private:
-	typedef struct sirDeviceSlot_s
-	{
-		sirInputDeviceState_t state;
-		uint32_t nGeneration;
-		bool bActive;
-	} sirDeviceSlot_t;
-
 	bool isValid( sirInputDeviceHandle_t hDevice ) const noexcept;
 	bool enqueue( const sirInputEvent_t &event ) noexcept;
 	uint64_t resolveTime( uint64_t nTimestampNs ) const noexcept;
 
-	sirDeviceSlot_t m_Devices[SIR_INPUT_MAX_DEVICES];
+	sirInputDeviceSlot_t m_Devices[SIR_INPUT_MAX_DEVICES];
 	sirInputEvent_t m_Events[SIR_INPUT_MAX_EVENTS];
 	uint64_t m_nSequence;
 	uint32_t m_nRead;

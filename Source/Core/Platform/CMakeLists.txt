@@ -19,6 +19,7 @@ if(WIN32)
         Windows/SIRPlatformTimeWindows.cpp
         Windows/SIRPlatformProcessWindows.cpp
         Windows/SIRWindowsRawInput.cpp
+        Windows/SIRWindowsXInput.cpp
     )
     target_link_libraries(SIRCore PRIVATE psapi user32)
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
