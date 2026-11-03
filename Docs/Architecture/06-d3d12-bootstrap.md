@@ -54,3 +54,12 @@ Remaining: reusable **asynchronous** upload/readback rings, independent compute/
 - WARP tests cover ring exhaustion, out-of-order completion checks, invalid and stale tickets, varying payload sizes, repeated reuse and ring growth.
 
 The transfer queue remains single-caller at the native bootstrap level. Multi-threaded submissions, independently tracked compute workloads, GRDG device generations, a shared renderer completion token, large persistent upload heaps and texture transfers are subsequent integration steps.
+
+
+## Independent compute queue and multi-queue completion snapshots
+
+The Windows-only bootstrap owns a D3D12 COMPUTE command queue, fence and event separate from the graphics and COPY queues. The compute queue supports a nonblocking native command-list marker with fence-safe command allocator reuse. The marker deliberately records no shader dispatch: pipeline binding and cooked DXIL will be integrated later.
+
+A native `sirD3D12CompletionSet_t` records one device generation plus the latest submitted graphics, compute and copy fence values. `snapshotCompletionSet` captures the state and `pollCompletionSet` checks completion against all three independently owned native fences. Submissions from a prior initialized device cannot satisfy a new generation. A requested future fence is rejected.
+
+Tests exercise overlapping COPY/COMPUTE marker submissions, exact completion snapshots, 64 reusable compute submissions, invalid completion values and stale generations after shutdown/reinitialize. This is still a backend-local completion API; later GRDG/FrameGraph integration will own the renderer-neutral completion contract and GPU-side cross-queue ordering.

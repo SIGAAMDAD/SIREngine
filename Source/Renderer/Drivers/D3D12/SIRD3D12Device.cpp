@@ -16,6 +16,208 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Renderer/Drivers/D3D12/SIRD3D12Device.h>
 
 #include <string.h>
+#include <atomic>
+
+static std::atomic<uint64_t> s_nNextD3D12DeviceGeneration{ 1 };
+
+SIRD3D12ComputeQueue::SIRD3D12ComputeQueue( void ) noexcept
+{
+}
+
+SIRD3D12ComputeQueue::~SIRD3D12ComputeQueue( void ) noexcept
+{
+	shutdown();
+}
+
+bool SIRD3D12ComputeQueue::initialize( ID3D12Device *pDevice ) noexcept
+{
+	if ( pDevice == nullptr || m_pQueue != nullptr || m_bUnsafe ) {
+		m_nLastError = E_INVALIDARG;
+		return false;
+	}
+	D3D12_COMMAND_QUEUE_DESC queue = {};
+	queue.Type = D3D12_COMMAND_LIST_TYPE_COMPUTE;
+	queue.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
+	m_nLastError = pDevice->CreateCommandQueue( &queue, IID_PPV_ARGS( m_pQueue.GetAddressOf() ) );
+	if ( FAILED( m_nLastError ) ) {
+		shutdown();
+		return false;
+	}
+	m_nLastError = pDevice->CreateFence( 0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS( m_pFence.GetAddressOf() ) );
+	if ( FAILED( m_nLastError ) ) {
+		shutdown();
+		return false;
+	}
+	m_hEvent = CreateEventW( nullptr, FALSE, FALSE, nullptr );
+	if ( m_hEvent == nullptr ) {
+		m_nLastError = HRESULT_FROM_WIN32( GetLastError() );
+		shutdown();
+		return false;
+	}
+	m_nLastError = pDevice->CreateCommandAllocator( D3D12_COMMAND_LIST_TYPE_COMPUTE, IID_PPV_ARGS( m_pAllocator.GetAddressOf() ) );
+	if ( FAILED( m_nLastError ) ) {
+		shutdown();
+		return false;
+	}
+	m_nLastError = pDevice->CreateCommandList( 0, D3D12_COMMAND_LIST_TYPE_COMPUTE, m_pAllocator.Get(), nullptr,
+	                                          IID_PPV_ARGS( m_pCommands.GetAddressOf() ) );
+	if ( FAILED( m_nLastError ) ) {
+		shutdown();
+		return false;
+	}
+	m_nLastError = m_pCommands->Close();
+	if ( FAILED( m_nLastError ) ) {
+		shutdown();
+		return false;
+	}
+	m_nLastError = S_OK;
+	return true;
+}
+
+bool SIRD3D12ComputeQueue::shutdown( void ) noexcept
+{
+	bool bSafe = !m_bUnsafe;
+	if ( bSafe && m_nSubmittedFence != 0 && m_pFence != nullptr ) {
+		bSafe = waitForFence( m_nSubmittedFence, 15000 );
+	}
+	if ( bSafe ) {
+		m_pCommands.Reset();
+		m_pAllocator.Reset();
+		m_pFence.Reset();
+		m_pQueue.Reset();
+		if ( m_hEvent != nullptr ) {
+			CloseHandle( m_hEvent );
+		}
+	} else {
+		// Native references are retained when GPU completion cannot be proved.
+		( void )m_pCommands.Detach();
+		( void )m_pAllocator.Detach();
+		( void )m_pFence.Detach();
+		( void )m_pQueue.Detach();
+	}
+	m_hEvent = nullptr;
+	m_nNextFence = 1;
+	m_nSubmittedFence = 0;
+	m_bUnsafe = !bSafe;
+	return bSafe;
+}
+
+bool SIRD3D12ComputeQueue::isReady( void ) const noexcept
+{
+	return m_pQueue != nullptr && m_pFence != nullptr && m_pAllocator != nullptr && m_pCommands != nullptr && m_hEvent != nullptr &&
+	       !m_bUnsafe;
+}
+
+bool SIRD3D12ComputeQueue::getCompletedFence( uint64_t *pCompletedFence ) const noexcept
+{
+	if ( pCompletedFence == nullptr || !isReady() ) {
+		return false;
+	}
+	*pCompletedFence = m_pFence->GetCompletedValue();
+	return *pCompletedFence != UINT64_MAX;
+}
+
+uint64_t SIRD3D12ComputeQueue::getLastSubmittedFence( void ) const noexcept
+{
+	return m_nSubmittedFence;
+}
+
+HRESULT SIRD3D12ComputeQueue::getLastError( void ) const noexcept
+{
+	return m_nLastError;
+}
+
+bool SIRD3D12ComputeQueue::pollFence( uint64_t nFence, bool *pCompleted ) const noexcept
+{
+	if ( pCompleted == nullptr ) {
+		return false;
+	}
+	*pCompleted = false;
+	if ( nFence > m_nSubmittedFence ) {
+		return false;
+	}
+	uint64_t nCompleted = 0;
+	if ( !getCompletedFence( &nCompleted ) ) {
+		return false;
+	}
+	*pCompleted = nCompleted >= nFence;
+	return true;
+}
+
+bool SIRD3D12ComputeQueue::waitForFence( uint64_t nFence, uint32_t nTimeoutMs ) noexcept
+{
+	bool bCompleted = false;
+	if ( !pollFence( nFence, &bCompleted ) ) {
+		m_nLastError = E_INVALIDARG;
+		return false;
+	}
+	if ( bCompleted ) {
+		m_nLastError = S_OK;
+		return true;
+	}
+	m_nLastError = m_pFence->SetEventOnCompletion( nFence, m_hEvent );
+	if ( FAILED( m_nLastError ) ) {
+		return false;
+	}
+	const DWORD nWait = WaitForSingleObject( m_hEvent, nTimeoutMs );
+	if ( nWait != WAIT_OBJECT_0 ) {
+		m_nLastError = nWait == WAIT_TIMEOUT ? HRESULT_FROM_WIN32( ERROR_TIMEOUT ) : HRESULT_FROM_WIN32( GetLastError() );
+		return false;
+	}
+	if ( !pollFence( nFence, &bCompleted ) || !bCompleted ) {
+		m_nLastError = DXGI_ERROR_DEVICE_REMOVED;
+		return false;
+	}
+	m_nLastError = S_OK;
+	return true;
+}
+
+bool SIRD3D12ComputeQueue::submitMarker( uint64_t *pFenceValue ) noexcept
+{
+	if ( pFenceValue == nullptr ) {
+		m_nLastError = E_POINTER;
+		return false;
+	}
+	*pFenceValue = 0;
+	bool bCompleted = false;
+	if ( !isReady() || m_nNextFence == UINT64_MAX ) {
+		m_nLastError = E_FAIL;
+		return false;
+	}
+	if ( !pollFence( m_nSubmittedFence, &bCompleted ) ) {
+		m_nLastError = DXGI_ERROR_DEVICE_REMOVED;
+		return false;
+	}
+	if ( !bCompleted ) {
+		m_nLastError = HRESULT_FROM_WIN32( ERROR_BUSY );
+		return false;
+	}
+	m_nLastError = m_pAllocator->Reset();
+	if ( FAILED( m_nLastError ) ) {
+		return false;
+	}
+	m_nLastError = m_pCommands->Reset( m_pAllocator.Get(), nullptr );
+	if ( FAILED( m_nLastError ) ) {
+		return false;
+	}
+	m_nLastError = m_pCommands->Close();
+	if ( FAILED( m_nLastError ) ) {
+		return false;
+	}
+	ID3D12CommandList *pLists[] = { m_pCommands.Get() };
+	m_pQueue->ExecuteCommandLists( 1, pLists );
+	m_nLastError = m_pQueue->Signal( m_pFence.Get(), m_nNextFence );
+	if ( FAILED( m_nLastError ) ) {
+		m_bUnsafe = true;
+		return false;
+	}
+	m_nSubmittedFence = m_nNextFence;
+	*pFenceValue = m_nNextFence;
+	++m_nNextFence;
+	m_nLastError = S_OK;
+	return true;
+}
+
 
 SIRD3D12Device::SIRD3D12Device( void ) noexcept
 {
@@ -134,7 +336,12 @@ bool SIRD3D12Device::initialize( bool bUseWarp ) noexcept
 		shutdown();
 		return false;
 	}
-
+	if ( !m_ComputeQueue.initialize( m_pDevice.Get() ) ) {
+		m_nLastError = m_ComputeQueue.getLastError();
+		shutdown();
+		return false;
+	}
+	m_nDeviceGeneration = s_nNextD3D12DeviceGeneration.fetch_add( 1, std::memory_order_relaxed );
 	m_nNextFenceValue = 1;
 	m_nLastError = S_OK;
 	return true;
@@ -203,7 +410,8 @@ void SIRD3D12Device::shutdown( void ) noexcept
 {
 	const bool bCopySafe = waitForPendingCopy();
 	const bool bTransferSafe = m_Transfers.shutdown();
-	if ( bCopySafe && bTransferSafe ) {
+	const bool bComputeSafe = m_ComputeQueue.shutdown();
+	if ( bCopySafe && bTransferSafe && bComputeSafe ) {
 		releasePendingCopy();
 		m_pCopyCommands.Reset();
 		m_pCopyAllocator.Reset();
@@ -224,7 +432,7 @@ void SIRD3D12Device::shutdown( void ) noexcept
 		m_pPendingDevice = nullptr;
 		m_pPendingReadback = nullptr;
 	}
-	if ( bCopySafe && bTransferSafe && m_hFenceEvent != nullptr ) {
+	if ( bCopySafe && bTransferSafe && bComputeSafe && m_hFenceEvent != nullptr ) {
 		CloseHandle( m_hFenceEvent );
 	}
 	m_hFenceEvent = nullptr;
@@ -232,12 +440,14 @@ void SIRD3D12Device::shutdown( void ) noexcept
 	m_pFactory.Reset();
 	m_nNextFenceValue = 0;
 	m_nPendingFenceValue = 0;
+	m_nDeviceGeneration = 0;
 }
 
 bool SIRD3D12Device::isReady( void ) const noexcept
 {
 	return m_pDevice != nullptr && m_pGraphicsQueue != nullptr && m_pGraphicsFence != nullptr && m_hFenceEvent != nullptr &&
-	       m_pCopyAllocator != nullptr && m_pCopyCommands != nullptr && m_Memory.isReady() && m_Transfers.isReady();
+	       m_pCopyAllocator != nullptr && m_pCopyCommands != nullptr && m_Memory.isReady() && m_Transfers.isReady() &&
+	       m_ComputeQueue.isReady() && m_nDeviceGeneration != 0;
 }
 
 bool SIRD3D12Device::queryAdapterInfo( sirD3D12AdapterInfo_t *pInfo ) const noexcept
@@ -293,6 +503,62 @@ uint64_t SIRD3D12Device::getCompletedCopyCount( void ) const noexcept
 SIRD3D12Transfers &SIRD3D12Device::getTransfers( void ) noexcept
 {
 	return m_Transfers;
+}
+
+SIRD3D12ComputeQueue &SIRD3D12Device::getComputeQueue( void ) noexcept
+{
+	return m_ComputeQueue;
+}
+
+bool SIRD3D12Device::snapshotCompletionSet( sirD3D12CompletionSet_t *pSet ) const noexcept
+{
+	if ( pSet == nullptr || !isReady() ) {
+		return false;
+	}
+	pSet->nDeviceGeneration = m_nDeviceGeneration;
+	pSet->nGraphicsFence = m_nNextFenceValue - 1;
+	pSet->nComputeFence = m_ComputeQueue.getLastSubmittedFence();
+	pSet->nCopyFence = m_Transfers.getLastSubmittedFence();
+	return true;
+}
+
+bool SIRD3D12Device::pollCompletionSet( const sirD3D12CompletionSet_t &set, bool *pCompleted ) noexcept
+{
+	if ( pCompleted == nullptr ) {
+		m_nLastError = E_POINTER;
+		return false;
+	}
+	*pCompleted = false;
+	if ( !isReady() || set.nDeviceGeneration != m_nDeviceGeneration || set.nGraphicsFence >= m_nNextFenceValue ||
+	     set.nComputeFence > m_ComputeQueue.getLastSubmittedFence() || set.nCopyFence > m_Transfers.getLastSubmittedFence() ) {
+		m_nLastError = E_INVALIDARG;
+		return false;
+	}
+	const uint64_t nGraphicsDone = m_pGraphicsFence->GetCompletedValue();
+	uint64_t nComputeDone = 0;
+	uint64_t nCopyDone = 0;
+	if ( nGraphicsDone == UINT64_MAX || !m_ComputeQueue.getCompletedFence( &nComputeDone ) ||
+	     !m_Transfers.getCompletedFence( &nCopyDone ) ) {
+		m_nLastError = DXGI_ERROR_DEVICE_REMOVED;
+		return false;
+	}
+	*pCompleted = nGraphicsDone >= set.nGraphicsFence && nComputeDone >= set.nComputeFence && nCopyDone >= set.nCopyFence;
+	m_nLastError = S_OK;
+	return true;
+}
+
+bool SIRD3D12Device::submitComputeMarker( sirD3D12CompletionSet_t *pSet ) noexcept
+{
+	if ( pSet == nullptr || !isReady() ) {
+		m_nLastError = E_INVALIDARG;
+		return false;
+	}
+	uint64_t nSubmittedFence = 0;
+	if ( !m_ComputeQueue.submitMarker( &nSubmittedFence ) ) {
+		m_nLastError = m_ComputeQueue.getLastError();
+		return false;
+	}
+	return snapshotCompletionSet( pSet ) && pSet->nComputeFence == nSubmittedFence;
 }
 
 bool SIRD3D12Device::copyRoundTripForTest( const void *pInput, void *pOutput, uint64_t nBytes ) noexcept

@@ -54,6 +54,46 @@ typedef struct sirD3D12MemoryInfo_s
 	uint64_t nCurrentReservationBytes;
 } sirD3D12MemoryInfo_t;
 
+typedef struct sirD3D12CompletionSet_s
+{
+	uint64_t nDeviceGeneration;
+	uint64_t nGraphicsFence;
+	uint64_t nComputeFence;
+	uint64_t nCopyFence;
+} sirD3D12CompletionSet_t;
+
+// Native single-caller COMPUTE queue. An empty command-list marker verifies
+// submission and fence ownership until compiled compute PSOs become available.
+class SIRD3D12ComputeQueue
+{
+private:
+	Microsoft::WRL::ComPtr<ID3D12CommandQueue> m_pQueue;
+	Microsoft::WRL::ComPtr<ID3D12Fence> m_pFence;
+	Microsoft::WRL::ComPtr<ID3D12CommandAllocator> m_pAllocator;
+	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> m_pCommands;
+	HANDLE m_hEvent = nullptr;
+	uint64_t m_nNextFence = 1;
+	uint64_t m_nSubmittedFence = 0;
+	bool m_bUnsafe = false;
+	HRESULT m_nLastError = S_OK;
+
+public:
+	SIRD3D12ComputeQueue( void ) noexcept;
+	~SIRD3D12ComputeQueue( void ) noexcept;
+	SIRD3D12ComputeQueue( const SIRD3D12ComputeQueue & ) = delete;
+	SIRD3D12ComputeQueue &operator=( const SIRD3D12ComputeQueue & ) = delete;
+
+	bool initialize( ID3D12Device *pDevice ) noexcept;
+	bool shutdown( void ) noexcept;
+	bool isReady( void ) const noexcept;
+	bool submitMarker( uint64_t *pFenceValue ) noexcept;
+	bool pollFence( uint64_t nFence, bool *pCompleted ) const noexcept;
+	bool waitForFence( uint64_t nFence, uint32_t nTimeoutMs ) noexcept;
+	bool getCompletedFence( uint64_t *pCompletedFence ) const noexcept;
+	uint64_t getLastSubmittedFence( void ) const noexcept;
+	HRESULT getLastError( void ) const noexcept;
+};
+
 // Native, Windows-only bootstrap. This is not the renderer-neutral SIRRenderingDevice ABI.
 class SIRD3D12Device
 {
@@ -67,11 +107,13 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> m_pCopyCommands;
 	SIRD3D12Memory m_Memory;
 	SIRD3D12Transfers m_Transfers;
+	SIRD3D12ComputeQueue m_ComputeQueue;
 	D3D12MA::Allocation *m_pPendingUpload = nullptr;
 	D3D12MA::Allocation *m_pPendingDevice = nullptr;
 	D3D12MA::Allocation *m_pPendingReadback = nullptr;
 	HANDLE m_hFenceEvent = nullptr;
 	uint64_t m_nNextFenceValue = 0;
+	uint64_t m_nDeviceGeneration = 0;
 	uint64_t m_nPendingFenceValue = 0;
 	uint64_t m_nCompletedCopyCount = 0;
 	HRESULT m_nLastError = S_OK;
@@ -94,6 +136,10 @@ public:
 	HRESULT getLastError( void ) const noexcept;
 	uint64_t getCompletedCopyCount( void ) const noexcept;
 	SIRD3D12Transfers &getTransfers( void ) noexcept;
+	SIRD3D12ComputeQueue &getComputeQueue( void ) noexcept;
+	bool snapshotCompletionSet( sirD3D12CompletionSet_t *pSet ) const noexcept;
+	bool pollCompletionSet( const sirD3D12CompletionSet_t &set, bool *pCompleted ) noexcept;
+	bool submitComputeMarker( sirD3D12CompletionSet_t *pSet ) noexcept;
 
 	// Synchronous diagnostic fixture only; production transfers will use pooled,
 	// asynchronous allocations and queue-completion tokens.

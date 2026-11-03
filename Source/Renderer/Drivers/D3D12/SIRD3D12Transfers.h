@@ -89,6 +89,8 @@ public:
 	bool isReady( void ) const noexcept;
 	uint32_t getSlotCount( void ) const noexcept;
 	uint64_t getCompletedCopyCount( void ) const noexcept;
+	uint64_t getLastSubmittedFence( void ) const noexcept;
+	bool getCompletedFence( uint64_t *pCompletedFence ) const noexcept;
 	HRESULT getLastError( void ) const noexcept;
 
 	bool submit( const void *pSource, uint64_t nBytes, sirD3D12TransferTicket_t *pTicket ) noexcept;

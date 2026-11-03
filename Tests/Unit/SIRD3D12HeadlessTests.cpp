@@ -91,6 +91,68 @@ static bool testAsyncCopyQueue( SIRD3D12Device &device )
 	return true;
 }
 
+
+static bool testComputeAndCompletions( SIRD3D12Device &device, sirD3D12CompletionSet_t *pOldSet )
+{
+	SIRD3D12ComputeQueue &compute = device.getComputeQueue();
+	SIRD3D12Transfers &transfers = device.getTransfers();
+	sirD3D12CompletionSet_t initial = {};
+	if ( !compute.isReady() || !device.snapshotCompletionSet( &initial ) || initial.nDeviceGeneration == 0 ) {
+		return false;
+	}
+
+	uint32_t szInput[64] = {};
+	uint32_t szOutput[64] = {};
+	for ( uint32_t iWord = 0; iWord < 64; ++iWord ) {
+		szInput[iWord] = 0x5e0f0000U ^ ( iWord * 143U );
+	}
+	sirD3D12TransferTicket_t transfer = {};
+	if ( !transfers.submit( szInput, sizeof( szInput ), &transfer ) ) {
+		return false;
+	}
+
+	sirD3D12CompletionSet_t submitted = {};
+	if ( !device.submitComputeMarker( &submitted ) || submitted.nComputeFence == 0 || submitted.nCopyFence <= initial.nCopyFence ||
+	     submitted.nDeviceGeneration != initial.nDeviceGeneration ) {
+		return false;
+	}
+
+	bool bCompleted = false;
+	sirD3D12CompletionSet_t invalid = submitted;
+	invalid.nDeviceGeneration = 0;
+	if ( device.pollCompletionSet( invalid, &bCompleted ) || device.pollCompletionSet( submitted, nullptr ) ) {
+		return false;
+	}
+	invalid = submitted;
+	++invalid.nComputeFence;
+	if ( device.pollCompletionSet( invalid, &bCompleted ) ) {
+		return false;
+	}
+	if ( !compute.waitForFence( submitted.nComputeFence, 15000 ) || !transfers.wait( transfer, 15000 ) ||
+	     !device.pollCompletionSet( submitted, &bCompleted ) || !bCompleted ) {
+		return false;
+	}
+	if ( !transfers.receive( transfer, szOutput, sizeof( szOutput ) ) ||
+	     memcmp( szInput, szOutput, sizeof( szInput ) ) != 0 ) {
+		return false;
+	}
+
+	for ( uint32_t iCycle = 0; iCycle < 64; ++iCycle ) {
+		uint64_t nFence = 0;
+		if ( !compute.submitMarker( &nFence ) || !compute.waitForFence( nFence, 15000 ) ) {
+			return false;
+		}
+		bool bDone = false;
+		if ( !compute.pollFence( nFence, &bDone ) || !bDone || compute.pollFence( nFence + 1, &bDone ) ) {
+			return false;
+		}
+	}
+	if ( !device.snapshotCompletionSet( pOldSet ) || !device.pollCompletionSet( *pOldSet, &bCompleted ) || !bCompleted ) {
+		return false;
+	}
+	return true;
+}
+
 int main( void )
 {
 	SIRD3D12Device device;
@@ -150,11 +212,31 @@ int main( void )
 		return 1;
 	}
 
+	sirD3D12CompletionSet_t oldSet = {};
+	if ( !testComputeAndCompletions( device, &oldSet ) ) {
+		fputs( "D3D12 compute / multi-queue completion test failed\n", stderr );
+		return 1;
+	}
+
 	device.shutdown();
 	device.shutdown();
 	if ( device.isReady() || device.copyRoundTripForTest( szInput, szOutput, sizeof( szInput ) ) ) {
 		fputs( "D3D12 accepted an operation after shutdown\n", stderr );
 		return 1;
 	}
+	if ( !device.initialize( true ) ) {
+		fputs( "D3D12 WARP reinitialization failed\n", stderr );
+		return 1;
+	}
+	sirD3D12CompletionSet_t fresh = {};
+	bool bCompleted = false;
+	if ( !device.snapshotCompletionSet( &fresh ) || fresh.nDeviceGeneration == oldSet.nDeviceGeneration ||
+	     device.pollCompletionSet( oldSet, &bCompleted ) || !device.submitComputeMarker( &fresh ) ||
+	     !device.getComputeQueue().waitForFence( fresh.nComputeFence, 15000 ) ||
+	     !device.pollCompletionSet( fresh, &bCompleted ) || !bCompleted ) {
+		fputs( "D3D12 device-generation invalidation failed\n", stderr );
+		return 1;
+	}
+	device.shutdown();
 	return 0;
 }

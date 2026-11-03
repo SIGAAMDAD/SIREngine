@@ -181,6 +181,20 @@ uint64_t SIRD3D12Transfers::getCompletedCopyCount( void ) const noexcept
 	return m_nCompletedCopies;
 }
 
+uint64_t SIRD3D12Transfers::getLastSubmittedFence( void ) const noexcept
+{
+	return m_nLastSubmittedFence;
+}
+
+bool SIRD3D12Transfers::getCompletedFence( uint64_t *pCompletedFence ) const noexcept
+{
+	if ( pCompletedFence == nullptr || !isReady() ) {
+		return false;
+	}
+	*pCompletedFence = m_pFence->GetCompletedValue();
+	return *pCompletedFence != UINT64_MAX;
+}
+
 HRESULT SIRD3D12Transfers::getLastError( void ) const noexcept
 {
 	return m_nLastError;
