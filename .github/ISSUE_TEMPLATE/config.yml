@@ -1,5 +1,5 @@
 blank_issues_enabled: false
 contact_links:
   - name: "Architecture index"
-    url: "https://github.com/SIGAAMDAD/SIREngine/blob/develop/docs/README.md"
+    url: "https://github.com/SIGAAMDAD/SIREngine/blob/develop/Docs/README.md"
     about: "Review the current subsystem contracts before opening a design issue"

@@ -1,15 +1,12 @@
-# Configure/build state is never committed.
 /out/
 /build/
-/_build/
+_build/
 /cmake-build-*/
 /CMakeFiles/
 /CMakeCache.txt
 /cmake_install.cmake
 /compile_commands.json
 /.cache/
-/.scons_cache/
-/.sconsign.dblite
 /.ninja_deps
 /.ninja_log
 /bin/

@@ -1,12 +1,18 @@
-[submodule "engine/godot"]
-	path = engine/godot
+[submodule "Upstream/Godot"]
+	path = Upstream/Godot
 	url = https://github.com/SIGAAMDAD/godot.git
-[submodule "third_party/EASTL"]
-	path = third_party/EASTL
+[submodule "Upstream/NomadFramework"]
+	path = Upstream/NomadFramework
+	url = https://github.com/SIGAAMDAD/NomadFramework.git
+[submodule "Upstream/Terrain3D"]
+	path = Upstream/Terrain3D
+	url = https://github.com/SIGAAMDAD/Terrain3D.git
+[submodule "ThirdParty/EASTL"]
+	path = ThirdParty/EASTL
 	url = https://github.com/electronicarts/EASTL.git
-[submodule "third_party/EABase"]
-	path = third_party/EABase
+[submodule "ThirdParty/EABase"]
+	path = ThirdParty/EABase
 	url = https://github.com/electronicarts/EABase.git
-[submodule "third_party/EAAssert"]
-	path = third_party/EAAssert
+[submodule "ThirdParty/EAAssert"]
+	path = ThirdParty/EAAssert
 	url = https://github.com/electronicarts/EAAssert.git

@@ -1,0 +1,83 @@
+name: SIREngine nightly native builds
+
+on:
+  schedule:
+    - cron: '17 7 * * *'
+  workflow_dispatch:
+    inputs:
+      macos_preview:
+        description: 'Include experimental macOS build'
+        type: boolean
+        required: false
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sir-nightly-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  native-release:
+    name: Native release and package / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            preset: linux-release
+          - os: windows-2022
+            preset: windows-release
+    env:
+      SCCACHE_GHA_ENABLED: 'true'
+      SCCACHE_GHA_VERSION: sir-native-v1-${{ matrix.os }}-release
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up MSVC compiler environment
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+      - uses: jwlawson/actions-setup-cmake@v2.2.0
+        with:
+          cmake-version: '4.4.5'
+      - uses: mozilla-actions/sccache-action@v0.0.11
+      - name: Configure native engine
+        run: cmake --preset "${{ matrix.preset }}" -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
+      - name: Compile native engine
+        run: cmake --build --preset "${{ matrix.preset }}" --parallel 2
+      - name: Run release tests
+        run: ctest --preset "${{ matrix.preset }}"
+      - name: Package native executable
+        run: cmake --build --preset "${{ matrix.preset }}" --target package
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sirengine-${{ matrix.os }}-native
+          path: out/${{ matrix.preset }}/SIREngine-*.zip
+          if-no-files-found: error
+          retention-days: 7
+      - name: Compiler-cache statistics
+        if: always()
+        run: sccache --show-stats
+
+  macos-preview:
+    if: github.event_name == 'workflow_dispatch' && inputs.macos_preview
+    runs-on: macos-15
+    timeout-minutes: 45
+    env:
+      SCCACHE_GHA_ENABLED: 'true'
+      SCCACHE_GHA_VERSION: sir-native-v1-macos-preview
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: jwlawson/actions-setup-cmake@v2.2.0
+        with:
+          cmake-version: '4.4.5'
+      - uses: mozilla-actions/sccache-action@v0.0.11
+      - run: cmake --preset macos-preview -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
+      - run: cmake --build --preset macos-preview --parallel 2
+      - run: ctest --preset macos-preview

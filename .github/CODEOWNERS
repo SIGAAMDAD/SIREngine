@@ -1,6 +1,7 @@
-# Default project review owner
+# SIREngine review ownership
 * @SIGAAMDAD
-/docs/ @SIGAAMDAD
-/include/sir/ @SIGAAMDAD
-/src/ @SIGAAMDAD
+/Engine/Source/ @SIGAAMDAD
+/Modules/ @SIGAAMDAD
+/Build/ @SIGAAMDAD
+/Docs/ @SIGAAMDAD
 /.github/workflows/ @SIGAAMDAD

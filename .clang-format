@@ -1,4 +1,4 @@
-# Applies only to SIREngine-owned C++; pinned Godot retains upstream formatting.
+# SIREngine-owned source only. The pinned Godot fork retains its own style.
 BasedOnStyle: LLVM
 Language: Cpp
 Standard: c++17
@@ -20,6 +20,8 @@ BraceWrapping:
 AllowShortFunctionsOnASingleLine: None
 AllowShortIfStatementsOnASingleLine: Never
 AllowShortLoopsOnASingleLine: false
+AlwaysBreakTemplateDeclarations: Yes
+FixNamespaceComments: false
 SpaceBeforeParens: ControlStatements
 SpacesInParens: Custom
 SpacesInParensOptions:

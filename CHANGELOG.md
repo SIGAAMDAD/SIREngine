@@ -1,12 +1,18 @@
 # Changelog
 
-All notable SIREngine releases will be recorded here using tagged versions and their source/tree hashes.
+This changelog records notable version-controlled changes to SIREngine.
 
-## Unreleased — 2026-11-02
+## Unreleased
 
-- Replaced the former `develop` custom-engine layout with a clean Godot-derived repository foundation.
-- Pinned the existing SIGAAMDAD Godot fork and EASTL family dependencies.
-- Introduced C++17/EASTL public aliases, a CMake 4.4.5 entrypoint and Godot SCons bridge.
-- Established architecture contracts, repository hygiene, contributor guidance and CI workflow definitions.
+### Source foundation
+- Established the general-purpose native C++17 engine layout under `Engine/Source/` with buildable Core and Launcher targets.
+- Separated `Upstream/` source-port references from first-party engine source and pinned Godot, NomadFramework and Terrain3D commits.
+- Reorganized documentation into `Docs/` and established four implementation milestones.
+- Removed the unused experimental `SIRConstants.h`, `SIRContainers.h` and their placeholder smoke test.
+- Replaced Python-heavy CI bootstrap with native CMake/CTest, cached compiler outputs via sccache, and nightly Windows/Linux Release packaging.
 
-No completed SIR runtime/backend migration or release is claimed by this changelog entry.
+### Prior development history
+- Introduced the initial Godot-derived branch foundation and architectural contracts.
+- Established the original C++17 build scaffolding, EASTL-family dependencies, coding standards and community files.
+
+Implementations are recorded as complete only once their native source and acceptance tests exist.

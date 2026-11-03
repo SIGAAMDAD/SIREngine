@@ -4,46 +4,49 @@
   "configurePresets": [
     {
       "name": "linux-ci",
-      "displayName": "Linux C++17 foundation",
+      "displayName": "Linux native C++17 debug",
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/out/linux-ci",
-      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug", "SIR_BUILD_GODOT": "OFF" }
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug", "SIR_BUILD_TESTS": "ON" }
     },
     {
       "name": "windows-ci",
-      "displayName": "Windows C++17 foundation",
+      "displayName": "Windows native C++17 debug",
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/out/windows-ci",
-      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug", "SIR_BUILD_GODOT": "OFF" }
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug", "SIR_BUILD_TESTS": "ON" }
     },
     {
-      "name": "linux-godot",
+      "name": "linux-release",
       "inherits": "linux-ci",
-      "binaryDir": "${sourceDir}/out/linux-godot",
-      "cacheVariables": { "SIR_BUILD_GODOT": "ON" }
+      "binaryDir": "${sourceDir}/out/linux-release",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release", "SIR_BUILD_TESTS": "ON" }
     },
     {
-      "name": "windows-godot",
+      "name": "windows-release",
       "inherits": "windows-ci",
-      "binaryDir": "${sourceDir}/out/windows-godot",
-      "cacheVariables": { "SIR_BUILD_GODOT": "ON" }
+      "binaryDir": "${sourceDir}/out/windows-release",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release", "SIR_BUILD_TESTS": "ON" }
     },
     {
       "name": "macos-preview",
       "inherits": "linux-ci",
-      "displayName": "macOS experimental foundation; not a required CI target",
+      "displayName": "Experimental macOS native C++17 build",
       "binaryDir": "${sourceDir}/out/macos-preview"
     }
   ],
   "buildPresets": [
     { "name": "linux-ci", "configurePreset": "linux-ci" },
     { "name": "windows-ci", "configurePreset": "windows-ci" },
-    { "name": "linux-godot", "configurePreset": "linux-godot", "targets": ["sir_godot_editor"] },
-    { "name": "windows-godot", "configurePreset": "windows-godot", "targets": ["sir_godot_editor"] },
+    { "name": "linux-release", "configurePreset": "linux-release" },
+    { "name": "windows-release", "configurePreset": "windows-release" },
     { "name": "macos-preview", "configurePreset": "macos-preview" }
   ],
   "testPresets": [
     { "name": "linux-ci", "configurePreset": "linux-ci", "output": { "outputOnFailure": true } },
-    { "name": "windows-ci", "configurePreset": "windows-ci", "output": { "outputOnFailure": true } }
+    { "name": "windows-ci", "configurePreset": "windows-ci", "output": { "outputOnFailure": true } },
+    { "name": "linux-release", "configurePreset": "linux-release", "output": { "outputOnFailure": true } },
+    { "name": "windows-release", "configurePreset": "windows-release", "output": { "outputOnFailure": true } },
+    { "name": "macos-preview", "configurePreset": "macos-preview", "output": { "outputOnFailure": true } }
   ]
 }

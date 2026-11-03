@@ -1,6 +1,6 @@
 # Contributing to SIREngine
 
-SIREngine targets a reusable Godot-derived engine, not a one-game mod collection. Read [the architecture](docs/README.md), [C++ standard](docs/standards/cpp.md), and [migration gates](docs/architecture/13-migration-plan.md) before proposing changes. Preserve existing Godot editor/workflow behavior unless the change explicitly owns a replacement contract.
+SIREngine targets a reusable Godot-derived engine, not a one-game mod collection. Read [the architecture](Docs/README.md), [C++ standard](Docs/Standards/cpp.md), and [migration gates](Docs/Architecture/13-migration-plan.md) before proposing changes. Preserve existing Godot editor/workflow behavior unless the change explicitly owns a replacement contract.
 
 ## Workflow
 
