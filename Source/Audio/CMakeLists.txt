@@ -1,0 +1,6 @@
+add_library(SIRAudio STATIC SIRAudioSystem.cpp SIRAudioMockBackend.cpp)
+add_library(SIR::Audio ALIAS SIRAudio)
+target_include_directories(SIRAudio PUBLIC "${PROJECT_SOURCE_DIR}/Source" "${PROJECT_SOURCE_DIR}/Build/CMake")
+target_compile_features(SIRAudio PUBLIC cxx_std_17)
+target_link_libraries(SIRAudio PUBLIC SIR::Core)
+sir_configure_owned_target(SIRAudio)
