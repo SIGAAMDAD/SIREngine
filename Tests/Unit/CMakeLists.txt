@@ -7,5 +7,19 @@ add_test(NAME launcher.help COMMAND SIREngine --help)
 set_tests_properties(launcher.help PROPERTIES PASS_REGULAR_EXPRESSION "Usage: SIREngine")
 add_test(NAME launcher.unknown-option COMMAND SIREngine --unknown)
 set_tests_properties(launcher.unknown-option PROPERTIES WILL_FAIL TRUE)
-
 sir_configure_owned_target(SIRApplicationTests)
+
+add_library(SIRPlatformTestModule SHARED SIRDynamicLibraryFixture.cpp)
+sir_configure_owned_target(SIRPlatformTestModule)
+
+add_executable(SIRSystemTests SIRSystemTests.cpp)
+add_dependencies(SIRSystemTests SIRPlatformTestModule)
+target_compile_definitions(SIRSystemTests PRIVATE SIR_TEST_MODULE_PATH="$<TARGET_FILE:SIRPlatformTestModule>")
+target_link_libraries(SIRSystemTests PRIVATE SIR::Core)
+add_test(NAME core.platform.lifecycle COMMAND SIRSystemTests)
+sir_configure_owned_target(SIRSystemTests)
+
+add_executable(SIRMemoryManagerTests SIRMemoryManagerTests.cpp)
+target_link_libraries(SIRMemoryManagerTests PRIVATE SIR::Core)
+add_test(NAME core.memory.manager COMMAND SIRMemoryManagerTests)
+sir_configure_owned_target(SIRMemoryManagerTests)

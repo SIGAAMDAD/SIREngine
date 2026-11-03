@@ -1,8 +1,8 @@
 # 02 — Memory ownership, domains and budgets
 
-**Status:** target contract; NMDMemoryManager has not yet been imported into this repository baseline.
+**Status:** page-level `SIRMemoryManager` and `SIRMemorySegment` are ported under `Source/Core/Memory/`. Expanded allocation routing, attributed live-byte accounting and complete engine integration remain target contracts.
 
-The goal is centralized accounting and reclamation of **all CPU memory allocated by Godot-derived runtime code and integrated engine modules**, with explicit domains and caller attribution. EASTL containers alone do not accomplish this; their allocators must be rebound to the SIR/NMD allocation interface during the container migration. Godot `memalloc`, paged pools, object allocators and third-party allocations need domain-specific adapters and tracing.
+The goal is centralized accounting and reclamation of **all CPU memory allocated by Godot-derived runtime code and integrated engine modules**, with explicit domains and caller attribution. EASTL containers alone do not accomplish this; their allocators must be rebound to the SIR allocation interface during the container migration. Godot `memalloc`, paged pools, object allocators and third-party allocations need domain-specific adapters and tracing.
 
 ## Domains
 
@@ -18,7 +18,7 @@ The goal is centralized accounting and reclamation of **all CPU memory allocated
 | Editor-only | Independent, generous budget that cannot mask shipping-runtime budgets |
 | Gameplay/networking | Game-supplied capacity and packet arena policies |
 
-Godot's efficient paged allocators may remain as *suballocators* if their backing allocations, retained pages and release behavior are fully traced to NMD. Replacing a fast pool solely to achieve uniformity is not the objective; central ownership, accounting and bounded reclamation are. No untracked external-heap fallbacks are accepted for a shipping budget profile.
+Godot's efficient paged allocators may remain as *suballocators* if their backing allocations, retained pages and release behavior are fully traced to SIRMemoryManager and its future allocation router. Replacing a fast pool solely to achieve uniformity is not the objective; central ownership, accounting and bounded reclamation are. No untracked external-heap fallbacks are accepted for a shipping budget profile.
 
 ## Allocation contract
 
