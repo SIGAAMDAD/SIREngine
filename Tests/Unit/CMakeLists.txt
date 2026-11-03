@@ -9,3 +9,13 @@ add_test(NAME launcher.unknown-option COMMAND SIREngine --unknown)
 set_tests_properties(launcher.unknown-option PROPERTIES WILL_FAIL TRUE)
 
 sir_configure_owned_target(SIRApplicationTests)
+
+add_executable(SIRContainerTests SIRContainerTests.cpp)
+target_link_libraries(SIRContainerTests PRIVATE SIR::Core)
+add_test(NAME core.containers.basic COMMAND SIRContainerTests)
+sir_configure_owned_target(SIRContainerTests)
+
+add_executable(SIRContainerDifferentialTests SIRContainerDifferentialTests.cpp)
+target_link_libraries(SIRContainerDifferentialTests PRIVATE SIR::Core)
+add_test(NAME core.containers.differential COMMAND SIRContainerDifferentialTests)
+sir_configure_owned_target(SIRContainerDifferentialTests)
