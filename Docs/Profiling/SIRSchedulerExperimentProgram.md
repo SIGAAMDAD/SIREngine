@@ -113,3 +113,42 @@ different kernel profiles, payload counts, resource constraints or machines.
 Do not introduce a speculative runtime dependency or force one scheduler algorithm
 onto every subsystem. The minimum deliverable for each wave is actual source,
 repeated matched measurements, adversarial tests and a candidate/result ledger.
+
+## S10 / Q01-Q03 queue alternatives (implemented experiment-only candidates)
+
+Three bounded queue implementations are compiled into the native benchmark target
+and `core.jobs.queue-candidates` test, without changing the production executor:
+
+- `kind=0` global mutex, independent per-worker LIFO/FIFO rings protected by one mutex.
+- `kind=1` one mutex per worker-owned queue, with the same ring layout.
+- `kind=2` bounded Chase-Lev variant using C++17 sequentially consistent owner/thief
+  arbitration and generation-tagged opaque 64-bit queue tokens.
+
+All variants provide **owner-only push/pop**, oldest-item FIFO stealing by any
+other worker, fixed power-of-two capacity, and no hot-path allocation. The
+Chase-Lev candidate uses atomic ring elements to make TSan analysis of test
+prototypes feasible; this overhead is part of the comparison. Queue entries
+are *opaque task IDs*, not production `SIRTaskScheduler` task slot ownership.
+Cancellation, slot reclamation, external multi-producer ingress, provider
+acknowledgement, and full task-graph execution are outside this candidate's
+contract and must be implemented and proven before any production replacement.
+
+`SIRBenchmarkQueueCandidate` compares 1/2/4/8 workers under matched queue
+semantics, 256 items per owner, empty and nontrivial payloads, and balanced
+or imbalanced sharding. OS threads and queue storage are created before the
+measured loop. Each run confirms token and payload checksum conservation and
+records successful steals; per-worker cache-line-separated counters avoid
+a single benchmark-induced completion hot spot. This is an **isolated queue
+experiment** and cannot be directly compared by subtracting its wall time
+from `SIRBenchmarkWorkerBatch`, which includes the entire production scheduler.
+
+The deterministic native tests exercise complete/full/empty ring boundaries,
+256 wraparound rounds, 1,024 last-item owner-versus-thief races, and repeated
+imbalanced multi-worker exactly-once execution with forced stealing. All
+variants must pass on Linux and Windows, plus sanitizer runs; use a model
+checker and backend-specific memory-order proof before selecting lock-free
+queue code for production.
+
+Next S10 steps: profile these candidates on controlled CPU hosts, add an
+external-producer ingress adapter and cancellation-safe slot reclamation,
+then run end-to-end `SIRTaskScheduler` backends under matched task graphs.
