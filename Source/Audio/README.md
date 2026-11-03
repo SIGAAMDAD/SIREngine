@@ -51,8 +51,10 @@ Shutdown requires every producer and backend callback to be quiesced.
 
 ## Scope remaining after Wave A contract and mock tests
 
-Cooked package manifests, FMOD native lifetime, bank residency and device
-recovery are not implemented by this contract-only provider. No
+Provider-neutral cooked manifest validation and immutable logical resource
+lookup are implemented in SIRAudioResourceStore. Production cooking, FMOD
+native lifetime, bank residency, GRDG integration and device recovery
+remain separate implementation waves. No
 FMOD/Wwise/OpenAL device playback is represented by mock test success.
 
 ## Wave A spatial identity and attribute transport
@@ -77,3 +79,30 @@ FMOD/Wwise/OpenAL device playback is represented by mock test success.
   A provider must not acknowledge release before retiring its own references.
 - The in-process queue packet is 112 bytes; the public wire command remains
   64 bytes and the transported messages contain no retained external pointers.
+
+## Wave A cooked resource contract
+
+- `SIRAudioResourceStore` validates a versioned, little-endian, provider-specific
+  **cooked mapping** of logical packages, events, controls and package
+  dependencies. The header includes build identity, content hash, provider
+  identifier and required capability mask.
+- Validation rejects schema/version/provider/endianness mismatch, invalid
+  offsets and record sizes, hash mismatch, missing capabilities, duplicate or
+  unsorted IDs, missing/cyclic package dependencies, and malformed or
+  unsupported controls. No FMOD/Wwise/OpenAL API is called.
+- A valid manifest is copied into a single caller-allocated immutable backing
+  store. Playback-time lookups use sorted numerical IDs and binary search,
+  with no provider SDK discovery, strings or heap allocation in the hot path.
+- Manifest reload is transactional: failed validation keeps the previous
+  snapshot; accepted reloads get a new 64-bit epoch and invalidate earlier
+  event/package handles. Callers receive record **copies**, not borrowed
+  memory pointers.
+- Optionally bind `SIRAudioSystem` to a loaded resource store at initialize.
+  The system checks known events and validates control ID, scope, supported
+  provider binding, type and numeric range before submitting hot commands.
+  The store must outlive the bound audio system and remain on its published
+  epoch until that system shuts down.
+- Tests cover valid and corrupted images, hash/provider/schema errors,
+  missing and cyclic dependencies, out-of-budget allocations, rollback,
+  handle staleness, and gameplay command validation. The source manifest
+  cooker, GRDG publication and provider-native bank lifecycle are later work.

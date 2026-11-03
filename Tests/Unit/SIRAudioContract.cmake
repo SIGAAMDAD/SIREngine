@@ -2,3 +2,8 @@ add_executable(SIRAudioContractTests SIRAudioContractTests.cpp SIRAudioMockBacke
 target_link_libraries(SIRAudioContractTests PRIVATE SIR::Audio)
 add_test(NAME audio.contract.wave-a COMMAND SIRAudioContractTests)
 sir_configure_owned_target(SIRAudioContractTests)
+
+add_executable(SIRAudioResourceTests SIRAudioResourcesTests.cpp SIRAudioMockBackend.cpp)
+target_link_libraries(SIRAudioResourceTests PRIVATE SIR::Audio)
+add_test(NAME audio.resources.wave-a COMMAND SIRAudioResourceTests)
+sir_configure_owned_target(SIRAudioResourceTests)
