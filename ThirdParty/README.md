@@ -5,6 +5,8 @@ Vendor source lives under `ThirdParty/` as **pinned Git submodules**, not copied
 ## Existing dependencies
 
 - `EASTL`, `EABase`, `EAAssert`: pinned Electronic Arts submodules
+- `GoogleTest`: pinned GoogleTest C++ unit-testing framework
+- `GoogleBenchmark`: pinned Google Benchmark for native CPU microbenchmarks
 - `OpenALSoft`: pinned audio-backend source
 - `meshoptimizer`: pinned mesh-processing source
 - `FMOD` and `Mono`: separately installed SDK integration records

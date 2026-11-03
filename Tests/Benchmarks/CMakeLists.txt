@@ -1,0 +1,4 @@
+add_executable(SIRCoreBenchmarks CoreBenchmarks.cpp)
+target_compile_features(SIRCoreBenchmarks PRIVATE cxx_std_17)
+target_link_libraries(SIRCoreBenchmarks PRIVATE SIR::Core benchmark::benchmark_main)
+sir_configure_owned_target(SIRCoreBenchmarks)

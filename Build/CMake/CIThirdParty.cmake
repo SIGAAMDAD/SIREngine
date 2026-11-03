@@ -16,7 +16,9 @@ set(sirKnownPaths
     ThirdParty/EABase
     ThirdParty/EAAssert
     ThirdParty/OpenALSoft
-    ThirdParty/meshoptimizer)
+    ThirdParty/meshoptimizer
+    ThirdParty/GoogleTest
+    ThirdParty/GoogleBenchmark)
 set(sirExpectedPaths ${sirKnownPaths})
 math(EXPR sirLast "${sirCount} - 1")
 foreach(sirIndex RANGE 0 ${sirLast})
@@ -74,7 +76,7 @@ foreach(sirLine IN LISTS sirTracked)
         math(EXPR sirGitlinks "${sirGitlinks} + 1")
     endif()
 endforeach()
-if(NOT sirGitlinks EQUAL 49)
-    message(FATAL_ERROR "Expected 49 third-party Gitlinks; found ${sirGitlinks}")
+if(NOT sirGitlinks EQUAL 51)
+    message(FATAL_ERROR "Expected 51 third-party Gitlinks; found ${sirGitlinks}")
 endif()
 message(STATUS "PASS: ${sirGitlinks} third-party Gitlinks, including 44 pinned imported sources")

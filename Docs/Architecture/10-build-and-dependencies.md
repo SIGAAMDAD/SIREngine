@@ -8,7 +8,7 @@
 - `Source/Core/` builds the portable `SIRCore` static library, with declarations and definitions colocated.
 - `Source/Main.cpp` is the bootstrap `SIREngine` executable entrypoint; `Source/CMakeLists.txt` declares its native target.
 - `Source/Terrain/` is the built-in terrain subsystem, including `Source/Terrain/Editor/` for terrain-specific authoring. Actual terrain implementation will join the native build with milestone 3.
-- `Tests/Unit/` contains lifecycle and application tests registered with CTest.
+- `Tests/Unit/` contains lifecycle, launcher and optional GoogleTest cases registered with CTest. `Tests/Benchmarks/` contains native CPU microbenchmarks enabled for profiling.
 - `Build/CMake/` owns dependency resolution, formatting, hygiene and build-tool options.
 - `ThirdParty/` contains pinned source dependencies (EASTL, EABase, EAAssert, OpenAL Soft and meshoptimizer) plus documentation for separately installed FMOD and Mono SDKs. Wwise remains optional.
 
@@ -34,6 +34,8 @@ Windows and Linux use the same developer presets. Other configurations include `
 ## CI/CD
 
 `.github/workflows/ci.yml` validates tracked paths, native C++ formatting and Windows/Linux Debug builds with CTest. A native setup action installs CMake and FASTBuild without Python. `.github/workflows/nightly.yml` runs Release builds, tests, package artifacts, profiling and relevant sanitizers. FASTBuild uses platform/configuration-scoped compilation caches, and Ninja tooling jobs export `compile_commands.json`.
+
+GoogleTest and Google Benchmark are pinned as independent optional development dependencies. Native CI enables GoogleTest for CTest on Windows/Linux; nightly profiling builds and runs Google Benchmark and retains per-platform JSON measurements and median comparisons. Neither vendor library is linked into the shipping Core or Launcher.
 
 Dependency-enabled configurations resolve `SIR::MeshOptimizer`, `SIR::OpenAL`, `SIR::FMODCore`, `SIR::FMODStudio` and `SIR::MonoRuntime` using `Build/CMake/SIRDependencies.cmake`, `SIRAudio.cmake` and `SIRMono.cmake`. The first two use pinned source submodules; FMOD and Mono use an installed SDK (or pkg-config for Mono). The OpenAL Soft and meshoptimizer targets have optional compiler/link smoke tests.
 

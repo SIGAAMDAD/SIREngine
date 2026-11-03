@@ -66,6 +66,8 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+      - name: Fetch pinned GoogleTest for native C++17 tests
+        run: git submodule update --init ThirdParty/GoogleTest
       - name: Set up MSVC compiler environment
         if: runner.os == 'Windows'
         uses: ilammy/msvc-dev-cmd@v1
@@ -77,10 +79,49 @@ jobs:
           restore-keys: |
             sir-fbuild-v1.20-${{ runner.os }}-dev-
       - name: Configure native engine
-        run: cmake --preset "${{ matrix.preset }}"
+        run: cmake --preset "${{ matrix.preset }}" -DSIR_WITH_GOOGLETEST=ON
       - name: Compile engine and tests
         run: cmake --build --preset "${{ matrix.preset }}"
       - name: Run native tests
         run: ctest --preset "${{ matrix.preset }}"
       - name: Verify no-op incremental rebuild
         run: cmake --build --preset dev
+
+  profiling-smoke:
+    name: Google Benchmark compile and execution / Linux
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Fetch pinned Google testing sources
+        run: git submodule update --init ThirdParty/GoogleTest ThirdParty/GoogleBenchmark
+      - uses: ./.github/actions/setup-build-tools
+      - uses: actions/cache@v4
+        with:
+          path: .cache/fastbuild
+          key: sir-fbuild-v1.20-google-profile-linux-${{ github.sha }}
+          restore-keys: |
+            sir-fbuild-v1.20-google-profile-linux-
+      - name: Configure optimized C++17 Google profiling
+        run: >
+          cmake --preset profile
+          -DSIR_WITH_GOOGLETEST=ON
+          -DSIR_WITH_GOOGLE_BENCHMARK=ON
+          -DSIR_BUILD_BENCHMARKS=ON
+      - name: Compile profiling executables
+        run: cmake --build --preset profile
+      - name: Run GoogleTest and lifecycle CTest suite
+        run: ctest --preset profile --output-on-failure
+      - name: Run CPU benchmark smoke and write JSON
+        shell: bash
+        run: bash Build/Scripts/RunGoogleBenchmarks.sh ubuntu-24.04-pr
+      - name: Preserve CPU benchmark evidence
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sir-google-benchmark-ci
+          path: out/Nightly/Benchmarks/
+          if-no-files-found: error
+          retention-days: 14

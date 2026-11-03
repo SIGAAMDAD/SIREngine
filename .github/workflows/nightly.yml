@@ -10,6 +10,10 @@ on:
       - 'Build/Scripts/NightlyBuild.sh'
       - 'Build/CMake/NightlyMetrics.cmake'
       - 'Build/CMake/NightlyCompare.cmake'
+      - 'Build/Scripts/RunGoogleBenchmarks.sh'
+      - 'Build/CMake/GoogleBenchmarkCompare.cmake'
+      - 'Tests/Benchmarks/**'
+      - 'Tests/Unit/GoogleApplicationTests.cpp'
   workflow_dispatch:
     inputs:
       macos_preview:
@@ -174,6 +178,53 @@ jobs:
         if: always()
         run: sccache --show-stats
 
+
+  google-profiling:
+    name: GoogleTest and Google Benchmark / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 75
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Fetch pinned Google testing and profiling sources
+        run: git submodule update --init ThirdParty/GoogleTest ThirdParty/GoogleBenchmark
+      - name: Set up MSVC compiler environment
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+      - uses: ./.github/actions/setup-build-tools
+      - uses: actions/cache@v4
+        with:
+          path: .cache/fastbuild
+          key: sir-fbuild-v1.20-${{ runner.os }}-google-profile-${{ github.sha }}
+          restore-keys: |
+            sir-fbuild-v1.20-${{ runner.os }}-google-profile-
+      - name: Configure optimized CPU profiling and GoogleTest
+        run: >
+          cmake --preset profile
+          -DSIR_WITH_GOOGLETEST=ON
+          -DSIR_WITH_GOOGLE_BENCHMARK=ON
+          -DSIR_BUILD_BENCHMARKS=ON
+      - name: Compile GoogleTest and CPU benchmark targets
+        run: cmake --build --preset profile
+      - name: Run CTest including GoogleTest
+        run: ctest --preset profile --output-on-failure
+      - name: Measure native CPU benchmarks
+        shell: bash
+        run: bash Build/Scripts/RunGoogleBenchmarks.sh "${{ matrix.os }}"
+      - name: Upload profiling measurements
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sir-google-benchmark-${{ matrix.os }}
+          path: out/Nightly/Benchmarks/
+          if-no-files-found: error
+          retention-days: 60
+
   clang-tooling:
     runs-on: ubuntu-24.04
     timeout-minutes: 25
@@ -212,7 +263,7 @@ jobs:
   regression-summary:
     name: Compare nightly builds with previous successful run
     if: always()
-    needs: [native-release, source-dependencies, clang-tooling, macos-preview]
+    needs: [native-release, source-dependencies, clang-tooling, google-profiling, macos-preview]
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -244,6 +295,22 @@ jobs:
           else
             echo "No previous successful nightly run available"
           fi
+      - name: Collect Google Benchmark measurements
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          pattern: sir-google-benchmark-*
+          path: out/Nightly/report/benchmarks
+          merge-multiple: true
+      - name: Compare CPU benchmark profiles
+        shell: bash
+        run: |
+          cmake \
+            -DSIR_CURRENT_DIR=out/Nightly/report/benchmarks \
+            -DSIR_BASELINE_DIR=out/Nightly/baseline \
+            -DSIR_REPORT=out/Nightly/report/BENCHMARKS.md \
+            -P Build/CMake/GoogleBenchmarkCompare.cmake
+          cat out/Nightly/report/BENCHMARKS.md >> "$GITHUB_STEP_SUMMARY"
       - name: Generate longitudinal regression report
         shell: bash
         run: |
@@ -259,6 +326,7 @@ jobs:
             echo "- Windows/Linux profile, release and sanitizers: ${{ needs.native-release.result }}"
             echo "- OpenAL Soft and meshoptimizer: ${{ needs.source-dependencies.result }}"
             echo "- Clang tooling: ${{ needs.clang-tooling.result }}"
+            echo "- GoogleTest and Google Benchmark: ${{ needs.google-profiling.result }}"
             echo "- Optional macOS preview: ${{ needs.macos-preview.result }}"
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Preserve longitudinal results and baseline
