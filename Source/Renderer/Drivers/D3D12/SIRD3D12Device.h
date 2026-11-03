@@ -33,6 +33,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <dxgi1_6.h>
 #include <wrl/client.h>
 #include <Renderer/Drivers/D3D12/SIRD3D12Memory.h>
+#include <Renderer/Drivers/D3D12/SIRD3D12Transfers.h>
 
 typedef struct sirD3D12AdapterInfo_s
 {
@@ -65,6 +66,7 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12CommandAllocator> m_pCopyAllocator;
 	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> m_pCopyCommands;
 	SIRD3D12Memory m_Memory;
+	SIRD3D12Transfers m_Transfers;
 	D3D12MA::Allocation *m_pPendingUpload = nullptr;
 	D3D12MA::Allocation *m_pPendingDevice = nullptr;
 	D3D12MA::Allocation *m_pPendingReadback = nullptr;
@@ -91,6 +93,7 @@ public:
 	bool queryLocalMemory( sirD3D12MemoryInfo_t *pInfo ) const noexcept;
 	HRESULT getLastError( void ) const noexcept;
 	uint64_t getCompletedCopyCount( void ) const noexcept;
+	SIRD3D12Transfers &getTransfers( void ) noexcept;
 
 	// Synchronous diagnostic fixture only; production transfers will use pooled,
 	// asynchronous allocations and queue-completion tokens.

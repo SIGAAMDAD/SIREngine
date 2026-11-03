@@ -41,3 +41,16 @@ The driver now compiles the pinned D3D12MA 3.2.1 source as an internal library d
 The diagnostic test performs 64 transfers with distinct data and validates the completed-submission counter. The WARP CI job initializes the pinned submodule, then compiles and runs these checks. A blocked/uncertain native copy retains all allocations and command objects until completion can be established; shutdown deliberately abandons native references if it cannot prove safe retirement.
 
 Remaining: reusable **asynchronous** upload/readback rings, independent compute/copy queues, per-queue completion sets, graphics descriptors, shader pipelines, swapchains, DRED, Core memory metadata callbacks and GRDG backing-ledger integration.
+
+
+## Independent copy queue and bounded asynchronous transfers
+
+- `SIRD3D12Transfers` owns a real D3D12 COPY command queue, a separate fence and three command allocator/list slots.
+- Each slot lazily allocates upload, DEFAULT and readback resources through D3D12MA and reuses them while size permits. Reallocation occurs only after the slot's previous fence is retired.
+- Nonblocking `submit` returns a local serial+slot ticket. The fourth concurrent submission fails with an explicit busy result rather than waiting.
+- `poll`, bounded `wait`, `receive` and `discard` validate live ticket ownership. A completed slot is reusable only after explicit receive/discard. Stale tickets cannot alias a reused slot.
+- The copy queue records upload and readback in separate command lists and submits them with separate `ExecuteCommandLists` calls. This uses Direct3D 12's COMMON state promotion/decay for DEFAULT buffers; COPY queues prohibit resource transition barriers. Separate COPY queue ownership avoids consuming direct-graphics queue time.
+- Device shutdown proves the copy queue's latest submitted fence before releasing slots and native allocator backing. A failed signal or unverifiable completion forces deliberate abandonment of native objects to avoid GPU use-after-free.
+- WARP tests cover ring exhaustion, out-of-order completion checks, invalid and stale tickets, varying payload sizes, repeated reuse and ring growth.
+
+The transfer queue remains single-caller at the native bootstrap level. Multi-threaded submissions, independently tracked compute workloads, GRDG device generations, a shared renderer completion token, large persistent upload heaps and texture transfers are subsequent integration steps.

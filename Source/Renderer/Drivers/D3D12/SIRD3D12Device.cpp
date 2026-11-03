@@ -129,6 +129,12 @@ bool SIRD3D12Device::initialize( bool bUseWarp ) noexcept
 		return false;
 	}
 
+	if ( !m_Transfers.initialize( m_pDevice.Get(), &m_Memory ) ) {
+		m_nLastError = m_Transfers.getLastError();
+		shutdown();
+		return false;
+	}
+
 	m_nNextFenceValue = 1;
 	m_nLastError = S_OK;
 	return true;
@@ -196,7 +202,8 @@ void SIRD3D12Device::releasePendingCopy( void ) noexcept
 void SIRD3D12Device::shutdown( void ) noexcept
 {
 	const bool bCopySafe = waitForPendingCopy();
-	if ( bCopySafe ) {
+	const bool bTransferSafe = m_Transfers.shutdown();
+	if ( bCopySafe && bTransferSafe ) {
 		releasePendingCopy();
 		m_pCopyCommands.Reset();
 		m_pCopyAllocator.Reset();
@@ -217,7 +224,7 @@ void SIRD3D12Device::shutdown( void ) noexcept
 		m_pPendingDevice = nullptr;
 		m_pPendingReadback = nullptr;
 	}
-	if ( bCopySafe && m_hFenceEvent != nullptr ) {
+	if ( bCopySafe && bTransferSafe && m_hFenceEvent != nullptr ) {
 		CloseHandle( m_hFenceEvent );
 	}
 	m_hFenceEvent = nullptr;
@@ -230,7 +237,7 @@ void SIRD3D12Device::shutdown( void ) noexcept
 bool SIRD3D12Device::isReady( void ) const noexcept
 {
 	return m_pDevice != nullptr && m_pGraphicsQueue != nullptr && m_pGraphicsFence != nullptr && m_hFenceEvent != nullptr &&
-	       m_pCopyAllocator != nullptr && m_pCopyCommands != nullptr && m_Memory.isReady();
+	       m_pCopyAllocator != nullptr && m_pCopyCommands != nullptr && m_Memory.isReady() && m_Transfers.isReady();
 }
 
 bool SIRD3D12Device::queryAdapterInfo( sirD3D12AdapterInfo_t *pInfo ) const noexcept
@@ -281,6 +288,11 @@ HRESULT SIRD3D12Device::getLastError( void ) const noexcept
 uint64_t SIRD3D12Device::getCompletedCopyCount( void ) const noexcept
 {
 	return m_nCompletedCopyCount;
+}
+
+SIRD3D12Transfers &SIRD3D12Device::getTransfers( void ) noexcept
+{
+	return m_Transfers;
 }
 
 bool SIRD3D12Device::copyRoundTripForTest( const void *pInput, void *pOutput, uint64_t nBytes ) noexcept
