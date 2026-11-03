@@ -32,3 +32,12 @@ ctest --preset dev --output-on-failure -R '^renderer[.]d3d12[.]'
 ```
 
 Windows CI enables the experimental option; the test requests **WARP explicitly** and does not certify physical GPU throughput. Hardware initialization, memory optimizations, presentation, GRDG retirement and enhanced barriers remain NOT RUN. CI should build and run this slice before merge.
+
+
+## Continuation: D3D12MA and reusable copy command objects
+
+The driver now compiles the pinned D3D12MA 3.2.1 source as an internal library dependency. The native allocator is created after the device and before the first GPU buffer. GPU copy tests use D3D12MA allocation ownership rather than hand-created committed resources. A single direct command allocator and command list are reused after an exact fence completion; each buffer is released only after its associated work finishes.
+
+The diagnostic test performs 64 transfers with distinct data and validates the completed-submission counter. The WARP CI job initializes the pinned submodule, then compiles and runs these checks. A blocked/uncertain native copy retains all allocations and command objects until completion can be established; shutdown deliberately abandons native references if it cannot prove safe retirement.
+
+Remaining: reusable **asynchronous** upload/readback rings, independent compute/copy queues, per-queue completion sets, graphics descriptors, shader pipelines, swapchains, DRED, Core memory metadata callbacks and GRDG backing-ledger integration.

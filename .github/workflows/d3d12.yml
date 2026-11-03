@@ -17,6 +17,8 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+      - name: Fetch pinned D3D12 allocator
+        run: git submodule update --init ThirdParty/D3D12MemoryAllocator
       - name: Set up MSVC compiler environment
         uses: ilammy/msvc-dev-cmd@v1
       - uses: ./.github/actions/setup-build-tools

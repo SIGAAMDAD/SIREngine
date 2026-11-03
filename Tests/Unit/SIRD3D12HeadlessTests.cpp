@@ -50,8 +50,20 @@ int main( void )
 		return 1;
 	}
 
-	if ( !device.copyRoundTripForTest( szInput, szOutput, sizeof( szInput ) ) || memcmp( szInput, szOutput, sizeof( szInput ) ) != 0 ) {
-		fprintf( stderr, "D3D12 upload/device/readback round trip failed: HRESULT 0x%08lx\n", ( unsigned long )device.getLastError() );
+	for ( uint32_t iPass = 0; iPass < 64; ++iPass ) {
+		for ( uint32_t iWord = 0; iWord < 32; ++iWord ) {
+			szInput[iWord] = ( iPass * 0x9e3779b9U ) ^ ( iWord * 1337U );
+		}
+		memset( szOutput, 0, sizeof( szOutput ) );
+		if ( !device.copyRoundTripForTest( szInput, szOutput, sizeof( szInput ) ) ||
+		     memcmp( szInput, szOutput, sizeof( szInput ) ) != 0 ) {
+			fprintf( stderr, "D3D12 pooled command / D3D12MA transfer failed at pass %u: HRESULT 0x%08lx\n", iPass,
+			         ( unsigned long )device.getLastError() );
+			return 1;
+		}
+	}
+	if ( device.getCompletedCopyCount() != 64 ) {
+		fputs( "D3D12 completion counter drifted\n", stderr );
 		return 1;
 	}
 
