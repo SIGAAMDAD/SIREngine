@@ -191,8 +191,8 @@ public:
 	friend class SIRResourceReadScope;
 };
 
-// Reserved for the next integration slice. These handles account for native
-// provider memory; such memory is not a second owner of canonical CPU bytes.
+// A derived representation is owned by its backend, while GRDG tracks one
+// distinct physical allocation and holds its source revision until release.
 typedef struct sirDerivedResourceHandle_s
 {
 	uint32_t m_nSlot;
@@ -208,14 +208,79 @@ typedef struct sirDerivedResourceRegistration_s
 } sirDerivedResourceRegistration_t;
 typedef sirDerivedResourceRegistration_t SIRDerivedResourceRegistration;
 
+// Release is invoked after the provider's completed fence has reached the
+// representation's retirement fence. Return true only once native storage
+// has actually been released. Callbacks must not re-enter the registry.
+typedef struct sirDerivedProviderCallbacks_s
+{
+	void *pContext;
+	bool ( *pfnReleaseNative )( void *pContext, uint64_t nNativeToken ) noexcept;
+} sirDerivedProviderCallbacks_t;
+typedef sirDerivedProviderCallbacks_t SIRDerivedProviderCallbacks;
+
+typedef struct sirResourceDerivedConfig_s
+{
+	SIRResourceAllocator allocator;
+	uint32_t nMetadataDomain;
+	uint32_t nMaxRepresentations;
+	uint32_t nMaxProviders;
+	uint64_t nMaxTrackedBytes;
+} sirResourceDerivedConfig_t;
+typedef sirResourceDerivedConfig_t SIRResourceDerivedConfig;
+
+// Byte totals represent independently allocated physical provider backing,
+// including pending retirements. Canonical GRDG bytes remain in graph stats.
+typedef struct sirResourceDerivedStats_s
+{
+	uint64_t nCommittedBytes[3];
+	uint64_t nResidentBytes[3];
+	uint64_t nPeakCommittedBytes[3];
+	uint32_t nLiveRepresentations;
+	uint32_t nPendingRetirements;
+	uint32_t nRegisteredProviders;
+} sirResourceDerivedStats_t;
+typedef sirResourceDerivedStats_t SIRResourceDerivedStats;
+
+typedef struct sirDerivedProviderSlot_s sirDerivedProviderSlot_t;
+typedef struct sirDerivedRepresentationSlot_s sirDerivedRepresentationSlot_t;
+
+// One writer thread, bounded metadata and generation-checked handles.
+// Graph and allocator callback context must outlive the registry. Each
+// registration pins its exact immutable source revision for the duration
+// of backend ownership, even if a newer revision is later published.
 class SIRResourceDerivedRegistry
 {
+private:
+	SIRResourceGraph *m_pGraph;
+	SIRResourceDerivedConfig m_Config;
+	std::thread::id m_OwnerThread;
+	sirDerivedProviderSlot_t *m_pProviders;
+	sirDerivedRepresentationSlot_t *m_pRepresentations;
+	SIRResourceDerivedStats m_Stats;
+	uint64_t m_nTrackedBytes;
+	bool m_bReady;
+
+	bool isWriterThread( void ) const noexcept;
+	int32_t findProvider( uint32_t nProviderId ) const noexcept;
+	SIRResourceResult collectProvider( uint32_t iProvider ) noexcept;
+	void releaseMetadata( void ) noexcept;
+
 public:
-	SIRResourceResult registerRepresentation( const SIRDerivedResourceRegistration &rRegistration,
+	SIRResourceDerivedRegistry( SIRResourceGraph &rGraph, const SIRResourceDerivedConfig &rConfig ) noexcept;
+	~SIRResourceDerivedRegistry( void ) noexcept;
+
+	SIRResourceDerivedRegistry( const SIRResourceDerivedRegistry & ) = delete;
+	SIRResourceDerivedRegistry &operator=( const SIRResourceDerivedRegistry & ) = delete;
+
+	bool isReady( void ) const noexcept;
+	SIRResourceResult registerProvider( uint32_t nProviderId, const SIRDerivedProviderCallbacks &rCallbacks ) noexcept;
+	SIRResourceResult registerRepresentation( const SIRResourceReadScope &rScope, const SIRResourceView &rSource,
+	                                          const SIRDerivedResourceRegistration &rRegistration,
 	                                          SIRDerivedResourceHandle *pHandle ) noexcept;
 	SIRResourceResult retireRepresentation( SIRDerivedResourceHandle hRepresentation, uint64_t nCompletionFence ) noexcept;
 	SIRResourceResult updateCompletedFence( uint32_t nProviderId, uint64_t nCompletedFence ) noexcept;
 	SIRResourceResult getAccounting( SIRDerivedResourceHandle hRepresentation, SIRDerivedResourceAccounting *pAccounting ) const noexcept;
+	SIRResourceResult getStats( SIRResourceDerivedStats *pStats ) const noexcept;
 };
 
 #endif // __SIRENGINE_SIRRESOURCEGRAPH_H__

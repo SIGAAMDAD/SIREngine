@@ -105,3 +105,9 @@ add_executable(SIRResourceMemoryIntegrationTests SIRResourceMemoryIntegrationTes
 target_link_libraries(SIRResourceMemoryIntegrationTests PRIVATE SIR::Resources)
 add_test(NAME resources.memory.domains COMMAND SIRResourceMemoryIntegrationTests)
 sir_configure_owned_target(SIRResourceMemoryIntegrationTests)
+
+# Bounded provider-owned derived representations and fence-aware retirement.
+add_executable(SIRDerivedResourceRegistryTests SIRDerivedResourceRegistryTests.cpp)
+target_link_libraries(SIRDerivedResourceRegistryTests PRIVATE SIR::Resources)
+add_test(NAME resources.derived.retirement COMMAND SIRDerivedResourceRegistryTests)
+sir_configure_owned_target(SIRDerivedResourceRegistryTests)

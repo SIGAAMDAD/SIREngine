@@ -28,3 +28,13 @@ Metadata and streaming allocations can use separate tracked domains. The adapter
 and its bound heaps must outlive every graph borrowing the callback context.
 The native `resources.memory.domains` test exercises publication, provider pins,
 retirement and rejection of an unbound domain against real Core heaps.
+
+Derived provider representations are registered through SIRResourceDerivedRegistry.
+The registry stores metadata in a supplied SIR resource allocator domain, pins
+the exact canonical source revision, rejects duplicate provider-native tokens,
+and accounts for device, external and independent CPU allocation bytes without
+recharging canonical GRDG backing. Retirement is deferred until each provider
+reports a monotonic completion fence AND its release callback confirms native
+deallocation. Failed releases are retried without invalidating handles or
+dropping accounted bytes. Providers and the registry must shut down before the
+owning resource graph; the registry is single-writer and bounds all metadata.
