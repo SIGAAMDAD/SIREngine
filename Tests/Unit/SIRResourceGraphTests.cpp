@@ -567,6 +567,67 @@ static void testReverseDependencyCapacityRollback( void )
 	REQUIRE( alloc.m_nOutstanding.load() == 0 );
 }
 
+static void testInvalidationJournalOverflowAndResume( void )
+{
+	SIRTestAllocatorStats alloc = {};
+	{
+		SIRResourceGraphConfig config = testConfig( alloc, 8 );
+		config.m_nMaxInvalidationEvents = 2;
+		SIRResourceGraph graph( config );
+		REQUIRE( graph.isReady() );
+		SIRResourceGraphWriter *pWriter = graph.getWriter();
+		REQUIRE( pWriter != nullptr );
+		SIRResourceHandle hA = {};
+		SIRResourceHandle hB = {};
+		SIRResourceHandle hC = {};
+		SIRResourcePublication publication = { key( 500 ), SIR_RESOURCE_KIND_COMPOSITION, 1, 1, nullptr, 0, nullptr, 0 };
+		REQUIRE( pWriter->publish( publication, &hA ) == SIR_RESOURCE_RESULT_SUCCESS );
+		SIRResourceDependency onA = { key( 500 ), SIR_RESOURCE_EDGE_KIND_REQUIRED, {} };
+		publication.m_Key = key( 501 );
+		publication.m_pDependencies = &onA;
+		publication.m_nDependencyCount = 1;
+		REQUIRE( pWriter->publish( publication, &hB ) == SIR_RESOURCE_RESULT_SUCCESS );
+		SIRResourceDependency onB = { key( 501 ), SIR_RESOURCE_EDGE_KIND_REQUIRED, {} };
+		publication.m_Key = key( 502 );
+		publication.m_pDependencies = &onB;
+		REQUIRE( pWriter->publish( publication, &hC ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( graph.getStats().m_nTotalInvalidationEvents == 0 );
+
+		publication = { key( 500 ), SIR_RESOURCE_KIND_COMPOSITION, 1, 1, nullptr, 0, nullptr, 0 };
+		REQUIRE( pWriter->publishExpected( publication, 1, &hA ) == SIR_RESOURCE_RESULT_SUCCESS );
+		SIRResourceGraphStats stats = graph.getStats();
+		REQUIRE( stats.m_nTotalInvalidationEvents == 2 && stats.m_nBufferedInvalidationEvents == 2 );
+		SIRResourceInvalidationEvent events[2] = {};
+		uint32_t nWritten = 0;
+		uint64_t nCursor = UINT64_MAX;
+		REQUIRE( pWriter->pollInvalidations( 0, events, 1, &nWritten, &nCursor ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( nWritten == 1 && nCursor == 1 && events[0].m_nJournalSequence == 1 );
+		REQUIRE( events[0].m_Dependent.m_nSlot == hB.m_nSlot && events[0].m_Cause.m_nAssetId == 500 );
+		REQUIRE( pWriter->pollInvalidations( 1, events, 1, &nWritten, &nCursor ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( nWritten == 1 && nCursor == 2 && events[0].m_nJournalSequence == 2 );
+		REQUIRE( events[0].m_Dependent.m_nSlot == hC.m_nSlot );
+		REQUIRE( pWriter->pollInvalidations( 2, events, 2, &nWritten, &nCursor ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( nWritten == 0 && nCursor == 2 );
+		REQUIRE( pWriter->publishExpected( publication, 2, &hA ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( graph.getStats().m_nTotalInvalidationEvents == 4 );
+		REQUIRE( pWriter->pollInvalidations( 1, events, 2, &nWritten, &nCursor ) == SIR_RESOURCE_RESULT_JOURNAL_OVERFLOW );
+		REQUIRE( nWritten == 0 && nCursor == 4 );
+		REQUIRE( pWriter->pollInvalidations( 2, events, 2, &nWritten, &nCursor ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( nWritten == 2 && nCursor == 4 );
+		REQUIRE( events[0].m_nJournalSequence == 3 && events[1].m_nJournalSequence == 4 );
+		REQUIRE( pWriter->pollInvalidations( 4, nullptr, 1, &nWritten, &nCursor ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		REQUIRE( pWriter->pollInvalidations( 5, events, 2, &nWritten, &nCursor ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+
+		publication = { key( 501 ), SIR_RESOURCE_KIND_COMPOSITION, 1, 1, nullptr, 0, &onA, 1 };
+		REQUIRE( pWriter->publishExpected( publication, 1, &hB ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( pWriter->pollInvalidations( 4, events, 2, &nWritten, &nCursor ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( nWritten == 1 && nCursor == 5 );
+		REQUIRE( events[0].m_Dependent.m_nSlot == hC.m_nSlot && events[0].m_Cause.m_nAssetId == 501 );
+		REQUIRE( events[0].m_nChangeSequence == graph.getStats().m_nChangeSequence );
+	}
+	REQUIRE( alloc.m_nOutstanding.load() == 0 );
+}
+
 int main( void )
 {
 	testScopeLifetimeAndDeduplication();
@@ -579,6 +640,7 @@ int main( void )
 	testExpectedRevisionPublication();
 	testReverseDependenciesAndTransitiveInvalidation();
 	testReverseDependencyCapacityRollback();
+	testInvalidationJournalOverflowAndResume();
 	printf( "PASS: GRDG resource registry, publication, deduplication, lifetime, concurrency\n" );
 	return 0;
 }
