@@ -3,8 +3,6 @@
 
 #include "SIRResourceViews.h"
 
-namespace sir
-{
 // Derived projections add behavior only. No virtual tables or owning payload members.
 // The subsystem decides what its methods mean; GRDG retains the data and identity.
 
@@ -192,6 +190,4 @@ static_assert(sizeof(SIRCollisionMeshView) == sizeof(SIRResourceView), "Collisio
 static_assert(sizeof(SIRTerrainHeightView) == sizeof(SIRResourceView), "Terrain height view owns data");
 static_assert(sizeof(SIRAudioBankResourceView) == sizeof(SIRResourceView), "Audio bank view owns data");
 static_assert(sizeof(SIRWorldCellView) == sizeof(SIRResourceView), "World cell view owns data");
-}
-
 #endif

@@ -3,8 +3,6 @@
 
 #include "SIRResourceTypes.h"
 
-namespace sir
-{
 class SIRResourceGraph;
 struct SIRPublishedResourceRecord;
 
@@ -229,6 +227,4 @@ SIRResourceResult tryCastResourceView(const SIRResourceView &rView, T *pOut) noe
     *pOut = T(rView);
     return SIRResourceResult::Success;
 }
-}
-
 #endif

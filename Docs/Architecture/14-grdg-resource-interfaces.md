@@ -1,8 +1,8 @@
-# SIREngine GRDG: resource type interfaces (review draft)
+# SIREngine GRDG: resource types and initial runtime implementation
 
-Status: PROPOSED INTERFACES. Declarations only; no GRDG implementation is claimed.
+Status: First registry/lifetime slice implemented; specialization and provider adapter contracts remain proposed.
 Repository baseline: SIGAAMDAD/SIREngine `develop`, d26167e104e6247d9cff028e8a75841718da5b64.
-Review branch: architecture/grdg-resource-interfaces.
+Implementation branch: architecture/grdg-resource-interfaces.
 
 ## Grounding
 
@@ -18,17 +18,17 @@ Current sources inspected (including updated `develop` terrain integration layou
 - Engine/Source/Runtime/Resources/README.md
 - Docs/Standards/cpp.md
 
-At this baseline GRDG and the typed resource API are not implemented. The accompanying .h files are interface declarations, not an implemented resource system. The C++17 syntax check compiles the headers, but no implementation or threading tests exist.
+The original `develop` baseline contained declarations only. The feature branch now contains a native Resources library and runtime tests. System-specific decoders, backend-native representations, and editor integration remain unimplemented.
 
 ## Non-negotiable invariants
 
 1. GRDG alone owns resource identity, dependency edges, canonical CPU payload allocation, revisions, residency and retirement. Resource subclasses and consumers never own a second canonical payload.
 2. All base resource families are representation-oriented and system-agnostic. No dependency on renderer, RHI, physics backend, FMOD, script engine, gameplay or editor.
-3. A specialized view is a non-owning, trivially small projection of a canonical GRDG payload; its class may add operations but no owned arrays, buffers, copies, or resource allocators. Current proposal: each view holds exactly two borrowed pointers, the read scope and immutable published record.
+3. A specialized view is a non-owning, trivially small projection of a canonical GRDG payload; its class may add operations but no owned arrays, buffers, copies, or resource allocators. Current implementation: each view holds exactly two borrowed pointers, the read scope and immutable published record.
 4. The logical resource key is stable across sessions; a process-local handle includes slot, generation and type and is never serialized as the identity.
-5. Required dependency edges form a DAG (cycles rejected at cook/publication time). Optional and streamed references may form cycles but must never trigger unbounded recursive dependency resolution.
+5. Required dependency edges form a DAG (cycles rejected at cook/publication time). All dependency-edge cycles are rejected during the current publication slice, including optional and streamed references.
 6. Immutable versions are published by one owner writer after validation. Readers acquire snapshots and use read-scoped views. Worker jobs and provider callbacks do not mutate published records.
-7. Chunk storage is content-addressed and GRDG-deduplicated across keys where format and bytes are genuinely identical. Identical chunks are backed by one resident allocation. Hash collisions require payload comparison or rejection; hash equality alone never proves byte equality.
+7. Chunk storage is content-addressed and GRDG-deduplicated across keys where format and bytes are genuinely identical. Identical chunks are backed by one resident allocation. Staged content always gets a byte-for-byte comparison before deduplication. An explicit key-only reuse request must supply a trusted content key, and ambiguous key collisions are rejected.
 8. CPU canonical bytes may be read by multiple subsystems but may not be copied into independent CPU 'render mesh', 'collision mesh', 'audio bank' or 'navigation mesh' ownership caches. Truly derived representations (GPU device data, collision acceleration structures, decoded audio, etc.) are separately accounted for by the same resource ID/revision and only exist if required by a provider.
 9. Eviction/reclamation requires reader quiescence and all provider pins, GPU fences, audio callbacks and physics jobs to finish. Raw bytes must never escape their scope or pin.
 10. Partial load, allocation failure or validation error never publishes partial/mixed-version records. Failed staging allocations are returned to the staging domain; no external heap fallback hides budget failures.
@@ -173,12 +173,12 @@ Allowed include direction: `Core <- Runtime/Resources <- Runtime consumers and p
 Typical read:
 
 ```cpp
-sir::SIRResourceReadScope scope(graph);
-sir::SIRResourceView raw;
-if (graph.resolve(scope, meshHandle, &raw) == sir::SIRResourceResult::Success)
+SIRResourceReadScope scope(graph);
+SIRResourceView raw;
+if (graph.resolve(scope, meshHandle, &raw) == SIRResourceResult::Success)
 {
-    sir::SIRRenderMeshView renderMesh(raw);
-    sir::SIRCollisionMeshView collisionMesh(raw);
+    SIRRenderMeshView renderMesh(raw);
+    SIRCollisionMeshView collisionMesh(raw);
     // Both access identical canonical geometry bytes under the same scope.
 }
 ```
@@ -201,7 +201,7 @@ A provider borrowing bytes across asynchronous GPU submission or an FMOD callbac
 - `Engine/Source/Runtime/Resources/Public/SIR/Resource/SIRResourceTypes.h`: keys, generations, states, chunks, typed edges, accounting.
 - `Engine/Source/Runtime/Resources/Public/SIR/Resource/SIRResourceViews.h`: ten system-neutral read view families and scoped reader guard.
 - `Engine/Source/Runtime/Resources/Public/SIR/Resource/SIRResourceGraph.h`: read access, writer capability, publication and provider representation accounting.
-- `Engine/Source/Runtime/{Rendering,Physics,Audio,Animation,Navigation,World,Terrain}/Public/...`: subclass projections, split by consumer ownership in the implementation. The single combined `SIRSystemResourceViews.h` in this review package is a **draft convenience file**, not the proposed permanent common header.
+- `Engine/Source/Runtime/{Rendering,Physics,Audio,Animation,Navigation,World,Terrain}/Public/...`: subclass projections, split by consumer ownership in the implementation. The combined `SIRSystemResourceViews.h` is a temporary interface-only header, not a permanent consumer-system dependency.
 - `Engine/Source/Runtime/Resources/Private/`: registry implementation, chunk content store, generation map, dependency validation, version publication, reclamation.
 - `Engine/Source/Runtime/Resources/Tests/`: handle reuse, type validation, dedup, concurrency, fault injection, retirement and provider lifetime tests.
 
@@ -243,3 +243,32 @@ Parallelize R06 consumers only after R01-R05 public contracts are frozen. Keep R
 - Format-specific ability to consume canonical bytes directly; GPU/physics/audio derived structures need provider accounting and a reasoned residency policy.
 
 These are architectural decisions for implementation work, not capabilities claimed to exist in the current `develop` tree.
+
+## First native implementation slice (after interface review)
+
+The C++17 code under `Engine/Source/Runtime/Resources` implements a fixed-capacity
+resource registry, staged allocation and immutable publication, deduplication
+across canonical chunks using both content keys and byte comparison, generation-
+checked handles, dependency queries, revision retention, provider pinning,
+and bounded reclamation. All public resource types live in the global C++ scope.
+
+The read-side protocol is a conservative graph-wide quiescence guard. Reader
+scope entry increments a sequentially consistent atomic counter before loading
+any published slot pointer. The writer publishes new pointers with sequentially
+consistent exchange. Reclamation observes the counter after publication and
+only releases unpinned retired records when it reaches zero. A reader that can
+observe a retired pointer must have entered before its publication exchange.
+This protocol favors correctness over maximum concurrency; a future per-thread
+RCU/epoch design may reduce global retention.
+
+The graph receives fixed capacities and an explicit domain-aware allocator.
+No allocator fallback is enabled; actual NMD callback routing must be connected
+when the NomadFramework memory service is ported. Resource views borrow bytes
+within the read scope; provider use beyond the scope requires a pin to the
+exact record revision. The graph must outlive every scope and provider pin.
+
+The native implementation does not yet implement native backend representations,
+codec-specific image/mesh/audio views, world streaming I/O, or editor import.
+The runtime test exercises canonical payload identity, hot replacement, rollback,
+required dependencies, cycle rejection, provider pins, eviction, stale handles,
+and six concurrent readers during publication.

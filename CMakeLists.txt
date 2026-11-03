@@ -16,6 +16,7 @@ include(Build/CMake/SIRBuildOptions.cmake)
 include(Build/CMake/SIRDependencies.cmake)
 include(Build/CMake/SIRAudio.cmake)
 add_subdirectory(Engine/Source/Core)
+add_subdirectory(Engine/Source/Runtime/Resources)
 add_subdirectory(Engine/Source/Programs/Launcher)
 
 if(SIR_BUILD_TESTS)

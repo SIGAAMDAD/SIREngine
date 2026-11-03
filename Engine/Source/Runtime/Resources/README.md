@@ -1,10 +1,23 @@
-# Resources runtime subsystem
+# GRDG resource runtime
 
-The GRDG resource-type interfaces are proposed, declaration-only C++17 contracts.
-They do not implement residency, publication, streaming, or reclamation yet.
+This directory now contains the first native, executable GRDG ownership slice:
 
-- [Resource inheritance, dependency graphs and ownership contract](../../../../Docs/Architecture/14-grdg-resource-interfaces.md)
-- Public declarations: `Public/SIR/Resource/`
-- Compile-only interface test: `Tests/Unit/SIRResourceInterfaceTests.cpp`
+- Fixed-capacity, generation-safe resource registry and canonical content keys.
+- Single-owner writer, immutable published records, read scopes and conservative
+  quiescent-state reclamation; read-side atomic operations do not acquire locks.
+- Explicit caller-supplied allocator callbacks; all metadata, staging and payload
+  allocations are accounted for and budget-checked. NMD integration is pending.
+- Borrowed views across resource kinds, staging-to-resident ownership transfer,
+  byte-verified chunk deduplication and dependency/cycle validation.
+- Provider pins keeping retired revisions alive until consumers release them.
 
-Specialized views currently share a review header; implementation moves them into their consuming runtime modules.
+The public declarations reside under `Public/SIR/Resource/`. All GRDG types are
+in the global scope: SIREngine's resource implementation declares no namespaces.
+
+**Unimplemented:** backend-native derived-resource registry, format-specific
+image/mesh/audio decoders, streaming I/O and integration into the Godot-derived
+engine/editor. Specialized view methods remain interface declarations until
+corresponding cooked schemas and subsystem adapters are established.
+
+See [resource interfaces and graph](../../../../Docs/Architecture/14-grdg-resource-interfaces.md)
+and `Tests/Unit/SIRResourceGraphTests.cpp`.

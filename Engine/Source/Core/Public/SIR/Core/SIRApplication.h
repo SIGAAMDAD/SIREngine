@@ -3,8 +3,6 @@
 
 #include <stdint.h>
 
-namespace sir
-{
 typedef enum class SIRAppState : uint8_t
 {
 	Uninitialized = 0,
@@ -26,6 +24,5 @@ public:
 	SIRAppState getState( void ) const noexcept;
 	uint64_t getTickCount( void ) const noexcept;
 };
-}
 
 #endif

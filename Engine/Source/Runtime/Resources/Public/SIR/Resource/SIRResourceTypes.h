@@ -3,8 +3,6 @@
 
 #include <stdint.h>
 
-namespace sir
-{
 // These are data-representation categories, not rendering/physics/audio classes.
 typedef enum class SIRResourceKind : uint8_t
 {
@@ -193,6 +191,4 @@ struct SIRDerivedResourceAccounting
 
 static_assert(sizeof(SIRResourceKey) == 16, "Resource keys must remain compact");
 static_assert(sizeof(SIRResourceHandle) == 16, "Resource handles must remain generation-safe");
-}
-
 #endif

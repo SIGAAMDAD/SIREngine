@@ -1,5 +1,4 @@
 add_library(SIRCore STATIC Private/SIRApplication.cpp)
-add_library(SIR::Core ALIAS SIRCore)
 target_include_directories(SIRCore PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/Public")
 target_compile_features(SIRCore PUBLIC cxx_std_17)
 if(MSVC)

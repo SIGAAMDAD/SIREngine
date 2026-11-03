@@ -1,5 +1,5 @@
 add_executable(SIRApplicationTests SIRApplicationTests.cpp)
-target_link_libraries(SIRApplicationTests PRIVATE SIR::Core)
+target_link_libraries(SIRApplicationTests PRIVATE SIRCore)
 add_test(NAME core.application.lifecycle COMMAND SIRApplicationTests)
 add_test(NAME launcher.version COMMAND SIREngine --version)
 set_tests_properties(launcher.version PROPERTIES PASS_REGULAR_EXPRESSION "SIREngine native foundation")
@@ -10,8 +10,12 @@ set_tests_properties(launcher.unknown-option PROPERTIES WILL_FAIL TRUE)
 
 sir_configure_owned_target(SIRApplicationTests)
 
-# Compile-only API surface test for the proposed GRDG resource interfaces.
 add_executable(SIRResourceInterfaceTests SIRResourceInterfaceTests.cpp)
-target_include_directories(SIRResourceInterfaceTests PRIVATE "${PROJECT_SOURCE_DIR}/Engine/Source/Runtime/Resources/Public")
+target_link_libraries(SIRResourceInterfaceTests PRIVATE SIRResources)
 sir_configure_owned_target(SIRResourceInterfaceTests)
 add_test(NAME resources.interfaces.headers COMMAND SIRResourceInterfaceTests)
+
+add_executable(SIRResourceGraphTests SIRResourceGraphTests.cpp)
+target_link_libraries(SIRResourceGraphTests PRIVATE SIRResources)
+sir_configure_owned_target(SIRResourceGraphTests)
+add_test(NAME resources.graph.lifecycle COMMAND SIRResourceGraphTests)
