@@ -1,0 +1,49 @@
+{
+  "version": 8,
+  "cmakeMinimumRequired": { "major": 4, "minor": 4, "patch": 5 },
+  "configurePresets": [
+    {
+      "name": "linux-ci",
+      "displayName": "Linux C++17 foundation",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/out/linux-ci",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug", "SIR_BUILD_GODOT": "OFF" }
+    },
+    {
+      "name": "windows-ci",
+      "displayName": "Windows C++17 foundation",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/out/windows-ci",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug", "SIR_BUILD_GODOT": "OFF" }
+    },
+    {
+      "name": "linux-godot",
+      "inherits": "linux-ci",
+      "binaryDir": "${sourceDir}/out/linux-godot",
+      "cacheVariables": { "SIR_BUILD_GODOT": "ON" }
+    },
+    {
+      "name": "windows-godot",
+      "inherits": "windows-ci",
+      "binaryDir": "${sourceDir}/out/windows-godot",
+      "cacheVariables": { "SIR_BUILD_GODOT": "ON" }
+    },
+    {
+      "name": "macos-preview",
+      "inherits": "linux-ci",
+      "displayName": "macOS experimental foundation; not a required CI target",
+      "binaryDir": "${sourceDir}/out/macos-preview"
+    }
+  ],
+  "buildPresets": [
+    { "name": "linux-ci", "configurePreset": "linux-ci" },
+    { "name": "windows-ci", "configurePreset": "windows-ci" },
+    { "name": "linux-godot", "configurePreset": "linux-godot", "targets": ["sir_godot_editor"] },
+    { "name": "windows-godot", "configurePreset": "windows-godot", "targets": ["sir_godot_editor"] },
+    { "name": "macos-preview", "configurePreset": "macos-preview" }
+  ],
+  "testPresets": [
+    { "name": "linux-ci", "configurePreset": "linux-ci", "output": { "outputOnFailure": true } },
+    { "name": "windows-ci", "configurePreset": "windows-ci", "output": { "outputOnFailure": true } }
+  ]
+}

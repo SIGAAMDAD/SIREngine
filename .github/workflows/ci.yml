@@ -1,0 +1,169 @@
+name: "SIREngine CI and nightly engine builds"
+
+on:
+  push:
+    branches: [develop]
+  pull_request:
+    branches: [develop, main]
+  schedule:
+    - cron: "17 7 * * *"
+  workflow_dispatch:
+    inputs:
+      macos_preview:
+        description: "Run experimental macOS C++ foundation build"
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: "sir-${{ github.workflow }}-${{ github.ref }}"
+  cancel-in-progress: "${{ github.event_name != 'schedule' }}"
+
+jobs:
+  hygiene:
+    name: "Repository hygiene and SIR formatting"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: "Install pinned formatter"
+        run: python -m pip install --disable-pip-version-check "clang-format==22.1.5"
+      - name: "Check tracked tree, gitlinks, generated files"
+        run: python scripts/check_hygiene.py
+      - name: "Check C++ format (SIR-owned paths only)"
+        run: python scripts/check_format.py
+      - name: "Syntax-check tooling"
+        run: python -m compileall -q scripts
+
+  foundation:
+    name: "C++17 and EASTL / ${{ matrix.os }}"
+    runs-on: "${{ matrix.os }}"
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            preset: linux-ci
+          - os: windows-2022
+            preset: windows-ci
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: "Install pinned CMake and SCons"
+        run: python -m pip install --disable-pip-version-check "cmake==4.4.5" "scons==4.11.1"
+      - name: "Initialize EASTL family from pinned Git SHAs"
+        run: git submodule update --init third_party/EASTL third_party/EABase third_party/EAAssert
+      - name: "Report toolchain provenance"
+        run: |
+          cmake --version
+          scons --version
+      - name: "Configure SIR core"
+        run: cmake --preset "${{ matrix.preset }}"
+      - name: "Compile SIR core tests"
+        run: cmake --build --preset "${{ matrix.preset }}" --parallel 2
+      - name: "Run CTest"
+        run: ctest --preset "${{ matrix.preset }}"
+
+  editor-linux-nightly:
+    name: "Nightly pinned Godot editor / Linux"
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: "Install compiler and Godot platform headers"
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ninja-build build-essential pkg-config \
+            libx11-dev libxext-dev libxrender-dev libxrandr-dev libxcursor-dev libxinerama-dev \
+            libxi-dev libxkbcommon-dev libwayland-dev libfontconfig1-dev libfreetype-dev \
+            libudev-dev libasound2-dev libpulse-dev libgl1-mesa-dev libvulkan-dev
+      - name: "Install pinned build tools"
+        run: python -m pip install --disable-pip-version-check "cmake==4.4.5" "scons==4.11.1"
+      - name: "Initialize pinned engine and dependency sources"
+        run: git submodule update --init --recursive
+      - name: "Configure Godot superbuild"
+        run: cmake --preset linux-godot
+      - name: "Compile Godot editor"
+        run: cmake --build --preset linux-godot
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: godot-editor-linux-nightly
+          path: engine/godot/bin/*
+          if-no-files-found: error
+          retention-days: 7
+
+  editor-windows-nightly:
+    name: "Nightly pinned Godot editor / Windows"
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: windows-2022
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: "Install pinned build tools"
+        run: python -m pip install --disable-pip-version-check "cmake==4.4.5" "scons==4.11.1"
+      - name: "Initialize pinned engine and dependency sources"
+        run: git submodule update --init --recursive
+      - name: "Install Direct3D 12 build SDK"
+        run: python engine/godot/misc/scripts/install_d3d12_sdk_windows.py
+      - name: "Configure Godot superbuild"
+        run: cmake --preset windows-godot
+      - name: "Compile Godot editor"
+        run: cmake --build --preset windows-godot
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: godot-editor-windows-nightly
+          path: engine/godot/bin/*
+          if-no-files-found: error
+          retention-days: 7
+
+  macos-preview:
+    name: "Manual macOS foundation preview"
+    if: github.event_name == 'workflow_dispatch' && inputs.macos_preview
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: "Install pinned CMake and SCons"
+        run: python -m pip install --disable-pip-version-check "cmake==4.4.5" "scons==4.11.1"
+      - name: "Initialize EASTL family"
+        run: git submodule update --init third_party/EASTL third_party/EABase third_party/EAAssert
+      - name: "Configure manual preview"
+        run: cmake --preset macos-preview
+      - name: "Build manual preview"
+        run: cmake --build --preset macos-preview
