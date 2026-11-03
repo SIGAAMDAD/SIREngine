@@ -457,7 +457,7 @@ static void testReverseDependenciesAndTransitiveInvalidation( void )
 		base.m_Key = key( 4 );
 		REQUIRE( pWriter->publish( base, &hD ) == SIR_RESOURCE_RESULT_SUCCESS );
 		SIRResourceDependency onA[2] = { { key( 1 ), SIR_RESOURCE_EDGE_KIND_REQUIRED, {} },
-		                                  { key( 1 ), SIR_RESOURCE_EDGE_KIND_OPTIONAL, {} } };
+		                                 { key( 1 ), SIR_RESOURCE_EDGE_KIND_OPTIONAL, {} } };
 		base.m_Key = key( 2 );
 		base.m_pDependencies = onA;
 		base.m_nDependencyCount = 2;
