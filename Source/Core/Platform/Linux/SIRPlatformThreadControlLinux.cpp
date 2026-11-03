@@ -106,10 +106,17 @@ sirThreadControlResult_t SIRPlatformThreadControl::setCurrentPriority( sirThread
 {
 	int nNice = 0;
 	switch ( ePriority ) {
-		case SIR_THREAD_PRIORITY_BACKGROUND: nNice = 10; break;
-		case SIR_THREAD_PRIORITY_NORMAL: nNice = 0; break;
-		case SIR_THREAD_PRIORITY_HIGH: nNice = -5; break;
-		default: return SIR_THREAD_CONTROL_INVALID_ARGUMENT;
+	case SIR_THREAD_PRIORITY_BACKGROUND:
+		nNice = 10;
+		break;
+	case SIR_THREAD_PRIORITY_NORMAL:
+		nNice = 0;
+		break;
+	case SIR_THREAD_PRIORITY_HIGH:
+		nNice = -5;
+		break;
+	default:
+		return SIR_THREAD_CONTROL_INVALID_ARGUMENT;
 	}
 	const id_t nThreadId = ( id_t )syscall( SYS_gettid );
 	return setpriority( PRIO_PROCESS, nThreadId, nNice ) == 0 ? SIR_THREAD_CONTROL_OK : sirThreadResultFromErrno( errno );

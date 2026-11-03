@@ -28,13 +28,18 @@ of merchantability, fitness for a particular purpose and noninfringement.
 static sirFileSystemResult_t sirFileSystemError( int nError ) noexcept
 {
 	switch ( nError ) {
-		case ENOENT:
-		case ENOTDIR: return SIR_FILESYSTEM_NOT_FOUND;
-		case EEXIST: return SIR_FILESYSTEM_ALREADY_EXISTS;
-		case EACCES:
-		case EPERM: return SIR_FILESYSTEM_ACCESS_DENIED;
-		case ENAMETOOLONG: return SIR_FILESYSTEM_BUFFER_TOO_SMALL;
-		default: return SIR_FILESYSTEM_IO_ERROR;
+	case ENOENT:
+	case ENOTDIR:
+		return SIR_FILESYSTEM_NOT_FOUND;
+	case EEXIST:
+		return SIR_FILESYSTEM_ALREADY_EXISTS;
+	case EACCES:
+	case EPERM:
+		return SIR_FILESYSTEM_ACCESS_DENIED;
+	case ENAMETOOLONG:
+		return SIR_FILESYSTEM_BUFFER_TOO_SMALL;
+	default:
+		return SIR_FILESYSTEM_IO_ERROR;
 	}
 }
 
@@ -42,9 +47,10 @@ static void sirFileSystemStatInfo( const struct stat &rStat, sirFileSystemInfo_t
 {
 	pInfo->nSizeBytes = rStat.st_size > 0 ? ( uint64_t )rStat.st_size : 0;
 	pInfo->nModifiedNanoseconds = ( uint64_t )rStat.st_mtim.tv_sec * 1000000000ULL + ( uint64_t )rStat.st_mtim.tv_nsec;
-	pInfo->eType = S_ISREG( rStat.st_mode ) ? SIR_FILESYSTEM_REGULAR_FILE :
-			S_ISDIR( rStat.st_mode ) ? SIR_FILESYSTEM_DIRECTORY :
-			S_ISLNK( rStat.st_mode ) ? SIR_FILESYSTEM_SYMLINK : SIR_FILESYSTEM_OTHER;
+	pInfo->eType = S_ISREG( rStat.st_mode )   ? SIR_FILESYSTEM_REGULAR_FILE
+	               : S_ISDIR( rStat.st_mode ) ? SIR_FILESYSTEM_DIRECTORY
+	               : S_ISLNK( rStat.st_mode ) ? SIR_FILESYSTEM_SYMLINK
+	                                          : SIR_FILESYSTEM_OTHER;
 }
 
 sirFileSystemResult_t SIRPlatformFileSystem::query( const char *pszPath, sirFileSystemInfo_t *pInfo ) noexcept

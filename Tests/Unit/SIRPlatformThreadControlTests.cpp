@@ -35,7 +35,8 @@ int main( void )
 	sirCheckThreadControl( SIRPlatformThreadControl::setCurrentName( "sir-thread-test" ) == SIR_THREAD_CONTROL_OK, "set name" );
 	char szName[256] = {};
 	sirCheckThreadControl( SIRPlatformThreadControl::getCurrentName( szName, sizeof( szName ) ) == SIR_THREAD_CONTROL_OK &&
-		std::strcmp( szName, "sir-thread-test" ) == 0, "read name" );
+	                           std::strcmp( szName, "sir-thread-test" ) == 0,
+	                       "read name" );
 	sirThreadAffinity_t affinity{};
 	const sirThreadControlResult_t eAffinity = SIRPlatformThreadControl::getCurrentAffinity( &affinity );
 	if ( eAffinity == SIR_THREAD_CONTROL_OK ) {
@@ -46,16 +47,16 @@ int main( void )
 	}
 	sirThreadAffinity_t empty{};
 	sirCheckThreadControl( SIRPlatformThreadControl::setCurrentAffinity( empty ) == SIR_THREAD_CONTROL_INVALID_ARGUMENT,
-		"reject zero affinity" );
+	                       "reject zero affinity" );
 	sirCheckThreadControl( SIRPlatformThreadControl::setCurrentPriority( ( sirThreadPriority_t )255 ) ==
-		SIR_THREAD_CONTROL_INVALID_ARGUMENT, "reject invalid priority" );
+	                           SIR_THREAD_CONTROL_INVALID_ARGUMENT,
+	                       "reject invalid priority" );
 	std::atomic<int> nBackgroundResult( -1 );
 	std::thread worker( [&nBackgroundResult]() {
 		const sirThreadControlResult_t eResult = SIRPlatformThreadControl::setCurrentPriority( SIR_THREAD_PRIORITY_BACKGROUND );
 		nBackgroundResult.store( ( int )eResult, std::memory_order_release );
 	} );
 	worker.join();
-	sirCheckThreadControl( nBackgroundResult.load( std::memory_order_acquire ) == SIR_THREAD_CONTROL_OK,
-		"set background worker priority" );
+	sirCheckThreadControl( nBackgroundResult.load( std::memory_order_acquire ) == SIR_THREAD_CONTROL_OK, "set background worker priority" );
 	return 0;
 }

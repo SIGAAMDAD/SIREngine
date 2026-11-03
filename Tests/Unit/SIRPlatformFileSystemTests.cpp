@@ -55,8 +55,10 @@ int main( void )
 	sirCheckFileSystem( SIRPlatformFileSystem::createDirectory( szChild.c_str(), true ) == SIR_FILESYSTEM_OK, "recursive mkdir" );
 	sirFileSystemInfo_t info{};
 	sirCheckFileSystem( SIRPlatformFileSystem::query( szChild.c_str(), &info ) == SIR_FILESYSTEM_OK &&
-		info.eType == SIR_FILESYSTEM_DIRECTORY, "directory stat" );
-	sirCheckFileSystem( SIRPlatformFileSystem::createDirectory( szChild.c_str(), false ) == SIR_FILESYSTEM_ALREADY_EXISTS, "existing directory" );
+	                        info.eType == SIR_FILESYSTEM_DIRECTORY,
+	                    "directory stat" );
+	sirCheckFileSystem( SIRPlatformFileSystem::createDirectory( szChild.c_str(), false ) == SIR_FILESYSTEM_ALREADY_EXISTS,
+	                    "existing directory" );
 	std::filesystem::path pathSource = pathChild / "source.bin";
 	std::filesystem::path pathDestination = pathChild / "dest.bin";
 	const std::string szSource = pathSource.string();
@@ -68,25 +70,26 @@ int main( void )
 		std::fclose( pFile );
 	}
 	sirCheckFileSystem( SIRPlatformFileSystem::query( szSource.c_str(), &info ) == SIR_FILESYSTEM_OK &&
-		info.eType == SIR_FILESYSTEM_REGULAR_FILE && info.nSizeBytes == 4, "file stat" );
+	                        info.eType == SIR_FILESYSTEM_REGULAR_FILE && info.nSizeBytes == 4,
+	                    "file stat" );
 	{
 		FILE *pFile = std::fopen( szDestination.c_str(), "wb" );
 		sirCheckFileSystem( pFile != nullptr, "create replacement target" );
 		std::fclose( pFile );
 	}
 	sirCheckFileSystem( SIRPlatformFileSystem::renameReplace( szSource.c_str(), szDestination.c_str() ) == SIR_FILESYSTEM_OK,
-		"replace destination" );
+	                    "replace destination" );
 	sirCheckFileSystem( SIRPlatformFileSystem::query( szDestination.c_str(), &info ) == SIR_FILESYSTEM_OK && info.nSizeBytes == 4,
-		"replacement contents" );
+	                    "replacement contents" );
 	sirCheckFileSystem( SIRPlatformFileSystem::query( szSource.c_str(), &info ) == SIR_FILESYSTEM_NOT_FOUND, "source renamed" );
 	sirFileTestVisitor_t visitor{};
 	sirCheckFileSystem( SIRPlatformFileSystem::enumerate( szChild.c_str(), &sirVisitFile, &visitor ) == SIR_FILESYSTEM_OK &&
-		visitor.nFound == 1, "enumeration" );
+	                        visitor.nFound == 1,
+	                    "enumeration" );
 	visitor.bStop = true;
 	sirCheckFileSystem( SIRPlatformFileSystem::enumerate( szChild.c_str(), &sirVisitFile, &visitor ) == SIR_FILESYSTEM_STOPPED,
-		"early visitor stop" );
-	sirCheckFileSystem( SIRPlatformFileSystem::removeDirectory( szChild.c_str() ) != SIR_FILESYSTEM_OK,
-		"reject nonempty directory" );
+	                    "early visitor stop" );
+	sirCheckFileSystem( SIRPlatformFileSystem::removeDirectory( szChild.c_str() ) != SIR_FILESYSTEM_OK, "reject nonempty directory" );
 	std::filesystem::remove( pathDestination );
 	sirCheckFileSystem( SIRPlatformFileSystem::removeDirectory( szChild.c_str() ) == SIR_FILESYSTEM_OK, "remove empty child" );
 	std::filesystem::remove_all( pathRoot );

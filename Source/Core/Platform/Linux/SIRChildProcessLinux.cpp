@@ -52,8 +52,8 @@ sirChildProcessResult_t SIRChildProcess::start( const sirChildProcessLaunch_t &r
 		return SIR_CHILD_PROCESS_ALREADY_OPEN;
 	}
 	if ( rLaunch.pszExecutable == nullptr || rLaunch.pszExecutable[0] == '\0' || rLaunch.nArgumentCount > 128 ||
-		( rLaunch.nArgumentCount != 0 && rLaunch.ppszArguments == nullptr ) ||
-		( rLaunch.pszWorkingDirectory != nullptr && rLaunch.pszWorkingDirectory[0] == '\0' ) ) {
+	     ( rLaunch.nArgumentCount != 0 && rLaunch.ppszArguments == nullptr ) ||
+	     ( rLaunch.pszWorkingDirectory != nullptr && rLaunch.pszWorkingDirectory[0] == '\0' ) ) {
 		return SIR_CHILD_PROCESS_INVALID_ARGUMENT;
 	}
 	char *pszArguments[130];

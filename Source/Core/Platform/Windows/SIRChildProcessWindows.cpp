@@ -89,8 +89,8 @@ sirChildProcessResult_t SIRChildProcess::start( const sirChildProcessLaunch_t &r
 		return SIR_CHILD_PROCESS_ALREADY_OPEN;
 	}
 	if ( rLaunch.pszExecutable == nullptr || rLaunch.pszExecutable[0] == '\0' || rLaunch.nArgumentCount > 128 ||
-		( rLaunch.nArgumentCount != 0 && rLaunch.ppszArguments == nullptr ) ||
-		( rLaunch.pszWorkingDirectory != nullptr && rLaunch.pszWorkingDirectory[0] == '\0' ) ) {
+	     ( rLaunch.nArgumentCount != 0 && rLaunch.ppszArguments == nullptr ) ||
+	     ( rLaunch.pszWorkingDirectory != nullptr && rLaunch.pszWorkingDirectory[0] == '\0' ) ) {
 		return SIR_CHILD_PROCESS_INVALID_ARGUMENT;
 	}
 	wchar_t szExecutable[32768] = {};
@@ -100,8 +100,7 @@ sirChildProcessResult_t SIRChildProcess::start( const sirChildProcessLaunch_t &r
 	if ( !sirConvertProcessUtf8( rLaunch.pszExecutable, szExecutable, 32768 ) ) {
 		return SIR_CHILD_PROCESS_INVALID_ARGUMENT;
 	}
-	if ( rLaunch.pszWorkingDirectory != nullptr &&
-		!sirConvertProcessUtf8( rLaunch.pszWorkingDirectory, szWorkingDirectory, 32768 ) ) {
+	if ( rLaunch.pszWorkingDirectory != nullptr && !sirConvertProcessUtf8( rLaunch.pszWorkingDirectory, szWorkingDirectory, 32768 ) ) {
 		return SIR_CHILD_PROCESS_INVALID_ARGUMENT;
 	}
 	const wchar_t *pszCwd = rLaunch.pszWorkingDirectory == nullptr ? nullptr : szWorkingDirectory;
@@ -110,10 +109,9 @@ sirChildProcessResult_t SIRChildProcess::start( const sirChildProcessLaunch_t &r
 		return SIR_CHILD_PROCESS_INVALID_ARGUMENT;
 	}
 	for ( uint32_t i = 0; i < rLaunch.nArgumentCount; ++i ) {
-		if ( rLaunch.ppszArguments[i] == nullptr ||
-			!sirConvertProcessUtf8( rLaunch.ppszArguments[i], szArgument, 32768 ) ||
-			!sirAppendProcessCharacter( szCommand, 32768, &nCursor, L' ' ) ||
-			!sirAppendProcessArgument( szCommand, 32768, &nCursor, szArgument ) ) {
+		if ( rLaunch.ppszArguments[i] == nullptr || !sirConvertProcessUtf8( rLaunch.ppszArguments[i], szArgument, 32768 ) ||
+		     !sirAppendProcessCharacter( szCommand, 32768, &nCursor, L' ' ) ||
+		     !sirAppendProcessArgument( szCommand, 32768, &nCursor, szArgument ) ) {
 			return SIR_CHILD_PROCESS_INVALID_ARGUMENT;
 		}
 	}

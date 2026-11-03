@@ -22,8 +22,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 static sirThreadControlResult_t sirWindowsThreadError( DWORD nError ) noexcept
 {
-	return nError == ERROR_ACCESS_DENIED || nError == ERROR_PRIVILEGE_NOT_HELD ? SIR_THREAD_CONTROL_ACCESS_DENIED :
-			SIR_THREAD_CONTROL_OS_ERROR;
+	return nError == ERROR_ACCESS_DENIED || nError == ERROR_PRIVILEGE_NOT_HELD ? SIR_THREAD_CONTROL_ACCESS_DENIED
+	                                                                           : SIR_THREAD_CONTROL_OS_ERROR;
 }
 
 sirThreadControlResult_t SIRPlatformThreadControl::setCurrentName( const char *pszName ) noexcept
@@ -49,8 +49,7 @@ sirThreadControlResult_t SIRPlatformThreadControl::getCurrentName( char *pszName
 	if ( FAILED( nResult ) ) {
 		return SIR_THREAD_CONTROL_OS_ERROR;
 	}
-	const int nWritten = WideCharToMultiByte( CP_UTF8, WC_ERR_INVALID_CHARS, pszWide, -1, pszName, ( int )nCapacity, nullptr,
-		nullptr );
+	const int nWritten = WideCharToMultiByte( CP_UTF8, WC_ERR_INVALID_CHARS, pszWide, -1, pszName, ( int )nCapacity, nullptr, nullptr );
 	LocalFree( pszWide );
 	return nWritten > 0 ? SIR_THREAD_CONTROL_OK : SIR_THREAD_CONTROL_INVALID_ARGUMENT;
 }
@@ -63,8 +62,8 @@ sirThreadControlResult_t SIRPlatformThreadControl::setCurrentAffinity( const sir
 	GROUP_AFFINITY affinity{};
 	affinity.Group = ( WORD )rAffinity.nGroup;
 	affinity.Mask = ( KAFFINITY )rAffinity.nMask;
-	return SetThreadGroupAffinity( GetCurrentThread(), &affinity, nullptr ) ? SIR_THREAD_CONTROL_OK :
-		sirWindowsThreadError( GetLastError() );
+	return SetThreadGroupAffinity( GetCurrentThread(), &affinity, nullptr ) ? SIR_THREAD_CONTROL_OK
+	                                                                        : sirWindowsThreadError( GetLastError() );
 }
 
 sirThreadControlResult_t SIRPlatformThreadControl::getCurrentAffinity( sirThreadAffinity_t *pAffinity ) noexcept
@@ -87,11 +86,17 @@ sirThreadControlResult_t SIRPlatformThreadControl::setCurrentPriority( sirThread
 {
 	int nNativePriority = THREAD_PRIORITY_NORMAL;
 	switch ( ePriority ) {
-		case SIR_THREAD_PRIORITY_BACKGROUND: nNativePriority = THREAD_PRIORITY_BELOW_NORMAL; break;
-		case SIR_THREAD_PRIORITY_NORMAL: nNativePriority = THREAD_PRIORITY_NORMAL; break;
-		case SIR_THREAD_PRIORITY_HIGH: nNativePriority = THREAD_PRIORITY_ABOVE_NORMAL; break;
-		default: return SIR_THREAD_CONTROL_INVALID_ARGUMENT;
+	case SIR_THREAD_PRIORITY_BACKGROUND:
+		nNativePriority = THREAD_PRIORITY_BELOW_NORMAL;
+		break;
+	case SIR_THREAD_PRIORITY_NORMAL:
+		nNativePriority = THREAD_PRIORITY_NORMAL;
+		break;
+	case SIR_THREAD_PRIORITY_HIGH:
+		nNativePriority = THREAD_PRIORITY_ABOVE_NORMAL;
+		break;
+	default:
+		return SIR_THREAD_CONTROL_INVALID_ARGUMENT;
 	}
-	return SetThreadPriority( GetCurrentThread(), nNativePriority ) ? SIR_THREAD_CONTROL_OK :
-		sirWindowsThreadError( GetLastError() );
+	return SetThreadPriority( GetCurrentThread(), nNativePriority ) ? SIR_THREAD_CONTROL_OK : sirWindowsThreadError( GetLastError() );
 }

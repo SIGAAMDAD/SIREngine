@@ -27,23 +27,28 @@ of merchantability, fitness for a particular purpose and noninfringement.
 static sirFileSystemResult_t sirWindowsFileSystemError( DWORD nError ) noexcept
 {
 	switch ( nError ) {
-		case ERROR_FILE_NOT_FOUND:
-		case ERROR_PATH_NOT_FOUND:
-		case ERROR_INVALID_NAME: return SIR_FILESYSTEM_NOT_FOUND;
-		case ERROR_ALREADY_EXISTS:
-		case ERROR_FILE_EXISTS: return SIR_FILESYSTEM_ALREADY_EXISTS;
-		case ERROR_ACCESS_DENIED:
-		case ERROR_SHARING_VIOLATION: return SIR_FILESYSTEM_ACCESS_DENIED;
-		case ERROR_FILENAME_EXCED_RANGE:
-		case ERROR_BUFFER_OVERFLOW: return SIR_FILESYSTEM_BUFFER_TOO_SMALL;
-		default: return SIR_FILESYSTEM_IO_ERROR;
+	case ERROR_FILE_NOT_FOUND:
+	case ERROR_PATH_NOT_FOUND:
+	case ERROR_INVALID_NAME:
+		return SIR_FILESYSTEM_NOT_FOUND;
+	case ERROR_ALREADY_EXISTS:
+	case ERROR_FILE_EXISTS:
+		return SIR_FILESYSTEM_ALREADY_EXISTS;
+	case ERROR_ACCESS_DENIED:
+	case ERROR_SHARING_VIOLATION:
+		return SIR_FILESYSTEM_ACCESS_DENIED;
+	case ERROR_FILENAME_EXCED_RANGE:
+	case ERROR_BUFFER_OVERFLOW:
+		return SIR_FILESYSTEM_BUFFER_TOO_SMALL;
+	default:
+		return SIR_FILESYSTEM_IO_ERROR;
 	}
 }
 
 static bool sirWindowsPathToWide( const char *pszPath, wchar_t *pszOutput, int nCapacity ) noexcept
 {
 	return pszPath != nullptr && pszPath[0] != '\0' &&
-		MultiByteToWideChar( CP_UTF8, MB_ERR_INVALID_CHARS, pszPath, -1, pszOutput, nCapacity ) > 0;
+	       MultiByteToWideChar( CP_UTF8, MB_ERR_INVALID_CHARS, pszPath, -1, pszOutput, nCapacity ) > 0;
 }
 
 static uint64_t sirWindowsFileTimeNanoseconds( const FILETIME &rTime ) noexcept
@@ -53,12 +58,13 @@ static uint64_t sirWindowsFileTimeNanoseconds( const FILETIME &rTime ) noexcept
 }
 
 static void sirWindowsFillFileInfo( DWORD nAttributes, DWORD nSizeHigh, DWORD nSizeLow, const FILETIME &rTime,
-	sirFileSystemInfo_t *pInfo ) noexcept
+                                    sirFileSystemInfo_t *pInfo ) noexcept
 {
 	pInfo->nSizeBytes = ( ( uint64_t )nSizeHigh << 32 ) | nSizeLow;
 	pInfo->nModifiedNanoseconds = sirWindowsFileTimeNanoseconds( rTime );
-	pInfo->eType = ( nAttributes & FILE_ATTRIBUTE_REPARSE_POINT ) != 0 ? SIR_FILESYSTEM_SYMLINK :
-			( nAttributes & FILE_ATTRIBUTE_DIRECTORY ) != 0 ? SIR_FILESYSTEM_DIRECTORY : SIR_FILESYSTEM_REGULAR_FILE;
+	pInfo->eType = ( nAttributes & FILE_ATTRIBUTE_REPARSE_POINT ) != 0 ? SIR_FILESYSTEM_SYMLINK
+	               : ( nAttributes & FILE_ATTRIBUTE_DIRECTORY ) != 0   ? SIR_FILESYSTEM_DIRECTORY
+	                                                                   : SIR_FILESYSTEM_REGULAR_FILE;
 }
 
 sirFileSystemResult_t SIRPlatformFileSystem::query( const char *pszPath, sirFileSystemInfo_t *pInfo ) noexcept
@@ -153,8 +159,9 @@ sirFileSystemResult_t SIRPlatformFileSystem::renameReplace( const char *pszOldPa
 	if ( !sirWindowsPathToWide( pszOldPath, szOldPath, 32768 ) || !sirWindowsPathToWide( pszNewPath, szNewPath, 32768 ) ) {
 		return SIR_FILESYSTEM_INVALID_ARGUMENT;
 	}
-	return MoveFileExW( szOldPath, szNewPath, MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH ) ? SIR_FILESYSTEM_OK :
-		sirWindowsFileSystemError( GetLastError() );
+	return MoveFileExW( szOldPath, szNewPath, MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH )
+	           ? SIR_FILESYSTEM_OK
+	           : sirWindowsFileSystemError( GetLastError() );
 }
 
 sirFileSystemResult_t SIRPlatformFileSystem::enumerate( const char *pszDirectory, sirFileSystemVisitor_t pVisitor, void *pContext ) noexcept
@@ -186,8 +193,8 @@ sirFileSystemResult_t SIRPlatformFileSystem::enumerate( const char *pszDirectory
 			continue;
 		}
 		char szName[2048];
-		if ( WideCharToMultiByte( CP_UTF8, WC_ERR_INVALID_CHARS, entry.cFileName, -1, szName, ( int )sizeof( szName ), nullptr,
-				nullptr ) == 0 ) {
+		if ( WideCharToMultiByte( CP_UTF8, WC_ERR_INVALID_CHARS, entry.cFileName, -1, szName, ( int )sizeof( szName ), nullptr, nullptr ) ==
+		     0 ) {
 			eResult = SIR_FILESYSTEM_BUFFER_TOO_SMALL;
 			break;
 		}
