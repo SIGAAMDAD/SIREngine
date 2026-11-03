@@ -617,6 +617,27 @@ void SIRResourceGraph::adoptPublishedRecordChunks( SIRPublishedResourceRecord *p
 	}
 }
 
+SIRResourceResult SIRResourceGraphWriter::publishExpected( const SIRResourcePublication &rPublication, uint64_t nExpectedRevision,
+                                                               SIRResourceHandle *pHandle ) noexcept
+{
+	if ( !m_pGraph->isWriterThread() ) {
+		return SIR_RESOURCE_RESULT_WRITER_VIOLATION;
+	}
+	if ( !pHandle || !rPublication.m_Key.m_nTypeId ) {
+		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
+	}
+	const int32_t iPrevious = m_pGraph->findSlot( rPublication.m_Key );
+	const SIRPublishedResourceRecord *pPrior =
+	    iPrevious >= 0 ? m_pGraph->m_pSlots[iPrevious].m_pPublished.load( std::memory_order_seq_cst ) : nullptr;
+	const uint64_t nCurrentRevision = pPrior != nullptr ? pPrior->m_Info.m_nRevision : 0;
+	if ( nCurrentRevision != nExpectedRevision ) {
+		return SIR_RESOURCE_RESULT_STALE_REVISION;
+	}
+	// The graph has one writer thread; no competing publication can interleave
+	// with this check. Reuse the normal validation and transactional commit path.
+	return publish( rPublication, pHandle );
+}
+
 SIRResourceResult SIRResourceGraphWriter::publish( const SIRResourcePublication &rPublication, SIRResourceHandle *pHandle ) noexcept
 {
 	if ( !m_pGraph->isWriterThread() ) {

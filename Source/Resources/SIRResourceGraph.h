@@ -109,6 +109,10 @@ public:
 	SIRResourceResult cancelStaging( SIRResourceStagingHandle hStaging ) noexcept;
 	SIRResourceResult request( const SIRResourceKey &rKey, SIRResourceHandle *pHandle ) noexcept;
 	SIRResourceResult publish( const SIRResourcePublication &rPublication, SIRResourceHandle *pHandle ) noexcept;
+	// Require the exact currently published revision (0 when absent or requested).
+	// Failed version checks do not consume staging or mutate the published record.
+	SIRResourceResult publishExpected( const SIRResourcePublication &rPublication, uint64_t nExpectedRevision,
+	                                   SIRResourceHandle *pHandle ) noexcept;
 	SIRResourceResult markFailed( SIRResourceHandle hResource, SIRResourceResult eCause ) noexcept;
 	SIRResourceResult evictChunk( SIRResourceHandle hResource, SIRResourceChunkId id ) noexcept;
 	SIRResourceResult retire( SIRResourceHandle hResource ) noexcept;

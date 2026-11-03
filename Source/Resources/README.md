@@ -38,3 +38,9 @@ reports a monotonic completion fence AND its release callback confirms native
 deallocation. Failed releases are retried without invalidating handles or
 dropping accounted bytes. Providers and the registry must shut down before the
 owning resource graph; the registry is single-writer and bounds all metadata.
+
+Writers can call `publishExpected(publication, expectedRevision, handle)` to
+reject outdated asynchronous completions before staging is consumed or any
+published record changes. Expected revision 0 means absent or requested;
+a mismatch returns `SIR_RESOURCE_RESULT_STALE_REVISION`. This is a
+single-writer version-admission check, not multi-writer synchronization.
