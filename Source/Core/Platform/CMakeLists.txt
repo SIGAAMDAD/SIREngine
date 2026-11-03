@@ -7,6 +7,7 @@ set(SIR_CORE_PLATFORM_COMMON
     SIRSync.cpp
     SIRAtomic.cpp
     SIRInput.cpp
+    SIRInputControllerProfiles.cpp
 )
 
 if(WIN32)

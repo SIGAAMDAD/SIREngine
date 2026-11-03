@@ -175,6 +175,73 @@ bool SIRInputSystem::submitGamepadSample( sirInputDeviceHandle_t hDevice, const 
 	return true;
 }
 
+bool SIRInputSystem::submitGamepadFrame( sirInputDeviceHandle_t hDevice, const sirInputGamepadFrameEvent_t *pEvents, uint32_t nCount,
+                                         uint64_t nTimestampNs ) noexcept
+{
+	if ( !isValid( hDevice ) || m_Devices[hDevice.nSlot].state.eKind != SIR_INPUT_DEVICE_GAMEPAD || m_bOverflowed ||
+	     nCount > SIR_INPUT_MAX_EVENTS || ( nCount != 0 && pEvents == nullptr ) ) {
+		return false;
+	}
+	if ( nCount == 0 ) {
+		return true;
+	}
+
+	// Validate and count actual transitions before touching the queue or the
+	// published device state. A single packet is committed in original order.
+	sirInputDeviceState_t scratch = m_Devices[hDevice.nSlot].state;
+	uint32_t nPending = 0;
+	for ( uint32_t iEvent = 0; iEvent < nCount; ++iEvent ) {
+		const sirInputGamepadFrameEvent_t &event = pEvents[iEvent];
+		if ( event.eKind == SIR_INPUT_EVENT_BUTTON ) {
+			if ( event.nCode >= SIR_INPUT_MAX_BUTTONS || ( event.nValue != 0 && event.nValue != 1 ) ) {
+				return false;
+			}
+			const uint32_t nWord = event.nCode / 32;
+			const uint32_t nMask = UINT32_C( 1 ) << ( event.nCode % 32 );
+			const bool bPressed = event.nValue != 0;
+			if ( ( ( scratch.nButtons[nWord] & nMask ) != 0 ) != bPressed ) {
+				++nPending;
+				if ( bPressed ) {
+					scratch.nButtons[nWord] |= nMask;
+				} else {
+					scratch.nButtons[nWord] &= ~nMask;
+				}
+			}
+		} else if ( event.eKind == SIR_INPUT_EVENT_AXIS ) {
+			if ( event.nCode >= SIR_INPUT_MAX_AXES ) {
+				return false;
+			}
+			if ( event.nCode < SIR_GAMEPAD_AXIS_COUNT ) {
+				const bool bTrigger = event.nCode >= SIR_GAMEPAD_AXIS_LEFT_TRIGGER;
+				if ( event.nValue > 32767 || event.nValue < ( bTrigger ? 0 : -32767 ) ) {
+					return false;
+				}
+			}
+			if ( scratch.nAxes[event.nCode] != event.nValue ) {
+				++nPending;
+				scratch.nAxes[event.nCode] = event.nValue;
+			}
+		} else {
+			return false;
+		}
+	}
+	if ( nPending > SIR_INPUT_MAX_EVENTS - m_nCount ) {
+		m_bOverflowed = true;
+		return false;
+	}
+	for ( uint32_t iEvent = 0; iEvent < nCount; ++iEvent ) {
+		const sirInputGamepadFrameEvent_t &event = pEvents[iEvent];
+		if ( event.eKind == SIR_INPUT_EVENT_BUTTON ) {
+			if ( !pushButton( hDevice, event.nCode, event.nValue != 0, nTimestampNs ) ) {
+				return false;
+			}
+		} else if ( !pushAxis( hDevice, event.nCode, event.nValue, nTimestampNs ) ) {
+			return false;
+		}
+	}
+	return true;
+}
+
 bool SIRInputSystem::pushAxis( sirInputDeviceHandle_t hDevice, uint16_t nAxis, int32_t nValue, uint64_t nTimestampNs ) noexcept
 {
 	if ( !isValid( hDevice ) || nAxis >= SIR_INPUT_MAX_AXES || m_bOverflowed ) {

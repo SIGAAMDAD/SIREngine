@@ -35,6 +35,12 @@ SIRLinuxEvdevInput::SIRLinuxEvdevInput( SIRInputSystem &input ) noexcept
 	}
 }
 
+bool SIRLinuxEvdevInput::registerProfile( const sirInputControllerProfile_t &profile ) noexcept
+{
+	// A connected device holds a stable pointer to its selected mapping.
+	return m_nDeviceCount == 0 && m_Profiles.addProfile( profile );
+}
+
 SIRLinuxEvdevInput::~SIRLinuxEvdevInput()
 {
 	shutdown();
@@ -84,7 +90,14 @@ bool SIRLinuxEvdevInput::openDevice( const char *pszPath ) noexcept
 			slot.hDevice = hDevice;
 			slot.nFd = nFd;
 			slot.nDeviceId = nId;
+			input_id identity = {};
+			if ( ioctl( nFd, EVIOCGID, &identity ) == 0 ) {
+				slot.pProfile = m_Profiles.findProfile( identity.bustype, identity.vendor, identity.product );
+			} else {
+				slot.pProfile = nullptr;
+			}
 			slot.bDesynchronized = false;
+			slot.nFrameCount = 0;
 			slot.nEffectId = -1;
 			unsigned long nEffects[( FF_MAX + ( sizeof( unsigned long ) * 8 ) ) / ( sizeof( unsigned long ) * 8 )] = {};
 			slot.bCanRumble =
@@ -101,11 +114,23 @@ bool SIRLinuxEvdevInput::openDevice( const char *pszPath ) noexcept
 			}
 			const uint16_t nAxisCodes[] = { ABS_X, ABS_Y, ABS_RX, ABS_RY, ABS_Z, ABS_RZ };
 			for ( uint32_t j = 0; j < SIR_GAMEPAD_AXIS_COUNT; ++j ) {
+				uint16_t nCode = nAxisCodes[j];
+				bool bInvert = j == SIR_GAMEPAD_AXIS_LEFT_Y || j == SIR_GAMEPAD_AXIS_RIGHT_Y;
+				if ( slot.pProfile != nullptr ) {
+					for ( uint32_t iAxis = 0; iAxis < slot.pProfile->nAxisCount; ++iAxis ) {
+						const sirInputControllerAxisBinding_t &binding = slot.pProfile->axes[iAxis];
+						if ( binding.nLogicalCode == j ) {
+							nCode = binding.nNativeCode;
+							bInvert = binding.bInvert;
+							break;
+						}
+					}
+				}
 				input_absinfo axis = {};
-				if ( ioctl( nFd, EVIOCGABS( nAxisCodes[j] ), &axis ) == 0 && axis.maximum > axis.minimum ) {
-					slot.axes[j] = { axis.minimum, axis.maximum, true };
+				if ( ioctl( nFd, EVIOCGABS( nCode ), &axis ) == 0 && axis.maximum > axis.minimum ) {
+					slot.axes[j] = { axis.minimum, axis.maximum, nCode, bInvert, true };
 				} else {
-					slot.axes[j] = { 0, 0, false };
+					slot.axes[j] = { 0, 0, nCode, bInvert, false };
 				}
 			}
 			++m_nDeviceCount;
@@ -226,6 +251,22 @@ void SIRLinuxEvdevInput::pumpHotplug( void ) noexcept
 	}
 }
 
+int16_t SIRLinuxEvdevInput::mapDeviceButton( const sirEvdevSlot_t &slot, uint16_t nCode ) const noexcept
+{
+	if ( slot.pProfile != nullptr ) {
+		const int16_t nMapped = SIRInputControllerProfiles::findButton( *slot.pProfile, nCode );
+		if ( nMapped >= 0 || slot.pProfile->bReplaceButtons ) {
+			return nMapped;
+		}
+	}
+	return mapButton( nCode );
+}
+
+int16_t SIRLinuxEvdevInput::mapDeviceAxis( const sirEvdevSlot_t &slot, uint16_t nCode ) const noexcept
+{
+	return slot.pProfile != nullptr ? SIRInputControllerProfiles::findAxis( *slot.pProfile, nCode ) : mapAxis( nCode );
+}
+
 int16_t SIRLinuxEvdevInput::mapButton( uint16_t nCode ) noexcept
 {
 	switch ( nCode ) {
@@ -302,24 +343,34 @@ int32_t SIRLinuxEvdevInput::normalizeAxis( int32_t nValue, int32_t nMinimum, int
 	return ( int32_t )( bTrigger ? nScaled : nScaled - 32767 );
 }
 
-bool SIRLinuxEvdevInput::processHat( sirEvdevSlot_t &slot, uint16_t nCode, int32_t nValue, uint64_t nTimestampNs ) noexcept
+bool SIRLinuxEvdevInput::appendFrameEvent( sirEvdevSlot_t &slot, sirInputEventKind_t eKind, uint16_t nCode, int32_t nValue ) noexcept
+{
+	if ( slot.nFrameCount >= SIR_EVDEV_MAX_FRAME_EVENTS ) {
+		return false;
+	}
+	slot.frame[slot.nFrameCount++] = { nCode, nValue, eKind };
+	return true;
+}
+
+bool SIRLinuxEvdevInput::stageHat( sirEvdevSlot_t &slot, uint16_t nCode, int32_t nValue ) noexcept
 {
 	if ( !slot.bHatDPad ) {
 		return true;
 	}
 	if ( nCode == ABS_HAT0X ) {
-		return m_Input.pushButton( slot.hDevice, SIR_GAMEPAD_BUTTON_DPAD_LEFT, nValue < 0, nTimestampNs ) &&
-		       m_Input.pushButton( slot.hDevice, SIR_GAMEPAD_BUTTON_DPAD_RIGHT, nValue > 0, nTimestampNs );
+		return appendFrameEvent( slot, SIR_INPUT_EVENT_BUTTON, SIR_GAMEPAD_BUTTON_DPAD_LEFT, nValue < 0 ? 1 : 0 ) &&
+		       appendFrameEvent( slot, SIR_INPUT_EVENT_BUTTON, SIR_GAMEPAD_BUTTON_DPAD_RIGHT, nValue > 0 ? 1 : 0 );
 	}
 	if ( nCode == ABS_HAT0Y ) {
-		return m_Input.pushButton( slot.hDevice, SIR_GAMEPAD_BUTTON_DPAD_UP, nValue < 0, nTimestampNs ) &&
-		       m_Input.pushButton( slot.hDevice, SIR_GAMEPAD_BUTTON_DPAD_DOWN, nValue > 0, nTimestampNs );
+		return appendFrameEvent( slot, SIR_INPUT_EVENT_BUTTON, SIR_GAMEPAD_BUTTON_DPAD_UP, nValue < 0 ? 1 : 0 ) &&
+		       appendFrameEvent( slot, SIR_INPUT_EVENT_BUTTON, SIR_GAMEPAD_BUTTON_DPAD_DOWN, nValue > 0 ? 1 : 0 );
 	}
 	return true;
 }
 
 bool SIRLinuxEvdevInput::resynchronize( sirEvdevSlot_t &slot ) noexcept
 {
+	slot.nFrameCount = 0;
 	if ( !m_Input.resynchronizeDevice( slot.hDevice ) ) {
 		return false;
 	}
@@ -329,24 +380,23 @@ bool SIRLinuxEvdevInput::resynchronize( sirEvdevSlot_t &slot ) noexcept
 	}
 	for ( uint16_t nCode = BTN_MISC; nCode <= KEY_MAX && nCode < SIR_INPUT_MAX_BUTTONS; ++nCode ) {
 		const bool bHeld = ( nKeys[nCode / ( sizeof( unsigned long ) * 8 )] & ( 1UL << ( nCode % ( sizeof( unsigned long ) * 8 ) ) ) ) != 0;
-		const int16_t nMapped = mapButton( nCode );
+		const int16_t nMapped = mapDeviceButton( slot, nCode );
 		const uint16_t nLogical = nMapped >= 0 ? ( uint16_t )nMapped : nCode;
 		if ( bHeld && !m_Input.pushButton( slot.hDevice, nLogical, true, 0 ) ) {
 			return false;
 		}
 	}
-	const uint16_t nAxisCodes[] = { ABS_X, ABS_Y, ABS_RX, ABS_RY, ABS_Z, ABS_RZ };
 	for ( uint16_t iAxis = 0; iAxis < SIR_GAMEPAD_AXIS_COUNT; ++iAxis ) {
 		if ( !slot.axes[iAxis].bValid ) {
 			continue;
 		}
 		input_absinfo axis = {};
-		if ( ioctl( slot.nFd, EVIOCGABS( nAxisCodes[iAxis] ), &axis ) != 0 ) {
+		if ( ioctl( slot.nFd, EVIOCGABS( slot.axes[iAxis].nNativeCode ), &axis ) != 0 ) {
 			return false;
 		}
-		const bool bTrigger = iAxis == SIR_GAMEPAD_AXIS_LEFT_TRIGGER || iAxis == SIR_GAMEPAD_AXIS_RIGHT_TRIGGER;
+		const bool bTrigger = iAxis >= SIR_GAMEPAD_AXIS_LEFT_TRIGGER;
 		int32_t nMapped = normalizeAxis( axis.value, slot.axes[iAxis].nMin, slot.axes[iAxis].nMax, bTrigger );
-		if ( iAxis == SIR_GAMEPAD_AXIS_LEFT_Y || iAxis == SIR_GAMEPAD_AXIS_RIGHT_Y ) {
+		if ( slot.axes[iAxis].bInvert ) {
 			nMapped = -nMapped;
 		}
 		if ( !m_Input.pushAxis( slot.hDevice, iAxis, nMapped, 0 ) ) {
@@ -355,10 +405,14 @@ bool SIRLinuxEvdevInput::resynchronize( sirEvdevSlot_t &slot ) noexcept
 	}
 	if ( slot.bHatDPad ) {
 		input_absinfo hat = {};
-		if ( ioctl( slot.nFd, EVIOCGABS( ABS_HAT0X ), &hat ) == 0 && !processHat( slot, ABS_HAT0X, hat.value, 0 ) ) {
+		if ( ioctl( slot.nFd, EVIOCGABS( ABS_HAT0X ), &hat ) == 0 &&
+		     !( m_Input.pushButton( slot.hDevice, SIR_GAMEPAD_BUTTON_DPAD_LEFT, hat.value < 0, 0 ) &&
+		        m_Input.pushButton( slot.hDevice, SIR_GAMEPAD_BUTTON_DPAD_RIGHT, hat.value > 0, 0 ) ) ) {
 			return false;
 		}
-		if ( ioctl( slot.nFd, EVIOCGABS( ABS_HAT0Y ), &hat ) == 0 && !processHat( slot, ABS_HAT0Y, hat.value, 0 ) ) {
+		if ( ioctl( slot.nFd, EVIOCGABS( ABS_HAT0Y ), &hat ) == 0 &&
+		     !( m_Input.pushButton( slot.hDevice, SIR_GAMEPAD_BUTTON_DPAD_UP, hat.value < 0, 0 ) &&
+		        m_Input.pushButton( slot.hDevice, SIR_GAMEPAD_BUTTON_DPAD_DOWN, hat.value > 0, 0 ) ) ) {
 			return false;
 		}
 	}
@@ -377,7 +431,10 @@ uint32_t SIRLinuxEvdevInput::pump( void ) noexcept
 		input_event events[32];
 		for ( uint32_t nBatch = 0; nBatch < 8; ++nBatch ) {
 			const ssize_t nRead = read( slot.nFd, events, sizeof( events ) );
-			if ( nRead < 0 && ( errno == EAGAIN || errno == EINTR ) ) {
+			if ( nRead < 0 && errno == EINTR ) {
+				continue;
+			}
+			if ( nRead < 0 && errno == EAGAIN ) {
 				break;
 			}
 			if ( nRead <= 0 || nRead % ( ssize_t )sizeof( input_event ) != 0 ) {
@@ -387,7 +444,9 @@ uint32_t SIRLinuxEvdevInput::pump( void ) noexcept
 			const uint32_t nEvents = ( uint32_t )( nRead / ( ssize_t )sizeof( input_event ) );
 			for ( uint32_t j = 0; j < nEvents; ++j ) {
 				const input_event &event = events[j];
+				++nProcessed;
 				if ( event.type == EV_SYN && event.code == SYN_DROPPED ) {
+					slot.nFrameCount = 0;
 					slot.bDesynchronized = true;
 					continue;
 				}
@@ -397,32 +456,39 @@ uint32_t SIRLinuxEvdevInput::pump( void ) noexcept
 					}
 					continue;
 				}
-				const uint64_t nNow = SIRPlatformTime::getMonotonicNanoseconds();
+				if ( event.type == EV_SYN && event.code == SYN_REPORT ) {
+					const uint64_t nNow = SIRPlatformTime::getMonotonicNanoseconds();
+					if ( !m_Input.submitGamepadFrame( slot.hDevice, slot.frame, slot.nFrameCount, nNow ) ) {
+						slot.bDesynchronized = true;
+					}
+					slot.nFrameCount = 0;
+					continue;
+				}
 				bool bSuccess = true;
 				if ( event.type == EV_KEY && event.code < SIR_INPUT_MAX_BUTTONS && ( event.value == 0 || event.value == 1 ) ) {
-					const int16_t nMapped = mapButton( event.code );
+					const int16_t nMapped = mapDeviceButton( slot, event.code );
 					const uint16_t nLogical = nMapped >= 0 ? ( uint16_t )nMapped : event.code;
-					bSuccess = m_Input.pushButton( slot.hDevice, nLogical, event.value == 1, nNow );
+					bSuccess = appendFrameEvent( slot, SIR_INPUT_EVENT_BUTTON, nLogical, event.value );
 				} else if ( event.type == EV_ABS ) {
-					const int16_t nAxis = mapAxis( event.code );
+					const int16_t nAxis = mapDeviceAxis( slot, event.code );
 					if ( nAxis >= 0 && slot.axes[nAxis].bValid ) {
-						const bool bTrigger = nAxis == SIR_GAMEPAD_AXIS_LEFT_TRIGGER || nAxis == SIR_GAMEPAD_AXIS_RIGHT_TRIGGER;
+						const bool bTrigger = nAxis >= SIR_GAMEPAD_AXIS_LEFT_TRIGGER;
 						int32_t nMapped = normalizeAxis( event.value, slot.axes[nAxis].nMin, slot.axes[nAxis].nMax, bTrigger );
-						if ( nAxis == SIR_GAMEPAD_AXIS_LEFT_Y || nAxis == SIR_GAMEPAD_AXIS_RIGHT_Y ) {
+						if ( slot.axes[nAxis].bInvert ) {
 							nMapped = -nMapped;
 						}
-						bSuccess = m_Input.pushAxis( slot.hDevice, ( uint16_t )nAxis, nMapped, nNow );
+						bSuccess = appendFrameEvent( slot, SIR_INPUT_EVENT_AXIS, ( uint16_t )nAxis, nMapped );
 					} else if ( event.code == ABS_HAT0X || event.code == ABS_HAT0Y ) {
-						bSuccess = processHat( slot, event.code, event.value, nNow );
+						bSuccess = stageHat( slot, event.code, event.value );
 					} else if ( nAxis < 0 && ( uint32_t )event.code + 16 < SIR_INPUT_MAX_AXES ) {
-						// Unknown native ABS controls remain accessible above the standardized axes.
-						bSuccess = m_Input.pushAxis( slot.hDevice, ( uint16_t )( 16 + event.code ), event.value, nNow );
+						// Preserve unknown axes in the extension range.
+						bSuccess = appendFrameEvent( slot, SIR_INPUT_EVENT_AXIS, ( uint16_t )( 16 + event.code ), event.value );
 					}
 				}
 				if ( !bSuccess ) {
+					slot.nFrameCount = 0;
 					slot.bDesynchronized = true;
 				}
-				++nProcessed;
 			}
 		}
 	}
@@ -482,6 +548,9 @@ void SIRLinuxEvdevInput::closeSlot( sirEvdevSlot_t &slot ) noexcept
 		}
 		close( slot.nFd );
 		m_Input.removeDevice( slot.hDevice );
+		slot.nFrameCount = 0;
+		slot.bDesynchronized = false;
+		slot.pProfile = nullptr;
 		slot.nFd = -1;
 		slot.szPath[0] = '\0';
 		--m_nDeviceCount;
