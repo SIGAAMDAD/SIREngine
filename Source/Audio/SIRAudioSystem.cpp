@@ -363,13 +363,6 @@ sirAudioResult_t SIRAudioSystem::registerListener( sirAudioListenerHandle_t &hLi
 		return SIR_AUDIO_NOT_INITIALIZED;
 	}
 	for ( uint32_t nAttempt = 0; nAttempt < m_nListenerCapacity; ++nAttempt ) {
-/home/runner/work/SIREngine/SIREngine/Source/Audio/SIRAudioSystem.h:91:71: error: code should be clang-formatted [-Wclang-format-violations]
-        sirAudioResult_t enqueue( sirAudioCommand_t &command, bool bCritical,
-                                                                             ^
-CMake Warning at Build/CMake/CIFormat.cmake:34 (message):
-  Formatting error: Source/Audio/SIRAudioSystem.h
-
-
 		const uint32_t iSlot = ( m_nNextListenerSlot + nAttempt ) % m_nListenerCapacity;
 		sirAudioSpatialSlot_t &slot = m_pListeners[iSlot];
 		if ( slot.eState != SIR_AUDIO_SPATIAL_FREE || slot.nGeneration == UINT32_MAX ) {

@@ -47,10 +47,6 @@ sirAudioResult_t SIRAudioMockBackend::initializeCallback( void *pContext, const 
 void SIRAudioMockBackend::shutdownCallback( void *pContext ) noexcept
 {
 	SIRAudioMockBackend *pBackend = ( SIRAudioMockBackend * )pContext;
-CMake Warning at Build/CMake/CIFormat.cmake:34 (message):
-  Formatting error: Tests/Unit/SIRAudioMockBackend.cpp
-
-
 	if ( pBackend != nullptr ) {
 		pBackend->m_bInitialized = false;
 		pBackend->m_bFailNextPlay = false;
