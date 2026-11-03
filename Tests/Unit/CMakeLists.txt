@@ -52,3 +52,5 @@ add_executable(SIRThreadingPrimitiveTests SIRThreadingPrimitiveTests.cpp)
 target_link_libraries(SIRThreadingPrimitiveTests PRIVATE SIR::Core)
 add_test(NAME core.threading.primitives COMMAND SIRThreadingPrimitiveTests)
 sir_configure_owned_target(SIRThreadingPrimitiveTests)
+
+include(${CMAKE_CURRENT_SOURCE_DIR}/SIRAllocatorMigration.cmake)
