@@ -52,34 +52,41 @@ private:
 
 	void siftUp( uint32_t iChild ) noexcept
 	{
-		while ( iChild != 0 ) {
-			uint32_t iParent = ( iChild - 1 ) / 2;
-			if ( !m_compare( m_values[iParent], m_values[iChild] ) ) {
+		if ( iChild == 0 ) {
+			return;
+		}
+		uint32_t iParent = ( iChild - 1 ) / 2;
+		if ( !m_compare( m_values[iParent], m_values[iChild] ) ) {
+			return;
+		}
+		T value = std::move( m_values[iChild] );
+		do {
+			m_values[iChild] = std::move( m_values[iParent] );
+			iChild = iParent;
+			if ( iChild == 0 ) {
 				break;
 			}
-			T temporary = std::move( m_values[iParent] );
-			m_values[iParent] = std::move( m_values[iChild] );
-			m_values[iChild] = std::move( temporary );
-			iChild = iParent;
-		}
+			iParent = ( iChild - 1 ) / 2;
+		} while ( m_compare( m_values[iParent], value ) );
+		m_values[iChild] = std::move( value );
 	}
 
 	void siftDown( uint32_t iParent ) noexcept
 	{
 		const uint32_t nCount = m_values.getSize();
+		T value = std::move( m_values[iParent] );
 		while ( iParent < nCount / 2 ) {
 			uint32_t iChild = iParent * 2 + 1;
 			if ( iChild + 1 < nCount && m_compare( m_values[iChild], m_values[iChild + 1] ) ) {
 				++iChild;
 			}
-			if ( !m_compare( m_values[iParent], m_values[iChild] ) ) {
+			if ( !m_compare( value, m_values[iChild] ) ) {
 				break;
 			}
-			T temporary = std::move( m_values[iParent] );
 			m_values[iParent] = std::move( m_values[iChild] );
-			m_values[iChild] = std::move( temporary );
 			iParent = iChild;
 		}
+		m_values[iParent] = std::move( value );
 	}
 
 public:

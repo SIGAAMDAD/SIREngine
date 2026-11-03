@@ -326,6 +326,30 @@ static void sirTestDistribution( const sirContainerAllocator_t *pAllocator )
 	}
 }
 
+static void sirTestHighBitHashes( const sirContainerAllocator_t *pAllocator )
+{
+	for ( uint32_t nShift : { 0u, 16u, 32u, 48u } ) {
+		SIRFlatHashMap<uint64_t, uint32_t> values( pAllocator );
+		SIRFlatHashSet<uint64_t> keys( pAllocator );
+		SIR_CHECK( values.tryReserve( 8192 ) == SIR_CONTAINER_OK );
+		SIR_CHECK( keys.tryReserve( 8192 ) == SIR_CONTAINER_OK );
+		for ( uint32_t iIndex = 0; iIndex < 8192; ++iIndex ) {
+			uint64_t nKey = ( ( uint64_t )iIndex << nShift ) + 3u;
+			SIR_CHECK( values.tryInsert( nKey, iIndex + 1 ) == SIR_CONTAINER_OK );
+			SIR_CHECK( keys.tryInsert( nKey ) == SIR_CONTAINER_OK );
+		}
+		for ( uint32_t iIndex = 0; iIndex < 8192; ++iIndex ) {
+			uint64_t nKey = ( ( uint64_t )iIndex << nShift ) + 3u;
+			const uint32_t *pValue = values.find( nKey );
+			SIR_CHECK( pValue != nullptr && *pValue == iIndex + 1 && keys.contains( nKey ) );
+			if ( ( iIndex & 1u ) == 0 ) {
+				SIR_CHECK( values.erase( nKey ) && keys.erase( nKey ) );
+			}
+		}
+		SIR_CHECK( values.getSize() == 4096 && keys.getSize() == 4096 );
+	}
+}
+
 static void sirTestRing( const sirContainerAllocator_t *pAllocator )
 {
 	SIRRingBuffer<int> ring( pAllocator );
@@ -355,6 +379,7 @@ int main( void )
 	sirTestGrowth( &allocator, &state );
 	sirTestReclamation( &allocator, &state );
 	sirTestDistribution( &allocator );
+	sirTestHighBitHashes( &allocator );
 	sirTestRing( &allocator );
 	SIR_CHECK( state.nLive == 0 );
 	puts( "SIR container optimization regressions passed" );

@@ -89,14 +89,18 @@ public:
 				return eReserve;
 			}
 		}
-		sirContainerResult_t eResult = m_bytes.tryResize( nRequired );
+		sirContainerResult_t eResult = m_bytes.tryResizeForOverwrite( nRequired );
 		if ( eResult != SIR_CONTAINER_OK ) {
 			return eResult;
 		}
 		if ( bAliased ) {
 			pBytes = m_bytes.data() + iSource;
 		}
-		memmove( m_bytes.data() + nOldLength, pBytes, nBytes );
+		if ( bAliased ) {
+			memmove( m_bytes.data() + nOldLength, pBytes, nBytes );
+		} else {
+			memcpy( m_bytes.data() + nOldLength, pBytes, nBytes );
+		}
 		m_bytes.data()[nOldLength + nBytes] = '\0';
 		return SIR_CONTAINER_OK;
 	}
@@ -116,7 +120,7 @@ public:
 		if ( bAliased && ( uint64_t )iSource + nBytes > m_bytes.getSize() ) {
 			return SIR_CONTAINER_INVALID_ARGUMENT;
 		}
-		sirContainerResult_t eResult = m_bytes.tryResize( nBytes + 1 );
+		sirContainerResult_t eResult = m_bytes.tryResizeForOverwrite( nBytes + 1 );
 		if ( eResult != SIR_CONTAINER_OK ) {
 			return eResult;
 		}

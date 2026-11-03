@@ -310,6 +310,34 @@ public:
 		return SIR_CONTAINER_OK;
 	}
 
+	// Extend storage for byte-wise overwrite without zero-initializing the new range.
+	// The caller must initialize all new elements before reading them.
+	sirContainerResult_t tryResizeForOverwrite( uint32_t nSize )
+	{
+		static_assert( std::is_trivially_default_constructible<T>::value && std::is_trivially_destructible<T>::value,
+			"Uninitialized growth is restricted to trivial element types" );
+		if ( nSize <= m_nSize ) {
+			m_nSize = nSize;
+			return SIR_CONTAINER_OK;
+		}
+		if ( nSize > m_nCapacity ) {
+			uint32_t nGrowth = 0;
+			sirContainerResult_t eResult = SIRVectorStorage::calculateGrowth( m_nCapacity, nSize, &nGrowth );
+			if ( eResult != SIR_CONTAINER_OK ) {
+				return eResult;
+			}
+			eResult = tryReserve( nGrowth );
+			if ( eResult != SIR_CONTAINER_OK ) {
+				return eResult;
+			}
+		}
+		for ( uint32_t iIndex = m_nSize; iIndex < nSize; ++iIndex ) {
+			new ( m_pData + iIndex ) T;
+		}
+		m_nSize = nSize;
+		return SIR_CONTAINER_OK;
+	}
+
 	sirContainerResult_t tryEraseSwap( uint32_t iIndex ) noexcept
 	{
 		static_assert( std::is_nothrow_move_assignable<T>::value, "Swap erase requires nothrow move assignment" );

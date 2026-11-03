@@ -42,3 +42,24 @@ Values reflect different data layouts and test sizes; compare only like-for-like
 - Clang/GCC C++17 tests, sanitizer regressions, randomized hash differential tests and injected allocation failure are required on the final source tree.
 - The pinned clang-format 22.1.5 check, native CMake 4.4.5 + FASTBuild matrix, Windows/MSVC build and integrated NMD accounting cannot be inferred from the isolated Linux compiler runs.
 - Preserve durable findings and reusable tests in `Docs/Architecture/` and `Tests/Unit/`, rather than adding raw AST dumps, benchmark binaries, `.csv` trials, source archives or ZIP snapshots to Git.
+
+## Iterative hot-path optimization (PR #8 continuation, 2026-11-02)
+
+Source changes: hole-based priority heap sifting, one-multiply 64-bit hash finalization, and overwrite-specific trivial byte growth for `SIRString`. No container capacity/layout changes were made in this pass. Existing allocation-domain ownership and rollback contracts remain in force.
+
+Paired timing on AMD EPYC 9V74 Linux, Clang 17, C++17, `-O3 -march=native -DNDEBUG`, pinned to CPU 1, three alternating process pairs with 11 timed samples after four warmups per process. Values are medians of process medians, in nanoseconds per operation. Both builds used the same test loops and allocation callbacks.
+
+| Workload | Before | After | Saved per operation |
+| --- | ---: | ---: | ---: |
+| Priority heap, random push/pop | 32.04 ns | 30.15 ns | 1.90 ns |
+| Priority heap, sorted push/pop | 29.70 ns | 22.01 ns | 7.69 ns |
+| Flat hash map random successful lookup | 3.70 ns | 3.20 ns | 0.50 ns |
+| Flat hash map random unsuccessful lookup | 4.32 ns | 3.60 ns | 0.73 ns |
+| Flat hash map 64-bit stride-65536 lookup | 2.42 ns | 1.79 ns | 0.64 ns |
+| Flat hash map 64-bit stride-2^48 lookup | 2.23 ns | 1.65 ns | 0.58 ns |
+| String 32-byte append to growing 256 KiB string | 29.91 ns | 24.57 ns | 5.34 ns |
+| Vector 65,536-element growing append | 1.56 ns | 1.57 ns | No material improvement; left unchanged |
+
+The same three primary features were also faster with generic Clang `-O2` without `-march=native`. Tests include random/sorted/reverse/duplicate heap ordering, 64-bit high-bit hash keys, self-aliasing, allocation failure, exception rollback and leak checks. Pinned clang-format and native Windows/Linux CI are the publication acceptance gates.
+
+**Discarded experiments:** branch-only ring wrapping (regression), compiler popcount substitution (near noise floor), fused heap pop (regression), reordered map lookup (mixed results), 7-bit fingerprint metadata (insufficient net gain), and trivial-copy relocation (no material gain). Preserve only the successful algorithm changes. Once deltas approach 0.01-0.1 ns with overlapping trial ranges, treat them as unresolved timing noise, not validated speedups.

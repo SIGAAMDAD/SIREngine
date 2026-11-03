@@ -124,6 +124,22 @@ int main( void )
 		CHECK( heap.tryPop() == SIR_CONTAINER_EMPTY );
 		heap.clear();
 	}
+	for ( int nMode = 0; nMode < 3; ++nMode ) {
+		SIRPriorityQueue<int> heap( &allocator );
+		std::priority_queue<int> reference;
+		CHECK( heap.tryReserve( 4096 ) == SIR_CONTAINER_OK );
+		for ( int iIndex = 0; iIndex < 4096; ++iIndex ) {
+			int nValue = nMode == 0 ? iIndex : ( nMode == 1 ? 4095 - iIndex : iIndex % 31 );
+			CHECK( heap.tryPush( nValue ) == SIR_CONTAINER_OK );
+			reference.push( nValue );
+		}
+		while ( !reference.empty() ) {
+			CHECK( heap.top() != nullptr && *heap.top() == reference.top() );
+			CHECK( heap.tryPop() == SIR_CONTAINER_OK );
+			reference.pop();
+		}
+		CHECK( heap.isEmpty() );
+	}
 	CHECK( state.nLiveBytes == 0 );
 	{
 		SIRPagedArray<SIRTrackedValue, 7> pages( &allocator );

@@ -57,11 +57,9 @@ public:
 	{
 #if SIZE_MAX > UINT32_MAX
 		uint64_t nMixed = ( uint64_t )nHash;
-		nMixed ^= nMixed >> 30;
-		nMixed *= UINT64_C( 0xbf58476d1ce4e5b9 );
-		nMixed ^= nMixed >> 27;
-		nMixed *= UINT64_C( 0x94d049bb133111eb );
-		nMixed ^= nMixed >> 31;
+		nMixed ^= nMixed >> 33;
+		nMixed *= UINT64_C( 0xff51afd7ed558ccd );
+		nMixed ^= nMixed >> 33;
 		return ( size_t )nMixed;
 #else
 		uint32_t nMixed = ( uint32_t )nHash;
