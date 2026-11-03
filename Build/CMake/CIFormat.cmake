@@ -1,11 +1,13 @@
 cmake_minimum_required(VERSION 3.25)
 get_filename_component(SIR_ROOT "${CMAKE_CURRENT_LIST_DIR}/../.." ABSOLUTE)
 find_package(Git REQUIRED)
-find_program(SIR_CLANG_FORMAT NAMES clang-format clang-format-22 REQUIRED)
+# A caller may set SIR_CLANG_FORMAT to a staged executable. Workspace mounts
+# are not executable and should not be discovered as native tool binaries.
+find_program(SIR_CLANG_FORMAT NAMES clang-format-18 clang-format REQUIRED)
 execute_process(COMMAND "${SIR_CLANG_FORMAT}" --version OUTPUT_VARIABLE sirVersion
     RESULT_VARIABLE sirStatus OUTPUT_STRIP_TRAILING_WHITESPACE)
-if(NOT sirStatus EQUAL 0 OR NOT sirVersion MATCHES "22\\.1\\.5")
-    message(FATAL_ERROR "Expected clang-format 22.1.5; got: ${sirVersion}")
+if(NOT sirStatus EQUAL 0 OR NOT sirVersion MATCHES "clang-format version 18\\.1\\.8($|[ \t])")
+    message(FATAL_ERROR "Expected clang-format 18.1.8; got: ${sirVersion}")
 endif()
 execute_process(COMMAND "${GIT_EXECUTABLE}" -C "${SIR_ROOT}" ls-files --
     Source Tests Tools

@@ -89,3 +89,8 @@ add_executable(SIRContainerHeapAdapterTests SIRContainerHeapAdapterTests.cpp)
 target_link_libraries(SIRContainerHeapAdapterTests PRIVATE SIR::Core)
 add_test(NAME core.containers.heap-adapter COMMAND SIRContainerHeapAdapterTests)
 sir_configure_owned_target(SIRContainerHeapAdapterTests)
+
+add_executable(SIRInputTests SIRInputTests.cpp)
+target_link_libraries(SIRInputTests PRIVATE SIR::Core)
+add_test(NAME core.platform.input COMMAND SIRInputTests)
+sir_configure_owned_target(SIRInputTests)
