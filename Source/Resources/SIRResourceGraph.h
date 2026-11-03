@@ -57,8 +57,7 @@ class SIRResourceKeyEqual
 public:
 	bool operator()( const SIRResourceKey &rLeft, const SIRResourceKey &rRight ) const noexcept
 	{
-		return rLeft.m_nAssetId == rRight.m_nAssetId && rLeft.m_nTypeId == rRight.m_nTypeId &&
-		       rLeft.m_nVariantId == rRight.m_nVariantId;
+		return rLeft.m_nAssetId == rRight.m_nAssetId && rLeft.m_nTypeId == rRight.m_nTypeId && rLeft.m_nVariantId == rRight.m_nVariantId;
 	}
 };
 
