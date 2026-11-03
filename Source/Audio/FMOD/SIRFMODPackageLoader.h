@@ -42,6 +42,8 @@ typedef struct sirFMODPackageEntry_s
 	uint8_t eState;   // 0 = absent, 1 = resident, 2 = failed native load with retained handle.
 	uint8_t bVisited; // Transient iterative DFS state.
 	uint8_t nReserved[6];
+	uint32_t nReferences;     // One reference per distinct root acquisition reaching this package.
+	uint32_t nRootReferences; // Explicit owner-held leases on this package itself.
 } sirFMODPackageEntry_t;
 
 typedef struct sirFMODPackageFrame_s
@@ -51,8 +53,9 @@ typedef struct sirFMODPackageFrame_s
 } sirFMODPackageFrame_t;
 
 // One owner-thread orchestrator owns the bank store's complete set of banks.
-// Load is dependency-first and idempotent. Unload-all retires in reverse
-// successful load order. Partial native unload failure preserves ownership.
+// Each loadPackage call acquires a logical root lease; common dependencies
+// are shared through per-package counts. releasePackage retires unused banks
+// in reverse dependency order. Partial native unload failure retains ownership.
 class SIRFMODPackageLoader
 {
 private:
@@ -83,6 +86,9 @@ public:
 	sirAudioResult_t initialize( const SIRAudioResourceStore *pManifest, SIRFMODBankStore *pBanks,
 	                             const sirContainerAllocator_t *pAllocator, sirFMODPackagePathResolver_t resolver ) noexcept;
 	sirAudioResult_t loadPackage( uint64_t nPackageId, bool bPreloadSamples ) noexcept;
+	sirAudioResult_t releasePackage( uint64_t nPackageId ) noexcept;
+	sirAudioResult_t collectUnused( void ) noexcept;
+	bool getPackageReferences( uint64_t nPackageId, uint32_t &nReferences, uint32_t &nRootReferences ) const noexcept;
 	sirAudioResult_t unloadAll( void ) noexcept;
 	sirAudioResult_t shutdown( void ) noexcept;
 	bool isReady( void ) const noexcept;

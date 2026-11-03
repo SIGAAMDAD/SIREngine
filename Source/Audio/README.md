@@ -150,3 +150,12 @@ DAG to load banks dependency-first with Core-accounted, bounded scratch;
 native failures roll back newly loaded banks or retain failed handles for
 retry. Optional sample preloading is issued only after bank registration.
 The manifest and context must stay alive while the loader owns banks.
+
+
+## Wave D — shared FMOD package residency
+
+The manifest-driven FMOD loader now tracks one reference per successfully
+acquired root and its dependency closure. `releasePackage` unloads banks
+when the final owner releases them while preserving shared dependencies.
+Failed native retirements retain owned bank handles for retry through
+`collectUnused`. `unloadAll` remains an explicit forced teardown.

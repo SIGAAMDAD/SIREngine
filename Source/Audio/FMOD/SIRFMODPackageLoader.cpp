@@ -191,6 +191,8 @@ sirAudioResult_t SIRFMODPackageLoader::rollbackTo( uint32_t nOldCount ) noexcept
 			return eResult;
 		}
 		m_pEntries[iPackage].eState = 0;
+		m_pEntries[iPackage].nReferences = 0;
+		m_pEntries[iPackage].nRootReferences = 0;
 		--m_nLoadedCount;
 	}
 	return SIR_AUDIO_OK;
@@ -214,9 +216,16 @@ sirAudioResult_t SIRFMODPackageLoader::loadPackage( uint64_t nPackageId, bool bP
 	if ( eResult != SIR_AUDIO_OK ) {
 		return eResult;
 	}
+	if ( m_pEntries[iRoot].nRootReferences == UINT32_MAX ) {
+		return SIR_AUDIO_CAPACITY;
+	}
 	for ( uint32_t iOrder = 0; iOrder < nPlanCount; ++iOrder ) {
-		if ( m_pEntries[m_pPlan[iOrder]].eState == 2 ) {
+		const sirFMODPackageEntry_t &entry = m_pEntries[m_pPlan[iOrder]];
+		if ( entry.eState == 2 ) {
 			return SIR_AUDIO_BUSY;
+		}
+		if ( entry.nReferences == UINT32_MAX ) {
+			return SIR_AUDIO_CAPACITY;
 		}
 	}
 	const uint32_t nPreviousLoaded = m_nLoadedCount;
@@ -259,11 +268,86 @@ sirAudioResult_t SIRFMODPackageLoader::loadPackage( uint64_t nPackageId, bool bP
 		}
 	}
 	if ( eResult == SIR_AUDIO_OK ) {
+		for ( uint32_t iOrder = 0; iOrder < nPlanCount; ++iOrder ) {
+			++m_pEntries[m_pPlan[iOrder]].nReferences;
+		}
+		++m_pEntries[iRoot].nRootReferences;
 		return SIR_AUDIO_OK;
 	}
 	m_nLastFailedPackageId = nFailedPackageId;
 	const sirAudioResult_t eRollback = rollbackTo( nPreviousLoaded );
 	return eRollback == SIR_AUDIO_OK ? eResult : eRollback;
+}
+
+bool SIRFMODPackageLoader::getPackageReferences( uint64_t nPackageId, uint32_t &nReferences, uint32_t &nRootReferences ) const noexcept
+{
+	uint32_t iPackage = 0;
+	if ( m_pEntries == nullptr || !findIndex( nPackageId, iPackage ) ) {
+		return false;
+	}
+	nReferences = m_pEntries[iPackage].nReferences;
+	nRootReferences = m_pEntries[iPackage].nRootReferences;
+	return true;
+}
+
+sirAudioResult_t SIRFMODPackageLoader::collectUnused( void ) noexcept
+{
+	if ( m_pEntries == nullptr ) {
+		return SIR_AUDIO_NOT_INITIALIZED;
+	}
+	if ( m_pBanks == nullptr || !m_pBanks->isReady() || m_pBanks->getLoadedBankCount() != m_nLoadedCount ) {
+		return SIR_AUDIO_BUSY;
+	}
+	for ( uint32_t iOrder = m_nLoadedCount; iOrder != 0; ) {
+		--iOrder;
+		const uint32_t iPackage = m_pLoadOrder[iOrder];
+		sirFMODPackageEntry_t &entry = m_pEntries[iPackage];
+		if ( entry.nReferences != 0 ) {
+			continue;
+		}
+		const sirAudioResult_t eResult = m_pBanks->unloadBank( entry.nPackageId );
+		if ( eResult != SIR_AUDIO_OK ) {
+			m_nLastFailedPackageId = entry.nPackageId;
+			return eResult;
+		}
+		entry.eState = 0;
+		entry.nRootReferences = 0;
+		for ( uint32_t iShift = iOrder + 1; iShift < m_nLoadedCount; ++iShift ) {
+			m_pLoadOrder[iShift - 1] = m_pLoadOrder[iShift];
+		}
+		--m_nLoadedCount;
+	}
+	return SIR_AUDIO_OK;
+}
+
+sirAudioResult_t SIRFMODPackageLoader::releasePackage( uint64_t nPackageId ) noexcept
+{
+	if ( !isReady() ) {
+		return SIR_AUDIO_NOT_INITIALIZED;
+	}
+	uint32_t iRoot = 0;
+	if ( !findIndex( nPackageId, iRoot ) || m_pEntries[iRoot].nRootReferences == 0 ) {
+		return SIR_AUDIO_INVALID_HANDLE;
+	}
+	if ( m_pBanks->getLoadedBankCount() != m_nLoadedCount ) {
+		return SIR_AUDIO_BUSY;
+	}
+
+	uint32_t nPlanCount = 0;
+	const sirAudioResult_t ePlan = buildPlan( iRoot, nPlanCount );
+	if ( ePlan != SIR_AUDIO_OK ) {
+		return ePlan;
+	}
+	for ( uint32_t iOrder = 0; iOrder < nPlanCount; ++iOrder ) {
+		if ( m_pEntries[m_pPlan[iOrder]].nReferences == 0 ) {
+			return SIR_AUDIO_INVALID_HANDLE;
+		}
+	}
+	--m_pEntries[iRoot].nRootReferences;
+	for ( uint32_t iOrder = 0; iOrder < nPlanCount; ++iOrder ) {
+		--m_pEntries[m_pPlan[iOrder]].nReferences;
+	}
+	return collectUnused();
 }
 
 sirAudioResult_t SIRFMODPackageLoader::unloadAll( void ) noexcept
@@ -273,6 +357,10 @@ sirAudioResult_t SIRFMODPackageLoader::unloadAll( void ) noexcept
 	}
 	if ( m_pBanks == nullptr || !m_pBanks->isReady() || m_pBanks->getLoadedBankCount() != m_nLoadedCount ) {
 		return SIR_AUDIO_BUSY;
+	}
+	for ( uint32_t iPackage = 0; iPackage < m_nPackageCount; ++iPackage ) {
+		m_pEntries[iPackage].nReferences = 0;
+		m_pEntries[iPackage].nRootReferences = 0;
 	}
 	return rollbackTo( 0 );
 }
