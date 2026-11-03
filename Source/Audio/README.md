@@ -22,3 +22,36 @@ event instance ownership, bank residency and SDK/device tests are later waves.
 
 All API calls that mutate logical playing handles are owner-thread-only.
 Shutdown requires every producer and backend callback to be quiesced.
+
+## Command and completion guarantees
+
+- Each accepted play/stop command receives an engine sequence number.
+  Only matching play-start, play-failure, stop, and natural-finish records
+  may transition the corresponding logical playback state.
+- Reused playback slots increment their generation; restarting the audio
+  system changes its epoch. Old completions and commands cannot mutate
+  the new logical handle.
+- A failed native **play** submission marks the occurrence failed. A failed
+  native **stop** submission restores the previous state so the caller can
+  retry. Failures of parameter commands do not invalidate an active voice.
+- The normal queue and reserved stop queue are each preallocated,
+  capacity-bounded, and processed with finite per-update budgets. If
+  a stop cannot be queued, the API returns SIR_AUDIO_CAPACITY and leaves
+  its state unchanged; the caller owns the retry.
+- A backend returning an error from submit must not retain the borrowed
+  command pointer or create native ownership that the error leaves
+  unaccounted. Successful asynchronous submissions must ultimately
+  report their corresponding completion. Callbacks submit fixed-size
+  completion records; only the logical owner thread updates handle slots.
+- Native providers must drain completions without silent loss. Wave A
+  drains after each dispatch to exercise small-capacity completion queues;
+  later providers may batch only with equivalent capacity guarantees.
+- The 64-byte command, 32-byte completion, and 16-byte handle layouts are
+  locked to ABI version 1 by compile-time checks.
+
+## Scope remaining after Wave A contract and mock tests
+
+Emitter/listener registration and spatial payload transport, cooked
+package manifests, FMOD native lifetime, bank residency and device
+recovery are not implemented by this contract-only provider. No
+FMOD/Wwise/OpenAL device playback is represented by mock test success.
