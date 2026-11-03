@@ -18,6 +18,21 @@ def sha256_file(path):
     return checksum.hexdigest()
 
 
+def validate_benchmark_json(path):
+    """Reject skipped/error cases or an empty filtered benchmark collection."""
+    try:
+        with open(path, "r", encoding="utf-8") as stream:
+            data = json.load(stream)
+        entries = data.get("benchmarks")
+        if not isinstance(entries, list) or not entries:
+            return False
+        if any(not isinstance(entry, dict) or entry.get("error_occurred") for entry in entries):
+            return False
+        return any(entry.get("aggregate_name") == "median" for entry in entries)
+    except (OSError, ValueError, json.JSONDecodeError):
+        return False
+
+
 def run(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("binary", type=pathlib.Path)
@@ -67,7 +82,7 @@ def run(argv=None):
                        f"--benchmark_out={output}", "--benchmark_out_format=json"]
             try:
                 proc = subprocess.run(command, capture_output=True, text=True, timeout=args.timeout, check=False)
-                status = "pass" if proc.returncode == 0 and output.is_file() and output.stat().st_size > 0 else "failed"
+                status = "pass" if proc.returncode == 0 and validate_benchmark_json(output) else "failed"
                 records.append({"id": ident, "status": status, "exit_code": proc.returncode, "command": command,
                                 "result": output.name if status == "pass" else None,
                                 "stdout_tail": proc.stdout[-4096:], "stderr_tail": proc.stderr[-4096:]})

@@ -10,6 +10,9 @@ ROOT = pathlib.Path(__file__).resolve().parents[2]
 SPEC = importlib.util.spec_from_file_location("sir_scheduler_compare", ROOT / "Tools/Profiling/SIRCompareBenchmarks.py")
 COMPARE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(COMPARE)
+RUNNER_SPEC = importlib.util.spec_from_file_location("sir_scheduler_runner", ROOT / "Tools/Profiling/SIRRunSchedulerExperiments.py")
+RUNNER = importlib.util.module_from_spec(RUNNER_SPEC)
+RUNNER_SPEC.loader.exec_module(RUNNER)
 
 
 def sample(name, duration, unit="ns"):
@@ -50,6 +53,17 @@ class SchedulerComparisonTests(unittest.TestCase):
         result = COMPARE.rank(data, prefix)
         self.assertEqual(result["rankings"]["0"][0]["workers"], 4)
         self.assertEqual(result["rankings"]["1"][0]["workers"], 1)
+
+    def test_runner_rejects_empty_or_skipped_benchmarks(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = pathlib.Path(directory) / "result.json"
+            path.write_text(json.dumps({"benchmarks": []}), encoding="utf-8")
+            self.assertFalse(RUNNER.validate_benchmark_json(path))
+            path.write_text(json.dumps({"benchmarks": [{"error_occurred": True, "aggregate_name": "median"}]}),
+                            encoding="utf-8")
+            self.assertFalse(RUNNER.validate_benchmark_json(path))
+            path.write_text(json.dumps({"benchmarks": [sample("A", 100)]}), encoding="utf-8")
+            self.assertTrue(RUNNER.validate_benchmark_json(path))
 
     def test_json_file_io(self):
         with tempfile.TemporaryDirectory() as directory:
