@@ -389,6 +389,55 @@ static void testIndexedKeyLookupAndGenerationReuse( void )
 	REQUIRE( alloc.m_nOutstanding.load() == 0 );
 }
 
+static void testExpectedRevisionPublication( void )
+{
+	SIRTestAllocatorStats alloc = {};
+	{
+		SIRResourceGraph graph( testConfig( alloc, 2 ) );
+		REQUIRE( graph.isReady() );
+		SIRResourceGraphWriter *pWriter = graph.getWriter();
+		REQUIRE( pWriter != nullptr );
+		SIRResourcePublication publication = { key( 500 ), SIR_RESOURCE_KIND_BLOB, 1, 4, nullptr, 0, nullptr, 0 };
+		SIRResourceHandle handle = {};
+		REQUIRE( pWriter->publishExpected( publication, 0, &handle ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( graph.getStats().m_nLiveResources == 1 );
+		SIRResourceStagingHandle staging = {};
+		SIRResourceMutableBytes stagedBytes = {};
+		REQUIRE( pWriter->allocateStaging( 8, 8, 9, &staging, &stagedBytes ) == SIR_RESOURCE_RESULT_SUCCESS );
+		memset( stagedBytes.m_pData, 0x31, 8 );
+		SIRResourceChunkPublication chunk = { { 0 }, content( 500 ), staging, false };
+		publication.m_pChunks = &chunk;
+		publication.m_nChunkCount = 1;
+		SIRResourceHandle unused = { UINT32_MAX, UINT32_MAX, UINT32_MAX, UINT32_MAX };
+		const uint64_t nBudgetBefore = graph.getStats().m_nCommittedBytes;
+		REQUIRE( pWriter->publishExpected( publication, 0, &unused ) == SIR_RESOURCE_RESULT_STALE_REVISION );
+		REQUIRE( unused.m_nSlot == UINT32_MAX );
+		REQUIRE( graph.getStats().m_nCommittedBytes == nBudgetBefore );
+		REQUIRE( pWriter->cancelStaging( staging ) == SIR_RESOURCE_RESULT_SUCCESS );
+		publication.m_pChunks = nullptr;
+		publication.m_nChunkCount = 0;
+		REQUIRE( pWriter->publishExpected( publication, 1, &handle ) == SIR_RESOURCE_RESULT_SUCCESS );
+		{
+			SIRResourceReadScope scope( graph );
+			SIRResourceView view;
+			REQUIRE( graph.resolve( scope, handle, &view ) == SIR_RESOURCE_RESULT_SUCCESS );
+			REQUIRE( view.getRevision() == 2 );
+		}
+		REQUIRE( pWriter->retire( handle ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( pWriter->publishExpected( publication, 2, &unused ) == SIR_RESOURCE_RESULT_STALE_REVISION );
+		REQUIRE( pWriter->publishExpected( publication, 0, &handle ) == SIR_RESOURCE_RESULT_SUCCESS );
+		{
+			SIRResourceReadScope scope( graph );
+			SIRResourceView view;
+			REQUIRE( graph.resolve( scope, handle, &view ) == SIR_RESOURCE_RESULT_SUCCESS );
+			REQUIRE( view.getRevision() == 1 );
+		}
+		REQUIRE( pWriter->retire( handle ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( pWriter->collectRetired( 8 ) == 3 );
+	}
+	REQUIRE( alloc.m_nOutstanding.load() == 0 );
+}
+
 int main( void )
 {
 	testScopeLifetimeAndDeduplication();
@@ -398,6 +447,7 @@ int main( void )
 	testDeepCycleWithoutRecursion();
 	testConcurrentReadersAndWriterBoundary();
 	testIndexedKeyLookupAndGenerationReuse();
+	testExpectedRevisionPublication();
 	printf( "PASS: GRDG resource registry, publication, deduplication, lifetime, concurrency\n" );
 	return 0;
 }
