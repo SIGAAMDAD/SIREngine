@@ -190,23 +190,29 @@ void SIRConditionVariable::notifyAll( void ) noexcept
 }
 
 SIRSpinLock::SIRSpinLock( void ) noexcept
-{
-	m_bLocked.clear( std::memory_order_relaxed );
-}
+{}
 
 void SIRSpinLock::lock( void ) noexcept
 {
-	while ( m_bLocked.test_and_set( std::memory_order_acquire ) ) {
-		SIRPlatformUtils::cpuRelax();
+	uint32_t nSpins = 0;
+	while ( m_Lock.testAndSet( SIR_MEMORY_ORDER_ACQUIRE ) ) {
+		while ( m_Lock.test( SIR_MEMORY_ORDER_RELAXED ) ) {
+			SIRPlatformUtils::cpuRelax();
+			++nSpins;
+			if ( nSpins == 1024 ) {
+				SIRPlatformUtils::yieldThread();
+				nSpins = 0;
+			}
+		}
 	}
 }
 
 bool SIRSpinLock::tryLock( void ) noexcept
 {
-	return !m_bLocked.test_and_set( std::memory_order_acquire );
+	return !m_Lock.testAndSet( SIR_MEMORY_ORDER_ACQUIRE );
 }
 
 void SIRSpinLock::unlock( void ) noexcept
 {
-	m_bLocked.clear( std::memory_order_release );
+	m_Lock.clear( SIR_MEMORY_ORDER_RELEASE );
 }
