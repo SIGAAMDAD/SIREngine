@@ -11,6 +11,7 @@ This software is provided "as is", without warranty of any kind,
 express or implied, including but not limited to the warranties
 of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
+
 */
 
 #include <Resources/SIRResourceMemoryAdapter.h>
@@ -21,8 +22,6 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Core/Memory/SIRGeneralHeap.h>
 #include <Core/Memory/SIRMemorySegment.h>
 #include <Core/Platform/SIRVirtualMemory.h>
-
-
 
 #include <stdio.h>
 #include <stdlib.h>
