@@ -165,12 +165,13 @@ static bool testBindingAndAllocations( SIRContainerTestHeap *pFixture )
 static bool testDomainBudgetFailure( SIRContainerTestHeap *pFixture )
 {
 	const uint64_t nPage = SIRVirtualMemory::getPageSize();
+	SIR_TEST_CHECK( pFixture->m_Large.trimUnusedPages() );
 	const uint64_t nUsed = pFixture->m_Memory.getDomainStats( SIR_MEMORY_DOMAIN_GAMEPLAY ).nCommittedBytes;
 	const uint64_t nLimit = nUsed == 0 ? nPage : nUsed;
 	SIR_TEST_CHECK( pFixture->m_Memory.setDomainCommitLimit( SIR_MEMORY_DOMAIN_GAMEPLAY, nLimit ) );
 	const sirContainerAllocator_t *pAllocator = pFixture->m_Adapter.getAllocator();
 	SIRVector<uint32_t> values( pAllocator );
-	SIR_TEST_CHECK( values.tryResize( 3 * 1024 * 1024 ) == SIR_CONTAINER_OUT_OF_MEMORY );
+	SIR_TEST_CHECK( values.tryResize( ( uint32_t )( nPage * 128 / sizeof( uint32_t ) ) ) == SIR_CONTAINER_OUT_OF_MEMORY );
 	SIR_TEST_CHECK( values.getSize() == 0 && values.data() == nullptr );
 	return true;
 }
