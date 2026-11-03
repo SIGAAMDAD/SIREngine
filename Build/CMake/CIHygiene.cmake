@@ -11,6 +11,12 @@ string(REPLACE "\n" ";" sirFiles "${sirFiles}")
 set(sirRequired
     CMakeLists.txt CMakePresets.json .gitmodules .clang-format
     Build/CMake/CIHygiene.cmake Build/CMake/CIFormat.cmake
+    Build/CMake/CIThirdParty.cmake ThirdParty/IMPORT_LOCK.json
+    Build/CMake/NightlyMetrics.cmake Build/CMake/NightlyCompare.cmake
+    Build/Scripts/NightlyBuild.sh
+    Build/Scripts/RunGoogleBenchmarks.sh Build/CMake/GoogleBenchmarkCompare.cmake
+    Tests/Unit/GoogleApplicationTests.cpp Tests/Benchmarks/CMakeLists.txt
+    Tests/Benchmarks/CoreBenchmarks.cpp Tests/Benchmarks/GoogleBenchmarkCompareTests.cmake
     Source/CMakeLists.txt Source/Core/CMakeLists.txt
     Source/Core/SIRApplication.h Source/Core/SIRApplication.cpp Source/Main.cpp
     .github/workflows/ci.yml .github/workflows/nightly.yml
@@ -38,11 +44,5 @@ foreach(sirPath IN LISTS sirFiles)
         message(FATAL_ERROR "Generated artifact tracked: ${sirPath}")
     endif()
 endforeach()
-foreach(sirModule IN ITEMS ThirdParty/EASTL ThirdParty/EABase ThirdParty/EAAssert ThirdParty/OpenALSoft ThirdParty/meshoptimizer)
-    execute_process(COMMAND "${GIT_EXECUTABLE}" -C "${SIR_ROOT}" ls-files --stage -- "${sirModule}"
-        RESULT_VARIABLE sirStatus OUTPUT_VARIABLE sirStage)
-    if(NOT sirStatus EQUAL 0 OR NOT sirStage MATCHES "^160000 [0-9a-f]+ 0[	 ]")
-        message(FATAL_ERROR "Source dependency must be pinned: ${sirModule}")
-    endif()
-endforeach()
-message(STATUS "PASS: native source hygiene and five pinned third-party gitlinks")
+include("${CMAKE_CURRENT_LIST_DIR}/CIThirdParty.cmake")
+message(STATUS "PASS: native source hygiene and locked third-party dependencies")

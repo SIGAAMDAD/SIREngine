@@ -6,7 +6,8 @@ The C++17 foundation and the engine migration have separate acceptance gates.
 | --- | --- |
 | Source authority | Exact first-party tree SHA, external source provenance for imported code, tracked-path hygiene |
 | Native build | Compiler and linker output for Core, Launcher and new registered systems |
-| Unit/runtime smoke | CTest lifecycle, version, help and invalid-option tests |
+| Unit/runtime smoke | CTest lifecycle, launcher tests and optional GoogleTest assertions | 
+| CPU profiling | Google Benchmark JSON with source SHA, repeated median timing and platform-labelled nightly comparisons |
 | Formatting and source contracts | Pinned clang-format, owned-header/enum checks, and Clang AST semantic checks for C++ changes |
 | Packaging | Release archives generated from a successful native build |
 | Startup/editor | Native editor launch, scene import/save, inspection and shutdown |

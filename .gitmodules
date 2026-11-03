@@ -13,3 +13,141 @@
 [submodule "ThirdParty/meshoptimizer"]
 	path = ThirdParty/meshoptimizer
 	url = https://github.com/zeux/meshoptimizer.git
+[submodule "ThirdParty/Zstd"]
+	path = ThirdParty/Zstd
+	url = https://github.com/meta/zstd.git
+[submodule "ThirdParty/LZ4"]
+	path = ThirdParty/LZ4
+	url = https://github.com/lz4/lz4.git
+[submodule "ThirdParty/xxHash"]
+	path = ThirdParty/xxHash
+	url = https://github.com/Cyan4973/xxHash.git
+[submodule "ThirdParty/VulkanMemoryAllocator"]
+	path = ThirdParty/VulkanMemoryAllocator
+	url = https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
+[submodule "ThirdParty/D3D12MemoryAllocator"]
+	path = ThirdParty/D3D12MemoryAllocator
+	url = https://github.com/GPUOpen-LibrariesAndSDKs/D3D12MemoryAllocator.git
+[submodule "ThirdParty/KTXSoftware"]
+	path = ThirdParty/KTXSoftware
+	url = https://github.com/KhronosGroup/KTX-Software.git
+[submodule "ThirdParty/DirectXShaderCompiler"]
+	path = ThirdParty/DirectXShaderCompiler
+	url = https://github.com/microsoft/DirectXShaderCompiler.git
+[submodule "ThirdParty/BasisUniversal"]
+	path = ThirdParty/BasisUniversal
+	url = https://github.com/BinomialLLC/basis_universal.git
+[submodule "ThirdParty/SPIRVTools"]
+	path = ThirdParty/SPIRVTools
+	url = https://github.com/KhronosGroup/SPIRV-Tools.git
+[submodule "ThirdParty/SPIRVReflect"]
+	path = ThirdParty/SPIRVReflect
+	url = https://github.com/KhronosGroup/SPIRV-Reflect.git
+[submodule "ThirdParty/SPIRVCross"]
+	path = ThirdParty/SPIRVCross
+	url = https://github.com/KhronosGroup/SPIRV-Cross.git
+[submodule "ThirdParty/SQLite"]
+	path = ThirdParty/SQLite
+	url = https://github.com/sqlite/sqlite.git
+[submodule "ThirdParty/VulkanHeaders"]
+	path = ThirdParty/VulkanHeaders
+	url = https://github.com/KhronosGroup/Vulkan-Headers.git
+[submodule "ThirdParty/DirectXHeaders"]
+	path = ThirdParty/DirectXHeaders
+	url = https://github.com/microsoft/DirectX-Headers.git
+[submodule "ThirdParty/glslang"]
+	path = ThirdParty/glslang
+	url = https://github.com/KhronosGroup/glslang.git
+[submodule "ThirdParty/SPIRVHeaders"]
+	path = ThirdParty/SPIRVHeaders
+	url = https://github.com/KhronosGroup/SPIRV-Headers.git
+[submodule "ThirdParty/Compressonator"]
+	path = ThirdParty/Compressonator
+	url = https://github.com/GPUOpen-Tools/compressonator.git
+[submodule "ThirdParty/etcpak"]
+	path = ThirdParty/etcpak
+	url = https://github.com/wolfpld/etcpak.git
+[submodule "ThirdParty/CVTT"]
+	path = ThirdParty/CVTT
+	url = https://github.com/elasota/ConvectionKernels.git
+[submodule "ThirdParty/ASTCEncoder"]
+	path = ThirdParty/ASTCEncoder
+	url = https://github.com/ARM-software/astc-encoder.git
+[submodule "ThirdParty/FidelityFX"]
+	path = ThirdParty/FidelityFX
+	url = https://github.com/GPUOpen-LibrariesAndSDKs/FidelityFX-SDK.git
+[submodule "ThirdParty/SMAA"]
+	path = ThirdParty/SMAA
+	url = https://github.com/iryoku/smaa.git
+[submodule "ThirdParty/XeSS"]
+	path = ThirdParty/XeSS
+	url = https://github.com/intel/xess.git
+[submodule "ThirdParty/Streamline"]
+	path = ThirdParty/Streamline
+	url = https://github.com/NVIDIA-RTX/Streamline.git
+[submodule "ThirdParty/ufbx"]
+	path = ThirdParty/ufbx
+	url = https://github.com/ufbx/ufbx.git
+[submodule "ThirdParty/fastgltf"]
+	path = ThirdParty/fastgltf
+	url = https://github.com/spnda/fastgltf.git
+[submodule "ThirdParty/libpng"]
+	path = ThirdParty/libpng
+	url = https://github.com/pnggroup/libpng.git
+[submodule "ThirdParty/libjpeg-turbo"]
+	path = ThirdParty/libjpeg-turbo
+	url = https://github.com/libjpeg-turbo/libjpeg-turbo.git
+[submodule "ThirdParty/libwebp"]
+	path = ThirdParty/libwebp
+	url = https://github.com/webmproject/libwebp.git
+[submodule "ThirdParty/tinyexr"]
+	path = ThirdParty/tinyexr
+	url = https://github.com/syoyo/tinyexr.git
+[submodule "ThirdParty/zlib"]
+	path = ThirdParty/zlib
+	url = https://github.com/madler/zlib.git
+[submodule "ThirdParty/libavif"]
+	path = ThirdParty/libavif
+	url = https://github.com/AOMediaCodec/libavif.git
+[submodule "ThirdParty/FreeType"]
+	path = ThirdParty/FreeType
+	url = https://github.com/freetype/freetype.git
+[submodule "ThirdParty/HarfBuzz"]
+	path = ThirdParty/HarfBuzz
+	url = https://github.com/harfbuzz/harfbuzz.git
+[submodule "ThirdParty/msdfgen"]
+	path = ThirdParty/msdfgen
+	url = https://github.com/Chlumsky/msdfgen.git
+[submodule "ThirdParty/AccessKit"]
+	path = ThirdParty/AccessKit
+	url = https://github.com/AccessKit/accesskit.git
+[submodule "ThirdParty/SDL3"]
+	path = ThirdParty/SDL3
+	url = https://github.com/libsdl-org/SDL.git
+[submodule "ThirdParty/HIDAPI"]
+	path = ThirdParty/HIDAPI
+	url = https://github.com/libusb/hidapi.git
+[submodule "ThirdParty/curl"]
+	path = ThirdParty/curl
+	url = https://github.com/curl/curl.git
+[submodule "ThirdParty/mbedTLS"]
+	path = ThirdParty/mbedTLS
+	url = https://github.com/Mbed-TLS/mbedtls.git
+[submodule "ThirdParty/libogg"]
+	path = ThirdParty/libogg
+	url = https://github.com/xiph/ogg.git
+[submodule "ThirdParty/libvorbis"]
+	path = ThirdParty/libvorbis
+	url = https://github.com/xiph/vorbis.git
+[submodule "ThirdParty/Opus"]
+	path = ThirdParty/Opus
+	url = https://github.com/xiph/opus.git
+[submodule "ThirdParty/libbacktrace"]
+	path = ThirdParty/libbacktrace
+	url = https://github.com/ianlancetaylor/libbacktrace.git
+[submodule "ThirdParty/GoogleTest"]
+	path = ThirdParty/GoogleTest
+	url = https://github.com/google/googletest.git
+[submodule "ThirdParty/GoogleBenchmark"]
+	path = ThirdParty/GoogleBenchmark
+	url = https://github.com/google/benchmark.git
