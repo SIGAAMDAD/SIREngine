@@ -1,0 +1,35 @@
+name: SIREngine Nightly Scheduler
+
+# Scheduled workflows run from the default branch, currently main.
+# Dispatch the complete build matrix from develop instead of building
+# main's legacy source tree.
+on:
+  schedule:
+    - cron: '17 7 * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/nightly.yml'
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: sir-nightly-dispatch
+  cancel-in-progress: false
+
+jobs:
+  dispatch-develop:
+    name: Dispatch nightly build of develop
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Trigger the CMake/FASTBuild nightly regression matrix
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh workflow run nightly.yml --repo "$GH_REPO" \
+            --ref develop --field macos_preview=false
