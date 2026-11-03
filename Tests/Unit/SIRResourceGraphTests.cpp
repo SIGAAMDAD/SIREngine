@@ -1,3 +1,4 @@
+
 #include <Resources/SIRResourceGraph.h>
 #include <Resources/SIRSystemResourceViews.h>
 
@@ -23,12 +24,10 @@ static void *testAllocate( void *pContext, uint64_t nBytes, uint32_t nAlignment,
 {
 	( void )nDomain;
 	SIRTestAllocatorStats *pStats = ( SIRTestAllocatorStats * )pContext;
-	if ( pStats->m_bFailNext.exchange( false ) )
-	{
+	if ( pStats->m_bFailNext.exchange( false ) ) {
 		return nullptr;
 	}
-	if ( !nBytes || nBytes > SIZE_MAX )
-	{
+	if ( !nBytes || nBytes > SIZE_MAX ) {
 		return nullptr;
 	}
 	void *pMemory = nullptr;
@@ -36,13 +35,11 @@ static void *testAllocate( void *pContext, uint64_t nBytes, uint32_t nAlignment,
 	pMemory = _aligned_malloc( ( size_t )nBytes, nAlignment );
 #else
 	const size_t nActualAlignment = nAlignment < sizeof( void * ) ? sizeof( void * ) : nAlignment;
-	if ( posix_memalign( &pMemory, nActualAlignment, ( size_t )nBytes ) != 0 )
-	{
+	if ( posix_memalign( &pMemory, nActualAlignment, ( size_t )nBytes ) != 0 ) {
 		return nullptr;
 	}
 #endif
-	if ( pMemory )
-	{
+	if ( pMemory ) {
 		pStats->m_nOutstanding.fetch_add( 1 );
 		pStats->m_nOutstandingBytes.fetch_add( nBytes );
 	}
@@ -63,18 +60,15 @@ static void testFree( void *pContext, void *pData, uint64_t nBytes, uint32_t nAl
 #endif
 }
 
-#define REQUIRE( condition )                                                                                           \
-	do                                                                                                                  \
-	{                                                                                                                   \
-		if ( !( condition ) )                                                                                          \
-		{                                                                                                               \
-			fprintf( stderr, "%s:%d failure: %s\n", __FILE__, __LINE__, #condition );                                \
-			abort();                                                                                                    \
-		}                                                                                                               \
+#define REQUIRE( condition )                                                                                                               \
+	do {                                                                                                                                   \
+		if ( !( condition ) ) {                                                                                                            \
+			fprintf( stderr, "%s:%d failure: %s\n", __FILE__, __LINE__, #condition );                                                      \
+			abort();                                                                                                                       \
+		}                                                                                                                                  \
 	} while ( false )
 
-static SIRResourceGraphConfig testConfig( SIRTestAllocatorStats &rStats, uint32_t nSlots = 64,
-	uint64_t nBudget = 4 * 1024 * 1024 ) noexcept
+static SIRResourceGraphConfig testConfig( SIRTestAllocatorStats &rStats, uint32_t nSlots = 64, uint64_t nBudget = 4 * 1024 * 1024 ) noexcept
 {
 	SIRResourceGraphConfig config = {};
 	config.m_Allocator = { &rStats, testAllocate, testFree };
@@ -96,8 +90,8 @@ static SIRResourceContentKey content( uint64_t nHash ) noexcept
 	return { nHash, nHash ^ 0x9E3779B97F4A7C15ULL, 4, 0 };
 }
 
-static SIRResourceHandle publishText( SIRResourceGraphWriter &rWriter, SIRResourceKey resourceKey,
-	const char *szData, uint64_t nHash, SIRResourceChunkId chunkId = { 0 } ) noexcept
+static SIRResourceHandle publishText( SIRResourceGraphWriter &rWriter, SIRResourceKey resourceKey, const char *szData, uint64_t nHash,
+                                      SIRResourceChunkId chunkId = { 0 } ) noexcept
 {
 	SIRResourceStagingHandle staging = {};
 	SIRResourceMutableBytes bytes = {};
@@ -292,8 +286,7 @@ static void testDeepCycleWithoutRecursion( void )
 		SIRResourcePublication root = { key( 1 ), SIR_RESOURCE_KIND_COMPOSITION, 1, 1, nullptr, 0, nullptr, 0 };
 		SIRResourceHandle h = {};
 		REQUIRE( pWriter->publish( root, &h ) == SIR_RESOURCE_RESULT_SUCCESS );
-		for ( uint64_t nAsset = 2; nAsset <= 201; ++nAsset )
-		{
+		for ( uint64_t nAsset = 2; nAsset <= 201; ++nAsset ) {
 			SIRResourceDependency edge = { key( nAsset - 1 ), SIR_RESOURCE_EDGE_KIND_REQUIRED, {} };
 			SIRResourcePublication next = { key( nAsset ), SIR_RESOURCE_KIND_COMPOSITION, 1, 1, nullptr, 0, &edge, 1 };
 			REQUIRE( pWriter->publish( next, &h ) == SIR_RESOURCE_RESULT_SUCCESS );
@@ -317,45 +310,36 @@ static void testConcurrentReadersAndWriterBoundary( void )
 		std::atomic<bool> bStart{ false };
 		std::atomic<int32_t> nErrors{ 0 };
 		std::vector<std::thread> threads;
-		for ( uint32_t iReader = 0; iReader < 6; ++iReader )
-		{
+		for ( uint32_t iReader = 0; iReader < 6; ++iReader ) {
 			threads.emplace_back( [&]() {
-				while ( !bStart.load( std::memory_order_acquire ) )
-				{
+				while ( !bStart.load( std::memory_order_acquire ) ) {
 					std::this_thread::yield();
 				}
-				if ( graph.getWriter() != nullptr )
-				{
+				if ( graph.getWriter() != nullptr ) {
 					++nErrors;
 				}
-				for ( uint32_t iPass = 0; iPass < 5000; ++iPass )
-				{
+				for ( uint32_t iPass = 0; iPass < 5000; ++iPass ) {
 					SIRResourceReadScope scope( graph );
 					SIRResourceView view;
-					if ( graph.resolve( scope, h, &view ) != SIR_RESOURCE_RESULT_SUCCESS )
-					{
+					if ( graph.resolve( scope, h, &view ) != SIR_RESOURCE_RESULT_SUCCESS ) {
 						++nErrors;
 						continue;
 					}
 					SIRResourceConstBytes bytes = {};
-					if ( view.getChunk( { 0 }, &bytes ) != SIR_RESOURCE_RESULT_SUCCESS ||
-						memcmp( bytes.m_pData, "data-", 5 ) != 0 )
-					{
+					if ( view.getChunk( { 0 }, &bytes ) != SIR_RESOURCE_RESULT_SUCCESS || memcmp( bytes.m_pData, "data-", 5 ) != 0 ) {
 						++nErrors;
 					}
 				}
 			} );
 		}
 		bStart.store( true, std::memory_order_release );
-		for ( uint32_t iPass = 1; iPass <= 400; ++iPass )
-		{
+		for ( uint32_t iPass = 1; iPass <= 400; ++iPass ) {
 			char szData[32] = {};
 			snprintf( szData, sizeof( szData ), "data-%u", iPass );
 			publishText( *pWriter, key( 55 ), szData, 55 + iPass );
 			pWriter->collectRetired( 4 );
 		}
-		for ( std::thread &rReader : threads )
-		{
+		for ( std::thread &rReader : threads ) {
 			rReader.join();
 		}
 		REQUIRE( nErrors.load() == 0 );
