@@ -9,3 +9,9 @@ add_test(NAME launcher.unknown-option COMMAND SIREngine --unknown)
 set_tests_properties(launcher.unknown-option PROPERTIES WILL_FAIL TRUE)
 
 sir_configure_owned_target(SIRApplicationTests)
+
+# Compile-only API surface test for the proposed GRDG resource interfaces.
+add_executable(SIRResourceInterfaceTests SIRResourceInterfaceTests.cpp)
+target_include_directories(SIRResourceInterfaceTests PRIVATE "${PROJECT_SOURCE_DIR}/Engine/Source/Runtime/Resources/Public")
+sir_configure_owned_target(SIRResourceInterfaceTests)
+add_test(NAME resources.interfaces.headers COMMAND SIRResourceInterfaceTests)
