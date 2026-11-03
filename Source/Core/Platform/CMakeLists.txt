@@ -6,6 +6,7 @@ set(SIR_CORE_PLATFORM_COMMON
     SIRThread.cpp
     SIRSync.cpp
     SIRAtomic.cpp
+    SIRInput.cpp
 )
 
 if(WIN32)
@@ -17,8 +18,9 @@ if(WIN32)
         Windows/SIRDynamicLibraryWindows.cpp
         Windows/SIRPlatformTimeWindows.cpp
         Windows/SIRPlatformProcessWindows.cpp
+        Windows/SIRWindowsRawInput.cpp
     )
-    target_link_libraries(SIRCore PRIVATE psapi)
+    target_link_libraries(SIRCore PRIVATE psapi user32)
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     set(SIR_CORE_PLATFORM_OS
         Linux/SIRVirtualMemoryLinux.cpp
@@ -28,6 +30,7 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         Linux/SIRDynamicLibraryLinux.cpp
         Linux/SIRPlatformTimeLinux.cpp
         Linux/SIRPlatformProcessLinux.cpp
+        Linux/SIRLinuxEvdevInput.cpp
     )
 else()
     message(FATAL_ERROR "SIRCore platform services currently support Windows and Linux")
