@@ -65,3 +65,12 @@ capacity receives `SIR_RESOURCE_RESULT_JOURNAL_OVERFLOW` and must rebuild
 its current dependency state before resuming at the returned latest cursor.
 The journal and reverse index are single-writer; cross-thread delivery is a
 separate scheduler contract.
+
+The canonical read-side `find` now probes a preallocated atomic open-addressed
+index. Each live cell references an immutable published record; deletion leaves
+a tombstone so future probes cannot miss colliding identities. The writer
+updates cells on publication/retirement without moving other live entries.
+Read scopes keep old records alive until quiescence, so concurrent readers
+can safely inspect a cell during mutation without acquiring a shared lock.
+The existing `SIRFlatHashMap` remains the private single-writer index.
+This is a bounded key-lookup implementation, not an epoch reclamation scheme.
