@@ -438,6 +438,21 @@ static void testManifestPackageLoading( const sirContainerAllocator_t *pAllocato
 	checkBank( loader.loadPackage( 2, true ) == SIR_AUDIO_OK && fixture.nPreloads == 2 );
 	checkBank( loader.loadPackage( 2, true ) == SIR_AUDIO_OK && fixture.nPreloads == 2 );
 	checkBank( loader.loadPackage( 999, false ) == SIR_AUDIO_INVALID_HANDLE );
+	uint32_t nReferences = 0;
+	uint32_t nRootReferences = 0;
+	checkBank( loader.getPackageReferences( 1, nReferences, nRootReferences ) && nReferences == 3 && nRootReferences == 0 );
+	checkBank( loader.getPackageReferences( 2, nReferences, nRootReferences ) && nReferences == 3 && nRootReferences == 3 );
+	checkBank( loader.loadPackage( 1, false ) == SIR_AUDIO_OK );
+	checkBank( loader.getPackageReferences( 1, nReferences, nRootReferences ) && nReferences == 4 && nRootReferences == 1 );
+	checkBank( loader.releasePackage( 2 ) == SIR_AUDIO_OK );
+	checkBank( loader.releasePackage( 2 ) == SIR_AUDIO_OK );
+	checkBank( loader.getLoadedCount() == 2 && fixture.bBankB );
+	checkBank( loader.releasePackage( 2 ) == SIR_AUDIO_OK );
+	checkBank( loader.getLoadedCount() == 1 && fixture.bBankA && !fixture.bBankB );
+	checkBank( loader.releasePackage( 2 ) == SIR_AUDIO_INVALID_HANDLE );
+	checkBank( loader.getPackageReferences( 1, nReferences, nRootReferences ) && nReferences == 1 && nRootReferences == 1 );
+	checkBank( loader.releasePackage( 1 ) == SIR_AUDIO_OK );
+	checkBank( loader.getLoadedCount() == 0 && !fixture.bBankA );
 	checkBank( loader.unloadAll() == SIR_AUDIO_OK );
 	checkBank( loader.getLoadedCount() == 0 && !fixture.bBankA && !fixture.bBankB );
 
@@ -453,6 +468,14 @@ static void testManifestPackageLoading( const sirContainerAllocator_t *pAllocato
 	checkBank( loader.loadPackage( 2, false ) == SIR_AUDIO_BUSY );
 	checkBank( loader.unloadAll() == SIR_AUDIO_OK );
 	checkBank( loader.getLoadedCount() == 0 && !fixture.bBankA && !fixture.bBankB );
+	checkBank( loader.loadPackage( 2, false ) == SIR_AUDIO_OK );
+	fixture.nFailUnload = 1;
+	checkBank( loader.releasePackage( 2 ) == SIR_AUDIO_BACKEND_ERROR );
+	checkBank( loader.getLastFailedPackageId() == 2 && loader.getLoadedCount() == 2 );
+	checkBank( loader.getPackageReferences( 2, nReferences, nRootReferences ) && nReferences == 0 && nRootReferences == 0 );
+	checkBank( loader.releasePackage( 2 ) == SIR_AUDIO_INVALID_HANDLE );
+	checkBank( loader.collectUnused() == SIR_AUDIO_OK );
+	checkBank( loader.getLoadedCount() == 0 );
 	checkBank( loader.loadPackage( 2, false ) == SIR_AUDIO_OK );
 	image = makePackageManifest();
 	checkBank( manifest.load( &image, sizeof( image ), SIR_AUDIO_PROVIDER_FMOD, 0, pAllocator ) == SIR_AUDIO_MANIFEST_OK );

@@ -141,3 +141,26 @@ This slice provides dependency-first *loading* and reverse-order
 GRDG publication, automatic event-path binding and production cooker
 integration remain later work. The existing `audio.fmod.bank-residency`
 test fixture exercises the manifest and real bank-store contracts.
+
+
+## Wave D — reference-counted root residency
+
+Each successful `SIRFMODPackageLoader::loadPackage` call now acquires one
+logical root lease. A package reachable from several roots has one bank
+instance and an independently maintained per-package reference count;
+the dependency DAG is traversed once per root acquire or release, and
+diamond-shaped dependency paths contribute only one reference per lease.
+
+`releasePackage` retires one root lease and unloads only zero-reference
+banks, in reverse physical load order. The loader compacts its preallocated
+load-order table after successful retirements, permitting later reloads
+without allocations in the hot path. A failed unload leaves the native
+bank handle and its zero-reference record for `collectUnused` to retry.
+A failed acquisition does not acquire partial references; loaded banks
+created by that failed acquisition are rolled back as before.
+
+`unloadAll` is an explicit forced teardown that discards root leases
+before retiring every bank. The loader exposes `getPackageReferences`
+for diagnostics and rejects duplicate release of an exhausted root lease.
+All calls remain on the audio owner thread. Bank load/unload itself stays
+SDK-gated and real middleware acceptance remains pending.
