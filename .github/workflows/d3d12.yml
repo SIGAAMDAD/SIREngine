@@ -1,0 +1,28 @@
+name: D3D12 headless bootstrap
+
+on:
+  pull_request:
+    branches: [develop, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  d3d12-warp:
+    name: Windows D3D12 WARP build and transfer
+    runs-on: windows-2022
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up MSVC compiler environment
+        uses: ilammy/msvc-dev-cmd@v1
+      - uses: ./.github/actions/setup-build-tools
+      - name: Configure experimental D3D12
+        run: cmake --preset dev -DSIR_WITH_D3D12=ON
+      - name: Compile headless driver and tests
+        run: cmake --build --preset dev --target SIRD3D12HeadlessTests
+      - name: Run native WARP device and transfer checks
+        run: ctest --preset dev --output-on-failure -R '^renderer[.]d3d12[.]'
