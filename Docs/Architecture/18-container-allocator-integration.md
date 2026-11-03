@@ -42,3 +42,22 @@
 The first Google Benchmark run configured `sirCompactBucketConfig_t::nWarmSlabsPerSeat = 0`. A 64-byte allocate/free pair therefore releases the last live slot in its slab and calls `makeNeutral`, forcing `fillActive` on the next iteration. This measures a **cold empty-slab recycling policy**, not sustained hot reuse. On Linux GitHub Actions, the first run reported 10,854.95 ns for direct 64-byte heap pairs and 10,905.01 ns for adapter pairs (medians of five repetitions). For 1,536-byte and 32,768-byte pairs the adapter measured ~2.1-2.2 ns slower than direct heap calls, with overlapping run variation.
 
 The benchmark now reports both policy settings for 64 bytes: `range(1)=0` for cold reclamation and `range(1)=1` for one warm slab retained per worker. Allocation size is `range(0)`. Production tuning should choose warm retention based on the domain's allocation-churn rate and memory budget, and separately measure peak committed bytes and retained pages.
+
+## Measured integration profile (Linux CI, 2026-11-03)
+
+Google Benchmark v1.10 on a four-CPU GitHub Actions Linux runner; values are **median CPU nanoseconds per allocation/free pair over five repetitions**. The `nWarmSlabsPerSeat` parameter is zero for cold class recycling or one for bounded active-slab reuse.
+
+| Request | Direct heap | Container adapter | Adapter overhead |
+| --- | ---: | ---: | ---: |
+| 64 bytes, warm=0 | 8,131.60 ns | 10,965.43 ns | cold-state variation dominates |
+| 64 bytes, warm=1 | 41.50 ns | 43.66 ns | +2.16 ns |
+| 1,536 bytes, warm=1 | 72.82 ns | 75.18 ns | +2.36 ns |
+| 32,768 bytes, warm=1 | 84.03 ns | 86.27 ns | +2.24 ns |
+
+The default warm=1 small route is about 196 times faster than cold=0 for direct heap operations in this single benchmark environment. Inspecting `SIRCompactBucketAllocator::releaseSlot` and `makeNeutral` explains this: warm=0 performs descriptor/state retirement each time the last allocation leaves an active slab. `makeNeutral` alone does not decommit the slab; decommit occurs via explicit `trimEmptySlabs` / pressure handling. The large-class buddy allocator similarly requires `trimUnusedPages` to decommit unused page ranges.
+
+**Source-level conclusion:** keep lifetime-aware warm retention as an explicit domain policy and trim at a safe point when real committed-memory pressure demands it. `SIRContainerHeapAdapter` adds no per-allocation metadata, and the measured callback overhead is approximately 2 ns per pair for the warm/medium/large tests on this runner. Production latency and peak committed bytes require an actual game workload with independent data.
+
+**Research:** [EASTL allocator design](https://github.com/electronicarts/EASTL/blob/master/doc/Design.md) supports instance-bound allocation interfaces; [EASTL best practices](https://github.com/electronicarts/EASTL/blob/master/doc/BestPractices.md) recommend fixed pools for bounded workloads. [GDC Anvil memory analytics](https://schedule.gdconf.com/session/solving-memory-issues-at-scale-anvils-memory-analytics-pipeline/921144) recommends tracing allocation lifetimes and budget regressions. SIREngine already has a memory-manager trace facility to extend for that workflow.
+
+The allocation-admission regression now trims unused buddy pages before imposing a domain limit, then requests 128 OS pages—within the configured large segment capacity—to specifically exercise denial of *new* committed memory rather than an oversized-segment rejection.
