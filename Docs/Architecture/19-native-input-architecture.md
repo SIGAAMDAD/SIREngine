@@ -50,7 +50,7 @@ A future background HID worker may submit through a bounded synchronized ingress
 6. Haptics route only through the registered owner. Typed `setVibration` returns unsupported when a backend cannot provide the requested effect lifetime; XInput does not claim automatic timed shutdown.
 7. Shutdown in reverse backend registration order, before destroying the coordinator/backend objects, then invalidate all canonical device generations.
 
-A failed `publishTick` is observable through `getLastResult()`. Ownership reconciliation is **transactional**: conflicts do not mutate the previously published route map. Input overflow rejects publication until the owner performs an explicit resync; lost edges are never represented as successfully published. Do not treat an abandoned/failed tick as accepted simulation input.
+A failed `publishTick` is observable through `getLastResult()`. Ownership reconciliation is **transactional**: a complete candidate table is checked before committing any routes; simultaneous identity changes cannot read stale keys from the prior tick, and conflicts do not mutate the previously published route map. Input overflow rejects publication until the owner performs an explicit resync; lost edges are never represented as successfully published. Do not treat an abandoned/failed tick as accepted simulation input.
 
 ## Device registry and physical identity
 

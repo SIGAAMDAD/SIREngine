@@ -158,6 +158,7 @@ public:
 	bool pollEvent( sirInputEvent_t *pEvent ) noexcept;
 	bool getState( sirInputDeviceHandle_t hDevice, sirInputDeviceState_t *pState ) const noexcept;
 	bool isDeviceActive( sirInputDeviceHandle_t hDevice ) const noexcept;
+	bool getDeviceKind( sirInputDeviceHandle_t hDevice, sirInputDeviceKind_t *pKind ) const noexcept;
 
 	// Source-style tick snapshot: the owner publishes after collecting native
 	// input. beginTick() clears live transient edges for the next tick without

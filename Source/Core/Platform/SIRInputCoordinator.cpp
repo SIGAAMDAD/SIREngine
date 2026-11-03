@@ -95,18 +95,24 @@ bool SIRInputCoordinator::reconcileDeviceOwners( void ) noexcept
 			return false;
 		}
 		const uint64_t nPhysicalKey = pOwner->getPhysicalKey( hDevice );
-		for ( uint32_t iOther = 0; iOther < SIR_INPUT_MAX_DEVICES; ++iOther ) {
-			if ( nPhysicalKey != 0 && iOther != hDevice.nSlot && candidate[iOther].bActive &&
-			     candidate[iOther].nPhysicalKey == nPhysicalKey ) {
-				m_eLastResult = SIR_INPUT_COORD_DUPLICATE_PHYSICAL_DEVICE;
-				return false;
-			}
-		}
 		sirInputDeviceRoute_t &route = candidate[hDevice.nSlot];
 		if ( !route.bActive || route.hDevice.nGeneration != hDevice.nGeneration || route.eBackend != pOwner->getBackendKind() ) {
 			route = { hDevice, nPhysicalKey, SIR_INPUT_UNPAIRED_USER, pOwner->getBackendKind(), true };
 		} else {
 			route.nPhysicalKey = nPhysicalKey;
+		}
+	}
+	// Compare verified identities only after all candidate ownership records
+	// have been refreshed; simultaneous swaps must not see stale old keys.
+	for ( uint32_t i = 0; i < SIR_INPUT_MAX_DEVICES; ++i ) {
+		if ( !candidate[i].bActive || candidate[i].nPhysicalKey == 0 ) {
+			continue;
+		}
+		for ( uint32_t j = i + 1; j < SIR_INPUT_MAX_DEVICES; ++j ) {
+			if ( candidate[j].bActive && candidate[j].nPhysicalKey == candidate[i].nPhysicalKey ) {
+				m_eLastResult = SIR_INPUT_COORD_DUPLICATE_PHYSICAL_DEVICE;
+				return false;
+			}
 		}
 	}
 	memcpy( m_Routes, candidate, sizeof( m_Routes ) );

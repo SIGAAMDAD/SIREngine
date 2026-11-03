@@ -144,6 +144,6 @@ bool SIRWindowsRawInput::ownsDevice( sirInputDeviceHandle_t hDevice ) const noex
 	if ( m_pWindow == nullptr ) {
 		return false;
 	}
-	sirInputDeviceState_t state = {};
-	return m_Input.getState( hDevice, &state ) && ( state.eKind == SIR_INPUT_DEVICE_KEYBOARD || state.eKind == SIR_INPUT_DEVICE_MOUSE );
+	sirInputDeviceKind_t eKind = SIR_INPUT_DEVICE_GAMEPAD;
+	return m_Input.getDeviceKind( hDevice, &eKind ) && ( eKind == SIR_INPUT_DEVICE_KEYBOARD || eKind == SIR_INPUT_DEVICE_MOUSE );
 }
