@@ -1,5 +1,6 @@
 
 #include <Resources/SIRResourceGraph.h>
+#include <Resources/SIRResourceTaskBatch.h>
 #include <Resources/SIRSystemResourceViews.h>
 
 #include <atomic>
@@ -904,6 +905,188 @@ static void testDeterministicDependencyOrderCompilation( void )
 	REQUIRE( alloc.m_nOutstanding.load() == 0 );
 }
 
+
+typedef struct sirTaskTestRecorder_s
+{
+	sirResourceTaskWorkItem_t items[32];
+	uint32_t nCount;
+	uint32_t nRejectNext;
+} sirTaskTestRecorder_t;
+
+static bool submitTaskTest( void *pContext, const sirResourceTaskWorkItem_t &rWork ) noexcept
+{
+	sirTaskTestRecorder_t *pRecorder = ( sirTaskTestRecorder_t * )pContext;
+	if ( pRecorder->nRejectNext != 0 ) {
+		--pRecorder->nRejectNext;
+		return false;
+	}
+	if ( pRecorder->nCount >= 32 ) {
+		return false;
+	}
+	pRecorder->items[pRecorder->nCount++] = rWork;
+	return true;
+}
+
+static sirResourceTaskConfig_t taskTestConfig( SIRTestAllocatorStats &rAlloc, sirTaskTestRecorder_t &rRecorder,
+                                               uint32_t nMaxEdges = 16 ) noexcept
+{
+	sirResourceTaskConfig_t config = {};
+	config.allocator = { &rAlloc, testAllocate, testFree };
+	config.nMetadataDomain = 7;
+	config.nMaxTasks = 16;
+	config.nMaxEdges = nMaxEdges;
+	config.nMaxInFlight = 4;
+	config.callbacks = { &rRecorder, submitTaskTest };
+	return config;
+}
+
+static SIRResourceHandle publishTaskNode( SIRResourceGraphWriter &rWriter, uint64_t nAsset,
+                                         const SIRResourceDependency *pDependencies = nullptr, uint32_t nDependencies = 0 ) noexcept
+{
+	SIRResourcePublication pub = { key( nAsset ), SIR_RESOURCE_KIND_COMPOSITION, 1, 1, nullptr, 0, pDependencies, nDependencies };
+	SIRResourceHandle hResult = {};
+	REQUIRE( rWriter.publish( pub, &hResult ) == SIR_RESOURCE_RESULT_SUCCESS );
+	return hResult;
+}
+
+static void testTaskDispatchDependenciesAndConcurrentCompletions( void )
+{
+	SIRTestAllocatorStats alloc = {};
+	{
+		SIRResourceGraph graph( testConfig( alloc, 16 ) );
+		SIRResourceGraphWriter *pWriter = graph.getWriter();
+		REQUIRE( pWriter != nullptr );
+		const SIRResourceHandle hA = publishTaskNode( *pWriter, 801 );
+		const SIRResourceHandle hB = publishTaskNode( *pWriter, 802 );
+		SIRResourceDependency edgesC[2] = { { key( 801 ), SIR_RESOURCE_EDGE_KIND_REQUIRED, {} },
+		                                   { key( 802 ), SIR_RESOURCE_EDGE_KIND_REQUIRED, {} } };
+		const SIRResourceHandle hC = publishTaskNode( *pWriter, 803, edgesC, 2 );
+		const SIRResourceDependency edgeD = { key( 803 ), SIR_RESOURCE_EDGE_KIND_REQUIRED, {} };
+		const SIRResourceHandle hD = publishTaskNode( *pWriter, 804, &edgeD, 1 );
+
+		sirTaskTestRecorder_t recorder = {};
+		SIRResourceTaskBatch batch( graph, taskTestConfig( alloc, recorder ) );
+		REQUIRE( batch.isReady() );
+		REQUIRE( batch.start( hD ) == SIR_RESOURCE_RESULT_SUCCESS );
+		sirResourceTaskStats_t stats = {};
+		REQUIRE( batch.getStats( &stats ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( stats.nTasks == 4 && stats.nEdges == 3 );
+		uint32_t nSubmitted = UINT32_MAX;
+		REQUIRE( batch.dispatchReady( 4, &nSubmitted ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( nSubmitted == 2 && recorder.nCount == 2 );
+		REQUIRE( recorder.items[0].hResource.m_nSlot == hA.m_nSlot );
+		REQUIRE( recorder.items[1].hResource.m_nSlot == hB.m_nSlot );
+		REQUIRE( batch.dispatchReady( 4, &nSubmitted ) == SIR_RESOURCE_RESULT_SUCCESS && nSubmitted == 0 );
+
+		std::thread workerB( [&]() {
+			REQUIRE( batch.tryPostCompletion( { recorder.items[1].nTicket, SIR_RESOURCE_RESULT_SUCCESS } ) == SIR_EVENT_ENQUEUE_OK );
+		} );
+		workerB.join();
+		uint32_t nConsumed = UINT32_MAX;
+		REQUIRE( batch.drainCompletions( 1, &nConsumed ) == SIR_RESOURCE_RESULT_SUCCESS && nConsumed == 1 );
+		REQUIRE( batch.dispatchReady( 4, &nSubmitted ) == SIR_RESOURCE_RESULT_SUCCESS && nSubmitted == 0 );
+
+		std::thread workerA( [&]() {
+			REQUIRE( batch.tryPostCompletion( { recorder.items[0].nTicket, SIR_RESOURCE_RESULT_SUCCESS } ) == SIR_EVENT_ENQUEUE_OK );
+		} );
+		workerA.join();
+		REQUIRE( batch.drainCompletions( 4, &nConsumed ) == SIR_RESOURCE_RESULT_SUCCESS && nConsumed == 1 );
+		REQUIRE( batch.dispatchReady( 4, &nSubmitted ) == SIR_RESOURCE_RESULT_SUCCESS && nSubmitted == 1 );
+		REQUIRE( recorder.items[2].hResource.m_nSlot == hC.m_nSlot );
+		REQUIRE( batch.tryPostCompletion( { recorder.items[2].nTicket, SIR_RESOURCE_RESULT_SUCCESS } ) == SIR_EVENT_ENQUEUE_OK );
+		REQUIRE( batch.drainCompletions( 4, &nConsumed ) == SIR_RESOURCE_RESULT_SUCCESS && nConsumed == 1 );
+		REQUIRE( batch.dispatchReady( 4, &nSubmitted ) == SIR_RESOURCE_RESULT_SUCCESS && nSubmitted == 1 );
+		REQUIRE( recorder.items[3].hResource.m_nSlot == hD.m_nSlot );
+		REQUIRE( batch.tryPostCompletion( { recorder.items[3].nTicket, SIR_RESOURCE_RESULT_SUCCESS } ) == SIR_EVENT_ENQUEUE_OK );
+		REQUIRE( batch.drainCompletions( 4, &nConsumed ) == SIR_RESOURCE_RESULT_SUCCESS && nConsumed == 1 );
+		REQUIRE( batch.getStats( &stats ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( stats.nTasks == 4 && stats.nCompleted == 4 && stats.nInFlight == 0 && !stats.bCancelled );
+		REQUIRE( batch.start( hA ) == SIR_RESOURCE_RESULT_SUCCESS );
+		// A late duplicate from the prior batch cannot finish a new generation.
+		REQUIRE( batch.tryPostCompletion( { recorder.items[0].nTicket, SIR_RESOURCE_RESULT_SUCCESS } ) == SIR_EVENT_ENQUEUE_OK );
+		REQUIRE( batch.drainCompletions( 4, &nConsumed ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( batch.getStats( &stats ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( stats.nIgnoredCompletions == 1 && stats.nCompleted == 0 );
+		REQUIRE( batch.dispatchReady( 4, &nSubmitted ) == SIR_RESOURCE_RESULT_SUCCESS && nSubmitted == 1 );
+		REQUIRE( batch.tryPostCompletion( { recorder.items[4].nTicket, SIR_RESOURCE_RESULT_SUCCESS } ) == SIR_EVENT_ENQUEUE_OK );
+		REQUIRE( batch.drainCompletions( 4, &nConsumed ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( batch.getStats( &stats ) == SIR_RESOURCE_RESULT_SUCCESS && stats.nCompleted == 1 );
+	}
+	REQUIRE( alloc.m_nOutstanding.load() == 0 );
+}
+
+static void testTaskCancellationStaleRevisionAndBackpressure( void )
+{
+	SIRTestAllocatorStats alloc = {};
+	{
+		SIRResourceGraph graph( testConfig( alloc, 8 ) );
+		SIRResourceGraphWriter *pWriter = graph.getWriter();
+		REQUIRE( pWriter != nullptr );
+		const SIRResourceHandle hA = publishTaskNode( *pWriter, 901 );
+		const SIRResourceHandle hB = publishTaskNode( *pWriter, 902 );
+		SIRResourceDependency edges[2] = { { key( 901 ), SIR_RESOURCE_EDGE_KIND_REQUIRED, {} },
+		                                  { key( 902 ), SIR_RESOURCE_EDGE_KIND_REQUIRED, {} } };
+		const SIRResourceHandle hRoot = publishTaskNode( *pWriter, 903, edges, 2 );
+		sirTaskTestRecorder_t recorder = {};
+		recorder.nRejectNext = 1;
+		SIRResourceTaskBatch batch( graph, taskTestConfig( alloc, recorder ) );
+		REQUIRE( batch.isReady() );
+		REQUIRE( batch.start( hRoot ) == SIR_RESOURCE_RESULT_SUCCESS );
+		uint32_t nSubmitted = 0;
+		REQUIRE( batch.dispatchReady( 1, &nSubmitted ) == SIR_RESOURCE_RESULT_SUCCESS && nSubmitted == 1 );
+		sirResourceTaskStats_t stats = {};
+		REQUIRE( batch.getStats( &stats ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( stats.nSubmitRejected == 1 && stats.nInFlight == 1 );
+		REQUIRE( batch.dispatchReady( 4, &nSubmitted ) == SIR_RESOURCE_RESULT_SUCCESS && nSubmitted == 1 );
+		REQUIRE( recorder.nCount == 2 );
+		REQUIRE( batch.cancel() == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( batch.start( hA ) == SIR_RESOURCE_RESULT_BUSY );
+		REQUIRE( batch.dispatchReady( 4, &nSubmitted ) == SIR_RESOURCE_RESULT_BUSY );
+		REQUIRE( batch.tryPostCompletion( { recorder.items[0].nTicket, SIR_RESOURCE_RESULT_SUCCESS } ) == SIR_EVENT_ENQUEUE_OK );
+		REQUIRE( batch.tryPostCompletion( { recorder.items[1].nTicket, SIR_RESOURCE_RESULT_SUCCESS } ) == SIR_EVENT_ENQUEUE_OK );
+		uint32_t nConsumed = 0;
+		REQUIRE( batch.drainCompletions( 4, &nConsumed ) == SIR_RESOURCE_RESULT_SUCCESS && nConsumed == 2 );
+		REQUIRE( batch.getStats( &stats ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( stats.nSkipped == 3 && stats.nCompleted == 0 && stats.nInFlight == 0 );
+		REQUIRE( batch.start( hRoot ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( batch.dispatchReady( 1, &nSubmitted ) == SIR_RESOURCE_RESULT_SUCCESS && nSubmitted == 1 );
+		REQUIRE( recorder.items[2].hResource.m_nSlot == hA.m_nSlot );
+		publishTaskNode( *pWriter, 901 );
+		REQUIRE( batch.tryPostCompletion( { recorder.items[2].nTicket, SIR_RESOURCE_RESULT_SUCCESS } ) == SIR_EVENT_ENQUEUE_OK );
+		REQUIRE( batch.drainCompletions( 4, &nConsumed ) == SIR_RESOURCE_RESULT_SUCCESS && nConsumed == 1 );
+		REQUIRE( batch.getStats( &stats ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( stats.nFailed == 1 && stats.bCancelled && stats.nSkipped == 2 );
+		REQUIRE( batch.dispatchReady( 4, &nSubmitted ) == SIR_RESOURCE_RESULT_BUSY );
+		REQUIRE( batch.start( hB ) == SIR_RESOURCE_RESULT_SUCCESS );
+	}
+	REQUIRE( alloc.m_nOutstanding.load() == 0 );
+}
+
+static void testTaskEdgeBudgetAndWriterAccess( void )
+{
+	SIRTestAllocatorStats alloc = {};
+	{
+		SIRResourceGraph graph( testConfig( alloc, 8 ) );
+		SIRResourceGraphWriter *pWriter = graph.getWriter();
+		REQUIRE( pWriter != nullptr );
+		publishTaskNode( *pWriter, 951 );
+		publishTaskNode( *pWriter, 952 );
+		SIRResourceDependency edges[2] = { { key( 951 ), SIR_RESOURCE_EDGE_KIND_REQUIRED, {} },
+		                                  { key( 952 ), SIR_RESOURCE_EDGE_KIND_REQUIRED, {} } };
+		const SIRResourceHandle hRoot = publishTaskNode( *pWriter, 953, edges, 2 );
+		sirTaskTestRecorder_t recorder = {};
+		SIRResourceTaskBatch batch( graph, taskTestConfig( alloc, recorder, 1 ) );
+		REQUIRE( batch.isReady() );
+		REQUIRE( batch.start( hRoot ) == SIR_RESOURCE_RESULT_OUT_OF_BUDGET );
+		std::atomic<uint32_t> eOther{ 0 };
+		std::thread worker( [&]() { eOther.store( batch.start( hRoot ) ); } );
+		worker.join();
+		REQUIRE( eOther.load() == SIR_RESOURCE_RESULT_WRITER_VIOLATION );
+		REQUIRE( recorder.nCount == 0 );
+	}
+	REQUIRE( alloc.m_nOutstanding.load() == 0 );
+}
+
 int main( void )
 {
 	testScopeLifetimeAndDeduplication();
@@ -921,6 +1104,9 @@ int main( void )
 	testEpochReclamationWithOverlappingScopes();
 	testReaderEpochSlotExhaustion();
 	testDeterministicDependencyOrderCompilation();
+	testTaskDispatchDependenciesAndConcurrentCompletions();
+	testTaskCancellationStaleRevisionAndBackpressure();
+	testTaskEdgeBudgetAndWriterAccess();
 	printf( "PASS: GRDG resource registry, publication, deduplication, lifetime, concurrency\n" );
 	return 0;
 }

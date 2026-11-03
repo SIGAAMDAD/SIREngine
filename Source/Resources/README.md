@@ -96,3 +96,29 @@ A caller can query required output capacity without modifying its array; an
 undersized caller buffer remains unchanged. This is the resource DAG compiler
 used to prepare work for the separate scheduler; it does not execute jobs or
 perform backend scheduling.
+
+## Dependency-aware external job handoff
+
+`SIRResourceTaskBatch` accepts a preexisting dependency-plan root and compiles
+an allocation-bounded task DAG from the current resident GRDG records.
+It uses only the configured resource metadata allocator for its plan, node
+and edge buffers. Independent prerequisites can be submitted together through
+a caller-supplied `pfnSubmit` callback, which hands compact handle/revision/
+generation tickets to the external executor. No raw canonical bytes cross
+that handoff. Executors borrow immutable resource views under their own
+short-lived read scopes and report completion via the Core
+`SIRMPSCEventQueue` on `tryPostCompletion`.
+
+The sole GRDG writer drains completions, checks revision and invalidation
+sequences, and unlocks downstream nodes only on successful completion.
+Submission rejection retains the waiting node for retry. A failed or stale
+completion cancels the remaining unsent tasks. Explicit cancellation never
+frees an accepted worker task before its completion has been received.
+The MPSC completion ring has 256 slots; a full ring requires producer retry,
+not dropped completion. The caller must stop and join all producer workers
+before destroying the batch or its allocator context.
+
+This is the scheduling **handoff**, not a separate Core executor. The current
+slice requires resident dependency metadata; nonresident streamed requests,
+worker-produced staging publications, executor-side cancellation and actual
+GPU/physics/audio work remain subsequent integration tasks.
