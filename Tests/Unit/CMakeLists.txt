@@ -54,3 +54,33 @@ add_test(NAME core.threading.primitives COMMAND SIRThreadingPrimitiveTests)
 sir_configure_owned_target(SIRThreadingPrimitiveTests)
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/SIRAllocatorMigration.cmake)
+
+add_executable(SIRContainerTests SIRContainerTests.cpp)
+target_link_libraries(SIRContainerTests PRIVATE SIR::Core)
+add_test(NAME core.containers.basic COMMAND SIRContainerTests)
+sir_configure_owned_target(SIRContainerTests)
+
+add_executable(SIRContainerDifferentialTests SIRContainerDifferentialTests.cpp)
+target_link_libraries(SIRContainerDifferentialTests PRIVATE SIR::Core)
+add_test(NAME core.containers.differential COMMAND SIRContainerDifferentialTests)
+sir_configure_owned_target(SIRContainerDifferentialTests)
+
+add_executable(SIRContainerExtendedTests SIRContainerExtendedTests.cpp)
+target_link_libraries(SIRContainerExtendedTests PRIVATE SIR::Core)
+add_test(NAME core.containers.extended COMMAND SIRContainerExtendedTests)
+sir_configure_owned_target(SIRContainerExtendedTests)
+
+add_executable(SIRContainerOptimizationTests SIRContainerOptimizationTests.cpp)
+target_link_libraries(SIRContainerOptimizationTests PRIVATE SIR::Core)
+add_test(NAME core.containers.optimization COMMAND SIRContainerOptimizationTests)
+sir_configure_owned_target(SIRContainerOptimizationTests)
+
+add_executable(SIRContainerMemoryTests SIRContainerMemoryTests.cpp)
+target_link_libraries(SIRContainerMemoryTests PRIVATE SIR::Core)
+add_test(NAME core.containers.memory COMMAND SIRContainerMemoryTests)
+sir_configure_owned_target(SIRContainerMemoryTests)
+
+add_executable(SIRContainerHeapAdapterTests SIRContainerHeapAdapterTests.cpp)
+target_link_libraries(SIRContainerHeapAdapterTests PRIVATE SIR::Core)
+add_test(NAME core.containers.heap-adapter COMMAND SIRContainerHeapAdapterTests)
+sir_configure_owned_target(SIRContainerHeapAdapterTests)
