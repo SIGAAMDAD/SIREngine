@@ -18,6 +18,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #define WIN32_LEAN_AND_MEAN
 #endif
 #include <Windows.h>
+#include <hidusage.h>
 
 SIRWindowsRawBackend::SIRWindowsRawBackend( void ) noexcept : m_pWindow( nullptr )
 {
