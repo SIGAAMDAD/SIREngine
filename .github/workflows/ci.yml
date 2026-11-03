@@ -82,8 +82,27 @@ jobs:
         run: cmake --preset "${{ matrix.preset }}" -DSIR_WITH_GOOGLETEST=ON
       - name: Compile engine and tests
         run: cmake --build --preset "${{ matrix.preset }}"
-      - name: Run native tests
-        run: ctest --preset "${{ matrix.preset }}"
+      - name: Run allocator unit tests (GoogleTest)
+        run: >
+          ctest --preset "${{ matrix.preset }}"
+          --output-on-failure
+          --no-tests=error
+          -R '^core[.]memory[.]allocators[.]'
+          --output-junit "${{ github.workspace }}/allocator-tests-${{ matrix.os }}.xml"
+      - name: Upload allocator unit test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allocator-unit-tests-${{ matrix.os }}
+          path: allocator-tests-${{ matrix.os }}.xml
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Run remaining native tests
+        run: >
+          ctest --preset "${{ matrix.preset }}"
+          --output-on-failure
+          --no-tests=error
+          -E '^core[.]memory[.]allocators[.]'
       - name: Verify no-op incremental rebuild
         run: cmake --build --preset dev
 
