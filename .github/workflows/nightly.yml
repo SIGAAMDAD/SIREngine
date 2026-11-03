@@ -13,7 +13,8 @@ on:
       - 'Build/Scripts/RunGoogleBenchmarks.sh'
       - 'Build/CMake/GoogleBenchmarkCompare.cmake'
       - 'Tests/Benchmarks/**'
-      - 'Tests/Unit/GoogleApplicationTests.cpp'
+      - 'Tests/Unit/**'
+      - 'Source/Core/**'
   workflow_dispatch:
     inputs:
       macos_preview:
@@ -69,7 +70,7 @@ jobs:
         shell: bash
         env:
           SIR_CI_LABEL: "${{ matrix.os }}-${{ matrix.preset }}"
-        run: bash Build/Scripts/NightlyBuild.sh "${{ matrix.preset }}"
+        run: bash Build/Scripts/NightlyBuild.sh "${{ matrix.preset }}" -DSIR_INPUT_SOAK_TESTS=ON
       - name: Upload regression metrics
         uses: actions/upload-artifact@v4
         if: always()

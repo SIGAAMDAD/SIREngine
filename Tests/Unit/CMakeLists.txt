@@ -94,3 +94,17 @@ add_executable(SIRInputTests SIRInputTests.cpp)
 target_link_libraries(SIRInputTests PRIVATE SIR::Core)
 add_test(NAME core.platform.input COMMAND SIRInputTests)
 sir_configure_owned_target(SIRInputTests)
+
+# Deterministic headless stress suite: enabled in every Windows/Linux CTest run.
+add_executable(SIRInputStressTests SIRInputStressTests.cpp)
+target_link_libraries(SIRInputStressTests PRIVATE SIR::Core)
+sir_configure_owned_target(SIRInputStressTests)
+add_test(NAME core.platform.input.stress COMMAND SIRInputStressTests)
+set_tests_properties(core.platform.input.stress PROPERTIES LABELS "core;input;stress" TIMEOUT 60)
+
+# The longer 9.6M-request soak runs in nightly and sanitizer configurations.
+option(SIR_INPUT_SOAK_TESTS "Include extended native input stress soak in CTest" OFF)
+if(SIR_INPUT_SOAK_TESTS)
+    add_test(NAME core.platform.input.soak COMMAND SIRInputStressTests --soak)
+    set_tests_properties(core.platform.input.soak PROPERTIES LABELS "core;input;soak" TIMEOUT 180)
+endif()
