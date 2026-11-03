@@ -42,8 +42,8 @@ struct SIRProviderPinSlot;
 typedef struct sirResourceAllocator_s
 {
 	void *m_pContext;
-	void *(*m_pfnAllocate)( void *pContext, uint64_t nBytes, uint32_t nAlignment, uint32_t nDomain ) noexcept;
-	void (*m_pfnFree)( void *pContext, void *pData, uint64_t nBytes, uint32_t nAlignment, uint32_t nDomain ) noexcept;
+	void *( *m_pfnAllocate )( void *pContext, uint64_t nBytes, uint32_t nAlignment, uint32_t nDomain ) noexcept;
+	void ( *m_pfnFree )( void *pContext, void *pData, uint64_t nBytes, uint32_t nAlignment, uint32_t nDomain ) noexcept;
 } sirResourceAllocator_t;
 typedef sirResourceAllocator_t SIRResourceAllocator;
 
@@ -80,8 +80,8 @@ public:
 	SIRResourceGraphWriter( const SIRResourceGraphWriter & ) = delete;
 	SIRResourceGraphWriter &operator=( const SIRResourceGraphWriter & ) = delete;
 
-	SIRResourceResult allocateStaging( uint64_t nSize, uint32_t nAlignment, uint32_t nDomainId,
-		SIRResourceStagingHandle *pHandle, SIRResourceMutableBytes *pBytes ) noexcept;
+	SIRResourceResult allocateStaging( uint64_t nSize, uint32_t nAlignment, uint32_t nDomainId, SIRResourceStagingHandle *pHandle,
+	                                   SIRResourceMutableBytes *pBytes ) noexcept;
 	SIRResourceResult cancelStaging( SIRResourceStagingHandle hStaging ) noexcept;
 	SIRResourceResult request( const SIRResourceKey &rKey, SIRResourceHandle *pHandle ) noexcept;
 	SIRResourceResult publish( const SIRResourcePublication &rPublication, SIRResourceHandle *pHandle ) noexcept;
@@ -127,17 +127,17 @@ private:
 	void destroyRecord( SIRPublishedResourceRecord *pRecord ) noexcept;
 	void pushRetired( SIRPublishedResourceRecord *pRecord ) noexcept;
 	void publishRecord( uint32_t iSlot, SIRPublishedResourceRecord *pRecord ) noexcept;
-	SIRSharedResourceChunk *findMatchingChunk( const SIRResourceContentKey &rKey, const uint8_t *pData,
-		uint64_t nSize, uint32_t nAlignment, const SIRPublishedResourceRecord *pPending ) const noexcept;
+	SIRSharedResourceChunk *findMatchingChunk( const SIRResourceContentKey &rKey, const uint8_t *pData, uint64_t nSize, uint32_t nAlignment,
+	                                           const SIRPublishedResourceRecord *pPending ) const noexcept;
 	bool reachesKey( const SIRResourceKey &rCurrent, const SIRResourceKey &rTarget ) noexcept;
 	SIRResourceResult validateDependencies( const SIRResourcePublication &rPublication ) noexcept;
 	SIRResourceResult checkHandle( SIRResourceHandle hResource, SIRPublishedResourceRecord **pRecord ) const noexcept;
 	SIRResourceResult prepareChunk( SIRPublishedResourceRecord *pRecord, uint32_t iChunk,
-		const SIRResourceChunkPublication &rInput ) noexcept;
+	                                const SIRResourceChunkPublication &rInput ) noexcept;
 	void abandonUnpublishedRecord( SIRPublishedResourceRecord *pRecord ) noexcept;
 	void adoptPublishedRecordChunks( SIRPublishedResourceRecord *pRecord ) noexcept;
-	SIRResourceResult buildReplacement( SIRPublishedResourceRecord *pCurrent, uint32_t iExcludeChunk,
-		SIRResourceState eState, SIRPublishedResourceRecord **pReplacement ) noexcept;
+	SIRResourceResult buildReplacement( SIRPublishedResourceRecord *pCurrent, uint32_t iExcludeChunk, SIRResourceState eState,
+	                                    SIRPublishedResourceRecord **pReplacement ) noexcept;
 	void releaseStagingSlot( uint32_t iSlot ) noexcept;
 	uint32_t collectRetiredInternal( uint32_t nMaxRecords ) noexcept;
 
@@ -151,14 +151,12 @@ public:
 	bool isReady( void ) const noexcept;
 	SIRResourceGraphWriter *getWriter( void ) noexcept;
 	SIRResourceGraphStats getStats( void ) const noexcept;
-	SIRResourceResult find( const SIRResourceReadScope &rScope, const SIRResourceKey &rKey,
-		SIRResourceHandle *pHandle ) const noexcept;
-	SIRResourceResult resolve( const SIRResourceReadScope &rScope, SIRResourceHandle hResource,
-		SIRResourceView *pView ) const noexcept;
-	SIRResourceResult resolveDependency( const SIRResourceReadScope &rScope, const SIRResourceView &rParent,
-		uint32_t iDependency, SIRResourceView *pChild ) const noexcept;
-	SIRResourceResult pinForProvider( const SIRResourceReadScope &rScope, const SIRResourceView &rView,
-		uint32_t nProviderId, SIRResourcePinHandle *pPin ) const noexcept;
+	SIRResourceResult find( const SIRResourceReadScope &rScope, const SIRResourceKey &rKey, SIRResourceHandle *pHandle ) const noexcept;
+	SIRResourceResult resolve( const SIRResourceReadScope &rScope, SIRResourceHandle hResource, SIRResourceView *pView ) const noexcept;
+	SIRResourceResult resolveDependency( const SIRResourceReadScope &rScope, const SIRResourceView &rParent, uint32_t iDependency,
+	                                     SIRResourceView *pChild ) const noexcept;
+	SIRResourceResult pinForProvider( const SIRResourceReadScope &rScope, const SIRResourceView &rView, uint32_t nProviderId,
+	                                  SIRResourcePinHandle *pPin ) const noexcept;
 	SIRResourceResult releaseProviderPin( SIRResourcePinHandle hPin ) const noexcept;
 
 	friend class SIRResourceGraphWriter;
@@ -186,11 +184,10 @@ class SIRResourceDerivedRegistry
 {
 public:
 	SIRResourceResult registerRepresentation( const SIRDerivedResourceRegistration &rRegistration,
-		SIRDerivedResourceHandle *pHandle ) noexcept;
+	                                          SIRDerivedResourceHandle *pHandle ) noexcept;
 	SIRResourceResult retireRepresentation( SIRDerivedResourceHandle hRepresentation, uint64_t nCompletionFence ) noexcept;
 	SIRResourceResult updateCompletedFence( uint32_t nProviderId, uint64_t nCompletedFence ) noexcept;
-	SIRResourceResult getAccounting( SIRDerivedResourceHandle hRepresentation,
-		SIRDerivedResourceAccounting *pAccounting ) const noexcept;
+	SIRResourceResult getAccounting( SIRDerivedResourceHandle hRepresentation, SIRDerivedResourceAccounting *pAccounting ) const noexcept;
 };
 
 #endif // __SIRENGINE_SIRRESOURCEGRAPH_H__
