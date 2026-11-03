@@ -12,7 +12,7 @@ import pathlib
 import sys
 
 UNITS_NS = {"ns": 1.0, "us": 1_000.0, "ms": 1_000_000.0, "s": 1_000_000_000.0}
-CONTEXT_FIELDS = ("num_cpus", "mhz_per_cpu", "cpu_scaling_enabled")
+CONTEXT_FIELDS = ("host_name", "num_cpus", "mhz_per_cpu", "cpu_scaling_enabled")
 
 
 def load(path):
