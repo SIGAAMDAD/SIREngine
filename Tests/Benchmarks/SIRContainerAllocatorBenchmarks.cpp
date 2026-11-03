@@ -32,7 +32,7 @@ public:
 	SIRGeneralHeap m_Heap;
 	SIRContainerHeapAdapter m_Adapter;
 
-	bool init( void )
+	bool init( uint32_t nWarmSlabsPerSeat = 1 )
 	{
 		const uint64_t nPage = SIRVirtualMemory::getPageSize();
 		if ( nPage == 0 ) {
@@ -48,7 +48,7 @@ public:
 		if ( pSmall == nullptr || pMedium == nullptr || pLarge == nullptr ) {
 			return false;
 		}
-		const sirCompactBucketConfig_t bucketConfig = { 256, 16, 16384, 2, 0, 0 };
+		const sirCompactBucketConfig_t bucketConfig = { 256, 16, 16384, 2, nWarmSlabsPerSeat, 0 };
 		if ( !m_Small.init( pSmall, bucketConfig ) || !m_Medium.init( pMedium ) || !m_Large.init( pLarge ) ) {
 			return false;
 		}
@@ -65,7 +65,7 @@ public:
 static void SIRBenchmarkGeneralHeapDirect( benchmark::State &state )
 {
 	SIRBenchmarkContainerHeap heap;
-	if ( !heap.init() ) {
+	if ( !heap.init( ( uint32_t )state.range( 1 ) ) ) {
 		state.SkipWithError( "Failed to initialize SIR benchmark heap" );
 		return;
 	}
@@ -91,7 +91,7 @@ static void SIRBenchmarkGeneralHeapDirect( benchmark::State &state )
 static void SIRBenchmarkContainerAdapter( benchmark::State &state )
 {
 	SIRBenchmarkContainerHeap heap;
-	if ( !heap.init() ) {
+	if ( !heap.init( ( uint32_t )state.range( 1 ) ) ) {
 		state.SkipWithError( "Failed to initialize SIR benchmark heap" );
 		return;
 	}
@@ -112,5 +112,5 @@ static void SIRBenchmarkContainerAdapter( benchmark::State &state )
 	}
 }
 
-BENCHMARK( SIRBenchmarkGeneralHeapDirect )->Arg( 64 )->Arg( 1536 )->Arg( 32768 );
-BENCHMARK( SIRBenchmarkContainerAdapter )->Arg( 64 )->Arg( 1536 )->Arg( 32768 );
+BENCHMARK( SIRBenchmarkGeneralHeapDirect )->Args( { 64, 0 } )->Args( { 64, 1 } )->Args( { 1536, 1 } )->Args( { 32768, 1 } );
+BENCHMARK( SIRBenchmarkContainerAdapter )->Args( { 64, 0 } )->Args( { 64, 1 } )->Args( { 1536, 1 } )->Args( { 32768, 1 } );
