@@ -6,3 +6,18 @@
 - `SIRPlatformPipe::create()` creates blocking, non-inheritable read and write ends. `read()` returns a partial byte count and `SIR_PIPE_END_OF_STREAM` once the writer has closed and the buffer is empty. `write()` loops for the full request, reports partial transfers on failure, and returns `SIR_PIPE_BROKEN` on a disconnected reader. On Linux, SIGPIPE is masked only on the writing thread during the native write and the generated signal is consumed on EPIPE, without changing process-wide signal handlers. Separate threads may operate the distinct ends, but a close on an endpoint must not race its own active operations. The API provides byte streams, not message framing, nonblocking I/O, or subprocess launch/redirect orchestration.
 
 Native ownership: `Source/Core/Platform/Linux/` implements `mmap`, `munmap`, `msync`, and anonymous `pipe2`; `Source/Core/Platform/Windows/` implements file sections/views and `CreatePipe`. Tests live in `Tests/Unit/SIRPlatformFileMappingTests.cpp` and `SIRPlatformPipeTests.cpp`.
+
+## Counting semaphore
+
+`SIRSemaphore` provides a process-local, thread-shared counting semaphore with
+`create(initialCount)`, single-permit `post()`, `wait()`, `tryWait()`, timed
+`waitFor(milliseconds)`, and `close()`. The Linux backend uses `sem_t` and the
+Windows backend uses `CreateSemaphoreW`/`WaitForSingleObject`/
+`ReleaseSemaphore`. The permit capacity follows the native OS semaphore limit
+(at most `INT32_MAX`); exhausted posts report `SIR_SEMAPHORE_LIMIT_REACHED`.
+Unlike mutexes, each post permits any waiting thread to proceed. A zero-
+timeout wait returns `SIR_SEMAPHORE_WOULD_BLOCK` when no permit is available.
+The Linux timed wait uses the POSIX real-time deadline API; wall-clock changes
+can affect its timeout. Callers must stop and join all waiters before close or
+destruction. The semaphore is a synchronization primitive and does not own
+resource payloads, file buffers, or pipe endpoints.
