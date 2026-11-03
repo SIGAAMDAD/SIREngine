@@ -73,6 +73,12 @@ bool SIRGeneralHeap::init( const sirGeneralHeapConfig_t &config )
 	return true;
 }
 
+bool SIRGeneralHeap::isConfiguredForDomain( sirMemoryDomain_t eDomain ) const noexcept
+{
+	return m_bInitialized && eDomain < SIR_MEMORY_DOMAIN_COUNT && m_Config.pSmallSegment->getDomain() == eDomain &&
+	       m_Config.pMediumSegment->getDomain() == eDomain && m_Config.pLargeSegment->getDomain() == eDomain;
+}
+
 bool SIRGeneralHeap::attachThread( void )
 {
 	return m_bInitialized && m_Config.pSmall->attach();

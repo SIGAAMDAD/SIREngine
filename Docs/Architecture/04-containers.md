@@ -1,6 +1,6 @@
 # 04 - Containers and allocation policy
 
-**Status:** SIREngine-owned container implementation in progress on [`feature/core-containers`](https://github.com/SIGAAMDAD/SIREngine/tree/feature/core-containers), PR [#8](https://github.com/SIGAAMDAD/SIREngine/pull/8); the GRDG/NMD memory-domain integration remains pending.
+**Status:** SIREngine-owned container implementation in progress on [`feature/core-containers`](https://github.com/SIGAAMDAD/SIREngine/tree/feature/core-containers), PR [#8](https://github.com/SIGAAMDAD/SIREngine/pull/8); the initial SIRGeneralHeap domain adapter is implemented; GRDG and specialized lifetime integrations remain pending.
 
 ## Ownership
 
@@ -27,3 +27,5 @@ Do not conflate benchmark supremacy on a synthetic key sequence with suitability
 ## Acceptance
 
 Every implementation needs positive and negative tests for empty/full, 32-bit size boundaries, alignment, exception/failure rollback, aliasing across growth/rehash, over-aligned objects, move-only values where supported, stale handles, memory reclamation and compiler modes. Hash tables additionally need structured hash-pattern tests; queues need the producer/consumer configuration and teardown tests that match their actual API. ASan/UBSan/TSan tests and clang-format/Clang semantic gates must be tied to the exact commit/configuration. The full SIREngine build and GRDG integration cannot be inferred from standalone container tests.
+
+**Allocator integration:** See [18 - Container allocation integration](18-container-allocator-integration.md) for the GeneralHeap domain binding, ownership constraints, matched profiling plan, and integration acceptance gates.
