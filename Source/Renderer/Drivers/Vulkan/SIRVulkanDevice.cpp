@@ -19,14 +19,23 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Renderer/Drivers/Vulkan/SIRVulkanDevice.h>
 
 #include <string.h>
+#include <Core/Platform/SIRAtomic.h>
+
+static SIRAtomic<uint64_t> s_nNextVulkanSerial( 1 );
 
 SIRVulkanDevice::SIRVulkanDevice( void ) noexcept
     : m_Library{ nullptr }, m_pfnGetInstanceProcAddr( nullptr ), m_pfnGetDeviceProcAddr( nullptr ), m_pfnDestroyInstance( nullptr ),
       m_pfnEnumeratePhysicalDevices( nullptr ), m_pfnGetPhysicalDeviceProperties( nullptr ),
       m_pfnGetPhysicalDeviceQueueFamilyProperties( nullptr ), m_pfnGetPhysicalDeviceMemoryProperties( nullptr ),
-      m_pfnCreateDevice( nullptr ), m_pfnDestroyDevice( nullptr ), m_pfnGetDeviceQueue( nullptr ), m_Instance( VK_NULL_HANDLE ),
-      m_PhysicalDevice( VK_NULL_HANDLE ), m_Device( VK_NULL_HANDLE ), m_GraphicsQueue( VK_NULL_HANDLE ), m_Allocator( nullptr ),
-      m_Adapter{}, m_nLiveBuffers( 0 ), m_bReady( false )
+      m_pfnGetPhysicalDeviceFeatures2( nullptr ), m_pfnCreateDevice( nullptr ), m_pfnDestroyDevice( nullptr ),
+      m_pfnGetDeviceQueue( nullptr ), m_pfnDeviceWaitIdle( nullptr ), m_pfnCreateCommandPool( nullptr ), m_pfnDestroyCommandPool( nullptr ),
+      m_pfnAllocateCommandBuffers( nullptr ), m_pfnResetCommandBuffer( nullptr ), m_pfnBeginCommandBuffer( nullptr ),
+      m_pfnEndCommandBuffer( nullptr ), m_pfnCmdPipelineBarrier2( nullptr ), m_pfnCmdCopyBuffer2( nullptr ), m_pfnQueueSubmit2( nullptr ),
+      m_pfnCreateSemaphore( nullptr ), m_pfnDestroySemaphore( nullptr ), m_pfnGetSemaphoreCounterValue( nullptr ),
+      m_pfnWaitSemaphores( nullptr ), m_Instance( VK_NULL_HANDLE ), m_PhysicalDevice( VK_NULL_HANDLE ), m_Device( VK_NULL_HANDLE ),
+      m_GraphicsQueue( VK_NULL_HANDLE ), m_Allocator( nullptr ), m_TransferCommandPool( VK_NULL_HANDLE ),
+      m_TransferTimeline( VK_NULL_HANDLE ), m_TransferSlots{}, m_nDeviceSerial( 0 ), m_nLastTransferValue( 0 ), m_iNextTransferSlot( 0 ),
+      m_bDeviceLost( false ), m_Adapter{}, m_nLiveBuffers( 0 ), m_bReady( false )
 {
 }
 
@@ -47,11 +56,13 @@ bool SIRVulkanDevice::loadInstanceDispatch( void ) noexcept
 	m_pfnGetPhysicalDeviceMemoryProperties =
 	    ( PFN_vkGetPhysicalDeviceMemoryProperties )m_pfnGetInstanceProcAddr( m_Instance, "vkGetPhysicalDeviceMemoryProperties" );
 	m_pfnCreateDevice = ( PFN_vkCreateDevice )m_pfnGetInstanceProcAddr( m_Instance, "vkCreateDevice" );
+	m_pfnGetPhysicalDeviceFeatures2 =
+	    ( PFN_vkGetPhysicalDeviceFeatures2 )m_pfnGetInstanceProcAddr( m_Instance, "vkGetPhysicalDeviceFeatures2" );
 	m_pfnGetDeviceProcAddr = ( PFN_vkGetDeviceProcAddr )m_pfnGetInstanceProcAddr( m_Instance, "vkGetDeviceProcAddr" );
 
 	return m_pfnDestroyInstance && m_pfnEnumeratePhysicalDevices && m_pfnGetPhysicalDeviceProperties &&
 	       m_pfnGetPhysicalDeviceQueueFamilyProperties && m_pfnGetPhysicalDeviceMemoryProperties && m_pfnCreateDevice &&
-	       m_pfnGetDeviceProcAddr;
+	       m_pfnGetDeviceProcAddr && m_pfnGetPhysicalDeviceFeatures2;
 }
 
 bool SIRVulkanDevice::chooseAdapter( void ) noexcept
@@ -180,6 +191,28 @@ sirVulkanResult_t SIRVulkanDevice::initialize( void ) noexcept
 		return SIR_VULKAN_DEVICE_UNAVAILABLE;
 	}
 
+	VkPhysicalDeviceVulkan13Features supported13 = {};
+	supported13.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
+	VkPhysicalDeviceVulkan12Features supported12 = {};
+	supported12.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
+	supported12.pNext = &supported13;
+	VkPhysicalDeviceFeatures2 queriedFeatures = {};
+	queriedFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+	queriedFeatures.pNext = &supported12;
+	m_pfnGetPhysicalDeviceFeatures2( m_PhysicalDevice, &queriedFeatures );
+	if ( supported12.timelineSemaphore == VK_FALSE || supported13.synchronization2 == VK_FALSE ) {
+		shutdown();
+		return SIR_VULKAN_API_UNSUPPORTED;
+	}
+
+	VkPhysicalDeviceVulkan13Features enabled13 = {};
+	enabled13.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
+	enabled13.synchronization2 = VK_TRUE;
+	VkPhysicalDeviceVulkan12Features enabled12 = {};
+	enabled12.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
+	enabled12.timelineSemaphore = VK_TRUE;
+	enabled12.pNext = &enabled13;
+
 	const float fPriority = 1.0f;
 	VkDeviceQueueCreateInfo queueInfo = {};
 	queueInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
@@ -191,6 +224,7 @@ sirVulkanResult_t SIRVulkanDevice::initialize( void ) noexcept
 	deviceInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 	deviceInfo.queueCreateInfoCount = 1;
 	deviceInfo.pQueueCreateInfos = &queueInfo;
+	deviceInfo.pNext = &enabled12;
 	if ( m_pfnCreateDevice( m_PhysicalDevice, &deviceInfo, nullptr, &m_Device ) != VK_SUCCESS ) {
 		shutdown();
 		return SIR_VULKAN_NATIVE_FAILURE;
@@ -218,6 +252,12 @@ sirVulkanResult_t SIRVulkanDevice::initialize( void ) noexcept
 		return SIR_VULKAN_ALLOCATION_FAILED;
 	}
 
+	if ( !initializeTransferQueue() ) {
+		shutdown();
+		return SIR_VULKAN_NATIVE_FAILURE;
+	}
+
+	m_nDeviceSerial = s_nNextVulkanSerial.fetchAdd( 1, SIR_MEMORY_ORDER_RELAXED );
 	m_bReady = true;
 	return SIR_VULKAN_SUCCESS;
 }
@@ -229,6 +269,11 @@ bool SIRVulkanDevice::shutdown( void ) noexcept
 	}
 
 	m_bReady = false;
+	bool bIdle = true;
+	if ( m_Device != VK_NULL_HANDLE && m_pfnDeviceWaitIdle != nullptr ) {
+		bIdle = m_pfnDeviceWaitIdle( m_Device ) == VK_SUCCESS;
+	}
+	destroyTransferQueue();
 	if ( m_Allocator != nullptr ) {
 		vmaDestroyAllocator( m_Allocator );
 		m_Allocator = nullptr;
@@ -247,7 +292,10 @@ bool SIRVulkanDevice::shutdown( void ) noexcept
 		SIRDynamicLibrary::unload( &m_Library );
 	}
 	memset( &m_Adapter, 0, sizeof( m_Adapter ) );
-	return true;
+	m_nDeviceSerial = 0;
+	m_nLastTransferValue = 0;
+	m_bDeviceLost = false;
+	return bIdle;
 }
 
 bool SIRVulkanDevice::isReady( void ) const noexcept
@@ -314,6 +362,9 @@ sirVulkanResult_t SIRVulkanDevice::createBuffer( uint64_t nBytes, VkBufferUsageF
 
 	pBuffer->pOwnerAllocator = m_Allocator;
 	pBuffer->nSize = ( VkDeviceSize )nBytes;
+	pBuffer->nUsage = nUsage;
+	pBuffer->nDeviceSerial = m_nDeviceSerial;
+	pBuffer->nLastGpuUse = 0;
 	pBuffer->bHostVisible = bHostVisible;
 	++m_nLiveBuffers;
 	return SIR_VULKAN_SUCCESS;
@@ -325,8 +376,12 @@ sirVulkanResult_t SIRVulkanDevice::writeBuffer( sirVulkanBuffer_t *pBuffer, uint
 		return SIR_VULKAN_INVALID_STATE;
 	}
 	if ( pBuffer == nullptr || pBuffer->pAllocation == nullptr || pBuffer->pOwnerAllocator != m_Allocator || !pBuffer->bHostVisible ||
-	     pData == nullptr || nBytes == 0 || nOffset > pBuffer->nSize || nBytes > pBuffer->nSize - nOffset ) {
+	     pData == nullptr || nBytes == 0 || nOffset > pBuffer->nSize || nBytes > pBuffer->nSize - nOffset ||
+	     pBuffer->nDeviceSerial != m_nDeviceSerial ) {
 		return SIR_VULKAN_INVALID_ARGUMENT;
+	}
+	if ( !isBufferIdle( pBuffer ) ) {
+		return SIR_VULKAN_BUSY;
 	}
 	void *pMapped = nullptr;
 	if ( vmaMapMemory( m_Allocator, pBuffer->pAllocation, &pMapped ) != VK_SUCCESS || pMapped == nullptr ) {
@@ -345,8 +400,11 @@ sirVulkanResult_t SIRVulkanDevice::destroyIdleBuffer( sirVulkanBuffer_t *pBuffer
 		return SIR_VULKAN_INVALID_STATE;
 	}
 	if ( pBuffer == nullptr || pBuffer->hBuffer == VK_NULL_HANDLE || pBuffer->pAllocation == nullptr ||
-	     pBuffer->pOwnerAllocator != m_Allocator || m_nLiveBuffers == 0 ) {
+	     pBuffer->pOwnerAllocator != m_Allocator || m_nLiveBuffers == 0 || pBuffer->nDeviceSerial != m_nDeviceSerial ) {
 		return SIR_VULKAN_INVALID_ARGUMENT;
+	}
+	if ( !isBufferIdle( pBuffer ) ) {
+		return SIR_VULKAN_BUSY;
 	}
 	vmaDestroyBuffer( m_Allocator, pBuffer->hBuffer, pBuffer->pAllocation );
 	memset( pBuffer, 0, sizeof( *pBuffer ) );
