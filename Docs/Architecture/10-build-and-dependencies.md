@@ -39,4 +39,14 @@ Dependency-enabled configurations resolve `SIR::MeshOptimizer`, `SIR::OpenAL`, `
 
 See [Dependency acquisition](../Dependencies.md). The source tree stores no nested engine checkout. Engine migration inputs are reviewed separately and ported into first-party build targets.
 
+### Nightly regression history
+
+The `.github/workflows/nightly.yml` schedule runs at **07:17 UTC** on `develop`. It compiles and tests Windows/Linux `profile` and `release` targets, runs Linux ASan/UBSan configurations, and checks the OpenAL Soft/meshoptimizer integration and Clang tooling. macOS is available by manual dispatch only.
+
+The Bash-driven `Build/Scripts/NightlyBuild.sh` uses CMake/FASTBuild (or Ninja for tooling). Each configuration records configure/build/test/package exit codes and wall time, CTest JUnit results, compiler warning counts, and executable size in a JSON artifact. Compiler/test logs and Release ZIPs are retained separately; artifacts contain the exact Git commit ID. Build failures remain failing GitHub jobs while their diagnostic artifacts are still uploaded.
+
+The aggregate `Build/CMake/NightlyCompare.cmake` report compares matching configurations to the last successful nightly whose results remain available. It reports compilation-time and executable-size changes, lost tests, and new warnings in the GitHub step summary. Compilation timings are observational because GitHub runner variance and cache hits can dominate small builds. Artifacts are retained for 30 days (raw metrics), 21 days (logs and packages), or 60 days (consolidated regression reports). There is no Python dependency in the nightly workflow.
+
+The full nightly workflow also runs automatically when its own source/scripts are modified on `develop`, providing a one-time regression check of workflow changes.
+
 CI outcomes are recorded from real workflow runs; a successful native bootstrap does not imply editor, graphics or terrain functionality.

@@ -12,6 +12,8 @@ set(sirRequired
     CMakeLists.txt CMakePresets.json .gitmodules .clang-format
     Build/CMake/CIHygiene.cmake Build/CMake/CIFormat.cmake
     Build/CMake/CIThirdParty.cmake ThirdParty/IMPORT_LOCK.json
+    Build/CMake/NightlyMetrics.cmake Build/CMake/NightlyCompare.cmake
+    Build/Scripts/NightlyBuild.sh
     Source/CMakeLists.txt Source/Core/CMakeLists.txt
     Source/Core/SIRApplication.h Source/Core/SIRApplication.cpp Source/Main.cpp
     .github/workflows/ci.yml .github/workflows/nightly.yml
