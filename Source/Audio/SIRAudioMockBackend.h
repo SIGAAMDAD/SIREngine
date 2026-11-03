@@ -35,6 +35,7 @@ private:
 	const sirContainerAllocator_t *m_pAllocator = nullptr;
 	bool m_bInitialized = false;
 	bool m_bFailNextPlay = false;
+	bool m_bFailNextStop = false;
 	uint64_t m_nSubmitted = 0;
 
 	static sirAudioResult_t initializeCallback( void *pContext, const sirAudioBackendConfig_t *pConfig ) noexcept;
@@ -48,6 +49,8 @@ public:
 	explicit SIRAudioMockBackend( const sirContainerAllocator_t *pAllocator ) noexcept;
 	static sirAudioBackendOps_t getOps( void ) noexcept;
 	void failNextPlay( void ) noexcept;
+	void failNextStop( void ) noexcept;
+	bool injectCompletion( const sirAudioCompletion_t &completion ) noexcept;
 	uint64_t getSubmittedCount( void ) const noexcept;
 };
 

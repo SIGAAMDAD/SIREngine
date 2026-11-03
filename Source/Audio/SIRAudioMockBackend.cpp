@@ -42,6 +42,7 @@ void SIRAudioMockBackend::shutdownCallback( void *pContext ) noexcept
 	if ( pBackend != nullptr ) {
 		pBackend->m_bInitialized = false;
 		pBackend->m_bFailNextPlay = false;
+		pBackend->m_bFailNextStop = false;
 		pBackend->m_Completions.shutdown();
 	}
 }
@@ -57,6 +58,10 @@ sirAudioResult_t SIRAudioMockBackend::submitCallback( void *pContext, const sirA
 		++pBackend->m_nSubmitted;
 		if ( command.eType != SIR_AUDIO_COMMAND_PLAY && command.eType != SIR_AUDIO_COMMAND_STOP ) {
 			continue;
+		}
+		if ( command.eType == SIR_AUDIO_COMMAND_STOP && pBackend->m_bFailNextStop ) {
+			pBackend->m_bFailNextStop = false;
+			return SIR_AUDIO_BACKEND_ERROR;
 		}
 		sirAudioCompletion_t completion = {};
 		completion.hPlaying = command.hPlaying;
@@ -109,4 +114,14 @@ void SIRAudioMockBackend::failNextPlay( void ) noexcept
 uint64_t SIRAudioMockBackend::getSubmittedCount( void ) const noexcept
 {
 	return m_nSubmitted;
+}
+
+void SIRAudioMockBackend::failNextStop( void ) noexcept
+{
+	m_bFailNextStop = true;
+}
+
+bool SIRAudioMockBackend::injectCompletion( const sirAudioCompletion_t &completion ) noexcept
+{
+	return m_bInitialized && m_Completions.tryPush( completion );
 }
