@@ -137,8 +137,8 @@ SIRResourceGraphWriter::SIRResourceGraphWriter( SIRResourceGraph &rGraph ) noexc
 }
 
 SIRResourceGraph::SIRResourceGraph( const SIRResourceGraphConfig &rConfig ) noexcept
-    : m_Config( rConfig ), m_Writer( *this ), m_OwnerThread( std::this_thread::get_id() ), m_nActiveReaders( 0 ), m_pReaderEpochs( nullptr ),
-      m_nPublicationEpoch( 1 ), m_nMaxReaders( 0 ),
+    : m_Config( rConfig ), m_Writer( *this ), m_OwnerThread( std::this_thread::get_id() ), m_nActiveReaders( 0 ),
+      m_pReaderEpochs( nullptr ), m_nPublicationEpoch( 1 ), m_nMaxReaders( 0 ),
       m_KeyIndexAllocator{ this, allocateKeyIndex, releaseKeyIndex, rConfig.m_nMetadataDomain, 0x47524447U },
       m_KeyIndex( &m_KeyIndexAllocator ), m_pSlots( nullptr ), m_pStaging( nullptr ), m_pProviderPins( nullptr ),
       m_pReverseEdges( nullptr ), m_pReadKeyIndex( nullptr ), m_nReadKeyIndexCapacity( 0 ), m_pReverseBuckets( nullptr ),
@@ -179,15 +179,14 @@ SIRResourceGraph::SIRResourceGraph( const SIRResourceGraphConfig &rConfig ) noex
 	m_pProviderPins = ( SIRProviderPinSlot * )allocate( nPins, alignof( SIRProviderPinSlot ), m_Config.m_nMetadataDomain );
 	m_pReverseEdges = ( SIRReverseDependencyEdge * )allocate( nEdges, alignof( SIRReverseDependencyEdge ), m_Config.m_nMetadataDomain );
 	m_pReadKeyIndex = ( sirReadKeyIndexCell_t * )allocate( nReadCells, alignof( sirReadKeyIndexCell_t ), m_Config.m_nMetadataDomain );
-	m_pReaderEpochs = ( std::atomic<uint64_t> * )allocate( nReaderBytes, alignof( std::atomic<uint64_t> ),
-	                                                      m_Config.m_nMetadataDomain );
+	m_pReaderEpochs = ( std::atomic<uint64_t> * )allocate( nReaderBytes, alignof( std::atomic<uint64_t> ), m_Config.m_nMetadataDomain );
 	m_pReverseBuckets = ( uint32_t * )allocate( nBuckets, alignof( uint32_t ), m_Config.m_nMetadataDomain );
 	m_pInvalidations =
 	    ( SIRResourceInvalidationEvent * )allocate( nEvents, alignof( SIRResourceInvalidationEvent ), m_Config.m_nMetadataDomain );
 	m_pTraversalQueue = ( uint32_t * )allocate( ( uint64_t )m_Config.m_nMaxResources * sizeof( uint32_t ), alignof( uint32_t ),
 	                                            m_Config.m_nMetadataDomain );
-	if ( !m_pSlots || !m_pStaging || !m_pProviderPins || !m_pReverseEdges || !m_pReadKeyIndex || !m_pReaderEpochs || !m_pReverseBuckets || !m_pInvalidations ||
-	     !m_pTraversalQueue ) {
+	if ( !m_pSlots || !m_pStaging || !m_pProviderPins || !m_pReverseEdges || !m_pReadKeyIndex || !m_pReaderEpochs || !m_pReverseBuckets ||
+	     !m_pInvalidations || !m_pTraversalQueue ) {
 		return;
 	}
 	for ( uint32_t iSlot = 0; iSlot < m_Config.m_nMaxResources; ++iSlot ) {
@@ -259,8 +258,8 @@ SIRResourceGraph::~SIRResourceGraph( void ) noexcept
 			m_pReaderEpochs[iReader].~atomic();
 		}
 	}
-	release( m_pReaderEpochs, ( uint64_t )m_nMaxReaders * sizeof( std::atomic<uint64_t> ),
-	         alignof( std::atomic<uint64_t> ), m_Config.m_nMetadataDomain );
+	release( m_pReaderEpochs, ( uint64_t )m_nMaxReaders * sizeof( std::atomic<uint64_t> ), alignof( std::atomic<uint64_t> ),
+	         m_Config.m_nMetadataDomain );
 	release( m_pInvalidations, ( uint64_t )m_nMaxInvalidationEvents * sizeof( SIRResourceInvalidationEvent ),
 	         alignof( SIRResourceInvalidationEvent ), m_Config.m_nMetadataDomain );
 	if ( m_pReadKeyIndex != nullptr && m_bReady ) {
