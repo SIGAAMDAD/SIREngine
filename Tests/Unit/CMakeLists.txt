@@ -53,6 +53,8 @@ target_link_libraries(SIRThreadingPrimitiveTests PRIVATE SIR::Core)
 add_test(NAME core.threading.primitives COMMAND SIRThreadingPrimitiveTests)
 sir_configure_owned_target(SIRThreadingPrimitiveTests)
 
+include(${CMAKE_CURRENT_SOURCE_DIR}/SIRAllocatorMigration.cmake)
+
 add_executable(SIRContainerTests SIRContainerTests.cpp)
 target_link_libraries(SIRContainerTests PRIVATE SIR::Core)
 add_test(NAME core.containers.basic COMMAND SIRContainerTests)
