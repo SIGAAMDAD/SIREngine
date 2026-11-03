@@ -63,3 +63,24 @@ Paired timing on AMD EPYC 9V74 Linux, Clang 17, C++17, `-O3 -march=native -DNDEB
 The same three primary features were also faster with generic Clang `-O2` without `-march=native`. Tests include random/sorted/reverse/duplicate heap ordering, 64-bit high-bit hash keys, self-aliasing, allocation failure, exception rollback and leak checks. Pinned clang-format and native Windows/Linux CI are the publication acceptance gates.
 
 **Discarded experiments:** branch-only ring wrapping (regression), compiler popcount substitution (near noise floor), fused heap pop (regression), reordered map lookup (mixed results), 7-bit fingerprint metadata (insufficient net gain), and trivial-copy relocation (no material gain). Preserve only the successful algorithm changes. Once deltas approach 0.01-0.1 ns with overlapping trial ranges, treat them as unresolved timing noise, not validated speedups.
+
+## Memory-density and reclamation pass (2026-11-02)
+
+**Source:** `feature/core-containers`, parent `bd33494c60771823e094b2d59e8cbf76d6532d11`. **Platform:** 64-bit Linux, Clang 17/GCC 14.2 C++17, explicit callback allocator reporting exact requested bytes (not RSS or allocation overhead).
+
+**Associative tables:** The duplicated allocation-base pointer was removed from `SIRFlatHashMap` and `SIRFlatHashSet`, reducing each instance from 56 to 48 bytes. Both tables now offer `tryShrinkToFit()`: live entries are transactionally rehashed into a smaller capacity after removal, with allocation failure preserving the old table. Empty tables release all owned allocation. `SIRHashProbe` supports either one byte per bucket (fast, default) or packed two-bit states (`bCompactControl = true` in the final template argument), without separate allocations or hidden system-heap fallback. The compact policy shares the same lifetime, tombstone, rehash and rollback implementation.
+
+| 32,768 occupied `uint32_t` keys | Default | Packed states | Saving |
+| --- | ---: | ---: | ---: |
+| Map of `uint32_t` to `uint32_t`, heap | 589,824 B | 540,672 B | 49,152 B (8.3%) |
+| Set of `uint32_t`, heap | 327,680 B | 278,528 B | 49,152 B (15.0%) |
+| Map after removing 28,672 entries + shrinking, heap | 73,728 B | 67,584 B | Compared with initial allocation: 87.5% and 87.5% respectively |
+| Set after removing 28,672 entries + shrinking, heap | 40,960 B | 34,816 B | Compared with initial allocation: 87.5% and 87.5% respectively |
+
+**String:** `SIRString` now stores its 24-byte inline array and heap pointer in a union, with the supplied allocation descriptor, byte length and capacity in separate fields. The measured 64-bit object falls from 48 to 40 bytes (16.7% smaller), still holding strings up to 23 bytes plus NUL without heap storage. Added no-allocation moves, explicit shrink-to-inline/size, and footprint inspection. Repeated 32-byte appends ran at 25.20 ns before and 18.84 ns after this patch in a paired, 11-sample, three-process trial on AMD EPYC 9V74 / Clang 17 `-O3 -march=native` (6.36 ns saved per append). These figures describe the exact workload and compiler, not a platform-independent speed guarantee.
+
+**Other containers:** Explicit release of empty bounded queue/ring storage and shrink-through adapters for priority heap, stack, and bit-vector; logical zeroing remains distinct from storage release. `SIRBitVector::clearAndRelease()` resets the logical bit count to zero, whereas `clear()` retains the bit count and zeroes values.
+
+**CPU tradeoff:** Default byte-per-bucket hash probing remains untouched apart from removal of the redundant object pointer; paired default lookup measurements ranged from -0.10 to +0.02 ns benefit, overlapping run-to-run variation. The compact policy performs extra bit operations per probe and was slower on some measured lookup workloads (~1 ns), so it is explicitly opt-in for memory-constrained domains. Repeated deletes alone retain capacity; callers request reclamation at an appropriate lifetime boundary. Shrink can temporarily require an additional allocation before releasing the old table; callback allocation refusal rolls back without publishing partial data.
+
+**Acceptance:** Five local CTest executables passed in optimized GCC C++17 Release mode. Five Clang 17 ASan+UBSan+leak-detection executables passed, including the new memory suite. The memory suite validates packed/default table byte counts, tombstone handling, allocation failure, payload preservation, shrinking/empty release, 23-byte string SSO, heap/inline transfer, string move and shrink, bit-vector reclaim and queue/heap/stack release. Remote clang-format 22.1.5 and GitHub Linux/Windows CMake/FASTBuild are required before declaring integrated acceptance.

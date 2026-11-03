@@ -100,6 +100,17 @@ public:
 		return UINT32_MAX;
 	}
 
+	sirContainerResult_t tryShrinkToFit( void )
+	{
+		return m_words.tryShrinkToFit();
+	}
+
+	void clearAndRelease( void ) noexcept
+	{
+		m_words.clear();
+		m_nBits = 0;
+		m_words.tryShrinkToFit();
+	}
 	void clear( void ) noexcept
 	{
 		for ( uint32_t iWord = 0; iWord < m_words.getSize(); ++iWord ) {

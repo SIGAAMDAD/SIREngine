@@ -24,8 +24,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #endif
 // clang-format on
 
-#include <Core/Containers/SIRInlineVector.h>
+#include <Core/Containers/SIRVectorStorage.h>
 #include <stdint.h>
+#include <string.h>
+#include <utility>
 
 typedef struct sirStringView_s
 {
@@ -33,29 +35,143 @@ typedef struct sirStringView_s
 	uint32_t nBytes;
 } sirStringView_t;
 
-// UTF-8 byte storage; validation and Unicode normalization are separate concerns.
+// UTF-8 byte storage. Inline and heap payloads share a physical slot.
+// Allocations, including shrinking, use only the supplied memory domain.
 class SIRString
 {
 private:
-	SIRInlineVector<char, 24> m_bytes;
+	static constexpr uint32_t INLINE_CAPACITY = 24;
+
+	const sirContainerAllocator_t *m_pAllocator;
+	uint32_t m_nLength;
+	uint32_t m_nCapacity;
+	union
+	{
+		char m_szInline[INLINE_CAPACITY];
+		char *m_pHeap;
+	};
+
+	bool isInline( void ) const noexcept
+	{
+		return m_nCapacity == INLINE_CAPACITY;
+	}
+
+	char *data( void ) noexcept
+	{
+		return isInline() ? m_szInline : m_pHeap;
+	}
+
+	const char *data( void ) const noexcept
+	{
+		return isInline() ? m_szInline : m_pHeap;
+	}
+
+	sirContainerResult_t tryReserveBytes( uint32_t nCapacity )
+	{
+		if ( nCapacity <= m_nCapacity ) {
+			return SIR_CONTAINER_OK;
+		}
+		void *pStorage = nullptr;
+		sirContainerResult_t eResult = SIRRawStorage::tryAllocate( m_pAllocator, nCapacity, alignof( char ), &pStorage );
+		if ( eResult != SIR_CONTAINER_OK ) {
+			return eResult;
+		}
+		memcpy( pStorage, data(), m_nLength + 1 );
+		if ( !isInline() ) {
+			SIRRawStorage::deallocate( m_pAllocator, m_pHeap, m_nCapacity, alignof( char ) );
+		}
+		m_pHeap = ( char * )pStorage;
+		m_nCapacity = nCapacity;
+		return SIR_CONTAINER_OK;
+	}
+
+	void release( void ) noexcept
+	{
+		if ( !isInline() ) {
+			SIRRawStorage::deallocate( m_pAllocator, m_pHeap, m_nCapacity, alignof( char ) );
+		}
+	}
 
 public:
-	explicit SIRString( const sirContainerAllocator_t *pAllocator ) : m_bytes( pAllocator )
+	explicit SIRString( const sirContainerAllocator_t *pAllocator ) noexcept
+		: m_pAllocator( pAllocator ), m_nLength( 0 ), m_nCapacity( INLINE_CAPACITY )
 	{
-		m_bytes.tryEmplaceBack( '\0' );
+		m_szInline[0] = '\0';
+	}
+
+	~SIRString( void ) noexcept
+	{
+		release();
+	}
+
+	SIRString( const SIRString & ) = delete;
+	SIRString &operator=( const SIRString & ) = delete;
+
+	SIRString( SIRString &&other ) noexcept
+		: m_pAllocator( other.m_pAllocator ), m_nLength( other.m_nLength ), m_nCapacity( other.m_nCapacity )
+	{
+		if ( other.isInline() ) {
+			if ( m_nLength < INLINE_CAPACITY ) {
+				memcpy( m_szInline, other.m_szInline, m_nLength + 1 );
+			} else {
+				m_nLength = 0;
+				m_szInline[0] = '\0';
+			}
+		} else {
+			m_pHeap = other.m_pHeap;
+		}
+		other.m_nCapacity = INLINE_CAPACITY;
+		other.m_nLength = 0;
+		other.m_szInline[0] = '\0';
+	}
+
+	SIRString &operator=( SIRString &&other ) noexcept
+	{
+		if ( this != &other ) {
+			release();
+			m_pAllocator = other.m_pAllocator;
+			m_nLength = other.m_nLength;
+			m_nCapacity = other.m_nCapacity;
+			if ( other.isInline() ) {
+				if ( m_nLength < INLINE_CAPACITY ) {
+					memcpy( m_szInline, other.m_szInline, m_nLength + 1 );
+				} else {
+					m_nLength = 0;
+					m_szInline[0] = '\0';
+				}
+			} else {
+				m_pHeap = other.m_pHeap;
+			}
+			other.m_nCapacity = INLINE_CAPACITY;
+			other.m_nLength = 0;
+			other.m_szInline[0] = '\0';
+		}
+		return *this;
 	}
 
 	uint32_t getByteLength( void ) const noexcept
 	{
-		return m_bytes.getSize() - 1;
+		return m_nLength;
 	}
+
+	uint32_t getCapacity( void ) const noexcept
+	{
+		return m_nCapacity;
+	}
+
 	const char *cStr( void ) const noexcept
 	{
-		return m_bytes.data();
+		return data();
 	}
+
 	sirStringView_t getView( void ) const noexcept
 	{
-		return { cStr(), getByteLength() };
+		return { data(), m_nLength };
+	}
+
+	sirContainerFootprint_t getFootprint( void ) const noexcept
+	{
+		return { INLINE_CAPACITY, isInline() ? 0u : m_nCapacity, 0, 0, ( uint64_t )m_nLength + 1 };
 	}
 
 	sirContainerResult_t tryAppendBytes( const char *pBytes, uint32_t nBytes )
@@ -66,42 +182,42 @@ public:
 		if ( pBytes == nullptr ) {
 			return SIR_CONTAINER_INVALID_ARGUMENT;
 		}
-		uint32_t nOldLength = getByteLength();
-		if ( ( uint64_t )nOldLength + nBytes + 1 > UINT32_MAX ) {
+		if ( ( uint64_t )m_nLength + nBytes + 1 > UINT32_MAX ) {
 			return SIR_CONTAINER_SIZE_OVERFLOW;
 		}
+		uintptr_t nStart = ( uintptr_t )data();
 		uintptr_t nSource = ( uintptr_t )pBytes;
-		uintptr_t nStart = ( uintptr_t )m_bytes.data();
-		bool bAliased = nSource >= nStart && nSource - nStart < m_bytes.getSize();
+		bool bAliased = nSource >= nStart && nSource - nStart <= m_nLength;
 		uint32_t iSource = bAliased ? ( uint32_t )( nSource - nStart ) : 0;
-		if ( bAliased && ( uint64_t )iSource + nBytes > m_bytes.getSize() ) {
+		if ( bAliased && ( uint64_t )iSource + nBytes > ( uint64_t )m_nLength + 1 ) {
 			return SIR_CONTAINER_INVALID_ARGUMENT;
 		}
-		uint32_t nRequired = nOldLength + nBytes + 1;
-		if ( nRequired > m_bytes.getCapacity() ) {
+		uint32_t nRequired = m_nLength + nBytes + 1;
+		if ( nRequired > m_nCapacity ) {
 			uint32_t nGrowth = 0;
-			sirContainerResult_t eGrowth = SIRVectorStorage::calculateGrowth( m_bytes.getCapacity(), nRequired, &nGrowth );
-			if ( eGrowth != SIR_CONTAINER_OK ) {
-				return eGrowth;
+			sirContainerResult_t eResult = SIRVectorStorage::calculateGrowth( m_nCapacity, nRequired, &nGrowth );
+			if ( eResult != SIR_CONTAINER_OK ) {
+				return eResult;
 			}
-			sirContainerResult_t eReserve = m_bytes.tryReserve( nGrowth );
-			if ( eReserve != SIR_CONTAINER_OK ) {
-				return eReserve;
+			eResult = tryReserveBytes( nGrowth );
+			if ( eResult != SIR_CONTAINER_OK ) {
+				return eResult;
 			}
 		}
-		sirContainerResult_t eResult = m_bytes.tryResizeForOverwrite( nRequired );
-		if ( eResult != SIR_CONTAINER_OK ) {
-			return eResult;
-		}
+		char *pDestination = data() + m_nLength;
 		if ( bAliased ) {
-			pBytes = m_bytes.data() + iSource;
-		}
-		if ( bAliased ) {
-			memmove( m_bytes.data() + nOldLength, pBytes, nBytes );
+			memmove( pDestination, data() + iSource, nBytes );
 		} else {
-			memcpy( m_bytes.data() + nOldLength, pBytes, nBytes );
+			memcpy( pDestination, pBytes, nBytes );
 		}
-		m_bytes.data()[nOldLength + nBytes] = '\0';
+		m_nLength += nBytes;
+		if ( isInline() && m_nLength < INLINE_CAPACITY ) {
+			m_szInline[m_nLength] = '\0';
+		} else if ( !isInline() ) {
+			m_pHeap[m_nLength] = '\0';
+		} else {
+			return SIR_CONTAINER_SIZE_OVERFLOW;
+		}
 		return SIR_CONTAINER_OK;
 	}
 
@@ -113,31 +229,71 @@ public:
 		if ( nBytes == UINT32_MAX ) {
 			return SIR_CONTAINER_SIZE_OVERFLOW;
 		}
+		uintptr_t nStart = ( uintptr_t )data();
 		uintptr_t nSource = ( uintptr_t )pBytes;
-		uintptr_t nStart = ( uintptr_t )m_bytes.data();
-		bool bAliased = pBytes != nullptr && nSource >= nStart && nSource - nStart < m_bytes.getSize();
+		bool bAliased = pBytes != nullptr && nSource >= nStart && nSource - nStart <= m_nLength;
 		uint32_t iSource = bAliased ? ( uint32_t )( nSource - nStart ) : 0;
-		if ( bAliased && ( uint64_t )iSource + nBytes > m_bytes.getSize() ) {
+		if ( bAliased && ( uint64_t )iSource + nBytes > ( uint64_t )m_nLength + 1 ) {
 			return SIR_CONTAINER_INVALID_ARGUMENT;
 		}
-		sirContainerResult_t eResult = m_bytes.tryResizeForOverwrite( nBytes + 1 );
+		if ( nBytes + 1 > m_nCapacity ) {
+			uint32_t nGrowth = 0;
+			sirContainerResult_t eResult = SIRVectorStorage::calculateGrowth( m_nCapacity, nBytes + 1, &nGrowth );
+			if ( eResult != SIR_CONTAINER_OK ) {
+				return eResult;
+			}
+			eResult = tryReserveBytes( nGrowth );
+			if ( eResult != SIR_CONTAINER_OK ) {
+				return eResult;
+			}
+		}
+		if ( nBytes != 0 ) {
+			if ( bAliased ) {
+				memmove( data(), data() + iSource, nBytes );
+			} else {
+				memcpy( data(), pBytes, nBytes );
+			}
+		}
+		m_nLength = nBytes;
+		if ( isInline() && nBytes < INLINE_CAPACITY ) {
+			m_szInline[nBytes] = '\0';
+		} else if ( !isInline() ) {
+			m_pHeap[nBytes] = '\0';
+		} else {
+			return SIR_CONTAINER_SIZE_OVERFLOW;
+		}
+		return SIR_CONTAINER_OK;
+	}
+
+	sirContainerResult_t tryShrinkToFit( void )
+	{
+		if ( isInline() || m_nCapacity == m_nLength + 1 ) {
+			return SIR_CONTAINER_OK;
+		}
+		if ( m_nLength + 1 <= INLINE_CAPACITY ) {
+			char *pOld = m_pHeap;
+			uint32_t nOldCapacity = m_nCapacity;
+			memcpy( m_szInline, pOld, m_nLength + 1 );
+			SIRRawStorage::deallocate( m_pAllocator, pOld, nOldCapacity, alignof( char ) );
+			m_nCapacity = INLINE_CAPACITY;
+			return SIR_CONTAINER_OK;
+		}
+		void *pMemory = nullptr;
+		sirContainerResult_t eResult = SIRRawStorage::tryAllocate( m_pAllocator, m_nLength + 1, alignof( char ), &pMemory );
 		if ( eResult != SIR_CONTAINER_OK ) {
 			return eResult;
 		}
-		if ( bAliased ) {
-			pBytes = m_bytes.data() + iSource;
-		}
-		if ( nBytes != 0 ) {
-			memmove( m_bytes.data(), pBytes, nBytes );
-		}
-		m_bytes.data()[nBytes] = '\0';
+		memcpy( pMemory, m_pHeap, m_nLength + 1 );
+		SIRRawStorage::deallocate( m_pAllocator, m_pHeap, m_nCapacity, alignof( char ) );
+		m_pHeap = ( char * )pMemory;
+		m_nCapacity = m_nLength + 1;
 		return SIR_CONTAINER_OK;
 	}
 
 	void clear( void ) noexcept
 	{
-		m_bytes.clear();
-		m_bytes.tryEmplaceBack( '\0' );
+		m_nLength = 0;
+		data()[0] = '\0';
 	}
 };
 

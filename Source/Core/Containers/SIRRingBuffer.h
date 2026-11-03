@@ -53,8 +53,7 @@ public:
 	}
 	~SIRRingBuffer( void ) noexcept
 	{
-		clear();
-		SIRRawStorage::deallocate( m_pAllocator, m_pData, ( size_t )m_nCapacity * sizeof( T ), alignof( T ) );
+		clearAndRelease();
 	}
 	SIRRingBuffer( const SIRRingBuffer & ) = delete;
 	SIRRingBuffer &operator=( const SIRRingBuffer & ) = delete;
@@ -188,6 +187,14 @@ public:
 			tryPopFront();
 		}
 		m_iHead = 0;
+	}
+
+	void clearAndRelease( void ) noexcept
+	{
+		clear();
+		SIRRawStorage::deallocate( m_pAllocator, m_pData, ( size_t )m_nCapacity * sizeof( T ), alignof( T ) );
+		m_pData = nullptr;
+		m_nCapacity = 0;
 	}
 
 	sirContainerFootprint_t getFootprint( void ) const noexcept

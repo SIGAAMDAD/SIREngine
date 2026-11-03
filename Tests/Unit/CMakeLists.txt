@@ -72,3 +72,8 @@ add_executable(SIRContainerOptimizationTests SIRContainerOptimizationTests.cpp)
 target_link_libraries(SIRContainerOptimizationTests PRIVATE SIR::Core)
 add_test(NAME core.containers.optimization COMMAND SIRContainerOptimizationTests)
 sir_configure_owned_target(SIRContainerOptimizationTests)
+
+add_executable(SIRContainerMemoryTests SIRContainerMemoryTests.cpp)
+target_link_libraries(SIRContainerMemoryTests PRIVATE SIR::Core)
+add_test(NAME core.containers.memory COMMAND SIRContainerMemoryTests)
+sir_configure_owned_target(SIRContainerMemoryTests)

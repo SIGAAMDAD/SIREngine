@@ -70,6 +70,10 @@ public:
 	{
 		return m_elements.tryPopBack();
 	}
+	sirContainerResult_t tryShrinkToFit( void )
+	{
+		return m_elements.tryShrinkToFit();
+	}
 	void clear( void ) noexcept
 	{
 		m_elements.clear();
