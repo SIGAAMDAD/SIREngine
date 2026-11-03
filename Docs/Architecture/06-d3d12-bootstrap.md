@@ -63,3 +63,12 @@ The Windows-only bootstrap owns a D3D12 COMPUTE command queue, fence and event s
 A native `sirD3D12CompletionSet_t` records one device generation plus the latest submitted graphics, compute and copy fence values. `snapshotCompletionSet` captures the state and `pollCompletionSet` checks completion against all three independently owned native fences. Submissions from a prior initialized device cannot satisfy a new generation. A requested future fence is rejected.
 
 Tests exercise overlapping COPY/COMPUTE marker submissions, exact completion snapshots, 64 reusable compute submissions, invalid completion values and stale generations after shutdown/reinitialize. This is still a backend-local completion API; later GRDG/FrameGraph integration will own the renderer-neutral completion contract and GPU-side cross-queue ordering.
+
+
+## GPU-side COPY to COMPUTE fence dependency
+
+The native D3D12 driver can now submit a COMPUTE-queue marker with a GPU-side dependency on an active COPY transfer. `SIRD3D12Transfers::queryDependency` validates the live serial/slot ticket, returns its submitted COPY fence value and borrows the native fence for immediate use. `SIRD3D12Device::submitComputeAfterCopy` passes that fence to `SIRD3D12ComputeQueue::submitMarkerAfterFence`, which enqueues `ID3D12CommandQueue::Wait` before the compute submission. The CPU does not wait during submission.
+
+The COMPUTE queue retains a COM reference to its dependency fence until its own marker completes. Failed signal or unprovable completion deliberately preserves queued objects and the retained dependency fence. Device shutdown drains the COMPUTE queue before releasing the COPY queue, so a COPY fence cannot be retired while a COMPUTE wait still uses it.
+
+WARP regression coverage executes 48 distinct COPY -> COMPUTE dependency chains with variable payload sizes and readback comparisons. Invalid/forged and retired transfer tickets are rejected; each COMPUTE completion is checked against the COPY fence in the recorded completion set. This establishes native GPU-side ordering but does not dispatch shaders or integrate GRDG resource lifetime ownership.

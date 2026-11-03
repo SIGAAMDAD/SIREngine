@@ -195,6 +195,30 @@ bool SIRD3D12Transfers::getCompletedFence( uint64_t *pCompletedFence ) const noe
 	return *pCompletedFence != UINT64_MAX;
 }
 
+bool SIRD3D12Transfers::queryDependency( sirD3D12TransferTicket_t ticket, ID3D12Fence **ppFence,
+	                                           uint64_t *pFenceValue ) const noexcept
+{
+	if ( ppFence == nullptr || pFenceValue == nullptr ) {
+		return false;
+	}
+	*ppFence = nullptr;
+	*pFenceValue = 0;
+
+	if ( !isReady() || ticket.nSerial == 0 || ticket.iSlot >= s_nSlotCount ) {
+		return false;
+	}
+
+	const sirD3D12TransferSlot_t *pSlot = &m_szSlots[ticket.iSlot];
+	if ( !pSlot->bOccupied || pSlot->nSerial != ticket.nSerial || pSlot->nFence == 0 ||
+	     pSlot->nFence > m_nLastSubmittedFence ) {
+		return false;
+	}
+
+	*ppFence = m_pFence.Get();
+	*pFenceValue = pSlot->nFence;
+	return true;
+}
+
 HRESULT SIRD3D12Transfers::getLastError( void ) const noexcept
 {
 	return m_nLastError;

@@ -71,6 +71,7 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12Fence> m_pFence;
 	Microsoft::WRL::ComPtr<ID3D12CommandAllocator> m_pAllocator;
 	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> m_pCommands;
+	Microsoft::WRL::ComPtr<ID3D12Fence> m_pPendingDependencyFence;
 	HANDLE m_hEvent = nullptr;
 	uint64_t m_nNextFence = 1;
 	uint64_t m_nSubmittedFence = 0;
@@ -87,6 +88,7 @@ public:
 	bool shutdown( void ) noexcept;
 	bool isReady( void ) const noexcept;
 	bool submitMarker( uint64_t *pFenceValue ) noexcept;
+	bool submitMarkerAfterFence( ID3D12Fence *pDependencyFence, uint64_t nDependencyFence, uint64_t *pFenceValue ) noexcept;
 	bool pollFence( uint64_t nFence, bool *pCompleted ) const noexcept;
 	bool waitForFence( uint64_t nFence, uint32_t nTimeoutMs ) noexcept;
 	bool getCompletedFence( uint64_t *pCompletedFence ) const noexcept;
@@ -140,6 +142,7 @@ public:
 	bool snapshotCompletionSet( sirD3D12CompletionSet_t *pSet ) const noexcept;
 	bool pollCompletionSet( const sirD3D12CompletionSet_t &set, bool *pCompleted ) noexcept;
 	bool submitComputeMarker( sirD3D12CompletionSet_t *pSet ) noexcept;
+	bool submitComputeAfterCopy( sirD3D12TransferTicket_t ticket, sirD3D12CompletionSet_t *pSet ) noexcept;
 
 	// Synchronous diagnostic fixture only; production transfers will use pooled,
 	// asynchronous allocations and queue-completion tokens.

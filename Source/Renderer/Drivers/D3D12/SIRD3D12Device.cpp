@@ -81,6 +81,7 @@ bool SIRD3D12ComputeQueue::shutdown( void ) noexcept
 		bSafe = waitForFence( m_nSubmittedFence, 15000 );
 	}
 	if ( bSafe ) {
+		m_pPendingDependencyFence.Reset();
 		m_pCommands.Reset();
 		m_pAllocator.Reset();
 		m_pFence.Reset();
@@ -90,6 +91,7 @@ bool SIRD3D12ComputeQueue::shutdown( void ) noexcept
 		}
 	} else {
 		// Native references are retained when GPU completion cannot be proved.
+		( void )m_pPendingDependencyFence.Detach();
 		( void )m_pCommands.Detach();
 		( void )m_pAllocator.Detach();
 		( void )m_pFence.Detach();
@@ -174,16 +176,28 @@ bool SIRD3D12ComputeQueue::waitForFence( uint64_t nFence, uint32_t nTimeoutMs ) 
 
 bool SIRD3D12ComputeQueue::submitMarker( uint64_t *pFenceValue ) noexcept
 {
+	return submitMarkerAfterFence( nullptr, 0, pFenceValue );
+}
+
+bool SIRD3D12ComputeQueue::submitMarkerAfterFence( ID3D12Fence *pDependencyFence, uint64_t nDependencyFence,
+                                                   uint64_t *pFenceValue ) noexcept
+{
 	if ( pFenceValue == nullptr ) {
 		m_nLastError = E_POINTER;
 		return false;
 	}
 	*pFenceValue = 0;
-	bool bCompleted = false;
+
+	if ( ( pDependencyFence == nullptr ) != ( nDependencyFence == 0 ) ) {
+		m_nLastError = E_INVALIDARG;
+		return false;
+	}
 	if ( !isReady() || m_nNextFence == UINT64_MAX ) {
 		m_nLastError = E_FAIL;
 		return false;
 	}
+
+	bool bCompleted = false;
 	if ( !pollFence( m_nSubmittedFence, &bCompleted ) ) {
 		m_nLastError = DXGI_ERROR_DEVICE_REMOVED;
 		return false;
@@ -192,6 +206,9 @@ bool SIRD3D12ComputeQueue::submitMarker( uint64_t *pFenceValue ) noexcept
 		m_nLastError = HRESULT_FROM_WIN32( ERROR_BUSY );
 		return false;
 	}
+
+	// The previous queue marker is retired; its external fence can be freed.
+	m_pPendingDependencyFence.Reset();
 	m_nLastError = m_pAllocator->Reset();
 	if ( FAILED( m_nLastError ) ) {
 		return false;
@@ -204,6 +221,18 @@ bool SIRD3D12ComputeQueue::submitMarker( uint64_t *pFenceValue ) noexcept
 	if ( FAILED( m_nLastError ) ) {
 		return false;
 	}
+
+	if ( pDependencyFence != nullptr ) {
+		// Retain the external fence until this compute marker has retired,
+		// including when its COPY queue owner shuts down independently.
+		m_pPendingDependencyFence = pDependencyFence;
+		m_nLastError = m_pQueue->Wait( m_pPendingDependencyFence.Get(), nDependencyFence );
+		if ( FAILED( m_nLastError ) ) {
+			m_pPendingDependencyFence.Reset();
+			return false;
+		}
+	}
+
 	ID3D12CommandList *pLists[] = { m_pCommands.Get() };
 	m_pQueue->ExecuteCommandLists( 1, pLists );
 	m_nLastError = m_pQueue->Signal( m_pFence.Get(), m_nNextFence );
@@ -408,8 +437,9 @@ void SIRD3D12Device::releasePendingCopy( void ) noexcept
 void SIRD3D12Device::shutdown( void ) noexcept
 {
 	const bool bCopySafe = waitForPendingCopy();
-	const bool bTransferSafe = m_Transfers.shutdown();
+	// Compute markers may wait on COPY fences: retire COMPUTE before COPY.
 	const bool bComputeSafe = m_ComputeQueue.shutdown();
+	const bool bTransferSafe = m_Transfers.shutdown();
 	if ( bCopySafe && bTransferSafe && bComputeSafe ) {
 		releasePendingCopy();
 		m_pCopyCommands.Reset();
@@ -558,6 +588,35 @@ bool SIRD3D12Device::submitComputeMarker( sirD3D12CompletionSet_t *pSet ) noexce
 		return false;
 	}
 	return snapshotCompletionSet( pSet ) && pSet->nComputeFence == nSubmittedFence;
+}
+
+bool SIRD3D12Device::submitComputeAfterCopy( sirD3D12TransferTicket_t ticket, sirD3D12CompletionSet_t *pSet ) noexcept
+{
+	if ( pSet == nullptr || !isReady() ) {
+		m_nLastError = E_INVALIDARG;
+		return false;
+	}
+	*pSet = {};
+
+	ID3D12Fence *pCopyFence = nullptr;
+	uint64_t nCopyFence = 0;
+	if ( !m_Transfers.queryDependency( ticket, &pCopyFence, &nCopyFence ) ) {
+		m_nLastError = E_INVALIDARG;
+		return false;
+	}
+
+	uint64_t nComputeFence = 0;
+	if ( !m_ComputeQueue.submitMarkerAfterFence( pCopyFence, nCopyFence, &nComputeFence ) ) {
+		m_nLastError = m_ComputeQueue.getLastError();
+		return false;
+	}
+
+	if ( !snapshotCompletionSet( pSet ) || pSet->nCopyFence < nCopyFence || pSet->nComputeFence != nComputeFence ) {
+		m_nLastError = E_FAIL;
+		return false;
+	}
+	m_nLastError = S_OK;
+	return true;
 }
 
 bool SIRD3D12Device::copyRoundTripForTest( const void *pInput, void *pOutput, uint64_t nBytes ) noexcept

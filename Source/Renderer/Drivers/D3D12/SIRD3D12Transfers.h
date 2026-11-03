@@ -91,6 +91,8 @@ public:
 	uint64_t getCompletedCopyCount( void ) const noexcept;
 	uint64_t getLastSubmittedFence( void ) const noexcept;
 	bool getCompletedFence( uint64_t *pCompletedFence ) const noexcept;
+	// Borrowed native fence is valid for immediate use only; the receiver must AddRef.
+	bool queryDependency( sirD3D12TransferTicket_t ticket, ID3D12Fence **ppFence, uint64_t *pFenceValue ) const noexcept;
 	HRESULT getLastError( void ) const noexcept;
 
 	bool submit( const void *pSource, uint64_t nBytes, sirD3D12TransferTicket_t *pTicket ) noexcept;

@@ -151,6 +151,58 @@ static bool testComputeAndCompletions( SIRD3D12Device &device, sirD3D12Completio
 	return true;
 }
 
+static bool testCopyToComputeGpuWait( SIRD3D12Device &device )
+{
+	SIRD3D12Transfers &transfers = device.getTransfers();
+	SIRD3D12ComputeQueue &compute = device.getComputeQueue();
+
+	for ( uint32_t iCycle = 0; iCycle < 48; ++iCycle ) {
+		uint32_t szInput[256] = {};
+		uint32_t szOutput[256] = {};
+		for ( uint32_t iWord = 0; iWord < 256; ++iWord ) {
+			szInput[iWord] = ( iCycle + 1 ) * 0x9e3779b9U ^ ( iWord * 313U );
+		}
+
+		const uint64_t nBytes = ( iCycle % 2 == 0 ) ? 128 : sizeof( szInput );
+		sirD3D12TransferTicket_t ticket = {};
+		if ( !transfers.submit( szInput, nBytes, &ticket ) ) {
+			return false;
+		}
+
+		sirD3D12TransferTicket_t forged = ticket;
+		++forged.nSerial;
+		sirD3D12CompletionSet_t completed = {};
+		if ( device.submitComputeAfterCopy( forged, &completed ) ||
+		     device.submitComputeAfterCopy( ticket, nullptr ) ) {
+			return false;
+		}
+		if ( !device.submitComputeAfterCopy( ticket, &completed ) || completed.nComputeFence == 0 ||
+		     completed.nCopyFence == 0 || completed.nDeviceGeneration == 0 ) {
+			return false;
+		}
+
+		// A COMPUTE fence completion after the GPU-side wait proves that
+		// the COPY queue reached the dependency's recorded signal.
+		if ( !compute.waitForFence( completed.nComputeFence, 15000 ) ) {
+			return false;
+		}
+		bool bCopyDone = false;
+		bool bAllDone = false;
+		if ( !transfers.poll( ticket, &bCopyDone ) || !bCopyDone ||
+		     !device.pollCompletionSet( completed, &bAllDone ) || !bAllDone ) {
+			return false;
+		}
+		if ( !transfers.receive( ticket, szOutput, sizeof( szOutput ) ) ||
+		     memcmp( szInput, szOutput, ( size_t )nBytes ) != 0 ) {
+			return false;
+		}
+		if ( device.submitComputeAfterCopy( ticket, &completed ) ) {
+			return false;
+		}
+	}
+	return true;
+}
+
 int main( void )
 {
 	SIRD3D12Device device;
@@ -207,6 +259,11 @@ int main( void )
 
 	if ( !testAsyncCopyQueue( device ) ) {
 		fputs( "D3D12 asynchronous copy queue failed\n", stderr );
+		return 1;
+	}
+
+	if ( !testCopyToComputeGpuWait( device ) ) {
+		fputs( "D3D12 GPU-side COPY to COMPUTE wait failed\n", stderr );
 		return 1;
 	}
 
