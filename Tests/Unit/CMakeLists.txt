@@ -17,3 +17,10 @@ if(SIR_WITH_GOOGLETEST)
     add_test(NAME core.application.googletest COMMAND SIRGoogleTests)
     sir_configure_owned_target(SIRGoogleTests)
 endif()
+
+# Validate the standalone CMake profiler comparison without vendor libraries.
+add_test(NAME profiling.benchmark-comparison
+    COMMAND "${CMAKE_COMMAND}"
+        "-DSIR_ROOT=${PROJECT_SOURCE_DIR}"
+        "-DSIR_TEST_ROOT=${PROJECT_BINARY_DIR}/RegressionSmoke"
+        -P "${PROJECT_SOURCE_DIR}/Tests/Benchmarks/GoogleBenchmarkCompareTests.cmake")

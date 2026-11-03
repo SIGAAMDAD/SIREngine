@@ -16,7 +16,7 @@ set(sirRequired
     Build/Scripts/NightlyBuild.sh
     Build/Scripts/RunGoogleBenchmarks.sh Build/CMake/GoogleBenchmarkCompare.cmake
     Tests/Unit/GoogleApplicationTests.cpp Tests/Benchmarks/CMakeLists.txt
-    Tests/Benchmarks/CoreBenchmarks.cpp
+    Tests/Benchmarks/CoreBenchmarks.cpp Tests/Benchmarks/GoogleBenchmarkCompareTests.cmake
     Source/CMakeLists.txt Source/Core/CMakeLists.txt
     Source/Core/SIRApplication.h Source/Core/SIRApplication.cpp Source/Main.cpp
     .github/workflows/ci.yml .github/workflows/nightly.yml

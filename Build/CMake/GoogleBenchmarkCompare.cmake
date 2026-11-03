@@ -11,7 +11,7 @@ string(APPEND sirSummary "The CPU-time results use Google Benchmark's median of 
 string(APPEND sirSummary "| Configuration | Benchmark | CPU time | Previous CPU time | Unit |\n| --- | --- | ---: | ---: | --- |\n")
 set(sirCompared 0)
 foreach(sirFile IN LISTS sirCurrent)
-    get_filename_component(sirLabel "${sirFile}" NAME_WE)
+    get_filename_component(sirLabel "${sirFile}" NAME_WLE)
     file(READ "${sirFile}" sirNewJson)
     string(JSON sirNewLength ERROR_VARIABLE sirJsonError LENGTH "${sirNewJson}" benchmarks)
     if(sirJsonError)
