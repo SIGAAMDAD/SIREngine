@@ -828,7 +828,6 @@ static void testReaderEpochSlotExhaustion( void )
 	REQUIRE( alloc.m_nOutstanding.load() == 0 );
 }
 
-
 static void testDeterministicDependencyOrderCompilation( void )
 {
 	SIRTestAllocatorStats alloc = {};
@@ -844,13 +843,13 @@ static void testDeterministicDependencyOrderCompilation( void )
 		REQUIRE( pWriter->publish( pub, &handles[1] ) == SIR_RESOURCE_RESULT_SUCCESS );
 
 		SIRResourceDependency edgesC[2] = { { key( 1 ), SIR_RESOURCE_EDGE_KIND_REQUIRED, {} },
-		                                   { key( 2 ), SIR_RESOURCE_EDGE_KIND_REQUIRED, {} } };
+		                                    { key( 2 ), SIR_RESOURCE_EDGE_KIND_REQUIRED, {} } };
 		pub.m_Key = key( 3 );
 		pub.m_pDependencies = edgesC;
 		pub.m_nDependencyCount = 2;
 		REQUIRE( pWriter->publish( pub, &handles[2] ) == SIR_RESOURCE_RESULT_SUCCESS );
 		SIRResourceDependency edgesD[2] = { { key( 3 ), SIR_RESOURCE_EDGE_KIND_REQUIRED, {} },
-		                                   { key( 2 ), SIR_RESOURCE_EDGE_KIND_REQUIRED, {} } };
+		                                    { key( 2 ), SIR_RESOURCE_EDGE_KIND_REQUIRED, {} } };
 		pub.m_Key = key( 4 );
 		pub.m_pDependencies = edgesD;
 		REQUIRE( pWriter->publish( pub, &handles[3] ) == SIR_RESOURCE_RESULT_SUCCESS );
@@ -861,7 +860,7 @@ static void testDeterministicDependencyOrderCompilation( void )
 		pub.m_nDependencyCount = 1;
 		REQUIRE( pWriter->publish( pub, &handles[4] ) == SIR_RESOURCE_RESULT_SUCCESS );
 		SIRResourceDependency edgesF[2] = { { key( 4 ), SIR_RESOURCE_EDGE_KIND_REQUIRED, {} },
-		                                   { key( 5 ), SIR_RESOURCE_EDGE_KIND_STREAMED, {} } };
+		                                    { key( 5 ), SIR_RESOURCE_EDGE_KIND_STREAMED, {} } };
 		pub.m_Key = key( 6 );
 		pub.m_pDependencies = edgesF;
 		pub.m_nDependencyCount = 2;

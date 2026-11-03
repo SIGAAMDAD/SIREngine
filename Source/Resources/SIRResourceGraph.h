@@ -161,8 +161,8 @@ public:
 	// Compile a dependency-first order from existing resource records, without
 	// recursion or runtime allocations. A zero capacity queries required count;
 	// insufficient output capacity leaves the caller's array untouched.
-	SIRResourceResult compileDependencyOrder( SIRResourceHandle hRoot, SIRResourceDependencyPlanEntry *pEntries,
-	                                          uint32_t nCapacity, uint32_t *pRequired ) noexcept;
+	SIRResourceResult compileDependencyOrder( SIRResourceHandle hRoot, SIRResourceDependencyPlanEntry *pEntries, uint32_t nCapacity,
+	                                          uint32_t *pRequired ) noexcept;
 	// Poll retained change events in sequence order. Overflow means the caller
 	// must rebuild dependency state and resume at the reported latest cursor.
 	SIRResourceResult pollInvalidations( uint64_t nAfterSequence, SIRResourceInvalidationEvent *pEvents, uint32_t nCapacity,
