@@ -37,6 +37,10 @@ private:
 	bool m_bFailNextPlay = false;
 	bool m_bFailNextStop = false;
 	uint64_t m_nSubmitted = 0;
+	uint32_t m_nSpatialUpdates = 0;
+	sirAudioAttributes_t m_LastAttributes = {};
+	sirAudioCommandType_t m_eLastSpatialType = SIR_AUDIO_COMMAND_PLAY;
+	bool m_bFailNextRelease = false;
 
 	static sirAudioResult_t initializeCallback( void *pContext, const sirAudioBackendConfig_t *pConfig ) noexcept;
 	static void shutdownCallback( void *pContext ) noexcept;
@@ -44,6 +48,8 @@ private:
 	static uint32_t drainCallback( void *pContext, sirAudioCompletion_t *pOutput, uint32_t nCapacity ) noexcept;
 	static void updateCallback( void *pContext ) noexcept;
 	static uint64_t capabilitiesCallback( const void *pContext ) noexcept;
+	static sirAudioResult_t submitSpatialCallback( void *pContext, const sirAudioCommand_t *pCommand,
+	                                               const sirAudioAttributes_t *pAttributes ) noexcept;
 
 public:
 	explicit SIRAudioMockBackend( const sirContainerAllocator_t *pAllocator ) noexcept;
@@ -52,6 +58,10 @@ public:
 	void failNextStop( void ) noexcept;
 	bool injectCompletion( const sirAudioCompletion_t &completion ) noexcept;
 	uint64_t getSubmittedCount( void ) const noexcept;
+	uint32_t getSpatialUpdateCount( void ) const noexcept;
+	sirAudioCommandType_t getLastSpatialType( void ) const noexcept;
+	sirAudioAttributes_t getLastAttributes( void ) const noexcept;
+	void failNextRelease( void ) noexcept;
 };
 
 #endif // __SIRENGINE_SIRAUDIOMOCKBACKEND_H__
