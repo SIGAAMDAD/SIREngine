@@ -1,0 +1,7 @@
+# Never commit the licensed Steamworks SDK or generated outputs here.
+SDK/
+sdk/
+*.dll
+*.so
+*.dylib
+*.lib

@@ -36,3 +36,20 @@ The selected licensed SDKs are installed outside Git. Pin a validated version in
 ## CI
 
 Normal push/PR builds compile the minimal SIREngine foundation without requiring large optional libraries or licensed SDKs. Dependency-enabled configurations are checked separately; source availability, configuration, compilation and runtime acceptance are distinct gates. Keep compiler caches scoped to platform, toolchain, build profile and dependency revision.
+
+## Additional pinned third-party source imports
+
+The [`ThirdParty/IMPORT_LOCK.json`](../ThirdParty/IMPORT_LOCK.json) manifest records **44 new pinned source gitlinks** and their verified upstream commit SHAs. `.gitmodules` registers the corresponding fetch URLs. These are source acquisitions only: there are **no new always-on CMake targets**, successful vendor builds, runtime adapters, or performance claims in this change.
+
+```sh
+git submodule update --init --recursive
+```
+
+### Version policy
+
+- `fastgltf` is locked to tag `v0.9.1` (requested 0.9 series).
+- `libpng` is locked to a `libpng16` branch snapshot.
+- All other new sources are locked to verified upstream branch-head SHAs at import, **not** floating branches.
+- Steamworks is obtained separately through Valve and is not vendored.
+- OpenGL and Vulkan function loading remain engine-owned: do not add GLAD or volk.
+- Shipping any enabled dependency requires its own build/link/runtime and licensing acceptance, including transitive codec libraries or SDK components.
