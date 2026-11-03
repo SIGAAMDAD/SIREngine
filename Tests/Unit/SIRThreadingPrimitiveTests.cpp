@@ -14,7 +14,6 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-
 #include <Core/Platform/SIRAtomic.h>
 #include <Core/Platform/SIRScopedLock.h>
 #include <Core/Platform/SIRSync.h>
