@@ -104,3 +104,8 @@ add_executable(SIRTaskProviderTests SIRTaskProviderTests.cpp)
 target_link_libraries(SIRTaskProviderTests PRIVATE SIR::Core)
 add_test(NAME core.jobs.provider COMMAND SIRTaskProviderTests)
 sir_configure_owned_target(SIRTaskProviderTests)
+
+add_executable(SIRTaskFenceTrackerTests SIRTaskFenceTrackerTests.cpp)
+target_link_libraries(SIRTaskFenceTrackerTests PRIVATE SIR::Core)
+add_test(NAME core.jobs.fences COMMAND SIRTaskFenceTrackerTests)
+sir_configure_owned_target(SIRTaskFenceTrackerTests)
