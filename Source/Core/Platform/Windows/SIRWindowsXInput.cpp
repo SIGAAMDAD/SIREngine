@@ -174,3 +174,21 @@ void SIRWindowsXInput::shutdown( void ) noexcept
 	m_pLibrary = nullptr;
 	m_pGetState = m_pSetState = nullptr;
 }
+
+bool SIRWindowsXInput::ownsDevice( sirInputDeviceHandle_t hDevice ) const noexcept
+{
+	for ( uint32_t i = 0; i < 4; ++i ) {
+		const sirXInputSlot_t &slot = m_Devices[i];
+		if ( slot.bActive && slot.hDevice.nSlot == hDevice.nSlot && slot.hDevice.nGeneration == hDevice.nGeneration ) {
+			return true;
+		}
+	}
+	return false;
+}
+
+bool SIRWindowsXInput::setVibration( sirInputDeviceHandle_t hDevice, uint16_t nStrong, uint16_t nWeak, uint16_t nDurationMs ) noexcept
+{
+	// XInput cannot guarantee finite effect expiration; require the caller to
+	// issue an explicit zero-motor stop rather than inventing a timer here.
+	return nDurationMs == 0 && setVibration( hDevice, nStrong, nWeak );
+}

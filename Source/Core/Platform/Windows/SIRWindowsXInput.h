@@ -19,10 +19,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <SIRPCH.hpp>
 
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
-	#pragma once
+#pragma once
 #endif
 
-#include <Core/Platform/SIRInput.h>
+#include <Core/Platform/SIRInputBackend.h>
 
 typedef struct sirXInputSlot_s
 {
@@ -33,9 +33,19 @@ typedef struct sirXInputSlot_s
 
 // Compatibility backend for XInput controllers. A future GameInput/HID owner
 // must arbitrate physical devices before enabling both sources.
-class SIRWindowsXInput
+class SIRWindowsXInput : public SIRInputBackend
 {
 public:
+	sirInputBackendKind_t getBackendKind( void ) const noexcept override
+	{
+		return SIR_INPUT_BACKEND_WINDOWS_XINPUT;
+	}
+	uint32_t pump( void ) noexcept override
+	{
+		return poll();
+	}
+	bool ownsDevice( sirInputDeviceHandle_t hDevice ) const noexcept override;
+	bool setVibration( sirInputDeviceHandle_t hDevice, uint16_t nStrong, uint16_t nWeak, uint16_t nDurationMs ) noexcept override;
 	explicit SIRWindowsXInput( SIRInputSystem &input ) noexcept;
 	SIRWindowsXInput( const SIRWindowsXInput & ) = delete;
 	SIRWindowsXInput &operator=( const SIRWindowsXInput & ) = delete;
@@ -44,7 +54,7 @@ public:
 	bool initialize( void ) noexcept;
 	uint32_t poll( void ) noexcept;
 	bool setVibration( sirInputDeviceHandle_t hDevice, uint16_t nLeftMotor, uint16_t nRightMotor ) noexcept;
-	void shutdown( void ) noexcept;
+	void shutdown( void ) noexcept override;
 
 private:
 	SIRInputSystem &m_Input;

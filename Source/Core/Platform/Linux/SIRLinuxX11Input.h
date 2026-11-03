@@ -19,18 +19,27 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <SIRPCH.hpp>
 
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
-	#pragma once
+#pragma once
 #endif
 
-#include <Core/Platform/SIRInput.h>
+#include <Core/Platform/SIRInputBackend.h>
 #include <X11/Xlib.h>
 
 // The window owner pumps XEvents and routes them to this adapter. It also
 // selects requiredEventMask() on its window; this class never owns Display.
 // Core X11 motion is accelerated; XI2 raw/relative motion is a later backend.
-class SIRLinuxX11Input
+class SIRLinuxX11Input : public SIRInputBackend
 {
 public:
+	sirInputBackendKind_t getBackendKind( void ) const noexcept override
+	{
+		return SIR_INPUT_BACKEND_LINUX_X11;
+	}
+	uint32_t pump( void ) noexcept override
+	{
+		return 0;
+	} // Owner's X11 event loop calls handleEvent().
+	bool ownsDevice( sirInputDeviceHandle_t hDevice ) const noexcept override;
 	explicit SIRLinuxX11Input( SIRInputSystem &input ) noexcept;
 	SIRLinuxX11Input( const SIRLinuxX11Input & ) = delete;
 	SIRLinuxX11Input &operator=( const SIRLinuxX11Input & ) = delete;
@@ -42,7 +51,7 @@ public:
 	static bool enableDetectableAutoRepeat( Display *pDisplay ) noexcept;
 	bool bind( Window hWindow, uint64_t nKeyboardNativeId, uint64_t nMouseNativeId ) noexcept;
 	bool handleEvent( const XEvent &event ) noexcept;
-	void shutdown( void ) noexcept;
+	void shutdown( void ) noexcept override;
 
 private:
 	bool loseFocus( void ) noexcept;

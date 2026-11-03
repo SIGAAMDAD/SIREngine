@@ -164,6 +164,8 @@ public:
 	// changing the published frame. All methods remain owner-thread-only.
 	bool publishTick( uint64_t nTick ) noexcept;
 	bool getPublishedState( sirInputDeviceHandle_t hDevice, sirInputDeviceState_t *pState ) const noexcept;
+	uint32_t copyPublishedEvents( sirInputEvent_t *pOutput, uint32_t nCapacity ) const noexcept;
+	uint32_t getPublishedEventCount( void ) const noexcept;
 	uint64_t getPublishedTick( void ) const noexcept;
 	bool isOverflowed( void ) const noexcept;
 	bool resynchronizeDevice( sirInputDeviceHandle_t hDevice ) noexcept;
@@ -189,6 +191,8 @@ private:
 	// Fixed storage; no allocation or pointer lifetime crosses a tick boundary.
 	// Slots retain the generation they had at publication, even after removal.
 	sirInputDeviceSlot_t m_Published[SIR_INPUT_MAX_DEVICES];
+	sirInputEvent_t m_PublishedEvents[SIR_INPUT_MAX_EVENTS];
+	uint32_t m_nPublishedEventCount;
 	uint64_t m_nPublishedTick;
 	bool m_bHasPublished;
 };

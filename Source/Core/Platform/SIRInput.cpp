@@ -19,7 +19,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 SIRInputSystem::SIRInputSystem( void ) noexcept
     : m_Devices{}, m_Events{}, m_nSequence( 0 ), m_nRead( 0 ), m_nWrite( 0 ), m_nCount( 0 ), m_nActiveDevices( 0 ), m_bOverflowed( false ),
-      m_Published{}, m_nPublishedTick( 0 ), m_bHasPublished( false )
+      m_Published{}, m_PublishedEvents{}, m_nPublishedEventCount( 0 ), m_nPublishedTick( 0 ), m_bHasPublished( false )
 {
 	for ( uint32_t i = 0; i < SIR_INPUT_MAX_DEVICES; ++i ) {
 		m_Devices[i].nGeneration = 1;
@@ -322,6 +322,14 @@ bool SIRInputSystem::publishTick( uint64_t nTick ) noexcept
 	// while the input owner prepares the next live state. Never publish
 	// native handles or references to mutable state.
 	memcpy( m_Published, m_Devices, sizeof( m_Devices ) );
+	// Consume only the current tick's ordered event stream; later publication
+	// cannot replay events and consumers cannot mutate the stable batch.
+	m_nPublishedEventCount = 0;
+	while ( m_nCount != 0 ) {
+		m_PublishedEvents[m_nPublishedEventCount++] = m_Events[m_nRead];
+		m_nRead = ( m_nRead + 1 ) % SIR_INPUT_MAX_EVENTS;
+		--m_nCount;
+	}
 	m_nPublishedTick = nTick;
 	m_bHasPublished = true;
 	return true;
@@ -338,6 +346,24 @@ bool SIRInputSystem::getPublishedState( sirInputDeviceHandle_t hDevice, sirInput
 	}
 	*pState = slot.state;
 	return true;
+}
+
+uint32_t SIRInputSystem::copyPublishedEvents( sirInputEvent_t *pOutput, uint32_t nCapacity ) const noexcept
+{
+	if ( !m_bHasPublished ) {
+		return 0;
+	}
+	if ( pOutput == nullptr || nCapacity == 0 ) {
+		return m_nPublishedEventCount;
+	}
+	const uint32_t nWritten = nCapacity < m_nPublishedEventCount ? nCapacity : m_nPublishedEventCount;
+	memcpy( pOutput, m_PublishedEvents, ( size_t )nWritten * sizeof( sirInputEvent_t ) );
+	return nWritten;
+}
+
+uint32_t SIRInputSystem::getPublishedEventCount( void ) const noexcept
+{
+	return m_bHasPublished ? m_nPublishedEventCount : 0;
 }
 
 uint64_t SIRInputSystem::getPublishedTick( void ) const noexcept
@@ -435,4 +461,5 @@ void SIRInputSystem::shutdown( void ) noexcept
 	m_bOverflowed = false;
 	m_bHasPublished = false;
 	m_nPublishedTick = 0;
+	m_nPublishedEventCount = 0;
 }

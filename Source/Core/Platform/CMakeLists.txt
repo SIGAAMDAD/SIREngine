@@ -7,6 +7,8 @@ set(SIR_CORE_PLATFORM_COMMON
     SIRSync.cpp
     SIRAtomic.cpp
     SIRInput.cpp
+    SIRInputBackend.cpp
+    SIRInputCoordinator.cpp
     SIRInputControllerProfiles.cpp
 )
 

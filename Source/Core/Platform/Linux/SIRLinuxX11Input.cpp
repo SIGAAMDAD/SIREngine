@@ -182,3 +182,9 @@ void SIRLinuxX11Input::shutdown( void ) noexcept
 	m_bFocused = false;
 	m_bHavePointerPosition = false;
 }
+
+bool SIRLinuxX11Input::ownsDevice( sirInputDeviceHandle_t hDevice ) const noexcept
+{
+	return m_bAttached && ( ( hDevice.nSlot == m_hKeyboard.nSlot && hDevice.nGeneration == m_hKeyboard.nGeneration ) ||
+	                        ( hDevice.nSlot == m_hMouse.nSlot && hDevice.nGeneration == m_hMouse.nGeneration ) );
+}

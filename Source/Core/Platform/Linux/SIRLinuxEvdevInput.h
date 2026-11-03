@@ -19,10 +19,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <SIRPCH.hpp>
 
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
-	#pragma once
+#pragma once
 #endif
 
-#include <Core/Platform/SIRInput.h>
+#include <Core/Platform/SIRInputBackend.h>
 #include <Core/Platform/SIRInputControllerProfiles.h>
 
 typedef struct sirEvdevAxisCalibration_s
@@ -55,9 +55,14 @@ typedef struct sirEvdevSlot_s
 
 // Nonblocking evdev controller backend. The caller owns discovery timing and
 // calls pump() from the SIRInputSystem owner thread.
-class SIRLinuxEvdevInput
+class SIRLinuxEvdevInput : public SIRInputBackend
 {
 public:
+	bool ownsDevice( sirInputDeviceHandle_t hDevice ) const noexcept override;
+	sirInputBackendKind_t getBackendKind( void ) const noexcept override
+	{
+		return SIR_INPUT_BACKEND_LINUX_EVDEV;
+	}
 	explicit SIRLinuxEvdevInput( SIRInputSystem &input ) noexcept;
 	SIRLinuxEvdevInput( const SIRLinuxEvdevInput & ) = delete;
 	SIRLinuxEvdevInput &operator=( const SIRLinuxEvdevInput & ) = delete;
@@ -68,13 +73,13 @@ public:
 	uint32_t discover( const char *pszDirectory = "/dev/input" ) noexcept;
 	bool watchDirectory( const char *pszDirectory = "/dev/input" ) noexcept;
 	bool isWatching( void ) const noexcept;
-	uint32_t pump( void ) noexcept;
+	uint32_t pump( void ) noexcept override;
 	static int16_t mapButton( uint16_t nNativeCode ) noexcept;
 	static int16_t mapAxis( uint16_t nNativeCode ) noexcept;
 	static int32_t normalizeAxis( int32_t nValue, int32_t nMinimum, int32_t nMaximum, bool bTrigger ) noexcept;
 	uint32_t getDeviceCount( void ) const noexcept;
-	bool setVibration( sirInputDeviceHandle_t hDevice, uint16_t nStrong, uint16_t nWeak, uint16_t nDurationMs ) noexcept;
-	void shutdown( void ) noexcept;
+	bool setVibration( sirInputDeviceHandle_t hDevice, uint16_t nStrong, uint16_t nWeak, uint16_t nDurationMs ) noexcept override;
+	void shutdown( void ) noexcept override;
 
 private:
 	bool resynchronize( sirEvdevSlot_t &slot ) noexcept;

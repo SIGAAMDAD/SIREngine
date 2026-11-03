@@ -18,17 +18,28 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <SIRPCH.hpp>
 
+// clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
 	#pragma once
 #endif
+// clang-format on
 
-#include <Core/Platform/SIRInput.h>
+#include <Core/Platform/SIRInputBackend.h>
 
 // Win32 WndProc forwards WM_INPUT and WM_INPUT_DEVICE_CHANGE to this adapter.
 // It does not create a window or install its own message loop.
-class SIRWindowsRawInput
+class SIRWindowsRawInput : public SIRInputBackend
 {
 public:
+	sirInputBackendKind_t getBackendKind( void ) const noexcept override
+	{
+		return SIR_INPUT_BACKEND_WINDOWS_RAW;
+	}
+	uint32_t pump( void ) noexcept override
+	{
+		return 0;
+	} // WndProc calls processMessage().
+	bool ownsDevice( sirInputDeviceHandle_t hDevice ) const noexcept override;
 	explicit SIRWindowsRawInput( SIRInputSystem &input ) noexcept;
 	SIRWindowsRawInput( const SIRWindowsRawInput & ) = delete;
 	SIRWindowsRawInput &operator=( const SIRWindowsRawInput & ) = delete;
@@ -36,7 +47,7 @@ public:
 
 	bool initialize( void *pWindow ) noexcept;
 	bool processMessage( uint32_t nMessage, uintptr_t nWParam, intptr_t nLParam ) noexcept;
-	void shutdown( void ) noexcept;
+	void shutdown( void ) noexcept override;
 
 private:
 	bool processRawInput( void *pRawInput ) noexcept;

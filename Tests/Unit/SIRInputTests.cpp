@@ -15,6 +15,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Core/Platform/SIRInput.h>
 #include <Core/Platform/SIRInputControllerProfiles.h>
+#include <Core/Platform/SIRInputCoordinator.h>
 #if defined( __linux__ )
 #include <Core/Platform/Linux/SIRLinuxEvdevInput.h>
 #include <fcntl.h>
@@ -619,10 +620,270 @@ static bool testPublishedTickState( void )
 	return input.getPublishedTick() == 0 && !input.getPublishedState( hNew, &published ) && !input.isDeviceActive( hNew );
 }
 
+// A minimal backend proves the coordinator's lifecycle and ownership contracts
+// without needing a controller or desktop session on the test host.
+class SIRInputMockBackend : public SIRInputBackend
+{
+public:
+	SIRInputMockBackend( SIRInputSystem &input, sirInputBackendKind_t eKind, uint64_t nPhysicalKey ) noexcept
+	    : m_Input( input ), m_hDevice{}, m_nPhysicalKey( nPhysicalKey ), m_eKind( eKind ), m_nPumps( 0 ), m_nRumbles( 0 ),
+	      m_bOwned( false ), m_bPendingPress( false ), m_bShutdown( false )
+	{
+	}
+	bool attachDevice( uint64_t nNativeId ) noexcept
+	{
+		m_bOwned = m_Input.addDevice( SIR_INPUT_DEVICE_GAMEPAD, nNativeId, &m_hDevice );
+		return m_bOwned;
+	}
+	void setDevice( sirInputDeviceHandle_t hDevice ) noexcept
+	{
+		m_hDevice = hDevice;
+		m_bOwned = true;
+	}
+	void setPendingPress( bool bPressed ) noexcept
+	{
+		m_bPendingPress = bPressed;
+	}
+	sirInputDeviceHandle_t getDevice( void ) const noexcept
+	{
+		return m_hDevice;
+	}
+	sirInputBackendKind_t getBackendKind( void ) const noexcept override
+	{
+		return m_eKind;
+	}
+	uint32_t pump( void ) noexcept override
+	{
+		++m_nPumps;
+		if ( m_bPendingPress ) {
+			m_bPendingPress = false;
+			return m_Input.pushButton( m_hDevice, SIR_GAMEPAD_BUTTON_SOUTH, true, 501 ) ? 1 : 0;
+		}
+		return 0;
+	}
+	bool ownsDevice( sirInputDeviceHandle_t hDevice ) const noexcept override
+	{
+		return m_bOwned && m_Input.isDeviceActive( hDevice ) && hDevice.nSlot == m_hDevice.nSlot &&
+		       hDevice.nGeneration == m_hDevice.nGeneration;
+	}
+	uint64_t getPhysicalKey( sirInputDeviceHandle_t hDevice ) const noexcept override
+	{
+		return ownsDevice( hDevice ) ? m_nPhysicalKey : 0;
+	}
+	bool setVibration( sirInputDeviceHandle_t hDevice, uint16_t nStrong, uint16_t nWeak, uint16_t nDurationMs ) noexcept override
+	{
+		if ( !ownsDevice( hDevice ) || nStrong == 0 || nWeak == 0 || nDurationMs == 0 ) {
+			return false;
+		}
+		++m_nRumbles;
+		return true;
+	}
+	void shutdown( void ) noexcept override
+	{
+		m_bShutdown = true;
+		if ( m_bOwned && m_Input.isDeviceActive( m_hDevice ) ) {
+			m_Input.removeDevice( m_hDevice );
+		}
+		m_bOwned = false;
+	}
+	bool wasShutdown( void ) const noexcept
+	{
+		return m_bShutdown;
+	}
+	uint32_t getPumps( void ) const noexcept
+	{
+		return m_nPumps;
+	}
+	uint32_t getRumbles( void ) const noexcept
+	{
+		return m_nRumbles;
+	}
+
+private:
+	SIRInputSystem &m_Input;
+	sirInputDeviceHandle_t m_hDevice;
+	uint64_t m_nPhysicalKey;
+	sirInputBackendKind_t m_eKind;
+	uint32_t m_nPumps;
+	uint32_t m_nRumbles;
+	bool m_bOwned;
+	bool m_bPendingPress;
+	bool m_bShutdown;
+};
+
+static bool testPublishedInputState( void )
+{
+	SIRInputSystem input;
+	sirInputDeviceHandle_t hKeyboard = {};
+	if ( !input.addDevice( SIR_INPUT_DEVICE_KEYBOARD, 900, &hKeyboard ) || !input.isDeviceActive( hKeyboard ) ) {
+		return false;
+	}
+	input.beginTick();
+	if ( !input.pushButton( hKeyboard, 42, true, 100 ) || !input.pushButton( hKeyboard, 42, false, 101 ) || !input.publishTick( 1 ) ||
+	     input.publishTick( 1 ) || input.getPublishedTick() != 1 ) {
+		return false;
+	}
+	const uint32_t nMask = UINT32_C( 1 ) << ( 42 % 32 );
+	sirInputDeviceState_t snapshot = {};
+	if ( !input.getPublishedState( hKeyboard, &snapshot ) || ( snapshot.nPressed[42 / 32] & nMask ) == 0 ||
+	     ( snapshot.nReleased[42 / 32] & nMask ) == 0 || ( snapshot.nButtons[42 / 32] & nMask ) != 0 ||
+	     input.getPublishedEventCount() != 3 || input.copyPublishedEvents( nullptr, 0 ) != 3 ) {
+		return false;
+	}
+	sirInputEvent_t events[4] = {};
+	if ( input.copyPublishedEvents( events, 4 ) != 3 || events[0].eKind != SIR_INPUT_EVENT_CONNECTED ||
+	     events[1].eKind != SIR_INPUT_EVENT_BUTTON || events[1].nValue != 1 || events[2].nValue != 0 ) {
+		return false;
+	}
+	sirInputEvent_t transient = {};
+	if ( input.pollEvent( &transient ) ) {
+		return false;
+	}
+	input.beginTick();
+	if ( !input.pushButton( hKeyboard, 41, true, 102 ) || !input.getPublishedState( hKeyboard, &snapshot ) ||
+	     ( snapshot.nButtons[41 / 32] & ( UINT32_C( 1 ) << ( 41 % 32 ) ) ) != 0 || !input.publishTick( 2 ) ||
+	     input.getPublishedEventCount() != 1 || input.copyPublishedEvents( events, 4 ) != 1 || events[0].nCode != 41 ) {
+		return false;
+	}
+	if ( !input.removeDevice( hKeyboard ) || !input.getPublishedState( hKeyboard, &snapshot ) ) {
+		return false;
+	}
+	sirInputDeviceHandle_t hNew = {};
+	if ( !input.addDevice( SIR_INPUT_DEVICE_KEYBOARD, 900, &hNew ) || hNew.nSlot != hKeyboard.nSlot ||
+	     hNew.nGeneration == hKeyboard.nGeneration || input.getPublishedState( hNew, &snapshot ) || !input.publishTick( 3 ) ||
+	     input.getPublishedState( hKeyboard, &snapshot ) || !input.getPublishedState( hNew, &snapshot ) ) {
+		return false;
+	}
+	input.shutdown();
+	return input.getPublishedTick() == 0 && input.getPublishedEventCount() == 0;
+}
+
+static bool testCoordinatorLifecycle( void )
+{
+	SIRInputSystem input;
+	SIRInputMockBackend backend( input, SIR_INPUT_BACKEND_WINDOWS_XINPUT, UINT64_C( 0x123456 ) );
+	SIRInputCoordinator coordinator( input );
+	if ( !coordinator.attachBackend( backend ) || coordinator.attachBackend( backend ) || !backend.attachDevice( 22 ) ||
+	     !coordinator.beginTick( 1 ) || coordinator.attachBackend( backend ) ) {
+		return false;
+	}
+	backend.setPendingPress( true );
+	if ( !coordinator.publishTick() || coordinator.getLastResult() != SIR_INPUT_COORD_OK || backend.getPumps() != 1 ||
+	     input.getPublishedEventCount() != 2 ) {
+		return false;
+	}
+	sirInputDeviceRoute_t route = {};
+	if ( !coordinator.getDeviceRoute( backend.getDevice(), &route ) || route.nPhysicalKey != UINT64_C( 0x123456 ) ||
+	     route.nUserId != SIR_INPUT_UNPAIRED_USER || !coordinator.assignUser( backend.getDevice(), 2 ) ||
+	     !coordinator.getDeviceRoute( backend.getDevice(), &route ) || route.nUserId != 2 ||
+	     coordinator.assignUser( backend.getDevice(), SIR_INPUT_MAX_USERS ) ||
+	     !coordinator.setVibration( backend.getDevice(), 200, 100, 30 ) || backend.getRumbles() != 1 || coordinator.beginTick( 1 ) ||
+	     !coordinator.beginTick( 2 ) ) {
+		return false;
+	}
+	const sirInputDeviceHandle_t hOriginal = backend.getDevice();
+	if ( !input.removeDevice( hOriginal ) || !backend.attachDevice( 23 ) || !coordinator.publishTick() ||
+	     coordinator.getDeviceRoute( hOriginal, &route ) || !coordinator.getDeviceRoute( backend.getDevice(), &route ) ||
+	     route.nUserId != SIR_INPUT_UNPAIRED_USER ) {
+		return false;
+	}
+	coordinator.shutdown();
+	return backend.wasShutdown() && coordinator.getBackendCount() == 0 && !coordinator.beginTick( 3 ) &&
+	       !coordinator.setVibration( backend.getDevice(), 10, 10, 100 );
+}
+
+static bool testCoordinatorOwnerConflicts( void )
+{
+	SIRInputSystem input;
+	SIRInputMockBackend first( input, SIR_INPUT_BACKEND_WINDOWS_XINPUT, 1 );
+	SIRInputMockBackend second( input, SIR_INPUT_BACKEND_WINDOWS_GAMEINPUT, 2 );
+	SIRInputCoordinator coordinator( input );
+	if ( !coordinator.attachBackend( first ) || !coordinator.attachBackend( second ) || !first.attachDevice( 91 ) ) {
+		return false;
+	}
+	second.setDevice( first.getDevice() );
+	if ( !coordinator.beginTick( 1 ) || coordinator.publishTick() || coordinator.getLastResult() != SIR_INPUT_COORD_DUPLICATE_OWNER ) {
+		return false;
+	}
+	coordinator.shutdown();
+	return first.wasShutdown() && second.wasShutdown();
+}
+
+static bool testCoordinatorPhysicalKeyConflict( void )
+{
+	SIRInputSystem input;
+	SIRInputMockBackend first( input, SIR_INPUT_BACKEND_WINDOWS_XINPUT, 77 );
+	SIRInputMockBackend second( input, SIR_INPUT_BACKEND_WINDOWS_GAMEINPUT, 77 );
+	SIRInputCoordinator coordinator( input );
+	if ( !coordinator.attachBackend( first ) || !coordinator.attachBackend( second ) || !first.attachDevice( 30 ) ||
+	     !second.attachDevice( 31 ) || !coordinator.beginTick( 1 ) || coordinator.publishTick() ||
+	     coordinator.getLastResult() != SIR_INPUT_COORD_DUPLICATE_PHYSICAL_DEVICE ) {
+		return false;
+	}
+	// The failed tick cannot publish an owner for even the first device.
+	sirInputDeviceRoute_t route = {};
+	if ( coordinator.getDeviceRoute( first.getDevice(), &route ) || input.getPublishedTick() != 0 ) {
+		return false;
+	}
+	coordinator.shutdown();
+	return true;
+}
+
+static bool testCoordinatorDesktopAndUnownedRejection( void )
+{
+	SIRInputSystem input;
+	SIRInputMockBackend x11( input, SIR_INPUT_BACKEND_LINUX_X11, 0 );
+	SIRInputMockBackend wayland( input, SIR_INPUT_BACKEND_LINUX_WAYLAND, 0 );
+	SIRInputCoordinator coordinator( input );
+	if ( !coordinator.attachBackend( x11 ) || coordinator.attachBackend( wayland ) || coordinator.getBackendCount() != 1 ) {
+		return false;
+	}
+	sirInputDeviceHandle_t hUnowned = {};
+	if ( !input.addDevice( SIR_INPUT_DEVICE_KEYBOARD, 11, &hUnowned ) || !coordinator.beginTick( 1 ) || coordinator.publishTick() ||
+	     coordinator.getLastResult() != SIR_INPUT_COORD_UNOWNED_DEVICE || input.getPublishedTick() != 0 ) {
+		return false;
+	}
+	sirInputDeviceRoute_t route = {};
+	if ( coordinator.getDeviceRoute( hUnowned, &route ) ) {
+		return false;
+	}
+	coordinator.shutdown();
+	return x11.wasShutdown() && !wayland.wasShutdown();
+}
+
+static bool testCoordinatorOverflowRecovery( void )
+{
+	SIRInputSystem input;
+	SIRInputMockBackend backend( input, SIR_INPUT_BACKEND_WINDOWS_XINPUT, 0 );
+	SIRInputCoordinator coordinator( input );
+	if ( !coordinator.attachBackend( backend ) || !backend.attachDevice( 9 ) || !coordinator.beginTick( 1 ) ) {
+		return false;
+	}
+	for ( uint32_t i = 0; i < SIR_INPUT_MAX_EVENTS - 1; ++i ) {
+		if ( !input.pushButton( backend.getDevice(), 7, ( i & 1 ) == 0, i + 1 ) ) {
+			return false;
+		}
+	}
+	if ( input.pushButton( backend.getDevice(), 7, false, 90000 ) || !input.isOverflowed() || coordinator.publishTick() ||
+	     coordinator.getLastResult() != SIR_INPUT_COORD_QUEUE_OVERFLOW || input.getPublishedTick() != 0 ||
+	     !input.resynchronizeDevice( backend.getDevice() ) || !coordinator.publishTick() || input.getPublishedTick() != 1 ||
+	     input.getPublishedEventCount() != 1 ) {
+		return false;
+	}
+	sirInputEvent_t event = {};
+	if ( input.copyPublishedEvents( &event, 1 ) != 1 || event.eKind != SIR_INPUT_EVENT_RESYNC ) {
+		return false;
+	}
+	coordinator.shutdown();
+	return true;
+}
+
 int main( void )
 {
 	bool bPassed = testPublishedTickState() && testLifecycle() && testTransitions() && testPointerAndAnalog() && testQueuePressure() &&
-	               testGamepadSamples() && testAtomicSampleOverflow() && testNativeGamepadFrame() && testNativeGamepadProfiles();
+	               testGamepadSamples() && testAtomicSampleOverflow() && testNativeGamepadFrame() && testNativeGamepadProfiles() &&
+	               testPublishedInputState() && testCoordinatorLifecycle() && testCoordinatorOwnerConflicts() &&
+	               testCoordinatorPhysicalKeyConflict() && testCoordinatorDesktopAndUnownedRejection() && testCoordinatorOverflowRecovery();
 #if defined( __linux__ )
 	SIRInputSystem input;
 	SIRLinuxEvdevInput controller( input );

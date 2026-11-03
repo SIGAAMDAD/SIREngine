@@ -577,3 +577,14 @@ void SIRLinuxEvdevInput::shutdown( void ) noexcept
 		closeSlot( m_Devices[i] );
 	}
 }
+
+bool SIRLinuxEvdevInput::ownsDevice( sirInputDeviceHandle_t hDevice ) const noexcept
+{
+	for ( uint32_t i = 0; i < SIR_INPUT_MAX_DEVICES; ++i ) {
+		const sirEvdevSlot_t &slot = m_Devices[i];
+		if ( slot.nFd >= 0 && slot.hDevice.nSlot == hDevice.nSlot && slot.hDevice.nGeneration == hDevice.nGeneration ) {
+			return true;
+		}
+	}
+	return false;
+}
