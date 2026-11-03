@@ -36,3 +36,9 @@
 - Native Linux and Windows CMake/FASTBuild CI and pinned clang-format 22.1.5.
 - Local unit and sanitizer tests for direct callback dispatch, wrong-domain binding, allocation failure, alignment, storage reclamation, and zero leaked live allocations.
 - Source-based ownership review and a real benchmark before claiming route performance improvements.
+
+## Cold-slab and steady-state profiling refinement
+
+The first Google Benchmark run configured `sirCompactBucketConfig_t::nWarmSlabsPerSeat = 0`. A 64-byte allocate/free pair therefore releases the last live slot in its slab and calls `makeNeutral`, forcing `fillActive` on the next iteration. This measures a **cold empty-slab recycling policy**, not sustained hot reuse. On Linux GitHub Actions, the first run reported 10,854.95 ns for direct 64-byte heap pairs and 10,905.01 ns for adapter pairs (medians of five repetitions). For 1,536-byte and 32,768-byte pairs the adapter measured ~2.1-2.2 ns slower than direct heap calls, with overlapping run variation.
+
+The benchmark now reports both policy settings for 64 bytes: `range(1)=0` for cold reclamation and `range(1)=1` for one warm slab retained per worker. Allocation size is `range(0)`. Production tuning should choose warm retention based on the domain's allocation-churn rate and memory budget, and separately measure peak committed bytes and retained pages.
