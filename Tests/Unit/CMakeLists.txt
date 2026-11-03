@@ -84,3 +84,14 @@ add_executable(SIRContainerHeapAdapterTests SIRContainerHeapAdapterTests.cpp)
 target_link_libraries(SIRContainerHeapAdapterTests PRIVATE SIR::Core)
 add_test(NAME core.containers.heap-adapter COMMAND SIRContainerHeapAdapterTests)
 sir_configure_owned_target(SIRContainerHeapAdapterTests)
+
+# GRDG resource graph regression coverage.
+add_executable(SIRResourceInterfaceTests SIRResourceInterfaceTests.cpp)
+target_link_libraries(SIRResourceInterfaceTests PRIVATE SIR::Resources)
+add_test(NAME resources.interfaces.headers COMMAND SIRResourceInterfaceTests)
+sir_configure_owned_target(SIRResourceInterfaceTests)
+
+add_executable(SIRResourceGraphTests SIRResourceGraphTests.cpp)
+target_link_libraries(SIRResourceGraphTests PRIVATE SIR::Resources)
+add_test(NAME resources.graph.lifecycle COMMAND SIRResourceGraphTests)
+sir_configure_owned_target(SIRResourceGraphTests)
