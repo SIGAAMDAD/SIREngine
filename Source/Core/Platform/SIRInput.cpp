@@ -313,6 +313,15 @@ bool SIRInputSystem::isDeviceActive( sirInputDeviceHandle_t hDevice ) const noex
 	return isValid( hDevice );
 }
 
+bool SIRInputSystem::getDeviceKind( sirInputDeviceHandle_t hDevice, sirInputDeviceKind_t *pKind ) const noexcept
+{
+	if ( pKind == nullptr || !isValid( hDevice ) ) {
+		return false;
+	}
+	*pKind = m_Devices[hDevice.nSlot].state.eKind;
+	return true;
+}
+
 bool SIRInputSystem::publishTick( uint64_t nTick ) noexcept
 {
 	if ( nTick == 0 || m_bOverflowed || ( m_bHasPublished && nTick <= m_nPublishedTick ) ) {

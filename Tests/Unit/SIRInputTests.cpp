@@ -640,6 +640,10 @@ public:
 		m_hDevice = hDevice;
 		m_bOwned = true;
 	}
+	void setPhysicalKey( uint64_t nPhysicalKey ) noexcept
+	{
+		m_nPhysicalKey = nPhysicalKey;
+	}
 	void setPendingPress( bool bPressed ) noexcept
 	{
 		m_bPendingPress = bPressed;
@@ -754,6 +758,11 @@ static bool testPublishedInputState( void )
 	     input.getPublishedState( hKeyboard, &snapshot ) || !input.getPublishedState( hNew, &snapshot ) ) {
 		return false;
 	}
+	sirInputDeviceKind_t eKind = SIR_INPUT_DEVICE_GAMEPAD;
+	if ( !input.getDeviceKind( hNew, &eKind ) || eKind != SIR_INPUT_DEVICE_KEYBOARD || input.getDeviceKind( hKeyboard, &eKind ) ||
+	     input.getDeviceKind( hNew, nullptr ) ) {
+		return false;
+	}
 	input.shutdown();
 	return input.getPublishedTick() == 0 && input.getPublishedEventCount() == 0;
 }
@@ -829,6 +838,32 @@ static bool testCoordinatorPhysicalKeyConflict( void )
 	return true;
 }
 
+static bool testCoordinatorPhysicalIdentitySwap( void )
+{
+	SIRInputSystem input;
+	SIRInputMockBackend first( input, SIR_INPUT_BACKEND_WINDOWS_XINPUT, 91 );
+	SIRInputMockBackend second( input, SIR_INPUT_BACKEND_WINDOWS_GAMEINPUT, 92 );
+	SIRInputCoordinator coordinator( input );
+	if ( !coordinator.attachBackend( first ) || !coordinator.attachBackend( second ) || !first.attachDevice( 1001 ) ||
+	     !second.attachDevice( 1002 ) || !coordinator.beginTick( 1 ) || !coordinator.publishTick() ||
+	     !coordinator.assignUser( first.getDevice(), 3 ) ) {
+		return false;
+	}
+	first.setPhysicalKey( 92 );
+	second.setPhysicalKey( 91 );
+	if ( !coordinator.beginTick( 2 ) || !coordinator.publishTick() ) {
+		return false;
+	}
+	sirInputDeviceRoute_t firstRoute = {};
+	sirInputDeviceRoute_t secondRoute = {};
+	if ( !coordinator.getDeviceRoute( first.getDevice(), &firstRoute ) || !coordinator.getDeviceRoute( second.getDevice(), &secondRoute ) ||
+	     firstRoute.nPhysicalKey != 92 || firstRoute.nUserId != 3 || secondRoute.nPhysicalKey != 91 ) {
+		return false;
+	}
+	coordinator.shutdown();
+	return true;
+}
+
 static bool testCoordinatorDesktopAndUnownedRejection( void )
 {
 	SIRInputSystem input;
@@ -883,7 +918,8 @@ int main( void )
 	bool bPassed = testPublishedTickState() && testLifecycle() && testTransitions() && testPointerAndAnalog() && testQueuePressure() &&
 	               testGamepadSamples() && testAtomicSampleOverflow() && testNativeGamepadFrame() && testNativeGamepadProfiles() &&
 	               testPublishedInputState() && testCoordinatorLifecycle() && testCoordinatorOwnerConflicts() &&
-	               testCoordinatorPhysicalKeyConflict() && testCoordinatorDesktopAndUnownedRejection() && testCoordinatorOverflowRecovery();
+	               testCoordinatorPhysicalKeyConflict() && testCoordinatorPhysicalIdentitySwap() &&
+	               testCoordinatorDesktopAndUnownedRejection() && testCoordinatorOverflowRecovery();
 #if defined( __linux__ )
 	SIRInputSystem input;
 	SIRLinuxEvdevInput controller( input );
