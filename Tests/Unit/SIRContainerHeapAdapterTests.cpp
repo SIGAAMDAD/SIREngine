@@ -30,12 +30,12 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <stdio.h>
 #include <stdint.h>
 
-#define SIR_TEST_CHECK( expression )                                                                                                        \
-	do {                                                                                                                                       \
-		if ( !( expression ) ) {                                                                                                                 \
-			fprintf( stderr, "Container heap adapter test failed at line %d: %s\n", __LINE__, #expression );                                       \
-			return false;                                                                                                                          \
-		}                                                                                                                                       \
+#define SIR_TEST_CHECK( expression )                                                                                                       \
+	do {                                                                                                                                   \
+		if ( !( expression ) ) {                                                                                                           \
+			fprintf( stderr, "Container heap adapter test failed at line %d: %s\n", __LINE__, #expression );                               \
+			return false;                                                                                                                  \
+		}                                                                                                                                  \
 	} while ( 0 )
 
 typedef struct alignas( 128 ) sirTestAlignedValue_s
@@ -73,15 +73,13 @@ public:
 		if ( !m_Small.init( pSmall, bucketConfig ) || !m_Medium.init( pMedium ) || !m_Large.init( pLarge ) ) {
 			return false;
 		}
-		const sirGeneralHeapConfig_t heapConfig = { &m_Small, &m_Medium, nullptr, &m_Large, pSmall, pMedium,
-		                                            pLarge, 256, 4096, false };
-		return m_Heap.init( heapConfig ) && m_Heap.attachThread() &&
-		       m_Adapter.init( &m_Heap, SIR_MEMORY_DOMAIN_GAMEPLAY, 0x434F4E54u );
+		const sirGeneralHeapConfig_t heapConfig = { &m_Small, &m_Medium, nullptr, &m_Large, pSmall, pMedium, pLarge, 256, 4096, false };
+		return m_Heap.init( heapConfig ) && m_Heap.attachThread() && m_Adapter.init( &m_Heap, SIR_MEMORY_DOMAIN_GAMEPLAY, 0x434F4E54u );
 	}
 
 	bool shutdown( void )
 	{
-		return m_Heap.detachThread() && m_Heap.shutdown() && m_Small.shutdown() && m_Medium.shutdown() && m_Large.shutdown();
+		return m_Heap.detachThread() && m_Heap.shutdown() && m_Small.shutdown() && m_Medium.shutdown();
 	}
 };
 
