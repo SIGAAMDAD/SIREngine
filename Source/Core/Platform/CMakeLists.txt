@@ -1,4 +1,4 @@
-# Native OS services belong to the Core library and share its lifecycle.
+# Core-owned platform and input services.
 set(SIR_CORE_PLATFORM_COMMON
     SIRPlatformUtils.cpp
     SIRVirtualMemory.cpp
@@ -6,10 +6,9 @@ set(SIR_CORE_PLATFORM_COMMON
     SIRThread.cpp
     SIRSync.cpp
     SIRAtomic.cpp
-    SIRInput.cpp
-    SIRInputBackend.cpp
-    SIRInputCoordinator.cpp
-    SIRInputControllerProfiles.cpp
+    Input/SIRInputDeviceRegistry.cpp
+    Input/SIRInputFrameState.cpp
+    Input/SIRInputService.cpp
 )
 
 if(WIN32)
@@ -21,8 +20,8 @@ if(WIN32)
         Windows/SIRDynamicLibraryWindows.cpp
         Windows/SIRPlatformTimeWindows.cpp
         Windows/SIRPlatformProcessWindows.cpp
-        Windows/SIRWindowsRawInput.cpp
-        Windows/SIRWindowsXInput.cpp
+        Input/Windows/SIRWindowsRawBackend.cpp
+        Input/Windows/SIRWindowsXInputBackend.cpp
     )
     target_link_libraries(SIRCore PRIVATE psapi user32)
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
@@ -34,15 +33,13 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         Linux/SIRDynamicLibraryLinux.cpp
         Linux/SIRPlatformTimeLinux.cpp
         Linux/SIRPlatformProcessLinux.cpp
-        Linux/SIRLinuxEvdevInput.cpp
+        Input/Linux/SIRLinuxEvdevBackend.cpp
     )
-    # X11 is a native, optional desktop adapter. The engine window owner
-    # supplies XEvents; controller evdev support does not depend on X11.
-    option(SIR_WITH_X11_INPUT "Compile the native X11 desktop input adapter when available" ON)
+    option(SIR_WITH_X11_INPUT "Build native X11 input backend when X11 is available" ON)
     if(SIR_WITH_X11_INPUT)
         find_package(X11 QUIET)
         if(X11_FOUND)
-            list(APPEND SIR_CORE_PLATFORM_OS Linux/SIRLinuxX11Input.cpp)
+            list(APPEND SIR_CORE_PLATFORM_OS Input/Linux/SIRLinuxX11Backend.cpp)
             target_link_libraries(SIRCore PRIVATE X11::X11)
             target_compile_definitions(SIRCore PUBLIC SIR_INPUT_X11_AVAILABLE=1)
         endif()
