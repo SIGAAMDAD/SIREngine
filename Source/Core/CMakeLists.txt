@@ -10,4 +10,6 @@ else()
     target_compile_options(SIRCore PRIVATE -Wall -Wextra -Wpedantic)
 endif()
 
+add_subdirectory(Platform)
+target_sources(SIRCore PRIVATE Memory/SIRMemoryManager.cpp)
 sir_configure_owned_target(SIRCore)
