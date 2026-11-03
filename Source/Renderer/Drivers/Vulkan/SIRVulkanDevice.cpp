@@ -324,8 +324,8 @@ sirVulkanResult_t SIRVulkanDevice::writeBuffer( sirVulkanBuffer_t *pBuffer, uint
 	if ( !m_bReady ) {
 		return SIR_VULKAN_INVALID_STATE;
 	}
-	if ( pBuffer == nullptr || pBuffer->pAllocation == nullptr || pBuffer->pOwnerAllocator != m_Allocator || !pBuffer->bHostVisible || pData == nullptr || nBytes == 0 ||
-	     nOffset > pBuffer->nSize || nBytes > pBuffer->nSize - nOffset ) {
+	if ( pBuffer == nullptr || pBuffer->pAllocation == nullptr || pBuffer->pOwnerAllocator != m_Allocator || !pBuffer->bHostVisible ||
+	     pData == nullptr || nBytes == 0 || nOffset > pBuffer->nSize || nBytes > pBuffer->nSize - nOffset ) {
 		return SIR_VULKAN_INVALID_ARGUMENT;
 	}
 	void *pMapped = nullptr;
