@@ -7,9 +7,9 @@
 
 Use a single `Source/` root and direct subsystem directories instead of a large `Engine/Source/Runtime/...` hierarchy. All first-party source directory names and C++ filenames use PascalCase. Files are colocated with their owning implementation and tests reference exported include paths; external vendor directory names are preserved.
 
-The source layout adopts the direct subsystem organization of compact engines: `Core/`, `System/`, `Engine/`, `Scene/`, `Resources/`, `Renderer/`, `Terrain/`, `World/`, `Mesh/`, `Physics/`, `Navigation/`, `Animation/`, `Audio/`, `Scripting/`, `Networking/`, `UI/` and `Editor/`. Terrain is a built-in runtime subsystem, with specialized editor code in `Source/Terrain/Editor/`.
+The source layout reserves direct ownership for the following systems, with directories introduced when genuine source or integration work exists: `Core/`, `System/`, `Engine/`, `Scene/`, `Resources/`, `Renderer/`, `Terrain/`, `World/`, `Mesh/`, `Physics/`, `Navigation/`, `Animation/`, `Audio/`, `Scripting/`, `Networking/`, `UI/` and `Editor/`. Terrain is a built-in runtime subsystem, with specialized editor code in `Source/Terrain/Editor/`.
 
-No artificial `Runtime/`, `Public/`, `Private/`, `Programs/`, `Developer/` or `Modules/` source layers are introduced. A directory is an ownership boundary, not automatically a separate DLL or CMake target.
+No artificial `Runtime/`, `Public/`, `Private/`, `Programs/`, `Developer/` or `Modules/` source layers are introduced. A source directory is an ownership boundary, not automatically a separate DLL or CMake target. Unimplemented systems do not need README-only filesystem placeholders.
 
 ## Native build
 

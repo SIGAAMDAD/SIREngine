@@ -2,13 +2,13 @@
 
 int main( void )
 {
-	sir::SIRApplication application;
+	SIRApplication application;
 
-	if ( application.getState() != sir::SIRAppState::Uninitialized || application.tick() ) {
+	if ( application.getState() != SIR_APP_UNINITIALIZED || application.tick() ) {
 		return 1;
 	}
 
-	if ( !application.initialize() || application.getState() != sir::SIRAppState::Ready ) {
+	if ( !application.initialize() || application.getState() != SIR_APP_READY ) {
 		return 2;
 	}
 
@@ -21,7 +21,7 @@ int main( void )
 	}
 
 	application.shutdown();
-	if ( application.getState() != sir::SIRAppState::Stopped || application.tick() ) {
+	if ( application.getState() != SIR_APP_STOPPED || application.tick() ) {
 		return 5;
 	}
 

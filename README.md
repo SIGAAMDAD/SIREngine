@@ -54,4 +54,4 @@ The same `dev` preset works on Windows and Linux. `debug`, `profile` and `releas
 
 ## Contributing and licensing
 
-See [Contributing](CONTRIBUTING.md), [coding standards](Docs/Standards/cpp.md), and [governance](GOVERNANCE.md). The repository retains its existing [license](LICENSE); third-party components retain their own terms, as documented in [third-party notices](THIRD_PARTY_NOTICES.md).
+See [Contributing](CONTRIBUTING.md), [coding standards](Docs/Standards/cpp.md), and [governance](GOVERNANCE.md). SIREngine-owned source is licensed under the [Mozilla Public License 2.0](LICENSE); third-party components retain their own terms, as documented in [third-party notices](THIRD_PARTY_NOTICES.md).

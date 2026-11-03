@@ -25,6 +25,8 @@ jobs:
           persist-credentials: false
       - name: Validate tracked paths and pins
         run: cmake -P Build/CMake/CIHygiene.cmake
+      - name: Enforce owned C++ declarations and headers
+        run: cmake -P Build/CMake/CIStyle.cmake
       - name: Install native clang-format 22.1.5
         shell: bash
         run: |

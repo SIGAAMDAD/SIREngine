@@ -10,4 +10,4 @@ Pinned source dependencies are managed as Git submodules under `ThirdParty/`:
 
 FMOD Studio API and Wwise are separately licensed SDKs, and their proprietary files are not committed. Mono is resolved from a separately installed embedding SDK and retains its runtime/distribution licensing obligations. System-installed OpenAL implementations retain their own licenses.
 
-The root [LICENSE](LICENSE) applies to SIREngine's first-party files according to their respective notices. A license audit is required before third-party code is imported or runtime libraries are packaged.
+The root [LICENSE](LICENSE) is the Mozilla Public License 2.0 for SIREngine-owned source files, with preserved licenses for external and imported source. A license audit is required before third-party code is imported or runtime libraries are packaged.

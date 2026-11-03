@@ -12,7 +12,7 @@ SIREngine targets a reusable Godot-derived engine, not a one-game mod collection
 
 ## Code review standards
 
-Use the repository's C++17, EASTL alias and Hungarian naming rules for SIR-owned code; leave third-party code on its own formatter. Runtime allocations require a registered domain. Publishing changes to GRDG/job/streaming ownership requires concurrency/lifetime tests. Public ABI or cooked-format changes require compatibility and versioning notes.
+Use C++17, the global namespace, canonical SIREngine header/record forms, and the repository's Hungarian naming rules for owned code. Use EASTL only through validated subsystem allocation policies; third-party code retains its own formatter. Runtime allocations require a registered domain. Publishing changes to GRDG/job/streaming ownership requires concurrency/lifetime tests. Public ABI or cooked-format changes require compatibility and versioning notes.
 
 ## Licenses and third-party material
 

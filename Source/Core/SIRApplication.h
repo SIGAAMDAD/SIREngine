@@ -1,21 +1,40 @@
-#ifndef SIR_CORE_APPLICATION_H
-#define SIR_CORE_APPLICATION_H
+/*
+===========================================================================
+SIREngine MPLv2 Source Code
+Copyright (C) 2023-2027 Noah Van Til
 
-#include <stdint.h>
+This Source Code Form is subject to the terms of the Mozilla Public
+License, v2. If a copy of the MPL was not distributed with this
+file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-namespace sir
+This software is provided "as is", without warranty of any kind,
+express or implied, including but not limited to the warranties
+of merchantability, fitness for a particular purpose and noninfringement.
+===========================================================================
+*/
+
+#ifndef __SIRENGINE_SIRAPPLICATION_H__
+#define __SIRENGINE_SIRAPPLICATION_H__
+
+#include <SIRPCH.hpp>
+
+// clang-format off
+#ifdef SIR_PRAGMA_ONCE_SUPPORTED
+	#pragma once
+#endif
+// clang-format on
+
+typedef enum sirAppState_e : uint8_t
 {
-typedef enum class SIRAppState : uint8_t
-{
-	Uninitialized = 0,
-	Ready = 1,
-	Stopped = 2
-} SIRAppState;
+	SIR_APP_UNINITIALIZED = 0,
+	SIR_APP_READY = 1,
+	SIR_APP_STOPPED = 2
+} sirAppState_t;
 
 class SIRApplication
 {
 private:
-	SIRAppState m_eState;
+	sirAppState_t m_eState;
 	uint64_t m_nTicks;
 
 public:
@@ -23,9 +42,8 @@ public:
 	bool initialize( void ) noexcept;
 	bool tick( void ) noexcept;
 	void shutdown( void ) noexcept;
-	SIRAppState getState( void ) const noexcept;
+	sirAppState_t getState( void ) const noexcept;
 	uint64_t getTickCount( void ) const noexcept;
 };
-}
 
-#endif
+#endif // __SIRENGINE_SIRAPPLICATION_H__

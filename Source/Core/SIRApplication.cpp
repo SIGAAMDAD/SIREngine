@@ -1,24 +1,22 @@
 #include <Core/SIRApplication.h>
 
-namespace sir
-{
-SIRApplication::SIRApplication( void ) noexcept : m_eState( SIRAppState::Uninitialized ), m_nTicks( 0 )
+SIRApplication::SIRApplication( void ) noexcept : m_eState( SIR_APP_UNINITIALIZED ), m_nTicks( 0 )
 {
 }
 
 bool SIRApplication::initialize( void ) noexcept
 {
-	if ( m_eState != SIRAppState::Uninitialized ) {
+	if ( m_eState != SIR_APP_UNINITIALIZED ) {
 		return false;
 	}
 
-	m_eState = SIRAppState::Ready;
+	m_eState = SIR_APP_READY;
 	return true;
 }
 
 bool SIRApplication::tick( void ) noexcept
 {
-	if ( m_eState != SIRAppState::Ready ) {
+	if ( m_eState != SIR_APP_READY ) {
 		return false;
 	}
 
@@ -28,12 +26,12 @@ bool SIRApplication::tick( void ) noexcept
 
 void SIRApplication::shutdown( void ) noexcept
 {
-	if ( m_eState == SIRAppState::Ready ) {
-		m_eState = SIRAppState::Stopped;
+	if ( m_eState == SIR_APP_READY ) {
+		m_eState = SIR_APP_STOPPED;
 	}
 }
 
-SIRAppState SIRApplication::getState( void ) const noexcept
+sirAppState_t SIRApplication::getState( void ) const noexcept
 {
 	return m_eState;
 }
@@ -41,5 +39,4 @@ SIRAppState SIRApplication::getState( void ) const noexcept
 uint64_t SIRApplication::getTickCount( void ) const noexcept
 {
 	return m_nTicks;
-}
 }

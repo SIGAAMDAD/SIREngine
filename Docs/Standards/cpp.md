@@ -6,6 +6,14 @@
 
 Use **PascalCase** for first-party repository directories, subsystem directories and C++ filenames. Preserve the existing `SIR` naming convention for engine-owned source and types. The established flat source root is `Source/`, with `Source/Core/`, `Source/Renderer/`, `Source/Terrain/`, `Build/CMake/`, `Tests/` and `Docs/`. Keep actual vendor directory names and fixed metadata names such as `.github/` unchanged. Do not introduce lowercase first-party folders or snake_case C++ source filenames in future layout proposals.
 
+## Source ownership and declaration contracts
+
+All SIREngine-owned C++ classes, structs, enumerations, templates, and free functions are in the **global namespace**. Do not introduce `namespace sir`, other named/anonymous namespaces, or `using namespace` directives. External `std::` and `eastl::` symbols keep their defined qualifiers.
+
+Owned structures use `typedef struct sir[Name]_s { ... } sir[Name]_t;` with no `m_` prefix on struct fields. Enums use `typedef enum sir[Name]_e : uintN_t { SIR_VALUE = ... } sir[Name]_t;` with explicit fixed-width underlying integer types. Each enum value starts `SIR_`. Class fields retain the established Hungarian `m_` conventions.
+
+Every SIREngine-owned header uses the 2023–2027 SIREngine MPLv2 notice, `__SIRENGINE_[HEADER_NAME]_H__` include guard, `#include <SIRPCH.hpp>`, conditional guarded `#pragma once`, and an annotated closing `#endif`. The canonical PCH file is `Build/CMake/SIRPCH.hpp`, published to owned targets through CMake include paths. Imported Godot-derived headers retain all original copyright/licensing attribution as well.
+
 ## Code and formatting
 
 - C++17, compiler extensions disabled; pinned clang-format 22.1.5 and the repository's `.clang-format`.

@@ -1,6 +1,6 @@
 # SIREngine source
 
-First-party C++17 systems are organized directly under `Source/` by subsystem. Source headers and implementations live together; no separate `Runtime/`, `Public/`, `Private/` or program hierarchy is imposed.
+First-party C++17 systems are organized by direct subsystem ownership. Source headers and implementations live together; no artificial `Runtime/`, `Public/`, `Private/` or program hierarchy is imposed. The table describes **target ownership**, not a claim that every subsystem has implementation files.
 
 | Directory | Responsibility |
 | --- | --- |
@@ -23,6 +23,6 @@ First-party C++17 systems are organized directly under `Source/` by subsystem. S
 | `Editor/` | Shared editor, inspector, import and authoring infrastructure |
 | `Main.cpp` | Native executable entrypoint |
 
-Directories are added when ownership needs to be established; empty subsystems are not linked into the build. During bootstrap, the buildable code consists of `Core/SIRApplication.h`, `Core/SIRApplication.cpp` and `Main.cpp`. `SIRCore` remains a static library until further engine systems are migrated.
+Subsystem directories are created when they receive source or concrete editor integration work. Empty README-only subsystem placeholders have been removed. The native bootstrap currently compiles `Core/SIRApplication.h`, `Core/SIRApplication.cpp` and `Main.cpp`; the other systems remain implementation milestones. `SIRCore` is a static library until further engine systems are migrated.
 
 Compile and test using the root CMake presets. The source tree uses PascalCase naming for first-party directories and filenames.

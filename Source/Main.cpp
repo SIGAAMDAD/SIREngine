@@ -20,7 +20,7 @@ int main( int nArgs, char **pszArgs )
 		return 2;
 	}
 
-	sir::SIRApplication application;
+	SIRApplication application;
 	if ( !application.initialize() ) {
 		return 1;
 	}
