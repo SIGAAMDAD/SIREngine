@@ -91,7 +91,6 @@ static bool testAsyncCopyQueue( SIRD3D12Device &device )
 	return true;
 }
 
-
 static bool testComputeAndCompletions( SIRD3D12Device &device, sirD3D12CompletionSet_t *pOldSet )
 {
 	SIRD3D12ComputeQueue &compute = device.getComputeQueue();
@@ -132,8 +131,7 @@ static bool testComputeAndCompletions( SIRD3D12Device &device, sirD3D12Completio
 	     !device.pollCompletionSet( submitted, &bCompleted ) || !bCompleted ) {
 		return false;
 	}
-	if ( !transfers.receive( transfer, szOutput, sizeof( szOutput ) ) ||
-	     memcmp( szInput, szOutput, sizeof( szInput ) ) != 0 ) {
+	if ( !transfers.receive( transfer, szOutput, sizeof( szOutput ) ) || memcmp( szInput, szOutput, sizeof( szInput ) ) != 0 ) {
 		return false;
 	}
 
@@ -232,8 +230,8 @@ int main( void )
 	bool bCompleted = false;
 	if ( !device.snapshotCompletionSet( &fresh ) || fresh.nDeviceGeneration == oldSet.nDeviceGeneration ||
 	     device.pollCompletionSet( oldSet, &bCompleted ) || !device.submitComputeMarker( &fresh ) ||
-	     !device.getComputeQueue().waitForFence( fresh.nComputeFence, 15000 ) ||
-	     !device.pollCompletionSet( fresh, &bCompleted ) || !bCompleted ) {
+	     !device.getComputeQueue().waitForFence( fresh.nComputeFence, 15000 ) || !device.pollCompletionSet( fresh, &bCompleted ) ||
+	     !bCompleted ) {
 		fputs( "D3D12 device-generation invalidation failed\n", stderr );
 		return 1;
 	}

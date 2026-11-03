@@ -60,7 +60,7 @@ bool SIRD3D12ComputeQueue::initialize( ID3D12Device *pDevice ) noexcept
 		return false;
 	}
 	m_nLastError = pDevice->CreateCommandList( 0, D3D12_COMMAND_LIST_TYPE_COMPUTE, m_pAllocator.Get(), nullptr,
-	                                          IID_PPV_ARGS( m_pCommands.GetAddressOf() ) );
+	                                           IID_PPV_ARGS( m_pCommands.GetAddressOf() ) );
 	if ( FAILED( m_nLastError ) ) {
 		shutdown();
 		return false;
@@ -217,7 +217,6 @@ bool SIRD3D12ComputeQueue::submitMarker( uint64_t *pFenceValue ) noexcept
 	m_nLastError = S_OK;
 	return true;
 }
-
 
 SIRD3D12Device::SIRD3D12Device( void ) noexcept
 {
