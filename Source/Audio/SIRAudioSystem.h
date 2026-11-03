@@ -88,8 +88,7 @@ private:
 	bool isValidListener( sirAudioListenerHandle_t hListener ) const noexcept;
 	void markTerminal( sirAudioPlayingSlot_t &slot, sirAudioPlaybackState_t eState ) noexcept;
 	void applyReleaseResult( const sirAudioCommand_t &command, sirAudioResult_t eResult ) noexcept;
-	sirAudioResult_t enqueue( sirAudioCommand_t &command, bool bCritical,
-	                          const sirAudioAttributes_t *pAttributes = nullptr ) noexcept;
+	sirAudioResult_t enqueue( sirAudioCommand_t &command, bool bCritical, const sirAudioAttributes_t *pAttributes = nullptr ) noexcept;
 	void applyCompletion( const sirAudioCompletion_t &completion ) noexcept;
 	void failSubmission( const sirAudioCommand_t &command ) noexcept;
 	void drainCompletions( void ) noexcept;
