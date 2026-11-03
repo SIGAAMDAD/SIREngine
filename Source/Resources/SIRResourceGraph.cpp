@@ -144,8 +144,9 @@ SIRResourceGraph::SIRResourceGraph( const SIRResourceGraphConfig &rConfig ) noex
       m_pReverseEdges( nullptr ), m_pReadKeyIndex( nullptr ), m_nReadKeyIndexCapacity( 0 ), m_pReverseBuckets( nullptr ),
       m_nReverseBucketCount( 0 ), m_nMaxDependencyEdges( 0 ), m_iFreeReverseEdge( UINT32_MAX ), m_nActiveReverseEdges( 0 ),
       m_nChangeSequence( 0 ), m_pInvalidations( nullptr ), m_nMaxInvalidationEvents( 0 ), m_nTotalInvalidations( 0 ),
-      m_pTraversalQueue( nullptr ), m_nTraversalStamp( 0 ), m_pSharedChunks( nullptr ), m_pRetired( nullptr ), m_nCommittedBytes( 0 ),
-      m_nPeakCommittedBytes( 0 ), m_nPayloadBytes( 0 ), m_nUniqueChunks( 0 ), m_nRetiredRecords( 0 ), m_bReady( false )
+      m_pTraversalQueue( nullptr ), m_pPlanNextEdges( nullptr ), m_pPlanOrder( nullptr ), m_pPlanStates( nullptr ), m_nTraversalStamp( 0 ),
+      m_pSharedChunks( nullptr ), m_pRetired( nullptr ), m_nCommittedBytes( 0 ), m_nPeakCommittedBytes( 0 ), m_nPayloadBytes( 0 ),
+      m_nUniqueChunks( 0 ), m_nRetiredRecords( 0 ), m_bReady( false )
 {
 	if ( !m_Config.m_Allocator.m_pfnAllocate || !m_Config.m_Allocator.m_pfnFree || !m_Config.m_nMaxResources || !m_Config.m_nMaxStaging ||
 	     !m_Config.m_nMaxProviderPins || m_Config.m_nMaxResources > INT32_MAX ) {
@@ -185,8 +186,13 @@ SIRResourceGraph::SIRResourceGraph( const SIRResourceGraphConfig &rConfig ) noex
 	    ( SIRResourceInvalidationEvent * )allocate( nEvents, alignof( SIRResourceInvalidationEvent ), m_Config.m_nMetadataDomain );
 	m_pTraversalQueue = ( uint32_t * )allocate( ( uint64_t )m_Config.m_nMaxResources * sizeof( uint32_t ), alignof( uint32_t ),
 	                                            m_Config.m_nMetadataDomain );
+	m_pPlanNextEdges = ( uint32_t * )allocate( ( uint64_t )m_Config.m_nMaxResources * sizeof( uint32_t ), alignof( uint32_t ),
+	                                           m_Config.m_nMetadataDomain );
+	m_pPlanOrder = ( uint32_t * )allocate( ( uint64_t )m_Config.m_nMaxResources * sizeof( uint32_t ), alignof( uint32_t ),
+	                                       m_Config.m_nMetadataDomain );
+	m_pPlanStates = ( uint8_t * )allocate( ( uint64_t )m_Config.m_nMaxResources, alignof( uint8_t ), m_Config.m_nMetadataDomain );
 	if ( !m_pSlots || !m_pStaging || !m_pProviderPins || !m_pReverseEdges || !m_pReadKeyIndex || !m_pReaderEpochs || !m_pReverseBuckets ||
-	     !m_pInvalidations || !m_pTraversalQueue ) {
+	     !m_pInvalidations || !m_pTraversalQueue || !m_pPlanNextEdges || !m_pPlanOrder || !m_pPlanStates ) {
 		return;
 	}
 	for ( uint32_t iSlot = 0; iSlot < m_Config.m_nMaxResources; ++iSlot ) {
@@ -272,6 +278,9 @@ SIRResourceGraph::~SIRResourceGraph( void ) noexcept
 	release( m_pReverseBuckets, ( uint64_t )m_nReverseBucketCount * sizeof( uint32_t ), alignof( uint32_t ), m_Config.m_nMetadataDomain );
 	release( m_pReverseEdges, ( uint64_t )m_nMaxDependencyEdges * sizeof( SIRReverseDependencyEdge ), alignof( SIRReverseDependencyEdge ),
 	         m_Config.m_nMetadataDomain );
+	release( m_pPlanStates, ( uint64_t )m_Config.m_nMaxResources, alignof( uint8_t ), m_Config.m_nMetadataDomain );
+	release( m_pPlanOrder, ( uint64_t )m_Config.m_nMaxResources * sizeof( uint32_t ), alignof( uint32_t ), m_Config.m_nMetadataDomain );
+	release( m_pPlanNextEdges, ( uint64_t )m_Config.m_nMaxResources * sizeof( uint32_t ), alignof( uint32_t ), m_Config.m_nMetadataDomain );
 	release( m_pTraversalQueue, ( uint64_t )m_Config.m_nMaxResources * sizeof( uint32_t ), alignof( uint32_t ),
 	         m_Config.m_nMetadataDomain );
 	release( m_pProviderPins, ( uint64_t )m_Config.m_nMaxProviderPins * sizeof( SIRProviderPinSlot ), alignof( SIRProviderPinSlot ),
@@ -677,6 +686,83 @@ SIRResourceResult SIRResourceGraphWriter::pollInvalidations( uint64_t nAfterSequ
 	*pCount = nToCopy;
 	*pNextSequence = nAfterSequence + nToCopy;
 	return nToCopy == 0 && nPending != 0 ? SIR_RESOURCE_RESULT_OUT_OF_BUDGET : SIR_RESOURCE_RESULT_SUCCESS;
+}
+
+SIRResourceResult SIRResourceGraphWriter::compileDependencyOrder( SIRResourceHandle hRoot, SIRResourceDependencyPlanEntry *pEntries,
+                                                                  uint32_t nCapacity, uint32_t *pRequired ) noexcept
+{
+	if ( !m_pGraph->isWriterThread() ) {
+		return SIR_RESOURCE_RESULT_WRITER_VIOLATION;
+	}
+	if ( pRequired == nullptr || ( nCapacity != 0 && pEntries == nullptr ) ) {
+		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
+	}
+	*pRequired = 0;
+	SIRPublishedResourceRecord *pRoot = nullptr;
+	const SIRResourceResult eRoot = m_pGraph->checkHandle( hRoot, &pRoot );
+	if ( eRoot != SIR_RESOURCE_RESULT_SUCCESS ) {
+		return eRoot;
+	}
+
+	const uint32_t nMaxResources = m_pGraph->m_Config.m_nMaxResources;
+	memset( m_pGraph->m_pPlanStates, 0, ( size_t )nMaxResources );
+	uint32_t nDepth = 0;
+	uint32_t nOrderCount = 0;
+	m_pGraph->m_pTraversalQueue[0] = hRoot.m_nSlot;
+	m_pGraph->m_pPlanNextEdges[0] = 0;
+	m_pGraph->m_pPlanStates[hRoot.m_nSlot] = 1;
+
+	for ( ;; ) {
+		const uint32_t iSlot = m_pGraph->m_pTraversalQueue[nDepth];
+		const SIRPublishedResourceRecord *pCurrent = m_pGraph->m_pSlots[iSlot].m_pPublished.load( std::memory_order_seq_cst );
+		if ( pCurrent == nullptr ) {
+			return SIR_RESOURCE_RESULT_INVALID_HANDLE;
+		}
+		uint32_t &rNextEdge = m_pGraph->m_pPlanNextEdges[nDepth];
+		if ( rNextEdge < pCurrent->m_Info.m_nDependencyCount ) {
+			const SIRResourceDependency &rDependency = pCurrent->m_pDependencies[rNextEdge++];
+			const int32_t iChild = m_pGraph->findSlot( rDependency.m_Target );
+			if ( iChild < 0 ) {
+				if ( rDependency.m_eKind == SIR_RESOURCE_EDGE_KIND_REQUIRED ) {
+					return SIR_RESOURCE_RESULT_DEPENDENCY_MISSING;
+				}
+				continue;
+			}
+			const uint8_t nChildState = m_pGraph->m_pPlanStates[iChild];
+			if ( nChildState == 1 ) {
+				return SIR_RESOURCE_RESULT_DEPENDENCY_CYCLE;
+			}
+			if ( nChildState == 2 ) {
+				continue;
+			}
+			if ( nDepth + 1 >= nMaxResources ) {
+				return SIR_RESOURCE_RESULT_OUT_OF_BUDGET;
+			}
+			++nDepth;
+			m_pGraph->m_pTraversalQueue[nDepth] = ( uint32_t )iChild;
+			m_pGraph->m_pPlanNextEdges[nDepth] = 0;
+			m_pGraph->m_pPlanStates[iChild] = 1;
+			continue;
+		}
+
+		m_pGraph->m_pPlanStates[iSlot] = 2;
+		m_pGraph->m_pPlanOrder[nOrderCount++] = iSlot;
+		if ( nDepth == 0 ) {
+			break;
+		}
+		--nDepth;
+	}
+
+	*pRequired = nOrderCount;
+	if ( nOrderCount > nCapacity ) {
+		return SIR_RESOURCE_RESULT_OUT_OF_BUDGET;
+	}
+	for ( uint32_t iPlan = 0; iPlan < nOrderCount; ++iPlan ) {
+		const uint32_t iSlot = m_pGraph->m_pPlanOrder[iPlan];
+		const SIRPublishedResourceRecord *pRecord = m_pGraph->m_pSlots[iSlot].m_pPublished.load( std::memory_order_seq_cst );
+		pEntries[iPlan] = { pRecord->m_Handle, pRecord->m_Info.m_nRevision, pRecord->m_Info.m_eState };
+	}
+	return SIR_RESOURCE_RESULT_SUCCESS;
 }
 
 SIRResourceResult SIRResourceGraphWriter::getInvalidationSequence( SIRResourceHandle hResource, uint64_t *pSequence ) noexcept
