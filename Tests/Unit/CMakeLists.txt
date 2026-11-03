@@ -89,3 +89,6 @@ add_executable(SIRContainerHeapAdapterTests SIRContainerHeapAdapterTests.cpp)
 target_link_libraries(SIRContainerHeapAdapterTests PRIVATE SIR::Core)
 add_test(NAME core.containers.heap-adapter COMMAND SIRContainerHeapAdapterTests)
 sir_configure_owned_target(SIRContainerHeapAdapterTests)
+
+# Portable audio backend contracts and deterministic mock implementation.
+include(${CMAKE_CURRENT_SOURCE_DIR}/SIRAudioContract.cmake)
