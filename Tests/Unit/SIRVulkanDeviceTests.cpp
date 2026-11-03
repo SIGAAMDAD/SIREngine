@@ -67,6 +67,46 @@ int main( void )
 	if ( !device.queryMemoryStats( &active ) || active.nLiveBuffers != 1 || active.nAllocationBytes == 0 ) {
 		return 8;
 	}
+	// Copy a CPU-written upload through device-local memory and back. Use
+	// identical buffer contents to check queue completion and visibility.
+	sirVulkanBuffer_t gpu = {};
+	sirVulkanBuffer_t readback = {};
+	if ( device.createBuffer( 4096, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT, false, &gpu ) !=
+	     SIR_VULKAN_SUCCESS ) {
+		return 12;
+	}
+	if ( device.createBuffer( 4096, VK_BUFFER_USAGE_TRANSFER_DST_BIT, true, &readback ) != SIR_VULKAN_SUCCESS ) {
+		return 13;
+	}
+	sirVulkanCompletion_t first = {};
+	sirVulkanCompletion_t second = {};
+	if ( device.submitBufferCopy( &buffer, 0, &gpu, 0, 128, &first ) != SIR_VULKAN_SUCCESS || first.nValue == 0 ) {
+		return 14;
+	}
+	if ( device.submitBufferCopy( &gpu, 0, &readback, 0, 128, &second ) != SIR_VULKAN_SUCCESS ||
+	     second.nValue <= first.nValue ) {
+		return 15;
+	}
+	bool bCompleted = false;
+	if ( device.queryCompletion( &second, &bCompleted ) != SIR_VULKAN_SUCCESS ||
+	     device.waitCompletion( &second, 5000000000ull ) != SIR_VULKAN_SUCCESS ) {
+		return 16;
+	}
+	uint8_t szReadback[128] = {};
+	if ( device.readBuffer( &readback, 0, szReadback, sizeof( szReadback ) ) != SIR_VULKAN_SUCCESS ||
+	     memcmp( szBytes, szReadback, sizeof( szReadback ) ) != 0 ) {
+		return 17;
+	}
+	sirVulkanCompletion_t invalid = second;
+	invalid.nDeviceSerial++;
+	if ( device.waitCompletion( &invalid, 0 ) != SIR_VULKAN_INVALID_ARGUMENT ||
+	     device.submitBufferCopy( &readback, 0, &gpu, 0, 128, &invalid ) != SIR_VULKAN_INVALID_ARGUMENT ) {
+		return 18;
+	}
+	if ( device.destroyIdleBuffer( &gpu ) != SIR_VULKAN_SUCCESS ||
+	     device.destroyIdleBuffer( &readback ) != SIR_VULKAN_SUCCESS ) {
+		return 19;
+	}
 	if ( device.destroyIdleBuffer( &buffer ) != SIR_VULKAN_SUCCESS || buffer.pAllocation != nullptr ||
 	     device.destroyIdleBuffer( &buffer ) != SIR_VULKAN_INVALID_ARGUMENT ) {
 		return 9;

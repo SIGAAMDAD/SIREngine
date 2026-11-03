@@ -5,7 +5,7 @@ if(NOT EXISTS "${PROJECT_SOURCE_DIR}/ThirdParty/VulkanMemoryAllocator/include/vk
     message(FATAL_ERROR "Missing pinned VMA; run git submodule update --init ThirdParty/VulkanMemoryAllocator")
 endif()
 
-add_library(SIRVulkan STATIC SIRVulkanDevice.cpp)
+add_library(SIRVulkan STATIC SIRVulkanDevice.cpp SIRVulkanCommands.cpp)
 add_library(SIR::Vulkan ALIAS SIRVulkan)
 target_include_directories(SIRVulkan PUBLIC
     "${PROJECT_SOURCE_DIR}/Source"
