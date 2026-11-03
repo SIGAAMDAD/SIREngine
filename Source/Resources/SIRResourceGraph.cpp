@@ -618,7 +618,7 @@ void SIRResourceGraph::adoptPublishedRecordChunks( SIRPublishedResourceRecord *p
 }
 
 SIRResourceResult SIRResourceGraphWriter::publishExpected( const SIRResourcePublication &rPublication, uint64_t nExpectedRevision,
-                                                               SIRResourceHandle *pHandle ) noexcept
+                                                           SIRResourceHandle *pHandle ) noexcept
 {
 	if ( !m_pGraph->isWriterThread() ) {
 		return SIR_RESOURCE_RESULT_WRITER_VIOLATION;
