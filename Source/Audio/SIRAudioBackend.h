@@ -26,7 +26,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Audio/SIRAudioTypes.h>
 
-// Version 1 uses portable POD messages with a single backend owner context.
+// ABI v2 uses portable POD messages; middleware handles remain private.
 typedef struct sirAudioBackendOps_s
 {
 	uint32_t nAbiVersion;
@@ -36,6 +36,9 @@ typedef struct sirAudioBackendOps_s
 	uint32_t ( *drainCompletions )( void *pContext, sirAudioCompletion_t *pOutput, uint32_t nCapacity ) noexcept;
 	void ( *update )( void *pContext ) noexcept;
 	uint64_t ( *getCapabilities )( const void *pContext ) noexcept;
+	// ABI v2: attributes are valid for the duration of this call only.
+	sirAudioResult_t ( *submitSpatial )( void *pContext, const sirAudioCommand_t *pCommand,
+	                                    const sirAudioAttributes_t *pAttributes ) noexcept;
 } sirAudioBackendOps_t;
 
 #endif // __SIRENGINE_SIRAUDIOBACKEND_H__

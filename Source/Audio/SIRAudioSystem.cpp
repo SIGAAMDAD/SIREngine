@@ -17,6 +17,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Core/Containers/SIRRawStorage.h>
 #include <limits.h>
+#include <cmath>
 
 static SIRAtomic<uint64_t> s_nAudioEpoch = SIRAtomic<uint64_t>( 1 );
 
@@ -28,7 +29,7 @@ SIRAudioSystem::~SIRAudioSystem( void ) noexcept
 sirAudioResult_t SIRAudioSystem::initialize( const sirAudioSystemConfig_t &config, const sirContainerAllocator_t *pAllocator,
                                              const sirAudioBackendOps_t &backend, void *pBackendContext ) noexcept
 {
-	if ( m_bInitialized || m_pPlaying != nullptr || backend.nAbiVersion != 1 || backend.initialize == nullptr ||
+	if ( m_bInitialized || m_pPlaying != nullptr || backend.nAbiVersion != 2 || backend.submitSpatial == nullptr || backend.initialize == nullptr ||
 	     backend.shutdown == nullptr || backend.submit == nullptr || backend.drainCompletions == nullptr || backend.update == nullptr ||
 	     backend.getCapabilities == nullptr || pBackendContext == nullptr || config.nMaxPlaying == 0 ||
 	     config.nMaxPlaying > UINT32_MAX / 2 || config.nCommandCapacity < 2 || config.nCriticalCapacity < 2 ||
@@ -48,6 +49,30 @@ sirAudioResult_t SIRAudioSystem::initialize( const sirAudioSystemConfig_t &confi
 	m_nPlayingCapacity = config.nMaxPlaying;
 	m_nNextSlot = 0;
 	memset( m_pPlaying, 0, nBytes );
+	if ( config.nMaxEmitters != 0 ) {
+		size_t nEmitterBytes = 0;
+		void *pEmitters = nullptr;
+		if ( !SIRRawStorage::checkedMultiply( config.nMaxEmitters, sizeof( sirAudioSpatialSlot_t ), &nEmitterBytes ) ||
+		     SIRRawStorage::tryAllocate( pAllocator, nEmitterBytes, alignof( sirAudioSpatialSlot_t ), &pEmitters ) != SIR_CONTAINER_OK ) {
+			shutdown();
+			return SIR_AUDIO_CAPACITY;
+		}
+		m_pEmitters = ( sirAudioSpatialSlot_t * )pEmitters;
+		m_nEmitterCapacity = config.nMaxEmitters;
+		memset( m_pEmitters, 0, nEmitterBytes );
+	}
+	if ( config.nMaxListeners != 0 ) {
+		size_t nListenerBytes = 0;
+		void *pListeners = nullptr;
+		if ( !SIRRawStorage::checkedMultiply( config.nMaxListeners, sizeof( sirAudioSpatialSlot_t ), &nListenerBytes ) ||
+		     SIRRawStorage::tryAllocate( pAllocator, nListenerBytes, alignof( sirAudioSpatialSlot_t ), &pListeners ) != SIR_CONTAINER_OK ) {
+			shutdown();
+			return SIR_AUDIO_CAPACITY;
+		}
+		m_pListeners = ( sirAudioSpatialSlot_t * )pListeners;
+		m_nListenerCapacity = config.nMaxListeners;
+		memset( m_pListeners, 0, nListenerBytes );
+	}
 	if ( !m_Commands.initialize( pAllocator, config.nCommandCapacity ) ||
 	     !m_CriticalCommands.initialize( pAllocator, config.nCriticalCapacity ) ) {
 		shutdown();
@@ -79,6 +104,20 @@ void SIRAudioSystem::shutdown( void ) noexcept
 	m_nEpoch = 0;
 	m_Commands.shutdown();
 	m_CriticalCommands.shutdown();
+	if ( m_pEmitters != nullptr ) {
+		SIRRawStorage::deallocate( m_pAllocator, m_pEmitters, ( size_t )m_nEmitterCapacity * sizeof( sirAudioSpatialSlot_t ),
+		                          alignof( sirAudioSpatialSlot_t ) );
+	}
+	if ( m_pListeners != nullptr ) {
+		SIRRawStorage::deallocate( m_pAllocator, m_pListeners, ( size_t )m_nListenerCapacity * sizeof( sirAudioSpatialSlot_t ),
+		                          alignof( sirAudioSpatialSlot_t ) );
+	}
+	m_pEmitters = nullptr;
+	m_pListeners = nullptr;
+	m_nEmitterCapacity = 0;
+	m_nListenerCapacity = 0;
+	m_nNextEmitterSlot = 0;
+	m_nNextListenerSlot = 0;
 	if ( m_pPlaying != nullptr ) {
 		SIRRawStorage::deallocate( m_pAllocator, m_pPlaying, ( size_t )m_nPlayingCapacity * sizeof( sirAudioPlayingSlot_t ),
 		                           alignof( sirAudioPlayingSlot_t ) );
@@ -95,13 +134,78 @@ bool SIRAudioSystem::isValid( sirAudioPlayingHandle_t hPlaying ) const noexcept
 	       m_pPlaying[hPlaying.nSlot].nGeneration == hPlaying.nGeneration && m_pPlaying[hPlaying.nSlot].eState != SIR_AUDIO_PLAYBACK_FREE;
 }
 
-sirAudioResult_t SIRAudioSystem::enqueue( sirAudioCommand_t &command, bool bCritical ) noexcept
+bool SIRAudioSystem::isValidEmitter( sirAudioEmitterHandle_t hEmitter ) const noexcept
+{
+	return m_bInitialized && hEmitter.nEpoch == m_nEpoch && hEmitter.nSlot < m_nEmitterCapacity && hEmitter.nGeneration != 0 &&
+	       m_pEmitters[hEmitter.nSlot].nGeneration == hEmitter.nGeneration &&
+	       m_pEmitters[hEmitter.nSlot].eState == SIR_AUDIO_SPATIAL_ACTIVE;
+}
+
+bool SIRAudioSystem::isValidListener( sirAudioListenerHandle_t hListener ) const noexcept
+{
+	return m_bInitialized && hListener.nEpoch == m_nEpoch && hListener.nSlot < m_nListenerCapacity && hListener.nGeneration != 0 &&
+	       m_pListeners[hListener.nSlot].nGeneration == hListener.nGeneration &&
+	       m_pListeners[hListener.nSlot].eState == SIR_AUDIO_SPATIAL_ACTIVE;
+}
+
+void SIRAudioSystem::markTerminal( sirAudioPlayingSlot_t &slot, sirAudioPlaybackState_t eState ) noexcept
+{
+	if ( slot.eState != SIR_AUDIO_PLAYBACK_FINISHED && slot.eState != SIR_AUDIO_PLAYBACK_FAILED &&
+	     slot.hEmitter.nEpoch == m_nEpoch && slot.hEmitter.nSlot < m_nEmitterCapacity ) {
+		sirAudioSpatialSlot_t &emitter = m_pEmitters[slot.hEmitter.nSlot];
+		if ( emitter.nGeneration == slot.hEmitter.nGeneration && emitter.nActiveVoices != 0 ) {
+			--emitter.nActiveVoices;
+		}
+	}
+	slot.eState = eState;
+}
+
+void SIRAudioSystem::applyReleaseResult( const sirAudioCommand_t &command, sirAudioResult_t eResult ) noexcept
+{
+	if ( command.eType != SIR_AUDIO_COMMAND_RELEASE_EMITTER && command.eType != SIR_AUDIO_COMMAND_RELEASE_LISTENER ) {
+		return;
+	}
+	const bool bEmitter = command.eType == SIR_AUDIO_COMMAND_RELEASE_EMITTER;
+	sirAudioSpatialSlot_t *pSlots = bEmitter ? m_pEmitters : m_pListeners;
+	const uint32_t nCapacity = bEmitter ? m_nEmitterCapacity : m_nListenerCapacity;
+	if ( command.hEmitter.nEpoch != m_nEpoch || command.hEmitter.nSlot >= nCapacity ) {
+		return;
+	}
+	sirAudioSpatialSlot_t &slot = pSlots[command.hEmitter.nSlot];
+	if ( slot.nGeneration == command.hEmitter.nGeneration && slot.eState == SIR_AUDIO_SPATIAL_RELEASING ) {
+		slot.eState = ( eResult == SIR_AUDIO_OK ) ? SIR_AUDIO_SPATIAL_FREE : SIR_AUDIO_SPATIAL_ACTIVE;
+	}
+}
+
+static bool isValidAudioAttributes( const sirAudioAttributes_t &attributes ) noexcept
+{
+	const float *pVectors[4] = { attributes.fPosition, attributes.fVelocity, attributes.fForward, attributes.fUp };
+	for ( uint32_t iVector = 0; iVector < 4; ++iVector ) {
+		for ( uint32_t iComponent = 0; iComponent < 3; ++iComponent ) {
+			if ( !std::isfinite( pVectors[iVector][iComponent] ) ) {
+				return false;
+			}
+		}
+	}
+	return true;
+}
+
+sirAudioResult_t SIRAudioSystem::enqueue( sirAudioCommand_t &command, bool bCritical,
+                                            const sirAudioAttributes_t *pAttributes ) noexcept
 {
 	if ( !m_bInitialized ) {
 		return SIR_AUDIO_NOT_INITIALIZED;
 	}
 	command.nSequence = m_nNextSequence.fetchAdd( 1, SIR_MEMORY_ORDER_RELAXED );
-	return ( bCritical ? m_CriticalCommands.tryPush( command ) : m_Commands.tryPush( command ) ) ? SIR_AUDIO_PENDING : SIR_AUDIO_CAPACITY;
+	if ( bCritical ) {
+		return m_CriticalCommands.tryPush( command ) ? SIR_AUDIO_PENDING : SIR_AUDIO_CAPACITY;
+	}
+	sirAudioPacket_t packet = {};
+	packet.command = command;
+	if ( pAttributes != nullptr ) {
+		packet.attributes = *pAttributes;
+	}
+	return m_Commands.tryPush( packet ) ? SIR_AUDIO_PENDING : SIR_AUDIO_CAPACITY;
 }
 
 sirAudioResult_t SIRAudioSystem::playEvent( uint64_t nEventId, sirAudioEmitterHandle_t hEmitter,
@@ -110,6 +214,13 @@ sirAudioResult_t SIRAudioSystem::playEvent( uint64_t nEventId, sirAudioEmitterHa
 	hPlaying = {};
 	if ( !m_bInitialized ) {
 		return SIR_AUDIO_NOT_INITIALIZED;
+	}
+	if ( hEmitter.nEpoch == 0 ) {
+		if ( hEmitter.nSlot != 0 || hEmitter.nGeneration != 0 ) {
+			return SIR_AUDIO_INVALID_HANDLE;
+		}
+	} else if ( !isValidEmitter( hEmitter ) ) {
+		return SIR_AUDIO_INVALID_HANDLE;
 	}
 	if ( nEventId == 0 ) {
 		return SIR_AUDIO_INVALID_ARGUMENT;
@@ -133,6 +244,10 @@ sirAudioResult_t SIRAudioSystem::playEvent( uint64_t nEventId, sirAudioEmitterHa
 		const sirAudioResult_t eResult = enqueue( command, false );
 		if ( eResult != SIR_AUDIO_PENDING ) {
 			return eResult;
+		}
+		slot.hEmitter = hEmitter;
+		if ( hEmitter.nEpoch != 0 ) {
+			++m_pEmitters[hEmitter.nSlot].nActiveVoices;
 		}
 		slot.nGeneration = candidate.nGeneration;
 		slot.nStartSequence = command.nSequence;
@@ -187,10 +302,118 @@ sirAudioResult_t SIRAudioSystem::setParameter( sirAudioPlayingHandle_t hPlaying,
 	return enqueue( command, false );
 }
 
+sirAudioResult_t SIRAudioSystem::registerEmitter( sirAudioEmitterHandle_t &hEmitter ) noexcept
+{
+	hEmitter = {};
+	if ( !m_bInitialized ) {
+		return SIR_AUDIO_NOT_INITIALIZED;
+	}
+	for ( uint32_t nAttempt = 0; nAttempt < m_nEmitterCapacity; ++nAttempt ) {
+		const uint32_t iSlot = ( m_nNextEmitterSlot + nAttempt ) % m_nEmitterCapacity;
+		sirAudioSpatialSlot_t &slot = m_pEmitters[iSlot];
+		if ( slot.eState != SIR_AUDIO_SPATIAL_FREE || slot.nGeneration == UINT32_MAX ) {
+			continue;
+		}
+		++slot.nGeneration;
+		slot.nActiveVoices = 0;
+		slot.eState = SIR_AUDIO_SPATIAL_ACTIVE;
+		hEmitter = { iSlot, slot.nGeneration, m_nEpoch };
+		m_nNextEmitterSlot = iSlot + 1 == m_nEmitterCapacity ? 0 : iSlot + 1;
+		return SIR_AUDIO_OK;
+	}
+	return SIR_AUDIO_CAPACITY;
+}
+
+sirAudioResult_t SIRAudioSystem::releaseEmitter( sirAudioEmitterHandle_t hEmitter ) noexcept
+{
+	if ( !isValidEmitter( hEmitter ) ) {
+		return SIR_AUDIO_INVALID_HANDLE;
+	}
+	sirAudioSpatialSlot_t &slot = m_pEmitters[hEmitter.nSlot];
+	if ( slot.nActiveVoices != 0 ) {
+		return SIR_AUDIO_BUSY;
+	}
+	sirAudioCommand_t command = {};
+	command.eType = SIR_AUDIO_COMMAND_RELEASE_EMITTER;
+	command.hEmitter = hEmitter;
+	const sirAudioResult_t eResult = enqueue( command, true );
+	if ( eResult == SIR_AUDIO_PENDING ) {
+		slot.eState = SIR_AUDIO_SPATIAL_RELEASING;
+	}
+	return eResult;
+}
+
+sirAudioResult_t SIRAudioSystem::setEmitterAttributes( sirAudioEmitterHandle_t hEmitter, const sirAudioAttributes_t &attributes ) noexcept
+{
+	if ( !isValidEmitter( hEmitter ) ) {
+		return SIR_AUDIO_INVALID_HANDLE;
+	}
+	if ( !isValidAudioAttributes( attributes ) ) {
+		return SIR_AUDIO_INVALID_ARGUMENT;
+	}
+	sirAudioCommand_t command = {};
+	command.eType = SIR_AUDIO_COMMAND_SET_ATTRIBUTES;
+	command.hEmitter = hEmitter;
+	return enqueue( command, false, &attributes );
+}
+
+sirAudioResult_t SIRAudioSystem::registerListener( sirAudioListenerHandle_t &hListener ) noexcept
+{
+	hListener = {};
+	if ( !m_bInitialized ) {
+		return SIR_AUDIO_NOT_INITIALIZED;
+	}
+	for ( uint32_t nAttempt = 0; nAttempt < m_nListenerCapacity; ++nAttempt ) {
+		const uint32_t iSlot = ( m_nNextListenerSlot + nAttempt ) % m_nListenerCapacity;
+		sirAudioSpatialSlot_t &slot = m_pListeners[iSlot];
+		if ( slot.eState != SIR_AUDIO_SPATIAL_FREE || slot.nGeneration == UINT32_MAX ) {
+			continue;
+		}
+		++slot.nGeneration;
+		slot.eState = SIR_AUDIO_SPATIAL_ACTIVE;
+		hListener = { iSlot, slot.nGeneration, m_nEpoch };
+		m_nNextListenerSlot = iSlot + 1 == m_nListenerCapacity ? 0 : iSlot + 1;
+		return SIR_AUDIO_OK;
+	}
+	return SIR_AUDIO_CAPACITY;
+}
+
+sirAudioResult_t SIRAudioSystem::releaseListener( sirAudioListenerHandle_t hListener ) noexcept
+{
+	if ( !isValidListener( hListener ) ) {
+		return SIR_AUDIO_INVALID_HANDLE;
+	}
+	sirAudioCommand_t command = {};
+	command.eType = SIR_AUDIO_COMMAND_RELEASE_LISTENER;
+	command.hEmitter = { hListener.nSlot, hListener.nGeneration, hListener.nEpoch };
+	const sirAudioResult_t eResult = enqueue( command, true );
+	if ( eResult == SIR_AUDIO_PENDING ) {
+		m_pListeners[hListener.nSlot].eState = SIR_AUDIO_SPATIAL_RELEASING;
+	}
+	return eResult;
+}
+
+sirAudioResult_t SIRAudioSystem::setListenerAttributes( sirAudioListenerHandle_t hListener, const sirAudioAttributes_t &attributes ) noexcept
+{
+	if ( !isValidListener( hListener ) ) {
+		return SIR_AUDIO_INVALID_HANDLE;
+	}
+	if ( !isValidAudioAttributes( attributes ) ) {
+		return SIR_AUDIO_INVALID_ARGUMENT;
+	}
+	sirAudioCommand_t command = {};
+	command.eType = SIR_AUDIO_COMMAND_SET_LISTENER_ATTRIBUTES;
+	command.hEmitter = { hListener.nSlot, hListener.nGeneration, hListener.nEpoch };
+	return enqueue( command, false, &attributes );
+}
+
 sirAudioResult_t SIRAudioSystem::setEmitterParameter( sirAudioEmitterHandle_t hEmitter, uint64_t nParameterId, float fValue ) noexcept
 {
 	if ( !m_bInitialized ) {
 		return SIR_AUDIO_NOT_INITIALIZED;
+	}
+	if ( !isValidEmitter( hEmitter ) ) {
+		return SIR_AUDIO_INVALID_HANDLE;
 	}
 	if ( nParameterId == 0 ) {
 		return SIR_AUDIO_INVALID_ARGUMENT;
@@ -243,19 +466,19 @@ void SIRAudioSystem::applyCompletion( const sirAudioCompletion_t &completion ) n
 		}
 	} else if ( completion.eType == SIR_AUDIO_COMPLETION_FAILED ) {
 		if ( completion.nSequence == slot.nStartSequence ) {
-			slot.eState = SIR_AUDIO_PLAYBACK_FAILED;
+			markTerminal( slot, SIR_AUDIO_PLAYBACK_FAILED );
 		} else if ( completion.nSequence == slot.nStopSequence && slot.eState == SIR_AUDIO_PLAYBACK_STOPPING ) {
 			slot.eState = slot.eStateBeforeStop;
 			slot.nStopSequence = 0;
 		}
 	} else if ( completion.eType == SIR_AUDIO_COMPLETION_STOPPED ) {
 		if ( completion.nSequence == slot.nStopSequence && slot.eState == SIR_AUDIO_PLAYBACK_STOPPING ) {
-			slot.eState = SIR_AUDIO_PLAYBACK_FINISHED;
+			markTerminal( slot, SIR_AUDIO_PLAYBACK_FINISHED );
 		}
 	} else if ( completion.eType == SIR_AUDIO_COMPLETION_FINISHED ) {
 		if ( completion.nSequence == slot.nStartSequence &&
 		     ( slot.eState == SIR_AUDIO_PLAYBACK_PLAYING || slot.eState == SIR_AUDIO_PLAYBACK_STOPPING ) ) {
-			slot.eState = SIR_AUDIO_PLAYBACK_FINISHED;
+			markTerminal( slot, SIR_AUDIO_PLAYBACK_FINISHED );
 		}
 	}
 }
@@ -267,7 +490,7 @@ void SIRAudioSystem::failSubmission( const sirAudioCommand_t &command ) noexcept
 	}
 	sirAudioPlayingSlot_t &slot = m_pPlaying[command.hPlaying.nSlot];
 	if ( command.eType == SIR_AUDIO_COMMAND_PLAY && slot.nStartSequence == command.nSequence ) {
-		slot.eState = SIR_AUDIO_PLAYBACK_FAILED;
+		markTerminal( slot, SIR_AUDIO_PLAYBACK_FAILED );
 	} else if ( command.eType == SIR_AUDIO_COMMAND_STOP && slot.eState == SIR_AUDIO_PLAYBACK_STOPPING &&
 	            slot.nStopSequence == command.nSequence ) {
 		slot.eState = slot.eStateBeforeStop;
@@ -296,12 +519,17 @@ uint32_t SIRAudioSystem::update( void ) noexcept
 		return 0;
 	}
 	uint32_t nProcessed = 0;
+	sirAudioPacket_t packet = {};
 	sirAudioCommand_t command = {};
 	// A finite normal-queue budget prevents continuously producing threads from
 	// keeping this update loop alive indefinitely. Play is always dispatched
 	// before the critical stop created by the same logical owner.
-	for ( uint32_t nIndex = 0; nIndex < m_Commands.getCapacity() && m_Commands.tryPop( command ); ++nIndex ) {
-		const sirAudioResult_t eResult = m_Backend.submit( m_pBackendContext, &command, 1 );
+	for ( uint32_t nIndex = 0; nIndex < m_Commands.getCapacity() && m_Commands.tryPop( packet ); ++nIndex ) {
+		command = packet.command;
+		const bool bSpatial = command.eType == SIR_AUDIO_COMMAND_SET_ATTRIBUTES ||
+		                      command.eType == SIR_AUDIO_COMMAND_SET_LISTENER_ATTRIBUTES;
+		const sirAudioResult_t eResult = bSpatial ? m_Backend.submitSpatial( m_pBackendContext, &command, &packet.attributes ) :
+		                                                m_Backend.submit( m_pBackendContext, &command, 1 );
 		if ( eResult != SIR_AUDIO_OK && eResult != SIR_AUDIO_PENDING ) {
 			failSubmission( command );
 		}
@@ -315,6 +543,7 @@ uint32_t SIRAudioSystem::update( void ) noexcept
 		if ( eResult != SIR_AUDIO_OK && eResult != SIR_AUDIO_PENDING ) {
 			failSubmission( command );
 		}
+		applyReleaseResult( command, eResult );
 		drainCompletions();
 		++nProcessed;
 	}

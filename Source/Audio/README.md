@@ -1,7 +1,7 @@
 # Wave A: portable audio contracts
 
 The owned audio interface is separate from FMOD/Wwise/OpenAL provider details.
-The backend ABI is version 1. Audio commands and completions are fixed POD
+The backend ABI is version 2. Audio commands and completions are fixed POD
 messages; no provider SDK headers are part of exported interfaces.
 
 Playback identity retains 32-bit slot, 32-bit generation and 64-bit epoch.
@@ -47,11 +47,33 @@ Shutdown requires every producer and backend callback to be quiesced.
   drains after each dispatch to exercise small-capacity completion queues;
   later providers may batch only with equivalent capacity guarantees.
 - The 64-byte command, 32-byte completion, and 16-byte handle layouts are
-  locked to ABI version 1 by compile-time checks.
+  locked to ABI version 2 by compile-time checks.
 
 ## Scope remaining after Wave A contract and mock tests
 
-Emitter/listener registration and spatial payload transport, cooked
-package manifests, FMOD native lifetime, bank residency and device
+Cooked package manifests, FMOD native lifetime, bank residency and device
 recovery are not implemented by this contract-only provider. No
 FMOD/Wwise/OpenAL device playback is represented by mock test success.
+
+## Wave A spatial identity and attribute transport
+
+- Emitters and listeners use fixed-capacity pools with slot, generation and
+  epoch identities. Initialization allocates both tables through the caller's
+  allocator; a zero configured capacity disables that handle family.
+- Registration is an owner-thread operation. Release commands use the reserved
+  critical queue; release of an emitter with live playback occurrences returns
+  `SIR_AUDIO_BUSY`. A provider release failure restores the handle for retry.
+- Spatial snapshots are copied into the preallocated normal command queue,
+  never borrowed from a gameplay caller. The backend ABI v2 `submitSpatial`
+  callback receives the command and its 48-byte attribute payload together.
+  Transport order is preserved relative to play and parameter commands.
+- Listener identity is encoded in the wire command's spatial handle fields
+  for listener-specific command types; the command type disambiguates it.
+  The backend must not retain caller-owned callback argument pointers.
+- Spatial input rejects NaN and infinity; coordinates and basis vectors are
+  passed through without middleware-specific transformation.
+- Release is a synchronous provider operation returning `SIR_AUDIO_OK` or an
+  error; the portable core tracks pending release until update dispatches it.
+  A provider must not acknowledge release before retiring its own references.
+- The in-process queue packet is 112 bytes; the public wire command remains
+  64 bytes and the transported messages contain no retained external pointers.

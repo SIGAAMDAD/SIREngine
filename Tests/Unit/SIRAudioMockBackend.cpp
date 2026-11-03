@@ -21,7 +21,7 @@ SIRAudioMockBackend::SIRAudioMockBackend( const sirContainerAllocator_t *pAlloca
 
 sirAudioBackendOps_t SIRAudioMockBackend::getOps( void ) noexcept
 {
-	return { 1, initializeCallback, shutdownCallback, submitCallback, drainCallback, updateCallback, capabilitiesCallback };
+	return { 2, initializeCallback, shutdownCallback, submitCallback, drainCallback, updateCallback, capabilitiesCallback, submitSpatialCallback };
 }
 
 sirAudioResult_t SIRAudioMockBackend::initializeCallback( void *pContext, const sirAudioBackendConfig_t *pConfig ) noexcept
@@ -33,6 +33,7 @@ sirAudioResult_t SIRAudioMockBackend::initializeCallback( void *pContext, const 
 	}
 	pBackend->m_bInitialized = true;
 	pBackend->m_nSubmitted = 0;
+	pBackend->m_nSpatialUpdates = 0;
 	return SIR_AUDIO_OK;
 }
 
@@ -43,6 +44,7 @@ void SIRAudioMockBackend::shutdownCallback( void *pContext ) noexcept
 		pBackend->m_bInitialized = false;
 		pBackend->m_bFailNextPlay = false;
 		pBackend->m_bFailNextStop = false;
+		pBackend->m_bFailNextRelease = false;
 		pBackend->m_Completions.shutdown();
 	}
 }
@@ -56,6 +58,11 @@ sirAudioResult_t SIRAudioMockBackend::submitCallback( void *pContext, const sirA
 	for ( uint32_t iCommand = 0; iCommand < nCount; ++iCommand ) {
 		const sirAudioCommand_t &command = pCommands[iCommand];
 		++pBackend->m_nSubmitted;
+		if ( ( command.eType == SIR_AUDIO_COMMAND_RELEASE_EMITTER ||
+		       command.eType == SIR_AUDIO_COMMAND_RELEASE_LISTENER ) && pBackend->m_bFailNextRelease ) {
+			pBackend->m_bFailNextRelease = false;
+			return SIR_AUDIO_BACKEND_ERROR;
+		}
 		if ( command.eType != SIR_AUDIO_COMMAND_PLAY && command.eType != SIR_AUDIO_COMMAND_STOP ) {
 			continue;
 		}
@@ -109,6 +116,39 @@ uint64_t SIRAudioMockBackend::capabilitiesCallback( const void * ) noexcept
 void SIRAudioMockBackend::failNextPlay( void ) noexcept
 {
 	m_bFailNextPlay = true;
+}
+
+sirAudioResult_t SIRAudioMockBackend::submitSpatialCallback( void *pContext, const sirAudioCommand_t *pCommand,
+                                                             const sirAudioAttributes_t *pAttributes ) noexcept
+{
+	SIRAudioMockBackend *pBackend = ( SIRAudioMockBackend * )pContext;
+	if ( pBackend == nullptr || !pBackend->m_bInitialized || pCommand == nullptr || pAttributes == nullptr ) {
+		return SIR_AUDIO_INVALID_ARGUMENT;
+	}
+	++pBackend->m_nSpatialUpdates;
+	pBackend->m_LastAttributes = *pAttributes;
+	pBackend->m_eLastSpatialType = pCommand->eType;
+	return SIR_AUDIO_OK;
+}
+
+uint32_t SIRAudioMockBackend::getSpatialUpdateCount( void ) const noexcept
+{
+	return m_nSpatialUpdates;
+}
+
+sirAudioCommandType_t SIRAudioMockBackend::getLastSpatialType( void ) const noexcept
+{
+	return m_eLastSpatialType;
+}
+
+sirAudioAttributes_t SIRAudioMockBackend::getLastAttributes( void ) const noexcept
+{
+	return m_LastAttributes;
+}
+
+void SIRAudioMockBackend::failNextRelease( void ) noexcept
+{
+	m_bFailNextRelease = true;
 }
 
 uint64_t SIRAudioMockBackend::getSubmittedCount( void ) const noexcept

@@ -19,6 +19,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <stdlib.h>
 #include <thread>
 #include <atomic>
+#include <limits>
 
 static void testCheck( bool bCondition ) noexcept
 {
@@ -106,7 +107,7 @@ static void testLifecycle( const sirContainerAllocator_t *pAllocator )
 {
 	SIRAudioMockBackend backend( pAllocator );
 	SIRAudioSystem audio;
-	const sirAudioSystemConfig_t config = { 2, 0, 4, 2, 8 };
+	const sirAudioSystemConfig_t config = { 2, 0, 4, 2, 8, 0 };
 	testCheck( audio.initialize( config, pAllocator, SIRAudioMockBackend::getOps(), &backend ) == SIR_AUDIO_OK );
 	sirAudioPlayingHandle_t first = {};
 	testCheck( audio.playEvent( 100, {}, first ) == SIR_AUDIO_PENDING );
@@ -156,7 +157,7 @@ static void testFailureAndCapacity( const sirContainerAllocator_t *pAllocator )
 {
 	SIRAudioMockBackend backend( pAllocator );
 	SIRAudioSystem audio;
-	const sirAudioSystemConfig_t config = { 4, 0, 2, 2, 2 };
+	const sirAudioSystemConfig_t config = { 4, 0, 2, 2, 2, 0 };
 	testCheck( audio.initialize( config, pAllocator, SIRAudioMockBackend::getOps(), &backend ) == SIR_AUDIO_OK );
 	sirAudioPlayingHandle_t handles[4] = {};
 	testCheck( audio.playEvent( 100, {}, handles[0] ) == SIR_AUDIO_PENDING );
@@ -184,7 +185,7 @@ static void testStaleAfterReuse( const sirContainerAllocator_t *pAllocator )
 {
 	SIRAudioMockBackend backend( pAllocator );
 	SIRAudioSystem audio;
-	const sirAudioSystemConfig_t config = { 1, 0, 2, 2, 2 };
+	const sirAudioSystemConfig_t config = { 1, 0, 2, 2, 2, 0 };
 	testCheck( audio.initialize( config, pAllocator, SIRAudioMockBackend::getOps(), &backend ) == SIR_AUDIO_OK );
 	sirAudioPlayingHandle_t first = {};
 	testCheck( audio.playEvent( 200, {}, first ) == SIR_AUDIO_PENDING );
@@ -211,7 +212,7 @@ static void testLateParameterFailure( const sirContainerAllocator_t *pAllocator 
 {
 	SIRAudioMockBackend backend( pAllocator );
 	SIRAudioSystem audio;
-	const sirAudioSystemConfig_t config = { 1, 0, 4, 2, 2 };
+	const sirAudioSystemConfig_t config = { 1, 0, 4, 2, 2, 0 };
 	testCheck( audio.initialize( config, pAllocator, SIRAudioMockBackend::getOps(), &backend ) == SIR_AUDIO_OK );
 	sirAudioPlayingHandle_t playing = {};
 	testCheck( audio.playEvent( 300, {}, playing ) == SIR_AUDIO_PENDING );
@@ -235,14 +236,14 @@ static void testInitializationRollback( const sirContainerAllocator_t *pAllocato
 {
 	SIRAudioMockBackend backend( pAllocator );
 	SIRAudioSystem audio;
-	const sirAudioSystemConfig_t valid = { 2, 0, 4, 2, 2 };
+	const sirAudioSystemConfig_t valid = { 2, 0, 4, 2, 2, 0 };
 	sirAudioBackendOps_t ops = SIRAudioMockBackend::getOps();
 	ops.nAbiVersion = 999;
 	testCheck( audio.initialize( valid, pAllocator, ops, &backend ) == SIR_AUDIO_INVALID_ARGUMENT );
 	const sirContainerAllocator_t rejecting = { nullptr, testRejectAllocation, testFree, 0, 0 };
 	testCheck( audio.initialize( valid, &rejecting, SIRAudioMockBackend::getOps(), &backend ) == SIR_AUDIO_CAPACITY );
 	const uint32_t nBefore = s_nLiveAllocations.load();
-	const sirAudioSystemConfig_t invalidMock = { 2, 0, 4, 2, 3 };
+	const sirAudioSystemConfig_t invalidMock = { 2, 0, 4, 2, 3, 0 };
 	testCheck( audio.initialize( invalidMock, pAllocator, SIRAudioMockBackend::getOps(), &backend ) == SIR_AUDIO_CAPACITY );
 	testCheck( s_nLiveAllocations.load() == nBefore );
 	testCheck( audio.initialize( valid, pAllocator, SIRAudioMockBackend::getOps(), &backend ) == SIR_AUDIO_OK );
@@ -253,7 +254,7 @@ static void testStopReservedQueue( const sirContainerAllocator_t *pAllocator )
 {
 	SIRAudioMockBackend backend( pAllocator );
 	SIRAudioSystem audio;
-	const sirAudioSystemConfig_t config = { 4, 0, 4, 2, 2 };
+	const sirAudioSystemConfig_t config = { 4, 0, 4, 2, 2, 0 };
 	testCheck( audio.initialize( config, pAllocator, SIRAudioMockBackend::getOps(), &backend ) == SIR_AUDIO_OK );
 	sirAudioPlayingHandle_t handles[3] = {};
 	for ( uint32_t iIndex = 0; iIndex < 3; ++iIndex ) {
@@ -276,7 +277,7 @@ static void testNaturalFinish( const sirContainerAllocator_t *pAllocator )
 {
 	SIRAudioMockBackend backend( pAllocator );
 	SIRAudioSystem audio;
-	const sirAudioSystemConfig_t config = { 1, 0, 4, 2, 2 };
+	const sirAudioSystemConfig_t config = { 1, 0, 4, 2, 2, 0 };
 	testCheck( audio.initialize( config, pAllocator, SIRAudioMockBackend::getOps(), &backend ) == SIR_AUDIO_OK );
 	sirAudioPlayingHandle_t first = {};
 	testCheck( audio.playEvent( 500, {}, first ) == SIR_AUDIO_PENDING );
@@ -289,6 +290,94 @@ static void testNaturalFinish( const sirContainerAllocator_t *pAllocator )
 	sirAudioPlayingHandle_t second = {};
 	testCheck( audio.playEvent( 501, {}, second ) == SIR_AUDIO_PENDING );
 	testCheck( second.nGeneration != first.nGeneration );
+	audio.shutdown();
+}
+
+static void testSpatialLifetime( const sirContainerAllocator_t *pAllocator )
+{
+	SIRAudioMockBackend backend( pAllocator );
+	SIRAudioSystem audio;
+	const sirAudioSystemConfig_t config = { 2, 1, 8, 2, 4, 1 };
+	testCheck( audio.initialize( config, pAllocator, SIRAudioMockBackend::getOps(), &backend ) == SIR_AUDIO_OK );
+	sirAudioEmitterHandle_t emitter = {};
+	sirAudioEmitterHandle_t overflow = {};
+	testCheck( audio.registerEmitter( emitter ) == SIR_AUDIO_OK );
+	testCheck( audio.registerEmitter( overflow ) == SIR_AUDIO_CAPACITY );
+	sirAudioListenerHandle_t listener = {};
+	testCheck( audio.registerListener( listener ) == SIR_AUDIO_OK );
+	sirAudioListenerHandle_t otherListener = {};
+	testCheck( audio.registerListener( otherListener ) == SIR_AUDIO_CAPACITY );
+	sirAudioAttributes_t attributes = {};
+	attributes.fPosition[0] = 3.25f;
+	attributes.fForward[2] = -1.0f;
+	attributes.fUp[1] = 1.0f;
+	testCheck( audio.setEmitterAttributes( emitter, attributes ) == SIR_AUDIO_PENDING );
+	testCheck( audio.setListenerAttributes( listener, attributes ) == SIR_AUDIO_PENDING );
+	attributes.fPosition[0] = 15.0f;
+	testCheck( audio.setEmitterAttributes( emitter, attributes ) == SIR_AUDIO_PENDING );
+	testCheck( audio.update() == 3 );
+	testCheck( backend.getSpatialUpdateCount() == 3 );
+	testCheck( backend.getLastSpatialType() == SIR_AUDIO_COMMAND_SET_ATTRIBUTES );
+	testCheck( backend.getLastAttributes().fPosition[0] == 15.0f );
+	sirAudioPlayingHandle_t playing = {};
+	testCheck( audio.playEvent( 701, emitter, playing ) == SIR_AUDIO_PENDING );
+	testCheck( audio.releaseEmitter( emitter ) == SIR_AUDIO_BUSY );
+	testCheck( audio.update() == 1 );
+	testCheck( audio.releaseEmitter( emitter ) == SIR_AUDIO_BUSY );
+	testCheck( audio.stopEvent( playing, SIR_AUDIO_STOP_IMMEDIATE ) == SIR_AUDIO_PENDING );
+	testCheck( audio.update() == 1 );
+	backend.failNextRelease();
+	testCheck( audio.releaseEmitter( emitter ) == SIR_AUDIO_PENDING );
+	testCheck( audio.setEmitterAttributes( emitter, attributes ) == SIR_AUDIO_INVALID_HANDLE );
+	testCheck( audio.update() == 1 );
+	testCheck( audio.setEmitterAttributes( emitter, attributes ) == SIR_AUDIO_PENDING );
+	testCheck( audio.update() == 1 );
+	testCheck( audio.releaseEmitter( emitter ) == SIR_AUDIO_PENDING );
+	testCheck( audio.releaseEmitter( emitter ) == SIR_AUDIO_INVALID_HANDLE );
+	testCheck( audio.update() == 1 );
+	testCheck( audio.setEmitterParameter( emitter, 12, 1.0f ) == SIR_AUDIO_INVALID_HANDLE );
+	sirAudioEmitterHandle_t recycled = {};
+	testCheck( audio.registerEmitter( recycled ) == SIR_AUDIO_OK );
+	testCheck( recycled.nGeneration != emitter.nGeneration );
+	testCheck( audio.playEvent( 702, emitter, playing ) == SIR_AUDIO_INVALID_HANDLE );
+	testCheck( audio.releaseListener( listener ) == SIR_AUDIO_PENDING );
+	testCheck( audio.setListenerAttributes( listener, attributes ) == SIR_AUDIO_INVALID_HANDLE );
+	testCheck( audio.update() == 1 );
+	testCheck( audio.registerListener( otherListener ) == SIR_AUDIO_OK );
+	testCheck( otherListener.nGeneration != listener.nGeneration );
+	audio.shutdown();
+	testCheck( audio.initialize( config, pAllocator, SIRAudioMockBackend::getOps(), &backend ) == SIR_AUDIO_OK );
+	testCheck( audio.releaseEmitter( recycled ) == SIR_AUDIO_INVALID_HANDLE );
+	testCheck( audio.releaseListener( otherListener ) == SIR_AUDIO_INVALID_HANDLE );
+	audio.shutdown();
+}
+
+static void testSpatialNegative( const sirContainerAllocator_t *pAllocator )
+{
+	SIRAudioMockBackend backend( pAllocator );
+	SIRAudioSystem audio;
+	const sirAudioSystemConfig_t config = { 1, 1, 2, 2, 2, 1 };
+	testCheck( audio.initialize( config, pAllocator, SIRAudioMockBackend::getOps(), &backend ) == SIR_AUDIO_OK );
+	sirAudioEmitterHandle_t emitter = {};
+	sirAudioListenerHandle_t listener = {};
+	testCheck( audio.registerEmitter( emitter ) == SIR_AUDIO_OK );
+	testCheck( audio.registerListener( listener ) == SIR_AUDIO_OK );
+	sirAudioAttributes_t attributes = {};
+	attributes.fPosition[0] = 1.0f;
+	testCheck( audio.setEmitterAttributes( emitter, attributes ) == SIR_AUDIO_PENDING );
+	testCheck( audio.setListenerAttributes( listener, attributes ) == SIR_AUDIO_PENDING );
+	testCheck( audio.setEmitterAttributes( emitter, attributes ) == SIR_AUDIO_CAPACITY );
+	attributes.fPosition[0] = std::numeric_limits<float>::quiet_NaN();
+	testCheck( audio.setEmitterAttributes( emitter, attributes ) == SIR_AUDIO_INVALID_ARGUMENT );
+	attributes.fPosition[0] = 3.0f;
+	testCheck( audio.update() == 2 );
+	backend.failNextRelease();
+	testCheck( audio.releaseListener( listener ) == SIR_AUDIO_PENDING );
+	testCheck( audio.update() == 1 );
+	testCheck( audio.setListenerAttributes( listener, attributes ) == SIR_AUDIO_PENDING );
+	testCheck( audio.update() == 1 );
+	testCheck( audio.releaseListener( listener ) == SIR_AUDIO_PENDING );
+	testCheck( audio.update() == 1 );
 	audio.shutdown();
 }
 
@@ -305,6 +394,8 @@ int main( void )
 	testInitializationRollback( &allocator );
 	testStopReservedQueue( &allocator );
 	testNaturalFinish( &allocator );
+	testSpatialLifetime( &allocator );
+	testSpatialNegative( &allocator );
 	testCheck( s_nLiveAllocations.load() == 0 );
 	return 0;
 }

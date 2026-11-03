@@ -33,7 +33,8 @@ typedef enum sirAudioResult_e : uint8_t
 	SIR_AUDIO_UNSUPPORTED = 4,
 	SIR_AUDIO_BACKEND_ERROR = 5,
 	SIR_AUDIO_INVALID_ARGUMENT = 6,
-	SIR_AUDIO_NOT_INITIALIZED = 7
+	SIR_AUDIO_NOT_INITIALIZED = 7,
+	SIR_AUDIO_BUSY = 8
 } sirAudioResult_t;
 
 typedef enum sirAudioPlaybackState_e : uint8_t
@@ -68,7 +69,10 @@ typedef enum sirAudioCommandType_e : uint8_t
 	SIR_AUDIO_COMMAND_SET_EMITTER_PARAMETER = 4,
 	SIR_AUDIO_COMMAND_SET_GLOBAL_PARAMETER = 5,
 	SIR_AUDIO_COMMAND_SET_ATTRIBUTES = 6,
-	SIR_AUDIO_COMMAND_SHUTDOWN = 7
+	SIR_AUDIO_COMMAND_SHUTDOWN = 7,
+	SIR_AUDIO_COMMAND_RELEASE_EMITTER = 8,
+	SIR_AUDIO_COMMAND_RELEASE_LISTENER = 9,
+	SIR_AUDIO_COMMAND_SET_LISTENER_ATTRIBUTES = 10
 } sirAudioCommandType_t;
 
 typedef enum sirAudioCompletionType_e : uint8_t
@@ -149,6 +153,7 @@ typedef struct sirAudioSystemConfig_s
 	uint32_t nCommandCapacity;
 	uint32_t nCriticalCapacity;
 	uint32_t nCompletionCapacity;
+	uint32_t nMaxListeners;
 } sirAudioSystemConfig_t;
 
 typedef struct sirAudioControlBinding_s
