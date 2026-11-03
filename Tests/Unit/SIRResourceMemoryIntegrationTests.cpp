@@ -11,6 +11,7 @@ This software is provided "as is", without warranty of any kind,
 express or implied, including but not limited to the warranties
 of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
+
 */
 
 #include <Resources/SIRResourceMemoryAdapter.h>
@@ -26,12 +27,12 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <stdlib.h>
 #include <string.h>
 
-#define REQUIRE( condition ) \
-	do { \
-		if ( !( condition ) ) { \
-			fprintf( stderr, "%s:%d: %s\\n", __FILE__, __LINE__, #condition ); \
-			abort(); \
-		} \
+#define REQUIRE( condition )                                                                                                               \
+	do {                                                                                                                                   \
+		if ( !( condition ) ) {                                                                                                            \
+			fprintf( stderr, "%s:%d: %s\\n", __FILE__, __LINE__, #condition );                                                             \
+			abort();                                                                                                                       \
+		}                                                                                                                                  \
 	} while ( false )
 
 class SIRResourceTestDomain
@@ -42,8 +43,7 @@ public:
 	SIRBuddyAllocator m_Large;
 	SIRGeneralHeap m_Heap;
 
-	bool init( SIRMemoryManager &rMemory, sirMemoryDomain_t eDomain, const char *szSmall, const char *szMedium,
-	           const char *szLarge )
+	bool init( SIRMemoryManager &rMemory, sirMemoryDomain_t eDomain, const char *szSmall, const char *szMedium, const char *szLarge )
 	{
 		const uint64_t nPage = SIRVirtualMemory::getPageSize();
 		SIRMemorySegment *pSmall = rMemory.createSegment( szSmall, nPage * 256, 0, eDomain );
@@ -57,12 +57,12 @@ public:
 			return false;
 		}
 		const sirGeneralHeapConfig_t heapConfig = { &m_Small, &m_Medium, nullptr, &m_Large, pSmall, pMedium, pLarge, 256, 4096, false };
-		return m_Heap.init( heapConfig ) && m_Heap.attachThread();
+		return m_Heap.init( heapConfig );
 	}
 
-	bool shutdown( void )
+	bool shutdown( bool bAttached )
 	{
-		return m_Heap.detachThread() && m_Heap.shutdown() && m_Small.shutdown() && m_Medium.shutdown();
+		return ( !bAttached || m_Heap.detachThread() ) && m_Heap.shutdown() && m_Small.shutdown() && m_Medium.shutdown();
 	}
 };
 
@@ -77,6 +77,9 @@ int main( void )
 	SIRResourceTestDomain streaming;
 	REQUIRE( resident.init( memory, SIR_MEMORY_DOMAIN_RESOURCE_RESIDENT, "grdg.meta.small", "grdg.meta.medium", "grdg.meta.large" ) );
 	REQUIRE( streaming.init( memory, SIR_MEMORY_DOMAIN_STREAMING, "grdg.io.small", "grdg.io.medium", "grdg.io.large" ) );
+	// Compact bucket bindings are per-thread; the streaming heap uses the
+	// synchronized medium-heap fallback while the resident heap is attached.
+	REQUIRE( resident.m_Heap.attachThread() );
 
 	SIRResourceMemoryAdapter adapter;
 	REQUIRE( adapter.bindDomain( SIR_MEMORY_DOMAIN_RESOURCE_RESIDENT, &resident.m_Heap ) );
@@ -98,7 +101,8 @@ int main( void )
 		REQUIRE( pWriter != nullptr );
 		SIRResourceStagingHandle missing = {};
 		SIRResourceMutableBytes missingBytes = {};
-		REQUIRE( pWriter->allocateStaging( 1024, 16, SIR_MEMORY_DOMAIN_AUDIO, &missing, &missingBytes ) == SIR_RESOURCE_RESULT_OUT_OF_BUDGET );
+		REQUIRE( pWriter->allocateStaging( 1024, 16, SIR_MEMORY_DOMAIN_AUDIO, &missing, &missingBytes ) ==
+		         SIR_RESOURCE_RESULT_OUT_OF_BUDGET );
 
 		SIRResourceStagingHandle staging = {};
 		SIRResourceMutableBytes payload = {};
@@ -134,7 +138,7 @@ int main( void )
 	         resident.m_Large.getAllocationCount() == 0 );
 	REQUIRE( streaming.m_Small.getLiveCount() == 0 && streaming.m_Medium.getAllocationCount() == 0 &&
 	         streaming.m_Large.getAllocationCount() == 0 );
-	REQUIRE( streaming.shutdown() && resident.shutdown() );
+	REQUIRE( streaming.shutdown( false ) && resident.shutdown( true ) );
 	puts( "PASS: GRDG physical domain-backed allocation and retirement" );
 	return 0;
 }

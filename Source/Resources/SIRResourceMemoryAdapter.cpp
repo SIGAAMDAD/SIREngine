@@ -40,8 +40,8 @@ SIRResourceAllocator SIRResourceMemoryAdapter::getAllocator( void ) noexcept
 
 void *SIRResourceMemoryAdapter::allocate( void *pContext, uint64_t nBytes, uint32_t nAlignment, uint32_t nDomain ) noexcept
 {
-	if ( pContext == nullptr || nBytes == 0 || nBytes > SIZE_MAX || nAlignment == 0 ||
-	     ( nAlignment & ( nAlignment - 1 ) ) != 0 || nDomain >= SIR_MEMORY_DOMAIN_COUNT ) {
+	if ( pContext == nullptr || nBytes == 0 || nBytes > SIZE_MAX || nAlignment == 0 || ( nAlignment & ( nAlignment - 1 ) ) != 0 ||
+	     nDomain >= SIR_MEMORY_DOMAIN_COUNT ) {
 		return nullptr;
 	}
 	SIRResourceMemoryAdapter *pAdapter = ( SIRResourceMemoryAdapter * )pContext;
