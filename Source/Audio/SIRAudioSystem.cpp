@@ -14,6 +14,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Audio/SIRAudioSystem.h>
+#include <Audio/SIRAudioResources.h>
 
 #include <Core/Containers/SIRRawStorage.h>
 #include <limits.h>
@@ -27,13 +28,14 @@ SIRAudioSystem::~SIRAudioSystem( void ) noexcept
 }
 
 sirAudioResult_t SIRAudioSystem::initialize( const sirAudioSystemConfig_t &config, const sirContainerAllocator_t *pAllocator,
-                                             const sirAudioBackendOps_t &backend, void *pBackendContext ) noexcept
+                                             const sirAudioBackendOps_t &backend, void *pBackendContext,
+                                             const SIRAudioResourceStore *pResources ) noexcept
 {
-	if ( m_bInitialized || m_pPlaying != nullptr || backend.nAbiVersion != 2 || backend.submitSpatial == nullptr ||
-	     backend.initialize == nullptr || backend.shutdown == nullptr || backend.submit == nullptr || backend.drainCompletions == nullptr ||
-	     backend.update == nullptr || backend.getCapabilities == nullptr || pBackendContext == nullptr || config.nMaxPlaying == 0 ||
-	     config.nMaxPlaying > UINT32_MAX / 2 || config.nCommandCapacity < 2 || config.nCriticalCapacity < 2 ||
-	     config.nCompletionCapacity < 2 ) {
+	if ( ( pResources != nullptr && !pResources->isLoaded() ) || m_bInitialized || m_pPlaying != nullptr || backend.nAbiVersion != 2 ||
+	     backend.submitSpatial == nullptr || backend.initialize == nullptr || backend.shutdown == nullptr || backend.submit == nullptr ||
+	     backend.drainCompletions == nullptr || backend.update == nullptr || backend.getCapabilities == nullptr ||
+	     pBackendContext == nullptr || config.nMaxPlaying == 0 || config.nMaxPlaying > UINT32_MAX / 2 || config.nCommandCapacity < 2 ||
+	     config.nCriticalCapacity < 2 || config.nCompletionCapacity < 2 ) {
 		return SIR_AUDIO_INVALID_ARGUMENT;
 	}
 	size_t nBytes = 0;
@@ -86,6 +88,8 @@ sirAudioResult_t SIRAudioSystem::initialize( const sirAudioSystemConfig_t &confi
 		shutdown();
 		return eResult;
 	}
+	m_pResources = pResources;
+	m_nResourceEpoch = pResources == nullptr ? 0 : pResources->getEpoch();
 	m_nEpoch = s_nAudioEpoch.fetchAdd( 1, SIR_MEMORY_ORDER_RELAXED );
 	m_nNextSequence.store( 1, SIR_MEMORY_ORDER_RELAXED );
 	m_bInitialized = true;
@@ -94,12 +98,14 @@ sirAudioResult_t SIRAudioSystem::initialize( const sirAudioSystemConfig_t &confi
 
 void SIRAudioSystem::shutdown( void ) noexcept
 {
-	// Producers and the update owner are quiesced before teardown.
+	// All producers and the update owner must already be quiesced.
 	if ( m_pBackendContext != nullptr && m_Backend.shutdown != nullptr ) {
 		m_Backend.shutdown( m_pBackendContext );
 	}
 	m_Backend = {};
 	m_pBackendContext = nullptr;
+	m_pResources = nullptr;
+	m_nResourceEpoch = 0;
 	m_bInitialized = false;
 	m_nEpoch = 0;
 	m_Commands.shutdown();
@@ -224,6 +230,15 @@ sirAudioResult_t SIRAudioSystem::playEvent( uint64_t nEventId, sirAudioEmitterHa
 	if ( nEventId == 0 ) {
 		return SIR_AUDIO_INVALID_ARGUMENT;
 	}
+	if ( m_pResources != nullptr ) {
+		if ( m_pResources->getEpoch() != m_nResourceEpoch ) {
+			return SIR_AUDIO_INVALID_HANDLE;
+		}
+		sirAudioEventRecord_t event = {};
+		if ( !m_pResources->findEvent( nEventId, event ) ) {
+			return SIR_AUDIO_INVALID_ARGUMENT;
+		}
+	}
 	for ( uint32_t nAttempt = 0; nAttempt < m_nPlayingCapacity; ++nAttempt ) {
 		const uint32_t iSlot = ( m_nNextSlot + nAttempt ) % m_nPlayingCapacity;
 		sirAudioPlayingSlot_t &slot = m_pPlaying[iSlot];
@@ -292,6 +307,15 @@ sirAudioResult_t SIRAudioSystem::setParameter( sirAudioPlayingHandle_t hPlaying,
 	}
 	if ( nParameterId == 0 ) {
 		return SIR_AUDIO_INVALID_ARGUMENT;
+	}
+	if ( m_pResources != nullptr ) {
+		if ( m_pResources->getEpoch() != m_nResourceEpoch ) {
+			return SIR_AUDIO_INVALID_HANDLE;
+		}
+		const sirAudioResult_t eValidation = m_pResources->validateControl( nParameterId, SIR_AUDIO_CONTROL_PLAYING, fValue );
+		if ( eValidation != SIR_AUDIO_OK ) {
+			return eValidation;
+		}
 	}
 	sirAudioCommand_t command = {};
 	command.eType = SIR_AUDIO_COMMAND_SET_PARAMETER;
@@ -418,6 +442,15 @@ sirAudioResult_t SIRAudioSystem::setEmitterParameter( sirAudioEmitterHandle_t hE
 	if ( nParameterId == 0 ) {
 		return SIR_AUDIO_INVALID_ARGUMENT;
 	}
+	if ( m_pResources != nullptr ) {
+		if ( m_pResources->getEpoch() != m_nResourceEpoch ) {
+			return SIR_AUDIO_INVALID_HANDLE;
+		}
+		const sirAudioResult_t eValidation = m_pResources->validateControl( nParameterId, SIR_AUDIO_CONTROL_EMITTER, fValue );
+		if ( eValidation != SIR_AUDIO_OK ) {
+			return eValidation;
+		}
+	}
 	sirAudioCommand_t command = {};
 	command.eType = SIR_AUDIO_COMMAND_SET_EMITTER_PARAMETER;
 	command.hEmitter = hEmitter;
@@ -433,6 +466,15 @@ sirAudioResult_t SIRAudioSystem::setGlobalParameter( uint64_t nParameterId, floa
 	}
 	if ( nParameterId == 0 ) {
 		return SIR_AUDIO_INVALID_ARGUMENT;
+	}
+	if ( m_pResources != nullptr ) {
+		if ( m_pResources->getEpoch() != m_nResourceEpoch ) {
+			return SIR_AUDIO_INVALID_HANDLE;
+		}
+		const sirAudioResult_t eValidation = m_pResources->validateControl( nParameterId, SIR_AUDIO_CONTROL_GLOBAL, fValue );
+		if ( eValidation != SIR_AUDIO_OK ) {
+			return eValidation;
+		}
 	}
 	sirAudioCommand_t command = {};
 	command.eType = SIR_AUDIO_COMMAND_SET_GLOBAL_PARAMETER;

@@ -27,9 +27,9 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Audio/SIRAudioBackend.h>
 #include <Audio/SIRAudioQueue.h>
 
-// The gameplay owner alone calls play/stop/update/shutdown and reads playback
-// state. Concurrent producers may submit global/emitter parameter commands;
-// they must quiesce before shutdown. Vendor callbacks only enqueue completions.
+// All handle mutations, update(), and shutdown() are owner-thread operations.
+// Parameter submissions may be made by concurrent producers after init.
+// Stop requests are lossless on success and have a reserved critical queue.
 typedef struct sirAudioPlayingSlot_s
 {
 	uint64_t nStartSequence;
@@ -62,6 +62,8 @@ typedef struct sirAudioPacket_s
 	sirAudioAttributes_t attributes;
 } sirAudioPacket_t;
 
+class SIRAudioResourceStore;
+
 class SIRAudioSystem
 {
 private:
@@ -71,6 +73,8 @@ private:
 	const sirContainerAllocator_t *m_pAllocator = nullptr;
 	sirAudioBackendOps_t m_Backend = {};
 	void *m_pBackendContext = nullptr;
+	const SIRAudioResourceStore *m_pResources = nullptr;
+	uint64_t m_nResourceEpoch = 0;
 	SIRAudioQueue<sirAudioPacket_t> m_Commands;
 	SIRAudioQueue<sirAudioCommand_t> m_CriticalCommands;
 	SIRAtomic<uint64_t> m_nNextSequence = SIRAtomic<uint64_t>( 1 );
@@ -100,7 +104,8 @@ public:
 	SIRAudioSystem &operator=( const SIRAudioSystem & ) = delete;
 
 	sirAudioResult_t initialize( const sirAudioSystemConfig_t &config, const sirContainerAllocator_t *pAllocator,
-	                             const sirAudioBackendOps_t &backend, void *pBackendContext ) noexcept;
+	                             const sirAudioBackendOps_t &backend, void *pBackendContext,
+	                             const SIRAudioResourceStore *pResources = nullptr ) noexcept;
 	void shutdown( void ) noexcept;
 	sirAudioResult_t playEvent( uint64_t nEventId, sirAudioEmitterHandle_t hEmitter, sirAudioPlayingHandle_t &hPlaying ) noexcept;
 	sirAudioResult_t stopEvent( sirAudioPlayingHandle_t hPlaying, sirAudioStopMode_t eMode ) noexcept;
