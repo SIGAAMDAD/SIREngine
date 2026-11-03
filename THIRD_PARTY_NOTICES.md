@@ -7,6 +7,8 @@ Pinned source dependencies are managed as Git submodules under `ThirdParty/`:
 - Electronic Arts EASTL, EABase and EAAssert — retain license files from their pinned repositories.
 - [OpenAL Soft](https://github.com/kcat/openal-soft) — an OpenAL implementation with library and bundled-component licenses; preserve its `COPYING` and related notices.
 - [meshoptimizer](https://github.com/zeux/meshoptimizer) — MIT-licensed mesh processing and optimization library.
+- [GoogleTest](https://github.com/google/googletest) — BSD-3-Clause licensed C++ unit testing framework.
+- [Google Benchmark](https://github.com/google/benchmark) — Apache-2.0 licensed native CPU benchmarking framework.
 
 FMOD Studio API and Wwise are separately licensed SDKs, and their proprietary files are not committed. Mono is resolved from a separately installed embedding SDK and retains its runtime/distribution licensing obligations. System-installed OpenAL implementations retain their own licenses.
 
