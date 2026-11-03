@@ -5,6 +5,7 @@ set(SIR_CORE_PLATFORM_COMMON
     SIRCPUInfo.cpp
     SIRThread.cpp
     SIRSync.cpp
+    SIRAtomic.cpp
 )
 
 if(WIN32)
