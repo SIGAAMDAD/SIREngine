@@ -13,6 +13,7 @@ if(WIN32)
         Windows/SIRPlatformFileWindows.cpp
         Windows/SIRPlatformFileMappingWindows.cpp
         Windows/SIRPlatformPipeWindows.cpp
+        Windows/SIRSemaphoreWindows.cpp
         Windows/SIRVirtualMemoryWindows.cpp
         Windows/SIRPlatformMemoryWindows.cpp
         Windows/SIRCPUInfoWindows.cpp
@@ -27,6 +28,7 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         Linux/SIRPlatformFileLinux.cpp
         Linux/SIRPlatformFileMappingLinux.cpp
         Linux/SIRPlatformPipeLinux.cpp
+        Linux/SIRSemaphoreLinux.cpp
         Linux/SIRVirtualMemoryLinux.cpp
         Linux/SIRPlatformMemoryLinux.cpp
         Linux/SIRCPUInfoLinux.cpp

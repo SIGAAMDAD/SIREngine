@@ -59,3 +59,8 @@ foreach(sirTest IN ITEMS SIRPlatformFileTests SIRPlatformFileMappingTests SIRPla
     add_test(NAME core.platform.${sirTest} COMMAND ${sirTest})
     sir_configure_owned_target(${sirTest})
 endforeach()
+
+add_executable(SIRSemaphoreTests SIRSemaphoreTests.cpp)
+target_link_libraries(SIRSemaphoreTests PRIVATE SIR::Core)
+add_test(NAME core.platform.semaphore COMMAND SIRSemaphoreTests)
+sir_configure_owned_target(SIRSemaphoreTests)
