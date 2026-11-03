@@ -48,7 +48,6 @@ private:
 	               "Priority queue updates require noexcept movable values" );
 	static_assert( std::is_nothrow_invocable_r<bool, Compare, const T &, const T &>::value, "Priority comparisons must be noexcept" );
 
-
 	SIRVector<T> m_values;
 	Compare m_compare;
 
