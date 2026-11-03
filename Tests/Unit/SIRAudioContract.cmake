@@ -7,3 +7,15 @@ add_executable(SIRAudioResourceTests SIRAudioResourcesTests.cpp SIRAudioMockBack
 target_link_libraries(SIRAudioResourceTests PRIVATE SIR::Audio)
 add_test(NAME audio.resources.wave-a COMMAND SIRAudioResourceTests)
 sir_configure_owned_target(SIRAudioResourceTests)
+
+add_executable(SIRFMODContextTests SIRFMODContextTests.cpp)
+target_link_libraries(SIRFMODContextTests PRIVATE SIR::FMODContext)
+add_test(NAME audio.fmod.context-contract COMMAND SIRFMODContextTests)
+sir_configure_owned_target(SIRFMODContextTests)
+
+if(SIR_WITH_FMOD)
+    add_executable(SIRFMODNativeSmokeTests SIRFMODNativeSmokeTests.cpp)
+    target_link_libraries(SIRFMODNativeSmokeTests PRIVATE SIR::FMODContext)
+    add_test(NAME audio.fmod.native-context COMMAND SIRFMODNativeSmokeTests)
+    sir_configure_owned_target(SIRFMODNativeSmokeTests)
+endif()

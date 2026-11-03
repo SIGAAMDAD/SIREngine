@@ -106,3 +106,12 @@ FMOD/Wwise/OpenAL device playback is represented by mock test success.
   missing and cyclic dependencies, out-of-budget allocations, rollback,
   handle staleness, and gameplay command validation. The source manifest
   cooker, GRDG publication and provider-native bank lifecycle are later work.
+
+## Wave B native context
+
+`FMOD/SIRFMODContext` now implements one-owner Studio/Core lifecycle,
+initialization rollback, SDK/runtime version validation, optional driver or
+no-sound selection, update, release and restart. Its callback-injected
+controller runs an SDK-free lifecycle test. The real `FMOD::Studio::System`
+bridge is linked only when `SIR_WITH_FMOD=ON`, together with a no-sound
+runtime smoke test. See `FMOD/README.md` for ownership and verification.
