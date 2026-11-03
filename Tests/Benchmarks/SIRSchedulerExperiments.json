@@ -1,0 +1,15 @@
+{
+  "schema": "sir.scheduler.experiments.v1",
+  "baseline_branch": "feat/grdg-task-scheduler-20261103",
+  "description": "Controlled, synthetic scheduler measurements. Subsystem replay is not native renderer/physics/audio execution.",
+  "experiments": [
+    {"id": "E02-callback-contention", "filter": "^SIRBenchmarkExperimentContention/", "scope": "scheduler", "independent_variables": ["workers", "shared_atomic"], "hypothesis": "Shared atomic result updates reduce scaling"},
+    {"id": "G01-task-granularity", "filter": "^SIRBenchmarkExperimentGranularity/", "scope": "scheduler", "independent_variables": ["workers", "chunk_items", "compute_iterations"], "hypothesis": "The optimum batch size depends on useful task cost"},
+    {"id": "Q06-local-stealing", "filter": "^SIRBenchmarkExperimentLocalSteal/", "scope": "scheduler", "independent_variables": ["workers", "spawned_children"], "hypothesis": "Worker-created tasks activate local queues and stealing"},
+    {"id": "D06-dag-shapes", "filter": "^SIRBenchmarkExperimentDagShape/", "scope": "scheduler", "independent_variables": ["workers", "task_count", "graph_shape"], "hypothesis": "Dependency width changes scheduling efficiency"},
+    {"id": "D08-graph-compilation", "filter": "^SIRBenchmarkExperimentGraphCompile/", "scope": "grdg", "independent_variables": ["pass_count", "resource_access_mode"], "hypothesis": "Overlapping writes increase graph compilation cost"},
+    {"id": "SYS-synthetic-replay", "filter": "^SIRBenchmarkExperimentReplay/", "scope": "subsystems", "independent_variables": ["kernel_profile", "workers", "chunk_items"], "hypothesis": "Different workload classes favor different task granularities and worker counts"},
+    {"id": "S8-existing-worker", "filter": "^SIRBenchmarkWorkerBatch/", "scope": "baseline", "independent_variables": ["workers", "tasks", "work"], "hypothesis": "Existing shared-atomic benchmark is a mixed scheduler/payload measurement"},
+    {"id": "S8-existing-providers", "filter": "^SIRBenchmarkFenceBurst/", "scope": "baseline", "independent_variables": ["ticket_count"], "hypothesis": "Fence burst processing has a batching crossover"}
+  ]
+}
