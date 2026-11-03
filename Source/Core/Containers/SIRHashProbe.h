@@ -68,7 +68,6 @@ public:
 		}
 	}
 
-
 	static sirContainerResult_t capacityForCount( uint32_t nElements, uint32_t *pCapacity ) noexcept
 	{
 		if ( pCapacity == nullptr ) {
@@ -89,11 +88,11 @@ public:
 	static size_t mixHash( size_t nHash ) noexcept
 	{
 #if SIZE_MAX > UINT32_MAX
-        uint64_t nMixed = ( uint64_t )nHash;
-        nMixed ^= nMixed >> 33;
-        nMixed *= UINT64_C( 0xff51afd7ed558ccd );
-        nMixed ^= nMixed >> 33;
-        return ( size_t )nMixed;
+		uint64_t nMixed = ( uint64_t )nHash;
+		nMixed ^= nMixed >> 33;
+		nMixed *= UINT64_C( 0xff51afd7ed558ccd );
+		nMixed ^= nMixed >> 33;
+		return ( size_t )nMixed;
 #else
 		uint32_t nMixed = ( uint32_t )nHash;
 		nMixed ^= nMixed >> 16;

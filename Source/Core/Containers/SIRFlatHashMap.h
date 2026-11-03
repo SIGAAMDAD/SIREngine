@@ -37,7 +37,7 @@ private:
 	using Pair = std::pair<K, V>;
 	static_assert( SIRLifetimeOps<Pair>::CAN_RELOCATE, "Hash table growth requires copy or nothrow move" );
 	static_assert( std::is_nothrow_invocable_r<size_t, Hash, const K &>::value,
-		"Hash must be noexcept to preserve strong rehash failure guarantee" );
+	               "Hash must be noexcept to preserve strong rehash failure guarantee" );
 
 	uint8_t *m_pControl = nullptr;
 	Pair *m_pEntries = nullptr;
@@ -118,7 +118,8 @@ private:
 			if ( SIRHashProbe::getControl<bCompactControl>( m_pControl, iBucket ) == SIRHashProbe::EMPTY ) {
 				return UINT32_MAX;
 			}
-			if ( SIRHashProbe::getControl<bCompactControl>( m_pControl, iBucket ) == SIRHashProbe::OCCUPIED && m_equal( m_pEntries[iBucket].first, key ) ) {
+			if ( SIRHashProbe::getControl<bCompactControl>( m_pControl, iBucket ) == SIRHashProbe::OCCUPIED &&
+			     m_equal( m_pEntries[iBucket].first, key ) ) {
 				return iBucket;
 			}
 			iBucket = ( iBucket + 1 ) & ( m_nCapacity - 1 );
@@ -228,7 +229,7 @@ private:
 
 public:
 	explicit SIRFlatHashMap( const sirContainerAllocator_t *pAllocator, Hash hash = Hash(), Equal equal = Equal() )
-		: m_pAllocator( pAllocator ), m_hash( std::move( hash ) ), m_equal( std::move( equal ) )
+	    : m_pAllocator( pAllocator ), m_hash( std::move( hash ) ), m_equal( std::move( equal ) )
 	{
 	}
 

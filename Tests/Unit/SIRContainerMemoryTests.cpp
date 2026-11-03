@@ -32,11 +32,11 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #endif
 
 #define SIR_CHECK( bCondition )                                                                                                            \
-	do {                                                                                                                                  \
+	do {                                                                                                                                   \
 		if ( !( bCondition ) ) {                                                                                                           \
-			fprintf( stderr, "Container memory test failure at line %d: %s\n", __LINE__, #bCondition );                                \
-			abort();                                                                                                                     \
-		}                                                                                                                                 \
+			fprintf( stderr, "Container memory test failure at line %d: %s\n", __LINE__, #bCondition );                                    \
+			abort();                                                                                                                       \
+		}                                                                                                                                  \
 	} while ( 0 )
 
 typedef struct sirMemoryTestState_s

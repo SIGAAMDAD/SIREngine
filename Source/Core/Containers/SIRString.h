@@ -94,7 +94,7 @@ private:
 
 public:
 	explicit SIRString( const sirContainerAllocator_t *pAllocator ) noexcept
-		: m_pAllocator( pAllocator ), m_nLength( 0 ), m_nCapacity( INLINE_CAPACITY )
+	    : m_pAllocator( pAllocator ), m_nLength( 0 ), m_nCapacity( INLINE_CAPACITY )
 	{
 		m_szInline[0] = '\0';
 	}
@@ -108,7 +108,7 @@ public:
 	SIRString &operator=( const SIRString & ) = delete;
 
 	SIRString( SIRString &&other ) noexcept
-		: m_pAllocator( other.m_pAllocator ), m_nLength( other.m_nLength ), m_nCapacity( other.m_nCapacity )
+	    : m_pAllocator( other.m_pAllocator ), m_nLength( other.m_nLength ), m_nCapacity( other.m_nCapacity )
 	{
 		if ( other.isInline() ) {
 			if ( m_nLength < INLINE_CAPACITY ) {
