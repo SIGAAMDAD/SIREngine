@@ -24,9 +24,11 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <stdio.h>
 #include <sys/ioctl.h>
 #include <sys/stat.h>
+#include <sys/inotify.h>
 #include <unistd.h>
 
-SIRLinuxEvdevInput::SIRLinuxEvdevInput( SIRInputSystem &input ) noexcept : m_Input( input ), m_Devices{}, m_nDeviceCount( 0 )
+SIRLinuxEvdevInput::SIRLinuxEvdevInput( SIRInputSystem &input ) noexcept
+    : m_Input( input ), m_Devices{}, m_nDeviceCount( 0 ), m_nNotifyFd( -1 ), m_nNotifyWatch( -1 ), m_szWatchDirectory{}
 {
 	for ( uint32_t i = 0; i < SIR_INPUT_MAX_DEVICES; ++i ) {
 		m_Devices[i].nFd = -1;
@@ -43,21 +45,19 @@ bool SIRLinuxEvdevInput::openDevice( const char *pszPath ) noexcept
 	if ( pszPath == nullptr || m_nDeviceCount >= SIR_INPUT_MAX_DEVICES ) {
 		return false;
 	}
+	if ( strlen( pszPath ) >= sizeof( m_Devices[0].szPath ) ) {
+		return false;
+	}
 	for ( uint32_t i = 0; i < SIR_INPUT_MAX_DEVICES; ++i ) {
-		if ( m_Devices[i].nFd >= 0 ) {
-			char szExisting[64];
-			char szRequested[64];
-			snprintf( szExisting, sizeof( szExisting ), "/proc/self/fd/%d", m_Devices[i].nFd );
-			const ssize_t nExisting = readlink( szExisting, szRequested, sizeof( szRequested ) - 1 );
-			if ( nExisting > 0 ) {
-				szRequested[nExisting] = '\0';
-				if ( strcmp( szRequested, pszPath ) == 0 ) {
-					return false;
-				}
-			}
+		if ( m_Devices[i].nFd >= 0 && strcmp( m_Devices[i].szPath, pszPath ) == 0 ) {
+			return false;
 		}
 	}
-	const int nFd = open( pszPath, O_RDONLY | O_NONBLOCK | O_CLOEXEC );
+	int nFd = open( pszPath, O_RDWR | O_NONBLOCK | O_CLOEXEC );
+	const bool bWritable = nFd >= 0;
+	if ( nFd < 0 ) {
+		nFd = open( pszPath, O_RDONLY | O_NONBLOCK | O_CLOEXEC );
+	}
 	if ( nFd < 0 ) {
 		return false;
 	}
@@ -80,7 +80,34 @@ bool SIRLinuxEvdevInput::openDevice( const char *pszPath ) noexcept
 	}
 	for ( uint32_t i = 0; i < SIR_INPUT_MAX_DEVICES; ++i ) {
 		if ( m_Devices[i].nFd == -1 ) {
-			m_Devices[i] = { hDevice, nFd, nId, false };
+			sirEvdevSlot_t &slot = m_Devices[i];
+			slot.hDevice = hDevice;
+			slot.nFd = nFd;
+			slot.nDeviceId = nId;
+			slot.bDesynchronized = false;
+			slot.nEffectId = -1;
+			unsigned long nEffects[( FF_MAX + ( sizeof( unsigned long ) * 8 ) ) / ( sizeof( unsigned long ) * 8 )] = {};
+			slot.bCanRumble =
+			    bWritable && ioctl( nFd, EVIOCGBIT( EV_FF, sizeof( nEffects ) ), nEffects ) >= 0 &&
+			    ( nEffects[FF_RUMBLE / ( sizeof( unsigned long ) * 8 )] & ( 1UL << ( FF_RUMBLE % ( sizeof( unsigned long ) * 8 ) ) ) ) != 0;
+			memcpy( slot.szPath, pszPath, strlen( pszPath ) + 1 );
+			const uint16_t nDPadCodes[] = { BTN_DPAD_UP, BTN_DPAD_DOWN, BTN_DPAD_LEFT, BTN_DPAD_RIGHT };
+			slot.bHatDPad = true;
+			for ( uint32_t j = 0; j < sizeof( nDPadCodes ) / sizeof( nDPadCodes[0] ); ++j ) {
+				const uint16_t nCode = nDPadCodes[j];
+				if ( ( nKeys[nCode / ( sizeof( unsigned long ) * 8 )] & ( 1UL << ( nCode % ( sizeof( unsigned long ) * 8 ) ) ) ) != 0 ) {
+					slot.bHatDPad = false;
+				}
+			}
+			const uint16_t nAxisCodes[] = { ABS_X, ABS_Y, ABS_RX, ABS_RY, ABS_Z, ABS_RZ };
+			for ( uint32_t j = 0; j < SIR_GAMEPAD_AXIS_COUNT; ++j ) {
+				input_absinfo axis = {};
+				if ( ioctl( nFd, EVIOCGABS( nAxisCodes[j] ), &axis ) == 0 && axis.maximum > axis.minimum ) {
+					slot.axes[j] = { axis.minimum, axis.maximum, true };
+				} else {
+					slot.axes[j] = { 0, 0, false };
+				}
+			}
 			++m_nDeviceCount;
 			if ( !resynchronize( m_Devices[i] ) ) {
 				closeSlot( m_Devices[i] );
@@ -103,6 +130,10 @@ uint32_t SIRLinuxEvdevInput::discover( const char *pszDirectory ) noexcept
 	if ( pDirectory == nullptr ) {
 		return 0;
 	}
+	// Arm hotplug notifications before enumeration to close the scan/watch gap.
+	if ( !isWatching() ) {
+		watchDirectory( pszDirectory );
+	}
 	uint32_t nOpened = 0;
 	while ( dirent *pEntry = readdir( pDirectory ) ) {
 		if ( strncmp( pEntry->d_name, "event", 5 ) != 0 ) {
@@ -118,6 +149,175 @@ uint32_t SIRLinuxEvdevInput::discover( const char *pszDirectory ) noexcept
 	return nOpened;
 }
 
+bool SIRLinuxEvdevInput::watchDirectory( const char *pszDirectory ) noexcept
+{
+	if ( pszDirectory == nullptr || ( m_nNotifyFd >= 0 && m_nNotifyWatch >= 0 ) ||
+	     strlen( pszDirectory ) >= sizeof( m_szWatchDirectory ) ) {
+		return false;
+	}
+	if ( m_nNotifyFd >= 0 ) {
+		close( m_nNotifyFd );
+		m_nNotifyFd = -1;
+	}
+	const int nFd = inotify_init1( IN_NONBLOCK | IN_CLOEXEC );
+	if ( nFd < 0 ) {
+		return false;
+	}
+	const int nWatch = inotify_add_watch( nFd, pszDirectory, IN_CREATE | IN_DELETE | IN_MOVED_TO | IN_MOVED_FROM );
+	if ( nWatch < 0 ) {
+		close( nFd );
+		return false;
+	}
+	m_nNotifyFd = nFd;
+	m_nNotifyWatch = nWatch;
+	memcpy( m_szWatchDirectory, pszDirectory, strlen( pszDirectory ) + 1 );
+	return true;
+}
+
+bool SIRLinuxEvdevInput::isWatching( void ) const noexcept
+{
+	return m_nNotifyFd >= 0 && m_nNotifyWatch >= 0;
+}
+
+void SIRLinuxEvdevInput::pumpHotplug( void ) noexcept
+{
+	if ( m_nNotifyFd < 0 ) {
+		return;
+	}
+	alignas( inotify_event ) char szEvents[4096];
+	for ( uint32_t iBatch = 0; iBatch < 4; ++iBatch ) {
+		const ssize_t nBytes = read( m_nNotifyFd, szEvents, sizeof( szEvents ) );
+		if ( nBytes < 0 && errno == EINTR ) {
+			continue;
+		}
+		if ( nBytes <= 0 ) {
+			break;
+		}
+		uint32_t nOffset = 0;
+		while ( nOffset + sizeof( inotify_event ) <= ( uint32_t )nBytes ) {
+			const inotify_event *pEvent = ( const inotify_event * )( szEvents + nOffset );
+			const uint32_t nLength = ( uint32_t )sizeof( inotify_event ) + pEvent->len;
+			if ( nLength > ( uint32_t )nBytes - nOffset ) {
+				break;
+			}
+			if ( ( pEvent->mask & IN_Q_OVERFLOW ) != 0 ) {
+				discover( m_szWatchDirectory );
+			}
+			if ( ( pEvent->mask & IN_IGNORED ) != 0 && pEvent->wd == m_nNotifyWatch ) {
+				m_nNotifyWatch = -1;
+			}
+			if ( pEvent->len >= 6 && strncmp( pEvent->name, "event", 5 ) == 0 ) {
+				char szPath[512];
+				const int nWritten = snprintf( szPath, sizeof( szPath ), "%s/%s", m_szWatchDirectory, pEvent->name );
+				if ( nWritten > 0 && ( size_t )nWritten < sizeof( szPath ) ) {
+					if ( ( pEvent->mask & ( IN_CREATE | IN_MOVED_TO ) ) != 0 ) {
+						openDevice( szPath );
+					} else if ( ( pEvent->mask & ( IN_DELETE | IN_MOVED_FROM ) ) != 0 ) {
+						for ( uint32_t iSlot = 0; iSlot < SIR_INPUT_MAX_DEVICES; ++iSlot ) {
+							if ( m_Devices[iSlot].nFd >= 0 && strcmp( m_Devices[iSlot].szPath, szPath ) == 0 ) {
+								closeSlot( m_Devices[iSlot] );
+							}
+						}
+					}
+				}
+			}
+			nOffset += nLength;
+		}
+	}
+}
+
+int16_t SIRLinuxEvdevInput::mapButton( uint16_t nCode ) noexcept
+{
+	switch ( nCode ) {
+	case BTN_SOUTH:
+		return SIR_GAMEPAD_BUTTON_SOUTH;
+	case BTN_EAST:
+		return SIR_GAMEPAD_BUTTON_EAST;
+	case BTN_WEST:
+		return SIR_GAMEPAD_BUTTON_WEST;
+	case BTN_NORTH:
+		return SIR_GAMEPAD_BUTTON_NORTH;
+	case BTN_TL:
+		return SIR_GAMEPAD_BUTTON_LEFT_SHOULDER;
+	case BTN_TR:
+		return SIR_GAMEPAD_BUTTON_RIGHT_SHOULDER;
+	case BTN_TL2:
+		return SIR_GAMEPAD_BUTTON_LEFT_TRIGGER_DIGITAL;
+	case BTN_TR2:
+		return SIR_GAMEPAD_BUTTON_RIGHT_TRIGGER_DIGITAL;
+	case BTN_SELECT:
+		return SIR_GAMEPAD_BUTTON_BACK;
+	case BTN_START:
+		return SIR_GAMEPAD_BUTTON_START;
+	case BTN_MODE:
+		return SIR_GAMEPAD_BUTTON_GUIDE;
+	case BTN_THUMBL:
+		return SIR_GAMEPAD_BUTTON_LEFT_THUMB;
+	case BTN_THUMBR:
+		return SIR_GAMEPAD_BUTTON_RIGHT_THUMB;
+	case BTN_DPAD_UP:
+		return SIR_GAMEPAD_BUTTON_DPAD_UP;
+	case BTN_DPAD_DOWN:
+		return SIR_GAMEPAD_BUTTON_DPAD_DOWN;
+	case BTN_DPAD_LEFT:
+		return SIR_GAMEPAD_BUTTON_DPAD_LEFT;
+	case BTN_DPAD_RIGHT:
+		return SIR_GAMEPAD_BUTTON_DPAD_RIGHT;
+	default:
+		return -1;
+	}
+}
+
+int16_t SIRLinuxEvdevInput::mapAxis( uint16_t nCode ) noexcept
+{
+	switch ( nCode ) {
+	case ABS_X:
+		return SIR_GAMEPAD_AXIS_LEFT_X;
+	case ABS_Y:
+		return SIR_GAMEPAD_AXIS_LEFT_Y;
+	case ABS_RX:
+		return SIR_GAMEPAD_AXIS_RIGHT_X;
+	case ABS_RY:
+		return SIR_GAMEPAD_AXIS_RIGHT_Y;
+	case ABS_Z:
+		return SIR_GAMEPAD_AXIS_LEFT_TRIGGER;
+	case ABS_RZ:
+		return SIR_GAMEPAD_AXIS_RIGHT_TRIGGER;
+	default:
+		return -1;
+	}
+}
+
+int32_t SIRLinuxEvdevInput::normalizeAxis( int32_t nValue, int32_t nMinimum, int32_t nMaximum, bool bTrigger ) noexcept
+{
+	if ( nMaximum <= nMinimum ) {
+		return 0;
+	}
+	if ( nValue < nMinimum ) {
+		nValue = nMinimum;
+	} else if ( nValue > nMaximum ) {
+		nValue = nMaximum;
+	}
+	const int64_t nScaled = ( ( int64_t )nValue - nMinimum ) * ( bTrigger ? 32767 : 65534 ) / ( ( int64_t )nMaximum - nMinimum );
+	return ( int32_t )( bTrigger ? nScaled : nScaled - 32767 );
+}
+
+bool SIRLinuxEvdevInput::processHat( sirEvdevSlot_t &slot, uint16_t nCode, int32_t nValue, uint64_t nTimestampNs ) noexcept
+{
+	if ( !slot.bHatDPad ) {
+		return true;
+	}
+	if ( nCode == ABS_HAT0X ) {
+		return m_Input.pushButton( slot.hDevice, SIR_GAMEPAD_BUTTON_DPAD_LEFT, nValue < 0, nTimestampNs ) &&
+		       m_Input.pushButton( slot.hDevice, SIR_GAMEPAD_BUTTON_DPAD_RIGHT, nValue > 0, nTimestampNs );
+	}
+	if ( nCode == ABS_HAT0Y ) {
+		return m_Input.pushButton( slot.hDevice, SIR_GAMEPAD_BUTTON_DPAD_UP, nValue < 0, nTimestampNs ) &&
+		       m_Input.pushButton( slot.hDevice, SIR_GAMEPAD_BUTTON_DPAD_DOWN, nValue > 0, nTimestampNs );
+	}
+	return true;
+}
+
 bool SIRLinuxEvdevInput::resynchronize( sirEvdevSlot_t &slot ) noexcept
 {
 	if ( !m_Input.resynchronizeDevice( slot.hDevice ) ) {
@@ -129,13 +329,36 @@ bool SIRLinuxEvdevInput::resynchronize( sirEvdevSlot_t &slot ) noexcept
 	}
 	for ( uint16_t nCode = BTN_MISC; nCode <= KEY_MAX && nCode < SIR_INPUT_MAX_BUTTONS; ++nCode ) {
 		const bool bHeld = ( nKeys[nCode / ( sizeof( unsigned long ) * 8 )] & ( 1UL << ( nCode % ( sizeof( unsigned long ) * 8 ) ) ) ) != 0;
-		if ( bHeld && !m_Input.pushButton( slot.hDevice, nCode, true, 0 ) ) {
+		const int16_t nMapped = mapButton( nCode );
+		const uint16_t nLogical = nMapped >= 0 ? ( uint16_t )nMapped : nCode;
+		if ( bHeld && !m_Input.pushButton( slot.hDevice, nLogical, true, 0 ) ) {
 			return false;
 		}
 	}
-	for ( uint16_t nAxis = 0; nAxis <= ABS_MAX && nAxis < SIR_INPUT_MAX_AXES; ++nAxis ) {
+	const uint16_t nAxisCodes[] = { ABS_X, ABS_Y, ABS_RX, ABS_RY, ABS_Z, ABS_RZ };
+	for ( uint16_t iAxis = 0; iAxis < SIR_GAMEPAD_AXIS_COUNT; ++iAxis ) {
+		if ( !slot.axes[iAxis].bValid ) {
+			continue;
+		}
 		input_absinfo axis = {};
-		if ( ioctl( slot.nFd, EVIOCGABS( nAxis ), &axis ) == 0 && !m_Input.pushAxis( slot.hDevice, nAxis, axis.value, 0 ) ) {
+		if ( ioctl( slot.nFd, EVIOCGABS( nAxisCodes[iAxis] ), &axis ) != 0 ) {
+			return false;
+		}
+		const bool bTrigger = iAxis == SIR_GAMEPAD_AXIS_LEFT_TRIGGER || iAxis == SIR_GAMEPAD_AXIS_RIGHT_TRIGGER;
+		int32_t nMapped = normalizeAxis( axis.value, slot.axes[iAxis].nMin, slot.axes[iAxis].nMax, bTrigger );
+		if ( iAxis == SIR_GAMEPAD_AXIS_LEFT_Y || iAxis == SIR_GAMEPAD_AXIS_RIGHT_Y ) {
+			nMapped = -nMapped;
+		}
+		if ( !m_Input.pushAxis( slot.hDevice, iAxis, nMapped, 0 ) ) {
+			return false;
+		}
+	}
+	if ( slot.bHatDPad ) {
+		input_absinfo hat = {};
+		if ( ioctl( slot.nFd, EVIOCGABS( ABS_HAT0X ), &hat ) == 0 && !processHat( slot, ABS_HAT0X, hat.value, 0 ) ) {
+			return false;
+		}
+		if ( ioctl( slot.nFd, EVIOCGABS( ABS_HAT0Y ), &hat ) == 0 && !processHat( slot, ABS_HAT0Y, hat.value, 0 ) ) {
 			return false;
 		}
 	}
@@ -144,6 +367,7 @@ bool SIRLinuxEvdevInput::resynchronize( sirEvdevSlot_t &slot ) noexcept
 
 uint32_t SIRLinuxEvdevInput::pump( void ) noexcept
 {
+	pumpHotplug();
 	uint32_t nProcessed = 0;
 	for ( uint32_t i = 0; i < SIR_INPUT_MAX_DEVICES; ++i ) {
 		sirEvdevSlot_t &slot = m_Devices[i];
@@ -175,10 +399,25 @@ uint32_t SIRLinuxEvdevInput::pump( void ) noexcept
 				}
 				const uint64_t nNow = SIRPlatformTime::getMonotonicNanoseconds();
 				bool bSuccess = true;
-				if ( event.type == EV_KEY && event.code < SIR_INPUT_MAX_BUTTONS && event.value != 2 ) {
-					bSuccess = m_Input.pushButton( slot.hDevice, event.code, event.value != 0, nNow );
-				} else if ( event.type == EV_ABS && event.code < SIR_INPUT_MAX_AXES ) {
-					bSuccess = m_Input.pushAxis( slot.hDevice, event.code, event.value, nNow );
+				if ( event.type == EV_KEY && event.code < SIR_INPUT_MAX_BUTTONS && ( event.value == 0 || event.value == 1 ) ) {
+					const int16_t nMapped = mapButton( event.code );
+					const uint16_t nLogical = nMapped >= 0 ? ( uint16_t )nMapped : event.code;
+					bSuccess = m_Input.pushButton( slot.hDevice, nLogical, event.value == 1, nNow );
+				} else if ( event.type == EV_ABS ) {
+					const int16_t nAxis = mapAxis( event.code );
+					if ( nAxis >= 0 && slot.axes[nAxis].bValid ) {
+						const bool bTrigger = nAxis == SIR_GAMEPAD_AXIS_LEFT_TRIGGER || nAxis == SIR_GAMEPAD_AXIS_RIGHT_TRIGGER;
+						int32_t nMapped = normalizeAxis( event.value, slot.axes[nAxis].nMin, slot.axes[nAxis].nMax, bTrigger );
+						if ( nAxis == SIR_GAMEPAD_AXIS_LEFT_Y || nAxis == SIR_GAMEPAD_AXIS_RIGHT_Y ) {
+							nMapped = -nMapped;
+						}
+						bSuccess = m_Input.pushAxis( slot.hDevice, ( uint16_t )nAxis, nMapped, nNow );
+					} else if ( event.code == ABS_HAT0X || event.code == ABS_HAT0Y ) {
+						bSuccess = processHat( slot, event.code, event.value, nNow );
+					} else if ( nAxis < 0 && ( uint32_t )event.code + 16 < SIR_INPUT_MAX_AXES ) {
+						// Unknown native ABS controls remain accessible above the standardized axes.
+						bSuccess = m_Input.pushAxis( slot.hDevice, ( uint16_t )( 16 + event.code ), event.value, nNow );
+					}
 				}
 				if ( !bSuccess ) {
 					slot.bDesynchronized = true;
@@ -190,12 +429,61 @@ uint32_t SIRLinuxEvdevInput::pump( void ) noexcept
 	return nProcessed;
 }
 
+bool SIRLinuxEvdevInput::setVibration( sirInputDeviceHandle_t hDevice, uint16_t nStrong, uint16_t nWeak, uint16_t nDurationMs ) noexcept
+{
+	for ( uint32_t i = 0; i < SIR_INPUT_MAX_DEVICES; ++i ) {
+		sirEvdevSlot_t &slot = m_Devices[i];
+		if ( slot.nFd < 0 || !slot.bCanRumble || slot.hDevice.nSlot != hDevice.nSlot || slot.hDevice.nGeneration != hDevice.nGeneration ) {
+			continue;
+		}
+		if ( nStrong == 0 && nWeak == 0 ) {
+			if ( slot.nEffectId < 0 ) {
+				return true;
+			}
+			input_event stop = {};
+			stop.type = EV_FF;
+			stop.code = ( uint16_t )slot.nEffectId;
+			stop.value = 0;
+			return write( slot.nFd, &stop, sizeof( stop ) ) == ( ssize_t )sizeof( stop );
+		}
+		if ( nDurationMs == 0 ) {
+			return false;
+		}
+		ff_effect effect = {};
+		effect.type = FF_RUMBLE;
+		effect.id = ( int16_t )slot.nEffectId;
+		effect.u.rumble.strong_magnitude = nStrong;
+		effect.u.rumble.weak_magnitude = nWeak;
+		effect.replay.length = nDurationMs;
+		if ( ioctl( slot.nFd, EVIOCSFF, &effect ) < 0 ) {
+			return false;
+		}
+		slot.nEffectId = effect.id;
+		input_event start = {};
+		start.type = EV_FF;
+		start.code = ( uint16_t )effect.id;
+		start.value = 1;
+		return write( slot.nFd, &start, sizeof( start ) ) == ( ssize_t )sizeof( start );
+	}
+	return false;
+}
+
 void SIRLinuxEvdevInput::closeSlot( sirEvdevSlot_t &slot ) noexcept
 {
 	if ( slot.nFd >= 0 ) {
+		if ( slot.nEffectId >= 0 ) {
+			input_event stop = {};
+			stop.type = EV_FF;
+			stop.code = ( uint16_t )slot.nEffectId;
+			stop.value = 0;
+			write( slot.nFd, &stop, sizeof( stop ) );
+			ioctl( slot.nFd, EVIOCRMFF, slot.nEffectId );
+			slot.nEffectId = -1;
+		}
 		close( slot.nFd );
 		m_Input.removeDevice( slot.hDevice );
 		slot.nFd = -1;
+		slot.szPath[0] = '\0';
 		--m_nDeviceCount;
 	}
 }
@@ -207,6 +495,15 @@ uint32_t SIRLinuxEvdevInput::getDeviceCount( void ) const noexcept
 
 void SIRLinuxEvdevInput::shutdown( void ) noexcept
 {
+	if ( m_nNotifyFd >= 0 ) {
+		if ( m_nNotifyWatch >= 0 ) {
+			inotify_rm_watch( m_nNotifyFd, m_nNotifyWatch );
+		}
+		close( m_nNotifyFd );
+		m_nNotifyFd = -1;
+		m_nNotifyWatch = -1;
+		m_szWatchDirectory[0] = '\0';
+	}
 	for ( uint32_t i = 0; i < SIR_INPUT_MAX_DEVICES; ++i ) {
 		closeSlot( m_Devices[i] );
 	}
