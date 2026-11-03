@@ -182,7 +182,9 @@ static void testGenerationAndStagingRollback( void )
 		SIRResourceReadScope scope( graph );
 		SIRResourceView view;
 		REQUIRE( graph.resolve( scope, first, &view ) == SIR_RESOURCE_RESULT_INVALID_HANDLE );
-		REQUIRE( pWriter->collectRetired( 1 ) == 0 );
+		// This scope entered after the first resource retired, so it cannot
+		// hold the old immutable record and collection is safe.
+		REQUIRE( pWriter->collectRetired( 1 ) == 1 );
 		SIRResourceStagingHandle staging = {};
 		SIRResourceMutableBytes bytes = {};
 		REQUIRE( pWriter->allocateStaging( 64, 8, 4, &staging, &bytes ) == SIR_RESOURCE_RESULT_SUCCESS );
@@ -732,7 +734,6 @@ static void testAtomicReadIndexCollisionsAndChurn( void )
 	}
 	REQUIRE( alloc.m_nOutstanding.load() == 0 );
 }
-
 
 static void testEpochReclamationWithOverlappingScopes( void )
 {
