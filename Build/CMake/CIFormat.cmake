@@ -24,6 +24,11 @@ foreach(sirPath IN LISTS sirPaths)
     execute_process(COMMAND "${SIR_CLANG_FORMAT}" --dry-run --Werror "${SIR_ROOT}/${sirPath}"
         RESULT_VARIABLE sirStatus)
     if(NOT sirStatus EQUAL 0)
+        execute_process(COMMAND "${SIR_CLANG_FORMAT}" "${SIR_ROOT}/${sirPath}"
+            OUTPUT_VARIABLE sirFormatted RESULT_VARIABLE sirFormatStatus)
+        if(sirFormatStatus EQUAL 0)
+            message(STATUS "Expected clang-format output for ${sirPath}:\n${sirFormatted}")
+        endif()
         message(FATAL_ERROR "Formatting error: ${sirPath}")
     endif()
 endforeach()
