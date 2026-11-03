@@ -10,6 +10,9 @@ set(SIR_CORE_PLATFORM_COMMON
 
 if(WIN32)
     set(SIR_CORE_PLATFORM_OS
+        Windows/SIRPlatformFileWindows.cpp
+        Windows/SIRPlatformFileMappingWindows.cpp
+        Windows/SIRPlatformPipeWindows.cpp
         Windows/SIRVirtualMemoryWindows.cpp
         Windows/SIRPlatformMemoryWindows.cpp
         Windows/SIRCPUInfoWindows.cpp
@@ -21,6 +24,9 @@ if(WIN32)
     target_link_libraries(SIRCore PRIVATE psapi)
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     set(SIR_CORE_PLATFORM_OS
+        Linux/SIRPlatformFileLinux.cpp
+        Linux/SIRPlatformFileMappingLinux.cpp
+        Linux/SIRPlatformPipeLinux.cpp
         Linux/SIRVirtualMemoryLinux.cpp
         Linux/SIRPlatformMemoryLinux.cpp
         Linux/SIRCPUInfoLinux.cpp
