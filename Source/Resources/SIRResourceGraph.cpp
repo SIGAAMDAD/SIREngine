@@ -59,8 +59,12 @@ struct SIRGraphSlot
 	std::atomic<SIRPublishedResourceRecord *> m_pPublished;
 	uint32_t m_nNextGeneration;
 	uint32_t m_nVisitedStamp;
+	uint32_t m_iReverseHead;
+	uint64_t m_nInvalidationSequence;
 
-	SIRGraphSlot( void ) noexcept : m_pPublished( nullptr ), m_nNextGeneration( 1 ), m_nVisitedStamp( 0 )
+	SIRGraphSlot( void ) noexcept
+	    : m_pPublished( nullptr ), m_nNextGeneration( 1 ), m_nVisitedStamp( 0 ), m_iReverseHead( UINT32_MAX ),
+	      m_nInvalidationSequence( 0 )
 	{
 	}
 };
@@ -79,6 +83,18 @@ struct SIRProviderPinSlot
 	SIRPublishedResourceRecord *m_pRecord;
 	uint32_t m_nGeneration;
 	uint32_t m_nProviderId;
+};
+
+// Writer-owned, fixed-pool reverse dependency edges. The target key is stable
+// even when an optional/streamed target is not resident in the graph.
+struct SIRReverseDependencyEdge
+{
+	SIRResourceKey m_Target;
+	uint32_t m_iSourceSlot;
+	uint32_t m_iNextBucket;
+	uint32_t m_iPrevBucket;
+	uint32_t m_iNextSource;
+	uint32_t m_iNextFree;
 };
 
 static bool sameKey( const SIRResourceKey &rA, const SIRResourceKey &rB ) noexcept
@@ -114,23 +130,36 @@ SIRResourceGraphWriter::SIRResourceGraphWriter( SIRResourceGraph &rGraph ) noexc
 SIRResourceGraph::SIRResourceGraph( const SIRResourceGraphConfig &rConfig ) noexcept
     : m_Config( rConfig ), m_Writer( *this ), m_OwnerThread( std::this_thread::get_id() ), m_nActiveReaders( 0 ),
       m_KeyIndexAllocator{ this, allocateKeyIndex, releaseKeyIndex, rConfig.m_nMetadataDomain, 0x47524447U },
-      m_KeyIndex( &m_KeyIndexAllocator ), m_pSlots( nullptr ), m_pStaging( nullptr ), m_pProviderPins( nullptr ),
-      m_pTraversalQueue( nullptr ), m_nTraversalStamp( 0 ), m_pSharedChunks( nullptr ), m_pRetired( nullptr ), m_nCommittedBytes( 0 ),
+      m_KeyIndex( &m_KeyIndexAllocator ), m_pSlots( nullptr ), m_pStaging( nullptr ), m_pProviderPins( nullptr ), m_pReverseEdges( nullptr ), m_pReverseBuckets( nullptr ),
+      m_nReverseBucketCount( 0 ), m_nMaxDependencyEdges( 0 ), m_iFreeReverseEdge( UINT32_MAX ),
+      m_nActiveReverseEdges( 0 ), m_nChangeSequence( 0 ), m_pTraversalQueue( nullptr ), m_nTraversalStamp( 0 ), m_pSharedChunks( nullptr ), m_pRetired( nullptr ), m_nCommittedBytes( 0 ),
       m_nPeakCommittedBytes( 0 ), m_nPayloadBytes( 0 ), m_nUniqueChunks( 0 ), m_nRetiredRecords( 0 ), m_bReady( false )
 {
 	if ( !m_Config.m_Allocator.m_pfnAllocate || !m_Config.m_Allocator.m_pfnFree || !m_Config.m_nMaxResources || !m_Config.m_nMaxStaging ||
 	     !m_Config.m_nMaxProviderPins || m_Config.m_nMaxResources > INT32_MAX ) {
 		return;
 	}
+	const uint64_t nDesiredEdges = m_Config.m_nMaxDependencyEdges ? m_Config.m_nMaxDependencyEdges :
+	                               ( uint64_t )m_Config.m_nMaxResources * 4;
+	if ( !nDesiredEdges || nDesiredEdges > UINT32_MAX ||
+	     m_Config.m_nMaxResources > ( UINT32_MAX - 1 ) / 2 ) {
+		return;
+	}
+	m_nMaxDependencyEdges = ( uint32_t )nDesiredEdges;
+	m_nReverseBucketCount = m_Config.m_nMaxResources * 2 + 1;
 	const uint64_t nSlots = ( uint64_t )m_Config.m_nMaxResources * sizeof( SIRGraphSlot );
 	const uint64_t nStaging = ( uint64_t )m_Config.m_nMaxStaging * sizeof( SIRStagingSlot );
 	const uint64_t nPins = ( uint64_t )m_Config.m_nMaxProviderPins * sizeof( SIRProviderPinSlot );
+	const uint64_t nEdges = ( uint64_t )m_nMaxDependencyEdges * sizeof( SIRReverseDependencyEdge );
+	const uint64_t nBuckets = ( uint64_t )m_nReverseBucketCount * sizeof( uint32_t );
 	m_pSlots = ( SIRGraphSlot * )allocate( nSlots, alignof( SIRGraphSlot ), m_Config.m_nMetadataDomain );
 	m_pStaging = ( SIRStagingSlot * )allocate( nStaging, alignof( SIRStagingSlot ), m_Config.m_nMetadataDomain );
 	m_pProviderPins = ( SIRProviderPinSlot * )allocate( nPins, alignof( SIRProviderPinSlot ), m_Config.m_nMetadataDomain );
+	m_pReverseEdges = ( SIRReverseDependencyEdge * )allocate( nEdges, alignof( SIRReverseDependencyEdge ), m_Config.m_nMetadataDomain );
+	m_pReverseBuckets = ( uint32_t * )allocate( nBuckets, alignof( uint32_t ), m_Config.m_nMetadataDomain );
 	m_pTraversalQueue = ( uint32_t * )allocate( ( uint64_t )m_Config.m_nMaxResources * sizeof( uint32_t ), alignof( uint32_t ),
 	                                            m_Config.m_nMetadataDomain );
-	if ( !m_pSlots || !m_pStaging || !m_pProviderPins || !m_pTraversalQueue ) {
+	if ( !m_pSlots || !m_pStaging || !m_pProviderPins || !m_pReverseEdges || !m_pReverseBuckets || !m_pTraversalQueue ) {
 		return;
 	}
 	for ( uint32_t iSlot = 0; iSlot < m_Config.m_nMaxResources; ++iSlot ) {
@@ -138,6 +167,11 @@ SIRResourceGraph::SIRResourceGraph( const SIRResourceGraphConfig &rConfig ) noex
 	}
 	memset( m_pStaging, 0, ( size_t )nStaging );
 	memset( m_pProviderPins, 0, ( size_t )nPins );
+	memset( m_pReverseBuckets, 0xff, ( size_t )nBuckets );
+	for ( uint32_t iEdge = 0; iEdge < m_nMaxDependencyEdges; ++iEdge ) {
+		m_pReverseEdges[iEdge].m_iNextFree = iEdge + 1 < m_nMaxDependencyEdges ? iEdge + 1 : UINT32_MAX;
+	}
+	m_iFreeReverseEdge = 0;
 	if ( m_KeyIndex.tryReserve( m_Config.m_nMaxResources ) != SIR_CONTAINER_OK ) {
 		return;
 	}
@@ -176,6 +210,10 @@ SIRResourceGraph::~SIRResourceGraph( void ) noexcept
 			releaseStagingSlot( iSlot );
 		}
 	}
+	release( m_pReverseBuckets, ( uint64_t )m_nReverseBucketCount * sizeof( uint32_t ), alignof( uint32_t ),
+	         m_Config.m_nMetadataDomain );
+	release( m_pReverseEdges, ( uint64_t )m_nMaxDependencyEdges * sizeof( SIRReverseDependencyEdge ), alignof( SIRReverseDependencyEdge ),
+	         m_Config.m_nMetadataDomain );
 	release( m_pTraversalQueue, ( uint64_t )m_Config.m_nMaxResources * sizeof( uint32_t ), alignof( uint32_t ),
 	         m_Config.m_nMetadataDomain );
 	release( m_pProviderPins, ( uint64_t )m_Config.m_nMaxProviderPins * sizeof( SIRProviderPinSlot ), alignof( SIRProviderPinSlot ),
@@ -255,6 +293,8 @@ SIRResourceGraphStats SIRResourceGraph::getStats( void ) const noexcept
 	result.m_nUniqueChunks = m_nUniqueChunks;
 	result.m_nRetiredRecords = m_nRetiredRecords;
 	result.m_nLiveResources = m_KeyIndex.getSize();
+	result.m_nIndexedDependencyEdges = m_nActiveReverseEdges;
+	result.m_nChangeSequence = m_nChangeSequence;
 	return result;
 }
 
@@ -339,6 +379,12 @@ void SIRResourceGraph::publishRecord( uint32_t iSlot, SIRPublishedResourceRecord
 {
 	SIRPublishedResourceRecord *pPrior = m_pSlots[iSlot].m_pPublished.exchange( pRecord, std::memory_order_seq_cst );
 	pushRetired( pPrior );
+	// This notification also covers availability transitions for missing optional
+	// dependencies and in-place eviction/failure state revisions.
+	const SIRPublishedResourceRecord *pChanged = pRecord != nullptr ? pRecord : pPrior;
+	if ( pChanged != nullptr ) {
+		invalidateReverseDependents( pChanged->m_Info.m_Key );
+	}
 }
 
 SIRResourceResult SIRResourceGraph::checkHandle( SIRResourceHandle hResource, SIRPublishedResourceRecord **pRecord ) const noexcept
@@ -350,6 +396,160 @@ SIRResourceResult SIRResourceGraph::checkHandle( SIRResourceHandle hResource, SI
 	if ( !*pRecord || !validHandle( hResource, ( *pRecord )->m_Handle ) ) {
 		return SIR_RESOURCE_RESULT_INVALID_HANDLE;
 	}
+	return SIR_RESOURCE_RESULT_SUCCESS;
+}
+
+
+bool SIRResourceGraph::canReplaceReverseEdges( uint32_t iSourceSlot, uint32_t nNewEdges ) const noexcept
+{
+	uint32_t nOldEdges = 0;
+	for ( uint32_t iEdge = m_pSlots[iSourceSlot].m_iReverseHead; iEdge != UINT32_MAX;
+	      iEdge = m_pReverseEdges[iEdge].m_iNextSource ) {
+		++nOldEdges;
+	}
+	return nNewEdges <= m_nMaxDependencyEdges - ( m_nActiveReverseEdges - nOldEdges );
+}
+
+void SIRResourceGraph::removeReverseEdges( uint32_t iSourceSlot ) noexcept
+{
+	uint32_t iEdge = m_pSlots[iSourceSlot].m_iReverseHead;
+	m_pSlots[iSourceSlot].m_iReverseHead = UINT32_MAX;
+	while ( iEdge != UINT32_MAX ) {
+		SIRReverseDependencyEdge &rEdge = m_pReverseEdges[iEdge];
+		const uint32_t iFollowing = rEdge.m_iNextSource;
+		const uint32_t iBucket = ( uint32_t )( SIRResourceKeyHash{}( rEdge.m_Target ) % m_nReverseBucketCount );
+		if ( rEdge.m_iPrevBucket == UINT32_MAX ) {
+			m_pReverseBuckets[iBucket] = rEdge.m_iNextBucket;
+		} else {
+			m_pReverseEdges[rEdge.m_iPrevBucket].m_iNextBucket = rEdge.m_iNextBucket;
+		}
+		if ( rEdge.m_iNextBucket != UINT32_MAX ) {
+			m_pReverseEdges[rEdge.m_iNextBucket].m_iPrevBucket = rEdge.m_iPrevBucket;
+		}
+		rEdge.m_iNextFree = m_iFreeReverseEdge;
+		m_iFreeReverseEdge = iEdge;
+		--m_nActiveReverseEdges;
+		iEdge = iFollowing;
+	}
+}
+
+void SIRResourceGraph::addReverseEdges( uint32_t iSourceSlot, const SIRResourceDependency *pEdges, uint32_t nEdges ) noexcept
+{
+	for ( uint32_t iInput = 0; iInput < nEdges; ++iInput ) {
+		const uint32_t iEdge = m_iFreeReverseEdge;
+		SIRReverseDependencyEdge &rEdge = m_pReverseEdges[iEdge];
+		m_iFreeReverseEdge = rEdge.m_iNextFree;
+		rEdge.m_Target = pEdges[iInput].m_Target;
+		rEdge.m_iSourceSlot = iSourceSlot;
+		const uint32_t iBucket = ( uint32_t )( SIRResourceKeyHash{}( rEdge.m_Target ) % m_nReverseBucketCount );
+		rEdge.m_iPrevBucket = UINT32_MAX;
+		rEdge.m_iNextBucket = m_pReverseBuckets[iBucket];
+		if ( rEdge.m_iNextBucket != UINT32_MAX ) {
+			m_pReverseEdges[rEdge.m_iNextBucket].m_iPrevBucket = iEdge;
+		}
+		m_pReverseBuckets[iBucket] = iEdge;
+		rEdge.m_iNextSource = m_pSlots[iSourceSlot].m_iReverseHead;
+		m_pSlots[iSourceSlot].m_iReverseHead = iEdge;
+		++m_nActiveReverseEdges;
+	}
+}
+
+void SIRResourceGraph::invalidateReverseDependents( const SIRResourceKey &rChangedKey ) noexcept
+{
+	// A single writer owns both the index and these traversal stamps. The
+	// queue is bounded by the number of resident resource slots.
+	m_nTraversalStamp = nextGeneration( m_nTraversalStamp );
+	if ( m_nTraversalStamp == 1 ) {
+		for ( uint32_t iSlot = 0; iSlot < m_Config.m_nMaxResources; ++iSlot ) {
+			m_pSlots[iSlot].m_nVisitedStamp = 0;
+		}
+	}
+	m_nChangeSequence = m_nChangeSequence == UINT64_MAX ? 1 : m_nChangeSequence + 1;
+	uint32_t iQueueHead = 0;
+	uint32_t nQueued = 0;
+	const SIRResourceKey *pCurrent = &rChangedKey;
+	for ( ;; ) {
+		const uint32_t iBucket = ( uint32_t )( SIRResourceKeyHash{}( *pCurrent ) % m_nReverseBucketCount );
+		for ( uint32_t iEdge = m_pReverseBuckets[iBucket]; iEdge != UINT32_MAX;
+		      iEdge = m_pReverseEdges[iEdge].m_iNextBucket ) {
+			const SIRReverseDependencyEdge &rEdge = m_pReverseEdges[iEdge];
+			if ( !sameKey( rEdge.m_Target, *pCurrent ) ) {
+				continue;
+			}
+			SIRGraphSlot &rSlot = m_pSlots[rEdge.m_iSourceSlot];
+			if ( rSlot.m_nVisitedStamp == m_nTraversalStamp ) {
+				continue;
+			}
+			rSlot.m_nVisitedStamp = m_nTraversalStamp;
+			rSlot.m_nInvalidationSequence = m_nChangeSequence;
+			m_pTraversalQueue[nQueued++] = rEdge.m_iSourceSlot;
+		}
+		if ( iQueueHead == nQueued ) {
+			break;
+		}
+		const uint32_t iNext = m_pTraversalQueue[iQueueHead++];
+		const SIRPublishedResourceRecord *pRecord = m_pSlots[iNext].m_pPublished.load( std::memory_order_seq_cst );
+		if ( pRecord == nullptr ) {
+			continue;
+		}
+		pCurrent = &pRecord->m_Info.m_Key;
+	}
+}
+
+SIRResourceResult SIRResourceGraphWriter::collectDependents( const SIRResourceKey &rTarget, SIRResourceHandle *pHandles,
+                                                             uint32_t nCapacity, uint32_t *pTotal ) noexcept
+{
+	if ( !m_pGraph->isWriterThread() ) {
+		return SIR_RESOURCE_RESULT_WRITER_VIOLATION;
+	}
+	if ( !rTarget.m_nTypeId || !pTotal || ( nCapacity != 0 && pHandles == nullptr ) ) {
+		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
+	}
+	m_pGraph->m_nTraversalStamp = nextGeneration( m_pGraph->m_nTraversalStamp );
+	if ( m_pGraph->m_nTraversalStamp == 1 ) {
+		for ( uint32_t iSlot = 0; iSlot < m_pGraph->m_Config.m_nMaxResources; ++iSlot ) {
+			m_pGraph->m_pSlots[iSlot].m_nVisitedStamp = 0;
+		}
+	}
+	uint32_t nFound = 0;
+	const uint32_t iBucket = ( uint32_t )( SIRResourceKeyHash{}( rTarget ) % m_pGraph->m_nReverseBucketCount );
+	for ( uint32_t iEdge = m_pGraph->m_pReverseBuckets[iBucket]; iEdge != UINT32_MAX;
+	      iEdge = m_pGraph->m_pReverseEdges[iEdge].m_iNextBucket ) {
+		const SIRReverseDependencyEdge &rEdge = m_pGraph->m_pReverseEdges[iEdge];
+		if ( !sameKey( rEdge.m_Target, rTarget ) ) {
+			continue;
+		}
+		SIRGraphSlot &rSlot = m_pGraph->m_pSlots[rEdge.m_iSourceSlot];
+		if ( rSlot.m_nVisitedStamp == m_pGraph->m_nTraversalStamp ) {
+			continue;
+		}
+		rSlot.m_nVisitedStamp = m_pGraph->m_nTraversalStamp;
+		const SIRPublishedResourceRecord *pRecord = rSlot.m_pPublished.load( std::memory_order_seq_cst );
+		if ( pRecord != nullptr ) {
+			if ( nFound < nCapacity ) {
+				pHandles[nFound] = pRecord->m_Handle;
+			}
+			++nFound;
+		}
+	}
+	*pTotal = nFound;
+	return nFound <= nCapacity ? SIR_RESOURCE_RESULT_SUCCESS : SIR_RESOURCE_RESULT_OUT_OF_BUDGET;
+}
+
+SIRResourceResult SIRResourceGraphWriter::getInvalidationSequence( SIRResourceHandle hResource, uint64_t *pSequence ) noexcept
+{
+	if ( !m_pGraph->isWriterThread() ) {
+		return SIR_RESOURCE_RESULT_WRITER_VIOLATION;
+	}
+	if ( pSequence == nullptr ) {
+		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
+	}
+	SIRPublishedResourceRecord *pRecord = nullptr;
+	const SIRResourceResult eResult = m_pGraph->checkHandle( hResource, &pRecord );
+	if ( eResult != SIR_RESOURCE_RESULT_SUCCESS ) {
+		return eResult;
+	}
+	*pSequence = m_pGraph->m_pSlots[hResource.m_nSlot].m_nInvalidationSequence;
 	return SIR_RESOURCE_RESULT_SUCCESS;
 }
 
@@ -382,6 +582,7 @@ SIRResourceResult SIRResourceGraphWriter::request( const SIRResourceKey &rKey, S
 		return SIR_RESOURCE_RESULT_OUT_OF_BUDGET;
 	}
 	m_pGraph->m_pSlots[iSlot].m_nNextGeneration = nextGeneration( pRecord->m_Handle.m_nGeneration );
+	m_pGraph->m_pSlots[iSlot].m_nInvalidationSequence = 0;
 	m_pGraph->publishRecord( ( uint32_t )iSlot, pRecord );
 	*pHandle = pRecord->m_Handle;
 	return SIR_RESOURCE_RESULT_SUCCESS;
@@ -657,6 +858,9 @@ SIRResourceResult SIRResourceGraphWriter::publish( const SIRResourcePublication 
 	if ( iSlot < 0 ) {
 		return SIR_RESOURCE_RESULT_OUT_OF_BUDGET;
 	}
+	if ( !m_pGraph->canReplaceReverseEdges( ( uint32_t )iSlot, rPublication.m_nDependencyCount ) ) {
+		return SIR_RESOURCE_RESULT_OUT_OF_BUDGET;
+	}
 	SIRPublishedResourceRecord *pPrior =
 	    iPrevious >= 0 ? m_pGraph->m_pSlots[iSlot].m_pPublished.load( std::memory_order_seq_cst ) : nullptr;
 	if ( pPrior && pPrior->m_Info.m_eState == SIR_RESOURCE_STATE_RESIDENT && pPrior->m_Info.m_eKind != rPublication.m_eKind ) {
@@ -693,6 +897,11 @@ SIRResourceResult SIRResourceGraphWriter::publish( const SIRResourcePublication 
 		m_pGraph->abandonUnpublishedRecord( pRecord );
 		return SIR_RESOURCE_RESULT_OUT_OF_BUDGET;
 	}
+	// No allocations or fallible operations after the reverse-edge pool is
+	// modified. Replacement has already passed edge-capacity admission.
+	m_pGraph->removeReverseEdges( ( uint32_t )iSlot );
+	m_pGraph->addReverseEdges( ( uint32_t )iSlot, pRecord->m_pDependencies, pRecord->m_Info.m_nDependencyCount );
+	m_pGraph->m_pSlots[iSlot].m_nInvalidationSequence = 0;
 	m_pGraph->adoptPublishedRecordChunks( pRecord );
 	if ( !pPrior ) {
 		m_pGraph->m_pSlots[iSlot].m_nNextGeneration = nextGeneration( pRecord->m_Handle.m_nGeneration );
@@ -798,6 +1007,8 @@ SIRResourceResult SIRResourceGraphWriter::retire( SIRResourceHandle hResource ) 
 	if ( !m_pGraph->m_KeyIndex.erase( pRecord->m_Info.m_Key ) ) {
 		return SIR_RESOURCE_RESULT_FAILED;
 	}
+	m_pGraph->removeReverseEdges( hResource.m_nSlot );
+	m_pGraph->m_pSlots[hResource.m_nSlot].m_nInvalidationSequence = 0;
 	m_pGraph->publishRecord( hResource.m_nSlot, nullptr );
 	return SIR_RESOURCE_RESULT_SUCCESS;
 }

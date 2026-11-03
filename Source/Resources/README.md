@@ -44,3 +44,15 @@ reject outdated asynchronous completions before staging is consumed or any
 published record changes. Expected revision 0 means absent or requested;
 a mismatch returns `SIR_RESOURCE_RESULT_STALE_REVISION`. This is a
 single-writer version-admission check, not multi-writer synchronization.
+
+A bounded writer-owned reverse dependency index now maps stable target keys
+(including missing optional/streamed targets) to the resources that depend on
+them. Publications and retirement update the index transactionally, rejecting
+insufficient edge capacity before consuming staging. Each change propagates a
+monotonic invalidation sequence through all transitive dependents. Writers
+can call `collectDependents` to enumerate direct consumers without scanning the
+entire registry or `getInvalidationSequence` to inspect a live resource's
+last upstream invalidation. The invalidation sequence is cleared when that
+resource successfully republishes; the resource revision still identifies the
+replacement. This first index is writer-owned; worker-to-writer notifications
+and a bounded multi-consumer change journal remain separate future work.
