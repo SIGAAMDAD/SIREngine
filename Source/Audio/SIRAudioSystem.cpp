@@ -36,14 +36,14 @@ sirAudioResult_t SIRAudioSystem::initialize( const sirAudioSystemConfig_t &confi
 		return SIR_AUDIO_INVALID_ARGUMENT;
 	}
 	size_t nBytes = 0;
-	if ( !SIRRawStorage::checkedMultiply( config.nMaxPlaying, sizeof( sirPlayingSlot_t ), &nBytes ) ) {
+	if ( !SIRRawStorage::checkedMultiply( config.nMaxPlaying, sizeof( sirAudioPlayingSlot_t ), &nBytes ) ) {
 		return SIR_AUDIO_INVALID_ARGUMENT;
 	}
 	void *pMemory = nullptr;
-	if ( SIRRawStorage::tryAllocate( pAllocator, nBytes, alignof( sirPlayingSlot_t ), &pMemory ) != SIR_CONTAINER_OK ) {
+	if ( SIRRawStorage::tryAllocate( pAllocator, nBytes, alignof( sirAudioPlayingSlot_t ), &pMemory ) != SIR_CONTAINER_OK ) {
 		return SIR_AUDIO_CAPACITY;
 	}
-	m_pPlaying = ( sirPlayingSlot_t * )pMemory;
+	m_pPlaying = ( sirAudioPlayingSlot_t * )pMemory;
 	m_pAllocator = pAllocator;
 	m_nPlayingCapacity = config.nMaxPlaying;
 	m_nNextSlot = 0;
@@ -80,8 +80,8 @@ void SIRAudioSystem::shutdown( void ) noexcept
 	m_Commands.shutdown();
 	m_CriticalCommands.shutdown();
 	if ( m_pPlaying != nullptr ) {
-		SIRRawStorage::deallocate( m_pAllocator, m_pPlaying, ( size_t )m_nPlayingCapacity * sizeof( sirPlayingSlot_t ),
-		                           alignof( sirPlayingSlot_t ) );
+		SIRRawStorage::deallocate( m_pAllocator, m_pPlaying, ( size_t )m_nPlayingCapacity * sizeof( sirAudioPlayingSlot_t ),
+		                           alignof( sirAudioPlayingSlot_t ) );
 	}
 	m_pPlaying = nullptr;
 	m_pAllocator = nullptr;
@@ -116,7 +116,7 @@ sirAudioResult_t SIRAudioSystem::playEvent( uint64_t nEventId, sirAudioEmitterHa
 	}
 	for ( uint32_t nAttempt = 0; nAttempt < m_nPlayingCapacity; ++nAttempt ) {
 		const uint32_t iSlot = ( m_nNextSlot + nAttempt ) % m_nPlayingCapacity;
-		sirPlayingSlot_t &slot = m_pPlaying[iSlot];
+		sirAudioPlayingSlot_t &slot = m_pPlaying[iSlot];
 		if ( slot.eState != SIR_AUDIO_PLAYBACK_FREE && slot.eState != SIR_AUDIO_PLAYBACK_FINISHED &&
 		     slot.eState != SIR_AUDIO_PLAYBACK_FAILED ) {
 			continue;
@@ -161,7 +161,7 @@ sirAudioResult_t SIRAudioSystem::stopEvent( sirAudioPlayingHandle_t hPlaying, si
 	command.eStopMode = eMode;
 	const sirAudioResult_t eResult = enqueue( command, true );
 	if ( eResult == SIR_AUDIO_PENDING ) {
-		sirPlayingSlot_t &slot = m_pPlaying[hPlaying.nSlot];
+		sirAudioPlayingSlot_t &slot = m_pPlaying[hPlaying.nSlot];
 		slot.nStopSequence = command.nSequence;
 		slot.eStateBeforeStop = slot.eState;
 		slot.eState = SIR_AUDIO_PLAYBACK_STOPPING;
@@ -232,7 +232,7 @@ void SIRAudioSystem::applyCompletion( const sirAudioCompletion_t &completion ) n
 	if ( !isValid( completion.hPlaying ) ) {
 		return;
 	}
-	sirPlayingSlot_t &slot = m_pPlaying[completion.hPlaying.nSlot];
+	sirAudioPlayingSlot_t &slot = m_pPlaying[completion.hPlaying.nSlot];
 	if ( completion.eType == SIR_AUDIO_COMPLETION_STARTED ) {
 		if ( completion.nSequence == slot.nStartSequence ) {
 			if ( slot.eState == SIR_AUDIO_PLAYBACK_QUEUED ) {
@@ -265,7 +265,7 @@ void SIRAudioSystem::failSubmission( const sirAudioCommand_t &command ) noexcept
 	if ( !isValid( command.hPlaying ) ) {
 		return;
 	}
-	sirPlayingSlot_t &slot = m_pPlaying[command.hPlaying.nSlot];
+	sirAudioPlayingSlot_t &slot = m_pPlaying[command.hPlaying.nSlot];
 	if ( command.eType == SIR_AUDIO_COMMAND_PLAY && slot.nStartSequence == command.nSequence ) {
 		slot.eState = SIR_AUDIO_PLAYBACK_FAILED;
 	} else if ( command.eType == SIR_AUDIO_COMMAND_STOP && slot.eState == SIR_AUDIO_PLAYBACK_STOPPING &&

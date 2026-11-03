@@ -30,20 +30,20 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // The gameplay owner alone calls play/stop/update/shutdown and reads playback
 // state. Concurrent producers may submit global/emitter parameter commands;
 // they must quiesce before shutdown. Vendor callbacks only enqueue completions.
+typedef struct sirAudioPlayingSlot_s
+{
+	uint64_t nStartSequence;
+	uint64_t nStopSequence;
+	uint32_t nGeneration;
+	sirAudioPlaybackState_t eState;
+	sirAudioPlaybackState_t eStateBeforeStop;
+	uint8_t nReserved[2];
+} sirAudioPlayingSlot_t;
+
 class SIRAudioSystem
 {
 private:
-	typedef struct sirPlayingSlot_s
-	{
-		uint64_t nStartSequence;
-		uint64_t nStopSequence;
-		uint32_t nGeneration;
-		sirAudioPlaybackState_t eState;
-		sirAudioPlaybackState_t eStateBeforeStop;
-		uint8_t nReserved[2];
-	} sirPlayingSlot_t;
-
-	sirPlayingSlot_t *m_pPlaying = nullptr;
+	sirAudioPlayingSlot_t *m_pPlaying = nullptr;
 	const sirContainerAllocator_t *m_pAllocator = nullptr;
 	sirAudioBackendOps_t m_Backend = {};
 	void *m_pBackendContext = nullptr;

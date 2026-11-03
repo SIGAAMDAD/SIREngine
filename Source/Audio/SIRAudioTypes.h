@@ -164,4 +164,10 @@ typedef struct sirAudioControlBinding_s
 	uint8_t nReserved;
 } sirAudioControlBinding_t;
 
+// Wave A wire-message layout: fixed, pointer-free, and stable across the
+// supported Windows/Linux 64-bit ABI. Any change requires a version bump.
+static_assert( sizeof( sirAudioPlayingHandle_t ) == 16, "Audio handle ABI changed" );
+static_assert( sizeof( sirAudioCommand_t ) == 64, "Audio command ABI changed" );
+static_assert( sizeof( sirAudioCompletion_t ) == 32, "Audio completion ABI changed" );
+
 #endif // __SIRENGINE_SIRAUDIOTYPES_H__
