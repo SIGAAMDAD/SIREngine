@@ -56,3 +56,12 @@ last upstream invalidation. The invalidation sequence is cleared when that
 resource successfully republishes; the resource revision still identifies the
 replacement. This first index is writer-owned; worker-to-writer notifications
 and a bounded multi-consumer change journal remain separate future work.
+
+The bounded invalidation journal stores one ordered notification per affected
+resource, each with a unique journal cursor, dependent generation-safe handle,
+originating change key and batch sequence. `pollInvalidations` supports partial
+drains without allocation. A consumer that falls beyond retained journal
+capacity receives `SIR_RESOURCE_RESULT_JOURNAL_OVERFLOW` and must rebuild
+its current dependency state before resuming at the returned latest cursor.
+The journal and reverse index are single-writer; cross-thread delivery is a
+separate scheduler contract.

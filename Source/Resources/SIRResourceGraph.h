@@ -82,6 +82,8 @@ typedef struct sirResourceGraphConfig_s
 	uint64_t m_nMaxCommittedBytes;
 	// Zero selects a bounded default of four dependency edges per resource.
 	uint32_t m_nMaxDependencyEdges;
+	// Zero selects a bounded default of four journal entries per resource.
+	uint32_t m_nMaxInvalidationEvents;
 } sirResourceGraphConfig_t;
 typedef sirResourceGraphConfig_t SIRResourceGraphConfig;
 
@@ -96,7 +98,20 @@ typedef struct sirResourceGraphStats_s
 	uint32_t m_nActiveReaders;
 	uint32_t m_nIndexedDependencyEdges;
 	uint64_t m_nChangeSequence;
+	uint64_t m_nTotalInvalidationEvents;
+	uint32_t m_nBufferedInvalidationEvents;
 } sirResourceGraphStats_t;
+
+// Bounded journal notifications. A change may invalidate several resources;
+// journal sequence is unique per affected resource, change sequence per batch.
+typedef struct sirResourceInvalidationEvent_s
+{
+	SIRResourceKey m_Cause;
+	SIRResourceHandle m_Dependent;
+	uint64_t m_nJournalSequence;
+	uint64_t m_nChangeSequence;
+} sirResourceInvalidationEvent_t;
+typedef sirResourceInvalidationEvent_t SIRResourceInvalidationEvent;
 typedef sirResourceGraphStats_t SIRResourceGraphStats;
 
 class SIRResourceGraphWriter
@@ -127,6 +142,10 @@ public:
 	SIRResourceResult collectDependents( const SIRResourceKey &rTarget, SIRResourceHandle *pHandles, uint32_t nCapacity,
 	                                     uint32_t *pTotal ) noexcept;
 	SIRResourceResult getInvalidationSequence( SIRResourceHandle hResource, uint64_t *pSequence ) noexcept;
+	// Poll retained change events in sequence order. Overflow means the caller
+	// must rebuild dependency state and resume at the reported latest cursor.
+	SIRResourceResult pollInvalidations( uint64_t nAfterSequence, SIRResourceInvalidationEvent *pEvents,
+	                                     uint32_t nCapacity, uint32_t *pCount, uint64_t *pNextSequence ) noexcept;
 
 	friend class SIRResourceGraph;
 };
@@ -154,6 +173,9 @@ private:
 	uint32_t m_iFreeReverseEdge;
 	uint32_t m_nActiveReverseEdges;
 	uint64_t m_nChangeSequence;
+	SIRResourceInvalidationEvent *m_pInvalidations;
+	uint32_t m_nMaxInvalidationEvents;
+	uint64_t m_nTotalInvalidations;
 	uint32_t *m_pTraversalQueue;
 	uint32_t m_nTraversalStamp;
 	SIRSharedResourceChunk *m_pSharedChunks;
