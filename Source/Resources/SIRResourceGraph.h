@@ -144,8 +144,8 @@ public:
 	SIRResourceResult getInvalidationSequence( SIRResourceHandle hResource, uint64_t *pSequence ) noexcept;
 	// Poll retained change events in sequence order. Overflow means the caller
 	// must rebuild dependency state and resume at the reported latest cursor.
-	SIRResourceResult pollInvalidations( uint64_t nAfterSequence, SIRResourceInvalidationEvent *pEvents,
-	                                     uint32_t nCapacity, uint32_t *pCount, uint64_t *pNextSequence ) noexcept;
+	SIRResourceResult pollInvalidations( uint64_t nAfterSequence, SIRResourceInvalidationEvent *pEvents, uint32_t nCapacity,
+	                                     uint32_t *pCount, uint64_t *pNextSequence ) noexcept;
 
 	friend class SIRResourceGraph;
 };
