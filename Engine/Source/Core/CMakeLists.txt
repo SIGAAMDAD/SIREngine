@@ -7,3 +7,5 @@ if(MSVC)
 else()
     target_compile_options(SIRCore PRIVATE -Wall -Wextra -Wpedantic)
 endif()
+
+sir_configure_owned_target(SIRCore)

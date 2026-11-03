@@ -7,3 +7,5 @@ add_test(NAME launcher.help COMMAND SIREngine --help)
 set_tests_properties(launcher.help PROPERTIES PASS_REGULAR_EXPRESSION "Usage: SIREngine")
 add_test(NAME launcher.unknown-option COMMAND SIREngine --unknown)
 set_tests_properties(launcher.unknown-option PROPERTIES WILL_FAIL TRUE)
+
+sir_configure_owned_target(SIRApplicationTests)
