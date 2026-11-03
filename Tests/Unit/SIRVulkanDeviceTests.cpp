@@ -57,6 +57,12 @@ int main( void )
 	     device.writeBuffer( &buffer, 4090, szBytes, sizeof( szBytes ) ) != SIR_VULKAN_INVALID_ARGUMENT ) {
 		return 7;
 	}
+	sirVulkanBuffer_t foreign = buffer;
+	foreign.pOwnerAllocator = nullptr;
+	if ( device.writeBuffer( &foreign, 0, szBytes, sizeof( szBytes ) ) != SIR_VULKAN_INVALID_ARGUMENT ||
+	     device.destroyIdleBuffer( &foreign ) != SIR_VULKAN_INVALID_ARGUMENT ) {
+		return 11;
+	}
 	sirVulkanMemoryStats_t active = {};
 	if ( !device.queryMemoryStats( &active ) || active.nLiveBuffers != 1 || active.nAllocationBytes == 0 ) {
 		return 8;
