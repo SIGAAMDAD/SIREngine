@@ -93,6 +93,62 @@ bool SIRInputFrameState::postChanges( sirInputDeviceId_t id, sirInputDeviceClass
 	     nCount > SIR_INPUT_EVENT_CAPACITY ) {
 		return false;
 	}
+	// The common native path emits a single physical transition. Avoid a
+	// full device-state scratch copy and a second scan for that case.
+	if ( nCount == 1 ) {
+		const sirInputControlChange_t &change = pChanges[0];
+		sirInputDeviceState_t &state = m_Live[id.nSlot];
+		bool bChanged = false;
+		if ( change.eSignal == SIR_INPUT_BUTTON ) {
+			if ( change.nControl >= SIR_INPUT_BUTTON_CAPACITY || ( change.nValue != 0 && change.nValue != 1 ) ) {
+				return false;
+			}
+			const uint32_t nWord = change.nControl / 32;
+			const uint32_t nMask = UINT32_C( 1 ) << ( change.nControl % 32 );
+			const bool bDown = change.nValue != 0;
+			bChanged = ( ( state.nHeld[nWord] & nMask ) != 0 ) != bDown;
+			if ( !bChanged ) {
+				return true;
+			}
+			if ( m_nCount == SIR_INPUT_EVENT_CAPACITY ) {
+				m_bOverflowed = true;
+				++m_nResync;
+				return false;
+			}
+			if ( bDown ) {
+				state.nHeld[nWord] |= nMask;
+				state.nPressed[nWord] |= nMask;
+			} else {
+				state.nHeld[nWord] &= ~nMask;
+				state.nReleased[nWord] |= nMask;
+			}
+		} else if ( change.eSignal == SIR_INPUT_AXIS ) {
+			if ( change.nControl >= SIR_INPUT_AXIS_CAPACITY ) {
+				return false;
+			}
+			if ( change.nControl < SIR_INPUT_AXIS_COUNT ) {
+				const bool bTrigger = change.nControl >= SIR_INPUT_AXIS_LT;
+				if ( change.nValue > 32767 || change.nValue < ( bTrigger ? 0 : -32767 ) ) {
+					return false;
+				}
+			}
+			bChanged = state.nAxes[change.nControl] != change.nValue;
+			if ( !bChanged ) {
+				return true;
+			}
+			if ( m_nCount == SIR_INPUT_EVENT_CAPACITY ) {
+				m_bOverflowed = true;
+				++m_nResync;
+				return false;
+			}
+			state.nAxes[change.nControl] = change.nValue;
+		} else {
+			return false;
+		}
+		const sirInputEvent_t event = { nTime, ++m_nSequence, id, change.nValue, 0, change.nControl, change.eSignal, eClass };
+		return append( event );
+	}
+
 	// Validate as one transaction, including repeated presses and releases.
 	sirInputDeviceState_t scratch = m_Live[id.nSlot];
 	uint32_t nChanges = 0;
