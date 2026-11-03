@@ -31,39 +31,40 @@ class SIRMemorySegment;
 // Cold large-block alternative to buddy allocation. Metadata is contained in
 // the existing manager reservation; page runs are backed by the same segment.
 // Not thread-safe: SIRGeneralHeap owns the large-heap mutex.
-typedef struct sirFreeRun_s {
-    uint32_t nPages;
-    uint32_t nNext;
-    uint32_t nPrevious;
+typedef struct sirFreeRun_s
+{
+	uint32_t nPages;
+	uint32_t nNext;
+	uint32_t nPrevious;
 } sirFreeRun_t;
 
 class SIRPageRunAllocator
 {
 public:
-    SIRPageRunAllocator( void );
-    static uint64_t getRequiredMetadataBytes( uint64_t nCapacityBytes,
-                                              uint64_t nPageBytes );
-    bool init( SIRMemorySegment *pSegment );
-    void *alloc( uint64_t nBytes, uint64_t nAlignment = 16 );
-    bool free( void *pMemory );
-    uint64_t getUsableSize( const void *pMemory ) const;
-    bool trimUnusedPages( void );
-    uint64_t getAllocatedBytes( void ) const;
-    uint32_t getAllocationCount( void ) const;
-private:
-    static constexpr uint32_t SIR_NONE = UINT32_MAX;
+	SIRPageRunAllocator( void );
+	static uint64_t getRequiredMetadataBytes( uint64_t nCapacityBytes, uint64_t nPageBytes );
+	bool init( SIRMemorySegment *pSegment );
+	void *alloc( uint64_t nBytes, uint64_t nAlignment = 16 );
+	bool free( void *pMemory );
+	uint64_t getUsableSize( const void *pMemory ) const;
+	bool trimUnusedPages( void );
+	uint64_t getAllocatedBytes( void ) const;
+	uint32_t getAllocationCount( void ) const;
 
-    void unlinkRun( uint32_t nFirst );
-    void insertRun( uint32_t nFirst, uint32_t nPages );
-    SIRMemorySegment *m_pSegment;
-    uint8_t *m_pBase;
-    sirFreeRun_t *m_pFreeRuns;
-    uint32_t *m_pAllocationPages;
-    uint32_t m_nPageCount;
-    uint32_t m_nPageBytes;
-    uint32_t m_nFreeHead;
-    uint32_t m_nAllocationCount;
-    uint64_t m_nAllocatedBytes;
+private:
+	static constexpr uint32_t SIR_NONE = UINT32_MAX;
+
+	void unlinkRun( uint32_t nFirst );
+	void insertRun( uint32_t nFirst, uint32_t nPages );
+	SIRMemorySegment *m_pSegment;
+	uint8_t *m_pBase;
+	sirFreeRun_t *m_pFreeRuns;
+	uint32_t *m_pAllocationPages;
+	uint32_t m_nPageCount;
+	uint32_t m_nPageBytes;
+	uint32_t m_nFreeHead;
+	uint32_t m_nAllocationCount;
+	uint64_t m_nAllocatedBytes;
 };
 
 #endif // __SIRENGINE_SIRPAGERUNALLOCATOR_H__

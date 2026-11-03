@@ -28,9 +28,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <stdint.h>
 #include <stddef.h>
 
-#define SIR_IS_POWER_OF_TWO( nValue ) ( (nValue) != 0 && ( ( (nValue) & ( (nValue) - 1 ) ) == 0 ) )
-#define SIR_ALIGN_DOWN( nValue, nAlignment ) ( (uintptr_t)( nValue ) & ~( (uintptr_t)( nAlignment ) - 1u ) )
-#define SIR_ALIGN_UP( nValue, nAlignment ) ( ( (uintptr_t)( nValue ) + (uintptr_t)( nAlignment ) - 1u ) & ~( (uintptr_t)( nAlignment ) - 1u ) )
-#define SIR_ROUND_UP_MULTIPLE( nValue, nMultiple ) ( ( (nValue) / (nMultiple) + ( (nValue) % (nMultiple) != 0 ) ) * (nMultiple) )
+#define SIR_IS_POWER_OF_TWO( nValue ) ( ( nValue ) != 0 && ( ( ( nValue ) & ( ( nValue ) - 1 ) ) == 0 ) )
+#define SIR_ALIGN_DOWN( nValue, nAlignment ) ( ( uintptr_t )( nValue ) & ~( ( uintptr_t )( nAlignment ) - 1u ) )
+#define SIR_ALIGN_UP( nValue, nAlignment )                                                                                                 \
+	( ( ( uintptr_t )( nValue ) + ( uintptr_t )( nAlignment ) - 1u ) & ~( ( uintptr_t )( nAlignment ) - 1u ) )
+#define SIR_ROUND_UP_MULTIPLE( nValue, nMultiple ) ( ( ( nValue ) / ( nMultiple ) + ( ( nValue ) % ( nMultiple ) != 0 ) ) * ( nMultiple ) )
 
 #endif // __SIRENGINE_SIRMEMORYUTILS_H__

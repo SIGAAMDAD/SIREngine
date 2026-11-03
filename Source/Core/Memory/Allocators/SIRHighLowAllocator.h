@@ -35,33 +35,33 @@ class SIRMemorySegment;
 class SIRHighLowAllocator
 {
 public:
-    SIRHighLowAllocator( void );
-    SIRHighLowAllocator( const SIRHighLowAllocator& ) = delete;
-    SIRHighLowAllocator& operator=( const SIRHighLowAllocator& ) = delete;
+	SIRHighLowAllocator( void );
+	SIRHighLowAllocator( const SIRHighLowAllocator & ) = delete;
+	SIRHighLowAllocator &operator=( const SIRHighLowAllocator & ) = delete;
 
-    bool init( SIRMemorySegment *pSegment );
+	bool init( SIRMemorySegment *pSegment );
 
-    void *allocLow( uint64_t nBytes, uint64_t nAlignment = 16 );
-    void *allocHigh( uint64_t nBytes, uint64_t nAlignment = 16 );
+	void *allocLow( uint64_t nBytes, uint64_t nAlignment = 16 );
+	void *allocHigh( uint64_t nBytes, uint64_t nAlignment = 16 );
 
-    uint64_t getLowMark( void ) const;
-    uint64_t getHighMark( void ) const;
-    bool rewindLow( uint64_t nMark );
-    bool rewindHigh( uint64_t nMark );
-    bool reset( void );
-    bool trimUnusedPages( void );
-    bool shutdown( void );
+	uint64_t getLowMark( void ) const;
+	uint64_t getHighMark( void ) const;
+	bool rewindLow( uint64_t nMark );
+	bool rewindHigh( uint64_t nMark );
+	bool reset( void );
+	bool trimUnusedPages( void );
+	bool shutdown( void );
 
-    uint64_t getLowUsedBytes( void ) const;
-    uint64_t getHighUsedBytes( void ) const;
-    uint64_t getAvailableBytes( void ) const;
+	uint64_t getLowUsedBytes( void ) const;
+	uint64_t getHighUsedBytes( void ) const;
+	uint64_t getAvailableBytes( void ) const;
 
 private:
-    SIRMemorySegment *m_pSegment;
-    uint64_t m_nLowUsed;
-    uint64_t m_nHighUsed;
-    uint64_t m_nLowCommittedEnd;
-    uint64_t m_nHighCommittedBegin;
+	SIRMemorySegment *m_pSegment;
+	uint64_t m_nLowUsed;
+	uint64_t m_nHighUsed;
+	uint64_t m_nLowCommittedEnd;
+	uint64_t m_nHighCommittedBegin;
 };
 
 #endif // __SIRENGINE_SIRHIGHLOWALLOCATOR_H__

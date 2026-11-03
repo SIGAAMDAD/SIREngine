@@ -21,34 +21,27 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <new>
 
 SIRCacheAllocator::SIRCacheAllocator( void )
-    : m_Buddy(), m_pSegment( nullptr ), m_pEntries( nullptr ), m_pActiveIndices( nullptr ),
-      m_pBase( nullptr ), m_nEntryCount( 0 ), m_nPageSize( 0 ), m_nFreshIndex( 0 ),
-      m_nFreeHead( SIR_CACHE_NONE ), m_nClockHand( 0 ),
-      m_nLiveCount( 0 ), m_nEvicted( 0 )
+    : m_Buddy(), m_pSegment( nullptr ), m_pEntries( nullptr ), m_pActiveIndices( nullptr ), m_pBase( nullptr ), m_nEntryCount( 0 ),
+      m_nPageSize( 0 ), m_nFreshIndex( 0 ), m_nFreeHead( SIR_CACHE_NONE ), m_nClockHand( 0 ), m_nLiveCount( 0 ), m_nEvicted( 0 )
 {
 }
 
-uint64_t SIRCacheAllocator::getRequiredMetadataBytes( uint64_t nSegmentBytes,
-                                                      uint64_t nMinimumBlockBytes,
-                                                      uint32_t nMaxEntries )
+uint64_t SIRCacheAllocator::getRequiredMetadataBytes( uint64_t nSegmentBytes, uint64_t nMinimumBlockBytes, uint32_t nMaxEntries )
 {
 	if ( nSegmentBytes > UINT32_MAX || nMaxEntries == 0 ) {
 		return 0;
 	}
-	const uint64_t nBuddy = SIRBuddyAllocator::getRequiredMetadataBytes(
-	    nSegmentBytes, nMinimumBlockBytes );
+	const uint64_t nBuddy = SIRBuddyAllocator::getRequiredMetadataBytes( nSegmentBytes, nMinimumBlockBytes );
 	if ( nBuddy == 0 ) {
 		return 0;
 	}
 	// Entries and dense CLOCK indices live in one permanent metadata allocation.
-	return nBuddy + ( (uint64_t)( nMaxEntries ) ) * ( sizeof( sirCacheDesc_t ) + sizeof( uint32_t ) ) + 16;
+	return nBuddy + ( ( uint64_t )( nMaxEntries ) ) * ( sizeof( sirCacheDesc_t ) + sizeof( uint32_t ) ) + 16;
 }
 
-bool SIRCacheAllocator::init( SIRMemorySegment *pSegment, uint32_t nMaxEntries,
-                              uint64_t nMinimumBlockBytes )
+bool SIRCacheAllocator::init( SIRMemorySegment *pSegment, uint32_t nMaxEntries, uint64_t nMinimumBlockBytes )
 {
-	if ( m_pEntries != nullptr || pSegment == nullptr || nMaxEntries == 0 ||
-	     pSegment->getReservedBytes() > UINT32_MAX ) {
+	if ( m_pEntries != nullptr || pSegment == nullptr || nMaxEntries == 0 || pSegment->getReservedBytes() > UINT32_MAX ) {
 		return false;
 	}
 	SIRMemoryManager *pManager = pSegment->getManager();
@@ -56,50 +49,44 @@ bool SIRCacheAllocator::init( SIRMemorySegment *pSegment, uint32_t nMaxEntries,
 		return false;
 	}
 
-	const uint64_t nDescriptorBytes = ( (uint64_t)( nMaxEntries ) ) *
-	                                  sizeof( sirCacheDesc_t );
-	const uint64_t nTotalBytes = nDescriptorBytes +
-	                             ( (uint64_t)( nMaxEntries ) ) * sizeof( uint32_t );
-	uint8_t *pMetadata = ( (uint8_t *)( pManager->allocateMetadata( nTotalBytes, alignof( uint32_t ) ) ) );
+	const uint64_t nDescriptorBytes = ( ( uint64_t )( nMaxEntries ) ) * sizeof( sirCacheDesc_t );
+	const uint64_t nTotalBytes = nDescriptorBytes + ( ( uint64_t )( nMaxEntries ) ) * sizeof( uint32_t );
+	uint8_t *pMetadata = ( ( uint8_t * )( pManager->allocateMetadata( nTotalBytes, alignof( uint32_t ) ) ) );
 	if ( pMetadata == nullptr || !m_Buddy.init( pSegment, nMinimumBlockBytes ) ) {
 		return false;
 	}
 
 	m_pSegment = pSegment;
-	m_pEntries = ( (sirCacheDesc_t *)( pMetadata ) );
-	m_pActiveIndices = ( (uint32_t *)( pMetadata + nDescriptorBytes ) );
-	m_pBase = ( (uint8_t *)( pSegment->getBase() ) );
+	m_pEntries = ( ( sirCacheDesc_t * )( pMetadata ) );
+	m_pActiveIndices = ( ( uint32_t * )( pMetadata + nDescriptorBytes ) );
+	m_pBase = ( ( uint8_t * )( pSegment->getBase() ) );
 	m_nEntryCount = nMaxEntries;
-	m_nPageSize = ( (uint32_t)( pSegment->getPageSize() ) );
+	m_nPageSize = ( ( uint32_t )( pSegment->getPageSize() ) );
 	for ( uint32_t i = 0; i < nMaxEntries; ++i ) {
-		m_pEntries[ i ].nGeneration = 1;
+		m_pEntries[i].nGeneration = 1;
 	}
 	return true;
 }
 
-uint8_t *SIRCacheAllocator::entryAddress( const sirCacheDesc_t& desc ) const
+uint8_t *SIRCacheAllocator::entryAddress( const sirCacheDesc_t &desc ) const
 {
 	return m_pBase + desc.nOffset;
 }
 
 sirCacheDesc_t *SIRCacheAllocator::validate( sirCacheHandle_t handle )
 {
-	if ( m_pEntries == nullptr || handle.nIndex >= m_nFreshIndex ||
-	     handle.nGeneration == 0 ) {
+	if ( m_pEntries == nullptr || handle.nIndex >= m_nFreshIndex || handle.nGeneration == 0 ) {
 		return nullptr;
 	}
 	sirCacheDesc_t *pDesc = m_pEntries + handle.nIndex;
-	return ( pDesc->nFlags & SIR_CACHE_LIVE ) != 0 &&
-	               pDesc->nGeneration == handle.nGeneration
-	           ? pDesc
-	           : nullptr;
+	return ( pDesc->nFlags & SIR_CACHE_LIVE ) != 0 && pDesc->nGeneration == handle.nGeneration ? pDesc : nullptr;
 }
 
 bool SIRCacheAllocator::acquireIndex( uint32_t *pIndex )
 {
 	if ( m_nFreeHead != SIR_CACHE_NONE ) {
 		*pIndex = m_nFreeHead;
-		m_nFreeHead = m_pEntries[ m_nFreeHead ].nNextFree;
+		m_nFreeHead = m_pEntries[m_nFreeHead].nNextFree;
 		return true;
 	}
 	if ( m_nFreshIndex == m_nEntryCount ) {
@@ -111,24 +98,23 @@ bool SIRCacheAllocator::acquireIndex( uint32_t *pIndex )
 
 void SIRCacheAllocator::returnIndex( uint32_t nIndex )
 {
-	sirCacheDesc_t& desc = m_pEntries[ nIndex ];
+	sirCacheDesc_t &desc = m_pEntries[nIndex];
 	desc.nNextFree = m_nFreeHead;
 	m_nFreeHead = nIndex;
 }
 
 bool SIRCacheAllocator::evictIndex( uint32_t nIndex, bool bEvicted )
 {
-	sirCacheDesc_t& desc = m_pEntries[ nIndex ];
-	if ( ( desc.nFlags & SIR_CACHE_LIVE ) == 0 || desc.nPinCount != 0 ||
-	     !m_Buddy.free( entryAddress( desc ) ) ) {
+	sirCacheDesc_t &desc = m_pEntries[nIndex];
+	if ( ( desc.nFlags & SIR_CACHE_LIVE ) == 0 || desc.nPinCount != 0 || !m_Buddy.free( entryAddress( desc ) ) ) {
 		return false;
 	}
 
 	const uint32_t nSlot = desc.nActiveSlot;
-	const uint32_t nLastIndex = m_pActiveIndices[ m_nLiveCount - 1 ];
+	const uint32_t nLastIndex = m_pActiveIndices[m_nLiveCount - 1];
 	if ( nLastIndex != nIndex ) {
-		m_pActiveIndices[ nSlot ] = nLastIndex;
-		m_pEntries[ nLastIndex ].nActiveSlot = nSlot;
+		m_pActiveIndices[nSlot] = nLastIndex;
+		m_pEntries[nLastIndex].nActiveSlot = nSlot;
 	}
 	--m_nLiveCount;
 	if ( m_nClockHand >= m_nLiveCount ) {
@@ -161,11 +147,11 @@ bool SIRCacheAllocator::evictOne( void )
 	uint32_t nFirstSecondChanceSlot = 0;
 	for ( uint32_t nScan = 0; nScan < nScanCount; ++nScan ) {
 		const uint32_t nSlot = m_nClockHand;
-		const uint32_t nIndex = m_pActiveIndices[ nSlot ];
+		const uint32_t nIndex = m_pActiveIndices[nSlot];
 		if ( ++m_nClockHand == m_nLiveCount ) {
 			m_nClockHand = 0;
 		}
-		sirCacheDesc_t& desc = m_pEntries[ nIndex ];
+		sirCacheDesc_t &desc = m_pEntries[nIndex];
 		if ( desc.nPinCount != 0 ) {
 			continue;
 		}
@@ -189,14 +175,11 @@ bool SIRCacheAllocator::evictOne( void )
 	return evictIndex( nFirstSecondChance, true );
 }
 
-void *SIRCacheAllocator::alloc( uint32_t nBytes, uint32_t nAlignment,
-                                sirCacheHandle_t *pHandle )
+void *SIRCacheAllocator::alloc( uint32_t nBytes, uint32_t nAlignment, sirCacheHandle_t *pHandle )
 {
 	// Reject requests Buddy can never satisfy before evicting any live data.
-	if ( m_pEntries == nullptr || pHandle == nullptr || nBytes == 0 ||
-	     nBytes > m_Buddy.getCapacity() ||
-	     !SIR_IS_POWER_OF_TWO( nAlignment ) ||
-	     nAlignment > m_nPageSize ) {
+	if ( m_pEntries == nullptr || pHandle == nullptr || nBytes == 0 || nBytes > m_Buddy.getCapacity() ||
+	     !SIR_IS_POWER_OF_TWO( nAlignment ) || nAlignment > m_nPageSize ) {
 		return nullptr;
 	}
 
@@ -218,15 +201,14 @@ void *SIRCacheAllocator::alloc( uint32_t nBytes, uint32_t nAlignment,
 		pMemory = m_Buddy.alloc( nBytes, nAlignment );
 	}
 
-	sirCacheDesc_t& desc = m_pEntries[ nIndex ];
-	const uintptr_t nOffset = ( (uintptr_t)( pMemory ) ) -
-	                          ( (uintptr_t)( m_pBase ) );
-	desc.nOffset = ( (uint32_t)( nOffset ) );
+	sirCacheDesc_t &desc = m_pEntries[nIndex];
+	const uintptr_t nOffset = ( ( uintptr_t )( pMemory ) ) - ( ( uintptr_t )( m_pBase ) );
+	desc.nOffset = ( ( uint32_t )( nOffset ) );
 	desc.nBytes = nBytes;
 	desc.nPinCount = 0;
 	desc.nActiveSlot = m_nLiveCount;
 	desc.nFlags = SIR_CACHE_LIVE | SIR_CACHE_REFERENCED;
-	m_pActiveIndices[ m_nLiveCount++ ] = nIndex;
+	m_pActiveIndices[m_nLiveCount++] = nIndex;
 	pHandle->nIndex = nIndex;
 	pHandle->nGeneration = desc.nGeneration;
 	return pMemory;

@@ -84,17 +84,15 @@ class SIRAllocationRouter
 {
 public:
 	SIRAllocationRouter( void );
-	bool init( const sirAllocationRouterConfig_t& config );
-	bool alloc( uint32_t nBytes, uint32_t nAlignment,
-	            sirRoutedAllocation_t *pResult,
-	            sirAllocationLifetime_t nLifetime = SIR_LIFETIME_ARBITRARY,
-	            sirJobScratchToken_t job = { UINT32_MAX, 0 } );
+	bool init( const sirAllocationRouterConfig_t &config );
+	bool alloc( uint32_t nBytes, uint32_t nAlignment, sirRoutedAllocation_t *pResult,
+	            sirAllocationLifetime_t nLifetime = SIR_LIFETIME_ARBITRARY, sirJobScratchToken_t job = { UINT32_MAX, 0 } );
 	bool free( sirRoutedAllocation_t *pAllocation );
 	uint64_t getRoutedCount( sirRoutingBacking_t backing ) const;
 
 private:
 	sirAllocationRouterConfig_t m_Config;
-	SIRAtomic<uint64_t> m_nCounts[ SIR_ROUTE_FRAME + 1 ];
+	SIRAtomic<uint64_t> m_nCounts[SIR_ROUTE_FRAME + 1];
 	uintptr_t m_nOwnerToken;
 	bool m_bInitialized;
 };

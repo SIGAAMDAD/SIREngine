@@ -36,50 +36,49 @@ class SIRMemorySegment;
 class SIRPoolAllocator
 {
 public:
-    SIRPoolAllocator( void );
-    SIRPoolAllocator( const SIRPoolAllocator& ) = delete;
-    SIRPoolAllocator& operator=( const SIRPoolAllocator& ) = delete;
-    SIRPoolAllocator( SIRPoolAllocator&& ) = delete;
-    SIRPoolAllocator& operator=( SIRPoolAllocator&& ) = delete;
+	SIRPoolAllocator( void );
+	SIRPoolAllocator( const SIRPoolAllocator & ) = delete;
+	SIRPoolAllocator &operator=( const SIRPoolAllocator & ) = delete;
+	SIRPoolAllocator( SIRPoolAllocator && ) = delete;
+	SIRPoolAllocator &operator=( SIRPoolAllocator && ) = delete;
 
-    bool init( SIRMemorySegment *pSegment, uint32_t nObjectBytes,
-               uint32_t nAlignment = 16, uint64_t nCommitIncrementBytes = 0 );
-    void *alloc( void );
-    bool free( void *pMemory );
+	bool init( SIRMemorySegment *pSegment, uint32_t nObjectBytes, uint32_t nAlignment = 16, uint64_t nCommitIncrementBytes = 0 );
+	void *alloc( void );
+	bool free( void *pMemory );
 
-    // Cold operations. reset/shutdown require no live objects.
-    bool precommitSlots( uint32_t nSlots );
-    bool reset( bool bDecommit = false );
-    bool shutdown( void );
+	// Cold operations. reset/shutdown require no live objects.
+	bool precommitSlots( uint32_t nSlots );
+	bool reset( bool bDecommit = false );
+	bool shutdown( void );
 
-    uint32_t getObjectBytes( void ) const;
-    uint32_t getSlotStride( void ) const;
-    uint32_t getCapacitySlots( void ) const;
-    uint32_t getLiveSlots( void ) const;
-    uint32_t getFreshSlots( void ) const;
-    uint64_t getCommittedPrefixBytes( void ) const;
+	uint32_t getObjectBytes( void ) const;
+	uint32_t getSlotStride( void ) const;
+	uint32_t getCapacitySlots( void ) const;
+	uint32_t getLiveSlots( void ) const;
+	uint32_t getFreshSlots( void ) const;
+	uint64_t getCommittedPrefixBytes( void ) const;
 
 private:
-    static constexpr uint32_t SIR_POOL_INVALID_SLOT = UINT32_MAX;
+	static constexpr uint32_t SIR_POOL_INVALID_SLOT = UINT32_MAX;
 
-    bool commitToSlotCount( uint32_t nSlots );
-    uint8_t *slotAddress( uint32_t nIndex ) const;
+	bool commitToSlotCount( uint32_t nSlots );
+	uint8_t *slotAddress( uint32_t nIndex ) const;
 
-    SIRMemorySegment *m_pSegment;
-    uint8_t *m_pBase;
-    // Base is the first aligned slot; no separate first-offset hot field.
-    // High bit of magic selects the power-of-two shift case.
-    uint64_t m_nStrideMagic;
-    uint64_t m_nCommittedPrefixBytes;
-    uint64_t m_nCommitIncrementBytes;
-    uint32_t m_nObjectBytes;
-    uint32_t m_nSlotStride;
-    uint32_t m_nCapacitySlots;
-    uint32_t m_nFreshIndex;
-    uint32_t m_nFreeHead;
-    uint32_t m_nLiveCount;
-    uint64_t *m_pLiveBits;
-    uint64_t m_nLiveBitmapWords;
+	SIRMemorySegment *m_pSegment;
+	uint8_t *m_pBase;
+	// Base is the first aligned slot; no separate first-offset hot field.
+	// High bit of magic selects the power-of-two shift case.
+	uint64_t m_nStrideMagic;
+	uint64_t m_nCommittedPrefixBytes;
+	uint64_t m_nCommitIncrementBytes;
+	uint32_t m_nObjectBytes;
+	uint32_t m_nSlotStride;
+	uint32_t m_nCapacitySlots;
+	uint32_t m_nFreshIndex;
+	uint32_t m_nFreeHead;
+	uint32_t m_nLiveCount;
+	uint64_t *m_pLiveBits;
+	uint64_t m_nLiveBitmapWords;
 };
 
 #endif // __SIRENGINE_SIRPOOLALLOCATOR_H__

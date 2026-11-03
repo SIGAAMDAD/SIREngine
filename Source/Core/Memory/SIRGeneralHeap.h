@@ -65,10 +65,10 @@ class SIRGeneralHeap
 {
 public:
 	SIRGeneralHeap( void );
-	SIRGeneralHeap( const SIRGeneralHeap& ) = delete;
-	SIRGeneralHeap& operator=( const SIRGeneralHeap& ) = delete;
+	SIRGeneralHeap( const SIRGeneralHeap & ) = delete;
+	SIRGeneralHeap &operator=( const SIRGeneralHeap & ) = delete;
 
-	bool init( const sirGeneralHeapConfig_t& config );
+	bool init( const sirGeneralHeapConfig_t &config );
 	// Worker entry/exit can be explicitly tied to the engine worker lifecycle.
 	bool attachThread( void );
 	bool detachThread( void );
@@ -82,12 +82,10 @@ public:
 	size_t getUsableSize( const void *pMemory ) const;
 	bool owns( const void *pMemory ) const;
 	uint32_t drainRemote( void );
-    uint32_t serviceThread( uint32_t nMaximum = 128 );
+	uint32_t serviceThread( uint32_t nMaximum = 128 );
 	bool shutdown( void );
 
 private:
-
-
 	sirHeapRoute_t routePointer( const void *pMemory ) const;
 	void *allocRaw( size_t nBytes, size_t nAlignment );
 	static bool contains( const SIRMemorySegment *pSegment, const void *pMemory );

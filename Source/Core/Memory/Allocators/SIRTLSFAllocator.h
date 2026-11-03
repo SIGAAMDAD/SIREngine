@@ -35,8 +35,8 @@ class SIRTLSFAllocator
 {
 public:
 	SIRTLSFAllocator( void );
-	SIRTLSFAllocator( const SIRTLSFAllocator& ) = delete;
-	SIRTLSFAllocator& operator=( const SIRTLSFAllocator& ) = delete;
+	SIRTLSFAllocator( const SIRTLSFAllocator & ) = delete;
+	SIRTLSFAllocator &operator=( const SIRTLSFAllocator & ) = delete;
 
 	bool init( SIRMemorySegment *pSegment, uint32_t nCommitIncrementBytes = 65536 );
 	void *alloc( uint32_t nBytes, uint32_t nAlignment = 16 );
@@ -73,8 +73,8 @@ private:
 	uint32_t m_nAllocatedBlockBytes;
 	uint32_t m_nAllocationCount;
 	uint32_t m_nFirstLevelBitmap;
-	uint32_t m_nSecondLevelBitmap[ 32 ];
-	uint32_t m_nFreeHeads[ 32 ][ 16 ];
+	uint32_t m_nSecondLevelBitmap[32];
+	uint32_t m_nFreeHeads[32][16];
 };
 
 #endif // __SIRENGINE_SIRTLSFALLOCATOR_H__

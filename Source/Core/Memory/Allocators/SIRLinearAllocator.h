@@ -34,33 +34,31 @@ class SIRMemorySegment;
 class SIRLinearAllocator
 {
 public:
-    SIRLinearAllocator( void );
-    SIRLinearAllocator( const SIRLinearAllocator& ) = delete;
-    SIRLinearAllocator& operator=( const SIRLinearAllocator& ) = delete;
+	SIRLinearAllocator( void );
+	SIRLinearAllocator( const SIRLinearAllocator & ) = delete;
+	SIRLinearAllocator &operator=( const SIRLinearAllocator & ) = delete;
 
+	bool init( SIRMemorySegment *pSegment, uint64_t nCommitIncrementBytes = 0, uint64_t nUsableBytes = 0 );
 
-    bool init( SIRMemorySegment *pSegment, uint64_t nCommitIncrementBytes = 0,
-               uint64_t nUsableBytes = 0 );
+	void *alloc( uint64_t nBytes, uint64_t nAlignment = 16 );
+	bool precommit( uint64_t nBytes );
+	uint64_t getMark( void ) const;
+	bool rewind( uint64_t nMark );
+	bool reset( bool bDecommit = false );
+	bool shutdown( void );
+	bool trimTo( uint64_t nKeepBytes );
 
-    void *alloc( uint64_t nBytes, uint64_t nAlignment = 16 );
-    bool precommit( uint64_t nBytes );
-    uint64_t getMark( void ) const;
-    bool rewind( uint64_t nMark );
-    bool reset( bool bDecommit = false );
-    bool shutdown( void );
-    bool trimTo( uint64_t nKeepBytes );
-
-    uint64_t getUsedBytes( void ) const;
-    uint64_t getCommittedPrefixBytes( void ) const;
-    uint64_t getCapacity( void ) const;
-    SIRMemorySegment *getSegment( void ) const;
+	uint64_t getUsedBytes( void ) const;
+	uint64_t getCommittedPrefixBytes( void ) const;
+	uint64_t getCapacity( void ) const;
+	SIRMemorySegment *getSegment( void ) const;
 
 private:
-    SIRMemorySegment *m_pSegment;
-    uint64_t m_nUsedBytes;
-    uint64_t m_nCommittedPrefixBytes;
-    uint64_t m_nCapacity;
-    uint64_t m_nCommitIncrementBytes;
+	SIRMemorySegment *m_pSegment;
+	uint64_t m_nUsedBytes;
+	uint64_t m_nCommittedPrefixBytes;
+	uint64_t m_nCapacity;
+	uint64_t m_nCommitIncrementBytes;
 };
 
 #endif // __SIRENGINE_SIRLINEARALLOCATOR_H__

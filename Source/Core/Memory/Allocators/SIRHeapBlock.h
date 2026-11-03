@@ -31,23 +31,23 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // Offsets always address 16-byte aligned blocks, and 0xffffffff is invalid.
 typedef struct sirHeapBlock_s
 {
-    uint32_t nPreviousPhysicalBytes;
-    uint32_t nSizeAndFlags;
-    uint32_t nPreviousFreeOffset;
-    uint32_t nNextFreeOffset;
+	uint32_t nPreviousPhysicalBytes;
+	uint32_t nSizeAndFlags;
+	uint32_t nPreviousFreeOffset;
+	uint32_t nNextFreeOffset;
 } sirHeapBlock_t;
 static_assert( sizeof( sirHeapBlock_t ) == 16, "16-byte heap block header" );
 
 class SIRHeapBlock
 {
 public:
-    static constexpr uint32_t NONE = UINT32_MAX;
-    static constexpr uint32_t FREE = 1;
-    static constexpr uint32_t HEADER = 16;
-    static constexpr uint32_t MINIMUM = 32;
+	static constexpr uint32_t NONE = UINT32_MAX;
+	static constexpr uint32_t FREE = 1;
+	static constexpr uint32_t HEADER = 16;
+	static constexpr uint32_t MINIMUM = 32;
 
-    static uint32_t size( const sirHeapBlock_t *pBlock ) noexcept;
-    static bool isFree( const sirHeapBlock_t *pBlock ) noexcept;
+	static uint32_t size( const sirHeapBlock_t *pBlock ) noexcept;
+	static bool isFree( const sirHeapBlock_t *pBlock ) noexcept;
 };
 
 #endif // __SIRENGINE_SIRHEAPBLOCK_H__

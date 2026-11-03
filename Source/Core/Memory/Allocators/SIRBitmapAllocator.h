@@ -35,49 +35,46 @@ class SIRMemorySegment;
 class SIRBitmapAllocator
 {
 public:
-    SIRBitmapAllocator( void );
-    SIRBitmapAllocator( const SIRBitmapAllocator& ) = delete;
-    SIRBitmapAllocator& operator=( const SIRBitmapAllocator& ) = delete;
+	SIRBitmapAllocator( void );
+	SIRBitmapAllocator( const SIRBitmapAllocator & ) = delete;
+	SIRBitmapAllocator &operator=( const SIRBitmapAllocator & ) = delete;
 
-    static uint64_t getRequiredMetadataBytes( uint64_t nSegmentBytes,
-                                               uint32_t nObjectBytes,
-                                               uint32_t nAlignment = 16 );
-    bool init( SIRMemorySegment *pSegment, uint32_t nObjectBytes,
-               uint32_t nAlignment = 16, uint64_t nCommitIncrementBytes = 0 );
-    void *alloc( void );
-    bool free( void *pMemory );
-    bool precommitSlots( uint32_t nSlots );
-    bool trimUnusedPages( void );
-    bool shutdown( void );
+	static uint64_t getRequiredMetadataBytes( uint64_t nSegmentBytes, uint32_t nObjectBytes, uint32_t nAlignment = 16 );
+	bool init( SIRMemorySegment *pSegment, uint32_t nObjectBytes, uint32_t nAlignment = 16, uint64_t nCommitIncrementBytes = 0 );
+	void *alloc( void );
+	bool free( void *pMemory );
+	bool precommitSlots( uint32_t nSlots );
+	bool trimUnusedPages( void );
+	bool shutdown( void );
 
-    uint32_t getCapacitySlots( void ) const;
-    uint32_t getActiveSlots( void ) const;
-    uint32_t getLiveSlots( void ) const;
-    uint32_t getSlotStride( void ) const;
+	uint32_t getCapacitySlots( void ) const;
+	uint32_t getActiveSlots( void ) const;
+	uint32_t getLiveSlots( void ) const;
+	uint32_t getSlotStride( void ) const;
 
 private:
-    static constexpr uint32_t SIR_BITMAP_LEVELS = 6;
-    static uint32_t findSetBit( uint64_t nWord );
-    static uint32_t highestSetBit( uint64_t nWord );
-    void updateWordSummary( uint32_t nWordIndex, bool bAvailable );
-    void changeFreeRange( uint32_t nBegin, uint32_t nEnd, bool bSetFree );
-    void setFree( uint32_t nSlot );
-    bool isFree( uint32_t nSlot ) const;
-    bool grow( uint32_t nMinimumSlots );
+	static constexpr uint32_t SIR_BITMAP_LEVELS = 6;
+	static uint32_t findSetBit( uint64_t nWord );
+	static uint32_t highestSetBit( uint64_t nWord );
+	void updateWordSummary( uint32_t nWordIndex, bool bAvailable );
+	void changeFreeRange( uint32_t nBegin, uint32_t nEnd, bool bSetFree );
+	void setFree( uint32_t nSlot );
+	bool isFree( uint32_t nSlot ) const;
+	bool grow( uint32_t nMinimumSlots );
 
-    SIRMemorySegment *m_pSegment;
-    uint8_t *m_pBase;
-    uint64_t *m_pLevels[SIR_BITMAP_LEVELS];
-    uint32_t m_nLevelWords[SIR_BITMAP_LEVELS];
-    uint64_t m_nCommittedBytes;
-    uint64_t m_nCommitIncrementBytes;
-    uint32_t m_nLevels;
-    uint32_t m_nStride;
-    uint32_t m_nCapacitySlots;
-    uint32_t m_nActiveSlots;
-    uint32_t m_nFreeSlots;
-    uint32_t m_nLiveSlots;
-    uint32_t m_nHotWord;
+	SIRMemorySegment *m_pSegment;
+	uint8_t *m_pBase;
+	uint64_t *m_pLevels[SIR_BITMAP_LEVELS];
+	uint32_t m_nLevelWords[SIR_BITMAP_LEVELS];
+	uint64_t m_nCommittedBytes;
+	uint64_t m_nCommitIncrementBytes;
+	uint32_t m_nLevels;
+	uint32_t m_nStride;
+	uint32_t m_nCapacitySlots;
+	uint32_t m_nActiveSlots;
+	uint32_t m_nFreeSlots;
+	uint32_t m_nLiveSlots;
+	uint32_t m_nHotWord;
 };
 
 #endif // __SIRENGINE_SIRBITMAPALLOCATOR_H__

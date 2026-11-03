@@ -39,18 +39,18 @@ static_assert( sizeof( sirMemoryHandle_t ) == 8, "8-byte memory handle" );
 // No automatic C++ construction/destruction or pointer fixups.
 typedef struct sirHandleDesc_s
 {
-    uint32_t nBlockOffset;
-    uint32_t nUserOffset;
-    uint32_t nGeneration;
-    uint32_t nStatePin; // Bit 0 live; bits 1..16 pin count.
+	uint32_t nBlockOffset;
+	uint32_t nUserOffset;
+	uint32_t nGeneration;
+	uint32_t nStatePin; // Bit 0 live; bits 1..16 pin count.
 } sirHandleDesc_t;
 
 typedef struct sirHandleCold_s
 {
-    uint32_t nBlockBytes;
-    uint32_t nPayloadBytes;
-    uint32_t nAlignment;
-    uint32_t nNextFree;
+	uint32_t nBlockBytes;
+	uint32_t nPayloadBytes;
+	uint32_t nAlignment;
+	uint32_t nNextFree;
 } sirHandleCold_t;
 
 typedef struct sirTreeLinks_s
@@ -59,7 +59,7 @@ typedef struct sirTreeLinks_s
 	uint32_t nRight;
 	uint32_t nParent;
 	uint8_t nHeight;
-	uint8_t nReserved[ 3 ];
+	uint8_t nReserved[3];
 } sirTreeLinks_t;
 
 typedef struct sirHandleHeapExtent_s
@@ -76,8 +76,8 @@ class SIRHandleHeap
 {
 public:
 	SIRHandleHeap( void );
-	SIRHandleHeap( const SIRHandleHeap& ) = delete;
-	SIRHandleHeap& operator=( const SIRHandleHeap& ) = delete;
+	SIRHandleHeap( const SIRHandleHeap & ) = delete;
+	SIRHandleHeap &operator=( const SIRHandleHeap & ) = delete;
 
 	static uint64_t getRequiredMetadataBytes( uint32_t nMaxHandles );
 	bool init( SIRMemorySegment *pSegment, uint32_t nMaxHandles );
@@ -97,13 +97,10 @@ public:
 	uint32_t getCommittedBytes( void ) const;
 
 private:
-    // Resolve consumes only one 16-byte cache-local descriptor.
-
-
-
+	// Resolve consumes only one 16-byte cache-local descriptor.
 
 	static_assert( sizeof( sirHandleDesc_t ) == 16, "16-byte hot handle descriptors" );
-    static_assert( sizeof( sirHandleCold_t ) == 16, "16-byte cold handle descriptors" );
+	static_assert( sizeof( sirHandleCold_t ) == 16, "16-byte cold handle descriptors" );
 	static_assert( sizeof( sirHandleHeapExtent_t ) == 40, "40-byte dual-index extents" );
 	static constexpr uint32_t SIR_HANDLE_NONE = UINT32_MAX;
 
@@ -114,15 +111,14 @@ private:
 	void recycleExtent( uint32_t nIndex );
 	bool insertExtent( uint32_t nOffset, uint32_t nBytes );
 	void removeExtent( uint32_t nIndex );
-	uint32_t findFittingExtent( uint32_t nBytes, uint32_t nAlignment,
-	                            uint32_t *pUserOffset, uint32_t *pBlockBytes ) const;
+	uint32_t findFittingExtent( uint32_t nBytes, uint32_t nAlignment, uint32_t *pUserOffset, uint32_t *pBlockBytes ) const;
 
 	template <bool bSizeTree>
-	sirTreeLinks_t& getLinks( uint32_t nIndex );
+	sirTreeLinks_t &getLinks( uint32_t nIndex );
 	template <bool bSizeTree>
-	const sirTreeLinks_t& getLinks( uint32_t nIndex ) const;
+	const sirTreeLinks_t &getLinks( uint32_t nIndex ) const;
 	template <bool bSizeTree>
-	uint32_t& root( void );
+	uint32_t &root( void );
 	template <bool bSizeTree>
 	uint32_t rootValue( void ) const;
 	template <bool bSizeTree>
@@ -150,16 +146,15 @@ private:
 	template <bool bSizeTree>
 	uint32_t treeNext( uint32_t nIndex ) const;
 	void trimLogicalTail( void );
-	bool prepareBlock( uint32_t nOffset, uint32_t nBytes, uint32_t nAlignment,
-	                   uint32_t *pUserOffset, uint32_t *pBlockBytes ) const;
+	bool prepareBlock( uint32_t nOffset, uint32_t nBytes, uint32_t nAlignment, uint32_t *pUserOffset, uint32_t *pBlockBytes ) const;
 	uint32_t sortActive( void );
-    uint32_t mergeSortedRuns( uint32_t nLeft, uint32_t nRight );
+	uint32_t mergeSortedRuns( uint32_t nLeft, uint32_t nRight );
 	bool less( uint32_t nLeft, uint32_t nRight ) const;
 
 	SIRMemorySegment *m_pSegment;
 	uint8_t *m_pBase;
 	sirHandleDesc_t *m_pHandles;
-    sirHandleCold_t *m_pCold;
+	sirHandleCold_t *m_pCold;
 	sirHandleHeapExtent_t *m_pExtents;
 	uint32_t m_nCapacity;
 	uint32_t m_nCommitted;
