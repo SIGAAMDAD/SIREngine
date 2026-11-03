@@ -297,6 +297,14 @@ static void testDeepCycleWithoutRecursion( void )
 		SIRResourcePublication invalid = { key( 1 ), SIR_RESOURCE_KIND_COMPOSITION, 1, 1, nullptr, 0, &cycle, 1 };
 		REQUIRE( pWriter->publish( invalid, &h ) == SIR_RESOURCE_RESULT_DEPENDENCY_CYCLE );
 		REQUIRE( graph.getStats().m_nLiveResources == 201 );
+		SIRResourceDependencyPlanEntry order[201] = {};
+		uint32_t nRequired = 0;
+		REQUIRE( pWriter->compileDependencyOrder( h, order, 201, &nRequired ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( nRequired == 201 );
+		for ( uint32_t iNode = 0; iNode < nRequired; ++iNode ) {
+			REQUIRE( order[iNode].hResource.m_nSlot == iNode );
+			REQUIRE( order[iNode].nRevision == 1 );
+		}
 	}
 	REQUIRE( alloc.m_nOutstanding.load() == 0 );
 }
@@ -820,6 +828,83 @@ static void testReaderEpochSlotExhaustion( void )
 	REQUIRE( alloc.m_nOutstanding.load() == 0 );
 }
 
+
+static void testDeterministicDependencyOrderCompilation( void )
+{
+	SIRTestAllocatorStats alloc = {};
+	{
+		SIRResourceGraph graph( testConfig( alloc, 16 ) );
+		REQUIRE( graph.isReady() );
+		SIRResourceGraphWriter *pWriter = graph.getWriter();
+		REQUIRE( pWriter != nullptr );
+		SIRResourceHandle handles[6] = {};
+		SIRResourcePublication pub = { key( 1 ), SIR_RESOURCE_KIND_COMPOSITION, 1, 1, nullptr, 0, nullptr, 0 };
+		REQUIRE( pWriter->publish( pub, &handles[0] ) == SIR_RESOURCE_RESULT_SUCCESS );
+		pub.m_Key = key( 2 );
+		REQUIRE( pWriter->publish( pub, &handles[1] ) == SIR_RESOURCE_RESULT_SUCCESS );
+
+		SIRResourceDependency edgesC[2] = { { key( 1 ), SIR_RESOURCE_EDGE_KIND_REQUIRED, {} },
+		                                   { key( 2 ), SIR_RESOURCE_EDGE_KIND_REQUIRED, {} } };
+		pub.m_Key = key( 3 );
+		pub.m_pDependencies = edgesC;
+		pub.m_nDependencyCount = 2;
+		REQUIRE( pWriter->publish( pub, &handles[2] ) == SIR_RESOURCE_RESULT_SUCCESS );
+		SIRResourceDependency edgesD[2] = { { key( 3 ), SIR_RESOURCE_EDGE_KIND_REQUIRED, {} },
+		                                   { key( 2 ), SIR_RESOURCE_EDGE_KIND_REQUIRED, {} } };
+		pub.m_Key = key( 4 );
+		pub.m_pDependencies = edgesD;
+		REQUIRE( pWriter->publish( pub, &handles[3] ) == SIR_RESOURCE_RESULT_SUCCESS );
+
+		SIRResourceDependency edgeE = { key( 999 ), SIR_RESOURCE_EDGE_KIND_OPTIONAL, {} };
+		pub.m_Key = key( 5 );
+		pub.m_pDependencies = &edgeE;
+		pub.m_nDependencyCount = 1;
+		REQUIRE( pWriter->publish( pub, &handles[4] ) == SIR_RESOURCE_RESULT_SUCCESS );
+		SIRResourceDependency edgesF[2] = { { key( 4 ), SIR_RESOURCE_EDGE_KIND_REQUIRED, {} },
+		                                   { key( 5 ), SIR_RESOURCE_EDGE_KIND_STREAMED, {} } };
+		pub.m_Key = key( 6 );
+		pub.m_pDependencies = edgesF;
+		pub.m_nDependencyCount = 2;
+		REQUIRE( pWriter->publish( pub, &handles[5] ) == SIR_RESOURCE_RESULT_SUCCESS );
+
+		uint32_t nRequired = UINT32_MAX;
+		REQUIRE( pWriter->compileDependencyOrder( handles[5], nullptr, 0, &nRequired ) == SIR_RESOURCE_RESULT_OUT_OF_BUDGET );
+		REQUIRE( nRequired == 6 );
+		SIRResourceDependencyPlanEntry tooSmall[2] = {};
+		tooSmall[0].hResource.m_nSlot = UINT32_MAX;
+		REQUIRE( pWriter->compileDependencyOrder( handles[5], tooSmall, 2, &nRequired ) == SIR_RESOURCE_RESULT_OUT_OF_BUDGET );
+		REQUIRE( nRequired == 6 && tooSmall[0].hResource.m_nSlot == UINT32_MAX );
+
+		SIRResourceDependencyPlanEntry order[6] = {};
+		REQUIRE( pWriter->compileDependencyOrder( handles[5], order, 6, &nRequired ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( nRequired == 6 );
+		for ( uint32_t iNode = 0; iNode < 6; ++iNode ) {
+			REQUIRE( order[iNode].hResource.m_nSlot == handles[iNode].m_nSlot );
+			REQUIRE( order[iNode].nRevision == 1 && order[iNode].eState == SIR_RESOURCE_STATE_RESIDENT );
+		}
+
+		pub = { key( 3 ), SIR_RESOURCE_KIND_COMPOSITION, 1, 1, nullptr, 0, edgesC, 2 };
+		REQUIRE( pWriter->publishExpected( pub, 1, &handles[2] ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( pWriter->compileDependencyOrder( handles[5], order, 6, &nRequired ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( order[2].nRevision == 2 );
+
+		std::atomic<uint32_t> nOtherResult{ 0 };
+		std::thread other( [&]() {
+			uint32_t nCount = 0;
+			nOtherResult.store( pWriter->compileDependencyOrder( handles[5], nullptr, 0, &nCount ) );
+		} );
+		other.join();
+		REQUIRE( nOtherResult.load() == SIR_RESOURCE_RESULT_WRITER_VIOLATION );
+
+		REQUIRE( pWriter->retire( handles[1] ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( pWriter->compileDependencyOrder( handles[5], order, 6, &nRequired ) == SIR_RESOURCE_RESULT_DEPENDENCY_MISSING );
+		REQUIRE( nRequired == 0 );
+		REQUIRE( pWriter->retire( handles[5] ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( pWriter->compileDependencyOrder( handles[5], order, 6, &nRequired ) == SIR_RESOURCE_RESULT_INVALID_HANDLE );
+	}
+	REQUIRE( alloc.m_nOutstanding.load() == 0 );
+}
+
 int main( void )
 {
 	testScopeLifetimeAndDeduplication();
@@ -836,6 +921,7 @@ int main( void )
 	testAtomicReadIndexCollisionsAndChurn();
 	testEpochReclamationWithOverlappingScopes();
 	testReaderEpochSlotExhaustion();
+	testDeterministicDependencyOrderCompilation();
 	printf( "PASS: GRDG resource registry, publication, deduplication, lifetime, concurrency\n" );
 	return 0;
 }

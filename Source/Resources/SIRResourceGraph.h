@@ -120,6 +120,16 @@ typedef struct sirResourceInvalidationEvent_s
 typedef sirResourceInvalidationEvent_t SIRResourceInvalidationEvent;
 typedef sirResourceGraphStats_t SIRResourceGraphStats;
 
+// A deterministic dependency-first plan. Revisions let the scheduler reject
+// obsolete asynchronous completions through publishExpected().
+typedef struct sirResourceDependencyPlanEntry_s
+{
+	SIRResourceHandle hResource;
+	uint64_t nRevision;
+	SIRResourceState eState;
+} sirResourceDependencyPlanEntry_t;
+typedef sirResourceDependencyPlanEntry_t SIRResourceDependencyPlanEntry;
+
 class SIRResourceGraphWriter
 {
 private:
@@ -148,6 +158,11 @@ public:
 	SIRResourceResult collectDependents( const SIRResourceKey &rTarget, SIRResourceHandle *pHandles, uint32_t nCapacity,
 	                                     uint32_t *pTotal ) noexcept;
 	SIRResourceResult getInvalidationSequence( SIRResourceHandle hResource, uint64_t *pSequence ) noexcept;
+	// Compile a dependency-first order from existing resource records, without
+	// recursion or runtime allocations. A zero capacity queries required count;
+	// insufficient output capacity leaves the caller's array untouched.
+	SIRResourceResult compileDependencyOrder( SIRResourceHandle hRoot, SIRResourceDependencyPlanEntry *pEntries,
+	                                          uint32_t nCapacity, uint32_t *pRequired ) noexcept;
 	// Poll retained change events in sequence order. Overflow means the caller
 	// must rebuild dependency state and resume at the reported latest cursor.
 	SIRResourceResult pollInvalidations( uint64_t nAfterSequence, SIRResourceInvalidationEvent *pEvents, uint32_t nCapacity,
@@ -190,6 +205,9 @@ private:
 	uint32_t m_nMaxInvalidationEvents;
 	uint64_t m_nTotalInvalidations;
 	uint32_t *m_pTraversalQueue;
+	uint32_t *m_pPlanNextEdges;
+	uint32_t *m_pPlanOrder;
+	uint8_t *m_pPlanStates;
 	uint32_t m_nTraversalStamp;
 	SIRSharedResourceChunk *m_pSharedChunks;
 	SIRPublishedResourceRecord *m_pRetired;

@@ -85,3 +85,14 @@ slot conservatively blocks collection. The configured capacity is
 `nMaxReaders` (zero defaults to 64); excess scopes report inactive. This
 permits reclamation of old revisions while unrelated newer readers remain
 active. This does not change the immutable views' scope-lifetime contract.
+
+The writer can now compile a deterministic, dependency-first resource plan
+with `compileDependencyOrder(root, entries, capacity, required)`. The compiler
+uses preallocated DFS state and stack arrays, has no runtime allocation or
+recursion, includes loaded optional/streamed edges, skips absent optional
+edges, and fails if required dependencies are missing. Output records capture
+generation-safe handles, the current publication revision, and resource state.
+A caller can query required output capacity without modifying its array; an
+undersized caller buffer remains unchanged. This is the resource DAG compiler
+used to prepare work for the separate scheduler; it does not execute jobs or
+perform backend scheduling.
