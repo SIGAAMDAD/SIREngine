@@ -229,8 +229,7 @@ static bool testComputeToDirectGpuWait( SIRD3D12Device &device )
 		}
 		sirD3D12CompletionSet_t forged = computed;
 		++forged.nComputeFence;
-		if ( device.submitGraphicsAfterCompute( forged, &result ) ||
-		     device.submitGraphicsAfterCompute( computed, nullptr ) ) {
+		if ( device.submitGraphicsAfterCompute( forged, &result ) || device.submitGraphicsAfterCompute( computed, nullptr ) ) {
 			return false;
 		}
 		forged = computed;
@@ -243,8 +242,7 @@ static bool testComputeToDirectGpuWait( SIRD3D12Device &device )
 		if ( !device.submitGraphicsAfterCompute( computed, &submitted ) ) {
 			return false;
 		}
-		if ( submitted.nDeviceGeneration != computed.nDeviceGeneration ||
-		     submitted.nGraphicsFence <= computed.nGraphicsFence ||
+		if ( submitted.nDeviceGeneration != computed.nDeviceGeneration || submitted.nGraphicsFence <= computed.nGraphicsFence ||
 		     submitted.nComputeFence < computed.nComputeFence || submitted.nCopyFence < computed.nCopyFence ) {
 			return false;
 		}
@@ -257,14 +255,12 @@ static bool testComputeToDirectGpuWait( SIRD3D12Device &device )
 		bool bComputeDone = false;
 		bool bCopyDone = false;
 		bool bAllDone = false;
-		if ( !compute.pollFence( computed.nComputeFence, &bComputeDone ) || !bComputeDone ||
-		     !transfers.poll( ticket, &bCopyDone ) || !bCopyDone ||
-		     !device.pollCompletionSet( submitted, &bAllDone ) || !bAllDone ) {
+		if ( !compute.pollFence( computed.nComputeFence, &bComputeDone ) || !bComputeDone || !transfers.poll( ticket, &bCopyDone ) ||
+		     !bCopyDone || !device.pollCompletionSet( submitted, &bAllDone ) || !bAllDone ) {
 			return false;
 		}
 
-		if ( !transfers.receive( ticket, szOutput, sizeof( szOutput ) ) ||
-		     memcmp( szInput, szOutput, ( size_t )nBytes ) != 0 ) {
+		if ( !transfers.receive( ticket, szOutput, sizeof( szOutput ) ) || memcmp( szInput, szOutput, ( size_t )nBytes ) != 0 ) {
 			return false;
 		}
 	}

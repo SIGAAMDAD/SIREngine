@@ -687,8 +687,7 @@ bool SIRD3D12Device::submitComputeAfterCopy( sirD3D12TransferTicket_t ticket, si
 	return true;
 }
 
-bool SIRD3D12Device::submitGraphicsAfterCompute( const sirD3D12CompletionSet_t &computeSet,
-                                                 sirD3D12CompletionSet_t *pSet ) noexcept
+bool SIRD3D12Device::submitGraphicsAfterCompute( const sirD3D12CompletionSet_t &computeSet, sirD3D12CompletionSet_t *pSet ) noexcept
 {
 	if ( pSet == nullptr || !isReady() ) {
 		m_nLastError = E_INVALIDARG;
