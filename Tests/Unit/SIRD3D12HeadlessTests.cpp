@@ -200,6 +200,77 @@ static bool testCopyToComputeGpuWait( SIRD3D12Device &device )
 	return true;
 }
 
+static bool testComputeToDirectGpuWait( SIRD3D12Device &device )
+{
+	SIRD3D12ComputeQueue &compute = device.getComputeQueue();
+	SIRD3D12Transfers &transfers = device.getTransfers();
+
+	sirD3D12CompletionSet_t invalid = {};
+	sirD3D12CompletionSet_t result = {};
+	if ( device.submitGraphicsAfterCompute( invalid, &result ) ) {
+		return false;
+	}
+	for ( uint32_t iCycle = 0; iCycle < 48; ++iCycle ) {
+		uint32_t szInput[128] = {};
+		uint32_t szOutput[128] = {};
+		for ( uint32_t iWord = 0; iWord < 128; ++iWord ) {
+			szInput[iWord] = ( iCycle + 17U ) * 0x9e3779b9U ^ ( iWord * 371U );
+		}
+
+		const uint64_t nBytes = iCycle % 2 == 0 ? 128 : sizeof( szInput );
+		sirD3D12TransferTicket_t ticket = {};
+		if ( !transfers.submit( szInput, nBytes, &ticket ) ) {
+			return false;
+		}
+
+		sirD3D12CompletionSet_t computed = {};
+		if ( !device.submitComputeAfterCopy( ticket, &computed ) ) {
+			return false;
+		}
+		sirD3D12CompletionSet_t forged = computed;
+		++forged.nComputeFence;
+		if ( device.submitGraphicsAfterCompute( forged, &result ) ||
+		     device.submitGraphicsAfterCompute( computed, nullptr ) ) {
+			return false;
+		}
+		forged = computed;
+		forged.nDeviceGeneration = 0;
+		if ( device.submitGraphicsAfterCompute( forged, &result ) ) {
+			return false;
+		}
+
+		sirD3D12CompletionSet_t submitted = {};
+		if ( !device.submitGraphicsAfterCompute( computed, &submitted ) ) {
+			return false;
+		}
+		if ( submitted.nDeviceGeneration != computed.nDeviceGeneration ||
+		     submitted.nGraphicsFence <= computed.nGraphicsFence ||
+		     submitted.nComputeFence < computed.nComputeFence || submitted.nCopyFence < computed.nCopyFence ) {
+			return false;
+		}
+
+		// A completed DIRECT fence proves COMPUTE finished, which in turn
+		// proves the preceding COPY transfer completed on the GPU.
+		if ( !device.waitForGraphicsFence( submitted.nGraphicsFence, 15000 ) ) {
+			return false;
+		}
+		bool bComputeDone = false;
+		bool bCopyDone = false;
+		bool bAllDone = false;
+		if ( !compute.pollFence( computed.nComputeFence, &bComputeDone ) || !bComputeDone ||
+		     !transfers.poll( ticket, &bCopyDone ) || !bCopyDone ||
+		     !device.pollCompletionSet( submitted, &bAllDone ) || !bAllDone ) {
+			return false;
+		}
+
+		if ( !transfers.receive( ticket, szOutput, sizeof( szOutput ) ) ||
+		     memcmp( szInput, szOutput, ( size_t )nBytes ) != 0 ) {
+			return false;
+		}
+	}
+	return true;
+}
+
 int main( void )
 {
 	SIRD3D12Device device;
@@ -261,6 +332,11 @@ int main( void )
 
 	if ( !testCopyToComputeGpuWait( device ) ) {
 		fputs( "D3D12 GPU-side COPY to COMPUTE wait failed\n", stderr );
+		return 1;
+	}
+
+	if ( !testComputeToDirectGpuWait( device ) ) {
+		fputs( "D3D12 COMPUTE to DIRECT GPU wait failed\n", stderr );
 		return 1;
 	}
 

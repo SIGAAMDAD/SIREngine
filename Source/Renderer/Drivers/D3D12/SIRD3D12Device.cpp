@@ -124,6 +124,20 @@ uint64_t SIRD3D12ComputeQueue::getLastSubmittedFence( void ) const noexcept
 	return m_nSubmittedFence;
 }
 
+bool SIRD3D12ComputeQueue::queryDependencyFence( uint64_t nFenceValue, ID3D12Fence **ppFence ) const noexcept
+{
+	if ( ppFence == nullptr ) {
+		return false;
+	}
+	*ppFence = nullptr;
+	if ( !isReady() || nFenceValue == 0 || nFenceValue > m_nSubmittedFence ) {
+		return false;
+	}
+
+	*ppFence = m_pFence.Get();
+	return true;
+}
+
 HRESULT SIRD3D12ComputeQueue::getLastError( void ) const noexcept
 {
 	return m_nLastError;
@@ -258,7 +272,7 @@ SIRD3D12Device::~SIRD3D12Device( void ) noexcept
 
 bool SIRD3D12Device::initialize( bool bUseWarp ) noexcept
 {
-	if ( isReady() || m_pFactory != nullptr ) {
+	if ( isReady() || m_pFactory != nullptr || m_bGraphicsUnsafe ) {
 		m_nLastError = E_FAIL;
 		return false;
 	}
@@ -434,13 +448,64 @@ void SIRD3D12Device::releasePendingCopy( void ) noexcept
 	m_nPendingFenceValue = 0;
 }
 
+bool SIRD3D12Device::waitForGraphicsFence( uint64_t nFenceValue, uint32_t nTimeoutMs ) noexcept
+{
+	if ( m_pGraphicsFence == nullptr || m_hFenceEvent == nullptr || m_bGraphicsUnsafe || nFenceValue == 0 ||
+	     nFenceValue >= m_nNextFenceValue ) {
+		m_nLastError = E_INVALIDARG;
+		return false;
+	}
+
+	uint64_t nCompleted = m_pGraphicsFence->GetCompletedValue();
+	if ( nCompleted == UINT64_MAX ) {
+		m_nLastError = DXGI_ERROR_DEVICE_REMOVED;
+		return false;
+	}
+	if ( nCompleted < nFenceValue ) {
+		m_nLastError = m_pGraphicsFence->SetEventOnCompletion( nFenceValue, m_hFenceEvent );
+		if ( FAILED( m_nLastError ) ) {
+			return false;
+		}
+		const DWORD nWait = WaitForSingleObject( m_hFenceEvent, nTimeoutMs );
+		if ( nWait != WAIT_OBJECT_0 ) {
+			m_nLastError = nWait == WAIT_TIMEOUT ? HRESULT_FROM_WIN32( ERROR_TIMEOUT ) : HRESULT_FROM_WIN32( GetLastError() );
+			return false;
+		}
+		nCompleted = m_pGraphicsFence->GetCompletedValue();
+	}
+	if ( nCompleted == UINT64_MAX || nCompleted < nFenceValue ) {
+		m_nLastError = DXGI_ERROR_DEVICE_REMOVED;
+		return false;
+	}
+	m_nLastError = S_OK;
+	return true;
+}
+
+bool SIRD3D12Device::retireDirectComputeDependency( void ) noexcept
+{
+	if ( m_bGraphicsUnsafe ) {
+		return false;
+	}
+	if ( m_pDirectComputeDependency == nullptr ) {
+		return true;
+	}
+	if ( m_nDirectDependencyFenceValue == 0 || !waitForGraphicsFence( m_nDirectDependencyFenceValue, 15000 ) ) {
+		return false;
+	}
+	m_pDirectComputeDependency.Reset();
+	m_nDirectDependencyFenceValue = 0;
+	return true;
+}
+
 void SIRD3D12Device::shutdown( void ) noexcept
 {
+	// DIRECT can wait on COMPUTE, and COMPUTE can wait on COPY.
+	// Drain dependent queues from the consumer back to the producer.
+	const bool bDirectSafe = retireDirectComputeDependency();
 	const bool bCopySafe = waitForPendingCopy();
-	// Compute markers may wait on COPY fences: retire COMPUTE before COPY.
 	const bool bComputeSafe = m_ComputeQueue.shutdown();
 	const bool bTransferSafe = m_Transfers.shutdown();
-	if ( bCopySafe && bTransferSafe && bComputeSafe ) {
+	if ( bDirectSafe && bCopySafe && bComputeSafe && bTransferSafe ) {
 		releasePendingCopy();
 		m_pCopyCommands.Reset();
 		m_pCopyAllocator.Reset();
@@ -453,6 +518,7 @@ void SIRD3D12Device::shutdown( void ) noexcept
 		// those native objects deliberately rather than create a GPU use-after-free.
 		( void )m_pCopyCommands.Detach();
 		( void )m_pCopyAllocator.Detach();
+		( void )m_pDirectComputeDependency.Detach();
 		( void )m_pGraphicsQueue.Detach();
 		( void )m_pGraphicsFence.Detach();
 		( void )m_pDevice.Detach();
@@ -461,7 +527,7 @@ void SIRD3D12Device::shutdown( void ) noexcept
 		m_pPendingDevice = nullptr;
 		m_pPendingReadback = nullptr;
 	}
-	if ( bCopySafe && bTransferSafe && bComputeSafe && m_hFenceEvent != nullptr ) {
+	if ( bDirectSafe && bCopySafe && bComputeSafe && bTransferSafe && m_hFenceEvent != nullptr ) {
 		CloseHandle( m_hFenceEvent );
 	}
 	m_hFenceEvent = nullptr;
@@ -469,6 +535,8 @@ void SIRD3D12Device::shutdown( void ) noexcept
 	m_pFactory.Reset();
 	m_nNextFenceValue = 0;
 	m_nPendingFenceValue = 0;
+	m_nDirectDependencyFenceValue = 0;
+	m_bGraphicsUnsafe = !bDirectSafe;
 	m_nDeviceGeneration = 0;
 }
 
@@ -476,7 +544,7 @@ bool SIRD3D12Device::isReady( void ) const noexcept
 {
 	return m_pDevice != nullptr && m_pGraphicsQueue != nullptr && m_pGraphicsFence != nullptr && m_hFenceEvent != nullptr &&
 	       m_pCopyAllocator != nullptr && m_pCopyCommands != nullptr && m_Memory.isReady() && m_Transfers.isReady() &&
-	       m_ComputeQueue.isReady() && m_nDeviceGeneration != 0;
+	       m_ComputeQueue.isReady() && m_nDeviceGeneration != 0 && !m_bGraphicsUnsafe;
 }
 
 bool SIRD3D12Device::queryAdapterInfo( sirD3D12AdapterInfo_t *pInfo ) const noexcept
@@ -617,6 +685,70 @@ bool SIRD3D12Device::submitComputeAfterCopy( sirD3D12TransferTicket_t ticket, si
 	}
 	m_nLastError = S_OK;
 	return true;
+}
+
+bool SIRD3D12Device::submitGraphicsAfterCompute( const sirD3D12CompletionSet_t &computeSet,
+                                                 sirD3D12CompletionSet_t *pSet ) noexcept
+{
+	if ( pSet == nullptr || !isReady() ) {
+		m_nLastError = E_INVALIDARG;
+		return false;
+	}
+	*pSet = {};
+
+	bool bPriorCompleted = false;
+	if ( !pollCompletionSet( computeSet, &bPriorCompleted ) || computeSet.nComputeFence == 0 ) {
+		m_nLastError = E_INVALIDARG;
+		return false;
+	}
+
+	ID3D12Fence *pComputeFence = nullptr;
+	if ( !m_ComputeQueue.queryDependencyFence( computeSet.nComputeFence, &pComputeFence ) ) {
+		m_nLastError = E_INVALIDARG;
+		return false;
+	}
+	if ( m_nNextFenceValue == UINT64_MAX ) {
+		m_nLastError = E_FAIL;
+		return false;
+	}
+
+	// The caller never waits: report queue saturation while a prior DIRECT
+	// dependency remains outstanding, and release it only after completion.
+	if ( m_pDirectComputeDependency != nullptr ) {
+		const uint64_t nCompleted = m_pGraphicsFence->GetCompletedValue();
+		if ( nCompleted == UINT64_MAX ) {
+			m_nLastError = DXGI_ERROR_DEVICE_REMOVED;
+			return false;
+		}
+		if ( nCompleted < m_nDirectDependencyFenceValue ) {
+			m_nLastError = HRESULT_FROM_WIN32( ERROR_BUSY );
+			return false;
+		}
+		m_pDirectComputeDependency.Reset();
+		m_nDirectDependencyFenceValue = 0;
+	}
+
+	Microsoft::WRL::ComPtr<ID3D12Fence> pOwnedDependency = pComputeFence;
+	m_nLastError = m_pGraphicsQueue->Wait( pOwnedDependency.Get(), computeSet.nComputeFence );
+	if ( FAILED( m_nLastError ) ) {
+		return false;
+	}
+
+	const uint64_t nGraphicsFence = m_nNextFenceValue;
+	m_nLastError = m_pGraphicsQueue->Signal( m_pGraphicsFence.Get(), nGraphicsFence );
+	if ( FAILED( m_nLastError ) ) {
+		// Wait was already queued. Keep the fence and queue alive even
+		// though the matching signal could not be submitted.
+		m_pDirectComputeDependency = pOwnedDependency;
+		m_bGraphicsUnsafe = true;
+		return false;
+	}
+
+	m_pDirectComputeDependency = pOwnedDependency;
+	m_nDirectDependencyFenceValue = nGraphicsFence;
+	++m_nNextFenceValue;
+	m_nLastError = S_OK;
+	return snapshotCompletionSet( pSet ) && pSet->nGraphicsFence == nGraphicsFence;
 }
 
 bool SIRD3D12Device::copyRoundTripForTest( const void *pInput, void *pOutput, uint64_t nBytes ) noexcept

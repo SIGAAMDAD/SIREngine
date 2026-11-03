@@ -72,3 +72,14 @@ The native D3D12 driver can now submit a COMPUTE-queue marker with a GPU-side de
 The COMPUTE queue retains a COM reference to its dependency fence until its own marker completes. Failed signal or unprovable completion deliberately preserves queued objects and the retained dependency fence. Device shutdown drains the COMPUTE queue before releasing the COPY queue, so a COPY fence cannot be retired while a COMPUTE wait still uses it.
 
 WARP regression coverage executes 48 distinct COPY -> COMPUTE dependency chains with variable payload sizes and readback comparisons. Invalid/forged and retired transfer tickets are rejected; each COMPUTE completion is checked against the COPY fence in the recorded completion set. This establishes native GPU-side ordering but does not dispatch shaders or integrate GRDG resource lifetime ownership.
+
+
+## COMPUTE -> DIRECT GPU-side dependency and completion retention
+
+The native D3D12 backend now supports a graphics-queue marker dependent on a previously submitted COMPUTE completion set. `SIRD3D12Device::submitGraphicsAfterCompute` checks generation, rejects unsignaled future fence values, borrows the COMPUTE fence through `queryDependencyFence`, and enqueues `ID3D12CommandQueue::Wait` followed by a DIRECT queue `Signal`. Submission does not wait on the CPU. The latest graphics fence is recorded in the returned three-queue completion snapshot.
+
+The DIRECT queue retains an owned COM reference to the COMPUTE fence until its matching graphics fence completes. A second unresolved dependency reports `ERROR_BUSY`; after retirement, its fence object may be reused. A native `waitForGraphicsFence` provides an explicit bounded CPU wait for tests and shutdown. Failure to submit the graphics signal marks the queue unsafe and retains dependent native objects.
+
+Shutdown drains the DIRECT queue before COMPUTE, then COPY; it only releases the device and D3D12MA backing after all queue completions are proven. WARP tests execute 48 COPY -> COMPUTE -> DIRECT chains and compare the original payload against readback. Future fence targets, zero fence targets, stale device generations and null results are rejected.
+
+Actual shader execution, FrameGraph barriers and GPU physical backing-ledger integration are separate milestones.

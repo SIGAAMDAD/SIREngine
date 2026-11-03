@@ -92,6 +92,8 @@ public:
 	bool pollFence( uint64_t nFence, bool *pCompleted ) const noexcept;
 	bool waitForFence( uint64_t nFence, uint32_t nTimeoutMs ) noexcept;
 	bool getCompletedFence( uint64_t *pCompletedFence ) const noexcept;
+	// Borrowed until the caller takes its own COM reference.
+	bool queryDependencyFence( uint64_t nFenceValue, ID3D12Fence **ppFence ) const noexcept;
 	uint64_t getLastSubmittedFence( void ) const noexcept;
 	HRESULT getLastError( void ) const noexcept;
 };
@@ -105,6 +107,7 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12Device> m_pDevice;
 	Microsoft::WRL::ComPtr<ID3D12CommandQueue> m_pGraphicsQueue;
 	Microsoft::WRL::ComPtr<ID3D12Fence> m_pGraphicsFence;
+	Microsoft::WRL::ComPtr<ID3D12Fence> m_pDirectComputeDependency;
 	Microsoft::WRL::ComPtr<ID3D12CommandAllocator> m_pCopyAllocator;
 	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> m_pCopyCommands;
 	SIRD3D12Memory m_Memory;
@@ -117,10 +120,13 @@ private:
 	uint64_t m_nNextFenceValue = 0;
 	uint64_t m_nDeviceGeneration = 0;
 	uint64_t m_nPendingFenceValue = 0;
+	uint64_t m_nDirectDependencyFenceValue = 0;
+	bool m_bGraphicsUnsafe = false;
 	uint64_t m_nCompletedCopyCount = 0;
 	HRESULT m_nLastError = S_OK;
 
 	bool waitForPendingCopy( void ) noexcept;
+	bool retireDirectComputeDependency( void ) noexcept;
 	void releasePendingCopy( void ) noexcept;
 
 public:
@@ -143,6 +149,8 @@ public:
 	bool pollCompletionSet( const sirD3D12CompletionSet_t &set, bool *pCompleted ) noexcept;
 	bool submitComputeMarker( sirD3D12CompletionSet_t *pSet ) noexcept;
 	bool submitComputeAfterCopy( sirD3D12TransferTicket_t ticket, sirD3D12CompletionSet_t *pSet ) noexcept;
+	bool submitGraphicsAfterCompute( const sirD3D12CompletionSet_t &computeSet, sirD3D12CompletionSet_t *pSet ) noexcept;
+	bool waitForGraphicsFence( uint64_t nFenceValue, uint32_t nTimeoutMs ) noexcept;
 
 	// Synchronous diagnostic fixture only; production transfers will use pooled,
 	// asynchronous allocations and queue-completion tokens.
