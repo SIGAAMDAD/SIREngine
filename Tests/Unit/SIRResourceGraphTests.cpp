@@ -349,6 +349,46 @@ static void testConcurrentReadersAndWriterBoundary( void )
 	REQUIRE( alloc.m_nOutstanding.load() == 0 );
 }
 
+static void testIndexedKeyLookupAndGenerationReuse( void )
+{
+	SIRTestAllocatorStats alloc = {};
+	{
+		SIRResourceGraph graph( testConfig( alloc, 96 ) );
+		REQUIRE( graph.isReady() );
+		SIRResourceGraphWriter *pWriter = graph.getWriter();
+		REQUIRE( pWriter != nullptr );
+		SIRResourceKey keys[96] = {};
+		SIRResourceHandle handles[96] = {};
+		for ( uint32_t iKey = 0; iKey < 96; ++iKey ) {
+			keys[iKey] = { 100 + ( iKey % 16 ), 1 + ( iKey / 16 ) % 3, iKey / 48 };
+			REQUIRE( pWriter->request( keys[iKey], &handles[iKey] ) == SIR_RESOURCE_RESULT_SUCCESS );
+		}
+		REQUIRE( graph.getStats().m_nLiveResources == 96 );
+		{
+			SIRResourceReadScope scope( graph );
+			for ( uint32_t iKey = 0; iKey < 96; ++iKey ) {
+				SIRResourceHandle found = {};
+				REQUIRE( graph.find( scope, keys[iKey], &found ) == SIR_RESOURCE_RESULT_SUCCESS );
+				REQUIRE( found.m_nSlot == handles[iKey].m_nSlot );
+			}
+		}
+		for ( uint32_t iKey = 0; iKey < 96; iKey += 2 ) {
+			REQUIRE( pWriter->retire( handles[iKey] ) == SIR_RESOURCE_RESULT_SUCCESS );
+		}
+		REQUIRE( graph.getStats().m_nLiveResources == 48 );
+		REQUIRE( pWriter->collectRetired( 96 ) == 48 );
+		for ( uint32_t iKey = 0; iKey < 48; ++iKey ) {
+			SIRResourceHandle replacement = {};
+			REQUIRE( pWriter->request( key( 10000 + iKey ), &replacement ) == SIR_RESOURCE_RESULT_SUCCESS );
+			SIRResourceReadScope scope( graph );
+			SIRResourceView stale;
+			REQUIRE( graph.resolve( scope, handles[iKey * 2], &stale ) == SIR_RESOURCE_RESULT_INVALID_HANDLE );
+		}
+		REQUIRE( graph.getStats().m_nLiveResources == 96 );
+	}
+	REQUIRE( alloc.m_nOutstanding.load() == 0 );
+}
+
 int main( void )
 {
 	testScopeLifetimeAndDeduplication();
@@ -357,6 +397,7 @@ int main( void )
 	testBudgetFailureAndMissingDependencies();
 	testDeepCycleWithoutRecursion();
 	testConcurrentReadersAndWriterBoundary();
+	testIndexedKeyLookupAndGenerationReuse();
 	printf( "PASS: GRDG resource registry, publication, deduplication, lifetime, concurrency\n" );
 	return 0;
 }
