@@ -21,6 +21,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Core/Containers/SIRBitVector.h>
 #include <Core/Containers/SIRFixedBitset.h>
 #include <Core/Containers/SIRRingBuffer.h>
+#include <Core/Containers/SIRPagedArray.h>
 #include <stdio.h>
 #include <initializer_list>
 #include <stdexcept>
@@ -252,6 +253,59 @@ static void sirTestGrowth( const sirContainerAllocator_t *pAllocator, sirOptimiz
 	}
 }
 
+static void sirTestReclamation( const sirContainerAllocator_t *pAllocator, sirOptimizationTestMemory_t *pState )
+{
+	{
+		SIRVector<int> values( pAllocator );
+		SIR_CHECK( values.tryReserve( 4096 ) == SIR_CONTAINER_OK );
+		SIR_CHECK( values.tryResize( 64 ) == SIR_CONTAINER_OK );
+		values[0] = 123;
+		size_t nBefore = pState->nLive;
+		pState->nFailAt = pState->nAllocations + 1;
+		SIR_CHECK( values.tryShrinkToFit() == SIR_CONTAINER_OUT_OF_MEMORY );
+		pState->nFailAt = 0;
+		SIR_CHECK( values.getCapacity() == 4096 && values[0] == 123 && pState->nLive == nBefore );
+		SIR_CHECK( values.tryShrinkToFit() == SIR_CONTAINER_OK );
+		SIR_CHECK( values.getCapacity() == 64 && values[0] == 123 && pState->nLive < nBefore );
+		values.clear();
+		SIR_CHECK( values.tryShrinkToFit() == SIR_CONTAINER_OK );
+		SIR_CHECK( values.getCapacity() == 0 && values.data() == nullptr );
+	}
+	SIR_CHECK( pState->nLive == 0 );
+	{
+		SIRInlineVector<int, 8> values( pAllocator );
+		for ( uint32_t iIndex = 0; iIndex < 128; ++iIndex ) {
+			SIR_CHECK( values.tryEmplaceBack( ( int )iIndex ) == SIR_CONTAINER_OK );
+		}
+		size_t nBefore = pState->nLive;
+		SIR_CHECK( values.tryResize( 96 ) == SIR_CONTAINER_OK );
+		pState->nFailAt = pState->nAllocations + 1;
+		SIR_CHECK( values.tryShrinkToFit() == SIR_CONTAINER_OUT_OF_MEMORY );
+		pState->nFailAt = 0;
+		SIR_CHECK( values.getCapacity() >= 128 && values[0] == 0 && pState->nLive == nBefore );
+		SIR_CHECK( values.tryResize( 5 ) == SIR_CONTAINER_OK );
+		SIR_CHECK( values.tryShrinkToFit() == SIR_CONTAINER_OK );
+		SIR_CHECK( values.usesInlineStorage() && values.getCapacity() == 8 && values[4] == 4 );
+		SIR_CHECK( pState->nLive == 0 );
+	}
+	{
+		SIRPagedArray<int, 32> values( pAllocator );
+		for ( uint32_t iIndex = 0; iIndex < 513; ++iIndex ) {
+			SIR_CHECK( values.tryEmplaceBack( ( int )iIndex ) == SIR_CONTAINER_OK );
+		}
+		int *pFirst = values.tryGet( 0 );
+		const size_t nBefore = pState->nLive;
+		while ( values.getSize() > 13 ) {
+			SIR_CHECK( values.tryPopBack() == SIR_CONTAINER_OK );
+		}
+		SIR_CHECK( values.tryShrinkToFit() == SIR_CONTAINER_OK );
+		SIR_CHECK( values.getPageCount() == 1 && values.tryGet( 0 ) == pFirst );
+		SIR_CHECK( *values.tryGet( 12 ) == 12 && pState->nLive < nBefore );
+		values.clear();
+		SIR_CHECK( values.tryShrinkToFit() == SIR_CONTAINER_OK );
+		SIR_CHECK( values.getPageCount() == 0 && pState->nLive == 0 );
+	}
+}
 static void sirTestDistribution( const sirContainerAllocator_t *pAllocator )
 {
 	for ( uint32_t nStride : { 1u, 256u, 65536u } ) {
@@ -299,6 +353,7 @@ int main( void )
 	sirTestExceptionRollback( &allocator );
 	SIR_CHECK( SIRTestCopyFailure::s_nLive == 0 );
 	sirTestGrowth( &allocator, &state );
+	sirTestReclamation( &allocator, &state );
 	sirTestDistribution( &allocator );
 	sirTestRing( &allocator );
 	SIR_CHECK( state.nLive == 0 );

@@ -112,6 +112,23 @@ public:
 		m_pages[m_nSize / PAGE_ELEMENTS][m_nSize % PAGE_ELEMENTS].~T();
 		return SIR_CONTAINER_OK;
 	}
+	// Free empty tail pages without relocating any live elements.
+	// A failed directory shrink leaves an intact, smaller live page set.
+	sirContainerResult_t tryShrinkToFit( void )
+	{
+		uint32_t nRequiredPages = m_nSize / PAGE_ELEMENTS;
+		if ( m_nSize % PAGE_ELEMENTS != 0 ) {
+			++nRequiredPages;
+		}
+		const size_t nPageBytes = ( size_t )PAGE_ELEMENTS * sizeof( T );
+		while ( m_pages.getSize() > nRequiredPages ) {
+			uint32_t iLast = m_pages.getSize() - 1;
+			T *pUnused = m_pages[iLast];
+			m_pages.tryPopBack();
+			SIRRawStorage::deallocate( m_pAllocator, pUnused, nPageBytes, alignof( T ) );
+		}
+		return m_pages.tryShrinkToFit();
+	}
 
 	void clear( void ) noexcept
 	{

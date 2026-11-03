@@ -210,6 +210,42 @@ public:
 		m_nCapacity = nCapacity;
 		return SIR_CONTAINER_OK;
 	}
+	// Reclaim reserved domain memory without changing the logical contents.
+	// An allocation or copy failure preserves the original storage.
+	sirContainerResult_t tryShrinkToFit( void )
+	{
+		if ( m_nSize == m_nCapacity ) {
+			return SIR_CONTAINER_OK;
+		}
+		if ( m_nSize == 0 ) {
+			SIRRawStorage::deallocate( m_pAllocator, m_pData, ( size_t )m_nCapacity * sizeof( T ), alignof( T ) );
+			m_pData = nullptr;
+			m_nCapacity = 0;
+			return SIR_CONTAINER_OK;
+		}
+		static_assert( SIRLifetimeOps<T>::CAN_RELOCATE, "Shrinking requires copy or nothrow move construction" );
+		size_t nBytes = 0;
+		if ( !SIRRawStorage::checkedMultiply( m_nSize, sizeof( T ), &nBytes ) ) {
+			return SIR_CONTAINER_SIZE_OVERFLOW;
+		}
+		void *pMemory = nullptr;
+		sirContainerResult_t eResult = SIRRawStorage::tryAllocate( m_pAllocator, nBytes, alignof( T ), &pMemory );
+		if ( eResult != SIR_CONTAINER_OK ) {
+			return eResult;
+		}
+		T *pNew = ( T * )pMemory;
+		try {
+			SIRLifetimeOps<T>::relocate( pNew, m_pData, m_nSize );
+		} catch ( ... ) {
+			SIRRawStorage::deallocate( m_pAllocator, pNew, nBytes, alignof( T ) );
+			throw;
+		}
+		SIRLifetimeOps<T>::destroy( m_pData, m_nSize );
+		SIRRawStorage::deallocate( m_pAllocator, m_pData, ( size_t )m_nCapacity * sizeof( T ), alignof( T ) );
+		m_pData = pNew;
+		m_nCapacity = m_nSize;
+		return SIR_CONTAINER_OK;
+	}
 
 	template <typename... Args>
 	sirContainerResult_t tryEmplaceBack( Args &&...args )
