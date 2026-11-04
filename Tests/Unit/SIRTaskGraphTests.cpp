@@ -552,6 +552,24 @@ static void testBucketCollisionAndInteriorFrontierPruning( void )
 	memory.shutdown();
 }
 
+static void testExplicitDuplicateEdges( void )
+{
+	SIRMemoryManager memory;
+	sirGraphMakeMemory( &memory );
+	SIRTaskGraph graph;
+	SIR_GRAPH_CHECK( graph.init( &memory, { 2, 1, 4 } ) );
+	const sirTaskGraphPass_t pass = { graphFail, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU };
+	uint32_t nPass = 0;
+	SIR_GRAPH_CHECK( graph.addPass( pass, nullptr, 0, &nPass ) );
+	SIR_GRAPH_CHECK( graph.addPass( pass, nullptr, 0, &nPass ) );
+	SIR_GRAPH_CHECK( graph.addDependency( 0, 1 ) );
+	SIR_GRAPH_CHECK( graph.addDependency( 0, 1 ) );
+	SIR_GRAPH_CHECK( graph.compile() == SIR_TASK_GRAPH_OK );
+	SIR_GRAPH_CHECK( graph.getEdgeCount() == 1 );
+	SIR_GRAPH_CHECK( graph.reset() );
+	memory.shutdown();
+}
+
 int main( void )
 {
 	testAccessHazards();
@@ -565,5 +583,6 @@ int main( void )
 	testGraphExecutionCancellationAndFailures();
 	testGraphInputValidationAndInspection();
 	testBucketCollisionAndInteriorFrontierPruning();
+	testExplicitDuplicateEdges();
 	return 0;
 }
