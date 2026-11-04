@@ -177,6 +177,12 @@ target_link_libraries(SIREditorScalarCodecTests PRIVATE SIR::EditorAuthoring)
 add_test(NAME editor.scene.typed-scalar-codec COMMAND SIREditorScalarCodecTests)
 sir_configure_owned_target(SIREditorScalarCodecTests)
 
+# Bound native typed-property edit import, undo and lossless text-scene export.
+add_executable(SIREditorScalarBindingTests SIREditorScalarBindingTests.cpp)
+target_link_libraries(SIREditorScalarBindingTests PRIVATE SIR::EditorAuthoring)
+add_test(NAME editor.scene.typed-scalar-binding COMMAND SIREditorScalarBindingTests)
+sir_configure_owned_target(SIREditorScalarBindingTests)
+
 # Source-format scalar edit preservation and fail-closed writer.
 add_executable(SIREditorTextWriterTests SIREditorTextWriterTests.cpp)
 target_link_libraries(SIREditorTextWriterTests PRIVATE SIR::EditorAuthoring)
