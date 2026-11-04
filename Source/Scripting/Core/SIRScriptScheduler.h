@@ -45,8 +45,28 @@ typedef struct sirScriptTaskHandle_s
 	uint32_t nGeneration;
 } sirScriptTaskHandle_t;
 
-// Bootstrap envelope; payload bytes are copied before enqueue returns.
-// Larger/over-aligned frames require the future SIRMemory-backed queue.
+// The allocator must be backed by an engine-owned, individually reclaimable
+// memory domain. An allocation token is opaque, nonzero, and paired
+// with the pointer returned by the provider. Callbacks run on the owner thread.
+typedef struct sirScriptPayloadAllocation_s
+{
+	void *pData;
+	uint64_t nToken;
+} sirScriptPayloadAllocation_t;
+
+typedef struct sirScriptPayloadAllocatorAPI_s
+{
+	uint32_t nABIRevision;
+	void *pUser;
+	uint32_t nMaximumBytes;
+	uint32_t nMaximumAlignment;
+	sirScriptResult_t ( *pAllocate )( void *, uint32_t, uint32_t, sirScriptPayloadAllocation_t * ) noexcept;
+	void ( *pRelease )( void *, sirScriptPayloadAllocation_t ) noexcept;
+} sirScriptPayloadAllocatorAPI_t;
+
+// Small calls remain inline. Overflow bytes belong to one live allocator
+// lease until cancel, complete dispatch, or shutdown. Copying the envelope
+// does NOT copy ownership; only the scheduler transfers the lease.
 typedef struct sirScriptScheduledCall_s
 {
 	sirScriptInstanceHandle_t instance;
@@ -54,6 +74,7 @@ typedef struct sirScriptScheduledCall_s
 	uint32_t nBytes;
 	uint32_t nAlignment;
 	sirScriptScheduledKind_t eKind;
+	sirScriptPayloadAllocation_t allocation;
 	alignas( 64 ) unsigned char szPayload[256];
 } sirScriptScheduledCall_t;
 
@@ -73,8 +94,15 @@ class SIRScriptScheduler
 {
 public:
 	SIRScriptScheduler( void ) noexcept;
+	~SIRScriptScheduler( void ) noexcept;
 
-	sirScriptResult_t enqueue( sirScriptPhase_t ePhase, const sirScriptScheduledCall_t &call, sirScriptTaskHandle_t *pHandle ) noexcept;
+	sirScriptResult_t setPayloadAllocator( const sirScriptPayloadAllocatorAPI_t &api ) noexcept;
+	sirScriptResult_t enqueue( sirScriptPhase_t ePhase, const sirScriptScheduledCall_t &call, const void *pPayload,
+	                           sirScriptTaskHandle_t *pHandle ) noexcept;
+	void releasePayload( sirScriptScheduledCall_t *pCall ) noexcept;
+	uint64_t allocatedPayloadBytes( void ) const noexcept;
+	uint64_t peakPayloadBytes( void ) const noexcept;
+	uint32_t livePayloadCount( void ) const noexcept;
 	sirScriptResult_t cancel( sirScriptTaskHandle_t handle ) noexcept;
 	bool dequeue( sirScriptPhase_t ePhase, uint64_t nLastSequence, sirScriptScheduledCall_t *pCall ) noexcept;
 	uint64_t lastSequence( void ) const noexcept;
@@ -86,6 +114,10 @@ private:
 	static uint32_t nextGeneration( uint32_t nGeneration ) noexcept;
 	void release( uint32_t nSlot ) noexcept;
 
+	sirScriptPayloadAllocatorAPI_t m_Allocator;
+	uint64_t m_nAllocatedPayloadBytes;
+	uint64_t m_nPeakPayloadBytes;
+	uint32_t m_nLivePayloads;
 	sirScriptScheduledSlot_t m_szSlots[MAX_TASKS + 1];
 	uint32_t m_szHeads[SIR_SCRIPT_PHASE_COUNT];
 	uint32_t m_szTails[SIR_SCRIPT_PHASE_COUNT];

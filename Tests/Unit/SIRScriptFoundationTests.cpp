@@ -19,6 +19,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Scripting/Core/SIRScriptServer.h>
 
 #include <stdio.h>
+#include <new>
+#include <string.h>
 #include <thread>
 #include <atomic>
 
@@ -93,6 +95,8 @@ typedef struct sirScriptTestBackend_s
 	uint32_t nDestroys;
 	uint32_t nInvokes;
 	uint32_t nLastEvent;
+	uint32_t nLargeMarker;
+	uint32_t nPayloadsAtInvoke;
 	uint64_t nEventSum;
 	bool bPostFromInvoke;
 	bool bWrongInvokeThread;
@@ -199,6 +203,12 @@ static sirScriptResult_t testInvoke( void *pContext, uint64_t, uint64_t nMethod,
 		if ( pBackend->pRuntime != nullptr && pBackend->subscription.nSlot != 0 ) {
 			pBackend->pRuntime->unsubscribe( pBackend->subscription );
 			pBackend->subscription = {};
+		}
+	}
+	if ( nMethod == 91 && arguments.nBytes == 512 ) {
+		pBackend->nLargeMarker = ( ( const unsigned char * )arguments.pData )[400];
+		if ( pBackend->pRuntime != nullptr ) {
+			pBackend->nPayloadsAtInvoke = pBackend->pRuntime->queryMemoryFootprint().nLiveExternalPayloads;
 		}
 	}
 	if ( nMethod == 90 ) {
@@ -831,11 +841,165 @@ static bool testIngressCapacity( void ) noexcept
 	return true;
 }
 
+typedef struct sirScriptTestPayloadHeap_s
+{
+	uint32_t nAllocations;
+	uint32_t nReleases;
+	uint32_t nLive;
+	bool bRejectNext;
+} sirScriptTestPayloadHeap_t;
+
+static sirScriptResult_t testAllocatePayload( void *pContext, uint32_t nBytes, uint32_t nAlignment,
+                                              sirScriptPayloadAllocation_t *pAllocation ) noexcept
+{
+	sirScriptTestPayloadHeap_t *pHeap = ( sirScriptTestPayloadHeap_t * )pContext;
+	*pAllocation = {};
+	if ( pHeap->bRejectNext ) {
+		pHeap->bRejectNext = false;
+		return SIR_SCRIPT_CAPACITY_EXCEEDED;
+	}
+	void *pMemory = ::operator new( nBytes, std::align_val_t( nAlignment ), std::nothrow );
+	if ( pMemory == nullptr ) {
+		return SIR_SCRIPT_CAPACITY_EXCEEDED;
+	}
+	++pHeap->nAllocations;
+	++pHeap->nLive;
+	pAllocation->pData = pMemory;
+	pAllocation->nToken = ( ( uint64_t )nAlignment << 32 ) | pHeap->nAllocations;
+	return SIR_SCRIPT_OK;
+}
+
+static void testReleasePayload( void *pContext, sirScriptPayloadAllocation_t allocation ) noexcept
+{
+	sirScriptTestPayloadHeap_t *pHeap = ( sirScriptTestPayloadHeap_t * )pContext;
+	const uint32_t nAlignment = ( uint32_t )( allocation.nToken >> 32 );
+	::operator delete( allocation.pData, std::align_val_t( nAlignment ) );
+	++pHeap->nReleases;
+	--pHeap->nLive;
+}
+
+static sirScriptPayloadAllocatorAPI_t testPayloadAPI( sirScriptTestPayloadHeap_t *pHeap ) noexcept
+{
+	return { SIR_SCRIPT_PAYLOAD_ALLOCATOR_ABI_REVISION, pHeap, 1024, 256, testAllocatePayload, testReleasePayload };
+}
+
+static bool testAllocatedScheduler( void ) noexcept
+{
+	sirScriptTestPayloadHeap_t heap = {};
+	SIRScriptScheduler scheduler;
+	sirScriptScheduledCall_t call = {};
+	call.nDispatchId = 55;
+	call.nAlignment = 64;
+	call.nBytes = 512;
+	call.eKind = SIR_SCRIPT_SCHEDULED_EVENT;
+	alignas( 64 ) unsigned char szPayload[512] = {};
+	for ( uint32_t iByte = 0; iByte < sizeof( szPayload ); ++iByte ) {
+		szPayload[iByte] = ( unsigned char )( iByte & 255 );
+	}
+	sirScriptTaskHandle_t first = {};
+	SIR_TEST_CHECK( scheduler.enqueue( SIR_SCRIPT_PHASE_EARLY, call, szPayload, &first ) == SIR_SCRIPT_CAPACITY_EXCEEDED );
+	sirScriptPayloadAllocatorAPI_t invalid = testPayloadAPI( &heap );
+	invalid.nABIRevision = 90;
+	SIR_TEST_CHECK( scheduler.setPayloadAllocator( invalid ) == SIR_SCRIPT_INVALID_ARGUMENT );
+	SIR_TEST_CHECK( scheduler.setPayloadAllocator( testPayloadAPI( &heap ) ) == SIR_SCRIPT_OK );
+	SIR_TEST_CHECK( scheduler.enqueue( SIR_SCRIPT_PHASE_EARLY, call, szPayload, &first ) == SIR_SCRIPT_OK );
+	SIR_TEST_CHECK( first.nSlot != 0 && heap.nLive == 1 && scheduler.allocatedPayloadBytes() == 512 );
+	SIR_TEST_CHECK( scheduler.setPayloadAllocator( {} ) == SIR_SCRIPT_BUSY );
+	memset( szPayload, 0, sizeof( szPayload ) );
+	sirScriptScheduledCall_t transferred = {};
+	SIR_TEST_CHECK( scheduler.dequeue( SIR_SCRIPT_PHASE_EARLY, scheduler.lastSequence(), &transferred ) );
+	SIR_TEST_CHECK( transferred.allocation.pData != nullptr && transferred.nBytes == 512 );
+	SIR_TEST_CHECK( ( ( unsigned char * )transferred.allocation.pData )[129] == 129 );
+	SIR_TEST_CHECK( scheduler.cancel( first ) == SIR_SCRIPT_INVALID_HANDLE );
+	SIR_TEST_CHECK( scheduler.livePayloadCount() == 1 );
+	SIR_TEST_CHECK( scheduler.setPayloadAllocator( {} ) == SIR_SCRIPT_BUSY );
+	scheduler.releasePayload( &transferred );
+	SIR_TEST_CHECK( heap.nLive == 0 && scheduler.allocatedPayloadBytes() == 0 );
+	SIR_TEST_CHECK( scheduler.peakPayloadBytes() == 512 );
+	SIR_TEST_CHECK( scheduler.setPayloadAllocator( {} ) == SIR_SCRIPT_OK );
+
+	SIR_TEST_CHECK( scheduler.setPayloadAllocator( testPayloadAPI( &heap ) ) == SIR_SCRIPT_OK );
+	call.nBytes = 512;
+	heap.bRejectNext = true;
+	SIR_TEST_CHECK( scheduler.enqueue( SIR_SCRIPT_PHASE_EARLY, call, szPayload, &first ) == SIR_SCRIPT_CAPACITY_EXCEEDED );
+	SIR_TEST_CHECK( scheduler.pendingCount( SIR_SCRIPT_PHASE_EARLY ) == 0 && heap.nLive == 0 );
+	SIR_TEST_CHECK( scheduler.enqueue( SIR_SCRIPT_PHASE_EARLY, call, szPayload, &first ) == SIR_SCRIPT_OK );
+	SIR_TEST_CHECK( scheduler.cancel( first ) == SIR_SCRIPT_OK );
+	SIR_TEST_CHECK( heap.nLive == 0 && heap.nReleases == 2 );
+	SIR_TEST_CHECK( scheduler.enqueue( SIR_SCRIPT_PHASE_LATE, call, szPayload, &first ) == SIR_SCRIPT_OK );
+	scheduler.clear();
+	SIR_TEST_CHECK( heap.nLive == 0 && heap.nReleases == 3 );
+	return true;
+}
+
+static bool testRuntimePayloadHeap( void ) noexcept
+{
+	sirScriptTestPayloadHeap_t heap = {};
+	SIRScriptServer server;
+	SIRScriptBindingRegistry &registry = server.bindings();
+	SIRScriptRuntime &runtime = server.runtime();
+	SIR_TEST_CHECK( registry.registerType( { 18, 512, 16, SIR_SCRIPT_TYPE_PLAIN_BYTES | SIR_SCRIPT_TYPE_NO_POINTERS } ) == SIR_SCRIPT_OK );
+	SIR_TEST_CHECK( registry.registerType( { 19, 128, 128, SIR_SCRIPT_TYPE_PLAIN_BYTES | SIR_SCRIPT_TYPE_NO_POINTERS } ) == SIR_SCRIPT_OK );
+	SIR_TEST_CHECK( registry.registerType( { 20, 2048, 16, SIR_SCRIPT_TYPE_PLAIN_BYTES | SIR_SCRIPT_TYPE_NO_POINTERS } ) == SIR_SCRIPT_OK );
+	SIR_TEST_CHECK( registry.registerEvent( { 80, 18 } ) == SIR_SCRIPT_OK );
+	SIR_TEST_CHECK( registry.registerEvent( { 81, 19 } ) == SIR_SCRIPT_OK );
+	SIR_TEST_CHECK( registry.registerEvent( { 82, 20 } ) == SIR_SCRIPT_OK );
+	SIR_TEST_CHECK( registry.publish() == SIR_SCRIPT_OK );
+	sirScriptTestProgramSource_t source = {};
+	sirScriptTestBackend_t backend = {};
+	backend.pRuntime = &runtime;
+	SIR_TEST_CHECK( runtime.setProgramSource( testProgramSourceAPI( &source ) ) == SIR_SCRIPT_OK );
+	SIR_TEST_CHECK( runtime.registerBackend( 1, testBackendAPI( &backend ) ) == SIR_SCRIPT_OK );
+	SIR_TEST_CHECK( runtime.startBackend( 1 ) == SIR_SCRIPT_OK );
+	sirScriptProgramHandle_t program = {};
+	sirScriptInstanceHandle_t instance = {};
+	sirScriptSubscriptionHandle_t subscription = {};
+	SIR_TEST_CHECK( runtime.loadProgram( 1, 321, 1, &program ) == SIR_SCRIPT_OK );
+	SIR_TEST_CHECK( runtime.createInstance( program, 123, &instance ) == SIR_SCRIPT_OK );
+	SIR_TEST_CHECK( runtime.subscribe( instance, 80, 91, &subscription ) == SIR_SCRIPT_OK );
+	alignas( 16 ) unsigned char szLarge[512] = {};
+	alignas( 128 ) unsigned char szWide[128] = {};
+	alignas( 16 ) unsigned char szTooLarge[2048] = {};
+	szLarge[400] = 42;
+	sirScriptTaskHandle_t first = {};
+	sirScriptTaskHandle_t second = {};
+	SIR_TEST_CHECK( runtime.enqueueEvent( 80, { szLarge, 512, 16 }, SIR_SCRIPT_PHASE_EARLY, &first ) == SIR_SCRIPT_CAPACITY_EXCEEDED );
+	SIR_TEST_CHECK( runtime.setPayloadAllocator( testPayloadAPI( &heap ) ) == SIR_SCRIPT_OK );
+	SIR_TEST_CHECK( runtime.enqueueEvent( 80, { szLarge, 512, 16 }, SIR_SCRIPT_PHASE_EARLY, &first ) == SIR_SCRIPT_OK );
+	SIR_TEST_CHECK( runtime.enqueueEvent( 81, { szWide, 128, 128 }, SIR_SCRIPT_PHASE_LATE, &second ) == SIR_SCRIPT_OK );
+	sirScriptTaskHandle_t invalid = {};
+	SIR_TEST_CHECK( runtime.enqueueEvent( 82, { szTooLarge, 2048, 16 }, SIR_SCRIPT_PHASE_EARLY, &invalid ) ==
+	                SIR_SCRIPT_CAPACITY_EXCEEDED );
+	const sirScriptRuntimeFootprint_t footprint = runtime.queryMemoryFootprint();
+	SIR_TEST_CHECK( footprint.nExternalPayloadBytes == 640 && footprint.nLiveExternalPayloads == 2 );
+	SIR_TEST_CHECK( footprint.nPeakExternalPayloadBytes == 640 && footprint.nScheduledCalls == 2 );
+	SIR_TEST_CHECK( runtime.setPayloadAllocator( {} ) == SIR_SCRIPT_BUSY );
+	SIR_TEST_CHECK( runtime.cancelScheduled( first ) == SIR_SCRIPT_OK );
+	uint32_t nProcessed = 0;
+	uint32_t nStale = 0;
+	SIR_TEST_CHECK( runtime.pumpPhase( SIR_SCRIPT_PHASE_LATE, 1, &nProcessed, &nStale ) == SIR_SCRIPT_OK );
+	SIR_TEST_CHECK( nProcessed == 1 && nStale == 0 && heap.nLive == 0 );
+	SIR_TEST_CHECK( runtime.cancelScheduled( second ) == SIR_SCRIPT_INVALID_HANDLE );
+	SIR_TEST_CHECK( runtime.queryMemoryFootprint().nExternalPayloadBytes == 0 );
+	SIR_TEST_CHECK( runtime.setPayloadAllocator( {} ) == SIR_SCRIPT_OK );
+	SIR_TEST_CHECK( runtime.setPayloadAllocator( testPayloadAPI( &heap ) ) == SIR_SCRIPT_OK );
+	SIR_TEST_CHECK( runtime.enqueueEvent( 80, { szLarge, 512, 16 }, SIR_SCRIPT_PHASE_EARLY, &first ) == SIR_SCRIPT_OK );
+	szLarge[400] = 0;
+	SIR_TEST_CHECK( runtime.pumpPhase( SIR_SCRIPT_PHASE_EARLY, 1, &nProcessed, &nStale ) == SIR_SCRIPT_OK );
+	SIR_TEST_CHECK( backend.nLargeMarker == 42 && backend.nPayloadsAtInvoke == 1 );
+	SIR_TEST_CHECK( heap.nLive == 0 );
+	SIR_TEST_CHECK( runtime.enqueueEvent( 80, { szLarge, 512, 16 }, SIR_SCRIPT_PHASE_EARLY, &first ) == SIR_SCRIPT_OK );
+	SIR_TEST_CHECK( runtime.shutdownAll() == SIR_SCRIPT_OK );
+	SIR_TEST_CHECK( heap.nLive == 0 && heap.nAllocations == heap.nReleases );
+	SIR_TEST_CHECK( runtime.queryMemoryFootprint().nExternalPayloadBytes == 0 );
+	return true;
+}
+
 int main( void )
 {
 	if ( !testBindings() || !testSchemaFingerprint() || !testRuntime() || !testScheduler() || !testShutdownAll() ||
 	     !testCrossBackendEvents() || !testProgramSourceLeases() || !testCrossThreadIngress() || !testIngressCapacity() ||
-	     !testConcurrentIngress() ) {
+	     !testConcurrentIngress() || !testAllocatedScheduler() || !testRuntimePayloadHeap() ) {
 		return 1;
 	}
 	puts( "SIREngine scripting foundation PASS" );
