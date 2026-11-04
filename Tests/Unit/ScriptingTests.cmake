@@ -57,3 +57,8 @@ add_executable(SIRLangLexerTests SIRLangLexerTests.cpp)
 target_link_libraries(SIRLangLexerTests PRIVATE SIR::Scripting)
 add_test(NAME scripting.language.lexer COMMAND SIRLangLexerTests)
 sir_configure_owned_target(SIRLangLexerTests)
+
+add_executable(SIRLangParserTests SIRLangParserTests.cpp)
+target_link_libraries(SIRLangParserTests PRIVATE SIR::Scripting)
+add_test(NAME scripting.language.parser COMMAND SIRLangParserTests)
+sir_configure_owned_target(SIRLangParserTests)
