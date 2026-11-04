@@ -35,6 +35,8 @@ static sirLangToken_t sirLangToken( sirLangCursor_t start, sirLangTokenKind_t eK
 
 static bool sirLangIsDigit( uint8_t iByte ) noexcept
 {
+
+
 	return iByte >= '0' && iByte <= '9';
 }
 
@@ -301,7 +303,7 @@ bool SIRLangIsKeyword( const uint8_t *pBytes, uint32_t nBytes ) noexcept
 	return false;
 }
 
-void SIRLangLexerInit( sirLangLexer_t *pLexer, const sirLangSourceView_t &source ) noexcept
+void SIRLangLexerInit( sirLangLexer_t *pLexer, const sirLangSourceView_t& source ) noexcept
 {
 	if ( pLexer == nullptr ) {
 		return;

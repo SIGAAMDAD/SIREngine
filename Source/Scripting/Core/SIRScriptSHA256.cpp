@@ -52,7 +52,7 @@ static void scriptWriteBE32( uint8_t *pData, uint32_t nValue ) noexcept
 	pData[3] = ( uint8_t )nValue;
 }
 
-static void scriptSHA256Transform( sirScriptSHA256State_t &state, const uint8_t *pBlock ) noexcept
+static void scriptSHA256Transform( sirScriptSHA256State_t& state, const uint8_t *pBlock ) noexcept
 {
 	uint32_t szWords[64] = {};
 	for ( uint32_t iWord = 0; iWord < 16; ++iWord ) {
@@ -100,7 +100,7 @@ static void scriptSHA256Transform( sirScriptSHA256State_t &state, const uint8_t 
 	state.szHash[7] += h;
 }
 
-static void scriptSHA256Update( sirScriptSHA256State_t &state, const uint8_t *pData, uint64_t nBytes ) noexcept
+static void scriptSHA256Update( sirScriptSHA256State_t& state, const uint8_t *pData, uint64_t nBytes ) noexcept
 {
 	state.nBytes += nBytes;
 	while ( nBytes != 0 ) {

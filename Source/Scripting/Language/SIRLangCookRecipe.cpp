@@ -44,13 +44,13 @@ static bool sirLangCookNonzeroDigest( const uint8_t szDigest[32] ) noexcept
 	return nAccumulated != 0;
 }
 
-sirScriptResult_t SIRLangMakeCookKey( const sirLangCookIdentity_t& identity, const sirLangCookImport_t *pImports,
-                                      uint32_t nImportCount, sirScriptCacheKey_t *pKey ) noexcept
+sirScriptResult_t SIRLangMakeCookKey( const sirLangCookIdentity_t& identity, const sirLangCookImport_t *pImports, uint32_t nImportCount,
+                                      sirScriptCacheKey_t *pKey ) noexcept
 {
-	if ( pKey == nullptr || identity.nModuleId == 0 || identity.nSchemaId == 0 ||
-	     identity.nLayoutDigest == 0 || identity.nBindingDigest == 0 || identity.nTargetId == 0 ||
-	     identity.nToolchainId == 0 || nImportCount > SIR_LANG_COOK_RECIPE_MAX_IMPORTS ||
-	     ( nImportCount != 0 && pImports == nullptr ) || !sirLangCookNonzeroDigest( identity.szSourceDigest ) ) {
+	if ( pKey == nullptr || identity.nModuleId == 0 || identity.nSchemaId == 0 || identity.nLayoutDigest == 0 ||
+	     identity.nBindingDigest == 0 || identity.nTargetId == 0 || identity.nToolchainId == 0 ||
+	     nImportCount > SIR_LANG_COOK_RECIPE_MAX_IMPORTS || ( nImportCount != 0 && pImports == nullptr ) ||
+	     !sirLangCookNonzeroDigest( identity.szSourceDigest ) ) {
 		return SIR_SCRIPT_INVALID_ARGUMENT;
 	}
 
@@ -66,8 +66,7 @@ sirScriptResult_t SIRLangMakeCookKey( const sirLangCookIdentity_t& identity, con
 		nPreviousModule = dependency.nModuleId;
 	}
 
-	uint8_t szRecipe[SIR_LANG_COOK_RECIPE_HEADER_BYTES +
-	                 SIR_LANG_COOK_RECIPE_IMPORT_BYTES * SIR_LANG_COOK_RECIPE_MAX_IMPORTS] = {};
+	uint8_t szRecipe[SIR_LANG_COOK_RECIPE_HEADER_BYTES + SIR_LANG_COOK_RECIPE_IMPORT_BYTES * SIR_LANG_COOK_RECIPE_MAX_IMPORTS] = {};
 	memcpy( szRecipe, "SIRCRP01", 8 );
 	sirLangCookWrite32( szRecipe + 8, 1 );
 	sirLangCookWrite32( szRecipe + 12, SIR_LANG_VM_VERSION );
@@ -87,7 +86,6 @@ sirScriptResult_t SIRLangMakeCookKey( const sirLangCookIdentity_t& identity, con
 		memcpy( szRecipe + iOffset + 8, pImports[iImport].szDigest, 32 );
 	}
 
-	const uint64_t nRecipeBytes = SIR_LANG_COOK_RECIPE_HEADER_BYTES +
-	                               ( uint64_t )nImportCount * SIR_LANG_COOK_RECIPE_IMPORT_BYTES;
+	const uint64_t nRecipeBytes = SIR_LANG_COOK_RECIPE_HEADER_BYTES + ( uint64_t )nImportCount * SIR_LANG_COOK_RECIPE_IMPORT_BYTES;
 	return SIRScriptArtifactCache::makeKey( szRecipe, nRecipeBytes, pKey );
 }

@@ -87,9 +87,9 @@ class SIRScriptRuntime
 public:
 	explicit SIRScriptRuntime( const SIRScriptBindingRegistry *pRegistry ) noexcept;
 
-	sirScriptResult_t setProgramSource( const sirScriptProgramSourceAPI_t &api ) noexcept;
+	sirScriptResult_t setProgramSource( const sirScriptProgramSourceAPI_t& api ) noexcept;
 	sirScriptResult_t clearProgramSource( void ) noexcept;
-	sirScriptResult_t registerBackend( uint64_t nBackendId, const sirScriptBackendAPI_t &api ) noexcept;
+	sirScriptResult_t registerBackend( uint64_t nBackendId, const sirScriptBackendAPI_t& api ) noexcept;
 	sirScriptResult_t startBackend( uint64_t nBackendId ) noexcept;
 	sirScriptResult_t stopBackend( uint64_t nBackendId ) noexcept;
 	sirScriptResult_t unregisterBackend( uint64_t nBackendId ) noexcept;
@@ -110,7 +110,7 @@ public:
 	sirScriptResult_t enqueueInvoke( sirScriptInstanceHandle_t instance, uint64_t nMethodId, uint64_t nArgumentsTypeId,
 	                                 sirScriptReadFrame_t arguments, sirScriptPhase_t ePhase, sirScriptTaskHandle_t *pHandle ) noexcept;
 	sirScriptResult_t cancelScheduled( sirScriptTaskHandle_t handle ) noexcept;
-	sirScriptResult_t setPayloadAllocator( const sirScriptPayloadAllocatorAPI_t &api ) noexcept;
+	sirScriptResult_t setPayloadAllocator( const sirScriptPayloadAllocatorAPI_t& api ) noexcept;
 	// Cross-thread: published registry and runtime must outlive every producer.
 	sirScriptResult_t postEvent( uint64_t nEventTypeId, sirScriptReadFrame_t payload, sirScriptPhase_t ePhase ) noexcept;
 	sirScriptResult_t pumpIngress( sirScriptPhase_t ePhase, uint32_t nBudget, uint32_t *pProcessed ) noexcept;
@@ -127,7 +127,7 @@ private:
 	bool isOwnerThread( void ) const noexcept;
 	static uint32_t nextGeneration( uint32_t nGeneration ) noexcept;
 	static bool validFrame( const void *pData, uint32_t nBytes, uint32_t nAlignment ) noexcept;
-	static bool validAPI( const sirScriptBackendAPI_t &api ) noexcept;
+	static bool validAPI( const sirScriptBackendAPI_t& api ) noexcept;
 	static bool validProgramView( sirScriptProgramView_t view, uint64_t nProgramId, uint64_t nRevision ) noexcept;
 	int32_t findBackend( uint64_t nBackendId ) const noexcept;
 	int32_t resolveProgram( sirScriptProgramHandle_t handle ) const noexcept;
