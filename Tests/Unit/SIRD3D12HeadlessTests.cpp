@@ -557,8 +557,7 @@ static bool testOffscreenIndexedGraphics( SIRD3D12Device &device )
 	}
 	uint32_t nMaxWidth = 0;
 	uint32_t nMaxHeight = 0;
-	if ( !device.getGraphicsKernelCapacityForTest( &nMaxWidth, &nMaxHeight ) ||
-	     nMaxWidth != 64 || nMaxHeight != 48 ) {
+	if ( !device.getGraphicsKernelCapacityForTest( &nMaxWidth, &nMaxHeight ) || nMaxWidth != 64 || nMaxHeight != 48 ) {
 		return false;
 	}
 

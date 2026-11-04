@@ -33,14 +33,12 @@ SIRD3D12GraphicsKernel::~SIRD3D12GraphicsKernel( void ) noexcept
 	shutdown( false );
 }
 
-bool SIRD3D12GraphicsKernel::initialize( ID3D12Device *pDevice, SIRD3D12Memory *pMemory,
-                                         const void *pVertexDxil, size_t nVertexBytes, const void *pPixelDxil,
-                                         size_t nPixelBytes, uint32_t nMaxWidth, uint32_t nMaxHeight ) noexcept
+bool SIRD3D12GraphicsKernel::initialize( ID3D12Device *pDevice, SIRD3D12Memory *pMemory, const void *pVertexDxil, size_t nVertexBytes,
+                                         const void *pPixelDxil, size_t nPixelBytes, uint32_t nMaxWidth, uint32_t nMaxHeight ) noexcept
 {
 	if ( pDevice == nullptr || pMemory == nullptr || !pMemory->isReady() || pVertexDxil == nullptr || pPixelDxil == nullptr ||
-	     nVertexBytes < 16 || nPixelBytes < 16 || nVertexBytes > 4 * 1024 * 1024 ||
-	     nPixelBytes > 4 * 1024 * 1024 || nMaxWidth == 0 || nMaxHeight == 0 ||
-	     nMaxWidth > 4096 || nMaxHeight > 4096 || m_pPipelineState != nullptr ) {
+	     nVertexBytes < 16 || nPixelBytes < 16 || nVertexBytes > 4 * 1024 * 1024 || nPixelBytes > 4 * 1024 * 1024 || nMaxWidth == 0 ||
+	     nMaxHeight == 0 || nMaxWidth > 4096 || nMaxHeight > 4096 || m_pPipelineState != nullptr ) {
 		m_nLastError = E_INVALIDARG;
 		return false;
 	}
@@ -88,9 +86,8 @@ bool SIRD3D12GraphicsKernel::initialize( ID3D12Device *pDevice, SIRD3D12Memory *
 	D3D12_CLEAR_VALUE clear = {};
 	clear.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	clear.Color[3] = 1.0f;
-	m_nLastError = pMemory->createTexture2D( nMaxWidth, nMaxHeight, DXGI_FORMAT_R8G8B8A8_UNORM,
-	                                         D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET, D3D12_RESOURCE_STATE_RENDER_TARGET,
-	                                         &clear, &m_pTarget );
+	m_nLastError = pMemory->createTexture2D( nMaxWidth, nMaxHeight, DXGI_FORMAT_R8G8B8A8_UNORM, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET,
+	                                         D3D12_RESOURCE_STATE_RENDER_TARGET, &clear, &m_pTarget );
 	if ( FAILED( m_nLastError ) ) {
 		shutdown( true );
 		return false;
@@ -104,27 +101,22 @@ bool SIRD3D12GraphicsKernel::initialize( ID3D12Device *pDevice, SIRD3D12Memory *
 		shutdown( true );
 		return false;
 	}
-	m_nLastError = pMemory->createBuffer( D3D12_HEAP_TYPE_READBACK, D3D12_RESOURCE_STATE_COPY_DEST, nReadbackBytes,
-	                                      &m_pReadback );
+	m_nLastError = pMemory->createBuffer( D3D12_HEAP_TYPE_READBACK, D3D12_RESOURCE_STATE_COPY_DEST, nReadbackBytes, &m_pReadback );
 	if ( FAILED( m_nLastError ) ) {
 		shutdown( true );
 		return false;
 	}
 
-	const sirD3D12TestVertex_t szVertices[3] = {
-	    { { -0.80f, -0.80f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } },
-	    { { 0.0f, 0.80f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } },
-	    { { 0.80f, -0.80f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } }
-	};
+	const sirD3D12TestVertex_t szVertices[3] = { { { -0.80f, -0.80f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } },
+	                                             { { 0.0f, 0.80f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } },
+	                                             { { 0.80f, -0.80f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } } };
 	const uint16_t szIndices[3] = { 0, 1, 2 };
-	m_nLastError = pMemory->createBuffer( D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ,
-	                                      sizeof( szVertices ), &m_pVertices );
+	m_nLastError = pMemory->createBuffer( D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ, sizeof( szVertices ), &m_pVertices );
 	if ( FAILED( m_nLastError ) ) {
 		shutdown( true );
 		return false;
 	}
-	m_nLastError = pMemory->createBuffer( D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ,
-	                                      sizeof( szIndices ), &m_pIndices );
+	m_nLastError = pMemory->createBuffer( D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ, sizeof( szIndices ), &m_pIndices );
 	if ( FAILED( m_nLastError ) ) {
 		shutdown( true );
 		return false;
@@ -159,17 +151,15 @@ bool SIRD3D12GraphicsKernel::initialize( ID3D12Device *pDevice, SIRD3D12Memory *
 		shutdown( true );
 		return false;
 	}
-	pDevice->CreateRenderTargetView( m_pTarget->GetResource(), nullptr,
-	                                 m_pRtvHeap->GetCPUDescriptorHandleForHeapStart() );
+	pDevice->CreateRenderTargetView( m_pTarget->GetResource(), nullptr, m_pRtvHeap->GetCPUDescriptorHandleForHeapStart() );
 
-	m_nLastError = pDevice->CreateCommandAllocator( D3D12_COMMAND_LIST_TYPE_DIRECT,
-	                                                IID_PPV_ARGS( m_pCommandAllocator.GetAddressOf() ) );
+	m_nLastError = pDevice->CreateCommandAllocator( D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS( m_pCommandAllocator.GetAddressOf() ) );
 	if ( FAILED( m_nLastError ) ) {
 		shutdown( true );
 		return false;
 	}
-	m_nLastError = pDevice->CreateCommandList( 0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_pCommandAllocator.Get(),
-	                                          m_pPipelineState.Get(), IID_PPV_ARGS( m_pCommandList.GetAddressOf() ) );
+	m_nLastError = pDevice->CreateCommandList( 0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_pCommandAllocator.Get(), m_pPipelineState.Get(),
+	                                           IID_PPV_ARGS( m_pCommandList.GetAddressOf() ) );
 	if ( FAILED( m_nLastError ) ) {
 		shutdown( true );
 		return false;
@@ -188,9 +178,9 @@ bool SIRD3D12GraphicsKernel::initialize( ID3D12Device *pDevice, SIRD3D12Memory *
 
 bool SIRD3D12GraphicsKernel::isReady( void ) const noexcept
 {
-	return m_pRootSignature != nullptr && m_pPipelineState != nullptr && m_pTarget != nullptr &&
-	       m_pReadback != nullptr && m_pVertices != nullptr && m_pIndices != nullptr &&
-	       m_pReadbackMapped != nullptr && m_pCommandList != nullptr && m_pRtvHeap != nullptr;
+	return m_pRootSignature != nullptr && m_pPipelineState != nullptr && m_pTarget != nullptr && m_pReadback != nullptr &&
+	       m_pVertices != nullptr && m_pIndices != nullptr && m_pReadbackMapped != nullptr && m_pCommandList != nullptr &&
+	       m_pRtvHeap != nullptr;
 }
 
 bool SIRD3D12GraphicsKernel::hasPending( void ) const noexcept
@@ -218,8 +208,7 @@ void SIRD3D12GraphicsKernel::releasePending( void ) noexcept
 
 bool SIRD3D12GraphicsKernel::record( uint32_t nWidth, uint32_t nHeight ) noexcept
 {
-	if ( !isReady() || hasPending() || nWidth == 0 || nHeight == 0 ||
-	     nWidth > m_nCapacityWidth || nHeight > m_nCapacityHeight ) {
+	if ( !isReady() || hasPending() || nWidth == 0 || nHeight == 0 || nWidth > m_nCapacityWidth || nHeight > m_nCapacityHeight ) {
 		m_nLastError = E_INVALIDARG;
 		return false;
 	}
@@ -244,10 +233,9 @@ bool SIRD3D12GraphicsKernel::record( uint32_t nWidth, uint32_t nHeight ) noexcep
 	m_pCommandList->ClearRenderTargetView( hRtv, szClear, 0, nullptr );
 
 	const D3D12_VERTEX_BUFFER_VIEW vbv = { m_pVertices->GetResource()->GetGPUVirtualAddress(),
-	                                       ( UINT )( sizeof( sirD3D12TestVertex_t ) * 3 ),
-	                                       ( UINT )sizeof( sirD3D12TestVertex_t ) };
-	const D3D12_INDEX_BUFFER_VIEW ibv = { m_pIndices->GetResource()->GetGPUVirtualAddress(),
-	                                      ( UINT )( sizeof( uint16_t ) * 3 ), DXGI_FORMAT_R16_UINT };
+	                                       ( UINT )( sizeof( sirD3D12TestVertex_t ) * 3 ), ( UINT )sizeof( sirD3D12TestVertex_t ) };
+	const D3D12_INDEX_BUFFER_VIEW ibv = { m_pIndices->GetResource()->GetGPUVirtualAddress(), ( UINT )( sizeof( uint16_t ) * 3 ),
+	                                      DXGI_FORMAT_R16_UINT };
 	m_pCommandList->IASetPrimitiveTopology( D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
 	m_pCommandList->IASetVertexBuffers( 0, 1, &vbv );
 	m_pCommandList->IASetIndexBuffer( &ibv );

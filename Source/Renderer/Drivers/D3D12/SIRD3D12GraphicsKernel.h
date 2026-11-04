@@ -61,9 +61,8 @@ public:
 	SIRD3D12GraphicsKernel( const SIRD3D12GraphicsKernel & ) = delete;
 	SIRD3D12GraphicsKernel &operator=( const SIRD3D12GraphicsKernel & ) = delete;
 
-	bool initialize( ID3D12Device *pDevice, SIRD3D12Memory *pMemory, const void *pVertexDxil,
-	                 size_t nVertexBytes, const void *pPixelDxil, size_t nPixelBytes,
-	                 uint32_t nMaxWidth, uint32_t nMaxHeight ) noexcept;
+	bool initialize( ID3D12Device *pDevice, SIRD3D12Memory *pMemory, const void *pVertexDxil, size_t nVertexBytes, const void *pPixelDxil,
+	                 size_t nPixelBytes, uint32_t nMaxWidth, uint32_t nMaxHeight ) noexcept;
 	bool isReady( void ) const noexcept;
 	bool hasPending( void ) const noexcept;
 	bool queryCapacity( uint32_t *pWidth, uint32_t *pHeight ) const noexcept;

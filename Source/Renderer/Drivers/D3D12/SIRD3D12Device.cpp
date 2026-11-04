@@ -1,5 +1,7 @@
 /*
 ===========================================================================
+
+
 SIREngine MPLv2 Source Code
 Copyright (C) 2023-2027 Noah Van Til
 
@@ -12,8 +14,6 @@ express or implied, including but not limited to the warranties
 of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
-
-
 
 #include <Renderer/Drivers/D3D12/SIRD3D12Device.h>
 
@@ -885,8 +885,8 @@ bool SIRD3D12Device::submitGraphicsAfterCompute( const sirD3D12CompletionSet_t &
 	return snapshotCompletionSet( pSet ) && pSet->nGraphicsFence == nGraphicsFence;
 }
 
-bool SIRD3D12Device::initializeGraphicsKernel( const void *pVertexDxil, size_t nVertexBytes, const void *pPixelDxil,
-                                               size_t nPixelBytes, uint32_t nMaxWidth, uint32_t nMaxHeight ) noexcept
+bool SIRD3D12Device::initializeGraphicsKernel( const void *pVertexDxil, size_t nVertexBytes, const void *pPixelDxil, size_t nPixelBytes,
+                                               uint32_t nMaxWidth, uint32_t nMaxHeight ) noexcept
 {
 	if ( !isReady() ) {
 		m_nLastError = E_FAIL;
