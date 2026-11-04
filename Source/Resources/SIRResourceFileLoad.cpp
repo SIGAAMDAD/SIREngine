@@ -191,6 +191,10 @@ SIRResourceResult SIRResourceFileLoad::poll( SIRResourceHandle *pResource ) noex
 		return SIR_RESOURCE_RESULT_BUSY;
 	}
 	if ( eState != SIR_TASK_COMPLETED && eState != SIR_TASK_FAILED && eState != SIR_TASK_CANCELLED ) {
+		// The task handle may have been externally released after completion
+		// or invalidated by a scheduler shutdown. No worker retains staging.
+		clearStaging();
+		closeTransfer();
 		return SIR_RESOURCE_RESULT_FAILED;
 	}
 	// Reading task state acquires the Core scheduler mutex: worker writes into

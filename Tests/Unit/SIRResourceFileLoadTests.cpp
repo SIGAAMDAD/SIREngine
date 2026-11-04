@@ -34,11 +34,22 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 static std::atomic<int> s_nFailFstatOrdinal{ 0 };
 static std::atomic<bool> s_bFailMappedRead{ false };
+static std::atomic<bool> s_bFailMappedUnmap{ false };
 static std::atomic<int> s_nFailPreadMode{ 0 };
 
 extern "C" int __real_fstat( int nHandle, struct stat *pInfo );
+extern "C" int __real_munmap( void *pBase, size_t nBytes );
 extern "C" ssize_t __real_pread( int nHandle, void *pDestination, size_t nBytes, off_t nOffset );
 extern "C" void *__real_mmap( void *pAddress, size_t nBytes, int nProtection, int nFlags, int nHandle, off_t nOffset );
+
+extern "C" int __wrap_munmap( void *pBase, size_t nBytes )
+{
+	if ( s_bFailMappedUnmap.exchange( false, std::memory_order_relaxed ) ) {
+		errno = EIO;
+		return -1;
+	}
+	return __real_munmap( pBase, nBytes );
+}
 
 extern "C" ssize_t __wrap_pread( int nHandle, void *pDestination, size_t nBytes, off_t nOffset )
 {
@@ -292,6 +303,34 @@ static void testBoundsAndStagingReuse( void )
 	memory.shutdown();
 }
 
+static void testExternalTaskReleaseRecovery( void )
+{
+	sirIOTestAlloc_t allocator = {};
+	SIRMemoryManager memory;
+	sirIOMemory( memory );
+	{
+		SIRResourceGraph graph( sirIOConfig( allocator ) );
+		SIR_IO_CHECK( graph.isReady() );
+		SIRTaskScheduler scheduler;
+		SIR_IO_CHECK( scheduler.init( &memory, { 8, 0, 16 } ) );
+		SIRResourceFileLoad load( graph, scheduler );
+		const int32_t nBefore = allocator.nOutstanding.load();
+		const sirResourceFileLoadRequest_t request = sirIORequest( 6011, SIR_RESOURCE_FILE_READ_AT );
+		SIR_IO_CHECK( load.begin( SIR_IO_PATH, request ) == SIR_RESOURCE_RESULT_SUCCESS );
+		sirTaskHandle_t task = {};
+		SIR_IO_CHECK( load.getTaskHandle( &task ) );
+		SIR_IO_CHECK( scheduler.pumpCPU( 1 ) == 1 );
+		SIR_IO_CHECK( scheduler.releaseTask( task ) );
+		SIRResourceHandle ignored = {};
+		SIR_IO_CHECK( load.poll( &ignored ) == SIR_RESOURCE_RESULT_FAILED );
+		SIR_IO_CHECK( !load.isActive() );
+		SIR_IO_CHECK( allocator.nOutstanding.load() == nBefore );
+		SIR_IO_CHECK( scheduler.shutdown() );
+	}
+	SIR_IO_CHECK( allocator.nOutstanding.load() == 0 );
+	memory.shutdown();
+}
+
 static sirTaskResult_t sirIOIdleTask( void *, sirTaskHandle_t ) noexcept
 {
 	return SIR_TASK_RESULT_SUCCESS;
@@ -413,6 +452,13 @@ static void testInjectedResourceTransferFailures( void )
 		SIR_IO_CHECK( load.poll( &ignored ) == SIR_RESOURCE_RESULT_FAILED );
 		SIR_IO_CHECK( load.getLastFileResult() == SIR_FILE_END_OF_FILE );
 		SIR_IO_CHECK( !load.isActive() );
+		request = sirIORequest( 5005, SIR_RESOURCE_FILE_READ_MAPPED );
+		SIR_IO_CHECK( load.begin( SIR_IO_PATH, request ) == SIR_RESOURCE_RESULT_SUCCESS );
+		s_bFailMappedUnmap.store( true, std::memory_order_relaxed );
+		SIR_IO_CHECK( scheduler.pumpCPU( 8 ) == 1 );
+		SIR_IO_CHECK( load.poll( &ignored ) == SIR_RESOURCE_RESULT_FAILED );
+		SIR_IO_CHECK( load.getLastFileResult() == SIR_FILE_IO_ERROR );
+		SIR_IO_CHECK( !load.isActive() );
 		SIR_IO_CHECK( scheduler.shutdown() );
 	}
 	SIR_IO_CHECK( alloc.nOutstanding.load() == 0 );
@@ -436,6 +482,7 @@ int main( void )
 	testCancellationAndStaleRevision();
 	testBoundsAndStagingReuse();
 	testRejectedRequestsAndTaskAdmission();
+	testExternalTaskReleaseRecovery();
 #if defined( __linux__ )
 	testInjectedResourceTransferFailures();
 #endif

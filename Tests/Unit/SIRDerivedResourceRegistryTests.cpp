@@ -37,13 +37,17 @@ typedef struct sirDerivedTestAllocator_s
 {
 	std::atomic<uint32_t> nLive;
 	std::atomic<bool> bFailNext;
+	std::atomic<uint32_t> nAllocationCalls;
+	std::atomic<uint32_t> nFailOrdinal;
 } sirDerivedTestAllocator_t;
 
 static void *testAllocate( void *pContext, uint64_t nBytes, uint32_t nAlignment, uint32_t nDomain ) noexcept
 {
 	( void )nDomain;
 	sirDerivedTestAllocator_t *pTest = ( sirDerivedTestAllocator_t * )pContext;
-	if ( pTest->bFailNext.exchange( false ) || nBytes == 0 || nBytes > SIZE_MAX ) {
+	const uint32_t nOrdinal = pTest->nAllocationCalls.fetch_add( 1 ) + 1;
+	if ( pTest->bFailNext.exchange( false ) || ( pTest->nFailOrdinal.load() != 0 && pTest->nFailOrdinal.load() == nOrdinal ) ||
+	     nBytes == 0 || nBytes > SIZE_MAX ) {
 		return nullptr;
 	}
 	void *pMemory = nullptr;
@@ -279,6 +283,14 @@ static void testConstructorOutOfMemory( void )
 			REQUIRE( !failed.isReady() );
 		}
 		REQUIRE( allocator.nLive.load() == nBefore );
+		allocator.nAllocationCalls.store( 0 );
+		allocator.nFailOrdinal.store( 2 );
+		{
+			SIRResourceDerivedRegistry failed( graph, derivedConfig( allocator ) );
+			REQUIRE( !failed.isReady() );
+		}
+		allocator.nFailOrdinal.store( 0 );
+		REQUIRE( allocator.nAllocationCalls.load() == 2 && allocator.nLive.load() == nBefore );
 	}
 	REQUIRE( allocator.nLive.load() == 0 );
 }
@@ -376,6 +388,12 @@ static void testInvalidInputsAndCapacity( void )
 			changed.m_Key.m_Resource.m_nGeneration++;
 			REQUIRE( registry.registerRepresentation( scope, view, changed, &live[0] ) == SIR_RESOURCE_RESULT_INVALID_HANDLE );
 			changed = base;
+			changed.m_Key.m_Resource.m_nSlot = UINT32_MAX;
+			REQUIRE( registry.registerRepresentation( scope, view, changed, &live[0] ) == SIR_RESOURCE_RESULT_INVALID_HANDLE );
+			changed = base;
+			changed.m_Key.m_Resource.m_nTypeId++;
+			REQUIRE( registry.registerRepresentation( scope, view, changed, &live[0] ) == SIR_RESOURCE_RESULT_INVALID_HANDLE );
+			changed = base;
 			changed.m_Key.m_nRevision = 2;
 			changed.m_Accounting.m_nSourceRevision = 2;
 			REQUIRE( registry.registerRepresentation( scope, view, changed, &live[0] ) == SIR_RESOURCE_RESULT_INVALID_HANDLE );
@@ -396,6 +414,18 @@ static void testInvalidInputsAndCapacity( void )
 				REQUIRE( registry.getStats( &ignoredStats ) == SIR_RESOURCE_RESULT_WRITER_VIOLATION );
 			} );
 			unauthorized.join();
+			SIRDerivedResourceRegistration variantA = base;
+			variantA.m_Key.m_nVariantId = 1;
+			variantA.m_nNativeToken = 900;
+			REQUIRE( registry.registerRepresentation( scope, view, variantA, &live[0] ) == SIR_RESOURCE_RESULT_SUCCESS );
+			SIRDerivedResourceRegistration variantB = variantA;
+			variantB.m_Key.m_nVariantId = 2;
+			variantB.m_nNativeToken = 901;
+			REQUIRE( registry.registerRepresentation( scope, view, variantB, &live[1] ) == SIR_RESOURCE_RESULT_SUCCESS );
+			REQUIRE( registry.retireRepresentation( live[0], 0 ) == SIR_RESOURCE_RESULT_SUCCESS );
+			REQUIRE( registry.retireRepresentation( live[1], 0 ) == SIR_RESOURCE_RESULT_SUCCESS );
+			REQUIRE( registry.updateCompletedFence( 7, 0 ) == SIR_RESOURCE_RESULT_SUCCESS );
+			REQUIRE( provider.nReleased == 2 );
 			for ( uint32_t i = 0; i < 4; ++i ) {
 				const SIRDerivedResourceRegistration registration = derived( hSource, 1, 7, i + 1, 500 + i, 32 );
 				REQUIRE( registry.registerRepresentation( scope, view, registration, &live[i] ) == SIR_RESOURCE_RESULT_SUCCESS );
@@ -410,7 +440,7 @@ static void testInvalidInputsAndCapacity( void )
 			REQUIRE( registry.retireRepresentation( live[i], 1 ) == SIR_RESOURCE_RESULT_SUCCESS );
 		}
 		REQUIRE( registry.updateCompletedFence( 7, 1 ) == SIR_RESOURCE_RESULT_SUCCESS );
-		REQUIRE( provider.nReleased == 4 );
+		REQUIRE( provider.nReleased == 6 );
 	}
 	REQUIRE( allocator.nLive.load() == 0 );
 }
