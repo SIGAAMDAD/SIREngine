@@ -195,10 +195,31 @@ static void testBooleanShortCircuit( void ) noexcept
 	assert( fixture.workspace.report.ePhase == SIR_LANG_COMPILE_SIGNATURES );
 }
 
+
+static void testRejectInvalidScalarExpressions( void ) noexcept
+{
+	static constexpr const char *szInvalid[] = {
+	    "fn bad(value: bool) -> bool:\n    return value + value\n",
+	    "fn bad(value: u16) -> bool:\n    return value == true\n",
+	    "fn bad(value: u16) -> bool:\n    return not value\n",
+	    "fn bad(value: u16) -> bool:\n    return value < true\n",
+	    "fn bad() -> u16:\n    return 1u16 + 2u8\n"
+	};
+	for ( uint32_t iSource = 0; iSource < sizeof( szInvalid ) / sizeof( szInvalid[0] ); ++iSource ) {
+		sirLangCompilerFixture_t fixture = {};
+		setupFixture( &fixture );
+		const char *pszSource = szInvalid[iSource];
+		assert( !SIRLangCompileSource( { ( const uint8_t * )pszSource, ( uint32_t )strlen( pszSource ) },
+		                               &fixture.workspace ) );
+		assert( fixture.workspace.report.ePhase == SIR_LANG_COMPILE_SIGNATURES );
+	}
+}
+
 int main( void )
 {
 	testSourceToVM();
 	testBooleanShortCircuit();
+	testRejectInvalidScalarExpressions();
 	testRejectedSource();
 	return 0;
 }
