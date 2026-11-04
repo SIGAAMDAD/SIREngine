@@ -466,8 +466,7 @@ int main( int argc, char **argv )
 	SIRD3D12Driver driver;
 	sirGraphicsAdapterInfo_t adapter = {};
 	uint32_t nAdapterIndex = 0;
-	if ( !sirBenchAdapter( driver, bHardware, &nAdapterIndex, &adapter ) ||
-	     adapter.bSoftwareAdapter == bHardware ) {
+	if ( !sirBenchAdapter( driver, bHardware, &nAdapterIndex, &adapter ) || adapter.bSoftwareAdapter == bHardware ) {
 		fprintf( stderr, "Requested %s adapter unavailable\n", bHardware ? "hardware" : "WARP" );
 		return 8;
 	}
