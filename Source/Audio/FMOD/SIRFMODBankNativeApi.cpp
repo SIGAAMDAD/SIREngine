@@ -96,7 +96,100 @@ static int32_t fmodCheckBankEvent( void *, void *pStudio, void *pBank, const cha
 	return ( int32_t )eResult;
 }
 
+static int32_t fmodCheckBankObject( void *, void *pStudio, void *pBank, sirFMODBankObjectKind_t eKind, const char *szPath,
+                                    const sirContainerAllocator_t *pAllocator, uint8_t *pbFound ) noexcept
+{
+	*pbFound = 0;
+	FMOD::Studio::System *pSystem = ( FMOD::Studio::System * )pStudio;
+	FMOD::Studio::Bank *pNativeBank = ( FMOD::Studio::Bank * )pBank;
+	void *pTarget = nullptr;
+	int nCount = 0;
+	FMOD_RESULT eResult = FMOD_OK;
+	if ( eKind == SIR_FMOD_BANK_OBJECT_BUS ) {
+		FMOD::Studio::Bus *pBus = nullptr;
+		eResult = pSystem->getBus( szPath, &pBus );
+		if ( eResult != FMOD_OK ) {
+			return ( int32_t )eResult;
+		}
+		pTarget = pBus;
+		eResult = pNativeBank->getBusCount( &nCount );
+	} else if ( eKind == SIR_FMOD_BANK_OBJECT_VCA ) {
+		FMOD::Studio::VCA *pVCA = nullptr;
+		eResult = pSystem->getVCA( szPath, &pVCA );
+		if ( eResult != FMOD_OK ) {
+			return ( int32_t )eResult;
+		}
+		pTarget = pVCA;
+		eResult = pNativeBank->getVCACount( &nCount );
+	} else if ( eKind == SIR_FMOD_BANK_OBJECT_SNAPSHOT ) {
+		FMOD::Studio::EventDescription *pEvent = nullptr;
+		eResult = pSystem->getEvent( szPath, &pEvent );
+		if ( eResult != FMOD_OK ) {
+			return ( int32_t )eResult;
+		}
+		pTarget = pEvent;
+		eResult = pNativeBank->getEventCount( &nCount );
+	} else {
+		return ( int32_t )FMOD_ERR_INVALID_PARAM;
+	}
+	if ( eResult != FMOD_OK || nCount <= 0 ) {
+		return ( int32_t )eResult;
+	}
+	size_t nBytes = 0;
+	if ( !SIRRawStorage::checkedMultiply( ( size_t )nCount, sizeof( void * ), &nBytes ) ) {
+		return ( int32_t )FMOD_ERR_MEMORY;
+	}
+	void *pMemory = nullptr;
+	if ( SIRRawStorage::tryAllocate( pAllocator, nBytes, alignof( void * ), &pMemory ) != SIR_CONTAINER_OK ) {
+		return ( int32_t )FMOD_ERR_MEMORY;
+	}
+	int nActual = 0;
+	if ( eKind == SIR_FMOD_BANK_OBJECT_BUS ) {
+		FMOD::Studio::Bus **ppObjects = ( FMOD::Studio::Bus ** )pMemory;
+		eResult = pNativeBank->getBusList( ppObjects, nCount, &nActual );
+		if ( eResult == FMOD_OK ) {
+			for ( int iObject = 0; iObject < nActual && iObject < nCount; ++iObject ) {
+				if ( ppObjects[iObject] == pTarget ) {
+					*pbFound = 1;
+					break;
+				}
+			}
+		}
+	} else if ( eKind == SIR_FMOD_BANK_OBJECT_VCA ) {
+		FMOD::Studio::VCA **ppObjects = ( FMOD::Studio::VCA ** )pMemory;
+		eResult = pNativeBank->getVCAList( ppObjects, nCount, &nActual );
+		if ( eResult == FMOD_OK ) {
+			for ( int iObject = 0; iObject < nActual && iObject < nCount; ++iObject ) {
+				if ( ppObjects[iObject] == pTarget ) {
+					*pbFound = 1;
+					break;
+				}
+			}
+		}
+	} else {
+		FMOD::Studio::EventDescription **ppObjects = ( FMOD::Studio::EventDescription ** )pMemory;
+		eResult = pNativeBank->getEventList( ppObjects, nCount, &nActual );
+		if ( eResult == FMOD_OK ) {
+			for ( int iObject = 0; iObject < nActual && iObject < nCount; ++iObject ) {
+				if ( ppObjects[iObject] == pTarget ) {
+					*pbFound = 1;
+					break;
+				}
+			}
+		}
+	}
+	SIRRawStorage::deallocate( pAllocator, pMemory, nBytes, alignof( void * ) );
+	return ( int32_t )eResult;
+}
+
 sirFMODBankNativeOps_t sirGetFMODBankNativeOps( void ) noexcept
 {
-	return { 1, nullptr, fmodLoadBankFile, fmodUnloadBank, fmodPreloadBankSamples, fmodGetBankSampleState, fmodCheckBankEvent };
+	return { 2,
+	         nullptr,
+	         fmodLoadBankFile,
+	         fmodUnloadBank,
+	         fmodPreloadBankSamples,
+	         fmodGetBankSampleState,
+	         fmodCheckBankEvent,
+	         fmodCheckBankObject };
 }

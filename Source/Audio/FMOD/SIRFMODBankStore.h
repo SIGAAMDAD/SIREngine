@@ -36,6 +36,13 @@ typedef enum sirFMODSampleState_e : uint8_t
 	SIR_FMOD_SAMPLE_ERROR = 3
 } sirFMODSampleState_t;
 
+typedef enum sirFMODBankObjectKind_e : uint8_t
+{
+	SIR_FMOD_BANK_OBJECT_BUS = 1,
+	SIR_FMOD_BANK_OBJECT_VCA = 2,
+	SIR_FMOD_BANK_OBJECT_SNAPSHOT = 3
+} sirFMODBankObjectKind_t;
+
 // FMOD handles and file operations stay on the audio owner thread. The
 // native SDK callback verifies event membership in the specific bank, using
 // the provided accounting allocator for temporary cold-path scratch storage.
@@ -49,6 +56,8 @@ typedef struct sirFMODBankNativeOps_s
 	int32_t ( *sampleState )( void *pUserData, void *pBank, sirFMODSampleState_t *pState ) noexcept;
 	int32_t ( *containsEvent )( void *pUserData, void *pStudio, void *pBank, const char *szPath, const sirContainerAllocator_t *pAllocator,
 	                            uint8_t *pbFound ) noexcept;
+	int32_t ( *containsObject )( void *pUserData, void *pStudio, void *pBank, sirFMODBankObjectKind_t eKind, const char *szPath,
+	                             const sirContainerAllocator_t *pAllocator, uint8_t *pbFound ) noexcept;
 } sirFMODBankNativeOps_t;
 
 typedef struct sirFMODBankSlot_s
@@ -110,6 +119,7 @@ public:
 	uint32_t getLoadedBankCount( void ) const noexcept;
 	bool hasLoadedBank( uint64_t nPackageId ) const noexcept;
 	bool isBoundTo( const SIRFMODContext *pContext ) const noexcept;
+	sirAudioResult_t containsBankObject( uint64_t nPackageId, sirFMODBankObjectKind_t eKind, const char *szPath ) noexcept;
 	sirAudioResult_t pinBankObject( uint64_t nPackageId ) noexcept;
 	void unpinBankObject( uint64_t nPackageId ) noexcept;
 	uint32_t getBankObjectPinCount( uint64_t nPackageId ) const noexcept;
