@@ -381,11 +381,59 @@ static bool testValidationAndBoundaryInputs( void )
 	return true;
 }
 
+static bool testTraceWrapAndSparseRetire( void )
+{
+	const uint64_t nPage = SIRVirtualMemory::getPageSize();
+	if ( nPage == 0 ) {
+		return false;
+	}
+	SIRMemoryManager memory;
+	const sirMemoryConfig_t config = { nPage * 128, nPage * 32, nPage * 12, 4 };
+	if ( !memory.init( config ) || memory.initTraceBuffer( UINT32_MAX ) || !memory.initTraceBuffer( 2 ) ) {
+		return false;
+	}
+	sirMemoryTraceEvent_t events[2] = {};
+	if ( memory.copyTrace( events, 2 ) != 0 ) {
+		return false;
+	}
+	for ( uint32_t i = 0; i < 8; ++i ) {
+		if ( memory.allocateMetadata( 8, 8 ) == nullptr ) {
+			return false;
+		}
+	}
+	if ( memory.copyTrace( events, 2 ) != 2 || events[1].nSequence <= events[0].nSequence || memory.getStats().nTraceDroppedCount < 6 ) {
+		return false;
+	}
+	if ( memory.copyTrace( events, 1 ) != 1 ) {
+		return false;
+	}
+	SIRMemorySegment *pSegment = memory.createSegment( "trace-sparse", nPage * 4 );
+	if ( pSegment == nullptr || !pSegment->commit( 0, nPage * 4 ) || !pSegment->bindRetirementOwner( 5, 7 ) ||
+	     !pSegment->retireIdleRange( 0, nPage, 5, 7 ) || pSegment->cancelRetiredRange( nPage, nPage, 5, 7 ) ||
+	     !pSegment->retireIdleRange( nPage * 2, nPage, 5, 7 ) ) {
+		return false;
+	}
+	const sirPageDrainReport_t waiting = memory.drainPendingDecommits( nPage - 1 );
+	if ( waiting.nRemainingPendingBytes != nPage * 2 || waiting.nCompletedRuns != 0 ) {
+		return false;
+	}
+	const sirPageDrainReport_t drained = memory.drainPendingDecommits( nPage * 4 );
+	if ( drained.nCompletedRuns != 2 || drained.nFailedRuns != 0 || drained.nDecommittedBytes != nPage * 2 ||
+	     drained.nRemainingPendingBytes != 0 ) {
+		return false;
+	}
+	if ( !pSegment->decommit( nPage, nPage ) || !pSegment->decommit( nPage * 3, nPage ) ) {
+		return false;
+	}
+	memory.shutdown();
+	return true;
+}
+
 int main( void )
 {
 	if ( !testMemoryBudget() || !testCoreDomainMetadata() || !testBitmapAndRecommit() || !testOversizedRequests() ||
 	     !testFailedInitializationRecovery() || !testBackingTelemetry() || !testRetainedPageBacking() ||
-	     !testValidationAndBoundaryInputs() ) {
+	     !testValidationAndBoundaryInputs() || !testTraceWrapAndSparseRetire() ) {
 		fputs( "SIR memory owner test failed\n", stderr );
 		return 1;
 	}
