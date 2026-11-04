@@ -2,7 +2,7 @@
 
 **Baseline:** `develop` commit `be151c5ad3e98ea6fa6bdbfa87d07a83dc7e6546`.
 **Branch:** `feature/streaming-foundation`.
-**Status:** first implementation slice; not an end-to-end world streaming system.
+**Status:** streaming demand coordinator and compiled World Partition planning slice; not an end-to-end world streaming system.
 
 Source design authorities: `SIR-WORLD-ARCH-001`, `SIR-IO-ARCH-001`,
 `SIR-IO-IMPL-001`, `GRDG-003` in the shared Nomad Drive. This branch introduces
@@ -32,7 +32,7 @@ only the interface owner for request intent and stage tracking.
 | GRDG adapter | Not implemented | Integrate PR #23 contracts |
 | SIRPack `.sirm/.sirp` reader/cooker | Not implemented | Finalize package ABI |
 | Core I/O native async | Not implemented | IOCP/io_uring contracts |
-| World Partition/cells/layers | Not implemented | Cooker manifest, StateStore schema |
+| World Partition/cells/layers | Native sorted cell directory, spatial demand generation, layer filtering and source merge implemented; activation pending | Cooked package/StateStore integration |
 | Predictive dispatch | Not implemented | World immutable views and request epochs |
 | Entity cooling/waking | Not implemented | Script state codec, WorldState |
 | Terrain, VT, HLOD provider callbacks | Not implemented | Terrain port, renderer, GRDG leases |
@@ -42,3 +42,19 @@ only the interface owner for request intent and stage tracking.
 cover valid/invalid state transitions, staging cancellation, stale ticket reuse,
 capacity exhaustion, prepared-only demand and shutdown with live resources.
 Full SIREngine CI and native provider hardware benchmarks are separate gates.
+
+## World Partition implementation — next source slice
+
+`Source/World/Partition/SIRWorldPartition` now validates and copies a sorted
+cell directory into caller-supplied storage, checks unique cell IDs using an
+in-place heap-sorted index, and generates one partition-owned streaming demand
+per selected cell. Selection covers source radius, optional vertical strata,
+layer eligibility, always-resident cells, overlapping priority/target/deadline
+merging and generation-tagged request epochs. Demand output is atomic under
+capacity failure. Clang 23 syntax, bounded CMake harness tests and Clang 17
+ASan/UBSan were executed; complete engine CI is still pending.
+
+No GRDG/IO publications, ticket reconciliation, runtime actor allocation or
+provider activation are claimed by this slice. The cooker must emit the
+manifest directory, and the coordinator must reconcile request epochs and
+resource provider completions before gameplay can activate loaded cells.
