@@ -1865,6 +1865,38 @@ static void testStaleDependencyRebindingDuringTaskCompilation( void )
 	REQUIRE( allocator.m_nOutstanding.load() == 0 );
 }
 
+static void testSharedChunkAllocationRollback( void )
+{
+	for ( uint32_t nFailOrdinal = 2; nFailOrdinal <= 3; ++nFailOrdinal ) {
+		SIRTestAllocatorStats allocator = {};
+		{
+			SIRResourceGraph graph( testConfig( allocator, 8 ) );
+			REQUIRE( graph.isReady() );
+			SIRResourceGraphWriter *pWriter = graph.getWriter();
+			REQUIRE( pWriter != nullptr );
+			SIRResourceStagingHandle stage[2] = {};
+			SIRResourceMutableBytes bytes[2] = {};
+			SIRResourceChunkPublication chunks[2] = {};
+			for ( uint32_t i = 0; i < 2; ++i ) {
+				REQUIRE( pWriter->allocateStaging( 16, 8, 9, &stage[i], &bytes[i] ) == SIR_RESOURCE_RESULT_SUCCESS );
+				memset( bytes[i].m_pData, ( int )( 0x77 + i ), 16 );
+				chunks[i] = { { i + 1 }, content( 7000 + i ), stage[i], false };
+			}
+			allocator.m_nAllocationCalls.store( 0, std::memory_order_relaxed );
+			allocator.m_nFailOnAllocation.store( nFailOrdinal, std::memory_order_relaxed );
+			SIRResourcePublication publication = { key( 7100 + nFailOrdinal ), SIR_RESOURCE_KIND_BLOB, 1, 1, chunks, 2, nullptr, 0 };
+			SIRResourceHandle handle = {};
+			REQUIRE( pWriter->publish( publication, &handle ) == SIR_RESOURCE_RESULT_OUT_OF_BUDGET );
+			REQUIRE( allocator.m_nAllocationCalls.load( std::memory_order_relaxed ) == nFailOrdinal );
+			REQUIRE( graph.getStats().m_nLiveResources == 0 );
+			allocator.m_nFailOnAllocation.store( 0, std::memory_order_relaxed );
+			REQUIRE( pWriter->cancelStaging( stage[0] ) == SIR_RESOURCE_RESULT_SUCCESS );
+			REQUIRE( pWriter->cancelStaging( stage[1] ) == SIR_RESOURCE_RESULT_SUCCESS );
+		}
+		REQUIRE( allocator.m_nOutstanding.load() == 0 );
+	}
+}
+
 int main( void )
 {
 	testScopeLifetimeAndDeduplication();
@@ -1898,6 +1930,7 @@ int main( void )
 	testReverseDependencyBucketCollisions();
 	testDependencyRetiredDuringTaskCompilation();
 	testStaleDependencyRebindingDuringTaskCompilation();
+	testSharedChunkAllocationRollback();
 	printf( "PASS: GRDG resource registry, publication, deduplication, lifetime, concurrency\n" );
 	return 0;
 }
