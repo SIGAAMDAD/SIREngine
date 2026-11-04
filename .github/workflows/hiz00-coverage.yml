@@ -50,6 +50,7 @@ jobs:
           cmake -S . -B out/HiZCoverage -G Ninja \
             -DCMAKE_BUILD_TYPE=Debug \
             -DCMAKE_CXX_COMPILER="${SIR_HIZ_LLVM_BIN}/clang++" \
+            -DCMAKE_C_COMPILER="$(command -v clang-23)" \
             -DCMAKE_CXX_FLAGS="-O0 -g -fprofile-instr-generate -fcoverage-mapping" \
             -DCMAKE_EXE_LINKER_FLAGS="-fprofile-instr-generate" \
             -DCMAKE_SHARED_LINKER_FLAGS="-fprofile-instr-generate" \
