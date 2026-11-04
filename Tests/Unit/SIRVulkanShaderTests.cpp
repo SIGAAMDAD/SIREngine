@@ -23,10 +23,8 @@ int main( void )
 	if ( !sirVulkanValidateSpirv( szWords, sizeof( szWords ), "main" ) ) {
 		return 1;
 	}
-	if ( sirVulkanValidateSpirv( nullptr, sizeof( szWords ), "main" ) ||
-	     sirVulkanValidateSpirv( szWords, 19, "main" ) ||
-	     sirVulkanValidateSpirv( szWords, 21, "main" ) ||
-	     sirVulkanValidateSpirv( szWords, sizeof( szWords ), "" ) ||
+	if ( sirVulkanValidateSpirv( nullptr, sizeof( szWords ), "main" ) || sirVulkanValidateSpirv( szWords, 19, "main" ) ||
+	     sirVulkanValidateSpirv( szWords, 21, "main" ) || sirVulkanValidateSpirv( szWords, sizeof( szWords ), "" ) ||
 	     sirVulkanValidateSpirv( szWords, sizeof( szWords ), nullptr ) ||
 	     sirVulkanValidateSpirv( ( ( const uint8_t * )szWords ) + 1, 20, "main" ) ) {
 		return 2;
@@ -63,6 +61,7 @@ int main( void )
 	if ( sirVulkanValidateSpirv( szInvalid, sizeof( szInvalid ), szEntry ) ) {
 		return 8;
 	}
+
 	szEntry[127] = '\0';
 	if ( !sirVulkanValidateSpirv( szInvalid, sizeof( szInvalid ), szEntry ) ) {
 		return 9;

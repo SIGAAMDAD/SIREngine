@@ -22,15 +22,15 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // SPIR-V instruction/entry-point semantic validation before runtime use.
 bool sirVulkanValidateSpirv( const void *pBytes, uint64_t nByteCount, const char *pszEntryPoint ) noexcept
 {
-	if ( pBytes == nullptr || pszEntryPoint == nullptr || nByteCount < 20 || nByteCount > ( 64ULL << 20 ) ||
-	     ( nByteCount & 3U ) != 0 || ( ( uintptr_t )pBytes & 3U ) != 0 ) {
+	if ( pBytes == nullptr || pszEntryPoint == nullptr || nByteCount < 20 || nByteCount > ( 64ULL << 20 ) || ( nByteCount & 3U ) != 0 ||
+	     ( ( uintptr_t )pBytes & 3U ) != 0 ) {
 		return false;
 	}
 	uint32_t szHeader[5] = {};
 	memcpy( szHeader, pBytes, sizeof( szHeader ) );
 	const uint32_t nVersion = szHeader[1];
-	if ( szHeader[0] != 0x07230203U || nVersion < 0x00010000U || nVersion > 0x00010600U ||
-	     ( nVersion & 0x000000ffU ) != 0 || szHeader[3] == 0 || szHeader[4] != 0 ) {
+	if ( szHeader[0] != 0x07230203U || nVersion < 0x00010000U || nVersion > 0x00010600U || ( nVersion & 0x000000ffU ) != 0 ||
+	     szHeader[3] == 0 || szHeader[4] != 0 ) {
 		return false;
 	}
 	for ( uint32_t iChar = 0; iChar < 128; ++iChar ) {
@@ -41,8 +41,8 @@ bool sirVulkanValidateSpirv( const void *pBytes, uint64_t nByteCount, const char
 	return false;
 }
 
-sirVulkanResult_t SIRVulkanDevice::createComputePipeline( const void *pCode, uint64_t nCodeBytes,
-                                                           const char *pszEntryPoint, sirVulkanComputePipeline_t *pPipeline ) noexcept
+sirVulkanResult_t SIRVulkanDevice::createComputePipeline( const void *pCode, uint64_t nCodeBytes, const char *pszEntryPoint,
+                                                          sirVulkanComputePipeline_t *pPipeline ) noexcept
 {
 	if ( !m_bReady || m_bDeviceLost ) {
 		return SIR_VULKAN_INVALID_STATE;
@@ -96,8 +96,7 @@ sirVulkanResult_t SIRVulkanDevice::createComputePipeline( const void *pCode, uin
 	const VkResult eCreate = pfnCreateComputePipelines( m_Device, VK_NULL_HANDLE, 1, &computeInfo, nullptr, &hPipeline );
 	pfnDestroyShaderModule( m_Device, hModule, nullptr );
 	if ( eCreate != VK_SUCCESS || hPipeline == VK_NULL_HANDLE ) {
-		const PFN_vkDestroyPipeline pfnDestroyPipeline =
-		    ( PFN_vkDestroyPipeline )m_pfnGetDeviceProcAddr( m_Device, "vkDestroyPipeline" );
+		const PFN_vkDestroyPipeline pfnDestroyPipeline = ( PFN_vkDestroyPipeline )m_pfnGetDeviceProcAddr( m_Device, "vkDestroyPipeline" );
 		if ( hPipeline != VK_NULL_HANDLE && pfnDestroyPipeline != nullptr ) {
 			pfnDestroyPipeline( m_Device, hPipeline, nullptr );
 		}
@@ -133,8 +132,7 @@ sirVulkanResult_t SIRVulkanDevice::destroyComputePipeline( sirVulkanComputePipel
 			return SIR_VULKAN_BUSY;
 		}
 	}
-	const PFN_vkDestroyPipeline pfnDestroyPipeline =
-	    ( PFN_vkDestroyPipeline )m_pfnGetDeviceProcAddr( m_Device, "vkDestroyPipeline" );
+	const PFN_vkDestroyPipeline pfnDestroyPipeline = ( PFN_vkDestroyPipeline )m_pfnGetDeviceProcAddr( m_Device, "vkDestroyPipeline" );
 	const PFN_vkDestroyPipelineLayout pfnDestroyPipelineLayout =
 	    ( PFN_vkDestroyPipelineLayout )m_pfnGetDeviceProcAddr( m_Device, "vkDestroyPipelineLayout" );
 	if ( pfnDestroyPipeline == nullptr || pfnDestroyPipelineLayout == nullptr ) {

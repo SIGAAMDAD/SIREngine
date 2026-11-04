@@ -16,8 +16,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Renderer/Drivers/Vulkan/SIRVulkanGraphics.h>
 #include <Renderer/SIRGraphicsValidation.h>
 
-sirGraphicsResult_t SIRVulkanRenderingDevice::createPipeline( const sirGraphicsPipelineDesc_t &desc,
-                                                               sirGraphicsHandle_t *pHandle ) noexcept
+sirGraphicsResult_t SIRVulkanRenderingDevice::createPipeline( const sirGraphicsPipelineDesc_t &desc, sirGraphicsHandle_t *pHandle ) noexcept
 {
 	if ( pHandle == nullptr ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
@@ -34,8 +33,7 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::createPipeline( const sirGraphicsP
 	     desc.computeShader.eFormat != SIR_GRAPHICS_SHADER_SPIRV ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
-	if ( !sirVulkanValidateSpirv( desc.computeShader.pBytes, desc.computeShader.nByteCount,
-	                             desc.computeShader.pszEntryPoint ) ) {
+	if ( !sirVulkanValidateSpirv( desc.computeShader.pBytes, desc.computeShader.nByteCount, desc.computeShader.pszEntryPoint ) ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	for ( uint32_t iSlot = 0; iSlot < SIR_VULKAN_PIPELINE_CAPACITY; ++iSlot ) {
@@ -43,8 +41,7 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::createPipeline( const sirGraphicsP
 		if ( pSlot->bActive || pSlot->nGeneration == 0 ) {
 			continue;
 		}
-		const sirVulkanResult_t eCreate = m_Native.createComputePipeline( desc.computeShader.pBytes,
-		                                                                  desc.computeShader.nByteCount,
+		const sirVulkanResult_t eCreate = m_Native.createComputePipeline( desc.computeShader.pBytes, desc.computeShader.nByteCount,
 		                                                                  desc.computeShader.pszEntryPoint, &pSlot->native );
 		switch ( eCreate ) {
 		case SIR_VULKAN_SUCCESS:
