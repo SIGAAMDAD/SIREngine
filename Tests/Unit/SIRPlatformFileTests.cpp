@@ -149,7 +149,6 @@ static void sirTestPlatformFile( void )
 	SIR_REQUIRE( SIRPlatformFile::remove( pszRenamed ) == SIR_FILE_NOT_FOUND );
 }
 
-
 static void testPlatformFileInputBoundaries( void )
 {
 	const char *pszPath = "SIRPlatformFileValidationTests.bin";
@@ -172,8 +171,7 @@ static void testPlatformFileInputBoundaries( void )
 	SIR_REQUIRE( file.getSize( nullptr ) == SIR_FILE_INVALID_ARGUMENT );
 	SIR_REQUIRE( file.open( "", SIR_FILE_OPEN_READ ) == SIR_FILE_INVALID_ARGUMENT );
 	SIR_REQUIRE( file.open( pszPath, UINT32_MAX ) == SIR_FILE_INVALID_ARGUMENT );
-	SIR_REQUIRE( file.open( pszPath, SIR_FILE_OPEN_WRITE | SIR_FILE_OPEN_APPEND | SIR_FILE_OPEN_TRUNCATE ) ==
-	             SIR_FILE_INVALID_ARGUMENT );
+	SIR_REQUIRE( file.open( pszPath, SIR_FILE_OPEN_WRITE | SIR_FILE_OPEN_APPEND | SIR_FILE_OPEN_TRUNCATE ) == SIR_FILE_INVALID_ARGUMENT );
 	SIR_REQUIRE( file.open( pszPath, SIR_FILE_OPEN_READ | SIR_FILE_OPEN_EXCLUSIVE ) == SIR_FILE_INVALID_ARGUMENT );
 	SIR_REQUIRE( file.open( pszPath, SIR_FILE_OPEN_READ | SIR_FILE_OPEN_APPEND ) == SIR_FILE_INVALID_ARGUMENT );
 	SIR_REQUIRE( SIRPlatformFile::getInfo( nullptr, &info ) == SIR_FILE_INVALID_ARGUMENT );
