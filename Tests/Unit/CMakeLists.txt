@@ -90,6 +90,13 @@ target_link_libraries(SIRContainerHeapAdapterTests PRIVATE SIR::Core)
 add_test(NAME core.containers.heap-adapter COMMAND SIRContainerHeapAdapterTests)
 sir_configure_owned_target(SIRContainerHeapAdapterTests)
 
+# Shared renderer contract tests run on Windows/Linux without a GPU or native driver.
+add_executable(SIRGraphicsInterfaceTests SIRGraphicsInterfaceTests.cpp)
+target_link_libraries(SIRGraphicsInterfaceTests PRIVATE SIR::Graphics)
+add_test(NAME renderer.graphics.interface COMMAND SIRGraphicsInterfaceTests)
+sir_configure_owned_target(SIRGraphicsInterfaceTests)
+
+# Native editor authoring and scene intake tests.
 add_executable(SIREditorAuthoringTests SIREditorAuthoringTests.cpp)
 target_link_libraries(SIREditorAuthoringTests PRIVATE SIR::EditorAuthoring)
 add_test(NAME editor.authoring.transactions-and-virtual-list COMMAND SIREditorAuthoringTests)
