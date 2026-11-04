@@ -41,7 +41,11 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--build", required=True)
     parser.add_argument("--output", required=True)
+    parser.add_argument("--min-line-percent", type=float, default=0.0)
+    parser.add_argument("--min-branch-percent", type=float, default=0.0)
     args = parser.parse_args()
+    if not (0 <= args.min_line_percent <= 100 and 0 <= args.min_branch_percent <= 100):
+        parser.error("coverage thresholds must be percentages from 0 through 100")
 
     build = Path(args.build).resolve()
     output = Path(args.output).resolve()
@@ -117,6 +121,18 @@ def main():
     if any(x["executable_lines"] == 0 or x["covered_lines"] == 0 for x in result.values()):
         print("GRDG coverage collector FAILED: target has no executed statements", file=sys.stderr)
         return 1
+    failures = []
+    for source, measurement in result.items():
+        if measurement["line_percent"] < args.min_line_percent:
+            failures.append(f"{source}: {measurement['line_percent']:.2f}% lines below {args.min_line_percent:.2f}%")
+        branch = measurement["branch_percent"]
+        if branch is None or branch < args.min_branch_percent:
+            failures.append(f"{source}: {branch}% branches below {args.min_branch_percent:.2f}%")
+    if failures:
+        print("Coverage acceptance FAILED: " + "; ".join(failures), file=sys.stderr)
+        return 1
+    print(f"GRDG coverage acceptance PASS: each TU >= {args.min_line_percent:.1f}% lines and "
+          f">= {args.min_branch_percent:.1f}% branches")
     return 0
 
 

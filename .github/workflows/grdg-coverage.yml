@@ -55,6 +55,8 @@ jobs:
           python3 Tests/Profiling/CollectSIRGRDGCoverage.py
           --build out/Linux/tooling
           --output out/Nightly/GRDGCoverage
+          --min-line-percent 80
+          --min-branch-percent 60
       - name: Upload instrumented coverage report
         if: always()
         uses: actions/upload-artifact@v4
