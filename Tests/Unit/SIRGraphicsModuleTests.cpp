@@ -407,6 +407,17 @@ static bool testBinaryModule( void ) noexcept
 	if ( sirGraphicsCreateABITexture( &device, &texture, &hTexture ) != SIR_GRAPHICS_DRIVER_ERROR ) {
 		return false;
 	}
+	const sirGraphicsHandle_t previousTexture = hTexture;
+	pMode( 17 );
+	if ( sirGraphicsCreateABITexture( &device, &texture, &hTexture ) != SIR_GRAPHICS_DRIVER_ERROR ||
+	     hTexture.nDeviceGeneration != previousTexture.nDeviceGeneration || hTexture.nSlot != previousTexture.nSlot ) {
+		return false;
+	}
+	pMode( 18 );
+	if ( sirGraphicsCreateABITexture( &device, &texture, &hTexture ) != SIR_GRAPHICS_DEVICE_LOST ||
+	     hTexture.nDeviceGeneration != previousTexture.nDeviceGeneration || hTexture.nSlot != previousTexture.nSlot ) {
+		return false;
+	}
 	pMode( 10 );
 
 	// Pipeline formats are device-enabled facts: a valid recipe may still be

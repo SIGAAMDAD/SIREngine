@@ -31,7 +31,7 @@ static uint32_t s_nDeviceIdentity = 23;
 
 static bool mockHasGraphicsModels( void ) noexcept
 {
-	return s_nMockMode == 10 || s_nMockMode == 14 || s_nMockMode == 15 || s_nMockMode == 16;
+	return s_nMockMode == 10 || ( s_nMockMode >= 14 && s_nMockMode <= 18 );
 }
 
 extern "C" SIR_TEST_EXPORT void SIRSetGraphicsABIMockMode( uint32_t nMode ) noexcept
@@ -240,7 +240,10 @@ static uint32_t mockCreateTexture( void *, const sirGraphicsTextureDesc_t *pDesc
 	if ( !mockHasGraphicsModels() ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
-	*pTexture = { 4, 1, 5, SIR_GRAPHICS_HANDLE_TEXTURE };
+	if ( s_nMockMode == 18 ) {
+		return SIR_GRAPHICS_DEVICE_LOST;
+	}
+	*pTexture = { 4, 1, s_nMockMode == 17 ? 4U : 5U, SIR_GRAPHICS_HANDLE_TEXTURE };
 	return SIR_GRAPHICS_SUCCESS;
 }
 
