@@ -118,3 +118,54 @@ access, stale handles, duplicate lease release, activation/retirement ordering,
 backend load-failure rollback, and coexistence of old loaded programs with
 new active revisions. Native compiler/optimizer workers and persistent artifact
 cache are separate integration stages.
+
+## Persistent artifact cache and optimizer wire contract (implementation slice 7)
+
+`SIRScriptArtifactCache` is a language-neutral, single-owner cache storing cooked bytes as
+`<cache-root>/<64-hex-recipe-sha256>.sirbc`. The host provisions a private cache directory
+and chooses a maximum artifact byte size at configuration time (at most `UINT32_MAX` per
+entry). `makeKey()` hashes an **externally canonicalized, versioned build recipe**. That recipe
+must contain frontend/compiler and optimizer versions, source and dependency digests, binding
+schema fingerprint, target ABI/CPU capabilities, code format and optimization parameters;
+this slice does not define or silently invent frontend-specific recipe serialization. A
+cache entry records the existing `sirScriptCodeArtifact_t`, recipe SHA-256, separate cooked
+payload SHA-256, payload byte length and alignment. Its binary header uses explicit
+little-endian fields, a magic marker, and format revision 1; no C++ structure padding,
+pointer addresses or process-local tokens are persisted.
+
+The store writes into a per-process, monotonically numbered exclusive temporary file,
+flushes and synchronizes it, then atomically renames the completed record into place.
+On Linux it additionally synchronizes the parent directory; on Windows it uses
+`MoveFileExA` with write-through and replace semantics. An existing recipe key with
+different artifact metadata or bytes is rejected as a deterministic-build conflict.
+Reopening a new cache object reads the previous file without an in-memory index. Reads
+require a caller-owned aligned destination and check the complete descriptor, payload
+length, exact EOF and SHA-256 before the caller may consume the returned bytes. The
+caller can explicitly erase malformed entries and rebuild. No implicit allocator,
+heap residency, archive scan, eviction or disk-quota manager is introduced. Different
+processes **must coordinate cache writes for a given key**; the root must be trusted and
+not writable by untrusted users. No executable page mapping or runtime code loading is
+performed here.
+
+`SIRScriptOptimizationProtocol` defines portable, fixed-size revision-1 envelopes for an
+external native-code optimizer: **160-byte requests** and **200-byte completions**. Both
+carry a wire header and SHA-256 checksum; requests carry job identity, backend/program
+revision, code format, schema, target, build fingerprint, canonical recipe key, input byte
+length, and optimization tier. A successful completion carries the cache artifact
+descriptor (rather than arbitrary executable pointers). `validateCompletion()` checks
+job identity, the complete expected code identity, and the recipe digest; the host must
+then call `SIRScriptArtifactCache::fetch()` to verify the cooked bytes before passing them
+to an engine-owned immutable provider and `SIRScriptCodeManager::stage()`. Failure replies
+carry a status and no artifact. Checksums detect accidental transport corruption;
+**they do not authenticate an untrusted worker**. Launching workers, OS IPC transport,
+source-file ownership, C++/LLVM compilation, cache eviction and GRDG-backed loading
+remain separate implementations.
+
+`SIRScriptArtifactCacheTests` exercises FIPS SHA-256 vectors, durable writes/reopen,
+byte-for-byte read verification, recipe conflicts, corrupt payload refusal, explicit
+recovery, wrong-thread calls, alignment and per-entry limits. The optimization protocol
+test round-trips requests and replies, verifies cache-backed completion, rejects mismatched
+job/target/recipe identities, invalid status values, unknown fields and corrupted wires.
+Both tests are registered with native CMake/CTest alongside the existing foundation and
+code-manager suites. The focused smoke builds do not prove a full engine link or a real
+optimizer process.

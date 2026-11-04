@@ -1,11 +1,14 @@
 add_library(SIRScripting STATIC
+    Core/SIRScriptArtifactCache.cpp
     Core/SIRScriptBindingRegistry.cpp
     Core/SIRScriptCodeManager.cpp
     Core/SIRScriptIngress.cpp
     Core/SIRScriptMemoryRouter.cpp
+    Core/SIRScriptOptimizationProtocol.cpp
     Core/SIRScriptRuntime.cpp
     Core/SIRScriptScheduler.cpp
     Core/SIRScriptServer.cpp
+    Core/SIRScriptSHA256.cpp
 )
 add_library(SIR::Scripting ALIAS SIRScripting)
 target_link_libraries(SIRScripting PUBLIC SIR::Core)
