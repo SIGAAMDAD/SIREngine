@@ -14,6 +14,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Audio/FMOD/SIRFMODMixerBackend.h>
+#include <Audio/FMOD/SIRFMODBankStore.h>
 
 #include <Core/Containers/SIRRawStorage.h>
 #include <cmath>
@@ -76,7 +77,11 @@ void SIRFMODMixerBackend::shutdown( void ) noexcept
 		abort();
 	}
 	for ( uint32_t iControl = 0; iControl < m_nCount; ++iControl ) {
-		m_pContext->unpinBorrowedBankObject();
+		const sirFMODMixerControl_t &control = m_pControls[iControl];
+		if ( control.pBankStore != nullptr ) {
+			control.pBankStore->unpinBankObject( control.nPackageId );
+		}
+		m_pContext->unpinBorrowedBankObject( control.pBankStore != nullptr );
 	}
 	if ( m_pControls != nullptr ) {
 		SIRRawStorage::deallocate( m_pAllocator, m_pControls, ( size_t )m_nCapacity * sizeof( sirFMODMixerControl_t ),
@@ -110,12 +115,15 @@ bool SIRFMODMixerBackend::findControl( uint64_t nControlId, uint32_t &iIndex ) c
 	return iLow < m_nCount && m_pControls[iLow].nControlId == nControlId;
 }
 
-sirAudioResult_t SIRFMODMixerBackend::registerControl( uint64_t nControlId, const char *szPath, sirFMODMixerControlKind_t eKind ) noexcept
+sirAudioResult_t SIRFMODMixerBackend::registerControl( uint64_t nControlId, const char *szPath, sirFMODMixerControlKind_t eKind,
+                                                        SIRFMODBankStore *pBankStore, uint64_t nPackageId ) noexcept
 {
 	if ( !isReady() ) {
 		return SIR_AUDIO_NOT_INITIALIZED;
 	}
-	if ( nControlId == 0 || szPath == nullptr || szPath[0] == '\0' ) {
+	if ( nControlId == 0 || szPath == nullptr || szPath[0] == '\0' ||
+	     ( pBankStore == nullptr && nPackageId != 0 ) || ( pBankStore != nullptr && nPackageId == 0 ) ||
+	     ( pBankStore != nullptr && !pBankStore->isBoundTo( m_pContext ) ) ) {
 		return SIR_AUDIO_INVALID_ARGUMENT;
 	}
 
@@ -137,14 +145,23 @@ sirAudioResult_t SIRFMODMixerBackend::registerControl( uint64_t nControlId, cons
 		return SIR_AUDIO_BACKEND_ERROR;
 	}
 
-	if ( !m_pContext->pinBorrowedBankObject() ) {
+	if ( pBankStore != nullptr ) {
+		const sirAudioResult_t ePin = pBankStore->pinBankObject( nPackageId );
+		if ( ePin != SIR_AUDIO_OK ) {
+			return ePin;
+		}
+	}
+	if ( !m_pContext->pinBorrowedBankObject( pBankStore != nullptr ) ) {
+		if ( pBankStore != nullptr ) {
+			pBankStore->unpinBankObject( nPackageId );
+		}
 		return SIR_AUDIO_CAPACITY;
 	}
 
 	if ( iInsert < m_nCount ) {
 		memmove( m_pControls + iInsert + 1, m_pControls + iInsert, ( size_t )( m_nCount - iInsert ) * sizeof( sirFMODMixerControl_t ) );
 	}
-	m_pControls[iInsert] = { nControlId, pNative, eKind, {} };
+	m_pControls[iInsert] = { nControlId, nPackageId, pNative, pBankStore, eKind, {} };
 	++m_nCount;
 	return SIR_AUDIO_OK;
 }
@@ -159,6 +176,18 @@ sirAudioResult_t SIRFMODMixerBackend::registerVCA( uint64_t nControlId, const ch
 	return registerControl( nControlId, szPath, SIR_FMOD_MIXER_VCA );
 }
 
+sirAudioResult_t SIRFMODMixerBackend::registerBusFromBank( uint64_t nControlId, uint64_t nPackageId,
+                                                             SIRFMODBankStore *pBankStore, const char *szPath ) noexcept
+{
+	return registerControl( nControlId, szPath, SIR_FMOD_MIXER_BUS, pBankStore, nPackageId );
+}
+
+sirAudioResult_t SIRFMODMixerBackend::registerVCAFromBank( uint64_t nControlId, uint64_t nPackageId,
+                                                             SIRFMODBankStore *pBankStore, const char *szPath ) noexcept
+{
+	return registerControl( nControlId, szPath, SIR_FMOD_MIXER_VCA, pBankStore, nPackageId );
+}
+
 sirAudioResult_t SIRFMODMixerBackend::unregisterControl( uint64_t nControlId ) noexcept
 {
 	if ( !isReady() ) {
@@ -169,11 +198,15 @@ sirAudioResult_t SIRFMODMixerBackend::unregisterControl( uint64_t nControlId ) n
 		return SIR_AUDIO_INVALID_ARGUMENT;
 	}
 
+	const sirFMODMixerControl_t control = m_pControls[iIndex];
 	if ( iIndex + 1 < m_nCount ) {
 		memmove( m_pControls + iIndex, m_pControls + iIndex + 1, ( size_t )( m_nCount - iIndex - 1 ) * sizeof( sirFMODMixerControl_t ) );
 	}
 	--m_nCount;
-	m_pContext->unpinBorrowedBankObject();
+	if ( control.pBankStore != nullptr ) {
+		control.pBankStore->unpinBankObject( control.nPackageId );
+	}
+	m_pContext->unpinBorrowedBankObject( control.pBankStore != nullptr );
 	return SIR_AUDIO_OK;
 }
 

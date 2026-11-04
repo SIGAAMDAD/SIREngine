@@ -132,12 +132,12 @@ sirAudioResult_t SIRFMODBankStore::loadBank( uint64_t nPackageId, const char *sz
 		// A native load must return a null handle on failure. A nonnull one
 		// is quarantined in a slot so the caller can explicitly unload it.
 		if ( pBank != nullptr ) {
-			m_pBanks[m_nBankCount++] = { nPackageId, pBank, 0, 0, {} };
+			m_pBanks[m_nBankCount++] = { nPackageId, pBank, 0, 0, 0, {} };
 		}
 		return SIR_AUDIO_BACKEND_ERROR;
 	}
 
-	m_pBanks[m_nBankCount++] = { nPackageId, pBank, 0, 1, {} };
+	m_pBanks[m_nBankCount++] = { nPackageId, pBank, 0, 0, 1, {} };
 	return SIR_AUDIO_OK;
 }
 
@@ -272,10 +272,9 @@ sirAudioResult_t SIRFMODBankStore::unloadBank( uint64_t nPackageId ) noexcept
 	if ( !findBank( nPackageId, iBank ) ) {
 		return SIR_AUDIO_INVALID_ARGUMENT;
 	}
-	// A registered bus, VCA, or snapshot description can originate from any
-	// loaded bank. Fail closed until the controller releases every borrowed
-	// registration; this guard is constant time and allocation free.
-	if ( m_pContext->getBorrowedBankObjectCount() != 0 ) {
+	// Exact bank owners can retire independently. Unscoped registrations
+	// retain the conservative context-wide guard until their owner is known.
+	if ( m_pContext->getUnscopedBankObjectCount() != 0 || m_pBanks[iBank].nBorrowedObjects != 0 ) {
 		return SIR_AUDIO_BUSY;
 	}
 	for ( uint32_t iEvent = 0; iEvent < m_nEventCount; ++iEvent ) {
@@ -320,6 +319,42 @@ sirAudioResult_t SIRFMODBankStore::shutdown( void ) noexcept
 	}
 	releaseStorage();
 	return SIR_AUDIO_OK;
+}
+
+bool SIRFMODBankStore::isBoundTo( const SIRFMODContext *pContext ) const noexcept
+{
+	return m_pContext == pContext && isReady();
+}
+
+sirAudioResult_t SIRFMODBankStore::pinBankObject( uint64_t nPackageId ) noexcept
+{
+	if ( !isReady() ) {
+		return SIR_AUDIO_NOT_INITIALIZED;
+	}
+	uint32_t iBank = 0;
+	if ( !findBank( nPackageId, iBank ) || m_pBanks[iBank].bUsable == 0 ) {
+		return SIR_AUDIO_INVALID_HANDLE;
+	}
+	if ( m_pBanks[iBank].nBorrowedObjects == UINT32_MAX ) {
+		return SIR_AUDIO_CAPACITY;
+	}
+	++m_pBanks[iBank].nBorrowedObjects;
+	return SIR_AUDIO_OK;
+}
+
+void SIRFMODBankStore::unpinBankObject( uint64_t nPackageId ) noexcept
+{
+	uint32_t iBank = 0;
+	if ( !isReady() || !findBank( nPackageId, iBank ) || m_pBanks[iBank].nBorrowedObjects == 0 ) {
+		abort();
+	}
+	--m_pBanks[iBank].nBorrowedObjects;
+}
+
+uint32_t SIRFMODBankStore::getBankObjectPinCount( uint64_t nPackageId ) const noexcept
+{
+	uint32_t iBank = 0;
+	return isReady() && findBank( nPackageId, iBank ) ? m_pBanks[iBank].nBorrowedObjects : 0;
 }
 
 bool SIRFMODBankStore::hasLoadedBank( uint64_t nPackageId ) const noexcept

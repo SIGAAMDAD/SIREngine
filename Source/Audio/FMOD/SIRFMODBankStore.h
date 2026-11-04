@@ -55,9 +55,10 @@ typedef struct sirFMODBankSlot_s
 {
 	uint64_t nPackageId;
 	void *pBank;
+	uint32_t nBorrowedObjects;
 	uint8_t bPreloadRequested;
 	uint8_t bUsable;
-	uint8_t nReserved[6];
+	uint8_t nReserved[2];
 } sirFMODBankSlot_t;
 
 typedef struct sirFMODBankEvent_s
@@ -108,6 +109,10 @@ public:
 	bool isReady( void ) const noexcept;
 	uint32_t getLoadedBankCount( void ) const noexcept;
 	bool hasLoadedBank( uint64_t nPackageId ) const noexcept;
+	bool isBoundTo( const SIRFMODContext *pContext ) const noexcept;
+	sirAudioResult_t pinBankObject( uint64_t nPackageId ) noexcept;
+	void unpinBankObject( uint64_t nPackageId ) noexcept;
+	uint32_t getBankObjectPinCount( uint64_t nPackageId ) const noexcept;
 	uint32_t getBoundEventCount( void ) const noexcept;
 	int32_t getLastNativeResult( void ) const noexcept;
 };

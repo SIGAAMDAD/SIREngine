@@ -27,6 +27,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Audio/FMOD/SIRFMODContext.h>
 #include <Core/Containers/SIRContainerResult.h>
 
+class SIRFMODBankStore;
+
 // FMOD objects are borrowed from the context's Studio system. The caller
 // owns one thread and must unload banks only after removing their bindings.
 typedef struct sirFMODMixerNativeOps_s
@@ -49,7 +51,9 @@ typedef enum sirFMODMixerControlKind_e : uint8_t
 typedef struct sirFMODMixerControl_s
 {
 	uint64_t nControlId;
+	uint64_t nPackageId;
 	void *pNative;
+	SIRFMODBankStore *pBankStore;
 	sirFMODMixerControlKind_t eKind;
 	uint8_t nReserved[7];
 } sirFMODMixerControl_t;
@@ -71,7 +75,8 @@ private:
 
 	bool isReady( void ) const noexcept;
 	bool findControl( uint64_t nControlId, uint32_t &iIndex ) const noexcept;
-	sirAudioResult_t registerControl( uint64_t nControlId, const char *szPath, sirFMODMixerControlKind_t eKind ) noexcept;
+	sirAudioResult_t registerControl( uint64_t nControlId, const char *szPath, sirFMODMixerControlKind_t eKind,
+	                                 SIRFMODBankStore *pBankStore = nullptr, uint64_t nPackageId = 0 ) noexcept;
 	sirAudioResult_t setVolume( uint64_t nControlId, float fVolume, sirFMODMixerControlKind_t eKind ) noexcept;
 
 public:
@@ -86,6 +91,10 @@ public:
 	void shutdown( void ) noexcept;
 	sirAudioResult_t registerBus( uint64_t nControlId, const char *szPath ) noexcept;
 	sirAudioResult_t registerVCA( uint64_t nControlId, const char *szPath ) noexcept;
+	sirAudioResult_t registerBusFromBank( uint64_t nControlId, uint64_t nPackageId, SIRFMODBankStore *pBankStore,
+	                                      const char *szPath ) noexcept;
+	sirAudioResult_t registerVCAFromBank( uint64_t nControlId, uint64_t nPackageId, SIRFMODBankStore *pBankStore,
+	                                      const char *szPath ) noexcept;
 	sirAudioResult_t unregisterControl( uint64_t nControlId ) noexcept;
 	sirAudioResult_t setBusVolume( uint64_t nControlId, float fVolume ) noexcept;
 	sirAudioResult_t setBusMute( uint64_t nControlId, bool bMute ) noexcept;

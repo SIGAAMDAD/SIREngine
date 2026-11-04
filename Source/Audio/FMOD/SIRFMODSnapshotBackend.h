@@ -27,6 +27,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Audio/FMOD/SIRFMODContext.h>
 #include <Core/Containers/SIRContainerResult.h>
 
+class SIRFMODBankStore;
+
 // Snapshot event descriptions are borrowed from loaded banks. Each active
 // EventInstance is owned here until release succeeds. Call only on the Studio
 // owner thread and unregister descriptions before unloading their banks.
@@ -44,8 +46,10 @@ typedef struct sirFMODSnapshotNativeOps_s
 typedef struct sirFMODSnapshotRecord_s
 {
 	uint64_t nSnapshotId;
+	uint64_t nPackageId;
 	void *pDescription;
 	void *pInstance;
+	SIRFMODBankStore *pBankStore;
 	uint8_t bStarted;
 	uint8_t nReserved[7];
 } sirFMODSnapshotRecord_t;
@@ -69,6 +73,8 @@ private:
 	bool findSnapshot( uint64_t nSnapshotId, uint32_t &iIndex ) const noexcept;
 	sirAudioResult_t releaseInstance( sirFMODSnapshotRecord_t &record, bool bStop, sirAudioStopMode_t eMode ) noexcept;
 	void releaseStorage( void ) noexcept;
+	sirAudioResult_t registerSnapshotInternal( uint64_t nSnapshotId, const char *szPath,
+	                                         SIRFMODBankStore *pBankStore, uint64_t nPackageId ) noexcept;
 
 public:
 	SIRFMODSnapshotBackend( void ) noexcept = default;
@@ -81,6 +87,8 @@ public:
 	sirAudioResult_t initialize( void ) noexcept;
 	sirAudioResult_t shutdown( void ) noexcept;
 	sirAudioResult_t registerSnapshot( uint64_t nSnapshotId, const char *szPath ) noexcept;
+	sirAudioResult_t registerSnapshotFromBank( uint64_t nSnapshotId, uint64_t nPackageId,
+	                                           SIRFMODBankStore *pBankStore, const char *szPath ) noexcept;
 	sirAudioResult_t unregisterSnapshot( uint64_t nSnapshotId ) noexcept;
 	sirAudioResult_t startSnapshot( uint64_t nSnapshotId ) noexcept;
 	sirAudioResult_t stopSnapshot( uint64_t nSnapshotId, sirAudioStopMode_t eMode ) noexcept;
