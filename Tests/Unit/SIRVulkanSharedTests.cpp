@@ -432,6 +432,14 @@ int main( void )
 	if ( driver.destroyDevice( pDevice ) != SIR_GRAPHICS_SUCCESS || pDevice->getDeviceGeneration() != 0 ) {
 		return 14;
 	}
+	if ( ( capabilities.nFeatureMask & SIR_GRAPHICS_FEATURE_COMPUTE ) != 0 ) {
+		create.nRequiredFeatures = SIR_GRAPHICS_FEATURE_COMPUTE;
+		pDevice = nullptr;
+		if ( driver.createDevice( create, &pDevice ) != SIR_GRAPHICS_SUCCESS || pDevice == nullptr ||
+		     driver.destroyDevice( pDevice ) != SIR_GRAPHICS_SUCCESS ) {
+			return 43;
+		}
+	}
 	printf( "Vulkan shared API headless transfer passed\n" );
 	return 0;
 }
