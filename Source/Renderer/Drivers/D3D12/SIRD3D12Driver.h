@@ -53,7 +53,8 @@ public:
 	sirGraphicsResult_t createView( const sirGraphicsViewDesc_t &desc, sirGraphicsHandle_t *pHandle ) noexcept override;
 	sirGraphicsResult_t createSampler( const sirGraphicsSamplerDesc_t &desc, sirGraphicsHandle_t *pHandle ) noexcept override;
 	sirGraphicsResult_t createPipeline( const sirGraphicsPipelineDesc_t &desc, sirGraphicsHandle_t *pHandle ) noexcept override;
-	sirGraphicsResult_t createBindingSet( sirGraphicsHandle_t hPipeline, uint32_t nSetIndex, sirGraphicsHandle_t *pHandle ) noexcept override;
+	sirGraphicsResult_t createBindingSet( sirGraphicsHandle_t hPipeline, uint32_t nSetIndex,
+	                                      sirGraphicsHandle_t *pHandle ) noexcept override;
 	sirGraphicsResult_t updateBindings( sirGraphicsHandle_t hSet, const sirGraphicsDescriptorWrite_t *pWrites,
 	                                    uint32_t nWriteCount ) noexcept override;
 	sirGraphicsResult_t mapBuffer( sirGraphicsHandle_t hBuffer, uint64_t nOffsetBytes, uint64_t nBytes,
@@ -74,8 +75,7 @@ public:
 	sirGraphicsResult_t resizeSurface( sirGraphicsHandle_t hSurface, const sirGraphicsNativeSurface_t &native,
 	                                   const sirGraphicsPresentDesc_t &present ) noexcept override;
 	sirGraphicsResult_t acquireSurfaceImage( sirGraphicsHandle_t hSurface, sirGraphicsSurfaceImage_t *pImage ) noexcept override;
-	sirGraphicsResult_t present( const sirGraphicsSurfaceImage_t &image,
-	                             const sirGraphicsCompletion_t &renderComplete ) noexcept override;
+	sirGraphicsResult_t present( const sirGraphicsSurfaceImage_t &image, const sirGraphicsCompletion_t &renderComplete ) noexcept override;
 	sirGraphicsResult_t shutdown( void ) noexcept override;
 };
 
