@@ -629,6 +629,66 @@ static void testShutdownWithLiveTasksAndProviderWait( void )
 	memory.shutdown();
 }
 
+typedef struct sirTestPriorityRecord_s
+{
+	std::atomic<uint32_t> *pCount;
+	uint32_t *pOrder;
+	uint32_t nPriority;
+} sirTestPriorityRecord_t;
+
+static sirTaskResult_t recordPriorityTask( void *pContext, sirTaskHandle_t ) noexcept
+{
+	sirTestPriorityRecord_t *pRecord = ( sirTestPriorityRecord_t * )pContext;
+	const uint32_t nIndex = pRecord->pCount->fetch_add( 1, std::memory_order_relaxed );
+	pRecord->pOrder[nIndex] = pRecord->nPriority;
+	return SIR_TASK_RESULT_SUCCESS;
+}
+
+static void testPrioritySchedulingFairness( void )
+{
+	SIRMemoryManager memory;
+	const sirMemoryConfig_t memoryConfig = { 64ULL * 1024 * 1024, 16ULL * 1024 * 1024, 4ULL * 1024 * 1024, 16 };
+	SIR_TEST_CHECK( memory.init( memoryConfig ) );
+	SIRTaskScheduler scheduler;
+	SIR_TEST_CHECK( scheduler.init( &memory, { 32, 0, 64 } ) );
+	std::atomic<uint32_t> nExecuted( 0 );
+	uint32_t szOrder[28] = {};
+	sirTestPriorityRecord_t records[28] = {};
+	sirTaskHandle_t handles[28] = {};
+	for ( uint32_t i = 0; i < 28; ++i ) {
+		const sirTaskPriority_t priority = i < 16   ? SIR_TASK_PRIORITY_CRITICAL
+		                                   : i < 24 ? SIR_TASK_PRIORITY_NORMAL
+		                                            : SIR_TASK_PRIORITY_BACKGROUND;
+		records[i] = { &nExecuted, szOrder, ( uint32_t )priority };
+		SIR_TEST_CHECK( scheduler.submit( recordPriorityTask, &records[i], priority, SIR_TASK_EXEC_MAIN, &handles[i] ) );
+	}
+	SIR_TEST_CHECK( scheduler.pumpMain( 28 ) == 28 );
+	SIR_TEST_CHECK( nExecuted.load() == 28 );
+	for ( uint32_t i = 0; i < 8; ++i ) {
+		SIR_TEST_CHECK( szOrder[i] == SIR_TASK_PRIORITY_CRITICAL );
+	}
+	SIR_TEST_CHECK( szOrder[8] == SIR_TASK_PRIORITY_NORMAL );
+	for ( uint32_t i = 9; i < 17; ++i ) {
+		SIR_TEST_CHECK( szOrder[i] == SIR_TASK_PRIORITY_CRITICAL );
+	}
+	for ( uint32_t i = 17; i < 20; ++i ) {
+		SIR_TEST_CHECK( szOrder[i] == SIR_TASK_PRIORITY_NORMAL );
+	}
+	SIR_TEST_CHECK( szOrder[20] == SIR_TASK_PRIORITY_BACKGROUND );
+	for ( uint32_t i = 21; i < 25; ++i ) {
+		SIR_TEST_CHECK( szOrder[i] == SIR_TASK_PRIORITY_NORMAL );
+	}
+	for ( uint32_t i = 25; i < 28; ++i ) {
+		SIR_TEST_CHECK( szOrder[i] == SIR_TASK_PRIORITY_BACKGROUND );
+	}
+	for ( uint32_t i = 0; i < 28; ++i ) {
+		SIR_TEST_CHECK( scheduler.getState( handles[i] ) == SIR_TASK_COMPLETED );
+		SIR_TEST_CHECK( scheduler.releaseTask( handles[i] ) );
+	}
+	SIR_TEST_CHECK( scheduler.shutdown() );
+	memory.shutdown();
+}
+
 int main( void )
 {
 	testScheduler();
@@ -642,5 +702,6 @@ int main( void )
 	testLocalCancellation();
 	testInvalidInputAndProviderLifecycle();
 	testShutdownWithLiveTasksAndProviderWait();
+	testPrioritySchedulingFairness();
 	return 0;
 }
