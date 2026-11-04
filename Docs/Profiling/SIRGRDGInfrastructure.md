@@ -65,9 +65,11 @@ coverage using `gcov --json-format --branch-probabilities --branch-counts`.
 production translation units actually produced instrumented object data and
 writes machine-readable `grdg-coverage.json` plus an accompanying Markdown
 report as an Actions artifact. The job rejects missing objects, incomplete
-collections and zero executed statements. The first run will establish
-measured line/branch percentages; numeric percentage acceptance thresholds
-can then be selected from actual results rather than invented values.
+collections and zero executed statements. The initial instrumented run measured **3,081 of 3,460 executable lines
+(89.05%)** and **1,880 of 2,748 branches (68.41%)** across nine production
+translation units. CI now requires **at least 80% executable-line coverage
+and 60% branch coverage separately for each of the nine translation units**.
+This rejects low-coverage changes even when the aggregate remains high.
 
 `profiling.grdg.benchmark-validator` exercises seven positive/negative
 regression checks on the benchmark JSON validator, including missing cases,
