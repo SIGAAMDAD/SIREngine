@@ -29,6 +29,11 @@ static uint64_t s_nSubmitted = 0;
 static uint32_t s_nDriverIdentity = 17;
 static uint32_t s_nDeviceIdentity = 23;
 
+static bool mockHasGraphicsModels( void ) noexcept
+{
+	return s_nMockMode == 10 || s_nMockMode == 14 || s_nMockMode == 15 || s_nMockMode == 16;
+}
+
 extern "C" SIR_TEST_EXPORT void SIRSetGraphicsABIMockMode( uint32_t nMode ) noexcept
 {
 	s_nMockMode = nMode;
@@ -72,7 +77,7 @@ static uint32_t mockQueryAdapter( void *, sirGraphicsABIAdapter_t *pInfo ) noexc
 			pInfo->nFeatureMask |= SIR_GRAPHICS_FEATURE_GRAPHICS;
 		}
 	}
-	if ( s_nMockMode == 10 ) {
+	if ( mockHasGraphicsModels() ) {
 		pInfo->nFeatureMask |= SIR_GRAPHICS_FEATURE_GRAPHICS | SIR_GRAPHICS_FEATURE_FIXED_FUNCTION;
 	}
 	if ( s_nMockMode == 13 ) {
@@ -98,14 +103,14 @@ static uint32_t mockQueryCapabilities( void *, sirGraphicsABICapabilities_t *pIn
 	pInfo->nAdapterKind = SIR_GRAPHICS_ABI_ADAPTER_SOFTWARE;
 	pInfo->nEnabledFeatures = SIR_GRAPHICS_FEATURE_COMPUTE;
 	pInfo->nPipelineModelMask = 1U << ( SIR_GRAPHICS_PIPELINE_MODEL_MODERN - 1 );
-	if ( s_nMockMode == 10 ) {
+	if ( mockHasGraphicsModels() ) {
 		pInfo->nEnabledFeatures |= SIR_GRAPHICS_FEATURE_GRAPHICS | SIR_GRAPHICS_FEATURE_FIXED_FUNCTION;
 		pInfo->nPipelineModelMask = ( 1U << SIR_GRAPHICS_PIPELINE_MODEL_FIXED_FUNCTION ) - 1U;
 		pInfo->nMaximumColorAttachments = 1;
 	}
 	pInfo->nEnabledQueues = 1U << SIR_GRAPHICS_QUEUE_DIRECT;
 	pInfo->nMaximumFramesInFlight = 2;
-	pInfo->nMaximumSamples = 1;
+	pInfo->nMaximumSamples = s_nMockMode == 15 ? 2 : 1;
 	pInfo->nMaximumTextureDimension = 4096;
 	pInfo->nMaximumBindings = 16;
 	return SIR_GRAPHICS_ABI_SUCCESS;
@@ -118,7 +123,7 @@ static uint32_t mockQueryPipelineModelCaps( void *, uint32_t nModel, sirGraphics
 	if ( pCaps == nullptr || pCaps->nSize < sizeof( sirGraphicsABIPipelineModelCaps_t ) ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	if ( nModel != SIR_GRAPHICS_PIPELINE_MODEL_MODERN && s_nMockMode != 10 && s_nMockMode != 11 ) {
+	if ( nModel != SIR_GRAPHICS_PIPELINE_MODEL_MODERN && !mockHasGraphicsModels() && s_nMockMode != 11 ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
 	if ( nModel < SIR_GRAPHICS_PIPELINE_MODEL_MODERN || nModel > SIR_GRAPHICS_PIPELINE_MODEL_FIXED_FUNCTION ) {
@@ -135,7 +140,7 @@ static uint32_t mockQueryPipelineModelCaps( void *, uint32_t nModel, sirGraphics
 	pCaps->nMaximumVertexStreams = 4;
 	pCaps->nMaximumVertexAttributes = 8;
 	pCaps->nMaximumTextureUnits = 8;
-	pCaps->nMaximumColorAttachments = s_nMockMode == 10 ? 1 : 0;
+	pCaps->nMaximumColorAttachments = mockHasGraphicsModels() ? 1 : 0;
 
 	if ( nModel == SIR_GRAPHICS_PIPELINE_MODEL_FIXED_FUNCTION ) {
 		pCaps->nExecutionModel = SIR_GRAPHICS_EXECUTION_STATEFUL_SERIAL;
@@ -164,7 +169,7 @@ static uint32_t mockQueryPipelineModelCaps( void *, uint32_t nModel, sirGraphics
 	pCaps->nRequiredFeatureMask = SIR_GRAPHICS_FEATURE_COMPUTE;
 	pCaps->nShaderStageMask = SIR_GRAPHICS_STAGE_COMPUTE;
 	pCaps->nShaderFormatMask = 1U << ( SIR_GRAPHICS_SHADER_SPIRV - 1 );
-	if ( s_nMockMode == 10 ) {
+	if ( mockHasGraphicsModels() ) {
 		pCaps->nRequiredFeatureMask |= SIR_GRAPHICS_FEATURE_GRAPHICS;
 		pCaps->nShaderStageMask |= SIR_GRAPHICS_STAGE_VERTEX | SIR_GRAPHICS_STAGE_FRAGMENT;
 	}
@@ -176,15 +181,24 @@ static uint32_t mockQueryFormat( void *, sirGraphicsABIFormat_t *pInfo ) noexcep
 	if ( pInfo == nullptr || pInfo->nSize < sizeof( sirGraphicsABIFormat_t ) ) {
 		return SIR_GRAPHICS_ABI_INVALID_ARGUMENT;
 	}
-	if ( pInfo->nFormat != SIR_GRAPHICS_FORMAT_RGBA8_UNORM ) {
+	if ( pInfo->nFormat != SIR_GRAPHICS_FORMAT_RGBA8_UNORM &&
+	     ( pInfo->nFormat != SIR_GRAPHICS_FORMAT_D16_UNORM || !mockHasGraphicsModels() ) ) {
 		return SIR_GRAPHICS_ABI_UNSUPPORTED;
 	}
 	const uint32_t nRequested = pInfo->nFormat;
 	*pInfo = {};
 	pInfo->nSize = sizeof( *pInfo );
-	pInfo->nFormat = s_nMockMode == 2 ? SIR_GRAPHICS_FORMAT_BGRA8_UNORM : nRequested;
+	pInfo->nFormat = ( s_nMockMode == 2 || s_nMockMode == 16 ) ? SIR_GRAPHICS_FORMAT_BGRA8_UNORM : nRequested;
 	pInfo->nOptimalFeatures = SIR_GRAPHICS_ABI_FORMAT_SAMPLED | SIR_GRAPHICS_ABI_FORMAT_TRANSFER_DST;
-	pInfo->nSampleCountMask = 1;
+	if ( mockHasGraphicsModels() ) {
+		if ( nRequested == SIR_GRAPHICS_FORMAT_RGBA8_UNORM && s_nMockMode != 14 ) {
+			pInfo->nOptimalFeatures |= SIR_GRAPHICS_ABI_FORMAT_COLOR_ATTACHMENT;
+		}
+		if ( nRequested == SIR_GRAPHICS_FORMAT_D16_UNORM ) {
+			pInfo->nOptimalFeatures |= SIR_GRAPHICS_ABI_FORMAT_DEPTH_STENCIL;
+		}
+	}
+	pInfo->nSampleCountMask = s_nMockMode == 15 ? 2 : 1;
 	return SIR_GRAPHICS_ABI_SUCCESS;
 }
 
@@ -218,9 +232,16 @@ static uint32_t mockCreateBuffer( void *, const sirGraphicsBufferDesc_t *, sirGr
 	return SIR_GRAPHICS_ABI_UNSUPPORTED;
 }
 
-static uint32_t mockCreateTexture( void *, const sirGraphicsTextureDesc_t *, sirGraphicsHandle_t * ) noexcept
+static uint32_t mockCreateTexture( void *, const sirGraphicsTextureDesc_t *pDesc, sirGraphicsHandle_t *pTexture ) noexcept
 {
-	return SIR_GRAPHICS_ABI_UNSUPPORTED;
+	if ( pDesc == nullptr || pTexture == nullptr ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	if ( !mockHasGraphicsModels() ) {
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
+	*pTexture = { 4, 1, 5, SIR_GRAPHICS_HANDLE_TEXTURE };
+	return SIR_GRAPHICS_SUCCESS;
 }
 
 static uint32_t mockCreateView( void *, const sirGraphicsViewDesc_t *, sirGraphicsHandle_t * ) noexcept

@@ -352,6 +352,101 @@ static bool testBinaryModule( void ) noexcept
 	programmable.nTextureUnits = 1;
 	modern.nRequiredFeatures = SIR_GRAPHICS_FEATURE_COMPUTE;
 
+	// Native resource creation is admitted through real format and device
+	// limits before the provider is allowed to allocate GPU memory.
+	sirGraphicsTextureDesc_t texture = {};
+	texture.nWidth = 128;
+	texture.nHeight = 128;
+	texture.nDepth = 1;
+	texture.nArrayLayers = 1;
+	texture.nMipLevels = 1;
+	texture.nSampleCount = 1;
+	texture.nUsage = SIR_GRAPHICS_USAGE_SAMPLED | SIR_GRAPHICS_USAGE_COPY_DESTINATION;
+	texture.eDimension = SIR_GRAPHICS_TEXTURE_2D;
+	texture.eFormat = SIR_GRAPHICS_FORMAT_RGBA8_UNORM;
+	texture.eMemory = SIR_GRAPHICS_MEMORY_GPU_LOCAL;
+	sirGraphicsHandle_t hTexture = {};
+	if ( sirGraphicsCreateABITexture( &device, &texture, &hTexture ) != SIR_GRAPHICS_SUCCESS ||
+	     hTexture.eType != SIR_GRAPHICS_HANDLE_TEXTURE || hTexture.nDeviceGeneration != 5 ) {
+		return false;
+	}
+	texture.nWidth = 8192;
+	if ( sirGraphicsCreateABITexture( &device, &texture, &hTexture ) != SIR_GRAPHICS_UNSUPPORTED ) {
+		return false;
+	}
+	texture.nWidth = 128;
+	texture.nUsage = SIR_GRAPHICS_USAGE_VERTEX;
+	if ( sirGraphicsCreateABITexture( &device, &texture, &hTexture ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return false;
+	}
+	texture.nUsage = SIR_GRAPHICS_USAGE_COLOR_ATTACHMENT;
+	texture.eMemory = SIR_GRAPHICS_MEMORY_CPU_UPLOAD;
+	if ( sirGraphicsCreateABITexture( &device, &texture, &hTexture ) != SIR_GRAPHICS_UNSUPPORTED ) {
+		return false;
+	}
+	texture.eMemory = SIR_GRAPHICS_MEMORY_GPU_LOCAL;
+	texture.eFormat = SIR_GRAPHICS_FORMAT_D16_UNORM;
+	if ( sirGraphicsCreateABITexture( &device, &texture, &hTexture ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return false;
+	}
+	texture.eFormat = SIR_GRAPHICS_FORMAT_RGBA8_UNORM;
+	pMode( 14 );
+	if ( sirGraphicsCreateABITexture( &device, &texture, &hTexture ) != SIR_GRAPHICS_UNSUPPORTED ) {
+		return false;
+	}
+	pMode( 15 );
+	if ( sirGraphicsCreateABITexture( &device, &texture, &hTexture ) != SIR_GRAPHICS_UNSUPPORTED ) {
+		return false;
+	}
+	texture.nSampleCount = 2;
+	if ( sirGraphicsCreateABITexture( &device, &texture, &hTexture ) != SIR_GRAPHICS_SUCCESS ) {
+		return false;
+	}
+	texture.nSampleCount = 1;
+	pMode( 16 );
+	if ( sirGraphicsCreateABITexture( &device, &texture, &hTexture ) != SIR_GRAPHICS_DRIVER_ERROR ) {
+		return false;
+	}
+	pMode( 10 );
+
+	// Pipeline formats are device-enabled facts: a valid recipe may still be
+	// unsuitable for the native attachment format or sample-count mask.
+	programmablePipeline.nDepthFormat = SIR_GRAPHICS_FORMAT_D16_UNORM;
+	if ( sirGraphicsCreateABIPipeline( &device, &programmablePipeline, &hPipeline ) != SIR_GRAPHICS_SUCCESS ) {
+		return false;
+	}
+	pMode( 14 );
+	if ( sirGraphicsCreateABIPipeline( &device, &programmablePipeline, &hPipeline ) != SIR_GRAPHICS_UNSUPPORTED ) {
+		return false;
+	}
+	pMode( 15 );
+	if ( sirGraphicsCreateABIPipeline( &device, &programmablePipeline, &hPipeline ) != SIR_GRAPHICS_UNSUPPORTED ) {
+		return false;
+	}
+	pMode( 16 );
+	if ( sirGraphicsCreateABIPipeline( &device, &programmablePipeline, &hPipeline ) != SIR_GRAPHICS_DRIVER_ERROR ) {
+		return false;
+	}
+	programmablePipeline.nDepthFormat = SIR_GRAPHICS_FORMAT_UNKNOWN;
+	modern.nRequiredFeatures = SIR_GRAPHICS_FEATURE_RAY_TRACING;
+	pMode( 14 );
+	iSelected = 99;
+	if ( sirGraphicsSelectABIPipelineVariant( &device, szVariants, 3, &iSelected ) != SIR_GRAPHICS_UNSUPPORTED ||
+	     iSelected != 99 ) {
+		return false;
+	}
+	pMode( 16 );
+	if ( sirGraphicsSelectABIPipelineVariant( &device, szVariants, 3, &iSelected ) != SIR_GRAPHICS_DRIVER_ERROR ||
+	     iSelected != 99 ) {
+		return false;
+	}
+	pMode( 10 );
+	if ( sirGraphicsSelectABIPipelineVariant( &device, szVariants, 3, &iSelected ) != SIR_GRAPHICS_SUCCESS ||
+	     iSelected != 1 ) {
+		return false;
+	}
+	modern.nRequiredFeatures = SIR_GRAPHICS_FEATURE_COMPUTE;
+
 	szVariants[0].pModern = nullptr;
 	iSelected = 99;
 	if ( sirGraphicsSelectABIPipelineVariant( &device, szVariants, 3, &iSelected ) != SIR_GRAPHICS_INVALID_ARGUMENT ||

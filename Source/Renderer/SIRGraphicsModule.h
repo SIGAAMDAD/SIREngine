@@ -83,6 +83,11 @@ sirGraphicsABIResult_t sirGraphicsQueryABIPipelineModelCaps( const sirGraphicsAB
 sirGraphicsABIResult_t sirGraphicsSelectABIPipelineVariant( const sirGraphicsABIDevice_t *pDevice,
                                                             const sirGraphicsABIPipeline_t *pCandidates, uint32_t nCount,
                                                             uint32_t *pIndex ) noexcept;
+// Enforces enabled format usages, multisampling and device bounds before
+// invoking the native texture allocator. pTexture is unchanged on failure.
+sirGraphicsABIResult_t sirGraphicsCreateABITexture( const sirGraphicsABIDevice_t *pDevice, const sirGraphicsTextureDesc_t *pDesc,
+                                                    sirGraphicsHandle_t *pTexture ) noexcept;
+
 sirGraphicsABIResult_t sirGraphicsCreateABIPipeline( const sirGraphicsABIDevice_t *pDevice, const sirGraphicsABIPipeline_t *pDesc,
                                                      sirGraphicsHandle_t *pPipeline ) noexcept;
 sirGraphicsABIResult_t sirGraphicsQueryABIFormat( const sirGraphicsABIDevice_t *pDevice, uint32_t nFormat,

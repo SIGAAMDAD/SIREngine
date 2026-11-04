@@ -15,6 +15,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Renderer/SIRGraphicsModule.h>
 #include <Renderer/SIRGraphicsTypes.h>
+#include <Renderer/SIRGraphicsValidation.h>
 #include <string.h>
 
 static sirGraphicsABIResult_t sirGraphicsResultFromProvider( uint32_t nResult ) noexcept
@@ -343,6 +344,157 @@ sirGraphicsABIResult_t sirGraphicsQueryABIPipelineModelCaps( const sirGraphicsAB
 	return SIR_GRAPHICS_SUCCESS;
 }
 
+// Texture/attachment support must be admitted against the actual enabled
+// adapter format table, not inferred from API family or pipeline model.
+static sirGraphicsABIResult_t sirGraphicsValidateABIAttachmentFormats( const sirGraphicsABIDevice_t *pDevice,
+                                                                      const sirGraphicsABIPipeline_t *pPipeline ) noexcept
+{
+	if ( pPipeline->nType == SIR_GRAPHICS_PIPELINE_COMPUTE ) {
+		return SIR_GRAPHICS_SUCCESS;
+	}
+	if ( pPipeline->nColorFormatCount == 0 && pPipeline->nDepthFormat == SIR_GRAPHICS_FORMAT_UNKNOWN ) {
+		return SIR_GRAPHICS_SUCCESS;
+	}
+	uint32_t nSampleBit = 0;
+	uint32_t nSamples = pPipeline->nSampleCount;
+	while ( nSamples > 1 ) {
+		nSamples >>= 1;
+		++nSampleBit;
+	}
+	const uint32_t nRequiredSample = 1U << nSampleBit;
+	for ( uint32_t iColor = 0; iColor < pPipeline->nColorFormatCount; ++iColor ) {
+		sirGraphicsABIFormat_t format = {};
+		format.nSize = sizeof( format );
+		const sirGraphicsABIResult_t eQuery = sirGraphicsQueryABIFormat( pDevice, pPipeline->szColorFormats[iColor], &format );
+		if ( eQuery != SIR_GRAPHICS_SUCCESS ) {
+			return eQuery;
+		}
+		if ( ( format.nOptimalFeatures & SIR_GRAPHICS_ABI_FORMAT_COLOR_ATTACHMENT ) == 0 ||
+		     ( format.nSampleCountMask & nRequiredSample ) == 0 ) {
+			return SIR_GRAPHICS_UNSUPPORTED;
+		}
+	}
+	if ( pPipeline->nDepthFormat != SIR_GRAPHICS_FORMAT_UNKNOWN ) {
+		sirGraphicsABIFormat_t format = {};
+		format.nSize = sizeof( format );
+		const sirGraphicsABIResult_t eQuery = sirGraphicsQueryABIFormat( pDevice, pPipeline->nDepthFormat, &format );
+		if ( eQuery != SIR_GRAPHICS_SUCCESS ) {
+			return eQuery;
+		}
+		if ( ( format.nOptimalFeatures & SIR_GRAPHICS_ABI_FORMAT_DEPTH_STENCIL ) == 0 ||
+		     ( format.nSampleCountMask & nRequiredSample ) == 0 ) {
+			return SIR_GRAPHICS_UNSUPPORTED;
+		}
+	}
+	return SIR_GRAPHICS_SUCCESS;
+}
+
+// The host admits resource creation using real device-enabled format facts;
+// the backend remains responsible for allocation, tiling and native ownership.
+sirGraphicsABIResult_t sirGraphicsCreateABITexture( const sirGraphicsABIDevice_t *pDevice, const sirGraphicsTextureDesc_t *pDesc,
+                                                    sirGraphicsHandle_t *pTexture ) noexcept
+{
+	if ( pDesc == nullptr || pTexture == nullptr ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	const sirGraphicsABIResult_t eStructure = sirGraphicsValidateTexture( *pDesc );
+	if ( eStructure != SIR_GRAPHICS_SUCCESS ) {
+		return eStructure;
+	}
+	constexpr uint32_t TEXTURE_USAGE_MASK = SIR_GRAPHICS_USAGE_SAMPLED | SIR_GRAPHICS_USAGE_STORAGE |
+	                                       SIR_GRAPHICS_USAGE_COLOR_ATTACHMENT | SIR_GRAPHICS_USAGE_DEPTH_STENCIL |
+	                                       SIR_GRAPHICS_USAGE_COPY_SOURCE | SIR_GRAPHICS_USAGE_COPY_DESTINATION;
+	if ( ( pDesc->nUsage & ~TEXTURE_USAGE_MASK ) != 0 ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	const bool bDepthFormat = pDesc->eFormat >= SIR_GRAPHICS_FORMAT_D16_UNORM &&
+	                          pDesc->eFormat <= SIR_GRAPHICS_FORMAT_D32_FLOAT;
+	if ( ( bDepthFormat && ( pDesc->nUsage & SIR_GRAPHICS_USAGE_COLOR_ATTACHMENT ) != 0 ) ||
+	     ( !bDepthFormat && ( pDesc->nUsage & SIR_GRAPHICS_USAGE_DEPTH_STENCIL ) != 0 ) ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	const sirGraphicsABIResult_t eDevice = sirGraphicsValidateABIDevice( pDevice );
+	if ( eDevice != SIR_GRAPHICS_SUCCESS ) {
+		return eDevice;
+	}
+
+	sirGraphicsABICapabilities_t caps = {};
+	caps.nSize = sizeof( caps );
+	const sirGraphicsABIResult_t eCaps =
+	    sirGraphicsResultFromProvider( pDevice->pQueryCapabilities( pDevice->pDevice, &caps ) );
+	if ( eCaps != SIR_GRAPHICS_SUCCESS ) {
+		return eCaps;
+	}
+	if ( sirGraphicsValidateABICapabilities( &caps ) != SIR_GRAPHICS_SUCCESS ) {
+		return SIR_GRAPHICS_DRIVER_ERROR;
+	}
+	if ( pDesc->nWidth > caps.nMaximumTextureDimension || pDesc->nHeight > caps.nMaximumTextureDimension ||
+	     pDesc->nDepth > caps.nMaximumTextureDimension || pDesc->nSampleCount > caps.nMaximumSamples ) {
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
+	if ( pDesc->nSampleCount > 1 && pDesc->nMipLevels != 1 ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	if ( ( pDesc->nUsage & SIR_GRAPHICS_USAGE_STORAGE ) != 0 &&
+	     ( caps.nEnabledFeatures & SIR_GRAPHICS_FEATURE_SHADER_STORAGE ) == 0 ) {
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
+
+	sirGraphicsABIFormat_t format = {};
+	format.nSize = sizeof( format );
+	const sirGraphicsABIResult_t eFormat = sirGraphicsQueryABIFormat( pDevice, pDesc->eFormat, &format );
+	if ( eFormat != SIR_GRAPHICS_SUCCESS ) {
+		return eFormat;
+	}
+	uint32_t nRequired = 0;
+	if ( ( pDesc->nUsage & SIR_GRAPHICS_USAGE_SAMPLED ) != 0 ) {
+		nRequired |= SIR_GRAPHICS_ABI_FORMAT_SAMPLED;
+	}
+	if ( ( pDesc->nUsage & SIR_GRAPHICS_USAGE_STORAGE ) != 0 ) {
+		nRequired |= SIR_GRAPHICS_ABI_FORMAT_STORAGE;
+	}
+	if ( ( pDesc->nUsage & SIR_GRAPHICS_USAGE_COLOR_ATTACHMENT ) != 0 ) {
+		nRequired |= SIR_GRAPHICS_ABI_FORMAT_COLOR_ATTACHMENT;
+	}
+	if ( ( pDesc->nUsage & SIR_GRAPHICS_USAGE_DEPTH_STENCIL ) != 0 ) {
+		nRequired |= SIR_GRAPHICS_ABI_FORMAT_DEPTH_STENCIL;
+	}
+	if ( ( pDesc->nUsage & SIR_GRAPHICS_USAGE_COPY_SOURCE ) != 0 ) {
+		nRequired |= SIR_GRAPHICS_ABI_FORMAT_TRANSFER_SRC;
+	}
+	if ( ( pDesc->nUsage & SIR_GRAPHICS_USAGE_COPY_DESTINATION ) != 0 ) {
+		nRequired |= SIR_GRAPHICS_ABI_FORMAT_TRANSFER_DST;
+	}
+	const bool bLinear = pDesc->eMemory == SIR_GRAPHICS_MEMORY_CPU_UPLOAD ||
+	                     pDesc->eMemory == SIR_GRAPHICS_MEMORY_CPU_READBACK;
+	const uint32_t nAvailable = bLinear ? format.nLinearFeatures : format.nOptimalFeatures;
+	if ( ( nAvailable & nRequired ) != nRequired ) {
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
+	uint32_t nSampleBit = 0;
+	uint32_t nSampleCount = pDesc->nSampleCount;
+	while ( nSampleCount > 1 ) {
+		nSampleCount >>= 1;
+		++nSampleBit;
+	}
+	if ( ( format.nSampleCountMask & ( 1U << nSampleBit ) ) == 0 ) {
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
+
+	sirGraphicsHandle_t hTexture = {};
+	const sirGraphicsABIResult_t eCreate =
+	    sirGraphicsResultFromProvider( pDevice->pCreateTexture( pDevice->pDevice, pDesc, &hTexture ) );
+	if ( eCreate != SIR_GRAPHICS_SUCCESS ) {
+		return eCreate;
+	}
+	if ( hTexture.eType != SIR_GRAPHICS_HANDLE_TEXTURE || hTexture.nGeneration == 0 ||
+	     hTexture.nDeviceGeneration != caps.nDeviceGeneration ) {
+		return SIR_GRAPHICS_DRIVER_ERROR;
+	}
+	*pTexture = hTexture;
+	return SIR_GRAPHICS_SUCCESS;
+}
+
 sirGraphicsABIResult_t sirGraphicsSelectABIPipelineVariant( const sirGraphicsABIDevice_t *pDevice,
                                                             const sirGraphicsABIPipeline_t *pCandidates, uint32_t nCount,
                                                             uint32_t *pIndex ) noexcept
@@ -381,6 +533,13 @@ sirGraphicsABIResult_t sirGraphicsSelectABIPipelineVariant( const sirGraphicsABI
 		if ( eRecipe != SIR_GRAPHICS_SUCCESS ) {
 			return eRecipe;
 		}
+		const sirGraphicsABIResult_t eFormat = sirGraphicsValidateABIAttachmentFormats( pDevice, pPipeline );
+		if ( eFormat == SIR_GRAPHICS_UNSUPPORTED ) {
+			continue;
+		}
+		if ( eFormat != SIR_GRAPHICS_SUCCESS ) {
+			return eFormat;
+		}
 		*pIndex = iCandidate;
 		return SIR_GRAPHICS_SUCCESS;
 	}
@@ -406,6 +565,10 @@ sirGraphicsABIResult_t sirGraphicsCreateABIPipeline( const sirGraphicsABIDevice_
 	const sirGraphicsABIResult_t eValidation = sirGraphicsValidateABIPipeline( pDesc, &caps );
 	if ( eValidation != SIR_GRAPHICS_SUCCESS ) {
 		return eValidation;
+	}
+	const sirGraphicsABIResult_t eFormats = sirGraphicsValidateABIAttachmentFormats( pDevice, pDesc );
+	if ( eFormats != SIR_GRAPHICS_SUCCESS ) {
+		return eFormats;
 	}
 
 	sirGraphicsHandle_t hPipeline = {};
