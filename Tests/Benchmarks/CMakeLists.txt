@@ -7,7 +7,8 @@ add_executable(SIRCoreBenchmarks
     SIRSchedulerWorkloadReplay.cpp
     SIRSchedulerQueueCandidates.cpp
     SIRSchedulerQueueCandidateBenchmarks.cpp
-    SIRGRDGInfrastructureBenchmarks.cpp)
+    SIRGRDGInfrastructureBenchmarks.cpp
+    SIRPlatformIOBenchmarks.cpp)
 target_compile_features(SIRCoreBenchmarks PRIVATE cxx_std_17)
 target_link_libraries(SIRCoreBenchmarks PRIVATE SIR::Core SIR::Resources benchmark::benchmark_main)
 if(WIN32)
