@@ -89,9 +89,12 @@ private:
 	uint32_t m_nRuntimeVersion = 0;
 	uint64_t m_nEpoch = 0;
 	int32_t m_nLastNativeResult = 0;
+	uint32_t m_nBorrowedBankObjects = 0;
 	sirFMODContextState_t m_eState = SIR_FMOD_CONTEXT_EMPTY;
 
 	sirFMODContextResult_t rollback( sirFMODContextResult_t eOriginalError, int32_t nNativeError ) noexcept;
+	bool pinBorrowedBankObject( void ) noexcept;
+	void unpinBorrowedBankObject( void ) noexcept;
 
 public:
 	SIRFMODContext( void ) noexcept = default;
@@ -109,6 +112,7 @@ public:
 	int32_t getLastNativeResult( void ) const noexcept;
 	uint32_t getRuntimeVersion( void ) const noexcept;
 	uint64_t getEpoch( void ) const noexcept;
+	uint32_t getBorrowedBankObjectCount( void ) const noexcept;
 };
 
 // Defined only in the SDK-enabled SIRFMODNativeApi.cpp translation unit.

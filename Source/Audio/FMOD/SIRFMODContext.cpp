@@ -17,6 +17,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Core/Platform/SIRAtomic.h>
 #include <stdlib.h>
+#include <limits.h>
 
 static SIRAtomic<uint64_t> s_nFMODEpoch = SIRAtomic<uint64_t>( 1 );
 
@@ -114,6 +115,11 @@ sirFMODContextResult_t SIRFMODContext::initialize( const sirFMODContextConfig_t 
 
 sirFMODContextResult_t SIRFMODContext::shutdown( void ) noexcept
 {
+	// Borrowed Studio object pointers become invalid when a bank or Studio
+	// releases their descriptions. Preserve the owner for explicit cleanup.
+	if ( m_nBorrowedBankObjects != 0 ) {
+		return SIR_FMOD_BAD_STATE;
+	}
 	if ( m_pStudio == nullptr ) {
 		m_Ops = {};
 		m_eState = SIR_FMOD_CONTEXT_EMPTY;
@@ -135,6 +141,7 @@ sirFMODContextResult_t SIRFMODContext::shutdown( void ) noexcept
 	m_nLastNativeResult = 0;
 	m_nRuntimeVersion = 0;
 	m_nEpoch = 0;
+	m_nBorrowedBankObjects = 0;
 	return SIR_FMOD_OK;
 }
 
@@ -195,6 +202,28 @@ int32_t SIRFMODContext::getLastNativeResult( void ) const noexcept
 uint32_t SIRFMODContext::getRuntimeVersion( void ) const noexcept
 {
 	return m_nRuntimeVersion;
+}
+
+bool SIRFMODContext::pinBorrowedBankObject( void ) noexcept
+{
+	if ( !isReady() || m_nBorrowedBankObjects == UINT32_MAX ) {
+		return false;
+	}
+	++m_nBorrowedBankObjects;
+	return true;
+}
+
+void SIRFMODContext::unpinBorrowedBankObject( void ) noexcept
+{
+	if ( m_nBorrowedBankObjects == 0 ) {
+		abort();
+	}
+	--m_nBorrowedBankObjects;
+}
+
+uint32_t SIRFMODContext::getBorrowedBankObjectCount( void ) const noexcept
+{
+	return m_nBorrowedBankObjects;
 }
 
 uint64_t SIRFMODContext::getEpoch( void ) const noexcept

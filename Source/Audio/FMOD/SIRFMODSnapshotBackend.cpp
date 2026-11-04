@@ -132,6 +132,9 @@ sirAudioResult_t SIRFMODSnapshotBackend::shutdown( void ) noexcept
 			}
 		}
 	}
+	for ( uint32_t iSnapshot = 0; iSnapshot < m_nCount; ++iSnapshot ) {
+		m_pContext->unpinBorrowedBankObject();
+	}
 	releaseStorage();
 	return SIR_AUDIO_OK;
 }
@@ -175,6 +178,9 @@ sirAudioResult_t SIRFMODSnapshotBackend::registerSnapshot( uint64_t nSnapshotId,
 		return SIR_AUDIO_BACKEND_ERROR;
 	}
 
+	if ( !m_pContext->pinBorrowedBankObject() ) {
+		return SIR_AUDIO_CAPACITY;
+	}
 	if ( iInsert < m_nCount ) {
 		memmove( m_pSnapshots + iInsert + 1, m_pSnapshots + iInsert, ( size_t )( m_nCount - iInsert ) * sizeof( sirFMODSnapshotRecord_t ) );
 	}
@@ -201,6 +207,7 @@ sirAudioResult_t SIRFMODSnapshotBackend::unregisterSnapshot( uint64_t nSnapshotI
 		         ( size_t )( m_nCount - iIndex - 1 ) * sizeof( sirFMODSnapshotRecord_t ) );
 	}
 	--m_nCount;
+	m_pContext->unpinBorrowedBankObject();
 	return SIR_AUDIO_OK;
 }
 

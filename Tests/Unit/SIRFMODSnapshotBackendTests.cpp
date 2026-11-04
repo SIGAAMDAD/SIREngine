@@ -252,6 +252,7 @@ static void testSnapshotLifecycle( const sirContainerAllocator_t *pAllocator )
 	checkSnapshot( snapshots.getLastNativeResult() == -21 && snapshots.getSnapshotCount() == 0 );
 	checkSnapshot( snapshots.registerSnapshot( 30, "snapshot:/Storm" ) == SIR_AUDIO_OK );
 	checkSnapshot( snapshots.registerSnapshot( 10, "snapshot:/Combat" ) == SIR_AUDIO_OK );
+	checkSnapshot( context.getBorrowedBankObjectCount() == 2 );
 	checkSnapshot( snapshots.registerSnapshot( 30, "snapshot:/Storm" ) == SIR_AUDIO_INVALID_ARGUMENT );
 	checkSnapshot( snapshots.registerSnapshot( 40, "snapshot:/Storm" ) == SIR_AUDIO_CAPACITY );
 
@@ -283,6 +284,7 @@ static void testSnapshotLifecycle( const sirContainerAllocator_t *pAllocator )
 	checkSnapshot( snapshots.stopSnapshot( 10, SIR_AUDIO_STOP_IMMEDIATE ) == SIR_AUDIO_OK );
 	checkSnapshot( snapshots.getActiveInstanceCount() == 0 );
 	checkSnapshot( snapshots.unregisterSnapshot( 10 ) == SIR_AUDIO_OK );
+	checkSnapshot( context.getBorrowedBankObjectCount() == 1 );
 	checkSnapshot( snapshots.registerSnapshot( 5, "snapshot:/Combat" ) == SIR_AUDIO_OK );
 	checkSnapshot( snapshots.startSnapshot( 5 ) == SIR_AUDIO_OK );
 	checkSnapshot( snapshots.stopSnapshot( 5, SIR_AUDIO_STOP_IMMEDIATE ) == SIR_AUDIO_OK );
@@ -290,6 +292,7 @@ static void testSnapshotLifecycle( const sirContainerAllocator_t *pAllocator )
 	checkSnapshot( snapshots.unregisterSnapshot( 30 ) == SIR_AUDIO_OK );
 	checkSnapshot( snapshots.unregisterSnapshot( 5 ) == SIR_AUDIO_OK );
 	checkSnapshot( snapshots.getSnapshotCount() == 0 );
+	checkSnapshot( context.getBorrowedBankObjectCount() == 0 );
 	checkSnapshot( snapshots.shutdown() == SIR_AUDIO_OK );
 	checkSnapshot( context.shutdown() == SIR_FMOD_OK );
 }
@@ -329,11 +332,15 @@ static void testAllocationAndEpoch( const sirContainerAllocator_t *pAllocator )
 	s_bSnapshotRejectAllocation = false;
 	checkSnapshot( snapshots.initialize() == SIR_AUDIO_OK );
 	checkSnapshot( snapshots.registerSnapshot( 1, "snapshot:/Storm" ) == SIR_AUDIO_OK );
+	checkSnapshot( context.getBorrowedBankObjectCount() == 1 );
+	checkSnapshot( context.shutdown() == SIR_FMOD_BAD_STATE );
+	checkSnapshot( snapshots.startSnapshot( 1 ) == SIR_AUDIO_OK );
+	checkSnapshot( context.shutdown() == SIR_FMOD_BAD_STATE );
+	checkSnapshot( snapshots.shutdown() == SIR_AUDIO_OK );
+	checkSnapshot( context.getBorrowedBankObjectCount() == 0 );
 	checkSnapshot( context.shutdown() == SIR_FMOD_OK );
-	checkSnapshot( snapshots.registerSnapshot( 2, "snapshot:/Combat" ) == SIR_AUDIO_NOT_INITIALIZED );
 	checkSnapshot( context.initialize( config, makeSnapshotContextOps( &fixture ) ) == SIR_FMOD_OK );
 	checkSnapshot( snapshots.startSnapshot( 1 ) == SIR_AUDIO_NOT_INITIALIZED );
-	checkSnapshot( snapshots.shutdown() == SIR_AUDIO_OK );
 	checkSnapshot( context.shutdown() == SIR_FMOD_OK );
 }
 
