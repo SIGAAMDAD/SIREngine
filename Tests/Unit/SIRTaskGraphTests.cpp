@@ -421,7 +421,6 @@ static void testGraphExecutionCancellationAndFailures( void )
 	memory.shutdown();
 }
 
-
 static void testGraphInputValidationAndInspection( void )
 {
 	SIRMemoryManager memory;
@@ -538,12 +537,10 @@ static void testBucketCollisionAndInteriorFrontierPruning( void )
 	{
 		SIRTaskGraph frontier;
 		SIR_GRAPH_CHECK( frontier.init( &memory, { 4, 4, 8 } ) );
-		const sirTaskGraphAccess_t ranges[4] = {
-		    { { 8, 0 }, 0, 8, SIR_TASK_GRAPH_READ },
-		    { { 8, 0 }, 8, 8, SIR_TASK_GRAPH_READ },
-		    { { 8, 0 }, 16, 8, SIR_TASK_GRAPH_READ },
-		    { { 8, 0 }, 8, 8, SIR_TASK_GRAPH_WRITE }
-		};
+		const sirTaskGraphAccess_t ranges[4] = { { { 8, 0 }, 0, 8, SIR_TASK_GRAPH_READ },
+		                                         { { 8, 0 }, 8, 8, SIR_TASK_GRAPH_READ },
+		                                         { { 8, 0 }, 16, 8, SIR_TASK_GRAPH_READ },
+		                                         { { 8, 0 }, 8, 8, SIR_TASK_GRAPH_WRITE } };
 		for ( uint32_t i = 0; i < 4; ++i ) {
 			SIR_GRAPH_CHECK( frontier.addPass( pass, ranges + i, 1, &nIndex ) );
 		}

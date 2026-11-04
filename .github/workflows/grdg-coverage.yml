@@ -27,6 +27,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+      - name: Install pinned clang-format
+        run: python3 -m pip install --disable-pip-version-check clang-format==22.1.5
+      - name: Verify owned-source formatting
+        run: cmake -P Build/CMake/CIFormat.cmake
       - name: Fetch pinned GoogleTest
         run: git submodule update --init ThirdParty/GoogleTest
       - uses: ./.github/actions/setup-build-tools

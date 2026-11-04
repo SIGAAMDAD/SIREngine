@@ -283,7 +283,6 @@ static void testConstructorOutOfMemory( void )
 	REQUIRE( allocator.nLive.load() == 0 );
 }
 
-
 static void testInvalidInputsAndCapacity( void )
 {
 	sirDerivedTestAllocator_t allocator = {};

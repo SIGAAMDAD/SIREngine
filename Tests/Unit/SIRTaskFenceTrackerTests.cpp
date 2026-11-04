@@ -271,7 +271,6 @@ static void testGraphIntegration( void )
 	memory.shutdown();
 }
 
-
 static sirTaskResult_t completedProvider( void *, sirTaskHandle_t ) noexcept
 {
 	return SIR_TASK_RESULT_SUCCESS;
@@ -372,8 +371,10 @@ static void testRollbackWithEarlierPendingRecord( void )
 	sirFenceTrackedContext_t rollbackContext = { &tracker, &finalizer, 11, true };
 	sirTaskHandle_t first = {};
 	sirTaskHandle_t undone = {};
-	SIR_FENCE_CHECK( scheduler.submit( registerFenceInsideCallback, &firstContext, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_RENDER, &first ) );
-	SIR_FENCE_CHECK( scheduler.submit( registerFenceInsideCallback, &rollbackContext, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_RENDER, &undone ) );
+	SIR_FENCE_CHECK(
+	    scheduler.submit( registerFenceInsideCallback, &firstContext, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_RENDER, &first ) );
+	SIR_FENCE_CHECK(
+	    scheduler.submit( registerFenceInsideCallback, &rollbackContext, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_RENDER, &undone ) );
 	SIR_FENCE_CHECK( scheduler.pumpProvider( SIR_TASK_EXEC_RENDER, 2 ) == 2 );
 	SIR_FENCE_CHECK( scheduler.getState( first ) == SIR_TASK_AWAITING_PROVIDER );
 	SIR_FENCE_CHECK( scheduler.getState( undone ) == SIR_TASK_FAILED );
