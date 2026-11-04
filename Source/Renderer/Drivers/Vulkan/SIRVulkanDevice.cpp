@@ -243,8 +243,7 @@ sirVulkanResult_t SIRVulkanDevice::initializeInstance( void ) noexcept
 	return SIR_VULKAN_SUCCESS;
 }
 
-sirVulkanResult_t SIRVulkanDevice::probeAdapters( uint32_t nAdapterIndex, uint32_t *pCount,
-                                                  sirVulkanAdapterInfo_t *pAdapter ) noexcept
+sirVulkanResult_t SIRVulkanDevice::probeAdapters( uint32_t nAdapterIndex, uint32_t *pCount, sirVulkanAdapterInfo_t *pAdapter ) noexcept
 {
 	if ( ( pCount == nullptr && pAdapter == nullptr ) || nAdapterIndex >= 32 ) {
 		return SIR_VULKAN_INVALID_ARGUMENT;
