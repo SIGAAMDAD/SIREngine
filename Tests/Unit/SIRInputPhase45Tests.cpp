@@ -320,7 +320,7 @@ static bool sirTestHapticDeviceLifecycle( void )
 	}
 	const sirInputHapticRequest_t request = { hDevice, 32000, 9000, 0, 1000, 0, 1 };
 	sirInputHapticHandle_t hEffect = {};
-	if ( !input.scheduleRumble( request, &hEffect ) || !input.scheduleRumble( request, nullptr ) ) {
+	if ( !input.scheduleRumble( request, &hEffect ) || input.scheduleRumble( request, nullptr ) ) {
 		fputs( "haptic-lifecycle step 3 failed\n", stderr );
 		return false;
 	}
