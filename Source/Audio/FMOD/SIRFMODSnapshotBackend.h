@@ -85,6 +85,7 @@ public:
 	sirAudioResult_t startSnapshot( uint64_t nSnapshotId ) noexcept;
 	sirAudioResult_t stopSnapshot( uint64_t nSnapshotId, sirAudioStopMode_t eMode ) noexcept;
 	uint32_t getSnapshotCount( void ) const noexcept;
+	bool isBoundTo( const SIRFMODContext *pContext ) const noexcept;
 	uint32_t getActiveInstanceCount( void ) const noexcept;
 	int32_t getLastNativeResult( void ) const noexcept;
 };

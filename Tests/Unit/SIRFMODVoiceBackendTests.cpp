@@ -14,8 +14,11 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Audio/FMOD/SIRFMODVoiceBackend.h>
+#include <Audio/FMOD/SIRFMODMixerBackend.h>
+#include <Audio/FMOD/SIRFMODSnapshotBackend.h>
 #include <Audio/SIRAudioSystem.h>
 #include <stdlib.h>
+#include <limits>
 #include <string.h>
 
 static void checkVoice( bool bValid ) noexcept
@@ -61,6 +64,13 @@ typedef struct sirFMODVoiceFixture_s
 	uint32_t nResolveCalls = 0;
 	uint32_t nInstanceParameterCalls = 0;
 	uint32_t nGlobalParameterCalls = 0;
+	uint32_t nBusVolumeCalls = 0;
+	uint32_t nBusMuteCalls = 0;
+	uint32_t nVCAVolumeCalls = 0;
+	float fBusVolume = 1.0f;
+	float fVCAVolume = 1.0f;
+	uint8_t bBusMuted = 0;
+	uint32_t nFailMixerVolume = 0;
 	uint64_t nLastParameterId = 0;
 	float fLastParameterValue = 0.0f;
 	uint32_t nFailParameter = 0;
@@ -484,6 +494,154 @@ static void testEmitterParameterDispatch( const sirContainerAllocator_t *pAlloca
 	checkVoice( context.shutdown() == SIR_FMOD_OK );
 }
 
+static int32_t testMixerResolveBus( void *pData, void *pStudio, const char *szPath, void **ppBus ) noexcept
+{
+	sirFMODVoiceFixture_t *pFixture = ( sirFMODVoiceFixture_t * )pData;
+	checkVoice( pStudio == pFixture );
+	if ( strcmp( szPath, "bus:/Master" ) != 0 ) {
+		return -81;
+	}
+	*ppBus = &pFixture->instances[6];
+	return 0;
+}
+
+static int32_t testMixerResolveVCA( void *pData, void *pStudio, const char *szPath, void **ppVCA ) noexcept
+{
+	sirFMODVoiceFixture_t *pFixture = ( sirFMODVoiceFixture_t * )pData;
+	checkVoice( pStudio == pFixture );
+	if ( strcmp( szPath, "vca:/Music" ) != 0 ) {
+		return -82;
+	}
+	*ppVCA = &pFixture->instances[7];
+	return 0;
+}
+
+static int32_t testMixerBusVolume( void *pData, void *pBus, float fVolume ) noexcept
+{
+	sirFMODVoiceFixture_t *pFixture = ( sirFMODVoiceFixture_t * )pData;
+	checkVoice( pBus == &pFixture->instances[6] );
+	++pFixture->nBusVolumeCalls;
+	if ( pFixture->nFailMixerVolume != 0 ) {
+		--pFixture->nFailMixerVolume;
+		return -85;
+	}
+	pFixture->fBusVolume = fVolume;
+	return 0;
+}
+
+static int32_t testMixerBusMute( void *pData, void *pBus, uint8_t bMute ) noexcept
+{
+	sirFMODVoiceFixture_t *pFixture = ( sirFMODVoiceFixture_t * )pData;
+	checkVoice( pBus == &pFixture->instances[6] );
+	++pFixture->nBusMuteCalls;
+	pFixture->bBusMuted = bMute;
+	return 0;
+}
+
+static int32_t testMixerVCAVolume( void *pData, void *pVCA, float fVolume ) noexcept
+{
+	sirFMODVoiceFixture_t *pFixture = ( sirFMODVoiceFixture_t * )pData;
+	checkVoice( pVCA == &pFixture->instances[7] );
+	++pFixture->nVCAVolumeCalls;
+	pFixture->fVCAVolume = fVolume;
+	return 0;
+}
+
+static sirFMODMixerNativeOps_t testMixerOps( sirFMODVoiceFixture_t *pFixture ) noexcept
+{
+	return { 1, pFixture, testMixerResolveBus, testMixerResolveVCA, testMixerBusVolume, testMixerBusMute, testMixerVCAVolume };
+}
+
+static int32_t testSnapshotResolve( void *pData, void *pStudio, const char *szPath, void **ppDescription ) noexcept
+{
+	sirFMODVoiceFixture_t *pFixture = ( sirFMODVoiceFixture_t * )pData;
+	checkVoice( pStudio == pFixture );
+	if ( strcmp( szPath, "snapshot:/Storm" ) != 0 ) {
+		return -83;
+	}
+	*ppDescription = &pFixture->instances[7];
+	return 0;
+}
+
+static sirFMODSnapshotNativeOps_t testSnapshotOps( sirFMODVoiceFixture_t *pFixture ) noexcept
+{
+	return { 1, pFixture, testSnapshotResolve, testCreateInstance, testStart, testStop, testRelease };
+}
+
+static void testPortableMixerAndSnapshotRouting( const sirContainerAllocator_t *pAllocator )
+{
+	sirFMODVoiceFixture_t fixture = {};
+	SIRFMODContext context;
+	const sirFMODContextConfig_t contextConfig = { 16, -1, 1, 1, 0, 0 };
+	checkVoice( context.initialize( contextConfig, makeContextOps( &fixture ) ) == SIR_FMOD_OK );
+
+	SIRFMODMixerBackend mixer;
+	checkVoice( mixer.configure( &context, pAllocator, testMixerOps( &fixture ), 2 ) == SIR_AUDIO_OK );
+	checkVoice( mixer.initialize() == SIR_AUDIO_OK );
+	checkVoice( mixer.registerBus( 42, "bus:/Master" ) == SIR_AUDIO_OK );
+	checkVoice( mixer.registerVCA( 43, "vca:/Music" ) == SIR_AUDIO_OK );
+	SIRFMODSnapshotBackend snapshots;
+	checkVoice( snapshots.configure( &context, pAllocator, testSnapshotOps( &fixture ), 1 ) == SIR_AUDIO_OK );
+	checkVoice( snapshots.initialize() == SIR_AUDIO_OK );
+	checkVoice( snapshots.registerSnapshot( 77, "snapshot:/Storm" ) == SIR_AUDIO_OK );
+
+	SIRFMODVoiceBackend backend;
+	checkVoice( backend.configure( &context, pAllocator, makeVoiceOps( &fixture ), 1 ) == SIR_AUDIO_OK );
+	SIRFMODSnapshotBackend uninitializedSnapshots;
+	checkVoice( backend.bindControllers( &mixer, &uninitializedSnapshots ) == SIR_AUDIO_INVALID_ARGUMENT );
+	checkVoice( backend.bindControllers( &mixer, &snapshots ) == SIR_AUDIO_OK );
+
+	SIRAudioSystem audio;
+	const sirAudioSystemConfig_t config = { 2, 0, 16, 4, 4, 0 };
+	checkVoice( audio.setBusVolume( 42, 0.5f ) == SIR_AUDIO_NOT_INITIALIZED );
+	checkVoice( audio.startSnapshot( 77 ) == SIR_AUDIO_NOT_INITIALIZED );
+	checkVoice( audio.initialize( config, pAllocator, SIRFMODVoiceBackend::getBackendOps(), &backend ) == SIR_AUDIO_OK );
+	checkVoice( backend.bindControllers( &mixer, &snapshots ) == SIR_AUDIO_BUSY );
+
+	checkVoice( audio.setBusVolume( 0, 0.5f ) == SIR_AUDIO_INVALID_ARGUMENT );
+	checkVoice( audio.setBusVolume( 42, -0.5f ) == SIR_AUDIO_INVALID_ARGUMENT );
+	checkVoice( audio.setBusVolume( 42, std::numeric_limits<float>::quiet_NaN() ) == SIR_AUDIO_INVALID_ARGUMENT );
+	checkVoice( audio.setVCAVolume( 43, 1.5f ) == SIR_AUDIO_INVALID_ARGUMENT );
+	checkVoice( audio.setBusMute( 0, true ) == SIR_AUDIO_INVALID_ARGUMENT );
+	checkVoice( audio.startSnapshot( 0 ) == SIR_AUDIO_INVALID_ARGUMENT );
+	checkVoice( audio.stopSnapshot( 77, ( sirAudioStopMode_t )9 ) == SIR_AUDIO_INVALID_ARGUMENT );
+
+	checkVoice( audio.setBusVolume( 42, 0.5f ) == SIR_AUDIO_PENDING );
+	checkVoice( audio.setBusMute( 42, true ) == SIR_AUDIO_PENDING );
+	checkVoice( audio.setVCAVolume( 43, 0.25f ) == SIR_AUDIO_PENDING );
+	checkVoice( audio.startSnapshot( 77 ) == SIR_AUDIO_PENDING );
+	checkVoice( audio.update() == 4 );
+	checkVoice( fixture.nBusVolumeCalls == 1 && fixture.fBusVolume == 0.5f );
+	checkVoice( fixture.nBusMuteCalls == 1 && fixture.bBusMuted == 1 );
+	checkVoice( fixture.nVCAVolumeCalls == 1 && fixture.fVCAVolume == 0.25f );
+	checkVoice( snapshots.getActiveInstanceCount() == 1 );
+
+	fixture.nFailStop = 1;
+	checkVoice( audio.stopSnapshot( 77, SIR_AUDIO_STOP_ALLOW_FADE ) == SIR_AUDIO_PENDING );
+	checkVoice( audio.update() == 1 );
+	checkVoice( snapshots.getActiveInstanceCount() == 1 );
+	checkVoice( backend.getLastNativeResult() == -46 );
+	checkVoice( audio.stopSnapshot( 77, SIR_AUDIO_STOP_IMMEDIATE ) == SIR_AUDIO_PENDING );
+	checkVoice( audio.update() == 1 );
+	checkVoice( snapshots.getActiveInstanceCount() == 0 );
+
+	fixture.nFailMixerVolume = 1;
+	checkVoice( audio.setBusVolume( 42, 0.75f ) == SIR_AUDIO_PENDING );
+	checkVoice( audio.update() == 1 );
+	checkVoice( fixture.fBusVolume == 0.5f && backend.getLastNativeResult() == -85 );
+	checkVoice( audio.setBusVolume( 42, 0.75f ) == SIR_AUDIO_PENDING );
+	checkVoice( audio.update() == 1 && fixture.fBusVolume == 0.75f );
+
+	checkVoice( audio.startSnapshot( 77 ) == SIR_AUDIO_PENDING );
+	checkVoice( audio.stopSnapshot( 77, SIR_AUDIO_STOP_ALLOW_FADE ) == SIR_AUDIO_PENDING );
+	checkVoice( audio.update() == 2 );
+	checkVoice( snapshots.getActiveInstanceCount() == 0 );
+	audio.shutdown();
+	checkVoice( snapshots.shutdown() == SIR_AUDIO_OK );
+	mixer.shutdown();
+	checkVoice( context.shutdown() == SIR_FMOD_OK );
+}
+
 static void testVoiceLifecycle( const sirContainerAllocator_t *pAllocator )
 {
 	sirFMODVoiceFixture_t fixture = {};
@@ -665,6 +823,7 @@ int main( void )
 	testParameterDispatch( &allocator );
 	testSpatialDriver( &allocator );
 	testEmitterParameterDispatch( &allocator );
+	testPortableMixerAndSnapshotRouting( &allocator );
 	testVoiceFailures( &allocator );
 	testCompletionReservations( &allocator );
 	testStartFailureCleanupRetry( &allocator );

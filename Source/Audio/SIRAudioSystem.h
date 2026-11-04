@@ -118,6 +118,11 @@ public:
 	sirAudioResult_t setListenerAttributes( sirAudioListenerHandle_t hListener, const sirAudioAttributes_t &attributes ) noexcept;
 	sirAudioResult_t setEmitterParameter( sirAudioEmitterHandle_t hEmitter, uint64_t nParameterId, float fValue ) noexcept;
 	sirAudioResult_t setGlobalParameter( uint64_t nParameterId, float fValue ) noexcept;
+	sirAudioResult_t setBusVolume( uint64_t nBusId, float fVolume ) noexcept;
+	sirAudioResult_t setBusMute( uint64_t nBusId, bool bMute ) noexcept;
+	sirAudioResult_t setVCAVolume( uint64_t nVCAId, float fVolume ) noexcept;
+	sirAudioResult_t startSnapshot( uint64_t nSnapshotId ) noexcept;
+	sirAudioResult_t stopSnapshot( uint64_t nSnapshotId, sirAudioStopMode_t eMode ) noexcept;
 	sirAudioResult_t getPlaybackState( sirAudioPlayingHandle_t hPlaying, sirAudioPlaybackState_t &eState ) noexcept;
 	uint32_t update( void ) noexcept;
 };

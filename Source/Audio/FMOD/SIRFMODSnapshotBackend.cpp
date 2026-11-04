@@ -263,6 +263,11 @@ sirAudioResult_t SIRFMODSnapshotBackend::stopSnapshot( uint64_t nSnapshotId, sir
 	return releaseInstance( m_pSnapshots[iIndex], true, eMode );
 }
 
+bool SIRFMODSnapshotBackend::isBoundTo( const SIRFMODContext *pContext ) const noexcept
+{
+	return m_pContext == pContext && isReady();
+}
+
 uint32_t SIRFMODSnapshotBackend::getSnapshotCount( void ) const noexcept
 {
 	return m_nCount;

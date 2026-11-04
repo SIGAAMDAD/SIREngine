@@ -213,6 +213,11 @@ sirAudioResult_t SIRFMODMixerBackend::setBusMute( uint64_t nControlId, bool bMut
 	return m_nLastNativeResult == 0 ? SIR_AUDIO_OK : SIR_AUDIO_BACKEND_ERROR;
 }
 
+bool SIRFMODMixerBackend::isBoundTo( const SIRFMODContext *pContext ) const noexcept
+{
+	return m_pContext == pContext && isReady();
+}
+
 uint32_t SIRFMODMixerBackend::getControlCount( void ) const noexcept
 {
 	return m_nCount;

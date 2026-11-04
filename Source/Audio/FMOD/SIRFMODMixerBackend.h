@@ -91,6 +91,7 @@ public:
 	sirAudioResult_t setBusMute( uint64_t nControlId, bool bMute ) noexcept;
 	sirAudioResult_t setVCAVolume( uint64_t nControlId, float fVolume ) noexcept;
 	uint32_t getControlCount( void ) const noexcept;
+	bool isBoundTo( const SIRFMODContext *pContext ) const noexcept;
 	int32_t getLastNativeResult( void ) const noexcept;
 };
 

@@ -14,6 +14,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Audio/FMOD/SIRFMODVoiceBackend.h>
+#include <Audio/FMOD/SIRFMODMixerBackend.h>
+#include <Audio/FMOD/SIRFMODSnapshotBackend.h>
 #include <Core/Containers/SIRRawStorage.h>
 #include <cmath>
 #include <stdlib.h>
@@ -60,6 +62,24 @@ sirAudioResult_t SIRFMODVoiceBackend::configure( SIRFMODContext *pContext, const
 	m_nEmitterCapacity = nMaxEmitters;
 	m_nEmitterParameterCapacity = nMaxEmitterParameters;
 	m_nListenerCapacity = nMaxListeners;
+	return SIR_AUDIO_OK;
+}
+
+sirAudioResult_t SIRFMODVoiceBackend::bindControllers( SIRFMODMixerBackend *pMixer,
+                                                        SIRFMODSnapshotBackend *pSnapshots ) noexcept
+{
+	if ( m_pContext == nullptr || !m_pContext->isReady() ) {
+		return SIR_AUDIO_NOT_INITIALIZED;
+	}
+	if ( m_bInitialized ) {
+		return SIR_AUDIO_BUSY;
+	}
+	if ( ( pMixer != nullptr && !pMixer->isBoundTo( m_pContext ) ) ||
+	     ( pSnapshots != nullptr && !pSnapshots->isBoundTo( m_pContext ) ) ) {
+		return SIR_AUDIO_INVALID_ARGUMENT;
+	}
+	m_pMixerBackend = pMixer;
+	m_pSnapshotBackend = pSnapshots;
 	return SIR_AUDIO_OK;
 }
 
@@ -238,6 +258,8 @@ void SIRFMODVoiceBackend::shutdownCallback( void *pContext ) noexcept
 		}
 	}
 	pBackend->releaseStorage();
+	pBackend->m_pMixerBackend = nullptr;
+	pBackend->m_pSnapshotBackend = nullptr;
 }
 
 bool SIRFMODVoiceBackend::findEvent( uint64_t nEventId, uint32_t &iEvent ) const noexcept
@@ -476,6 +498,33 @@ sirAudioResult_t SIRFMODVoiceBackend::updateEmitterParameter( const sirAudioComm
 
 sirAudioResult_t SIRFMODVoiceBackend::submitOne( const sirAudioCommand_t &command ) noexcept
 {
+	if ( command.eType == SIR_AUDIO_COMMAND_SET_BUS_VOLUME || command.eType == SIR_AUDIO_COMMAND_SET_BUS_MUTE ||
+	     command.eType == SIR_AUDIO_COMMAND_SET_VCA_VOLUME ) {
+		if ( m_pMixerBackend == nullptr ) {
+			return SIR_AUDIO_UNSUPPORTED;
+		}
+		sirAudioResult_t eResult = SIR_AUDIO_UNSUPPORTED;
+		if ( command.eType == SIR_AUDIO_COMMAND_SET_BUS_VOLUME ) {
+			eResult = m_pMixerBackend->setBusVolume( command.nControlId, command.fValue );
+		} else if ( command.eType == SIR_AUDIO_COMMAND_SET_BUS_MUTE ) {
+			eResult = m_pMixerBackend->setBusMute( command.nControlId, command.fValue != 0.0f );
+		} else {
+			eResult = m_pMixerBackend->setVCAVolume( command.nControlId, command.fValue );
+		}
+		m_nLastNativeResult = m_pMixerBackend->getLastNativeResult();
+		return eResult;
+	}
+	if ( command.eType == SIR_AUDIO_COMMAND_START_SNAPSHOT || command.eType == SIR_AUDIO_COMMAND_STOP_SNAPSHOT ) {
+		if ( m_pSnapshotBackend == nullptr ) {
+			return SIR_AUDIO_UNSUPPORTED;
+		}
+		const sirAudioResult_t eResult =
+		    command.eType == SIR_AUDIO_COMMAND_START_SNAPSHOT
+		        ? m_pSnapshotBackend->startSnapshot( command.nEventId )
+		        : m_pSnapshotBackend->stopSnapshot( command.nEventId, command.eStopMode );
+		m_nLastNativeResult = m_pSnapshotBackend->getLastNativeResult();
+		return eResult;
+	}
 	if ( command.eType == SIR_AUDIO_COMMAND_RELEASE_EMITTER ) {
 		if ( command.hEmitter.nSlot >= m_nEmitterCapacity || command.hEmitter.nGeneration == 0 || command.hEmitter.nEpoch == 0 ) {
 			return SIR_AUDIO_INVALID_HANDLE;
