@@ -137,6 +137,34 @@ sirStreamingResult_t SIRStreamingCoordinator::submit( const sirStreamingDemand_t
 	return SIR_STREAMING_OUT_OF_CAPACITY;
 }
 
+sirStreamingResult_t SIRStreamingCoordinator::updateDemand( sirStreamingTicket_t ticket, const sirStreamingDemand_t &demand ) noexcept
+{
+	if ( !isValid( ticket ) ) {
+		return SIR_STREAMING_STALE_TICKET;
+	}
+	if ( !streamingDemandValid( demand ) ) {
+		return SIR_STREAMING_INVALID_ARGUMENT;
+	}
+
+	sirStreamingSlot_t &slot = m_pSlots[ticket.nSlot];
+	const bool bSameOwner = slot.demand.nConsumerId == demand.nConsumerId && slot.demand.nConsumerGeneration == demand.nConsumerGeneration;
+	if ( !bSameOwner || !streamingUnitEquals( slot.demand.keyUnit, demand.keyUnit ) ) {
+		return SIR_STREAMING_INVALID_ARGUMENT;
+	}
+	if ( demand.nRequestEpoch < slot.demand.nRequestEpoch ) {
+		return SIR_STREAMING_INVALID_ARGUMENT;
+	}
+	if ( slot.bCancellationRequested || slot.eStage == SIR_STREAMING_STAGE_RETIRING ) {
+		return SIR_STREAMING_BUSY;
+	}
+	if ( slot.eStage == SIR_STREAMING_STAGE_ACTIVE && demand.eTarget != SIR_STREAMING_TARGET_ACTIVE ) {
+		return SIR_STREAMING_BUSY;
+	}
+
+	slot.demand = demand;
+	return SIR_STREAMING_OK;
+}
+
 sirStreamingResult_t SIRStreamingCoordinator::query( sirStreamingTicket_t ticket, sirStreamingSnapshot_t *pSnapshot ) const noexcept
 {
 	if ( pSnapshot == nullptr ) {

@@ -17,8 +17,8 @@ physics, create a second mutable world database, or publish GRDG versions.
 - Overlapping sources produce one demand per cell using maximum target stage,
   maximum priority and earliest deadline, preserving deterministic cell order.
 - One partition-owned consumer ID and manifest generation identify the demand
-  stream. Each evaluation takes an explicit request epoch. Reconciliation with
-  older coordinator tickets is **not implemented** in this package.
+  stream. Each evaluation takes an explicit request epoch. `SIRStreamingDemandReconciler`
+  now performs full-set epoch reconciliation against the streaming coordinator.
 - Output capacity failure is atomic: the required count is returned without
   modifying the caller's demand buffer. Manifest storage stays bounded.
 - The directory is a runtime in-memory view; its binary layout is **not** the
@@ -27,8 +27,8 @@ physics, create a second mutable world database, or publish GRDG versions.
 ## Integration follow-up
 
 1. Freeze SIRPack world-cell manifest format and stream coordinates/dimensions.
-2. Implement consumer-epoch demand reconciliation in `SIRStreamingCoordinator`
-   without prematurely releasing in-flight or provider-pinned work.
+2. Connect existing reconciliation tickets to GRDG resource requests, pending
+   I/O completion, and provider-retirement acknowledgements.
 3. Connect cell resource bundles to the canonical GRDG/IO coordinator (PR #23).
 4. Add committed world-state views and layer policy; GPU/Jolt/nav provider-safe
    activation and HLOD/terrain demand are separate implementations.
