@@ -71,6 +71,110 @@ static bool sirEditorBridgeBindingValid( const sirEditorScalarBridge_t& context,
 	return context.pDocument->findNode( binding.nNodeId, pOutNode ) == SIR_EDITOR_OK;
 }
 
+static bool sirEditorDiscoveryIsScalar( sirPropertyKind_t eKind ) noexcept
+{
+	return eKind == SIR_PROPERTY_BOOL || eKind == SIR_PROPERTY_INT64 ||
+	       eKind == SIR_PROPERTY_UINT64 || eKind == SIR_PROPERTY_REAL64;
+}
+
+static sirEditorScalarBridgeResult_t sirEditorDiscoverPass( const sirEditorScalarDiscovery_t& context, bool bWrite,
+                                                            uint32_t *pOutCount ) noexcept
+{
+	uint32_t nMatches = 0;
+	for ( uint32_t iSource = 0; iSource < context.pIndex->nCount; ++iSource ) {
+		const sirEditorTextProperty_t& source = context.pIndex->pProperties[iSource];
+		if ( source.nNodeId == 0 || source.nNameLength == 0 || source.nNameOffset > context.nSourceBytes ||
+		     source.nNameLength > context.nSourceBytes - source.nNameOffset ) {
+			return SIR_EDITOR_SCALAR_BRIDGE_INVALID_BINDING;
+		}
+		sirEditorNode_t node = {};
+		if ( context.pDocument->findNode( source.nNodeId, &node ) != SIR_EDITOR_OK ) {
+			return SIR_EDITOR_SCALAR_BRIDGE_INVALID_BINDING;
+		}
+		const sirObjectPropertyDescriptor_t *pFound = nullptr;
+		for ( uint32_t iProperty = 0; iProperty < context.pRegistry->getPropertyCount(); ++iProperty ) {
+			const sirObjectPropertyDescriptor_t *pDescriptor = context.pRegistry->getPropertyDescriptor( iProperty );
+			if ( pDescriptor == nullptr || !sirEditorDiscoveryIsScalar( pDescriptor->eKind ) ) {
+				continue;
+			}
+			if ( context.pRegistry->findProperty( node.nTypeId, pDescriptor->nPropertyId ) != pDescriptor ) {
+				continue;
+			}
+			if ( !context.pMatchesAtom( pDescriptor->nNameAtom, context.pszSource + source.nNameOffset,
+			                            source.nNameLength, context.pContext ) ) {
+				continue;
+			}
+			if ( pFound != nullptr ) {
+				return SIR_EDITOR_SCALAR_BRIDGE_INVALID_BINDING;
+			}
+			pFound = pDescriptor;
+		}
+		if ( pFound == nullptr ) {
+			continue;
+		}
+		for ( uint32_t iPrior = 0; iPrior < iSource; ++iPrior ) {
+			const sirEditorTextProperty_t& previous = context.pIndex->pProperties[iPrior];
+			if ( previous.nNodeId != source.nNodeId || previous.nNameLength != source.nNameLength ||
+			     previous.nNameOffset > context.nSourceBytes ||
+			     previous.nNameLength > context.nSourceBytes - previous.nNameOffset ) {
+				continue;
+			}
+			if ( memcmp( context.pszSource + previous.nNameOffset, context.pszSource + source.nNameOffset,
+			             source.nNameLength ) == 0 ) {
+				return SIR_EDITOR_SCALAR_BRIDGE_INVALID_BINDING;
+			}
+		}
+		if ( bWrite ) {
+			context.pOutput[nMatches] = { source.nNodeId, pFound->nPropertyId, iSource };
+		}
+		++nMatches;
+	}
+	*pOutCount = nMatches;
+	return SIR_EDITOR_SCALAR_BRIDGE_OK;
+}
+
+sirEditorScalarBridgeResult_t sirEditorDiscoverScalarBindings( const sirEditorScalarDiscovery_t& context,
+                                                               uint32_t *pOutCount ) noexcept
+{
+	if ( pOutCount == nullptr ) {
+		return SIR_EDITOR_SCALAR_BRIDGE_INVALID_ARGUMENT;
+	}
+	*pOutCount = 0;
+	if ( context.pDocument == nullptr || context.pRegistry == nullptr || context.pIndex == nullptr ||
+	     context.pszSource == nullptr || context.pMatchesAtom == nullptr || context.nSourceBytes == 0 ) {
+		return SIR_EDITOR_SCALAR_BRIDGE_INVALID_ARGUMENT;
+	}
+	if ( context.pIndex->nCount > context.pIndex->nCapacity ||
+	     ( context.pIndex->nCount != 0 && context.pIndex->pProperties == nullptr ) ||
+	     ( context.nOutputCapacity != 0 && context.pOutput == nullptr ) ) {
+		return SIR_EDITOR_SCALAR_BRIDGE_INVALID_ARGUMENT;
+	}
+	if ( context.nOutputCapacity != 0 &&
+	     ( sirEditorBridgeOverlaps( context.pOutput, ( size_t )context.nOutputCapacity * sizeof( sirEditorScalarBinding_t ),
+	                                context.pIndex->pProperties,
+	                                ( size_t )context.pIndex->nCount * sizeof( sirEditorTextProperty_t ) ) ||
+	       sirEditorBridgeOverlaps( context.pOutput, ( size_t )context.nOutputCapacity * sizeof( sirEditorScalarBinding_t ),
+	                                context.pszSource, context.nSourceBytes ) ) ) {
+		return SIR_EDITOR_SCALAR_BRIDGE_INVALID_ARGUMENT;
+	}
+	uint32_t nMatches = 0;
+	sirEditorScalarBridgeResult_t eResult = sirEditorDiscoverPass( context, false, &nMatches );
+	if ( eResult != SIR_EDITOR_SCALAR_BRIDGE_OK ) {
+		return eResult;
+	}
+	*pOutCount = nMatches;
+	if ( context.pOutput == nullptr && context.nOutputCapacity == 0 ) {
+		return SIR_EDITOR_SCALAR_BRIDGE_OK;
+	}
+	if ( context.nOutputCapacity < nMatches ) {
+		return SIR_EDITOR_SCALAR_BRIDGE_OUT_OF_CAPACITY;
+	}
+	uint32_t nWritten = 0;
+	eResult = sirEditorDiscoverPass( context, true, &nWritten );
+	return eResult == SIR_EDITOR_SCALAR_BRIDGE_OK && nWritten == nMatches ? SIR_EDITOR_SCALAR_BRIDGE_OK
+	                                                                      : SIR_EDITOR_SCALAR_BRIDGE_INVALID_BINDING;
+}
+
 sirEditorScalarBridgeResult_t sirEditorImportBoundScalars( const sirEditorScalarBridge_t& context ) noexcept
 {
 	if ( !sirEditorBridgeValid( context ) ) {
