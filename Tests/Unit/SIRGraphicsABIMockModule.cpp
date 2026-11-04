@@ -25,6 +25,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 static uint32_t s_nMockMode = 0;
 static uint32_t s_nLiveDevices = 0;
+static uint64_t s_nSubmitted = 0;
 static uint32_t s_nDriverIdentity = 17;
 static uint32_t s_nDeviceIdentity = 23;
 
@@ -98,22 +99,236 @@ static uint32_t mockQueryFormat( void *, sirGraphicsABIFormat_t *pInfo ) noexcep
 	return SIR_GRAPHICS_ABI_SUCCESS;
 }
 
-static uint32_t mockPoll( void *, uint32_t, uint64_t, uint32_t *pDone ) noexcept
+static uint32_t mockPoll( void *, const sirGraphicsCompletion_t *pCompletion, uint32_t *pDone ) noexcept
 {
-	if ( pDone == nullptr ) {
+	if ( pCompletion == nullptr || pDone == nullptr || pCompletion->nDeviceGeneration != 5 ||
+	     pCompletion->eQueue != SIR_GRAPHICS_QUEUE_DIRECT || pCompletion->nValue == 0 ) {
 		return SIR_GRAPHICS_ABI_INVALID_ARGUMENT;
 	}
-	*pDone = 1;
+	*pDone = pCompletion->nValue <= s_nSubmitted ? 1 : 0;
 	return SIR_GRAPHICS_ABI_SUCCESS;
 }
 
-static uint32_t mockWait( void *, uint32_t, uint64_t, uint64_t ) noexcept
+static uint32_t mockWait( void *, const sirGraphicsCompletion_t *pCompletion, uint64_t ) noexcept
 {
-	return SIR_GRAPHICS_ABI_SUCCESS;
+	uint32_t nComplete = 0;
+	const uint32_t nResult = mockPoll( nullptr, pCompletion, &nComplete );
+	if ( nResult != SIR_GRAPHICS_ABI_SUCCESS ) {
+		return nResult;
+	}
+	return nComplete != 0 ? SIR_GRAPHICS_ABI_SUCCESS : SIR_GRAPHICS_ABI_UNSUPPORTED;
 }
 
 static uint32_t mockShutdown( void * ) noexcept
 {
+	return SIR_GRAPHICS_ABI_SUCCESS;
+}
+
+static uint32_t mockCreateBuffer( void *, const sirGraphicsBufferDesc_t *, sirGraphicsHandle_t * ) noexcept
+{
+	return SIR_GRAPHICS_ABI_UNSUPPORTED;
+}
+
+static uint32_t mockCreateTexture( void *, const sirGraphicsTextureDesc_t *, sirGraphicsHandle_t * ) noexcept
+{
+	return SIR_GRAPHICS_ABI_UNSUPPORTED;
+}
+
+static uint32_t mockCreateView( void *, const sirGraphicsViewDesc_t *, sirGraphicsHandle_t * ) noexcept
+{
+	return SIR_GRAPHICS_ABI_UNSUPPORTED;
+}
+
+static uint32_t mockCreateSampler( void *, const sirGraphicsSamplerDesc_t *, sirGraphicsHandle_t * ) noexcept
+{
+	return SIR_GRAPHICS_ABI_UNSUPPORTED;
+}
+
+static uint32_t mockCreatePipeline( void *, const sirGraphicsABIPipeline_t *, sirGraphicsHandle_t * ) noexcept
+{
+	return SIR_GRAPHICS_ABI_UNSUPPORTED;
+}
+
+static uint32_t mockCreateBindingSet( void *, sirGraphicsHandle_t, uint32_t, sirGraphicsHandle_t * ) noexcept
+{
+	return SIR_GRAPHICS_ABI_UNSUPPORTED;
+}
+
+static uint32_t mockUpdateBindings( void *, sirGraphicsHandle_t, const sirGraphicsDescriptorWrite_t *, uint32_t ) noexcept
+{
+	return SIR_GRAPHICS_ABI_UNSUPPORTED;
+}
+
+static uint32_t mockMapBuffer( void *, const sirGraphicsABIBufferRange_t *, sirGraphicsMappedBuffer_t * ) noexcept
+{
+	return SIR_GRAPHICS_ABI_UNSUPPORTED;
+}
+
+static uint32_t mockUnmapBuffer( void *, const sirGraphicsABIBufferRange_t * ) noexcept
+{
+	return SIR_GRAPHICS_ABI_UNSUPPORTED;
+}
+
+static uint32_t mockFlushBuffer( void *, const sirGraphicsABIBufferRange_t * ) noexcept
+{
+	return SIR_GRAPHICS_ABI_UNSUPPORTED;
+}
+
+static uint32_t mockInvalidateBuffer( void *, const sirGraphicsABIBufferRange_t * ) noexcept
+{
+	return SIR_GRAPHICS_ABI_UNSUPPORTED;
+}
+
+static uint32_t mockCreateSurface( void *, const sirGraphicsABINativeSurface_t *, const sirGraphicsABIPresentDesc_t *, sirGraphicsHandle_t * ) noexcept
+{
+	return SIR_GRAPHICS_ABI_UNSUPPORTED;
+}
+
+static uint32_t mockResizeSurface( void *, sirGraphicsHandle_t, const sirGraphicsABINativeSurface_t *, const sirGraphicsABIPresentDesc_t * ) noexcept
+{
+	return SIR_GRAPHICS_ABI_UNSUPPORTED;
+}
+
+static uint32_t mockAcquireSurfaceImage( void *, sirGraphicsHandle_t, sirGraphicsSurfaceImage_t * ) noexcept
+{
+	return SIR_GRAPHICS_ABI_UNSUPPORTED;
+}
+
+static uint32_t mockPresent( void *, const sirGraphicsSurfaceImage_t *, const sirGraphicsCompletion_t * ) noexcept
+{
+	return SIR_GRAPHICS_ABI_UNSUPPORTED;
+}
+static uint32_t mockCmdReset( void * ) noexcept
+{
+	return SIR_GRAPHICS_ABI_SUCCESS;
+}
+
+static uint32_t mockCmdBarrier( void *, const sirGraphicsBarrier_t *, uint32_t ) noexcept
+{
+	return SIR_GRAPHICS_ABI_UNSUPPORTED;
+}
+
+static uint32_t mockCmdCopyBuffer( void *, const sirGraphicsABICopyBuffer_t * ) noexcept
+{
+	return SIR_GRAPHICS_ABI_UNSUPPORTED;
+}
+
+static uint32_t mockCmdCopyBufferTexture( void *, const sirGraphicsABIBufferTextureCopy_t * ) noexcept
+{
+	return SIR_GRAPHICS_ABI_UNSUPPORTED;
+}
+
+static uint32_t mockCmdBeginRenderPass( void *, const sirGraphicsABIRenderPass_t * ) noexcept
+{
+	return SIR_GRAPHICS_ABI_UNSUPPORTED;
+}
+
+static uint32_t mockCmdEndRenderPass( void * ) noexcept
+{
+	return SIR_GRAPHICS_ABI_UNSUPPORTED;
+}
+
+static uint32_t mockCmdBindPipeline( void *, sirGraphicsHandle_t ) noexcept
+{
+	return SIR_GRAPHICS_ABI_UNSUPPORTED;
+}
+
+static uint32_t mockCmdBindBindingSet( void *, uint32_t, sirGraphicsHandle_t ) noexcept
+{
+	return SIR_GRAPHICS_ABI_UNSUPPORTED;
+}
+
+static uint32_t mockCmdBindVertexBuffer( void *, const sirGraphicsABIVertexBuffer_t * ) noexcept
+{
+	return SIR_GRAPHICS_ABI_UNSUPPORTED;
+}
+
+static uint32_t mockCmdBindIndexBuffer( void *, const sirGraphicsABIIndexBuffer_t * ) noexcept
+{
+	return SIR_GRAPHICS_ABI_UNSUPPORTED;
+}
+
+static uint32_t mockCmdSetViewport( void *, const sirGraphicsViewport_t *, const sirGraphicsRect_t * ) noexcept
+{
+	return SIR_GRAPHICS_ABI_UNSUPPORTED;
+}
+
+static uint32_t mockCmdDraw( void *, const sirGraphicsABIDraw_t * ) noexcept
+{
+	return SIR_GRAPHICS_ABI_UNSUPPORTED;
+}
+
+static uint32_t mockCmdDrawIndexed( void *, const sirGraphicsABIDrawIndexed_t * ) noexcept
+{
+	return SIR_GRAPHICS_ABI_UNSUPPORTED;
+}
+
+static uint32_t mockCmdClose( void * ) noexcept
+{
+	return SIR_GRAPHICS_ABI_SUCCESS;
+}
+static uint32_t mockCmdDispatch( void *, uint32_t nX, uint32_t nY, uint32_t nZ ) noexcept
+{
+	return nX != 0 && nY != 0 && nZ != 0 ? SIR_GRAPHICS_ABI_SUCCESS : SIR_GRAPHICS_ABI_INVALID_ARGUMENT;
+}
+
+static uint32_t mockBudget( void *, sirGraphicsMemoryBudget_t *pBudget ) noexcept
+{
+	if ( pBudget == nullptr ) {
+		return SIR_GRAPHICS_ABI_INVALID_ARGUMENT;
+	}
+	*pBudget = {};
+	pBudget->nBudgetBytes = 1024 * 1024;
+	return SIR_GRAPHICS_ABI_SUCCESS;
+}
+
+static uint32_t mockRetire( void *, sirGraphicsHandle_t hResource, const sirGraphicsCompletionSet_t *pComplete ) noexcept
+{
+	if ( hResource.nDeviceGeneration != 5 || hResource.nGeneration == 0 || pComplete == nullptr ||
+	     pComplete->nDeviceGeneration != 5 ) {
+		return SIR_GRAPHICS_ABI_INVALID_ARGUMENT;
+	}
+	return SIR_GRAPHICS_ABI_SUCCESS;
+}
+
+static uint32_t mockAcquireCommands( void *, uint32_t nQueue, sirGraphicsABICommandList_t *pCommands ) noexcept
+{
+	if ( nQueue != SIR_GRAPHICS_QUEUE_DIRECT || pCommands == nullptr || pCommands->nSize < sizeof( sirGraphicsABICommandList_t ) ) {
+		return SIR_GRAPHICS_ABI_INVALID_ARGUMENT;
+	}
+	*pCommands = {};
+	pCommands->nSize = sizeof( *pCommands );
+	pCommands->nDeviceGeneration = 5;
+	pCommands->nQueue = nQueue;
+	pCommands->pCommands = &s_nDeviceIdentity;
+	pCommands->pReset = mockCmdReset;
+	pCommands->pBarrier = mockCmdBarrier;
+	pCommands->pCopyBuffer = mockCmdCopyBuffer;
+	pCommands->pCopyBufferTexture = mockCmdCopyBufferTexture;
+	pCommands->pBeginRenderPass = mockCmdBeginRenderPass;
+	pCommands->pEndRenderPass = mockCmdEndRenderPass;
+	pCommands->pBindPipeline = mockCmdBindPipeline;
+	pCommands->pBindBindingSet = mockCmdBindBindingSet;
+	pCommands->pBindVertexBuffer = mockCmdBindVertexBuffer;
+	pCommands->pBindIndexBuffer = mockCmdBindIndexBuffer;
+	pCommands->pSetViewport = mockCmdSetViewport;
+	pCommands->pDraw = mockCmdDraw;
+	pCommands->pDrawIndexed = mockCmdDrawIndexed;
+	pCommands->pDispatch = mockCmdDispatch;
+	pCommands->pClose = mockCmdClose;
+	return SIR_GRAPHICS_ABI_SUCCESS;
+}
+
+static uint32_t mockSubmit( void *, uint32_t nQueue, const sirGraphicsABISubmission_t *pBatch,
+                            sirGraphicsCompletion_t *pCompletion ) noexcept
+{
+	if ( nQueue != SIR_GRAPHICS_QUEUE_DIRECT || pBatch == nullptr || pBatch->nSize < sizeof( *pBatch ) ||
+	     pBatch->nCommandListCount != 1 || pBatch->ppCommandLists == nullptr ||
+	     pBatch->ppCommandLists[0] != &s_nDeviceIdentity || pCompletion == nullptr ) {
+		return SIR_GRAPHICS_ABI_INVALID_ARGUMENT;
+	}
+	++s_nSubmitted;
+	*pCompletion = { 5, SIR_GRAPHICS_QUEUE_DIRECT, s_nSubmitted };
 	return SIR_GRAPHICS_ABI_SUCCESS;
 }
 
@@ -137,6 +352,25 @@ static uint32_t mockCreate( void *, const sirGraphicsABIDeviceRequest_t *pReques
 	pDevice->pPoll = mockPoll;
 	pDevice->pWait = mockWait;
 	pDevice->pShutdown = mockShutdown;
+	pDevice->pQueryMemoryBudget = mockBudget;
+	pDevice->pCreateBuffer = mockCreateBuffer;
+	pDevice->pCreateTexture = mockCreateTexture;
+	pDevice->pCreateView = mockCreateView;
+	pDevice->pCreateSampler = mockCreateSampler;
+	pDevice->pCreatePipeline = mockCreatePipeline;
+	pDevice->pCreateBindingSet = mockCreateBindingSet;
+	pDevice->pUpdateBindings = mockUpdateBindings;
+	pDevice->pMapBuffer = mockMapBuffer;
+	pDevice->pUnmapBuffer = mockUnmapBuffer;
+	pDevice->pFlushBuffer = mockFlushBuffer;
+	pDevice->pInvalidateBuffer = mockInvalidateBuffer;
+	pDevice->pAcquireCommands = mockAcquireCommands;
+	pDevice->pSubmit = mockSubmit;
+	pDevice->pRetireResource = mockRetire;
+	pDevice->pCreateSurface = mockCreateSurface;
+	pDevice->pResizeSurface = mockResizeSurface;
+	pDevice->pAcquireSurfaceImage = mockAcquireSurfaceImage;
+	pDevice->pPresent = mockPresent;
 	if ( s_nMockMode == 5 ) {
 		pDevice->pWait = nullptr;
 	}

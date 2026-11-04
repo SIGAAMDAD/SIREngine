@@ -137,6 +137,46 @@ static bool testBinaryModule( void ) noexcept
 	if ( sirGraphicsQueryABIFormat( &device, SIR_GRAPHICS_FORMAT_D16_UNORM, &format ) != SIR_GRAPHICS_ABI_UNSUPPORTED ) {
 		return false;
 	}
+
+	sirGraphicsABICommandList_t commands = {};
+	commands.nSize = sizeof( commands );
+	if ( device.pAcquireCommands( device.pDevice, SIR_GRAPHICS_QUEUE_DIRECT, &commands ) != SIR_GRAPHICS_ABI_SUCCESS ||
+	     sirGraphicsValidateABICommandList( &commands ) != SIR_GRAPHICS_ABI_SUCCESS ||
+	     commands.pReset( commands.pCommands ) != SIR_GRAPHICS_ABI_SUCCESS ||
+	     commands.pDispatch( commands.pCommands, 1, 1, 1 ) != SIR_GRAPHICS_ABI_SUCCESS ||
+	     commands.pDispatch( commands.pCommands, 0, 1, 1 ) != SIR_GRAPHICS_ABI_INVALID_ARGUMENT ||
+	     commands.pClose( commands.pCommands ) != SIR_GRAPHICS_ABI_SUCCESS ) {
+		return false;
+	}
+	sirGraphicsABICommandList_t damaged = commands;
+	damaged.pDraw = nullptr;
+	if ( sirGraphicsValidateABICommandList( &damaged ) != SIR_GRAPHICS_ABI_INVALID_ARGUMENT ) {
+		return false;
+	}
+	const void *szCommandLists[] = { commands.pCommands };
+	sirGraphicsABISubmission_t submission = {};
+	submission.nSize = sizeof( submission );
+	submission.nCommandListCount = 1;
+	submission.ppCommandLists = szCommandLists;
+	sirGraphicsCompletion_t completion = {};
+	if ( device.pSubmit( device.pDevice, SIR_GRAPHICS_QUEUE_DIRECT, &submission, &completion ) != SIR_GRAPHICS_ABI_SUCCESS ||
+	     completion.nDeviceGeneration != 5 || completion.eQueue != SIR_GRAPHICS_QUEUE_DIRECT || completion.nValue == 0 ) {
+		return false;
+	}
+	uint32_t nDone = 0;
+	if ( device.pPoll( device.pDevice, &completion, &nDone ) != SIR_GRAPHICS_ABI_SUCCESS || nDone != 1 ||
+	     device.pWait( device.pDevice, &completion, 0 ) != SIR_GRAPHICS_ABI_SUCCESS ) {
+		return false;
+	}
+	completion.nDeviceGeneration = 4;
+	if ( device.pPoll( device.pDevice, &completion, &nDone ) != SIR_GRAPHICS_ABI_INVALID_ARGUMENT ) {
+		return false;
+	}
+	sirGraphicsMemoryBudget_t budget = {};
+	if ( device.pQueryMemoryBudget( device.pDevice, &budget ) != SIR_GRAPHICS_ABI_SUCCESS ||
+	     budget.nBudgetBytes != 1024U * 1024U ) {
+		return false;
+	}
 	if ( sirGraphicsDestroyABIDevice( &module, &device ) != SIR_GRAPHICS_ABI_SUCCESS || device.pDevice != nullptr ||
 	     module.nActiveDevices != 0 ) {
 		return false;

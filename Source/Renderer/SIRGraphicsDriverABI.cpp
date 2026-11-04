@@ -121,7 +121,32 @@ sirGraphicsABIResult_t sirGraphicsValidateABIDevice( const sirGraphicsABIDevice_
 {
 	if ( pDevice == nullptr || pDevice->nSize < sizeof( sirGraphicsABIDevice_t ) || pDevice->nReserved != 0 ||
 	     pDevice->pDevice == nullptr || pDevice->pQueryCapabilities == nullptr || pDevice->pQueryFormat == nullptr ||
-	     pDevice->pPoll == nullptr || pDevice->pWait == nullptr || pDevice->pShutdown == nullptr ) {
+	     pDevice->pPoll == nullptr || pDevice->pWait == nullptr || pDevice->pShutdown == nullptr ||
+	     pDevice->pQueryMemoryBudget == nullptr || pDevice->pCreateBuffer == nullptr ||
+	     pDevice->pCreateTexture == nullptr || pDevice->pCreateView == nullptr || pDevice->pCreateSampler == nullptr ||
+	     pDevice->pCreatePipeline == nullptr || pDevice->pCreateBindingSet == nullptr ||
+	     pDevice->pUpdateBindings == nullptr || pDevice->pMapBuffer == nullptr || pDevice->pUnmapBuffer == nullptr ||
+	     pDevice->pFlushBuffer == nullptr || pDevice->pInvalidateBuffer == nullptr ||
+	     pDevice->pAcquireCommands == nullptr || pDevice->pSubmit == nullptr || pDevice->pRetireResource == nullptr ||
+	     pDevice->pCreateSurface == nullptr || pDevice->pResizeSurface == nullptr ||
+	     pDevice->pAcquireSurfaceImage == nullptr || pDevice->pPresent == nullptr ) {
+		return SIR_GRAPHICS_ABI_INVALID_ARGUMENT;
+	}
+	return SIR_GRAPHICS_ABI_SUCCESS;
+}
+
+sirGraphicsABIResult_t sirGraphicsValidateABICommandList( const sirGraphicsABICommandList_t *pCommands ) noexcept
+{
+	if ( pCommands == nullptr || pCommands->nSize < sizeof( sirGraphicsABICommandList_t ) ||
+	     pCommands->nDeviceGeneration == 0 || pCommands->nQueue >= SIR_GRAPHICS_QUEUE_COUNT ||
+	     pCommands->nReserved != 0 || pCommands->pCommands == nullptr ||
+	     pCommands->pReset == nullptr || pCommands->pBarrier == nullptr ||
+	     pCommands->pCopyBuffer == nullptr || pCommands->pCopyBufferTexture == nullptr ||
+	     pCommands->pBeginRenderPass == nullptr || pCommands->pEndRenderPass == nullptr ||
+	     pCommands->pBindPipeline == nullptr || pCommands->pBindBindingSet == nullptr ||
+	     pCommands->pBindVertexBuffer == nullptr || pCommands->pBindIndexBuffer == nullptr ||
+	     pCommands->pSetViewport == nullptr || pCommands->pDraw == nullptr ||
+	     pCommands->pDrawIndexed == nullptr || pCommands->pDispatch == nullptr || pCommands->pClose == nullptr ) {
 		return SIR_GRAPHICS_ABI_INVALID_ARGUMENT;
 	}
 	return SIR_GRAPHICS_ABI_SUCCESS;
