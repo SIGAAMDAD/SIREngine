@@ -40,3 +40,39 @@ inspector aid, not a replacement for Godot's normal editable Inspector.
 The dock caps the total property index at 8192 records and displays at most
 256 entries for one selected node; native transport previews cap each value
 at 512 bytes. The native parser itself supports up to 65536 property entries.
+
+## Direct native extension (new)
+
+The dock now prefers a native `SIREditorGodotSession` registered by an optional
+GDExtension. When present, `Refresh` constructs a short-lived native session,
+opens the on-disk `.tscn`, obtains scene/resource/property dictionaries through
+the C ABI, then releases the session. This path does not spawn an executable,
+write JSON, or allocate a second scene-string copy for the transport. Existing
+Godot `Tree`, `EditorSelection` and inspector controls remain unchanged. If
+that native class is absent, the previous asynchronous CLI remains available.
+
+To build the extension against the **matching fork API**:
+
+```sh
+cmake -S . -B out/editor-native -DSIR_EDITOR_ENABLE_GDEXTENSION=ON \
+  -DSIR_GODOT_CPP_ROOT=/path/to/godot-cpp \
+  -DGODOTCPP_CUSTOM_API_FILE=/path/to/fork-generated/extension_api.json \
+  -DGODOTCPP_TARGET=editor
+cmake --build out/editor-native --target SIREditorGodotExtension
+cmake --install out/editor-native --component EditorGodotBridge \
+  --prefix /path/to/SIREngine/Tools/GodotEditorBridge
+```
+
+The `godot-cpp` source and generated extension API must match the provided
+Godot 4.8 fork. SIREngine does not download, vendor or build its dependencies
+through SCons. The `.gdextension` descriptor is intentionally kept outside the
+Godot project until installation, so the default project has no missing-binary
+load errors. The extension target is disabled by default in the CMake build.
+
+The extension is **editor-only and read-only**; it is not a general runtime
+Node system. Its authoring segment uses SIREngine's `SIRMemoryManager` domain
+`SIR_MEMORY_DOMAIN_EDITOR`. Godot remains the owner of the UI and scripting
+`Variant`s. Once the Godot editor kernel is embedded into SIREngine, that host
+will pass the existing central editor segment instead of creating a temporary
+segment in the Godot process. Neither a real GDExtension build against this
+fork nor a graphical editor smoke test is covered by default CI.

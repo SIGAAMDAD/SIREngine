@@ -131,17 +131,19 @@ func _on_refresh_pressed() -> void:
         _status.text = "The scene must be saved to disk before inspection."
         return
 
+    var direct_available: bool = ClassDB.class_exists("SIREditorGodotSession")
     var executable: String = _binary.text.strip_edges()
-    if executable.is_empty():
-        _status.text = "Configure the SIREditor executable path first."
+    if not direct_available and executable.is_empty():
+        _status.text = "Configure the SIREditor executable or install the native editor extension."
         return
 
     _cancel_active_request()
     _snapshot_scene = ""
     _snapshot_hash = ""
     _items_by_id.clear()
+    _properties_by_node.clear()
     _tree.clear()
-    _on_binary_submitted("")
+    _property_tree.clear()
 
     var disk_path: String = ProjectSettings.globalize_path(scene_root.scene_file_path)
     var source_hash: String = FileAccess.get_sha256(disk_path)
@@ -149,7 +151,33 @@ func _on_refresh_pressed() -> void:
         _status.text = "Cannot read the saved scene file."
         return
 
-    # Each request writes one unique cache file, never to the authored scene.
+    # Use one source model per refresh on the Godot editor thread; this path
+    # performs no JSON serialization, subprocess spawn or temporary file IO.
+    if direct_available:
+        var native_session: RefCounted = ClassDB.instantiate("SIREditorGodotSession") as RefCounted
+        if native_session == null:
+            _status.text = "Cannot construct the native editor extension session."
+            return
+        var opened: bool = bool(native_session.call("open_scene", disk_path))
+        var snapshot: Dictionary = native_session.call("get_snapshot") if opened else {}
+        var native_error: String = str(native_session.call("get_last_error"))
+        native_session.call("close_scene")
+        native_session = null
+        if not opened:
+            _status.text = "Native in-process inspection failed: %s" % native_error
+            return
+        if FileAccess.get_sha256(disk_path) != source_hash:
+            _status.text = "Saved scene changed during native inspection. Refresh again."
+            return
+        if snapshot.get("scene", "") != disk_path or not _valid_snapshot(snapshot):
+            _status.text = "Native snapshot failed scene identity or schema validation."
+            return
+        _snapshot_hash = source_hash
+        _show_snapshot(snapshot, scene_root.scene_file_path)
+        return
+
+    _on_binary_submitted("")
+    # Fallback only until the native extension is built and installed.
     _active_output = ProjectSettings.globalize_path("user://sir_scene_%s_%s.json" % [
         str(get_instance_id()), str(_request_generation)])
     _remove_output_files(_active_output)
