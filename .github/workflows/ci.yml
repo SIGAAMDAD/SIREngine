@@ -79,8 +79,19 @@ jobs:
           key: sir-fbuild-v1.20-${{ runner.os }}-dev-${{ github.sha }}
           restore-keys: |
             sir-fbuild-v1.20-${{ runner.os }}-dev-
+      - name: Fetch pinned GameInput v1 native SDK header
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $includeDir = Join-Path $env:RUNNER_TEMP 'sir-gameinput-v1'
+          New-Item -ItemType Directory -Path $includeDir -Force | Out-Null
+          $header = Join-Path $includeDir 'GameInput.h'
+          Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/microsoftconnect/GameInput/dce6dabd75b53fcb29db86afe4de5c917921af18/include/v1/GameInput.h' -OutFile $header
+          $blob = (git hash-object -- $header).Trim()
+          if ($blob -ne 'ebd3875a7a7e7892d1723f1a8467fe6ca8325620') { throw "GameInput v1 header source mismatch: $blob" }
+          Add-Content -Path $env:GITHUB_ENV -Value "SIR_GAMEINPUT_SDK_INCLUDE=$includeDir"
       - name: Configure native engine
-        run: cmake --preset "${{ matrix.preset }}" -DSIR_WITH_GOOGLETEST=ON
+        run: cmake --preset "${{ matrix.preset }}" -DSIR_WITH_GOOGLETEST=ON -DSIR_REQUIRE_GAMEINPUT_SDK=${{ runner.os == 'Windows' && 'ON' || 'OFF' }}
       - name: Compile engine and tests
         run: cmake --build --preset "${{ matrix.preset }}"
       - name: Run allocator unit tests (GoogleTest)

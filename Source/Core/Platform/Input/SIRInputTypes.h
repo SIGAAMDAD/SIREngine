@@ -116,7 +116,8 @@ typedef struct sirInputHardwareKey_s
 typedef enum sirInputClockSource_e : uint8_t
 {
 	SIR_INPUT_CLOCK_ENGINE_MONOTONIC = 0,
-	SIR_INPUT_CLOCK_EVDEV_MONOTONIC = 1
+	SIR_INPUT_CLOCK_EVDEV_MONOTONIC = 1,
+	SIR_INPUT_CLOCK_GAMEINPUT = 2
 } sirInputClockSource_t;
 
 constexpr uint8_t SIR_INPUT_TIMESTAMP_NATIVE = 1;

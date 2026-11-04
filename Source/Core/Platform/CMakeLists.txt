@@ -25,6 +25,24 @@ if(WIN32)
         Input/Windows/SIRWindowsRawDecode.cpp
         Input/Windows/SIRWindowsXInputBackend.cpp
     )
+    # GameInput is first-party Windows controller I/O. The runtime is loaded
+    # from the OS, while its v1 SDK header is an explicitly pinned build input.
+    option(SIR_WITH_GAMEINPUT "Enable native Windows GameInput controller history" ON)
+    option(SIR_REQUIRE_GAMEINPUT_SDK "Require GameInput SDK during configure (CI acceptance)" OFF)
+    if(SIR_WITH_GAMEINPUT)
+        find_path(SIR_GAMEINPUT_INCLUDE_DIR NAMES GameInput.h HINTS "$ENV{SIR_GAMEINPUT_SDK_INCLUDE}")
+        if(SIR_GAMEINPUT_INCLUDE_DIR)
+            list(APPEND SIR_CORE_PLATFORM_OS
+                Input/Windows/SIRWindowsGameInputBackend.cpp
+                Input/Windows/SIRWindowsGameInputCodec.cpp)
+            target_include_directories(SIRCore PRIVATE "${SIR_GAMEINPUT_INCLUDE_DIR}")
+            target_compile_definitions(SIRCore PUBLIC SIR_INPUT_GAMEINPUT_AVAILABLE=1)
+        elseif(SIR_REQUIRE_GAMEINPUT_SDK)
+            message(FATAL_ERROR "Native GameInput SDK v1 header required but GameInput.h was not found")
+        endif()
+    elseif(SIR_REQUIRE_GAMEINPUT_SDK)
+        message(FATAL_ERROR "SIR_REQUIRE_GAMEINPUT_SDK requires SIR_WITH_GAMEINPUT=ON")
+    endif()
     target_link_libraries(SIRCore PRIVATE psapi user32)
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     set(SIR_CORE_PLATFORM_OS
