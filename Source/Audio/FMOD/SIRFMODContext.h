@@ -81,6 +81,7 @@ class SIRFMODContext
 private:
 	friend class SIRFMODVoiceBackend;
 	friend class SIRFMODBankStore;
+	friend class SIRFMODMixerBackend;
 	sirFMODNativeOps_t m_Ops = {};
 	void *m_pStudio = nullptr;
 	void *m_pCoreBorrowed = nullptr;
