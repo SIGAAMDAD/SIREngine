@@ -325,3 +325,68 @@ TEST( SIRHiZFoundation, RandomizedReferenceNeverFalseOccludes )
 		}
 	}
 }
+
+TEST( SIRHiZFoundation, HugeByteCountsRejectBeforeReadingCallerMemory )
+{
+#if UINTPTR_MAX == UINT64_MAX
+	const uint32_t nSide = 1U << 31;
+	sirHiZLayout_t layout = {};
+	ASSERT_EQ( sirHiZCalculateLayout( nSide, nSide, &layout ), SIR_GRAPHICS_SUCCESS );
+	float fInput = 0.5f;
+	float fOutput = 123.0f;
+	EXPECT_EQ( sirHiZBuildReference( layout, { &fInput, UINT64_MAX, UINT32_MAX }, &fOutput, UINT64_MAX ), SIR_GRAPHICS_CAPACITY_EXCEEDED );
+	EXPECT_FLOAT_EQ( fOutput, 123.0f );
+
+	ASSERT_EQ( sirHiZCalculateLayout( nSide, nSide - 1, &layout ), SIR_GRAPHICS_SUCCESS );
+	const uint64_t nRequiredInput = ( uint64_t )( layout.nHeight - 1 ) * nSide + layout.nWidth;
+	ASSERT_LE( nRequiredInput, ( uint64_t )SIZE_MAX / sizeof( float ) );
+	ASSERT_GT( layout.nTexelCount, ( uint64_t )SIZE_MAX / sizeof( float ) );
+	EXPECT_EQ( sirHiZBuildReference( layout, { &fInput, UINT64_MAX, nSide }, &fOutput, UINT64_MAX ), SIR_GRAPHICS_CAPACITY_EXCEEDED );
+	EXPECT_FLOAT_EQ( fOutput, 123.0f );
+
+	sirVisibilityCullDesc_t desc = { &layout, nullptr, 0, nullptr, 0, false };
+	sirVisibilityOutput_t output = { nullptr, 0, 77, nullptr, 0, 88 };
+	EXPECT_EQ( sirVisibilityCullReference( desc, &output ), SIR_GRAPHICS_CAPACITY_EXCEEDED );
+	EXPECT_EQ( output.nVisibleCount, 77U );
+	EXPECT_EQ( output.nRejectedCount, 88U );
+#endif
+}
+
+TEST( SIRHiZFoundation, OutputIdentifiersCannotOverwriteDescriptorOrLayout )
+{
+	const sirHiZLayout_t layoutConst = testLayout( 2, 2 );
+	sirHiZLayout_t layout = layoutConst;
+	const float szDepth[4] = { 0.9f, 0.9f, 0.9f, 0.1f };
+	float szPyramid[8] = {};
+	ASSERT_EQ( sirHiZBuildReference( layout, { szDepth, 4, 2 }, szPyramid, 8 ), SIR_GRAPHICS_SUCCESS );
+	sirVisibilityCandidate_t szCandidates[2] = {};
+	szCandidates[0] = { 11, { 0, 0, 1, 1, 0.2f, 0.0f, false, 0 }, false };
+	szCandidates[1] = { 12, { 1, 1, 2, 2, 0.2f, 0.0f, false, 0 }, false };
+	sirVisibilityCullDesc_t desc = { &layout, szPyramid, 8, szCandidates, 2, true };
+	uint32_t szVisible[2] = { 91, 91 };
+	uint32_t szRejected[2] = { 92, 92 };
+	sirVisibilityOutput_t output = { szVisible, 2, 77, szRejected, 2, 88 };
+
+	output.pVisibleIds = &desc.nCandidateCount;
+	EXPECT_EQ( sirVisibilityCullReference( desc, &output ), SIR_GRAPHICS_INVALID_ARGUMENT );
+	EXPECT_EQ( desc.nCandidateCount, 2U );
+	output.pVisibleIds = szVisible;
+	output.pRejectedIds = &desc.nCandidateCount;
+	EXPECT_EQ( sirVisibilityCullReference( desc, &output ), SIR_GRAPHICS_INVALID_ARGUMENT );
+	EXPECT_EQ( desc.nCandidateCount, 2U );
+	output.pRejectedIds = szRejected;
+
+	output.pVisibleIds = &layout.nWidth;
+	EXPECT_EQ( sirVisibilityCullReference( desc, &output ), SIR_GRAPHICS_INVALID_ARGUMENT );
+	EXPECT_EQ( layout.nWidth, 2U );
+	output.pVisibleIds = szVisible;
+	output.pRejectedIds = &layout.nHeight;
+	EXPECT_EQ( sirVisibilityCullReference( desc, &output ), SIR_GRAPHICS_INVALID_ARGUMENT );
+	EXPECT_EQ( layout.nHeight, 2U );
+	EXPECT_EQ( output.nVisibleCount, 77U );
+	EXPECT_EQ( output.nRejectedCount, 88U );
+	output.pRejectedIds = szRejected;
+	ASSERT_EQ( sirVisibilityCullReference( desc, &output ), SIR_GRAPHICS_SUCCESS );
+	EXPECT_EQ( output.nVisibleCount, 1U );
+	EXPECT_EQ( output.nRejectedCount, 1U );
+}
