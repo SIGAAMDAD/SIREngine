@@ -244,6 +244,8 @@ static bool testBinaryModule( void ) noexcept
 	if ( sirGraphicsCreateABIPipeline( &device, &fixedPipeline, &hPipeline ) != SIR_GRAPHICS_SUCCESS ) {
 		return false;
 	}
+	sirGraphicsABIFixedStage_t szFixedStages[5] = {};
+	fixed.pStages = szFixedStages;
 	fixed.nTextureStageCount = 5;
 	if ( sirGraphicsCreateABIPipeline( &device, &fixedPipeline, &hPipeline ) != SIR_GRAPHICS_UNSUPPORTED ) {
 		return false;

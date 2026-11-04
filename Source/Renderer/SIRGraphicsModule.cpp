@@ -234,8 +234,9 @@ sirGraphicsABIResult_t sirGraphicsSelectABIPipelineVariant( const sirGraphicsABI
 
 	for ( uint32_t iCandidate = 0; iCandidate < nCount; ++iCandidate ) {
 		const sirGraphicsABIPipeline_t *pPipeline = &pCandidates[iCandidate];
-		if ( pPipeline->nSize < sizeof( sirGraphicsABIPipeline_t ) ) {
-			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		const sirGraphicsABIResult_t eStructure = sirGraphicsValidateABIPipelineStructure( pPipeline );
+		if ( eStructure != SIR_GRAPHICS_SUCCESS ) {
+			return eStructure;
 		}
 		sirGraphicsABIPipelineModelCaps_t caps = {};
 		caps.nSize = sizeof( caps );
@@ -265,6 +266,10 @@ sirGraphicsABIResult_t sirGraphicsCreateABIPipeline( const sirGraphicsABIDevice_
 {
 	if ( pDesc == nullptr || pPipeline == nullptr ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	const sirGraphicsABIResult_t eStructure = sirGraphicsValidateABIPipelineStructure( pDesc );
+	if ( eStructure != SIR_GRAPHICS_SUCCESS ) {
+		return eStructure;
 	}
 	sirGraphicsABIPipelineModelCaps_t caps = {};
 	caps.nSize = sizeof( caps );

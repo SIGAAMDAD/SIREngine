@@ -101,11 +101,14 @@ static bool testModern( void ) noexcept
 		return false;
 	}
 	pipeline.vertexShader.nFormat = SIR_GRAPHICS_SHADER_SPIRV;
+	sirGraphicsBindingDesc_t szExtraBindings[17] = {};
 	pipeline.nBindingCount = 17;
+	pipeline.pBindings = szExtraBindings;
 	if ( !checkResult( sirGraphicsValidateABIPipeline( &pipeline, &caps ), SIR_GRAPHICS_UNSUPPORTED, "binding limit" ) ) {
 		return false;
 	}
 	pipeline.nBindingCount = 0;
+	pipeline.pBindings = nullptr;
 	sirGraphicsBindingDesc_t binding = {};
 	binding.nBinding = 0;
 	binding.nArrayCount = 1;
@@ -216,7 +219,7 @@ static bool testProgrammable( void ) noexcept
 	}
 	recipe.nVertexShaderProfile = 101;
 	pipeline.nType = SIR_GRAPHICS_PIPELINE_COMPUTE;
-	if ( !checkResult( sirGraphicsValidateABIPipeline( &pipeline, &caps ), SIR_GRAPHICS_UNSUPPORTED, "programmable compute" ) ) {
+	if ( !checkResult( sirGraphicsValidateABIPipeline( &pipeline, &caps ), SIR_GRAPHICS_INVALID_ARGUMENT, "programmable compute" ) ) {
 		return false;
 	}
 	caps.nShaderStageMask = SIR_GRAPHICS_STAGE_VERTEX;
