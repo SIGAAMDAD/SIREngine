@@ -501,10 +501,10 @@ static void testGraphInputValidationAndInspection( void )
 	SIR_GRAPH_CHECK( !graph.submit( nullptr ) );
 	SIRTaskScheduler scheduler;
 	SIR_GRAPH_CHECK( scheduler.init( &memory, { 4, 0, 4 } ) );
-	SIR_GRAPH_CHECK( !graph.getSubmittedHandle( 0, &edge.nBefore ) );
+	sirTaskHandle_t submitted = {};
+	SIR_GRAPH_CHECK( !graph.getSubmittedHandle( 0, &submitted ) );
 	SIR_GRAPH_CHECK( graph.submit( &scheduler ) );
 	SIR_GRAPH_CHECK( !graph.submit( &scheduler ) );
-	sirTaskHandle_t submitted = {};
 	SIR_GRAPH_CHECK( !graph.getSubmittedHandle( 2, &submitted ) );
 	SIR_GRAPH_CHECK( !graph.getSubmittedHandle( 0, nullptr ) );
 	SIR_GRAPH_CHECK( graph.getSubmittedHandle( 0, &submitted ) );
