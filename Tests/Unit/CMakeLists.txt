@@ -195,6 +195,14 @@ target_link_libraries(SIRResourceCatalogDifferentialTests PRIVATE SIR::Resources
 add_test(NAME resources.catalog.differential-dag COMMAND SIRResourceCatalogDifferentialTests)
 sir_configure_owned_target(SIRResourceCatalogDifferentialTests)
 
+# Full source fixture: reflect, import, edit, undo/redo, losslessly serialize and reopen.
+add_executable(SIREditorRealSceneScalarRoundtripTests SIREditorRealSceneScalarRoundtripTests.cpp)
+target_link_libraries(SIREditorRealSceneScalarRoundtripTests PRIVATE SIR::EditorAuthoring)
+target_compile_definitions(SIREditorRealSceneScalarRoundtripTests PRIVATE
+    SIR_EDITOR_TEST_UI_SCENE="${PROJECT_SOURCE_DIR}/Tests/Fixtures/Editor/SourceGodotUI.tscn")
+add_test(NAME editor.scene.real-fixture-scalar-roundtrip COMMAND SIREditorRealSceneScalarRoundtripTests)
+sir_configure_owned_target(SIREditorRealSceneScalarRoundtripTests)
+
 # Source-format scalar edit preservation and fail-closed writer.
 add_executable(SIREditorTextWriterTests SIREditorTextWriterTests.cpp)
 target_link_libraries(SIREditorTextWriterTests PRIVATE SIR::EditorAuthoring)
