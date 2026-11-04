@@ -37,10 +37,10 @@ class SIRPoolAllocator
 {
 public:
 	SIRPoolAllocator( void );
-	SIRPoolAllocator( const SIRPoolAllocator & ) = delete;
-	SIRPoolAllocator &operator=( const SIRPoolAllocator & ) = delete;
-	SIRPoolAllocator( SIRPoolAllocator && ) = delete;
-	SIRPoolAllocator &operator=( SIRPoolAllocator && ) = delete;
+	SIRPoolAllocator( const SIRPoolAllocator& ) = delete;
+	SIRPoolAllocator& operator=( const SIRPoolAllocator& ) = delete;
+	SIRPoolAllocator( SIRPoolAllocator&& ) = delete;
+	SIRPoolAllocator& operator=( SIRPoolAllocator&& ) = delete;
 
 	bool init( SIRMemorySegment *pSegment, uint32_t nObjectBytes, uint32_t nAlignment = 16, uint64_t nCommitIncrementBytes = 0 );
 	void *alloc( void );

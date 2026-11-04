@@ -36,7 +36,7 @@ class SIRFlatHashMap
 private:
 	using Pair = std::pair<K, V>;
 	static_assert( SIRLifetimeOps<Pair>::CAN_RELOCATE, "Hash table growth requires copy or nothrow move" );
-	static_assert( std::is_nothrow_invocable_r<size_t, Hash, const K &>::value,
+	static_assert( std::is_nothrow_invocable_r<size_t, Hash, const K&>::value,
 	               "Hash must be noexcept to preserve strong rehash failure guarantee" );
 
 	uint8_t *m_pControl = nullptr;
@@ -108,7 +108,7 @@ private:
 		return nAddress >= nStart && nAddress - nStart < nBytes;
 	}
 
-	uint32_t locate( const K &key ) const
+	uint32_t locate( const K& key ) const
 	{
 		if ( m_nCapacity == 0 ) {
 			return UINT32_MAX;
@@ -169,7 +169,7 @@ private:
 	}
 
 	template <typename KeyArg, typename ValueArg>
-	sirContainerResult_t insertInternal( KeyArg &&key, ValueArg &&value, bool *pInserted )
+	sirContainerResult_t insertInternal( KeyArg&& key, ValueArg&& value, bool *pInserted )
 	{
 		if ( pInserted != nullptr ) {
 			*pInserted = false;
@@ -239,10 +239,10 @@ public:
 		freeTable( m_pControl, m_nCapacity );
 	}
 
-	SIRFlatHashMap( const SIRFlatHashMap & ) = delete;
-	SIRFlatHashMap &operator=( const SIRFlatHashMap & ) = delete;
-	SIRFlatHashMap( SIRFlatHashMap && ) = delete;
-	SIRFlatHashMap &operator=( SIRFlatHashMap && ) = delete;
+	SIRFlatHashMap( const SIRFlatHashMap& ) = delete;
+	SIRFlatHashMap& operator=( const SIRFlatHashMap& ) = delete;
+	SIRFlatHashMap( SIRFlatHashMap&& ) = delete;
+	SIRFlatHashMap& operator=( SIRFlatHashMap&& ) = delete;
 
 	uint32_t getSize( void ) const noexcept
 	{
@@ -303,35 +303,35 @@ public:
 		return rehash( nRequired );
 	}
 
-	sirContainerResult_t tryInsert( const K &key, const V &value, bool *pInserted = nullptr )
+	sirContainerResult_t tryInsert( const K& key, const V& value, bool *pInserted = nullptr )
 	{
 		return insertInternal( key, value, pInserted );
 	}
 
-	sirContainerResult_t tryInsert( K &&key, V &&value, bool *pInserted = nullptr )
+	sirContainerResult_t tryInsert( K&& key, V&& value, bool *pInserted = nullptr )
 	{
 		return insertInternal( std::move( key ), std::move( value ), pInserted );
 	}
 
 	template <typename KeyArg, typename ValueArg>
-	sirContainerResult_t tryEmplace( KeyArg &&key, ValueArg &&value, bool *pInserted = nullptr )
+	sirContainerResult_t tryEmplace( KeyArg&& key, ValueArg&& value, bool *pInserted = nullptr )
 	{
 		return insertInternal( std::forward<KeyArg>( key ), std::forward<ValueArg>( value ), pInserted );
 	}
 
-	V *find( const K &key )
+	V *find( const K& key )
 	{
 		uint32_t iIndex = locate( key );
 		return iIndex == UINT32_MAX ? nullptr : &m_pEntries[iIndex].second;
 	}
 
-	const V *find( const K &key ) const
+	const V *find( const K& key ) const
 	{
 		uint32_t iIndex = locate( key );
 		return iIndex == UINT32_MAX ? nullptr : &m_pEntries[iIndex].second;
 	}
 
-	bool erase( const K &key )
+	bool erase( const K& key )
 	{
 		uint32_t iIndex = locate( key );
 		if ( iIndex == UINT32_MAX ) {

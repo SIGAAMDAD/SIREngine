@@ -98,7 +98,7 @@ public:
 	uint32_t getCount( void ) const noexcept;
 	uint32_t getCapacity( void ) const noexcept;
 
-	sirGraphicsResult_t push( const sirShaderCacheKey_t &key, uint32_t nPriority ) noexcept;
+	sirGraphicsResult_t push( const sirShaderCacheKey_t& key, uint32_t nPriority ) noexcept;
 	bool tryPop( sirShaderWarmupItem_t *pItem ) noexcept;
 	void clear( void ) noexcept;
 
@@ -111,10 +111,10 @@ private:
 
 bool sirShaderIsStageValid( uint32_t nStage ) noexcept;
 sirGraphicsResult_t sirShaderGetBackendFormat( sirGraphicsBackend_t eBackend, sirGraphicsShaderFormat_t *pFormat ) noexcept;
-sirGraphicsResult_t sirShaderBuildCacheKey( const sirShaderCacheDescriptor_t &desc, sirShaderCacheKey_t *pKey ) noexcept;
-sirGraphicsResult_t sirShaderValidateVariant( const sirShaderVariant_t &variant ) noexcept;
+sirGraphicsResult_t sirShaderBuildCacheKey( const sirShaderCacheDescriptor_t& desc, sirShaderCacheKey_t *pKey ) noexcept;
+sirGraphicsResult_t sirShaderValidateVariant( const sirShaderVariant_t& variant ) noexcept;
 sirGraphicsResult_t sirShaderSelectVariant( const sirShaderVariant_t *pVariants, uint32_t nVariantCount,
-                                            const sirShaderSelection_t &selection, const sirShaderVariant_t **ppVariant ) noexcept;
-sirGraphicsResult_t sirShaderToGraphicsCode( const sirShaderVariant_t &variant, sirGraphicsShaderCode_t *pCode ) noexcept;
+                                            const sirShaderSelection_t& selection, const sirShaderVariant_t **ppVariant ) noexcept;
+sirGraphicsResult_t sirShaderToGraphicsCode( const sirShaderVariant_t& variant, sirGraphicsShaderCode_t *pCode ) noexcept;
 
 #endif // __SIRENGINE_SIRSHADERPIPELINE_H__

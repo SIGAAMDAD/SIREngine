@@ -27,7 +27,9 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Core/Events/SIREventTypes.h>
 #include <atomic>
+
 #include <stdint.h>
+
 #include <type_traits>
 
 // Single-owner typed signal. subscribe/unsubscribe/clear and publish must all run
@@ -38,14 +40,14 @@ template <typename TPayload, uint32_t Capacity = 8>
 class SIREvent
 {
 public:
-	typedef void ( *callback_t )( void *pContext, const TPayload &payload ) noexcept;
+	typedef void ( *callback_t )( void *pContext, const TPayload& payload ) noexcept;
 	static_assert( Capacity > 0, "A SIREvent needs at least one listener slot" );
 
 	SIREvent( void ) noexcept : m_nCount( 0 ), m_nActive( 0 ), m_nDepth( 0 ), m_bDirty( false )
 	{
 	}
-	SIREvent( const SIREvent & ) = delete;
-	SIREvent &operator=( const SIREvent & ) = delete;
+	SIREvent( const SIREvent& ) = delete;
+	SIREvent& operator=( const SIREvent& ) = delete;
 
 	sirSubscriptionHandle_t subscribe( void *pContext, callback_t pCallback ) noexcept
 	{
@@ -68,17 +70,17 @@ public:
 		return { this, nToken };
 	}
 
-	template <typename TObject, void ( TObject::*Method )( const TPayload & ) noexcept>
+	template <typename TObject, void ( TObject::*Method )( const TPayload& ) noexcept>
 	sirSubscriptionHandle_t subscribe( TObject *pObject ) noexcept
 	{
 		return subscribe( pObject,
-		                  []( void *pContext, const TPayload &payload ) noexcept { ( ( ( TObject * )pContext )->*Method )( payload ); } );
+		                  []( void *pContext, const TPayload& payload ) noexcept { ( ( ( TObject * )pContext )->*Method )( payload ); } );
 	}
 
-	template <typename TObject, void ( TObject::*Method )( const TPayload & ) const noexcept>
+	template <typename TObject, void ( TObject::*Method )( const TPayload& ) const noexcept>
 	sirSubscriptionHandle_t subscribe( const TObject *pObject ) noexcept
 	{
-		return subscribe( ( void * )pObject, []( void *pContext, const TPayload &payload ) noexcept {
+		return subscribe( ( void * )pObject, []( void *pContext, const TPayload& payload ) noexcept {
 			( ( ( const TObject * )pContext )->*Method )( payload );
 		} );
 	}
@@ -131,7 +133,7 @@ public:
 		}
 	}
 
-	void publish( const TPayload &payload ) noexcept
+	void publish( const TPayload& payload ) noexcept
 	{
 		if ( m_nActive == 0 ) {
 			return;

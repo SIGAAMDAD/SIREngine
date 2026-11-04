@@ -66,10 +66,10 @@ public:
 	SIRSPSCEventRing( void ) noexcept : m_Producer{}, m_Consumer{}, m_bStopped( false )
 	{
 	}
-	SIRSPSCEventRing( const SIRSPSCEventRing & ) = delete;
-	SIRSPSCEventRing &operator=( const SIRSPSCEventRing & ) = delete;
+	SIRSPSCEventRing( const SIRSPSCEventRing& ) = delete;
+	SIRSPSCEventRing& operator=( const SIRSPSCEventRing& ) = delete;
 
-	sirEventEnqueueStatus_t tryEnqueue( const TPayload &payload ) noexcept
+	sirEventEnqueueStatus_t tryEnqueue( const TPayload& payload ) noexcept
 	{
 		if ( m_bStopped.load( SIR_MEMORY_ORDER_ACQUIRE ) ) {
 			return SIR_EVENT_ENQUEUE_STOPPED;
@@ -86,7 +86,7 @@ public:
 		return enqueueBatchUnchecked( pPayloads, nCount );
 	}
 
-	bool tryDequeue( TPayload &output ) noexcept
+	bool tryDequeue( TPayload& output ) noexcept
 	{
 		if ( m_Consumer.bDraining ) {
 			return false;
@@ -136,7 +136,7 @@ public:
 	// Acquire up to two zero-copy contiguous spans. The data remain reserved
 	// until commitRead(). A partial commit releases only the consumed prefix.
 	// Only the consumer thread may hold a read lease.
-	uint32_t acquireReadSpans( sirEventReadSpan_s<TPayload> &first, sirEventReadSpan_s<TPayload> &second,
+	uint32_t acquireReadSpans( sirEventReadSpan_s<TPayload>& first, sirEventReadSpan_s<TPayload>& second,
 	                           uint32_t nBudget = UINT32_MAX ) noexcept
 	{
 		first = { nullptr, 0 };

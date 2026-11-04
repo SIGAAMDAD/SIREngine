@@ -34,7 +34,7 @@ struct sirEventQueueSlot_s
 {
 	TPayload payload;
 	void *pContext;
-	void ( *pCallback )( void *, const TPayload & ) noexcept;
+	void ( *pCallback )( void *, const TPayload& ) noexcept;
 	uint32_t nNext;
 };
 
@@ -44,7 +44,7 @@ template <typename TPayload, uint32_t Capacity = 256>
 class SIREventQueue
 {
 public:
-	typedef void ( *callback_t )( void *pContext, const TPayload &payload ) noexcept;
+	typedef void ( *callback_t )( void *pContext, const TPayload& payload ) noexcept;
 	static_assert( Capacity > 0, "Queue needs slots" );
 	static_assert( std::is_trivially_copyable<TPayload>::value, "Queue payloads must be POD" );
 
@@ -54,10 +54,10 @@ public:
 			m_Slots[i].nNext = i == Capacity ? 0 : i + 1;
 		}
 	}
-	SIREventQueue( const SIREventQueue & ) = delete;
-	SIREventQueue &operator=( const SIREventQueue & ) = delete;
+	SIREventQueue( const SIREventQueue& ) = delete;
+	SIREventQueue& operator=( const SIREventQueue& ) = delete;
 
-	bool enqueue( void *pContext, callback_t pCallback, const TPayload &payload,
+	bool enqueue( void *pContext, callback_t pCallback, const TPayload& payload,
 	              sirEventPriority_t ePriority = SIR_EVENT_PRIORITY_NORMAL ) noexcept
 	{
 		if ( pCallback == nullptr || ePriority >= SIR_EVENT_PRIORITY_COUNT || m_nFreeHead == 0 ) {

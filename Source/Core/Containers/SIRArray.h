@@ -59,12 +59,12 @@ public:
 	{
 		return iIndex < N ? m_szData + iIndex : nullptr;
 	}
-	T &operator[]( size_t iIndex ) noexcept
+	T& operator[]( size_t iIndex ) noexcept
 	{
 		assert( iIndex < N );
 		return m_szData[iIndex];
 	}
-	const T &operator[]( size_t iIndex ) const noexcept
+	const T& operator[]( size_t iIndex ) const noexcept
 	{
 		assert( iIndex < N );
 		return m_szData[iIndex];

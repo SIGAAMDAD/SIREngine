@@ -84,7 +84,7 @@ class SIRAllocationRouter
 {
 public:
 	SIRAllocationRouter( void );
-	bool init( const sirAllocationRouterConfig_t &config );
+	bool init( const sirAllocationRouterConfig_t& config );
 	bool alloc( uint32_t nBytes, uint32_t nAlignment, sirRoutedAllocation_t *pResult,
 	            sirAllocationLifetime_t nLifetime = SIR_LIFETIME_ARBITRARY, sirJobScratchToken_t job = { UINT32_MAX, 0 } );
 	bool free( sirRoutedAllocation_t *pAllocation );

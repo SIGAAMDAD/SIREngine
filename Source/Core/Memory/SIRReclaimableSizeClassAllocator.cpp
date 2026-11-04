@@ -133,7 +133,7 @@ bool SIRReclaimableSizeClassAllocator::advanceRetentionEpoch( void )
 		return true;
 	}
 	for ( uint32_t i = 0; i < m_nInitialized; ++i ) {
-		sirClassState_t &state = m_pClassState[i];
+		sirClassState_t& state = m_pClassState[i];
 		const uint64_t nCurrent = m_pSlabs[i].getColdActivations();
 		const uint64_t nRefills = nCurrent - state.nLastActivations;
 		state.nLastActivations = nCurrent;
