@@ -119,3 +119,36 @@ bool sirEditorWriteSceneJSON( const SIREditorSceneWorkspace &workspace, const ch
 	fputs( "]}\n", pOutput );
 	return ferror( pOutput ) == 0;
 }
+
+bool sirEditorWriteSceneJSONFile( const SIREditorSceneWorkspace &workspace, const char *pszScenePath, const char *pszOutputPath ) noexcept
+{
+	if ( pszScenePath == nullptr || pszOutputPath == nullptr || pszOutputPath[0] == '\0' || strcmp( pszScenePath, pszOutputPath ) == 0 ) {
+		return false;
+	}
+
+	constexpr size_t N_MAX_STAGING_PATH = 4096;
+	char szStaging[N_MAX_STAGING_PATH];
+	const int nNameLength = snprintf( szStaging, sizeof( szStaging ), "%s.tmp", pszOutputPath );
+	if ( nNameLength <= 0 || ( size_t )nNameLength >= sizeof( szStaging ) ) {
+		return false;
+	}
+
+	FILE *pOutput = fopen( szStaging, "wb" );
+	if ( pOutput == nullptr ) {
+		return false;
+	}
+
+	const bool bWritten = sirEditorWriteSceneJSON( workspace, pszScenePath, pOutput );
+	const bool bFlushed = fflush( pOutput ) == 0;
+	const bool bClosed = fclose( pOutput ) == 0;
+	if ( !bWritten || !bFlushed || !bClosed ) {
+		remove( szStaging );
+		return false;
+	}
+
+	if ( rename( szStaging, pszOutputPath ) != 0 ) {
+		remove( szStaging );
+		return false;
+	}
+	return true;
+}

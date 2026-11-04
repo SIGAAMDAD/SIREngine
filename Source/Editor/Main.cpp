@@ -26,6 +26,7 @@ static void sirEditorPrintHelp( void ) noexcept
 {
 	puts( "Usage: SIREditor --inspect-scene <path.tscn>" );
 	puts( "       SIREditor --inspect-scene-json <path.tscn>" );
+	puts( "       SIREditor --inspect-scene-json-file <path.tscn> <output.json>" );
 	puts( "       SIREditor --version" );
 	puts( "       SIREditor --help" );
 	puts( "Scene inspection is read-only; serialized properties remain owned by Godot." );
@@ -71,7 +72,7 @@ static void sirEditorPrintResources( const SIREditorSceneWorkspace &workspace ) 
 	}
 }
 
-static int sirEditorInspectScene( const char *pszPath, bool bJSON ) noexcept
+static int sirEditorInspectScene( const char *pszPath, bool bJSON, const char *pszOutputPath = nullptr ) noexcept
 {
 	constexpr uint64_t N_MIB = UINT64_C( 1024 ) * 1024;
 	SIRMemoryManager memory;
@@ -98,6 +99,9 @@ static int sirEditorInspectScene( const char *pszPath, bool bJSON ) noexcept
 	}
 
 	if ( bJSON ) {
+		if ( pszOutputPath != nullptr ) {
+			return sirEditorWriteSceneJSONFile( workspace, pszPath, pszOutputPath ) ? 0 : 4;
+		}
 		return sirEditorWriteSceneJSON( workspace, pszPath, stdout ) ? 0 : 4;
 	}
 
@@ -126,6 +130,9 @@ int main( int nArgs, char **pszArgs )
 	}
 	if ( nArgs == 3 && strcmp( pszArgs[1], "--inspect-scene-json" ) == 0 ) {
 		return sirEditorInspectScene( pszArgs[2], true );
+	}
+	if ( nArgs == 4 && strcmp( pszArgs[1], "--inspect-scene-json-file" ) == 0 ) {
+		return sirEditorInspectScene( pszArgs[2], true, pszArgs[3] );
 	}
 	sirEditorPrintHelp();
 	return 2;

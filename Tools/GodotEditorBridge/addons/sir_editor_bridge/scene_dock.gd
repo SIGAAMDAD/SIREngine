@@ -3,13 +3,24 @@ extends VBoxContainer
 
 const HOST_SETTING: String = "sir_editor/host_binary"
 const MAX_TREE_ROWS: int = 2048
+const MAX_JSON_BYTES: int = 4 * 1024 * 1024
+const PROCESS_TIMEOUT_MSEC: int = 30000
 
 var _binary: LineEdit
 var _status: Label
 var _tree: Tree
 var _items_by_id: Dictionary = {}
 var _snapshot_scene: String = ""
+var _snapshot_hash: String = ""
 var _rebuilding: bool = false
+
+var _request_generation: int = 0
+var _active_pid: int = 0
+var _active_scene: String = ""
+var _active_disk_path: String = ""
+var _active_source_hash: String = ""
+var _active_output: String = ""
+var _active_started: int = 0
 
 
 func _ready() -> void:
@@ -45,8 +56,40 @@ func _ready() -> void:
     add_child(_tree)
 
 
+func _exit_tree() -> void:
+    shutdown_bridge()
+
+
+func shutdown_bridge() -> void:
+    _cancel_active_request()
+
+
+func _remove_output_files(path: String) -> void:
+    if path.is_empty():
+        return
+    if FileAccess.file_exists(path):
+        DirAccess.remove_absolute(path)
+    if FileAccess.file_exists(path + ".tmp"):
+        DirAccess.remove_absolute(path + ".tmp")
+
+
+func _cancel_active_request() -> void:
+    _request_generation += 1
+    if _active_pid > 0 and OS.is_process_running(_active_pid):
+        OS.kill(_active_pid)
+    _active_pid = 0
+    _remove_output_files(_active_output)
+    _active_output = ""
+    _active_scene = ""
+    _active_disk_path = ""
+    _active_source_hash = ""
+    _active_started = 0
+
+
 func invalidate_snapshot() -> void:
+    _cancel_active_request()
     _snapshot_scene = ""
+    _snapshot_hash = ""
     _items_by_id.clear()
     if _tree != null:
         _tree.clear()
@@ -69,28 +112,99 @@ func _on_refresh_pressed() -> void:
         _status.text = "Configure the SIREditor executable path first."
         return
 
+    _cancel_active_request()
+    _snapshot_scene = ""
+    _snapshot_hash = ""
+    _items_by_id.clear()
+    _tree.clear()
     _on_binary_submitted("")
-    var result_output: Array = []
-    var scene_path: String = ProjectSettings.globalize_path(scene_root.scene_file_path)
-    # Explicit button action only: OS.execute blocks the editor event loop.
-    var result_code: int = OS.execute(executable, PackedStringArray(["--inspect-scene-json", scene_path]), result_output)
-    if result_code != 0 or result_output.is_empty():
-        _status.text = "Native scene inspection failed (exit %d)." % result_code
+
+    var disk_path: String = ProjectSettings.globalize_path(scene_root.scene_file_path)
+    var source_hash: String = FileAccess.get_sha256(disk_path)
+    if source_hash.is_empty():
+        _status.text = "Cannot read the saved scene file."
         return
 
-    var parsed: Variant = JSON.parse_string(String(result_output[0]))
+    # Each request writes one unique cache file, never to the authored scene.
+    _active_output = ProjectSettings.globalize_path("user://sir_scene_%s_%s.json" % [
+        str(get_instance_id()), str(_request_generation)])
+    _remove_output_files(_active_output)
+    _active_scene = scene_root.scene_file_path
+    _active_disk_path = disk_path
+    _active_source_hash = source_hash
+    _active_started = Time.get_ticks_msec()
+    _active_pid = OS.create_process(executable, PackedStringArray([
+        "--inspect-scene-json-file", disk_path, _active_output]))
+    if _active_pid <= 0:
+        _cancel_active_request()
+        _status.text = "Cannot launch the native SIREditor executable."
+        return
+    _status.text = "Inspecting saved scene without blocking the editor..."
+
+
+func _process(_delta: float) -> void:
+    if _active_pid <= 0:
+        return
+    if OS.is_process_running(_active_pid):
+        if Time.get_ticks_msec() - _active_started >= PROCESS_TIMEOUT_MSEC:
+            _cancel_active_request()
+            _status.text = "Native scene inspection timed out."
+        return
+
+    var exit_code: int = OS.get_process_exit_code(_active_pid)
+    var output_path: String = _active_output
+    var scene_path: String = _active_scene
+    var disk_path: String = _active_disk_path
+    var source_hash: String = _active_source_hash
+    _active_pid = 0
+    _active_output = ""
+    _active_scene = ""
+    _active_disk_path = ""
+    _active_source_hash = ""
+
+    var current_root: Node = EditorInterface.get_edited_scene_root()
+    if current_root == null or current_root.scene_file_path != scene_path:
+        _remove_output_files(output_path)
+        return
+    if FileAccess.get_sha256(disk_path) != source_hash:
+        _remove_output_files(output_path)
+        _status.text = "Saved scene changed during inspection. Refresh again."
+        return
+    if exit_code != 0 or not FileAccess.file_exists(output_path):
+        _remove_output_files(output_path)
+        _status.text = "Native scene inspection failed (exit %d)." % exit_code
+        return
+
+    var output_file: FileAccess = FileAccess.open(output_path, FileAccess.READ)
+    if output_file == null:
+        _remove_output_files(output_path)
+        _status.text = "Cannot read native scene snapshot."
+        return
+    if output_file.get_length() > MAX_JSON_BYTES:
+        output_file.close()
+        _remove_output_files(output_path)
+        _status.text = "Native scene snapshot exceeds dock limit."
+        return
+    var output_text: String = output_file.get_as_text()
+    output_file.close()
+    _remove_output_files(output_path)
+
+    var parsed: Variant = JSON.parse_string(output_text)
     if typeof(parsed) != TYPE_DICTIONARY:
         _status.text = "Native output is not a JSON object."
         return
-    if not _valid_snapshot(parsed):
-        _status.text = "Native snapshot failed schema or hierarchy validation."
+    if parsed.get("scene", "") != disk_path or not _valid_snapshot(parsed):
+        _status.text = "Native snapshot failed scene identity or schema validation."
         return
 
-    _show_snapshot(parsed, scene_root.scene_file_path)
+    _snapshot_hash = source_hash
+    _show_snapshot(parsed, scene_path)
 
 
 func _valid_snapshot(snapshot: Dictionary) -> bool:
     if snapshot.get("schema", 0) != 1:
+        return false
+    if typeof(snapshot.get("revision", null)) != TYPE_STRING:
         return false
     var nodes: Variant = snapshot.get("nodes", null)
     var resources: Variant = snapshot.get("resources", null)
@@ -145,6 +259,9 @@ func _on_item_selected() -> void:
         return
     var scene_root: Node = EditorInterface.get_edited_scene_root()
     if scene_root == null or scene_root.scene_file_path != _snapshot_scene:
+        invalidate_snapshot()
+        return
+    if FileAccess.get_sha256(ProjectSettings.globalize_path(_snapshot_scene)) != _snapshot_hash:
         invalidate_snapshot()
         return
 
