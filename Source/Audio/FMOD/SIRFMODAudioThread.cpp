@@ -394,7 +394,7 @@ void SIRFMODAudioThread::threadMain( void ) noexcept
 				nActiveLoadTicket = 0;
 			}
 		}
-		for ( uint32_t iBatch = 0; nActiveLoadTicket == 0 && iBatch < 32; ++iBatch ) {
+		for ( uint32_t iBatch = 0; iBatch < 32; ++iBatch ) {
 			uint64_t nTicket = 0;
 			if ( !m_Critical.tryPop( nTicket ) && !m_Requests.tryPop( nTicket ) ) {
 				break;
@@ -407,6 +407,11 @@ void SIRFMODAudioThread::threadMain( void ) noexcept
 			sirFMODThreadResult_t result = {};
 			if ( slot.bCancel.load( SIR_MEMORY_ORDER_ACQUIRE ) != 0 ) {
 				result.eResult = SIR_AUDIO_CANCELLED;
+			} else if ( nActiveLoadTicket != 0 && slot.request.eOperation == SIR_FMOD_THREAD_LOAD_PACKAGE ) {
+				// A pending root load does not block playback, mixer, or
+				// query traffic. A second root load fails without replacing
+				// the first transaction's active completion ticket.
+				result.eResult = SIR_AUDIO_BUSY;
 			} else {
 				result.eResult = execute( slot.request, result );
 			}
