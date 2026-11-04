@@ -18,6 +18,18 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <assert.h>
 #include <string.h>
 
+static bool sirEditorTestAtomMatches( uint64_t nAtom, const char *pszSource, uint32_t nBytes, void *pContext ) noexcept
+{
+	( void )pContext;
+	if ( nAtom == 107 ) {
+		return nBytes == 3 && memcmp( pszSource, "foo", 3 ) == 0;
+	}
+	if ( nAtom == 108 ) {
+		return nBytes == 3 && memcmp( pszSource, "bar", 3 ) == 0;
+	}
+	return false;
+}
+
 int main( void )
 {
 	sirObjectTypeDescriptor_t szTypes[1] = {};
@@ -78,13 +90,45 @@ int main( void )
 	assert( pszFoo != nullptr && pszBar != nullptr );
 	sirEditorTextProperty_t szText[2] = {};
 	szText[0].nNodeId = 1;
+	szText[0].nNameOffset = ( uint32_t )( strstr( pszSource, "foo =" ) - pszSource );
+	szText[0].nNameLength = 3;
 	szText[0].nValueOffset = ( uint32_t )( pszFoo - pszSource );
 	szText[0].nValueLength = 2;
 	szText[1].nNodeId = 1;
+	szText[1].nNameOffset = ( uint32_t )( strstr( pszSource, "bar =" ) - pszSource );
+	szText[1].nNameLength = 3;
 	szText[1].nValueOffset = ( uint32_t )( pszBar - pszSource );
 	szText[1].nValueLength = 5;
 	sirEditorTextPropertyIndex_t index = { szText, 2, 2, 0 };
-	sirEditorScalarBinding_t szBindings[2] = { { 1, 7, 0 }, { 1, 8, 1 } };
+	sirEditorScalarBinding_t szBindings[2] = {};
+	sirEditorScalarDiscovery_t discovery = {};
+	discovery.pDocument = &document;
+	discovery.pRegistry = &registry;
+	discovery.pIndex = &index;
+	discovery.pszSource = pszSource;
+	discovery.nSourceBytes = strlen( pszSource );
+	discovery.pMatchesAtom = sirEditorTestAtomMatches;
+	uint32_t nDiscovered = 0;
+	assert( sirEditorDiscoverScalarBindings( discovery, &nDiscovered ) == SIR_EDITOR_SCALAR_BRIDGE_OK );
+	assert( nDiscovered == 2 );
+	discovery.pOutput = szBindings;
+	discovery.nOutputCapacity = 1;
+	szBindings[0] = { 999, 999, 999 };
+	assert( sirEditorDiscoverScalarBindings( discovery, &nDiscovered ) == SIR_EDITOR_SCALAR_BRIDGE_OUT_OF_CAPACITY );
+	assert( nDiscovered == 2 && szBindings[0].nNodeId == 999 );
+	discovery.nOutputCapacity = 2;
+	assert( sirEditorDiscoverScalarBindings( discovery, &nDiscovered ) == SIR_EDITOR_SCALAR_BRIDGE_OK );
+	assert( nDiscovered == 2 );
+	assert( szBindings[0].nNodeId == 1 && szBindings[0].nPropertyId == 7 && szBindings[0].iSourceProperty == 0 );
+	assert( szBindings[1].nNodeId == 1 && szBindings[1].nPropertyId == 8 && szBindings[1].iSourceProperty == 1 );
+
+	// Duplicate name on the same authored node is invalid and publishes no
+	// partial output. Restoring the source span permits discovery again.
+	const uint32_t nBarName = szText[1].nNameOffset;
+	szText[1].nNameOffset = szText[0].nNameOffset;
+	assert( sirEditorDiscoverScalarBindings( discovery, &nDiscovered ) == SIR_EDITOR_SCALAR_BRIDGE_INVALID_BINDING );
+	assert( nDiscovered == 0 );
+	szText[1].nNameOffset = nBarName;
 	sirEditorProperty_t szStaged[2] = {};
 	sirEditorTextEdit_t szEdits[2] = {};
 	char szValues[256] = {};
