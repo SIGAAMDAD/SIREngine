@@ -36,7 +36,7 @@ template <typename TPayload, uint32_t Capacity = 256>
 class SIRChannelEventQueue
 {
 public:
-	typedef void ( *callback_t )( void *, const TPayload & ) noexcept;
+	typedef void ( *callback_t )( void *, const TPayload& ) noexcept;
 	static_assert( Capacity > 0, "Channel queue requires slots" );
 	static_assert( std::is_trivially_copyable<TPayload>::value, "Channel event must be POD" );
 
@@ -45,8 +45,8 @@ public:
 	      m_bClearDuringPump( false )
 	{
 	}
-	SIRChannelEventQueue( const SIRChannelEventQueue & ) = delete;
-	SIRChannelEventQueue &operator=( const SIRChannelEventQueue & ) = delete;
+	SIRChannelEventQueue( const SIRChannelEventQueue& ) = delete;
+	SIRChannelEventQueue& operator=( const SIRChannelEventQueue& ) = delete;
 
 	bool bind( void *pContext, callback_t pCallback ) noexcept
 	{
@@ -57,7 +57,7 @@ public:
 		m_pCallback = pCallback;
 		return true;
 	}
-	bool enqueue( const TPayload &payload ) noexcept
+	bool enqueue( const TPayload& payload ) noexcept
 	{
 		if ( m_nCount == Capacity ) {
 			return false;

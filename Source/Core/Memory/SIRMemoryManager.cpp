@@ -48,12 +48,12 @@ SIRMemoryManager::SIRMemoryManager( void )
 {
 }
 
-SIRMemoryManager::SIRMemoryManager( const sirMemoryConfig_t &config ) : SIRMemoryManager()
+SIRMemoryManager::SIRMemoryManager( const sirMemoryConfig_t& config ) : SIRMemoryManager()
 {
 	init( config );
 }
 
-SIRMemoryManager::SIRMemoryManager( const sirMemoryConfig_t &config, const sirMemoryBudgetProfile_t &budget ) : SIRMemoryManager()
+SIRMemoryManager::SIRMemoryManager( const sirMemoryConfig_t& config, const sirMemoryBudgetProfile_t& budget ) : SIRMemoryManager()
 {
 	initBudgeted( config, budget );
 }
@@ -69,13 +69,13 @@ SIRMemoryManager::~SIRMemoryManager( void )
 	shutdown();
 }
 
-bool SIRMemoryManager::init( const sirMemoryConfig_t &config )
+bool SIRMemoryManager::init( const sirMemoryConfig_t& config )
 {
 	const sirMemoryBudgetProfile_t budget = { config.nCommitBudgetBytes, config.nCommitBudgetBytes };
 	return initBudgeted( config, budget );
 }
 
-bool SIRMemoryManager::initBudgeted( const sirMemoryConfig_t &config, const sirMemoryBudgetProfile_t &budget )
+bool SIRMemoryManager::initBudgeted( const sirMemoryConfig_t& config, const sirMemoryBudgetProfile_t& budget )
 {
 	std::lock_guard<SIRMutex> lock( m_Mutex );
 	if ( m_pBase != nullptr || config.nMaxSegments == 0 ) {
@@ -725,7 +725,7 @@ void SIRMemoryManager::recordTraceLocked( uint32_t nType, uint64_t nBytes, uint3
 	} else {
 		++m_nTraceDroppedCount;
 	}
-	sirMemoryTraceEvent_t &event = m_pTrace[m_nTraceSequence % m_nTraceCapacity];
+	sirMemoryTraceEvent_t& event = m_pTrace[m_nTraceSequence % m_nTraceCapacity];
 	event.nSequence = ++m_nTraceSequence;
 	event.nBytes = nBytes;
 	event.nType = nType;

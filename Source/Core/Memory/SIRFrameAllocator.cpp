@@ -110,7 +110,7 @@ bool SIRFrameAllocator::beginEpoch( uint64_t nEpoch, uint64_t nCompletedEpoch )
 	}
 
 	const uint32_t nSlot = ( ( uint32_t )( nEpoch % m_nSlotCount ) );
-	sirFrameSlot_t &slot = m_pSlots[nSlot];
+	sirFrameSlot_t& slot = m_pSlots[nSlot];
 	if ( slot.bInFlight && slot.nEpoch > nCompletedEpoch ) {
 		return false;
 	}
@@ -191,7 +191,7 @@ bool SIRFrameAllocator::trimIdleRetaining( uint64_t nWarmBytes )
 		if ( i == m_nActiveSlot || m_pSlots[i].bInFlight ) {
 			continue;
 		}
-		SIRLinearAllocator &linear = m_pSlots[i].Linear;
+		SIRLinearAllocator& linear = m_pSlots[i].Linear;
 		const uint64_t nKeep = nWarmBytes < linear.getCapacity() ? nWarmBytes : linear.getCapacity();
 		if ( !linear.reset( false ) || !linear.trimTo( nKeep ) ) {
 			bSuccess = false;
