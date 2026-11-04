@@ -1,4 +1,5 @@
 add_subdirectory(Core)
+add_subdirectory(Scripting)
 
 add_executable(SIREngine Main.cpp)
 target_link_libraries(SIREngine PRIVATE SIR::Core)
