@@ -43,9 +43,9 @@ sirAudioResult_t SIRFMODVoiceBackend::configure( SIRFMODContext *pContext, const
 {
 	if ( m_bInitialized || m_pVoices != nullptr || pContext == nullptr || !pContext->isReady() || pAllocator == nullptr ||
 	     pAllocator->pfnAllocate == nullptr || pAllocator->pfnDeallocate == nullptr || nMaxRegisteredEvents == 0 || ops.nAbiVersion != 3 ||
-	     ( nMaxEmitterParameters != 0 && ( nMaxEmitters == 0 || nMaxRegisteredParameters == 0 ) ) ||
-	     ops.resolveEvent == nullptr || ops.createInstance == nullptr || ops.startInstance == nullptr || ops.stopInstance == nullptr ||
-	     ops.isStopped == nullptr || ops.releaseInstance == nullptr ||
+	     ( nMaxEmitterParameters != 0 && ( nMaxEmitters == 0 || nMaxRegisteredParameters == 0 ) ) || ops.resolveEvent == nullptr ||
+	     ops.createInstance == nullptr || ops.startInstance == nullptr || ops.stopInstance == nullptr || ops.isStopped == nullptr ||
+	     ops.releaseInstance == nullptr ||
 	     ( nMaxRegisteredParameters != 0 && ( ops.setInstanceParameter == nullptr || ops.setGlobalParameter == nullptr ) ) ||
 	     ( nMaxEmitters != 0 && ops.setInstanceSpatial == nullptr ) ||
 	     ( nMaxListeners != 0 &&
@@ -84,7 +84,7 @@ sirAudioResult_t SIRFMODVoiceBackend::initializeCallback( void *pContext, const 
 	     !SIRRawStorage::checkedMultiply( pBackend->m_nParameterCapacity, sizeof( sirFMODParameterBinding_t ), &nParameterBytes ) ||
 	     !SIRRawStorage::checkedMultiply( pBackend->m_nEmitterCapacity, sizeof( sirFMODEmitterSpatial_t ), &nEmitterBytes ) ||
 	     !SIRRawStorage::checkedMultiply( pBackend->m_nEmitterParameterCapacity, sizeof( sirFMODEmitterParameter_t ),
-	                                       &nEmitterParameterBytes ) ) {
+	                                      &nEmitterParameterBytes ) ) {
 		return SIR_AUDIO_INVALID_ARGUMENT;
 	}
 	void *pMemory = nullptr;
@@ -131,8 +131,8 @@ sirAudioResult_t SIRFMODVoiceBackend::initializeCallback( void *pContext, const 
 	}
 	if ( nEmitterParameterBytes != 0 ) {
 		pMemory = nullptr;
-		if ( SIRRawStorage::tryAllocate( pBackend->m_pAllocator, nEmitterParameterBytes, alignof( sirFMODEmitterParameter_t ),
-		                               &pMemory ) != SIR_CONTAINER_OK ) {
+		if ( SIRRawStorage::tryAllocate( pBackend->m_pAllocator, nEmitterParameterBytes, alignof( sirFMODEmitterParameter_t ), &pMemory ) !=
+		     SIR_CONTAINER_OK ) {
 			pBackend->releaseStorage();
 			return SIR_AUDIO_CAPACITY;
 		}
@@ -393,8 +393,7 @@ void SIRFMODVoiceBackend::clearEmitterParameters( sirAudioEmitterHandle_t hEmitt
 	uint32_t iParameter = 0;
 	while ( iParameter < m_nEmitterParameterCount ) {
 		const sirAudioEmitterHandle_t hStored = m_pEmitterParameters[iParameter].hEmitter;
-		if ( hStored.nSlot != hEmitter.nSlot || hStored.nGeneration != hEmitter.nGeneration ||
-		     hStored.nEpoch != hEmitter.nEpoch ) {
+		if ( hStored.nSlot != hEmitter.nSlot || hStored.nGeneration != hEmitter.nGeneration || hStored.nEpoch != hEmitter.nEpoch ) {
 			++iParameter;
 			continue;
 		}
@@ -421,8 +420,7 @@ sirAudioResult_t SIRFMODVoiceBackend::applyEmitterParametersToNewInstance( void 
 		if ( !findParameter( entry.nControlId, iBinding ) || m_pParameters[iBinding].eScope != SIR_AUDIO_CONTROL_EMITTER ) {
 			continue;
 		}
-		m_nLastNativeResult = m_Ops.setInstanceParameter( m_Ops.pUserData, pInstance,
-		                                               m_pParameters[iBinding].nNativeId, entry.fValue );
+		m_nLastNativeResult = m_Ops.setInstanceParameter( m_Ops.pUserData, pInstance, m_pParameters[iBinding].nNativeId, entry.fValue );
 		if ( m_nLastNativeResult != 0 ) {
 			return SIR_AUDIO_BACKEND_ERROR;
 		}
@@ -466,8 +464,8 @@ sirAudioResult_t SIRFMODVoiceBackend::updateEmitterParameter( const sirAudioComm
 		     slot.hEmitter.nGeneration != hEmitter.nGeneration || slot.hEmitter.nEpoch != hEmitter.nEpoch ) {
 			continue;
 		}
-		m_nLastNativeResult = m_Ops.setInstanceParameter( m_Ops.pUserData, slot.pInstance,
-		                                               m_pParameters[iBinding].nNativeId, entry.fValue );
+		m_nLastNativeResult =
+		    m_Ops.setInstanceParameter( m_Ops.pUserData, slot.pInstance, m_pParameters[iBinding].nNativeId, entry.fValue );
 		if ( m_nLastNativeResult != 0 ) {
 			entry.bDirty = 1;
 			eResult = SIR_AUDIO_BACKEND_ERROR;
@@ -726,8 +724,8 @@ void SIRFMODVoiceBackend::retryEmitterParameters( void ) noexcept
 			     slot.hEmitter.nGeneration != entry.hEmitter.nGeneration || slot.hEmitter.nEpoch != entry.hEmitter.nEpoch ) {
 				continue;
 			}
-			m_nLastNativeResult = m_Ops.setInstanceParameter( m_Ops.pUserData, slot.pInstance,
-			                                               m_pParameters[iBinding].nNativeId, entry.fValue );
+			m_nLastNativeResult =
+			    m_Ops.setInstanceParameter( m_Ops.pUserData, slot.pInstance, m_pParameters[iBinding].nNativeId, entry.fValue );
 			if ( m_nLastNativeResult != 0 ) {
 				entry.bDirty = 1;
 			}
