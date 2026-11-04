@@ -4,6 +4,10 @@ SIREngine MPLv2 Source Code
 Copyright (C) 2023-2027 Noah Van Til
 
 This Source Code Form is subject to the terms of the Mozilla Public
+CMake Warning at Build/CMake/CIFormat.cmake:34 (message):
+  Formatting error: Source/Renderer/Drivers/D3D12/SIRD3D12Driver.cpp
+
+
 License, v2. If a copy of the MPL was not distributed with this
 file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
@@ -147,7 +151,7 @@ sirGraphicsResult_t SIRD3D12RenderingDevice::queryNativeDiagnostics( sirD3D12Dia
 
 sirGraphicsResult_t SIRD3D12RenderingDevice::queryNativeAdapterInfo( sirD3D12AdapterInfo_t *pInfo ) const noexcept
 {
-	return pInfo == nullptr ? SIR_GRAPHICS_INVALID_ARGUMENT
+	return pInfo == nullptr                     ? SIR_GRAPHICS_INVALID_ARGUMENT
 	       : m_Native.queryAdapterInfo( pInfo ) ? SIR_GRAPHICS_SUCCESS
 	                                            : SIR_GRAPHICS_DEVICE_LOST;
 }

@@ -437,7 +437,8 @@ int main( void )
 		fprintf( stderr, "D3D12 WARP device initialization failed: HRESULT 0x%08lx\n", ( unsigned long )device.getLastError() );
 		return 1;
 	}
-	if ( !device.isReady() || device.initialize( nWarpIndex, transferConfig ) || !device.queryAdapterInfo( &adapter ) || !adapter.bSoftware ) {
+	if ( !device.isReady() || device.initialize( nWarpIndex, transferConfig ) || !device.queryAdapterInfo( &adapter ) ||
+	     !adapter.bSoftware ) {
 		fputs( "D3D12 WARP adapter or lifecycle contract failed\n", stderr );
 		return 1;
 	}

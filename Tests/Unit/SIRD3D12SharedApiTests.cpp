@@ -265,8 +265,7 @@ int main( void )
 			return 30;
 		}
 		sirD3D12AdapterInfo_t native = {};
-		const bool bMatch = static_cast<SIRD3D12RenderingDevice *>( pDevice )->queryNativeAdapterInfo( &native ) ==
-		                    SIR_GRAPHICS_SUCCESS &&
+		const bool bMatch = static_cast<SIRD3D12RenderingDevice *>( pDevice )->queryNativeAdapterInfo( &native ) == SIR_GRAPHICS_SUCCESS &&
 		                    ( uint64_t )native.nAdapterLuid == reported.nAdapterLuid && !native.bSoftware;
 		if ( driver.destroyDevice( pDevice ) != SIR_GRAPHICS_SUCCESS || !bMatch ) {
 			return 31;

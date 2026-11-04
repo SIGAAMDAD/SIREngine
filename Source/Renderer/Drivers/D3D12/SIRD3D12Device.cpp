@@ -81,7 +81,6 @@ HRESULT sirD3D12EnumerateAdapters( IDXGIFactory6 *pFactory, uint32_t nRequestedI
 	return ppSelected != nullptr || nFound == 0 ? DXGI_ERROR_NOT_FOUND : S_OK;
 }
 
-
 SIRD3D12ComputeQueue::SIRD3D12ComputeQueue( void ) noexcept
 {
 }
