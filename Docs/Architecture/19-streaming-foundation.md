@@ -134,3 +134,26 @@ library and Windows/Linux production CI were not compiled or executed here;
 the native integration test is registered to run when the dependency lands.
 The repository-pinned clang-format 22.1.5 gate is still outstanding; source
 was formatted and checked with clang-format 23.1.5.
+
+## Canonical alias validation and bounded physical I/O — sixth slice
+
+The optional GRDG adapter now rejects multiple logical binding entries that
+name the same canonical `SIRResourceKey` while disagreeing about the source
+path, file span, content key, schema, format, alignment, dependency edges,
+chunk identity, transfer mode or expected revision. This is a cold mount-time
+validation pass; compatible aliases still share the GRDG resource and each
+consumer maintains an independent provider pin.
+
+The new `nMaxConcurrentLoads` configuration bounds physical in-flight
+`SIRResourceFileLoad` operations. Zero defaults to adapter capacity. The
+adapter releases the load budget only when the Core Jobs transfer reaches a
+terminal state, including cancelled requests. The per-pump stats report both
+current active loads and configured maximum, independent of demand tickets.
+
+The local Clang 17/23 CMake harness and Clang 17 ASan/UBSan complete five
+suites with negative alias-directory cases and a three-unit single-load
+budget progression. PR #23's real native GRDG/Core Jobs source, full engine
+CI and Windows provider runtime remain outstanding checks. The repository
+formatter now explicitly binds reference ampersands to types; the source was
+formatted using clang-format 23.1.5, while the pinned 22.1.5 gate remains
+unverified.

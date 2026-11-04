@@ -18,6 +18,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <limits.h>
 #include <new>
 #include <stdlib.h>
+#include <string.h>
 
 typedef enum sirStreamingGRDGSlotState_e : uint8_t
 {
@@ -49,14 +50,14 @@ typedef struct sirStreamingGRDGSlot_s
 	bool bCancelRequested;
 	bool bHasPin;
 
-	sirStreamingGRDGSlot_s( SIRResourceGraph &rGraph, SIRTaskScheduler &rScheduler ) noexcept
+	sirStreamingGRDGSlot_s( SIRResourceGraph& rGraph, SIRTaskScheduler& rScheduler ) noexcept
 	    : load( rGraph, rScheduler ), pBinding( nullptr ), ticket{}, resident{}, hPin{}, eState( SIR_STREAMING_GRDG_FREE ),
 	      bCancelRequested( false ), bHasPin( false )
 	{
 	}
 } sirStreamingGRDGSlot_t;
 
-static int streamingGRDGCompareKeys( const sirStreamingUnitKey_t &a, const sirStreamingUnitKey_t &b ) noexcept
+static int streamingGRDGCompareKeys( const sirStreamingUnitKey_t& a, const sirStreamingUnitKey_t& b ) noexcept
 {
 	if ( a.nContainerId != b.nContainerId ) {
 		return a.nContainerId < b.nContainerId ? -1 : 1;
@@ -76,20 +77,57 @@ static int streamingGRDGCompareKeys( const sirStreamingUnitKey_t &a, const sirSt
 	return 0;
 }
 
-static bool streamingGRDGResourcesEqual( const SIRResourceKey &a, const SIRResourceKey &b ) noexcept
+static bool streamingGRDGResourcesEqual( const SIRResourceKey& a, const SIRResourceKey& b ) noexcept
 {
 	return a.m_nAssetId == b.m_nAssetId && a.m_nTypeId == b.m_nTypeId && a.m_nVariantId == b.m_nVariantId;
 }
 
-static bool streamingGRDGContentEqual( const SIRResourceContentKey &a, const SIRResourceContentKey &b ) noexcept
+static bool streamingGRDGContentEqual( const SIRResourceContentKey& a, const SIRResourceContentKey& b ) noexcept
 {
 	return a.m_nHashLo == b.m_nHashLo && a.m_nHashHi == b.m_nHashHi && a.m_nFormatId == b.m_nFormatId && a.m_nEncodingId == b.m_nEncodingId;
 }
 
+// Multiple logical units may share one canonical GRDG resource only when
+// their complete load contracts agree. Otherwise the first request could
+// publish a payload that satisfies one caller but invalidates another.
+static bool streamingGRDGDependenciesEqual( const sirResourceFileLoadRequest_t& a, const sirResourceFileLoadRequest_t& b ) noexcept
+{
+	if ( a.nDependencyCount != b.nDependencyCount ) {
+		return false;
+	}
+	for ( uint32_t iEdge = 0; iEdge < a.nDependencyCount; ++iEdge ) {
+		const SIRResourceDependency& left = a.pDependencies[iEdge];
+		const SIRResourceDependency& right = b.pDependencies[iEdge];
+		if ( !streamingGRDGResourcesEqual( left.m_Target, right.m_Target ) || left.m_eKind != right.m_eKind ) {
+			return false;
+		}
+	}
+	return true;
+}
+
+static bool streamingGRDGLoadContractsEqual( const sirStreamingGRDGBinding_t& a, const sirStreamingGRDGBinding_t& b ) noexcept
+{
+	const sirResourceFileLoadRequest_t& left = a.request;
+	const sirResourceFileLoadRequest_t& right = b.request;
+	if ( strcmp( a.pszFilePath, b.pszFilePath ) != 0 || !streamingGRDGContentEqual( left.keyContent, right.keyContent ) ) {
+		return false;
+	}
+	if ( left.idChunk.m_nValue != right.idChunk.m_nValue || left.eKind != right.eKind || left.eMode != right.eMode ) {
+		return false;
+	}
+	const bool bFormatEqual = left.nSchemaVersion == right.nSchemaVersion && left.nFormatId == right.nFormatId;
+	const bool bAllocationEqual = left.nAlignment == right.nAlignment && left.nStagingDomain == right.nStagingDomain;
+	const bool bRangeEqual = left.nFileOffset == right.nFileOffset && left.nFileBytes == right.nFileBytes;
+	if ( !bFormatEqual || !bAllocationEqual || !bRangeEqual || left.nExpectedRevision != right.nExpectedRevision ) {
+		return false;
+	}
+	return streamingGRDGDependenciesEqual( left, right );
+}
+
 SIRStreamingGRDGAdapter::SIRStreamingGRDGAdapter( void ) noexcept
     : m_pGraph( nullptr ), m_pScheduler( nullptr ), m_pCoordinator( nullptr ), m_pBridge( nullptr ), m_pBindings( nullptr ),
-      m_pSlots( nullptr ), m_Callbacks{}, m_nBindingCount( 0 ), m_nCapacity( 0 ), m_nProviderId( 0 ), m_iNextSlot( 0 ),
-      m_bInitialized( false )
+      m_pSlots( nullptr ), m_Callbacks{}, m_nBindingCount( 0 ), m_nCapacity( 0 ), m_nProviderId( 0 ), m_nMaxConcurrentLoads( 0 ),
+      m_nActiveLoads( 0 ), m_iNextSlot( 0 ), m_bInitialized( false )
 {
 }
 
@@ -107,7 +145,7 @@ uint64_t SIRStreamingGRDGAdapter::requiredBytes( uint32_t nCapacity ) noexcept
 	return ( uint64_t )nCapacity * sizeof( sirStreamingGRDGSlot_t );
 }
 
-sirStreamingResult_t SIRStreamingGRDGAdapter::initialize( const sirStreamingGRDGConfig_t &config ) noexcept
+sirStreamingResult_t SIRStreamingGRDGAdapter::initialize( const sirStreamingGRDGConfig_t& config ) noexcept
 {
 	if ( m_bInitialized || !config.pGraph || !config.pScheduler || !config.pCoordinator || !config.pStorage ) {
 		return SIR_STREAMING_INVALID_ARGUMENT;
@@ -116,6 +154,9 @@ sirStreamingResult_t SIRStreamingGRDGAdapter::initialize( const sirStreamingGRDG
 		return SIR_STREAMING_INVALID_ARGUMENT;
 	}
 	if ( !config.nProviderId || !config.nCapacity || !config.callbacks.pBeginRetire || !config.callbacks.pBeginActivate ) {
+		return SIR_STREAMING_INVALID_ARGUMENT;
+	}
+	if ( config.nMaxConcurrentLoads > config.nCapacity ) {
 		return SIR_STREAMING_INVALID_ARGUMENT;
 	}
 
@@ -139,7 +180,7 @@ sirStreamingResult_t SIRStreamingGRDGAdapter::initialize( const sirStreamingGRDG
 	}
 
 	for ( uint32_t iBinding = 0; iBinding < config.nBindingCount; ++iBinding ) {
-		const sirStreamingGRDGBinding_t &entry = config.pBindings[iBinding];
+		const sirStreamingGRDGBinding_t& entry = config.pBindings[iBinding];
 		if ( entry.keyUnit.nUnitId == 0 || entry.keyUnit.nManifestGeneration == 0 || entry.keyUnit.eKind >= SIR_STREAMING_UNIT_COUNT ) {
 			return SIR_STREAMING_INVALID_ARGUMENT;
 		}
@@ -155,6 +196,15 @@ sirStreamingResult_t SIRStreamingGRDGAdapter::initialize( const sirStreamingGRDG
 		if ( iBinding != 0 && streamingGRDGCompareKeys( config.pBindings[iBinding - 1].keyUnit, entry.keyUnit ) >= 0 ) {
 			return SIR_STREAMING_INVALID_ARGUMENT;
 		}
+		for ( uint32_t iPrevious = 0; iPrevious < iBinding; ++iPrevious ) {
+			const sirStreamingGRDGBinding_t& previous = config.pBindings[iPrevious];
+			if ( !streamingGRDGResourcesEqual( entry.request.keyResource, previous.request.keyResource ) ) {
+				continue;
+			}
+			if ( !streamingGRDGLoadContractsEqual( entry, previous ) ) {
+				return SIR_STREAMING_INVALID_ARGUMENT;
+			}
+		}
 	}
 
 	m_pGraph = config.pGraph;
@@ -166,6 +216,8 @@ sirStreamingResult_t SIRStreamingGRDGAdapter::initialize( const sirStreamingGRDG
 	m_nBindingCount = config.nBindingCount;
 	m_nCapacity = config.nCapacity;
 	m_nProviderId = config.nProviderId;
+	m_nMaxConcurrentLoads = config.nMaxConcurrentLoads ? config.nMaxConcurrentLoads : config.nCapacity;
+	m_nActiveLoads = 0;
 	m_iNextSlot = 0;
 	for ( uint32_t iSlot = 0; iSlot < m_nCapacity; ++iSlot ) {
 		new ( m_pSlots + iSlot ) sirStreamingGRDGSlot_t( *m_pGraph, *m_pScheduler );
@@ -213,6 +265,8 @@ sirStreamingResult_t SIRStreamingGRDGAdapter::shutdown( void ) noexcept
 	m_nBindingCount = 0;
 	m_nCapacity = 0;
 	m_nProviderId = 0;
+	m_nMaxConcurrentLoads = 0;
+	m_nActiveLoads = 0;
 	m_bInitialized = false;
 	return SIR_STREAMING_OK;
 }
@@ -228,7 +282,7 @@ sirStreamingProviderCallbacks_t SIRStreamingGRDGAdapter::getBridgeCallbacks( voi
 	return callbacks;
 }
 
-const sirStreamingGRDGBinding_t *SIRStreamingGRDGAdapter::findBinding( const sirStreamingUnitKey_t &key ) const noexcept
+const sirStreamingGRDGBinding_t *SIRStreamingGRDGAdapter::findBinding( const sirStreamingUnitKey_t& key ) const noexcept
 {
 	uint32_t iFirst = 0;
 	uint32_t iLast = m_nBindingCount;
@@ -247,10 +301,10 @@ const sirStreamingGRDGBinding_t *SIRStreamingGRDGAdapter::findBinding( const sir
 	return nullptr;
 }
 
-bool SIRStreamingGRDGAdapter::isOtherLoadActive( uint32_t iExclude, const SIRResourceKey &key ) const noexcept
+bool SIRStreamingGRDGAdapter::isOtherLoadActive( uint32_t iExclude, const SIRResourceKey& key ) const noexcept
 {
 	for ( uint32_t iSlot = 0; iSlot < m_nCapacity; ++iSlot ) {
-		const sirStreamingGRDGSlot_t &slot = m_pSlots[iSlot];
+		const sirStreamingGRDGSlot_t& slot = m_pSlots[iSlot];
 		if ( iSlot == iExclude || slot.eState != SIR_STREAMING_GRDG_LOADING || !slot.pBinding ) {
 			continue;
 		}
@@ -266,7 +320,7 @@ bool SIRStreamingGRDGAdapter::isCurrent( sirStreamingTicket_t ticket ) const noe
 	if ( !m_bInitialized || !m_pBridge || ticket.nSlot >= m_nCapacity || ticket.nGeneration == 0 ) {
 		return false;
 	}
-	const sirStreamingGRDGSlot_t &slot = m_pSlots[ticket.nSlot];
+	const sirStreamingGRDGSlot_t& slot = m_pSlots[ticket.nSlot];
 	return slot.eState != SIR_STREAMING_GRDG_FREE && slot.ticket.nGeneration == ticket.nGeneration;
 }
 
@@ -275,7 +329,7 @@ bool SIRStreamingGRDGAdapter::beginPrepare( sirStreamingTicket_t ticket, const s
 	if ( !m_bInitialized || !m_pBridge || !pDemand || ticket.nSlot >= m_nCapacity || !ticket.nGeneration ) {
 		return false;
 	}
-	sirStreamingGRDGSlot_t &slot = m_pSlots[ticket.nSlot];
+	sirStreamingGRDGSlot_t& slot = m_pSlots[ticket.nSlot];
 	if ( slot.eState != SIR_STREAMING_GRDG_FREE ) {
 		return false;
 	}
@@ -295,7 +349,7 @@ bool SIRStreamingGRDGAdapter::cancelPrepare( sirStreamingTicket_t ticket ) noexc
 	if ( !isCurrent( ticket ) ) {
 		return false;
 	}
-	sirStreamingGRDGSlot_t &slot = m_pSlots[ticket.nSlot];
+	sirStreamingGRDGSlot_t& slot = m_pSlots[ticket.nSlot];
 	slot.bCancelRequested = true;
 	if ( slot.load.isActive() ) {
 		return slot.load.cancel() == SIR_RESOURCE_RESULT_SUCCESS;
@@ -311,7 +365,7 @@ bool SIRStreamingGRDGAdapter::beginActivate( sirStreamingTicket_t ticket ) noexc
 	if ( !isCurrent( ticket ) ) {
 		return false;
 	}
-	const sirStreamingGRDGSlot_t &slot = m_pSlots[ticket.nSlot];
+	const sirStreamingGRDGSlot_t& slot = m_pSlots[ticket.nSlot];
 	if ( slot.eState != SIR_STREAMING_GRDG_PREPARED || !slot.bHasPin ) {
 		return false;
 	}
@@ -323,7 +377,7 @@ bool SIRStreamingGRDGAdapter::beginRetire( sirStreamingTicket_t ticket ) noexcep
 	if ( !isCurrent( ticket ) ) {
 		return false;
 	}
-	const sirStreamingGRDGSlot_t &slot = m_pSlots[ticket.nSlot];
+	const sirStreamingGRDGSlot_t& slot = m_pSlots[ticket.nSlot];
 	if ( slot.load.isActive() ) {
 		return false;
 	}
@@ -351,10 +405,13 @@ bool SIRStreamingGRDGAdapter::beginRetireCallback( void *pContext, sirStreamingT
 	return pContext && ( ( SIRStreamingGRDGAdapter * )pContext )->beginRetire( ticket );
 }
 
-SIRResourceResult SIRStreamingGRDGAdapter::startLoad( sirStreamingGRDGSlot_t &slot ) noexcept
+SIRResourceResult SIRStreamingGRDGAdapter::startLoad( sirStreamingGRDGSlot_t& slot ) noexcept
 {
 	if ( !slot.pBinding || slot.load.isActive() ) {
 		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
+	}
+	if ( m_nActiveLoads >= m_nMaxConcurrentLoads ) {
+		return SIR_RESOURCE_RESULT_BUSY;
 	}
 	SIRResourceHandle hRequest = {};
 	SIRResourceGraphWriter *pWriter = m_pGraph->getWriter();
@@ -370,17 +427,18 @@ SIRResourceResult SIRStreamingGRDGAdapter::startLoad( sirStreamingGRDGSlot_t &sl
 		return eResult;
 	}
 	slot.eState = SIR_STREAMING_GRDG_LOADING;
+	++m_nActiveLoads;
 	return SIR_RESOURCE_RESULT_SUCCESS;
 }
 
-uint8_t SIRStreamingGRDGAdapter::probeResident( sirStreamingGRDGSlot_t &slot ) noexcept
+uint8_t SIRStreamingGRDGAdapter::probeResident( sirStreamingGRDGSlot_t& slot ) noexcept
 {
 	SIRResourceReadScope scope( *m_pGraph );
 	if ( !scope.isActive() ) {
 		return SIR_STREAMING_GRDG_PROBE_RETRY;
 	}
 
-	const sirResourceFileLoadRequest_t &request = slot.pBinding->request;
+	const sirResourceFileLoadRequest_t& request = slot.pBinding->request;
 	SIRResourceHandle hResource = {};
 	const SIRResourceResult eFound = m_pGraph->find( scope, request.keyResource, &hResource );
 	if ( eFound == SIR_RESOURCE_RESULT_INVALID_HANDLE ) {
@@ -437,7 +495,7 @@ uint8_t SIRStreamingGRDGAdapter::probeResident( sirStreamingGRDGSlot_t &slot ) n
 	return SIR_STREAMING_GRDG_PROBE_PINNED;
 }
 
-bool SIRStreamingGRDGAdapter::checkPublishedRevision( sirStreamingGRDGSlot_t &slot ) noexcept
+bool SIRStreamingGRDGAdapter::checkPublishedRevision( sirStreamingGRDGSlot_t& slot ) noexcept
 {
 	SIRResourceReadScope scope( *m_pGraph );
 	if ( !scope.isActive() ) {
@@ -455,9 +513,9 @@ bool SIRStreamingGRDGAdapter::checkPublishedRevision( sirStreamingGRDGSlot_t &sl
 	return true;
 }
 
-void SIRStreamingGRDGAdapter::processSlot( uint32_t iSlot, sirStreamingGRDGStats_t &stats ) noexcept
+void SIRStreamingGRDGAdapter::processSlot( uint32_t iSlot, sirStreamingGRDGStats_t& stats ) noexcept
 {
-	sirStreamingGRDGSlot_t &slot = m_pSlots[iSlot];
+	sirStreamingGRDGSlot_t& slot = m_pSlots[iSlot];
 	if ( slot.eState == SIR_STREAMING_GRDG_FREE || slot.eState == SIR_STREAMING_GRDG_FAILED ) {
 		return;
 	}
@@ -478,6 +536,7 @@ void SIRStreamingGRDGAdapter::processSlot( uint32_t iSlot, sirStreamingGRDGStats
 			++stats.nWaiting;
 			return;
 		}
+		--m_nActiveLoads;
 		slot.eState = eResult == SIR_RESOURCE_RESULT_SUCCESS || eResult == SIR_RESOURCE_RESULT_STALE_REVISION
 		                  ? SIR_STREAMING_GRDG_PIN_PENDING
 		                  : SIR_STREAMING_GRDG_FAILED_PENDING;
@@ -545,6 +604,8 @@ sirStreamingResult_t SIRStreamingGRDGAdapter::pump( uint32_t nMaximumSlots, sirS
 		m_iNextSlot = m_iNextSlot + 1 == m_nCapacity ? 0 : m_iNextSlot + 1;
 		++stats.nVisited;
 	}
+	stats.nActiveLoads = m_nActiveLoads;
+	stats.nMaxConcurrentLoads = m_nMaxConcurrentLoads;
 	*pStats = stats;
 	return SIR_STREAMING_OK;
 }
@@ -558,7 +619,7 @@ sirStreamingResult_t SIRStreamingGRDGAdapter::queryResource( sirStreamingTicket_
 	if ( !isCurrent( ticket ) ) {
 		return SIR_STREAMING_STALE_TICKET;
 	}
-	const sirStreamingGRDGSlot_t &slot = m_pSlots[ticket.nSlot];
+	const sirStreamingGRDGSlot_t& slot = m_pSlots[ticket.nSlot];
 	if ( slot.eState != SIR_STREAMING_GRDG_PREPARED || !slot.bHasPin ) {
 		return SIR_STREAMING_NOT_READY;
 	}
@@ -582,7 +643,7 @@ sirStreamingResult_t SIRStreamingGRDGAdapter::acknowledgeRetired( sirStreamingTi
 	if ( !isCurrent( ticket ) ) {
 		return SIR_STREAMING_STALE_TICKET;
 	}
-	sirStreamingGRDGSlot_t &slot = m_pSlots[ticket.nSlot];
+	sirStreamingGRDGSlot_t& slot = m_pSlots[ticket.nSlot];
 	if ( slot.load.isActive() ) {
 		return SIR_STREAMING_BUSY;
 	}

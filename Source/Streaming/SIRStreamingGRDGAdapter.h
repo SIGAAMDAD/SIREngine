@@ -63,6 +63,8 @@ typedef struct sirStreamingGRDGConfig_s
 	uint32_t nBindingCount;
 	uint32_t nCapacity;
 	uint32_t nProviderId;
+	// Zero defaults to capacity. This limits simultaneous physical file reads.
+	uint32_t nMaxConcurrentLoads;
 	sirStreamingGRDGProviderCallbacks_t callbacks;
 } sirStreamingGRDGConfig_t;
 
@@ -73,6 +75,8 @@ typedef struct sirStreamingGRDGStats_s
 	uint32_t nWaiting;
 	uint32_t nPrepared;
 	uint32_t nFailed;
+	uint32_t nActiveLoads;
+	uint32_t nMaxConcurrentLoads;
 } sirStreamingGRDGStats_t;
 
 typedef struct sirStreamingGRDGSlot_s sirStreamingGRDGSlot_t;
@@ -84,13 +88,13 @@ class SIRStreamingGRDGAdapter
 {
 public:
 	SIRStreamingGRDGAdapter( void ) noexcept;
-	SIRStreamingGRDGAdapter( const SIRStreamingGRDGAdapter & ) = delete;
+	SIRStreamingGRDGAdapter( const SIRStreamingGRDGAdapter& ) = delete;
 	~SIRStreamingGRDGAdapter( void ) noexcept;
 
-	SIRStreamingGRDGAdapter &operator=( const SIRStreamingGRDGAdapter & ) = delete;
+	SIRStreamingGRDGAdapter& operator=( const SIRStreamingGRDGAdapter& ) = delete;
 
 	static uint64_t requiredBytes( uint32_t nCapacity ) noexcept;
-	sirStreamingResult_t initialize( const sirStreamingGRDGConfig_t &config ) noexcept;
+	sirStreamingResult_t initialize( const sirStreamingGRDGConfig_t& config ) noexcept;
 	sirStreamingResult_t bindBridge( SIRStreamingProviderBridge *pBridge ) noexcept;
 	sirStreamingResult_t shutdown( void ) noexcept;
 
@@ -107,17 +111,17 @@ private:
 	static bool beginActivateCallback( void *pContext, sirStreamingTicket_t ticket ) noexcept;
 	static bool beginRetireCallback( void *pContext, sirStreamingTicket_t ticket ) noexcept;
 
-	const sirStreamingGRDGBinding_t *findBinding( const sirStreamingUnitKey_t &key ) const noexcept;
-	bool isOtherLoadActive( uint32_t iExclude, const SIRResourceKey &key ) const noexcept;
+	const sirStreamingGRDGBinding_t *findBinding( const sirStreamingUnitKey_t& key ) const noexcept;
+	bool isOtherLoadActive( uint32_t iExclude, const SIRResourceKey& key ) const noexcept;
 	bool isCurrent( sirStreamingTicket_t ticket ) const noexcept;
 	bool beginPrepare( sirStreamingTicket_t ticket, const sirStreamingDemand_t *pDemand ) noexcept;
 	bool cancelPrepare( sirStreamingTicket_t ticket ) noexcept;
 	bool beginActivate( sirStreamingTicket_t ticket ) noexcept;
 	bool beginRetire( sirStreamingTicket_t ticket ) noexcept;
-	SIRResourceResult startLoad( sirStreamingGRDGSlot_t &slot ) noexcept;
-	bool checkPublishedRevision( sirStreamingGRDGSlot_t &slot ) noexcept;
-	uint8_t probeResident( sirStreamingGRDGSlot_t &slot ) noexcept;
-	void processSlot( uint32_t iSlot, sirStreamingGRDGStats_t &stats ) noexcept;
+	SIRResourceResult startLoad( sirStreamingGRDGSlot_t& slot ) noexcept;
+	bool checkPublishedRevision( sirStreamingGRDGSlot_t& slot ) noexcept;
+	uint8_t probeResident( sirStreamingGRDGSlot_t& slot ) noexcept;
+	void processSlot( uint32_t iSlot, sirStreamingGRDGStats_t& stats ) noexcept;
 
 	SIRResourceGraph *m_pGraph;
 	SIRTaskScheduler *m_pScheduler;
@@ -129,6 +133,8 @@ private:
 	uint32_t m_nBindingCount;
 	uint32_t m_nCapacity;
 	uint32_t m_nProviderId;
+	uint32_t m_nMaxConcurrentLoads;
+	uint32_t m_nActiveLoads;
 	uint32_t m_iNextSlot;
 	bool m_bInitialized;
 };

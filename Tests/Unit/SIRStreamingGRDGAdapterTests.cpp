@@ -117,7 +117,7 @@ static sirStreamingGRDGBinding_t makeBinding( uint64_t nUnitId, uint64_t nAssetI
 	return binding;
 }
 
-static sirStreamingDemand_t makeDemand( const sirStreamingGRDGBinding_t &binding, uint64_t nConsumerId ) noexcept
+static sirStreamingDemand_t makeDemand( const sirStreamingGRDGBinding_t& binding, uint64_t nConsumerId ) noexcept
 {
 	sirStreamingDemand_t demand = {};
 	demand.keyUnit = binding.keyUnit;
@@ -128,7 +128,7 @@ static sirStreamingDemand_t makeDemand( const sirStreamingGRDGBinding_t &binding
 	return demand;
 }
 
-static SIRResourceGraphConfig makeGraphConfig( sirStreamingAdapterTestAllocator_t &allocator ) noexcept
+static SIRResourceGraphConfig makeGraphConfig( sirStreamingAdapterTestAllocator_t& allocator ) noexcept
 {
 	SIRResourceGraphConfig config = {};
 	config.m_Allocator = { &allocator, allocateGraphBytes, freeGraphBytes };
@@ -343,6 +343,109 @@ static void testDirectoryValidation( const char *pszPath ) noexcept
 	bindings[1].request.nAlignment = 8;
 	bindings[1].request.nFileBytes = 0;
 	SIR_GRDG_TEST( adapter.initialize( config ) == SIR_STREAMING_INVALID_ARGUMENT );
+
+	// Two logical units can borrow the same canonical GRDG key. Their file,
+	// schema, chunk and dependency contracts must agree before work starts.
+	bindings[1] = makeBinding( 2, 1, pszPath );
+	bindings[1].request.keyContent.m_nHashLo ^= 1;
+	SIR_GRDG_TEST( adapter.initialize( config ) == SIR_STREAMING_INVALID_ARGUMENT );
+	bindings[1].request.keyContent = bindings[0].request.keyContent;
+	bindings[1].request.nExpectedRevision = 1;
+	SIR_GRDG_TEST( adapter.initialize( config ) == SIR_STREAMING_INVALID_ARGUMENT );
+	bindings[1].request.nExpectedRevision = 0;
+	bindings[1].pszFilePath = "sir_streaming_different_file.bin";
+	SIR_GRDG_TEST( adapter.initialize( config ) == SIR_STREAMING_INVALID_ARGUMENT );
+	bindings[1].pszFilePath = pszPath;
+	bindings[1].request.nFileOffset = 1;
+	SIR_GRDG_TEST( adapter.initialize( config ) == SIR_STREAMING_INVALID_ARGUMENT );
+	bindings[1].request.nFileOffset = 0;
+
+	SIRResourceDependency dependencyA = {};
+	dependencyA.m_Target = { 900, 31, 0 };
+	dependencyA.m_eKind = SIR_RESOURCE_EDGE_KIND_REQUIRED;
+	SIRResourceDependency dependencyB = dependencyA;
+	dependencyB.m_Target.m_nAssetId = 901;
+	bindings[0].request.pDependencies = &dependencyA;
+	bindings[0].request.nDependencyCount = 1;
+	bindings[1].request.pDependencies = &dependencyB;
+	bindings[1].request.nDependencyCount = 1;
+	SIR_GRDG_TEST( adapter.initialize( config ) == SIR_STREAMING_INVALID_ARGUMENT );
+	bindings[1].request.pDependencies = &dependencyA;
+	config.nMaxConcurrentLoads = 3;
+	SIR_GRDG_TEST( adapter.initialize( config ) == SIR_STREAMING_INVALID_ARGUMENT );
+	config.nMaxConcurrentLoads = 1;
+	SIR_GRDG_TEST( adapter.initialize( config ) == SIR_STREAMING_OK );
+	SIR_GRDG_TEST( adapter.shutdown() == SIR_STREAMING_OK );
+	SIR_GRDG_TEST( coordinator.shutdown() == SIR_STREAMING_OK );
+	SIR_GRDG_TEST( scheduler.shutdown() );
+	memory.shutdown();
+}
+
+static void testBoundedConcurrentLoads( const char *pszPath ) noexcept
+{
+	sirStreamingAdapterTestAllocator_t allocator = {};
+	SIRResourceGraph graph( makeGraphConfig( allocator ) );
+	SIRMemoryManager memory;
+	SIR_GRDG_TEST( memory.init( { 64ULL * 1024 * 1024, 32ULL * 1024 * 1024, 8ULL * 1024 * 1024, 32 } ) );
+	SIRTaskScheduler scheduler;
+	SIR_GRDG_TEST( scheduler.init( &memory, { 16, 0, 32 } ) );
+
+	alignas( 64 ) uint8_t szCoordinator[4096] = {};
+	alignas( 64 ) uint8_t szBridge[4096] = {};
+	alignas( 64 ) uint8_t szAdapter[16384] = {};
+	SIRStreamingCoordinator coordinator;
+	SIR_GRDG_TEST( coordinator.initialize( szCoordinator, sizeof( szCoordinator ), 3 ) == SIR_STREAMING_OK );
+	const sirStreamingGRDGBinding_t bindings[3] = { makeBinding( 1, 101, pszPath ), makeBinding( 2, 102, pszPath ),
+	                                                makeBinding( 3, 103, pszPath ) };
+	sirStreamingAdapterTestProvider_t provider = {};
+	SIRStreamingGRDGAdapter adapter;
+	sirStreamingGRDGConfig_t config = {};
+	config.pGraph = &graph;
+	config.pScheduler = &scheduler;
+	config.pCoordinator = &coordinator;
+	config.pBindings = bindings;
+	config.nBindingCount = 3;
+	config.pStorage = szAdapter;
+	config.nStorageBytes = sizeof( szAdapter );
+	config.nCapacity = 3;
+	config.nProviderId = 88;
+	config.nMaxConcurrentLoads = 1;
+	config.callbacks = { &provider, beginActivate, beginRetire };
+	SIR_GRDG_TEST( adapter.requiredBytes( 3 ) <= sizeof( szAdapter ) );
+	SIR_GRDG_TEST( adapter.initialize( config ) == SIR_STREAMING_OK );
+	SIRStreamingProviderBridge bridge;
+	SIR_GRDG_TEST( bridge.initialize( &coordinator, szBridge, sizeof( szBridge ), adapter.getBridgeCallbacks() ) == SIR_STREAMING_OK );
+	SIR_GRDG_TEST( adapter.bindBridge( &bridge ) == SIR_STREAMING_OK );
+
+	sirStreamingTicket_t tickets[3] = {};
+	for ( uint32_t iTicket = 0; iTicket < 3; ++iTicket ) {
+		const sirStreamingDemand_t demand = makeDemand( bindings[iTicket], iTicket + 1 );
+		SIR_GRDG_TEST( coordinator.submit( demand, &tickets[iTicket] ) == SIR_STREAMING_OK );
+	}
+	sirStreamingBridgeStats_t bridgeStats = {};
+	sirStreamingGRDGStats_t grdgStats = {};
+	SIR_GRDG_TEST( bridge.pump( 3, &bridgeStats ) == SIR_STREAMING_OK && bridgeStats.nPrepareDispatched == 3 );
+	SIR_GRDG_TEST( adapter.pump( 3, &grdgStats ) == SIR_STREAMING_OK && grdgStats.nStarted == 1 && grdgStats.nActiveLoads == 1 &&
+	               grdgStats.nMaxConcurrentLoads == 1 );
+	SIR_GRDG_TEST( scheduler.pumpCPU( 8 ) == 1 );
+	SIR_GRDG_TEST( adapter.pump( 3, &grdgStats ) == SIR_STREAMING_OK && grdgStats.nPrepared == 1 && grdgStats.nStarted == 1 &&
+	               grdgStats.nActiveLoads == 1 && grdgStats.nMaxConcurrentLoads == 1 );
+	SIR_GRDG_TEST( scheduler.pumpCPU( 8 ) == 1 );
+	SIR_GRDG_TEST( adapter.pump( 3, &grdgStats ) == SIR_STREAMING_OK && grdgStats.nPrepared == 1 && grdgStats.nStarted == 1 &&
+	               grdgStats.nActiveLoads == 1 && grdgStats.nMaxConcurrentLoads == 1 );
+	SIR_GRDG_TEST( scheduler.pumpCPU( 8 ) == 1 );
+	SIR_GRDG_TEST( adapter.pump( 3, &grdgStats ) == SIR_STREAMING_OK && grdgStats.nPrepared == 1 && grdgStats.nStarted == 0 &&
+	               grdgStats.nActiveLoads == 0 );
+
+	for ( uint32_t iTicket = 0; iTicket < 3; ++iTicket ) {
+		SIR_GRDG_TEST( coordinator.cancel( tickets[iTicket] ) == SIR_STREAMING_OK );
+	}
+	SIR_GRDG_TEST( bridge.pump( 3, &bridgeStats ) == SIR_STREAMING_OK && bridgeStats.nRetirementDispatched == 3 );
+	for ( uint32_t iTicket = 0; iTicket < 3; ++iTicket ) {
+		SIR_GRDG_TEST( adapter.acknowledgeRetired( tickets[iTicket] ) == SIR_STREAMING_OK );
+	}
+	SIR_GRDG_TEST( adapter.shutdown() == SIR_STREAMING_OK );
+	SIR_GRDG_TEST( bridge.shutdown() == SIR_STREAMING_OK );
 	SIR_GRDG_TEST( coordinator.shutdown() == SIR_STREAMING_OK );
 	SIR_GRDG_TEST( scheduler.shutdown() );
 	memory.shutdown();
@@ -356,6 +459,7 @@ int main( void )
 	testPhysicalSharing( pszPath );
 	testCancellationAndMissingFile( pszPath );
 	testDirectoryValidation( pszPath );
+	testBoundedConcurrentLoads( pszPath );
 	SIR_GRDG_TEST( SIRPlatformFile::remove( pszPath ) == SIR_FILE_OK );
 	printf( "PASS: canonical GRDG file loads, shared pins, activation and cancellation\n" );
 	return 0;
