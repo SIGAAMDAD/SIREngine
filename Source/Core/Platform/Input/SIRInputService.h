@@ -31,6 +31,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Core/Platform/Input/SIRInputText.h>
 #include <Core/Platform/Input/SIRInputHaptics.h>
 #include <Core/Platform/Input/SIRInputReplay.h>
+#include <Core/Platform/Input/SIRInputHistory.h>
 
 // Single input owner: UE's device/backend ownership and Source's tick snapshot.
 // No native window/input handles or third-party library types in this contract.
@@ -49,8 +50,10 @@ public:
 	bool recover( void ) noexcept;
 	const sirInputFrame_t *frame( void ) const noexcept;
 	bool recordReplayTick( SIRInputReplayTape &tape, const sirInputReplayKey_t *pKeys, uint32_t nCount ) const noexcept;
+	bool captureHistoryTick( SIRInputHistory& history, const sirInputReplayKey_t *pKeys, uint32_t nCount ) const noexcept;
 	bool startReplay( void ) noexcept;
 	bool queueReplayTick( const sirInputReplayFrame_t &frame ) noexcept;
+	bool queueHistoryTick( const SIRInputHistory& history, uint64_t nTick ) noexcept;
 	void stopReplay( void ) noexcept;
 	bool replayActive( void ) const noexcept;
 	bool queryAction( uint32_t nActionId, uint32_t nUser, sirInputActionState_t *pOut ) const noexcept;

@@ -120,6 +120,24 @@ bool SIRInputService::recordReplayTick( SIRInputReplayTape &tape, const sirInput
 }
 
 
+bool SIRInputService::captureHistoryTick( SIRInputHistory& history, const sirInputReplayKey_t *pKeys, uint32_t nCount ) const noexcept
+{
+	const sirInputFrame_t *pFrame = m_State.frame();
+	if ( m_bStopping || m_State.collecting() || pFrame == nullptr || nCount > SIR_INPUT_ACTION_CAPACITY ||
+	     ( nCount != 0 && pKeys == nullptr ) ) {
+		return false;
+	}
+	sirInputReplayFrame_t inputFrame = {};
+	inputFrame.nTick = pFrame->nTick;
+	inputFrame.nCount = nCount;
+	for ( uint32_t i = 0; i < nCount; ++i ) {
+		if ( !queryAction( pKeys[i].nActionId, pKeys[i].nUser, &inputFrame.actions[i] ) ) {
+			return false;
+		}
+	}
+	return history.append( inputFrame );
+}
+
 bool SIRInputService::startReplay( void ) noexcept
 {
 	if ( m_bStopping || m_State.collecting() || m_bReplayActive ) {
@@ -140,6 +158,15 @@ bool SIRInputService::queueReplayTick( const sirInputReplayFrame_t &frame ) noex
 	m_ReplayFrame = frame;
 	m_bReplayQueued = true;
 	return true;
+}
+
+bool SIRInputService::queueHistoryTick( const SIRInputHistory& history, uint64_t nTick ) noexcept
+{
+	if ( !m_bReplayActive || !m_State.collecting() || nTick != m_nCollectingTick ) {
+		return false;
+	}
+	sirInputReplayFrame_t frame = {};
+	return history.read( nTick, &frame ) && queueReplayTick( frame );
 }
 
 void SIRInputService::stopReplay( void ) noexcept
