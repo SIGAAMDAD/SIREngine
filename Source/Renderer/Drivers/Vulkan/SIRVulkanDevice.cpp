@@ -167,6 +167,7 @@ bool SIRVulkanDevice::chooseAdapter( uint32_t nAdapterIndex ) noexcept
 	m_Adapter.nVendorId = selectedProperties.vendorID;
 	m_Adapter.nDeviceId = selectedProperties.deviceID;
 	m_Adapter.nQueueFamilyIndex = szFamilies[nAdapterIndex];
+	m_Adapter.nMaximumTextureDimension = selectedProperties.limits.maxImageDimension2D;
 	m_Adapter.bComputeCapable = szCompute[nAdapterIndex];
 	m_Adapter.bSoftwareAdapter = selectedProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_CPU;
 	memcpy( m_Adapter.szMaximumComputeGroupCount, selectedProperties.limits.maxComputeWorkGroupCount,

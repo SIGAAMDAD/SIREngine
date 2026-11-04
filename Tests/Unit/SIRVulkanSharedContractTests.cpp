@@ -32,6 +32,7 @@ int main( void )
 	sirVulkanAdapterInfo_t nativeAdapter = {};
 	nativeAdapter.nApiVersion = VK_API_VERSION_1_4;
 	nativeAdapter.nVendorId = 0x1234;
+	nativeAdapter.nMaximumTextureDimension = 8192;
 	nativeAdapter.bComputeCapable = true;
 	nativeAdapter.bSoftwareAdapter = true;
 	memcpy( nativeAdapter.szDeviceName, "Synthetic Vulkan", sizeof( "Synthetic Vulkan" ) );
@@ -40,6 +41,36 @@ int main( void )
 	     reported.nVendorId != 0x1234 || reported.nFeatureMask != SIR_GRAPHICS_FEATURE_COMPUTE || !reported.bSoftwareAdapter ||
 	     sirVulkanDescribeAdapter( 0, nativeAdapter, nullptr ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
 		return 8;
+	}
+	sirGraphicsCapabilities_t synthetic = {};
+	if ( sirVulkanDescribeCapabilities( nativeAdapter, 41, &synthetic ) != SIR_GRAPHICS_SUCCESS ||
+	     synthetic.eBackend != SIR_GRAPHICS_BACKEND_VULKAN || synthetic.nDeviceGeneration != 41 ||
+	     synthetic.nMaximumTextureDimension != 8192 || synthetic.nMaximumSampleCount != 1 ||
+	     synthetic.nFeatureMask != SIR_GRAPHICS_FEATURE_COMPUTE || !synthetic.bSoftwareAdapter ||
+	     synthetic.nMaximumColorAttachments != 0 || synthetic.nMaximumBindingSlots != 0 ) {
+		return 17;
+	}
+	sirGraphicsDeviceCreateDesc_t admission = {};
+	admission.nRequiredFeatures = SIR_GRAPHICS_FEATURE_COMPUTE;
+	if ( sirVulkanValidateDeviceAdmission( admission, synthetic ) != SIR_GRAPHICS_UNSUPPORTED ) {
+		return 18;
+	}
+	admission.bAllowSoftware = true;
+	if ( sirVulkanValidateDeviceAdmission( admission, synthetic ) != SIR_GRAPHICS_SUCCESS ) {
+		return 19;
+	}
+	admission.nRequiredFeatures = SIR_GRAPHICS_FEATURE_GRAPHICS;
+	if ( sirVulkanValidateDeviceAdmission( admission, synthetic ) != SIR_GRAPHICS_UNSUPPORTED ) {
+		return 20;
+	}
+	memset( nativeAdapter.szDeviceName, 'x', sizeof( nativeAdapter.szDeviceName ) );
+	if ( sirVulkanDescribeAdapter( 0, nativeAdapter, &reported ) != SIR_GRAPHICS_SUCCESS ||
+	     reported.szName[sizeof( reported.szName ) - 1] != '\0' ) {
+		return 21;
+	}
+	if ( sirVulkanDescribeCapabilities( nativeAdapter, 0, &synthetic ) != SIR_GRAPHICS_INVALID_ARGUMENT ||
+	     sirVulkanDescribeCapabilities( nativeAdapter, 1, nullptr ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return 22;
 	}
 	nativeAdapter.bComputeCapable = false;
 	nativeAdapter.bSoftwareAdapter = false;

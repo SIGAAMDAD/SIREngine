@@ -49,6 +49,7 @@ typedef struct sirVulkanAdapterInfo_s
 	uint32_t nVendorId;
 	uint32_t nDeviceId;
 	uint32_t nQueueFamilyIndex;
+	uint32_t nMaximumTextureDimension;
 	uint32_t nMemoryTypeCount;
 	uint32_t nMemoryHeapCount;
 	uint32_t szMaximumComputeGroupCount[3];
