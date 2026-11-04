@@ -526,11 +526,13 @@ static void testBucketCollisionAndInteriorFrontierPruning( void )
 	uint32_t nIndex = 0;
 	{
 		SIRTaskGraph collision;
-		SIR_GRAPH_CHECK( collision.init( &memory, { 2, 2, 2 } ) );
+		SIR_GRAPH_CHECK( collision.init( &memory, { 3, 3, 3 } ) );
 		const sirTaskGraphAccess_t first = { { 4, 0 }, 0, 8, SIR_TASK_GRAPH_READ };
 		const sirTaskGraphAccess_t second = { { 5, 0 }, 0, 8, SIR_TASK_GRAPH_READ };
+		const sirTaskGraphAccess_t third = { { 4, 13 }, 0, 8, SIR_TASK_GRAPH_READ };
 		SIR_GRAPH_CHECK( collision.addPass( pass, &first, 1, &nIndex ) );
 		SIR_GRAPH_CHECK( collision.addPass( pass, &second, 1, &nIndex ) );
+		SIR_GRAPH_CHECK( collision.addPass( pass, &third, 1, &nIndex ) );
 		SIR_GRAPH_CHECK( collision.compile() == SIR_TASK_GRAPH_OK );
 		SIR_GRAPH_CHECK( collision.getEdgeCount() == 0 );
 	}
