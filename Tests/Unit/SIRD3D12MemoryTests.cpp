@@ -56,6 +56,10 @@ int main( void )
 	config.pCpuHeap = &uninitialized;
 	if ( driver.createDevice( config, &pDevice ) != SIR_GRAPHICS_DRIVER_ERROR || pDevice != nullptr ) {
 		return 5;
+CMake Warning at Build/CMake/CIFormat.cmake:34 (message):
+  Formatting error: Tests/Unit/SIRD3D12MemoryTests.cpp
+
+
 	}
 	config.pCpuHeap = nullptr;
 	if ( driver.createDevice( config, &pDevice ) != SIR_GRAPHICS_SUCCESS || pDevice == nullptr ) {
@@ -172,7 +176,6 @@ int main( void )
 		return 20;
 	}
 
-
 	// Native renderer startup must seal the resource pools before exposing the device.
 	sirD3D12SealedPoolConfig_t sealedProfile = {};
 	sealedProfile.nDeviceBufferBytes = 4 * 1024 * 1024;
@@ -196,8 +199,7 @@ int main( void )
 		return 23;
 	}
 	config.nResidentBudgetBytes = 0;
-	if ( driver.createSealedDevice( config, sealedProfile, &pSealedDevice ) != SIR_GRAPHICS_SUCCESS ||
-	     pSealedDevice == nullptr ) {
+	if ( driver.createSealedDevice( config, sealedProfile, &pSealedDevice ) != SIR_GRAPHICS_SUCCESS || pSealedDevice == nullptr ) {
 		return 24;
 	}
 	sirGraphicsMemoryBudget_t sealedBaseline = {};
@@ -208,8 +210,7 @@ int main( void )
 	sirGraphicsNativeSurface_t surface = {};
 	sirGraphicsPresentDesc_t present = {};
 	sirGraphicsHandle_t hSurface = {};
-	if ( pSealedDevice->createSurface( surface, present, &hSurface ) != SIR_GRAPHICS_UNSUPPORTED ||
-	     hSurface.nGeneration != 0 ) {
+	if ( pSealedDevice->createSurface( surface, present, &hSurface ) != SIR_GRAPHICS_UNSUPPORTED || hSurface.nGeneration != 0 ) {
 		return 26;
 	}
 	sirGraphicsBufferDesc_t resourceBuffer = {};
@@ -242,8 +243,7 @@ int main( void )
 	}
 	resourceBuffer.nSizeBytes = 64ULL * 1024 * 1024;
 	sirGraphicsHandle_t hOversized = {};
-	if ( pSealedDevice->createBuffer( resourceBuffer, &hOversized ) != SIR_GRAPHICS_OUT_OF_MEMORY ||
-	     hOversized.nGeneration != 0 ) {
+	if ( pSealedDevice->createBuffer( resourceBuffer, &hOversized ) != SIR_GRAPHICS_OUT_OF_MEMORY || hOversized.nGeneration != 0 ) {
 		return 30;
 	}
 	sirGraphicsMemoryBudget_t sealedAllocated = {};
