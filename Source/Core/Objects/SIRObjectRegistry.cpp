@@ -127,6 +127,14 @@ const sirObjectPropertyDescriptor_t *SIRObjectRegistry::findProperty( uint32_t n
 	return nullptr;
 }
 
+const sirObjectPropertyDescriptor_t *SIRObjectRegistry::getPropertyDescriptor( uint32_t iProperty ) const noexcept
+{
+	if ( m_pProperties == nullptr || iProperty >= m_nPropertyCount ) {
+		return nullptr;
+	}
+	return &m_pProperties[iProperty];
+}
+
 sirObjectResult_t SIRObjectRegistry::validateProperty( uint32_t nTypeId, uint32_t nPropertyId,
                                                        const sirPropertyValue_t &value ) const noexcept
 {
