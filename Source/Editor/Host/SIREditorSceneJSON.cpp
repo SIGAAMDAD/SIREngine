@@ -51,6 +51,7 @@ bool sirEditorWriteSceneJSON( const SIREditorSceneWorkspace &workspace, const ch
 
 	const sirEditorTextSceneIndex_t &scene = workspace.getSceneIndex();
 	const sirEditorTextResourceIndex_t &resources = workspace.getResourceIndex();
+	const sirEditorTextPropertyIndex_t &properties = workspace.getPropertyIndex();
 	const char *pszSource = workspace.getSource();
 	const size_t nSourceBytes = workspace.getSourceBytes();
 	if ( scene.nNodeCount > scene.storage.nNodeCapacity || resources.nCount > resources.nCapacity ) {
@@ -60,6 +61,9 @@ bool sirEditorWriteSceneJSON( const SIREditorSceneWorkspace &workspace, const ch
 		return false;
 	}
 	if ( resources.nCount != 0 && resources.pResources == nullptr ) {
+		return false;
+	}
+	if ( properties.nCount > properties.nCapacity || ( properties.nCount != 0 && properties.pProperties == nullptr ) ) {
 		return false;
 	}
 
@@ -78,6 +82,14 @@ bool sirEditorWriteSceneJSON( const SIREditorSceneWorkspace &workspace, const ch
 		     !sirEditorValidSpan( nSourceBytes, resource.nTypeOffset, resource.nTypeLength ) ||
 		     !sirEditorValidSpan( nSourceBytes, resource.nPathOffset, resource.nPathLength ) ||
 		     !sirEditorValidSpan( nSourceBytes, resource.nUidOffset, resource.nUidLength ) ) {
+			return false;
+		}
+	}
+
+	for ( uint32_t i = 0; i < properties.nCount; ++i ) {
+		const sirEditorTextProperty_t &property = properties.pProperties[i];
+		if ( !sirEditorValidSpan( nSourceBytes, property.nNameOffset, property.nNameLength ) ||
+		     !sirEditorValidSpan( nSourceBytes, property.nValueOffset, property.nValueLength ) ) {
 			return false;
 		}
 	}
@@ -115,6 +127,26 @@ bool sirEditorWriteSceneJSON( const SIREditorSceneWorkspace &workspace, const ch
 		fputs( ",\"uid\":", pOutput );
 		sirEditorWriteJSONString( pOutput, pszSource + resource.nUidOffset, resource.nUidLength );
 		fprintf( pOutput, ",\"line\":%u}", resource.nSourceLine );
+	}
+	fputs( "],\"properties\":[", pOutput );
+	for ( uint32_t i = 0; i < properties.nCount; ++i ) {
+		const sirEditorTextProperty_t &property = properties.pProperties[i];
+		if ( i != 0 ) {
+			fputc( ',', pOutput );
+		}
+		fprintf( pOutput, "{\"node\":\"%llu\",\"name\":", ( unsigned long long )property.nNodeId );
+		sirEditorWriteJSONString( pOutput, pszSource + property.nNameOffset, property.nNameLength );
+		fputs( ",\"value\":", pOutput );
+		const uint32_t nMaximumPreview = 512;
+		uint32_t nPreview = property.nValueLength < nMaximumPreview ? property.nValueLength : nMaximumPreview;
+		if ( nPreview < property.nValueLength ) {
+			while ( nPreview != 0 && ( ( uint8_t )pszSource[property.nValueOffset + nPreview] & 0xc0 ) == 0x80 ) {
+				--nPreview;
+			}
+		}
+		sirEditorWriteJSONString( pOutput, pszSource + property.nValueOffset, nPreview );
+		fprintf( pOutput, ",\"line\":%u,\"bytes\":%u,\"truncated\":%s}", property.nSourceLine, property.nValueLength,
+		         nPreview != property.nValueLength ? "true" : "false" );
 	}
 	fputs( "]}\n", pOutput );
 	return ferror( pOutput ) == 0;

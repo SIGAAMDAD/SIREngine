@@ -26,6 +26,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Core/Memory/Allocators/SIRLinearAllocator.h>
 #include <Editor/Scene/SIREditorTextScene.h>
+#include <Editor/Scene/SIREditorTextProperties.h>
 #include <Editor/Widgets/SIREditorHierarchyModel.h>
 
 class SIRMemorySegment;
@@ -41,7 +42,8 @@ typedef enum sirEditorWorkspaceResult_e : uint8_t
 	SIR_EDITOR_WORKSPACE_INVALID_RESOURCES = 6,
 	SIR_EDITOR_WORKSPACE_DOCUMENT_FAILED = 7,
 	SIR_EDITOR_WORKSPACE_HIERARCHY_FAILED = 8,
-	SIR_EDITOR_WORKSPACE_FILE_IO = 9
+	SIR_EDITOR_WORKSPACE_FILE_IO = 9,
+	SIR_EDITOR_WORKSPACE_INVALID_PROPERTIES = 10
 } sirEditorWorkspaceResult_t;
 
 // Editor-main-thread source owner. The Godot scene reader remains authoritative
@@ -56,6 +58,7 @@ private:
 	SIREditorHierarchyModel m_Hierarchy;
 	sirEditorTextSceneIndex_t m_Scene;
 	sirEditorTextResourceIndex_t m_Resources;
+	sirEditorTextPropertyIndex_t m_Properties;
 	const char *m_pszSource;
 	size_t m_nSourceBytes;
 	uint32_t m_nErrorLine;
@@ -84,6 +87,7 @@ public:
 	size_t getSourceBytes( void ) const noexcept;
 	const sirEditorTextSceneIndex_t &getSceneIndex( void ) const noexcept;
 	const sirEditorTextResourceIndex_t &getResourceIndex( void ) const noexcept;
+	const sirEditorTextPropertyIndex_t &getPropertyIndex( void ) const noexcept;
 	SIREditorSceneDocument &getDocument( void ) noexcept;
 	const SIREditorSceneDocument &getDocument( void ) const noexcept;
 	SIREditorHierarchyModel &getHierarchy( void ) noexcept;

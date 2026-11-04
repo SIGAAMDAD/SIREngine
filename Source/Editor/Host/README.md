@@ -38,3 +38,20 @@ and polls `OS.is_process_running` without blocking the editor event loop. The
 source is rehashed before acceptance and stale/timeout results are discarded.
 The transport is a bounded saved-file migration adapter, not a live native
 Godot object loader or a replacement for the eventual editor-private API.
+
+## Source-backed serialized property index
+
+`SIREditorSceneWorkspace` now indexes the property declarations belonging to
+`[node]` sections of a saved Godot `.tscn`. It uses a measure-then-fill
+scanner with caller-owned editor-domain storage and balanced quoted/nested
+values (including multiline strings and dictionaries). Each entry refers to
+its owning native node ID, original property name/value spans and source line.
+These are **read-only serialized text spans**, not Godot `Variant` values or
+validated PropertyInfo metadata. Other section types, inherited scene
+resolution, editing, property conversion and saving remain with Godot's editor.
+
+The existing scene JSON schema `1` adds an optional `properties` collection.
+Each element carries `node`, `name`, `value`, `line`, `bytes`, and `truncated`.
+The transport displays at most 512 bytes of a serialized value per entry,
+without cutting a UTF-8 codepoint. Full serialized bytes remain in the source
+workspace. Existing `nodes` and `resources` fields are unchanged.
