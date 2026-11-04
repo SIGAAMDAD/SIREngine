@@ -471,7 +471,8 @@ static uint32_t sirLangLowerLogical( sirLangLowerState_t *pState, uint32_t iNode
 	sirLangBinaryModifiers_t modifiers = {};
 	const sirLangOpcode_t eOpcode = sirLangBinaryOp( pState, iLeft, iRight, &modifiers );
 	if ( eOpcode != SIR_LANG_OP_AND && eOpcode != SIR_LANG_OP_OR ) {
-		return sirLangError( pState, SIR_LANG_LOWER_UNSUPPORTED, iNode ), SIR_LANG_INVALID_INDEX;
+		sirLangError( pState, SIR_LANG_LOWER_UNSUPPORTED, iNode );
+		return SIR_LANG_INVALID_INDEX;
 	}
 
 	const uint32_t iBranch = sirLangEmit( pState, { SIR_LANG_OP_JUMP_FALSE, SIR_LANG_VALUE_VOID, 0, UINT32_MAX,

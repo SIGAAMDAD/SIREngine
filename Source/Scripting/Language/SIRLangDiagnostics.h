@@ -37,6 +37,12 @@ typedef struct sirLangEditorDiagnostic_s
 	bool bHasSourceLocation;
 } sirLangEditorDiagnostic_t;
 
+// Writes up to nCapacity errors from the failed compilation in source order.
+// The return value counts written entries. If the failing stage has no
+// diagnostic array, one stage-level fallback is emitted. No heap allocation.
+uint32_t SIRLangCollectCompileDiagnostics( const sirLangCompileWorkspace_t *pWorkspace,
+                                           sirLangEditorDiagnostic_t *pDiagnostics, uint32_t nCapacity ) noexcept;
+
 // Returns false only when the source has no failure to report or the caller
 // supplied an invalid destination. Never invokes a compiler pass.
 bool SIRLangGetCompileDiagnostic( const sirLangCompileWorkspace_t *pWorkspace,

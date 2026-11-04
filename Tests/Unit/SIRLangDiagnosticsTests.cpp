@@ -55,8 +55,51 @@ static void testCompilerSourceDiagnostics( void ) noexcept
 	assert( !SIRLangGetCompileDiagnostic( &workspace, nullptr ) );
 }
 
+
+static void testRecoveredDiagnostics( void ) noexcept
+{
+	sirLangToken_t szTokens[256] = {};
+	sirLangSyntaxNode_t szNodes[256] = {};
+	sirLangParseDiagnostic_t szParse[16] = {};
+	sirLangCompileWorkspace_t workspace = {};
+	workspace.syntax.pTokens = szTokens;
+	workspace.syntax.nTokenCapacity = 256;
+	workspace.syntax.pNodes = szNodes;
+	workspace.syntax.nNodeCapacity = 256;
+	workspace.syntax.pDiagnostics = szParse;
+	workspace.syntax.nDiagnosticCapacity = 16;
+	workspace.cir.nModuleId = 1;
+	workspace.cir.nLayoutDigest = 2;
+	workspace.cir.nBindingDigest = 3;
+
+	static constexpr char szBroken[] =
+	    "fn broken(a: u16:\n"
+	    "    let missing: u16 =\n"
+	    "fn good(x: i32):\n"
+	    "    return x\n";
+	const sirLangSourceView_t source = { ( const uint8_t * )szBroken, sizeof( szBroken ) - 1 };
+	assert( !SIRLangCompileSource( source, &workspace ) );
+	assert( workspace.report.ePhase == SIR_LANG_COMPILE_PARSE );
+	assert( workspace.syntax.nDiagnosticCount >= 2 );
+
+	sirLangEditorDiagnostic_t szCollected[4] = {};
+	const uint32_t nCollected = SIRLangCollectCompileDiagnostics( &workspace, szCollected, 4 );
+	assert( nCollected >= 2 && nCollected <= 4 );
+	assert( szCollected[0].ePhase == SIR_LANG_COMPILE_PARSE );
+	assert( szCollected[1].ePhase == SIR_LANG_COMPILE_PARSE );
+	assert( szCollected[0].bHasSourceLocation && szCollected[1].bHasSourceLocation );
+	assert( szCollected[0].nOffset <= szCollected[1].nOffset );
+	assert( szCollected[0].nCode != 0 && szCollected[1].nCode != 0 );
+
+	assert( SIRLangCollectCompileDiagnostics( &workspace, szCollected, 1 ) == 1 );
+	assert( SIRLangCollectCompileDiagnostics( &workspace, nullptr, 4 ) == 0 );
+	assert( SIRLangCollectCompileDiagnostics( &workspace, szCollected, 0 ) == 0 );
+	assert( SIRLangCollectCompileDiagnostics( nullptr, szCollected, 4 ) == 0 );
+}
+
 int main( void )
 {
 	testCompilerSourceDiagnostics();
+	testRecoveredDiagnostics();
 	return 0;
 }
