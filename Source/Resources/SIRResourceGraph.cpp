@@ -177,7 +177,13 @@ SIRResourceGraph::SIRResourceGraph( const SIRResourceGraphConfig &rConfig ) noex
 	const uint64_t nReaderBytes = ( uint64_t )m_nMaxReaders * sizeof( std::atomic<uint64_t> );
 	m_pSlots = ( SIRGraphSlot * )allocate( nSlots, alignof( SIRGraphSlot ), m_Config.m_nMetadataDomain );
 	m_pStaging = ( SIRStagingSlot * )allocate( nStaging, alignof( SIRStagingSlot ), m_Config.m_nMetadataDomain );
+	if ( m_pStaging != nullptr ) {
+		memset( m_pStaging, 0, ( size_t )nStaging );
+	}
 	m_pProviderPins = ( SIRProviderPinSlot * )allocate( nPins, alignof( SIRProviderPinSlot ), m_Config.m_nMetadataDomain );
+	if ( m_pProviderPins != nullptr ) {
+		memset( m_pProviderPins, 0, ( size_t )nPins );
+	}
 	m_pReverseEdges = ( SIRReverseDependencyEdge * )allocate( nEdges, alignof( SIRReverseDependencyEdge ), m_Config.m_nMetadataDomain );
 	m_pReadKeyIndex = ( sirReadKeyIndexCell_t * )allocate( nReadCells, alignof( sirReadKeyIndexCell_t ), m_Config.m_nMetadataDomain );
 	m_pReaderEpochs = ( std::atomic<uint64_t> * )allocate( nReaderBytes, alignof( std::atomic<uint64_t> ), m_Config.m_nMetadataDomain );
@@ -198,8 +204,6 @@ SIRResourceGraph::SIRResourceGraph( const SIRResourceGraphConfig &rConfig ) noex
 	for ( uint32_t iSlot = 0; iSlot < m_Config.m_nMaxResources; ++iSlot ) {
 		new ( &m_pSlots[iSlot] ) SIRGraphSlot();
 	}
-	memset( m_pStaging, 0, ( size_t )nStaging );
-	memset( m_pProviderPins, 0, ( size_t )nPins );
 	for ( uint32_t iReader = 0; iReader < m_nMaxReaders; ++iReader ) {
 		new ( &m_pReaderEpochs[iReader] ) std::atomic<uint64_t>();
 		m_pReaderEpochs[iReader].store( 0, std::memory_order_relaxed );
