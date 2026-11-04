@@ -143,6 +143,7 @@ public:
 	sirAudioResult_t cancelLoadPackage( void ) noexcept;
 	uint64_t getPendingPackageId( void ) const noexcept;
 	sirAudioResult_t getSampleState( uint64_t nPackageId, sirFMODSampleState_t &eState ) noexcept;
+	sirAudioResult_t recoverOutput( int32_t iPreferredDriver, bool bFallbackToFirst ) noexcept;
 	sirAudioResult_t releasePackage( uint64_t nPackageId ) noexcept;
 	sirAudioResult_t collectUnused( void ) noexcept;
 	uint32_t update( void ) noexcept;

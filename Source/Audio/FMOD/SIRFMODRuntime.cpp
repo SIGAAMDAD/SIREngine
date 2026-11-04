@@ -360,6 +360,18 @@ sirAudioResult_t SIRFMODRuntime::getSampleState( uint64_t nPackageId, sirFMODSam
 	return isReady() ? m_Banks.getSampleState( nPackageId, eState ) : SIR_AUDIO_NOT_INITIALIZED;
 }
 
+sirAudioResult_t SIRFMODRuntime::recoverOutput( int32_t iPreferredDriver, bool bFallbackToFirst ) noexcept
+{
+	if ( !isReady() ) {
+		return SIR_AUDIO_NOT_INITIALIZED;
+	}
+	const sirFMODContextResult_t eResult = m_Context.recoverOutput( iPreferredDriver, bFallbackToFirst );
+	if ( eResult == SIR_FMOD_OK ) {
+		return SIR_AUDIO_OK;
+	}
+	return eResult == SIR_FMOD_INVALID_DRIVER ? SIR_AUDIO_INVALID_ARGUMENT : SIR_AUDIO_BACKEND_ERROR;
+}
+
 sirAudioResult_t SIRFMODRuntime::collectUnused( void ) noexcept
 {
 	if ( !isReady() ) {

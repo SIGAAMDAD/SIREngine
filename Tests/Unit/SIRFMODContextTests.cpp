@@ -42,6 +42,9 @@ typedef struct sirFMODFixture_s
 	int32_t nInitializeCalls = 0;
 	int32_t nNoSoundCalls = 0;
 	bool bStudioAlive = false;
+	bool bFireDeviceLoss = false;
+	void *pDeviceOwner = nullptr;
+	void ( *pfnDeviceSignal )( void * ) noexcept = nullptr;
 	bool bCoreAlive = false;
 	sirFMODFixtureFailure_t eFailure = SIR_FMOD_FIXTURE_NONE;
 } sirFMODFixture_t;
@@ -133,6 +136,10 @@ static int32_t fakeUpdate( void *pUserData, void *pStudio ) noexcept
 	sirFMODFixture_t *pFixture = ( sirFMODFixture_t * )pUserData;
 	checkFMOD( pStudio == pFixture );
 	++pFixture->nUpdateCalls;
+	if ( pFixture->bFireDeviceLoss && pFixture->pfnDeviceSignal != nullptr ) {
+		pFixture->bFireDeviceLoss = false;
+		pFixture->pfnDeviceSignal( pFixture->pDeviceOwner );
+	}
 	return failOnce( pFixture, SIR_FMOD_FIXTURE_UPDATE );
 }
 
@@ -149,9 +156,19 @@ static int32_t fakeRelease( void *pUserData, void *pStudio ) noexcept
 	return nResult;
 }
 
+static int32_t fakeRegisterDeviceLoss( void *pUserData, void *pCore, void *pOwner,
+                                       void ( *pfnSignal )( void * ) noexcept ) noexcept
+{
+	sirFMODFixture_t *pFixture = ( sirFMODFixture_t * )pUserData;
+	checkFMOD( pCore == &pFixture->nVersion && pOwner != nullptr && pfnSignal != nullptr );
+	pFixture->pDeviceOwner = pOwner;
+	pFixture->pfnDeviceSignal = pfnSignal;
+	return 0;
+}
+
 static sirFMODNativeOps_t fakeOps( sirFMODFixture_t &fixture ) noexcept
 {
-	return { 1,
+	return { 2,
 	         0x00020400,
 	         &fixture,
 	         fakeCreate,
@@ -162,7 +179,8 @@ static sirFMODNativeOps_t fakeOps( sirFMODFixture_t &fixture ) noexcept
 	         fakeSetNoSound,
 	         fakeInitialize,
 	         fakeUpdate,
-	         fakeRelease };
+	         fakeRelease,
+	         fakeRegisterDeviceLoss };
 }
 
 static void testContextLifecycle( void )
@@ -261,6 +279,34 @@ static void testUpdateFailures( void )
 	checkFMOD( context.shutdown() == SIR_FMOD_OK );
 }
 
+static void testDeviceRecovery( void )
+{
+	sirFMODFixture_t fixture = {};
+	SIRFMODContext context;
+	const sirFMODContextConfig_t config = { 64, -1, 0, 1, 0, 0 };
+	checkFMOD( context.initialize( config, fakeOps( fixture ) ) == SIR_FMOD_OK );
+	fixture.bFireDeviceLoss = true;
+	checkFMOD( context.update() == SIR_FMOD_OK && context.needsDeviceRecovery() );
+	checkFMOD( context.getDeviceLossSignalCount() == 1 );
+	checkFMOD( context.recoverOutput( 2, false ) == SIR_FMOD_OK );
+	checkFMOD( fixture.iSelectedDriver == 2 && context.getSuccessfulRecoveryCount() == 1 );
+	checkFMOD( !context.needsDeviceRecovery() );
+	fixture.bFireDeviceLoss = true;
+	checkFMOD( context.update() == SIR_FMOD_OK && context.needsDeviceRecovery() );
+	checkFMOD( context.recoverOutput( 99, false ) == SIR_FMOD_INVALID_DRIVER );
+	fixture.eFailure = SIR_FMOD_FIXTURE_DRIVER;
+	checkFMOD( context.recoverOutput( 2, true ) == SIR_FMOD_OK );
+	checkFMOD( fixture.iSelectedDriver == 0 && !context.needsDeviceRecovery() );
+	checkFMOD( context.getSuccessfulRecoveryCount() == 2 );
+	fixture.nDriverCount = 0;
+	checkFMOD( context.recoverOutput( 0, true ) == SIR_FMOD_INVALID_DRIVER );
+	checkFMOD( context.shutdown() == SIR_FMOD_OK );
+	const sirFMODContextConfig_t noSound = { 64, -1, 1, 1, 0, 0 };
+	checkFMOD( context.initialize( noSound, fakeOps( fixture ) ) == SIR_FMOD_OK );
+	checkFMOD( context.recoverOutput( 0, true ) == SIR_FMOD_BAD_STATE );
+	checkFMOD( context.shutdown() == SIR_FMOD_OK );
+}
+
 static void testInvalidConfiguration( void )
 {
 	sirFMODFixture_t fixture = {};
@@ -296,6 +342,7 @@ int main( void )
 	testMismatchAndNoSound();
 	testReleaseFailure();
 	testUpdateFailures();
+	testDeviceRecovery();
 	testInvalidConfiguration();
 	return 0;
 }

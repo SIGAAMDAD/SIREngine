@@ -25,6 +25,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // clang-format on
 
 #include <Audio/SIRAudioTypes.h>
+#include <Core/Platform/SIRAtomic.h>
 
 typedef enum sirFMODContextState_e : uint8_t
 {
@@ -72,6 +73,8 @@ typedef struct sirFMODNativeOps_s
 	int32_t ( *initializeStudio )( void *pUserData, void *pStudio, const sirFMODContextConfig_t *pConfig ) noexcept;
 	int32_t ( *updateStudio )( void *pUserData, void *pStudio ) noexcept;
 	int32_t ( *releaseStudio )( void *pUserData, void *pStudio ) noexcept;
+	int32_t ( *registerDeviceLoss )( void *pUserData, void *pCore, void *pOwner,
+	                                void ( *pfnSignal )( void *pOwner ) noexcept ) noexcept;
 } sirFMODNativeOps_t;
 
 // The owner thread exclusively invokes all methods and quiesces callbacks
@@ -91,6 +94,11 @@ private:
 	int32_t m_nLastNativeResult = 0;
 	uint32_t m_nBorrowedBankObjects = 0;
 	uint32_t m_nUnscopedBankObjects = 0;
+	SIRAtomic<uint32_t> m_nDeviceLossSignals = SIRAtomic<uint32_t>( 0 );
+	uint32_t m_nAcknowledgedDeviceLoss = 0;
+	uint32_t m_nRecoveryAttempts = 0;
+	uint32_t m_nSuccessfulRecoveries = 0;
+	bool m_bNoSound = false;
 	sirFMODContextState_t m_eState = SIR_FMOD_CONTEXT_EMPTY;
 
 	sirFMODContextResult_t rollback( sirFMODContextResult_t eOriginalError, int32_t nNativeError ) noexcept;
@@ -108,6 +116,11 @@ public:
 	sirFMODContextResult_t shutdown( void ) noexcept;
 	sirFMODContextResult_t getDriverCount( int32_t &nCount ) noexcept;
 	sirFMODContextResult_t changeDriver( int32_t iDriver ) noexcept;
+	sirFMODContextResult_t recoverOutput( int32_t iPreferredDriver, bool bFallbackToFirst ) noexcept;
+	bool needsDeviceRecovery( void ) const noexcept;
+	uint32_t getDeviceLossSignalCount( void ) const noexcept;
+	uint32_t getSuccessfulRecoveryCount( void ) const noexcept;
+	static void notifyDeviceLoss( void *pOwner ) noexcept;
 	bool isReady( void ) const noexcept;
 	sirFMODContextState_t getState( void ) const noexcept;
 	int32_t getLastNativeResult( void ) const noexcept;

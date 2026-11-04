@@ -16,6 +16,9 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Audio/FMOD/SIRFMODBankStore.h>
+#include <Audio/FMOD/SIRFMODAudioThread.h>
+#include <chrono>
+#include <thread>
 #include <Audio/FMOD/SIRFMODRuntime.h>
 #include <Audio/FMOD/SIRFMODMixerBackend.h>
 #include <Audio/FMOD/SIRFMODSnapshotBackend.h>
@@ -127,9 +130,14 @@ static int32_t testStudioRelease( void *pData, void * ) noexcept
 	( ( sirFMODBankFixture_t * )pData )->bStudio = false;
 	return 0;
 }
+static int32_t testStudioDeviceLossCallback( void *, void *, void *, void ( * )( void * ) noexcept ) noexcept
+{
+	return 0;
+}
+
 static sirFMODNativeOps_t makeStudioOps( sirFMODBankFixture_t *pFixture ) noexcept
 {
-	return { 1,
+	return { 2,
 	         0x00020400,
 	         pFixture,
 	         testStudioCreate,
@@ -140,7 +148,8 @@ static sirFMODNativeOps_t makeStudioOps( sirFMODBankFixture_t *pFixture ) noexce
 	         testStudioNoSound,
 	         testStudioInitialize,
 	         testStudioUpdate,
-	         testStudioRelease };
+	         testStudioRelease,
+	         testStudioDeviceLossCallback };
 }
 
 static int32_t testVoiceResolve( void *pData, void *, const char *szPath, void **ppDescription ) noexcept
@@ -876,6 +885,102 @@ static void testRuntimeComposition( const sirContainerAllocator_t *pAllocator )
 	manifest.shutdown();
 }
 
+static sirFMODThreadResult_t testWaitForTicket( SIRFMODAudioThread &thread, uint64_t nTicket )
+{
+	sirFMODThreadResult_t result = {};
+	for ( uint32_t iAttempt = 0; iAttempt < 10000; ++iAttempt ) {
+		const sirAudioResult_t eStatus = thread.poll( nTicket, result );
+		if ( eStatus == SIR_AUDIO_OK ) {
+			checkBank( result.nTicket == nTicket );
+			return result;
+		}
+		checkBank( eStatus == SIR_AUDIO_PENDING );
+		std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
+	}
+	abort();
+}
+
+static void testAudioOwnerThread( const sirContainerAllocator_t *pAllocator )
+{
+	sirFMODBankFixture_t fixture = {};
+	SIRAudioResourceStore manifest;
+	sirFMODRuntimeTestManifest_t image = makeRuntimeManifest();
+	checkBank( manifest.load( &image, sizeof( image ), SIR_AUDIO_PROVIDER_FMOD, 0, pAllocator ) == SIR_AUDIO_MANIFEST_OK );
+	sirFMODAudioThreadConfig_t config = {};
+	config.runtime.context = { 16, -1, 1, 1, 0, 0 };
+	config.runtime.audio = { 4, 0, 64, 16, 16, 0 };
+	config.runtime.pAllocator = pAllocator;
+	config.runtime.pManifest = &manifest;
+	config.runtime.packageResolver = { nullptr, testResolvePackagePath };
+	config.runtime.eventResolver = { nullptr, testResolveEventPath };
+	config.runtime.nMaxRegisteredEvents = 1;
+	config.runtime.nMaxRegisteredParameters = 1;
+	config.runtime.nMaxBanks = 2;
+	config.runtime.nMaxBankEventBindings = 1;
+	config.runtime.nMaxMixerControls = 1;
+	config.runtime.nMaxSnapshots = 1;
+	config.runtime.nEngineMemoryBudgetBytes = 1024 * 1024;
+	config.nativeOps.context = makeStudioOps( &fixture );
+	config.nativeOps.voice = makeVoiceOps( &fixture );
+	config.nativeOps.voice.setInstanceParameter = testRuntimeInstanceParameter;
+	config.nativeOps.voice.setGlobalParameter = testRuntimeGlobalParameter;
+	config.nativeOps.bank = makeBankOps( &fixture );
+	config.nativeOps.mixer = { 1, &fixture, testPinnedBusResolve, testPinnedVCAResolve, testPinnedSetVolume,
+	                           testPinnedSetMute, testPinnedSetVolume };
+	config.nativeOps.snapshot = { 1, &fixture, testPinnedSnapshotResolve, testVoiceCreate, testVoiceStart,
+	                              testVoiceStop, testVoiceRelease };
+	config.nRequestCapacity = 64;
+	config.nIdleSleepMilliseconds = 1;
+	SIRFMODAudioThread worker;
+	checkBank( worker.start( config ) == SIR_AUDIO_OK && worker.isReady() );
+	sirFMODThreadRequest_t request = {};
+	request.eOperation = SIR_FMOD_THREAD_LOAD_PACKAGE;
+	request.nId = 2;
+	request.bFlag = 1;
+	fixture.nAsyncPolls = 4;
+	uint64_t nLoadTicket = 0;
+	checkBank( worker.submit( request, nLoadTicket ) == SIR_AUDIO_PENDING && nLoadTicket != 0 );
+	sirFMODThreadResult_t result = testWaitForTicket( worker, nLoadTicket );
+	checkBank( result.eResult == SIR_AUDIO_OK );
+	checkBank( worker.poll( nLoadTicket, result ) == SIR_AUDIO_INVALID_HANDLE );
+	request = {};
+	request.eOperation = SIR_FMOD_THREAD_PLAY_EVENT;
+	request.nId = 101;
+	uint64_t nPlayTicket = 0;
+	checkBank( worker.submit( request, nPlayTicket ) == SIR_AUDIO_PENDING );
+	result = testWaitForTicket( worker, nPlayTicket );
+	checkBank( result.eResult == SIR_AUDIO_PENDING && result.hPlaying.nEpoch != 0 );
+	const sirAudioPlayingHandle_t hPlaying = result.hPlaying;
+	request = {};
+	request.eOperation = SIR_FMOD_THREAD_STOP_EVENT;
+	request.hPlaying = hPlaying;
+	request.eStopMode = SIR_AUDIO_STOP_IMMEDIATE;
+	uint64_t nStopTicket = 0;
+	checkBank( worker.submit( request, nStopTicket ) == SIR_AUDIO_PENDING );
+	result = testWaitForTicket( worker, nStopTicket );
+	checkBank( result.eResult == SIR_AUDIO_PENDING );
+	request = {};
+	request.eOperation = SIR_FMOD_THREAD_RELEASE_PACKAGE;
+	request.nId = 2;
+	uint64_t nReleaseTicket = 0;
+	checkBank( worker.submit( request, nReleaseTicket ) == SIR_AUDIO_PENDING );
+	result = testWaitForTicket( worker, nReleaseTicket );
+	checkBank( result.eResult == SIR_AUDIO_OK || result.eResult == SIR_AUDIO_BUSY );
+	request = {};
+	request.eOperation = SIR_FMOD_THREAD_LOAD_PACKAGE;
+	request.nId = 2;
+	fixture.nAsyncPolls = 1000000;
+	uint64_t nCancelledTicket = 0;
+	checkBank( worker.submit( request, nCancelledTicket ) == SIR_AUDIO_PENDING );
+	checkBank( worker.cancel( nCancelledTicket ) == SIR_AUDIO_OK );
+	result = testWaitForTicket( worker, nCancelledTicket );
+	checkBank( result.eResult == SIR_AUDIO_CANCELLED );
+	checkBank( worker.getDroppedLifecycleCount() <= 2 );
+	checkBank( worker.shutdown() == SIR_AUDIO_OK );
+	checkBank( !worker.isReady() );
+	manifest.shutdown();
+}
+
 int main( void )
 {
 	const sirContainerAllocator_t allocator = { nullptr, testBankAllocate, testBankFree, 0, 0 };
@@ -886,6 +991,7 @@ int main( void )
 	testScopedBankOwnership( &allocator );
 	testManifestPackageLoading( &allocator );
 	testRuntimeComposition( &allocator );
+	testAudioOwnerThread( &allocator );
 	checkBank( s_nAllocatedBlocks == 0 );
 	return 0;
 }
