@@ -80,7 +80,7 @@ jobs:
       - name: Configure Clang instrumentation
         run: >
           cmake -S . -B out/editor-r2r3-coverage -G Ninja
-          -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_COMPILER=clang++
+          -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
           -DSIR_BUILD_TESTS=ON -DSIR_WITH_GOOGLETEST=ON
           -DCMAKE_CXX_FLAGS="-O0 -g -fprofile-instr-generate -fcoverage-mapping"
           -DCMAKE_EXE_LINKER_FLAGS="-fprofile-instr-generate -fcoverage-mapping"
