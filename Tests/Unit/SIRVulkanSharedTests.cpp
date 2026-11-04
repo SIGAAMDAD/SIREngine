@@ -502,8 +502,7 @@ int main( void )
 	volumeCopy.nDepth = 3;
 	volumeCopy.bBufferToTexture = true;
 	SIRGraphicsCommandList *pVolumeUpload = nullptr;
-	if ( pDevice->acquireCommands( SIR_GRAPHICS_QUEUE_DIRECT, &pVolumeUpload ) != SIR_GRAPHICS_SUCCESS ||
-	     pVolumeUpload == nullptr ) {
+	if ( pDevice->acquireCommands( SIR_GRAPHICS_QUEUE_DIRECT, &pVolumeUpload ) != SIR_GRAPHICS_SUCCESS || pVolumeUpload == nullptr ) {
 		return 61;
 	}
 	volumeCopy.nZ = 3;
@@ -511,8 +510,7 @@ int main( void )
 		return 62;
 	}
 	volumeCopy.nZ = 1;
-	if ( pVolumeUpload->copyBufferTexture( volumeCopy ) != SIR_GRAPHICS_SUCCESS ||
-	     pVolumeUpload->close() != SIR_GRAPHICS_SUCCESS ) {
+	if ( pVolumeUpload->copyBufferTexture( volumeCopy ) != SIR_GRAPHICS_SUCCESS || pVolumeUpload->close() != SIR_GRAPHICS_SUCCESS ) {
 		return 63;
 	}
 	sirGraphicsSubmission_t volumeSubmission = {};
@@ -526,9 +524,8 @@ int main( void )
 	volumeCopy.hBuffer = hReadback;
 	volumeCopy.bBufferToTexture = false;
 	SIRGraphicsCommandList *pVolumeReadback = nullptr;
-	if ( pDevice->acquireCommands( SIR_GRAPHICS_QUEUE_DIRECT, &pVolumeReadback ) != SIR_GRAPHICS_SUCCESS ||
-	     pVolumeReadback == nullptr || pVolumeReadback->copyBufferTexture( volumeCopy ) != SIR_GRAPHICS_SUCCESS ||
-	     pVolumeReadback->close() != SIR_GRAPHICS_SUCCESS ) {
+	if ( pDevice->acquireCommands( SIR_GRAPHICS_QUEUE_DIRECT, &pVolumeReadback ) != SIR_GRAPHICS_SUCCESS || pVolumeReadback == nullptr ||
+	     pVolumeReadback->copyBufferTexture( volumeCopy ) != SIR_GRAPHICS_SUCCESS || pVolumeReadback->close() != SIR_GRAPHICS_SUCCESS ) {
 		return 65;
 	}
 	volumeSubmission.ppCommandLists = &pVolumeReadback;

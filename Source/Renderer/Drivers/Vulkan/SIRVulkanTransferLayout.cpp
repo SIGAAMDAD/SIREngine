@@ -126,12 +126,11 @@ bool sirVulkanSetSubresourceLayout( sirVulkanImage_t *pImage, uint32_t nMip, uin
 sirVulkanResult_t sirVulkanValidateTextureTransfer( const sirVulkanBuffer_t *pBuffer, const sirVulkanImage_t *pImage,
                                                     const sirVulkanTextureTransfer_t &transfer ) noexcept
 {
-	if ( pBuffer == nullptr || pImage == nullptr ||
-	     ( pImage->eType != VK_IMAGE_TYPE_2D && pImage->eType != VK_IMAGE_TYPE_3D ) || pImage->nMips == 0 ||
-	     pImage->nMips > 32 || pImage->nLayers == 0 ||
+	if ( pBuffer == nullptr || pImage == nullptr || ( pImage->eType != VK_IMAGE_TYPE_2D && pImage->eType != VK_IMAGE_TYPE_3D ) ||
+	     pImage->nMips == 0 || pImage->nMips > 32 || pImage->nLayers == 0 ||
 	     pImage->nLayers > SIR_VULKAN_MAX_TRACKED_SUBRESOURCES / pImage->nMips || transfer.nMip >= pImage->nMips ||
-	     transfer.nLayer >= pImage->nLayers || transfer.extent.width == 0 || transfer.extent.height == 0 ||
-	     transfer.extent.depth == 0 || transfer.offset.x < 0 || transfer.offset.y < 0 || transfer.offset.z < 0 ||
+	     transfer.nLayer >= pImage->nLayers || transfer.extent.width == 0 || transfer.extent.height == 0 || transfer.extent.depth == 0 ||
+	     transfer.offset.x < 0 || transfer.offset.y < 0 || transfer.offset.z < 0 ||
 	     ( pImage->eType == VK_IMAGE_TYPE_2D && ( transfer.extent.depth != 1 || transfer.offset.z != 0 ) ) ||
 	     ( pImage->eType == VK_IMAGE_TYPE_3D && ( pImage->nLayers != 1 || transfer.nLayer != 0 ) ) ) {
 		return SIR_VULKAN_INVALID_ARGUMENT;

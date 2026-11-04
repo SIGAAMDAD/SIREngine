@@ -108,8 +108,8 @@ sirGraphicsResult_t SIRVulkanCommandList::copyBufferTexture( const sirGraphicsBu
 	if ( m_nOperationCount >= SIR_VULKAN_COPY_BATCH_CAPACITY ) {
 		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
 	}
-	if ( m_pOwner == nullptr || copy.nWidth == 0 || copy.nHeight == 0 || copy.nDepth == 0 || copy.nX > INT32_MAX ||
-	     copy.nY > INT32_MAX || copy.nZ > INT32_MAX ) {
+	if ( m_pOwner == nullptr || copy.nWidth == 0 || copy.nHeight == 0 || copy.nDepth == 0 || copy.nX > INT32_MAX || copy.nY > INT32_MAX ||
+	     copy.nZ > INT32_MAX ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	const sirVulkanGraphicsBufferSlot_t *pBuffer = m_pOwner->resolveBuffer( copy.hBuffer );
