@@ -50,6 +50,11 @@ typedef struct sirFMODVoiceNativeOps_s
 	int32_t ( *setListenerSpatial )( void *pUserData, void *pStudio, uint32_t iListener, const sirAudioAttributes_t *pAttributes ) noexcept;
 	int32_t ( *setListenerCount )( void *pUserData, void *pStudio, uint32_t nListeners ) noexcept;
 	int32_t ( *setListenerWeight )( void *pUserData, void *pStudio, uint32_t iListener, float fWeight ) noexcept;
+	int32_t ( *setInstanceVolume )( void *pUserData, void *pInstance, float fVolume ) noexcept;
+	int32_t ( *setInstancePitch )( void *pUserData, void *pInstance, float fPitch ) noexcept;
+	int32_t ( *setInstancePaused )( void *pUserData, void *pInstance, uint8_t bPaused ) noexcept;
+	int32_t ( *setInstanceTimeline )( void *pUserData, void *pInstance, int32_t nMilliseconds ) noexcept;
+	int32_t ( *getInstanceTimeline )( void *pUserData, void *pInstance, int32_t *pnMilliseconds ) noexcept;
 } sirFMODVoiceNativeOps_t;
 
 typedef struct sirFMODRegisteredEvent_s
@@ -170,6 +175,7 @@ public:
 	bool isEventInUse( uint64_t nEventId ) const noexcept;
 	uint32_t getActiveVoiceCount( void ) const noexcept;
 	int32_t getLastNativeResult( void ) const noexcept;
+	sirAudioResult_t getPlayingTimeline( sirAudioPlayingHandle_t hPlaying, uint32_t &nMilliseconds ) noexcept;
 	static sirAudioBackendOps_t getBackendOps( void ) noexcept;
 };
 

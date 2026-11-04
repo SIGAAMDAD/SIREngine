@@ -116,14 +116,13 @@ bool SIRFMODMixerBackend::findControl( uint64_t nControlId, uint32_t &iIndex ) c
 }
 
 sirAudioResult_t SIRFMODMixerBackend::registerControl( uint64_t nControlId, const char *szPath, sirFMODMixerControlKind_t eKind,
-                                                        SIRFMODBankStore *pBankStore, uint64_t nPackageId ) noexcept
+                                                       SIRFMODBankStore *pBankStore, uint64_t nPackageId ) noexcept
 {
 	if ( !isReady() ) {
 		return SIR_AUDIO_NOT_INITIALIZED;
 	}
-	if ( nControlId == 0 || szPath == nullptr || szPath[0] == '\0' ||
-	     ( pBankStore == nullptr && nPackageId != 0 ) || ( pBankStore != nullptr && nPackageId == 0 ) ||
-	     ( pBankStore != nullptr && !pBankStore->isBoundTo( m_pContext ) ) ) {
+	if ( nControlId == 0 || szPath == nullptr || szPath[0] == '\0' || ( pBankStore == nullptr && nPackageId != 0 ) ||
+	     ( pBankStore != nullptr && nPackageId == 0 ) || ( pBankStore != nullptr && !pBankStore->isBoundTo( m_pContext ) ) ) {
 		return SIR_AUDIO_INVALID_ARGUMENT;
 	}
 
@@ -176,14 +175,14 @@ sirAudioResult_t SIRFMODMixerBackend::registerVCA( uint64_t nControlId, const ch
 	return registerControl( nControlId, szPath, SIR_FMOD_MIXER_VCA );
 }
 
-sirAudioResult_t SIRFMODMixerBackend::registerBusFromBank( uint64_t nControlId, uint64_t nPackageId,
-                                                             SIRFMODBankStore *pBankStore, const char *szPath ) noexcept
+sirAudioResult_t SIRFMODMixerBackend::registerBusFromBank( uint64_t nControlId, uint64_t nPackageId, SIRFMODBankStore *pBankStore,
+                                                           const char *szPath ) noexcept
 {
 	return registerControl( nControlId, szPath, SIR_FMOD_MIXER_BUS, pBankStore, nPackageId );
 }
 
-sirAudioResult_t SIRFMODMixerBackend::registerVCAFromBank( uint64_t nControlId, uint64_t nPackageId,
-                                                             SIRFMODBankStore *pBankStore, const char *szPath ) noexcept
+sirAudioResult_t SIRFMODMixerBackend::registerVCAFromBank( uint64_t nControlId, uint64_t nPackageId, SIRFMODBankStore *pBankStore,
+                                                           const char *szPath ) noexcept
 {
 	return registerControl( nControlId, szPath, SIR_FMOD_MIXER_VCA, pBankStore, nPackageId );
 }

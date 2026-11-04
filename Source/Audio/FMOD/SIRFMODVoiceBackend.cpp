@@ -44,7 +44,7 @@ sirAudioResult_t SIRFMODVoiceBackend::configure( SIRFMODContext *pContext, const
                                                  uint32_t nMaxEmitterParameters ) noexcept
 {
 	if ( m_bInitialized || m_pVoices != nullptr || pContext == nullptr || !pContext->isReady() || pAllocator == nullptr ||
-	     pAllocator->pfnAllocate == nullptr || pAllocator->pfnDeallocate == nullptr || nMaxRegisteredEvents == 0 || ops.nAbiVersion != 3 ||
+	     pAllocator->pfnAllocate == nullptr || pAllocator->pfnDeallocate == nullptr || nMaxRegisteredEvents == 0 || ops.nAbiVersion != 4 ||
 	     ( nMaxEmitterParameters != 0 && ( nMaxEmitters == 0 || nMaxRegisteredParameters == 0 ) ) || ops.resolveEvent == nullptr ||
 	     ops.createInstance == nullptr || ops.startInstance == nullptr || ops.stopInstance == nullptr || ops.isStopped == nullptr ||
 	     ops.releaseInstance == nullptr ||
@@ -651,7 +651,9 @@ sirAudioResult_t SIRFMODVoiceBackend::submitOne( const sirAudioCommand_t &comman
 		}
 		return SIR_AUDIO_OK;
 	}
-	if ( command.eType == SIR_AUDIO_COMMAND_STOP || command.eType == SIR_AUDIO_COMMAND_SET_PARAMETER ) {
+	if ( command.eType == SIR_AUDIO_COMMAND_STOP || command.eType == SIR_AUDIO_COMMAND_SET_PARAMETER ||
+	     command.eType == SIR_AUDIO_COMMAND_SET_PLAYING_VOLUME || command.eType == SIR_AUDIO_COMMAND_SET_PLAYING_PITCH ||
+	     command.eType == SIR_AUDIO_COMMAND_SET_PLAYING_PAUSED || command.eType == SIR_AUDIO_COMMAND_SEEK_PLAYING_TIMELINE ) {
 		if ( command.hPlaying.nSlot >= m_nVoiceCapacity ) {
 			return SIR_AUDIO_INVALID_HANDLE;
 		}
@@ -668,6 +670,32 @@ sirAudioResult_t SIRFMODVoiceBackend::submitOne( const sirAudioCommand_t &comman
 			}
 			m_nLastNativeResult =
 			    m_Ops.setInstanceParameter( m_Ops.pUserData, slot.pInstance, m_pParameters[iParameter].nNativeId, command.fValue );
+			return m_nLastNativeResult == 0 ? SIR_AUDIO_OK : SIR_AUDIO_BACKEND_ERROR;
+		}
+		if ( command.eType != SIR_AUDIO_COMMAND_STOP ) {
+			if ( command.eType == SIR_AUDIO_COMMAND_SET_PLAYING_VOLUME ) {
+				if ( m_Ops.setInstanceVolume == nullptr ) {
+					return SIR_AUDIO_UNSUPPORTED;
+				}
+				m_nLastNativeResult = m_Ops.setInstanceVolume( m_Ops.pUserData, slot.pInstance, command.fValue );
+			} else if ( command.eType == SIR_AUDIO_COMMAND_SET_PLAYING_PITCH ) {
+				if ( m_Ops.setInstancePitch == nullptr ) {
+					return SIR_AUDIO_UNSUPPORTED;
+				}
+				m_nLastNativeResult = m_Ops.setInstancePitch( m_Ops.pUserData, slot.pInstance, command.fValue );
+			} else if ( command.eType == SIR_AUDIO_COMMAND_SET_PLAYING_PAUSED ) {
+				if ( m_Ops.setInstancePaused == nullptr ) {
+					return SIR_AUDIO_UNSUPPORTED;
+				}
+				m_nLastNativeResult = m_Ops.setInstancePaused( m_Ops.pUserData, slot.pInstance,
+				                                             command.fValue != 0.0f ? 1 : 0 );
+			} else {
+				if ( m_Ops.setInstanceTimeline == nullptr ) {
+					return SIR_AUDIO_UNSUPPORTED;
+				}
+				m_nLastNativeResult = m_Ops.setInstanceTimeline( m_Ops.pUserData, slot.pInstance,
+				                                               ( int32_t )command.nControlId );
+			}
 			return m_nLastNativeResult == 0 ? SIR_AUDIO_OK : SIR_AUDIO_BACKEND_ERROR;
 		}
 		if ( slot.bStopRequested != 0 ) {
@@ -902,6 +930,31 @@ uint32_t SIRFMODVoiceBackend::getActiveVoiceCount( void ) const noexcept
 		}
 	}
 	return nCount;
+}
+
+sirAudioResult_t SIRFMODVoiceBackend::getPlayingTimeline( sirAudioPlayingHandle_t hPlaying,
+                                                            uint32_t &nMilliseconds ) noexcept
+{
+	nMilliseconds = 0;
+	if ( !m_bInitialized || m_pContext == nullptr || !m_pContext->isReady() ||
+	     m_pContext->getEpoch() != m_nContextEpoch ) {
+		return SIR_AUDIO_NOT_INITIALIZED;
+	}
+	if ( hPlaying.nSlot >= m_nVoiceCapacity || m_Ops.getInstanceTimeline == nullptr ) {
+		return SIR_AUDIO_INVALID_HANDLE;
+	}
+	const sirFMODVoiceSlot_t &slot = m_pVoices[hPlaying.nSlot];
+	if ( slot.pInstance == nullptr || slot.bStartFailed != 0 ||
+	     slot.hPlaying.nEpoch != hPlaying.nEpoch || slot.hPlaying.nGeneration != hPlaying.nGeneration ) {
+		return SIR_AUDIO_INVALID_HANDLE;
+	}
+	int32_t nPosition = 0;
+	m_nLastNativeResult = m_Ops.getInstanceTimeline( m_Ops.pUserData, slot.pInstance, &nPosition );
+	if ( m_nLastNativeResult != 0 ) {
+		return SIR_AUDIO_BACKEND_ERROR;
+	}
+	nMilliseconds = ( uint32_t )( nPosition < 0 ? 0 : nPosition );
+	return SIR_AUDIO_OK;
 }
 
 int32_t SIRFMODVoiceBackend::getLastNativeResult( void ) const noexcept

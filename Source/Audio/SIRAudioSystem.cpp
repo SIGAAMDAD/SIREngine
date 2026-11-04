@@ -325,6 +325,71 @@ sirAudioResult_t SIRAudioSystem::setParameter( sirAudioPlayingHandle_t hPlaying,
 	return enqueue( command, false );
 }
 
+sirAudioResult_t SIRAudioSystem::setPlayingVolume( sirAudioPlayingHandle_t hPlaying, float fVolume ) noexcept
+{
+	if ( !isValid( hPlaying ) || m_pPlaying[hPlaying.nSlot].eState == SIR_AUDIO_PLAYBACK_FINISHED ||
+	     m_pPlaying[hPlaying.nSlot].eState == SIR_AUDIO_PLAYBACK_FAILED ||
+	     m_pPlaying[hPlaying.nSlot].eState == SIR_AUDIO_PLAYBACK_STOPPING ) {
+		return SIR_AUDIO_INVALID_HANDLE;
+	}
+	if ( !std::isfinite( fVolume ) || fVolume < 0.0f || fVolume > 4.0f ) {
+		return SIR_AUDIO_INVALID_ARGUMENT;
+	}
+	sirAudioCommand_t command = {};
+	command.eType = SIR_AUDIO_COMMAND_SET_PLAYING_VOLUME;
+	command.hPlaying = hPlaying;
+	command.fValue = fVolume;
+	return enqueue( command, false );
+}
+
+sirAudioResult_t SIRAudioSystem::setPlayingPitch( sirAudioPlayingHandle_t hPlaying, float fPitch ) noexcept
+{
+	if ( !isValid( hPlaying ) || m_pPlaying[hPlaying.nSlot].eState == SIR_AUDIO_PLAYBACK_FINISHED ||
+	     m_pPlaying[hPlaying.nSlot].eState == SIR_AUDIO_PLAYBACK_FAILED ||
+	     m_pPlaying[hPlaying.nSlot].eState == SIR_AUDIO_PLAYBACK_STOPPING ) {
+		return SIR_AUDIO_INVALID_HANDLE;
+	}
+	if ( !std::isfinite( fPitch ) || fPitch <= 0.0f || fPitch > 4.0f ) {
+		return SIR_AUDIO_INVALID_ARGUMENT;
+	}
+	sirAudioCommand_t command = {};
+	command.eType = SIR_AUDIO_COMMAND_SET_PLAYING_PITCH;
+	command.hPlaying = hPlaying;
+	command.fValue = fPitch;
+	return enqueue( command, false );
+}
+
+sirAudioResult_t SIRAudioSystem::setPlayingPaused( sirAudioPlayingHandle_t hPlaying, bool bPaused ) noexcept
+{
+	if ( !isValid( hPlaying ) || m_pPlaying[hPlaying.nSlot].eState == SIR_AUDIO_PLAYBACK_FINISHED ||
+	     m_pPlaying[hPlaying.nSlot].eState == SIR_AUDIO_PLAYBACK_FAILED ||
+	     m_pPlaying[hPlaying.nSlot].eState == SIR_AUDIO_PLAYBACK_STOPPING ) {
+		return SIR_AUDIO_INVALID_HANDLE;
+	}
+	sirAudioCommand_t command = {};
+	command.eType = SIR_AUDIO_COMMAND_SET_PLAYING_PAUSED;
+	command.hPlaying = hPlaying;
+	command.fValue = bPaused ? 1.0f : 0.0f;
+	return enqueue( command, false );
+}
+
+sirAudioResult_t SIRAudioSystem::seekPlayingTimeline( sirAudioPlayingHandle_t hPlaying, uint32_t nMilliseconds ) noexcept
+{
+	if ( !isValid( hPlaying ) || m_pPlaying[hPlaying.nSlot].eState == SIR_AUDIO_PLAYBACK_FINISHED ||
+	     m_pPlaying[hPlaying.nSlot].eState == SIR_AUDIO_PLAYBACK_FAILED ||
+	     m_pPlaying[hPlaying.nSlot].eState == SIR_AUDIO_PLAYBACK_STOPPING ) {
+		return SIR_AUDIO_INVALID_HANDLE;
+	}
+	if ( nMilliseconds > 0x7FFFFFFFU ) {
+		return SIR_AUDIO_INVALID_ARGUMENT;
+	}
+	sirAudioCommand_t command = {};
+	command.eType = SIR_AUDIO_COMMAND_SEEK_PLAYING_TIMELINE;
+	command.hPlaying = hPlaying;
+	command.nControlId = nMilliseconds;
+	return enqueue( command, false );
+}
+
 sirAudioResult_t SIRAudioSystem::registerEmitter( sirAudioEmitterHandle_t &hEmitter ) noexcept
 {
 	hEmitter = {};
