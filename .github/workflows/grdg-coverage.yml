@@ -69,7 +69,7 @@ jobs:
           ctest --test-dir out/Linux/tooling
           --output-on-failure
           --no-tests=error
-          -R '^(resources[.]|core[.]jobs[.]|core[.]platform[.]|core[.]memory[.]manager|core[.]memory[.]allocators[.])'
+          -R '^(resources[.]|core[.]jobs[.]|core[.]platform[.]|core[.]memory[.])'
       - name: Measure line and branch coverage
         run: >
           python3 Tests/Profiling/CollectSIRGRDGCoverage.py
