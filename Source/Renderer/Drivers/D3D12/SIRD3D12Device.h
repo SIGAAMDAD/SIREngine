@@ -152,6 +152,8 @@ public:
 	bool queryLocalMemory( sirD3D12MemoryInfo_t *pInfo ) const noexcept;
 	bool queryUnifiedMemory( bool *pUnified ) const noexcept;
 	HRESULT getLastError( void ) const noexcept;
+	ID3D12Device *getNativeDevice( void ) const noexcept;
+	SIRD3D12Memory *getMemory( void ) noexcept;
 	SIRD3D12Transfers &getTransfers( void ) noexcept;
 	const SIRD3D12Transfers &getTransfers( void ) const noexcept;
 	SIRD3D12ComputeQueue &getComputeQueue( void ) noexcept;
