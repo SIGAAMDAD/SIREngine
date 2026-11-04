@@ -1,4 +1,4 @@
-add_executable(SIRCoreBenchmarks CoreBenchmarks.cpp SIRContainerAllocatorBenchmarks.cpp SIRAudioBenchmarks.cpp)
+add_executable(SIRCoreBenchmarks CoreBenchmarks.cpp SIRContainerAllocatorBenchmarks.cpp EventBenchmarks.cpp SIRAudioBenchmarks.cpp)
 target_compile_features(SIRCoreBenchmarks PRIVATE cxx_std_17)
 target_link_libraries(SIRCoreBenchmarks PRIVATE SIR::Core SIR::FMODContext benchmark::benchmark_main)
 if(WIN32)

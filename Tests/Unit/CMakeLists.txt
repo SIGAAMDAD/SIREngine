@@ -59,6 +59,7 @@ add_test(NAME core.threading.primitives COMMAND SIRThreadingPrimitiveTests)
 sir_configure_owned_target(SIRThreadingPrimitiveTests)
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/SIRAllocatorMigration.cmake)
+include(${CMAKE_CURRENT_SOURCE_DIR}/EventTests.cmake)
 
 add_executable(SIRContainerTests SIRContainerTests.cpp)
 target_link_libraries(SIRContainerTests PRIVATE SIR::Core)
@@ -92,3 +93,9 @@ sir_configure_owned_target(SIRContainerHeapAdapterTests)
 
 # Portable audio backend contracts and deterministic mock implementation.
 include(${CMAKE_CURRENT_SOURCE_DIR}/SIRAudioContract.cmake)
+
+# Shared renderer contract tests run on Windows/Linux without a GPU or native driver.
+add_executable(SIRGraphicsInterfaceTests SIRGraphicsInterfaceTests.cpp)
+target_link_libraries(SIRGraphicsInterfaceTests PRIVATE SIR::Graphics)
+add_test(NAME renderer.graphics.interface COMMAND SIRGraphicsInterfaceTests)
+sir_configure_owned_target(SIRGraphicsInterfaceTests)
