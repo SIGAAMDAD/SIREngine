@@ -25,6 +25,7 @@ add_library(SIRScripting STATIC
     Language/SIRLangBytecode.cpp
     Language/SIRLangEffects.cpp
     Language/SIRLangSourceCompiler.cpp
+    Language/SIRLangGraphVMBackend.cpp
 )
 find_package(Threads REQUIRED)
 add_library(SIR::Scripting ALIAS SIRScripting)
