@@ -56,10 +56,6 @@ int main( void )
 	config.pCpuHeap = &uninitialized;
 	if ( driver.createDevice( config, &pDevice ) != SIR_GRAPHICS_DRIVER_ERROR || pDevice != nullptr ) {
 		return 5;
-CMake Warning at Build/CMake/CIFormat.cmake:34 (message):
-  Formatting error: Tests/Unit/SIRD3D12MemoryTests.cpp
-
-
 	}
 	config.pCpuHeap = nullptr;
 	if ( driver.createDevice( config, &pDevice ) != SIR_GRAPHICS_SUCCESS || pDevice == nullptr ) {
