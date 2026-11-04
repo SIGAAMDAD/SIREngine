@@ -22,6 +22,9 @@ bool SIRLangCompileSource( const sirLangSourceView_t& source, sirLangCompileWork
 	}
 
 	pWorkspace->report = { SIR_LANG_COMPILE_INPUT, 0, SIR_LANG_INVALID_INDEX };
+	pWorkspace->cir.program = {};
+	pWorkspace->hir.nCount = 0;
+	pWorkspace->effects.nCount = 0;
 	if ( source.nBytes != 0 && source.pBytes == nullptr ) {
 		return false;
 	}
