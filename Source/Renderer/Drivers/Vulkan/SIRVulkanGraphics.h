@@ -55,6 +55,8 @@ typedef struct sirVulkanGraphicsImageSlot_s
 	sirVulkanImage_t native;
 	uint32_t nGeneration;
 	uint32_t nViewCount;
+	uint32_t nWidth;
+	uint32_t nHeight;
 	uint64_t nRetireValue;
 	bool bActive;
 	bool bRetiring;
@@ -96,7 +98,9 @@ private:
 	uint64_t m_nDestinationOffset = 0;
 	uint64_t m_nBytes = 0;
 	uint64_t m_nLastCompletion = 0;
+	sirGraphicsBufferTextureCopy_t m_TextureCopy = {};
 	bool m_bHasCopy = false;
+	bool m_bHasTextureCopy = false;
 
 	void prepare( SIRVulkanRenderingDevice *pOwner ) noexcept;
 
@@ -114,10 +118,7 @@ public:
 	{
 		return nCount == 0 ? SIR_GRAPHICS_SUCCESS : SIR_GRAPHICS_UNSUPPORTED;
 	}
-	sirGraphicsResult_t copyBufferTexture( const sirGraphicsBufferTextureCopy_t & ) noexcept override
-	{
-		return SIR_GRAPHICS_UNSUPPORTED;
-	}
+	sirGraphicsResult_t copyBufferTexture( const sirGraphicsBufferTextureCopy_t &copy ) noexcept override;
 	sirGraphicsResult_t beginRenderPass( const sirGraphicsRenderPass_t & ) noexcept override
 	{
 		return SIR_GRAPHICS_UNSUPPORTED;

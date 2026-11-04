@@ -51,6 +51,8 @@ sirVulkanResult_t SIRVulkanDevice::createImage( const VkImageCreateInfo &info, s
 	pImage->nDeviceSerial = m_nDeviceSerial;
 	pImage->eFormat = info.format;
 	pImage->eType = info.imageType;
+	pImage->eLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	pImage->nLastGpuUse = 0;
 	pImage->nLayers = info.arrayLayers;
 	pImage->nMips = info.mipLevels;
 	pImage->nUsage = info.usage;
@@ -67,6 +69,13 @@ sirVulkanResult_t SIRVulkanDevice::destroyImage( sirVulkanImage_t *pImage ) noex
 	if ( pImage == nullptr || pImage->hImage == VK_NULL_HANDLE || pImage->pOwnerAllocator != m_Allocator ||
 	     pImage->pAllocation == nullptr || pImage->nDeviceSerial != m_nDeviceSerial || m_nLiveImages == 0 ) {
 		return SIR_VULKAN_INVALID_ARGUMENT;
+	}
+	if ( pImage->nLastGpuUse != 0 ) {
+		const sirVulkanCompletion_t completion = { m_nDeviceSerial, pImage->nLastGpuUse };
+		bool bCompleted = false;
+		if ( queryCompletion( &completion, &bCompleted ) != SIR_VULKAN_SUCCESS || !bCompleted ) {
+			return SIR_VULKAN_BUSY;
+		}
 	}
 	vmaDestroyImage( m_Allocator, pImage->hImage, pImage->pAllocation );
 	memset( pImage, 0, sizeof( *pImage ) );

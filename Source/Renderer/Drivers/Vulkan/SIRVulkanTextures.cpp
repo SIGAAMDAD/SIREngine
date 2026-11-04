@@ -100,6 +100,59 @@ static VkSamplerAddressMode sirVulkanSamplerAddress( sirGraphicsAddressMode_t eM
 	}
 }
 
+sirGraphicsResult_t SIRVulkanCommandList::copyBufferTexture( const sirGraphicsBufferTextureCopy_t &copy ) noexcept
+{
+	if ( m_eState != SIR_VULKAN_COMMAND_RECORDING || m_bHasCopy ) {
+		return SIR_GRAPHICS_BUSY;
+	}
+	if ( m_pOwner == nullptr || copy.nWidth == 0 || copy.nHeight == 0 || copy.nDepth != 1 || copy.nMip != 0 || copy.nLayer != 0 ||
+	     copy.nZ != 0 || ( copy.nBufferOffset & 3U ) != 0 ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	const sirVulkanGraphicsBufferSlot_t *pBuffer = m_pOwner->resolveBuffer( copy.hBuffer );
+	if ( pBuffer == nullptr || copy.hTexture.nSlot >= SIRVulkanRenderingDevice::SIR_VULKAN_TEXTURE_CAPACITY ||
+	     copy.hTexture.nGeneration == 0 || copy.hTexture.nDeviceGeneration != m_pOwner->m_nDeviceGeneration ||
+	     copy.hTexture.eType != SIR_GRAPHICS_HANDLE_TEXTURE ) {
+		return SIR_GRAPHICS_INVALID_HANDLE;
+	}
+	const sirVulkanGraphicsImageSlot_t *pImage = &m_pOwner->m_szImages[copy.hTexture.nSlot];
+	if ( !pImage->bActive || pImage->nGeneration != copy.hTexture.nGeneration ) {
+		return SIR_GRAPHICS_INVALID_HANDLE;
+	}
+	if ( pImage->native.eFormat != VK_FORMAT_R8G8B8A8_UNORM || pImage->native.eType != VK_IMAGE_TYPE_2D ) {
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
+	if ( pBuffer->pMapped != nullptr || copy.nX > pImage->nWidth || copy.nY > pImage->nHeight ||
+	     copy.nWidth > pImage->nWidth - copy.nX || copy.nHeight > pImage->nHeight - copy.nY ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	if ( copy.bBufferToTexture ) {
+		if ( ( pBuffer->native.nUsage & VK_BUFFER_USAGE_TRANSFER_SRC_BIT ) == 0 ||
+		     ( pImage->native.nUsage & VK_IMAGE_USAGE_TRANSFER_DST_BIT ) == 0 ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
+	} else if ( ( pBuffer->native.nUsage & VK_BUFFER_USAGE_TRANSFER_DST_BIT ) == 0 ||
+	            ( pImage->native.nUsage & VK_IMAGE_USAGE_TRANSFER_SRC_BIT ) == 0 ||
+	            pImage->native.eLayout == VK_IMAGE_LAYOUT_UNDEFINED ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	const uint64_t nTightRow = uint64_t( copy.nWidth ) * 4;
+	const uint64_t nRowBytes = copy.nBytesPerRow == 0 ? nTightRow : uint64_t( copy.nBytesPerRow );
+	if ( ( nRowBytes & 3U ) != 0 || nRowBytes < nTightRow ||
+	     ( copy.nRowsPerImage != 0 && copy.nRowsPerImage < copy.nHeight ) ||
+	     uint64_t( copy.nHeight - 1 ) > ( UINT64_MAX - nTightRow ) / nRowBytes ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	const uint64_t nRequired = uint64_t( copy.nHeight - 1 ) * nRowBytes + nTightRow;
+	if ( copy.nBufferOffset > pBuffer->native.nSize || nRequired > pBuffer->native.nSize - copy.nBufferOffset ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	m_TextureCopy = copy;
+	m_bHasCopy = true;
+	m_bHasTextureCopy = true;
+	return SIR_GRAPHICS_SUCCESS;
+}
+
 sirGraphicsResult_t SIRVulkanRenderingDevice::createTexture( const sirGraphicsTextureDesc_t &desc, sirGraphicsHandle_t *pHandle ) noexcept
 {
 	if ( pHandle == nullptr ) {
@@ -163,6 +216,8 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::createTexture( const sirGraphicsTe
 		}
 		m_nNativeSerial = pSlot->native.nDeviceSerial;
 		pSlot->nViewCount = 0;
+		pSlot->nWidth = desc.nWidth;
+		pSlot->nHeight = desc.nHeight;
 		pSlot->nRetireValue = 0;
 		pSlot->bActive = true;
 		*pHandle = { iSlot, pSlot->nGeneration, m_nDeviceGeneration, SIR_GRAPHICS_HANDLE_TEXTURE };
@@ -384,6 +439,9 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::retireImageResource( sirGraphicsHa
 		}
 		if ( pSlot->nViewCount != 0 ) {
 			return SIR_GRAPHICS_BUSY;
+		}
+		if ( nFence < pSlot->native.nLastGpuUse ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
 		}
 		pSlot->bActive = false;
 		pSlot->bRetiring = true;

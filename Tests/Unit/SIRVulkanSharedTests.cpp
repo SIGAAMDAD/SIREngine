@@ -160,7 +160,7 @@ int main( void )
 	texture.nArrayLayers = 1;
 	texture.nMipLevels = 1;
 	texture.nSampleCount = 1;
-	texture.nUsage = SIR_GRAPHICS_USAGE_SAMPLED | SIR_GRAPHICS_USAGE_COPY_DESTINATION;
+	texture.nUsage = SIR_GRAPHICS_USAGE_SAMPLED | SIR_GRAPHICS_USAGE_COPY_DESTINATION | SIR_GRAPHICS_USAGE_COPY_SOURCE;
 	texture.eDimension = SIR_GRAPHICS_TEXTURE_2D;
 	texture.eFormat = SIR_GRAPHICS_FORMAT_RGBA8_UNORM;
 	texture.eMemory = SIR_GRAPHICS_MEMORY_GPU_LOCAL;
@@ -191,6 +191,54 @@ int main( void )
 	if ( pDevice->createSampler( sampler, &hSampler ) != SIR_GRAPHICS_SUCCESS || hSampler.eType != SIR_GRAPHICS_HANDLE_SAMPLER ) {
 		return 19;
 	}
+	// Transfer a tightly packed 4x8 RGBA8 image, then read it back using
+	// synchronization2 transitions and the existing timeline completion.
+	sirGraphicsBufferTextureCopy_t copy = {};
+	copy.hBuffer = hSource;
+	copy.hTexture = hTexture;
+	copy.nWidth = 4;
+	copy.nHeight = 8;
+	copy.nDepth = 1;
+	copy.bBufferToTexture = true;
+	SIRGraphicsCommandList *pUpload = nullptr;
+	if ( pDevice->acquireCommands( SIR_GRAPHICS_QUEUE_DIRECT, &pUpload ) != SIR_GRAPHICS_SUCCESS ||
+	     pUpload == nullptr || pUpload->copyBufferTexture( copy ) != SIR_GRAPHICS_SUCCESS ||
+	     pUpload->close() != SIR_GRAPHICS_SUCCESS ) {
+		return 21;
+	}
+	sirGraphicsSubmission_t uploadSubmission = {};
+	uploadSubmission.ppCommandLists = &pUpload;
+	uploadSubmission.nCommandListCount = 1;
+	sirGraphicsCompletion_t uploaded = {};
+	if ( pDevice->submit( SIR_GRAPHICS_QUEUE_DIRECT, uploadSubmission, &uploaded ) != SIR_GRAPHICS_SUCCESS ||
+	     pDevice->wait( uploaded, 5000000000ull ) != SIR_GRAPHICS_SUCCESS ) {
+		return 22;
+	}
+	copy.hBuffer = hReadback;
+	copy.bBufferToTexture = false;
+	SIRGraphicsCommandList *pImageReadback = nullptr;
+	if ( pDevice->acquireCommands( SIR_GRAPHICS_QUEUE_DIRECT, &pImageReadback ) != SIR_GRAPHICS_SUCCESS ||
+	     pImageReadback == nullptr || pImageReadback->copyBufferTexture( copy ) != SIR_GRAPHICS_SUCCESS ||
+	     pImageReadback->close() != SIR_GRAPHICS_SUCCESS ) {
+		return 23;
+	}
+	sirGraphicsSubmission_t readbackSubmission = {};
+	readbackSubmission.ppCommandLists = &pImageReadback;
+	readbackSubmission.nCommandListCount = 1;
+	readbackSubmission.pWaits = &uploaded;
+	readbackSubmission.nWaitCount = 1;
+	sirGraphicsCompletion_t downloaded = {};
+	if ( pDevice->submit( SIR_GRAPHICS_QUEUE_DIRECT, readbackSubmission, &downloaded ) != SIR_GRAPHICS_SUCCESS ||
+	     pDevice->wait( downloaded, 5000000000ull ) != SIR_GRAPHICS_SUCCESS ) {
+		return 24;
+	}
+	if ( pDevice->mapBuffer( hReadback, 0, sizeof( szExpected ), &mapped ) != SIR_GRAPHICS_SUCCESS ||
+	     pDevice->invalidateBuffer( hReadback, 0, sizeof( szExpected ) ) != SIR_GRAPHICS_SUCCESS ||
+	     memcmp( mapped.pData, szExpected, sizeof( szExpected ) ) != 0 ||
+	     pDevice->unmapBuffer( hReadback, 0, sizeof( szExpected ) ) != SIR_GRAPHICS_SUCCESS ) {
+		return 25;
+	}
+	completed.szQueueValues[SIR_GRAPHICS_QUEUE_DIRECT] = downloaded.nValue;
 	if ( pDevice->retireResource( hView, completed ) != SIR_GRAPHICS_SUCCESS ||
 	     pDevice->retireResource( hTexture, completed ) != SIR_GRAPHICS_SUCCESS ||
 	     pDevice->retireResource( hSampler, completed ) != SIR_GRAPHICS_SUCCESS ||
