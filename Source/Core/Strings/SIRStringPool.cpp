@@ -111,6 +111,23 @@ static uint64_t hashCookedPayload( const char *pText, size_t nBytes ) noexcept
 	}
 	return hash;
 }
+/* Limits are admission budgets, not additional allocations. The caller
+   reserves the hard maximum once so hot atom/lease addresses remain stable. */
+static uint32_t initialBudget( uint32_t nMaximum, uint32_t nRequested, uint32_t nDefault ) noexcept
+{
+	const uint32_t nInitial = nRequested != 0 ? nRequested : nDefault;
+	return nInitial < nMaximum ? nInitial : nMaximum;
+}
+
+static uint32_t grownBudget( uint32_t nActive, uint32_t nRequired, uint32_t nMaximum ) noexcept
+{
+	while ( nActive < nRequired && nActive < nMaximum ) {
+		const uint64_t nDoubled = nActive == 0 ? 1u : ( uint64_t )nActive * 2u;
+		nActive = nDoubled > nMaximum ? nMaximum : ( uint32_t )nDoubled;
+	}
+	return nActive;
+}
+
 static uint32_t nextPowerOfTwo( uint64_t value ) noexcept
 {
 	if ( value > 0x80000000ULL ) {
@@ -276,7 +293,9 @@ SIRStringPool::SIRStringPool( void ) noexcept
     : m_pMemory( NULL ), m_nMemoryBytes( 0 ), m_nCursor( 0 ), m_bOwnsMemory( false ), m_Allocator(), m_nBaseId( 0 ), m_nCatalogHash( 0 ),
       m_nHashBuckets( 0 ), m_nMaxNames( 0 ), m_nCookedNames( 0 ), m_nDynamicTextCapacity( 0 ), m_nDynamicUsed( 0 ), m_nCacheCursor( 0 ),
       m_nCacheSlots( 0 ), m_nNextUnusedShort( 0 ), m_nNextUnusedLong( 0 ), m_nShortBytes( 0 ), m_nLongBytes( 0 ), m_nShortSlots( 0 ),
-      m_nLongSlots( 0 ), m_nNames( 0 ), m_nDirectLeases( 0 ),
+      m_nLongSlots( 0 ), m_bAdaptiveBudgets( false ), m_nInitialNameBudget( 0 ), m_nInitialDynamicTextBudget( 0 ),
+      m_nInitialShortSlots( 0 ), m_nInitialLongSlots( 0 ), m_nActiveNameBudget( 0 ), m_nActiveDynamicTextBudget( 0 ),
+      m_nActiveShortSlots( 0 ), m_nActiveLongSlots( 0 ), m_nNames( 0 ), m_nDirectLeases( 0 ),
 #if SIR_STRING_GROUPED_INDEX
       m_pGroupControl( NULL ), m_pGroupIndices( NULL ),
 #if SIR_STRING_ADAPTIVE_INDEX
@@ -300,12 +319,13 @@ sirStringPoolConfig_t SIRStringPool::defaultConfig( void ) noexcept
 	sirStringPoolConfig_t config;
 	memset( &config, 0, sizeof( config ) );
 	config.nHashBuckets = SIR_STRING_TABLE_DEFAULT_SLOT_COUNT;
-	config.nMaxNames = 4096;
+	config.nMaxNames = 8192;
 	config.nDynamicTextBytes = SIR_STRING_TABLE_DEFAULT_BLOCK_SIZE;
-	config.nShortSlots = 8;
+	config.nShortSlots = 16;
 	config.nLongSlots = 4;
-	config.nShortBytes = 256;
+	config.nShortBytes = 128;
 	config.nLongBytes = 1024;
+	config.bAdaptiveBudgets = true;
 	return config;
 }
 
@@ -314,7 +334,10 @@ size_t SIRStringPool::requiredBytes( const sirStringPoolConfig_t& config, size_t
 	if ( SIR_STRING_INDEX_TARGET_LOAD_PERCENT < 25 || SIR_STRING_INDEX_TARGET_LOAD_PERCENT > 85 || !isPowerOfTwo( config.nHashBuckets ) ||
 	     config.nMaxNames == 0 || config.nMaxNames > SIR_ENTRY_INDEX_MASK || config.nLongBytes < config.nShortBytes ||
 	     config.nLongBytes < SIR_MAX_COOKED_TEXT_BYTES || ( uint64_t )config.nShortSlots + config.nLongSlots > UINT32_MAX ||
-	     ( cookedBytes != 0 && cookedBytes < SIR_COOKED_HEADER_BYTES ) ) {
+	     ( cookedBytes != 0 && cookedBytes < SIR_COOKED_HEADER_BYTES ) ||
+	     ( config.bAdaptiveBudgets &&
+	       ( config.nInitialNameBudget > config.nMaxNames || config.nInitialDynamicTextBytes > config.nDynamicTextBytes ||
+	         config.nInitialShortSlots > config.nShortSlots || config.nInitialLongSlots > config.nLongSlots ) ) ) {
 		return 0;
 	}
 	uint64_t requiredSlots =
@@ -408,6 +431,9 @@ void SIRStringPool::resetState( void ) noexcept
 	m_nDynamicTextCapacity = m_nDynamicUsed = m_nCacheCursor = m_nCacheSlots = 0;
 	m_nNextUnusedShort = m_nNextUnusedLong = 0;
 	m_nShortSlots = m_nLongSlots = m_nShortBytes = m_nLongBytes = 0;
+	m_bAdaptiveBudgets = false;
+	m_nInitialNameBudget = m_nInitialDynamicTextBudget = m_nInitialShortSlots = m_nInitialLongSlots = 0;
+	m_nActiveNameBudget = m_nActiveDynamicTextBudget = m_nActiveShortSlots = m_nActiveLongSlots = 0;
 	m_nBlobBytes = 0;
 	m_nNames.store( 0, std::memory_order_relaxed );
 	m_nDirectLeases.store( 0, std::memory_order_relaxed );
@@ -470,6 +496,16 @@ bool SIRStringPool::initialize( const sirStringPoolSpan_t& span, const sirString
 	m_nShortBytes = config.nShortBytes;
 	m_nLongBytes = config.nLongBytes;
 	m_nCacheSlots = m_nShortSlots + m_nLongSlots;
+	m_bAdaptiveBudgets = config.bAdaptiveBudgets;
+	m_nInitialNameBudget = m_bAdaptiveBudgets ? initialBudget( m_nMaxNames, config.nInitialNameBudget, 512 ) : m_nMaxNames;
+	m_nInitialDynamicTextBudget =
+	    m_bAdaptiveBudgets ? initialBudget( m_nDynamicTextCapacity, config.nInitialDynamicTextBytes, 65536 ) : m_nDynamicTextCapacity;
+	m_nInitialShortSlots = m_bAdaptiveBudgets ? initialBudget( m_nShortSlots, config.nInitialShortSlots, 4 ) : m_nShortSlots;
+	m_nInitialLongSlots = m_bAdaptiveBudgets ? initialBudget( m_nLongSlots, config.nInitialLongSlots, 1 ) : m_nLongSlots;
+	m_nActiveNameBudget = m_nInitialNameBudget < cooked ? cooked : m_nInitialNameBudget;
+	m_nActiveDynamicTextBudget = m_nInitialDynamicTextBudget;
+	m_nActiveShortSlots = m_nInitialShortSlots;
+	m_nActiveLongSlots = m_nInitialLongSlots;
 	m_nNextUnusedShort = 0;
 	m_nNextUnusedLong = m_nShortSlots;
 	m_nCookedNames = cooked;
@@ -670,6 +706,10 @@ bool SIRStringPool::retireScope( void ) noexcept
 	}
 	m_nNextUnusedShort = 0;
 	m_nNextUnusedLong = m_nShortSlots;
+	m_nActiveShortSlots = m_nInitialShortSlots;
+	m_nActiveLongSlots = m_nInitialLongSlots;
+	m_nActiveNameBudget = m_nInitialNameBudget < m_nCookedNames ? m_nCookedNames : m_nInitialNameBudget;
+	m_nActiveDynamicTextBudget = m_nInitialDynamicTextBudget;
 	m_nCacheCursor = 0;
 	m_nDynamicUsed = 0;
 	m_nNames.store( m_nCookedNames, std::memory_order_release );
@@ -1165,6 +1205,12 @@ SIRStringAtom SIRStringPool::intern( const char *text, size_t bytes ) noexcept
 		m_registryLock.unlock();
 		return SIRStringAtom();
 	}
+	const uint32_t nNameBudget = grownBudget( m_nActiveNameBudget, index + 1, m_nMaxNames );
+	const uint32_t nTextBudget = grownBudget( m_nActiveDynamicTextBudget, m_nDynamicUsed + ( uint32_t )bytes + 1, m_nDynamicTextCapacity );
+	if ( nNameBudget <= index || nTextBudget < m_nDynamicUsed + ( uint32_t )bytes + 1 ) {
+		m_registryLock.unlock();
+		return SIRStringAtom();
+	}
 	uint32_t position = 0;
 	if ( !findInsertionSlot( hash, position ) ) {
 		m_registryLock.unlock();
@@ -1180,6 +1226,8 @@ SIRStringAtom SIRStringPool::intern( const char *text, size_t bytes ) noexcept
 	}
 	m_pDynamic[m_nDynamicUsed + bytes] = 0;
 	m_nDynamicUsed += ( uint32_t )bytes + 1;
+	m_nActiveNameBudget = nNameBudget;
+	m_nActiveDynamicTextBudget = nTextBudget;
 	m_nNames.store( index + 1, std::memory_order_release );
 	publishIndex( position, hash, index + 1 );
 	m_registryLock.unlock();
@@ -1252,13 +1300,27 @@ sirStringStatus_t SIRStringPool::acquire( SIRStringAtom atom, SIRStringLease& le
 	}
 	const uint32_t bytes = m_pCooked[index].nLength;
 	uint32_t victim = m_nCacheSlots;
+	uint32_t nTargetShortSlots = m_nActiveShortSlots;
+	uint32_t nTargetLongSlots = m_nActiveLongSlots;
 	/* The cache lock exclusively owns these virgin cursors. Until its
 	   first successful decode a slot has no published atom and cannot
 	   be pinned by another thread. Selecting one is constant time. */
 	if ( bytes <= m_nShortBytes && m_nNextUnusedShort < m_nShortSlots ) {
-		victim = m_nNextUnusedShort;
-	} else if ( bytes <= m_nLongBytes && m_nNextUnusedLong < m_nCacheSlots ) {
-		victim = m_nNextUnusedLong;
+		if ( m_nNextUnusedShort >= nTargetShortSlots ) {
+			nTargetShortSlots = grownBudget( nTargetShortSlots, m_nNextUnusedShort + 1, m_nShortSlots );
+		}
+		if ( m_nNextUnusedShort < nTargetShortSlots ) {
+			victim = m_nNextUnusedShort;
+		}
+	}
+	if ( victim == m_nCacheSlots && bytes <= m_nLongBytes && m_nNextUnusedLong < m_nCacheSlots ) {
+		const uint32_t nLongUsed = m_nNextUnusedLong - m_nShortSlots;
+		if ( nLongUsed >= nTargetLongSlots ) {
+			nTargetLongSlots = grownBudget( nTargetLongSlots, nLongUsed + 1, m_nLongSlots );
+		}
+		if ( nLongUsed < nTargetLongSlots ) {
+			victim = m_nNextUnusedLong;
+		}
 	}
 	if ( victim < m_nCacheSlots ) {
 		uint32_t expected = 0;
@@ -1272,6 +1334,13 @@ sirStringStatus_t SIRStringPool::acquire( SIRStringAtom atom, SIRStringLease& le
 		   scan finds an unpinned resident. No speculative empty scan. */
 		uint32_t i = m_nCacheCursor;
 		for ( uint32_t inspected = 0; inspected < m_nCacheSlots; ++inspected ) {
+			if ( ( i >= m_nActiveShortSlots && i < m_nShortSlots ) || i >= m_nShortSlots + m_nActiveLongSlots ) {
+				++i;
+				if ( i == m_nCacheSlots ) {
+					i = 0;
+				}
+				continue;
+			}
 			sirStringPoolCacheSlot_t& slot = m_pCache[i];
 			if ( slot.nCapacity >= bytes ) {
 				uint32_t expected = 0;
@@ -1310,6 +1379,8 @@ sirStringStatus_t SIRStringPool::acquire( SIRStringAtom atom, SIRStringLease& le
 	if ( slot.nGeneration == 0 ) {
 		++slot.nGeneration;
 	}
+	m_nActiveShortSlots = nTargetShortSlots;
+	m_nActiveLongSlots = nTargetLongSlots;
 	slot.nAtomId.store( atom.getId(), std::memory_order_release );
 	slot.nPins.store( 1, std::memory_order_release );
 	m_pCookedHot[index].store( victim + 1, std::memory_order_release );
@@ -1435,10 +1506,16 @@ sirStringPoolStats_t SIRStringPool::getStats( void ) const noexcept
 	stats.nDecodedSlotCount = m_nCacheSlots;
 	stats.nBlockCount = getBlockCount();
 	stats.nReservedBytes = getReservedBytes();
+	m_registryLock.lock();
 	stats.nDynamicTextBytes = m_nDynamicUsed;
+	stats.nActiveNameBudget = m_nActiveNameBudget;
+	stats.nActiveDynamicTextBudget = m_nActiveDynamicTextBudget;
+	m_registryLock.unlock();
 	stats.nPinnedLeases = m_nDirectLeases.load( std::memory_order_acquire );
 	if ( m_pCache ) {
 		m_cacheLock.lock();
+		stats.nActiveShortSlots = m_nActiveShortSlots;
+		stats.nActiveLongSlots = m_nActiveLongSlots;
 		for ( uint32_t i = 0; i < m_nCacheSlots; ++i ) {
 			if ( m_pCache[i].nAtomId.load( std::memory_order_acquire ) ) {
 				++stats.nCachedStrings;

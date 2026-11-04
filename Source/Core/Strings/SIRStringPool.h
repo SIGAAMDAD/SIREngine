@@ -28,7 +28,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #endif
 // clang-format on
 
-constexpr uint32_t SIR_STRING_TABLE_DEFAULT_SLOT_COUNT = 4096;
+constexpr uint32_t SIR_STRING_TABLE_DEFAULT_SLOT_COUNT = 16384;
 constexpr uint32_t SIR_STRING_TABLE_DEFAULT_BLOCK_SIZE = 1U << 20;
 constexpr uint16_t SIR_STRING_CATALOG_VERSION = 1;
 
@@ -193,6 +193,14 @@ typedef struct sirStringPoolConfig_s
 	uint32_t nLongSlots;
 	uint32_t nShortBytes;
 	uint32_t nLongBytes;
+	/* Maximum capacities above stay hard bounds. Zero initial values select
+	   conservative defaults. Adaptive budgets grow logically inside the
+	   pre-reserved backing span; neither source pointers nor atom IDs move. */
+	bool bAdaptiveBudgets;
+	uint32_t nInitialNameBudget;
+	uint32_t nInitialDynamicTextBytes;
+	uint32_t nInitialShortSlots;
+	uint32_t nInitialLongSlots;
 } sirStringPoolConfig_t;
 
 /* On-disk SIRS v1 records are serialized as little-endian fields; do not
@@ -252,6 +260,10 @@ typedef struct sirStringPoolStats_s
 	uint32_t nPinnedLeases;
 	uint32_t nDynamicTextBytes;
 	uint32_t nDecodedSlotCount;
+	uint32_t nActiveNameBudget;
+	uint32_t nActiveDynamicTextBudget;
+	uint32_t nActiveShortSlots;
+	uint32_t nActiveLongSlots;
 } sirStringPoolStats_t;
 
 typedef struct sirStringPoolCookedEntry_s sirStringPoolCookedEntry_t;
@@ -362,6 +374,15 @@ private:
 	uint32_t m_nLongBytes;
 	uint32_t m_nShortSlots;
 	uint32_t m_nLongSlots;
+	bool m_bAdaptiveBudgets;
+	uint32_t m_nInitialNameBudget;
+	uint32_t m_nInitialDynamicTextBudget;
+	uint32_t m_nInitialShortSlots;
+	uint32_t m_nInitialLongSlots;
+	uint32_t m_nActiveNameBudget;
+	uint32_t m_nActiveDynamicTextBudget;
+	uint32_t m_nActiveShortSlots;
+	uint32_t m_nActiveLongSlots;
 	std::atomic<uint32_t> m_nNames;
 	std::atomic<uint32_t> m_nDirectLeases;
 #if SIR_STRING_GROUPED_INDEX
@@ -382,7 +403,7 @@ private:
 	uint8_t *m_pDynamic;
 	const uint8_t *m_pBlob;
 	uint32_t m_nBlobBytes;
-	SIRSpinLock m_registryLock;
+	mutable SIRSpinLock m_registryLock;
 	mutable SIRSpinLock m_cacheLock;
 };
 

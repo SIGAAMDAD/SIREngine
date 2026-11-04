@@ -35,3 +35,11 @@ A spinlock serializes string admission; a separate cache lock serializes lazy co
 ## Verification state
 
 The donor-port was built and exercised in a bounded **local source fixture** using Clang/clang-format 23.1.5 and a GoogleTest-compatible assertion shim. This is not the actual pinned GoogleTest library or full SIREngine build. LLVM coverage is source-derived and counts compiled scope only, not noncompiled experimental variants. Results are documented separately in the task handoff. A full repository AST and upstream CMake/CTest integration are still required before claiming develop merge readiness.
+
+## Adaptive budget policy (November 2026)
+
+The default hard identity limit is **8,192 names** with a 16,384-bucket index at the default 50% load target. The short decoded cache is **16 × 128 bytes** (previously 8 × 256 bytes); the long cache remains **4 × 1,024 bytes**.
+
+Adaptive budget admission is enabled by default (`bAdaptiveBudgets`). Unless the caller supplies explicit initial values, the runtime starts with an active allowance of 512 names, 64 KiB dynamic UTF-8 text, four short cache slots and one long cache slot. These soft limits double as demand arrives, capped by `nMaxNames`, `nDynamicTextBytes`, `nShortSlots` and `nLongSlots`. An already loaded cooked catalog establishes the minimum active name budget. Growth occurs under the relevant registry or cache lock; cache promotions publish only after a successful decode. Scope retirement resets active allowances without invalidating the immutable cooked catalog. `getStats()` exposes all four active budgets. Setting `bAdaptiveBudgets = false` activates the configured hard limits immediately. Optional `nInitial*` fields override automatic starting limits, and initial values above hard limits fail preflight validation.
+
+**Memory ownership and accounting:** the existing single contiguous span is still allocated for the configured maximum up front, to preserve atom/text-pointer stability and avoid hot-path allocation. Adaptive allowances control *admitted usage*, not physical reservation or page commitment; `nReservedBytes` always reports the hard-reserved span. A future virtual-memory-backed tier may commit/decommit pages independently at safe boundaries, but that is not implemented by this change.

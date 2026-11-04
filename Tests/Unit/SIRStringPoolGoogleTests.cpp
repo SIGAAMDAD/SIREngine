@@ -872,3 +872,144 @@ TEST( SIRStringPool, DeterministicMalformedCatalogMutationMatrix )
 	}
 	EXPECT_TRUE( nRejected > 900u );
 }
+
+TEST( SIRStringPool, AdaptiveDefaultShapeAndEightThousandNames )
+{
+	const sirStringPoolConfig_t config = SIRStringPool::defaultConfig();
+	EXPECT_EQ( config.nMaxNames, 8192u );
+	EXPECT_EQ( config.nHashBuckets, 16384u );
+	EXPECT_EQ( config.nShortSlots, 16u );
+	EXPECT_EQ( config.nShortBytes, 128u );
+	EXPECT_TRUE( config.bAdaptiveBudgets );
+
+	SIRStringPool pool;
+	std::vector<uint8_t> span( SIRStringPool::requiredBytes( config, 0 ) );
+	EXPECT_TRUE( pool.initialize( { span.data(), span.size(), nullptr, 0 }, config ) );
+	EXPECT_EQ( pool.getStats().nActiveNameBudget, 512u );
+	EXPECT_EQ( pool.getStats().nActiveDynamicTextBudget, 65536u );
+	EXPECT_EQ( pool.getStats().nActiveShortSlots, 4u );
+	EXPECT_EQ( pool.getStats().nActiveLongSlots, 1u );
+
+	char szName[32] = {};
+	for ( uint32_t iName = 0; iName < 8192; ++iName ) {
+		snprintf( szName, sizeof( szName ), "name-%05u", iName );
+		EXPECT_TRUE( pool.intern( szName ).isValid() );
+	}
+	EXPECT_EQ( pool.getStringCount(), 8192u );
+	EXPECT_EQ( pool.getStats().nActiveNameBudget, 8192u );
+	EXPECT_FALSE( pool.intern( "name-extra" ).isValid() );
+	EXPECT_TRUE( pool.shutdown() );
+}
+
+TEST( SIRStringPool, AdaptiveAdmissionBudgetsGrowAndReset )
+{
+	sirStringPoolConfig_t config = sirPoolTestConfig();
+	config.nMaxNames = 8;
+	config.nDynamicTextBytes = 64;
+	config.nInitialNameBudget = 2;
+	config.nInitialDynamicTextBytes = 8;
+	config.nInitialShortSlots = 1;
+	config.nInitialLongSlots = 1;
+	SIRStringPool pool;
+	std::vector<uint8_t> span( SIRStringPool::requiredBytes( config, 0 ) );
+	EXPECT_TRUE( pool.initialize( { span.data(), span.size(), nullptr, 0 }, config ) );
+	EXPECT_EQ( pool.getStats().nActiveNameBudget, 2u );
+	EXPECT_EQ( pool.getStats().nActiveDynamicTextBudget, 8u );
+	EXPECT_TRUE( pool.intern( "alpha" ).isValid() );
+	EXPECT_EQ( pool.getStats().nActiveDynamicTextBudget, 8u );
+	EXPECT_TRUE( pool.intern( "beta" ).isValid() );
+	EXPECT_EQ( pool.getStats().nActiveDynamicTextBudget, 16u );
+	EXPECT_TRUE( pool.intern( "gamma" ).isValid() );
+	EXPECT_EQ( pool.getStats().nActiveDynamicTextBudget, 32u );
+	EXPECT_EQ( pool.getStats().nActiveNameBudget, 4u );
+	EXPECT_TRUE( pool.retireScope() );
+	EXPECT_EQ( pool.getStats().nActiveNameBudget, 2u );
+	EXPECT_EQ( pool.getStats().nActiveDynamicTextBudget, 8u );
+	EXPECT_EQ( pool.getStringCount(), 0u );
+	EXPECT_TRUE( pool.shutdown() );
+}
+
+TEST( SIRStringPool, AdaptiveCacheGrowsWithoutMovingPinnedText )
+{
+	const auto catalog = sirTestCatalog( { { "aa", true }, { "bb", true }, { "cc", true }, { "dd", true }, { "ee", true } } );
+	sirStringPoolConfig_t config = sirPoolTestConfig();
+	config.nShortSlots = 4;
+	config.nLongSlots = 0;
+	config.nInitialShortSlots = 1;
+	SIRStringPool pool;
+	std::vector<uint8_t> span;
+	EXPECT_TRUE( sirTestInitCatalog( &pool, catalog, config, &span ) );
+	EXPECT_EQ( pool.getStats().nActiveShortSlots, 1u );
+	SIRStringLease leases[5];
+	const char *pszExpected[] = { "aa", "bb", "cc", "dd" };
+	for ( uint32_t iName = 0; iName < 4; ++iName ) {
+		EXPECT_EQ( pool.acquire( pool.find( pszExpected[iName] ), leases[iName] ), SIR_STRING_OK );
+		EXPECT_STREQ( leases[iName].data(), pszExpected[iName] );
+	}
+	EXPECT_EQ( pool.getStats().nActiveShortSlots, 4u );
+	EXPECT_EQ( pool.getStats().nPinnedLeases, 4u );
+	EXPECT_EQ( pool.acquire( pool.find( "ee" ), leases[4] ), SIR_STRING_ALL_SLOTS_PINNED );
+	for ( uint32_t iName = 0; iName < 4; ++iName ) {
+		EXPECT_STREQ( leases[iName].data(), pszExpected[iName] );
+		leases[iName].release();
+	}
+	EXPECT_TRUE( pool.retireScope() );
+	EXPECT_EQ( pool.getStats().nActiveShortSlots, 1u );
+	EXPECT_TRUE( pool.shutdown() );
+}
+
+TEST( SIRStringPool, AdaptiveLongCacheAndCookedIdentityFloor )
+{
+	const auto catalog = sirTestCatalog( { { "long-alpha", true }, { "long-bravo", true }, { "long-charlie", true } } );
+	sirStringPoolConfig_t config = sirPoolTestConfig();
+	config.nShortSlots = 0;
+	config.nLongSlots = 3;
+	config.nShortBytes = 4;
+	config.nInitialNameBudget = 1;
+	config.nInitialLongSlots = 1;
+	SIRStringPool pool;
+	std::vector<uint8_t> span;
+	EXPECT_TRUE( sirTestInitCatalog( &pool, catalog, config, &span ) );
+	EXPECT_EQ( pool.getStats().nActiveNameBudget, 3u );
+	EXPECT_EQ( pool.getStats().nActiveLongSlots, 1u );
+	const char *pszExpected[] = { "long-alpha", "long-bravo", "long-charlie" };
+	SIRStringLease leases[3];
+	for ( uint32_t iName = 0; iName < 3; ++iName ) {
+		EXPECT_EQ( pool.acquire( pool.find( pszExpected[iName] ), leases[iName] ), SIR_STRING_OK );
+	}
+	EXPECT_EQ( pool.getStats().nActiveLongSlots, 3u );
+	for ( uint32_t iName = 0; iName < 3; ++iName ) {
+		EXPECT_STREQ( leases[iName].data(), pszExpected[iName] );
+		leases[iName].release();
+	}
+	EXPECT_TRUE( pool.retireScope() );
+	EXPECT_EQ( pool.getStats().nActiveLongSlots, 1u );
+	EXPECT_EQ( pool.getStats().nActiveNameBudget, 3u );
+	EXPECT_TRUE( pool.shutdown() );
+}
+
+TEST( SIRStringPool, FixedBudgetsAndInvalidAdaptiveLimits )
+{
+	sirStringPoolConfig_t config = sirPoolTestConfig();
+	config.bAdaptiveBudgets = false;
+	SIRStringPool pool;
+	std::vector<uint8_t> span( SIRStringPool::requiredBytes( config, 0 ) );
+	EXPECT_TRUE( pool.initialize( { span.data(), span.size(), nullptr, 0 }, config ) );
+	EXPECT_EQ( pool.getStats().nActiveNameBudget, config.nMaxNames );
+	EXPECT_EQ( pool.getStats().nActiveDynamicTextBudget, config.nDynamicTextBytes );
+	EXPECT_EQ( pool.getStats().nActiveShortSlots, config.nShortSlots );
+	EXPECT_EQ( pool.getStats().nActiveLongSlots, config.nLongSlots );
+	EXPECT_TRUE( pool.shutdown() );
+	config.bAdaptiveBudgets = true;
+	config.nInitialNameBudget = config.nMaxNames + 1;
+	EXPECT_EQ( SIRStringPool::requiredBytes( config, 0 ), 0u );
+	config.nInitialNameBudget = 0;
+	config.nInitialDynamicTextBytes = config.nDynamicTextBytes + 1;
+	EXPECT_EQ( SIRStringPool::requiredBytes( config, 0 ), 0u );
+	config.nInitialDynamicTextBytes = 0;
+	config.nInitialShortSlots = config.nShortSlots + 1;
+	EXPECT_EQ( SIRStringPool::requiredBytes( config, 0 ), 0u );
+	config.nInitialShortSlots = 0;
+	config.nInitialLongSlots = config.nLongSlots + 1;
+	EXPECT_EQ( SIRStringPool::requiredBytes( config, 0 ), 0u );
+}
