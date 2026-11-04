@@ -18,9 +18,11 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <SIRPCH.hpp>
 
+// clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
-#pragma once
+	#pragma once
 #endif
+// clang-format on
 
 #include <Core/Platform/Input/SIRInputBackend.h>
 #include <Core/Platform/Input/SIRInputService.h>
@@ -46,6 +48,7 @@ typedef struct sirInputEvdevSlot_s
 	int nRumbleEffect;
 	uint32_t nPending;
 	uint64_t nNative;
+	bool bClockMonotonic;
 	bool bCanRumble;
 	bool bHatDPad;
 	int8_t nHatX;

@@ -18,9 +18,11 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <SIRPCH.hpp>
 
+// clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
-#pragma once
+	#pragma once
 #endif
+// clang-format on
 
 #include <Core/Platform/Input/SIRInputBackend.h>
 #include <Core/Platform/Input/SIRInputDeviceRegistry.h>
@@ -47,9 +49,9 @@ public:
 	bool describe( sirInputDeviceId_t hDevice, sirInputDeviceDescriptor_t *pOut ) const noexcept;
 	bool findDevice( sirInputBackendId_t eSource, uint64_t nNative, sirInputDeviceId_t *pOut ) const noexcept;
 	bool emitControls( sirInputBackendId_t eSource, sirInputDeviceId_t hDevice, const sirInputControlChange_t *pChanges, uint32_t nCount,
-	                   uint64_t nTime = 0 ) noexcept;
+	                   uint64_t nTime = 0, sirInputClockSource_t eClock = SIR_INPUT_CLOCK_ENGINE_MONOTONIC ) noexcept;
 	bool emitPointer( sirInputBackendId_t eSource, sirInputDeviceId_t hDevice, sirInputSignal_t eSignal, uint16_t nControl, int32_t nX,
-	                  int32_t nY, uint64_t nTime = 0 ) noexcept;
+	                  int32_t nY, uint64_t nTime = 0, sirInputClockSource_t eClock = SIR_INPUT_CLOCK_ENGINE_MONOTONIC ) noexcept;
 	bool loseState( sirInputBackendId_t eSource, sirInputDeviceId_t hDevice ) noexcept;
 	bool vibrate( sirInputDeviceId_t hDevice, uint16_t nLeft, uint16_t nRight ) noexcept;
 	uint32_t activeDeviceCount( void ) const noexcept;
@@ -58,7 +60,7 @@ public:
 private:
 	bool verifyOwner( sirInputBackendId_t eSource, sirInputDeviceId_t id, sirInputDeviceDescriptor_t *pOut ) const noexcept;
 	bool hasBackend( sirInputBackendId_t eSource ) const noexcept;
-	uint64_t timestamp( uint64_t nNative ) const noexcept;
+	sirInputTimestamp_t timestamp( uint64_t nNative, sirInputClockSource_t eClock ) const noexcept;
 	SIRInputDeviceRegistry m_Registry;
 	SIRInputFrameState m_State;
 	SIRInputBackend *m_pBackends[SIR_INPUT_BACKEND_CAPACITY];

@@ -36,7 +36,7 @@ extern "C" ssize_t __wrap_read( int nFd, void *pBuf, size_t nBytes )
 class SIRInputEvdevBatchTestPeer
 {
 public:
-	static bool install( SIRLinuxEvdevBackend &backend, int nReadFd, sirInputDeviceId_t device ) noexcept
+	static bool install( SIRLinuxEvdevBackend &backend, int nReadFd, sirInputDeviceId_t device, bool bMonotonic = false ) noexcept
 	{
 		sirInputEvdevSlot_t &slot = backend.m_Slots[0];
 		if ( slot.bOpen ) {
@@ -47,6 +47,7 @@ public:
 		slot.nFd = nReadFd;
 		slot.id = device;
 		slot.nRumbleEffect = -1;
+		slot.bClockMonotonic = bMonotonic;
 		return true;
 	}
 };
@@ -143,7 +144,7 @@ static bool testPartialReportAcrossReads( void ) noexcept
 	if ( !createPipe( &nReadFd, &nWriteFd ) ) {
 		return false;
 	}
-	if ( !SIRInputEvdevBatchTestPeer::install( backend, nReadFd, id ) ) {
+	if ( !SIRInputEvdevBatchTestPeer::install( backend, nReadFd, id, true ) ) {
 		close( nReadFd );
 		close( nWriteFd );
 		return false;
@@ -155,6 +156,8 @@ static bool testPartialReportAcrossReads( void ) noexcept
 	input_event report = {};
 	report.type = EV_SYN;
 	report.code = SYN_REPORT;
+	report.time.tv_sec = 250;
+	report.time.tv_usec = 321;
 	if ( write( nWriteFd, &press, sizeof( press ) ) != sizeof( press ) ) {
 		service.shutdown();
 		close( nWriteFd );
@@ -172,8 +175,31 @@ static bool testPartialReportAcrossReads( void ) noexcept
 		return false;
 	}
 	backend.sample( service );
-	const bool bValid =
-	    service.publish() && service.frame()->nCount == 1 && ( service.frame()->state[id.nSlot].nHeld[0] & UINT32_C( 1 ) ) != 0;
+	bool bValid = service.publish() && service.frame()->nCount == 1 && service.frame()->events[0].nTimestampNs == 250000321000ULL &&
+	              service.frame()->events[0].eClock == SIR_INPUT_CLOCK_EVDEV_MONOTONIC &&
+	              ( service.frame()->events[0].nTimestampFlags & SIR_INPUT_TIMESTAMP_NATIVE ) != 0 &&
+	              service.frame()->events[0].nReceivedNs != 0 && ( service.frame()->state[id.nSlot].nHeld[0] & UINT32_C( 1 ) ) != 0;
+	if ( bValid ) {
+		input_event release = {};
+		release.type = EV_KEY;
+		release.code = BTN_SOUTH;
+		release.value = 0;
+		input_event badTime = {};
+		badTime.type = EV_SYN;
+		badTime.code = SYN_REPORT;
+		badTime.time.tv_sec = 300;
+		badTime.time.tv_usec = 1000000;
+		bValid = service.begin( 4 ) && write( nWriteFd, &release, sizeof( release ) ) == ( ssize_t )sizeof( release ) &&
+		         write( nWriteFd, &badTime, sizeof( badTime ) ) == ( ssize_t )sizeof( badTime );
+		if ( bValid ) {
+			backend.sample( service );
+			bValid = service.publish() && service.frame()->nCount == 1 &&
+			         service.frame()->events[0].eClock == SIR_INPUT_CLOCK_ENGINE_MONOTONIC &&
+			         service.frame()->events[0].nTimestampFlags == 0 &&
+			         service.frame()->events[0].nTimestampNs == service.frame()->events[0].nReceivedNs &&
+			         ( service.frame()->state[id.nSlot].nHeld[0] & UINT32_C( 1 ) ) == 0;
+		}
+	}
 	service.shutdown();
 	close( nWriteFd );
 	return bValid;

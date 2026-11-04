@@ -18,9 +18,11 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <SIRPCH.hpp>
 
+// clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
-#pragma once
+	#pragma once
 #endif
+// clang-format on
 
 // The platform-independent wire contract. Native device handles never cross here.
 constexpr uint32_t SIR_INPUT_DEVICE_CAPACITY = 32;
@@ -111,17 +113,38 @@ typedef struct sirInputHardwareKey_s
 	sirInputDeviceClass_t eClass;
 } sirInputHardwareKey_t;
 
+typedef enum sirInputClockSource_e : uint8_t
+{
+	SIR_INPUT_CLOCK_ENGINE_MONOTONIC = 0,
+	SIR_INPUT_CLOCK_EVDEV_MONOTONIC = 1
+} sirInputClockSource_t;
+
+constexpr uint8_t SIR_INPUT_TIMESTAMP_NATIVE = 1;
+
+typedef struct sirInputTimestamp_s
+{
+	uint64_t nSourceNs;
+	uint64_t nReceivedNs;
+	sirInputClockSource_t eClock;
+	uint8_t bNative;
+} sirInputTimestamp_t;
+
 typedef struct sirInputEvent_s
 {
 	uint64_t nTimestampNs;
 	uint64_t nSequence;
 	sirInputDeviceId_t hDevice;
+	uint64_t nReceivedNs;
 	int32_t nValue;
 	int32_t nValueY;
 	uint16_t nControl;
 	sirInputSignal_t eSignal;
 	sirInputDeviceClass_t eClass;
+	sirInputClockSource_t eClock;
+	uint8_t nTimestampFlags;
 } sirInputEvent_t;
+
+static_assert( sizeof( sirInputEvent_t ) == 48, "Input event must remain 48 bytes" );
 
 typedef struct sirInputControlChange_s
 {
@@ -145,6 +168,9 @@ typedef struct sirInputFrame_s
 	uint64_t nTick;
 	uint32_t nCount;
 	uint32_t nResyncCount;
+	uint64_t nCutoffNs;
+	uint64_t nOldestReceiptAgeNs;
+	uint64_t nNewestReceiptAgeNs;
 	sirInputEvent_t events[SIR_INPUT_EVENT_CAPACITY];
 	sirInputDeviceId_t devices[SIR_INPUT_DEVICE_CAPACITY];
 	sirInputDeviceState_t state[SIR_INPUT_DEVICE_CAPACITY];
