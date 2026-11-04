@@ -103,7 +103,8 @@ typedef enum sirVulkanGraphicsOpKind_e : uint8_t
 	SIR_VULKAN_GRAPHICS_BUFFER_COPY = 0,
 	SIR_VULKAN_GRAPHICS_TEXTURE_COPY,
 	SIR_VULKAN_GRAPHICS_IMAGE_BARRIER,
-	SIR_VULKAN_GRAPHICS_BUFFER_BARRIER
+	SIR_VULKAN_GRAPHICS_BUFFER_BARRIER,
+	SIR_VULKAN_GRAPHICS_COMPUTE_DISPATCH
 } sirVulkanGraphicsOpKind_t;
 
 typedef struct sirVulkanGraphicsOperation_s
@@ -116,6 +117,10 @@ typedef struct sirVulkanGraphicsOperation_s
 	uint64_t nBytes;
 	sirGraphicsBufferTextureCopy_t textureCopy;
 	sirGraphicsBarrier_t barrier;
+	sirGraphicsHandle_t hPipeline;
+	uint32_t nGroupCountX;
+	uint32_t nGroupCountY;
+	uint32_t nGroupCountZ;
 } sirVulkanGraphicsOperation_t;
 
 class SIRVulkanCommandList final : public SIRGraphicsCommandList
@@ -128,6 +133,7 @@ private:
 	sirVulkanGraphicsOperation_t m_szOperations[SIR_VULKAN_COPY_BATCH_CAPACITY] = {};
 	uint32_t m_nOperationCount = 0;
 	uint64_t m_nLastCompletion = 0;
+	sirGraphicsHandle_t m_hBoundPipeline = {};
 
 	void prepare( SIRVulkanRenderingDevice *pOwner ) noexcept;
 
@@ -151,10 +157,7 @@ public:
 	{
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
-	sirGraphicsResult_t bindPipeline( sirGraphicsHandle_t ) noexcept override
-	{
-		return SIR_GRAPHICS_UNSUPPORTED;
-	}
+	sirGraphicsResult_t bindPipeline( sirGraphicsHandle_t hPipeline ) noexcept override;
 	sirGraphicsResult_t bindBindingSet( uint32_t, sirGraphicsHandle_t ) noexcept override
 	{
 		return SIR_GRAPHICS_UNSUPPORTED;
@@ -179,10 +182,7 @@ public:
 	{
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
-	sirGraphicsResult_t dispatch( uint32_t, uint32_t, uint32_t ) noexcept override
-	{
-		return SIR_GRAPHICS_UNSUPPORTED;
-	}
+	sirGraphicsResult_t dispatch( uint32_t nGroupCountX, uint32_t nGroupCountY, uint32_t nGroupCountZ ) noexcept override;
 };
 
 class SIRVulkanRenderingDevice final : public SIRRenderingDevice

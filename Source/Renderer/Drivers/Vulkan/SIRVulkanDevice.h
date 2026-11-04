@@ -51,6 +51,8 @@ typedef struct sirVulkanAdapterInfo_s
 	uint32_t nQueueFamilyIndex;
 	uint32_t nMemoryTypeCount;
 	uint32_t nMemoryHeapCount;
+	uint32_t szMaximumComputeGroupCount[3];
+	bool bComputeCapable;
 	uint64_t nDeviceLocalHeapBytes;
 	char szDeviceName[VK_MAX_PHYSICAL_DEVICE_NAME_SIZE];
 } sirVulkanAdapterInfo_t;
@@ -234,7 +236,8 @@ typedef enum sirVulkanRecordedKind_e : uint8_t
 	SIR_VULKAN_RECORDED_BUFFER_COPY = 0,
 	SIR_VULKAN_RECORDED_TEXTURE_COPY,
 	SIR_VULKAN_RECORDED_IMAGE_BARRIER,
-	SIR_VULKAN_RECORDED_BUFFER_BARRIER
+	SIR_VULKAN_RECORDED_BUFFER_BARRIER,
+	SIR_VULKAN_RECORDED_COMPUTE_DISPATCH
 } sirVulkanRecordedKind_t;
 
 typedef struct sirVulkanRecordedCommand_s
@@ -246,6 +249,10 @@ typedef struct sirVulkanRecordedCommand_s
 	sirVulkanImage_t *pImage;
 	sirVulkanTextureTransfer_t textureCopy;
 	sirVulkanImageBarrier_t imageBarrier;
+	sirVulkanComputePipeline_t *pPipeline;
+	uint32_t nGroupCountX;
+	uint32_t nGroupCountY;
+	uint32_t nGroupCountZ;
 } sirVulkanRecordedCommand_t;
 
 // Pure ordered preflight: never mutates caller-owned VkImage state.
@@ -280,6 +287,8 @@ private:
 	PFN_vkEndCommandBuffer m_pfnEndCommandBuffer;
 	PFN_vkCmdPipelineBarrier2 m_pfnCmdPipelineBarrier2;
 	PFN_vkCmdCopyBuffer2 m_pfnCmdCopyBuffer2;
+	PFN_vkCmdBindPipeline m_pfnCmdBindPipeline = nullptr;
+	PFN_vkCmdDispatch m_pfnCmdDispatch = nullptr;
 	PFN_vkCmdCopyBufferToImage2 m_pfnCmdCopyBufferToImage2 = nullptr;
 	PFN_vkCmdCopyImageToBuffer2 m_pfnCmdCopyImageToBuffer2 = nullptr;
 	PFN_vkQueueSubmit2 m_pfnQueueSubmit2;

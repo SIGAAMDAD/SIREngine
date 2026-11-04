@@ -113,6 +113,30 @@ int main( void )
 	if ( sirVulkanValidateRecordedCommands( commands, 7 ) != SIR_VULKAN_INVALID_ARGUMENT ) {
 		return 12;
 	}
+	sirVulkanComputePipeline_t compute = {};
+	sirVulkanRecordedCommand_t dispatch = {};
+	dispatch.eKind = SIR_VULKAN_RECORDED_COMPUTE_DISPATCH;
+	dispatch.pPipeline = &compute;
+	dispatch.nGroupCountX = 1;
+	dispatch.nGroupCountY = 2;
+	dispatch.nGroupCountZ = 3;
+	if ( sirVulkanValidateRecordedCommands( &dispatch, 1 ) != SIR_VULKAN_SUCCESS ) {
+		return 13;
+	}
+	dispatch.nGroupCountY = 0;
+	if ( sirVulkanValidateRecordedCommands( &dispatch, 1 ) != SIR_VULKAN_INVALID_ARGUMENT ) {
+		return 14;
+	}
+	dispatch.nGroupCountY = 1;
+	dispatch.pPipeline = nullptr;
+	if ( sirVulkanValidateRecordedCommands( &dispatch, 1 ) != SIR_VULKAN_INVALID_ARGUMENT ) {
+		return 15;
+	}
+	dispatch.pPipeline = &compute;
+	commands[6] = dispatch;
+	if ( sirVulkanValidateRecordedCommands( commands, 7 ) != SIR_VULKAN_SUCCESS ) {
+		return 16;
+	}
 	printf( "Vulkan ordered mixed command validation passed\n" );
 	return 0;
 }

@@ -51,6 +51,7 @@ void SIRVulkanCommandList::prepare( SIRVulkanRenderingDevice *pOwner ) noexcept
 	m_eState = SIR_VULKAN_COMMAND_RECORDING;
 	m_nOperationCount = 0;
 	m_nLastCompletion = 0;
+	m_hBoundPipeline = {};
 }
 
 sirGraphicsResult_t SIRVulkanCommandList::reset( void ) noexcept
@@ -60,6 +61,7 @@ sirGraphicsResult_t SIRVulkanCommandList::reset( void ) noexcept
 	}
 	m_eState = SIR_VULKAN_COMMAND_RECORDING;
 	m_nOperationCount = 0;
+	m_hBoundPipeline = {};
 	return SIR_GRAPHICS_SUCCESS;
 }
 
@@ -216,8 +218,8 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::queryCapabilities( sirGraphicsCapa
 	pCapabilities->eBackend = SIR_GRAPHICS_BACKEND_VULKAN;
 	pCapabilities->nApiVersion = { VK_API_VERSION_MAJOR( adapter.nApiVersion ), VK_API_VERSION_MINOR( adapter.nApiVersion ),
 	                               VK_API_VERSION_PATCH( adapter.nApiVersion ) };
-	// Transfer is implemented; graphics drawing and compute remain unavailable.
-	pCapabilities->nFeatureMask = 0;
+	// Graphics drawing remains unavailable; compute dispatch uses the direct queue.
+	pCapabilities->nFeatureMask = adapter.bComputeCapable ? SIR_GRAPHICS_FEATURE_COMPUTE : 0;
 	pCapabilities->nQueueMask = 1U << SIR_GRAPHICS_QUEUE_DIRECT;
 	pCapabilities->nMaximumFramesInFlight = SIR_VULKAN_TRANSFER_SLOT_COUNT;
 	pCapabilities->nDeviceGeneration = m_nDeviceGeneration;
@@ -470,6 +472,23 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::submit( sirGraphicsQueue_t eQueue,
 			}
 			nativeOp.eKind = SIR_VULKAN_RECORDED_BUFFER_COPY;
 			nativeOp.bufferCopy = { &pSrc->native, &pDst->native, op.nSourceOffset, op.nDestinationOffset, op.nBytes };
+			continue;
+		}
+		if ( op.eKind == SIR_VULKAN_GRAPHICS_COMPUTE_DISPATCH ) {
+			const sirGraphicsHandle_t hPipeline = op.hPipeline;
+			if ( hPipeline.eType != SIR_GRAPHICS_HANDLE_PIPELINE || hPipeline.nDeviceGeneration != m_nDeviceGeneration ||
+			     hPipeline.nSlot >= SIR_VULKAN_PIPELINE_CAPACITY ) {
+				return SIR_GRAPHICS_INVALID_HANDLE;
+			}
+			sirVulkanGraphicsPipelineSlot_t *pPipeline = &m_szPipelines[hPipeline.nSlot];
+			if ( !pPipeline->bActive || pPipeline->nGeneration != hPipeline.nGeneration ) {
+				return SIR_GRAPHICS_INVALID_HANDLE;
+			}
+			nativeOp.eKind = SIR_VULKAN_RECORDED_COMPUTE_DISPATCH;
+			nativeOp.pPipeline = &pPipeline->native;
+			nativeOp.nGroupCountX = op.nGroupCountX;
+			nativeOp.nGroupCountY = op.nGroupCountY;
+			nativeOp.nGroupCountZ = op.nGroupCountZ;
 			continue;
 		}
 		if ( op.eKind == SIR_VULKAN_GRAPHICS_BUFFER_BARRIER ) {

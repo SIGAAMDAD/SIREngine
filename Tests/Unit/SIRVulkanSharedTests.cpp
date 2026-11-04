@@ -77,6 +77,25 @@ int main( void )
 	}
 	sirGraphicsCompletionSet_t pipelineCompletion = {};
 	pipelineCompletion.nDeviceGeneration = pDevice->getDeviceGeneration();
+	if ( ( capabilities.nFeatureMask & SIR_GRAPHICS_FEATURE_COMPUTE ) != 0 ) {
+		SIRGraphicsCommandList *pCompute = nullptr;
+		if ( pDevice->acquireCommands( SIR_GRAPHICS_QUEUE_DIRECT, &pCompute ) != SIR_GRAPHICS_SUCCESS || pCompute == nullptr ||
+		     pCompute->dispatch( 1, 1, 1 ) != SIR_GRAPHICS_INVALID_HANDLE || pCompute->bindPipeline( hCompute ) != SIR_GRAPHICS_SUCCESS ||
+		     pCompute->dispatch( 0, 1, 1 ) != SIR_GRAPHICS_INVALID_ARGUMENT || pCompute->dispatch( 1, 1, 1 ) != SIR_GRAPHICS_SUCCESS ||
+		     pCompute->close() != SIR_GRAPHICS_SUCCESS ) {
+			return 39;
+		}
+		sirGraphicsSubmission_t computeSubmit = {};
+		computeSubmit.ppCommandLists = &pCompute;
+		computeSubmit.nCommandListCount = 1;
+		sirGraphicsCompletion_t computeCompleted = {};
+		if ( pDevice->submit( SIR_GRAPHICS_QUEUE_DIRECT, computeSubmit, &computeCompleted ) != SIR_GRAPHICS_SUCCESS ||
+		     pDevice->wait( computeCompleted, 5000000000ULL ) != SIR_GRAPHICS_SUCCESS ) {
+			return 40;
+		}
+		pipelineCompletion.nQueueMask = 1U << SIR_GRAPHICS_QUEUE_DIRECT;
+		pipelineCompletion.szQueueValues[SIR_GRAPHICS_QUEUE_DIRECT] = computeCompleted.nValue;
+	}
 	if ( pDevice->retireResource( hCompute, pipelineCompletion ) != SIR_GRAPHICS_SUCCESS ||
 	     pDevice->retireResource( hCompute, pipelineCompletion ) != SIR_GRAPHICS_INVALID_HANDLE ) {
 		return 38;
