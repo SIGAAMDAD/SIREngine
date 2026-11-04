@@ -421,6 +421,140 @@ static void testGraphExecutionCancellationAndFailures( void )
 	memory.shutdown();
 }
 
+
+static void testGraphInputValidationAndInspection( void )
+{
+	SIRMemoryManager memory;
+	SIRTaskGraph graph;
+	const sirTaskGraphPass_t pass = { graphFail, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU };
+	const sirTaskGraphAccess_t access = { { 1, 0 }, 0, 16, SIR_TASK_GRAPH_READ };
+	uint32_t nPass = UINT32_MAX;
+	sirTaskGraphEdge_t edge = {};
+	uint32_t nTopological = UINT32_MAX;
+	SIR_GRAPH_CHECK( !graph.reset() );
+	SIR_GRAPH_CHECK( !graph.addPass( pass, &access, 1, &nPass ) );
+	SIR_GRAPH_CHECK( !graph.addDependency( 0, 1 ) );
+	SIR_GRAPH_CHECK( graph.compile() == SIR_TASK_GRAPH_INVALID );
+	SIR_GRAPH_CHECK( !graph.getEdge( 0, &edge ) );
+	SIR_GRAPH_CHECK( !graph.getTopologicalPass( 0, &nTopological ) );
+	SIR_GRAPH_CHECK( !graph.submit( nullptr ) );
+	SIR_GRAPH_CHECK( !graph.getSubmittedHandle( 0, nullptr ) );
+	SIR_GRAPH_CHECK( !graph.queryExecution( nullptr ) );
+	SIR_GRAPH_CHECK( !graph.cancelExecution() );
+	SIR_GRAPH_CHECK( !graph.releaseSubmitted() );
+	SIR_GRAPH_CHECK( !graph.init( nullptr, { 2, 2, 4 } ) );
+	SIR_GRAPH_CHECK( !graph.init( &memory, { 2, 2, 4 } ) );
+	sirGraphMakeMemory( &memory );
+	SIR_GRAPH_CHECK( !graph.init( &memory, { 0, 2, 4 } ) );
+	SIR_GRAPH_CHECK( !graph.init( &memory, { 2, 0, 4 } ) );
+	SIR_GRAPH_CHECK( !graph.init( &memory, { 2, 2, 0 } ) );
+	SIR_GRAPH_CHECK( !graph.init( &memory, { UINT32_MAX, 2, 4 } ) );
+	SIR_GRAPH_CHECK( !graph.init( &memory, { 2, UINT32_MAX, 4 } ) );
+	SIR_GRAPH_CHECK( !graph.init( &memory, { 2, 2, UINT32_MAX } ) );
+	SIR_GRAPH_CHECK( !graph.init( &memory, { 2, UINT32_MAX / 2 + 1, 4 } ) );
+	SIR_GRAPH_CHECK( !graph.init( &memory, { 2, UINT32_MAX / 2, 4 } ) );
+	SIR_GRAPH_CHECK( !graph.init( &memory, { 100000, 100000, 100000 } ) );
+	SIR_GRAPH_CHECK( graph.init( &memory, { 2, 2, 1 } ) );
+	SIR_GRAPH_CHECK( !graph.init( &memory, { 2, 2, 1 } ) );
+	SIR_GRAPH_CHECK( graph.compile() == SIR_TASK_GRAPH_INVALID );
+	SIR_GRAPH_CHECK( !graph.addPass( pass, nullptr, 1, &nPass ) );
+	SIR_GRAPH_CHECK( !graph.addPass( pass, &access, 1, nullptr ) );
+	sirTaskGraphPass_t invalidPass = pass;
+	invalidPass.pFunction = nullptr;
+	SIR_GRAPH_CHECK( !graph.addPass( invalidPass, &access, 1, &nPass ) );
+	invalidPass = pass;
+	invalidPass.eExecutor = SIR_TASK_EXEC_COUNT;
+	SIR_GRAPH_CHECK( !graph.addPass( invalidPass, &access, 1, &nPass ) );
+	invalidPass = pass;
+	invalidPass.ePriority = ( sirTaskPriority_t )255;
+	SIR_GRAPH_CHECK( !graph.addPass( invalidPass, &access, 1, &nPass ) );
+	SIR_GRAPH_CHECK( !graph.addPass( pass, &access, 3, &nPass ) );
+	sirTaskGraphAccess_t invalidAccess = access;
+	invalidAccess.keyResource = { 0, 0 };
+	SIR_GRAPH_CHECK( !graph.addPass( pass, &invalidAccess, 1, &nPass ) );
+	invalidAccess = access;
+	invalidAccess.nBytes = 0;
+	SIR_GRAPH_CHECK( !graph.addPass( pass, &invalidAccess, 1, &nPass ) );
+	invalidAccess = access;
+	invalidAccess.nOffset = UINT64_MAX - 1;
+	invalidAccess.nBytes = 3;
+	SIR_GRAPH_CHECK( !graph.addPass( pass, &invalidAccess, 1, &nPass ) );
+	invalidAccess = access;
+	invalidAccess.eMode = ( sirTaskGraphAccessMode_t )255;
+	SIR_GRAPH_CHECK( !graph.addPass( pass, &invalidAccess, 1, &nPass ) );
+	SIR_GRAPH_CHECK( graph.addPass( pass, &access, 1, &nPass ) && nPass == 0 );
+	SIR_GRAPH_CHECK( graph.addPass( pass, &access, 1, &nPass ) && nPass == 1 );
+	SIR_GRAPH_CHECK( !graph.addPass( pass, &access, 1, &nPass ) );
+	SIR_GRAPH_CHECK( !graph.addDependency( 0, 0 ) );
+	SIR_GRAPH_CHECK( !graph.addDependency( 2, 1 ) );
+	SIR_GRAPH_CHECK( !graph.addDependency( 0, 2 ) );
+	SIR_GRAPH_CHECK( graph.addDependency( 0, 1 ) );
+	SIR_GRAPH_CHECK( !graph.addDependency( 0, 1 ) );
+	SIR_GRAPH_CHECK( graph.compile() == SIR_TASK_GRAPH_OK );
+	SIR_GRAPH_CHECK( graph.getEdgeCount() == 1 );
+	SIR_GRAPH_CHECK( !graph.getEdge( 1, &edge ) );
+	SIR_GRAPH_CHECK( !graph.getEdge( 0, nullptr ) );
+	SIR_GRAPH_CHECK( graph.getEdge( 0, &edge ) );
+	SIR_GRAPH_CHECK( !graph.getTopologicalPass( 2, &nTopological ) );
+	SIR_GRAPH_CHECK( !graph.getTopologicalPass( 0, nullptr ) );
+	SIR_GRAPH_CHECK( graph.getTopologicalPass( 0, &nTopological ) );
+	SIR_GRAPH_CHECK( !graph.submit( nullptr ) );
+	SIRTaskScheduler scheduler;
+	SIR_GRAPH_CHECK( scheduler.init( &memory, { 4, 0, 4 } ) );
+	SIR_GRAPH_CHECK( !graph.getSubmittedHandle( 0, &edge.nBefore ) );
+	SIR_GRAPH_CHECK( graph.submit( &scheduler ) );
+	SIR_GRAPH_CHECK( !graph.submit( &scheduler ) );
+	sirTaskHandle_t submitted = {};
+	SIR_GRAPH_CHECK( !graph.getSubmittedHandle( 2, &submitted ) );
+	SIR_GRAPH_CHECK( !graph.getSubmittedHandle( 0, nullptr ) );
+	SIR_GRAPH_CHECK( graph.getSubmittedHandle( 0, &submitted ) );
+	SIR_GRAPH_CHECK( graph.cancelExecution() );
+	sirTaskGraphExecutionSummary_t summary = {};
+	SIR_GRAPH_CHECK( graph.queryExecution( &summary ) );
+	SIR_GRAPH_CHECK( summary.nCancelled == 2 );
+	SIR_GRAPH_CHECK( graph.releaseSubmitted() );
+	SIR_GRAPH_CHECK( !graph.getSubmittedHandle( 0, &submitted ) );
+	SIR_GRAPH_CHECK( graph.reset() );
+	SIR_GRAPH_CHECK( scheduler.shutdown() );
+	memory.shutdown();
+}
+
+static void testBucketCollisionAndInteriorFrontierPruning( void )
+{
+	SIRMemoryManager memory;
+	sirGraphMakeMemory( &memory );
+	const sirTaskGraphPass_t pass = { graphFail, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU };
+	uint32_t nIndex = 0;
+	{
+		SIRTaskGraph collision;
+		SIR_GRAPH_CHECK( collision.init( &memory, { 2, 2, 2 } ) );
+		const sirTaskGraphAccess_t first = { { 4, 0 }, 0, 8, SIR_TASK_GRAPH_READ };
+		const sirTaskGraphAccess_t second = { { 5, 0 }, 0, 8, SIR_TASK_GRAPH_READ };
+		SIR_GRAPH_CHECK( collision.addPass( pass, &first, 1, &nIndex ) );
+		SIR_GRAPH_CHECK( collision.addPass( pass, &second, 1, &nIndex ) );
+		SIR_GRAPH_CHECK( collision.compile() == SIR_TASK_GRAPH_OK );
+		SIR_GRAPH_CHECK( collision.getEdgeCount() == 0 );
+	}
+	{
+		SIRTaskGraph frontier;
+		SIR_GRAPH_CHECK( frontier.init( &memory, { 4, 4, 8 } ) );
+		const sirTaskGraphAccess_t ranges[4] = {
+		    { { 8, 0 }, 0, 8, SIR_TASK_GRAPH_READ },
+		    { { 8, 0 }, 8, 8, SIR_TASK_GRAPH_READ },
+		    { { 8, 0 }, 16, 8, SIR_TASK_GRAPH_READ },
+		    { { 8, 0 }, 8, 8, SIR_TASK_GRAPH_WRITE }
+		};
+		for ( uint32_t i = 0; i < 4; ++i ) {
+			SIR_GRAPH_CHECK( frontier.addPass( pass, ranges + i, 1, &nIndex ) );
+		}
+		SIR_GRAPH_CHECK( frontier.compile() == SIR_TASK_GRAPH_OK );
+		SIR_GRAPH_CHECK( graphHasEdge( frontier, 1, 3 ) );
+		SIR_GRAPH_CHECK( !graphHasEdge( frontier, 0, 3 ) );
+		SIR_GRAPH_CHECK( !graphHasEdge( frontier, 2, 3 ) );
+	}
+	memory.shutdown();
+}
+
 int main( void )
 {
 	testAccessHazards();
@@ -432,5 +566,7 @@ int main( void )
 	testParallelGraphDispatch();
 	testGraphExecutionSummaryAndProviderLifetime();
 	testGraphExecutionCancellationAndFailures();
+	testGraphInputValidationAndInspection();
+	testBucketCollisionAndInteriorFrontierPruning();
 	return 0;
 }
