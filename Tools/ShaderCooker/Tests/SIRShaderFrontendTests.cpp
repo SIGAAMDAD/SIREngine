@@ -307,6 +307,122 @@ static bool sirCookBoundaryCases( const std::filesystem::path& sRoot )
 		return false;
 	}
 
+	if ( !checkSource( "#pragma\n", SIR_SHADER_COOK_OK, "pragma without argument" ) ||
+	     !checkSource( "#unrecognized\n", SIR_SHADER_COOK_OK, "unknown directive retained" ) ||
+	     !checkSource( "#include shared.hlsli\n", SIR_SHADER_COOK_BAD_DIRECTIVE, "unquoted include" ) ||
+	     !checkSource( "#include \"shared.hlsli\" // tail\n", SIR_SHADER_COOK_OK, "include comment suffix" ) ||
+	     !checkSource( "#pragma once   \n", SIR_SHADER_COOK_OK, "pragma with whitespace suffix" ) ||
+	     !checkSource( "#if defined(_FLAG)\nint present;\n#else\nint absent;\n#endif\n", SIR_SHADER_COOK_OK,
+	                   "defined identifier underscore" ) ||
+	     !checkSource( "#define _FLAG 1\n#if defined(_FLAG)\nint present;\n#endif\n", SIR_SHADER_COOK_OK,
+	                   "defined true underscore identifier" ) ||
+	     !checkSource( "#if defined()\n#endif\n", SIR_SHADER_COOK_BAD_DIRECTIVE, "empty defined token" ) ||
+	     !checkSource( "#if 1\n#else\nint absent;\n#endif\n", SIR_SHADER_COOK_OK, "else already taken" ) ||
+	     !checkSource( "#if 1\n#elif 1\nint absent;\n#endif\n", SIR_SHADER_COOK_OK, "elif already taken" ) ||
+	     !checkSource( "#if 0\n#elif 1\nint present;\n#endif\n", SIR_SHADER_COOK_OK, "elif selected" ) ||
+	     !checkSource( "#if 0\n#elif 0\n#else\nint present;\n#endif\n", SIR_SHADER_COOK_OK, "elif false then else" ) ||
+	     !checkSource( "#define _FLAG 12\n#if !_FLAG\nint absent;\n#endif\n", SIR_SHADER_COOK_OK, "inverted nonzero macro" ) ||
+	     !checkSource( "float x = \"unterminated\n", SIR_SHADER_COOK_OK, "unterminated ordinary string" ) ||
+	     !checkSource( "int x;", SIR_SHADER_COOK_OK, "source without final newline" ) ||
+	     !checkSource( std::string( "\xef\xbb\xbf" ) + "int x;\r", SIR_SHADER_COOK_OK, "UTF-8 BOM and CR" ) ||
+	     !checkSource( "#include \"../../outside.hlsli\"\n", SIR_SHADER_COOK_PATH_ESCAPE, "parent escapes source root" ) ) {
+		return false;
+	}
+
+	if ( !checkSource( "#include   \n", SIR_SHADER_COOK_BAD_DIRECTIVE, "include whitespace without path" ) ||
+	     !checkSource( "#pragma   \n", SIR_SHADER_COOK_OK, "blank pragma" ) ||
+	     !checkSource( "#pragma oncemore\n", SIR_SHADER_COOK_OK, "unrecognized pragma suffix" ) ||
+	     !checkSource( "#if defined _FLAG\nint absent;\n#endif\n", SIR_SHADER_COOK_OK, "defined without parentheses" ) ||
+	     !checkSource( "#if defined(_FLAG\n#endif\n", SIR_SHADER_COOK_BAD_DIRECTIVE, "missing defined parenthesis" ) ||
+	     !checkSource( "#if defined _FLAG)\n#endif\n", SIR_SHADER_COOK_BAD_DIRECTIVE, "extra defined parenthesis" ) ||
+	     !checkSource( "#if (1)\n#endif\n", SIR_SHADER_COOK_BAD_DIRECTIVE, "parenthesized expression unsupported" ) ||
+	     !checkSource( "#if 0\n#if 1\n#elif 1\n#else\n#endif\n#endif\n", SIR_SHADER_COOK_OK, "inactive ancestor with elif and else" ) ||
+	     !checkSource( "#if 0\n#if 0\n#else\n#endif\n#endif\n", SIR_SHADER_COOK_OK, "inactive parent for else branch" ) ||
+	     !checkSource( "#define _FLAG 1\n#if _FLAG\nint present;\n#endif\n", SIR_SHADER_COOK_OK, "underscore-valued macro condition" ) ) {
+		return false;
+	}
+
+	// A pragma-one header remains single-copy even with tab suffix.
+	sirCookPut( sRoot / "case/once_tabs.hlsli", "#pragma once\t\nint unique_definition;\n" );
+	if ( !checkSource( "#include \"once_tabs.hlsli\"\n#include \"once_tabs.hlsli\"\n", SIR_SHADER_COOK_OK,
+	                   "pragma once followed by tab" ) ) {
+		return false;
+	}
+	const size_t iUnique = manifest.sExpandedSource.find( "int unique_definition;" );
+	if ( !sirCookCheck( iUnique != std::string::npos &&
+	                        manifest.sExpandedSource.find( "int unique_definition;", iUnique + 1 ) == std::string::npos,
+	                    "one-time header actually expanded once" ) ) {
+		return false;
+	}
+
+	request.sEntryPoint = "{INVALID";
+	if ( !sirCookCheck( sirShaderCookPreprocess( request, &manifest, &sDiagnostic ) == SIR_SHADER_COOK_INVALID_ARGUMENT,
+	                    "identifier beyond lowercase alphabet" ) ) {
+		return false;
+	}
+	request.sEntryPoint = "main";
+	request.szDefines.push_back( { "_FLAG", "\x7f" } );
+	if ( !sirCookCheck( sirShaderCookPreprocess( request, &manifest, &sDiagnostic ) == SIR_SHADER_COOK_INVALID_ARGUMENT,
+	                    "nonprintable define" ) ) {
+		return false;
+	}
+	request.szDefines[0].sValue = "\"";
+	if ( !sirCookCheck( sirShaderCookPreprocess( request, &manifest, &sDiagnostic ) == SIR_SHADER_COOK_INVALID_ARGUMENT,
+	                    "quote in define" ) ) {
+		return false;
+	}
+	request.szDefines[0].sValue = "\\";
+	if ( !sirCookCheck( sirShaderCookPreprocess( request, &manifest, &sDiagnostic ) == SIR_SHADER_COOK_INVALID_ARGUMENT,
+	                    "backslash in define" ) ) {
+		return false;
+	}
+	request.szDefines.clear();
+
+	request.sEntryFile = "/absolute/source.hlsl";
+	if ( !sirCookCheck( sirShaderCookPreprocess( request, &manifest, &sDiagnostic ) == SIR_SHADER_COOK_INVALID_ARGUMENT,
+	                    "absolute entry path" ) ) {
+		return false;
+	}
+	request.sEntryFile = "case/main.hlsl";
+	request.sRoot = sRoot / "case/main.hlsl";
+	if ( !sirCookCheck( sirShaderCookPreprocess( request, &manifest, &sDiagnostic ) == SIR_SHADER_COOK_IO_ERROR,
+	                    "regular file is not source root" ) ) {
+		return false;
+	}
+	request.sRoot = sRoot;
+
+	const std::filesystem::path sExternal = sRoot.parent_path() / "sir_shader_outside_fixture.hlsli";
+	sirCookPut( sExternal, "int x;\n" );
+	std::error_code eSymlink;
+	std::filesystem::create_symlink( sExternal, sRoot / "case/escape.hlsli", eSymlink );
+	if ( !eSymlink && !checkSource( "#include \"escape.hlsli\"\n", SIR_SHADER_COOK_PATH_ESCAPE, "symlink escapes root" ) ) {
+		std::filesystem::remove( sExternal );
+		return false;
+	}
+	std::filesystem::remove( sRoot / "case/escape.hlsli" );
+	std::filesystem::remove( sExternal );
+
+	// Exercise the distinct aggregate-input and unique-file admission limits.
+	std::string sUniqueIncludes;
+	for ( uint32_t iFile = 0; iFile < 9; ++iFile ) {
+		const std::string sName = "large" + std::to_string( iFile ) + ".hlsli";
+		sirCookPut( sRoot / "case" / sName, std::string( ( 1U << 20 ) - 64, 'x' ) + "\n" );
+		sUniqueIncludes += "#include \"" + sName + "\"\n";
+	}
+	if ( !checkSource( sUniqueIncludes, SIR_SHADER_COOK_CAPACITY_EXCEEDED, "aggregate source byte limit" ) ) {
+		return false;
+	}
+
+	sUniqueIncludes.clear();
+	for ( uint32_t iFile = 0; iFile < 257; ++iFile ) {
+		const std::string sName = "part" + std::to_string( iFile ) + ".hlsli";
+		sirCookPut( sRoot / "case" / sName, "int shared;\n" );
+		sUniqueIncludes += "#include \"" + sName + "\"\n";
+	}
+	if ( !checkSource( sUniqueIncludes, SIR_SHADER_COOK_CAPACITY_EXCEEDED, "unique file-count limit" ) ) {
+		return false;
+	}
+
 	// Depth is independent of the number-of-files and byte budgets.
 	for ( uint32_t iDepth = 0; iDepth < 66; ++iDepth ) {
 		sirCookPut( sRoot / "case" / ( "depth" + std::to_string( iDepth ) + ".hlsli" ),

@@ -138,7 +138,7 @@ static int32_t sirCookReadDirective( const std::string& sLine, std::string *pInc
 	iChar = sLine.find_first_not_of( " \t", nWordEnd );
 	if ( sWord == "pragma" ) {
 		return iChar != std::string::npos && sLine.compare( iChar, 4, "once" ) == 0 &&
-		               ( iChar + 4 == sLine.size() || sLine[iChar + 4] == ' ' )
+		               ( iChar + 4 == sLine.size() || sLine[iChar + 4] == ' ' || sLine[iChar + 4] == '\t' )
 		           ? 2
 				   : 0;
 	}
