@@ -18,6 +18,7 @@ add_library(SIRScripting STATIC
     Language/SIRLangLexer.cpp
     Language/SIRLangParser.cpp
     Language/SIRLangSemantic.cpp
+    Language/SIRLangSignatures.cpp
 )
 find_package(Threads REQUIRED)
 add_library(SIR::Scripting ALIAS SIRScripting)
