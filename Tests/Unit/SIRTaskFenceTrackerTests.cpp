@@ -59,7 +59,9 @@ static bool rejectNestedAcknowledgement( void *pContext ) noexcept
 {
 	sirFenceReentryContext_t *pReentry = ( sirFenceReentryContext_t * )pContext;
 	uint32_t nAcknowledged = UINT32_MAX;
-	if ( !pReentry->pTracker->advanceCompleted( 99, SIR_TASK_RESULT_SUCCESS, &nAcknowledged ) && nAcknowledged == 0 ) {
+	if ( !pReentry->pTracker->advanceCompleted( 99, SIR_TASK_RESULT_SUCCESS, &nAcknowledged ) && nAcknowledged == 0 &&
+	     !pReentry->pTracker->hasCapacity() && !pReentry->pTracker->untrackLast( {} ) &&
+	     !pReentry->pTracker->shutdown() && !pReentry->pTracker->track( {}, 999 ) ) {
 		++pReentry->nDenied;
 		return true;
 	}
@@ -295,6 +297,7 @@ static void testRejectedInitializationAndThreadAffinity( void )
 	SIR_FENCE_CHECK( !tracker.init( &memory, &scheduler, SIR_TASK_EXEC_RENDER, 0 ) );
 	SIR_FENCE_CHECK( !tracker.init( &memory, &scheduler, SIR_TASK_EXEC_CPU, 1 ) );
 	SIR_FENCE_CHECK( !tracker.init( &memory, &scheduler, SIR_TASK_EXEC_COUNT, 1 ) );
+	SIR_FENCE_CHECK( !tracker.init( &memory, &scheduler, SIR_TASK_EXEC_RENDER, UINT32_MAX ) );
 	SIR_FENCE_CHECK( tracker.init( &memory, &scheduler, SIR_TASK_EXEC_RENDER, 2 ) );
 	SIR_FENCE_CHECK( !tracker.init( &memory, &scheduler, SIR_TASK_EXEC_RENDER, 2 ) );
 	std::thread wrongThread( [&]() {
