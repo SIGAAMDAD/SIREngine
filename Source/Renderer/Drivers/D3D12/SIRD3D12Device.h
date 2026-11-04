@@ -34,6 +34,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <wrl/client.h>
 #include <Renderer/Drivers/D3D12/SIRD3D12Memory.h>
 #include <Renderer/Drivers/D3D12/SIRD3D12ComputeKernel.h>
+#include <Renderer/Drivers/D3D12/SIRD3D12GraphicsKernel.h>
 #include <Renderer/Drivers/D3D12/SIRD3D12Transfers.h>
 
 typedef struct sirD3D12AdapterInfo_s
@@ -128,6 +129,7 @@ private:
 	SIRD3D12Memory m_Memory;
 	SIRD3D12Transfers m_Transfers;
 	SIRD3D12ComputeQueue m_ComputeQueue;
+	SIRD3D12GraphicsKernel m_GraphicsKernel;
 	D3D12MA::Allocation *m_pPendingUpload = nullptr;
 	D3D12MA::Allocation *m_pPendingDevice = nullptr;
 	D3D12MA::Allocation *m_pPendingReadback = nullptr;
@@ -169,6 +171,11 @@ public:
 	bool submitComputeAfterCopy( sirD3D12TransferTicket_t ticket, sirD3D12CompletionSet_t *pSet ) noexcept;
 	bool submitGraphicsAfterCompute( const sirD3D12CompletionSet_t &computeSet, sirD3D12CompletionSet_t *pSet ) noexcept;
 	bool waitForGraphicsFence( uint64_t nFenceValue, uint32_t nTimeoutMs ) noexcept;
+	bool initializeGraphicsKernel( const void *pVertexDxil, size_t nVertexBytes, const void *pPixelDxil,
+	                               size_t nPixelBytes ) noexcept;
+	bool submitGraphicsTriangle( uint32_t nWidth, uint32_t nHeight, sirD3D12CompletionSet_t *pSet ) noexcept;
+	bool readGraphicsTriangle( const sirD3D12CompletionSet_t &set, uint8_t *pOutput,
+	                           uint32_t nRowPitch, size_t nOutputBytes ) noexcept;
 
 	// Native-only resource ownership; never pass D3D12MA pointers into GRDG.
 	bool createNativeBuffer( D3D12_HEAP_TYPE eHeapType, D3D12_RESOURCE_STATES eInitialState, uint64_t nBytes,

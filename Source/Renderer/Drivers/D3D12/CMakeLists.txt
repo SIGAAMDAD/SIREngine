@@ -13,6 +13,7 @@ add_library(SIRD3D12 STATIC
     SIRD3D12Memory.cpp
     SIRD3D12Transfers.cpp
     SIRD3D12ComputeKernel.cpp
+    SIRD3D12GraphicsKernel.cpp
     "${SIR_D3D12MA_ROOT}/src/D3D12MemAlloc.cpp")
 add_library(SIR::D3D12 ALIAS SIRD3D12)
 target_include_directories(SIRD3D12 PUBLIC

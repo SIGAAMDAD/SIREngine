@@ -598,7 +598,10 @@ void SIRD3D12Device::shutdown( void ) noexcept
 {
 	// DIRECT can wait on COMPUTE, and COMPUTE can wait on COPY.
 	// Drain dependent queues from the consumer back to the producer.
-	const bool bDirectSafe = retireDirectComputeDependency();
+	const bool bGraphicsSafe = !m_bGraphicsUnsafe &&
+	                           ( m_nNextFenceValue <= 1 || waitForGraphicsFence( m_nNextFenceValue - 1, 15000 ) );
+	const bool bDirectSafe = bGraphicsSafe && retireDirectComputeDependency();
+	m_GraphicsKernel.shutdown( bDirectSafe );
 	const bool bCopySafe = waitForPendingCopy();
 	const bool bComputeSafe = m_ComputeQueue.shutdown();
 	const bool bTransferSafe = m_Transfers.shutdown();
@@ -879,6 +882,83 @@ bool SIRD3D12Device::submitGraphicsAfterCompute( const sirD3D12CompletionSet_t &
 	++m_nNextFenceValue;
 	m_nLastError = S_OK;
 	return snapshotCompletionSet( pSet ) && pSet->nGraphicsFence == nGraphicsFence;
+}
+
+bool SIRD3D12Device::initializeGraphicsKernel( const void *pVertexDxil, size_t nVertexBytes,
+                                              const void *pPixelDxil, size_t nPixelBytes ) noexcept
+{
+	if ( !isReady() ) {
+		m_nLastError = E_FAIL;
+		return false;
+	}
+	const bool bReady = m_GraphicsKernel.initialize( m_pDevice.Get(), pVertexDxil, nVertexBytes, pPixelDxil, nPixelBytes );
+	m_nLastError = m_GraphicsKernel.getLastError();
+	return bReady;
+}
+
+bool SIRD3D12Device::submitGraphicsTriangle( uint32_t nWidth, uint32_t nHeight,
+                                             sirD3D12CompletionSet_t *pSet ) noexcept
+{
+	if ( pSet == nullptr || !isReady() || !m_GraphicsKernel.isReady() || m_GraphicsKernel.hasPending() ||
+	     m_nNextFenceValue == UINT64_MAX ) {
+		m_nLastError = E_INVALIDARG;
+		return false;
+	}
+	*pSet = {};
+
+	const uint64_t nCompleted = m_pGraphicsFence->GetCompletedValue();
+	if ( nCompleted == UINT64_MAX ) {
+		m_nLastError = DXGI_ERROR_DEVICE_REMOVED;
+		return false;
+	}
+	if ( m_nNextFenceValue > 1 && nCompleted < m_nNextFenceValue - 1 ) {
+		m_nLastError = HRESULT_FROM_WIN32( ERROR_BUSY );
+		return false;
+	}
+	// A previously submitted DIRECT dependency is now retired.
+	m_pDirectComputeDependency.Reset();
+	m_nDirectDependencyFenceValue = 0;
+
+	if ( !m_GraphicsKernel.record( m_pDevice.Get(), &m_Memory, nWidth, nHeight ) ) {
+		m_nLastError = m_GraphicsKernel.getLastError();
+		return false;
+	}
+
+	ID3D12CommandList *pLists[] = { m_GraphicsKernel.getRecordedList() };
+	m_pGraphicsQueue->ExecuteCommandLists( 1, pLists );
+	const uint64_t nFence = m_nNextFenceValue;
+	m_nLastError = m_pGraphicsQueue->Signal( m_pGraphicsFence.Get(), nFence );
+	if ( FAILED( m_nLastError ) ) {
+		// The list is already enqueued. Preserve all native references if
+		// the fence cannot prove its completion.
+		m_bGraphicsUnsafe = true;
+		return false;
+	}
+	m_GraphicsKernel.submitted( nFence );
+	++m_nNextFenceValue;
+	if ( !snapshotCompletionSet( pSet ) || pSet->nGraphicsFence != nFence ) {
+		m_nLastError = E_FAIL;
+		return false;
+	}
+	m_nLastError = S_OK;
+	return true;
+}
+
+bool SIRD3D12Device::readGraphicsTriangle( const sirD3D12CompletionSet_t &set, uint8_t *pOutput,
+                                            uint32_t nRowPitch, size_t nOutputBytes ) noexcept
+{
+	bool bCompleted = false;
+	if ( !pollCompletionSet( set, &bCompleted ) ) {
+		return false;
+	}
+	if ( !bCompleted ) {
+		m_nLastError = HRESULT_FROM_WIN32( ERROR_BUSY );
+		return false;
+	}
+	const bool bRead = m_GraphicsKernel.readback( m_pGraphicsFence.Get(), set.nGraphicsFence, pOutput, nRowPitch,
+	                                             nOutputBytes );
+	m_nLastError = m_GraphicsKernel.getLastError();
+	return bRead;
 }
 
 bool SIRD3D12Device::createNativeBuffer( D3D12_HEAP_TYPE eHeapType, D3D12_RESOURCE_STATES eInitialState, uint64_t nBytes,

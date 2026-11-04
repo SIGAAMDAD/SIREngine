@@ -474,6 +474,135 @@ static bool testCompiledDxilCompute( SIRD3D12Device &device )
 	return true;
 }
 
+
+static bool loadGraphicsDxil( const char *pszPath, void **ppBytes, size_t *pSize )
+{
+	if ( pszPath == nullptr || ppBytes == nullptr || pSize == nullptr ) {
+		return false;
+	}
+	*ppBytes = nullptr;
+	*pSize = 0;
+	FILE *pFile = nullptr;
+	if ( fopen_s( &pFile, pszPath, "rb" ) != 0 || pFile == nullptr ) {
+		return false;
+	}
+	if ( fseek( pFile, 0, SEEK_END ) != 0 ) {
+		fclose( pFile );
+		return false;
+	}
+	const long nBytes = ftell( pFile );
+	if ( nBytes < 16 || nBytes > 4 * 1024 * 1024 || fseek( pFile, 0, SEEK_SET ) != 0 ) {
+		fclose( pFile );
+		return false;
+	}
+
+	void *pBytes = malloc( ( size_t )nBytes );
+	if ( pBytes == nullptr ) {
+		fclose( pFile );
+		return false;
+	}
+	const size_t nRead = fread( pBytes, 1, ( size_t )nBytes, pFile );
+	fclose( pFile );
+	if ( nRead != ( size_t )nBytes ) {
+		free( pBytes );
+		return false;
+	}
+	*ppBytes = pBytes;
+	*pSize = nRead;
+	return true;
+}
+
+static bool testOffscreenIndexedGraphics( SIRD3D12Device &device )
+{
+	void *pVertexDxil = nullptr;
+	void *pPixelDxil = nullptr;
+	size_t nVertexBytes = 0;
+	size_t nPixelBytes = 0;
+
+	const bool bVs = loadGraphicsDxil( SIR_D3D12_VS_DXIL_PATH, &pVertexDxil, &nVertexBytes );
+	const bool bPs = bVs && loadGraphicsDxil( SIR_D3D12_PS_DXIL_PATH, &pPixelDxil, &nPixelBytes );
+	if ( !bVs || !bPs ) {
+		fputs( "D3D12 offline graphics VS/PS DXIL missing\n", stderr );
+		free( pVertexDxil );
+		free( pPixelDxil );
+		return false;
+	}
+
+	const bool bInitialized = device.initializeGraphicsKernel( pVertexDxil, nVertexBytes, pPixelDxil, nPixelBytes );
+	free( pVertexDxil );
+	free( pPixelDxil );
+	if ( !bInitialized ) {
+		fprintf( stderr, "D3D12 graphics PSO initialization failed: HRESULT 0x%08lx\n",
+		         ( unsigned long )device.getLastError() );
+		return false;
+	}
+	if ( device.initializeGraphicsKernel( nullptr, 0, nullptr, 0 ) ) {
+		return false;
+	}
+
+	sirD3D12CompletionSet_t invalid = {};
+	if ( device.submitGraphicsTriangle( 0, 32, &invalid ) || device.submitGraphicsTriangle( 32, 0, &invalid ) ||
+	     device.submitGraphicsTriangle( 129, 32, &invalid ) || device.submitGraphicsTriangle( 32, 129, &invalid ) ||
+	     device.submitGraphicsTriangle( 32, 32, nullptr ) ) {
+		return false;
+	}
+
+	const uint32_t szWidth[] = { 32, 17, 64 };
+	const uint32_t szHeight[] = { 32, 29, 48 };
+	for ( uint32_t iPass = 0; iPass < 3; ++iPass ) {
+		const uint32_t nWidth = szWidth[iPass];
+		const uint32_t nHeight = szHeight[iPass];
+		const uint32_t nStride = nWidth * 4 + 8;
+		uint8_t szPixels[128 * 128 * 4] = {};
+		sirD3D12CompletionSet_t submitted = {};
+
+		if ( !device.submitGraphicsTriangle( nWidth, nHeight, &submitted ) || submitted.nGraphicsFence == 0 ) {
+			fprintf( stderr, "D3D12 graphics draw submission failed at %u: HRESULT 0x%08lx\n", iPass,
+			         ( unsigned long )device.getLastError() );
+			return false;
+		}
+		if ( device.submitGraphicsTriangle( nWidth, nHeight, &invalid ) ) {
+			return false;
+		}
+
+		sirD3D12CompletionSet_t forged = submitted;
+		forged.nDeviceGeneration = 0;
+		if ( device.readGraphicsTriangle( forged, szPixels, nStride, sizeof( szPixels ) ) ) {
+			return false;
+		}
+		forged = submitted;
+		++forged.nGraphicsFence;
+		if ( device.readGraphicsTriangle( forged, szPixels, nStride, sizeof( szPixels ) ) ||
+		     device.readGraphicsTriangle( submitted, szPixels, nWidth * 4 - 1, sizeof( szPixels ) ) ||
+		     device.readGraphicsTriangle( submitted, szPixels, nStride, nWidth * 4 ) ) {
+			return false;
+		}
+
+		if ( !device.waitForGraphicsFence( submitted.nGraphicsFence, 15000 ) ||
+		     !device.readGraphicsTriangle( submitted, szPixels, nStride, sizeof( szPixels ) ) ) {
+			fprintf( stderr, "D3D12 graphics readback failed at %u: HRESULT 0x%08lx\n", iPass,
+			         ( unsigned long )device.getLastError() );
+			return false;
+		}
+
+		const uint8_t *pCenter = &szPixels[( nHeight / 2 ) * nStride + ( nWidth / 2 ) * 4];
+		const uint8_t *pCorner = &szPixels[0];
+		const uint8_t *pOutside = &szPixels[( nHeight - 1 ) * nStride + ( nWidth - 1 ) * 4];
+		if ( pCenter[0] < 225 || pCenter[1] > 15 || pCenter[2] > 15 || pCenter[3] != 255 ||
+		     pCorner[0] != 0 || pCorner[1] != 0 || pCorner[2] != 0 || pCorner[3] != 255 ||
+		     pOutside[0] != 0 || pOutside[1] != 0 || pOutside[2] != 0 || pOutside[3] != 255 ) {
+			fprintf( stderr, "D3D12 graphics pixel mismatch at %u: center %u/%u/%u/%u corner %u/%u/%u/%u\n",
+			         iPass, pCenter[0], pCenter[1], pCenter[2], pCenter[3],
+			         pCorner[0], pCorner[1], pCorner[2], pCorner[3] );
+			return false;
+		}
+		if ( device.readGraphicsTriangle( submitted, szPixels, nStride, sizeof( szPixels ) ) ) {
+			return false;
+		}
+	}
+	return true;
+}
+
 int main( void )
 {
 	SIRD3D12Device device;
@@ -525,6 +654,11 @@ int main( void )
 	// DXGI memory-budget reporting can be unavailable for software adapters.
 	if ( device.queryLocalMemory( &memory ) && memory.nCurrentUsageBytes > memory.nBudgetBytes && memory.nBudgetBytes != 0 ) {
 		fputs( "D3D12 memory report is inconsistent\n", stderr );
+		return 1;
+	}
+
+	if ( !testOffscreenIndexedGraphics( device ) ) {
+		fputs( "D3D12 offscreen graphics draw failed\n", stderr );
 		return 1;
 	}
 
