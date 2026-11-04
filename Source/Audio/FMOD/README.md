@@ -164,3 +164,56 @@ before retiring every bank. The loader exposes `getPackageReferences`
 for diagnostics and rejects duplicate release of an exhausted root lease.
 All calls remain on the audio owner thread. Bank load/unload itself stays
 SDK-gated and real middleware acceptance remains pending.
+
+
+## Phase 2 — dedicated audio owner, memory domains and streaming
+
+**Single native owner:** `SIRFMODAudioThread` starts an OS thread before
+initializing Studio. The thread exclusively runs runtime mutations, bank
+operations, playback and mixer commands. Producers submit fixed-size portable
+requests to bounded MPMC queues and receive generation-tagged tickets. Results
+remain in preallocated slots until consumed; release/cancellation is explicit.
+A separate critical lane carries output recovery. PLAY and STOP preserve FIFO
+order through the normal lane. Audio update and other commands continue while
+one nonblocking metadata load is pending. Native FMOD pointers never enter a
+request or completion.
+
+**Bank streaming:** `SIRFMODBankStore::beginLoadBank` uses
+`FMOD_STUDIO_LOAD_BANK_NONBLOCKING`; `pollBankLoad` checks
+`Bank::getLoadingState`. A pending bank is not eligible for event, bus,
+VCA, snapshot or sample binding. `SIRFMODPackageLoader` makes a dependency
+postorder transaction, starts/polls one bank at a time, commits root leases
+only after all required banks are ready, and unwinds newly acquired banks on
+failure or cancellation. Root-load cancellation is serviced on the FMOD
+owner, not from a producer thread. Unload failures remain owned for retry.
+
+**Engine domain:** Each runtime config may set `nEngineMemoryBudgetBytes`.
+The budgeted allocator wraps the NMD domain, charging headers and alignment,
+and tracks current, peak and failed bytes with lock-free counters.
+`SIRFMODRuntime::getMemoryStats` reports its engine-controlled memory.
+The upstream allocator must remain valid until runtime shutdown.
+
+**Native FMOD domain:** `nNativeMemoryBudgetBytes` opts into the SDK-only
+`FMOD::Memory_Initialize` bridge before creating Studio/Core. Its process-
+global callbacks allocate/free/reallocate with a distinct NMD budget,
+16-byte alignment, preserved realloc contents and live/peak/failure
+accounting. FMOD may execute those callbacks from its own streaming threads.
+The first installation is retained for process lifetime: the caller must
+supply a process-lifetime allocator, and later installations must match
+that allocator and budget. `getNativeMemoryStats` reports this domain.
+
+**Device recovery:** The FMOD Core `FMOD_SYSTEM_CALLBACK_DEVICELOST` bridge
+increments an atomic signal. No Studio or Core calls occur inside that
+callback. The dedicated owner responds with driver enumeration, a preferred
+output or driver-zero fallback, and a Studio update before acknowledging
+the signal. Failures are retried with bounded tick-based backoff; the
+worker exposes success/failure counters. No-sound output is excluded.
+
+**Verification:** SDK-independent CI builds the runtime on Linux and Windows
+and tests bank cancellation, reference-counted load/unload, output signal
+recovery, budget limits, multithreaded allocations and concurrent request
+tickets. Google Benchmark includes audio command queue round trips and the
+budgeted allocation path. `audio.fmod.native-context` and
+`audio.fmod.native-runtime` are compiled only when `SIR_WITH_FMOD=ON`.
+Actual FMOD SDK linking, native callback execution and playback with cooked
+banks require the installed licensed FMOD 2.04 SDK and real content.
