@@ -69,10 +69,13 @@ private:
 	void prepare( SIRVulkanRenderingDevice *pOwner ) noexcept;
 
 public:
-	sirGraphicsQueue_t getQueue( void ) const noexcept override { return SIR_GRAPHICS_QUEUE_DIRECT; }
+	sirGraphicsQueue_t getQueue( void ) const noexcept override
+	{
+		return SIR_GRAPHICS_QUEUE_DIRECT;
+	}
 	sirGraphicsResult_t reset( void ) noexcept override;
-	sirGraphicsResult_t copyBuffer( sirGraphicsHandle_t hDestination, uint64_t nDstOffset, sirGraphicsHandle_t hSource,
-	                                uint64_t nSrcOffset, uint64_t nBytes ) noexcept override;
+	sirGraphicsResult_t copyBuffer( sirGraphicsHandle_t hDestination, uint64_t nDstOffset, sirGraphicsHandle_t hSource, uint64_t nSrcOffset,
+	                                uint64_t nBytes ) noexcept override;
 	sirGraphicsResult_t close( void ) noexcept override;
 
 	sirGraphicsResult_t barrier( const sirGraphicsBarrier_t *, uint32_t nCount ) noexcept override
@@ -87,9 +90,18 @@ public:
 	{
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
-	sirGraphicsResult_t endRenderPass( void ) noexcept override { return SIR_GRAPHICS_UNSUPPORTED; }
-	sirGraphicsResult_t bindPipeline( sirGraphicsHandle_t ) noexcept override { return SIR_GRAPHICS_UNSUPPORTED; }
-	sirGraphicsResult_t bindBindingSet( uint32_t, sirGraphicsHandle_t ) noexcept override { return SIR_GRAPHICS_UNSUPPORTED; }
+	sirGraphicsResult_t endRenderPass( void ) noexcept override
+	{
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
+	sirGraphicsResult_t bindPipeline( sirGraphicsHandle_t ) noexcept override
+	{
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
+	sirGraphicsResult_t bindBindingSet( uint32_t, sirGraphicsHandle_t ) noexcept override
+	{
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
 	sirGraphicsResult_t bindVertexBuffer( uint32_t, sirGraphicsHandle_t, uint64_t, uint32_t ) noexcept override
 	{
 		return SIR_GRAPHICS_UNSUPPORTED;
@@ -144,8 +156,14 @@ public:
 	SIRVulkanRenderingDevice( const SIRVulkanRenderingDevice & ) = delete;
 	SIRVulkanRenderingDevice &operator=( const SIRVulkanRenderingDevice & ) = delete;
 
-	sirGraphicsBackend_t getBackend( void ) const noexcept override { return SIR_GRAPHICS_BACKEND_VULKAN; }
-	uint32_t getDeviceGeneration( void ) const noexcept override { return m_nDeviceGeneration; }
+	sirGraphicsBackend_t getBackend( void ) const noexcept override
+	{
+		return SIR_GRAPHICS_BACKEND_VULKAN;
+	}
+	uint32_t getDeviceGeneration( void ) const noexcept override
+	{
+		return m_nDeviceGeneration;
+	}
 	sirGraphicsResult_t queryCapabilities( sirGraphicsCapabilities_t *pCapabilities ) const noexcept override;
 	sirGraphicsResult_t queryMemoryBudget( sirGraphicsMemoryBudget_t *pBudget ) const noexcept override;
 	sirGraphicsResult_t createBuffer( const sirGraphicsBufferDesc_t &desc, sirGraphicsHandle_t *pHandle ) noexcept override;
@@ -165,27 +183,37 @@ public:
 	// Unimplemented features fail explicitly rather than returning fake handles.
 	sirGraphicsResult_t createTexture( const sirGraphicsTextureDesc_t &, sirGraphicsHandle_t *pHandle ) noexcept override
 	{
-		if ( pHandle != nullptr ) { *pHandle = {}; }
+		if ( pHandle != nullptr ) {
+			*pHandle = {};
+		}
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
 	sirGraphicsResult_t createView( const sirGraphicsViewDesc_t &, sirGraphicsHandle_t *pHandle ) noexcept override
 	{
-		if ( pHandle != nullptr ) { *pHandle = {}; }
+		if ( pHandle != nullptr ) {
+			*pHandle = {};
+		}
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
 	sirGraphicsResult_t createSampler( const sirGraphicsSamplerDesc_t &, sirGraphicsHandle_t *pHandle ) noexcept override
 	{
-		if ( pHandle != nullptr ) { *pHandle = {}; }
+		if ( pHandle != nullptr ) {
+			*pHandle = {};
+		}
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
 	sirGraphicsResult_t createPipeline( const sirGraphicsPipelineDesc_t &, sirGraphicsHandle_t *pHandle ) noexcept override
 	{
-		if ( pHandle != nullptr ) { *pHandle = {}; }
+		if ( pHandle != nullptr ) {
+			*pHandle = {};
+		}
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
 	sirGraphicsResult_t createBindingSet( sirGraphicsHandle_t, uint32_t, sirGraphicsHandle_t *pHandle ) noexcept override
 	{
-		if ( pHandle != nullptr ) { *pHandle = {}; }
+		if ( pHandle != nullptr ) {
+			*pHandle = {};
+		}
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
 	sirGraphicsResult_t updateBindings( sirGraphicsHandle_t, const sirGraphicsDescriptorWrite_t *, uint32_t ) noexcept override
@@ -195,7 +223,9 @@ public:
 	sirGraphicsResult_t createSurface( const sirGraphicsNativeSurface_t &, const sirGraphicsPresentDesc_t &,
 	                                   sirGraphicsHandle_t *pHandle ) noexcept override
 	{
-		if ( pHandle != nullptr ) { *pHandle = {}; }
+		if ( pHandle != nullptr ) {
+			*pHandle = {};
+		}
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
 	sirGraphicsResult_t resizeSurface( sirGraphicsHandle_t, const sirGraphicsNativeSurface_t &,
@@ -205,7 +235,9 @@ public:
 	}
 	sirGraphicsResult_t acquireSurfaceImage( sirGraphicsHandle_t, sirGraphicsSurfaceImage_t *pImage ) noexcept override
 	{
-		if ( pImage != nullptr ) { *pImage = {}; }
+		if ( pImage != nullptr ) {
+			*pImage = {};
+		}
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
 	sirGraphicsResult_t present( const sirGraphicsSurfaceImage_t &, const sirGraphicsCompletion_t & ) noexcept override
@@ -220,7 +252,10 @@ private:
 	SIRVulkanRenderingDevice m_Device;
 
 public:
-	sirGraphicsBackend_t getBackend( void ) const noexcept override { return SIR_GRAPHICS_BACKEND_VULKAN; }
+	sirGraphicsBackend_t getBackend( void ) const noexcept override
+	{
+		return SIR_GRAPHICS_BACKEND_VULKAN;
+	}
 	sirGraphicsResult_t getAdapterCount( uint32_t *pCount ) const noexcept override;
 	sirGraphicsResult_t queryAdapter( uint32_t nAdapterIndex, sirGraphicsAdapterInfo_t *pInfo ) const noexcept override;
 	sirGraphicsResult_t createDevice( const sirGraphicsDeviceCreateDesc_t &desc, SIRRenderingDevice **ppDevice ) noexcept override;

@@ -1,5 +1,7 @@
 /*
 ===========================================================================
+
+
 SIREngine MPLv2 Source Code
 Copyright (C) 2023-2027 Noah Van Til
 
@@ -23,8 +25,7 @@ int main( void )
 {
 	SIRVulkanDriver driver;
 	SIRGraphicsRegistry registry;
-	if ( driver.getBackend() != SIR_GRAPHICS_BACKEND_VULKAN ||
-	     registry.registerDriver( &driver ) != SIR_GRAPHICS_SUCCESS ||
+	if ( driver.getBackend() != SIR_GRAPHICS_BACKEND_VULKAN || registry.registerDriver( &driver ) != SIR_GRAPHICS_SUCCESS ||
 	     registry.findDriver( SIR_GRAPHICS_BACKEND_VULKAN ) != &driver ||
 	     driver.getAdapterCount( nullptr ) != SIR_GRAPHICS_INVALID_ARGUMENT ||
 	     driver.destroyDevice( nullptr ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
@@ -52,10 +53,8 @@ int main( void )
 	if ( eCreate != SIR_GRAPHICS_SUCCESS || pDevice == nullptr ) {
 		return 3;
 	}
-	if ( pDevice->getDeviceGeneration() == 0 ||
-	     pDevice->queryCapabilities( &capabilities ) != SIR_GRAPHICS_SUCCESS ||
-	     capabilities.eBackend != SIR_GRAPHICS_BACKEND_VULKAN ||
-	     ( capabilities.nFeatureMask & SIR_GRAPHICS_FEATURE_GRAPHICS ) == 0 ||
+	if ( pDevice->getDeviceGeneration() == 0 || pDevice->queryCapabilities( &capabilities ) != SIR_GRAPHICS_SUCCESS ||
+	     capabilities.eBackend != SIR_GRAPHICS_BACKEND_VULKAN || ( capabilities.nFeatureMask & SIR_GRAPHICS_FEATURE_GRAPHICS ) == 0 ||
 	     ( capabilities.nQueueMask & ( 1U << SIR_GRAPHICS_QUEUE_DIRECT ) ) == 0 ) {
 		return 4;
 	}
@@ -86,8 +85,8 @@ int main( void )
 		szExpected[iByte] = ( uint8_t )( iByte ^ 0x5a );
 	}
 	sirGraphicsMappedBuffer_t mapped = {};
-	if ( pDevice->mapBuffer( hSource, 0, sizeof( szExpected ), &mapped ) != SIR_GRAPHICS_SUCCESS ||
-	     mapped.pData == nullptr || mapped.nBytes != sizeof( szExpected ) ) {
+	if ( pDevice->mapBuffer( hSource, 0, sizeof( szExpected ), &mapped ) != SIR_GRAPHICS_SUCCESS || mapped.pData == nullptr ||
+	     mapped.nBytes != sizeof( szExpected ) ) {
 		return 6;
 	}
 	memcpy( mapped.pData, szExpected, sizeof( szExpected ) );
@@ -97,8 +96,8 @@ int main( void )
 	}
 
 	SIRGraphicsCommandList *pFirst = nullptr;
-	if ( pDevice->acquireCommands( SIR_GRAPHICS_QUEUE_DIRECT, &pFirst ) != SIR_GRAPHICS_SUCCESS ||
-	     pFirst == nullptr || pFirst->copyBuffer( hGpu, 0, hSource, 0, sizeof( szExpected ) ) != SIR_GRAPHICS_SUCCESS ||
+	if ( pDevice->acquireCommands( SIR_GRAPHICS_QUEUE_DIRECT, &pFirst ) != SIR_GRAPHICS_SUCCESS || pFirst == nullptr ||
+	     pFirst->copyBuffer( hGpu, 0, hSource, 0, sizeof( szExpected ) ) != SIR_GRAPHICS_SUCCESS ||
 	     pFirst->close() != SIR_GRAPHICS_SUCCESS ) {
 		return 8;
 	}
@@ -106,14 +105,13 @@ int main( void )
 	firstSubmission.ppCommandLists = &pFirst;
 	firstSubmission.nCommandListCount = 1;
 	sirGraphicsCompletion_t first = {};
-	if ( pDevice->submit( SIR_GRAPHICS_QUEUE_DIRECT, firstSubmission, &first ) != SIR_GRAPHICS_SUCCESS ||
-	     first.nValue == 0 ) {
+	if ( pDevice->submit( SIR_GRAPHICS_QUEUE_DIRECT, firstSubmission, &first ) != SIR_GRAPHICS_SUCCESS || first.nValue == 0 ) {
 		return 9;
 	}
 
 	SIRGraphicsCommandList *pSecond = nullptr;
-	if ( pDevice->acquireCommands( SIR_GRAPHICS_QUEUE_DIRECT, &pSecond ) != SIR_GRAPHICS_SUCCESS ||
-	     pSecond == nullptr || pSecond->copyBuffer( hReadback, 0, hGpu, 0, sizeof( szExpected ) ) != SIR_GRAPHICS_SUCCESS ||
+	if ( pDevice->acquireCommands( SIR_GRAPHICS_QUEUE_DIRECT, &pSecond ) != SIR_GRAPHICS_SUCCESS || pSecond == nullptr ||
+	     pSecond->copyBuffer( hReadback, 0, hGpu, 0, sizeof( szExpected ) ) != SIR_GRAPHICS_SUCCESS ||
 	     pSecond->close() != SIR_GRAPHICS_SUCCESS ) {
 		return 10;
 	}
@@ -123,8 +121,8 @@ int main( void )
 	secondSubmission.pWaits = &first;
 	secondSubmission.nWaitCount = 1;
 	sirGraphicsCompletion_t second = {};
-	if ( pDevice->submit( SIR_GRAPHICS_QUEUE_DIRECT, secondSubmission, &second ) != SIR_GRAPHICS_SUCCESS ||
-	     second.nValue <= first.nValue || pDevice->wait( second, 5000000000ull ) != SIR_GRAPHICS_SUCCESS ) {
+	if ( pDevice->submit( SIR_GRAPHICS_QUEUE_DIRECT, secondSubmission, &second ) != SIR_GRAPHICS_SUCCESS || second.nValue <= first.nValue ||
+	     pDevice->wait( second, 5000000000ull ) != SIR_GRAPHICS_SUCCESS ) {
 		return 11;
 	}
 
@@ -144,8 +142,7 @@ int main( void )
 	     pDevice->retireResource( hSource, completed ) != SIR_GRAPHICS_INVALID_HANDLE ) {
 		return 13;
 	}
-	if ( driver.destroyDevice( pDevice ) != SIR_GRAPHICS_SUCCESS ||
-	     pDevice->getDeviceGeneration() != 0 ) {
+	if ( driver.destroyDevice( pDevice ) != SIR_GRAPHICS_SUCCESS || pDevice->getDeviceGeneration() != 0 ) {
 		return 14;
 	}
 	printf( "Vulkan shared API headless transfer passed\n" );

@@ -20,8 +20,7 @@ int main( void )
 {
 	SIRVulkanDriver driver;
 	SIRGraphicsRegistry registry;
-	if ( registry.registerDriver( &driver ) != SIR_GRAPHICS_SUCCESS ||
-	     registry.findDriver( SIR_GRAPHICS_BACKEND_VULKAN ) != &driver ||
+	if ( registry.registerDriver( &driver ) != SIR_GRAPHICS_SUCCESS || registry.findDriver( SIR_GRAPHICS_BACKEND_VULKAN ) != &driver ||
 	     registry.registerDriver( &driver ) != SIR_GRAPHICS_INVALID_ARGUMENT ||
 	     driver.getAdapterCount( nullptr ) != SIR_GRAPHICS_INVALID_ARGUMENT ||
 	     driver.queryAdapter( 0, nullptr ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
@@ -36,11 +35,10 @@ int main( void )
 	sirGraphicsCompletion_t completion = {};
 	bool bCompleted = true;
 	if ( inert.getBackend() != SIR_GRAPHICS_BACKEND_VULKAN || inert.getDeviceGeneration() != 0 ||
-	     inert.queryCapabilities( &capabilities ) != SIR_GRAPHICS_BUSY ||
-	     inert.queryMemoryBudget( &budget ) != SIR_GRAPHICS_BUSY ||
+	     inert.queryCapabilities( &capabilities ) != SIR_GRAPHICS_BUSY || inert.queryMemoryBudget( &budget ) != SIR_GRAPHICS_BUSY ||
 	     inert.mapBuffer( handle, 0, 4, &mapped ) != SIR_GRAPHICS_INVALID_HANDLE ||
-	     inert.poll( completion, &bCompleted ) != SIR_GRAPHICS_INVALID_ARGUMENT ||
-	     bCompleted || inert.shutdown() != SIR_GRAPHICS_SUCCESS ) {
+	     inert.poll( completion, &bCompleted ) != SIR_GRAPHICS_INVALID_ARGUMENT || bCompleted ||
+	     inert.shutdown() != SIR_GRAPHICS_SUCCESS ) {
 		return 2;
 	}
 
@@ -55,8 +53,7 @@ int main( void )
 	     driver.destroyDevice( &inert ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
 		return 4;
 	}
-	if ( registry.unregisterDriver( SIR_GRAPHICS_BACKEND_VULKAN ) != SIR_GRAPHICS_SUCCESS ||
-	     registry.getCount() != 0 ) {
+	if ( registry.unregisterDriver( SIR_GRAPHICS_BACKEND_VULKAN ) != SIR_GRAPHICS_SUCCESS || registry.getCount() != 0 ) {
 		return 5;
 	}
 	return 0;
