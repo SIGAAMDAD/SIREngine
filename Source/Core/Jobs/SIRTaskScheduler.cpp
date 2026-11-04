@@ -296,15 +296,6 @@ uint32_t SIRTaskScheduler::selectPriorityLocked( sirTaskQueue_t &queue ) noexcep
 		queue.nNormalStreak = 0;
 		return SIR_TASK_PRIORITY_BACKGROUND;
 	}
-	if ( bCritical ) {
-		queue.nCriticalStreak = 1;
-		return SIR_TASK_PRIORITY_CRITICAL;
-	}
-	if ( bNormal ) {
-		queue.nCriticalStreak = 0;
-		queue.nNormalStreak = 1;
-		return SIR_TASK_PRIORITY_NORMAL;
-	}
 	return SIR_TASK_NONE;
 }
 
