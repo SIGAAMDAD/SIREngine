@@ -760,9 +760,113 @@ SIRResourceResult SIRResourceGraphWriter::compileDependencyOrder( SIRResourceHan
 	for ( uint32_t iPlan = 0; iPlan < nOrderCount; ++iPlan ) {
 		const uint32_t iSlot = m_pGraph->m_pPlanOrder[iPlan];
 		const SIRPublishedResourceRecord *pRecord = m_pGraph->m_pSlots[iSlot].m_pPublished.load( std::memory_order_seq_cst );
-		pEntries[iPlan] = { pRecord->m_Handle, pRecord->m_Info.m_nRevision, pRecord->m_Info.m_eState };
+		pEntries[iPlan] = { pRecord->m_Handle, pRecord->m_Info.m_nRevision, pRecord->m_Info.m_eState,
+		                    m_pGraph->m_pSlots[iSlot].m_nInvalidationSequence };
 	}
 	return SIR_RESOURCE_RESULT_SUCCESS;
+}
+
+SIRResourceResult SIRResourceGraphWriter::validateTaskPlan( const SIRResourceDependencyPlanEntry *pEntries, uint32_t nCount ) noexcept
+{
+	if ( !m_pGraph->isWriterThread() ) {
+		return SIR_RESOURCE_RESULT_WRITER_VIOLATION;
+	}
+	if ( pEntries == nullptr || nCount == 0 || nCount > m_pGraph->m_Config.m_nMaxResources ) {
+		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
+	}
+	for ( uint32_t iEntry = 0; iEntry < nCount; ++iEntry ) {
+		SIRPublishedResourceRecord *pRecord = nullptr;
+		const SIRResourceDependencyPlanEntry &rEntry = pEntries[iEntry];
+		if ( m_pGraph->checkHandle( rEntry.hResource, &pRecord ) != SIR_RESOURCE_RESULT_SUCCESS ||
+		     pRecord->m_Info.m_nRevision != rEntry.nRevision || pRecord->m_Info.m_eState != rEntry.eState ||
+		     m_pGraph->m_pSlots[rEntry.hResource.m_nSlot].m_nInvalidationSequence != rEntry.nInvalidationSequence ) {
+			return SIR_RESOURCE_RESULT_STALE_REVISION;
+		}
+	}
+	return SIR_RESOURCE_RESULT_SUCCESS;
+}
+
+SIRResourceResult SIRResourceGraphWriter::compileTaskGraph( SIRResourceHandle hRoot, SIRTaskGraph &rTaskGraph,
+                                                            SIRResourceDependencyPlanEntry *pEntries, uint32_t nCapacity,
+                                                            sirResourceTaskPassFactory_t pfnDescribePass, void *pContext,
+                                                            uint32_t *pRequired ) noexcept
+{
+	if ( !m_pGraph->isWriterThread() ) {
+		return SIR_RESOURCE_RESULT_WRITER_VIOLATION;
+	}
+	if ( pRequired == nullptr || pEntries == nullptr || nCapacity == 0 || pfnDescribePass == nullptr || rTaskGraph.getPassCount() != 0 ) {
+		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
+	}
+	*pRequired = 0;
+	SIRResourceResult eResult = compileDependencyOrder( hRoot, pEntries, nCapacity, pRequired );
+	if ( eResult != SIR_RESOURCE_RESULT_SUCCESS ) {
+		return eResult;
+	}
+
+	// The dependency planner has finished using this preallocated writer
+	// scratch array. Reuse it as a slot-to-pass lookup without another DAG.
+	const uint32_t nMaxResources = m_pGraph->m_Config.m_nMaxResources;
+	memset( m_pGraph->m_pPlanNextEdges, 0, ( size_t )nMaxResources * sizeof( uint32_t ) );
+	for ( uint32_t iPass = 0; iPass < *pRequired; ++iPass ) {
+		const SIRResourceDependencyPlanEntry &rEntry = pEntries[iPass];
+		SIRPublishedResourceRecord *pRecord = nullptr;
+		if ( m_pGraph->checkHandle( rEntry.hResource, &pRecord ) != SIR_RESOURCE_RESULT_SUCCESS ||
+		     pRecord->m_Info.m_nRevision != rEntry.nRevision ) {
+			eResult = SIR_RESOURCE_RESULT_STALE_REVISION;
+			break;
+		}
+		sirTaskGraphPass_t pass = {};
+		if ( !pfnDescribePass( pContext, rEntry, &pass ) ) {
+			eResult = SIR_RESOURCE_RESULT_FAILED;
+			break;
+		}
+		uint32_t nPassIndex = UINT32_MAX;
+		if ( !rTaskGraph.addPass( pass, nullptr, 0, &nPassIndex ) || nPassIndex != iPass ) {
+			eResult = SIR_RESOURCE_RESULT_OUT_OF_BUDGET;
+			break;
+		}
+		for ( uint32_t iDependency = 0; iDependency < pRecord->m_Info.m_nDependencyCount; ++iDependency ) {
+			const SIRResourceDependency &rDependency = pRecord->m_pDependencies[iDependency];
+			const int32_t iSlot = m_pGraph->findSlot( rDependency.m_Target );
+			if ( iSlot < 0 ) {
+				if ( rDependency.m_eKind == SIR_RESOURCE_EDGE_KIND_REQUIRED ) {
+					eResult = SIR_RESOURCE_RESULT_DEPENDENCY_MISSING;
+					break;
+				}
+				continue;
+			}
+			const uint32_t nPrerequisite = m_pGraph->m_pPlanNextEdges[iSlot];
+			if ( nPrerequisite == 0 || nPrerequisite > iPass ) {
+				eResult = SIR_RESOURCE_RESULT_STALE_REVISION;
+				break;
+			}
+			if ( !rTaskGraph.addDependency( nPrerequisite - 1, iPass ) ) {
+				eResult = SIR_RESOURCE_RESULT_OUT_OF_BUDGET;
+				break;
+			}
+		}
+		if ( eResult != SIR_RESOURCE_RESULT_SUCCESS ) {
+			break;
+		}
+		m_pGraph->m_pPlanNextEdges[rEntry.hResource.m_nSlot] = iPass + 1;
+	}
+	if ( eResult == SIR_RESOURCE_RESULT_SUCCESS ) {
+		eResult = validateTaskPlan( pEntries, *pRequired );
+	}
+	if ( eResult == SIR_RESOURCE_RESULT_SUCCESS ) {
+		const sirTaskGraphStatus_t eCompile = rTaskGraph.compile();
+		if ( eCompile == SIR_TASK_GRAPH_CAPACITY ) {
+			eResult = SIR_RESOURCE_RESULT_OUT_OF_BUDGET;
+		} else if ( eCompile == SIR_TASK_GRAPH_CYCLE ) {
+			eResult = SIR_RESOURCE_RESULT_DEPENDENCY_CYCLE;
+		} else if ( eCompile != SIR_TASK_GRAPH_OK ) {
+			eResult = SIR_RESOURCE_RESULT_FAILED;
+		}
+	}
+	if ( eResult != SIR_RESOURCE_RESULT_SUCCESS ) {
+		rTaskGraph.reset();
+	}
+	return eResult;
 }
 
 SIRResourceResult SIRResourceGraphWriter::getInvalidationSequence( SIRResourceHandle hResource, uint64_t *pSequence ) noexcept

@@ -97,28 +97,31 @@ undersized caller buffer remains unchanged. This is the resource DAG compiler
 used to prepare work for the separate scheduler; it does not execute jobs or
 perform backend scheduling.
 
-## Dependency-aware external job handoff
+## Core Jobs execution authority
 
-`SIRResourceTaskBatch` accepts a preexisting dependency-plan root and compiles
-an allocation-bounded task DAG from the current resident GRDG records.
-It uses only the configured resource metadata allocator for its plan, node
-and edge buffers. Independent prerequisites can be submitted together through
-a caller-supplied `pfnSubmit` callback, which hands compact handle/revision/
-generation tickets to the external executor. No raw canonical bytes cross
-that handoff. Executors borrow immutable resource views under their own
-short-lived read scopes and report completion via the Core
-`SIRMPSCEventQueue` on `tryPostCompletion`.
+The former GRDG-local `SIRResourceTaskBatch` scheduler is removed. GRDG
+constructs its dependency-first resource plan on its single writer thread, then
+`SIRResourceGraphWriter::compileTaskGraph` populates a fresh `SIRTaskGraph`
+with Core Jobs passes and direct prerequisite edges. The preallocated GRDG
+traversal scratch doubles as a slot-to-pass lookup; no independent GRDG task
+state, dispatch loop, completion queue, or cancellation model is retained.
 
-The sole GRDG writer drains completions, checks revision and invalidation
-sequences, and unlocks downstream nodes only on successful completion.
-Submission rejection retains the waiting node for retry. A failed or stale
-completion cancels the remaining unsent tasks. Explicit cancellation never
-frees an accepted worker task before its completion has been received.
-The MPSC completion ring has 256 slots; a full ring requires producer retry,
-not dropped completion. The caller must stop and join all producer workers
-before destroying the batch or its allocator context.
+Callers describe per-resource work using `sirResourceTaskPassFactory_t`, then
+submit the compiled graph with `SIRTaskGraph::submit( &scheduler )`.
+The sole `SIRTaskScheduler` handles CPU/affine-provider execution, failure
+propagation and cancellation. Poll `SIRTaskGraph::queryExecution` from the
+writer and release terminal handles with `releaseSubmitted` before recycling
+the graph or pass contexts. Core worker callbacks must acquire their own read
+scopes when accessing immutable GRDG data.
 
-This is the scheduling **handoff**, not a separate Core executor. The current
-slice requires resident dependency metadata; nonresident streamed requests,
-worker-produced staging publications, executor-side cancellation and actual
-GPU/physics/audio work remain subsequent integration tasks.
+The plan captures each resource's generation-safe handle, revision and
+transitive invalidation sequence. Call `validateTaskPlan` before submitting
+and once again after the task graph reports `SUCCEEDED`, before making any
+writer-owned publication. Invalidation or revision changes return
+`SIR_RESOURCE_RESULT_STALE_REVISION`. Provider-acknowledged tasks remain live
+until the Core scheduler marks them terminal. Pass contexts are caller-owned
+until `releaseSubmitted` succeeds.
+
+This implementation compiles **resident and requested** resource dependencies
+without a GRDG-owned executor; streaming I/O work, CPU/GPU provider passes and
+resource publication are selected by clients and providers through Core Jobs.
