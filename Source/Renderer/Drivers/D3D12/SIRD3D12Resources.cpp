@@ -346,7 +346,7 @@ uint64_t SIRD3D12Resources::getExternalBytes( void ) const noexcept
 }
 
 sirGraphicsResult_t SIRD3D12Resources::importExternalTexture( ID3D12Resource *pResource, sirGraphicsFormat_t eFormat,
-                                                               sirGraphicsHandle_t *pHandle ) noexcept
+                                                              sirGraphicsHandle_t *pHandle ) noexcept
 {
 	if ( pHandle == nullptr ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
@@ -362,8 +362,7 @@ sirGraphicsResult_t SIRD3D12Resources::importExternalTexture( ID3D12Resource *pR
 	}
 	const D3D12_RESOURCE_ALLOCATION_INFO info = m_pDevice->GetResourceAllocationInfo( 0, 1, &desc );
 	if ( info.SizeInBytes == UINT64_MAX || info.SizeInBytes == 0 || m_nAllocatedBytes > UINT64_MAX - info.SizeInBytes ||
-	     ( m_nBudgetBytes != 0 && ( m_nAllocatedBytes > m_nBudgetBytes ||
-	       info.SizeInBytes > m_nBudgetBytes - m_nAllocatedBytes ) ) ) {
+	     ( m_nBudgetBytes != 0 && ( m_nAllocatedBytes > m_nBudgetBytes || info.SizeInBytes > m_nBudgetBytes - m_nAllocatedBytes ) ) ) {
 		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
 	}
 	if ( !m_pMemory->reserveExternalBytes( info.SizeInBytes ) ) {
@@ -400,8 +399,7 @@ sirGraphicsResult_t SIRD3D12Resources::importExternalTexture( ID3D12Resource *pR
 bool SIRD3D12Resources::canReleaseExternalTexture( sirGraphicsHandle_t hTexture ) noexcept
 {
 	const sirD3D12ResourceSlot_t *pSlot = findSlot( hTexture, SIR_GRAPHICS_HANDLE_TEXTURE );
-	return pSlot != nullptr && pSlot->pExternalResource != nullptr && pSlot->nDependentViews == 0 &&
-	       pSlot->nCommandReferences == 0;
+	return pSlot != nullptr && pSlot->pExternalResource != nullptr && pSlot->nDependentViews == 0 && pSlot->nCommandReferences == 0;
 }
 
 sirGraphicsResult_t SIRD3D12Resources::releaseExternalTexture( sirGraphicsHandle_t hTexture ) noexcept

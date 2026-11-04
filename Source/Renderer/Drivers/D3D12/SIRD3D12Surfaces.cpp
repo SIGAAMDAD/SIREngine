@@ -33,8 +33,9 @@ SIRD3D12Surfaces::~SIRD3D12Surfaces( void ) noexcept
 	shutdown( false );
 }
 
-bool SIRD3D12Surfaces::initialize( SIRD3D12Device *pNative, SIRD3D12Resources *pResources,
-                                  uint32_t nGeneration ) noexcept
+
+
+bool SIRD3D12Surfaces::initialize( SIRD3D12Device *pNative, SIRD3D12Resources *pResources, uint32_t nGeneration ) noexcept
 {
 	if ( m_pNative != nullptr || pNative == nullptr || pResources == nullptr || nGeneration == 0 ) {
 		return false;
@@ -48,9 +49,9 @@ bool SIRD3D12Surfaces::initialize( SIRD3D12Device *pNative, SIRD3D12Resources *p
 	m_pResources = pResources;
 	m_nDeviceGeneration = nGeneration;
 	BOOL bSupported = FALSE;
-	m_bTearingSupported = SUCCEEDED( m_pFactory->CheckFeatureSupport( DXGI_FEATURE_PRESENT_ALLOW_TEARING, &bSupported,
-	                                                                 sizeof( bSupported ) ) ) &&
-	                      bSupported != FALSE;
+	m_bTearingSupported =
+	    SUCCEEDED( m_pFactory->CheckFeatureSupport( DXGI_FEATURE_PRESENT_ALLOW_TEARING, &bSupported, sizeof( bSupported ) ) ) &&
+	    bSupported != FALSE;
 	return true;
 }
 
@@ -88,7 +89,7 @@ sirD3D12SurfaceSlot_t *SIRD3D12Surfaces::findSlot( sirGraphicsHandle_t hSurface 
 }
 
 sirGraphicsResult_t SIRD3D12Surfaces::validateWindow( const sirGraphicsNativeSurface_t &native,
-                                                       const sirGraphicsPresentDesc_t &present ) const noexcept
+                                                      const sirGraphicsPresentDesc_t &present ) const noexcept
 {
 	if ( native.ePlatform != SIR_GRAPHICS_SURFACE_WIN32 ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
@@ -96,10 +97,8 @@ sirGraphicsResult_t SIRD3D12Surfaces::validateWindow( const sirGraphicsNativeSur
 	if ( native.pWindow == nullptr || native.nWindowGeneration == 0 || !IsWindow( ( HWND )native.pWindow ) ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	if ( present.nWidth == 0 || present.nHeight == 0 ||
-	     present.nWidth > D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION ||
-	     present.nHeight > D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION || present.nBackbufferCount < 2 ||
-	     present.nBackbufferCount > 3 ) {
+	if ( present.nWidth == 0 || present.nHeight == 0 || present.nWidth > D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION ||
+	     present.nHeight > D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION || present.nBackbufferCount < 2 || present.nBackbufferCount > 3 ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( sirD3D12SurfaceFormat( present.eFormat ) == DXGI_FORMAT_UNKNOWN || present.bHdr ||
@@ -164,8 +163,7 @@ sirGraphicsResult_t SIRD3D12Surfaces::importImages( sirD3D12SurfaceSlot_t &slot 
 	return SIR_GRAPHICS_SUCCESS;
 }
 
-sirGraphicsResult_t SIRD3D12Surfaces::createSwapchain( sirD3D12SurfaceSlot_t &slot,
-                                                       const sirGraphicsNativeSurface_t &native,
+sirGraphicsResult_t SIRD3D12Surfaces::createSwapchain( sirD3D12SurfaceSlot_t &slot, const sirGraphicsNativeSurface_t &native,
                                                        const sirGraphicsPresentDesc_t &present ) noexcept
 {
 	DXGI_SWAP_CHAIN_DESC1 desc = {};
@@ -180,8 +178,8 @@ sirGraphicsResult_t SIRD3D12Surfaces::createSwapchain( sirD3D12SurfaceSlot_t &sl
 	desc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
 	desc.Flags = present.bAllowTearing ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0;
 	Microsoft::WRL::ComPtr<IDXGISwapChain1> pSwapchain;
-	const HRESULT nResult = m_pFactory->CreateSwapChainForHwnd( m_pDirectQueue, ( HWND )native.pWindow, &desc, nullptr, nullptr,
-	                                                         pSwapchain.GetAddressOf() );
+	const HRESULT nResult =
+	    m_pFactory->CreateSwapChainForHwnd( m_pDirectQueue, ( HWND )native.pWindow, &desc, nullptr, nullptr, pSwapchain.GetAddressOf() );
 	if ( FAILED( nResult ) || FAILED( pSwapchain.As( &slot.pSwapchain ) ) ) {
 		return SIR_GRAPHICS_DRIVER_ERROR;
 	}
@@ -196,8 +194,7 @@ sirGraphicsResult_t SIRD3D12Surfaces::createSwapchain( sirD3D12SurfaceSlot_t &sl
 	return importImages( slot );
 }
 
-sirGraphicsResult_t SIRD3D12Surfaces::createSurface( const sirGraphicsNativeSurface_t &native,
-                                                     const sirGraphicsPresentDesc_t &present,
+sirGraphicsResult_t SIRD3D12Surfaces::createSurface( const sirGraphicsNativeSurface_t &native, const sirGraphicsPresentDesc_t &present,
                                                      sirGraphicsHandle_t *pSurface ) noexcept
 {
 	if ( pSurface == nullptr ) {
@@ -239,8 +236,7 @@ sirGraphicsResult_t SIRD3D12Surfaces::createSurface( const sirGraphicsNativeSurf
 	return SIR_GRAPHICS_SUCCESS;
 }
 
-sirGraphicsResult_t SIRD3D12Surfaces::resizeSurface( sirGraphicsHandle_t hSurface,
-                                                     const sirGraphicsNativeSurface_t &native,
+sirGraphicsResult_t SIRD3D12Surfaces::resizeSurface( sirGraphicsHandle_t hSurface, const sirGraphicsNativeSurface_t &native,
                                                      const sirGraphicsPresentDesc_t &present ) noexcept
 {
 	sirD3D12SurfaceSlot_t *pSlot = findSlot( hSurface );
@@ -267,8 +263,7 @@ sirGraphicsResult_t SIRD3D12Surfaces::resizeSurface( sirGraphicsHandle_t hSurfac
 	}
 	const DXGI_FORMAT eFormat = sirD3D12SurfaceFormat( present.eFormat );
 	const UINT nFlags = present.bAllowTearing ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0;
-	const HRESULT nResize = pSlot->pSwapchain->ResizeBuffers( present.nBackbufferCount, present.nWidth, present.nHeight, eFormat,
-	                                                        nFlags );
+	const HRESULT nResize = pSlot->pSwapchain->ResizeBuffers( present.nBackbufferCount, present.nWidth, present.nHeight, eFormat, nFlags );
 	if ( FAILED( nResize ) ) {
 		return SIR_GRAPHICS_DRIVER_ERROR;
 	}
@@ -283,8 +278,7 @@ sirGraphicsResult_t SIRD3D12Surfaces::resizeSurface( sirGraphicsHandle_t hSurfac
 	return importImages( *pSlot );
 }
 
-sirGraphicsResult_t SIRD3D12Surfaces::acquireSurfaceImage( sirGraphicsHandle_t hSurface,
-                                                          sirGraphicsSurfaceImage_t *pImage ) noexcept
+sirGraphicsResult_t SIRD3D12Surfaces::acquireSurfaceImage( sirGraphicsHandle_t hSurface, sirGraphicsSurfaceImage_t *pImage ) noexcept
 {
 	if ( pImage == nullptr ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
@@ -316,18 +310,15 @@ sirGraphicsResult_t SIRD3D12Surfaces::acquireSurfaceImage( sirGraphicsHandle_t h
 	return SIR_GRAPHICS_SUCCESS;
 }
 
-bool SIRD3D12Surfaces::imageMatches( const sirD3D12SurfaceSlot_t &slot,
-                                   const sirGraphicsSurfaceImage_t &image ) const noexcept
+bool SIRD3D12Surfaces::imageMatches( const sirD3D12SurfaceSlot_t &slot, const sirGraphicsSurfaceImage_t &image ) const noexcept
 {
 	const sirGraphicsHandle_t &hExpected = slot.szImages[slot.iAcquiredImage];
-	return slot.bAcquired && slot.nAcquisitionId == image.nAcquisitionId &&
-	       slot.nWindowGeneration == image.nWindowGeneration && hExpected.nSlot == image.hImage.nSlot &&
-	       hExpected.nGeneration == image.hImage.nGeneration && hExpected.nDeviceGeneration == image.hImage.nDeviceGeneration &&
-	       hExpected.eType == image.hImage.eType;
+	return slot.bAcquired && slot.nAcquisitionId == image.nAcquisitionId && slot.nWindowGeneration == image.nWindowGeneration &&
+	       hExpected.nSlot == image.hImage.nSlot && hExpected.nGeneration == image.hImage.nGeneration &&
+	       hExpected.nDeviceGeneration == image.hImage.nDeviceGeneration && hExpected.eType == image.hImage.eType;
 }
 
-sirGraphicsResult_t SIRD3D12Surfaces::validateSubmission( sirGraphicsQueue_t eQueue,
-                                                         const sirGraphicsSubmission_t &submission ) noexcept
+sirGraphicsResult_t SIRD3D12Surfaces::validateSubmission( sirGraphicsQueue_t eQueue, const sirGraphicsSubmission_t &submission ) noexcept
 {
 	if ( submission.nAcquisitionCount == 0 ) {
 		return SIR_GRAPHICS_SUCCESS;
@@ -350,8 +341,7 @@ sirGraphicsResult_t SIRD3D12Surfaces::validateSubmission( sirGraphicsQueue_t eQu
 	return SIR_GRAPHICS_SUCCESS;
 }
 
-void SIRD3D12Surfaces::completeSubmission( const sirGraphicsSubmission_t &submission,
-                                           const sirGraphicsCompletion_t &completion ) noexcept
+void SIRD3D12Surfaces::completeSubmission( const sirGraphicsSubmission_t &submission, const sirGraphicsCompletion_t &completion ) noexcept
 {
 	for ( uint32_t iImage = 0; iImage < submission.nAcquisitionCount; ++iImage ) {
 		sirD3D12SurfaceSlot_t *pSlot = findSlot( submission.pAcquisitions[iImage].hSurface );
@@ -370,8 +360,7 @@ sirGraphicsResult_t SIRD3D12Surfaces::present( const sirGraphicsSurfaceImage_t &
 	if ( pSlot == nullptr || !imageMatches( *pSlot, image ) || !pSlot->bSubmitted ) {
 		return SIR_GRAPHICS_INVALID_HANDLE;
 	}
-	if ( renderComplete.eQueue != SIR_GRAPHICS_QUEUE_DIRECT ||
-	     renderComplete.nDeviceGeneration != m_nDeviceGeneration ||
+	if ( renderComplete.eQueue != SIR_GRAPHICS_QUEUE_DIRECT || renderComplete.nDeviceGeneration != m_nDeviceGeneration ||
 	     renderComplete.nValue != pSlot->renderCompletion.nValue ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
@@ -394,8 +383,7 @@ sirGraphicsResult_t SIRD3D12Surfaces::present( const sirGraphicsSurfaceImage_t &
 	return SIR_GRAPHICS_SUCCESS;
 }
 
-sirGraphicsResult_t SIRD3D12Surfaces::retireSurface( sirGraphicsHandle_t hSurface,
-                                                     const sirGraphicsCompletionSet_t &completion ) noexcept
+sirGraphicsResult_t SIRD3D12Surfaces::retireSurface( sirGraphicsHandle_t hSurface, const sirGraphicsCompletionSet_t &completion ) noexcept
 {
 	sirD3D12SurfaceSlot_t *pSlot = findSlot( hSurface );
 	if ( pSlot == nullptr ) {

@@ -62,9 +62,9 @@ int main( void )
 		return 6;
 	}
 	sirGraphicsMemoryBudget_t baseline = {};
-	if ( pDevice->queryMemoryBudget( &baseline ) != SIR_GRAPHICS_SUCCESS ||
-	     baseline.nCommittedBytes == 0 || baseline.nPeakCommittedBytes < baseline.nCommittedBytes ||
-	     baseline.nUploadMappedBytes < 3 * 64 * 1024 || baseline.nReadbackMappedBytes < 3 * 64 * 1024 ) {
+	if ( pDevice->queryMemoryBudget( &baseline ) != SIR_GRAPHICS_SUCCESS || baseline.nCommittedBytes == 0 ||
+	     baseline.nPeakCommittedBytes < baseline.nCommittedBytes || baseline.nUploadMappedBytes < 3 * 64 * 1024 ||
+	     baseline.nReadbackMappedBytes < 3 * 64 * 1024 ) {
 		return 7;
 	}
 	sirGraphicsBufferDesc_t desc = {};
@@ -76,8 +76,7 @@ int main( void )
 		return 8;
 	}
 	sirGraphicsMemoryBudget_t allocated = {};
-	if ( pDevice->queryMemoryBudget( &allocated ) != SIR_GRAPHICS_SUCCESS ||
-	     allocated.nCommittedBytes < baseline.nCommittedBytes ||
+	if ( pDevice->queryMemoryBudget( &allocated ) != SIR_GRAPHICS_SUCCESS || allocated.nCommittedBytes < baseline.nCommittedBytes ||
 	     allocated.nPeakCommittedBytes < allocated.nCommittedBytes ) {
 		return 9;
 	}
@@ -88,8 +87,7 @@ int main( void )
 		return 10;
 	}
 	sirGraphicsMemoryBudget_t released = {};
-	if ( pDevice->queryMemoryBudget( &released ) != SIR_GRAPHICS_SUCCESS ||
-	     released.nCommittedBytes > allocated.nCommittedBytes ||
+	if ( pDevice->queryMemoryBudget( &released ) != SIR_GRAPHICS_SUCCESS || released.nCommittedBytes > allocated.nCommittedBytes ||
 	     released.nPeakCommittedBytes < allocated.nPeakCommittedBytes ) {
 		return 11;
 	}

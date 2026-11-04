@@ -30,7 +30,6 @@ static void sirD3D12FreeHostMetadata( void *pMemory, void *pUser ) noexcept
 	}
 }
 
-
 SIRD3D12Memory::SIRD3D12Memory( void ) noexcept
 {
 }
@@ -90,8 +89,7 @@ bool SIRD3D12Memory::queryAllocationLedger( sirD3D12AllocationLedger_t *pLedger 
 	pLedger->nCommittedBytes = nPhysicalBlocks + m_nExternalBytes;
 	pLedger->nBlockBytes = nPhysicalBlocks;
 	pLedger->nExternalBytes = m_nExternalBytes;
-	pLedger->nPeakCommittedBytes = m_nPeakTrackedBytes > pLedger->nCommittedBytes ? m_nPeakTrackedBytes
-	                                                                            : pLedger->nCommittedBytes;
+	pLedger->nPeakCommittedBytes = m_nPeakTrackedBytes > pLedger->nCommittedBytes ? m_nPeakTrackedBytes : pLedger->nCommittedBytes;
 	pLedger->nResidentLimitBytes = m_nResidentLimitBytes;
 	return true;
 }
@@ -113,8 +111,8 @@ bool SIRD3D12Memory::reserveExternalBytes( uint64_t nBytes ) noexcept
 {
 	sirD3D12AllocationLedger_t ledger = {};
 	if ( nBytes == 0 || !queryAllocationLedger( &ledger ) || ledger.nCommittedBytes > UINT64_MAX - nBytes ||
-	     ( m_nResidentLimitBytes != 0 && ( ledger.nCommittedBytes > m_nResidentLimitBytes ||
-	       nBytes > m_nResidentLimitBytes - ledger.nCommittedBytes ) ) ) {
+	     ( m_nResidentLimitBytes != 0 &&
+	       ( ledger.nCommittedBytes > m_nResidentLimitBytes || nBytes > m_nResidentLimitBytes - ledger.nCommittedBytes ) ) ) {
 		return false;
 	}
 	m_nExternalBytes += nBytes;
@@ -138,8 +136,7 @@ bool SIRD3D12Memory::enforceResidentLimit( D3D12MA::Allocation **ppAllocation ) 
 		return false;
 	}
 	sirD3D12AllocationLedger_t ledger = {};
-	if ( !queryAllocationLedger( &ledger ) ||
-	     ( m_nResidentLimitBytes != 0 && ledger.nCommittedBytes > m_nResidentLimitBytes ) ) {
+	if ( !queryAllocationLedger( &ledger ) || ( m_nResidentLimitBytes != 0 && ledger.nCommittedBytes > m_nResidentLimitBytes ) ) {
 		( *ppAllocation )->Release();
 		*ppAllocation = nullptr;
 		m_nLastError = E_OUTOFMEMORY;

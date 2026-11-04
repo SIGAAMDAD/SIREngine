@@ -64,12 +64,11 @@ private:
 	bool m_bTearingSupported = false;
 
 	sirD3D12SurfaceSlot_t *findSlot( sirGraphicsHandle_t hSurface ) noexcept;
-	sirGraphicsResult_t validateWindow( const sirGraphicsNativeSurface_t &native,
-	                                    const sirGraphicsPresentDesc_t &present ) const noexcept;
+	sirGraphicsResult_t validateWindow( const sirGraphicsNativeSurface_t &native, const sirGraphicsPresentDesc_t &present ) const noexcept;
 	sirGraphicsResult_t releaseImages( sirD3D12SurfaceSlot_t &slot ) noexcept;
 	sirGraphicsResult_t importImages( sirD3D12SurfaceSlot_t &slot ) noexcept;
 	sirGraphicsResult_t createSwapchain( sirD3D12SurfaceSlot_t &slot, const sirGraphicsNativeSurface_t &native,
-	                                   const sirGraphicsPresentDesc_t &present ) noexcept;
+	                                     const sirGraphicsPresentDesc_t &present ) noexcept;
 	bool isDirectComplete( uint64_t nFence ) noexcept;
 	bool imageMatches( const sirD3D12SurfaceSlot_t &slot, const sirGraphicsSurfaceImage_t &image ) const noexcept;
 

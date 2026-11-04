@@ -42,24 +42,22 @@ static int sirTestDXGISurface( SIRRenderingDevice *pDevice, HWND hWindow ) noexc
 	config.eFormat = SIR_GRAPHICS_FORMAT_RGBA8_UNORM;
 	config.eMode = SIR_GRAPHICS_PRESENT_FIFO;
 	sirGraphicsHandle_t hSurface = {};
-	if ( pDevice->createSurface( native, config, &hSurface ) != SIR_GRAPHICS_SUCCESS ||
-	     hSurface.eType != SIR_GRAPHICS_HANDLE_SURFACE || hSurface.nDeviceGeneration != nGeneration ) {
+	if ( pDevice->createSurface( native, config, &hSurface ) != SIR_GRAPHICS_SUCCESS || hSurface.eType != SIR_GRAPHICS_HANDLE_SURFACE ||
+	     hSurface.nDeviceGeneration != nGeneration ) {
 		return 10;
 	}
 	sirGraphicsHandle_t hDuplicate = {};
-	if ( pDevice->createSurface( native, config, &hDuplicate ) != SIR_GRAPHICS_BUSY ||
-	     hDuplicate.nGeneration != 0 ) {
+	if ( pDevice->createSurface( native, config, &hDuplicate ) != SIR_GRAPHICS_BUSY || hDuplicate.nGeneration != 0 ) {
 		return 11;
 	}
 	sirGraphicsSurfaceImage_t image = {};
-	if ( pDevice->acquireSurfaceImage( hSurface, &image ) != SIR_GRAPHICS_SUCCESS ||
-	     image.hImage.eType != SIR_GRAPHICS_HANDLE_TEXTURE || image.nAcquisitionId == 0 ||
-	     image.nWindowGeneration != native.nWindowGeneration ) {
+	if ( pDevice->acquireSurfaceImage( hSurface, &image ) != SIR_GRAPHICS_SUCCESS || image.hImage.eType != SIR_GRAPHICS_HANDLE_TEXTURE ||
+	     image.nAcquisitionId == 0 || image.nWindowGeneration != native.nWindowGeneration ) {
+
 		return 12;
 	}
 	sirGraphicsSurfaceImage_t duplicateImage = {};
-	if ( pDevice->acquireSurfaceImage( hSurface, &duplicateImage ) != SIR_GRAPHICS_BUSY ||
-	     duplicateImage.nAcquisitionId != 0 ) {
+	if ( pDevice->acquireSurfaceImage( hSurface, &duplicateImage ) != SIR_GRAPHICS_BUSY || duplicateImage.nAcquisitionId != 0 ) {
 		return 13;
 	}
 	if ( pDevice->resizeSurface( hSurface, native, config ) != SIR_GRAPHICS_BUSY ) {
@@ -121,8 +119,7 @@ static int sirTestDXGISurface( SIRRenderingDevice *pDevice, HWND hWindow ) noexc
 	}
 	submission.pAcquisitions = &image;
 	if ( pDevice->submit( SIR_GRAPHICS_QUEUE_DIRECT, submission, &rendered ) != SIR_GRAPHICS_SUCCESS ||
-	     rendered.nDeviceGeneration != nGeneration || rendered.eQueue != SIR_GRAPHICS_QUEUE_DIRECT ||
-	     rendered.nValue == 0 ) {
+	     rendered.nDeviceGeneration != nGeneration || rendered.eQueue != SIR_GRAPHICS_QUEUE_DIRECT || rendered.nValue == 0 ) {
 		return 22;
 	}
 	sirGraphicsCompletion_t forged = rendered;
@@ -147,8 +144,8 @@ static int sirTestDXGISurface( SIRRenderingDevice *pDevice, HWND hWindow ) noexc
 		return 26;
 	}
 	sirGraphicsSurfaceImage_t resized = {};
-	if ( pDevice->acquireSurfaceImage( hSurface, &resized ) != SIR_GRAPHICS_SUCCESS ||
-	     resized.nWindowGeneration != 2 || resized.hImage.nGeneration == 0 ) {
+	if ( pDevice->acquireSurfaceImage( hSurface, &resized ) != SIR_GRAPHICS_SUCCESS || resized.nWindowGeneration != 2 ||
+	     resized.hImage.nGeneration == 0 ) {
 		return 27;
 	}
 	if ( pDevice->present( resized, rendered ) != SIR_GRAPHICS_INVALID_HANDLE ||
@@ -189,9 +186,8 @@ int main( void )
 	if ( RegisterClassW( &wndClass ) == 0 ) {
 		return 1;
 	}
-	HWND hWindow = CreateWindowExW( 0, wndClass.lpszClassName, L"SIREngine D3D12 WARP Surface Test",
-	                               WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, 96, 96,
-	                               nullptr, nullptr, hInstance, nullptr );
+	HWND hWindow = CreateWindowExW( 0, wndClass.lpszClassName, L"SIREngine D3D12 WARP Surface Test", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT,
+	                                CW_USEDEFAULT, 96, 96, nullptr, nullptr, hInstance, nullptr );
 	if ( hWindow == nullptr ) {
 		UnregisterClassW( wndClass.lpszClassName, hInstance );
 		return 2;

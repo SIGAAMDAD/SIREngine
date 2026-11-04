@@ -393,8 +393,7 @@ SIRD3D12Device::~SIRD3D12Device( void ) noexcept
 	shutdown();
 }
 
-bool SIRD3D12Device::initialize( bool bUseWarp, const sirD3D12TransferPoolConfig_t &transferConfig,
-                                SIRGeneralHeap *pCpuHeap ) noexcept
+bool SIRD3D12Device::initialize( bool bUseWarp, const sirD3D12TransferPoolConfig_t &transferConfig, SIRGeneralHeap *pCpuHeap ) noexcept
 {
 	if ( isReady() || m_pFactory != nullptr || m_bGraphicsUnsafe ) {
 		m_nLastError = E_FAIL;
@@ -780,6 +779,7 @@ const SIRD3D12Transfers &SIRD3D12Device::getTransfers( void ) const noexcept
 {
 	return m_Transfers;
 }
+
 
 SIRD3D12ComputeQueue &SIRD3D12Device::getComputeQueue( void ) noexcept
 {

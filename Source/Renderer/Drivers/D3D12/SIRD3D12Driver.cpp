@@ -18,9 +18,9 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Renderer/SIRGraphicsValidation.h>
 #include <limits.h>
 
-static constexpr uint64_t SIR_D3D12_SHARED_FEATURES = SIR_GRAPHICS_FEATURE_GRAPHICS | SIR_GRAPHICS_FEATURE_COMPUTE |
-                                                      SIR_GRAPHICS_FEATURE_COPY_QUEUE | SIR_GRAPHICS_FEATURE_SHADER_STORAGE |
-                                                      SIR_GRAPHICS_FEATURE_MRT | SIR_GRAPHICS_FEATURE_INDIRECT_DRAW | SIR_GRAPHICS_FEATURE_PRESENT;
+static constexpr uint64_t SIR_D3D12_SHARED_FEATURES =
+    SIR_GRAPHICS_FEATURE_GRAPHICS | SIR_GRAPHICS_FEATURE_COMPUTE | SIR_GRAPHICS_FEATURE_COPY_QUEUE | SIR_GRAPHICS_FEATURE_SHADER_STORAGE |
+    SIR_GRAPHICS_FEATURE_MRT | SIR_GRAPHICS_FEATURE_INDIRECT_DRAW | SIR_GRAPHICS_FEATURE_PRESENT;
 
 static sirGraphicsResult_t sirD3D12FindAdapter( uint32_t nAdapterIndex, sirGraphicsAdapterInfo_t *pInfo ) noexcept
 {
@@ -199,8 +199,8 @@ sirGraphicsResult_t SIRD3D12RenderingDevice::queryMemoryBudget( sirGraphicsMemor
 	if ( !m_Native.queryAllocationLedger( &ledger ) ) {
 		return SIR_GRAPHICS_DEVICE_LOST;
 	}
-	pBudget->nBudgetBytes = ledger.nResidentLimitBytes != 0 && ledger.nResidentLimitBytes < native.nBudgetBytes
-	                            ? ledger.nResidentLimitBytes : native.nBudgetBytes;
+	pBudget->nBudgetBytes = ledger.nResidentLimitBytes != 0 && ledger.nResidentLimitBytes < native.nBudgetBytes ? ledger.nResidentLimitBytes
+	                                                                                                            : native.nBudgetBytes;
 	pBudget->nResidentBytes = native.nCurrentUsageBytes;
 	pBudget->nCommittedBytes = ledger.nCommittedBytes;
 	pBudget->nPeakCommittedBytes = ledger.nPeakCommittedBytes;
@@ -365,22 +365,20 @@ sirGraphicsResult_t SIRD3D12RenderingDevice::createSurface( const sirGraphicsNat
 	return m_Surfaces.createSurface( native, present, pSurface );
 }
 
-sirGraphicsResult_t SIRD3D12RenderingDevice::resizeSurface( sirGraphicsHandle_t hSurface,
-                                                            const sirGraphicsNativeSurface_t &native,
+sirGraphicsResult_t SIRD3D12RenderingDevice::resizeSurface( sirGraphicsHandle_t hSurface, const sirGraphicsNativeSurface_t &native,
                                                             const sirGraphicsPresentDesc_t &present ) noexcept
 {
 	m_Commands.collectCompleted();
 	return m_Surfaces.resizeSurface( hSurface, native, present );
 }
 
-sirGraphicsResult_t SIRD3D12RenderingDevice::acquireSurfaceImage( sirGraphicsHandle_t hSurface,
-                                                                 sirGraphicsSurfaceImage_t *pImage ) noexcept
+sirGraphicsResult_t SIRD3D12RenderingDevice::acquireSurfaceImage( sirGraphicsHandle_t hSurface, sirGraphicsSurfaceImage_t *pImage ) noexcept
 {
 	return m_Surfaces.acquireSurfaceImage( hSurface, pImage );
 }
 
 sirGraphicsResult_t SIRD3D12RenderingDevice::present( const sirGraphicsSurfaceImage_t &image,
-                                                     const sirGraphicsCompletion_t &renderComplete ) noexcept
+                                                      const sirGraphicsCompletion_t &renderComplete ) noexcept
 {
 	return m_Surfaces.present( image, renderComplete );
 }

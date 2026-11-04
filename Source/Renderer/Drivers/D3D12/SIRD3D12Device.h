@@ -150,8 +150,7 @@ public:
 	SIRD3D12Device( const SIRD3D12Device & ) = delete;
 	SIRD3D12Device &operator=( const SIRD3D12Device & ) = delete;
 
-	bool initialize( bool bUseWarp, const sirD3D12TransferPoolConfig_t &transferConfig,
-	                 SIRGeneralHeap *pCpuHeap = nullptr ) noexcept;
+	bool initialize( bool bUseWarp, const sirD3D12TransferPoolConfig_t &transferConfig, SIRGeneralHeap *pCpuHeap = nullptr ) noexcept;
 	void shutdown( void ) noexcept;
 	bool isReady( void ) const noexcept;
 	bool queryAdapterInfo( sirD3D12AdapterInfo_t *pInfo ) const noexcept;
