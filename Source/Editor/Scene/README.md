@@ -28,3 +28,22 @@ cooker or replacement UI.
 
 Regression tests include two actual scene files from the pinned fork and
 synthetic malformed/capacity/reconciliation stress cases.
+
+## External and embedded resource dependency index
+
+`sirEditorScanTextResources` indexes Godot `[ext_resource]` and
+`[sub_resource]` declarations as source-backed metadata, preserving their
+text-scene ID, type, external path, optional UID, line number, and deterministic
+per-scene key. It validates `ExtResource("id")` / `SubResource("id")` calls
+against the corresponding declarations, including forward references, without
+allocating memory or resolving Godot `Variant` values. The ID namespaces are
+separate, matching the serialized expression kinds. Missing references,
+duplicate declarations, malformed calls, and insufficient caller-owned buffers
+produce source-line diagnostics and clear the published index.
+
+Consumers must keep the source buffer alive while interpreting offsets and
+combine the per-scene stable key with the canonical scene identity. This
+resource index is intended for editor dependency diagnostics and as input to
+the future importer/cooker. The Godot `ResourceLoaderText` remains responsible
+for loading, interpreting and saving actual property/resource objects. This
+scanner does not rewrite scenes, instantiate objects, or replace that loader.
