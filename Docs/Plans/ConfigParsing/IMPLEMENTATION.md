@@ -1,6 +1,6 @@
 # SIRConfig — complete implementation program
 
-**Status:** Proposed implementation plan; NO parser code implemented or tested on this branch.  
+**Status:** IN PROGRESS — `ffbd58c2` implements parts of C01/C02/C05/C16/C17: shared types, a bounded callback-allocation adapter, buffer/stream CSV/TSV reader, CSV/TSV writer, SIRCore and CTest registrations. All other tasks remain planned.  
 **Base:** SIGAAMDAD/SIREngine `develop@0a7d47de77130b63290ec4950bdf2e257dbfe326`.  
 **Branch:** `feature/config-parsing`.  
 **Scope:** Portable parsing, serialization, memory accounting, editor-preserving documents and explicit typed cooking for Valve KeyValues 1/VDF, Valve KV3 text/binary, Valve console CFG, JSON, CSV, TSV, INI, XML, YAML 1.2.2, TOML 1.0 and 1.1.

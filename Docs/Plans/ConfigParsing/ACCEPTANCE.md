@@ -1,6 +1,6 @@
 # SIRConfig — conformance, memory and performance acceptance
 
-**Status:** Planned tests; not executed for config parser implementation. Source baseline `develop@0a7d47de77130b63290ec4950bdf2e257dbfe326`. This matrix sets actual completion criteria and negative cases.
+**Status:** PARTIAL — local Clang ASan/UBSan and optimized test binaries for the initial CSV/TSV and budget slice passed (`0 failures`). Full SIREngine CMake, upstream conformance suites, and Windows/Linux CI are NOT_RUN. Source baseline `develop@0a7d47de77130b63290ec4950bdf2e257dbfe326`. This matrix sets actual completion criteria and negative cases.
 
 ## I. Universal gates for every format
 
@@ -99,4 +99,4 @@ bash Build/Scripts/RunGoogleBenchmarks.sh local-profile
 
 Windows and Linux Debug/Release and available Clang/ASan/UBSan combinations need actual CMake/CTest logs. New C++ must pass pinned clang-format, headers, fixed-width enum/struct, global-namespace and AST checks. Add config fixture/fuzzer runs in regular and nightly CI. A test binary not linked from the real `SIRCore` sources is not integrated acceptance. Final source commit plus vendor pins must be included in evidence logs.
 
-**Acceptance verdicts as of this plan:** all CONFIG UNIT, CONFORMANCE, FUZZ, MEMORY, PERFORMANCE, WINDOWS, LINUX, EDITOR and COOKED LOAD gates are **NOT_RUN**. The static documentation itself is the sole delivered artifact; this is not a claim of implementation completion.
+**Acceptance verdicts as of this plan:** all CONFIG UNIT, CONFORMANCE, FUZZ, MEMORY, PERFORMANCE, WINDOWS, LINUX, EDITOR and COOKED LOAD gates are **NOT_RUN**. `ffbd58c2` delivers a parser source implementation and tests. Full SIREngine integration and format-completeness acceptance remain NOT_RUN.
