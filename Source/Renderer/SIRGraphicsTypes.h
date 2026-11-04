@@ -469,6 +469,9 @@ typedef struct sirGraphicsViewDesc_s
 	uint32_t nBaseLayer;
 	uint32_t nLayers;
 	uint32_t nUsage;
+	// Texture views use mip/layer ranges; buffer views use byte ranges.
+	uint64_t nBufferOffsetBytes;
+	uint64_t nBufferSizeBytes;
 } sirGraphicsViewDesc_t;
 
 typedef struct sirGraphicsSamplerDesc_s
@@ -663,5 +666,6 @@ typedef struct sirGraphicsSurfaceImage_s
 
 static_assert( sizeof( sirGraphicsHandle_t ) == 16, "portable GPU resource handles must occupy 16 bytes" );
 static_assert( sizeof( sirGraphicsCompletion_t ) == 16, "portable GPU fence tokens must occupy 16 bytes" );
+static_assert( sizeof( sirGraphicsViewDesc_t ) == 56, "portable graphics view descriptors must occupy 56 bytes" );
 
 #endif // __SIRENGINE_SIRGRAPHICSTYPES_H__

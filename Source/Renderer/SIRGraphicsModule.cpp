@@ -473,17 +473,7 @@ sirGraphicsABIResult_t sirGraphicsCreateABIBuffer( const sirGraphicsABIDevice_t 
 sirGraphicsABIResult_t sirGraphicsCreateABIView( const sirGraphicsABIDevice_t *pDevice, const sirGraphicsViewDesc_t *pDesc,
                                                  sirGraphicsHandle_t *pView ) noexcept
 {
-	if ( pDesc == nullptr || pView == nullptr || pDesc->nMipLevels == 0 || pDesc->nLayers == 0 ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
-	}
-	if ( pDesc->nBaseMip > UINT32_MAX - pDesc->nMipLevels ||
-	     pDesc->nBaseLayer > UINT32_MAX - pDesc->nLayers ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
-	}
-	constexpr uint32_t VIEW_USAGE_MASK = SIR_GRAPHICS_USAGE_SAMPLED | SIR_GRAPHICS_USAGE_STORAGE |
-	                                     SIR_GRAPHICS_USAGE_COLOR_ATTACHMENT | SIR_GRAPHICS_USAGE_DEPTH_STENCIL;
-	const uint32_t nUsage = pDesc->nUsage;
-	if ( nUsage == 0 || ( nUsage & ~VIEW_USAGE_MASK ) != 0 || ( nUsage & ( nUsage - 1 ) ) != 0 ) {
+	if ( pDesc == nullptr || pView == nullptr ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	const bool bTexture = pDesc->hResource.eType == SIR_GRAPHICS_HANDLE_TEXTURE;
@@ -491,6 +481,28 @@ sirGraphicsABIResult_t sirGraphicsCreateABIView( const sirGraphicsABIDevice_t *p
 	if ( !bTexture && !bBuffer ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
+	if ( bTexture ) {
+		if ( pDesc->nMipLevels == 0 || pDesc->nLayers == 0 || pDesc->nBufferOffsetBytes != 0 ||
+		     pDesc->nBufferSizeBytes != 0 ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
+		if ( pDesc->nBaseMip > UINT32_MAX - pDesc->nMipLevels ||
+		     pDesc->nBaseLayer > UINT32_MAX - pDesc->nLayers ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
+	} else {
+		if ( pDesc->nBaseMip != 0 || pDesc->nMipLevels != 0 || pDesc->nBaseLayer != 0 || pDesc->nLayers != 0 ||
+		     pDesc->nBufferSizeBytes == 0 || pDesc->nBufferOffsetBytes > UINT64_MAX - pDesc->nBufferSizeBytes ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
+	}
+	constexpr uint32_t VIEW_USAGE_MASK = SIR_GRAPHICS_USAGE_SAMPLED | SIR_GRAPHICS_USAGE_STORAGE |
+	                                     SIR_GRAPHICS_USAGE_COLOR_ATTACHMENT | SIR_GRAPHICS_USAGE_DEPTH_STENCIL;
+	const uint32_t nUsage = pDesc->nUsage;
+	if ( nUsage == 0 || ( nUsage & ~VIEW_USAGE_MASK ) != 0 || ( nUsage & ( nUsage - 1 ) ) != 0 ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+
 	if ( bBuffer && ( nUsage & ( SIR_GRAPHICS_USAGE_COLOR_ATTACHMENT | SIR_GRAPHICS_USAGE_DEPTH_STENCIL ) ) != 0 ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}

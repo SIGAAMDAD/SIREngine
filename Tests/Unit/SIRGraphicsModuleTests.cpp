@@ -446,11 +446,22 @@ static bool testBinaryModule( void ) noexcept
 	view.eFormat = SIR_GRAPHICS_FORMAT_RGBA8_UNORM;
 	view.hResource = hBuffer;
 	view.eFormat = SIR_GRAPHICS_FORMAT_UNKNOWN;
+	view.nMipLevels = 0;
+	view.nLayers = 0;
+	view.nBufferSizeBytes = 4096;
 	if ( sirGraphicsCreateABIView( &device, &view, &hView ) != SIR_GRAPHICS_SUCCESS ) {
 		return false;
 	}
+	view.nBufferOffsetBytes = UINT64_MAX;
+	if ( sirGraphicsCreateABIView( &device, &view, &hView ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return false;
+	}
+	view.nBufferOffsetBytes = 0;
+	view.nBufferSizeBytes = 0;
 	view.hResource = hTexture;
 	view.eFormat = SIR_GRAPHICS_FORMAT_RGBA8_UNORM;
+	view.nMipLevels = 1;
+	view.nLayers = 1;
 
 	sirGraphicsSamplerDesc_t sampler = {};
 	sampler.fMaximumAnisotropy = 1.0f;
