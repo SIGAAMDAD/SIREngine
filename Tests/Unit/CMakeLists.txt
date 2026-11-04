@@ -89,3 +89,85 @@ add_executable(SIRContainerHeapAdapterTests SIRContainerHeapAdapterTests.cpp)
 target_link_libraries(SIRContainerHeapAdapterTests PRIVATE SIR::Core)
 add_test(NAME core.containers.heap-adapter COMMAND SIRContainerHeapAdapterTests)
 sir_configure_owned_target(SIRContainerHeapAdapterTests)
+
+# GRDG resource graph regression coverage.
+add_executable(SIRResourceInterfaceTests SIRResourceInterfaceTests.cpp)
+target_link_libraries(SIRResourceInterfaceTests PRIVATE SIR::Resources)
+add_test(NAME resources.interfaces.headers COMMAND SIRResourceInterfaceTests)
+sir_configure_owned_target(SIRResourceInterfaceTests)
+
+add_executable(SIRResourceGraphTests SIRResourceGraphTests.cpp)
+target_link_libraries(SIRResourceGraphTests PRIVATE SIR::Resources)
+add_test(NAME resources.graph.lifecycle COMMAND SIRResourceGraphTests)
+sir_configure_owned_target(SIRResourceGraphTests)
+
+add_executable(SIRResourceMemoryIntegrationTests SIRResourceMemoryIntegrationTests.cpp)
+target_link_libraries(SIRResourceMemoryIntegrationTests PRIVATE SIR::Resources)
+add_test(NAME resources.memory.domains COMMAND SIRResourceMemoryIntegrationTests)
+sir_configure_owned_target(SIRResourceMemoryIntegrationTests)
+
+# Bounded provider-owned derived representations and fence-aware retirement.
+add_executable(SIRDerivedResourceRegistryTests SIRDerivedResourceRegistryTests.cpp)
+target_link_libraries(SIRDerivedResourceRegistryTests PRIVATE SIR::Resources)
+add_test(NAME resources.derived.retirement COMMAND SIRDerivedResourceRegistryTests)
+sir_configure_owned_target(SIRDerivedResourceRegistryTests)
+
+add_executable(SIRTaskSchedulerTests SIRTaskSchedulerTests.cpp)
+target_link_libraries(SIRTaskSchedulerTests PRIVATE SIR::Core)
+add_test(NAME core.jobs.scheduler COMMAND SIRTaskSchedulerTests)
+sir_configure_owned_target(SIRTaskSchedulerTests)
+
+add_executable(SIRTaskGraphTests SIRTaskGraphTests.cpp)
+target_link_libraries(SIRTaskGraphTests PRIVATE SIR::Core)
+add_test(NAME core.jobs.graph COMMAND SIRTaskGraphTests)
+sir_configure_owned_target(SIRTaskGraphTests)
+
+add_executable(SIRTaskProviderTests SIRTaskProviderTests.cpp)
+target_link_libraries(SIRTaskProviderTests PRIVATE SIR::Core)
+add_test(NAME core.jobs.provider COMMAND SIRTaskProviderTests)
+sir_configure_owned_target(SIRTaskProviderTests)
+
+add_executable(SIRTaskFenceTrackerTests SIRTaskFenceTrackerTests.cpp)
+target_link_libraries(SIRTaskFenceTrackerTests PRIVATE SIR::Core)
+add_test(NAME core.jobs.fences COMMAND SIRTaskFenceTrackerTests)
+sir_configure_owned_target(SIRTaskFenceTrackerTests)
+
+add_executable(SIRTaskSchedulerStressTests SIRTaskSchedulerStressTests.cpp)
+target_link_libraries(SIRTaskSchedulerStressTests PRIVATE SIR::Core)
+add_test(NAME core.jobs.stress COMMAND SIRTaskSchedulerStressTests)
+set_tests_properties(core.jobs.stress PROPERTIES TIMEOUT 90)
+sir_configure_owned_target(SIRTaskSchedulerStressTests)
+
+add_executable(SIRSchedulerExperimentTests SIRSchedulerExperimentTests.cpp)
+target_link_libraries(SIRSchedulerExperimentTests PRIVATE SIR::Core)
+add_test(NAME core.jobs.experiments COMMAND SIRSchedulerExperimentTests)
+set_tests_properties(core.jobs.experiments PROPERTIES TIMEOUT 90)
+sir_configure_owned_target(SIRSchedulerExperimentTests)
+
+find_package(Python3 QUIET COMPONENTS Interpreter)
+if(Python3_Interpreter_FOUND)
+    add_test(NAME profiling.scheduler.experiment-analysis
+        COMMAND "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/Tests/Profiling/TestSIRSchedulerComparison.py")
+endif()
+
+add_executable(SIRSchedulerQueueCandidateTests
+    SIRSchedulerQueueCandidateTests.cpp
+    ${PROJECT_SOURCE_DIR}/Tests/Benchmarks/SIRSchedulerQueueCandidates.cpp)
+target_link_libraries(SIRSchedulerQueueCandidateTests PRIVATE SIR::Core)
+add_test(NAME core.jobs.queue-candidates COMMAND SIRSchedulerQueueCandidateTests)
+set_tests_properties(core.jobs.queue-candidates PROPERTIES TIMEOUT 90)
+sir_configure_owned_target(SIRSchedulerQueueCandidateTests)
+
+# Core-owned file, mapped-file, and anonymous-pipe services.
+foreach(sirTest IN ITEMS SIRPlatformFileTests SIRPlatformFileMappingTests SIRPlatformPipeTests)
+    add_executable(${sirTest} ${sirTest}.cpp)
+    target_link_libraries(${sirTest} PRIVATE SIR::Core)
+    add_test(NAME core.platform.${sirTest} COMMAND ${sirTest})
+    sir_configure_owned_target(${sirTest})
+endforeach()
+
+add_executable(SIRSemaphoreTests SIRSemaphoreTests.cpp)
+target_link_libraries(SIRSemaphoreTests PRIVATE SIR::Core)
+add_test(NAME core.platform.semaphore COMMAND SIRSemaphoreTests)
+sir_configure_owned_target(SIRSemaphoreTests)
+
