@@ -108,6 +108,12 @@ add_test(NAME core.platform.input.actions COMMAND SIRInputActionTests)
 set_tests_properties(core.platform.input.actions PROPERTIES LABELS "core;input;actions" TIMEOUT 60)
 sir_configure_owned_target(SIRInputActionTests)
 
+add_executable(SIRInputHapticNegativeTests SIRInputHapticNegativeTests.cpp)
+target_link_libraries(SIRInputHapticNegativeTests PRIVATE SIR::Core)
+add_test(NAME core.platform.input.haptic-negative COMMAND SIRInputHapticNegativeTests)
+set_tests_properties(core.platform.input.haptic-negative PROPERTIES LABELS "core;input;haptics;regression" TIMEOUT 60)
+sir_configure_owned_target(SIRInputHapticNegativeTests)
+
 add_executable(SIRInputProfileNegativeTests SIRInputProfileNegativeTests.cpp)
 target_link_libraries(SIRInputProfileNegativeTests PRIVATE SIR::Core)
 add_test(NAME core.platform.input.profile-negative COMMAND SIRInputProfileNegativeTests)
