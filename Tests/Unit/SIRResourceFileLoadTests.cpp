@@ -245,6 +245,91 @@ static void testBoundsAndStagingReuse( void )
 	memory.shutdown();
 }
 
+
+static sirTaskResult_t sirIOIdleTask( void *, sirTaskHandle_t ) noexcept
+{
+	return SIR_TASK_RESULT_SUCCESS;
+}
+
+static void testRejectedRequestsAndTaskAdmission( void )
+{
+	sirIOTestAlloc_t alloc = {};
+	SIRMemoryManager memory;
+	sirIOMemory( memory );
+	{
+		SIRResourceGraph graph( sirIOConfig( alloc ) );
+		SIRTaskScheduler scheduler;
+		SIR_IO_CHECK( scheduler.init( &memory, { 8, 0, 16 } ) );
+		SIRResourceFileLoad load( graph, scheduler );
+		const sirResourceFileLoadRequest_t valid = sirIORequest( 4001, SIR_RESOURCE_FILE_READ_AT );
+		sirResourceFileLoadRequest_t request = valid;
+		SIRResourceHandle resource = {};
+		sirTaskHandle_t task = {};
+		SIR_IO_CHECK( !load.isActive() && !load.getTaskHandle( &task ) );
+		SIR_IO_CHECK( !load.getTaskHandle( nullptr ) );
+		SIR_IO_CHECK( load.cancel() == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		SIR_IO_CHECK( load.poll( &resource ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		SIR_IO_CHECK( load.begin( nullptr, valid ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		SIR_IO_CHECK( load.begin( "", valid ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		request.keyResource.m_nTypeId = 0;
+		SIR_IO_CHECK( load.begin( SIR_IO_PATH, request ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		request = valid;
+		request.eKind = ( SIRResourceKind )255;
+		SIR_IO_CHECK( load.begin( SIR_IO_PATH, request ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		request = valid;
+		request.eMode = ( sirResourceFileReadMode_t )255;
+		SIR_IO_CHECK( load.begin( SIR_IO_PATH, request ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		request = valid;
+		request.nSchemaVersion = 0;
+		SIR_IO_CHECK( load.begin( SIR_IO_PATH, request ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		request = valid;
+		request.nAlignment = 0;
+		SIR_IO_CHECK( load.begin( SIR_IO_PATH, request ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		request = valid;
+		request.nAlignment = 3;
+		SIR_IO_CHECK( load.begin( SIR_IO_PATH, request ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		request = valid;
+		request.nDependencyCount = 1;
+		SIR_IO_CHECK( load.begin( SIR_IO_PATH, request ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		request = valid;
+		request.nFileOffset = 8191;
+		request.nFileBytes = 2;
+		SIR_IO_CHECK( load.begin( SIR_IO_PATH, request ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		request = valid;
+		SIR_IO_CHECK( load.begin( SIR_IO_PATH, request ) == SIR_RESOURCE_RESULT_SUCCESS );
+		SIR_IO_CHECK( load.begin( SIR_IO_PATH, valid ) == SIR_RESOURCE_RESULT_BUSY );
+		SIR_IO_CHECK( !load.getTaskHandle( nullptr ) && load.getTaskHandle( &task ) );
+		SIR_IO_CHECK( load.poll( &resource ) == SIR_RESOURCE_RESULT_BUSY );
+		std::atomic<uint32_t> nWrongWriter( 0 );
+		std::thread wrongWriter( [&]() {
+			if ( load.cancel() == SIR_RESOURCE_RESULT_WRITER_VIOLATION &&
+			     load.poll( &resource ) == SIR_RESOURCE_RESULT_WRITER_VIOLATION && !load.getTaskHandle( &task ) ) {
+				nWrongWriter.store( 1, std::memory_order_relaxed );
+			}
+		} );
+		wrongWriter.join();
+		SIR_IO_CHECK( nWrongWriter.load( std::memory_order_relaxed ) == 1 );
+		SIR_IO_CHECK( load.cancel() == SIR_RESOURCE_RESULT_SUCCESS );
+		SIR_IO_CHECK( scheduler.pumpCPU( 8 ) == 0 );
+		SIR_IO_CHECK( load.poll( &resource ) == SIR_RESOURCE_RESULT_FAILED );
+		SIR_IO_CHECK( !load.isActive() && load.cancel() == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		sirTaskHandle_t occupied[8] = {};
+		for ( uint32_t i = 0; i < 8; ++i ) {
+			SIR_IO_CHECK( scheduler.submit( sirIOIdleTask, nullptr, SIR_TASK_PRIORITY_BACKGROUND, SIR_TASK_EXEC_CPU,
+			                                &occupied[i] ) );
+		}
+		SIR_IO_CHECK( load.begin( SIR_IO_PATH, valid ) == SIR_RESOURCE_RESULT_OUT_OF_BUDGET );
+		SIR_IO_CHECK( !load.isActive() );
+		SIR_IO_CHECK( scheduler.pumpCPU( 8 ) == 8 );
+		for ( uint32_t i = 0; i < 8; ++i ) {
+			SIR_IO_CHECK( scheduler.releaseTask( occupied[i] ) );
+		}
+		SIR_IO_CHECK( scheduler.shutdown() );
+	}
+	SIR_IO_CHECK( alloc.nOutstanding.load() == 0 );
+	memory.shutdown();
+}
+
 int main( void )
 {
 	uint8_t bytes[SIR_IO_BYTES] = {};
@@ -260,6 +345,7 @@ int main( void )
 	testConcurrentReads( bytes );
 	testCancellationAndStaleRevision();
 	testBoundsAndStagingReuse();
+	testRejectedRequestsAndTaskAdmission();
 	SIR_IO_CHECK( SIRPlatformFile::remove( SIR_IO_PATH ) == SIR_FILE_OK );
 	printf( "PASS: native file reads, mapped GRDG staging, Core Jobs, deduplication, revision and cancellation\n" );
 	return 0;
