@@ -72,9 +72,9 @@ typedef struct sirGraphicsABIHost_s
 	uint32_t nMinor;
 	uint32_t nReserved;
 	void *pContext;
-	void *(*pAllocate)( void *pContext, uint64_t nBytes, uint64_t nAlignment );
-	void (*pFree)( void *pContext, void *pMemory );
-	void (*pLog)( void *pContext, uint32_t nSeverity, const char *pszMessage );
+	void *( *pAllocate )( void *pContext, uint64_t nBytes, uint64_t nAlignment );
+	void ( *pFree )( void *pContext, void *pMemory );
+	void ( *pLog )( void *pContext, uint32_t nSeverity, const char *pszMessage );
 } sirGraphicsABIHost_t;
 
 typedef struct sirGraphicsABIAdapter_s
@@ -143,11 +143,11 @@ typedef struct sirGraphicsABIDevice_s
 	uint32_t nSize;
 	uint32_t nReserved;
 	void *pDevice;
-	uint32_t (*pQueryCapabilities)( void *pDevice, sirGraphicsABICapabilities_t *pInfo );
-	uint32_t (*pQueryFormat)( void *pDevice, sirGraphicsABIFormat_t *pFormat );
-	uint32_t (*pPoll)( void *pDevice, uint32_t nQueue, uint64_t nValue, uint32_t *pComplete );
-	uint32_t (*pWait)( void *pDevice, uint32_t nQueue, uint64_t nValue, uint64_t nTimeoutNs );
-	uint32_t (*pShutdown)( void *pDevice );
+	uint32_t ( *pQueryCapabilities )( void *pDevice, sirGraphicsABICapabilities_t *pInfo );
+	uint32_t ( *pQueryFormat )( void *pDevice, sirGraphicsABIFormat_t *pFormat );
+	uint32_t ( *pPoll )( void *pDevice, uint32_t nQueue, uint64_t nValue, uint32_t *pComplete );
+	uint32_t ( *pWait )( void *pDevice, uint32_t nQueue, uint64_t nValue, uint64_t nTimeoutNs );
+	uint32_t ( *pShutdown )( void *pDevice );
 } sirGraphicsABIDevice_t;
 
 typedef struct sirGraphicsABIDriver_s
@@ -157,22 +157,21 @@ typedef struct sirGraphicsABIDriver_s
 	uint32_t nMinor;
 	uint32_t nBackend;
 	void *pDriver;
-	uint32_t (*pAdapterCount)( void *pDriver, uint32_t *pCount );
-	uint32_t (*pQueryAdapter)( void *pDriver, sirGraphicsABIAdapter_t *pAdapter );
-	uint32_t (*pCreateDevice)( void *pDriver, const sirGraphicsABIDeviceRequest_t *pRequest, sirGraphicsABIDevice_t *pDevice );
-	uint32_t (*pDestroyDevice)( void *pDriver, sirGraphicsABIDevice_t *pDevice );
-	void (*pReleaseDriver)( void *pDriver );
+	uint32_t ( *pAdapterCount )( void *pDriver, uint32_t *pCount );
+	uint32_t ( *pQueryAdapter )( void *pDriver, sirGraphicsABIAdapter_t *pAdapter );
+	uint32_t ( *pCreateDevice )( void *pDriver, const sirGraphicsABIDeviceRequest_t *pRequest, sirGraphicsABIDevice_t *pDevice );
+	uint32_t ( *pDestroyDevice )( void *pDriver, sirGraphicsABIDevice_t *pDevice );
+	void ( *pReleaseDriver )( void *pDriver );
 } sirGraphicsABIDriver_t;
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
 
 // The backend exports this exact symbol. Caller initializes output nSize;
 // all fields beyond the negotiated prefix must remain untouched.
-typedef uint32_t (*sirGraphicsABIFactory_t)( uint32_t nMajor, uint32_t nMinor,
-                                              const sirGraphicsABIHost_t *pHost, sirGraphicsABIDriver_t *pDriver );
+typedef uint32_t ( *sirGraphicsABIFactory_t )( uint32_t nMajor, uint32_t nMinor, const sirGraphicsABIHost_t *pHost,
+                                               sirGraphicsABIDriver_t *pDriver );
 
 #ifdef __cplusplus
 }
