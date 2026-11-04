@@ -25,6 +25,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // clang-format on
 
 #include <Renderer/Drivers/D3D12/SIRD3D12Pipelines.h>
+#include <Renderer/Drivers/D3D12/SIRD3D12Bindings.h>
 #include <Renderer/Drivers/D3D12/SIRD3D12Resources.h>
 
 // Each command context owns a fixed native allocator/list pair and holds
@@ -41,6 +42,9 @@ private:
 	SIRD3D12Device *m_pNative = nullptr;
 	SIRD3D12Resources *m_pResources = nullptr;
 	SIRD3D12Pipelines *m_pPipelines = nullptr;
+	SIRD3D12Bindings *m_pBindings = nullptr;
+	sirGraphicsHandle_t m_hBoundPipeline = {};
+	uint8_t m_szBoundRoots[32] = {};
 	sirGraphicsHandle_t m_szReferences[s_nReferenceCapacity] = {};
 	sirGraphicsQueue_t m_eQueue = SIR_GRAPHICS_QUEUE_DIRECT;
 	sirGraphicsPipelineType_t m_ePipelineType = SIR_GRAPHICS_PIPELINE_GRAPHICS;
@@ -67,7 +71,7 @@ public:
 	SIRD3D12CommandList( const SIRD3D12CommandList & ) = delete;
 	SIRD3D12CommandList &operator=( const SIRD3D12CommandList & ) = delete;
 
-	bool initialize( SIRD3D12Device *pNative, SIRD3D12Resources *pResources, SIRD3D12Pipelines *pPipelines,
+	bool initialize( SIRD3D12Device *pNative, SIRD3D12Resources *pResources, SIRD3D12Pipelines *pPipelines, SIRD3D12Bindings *pBindings,
 	                 sirGraphicsQueue_t eQueue ) noexcept;
 	void shutdown( bool bGpuComplete ) noexcept;
 	sirGraphicsQueue_t getQueue( void ) const noexcept override;
@@ -103,7 +107,8 @@ public:
 	~SIRD3D12Commands( void ) noexcept;
 	SIRD3D12Commands( const SIRD3D12Commands & ) = delete;
 	SIRD3D12Commands &operator=( const SIRD3D12Commands & ) = delete;
-	bool initialize( SIRD3D12Device *pNative, SIRD3D12Resources *pResources, SIRD3D12Pipelines *pPipelines ) noexcept;
+	bool initialize( SIRD3D12Device *pNative, SIRD3D12Resources *pResources, SIRD3D12Pipelines *pPipelines,
+	                 SIRD3D12Bindings *pBindings ) noexcept;
 	void shutdown( bool bGpuComplete ) noexcept;
 	void collectCompleted( void ) noexcept;
 	sirGraphicsResult_t acquire( sirGraphicsQueue_t eQueue, SIRGraphicsCommandList **ppCommands ) noexcept;

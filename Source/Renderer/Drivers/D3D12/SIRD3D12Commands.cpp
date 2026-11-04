@@ -99,9 +99,9 @@ static uint32_t sirD3D12TexelBytes( sirGraphicsFormat_t eFormat ) noexcept
 }
 
 bool SIRD3D12CommandList::initialize( SIRD3D12Device *pNative, SIRD3D12Resources *pResources, SIRD3D12Pipelines *pPipelines,
-                                      sirGraphicsQueue_t eQueue ) noexcept
+                                      SIRD3D12Bindings *pBindings, sirGraphicsQueue_t eQueue ) noexcept
 {
-	if ( m_pNative != nullptr || pNative == nullptr || pResources == nullptr || pPipelines == nullptr ||
+	if ( m_pNative != nullptr || pNative == nullptr || pResources == nullptr || pPipelines == nullptr || pBindings == nullptr ||
 	     eQueue >= SIR_GRAPHICS_QUEUE_COUNT ) {
 		return false;
 	}
@@ -126,6 +126,7 @@ bool SIRD3D12CommandList::initialize( SIRD3D12Device *pNative, SIRD3D12Resources
 	m_pNative = pNative;
 	m_pResources = pResources;
 	m_pPipelines = pPipelines;
+	m_pBindings = pBindings;
 	m_eQueue = eQueue;
 	// The newly created native list is closed, but no caller owns it yet.
 	// Keep the public slot free until acquire() gives it to a caller.
@@ -147,6 +148,7 @@ void SIRD3D12CommandList::shutdown( bool bGpuComplete ) noexcept
 	m_pNative = nullptr;
 	m_pResources = nullptr;
 	m_pPipelines = nullptr;
+	m_pBindings = nullptr;
 	m_nReferenceCount = 0;
 	m_nSubmittedFence = 0;
 	m_bRecording = false;
@@ -190,7 +192,9 @@ sirGraphicsResult_t SIRD3D12CommandList::pin( sirGraphicsHandle_t hHandle ) noex
 		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
 	}
 	const sirGraphicsResult_t eResult = hHandle.eType == SIR_GRAPHICS_HANDLE_PIPELINE ? m_pPipelines->retainCommandReference( hHandle )
-	                                                                                  : m_pResources->retainCommandReference( hHandle );
+	                                    : hHandle.eType == SIR_GRAPHICS_HANDLE_BINDING_SET
+	                                        ? m_pBindings->retainCommandReference( hHandle )
+	                                        : m_pResources->retainCommandReference( hHandle );
 	if ( eResult != SIR_GRAPHICS_SUCCESS ) {
 		return eResult;
 	}
@@ -205,6 +209,8 @@ void SIRD3D12CommandList::releaseReferences( void ) noexcept
 		const sirGraphicsHandle_t &ref = m_szReferences[iRef];
 		if ( ref.eType == SIR_GRAPHICS_HANDLE_PIPELINE ) {
 			m_pPipelines->releaseCommandReference( ref );
+		} else if ( ref.eType == SIR_GRAPHICS_HANDLE_BINDING_SET ) {
+			m_pBindings->releaseCommandReference( ref );
 		} else {
 			m_pResources->releaseCommandReference( ref );
 		}
@@ -257,6 +263,8 @@ sirGraphicsResult_t SIRD3D12CommandList::reset( void ) noexcept
 	m_bRenderPass = false;
 	m_bPipelineBound = false;
 	m_nBindingCount = 0;
+	m_hBoundPipeline = {};
+	memset( m_szBoundRoots, 0, sizeof( m_szBoundRoots ) );
 	return SIR_GRAPHICS_SUCCESS;
 }
 
@@ -524,14 +532,52 @@ sirGraphicsResult_t SIRD3D12CommandList::bindPipeline( sirGraphicsHandle_t hPipe
 	m_ePipelineType = pPipeline->eType;
 	m_eTopology = pPipeline->eTopology;
 	m_nBindingCount = pPipeline->nBindingCount;
+	m_hBoundPipeline = hPipeline;
+	memset( m_szBoundRoots, 0, sizeof( m_szBoundRoots ) );
 	m_bPipelineBound = true;
 	return SIR_GRAPHICS_SUCCESS;
 }
 
-sirGraphicsResult_t SIRD3D12CommandList::bindBindingSet( uint32_t, sirGraphicsHandle_t ) noexcept
+sirGraphicsResult_t SIRD3D12CommandList::bindBindingSet( uint32_t nSetIndex, sirGraphicsHandle_t hBindingSet ) noexcept
 {
-	// Root descriptor tables require the shared binding-set implementation.
-	return validRecording() ? SIR_GRAPHICS_UNSUPPORTED : SIR_GRAPHICS_BUSY;
+	if ( !validRecording() ) {
+		return SIR_GRAPHICS_BUSY;
+	}
+	if ( !m_bPipelineBound || m_eQueue == SIR_GRAPHICS_QUEUE_COPY ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	const sirD3D12BindingSetSlot_t *pSet = m_pBindings->querySlot( hBindingSet );
+	if ( pSet == nullptr ) {
+		return SIR_GRAPHICS_INVALID_HANDLE;
+	}
+	if ( pSet->nSetIndex != nSetIndex || pSet->hPipeline.nSlot != m_hBoundPipeline.nSlot ||
+	     pSet->hPipeline.nGeneration != m_hBoundPipeline.nGeneration ||
+	     pSet->hPipeline.nDeviceGeneration != m_hBoundPipeline.nDeviceGeneration ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	if ( !m_pBindings->isComplete( *pSet ) ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	ID3D12DescriptorHeap *szHeaps[2] = { m_pBindings->getHeap( D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV ),
+	                                     m_pBindings->getHeap( D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER ) };
+	if ( szHeaps[0] == nullptr || szHeaps[1] == nullptr ) {
+		return SIR_GRAPHICS_DEVICE_LOST;
+	}
+	const sirGraphicsResult_t ePinned = pin( hBindingSet );
+	if ( ePinned != SIR_GRAPHICS_SUCCESS ) {
+		return ePinned;
+	}
+	m_pCommands->SetDescriptorHeaps( 2, szHeaps );
+	for ( uint32_t iRange = 0; iRange < pSet->nRangeCount; ++iRange ) {
+		const sirD3D12BindingRange_t &range = pSet->szRanges[iRange];
+		if ( m_ePipelineType == SIR_GRAPHICS_PIPELINE_GRAPHICS ) {
+			m_pCommands->SetGraphicsRootDescriptorTable( range.nRootIndex, range.hGpu );
+		} else {
+			m_pCommands->SetComputeRootDescriptorTable( range.nRootIndex, range.hGpu );
+		}
+		m_szBoundRoots[range.nRootIndex] = 1;
+	}
+	return SIR_GRAPHICS_SUCCESS;
 }
 
 sirGraphicsResult_t SIRD3D12CommandList::bindVertexBuffer( uint32_t nSlot, sirGraphicsHandle_t hBuffer, uint64_t nOffsetBytes,
@@ -626,8 +672,10 @@ sirGraphicsResult_t SIRD3D12CommandList::draw( uint32_t nVertices, uint32_t nIns
 	if ( nVertices == 0 || nInstances == 0 ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	if ( m_nBindingCount != 0 ) {
-		return SIR_GRAPHICS_UNSUPPORTED;
+	for ( uint32_t iBinding = 0; iBinding < m_nBindingCount; ++iBinding ) {
+		if ( m_szBoundRoots[iBinding] == 0 ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
 	}
 	m_pCommands->DrawInstanced( nVertices, nInstances, nFirstVertex, nFirstInstance );
 	return SIR_GRAPHICS_SUCCESS;
@@ -642,8 +690,10 @@ sirGraphicsResult_t SIRD3D12CommandList::drawIndexed( uint32_t nIndices, uint32_
 	if ( nIndices == 0 || nInstances == 0 ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	if ( m_nBindingCount != 0 ) {
-		return SIR_GRAPHICS_UNSUPPORTED;
+	for ( uint32_t iBinding = 0; iBinding < m_nBindingCount; ++iBinding ) {
+		if ( m_szBoundRoots[iBinding] == 0 ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
 	}
 	m_pCommands->DrawIndexedInstanced( nIndices, nInstances, nFirstIndex, nVertexOffset, nFirstInstance );
 	return SIR_GRAPHICS_SUCCESS;
@@ -657,8 +707,10 @@ sirGraphicsResult_t SIRD3D12CommandList::dispatch( uint32_t nX, uint32_t nY, uin
 	if ( nX == 0 || nY == 0 || nZ == 0 || nX > 65535 || nY > 65535 || nZ > 65535 ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	if ( m_nBindingCount != 0 ) {
-		return SIR_GRAPHICS_UNSUPPORTED;
+	for ( uint32_t iBinding = 0; iBinding < m_nBindingCount; ++iBinding ) {
+		if ( m_szBoundRoots[iBinding] == 0 ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
 	}
 	m_pCommands->Dispatch( nX, nY, nZ );
 	return SIR_GRAPHICS_SUCCESS;
@@ -682,14 +734,15 @@ SIRD3D12Commands::~SIRD3D12Commands( void ) noexcept
 	shutdown( false );
 }
 
-bool SIRD3D12Commands::initialize( SIRD3D12Device *pNative, SIRD3D12Resources *pResources, SIRD3D12Pipelines *pPipelines ) noexcept
+bool SIRD3D12Commands::initialize( SIRD3D12Device *pNative, SIRD3D12Resources *pResources, SIRD3D12Pipelines *pPipelines,
+                                   SIRD3D12Bindings *pBindings ) noexcept
 {
-	if ( m_pNative != nullptr || pNative == nullptr || pResources == nullptr || pPipelines == nullptr ) {
+	if ( m_pNative != nullptr || pNative == nullptr || pResources == nullptr || pPipelines == nullptr || pBindings == nullptr ) {
 		return false;
 	}
 	for ( uint32_t iQueue = 0; iQueue < SIR_GRAPHICS_QUEUE_COUNT; ++iQueue ) {
 		for ( uint32_t iSlot = 0; iSlot < s_nListsPerQueue; ++iSlot ) {
-			if ( !m_szLists[iQueue][iSlot].initialize( pNative, pResources, pPipelines, ( sirGraphicsQueue_t )iQueue ) ) {
+			if ( !m_szLists[iQueue][iSlot].initialize( pNative, pResources, pPipelines, pBindings, ( sirGraphicsQueue_t )iQueue ) ) {
 				for ( uint32_t iCleanup = 0; iCleanup < SIR_GRAPHICS_QUEUE_COUNT; ++iCleanup ) {
 					for ( uint32_t jCleanup = 0; jCleanup < s_nListsPerQueue; ++jCleanup ) {
 						m_szLists[iCleanup][jCleanup].shutdown( true );

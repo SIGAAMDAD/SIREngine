@@ -145,7 +145,14 @@ sirGraphicsResult_t SIRD3D12RenderingDevice::initialize( bool bSoftware, const s
 		m_Native.shutdown();
 		return SIR_GRAPHICS_DRIVER_ERROR;
 	}
-	if ( !m_Commands.initialize( &m_Native, &m_Resources, &m_Pipelines ) ) {
+	if ( !m_Bindings.initialize( &m_Native, &m_Resources, &m_Pipelines, getDeviceGeneration() ) ) {
+		m_Pipelines.shutdown( true );
+		m_Resources.shutdown( true );
+		m_Native.shutdown();
+		return SIR_GRAPHICS_DRIVER_ERROR;
+	}
+	if ( !m_Commands.initialize( &m_Native, &m_Resources, &m_Pipelines, &m_Bindings ) ) {
+		m_Bindings.shutdown( true );
 		m_Pipelines.shutdown( true );
 		m_Resources.shutdown( true );
 		m_Native.shutdown();
@@ -153,6 +160,7 @@ sirGraphicsResult_t SIRD3D12RenderingDevice::initialize( bool bSoftware, const s
 	}
 	if ( !m_Surfaces.initialize( &m_Native, &m_Resources, getDeviceGeneration() ) ) {
 		m_Commands.shutdown( true );
+		m_Bindings.shutdown( true );
 		m_Pipelines.shutdown( true );
 		m_Resources.shutdown( true );
 		m_Native.shutdown();
@@ -250,18 +258,16 @@ sirGraphicsResult_t SIRD3D12RenderingDevice::createPipeline( const sirGraphicsPi
 {
 	return m_Pipelines.createPipeline( desc, pHandle );
 }
-sirGraphicsResult_t SIRD3D12RenderingDevice::createBindingSet( sirGraphicsHandle_t, uint32_t, sirGraphicsHandle_t *pHandle ) noexcept
+sirGraphicsResult_t SIRD3D12RenderingDevice::createBindingSet( sirGraphicsHandle_t hPipeline, uint32_t nSetIndex,
+                                                               sirGraphicsHandle_t *pHandle ) noexcept
 {
-	if ( pHandle == nullptr ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
-	}
-	*pHandle = {};
-	return SIR_GRAPHICS_UNSUPPORTED;
+	return m_Bindings.createSet( hPipeline, nSetIndex, pHandle );
 }
-sirGraphicsResult_t SIRD3D12RenderingDevice::updateBindings( sirGraphicsHandle_t, const sirGraphicsDescriptorWrite_t *pWrites,
+
+sirGraphicsResult_t SIRD3D12RenderingDevice::updateBindings( sirGraphicsHandle_t hSet, const sirGraphicsDescriptorWrite_t *pWrites,
                                                              uint32_t nWriteCount ) noexcept
 {
-	return nWriteCount != 0 && pWrites == nullptr ? SIR_GRAPHICS_INVALID_ARGUMENT : SIR_GRAPHICS_UNSUPPORTED;
+	return m_Bindings.updateSet( hSet, pWrites, nWriteCount );
 }
 sirGraphicsResult_t SIRD3D12RenderingDevice::mapBuffer( sirGraphicsHandle_t hBuffer, uint64_t nOffset, uint64_t nBytes,
                                                         sirGraphicsMappedBuffer_t *pMapped ) noexcept
@@ -364,6 +370,10 @@ sirGraphicsResult_t SIRD3D12RenderingDevice::retireResource( sirGraphicsHandle_t
                                                              const sirGraphicsCompletionSet_t &completion ) noexcept
 {
 	m_Commands.collectCompleted();
+	m_Bindings.collectRetired();
+	if ( hResource.eType == SIR_GRAPHICS_HANDLE_BINDING_SET ) {
+		return m_Bindings.retireSet( hResource, completion );
+	}
 	if ( hResource.eType == SIR_GRAPHICS_HANDLE_SURFACE ) {
 		return m_Surfaces.retireSurface( hResource, completion );
 	}
@@ -416,6 +426,7 @@ sirGraphicsResult_t SIRD3D12RenderingDevice::shutdown( void ) noexcept
 	}
 	m_Commands.shutdown( true );
 	m_Surfaces.shutdown( true );
+	m_Bindings.shutdown( true );
 	m_Pipelines.shutdown( true );
 	m_Resources.shutdown( true );
 	m_Native.shutdown();
