@@ -39,10 +39,13 @@ must verify full artifact bytes and source metadata on lookup.
   optional UTF-8 BOM is removed, and sorted unique `--define` values enter
   the cache fingerprint.
 - Expansion preserves logical `#line` locations and models `#pragma once`.
-  It does **not** interpret conditional preprocessor expressions; all
-  referenced include files must exist, including includes in inactive
-  conditional branches. This conservative dependency rule may reject an
-  otherwise compilable shader. Compiler preprocessing still evaluates macros.
+  Nested decimal integer `#if`, `#ifdef`, `#ifndef`, `#elif`, `#else`, `#endif`,
+  `#define`, `#undef` and simple `defined(...)` tests control dependency
+  expansion; skipped includes do not enter the graph. Complex preprocessor
+  expressions are rejected with a diagnostic rather than guessed.
+  Files repeated without `#pragma once` remain repeated in the source but
+  occupy one content-addressed DAG node. Compiler preprocessing still
+  evaluates the retained conditionals and macros.
 - Bounded at 1 MiB per source, 8 MiB aggregate input, 16 MiB expanded
   source, 256 source records, 64 nested includes and 64 defines.
 - GL 4.6 and legacy Direct3D profiles are intentionally rejected until
@@ -57,3 +60,13 @@ shader compilation evidence. The test host must separately run native DXC
 DXIL/SPIR-V compile, reflection, identical-input byte reproducibility and
 Windows/Linux integration before SHD-01 can be closed. Backend GPU/PSO
 acceptance belongs to later SHD milestones.
+
+## Native compiler acceptance
+
+Configure CMake with an explicit `-DSIR_SHADER_DXC_EXECUTABLE=/abs/path/dxc`
+to register `shader.cooker.native-dxc`; `spirv-val` and `spirv-dis` must
+also be installed. The test compiles the real HLSL fixture to DXIL and
+SPIR-V twice, compares binary and manifest bytes, checks DXIL resource
+reflection, and verifies SPIR-V with SPIRV-Tools. The pinned Linux CI
+workflow downloads the upstream DXC v1.9.2609 archive with its published
+SHA-256 checksum; the standard unit tests remain compiler-independent.
