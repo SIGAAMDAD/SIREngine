@@ -132,7 +132,6 @@ int main( void )
 		return 16;
 	}
 
-
 	SIRGraphicsCommandList *pFirst = nullptr;
 	if ( pDevice->acquireCommands( SIR_GRAPHICS_QUEUE_DIRECT, &pFirst ) != SIR_GRAPHICS_SUCCESS || pFirst == nullptr ||
 	     pFirst->copyBuffer( hGpu, 0, hSource, 0, sizeof( szExpected ) ) != SIR_GRAPHICS_SUCCESS ||
@@ -184,6 +183,8 @@ int main( void )
 		if ( eRecord != SIR_GRAPHICS_SUCCESS ) {
 			return 29;
 		}
+
+
 	}
 	if ( pBatch->copyBuffer( hGpu, 1024, hSource, 0, sizeof( szExpected ) ) != SIR_GRAPHICS_CAPACITY_EXCEEDED ||
 	     pBatch->close() != SIR_GRAPHICS_SUCCESS ) {
