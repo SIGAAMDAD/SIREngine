@@ -59,18 +59,15 @@ static uint64_t sirGraphHashResource( sirTaskGraphResourceKey_t keyResource ) no
 }
 
 template <typename T>
-static bool sirGraphAppendFootprint( uint64_t *pnBytes, uint32_t nCount ) noexcept
+static void sirGraphAppendFootprint( uint64_t *pnBytes, uint32_t nCount ) noexcept
 {
+	// Fourteen arrays with 32-bit element counts, 16-bit-sized elements,
+	// and 16-bit alignments cannot overflow a uint64_t footprint.
+	static_assert( sizeof( T ) <= UINT16_MAX, "Task graph element grew beyond the footprint bound" );
+	static_assert( alignof( T ) <= UINT16_MAX, "Task graph alignment grew beyond the footprint bound" );
 	const uint64_t nAlignment = alignof( T );
-	if ( *pnBytes > UINT64_MAX - ( nAlignment - 1 ) ) {
-		return false;
-	}
 	const uint64_t nAligned = ( *pnBytes + nAlignment - 1 ) & ~( nAlignment - 1 );
-	if ( nCount > ( UINT64_MAX - nAligned ) / sizeof( T ) ) {
-		return false;
-	}
 	*pnBytes = nAligned + ( uint64_t )nCount * sizeof( T );
-	return true;
 }
 
 template <typename T>
@@ -118,22 +115,20 @@ bool SIRTaskGraph::init( SIRMemoryManager *pMemory, const sirTaskGraphConfig_t &
 	// One page-accounted metadata reservation; failed admission does not
 	// leave a partially initialized graph or consume multiple arena spans.
 	uint64_t nStorageBytes = 0;
-	if ( !sirGraphAppendFootprint<sirTaskGraphPassRecord_t>( &nStorageBytes, config.nPassCapacity ) ||
-	     !sirGraphAppendFootprint<sirTaskGraphAccessRecord_t>( &nStorageBytes, config.nAccessCapacity ) ||
-	     !sirGraphAppendFootprint<sirTaskGraphResourceBucket_t>( &nStorageBytes, nBuckets ) ||
-	     !sirGraphAppendFootprint<sirTaskGraphEdge_t>( &nStorageBytes, config.nEdgeCapacity ) ||
-	     !sirGraphAppendFootprint<sirTaskGraphEdge_t>( &nStorageBytes, config.nEdgeCapacity ) ||
-	     !sirGraphAppendFootprint<uint32_t>( &nStorageBytes, config.nPassCapacity ) ||
-	     !sirGraphAppendFootprint<uint32_t>( &nStorageBytes, config.nEdgeCapacity ) ||
-	     !sirGraphAppendFootprint<uint32_t>( &nStorageBytes, config.nPassCapacity ) ||
-	     !sirGraphAppendFootprint<uint32_t>( &nStorageBytes, config.nPassCapacity ) ||
-	     !sirGraphAppendFootprint<uint32_t>( &nStorageBytes, config.nPassCapacity ) ||
-	     !sirGraphAppendFootprint<uint32_t>( &nStorageBytes, config.nPassCapacity ) ||
-	     !sirGraphAppendFootprint<sirTaskBatchTask_t>( &nStorageBytes, config.nPassCapacity ) ||
-	     !sirGraphAppendFootprint<sirTaskBatchEdge_t>( &nStorageBytes, config.nEdgeCapacity ) ||
-	     !sirGraphAppendFootprint<sirTaskHandle_t>( &nStorageBytes, config.nPassCapacity ) ) {
-		return false;
-	}
+	sirGraphAppendFootprint<sirTaskGraphPassRecord_t>( &nStorageBytes, config.nPassCapacity );
+	sirGraphAppendFootprint<sirTaskGraphAccessRecord_t>( &nStorageBytes, config.nAccessCapacity );
+	sirGraphAppendFootprint<sirTaskGraphResourceBucket_t>( &nStorageBytes, nBuckets );
+	sirGraphAppendFootprint<sirTaskGraphEdge_t>( &nStorageBytes, config.nEdgeCapacity );
+	sirGraphAppendFootprint<sirTaskGraphEdge_t>( &nStorageBytes, config.nEdgeCapacity );
+	sirGraphAppendFootprint<uint32_t>( &nStorageBytes, config.nPassCapacity );
+	sirGraphAppendFootprint<uint32_t>( &nStorageBytes, config.nEdgeCapacity );
+	sirGraphAppendFootprint<uint32_t>( &nStorageBytes, config.nPassCapacity );
+	sirGraphAppendFootprint<uint32_t>( &nStorageBytes, config.nPassCapacity );
+	sirGraphAppendFootprint<uint32_t>( &nStorageBytes, config.nPassCapacity );
+	sirGraphAppendFootprint<uint32_t>( &nStorageBytes, config.nPassCapacity );
+	sirGraphAppendFootprint<sirTaskBatchTask_t>( &nStorageBytes, config.nPassCapacity );
+	sirGraphAppendFootprint<sirTaskBatchEdge_t>( &nStorageBytes, config.nEdgeCapacity );
+	sirGraphAppendFootprint<sirTaskHandle_t>( &nStorageBytes, config.nPassCapacity );
 	void *pStorage = pMemory->allocateMetadata( nStorageBytes, alignof( max_align_t ), SIR_MEMORY_DOMAIN_CORE );
 	if ( pStorage == nullptr ) {
 		return false;
