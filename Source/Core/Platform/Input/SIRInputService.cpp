@@ -126,24 +126,24 @@ bool SIRInputService::findDevice( sirInputBackendId_t eSource, uint64_t nNative,
 bool SIRInputService::emitControls( sirInputBackendId_t eSource, sirInputDeviceId_t id, const sirInputControlChange_t *pChanges,
                                     uint32_t nCount, uint64_t nTime ) noexcept
 {
-	sirInputDeviceDescriptor_t desc = {};
-	return verifyOwner( eSource, id, &desc ) && m_State.postChanges( id, desc.key.eClass, pChanges, nCount, timestamp( nTime ) );
+	sirInputDeviceClass_t eClass = SIR_INPUT_KEYBOARD;
+	return m_Registry.authorize( eSource, id, &eClass ) && m_State.postChanges( id, eClass, pChanges, nCount, timestamp( nTime ) );
 }
 
 bool SIRInputService::emitPointer( sirInputBackendId_t eSource, sirInputDeviceId_t id, sirInputSignal_t eSignal, uint16_t nControl,
                                    int32_t nX, int32_t nY, uint64_t nTime ) noexcept
 {
-	sirInputDeviceDescriptor_t desc = {};
-	return verifyOwner( eSource, id, &desc ) && m_State.postPointer( id, desc.key.eClass, eSignal, nControl, nX, nY, timestamp( nTime ) );
+	sirInputDeviceClass_t eClass = SIR_INPUT_KEYBOARD;
+	return m_Registry.authorize( eSource, id, &eClass ) && m_State.postPointer( id, eClass, eSignal, nControl, nX, nY, timestamp( nTime ) );
 }
 
 bool SIRInputService::loseState( sirInputBackendId_t eSource, sirInputDeviceId_t id ) noexcept
 {
-	sirInputDeviceDescriptor_t desc = {};
-	if ( !verifyOwner( eSource, id, &desc ) ) {
+	sirInputDeviceClass_t eClass = SIR_INPUT_KEYBOARD;
+	if ( !m_Registry.authorize( eSource, id, &eClass ) ) {
 		return false;
 	}
-	return m_State.postDevice( id, desc.key.eClass, SIR_INPUT_RESYNC, timestamp( 0 ) );
+	return m_State.postDevice( id, eClass, SIR_INPUT_RESYNC, timestamp( 0 ) );
 }
 
 bool SIRInputService::vibrate( sirInputDeviceId_t id, uint16_t nLeft, uint16_t nRight ) noexcept
