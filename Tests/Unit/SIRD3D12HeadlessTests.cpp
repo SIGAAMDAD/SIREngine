@@ -24,11 +24,9 @@ static bool testAsyncCopyQueue( SIRD3D12Device &device )
 	SIRD3D12Transfers &transfers = device.getTransfers();
 	const uint32_t nSlots = transfers.getSlotCount();
 	sirD3D12ResidentTransferView_t arena = {};
-	if ( !transfers.isReady() || nSlots != 3 || !transfers.queryResidentArena( &arena ) ||
-	     arena.nSlotBytes == 0 || arena.nReservedBufferBytes == 0 ||
-	     arena.nPersistentMappedBytes != arena.nSlotBytes * nSlots * 2 ||
-	     arena.pWriteBytes == nullptr || arena.pReadbackBytes == nullptr ||
-	     arena.pWriteResource == nullptr || arena.pReadbackResource == nullptr ) {
+	if ( !transfers.isReady() || nSlots != 3 || !transfers.queryResidentArena( &arena ) || arena.nSlotBytes == 0 ||
+	     arena.nReservedBufferBytes == 0 || arena.nPersistentMappedBytes != arena.nSlotBytes * nSlots * 2 || arena.pWriteBytes == nullptr ||
+	     arena.pReadbackBytes == nullptr || arena.pWriteResource == nullptr || arena.pReadbackResource == nullptr ) {
 		return false;
 	}
 	if ( ( arena.ePath == SIR_D3D12_TRANSFER_STAGED ) == ( arena.pWriteResource == arena.pGpuResource ) ) {
@@ -725,16 +723,14 @@ int main( void )
 		return 1;
 	}
 	sirD3D12ResidentTransferView_t staged = {};
-	if ( !device.getTransfers().queryResidentArena( &staged ) ||
-	     staged.ePath != SIR_D3D12_TRANSFER_STAGED || staged.nSlotBytes != transferConfig.nSlotBytes ||
-	     staged.pWriteResource == staged.pGpuResource ) {
+	if ( !device.getTransfers().queryResidentArena( &staged ) || staged.ePath != SIR_D3D12_TRANSFER_STAGED ||
+	     staged.nSlotBytes != transferConfig.nSlotBytes || staged.pWriteResource == staged.pGpuResource ) {
 		fputs( "D3D12 staging pool validation failed\n", stderr );
 		return 1;
 	}
 	sirD3D12TransferTicket_t stageTicket = {};
 	uint32_t szStagedOutput[32] = {};
-	if ( !device.getTransfers().submit( szInput, sizeof( szInput ), &stageTicket ) ||
-	     !device.getTransfers().wait( stageTicket, 15000 ) ||
+	if ( !device.getTransfers().submit( szInput, sizeof( szInput ), &stageTicket ) || !device.getTransfers().wait( stageTicket, 15000 ) ||
 	     !device.getTransfers().receive( stageTicket, szStagedOutput, sizeof( szStagedOutput ) ) ||
 	     memcmp( szInput, szStagedOutput, sizeof( szInput ) ) != 0 ) {
 		fputs( "D3D12 forced staged transfer failed\n", stderr );

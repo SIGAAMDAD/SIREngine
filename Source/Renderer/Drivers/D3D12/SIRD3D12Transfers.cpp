@@ -26,8 +26,7 @@ SIRD3D12Transfers::~SIRD3D12Transfers( void ) noexcept
 	shutdown();
 }
 
-bool SIRD3D12Transfers::initialize( ID3D12Device *pDevice, SIRD3D12Memory *pMemory,
-                                    const sirD3D12TransferPoolConfig_t &config ) noexcept
+bool SIRD3D12Transfers::initialize( ID3D12Device *pDevice, SIRD3D12Memory *pMemory, const sirD3D12TransferPoolConfig_t &config ) noexcept
 {
 	if ( isReady() || m_pQueue != nullptr || m_bSubmissionUnsafe || pDevice == nullptr || pMemory == nullptr || !pMemory->isReady() ) {
 		m_nLastError = E_INVALIDARG;
@@ -57,8 +56,7 @@ bool SIRD3D12Transfers::initialize( ID3D12Device *pDevice, SIRD3D12Memory *pMemo
 	}
 
 	m_pMemory = pMemory;
-	if ( !m_pMemory->initializeTransferArena( config, s_nSlotCount ) ||
-	     !m_pMemory->queryTransferArena( &m_Arena ) ) {
+	if ( !m_pMemory->initializeTransferArena( config, s_nSlotCount ) || !m_pMemory->queryTransferArena( &m_Arena ) ) {
 		m_nLastError = m_pMemory->getLastError();
 		shutdown();
 		return false;
@@ -85,21 +83,21 @@ bool SIRD3D12Transfers::initialize( ID3D12Device *pDevice, SIRD3D12Memory *pMemo
 		if ( m_Arena.ePath == SIR_D3D12_TRANSFER_STAGED ) {
 			m_nLastError =
 			    pDevice->CreateCommandAllocator( D3D12_COMMAND_LIST_TYPE_COPY, IID_PPV_ARGS( pSlot->pReadbackAllocator.GetAddressOf() ) );
-		if ( FAILED( m_nLastError ) ) {
-			shutdown();
-			return false;
-		}
-		m_nLastError = pDevice->CreateCommandList( 0, D3D12_COMMAND_LIST_TYPE_COPY, pSlot->pReadbackAllocator.Get(), nullptr,
-		                                           IID_PPV_ARGS( pSlot->pReadbackCommands.GetAddressOf() ) );
-		if ( FAILED( m_nLastError ) ) {
-			shutdown();
-			return false;
-		}
-		m_nLastError = pSlot->pReadbackCommands->Close();
-		if ( FAILED( m_nLastError ) ) {
-			shutdown();
-			return false;
-		}
+			if ( FAILED( m_nLastError ) ) {
+				shutdown();
+				return false;
+			}
+			m_nLastError = pDevice->CreateCommandList( 0, D3D12_COMMAND_LIST_TYPE_COPY, pSlot->pReadbackAllocator.Get(), nullptr,
+			                                           IID_PPV_ARGS( pSlot->pReadbackCommands.GetAddressOf() ) );
+			if ( FAILED( m_nLastError ) ) {
+				shutdown();
+				return false;
+			}
+			m_nLastError = pSlot->pReadbackCommands->Close();
+			if ( FAILED( m_nLastError ) ) {
+				shutdown();
+				return false;
+			}
 		}
 	}
 
@@ -158,8 +156,8 @@ bool SIRD3D12Transfers::shutdown( void ) noexcept
 
 bool SIRD3D12Transfers::isReady( void ) const noexcept
 {
-	return m_pQueue != nullptr && m_pFence != nullptr && m_hEvent != nullptr && m_pMemory != nullptr &&
-	       m_Arena.pWriteBytes != nullptr && m_Arena.pReadbackBytes != nullptr && !m_bSubmissionUnsafe;
+	return m_pQueue != nullptr && m_pFence != nullptr && m_hEvent != nullptr && m_pMemory != nullptr && m_Arena.pWriteBytes != nullptr &&
+	       m_Arena.pReadbackBytes != nullptr && !m_bSubmissionUnsafe;
 }
 
 uint32_t SIRD3D12Transfers::getSlotCount( void ) const noexcept
@@ -236,8 +234,8 @@ sirD3D12TransferSlot_t *SIRD3D12Transfers::findSlot( sirD3D12TransferTicket_t ti
 
 bool SIRD3D12Transfers::submit( const void *pSource, uint64_t nBytes, sirD3D12TransferTicket_t *pTicket ) noexcept
 {
-	if ( pTicket == nullptr || pSource == nullptr || nBytes == 0 || !isReady() ||
-	     m_nNextFence == UINT64_MAX || m_nNextSerial == UINT64_MAX ) {
+	if ( pTicket == nullptr || pSource == nullptr || nBytes == 0 || !isReady() || m_nNextFence == UINT64_MAX ||
+	     m_nNextSerial == UINT64_MAX ) {
 		m_nLastError = E_INVALIDARG;
 		return false;
 	}
@@ -295,8 +293,7 @@ bool SIRD3D12Transfers::submit( const void *pSource, uint64_t nBytes, sirD3D12Tr
 		if ( FAILED( m_nLastError ) ) {
 			return false;
 		}
-		pSlot->pReadbackCommands->CopyBufferRegion( m_Arena.pReadbackResource, nOffset, m_Arena.pGpuResource, nOffset,
-		                                           nBytes );
+		pSlot->pReadbackCommands->CopyBufferRegion( m_Arena.pReadbackResource, nOffset, m_Arena.pGpuResource, nOffset, nBytes );
 		m_nLastError = pSlot->pReadbackCommands->Close();
 		if ( FAILED( m_nLastError ) ) {
 			return false;

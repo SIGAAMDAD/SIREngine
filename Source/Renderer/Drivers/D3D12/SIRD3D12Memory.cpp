@@ -124,9 +124,8 @@ HRESULT SIRD3D12Memory::createTexture2D( uint32_t nWidth, uint32_t nHeight, DXGI
 bool SIRD3D12Memory::initializeTransferArena( const sirD3D12TransferPoolConfig_t &config, uint32_t nSlots ) noexcept
 {
 	constexpr uint64_t MAX_SLOT_BYTES = 16ULL * 1024ULL * 1024ULL;
-	if ( !isReady() || m_pTransferWrite != nullptr || m_pTransferReadback != nullptr ||
-	     config.nSlotBytes == 0 || config.nSlotBytes > MAX_SLOT_BYTES || nSlots == 0 || nSlots > 16 ||
-	     config.nSlotBytes > SIZE_MAX / nSlots ) {
+	if ( !isReady() || m_pTransferWrite != nullptr || m_pTransferReadback != nullptr || config.nSlotBytes == 0 ||
+	     config.nSlotBytes > MAX_SLOT_BYTES || nSlots == 0 || nSlots > 16 || config.nSlotBytes > SIZE_MAX / nSlots ) {
 		m_nLastError = E_INVALIDARG;
 		return false;
 	}
@@ -150,15 +149,13 @@ bool SIRD3D12Memory::initializeTransferArena( const sirD3D12TransferPoolConfig_t
 		return false;
 	}
 	if ( m_eTransferPath == SIR_D3D12_TRANSFER_STAGED ) {
-		m_nLastError = createBuffer( D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_COMMON, nBytes,
-		                             &m_pTransferGpu );
+		m_nLastError = createBuffer( D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_COMMON, nBytes, &m_pTransferGpu );
 		if ( FAILED( m_nLastError ) ) {
 			releaseTransferArena( true );
 			return false;
 		}
 	}
-	m_nLastError = createBuffer( D3D12_HEAP_TYPE_READBACK, D3D12_RESOURCE_STATE_COPY_DEST, nBytes,
-	                             &m_pTransferReadback );
+	m_nLastError = createBuffer( D3D12_HEAP_TYPE_READBACK, D3D12_RESOURCE_STATE_COPY_DEST, nBytes, &m_pTransferReadback );
 	if ( FAILED( m_nLastError ) ) {
 		releaseTransferArena( true );
 		return false;
