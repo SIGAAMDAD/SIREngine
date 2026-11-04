@@ -19,6 +19,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #endif
 #include <Windows.h>
 #include <hidusage.h>
+#include <Core/Platform/Input/Windows/SIRWindowsRawDecode.h>
 
 SIRWindowsRawBackend::SIRWindowsRawBackend( void ) noexcept : m_pWindow( nullptr )
 {
@@ -61,64 +62,44 @@ bool SIRWindowsRawBackend::processRaw( SIRInputService &service, void *pHRawInpu
 {
 	UINT nBytes = 0;
 	if ( GetRawInputData( ( HRAWINPUT )pHRawInput, RID_INPUT, nullptr, &nBytes, sizeof( RAWINPUTHEADER ) ) != 0 ||
-	     nBytes > sizeof( RAWINPUT ) ) {
+	     nBytes > sizeof( RAWINPUT ) || nBytes < sizeof( RAWINPUTHEADER ) ) {
 		return false;
 	}
+
 	RAWINPUT input = {};
-	if ( GetRawInputData( ( HRAWINPUT )pHRawInput, RID_INPUT, &input, &nBytes, sizeof( RAWINPUTHEADER ) ) == ( UINT )-1 ) {
+	const UINT nRead = GetRawInputData( ( HRAWINPUT )pHRawInput, RID_INPUT, &input, &nBytes, sizeof( RAWINPUTHEADER ) );
+	if ( nRead == ( UINT )-1 || nRead != nBytes ) {
 		return false;
 	}
-	if ( input.header.dwType != RIM_TYPEKEYBOARD && input.header.dwType != RIM_TYPEMOUSE ) {
-		return false;
+	return sirInputDecodeWindowsRawRecord( service, input );
+}
+
+// WM_INPUT's lParam is no longer in the raw queue once dispatched. Process it
+// individually, then drain later queued WM_INPUT reports in bounded batches.
+bool SIRWindowsRawBackend::drainBuffered( SIRInputService &service ) noexcept
+{
+	if ( ( HIWORD( GetQueueStatus( QS_RAWINPUT ) ) & QS_RAWINPUT ) == 0 ) {
+		return true;
 	}
-	const sirInputDeviceClass_t eClass = input.header.dwType == RIM_TYPEKEYBOARD ? SIR_INPUT_KEYBOARD : SIR_INPUT_POINTER;
-	const uint64_t nNative = ( uint64_t )( uintptr_t )input.header.hDevice;
-	if ( nNative == 0 ) {
-		return false;
-	}
-	sirInputDeviceId_t hDevice = {};
-	if ( !service.findDevice( id(), nNative, &hDevice ) && !service.connect( { 0, nNative, id(), eClass }, &hDevice ) ) {
-		return false;
-	}
-	if ( eClass == SIR_INPUT_KEYBOARD ) {
-		const RAWKEYBOARD &key = input.data.keyboard;
-		if ( key.MakeCode == 0 ) {
+
+	constexpr uint32_t BUFFER_BYTES = 16 * 1024;
+	constexpr uint32_t MAX_BATCHES = 8;
+	alignas( 8 ) uint8_t szBuffer[BUFFER_BYTES] = {};
+
+	for ( uint32_t iBatch = 0; iBatch < MAX_BATCHES; ++iBatch ) {
+		UINT nCapacityBytes = BUFFER_BYTES;
+		const UINT nCount = GetRawInputBuffer( ( RAWINPUT * )szBuffer, &nCapacityBytes, sizeof( RAWINPUTHEADER ) );
+		if ( nCount == 0 ) {
 			return true;
 		}
-		const uint16_t nScan =
-		    ( uint16_t )( key.MakeCode | ( ( key.Flags & RI_KEY_E0 ) ? 0x100 : 0 ) | ( ( key.Flags & RI_KEY_E1 ) ? 0x200 : 0 ) );
-		const sirInputControlChange_t change = { SIR_INPUT_BUTTON, nScan, ( key.Flags & RI_KEY_BREAK ) ? 0 : 1 };
-		return service.emitControls( id(), hDevice, &change, 1 );
-	}
-	const RAWMOUSE &mouse = input.data.mouse;
-	sirInputControlChange_t changes[10] = {};
-	uint32_t nCount = 0;
-	const uint16_t nDown[5] = { RI_MOUSE_LEFT_BUTTON_DOWN, RI_MOUSE_RIGHT_BUTTON_DOWN, RI_MOUSE_MIDDLE_BUTTON_DOWN, RI_MOUSE_BUTTON_4_DOWN,
-	                            RI_MOUSE_BUTTON_5_DOWN };
-	const uint16_t nUp[5] = { RI_MOUSE_LEFT_BUTTON_UP, RI_MOUSE_RIGHT_BUTTON_UP, RI_MOUSE_MIDDLE_BUTTON_UP, RI_MOUSE_BUTTON_4_UP,
-	                          RI_MOUSE_BUTTON_5_UP };
-	for ( uint16_t i = 0; i < 5; ++i ) {
-		if ( ( mouse.usButtonFlags & nDown[i] ) != 0 ) {
-			changes[nCount++] = { SIR_INPUT_BUTTON, i, 1 };
+		if ( nCount == ( UINT )-1 ) {
+			// An oversized device report stays queued for the ordinary WM_INPUT
+			// dispatch path; do not allocate on the input hot path.
+			return GetLastError() == ERROR_INSUFFICIENT_BUFFER;
 		}
-		if ( ( mouse.usButtonFlags & nUp[i] ) != 0 ) {
-			changes[nCount++] = { SIR_INPUT_BUTTON, i, 0 };
+		if ( !sirInputDecodeWindowsRawBatch( service, ( RAWINPUT * )szBuffer, nCount, BUFFER_BYTES ) ) {
+			return false;
 		}
-	}
-	if ( nCount && !service.emitControls( id(), hDevice, changes, nCount ) ) {
-		return false;
-	}
-	if ( ( mouse.usFlags & MOUSE_MOVE_ABSOLUTE ) == 0 && ( mouse.lLastX || mouse.lLastY ) &&
-	     !service.emitPointer( id(), hDevice, SIR_INPUT_MOTION, 0, mouse.lLastX, mouse.lLastY ) ) {
-		return false;
-	}
-	if ( ( mouse.usButtonFlags & RI_MOUSE_WHEEL ) &&
-	     !service.emitPointer( id(), hDevice, SIR_INPUT_WHEEL, 0, ( SHORT )mouse.usButtonData, 0 ) ) {
-		return false;
-	}
-	if ( ( mouse.usButtonFlags & RI_MOUSE_HWHEEL ) &&
-	     !service.emitPointer( id(), hDevice, SIR_INPUT_WHEEL, 1, ( SHORT )mouse.usButtonData, 0 ) ) {
-		return false;
 	}
 	return true;
 }
@@ -129,7 +110,14 @@ bool SIRWindowsRawBackend::processMessage( SIRInputService &service, uint32_t nM
 		return false;
 	}
 	if ( nMessage == WM_INPUT ) {
-		return processRaw( service, ( void * )nLParam );
+		const bool bCurrent = processRaw( service, ( void * )nLParam );
+		const bool bBuffered = drainBuffered( service );
+		if ( !bCurrent || !bBuffered ) {
+			// Recover held input when a capacity failure invalidates a batch.
+			( void )service.recover();
+			return false;
+		}
+		return true;
 	}
 	if ( nMessage == WM_INPUT_DEVICE_CHANGE && nWParam == GIDC_REMOVAL ) {
 		sirInputDeviceId_t h = {};

@@ -126,3 +126,12 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     set_tests_properties(core.platform.input.evdev-batch PROPERTIES LABELS "core;input;regression" TIMEOUT 60)
     sir_configure_owned_target(SIRInputEvdevBatchTests)
 endif()
+
+# Win32 packet decoder regression: real MSVC / Windows SDK build, no hardware required.
+if(WIN32)
+    add_executable(SIRWindowsRawBatchTests SIRWindowsRawBatchTests.cpp)
+    target_link_libraries(SIRWindowsRawBatchTests PRIVATE SIR::Core)
+    add_test(NAME core.platform.input.windows-raw-batch COMMAND SIRWindowsRawBatchTests)
+    set_tests_properties(core.platform.input.windows-raw-batch PROPERTIES LABELS "core;input;regression" TIMEOUT 60)
+    sir_configure_owned_target(SIRWindowsRawBatchTests)
+endif()
