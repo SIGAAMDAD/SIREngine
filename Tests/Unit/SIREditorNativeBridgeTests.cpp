@@ -133,6 +133,22 @@ static void sirEditorTestNativeBridge( void )
 	assert( sirEditorNativeBridgeNodeAt( pBridge, nOldGeneration, 0, &absentNode ) == SIR_EDITOR_BRIDGE_STALE );
 	assert( sirEditorNativeBridgeNodeAt( pBridge, snapshot.nGeneration, 0, &absentNode ) == SIR_EDITOR_BRIDGE_OK );
 
+	// The Godot dock keeps one bridge alive and reopens scenes on refresh.
+	// Repeated close/reopen must invalidate stale readers without consuming
+	// additional editor-domain pages for the same authored scene.
+	const uint64_t nCommittedBeforeRefresh = memory.getDomainStats( SIR_MEMORY_DOMAIN_EDITOR ).nCommittedBytes;
+	for ( uint32_t iRefresh = 0; iRefresh < 128; ++iRefresh ) {
+		const uint64_t nPreviousGeneration = snapshot.nGeneration;
+		sirEditorNativeBridgeClose( pBridge );
+		assert( sirEditorNativeBridgeNodeAt( pBridge, nPreviousGeneration, 0, &absentNode ) == SIR_EDITOR_BRIDGE_STALE );
+		assert( sirEditorNativeBridgeOpenFile( pBridge, SIR_EDITOR_TEST_UI_SCENE ) == SIR_EDITOR_BRIDGE_OK );
+		assert( sirEditorNativeBridgeSnapshot( pBridge, &snapshot ) == SIR_EDITOR_BRIDGE_OK );
+		assert( snapshot.nGeneration != nPreviousGeneration );
+		assert( snapshot.nNodeCount == 5 && snapshot.nResourceCount == 1 && snapshot.nPropertyCount == 15 );
+		assert( sirEditorNativeBridgeNodeAt( pBridge, snapshot.nGeneration, 0, &absentNode ) == SIR_EDITOR_BRIDGE_OK );
+	}
+	assert( memory.getDomainStats( SIR_MEMORY_DOMAIN_EDITOR ).nCommittedBytes == nCommittedBeforeRefresh );
+
 	sirEditorNativeBridgeDestroy( pBridge );
 	wrongMemory.shutdown();
 	memory.shutdown();
