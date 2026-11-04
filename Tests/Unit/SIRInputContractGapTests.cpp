@@ -248,6 +248,106 @@ static bool sirInputGapDeviceRegistry( void ) noexcept
 	return true;
 }
 
+typedef struct sirInputGapUICounters_s
+{
+	uint32_t nFocus;
+	uint32_t nActions;
+	uint32_t nPreedit;
+	bool bFocused;
+} sirInputGapUICounters_t;
+
+static void sirInputGapUICountFocus( void *pContext, bool bFocused ) noexcept
+{
+	sirInputGapUICounters_t *pCount = ( sirInputGapUICounters_t * )pContext;
+	++pCount->nFocus;
+	pCount->bFocused = bFocused;
+}
+
+static void sirInputGapUICountAction( void *pContext, const sirInputActionState_t *pState ) noexcept
+{
+	( void )pState;
+	++( ( sirInputGapUICounters_t * )pContext )->nActions;
+}
+
+static void sirInputGapUICountPreedit( void *pContext, const uint32_t *pCodepoints, uint32_t nCount, uint32_t nCaret,
+                                       uint32_t nSelection ) noexcept
+{
+	( void )pCodepoints;
+	( void )nCount;
+	( void )nCaret;
+	( void )nSelection;
+	++( ( sirInputGapUICounters_t * )pContext )->nPreedit;
+}
+
+static bool sirInputGapUIDispatchBoundaries( void ) noexcept
+{
+	SIRInputService input;
+	SIRInputUIDispatch dispatch;
+	sirInputGapUICounters_t counts = {};
+	const uint32_t nMissingAction = UINT32_C( 0x12345678 );
+	sirInputUIConsumer_t consumer = {};
+	consumer.pContext = &counts;
+	consumer.pActionIds = &nMissingAction;
+	consumer.nActionCount = 1;
+	consumer.pOnFocus = sirInputGapUICountFocus;
+	consumer.pOnAction = sirInputGapUICountAction;
+	consumer.pOnPreedit = sirInputGapUICountPreedit;
+	if ( dispatch.dispatch( input, consumer ) ) {
+		return false;
+	}
+	SIRInputService zeroTick;
+	if ( !zeroTick.begin( 0 ) || !zeroTick.publish() || dispatch.dispatch( zeroTick, consumer ) ) {
+		return false;
+	}
+	input.text().setEnabled( true );
+	input.text().setFocused( true );
+	if ( !input.begin( 1 ) || !input.publish() ) {
+		return false;
+	}
+	sirInputUIConsumer_t invalid = consumer;
+	invalid.nActionCount = SIR_INPUT_ACTION_CAPACITY + 1;
+	if ( dispatch.dispatch( input, invalid ) ) {
+		return false;
+	}
+	invalid = consumer;
+	invalid.pActionIds = nullptr;
+	if ( dispatch.dispatch( input, invalid ) ) {
+		return false;
+	}
+	invalid = consumer;
+	invalid.nUser = SIR_INPUT_USER_CAPACITY;
+	if ( dispatch.dispatch( input, invalid ) ) {
+		return false;
+	}
+	input.text().reset();
+	if ( dispatch.dispatch( input, consumer ) ) {
+		return false;
+	}
+	input.text().setEnabled( true );
+	input.text().setFocused( true );
+	if ( !input.begin( 2 ) || !input.publish() || !dispatch.dispatch( input, consumer ) || counts.nFocus != 1 || !counts.bFocused ||
+	     counts.nActions != 0 || counts.nPreedit != 1 || dispatch.dispatch( input, consumer ) ) {
+		return false;
+	}
+	uint32_t nCodepoint = 'x';
+	if ( !input.begin( 3 ) || !input.text().setPreeditCodepoints( &nCodepoint, 1, 1, 0 ) || !input.publish() ||
+	     !dispatch.dispatch( input, consumer ) || counts.nFocus != 1 || counts.nPreedit != 2 ) {
+		return false;
+	}
+	sirInputUIConsumer_t noFocusCallback = consumer;
+	noFocusCallback.pOnFocus = nullptr;
+	if ( !input.begin( 4 ) || !input.publish() || !dispatch.dispatch( input, noFocusCallback ) || counts.nFocus != 1 ||
+	     counts.nPreedit != 2 ) {
+		return false;
+	}
+	input.text().setFocused( false );
+	if ( !input.begin( 5 ) || !input.publish() || !dispatch.dispatch( input, consumer ) || counts.nFocus != 2 || counts.bFocused ||
+	     counts.nPreedit != 3 ) {
+		return false;
+	}
+	return true;
+}
+
 int main( void )
 {
 	if ( !sirInputGapHistoryAndTape() ) {
@@ -268,6 +368,10 @@ int main( void )
 	}
 	if ( !sirInputGapDeviceRegistry() ) {
 		fputs( "input contracts: device registry FAILED\n", stderr );
+		return 1;
+	}
+	if ( !sirInputGapUIDispatchBoundaries() ) {
+		fputs( "input contracts: UI boundary dispatch FAILED\n", stderr );
 		return 1;
 	}
 	puts( "SIRInputContractGapTests PASS" );
