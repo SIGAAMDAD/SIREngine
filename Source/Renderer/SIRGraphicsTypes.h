@@ -354,6 +354,13 @@ typedef struct sirGraphicsVersion_s
 	uint32_t nPatch;
 } sirGraphicsVersion_t;
 
+// Source-facing pipeline descriptors borrow the same typed, SDK-neutral
+// era recipes as the v1 binary tables. No parallel recipe layouts.
+typedef struct sirGraphicsABIModernRecipe_s sirGraphicsABIModernRecipe_t;
+typedef struct sirGraphicsABIProgrammableRecipe_s sirGraphicsABIProgrammableRecipe_t;
+typedef struct sirGraphicsABIFixedRecipe_s sirGraphicsABIFixedRecipe_t;
+typedef struct sirGraphicsABIPipelineModelCaps_s sirGraphicsABIPipelineModelCaps_t;
+
 // The slot may be zero. A zero generation or zero device generation is invalid.
 // The backend selects resource-table ownership; no GRDG identity is embedded.
 typedef struct sirGraphicsHandle_s
@@ -384,6 +391,7 @@ typedef struct sirGraphicsCapabilities_s
 	sirGraphicsVersion_t nApiVersion;
 	uint64_t nFeatureMask;
 	uint32_t nQueueMask;
+	uint32_t nPipelineModelMask;
 	uint32_t nMaximumTextureDimension;
 	uint32_t nMaximumColorAttachments;
 	uint32_t nMaximumFramesInFlight;
@@ -533,6 +541,10 @@ typedef struct sirGraphicsPipelineDesc_s
 	sirGraphicsBlendState_t szBlendStates[8];
 	bool bDepthTest;
 	bool bDepthWrite;
+	sirGraphicsPipelineModel_t eModel;
+	const sirGraphicsABIModernRecipe_t *pModern;
+	const sirGraphicsABIProgrammableRecipe_t *pProgrammable;
+	const sirGraphicsABIFixedRecipe_t *pFixed;
 } sirGraphicsPipelineDesc_t;
 
 typedef struct sirGraphicsDescriptorWrite_s

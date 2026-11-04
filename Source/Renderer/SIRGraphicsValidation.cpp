@@ -14,6 +14,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Renderer/SIRGraphicsValidation.h>
+#include <Renderer/SIRGraphicsABIOperations.h>
 
 bool sirGraphicsIsBackendValid( sirGraphicsBackend_t eBackend ) noexcept
 {
@@ -142,11 +143,66 @@ static bool sirGraphicsValidShader( const sirGraphicsShaderCode_t &shader ) noex
 
 static bool sirGraphicsEmptyShader( const sirGraphicsShaderCode_t &shader ) noexcept
 {
-	return shader.pBytes == nullptr && shader.nByteCount == 0;
+	return shader.pBytes == nullptr && shader.nByteCount == 0 && shader.nContentHash == 0;
+}
+
+static sirGraphicsResult_t sirGraphicsValidateSourcePipelineModel( const sirGraphicsPipelineDesc_t &desc ) noexcept
+{
+	if ( desc.eModel == SIR_GRAPHICS_PIPELINE_MODEL_MODERN ) {
+		if ( desc.pModern == nullptr || desc.pProgrammable != nullptr || desc.pFixed != nullptr ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
+		if ( desc.pModern->nSize < sizeof( sirGraphicsABIModernRecipe_t ) ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
+		const uint32_t nExpectedStages = desc.eType == SIR_GRAPHICS_PIPELINE_COMPUTE
+		                                     ? SIR_GRAPHICS_STAGE_COMPUTE
+		                                     : SIR_GRAPHICS_STAGE_VERTEX | SIR_GRAPHICS_STAGE_FRAGMENT;
+		if ( desc.eType != SIR_GRAPHICS_PIPELINE_COMPUTE && desc.eType != SIR_GRAPHICS_PIPELINE_GRAPHICS ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
+		return desc.pModern->nStageMask == nExpectedStages ? SIR_GRAPHICS_SUCCESS : SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	if ( desc.eModel == SIR_GRAPHICS_PIPELINE_MODEL_PROGRAMMABLE ) {
+		if ( desc.pProgrammable == nullptr || desc.pModern != nullptr || desc.pFixed != nullptr ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
+		if ( desc.pProgrammable->nSize < sizeof( sirGraphicsABIProgrammableRecipe_t ) ||
+		     desc.pProgrammable->nReserved != 0 ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
+		if ( desc.eType != SIR_GRAPHICS_PIPELINE_GRAPHICS ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
+		return SIR_GRAPHICS_SUCCESS;
+	}
+	if ( desc.eModel == SIR_GRAPHICS_PIPELINE_MODEL_FIXED_FUNCTION ) {
+		if ( desc.pFixed == nullptr || desc.pModern != nullptr || desc.pProgrammable != nullptr ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
+		if ( desc.pFixed->nSize < sizeof( sirGraphicsABIFixedRecipe_t ) || desc.pFixed->nReserved != 0 ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
+		if ( desc.eType != SIR_GRAPHICS_PIPELINE_FIXED_FUNCTION || desc.nBindingCount != 0 ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
+		if ( desc.pFixed->nTextureStageCount != 0 && desc.pFixed->pStages == nullptr ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
+		if ( desc.pFixed->nLightCount != 0 && desc.pFixed->pLights == nullptr ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
+		return SIR_GRAPHICS_SUCCESS;
+	}
+	return SIR_GRAPHICS_INVALID_ARGUMENT;
 }
 
 sirGraphicsResult_t sirGraphicsValidatePipeline( const sirGraphicsPipelineDesc_t &desc ) noexcept
 {
+	const sirGraphicsResult_t eModel = sirGraphicsValidateSourcePipelineModel( desc );
+	if ( eModel != SIR_GRAPHICS_SUCCESS ) {
+		return eModel;
+	}
 	if ( desc.nBindingCount > 0 && desc.pBindings == nullptr ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
@@ -171,6 +227,9 @@ sirGraphicsResult_t sirGraphicsValidatePipeline( const sirGraphicsPipelineDesc_t
 			return SIR_GRAPHICS_INVALID_ARGUMENT;
 		}
 		if ( !sirGraphicsEmptyShader( desc.pixelShader ) || desc.nColorFormatCount != 0 || desc.nAttributeCount != 0 ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
+		if ( desc.nSampleCount != 1 ) {
 			return SIR_GRAPHICS_INVALID_ARGUMENT;
 		}
 		return SIR_GRAPHICS_SUCCESS;

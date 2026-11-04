@@ -1,4 +1,5 @@
 #include <Renderer/SIRGraphicsRegistry.h>
+#include <Renderer/SIRGraphicsABIOperations.h>
 #include <Renderer/SIRGraphicsValidation.h>
 
 #include <stdio.h>
@@ -382,8 +383,14 @@ static bool testResourcesAndPipelines( void ) noexcept
 	}
 
 	const uint32_t szFakeShader[] = { 0x07230203, 0, 0, 0 };
+	sirGraphicsABIModernRecipe_t modern = {};
+	modern.nSize = sizeof( modern );
+	modern.nStageMask = SIR_GRAPHICS_STAGE_COMPUTE;
 	sirGraphicsPipelineDesc_t pipeline = {};
 	pipeline.eType = SIR_GRAPHICS_PIPELINE_COMPUTE;
+	pipeline.eModel = SIR_GRAPHICS_PIPELINE_MODEL_MODERN;
+	pipeline.pModern = &modern;
+	pipeline.nSampleCount = 1;
 	pipeline.computeShader = { SIR_GRAPHICS_SHADER_SPIRV, szFakeShader, sizeof( szFakeShader ), 1, "main" };
 	if ( sirGraphicsValidatePipeline( pipeline ) != SIR_GRAPHICS_SUCCESS ) {
 		return false;
@@ -394,6 +401,7 @@ static bool testResourcesAndPipelines( void ) noexcept
 	}
 	pipeline.nAttributeCount = 0;
 	pipeline.eType = SIR_GRAPHICS_PIPELINE_GRAPHICS;
+	modern.nStageMask = SIR_GRAPHICS_STAGE_VERTEX | SIR_GRAPHICS_STAGE_FRAGMENT;
 	pipeline.computeShader = {};
 	pipeline.vertexShader = { SIR_GRAPHICS_SHADER_SPIRV, szFakeShader, sizeof( szFakeShader ), 2, "main" };
 	pipeline.pixelShader = { SIR_GRAPHICS_SHADER_DXIL, szFakeShader, sizeof( szFakeShader ), 3, "main" };
@@ -418,6 +426,11 @@ static bool testResourcesAndPipelines( void ) noexcept
 	pipeline.eType = SIR_GRAPHICS_PIPELINE_FIXED_FUNCTION;
 	pipeline.vertexShader = {};
 	pipeline.pixelShader = {};
+	sirGraphicsABIFixedRecipe_t fixed = {};
+	fixed.nSize = sizeof( fixed );
+	pipeline.eModel = SIR_GRAPHICS_PIPELINE_MODEL_FIXED_FUNCTION;
+	pipeline.pModern = nullptr;
+	pipeline.pFixed = &fixed;
 	return sirGraphicsValidatePipeline( pipeline ) == SIR_GRAPHICS_SUCCESS;
 }
 
