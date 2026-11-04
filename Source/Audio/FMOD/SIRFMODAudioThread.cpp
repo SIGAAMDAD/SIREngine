@@ -184,7 +184,8 @@ sirAudioResult_t SIRFMODAudioThread::submit( const sirFMODThreadRequest_t &reque
 		const uint64_t nNextTicket = ( nGeneration << 16 ) | iSlot;
 		slot.nGeneration = ( uint32_t )nGeneration;
 		slot.nTicket.store( nNextTicket, SIR_MEMORY_ORDER_RELAXED );
-		slot.bCancel.store( 0, SIR_MEMORY_ORDER_RELAXED );
+		slot.nCancelTicket.store( 0, SIR_MEMORY_ORDER_RELAXED );
+		slot.nOperation.store( ( uint8_t )request.eOperation, SIR_MEMORY_ORDER_RELAXED );
 		slot.request = request;
 		slot.result = {};
 		slot.nState.store( SIR_FMOD_SLOT_QUEUED, SIR_MEMORY_ORDER_RELEASE );
@@ -219,10 +220,11 @@ sirAudioResult_t SIRFMODAudioThread::cancel( uint64_t nTicket ) noexcept
 		     ( nState == SIR_FMOD_SLOT_QUEUED || nState == SIR_FMOD_SLOT_EXECUTING ) ) {
 			// Only a running asynchronous bank transaction can still be
 			// cancelled after dispatch. Other native calls are noninterruptible.
-			if ( nState == SIR_FMOD_SLOT_EXECUTING && slot.request.eOperation != SIR_FMOD_THREAD_LOAD_PACKAGE ) {
+			if ( nState == SIR_FMOD_SLOT_EXECUTING &&
+			     slot.nOperation.load( SIR_MEMORY_ORDER_ACQUIRE ) != SIR_FMOD_THREAD_LOAD_PACKAGE ) {
 				eResult = SIR_AUDIO_BUSY;
 			} else {
-				slot.bCancel.store( 1, SIR_MEMORY_ORDER_RELEASE );
+				slot.nCancelTicket.store( nTicket, SIR_MEMORY_ORDER_RELEASE );
 				eResult = SIR_AUDIO_OK;
 				m_nWakes.fetchAdd( 1, SIR_MEMORY_ORDER_RELEASE );
 				m_WaitCondition.notify_one();
@@ -411,7 +413,7 @@ void SIRFMODAudioThread::threadMain( void ) noexcept
 		}
 		if ( nActiveLoadTicket != 0 ) {
 			sirFMODThreadSlot_t &slot = m_pSlots[( uint32_t )( nActiveLoadTicket & 0xFFFFU )];
-			const bool bCancelled = slot.bCancel.load( SIR_MEMORY_ORDER_ACQUIRE ) != 0;
+			const bool bCancelled = slot.nCancelTicket.load( SIR_MEMORY_ORDER_ACQUIRE ) == nActiveLoadTicket;
 			const sirAudioResult_t eProgress = bCancelled ? m_Runtime.cancelLoadPackage() : m_Runtime.pollLoadPackage();
 			if ( m_Runtime.getPendingPackageId() == 0 ) {
 				sirFMODThreadResult_t result = {};
@@ -431,7 +433,7 @@ void SIRFMODAudioThread::threadMain( void ) noexcept
 			}
 			slot.nState.store( SIR_FMOD_SLOT_EXECUTING, SIR_MEMORY_ORDER_RELEASE );
 			sirFMODThreadResult_t result = {};
-			if ( slot.bCancel.load( SIR_MEMORY_ORDER_ACQUIRE ) != 0 ) {
+			if ( slot.nCancelTicket.load( SIR_MEMORY_ORDER_ACQUIRE ) == nTicket ) {
 				result.eResult = SIR_AUDIO_CANCELLED;
 			} else if ( nActiveLoadTicket != 0 && slot.request.eOperation == SIR_FMOD_THREAD_LOAD_PACKAGE ) {
 				// A pending root load does not block playback, mixer, or
