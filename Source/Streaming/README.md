@@ -28,7 +28,7 @@ and completion transfer. Core Jobs owns scheduling and worker/provider fences.
 | Layer | Planned owner | Contract / next component |
 | --- | --- | --- |
 | State and immutable reader views | `Source/World/State` | `SIRStateStore`, `SIRImmutableViewService` |
-| World cells, layers, streaming sources | `Source/World/Partition` | `SIRWorldPartition`, `SIRWorldCellDirectory`, `SIRWorldLayerManager` |
+| World cells, layers, streaming sources | `Source/World/Partition` | `SIRWorldPartition` directory/demand generator implemented; layer policy and provider activation pending |
 | Trajectory + offline prediction | `Source/Prediction` | `SIRPredictionSystem`, versioned demand epochs |
 | Entity FULL/REDUCED/COARSE/DORMANT | `Source/World/Entities` | `SIRWorldEntityResidency`, durable event cursors |
 | Pack manifests + compression | `Tools/SceneCooker` and `Source/Resources` | `.sirm/.sirp`, deterministic cooker and validated reader |
@@ -52,6 +52,6 @@ and completion transfer. Core Jobs owns scheduling and worker/provider fences.
    test teleport, stale generations, cancellations and safe retirement.
 6. Measure budgets, p50/p95/p99 load-to-active latency and frame-time hitches.
 
-**Current limitation:** this branch does not stream bytes, cook packages,
+**Current limitation:** the new world partition generates demand but this branch does not stream bytes, cook packages,
 activate worlds or claim integration with unmerged PR #23. It establishes the
 buildable, tested demand/state authority and leaves data-plane ownership intact.
