@@ -145,3 +145,17 @@ add_test(NAME scripting.language.signed-runner
         "-DINPUT=${CMAKE_CURRENT_LIST_DIR}/Fixtures/SIRLang/signed.sir"
         "-DOUTPUT=${CMAKE_CURRENT_BINARY_DIR}/sirlang-signed.sirbc"
         -P "${CMAKE_CURRENT_LIST_DIR}/SIRLangSignedRunner.cmake")
+
+# These tests use assert() for both setup and validation. Release/profile
+# builds define NDEBUG globally; explicitly enable assertions for native
+# language test targets so initialization and negative checks still execute.
+get_property(sirScriptingUnitTargets DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" PROPERTY BUILDSYSTEM_TARGETS)
+foreach(sirScriptingUnitTarget IN LISTS sirScriptingUnitTargets)
+    if(sirScriptingUnitTarget MATCHES "^SIRLang.*Tests$")
+        if(MSVC)
+            target_compile_options(${sirScriptingUnitTarget} PRIVATE /UNDEBUG)
+        else()
+            target_compile_options(${sirScriptingUnitTarget} PRIVATE -UNDEBUG)
+        endif()
+    endif()
+endforeach()

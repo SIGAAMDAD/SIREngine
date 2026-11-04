@@ -122,8 +122,7 @@ static void initBackend( sirLangRuntimeFixture_t *pFixture, uint64_t nBindingDig
 	backend.nFuelPerInvoke = 128;
 }
 
-static sirScriptResult_t runtimeTestAlloc( void *, uint32_t nBytes, uint32_t nAlignment,
-                                          sirScriptPayloadAllocation_t *pResult ) noexcept
+static sirScriptResult_t runtimeTestAlloc( void *, uint32_t nBytes, uint32_t nAlignment, sirScriptPayloadAllocation_t *pResult ) noexcept
 {
 	if ( pResult == nullptr || nBytes == 0 || nAlignment > alignof( max_align_t ) ) {
 		return SIR_SCRIPT_INVALID_ARGUMENT;
@@ -154,14 +153,15 @@ static void testRealSourceThroughRuntime( void )
 
 	initCompiler( &s_Fixture, nFingerprint );
 	static constexpr char szSource[] = "fn identity(value: u16) -> u16:\n"
-	                                    "    return value\n";
+	                                   "    return value\n";
 	assert( SIRLangCompileSource( { ( const uint8_t * )szSource, sizeof( szSource ) - 1 }, &s_Fixture.compiler ) );
 	const uint64_t nMethodId = s_Fixture.compiler.cir.program.pFunctions[0].nFunctionId;
 	uint32_t nEncoded = 0;
-	assert( SIRLangEncodeGraphVM( &s_Fixture.compiler.cir.program, s_Fixture.szBytecode,
-	                              sizeof( s_Fixture.szBytecode ), &nEncoded ) == SIR_LANG_VM_OK );
+	assert( SIRLangEncodeGraphVM( &s_Fixture.compiler.cir.program, s_Fixture.szBytecode, sizeof( s_Fixture.szBytecode ), &nEncoded ) ==
+	        SIR_LANG_VM_OK );
 
-	const std::filesystem::path root = std::filesystem::temp_directory_path() /
+	const std::filesystem::path root =
+	    std::filesystem::temp_directory_path() /
 	    ( "sir-lang-runtime-" + std::to_string( std::chrono::steady_clock::now().time_since_epoch().count() ) );
 	assert( std::filesystem::create_directory( root ) );
 	assert( cache.configure( root.string().c_str(), 32768 ) == SIR_SCRIPT_OK );
@@ -172,8 +172,7 @@ static void testRealSourceThroughRuntime( void )
 	assert( cache.store( artifact, key, s_Fixture.szBytecode, nEncoded, 8, &descriptor ) == SIR_SCRIPT_OK );
 
 	const sirScriptPayloadAllocatorAPI_t allocator = {
-	    SIR_SCRIPT_PAYLOAD_ALLOCATOR_ABI_REVISION, nullptr, 32768, 8, runtimeTestAlloc, runtimeTestFree
-	};
+	    SIR_SCRIPT_PAYLOAD_ALLOCATOR_ABI_REVISION, nullptr, 32768, 8, runtimeTestAlloc, runtimeTestFree };
 	assert( source.configure( &cache, allocator, 32768 ) == SIR_SCRIPT_OK );
 	sirScriptCachedEntryHandle_t entry = {};
 	assert( source.registerArtifact( descriptor, &entry ) == SIR_SCRIPT_OK );
@@ -196,7 +195,7 @@ static void testRealSourceThroughRuntime( void )
 	const sirLangVMValue_t argument = { 42, SIR_LANG_VALUE_U16 };
 	sirLangVMValue_t result = {};
 	assert( runtime.invoke( instance, nMethodId, { &argument, sizeof( argument ), alignof( sirLangVMValue_t ) },
-	                       { &result, sizeof( result ), alignof( sirLangVMValue_t ) } ) == SIR_SCRIPT_OK );
+	                        { &result, sizeof( result ), alignof( sirLangVMValue_t ) } ) == SIR_SCRIPT_OK );
 	assert( result.nBits == 42 && result.eType == SIR_LANG_VALUE_U16 );
 	assert( runtime.unloadProgram( program ) == SIR_SCRIPT_BUSY );
 	assert( source.unregisterArtifact( entry ) == SIR_SCRIPT_BUSY );

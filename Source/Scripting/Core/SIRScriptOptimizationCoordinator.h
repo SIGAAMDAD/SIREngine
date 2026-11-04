@@ -96,13 +96,13 @@ class SIRScriptOptimizationCoordinator
 public:
 	SIRScriptOptimizationCoordinator( void ) noexcept;
 	~SIRScriptOptimizationCoordinator( void ) noexcept;
-	SIRScriptOptimizationCoordinator( const SIRScriptOptimizationCoordinator & ) = delete;
-	SIRScriptOptimizationCoordinator &operator=( const SIRScriptOptimizationCoordinator & ) = delete;
+	SIRScriptOptimizationCoordinator( const SIRScriptOptimizationCoordinator& ) = delete;
+	SIRScriptOptimizationCoordinator& operator=( const SIRScriptOptimizationCoordinator& ) = delete;
 
-	sirScriptResult_t configure( const sirScriptOptimizationTransportAPI_t &transport, SIRScriptCachedProgramSource *pSource,
+	sirScriptResult_t configure( const sirScriptOptimizationTransportAPI_t& transport, SIRScriptCachedProgramSource *pSource,
 	                             SIRScriptCodeManager *pManager ) noexcept;
 	sirScriptResult_t start( void ) noexcept;
-	sirScriptResult_t submit( const sirScriptOptimizationRequest_t &request, bool bActivate,
+	sirScriptResult_t submit( const sirScriptOptimizationRequest_t& request, bool bActivate,
 	                          sirScriptOptimizationJobHandle_t *pHandle ) noexcept;
 	sirScriptResult_t cancel( sirScriptOptimizationJobHandle_t handle ) noexcept;
 	sirScriptResult_t query( sirScriptOptimizationJobHandle_t handle, sirScriptOptimizationJobInfo_t *pInfo ) const noexcept;
@@ -118,8 +118,8 @@ private:
 	int32_t resolve( sirScriptOptimizationJobHandle_t handle ) const noexcept;
 	int32_t findByJobId( uint64_t nJobId ) const noexcept;
 	void failWorker( void ) noexcept;
-	void processReply( const sirScriptOptimizationReply_t &reply, sirScriptOptimizationPumpStats_t *pStats ) noexcept;
-	void failJob( sirScriptOptimizationJobSlot_t &slot, sirScriptResult_t eResult ) noexcept;
+	void processReply( const sirScriptOptimizationReply_t& reply, sirScriptOptimizationPumpStats_t *pStats ) noexcept;
+	void failJob( sirScriptOptimizationJobSlot_t& slot, sirScriptResult_t eResult ) noexcept;
 
 	sirScriptOptimizationTransportAPI_t m_Transport;
 	SIRScriptCachedProgramSource *m_pSource;

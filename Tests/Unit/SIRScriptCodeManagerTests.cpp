@@ -77,7 +77,7 @@ static sirScriptProgramSourceAPI_t fixtureAPI( sirCodeTestProvider_t *pFixture )
 	return { SIR_SCRIPT_PROGRAM_SOURCE_ABI_REVISION, pFixture, acquireFixture, releaseFixture };
 }
 
-static sirScriptCodeArtifact_t artifact( const SIRScriptBindingRegistry &registry, uint64_t nRevision ) noexcept
+static sirScriptCodeArtifact_t artifact( const SIRScriptBindingRegistry& registry, uint64_t nRevision ) noexcept
 {
 	return { 1, 50, nRevision, 77, registry.schemaFingerprint(), 88, 101 + nRevision };
 }

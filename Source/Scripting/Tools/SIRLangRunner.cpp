@@ -7,6 +7,8 @@ This Source Code Form is subject to the terms of the Mozilla Public
 License, v2. If a copy of the MPL was not distributed with this
 file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+
+
 This software is provided "as is", without warranty of any kind,
 express or implied, including but not limited to the warranties
 of merchantability, fitness for a particular purpose and noninfringement.
@@ -153,8 +155,8 @@ static bool sirLangRunParseArgument( const char *pszValue, sirLangValueKind_t eT
 		if ( nWidth == 0 ) {
 			return false;
 		}
-		const bool bSigned = eType == SIR_LANG_VALUE_I8 || eType == SIR_LANG_VALUE_I16 ||
-		                     eType == SIR_LANG_VALUE_I32 || eType == SIR_LANG_VALUE_I64;
+		const bool bSigned =
+		    eType == SIR_LANG_VALUE_I8 || eType == SIR_LANG_VALUE_I16 || eType == SIR_LANG_VALUE_I32 || eType == SIR_LANG_VALUE_I64;
 		if ( bSigned ) {
 			if ( !sirLangRunParseSigned( pszValue, nWidth, &nBits ) ) {
 				return false;
@@ -202,8 +204,7 @@ int main( int nArgc, char **ppszArgv )
 		return 2;
 	}
 	for ( uint32_t i = 0; i < function.nParameterCount; ++i ) {
-		const sirLangValueKind_t eType =
-		    s_RunBuffers.storage.program.pParameterTypes[function.iFirstParameterType + i];
+		const sirLangValueKind_t eType = s_RunBuffers.storage.program.pParameterTypes[function.iFirstParameterType + i];
 		if ( !sirLangRunParseArgument( ppszArgv[3 + i], eType, &s_RunBuffers.szArguments[i] ) ) {
 			fprintf( stderr, "SIRLangRunner: invalid argument %u\n", i );
 			return 2;
@@ -219,11 +220,10 @@ int main( int nArgc, char **ppszArgv )
 	invocation.nExpectedBindingDigest = s_RunBuffers.storage.program.nBindingDigest;
 	const sirLangVMRunResult_t result = SIRLangRunGraphVM( &s_RunBuffers.storage.program, invocation );
 	if ( result.eError != SIR_LANG_VM_OK ) {
-		fprintf( stderr, "SIRLangRunner: execution failed (%u) at node %u\n",
-		         ( unsigned )result.eError, result.nSourceNode );
+		fprintf( stderr, "SIRLangRunner: execution failed (%u) at node %u\n", ( unsigned )result.eError, result.nSourceNode );
 		return 5;
 	}
-	printf( "value_type=%u value_bits=%llu fuel=%llu\n", ( unsigned )result.result.eType,
-	        ( unsigned long long )result.result.nBits, ( unsigned long long )result.nFuelConsumed );
+	printf( "value_type=%u value_bits=%llu fuel=%llu\n", ( unsigned )result.result.eType, ( unsigned long long )result.result.nBits,
+	        ( unsigned long long )result.nFuelConsumed );
 	return 0;
 }

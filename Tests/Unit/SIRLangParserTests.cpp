@@ -60,7 +60,7 @@ static void assertTreeIntegrity( const sirLangSyntaxTree_t *pTree ) noexcept
 	assert( pTree->nRoot < pTree->nNodeCount );
 	assert( pTree->pNodes[pTree->nRoot].eKind == SIR_LANG_SYNTAX_MODULE );
 	for ( uint32_t iNode = 0; iNode < pTree->nNodeCount; ++iNode ) {
-		const sirLangSyntaxNode_t &node = pTree->pNodes[iNode];
+		const sirLangSyntaxNode_t& node = pTree->pNodes[iNode];
 		assert( node.nStartToken <= node.nEndToken );
 		assert( node.nEndToken <= pTree->nTokenCount );
 		uint32_t iChild = node.nFirstChild;
@@ -72,7 +72,7 @@ static void assertTreeIntegrity( const sirLangSyntaxTree_t *pTree ) noexcept
 		}
 	}
 	for ( uint32_t iToken = 0; iToken < pTree->nTokenCount; ++iToken ) {
-		const sirLangToken_t &token = pTree->pTokens[iToken];
+		const sirLangToken_t& token = pTree->pTokens[iToken];
 		assert( token.nOffset <= pTree->source.nBytes );
 		assert( token.nLength <= pTree->source.nBytes - token.nOffset );
 	}
@@ -103,7 +103,7 @@ static void testBehaviorAndSchema( void ) noexcept
 	const sirLangParseError_t eResult = parseSource( &workspace, pszSource );
 	if ( eResult != SIR_LANG_PARSE_OK ) {
 		for ( uint32_t iDiag = 0; iDiag < workspace.tree.nDiagnosticCount; ++iDiag ) {
-			const sirLangParseDiagnostic_t &diag = workspace.tree.pDiagnostics[iDiag];
+			const sirLangParseDiagnostic_t& diag = workspace.tree.pDiagnostics[iDiag];
 			fprintf( stderr, "Parser error %u at %u:%u\n", ( unsigned )diag.eError, diag.nLine, diag.nColumn );
 		}
 	}

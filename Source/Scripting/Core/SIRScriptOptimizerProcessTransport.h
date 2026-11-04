@@ -53,14 +53,14 @@ public:
 	SIRScriptOptimizerProcessTransport( void ) noexcept;
 	~SIRScriptOptimizerProcessTransport( void ) noexcept;
 
-	SIRScriptOptimizerProcessTransport( const SIRScriptOptimizerProcessTransport & ) = delete;
-	SIRScriptOptimizerProcessTransport &operator=( const SIRScriptOptimizerProcessTransport & ) = delete;
+	SIRScriptOptimizerProcessTransport( const SIRScriptOptimizerProcessTransport& ) = delete;
+	SIRScriptOptimizerProcessTransport& operator=( const SIRScriptOptimizerProcessTransport& ) = delete;
 
 	sirScriptOptimizationTransportAPI_t getAPI( void ) noexcept;
 	bool isRunning( void ) const noexcept;
 	bool hasFailed( void ) const noexcept;
 
-	sirScriptResult_t configure( const sirScriptOptimizerProcessConfig_t &config ) noexcept;
+	sirScriptResult_t configure( const sirScriptOptimizerProcessConfig_t& config ) noexcept;
 	sirScriptResult_t start( void ) noexcept;
 	void stop( void ) noexcept;
 	sirScriptResult_t send( const uint8_t *pWire, uint32_t nBytes ) noexcept;

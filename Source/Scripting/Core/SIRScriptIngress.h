@@ -51,10 +51,10 @@ class SIRScriptIngress
 {
 public:
 	SIRScriptIngress( void ) noexcept;
-	SIRScriptIngress( const SIRScriptIngress & ) = delete;
-	SIRScriptIngress &operator=( const SIRScriptIngress & ) = delete;
+	SIRScriptIngress( const SIRScriptIngress& ) = delete;
+	SIRScriptIngress& operator=( const SIRScriptIngress& ) = delete;
 
-	sirScriptResult_t tryPost( sirScriptPhase_t ePhase, const sirScriptIngressPacket_t &packet ) noexcept;
+	sirScriptResult_t tryPost( sirScriptPhase_t ePhase, const sirScriptIngressPacket_t& packet ) noexcept;
 	bool tryPop( sirScriptPhase_t ePhase, uint64_t nEndTicket, sirScriptIngressPacket_t *pPacket ) noexcept;
 	uint64_t snapshotTail( sirScriptPhase_t ePhase ) const noexcept;
 	uint32_t pendingCount( sirScriptPhase_t ePhase ) const noexcept;

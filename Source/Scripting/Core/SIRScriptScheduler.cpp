@@ -42,14 +42,14 @@ uint32_t SIRScriptScheduler::nextGeneration( uint32_t nGeneration ) noexcept
 
 void SIRScriptScheduler::release( uint32_t nSlot ) noexcept
 {
-	sirScriptScheduledSlot_t &slot = m_szSlots[nSlot];
+	sirScriptScheduledSlot_t& slot = m_szSlots[nSlot];
 	slot.bActive = false;
 	slot.nGeneration = nextGeneration( slot.nGeneration );
 	slot.nNext = m_nFreeHead;
 	m_nFreeHead = nSlot;
 }
 
-sirScriptResult_t SIRScriptScheduler::setPayloadAllocator( const sirScriptPayloadAllocatorAPI_t &api ) noexcept
+sirScriptResult_t SIRScriptScheduler::setPayloadAllocator( const sirScriptPayloadAllocatorAPI_t& api ) noexcept
 {
 	if ( m_nLivePayloads != 0 ) {
 		return SIR_SCRIPT_BUSY;
@@ -67,7 +67,7 @@ sirScriptResult_t SIRScriptScheduler::setPayloadAllocator( const sirScriptPayloa
 	return SIR_SCRIPT_OK;
 }
 
-sirScriptResult_t SIRScriptScheduler::enqueue( sirScriptPhase_t ePhase, const sirScriptScheduledCall_t &call, const void *pPayload,
+sirScriptResult_t SIRScriptScheduler::enqueue( sirScriptPhase_t ePhase, const sirScriptScheduledCall_t& call, const void *pPayload,
                                                sirScriptTaskHandle_t *pHandle ) noexcept
 {
 	if ( pHandle == nullptr || ePhase >= SIR_SCRIPT_PHASE_COUNT ) {
@@ -112,7 +112,7 @@ sirScriptResult_t SIRScriptScheduler::enqueue( sirScriptPhase_t ePhase, const si
 	}
 
 	const uint32_t nSlot = m_nFreeHead;
-	sirScriptScheduledSlot_t &slot = m_szSlots[nSlot];
+	sirScriptScheduledSlot_t& slot = m_szSlots[nSlot];
 	m_nFreeHead = slot.nNext;
 	slot.call = call;
 	slot.call.allocation = allocation;
@@ -165,7 +165,7 @@ sirScriptResult_t SIRScriptScheduler::cancel( sirScriptTaskHandle_t handle ) noe
 	if ( handle.nSlot == 0 || handle.nSlot > MAX_TASKS ) {
 		return SIR_SCRIPT_INVALID_HANDLE;
 	}
-	const sirScriptScheduledSlot_t &slot = m_szSlots[handle.nSlot];
+	const sirScriptScheduledSlot_t& slot = m_szSlots[handle.nSlot];
 	if ( !slot.bActive || slot.nGeneration != handle.nGeneration ) {
 		return SIR_SCRIPT_INVALID_HANDLE;
 	}
@@ -206,7 +206,7 @@ bool SIRScriptScheduler::dequeue( sirScriptPhase_t ePhase, uint64_t nLastSequenc
 		return false;
 	}
 
-	sirScriptScheduledSlot_t &slot = m_szSlots[nSlot];
+	sirScriptScheduledSlot_t& slot = m_szSlots[nSlot];
 	*pCall = slot.call;
 	slot.call.allocation = {};
 	m_szHeads[ePhase] = slot.nNext;

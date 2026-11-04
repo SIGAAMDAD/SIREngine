@@ -483,8 +483,8 @@ static uint32_t sirLangLowerLogical( sirLangLowerState_t *pState, uint32_t iNode
 		return SIR_LANG_INVALID_INDEX;
 	}
 
-	const uint32_t iBranch = sirLangEmit( pState, { SIR_LANG_OP_JUMP_FALSE, SIR_LANG_VALUE_VOID, 0, UINT32_MAX,
-	                                               iLeftValue, 0, 0, 0, iNode } );
+	const uint32_t iBranch =
+	    sirLangEmit( pState, { SIR_LANG_OP_JUMP_FALSE, SIR_LANG_VALUE_VOID, 0, UINT32_MAX, iLeftValue, 0, 0, 0, iNode } );
 	if ( iBranch == SIR_LANG_INVALID_INDEX ) {
 		return SIR_LANG_INVALID_INDEX;
 	}
@@ -507,8 +507,7 @@ static uint32_t sirLangLowerLogical( sirLangLowerState_t *pState, uint32_t iNode
 		return SIR_LANG_INVALID_INDEX;
 	}
 
-	const uint32_t iTrueExit = sirLangEmit( pState, { SIR_LANG_OP_JUMP, SIR_LANG_VALUE_VOID, 0, UINT32_MAX, 0, 0, 0, 0,
-	                                               iNode } );
+	const uint32_t iTrueExit = sirLangEmit( pState, { SIR_LANG_OP_JUMP, SIR_LANG_VALUE_VOID, 0, UINT32_MAX, 0, 0, 0, 0, iNode } );
 	if ( iTrueExit == SIR_LANG_INVALID_INDEX ) {
 		return SIR_LANG_INVALID_INDEX;
 	}
@@ -535,8 +534,7 @@ static uint32_t sirLangLowerLogical( sirLangLowerState_t *pState, uint32_t iNode
 	pState->pOutput->pInstructions[iTrueExit].nAuxiliary = pState->pOutput->program.nInstructionCount;
 	const uint32_t iPhi = sirLangNewRegister( pState, iNode );
 	if ( iPhi != SIR_LANG_INVALID_INDEX ) {
-		sirLangEmit( pState, { SIR_LANG_OP_PHI, SIR_LANG_VALUE_BOOL, 0, iPhi, iTrueValue, iFalseValue,
-	                       iTrueExit, 0, iNode } );
+		sirLangEmit( pState, { SIR_LANG_OP_PHI, SIR_LANG_VALUE_BOOL, 0, iPhi, iTrueValue, iFalseValue, iTrueExit, 0, iNode } );
 	}
 	return iPhi;
 }
@@ -619,8 +617,7 @@ static uint32_t sirLangLowerExpression( sirLangLowerState_t *pState, uint32_t iN
 		// inequality, preserving one canonical scalar opcode set in v1.
 		const uint32_t iOperator = pState->pTree->pNodes[iLeft].nEndToken;
 		if ( sirLangNodeText( pState, iOperator, "xor" ) &&
-		     ( sirLangRegisterType( pState, iA ) != SIR_LANG_VALUE_BOOL ||
-		       sirLangRegisterType( pState, iB ) != SIR_LANG_VALUE_BOOL ) ) {
+		     ( sirLangRegisterType( pState, iA ) != SIR_LANG_VALUE_BOOL || sirLangRegisterType( pState, iB ) != SIR_LANG_VALUE_BOOL ) ) {
 			sirLangError( pState, SIR_LANG_LOWER_TYPE, iNode );
 			break;
 		}

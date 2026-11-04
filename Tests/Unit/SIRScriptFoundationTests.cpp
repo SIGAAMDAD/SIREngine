@@ -337,11 +337,11 @@ static bool testRuntime( void ) noexcept
 	sirScriptTestProgramSource_t source = {};
 	source.nPayload = 0x123456789ABCDEF0ULL;
 	SIR_TEST_CHECK( server.runtime().setProgramSource( testProgramSourceAPI( &source ) ) == SIR_SCRIPT_OK );
-	SIRScriptBindingRegistry &registry = server.bindings();
+	SIRScriptBindingRegistry& registry = server.bindings();
 	SIR_TEST_CHECK( registry.registerType( { 10, sizeof( uint32_t ), alignof( uint32_t ),
 	                                         SIR_SCRIPT_TYPE_PLAIN_BYTES | SIR_SCRIPT_TYPE_NO_POINTERS } ) == SIR_SCRIPT_OK );
 	SIR_TEST_CHECK( registry.registerEvent( { 25, 10 } ) == SIR_SCRIPT_OK );
-	SIRScriptRuntime &runtime = server.runtime();
+	SIRScriptRuntime& runtime = server.runtime();
 	sirScriptTestBackend_t backend = {};
 	backend.pRuntime = &runtime;
 	const sirScriptBackendAPI_t api = testBackendAPI( &backend );
@@ -415,8 +415,8 @@ static bool testScheduler( void ) noexcept
 	sirScriptTestProgramSource_t source = {};
 	source.nPayload = 0x123456789ABCDEF0ULL;
 	SIR_TEST_CHECK( server.runtime().setProgramSource( testProgramSourceAPI( &source ) ) == SIR_SCRIPT_OK );
-	SIRScriptBindingRegistry &registry = server.bindings();
-	SIRScriptRuntime &runtime = server.runtime();
+	SIRScriptBindingRegistry& registry = server.bindings();
+	SIRScriptRuntime& runtime = server.runtime();
 	SIR_TEST_CHECK( registry.registerType( { 10, 4, 4, SIR_SCRIPT_TYPE_PLAIN_BYTES | SIR_SCRIPT_TYPE_NO_POINTERS } ) == SIR_SCRIPT_OK );
 	SIR_TEST_CHECK( registry.registerType( { 11, 512, 16, SIR_SCRIPT_TYPE_PLAIN_BYTES | SIR_SCRIPT_TYPE_NO_POINTERS } ) == SIR_SCRIPT_OK );
 	SIR_TEST_CHECK( registry.registerType( { 12, 128, 128, SIR_SCRIPT_TYPE_PLAIN_BYTES | SIR_SCRIPT_TYPE_NO_POINTERS } ) == SIR_SCRIPT_OK );
@@ -544,8 +544,8 @@ static bool testShutdownAll( void ) noexcept
 	sirScriptTestProgramSource_t source = {};
 	source.nPayload = 0x123456789ABCDEF0ULL;
 	SIR_TEST_CHECK( server.runtime().setProgramSource( testProgramSourceAPI( &source ) ) == SIR_SCRIPT_OK );
-	SIRScriptRuntime &runtime = server.runtime();
-	SIRScriptBindingRegistry &registry = server.bindings();
+	SIRScriptRuntime& runtime = server.runtime();
+	SIRScriptBindingRegistry& registry = server.bindings();
 	sirScriptTestBackend_t backend = {};
 	backend.pRuntime = &runtime;
 	SIR_TEST_CHECK( registry.registerType( { 10, 4, 4, SIR_SCRIPT_TYPE_PLAIN_BYTES | SIR_SCRIPT_TYPE_NO_POINTERS } ) == SIR_SCRIPT_OK );
@@ -585,8 +585,8 @@ static bool testCrossBackendEvents( void ) noexcept
 	sirScriptTestProgramSource_t source = {};
 	source.nPayload = 0x123456789ABCDEF0ULL;
 	SIR_TEST_CHECK( server.runtime().setProgramSource( testProgramSourceAPI( &source ) ) == SIR_SCRIPT_OK );
-	SIRScriptBindingRegistry &registry = server.bindings();
-	SIRScriptRuntime &runtime = server.runtime();
+	SIRScriptBindingRegistry& registry = server.bindings();
+	SIRScriptRuntime& runtime = server.runtime();
 	sirScriptTestBackend_t first = {};
 	sirScriptTestBackend_t second = {};
 	SIR_TEST_CHECK( registry.registerType( { 10, 4, 4, SIR_SCRIPT_TYPE_PLAIN_BYTES | SIR_SCRIPT_TYPE_NO_POINTERS } ) == SIR_SCRIPT_OK );
@@ -637,8 +637,8 @@ static bool testCrossBackendEvents( void ) noexcept
 static bool testProgramSourceLeases( void ) noexcept
 {
 	SIRScriptServer server;
-	SIRScriptBindingRegistry &registry = server.bindings();
-	SIRScriptRuntime &runtime = server.runtime();
+	SIRScriptBindingRegistry& registry = server.bindings();
+	SIRScriptRuntime& runtime = server.runtime();
 	sirScriptTestProgramSource_t source = {};
 	source.nPayload = 0xCAFE1234U;
 	sirScriptTestBackend_t backend = {};
@@ -693,8 +693,8 @@ static bool testProgramSourceLeases( void ) noexcept
 static bool testCrossThreadIngress( void ) noexcept
 {
 	SIRScriptServer server;
-	SIRScriptBindingRegistry &registry = server.bindings();
-	SIRScriptRuntime &runtime = server.runtime();
+	SIRScriptBindingRegistry& registry = server.bindings();
+	SIRScriptRuntime& runtime = server.runtime();
 	sirScriptTestProgramSource_t source = {};
 	source.nPayload = 0x789ABCDEULL;
 	sirScriptTestBackend_t backend = {};
@@ -940,8 +940,8 @@ static bool testRuntimePayloadHeap( void ) noexcept
 {
 	sirScriptTestPayloadHeap_t heap = {};
 	SIRScriptServer server;
-	SIRScriptBindingRegistry &registry = server.bindings();
-	SIRScriptRuntime &runtime = server.runtime();
+	SIRScriptBindingRegistry& registry = server.bindings();
+	SIRScriptRuntime& runtime = server.runtime();
 	SIR_TEST_CHECK( registry.registerType( { 18, 512, 16, SIR_SCRIPT_TYPE_PLAIN_BYTES | SIR_SCRIPT_TYPE_NO_POINTERS } ) == SIR_SCRIPT_OK );
 	SIR_TEST_CHECK( registry.registerType( { 19, 128, 128, SIR_SCRIPT_TYPE_PLAIN_BYTES | SIR_SCRIPT_TYPE_NO_POINTERS } ) == SIR_SCRIPT_OK );
 	SIR_TEST_CHECK( registry.registerType( { 20, 2048, 16, SIR_SCRIPT_TYPE_PLAIN_BYTES | SIR_SCRIPT_TYPE_NO_POINTERS } ) == SIR_SCRIPT_OK );

@@ -20,7 +20,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 SIRScriptIngress::SIRScriptIngress( void ) noexcept : m_nActiveProducers( 0 ), m_bClosed( false )
 {
 	for ( uint32_t iPhase = 0; iPhase < SIR_SCRIPT_PHASE_COUNT; ++iPhase ) {
-		sirScriptIngressQueue_t &queue = m_szQueues[iPhase];
+		sirScriptIngressQueue_t& queue = m_szQueues[iPhase];
 		queue.nHead = 0;
 		queue.nTail.store( 0, std::memory_order_relaxed );
 		queue.nCount.store( 0, std::memory_order_relaxed );
@@ -30,7 +30,7 @@ SIRScriptIngress::SIRScriptIngress( void ) noexcept : m_nActiveProducers( 0 ), m
 	}
 }
 
-sirScriptResult_t SIRScriptIngress::tryPost( sirScriptPhase_t ePhase, const sirScriptIngressPacket_t &packet ) noexcept
+sirScriptResult_t SIRScriptIngress::tryPost( sirScriptPhase_t ePhase, const sirScriptIngressPacket_t& packet ) noexcept
 {
 	if ( ePhase >= SIR_SCRIPT_PHASE_COUNT || packet.nEventTypeId == 0 || packet.nBytes > sizeof( packet.szPayload ) ||
 	     packet.nAlignment == 0 || ( packet.nAlignment & ( packet.nAlignment - 1 ) ) != 0 ||
@@ -46,10 +46,10 @@ sirScriptResult_t SIRScriptIngress::tryPost( sirScriptPhase_t ePhase, const sirS
 		return SIR_SCRIPT_BUSY;
 	}
 
-	sirScriptIngressQueue_t &queue = m_szQueues[ePhase];
+	sirScriptIngressQueue_t& queue = m_szQueues[ePhase];
 	uint64_t nPosition = queue.nTail.load( std::memory_order_relaxed );
 	for ( ;; ) {
-		sirScriptIngressSlot_t &slot = queue.szSlots[nPosition & ( CAPACITY - 1 )];
+		sirScriptIngressSlot_t& slot = queue.szSlots[nPosition & ( CAPACITY - 1 )];
 		const uint64_t nSequence = slot.nSequence.load( std::memory_order_acquire );
 		const int64_t nDifference = ( int64_t )( nSequence - nPosition );
 		if ( nDifference == 0 ) {
@@ -76,12 +76,12 @@ bool SIRScriptIngress::tryPop( sirScriptPhase_t ePhase, uint64_t nEndTicket, sir
 	if ( ePhase >= SIR_SCRIPT_PHASE_COUNT || pPacket == nullptr ) {
 		return false;
 	}
-	sirScriptIngressQueue_t &queue = m_szQueues[ePhase];
+	sirScriptIngressQueue_t& queue = m_szQueues[ePhase];
 	const uint64_t nPosition = queue.nHead;
 	if ( nPosition >= nEndTicket ) {
 		return false;
 	}
-	sirScriptIngressSlot_t &slot = queue.szSlots[nPosition & ( CAPACITY - 1 )];
+	sirScriptIngressSlot_t& slot = queue.szSlots[nPosition & ( CAPACITY - 1 )];
 	if ( slot.nSequence.load( std::memory_order_acquire ) != nPosition + 1 ) {
 		return false;
 	}

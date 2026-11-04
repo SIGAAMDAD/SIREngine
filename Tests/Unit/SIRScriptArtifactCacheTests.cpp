@@ -99,7 +99,7 @@ static bool testCache( void )
 	SIR_TEST_CHECK( cache.store( artifact, key, szChanged, sizeof( szChanged ), 64, &record ) == SIR_SCRIPT_TYPE_MISMATCH );
 
 	std::filesystem::path file;
-	for ( const auto &entry : std::filesystem::directory_iterator( root ) ) {
+	for ( const auto& entry : std::filesystem::directory_iterator( root ) ) {
 		file = entry.path();
 	}
 	SIR_TEST_CHECK( !file.empty() );

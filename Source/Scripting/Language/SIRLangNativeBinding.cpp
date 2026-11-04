@@ -44,16 +44,12 @@ sirLangVMError_t SIRLangInvokeNativeBinding( const sirLangVMCall_t& call, sirLan
 	}
 
 	const uint32_t nBytes = call.nArgumentCount * sizeof( sirLangVMValue_t );
-	const sirScriptReadFrame_t arguments = {
-	    nBytes != 0 ? call.pArguments : nullptr, nBytes, nBytes != 0 ? alignof( sirLangVMValue_t ) : 1
-	};
-	const sirScriptWriteFrame_t result = {
-	    descriptor.nReturnTypeId != 0 ? pResult : nullptr,
-	    descriptor.nReturnTypeId != 0 ? ( uint32_t )sizeof( sirLangVMValue_t ) : 0,
-	    descriptor.nReturnTypeId != 0 ? ( uint32_t )alignof( sirLangVMValue_t ) : 1
-	};
-	const sirScriptNativeInvocation_t request = { call.nFunctionId, call.nSignatureId,
-	                                              call.nBindingRevision, arguments, result };
+	const sirScriptReadFrame_t arguments = { nBytes != 0 ? call.pArguments : nullptr, nBytes,
+	                                         nBytes != 0 ? alignof( sirLangVMValue_t ) : 1 };
+	const sirScriptWriteFrame_t result = { descriptor.nReturnTypeId != 0 ? pResult : nullptr,
+	                                       descriptor.nReturnTypeId != 0 ? ( uint32_t )sizeof( sirLangVMValue_t ) : 0,
+	                                       descriptor.nReturnTypeId != 0 ? ( uint32_t )alignof( sirLangVMValue_t ) : 1 };
+	const sirScriptNativeInvocation_t request = { call.nFunctionId, call.nSignatureId, call.nBindingRevision, arguments, result };
 	const sirScriptResult_t eResult = pRegistry->invokeNative( request );
 	return eResult == SIR_SCRIPT_OK ? SIR_LANG_VM_OK : SIR_LANG_VM_INVALID_CAPABILITY;
 }

@@ -9,6 +9,8 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 This software is provided "as is", without warranty of any kind,
 express or implied, including but not limited to the warranties
+
+
 of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
@@ -49,7 +51,7 @@ uint32_t SIRScriptRuntime::nextGeneration( uint32_t nGeneration ) noexcept
 	return nGeneration == 0 ? 1 : nGeneration;
 }
 
-bool SIRScriptRuntime::validAPI( const sirScriptBackendAPI_t &api ) noexcept
+bool SIRScriptRuntime::validAPI( const sirScriptBackendAPI_t& api ) noexcept
 {
 	return api.nABIRevision == SIR_SCRIPT_BACKEND_ABI_REVISION && api.pStart != nullptr && api.pStop != nullptr &&
 	       api.pLoadProgram != nullptr && api.pUnloadProgram != nullptr && api.pCreateInstance != nullptr &&
@@ -71,7 +73,7 @@ bool SIRScriptRuntime::validProgramView( sirScriptProgramView_t view, uint64_t n
 	return view.pData != nullptr && ( ( uintptr_t )view.pData % view.nAlignment ) == 0;
 }
 
-sirScriptResult_t SIRScriptRuntime::setProgramSource( const sirScriptProgramSourceAPI_t &api ) noexcept
+sirScriptResult_t SIRScriptRuntime::setProgramSource( const sirScriptProgramSourceAPI_t& api ) noexcept
 {
 	if ( !isOwnerThread() || m_bCallingBackend || m_bDispatching || m_bPumping || m_bShuttingDown ) {
 		return SIR_SCRIPT_BUSY;
@@ -118,7 +120,7 @@ int32_t SIRScriptRuntime::resolveProgram( sirScriptProgramHandle_t handle ) cons
 		return -1;
 	}
 	const uint32_t iProgram = handle.nSlot - 1;
-	const sirScriptProgramSlot_t &slot = m_szPrograms[iProgram];
+	const sirScriptProgramSlot_t& slot = m_szPrograms[iProgram];
 	return slot.bActive && slot.nGeneration == handle.nGeneration ? ( int32_t )iProgram : -1;
 }
 
@@ -128,7 +130,7 @@ int32_t SIRScriptRuntime::resolveInstance( sirScriptInstanceHandle_t handle ) co
 		return -1;
 	}
 	const uint32_t iInstance = handle.nSlot - 1;
-	const sirScriptInstanceSlot_t &slot = m_szInstances[iInstance];
+	const sirScriptInstanceSlot_t& slot = m_szInstances[iInstance];
 	return slot.bActive && slot.nGeneration == handle.nGeneration ? ( int32_t )iInstance : -1;
 }
 
@@ -142,7 +144,7 @@ bool SIRScriptRuntime::hasLivePrograms( uint32_t iBackend ) const noexcept
 	return false;
 }
 
-sirScriptResult_t SIRScriptRuntime::registerBackend( uint64_t nBackendId, const sirScriptBackendAPI_t &api ) noexcept
+sirScriptResult_t SIRScriptRuntime::registerBackend( uint64_t nBackendId, const sirScriptBackendAPI_t& api ) noexcept
 {
 	if ( !isOwnerThread() ) {
 		return SIR_SCRIPT_BUSY;
@@ -180,7 +182,7 @@ sirScriptResult_t SIRScriptRuntime::startBackend( uint64_t nBackendId ) noexcept
 	if ( iBackend < 0 ) {
 		return SIR_SCRIPT_NOT_FOUND;
 	}
-	sirScriptBackendSlot_t &backend = m_szBackends[iBackend];
+	sirScriptBackendSlot_t& backend = m_szBackends[iBackend];
 	if ( backend.bStarted ) {
 		return SIR_SCRIPT_WRONG_STATE;
 	}
@@ -205,7 +207,7 @@ sirScriptResult_t SIRScriptRuntime::stopBackend( uint64_t nBackendId ) noexcept
 	if ( iBackend < 0 ) {
 		return SIR_SCRIPT_NOT_FOUND;
 	}
-	sirScriptBackendSlot_t &backend = m_szBackends[iBackend];
+	sirScriptBackendSlot_t& backend = m_szBackends[iBackend];
 	if ( !backend.bStarted ) {
 		return SIR_SCRIPT_WRONG_STATE;
 	}
@@ -297,7 +299,7 @@ sirScriptResult_t SIRScriptRuntime::loadProgram( uint64_t nBackendId, uint64_t n
 		return SIR_SCRIPT_WRONG_STATE;
 	}
 	for ( uint32_t iProgram = 0; iProgram < MAX_PROGRAMS; ++iProgram ) {
-		const sirScriptProgramSlot_t &slot = m_szPrograms[iProgram];
+		const sirScriptProgramSlot_t& slot = m_szPrograms[iProgram];
 		if ( slot.bActive && slot.nProgramId == nProgramId && slot.nRevision == nRevision && slot.iBackend == iBackend ) {
 			return SIR_SCRIPT_DUPLICATE;
 		}
@@ -306,7 +308,7 @@ sirScriptResult_t SIRScriptRuntime::loadProgram( uint64_t nBackendId, uint64_t n
 		return SIR_SCRIPT_WRONG_STATE;
 	}
 	for ( uint32_t iProgram = 0; iProgram < MAX_PROGRAMS; ++iProgram ) {
-		sirScriptProgramSlot_t &slot = m_szPrograms[iProgram];
+		sirScriptProgramSlot_t& slot = m_szPrograms[iProgram];
 		if ( slot.bActive ) {
 			continue;
 		}
@@ -331,7 +333,7 @@ sirScriptResult_t SIRScriptRuntime::loadProgram( uint64_t nBackendId, uint64_t n
 		}
 
 		uint64_t nBackendToken = 0;
-		sirScriptBackendSlot_t &backend = m_szBackends[iBackend];
+		sirScriptBackendSlot_t& backend = m_szBackends[iBackend];
 		m_bCallingBackend = true;
 		const sirScriptResult_t eResult = backend.api.pLoadProgram( backend.api.pUser, view, &nBackendToken );
 		m_bCallingBackend = false;
@@ -368,11 +370,11 @@ sirScriptResult_t SIRScriptRuntime::unloadProgram( sirScriptProgramHandle_t hand
 	if ( iProgram < 0 ) {
 		return SIR_SCRIPT_INVALID_HANDLE;
 	}
-	sirScriptProgramSlot_t &slot = m_szPrograms[iProgram];
+	sirScriptProgramSlot_t& slot = m_szPrograms[iProgram];
 	if ( slot.nReferences != 0 ) {
 		return SIR_SCRIPT_BUSY;
 	}
-	sirScriptBackendSlot_t &backend = m_szBackends[slot.iBackend];
+	sirScriptBackendSlot_t& backend = m_szBackends[slot.iBackend];
 	m_bCallingBackend = true;
 	backend.api.pUnloadProgram( backend.api.pUser, slot.nBackendToken );
 	m_ProgramSource.pRelease( m_ProgramSource.pUser, slot.nLeaseToken );
@@ -401,12 +403,12 @@ sirScriptResult_t SIRScriptRuntime::createInstance( sirScriptProgramHandle_t pro
 		return SIR_SCRIPT_INVALID_HANDLE;
 	}
 	for ( uint32_t iInstance = 0; iInstance < MAX_INSTANCES; ++iInstance ) {
-		sirScriptInstanceSlot_t &slot = m_szInstances[iInstance];
+		sirScriptInstanceSlot_t& slot = m_szInstances[iInstance];
 		if ( slot.bActive ) {
 			continue;
 		}
-		sirScriptProgramSlot_t &loaded = m_szPrograms[iProgram];
-		sirScriptBackendSlot_t &backend = m_szBackends[loaded.iBackend];
+		sirScriptProgramSlot_t& loaded = m_szPrograms[iProgram];
+		sirScriptBackendSlot_t& backend = m_szBackends[loaded.iBackend];
 		uint64_t nBackendToken = 0;
 		m_bCallingBackend = true;
 		sirScriptResult_t eResult = backend.api.pCreateInstance( backend.api.pUser, loaded.nBackendToken, nOwnerId, &nBackendToken );
@@ -443,7 +445,7 @@ sirScriptResult_t SIRScriptRuntime::createInstance( sirScriptProgramHandle_t pro
 void SIRScriptRuntime::invalidateSubscriptions( sirScriptInstanceHandle_t handle ) noexcept
 {
 	for ( uint32_t iSubscription = 0; iSubscription < MAX_SUBSCRIPTIONS; ++iSubscription ) {
-		sirScriptSubscriptionSlot_t &subscription = m_szSubscriptions[iSubscription];
+		sirScriptSubscriptionSlot_t& subscription = m_szSubscriptions[iSubscription];
 		if ( subscription.bActive && subscription.instance.nSlot == handle.nSlot &&
 		     subscription.instance.nGeneration == handle.nGeneration ) {
 			subscription.bActive = false;
@@ -464,13 +466,13 @@ sirScriptResult_t SIRScriptRuntime::destroyInstance( sirScriptInstanceHandle_t h
 	if ( iInstance < 0 ) {
 		return SIR_SCRIPT_INVALID_HANDLE;
 	}
-	sirScriptInstanceSlot_t &slot = m_szInstances[iInstance];
+	sirScriptInstanceSlot_t& slot = m_szInstances[iInstance];
 	if ( slot.bInvoking ) {
 		return SIR_SCRIPT_BUSY;
 	}
 	invalidateSubscriptions( handle );
-	sirScriptProgramSlot_t &program = m_szPrograms[slot.iProgram];
-	sirScriptBackendSlot_t &backend = m_szBackends[program.iBackend];
+	sirScriptProgramSlot_t& program = m_szPrograms[slot.iProgram];
+	sirScriptBackendSlot_t& backend = m_szBackends[program.iBackend];
 	m_bCallingBackend = true;
 	backend.api.pShutdownInstance( backend.api.pUser, slot.nBackendToken );
 	backend.api.pDestroyInstance( backend.api.pUser, slot.nBackendToken );
@@ -494,7 +496,7 @@ sirScriptResult_t SIRScriptRuntime::invoke( sirScriptInstanceHandle_t handle, ui
 	if ( nMethodId == 0 ) {
 		return SIR_SCRIPT_INVALID_ARGUMENT;
 	}
-	sirScriptInstanceSlot_t &slot = m_szInstances[iInstance];
+	sirScriptInstanceSlot_t& slot = m_szInstances[iInstance];
 	if ( slot.bInvoking || m_bCallingBackend ) {
 		return SIR_SCRIPT_BUSY;
 	}
@@ -502,8 +504,8 @@ sirScriptResult_t SIRScriptRuntime::invoke( sirScriptInstanceHandle_t handle, ui
 	     !validFrame( result.pData, result.nBytes, result.nAlignment ) ) {
 		return SIR_SCRIPT_INVALID_ARGUMENT;
 	}
-	const sirScriptProgramSlot_t &program = m_szPrograms[slot.iProgram];
-	const sirScriptBackendSlot_t &backend = m_szBackends[program.iBackend];
+	const sirScriptProgramSlot_t& program = m_szPrograms[slot.iProgram];
+	const sirScriptBackendSlot_t& backend = m_szBackends[program.iBackend];
 	slot.bInvoking = true;
 	m_bCallingBackend = true;
 	const sirScriptInvokeRequest_t request = { slot.nBackendToken, nMethodId, arguments, result };
@@ -538,14 +540,14 @@ sirScriptResult_t SIRScriptRuntime::subscribe( sirScriptInstanceHandle_t instanc
 	// An empty payload is not accepted for nonempty event descriptors here;
 	// validateEvent will check actual bytes when the event is published.
 	for ( uint32_t iSubscription = 0; iSubscription < MAX_SUBSCRIPTIONS; ++iSubscription ) {
-		const sirScriptSubscriptionSlot_t &entry = m_szSubscriptions[iSubscription];
+		const sirScriptSubscriptionSlot_t& entry = m_szSubscriptions[iSubscription];
 		if ( entry.bActive && entry.instance.nSlot == instance.nSlot && entry.instance.nGeneration == instance.nGeneration &&
 		     entry.nEventTypeId == nEventTypeId && entry.nMethodId == nMethodId ) {
 			return SIR_SCRIPT_DUPLICATE;
 		}
 	}
 	for ( uint32_t iSubscription = 0; iSubscription < MAX_SUBSCRIPTIONS; ++iSubscription ) {
-		sirScriptSubscriptionSlot_t &slot = m_szSubscriptions[iSubscription];
+		sirScriptSubscriptionSlot_t& slot = m_szSubscriptions[iSubscription];
 		if ( slot.bActive ) {
 			continue;
 		}
@@ -568,7 +570,7 @@ sirScriptResult_t SIRScriptRuntime::unsubscribe( sirScriptSubscriptionHandle_t h
 	if ( handle.nSlot == 0 || handle.nSlot > MAX_SUBSCRIPTIONS ) {
 		return SIR_SCRIPT_INVALID_HANDLE;
 	}
-	sirScriptSubscriptionSlot_t &slot = m_szSubscriptions[handle.nSlot - 1];
+	sirScriptSubscriptionSlot_t& slot = m_szSubscriptions[handle.nSlot - 1];
 	if ( !slot.bActive || slot.nGeneration != handle.nGeneration ) {
 		return SIR_SCRIPT_INVALID_HANDLE;
 	}
@@ -596,7 +598,7 @@ sirScriptResult_t SIRScriptRuntime::publishEvent( uint64_t nEventTypeId, sirScri
 	sirScriptResult_t eFirstFailure = SIR_SCRIPT_OK;
 	const sirScriptWriteFrame_t emptyResult = { nullptr, 0, 1 };
 	for ( uint32_t iSubscription = 0; iSubscription < MAX_SUBSCRIPTIONS; ++iSubscription ) {
-		const sirScriptSubscriptionSlot_t &slot = m_szSubscriptions[iSubscription];
+		const sirScriptSubscriptionSlot_t& slot = m_szSubscriptions[iSubscription];
 		if ( !slot.bActive || slot.nEventTypeId != nEventTypeId ) {
 			continue;
 		}
@@ -672,7 +674,7 @@ sirScriptResult_t SIRScriptRuntime::cancelScheduled( sirScriptTaskHandle_t handl
 	return m_Scheduler.cancel( handle );
 }
 
-sirScriptResult_t SIRScriptRuntime::setPayloadAllocator( const sirScriptPayloadAllocatorAPI_t &api ) noexcept
+sirScriptResult_t SIRScriptRuntime::setPayloadAllocator( const sirScriptPayloadAllocatorAPI_t& api ) noexcept
 {
 	if ( !isOwnerThread() || m_bDispatching || m_bCallingBackend || m_bPumping || m_bShuttingDown ) {
 		return SIR_SCRIPT_BUSY;

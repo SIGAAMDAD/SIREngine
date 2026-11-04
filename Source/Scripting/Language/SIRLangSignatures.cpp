@@ -478,11 +478,10 @@ static sirLangTypeIdentity_t sirLangInfer( sirLangSignatureState_t *pState, uint
 		const sirLangTypeIdentity_t right = sirLangInfer( pState, iRight );
 		result = left;
 		const uint32_t iOperator = pState->pTree->pNodes[iLeft].nEndToken;
-		const bool bLogical = sirLangTextIs( pState, iOperator, "and" ) ||
-		                      sirLangTextIs( pState, iOperator, "or" ) || sirLangTextIs( pState, iOperator, "xor" );
-		const bool bArithmetic = sirLangTextIs( pState, iOperator, "+" ) ||
-		                         sirLangTextIs( pState, iOperator, "-" ) || sirLangTextIs( pState, iOperator, "*" ) ||
-		                         sirLangTextIs( pState, iOperator, "/" );
+		const bool bLogical = sirLangTextIs( pState, iOperator, "and" ) || sirLangTextIs( pState, iOperator, "or" ) ||
+		                      sirLangTextIs( pState, iOperator, "xor" );
+		const bool bArithmetic = sirLangTextIs( pState, iOperator, "+" ) || sirLangTextIs( pState, iOperator, "-" ) ||
+		                         sirLangTextIs( pState, iOperator, "*" ) || sirLangTextIs( pState, iOperator, "/" );
 		const bool bOrdered = sirLangTextIs( pState, iOperator, "<" ) || sirLangTextIs( pState, iOperator, ">" );
 		const bool bEquality = sirLangTextIs( pState, iOperator, "!" ) || sirLangTextIs( pState, iOperator, "=" );
 		const bool bBothKnown = left.eValue != SIR_LANG_VALUE_UNKNOWN && right.eValue != SIR_LANG_VALUE_UNKNOWN;
@@ -491,8 +490,7 @@ static sirLangTypeIdentity_t sirLangInfer( sirLangSignatureState_t *pState, uint
 		if ( bLogical && bBothKnown && ( left.eValue != SIR_LANG_VALUE_BOOL || right.eValue != SIR_LANG_VALUE_BOOL ) ) {
 			sirLangSignatureReport( pState, SIR_LANG_SIGNATURE_ARGUMENT_TYPE, iNode );
 		}
-		if ( bBothKnown && ( bArithmetic || bOrdered ) &&
-		     ( !bIntegerOperands || !sirLangTypeEqual( pState, left, right ) ) ) {
+		if ( bBothKnown && ( bArithmetic || bOrdered ) && ( !bIntegerOperands || !sirLangTypeEqual( pState, left, right ) ) ) {
 			sirLangSignatureReport( pState, SIR_LANG_SIGNATURE_ARGUMENT_TYPE, iNode );
 		}
 		if ( bBothKnown && bEquality ) {

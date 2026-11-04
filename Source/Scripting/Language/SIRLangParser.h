@@ -140,6 +140,6 @@ bool SIRLangSyntaxSpan( const sirLangSyntaxTree_t *pTree, uint32_t iNode, sirLan
 // Syntax only. No engine bindings, persistent state or runtime code are created.
 // Returns OK for a syntactically clean module, otherwise the first error;
 // error recovery retains later independent declarations when capacity permits.
-sirLangParseError_t SIRLangParse( const sirLangSourceView_t &source, sirLangSyntaxTree_t *pTree ) noexcept;
+sirLangParseError_t SIRLangParse( const sirLangSourceView_t& source, sirLangSyntaxTree_t *pTree ) noexcept;
 
 #endif // __SIRENGINE_SIRLANGPARSER_H__

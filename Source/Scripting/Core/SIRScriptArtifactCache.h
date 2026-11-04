@@ -52,15 +52,15 @@ class SIRScriptArtifactCache
 {
 public:
 	SIRScriptArtifactCache( void ) noexcept;
-	SIRScriptArtifactCache( const SIRScriptArtifactCache & ) = delete;
-	SIRScriptArtifactCache &operator=( const SIRScriptArtifactCache & ) = delete;
+	SIRScriptArtifactCache( const SIRScriptArtifactCache& ) = delete;
+	SIRScriptArtifactCache& operator=( const SIRScriptArtifactCache& ) = delete;
 
 	// Bound the size of each accepted cache entry (caller-selected budget).
 	sirScriptResult_t configure( const char *szRoot, uint64_t nMaximumArtifactBytes ) noexcept;
 	static sirScriptResult_t makeKey( const void *pCanonicalRecipe, uint64_t nRecipeBytes, sirScriptCacheKey_t *pKey ) noexcept;
-	sirScriptResult_t store( const sirScriptCodeArtifact_t &artifact, sirScriptCacheKey_t key, const void *pBytes, uint64_t nBytes,
+	sirScriptResult_t store( const sirScriptCodeArtifact_t& artifact, sirScriptCacheKey_t key, const void *pBytes, uint64_t nBytes,
 	                         uint32_t nAlignment, sirScriptCachedArtifact_t *pDescriptor ) noexcept;
-	sirScriptResult_t fetch( const sirScriptCachedArtifact_t &descriptor, void *pOutput, uint64_t nCapacity ) const noexcept;
+	sirScriptResult_t fetch( const sirScriptCachedArtifact_t& descriptor, void *pOutput, uint64_t nCapacity ) const noexcept;
 	sirScriptResult_t erase( sirScriptCacheKey_t key ) noexcept;
 
 private:
@@ -68,12 +68,12 @@ private:
 	static constexpr uint32_t HEADER_BYTES = 152;
 
 	bool isOwnerThread( void ) const noexcept;
-	bool validKey( const sirScriptCacheKey_t &key ) const noexcept;
-	bool formatPath( const sirScriptCacheKey_t &key, char szPath[MAX_PATH_BYTES] ) const noexcept;
-	bool validDescriptor( const sirScriptCachedArtifact_t &descriptor ) const noexcept;
-	static void encodeHeader( const sirScriptCachedArtifact_t &descriptor, uint8_t szHeader[HEADER_BYTES] ) noexcept;
+	bool validKey( const sirScriptCacheKey_t& key ) const noexcept;
+	bool formatPath( const sirScriptCacheKey_t& key, char szPath[MAX_PATH_BYTES] ) const noexcept;
+	bool validDescriptor( const sirScriptCachedArtifact_t& descriptor ) const noexcept;
+	static void encodeHeader( const sirScriptCachedArtifact_t& descriptor, uint8_t szHeader[HEADER_BYTES] ) noexcept;
 	static bool decodeHeader( const uint8_t szHeader[HEADER_BYTES], sirScriptCachedArtifact_t *pDescriptor ) noexcept;
-	static bool sameDescriptor( const sirScriptCachedArtifact_t &a, const sirScriptCachedArtifact_t &b ) noexcept;
+	static bool sameDescriptor( const sirScriptCachedArtifact_t& a, const sirScriptCachedArtifact_t& b ) noexcept;
 
 	char m_szRoot[MAX_PATH_BYTES];
 	uint64_t m_nMaximumArtifactBytes;

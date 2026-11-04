@@ -68,12 +68,12 @@ class SIRScriptCachedProgramSource
 public:
 	SIRScriptCachedProgramSource( void ) noexcept;
 	~SIRScriptCachedProgramSource( void ) noexcept;
-	SIRScriptCachedProgramSource( const SIRScriptCachedProgramSource & ) = delete;
-	SIRScriptCachedProgramSource &operator=( const SIRScriptCachedProgramSource & ) = delete;
+	SIRScriptCachedProgramSource( const SIRScriptCachedProgramSource& ) = delete;
+	SIRScriptCachedProgramSource& operator=( const SIRScriptCachedProgramSource& ) = delete;
 
-	sirScriptResult_t configure( SIRScriptArtifactCache *pCache, const sirScriptPayloadAllocatorAPI_t &allocator,
+	sirScriptResult_t configure( SIRScriptArtifactCache *pCache, const sirScriptPayloadAllocatorAPI_t& allocator,
 	                             uint64_t nMaximumResidentBytes ) noexcept;
-	sirScriptResult_t registerArtifact( const sirScriptCachedArtifact_t &descriptor, sirScriptCachedEntryHandle_t *pHandle ) noexcept;
+	sirScriptResult_t registerArtifact( const sirScriptCachedArtifact_t& descriptor, sirScriptCachedEntryHandle_t *pHandle ) noexcept;
 	sirScriptResult_t unregisterArtifact( sirScriptCachedEntryHandle_t handle ) noexcept;
 	sirScriptResult_t shutdown( void ) noexcept;
 	sirScriptCachedSourceStats_t stats( void ) const noexcept;
@@ -84,8 +84,8 @@ private:
 	static constexpr uint32_t MAX_LEASES = 128;
 
 	static uint32_t nextGeneration( uint32_t nGeneration ) noexcept;
-	static bool validDescriptor( const sirScriptCachedArtifact_t &descriptor ) noexcept;
-	static bool sameDescriptor( const sirScriptCachedArtifact_t &a, const sirScriptCachedArtifact_t &b ) noexcept;
+	static bool validDescriptor( const sirScriptCachedArtifact_t& descriptor ) noexcept;
+	static bool sameDescriptor( const sirScriptCachedArtifact_t& a, const sirScriptCachedArtifact_t& b ) noexcept;
 	static sirScriptResult_t acquireThunk( void *pUser, uint64_t nBackendId, uint64_t nProgramId, uint64_t nRevision,
 	                                       sirScriptProgramView_t *pView, uint64_t *pToken ) noexcept;
 	static void releaseThunk( void *pUser, uint64_t nToken ) noexcept;

@@ -38,9 +38,9 @@ uint32_t SIRScriptCachedProgramSource::nextGeneration( uint32_t nGeneration ) no
 	return nGeneration == 0 ? 1 : nGeneration;
 }
 
-bool SIRScriptCachedProgramSource::validDescriptor( const sirScriptCachedArtifact_t &descriptor ) noexcept
+bool SIRScriptCachedProgramSource::validDescriptor( const sirScriptCachedArtifact_t& descriptor ) noexcept
 {
-	const sirScriptCodeArtifact_t &a = descriptor.artifact;
+	const sirScriptCodeArtifact_t& a = descriptor.artifact;
 	if ( a.nBackendId == 0 || a.nProgramId == 0 || a.nRevision == 0 || a.nFormatId == 0 || a.nSchemaFingerprint == 0 || a.nTargetId == 0 ||
 	     a.nBuildFingerprint == 0 || descriptor.nBytes == 0 || descriptor.nBytes > UINT32_MAX || descriptor.nAlignment == 0 ||
 	     descriptor.nAlignment > 4096 || ( descriptor.nAlignment & ( descriptor.nAlignment - 1 ) ) != 0 ) {
@@ -53,7 +53,7 @@ bool SIRScriptCachedProgramSource::validDescriptor( const sirScriptCachedArtifac
 	return nDigest != 0;
 }
 
-bool SIRScriptCachedProgramSource::sameDescriptor( const sirScriptCachedArtifact_t &a, const sirScriptCachedArtifact_t &b ) noexcept
+bool SIRScriptCachedProgramSource::sameDescriptor( const sirScriptCachedArtifact_t& a, const sirScriptCachedArtifact_t& b ) noexcept
 {
 	return a.artifact.nBackendId == b.artifact.nBackendId && a.artifact.nProgramId == b.artifact.nProgramId &&
 	       a.artifact.nRevision == b.artifact.nRevision && a.artifact.nFormatId == b.artifact.nFormatId &&
@@ -62,7 +62,7 @@ bool SIRScriptCachedProgramSource::sameDescriptor( const sirScriptCachedArtifact
 	       memcmp( a.key.szDigest, b.key.szDigest, 32 ) == 0 && memcmp( a.szPayloadDigest, b.szPayloadDigest, 32 ) == 0;
 }
 
-sirScriptResult_t SIRScriptCachedProgramSource::configure( SIRScriptArtifactCache *pCache, const sirScriptPayloadAllocatorAPI_t &allocator,
+sirScriptResult_t SIRScriptCachedProgramSource::configure( SIRScriptArtifactCache *pCache, const sirScriptPayloadAllocatorAPI_t& allocator,
                                                            uint64_t nMaximumResidentBytes ) noexcept
 {
 	if ( !isOwnerThread() || m_bInAllocator ) {
@@ -82,7 +82,7 @@ sirScriptResult_t SIRScriptCachedProgramSource::configure( SIRScriptArtifactCach
 	return SIR_SCRIPT_OK;
 }
 
-sirScriptResult_t SIRScriptCachedProgramSource::registerArtifact( const sirScriptCachedArtifact_t &descriptor,
+sirScriptResult_t SIRScriptCachedProgramSource::registerArtifact( const sirScriptCachedArtifact_t& descriptor,
                                                                   sirScriptCachedEntryHandle_t *pHandle ) noexcept
 {
 	if ( !isOwnerThread() || m_bInAllocator ) {
@@ -101,7 +101,7 @@ sirScriptResult_t SIRScriptCachedProgramSource::registerArtifact( const sirScrip
 
 	int32_t iFree = -1;
 	for ( uint32_t iEntry = 0; iEntry < MAX_ENTRIES; ++iEntry ) {
-		const sirScriptCachedSourceEntry_t &entry = m_szEntries[iEntry];
+		const sirScriptCachedSourceEntry_t& entry = m_szEntries[iEntry];
 		if ( !entry.bOccupied && iFree < 0 ) {
 			iFree = ( int32_t )iEntry;
 		}
@@ -115,7 +115,7 @@ sirScriptResult_t SIRScriptCachedProgramSource::registerArtifact( const sirScrip
 		return SIR_SCRIPT_CAPACITY_EXCEEDED;
 	}
 
-	sirScriptCachedSourceEntry_t &entry = m_szEntries[iFree];
+	sirScriptCachedSourceEntry_t& entry = m_szEntries[iFree];
 	entry.descriptor = descriptor;
 	entry.nGeneration = nextGeneration( entry.nGeneration );
 	entry.nPins = 0;
@@ -133,7 +133,7 @@ sirScriptResult_t SIRScriptCachedProgramSource::unregisterArtifact( sirScriptCac
 	if ( handle.nSlot == 0 || handle.nSlot > MAX_ENTRIES ) {
 		return SIR_SCRIPT_INVALID_HANDLE;
 	}
-	sirScriptCachedSourceEntry_t &entry = m_szEntries[handle.nSlot - 1];
+	sirScriptCachedSourceEntry_t& entry = m_szEntries[handle.nSlot - 1];
 	if ( !entry.bOccupied || entry.nGeneration != handle.nGeneration ) {
 		return SIR_SCRIPT_INVALID_HANDLE;
 	}
@@ -149,7 +149,7 @@ sirScriptResult_t SIRScriptCachedProgramSource::unregisterArtifact( sirScriptCac
 
 void SIRScriptCachedProgramSource::releaseEntry( uint32_t iEntry ) noexcept
 {
-	sirScriptCachedSourceEntry_t &entry = m_szEntries[iEntry];
+	sirScriptCachedSourceEntry_t& entry = m_szEntries[iEntry];
 	if ( entry.nPins != 0 || entry.allocation.nToken == 0 ) {
 		return;
 	}
@@ -175,7 +175,7 @@ sirScriptResult_t SIRScriptCachedProgramSource::acquire( uint64_t nBackendId, ui
 	}
 	int32_t iEntry = -1;
 	for ( uint32_t i = 0; i < MAX_ENTRIES; ++i ) {
-		const sirScriptCachedSourceEntry_t &entry = m_szEntries[i];
+		const sirScriptCachedSourceEntry_t& entry = m_szEntries[i];
 		if ( entry.bOccupied && entry.descriptor.artifact.nBackendId == nBackendId && entry.descriptor.artifact.nProgramId == nProgramId &&
 		     entry.descriptor.artifact.nRevision == nRevision ) {
 			iEntry = ( int32_t )i;
@@ -196,7 +196,7 @@ sirScriptResult_t SIRScriptCachedProgramSource::acquire( uint64_t nBackendId, ui
 		return SIR_SCRIPT_CAPACITY_EXCEEDED;
 	}
 
-	sirScriptCachedSourceEntry_t &entry = m_szEntries[iEntry];
+	sirScriptCachedSourceEntry_t& entry = m_szEntries[iEntry];
 	if ( entry.allocation.nToken == 0 ) {
 		if ( entry.descriptor.nBytes > m_nMaximumResidentBytes - m_nResidentBytes ) {
 			return SIR_SCRIPT_CAPACITY_EXCEEDED;
@@ -233,7 +233,7 @@ sirScriptResult_t SIRScriptCachedProgramSource::acquire( uint64_t nBackendId, ui
 		}
 	}
 
-	sirScriptCachedSourceLease_t &lease = m_szLeases[iLease];
+	sirScriptCachedSourceLease_t& lease = m_szLeases[iLease];
 	lease.nGeneration = nextGeneration( lease.nGeneration );
 	lease.iEntry = ( uint32_t )iEntry;
 	lease.bOccupied = true;
@@ -258,12 +258,12 @@ void SIRScriptCachedProgramSource::release( uint64_t nToken ) noexcept
 	if ( nSlot == 0 || nSlot > MAX_LEASES || nGeneration == 0 ) {
 		return;
 	}
-	sirScriptCachedSourceLease_t &lease = m_szLeases[nSlot - 1];
+	sirScriptCachedSourceLease_t& lease = m_szLeases[nSlot - 1];
 	if ( !lease.bOccupied || lease.nGeneration != nGeneration ) {
 		return;
 	}
 	lease.bOccupied = false;
-	sirScriptCachedSourceEntry_t &entry = m_szEntries[lease.iEntry];
+	sirScriptCachedSourceEntry_t& entry = m_szEntries[lease.iEntry];
 	if ( entry.nPins == 0 ) {
 		return;
 	}
@@ -305,7 +305,7 @@ sirScriptResult_t SIRScriptCachedProgramSource::shutdown( void ) noexcept
 		}
 	}
 	for ( uint32_t iEntry = 0; iEntry < MAX_ENTRIES; ++iEntry ) {
-		sirScriptCachedSourceEntry_t &entry = m_szEntries[iEntry];
+		sirScriptCachedSourceEntry_t& entry = m_szEntries[iEntry];
 		if ( entry.allocation.nToken != 0 ) {
 			releaseEntry( iEntry );
 		}
@@ -328,7 +328,7 @@ sirScriptCachedSourceStats_t SIRScriptCachedProgramSource::stats( void ) const n
 	result.nResidentBytes = m_nResidentBytes;
 	result.nPeakResidentBytes = m_nPeakResidentBytes;
 	for ( uint32_t iEntry = 0; iEntry < MAX_ENTRIES; ++iEntry ) {
-		const sirScriptCachedSourceEntry_t &entry = m_szEntries[iEntry];
+		const sirScriptCachedSourceEntry_t& entry = m_szEntries[iEntry];
 		if ( entry.bOccupied ) {
 			++result.nRegisteredArtifacts;
 			if ( entry.allocation.nToken != 0 ) {

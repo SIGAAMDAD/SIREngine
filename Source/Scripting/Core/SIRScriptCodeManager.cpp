@@ -38,14 +38,14 @@ uint32_t SIRScriptCodeManager::nextGeneration( uint32_t nGeneration ) noexcept
 	return nGeneration == 0 ? 1 : nGeneration;
 }
 
-bool SIRScriptCodeManager::validView( const sirScriptProgramView_t &view, const sirScriptCodeArtifact_t &artifact ) noexcept
+bool SIRScriptCodeManager::validView( const sirScriptProgramView_t& view, const sirScriptCodeArtifact_t& artifact ) noexcept
 {
 	return view.nProgramId == artifact.nProgramId && view.nRevision == artifact.nRevision && view.nFormatId == artifact.nFormatId &&
 	       view.pData != nullptr && view.nBytes != 0 && view.nAlignment != 0 && view.nAlignment <= 4096 &&
 	       ( view.nAlignment & ( view.nAlignment - 1 ) ) == 0 && ( ( uintptr_t )view.pData & ( view.nAlignment - 1 ) ) == 0;
 }
 
-sirScriptResult_t SIRScriptCodeManager::configure( uint64_t nTargetId, const sirScriptProgramSourceAPI_t &provider ) noexcept
+sirScriptResult_t SIRScriptCodeManager::configure( uint64_t nTargetId, const sirScriptProgramSourceAPI_t& provider ) noexcept
 {
 	if ( !isOwnerThread() || m_bInProvider ) {
 		return SIR_SCRIPT_BUSY;
@@ -68,11 +68,11 @@ int32_t SIRScriptCodeManager::resolve( sirScriptCodeHandle_t handle ) const noex
 		return -1;
 	}
 	const uint32_t iSlot = handle.nSlot - 1;
-	const sirScriptCodeSlot_t &slot = m_szArtifacts[iSlot];
+	const sirScriptCodeSlot_t& slot = m_szArtifacts[iSlot];
 	return slot.bOccupied && slot.nGeneration == handle.nGeneration ? ( int32_t )iSlot : -1;
 }
 
-sirScriptResult_t SIRScriptCodeManager::stage( const sirScriptCodeArtifact_t &artifact, sirScriptCodeHandle_t *pHandle ) noexcept
+sirScriptResult_t SIRScriptCodeManager::stage( const sirScriptCodeArtifact_t& artifact, sirScriptCodeHandle_t *pHandle ) noexcept
 {
 	if ( !isOwnerThread() || m_bInProvider ) {
 		return SIR_SCRIPT_BUSY;
@@ -92,7 +92,7 @@ sirScriptResult_t SIRScriptCodeManager::stage( const sirScriptCodeArtifact_t &ar
 	}
 	int32_t iFree = -1;
 	for ( uint32_t iSlot = 0; iSlot < MAX_ARTIFACTS; ++iSlot ) {
-		const sirScriptCodeSlot_t &slot = m_szArtifacts[iSlot];
+		const sirScriptCodeSlot_t& slot = m_szArtifacts[iSlot];
 		if ( !slot.bOccupied && iFree < 0 ) {
 			iFree = ( int32_t )iSlot;
 		}
@@ -130,7 +130,7 @@ sirScriptResult_t SIRScriptCodeManager::stage( const sirScriptCodeArtifact_t &ar
 		return SIR_SCRIPT_TYPE_MISMATCH;
 	}
 
-	sirScriptCodeSlot_t &slot = m_szArtifacts[iFree];
+	sirScriptCodeSlot_t& slot = m_szArtifacts[iFree];
 	slot.nGeneration = nextGeneration( slot.nGeneration );
 	slot.artifact = artifact;
 	slot.view = view;
@@ -145,7 +145,7 @@ sirScriptResult_t SIRScriptCodeManager::stage( const sirScriptCodeArtifact_t &ar
 
 void SIRScriptCodeManager::destroySlot( uint32_t iSlot ) noexcept
 {
-	sirScriptCodeSlot_t &slot = m_szArtifacts[iSlot];
+	sirScriptCodeSlot_t& slot = m_szArtifacts[iSlot];
 	if ( !slot.bOccupied || slot.nPins != 0 ) {
 		return;
 	}
@@ -170,12 +170,12 @@ sirScriptResult_t SIRScriptCodeManager::activate( sirScriptCodeHandle_t handle )
 	if ( iSlot < 0 ) {
 		return SIR_SCRIPT_INVALID_HANDLE;
 	}
-	sirScriptCodeSlot_t &candidate = m_szArtifacts[iSlot];
+	sirScriptCodeSlot_t& candidate = m_szArtifacts[iSlot];
 	if ( candidate.bActive || candidate.bRetired ) {
 		return SIR_SCRIPT_WRONG_STATE;
 	}
 	for ( uint32_t iOld = 0; iOld < MAX_ARTIFACTS; ++iOld ) {
-		sirScriptCodeSlot_t &old = m_szArtifacts[iOld];
+		sirScriptCodeSlot_t& old = m_szArtifacts[iOld];
 		if ( old.bOccupied && old.bActive && old.artifact.nBackendId == candidate.artifact.nBackendId &&
 		     old.artifact.nProgramId == candidate.artifact.nProgramId ) {
 			old.bActive = false;
@@ -214,7 +214,7 @@ sirScriptResult_t SIRScriptCodeManager::retire( sirScriptCodeHandle_t handle ) n
 	if ( iSlot < 0 ) {
 		return SIR_SCRIPT_INVALID_HANDLE;
 	}
-	sirScriptCodeSlot_t &slot = m_szArtifacts[iSlot];
+	sirScriptCodeSlot_t& slot = m_szArtifacts[iSlot];
 	if ( slot.bRetired ) {
 		return SIR_SCRIPT_WRONG_STATE;
 	}
@@ -235,7 +235,7 @@ sirScriptResult_t SIRScriptCodeManager::activeRevision( uint64_t nBackendId, uin
 		return SIR_SCRIPT_INVALID_ARGUMENT;
 	}
 	for ( uint32_t iSlot = 0; iSlot < MAX_ARTIFACTS; ++iSlot ) {
-		const sirScriptCodeSlot_t &slot = m_szArtifacts[iSlot];
+		const sirScriptCodeSlot_t& slot = m_szArtifacts[iSlot];
 		if ( slot.bOccupied && slot.bActive && slot.artifact.nBackendId == nBackendId && slot.artifact.nProgramId == nProgramId ) {
 			*pRevision = slot.artifact.nRevision;
 			return SIR_SCRIPT_OK;
@@ -255,7 +255,7 @@ sirScriptResult_t SIRScriptCodeManager::acquire( uint64_t nBackendId, uint64_t n
 	}
 	int32_t iCode = -1;
 	for ( uint32_t iSlot = 0; iSlot < MAX_ARTIFACTS; ++iSlot ) {
-		const sirScriptCodeSlot_t &slot = m_szArtifacts[iSlot];
+		const sirScriptCodeSlot_t& slot = m_szArtifacts[iSlot];
 		if ( slot.bOccupied && slot.bActive && slot.artifact.nBackendId == nBackendId && slot.artifact.nProgramId == nProgramId &&
 		     slot.artifact.nRevision == nRevision ) {
 			iCode = ( int32_t )iSlot;
@@ -266,7 +266,7 @@ sirScriptResult_t SIRScriptCodeManager::acquire( uint64_t nBackendId, uint64_t n
 		return SIR_SCRIPT_NOT_FOUND;
 	}
 	for ( uint32_t iLease = 0; iLease < MAX_LEASES; ++iLease ) {
-		sirScriptCodeLeaseSlot_t &lease = m_szLeases[iLease];
+		sirScriptCodeLeaseSlot_t& lease = m_szLeases[iLease];
 		if ( lease.bOccupied ) {
 			continue;
 		}
@@ -291,13 +291,13 @@ void SIRScriptCodeManager::release( uint64_t nToken ) noexcept
 	if ( nSlot == 0 || nSlot > MAX_LEASES || nGeneration == 0 ) {
 		return;
 	}
-	sirScriptCodeLeaseSlot_t &lease = m_szLeases[nSlot - 1];
+	sirScriptCodeLeaseSlot_t& lease = m_szLeases[nSlot - 1];
 	if ( !lease.bOccupied || lease.nGeneration != nGeneration ) {
 		return;
 	}
 	const uint32_t iCode = lease.iArtifact;
 	lease.bOccupied = false;
-	sirScriptCodeSlot_t &slot = m_szArtifacts[iCode];
+	sirScriptCodeSlot_t& slot = m_szArtifacts[iCode];
 	if ( slot.nPins == 0 ) {
 		return;
 	}
@@ -360,7 +360,7 @@ sirScriptCodeStats_t SIRScriptCodeManager::stats( void ) const noexcept
 		return stats;
 	}
 	for ( uint32_t iSlot = 0; iSlot < MAX_ARTIFACTS; ++iSlot ) {
-		const sirScriptCodeSlot_t &slot = m_szArtifacts[iSlot];
+		const sirScriptCodeSlot_t& slot = m_szArtifacts[iSlot];
 		if ( !slot.bOccupied ) {
 			continue;
 		}

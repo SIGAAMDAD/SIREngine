@@ -199,10 +199,8 @@ int main( int nArgc, char **ppszArgv )
 
 	sirLangInitializeBuffers( &s_Buffers );
 	sirLangCompileWorkspace_t& workspace = s_Buffers.workspace;
-	if ( !sirLangParseId( ppszArgv[3], &workspace.cir.nModuleId ) ||
-	     !sirLangParseId( ppszArgv[4], &workspace.cir.nSchemaId ) ||
-	     !sirLangParseId( ppszArgv[5], &workspace.cir.nLayoutDigest ) ||
-	     !sirLangParseId( ppszArgv[6], &workspace.cir.nBindingDigest ) ) {
+	if ( !sirLangParseId( ppszArgv[3], &workspace.cir.nModuleId ) || !sirLangParseId( ppszArgv[4], &workspace.cir.nSchemaId ) ||
+	     !sirLangParseId( ppszArgv[5], &workspace.cir.nLayoutDigest ) || !sirLangParseId( ppszArgv[6], &workspace.cir.nBindingDigest ) ) {
 		fprintf( stderr, "SIRLangCooker: invalid module/schema/layout/binding identity\n" );
 		return 2;
 	}
@@ -226,15 +224,13 @@ int main( int nArgc, char **ppszArgv )
 	}
 
 	if ( !SIRLangCompileSource( source, &workspace ) ) {
-		fprintf( stderr, "SIRLangCooker: compilation failed at phase %u, error %u, node %u\n",
-		         ( unsigned )workspace.report.ePhase, ( unsigned )workspace.report.nStageResult,
-		         ( unsigned )workspace.report.iErrorNode );
+		fprintf( stderr, "SIRLangCooker: compilation failed at phase %u, error %u, node %u\n", ( unsigned )workspace.report.ePhase,
+		         ( unsigned )workspace.report.nStageResult, ( unsigned )workspace.report.iErrorNode );
 		sirLangEditorDiagnostic_t szErrors[16] = {};
 		const uint32_t nErrors = SIRLangCollectCompileDiagnostics( &workspace, szErrors, 16 );
 		for ( uint32_t iError = 0; iError < nErrors; ++iError ) {
 			const sirLangEditorDiagnostic_t& error = szErrors[iError];
-			fprintf( stderr, "SIRLangCooker: %u:%u phase %u code %u\n", error.nLine, error.nColumn,
-			         ( unsigned )error.ePhase, error.nCode );
+			fprintf( stderr, "SIRLangCooker: %u:%u phase %u code %u\n", error.nLine, error.nColumn, ( unsigned )error.ePhase, error.nCode );
 		}
 		return 4;
 	}

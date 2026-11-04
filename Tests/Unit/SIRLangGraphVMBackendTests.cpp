@@ -20,7 +20,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <string.h>
 
 static sirLangCIRInstruction_t makeInstruction( sirLangOpcode_t eOpcode, sirLangValueKind_t eType, uint32_t iDestination,
-                                                 uint32_t iFirstSource ) noexcept
+                                                uint32_t iFirstSource ) noexcept
 {
 	sirLangCIRInstruction_t instruction = {};
 	instruction.eOpcode = eOpcode;
@@ -33,10 +33,8 @@ static sirLangCIRInstruction_t makeInstruction( sirLangOpcode_t eOpcode, sirLang
 static void testBackendLifecycle( void ) noexcept
 {
 	const sirLangCIRFunction_t function = { 99, 0, 2, 1, 1, 0, SIR_LANG_VALUE_U16 };
-	const sirLangCIRInstruction_t szInstructions[] = {
-	    makeInstruction( SIR_LANG_OP_PARAMETER, SIR_LANG_VALUE_U16, 0, 0 ),
-	    makeInstruction( SIR_LANG_OP_RETURN, SIR_LANG_VALUE_U16, UINT32_MAX, 0 )
-	};
+	const sirLangCIRInstruction_t szInstructions[] = { makeInstruction( SIR_LANG_OP_PARAMETER, SIR_LANG_VALUE_U16, 0, 0 ),
+	                                                   makeInstruction( SIR_LANG_OP_RETURN, SIR_LANG_VALUE_U16, UINT32_MAX, 0 ) };
 	const sirLangValueKind_t parameter = SIR_LANG_VALUE_U16;
 	sirLangCIRProgram_t program = {};
 	program.pFunctions = &function;
@@ -97,11 +95,10 @@ static void testBackendLifecycle( void ) noexcept
 
 	const sirLangVMValue_t argument = { 42, SIR_LANG_VALUE_U16 };
 	sirLangVMValue_t output = {};
-	const sirScriptInvokeRequest_t call = {
-	    nInstanceToken, 99,
-	    { &argument, sizeof( argument ), alignof( sirLangVMValue_t ) },
-	    { &output, sizeof( output ), alignof( sirLangVMValue_t ) }
-	};
+	const sirScriptInvokeRequest_t call = { nInstanceToken,
+	                                        99,
+	                                        { &argument, sizeof( argument ), alignof( sirLangVMValue_t ) },
+	                                        { &output, sizeof( output ), alignof( sirLangVMValue_t ) } };
 	assert( api.pInvoke( api.pUser, &call ) == SIR_SCRIPT_OK );
 	assert( output.eType == SIR_LANG_VALUE_U16 && output.nBits == 42 );
 
@@ -121,7 +118,6 @@ static void testBackendLifecycle( void ) noexcept
 	api.pStop( api.pUser );
 }
 
-
 static sirScriptResult_t testNativeThunk( void *, sirScriptReadFrame_t arguments, sirScriptWriteFrame_t result ) noexcept
 {
 	if ( arguments.nBytes != sizeof( sirLangVMValue_t ) || result.nBytes != sizeof( sirLangVMValue_t ) ) {
@@ -139,7 +135,8 @@ static void testImmutableNativeBinding( void ) noexcept
 	constexpr uint32_t TYPE_FLAGS = SIR_SCRIPT_TYPE_PLAIN_BYTES | SIR_SCRIPT_TYPE_NO_POINTERS;
 	assert( registry.registerType( { 10, sizeof( sirLangVMValue_t ), alignof( sirLangVMValue_t ), TYPE_FLAGS } ) == SIR_SCRIPT_OK );
 	assert( registry.registerType( { 11, sizeof( sirLangVMValue_t ), alignof( sirLangVMValue_t ), TYPE_FLAGS } ) == SIR_SCRIPT_OK );
-	assert( registry.registerFunction( { 999, 123, 10, 11, 0, 1, SIR_LANG_EFFECT_STATE_READ }, testNativeThunk, nullptr ) == SIR_SCRIPT_OK );
+	assert( registry.registerFunction( { 999, 123, 10, 11, 0, 1, SIR_LANG_EFFECT_STATE_READ }, testNativeThunk, nullptr ) ==
+	        SIR_SCRIPT_OK );
 	assert( registry.publish() == SIR_SCRIPT_OK );
 	const sirLangNativeBindingContext_t context = { &registry, registry.schemaFingerprint(), 0 };
 	const sirLangVMValue_t input = { 7, SIR_LANG_VALUE_U16 };
@@ -161,23 +158,21 @@ static void testImmutableNativeBinding( void ) noexcept
 	assert( SIRLangInvokeNativeBinding( call, &output, ( void * )&context ) == SIR_LANG_VM_INVALID_CAPABILITY );
 }
 
-
 static void testNativeBytecodeThroughBackend( void ) noexcept
 {
 	SIRScriptBindingRegistry registry;
 	constexpr uint32_t TYPE_FLAGS = SIR_SCRIPT_TYPE_PLAIN_BYTES | SIR_SCRIPT_TYPE_NO_POINTERS;
 	assert( registry.registerType( { 10, sizeof( sirLangVMValue_t ), alignof( sirLangVMValue_t ), TYPE_FLAGS } ) == SIR_SCRIPT_OK );
 	assert( registry.registerType( { 11, sizeof( sirLangVMValue_t ), alignof( sirLangVMValue_t ), TYPE_FLAGS } ) == SIR_SCRIPT_OK );
-	assert( registry.registerFunction( { 999, 123, 10, 11, 0, 1, SIR_LANG_EFFECT_STATE_READ }, testNativeThunk, nullptr ) == SIR_SCRIPT_OK );
+	assert( registry.registerFunction( { 999, 123, 10, 11, 0, 1, SIR_LANG_EFFECT_STATE_READ }, testNativeThunk, nullptr ) ==
+	        SIR_SCRIPT_OK );
 	assert( registry.publish() == SIR_SCRIPT_OK );
 	const uint64_t nBindingDigest = registry.schemaFingerprint();
 
 	const sirLangCIRFunction_t function = { 81, 0, 3, 2, 0, 0, SIR_LANG_VALUE_U16 };
-	sirLangCIRInstruction_t szInstructions[] = {
-	    makeInstruction( SIR_LANG_OP_CONST, SIR_LANG_VALUE_U16, 0, 0 ),
-	    makeInstruction( SIR_LANG_OP_CALL_NATIVE, SIR_LANG_VALUE_U16, 1, 0 ),
-	    makeInstruction( SIR_LANG_OP_RETURN, SIR_LANG_VALUE_U16, UINT32_MAX, 1 )
-	};
+	sirLangCIRInstruction_t szInstructions[] = { makeInstruction( SIR_LANG_OP_CONST, SIR_LANG_VALUE_U16, 0, 0 ),
+	                                             makeInstruction( SIR_LANG_OP_CALL_NATIVE, SIR_LANG_VALUE_U16, 1, 0 ),
+	                                             makeInstruction( SIR_LANG_OP_RETURN, SIR_LANG_VALUE_U16, UINT32_MAX, 1 ) };
 	szInstructions[0].nImmediate = 21;
 	szInstructions[1].iSecondSource = 1;
 	const uint32_t iCallArgument = 0;
@@ -246,8 +241,7 @@ static void testNativeBytecodeThroughBackend( void ) noexcept
 	assert( api.pInitializeInstance( api.pUser, nInstanceToken ) == SIR_SCRIPT_OK );
 	sirLangVMValue_t output = {};
 	const sirScriptInvokeRequest_t call = {
-	    nInstanceToken, 81, { nullptr, 0, 1 }, { &output, sizeof( output ), alignof( sirLangVMValue_t ) }
-	};
+	    nInstanceToken, 81, { nullptr, 0, 1 }, { &output, sizeof( output ), alignof( sirLangVMValue_t ) } };
 	assert( api.pInvoke( api.pUser, &call ) == SIR_SCRIPT_OK );
 	assert( output.eType == SIR_LANG_VALUE_U16 && output.nBits == 22 );
 
