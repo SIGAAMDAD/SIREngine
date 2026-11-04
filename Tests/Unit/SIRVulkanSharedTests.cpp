@@ -18,7 +18,6 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <stdio.h>
 
-
 #include <string.h>
 
 int main( void )
