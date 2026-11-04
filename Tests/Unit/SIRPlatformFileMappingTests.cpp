@@ -27,6 +27,7 @@ static void sirTestMappings( void )
 
 	SIR_REQUIRE( file.open( pszPath, SIR_FILE_OPEN_READ | SIR_FILE_OPEN_WRITE | SIR_FILE_OPEN_CREATE | SIR_FILE_OPEN_TRUNCATE ) ==
 	             SIR_FILE_OK );
+	SIR_REQUIRE( mapping.map( file, 0, 1, ( sirFileMapMode_t )255 ) == SIR_FILE_INVALID_ARGUMENT );
 	SIR_REQUIRE( mapping.map( file, 0, 0, SIR_FILE_MAP_READ_ONLY ) == SIR_FILE_OUT_OF_RANGE );
 	uint8_t szContents[8192];
 	for ( uint32_t i = 0; i < sizeof( szContents ); ++i ) {
@@ -83,6 +84,9 @@ static void sirTestMappings( void )
 	SIR_REQUIRE( mapping.getData()[0] == nMarker );
 	SIR_REQUIRE( mapping.unmap() == SIR_FILE_OK );
 	SIR_REQUIRE( file.truncate( 8192 ) == SIR_FILE_OK );
+	SIR_REQUIRE( file.close() == SIR_FILE_OK );
+	SIR_REQUIRE( file.open( pszPath, SIR_FILE_OPEN_WRITE ) == SIR_FILE_OK );
+	SIR_REQUIRE( mapping.map( file, 0, 1, SIR_FILE_MAP_READ_ONLY ) == SIR_FILE_INVALID_ARGUMENT );
 	SIR_REQUIRE( file.close() == SIR_FILE_OK );
 	SIR_REQUIRE( SIRPlatformFile::remove( pszPath ) == SIR_FILE_OK );
 }

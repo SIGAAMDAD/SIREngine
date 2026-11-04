@@ -198,6 +198,7 @@ static void testPlatformFileInputBoundaries( void )
 	SIR_REQUIRE( file.seek( 1, SIR_FILE_SEEK_CURRENT, nullptr ) == SIR_FILE_OUT_OF_RANGE );
 	SIR_REQUIRE( file.writeAt( 0, &value, 1, nullptr ) == SIR_FILE_INVALID_ARGUMENT );
 	SIR_REQUIRE( file.writeAt( INT64_MAX, &value, 1, &nDone ) == SIR_FILE_OUT_OF_RANGE );
+	SIR_REQUIRE( file.writeAt( UINT64_MAX, &value, 1, &nDone ) == SIR_FILE_OUT_OF_RANGE );
 	SIR_REQUIRE( file.writeAt( 0, nullptr, 1, &nDone ) == SIR_FILE_INVALID_ARGUMENT );
 	SIR_REQUIRE( file.write( &value, 0, nullptr ) == SIR_FILE_INVALID_ARGUMENT );
 	SIR_REQUIRE( file.close() == SIR_FILE_OK );

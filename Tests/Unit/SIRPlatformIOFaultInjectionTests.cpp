@@ -48,6 +48,7 @@ static std::atomic<int> s_nOpenFault{ 0 };
 static std::atomic<int> s_nWriteFault{ 0 };
 static std::atomic<bool> s_bMapFault{ false };
 static std::atomic<bool> s_bMapAccessFault{ false };
+static std::atomic<bool> s_bMapPermissionFault{ false };
 static std::atomic<bool> s_bSizeFault{ false };
 static std::atomic<bool> s_bPageFault{ false };
 static std::atomic<bool> s_bUnmapFault{ false };
@@ -244,6 +245,10 @@ extern "C" void *__wrap_mmap( void *pAddress, size_t nBytes, int nProtection, in
 		errno = EACCES;
 		return MAP_FAILED;
 	}
+	if ( s_bMapPermissionFault.exchange( false, std::memory_order_relaxed ) ) {
+		errno = EPERM;
+		return MAP_FAILED;
+	}
 	if ( s_bMapFault.exchange( false, std::memory_order_relaxed ) ) {
 		errno = ENOMEM;
 		return MAP_FAILED;
@@ -358,6 +363,8 @@ static void sirTestInjectedPositionalTransfers( void )
 	s_bPageFault.store( true, std::memory_order_relaxed );
 	SIR_CHECK( mapping.map( file, 1, 128, SIR_FILE_MAP_READ_WRITE ) == SIR_FILE_IO_ERROR && !mapping.isMapped() );
 	s_bMapAccessFault.store( true, std::memory_order_relaxed );
+	SIR_CHECK( mapping.map( file, 1, 128, SIR_FILE_MAP_READ_WRITE ) == SIR_FILE_ACCESS_DENIED && !mapping.isMapped() );
+	s_bMapPermissionFault.store( true, std::memory_order_relaxed );
 	SIR_CHECK( mapping.map( file, 1, 128, SIR_FILE_MAP_READ_WRITE ) == SIR_FILE_ACCESS_DENIED && !mapping.isMapped() );
 	s_bMapFault.store( true, std::memory_order_relaxed );
 	SIR_CHECK( mapping.map( file, 1, 128, SIR_FILE_MAP_READ_WRITE ) == SIR_FILE_IO_ERROR && !mapping.isMapped() );
