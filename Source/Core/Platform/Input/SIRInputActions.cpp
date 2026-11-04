@@ -430,6 +430,12 @@ void SIRInputActions::evaluate( const sirInputFrame_t &frame ) noexcept
 	if ( frame.nTick == 0 || ( m_nLastTick != 0 && frame.nTick <= m_nLastTick ) ) {
 		return;
 	}
+	// The native input core can run without a logical action map. Avoid
+	// 32-device snapshot copies and scans in this hot-path configuration.
+	if ( m_nActions == 0 ) {
+		m_nLastTick = frame.nTick;
+		return;
+	}
 	for ( uint32_t i = 0; i < m_nActions; ++i ) {
 		m_Actions[i].bPressed = false;
 		m_Actions[i].bReleased = false;
