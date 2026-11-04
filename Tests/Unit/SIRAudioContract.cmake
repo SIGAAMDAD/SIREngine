@@ -34,3 +34,8 @@ add_executable(SIRFMODMixerBackendTests SIRFMODMixerBackendTests.cpp)
 target_link_libraries(SIRFMODMixerBackendTests PRIVATE SIR::FMODContext)
 add_test(NAME audio.fmod.mixer-controls COMMAND SIRFMODMixerBackendTests)
 sir_configure_owned_target(SIRFMODMixerBackendTests)
+
+add_executable(SIRFMODSnapshotBackendTests SIRFMODSnapshotBackendTests.cpp)
+target_link_libraries(SIRFMODSnapshotBackendTests PRIVATE SIR::FMODContext)
+add_test(NAME audio.fmod.snapshot-lifecycle COMMAND SIRFMODSnapshotBackendTests)
+sir_configure_owned_target(SIRFMODSnapshotBackendTests)
