@@ -22,6 +22,9 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/mman.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
 
 #define SIR_MEMORY_FAULT_CHECK( condition )                                                                                                \
 	do {                                                                                                                                   \
@@ -32,12 +35,22 @@ of merchantability, fitness for a particular purpose and noninfringement.
 	} while ( 0 )
 
 static std::atomic<bool> s_bFailReserve{ false };
+static std::atomic<bool> s_bInvalidPageSize{ false };
 static std::atomic<bool> s_bFailProtection{ false };
 static std::atomic<bool> s_bFailDiscard{ false };
 
+extern "C" long __real_sysconf( int nName );
 extern "C" void *__real_mmap( void *pAddress, size_t nBytes, int nProtection, int nFlags, int nHandle, off_t nOffset );
 extern "C" int __real_mprotect( void *pAddress, size_t nBytes, int nProtection );
 extern "C" int __real_madvise( void *pAddress, size_t nBytes, int nAdvice );
+
+extern "C" long __wrap_sysconf( int nName )
+{
+	if ( nName == _SC_PAGESIZE && s_bInvalidPageSize.exchange( false, std::memory_order_relaxed ) ) {
+		return 3;
+	}
+	return __real_sysconf( nName );
+}
 
 extern "C" void *__wrap_mmap( void *pAddress, size_t nBytes, int nProtection, int nFlags, int nHandle, off_t nOffset )
 {
@@ -113,8 +126,27 @@ static void testVirtualBackingFaultRecovery( void )
 	memory.shutdown();
 }
 
+static void testInvalidOperatingSystemPageSize( void )
+{
+	// Page size is cached on its first call, so isolate a deliberately
+	// invalid kernel report in a child rather than poisoning the test host.
+	const pid_t nChild = fork();
+	SIR_MEMORY_FAULT_CHECK( nChild >= 0 );
+	if ( nChild == 0 ) {
+		s_bInvalidPageSize.store( true, std::memory_order_relaxed );
+		SIRMemoryManager memory;
+		const sirMemoryConfig_t config = { 4096 * 128, 4096 * 32, 4096 * 8, 4 };
+		SIR_MEMORY_FAULT_CHECK( !memory.init( config ) && !memory.isInitialized() );
+		exit( 0 );
+	}
+	int nStatus = 0;
+	SIR_MEMORY_FAULT_CHECK( waitpid( nChild, &nStatus, 0 ) == nChild );
+	SIR_MEMORY_FAULT_CHECK( WIFEXITED( nStatus ) && WEXITSTATUS( nStatus ) == 0 );
+}
+
 int main( void )
 {
+	testInvalidOperatingSystemPageSize();
 	testVirtualBackingFaultRecovery();
 	return 0;
 }

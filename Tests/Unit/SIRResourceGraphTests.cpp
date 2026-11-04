@@ -1955,6 +1955,49 @@ static void testResourceKeyAndContentFieldSeparation( void )
 	REQUIRE( alloc.m_nOutstanding.load() == 0 );
 }
 
+static void testExhaustedReadIndexTombstones( void )
+{
+	SIRTestAllocatorStats allocator = {};
+	{
+		SIRResourceGraph graph( testConfig( allocator, 2 ) );
+		REQUIRE( graph.isReady() );
+		SIRResourceGraphWriter *pWriter = graph.getWriter();
+		REQUIRE( pWriter != nullptr );
+		// The read index has 2 * maxResources + 1 cells. Populate each
+		// original hash bucket with a distinct tombstone before inserting again.
+		uint64_t nAsset = 200000;
+		for ( uint32_t iBucket = 0; iBucket < 5; ++iBucket ) {
+			SIRResourceKey candidate = key( nAsset++ );
+			while ( SIRResourceKeyHash{}( candidate ) % 5 != iBucket ) {
+				candidate = key( nAsset++ );
+			}
+			SIRResourcePublication publication = { candidate, SIR_RESOURCE_KIND_COMPOSITION, 1, 1, nullptr, 0, nullptr, 0 };
+			SIRResourceHandle handle = {};
+			REQUIRE( pWriter->publish( publication, &handle ) == SIR_RESOURCE_RESULT_SUCCESS );
+			REQUIRE( pWriter->retire( handle ) == SIR_RESOURCE_RESULT_SUCCESS );
+			REQUIRE( pWriter->collectRetired( 8 ) == 1 );
+		}
+		{
+			SIRResourceReadScope scope( graph );
+			SIRResourceHandle missing = {};
+			REQUIRE( scope.isActive() );
+			REQUIRE( graph.find( scope, key( 9999 ), &missing ) == SIR_RESOURCE_RESULT_INVALID_HANDLE );
+		}
+		SIRResourcePublication next = { key( 300000 ), SIR_RESOURCE_KIND_COMPOSITION, 1, 1, nullptr, 0, nullptr, 0 };
+		SIRResourceHandle replacement = {};
+		REQUIRE( pWriter->publish( next, &replacement ) == SIR_RESOURCE_RESULT_SUCCESS );
+		{
+			SIRResourceReadScope scope( graph );
+			SIRResourceHandle found = {};
+			REQUIRE( graph.find( scope, next.m_Key, &found ) == SIR_RESOURCE_RESULT_SUCCESS );
+			REQUIRE( found.m_nSlot == replacement.m_nSlot && found.m_nGeneration == replacement.m_nGeneration );
+		}
+		REQUIRE( pWriter->retire( replacement ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( pWriter->collectRetired( 8 ) == 1 );
+	}
+	REQUIRE( allocator.m_nOutstanding.load() == 0 );
+}
+
 int main( void )
 {
 	testScopeLifetimeAndDeduplication();
@@ -1986,6 +2029,7 @@ int main( void )
 	testDuplicateStagingRejection();
 	testPublicationCapacityAfterFullAdmission();
 	testReverseDependencyBucketCollisions();
+	testExhaustedReadIndexTombstones();
 	testDependencyRetiredDuringTaskCompilation();
 	testStaleDependencyRebindingDuringTaskCompilation();
 	testSharedChunkAllocationRollback();
