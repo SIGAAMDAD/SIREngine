@@ -55,9 +55,8 @@ sirGraphicsResult_t sirVulkanPlanImageBarrier( const sirGraphicsBarrier_t &barri
 	if ( barrier.eType != SIR_GRAPHICS_BARRIER_TRANSITION && barrier.eType != SIR_GRAPHICS_BARRIER_UAV ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
-	if ( barrier.nMipCount == 0 || barrier.nLayerCount == 0 || barrier.nBaseMip >= pImage->nMips ||
-	     barrier.nBaseLayer >= pImage->nLayers || barrier.nMipCount > pImage->nMips - barrier.nBaseMip ||
-	     barrier.nLayerCount > pImage->nLayers - barrier.nBaseLayer ) {
+	if ( barrier.nMipCount == 0 || barrier.nLayerCount == 0 || barrier.nBaseMip >= pImage->nMips || barrier.nBaseLayer >= pImage->nLayers ||
+	     barrier.nMipCount > pImage->nMips - barrier.nBaseMip || barrier.nLayerCount > pImage->nLayers - barrier.nBaseLayer ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
 	if ( pImage->eFormat == VK_FORMAT_D16_UNORM || pImage->eFormat == VK_FORMAT_D24_UNORM_S8_UINT ||
@@ -193,9 +192,8 @@ sirVulkanResult_t SIRVulkanDevice::submitImageBarrier( sirVulkanImage_t *pImage,
 	     pImage->nDeviceSerial != m_nDeviceSerial || m_nLastTransferValue == UINT64_MAX ) {
 		return SIR_VULKAN_INVALID_ARGUMENT;
 	}
-	if ( barrier.nMipCount == 0 || barrier.nLayerCount == 0 || barrier.nMip >= pImage->nMips ||
-	     barrier.nLayer >= pImage->nLayers || barrier.nMipCount > pImage->nMips - barrier.nMip ||
-	     barrier.nLayerCount > pImage->nLayers - barrier.nLayer ||
+	if ( barrier.nMipCount == 0 || barrier.nLayerCount == 0 || barrier.nMip >= pImage->nMips || barrier.nLayer >= pImage->nLayers ||
+	     barrier.nMipCount > pImage->nMips - barrier.nMip || barrier.nLayerCount > pImage->nLayers - barrier.nLayer ||
 	     ( barrier.bUav && ( barrier.eBefore != VK_IMAGE_LAYOUT_GENERAL || barrier.eAfter != VK_IMAGE_LAYOUT_GENERAL ||
 	                         ( pImage->nUsage & VK_IMAGE_USAGE_STORAGE_BIT ) == 0 ) ) ||
 	     ( !barrier.bUav && barrier.eBefore == barrier.eAfter ) ||

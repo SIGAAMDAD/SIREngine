@@ -127,8 +127,8 @@ int main( void )
 	rangeBarrier.eAfter = SIR_GRAPHICS_STATE_COMMON;
 	rangeBarrier.nMipCount = 2;
 	rangeBarrier.nLayerCount = 2;
-	if ( sirVulkanPlanImageBarrier( rangeBarrier, &range, &native ) != SIR_GRAPHICS_SUCCESS ||
-	     native.nMip != 0 || native.nLayer != 0 || native.nMipCount != 2 || native.nLayerCount != 2 ) {
+	if ( sirVulkanPlanImageBarrier( rangeBarrier, &range, &native ) != SIR_GRAPHICS_SUCCESS || native.nMip != 0 || native.nLayer != 0 ||
+	     native.nMipCount != 2 || native.nLayerCount != 2 ) {
 		return 16;
 	}
 	if ( !sirVulkanSetSubresourceLayout( &range, 0, 0, VK_IMAGE_LAYOUT_GENERAL ) ||
@@ -166,8 +166,8 @@ int main( void )
 		return 21;
 	}
 	uploaded.szUploadedSubresources[0] = 0xFULL;
-	if ( sirVulkanPlanImageBarrier( rangeBarrier, &uploaded, &native ) != SIR_GRAPHICS_SUCCESS ||
-	     native.nMipCount != 2 || native.nLayerCount != 2 ) {
+	if ( sirVulkanPlanImageBarrier( rangeBarrier, &uploaded, &native ) != SIR_GRAPHICS_SUCCESS || native.nMipCount != 2 ||
+	     native.nLayerCount != 2 ) {
 		return 22;
 	}
 	printf( "Vulkan image barrier contracts passed\n" );

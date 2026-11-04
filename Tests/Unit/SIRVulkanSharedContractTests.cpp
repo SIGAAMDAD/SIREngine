@@ -73,8 +73,7 @@ int main( void )
 	if ( sirVulkanAdapterPriority( VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU ) != 4 ||
 	     sirVulkanAdapterPriority( VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU ) != 3 ||
 	     sirVulkanAdapterPriority( VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU ) != 2 ||
-	     sirVulkanAdapterPriority( VK_PHYSICAL_DEVICE_TYPE_CPU ) != 1 ||
-	     sirVulkanAdapterPriority( VK_PHYSICAL_DEVICE_TYPE_OTHER ) != 1 ) {
+	     sirVulkanAdapterPriority( VK_PHYSICAL_DEVICE_TYPE_CPU ) != 1 || sirVulkanAdapterPriority( VK_PHYSICAL_DEVICE_TYPE_OTHER ) != 1 ) {
 		return 14;
 	}
 

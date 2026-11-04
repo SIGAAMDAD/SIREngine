@@ -82,8 +82,7 @@ uint32_t sirVulkanAdapterPriority( VkPhysicalDeviceType eType ) noexcept
 bool SIRVulkanDevice::chooseAdapter( uint32_t nAdapterIndex ) noexcept
 {
 	uint32_t nDeviceCount = 0;
-	if ( m_pfnEnumeratePhysicalDevices( m_Instance, &nDeviceCount, nullptr ) != VK_SUCCESS || nDeviceCount == 0 ||
-	     nDeviceCount > 32 ) {
+	if ( m_pfnEnumeratePhysicalDevices( m_Instance, &nDeviceCount, nullptr ) != VK_SUCCESS || nDeviceCount == 0 || nDeviceCount > 32 ) {
 		return false;
 	}
 	VkPhysicalDevice szDevices[32] = {};
@@ -124,8 +123,7 @@ bool SIRVulkanDevice::chooseAdapter( uint32_t nAdapterIndex ) noexcept
 		uint32_t nSelectedFamily = UINT32_MAX;
 		bool bCompute = false;
 		for ( uint32_t iFamily = 0; iFamily < nFamilyCount; ++iFamily ) {
-			if ( szFamiliesInfo[iFamily].queueCount == 0 ||
-			     ( szFamiliesInfo[iFamily].queueFlags & VK_QUEUE_GRAPHICS_BIT ) == 0 ) {
+			if ( szFamiliesInfo[iFamily].queueCount == 0 || ( szFamiliesInfo[iFamily].queueFlags & VK_QUEUE_GRAPHICS_BIT ) == 0 ) {
 				continue;
 			}
 			const bool bFamilyCompute = ( szFamiliesInfo[iFamily].queueFlags & VK_QUEUE_COMPUTE_BIT ) != 0;
