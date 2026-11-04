@@ -15,8 +15,15 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Scripting/Core/SIRScriptServer.h>
 
-SIRScriptServer::SIRScriptServer( void ) noexcept : m_Bindings(), m_Runtime( &m_Bindings )
+SIRScriptServer::SIRScriptServer( void ) noexcept : m_Bindings(), m_CodeManager( &m_Bindings ), m_Runtime( &m_Bindings )
 {
+}
+
+SIRScriptServer::~SIRScriptServer( void ) noexcept
+{
+	// Finish backend unload callbacks before code-manager resource release.
+	( void )m_Runtime.shutdownAll();
+	( void )m_CodeManager.shutdown();
 }
 
 SIRScriptBindingRegistry &SIRScriptServer::bindings( void ) noexcept
@@ -27,4 +34,14 @@ SIRScriptBindingRegistry &SIRScriptServer::bindings( void ) noexcept
 SIRScriptRuntime &SIRScriptServer::runtime( void ) noexcept
 {
 	return m_Runtime;
+}
+
+SIRScriptCodeManager &SIRScriptServer::codeManager( void ) noexcept
+{
+	return m_CodeManager;
+}
+
+sirScriptResult_t SIRScriptServer::useCodeManagerSource( void ) noexcept
+{
+	return m_Runtime.setProgramSource( m_CodeManager.makeProgramSourceAPI() );
 }

@@ -2,3 +2,8 @@ add_executable(SIRScriptFoundationTests SIRScriptFoundationTests.cpp)
 target_link_libraries(SIRScriptFoundationTests PRIVATE SIR::Scripting)
 add_test(NAME scripting.foundation COMMAND SIRScriptFoundationTests)
 sir_configure_owned_target(SIRScriptFoundationTests)
+
+add_executable(SIRScriptCodeManagerTests SIRScriptCodeManagerTests.cpp)
+target_link_libraries(SIRScriptCodeManagerTests PRIVATE SIR::Scripting)
+add_test(NAME scripting.code-manager COMMAND SIRScriptCodeManagerTests)
+sir_configure_owned_target(SIRScriptCodeManagerTests)
