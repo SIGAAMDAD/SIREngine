@@ -68,6 +68,7 @@ typedef struct sirFMODBankFixture_s
 	uint32_t nUnloads;
 	uint32_t nPreloads;
 	uint32_t nChecks;
+	uint32_t nAsyncPolls;
 	uint32_t nStarts;
 	uint32_t nReleases;
 	uint32_t nFailLoad;
@@ -292,9 +293,27 @@ static int32_t testContainsBankObject( void *pData, void *pStudio, void *pBank, 
 	return 0;
 }
 
+static int32_t testLoadBankAsync( void *pData, void *pStudio, const char *szPath, void **ppBank ) noexcept
+{
+	return testLoadBank( pData, pStudio, szPath, ppBank );
+}
+
+static int32_t testGetBankLoadingState( void *pData, void *, sirFMODSampleState_t *pState ) noexcept
+{
+	sirFMODBankFixture_t *pFixture = ( sirFMODBankFixture_t * )pData;
+	if ( pFixture->nAsyncPolls != 0 ) {
+		--pFixture->nAsyncPolls;
+		*pState = SIR_FMOD_SAMPLE_LOADING;
+	} else {
+		*pState = SIR_FMOD_SAMPLE_READY;
+	}
+	return 0;
+}
+
 static sirFMODBankNativeOps_t makeBankOps( sirFMODBankFixture_t *pFixture ) noexcept
 {
-	return { 2, pFixture, testLoadBank, testUnloadBank, testPreloadBank, testSampleState, testContainsEvent, testContainsBankObject };
+	return { 3, pFixture, testLoadBank, testUnloadBank, testPreloadBank, testSampleState, testContainsEvent,
+	         testContainsBankObject, testLoadBankAsync, testGetBankLoadingState };
 }
 
 static int32_t testPinnedBusResolve( void *pData, void *pStudio, const char *szPath, void **ppBus ) noexcept
@@ -440,6 +459,34 @@ static void testScopedBankOwnership( const sirContainerAllocator_t *pAllocator )
 	checkBank( context.getBorrowedBankObjectCount() == 0 );
 	checkBank( banks.unloadBank( 1 ) == SIR_AUDIO_OK );
 	checkBank( snapshots.shutdown() == SIR_AUDIO_OK );
+	checkBank( banks.shutdown() == SIR_AUDIO_OK );
+	audio.shutdown();
+	checkBank( context.shutdown() == SIR_FMOD_OK );
+}
+
+static void testNonblockingBanks( const sirContainerAllocator_t *pAllocator )
+{
+	sirFMODBankFixture_t fixture = {};
+	SIRFMODContext context;
+	const sirFMODContextConfig_t contextConfig = { 16, -1, 1, 1, 0, 0 };
+	checkBank( context.initialize( contextConfig, makeStudioOps( &fixture ) ) == SIR_FMOD_OK );
+	SIRFMODVoiceBackend voices;
+	checkBank( voices.configure( &context, pAllocator, makeVoiceOps( &fixture ), 1 ) == SIR_AUDIO_OK );
+	SIRAudioSystem audio;
+	const sirAudioSystemConfig_t audioConfig = { 1, 0, 4, 2, 2, 0 };
+	checkBank( audio.initialize( audioConfig, pAllocator, SIRFMODVoiceBackend::getBackendOps(), &voices ) == SIR_AUDIO_OK );
+	SIRFMODBankStore banks;
+	checkBank( banks.initialize( &context, &voices, pAllocator, makeBankOps( &fixture ), 1, 1 ) == SIR_AUDIO_OK );
+	fixture.nAsyncPolls = 2;
+	checkBank( banks.beginLoadBank( 1, "A.bank" ) == SIR_AUDIO_PENDING );
+	checkBank( !banks.hasLoadedBank( 1 ) );
+	checkBank( banks.pollBankLoad( 1 ) == SIR_AUDIO_PENDING );
+	checkBank( banks.pollBankLoad( 1 ) == SIR_AUDIO_PENDING );
+	checkBank( banks.pollBankLoad( 1 ) == SIR_AUDIO_OK );
+	checkBank( banks.hasLoadedBank( 1 ) && banks.preloadSamples( 1 ) == SIR_AUDIO_OK );
+	checkBank( banks.unloadBank( 1 ) == SIR_AUDIO_OK );
+	checkBank( banks.beginLoadBank( 1, "A.bank" ) == SIR_AUDIO_PENDING );
+	checkBank( banks.unloadBank( 1 ) == SIR_AUDIO_OK );
 	checkBank( banks.shutdown() == SIR_AUDIO_OK );
 	audio.shutdown();
 	checkBank( context.shutdown() == SIR_FMOD_OK );
@@ -833,6 +880,7 @@ int main( void )
 {
 	const sirContainerAllocator_t allocator = { nullptr, testBankAllocate, testBankFree, 0, 0 };
 	testBankLifecycle( &allocator );
+	testNonblockingBanks( &allocator );
 	testBankFailures( &allocator );
 	testBorrowedBankObjectPins( &allocator );
 	testScopedBankOwnership( &allocator );

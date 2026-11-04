@@ -185,8 +185,7 @@ static int32_t fmodCheckBankObject( void *, void *pStudio, void *pBank, sirFMODB
 static int32_t fmodLoadBankFileAsync( void *, void *pStudio, const char *szPath, void **ppBank ) noexcept
 {
 	FMOD::Studio::Bank *pBank = nullptr;
-	const FMOD_RESULT eResult =
-	    ( ( FMOD::Studio::System * )pStudio )->loadBankFile( szPath, FMOD_STUDIO_LOAD_BANK_NONBLOCKING, &pBank );
+	const FMOD_RESULT eResult = ( ( FMOD::Studio::System * )pStudio )->loadBankFile( szPath, FMOD_STUDIO_LOAD_BANK_NONBLOCKING, &pBank );
 	*ppBank = pBank;
 	return ( int32_t )eResult;
 }
