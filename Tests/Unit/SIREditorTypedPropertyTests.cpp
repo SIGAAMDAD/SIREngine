@@ -163,6 +163,47 @@ int main( void )
 	assert( document.copyPropertySnapshot( szSnapshot, 4, &nProperties ) == SIR_EDITOR_OK );
 	assert( nProperties == 1 && szSnapshot[0].value.nPayload == 99 );
 
+	// Reusing an authored ID with a new generation must not retain old
+	// properties unless the new incarnation explicitly assigns them.
+	assert( document.beginEdit( document.getRevision() ) == SIR_EDITOR_OK );
+	assert( document.queueRemove( 2 ) == SIR_EDITOR_OK );
+	assert( document.queueUpsert( sirTypedTestNode( 2, 1 ) ) == SIR_EDITOR_OK );
+	assert( document.commitEdit() == SIR_EDITOR_OK );
+	assert( document.findNode( 2, &foundNode ) == SIR_EDITOR_OK );
+	assert( document.findProperty( 2, 7, &found ) == SIR_EDITOR_NOT_FOUND );
+	assert( document.undo() == SIR_EDITOR_OK );
+	assert( document.findProperty( 2, 7, &found ) == SIR_EDITOR_OK && found.nPayload == 99 );
+	assert( document.redo() == SIR_EDITOR_OK );
+	assert( document.findProperty( 2, 7, &found ) == SIR_EDITOR_NOT_FOUND );
+
+	assert( document.beginEdit( document.getRevision() ) == SIR_EDITOR_OK );
+	assert( document.queueRemove( 2 ) == SIR_EDITOR_OK );
+	assert( document.queueUpsert( sirTypedTestNode( 2, 1 ) ) == SIR_EDITOR_OK );
+	assert( document.queueSetProperty( sirTypedTestProperty( 2, 7, 456 ) ) == SIR_EDITOR_OK );
+	assert( document.commitEdit() == SIR_EDITOR_OK );
+	assert( document.findProperty( 2, 7, &found ) == SIR_EDITOR_OK && found.nPayload == 456 );
+	assert( document.undo() == SIR_EDITOR_OK );
+	assert( document.findProperty( 2, 7, &found ) == SIR_EDITOR_NOT_FOUND );
+	assert( document.redo() == SIR_EDITOR_OK );
+	assert( document.findProperty( 2, 7, &found ) == SIR_EDITOR_OK && found.nPayload == 456 );
+
+	assert( document.beginEdit( document.getRevision() ) == SIR_EDITOR_OK );
+	assert( document.queueRemoveProperty( 2, 7 ) == SIR_EDITOR_OK );
+	assert( document.commitEdit() == SIR_EDITOR_OK );
+	assert( document.findProperty( 2, 7, &found ) == SIR_EDITOR_NOT_FOUND );
+	assert( document.undo() == SIR_EDITOR_OK );
+	assert( document.findProperty( 2, 7, &found ) == SIR_EDITOR_OK && found.nPayload == 456 );
+	assert( document.redo() == SIR_EDITOR_OK );
+	assert( document.findProperty( 2, 7, &found ) == SIR_EDITOR_NOT_FOUND );
+
+	const uint64_t nRevisionAfterRemove = document.getRevision();
+	assert( document.beginEdit( nRevisionAfterRemove - 1 ) == SIR_EDITOR_STALE_REVISION );
+	assert( document.beginEdit( nRevisionAfterRemove ) == SIR_EDITOR_OK );
+	assert( document.queueRemoveProperty( 2, 7 ) == SIR_EDITOR_OK );
+	assert( document.commitEdit() == SIR_EDITOR_NOT_FOUND );
+	assert( document.getRevision() == nRevisionAfterRemove );
+	assert( document.cancelEdit() == SIR_EDITOR_OK );
+
 	document.shutdown();
 	registry.shutdown();
 	return 0;
