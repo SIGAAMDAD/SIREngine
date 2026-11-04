@@ -170,37 +170,43 @@ sirResourceCatalogResult_t SIRResourceCatalog::buildLoadOrder( uint64_t *pOutIds
 			return SIR_RESOURCE_CATALOG_NOT_FOUND;
 		}
 	}
-	memset( m_pSeen, 0, m_nEntryCount );
-	memset( m_pScratch, 0, ( size_t )m_nEntryCount * sizeof( uint32_t ) );
-	for ( uint32_t iEdge = 0; iEdge < m_nDependencyCount; ++iEdge ) {
-		const uint32_t iOwner = findIndex( m_pDependencies[iEdge].nOwnerId );
-		if ( m_pScratch[iOwner] == UINT32_MAX ) {
-			return SIR_RESOURCE_CATALOG_OUT_OF_CAPACITY;
-		}
-		++m_pScratch[iOwner];
-	}
-	for ( uint32_t iOutput = 0; iOutput < m_nEntryCount; ++iOutput ) {
-		uint32_t iNext = UINT32_MAX;
-		for ( uint32_t iResource = 0; iResource < m_nEntryCount; ++iResource ) {
-			if ( m_pSeen[iResource] == 0 && m_pScratch[iResource] == 0 &&
-			     ( iNext == UINT32_MAX || m_pEntries[iResource].nId < m_pEntries[iNext].nId ) ) {
-				iNext = iResource;
-			}
-		}
-		if ( iNext == UINT32_MAX ) {
-			return SIR_RESOURCE_CATALOG_CYCLIC;
-		}
-		const uint64_t nCompletedId = m_pEntries[iNext].nId;
-		m_pSeen[iNext] = 1;
-		pOutIds[iOutput] = nCompletedId;
+	// First validate a complete topological traversal. Only the second
+	// pass writes caller output, preserving it if the catalog was corrupted.
+	for ( uint32_t iPass = 0; iPass < 2; ++iPass ) {
+		memset( m_pSeen, 0, m_nEntryCount );
+		memset( m_pScratch, 0, ( size_t )m_nEntryCount * sizeof( uint32_t ) );
 		for ( uint32_t iEdge = 0; iEdge < m_nDependencyCount; ++iEdge ) {
-			const sirResourceDependency_t& edge = m_pDependencies[iEdge];
-			if ( edge.nTargetId == nCompletedId ) {
-				const uint32_t iOwner = findIndex( edge.nOwnerId );
-				if ( m_pScratch[iOwner] == 0 ) {
-					return SIR_RESOURCE_CATALOG_CYCLIC;
+			const uint32_t iOwner = findIndex( m_pDependencies[iEdge].nOwnerId );
+			if ( m_pScratch[iOwner] == UINT32_MAX ) {
+				return SIR_RESOURCE_CATALOG_OUT_OF_CAPACITY;
+			}
+			++m_pScratch[iOwner];
+		}
+		for ( uint32_t iOutput = 0; iOutput < m_nEntryCount; ++iOutput ) {
+			uint32_t iNext = UINT32_MAX;
+			for ( uint32_t iResource = 0; iResource < m_nEntryCount; ++iResource ) {
+				if ( m_pSeen[iResource] == 0 && m_pScratch[iResource] == 0 &&
+				     ( iNext == UINT32_MAX || m_pEntries[iResource].nId < m_pEntries[iNext].nId ) ) {
+					iNext = iResource;
 				}
-				--m_pScratch[iOwner];
+			}
+			if ( iNext == UINT32_MAX ) {
+				return SIR_RESOURCE_CATALOG_CYCLIC;
+			}
+			const uint64_t nCompletedId = m_pEntries[iNext].nId;
+			m_pSeen[iNext] = 1;
+			if ( iPass == 1 ) {
+				pOutIds[iOutput] = nCompletedId;
+			}
+			for ( uint32_t iEdge = 0; iEdge < m_nDependencyCount; ++iEdge ) {
+				const sirResourceDependency_t& edge = m_pDependencies[iEdge];
+				if ( edge.nTargetId == nCompletedId ) {
+					const uint32_t iOwner = findIndex( edge.nOwnerId );
+					if ( m_pScratch[iOwner] == 0 ) {
+						return SIR_RESOURCE_CATALOG_CYCLIC;
+					}
+					--m_pScratch[iOwner];
+				}
 			}
 		}
 	}
