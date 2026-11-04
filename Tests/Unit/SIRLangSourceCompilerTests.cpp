@@ -137,9 +137,47 @@ static void testRejectedSource( void ) noexcept
 	assert( fixture.workspace.report.ePhase == SIR_LANG_COMPILE_INPUT );
 }
 
+static void testBooleanShortCircuit( void ) noexcept
+{
+	sirLangCompilerFixture_t fixture = {};
+	setupFixture( &fixture );
+	static constexpr char szSource[] =
+	    "fn lazy_and(flag: bool) -> bool:\n"
+	    "    return flag and ((1u16 / 0u16) == 1u16)\n"
+	    "fn lazy_or(flag: bool) -> bool:\n"
+	    "    return flag or ((1u16 / 0u16) == 1u16)\n";
+
+	const sirLangSourceView_t source = { ( const uint8_t * )szSource, sizeof( szSource ) - 1 };
+	assert( SIRLangCompileSource( source, &fixture.workspace ) );
+	const sirLangCIRProgram_t& program = fixture.workspace.cir.program;
+	assert( program.nFunctionCount == 2 );
+	assert( SIRLangVerifyCIR( &program ) == SIR_LANG_VM_OK );
+
+	sirLangVMValue_t argument = { 0, SIR_LANG_VALUE_BOOL };
+	sirLangVMInvocation_t invocation = {};
+	invocation.nFunctionId = program.pFunctions[0].nFunctionId;
+	invocation.pArguments = &argument;
+	invocation.nArgumentCount = 1;
+	invocation.nFuel = 128;
+	invocation.nExpectedLayoutDigest = program.nLayoutDigest;
+	invocation.nExpectedBindingDigest = program.nBindingDigest;
+
+	sirLangVMRunResult_t result = SIRLangRunGraphVM( &program, invocation );
+	assert( result.eError == SIR_LANG_VM_OK && result.result.eType == SIR_LANG_VALUE_BOOL && result.result.nBits == 0 );
+	argument.nBits = 1;
+	assert( SIRLangRunGraphVM( &program, invocation ).eError == SIR_LANG_VM_DIVIDE_ZERO );
+
+	invocation.nFunctionId = program.pFunctions[1].nFunctionId;
+	result = SIRLangRunGraphVM( &program, invocation );
+	assert( result.eError == SIR_LANG_VM_OK && result.result.eType == SIR_LANG_VALUE_BOOL && result.result.nBits == 1 );
+	argument.nBits = 0;
+	assert( SIRLangRunGraphVM( &program, invocation ).eError == SIR_LANG_VM_DIVIDE_ZERO );
+}
+
 int main( void )
 {
 	testSourceToVM();
+	testBooleanShortCircuit();
 	testRejectedSource();
 	return 0;
 }

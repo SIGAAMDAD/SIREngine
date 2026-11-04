@@ -459,6 +459,71 @@ static sirLangOpcode_t sirLangBinaryOp( const sirLangLowerState_t *pState, uint3
 	return SIR_LANG_OP_PHI;
 }
 
+// Boolean operators are control flow: the RHS may contain a native call,
+// effect, or failing arithmetic operation and must never be evaluated eagerly.
+static uint32_t sirLangLowerLogical( sirLangLowerState_t *pState, uint32_t iNode, uint32_t iLeft, uint32_t iRight ) noexcept
+{
+	const uint32_t iLeftValue = sirLangLowerExpression( pState, iLeft );
+	if ( iLeftValue == SIR_LANG_INVALID_INDEX ) {
+		return iLeftValue;
+	}
+
+	sirLangBinaryModifiers_t modifiers = {};
+	const sirLangOpcode_t eOpcode = sirLangBinaryOp( pState, iLeft, iRight, &modifiers );
+	if ( eOpcode != SIR_LANG_OP_AND && eOpcode != SIR_LANG_OP_OR ) {
+		return sirLangError( pState, SIR_LANG_LOWER_UNSUPPORTED, iNode ), SIR_LANG_INVALID_INDEX;
+	}
+
+	const uint32_t iBranch = sirLangEmit( pState, { SIR_LANG_OP_JUMP_FALSE, SIR_LANG_VALUE_VOID, 0, UINT32_MAX,
+	                                               iLeftValue, 0, 0, 0, iNode } );
+	if ( iBranch == SIR_LANG_INVALID_INDEX ) {
+		return SIR_LANG_INVALID_INDEX;
+	}
+
+	// On a true LHS, 'and' evaluates its RHS while 'or' returns true.
+	uint32_t iTrueValue = SIR_LANG_INVALID_INDEX;
+	if ( eOpcode == SIR_LANG_OP_AND ) {
+		iTrueValue = sirLangLowerExpression( pState, iRight );
+	} else {
+		iTrueValue = sirLangNewRegister( pState, iNode );
+		if ( iTrueValue != SIR_LANG_INVALID_INDEX ) {
+			sirLangEmit( pState, { SIR_LANG_OP_CONST, SIR_LANG_VALUE_BOOL, 0, iTrueValue, 0, 0, 0, 1, iNode } );
+		}
+	}
+	if ( iTrueValue == SIR_LANG_INVALID_INDEX || pState->pOutput->eError != SIR_LANG_LOWER_OK ) {
+		return SIR_LANG_INVALID_INDEX;
+	}
+
+	const uint32_t iTrueExit = sirLangEmit( pState, { SIR_LANG_OP_JUMP, SIR_LANG_VALUE_VOID, 0, UINT32_MAX, 0, 0, 0, 0,
+	                                               iNode } );
+	if ( iTrueExit == SIR_LANG_INVALID_INDEX ) {
+		return SIR_LANG_INVALID_INDEX;
+	}
+
+	// The false LHS skips RHS for 'and', evaluates RHS for 'or'.
+	pState->pOutput->pInstructions[iBranch].nAuxiliary = pState->pOutput->program.nInstructionCount;
+	uint32_t iFalseValue = SIR_LANG_INVALID_INDEX;
+	if ( eOpcode == SIR_LANG_OP_OR ) {
+		iFalseValue = sirLangLowerExpression( pState, iRight );
+	} else {
+		iFalseValue = sirLangNewRegister( pState, iNode );
+		if ( iFalseValue != SIR_LANG_INVALID_INDEX ) {
+			sirLangEmit( pState, { SIR_LANG_OP_CONST, SIR_LANG_VALUE_BOOL, 0, iFalseValue, 0, 0, 0, 0, iNode } );
+		}
+	}
+	if ( iFalseValue == SIR_LANG_INVALID_INDEX || pState->pOutput->eError != SIR_LANG_LOWER_OK ) {
+		return SIR_LANG_INVALID_INDEX;
+	}
+
+	pState->pOutput->pInstructions[iTrueExit].nAuxiliary = pState->pOutput->program.nInstructionCount;
+	const uint32_t iPhi = sirLangNewRegister( pState, iNode );
+	if ( iPhi != SIR_LANG_INVALID_INDEX ) {
+		sirLangEmit( pState, { SIR_LANG_OP_PHI, SIR_LANG_VALUE_BOOL, 0, iPhi, iTrueValue, iFalseValue,
+	                       iTrueExit, 0, iNode } );
+	}
+	return iPhi;
+}
+
 static uint32_t sirLangLowerExpression( sirLangLowerState_t *pState, uint32_t iNode ) noexcept
 {
 	if ( iNode >= pState->pTree->nNodeCount || !sirLangEnter( pState, iNode ) ) {
@@ -522,13 +587,17 @@ static uint32_t sirLangLowerExpression( sirLangLowerState_t *pState, uint32_t iN
 			sirLangError( pState, SIR_LANG_LOWER_INVALID_INPUT, iNode );
 			break;
 		}
+		sirLangBinaryModifiers_t modifiers = {};
+		const sirLangOpcode_t eOp = sirLangBinaryOp( pState, iLeft, iRight, &modifiers );
+		if ( eOp == SIR_LANG_OP_AND || eOp == SIR_LANG_OP_OR ) {
+			iValue = sirLangLowerLogical( pState, iNode, iLeft, iRight );
+			break;
+		}
 		uint32_t iA = sirLangLowerExpression( pState, iLeft );
 		uint32_t iB = sirLangLowerExpression( pState, iRight );
 		if ( iA == SIR_LANG_INVALID_INDEX || iB == SIR_LANG_INVALID_INDEX ) {
 			break;
 		}
-		sirLangBinaryModifiers_t modifiers = {};
-		const sirLangOpcode_t eOp = sirLangBinaryOp( pState, iLeft, iRight, &modifiers );
 		if ( eOp == SIR_LANG_OP_PHI ) {
 			sirLangError( pState, SIR_LANG_LOWER_UNSUPPORTED, iNode );
 			break;
