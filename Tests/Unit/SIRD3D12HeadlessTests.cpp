@@ -16,6 +16,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Renderer/Drivers/D3D12/SIRD3D12Device.h>
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 static bool testAsyncCopyQueue( SIRD3D12Device &device )
@@ -390,6 +391,85 @@ static bool testDeferredMultiQueueRetirement( SIRD3D12Device &device )
 	return bTransferred && pLast == nullptr && device.getRetiredAllocationCount() == 1;
 }
 
+static bool testCompiledDxilCompute( SIRD3D12Device &device )
+{
+	FILE *pFile = nullptr;
+	if ( fopen_s( &pFile, SIR_D3D12_SMOKE_DXIL_PATH, "rb" ) != 0 || pFile == nullptr ) {
+		fputs( "DXC test shader output missing\n", stderr );
+		return false;
+	}
+	if ( fseek( pFile, 0, SEEK_END ) != 0 ) {
+		fclose( pFile );
+		return false;
+	}
+	const long nFileBytes = ftell( pFile );
+	if ( nFileBytes < 16 || nFileBytes > 4 * 1024 * 1024 || fseek( pFile, 0, SEEK_SET ) != 0 ) {
+		fclose( pFile );
+		return false;
+	}
+	void *pShader = malloc( ( size_t )nFileBytes );
+	if ( pShader == nullptr ) {
+		fclose( pFile );
+		return false;
+	}
+	const size_t nRead = fread( pShader, 1, ( size_t )nFileBytes, pFile );
+	fclose( pFile );
+	if ( nRead != ( size_t )nFileBytes ) {
+		free( pShader );
+		return false;
+	}
+
+	const bool bLoaded = device.initializeComputeKernel( pShader, nRead );
+	free( pShader );
+	if ( !bLoaded ) {
+		fprintf( stderr, "DXIL compute PSO creation failed: HRESULT 0x%08lx\n", ( unsigned long )device.getLastError() );
+		return false;
+	}
+	if ( device.initializeComputeKernel( nullptr, 0 ) ) {
+		return false;
+	}
+
+	sirD3D12CompletionSet_t rejected = {};
+	if ( device.submitComputeKernel( 0, 123, &rejected ) || device.submitComputeKernel( 4097, 123, &rejected ) ||
+	     device.submitComputeKernel( 64, 123, nullptr ) ) {
+		return false;
+	}
+
+	const uint32_t szCounts[] = { 1, 63, 64, 65, 130, 257, 4096 };
+	for ( uint32_t iPass = 0; iPass < sizeof( szCounts ) / sizeof( szCounts[0] ); ++iPass ) {
+		const uint32_t nCount = szCounts[iPass];
+		const uint32_t nSeed = 0x1234567u ^ ( iPass * 0x9e3779b9u );
+		sirD3D12CompletionSet_t submitted = {};
+		if ( !device.submitComputeKernel( nCount, nSeed, &submitted ) || submitted.nComputeFence == 0 ) {
+			return false;
+		}
+		if ( device.submitComputeKernel( nCount, nSeed, &rejected ) ) {
+			return false;
+		}
+
+		uint32_t szOutput[4096] = {};
+		if ( device.getComputeQueue().readKernel( submitted.nComputeFence, szOutput, nCount - 1 ) ||
+		     device.getComputeQueue().readKernel( submitted.nComputeFence + 1, szOutput, nCount ) ) {
+			return false;
+		}
+		if ( !device.getComputeQueue().waitForFence( submitted.nComputeFence, 15000 ) ||
+		     !device.getComputeQueue().readKernel( submitted.nComputeFence, szOutput, nCount ) ) {
+			return false;
+		}
+
+		for ( uint32_t iWord = 0; iWord < nCount; ++iWord ) {
+			if ( szOutput[iWord] != ( ( iWord * 13u ) ^ nSeed ) ) {
+				fprintf( stderr, "DXIL compute mismatch at pass %u element %u\n", iPass, iWord );
+				return false;
+			}
+		}
+		if ( device.getComputeQueue().readKernel( submitted.nComputeFence, szOutput, nCount ) ) {
+			return false;
+		}
+	}
+	return true;
+}
+
 int main( void )
 {
 	SIRD3D12Device device;
@@ -441,6 +521,11 @@ int main( void )
 	// DXGI memory-budget reporting can be unavailable for software adapters.
 	if ( device.queryLocalMemory( &memory ) && memory.nCurrentUsageBytes > memory.nBudgetBytes && memory.nBudgetBytes != 0 ) {
 		fputs( "D3D12 memory report is inconsistent\n", stderr );
+		return 1;
+	}
+
+	if ( !testCompiledDxilCompute( device ) ) {
+		fputs( "D3D12 DXIL compute execution failed\n", stderr );
 		return 1;
 	}
 

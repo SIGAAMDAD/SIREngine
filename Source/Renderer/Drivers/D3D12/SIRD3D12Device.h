@@ -33,6 +33,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <dxgi1_6.h>
 #include <wrl/client.h>
 #include <Renderer/Drivers/D3D12/SIRD3D12Memory.h>
+#include <Renderer/Drivers/D3D12/SIRD3D12ComputeKernel.h>
 #include <Renderer/Drivers/D3D12/SIRD3D12Transfers.h>
 
 typedef struct sirD3D12AdapterInfo_s
@@ -78,6 +79,7 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12CommandAllocator> m_pAllocator;
 	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> m_pCommands;
 	Microsoft::WRL::ComPtr<ID3D12Fence> m_pPendingDependencyFence;
+	SIRD3D12ComputeKernel m_Kernel;
 	HANDLE m_hEvent = nullptr;
 	uint64_t m_nNextFence = 1;
 	uint64_t m_nSubmittedFence = 0;
@@ -94,6 +96,10 @@ public:
 	bool shutdown( void ) noexcept;
 	bool isReady( void ) const noexcept;
 	bool submitMarker( uint64_t *pFenceValue ) noexcept;
+	bool initializeKernel( ID3D12Device *pDevice, const void *pDxil, size_t nDxilBytes ) noexcept;
+	bool dispatchKernel( ID3D12Device *pDevice, SIRD3D12Memory *pMemory, uint32_t nElements, uint32_t nSeed,
+	                     uint64_t *pFenceValue ) noexcept;
+	bool readKernel( uint64_t nFence, uint32_t *pOutput, uint32_t nCapacity ) noexcept;
 	bool submitMarkerAfterFence( ID3D12Fence *pDependencyFence, uint64_t nDependencyFence, uint64_t *pFenceValue ) noexcept;
 	bool pollFence( uint64_t nFence, bool *pCompleted ) const noexcept;
 	bool waitForFence( uint64_t nFence, uint32_t nTimeoutMs ) noexcept;
@@ -158,6 +164,8 @@ public:
 	bool snapshotCompletionSet( sirD3D12CompletionSet_t *pSet ) const noexcept;
 	bool pollCompletionSet( const sirD3D12CompletionSet_t &set, bool *pCompleted ) noexcept;
 	bool submitComputeMarker( sirD3D12CompletionSet_t *pSet ) noexcept;
+	bool initializeComputeKernel( const void *pDxil, size_t nDxilBytes ) noexcept;
+	bool submitComputeKernel( uint32_t nElements, uint32_t nSeed, sirD3D12CompletionSet_t *pSet ) noexcept;
 	bool submitComputeAfterCopy( sirD3D12TransferTicket_t ticket, sirD3D12CompletionSet_t *pSet ) noexcept;
 	bool submitGraphicsAfterCompute( const sirD3D12CompletionSet_t &computeSet, sirD3D12CompletionSet_t *pSet ) noexcept;
 	bool waitForGraphicsFence( uint64_t nFenceValue, uint32_t nTimeoutMs ) noexcept;

@@ -80,6 +80,7 @@ bool SIRD3D12ComputeQueue::shutdown( void ) noexcept
 	if ( bSafe && m_nSubmittedFence != 0 && m_pFence != nullptr ) {
 		bSafe = waitForFence( m_nSubmittedFence, 15000 );
 	}
+	m_Kernel.shutdown( bSafe );
 	if ( bSafe ) {
 		m_pPendingDependencyFence.Reset();
 		m_pCommands.Reset();
@@ -259,6 +260,89 @@ bool SIRD3D12ComputeQueue::submitMarkerAfterFence( ID3D12Fence *pDependencyFence
 	++m_nNextFence;
 	m_nLastError = S_OK;
 	return true;
+}
+
+bool SIRD3D12ComputeQueue::initializeKernel( ID3D12Device *pDevice, const void *pDxil,
+                                               size_t nDxilBytes ) noexcept
+{
+	if ( !isReady() ) {
+		m_nLastError = E_FAIL;
+		return false;
+	}
+	const bool bReady = m_Kernel.initialize( pDevice, pDxil, nDxilBytes );
+	m_nLastError = m_Kernel.getLastError();
+	return bReady;
+}
+
+bool SIRD3D12ComputeQueue::dispatchKernel( ID3D12Device *pDevice, SIRD3D12Memory *pMemory,
+                                            uint32_t nElements, uint32_t nSeed, uint64_t *pFenceValue ) noexcept
+{
+	if ( pFenceValue == nullptr ) {
+		m_nLastError = E_POINTER;
+		return false;
+	}
+	*pFenceValue = 0;
+	if ( !isReady() || !m_Kernel.isReady() || m_Kernel.hasPending() || m_nNextFence == UINT64_MAX ) {
+		m_nLastError = E_FAIL;
+		return false;
+	}
+
+	bool bCompleted = false;
+	if ( !pollFence( m_nSubmittedFence, &bCompleted ) ) {
+		m_nLastError = DXGI_ERROR_DEVICE_REMOVED;
+		return false;
+	}
+	if ( !bCompleted ) {
+		m_nLastError = HRESULT_FROM_WIN32( ERROR_BUSY );
+		return false;
+	}
+
+	m_pPendingDependencyFence.Reset();
+	m_nLastError = m_pAllocator->Reset();
+	if ( FAILED( m_nLastError ) ) {
+		return false;
+	}
+	m_nLastError = m_pCommands->Reset( m_pAllocator.Get(), nullptr );
+	if ( FAILED( m_nLastError ) ) {
+		return false;
+	}
+	if ( !m_Kernel.record( pDevice, pMemory, m_pCommands.Get(), nElements, nSeed ) ) {
+		m_nLastError = m_Kernel.getLastError();
+		m_Kernel.cancelUnsubmitted();
+		( void )m_pCommands->Close();
+		return false;
+	}
+	m_nLastError = m_pCommands->Close();
+	if ( FAILED( m_nLastError ) ) {
+		m_Kernel.cancelUnsubmitted();
+		return false;
+	}
+
+	ID3D12CommandList *pLists[] = { m_pCommands.Get() };
+	m_pQueue->ExecuteCommandLists( 1, pLists );
+	m_nLastError = m_pQueue->Signal( m_pFence.Get(), m_nNextFence );
+	if ( FAILED( m_nLastError ) ) {
+		m_bUnsafe = true;
+		return false;
+	}
+
+	m_Kernel.submitted( m_nNextFence );
+	m_nSubmittedFence = m_nNextFence;
+	*pFenceValue = m_nNextFence;
+	++m_nNextFence;
+	m_nLastError = S_OK;
+	return true;
+}
+
+bool SIRD3D12ComputeQueue::readKernel( uint64_t nFence, uint32_t *pOutput, uint32_t nCapacity ) noexcept
+{
+	if ( !isReady() ) {
+		m_nLastError = E_FAIL;
+		return false;
+	}
+	const bool bRead = m_Kernel.readback( m_pFence.Get(), nFence, pOutput, nCapacity );
+	m_nLastError = m_Kernel.getLastError();
+	return bRead;
 }
 
 SIRD3D12Device::SIRD3D12Device( void ) noexcept
@@ -656,6 +740,38 @@ bool SIRD3D12Device::pollCompletionSet( const sirD3D12CompletionSet_t &set, bool
 		return false;
 	}
 	*pCompleted = nGraphicsDone >= set.nGraphicsFence && nComputeDone >= set.nComputeFence && nCopyDone >= set.nCopyFence;
+	m_nLastError = S_OK;
+	return true;
+}
+
+bool SIRD3D12Device::initializeComputeKernel( const void *pDxil, size_t nDxilBytes ) noexcept
+{
+	if ( !isReady() ) {
+		m_nLastError = E_FAIL;
+		return false;
+	}
+	const bool bReady = m_ComputeQueue.initializeKernel( m_pDevice.Get(), pDxil, nDxilBytes );
+	m_nLastError = m_ComputeQueue.getLastError();
+	return bReady;
+}
+
+bool SIRD3D12Device::submitComputeKernel( uint32_t nElements, uint32_t nSeed, sirD3D12CompletionSet_t *pSet ) noexcept
+{
+	if ( pSet == nullptr || !isReady() ) {
+		m_nLastError = E_INVALIDARG;
+		return false;
+	}
+	*pSet = {};
+
+	uint64_t nSubmitted = 0;
+	if ( !m_ComputeQueue.dispatchKernel( m_pDevice.Get(), &m_Memory, nElements, nSeed, &nSubmitted ) ) {
+		m_nLastError = m_ComputeQueue.getLastError();
+		return false;
+	}
+	if ( !snapshotCompletionSet( pSet ) || pSet->nComputeFence != nSubmitted ) {
+		m_nLastError = E_FAIL;
+		return false;
+	}
 	m_nLastError = S_OK;
 	return true;
 }
