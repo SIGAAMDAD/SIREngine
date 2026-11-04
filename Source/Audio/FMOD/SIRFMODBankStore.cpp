@@ -73,7 +73,8 @@ sirAudioResult_t SIRFMODBankStore::initialize( SIRFMODContext *pContext, SIRFMOD
 	if ( m_bInitialized || m_pBanks != nullptr || pContext == nullptr || !pContext->isReady() || pVoices == nullptr ||
 	     !pVoices->isInitialized() || !SIRRawStorage::isValidAllocator( pAllocator ) || nMaxBanks == 0 || nMaxEventBindings == 0 ||
 	     ops.nAbiVersion != 3 || ops.loadFile == nullptr || ops.unload == nullptr || ops.preloadSamples == nullptr ||
-	     ops.sampleState == nullptr || ops.containsEvent == nullptr || ops.containsObject == nullptr || ops.loadFileAsync == nullptr || ops.getLoadState == nullptr ) {
+	     ops.sampleState == nullptr || ops.containsEvent == nullptr || ops.containsObject == nullptr || ops.loadFileAsync == nullptr ||
+	     ops.getLoadState == nullptr ) {
 		return SIR_AUDIO_INVALID_ARGUMENT;
 	}
 
@@ -100,6 +101,8 @@ sirAudioResult_t SIRFMODBankStore::initialize( SIRFMODContext *pContext, SIRFMOD
 	memset( m_pEvents, 0, nEventBytes );
 	m_pContext = pContext;
 	m_pVoices = pVoices;
+
+
 	m_pAllocator = pAllocator;
 	m_Ops = ops;
 	m_nBankCapacity = nMaxBanks;
