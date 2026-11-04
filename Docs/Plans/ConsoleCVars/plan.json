@@ -1,0 +1,633 @@
+{
+  "format_version": "1.0",
+  "plan_id": "sir-console-cvars-commands-v0.1",
+  "mode": "ARCHITECTURE",
+  "objective": "Design and roadmap the unified SIREngine console, cooked command registry and typed CVar runtime",
+  "approval": {
+    "status": "UNAPPROVED",
+    "evidence": "Owner requested branch and roadmap; target design proposals remain to review."
+  },
+  "baseline": {
+    "repository": "SIGAAMDAD/SIREngine",
+    "branch": "develop",
+    "sha": "51666fadadf8112b3b2d5bf919ba11dde55d931b",
+    "target_branch": "feature/console-cvars-commands"
+  },
+  "sources": [
+    {
+      "id": "OWNER-001",
+      "kind": "OWNER",
+      "path": "Current conversation",
+      "locator": "request 2026-11-04",
+      "quotation": "draft a system for the console/cvars/commands, establish a new branch from develop, and create a roadmap"
+    },
+    {
+      "id": "SOURCE-001",
+      "kind": "REPOSITORY",
+      "path": "Source/Core/CMakeLists.txt",
+      "locator": "full file",
+      "quotation": "Core registers Memory, Events, Config; no Console/CVars",
+      "sha": "a04111c402bc3e91ebb9a9923a209b24bc8013d7"
+    },
+    {
+      "id": "SOURCE-002",
+      "kind": "REPOSITORY",
+      "path": "Source/Core/Events/SIRDeferredEventChannel.h",
+      "locator": "enqueue",
+      "quotation": "enqueue returns bool; no explicit credit reservation",
+      "sha": "6012fbe2b0992f8ba28e864210ffd7fca0afb147"
+    },
+    {
+      "id": "SOURCE-003",
+      "kind": "REPOSITORY",
+      "path": "Source/Core/Config/SIRConfigTypes.h",
+      "locator": "sirConfigParseContext_t",
+      "quotation": "existing typed parse context, limits and allocator descriptors",
+      "sha": "95100b9af62371fae5c145377b97e8351035ea1b"
+    }
+  ],
+  "requirements": [
+    {
+      "id": "REQ-001",
+      "statement": "Native console, typed CVar and command registry system architecture",
+      "authority": "OWNER_REQUIREMENT",
+      "source_ids": [
+        "OWNER-001"
+      ],
+      "task_ids": [
+        "P0",
+        "P1",
+        "P2",
+        "P3",
+        "P4",
+        "P5",
+        "P6",
+        "P7"
+      ],
+      "test_ids": [
+        "TEST-DOC"
+      ]
+    },
+    {
+      "id": "REQ-002",
+      "statement": "Create new branch from current develop",
+      "authority": "OWNER_REQUIREMENT",
+      "source_ids": [
+        "OWNER-001"
+      ],
+      "task_ids": [
+        "P0"
+      ],
+      "test_ids": [
+        "TEST-BRANCH"
+      ]
+    },
+    {
+      "id": "REQ-003",
+      "statement": "Document implementation roadmap and acceptance",
+      "authority": "OWNER_REQUIREMENT",
+      "source_ids": [
+        "OWNER-001"
+      ],
+      "task_ids": [
+        "P0",
+        "P1",
+        "P2",
+        "P3",
+        "P4",
+        "P5",
+        "P6",
+        "P7"
+      ],
+      "test_ids": [
+        "TEST-DOC"
+      ]
+    },
+    {
+      "id": "REQ-004",
+      "statement": "Integrate existing Core/Events and Config without duplicating them",
+      "authority": "DESIGN_PROPOSAL",
+      "source_ids": [
+        "SOURCE-001",
+        "SOURCE-002",
+        "SOURCE-003"
+      ],
+      "task_ids": [
+        "P3",
+        "P5"
+      ],
+      "test_ids": [
+        "TEST-DOC"
+      ]
+    }
+  ],
+  "interfaces": [
+    {
+      "id": "IF-STRINGS",
+      "kind": "FUNCTION",
+      "owner": "P1",
+      "consumers": [
+        "P2",
+        "P3",
+        "P4"
+      ],
+      "contract_path": "Docs/Plans/ConsoleCVars/INTERFACES.md"
+    },
+    {
+      "id": "IF-CVARS",
+      "kind": "FUNCTION",
+      "owner": "P3",
+      "consumers": [
+        "P4",
+        "P5",
+        "P6"
+      ],
+      "contract_path": "Docs/Plans/ConsoleCVars/INTERFACES.md"
+    },
+    {
+      "id": "IF-COMMANDS",
+      "kind": "FUNCTION",
+      "owner": "P4",
+      "consumers": [
+        "P5",
+        "P6"
+      ],
+      "contract_path": "Docs/Plans/ConsoleCVars/INTERFACES.md"
+    },
+    {
+      "id": "IF-CATALOG",
+      "kind": "FILE",
+      "owner": "P2",
+      "consumers": [
+        "P3",
+        "P4"
+      ],
+      "contract_path": "Docs/Plans/ConsoleCVars/INTERFACES.md"
+    }
+  ],
+  "state_domains": [
+    {
+      "id": "CVAR-STATE",
+      "writer": "P3",
+      "contract_path": "Docs/Plans/ConsoleCVars/INTERFACES.md"
+    },
+    {
+      "id": "CMD-BINDINGS",
+      "writer": "P4",
+      "contract_path": "Docs/Plans/ConsoleCVars/INTERFACES.md"
+    },
+    {
+      "id": "NAME-POOL",
+      "writer": "P1",
+      "contract_path": "Docs/Plans/ConsoleCVars/INTERFACES.md"
+    }
+  ],
+  "workgroups": [
+    {
+      "id": "P0",
+      "owned_paths": [
+        "Docs/Plans/ConsoleCVars/*"
+      ],
+      "tasks": [
+        "P0"
+      ],
+      "depends_on": [],
+      "consumes": [],
+      "produces": []
+    },
+    {
+      "id": "P1",
+      "owned_paths": [
+        "Source/Core/Strings/*",
+        "Tests/Unit/Strings/*"
+      ],
+      "tasks": [
+        "P1"
+      ],
+      "depends_on": [
+        "P0"
+      ],
+      "consumes": [],
+      "produces": []
+    },
+    {
+      "id": "P2",
+      "owned_paths": [
+        "Source/Core/Registration/*",
+        "Tools/StringCatalogCooker/*",
+        "Tools/RegistrationCooker/*"
+      ],
+      "tasks": [
+        "P2"
+      ],
+      "depends_on": [
+        "P1"
+      ],
+      "consumes": [],
+      "produces": []
+    },
+    {
+      "id": "P3",
+      "owned_paths": [
+        "Source/Core/CVars/*",
+        "Tests/Unit/CVars/*"
+      ],
+      "tasks": [
+        "P3"
+      ],
+      "depends_on": [
+        "P2"
+      ],
+      "consumes": [],
+      "produces": []
+    },
+    {
+      "id": "P4",
+      "owned_paths": [
+        "Source/Core/Console/*",
+        "Tests/Unit/Console/*"
+      ],
+      "tasks": [
+        "P4"
+      ],
+      "depends_on": [
+        "P3"
+      ],
+      "consumes": [],
+      "produces": []
+    },
+    {
+      "id": "P5",
+      "owned_paths": [
+        "Source/Core/CVars/SIRCVarConfigAdapter.*",
+        "Source/Core/Console/SIRConsoleConfigAdapter.*"
+      ],
+      "tasks": [
+        "P5"
+      ],
+      "depends_on": [
+        "P4"
+      ],
+      "consumes": [],
+      "produces": []
+    },
+    {
+      "id": "P6",
+      "owned_paths": [
+        "Source/Core/SIRApplication.*",
+        "Source/Core/Events/SIREventRegistry.*"
+      ],
+      "tasks": [
+        "P6"
+      ],
+      "depends_on": [
+        "P5"
+      ],
+      "consumes": [],
+      "produces": []
+    },
+    {
+      "id": "P7",
+      "owned_paths": [
+        "Tests/Benchmarks/ConsoleCVars/*",
+        "Tests/Unit/Console/*",
+        "Tests/Unit/CVars/*"
+      ],
+      "tasks": [
+        "P7"
+      ],
+      "depends_on": [
+        "P6"
+      ],
+      "consumes": [],
+      "produces": []
+    }
+  ],
+  "tasks": [
+    {
+      "id": "P0",
+      "workgroup": "P0",
+      "requirement_ids": [
+        "REQ-001",
+        "REQ-003"
+      ],
+      "depends_on": [],
+      "steps": [
+        "Freeze ABI, precedence, flags, namespace and event credit",
+        "Build CONTRACT_REVIEW acceptance and negative cases"
+      ],
+      "test_ids": [
+        "TEST-DOC"
+      ],
+      "outputs": [
+        "Docs/Plans/ConsoleCVars/*"
+      ],
+      "stop_conditions": [
+        "Unratified interface or unmet dependency gate"
+      ]
+    },
+    {
+      "id": "P1",
+      "workgroup": "P1",
+      "requirement_ids": [
+        "REQ-001",
+        "REQ-003"
+      ],
+      "depends_on": [
+        "P0"
+      ],
+      "steps": [
+        "Port SIRStringPool and leases",
+        "Build AST_UNIT acceptance and negative cases"
+      ],
+      "test_ids": [
+        "TEST-DOC"
+      ],
+      "outputs": [
+        "Source/Core/Strings/*",
+        "Tests/Unit/Strings/*"
+      ],
+      "stop_conditions": [
+        "Unratified interface or unmet dependency gate"
+      ]
+    },
+    {
+      "id": "P2",
+      "workgroup": "P2",
+      "requirement_ids": [
+        "REQ-001",
+        "REQ-003"
+      ],
+      "depends_on": [
+        "P1"
+      ],
+      "steps": [
+        "Cooked registration catalog and dynamic overlay",
+        "Build COOK_ROUNDTRIP acceptance and negative cases"
+      ],
+      "test_ids": [
+        "TEST-DOC"
+      ],
+      "outputs": [
+        "Source/Core/Registration/*",
+        "Tools/StringCatalogCooker/*",
+        "Tools/RegistrationCooker/*"
+      ],
+      "stop_conditions": [
+        "Unratified interface or unmet dependency gate"
+      ]
+    },
+    {
+      "id": "P3",
+      "workgroup": "P3",
+      "requirement_ids": [
+        "REQ-001",
+        "REQ-003"
+      ],
+      "depends_on": [
+        "P2"
+      ],
+      "steps": [
+        "Compact typed CVar bank and transaction registry",
+        "Build TRANSACTION_TESTS acceptance and negative cases"
+      ],
+      "test_ids": [
+        "TEST-DOC"
+      ],
+      "outputs": [
+        "Source/Core/CVars/*",
+        "Tests/Unit/CVars/*"
+      ],
+      "stop_conditions": [
+        "Unratified interface or unmet dependency gate"
+      ]
+    },
+    {
+      "id": "P4",
+      "workgroup": "P4",
+      "requirement_ids": [
+        "REQ-001",
+        "REQ-003"
+      ],
+      "depends_on": [
+        "P3"
+      ],
+      "steps": [
+        "Command bindings and headless console service",
+        "Build COMMAND_TESTS acceptance and negative cases"
+      ],
+      "test_ids": [
+        "TEST-DOC"
+      ],
+      "outputs": [
+        "Source/Core/Console/*",
+        "Tests/Unit/Console/*"
+      ],
+      "stop_conditions": [
+        "Unratified interface or unmet dependency gate"
+      ]
+    },
+    {
+      "id": "P5",
+      "workgroup": "P5",
+      "requirement_ids": [
+        "REQ-001",
+        "REQ-003"
+      ],
+      "depends_on": [
+        "P4"
+      ],
+      "steps": [
+        "Config and VFS persistence integration",
+        "Build ARCHIVE_TESTS acceptance and negative cases"
+      ],
+      "test_ids": [
+        "TEST-DOC"
+      ],
+      "outputs": [
+        "Source/Core/CVars/SIRCVarConfigAdapter.*",
+        "Source/Core/Console/SIRConsoleConfigAdapter.*"
+      ],
+      "stop_conditions": [
+        "Unratified interface or unmet dependency gate"
+      ]
+    },
+    {
+      "id": "P6",
+      "workgroup": "P6",
+      "requirement_ids": [
+        "REQ-001",
+        "REQ-003"
+      ],
+      "depends_on": [
+        "P5"
+      ],
+      "steps": [
+        "Lifecycle, sinks, snapshots and consumers",
+        "Build INTEGRATION_TESTS acceptance and negative cases"
+      ],
+      "test_ids": [
+        "TEST-DOC"
+      ],
+      "outputs": [
+        "Source/Core/SIRApplication.*",
+        "Source/Core/Events/SIREventRegistry.*"
+      ],
+      "stop_conditions": [
+        "Unratified interface or unmet dependency gate"
+      ]
+    },
+    {
+      "id": "P7",
+      "workgroup": "P7",
+      "requirement_ids": [
+        "REQ-001",
+        "REQ-003"
+      ],
+      "depends_on": [
+        "P6"
+      ],
+      "steps": [
+        "Native coverage and benchmarking gates",
+        "Build FULL_GATE acceptance and negative cases"
+      ],
+      "test_ids": [
+        "TEST-DOC"
+      ],
+      "outputs": [
+        "Tests/Benchmarks/ConsoleCVars/*",
+        "Tests/Unit/Console/*",
+        "Tests/Unit/CVars/*"
+      ],
+      "stop_conditions": [
+        "Unratified interface or unmet dependency gate"
+      ]
+    }
+  ],
+  "tests": [
+    {
+      "id": "TEST-DOC",
+      "requirement_ids": [
+        "REQ-001",
+        "REQ-003"
+      ],
+      "tier": "PLAN_STATIC",
+      "status": "NOT_RUN",
+      "command": "Manual cross-document scope and contract review",
+      "evidence_path": "Docs/Plans/ConsoleCVars/ACCEPTANCE.md"
+    },
+    {
+      "id": "TEST-BRANCH",
+      "requirement_ids": [
+        "REQ-002"
+      ],
+      "tier": "LIVE_EXTERNAL",
+      "status": "NOT_RUN",
+      "command": "GitHub branch readback from remote",
+      "evidence_path": "Docs/Plans/ConsoleCVars/README.md"
+    }
+  ],
+  "probes": [],
+  "decisions": [
+    {
+      "id": "DEC-1",
+      "status": "OPEN",
+      "authority": "OWNER",
+      "subject": "Override priority",
+      "blocks": [
+        "P0"
+      ],
+      "evidence": "Review required"
+    },
+    {
+      "id": "DEC-2",
+      "status": "OPEN",
+      "authority": "OWNER",
+      "subject": "CVar type set",
+      "blocks": [
+        "P0"
+      ],
+      "evidence": "Review required"
+    },
+    {
+      "id": "DEC-3",
+      "status": "OPEN",
+      "authority": "OWNER",
+      "subject": "Namespace grammar",
+      "blocks": [
+        "P0"
+      ],
+      "evidence": "Review required"
+    },
+    {
+      "id": "DEC-4",
+      "status": "OPEN",
+      "authority": "OWNER",
+      "subject": "Event notification reservation",
+      "blocks": [
+        "P0"
+      ],
+      "evidence": "Review required"
+    },
+    {
+      "id": "DEC-5",
+      "status": "OPEN",
+      "authority": "OWNER",
+      "subject": "Archive format",
+      "blocks": [
+        "P0"
+      ],
+      "evidence": "Review required"
+    },
+    {
+      "id": "DEC-6",
+      "status": "OPEN",
+      "authority": "OWNER",
+      "subject": "Latched apply phase",
+      "blocks": [
+        "P0"
+      ],
+      "evidence": "Review required"
+    },
+    {
+      "id": "DEC-7",
+      "status": "OPEN",
+      "authority": "OWNER",
+      "subject": "Origin/build permission matrix",
+      "blocks": [
+        "P0"
+      ],
+      "evidence": "Review required"
+    },
+    {
+      "id": "DEC-8",
+      "status": "OPEN",
+      "authority": "OWNER",
+      "subject": "Exact donor archive digest",
+      "blocks": [
+        "P0"
+      ],
+      "evidence": "Review required"
+    }
+  ],
+  "review_passes": [
+    {
+      "id": "SOURCE_FIDELITY",
+      "status": "NOT_RUN",
+      "evidence_path": "Docs/Plans/ConsoleCVars/README.md",
+      "observed": "Pending complete publication review"
+    },
+    {
+      "id": "CONTRACT_CONSISTENCY",
+      "status": "NOT_RUN",
+      "evidence_path": "Docs/Plans/ConsoleCVars/INTERFACES.md",
+      "observed": "Pending complete publication review"
+    },
+    {
+      "id": "ADVERSARIAL",
+      "status": "NOT_RUN",
+      "evidence_path": "Docs/Plans/ConsoleCVars/ACCEPTANCE.md",
+      "observed": "Pending complete publication review"
+    }
+  ]
+}
