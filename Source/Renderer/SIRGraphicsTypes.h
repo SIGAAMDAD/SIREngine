@@ -370,6 +370,11 @@ typedef struct sirGraphicsDeviceCreateDesc_s
 	// Optional host CPU metadata authority; must outlive native device shutdown.
 	// When provided, the heap must own the RENDERING_CPU domain.
 	SIRGeneralHeap *pCpuHeap;
+	// Opt-in driver diagnostics. Requested but unavailable capabilities fail
+	// device creation; validation and DRED are excluded from runtime timings.
+	bool bEnableApiValidation;
+	bool bEnableGpuValidation;
+	bool bEnableDeviceFaultDiagnostics;
 } sirGraphicsDeviceCreateDesc_t;
 
 typedef struct sirGraphicsMemoryBudget_s

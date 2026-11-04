@@ -41,6 +41,25 @@ jobs:
       - name: Configure experimental D3D12
         run: cmake --preset dev -DSIR_WITH_D3D12=ON
       - name: Compile headless driver and tests
-        run: cmake --build --preset dev --target SIRD3D12HeadlessTests SIRD3D12SharedApiTests SIRD3D12PipelineTests SIRD3D12CommandsTests SIRD3D12SurfaceTests SIRD3D12MemoryTests
+        run: cmake --build --preset dev --target SIRD3D12HeadlessTests SIRD3D12SharedApiTests SIRD3D12PipelineTests SIRD3D12CommandsTests SIRD3D12SurfaceTests SIRD3D12MemoryTests SIRD3D12DiagnosticsTests SIRD3D12Benchmarks
       - name: Run native WARP device and transfer checks
         run: ctest --preset dev --output-on-failure -R '^renderer[.]d3d12[.]'
+      - name: Capture WARP D3D12 CPU and GPU timestamp metrics
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $binary = Get-ChildItem -Path "out/Windows/dev" -Filter SIRD3D12Benchmarks.exe -Recurse |
+            Select-Object -First 1
+          if (-not $binary) { throw "D3D12 benchmark executable missing" }
+          New-Item -ItemType Directory -Path "out/Nightly/Benchmarks" -Force | Out-Null
+          & $binary.FullName --adapter warp --warmup 16 --iterations 96 --output "out/Nightly/Benchmarks/d3d12-warp.json"
+          if ($LASTEXITCODE -ne 0) { throw "D3D12 benchmark returned $LASTEXITCODE" }
+          Get-Content "out/Nightly/Benchmarks/d3d12-warp.json"
+      - name: Preserve D3D12 performance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sir-d3d12-warp-benchmarks
+          path: out/Nightly/Benchmarks/d3d12-warp.json
+          if-no-files-found: warn
+          retention-days: 14

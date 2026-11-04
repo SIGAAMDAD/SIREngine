@@ -117,8 +117,14 @@ sirGraphicsResult_t SIRD3D12RenderingDevice::initialize( bool bSoftware, const s
 	sirD3D12TransferPoolConfig_t config = {};
 	config.nSlotBytes = nSlotBytes;
 	config.bPreferDirectMapped = true;
-	if ( !m_Native.initialize( bSoftware, config, desc.pCpuHeap ) ) {
-		return SIR_GRAPHICS_DRIVER_ERROR;
+	sirD3D12DiagnosticConfig_t diagnostics = {};
+	diagnostics.bEnableDebugLayer = desc.bEnableApiValidation;
+	diagnostics.bEnableGpuValidation = desc.bEnableGpuValidation;
+	diagnostics.bEnableDred = desc.bEnableDeviceFaultDiagnostics;
+	if ( !m_Native.initialize( bSoftware, config, desc.pCpuHeap, diagnostics ) ) {
+		return m_Native.getLastError() == E_NOTIMPL ? SIR_GRAPHICS_UNSUPPORTED
+		       : m_Native.getLastError() == E_INVALIDARG ? SIR_GRAPHICS_INVALID_ARGUMENT
+		                                                : SIR_GRAPHICS_DRIVER_ERROR;
 	}
 	m_bSoftware = bSoftware;
 	if ( !m_Native.getMemory()->configureResidentBudget( desc.nResidentBudgetBytes ) ) {
@@ -152,6 +158,13 @@ sirGraphicsResult_t SIRD3D12RenderingDevice::initialize( bool bSoftware, const s
 		return SIR_GRAPHICS_DRIVER_ERROR;
 	}
 	return SIR_GRAPHICS_SUCCESS;
+}
+
+sirGraphicsResult_t SIRD3D12RenderingDevice::queryNativeDiagnostics( sirD3D12DiagnosticSnapshot_t *pSnapshot ) noexcept
+{
+	return pSnapshot == nullptr ? SIR_GRAPHICS_INVALID_ARGUMENT
+	       : m_Native.queryDiagnostics( pSnapshot ) ? SIR_GRAPHICS_SUCCESS
+	                                                : SIR_GRAPHICS_DEVICE_LOST;
 }
 
 sirGraphicsResult_t SIRD3D12RenderingDevice::queryCapabilities( sirGraphicsCapabilities_t *pCapabilities ) const noexcept
@@ -380,7 +393,11 @@ sirGraphicsResult_t SIRD3D12RenderingDevice::acquireSurfaceImage( sirGraphicsHan
 sirGraphicsResult_t SIRD3D12RenderingDevice::present( const sirGraphicsSurfaceImage_t &image,
                                                       const sirGraphicsCompletion_t &renderComplete ) noexcept
 {
-	return m_Surfaces.present( image, renderComplete );
+	const sirGraphicsResult_t eResult = m_Surfaces.present( image, renderComplete );
+	if ( eResult == SIR_GRAPHICS_DEVICE_LOST ) {
+		m_Native.captureDeviceFailure( DXGI_ERROR_DEVICE_REMOVED );
+	}
+	return eResult;
 }
 
 sirGraphicsResult_t SIRD3D12RenderingDevice::shutdown( void ) noexcept
