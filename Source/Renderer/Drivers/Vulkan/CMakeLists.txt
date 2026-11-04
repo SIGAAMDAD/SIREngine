@@ -10,7 +10,8 @@ add_library(SIRVulkan STATIC
     SIRVulkanCommands.cpp
     SIRVulkanGraphics.cpp
     SIRVulkanImages.cpp
-    SIRVulkanTextures.cpp)
+    SIRVulkanTextures.cpp
+    SIRVulkanTextureTransfer.cpp)
 add_library(SIR::Vulkan ALIAS SIRVulkan)
 target_include_directories(SIRVulkan PUBLIC
     "${PROJECT_SOURCE_DIR}/Source"

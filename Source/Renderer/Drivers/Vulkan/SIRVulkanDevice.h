@@ -102,6 +102,8 @@ typedef struct sirVulkanImage_s
 	uint64_t nDeviceSerial;
 	VkFormat eFormat;
 	VkImageType eType;
+	VkImageLayout eLayout;
+	uint64_t nLastGpuUse;
 	VkImageUsageFlags nUsage;
 	uint32_t nMips;
 	uint32_t nLayers;
@@ -120,6 +122,18 @@ typedef struct sirVulkanSampler_s
 	VkSampler hSampler;
 	uint64_t nDeviceSerial;
 } sirVulkanSampler_t;
+
+typedef struct sirVulkanTextureTransfer_s
+{
+	uint64_t nBufferOffset;
+	uint32_t nBufferRowLength;
+	uint32_t nBufferImageHeight;
+	uint32_t nMip;
+	uint32_t nLayer;
+	VkOffset3D offset;
+	VkExtent3D extent;
+	bool bBufferToImage;
+} sirVulkanTextureTransfer_t;
 
 // First headless slice: one owner thread creates and retires the native device.
 // Buffers must be retired before shutdown; queue submissions arrive in a later slice.
@@ -147,6 +161,8 @@ private:
 	PFN_vkEndCommandBuffer m_pfnEndCommandBuffer;
 	PFN_vkCmdPipelineBarrier2 m_pfnCmdPipelineBarrier2;
 	PFN_vkCmdCopyBuffer2 m_pfnCmdCopyBuffer2;
+	PFN_vkCmdCopyBufferToImage2 m_pfnCmdCopyBufferToImage2 = nullptr;
+	PFN_vkCmdCopyImageToBuffer2 m_pfnCmdCopyImageToBuffer2 = nullptr;
 	PFN_vkQueueSubmit2 m_pfnQueueSubmit2;
 	PFN_vkCreateSemaphore m_pfnCreateSemaphore;
 	PFN_vkDestroySemaphore m_pfnDestroySemaphore;
@@ -206,8 +222,10 @@ public:
 	sirVulkanResult_t destroySampler( sirVulkanSampler_t *pSampler ) noexcept;
 	sirVulkanResult_t destroyIdleBuffer( sirVulkanBuffer_t *pBuffer ) noexcept;
 	sirVulkanResult_t readBuffer( sirVulkanBuffer_t *pBuffer, uint64_t nOffset, void *pData, uint64_t nBytes ) noexcept;
-	sirVulkanResult_t submitBufferCopy( sirVulkanBuffer_t *pSource, uint64_t nSourceOffset, sirVulkanBuffer_t *pDestination,
+	 sirVulkanResult_t submitBufferCopy( sirVulkanBuffer_t *pSource, uint64_t nSourceOffset, sirVulkanBuffer_t *pDestination,
 	                                    uint64_t nDestinationOffset, uint64_t nBytes, sirVulkanCompletion_t *pCompletion ) noexcept;
+	sirVulkanResult_t submitBufferImageCopy( sirVulkanBuffer_t *pBuffer, sirVulkanImage_t *pImage,
+	                                         const sirVulkanTextureTransfer_t &transfer, sirVulkanCompletion_t *pCompletion ) noexcept;
 	sirVulkanResult_t queryCompletion( const sirVulkanCompletion_t *pCompletion, bool *pComplete ) const noexcept;
 	sirVulkanResult_t waitCompletion( const sirVulkanCompletion_t *pCompletion, uint64_t nTimeoutNs ) const noexcept;
 };
