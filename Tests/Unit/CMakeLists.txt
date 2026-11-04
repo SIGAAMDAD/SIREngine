@@ -159,6 +159,12 @@ target_link_libraries(SIRObjectRegistryTests PRIVATE SIR::Core)
 add_test(NAME core.objects.registry-and-lifetime COMMAND SIRObjectRegistryTests)
 sir_configure_owned_target(SIRObjectRegistryTests)
 
+# Typed authored property changes share the scene document's undo/redo journal.
+add_executable(SIREditorTypedPropertyTests SIREditorTypedPropertyTests.cpp)
+target_link_libraries(SIREditorTypedPropertyTests PRIVATE SIR::EditorAuthoring)
+add_test(NAME editor.authoring.typed-property-transactions COMMAND SIREditorTypedPropertyTests)
+sir_configure_owned_target(SIREditorTypedPropertyTests)
+
 # Native SIREngine resource identity and dependency DAG without a foreign loader.
 add_executable(SIRResourceCatalogTests SIRResourceCatalogTests.cpp)
 target_link_libraries(SIRResourceCatalogTests PRIVATE SIR::Resources)
