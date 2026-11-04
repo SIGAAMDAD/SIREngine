@@ -65,7 +65,7 @@ sirGraphicsABIResult_t sirGraphicsUnloadABIModule( sirGraphicsABIModule_t *pModu
 		return SIR_GRAPHICS_ABI_INVALID_ARGUMENT;
 	}
 	if ( pModule->nActiveDevices != 0 ) {
-		return SIR_GRAPHICS_ABI_UNSUPPORTED;
+		return SIR_GRAPHICS_BUSY;
 	}
 	pModule->driver.pReleaseDriver( pModule->driver.pDriver );
 	if ( !SIRDynamicLibrary::unload( &pModule->library ) ) {
@@ -92,7 +92,7 @@ sirGraphicsABIResult_t sirGraphicsQueryABIAdapter( const sirGraphicsABIModule_t 
 		return eCount;
 	}
 	if ( nCount > 256 ) {
-		return SIR_GRAPHICS_ABI_DRIVER_ERROR;
+		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
 	}
 	if ( nIndex >= nCount ) {
 		return SIR_GRAPHICS_ABI_UNSUPPORTED;
@@ -166,8 +166,11 @@ sirGraphicsABIResult_t sirGraphicsCreateABIDevice( sirGraphicsABIModule_t *pModu
 {
 	if ( pModule == nullptr || pRequest == nullptr || pRequest->nSize < sizeof( sirGraphicsABIDeviceRequest_t ) ||
 	     pRequest->nFramesInFlight == 0 || pRequest->nAllowSoftware > 1 || pRequest->nHeadless > 1 || pRequest->nReserved != 0 ||
-	     pDevice == nullptr || pDevice->nSize < sizeof( sirGraphicsABIDevice_t ) || pModule->nActiveDevices >= 16 ) {
+	     pDevice == nullptr || pDevice->nSize < sizeof( sirGraphicsABIDevice_t ) ) {
 		return SIR_GRAPHICS_ABI_INVALID_ARGUMENT;
+	}
+	if ( pModule->nActiveDevices >= 16 ) {
+		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
 	}
 	sirGraphicsABIAdapter_t adapter = {};
 	adapter.nSize = sizeof( adapter );
@@ -196,8 +199,12 @@ sirGraphicsABIResult_t sirGraphicsCreateABIDevice( sirGraphicsABIModule_t *pModu
 	sirGraphicsABICapabilities_t caps = {};
 	caps.nSize = sizeof( caps );
 	const sirGraphicsABIResult_t eCaps = sirGraphicsQueryABICapabilities( &device, pModule->driver.nBackend, &caps );
-	if ( eCaps != SIR_GRAPHICS_ABI_SUCCESS || ( caps.nEnabledFeatures & pRequest->nRequiredFeatures ) != pRequest->nRequiredFeatures ||
-	     caps.nAdapterKind != adapter.nKind || caps.nMaximumFramesInFlight < pRequest->nFramesInFlight ) {
+	if ( eCaps != SIR_GRAPHICS_ABI_SUCCESS ) {
+		pModule->driver.pDestroyDevice( pModule->driver.pDriver, &device );
+		return eCaps;
+	}
+	if ( ( caps.nEnabledFeatures & pRequest->nRequiredFeatures ) != pRequest->nRequiredFeatures || caps.nAdapterKind != adapter.nKind ||
+	     caps.nMaximumFramesInFlight < pRequest->nFramesInFlight ) {
 		pModule->driver.pDestroyDevice( pModule->driver.pDriver, &device );
 		return SIR_GRAPHICS_ABI_UNSUPPORTED;
 	}
@@ -215,7 +222,8 @@ sirGraphicsABIResult_t sirGraphicsCreateABIDevice( sirGraphicsABIModule_t *pModu
 
 sirGraphicsABIResult_t sirGraphicsDestroyABIDevice( sirGraphicsABIModule_t *pModule, sirGraphicsABIDevice_t *pDevice ) noexcept
 {
-	if ( pModule == nullptr || pDevice == nullptr || sirGraphicsValidateABIDevice( pDevice ) != SIR_GRAPHICS_ABI_SUCCESS ) {
+	if ( pModule == nullptr || pDevice == nullptr || sirGraphicsValidateABIDriver( &pModule->driver ) != SIR_GRAPHICS_ABI_SUCCESS ||
+	     sirGraphicsValidateABIDevice( pDevice ) != SIR_GRAPHICS_ABI_SUCCESS ) {
 		return SIR_GRAPHICS_ABI_INVALID_ARGUMENT;
 	}
 	for ( uint32_t i = 0; i < pModule->nActiveDevices; ++i ) {
