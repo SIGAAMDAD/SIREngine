@@ -40,3 +40,8 @@ sir_configure_owned_target(SIRScripting)
 add_executable(SIRScriptOptimizerWorker Worker/SIRScriptOptimizerWorkerMain.cpp)
 target_link_libraries(SIRScriptOptimizerWorker PRIVATE SIR::Scripting ${CMAKE_DL_LIBS})
 sir_configure_owned_target(SIRScriptOptimizerWorker)
+
+# The host-side cooker is independent of any optional LLVM or VM vendor SDK.
+add_executable(SIRLangCooker Tools/SIRLangCooker.cpp)
+target_link_libraries(SIRLangCooker PRIVATE SIR::Scripting)
+sir_configure_owned_target(SIRLangCooker)
