@@ -22,6 +22,8 @@ struct SIRTestAllocatorStats
 	std::atomic<uint64_t> m_nOutstandingBytes;
 
 	std::atomic<bool> m_bFailNext;
+	std::atomic<uint32_t> m_nFailOnAllocation;
+	std::atomic<uint32_t> m_nAllocationCalls;
 };
 
 static void *testAllocate( void *pContext, uint64_t nBytes, uint32_t nAlignment, uint32_t nDomain ) noexcept
@@ -29,6 +31,10 @@ static void *testAllocate( void *pContext, uint64_t nBytes, uint32_t nAlignment,
 	( void )nDomain;
 	SIRTestAllocatorStats *pStats = ( SIRTestAllocatorStats * )pContext;
 	if ( pStats->m_bFailNext.exchange( false ) ) {
+		return nullptr;
+	}
+	const uint32_t nFail = pStats->m_nFailOnAllocation.load( std::memory_order_relaxed );
+	if ( nFail != 0 && pStats->m_nAllocationCalls.fetch_add( 1, std::memory_order_relaxed ) + 1 == nFail ) {
 		return nullptr;
 	}
 	if ( !nBytes || nBytes > SIZE_MAX ) {
@@ -1404,6 +1410,77 @@ static void testWriterInputValidationAndStagingLifecycle( void )
 	REQUIRE( alloc.m_nOutstanding.load() == 0 );
 }
 
+static void testConstructorAllocationFailuresAndOverflow( void )
+{
+	for ( uint32_t nFail = 1; nFail <= 13; ++nFail ) {
+		SIRTestAllocatorStats allocator = {};
+		allocator.m_nFailOnAllocation.store( nFail, std::memory_order_relaxed );
+		{
+			SIRResourceGraph graph( testConfig( allocator, 8 ) );
+			REQUIRE( !graph.isReady() && graph.getWriter() == nullptr );
+		}
+		REQUIRE( allocator.m_nOutstanding.load() == 0 );
+	}
+	SIRTestAllocatorStats allocator = {};
+	SIRResourceGraphConfig config = testConfig( allocator, UINT32_MAX / 4 + 1 );
+	{
+		SIRResourceGraph graph( config );
+		REQUIRE( !graph.isReady() );
+	}
+	config.m_nMaxDependencyEdges = 1;
+	{
+		SIRResourceGraph graph( config );
+		REQUIRE( !graph.isReady() );
+	}
+	REQUIRE( allocator.m_nOutstanding.load() == 0 );
+}
+
+static void testContentKeyCollisionDoesNotAliasData( void )
+{
+	SIRTestAllocatorStats allocator = {};
+	{
+		SIRResourceGraph graph( testConfig( allocator, 8 ) );
+		REQUIRE( graph.isReady() );
+		SIRResourceGraphWriter *pWriter = graph.getWriter();
+		REQUIRE( pWriter != nullptr );
+		const SIRResourceContentKey sharedKey = content( 777 );
+		SIRResourceHandle handles[2] = {};
+		for ( uint32_t i = 0; i < 2; ++i ) {
+			SIRResourceStagingHandle staging = {};
+			SIRResourceMutableBytes bytes = {};
+			REQUIRE( pWriter->allocateStaging( 8, 8, 9, &staging, &bytes ) == SIR_RESOURCE_RESULT_SUCCESS );
+			memset( bytes.m_pData, i == 0 ? 0x11 : 0x22, 8 );
+			SIRResourceChunkPublication chunk = { { 0 }, sharedKey, staging, false };
+			SIRResourcePublication publication = { key( 1100 + i ), SIR_RESOURCE_KIND_BLOB, 1, 1, &chunk, 1, nullptr, 0 };
+			REQUIRE( pWriter->publish( publication, &handles[i] ) == SIR_RESOURCE_RESULT_SUCCESS );
+		}
+		REQUIRE( graph.getStats().m_nUniqueChunks == 2 && graph.getStats().m_nPayloadBytes == 16 );
+		SIRResourceChunkPublication reuse = { { 0 }, sharedKey, {}, true };
+		SIRResourcePublication ambiguous = { key( 1102 ), SIR_RESOURCE_KIND_BLOB, 1, 1, &reuse, 1, nullptr, 0 };
+		SIRResourceHandle rejected = {};
+		REQUIRE( pWriter->publish( ambiguous, &rejected ) == SIR_RESOURCE_RESULT_MISSING_CHUNK );
+		REQUIRE( graph.getStats().m_nLiveResources == 2 );
+		{
+			SIRResourceReadScope scope( graph );
+			SIRResourceView first;
+			SIRResourceView second;
+			REQUIRE( graph.resolve( scope, handles[0], &first ) == SIR_RESOURCE_RESULT_SUCCESS );
+			REQUIRE( graph.resolve( scope, handles[1], &second ) == SIR_RESOURCE_RESULT_SUCCESS );
+			SIRResourceConstBytes a = {};
+			SIRResourceConstBytes b = {};
+			REQUIRE( first.getChunk( { 0 }, &a ) == SIR_RESOURCE_RESULT_SUCCESS );
+			REQUIRE( second.getChunk( { 0 }, &b ) == SIR_RESOURCE_RESULT_SUCCESS );
+			REQUIRE( a.m_pData != b.m_pData && a.m_nSize == 8 && b.m_nSize == 8 );
+			REQUIRE( a.m_pData[0] == 0x11 && b.m_pData[0] == 0x22 );
+		}
+		REQUIRE( pWriter->retire( handles[0] ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( pWriter->retire( handles[1] ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( pWriter->collectRetired( 8 ) == 2 );
+		REQUIRE( graph.getStats().m_nUniqueChunks == 0 );
+	}
+	REQUIRE( allocator.m_nOutstanding.load() == 0 );
+}
+
 int main( void )
 {
 	testScopeLifetimeAndDeduplication();
@@ -1427,6 +1504,8 @@ int main( void )
 	testCoreTaskGraphStaleRevisionsAndBudget();
 	testPublicValidationAndReadViewBoundaries();
 	testWriterInputValidationAndStagingLifecycle();
+	testConstructorAllocationFailuresAndOverflow();
+	testContentKeyCollisionDoesNotAliasData();
 	printf( "PASS: GRDG resource registry, publication, deduplication, lifetime, concurrency\n" );
 	return 0;
 }
