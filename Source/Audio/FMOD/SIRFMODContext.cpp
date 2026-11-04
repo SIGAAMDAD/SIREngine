@@ -142,6 +142,7 @@ sirFMODContextResult_t SIRFMODContext::shutdown( void ) noexcept
 	m_nRuntimeVersion = 0;
 	m_nEpoch = 0;
 	m_nBorrowedBankObjects = 0;
+	m_nUnscopedBankObjects = 0;
 	return SIR_FMOD_OK;
 }
 
@@ -204,26 +205,38 @@ uint32_t SIRFMODContext::getRuntimeVersion( void ) const noexcept
 	return m_nRuntimeVersion;
 }
 
-bool SIRFMODContext::pinBorrowedBankObject( void ) noexcept
+bool SIRFMODContext::pinBorrowedBankObject( bool bBankScoped ) noexcept
 {
-	if ( !isReady() || m_nBorrowedBankObjects == UINT32_MAX ) {
+	if ( !isReady() || m_nBorrowedBankObjects == UINT32_MAX ||
+	     ( !bBankScoped && m_nUnscopedBankObjects == UINT32_MAX ) ) {
 		return false;
 	}
 	++m_nBorrowedBankObjects;
+	if ( !bBankScoped ) {
+		++m_nUnscopedBankObjects;
+	}
 	return true;
 }
 
-void SIRFMODContext::unpinBorrowedBankObject( void ) noexcept
+void SIRFMODContext::unpinBorrowedBankObject( bool bBankScoped ) noexcept
 {
-	if ( m_nBorrowedBankObjects == 0 ) {
+	if ( m_nBorrowedBankObjects == 0 || ( !bBankScoped && m_nUnscopedBankObjects == 0 ) ) {
 		abort();
 	}
 	--m_nBorrowedBankObjects;
+	if ( !bBankScoped ) {
+		--m_nUnscopedBankObjects;
+	}
 }
 
 uint32_t SIRFMODContext::getBorrowedBankObjectCount( void ) const noexcept
 {
 	return m_nBorrowedBankObjects;
+}
+
+uint32_t SIRFMODContext::getUnscopedBankObjectCount( void ) const noexcept
+{
+	return m_nUnscopedBankObjects;
 }
 
 uint64_t SIRFMODContext::getEpoch( void ) const noexcept

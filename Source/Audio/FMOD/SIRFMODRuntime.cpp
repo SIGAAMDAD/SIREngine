@@ -226,11 +226,11 @@ sirAudioResult_t SIRFMODRuntime::bindPackageResources( void ) noexcept
 		}
 		sirAudioResult_t eBind = SIR_AUDIO_UNSUPPORTED;
 		if ( object.eKind == SIR_FMOD_RUNTIME_BUS ) {
-			eBind = m_Mixer.registerBus( object.nObjectId, pszPath );
+			eBind = m_Mixer.registerBusFromBank( object.nObjectId, object.nPackageId, &m_Banks, pszPath );
 		} else if ( object.eKind == SIR_FMOD_RUNTIME_VCA ) {
-			eBind = m_Mixer.registerVCA( object.nObjectId, pszPath );
+			eBind = m_Mixer.registerVCAFromBank( object.nObjectId, object.nPackageId, &m_Banks, pszPath );
 		} else {
-			eBind = m_Snapshots.registerSnapshot( object.nObjectId, pszPath );
+			eBind = m_Snapshots.registerSnapshotFromBank( object.nObjectId, object.nPackageId, &m_Banks, pszPath );
 		}
 		if ( eBind != SIR_AUDIO_OK ) {
 			return eBind;

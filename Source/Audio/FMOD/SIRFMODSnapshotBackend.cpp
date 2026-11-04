@@ -14,6 +14,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Audio/FMOD/SIRFMODSnapshotBackend.h>
+#include <Audio/FMOD/SIRFMODBankStore.h>
 
 #include <Core/Containers/SIRRawStorage.h>
 #include <stdlib.h>
@@ -133,7 +134,11 @@ sirAudioResult_t SIRFMODSnapshotBackend::shutdown( void ) noexcept
 		}
 	}
 	for ( uint32_t iSnapshot = 0; iSnapshot < m_nCount; ++iSnapshot ) {
-		m_pContext->unpinBorrowedBankObject();
+		const sirFMODSnapshotRecord_t &record = m_pSnapshots[iSnapshot];
+		if ( record.pBankStore != nullptr ) {
+			record.pBankStore->unpinBankObject( record.nPackageId );
+		}
+		m_pContext->unpinBorrowedBankObject( record.pBankStore != nullptr );
 	}
 	releaseStorage();
 	return SIR_AUDIO_OK;
@@ -157,10 +162,24 @@ bool SIRFMODSnapshotBackend::findSnapshot( uint64_t nSnapshotId, uint32_t &iInde
 
 sirAudioResult_t SIRFMODSnapshotBackend::registerSnapshot( uint64_t nSnapshotId, const char *szPath ) noexcept
 {
+	return registerSnapshotInternal( nSnapshotId, szPath, nullptr, 0 );
+}
+
+sirAudioResult_t SIRFMODSnapshotBackend::registerSnapshotFromBank( uint64_t nSnapshotId, uint64_t nPackageId,
+                                                                   SIRFMODBankStore *pBankStore, const char *szPath ) noexcept
+{
+	return registerSnapshotInternal( nSnapshotId, szPath, pBankStore, nPackageId );
+}
+
+sirAudioResult_t SIRFMODSnapshotBackend::registerSnapshotInternal( uint64_t nSnapshotId, const char *szPath,
+                                                                    SIRFMODBankStore *pBankStore, uint64_t nPackageId ) noexcept
+{
 	if ( !isReady() ) {
 		return SIR_AUDIO_NOT_INITIALIZED;
 	}
-	if ( nSnapshotId == 0 || szPath == nullptr || strncmp( szPath, "snapshot:/", 10 ) != 0 || szPath[10] == '\0' ) {
+	if ( nSnapshotId == 0 || szPath == nullptr || strncmp( szPath, "snapshot:/", 10 ) != 0 || szPath[10] == '\0' ||
+	     ( pBankStore == nullptr && nPackageId != 0 ) || ( pBankStore != nullptr && nPackageId == 0 ) ||
+	     ( pBankStore != nullptr && !pBankStore->isBoundTo( m_pContext ) ) ) {
 		return SIR_AUDIO_INVALID_ARGUMENT;
 	}
 
@@ -178,13 +197,22 @@ sirAudioResult_t SIRFMODSnapshotBackend::registerSnapshot( uint64_t nSnapshotId,
 		return SIR_AUDIO_BACKEND_ERROR;
 	}
 
-	if ( !m_pContext->pinBorrowedBankObject() ) {
+	if ( pBankStore != nullptr ) {
+		const sirAudioResult_t ePin = pBankStore->pinBankObject( nPackageId );
+		if ( ePin != SIR_AUDIO_OK ) {
+			return ePin;
+		}
+	}
+	if ( !m_pContext->pinBorrowedBankObject( pBankStore != nullptr ) ) {
+		if ( pBankStore != nullptr ) {
+			pBankStore->unpinBankObject( nPackageId );
+		}
 		return SIR_AUDIO_CAPACITY;
 	}
 	if ( iInsert < m_nCount ) {
 		memmove( m_pSnapshots + iInsert + 1, m_pSnapshots + iInsert, ( size_t )( m_nCount - iInsert ) * sizeof( sirFMODSnapshotRecord_t ) );
 	}
-	m_pSnapshots[iInsert] = { nSnapshotId, pDescription, nullptr, 0, {} };
+	m_pSnapshots[iInsert] = { nSnapshotId, nPackageId, pDescription, nullptr, pBankStore, 0, {} };
 	++m_nCount;
 	return SIR_AUDIO_OK;
 }
@@ -202,12 +230,16 @@ sirAudioResult_t SIRFMODSnapshotBackend::unregisterSnapshot( uint64_t nSnapshotI
 		return SIR_AUDIO_BUSY;
 	}
 
+	const sirFMODSnapshotRecord_t record = m_pSnapshots[iIndex];
 	if ( iIndex + 1 < m_nCount ) {
 		memmove( m_pSnapshots + iIndex, m_pSnapshots + iIndex + 1,
 		         ( size_t )( m_nCount - iIndex - 1 ) * sizeof( sirFMODSnapshotRecord_t ) );
 	}
 	--m_nCount;
-	m_pContext->unpinBorrowedBankObject();
+	if ( record.pBankStore != nullptr ) {
+		record.pBankStore->unpinBankObject( record.nPackageId );
+	}
+	m_pContext->unpinBorrowedBankObject( record.pBankStore != nullptr );
 	return SIR_AUDIO_OK;
 }
 
