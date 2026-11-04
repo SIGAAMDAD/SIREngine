@@ -18,6 +18,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <chrono>
 #include <filesystem>
+#include <string>
 #include <stdio.h>
 #include <string.h>
 #include <thread>
