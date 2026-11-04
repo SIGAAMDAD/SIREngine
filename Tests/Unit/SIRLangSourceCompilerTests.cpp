@@ -192,7 +192,7 @@ static void testBooleanShortCircuit( void ) noexcept
 	static constexpr char szInvalid[] = "fn invalid(value: u16) -> bool:\n"
 	                                    "    return value xor 1u16\n";
 	assert( !SIRLangCompileSource( { ( const uint8_t * )szInvalid, sizeof( szInvalid ) - 1 }, &fixture.workspace ) );
-	assert( fixture.workspace.report.ePhase == SIR_LANG_COMPILE_SIGNATURES );
+	assert( fixture.workspace.report.ePhase == SIR_LANG_COMPILE_SEMANTIC );
 }
 
 
@@ -211,7 +211,7 @@ static void testRejectInvalidScalarExpressions( void ) noexcept
 		const char *pszSource = szInvalid[iSource];
 		assert( !SIRLangCompileSource( { ( const uint8_t * )pszSource, ( uint32_t )strlen( pszSource ) },
 		                               &fixture.workspace ) );
-		assert( fixture.workspace.report.ePhase == SIR_LANG_COMPILE_SIGNATURES );
+		assert( fixture.workspace.report.ePhase == SIR_LANG_COMPILE_SEMANTIC );
 	}
 }
 
