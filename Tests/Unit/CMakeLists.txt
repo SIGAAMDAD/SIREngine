@@ -109,6 +109,12 @@ add_test(NAME core.platform.input.ui-haptics-profiles COMMAND SIRInputPhase45Tes
 set_tests_properties(core.platform.input.ui-haptics-profiles PROPERTIES LABELS "core;input;ui;haptics;profiles" TIMEOUT 60)
 sir_configure_owned_target(SIRInputPhase45Tests)
 
+add_executable(SIRInputReplayTests SIRInputReplayTests.cpp)
+target_link_libraries(SIRInputReplayTests PRIVATE SIR::Core)
+add_test(NAME core.platform.input.replay COMMAND SIRInputReplayTests)
+set_tests_properties(core.platform.input.replay PROPERTIES LABELS "core;input;replay" TIMEOUT 60)
+sir_configure_owned_target(SIRInputReplayTests)
+
 add_executable(SIRInputTests SIRInputTests.cpp)
 target_link_libraries(SIRInputTests PRIVATE SIR::Core)
 add_test(NAME core.platform.input COMMAND SIRInputTests)

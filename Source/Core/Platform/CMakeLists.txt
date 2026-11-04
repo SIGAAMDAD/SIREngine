@@ -7,6 +7,7 @@ set(SIR_CORE_PLATFORM_COMMON
     SIRSync.cpp
     SIRAtomic.cpp
     Input/SIRInputActions.cpp
+    Input/SIRInputReplay.cpp
     Input/SIRInputBackend.cpp
     Input/SIRInputText.cpp
     Input/SIRInputUIDispatch.cpp
