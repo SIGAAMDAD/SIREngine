@@ -33,8 +33,8 @@ sirVulkanResult_t SIRVulkanDevice::createImage( const VkImageCreateInfo &info, s
 		return SIR_VULKAN_INVALID_STATE;
 	}
 	if ( pImage == nullptr || pImage->hImage != VK_NULL_HANDLE || pImage->pAllocation != nullptr ||
-	     info.sType != VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO || info.extent.width == 0 || info.extent.height == 0 ||
-	     info.extent.depth == 0 || info.usage == 0 ) {
+	     info.sType != VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO || info.extent.width == 0 || info.extent.height == 0 || info.extent.depth == 0 ||
+	     info.usage == 0 ) {
 		return SIR_VULKAN_INVALID_ARGUMENT;
 	}
 	VmaAllocationCreateInfo allocation = {};
@@ -44,9 +44,8 @@ sirVulkanResult_t SIRVulkanDevice::createImage( const VkImageCreateInfo &info, s
 	if ( eCreate != VK_SUCCESS ) {
 		pImage->hImage = VK_NULL_HANDLE;
 		pImage->pAllocation = nullptr;
-		return eCreate == VK_ERROR_OUT_OF_DEVICE_MEMORY || eCreate == VK_ERROR_OUT_OF_HOST_MEMORY
-		           ? SIR_VULKAN_ALLOCATION_FAILED
-		           : SIR_VULKAN_NATIVE_FAILURE;
+		return eCreate == VK_ERROR_OUT_OF_DEVICE_MEMORY || eCreate == VK_ERROR_OUT_OF_HOST_MEMORY ? SIR_VULKAN_ALLOCATION_FAILED
+		                                                                                          : SIR_VULKAN_NATIVE_FAILURE;
 	}
 	pImage->pOwnerAllocator = m_Allocator;
 	pImage->nDeviceSerial = m_nDeviceSerial;
@@ -76,15 +75,15 @@ sirVulkanResult_t SIRVulkanDevice::destroyImage( sirVulkanImage_t *pImage ) noex
 }
 
 sirVulkanResult_t SIRVulkanDevice::createImageView( const sirVulkanImage_t *pImage, const VkImageViewCreateInfo &info,
-                                                     sirVulkanImageView_t *pView ) noexcept
+                                                    sirVulkanImageView_t *pView ) noexcept
 {
 	if ( !m_bReady || m_bDeviceLost ) {
 		return SIR_VULKAN_INVALID_STATE;
 	}
 	if ( pImage == nullptr || pView == nullptr || pImage->hImage == VK_NULL_HANDLE || pImage->pOwnerAllocator != m_Allocator ||
 	     pImage->nDeviceSerial != m_nDeviceSerial || pView->hView != VK_NULL_HANDLE ||
-	     info.sType != VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO || info.image != pImage->hImage ||
-	     info.format != pImage->eFormat || info.subresourceRange.levelCount == 0 || info.subresourceRange.layerCount == 0 ||
+	     info.sType != VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO || info.image != pImage->hImage || info.format != pImage->eFormat ||
+	     info.subresourceRange.levelCount == 0 || info.subresourceRange.layerCount == 0 ||
 	     info.subresourceRange.baseMipLevel >= pImage->nMips ||
 	     info.subresourceRange.levelCount > pImage->nMips - info.subresourceRange.baseMipLevel ||
 	     info.subresourceRange.baseArrayLayer >= pImage->nLayers ||
@@ -93,9 +92,8 @@ sirVulkanResult_t SIRVulkanDevice::createImageView( const sirVulkanImage_t *pIma
 	}
 	const VkResult eCreate = m_pfnCreateImageView( m_Device, &info, nullptr, &pView->hView );
 	if ( eCreate != VK_SUCCESS ) {
-		return eCreate == VK_ERROR_OUT_OF_DEVICE_MEMORY || eCreate == VK_ERROR_OUT_OF_HOST_MEMORY
-		           ? SIR_VULKAN_ALLOCATION_FAILED
-		           : SIR_VULKAN_NATIVE_FAILURE;
+		return eCreate == VK_ERROR_OUT_OF_DEVICE_MEMORY || eCreate == VK_ERROR_OUT_OF_HOST_MEMORY ? SIR_VULKAN_ALLOCATION_FAILED
+		                                                                                          : SIR_VULKAN_NATIVE_FAILURE;
 	}
 	pView->nDeviceSerial = m_nDeviceSerial;
 	pView->hImage = pImage->hImage;
@@ -108,8 +106,7 @@ sirVulkanResult_t SIRVulkanDevice::destroyImageView( sirVulkanImageView_t *pView
 	if ( !m_bReady || m_bDeviceLost ) {
 		return SIR_VULKAN_INVALID_STATE;
 	}
-	if ( pView == nullptr || pView->hView == VK_NULL_HANDLE || pView->nDeviceSerial != m_nDeviceSerial ||
-	     m_nLiveImageViews == 0 ) {
+	if ( pView == nullptr || pView->hView == VK_NULL_HANDLE || pView->nDeviceSerial != m_nDeviceSerial || m_nLiveImageViews == 0 ) {
 		return SIR_VULKAN_INVALID_ARGUMENT;
 	}
 	m_pfnDestroyImageView( m_Device, pView->hView, nullptr );
@@ -129,9 +126,8 @@ sirVulkanResult_t SIRVulkanDevice::createSampler( const VkSamplerCreateInfo &inf
 	}
 	const VkResult eCreate = m_pfnCreateSampler( m_Device, &info, nullptr, &pSampler->hSampler );
 	if ( eCreate != VK_SUCCESS ) {
-		return eCreate == VK_ERROR_OUT_OF_DEVICE_MEMORY || eCreate == VK_ERROR_OUT_OF_HOST_MEMORY
-		           ? SIR_VULKAN_ALLOCATION_FAILED
-		           : SIR_VULKAN_NATIVE_FAILURE;
+		return eCreate == VK_ERROR_OUT_OF_DEVICE_MEMORY || eCreate == VK_ERROR_OUT_OF_HOST_MEMORY ? SIR_VULKAN_ALLOCATION_FAILED
+		                                                                                          : SIR_VULKAN_NATIVE_FAILURE;
 	}
 	pSampler->nDeviceSerial = m_nDeviceSerial;
 	++m_nLiveSamplers;

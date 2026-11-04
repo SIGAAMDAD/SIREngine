@@ -46,10 +46,9 @@ int main( void )
 	sirGraphicsTextureDesc_t texture = {};
 	sirGraphicsViewDesc_t view = {};
 	sirGraphicsSamplerDesc_t sampler = {};
-	if ( inert.createTexture( texture, &handle ) != SIR_GRAPHICS_BUSY ||
-	     inert.createView( view, &handle ) != SIR_GRAPHICS_BUSY ||
-	     inert.createSampler( sampler, &handle ) != SIR_GRAPHICS_BUSY ||
-	     inert.createBuffer( invalid, &handle ) != SIR_GRAPHICS_BUSY || handle.nGeneration != 0 ) {
+	if ( inert.createTexture( texture, &handle ) != SIR_GRAPHICS_BUSY || inert.createView( view, &handle ) != SIR_GRAPHICS_BUSY ||
+	     inert.createSampler( sampler, &handle ) != SIR_GRAPHICS_BUSY || inert.createBuffer( invalid, &handle ) != SIR_GRAPHICS_BUSY ||
+	     handle.nGeneration != 0 ) {
 		return 3;
 	}
 	sirGraphicsDeviceCreateDesc_t create = {};

@@ -165,8 +165,7 @@ int main( void )
 	texture.eFormat = SIR_GRAPHICS_FORMAT_RGBA8_UNORM;
 	texture.eMemory = SIR_GRAPHICS_MEMORY_GPU_LOCAL;
 	sirGraphicsHandle_t hTexture = {};
-	if ( pDevice->createTexture( texture, &hTexture ) != SIR_GRAPHICS_SUCCESS ||
-	     hTexture.eType != SIR_GRAPHICS_HANDLE_TEXTURE ) {
+	if ( pDevice->createTexture( texture, &hTexture ) != SIR_GRAPHICS_SUCCESS || hTexture.eType != SIR_GRAPHICS_HANDLE_TEXTURE ) {
 		return 17;
 	}
 	sirGraphicsViewDesc_t view = {};
@@ -176,10 +175,8 @@ int main( void )
 	view.nLayers = 1;
 	view.nUsage = SIR_GRAPHICS_USAGE_SAMPLED;
 	sirGraphicsHandle_t hView = {};
-	if ( pDevice->createView( view, &hView ) != SIR_GRAPHICS_SUCCESS ||
-	     hView.eType != SIR_GRAPHICS_HANDLE_VIEW ||
-	     driver.destroyDevice( pDevice ) != SIR_GRAPHICS_BUSY ||
-	     pDevice->retireResource( hTexture, completed ) != SIR_GRAPHICS_BUSY ) {
+	if ( pDevice->createView( view, &hView ) != SIR_GRAPHICS_SUCCESS || hView.eType != SIR_GRAPHICS_HANDLE_VIEW ||
+	     driver.destroyDevice( pDevice ) != SIR_GRAPHICS_BUSY || pDevice->retireResource( hTexture, completed ) != SIR_GRAPHICS_BUSY ) {
 		return 18;
 	}
 	sirGraphicsSamplerDesc_t sampler = {};
@@ -191,8 +188,7 @@ int main( void )
 	sampler.fMinimumLod = 0.0f;
 	sampler.fMaximumLod = 1.0f;
 	sirGraphicsHandle_t hSampler = {};
-	if ( pDevice->createSampler( sampler, &hSampler ) != SIR_GRAPHICS_SUCCESS ||
-	     hSampler.eType != SIR_GRAPHICS_HANDLE_SAMPLER ) {
+	if ( pDevice->createSampler( sampler, &hSampler ) != SIR_GRAPHICS_SUCCESS || hSampler.eType != SIR_GRAPHICS_HANDLE_SAMPLER ) {
 		return 19;
 	}
 	if ( pDevice->retireResource( hView, completed ) != SIR_GRAPHICS_SUCCESS ||

@@ -19,25 +19,44 @@ of merchantability, fitness for a particular purpose and noninfringement.
 static VkFormat sirVulkanTextureFormat( sirGraphicsFormat_t eFormat ) noexcept
 {
 	switch ( eFormat ) {
-		case SIR_GRAPHICS_FORMAT_RGBA8_UNORM: return VK_FORMAT_R8G8B8A8_UNORM;
-		case SIR_GRAPHICS_FORMAT_BGRA8_UNORM: return VK_FORMAT_B8G8R8A8_UNORM;
-		case SIR_GRAPHICS_FORMAT_RGBA8_SRGB: return VK_FORMAT_R8G8B8A8_SRGB;
-		case SIR_GRAPHICS_FORMAT_RGBA16_FLOAT: return VK_FORMAT_R16G16B16A16_SFLOAT;
-		case SIR_GRAPHICS_FORMAT_R8_UNORM: return VK_FORMAT_R8_UNORM;
-		case SIR_GRAPHICS_FORMAT_RG8_UNORM: return VK_FORMAT_R8G8_UNORM;
-		case SIR_GRAPHICS_FORMAT_R16_FLOAT: return VK_FORMAT_R16_SFLOAT;
-		case SIR_GRAPHICS_FORMAT_R32_FLOAT: return VK_FORMAT_R32_SFLOAT;
-		case SIR_GRAPHICS_FORMAT_R32_UINT: return VK_FORMAT_R32_UINT;
-		case SIR_GRAPHICS_FORMAT_RG32_FLOAT: return VK_FORMAT_R32G32_SFLOAT;
-		case SIR_GRAPHICS_FORMAT_RGBA32_FLOAT: return VK_FORMAT_R32G32B32A32_SFLOAT;
-		case SIR_GRAPHICS_FORMAT_D16_UNORM: return VK_FORMAT_D16_UNORM;
-		case SIR_GRAPHICS_FORMAT_D24_UNORM_S8_UINT: return VK_FORMAT_D24_UNORM_S8_UINT;
-		case SIR_GRAPHICS_FORMAT_D32_FLOAT: return VK_FORMAT_D32_SFLOAT;
-		case SIR_GRAPHICS_FORMAT_BC1_UNORM: return VK_FORMAT_BC1_RGBA_UNORM_BLOCK;
-		case SIR_GRAPHICS_FORMAT_BC3_UNORM: return VK_FORMAT_BC3_UNORM_BLOCK;
-		case SIR_GRAPHICS_FORMAT_BC5_UNORM: return VK_FORMAT_BC5_UNORM_BLOCK;
-		case SIR_GRAPHICS_FORMAT_BC7_UNORM: return VK_FORMAT_BC7_UNORM_BLOCK;
-		default: return VK_FORMAT_UNDEFINED;
+	case SIR_GRAPHICS_FORMAT_RGBA8_UNORM:
+		return VK_FORMAT_R8G8B8A8_UNORM;
+	case SIR_GRAPHICS_FORMAT_BGRA8_UNORM:
+		return VK_FORMAT_B8G8R8A8_UNORM;
+	case SIR_GRAPHICS_FORMAT_RGBA8_SRGB:
+		return VK_FORMAT_R8G8B8A8_SRGB;
+	case SIR_GRAPHICS_FORMAT_RGBA16_FLOAT:
+		return VK_FORMAT_R16G16B16A16_SFLOAT;
+	case SIR_GRAPHICS_FORMAT_R8_UNORM:
+		return VK_FORMAT_R8_UNORM;
+	case SIR_GRAPHICS_FORMAT_RG8_UNORM:
+		return VK_FORMAT_R8G8_UNORM;
+	case SIR_GRAPHICS_FORMAT_R16_FLOAT:
+		return VK_FORMAT_R16_SFLOAT;
+	case SIR_GRAPHICS_FORMAT_R32_FLOAT:
+		return VK_FORMAT_R32_SFLOAT;
+	case SIR_GRAPHICS_FORMAT_R32_UINT:
+		return VK_FORMAT_R32_UINT;
+	case SIR_GRAPHICS_FORMAT_RG32_FLOAT:
+		return VK_FORMAT_R32G32_SFLOAT;
+	case SIR_GRAPHICS_FORMAT_RGBA32_FLOAT:
+		return VK_FORMAT_R32G32B32A32_SFLOAT;
+	case SIR_GRAPHICS_FORMAT_D16_UNORM:
+		return VK_FORMAT_D16_UNORM;
+	case SIR_GRAPHICS_FORMAT_D24_UNORM_S8_UINT:
+		return VK_FORMAT_D24_UNORM_S8_UINT;
+	case SIR_GRAPHICS_FORMAT_D32_FLOAT:
+		return VK_FORMAT_D32_SFLOAT;
+	case SIR_GRAPHICS_FORMAT_BC1_UNORM:
+		return VK_FORMAT_BC1_RGBA_UNORM_BLOCK;
+	case SIR_GRAPHICS_FORMAT_BC3_UNORM:
+		return VK_FORMAT_BC3_UNORM_BLOCK;
+	case SIR_GRAPHICS_FORMAT_BC5_UNORM:
+		return VK_FORMAT_BC5_UNORM_BLOCK;
+	case SIR_GRAPHICS_FORMAT_BC7_UNORM:
+		return VK_FORMAT_BC7_UNORM_BLOCK;
+	default:
+		return VK_FORMAT_UNDEFINED;
 	}
 }
 
@@ -68,16 +87,20 @@ static VkImageUsageFlags sirVulkanTextureUsage( uint32_t nUsage ) noexcept
 static VkSamplerAddressMode sirVulkanSamplerAddress( sirGraphicsAddressMode_t eMode ) noexcept
 {
 	switch ( eMode ) {
-		case SIR_GRAPHICS_ADDRESS_REPEAT: return VK_SAMPLER_ADDRESS_MODE_REPEAT;
-		case SIR_GRAPHICS_ADDRESS_MIRROR: return VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
-		case SIR_GRAPHICS_ADDRESS_CLAMP: return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-		case SIR_GRAPHICS_ADDRESS_BORDER: return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
-		default: return VK_SAMPLER_ADDRESS_MODE_REPEAT;
+	case SIR_GRAPHICS_ADDRESS_REPEAT:
+		return VK_SAMPLER_ADDRESS_MODE_REPEAT;
+	case SIR_GRAPHICS_ADDRESS_MIRROR:
+		return VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
+	case SIR_GRAPHICS_ADDRESS_CLAMP:
+		return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+	case SIR_GRAPHICS_ADDRESS_BORDER:
+		return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+	default:
+		return VK_SAMPLER_ADDRESS_MODE_REPEAT;
 	}
 }
 
-sirGraphicsResult_t SIRVulkanRenderingDevice::createTexture( const sirGraphicsTextureDesc_t &desc,
-                                                              sirGraphicsHandle_t *pHandle ) noexcept
+sirGraphicsResult_t SIRVulkanRenderingDevice::createTexture( const sirGraphicsTextureDesc_t &desc, sirGraphicsHandle_t *pHandle ) noexcept
 {
 	if ( pHandle == nullptr ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
@@ -95,14 +118,12 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::createTexture( const sirGraphicsTe
 	if ( desc.eMemory != SIR_GRAPHICS_MEMORY_GPU_LOCAL || desc.nSampleCount != 1 ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
-	constexpr uint32_t IMAGE_MASK = SIR_GRAPHICS_USAGE_SAMPLED | SIR_GRAPHICS_USAGE_STORAGE |
-	                                SIR_GRAPHICS_USAGE_COLOR_ATTACHMENT | SIR_GRAPHICS_USAGE_DEPTH_STENCIL |
-	                                SIR_GRAPHICS_USAGE_COPY_SOURCE | SIR_GRAPHICS_USAGE_COPY_DESTINATION;
+	constexpr uint32_t IMAGE_MASK = SIR_GRAPHICS_USAGE_SAMPLED | SIR_GRAPHICS_USAGE_STORAGE | SIR_GRAPHICS_USAGE_COLOR_ATTACHMENT |
+	                                SIR_GRAPHICS_USAGE_DEPTH_STENCIL | SIR_GRAPHICS_USAGE_COPY_SOURCE | SIR_GRAPHICS_USAGE_COPY_DESTINATION;
 	if ( ( desc.nUsage & ~IMAGE_MASK ) != 0 ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
-	const bool bDepth = desc.eFormat == SIR_GRAPHICS_FORMAT_D16_UNORM ||
-	                    desc.eFormat == SIR_GRAPHICS_FORMAT_D24_UNORM_S8_UINT ||
+	const bool bDepth = desc.eFormat == SIR_GRAPHICS_FORMAT_D16_UNORM || desc.eFormat == SIR_GRAPHICS_FORMAT_D24_UNORM_S8_UINT ||
 	                    desc.eFormat == SIR_GRAPHICS_FORMAT_D32_FLOAT;
 	if ( ( bDepth && ( desc.nUsage & ( SIR_GRAPHICS_USAGE_STORAGE | SIR_GRAPHICS_USAGE_COLOR_ATTACHMENT ) ) != 0 ) ||
 	     ( !bDepth && ( desc.nUsage & SIR_GRAPHICS_USAGE_DEPTH_STENCIL ) != 0 ) ) {
@@ -115,9 +136,9 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::createTexture( const sirGraphicsTe
 
 	VkImageCreateInfo info = {};
 	info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-	info.imageType = desc.eDimension == SIR_GRAPHICS_TEXTURE_1D ? VK_IMAGE_TYPE_1D
+	info.imageType = desc.eDimension == SIR_GRAPHICS_TEXTURE_1D   ? VK_IMAGE_TYPE_1D
 	                 : desc.eDimension == SIR_GRAPHICS_TEXTURE_3D ? VK_IMAGE_TYPE_3D
-	                                                               : VK_IMAGE_TYPE_2D;
+	                                                              : VK_IMAGE_TYPE_2D;
 	info.format = eFormat;
 	info.extent = { desc.nWidth, desc.nHeight, desc.nDepth };
 	info.mipLevels = desc.nMipLevels;
@@ -150,8 +171,7 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::createTexture( const sirGraphicsTe
 	return SIR_GRAPHICS_CAPACITY_EXCEEDED;
 }
 
-sirGraphicsResult_t SIRVulkanRenderingDevice::createView( const sirGraphicsViewDesc_t &desc,
-                                                           sirGraphicsHandle_t *pHandle ) noexcept
+sirGraphicsResult_t SIRVulkanRenderingDevice::createView( const sirGraphicsViewDesc_t &desc, sirGraphicsHandle_t *pHandle ) noexcept
 {
 	if ( pHandle == nullptr ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
@@ -168,8 +188,8 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::createView( const sirGraphicsViewD
 	if ( !pImage->bActive || pImage->nGeneration != desc.hResource.nGeneration ) {
 		return SIR_GRAPHICS_INVALID_HANDLE;
 	}
-	const VkFormat eViewFormat = desc.eFormat == SIR_GRAPHICS_FORMAT_UNKNOWN ? pImage->native.eFormat
-	                                                                      : sirVulkanTextureFormat( desc.eFormat );
+	const VkFormat eViewFormat =
+	    desc.eFormat == SIR_GRAPHICS_FORMAT_UNKNOWN ? pImage->native.eFormat : sirVulkanTextureFormat( desc.eFormat );
 	if ( eViewFormat != pImage->native.eFormat || desc.nBaseMip >= pImage->native.nMips ||
 	     desc.nMipLevels > pImage->native.nMips - desc.nBaseMip || desc.nBaseLayer >= pImage->native.nLayers ||
 	     desc.nLayers > pImage->native.nLayers - desc.nBaseLayer ) {
@@ -194,8 +214,8 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::createView( const sirGraphicsViewD
 	} else {
 		eViewType = desc.nLayers == 1 ? VK_IMAGE_VIEW_TYPE_2D : VK_IMAGE_VIEW_TYPE_2D_ARRAY;
 	}
-	constexpr uint32_t VIEW_MASK = SIR_GRAPHICS_USAGE_SAMPLED | SIR_GRAPHICS_USAGE_STORAGE |
-	                               SIR_GRAPHICS_USAGE_COLOR_ATTACHMENT | SIR_GRAPHICS_USAGE_DEPTH_STENCIL;
+	constexpr uint32_t VIEW_MASK =
+	    SIR_GRAPHICS_USAGE_SAMPLED | SIR_GRAPHICS_USAGE_STORAGE | SIR_GRAPHICS_USAGE_COLOR_ATTACHMENT | SIR_GRAPHICS_USAGE_DEPTH_STENCIL;
 	if ( ( desc.nUsage & ~VIEW_MASK ) != 0 ||
 	     ( desc.nUsage != 0 && ( sirVulkanTextureUsage( desc.nUsage ) & ~pImage->native.nUsage ) != 0 ) ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
@@ -205,12 +225,12 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::createView( const sirGraphicsViewD
 	info.image = pImage->native.hImage;
 	info.viewType = eViewType;
 	info.format = eViewFormat;
-	info.components = { VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY,
-	                    VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY };
-	info.subresourceRange.aspectMask = eViewFormat == VK_FORMAT_D16_UNORM || eViewFormat == VK_FORMAT_D24_UNORM_S8_UINT ||
-	                                           eViewFormat == VK_FORMAT_D32_SFLOAT
-	                                       ? VK_IMAGE_ASPECT_DEPTH_BIT
-	                                       : VK_IMAGE_ASPECT_COLOR_BIT;
+	info.components = { VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY,
+	                    VK_COMPONENT_SWIZZLE_IDENTITY };
+	info.subresourceRange.aspectMask =
+	    eViewFormat == VK_FORMAT_D16_UNORM || eViewFormat == VK_FORMAT_D24_UNORM_S8_UINT || eViewFormat == VK_FORMAT_D32_SFLOAT
+	        ? VK_IMAGE_ASPECT_DEPTH_BIT
+	        : VK_IMAGE_ASPECT_COLOR_BIT;
 	info.subresourceRange.baseMipLevel = desc.nBaseMip;
 	info.subresourceRange.levelCount = desc.nMipLevels;
 	info.subresourceRange.baseArrayLayer = desc.nBaseLayer;
@@ -235,8 +255,7 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::createView( const sirGraphicsViewD
 	return SIR_GRAPHICS_CAPACITY_EXCEEDED;
 }
 
-sirGraphicsResult_t SIRVulkanRenderingDevice::createSampler( const sirGraphicsSamplerDesc_t &desc,
-                                                              sirGraphicsHandle_t *pHandle ) noexcept
+sirGraphicsResult_t SIRVulkanRenderingDevice::createSampler( const sirGraphicsSamplerDesc_t &desc, sirGraphicsHandle_t *pHandle ) noexcept
 {
 	if ( pHandle == nullptr ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
@@ -257,8 +276,7 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::createSampler( const sirGraphicsSa
 	info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
 	info.magFilter = bLinear ? VK_FILTER_LINEAR : VK_FILTER_NEAREST;
 	info.minFilter = bLinear ? VK_FILTER_LINEAR : VK_FILTER_NEAREST;
-	info.mipmapMode = desc.eFilter == SIR_GRAPHICS_FILTER_TRILINEAR ? VK_SAMPLER_MIPMAP_MODE_LINEAR
-	                                                              : VK_SAMPLER_MIPMAP_MODE_NEAREST;
+	info.mipmapMode = desc.eFilter == SIR_GRAPHICS_FILTER_TRILINEAR ? VK_SAMPLER_MIPMAP_MODE_LINEAR : VK_SAMPLER_MIPMAP_MODE_NEAREST;
 	info.addressModeU = sirVulkanSamplerAddress( desc.eAddressU );
 	info.addressModeV = sirVulkanSamplerAddress( desc.eAddressV );
 	info.addressModeW = sirVulkanSamplerAddress( desc.eAddressW );
@@ -344,7 +362,7 @@ void SIRVulkanRenderingDevice::collectImageResources( void ) noexcept
 }
 
 sirGraphicsResult_t SIRVulkanRenderingDevice::retireImageResource( sirGraphicsHandle_t hResource,
-                                                                    const sirGraphicsCompletionSet_t &completion ) noexcept
+                                                                   const sirGraphicsCompletionSet_t &completion ) noexcept
 {
 	if ( !m_bReady || !sirGraphicsIsCompletionSetValid( completion, m_nDeviceGeneration ) ||
 	     ( completion.nQueueMask & ~( 1U << SIR_GRAPHICS_QUEUE_DIRECT ) ) != 0 ||
@@ -356,52 +374,53 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::retireImageResource( sirGraphicsHa
 	}
 	const uint64_t nFence = completion.szQueueValues[SIR_GRAPHICS_QUEUE_DIRECT];
 	switch ( hResource.eType ) {
-		case SIR_GRAPHICS_HANDLE_TEXTURE: {
-			if ( hResource.nSlot >= SIR_VULKAN_TEXTURE_CAPACITY ) {
-				return SIR_GRAPHICS_INVALID_HANDLE;
-			}
-			sirVulkanGraphicsImageSlot_t *pSlot = &m_szImages[hResource.nSlot];
-			if ( !pSlot->bActive || pSlot->nGeneration != hResource.nGeneration ) {
-				return SIR_GRAPHICS_INVALID_HANDLE;
-			}
-			if ( pSlot->nViewCount != 0 ) {
-				return SIR_GRAPHICS_BUSY;
-			}
-			pSlot->bActive = false;
-			pSlot->bRetiring = true;
-			pSlot->nRetireValue = nFence;
-			++pSlot->nGeneration;
-			break;
+	case SIR_GRAPHICS_HANDLE_TEXTURE: {
+		if ( hResource.nSlot >= SIR_VULKAN_TEXTURE_CAPACITY ) {
+			return SIR_GRAPHICS_INVALID_HANDLE;
 		}
-		case SIR_GRAPHICS_HANDLE_VIEW: {
-			if ( hResource.nSlot >= SIR_VULKAN_VIEW_CAPACITY ) {
-				return SIR_GRAPHICS_INVALID_HANDLE;
-			}
-			sirVulkanGraphicsViewSlot_t *pSlot = &m_szViews[hResource.nSlot];
-			if ( !pSlot->bActive || pSlot->nGeneration != hResource.nGeneration ) {
-				return SIR_GRAPHICS_INVALID_HANDLE;
-			}
-			pSlot->bActive = false;
-			pSlot->bRetiring = true;
-			pSlot->nRetireValue = nFence;
-			++pSlot->nGeneration;
-			break;
+		sirVulkanGraphicsImageSlot_t *pSlot = &m_szImages[hResource.nSlot];
+		if ( !pSlot->bActive || pSlot->nGeneration != hResource.nGeneration ) {
+			return SIR_GRAPHICS_INVALID_HANDLE;
 		}
-		case SIR_GRAPHICS_HANDLE_SAMPLER: {
-			if ( hResource.nSlot >= SIR_VULKAN_SAMPLER_CAPACITY ) {
-				return SIR_GRAPHICS_INVALID_HANDLE;
-			}
-			sirVulkanGraphicsSamplerSlot_t *pSlot = &m_szSamplers[hResource.nSlot];
-			if ( !pSlot->bActive || pSlot->nGeneration != hResource.nGeneration ) {
-				return SIR_GRAPHICS_INVALID_HANDLE;
-			}
-			pSlot->bActive = false;
-			pSlot->bRetiring = true;
-			pSlot->nRetireValue = nFence;
-			++pSlot->nGeneration;
-			break;
+		if ( pSlot->nViewCount != 0 ) {
+			return SIR_GRAPHICS_BUSY;
 		}
-		default: return SIR_GRAPHICS_INVALID_HANDLE;
+		pSlot->bActive = false;
+		pSlot->bRetiring = true;
+		pSlot->nRetireValue = nFence;
+		++pSlot->nGeneration;
+		break;
+	}
+	case SIR_GRAPHICS_HANDLE_VIEW: {
+		if ( hResource.nSlot >= SIR_VULKAN_VIEW_CAPACITY ) {
+			return SIR_GRAPHICS_INVALID_HANDLE;
+		}
+		sirVulkanGraphicsViewSlot_t *pSlot = &m_szViews[hResource.nSlot];
+		if ( !pSlot->bActive || pSlot->nGeneration != hResource.nGeneration ) {
+			return SIR_GRAPHICS_INVALID_HANDLE;
+		}
+		pSlot->bActive = false;
+		pSlot->bRetiring = true;
+		pSlot->nRetireValue = nFence;
+		++pSlot->nGeneration;
+		break;
+	}
+	case SIR_GRAPHICS_HANDLE_SAMPLER: {
+		if ( hResource.nSlot >= SIR_VULKAN_SAMPLER_CAPACITY ) {
+			return SIR_GRAPHICS_INVALID_HANDLE;
+		}
+		sirVulkanGraphicsSamplerSlot_t *pSlot = &m_szSamplers[hResource.nSlot];
+		if ( !pSlot->bActive || pSlot->nGeneration != hResource.nGeneration ) {
+			return SIR_GRAPHICS_INVALID_HANDLE;
+		}
+		pSlot->bActive = false;
+		pSlot->bRetiring = true;
+		pSlot->nRetireValue = nFence;
+		++pSlot->nGeneration;
+		break;
+	}
+	default:
+		return SIR_GRAPHICS_INVALID_HANDLE;
 	}
 	collectRetired();
 	return SIR_GRAPHICS_SUCCESS;
