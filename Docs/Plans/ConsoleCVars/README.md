@@ -1,11 +1,11 @@
 # Console / CVar / Command System — implementation packet
 
 **Branch:** `feature/console-cvars-commands` created from `develop@51666fadadf8112b3b2d5bf919ba11dde55d931b` (2026-11-04).
-**State:** architecture and roadmap only; no console or CVar runtime implementation is claimed.
+**State:** P0 native contract freeze and malformed catalog tests implemented; remaining P1-P7 runtime milestones pending.
 **Design:** [Architecture](../../Architecture/20-console-cvars-commands.md).
 **Contracts:** [Interfaces](INTERFACES.md).
 **Milestones:** [Roadmap](ROADMAP.md).
-**Verification:** [Acceptance](ACCEPTANCE.md).
+**Verification:** [Acceptance](ACCEPTANCE.md). **P0 contract:** [P0 Freeze](P0_FREEZE.md).
 **Machine task ledger:** [plan.json](plan.json).
 
 ## Purpose
@@ -14,7 +14,7 @@ Build one native, memory-accounted, cooked-and-dynamic command/CVar registry usi
 
 ## Current baseline vs future work
 
-Verified current develop has SIRMemory, typed SIREvent queues, SIREngineSystem/SIRApplication lifecycle and partial Core/Config (CSV/TSV). The native Strings, Registration, CVars and Console directories/targets are absent. The legacy ConsoleManager remains on main only as a behavior reference. This packet adds plans and makes no product-code modifications.
+Verified current develop has SIRMemory, typed SIREvent queues, SIREngineSystem/SIRApplication lifecycle and partial Core/Config (CSV/TSV). Strings is already present on current develop; P0 adds Registration contract types, validator and target. CVars and Console remain unimplemented. The legacy ConsoleManager remains on main only as a behavior reference. This packet adds plans and makes no product-code modifications.
 
 ## Source references
 

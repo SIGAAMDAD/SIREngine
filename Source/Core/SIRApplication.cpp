@@ -108,7 +108,7 @@ uint32_t SIRApplication::getSystemCount( void ) const noexcept
 	return m_nSystemCount;
 }
 
-SIREventRegistry &SIRApplication::getEventRegistry( void ) noexcept
+SIREventRegistry& SIRApplication::getEventRegistry( void ) noexcept
 {
 	return m_EventRegistry;
 }

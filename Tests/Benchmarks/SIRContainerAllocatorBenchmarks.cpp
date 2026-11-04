@@ -62,7 +62,7 @@ public:
 	}
 };
 
-static void SIRBenchmarkGeneralHeapDirect( benchmark::State &state )
+static void SIRBenchmarkGeneralHeapDirect( benchmark::State& state )
 {
 	SIRBenchmarkContainerHeap heap;
 	if ( !heap.init( ( uint32_t )state.range( 1 ) ) ) {
@@ -88,7 +88,7 @@ static void SIRBenchmarkGeneralHeapDirect( benchmark::State &state )
 	}
 }
 
-static void SIRBenchmarkContainerAdapter( benchmark::State &state )
+static void SIRBenchmarkContainerAdapter( benchmark::State& state )
 {
 	SIRBenchmarkContainerHeap heap;
 	if ( !heap.init( ( uint32_t )state.range( 1 ) ) ) {

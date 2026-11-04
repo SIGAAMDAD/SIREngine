@@ -47,8 +47,8 @@ public:
 	    : m_nPending( 0 ), m_nCoalesced( 0 ), m_nRejected( 0 ), m_bDraining( false ), m_bDiscardSnapshot( false )
 	{
 	}
-	SIRDirtyEventSet( const SIRDirtyEventSet & ) = delete;
-	SIRDirtyEventSet &operator=( const SIRDirtyEventSet & ) = delete;
+	SIRDirtyEventSet( const SIRDirtyEventSet& ) = delete;
+	SIRDirtyEventSet& operator=( const SIRDirtyEventSet& ) = delete;
 
 	bool mark( uint32_t nSlot, uint32_t nGeneration = 1 ) noexcept
 	{

@@ -1,6 +1,6 @@
 # Proposed native interfaces and serialization contracts
 
-**Status:** design contracts for technical review; function spelling is provisional until headers compile.
+**Status:** P0 types and catalog header validator implemented in Source/Core/Registration/SIRRegistrationTypes.h; later interfaces remain design sketches. See [P0 Freeze](P0_FREEZE.md) for binding ABI v1 decisions.
 **C++:** global namespace, C++17, `noexcept`, SIR struct/enum names, fixed-width integer types, **at most four parameters per method** and one-line declarations within the 140-column rule. Class groups ordered public/protected/private; constructors/destructor group, operators, getters/setters, ordinary methods.
 
 ## 1. Shared types

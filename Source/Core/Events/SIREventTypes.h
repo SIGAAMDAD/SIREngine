@@ -104,7 +104,7 @@ template <typename TPayload>
 struct sirEventDelegate_s
 {
 	void *pContext;
-	void ( *pInvoke )( void *, const TPayload & ) noexcept;
+	void ( *pInvoke )( void *, const TPayload& ) noexcept;
 };
 
 template <typename TPayload>

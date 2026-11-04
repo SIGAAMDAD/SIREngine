@@ -1,5 +1,7 @@
 /*
+
 ===========================================================================
+
 SIREngine MPLv2 Source Code
 Copyright (C) 2023-2027 Noah Van Til
 Ported from The Nomad Framework, Copyright (C) 2025-2027 Noah Van Til
@@ -68,7 +70,7 @@ bool SIRCacheAllocator::init( SIRMemorySegment *pSegment, uint32_t nMaxEntries, 
 	return true;
 }
 
-uint8_t *SIRCacheAllocator::entryAddress( const sirCacheDesc_t &desc ) const
+uint8_t *SIRCacheAllocator::entryAddress( const sirCacheDesc_t& desc ) const
 {
 	return m_pBase + desc.nOffset;
 }
@@ -98,14 +100,14 @@ bool SIRCacheAllocator::acquireIndex( uint32_t *pIndex )
 
 void SIRCacheAllocator::returnIndex( uint32_t nIndex )
 {
-	sirCacheDesc_t &desc = m_pEntries[nIndex];
+	sirCacheDesc_t& desc = m_pEntries[nIndex];
 	desc.nNextFree = m_nFreeHead;
 	m_nFreeHead = nIndex;
 }
 
 bool SIRCacheAllocator::evictIndex( uint32_t nIndex, bool bEvicted )
 {
-	sirCacheDesc_t &desc = m_pEntries[nIndex];
+	sirCacheDesc_t& desc = m_pEntries[nIndex];
 	if ( ( desc.nFlags & SIR_CACHE_LIVE ) == 0 || desc.nPinCount != 0 || !m_Buddy.free( entryAddress( desc ) ) ) {
 		return false;
 	}
@@ -151,7 +153,7 @@ bool SIRCacheAllocator::evictOne( void )
 		if ( ++m_nClockHand == m_nLiveCount ) {
 			m_nClockHand = 0;
 		}
-		sirCacheDesc_t &desc = m_pEntries[nIndex];
+		sirCacheDesc_t& desc = m_pEntries[nIndex];
 		if ( desc.nPinCount != 0 ) {
 			continue;
 		}
@@ -201,7 +203,7 @@ void *SIRCacheAllocator::alloc( uint32_t nBytes, uint32_t nAlignment, sirCacheHa
 		pMemory = m_Buddy.alloc( nBytes, nAlignment );
 	}
 
-	sirCacheDesc_t &desc = m_pEntries[nIndex];
+	sirCacheDesc_t& desc = m_pEntries[nIndex];
 	const uintptr_t nOffset = ( ( uintptr_t )( pMemory ) ) - ( ( uintptr_t )( m_pBase ) );
 	desc.nOffset = ( ( uint32_t )( nOffset ) );
 	desc.nBytes = nBytes;

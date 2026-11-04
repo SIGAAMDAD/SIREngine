@@ -5,6 +5,8 @@ Copyright (C) 2023-2027 Noah Van Til
 
 This Source Code Form is subject to the terms of the Mozilla Public
 License, v2. If a copy of the MPL was not distributed with this
+
+
 file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 This software is provided "as is", without warranty of any kind,
@@ -54,15 +56,15 @@ public:
 	}
 
 	template <typename... Args>
-	sirContainerResult_t tryEmplace( Args &&...args )
+	sirContainerResult_t tryEmplace( Args&&...args )
 	{
 		return m_elements.tryEmplaceBack( std::forward<Args>( args )... );
 	}
-	sirContainerResult_t tryPush( const T &value )
+	sirContainerResult_t tryPush( const T& value )
 	{
 		return m_elements.tryPushBack( value );
 	}
-	sirContainerResult_t tryPush( T &&value )
+	sirContainerResult_t tryPush( T&& value )
 	{
 		return m_elements.tryPushBack( std::move( value ) );
 	}

@@ -35,17 +35,17 @@ template <typename TPayload, uint32_t Capacity = 256>
 class SIREventStream
 {
 public:
-	typedef void ( *callback_t )( void *pContext, const TPayload &payload ) noexcept;
+	typedef void ( *callback_t )( void *pContext, const TPayload& payload ) noexcept;
 	static_assert( Capacity > 0, "Stream capacity must be positive" );
 	static_assert( std::is_trivially_copyable<TPayload>::value, "Event streams carry POD payloads" );
 
 	SIREventStream( void ) noexcept : m_nWrite( 0 ), m_nCounts{}, m_bDraining( false )
 	{
 	}
-	SIREventStream( const SIREventStream & ) = delete;
-	SIREventStream &operator=( const SIREventStream & ) = delete;
+	SIREventStream( const SIREventStream& ) = delete;
+	SIREventStream& operator=( const SIREventStream& ) = delete;
 
-	bool append( const TPayload &payload ) noexcept
+	bool append( const TPayload& payload ) noexcept
 	{
 		const uint32_t nWrite = m_nWrite;
 		if ( m_nCounts[nWrite] == Capacity ) {
