@@ -500,12 +500,55 @@ static bool testRecyclableFloorAndDomainBudget( void )
 	return true;
 }
 
+static bool testRetirementRangeRejectionMatrix( void )
+{
+	const uint64_t nPage = SIRVirtualMemory::getPageSize();
+	if ( nPage == 0 ) {
+		return false;
+	}
+	SIRMemoryManager memory;
+	if ( memory.drainPendingDecommits( nPage ).nCompletedRuns != 0 ) {
+		return false;
+	}
+	const sirMemoryConfig_t config = { nPage * 128, nPage * 32, nPage * 8, 4 };
+	if ( !memory.init( config ) ) {
+		return false;
+	}
+	SIRMemorySegment *pSegment = memory.createSegment( "retirement-matrix", nPage * 4 );
+	if ( pSegment == nullptr || pSegment->bindRetirementOwner( 0, 1 ) || pSegment->bindRetirementOwner( 1, 0 ) ||
+	     !pSegment->bindRetirementOwner( 33, 44 ) || pSegment->bindRetirementOwner( 33, 44 ) ) {
+		return false;
+	}
+	if ( pSegment->retireIdleRange( 0, nPage, 0, 44 ) || pSegment->retireIdleRange( 0, nPage, 32, 44 ) ||
+	     pSegment->retireIdleRange( 0, nPage, 33, 43 ) || pSegment->retireIdleRange( 0, 0, 33, 44 ) ||
+	     pSegment->retireIdleRange( 1, nPage, 33, 44 ) || pSegment->retireIdleRange( 0, nPage - 1, 33, 44 ) ||
+	     pSegment->retireIdleRange( nPage * 5, nPage, 33, 44 ) || pSegment->retireIdleRange( nPage * 3, nPage * 2, 33, 44 ) ||
+	     pSegment->retireIdleRange( 0, nPage, 33, 44 ) ) {
+		return false;
+	}
+	if ( pSegment->cancelRetiredRange( 0, nPage, 0, 44 ) || pSegment->cancelRetiredRange( 0, nPage, 32, 44 ) ||
+	     pSegment->cancelRetiredRange( 0, nPage, 33, 43 ) || pSegment->cancelRetiredRange( 0, 0, 33, 44 ) ||
+	     pSegment->cancelRetiredRange( 1, nPage, 33, 44 ) || pSegment->cancelRetiredRange( 0, nPage - 1, 33, 44 ) ||
+	     pSegment->cancelRetiredRange( nPage * 5, nPage, 33, 44 ) || pSegment->cancelRetiredRange( nPage * 3, nPage * 2, 33, 44 ) ||
+	     pSegment->cancelRetiredRange( 0, nPage, 33, 44 ) ) {
+		return false;
+	}
+	if ( !pSegment->commit( 0, nPage * 2 ) || !pSegment->retireIdleRange( 0, nPage, 33, 44 ) ||
+	     pSegment->retireIdleRange( 0, nPage, 33, 44 ) || pSegment->cancelRetiredRange( nPage, nPage, 33, 44 ) ||
+	     !pSegment->cancelRetiredRange( 0, nPage, 33, 44 ) || pSegment->cancelRetiredRange( 0, nPage, 33, 44 ) ||
+	     !pSegment->decommit( 0, nPage * 2 ) ) {
+		return false;
+	}
+	memory.shutdown();
+	return true;
+}
+
 int main( void )
 {
 	if ( !testMemoryBudget() || !testCoreDomainMetadata() || !testBitmapAndRecommit() || !testOversizedRequests() ||
 	     !testFailedInitializationRecovery() || !testBackingTelemetry() || !testRetainedPageBacking() ||
 	     !testValidationAndBoundaryInputs() || !testTraceWrapAndSparseRetire() || !testSegmentBitmapMetadataExhaustion() ||
-	     !testRecyclableFloorAndDomainBudget() ) {
+	     !testRecyclableFloorAndDomainBudget() || !testRetirementRangeRejectionMatrix() ) {
 		fputs( "SIR memory owner test failed\n", stderr );
 		return 1;
 	}
