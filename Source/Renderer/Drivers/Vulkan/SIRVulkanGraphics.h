@@ -104,7 +104,7 @@ private:
 
 	SIRVulkanRenderingDevice *m_pOwner = nullptr;
 	sirVulkanCommandState_t m_eState = SIR_VULKAN_COMMAND_FREE;
-	 sirVulkanGraphicsBufferCopy_t m_szBufferCopies[SIR_VULKAN_COPY_BATCH_CAPACITY] = {};
+	sirVulkanGraphicsBufferCopy_t m_szBufferCopies[SIR_VULKAN_COPY_BATCH_CAPACITY] = {};
 	uint32_t m_nCopyCount = 0;
 	uint64_t m_nLastCompletion = 0;
 	sirGraphicsBufferTextureCopy_t m_TextureCopy = {};

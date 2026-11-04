@@ -269,7 +269,7 @@ public:
 	sirVulkanResult_t submitBufferCopy( sirVulkanBuffer_t *pSource, uint64_t nSourceOffset, sirVulkanBuffer_t *pDestination,
 	                                    uint64_t nDestinationOffset, uint64_t nBytes, sirVulkanCompletion_t *pCompletion ) noexcept;
 	sirVulkanResult_t submitBufferCopies( const sirVulkanBufferCopy_t *pCopies, uint32_t nCount,
-	                                     sirVulkanCompletion_t *pCompletion ) noexcept;
+	                                      sirVulkanCompletion_t *pCompletion ) noexcept;
 	sirVulkanResult_t submitImageBarrier( sirVulkanImage_t *pImage, const sirVulkanImageBarrier_t &barrier,
 	                                      sirVulkanCompletion_t *pCompletion ) noexcept;
 	sirVulkanResult_t submitBufferImageCopy( sirVulkanBuffer_t *pBuffer, sirVulkanImage_t *pImage,

@@ -17,6 +17,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Renderer/SIRGraphicsRegistry.h>
 
 #include <stdio.h>
+
+
 #include <string.h>
 
 int main( void )
@@ -153,8 +155,8 @@ int main( void )
 	for ( uint32_t iCopy = 0; iCopy < SIR_VULKAN_COPY_BATCH_CAPACITY; ++iCopy ) {
 		const uint64_t nOffset = ( iCopy / 2 ) * sizeof( szExpected );
 		const sirGraphicsResult_t eRecord = ( iCopy & 1 ) == 0
-		                                       ? pBatch->copyBuffer( hGpu, nOffset, hSource, 0, sizeof( szExpected ) )
-		                                       : pBatch->copyBuffer( hReadback, nOffset, hGpu, nOffset, sizeof( szExpected ) );
+		                                        ? pBatch->copyBuffer( hGpu, nOffset, hSource, 0, sizeof( szExpected ) )
+		                                        : pBatch->copyBuffer( hReadback, nOffset, hGpu, nOffset, sizeof( szExpected ) );
 		if ( eRecord != SIR_GRAPHICS_SUCCESS ) {
 			return 29;
 		}
@@ -170,8 +172,7 @@ int main( void )
 	batchSubmission.nWaitCount = 1;
 	sirGraphicsCompletion_t batchCompleted = {};
 	if ( pDevice->submit( SIR_GRAPHICS_QUEUE_DIRECT, batchSubmission, &batchCompleted ) != SIR_GRAPHICS_SUCCESS ||
-	     batchCompleted.nValue != second.nValue + 1 ||
-	     pDevice->wait( batchCompleted, 5000000000ull ) != SIR_GRAPHICS_SUCCESS ) {
+	     batchCompleted.nValue != second.nValue + 1 || pDevice->wait( batchCompleted, 5000000000ull ) != SIR_GRAPHICS_SUCCESS ) {
 		return 31;
 	}
 	const uint64_t nBatchReadOffset = 3 * sizeof( szExpected );

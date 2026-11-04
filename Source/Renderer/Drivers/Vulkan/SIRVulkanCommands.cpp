@@ -187,11 +187,10 @@ sirVulkanResult_t sirVulkanValidateBufferCopies( const sirVulkanBufferCopy_t *pC
 	}
 	for ( uint32_t iCopy = 0; iCopy < nCount; ++iCopy ) {
 		const sirVulkanBufferCopy_t &copy = pCopies[iCopy];
-		if ( copy.pSource == nullptr || copy.pDestination == nullptr || copy.pSource == copy.pDestination ||
-		     copy.nBytes == 0 || ( copy.pSource->nUsage & VK_BUFFER_USAGE_TRANSFER_SRC_BIT ) == 0 ||
-		     ( copy.pDestination->nUsage & VK_BUFFER_USAGE_TRANSFER_DST_BIT ) == 0 ||
-		     copy.nSourceOffset > copy.pSource->nSize || copy.nBytes > copy.pSource->nSize - copy.nSourceOffset ||
-		     copy.nDestinationOffset > copy.pDestination->nSize ||
+		if ( copy.pSource == nullptr || copy.pDestination == nullptr || copy.pSource == copy.pDestination || copy.nBytes == 0 ||
+		     ( copy.pSource->nUsage & VK_BUFFER_USAGE_TRANSFER_SRC_BIT ) == 0 ||
+		     ( copy.pDestination->nUsage & VK_BUFFER_USAGE_TRANSFER_DST_BIT ) == 0 || copy.nSourceOffset > copy.pSource->nSize ||
+		     copy.nBytes > copy.pSource->nSize - copy.nSourceOffset || copy.nDestinationOffset > copy.pDestination->nSize ||
 		     copy.nBytes > copy.pDestination->nSize - copy.nDestinationOffset ) {
 			return SIR_VULKAN_INVALID_ARGUMENT;
 		}
@@ -199,9 +198,9 @@ sirVulkanResult_t sirVulkanValidateBufferCopies( const sirVulkanBufferCopy_t *pC
 	return SIR_VULKAN_SUCCESS;
 }
 
-sirVulkanResult_t SIRVulkanDevice::submitBufferCopy( sirVulkanBuffer_t *pSource, uint64_t nSourceOffset,
-                                                     sirVulkanBuffer_t *pDestination, uint64_t nDestinationOffset,
-                                                     uint64_t nBytes, sirVulkanCompletion_t *pCompletion ) noexcept
+sirVulkanResult_t SIRVulkanDevice::submitBufferCopy( sirVulkanBuffer_t *pSource, uint64_t nSourceOffset, sirVulkanBuffer_t *pDestination,
+                                                     uint64_t nDestinationOffset, uint64_t nBytes,
+                                                     sirVulkanCompletion_t *pCompletion ) noexcept
 {
 	const sirVulkanBufferCopy_t copy = { pSource, pDestination, nSourceOffset, nDestinationOffset, nBytes };
 	return submitBufferCopies( &copy, 1, pCompletion );
@@ -225,9 +224,9 @@ sirVulkanResult_t SIRVulkanDevice::submitBufferCopies( const sirVulkanBufferCopy
 	for ( uint32_t iCopy = 0; iCopy < nCount; ++iCopy ) {
 		const sirVulkanBufferCopy_t &copy = pCopies[iCopy];
 		if ( copy.pSource->hBuffer == VK_NULL_HANDLE || copy.pDestination->hBuffer == VK_NULL_HANDLE ||
-		     copy.pSource->hBuffer == copy.pDestination->hBuffer ||
-		     copy.pSource->pOwnerAllocator != m_Allocator || copy.pDestination->pOwnerAllocator != m_Allocator ||
-		     copy.pSource->nDeviceSerial != m_nDeviceSerial || copy.pDestination->nDeviceSerial != m_nDeviceSerial ) {
+		     copy.pSource->hBuffer == copy.pDestination->hBuffer || copy.pSource->pOwnerAllocator != m_Allocator ||
+		     copy.pDestination->pOwnerAllocator != m_Allocator || copy.pSource->nDeviceSerial != m_nDeviceSerial ||
+		     copy.pDestination->nDeviceSerial != m_nDeviceSerial ) {
 			return SIR_VULKAN_INVALID_ARGUMENT;
 		}
 	}

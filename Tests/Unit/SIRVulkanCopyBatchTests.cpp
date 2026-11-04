@@ -31,9 +31,7 @@ int main( void )
 
 	sirVulkanBufferCopy_t copies[SIR_VULKAN_COPY_BATCH_CAPACITY + 1] = {};
 	for ( uint32_t i = 0; i < SIR_VULKAN_COPY_BATCH_CAPACITY; ++i ) {
-		copies[i] = { ( i & 1 ) == 0 ? &source : &staging,
-		             ( i & 1 ) == 0 ? &staging : &readback,
-		             ( i / 2 ) * 128, ( i / 2 ) * 128, 128 };
+		copies[i] = { ( i & 1 ) == 0 ? &source : &staging, ( i & 1 ) == 0 ? &staging : &readback, ( i / 2 ) * 128, ( i / 2 ) * 128, 128 };
 	}
 	if ( sirVulkanValidateBufferCopies( copies, SIR_VULKAN_COPY_BATCH_CAPACITY ) != SIR_VULKAN_SUCCESS ||
 	     sirVulkanValidateBufferCopies( copies, 1 ) != SIR_VULKAN_SUCCESS ) {
