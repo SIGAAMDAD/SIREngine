@@ -78,7 +78,7 @@ sirSystemResult_t SIRLifecycleTestSystem::shutdown( void ) noexcept
 	return m_eShutdownResult;
 }
 
-static bool matches( const sirLifecycleTrace_t &trace, const uint32_t *pExpected, uint32_t nCount ) noexcept
+static bool matches( const sirLifecycleTrace_t& trace, const uint32_t *pExpected, uint32_t nCount ) noexcept
 {
 	if ( trace.nCount != nCount ) {
 		return false;

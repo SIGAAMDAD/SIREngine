@@ -41,8 +41,8 @@ class SIRAsyncEventChannel
 public:
 	typedef typename SIREvent<TPayload, ListenerCapacity>::callback_t callback_t;
 	SIRAsyncEventChannel( void ) noexcept = default;
-	SIRAsyncEventChannel( const SIRAsyncEventChannel & ) = delete;
-	SIRAsyncEventChannel &operator=( const SIRAsyncEventChannel & ) = delete;
+	SIRAsyncEventChannel( const SIRAsyncEventChannel& ) = delete;
+	SIRAsyncEventChannel& operator=( const SIRAsyncEventChannel& ) = delete;
 
 	sirSubscriptionHandle_t subscribe( void *pContext, callback_t pCallback ) noexcept
 	{
@@ -64,7 +64,7 @@ public:
 		}
 		return bRemoved;
 	}
-	sirEventEnqueueStatus_t tryPublish( const TPayload &payload ) noexcept
+	sirEventEnqueueStatus_t tryPublish( const TPayload& payload ) noexcept
 	{
 		if constexpr ( FilterUnobserved ) {
 			if ( !m_bObserved.load( SIR_MEMORY_ORDER_ACQUIRE ) ) {
@@ -84,7 +84,7 @@ public:
 	}
 	uint32_t pump( uint32_t nBudget = UINT32_MAX ) noexcept
 	{
-		return m_Ring.drainBatch( [this]( const TPayload &payload ) noexcept { m_Event.publish( payload ); }, nBudget );
+		return m_Ring.drainBatch( [this]( const TPayload& payload ) noexcept { m_Event.publish( payload ); }, nBudget );
 	}
 	void stop( void ) noexcept
 	{

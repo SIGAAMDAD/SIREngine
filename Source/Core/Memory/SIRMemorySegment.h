@@ -34,8 +34,8 @@ class SIRMemorySegment
 {
 public:
 	SIRMemorySegment( void );
-	SIRMemorySegment( const SIRMemorySegment & ) = delete;
-	SIRMemorySegment &operator=( const SIRMemorySegment & ) = delete;
+	SIRMemorySegment( const SIRMemorySegment& ) = delete;
+	SIRMemorySegment& operator=( const SIRMemorySegment& ) = delete;
 
 	void *getBase( void ) const;
 	const char *getName( void ) const;
