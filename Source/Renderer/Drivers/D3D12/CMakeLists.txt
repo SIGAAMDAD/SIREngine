@@ -14,6 +14,7 @@ add_library(SIRD3D12 STATIC
     SIRD3D12Memory.cpp
     SIRD3D12Resources.cpp
     SIRD3D12Pipelines.cpp
+    SIRD3D12Commands.cpp
     SIRD3D12Transfers.cpp
     SIRD3D12ComputeKernel.cpp
     SIRD3D12GraphicsKernel.cpp

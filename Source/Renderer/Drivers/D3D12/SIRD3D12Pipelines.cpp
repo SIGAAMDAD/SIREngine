@@ -318,6 +318,32 @@ sirD3D12PipelineSlot_t *SIRD3D12Pipelines::findSlot( sirGraphicsHandle_t hPipeli
 	return &slot;
 }
 
+const sirD3D12PipelineSlot_t *SIRD3D12Pipelines::querySlot( sirGraphicsHandle_t hPipeline ) noexcept
+{
+	return findSlot( hPipeline );
+}
+
+sirGraphicsResult_t SIRD3D12Pipelines::retainCommandReference( sirGraphicsHandle_t hPipeline ) noexcept
+{
+	sirD3D12PipelineSlot_t *pSlot = findSlot( hPipeline );
+	if ( pSlot == nullptr ) {
+		return SIR_GRAPHICS_INVALID_HANDLE;
+	}
+	if ( pSlot->nCommandReferences == UINT32_MAX ) {
+		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
+	}
+	++pSlot->nCommandReferences;
+	return SIR_GRAPHICS_SUCCESS;
+}
+
+void SIRD3D12Pipelines::releaseCommandReference( sirGraphicsHandle_t hPipeline ) noexcept
+{
+	sirD3D12PipelineSlot_t *pSlot = findSlot( hPipeline );
+	if ( pSlot != nullptr && pSlot->nCommandReferences != 0 ) {
+		--pSlot->nCommandReferences;
+	}
+}
+
 void SIRD3D12Pipelines::collectRetired( void ) noexcept
 {
 	if ( m_pNative == nullptr ) {
@@ -538,6 +564,9 @@ sirGraphicsResult_t SIRD3D12Pipelines::retirePipeline( sirGraphicsHandle_t hPipe
 	native.nGraphicsFence = completion.szQueueValues[SIR_GRAPHICS_QUEUE_DIRECT];
 	native.nComputeFence = completion.szQueueValues[SIR_GRAPHICS_QUEUE_COMPUTE];
 	native.nCopyFence = completion.szQueueValues[SIR_GRAPHICS_QUEUE_COPY];
+	if ( pSlot->nCommandReferences != 0 ) {
+		return SIR_GRAPHICS_BUSY;
+	}
 	bool bCompleted = false;
 	if ( !m_pNative->pollCompletionSet( native, &bCompleted ) ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
