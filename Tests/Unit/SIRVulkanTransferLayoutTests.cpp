@@ -20,14 +20,11 @@ of merchantability, fitness for a particular purpose and noninfringement.
 int main( void )
 {
 	sirVulkanFormatBlock_t block = {};
-	if ( !sirVulkanGetFormatBlock( VK_FORMAT_R8_UNORM, &block ) || block.nBlockWidth != 1 ||
-	     block.nBlockHeight != 1 || block.nBytesPerBlock != 1 ||
-	     !sirVulkanGetFormatBlock( VK_FORMAT_R16G16B16A16_SFLOAT, &block ) || block.nBytesPerBlock != 8 ||
-	     !sirVulkanGetFormatBlock( VK_FORMAT_BC1_RGBA_UNORM_BLOCK, &block ) || block.nBlockWidth != 4 ||
-	     block.nBlockHeight != 4 || block.nBytesPerBlock != 8 ||
-	     !sirVulkanGetFormatBlock( VK_FORMAT_BC7_UNORM_BLOCK, &block ) || block.nBytesPerBlock != 16 ||
-	     sirVulkanGetFormatBlock( VK_FORMAT_D32_SFLOAT, &block ) ||
-	     sirVulkanGetFormatBlock( VK_FORMAT_R8_UNORM, nullptr ) ) {
+	if ( !sirVulkanGetFormatBlock( VK_FORMAT_R8_UNORM, &block ) || block.nBlockWidth != 1 || block.nBlockHeight != 1 ||
+	     block.nBytesPerBlock != 1 || !sirVulkanGetFormatBlock( VK_FORMAT_R16G16B16A16_SFLOAT, &block ) || block.nBytesPerBlock != 8 ||
+	     !sirVulkanGetFormatBlock( VK_FORMAT_BC1_RGBA_UNORM_BLOCK, &block ) || block.nBlockWidth != 4 || block.nBlockHeight != 4 ||
+	     block.nBytesPerBlock != 8 || !sirVulkanGetFormatBlock( VK_FORMAT_BC7_UNORM_BLOCK, &block ) || block.nBytesPerBlock != 16 ||
+	     sirVulkanGetFormatBlock( VK_FORMAT_D32_SFLOAT, &block ) || sirVulkanGetFormatBlock( VK_FORMAT_R8_UNORM, nullptr ) ) {
 		return 1;
 	}
 	sirVulkanImage_t image = {};
