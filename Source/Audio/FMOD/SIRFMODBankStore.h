@@ -107,6 +107,7 @@ public:
 	sirAudioResult_t shutdown( void ) noexcept;
 	bool isReady( void ) const noexcept;
 	uint32_t getLoadedBankCount( void ) const noexcept;
+	bool hasLoadedBank( uint64_t nPackageId ) const noexcept;
 	uint32_t getBoundEventCount( void ) const noexcept;
 	int32_t getLastNativeResult( void ) const noexcept;
 };

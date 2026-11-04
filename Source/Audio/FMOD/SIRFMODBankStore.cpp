@@ -322,6 +322,12 @@ sirAudioResult_t SIRFMODBankStore::shutdown( void ) noexcept
 	return SIR_AUDIO_OK;
 }
 
+bool SIRFMODBankStore::hasLoadedBank( uint64_t nPackageId ) const noexcept
+{
+	uint32_t iBank = 0;
+	return isReady() && findBank( nPackageId, iBank ) && m_pBanks[iBank].bUsable != 0;
+}
+
 uint32_t SIRFMODBankStore::getLoadedBankCount( void ) const noexcept
 {
 	return m_nBankCount;
