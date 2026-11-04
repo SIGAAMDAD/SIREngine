@@ -107,3 +107,8 @@ add_test(NAME scripting.language.cooker-smoke
     COMMAND $<TARGET_FILE:SIRLangCooker>
         "${CMAKE_CURRENT_LIST_DIR}/Fixtures/SIRLang/echo.sir"
         "${CMAKE_CURRENT_BINARY_DIR}/sirlang-smoke.sirbc" 101 201 301 401)
+
+add_executable(SIRLangGraphVMBackendTests SIRLangGraphVMBackendTests.cpp)
+target_link_libraries(SIRLangGraphVMBackendTests PRIVATE SIR::Scripting)
+add_test(NAME scripting.language.graphvm-backend COMMAND SIRLangGraphVMBackendTests)
+sir_configure_owned_target(SIRLangGraphVMBackendTests)
