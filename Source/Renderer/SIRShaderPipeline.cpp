@@ -80,7 +80,7 @@ sirGraphicsResult_t sirShaderGetBackendFormat( sirGraphicsBackend_t eBackend, si
 	}
 }
 
-sirGraphicsResult_t sirShaderBuildCacheKey( const sirShaderCacheDescriptor_t &desc, sirShaderCacheKey_t *pKey ) noexcept
+sirGraphicsResult_t sirShaderBuildCacheKey( const sirShaderCacheDescriptor_t& desc, sirShaderCacheKey_t *pKey ) noexcept
 {
 	if ( pKey == nullptr ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
@@ -117,7 +117,7 @@ sirGraphicsResult_t sirShaderBuildCacheKey( const sirShaderCacheDescriptor_t &de
 	return SIR_GRAPHICS_SUCCESS;
 }
 
-sirGraphicsResult_t sirShaderValidateVariant( const sirShaderVariant_t &variant ) noexcept
+sirGraphicsResult_t sirShaderValidateVariant( const sirShaderVariant_t& variant ) noexcept
 {
 	sirGraphicsShaderFormat_t eExpected = SIR_GRAPHICS_SHADER_DXIL;
 	if ( sirShaderGetBackendFormat( variant.eBackend, &eExpected ) != SIR_GRAPHICS_SUCCESS ) {
@@ -146,7 +146,7 @@ sirGraphicsResult_t sirShaderValidateVariant( const sirShaderVariant_t &variant 
 }
 
 sirGraphicsResult_t sirShaderSelectVariant( const sirShaderVariant_t *pVariants, uint32_t nVariantCount,
-                                            const sirShaderSelection_t &selection, const sirShaderVariant_t **ppVariant ) noexcept
+                                            const sirShaderSelection_t& selection, const sirShaderVariant_t **ppVariant ) noexcept
 {
 	if ( ppVariant == nullptr ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
@@ -166,7 +166,7 @@ sirGraphicsResult_t sirShaderSelectVariant( const sirShaderVariant_t *pVariants,
 
 	uint32_t nBestScore = 0;
 	for ( uint32_t iVariant = 0; iVariant < nVariantCount; ++iVariant ) {
-		const sirShaderVariant_t &variant = pVariants[iVariant];
+		const sirShaderVariant_t& variant = pVariants[iVariant];
 		const sirGraphicsResult_t eValidation = sirShaderValidateVariant( variant );
 		if ( eValidation != SIR_GRAPHICS_SUCCESS ) {
 			return eValidation;
@@ -201,7 +201,7 @@ sirGraphicsResult_t sirShaderSelectVariant( const sirShaderVariant_t *pVariants,
 	return *ppVariant != nullptr ? SIR_GRAPHICS_SUCCESS : SIR_GRAPHICS_UNSUPPORTED;
 }
 
-sirGraphicsResult_t sirShaderToGraphicsCode( const sirShaderVariant_t &variant, sirGraphicsShaderCode_t *pCode ) noexcept
+sirGraphicsResult_t sirShaderToGraphicsCode( const sirShaderVariant_t& variant, sirGraphicsShaderCode_t *pCode ) noexcept
 {
 	if ( pCode == nullptr ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
@@ -229,13 +229,13 @@ uint32_t SIRShaderWarmupQueue::getCapacity( void ) const noexcept
 	return s_nCapacity;
 }
 
-sirGraphicsResult_t SIRShaderWarmupQueue::push( const sirShaderCacheKey_t &key, uint32_t nPriority ) noexcept
+sirGraphicsResult_t SIRShaderWarmupQueue::push( const sirShaderCacheKey_t& key, uint32_t nPriority ) noexcept
 {
 	if ( key.nLow == 0 && key.nHigh == 0 ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	for ( uint32_t iItem = 0; iItem < m_nCount; ++iItem ) {
-		sirShaderWarmupItem_t &item = m_szItems[iItem];
+		sirShaderWarmupItem_t& item = m_szItems[iItem];
 		if ( item.key.nLow == key.nLow && item.key.nHigh == key.nHigh ) {
 			if ( nPriority > item.nPriority ) {
 				item.nPriority = nPriority;
