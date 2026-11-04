@@ -310,6 +310,10 @@ SIREditorSceneDocument &SIREditorSceneWorkspace::getDocument( void ) noexcept
 {
 	return m_Document;
 }
+const SIREditorSceneDocument &SIREditorSceneWorkspace::getDocument( void ) const noexcept
+{
+	return m_Document;
+}
 SIREditorHierarchyModel &SIREditorSceneWorkspace::getHierarchy( void ) noexcept
 {
 	return m_Hierarchy;

@@ -14,6 +14,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Editor/Host/SIREditorSceneWorkspace.h>
+#include <Editor/Host/SIREditorSceneJSON.h>
 
 #include <Core/Memory/SIRMemoryManager.h>
 #include <Core/Memory/SIRMemorySegment.h>
@@ -24,6 +25,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 static void sirEditorPrintHelp( void ) noexcept
 {
 	puts( "Usage: SIREditor --inspect-scene <path.tscn>" );
+	puts( "       SIREditor --inspect-scene-json <path.tscn>" );
 	puts( "       SIREditor --version" );
 	puts( "       SIREditor --help" );
 	puts( "Scene inspection is read-only; serialized properties remain owned by Godot." );
@@ -69,7 +71,7 @@ static void sirEditorPrintResources( const SIREditorSceneWorkspace &workspace ) 
 	}
 }
 
-static int sirEditorInspectScene( const char *pszPath ) noexcept
+static int sirEditorInspectScene( const char *pszPath, bool bJSON ) noexcept
 {
 	constexpr uint64_t N_MIB = UINT64_C( 1024 ) * 1024;
 	SIRMemoryManager memory;
@@ -95,6 +97,10 @@ static int sirEditorInspectScene( const char *pszPath ) noexcept
 		return 2;
 	}
 
+	if ( bJSON ) {
+		return sirEditorWriteSceneJSON( workspace, pszPath, stdout ) ? 0 : 4;
+	}
+
 	printf( "SIREditor scene: %s\n", pszPath );
 	printf( "Nodes: %u\n", workspace.getSceneIndex().nNodeCount );
 	printf( "Resources: %u\n", workspace.getResourceIndex().nCount );
@@ -116,7 +122,10 @@ int main( int nArgs, char **pszArgs )
 		return 0;
 	}
 	if ( nArgs == 3 && strcmp( pszArgs[1], "--inspect-scene" ) == 0 ) {
-		return sirEditorInspectScene( pszArgs[2] );
+		return sirEditorInspectScene( pszArgs[2], false );
+	}
+	if ( nArgs == 3 && strcmp( pszArgs[1], "--inspect-scene-json" ) == 0 ) {
+		return sirEditorInspectScene( pszArgs[2], true );
 	}
 	sirEditorPrintHelp();
 	return 2;

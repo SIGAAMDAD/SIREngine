@@ -4,7 +4,8 @@ add_library(SIREditorAuthoring STATIC
     Scene/SIREditorTextScene.cpp
     Widgets/SIREditorVirtualList.cpp
     Widgets/SIREditorHierarchyModel.cpp
-    Host/SIREditorSceneWorkspace.cpp)
+    Host/SIREditorSceneWorkspace.cpp
+    Host/SIREditorSceneJSON.cpp)
 add_library(SIR::EditorAuthoring ALIAS SIREditorAuthoring)
 target_compile_features(SIREditorAuthoring PUBLIC cxx_std_17)
 target_include_directories(SIREditorAuthoring PUBLIC "${PROJECT_SOURCE_DIR}/Source" "${PROJECT_SOURCE_DIR}/Build/CMake")
