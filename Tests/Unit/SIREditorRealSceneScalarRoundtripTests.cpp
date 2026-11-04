@@ -49,7 +49,7 @@ static void sirTestRoundtripImport( SIREditorSceneWorkspace& workspace, const SI
 	discovery.nSourceBytes = workspace.getSourceBytes();
 	discovery.pMatchesAtom = sirTestRoundtripAtomName;
 	assert( sirEditorDiscoverScalarBindings( discovery, pOutCount ) == SIR_EDITOR_SCALAR_BRIDGE_OK );
-	assert( *pOutCount == 7 );
+	assert( *pOutCount == 8 );
 	discovery.pOutput = pBindings;
 	discovery.nOutputCapacity = 16;
 	assert( sirEditorDiscoverScalarBindings( discovery, pOutCount ) == SIR_EDITOR_SCALAR_BRIDGE_OK );
