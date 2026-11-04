@@ -161,9 +161,108 @@ static void testImmutableNativeBinding( void ) noexcept
 	assert( SIRLangInvokeNativeBinding( call, &output, ( void * )&context ) == SIR_LANG_VM_INVALID_CAPABILITY );
 }
 
+
+static void testNativeBytecodeThroughBackend( void ) noexcept
+{
+	SIRScriptBindingRegistry registry;
+	constexpr uint32_t TYPE_FLAGS = SIR_SCRIPT_TYPE_PLAIN_BYTES | SIR_SCRIPT_TYPE_NO_POINTERS;
+	assert( registry.registerType( { 10, sizeof( sirLangVMValue_t ), alignof( sirLangVMValue_t ), TYPE_FLAGS } ) == SIR_SCRIPT_OK );
+	assert( registry.registerType( { 11, sizeof( sirLangVMValue_t ), alignof( sirLangVMValue_t ), TYPE_FLAGS } ) == SIR_SCRIPT_OK );
+	assert( registry.registerFunction( { 999, 123, 10, 11, 0, 1, SIR_LANG_EFFECT_STATE_READ }, testNativeThunk, nullptr ) == SIR_SCRIPT_OK );
+	assert( registry.publish() == SIR_SCRIPT_OK );
+	const uint64_t nBindingDigest = registry.schemaFingerprint();
+
+	const sirLangCIRFunction_t function = { 81, 0, 3, 2, 0, 0, SIR_LANG_VALUE_U16 };
+	sirLangCIRInstruction_t szInstructions[] = {
+	    makeInstruction( SIR_LANG_OP_CONST, SIR_LANG_VALUE_U16, 0, 0 ),
+	    makeInstruction( SIR_LANG_OP_CALL_NATIVE, SIR_LANG_VALUE_U16, 1, 0 ),
+	    makeInstruction( SIR_LANG_OP_RETURN, SIR_LANG_VALUE_U16, UINT32_MAX, 1 )
+	};
+	szInstructions[0].nImmediate = 21;
+	szInstructions[1].iSecondSource = 1;
+	const uint32_t iCallArgument = 0;
+	const sirLangValueKind_t eParameter = SIR_LANG_VALUE_U16;
+	const sirLangCIRCapability_t capability = { 999, 123, 1, 0, SIR_LANG_EFFECT_STATE_READ, 0, 1, SIR_LANG_VALUE_U16 };
+	sirLangCIRProgram_t program = {};
+	program.pFunctions = &function;
+	program.nFunctionCount = 1;
+	program.pInstructions = szInstructions;
+	program.nInstructionCount = 3;
+	program.pParameterTypes = &eParameter;
+	program.nParameterTypeCount = 1;
+	program.pCallArguments = &iCallArgument;
+	program.nCallArgumentCount = 1;
+	program.pCapabilities = &capability;
+	program.nCapabilityCount = 1;
+	program.nSchemaId = 201;
+	program.nLayoutDigest = 301;
+	program.nBindingDigest = nBindingDigest;
+	program.nRevision = SIR_LANG_VM_VERSION;
+	assert( SIRLangVerifyCIR( &program ) == SIR_LANG_VM_OK );
+
+	uint8_t szBytecode[1024] = {};
+	uint32_t nBytecode = 0;
+	assert( SIRLangEncodeGraphVM( &program, szBytecode, sizeof( szBytecode ), &nBytecode ) == SIR_LANG_VM_OK );
+
+	sirLangCIRFunction_t szDecodedFunctions[2] = {};
+	sirLangCIRInstruction_t szDecodedInstructions[8] = {};
+	sirLangValueKind_t szDecodedParameters[4] = {};
+	uint32_t szDecodedArgs[4] = {};
+	sirLangGraphVMProgramSlot_t programs[1] = {};
+	programs[0].storage.pFunctions = szDecodedFunctions;
+	programs[0].storage.nFunctionCapacity = 2;
+	programs[0].storage.pInstructions = szDecodedInstructions;
+	programs[0].storage.nInstructionCapacity = 8;
+	programs[0].storage.pParameterTypes = szDecodedParameters;
+	programs[0].storage.nParameterTypeCapacity = 4;
+	programs[0].storage.pCallArguments = szDecodedArgs;
+	programs[0].storage.nCallArgumentCapacity = 4;
+	programs[0].storage.pCapabilities = &capability;
+	programs[0].storage.nCapabilityCount = 1;
+
+	sirLangGraphVMInstanceSlot_t instances[1] = {};
+	const sirLangNativeBindingContext_t nativeContext = { &registry, nBindingDigest, 0 };
+	sirLangGraphVMBackend_t backend = {};
+	backend.pPrograms = programs;
+	backend.nProgramCapacity = 1;
+	backend.pInstances = instances;
+	backend.nInstanceCapacity = 1;
+	backend.nFormatId = 77;
+	backend.nSchemaId = 201;
+	backend.nLayoutDigest = 301;
+	backend.nBindingDigest = nBindingDigest;
+	backend.nFuelPerInvoke = 32;
+	backend.pNativeCall = SIRLangInvokeNativeBinding;
+	backend.pNativeUser = ( void * )&nativeContext;
+
+	const sirScriptBackendAPI_t api = SIRLangGraphVMBackendAPI( &backend );
+	assert( api.pStart( api.pUser ) == SIR_SCRIPT_OK );
+	const sirScriptProgramView_t view = { 100, 1, 77, szBytecode, nBytecode, alignof( uint64_t ) };
+	uint64_t nProgramToken = 0;
+	assert( api.pLoadProgram( api.pUser, view, &nProgramToken ) == SIR_SCRIPT_OK );
+
+	uint64_t nInstanceToken = 0;
+	assert( api.pCreateInstance( api.pUser, nProgramToken, 50, &nInstanceToken ) == SIR_SCRIPT_OK );
+	assert( api.pInitializeInstance( api.pUser, nInstanceToken ) == SIR_SCRIPT_OK );
+	sirLangVMValue_t output = {};
+	const sirScriptInvokeRequest_t call = {
+	    nInstanceToken, 81, { nullptr, 0, 1 }, { &output, sizeof( output ), alignof( sirLangVMValue_t ) }
+	};
+	assert( api.pInvoke( api.pUser, &call ) == SIR_SCRIPT_OK );
+	assert( output.eType == SIR_LANG_VALUE_U16 && output.nBits == 22 );
+
+	backend.pNativeCall = nullptr;
+	assert( api.pInvoke( api.pUser, &call ) == SIR_SCRIPT_BACKEND_FAILURE );
+	api.pShutdownInstance( api.pUser, nInstanceToken );
+	api.pDestroyInstance( api.pUser, nInstanceToken );
+	api.pUnloadProgram( api.pUser, nProgramToken );
+	api.pStop( api.pUser );
+}
+
 int main( void )
 {
 	testBackendLifecycle();
 	testImmutableNativeBinding();
+	testNativeBytecodeThroughBackend();
 	return 0;
 }
