@@ -97,6 +97,12 @@ target_link_libraries(SIRContainerHeapAdapterTests PRIVATE SIR::Core)
 add_test(NAME core.containers.heap-adapter COMMAND SIRContainerHeapAdapterTests)
 sir_configure_owned_target(SIRContainerHeapAdapterTests)
 
+add_executable(SIRInputActionTests SIRInputActionTests.cpp)
+target_link_libraries(SIRInputActionTests PRIVATE SIR::Core)
+add_test(NAME core.platform.input.actions COMMAND SIRInputActionTests)
+set_tests_properties(core.platform.input.actions PROPERTIES LABELS "core;input;actions" TIMEOUT 60)
+sir_configure_owned_target(SIRInputActionTests)
+
 add_executable(SIRInputTests SIRInputTests.cpp)
 target_link_libraries(SIRInputTests PRIVATE SIR::Core)
 add_test(NAME core.platform.input COMMAND SIRInputTests)
