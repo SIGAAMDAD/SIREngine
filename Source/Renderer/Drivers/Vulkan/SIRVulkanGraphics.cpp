@@ -64,6 +64,34 @@ sirGraphicsResult_t sirVulkanDescribeAdapter( uint32_t nAdapterIndex, const sirV
 	return SIR_GRAPHICS_SUCCESS;
 }
 
+// Validate the bounded native batch without requiring a Vulkan device.
+sirGraphicsResult_t sirVulkanValidateBatchCounts( const uint32_t *pCounts, uint32_t nListCount, uint32_t *pTotal ) noexcept
+{
+	if ( pTotal == nullptr ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	*pTotal = 0;
+	if ( pCounts == nullptr || nListCount == 0 ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	if ( nListCount > SIR_VULKAN_TRANSFER_SLOT_COUNT ) {
+		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
+	}
+	uint32_t nTotal = 0;
+	for ( uint32_t iList = 0; iList < nListCount; ++iList ) {
+		const uint32_t nCount = pCounts[iList];
+		if ( nCount == 0 ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
+		if ( nCount > SIR_VULKAN_COPY_BATCH_CAPACITY - nTotal ) {
+			return SIR_GRAPHICS_CAPACITY_EXCEEDED;
+		}
+		nTotal += nCount;
+	}
+	*pTotal = nTotal;
+	return SIR_GRAPHICS_SUCCESS;
+}
+
 void SIRVulkanCommandList::prepare( SIRVulkanRenderingDevice *pOwner ) noexcept
 {
 	m_pOwner = pOwner;
@@ -471,7 +499,7 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::submit( sirGraphicsQueue_t eQueue,
 	if ( eValidation != SIR_GRAPHICS_SUCCESS ) {
 		return eValidation;
 	}
-	if ( eQueue != SIR_GRAPHICS_QUEUE_DIRECT || submission.nCommandListCount != 1 || submission.nAcquisitionCount != 0 ) {
+	if ( eQueue != SIR_GRAPHICS_QUEUE_DIRECT || submission.nAcquisitionCount != 0 ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
 	for ( uint32_t iWait = 0; iWait < submission.nWaitCount; ++iWait ) {
@@ -480,153 +508,179 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::submit( sirGraphicsQueue_t eQueue,
 			return SIR_GRAPHICS_UNSUPPORTED;
 		}
 	}
-	SIRVulkanCommandList *pList = nullptr;
-	for ( uint32_t iSlot = 0; iSlot < SIR_VULKAN_TRANSFER_SLOT_COUNT; ++iSlot ) {
-		if ( submission.ppCommandLists[0] == &m_szCommands[iSlot] ) {
-			pList = &m_szCommands[iSlot];
-			break;
-		}
+	if ( submission.nCommandListCount > SIR_VULKAN_TRANSFER_SLOT_COUNT ) {
+		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
 	}
-	if ( pList == nullptr || pList->m_eState != SIR_VULKAN_COMMAND_CLOSED || pList->m_nOperationCount == 0 ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	SIRVulkanCommandList *szLists[SIR_VULKAN_TRANSFER_SLOT_COUNT] = {};
+	uint32_t szCounts[SIR_VULKAN_TRANSFER_SLOT_COUNT] = {};
+	for ( uint32_t iList = 0; iList < submission.nCommandListCount; ++iList ) {
+		SIRVulkanCommandList *pList = nullptr;
+		for ( uint32_t iSlot = 0; iSlot < SIR_VULKAN_TRANSFER_SLOT_COUNT; ++iSlot ) {
+			if ( submission.ppCommandLists[iList] == &m_szCommands[iSlot] ) {
+				pList = &m_szCommands[iSlot];
+				break;
+			}
+		}
+		if ( pList == nullptr || pList->m_eState != SIR_VULKAN_COMMAND_CLOSED || pList->m_nOperationCount == 0 ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
+		for ( uint32_t iEarlier = 0; iEarlier < iList; ++iEarlier ) {
+			if ( szLists[iEarlier] == pList ) {
+				return SIR_GRAPHICS_INVALID_ARGUMENT;
+			}
+		}
+		szLists[iList] = pList;
+		szCounts[iList] = pList->m_nOperationCount;
+	}
+	uint32_t nNativeCount = 0;
+	const sirGraphicsResult_t eBatch = sirVulkanValidateBatchCounts( szCounts, submission.nCommandListCount, &nNativeCount );
+	if ( eBatch != SIR_GRAPHICS_SUCCESS ) {
+		return eBatch;
 	}
 	sirVulkanRecordedCommand_t commands[SIR_VULKAN_COPY_BATCH_CAPACITY] = {};
 	sirVulkanImage_t *szOriginals[SIR_VULKAN_COPY_BATCH_CAPACITY] = {};
 	sirVulkanImage_t szShadows[SIR_VULKAN_COPY_BATCH_CAPACITY] = {};
 	uint32_t nImages = 0;
-	for ( uint32_t iCommand = 0; iCommand < pList->m_nOperationCount; ++iCommand ) {
-		const sirVulkanGraphicsOperation_t &op = pList->m_szOperations[iCommand];
-		sirVulkanRecordedCommand_t &nativeOp = commands[iCommand];
-		if ( op.eKind == SIR_VULKAN_GRAPHICS_BUFFER_COPY ) {
-			sirVulkanGraphicsBufferSlot_t *pSrc = resolveBuffer( op.hSource );
-			sirVulkanGraphicsBufferSlot_t *pDst = resolveBuffer( op.hDestination );
-			if ( pSrc == nullptr || pDst == nullptr ) {
+	uint32_t nRecorded = 0;
+	for ( uint32_t iList = 0; iList < submission.nCommandListCount; ++iList ) {
+		const SIRVulkanCommandList *pList = szLists[iList];
+		for ( uint32_t iCommand = 0; iCommand < pList->m_nOperationCount; ++iCommand ) {
+			const sirVulkanGraphicsOperation_t &op = pList->m_szOperations[iCommand];
+			sirVulkanRecordedCommand_t &nativeOp = commands[nRecorded++];
+			if ( op.eKind == SIR_VULKAN_GRAPHICS_BUFFER_COPY ) {
+				sirVulkanGraphicsBufferSlot_t *pSrc = resolveBuffer( op.hSource );
+				sirVulkanGraphicsBufferSlot_t *pDst = resolveBuffer( op.hDestination );
+				if ( pSrc == nullptr || pDst == nullptr ) {
+					return SIR_GRAPHICS_INVALID_HANDLE;
+				}
+				if ( pSrc->pMapped != nullptr || pDst->pMapped != nullptr ) {
+					return SIR_GRAPHICS_BUSY;
+				}
+				nativeOp.eKind = SIR_VULKAN_RECORDED_BUFFER_COPY;
+				nativeOp.bufferCopy = { &pSrc->native, &pDst->native, op.nSourceOffset, op.nDestinationOffset, op.nBytes };
+				continue;
+			}
+			if ( op.eKind == SIR_VULKAN_GRAPHICS_COMPUTE_DISPATCH ) {
+				const sirGraphicsHandle_t hPipeline = op.hPipeline;
+				if ( hPipeline.eType != SIR_GRAPHICS_HANDLE_PIPELINE || hPipeline.nDeviceGeneration != m_nDeviceGeneration ||
+				     hPipeline.nSlot >= SIR_VULKAN_PIPELINE_CAPACITY ) {
+					return SIR_GRAPHICS_INVALID_HANDLE;
+				}
+				sirVulkanGraphicsPipelineSlot_t *pPipeline = &m_szPipelines[hPipeline.nSlot];
+				if ( !pPipeline->bActive || pPipeline->nGeneration != hPipeline.nGeneration ) {
+					return SIR_GRAPHICS_INVALID_HANDLE;
+				}
+				nativeOp.eKind = SIR_VULKAN_RECORDED_COMPUTE_DISPATCH;
+				nativeOp.pPipeline = &pPipeline->native;
+				nativeOp.nGroupCountX = op.nGroupCountX;
+				nativeOp.nGroupCountY = op.nGroupCountY;
+				nativeOp.nGroupCountZ = op.nGroupCountZ;
+				continue;
+			}
+			if ( op.eKind == SIR_VULKAN_GRAPHICS_BUFFER_BARRIER ) {
+				sirVulkanGraphicsBufferSlot_t *pBuffer = resolveBuffer( op.barrier.hResource );
+				if ( pBuffer == nullptr ) {
+					return SIR_GRAPHICS_INVALID_HANDLE;
+				}
+				if ( pBuffer->pMapped != nullptr ) {
+					return SIR_GRAPHICS_BUSY;
+				}
+				nativeOp.eKind = SIR_VULKAN_RECORDED_BUFFER_BARRIER;
+				nativeOp.pBuffer = &pBuffer->native;
+				const sirGraphicsResult_t ePlan = sirVulkanPlanBufferBarrier( op.barrier, &pBuffer->native, &nativeOp.bufferBarrier );
+				if ( ePlan != SIR_GRAPHICS_SUCCESS ) {
+					return ePlan;
+				}
+				continue;
+			}
+			const sirGraphicsHandle_t hTexture = op.eKind == SIR_VULKAN_GRAPHICS_TEXTURE_COPY ? op.textureCopy.hTexture : op.barrier.hResource;
+			if ( hTexture.eType != SIR_GRAPHICS_HANDLE_TEXTURE || hTexture.nDeviceGeneration != m_nDeviceGeneration ||
+			     hTexture.nSlot >= SIR_VULKAN_TEXTURE_CAPACITY ) {
 				return SIR_GRAPHICS_INVALID_HANDLE;
 			}
-			if ( pSrc->pMapped != nullptr || pDst->pMapped != nullptr ) {
-				return SIR_GRAPHICS_BUSY;
-			}
-			nativeOp.eKind = SIR_VULKAN_RECORDED_BUFFER_COPY;
-			nativeOp.bufferCopy = { &pSrc->native, &pDst->native, op.nSourceOffset, op.nDestinationOffset, op.nBytes };
-			continue;
-		}
-		if ( op.eKind == SIR_VULKAN_GRAPHICS_COMPUTE_DISPATCH ) {
-			const sirGraphicsHandle_t hPipeline = op.hPipeline;
-			if ( hPipeline.eType != SIR_GRAPHICS_HANDLE_PIPELINE || hPipeline.nDeviceGeneration != m_nDeviceGeneration ||
-			     hPipeline.nSlot >= SIR_VULKAN_PIPELINE_CAPACITY ) {
+			sirVulkanGraphicsImageSlot_t *pImage = &m_szImages[hTexture.nSlot];
+			if ( !pImage->bActive || pImage->nGeneration != hTexture.nGeneration ) {
 				return SIR_GRAPHICS_INVALID_HANDLE;
 			}
-			sirVulkanGraphicsPipelineSlot_t *pPipeline = &m_szPipelines[hPipeline.nSlot];
-			if ( !pPipeline->bActive || pPipeline->nGeneration != hPipeline.nGeneration ) {
-				return SIR_GRAPHICS_INVALID_HANDLE;
+			sirVulkanImage_t *pShadow = nullptr;
+			for ( uint32_t iImage = 0; iImage < nImages; ++iImage ) {
+				if ( szOriginals[iImage] == &pImage->native ) {
+					pShadow = &szShadows[iImage];
+					break;
+				}
 			}
-			nativeOp.eKind = SIR_VULKAN_RECORDED_COMPUTE_DISPATCH;
-			nativeOp.pPipeline = &pPipeline->native;
-			nativeOp.nGroupCountX = op.nGroupCountX;
-			nativeOp.nGroupCountY = op.nGroupCountY;
-			nativeOp.nGroupCountZ = op.nGroupCountZ;
-			continue;
-		}
-		if ( op.eKind == SIR_VULKAN_GRAPHICS_BUFFER_BARRIER ) {
-			sirVulkanGraphicsBufferSlot_t *pBuffer = resolveBuffer( op.barrier.hResource );
-			if ( pBuffer == nullptr ) {
-				return SIR_GRAPHICS_INVALID_HANDLE;
+			if ( pShadow == nullptr ) {
+				if ( nImages >= SIR_VULKAN_COPY_BATCH_CAPACITY ) {
+					return SIR_GRAPHICS_CAPACITY_EXCEEDED;
+				}
+				szOriginals[nImages] = &pImage->native;
+				szShadows[nImages] = pImage->native;
+				pShadow = &szShadows[nImages++];
 			}
-			if ( pBuffer->pMapped != nullptr ) {
-				return SIR_GRAPHICS_BUSY;
-			}
-			nativeOp.eKind = SIR_VULKAN_RECORDED_BUFFER_BARRIER;
-			nativeOp.pBuffer = &pBuffer->native;
-			const sirGraphicsResult_t ePlan = sirVulkanPlanBufferBarrier( op.barrier, &pBuffer->native, &nativeOp.bufferBarrier );
-			if ( ePlan != SIR_GRAPHICS_SUCCESS ) {
-				return ePlan;
-			}
-			continue;
-		}
-		const sirGraphicsHandle_t hTexture = op.eKind == SIR_VULKAN_GRAPHICS_TEXTURE_COPY ? op.textureCopy.hTexture : op.barrier.hResource;
-		if ( hTexture.eType != SIR_GRAPHICS_HANDLE_TEXTURE || hTexture.nDeviceGeneration != m_nDeviceGeneration ||
-		     hTexture.nSlot >= SIR_VULKAN_TEXTURE_CAPACITY ) {
-			return SIR_GRAPHICS_INVALID_HANDLE;
-		}
-		sirVulkanGraphicsImageSlot_t *pImage = &m_szImages[hTexture.nSlot];
-		if ( !pImage->bActive || pImage->nGeneration != hTexture.nGeneration ) {
-			return SIR_GRAPHICS_INVALID_HANDLE;
-		}
-		sirVulkanImage_t *pShadow = nullptr;
-		for ( uint32_t iImage = 0; iImage < nImages; ++iImage ) {
-			if ( szOriginals[iImage] == &pImage->native ) {
-				pShadow = &szShadows[iImage];
-				break;
-			}
-		}
-		if ( pShadow == nullptr ) {
-			if ( nImages >= SIR_VULKAN_COPY_BATCH_CAPACITY ) {
-				return SIR_GRAPHICS_CAPACITY_EXCEEDED;
-			}
-			szOriginals[nImages] = &pImage->native;
-			szShadows[nImages] = pImage->native;
-			pShadow = &szShadows[nImages++];
-		}
-		nativeOp.pImage = &pImage->native;
-		if ( op.eKind == SIR_VULKAN_GRAPHICS_TEXTURE_COPY ) {
-			const sirGraphicsBufferTextureCopy_t &copy = op.textureCopy;
-			sirVulkanGraphicsBufferSlot_t *pBuffer = resolveBuffer( copy.hBuffer );
-			if ( pBuffer == nullptr ) {
-				return SIR_GRAPHICS_INVALID_HANDLE;
-			}
-			if ( pBuffer->pMapped != nullptr ) {
-				return SIR_GRAPHICS_BUSY;
-			}
-			sirVulkanFormatBlock_t block = {};
-			if ( !sirVulkanGetFormatBlock( pImage->native.eFormat, &block ) ||
-			     ( copy.nBytesPerRow != 0 && copy.nBytesPerRow % block.nBytesPerBlock != 0 ) ) {
+			nativeOp.pImage = &pImage->native;
+			if ( op.eKind == SIR_VULKAN_GRAPHICS_TEXTURE_COPY ) {
+				const sirGraphicsBufferTextureCopy_t &copy = op.textureCopy;
+				sirVulkanGraphicsBufferSlot_t *pBuffer = resolveBuffer( copy.hBuffer );
+				if ( pBuffer == nullptr ) {
+					return SIR_GRAPHICS_INVALID_HANDLE;
+				}
+				if ( pBuffer->pMapped != nullptr ) {
+					return SIR_GRAPHICS_BUSY;
+				}
+				sirVulkanFormatBlock_t block = {};
+				if ( !sirVulkanGetFormatBlock( pImage->native.eFormat, &block ) ||
+				     ( copy.nBytesPerRow != 0 && copy.nBytesPerRow % block.nBytesPerBlock != 0 ) ) {
+					return SIR_GRAPHICS_INVALID_ARGUMENT;
+				}
+				sirVulkanTextureTransfer_t transfer = {};
+				transfer.nBufferOffset = copy.nBufferOffset;
+				transfer.nBufferRowLength = copy.nBytesPerRow == 0 ? 0 : ( copy.nBytesPerRow / block.nBytesPerBlock ) * block.nBlockWidth;
+				transfer.nBufferImageHeight = copy.nRowsPerImage;
+				transfer.nMip = copy.nMip;
+				transfer.nLayer = copy.nLayer;
+				transfer.offset = { ( int32_t )copy.nX, ( int32_t )copy.nY, 0 };
+				transfer.extent = { copy.nWidth, copy.nHeight, 1 };
+				transfer.bBufferToImage = copy.bBufferToTexture;
+				nativeOp.eKind = SIR_VULKAN_RECORDED_TEXTURE_COPY;
+				nativeOp.pBuffer = &pBuffer->native;
+				nativeOp.textureCopy = transfer;
+				const sirVulkanResult_t eCheck = sirVulkanValidateTextureTransfer( nativeOp.pBuffer, pShadow, transfer );
+				if ( eCheck != SIR_VULKAN_SUCCESS ) {
+					return sirVulkanToGraphicsResult( eCheck );
+				}
+				if ( transfer.bBufferToImage ) {
+					const uint32_t nIndex = transfer.nLayer * pShadow->nMips + transfer.nMip;
+					pShadow->szUploadedSubresources[nIndex / 64] |= 1ULL << ( nIndex % 64 );
+					const VkImageLayout eFinal = ( pShadow->nUsage & VK_IMAGE_USAGE_STORAGE_BIT ) != 0 ? VK_IMAGE_LAYOUT_GENERAL
+					                             : ( pShadow->nUsage & VK_IMAGE_USAGE_SAMPLED_BIT ) != 0
+					                                 ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+					                                 : VK_IMAGE_LAYOUT_GENERAL;
+					( void )sirVulkanSetSubresourceLayout( pShadow, transfer.nMip, transfer.nLayer, eFinal );
+				}
+			} else if ( op.eKind == SIR_VULKAN_GRAPHICS_IMAGE_BARRIER ) {
+				nativeOp.eKind = SIR_VULKAN_RECORDED_IMAGE_BARRIER;
+				const sirGraphicsResult_t ePlan = sirVulkanPlanImageBarrier( op.barrier, pShadow, &nativeOp.imageBarrier );
+				if ( ePlan != SIR_GRAPHICS_SUCCESS ) {
+					return ePlan;
+				}
+				( void )sirVulkanSetSubresourceLayout( pShadow, nativeOp.imageBarrier.nMip, nativeOp.imageBarrier.nLayer,
+				                                       nativeOp.imageBarrier.eAfter );
+			} else {
 				return SIR_GRAPHICS_INVALID_ARGUMENT;
 			}
-			sirVulkanTextureTransfer_t transfer = {};
-			transfer.nBufferOffset = copy.nBufferOffset;
-			transfer.nBufferRowLength = copy.nBytesPerRow == 0 ? 0 : ( copy.nBytesPerRow / block.nBytesPerBlock ) * block.nBlockWidth;
-			transfer.nBufferImageHeight = copy.nRowsPerImage;
-			transfer.nMip = copy.nMip;
-			transfer.nLayer = copy.nLayer;
-			transfer.offset = { ( int32_t )copy.nX, ( int32_t )copy.nY, 0 };
-			transfer.extent = { copy.nWidth, copy.nHeight, 1 };
-			transfer.bBufferToImage = copy.bBufferToTexture;
-			nativeOp.eKind = SIR_VULKAN_RECORDED_TEXTURE_COPY;
-			nativeOp.pBuffer = &pBuffer->native;
-			nativeOp.textureCopy = transfer;
-			const sirVulkanResult_t eCheck = sirVulkanValidateTextureTransfer( nativeOp.pBuffer, pShadow, transfer );
-			if ( eCheck != SIR_VULKAN_SUCCESS ) {
-				return sirVulkanToGraphicsResult( eCheck );
-			}
-			if ( transfer.bBufferToImage ) {
-				const uint32_t nIndex = transfer.nLayer * pShadow->nMips + transfer.nMip;
-				pShadow->szUploadedSubresources[nIndex / 64] |= 1ULL << ( nIndex % 64 );
-				const VkImageLayout eFinal = ( pShadow->nUsage & VK_IMAGE_USAGE_STORAGE_BIT ) != 0 ? VK_IMAGE_LAYOUT_GENERAL
-				                             : ( pShadow->nUsage & VK_IMAGE_USAGE_SAMPLED_BIT ) != 0
-				                                 ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-				                                 : VK_IMAGE_LAYOUT_GENERAL;
-				( void )sirVulkanSetSubresourceLayout( pShadow, transfer.nMip, transfer.nLayer, eFinal );
-			}
-		} else if ( op.eKind == SIR_VULKAN_GRAPHICS_IMAGE_BARRIER ) {
-			nativeOp.eKind = SIR_VULKAN_RECORDED_IMAGE_BARRIER;
-			const sirGraphicsResult_t ePlan = sirVulkanPlanImageBarrier( op.barrier, pShadow, &nativeOp.imageBarrier );
-			if ( ePlan != SIR_GRAPHICS_SUCCESS ) {
-				return ePlan;
-			}
-			( void )sirVulkanSetSubresourceLayout( pShadow, nativeOp.imageBarrier.nMip, nativeOp.imageBarrier.nLayer,
-			                                       nativeOp.imageBarrier.eAfter );
-		} else {
-			return SIR_GRAPHICS_INVALID_ARGUMENT;
 		}
 	}
 	sirVulkanCompletion_t native = {};
-	const sirVulkanResult_t eSubmit = m_Native.submitRecordedCommands( commands, pList->m_nOperationCount, &native );
+	const sirVulkanResult_t eSubmit = m_Native.submitRecordedCommands( commands, nNativeCount, &native );
 	if ( eSubmit != SIR_VULKAN_SUCCESS ) {
 		return sirVulkanToGraphicsResult( eSubmit );
 	}
 	m_nLastCompletion = native.nValue;
-	pList->m_eState = SIR_VULKAN_COMMAND_SUBMITTED;
-	pList->m_nLastCompletion = native.nValue;
+	for ( uint32_t iList = 0; iList < submission.nCommandListCount; ++iList ) {
+		SIRVulkanCommandList *pList = szLists[iList];
+		pList->m_eState = SIR_VULKAN_COMMAND_SUBMITTED;
+		pList->m_nLastCompletion = native.nValue;
+	}
 	*pCompletion = { m_nDeviceGeneration, SIR_GRAPHICS_QUEUE_DIRECT, native.nValue };
 	return SIR_GRAPHICS_SUCCESS;
 }
