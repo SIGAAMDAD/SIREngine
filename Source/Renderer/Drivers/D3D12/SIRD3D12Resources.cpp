@@ -176,6 +176,7 @@ void SIRD3D12Resources::shutdown( bool bGpuComplete ) noexcept
 	m_nDeviceGeneration = 0;
 	m_nBudgetBytes = 0;
 	m_nAllocatedBytes = 0;
+	m_nExternalBytes = 0;
 	m_nPeakAllocatedBytes = 0;
 }
 
@@ -252,6 +253,15 @@ void SIRD3D12Resources::releaseSlot( uint32_t iSlot ) noexcept
 			m_nAllocatedBytes -= slot.nAllocationBytes;
 		}
 		slot.pAllocation->Release();
+	} else if ( slot.pExternalResource != nullptr ) {
+		if ( m_nAllocatedBytes >= slot.nAllocationBytes ) {
+			m_nAllocatedBytes -= slot.nAllocationBytes;
+		}
+		if ( m_nExternalBytes >= slot.nAllocationBytes ) {
+			m_nExternalBytes -= slot.nAllocationBytes;
+		}
+		m_pMemory->releaseExternalBytes( slot.nAllocationBytes );
+		slot.pExternalResource->Release();
 	}
 	const uint32_t nGeneration = slot.nGeneration;
 	slot = {};
@@ -328,6 +338,77 @@ void SIRD3D12Resources::collectRetired( void ) noexcept
 			releaseSlot( iSlot );
 		}
 	}
+}
+
+uint64_t SIRD3D12Resources::getExternalBytes( void ) const noexcept
+{
+	return m_nExternalBytes;
+}
+
+sirGraphicsResult_t SIRD3D12Resources::importExternalTexture( ID3D12Resource *pResource, sirGraphicsFormat_t eFormat,
+                                                              sirGraphicsHandle_t *pHandle ) noexcept
+{
+	if ( pHandle == nullptr ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	*pHandle = {};
+	if ( m_pDevice == nullptr || pResource == nullptr ) {
+		return SIR_GRAPHICS_DEVICE_LOST;
+	}
+	const D3D12_RESOURCE_DESC desc = pResource->GetDesc();
+	if ( desc.Dimension != D3D12_RESOURCE_DIMENSION_TEXTURE2D || desc.DepthOrArraySize != 1 || desc.MipLevels != 1 ||
+	     desc.SampleDesc.Count != 1 || desc.Width > UINT32_MAX || desc.Format != sirD3D12Format( eFormat ) ) {
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
+	const D3D12_RESOURCE_ALLOCATION_INFO info = m_pDevice->GetResourceAllocationInfo( 0, 1, &desc );
+	if ( info.SizeInBytes == UINT64_MAX || info.SizeInBytes == 0 || m_nAllocatedBytes > UINT64_MAX - info.SizeInBytes ||
+	     ( m_nBudgetBytes != 0 && ( m_nAllocatedBytes > m_nBudgetBytes || info.SizeInBytes > m_nBudgetBytes - m_nAllocatedBytes ) ) ) {
+		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
+	}
+	if ( !m_pMemory->reserveExternalBytes( info.SizeInBytes ) ) {
+		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
+	}
+	uint32_t iSlot = 0;
+	const sirGraphicsResult_t eSlot = acquireSlot( SIR_GRAPHICS_HANDLE_TEXTURE, &iSlot, pHandle );
+	if ( eSlot != SIR_GRAPHICS_SUCCESS ) {
+		m_pMemory->releaseExternalBytes( info.SizeInBytes );
+		return eSlot;
+	}
+	sirD3D12ResourceSlot_t &slot = m_szSlots[iSlot];
+	pResource->AddRef();
+	slot.pExternalResource = pResource;
+	slot.nAllocationBytes = info.SizeInBytes;
+	slot.nWidth = ( uint32_t )desc.Width;
+	slot.nHeight = desc.Height;
+	slot.nDepth = 1;
+	slot.nLayers = 1;
+	slot.nMips = 1;
+	slot.nSamples = 1;
+	slot.nUsage = SIR_GRAPHICS_USAGE_COLOR_ATTACHMENT | SIR_GRAPHICS_USAGE_COPY_SOURCE | SIR_GRAPHICS_USAGE_COPY_DESTINATION;
+	slot.eFormat = eFormat;
+	slot.eDimension = SIR_GRAPHICS_TEXTURE_2D;
+	slot.eMemory = SIR_GRAPHICS_MEMORY_GPU_LOCAL;
+	m_nAllocatedBytes += info.SizeInBytes;
+	m_nExternalBytes += info.SizeInBytes;
+	if ( m_nAllocatedBytes > m_nPeakAllocatedBytes ) {
+		m_nPeakAllocatedBytes = m_nAllocatedBytes;
+	}
+	return SIR_GRAPHICS_SUCCESS;
+}
+
+bool SIRD3D12Resources::canReleaseExternalTexture( sirGraphicsHandle_t hTexture ) noexcept
+{
+	const sirD3D12ResourceSlot_t *pSlot = findSlot( hTexture, SIR_GRAPHICS_HANDLE_TEXTURE );
+	return pSlot != nullptr && pSlot->pExternalResource != nullptr && pSlot->nDependentViews == 0 && pSlot->nCommandReferences == 0;
+}
+
+sirGraphicsResult_t SIRD3D12Resources::releaseExternalTexture( sirGraphicsHandle_t hTexture ) noexcept
+{
+	if ( !canReleaseExternalTexture( hTexture ) ) {
+		return SIR_GRAPHICS_BUSY;
+	}
+	releaseSlot( hTexture.nSlot );
+	return SIR_GRAPHICS_SUCCESS;
 }
 
 uint64_t SIRD3D12Resources::getAllocatedBytes( void ) const noexcept
@@ -625,7 +706,7 @@ sirGraphicsResult_t SIRD3D12Resources::createView( const sirGraphicsViewDesc_t &
 	slot.hParent = desc.hResource;
 	slot.nUsage = desc.nUsage;
 	++pResource->nDependentViews;
-	ID3D12Resource *pNativeResource = pResource->pAllocation->GetResource();
+	ID3D12Resource *pNativeResource = pResource->getNativeResource();
 
 	if ( desc.nUsage == SIR_GRAPHICS_USAGE_CONSTANT ) {
 		D3D12_CONSTANT_BUFFER_VIEW_DESC cbv = {};
@@ -876,6 +957,9 @@ sirGraphicsResult_t SIRD3D12Resources::retireResource( sirGraphicsHandle_t hHand
 	sirD3D12ResourceSlot_t *pSlot = findSlot( hHandle, SIR_GRAPHICS_HANDLE_NONE );
 	if ( pSlot == nullptr ) {
 		return SIR_GRAPHICS_INVALID_HANDLE;
+	}
+	if ( pSlot->pExternalResource != nullptr ) {
+		return SIR_GRAPHICS_UNSUPPORTED;
 	}
 	if ( !sirGraphicsIsCompletionSetValid( completion, m_nDeviceGeneration ) ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;

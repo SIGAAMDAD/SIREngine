@@ -14,6 +14,21 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Renderer/Drivers/D3D12/SIRD3D12Memory.h>
+#include <Core/Memory/SIRGeneralHeap.h>
+#include <limits.h>
+
+static void *sirD3D12AllocateHostMetadata( size_t nBytes, size_t nAlignment, void *pUser ) noexcept
+{
+	SIRGeneralHeap *pHeap = ( SIRGeneralHeap * )pUser;
+	return pHeap != nullptr ? pHeap->allocAligned( nBytes, nAlignment ) : nullptr;
+}
+
+static void sirD3D12FreeHostMetadata( void *pMemory, void *pUser ) noexcept
+{
+	if ( pMemory != nullptr && pUser != nullptr ) {
+		( ( SIRGeneralHeap * )pUser )->free( pMemory );
+	}
+}
 
 SIRD3D12Memory::SIRD3D12Memory( void ) noexcept
 {
@@ -24,18 +39,113 @@ SIRD3D12Memory::~SIRD3D12Memory( void ) noexcept
 	shutdown();
 }
 
-bool SIRD3D12Memory::initialize( IDXGIAdapter *pAdapter, ID3D12Device *pDevice ) noexcept
+bool SIRD3D12Memory::initialize( IDXGIAdapter *pAdapter, ID3D12Device *pDevice, SIRGeneralHeap *pCpuHeap ) noexcept
 {
 	if ( m_pAllocator != nullptr || pAdapter == nullptr || pDevice == nullptr ) {
 		m_nLastError = E_INVALIDARG;
 		return false;
 	}
 
+	if ( pCpuHeap != nullptr && !pCpuHeap->isConfiguredForDomain( SIR_MEMORY_DOMAIN_RENDERING_CPU ) ) {
+		m_nLastError = E_INVALIDARG;
+		return false;
+	}
+	m_pHostHeap = pCpuHeap;
+	m_Callbacks = {};
+	if ( m_pHostHeap != nullptr ) {
+		m_Callbacks.pAllocate = &sirD3D12AllocateHostMetadata;
+		m_Callbacks.pFree = &sirD3D12FreeHostMetadata;
+		m_Callbacks.pPrivateData = m_pHostHeap;
+	}
 	D3D12MA::ALLOCATOR_DESC desc = {};
 	desc.pAdapter = pAdapter;
 	desc.pDevice = pDevice;
+	desc.pAllocationCallbacks = m_pHostHeap != nullptr ? &m_Callbacks : nullptr;
 	m_nLastError = D3D12MA::CreateAllocator( &desc, &m_pAllocator );
-	return SUCCEEDED( m_nLastError ) && m_pAllocator != nullptr;
+	if ( FAILED( m_nLastError ) || m_pAllocator == nullptr ) {
+		m_pHostHeap = nullptr;
+		return false;
+	}
+	return true;
+}
+
+bool SIRD3D12Memory::queryAllocationLedger( sirD3D12AllocationLedger_t *pLedger ) const noexcept
+{
+	if ( pLedger == nullptr || m_pAllocator == nullptr ) {
+		return false;
+	}
+	D3D12MA::Budget local = {};
+	D3D12MA::Budget nonLocal = {};
+	m_pAllocator->GetBudget( &local, &nonLocal );
+	if ( local.Stats.AllocationBytes > UINT64_MAX - nonLocal.Stats.AllocationBytes ||
+	     local.Stats.BlockBytes > UINT64_MAX - nonLocal.Stats.BlockBytes ) {
+		return false;
+	}
+	const uint64_t nPhysicalBlocks = local.Stats.BlockBytes + nonLocal.Stats.BlockBytes;
+	if ( nPhysicalBlocks > UINT64_MAX - m_nExternalBytes ) {
+		return false;
+	}
+	*pLedger = {};
+	pLedger->nCommittedBytes = nPhysicalBlocks + m_nExternalBytes;
+	pLedger->nBlockBytes = nPhysicalBlocks;
+	pLedger->nExternalBytes = m_nExternalBytes;
+	pLedger->nPeakCommittedBytes = m_nPeakTrackedBytes > pLedger->nCommittedBytes ? m_nPeakTrackedBytes : pLedger->nCommittedBytes;
+	pLedger->nResidentLimitBytes = m_nResidentLimitBytes;
+	return true;
+}
+
+bool SIRD3D12Memory::configureResidentBudget( uint64_t nBytes ) noexcept
+{
+	sirD3D12AllocationLedger_t ledger = {};
+	if ( !queryAllocationLedger( &ledger ) || ( nBytes != 0 && ledger.nCommittedBytes > nBytes ) ) {
+		return false;
+	}
+	m_nResidentLimitBytes = nBytes;
+	if ( ledger.nCommittedBytes > m_nPeakTrackedBytes ) {
+		m_nPeakTrackedBytes = ledger.nCommittedBytes;
+	}
+	return true;
+}
+
+bool SIRD3D12Memory::reserveExternalBytes( uint64_t nBytes ) noexcept
+{
+	sirD3D12AllocationLedger_t ledger = {};
+	if ( nBytes == 0 || !queryAllocationLedger( &ledger ) || ledger.nCommittedBytes > UINT64_MAX - nBytes ||
+	     ( m_nResidentLimitBytes != 0 &&
+	       ( ledger.nCommittedBytes > m_nResidentLimitBytes || nBytes > m_nResidentLimitBytes - ledger.nCommittedBytes ) ) ) {
+		return false;
+	}
+	m_nExternalBytes += nBytes;
+	const uint64_t nTotal = ledger.nCommittedBytes + nBytes;
+	if ( nTotal > m_nPeakTrackedBytes ) {
+		m_nPeakTrackedBytes = nTotal;
+	}
+	return true;
+}
+
+void SIRD3D12Memory::releaseExternalBytes( uint64_t nBytes ) noexcept
+{
+	if ( nBytes <= m_nExternalBytes ) {
+		m_nExternalBytes -= nBytes;
+	}
+}
+
+bool SIRD3D12Memory::enforceResidentLimit( D3D12MA::Allocation **ppAllocation ) noexcept
+{
+	if ( ppAllocation == nullptr || *ppAllocation == nullptr ) {
+		return false;
+	}
+	sirD3D12AllocationLedger_t ledger = {};
+	if ( !queryAllocationLedger( &ledger ) || ( m_nResidentLimitBytes != 0 && ledger.nCommittedBytes > m_nResidentLimitBytes ) ) {
+		( *ppAllocation )->Release();
+		*ppAllocation = nullptr;
+		m_nLastError = E_OUTOFMEMORY;
+		return false;
+	}
+	if ( ledger.nCommittedBytes > m_nPeakTrackedBytes ) {
+		m_nPeakTrackedBytes = ledger.nCommittedBytes;
+	}
+	return true;
 }
 
 void SIRD3D12Memory::shutdown( void ) noexcept
@@ -45,6 +155,11 @@ void SIRD3D12Memory::shutdown( void ) noexcept
 		m_pAllocator->Release();
 		m_pAllocator = nullptr;
 	}
+	m_pHostHeap = nullptr;
+	m_Callbacks = {};
+	m_nResidentLimitBytes = 0;
+	m_nExternalBytes = 0;
+	m_nPeakTrackedBytes = 0;
 }
 
 void SIRD3D12Memory::abandon( void ) noexcept
@@ -53,6 +168,8 @@ void SIRD3D12Memory::abandon( void ) noexcept
 	// including their persistent mappings, and the allocator that owns them.
 	releaseTransferArena( false );
 	m_pAllocator = nullptr;
+	m_pHostHeap = nullptr;
+	m_Callbacks = {};
 }
 
 bool SIRD3D12Memory::isReady( void ) const noexcept
@@ -87,6 +204,9 @@ HRESULT SIRD3D12Memory::createBuffer( D3D12_HEAP_TYPE eHeapType, D3D12_RESOURCE_
 	allocation.HeapType = eHeapType;
 
 	m_nLastError = m_pAllocator->CreateResource( &allocation, &resource, eInitialState, nullptr, ppAllocation, IID_NULL, nullptr );
+	if ( SUCCEEDED( m_nLastError ) ) {
+		( void )enforceResidentLimit( ppAllocation );
+	}
 	return m_nLastError;
 }
 
@@ -118,6 +238,9 @@ HRESULT SIRD3D12Memory::createTexture2D( uint32_t nWidth, uint32_t nHeight, DXGI
 	D3D12MA::ALLOCATION_DESC allocation = {};
 	allocation.HeapType = D3D12_HEAP_TYPE_DEFAULT;
 	m_nLastError = m_pAllocator->CreateResource( &allocation, &resource, eInitialState, pClearValue, ppAllocation, IID_NULL, nullptr );
+	if ( SUCCEEDED( m_nLastError ) ) {
+		( void )enforceResidentLimit( ppAllocation );
+	}
 	return m_nLastError;
 }
 
@@ -136,6 +259,9 @@ HRESULT SIRD3D12Memory::createTexture( const D3D12_RESOURCE_DESC &resource, D3D1
 	D3D12MA::ALLOCATION_DESC allocation = {};
 	allocation.HeapType = D3D12_HEAP_TYPE_DEFAULT;
 	m_nLastError = m_pAllocator->CreateResource( &allocation, &resource, eInitialState, pClearValue, ppAllocation, IID_NULL, nullptr );
+	if ( SUCCEEDED( m_nLastError ) ) {
+		( void )enforceResidentLimit( ppAllocation );
+	}
 	return m_nLastError;
 }
 

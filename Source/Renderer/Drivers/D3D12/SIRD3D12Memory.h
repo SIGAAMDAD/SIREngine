@@ -26,6 +26,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <D3D12MemAlloc.h>
 
+class SIRGeneralHeap;
+
 typedef enum sirD3D12TransferPath_e : uint8_t
 {
 	SIR_D3D12_TRANSFER_DIRECT_UMA = 0,
@@ -52,12 +54,30 @@ typedef struct sirD3D12ResidentTransferView_s
 	sirD3D12TransferPath_t ePath;
 } sirD3D12ResidentTransferView_t;
 
+// Allocation bytes come from D3D12MA on both memory segments. Swapchain
+// backing is external to D3D12MA and charged using the D3D12 allocation
+// footprint estimate rather than falsely claiming DXGI ownership.
+typedef struct sirD3D12AllocationLedger_s
+{
+	uint64_t nCommittedBytes;
+	uint64_t nPeakCommittedBytes;
+	uint64_t nBlockBytes;
+	uint64_t nExternalBytes;
+	uint64_t nResidentLimitBytes;
+} sirD3D12AllocationLedger_t;
+
 // Native D3D12MA owner. The allocation owns its ID3D12Resource; callers
 // borrow Allocation::GetResource() without obtaining an extra COM reference.
 class SIRD3D12Memory
 {
 private:
 	D3D12MA::Allocator *m_pAllocator = nullptr;
+	D3D12MA::ALLOCATION_CALLBACKS m_Callbacks = {};
+	SIRGeneralHeap *m_pHostHeap = nullptr;
+	uint64_t m_nResidentLimitBytes = 0;
+	uint64_t m_nExternalBytes = 0;
+	uint64_t m_nPeakTrackedBytes = 0;
+	bool enforceResidentLimit( D3D12MA::Allocation **ppAllocation ) noexcept;
 	D3D12MA::Allocation *m_pTransferWrite = nullptr;
 	D3D12MA::Allocation *m_pTransferGpu = nullptr;
 	D3D12MA::Allocation *m_pTransferReadback = nullptr;
@@ -74,7 +94,11 @@ public:
 	SIRD3D12Memory( const SIRD3D12Memory & ) = delete;
 	SIRD3D12Memory &operator=( const SIRD3D12Memory & ) = delete;
 
-	bool initialize( IDXGIAdapter *pAdapter, ID3D12Device *pDevice ) noexcept;
+	bool initialize( IDXGIAdapter *pAdapter, ID3D12Device *pDevice, SIRGeneralHeap *pCpuHeap = nullptr ) noexcept;
+	bool configureResidentBudget( uint64_t nBytes ) noexcept;
+	bool queryAllocationLedger( sirD3D12AllocationLedger_t *pLedger ) const noexcept;
+	bool reserveExternalBytes( uint64_t nBytes ) noexcept;
+	void releaseExternalBytes( uint64_t nBytes ) noexcept;
 	void shutdown( void ) noexcept;
 	bool initializeTransferArena( const sirD3D12TransferPoolConfig_t &config, uint32_t nSlots ) noexcept;
 	void releaseTransferArena( bool bGpuComplete ) noexcept;
