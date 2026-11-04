@@ -66,11 +66,26 @@ typedef struct sirD3D12AllocationLedger_s
 	uint64_t nResidentLimitBytes;
 } sirD3D12AllocationLedger_t;
 
+// Fixed, game-profiled GPU backing; each nonzero class owns exactly one D3D12 heap.
+// The caller selects the class budgets. Zero disables allocations from that class after sealing.
+typedef struct sirD3D12SealedPoolConfig_s
+{
+	uint64_t nDeviceBufferBytes;
+	uint64_t nSampledTextureBytes;
+	uint64_t nAttachmentTextureBytes;
+	uint64_t nUploadBufferBytes;
+	uint64_t nReadbackBufferBytes;
+	uint64_t nGpuUploadBufferBytes;
+} sirD3D12SealedPoolConfig_t;
+
 // Native D3D12MA owner. The allocation owns its ID3D12Resource; callers
 // borrow Allocation::GetResource() without obtaining an extra COM reference.
 class SIRD3D12Memory
 {
 private:
+	static constexpr uint32_t s_nSealedPoolCount = 6;
+	D3D12MA::Pool *m_szSealedPools[s_nSealedPoolCount] = {};
+	bool m_bSealed = false;
 	D3D12MA::Allocator *m_pAllocator = nullptr;
 	D3D12MA::ALLOCATION_CALLBACKS m_Callbacks = {};
 	SIRGeneralHeap *m_pHostHeap = nullptr;
@@ -96,6 +111,7 @@ public:
 
 	bool initialize( IDXGIAdapter *pAdapter, ID3D12Device *pDevice, SIRGeneralHeap *pCpuHeap = nullptr ) noexcept;
 	bool configureResidentBudget( uint64_t nBytes ) noexcept;
+	bool configureSealedPools( const sirD3D12SealedPoolConfig_t& config ) noexcept;
 	bool queryAllocationLedger( sirD3D12AllocationLedger_t *pLedger ) const noexcept;
 	bool reserveExternalBytes( uint64_t nBytes ) noexcept;
 	void releaseExternalBytes( uint64_t nBytes ) noexcept;

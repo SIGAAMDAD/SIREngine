@@ -117,5 +117,56 @@ int main( void )
 		return 15;
 	}
 	memory.shutdown();
+	// Fixed pools must never grow their physical backing after startup.
+	SIRD3D12Memory sealed;
+	if ( !sealed.initialize( pWarp.Get(), pNativeDevice.Get() ) ) {
+		return 16;
+	}
+	sirD3D12SealedPoolConfig_t profile = {};
+	if ( sealed.configureSealedPools( profile ) || sealed.getLastError() != E_INVALIDARG ) {
+		return 17;
+	}
+	profile.nDeviceBufferBytes = 4 * 1024 * 1024;
+	profile.nSampledTextureBytes = 4 * 1024 * 1024;
+	profile.nAttachmentTextureBytes = 4 * 1024 * 1024;
+	profile.nUploadBufferBytes = 4 * 1024 * 1024;
+	profile.nReadbackBufferBytes = 4 * 1024 * 1024;
+	if ( !sealed.configureSealedPools( profile ) || sealed.configureSealedPools( profile ) || sealed.getLastError() != E_INVALIDARG ) {
+		return 18;
+	}
+	sirD3D12AllocationLedger_t reserved = {};
+	if ( !sealed.queryAllocationLedger( &reserved ) || reserved.nBlockBytes < 20ULL * 1024 * 1024 ) {
+		return 19;
+	}
+	D3D12MA::Allocation *szAllocations[5] = {};
+	const bool bCreated =
+	    SUCCEEDED( sealed.createBuffer( D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_COMMON, 4096, &szAllocations[0] ) ) &&
+	    SUCCEEDED( sealed.createBuffer( D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ, 4096, &szAllocations[1] ) ) &&
+	    SUCCEEDED( sealed.createBuffer( D3D12_HEAP_TYPE_READBACK, D3D12_RESOURCE_STATE_COPY_DEST, 4096, &szAllocations[2] ) ) &&
+	    SUCCEEDED( sealed.createTexture2D( 32, 32, DXGI_FORMAT_R8G8B8A8_UNORM, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, nullptr,
+	                                       &szAllocations[3] ) ) &&
+	    SUCCEEDED( sealed.createTexture2D( 32, 32, DXGI_FORMAT_R8G8B8A8_UNORM, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET,
+	                                       D3D12_RESOURCE_STATE_COMMON, nullptr, &szAllocations[4] ) );
+	bool bPlaced = bCreated;
+	for ( uint32_t iResource = 0; iResource < 5; ++iResource ) {
+		bPlaced = bPlaced && szAllocations[iResource] != nullptr && szAllocations[iResource]->GetHeap() != nullptr;
+	}
+	D3D12MA::Allocation *pExcess = nullptr;
+	const HRESULT nOversized = sealed.createBuffer( D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_COMMON, 64ULL * 1024 * 1024, &pExcess );
+	sirD3D12AllocationLedger_t stable = {};
+	const bool bStable = sealed.queryAllocationLedger( &stable ) && stable.nBlockBytes == reserved.nBlockBytes &&
+	                     stable.nCommittedBytes == reserved.nCommittedBytes;
+	if ( pExcess != nullptr ) {
+		pExcess->Release();
+	}
+	for ( uint32_t iResource = 0; iResource < 5; ++iResource ) {
+		if ( szAllocations[iResource] != nullptr ) {
+			szAllocations[iResource]->Release();
+		}
+	}
+	sealed.shutdown();
+	if ( !bPlaced || nOversized != E_OUTOFMEMORY || pExcess != nullptr || !bStable ) {
+		return 20;
+	}
 	return 0;
 }
