@@ -26,6 +26,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Renderer/SIRRenderingDevice.h>
 #include <Renderer/Drivers/D3D12/SIRD3D12Device.h>
+#include <Renderer/Drivers/D3D12/SIRD3D12Resources.h>
 
 // Direct native implementation of the shared rendering-device contract.
 // The existing headless kernels are backend-private test facilities.
@@ -33,6 +34,7 @@ class SIRD3D12RenderingDevice final : public SIRRenderingDevice
 {
 private:
 	SIRD3D12Device m_Native;
+	SIRD3D12Resources m_Resources;
 	bool m_bSoftware = false;
 
 public:
