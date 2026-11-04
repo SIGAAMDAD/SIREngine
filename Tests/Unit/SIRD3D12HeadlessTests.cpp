@@ -426,11 +426,18 @@ int main( void )
 		return 1;
 	}
 
-	if ( !device.initialize( true, transferConfig ) ) {
+	Microsoft::WRL::ComPtr<IDXGIFactory6> pFactory;
+	uint32_t nAdapters = 0;
+	if ( FAILED( CreateDXGIFactory2( 0, IID_PPV_ARGS( pFactory.GetAddressOf() ) ) ) ||
+	     FAILED( sirD3D12EnumerateAdapters( pFactory.Get(), UINT32_MAX, nullptr, &nAdapters ) ) || nAdapters == 0 ) {
+		return 1;
+	}
+	const uint32_t nWarpIndex = nAdapters - 1;
+	if ( !device.initialize( nWarpIndex, transferConfig ) ) {
 		fprintf( stderr, "D3D12 WARP device initialization failed: HRESULT 0x%08lx\n", ( unsigned long )device.getLastError() );
 		return 1;
 	}
-	if ( !device.isReady() || device.initialize( true, transferConfig ) || !device.queryAdapterInfo( &adapter ) || !adapter.bSoftware ) {
+	if ( !device.isReady() || device.initialize( nWarpIndex, transferConfig ) || !device.queryAdapterInfo( &adapter ) || !adapter.bSoftware ) {
 		fputs( "D3D12 WARP adapter or lifecycle contract failed\n", stderr );
 		return 1;
 	}
@@ -504,7 +511,7 @@ int main( void )
 	}
 	transferConfig.nSlotBytes = 4096;
 	transferConfig.bPreferDirectMapped = false;
-	if ( !device.initialize( true, transferConfig ) ) {
+	if ( !device.initialize( nWarpIndex, transferConfig ) ) {
 		fputs( "D3D12 WARP forced-staging reinitialization failed\n", stderr );
 		return 1;
 	}

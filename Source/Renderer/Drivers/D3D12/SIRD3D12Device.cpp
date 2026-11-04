@@ -23,6 +23,65 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 static std::atomic<uint64_t> s_nNextD3D12DeviceGeneration{ 1 };
 
+HRESULT sirD3D12EnumerateAdapters( IDXGIFactory6 *pFactory, uint32_t nRequestedIndex, IDXGIAdapter4 **ppSelected,
+                                   uint32_t *pCount ) noexcept
+{
+	if ( pFactory == nullptr || ( ppSelected == nullptr && pCount == nullptr ) ) {
+		return E_INVALIDARG;
+	}
+	if ( ppSelected != nullptr ) {
+		*ppSelected = nullptr;
+	}
+	if ( pCount != nullptr ) {
+		*pCount = 0;
+	}
+	uint32_t nFound = 0;
+	for ( UINT iDxgi = 0; iDxgi < 256; ++iDxgi ) {
+		Microsoft::WRL::ComPtr<IDXGIAdapter4> pCandidate;
+		HRESULT nResult =
+		    pFactory->EnumAdapterByGpuPreference( iDxgi, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS( pCandidate.GetAddressOf() ) );
+		if ( nResult == DXGI_ERROR_NOT_FOUND ) {
+			break;
+		}
+		if ( FAILED( nResult ) ) {
+			return nResult;
+		}
+		DXGI_ADAPTER_DESC3 description = {};
+		nResult = pCandidate->GetDesc3( &description );
+		if ( FAILED( nResult ) ) {
+			return nResult;
+		}
+		if ( ( description.Flags & DXGI_ADAPTER_FLAG3_SOFTWARE ) != 0 ) {
+			continue;
+		}
+		Microsoft::WRL::ComPtr<ID3D12Device> pProbe;
+		if ( FAILED( D3D12CreateDevice( pCandidate.Get(), D3D_FEATURE_LEVEL_12_0, IID_PPV_ARGS( pProbe.GetAddressOf() ) ) ) ) {
+			continue;
+		}
+		if ( ppSelected != nullptr && nFound == nRequestedIndex ) {
+			*ppSelected = pCandidate.Detach();
+			return S_OK;
+		}
+		++nFound;
+	}
+	Microsoft::WRL::ComPtr<IDXGIAdapter4> pWarp;
+	if ( SUCCEEDED( pFactory->EnumWarpAdapter( IID_PPV_ARGS( pWarp.GetAddressOf() ) ) ) ) {
+		Microsoft::WRL::ComPtr<ID3D12Device> pProbe;
+		if ( SUCCEEDED( D3D12CreateDevice( pWarp.Get(), D3D_FEATURE_LEVEL_12_0, IID_PPV_ARGS( pProbe.GetAddressOf() ) ) ) ) {
+			if ( ppSelected != nullptr && nFound == nRequestedIndex ) {
+				*ppSelected = pWarp.Detach();
+				return S_OK;
+			}
+			++nFound;
+		}
+	}
+	if ( pCount != nullptr ) {
+		*pCount = nFound;
+	}
+	return ppSelected != nullptr || nFound == 0 ? DXGI_ERROR_NOT_FOUND : S_OK;
+}
+
+
 SIRD3D12ComputeQueue::SIRD3D12ComputeQueue( void ) noexcept
 {
 }
@@ -311,7 +370,7 @@ SIRD3D12Device::~SIRD3D12Device( void ) noexcept
 	shutdown();
 }
 
-bool SIRD3D12Device::initialize( bool bUseWarp, const sirD3D12TransferPoolConfig_t &transferConfig, SIRGeneralHeap *pCpuHeap,
+bool SIRD3D12Device::initialize( uint32_t nAdapterIndex, const sirD3D12TransferPoolConfig_t &transferConfig, SIRGeneralHeap *pCpuHeap,
                                  const sirD3D12DiagnosticConfig_t &diagnostics ) noexcept
 {
 	if ( isReady() || m_pFactory != nullptr || m_bGraphicsUnsafe ) {
@@ -330,39 +389,9 @@ bool SIRD3D12Device::initialize( bool bUseWarp, const sirD3D12TransferPoolConfig
 		return false;
 	}
 
-	if ( bUseWarp ) {
-		m_nLastError = m_pFactory->EnumWarpAdapter( IID_PPV_ARGS( m_pAdapter.GetAddressOf() ) );
-		if ( SUCCEEDED( m_nLastError ) ) {
-			m_nLastError = D3D12CreateDevice( m_pAdapter.Get(), D3D_FEATURE_LEVEL_12_0, IID_PPV_ARGS( m_pDevice.GetAddressOf() ) );
-		}
-	} else {
-		for ( UINT iAdapter = 0;; ++iAdapter ) {
-			Microsoft::WRL::ComPtr<IDXGIAdapter4> pCandidate;
-			const HRESULT nEnumResult = m_pFactory->EnumAdapterByGpuPreference( iAdapter, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE,
-			                                                                    IID_PPV_ARGS( pCandidate.GetAddressOf() ) );
-			if ( nEnumResult == DXGI_ERROR_NOT_FOUND ) {
-				break;
-			}
-			if ( FAILED( nEnumResult ) ) {
-				m_nLastError = nEnumResult;
-				break;
-			}
-
-			DXGI_ADAPTER_DESC3 description = {};
-			if ( FAILED( pCandidate->GetDesc3( &description ) ) || ( description.Flags & DXGI_ADAPTER_FLAG3_SOFTWARE ) != 0 ) {
-				continue;
-			}
-
-			Microsoft::WRL::ComPtr<ID3D12Device> pCandidateDevice;
-			const HRESULT nDeviceResult =
-			    D3D12CreateDevice( pCandidate.Get(), D3D_FEATURE_LEVEL_12_0, IID_PPV_ARGS( pCandidateDevice.GetAddressOf() ) );
-			if ( SUCCEEDED( nDeviceResult ) ) {
-				m_pAdapter = pCandidate;
-				m_pDevice = pCandidateDevice;
-				break;
-			}
-			m_nLastError = nDeviceResult;
-		}
+	m_nLastError = sirD3D12EnumerateAdapters( m_pFactory.Get(), nAdapterIndex, m_pAdapter.ReleaseAndGetAddressOf(), nullptr );
+	if ( SUCCEEDED( m_nLastError ) ) {
+		m_nLastError = D3D12CreateDevice( m_pAdapter.Get(), D3D_FEATURE_LEVEL_12_0, IID_PPV_ARGS( m_pDevice.GetAddressOf() ) );
 	}
 
 	if ( m_pDevice == nullptr ) {
