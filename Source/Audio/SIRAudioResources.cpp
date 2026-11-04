@@ -457,6 +457,20 @@ bool SIRAudioResourceStore::findEventIndex( uint64_t nEventId, uint32_t &iEvent 
 	return true;
 }
 
+uint32_t SIRAudioResourceStore::getEventCount( void ) const noexcept
+{
+	return m_pBytes == nullptr ? 0 : m_Header.nEventCount;
+}
+
+bool SIRAudioResourceStore::getEventAt( uint32_t iEvent, sirAudioEventRecord_t &event ) const noexcept
+{
+	if ( m_pBytes == nullptr || iEvent >= m_Header.nEventCount ) {
+		return false;
+	}
+	readAudioEvent( m_pBytes, m_nEventOffset, iEvent, event );
+	return true;
+}
+
 bool SIRAudioResourceStore::findEvent( uint64_t nEventId, sirAudioEventRecord_t &event, sirAudioEventHandle_t *pHandle ) const noexcept
 {
 	uint32_t iEvent = 0;
@@ -499,6 +513,20 @@ bool SIRAudioResourceStore::resolvePackage( sirAudioPackageHandle_t hPackage, si
 		return false;
 	}
 	readAudioPackage( m_pBytes, m_nPackageOffset, hPackage.nSlot, package );
+	return true;
+}
+
+uint32_t SIRAudioResourceStore::getControlCount( void ) const noexcept
+{
+	return m_pBytes == nullptr ? 0 : m_Header.nControlCount;
+}
+
+bool SIRAudioResourceStore::getControlAt( uint32_t iControl, sirAudioControlRecord_t &control ) const noexcept
+{
+	if ( m_pBytes == nullptr || iControl >= m_Header.nControlCount ) {
+		return false;
+	}
+	readAudioControl( m_pBytes, m_nControlOffset, iControl, control );
 	return true;
 }
 

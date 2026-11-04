@@ -14,6 +14,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Audio/FMOD/SIRFMODBankStore.h>
+#include <Audio/FMOD/SIRFMODRuntime.h>
 #include <Audio/FMOD/SIRFMODMixerBackend.h>
 #include <Audio/FMOD/SIRFMODSnapshotBackend.h>
 #include <Audio/FMOD/SIRFMODPackageLoader.h>
@@ -586,6 +587,146 @@ static void testManifestPackageLoading( const sirContainerAllocator_t *pAllocato
 	checkBank( !fixture.bStudio );
 }
 
+typedef struct sirFMODRuntimeTestManifest_s
+{
+	sirAudioManifestHeader_t header;
+	sirAudioPackageRecord_t packages[2];
+	sirAudioEventRecord_t events[1];
+	sirAudioControlRecord_t controls[1];
+	uint64_t dependencies[1];
+} sirFMODRuntimeTestManifest_t;
+
+static sirFMODRuntimeTestManifest_t makeRuntimeManifest( void ) noexcept
+{
+	sirFMODRuntimeTestManifest_t image = {};
+	image.header.nMagic = SIR_AUDIO_MANIFEST_MAGIC;
+	image.header.nTotalBytes = sizeof( image );
+	image.header.nPackageCount = 2;
+	image.header.nEventCount = 1;
+	image.header.nControlCount = 1;
+	image.header.nDependencyCount = 1;
+	image.header.nVersion = SIR_AUDIO_MANIFEST_VERSION;
+	image.header.nHeaderBytes = sizeof( image.header );
+	image.header.eProvider = SIR_AUDIO_PROVIDER_FMOD;
+	image.header.nEndianness = SIR_AUDIO_MANIFEST_LITTLE_ENDIAN;
+	image.packages[0] = { 1, 101, 0, 0, 0 };
+	image.packages[1] = { 2, 102, 0, 0, 1 };
+	image.events[0] = { 101, 1, 1001, 0 };
+	image.controls[0] = { 201, 2001, 0, 0.5f, 0.0f, 1.0f, SIR_AUDIO_CONTROL_PLAYING, SIR_AUDIO_CONTROL_FLOAT, SIR_AUDIO_BINDING_NATIVE, 0 };
+	image.dependencies[0] = 1;
+	image.header.nContentHash = SIRAudioResourceStore::hashPayload( ( const uint8_t * )&image + sizeof( image.header.nContentHash ),
+	                                                                sizeof( image ) - sizeof( image.header.nContentHash ) );
+	return image;
+}
+
+static int32_t testRuntimeInstanceParameter( void *, void *, uint64_t nNativeId, float fValue ) noexcept
+{
+	checkBank( nNativeId == 2001 && fValue >= 0.0f && fValue <= 1.0f );
+	return 0;
+}
+
+static int32_t testRuntimeGlobalParameter( void *, void *, uint64_t, float ) noexcept
+{
+	return 0;
+}
+
+static sirAudioResult_t testResolveEventPath( void *, uint64_t nEventId, uint64_t nProviderKey, const char **pszPath ) noexcept
+{
+	if ( nEventId != 101 || nProviderKey != 1001 ) {
+		return SIR_AUDIO_INVALID_ARGUMENT;
+	}
+	*pszPath = "event:/A";
+	return SIR_AUDIO_OK;
+}
+
+static sirAudioResult_t testResolveRuntimeObject( void *, sirFMODRuntimeObjectKind_t eKind, uint64_t nObjectId, uint64_t nProviderKey,
+                                                  const char **pszPath ) noexcept
+{
+	if ( eKind == SIR_FMOD_RUNTIME_BUS && nObjectId == 10 && nProviderKey == 501 ) {
+		*pszPath = "bus:/Master";
+		return SIR_AUDIO_OK;
+	}
+	if ( eKind == SIR_FMOD_RUNTIME_VCA && nObjectId == 20 && nProviderKey == 502 ) {
+		*pszPath = "vca:/Music";
+		return SIR_AUDIO_OK;
+	}
+	if ( eKind == SIR_FMOD_RUNTIME_SNAPSHOT && nObjectId == 30 && nProviderKey == 503 ) {
+		*pszPath = "snapshot:/Storm";
+		return SIR_AUDIO_OK;
+	}
+	return SIR_AUDIO_INVALID_ARGUMENT;
+}
+
+static void testRuntimeComposition( const sirContainerAllocator_t *pAllocator )
+{
+	sirFMODBankFixture_t fixture = {};
+	SIRAudioResourceStore manifest;
+	sirFMODRuntimeTestManifest_t image = makeRuntimeManifest();
+	checkBank( manifest.load( &image, sizeof( image ), SIR_AUDIO_PROVIDER_FMOD, 0, pAllocator ) == SIR_AUDIO_MANIFEST_OK );
+	checkBank( manifest.getEventCount() == 1 && manifest.getControlCount() == 1 );
+	sirAudioEventRecord_t event = {};
+	sirAudioControlRecord_t control = {};
+	checkBank( manifest.getEventAt( 0, event ) && event.nEventId == 101 );
+	checkBank( manifest.getControlAt( 0, control ) && control.nControlId == 201 );
+	checkBank( !manifest.getEventAt( 1, event ) && !manifest.getControlAt( 1, control ) );
+
+	const sirFMODRuntimeObject_t objects[3] = {
+	    { 10, 1, 501, SIR_FMOD_RUNTIME_BUS, {} }, { 20, 1, 502, SIR_FMOD_RUNTIME_VCA, {} }, { 30, 1, 503, SIR_FMOD_RUNTIME_SNAPSHOT, {} } };
+	sirFMODRuntimeConfig_t config = {};
+	config.context = { 16, -1, 1, 1, 0, 0 };
+	config.audio = { 1, 0, 8, 4, 4, 0 };
+	config.pAllocator = pAllocator;
+	config.pManifest = &manifest;
+	config.packageResolver = { nullptr, testResolvePackagePath };
+	config.eventResolver = { nullptr, testResolveEventPath };
+	config.objectResolver = { nullptr, testResolveRuntimeObject };
+	config.pObjects = objects;
+	config.nObjectCount = 3;
+	config.nMaxRegisteredEvents = 1;
+	config.nMaxRegisteredParameters = 1;
+	config.nMaxEmitterParameters = 0;
+	config.nMaxBanks = 2;
+	config.nMaxBankEventBindings = 1;
+	config.nMaxMixerControls = 2;
+	config.nMaxSnapshots = 1;
+	sirFMODRuntimeNativeOps_t ops = {};
+	ops.context = makeStudioOps( &fixture );
+	ops.voice = makeVoiceOps( &fixture );
+	ops.voice.setInstanceParameter = testRuntimeInstanceParameter;
+	ops.voice.setGlobalParameter = testRuntimeGlobalParameter;
+	ops.bank = makeBankOps( &fixture );
+	ops.mixer = { 1, &fixture, testPinnedBusResolve, testPinnedVCAResolve, testPinnedSetVolume, testPinnedSetMute, testPinnedSetVolume };
+	ops.snapshot = { 1, &fixture, testPinnedSnapshotResolve, testVoiceCreate, testVoiceStart, testVoiceStop, testVoiceRelease };
+
+	SIRFMODRuntime runtime;
+	checkBank( runtime.initialize( config, ops ) == SIR_AUDIO_OK );
+	checkBank( runtime.isReady() );
+	checkBank( runtime.loadPackage( 2, false ) == SIR_AUDIO_OK );
+	checkBank( runtime.getBanks().getLoadedBankCount() == 2 && runtime.getBanks().getBoundEventCount() == 1 );
+	checkBank( runtime.getContext().getBorrowedBankObjectCount() == 3 );
+	checkBank( runtime.loadPackage( 2, false ) == SIR_AUDIO_OK );
+	checkBank( runtime.getBanks().getBoundEventCount() == 1 );
+	checkBank( runtime.releasePackage( 2 ) == SIR_AUDIO_OK );
+	checkBank( runtime.getBanks().getLoadedBankCount() == 2 );
+	checkBank( runtime.getAudio().setBusVolume( 10, 0.25f ) == SIR_AUDIO_PENDING );
+	checkBank( runtime.getAudio().setVCAVolume( 20, 0.75f ) == SIR_AUDIO_PENDING );
+	checkBank( runtime.update() == 2 );
+	sirAudioPlayingHandle_t playing = {};
+	checkBank( runtime.getAudio().playEvent( 101, {}, playing ) == SIR_AUDIO_PENDING );
+	checkBank( runtime.update() == 1 );
+	checkBank( runtime.getAudio().setParameter( playing, 201, 0.75f ) == SIR_AUDIO_PENDING );
+	checkBank( runtime.update() == 1 );
+	checkBank( runtime.releasePackage( 2 ) == SIR_AUDIO_BUSY );
+	checkBank( runtime.getBanks().getLoadedBankCount() >= 1 );
+	checkBank( runtime.getAudio().stopEvent( playing, SIR_AUDIO_STOP_IMMEDIATE ) == SIR_AUDIO_PENDING );
+	checkBank( runtime.update() == 1 );
+	checkBank( runtime.collectUnused() == SIR_AUDIO_OK );
+	checkBank( runtime.getBanks().getLoadedBankCount() == 0 && runtime.getContext().getBorrowedBankObjectCount() == 0 );
+	checkBank( runtime.shutdown() == SIR_AUDIO_OK );
+	checkBank( !runtime.isReady() && !fixture.bStudio );
+	manifest.shutdown();
+}
+
 int main( void )
 {
 	const sirContainerAllocator_t allocator = { nullptr, testBankAllocate, testBankFree, 0, 0 };
@@ -593,6 +734,7 @@ int main( void )
 	testBankFailures( &allocator );
 	testBorrowedBankObjectPins( &allocator );
 	testManifestPackageLoading( &allocator );
+	testRuntimeComposition( &allocator );
 	checkBank( s_nAllocatedBlocks == 0 );
 	return 0;
 }
