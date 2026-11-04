@@ -137,3 +137,11 @@ add_executable(SIRLangCookRecipeTests SIRLangCookRecipeTests.cpp)
 target_link_libraries(SIRLangCookRecipeTests PRIVATE SIR::Scripting)
 add_test(NAME scripting.language.cook-recipe COMMAND SIRLangCookRecipeTests)
 sir_configure_owned_target(SIRLangCookRecipeTests)
+
+add_test(NAME scripting.language.signed-runner
+    COMMAND ${CMAKE_COMMAND}
+        "-DCOOKER=$<TARGET_FILE:SIRLangCooker>"
+        "-DRUNNER=$<TARGET_FILE:SIRLangRunner>"
+        "-DINPUT=${CMAKE_CURRENT_LIST_DIR}/Fixtures/SIRLang/signed.sir"
+        "-DOUTPUT=${CMAKE_CURRENT_BINARY_DIR}/sirlang-signed.sirbc"
+        -P "${CMAKE_CURRENT_LIST_DIR}/SIRLangSignedRunner.cmake")

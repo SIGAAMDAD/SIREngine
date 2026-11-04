@@ -91,6 +91,49 @@ static bool sirLangRunParseUnsigned( const char *pszValue, uint64_t *pResult ) n
 	return true;
 }
 
+static uint32_t sirLangRunIntegerWidth( sirLangValueKind_t eType ) noexcept
+{
+	switch ( eType ) {
+	case SIR_LANG_VALUE_I8:
+	case SIR_LANG_VALUE_U8:
+		return 8;
+	case SIR_LANG_VALUE_I16:
+	case SIR_LANG_VALUE_U16:
+		return 16;
+	case SIR_LANG_VALUE_I32:
+	case SIR_LANG_VALUE_U32:
+		return 32;
+	case SIR_LANG_VALUE_I64:
+	case SIR_LANG_VALUE_U64:
+		return 64;
+	default:
+		return 0;
+	}
+}
+
+static bool sirLangRunParseSigned( const char *pszValue, uint32_t nWidth, uint64_t *pBits ) noexcept
+{
+	if ( pszValue == nullptr || pBits == nullptr || *pszValue == '\0' ) {
+		return false;
+	}
+	errno = 0;
+	char *pszEnd = nullptr;
+	const long long nParsed = strtoll( pszValue, &pszEnd, 0 );
+	if ( errno != 0 || pszEnd == pszValue || *pszEnd != '\0' ) {
+		return false;
+	}
+	const int64_t nSigned = ( int64_t )nParsed;
+	if ( nWidth < 64 ) {
+		const int64_t nMin = -( INT64_C( 1 ) << ( nWidth - 1 ) );
+		const int64_t nMax = ( INT64_C( 1 ) << ( nWidth - 1 ) ) - 1;
+		if ( nSigned < nMin || nSigned > nMax ) {
+			return false;
+		}
+	}
+	memcpy( pBits, &nSigned, sizeof( nSigned ) );
+	return true;
+}
+
 static bool sirLangRunParseArgument( const char *pszValue, sirLangValueKind_t eType, sirLangVMValue_t *pValue ) noexcept
 {
 	if ( pszValue == nullptr || pValue == nullptr ) {
@@ -105,8 +148,25 @@ static bool sirLangRunParseArgument( const char *pszValue, sirLangValueKind_t eT
 		} else {
 			return false;
 		}
-	} else if ( !sirLangRunParseUnsigned( pszValue, &nBits ) ) {
-		return false;
+	} else {
+		const uint32_t nWidth = sirLangRunIntegerWidth( eType );
+		if ( nWidth == 0 ) {
+			return false;
+		}
+		const bool bSigned = eType == SIR_LANG_VALUE_I8 || eType == SIR_LANG_VALUE_I16 ||
+		                     eType == SIR_LANG_VALUE_I32 || eType == SIR_LANG_VALUE_I64;
+		if ( bSigned ) {
+			if ( !sirLangRunParseSigned( pszValue, nWidth, &nBits ) ) {
+				return false;
+			}
+		} else {
+			if ( !sirLangRunParseUnsigned( pszValue, &nBits ) ) {
+				return false;
+			}
+			if ( nWidth < 64 && nBits > ( UINT64_C( 1 ) << nWidth ) - 1 ) {
+				return false;
+			}
+		}
 	}
 	pValue->nBits = nBits;
 	pValue->eType = eType;
@@ -116,7 +176,7 @@ static bool sirLangRunParseArgument( const char *pszValue, sirLangValueKind_t eT
 int main( int nArgc, char **ppszArgv )
 {
 	if ( nArgc < 3 ) {
-		fprintf( stderr, "Usage: SIRLangRunner <program.sirbc> <function_index> [unsigned_arg ...]\n" );
+		fprintf( stderr, "Usage: SIRLangRunner <program.sirbc> <function_index> [integer_or_bool_arg ...]\n" );
 		return 2;
 	}
 	uint32_t nBytes = 0;
