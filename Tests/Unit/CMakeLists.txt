@@ -162,6 +162,19 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     sir_configure_owned_target(SIRInputEvdevBatchTests)
 endif()
 
+# Linux X11 window/event acceptance with an actual ephemeral Xvfb server.
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND SIR_WITH_X11_INPUT)
+    find_package(X11 QUIET)
+    find_program(SIR_XVFB_RUN NAMES xvfb-run)
+    if(X11_FOUND AND SIR_XVFB_RUN)
+        add_executable(SIRInputX11WindowTests SIRInputX11WindowTests.cpp)
+        target_link_libraries(SIRInputX11WindowTests PRIVATE SIR::Core X11::X11)
+        add_test(NAME core.platform.input.x11-window COMMAND "${SIR_XVFB_RUN}" -a "$<TARGET_FILE:SIRInputX11WindowTests>")
+        set_tests_properties(core.platform.input.x11-window PROPERTIES LABELS "core;input;x11;integration" TIMEOUT 60)
+        sir_configure_owned_target(SIRInputX11WindowTests)
+    endif()
+endif()
+
 # Win32 packet decoder regression: real MSVC / Windows SDK build, no hardware required.
 if(WIN32)
     add_executable(SIRWindowsRawBatchTests SIRWindowsRawBatchTests.cpp)
