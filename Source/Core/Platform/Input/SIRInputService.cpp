@@ -161,6 +161,25 @@ bool SIRInputService::loseState( sirInputBackendId_t eSource, sirInputDeviceId_t
 	return m_State.postDevice( id, eClass, SIR_INPUT_RESYNC, timestamp( 0, SIR_INPUT_CLOCK_ENGINE_MONOTONIC ) );
 }
 
+bool SIRInputService::loseBackendState( sirInputBackendId_t eSource ) noexcept
+{
+	if ( m_bStopping || !m_State.collecting() || !hasBackend( eSource ) ) {
+		return false;
+	}
+
+	bool bOkay = true;
+	for ( uint32_t iSlot = 0; iSlot < SIR_INPUT_DEVICE_CAPACITY; ++iSlot ) {
+		sirInputDeviceDescriptor_t desc = {};
+		if ( !m_Registry.inspectSlot( iSlot, &desc ) || !desc.bConnected || desc.key.eBackend != eSource ) {
+			continue;
+		}
+		if ( !loseState( eSource, desc.id ) ) {
+			bOkay = false;
+		}
+	}
+	return bOkay;
+}
+
 bool SIRInputService::vibrate( sirInputDeviceId_t id, uint16_t nLeft, uint16_t nRight ) noexcept
 {
 	sirInputDeviceDescriptor_t desc = {};

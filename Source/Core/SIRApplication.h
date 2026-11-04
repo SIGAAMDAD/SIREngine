@@ -25,6 +25,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // clang-format on
 
 #include <Core/Events/SIREventRegistry.h>
+#include <Core/Platform/Input/SIRInputService.h>
+
+// The native window owner dispatches events only between input begin/publish.
+typedef bool ( *sirAppInputPump_t )( SIRInputService &input, void *pContext );
 
 typedef enum sirAppState_e : uint8_t
 {
@@ -39,15 +43,20 @@ private:
 	sirAppState_t m_eState;
 	uint64_t m_nTicks;
 	SIREventRegistry m_EventRegistry;
+	SIRInputService *m_pInput;
+	sirAppInputPump_t m_pInputPump;
+	void *m_pInputPumpContext;
 
 public:
 	SIRApplication( void ) noexcept;
+	bool attachInput( SIRInputService &input, sirAppInputPump_t pPump = nullptr, void *pContext = nullptr ) noexcept;
 	bool initialize( void ) noexcept;
 	bool tick( void ) noexcept;
 	void shutdown( void ) noexcept;
 	sirAppState_t getState( void ) const noexcept;
 	uint64_t getTickCount( void ) const noexcept;
 	SIREventRegistry &getEventRegistry( void ) noexcept;
+	const sirInputFrame_t *getInputFrame( void ) const noexcept;
 };
 
 #endif // __SIRENGINE_SIRAPPLICATION_H__

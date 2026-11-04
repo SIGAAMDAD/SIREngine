@@ -54,6 +54,7 @@ public:
 	bool emitPointer( sirInputBackendId_t eSource, sirInputDeviceId_t hDevice, sirInputSignal_t eSignal, uint16_t nControl, int32_t nX,
 	                  int32_t nY, uint64_t nTime = 0, sirInputClockSource_t eClock = SIR_INPUT_CLOCK_ENGINE_MONOTONIC ) noexcept;
 	bool loseState( sirInputBackendId_t eSource, sirInputDeviceId_t hDevice ) noexcept;
+	bool loseBackendState( sirInputBackendId_t eSource ) noexcept;
 	bool vibrate( sirInputDeviceId_t hDevice, uint16_t nLeft, uint16_t nRight ) noexcept;
 	uint32_t activeDeviceCount( void ) const noexcept;
 	void shutdown( void ) noexcept;
