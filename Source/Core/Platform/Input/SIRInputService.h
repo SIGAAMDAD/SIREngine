@@ -28,6 +28,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Core/Platform/Input/SIRInputBackend.h>
 #include <Core/Platform/Input/SIRInputDeviceRegistry.h>
 #include <Core/Platform/Input/SIRInputFrameState.h>
+#include <Core/Platform/Input/SIRInputText.h>
+#include <Core/Platform/Input/SIRInputHaptics.h>
 
 // Single input owner: UE's device/backend ownership and Source's tick snapshot.
 // No native window/input handles or third-party library types in this contract.
@@ -47,6 +49,14 @@ public:
 	const sirInputFrame_t *frame( void ) const noexcept;
 	SIRInputActions &actions( void ) noexcept;
 	const SIRInputActions &actions( void ) const noexcept;
+	SIRInputText &text( void ) noexcept;
+	const SIRInputText &text( void ) const noexcept;
+	bool scheduleRumble( const sirInputHapticRequest_t &request, sirInputHapticHandle_t *pHandle ) noexcept;
+	bool cancelRumble( sirInputHapticHandle_t hEffect ) noexcept;
+	void setHapticsPaused( bool bPaused ) noexcept;
+	uint32_t hapticCapabilities( sirInputDeviceId_t hDevice ) const noexcept;
+	bool vibrateTriggers( sirInputDeviceId_t hDevice, uint16_t nLeft, uint16_t nRight ) noexcept;
+	uint32_t activeHaptics( void ) const noexcept;
 	bool connect( const sirInputHardwareKey_t &key, sirInputDeviceId_t *pOut ) noexcept;
 	bool disconnect( sirInputBackendId_t eSource, sirInputDeviceId_t hDevice ) noexcept;
 	bool pairUser( sirInputDeviceId_t hDevice, uint32_t nUser ) noexcept;
@@ -67,11 +77,14 @@ private:
 	bool hasBackend( sirInputBackendId_t eSource ) const noexcept;
 	sirInputTimestamp_t timestamp( uint64_t nNative, sirInputClockSource_t eClock ) const noexcept;
 	SIRInputActions m_Actions;
+	SIRInputText m_Text;
+	SIRInputHaptics m_Haptics;
 	SIRInputDeviceRegistry m_Registry;
 	SIRInputFrameState m_State;
 	SIRInputBackend *m_pBackends[SIR_INPUT_BACKEND_CAPACITY];
 	uint32_t m_nBackendCount;
 	bool m_bStopping;
+	bool m_bHapticsPaused;
 };
 
 #endif // __SIRENGINE_SIRINPUTSERVICE_H__

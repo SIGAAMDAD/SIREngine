@@ -295,13 +295,63 @@ void SIRWindowsGameInputBackend::resynchronize( SIRInputService &service ) noexc
 bool SIRWindowsGameInputBackend::vibrate( sirInputDeviceId_t id, uint16_t nLeft, uint16_t nRight ) noexcept
 {
 	for ( uint32_t i = 0; i < SIR_INPUT_DEVICE_CAPACITY; ++i ) {
-		if ( m_Devices[i].pDevice != nullptr && m_Devices[i].id.nSlot == id.nSlot && m_Devices[i].id.nGeneration == id.nGeneration ) {
-			GameInput::v1::GameInputRumbleParams rumble = { ( float )nLeft / 65535.0f, ( float )nRight / 65535.0f, 0.0f, 0.0f };
-			( ( GameInput::v1::IGameInputDevice * )m_Devices[i].pDevice )->SetRumbleState( &rumble );
+		sirGameInputNativeDevice_t &device = m_Devices[i];
+		if ( device.pDevice != nullptr && device.id.nSlot == id.nSlot && device.id.nGeneration == id.nGeneration ) {
+			device.nMotorLeft = nLeft;
+			device.nMotorRight = nRight;
+			const GameInput::v1::GameInputRumbleParams rumble = {
+			    ( float )nLeft / 65535.0f, ( float )nRight / 65535.0f,
+			    ( float )device.nTriggerLeft / 65535.0f, ( float )device.nTriggerRight / 65535.0f
+			};
+			( ( GameInput::v1::IGameInputDevice * )device.pDevice )->SetRumbleState( &rumble );
 			return true;
 		}
 	}
 	return false;
+}
+
+bool SIRWindowsGameInputBackend::vibrateTriggers( sirInputDeviceId_t id, uint16_t nLeft, uint16_t nRight ) noexcept
+{
+	for ( uint32_t i = 0; i < SIR_INPUT_DEVICE_CAPACITY; ++i ) {
+		sirGameInputNativeDevice_t &device = m_Devices[i];
+		if ( device.pDevice != nullptr && device.id.nSlot == id.nSlot && device.id.nGeneration == id.nGeneration ) {
+			device.nTriggerLeft = nLeft;
+			device.nTriggerRight = nRight;
+			const GameInput::v1::GameInputRumbleParams rumble = {
+			    ( float )device.nMotorLeft / 65535.0f, ( float )device.nMotorRight / 65535.0f,
+			    ( float )nLeft / 65535.0f, ( float )nRight / 65535.0f
+			};
+			( ( GameInput::v1::IGameInputDevice * )device.pDevice )->SetRumbleState( &rumble );
+			return true;
+		}
+	}
+	return false;
+}
+
+uint32_t SIRWindowsGameInputBackend::hapticCapabilities( sirInputDeviceId_t hDevice ) const noexcept
+{
+	for ( uint32_t i = 0; i < SIR_INPUT_DEVICE_CAPACITY; ++i ) {
+		const sirGameInputNativeDevice_t &device = m_Devices[i];
+		if ( device.pDevice == nullptr || device.id.nSlot != hDevice.nSlot ||
+		     device.id.nGeneration != hDevice.nGeneration ) {
+			continue;
+		}
+		const GameInput::v1::GameInputDeviceInfo *pInfo = nullptr;
+		const HRESULT nResult = ( ( GameInput::v1::IGameInputDevice * )device.pDevice )->GetDeviceInfo( &pInfo );
+		if ( FAILED( nResult ) || pInfo == nullptr ) {
+			return SIR_INPUT_HAPTIC_CAP_NONE;
+		}
+		const uint32_t nMotors = ( uint32_t )pInfo->supportedRumbleMotors;
+		uint32_t nCaps = SIR_INPUT_HAPTIC_CAP_NONE;
+		if ( ( nMotors & ( GameInput::v1::GameInputRumbleLowFrequency | GameInput::v1::GameInputRumbleHighFrequency ) ) != 0 ) {
+			nCaps |= SIR_INPUT_HAPTIC_CAP_RUMBLE;
+		}
+		if ( ( nMotors & ( GameInput::v1::GameInputRumbleLeftTrigger | GameInput::v1::GameInputRumbleRightTrigger ) ) != 0 ) {
+			nCaps |= SIR_INPUT_HAPTIC_CAP_TRIGGER_RUMBLE;
+		}
+		return nCaps;
+	}
+	return SIR_INPUT_HAPTIC_CAP_NONE;
 }
 
 void SIRWindowsGameInputBackend::stop( SIRInputService &service ) noexcept
@@ -320,6 +370,7 @@ void SIRWindowsGameInputBackend::stop( SIRInputService &service ) noexcept
 	}
 	for ( uint32_t i = 0; i < SIR_INPUT_DEVICE_CAPACITY; ++i ) {
 		if ( m_Devices[i].pDevice != nullptr ) {
+			( void )vibrateTriggers( m_Devices[i].id, 0, 0 );
 			( void )vibrate( m_Devices[i].id, 0, 0 );
 			dropDevice( service, i );
 		}

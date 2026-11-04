@@ -71,9 +71,12 @@ public:
 	void sample( SIRInputService &service ) noexcept override;
 	void resynchronize( SIRInputService &service ) noexcept override;
 	bool vibrate( sirInputDeviceId_t id, uint16_t nLeft, uint16_t nRight ) noexcept override;
+	uint32_t hapticCapabilities( sirInputDeviceId_t hDevice ) const noexcept override;
 	void stop( SIRInputService &service ) noexcept override;
 	bool discover( SIRInputService &service, const char *pszDir = "/dev/input" ) noexcept;
 	bool addProfile( const sirInputControllerProfile_t &profile ) noexcept;
+	bool importCookedProfiles( const uint8_t *pBytes, uint32_t nBytes ) noexcept;
+	bool loadCookedProfilesFile( const char *pszPath ) noexcept;
 	static uint64_t physicalKey( const char *pszPhys, uint16_t nVendor, uint16_t nProduct ) noexcept;
 	static int16_t mapButton( uint16_t nNative ) noexcept;
 	static int16_t mapAxis( uint16_t nNative ) noexcept;

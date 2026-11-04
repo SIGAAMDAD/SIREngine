@@ -7,6 +7,10 @@ set(SIR_CORE_PLATFORM_COMMON
     SIRSync.cpp
     SIRAtomic.cpp
     Input/SIRInputActions.cpp
+    Input/SIRInputBackend.cpp
+    Input/SIRInputText.cpp
+    Input/SIRInputUIDispatch.cpp
+    Input/SIRInputHaptics.cpp
     Input/SIRInputDeviceRegistry.cpp
     Input/SIRInputControllerProfiles.cpp
     Input/SIRInputFrameState.cpp
@@ -45,7 +49,7 @@ if(WIN32)
     elseif(SIR_REQUIRE_GAMEINPUT_SDK)
         message(FATAL_ERROR "SIR_REQUIRE_GAMEINPUT_SDK requires SIR_WITH_GAMEINPUT=ON")
     endif()
-    target_link_libraries(SIRCore PRIVATE psapi user32)
+    target_link_libraries(SIRCore PRIVATE psapi user32 imm32)
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     set(SIR_CORE_PLATFORM_OS
         Linux/SIRVirtualMemoryLinux.cpp

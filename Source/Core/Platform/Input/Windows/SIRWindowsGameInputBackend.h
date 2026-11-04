@@ -35,6 +35,10 @@ typedef struct sirGameInputNativeDevice_s
 	void *pDevice;
 	sirInputDeviceId_t id;
 	sirGameInputDecodedGamepad_t decoded;
+	uint16_t nMotorLeft;
+	uint16_t nMotorRight;
+	uint16_t nTriggerLeft;
+	uint16_t nTriggerRight;
 } sirGameInputNativeDevice_t;
 
 // GameInput owns the input history and device endpoints. The callback only
@@ -51,6 +55,8 @@ public:
 	void sample( SIRInputService &service ) noexcept override;
 	void resynchronize( SIRInputService &service ) noexcept override;
 	bool vibrate( sirInputDeviceId_t hDevice, uint16_t nLeft, uint16_t nRight ) noexcept override;
+	uint32_t hapticCapabilities( sirInputDeviceId_t hDevice ) const noexcept override;
+	bool vibrateTriggers( sirInputDeviceId_t hDevice, uint16_t nLeft, uint16_t nRight ) noexcept override;
 	void stop( SIRInputService &service ) noexcept override;
 	bool initialized( void ) const noexcept;
 
