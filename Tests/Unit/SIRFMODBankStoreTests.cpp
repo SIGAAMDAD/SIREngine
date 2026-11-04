@@ -612,11 +612,10 @@ static sirFMODRuntimeTestManifest_t makeRuntimeManifest( void ) noexcept
 	image.packages[0] = { 1, 101, 0, 0, 0 };
 	image.packages[1] = { 2, 102, 0, 0, 1 };
 	image.events[0] = { 101, 1, 1001, 0 };
-	image.controls[0] = { 201, 2001, 0, 0.5f, 0.0f, 1.0f, SIR_AUDIO_CONTROL_PLAYING,
-	                      SIR_AUDIO_CONTROL_FLOAT, SIR_AUDIO_BINDING_NATIVE, 0 };
+	image.controls[0] = { 201, 2001, 0, 0.5f, 0.0f, 1.0f, SIR_AUDIO_CONTROL_PLAYING, SIR_AUDIO_CONTROL_FLOAT, SIR_AUDIO_BINDING_NATIVE, 0 };
 	image.dependencies[0] = 1;
-	image.header.nContentHash = SIRAudioResourceStore::hashPayload(
-	    ( const uint8_t * )&image + sizeof( image.header.nContentHash ), sizeof( image ) - sizeof( image.header.nContentHash ) );
+	image.header.nContentHash = SIRAudioResourceStore::hashPayload( ( const uint8_t * )&image + sizeof( image.header.nContentHash ),
+	                                                                sizeof( image ) - sizeof( image.header.nContentHash ) );
 	return image;
 }
 
@@ -640,8 +639,8 @@ static sirAudioResult_t testResolveEventPath( void *, uint64_t nEventId, uint64_
 	return SIR_AUDIO_OK;
 }
 
-static sirAudioResult_t testResolveRuntimeObject( void *, sirFMODRuntimeObjectKind_t eKind, uint64_t nObjectId,
-                                                 uint64_t nProviderKey, const char **pszPath ) noexcept
+static sirAudioResult_t testResolveRuntimeObject( void *, sirFMODRuntimeObjectKind_t eKind, uint64_t nObjectId, uint64_t nProviderKey,
+                                                  const char **pszPath ) noexcept
 {
 	if ( eKind == SIR_FMOD_RUNTIME_BUS && nObjectId == 10 && nProviderKey == 501 ) {
 		*pszPath = "bus:/Master";
@@ -672,9 +671,7 @@ static void testRuntimeComposition( const sirContainerAllocator_t *pAllocator )
 	checkBank( !manifest.getEventAt( 1, event ) && !manifest.getControlAt( 1, control ) );
 
 	const sirFMODRuntimeObject_t objects[3] = {
-	    { 10, 1, 501, SIR_FMOD_RUNTIME_BUS, {} },
-	    { 20, 1, 502, SIR_FMOD_RUNTIME_VCA, {} },
-	    { 30, 1, 503, SIR_FMOD_RUNTIME_SNAPSHOT, {} } };
+	    { 10, 1, 501, SIR_FMOD_RUNTIME_BUS, {} }, { 20, 1, 502, SIR_FMOD_RUNTIME_VCA, {} }, { 30, 1, 503, SIR_FMOD_RUNTIME_SNAPSHOT, {} } };
 	sirFMODRuntimeConfig_t config = {};
 	config.context = { 16, -1, 1, 1, 0, 0 };
 	config.audio = { 1, 0, 8, 4, 4, 0 };
@@ -698,10 +695,8 @@ static void testRuntimeComposition( const sirContainerAllocator_t *pAllocator )
 	ops.voice.setInstanceParameter = testRuntimeInstanceParameter;
 	ops.voice.setGlobalParameter = testRuntimeGlobalParameter;
 	ops.bank = makeBankOps( &fixture );
-	ops.mixer = { 1, &fixture, testPinnedBusResolve, testPinnedVCAResolve, testPinnedSetVolume, testPinnedSetMute,
-	             testPinnedSetVolume };
-	ops.snapshot = { 1, &fixture, testPinnedSnapshotResolve, testVoiceCreate, testVoiceStart, testVoiceStop,
-	                testVoiceRelease };
+	ops.mixer = { 1, &fixture, testPinnedBusResolve, testPinnedVCAResolve, testPinnedSetVolume, testPinnedSetMute, testPinnedSetVolume };
+	ops.snapshot = { 1, &fixture, testPinnedSnapshotResolve, testVoiceCreate, testVoiceStart, testVoiceStop, testVoiceRelease };
 
 	SIRFMODRuntime runtime;
 	checkBank( runtime.initialize( config, ops ) == SIR_AUDIO_OK );

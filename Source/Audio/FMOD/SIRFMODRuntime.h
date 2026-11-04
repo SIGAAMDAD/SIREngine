@@ -36,8 +36,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 typedef struct sirFMODRuntimeEventResolver_s
 {
 	void *pUserData;
-	sirAudioResult_t ( *resolve )( void *pUserData, uint64_t nEventId, uint64_t nProviderKey,
-	                               const char **pszEventPath ) noexcept;
+	sirAudioResult_t ( *resolve )( void *pUserData, uint64_t nEventId, uint64_t nProviderKey, const char **pszEventPath ) noexcept;
 } sirFMODRuntimeEventResolver_t;
 
 typedef enum sirFMODRuntimeObjectKind_e : uint8_t
@@ -61,8 +60,8 @@ typedef struct sirFMODRuntimeObject_s
 typedef struct sirFMODRuntimeObjectResolver_s
 {
 	void *pUserData;
-	sirAudioResult_t ( *resolve )( void *pUserData, sirFMODRuntimeObjectKind_t eKind, uint64_t nObjectId,
-	                               uint64_t nProviderKey, const char **pszPath ) noexcept;
+	sirAudioResult_t ( *resolve )( void *pUserData, sirFMODRuntimeObjectKind_t eKind, uint64_t nObjectId, uint64_t nProviderKey,
+	                               const char **pszPath ) noexcept;
 } sirFMODRuntimeObjectResolver_t;
 
 typedef struct sirFMODRuntimeNativeOps_s

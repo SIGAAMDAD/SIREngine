@@ -47,16 +47,14 @@ void SIRFMODRuntime::releaseBindingStorage( void ) noexcept
 	m_bInitialized = false;
 }
 
-sirAudioResult_t SIRFMODRuntime::initialize( const sirFMODRuntimeConfig_t &config,
-                                             const sirFMODRuntimeNativeOps_t &ops ) noexcept
+sirAudioResult_t SIRFMODRuntime::initialize( const sirFMODRuntimeConfig_t &config, const sirFMODRuntimeNativeOps_t &ops ) noexcept
 {
 	if ( m_pManifest != nullptr || m_bInitialized || config.pManifest == nullptr || !config.pManifest->isLoaded() ||
-	     config.pManifest->getProvider() != SIR_AUDIO_PROVIDER_FMOD ||
-	     !SIRRawStorage::isValidAllocator( config.pAllocator ) || config.packageResolver.resolve == nullptr ||
-	     config.eventResolver.resolve == nullptr || config.nMaxRegisteredEvents == 0 ||
+	     config.pManifest->getProvider() != SIR_AUDIO_PROVIDER_FMOD || !SIRRawStorage::isValidAllocator( config.pAllocator ) ||
+	     config.packageResolver.resolve == nullptr || config.eventResolver.resolve == nullptr || config.nMaxRegisteredEvents == 0 ||
 	     config.nMaxRegisteredParameters < config.pManifest->getControlCount() ||
-	     config.nMaxRegisteredEvents < config.pManifest->getEventCount() || config.nMaxBanks == 0 ||
-	     config.nMaxBankEventBindings == 0 || config.nMaxMixerControls == 0 || config.nMaxSnapshots == 0 ||
+	     config.nMaxRegisteredEvents < config.pManifest->getEventCount() || config.nMaxBanks == 0 || config.nMaxBankEventBindings == 0 ||
+	     config.nMaxMixerControls == 0 || config.nMaxSnapshots == 0 ||
 	     ( config.nObjectCount != 0 && ( config.pObjects == nullptr || config.objectResolver.resolve == nullptr ) ) ) {
 		return SIR_AUDIO_INVALID_ARGUMENT;
 	}
@@ -127,9 +125,8 @@ sirAudioResult_t SIRFMODRuntime::initialize( const sirFMODRuntimeConfig_t &confi
 		if ( eResult != SIR_AUDIO_OK ) {
 			break;
 		}
-		eResult = m_Voices.configure( &m_Context, m_pAllocator, ops.voice, config.nMaxRegisteredEvents,
-		                              config.nMaxRegisteredParameters, config.audio.nMaxEmitters,
-		                              config.audio.nMaxListeners, config.nMaxEmitterParameters );
+		eResult = m_Voices.configure( &m_Context, m_pAllocator, ops.voice, config.nMaxRegisteredEvents, config.nMaxRegisteredParameters,
+		                              config.audio.nMaxEmitters, config.audio.nMaxListeners, config.nMaxEmitterParameters );
 		if ( eResult != SIR_AUDIO_OK ) {
 			break;
 		}
@@ -141,8 +138,7 @@ sirAudioResult_t SIRFMODRuntime::initialize( const sirFMODRuntimeConfig_t &confi
 		if ( eResult != SIR_AUDIO_OK ) {
 			break;
 		}
-		eResult = m_Banks.initialize( &m_Context, &m_Voices, m_pAllocator, ops.bank, config.nMaxBanks,
-		                              config.nMaxBankEventBindings );
+		eResult = m_Banks.initialize( &m_Context, &m_Voices, m_pAllocator, ops.bank, config.nMaxBanks, config.nMaxBankEventBindings );
 		if ( eResult != SIR_AUDIO_OK ) {
 			break;
 		}
@@ -220,8 +216,8 @@ sirAudioResult_t SIRFMODRuntime::bindPackageResources( void ) noexcept
 			continue;
 		}
 		const char *pszPath = nullptr;
-		const sirAudioResult_t ePath = m_ObjectResolver.resolve(
-		    m_ObjectResolver.pUserData, object.eKind, object.nObjectId, object.nProviderKey, &pszPath );
+		const sirAudioResult_t ePath =
+		    m_ObjectResolver.resolve( m_ObjectResolver.pUserData, object.eKind, object.nObjectId, object.nProviderKey, &pszPath );
 		if ( ePath != SIR_AUDIO_OK ) {
 			return ePath;
 		}
@@ -252,9 +248,8 @@ void SIRFMODRuntime::rollbackNewBindings( void ) noexcept
 			continue;
 		}
 		const sirFMODRuntimeObject_t &object = m_pObjects[iObject];
-		const sirAudioResult_t eResult = object.eKind == SIR_FMOD_RUNTIME_SNAPSHOT
-		                                     ? m_Snapshots.unregisterSnapshot( object.nObjectId )
-		                                     : m_Mixer.unregisterControl( object.nObjectId );
+		const sirAudioResult_t eResult = object.eKind == SIR_FMOD_RUNTIME_SNAPSHOT ? m_Snapshots.unregisterSnapshot( object.nObjectId )
+		                                                                           : m_Mixer.unregisterControl( object.nObjectId );
 		if ( eResult != SIR_AUDIO_OK ) {
 			abort();
 		}
@@ -266,8 +261,7 @@ void SIRFMODRuntime::rollbackNewBindings( void ) noexcept
 			continue;
 		}
 		sirAudioEventRecord_t event = {};
-		if ( !m_pManifest->getEventAt( iEvent, event ) ||
-		     m_Banks.unbindEvent( event.nPackageId, event.nEventId ) != SIR_AUDIO_OK ) {
+		if ( !m_pManifest->getEventAt( iEvent, event ) || m_Banks.unbindEvent( event.nPackageId, event.nEventId ) != SIR_AUDIO_OK ) {
 			abort();
 		}
 		m_pEventStates[iEvent] = 0;
@@ -292,8 +286,7 @@ void SIRFMODRuntime::synchronizeReleasedBindings( void ) noexcept
 {
 	for ( uint32_t iEvent = 0; iEvent < m_nEventCount; ++iEvent ) {
 		sirAudioEventRecord_t event = {};
-		if ( m_pEventStates[iEvent] != 0 && m_pManifest->getEventAt( iEvent, event ) &&
-		     !m_Banks.hasLoadedBank( event.nPackageId ) ) {
+		if ( m_pEventStates[iEvent] != 0 && m_pManifest->getEventAt( iEvent, event ) && !m_Banks.hasLoadedBank( event.nPackageId ) ) {
 			m_pEventStates[iEvent] = 0;
 		}
 	}
@@ -339,9 +332,8 @@ sirAudioResult_t SIRFMODRuntime::collectUnused( void ) noexcept
 		if ( nReferences != 0 ) {
 			continue;
 		}
-		const sirAudioResult_t eResult = object.eKind == SIR_FMOD_RUNTIME_SNAPSHOT
-		                                     ? m_Snapshots.unregisterSnapshot( object.nObjectId )
-		                                     : m_Mixer.unregisterControl( object.nObjectId );
+		const sirAudioResult_t eResult = object.eKind == SIR_FMOD_RUNTIME_SNAPSHOT ? m_Snapshots.unregisterSnapshot( object.nObjectId )
+		                                                                           : m_Mixer.unregisterControl( object.nObjectId );
 		if ( eResult != SIR_AUDIO_OK ) {
 			return eResult;
 		}
@@ -401,10 +393,31 @@ bool SIRFMODRuntime::isReady( void ) const noexcept
 	       m_pManifest->getEpoch() == m_nManifestEpoch && m_Packages.isReady();
 }
 
-SIRAudioSystem &SIRFMODRuntime::getAudio( void ) noexcept { return m_Audio; }
-SIRFMODContext &SIRFMODRuntime::getContext( void ) noexcept { return m_Context; }
-SIRFMODMixerBackend &SIRFMODRuntime::getMixer( void ) noexcept { return m_Mixer; }
-SIRFMODSnapshotBackend &SIRFMODRuntime::getSnapshots( void ) noexcept { return m_Snapshots; }
-SIRFMODBankStore &SIRFMODRuntime::getBanks( void ) noexcept { return m_Banks; }
-SIRFMODPackageLoader &SIRFMODRuntime::getPackages( void ) noexcept { return m_Packages; }
-int32_t SIRFMODRuntime::getLastNativeResult( void ) const noexcept { return m_nLastNativeResult; }
+SIRAudioSystem &SIRFMODRuntime::getAudio( void ) noexcept
+{
+	return m_Audio;
+}
+SIRFMODContext &SIRFMODRuntime::getContext( void ) noexcept
+{
+	return m_Context;
+}
+SIRFMODMixerBackend &SIRFMODRuntime::getMixer( void ) noexcept
+{
+	return m_Mixer;
+}
+SIRFMODSnapshotBackend &SIRFMODRuntime::getSnapshots( void ) noexcept
+{
+	return m_Snapshots;
+}
+SIRFMODBankStore &SIRFMODRuntime::getBanks( void ) noexcept
+{
+	return m_Banks;
+}
+SIRFMODPackageLoader &SIRFMODRuntime::getPackages( void ) noexcept
+{
+	return m_Packages;
+}
+int32_t SIRFMODRuntime::getLastNativeResult( void ) const noexcept
+{
+	return m_nLastNativeResult;
+}
