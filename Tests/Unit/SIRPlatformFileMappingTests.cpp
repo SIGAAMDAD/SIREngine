@@ -35,6 +35,10 @@ static void sirTestMappings( void )
 	uint64_t nTransferred = 0;
 	SIR_REQUIRE( file.write( szContents, sizeof( szContents ), &nTransferred ) == SIR_FILE_OK );
 	SIR_REQUIRE( nTransferred == sizeof( szContents ) );
+	SIR_REQUIRE( mapping.map( file, 17, 0, SIR_FILE_MAP_READ_ONLY ) == SIR_FILE_OK );
+	SIR_REQUIRE( mapping.isMapped() && mapping.getSize() == sizeof( szContents ) - 17 );
+	SIR_REQUIRE( mapping.getData()[0] == szContents[17] );
+	SIR_REQUIRE( mapping.unmap() == SIR_FILE_OK );
 
 	SIR_REQUIRE( mapping.map( file, UINT64_MAX, 4, SIR_FILE_MAP_READ_ONLY ) == SIR_FILE_OUT_OF_RANGE );
 	SIR_REQUIRE( mapping.map( file, 8192, 0, SIR_FILE_MAP_READ_ONLY ) == SIR_FILE_OUT_OF_RANGE );
