@@ -1,6 +1,8 @@
 name: GRDG instrumented C++ coverage
 
 on:
+  push:
+    branches: [test/grdg-exhaustive-coverage-20261104]
   pull_request:
     branches: [develop, main]
     paths:
