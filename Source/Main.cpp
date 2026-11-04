@@ -10,10 +10,12 @@
 #include <stdio.h>
 #include <string.h>
 
+#if defined( _WIN32 ) || defined( SIR_INPUT_X11_AVAILABLE )
 static bool sirPumpInputWindow( SIRInputService &input, void *pContext )
 {
 	return ( ( SIRInputWindow * )pContext )->pump( input );
 }
+#endif
 
 static int sirRunNativeInputWindow( void )
 {

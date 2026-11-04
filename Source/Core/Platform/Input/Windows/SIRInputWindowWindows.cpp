@@ -26,6 +26,9 @@ static constexpr wchar_t s_szInputClass[] = L"SIREngineNativeInputWindow";
 
 static LRESULT CALLBACK sirInputNativeWindowProc( HWND hWindow, UINT nMessage, WPARAM nWParam, LPARAM nLParam )
 {
+  Source/Core/Platform/Input/Windows/SIRInputWindowWindows.cpp
+
+
 	if ( nMessage == WM_NCCREATE ) {
 		const CREATESTRUCTW *pCreate = ( const CREATESTRUCTW * )nLParam;
 		SetWindowLongPtrW( hWindow, GWLP_USERDATA, ( LONG_PTR )pCreate->lpCreateParams );
@@ -40,8 +43,8 @@ static LRESULT CALLBACK sirInputNativeWindowProc( HWND hWindow, UINT nMessage, W
 }
 
 SIRInputWindow::SIRInputWindow( void ) noexcept
-    : m_pInput( nullptr ), m_pDesktop( nullptr ), m_pDisplay( nullptr ), m_nWindow( 0 ), m_bOpen( false ),
-      m_bAttached( false ), m_bRegistered( false ), m_bFocusLost( false )
+    : m_pInput( nullptr ), m_pDesktop( nullptr ), m_pDisplay( nullptr ), m_nWindow( 0 ), m_bOpen( false ), m_bAttached( false ),
+      m_bRegistered( false ), m_bFocusLost( false )
 {
 }
 
@@ -66,8 +69,8 @@ bool SIRInputWindow::open( SIRInputService &input, SIRInputBackend &desktop ) no
 	}
 	m_bRegistered = nClass != 0;
 
-	HWND hWindow = CreateWindowExW( 0, s_szInputClass, L"SIREngine native input", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT,
-	                               CW_USEDEFAULT, 800, 450, nullptr, nullptr, windowClass.hInstance, this );
+	HWND hWindow = CreateWindowExW( 0, s_szInputClass, L"SIREngine native input", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, 800,
+	                                450, nullptr, nullptr, windowClass.hInstance, this );
 	if ( hWindow == nullptr ) {
 		close();
 		return false;
@@ -118,8 +121,7 @@ intptr_t SIRInputWindow::dispatchNativeMessage( uint32_t nMessage, uintptr_t nWP
 	}
 	if ( m_pInput != nullptr && m_pDesktop != nullptr ) {
 		if ( nMessage == WM_INPUT || nMessage == WM_INPUT_DEVICE_CHANGE ) {
-			( ( SIRWindowsRawBackend * )m_pDesktop )
-			    ->processMessage( *m_pInput, nMessage, nWParam, nLParam );
+			( ( SIRWindowsRawBackend * )m_pDesktop )->processMessage( *m_pInput, nMessage, nWParam, nLParam );
 			if ( nMessage == WM_INPUT_DEVICE_CHANGE ) {
 				return 0;
 			}

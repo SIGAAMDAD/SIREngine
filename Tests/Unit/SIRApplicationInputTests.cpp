@@ -115,16 +115,15 @@ static bool sirTestApplicationInputLifecycle( void )
 		return false;
 	}
 	pFrame = application.getInputFrame();
-	if ( pFrame == nullptr || pFrame->nTick != 3 ||
-	     ( pFrame->state[backend.m_hDevice.nSlot].nReleased[38 / 32] & nMask ) == 0 ||
+	if ( pFrame == nullptr || pFrame->nTick != 3 || ( pFrame->state[backend.m_hDevice.nSlot].nReleased[38 / 32] & nMask ) == 0 ||
 	     ( pFrame->state[backend.m_hDevice.nSlot].nHeld[38 / 32] & nMask ) != 0 ) {
 		return false;
 	}
 
 	application.shutdown();
 	application.shutdown();
-	return backend.m_nStops == 1 && backend.m_nSamples == 3 && application.getInputFrame() == nullptr &&
-	       input.activeDeviceCount() == 0 && !application.tick();
+	return backend.m_nStops == 1 && backend.m_nSamples == 3 && application.getInputFrame() == nullptr && input.activeDeviceCount() == 0 &&
+	       !application.tick();
 }
 
 static bool sirTestHeadlessApplicationStillWorks( void )
