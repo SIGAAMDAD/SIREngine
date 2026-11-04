@@ -7,6 +7,9 @@ on:
       - 'Source/Core/Jobs/**'
       - 'Tests/Unit/SIRTask*'
       - 'Tests/Unit/CMakeLists.txt'
+      - 'Tests/Unit/SIRInfrastructureIntegrationTests.cpp'
+      - 'Tests/Unit/SIRResourceFileLoadTests.cpp'
+      - 'Source/Resources/**'
       - '.github/workflows/jobs-sanitizer.yml'
   workflow_dispatch:
 
@@ -42,4 +45,4 @@ jobs:
           --output-on-failure
           --no-tests=error
           --repeat until-fail:5
-          -R '^core[.]jobs[.]'
+          -R '^(core[.]jobs[.]|resources[.](integration[.]stress|streaming[.]native-file-io))'

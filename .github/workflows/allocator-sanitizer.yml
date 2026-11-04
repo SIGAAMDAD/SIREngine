@@ -6,6 +6,9 @@ on:
     paths:
       - 'Source/Core/Memory/**'
       - 'Tests/Unit/SIRAllocator*'
+      - 'Tests/Unit/SIRInfrastructureIntegrationTests.cpp'
+      - 'Tests/Unit/CMakeLists.txt'
+      - 'Source/Resources/**'
       - '.github/workflows/allocator-sanitizer.yml'
   workflow_dispatch:
 
@@ -36,4 +39,7 @@ jobs:
         env:
           ASAN_OPTIONS: detect_leaks=1:halt_on_error=1
           UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
-        run: ctest --preset dev --output-on-failure -R '^core[.]memory[.]allocators'
+        run: >
+          ctest --preset dev --output-on-failure --no-tests=error
+          --repeat until-fail:3
+          -R '^(core[.]memory[.]allocators|core[.]memory[.]manager|core[.]platform[.]decommit-failure|resources[.](integration[.]stress|streaming[.]native-file-io))'
