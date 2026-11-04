@@ -23,6 +23,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 static uint32_t s_nReleases = 0;
 static uint32_t s_nFactoryMode = 0;
 static uint32_t s_nDriverSentinel = 0;
+static uint32_t s_nDriverSentinel = 0;
 
 static void *testAllocate( void *, uint64_t nBytes, uint64_t ) noexcept
 {
@@ -115,23 +116,22 @@ static bool testNegotiation( void ) noexcept
 	}
 	host.pFree = testFree;
 	s_nFactoryMode = 1;
-	if ( sirGraphicsNegotiateDriverABI( testFactory, &host, &driver ) != SIR_GRAPHICS_ABI_INVALID_ARGUMENT ||
-	     driver.pDriver != nullptr || s_nReleases != 1 ) {
+	if ( sirGraphicsNegotiateDriverABI( testFactory, &host, &driver ) != SIR_GRAPHICS_ABI_INVALID_ARGUMENT || driver.pDriver != nullptr ||
+	     s_nReleases != 1 ) {
 		return false;
 	}
 	s_nFactoryMode = 2;
-	if ( sirGraphicsNegotiateDriverABI( testFactory, &host, &driver ) != SIR_GRAPHICS_ABI_VERSION_MISMATCH ||
-	     driver.pDriver != nullptr || s_nReleases != 2 ) {
+	if ( sirGraphicsNegotiateDriverABI( testFactory, &host, &driver ) != SIR_GRAPHICS_ABI_VERSION_MISMATCH || driver.pDriver != nullptr ||
+	     s_nReleases != 2 ) {
 		return false;
 	}
 	s_nFactoryMode = 3;
-	if ( sirGraphicsNegotiateDriverABI( testFactory, &host, &driver ) != SIR_GRAPHICS_ABI_UNSUPPORTED ||
-	     driver.pDriver != nullptr ) {
+	if ( sirGraphicsNegotiateDriverABI( testFactory, &host, &driver ) != SIR_GRAPHICS_ABI_UNSUPPORTED || driver.pDriver != nullptr ) {
 		return false;
 	}
 	s_nFactoryMode = 0;
-	if ( sirGraphicsNegotiateDriverABI( testFactory, &host, &driver ) != SIR_GRAPHICS_ABI_SUCCESS ||
-	     driver.pDriver == nullptr || driver.pCreateDevice == nullptr ) {
+	if ( sirGraphicsNegotiateDriverABI( testFactory, &host, &driver ) != SIR_GRAPHICS_ABI_SUCCESS || driver.pDriver == nullptr ||
+	     driver.pCreateDevice == nullptr ) {
 		return false;
 	}
 	driver.pReleaseDriver( driver.pDriver );
