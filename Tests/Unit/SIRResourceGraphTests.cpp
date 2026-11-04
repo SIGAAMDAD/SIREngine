@@ -1534,6 +1534,58 @@ static void testMultiChunkEvictionAndFailedReplacement( void )
 	REQUIRE( allocator.m_nOutstanding.load() == 0 );
 }
 
+static void testCompileTaskGraphInputRejection( void )
+{
+	SIRTestAllocatorStats allocator = {};
+	SIRMemoryManager memory;
+	initResourceTaskMemory( memory );
+	{
+		SIRResourceGraph resources( testConfig( allocator, 8 ) );
+		REQUIRE( resources.isReady() );
+		SIRResourceGraphWriter *pWriter = resources.getWriter();
+		REQUIRE( pWriter != nullptr );
+		sirResourceScheduledTestSet_t work = {};
+		work.nNodes = 1;
+		work.nodes[0].hResource = publishTaskNode( *pWriter, 4411 );
+		SIRResourceDependencyPlanEntry plan[8] = {};
+		uint32_t nCount = 0;
+		SIRTaskGraph tasks;
+		REQUIRE( pWriter->compileTaskGraph( work.nodes[0].hResource, tasks, plan, 8, describeResourceTest, &work, nullptr ) ==
+		         SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		REQUIRE( pWriter->compileTaskGraph( work.nodes[0].hResource, tasks, nullptr, 8, describeResourceTest, &work, &nCount ) ==
+		         SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		REQUIRE( pWriter->compileTaskGraph( work.nodes[0].hResource, tasks, plan, 0, describeResourceTest, &work, &nCount ) ==
+		         SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		REQUIRE( pWriter->compileTaskGraph( work.nodes[0].hResource, tasks, plan, 8, nullptr, &work, &nCount ) ==
+		         SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		REQUIRE( pWriter->compileTaskGraph( { UINT32_MAX, 0, 0, 0 }, tasks, plan, 8, describeResourceTest, &work, &nCount ) ==
+		         SIR_RESOURCE_RESULT_INVALID_HANDLE );
+		REQUIRE( tasks.init( &memory, { 4, 1, 4 } ) );
+		const sirTaskGraphPass_t pass = { executeResourceTest, &work.nodes[0], SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU };
+		uint32_t nPass = 0;
+		REQUIRE( tasks.addPass( pass, nullptr, 0, &nPass ) );
+		REQUIRE( pWriter->compileTaskGraph( work.nodes[0].hResource, tasks, plan, 8, describeResourceTest, &work, &nCount ) ==
+		         SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		REQUIRE( tasks.reset() );
+		std::atomic<uint32_t> nWrongThread{ 0 };
+		std::thread wrong( [&]() {
+			uint32_t nOther = 0;
+			if ( pWriter->compileTaskGraph( work.nodes[0].hResource, tasks, plan, 8, describeResourceTest, &work, &nOther ) ==
+			     SIR_RESOURCE_RESULT_WRITER_VIOLATION ) {
+				nWrongThread.store( 1 );
+			}
+		} );
+		wrong.join();
+		REQUIRE( nWrongThread.load() == 1 );
+		REQUIRE( pWriter->compileTaskGraph( work.nodes[0].hResource, tasks, plan, 8, describeResourceTest, &work, &nCount ) ==
+		         SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( nCount == 1 && tasks.getPassCount() == 1 );
+		REQUIRE( tasks.reset() );
+	}
+	memory.shutdown();
+	REQUIRE( allocator.m_nOutstanding.load() == 0 );
+}
+
 int main( void )
 {
 	testScopeLifetimeAndDeduplication();
@@ -1560,6 +1612,7 @@ int main( void )
 	testConstructorAllocationFailuresAndOverflow();
 	testContentKeyCollisionDoesNotAliasData();
 	testMultiChunkEvictionAndFailedReplacement();
+	testCompileTaskGraphInputRejection();
 	printf( "PASS: GRDG resource registry, publication, deduplication, lifetime, concurrency\n" );
 	return 0;
 }
