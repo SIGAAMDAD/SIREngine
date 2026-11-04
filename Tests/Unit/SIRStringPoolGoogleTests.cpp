@@ -15,7 +15,6 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Core/Strings/SIRStringPool.h>
 #include <gtest/gtest.h>
-#include <algorithm>
 #include <atomic>
 #include <cstdlib>
 #include <cstring>
@@ -135,7 +134,8 @@ static std::vector<uint8_t> sirTestCatalog( const std::vector<sirTestCookedName_
 			const size_t nEncoded = name.sText.size() + ( name.sText.size() + 127 ) / 128;
 			sirTestAppend16( bytes, ( uint16_t )nEncoded );
 			for ( size_t iByte = 0; iByte < name.sText.size(); ) {
-				const size_t nChunk = std::min( ( size_t )128, name.sText.size() - iByte );
+				const size_t nRemaining = name.sText.size() - iByte;
+				const size_t nChunk = nRemaining < 128 ? nRemaining : 128;
 				blob.push_back( ( uint8_t )( nChunk - 1 ) );
 				blob.insert( blob.end(), name.sText.begin() + iByte, name.sText.begin() + iByte + nChunk );
 				iByte += nChunk;
