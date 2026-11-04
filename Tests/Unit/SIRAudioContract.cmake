@@ -29,3 +29,8 @@ add_executable(SIRFMODBankStoreTests SIRFMODBankStoreTests.cpp)
 target_link_libraries(SIRFMODBankStoreTests PRIVATE SIR::FMODContext)
 add_test(NAME audio.fmod.bank-residency COMMAND SIRFMODBankStoreTests)
 sir_configure_owned_target(SIRFMODBankStoreTests)
+
+add_executable(SIRFMODMixerBackendTests SIRFMODMixerBackendTests.cpp)
+target_link_libraries(SIRFMODMixerBackendTests PRIVATE SIR::FMODContext)
+add_test(NAME audio.fmod.mixer-controls COMMAND SIRFMODMixerBackendTests)
+sir_configure_owned_target(SIRFMODMixerBackendTests)
