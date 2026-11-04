@@ -62,3 +62,58 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::createPipeline( const sirGraphicsP
 	}
 	return SIR_GRAPHICS_CAPACITY_EXCEEDED;
 }
+
+sirGraphicsResult_t SIRVulkanCommandList::bindPipeline( sirGraphicsHandle_t hPipeline ) noexcept
+{
+	if ( m_eState != SIR_VULKAN_COMMAND_RECORDING || m_pOwner == nullptr ) {
+		return SIR_GRAPHICS_BUSY;
+	}
+	if ( hPipeline.eType != SIR_GRAPHICS_HANDLE_PIPELINE || hPipeline.nDeviceGeneration != m_pOwner->m_nDeviceGeneration ||
+	     hPipeline.nSlot >= SIRVulkanRenderingDevice::SIR_VULKAN_PIPELINE_CAPACITY ) {
+		return SIR_GRAPHICS_INVALID_HANDLE;
+	}
+	const sirVulkanGraphicsPipelineSlot_t *pSlot = &m_pOwner->m_szPipelines[hPipeline.nSlot];
+	if ( !pSlot->bActive || pSlot->nGeneration != hPipeline.nGeneration ) {
+		return SIR_GRAPHICS_INVALID_HANDLE;
+	}
+	m_hBoundPipeline = hPipeline;
+	return SIR_GRAPHICS_SUCCESS;
+}
+
+sirGraphicsResult_t SIRVulkanCommandList::dispatch( uint32_t nGroupCountX, uint32_t nGroupCountY, uint32_t nGroupCountZ ) noexcept
+{
+	if ( m_eState != SIR_VULKAN_COMMAND_RECORDING || m_pOwner == nullptr ) {
+		return SIR_GRAPHICS_BUSY;
+	}
+	if ( m_nOperationCount >= SIR_VULKAN_COPY_BATCH_CAPACITY ) {
+		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
+	}
+	if ( nGroupCountX == 0 || nGroupCountY == 0 || nGroupCountZ == 0 ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	const sirGraphicsHandle_t hPipeline = m_hBoundPipeline;
+	if ( hPipeline.eType != SIR_GRAPHICS_HANDLE_PIPELINE || hPipeline.nDeviceGeneration != m_pOwner->m_nDeviceGeneration ||
+	     hPipeline.nSlot >= SIRVulkanRenderingDevice::SIR_VULKAN_PIPELINE_CAPACITY ) {
+		return SIR_GRAPHICS_INVALID_HANDLE;
+	}
+	const sirVulkanGraphicsPipelineSlot_t *pSlot = &m_pOwner->m_szPipelines[hPipeline.nSlot];
+	if ( !pSlot->bActive || pSlot->nGeneration != hPipeline.nGeneration ) {
+		return SIR_GRAPHICS_INVALID_HANDLE;
+	}
+	sirVulkanAdapterInfo_t adapter = {};
+	if ( !m_pOwner->m_Native.queryAdapter( &adapter ) || !adapter.bComputeCapable ) {
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
+	if ( nGroupCountX > adapter.szMaximumComputeGroupCount[0] || nGroupCountY > adapter.szMaximumComputeGroupCount[1] ||
+	     nGroupCountZ > adapter.szMaximumComputeGroupCount[2] ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	sirVulkanGraphicsOperation_t &operation = m_szOperations[m_nOperationCount++];
+	operation = {};
+	operation.eKind = SIR_VULKAN_GRAPHICS_COMPUTE_DISPATCH;
+	operation.hPipeline = hPipeline;
+	operation.nGroupCountX = nGroupCountX;
+	operation.nGroupCountY = nGroupCountY;
+	operation.nGroupCountZ = nGroupCountZ;
+	return SIR_GRAPHICS_SUCCESS;
+}
