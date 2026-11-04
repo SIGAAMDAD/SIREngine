@@ -90,8 +90,57 @@ target_link_libraries(SIRContainerHeapAdapterTests PRIVATE SIR::Core)
 add_test(NAME core.containers.heap-adapter COMMAND SIRContainerHeapAdapterTests)
 sir_configure_owned_target(SIRContainerHeapAdapterTests)
 
-# Shared renderer contract tests run on Windows/Linux without a GPU or native driver.
+if(SIR_WITH_D3D12)
+    # DXIL is cooked offline; the runtime driver never invokes DXC.
+    find_program(SIR_D3D12_DXC_EXECUTABLE NAMES dxc.exe dxc REQUIRED)
+    set(SIR_D3D12_SMOKE_SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/Shaders/SIRD3D12ComputeSmoke.hlsl")
+    set(SIR_D3D12_SMOKE_DXIL "${CMAKE_CURRENT_BINARY_DIR}/SIRD3D12ComputeSmoke.dxil")
+    add_custom_command(
+        OUTPUT "${SIR_D3D12_SMOKE_DXIL}"
+        COMMAND "${SIR_D3D12_DXC_EXECUTABLE}" -nologo -T cs_6_0 -E main -O3
+                -Fo "${SIR_D3D12_SMOKE_DXIL}" "${SIR_D3D12_SMOKE_SOURCE}"
+        DEPENDS "${SIR_D3D12_SMOKE_SOURCE}"
+        COMMENT "Cook the D3D12 WARP compute smoke DXIL"
+        VERBATIM)
+    add_custom_target(SIRD3D12ComputeSmokeDXIL DEPENDS "${SIR_D3D12_SMOKE_DXIL}")
+    set(SIR_D3D12_GRAPHICS_SMOKE_SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/Shaders/SIRD3D12GraphicsSmoke.hlsl")
+    set(SIR_D3D12_VS_DXIL "${CMAKE_CURRENT_BINARY_DIR}/SIRD3D12GraphicsSmokeVS.dxil")
+    set(SIR_D3D12_PS_DXIL "${CMAKE_CURRENT_BINARY_DIR}/SIRD3D12GraphicsSmokePS.dxil")
+    add_custom_command(
+        OUTPUT "${SIR_D3D12_VS_DXIL}"
+        COMMAND "${SIR_D3D12_DXC_EXECUTABLE}" -nologo -T vs_6_0 -E vsMain -O3
+                -Fo "${SIR_D3D12_VS_DXIL}" "${SIR_D3D12_GRAPHICS_SMOKE_SOURCE}"
+        DEPENDS "${SIR_D3D12_GRAPHICS_SMOKE_SOURCE}"
+        COMMENT "Cook the D3D12 WARP offscreen vertex DXIL"
+        VERBATIM)
+    add_custom_command(
+        OUTPUT "${SIR_D3D12_PS_DXIL}"
+        COMMAND "${SIR_D3D12_DXC_EXECUTABLE}" -nologo -T ps_6_0 -E psMain -O3
+                -Fo "${SIR_D3D12_PS_DXIL}" "${SIR_D3D12_GRAPHICS_SMOKE_SOURCE}"
+        DEPENDS "${SIR_D3D12_GRAPHICS_SMOKE_SOURCE}"
+        COMMENT "Cook the D3D12 WARP offscreen pixel DXIL"
+        VERBATIM)
+    add_custom_target(SIRD3D12GraphicsSmokeDXIL DEPENDS "${SIR_D3D12_VS_DXIL}" "${SIR_D3D12_PS_DXIL}")
+    add_executable(SIRD3D12HeadlessTests SIRD3D12HeadlessTests.cpp)
+    add_dependencies(SIRD3D12HeadlessTests SIRD3D12ComputeSmokeDXIL SIRD3D12GraphicsSmokeDXIL)
+    target_compile_definitions(SIRD3D12HeadlessTests PRIVATE
+        SIR_D3D12_SMOKE_DXIL_PATH="${SIR_D3D12_SMOKE_DXIL}"
+        SIR_D3D12_VS_DXIL_PATH="${SIR_D3D12_VS_DXIL}"
+        SIR_D3D12_PS_DXIL_PATH="${SIR_D3D12_PS_DXIL}")
+    target_link_libraries(SIRD3D12HeadlessTests PRIVATE SIR::D3D12)
+    add_test(NAME renderer.d3d12.warp-headless COMMAND SIRD3D12HeadlessTests)
+    sir_configure_owned_target(SIRD3D12HeadlessTests)
+endif()
+
+# The portable contract runs independently of the native graphics driver.
 add_executable(SIRGraphicsInterfaceTests SIRGraphicsInterfaceTests.cpp)
 target_link_libraries(SIRGraphicsInterfaceTests PRIVATE SIR::Graphics)
 add_test(NAME renderer.graphics.interface COMMAND SIRGraphicsInterfaceTests)
 sir_configure_owned_target(SIRGraphicsInterfaceTests)
+
+if(SIR_WITH_D3D12)
+    add_executable(SIRD3D12SharedApiTests SIRD3D12SharedApiTests.cpp)
+    target_link_libraries(SIRD3D12SharedApiTests PRIVATE SIR::D3D12 SIR::Graphics)
+    add_test(NAME renderer.d3d12.shared-api COMMAND SIRD3D12SharedApiTests)
+    sir_configure_owned_target(SIRD3D12SharedApiTests)
+endif()
