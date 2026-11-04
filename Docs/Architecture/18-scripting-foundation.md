@@ -169,3 +169,45 @@ job/target/recipe identities, invalid status values, unknown fields and corrupte
 Both tests are registered with native CMake/CTest alongside the existing foundation and
 code-manager suites. The focused smoke builds do not prove a full engine link or a real
 optimizer process.
+
+## Verified cache-backed program source (implementation slice 8)
+
+`SIRScriptCachedProgramSource` is the owner-thread bridge from the persistent
+`SIRScriptArtifactCache` into the existing `sirScriptProgramSourceAPI_t` consumed
+by `SIRScriptCodeManager`. Registration records a complete cooked-artifact
+identity and SHA-256 descriptor. When the code manager stages a revision,
+the bridge loads the artifact through the cache's **verified** `fetch()` method
+into a caller-supplied, individually reclaimable engine allocation; it does
+not create an executable mapping. Loading fails closed on missing files,
+invalid headers, damaged bytes, alignment failures, allocator refusal and
+resident-budget exhaustion. No fallback process heap is used.
+
+The bridge accepts `sirScriptPayloadAllocatorAPI_t`, which can be provided by
+`SIRScriptMemoryRouter::makeAPI()` with the existing `SIRAllocationRouter`.
+The router and cache must outlive the provider. The provider must outlive
+`SIRScriptCodeManager`, and the code manager must outlive loaded runtime
+programs. A code-manager stage pins a provider lease; additional provider
+acquisitions share the same immutable allocation until the final lease is
+released. Retired program revisions remain readable while prior runtime loads
+are live. Last-release reclamation is immediate and occurs on the script owner
+thread. The bridge reports live and peak resident bytes, registered artifacts,
+resident artifacts and active leases. It limits registration to 32 artifacts
+and provider leases to 128. These limits are independent of the code manager.
+
+A typical integration sequence is: configure the disk cache; configure the
+provider using a routed allocator and resident byte budget; register the
+verified optimizer completion descriptor; publish the binding registry;
+configure the code manager with the provider's `makeProgramSourceAPI()`;
+then stage/activate the artifact and let the runtime acquire its revision.
+Shutdown must drain runtime instances and loaded programs first, shut down the
+code manager next, and only then shut down the provider, allocator and cache.
+The bridge does not own the cache, allocator or their memory domains. It
+retains the existing script owner-thread contract; cross-thread producers
+must use the event-ingress boundary instead.
+
+`SIRScriptCachedProgramSourceTests` covers byte integrity, duplicate and
+conflicting registration, pin counts and stale releases, runtime revision
+swapping, missing-cache rollback, allocator failure, resident-budget pressure,
+wrong-thread rejection, and resource cleanup. This is a verified cache
+**provider**, not a native optimizer process, code executor or disk eviction
+manager. Those remain separate implementation stages.

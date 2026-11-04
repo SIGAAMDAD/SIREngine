@@ -1,5 +1,6 @@
 add_library(SIRScripting STATIC
     Core/SIRScriptArtifactCache.cpp
+    Core/SIRScriptCachedProgramSource.cpp
     Core/SIRScriptBindingRegistry.cpp
     Core/SIRScriptCodeManager.cpp
     Core/SIRScriptIngress.cpp
