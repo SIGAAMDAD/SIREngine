@@ -36,3 +36,19 @@ add_executable(SIRScriptOptimizerProcessTransportTests SIRScriptOptimizerProcess
 target_link_libraries(SIRScriptOptimizerProcessTransportTests PRIVATE SIR::Scripting)
 sir_configure_owned_target(SIRScriptOptimizerProcessTransportTests)
 add_test(NAME scripting.optimizer-process-transport COMMAND SIRScriptOptimizerProcessTransportTests $<TARGET_FILE:SIRScriptOptimizerWorkerFixture>)
+
+add_library(SIRScriptOptimizerTestBackend SHARED SIRScriptOptimizerTestBackend.cpp)
+target_include_directories(SIRScriptOptimizerTestBackend PRIVATE "${PROJECT_SOURCE_DIR}/Source" "${PROJECT_SOURCE_DIR}/Build/CMake")
+target_compile_features(SIRScriptOptimizerTestBackend PRIVATE cxx_std_17)
+sir_configure_owned_target(SIRScriptOptimizerTestBackend)
+
+add_executable(SIRScriptOptimizerWorkerTests SIRScriptOptimizerWorkerTests.cpp)
+target_link_libraries(SIRScriptOptimizerWorkerTests PRIVATE SIR::Scripting)
+sir_configure_owned_target(SIRScriptOptimizerWorkerTests)
+add_test(NAME scripting.optimizer-worker COMMAND SIRScriptOptimizerWorkerTests
+    $<TARGET_FILE:SIRScriptOptimizerWorker> $<TARGET_FILE:SIRScriptOptimizerTestBackend>)
+
+add_executable(SIRScriptOptimizationRecipeTests SIRScriptOptimizationRecipeTests.cpp)
+target_link_libraries(SIRScriptOptimizationRecipeTests PRIVATE SIR::Scripting)
+sir_configure_owned_target(SIRScriptOptimizationRecipeTests)
+add_test(NAME scripting.optimization-recipe COMMAND SIRScriptOptimizationRecipeTests)

@@ -277,3 +277,69 @@ protocol and lifecycle tests, **not** compiler tests: the fixture emits a
 valid failure reply without generating optimized code. A production worker
 must implement canonical input staging, compilation/optimization and
 SHA-256-verified artifact cache publishing before returning success.
+
+## Canonical optimizer inputs and executable worker (implementation slice 11)
+
+`SIRScriptOptimizationRecipe` defines a language-neutral, **248-byte canonical
+build recipe** (`SIRRCP01`, revision 1) in explicit little-endian fields.
+Its SHA-256 digest is the Stage 7 cache key. The recipe binds backend/program
+identity and revision, cooked output-format identity, published binding schema,
+CPU target identity, build fingerprint, optimization tier, input byte length,
+and a SHA-256 digest of the complete compiler input. Its four additional
+SHA-256 components represent the **complete dependency closure**, frontend
+and compiler identity/version, optimizer toolchain identity/version, and all
+code-generation options/target CPU feature settings. The frontend must
+compute these component digests from canonical, versioned inputs. Changed
+source, dependencies, compiler version, target or options invalidate the key.
+The IPC job ID is excluded, permitting deterministic reuse across worker
+restarts. The recipe is a binary contract, independent of gameplay-language
+syntax, SUIL, LLVM, and other frontend representations.
+
+`SIRScriptOptimizerInputStore` stages each recipe plus opaque compiler input
+under `<input-root>/<64-hex-recipe-sha256>.sirinput`. Its versioned 224-byte
+header records the artifact identity, optimization options, input and recipe
+lengths, recipe digest, input digest, and header checksum. Staging requires
+`SIRScriptOptimizationRecipe::verify()` and rejects a reused recipe key with
+conflicting identity or compiler bytes. It writes to an exclusive temporary
+file, synchronizes the data, then renames atomically. Readers independently
+validate the complete header, file length, recipe digest, input digest, and
+canonical recipe contract. There is no source pointer or variable-size code
+in the IPC envelope. Maximum input bytes and recipe bytes are explicitly
+configured; the example worker caps them at 64 MiB and 64 KiB respectively.
+The host must stage each input **before** submitting the corresponding wire
+request. Recipe and input stores are provisioned in trusted directories.
+Concurrent stage writers for the same key require one external writer owner.
+
+`SIRScriptOptimizerWorker` runs in the **separate optimizer process**. It reads
+and validates the staged inputs, calls a versioned compiler-backend function
+pointer with an opaque input view, checks the returned bytes and alignment,
+publishes the result through `SIRScriptArtifactCache::store()`, and returns the
+verified cached descriptor using the existing 200-byte completion record.
+Backend output must be released through the matching backend-owned callback on
+both success and failure. The worker handles missing/corrupt inputs and failed
+compilation as per-job errors rather than terminating the child. Worker heap
+allocations occur in that subprocess, not the engine's tightly budgeted
+runtime. Resident input and artifact sizes are separately capped.
+
+`SIRScriptOptimizerWorkerMain` is the production **worker-process entrypoint**.
+It accepts provisioned input/cache roots and a compiler backend shared-library
+path. It loads `SIRScriptOptimizerBackendGetAPI` (ABI revision 1) through
+`LoadLibraryA` or `dlopen`, then handles canonical 160-byte request and
+200-byte reply frames until EOF. Standard output is reserved for binary IPC;
+errors go to stderr. Only trusted compiler-backend libraries may be loaded:
+this is a process separation and memory-lifetime boundary, **not** an OS
+sandbox. Worker process priority and security confinement are future platform
+policies. No LLVM runtime/compiler library is linked into the host SIRScripting
+library. A real backend, including LLVM bitcode optimization, AOT/JIT codegen,
+code relocation and native execution, must be implemented independently. The
+included `SIRScriptOptimizerTestBackend` is **only a deterministic test fixture**;
+it does not emit runnable machine code.
+
+`SIRScriptOptimizerWorkerTests` launches the real worker through the Stage 10
+pipe transport and dynamically loads the test shared library. It checks
+canonical input preservation, transformed compiled output and cache fetch,
+repeated recipe jobs, missing and damaged input rejection, corrupt-record
+restaging, compiler failure without worker termination, owner-thread
+restrictions and resource reclamation. `SIRScriptOptimizationRecipeTests`
+exercises stable key reuse, target/schema/options invalidation, and forged or
+mutated input rejection. All previous scripting suites remain included.
