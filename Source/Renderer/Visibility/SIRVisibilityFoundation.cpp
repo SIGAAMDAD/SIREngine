@@ -263,9 +263,6 @@ sirGraphicsResult_t sirVisibilityCullReference( const sirVisibilityCullDesc_t& d
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( desc.nCandidateCount != 0 && desc.pCandidates == nullptr ) {
-/home/runner/work/SIREngine/SIREngine/Source/Renderer/Visibility/SIRVisibilityFoundation.h:153:128: error: code should be clang-formatted [-Wclang-format-violations]
-sirGraphicsResult_t sirVisibilityCullReference( const sirVisibilityCullDesc_t& desc, sirVisibilityOutput_t *pOutput ) noexcept;
-                                                                                                                               ^
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( desc.bHistoryValid && ( desc.pPyramid == nullptr || desc.nPyramidTexels < desc.pLayout->nTexelCount ) ) {
