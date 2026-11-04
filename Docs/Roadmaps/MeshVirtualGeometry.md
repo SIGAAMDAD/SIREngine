@@ -3,7 +3,7 @@
 **Canonical tracking issue:** [#36](https://github.com/SIGAAMDAD/SIREngine/issues/36)
 **Implementation branch:** [`feature/mesh-cache-foundation`](https://github.com/SIGAAMDAD/SIREngine/tree/feature/mesh-cache-foundation) at original foundation commit [`9f0a566a8d9d`](https://github.com/SIGAAMDAD/SIREngine/commit/9f0a566a8d9d091ebee47e4d701dbffe1a2b5b8e).
 **Base branch:** `develop` at `51666fadadf8112b3b2d5bf919ba11dde55d931b`.
-**Status (2026-11-04):** R0 independent CPU cache slice committed; 28 roadmap implementation/acceptance issues open. Remaining stages are requirements and executable plans, **not** implemented source.
+**Status (2026-11-04):** R0 independent CPU cache slice committed; 29 roadmap implementation/acceptance issues open. Remaining stages are requirements and executable plans, **not** implemented source.
 **Source plan:** SIR-VG-001 (Nanite-inspired SIREngine-native virtualized geometry), SIR-VG-DISP-001 (baked displacement), existing `Docs/Architecture/20-mesh-cache-foundation.md`, and renderer/GRDG/Streaming design authorities.
 
 ## 1. Objectives and invariant boundaries
@@ -28,7 +28,7 @@ The independent CPU foundation in `Source/Mesh/SIRMeshCache.*` deliberately **do
 | R5 | Streamed world geometry, terrain and HLOD integration | 3 | [#53](https://github.com/SIGAAMDAD/SIREngine/issues/53), [#54](https://github.com/SIGAAMDAD/SIREngine/issues/54), [#55](https://github.com/SIGAAMDAD/SIREngine/issues/55) |
 | R6 | Material recipes, clutter and static object lifetimes | 3 | [#62](https://github.com/SIGAAMDAD/SIREngine/issues/62), [#64](https://github.com/SIGAAMDAD/SIREngine/issues/64), [#66](https://github.com/SIGAAMDAD/SIREngine/issues/66) |
 | R7 | Skeletal entities and optional acceleration | 3 | [#67](https://github.com/SIGAAMDAD/SIREngine/issues/67), [#68](https://github.com/SIGAAMDAD/SIREngine/issues/68), [#69](https://github.com/SIGAAMDAD/SIREngine/issues/69) |
-| R8 | Editor, profiling, release and independent acceptance | 4 | [#70](https://github.com/SIGAAMDAD/SIREngine/issues/70), [#71](https://github.com/SIGAAMDAD/SIREngine/issues/71), [#72](https://github.com/SIGAAMDAD/SIREngine/issues/72), [#75](https://github.com/SIGAAMDAD/SIREngine/issues/75) |
+| R8 | Editor, profiling, release and independent acceptance | 5 | [#70](https://github.com/SIGAAMDAD/SIREngine/issues/70), [#71](https://github.com/SIGAAMDAD/SIREngine/issues/71), [#72](https://github.com/SIGAAMDAD/SIREngine/issues/72), [#75](https://github.com/SIGAAMDAD/SIREngine/issues/75), [#76](https://github.com/SIGAAMDAD/SIREngine/issues/76) |
 
 ## 3. Dependency DAG
 
@@ -160,7 +160,8 @@ The diagram is conceptual; **each task issue's explicit `Blocked by` list is the
 | `VG-R8-01` | [#70](https://github.com/SIGAAMDAD/SIREngine/issues/70) | Editor/diagnostic mesh residency inspector |
 | `VG-R8-02` | [#71](https://github.com/SIGAAMDAD/SIREngine/issues/71) | Performance and memory benchmarking |
 | `VG-R8-03` | [#72](https://github.com/SIGAAMDAD/SIREngine/issues/72) | Baseline integration and shipping acceptance |
-| `VG-R8-04` | [#75](https://github.com/SIGAAMDAD/SIREngine/issues/75) | Optional skeletal/ragdoll/RT capability QA |
+| `VG-R8-04` | [#75](https://github.com/SIGAAMDAD/SIREngine/issues/75) | Optional skeletal/ragdoll capability QA |
+| `VG-R8-05` | [#76](https://github.com/SIGAAMDAD/SIREngine/issues/76) | Optional mesh/task, software raster and hardware RT capability QA |
 
 
 ## 5. Shared memory / object treatment
@@ -205,7 +206,7 @@ Integration requires an agreed frozen cross-owner ABI and exact source ancestry;
 
 - Each issue opens with `Task ID`, source touchpoints, direct blockers, writer, implementation contract, acceptance, negative cases and protected areas.
 - Mark a task completed only when the commit, compile/config/format/AST records and required test/benchmark evidence are attached to the exact issue. Passing a standalone CPU mock cannot certify hardware Vulkan/D3D12 behavior.
-- R8-03 is the **baseline virtualized geometry** release gate. R8-04 separately gates optional skinned/ragdoll/mesh/task/software-raster/RT capabilities. Releases can distinguish supported hardware tiers without changing core mesh-format authority.
+- R8-03 is the **baseline virtualized geometry** release gate. R8-04 separately gates skinned/ragdoll capabilities. R8-05 independently gates mesh/task, software-raster and RT capabilities. Releases can distinguish supported hardware tiers without changing core mesh-format authority.
 - Roadmap updates should edit this index and its corresponding GitHub issues together. Preserve direct issue dependency references.
 
-**Tracking:** [Master GitHub issue [#36](https://github.com/SIGAAMDAD/SIREngine/issues/36)](https://github.com/SIGAAMDAD/SIREngine/issues/36) · [Source foundation](https://github.com/SIGAAMDAD/SIREngine/blob/feature/mesh-cache-foundation/Docs/Architecture/20-mesh-cache-foundation.md)
+**Tracking:** [Master GitHub issue #36](https://github.com/SIGAAMDAD/SIREngine/issues/36) · [Source foundation](https://github.com/SIGAAMDAD/SIREngine/blob/feature/mesh-cache-foundation/Docs/Architecture/20-mesh-cache-foundation.md)
