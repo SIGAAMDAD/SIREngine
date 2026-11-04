@@ -53,6 +53,7 @@ typedef struct sirVulkanAdapterInfo_s
 	uint32_t nMemoryHeapCount;
 	uint32_t szMaximumComputeGroupCount[3];
 	bool bComputeCapable;
+	bool bSoftwareAdapter;
 	uint64_t nDeviceLocalHeapBytes;
 	char szDeviceName[VK_MAX_PHYSICAL_DEVICE_NAME_SIZE];
 } sirVulkanAdapterInfo_t;

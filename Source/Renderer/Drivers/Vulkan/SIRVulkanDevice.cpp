@@ -111,6 +111,7 @@ bool SIRVulkanDevice::chooseAdapter( void ) noexcept
 			m_Adapter.nDeviceId = properties.deviceID;
 			m_Adapter.nQueueFamilyIndex = iFamily;
 			m_Adapter.bComputeCapable = ( families[iFamily].queueFlags & VK_QUEUE_COMPUTE_BIT ) != 0;
+			m_Adapter.bSoftwareAdapter = properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_CPU;
 			memcpy( m_Adapter.szMaximumComputeGroupCount, properties.limits.maxComputeWorkGroupCount,
 			        sizeof( m_Adapter.szMaximumComputeGroupCount ) );
 			memcpy( m_Adapter.szDeviceName, properties.deviceName, sizeof( m_Adapter.szDeviceName ) );

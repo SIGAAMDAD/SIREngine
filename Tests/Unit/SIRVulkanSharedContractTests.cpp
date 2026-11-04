@@ -16,6 +16,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Renderer/Drivers/Vulkan/SIRVulkanGraphics.h>
 #include <Renderer/SIRGraphicsRegistry.h>
 
+#include <string.h>
+
 int main( void )
 {
 	SIRVulkanDriver driver;
@@ -25,6 +27,25 @@ int main( void )
 	     driver.getAdapterCount( nullptr ) != SIR_GRAPHICS_INVALID_ARGUMENT ||
 	     driver.queryAdapter( 0, nullptr ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
 		return 1;
+	}
+
+	sirVulkanAdapterInfo_t nativeAdapter = {};
+	nativeAdapter.nApiVersion = VK_API_VERSION_1_4;
+	nativeAdapter.nVendorId = 0x1234;
+	nativeAdapter.bComputeCapable = true;
+	nativeAdapter.bSoftwareAdapter = true;
+	memcpy( nativeAdapter.szDeviceName, "Synthetic Vulkan", sizeof( "Synthetic Vulkan" ) );
+	sirGraphicsAdapterInfo_t reported = {};
+	if ( sirVulkanDescribeAdapter( 3, nativeAdapter, &reported ) != SIR_GRAPHICS_SUCCESS || reported.nAdapterIndex != 3 ||
+	     reported.nVendorId != 0x1234 || reported.nFeatureMask != SIR_GRAPHICS_FEATURE_COMPUTE || !reported.bSoftwareAdapter ||
+	     sirVulkanDescribeAdapter( 0, nativeAdapter, nullptr ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return 8;
+	}
+	nativeAdapter.bComputeCapable = false;
+	nativeAdapter.bSoftwareAdapter = false;
+	if ( sirVulkanDescribeAdapter( 0, nativeAdapter, &reported ) != SIR_GRAPHICS_SUCCESS || reported.nFeatureMask != 0 ||
+	     reported.bSoftwareAdapter ) {
+		return 9;
 	}
 
 	SIRVulkanRenderingDevice inert;

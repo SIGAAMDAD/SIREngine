@@ -58,6 +58,24 @@ int main( void )
 		return 4;
 	}
 
+	uint32_t nAdapterCount = 0;
+	sirGraphicsAdapterInfo_t adapter = {};
+	if ( driver.getAdapterCount( &nAdapterCount ) != SIR_GRAPHICS_SUCCESS || nAdapterCount == 0 ||
+	     driver.queryAdapter( 0, &adapter ) != SIR_GRAPHICS_SUCCESS ||
+	     ( adapter.nFeatureMask & SIR_GRAPHICS_FEATURE_COMPUTE ) != ( capabilities.nFeatureMask & SIR_GRAPHICS_FEATURE_COMPUTE ) ) {
+		return 44;
+	}
+	sirGraphicsSelection_t selection = {};
+	selection.eBackend = SIR_GRAPHICS_BACKEND_VULKAN;
+	selection.nRequiredFeatures = capabilities.nFeatureMask & SIR_GRAPHICS_FEATURE_COMPUTE;
+	selection.bAllowSoftware = true;
+	SIRGraphicsDriver *pSelected = nullptr;
+	sirGraphicsAdapterInfo_t selected = {};
+	if ( registry.selectDriver( selection, &pSelected, &selected ) != SIR_GRAPHICS_SUCCESS || pSelected != &driver ||
+	     selected.nFeatureMask != adapter.nFeatureMask ) {
+		return 45;
+	}
+
 	// Minimal descriptor-free SPIR-V compute entry point:
 	// OpCapability Shader, Logical GLSL450, LocalSize(1,1,1), empty main.
 	const uint32_t szComputeSpirv[] = {
@@ -77,6 +95,7 @@ int main( void )
 	}
 	sirGraphicsCompletionSet_t pipelineCompletion = {};
 	pipelineCompletion.nDeviceGeneration = pDevice->getDeviceGeneration();
+	sirGraphicsCompletion_t computeCompleted = {};
 	if ( ( capabilities.nFeatureMask & SIR_GRAPHICS_FEATURE_COMPUTE ) != 0 ) {
 		SIRGraphicsCommandList *pCompute = nullptr;
 		if ( pDevice->acquireCommands( SIR_GRAPHICS_QUEUE_DIRECT, &pCompute ) != SIR_GRAPHICS_SUCCESS || pCompute == nullptr ||
@@ -88,17 +107,19 @@ int main( void )
 		sirGraphicsSubmission_t computeSubmit = {};
 		computeSubmit.ppCommandLists = &pCompute;
 		computeSubmit.nCommandListCount = 1;
-		sirGraphicsCompletion_t computeCompleted = {};
-		if ( pDevice->submit( SIR_GRAPHICS_QUEUE_DIRECT, computeSubmit, &computeCompleted ) != SIR_GRAPHICS_SUCCESS ||
-		     pDevice->wait( computeCompleted, 5000000000ULL ) != SIR_GRAPHICS_SUCCESS ) {
+		if ( pDevice->submit( SIR_GRAPHICS_QUEUE_DIRECT, computeSubmit, &computeCompleted ) != SIR_GRAPHICS_SUCCESS ) {
 			return 40;
 		}
 		pipelineCompletion.nQueueMask = 1U << SIR_GRAPHICS_QUEUE_DIRECT;
 		pipelineCompletion.szQueueValues[SIR_GRAPHICS_QUEUE_DIRECT] = computeCompleted.nValue;
 	}
+	// Retirement invalidates immediately, even with the dispatch still executing.
 	if ( pDevice->retireResource( hCompute, pipelineCompletion ) != SIR_GRAPHICS_SUCCESS ||
 	     pDevice->retireResource( hCompute, pipelineCompletion ) != SIR_GRAPHICS_INVALID_HANDLE ) {
 		return 38;
+	}
+	if ( computeCompleted.nValue != 0 && pDevice->wait( computeCompleted, 5000000000ULL ) != SIR_GRAPHICS_SUCCESS ) {
+		return 40;
 	}
 
 	SIRGraphicsCommandList *pCancelled = nullptr;
