@@ -106,6 +106,37 @@ static bool sirFrameNegativeOverflow( void ) noexcept
 	return state.frame()->nCount == 0 && state.frame()->nResyncCount == 0;
 }
 
+static bool sirFrameNegativeFullAxisAndPointer( void ) noexcept
+{
+	SIRInputFrameState state;
+	SIRInputDeviceRegistry registry;
+	const sirInputDeviceId_t hDevice = { 0, 1 };
+	const sirInputTimestamp_t time = { 100, 101, SIR_INPUT_CLOCK_ENGINE_MONOTONIC, 0 };
+	for ( uint32_t nTick = 1; nTick <= 2; ++nTick ) {
+		if ( !state.begin( nTick ) ) {
+			return false;
+		}
+		for ( uint32_t i = 0; i < SIR_INPUT_EVENT_CAPACITY; ++i ) {
+			const sirInputControlChange_t change = { SIR_INPUT_BUTTON, 4, ( i & 1 ) == 0 ? 1 : 0 };
+			if ( !state.postChanges( hDevice, SIR_INPUT_CONTROLLER, &change, 1, time ) ) {
+				return false;
+			}
+		}
+		if ( nTick == 1 ) {
+			const sirInputControlChange_t axis = { SIR_INPUT_AXIS, SIR_INPUT_AXIS_LX, 1200 };
+			if ( state.postChanges( hDevice, SIR_INPUT_CONTROLLER, &axis, 1, time ) || !state.overflowed() ) {
+				return false;
+			}
+		} else if ( state.postPointer( hDevice, SIR_INPUT_POINTER, SIR_INPUT_WHEEL, 0, 120, 0, time ) || !state.overflowed() ) {
+			return false;
+		}
+		if ( !state.recover( registry ) || !state.publish( registry ) || state.frame()->nCount != 0 ) {
+			return false;
+		}
+	}
+	return state.lastPublishedTick() == 2;
+}
+
 int main( void )
 {
 	if ( !sirFrameNegativeParameters() ) {
@@ -114,6 +145,10 @@ int main( void )
 	}
 	if ( !sirFrameNegativeOverflow() ) {
 		fputs( "input frame negative: overflow FAILED\n", stderr );
+		return 1;
+	}
+	if ( !sirFrameNegativeFullAxisAndPointer() ) {
+		fputs( "input frame negative: full axis/pointer FAILED\n", stderr );
 		return 1;
 	}
 	puts( "SIRInputFrameNegativeTests PASS" );
