@@ -49,7 +49,7 @@ typedef struct sirStreamingBridgeStats_s
 
 typedef struct sirStreamingBridgeSlot_s sirStreamingBridgeSlot_t;
 
-// Control-plane adapter between ticket lifecycle and a single canonical
+// Ticket lifecycle dispatch to a single canonical
 // resource/provider owner. Never stores payload pointers or native GPU handles.
 // The supplied STREAMING-domain storage must remain alive through shutdown.
 class SIRStreamingProviderBridge

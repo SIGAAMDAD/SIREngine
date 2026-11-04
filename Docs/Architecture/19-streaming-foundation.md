@@ -2,7 +2,7 @@
 
 **Baseline:** `develop` commit `be151c5ad3e98ea6fa6bdbfa87d07a83dc7e6546`.
 **Branch:** `feature/streaming-foundation`.
-**Status:** demand coordination, World Partition, epoch reconciliation, provider completion bridge and conditional GRDG file-loader adapter implemented; live GRDG build and provider backends pending.
+**Status:** demand coordination, World Partition, epoch reconciliation and provider lifecycle dispatch implemented; GRDG I/O and backend integration pending.
 
 Source design authorities: `SIR-WORLD-ARCH-001`, `SIR-IO-ARCH-001`,
 `SIR-IO-IMPL-001`, `GRDG-003` in the shared Nomad Drive. This branch introduces
@@ -29,9 +29,8 @@ only the interface owner for request intent and stage tracking.
 | Milestone | Current state | Dependency |
 | --- | --- | --- |
 | Native demand coordinator | Compiled lifecycle shell, ticket metadata refresh and unit tests | No GRDG dependency |
-| Demand epoch reconciliation | Implemented complete-set validation, stable tickets, pending cancellation, deferred resubmission and integration tests | GRDG completion/retirement adapter |
-| Provider lifecycle bridge | Implemented bounded prepare/activate/cancel/retire dispatch and generation-safe owner-thread acknowledgements | Real canonical GRDG mapping and native provider backends |
-| GRDG adapter | Concrete opt-in adapter for ResourceGraph, ResourceFileLoad, Core Jobs and provider pins; local fake-backend tests pass | Build/run with PR #23's live Resources integration |
+| Demand epoch reconciliation | Implemented complete-set validation, stable tickets, pending cancellation, deferred resubmission and integration tests | Direct GRDG completion and retirement integration |
+| Provider lifecycle bridge | Implemented bounded prepare/activate/cancel/retire dispatch and generation-safe owner-thread acknowledgements | Canonical GRDG resources and native provider backends |
 | SIRPack `.sirm/.sirp` reader/cooker | Not implemented | Finalize package ABI |
 | Core I/O native async | Not implemented | IOCP/io_uring contracts |
 | World Partition/cells/layers | Native sorted cell directory, spatial demand generation, layer filtering and source merge implemented; activation pending | Cooked package/StateStore integration |
@@ -104,56 +103,6 @@ an integrated moving-source control-plane test. Clang 17 ASan/UBSan tests pass.
 The repository-pinned clang-format 22.1.5, full engine build, platform CI, and
 live GRDG/IO/provider tests are still outstanding.
 
-## GRDG file-loader integration — fifth native slice
+## Resource ownership boundary
 
-`Source/Streaming/SIRStreamingGRDGAdapter` is the dependency-gated native
-resource preparation adapter. It accepts a caller-owned, sorted in-memory
-binding directory mapping logical streamed units to cooked resource keys,
-file intervals and declared chunk/schema identities. It uses the actual
-`SIRResourceFileLoad` request/poll/cancel API and `SIRResourceGraphWriter`
-for authoritative staging/publication. Multiple consumers of the same key
-wait for one physical in-flight load and subsequently pin the single published
-resource individually; no second resource cache or allocator is created.
-
-Preparation checks the published schema, format, chunk identity and declared
-content key, then retains a canonical GRDG provider pin. Pinning validates
-identity metadata; cryptographic verification of raw file bytes belongs to
-SIRPack ingestion/codec validation and is not implemented here. The adapter
-passes both GRDG handle and published revision to the backend, monitors
-prepared/active revisions, and cancels stale tickets so the backend can retire
-safely. Cancellation of an in-flight file read waits for Core Jobs completion
-before issuing a final failure/retirement acknowledgment. Physical GRDG
-retirement remains in the resource owner; per-consumer retirement only releases
-the matching provider pin after backend acknowledgment.
-
-The `SIR::StreamingGRDG` CMake target and its real-file integration test are
-built only when `SIR::Resources` exists. Because PR #23 remains an unmerged
-draft, Clang 17/23, ASan/UBSan and five focused local harness tests used an
-API-matched fake GRDG/file-loader service for this slice. The actual PR #23
-library and Windows/Linux production CI were not compiled or executed here;
-the native integration test is registered to run when the dependency lands.
-The repository-pinned clang-format 22.1.5 gate is still outstanding; source
-was formatted and checked with clang-format 23.1.5.
-
-## Canonical alias validation and bounded physical I/O — sixth slice
-
-The optional GRDG adapter now rejects multiple logical binding entries that
-name the same canonical `SIRResourceKey` while disagreeing about the source
-path, file span, content key, schema, format, alignment, dependency edges,
-chunk identity, transfer mode or expected revision. This is a cold mount-time
-validation pass; compatible aliases still share the GRDG resource and each
-consumer maintains an independent provider pin.
-
-The new `nMaxConcurrentLoads` configuration bounds physical in-flight
-`SIRResourceFileLoad` operations. Zero defaults to adapter capacity. The
-adapter releases the load budget only when the Core Jobs transfer reaches a
-terminal state, including cancelled requests. The per-pump stats report both
-current active loads and configured maximum, independent of demand tickets.
-
-The local Clang 17/23 CMake harness and Clang 17 ASan/UBSan complete five
-suites with negative alias-directory cases and a three-unit single-load
-budget progression. PR #23's real native GRDG/Core Jobs source, full engine
-CI and Windows provider runtime remain outstanding checks. The repository
-formatter now explicitly binds reference ampersands to types; the source was
-formatted using clang-format 23.1.5, while the pinned 22.1.5 gate remains
-unverified.
+Streaming owns only spatial demand, ticket reconciliation and provider lifecycle intent. GRDG resource identity, payload publication, pinning and physical file-load scheduling belong in the owning resource and Core systems. The GRDG and I/O implementations are not part of this branch; no additional streaming-to-GRDG translation layer is compiled or registered.

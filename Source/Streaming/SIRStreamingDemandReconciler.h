@@ -77,7 +77,7 @@ public:
 	sirStreamingResult_t reconcile( const sirStreamingDemand_t *pDemands, uint32_t nDemandCount, uint32_t nRequestEpoch,
 	                                sirStreamingReconcileStats_t *pStats ) noexcept;
 
-	// Producer/GRDG adapter uses this to obtain a ticket and query the actual
+	// GRDG resource owners use this to obtain a ticket and query the actual
 	// coordinator stage. No provider completion is inferred by this class.
 	sirStreamingResult_t findTicket( const sirStreamingUnitKey_t &key, sirStreamingTicket_t *pTicket ) const noexcept;
 	uint32_t getTrackedCount( void ) const noexcept;
