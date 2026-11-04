@@ -781,6 +781,27 @@ static void testRuntimeComposition( const sirContainerAllocator_t *pAllocator )
 	checkBank( runtime.isReady() );
 	checkBank( runtime.getMemoryStats().nCurrentBytes > 0 );
 	checkBank( runtime.getMemoryStats().nPeakBytes >= runtime.getMemoryStats().nCurrentBytes );
+	checkBank( runtime.beginLoadPackage( 2, true ) == SIR_AUDIO_PENDING );
+	checkBank( runtime.getPendingPackageId() == 2 );
+	checkBank( runtime.pollLoadPackage() == SIR_AUDIO_PENDING );
+	checkBank( runtime.getBanks().getLoadedBankCount() == 1 && !runtime.getBanks().hasLoadedBank( 1 ) );
+	checkBank( runtime.cancelLoadPackage() == SIR_AUDIO_CANCELLED );
+	checkBank( runtime.getPendingPackageId() == 0 && runtime.getBanks().getLoadedBankCount() == 0 );
+	checkBank( runtime.getBanks().getBoundEventCount() == 0 );
+	fixture.nAsyncPolls = 1;
+	checkBank( runtime.beginLoadPackage( 2, true ) == SIR_AUDIO_PENDING );
+	checkBank( runtime.loadPackage( 2, false ) == SIR_AUDIO_BUSY );
+	sirAudioResult_t eAsyncResult = SIR_AUDIO_PENDING;
+	for ( uint32_t iAttempt = 0; iAttempt < 16 && eAsyncResult == SIR_AUDIO_PENDING; ++iAttempt ) {
+		runtime.update();
+		eAsyncResult = runtime.pollLoadPackage();
+	}
+	checkBank( eAsyncResult == SIR_AUDIO_OK );
+	checkBank( runtime.getPendingPackageId() == 0 && runtime.getBanks().getBoundEventCount() == 1 );
+	checkBank( runtime.getBanks().getLoadedBankCount() == 2 && fixture.nPreloads >= 2 );
+	checkBank( runtime.releasePackage( 2 ) == SIR_AUDIO_OK );
+	checkBank( runtime.getBanks().getLoadedBankCount() == 0 );
+
 	checkBank( runtime.loadPackage( 2, false ) == SIR_AUDIO_OK );
 	checkBank( runtime.getBanks().getLoadedBankCount() == 2 && runtime.getBanks().getBoundEventCount() == 1 );
 	checkBank( runtime.getContext().getBorrowedBankObjectCount() == 3 );

@@ -112,6 +112,7 @@ void SIRFMODPackageLoader::releaseStorage( void ) noexcept
 	m_nManifestEpoch = 0;
 	m_nPackageCount = 0;
 	m_nLoadedCount = 0;
+	clearAsync();
 }
 
 sirAudioResult_t SIRFMODPackageLoader::initialize( const SIRAudioResourceStore *pManifest, SIRFMODBankStore *pBanks,
@@ -198,8 +199,165 @@ sirAudioResult_t SIRFMODPackageLoader::rollbackTo( uint32_t nOldCount ) noexcept
 	return SIR_AUDIO_OK;
 }
 
+void SIRFMODPackageLoader::clearAsync( void ) noexcept
+{
+	m_nAsyncRootId = 0;
+	m_nAsyncPlanCount = 0;
+	m_nAsyncStep = 0;
+	m_nAsyncOldCount = 0;
+	m_bAsyncPreloadSamples = false;
+	m_eAsyncTerminalResult = SIR_AUDIO_PENDING;
+}
+
+sirAudioResult_t SIRFMODPackageLoader::failAsync( sirAudioResult_t eError ) noexcept
+{
+	m_eAsyncTerminalResult = eError;
+	const sirAudioResult_t eRollback = rollbackTo( m_nAsyncOldCount );
+	if ( eRollback != SIR_AUDIO_OK ) {
+		return eRollback;
+	}
+	clearAsync();
+	return eError;
+}
+
+sirAudioResult_t SIRFMODPackageLoader::beginLoadPackage( uint64_t nPackageId, bool bPreloadSamples ) noexcept
+{
+	if ( !isReady() ) {
+		return SIR_AUDIO_NOT_INITIALIZED;
+	}
+	if ( m_nAsyncRootId != 0 || m_pBanks->getLoadedBankCount() != m_nLoadedCount ) {
+		return SIR_AUDIO_BUSY;
+	}
+	uint32_t iRoot = 0;
+	if ( !findIndex( nPackageId, iRoot ) ) {
+		return SIR_AUDIO_INVALID_HANDLE;
+	}
+	uint32_t nPlanCount = 0;
+	const sirAudioResult_t ePlan = buildPlan( iRoot, nPlanCount );
+	if ( ePlan != SIR_AUDIO_OK ) {
+		return ePlan;
+	}
+	if ( m_pEntries[iRoot].nRootReferences == UINT32_MAX ) {
+		return SIR_AUDIO_CAPACITY;
+	}
+	for ( uint32_t iOrder = 0; iOrder < nPlanCount; ++iOrder ) {
+		const sirFMODPackageEntry_t &entry = m_pEntries[m_pPlan[iOrder]];
+		if ( entry.eState == 2 || entry.eState == 3 ) {
+			return SIR_AUDIO_BUSY;
+		}
+		if ( entry.nReferences == UINT32_MAX ) {
+			return SIR_AUDIO_CAPACITY;
+		}
+	}
+	m_nAsyncRootId = nPackageId;
+	m_nAsyncPlanCount = nPlanCount;
+	m_nAsyncStep = 0;
+	m_nAsyncOldCount = m_nLoadedCount;
+	m_bAsyncPreloadSamples = bPreloadSamples;
+	m_eAsyncTerminalResult = SIR_AUDIO_PENDING;
+	m_nLastFailedPackageId = 0;
+	return SIR_AUDIO_PENDING;
+}
+
+sirAudioResult_t SIRFMODPackageLoader::pollLoadPackage( void ) noexcept
+{
+	if ( m_nAsyncRootId == 0 ) {
+		return SIR_AUDIO_INVALID_HANDLE;
+	}
+	if ( !isReady() ) {
+		return SIR_AUDIO_NOT_INITIALIZED;
+	}
+	if ( m_eAsyncTerminalResult != SIR_AUDIO_PENDING ) {
+		return failAsync( m_eAsyncTerminalResult );
+	}
+	if ( m_nAsyncStep < m_nAsyncPlanCount ) {
+		const uint32_t iPackage = m_pPlan[m_nAsyncStep];
+		sirFMODPackageEntry_t &entry = m_pEntries[iPackage];
+		sirAudioResult_t eResult = SIR_AUDIO_OK;
+		if ( entry.eState == 0 ) {
+			sirAudioPackageRecord_t package = {};
+			if ( !m_pManifest->getPackageAt( iPackage, package ) ) {
+				m_nLastFailedPackageId = entry.nPackageId;
+				return failAsync( SIR_AUDIO_INVALID_HANDLE );
+			}
+			const char *szPath = nullptr;
+			eResult = m_Resolver.resolve( m_Resolver.pUserData, package.nPackageId, package.nProviderPackageKey, &szPath );
+			if ( eResult != SIR_AUDIO_OK ) {
+				m_nLastFailedPackageId = entry.nPackageId;
+				return failAsync( eResult );
+			}
+			if ( szPath == nullptr || szPath[0] == '\0' ) {
+				m_nLastFailedPackageId = entry.nPackageId;
+				return failAsync( SIR_AUDIO_INVALID_ARGUMENT );
+			}
+			const uint32_t nPreviousBanks = m_pBanks->getLoadedBankCount();
+			eResult = m_pBanks->beginLoadBank( entry.nPackageId, szPath );
+			if ( m_pBanks->getLoadedBankCount() != nPreviousBanks ) {
+				entry.eState = eResult == SIR_AUDIO_PENDING ? 3 : eResult == SIR_AUDIO_OK ? 1 : 2;
+				m_pLoadOrder[m_nLoadedCount++] = iPackage;
+			}
+			if ( eResult != SIR_AUDIO_PENDING && eResult != SIR_AUDIO_OK ) {
+				m_nLastFailedPackageId = entry.nPackageId;
+				return failAsync( eResult );
+			}
+			if ( eResult == SIR_AUDIO_PENDING ) {
+				return SIR_AUDIO_PENDING;
+			}
+		}
+		if ( entry.eState == 3 ) {
+			eResult = m_pBanks->pollBankLoad( entry.nPackageId );
+			if ( eResult == SIR_AUDIO_PENDING ) {
+				return SIR_AUDIO_PENDING;
+			}
+			if ( eResult != SIR_AUDIO_OK ) {
+				entry.eState = 2;
+				m_nLastFailedPackageId = entry.nPackageId;
+				return failAsync( eResult );
+			}
+			entry.eState = 1;
+		}
+		if ( m_bAsyncPreloadSamples ) {
+			eResult = m_pBanks->preloadSamples( entry.nPackageId );
+			if ( eResult != SIR_AUDIO_OK ) {
+				m_nLastFailedPackageId = entry.nPackageId;
+				return failAsync( eResult );
+			}
+		}
+		++m_nAsyncStep;
+		if ( m_nAsyncStep < m_nAsyncPlanCount ) {
+			return SIR_AUDIO_PENDING;
+		}
+	}
+	uint32_t iRoot = 0;
+	if ( !findIndex( m_nAsyncRootId, iRoot ) ) {
+		return failAsync( SIR_AUDIO_INVALID_HANDLE );
+	}
+	for ( uint32_t iOrder = 0; iOrder < m_nAsyncPlanCount; ++iOrder ) {
+		++m_pEntries[m_pPlan[iOrder]].nReferences;
+	}
+	++m_pEntries[iRoot].nRootReferences;
+	clearAsync();
+	return SIR_AUDIO_OK;
+}
+
+sirAudioResult_t SIRFMODPackageLoader::cancelLoadPackage( void ) noexcept
+{
+	if ( m_nAsyncRootId == 0 ) {
+		return SIR_AUDIO_INVALID_HANDLE;
+	}
+	return failAsync( SIR_AUDIO_CANCELLED );
+}
+
+uint64_t SIRFMODPackageLoader::getPendingPackageId( void ) const noexcept
+{
+	return m_nAsyncRootId;
+}
+
 sirAudioResult_t SIRFMODPackageLoader::loadPackage( uint64_t nPackageId, bool bPreloadSamples ) noexcept
 {
+	if ( m_nAsyncRootId != 0 ) {
+		return SIR_AUDIO_BUSY;
+	}
 	if ( !isReady() ) {
 		return SIR_AUDIO_NOT_INITIALIZED;
 	}
@@ -292,6 +450,9 @@ bool SIRFMODPackageLoader::getPackageReferences( uint64_t nPackageId, uint32_t &
 
 sirAudioResult_t SIRFMODPackageLoader::collectUnused( void ) noexcept
 {
+	if ( m_nAsyncRootId != 0 ) {
+		return SIR_AUDIO_BUSY;
+	}
 	if ( m_pEntries == nullptr ) {
 		return SIR_AUDIO_NOT_INITIALIZED;
 	}
@@ -322,6 +483,9 @@ sirAudioResult_t SIRFMODPackageLoader::collectUnused( void ) noexcept
 
 sirAudioResult_t SIRFMODPackageLoader::releasePackage( uint64_t nPackageId ) noexcept
 {
+	if ( m_nAsyncRootId != 0 ) {
+		return SIR_AUDIO_BUSY;
+	}
 	if ( !isReady() ) {
 		return SIR_AUDIO_NOT_INITIALIZED;
 	}
@@ -352,6 +516,12 @@ sirAudioResult_t SIRFMODPackageLoader::releasePackage( uint64_t nPackageId ) noe
 
 sirAudioResult_t SIRFMODPackageLoader::unloadAll( void ) noexcept
 {
+	if ( m_nAsyncRootId != 0 ) {
+		const sirAudioResult_t eCancel = cancelLoadPackage();
+		if ( eCancel != SIR_AUDIO_CANCELLED ) {
+			return eCancel;
+		}
+	}
 	if ( m_pEntries == nullptr ) {
 		return SIR_AUDIO_OK;
 	}

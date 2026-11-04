@@ -138,6 +138,11 @@ public:
 	sirAudioResult_t initialize( const sirFMODRuntimeConfig_t &config, const sirFMODRuntimeNativeOps_t &ops ) noexcept;
 	sirAudioResult_t shutdown( void ) noexcept;
 	sirAudioResult_t loadPackage( uint64_t nPackageId, bool bPreloadSamples ) noexcept;
+	sirAudioResult_t beginLoadPackage( uint64_t nPackageId, bool bPreloadSamples ) noexcept;
+	sirAudioResult_t pollLoadPackage( void ) noexcept;
+	sirAudioResult_t cancelLoadPackage( void ) noexcept;
+	uint64_t getPendingPackageId( void ) const noexcept;
+	sirAudioResult_t getSampleState( uint64_t nPackageId, sirFMODSampleState_t &eState ) noexcept;
 	sirAudioResult_t releasePackage( uint64_t nPackageId ) noexcept;
 	sirAudioResult_t collectUnused( void ) noexcept;
 	uint32_t update( void ) noexcept;

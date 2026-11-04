@@ -59,11 +59,8 @@ const sirContainerAllocator_t *SIRFMODMemoryBudget::getAllocator( void ) const n
 
 sirFMODMemoryBudgetStats_t SIRFMODMemoryBudget::getStats( void ) const noexcept
 {
-	return { m_nBudgetBytes,
-	         m_nCurrent.load( SIR_MEMORY_ORDER_ACQUIRE ),
-	         m_nPeak.load( SIR_MEMORY_ORDER_RELAXED ),
-	         m_nAllocations.load( SIR_MEMORY_ORDER_RELAXED ),
-	         m_nFailures.load( SIR_MEMORY_ORDER_RELAXED ) };
+	return { m_nBudgetBytes, m_nCurrent.load( SIR_MEMORY_ORDER_ACQUIRE ), m_nPeak.load( SIR_MEMORY_ORDER_RELAXED ),
+	         m_nAllocations.load( SIR_MEMORY_ORDER_RELAXED ), m_nFailures.load( SIR_MEMORY_ORDER_RELAXED ) };
 }
 
 void *SIRFMODMemoryBudget::allocateCallback( void *pContext, size_t nBytes, size_t nAlignment ) noexcept
@@ -73,8 +70,7 @@ void *SIRFMODMemoryBudget::allocateCallback( void *pContext, size_t nBytes, size
 	     ( nAlignment & ( nAlignment - 1 ) ) != 0 ) {
 		return nullptr;
 	}
-	const size_t nRequiredAlignment = nAlignment < alignof( sirFMODMemoryHeader_t ) ?
-	                                      alignof( sirFMODMemoryHeader_t ) : nAlignment;
+	const size_t nRequiredAlignment = nAlignment < alignof( sirFMODMemoryHeader_t ) ? alignof( sirFMODMemoryHeader_t ) : nAlignment;
 	size_t nCharge = 0;
 	if ( !SIRRawStorage::checkedAdd( nBytes, sizeof( sirFMODMemoryHeader_t ), &nCharge ) ||
 	     !SIRRawStorage::checkedAdd( nCharge, nRequiredAlignment - 1, &nCharge ) ) {
@@ -84,8 +80,8 @@ void *SIRFMODMemoryBudget::allocateCallback( void *pContext, size_t nBytes, size
 	uint64_t nCurrent = pBudget->m_nCurrent.load( SIR_MEMORY_ORDER_RELAXED );
 	for ( ;; ) {
 		if ( nCharge > UINT64_MAX - nCurrent ||
-		     ( pBudget->m_nBudgetBytes != 0 && nCharge > pBudget->m_nBudgetBytes - ( nCurrent > pBudget->m_nBudgetBytes ?
-	                                                                                     pBudget->m_nBudgetBytes : nCurrent ) ) ) {
+		     ( pBudget->m_nBudgetBytes != 0 &&
+		       nCharge > pBudget->m_nBudgetBytes - ( nCurrent > pBudget->m_nBudgetBytes ? pBudget->m_nBudgetBytes : nCurrent ) ) ) {
 			pBudget->m_nFailures.fetchAdd( 1, SIR_MEMORY_ORDER_RELAXED );
 			return nullptr;
 		}
@@ -108,8 +104,7 @@ void *SIRFMODMemoryBudget::allocateCallback( void *pContext, size_t nBytes, size
 	pHeader->pBase = pBase;
 	pHeader->nCharge = nCharge;
 	uint64_t nPeak = pBudget->m_nPeak.load( SIR_MEMORY_ORDER_RELAXED );
-	while ( nPeak < nCurrent + nCharge &&
-	        !pBudget->m_nPeak.compareExchangeWeak( nPeak, nCurrent + nCharge, SIR_MEMORY_ORDER_RELAXED ) ) {
+	while ( nPeak < nCurrent + nCharge && !pBudget->m_nPeak.compareExchangeWeak( nPeak, nCurrent + nCharge, SIR_MEMORY_ORDER_RELAXED ) ) {
 	}
 	pBudget->m_nAllocations.fetchAdd( 1, SIR_MEMORY_ORDER_RELAXED );
 	return ( void * )nAligned;

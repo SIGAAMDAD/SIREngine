@@ -319,6 +319,47 @@ sirAudioResult_t SIRFMODRuntime::loadPackage( uint64_t nPackageId, bool bPreload
 	return SIR_AUDIO_OK;
 }
 
+sirAudioResult_t SIRFMODRuntime::beginLoadPackage( uint64_t nPackageId, bool bPreloadSamples ) noexcept
+{
+	return isReady() ? m_Packages.beginLoadPackage( nPackageId, bPreloadSamples ) : SIR_AUDIO_NOT_INITIALIZED;
+}
+
+sirAudioResult_t SIRFMODRuntime::pollLoadPackage( void ) noexcept
+{
+	if ( !isReady() ) {
+		return SIR_AUDIO_NOT_INITIALIZED;
+	}
+	const uint64_t nPackageId = m_Packages.getPendingPackageId();
+	const sirAudioResult_t eResult = m_Packages.pollLoadPackage();
+	if ( eResult != SIR_AUDIO_OK ) {
+		return eResult;
+	}
+	const sirAudioResult_t eBind = bindPackageResources();
+	if ( eBind != SIR_AUDIO_OK ) {
+		rollbackNewBindings();
+		const sirAudioResult_t eRelease = m_Packages.releasePackage( nPackageId );
+		synchronizeReleasedBindings();
+		return eRelease == SIR_AUDIO_OK ? eBind : eRelease;
+	}
+	commitNewBindings();
+	return SIR_AUDIO_OK;
+}
+
+sirAudioResult_t SIRFMODRuntime::cancelLoadPackage( void ) noexcept
+{
+	return isReady() ? m_Packages.cancelLoadPackage() : SIR_AUDIO_NOT_INITIALIZED;
+}
+
+uint64_t SIRFMODRuntime::getPendingPackageId( void ) const noexcept
+{
+	return isReady() ? m_Packages.getPendingPackageId() : 0;
+}
+
+sirAudioResult_t SIRFMODRuntime::getSampleState( uint64_t nPackageId, sirFMODSampleState_t &eState ) noexcept
+{
+	return isReady() ? m_Banks.getSampleState( nPackageId, eState ) : SIR_AUDIO_NOT_INITIALIZED;
+}
+
 sirAudioResult_t SIRFMODRuntime::collectUnused( void ) noexcept
 {
 	if ( !isReady() ) {
