@@ -200,7 +200,12 @@ static bool testCoordinator( const char *pszExecutable ) noexcept
 	bool bComplete = false;
 	for ( ; std::chrono::steady_clock::now() < until; ) {
 		sirScriptOptimizationPumpStats_t stats = {};
-		SIR_TEST_CHECK( coordinator.pump( 1, 1, &stats ) == SIR_SCRIPT_OK );
+		const sirScriptResult_t ePump = coordinator.pump( 1, 1, &stats );
+		if ( ePump != SIR_SCRIPT_OK ) {
+			fprintf( stderr, "optimizer coordinator pump: %u, transport failed: %u, sent: %u, received: %u, failures: %u\n",
+			         ( unsigned )ePump, ( unsigned )transport.hasFailed(), stats.nSent, stats.nReceived, stats.nFailed );
+		}
+		SIR_TEST_CHECK( ePump == SIR_SCRIPT_OK );
 		sirScriptOptimizationJobInfo_t info = {};
 		SIR_TEST_CHECK( coordinator.query( job, &info ) == SIR_SCRIPT_OK );
 		if ( info.eState == SIR_SCRIPT_JOB_FAILED ) {
