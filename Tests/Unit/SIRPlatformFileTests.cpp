@@ -160,6 +160,7 @@ static void testPlatformFileInputBoundaries( void )
 	sirFileInfo_t info = {};
 	SIR_REQUIRE( file.readAt( 0, &value, 1, &nDone ) == SIR_FILE_CLOSED );
 	SIR_REQUIRE( file.writeAt( 0, &value, 1, &nDone ) == SIR_FILE_CLOSED );
+	SIR_REQUIRE( file.write( &value, 1, &nDone ) == SIR_FILE_CLOSED && nDone == 0 );
 	SIR_REQUIRE( file.readAt( 0, &value, 1, nullptr ) == SIR_FILE_INVALID_ARGUMENT );
 	SIR_REQUIRE( file.writeAt( 0, &value, 1, nullptr ) == SIR_FILE_INVALID_ARGUMENT );
 	SIR_REQUIRE( file.seek( 0, SIR_FILE_SEEK_BEGIN, &nPosition ) == SIR_FILE_CLOSED );
