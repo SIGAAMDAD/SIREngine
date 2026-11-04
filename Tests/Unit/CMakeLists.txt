@@ -165,6 +165,12 @@ target_link_libraries(SIREditorTypedPropertyTests PRIVATE SIR::EditorAuthoring)
 add_test(NAME editor.authoring.typed-property-transactions COMMAND SIREditorTypedPropertyTests)
 sir_configure_owned_target(SIREditorTypedPropertyTests)
 
+# Deterministic differential property-state machine: 2500 mixed valid/invalid transactions.
+add_executable(SIREditorPropertyStressTests SIREditorPropertyStressTests.cpp)
+target_link_libraries(SIREditorPropertyStressTests PRIVATE SIR::EditorAuthoring)
+add_test(NAME editor.authoring.property-journal-stress COMMAND SIREditorPropertyStressTests)
+sir_configure_owned_target(SIREditorPropertyStressTests)
+
 # Native SIREngine resource identity and dependency DAG without a foreign loader.
 add_executable(SIRResourceCatalogTests SIRResourceCatalogTests.cpp)
 target_link_libraries(SIRResourceCatalogTests PRIVATE SIR::Resources)
