@@ -1,4 +1,4 @@
-add_executable(SIRCoreBenchmarks CoreBenchmarks.cpp SIRContainerAllocatorBenchmarks.cpp EventBenchmarks.cpp SIRInputBenchmarks.cpp)
+add_executable(SIRCoreBenchmarks CoreBenchmarks.cpp SIRContainerAllocatorBenchmarks.cpp EventBenchmarks.cpp SIRInputBenchmarks.cpp SIRInputSnapshotBenchmarks.cpp)
 target_compile_features(SIRCoreBenchmarks PRIVATE cxx_std_17)
 target_link_libraries(SIRCoreBenchmarks PRIVATE SIR::Core benchmark::benchmark_main)
 if(WIN32)

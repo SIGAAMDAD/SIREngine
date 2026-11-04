@@ -17,6 +17,20 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Core/Platform/Input/SIRInputDeviceRegistry.h>
 #include <Core/Platform/SIRPlatformTime.h>
 #include <limits.h>
+#if defined( _MSC_VER )
+#include <intrin.h>
+#endif
+
+static uint32_t firstInputSetBit( uint32_t nBits ) noexcept
+{
+#if defined( _MSC_VER )
+	unsigned long nIndex = 0;
+	_BitScanForward( &nIndex, nBits );
+	return ( uint32_t )nIndex;
+#else
+	return ( uint32_t )__builtin_ctz( nBits );
+#endif
+}
 
 static int32_t saturateInputMovement( int32_t nOld, int32_t nDelta ) noexcept
 {
@@ -26,7 +40,7 @@ static int32_t saturateInputMovement( int32_t nOld, int32_t nDelta ) noexcept
 
 SIRInputFrameState::SIRInputFrameState( void ) noexcept
     : m_Live{}, m_Frames{}, m_nTick( 0 ), m_nSequence( 0 ), m_nLastTick( 0 ), m_nCount( 0 ), m_nPublishedIndex( 0 ), m_nResync( 0 ),
-      m_bCollecting( false ), m_bOverflowed( false ), m_bPublished( false )
+      m_nStateDirty{ UINT32_MAX, UINT32_MAX }, m_nTransientMask( 0 ), m_bCollecting( false ), m_bOverflowed( false ), m_bPublished( false )
 {
 }
 
@@ -36,16 +50,29 @@ bool SIRInputFrameState::begin( uint64_t nTick ) noexcept
 		return false;
 	}
 	for ( uint32_t i = 0; i < SIR_INPUT_DEVICE_CAPACITY; ++i ) {
+		if ( ( m_nTransientMask & ( UINT32_C( 1 ) << i ) ) == 0 ) {
+			continue;
+		}
 		memset( m_Live[i].nPressed, 0, sizeof( m_Live[i].nPressed ) );
 		memset( m_Live[i].nReleased, 0, sizeof( m_Live[i].nReleased ) );
-		m_Live[i].nMotionX = m_Live[i].nMotionY = 0;
+		m_Live[i].nMotionX = 0;
+		m_Live[i].nMotionY = 0;
+		markStateDirty( i );
 	}
+	m_nTransientMask = 0;
 	m_nCount = 0;
 	m_nResync = 0;
 	m_bOverflowed = false;
 	m_nTick = nTick;
 	m_bCollecting = true;
 	return true;
+}
+
+void SIRInputFrameState::markStateDirty( uint32_t nSlot ) noexcept
+{
+	const uint32_t nMask = UINT32_C( 1 ) << nSlot;
+	m_nStateDirty[0] |= nMask;
+	m_nStateDirty[1] |= nMask;
 }
 
 bool SIRInputFrameState::append( const sirInputEvent_t &event ) noexcept
@@ -145,6 +172,10 @@ bool SIRInputFrameState::postChanges( sirInputDeviceId_t id, sirInputDeviceClass
 		} else {
 			return false;
 		}
+		markStateDirty( id.nSlot );
+		if ( change.eSignal == SIR_INPUT_BUTTON ) {
+			m_nTransientMask |= UINT32_C( 1 ) << id.nSlot;
+		}
 		const sirInputEvent_t event = { nTime, ++m_nSequence, id, change.nValue, 0, change.nControl, change.eSignal, eClass };
 		return append( event );
 	}
@@ -196,9 +227,15 @@ bool SIRInputFrameState::postChanges( sirInputDeviceId_t id, sirInputDeviceClass
 		}
 		if ( bChanged ) {
 			apply( state, change );
+			if ( change.eSignal == SIR_INPUT_BUTTON ) {
+				m_nTransientMask |= UINT32_C( 1 ) << id.nSlot;
+			}
 			sirInputEvent_t event = { nTime, ++m_nSequence, id, change.nValue, 0, change.nControl, change.eSignal, eClass };
 			append( event );
 		}
+	}
+	if ( nChanges != 0 ) {
+		markStateDirty( id.nSlot );
 	}
 	return true;
 }
@@ -238,6 +275,8 @@ bool SIRInputFrameState::postPointer( sirInputDeviceId_t id, sirInputDeviceClass
 		sirInputDeviceState_t &state = m_Live[id.nSlot];
 		state.nMotionX = saturateInputMovement( state.nMotionX, nX );
 		state.nMotionY = saturateInputMovement( state.nMotionY, nY );
+		markStateDirty( id.nSlot );
+		m_nTransientMask |= UINT32_C( 1 ) << id.nSlot;
 	}
 	return true;
 }
@@ -246,6 +285,7 @@ void SIRInputFrameState::clearDevice( sirInputDeviceId_t id ) noexcept
 {
 	if ( id.nSlot < SIR_INPUT_DEVICE_CAPACITY ) {
 		memset( &m_Live[id.nSlot], 0, sizeof( m_Live[id.nSlot] ) );
+		markStateDirty( id.nSlot );
 	}
 }
 
@@ -259,14 +299,18 @@ bool SIRInputFrameState::publish( const SIRInputDeviceRegistry &registry ) noexc
 	frame.nTick = m_nTick;
 	frame.nCount = m_nCount;
 	frame.nResyncCount = m_nResync;
-	memcpy( frame.state, m_Live, sizeof( m_Live ) );
-	for ( uint32_t i = 0; i < SIR_INPUT_DEVICE_CAPACITY; ++i ) {
-		sirInputDeviceDescriptor_t descriptor = {};
-		registry.inspectSlot( i, &descriptor );
-		frame.devices[i] = descriptor.id;
-		frame.nConnected[i] = descriptor.bConnected ? 1 : 0;
-		frame.nUsers[i] = descriptor.bConnected ? descriptor.nUserId : SIR_INPUT_NO_USER;
+	uint32_t nDirty = m_nStateDirty[nNext];
+	if ( nDirty == UINT32_MAX ) {
+		memcpy( frame.state, m_Live, sizeof( m_Live ) );
+	} else {
+		while ( nDirty != 0 ) {
+			const uint32_t iSlot = firstInputSetBit( nDirty );
+			frame.state[iSlot] = m_Live[iSlot];
+			nDirty &= nDirty - 1;
+		}
 	}
+	m_nStateDirty[nNext] = 0;
+	registry.snapshot( frame );
 	m_nPublishedIndex = nNext;
 	m_nLastTick = m_nTick;
 	m_bPublished = true;

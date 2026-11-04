@@ -45,6 +45,7 @@ public:
 	bool pairUser( sirInputDeviceId_t id, uint32_t nUser ) noexcept;
 	bool valid( sirInputDeviceId_t id ) const noexcept;
 	bool inspectSlot( uint32_t nSlot, sirInputDeviceDescriptor_t *pOut ) const noexcept;
+	void snapshot( sirInputFrame_t &frame ) const noexcept;
 	uint32_t count( void ) const noexcept;
 	void reset( void ) noexcept;
 

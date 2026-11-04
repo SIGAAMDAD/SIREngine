@@ -50,6 +50,7 @@ public:
 private:
 	bool append( const sirInputEvent_t &event ) noexcept;
 	bool apply( sirInputDeviceState_t &state, const sirInputControlChange_t &event ) const noexcept;
+	void markStateDirty( uint32_t nSlot ) noexcept;
 	sirInputDeviceState_t m_Live[SIR_INPUT_DEVICE_CAPACITY];
 	sirInputFrame_t m_Frames[2];
 	uint64_t m_nTick;
@@ -58,6 +59,8 @@ private:
 	uint32_t m_nCount;
 	uint32_t m_nPublishedIndex;
 	uint32_t m_nResync;
+	uint32_t m_nStateDirty[2];
+	uint32_t m_nTransientMask;
 	bool m_bCollecting;
 	bool m_bOverflowed;
 	bool m_bPublished;

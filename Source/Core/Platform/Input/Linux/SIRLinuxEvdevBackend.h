@@ -76,6 +76,7 @@ public:
 	static int32_t normalize( int32_t nValue, int32_t nMinimum, int32_t nMaximum, bool bTrigger ) noexcept;
 
 private:
+	friend class SIRInputEvdevBatchTestPeer;
 	bool openDevice( SIRInputService &service, const char *pszPath ) noexcept;
 	bool requery( SIRInputService &service, sirInputEvdevSlot_t &slot, bool bReset ) noexcept;
 	void closeDevice( SIRInputService &service, sirInputEvdevSlot_t &slot ) noexcept;

@@ -436,73 +436,81 @@ void SIRLinuxEvdevBackend::sample( SIRInputService &service ) noexcept
 		if ( !slot.bOpen ) {
 			continue;
 		}
-		input_event event = {};
-		uint32_t nIterations = 0;
-		while ( nIterations++ < 512 ) {
-			const ssize_t nRead = read( slot.nFd, &event, sizeof( event ) );
+		// Read complete evdev records in bounded batches. Preserve SYN_REPORT
+		// boundaries and keep incomplete device reports across read calls.
+		input_event szEvents[64] = {};
+		uint32_t nConsumed = 0;
+		while ( nConsumed < 512 ) {
+			const uint32_t nRequest = ( 512 - nConsumed ) < 64 ? ( 512 - nConsumed ) : 64;
+			const ssize_t nRead = read( slot.nFd, szEvents, nRequest * sizeof( szEvents[0] ) );
 			if ( nRead < 0 && errno == EINTR ) {
 				continue;
 			}
 			if ( nRead < 0 && ( errno == EAGAIN || errno == EWOULDBLOCK ) ) {
 				break;
 			}
-			if ( nRead != ( ssize_t )sizeof( event ) ) {
+			if ( nRead <= 0 || ( ( size_t )nRead % sizeof( szEvents[0] ) ) != 0 ) {
 				closeDevice( service, slot );
 				break;
 			}
-			if ( event.type == EV_SYN && event.code == SYN_DROPPED ) {
-				slot.bDesynchronized = true;
-				slot.nPending = 0;
-				continue;
-			}
-			if ( event.type == EV_SYN && event.code == SYN_REPORT ) {
+			const uint32_t nRecords = ( uint32_t )( ( size_t )nRead / sizeof( szEvents[0] ) );
+			nConsumed += nRecords;
+			for ( uint32_t iEvent = 0; iEvent < nRecords; ++iEvent ) {
+				const input_event &event = szEvents[iEvent];
+				if ( event.type == EV_SYN && event.code == SYN_DROPPED ) {
+					slot.bDesynchronized = true;
+					slot.nPending = 0;
+					continue;
+				}
+				if ( event.type == EV_SYN && event.code == SYN_REPORT ) {
+					if ( slot.bDesynchronized ) {
+						slot.bDesynchronized = false;
+						slot.nPending = 0;
+						requery( service, slot, true );
+					} else if ( slot.nPending != 0 ) {
+						service.emitControls( id(), slot.id, slot.pending, slot.nPending );
+						slot.nPending = 0;
+					}
+					continue;
+				}
 				if ( slot.bDesynchronized ) {
-					slot.bDesynchronized = false;
-					slot.nPending = 0;
-					requery( service, slot, true );
-				} else if ( slot.nPending != 0 ) {
-					service.emitControls( id(), slot.id, slot.pending, slot.nPending );
-					slot.nPending = 0;
-				}
-				continue;
-			}
-			if ( slot.bDesynchronized ) {
-				continue;
-			}
-			if ( event.type == EV_KEY ) {
-				const int16_t nMapped = resolveButton( slot, event.code );
-				if ( nMapped >= 0 && event.value <= 1 &&
-				     ( !slot.bHatDPad || nMapped < SIR_INPUT_PAD_DPAD_UP || nMapped > SIR_INPUT_PAD_DPAD_RIGHT ) ) {
-					queueChange( slot, SIR_INPUT_BUTTON, ( uint16_t )nMapped, event.value );
-				}
-			} else if ( event.type == EV_ABS ) {
-				if ( slot.bHatDPad && event.code == ABS_HAT0X ) {
-					const int8_t nValue = ( int8_t )( event.value < 0 ? -1 : event.value > 0 ? 1 : 0 );
-					if ( nValue != slot.nHatX ) {
-						queueChange( slot, SIR_INPUT_BUTTON, SIR_INPUT_PAD_DPAD_LEFT, nValue < 0 ? 1 : 0 );
-						queueChange( slot, SIR_INPUT_BUTTON, SIR_INPUT_PAD_DPAD_RIGHT, nValue > 0 ? 1 : 0 );
-						slot.nHatX = nValue;
-					}
 					continue;
 				}
-				if ( slot.bHatDPad && event.code == ABS_HAT0Y ) {
-					const int8_t nValue = ( int8_t )( event.value < 0 ? -1 : event.value > 0 ? 1 : 0 );
-					if ( nValue != slot.nHatY ) {
-						queueChange( slot, SIR_INPUT_BUTTON, SIR_INPUT_PAD_DPAD_UP, nValue < 0 ? 1 : 0 );
-						queueChange( slot, SIR_INPUT_BUTTON, SIR_INPUT_PAD_DPAD_DOWN, nValue > 0 ? 1 : 0 );
-						slot.nHatY = nValue;
+				if ( event.type == EV_KEY ) {
+					const int16_t nMapped = resolveButton( slot, event.code );
+					if ( nMapped >= 0 && event.value <= 1 &&
+					     ( !slot.bHatDPad || nMapped < SIR_INPUT_PAD_DPAD_UP || nMapped > SIR_INPUT_PAD_DPAD_RIGHT ) ) {
+						queueChange( slot, SIR_INPUT_BUTTON, ( uint16_t )nMapped, event.value );
 					}
-					continue;
-				}
-				for ( uint16_t iAxis = 0; iAxis < SIR_INPUT_AXIS_COUNT; ++iAxis ) {
-					const sirInputEvdevAxis_t &axis = slot.axes[iAxis];
-					if ( axis.bValid && axis.nCode == event.code ) {
-						int32_t nNormalized = normalize( event.value, axis.nMinimum, axis.nMaximum, axis.bTrigger );
-						if ( axis.bInvert ) {
-							nNormalized = -nNormalized;
+				} else if ( event.type == EV_ABS ) {
+					if ( slot.bHatDPad && event.code == ABS_HAT0X ) {
+						const int8_t nValue = ( int8_t )( event.value < 0 ? -1 : event.value > 0 ? 1 : 0 );
+						if ( nValue != slot.nHatX ) {
+							queueChange( slot, SIR_INPUT_BUTTON, SIR_INPUT_PAD_DPAD_LEFT, nValue < 0 ? 1 : 0 );
+							queueChange( slot, SIR_INPUT_BUTTON, SIR_INPUT_PAD_DPAD_RIGHT, nValue > 0 ? 1 : 0 );
+							slot.nHatX = nValue;
 						}
-						queueChange( slot, SIR_INPUT_AXIS, iAxis, nNormalized );
-						break;
+						continue;
+					}
+					if ( slot.bHatDPad && event.code == ABS_HAT0Y ) {
+						const int8_t nValue = ( int8_t )( event.value < 0 ? -1 : event.value > 0 ? 1 : 0 );
+						if ( nValue != slot.nHatY ) {
+							queueChange( slot, SIR_INPUT_BUTTON, SIR_INPUT_PAD_DPAD_UP, nValue < 0 ? 1 : 0 );
+							queueChange( slot, SIR_INPUT_BUTTON, SIR_INPUT_PAD_DPAD_DOWN, nValue > 0 ? 1 : 0 );
+							slot.nHatY = nValue;
+						}
+						continue;
+					}
+					for ( uint16_t iAxis = 0; iAxis < SIR_INPUT_AXIS_COUNT; ++iAxis ) {
+						const sirInputEvdevAxis_t &axis = slot.axes[iAxis];
+						if ( axis.bValid && axis.nCode == event.code ) {
+							int32_t nNormalized = normalize( event.value, axis.nMinimum, axis.nMaximum, axis.bTrigger );
+							if ( axis.bInvert ) {
+								nNormalized = -nNormalized;
+							}
+							queueChange( slot, SIR_INPUT_AXIS, iAxis, nNormalized );
+							break;
+						}
 					}
 				}
 			}
