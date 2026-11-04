@@ -2,7 +2,7 @@ name: SIREngine CI
 
 on:
   push:
-    branches: [develop]
+    branches: [develop, feature/native-input-foundation]
   pull_request:
     branches: [develop, main]
   workflow_dispatch:
