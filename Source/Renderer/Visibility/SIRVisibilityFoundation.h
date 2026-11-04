@@ -152,4 +152,25 @@ sirGraphicsResult_t sirHiZTestRectangle( const sirHiZLayout_t& layout, const flo
 // before publishing results; does not allocate or partially update the output.
 sirGraphicsResult_t sirVisibilityCullReference( const sirVisibilityCullDesc_t& desc, sirVisibilityOutput_t *pOutput ) noexcept;
 
+
+// HIZ-00 v1: fixed-width modes, mip/index layout and shared CPU/GPU ABI.
+// Device residency, synchronization and serialized resource identity are
+// represented by later system contracts, not hidden in these reference PODs.
+static_assert( sizeof( sirVisibilityMode_t ) == 1, "visibility mode must be 8-bit" );
+static_assert( sizeof( sirVisibilityDepthConvention_t ) == 1, "visibility depth convention must be 8-bit" );
+static_assert( sizeof( sirVisibilityMethodDesc_t ) == 16, "visibility method ABI changed" );
+static_assert( sizeof( sirHiZMip_t ) == 16, "Hi-Z mip ABI changed" );
+static_assert( offsetof( sirHiZMip_t, nOffset ) == 0, "Hi-Z mip offset ABI changed" );
+static_assert( offsetof( sirHiZMip_t, nWidth ) == 8, "Hi-Z mip width ABI changed" );
+static_assert( sizeof( sirHiZLayout_t ) == 536, "Hi-Z layout ABI changed" );
+static_assert( offsetof( sirHiZLayout_t, szMips ) == 24, "Hi-Z mip array ABI changed" );
+static_assert( sizeof( sirHiZTest_t ) == 32, "Hi-Z rectangle query ABI changed" );
+static_assert( offsetof( sirHiZTest_t, nSelectedMip ) == 28, "Hi-Z mip selection ABI changed" );
+#if UINTPTR_MAX == UINT64_MAX
+static_assert( sizeof( sirVisibilityView_t ) == 72, "64-bit visibility view ABI changed" );
+static_assert( sizeof( sirVisibilityCandidate_t ) == 40, "64-bit visibility candidate ABI changed" );
+static_assert( sizeof( sirVisibilityCullDesc_t ) == 40, "64-bit visibility cull ABI changed" );
+static_assert( sizeof( sirVisibilityOutput_t ) == 32, "64-bit visibility output ABI changed" );
+#endif
+
 #endif // __SIRENGINE_SIRVISIBILITYFOUNDATION_H__
