@@ -58,7 +58,6 @@ static D3D12_RESOURCE_STATES sirD3D12BarrierState( sirGraphicsState_t eState ) n
 	}
 }
 
-
 static D3D12_BARRIER_SYNC sirD3D12EnhancedSync( sirGraphicsState_t eState ) noexcept
 {
 	switch ( eState ) {
@@ -450,7 +449,8 @@ sirGraphicsResult_t SIRD3D12CommandList::barrier( const sirGraphicsBarrier_t *pB
 				D3D12_FEATURE_DATA_FORMAT_INFO formatInfo = {};
 				formatInfo.Format = pSlot->getNativeResource()->GetDesc().Format;
 				if ( FAILED( m_pNative->getNativeDevice()->CheckFeatureSupport( D3D12_FEATURE_FORMAT_INFO, &formatInfo,
-				                                                        sizeof( formatInfo ) ) ) || formatInfo.PlaneCount == 0 ) {
+				                                                                sizeof( formatInfo ) ) ) ||
+				     formatInfo.PlaneCount == 0 ) {
 					return SIR_GRAPHICS_UNSUPPORTED;
 				}
 				D3D12_TEXTURE_BARRIER barrier = {};
