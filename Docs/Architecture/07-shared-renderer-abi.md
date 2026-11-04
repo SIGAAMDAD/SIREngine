@@ -154,3 +154,10 @@ The surface description is size-tagged, carries a supported Win32/X11/Wayland pl
 Acquire validates a live surface and checks that the native response references **the same surface handle**, a valid texture handle from the current device, a nonzero one-use acquisition identity and window generation. Present requires the exact current device generation, DIRECT queue completion token and valid surface/image reservation metadata. Validation or native failure never mutates caller-owned result objects; DEVICE_LOST propagates unchanged. Resize does not magically preserve old acquisitions: the driver must invalidate stale image and window generations and enforce its own WSI state machine.
 
 The independent mock driver tests use a synthetic PRESENT device and cover normal create/resize/acquire/present, headless rejection, disabled HDR, malformed dimensions, stale returned surface/image handles, invalid acquisition IDs and device-loss propagation. **Native Vulkan/D3D12 WSI and visual swapchain conformance have not been demonstrated.** ABI-05 remains open pending real backend acceptance.
+
+
+### ABI-05 deferred resource retirement admission
+
+`sirGraphicsRetireABIResource` validates a native resource handle against the current device generation, checks the complete completion-set queue mask and nonzero named queue values using the existing source-side completion invariant, then verifies that every referenced queue is **actually enabled on the device**. Only a structurally valid retirement request reaches the native `pRetireResource` callback. An empty completion set is allowed when the resource has no outstanding submissions. The host does not reclaim GPU memory or implement another resource ownership registry: the backend retains allocation/reclamation authority and may return DEVICE_LOST.
+
+Mock DSO tests cover valid retirement, stale device generation, a completion fence on a nonexistent queue, and device-loss propagation. ABI remains **v1.0**. Native lifetime/race and GPU event tests are still required to close ABI-05.

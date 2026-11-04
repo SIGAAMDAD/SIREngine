@@ -500,7 +500,7 @@ static uint32_t mockRetire( void *, sirGraphicsHandle_t hResource, const sirGrap
 	if ( hResource.nDeviceGeneration != 5 || hResource.nGeneration == 0 || pComplete == nullptr || pComplete->nDeviceGeneration != 5 ) {
 		return SIR_GRAPHICS_ABI_INVALID_ARGUMENT;
 	}
-	return SIR_GRAPHICS_ABI_SUCCESS;
+	return s_nMockMode == 30 ? SIR_GRAPHICS_DEVICE_LOST : SIR_GRAPHICS_ABI_SUCCESS;
 }
 
 static uint32_t mockAcquireCommands( void *, uint32_t nQueue, sirGraphicsABICommandList_t *pCommands ) noexcept

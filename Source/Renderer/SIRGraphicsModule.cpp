@@ -710,6 +710,27 @@ sirGraphicsABIResult_t sirGraphicsPresentABISurfaceImage( const sirGraphicsABIDe
 	return sirGraphicsResultFromProvider( pDevice->pPresent( pDevice->pDevice, pImage, pCompletion ) );
 }
 
+sirGraphicsABIResult_t sirGraphicsRetireABIResource( const sirGraphicsABIDevice_t *pDevice, sirGraphicsHandle_t hResource,
+                                                    const sirGraphicsCompletionSet_t *pComplete ) noexcept
+{
+	if ( pComplete == nullptr ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	sirGraphicsABICapabilities_t caps = {};
+	const sirGraphicsABIResult_t eCaps = sirGraphicsReadABIQueueCaps( pDevice, &caps );
+	if ( eCaps != SIR_GRAPHICS_SUCCESS ) {
+		return eCaps;
+	}
+	if ( !sirGraphicsIsHandleValid( hResource, SIR_GRAPHICS_HANDLE_NONE, caps.nDeviceGeneration ) ||
+	     !sirGraphicsIsCompletionSetValid( *pComplete, caps.nDeviceGeneration ) ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	if ( ( pComplete->nQueueMask & ~caps.nEnabledQueues ) != 0 ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	return sirGraphicsResultFromProvider( pDevice->pRetireResource( pDevice->pDevice, hResource, pComplete ) );
+}
+
 sirGraphicsABIResult_t sirGraphicsQueryABIMemoryBudget( const sirGraphicsABIDevice_t *pDevice, sirGraphicsMemoryBudget_t *pBudget ) noexcept
 {
 	if ( pBudget == nullptr ) {

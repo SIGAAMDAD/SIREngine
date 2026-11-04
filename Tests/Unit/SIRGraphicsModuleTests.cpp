@@ -814,6 +814,34 @@ static bool testBinaryModule( void ) noexcept
 	}
 	pMode( 0 );
 
+	// Deferred retirement honors only completion fences belonging to the
+	// current device and one of its actually enabled queues.
+	sirGraphicsCompletionSet_t retire = {};
+	retire.nDeviceGeneration = 5;
+	retire.nQueueMask = 1U << SIR_GRAPHICS_QUEUE_DIRECT;
+	retire.szQueueValues[SIR_GRAPHICS_QUEUE_DIRECT] = 1;
+	if ( sirGraphicsRetireABIResource( &device, hBuffer, &retire ) != SIR_GRAPHICS_SUCCESS ) {
+		return false;
+	}
+	retire.nDeviceGeneration = 4;
+	if ( sirGraphicsRetireABIResource( &device, hBuffer, &retire ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return false;
+	}
+	retire.nDeviceGeneration = 5;
+	retire.nQueueMask = 1U << SIR_GRAPHICS_QUEUE_COMPUTE;
+	retire.szQueueValues[SIR_GRAPHICS_QUEUE_DIRECT] = 0;
+	retire.szQueueValues[SIR_GRAPHICS_QUEUE_COMPUTE] = 1;
+	if ( sirGraphicsRetireABIResource( &device, hBuffer, &retire ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return false;
+	}
+	retire.nQueueMask = 0;
+	retire.szQueueValues[SIR_GRAPHICS_QUEUE_COMPUTE] = 0;
+	pMode( 30 );
+	if ( sirGraphicsRetireABIResource( &device, hBuffer, &retire ) != SIR_GRAPHICS_DEVICE_LOST ) {
+		return false;
+	}
+	pMode( 0 );
+
 	sirGraphicsMemoryBudget_t budget = {};
 	if ( sirGraphicsQueryABIMemoryBudget( &device, &budget ) != SIR_GRAPHICS_SUCCESS ||
 	     budget.nBudgetBytes != 1024U * 1024U ) {

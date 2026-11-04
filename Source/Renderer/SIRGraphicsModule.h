@@ -110,6 +110,11 @@ sirGraphicsABIResult_t sirGraphicsPresentABISurfaceImage( const sirGraphicsABIDe
                                                           const sirGraphicsSurfaceImage_t *pImage,
                                                           const sirGraphicsCompletion_t *pCompletion ) noexcept;
 
+// Retirement is a native ownership operation gated by validated queue fences.
+// An empty completion set denotes a resource with no outstanding GPU users.
+sirGraphicsABIResult_t sirGraphicsRetireABIResource( const sirGraphicsABIDevice_t *pDevice, sirGraphicsHandle_t hResource,
+                                                    const sirGraphicsCompletionSet_t *pComplete ) noexcept;
+
 // Returns a validated snapshot of the native device's current memory budget.
 // A zero native budget is an unknown limit, not a guaranteed free allocation.
 // The output is unchanged on driver error or incoherent counters.
