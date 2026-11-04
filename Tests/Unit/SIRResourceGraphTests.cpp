@@ -13,8 +13,6 @@
 #include <vector>
 
 #ifdef _WIN32
-
-
 #include <malloc.h>
 #endif
 
