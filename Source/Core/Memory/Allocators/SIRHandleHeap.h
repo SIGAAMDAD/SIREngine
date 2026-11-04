@@ -76,8 +76,8 @@ class SIRHandleHeap
 {
 public:
 	SIRHandleHeap( void );
-	SIRHandleHeap( const SIRHandleHeap & ) = delete;
-	SIRHandleHeap &operator=( const SIRHandleHeap & ) = delete;
+	SIRHandleHeap( const SIRHandleHeap& ) = delete;
+	SIRHandleHeap& operator=( const SIRHandleHeap& ) = delete;
 
 	static uint64_t getRequiredMetadataBytes( uint32_t nMaxHandles );
 	bool init( SIRMemorySegment *pSegment, uint32_t nMaxHandles );
@@ -114,11 +114,11 @@ private:
 	uint32_t findFittingExtent( uint32_t nBytes, uint32_t nAlignment, uint32_t *pUserOffset, uint32_t *pBlockBytes ) const;
 
 	template <bool bSizeTree>
-	sirTreeLinks_t &getLinks( uint32_t nIndex );
+	sirTreeLinks_t& getLinks( uint32_t nIndex );
 	template <bool bSizeTree>
-	const sirTreeLinks_t &getLinks( uint32_t nIndex ) const;
+	const sirTreeLinks_t& getLinks( uint32_t nIndex ) const;
 	template <bool bSizeTree>
-	uint32_t &root( void );
+	uint32_t& root( void );
 	template <bool bSizeTree>
 	uint32_t rootValue( void ) const;
 	template <bool bSizeTree>

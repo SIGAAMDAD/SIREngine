@@ -44,7 +44,7 @@ struct sirEventWheelSlot_s
 {
 	TPayload payload;
 	void *pContext = nullptr;
-	void ( *pCallback )( void *, const TPayload & ) noexcept = nullptr;
+	void ( *pCallback )( void *, const TPayload& ) noexcept = nullptr;
 	uint64_t nDue = 0;
 	uint64_t nInterval = 0;
 	uint32_t nNext = 0;
@@ -63,7 +63,7 @@ template <typename TPayload, uint32_t Capacity = 128, uint32_t BucketCount = 256
 class SIREventTimingWheel
 {
 public:
-	typedef void ( *callback_t )( void *, const TPayload & ) noexcept;
+	typedef void ( *callback_t )( void *, const TPayload& ) noexcept;
 	static_assert( Capacity > 0, "Timing wheel requires storage" );
 	static_assert( BucketCount > 1 && ( BucketCount & ( BucketCount - 1 ) ) == 0, "Bucket count must be power of two" );
 	static_assert( std::is_trivially_copyable<TPayload>::value, "Timing wheel payloads must be POD" );
@@ -75,11 +75,11 @@ public:
 			m_Slots[i].nNext = i == Capacity ? 0 : i + 1;
 		}
 	}
-	SIREventTimingWheel( const SIREventTimingWheel & ) = delete;
-	SIREventTimingWheel &operator=( const SIREventTimingWheel & ) = delete;
+	SIREventTimingWheel( const SIREventTimingWheel& ) = delete;
+	SIREventTimingWheel& operator=( const SIREventTimingWheel& ) = delete;
 
-	bool schedule( void *pContext, callback_t pCallback, const TPayload &payload, uint64_t nNow, uint64_t nDelay, uint64_t nInterval,
-	               sirEventScheduleHandle_t &handle ) noexcept
+	bool schedule( void *pContext, callback_t pCallback, const TPayload& payload, uint64_t nNow, uint64_t nDelay, uint64_t nInterval,
+	               sirEventScheduleHandle_t& handle ) noexcept
 	{
 		handle = {};
 		if ( pCallback == nullptr || m_nFreeHead == 0 || nDelay >= BucketCount || nInterval >= BucketCount ||
@@ -91,7 +91,7 @@ public:
 			m_nClock = nNow;
 		}
 		const uint32_t nIndex = m_nFreeHead;
-		sirEventWheelSlot_s<TPayload> &slot = m_Slots[nIndex];
+		sirEventWheelSlot_s<TPayload>& slot = m_Slots[nIndex];
 		m_nFreeHead = slot.nNext;
 		slot.payload = payload;
 		slot.pContext = pContext;
@@ -114,7 +114,7 @@ public:
 		if ( handle.pOwner != this || handle.nSlot == 0 || handle.nSlot > Capacity ) {
 			return false;
 		}
-		sirEventWheelSlot_s<TPayload> &slot = m_Slots[handle.nSlot];
+		sirEventWheelSlot_s<TPayload>& slot = m_Slots[handle.nSlot];
 		if ( slot.nGeneration != handle.nGeneration || slot.eState == SIR_EVENT_WHEEL_FREE || slot.eState == SIR_EVENT_WHEEL_CANCELLED ) {
 			return false;
 		}
@@ -180,7 +180,7 @@ public:
 		uint32_t nInvoked = 0;
 		for ( uint32_t i = 0; i < nCollected; ++i ) {
 			const uint32_t nIndex = szDue[i];
-			sirEventWheelSlot_s<TPayload> &slot = m_Slots[nIndex];
+			sirEventWheelSlot_s<TPayload>& slot = m_Slots[nIndex];
 			if ( slot.eState == SIR_EVENT_WHEEL_INVOKING ) {
 				slot.pCallback( slot.pContext, slot.payload );
 				++nInvoked;
@@ -208,7 +208,7 @@ public:
 		m_nPending = 0;
 		m_nFreeHead = 0;
 		for ( uint32_t i = Capacity; i > 0; --i ) {
-			sirEventWheelSlot_s<TPayload> &slot = m_Slots[i];
+			sirEventWheelSlot_s<TPayload>& slot = m_Slots[i];
 			if ( slot.eState == SIR_EVENT_WHEEL_INVOKING ) {
 				slot.eState = SIR_EVENT_WHEEL_CANCELLED;
 			} else if ( slot.eState == SIR_EVENT_WHEEL_QUEUED || slot.eState == SIR_EVENT_WHEEL_FREE ) {
@@ -230,7 +230,7 @@ public:
 private:
 	// At most one wheel revolution is relevant. Find occupied buckets in
 	// 64-bit groups rather than advancing through empty ticks.
-	bool nextOccupiedTick( uint64_t nStart, uint64_t nEnd, uint64_t &nFound ) const noexcept
+	bool nextOccupiedTick( uint64_t nStart, uint64_t nEnd, uint64_t& nFound ) const noexcept
 	{
 		uint64_t nDistance = nEnd - nStart;
 		if ( nDistance >= BucketCount ) {
@@ -265,7 +265,7 @@ private:
 
 	void insert( uint32_t nIndex ) noexcept
 	{
-		sirEventWheelSlot_s<TPayload> &slot = m_Slots[nIndex];
+		sirEventWheelSlot_s<TPayload>& slot = m_Slots[nIndex];
 		const uint32_t nBucket = ( uint32_t )( slot.nDue & ( BucketCount - 1 ) );
 		slot.nNext = 0;
 		slot.nPrev = m_nTails[nBucket];
@@ -281,7 +281,7 @@ private:
 	}
 	void unlink( uint32_t nIndex ) noexcept
 	{
-		sirEventWheelSlot_s<TPayload> &slot = m_Slots[nIndex];
+		sirEventWheelSlot_s<TPayload>& slot = m_Slots[nIndex];
 		const uint32_t nBucket = ( uint32_t )( slot.nDue & ( BucketCount - 1 ) );
 		if ( slot.nPrev != 0 ) {
 			m_Slots[slot.nPrev].nNext = slot.nNext;
@@ -300,7 +300,7 @@ private:
 	}
 	void release( uint32_t nIndex ) noexcept
 	{
-		sirEventWheelSlot_s<TPayload> &slot = m_Slots[nIndex];
+		sirEventWheelSlot_s<TPayload>& slot = m_Slots[nIndex];
 		slot.eState = SIR_EVENT_WHEEL_FREE;
 		if ( ++slot.nGeneration == 0 ) {
 			++slot.nGeneration;

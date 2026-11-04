@@ -58,25 +58,25 @@ class SIRDelimitedReader
 {
 public:
 	SIRDelimitedReader( void ) noexcept;
-	SIRDelimitedReader( const SIRDelimitedReader & ) = delete;
-	SIRDelimitedReader &operator=( const SIRDelimitedReader & ) = delete;
+	SIRDelimitedReader( const SIRDelimitedReader& ) = delete;
+	SIRDelimitedReader& operator=( const SIRDelimitedReader& ) = delete;
 	~SIRDelimitedReader( void ) noexcept;
 
-	sirConfigResult_t openBuffer( const sirConfigInput_t &input, const sirConfigParseContext_t &context,
-	                              const sirDelimitedOptions_t &options ) noexcept;
-	sirConfigResult_t openStream( const sirConfigSource_t &source, const sirConfigParseContext_t &context,
-	                              const sirDelimitedOptions_t &options ) noexcept;
+	sirConfigResult_t openBuffer( const sirConfigInput_t& input, const sirConfigParseContext_t& context,
+	                              const sirDelimitedOptions_t& options ) noexcept;
+	sirConfigResult_t openStream( const sirConfigSource_t& source, const sirConfigParseContext_t& context,
+	                              const sirDelimitedOptions_t& options ) noexcept;
 	sirConfigResult_t nextRow( sirDelimitedRowView_t *pRow, sirConfigDiagnostic_t *pDiagnostic ) noexcept;
 	void close( void ) noexcept;
 
 private:
-	sirConfigResult_t openCommon( const sirConfigParseContext_t &context, const sirDelimitedOptions_t &options ) noexcept;
+	sirConfigResult_t openCommon( const sirConfigParseContext_t& context, const sirDelimitedOptions_t& options ) noexcept;
 	sirConfigResult_t readByte( uint8_t *pByte, bool *pEnd ) noexcept;
 	sirConfigResult_t appendByte( uint8_t nByte ) noexcept;
 	sirConfigResult_t completeField( void ) noexcept;
 	sirConfigResult_t completeRow( sirDelimitedRowView_t *pRow ) noexcept;
 	sirConfigResult_t fail( sirConfigResult_t eResult, sirConfigDiagnostic_t *pDiagnostic ) noexcept;
-	bool validOptions( const sirDelimitedOptions_t &options ) const noexcept;
+	bool validOptions( const sirDelimitedOptions_t& options ) const noexcept;
 
 	const sirContainerAllocator_t *m_pAllocator;
 	sirConfigLimits_t m_Limits;
@@ -112,14 +112,14 @@ class SIRDelimitedWriter
 {
 public:
 	SIRDelimitedWriter( void ) noexcept;
-	sirConfigResult_t open( const sirConfigSink_t &sink, const sirConfigParseContext_t &context,
-	                        const sirDelimitedOptions_t &options ) noexcept;
+	sirConfigResult_t open( const sirConfigSink_t& sink, const sirConfigParseContext_t& context,
+	                        const sirDelimitedOptions_t& options ) noexcept;
 	sirConfigResult_t writeRow( const sirStringView_t *pFields, uint32_t nFieldCount ) noexcept;
 	sirConfigResult_t finish( void ) noexcept;
 	void close( void ) noexcept;
 
 private:
-	bool needsQuote( const sirStringView_t &field ) const noexcept;
+	bool needsQuote( const sirStringView_t& field ) const noexcept;
 	sirConfigResult_t writeSpan( const uint8_t *pBytes, uint64_t nBytes ) noexcept;
 	sirConfigResult_t writeByte( uint8_t nByte ) noexcept;
 	sirConfigResult_t computeRowBytes( const sirStringView_t *pFields, uint32_t nFieldCount, uint64_t *pBytes ) const noexcept;

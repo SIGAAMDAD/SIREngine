@@ -66,10 +66,10 @@ class SIRGeneralHeap
 {
 public:
 	SIRGeneralHeap( void );
-	SIRGeneralHeap( const SIRGeneralHeap & ) = delete;
-	SIRGeneralHeap &operator=( const SIRGeneralHeap & ) = delete;
+	SIRGeneralHeap( const SIRGeneralHeap& ) = delete;
+	SIRGeneralHeap& operator=( const SIRGeneralHeap& ) = delete;
 
-	bool init( const sirGeneralHeapConfig_t &config );
+	bool init( const sirGeneralHeapConfig_t& config );
 	bool isConfiguredForDomain( sirMemoryDomain_t eDomain ) const noexcept;
 	// Worker entry/exit can be explicitly tied to the engine worker lifecycle.
 	bool attachThread( void );

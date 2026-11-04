@@ -36,8 +36,8 @@ class SIRHighLowAllocator
 {
 public:
 	SIRHighLowAllocator( void );
-	SIRHighLowAllocator( const SIRHighLowAllocator & ) = delete;
-	SIRHighLowAllocator &operator=( const SIRHighLowAllocator & ) = delete;
+	SIRHighLowAllocator( const SIRHighLowAllocator& ) = delete;
+	SIRHighLowAllocator& operator=( const SIRHighLowAllocator& ) = delete;
 
 	bool init( SIRMemorySegment *pSegment );
 

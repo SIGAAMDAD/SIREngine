@@ -3,6 +3,10 @@
 SIREngine MPLv2 Source Code
 Copyright (C) 2023-2027 Noah Van Til
 
+
+
+
+
 This Source Code Form is subject to the terms of the Mozilla Public
 License, v2. If a copy of the MPL was not distributed with this
 file, You can obtain one at https://mozilla.org/MPL/2.0/.
@@ -14,6 +18,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Core/Platform/SIRVirtualMemory.h>
+#include <Core/Memory/SIRMemoryManager.h>
+#include <Core/Memory/SIRMemorySegment.h>
 
 #include <errno.h>
 #include <stdint.h>
@@ -44,5 +50,34 @@ int main( void )
 		return 1;
 	}
 	const bool bReleased = SIRVirtualMemory::release( pAddress, nPage );
-	return bReleased ? 0 : 1;
+	if ( !bReleased ) {
+		return 1;
+	}
+	SIRMemoryManager memory;
+	const sirMemoryConfig_t config = { nPage * 128, nPage * 32, nPage * 8, 4 };
+	if ( !memory.init( config ) ) {
+		return 1;
+	}
+	SIRMemorySegment *pSegment = memory.createSegment( "rollback", nPage * 2 );
+	if ( pSegment == nullptr || !pSegment->commit( 0, nPage ) || !pSegment->bindRetirementOwner( 7, 13 ) ) {
+		return 1;
+	}
+	volatile uint8_t *pManaged = ( volatile uint8_t * )pSegment->getBase();
+	pManaged[0] = 0xA7;
+	if ( !pSegment->retireIdleRange( 0, nPage, 7, 13 ) ) {
+		return 1;
+	}
+	const sirPageBackingStats_t before = memory.getPageBackingStats();
+	const sirPageDrainReport_t report = memory.drainPendingDecommits( nPage );
+	const sirPageBackingStats_t after = memory.getPageBackingStats();
+	if ( report.nFailedRuns != 1 || report.nCompletedRuns != 0 || report.nDecommittedBytes != 0 || report.nRemainingPendingBytes != nPage ||
+	     after.nManagedCommittedBytes != before.nManagedCommittedBytes || after.nFailedDecommitCalls != before.nFailedDecommitCalls + 1 ||
+	     pManaged[0] != 0xA7 ) {
+		fputs( "failed pending drain lost committed memory or corrupted payload\n", stderr );
+		return 1;
+	}
+	if ( !pSegment->cancelRetiredRange( 0, nPage, 7, 13 ) || memory.getPageBackingStats().nPendingDecommitBytes != 0 ) {
+		return 1;
+	}
+	return 0;
 }

@@ -54,7 +54,7 @@ bool SIRGeneralHeap::overlap( const SIRMemorySegment *pA, const SIRMemorySegment
 	return ( nA <= nB && nB - nA < pA->getReservedBytes() ) || ( nB <= nA && nA - nB < pB->getReservedBytes() );
 }
 
-bool SIRGeneralHeap::init( const sirGeneralHeapConfig_t &config )
+bool SIRGeneralHeap::init( const sirGeneralHeapConfig_t& config )
 {
 	if ( m_bInitialized || config.pSmall == nullptr || config.pSmallSegment == nullptr || config.pMediumSegment == nullptr ||
 	     config.pLargeSegment == nullptr || ( config.bUsePageRuns ? config.pPageRuns == nullptr : config.pLarge == nullptr ) ||
