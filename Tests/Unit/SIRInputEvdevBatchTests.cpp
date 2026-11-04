@@ -18,6 +18,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -49,6 +50,49 @@ public:
 		slot.nRumbleEffect = -1;
 		slot.bClockMonotonic = bMonotonic;
 		return true;
+	}
+
+	static int16_t resolve( SIRLinuxEvdevBackend &backend, uint16_t nCode, bool bProfile, bool bReplace ) noexcept
+	{
+		sirInputEvdevSlot_t slot = {};
+		slot.bHasProfile = bProfile;
+		slot.profile.nButtonCount = 1;
+		slot.profile.buttons[0] = { BTN_EAST, SIR_INPUT_PAD_SOUTH };
+		slot.profile.bReplaceButtons = bReplace;
+		return backend.resolveButton( slot, nCode );
+	}
+
+	static bool queueBoundary( SIRLinuxEvdevBackend &backend ) noexcept
+	{
+		sirInputEvdevSlot_t slot = {};
+		if ( !backend.queueChange( slot, SIR_INPUT_BUTTON, SIR_INPUT_PAD_SOUTH, 1 ) || slot.nPending != 1 ) {
+			return false;
+		}
+		slot.nPending = SIR_INPUT_EVDEV_REPORT_CAPACITY;
+		return !backend.queueChange( slot, SIR_INPUT_BUTTON, SIR_INPUT_PAD_SOUTH, 1 ) && slot.bDesynchronized && slot.nPending == 0;
+	}
+
+	static bool open( SIRLinuxEvdevBackend &backend, SIRInputService &service, const char *pszPath ) noexcept
+	{
+		return backend.openDevice( service, pszPath );
+	}
+
+	static bool desynchronized( const SIRLinuxEvdevBackend &backend ) noexcept
+	{
+		return backend.m_Slots[0].bDesynchronized;
+	}
+
+	static void configureAxes( SIRLinuxEvdevBackend &backend ) noexcept
+	{
+		sirInputEvdevSlot_t &slot = backend.m_Slots[0];
+		slot.bHatDPad = true;
+		slot.axes[SIR_INPUT_AXIS_LX] = { -100, 100, ABS_X, false, true, false };
+		slot.axes[SIR_INPUT_AXIS_LY] = { -100, 100, ABS_Y, false, true, true };
+	}
+
+	static void setRumble( SIRLinuxEvdevBackend &backend, bool bCanRumble ) noexcept
+	{
+		backend.m_Slots[0].bCanRumble = bCanRumble;
 	}
 };
 
@@ -205,9 +249,189 @@ static bool testPartialReportAcrossReads( void ) noexcept
 	return bValid;
 }
 
+static bool testMappingAndQueueBoundaries( void ) noexcept
+{
+	SIRLinuxEvdevBackend backend;
+	if ( SIRLinuxEvdevBackend::physicalKey( nullptr, 1, 1 ) != 0 || SIRLinuxEvdevBackend::physicalKey( "", 1, 1 ) != 0 ||
+	     SIRLinuxEvdevBackend::physicalKey( "usb-7/input0", 123, 456 ) != SIRLinuxEvdevBackend::physicalKey( "usb-7/input1", 123, 456 ) ||
+	     SIRLinuxEvdevBackend::physicalKey( "usb-7/input0", 123, 456 ) == SIRLinuxEvdevBackend::physicalKey( "usb-7/input0", 124, 456 ) ||
+	     SIRLinuxEvdevBackend::normalize( 4, 4, 4, false ) != 0 || SIRLinuxEvdevBackend::normalize( -1000, -50, 50, false ) != -32767 ||
+	     SIRLinuxEvdevBackend::normalize( 1000, -50, 50, false ) != 32767 || SIRLinuxEvdevBackend::normalize( -1000, -50, 50, true ) != 0 ||
+	     SIRLinuxEvdevBackend::normalize( 1000, -50, 50, true ) != 32767 ) {
+		return false;
+	}
+	if ( SIRInputEvdevBatchTestPeer::resolve( backend, BTN_SOUTH, false, false ) != SIR_INPUT_PAD_SOUTH ||
+	     SIRInputEvdevBatchTestPeer::resolve( backend, BTN_EAST, true, false ) != SIR_INPUT_PAD_SOUTH ||
+	     SIRInputEvdevBatchTestPeer::resolve( backend, BTN_TR, true, false ) != SIR_INPUT_PAD_RB ||
+	     SIRInputEvdevBatchTestPeer::resolve( backend, BTN_SOUTH, true, false ) != -1 ||
+	     SIRInputEvdevBatchTestPeer::resolve( backend, BTN_SOUTH, true, true ) != -1 ) {
+		return false;
+	}
+	return SIRInputEvdevBatchTestPeer::queueBoundary( backend );
+}
+
+static bool testDiscoveryAndOpenFailures( void ) noexcept
+{
+	SIRInputService service;
+	SIRLinuxEvdevBackend backend;
+	if ( !service.attach( backend ) || !service.begin( 1 ) ) {
+		return false;
+	}
+	char szTooLong[600] = {};
+	for ( uint32_t i = 0; i < 599; ++i ) {
+		szTooLong[i] = 'x';
+	}
+	if ( backend.discover( service, nullptr ) || backend.discover( service, szTooLong ) ||
+	     SIRInputEvdevBatchTestPeer::open( backend, service, nullptr ) || SIRInputEvdevBatchTestPeer::open( backend, service, szTooLong ) ||
+	     SIRInputEvdevBatchTestPeer::open( backend, service, "/tmp/sir-r0-absent-device-node" ) ||
+	     backend.loadCookedProfilesFile( nullptr ) || backend.loadCookedProfilesFile( "" ) ||
+	     backend.loadCookedProfilesFile( "/tmp/sir-r0-absent-profile" ) ) {
+		return false;
+	}
+	char szDirectory[] = "/tmp/sir-evdev-r0-XXXXXX";
+	if ( mkdtemp( szDirectory ) == nullptr ) {
+		return false;
+	}
+	char szEventPath[640] = {};
+	const int nLength = snprintf( szEventPath, sizeof( szEventPath ), "%s/event0", szDirectory );
+	bool bValid = nLength > 0 && nLength < ( int )sizeof( szEventPath );
+	FILE *pFile = bValid ? fopen( szEventPath, "wb" ) : nullptr;
+	if ( pFile == nullptr ) {
+		bValid = false;
+	} else {
+		fclose( pFile );
+	}
+	if ( bValid ) {
+		bValid = backend.discover( service, szDirectory ) && !SIRInputEvdevBatchTestPeer::open( backend, service, szEventPath ) &&
+		         service.activeDeviceCount() == 0;
+		sirInputControllerProfile_t profile = {};
+		profile.nVendor = 1;
+		profile.nProduct = 2;
+		bValid = bValid && !backend.addProfile( profile ) && !backend.importCookedProfiles( nullptr, 4 );
+	}
+	unlink( szEventPath );
+	if ( bValid ) {
+		backend.sample( service );
+		bValid = service.publish() && service.activeDeviceCount() == 0;
+	}
+	service.shutdown();
+	rmdir( szDirectory );
+	return bValid;
+}
+
+static bool testDesyncAndReadFailureLifecycle( void ) noexcept
+{
+	SIRInputService service;
+	SIRLinuxEvdevBackend backend;
+	if ( !service.attach( backend ) || !service.begin( 1 ) ) {
+		return false;
+	}
+	sirInputDeviceId_t id = {};
+	if ( !service.connect( { 0, 952, SIR_INPUT_LINUX_EVDEV, SIR_INPUT_CONTROLLER }, &id ) || !service.publish() || !service.begin( 2 ) ) {
+		return false;
+	}
+	int nReadFd = -1;
+	int nWriteFd = -1;
+	if ( !createPipe( &nReadFd, &nWriteFd ) ) {
+		return false;
+	}
+	if ( !SIRInputEvdevBatchTestPeer::install( backend, nReadFd, id ) ) {
+		close( nReadFd );
+		close( nWriteFd );
+		return false;
+	}
+	input_event szEvents[3] = {};
+	szEvents[0].type = EV_SYN;
+	szEvents[0].code = SYN_DROPPED;
+	szEvents[1].type = EV_KEY;
+	szEvents[1].code = BTN_EAST;
+	szEvents[1].value = 1;
+	szEvents[2].type = EV_SYN;
+	szEvents[2].code = SYN_REPORT;
+	bool bValid = write( nWriteFd, szEvents, sizeof( szEvents ) ) == ( ssize_t )sizeof( szEvents );
+	if ( bValid ) {
+		backend.sample( service );
+		bValid = service.publish() && service.frame() != nullptr && service.frame()->nCount == 1 &&
+		         service.frame()->events[0].eSignal == SIR_INPUT_RESYNC && !SIRInputEvdevBatchTestPeer::desynchronized( backend );
+	}
+	if ( bValid ) {
+		bValid = service.begin( 3 );
+		backend.resynchronize( service );
+		bValid = bValid && SIRInputEvdevBatchTestPeer::desynchronized( backend );
+	}
+	close( nWriteFd );
+	if ( bValid ) {
+		backend.sample( service );
+		bValid = service.activeDeviceCount() == 0 && !service.describe( id, nullptr ) && service.publish();
+	}
+	service.shutdown();
+	return bValid;
+}
+
+static bool testAxisHatAndRumbleErrors( void ) noexcept
+{
+	SIRInputService service;
+	SIRLinuxEvdevBackend backend;
+	if ( !service.attach( backend ) || !service.begin( 1 ) ) {
+		return false;
+	}
+	sirInputDeviceId_t id = {};
+	if ( !service.connect( { 0, 951, SIR_INPUT_LINUX_EVDEV, SIR_INPUT_CONTROLLER }, &id ) || !service.publish() || !service.begin( 2 ) ) {
+		return false;
+	}
+	int nReadFd = -1;
+	int nWriteFd = -1;
+	if ( !createPipe( &nReadFd, &nWriteFd ) ) {
+		return false;
+	}
+	if ( !SIRInputEvdevBatchTestPeer::install( backend, nReadFd, id ) ) {
+		close( nReadFd );
+		close( nWriteFd );
+		return false;
+	}
+	SIRInputEvdevBatchTestPeer::configureAxes( backend );
+	input_event szEvents[7] = {};
+	szEvents[0].type = EV_ABS;
+	szEvents[0].code = ABS_X;
+	szEvents[0].value = 50;
+	szEvents[1].type = EV_ABS;
+	szEvents[1].code = ABS_Y;
+	szEvents[1].value = -50;
+	szEvents[2].type = EV_ABS;
+	szEvents[2].code = ABS_HAT0X;
+	szEvents[2].value = -1;
+	szEvents[3].type = EV_ABS;
+	szEvents[3].code = ABS_HAT0Y;
+	szEvents[3].value = 1;
+	szEvents[4].type = EV_KEY;
+	szEvents[4].code = BTN_EAST;
+	szEvents[4].value = 2;
+	szEvents[5].type = EV_ABS;
+	szEvents[5].code = ABS_HAT1X;
+	szEvents[5].value = 1;
+	szEvents[6].type = EV_SYN;
+	szEvents[6].code = SYN_REPORT;
+	bool bValid = write( nWriteFd, szEvents, sizeof( szEvents ) ) == ( ssize_t )sizeof( szEvents );
+	if ( bValid ) {
+		backend.sample( service );
+		bValid = service.publish() && service.frame()->nCount == 4 && service.frame()->state[id.nSlot].nAxes[SIR_INPUT_AXIS_LX] == 16383 &&
+		         service.frame()->state[id.nSlot].nAxes[SIR_INPUT_AXIS_LY] == 16384;
+	}
+	if ( bValid ) {
+		bValid =
+		    !backend.vibrate( { id.nSlot, id.nGeneration + 1 }, 100, 100 ) && backend.hapticCapabilities( id ) == SIR_INPUT_HAPTIC_CAP_NONE;
+		SIRInputEvdevBatchTestPeer::setRumble( backend, true );
+		bValid = bValid && backend.hapticCapabilities( id ) == SIR_INPUT_HAPTIC_CAP_RUMBLE && !backend.vibrate( id, 50, 25 );
+	}
+	close( nWriteFd );
+	service.shutdown();
+	return bValid;
+}
+
 int main( void )
 {
-	if ( !testBatchedReports() || !testPartialReportAcrossReads() ) {
+	if ( !testBatchedReports() || !testPartialReportAcrossReads() || !testMappingAndQueueBoundaries() || !testDiscoveryAndOpenFailures() ||
+	     !testDesyncAndReadFailureLifecycle() || !testAxisHatAndRumbleErrors() ) {
 		fprintf( stderr, "SIRInputEvdevBatchTests FAIL\n" );
 		return 1;
 	}
