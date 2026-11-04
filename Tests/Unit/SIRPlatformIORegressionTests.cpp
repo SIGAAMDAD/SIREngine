@@ -198,7 +198,7 @@ static void sirTestSemaphoreContention( void )
 	constexpr uint32_t N_PER_WORKER = 1024;
 	std::thread szWorkers[SIR_IO_WORKERS];
 	for ( uint32_t iWorker = 0; iWorker < SIR_IO_WORKERS; ++iWorker ) {
-		szWorkers[iWorker] = std::thread( [&semaphore]() {
+		szWorkers[iWorker] = std::thread( [&semaphore, N_PER_WORKER]() {
 			for ( uint32_t iPermit = 0; iPermit < N_PER_WORKER; ++iPermit ) {
 				SIR_CHECK( semaphore.post() == SIR_SEMAPHORE_OK );
 			}
