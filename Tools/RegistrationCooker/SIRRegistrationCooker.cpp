@@ -222,8 +222,8 @@ bool sirCookRegistrationCatalog( const std::vector<sirRegistrationCookDefinition
 	const uint64_t nNamesOffset = names.empty() ? 0 : SIR_REGISTRATION_CATALOG_HEADER_BYTES;
 	const uint64_t nCommandsOffset = nCommands ? sirCookAlign8( SIR_REGISTRATION_CATALOG_HEADER_BYTES + names.size() * 8 ) : 0;
 	const uint64_t nCVarsOffset = nCVars ? sirCookAlign8( nCommands ? nCommandsOffset + ( uint64_t )nCommands * 32
-	                                                           : SIR_REGISTRATION_CATALOG_HEADER_BYTES + names.size() * 8 )
-	                                    : 0;
+	                                                                : SIR_REGISTRATION_CATALOG_HEADER_BYTES + names.size() * 8 )
+	                                     : 0;
 	uint64_t nEnd = SIR_REGISTRATION_CATALOG_HEADER_BYTES + names.size() * 8;
 	if ( nCommands ) {
 		nEnd = nCommandsOffset + ( uint64_t )nCommands * 32;
@@ -298,8 +298,9 @@ bool sirCookRegistrationCatalog( const std::vector<sirRegistrationCookDefinition
 		nDescriptorHash = sirCookHash( result.data() + nCVarsOffset, ( size_t )nCVars * 32, nDescriptorHash );
 	}
 	sirCookWrite64( result.data() + 96, nDescriptorHash );
-	sirCookWrite64( result.data() + 104, sirCookHash( result.data() + SIR_REGISTRATION_CATALOG_HEADER_BYTES,
-	                                                  result.size() - SIR_REGISTRATION_CATALOG_HEADER_BYTES, SIR_REGISTRATION_HASH_BASIS ) );
+	sirCookWrite64( result.data() + 104,
+	                sirCookHash( result.data() + SIR_REGISTRATION_CATALOG_HEADER_BYTES,
+	                             result.size() - SIR_REGISTRATION_CATALOG_HEADER_BYTES, SIR_REGISTRATION_HASH_BASIS ) );
 	strings.swap( cookedStrings );
 	registrations.swap( result );
 	return true;

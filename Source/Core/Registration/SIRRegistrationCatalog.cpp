@@ -72,8 +72,7 @@ static bool sirCatalogAllowedModuleName( SIRStringPool& pool, SIRStringAtom atom
 		return false;
 	}
 	const size_t nPrefix = ( size_t )( pszDot - szName );
-	return !( nPrefix == 3 && memcmp( szName, "sir", 3 ) == 0 ) &&
-	       !( nPrefix == 7 && memcmp( szName, "console", 7 ) == 0 );
+	return !( nPrefix == 3 && memcmp( szName, "sir", 3 ) == 0 ) && !( nPrefix == 7 && memcmp( szName, "console", 7 ) == 0 );
 }
 
 static bool sirCatalogUtf8( const uint8_t *pBytes, uint32_t nCount ) noexcept
@@ -130,8 +129,7 @@ static bool sirCatalogDefaultValid( const sirRegistrationCatalogInit_t& init, ui
 			return false;
 		}
 		const uint32_t nLength = sirCatalogU32( init.pBytes + nOffset );
-		return nLength <= init.nBytes - nOffset - 4 &&
-		       sirCatalogUtf8( init.pBytes + nOffset + 4, nLength );
+		return nLength <= init.nBytes - nOffset - 4 && sirCatalogUtf8( init.pBytes + nOffset + 4, nLength );
 	}
 	if ( init.nBytes - nOffset < 8 ) {
 		return false;
@@ -172,7 +170,8 @@ uint32_t SIRRegistrationCatalog::getCookedCount( void ) const noexcept
 	return m_nCookedCount;
 }
 
-sirRegistrationResult_t SIRRegistrationCatalog::getEntry( sirRegistrationHandle_t handle, const sirRegistrationEntry_t **ppEntry ) const noexcept
+sirRegistrationResult_t SIRRegistrationCatalog::getEntry( sirRegistrationHandle_t handle,
+                                                          const sirRegistrationEntry_t **ppEntry ) const noexcept
 {
 	if ( ppEntry == nullptr ) {
 		return SIR_REGISTRATION_INVALID_ARGUMENT;
@@ -193,7 +192,7 @@ sirRegistrationResult_t SIRRegistrationCatalog::getEntry( sirRegistrationHandle_
 }
 
 sirRegistrationResult_t SIRRegistrationCatalog::loadNames( const sirRegistrationCatalogInit_t& init, SIRStringPool& pool,
-                                                            uint32_t nNames ) noexcept
+                                                           uint32_t nNames ) noexcept
 {
 	const uint64_t nOffset = sirCatalogU64( init.pBytes + 24 );
 	uint32_t nPreviousOrdinal = 0;
@@ -429,7 +428,8 @@ bool SIRRegistrationCatalog::isNameOccupied( SIRStringAtom atom ) const noexcept
 	return false;
 }
 
-sirRegistrationResult_t SIRRegistrationCatalog::find( const char *pszName, size_t nNameBytes, sirRegistrationHandle_t *pHandle ) const noexcept
+sirRegistrationResult_t SIRRegistrationCatalog::find( const char *pszName, size_t nNameBytes,
+                                                      sirRegistrationHandle_t *pHandle ) const noexcept
 {
 	if ( pHandle == nullptr ) {
 		return SIR_REGISTRATION_INVALID_ARGUMENT;
@@ -455,7 +455,7 @@ sirRegistrationResult_t SIRRegistrationCatalog::find( const char *pszName, size_
 }
 
 sirRegistrationResult_t SIRRegistrationCatalog::registerDynamic( const sirRegistrationDynamicDesc_t& desc,
-                                                                  sirRegistrationHandle_t *pHandle ) noexcept
+                                                                 sirRegistrationHandle_t *pHandle ) noexcept
 {
 	if ( pHandle == nullptr ) {
 		return SIR_REGISTRATION_INVALID_ARGUMENT;

@@ -44,7 +44,7 @@ typedef struct sirRegistrationCookDefinition_s
 
 // Sorts and validates caller-owned definitions; emits deterministic SIRS v1 and SIRC v1.
 // Failure preserves both caller output buffers.
-bool sirCookRegistrationCatalog( const std::vector<sirRegistrationCookDefinition_t>& definitions,
-                                 std::vector<uint8_t>& strings, std::vector<uint8_t>& registrations );
+bool sirCookRegistrationCatalog( const std::vector<sirRegistrationCookDefinition_t>& definitions, std::vector<uint8_t>& strings,
+                                 std::vector<uint8_t>& registrations );
 
 #endif // __SIRENGINE_SIRREGISTRATIONCOOKER_H__
