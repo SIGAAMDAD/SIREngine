@@ -159,3 +159,35 @@ The old `SIRD3D12Device::copyRoundTripForTest` path, its private DIRECT queue co
 Their correctness coverage now executes against `SIRD3D12Transfers` using its explicitly sized, persistently mapped arena and native COPY queue. The previous 64 repeated roundtrip cases, invalid inputs, byte-for-byte readback comparisons, and completed-copy checks are preserved in the test as direct transfer operations; asynchronous saturation, stale tickets, forced staging and cross-queue waits remain covered separately.
 
 No compatibility overload or old transfer abstraction remains in the native D3D12 device.
+
+## Shared DXIL pipeline API — implementation 02
+
+`SIRD3D12Pipelines` owns a fixed table of 64 typed pipeline handles.
+Each pipeline owns one native root signature and graphics or compute PSO.
+The shared `createPipeline` call consumes already-cooked DXIL containers
+(`DXBC` container signature) with no runtime HLSL/DXC dependency; non-DXIL
+payloads and fixed-function pipelines are rejected. The CMake WARP workflow
+compiles the test shaders using the pinned offline DXC package.
+
+Each `sirGraphicsBindingDesc_t` becomes one D3D12 root descriptor table
+with the declared register, register space, descriptor array count and
+shader-stage visibility. Root signatures reject overlapping register ranges,
+unsupported stage masks and more than 32 binding entries. CBV, SRV, UAV and
+sampler ranges preserve the shared binding types and are created without
+allocating descriptor heaps on each pipeline creation.
+
+General graphics PSOs lower culling, depth testing/writing, color and
+alpha blending, render-target formats, MSAA sample count and primitive type.
+Locations in the shared vertex attribute description map to DXIL semantics:
+location 0 = `POSITION0`, location 1 = `COLOR0`, subsequent locations =
+`TEXCOORD(location - 2)`. Shader cooking must use this contract. Tessellation
+patch topology remains unsupported until hull/domain stages are part of
+the shared shader descriptor.
+
+Pipeline handles carry the device generation and slot generation; retirement
+invalidates a handle immediately and releases native root/PSO COM ownership
+only after the named queue completion set is proven. Native command-list
+submission and binding-set creation are independent implementation 03 work.
+The current WARP acceptance verifies PSO creation, invalid descriptors,
+stale handles, future-fence rejection, capacity exhaustion and reuse. There
+is no claim of general shared-API draw/dispatch execution yet.
