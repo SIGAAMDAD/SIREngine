@@ -441,6 +441,10 @@ static sirLangOpcode_t sirLangBinaryOp( const sirLangLowerState_t *pState, uint3
 		if ( sirLangNodeText( pState, iToken, "or" ) ) {
 			return SIR_LANG_OP_OR;
 		}
+		if ( sirLangNodeText( pState, iToken, "xor" ) ) {
+			pModifiers->bNegate = true;
+			return SIR_LANG_OP_EQUAL;
+		}
 		if ( sirLangNodeText( pState, iToken, "=" ) ) {
 			return SIR_LANG_OP_EQUAL;
 		}
@@ -466,6 +470,10 @@ static uint32_t sirLangLowerLogical( sirLangLowerState_t *pState, uint32_t iNode
 	const uint32_t iLeftValue = sirLangLowerExpression( pState, iLeft );
 	if ( iLeftValue == SIR_LANG_INVALID_INDEX ) {
 		return iLeftValue;
+	}
+	if ( sirLangRegisterType( pState, iLeftValue ) != SIR_LANG_VALUE_BOOL ) {
+		sirLangError( pState, SIR_LANG_LOWER_TYPE, iNode );
+		return SIR_LANG_INVALID_INDEX;
 	}
 
 	sirLangBinaryModifiers_t modifiers = {};
@@ -494,6 +502,10 @@ static uint32_t sirLangLowerLogical( sirLangLowerState_t *pState, uint32_t iNode
 	if ( iTrueValue == SIR_LANG_INVALID_INDEX || pState->pOutput->eError != SIR_LANG_LOWER_OK ) {
 		return SIR_LANG_INVALID_INDEX;
 	}
+	if ( sirLangRegisterType( pState, iTrueValue ) != SIR_LANG_VALUE_BOOL ) {
+		sirLangError( pState, SIR_LANG_LOWER_TYPE, iNode );
+		return SIR_LANG_INVALID_INDEX;
+	}
 
 	const uint32_t iTrueExit = sirLangEmit( pState, { SIR_LANG_OP_JUMP, SIR_LANG_VALUE_VOID, 0, UINT32_MAX, 0, 0, 0, 0,
 	                                               iNode } );
@@ -513,6 +525,10 @@ static uint32_t sirLangLowerLogical( sirLangLowerState_t *pState, uint32_t iNode
 		}
 	}
 	if ( iFalseValue == SIR_LANG_INVALID_INDEX || pState->pOutput->eError != SIR_LANG_LOWER_OK ) {
+		return SIR_LANG_INVALID_INDEX;
+	}
+	if ( sirLangRegisterType( pState, iFalseValue ) != SIR_LANG_VALUE_BOOL ) {
+		sirLangError( pState, SIR_LANG_LOWER_TYPE, iNode );
 		return SIR_LANG_INVALID_INDEX;
 	}
 
@@ -597,6 +613,15 @@ static uint32_t sirLangLowerExpression( sirLangLowerState_t *pState, uint32_t iN
 		uint32_t iA = sirLangLowerExpression( pState, iLeft );
 		uint32_t iB = sirLangLowerExpression( pState, iRight );
 		if ( iA == SIR_LANG_INVALID_INDEX || iB == SIR_LANG_INVALID_INDEX ) {
+			break;
+		}
+		// 'xor' is eager and both operands must be boolean. It lowers to
+		// inequality, preserving one canonical scalar opcode set in v1.
+		const uint32_t iOperator = pState->pTree->pNodes[iLeft].nEndToken;
+		if ( sirLangNodeText( pState, iOperator, "xor" ) &&
+		     ( sirLangRegisterType( pState, iA ) != SIR_LANG_VALUE_BOOL ||
+		       sirLangRegisterType( pState, iB ) != SIR_LANG_VALUE_BOOL ) ) {
+			sirLangError( pState, SIR_LANG_LOWER_TYPE, iNode );
 			break;
 		}
 		if ( eOp == SIR_LANG_OP_PHI ) {

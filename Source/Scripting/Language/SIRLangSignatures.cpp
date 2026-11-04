@@ -470,14 +470,21 @@ static sirLangTypeIdentity_t sirLangInfer( sirLangSignatureState_t *pState, uint
 		break;
 	case SIR_LANG_SYNTAX_BINARY: {
 		const uint32_t iLeft = node.nFirstChild;
-		result = sirLangInfer( pState, iLeft );
+		const sirLangTypeIdentity_t left = sirLangInfer( pState, iLeft );
 		const uint32_t iRight = sirLangNextNode( pState, iLeft );
-		sirLangInfer( pState, iRight );
+		const sirLangTypeIdentity_t right = sirLangInfer( pState, iRight );
+		result = left;
 		const uint32_t iOperator = pState->pTree->pNodes[iLeft].nEndToken;
-		if ( sirLangTextIs( pState, iOperator, "<" ) || sirLangTextIs( pState, iOperator, ">" ) ||
-		     sirLangTextIs( pState, iOperator, "!" ) || sirLangTextIs( pState, iOperator, "=" ) ||
-		     sirLangTextIs( pState, iOperator, "and" ) || sirLangTextIs( pState, iOperator, "or" ) ||
-		     sirLangTextIs( pState, iOperator, "xor" ) ) {
+		const bool bLogical = sirLangTextIs( pState, iOperator, "and" ) ||
+		                      sirLangTextIs( pState, iOperator, "or" ) || sirLangTextIs( pState, iOperator, "xor" );
+		if ( bLogical ) {
+			if ( ( left.eValue != SIR_LANG_VALUE_UNKNOWN && left.eValue != SIR_LANG_VALUE_BOOL ) ||
+			     ( right.eValue != SIR_LANG_VALUE_UNKNOWN && right.eValue != SIR_LANG_VALUE_BOOL ) ) {
+				sirLangSignatureReport( pState, SIR_LANG_SIGNATURE_ARGUMENT_TYPE, iNode );
+			}
+		}
+		if ( bLogical || sirLangTextIs( pState, iOperator, "<" ) || sirLangTextIs( pState, iOperator, ">" ) ||
+		     sirLangTextIs( pState, iOperator, "!" ) || sirLangTextIs( pState, iOperator, "=" ) ) {
 			result = sirLangScalarType( SIR_LANG_VALUE_BOOL );
 		}
 		break;
