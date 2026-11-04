@@ -35,3 +35,33 @@ The reference `.cpp` is expected to reach 100% line/function/branch coverage und
 2. FrameGraph imports the depth producer and explicit, completion-protected prior-frame Hi-Z backing; it creates transient compaction outputs and declares the hazards.
 3. The shader cooker emits native kernels matching these reference semantics; differential GPU readback tests compare all pyramid mips and visibility outputs.
 4. GPU indirect-count execution uses one shared ABI extension, then backend-specific Vulkan/D3D12/GL implementations; this HIZ-00 patch does not modify virtual methods in `SIRGraphicsCommandList`.
+
+## HIZ-00 v1 ABI freeze and aliasing contract
+
+The revision-1 CPU reference POD layout is compile-time pinned for mode/depth
+enums, the method descriptor (16 bytes), mip descriptor (16 bytes), fixed
+32-mip layout (536 bytes), and rectangle query (32 bytes). On 64-bit targets,
+the view (72 bytes), candidate (40 bytes), cull descriptor (40 bytes), and
+output descriptor (32 bytes) are pinned. Any future change to these public
+layouts requires an explicit ABI revision and consumer migration.
+
+The view revision counters are **exact-match equality tokens**, not
+wall-clock timestamps. A view/frame gap, a camera cut, projection change,
+origin change, producer/scene revision change, device-generation change,
+size/sample change, or depth-format change invalidates reuse. Resource
+residency and queue completion remain external prerequisites.
+
+The pyramid builder rejects all overlapping addressed depth-input/output
+byte ranges (including offset aliases). Culling rejects overlaps among the
+**actually written** visible/rejected ID prefixes, caller-owned immutable
+layout/candidate/pyramid inputs, the descriptor itself and its output
+descriptor. Validation and both visibility-count passes finish before any
+result is published; alias violations return
+`SIR_GRAPHICS_INVALID_ARGUMENT` without writing result buffers or counts.
+Zero-length ID prefixes need no backing storage. Output capacity exhaustion
+continues to return `SIR_GRAPHICS_CAPACITY_EXCEEDED`.
+
+The native CTest foundation target includes regression cases for offset
+aliases in both directions, candidate/pyramid ID corruption, ID-array overlap
+and output-descriptor overlap. The same CPU reference also provides the
+semantic oracle for later HIZ-03/HIZ-05 GPU readback tests.

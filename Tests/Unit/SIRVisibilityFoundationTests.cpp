@@ -408,10 +408,67 @@ static bool testRandomDifferential( void ) noexcept
 	return true;
 }
 
+// Offset aliases must fail before the pyramid or compacted IDs are modified.
+static bool testAliasingContracts( void ) noexcept
+{
+	sirHiZLayout_t layout = {};
+	REQUIRE( sirHiZCalculateLayout( 2, 2, &layout ) == SIR_GRAPHICS_SUCCESS );
+	float szStorage[32] = {};
+	szStorage[0] = 0.9f;
+	szStorage[1] = 0.1f;
+	szStorage[2] = 0.9f;
+	szStorage[3] = 0.9f;
+	sirHiZSource_t source = { szStorage, 4, 2 };
+	REQUIRE( sirHiZBuildReference( layout, source, szStorage + 1, 31 ) == SIR_GRAPHICS_INVALID_ARGUMENT );
+	REQUIRE( szStorage[0] == 0.9f && szStorage[1] == 0.1f );
+	source.pDepth = szStorage + 1;
+	REQUIRE( sirHiZBuildReference( layout, source, szStorage, 32 ) == SIR_GRAPHICS_INVALID_ARGUMENT );
+	source.pDepth = szStorage;
+	REQUIRE( sirHiZBuildReference( layout, source, szStorage + 8, 24 ) == SIR_GRAPHICS_SUCCESS );
+	REQUIRE( szStorage[8] == 0.9f && szStorage[9] == 0.1f );
+
+	sirVisibilityCandidate_t szCandidates[2] = {};
+	szCandidates[0] = { 41, { 0, 0, 1, 1, 0.5f, 0.0f, false, 0 }, false };
+	szCandidates[1] = { 42, { 1, 0, 2, 1, 0.5f, 0.0f, false, 0 }, false };
+	sirVisibilityCullDesc_t desc = { &layout, szStorage + 8, layout.nTexelCount, szCandidates, 2, true };
+	uint32_t szVisible[2] = { 123, 456 };
+	uint32_t szRejected[2] = { 789, 101 };
+	sirVisibilityOutput_t output = { szVisible, 2, 77, szRejected, 2, 88 };
+	REQUIRE( sirVisibilityCullReference( desc, &output ) == SIR_GRAPHICS_SUCCESS );
+	REQUIRE( output.nVisibleCount == 1 && output.nRejectedCount == 1 );
+	REQUIRE( szVisible[0] == 42 && szRejected[0] == 41 );
+
+	output.nVisibleCount = 77;
+	output.nRejectedCount = 88;
+	output.pVisibleIds = &szCandidates[0].nInstanceId;
+	REQUIRE( sirVisibilityCullReference( desc, &output ) == SIR_GRAPHICS_INVALID_ARGUMENT );
+	REQUIRE( szCandidates[0].nInstanceId == 41 && output.nVisibleCount == 77 );
+	output.pVisibleIds = ( uint32_t * )( szStorage + 9 );
+	REQUIRE( sirVisibilityCullReference( desc, &output ) == SIR_GRAPHICS_INVALID_ARGUMENT );
+	REQUIRE( szStorage[9] == 0.1f && output.nVisibleCount == 77 );
+	output.pVisibleIds = szVisible;
+	output.pRejectedIds = szVisible;
+	REQUIRE( sirVisibilityCullReference( desc, &output ) == SIR_GRAPHICS_INVALID_ARGUMENT );
+	REQUIRE( szVisible[0] == 42 && output.nRejectedCount == 88 );
+	output.pRejectedIds = &szCandidates[0].nInstanceId;
+	REQUIRE( sirVisibilityCullReference( desc, &output ) == SIR_GRAPHICS_INVALID_ARGUMENT );
+	output.pRejectedIds = ( uint32_t * )( szStorage + 8 );
+	REQUIRE( sirVisibilityCullReference( desc, &output ) == SIR_GRAPHICS_INVALID_ARGUMENT );
+	output.pRejectedIds = szRejected;
+	output.pVisibleIds = &output.nVisibleCount;
+	REQUIRE( sirVisibilityCullReference( desc, &output ) == SIR_GRAPHICS_INVALID_ARGUMENT );
+	output.pVisibleIds = szVisible;
+	output.pRejectedIds = &output.nRejectedCount;
+	REQUIRE( sirVisibilityCullReference( desc, &output ) == SIR_GRAPHICS_INVALID_ARGUMENT );
+	output.pRejectedIds = szRejected;
+	REQUIRE( sirVisibilityCullReference( desc, &output ) == SIR_GRAPHICS_SUCCESS );
+	return true;
+}
+
 int main( void )
 {
 	if ( !testMethodContracts() || !testHistoryContracts() || !testLayoutContracts() || !testBuildContracts() ||
-	     !testOcclusionContracts() || !testBatchCulling() || !testRandomDifferential() ) {
+	     !testOcclusionContracts() || !testBatchCulling() || !testRandomDifferential() || !testAliasingContracts() ) {
 		return 1;
 	}
 	puts( "PASS: HIZ-00 contracts, negative paths, odd mip extents, and randomized conservative visibility" );
