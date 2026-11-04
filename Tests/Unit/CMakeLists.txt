@@ -171,6 +171,12 @@ target_link_libraries(SIRResourceCatalogTests PRIVATE SIR::Resources)
 add_test(NAME resources.catalog.dependency-validation COMMAND SIRResourceCatalogTests)
 sir_configure_owned_target(SIRResourceCatalogTests)
 
+# Allocation-free typed text-scene scalar conversion and precision roundtrips.
+add_executable(SIREditorScalarCodecTests SIREditorScalarCodecTests.cpp)
+target_link_libraries(SIREditorScalarCodecTests PRIVATE SIR::EditorAuthoring)
+add_test(NAME editor.scene.typed-scalar-codec COMMAND SIREditorScalarCodecTests)
+sir_configure_owned_target(SIREditorScalarCodecTests)
+
 # Source-format scalar edit preservation and fail-closed writer.
 add_executable(SIREditorTextWriterTests SIREditorTextWriterTests.cpp)
 target_link_libraries(SIREditorTextWriterTests PRIVATE SIR::EditorAuthoring)
