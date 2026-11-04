@@ -1257,5 +1257,39 @@
     "Docs/Plans/ConfigParsing/IMPLEMENTATION.md",
     "Docs/Plans/ConfigParsing/ACCEPTANCE.md"
   ],
-  "acceptance_status": "NOT_RUN"
+  "acceptance_status": "NOT_RUN",
+  "implementation_progress": {
+    "source_commit": "ffbd58c2cfdf8406f71820c50bb80120cb78bc9e",
+    "scope_status": "PARTIAL",
+    "implemented_paths": [
+      "Source/Core/Config/SIRConfigTypes.h",
+      "Source/Core/Config/SIRConfigBudget.h",
+      "Source/Core/Config/SIRConfigBudget.cpp",
+      "Source/Core/Config/Formats/Delimited/SIRDelimited.h",
+      "Source/Core/Config/Formats/Delimited/SIRDelimited.cpp",
+      "Source/Core/Config/CMakeLists.txt",
+      "Tests/Unit/Config/SIRDelimitedTests.cpp",
+      "Tests/Unit/Config/CMakeLists.txt",
+      "Source/Core/CMakeLists.txt",
+      "Tests/Unit/CMakeLists.txt"
+    ],
+    "partial_task_ids": [
+      "C01",
+      "C02",
+      "C05",
+      "C16",
+      "C17"
+    ],
+    "local_verification": {
+      "status": "PASS",
+      "kind": "Clang 17-mode standalone compile and runtime tests",
+      "configurations": [
+        "-O0 -g -Wall -Wextra -Wpedantic -Werror -fsanitize=address,undefined",
+        "-O2 -DNDEBUG -Wall -Wextra -Wpedantic -Werror"
+      ],
+      "result": "0 test failures",
+      "limitations": "Minimal local contract headers, not entire SIREngine or pinned clang-format 22.1.5"
+    },
+    "integrated_tests_status": "NOT_RUN"
+  }
 }

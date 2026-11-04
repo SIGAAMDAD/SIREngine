@@ -1,6 +1,6 @@
 # SIRConfig API contract — proposed C++17 public surface
 
-**Status:** contract proposal (not existing headers). **Source baseline:** SIREngine `develop@0a7d47de`. **Owners:** `Source/Core/Config/`; test consumers `Tests/Unit/Config/`. The code blocks specify types and operations to implement; they are not yet compile-verified.
+**Status:** MIXED — `SIRConfigTypes.h`, `SIRConfigBudget.*`, `SIRDelimited.h/.cpp` implement the common type subset, budget adapter and CSV/TSV streaming API as of `ffbd58c2`. The rest of this specification remains proposed. **Source baseline:** SIREngine `develop@0a7d47de`. **Owners:** `Source/Core/Config/`; test consumers `Tests/Unit/Config/`. The code blocks specify types and operations to implement; they are not yet compile-verified.
 
 ## Shared value/ownership types
 

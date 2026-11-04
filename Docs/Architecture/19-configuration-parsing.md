@@ -1,6 +1,6 @@
 # 19 — Configuration parsing, serialization, and memory ownership
 
-**Status:** IMPLEMENTATION PLAN; no configuration parser is implemented on this branch.  
+**Status:** PARTIAL IMPLEMENTATION — shared configuration types, the allocation budget adapter and CSV/TSV streaming reader/writer are implemented on `feature/config-parsing` at `ffbd58c2`; remaining format codecs are planned.  
 **Source baseline:** `develop` commit `0a7d47de77130b63290ec4950bdf2e257dbfe326` (2026-11-03).  
 **Owned area:** `Source/Core/Config/` (future); test integration under `Tests/Unit/Config/` and `Tests/Benchmarks/Config/`.
 
@@ -109,4 +109,4 @@ Registration path: `Source/Core/Config/CMakeLists.txt` contributes first-party s
 
 Implementation dependency and acceptance plan: [IMPLEMENTATION.md](../Plans/ConfigParsing/IMPLEMENTATION.md). Callable API and lifetime contracts: [API.md](../Plans/ConfigParsing/API.md). Test matrix: [ACCEPTANCE.md](../Plans/ConfigParsing/ACCEPTANCE.md).
 
-**Current acceptance:** plan/docs only. Build, conformance, sanitizer and memory/runtime acceptance are NOT_RUN.
+**Current acceptance:** focused native Clang C++17 tests using local source-contract fixtures passed (`-Werror`, ASan/UBSan and optimized release; `0 failures`). These are not an entire SIREngine CMake build. Windows/Linux CI, pinned clang-format 22.1.5, full conformance, fuzzing, memory-manager integration and editor/cooker acceptance remain NOT_RUN.
