@@ -366,6 +366,21 @@ static bool testResourcesAndPipelines( void ) noexcept
 		return false;
 	}
 
+	sirGraphicsSamplerDesc_t sampler = {};
+	sampler.eFilter = SIR_GRAPHICS_FILTER_ANISOTROPIC;
+	sampler.eAddressU = SIR_GRAPHICS_ADDRESS_REPEAT;
+	sampler.eAddressV = SIR_GRAPHICS_ADDRESS_CLAMP;
+	sampler.eAddressW = SIR_GRAPHICS_ADDRESS_BORDER;
+	sampler.fMaximumAnisotropy = 8.0f;
+	sampler.fMaximumLod = 16.0f;
+	if ( sirGraphicsValidateSampler( sampler ) != SIR_GRAPHICS_SUCCESS ) {
+		return false;
+	}
+	sampler.eFilter = ( sirGraphicsSamplerFilter_t )99;
+	if ( sirGraphicsValidateSampler( sampler ) == SIR_GRAPHICS_SUCCESS ) {
+		return false;
+	}
+
 	const uint32_t szFakeShader[] = { 0x07230203, 0, 0, 0 };
 	sirGraphicsPipelineDesc_t pipeline = {};
 	pipeline.eType = SIR_GRAPHICS_PIPELINE_COMPUTE;
@@ -389,9 +404,17 @@ static bool testResourcesAndPipelines( void ) noexcept
 		return false;
 	}
 	pipeline.pixelShader.eFormat = SIR_GRAPHICS_SHADER_SPIRV;
+	pipeline.eTopology = SIR_GRAPHICS_TOPOLOGY_TRIANGLES;
+	pipeline.eCullMode = SIR_GRAPHICS_CULL_BACK;
+	pipeline.eDepthCompare = SIR_GRAPHICS_COMPARE_LESS_EQUAL;
 	if ( sirGraphicsValidatePipeline( pipeline ) != SIR_GRAPHICS_SUCCESS ) {
 		return false;
 	}
+	pipeline.eTopology = ( sirGraphicsTopology_t )99;
+	if ( sirGraphicsValidatePipeline( pipeline ) == SIR_GRAPHICS_SUCCESS ) {
+		return false;
+	}
+	pipeline.eTopology = SIR_GRAPHICS_TOPOLOGY_TRIANGLES;
 	pipeline.eType = SIR_GRAPHICS_PIPELINE_FIXED_FUNCTION;
 	pipeline.vertexShader = {};
 	pipeline.pixelShader = {};

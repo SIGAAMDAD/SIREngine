@@ -200,6 +200,86 @@ typedef enum sirGraphicsBindingType_e : uint32_t
 	SIR_GRAPHICS_BINDING_SAMPLER = 4
 } sirGraphicsBindingType_t;
 
+typedef enum sirGraphicsShaderStage_e : uint32_t
+{
+	SIR_GRAPHICS_STAGE_VERTEX = 1U << 0,
+	SIR_GRAPHICS_STAGE_FRAGMENT = 1U << 1,
+	SIR_GRAPHICS_STAGE_COMPUTE = 1U << 2,
+	SIR_GRAPHICS_STAGE_GEOMETRY = 1U << 3,
+	SIR_GRAPHICS_STAGE_TESS_CONTROL = 1U << 4,
+	SIR_GRAPHICS_STAGE_TESS_EVALUATION = 1U << 5,
+	SIR_GRAPHICS_STAGE_MESH = 1U << 6,
+	SIR_GRAPHICS_STAGE_TASK = 1U << 7
+} sirGraphicsShaderStage_t;
+
+typedef enum sirGraphicsTopology_e : uint32_t
+{
+	SIR_GRAPHICS_TOPOLOGY_POINTS = 0,
+	SIR_GRAPHICS_TOPOLOGY_LINES = 1,
+	SIR_GRAPHICS_TOPOLOGY_LINE_STRIP = 2,
+	SIR_GRAPHICS_TOPOLOGY_TRIANGLES = 3,
+	SIR_GRAPHICS_TOPOLOGY_TRIANGLE_STRIP = 4,
+	SIR_GRAPHICS_TOPOLOGY_PATCHES = 5
+} sirGraphicsTopology_t;
+
+typedef enum sirGraphicsCullMode_e : uint32_t
+{
+	SIR_GRAPHICS_CULL_NONE = 0,
+	SIR_GRAPHICS_CULL_FRONT = 1,
+	SIR_GRAPHICS_CULL_BACK = 2
+} sirGraphicsCullMode_t;
+
+typedef enum sirGraphicsSamplerFilter_e : uint32_t
+{
+	SIR_GRAPHICS_FILTER_NEAREST = 0,
+	SIR_GRAPHICS_FILTER_LINEAR = 1,
+	SIR_GRAPHICS_FILTER_TRILINEAR = 2,
+	SIR_GRAPHICS_FILTER_ANISOTROPIC = 3
+} sirGraphicsSamplerFilter_t;
+
+typedef enum sirGraphicsAddressMode_e : uint32_t
+{
+	SIR_GRAPHICS_ADDRESS_REPEAT = 0,
+	SIR_GRAPHICS_ADDRESS_MIRROR = 1,
+	SIR_GRAPHICS_ADDRESS_CLAMP = 2,
+	SIR_GRAPHICS_ADDRESS_BORDER = 3
+} sirGraphicsAddressMode_t;
+
+typedef enum sirGraphicsCompareOp_e : uint32_t
+{
+	SIR_GRAPHICS_COMPARE_NEVER = 0,
+	SIR_GRAPHICS_COMPARE_LESS = 1,
+	SIR_GRAPHICS_COMPARE_EQUAL = 2,
+	SIR_GRAPHICS_COMPARE_LESS_EQUAL = 3,
+	SIR_GRAPHICS_COMPARE_GREATER = 4,
+	SIR_GRAPHICS_COMPARE_NOT_EQUAL = 5,
+	SIR_GRAPHICS_COMPARE_GREATER_EQUAL = 6,
+	SIR_GRAPHICS_COMPARE_ALWAYS = 7
+} sirGraphicsCompareOp_t;
+
+typedef enum sirGraphicsBlendFactor_e : uint32_t
+{
+	SIR_GRAPHICS_BLEND_ZERO = 0,
+	SIR_GRAPHICS_BLEND_ONE = 1,
+	SIR_GRAPHICS_BLEND_SRC_COLOR = 2,
+	SIR_GRAPHICS_BLEND_ONE_MINUS_SRC_COLOR = 3,
+	SIR_GRAPHICS_BLEND_DST_COLOR = 4,
+	SIR_GRAPHICS_BLEND_ONE_MINUS_DST_COLOR = 5,
+	SIR_GRAPHICS_BLEND_SRC_ALPHA = 6,
+	SIR_GRAPHICS_BLEND_ONE_MINUS_SRC_ALPHA = 7,
+	SIR_GRAPHICS_BLEND_DST_ALPHA = 8,
+	SIR_GRAPHICS_BLEND_ONE_MINUS_DST_ALPHA = 9
+} sirGraphicsBlendFactor_t;
+
+typedef enum sirGraphicsBlendOp_e : uint32_t
+{
+	SIR_GRAPHICS_BLEND_ADD = 0,
+	SIR_GRAPHICS_BLEND_SUBTRACT = 1,
+	SIR_GRAPHICS_BLEND_REVERSE_SUBTRACT = 2,
+	SIR_GRAPHICS_BLEND_MIN = 3,
+	SIR_GRAPHICS_BLEND_MAX = 4
+} sirGraphicsBlendOp_t;
+
 typedef enum sirGraphicsSurfacePlatform_e : uint32_t
 {
 	SIR_GRAPHICS_SURFACE_WIN32 = 1,
@@ -332,10 +412,10 @@ typedef struct sirGraphicsViewDesc_s
 
 typedef struct sirGraphicsSamplerDesc_s
 {
-	uint32_t nFilter;
-	uint32_t nAddressU;
-	uint32_t nAddressV;
-	uint32_t nAddressW;
+	sirGraphicsSamplerFilter_t eFilter;
+	sirGraphicsAddressMode_t eAddressU;
+	sirGraphicsAddressMode_t eAddressV;
+	sirGraphicsAddressMode_t eAddressW;
 	float fMaximumAnisotropy;
 	float fMinimumLod;
 	float fMaximumLod;
@@ -368,6 +448,18 @@ typedef struct sirGraphicsVertexAttribute_s
 	sirGraphicsFormat_t eFormat;
 } sirGraphicsVertexAttribute_t;
 
+typedef struct sirGraphicsBlendState_s
+{
+	sirGraphicsBlendFactor_t eSourceColor;
+	sirGraphicsBlendFactor_t eDestinationColor;
+	sirGraphicsBlendOp_t eColorOperation;
+	sirGraphicsBlendFactor_t eSourceAlpha;
+	sirGraphicsBlendFactor_t eDestinationAlpha;
+	sirGraphicsBlendOp_t eAlphaOperation;
+	uint32_t nColorWriteMask;
+	bool bEnabled;
+} sirGraphicsBlendState_t;
+
 typedef struct sirGraphicsPipelineDesc_s
 {
 	sirGraphicsPipelineType_t eType;
@@ -382,11 +474,12 @@ typedef struct sirGraphicsPipelineDesc_s
 	sirGraphicsFormat_t szColorFormats[8];
 	sirGraphicsFormat_t eDepthFormat;
 	uint32_t nSampleCount;
-	uint32_t nTopology;
-	uint32_t nCullMode;
+	sirGraphicsTopology_t eTopology;
+	sirGraphicsCullMode_t eCullMode;
+	sirGraphicsCompareOp_t eDepthCompare;
+	sirGraphicsBlendState_t szBlendStates[8];
 	bool bDepthTest;
 	bool bDepthWrite;
-	bool bAlphaBlend;
 } sirGraphicsPipelineDesc_t;
 
 typedef struct sirGraphicsDescriptorWrite_s

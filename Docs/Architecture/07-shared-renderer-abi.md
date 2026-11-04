@@ -14,6 +14,8 @@
 
 `SIRGraphicsRegistry::registerDriver` is performed during platform/backend startup, before threads begin using rendering. An explicit backend choice selects **only that backend**; it fails `SIR_GRAPHICS_UNSUPPORTED` when no matching adapter supports the requested minimum API version, capabilities or software-adapter policy. There is no hidden cross-API fallback. `SIR_GRAPHICS_BACKEND_AUTO` selects the first registered driver with a qualifying adapter; registration order is therefore a platform configuration decision, not an implicit vendor preference.
 
+The portable pipeline descriptor fixes the numerical meanings of topology, cull mode, depth comparisons, blend operations/factors, sampler filtering/addressing and shader-stage masks so every native backend lowers the **same** state values.
+
 The version for `SIR_GRAPHICS_BACKEND_OPENGL` negotiates 2.1, 3.3, 4.6 etc. D3D7, 8, 9, 10, 11, 12 are explicitly distinguishable backends. `sirGraphicsCapabilities_t` advertises optional compute, multiple queues, storage, fixed-function, sampler feedback, mesh/ray, HDR and presentation. Drivers must reject unsupported operations explicitly. A legacy API reports fewer features; it does not change the common interface or require a compatibility renderer wrapper.
 
 ## Resource and memory invariants
