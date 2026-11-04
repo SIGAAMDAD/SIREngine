@@ -149,8 +149,69 @@ static void sirTestPlatformFile( void )
 	SIR_REQUIRE( SIRPlatformFile::remove( pszRenamed ) == SIR_FILE_NOT_FOUND );
 }
 
+static void testPlatformFileInputBoundaries( void )
+{
+	const char *pszPath = "SIRPlatformFileValidationTests.bin";
+	( void )SIRPlatformFile::remove( pszPath );
+	SIRPlatformFile file;
+	uint8_t value = 0x42;
+	uint64_t nDone = 0;
+	uint64_t nPosition = 0;
+	sirFileInfo_t info = {};
+	SIR_REQUIRE( file.readAt( 0, &value, 1, &nDone ) == SIR_FILE_CLOSED );
+	SIR_REQUIRE( file.writeAt( 0, &value, 1, &nDone ) == SIR_FILE_CLOSED );
+	SIR_REQUIRE( file.readAt( 0, &value, 1, nullptr ) == SIR_FILE_INVALID_ARGUMENT );
+	SIR_REQUIRE( file.writeAt( 0, &value, 1, nullptr ) == SIR_FILE_INVALID_ARGUMENT );
+	SIR_REQUIRE( file.seek( 0, SIR_FILE_SEEK_BEGIN, &nPosition ) == SIR_FILE_CLOSED );
+	SIR_REQUIRE( file.tell( &nPosition ) == SIR_FILE_CLOSED );
+	SIR_REQUIRE( file.getSize( &nPosition ) == SIR_FILE_CLOSED );
+	SIR_REQUIRE( file.flush() == SIR_FILE_CLOSED );
+	SIR_REQUIRE( file.truncate( 1 ) == SIR_FILE_CLOSED );
+	SIR_REQUIRE( file.tell( nullptr ) == SIR_FILE_INVALID_ARGUMENT );
+	SIR_REQUIRE( file.getSize( nullptr ) == SIR_FILE_INVALID_ARGUMENT );
+	SIR_REQUIRE( file.open( "", SIR_FILE_OPEN_READ ) == SIR_FILE_INVALID_ARGUMENT );
+	SIR_REQUIRE( file.open( pszPath, UINT32_MAX ) == SIR_FILE_INVALID_ARGUMENT );
+	SIR_REQUIRE( file.open( pszPath, SIR_FILE_OPEN_WRITE | SIR_FILE_OPEN_APPEND | SIR_FILE_OPEN_TRUNCATE ) == SIR_FILE_INVALID_ARGUMENT );
+	SIR_REQUIRE( file.open( pszPath, SIR_FILE_OPEN_READ | SIR_FILE_OPEN_EXCLUSIVE ) == SIR_FILE_INVALID_ARGUMENT );
+	SIR_REQUIRE( file.open( pszPath, SIR_FILE_OPEN_READ | SIR_FILE_OPEN_APPEND ) == SIR_FILE_INVALID_ARGUMENT );
+	SIR_REQUIRE( SIRPlatformFile::getInfo( nullptr, &info ) == SIR_FILE_INVALID_ARGUMENT );
+	SIR_REQUIRE( SIRPlatformFile::getInfo( "", &info ) == SIR_FILE_INVALID_ARGUMENT );
+	SIR_REQUIRE( SIRPlatformFile::getInfo( pszPath, nullptr ) == SIR_FILE_INVALID_ARGUMENT );
+	SIR_REQUIRE( SIRPlatformFile::remove( nullptr ) == SIR_FILE_INVALID_ARGUMENT );
+	SIR_REQUIRE( SIRPlatformFile::remove( "" ) == SIR_FILE_INVALID_ARGUMENT );
+	SIR_REQUIRE( SIRPlatformFile::renameReplace( nullptr, pszPath ) == SIR_FILE_INVALID_ARGUMENT );
+	SIR_REQUIRE( SIRPlatformFile::renameReplace( pszPath, nullptr ) == SIR_FILE_INVALID_ARGUMENT );
+	SIR_REQUIRE( SIRPlatformFile::renameReplace( "", pszPath ) == SIR_FILE_INVALID_ARGUMENT );
+	SIR_REQUIRE( SIRPlatformFile::renameReplace( pszPath, "" ) == SIR_FILE_INVALID_ARGUMENT );
+#ifndef _WIN32
+	SIR_REQUIRE( file.open( ".", SIR_FILE_OPEN_READ ) == SIR_FILE_IO_ERROR );
+	SIR_REQUIRE( SIRPlatformFile::getInfo( ".", &info ) == SIR_FILE_OK && info.bDirectory );
+#endif
+	SIR_REQUIRE( file.open( pszPath, SIR_FILE_OPEN_CREATE | SIR_FILE_OPEN_WRITE | SIR_FILE_OPEN_TRUNCATE ) == SIR_FILE_OK );
+	SIR_REQUIRE( file.readAt( 0, &value, 1, &nDone ) == SIR_FILE_ACCESS_DENIED );
+	SIR_REQUIRE( file.writeAt( 0, &value, 1, &nDone ) == SIR_FILE_OK && nDone == 1 );
+	SIR_REQUIRE( file.seek( 0, SIR_FILE_SEEK_END, &nPosition ) == SIR_FILE_OK && nPosition == 1 );
+	SIR_REQUIRE( file.seek( -1, SIR_FILE_SEEK_BEGIN, nullptr ) == SIR_FILE_OUT_OF_RANGE );
+	SIR_REQUIRE( file.seek( 0, ( sirFileSeekOrigin_t )255, nullptr ) == SIR_FILE_INVALID_ARGUMENT );
+	SIR_REQUIRE( file.seek( INT64_MAX, SIR_FILE_SEEK_BEGIN, nullptr ) == SIR_FILE_OK );
+	SIR_REQUIRE( file.seek( 1, SIR_FILE_SEEK_CURRENT, nullptr ) == SIR_FILE_OUT_OF_RANGE );
+	SIR_REQUIRE( file.writeAt( 0, &value, 1, nullptr ) == SIR_FILE_INVALID_ARGUMENT );
+	SIR_REQUIRE( file.writeAt( INT64_MAX, &value, 1, &nDone ) == SIR_FILE_OUT_OF_RANGE );
+	SIR_REQUIRE( file.writeAt( 0, nullptr, 1, &nDone ) == SIR_FILE_INVALID_ARGUMENT );
+	SIR_REQUIRE( file.write( &value, 0, nullptr ) == SIR_FILE_INVALID_ARGUMENT );
+	SIR_REQUIRE( file.close() == SIR_FILE_OK );
+	SIR_REQUIRE( file.open( pszPath, SIR_FILE_OPEN_READ ) == SIR_FILE_OK );
+	SIR_REQUIRE( file.writeAt( 0, &value, 1, &nDone ) == SIR_FILE_ACCESS_DENIED );
+	SIR_REQUIRE( file.readAt( INT64_MAX, &value, 1, &nDone ) == SIR_FILE_OUT_OF_RANGE );
+	SIR_REQUIRE( file.readAt( 0, nullptr, 1, &nDone ) == SIR_FILE_INVALID_ARGUMENT );
+	SIR_REQUIRE( file.read( &value, 0, nullptr ) == SIR_FILE_INVALID_ARGUMENT );
+	SIR_REQUIRE( file.close() == SIR_FILE_OK );
+	SIR_REQUIRE( SIRPlatformFile::remove( pszPath ) == SIR_FILE_OK );
+}
+
 int main( void )
 {
 	sirTestPlatformFile();
+	testPlatformFileInputBoundaries();
 	return 0;
 }
