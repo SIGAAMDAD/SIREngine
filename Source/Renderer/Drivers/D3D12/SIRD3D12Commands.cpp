@@ -58,6 +58,91 @@ static D3D12_RESOURCE_STATES sirD3D12BarrierState( sirGraphicsState_t eState ) n
 	}
 }
 
+
+static D3D12_BARRIER_SYNC sirD3D12EnhancedSync( sirGraphicsState_t eState ) noexcept
+{
+	switch ( eState ) {
+	case SIR_GRAPHICS_STATE_VERTEX_INDEX:
+		return D3D12_BARRIER_SYNC_DRAW;
+	case SIR_GRAPHICS_STATE_CONSTANT:
+	case SIR_GRAPHICS_STATE_SHADER_READ:
+	case SIR_GRAPHICS_STATE_SHADER_WRITE:
+		return D3D12_BARRIER_SYNC_ALL_SHADING;
+	case SIR_GRAPHICS_STATE_COLOR_ATTACHMENT:
+		return D3D12_BARRIER_SYNC_RENDER_TARGET;
+	case SIR_GRAPHICS_STATE_DEPTH_READ:
+	case SIR_GRAPHICS_STATE_DEPTH_WRITE:
+		return D3D12_BARRIER_SYNC_DEPTH_STENCIL;
+	case SIR_GRAPHICS_STATE_COPY_SOURCE:
+	case SIR_GRAPHICS_STATE_COPY_DESTINATION:
+		return D3D12_BARRIER_SYNC_COPY;
+	default:
+		return D3D12_BARRIER_SYNC_ALL;
+	}
+}
+
+static D3D12_BARRIER_ACCESS sirD3D12EnhancedAccess( sirGraphicsState_t eState ) noexcept
+{
+	switch ( eState ) {
+	case SIR_GRAPHICS_STATE_VERTEX_INDEX:
+		return D3D12_BARRIER_ACCESS_VERTEX_BUFFER | D3D12_BARRIER_ACCESS_INDEX_BUFFER;
+	case SIR_GRAPHICS_STATE_CONSTANT:
+		return D3D12_BARRIER_ACCESS_CONSTANT_BUFFER;
+	case SIR_GRAPHICS_STATE_SHADER_READ:
+		return D3D12_BARRIER_ACCESS_SHADER_RESOURCE;
+	case SIR_GRAPHICS_STATE_SHADER_WRITE:
+		return D3D12_BARRIER_ACCESS_UNORDERED_ACCESS;
+	case SIR_GRAPHICS_STATE_COLOR_ATTACHMENT:
+		return D3D12_BARRIER_ACCESS_RENDER_TARGET;
+	case SIR_GRAPHICS_STATE_DEPTH_READ:
+		return D3D12_BARRIER_ACCESS_DEPTH_STENCIL_READ;
+	case SIR_GRAPHICS_STATE_DEPTH_WRITE:
+		return D3D12_BARRIER_ACCESS_DEPTH_STENCIL_WRITE;
+	case SIR_GRAPHICS_STATE_COPY_SOURCE:
+		return D3D12_BARRIER_ACCESS_COPY_SOURCE;
+	case SIR_GRAPHICS_STATE_COPY_DESTINATION:
+		return D3D12_BARRIER_ACCESS_COPY_DEST;
+	default:
+		return D3D12_BARRIER_ACCESS_COMMON;
+	}
+}
+
+static D3D12_BARRIER_LAYOUT sirD3D12EnhancedLayout( sirGraphicsState_t eState ) noexcept
+{
+	switch ( eState ) {
+	case SIR_GRAPHICS_STATE_SHADER_READ:
+		return D3D12_BARRIER_LAYOUT_SHADER_RESOURCE;
+	case SIR_GRAPHICS_STATE_SHADER_WRITE:
+		return D3D12_BARRIER_LAYOUT_UNORDERED_ACCESS;
+	case SIR_GRAPHICS_STATE_COLOR_ATTACHMENT:
+		return D3D12_BARRIER_LAYOUT_RENDER_TARGET;
+	case SIR_GRAPHICS_STATE_DEPTH_READ:
+		return D3D12_BARRIER_LAYOUT_DEPTH_STENCIL_READ;
+	case SIR_GRAPHICS_STATE_DEPTH_WRITE:
+		return D3D12_BARRIER_LAYOUT_DEPTH_STENCIL_WRITE;
+	case SIR_GRAPHICS_STATE_COPY_SOURCE:
+		return D3D12_BARRIER_LAYOUT_COPY_SOURCE;
+	case SIR_GRAPHICS_STATE_COPY_DESTINATION:
+		return D3D12_BARRIER_LAYOUT_COPY_DEST;
+	case SIR_GRAPHICS_STATE_PRESENT:
+		return D3D12_BARRIER_LAYOUT_PRESENT;
+	default:
+		return D3D12_BARRIER_LAYOUT_COMMON;
+	}
+}
+
+static bool sirD3D12ValidResourceState( sirGraphicsHandleType_t eResource, sirGraphicsState_t eState ) noexcept
+{
+	if ( eResource == SIR_GRAPHICS_HANDLE_BUFFER ) {
+		return eState != SIR_GRAPHICS_STATE_COLOR_ATTACHMENT && eState != SIR_GRAPHICS_STATE_DEPTH_READ &&
+		       eState != SIR_GRAPHICS_STATE_DEPTH_WRITE && eState != SIR_GRAPHICS_STATE_PRESENT;
+	}
+	if ( eResource == SIR_GRAPHICS_HANDLE_TEXTURE ) {
+		return eState != SIR_GRAPHICS_STATE_VERTEX_INDEX && eState != SIR_GRAPHICS_STATE_CONSTANT;
+	}
+	return false;
+}
+
 static D3D_PRIMITIVE_TOPOLOGY sirD3D12PrimitiveTopology( sirGraphicsTopology_t eTopology ) noexcept
 {
 	switch ( eTopology ) {
@@ -123,6 +208,15 @@ bool SIRD3D12CommandList::initialize( SIRD3D12Device *pNative, SIRD3D12Resources
 		m_pAllocator.Reset();
 		return false;
 	}
+	// Enhanced barriers are optional. All existing command paths retain the native
+	// ResourceBarrier fallback; COPY queue execution stays on the legacy contract.
+	if ( eQueue == SIR_GRAPHICS_QUEUE_DIRECT ) {
+		D3D12_FEATURE_DATA_D3D12_OPTIONS12 features = {};
+		if ( SUCCEEDED( pDevice->CheckFeatureSupport( D3D12_FEATURE_D3D12_OPTIONS12, &features, sizeof( features ) ) ) &&
+		     features.EnhancedBarriersSupported != FALSE ) {
+			( void )m_pCommands.As( &m_pEnhancedCommands );
+		}
+	}
 	m_pNative = pNative;
 	m_pResources = pResources;
 	m_pPipelines = pPipelines;
@@ -138,10 +232,12 @@ void SIRD3D12CommandList::shutdown( bool bGpuComplete ) noexcept
 {
 	if ( bGpuComplete ) {
 		releaseReferences();
+		m_pEnhancedCommands.Reset();
 		m_pCommands.Reset();
 		m_pAllocator.Reset();
 	} else {
 		// Unknown queue completion: retain native objects and resource owners.
+		( void )m_pEnhancedCommands.Detach();
 		( void )m_pCommands.Detach();
 		( void )m_pAllocator.Detach();
 	}
@@ -292,7 +388,9 @@ sirGraphicsResult_t SIRD3D12CommandList::barrier( const sirGraphicsBarrier_t *pB
 		native.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
 		if ( source.eType == SIR_GRAPHICS_BARRIER_TRANSITION ) {
 			if ( source.eBefore == SIR_GRAPHICS_STATE_UNDEFINED || source.eAfter == SIR_GRAPHICS_STATE_UNDEFINED ||
-			     source.eBefore > SIR_GRAPHICS_STATE_PRESENT || source.eAfter > SIR_GRAPHICS_STATE_PRESENT ) {
+			     source.eBefore > SIR_GRAPHICS_STATE_PRESENT || source.eAfter > SIR_GRAPHICS_STATE_PRESENT ||
+			     !sirD3D12ValidResourceState( pSlot->eType, source.eBefore ) ||
+			     !sirD3D12ValidResourceState( pSlot->eType, source.eAfter ) ) {
 				return SIR_GRAPHICS_INVALID_ARGUMENT;
 			}
 			if ( m_eQueue == SIR_GRAPHICS_QUEUE_COPY &&
@@ -337,6 +435,57 @@ sirGraphicsResult_t SIRD3D12CommandList::barrier( const sirGraphicsBarrier_t *pB
 		const sirGraphicsResult_t ePinned = pin( source.hResource );
 		if ( ePinned != SIR_GRAPHICS_SUCCESS ) {
 			return ePinned;
+		}
+		// A resource created in a legacy non-COMMON heap state must continue using
+		// the legacy barrier API. Only DEFAULT GPU memory uses this enhanced path.
+		if ( m_pEnhancedCommands != nullptr && source.eType == SIR_GRAPHICS_BARRIER_TRANSITION &&
+		     pSlot->eMemory == SIR_GRAPHICS_MEMORY_GPU_LOCAL ) {
+			const D3D12_BARRIER_SYNC eSyncBefore = sirD3D12EnhancedSync( source.eBefore );
+			const D3D12_BARRIER_SYNC eSyncAfter = sirD3D12EnhancedSync( source.eAfter );
+			const D3D12_BARRIER_ACCESS eAccessBefore = sirD3D12EnhancedAccess( source.eBefore );
+			const D3D12_BARRIER_ACCESS eAccessAfter = sirD3D12EnhancedAccess( source.eAfter );
+			D3D12_BARRIER_GROUP group = {};
+			group.NumBarriers = 1;
+			if ( pSlot->eType == SIR_GRAPHICS_HANDLE_TEXTURE ) {
+				D3D12_FEATURE_DATA_FORMAT_INFO formatInfo = {};
+				formatInfo.Format = pSlot->getNativeResource()->GetDesc().Format;
+				if ( FAILED( m_pNative->getNativeDevice()->CheckFeatureSupport( D3D12_FEATURE_FORMAT_INFO, &formatInfo,
+				                                                        sizeof( formatInfo ) ) ) || formatInfo.PlaneCount == 0 ) {
+					return SIR_GRAPHICS_UNSUPPORTED;
+				}
+				D3D12_TEXTURE_BARRIER barrier = {};
+				barrier.SyncBefore = eSyncBefore;
+				barrier.SyncAfter = eSyncAfter;
+				barrier.AccessBefore = eAccessBefore;
+				barrier.AccessAfter = eAccessAfter;
+				barrier.LayoutBefore = sirD3D12EnhancedLayout( source.eBefore );
+				barrier.LayoutAfter = sirD3D12EnhancedLayout( source.eAfter );
+				barrier.pResource = pSlot->getNativeResource();
+				barrier.Subresources.IndexOrFirstMipLevel = source.nBaseMip;
+				barrier.Subresources.NumMipLevels = source.nMipCount == 0 ? pSlot->nMips - source.nBaseMip : source.nMipCount;
+				barrier.Subresources.FirstArraySlice = source.nBaseLayer;
+				barrier.Subresources.NumArraySlices =
+				    source.nLayerCount == 0 ? ( pSlot->eDimension == SIR_GRAPHICS_TEXTURE_3D ? 1 : pSlot->nLayers ) - source.nBaseLayer
+				                            : source.nLayerCount;
+				barrier.Subresources.FirstPlane = 0;
+				barrier.Subresources.NumPlanes = formatInfo.PlaneCount;
+				group.Type = D3D12_BARRIER_TYPE_TEXTURE;
+				group.pTextureBarriers = &barrier;
+				m_pEnhancedCommands->Barrier( 1, &group );
+			} else {
+				D3D12_BUFFER_BARRIER barrier = {};
+				barrier.SyncBefore = eSyncBefore;
+				barrier.SyncAfter = eSyncAfter;
+				barrier.AccessBefore = eAccessBefore;
+				barrier.AccessAfter = eAccessAfter;
+				barrier.pResource = pSlot->getNativeResource();
+				barrier.Offset = 0;
+				barrier.Size = pSlot->nSizeBytes;
+				group.Type = D3D12_BARRIER_TYPE_BUFFER;
+				group.pBufferBarriers = &barrier;
+				m_pEnhancedCommands->Barrier( 1, &group );
+			}
+			continue;
 		}
 		if ( source.eType == SIR_GRAPHICS_BARRIER_TRANSITION && pSlot->eType == SIR_GRAPHICS_HANDLE_TEXTURE &&
 		     ( source.nBaseMip != 0 || source.nBaseLayer != 0 || ( source.nMipCount != 0 && source.nMipCount != pSlot->nMips ) ||

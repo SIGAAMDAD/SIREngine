@@ -39,6 +39,7 @@ private:
 	static constexpr uint32_t s_nReferenceCapacity = 128;
 	Microsoft::WRL::ComPtr<ID3D12CommandAllocator> m_pAllocator;
 	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> m_pCommands;
+	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList7> m_pEnhancedCommands;
 	SIRD3D12Device *m_pNative = nullptr;
 	SIRD3D12Resources *m_pResources = nullptr;
 	SIRD3D12Pipelines *m_pPipelines = nullptr;

@@ -298,6 +298,15 @@ static int sirTestRaster( SIRRenderingDevice *pDevice, uint32_t nGeneration, con
 	if ( pDevice->acquireCommands( SIR_GRAPHICS_QUEUE_DIRECT, &pDirect ) != SIR_GRAPHICS_SUCCESS ) {
 		return 57;
 	}
+	// A buffer cannot transition to an attachment layout.
+	sirGraphicsBarrier_t invalidBuffer = {};
+	invalidBuffer.eType = SIR_GRAPHICS_BARRIER_TRANSITION;
+	invalidBuffer.hResource = hVertices;
+	invalidBuffer.eBefore = SIR_GRAPHICS_STATE_COMMON;
+	invalidBuffer.eAfter = SIR_GRAPHICS_STATE_COLOR_ATTACHMENT;
+	if ( pDirect->barrier( &invalidBuffer, 1 ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return 72;
+	}
 	sirGraphicsBarrier_t transition = {};
 	transition.eType = SIR_GRAPHICS_BARRIER_TRANSITION;
 	transition.hResource = hTexture;
@@ -315,6 +324,11 @@ static int sirTestRaster( SIRRenderingDevice *pDevice, uint32_t nGeneration, con
 		return 70;
 	}
 	partial.nBaseMip = 2;
+	partial.nBaseLayer = 2;
+	if ( pDirect->barrier( &partial, 1 ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return 73;
+	}
+	partial.nBaseLayer = 1;
 	if ( pDirect->barrier( &partial, 1 ) != SIR_GRAPHICS_SUCCESS ) {
 		return 71;
 	}
