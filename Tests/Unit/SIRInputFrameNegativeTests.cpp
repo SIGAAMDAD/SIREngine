@@ -25,8 +25,8 @@ static bool sirFrameNegativeParameters( void ) noexcept
 	const sirInputDeviceId_t hBadDevice = { SIR_INPUT_DEVICE_CAPACITY, 1 };
 	const sirInputTimestamp_t time = { 100, 120, SIR_INPUT_CLOCK_GAMEINPUT, 1 };
 	const sirInputControlChange_t press = { SIR_INPUT_BUTTON, 7, 1 };
-	if ( state.postDevice( hDevice, SIR_INPUT_KEYBOARD, SIR_INPUT_CONNECTED, time ) || !state.begin( 1 ) || state.begin( 2 ) ||
-	     state.postDevice( hDevice, SIR_INPUT_KEYBOARD, SIR_INPUT_BUTTON, time ) ||
+	if ( state.postDevice( hDevice, SIR_INPUT_KEYBOARD, SIR_INPUT_CONNECTED, time ) || state.begin( 0 ) || !state.begin( 1 ) ||
+	     state.begin( 2 ) || state.postDevice( hDevice, SIR_INPUT_KEYBOARD, SIR_INPUT_BUTTON, time ) ||
 	     state.postDevice( hBadDevice, SIR_INPUT_KEYBOARD, SIR_INPUT_CONNECTED, time ) ) {
 		return false;
 	}

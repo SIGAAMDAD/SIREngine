@@ -296,7 +296,7 @@ static bool sirInputGapUIDispatchBoundaries( void ) noexcept
 		return false;
 	}
 	SIRInputService zeroTick;
-	if ( !zeroTick.begin( 0 ) || !zeroTick.publish() || dispatch.dispatch( zeroTick, consumer ) ) {
+	if ( zeroTick.begin( 0 ) || zeroTick.publish() || dispatch.dispatch( zeroTick, consumer ) ) {
 		return false;
 	}
 	input.text().setEnabled( true );
