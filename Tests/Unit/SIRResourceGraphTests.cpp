@@ -1125,7 +1125,6 @@ static void testCoreTaskGraphStaleRevisionsAndBudget( void )
 	REQUIRE( alloc.m_nOutstanding.load() == 0 );
 }
 
-
 static void testPublicValidationAndReadViewBoundaries( void )
 {
 	SIRTestAllocatorStats alloc = {};
@@ -1194,16 +1193,14 @@ static void testPublicValidationAndReadViewBoundaries( void )
 		SIRResourceChunkInfo chunkInfo = {};
 		SIRResourceDependency dependency = {};
 		SIRResourcePinHandle pin = {};
-		REQUIRE( !missingView.isValid() && missingView.getKind() == SIR_RESOURCE_KIND_BLOB &&
-		         missingView.getRevision() == 0 && missingView.getHandle().m_nGeneration == 0 );
+		REQUIRE( !missingView.isValid() && missingView.getKind() == SIR_RESOURCE_KIND_BLOB && missingView.getRevision() == 0 &&
+		         missingView.getHandle().m_nGeneration == 0 );
 		REQUIRE( missingView.getInfo( &info ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
 		REQUIRE( missingView.getChunk( { 0 }, &bytes ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
 		REQUIRE( missingView.getChunkInfo( 0, &chunkInfo ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
 		REQUIRE( missingView.getDependency( 0, &dependency ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
 		std::atomic<bool> bWriterRejected{ false };
-		std::thread other( [&]() {
-			bWriterRejected.store( graph.getWriter() == nullptr && graph.getStats().m_nLiveResources == 0 );
-		} );
+		std::thread other( [&]() { bWriterRejected.store( graph.getWriter() == nullptr && graph.getStats().m_nLiveResources == 0 ); } );
 		other.join();
 		REQUIRE( bWriterRejected.load() );
 		{
