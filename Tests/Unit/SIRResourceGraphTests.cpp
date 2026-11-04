@@ -13,6 +13,8 @@
 #include <vector>
 
 #ifdef _WIN32
+
+
 #include <malloc.h>
 #endif
 
@@ -1420,7 +1422,6 @@ int main( void )
 	testAtomicReadIndexCollisionsAndChurn();
 	testEpochReclamationWithOverlappingScopes();
 	testReaderEpochSlotExhaustion();
-
 
 	testDeterministicDependencyOrderCompilation();
 	testCoreTaskGraphResourceDependencies();
