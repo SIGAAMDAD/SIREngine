@@ -23,3 +23,18 @@ future Godot-derived `Control`/`Tree` presenter.
 The scene intake is limited to 32 MiB of source data per open operation, with
 larger or out-of-budget projects rejected instead of allocating outside the
 editor memory domain. This is an initial host input limit, not a runtime budget.
+
+## Asynchronous Godot dock transport
+
+`SIREditor --inspect-scene-json-file <source.tscn> <result.json>` publishes
+schema-v1 JSON to an explicitly supplied file, using a sibling `.tmp` staging
+path and a final rename only after a successful flush and close. Invalid
+workspace state, an unreadable destination or an output path identical to the
+source returns a nonzero status. No intermediate JSON is presented as a
+successful snapshot.
+
+The Godot 4.8 editor-only bridge launches this command using `OS.create_process`
+and polls `OS.is_process_running` without blocking the editor event loop. The
+source is rehashed before acceptance and stale/timeout results are discarded.
+The transport is a bounded saved-file migration adapter, not a live native
+Godot object loader or a replacement for the eventual editor-private API.

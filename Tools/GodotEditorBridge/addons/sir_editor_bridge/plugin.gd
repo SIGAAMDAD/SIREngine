@@ -22,6 +22,8 @@ func _enter_tree() -> void:
 
 
 func _exit_tree() -> void:
+    if _content != null:
+        _content.shutdown_bridge()
     scene_changed.disconnect(_on_scene_changed)
     scene_saved.disconnect(_on_scene_saved)
     remove_dock(_dock)

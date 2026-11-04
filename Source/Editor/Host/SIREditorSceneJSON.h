@@ -33,4 +33,8 @@ class SIREditorSceneWorkspace;
 // Source/path strings remain valid only while the workspace is open.
 bool sirEditorWriteSceneJSON( const SIREditorSceneWorkspace &workspace, const char *pszScenePath, FILE *pOutput ) noexcept;
 
+// File-output protocol for OS.create_process consumers: write a sibling staging
+// file and publish only after the complete JSON document is flushed and closed.
+bool sirEditorWriteSceneJSONFile( const SIREditorSceneWorkspace &workspace, const char *pszScenePath, const char *pszOutputPath ) noexcept;
+
 #endif // __SIRENGINE_SIREDITORSCENEJSON_H__

@@ -147,3 +147,16 @@ sir_configure_owned_target(SIREditorSceneJSONTests)
 add_test(NAME editor.host.json-cli COMMAND SIREditor --inspect-scene-json
     "${PROJECT_SOURCE_DIR}/Tests/Fixtures/Editor/SourceGodotUI.tscn")
 set_tests_properties(editor.host.json-cli PROPERTIES PASS_REGULAR_EXPRESSION "\"schema\":1")
+
+# Nonblocking editor-dock transport: staged native scene snapshot publication.
+add_executable(SIREditorSceneJSONFileTests SIREditorSceneJSONFileTests.cpp)
+target_link_libraries(SIREditorSceneJSONFileTests PRIVATE SIR::EditorAuthoring)
+target_compile_definitions(SIREditorSceneJSONFileTests PRIVATE
+    SIR_EDITOR_TEST_UI_SCENE="${PROJECT_SOURCE_DIR}/Tests/Fixtures/Editor/SourceGodotUI.tscn")
+add_test(NAME editor.host.json-file-unit COMMAND SIREditorSceneJSONFileTests)
+sir_configure_owned_target(SIREditorSceneJSONFileTests)
+add_test(NAME editor.host.json-file-cli COMMAND "${CMAKE_COMMAND}"
+    "-DSIR_EDITOR_EXECUTABLE=$<TARGET_FILE:SIREditor>"
+    "-DSIR_EDITOR_SCENE=${PROJECT_SOURCE_DIR}/Tests/Fixtures/Editor/SourceGodotUI.tscn"
+    "-DSIR_EDITOR_OUTPUT=${CMAKE_CURRENT_BINARY_DIR}/sir-editor-cli-snapshot-$<CONFIG>.json"
+    -P "${CMAKE_CURRENT_SOURCE_DIR}/EditorJSONFileCLITests.cmake")
