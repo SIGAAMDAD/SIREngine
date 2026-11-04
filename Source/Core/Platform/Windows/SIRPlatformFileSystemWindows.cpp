@@ -161,7 +161,7 @@ sirFileSystemResult_t SIRPlatformFileSystem::renameReplace( const char *pszOldPa
 	}
 	return MoveFileExW( szOldPath, szNewPath, MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH )
 	           ? SIR_FILESYSTEM_OK
-	           : sirWindowsFileSystemError( GetLastError() );
+			   : sirWindowsFileSystemError( GetLastError() );
 }
 
 sirFileSystemResult_t SIRPlatformFileSystem::enumerate( const char *pszDirectory, sirFileSystemVisitor_t pVisitor, void *pContext ) noexcept

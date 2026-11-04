@@ -387,7 +387,7 @@ sirFileResult_t SIRPlatformFile::truncate( uint64_t nBytes ) noexcept
 	nEndInfo.EndOfFile.QuadPart = ( LONGLONG )nBytes;
 	return SetFileInformationByHandle( ( HANDLE )m_nNativeHandle, FileEndOfFileInfo, &nEndInfo, sizeof( nEndInfo ) )
 	           ? SIR_FILE_OK
-	           : sirFileErrorWindows( GetLastError() );
+			   : sirFileErrorWindows( GetLastError() );
 }
 
 sirFileResult_t SIRPlatformFile::getInfo( const char *pszUtf8Path, sirFileInfo_t *pInfo ) noexcept
