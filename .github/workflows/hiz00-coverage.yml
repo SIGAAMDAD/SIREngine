@@ -1,0 +1,125 @@
+name: HIZ-00 LLVM 23 Coverage
+
+on:
+  pull_request:
+    branches: [develop, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hiz00-coverage-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  hiz00-llvm23:
+    name: HIZ-00 Clang 23 AST and exact-source coverage
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Checkout pinned GoogleTest
+        run: git submodule update --init ThirdParty/GoogleTest
+      - uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '4.4.5'
+      - name: Install matched LLVM 23.1.5 compiler and coverage tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="${RUNNER_TEMP}/llvm-23.1.5-x86_64.tar.xz"
+          url="https://www.kernel.org/pub/tools/llvm/files"
+          curl --retry 3 -fsSL "${url}/llvm-23.1.5-x86_64.tar.xz" -o "${archive}"
+          curl --retry 3 -fsSL "${url}/sha256sums.asc" -o "${RUNNER_TEMP}/llvm-sha256sums.asc"
+          grep -E '[[:space:]]llvm-23[.]1[.]5-x86_64[.]tar[.]xz$' "${RUNNER_TEMP}/llvm-sha256sums.asc" |
+            sed "s|llvm-23.1.5-x86_64.tar.xz|${archive}|" | sha256sum --check -
+          mkdir -p "${RUNNER_TEMP}/llvm23"
+          tar -xJf "${archive}" -C "${RUNNER_TEMP}/llvm23"
+          clang_bin="$(find "${RUNNER_TEMP}/llvm23" -type f -name 'clang++' -print -quit)"
+          test -n "${clang_bin}"
+          toolbin="$(dirname "${clang_bin}")"
+          test -x "${toolbin}/llvm-cov"
+          test -x "${toolbin}/llvm-profdata"
+          "${clang_bin}" --version | grep 'clang version 23[.]1[.]5'
+          "${toolbin}/llvm-cov" --version | grep '23[.]1[.]5'
+          echo "${toolbin}" >> "${GITHUB_PATH}"
+          echo "SIR_HIZ_LLVM_BIN=${toolbin}" >> "${GITHUB_ENV}"
+      - name: Configure instrumented SIREngine CMake targets
+        shell: bash
+        run: |
+          set -euo pipefail
+          cmake -S . -B out/HiZCoverage -G Ninja \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_CXX_COMPILER="${SIR_HIZ_LLVM_BIN}/clang++" \
+            -DCMAKE_CXX_FLAGS="-O0 -g -fprofile-instr-generate -fcoverage-mapping" \
+            -DCMAKE_EXE_LINKER_FLAGS="-fprofile-instr-generate" \
+            -DCMAKE_SHARED_LINKER_FLAGS="-fprofile-instr-generate" \
+            -DSIR_BUILD_TESTS=ON -DSIR_WITH_GOOGLETEST=ON \
+            -DSIR_WITH_D3D12=OFF -DSIR_WITH_VULKAN=OFF
+          test -s out/HiZCoverage/compile_commands.json
+      - name: Build instrumented production and tests
+        run: >
+          cmake --build out/HiZCoverage --parallel 2
+          --target SIRVisibilityFoundationTests SIRVisibilityFoundationGoogleTests
+      - name: Clang 23 AST from authentic compilation database
+        shell: bash
+        run: |
+          set -euo pipefail
+          source_file="${GITHUB_WORKSPACE}/Source/Renderer/Visibility/SIRVisibilityFoundation.cpp"
+          compiler_command="$(jq -er --arg src "${source_file}" \
+            '.[] | select(.file == $src) | .command' out/HiZCoverage/compile_commands.json)"
+          test -n "${compiler_command}"
+          ( cd "${GITHUB_WORKSPACE}"; bash -c "${compiler_command} -Xclang -ast-dump -fsyntax-only" > out/HiZCoverage/hiz00.ast.txt )
+          grep -q 'FunctionDecl.*sirHiZBuildReference' out/HiZCoverage/hiz00.ast.txt
+          grep -q 'FunctionDecl.*sirVisibilityCullReference' out/HiZCoverage/hiz00.ast.txt
+      - name: Execute every HIZ-00 test under LLVM instrumentation
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p out/HiZCoverage/profiles
+          export LLVM_PROFILE_FILE="${GITHUB_WORKSPACE}/out/HiZCoverage/profiles/hiz-%p-%m.profraw"
+          ctest --test-dir out/HiZCoverage -R '^renderer[.]visibility[.]' \
+            --output-on-failure --no-tests=error \
+            --output-junit "${GITHUB_WORKSPACE}/out/HiZCoverage/hiz-00-ctest.xml"
+          find out/HiZCoverage/profiles -name '*.profraw' | grep -q .
+      - name: Merge profiles and report four independent source counters
+        shell: bash
+        run: |
+          set -euo pipefail
+          src="${GITHUB_WORKSPACE}/Source/Renderer/Visibility/SIRVisibilityFoundation.cpp"
+          build="out/HiZCoverage"
+          "${SIR_HIZ_LLVM_BIN}/llvm-profdata" merge -sparse "${build}"/profiles/*.profraw -o "${build}/hiz-00.profdata"
+          "${SIR_HIZ_LLVM_BIN}/llvm-cov" export \
+            --instr-profile="${build}/hiz-00.profdata" \
+            "${build}/Tests/Unit/SIRVisibilityFoundationTests" \
+            --object="${build}/Tests/Unit/SIRVisibilityFoundationGoogleTests" \
+            "${src}" > "${build}/hiz-00-llvm-export.json"
+          jq -e --arg src "${src}" \
+            '[.data[].files[] | select(.filename == $src)] | length == 1' \
+            "${build}/hiz-00-llvm-export.json"
+          jq -r --arg src "${src}" \
+            '.data[].files[] | select(.filename == $src) | .summary |
+             "lines: \(.lines.covered)/\(.lines.count) branches: \(.branches.covered)/\(.branches.count) functions: \(.functions.covered)/\(.functions.count) regions: \(.regions.covered)/\(.regions.count)"' \
+            "${build}/hiz-00-llvm-export.json"
+          jq --arg src "${src}" \
+            '.data[].files[] | select(.filename == $src) | {filename,summary,segments,branches}' \
+            "${build}/hiz-00-llvm-export.json" > "${build}/hiz-00-uncovered-debug.json"
+          jq -e --arg src "${src}" \
+            '.data[].files[] | select(.filename == $src) | .summary |
+             all([.lines,.branches,.functions,.regions][]; .count > 0 and .covered == .count)' \
+            "${build}/hiz-00-llvm-export.json"
+      - name: Upload exact-source coverage and test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hiz-00-llvm23-${{ github.sha }}
+          path: |
+            out/HiZCoverage/hiz-00-ctest.xml
+            out/HiZCoverage/hiz-00.profdata
+            out/HiZCoverage/hiz-00-llvm-export.json
+            out/HiZCoverage/hiz-00-uncovered-debug.json
+          if-no-files-found: warn
+          retention-days: 14
