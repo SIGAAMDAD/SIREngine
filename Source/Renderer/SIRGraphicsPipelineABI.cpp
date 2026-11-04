@@ -180,8 +180,7 @@ static sirGraphicsABIResult_t sirGraphicsValidateABIPipelineCommon( const sirGra
 		if ( pBinding->eType > SIR_GRAPHICS_BINDING_SAMPLER ) {
 			return SIR_GRAPHICS_INVALID_ARGUMENT;
 		}
-		if ( pBinding->nBinding >= pCaps->nMaximumBindings ||
-		     pBinding->nArrayCount > pCaps->nMaximumBindings - pBinding->nBinding ) {
+		if ( pBinding->nBinding >= pCaps->nMaximumBindings || pBinding->nArrayCount > pCaps->nMaximumBindings - pBinding->nBinding ) {
 			return SIR_GRAPHICS_UNSUPPORTED;
 		}
 		if ( ( pBinding->nShaderStageMask & ~nBoundStages ) != 0 ) {
@@ -190,19 +189,16 @@ static sirGraphicsABIResult_t sirGraphicsValidateABIPipelineCommon( const sirGra
 		if ( pPipeline->nModel == SIR_GRAPHICS_PIPELINE_MODEL_PROGRAMMABLE && pBinding->nSpace != 0 ) {
 			return SIR_GRAPHICS_UNSUPPORTED;
 		}
-		if ( pPipeline->nModel == SIR_GRAPHICS_PIPELINE_MODEL_PROGRAMMABLE &&
-		     pBinding->eType == SIR_GRAPHICS_BINDING_STORAGE_TEXTURE ) {
+		if ( pPipeline->nModel == SIR_GRAPHICS_PIPELINE_MODEL_PROGRAMMABLE && pBinding->eType == SIR_GRAPHICS_BINDING_STORAGE_TEXTURE ) {
 			return SIR_GRAPHICS_UNSUPPORTED;
 		}
 	}
 	for ( uint32_t iAttribute = 0; iAttribute < pPipeline->nAttributeCount; ++iAttribute ) {
 		const sirGraphicsVertexAttribute_t *pAttribute = &pPipeline->pAttributes[iAttribute];
-		if ( pAttribute->nLocation >= pCaps->nMaximumVertexAttributes ||
-		     pAttribute->nBufferSlot >= pCaps->nMaximumVertexStreams ) {
+		if ( pAttribute->nLocation >= pCaps->nMaximumVertexAttributes || pAttribute->nBufferSlot >= pCaps->nMaximumVertexStreams ) {
 			return SIR_GRAPHICS_UNSUPPORTED;
 		}
-		if ( pAttribute->eFormat <= SIR_GRAPHICS_FORMAT_UNKNOWN ||
-		     pAttribute->eFormat > SIR_GRAPHICS_FORMAT_BC7_UNORM ) {
+		if ( pAttribute->eFormat <= SIR_GRAPHICS_FORMAT_UNKNOWN || pAttribute->eFormat > SIR_GRAPHICS_FORMAT_BC7_UNORM ) {
 			return SIR_GRAPHICS_INVALID_ARGUMENT;
 		}
 	}
@@ -246,8 +242,7 @@ static sirGraphicsABIResult_t sirGraphicsValidateABIPipelineCommon( const sirGra
 		}
 	}
 	if ( pPipeline->nDepthFormat != SIR_GRAPHICS_FORMAT_UNKNOWN &&
-	     ( pPipeline->nDepthFormat < SIR_GRAPHICS_FORMAT_D16_UNORM ||
-	       pPipeline->nDepthFormat > SIR_GRAPHICS_FORMAT_D32_FLOAT ) ) {
+	     ( pPipeline->nDepthFormat < SIR_GRAPHICS_FORMAT_D16_UNORM || pPipeline->nDepthFormat > SIR_GRAPHICS_FORMAT_D32_FLOAT ) ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	return SIR_GRAPHICS_SUCCESS;
