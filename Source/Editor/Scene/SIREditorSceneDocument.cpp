@@ -321,8 +321,8 @@ sirEditorResult_t SIREditorSceneDocument::setPropertyRegistry( const SIRObjectRe
 	if ( !m_bInitialized ) {
 		return SIR_EDITOR_NOT_INITIALIZED;
 	}
-	if ( m_bEditing || m_nHistoryCount != 0 ) {
-		return SIR_EDITOR_TRANSACTION_ACTIVE;
+	if ( m_bEditing || pRegistry == nullptr || ( m_pRegistry != nullptr && m_pRegistry != pRegistry ) ) {
+		return SIR_EDITOR_INVALID_ARGUMENT;
 	}
 	m_pRegistry = pRegistry;
 	return SIR_EDITOR_OK;
@@ -415,7 +415,15 @@ sirEditorResult_t SIREditorSceneDocument::discardOrphanedProperties( void ) noex
 {
 	for ( uint32_t iProperty = 0; iProperty < m_Storage.nPropertyCapacity; ++iProperty ) {
 		const sirEditorProperty_t& property = m_Storage.pPropertyStaging[iProperty];
-		if ( property.nNodeId == 0 || findSlot( m_Storage.pStaging, property.nNodeId ) != UINT32_MAX ) {
+		if ( property.nNodeId == 0 ) {
+			continue;
+		}
+		const uint32_t iNode = findSlot( m_Storage.pStaging, property.nNodeId );
+		if ( iNode != UINT32_MAX ) {
+			if ( m_pRegistry == nullptr ||
+			     m_pRegistry->validateProperty( m_Storage.pStaging[iNode].nTypeId, property.nPropertyId, property.value ) != SIR_OBJECT_OK ) {
+				return SIR_EDITOR_INVALID_PROPERTY;
+			}
 			continue;
 		}
 		if ( m_nPendingPropertyDeltaCount >= m_Storage.nPropertyCapacity + m_Storage.nPendingPropertyCapacity ) {
