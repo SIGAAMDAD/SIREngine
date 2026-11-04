@@ -49,6 +49,11 @@ public:
 	bool recover( void ) noexcept;
 	const sirInputFrame_t *frame( void ) const noexcept;
 	bool recordReplayTick( SIRInputReplayTape &tape, const sirInputReplayKey_t *pKeys, uint32_t nCount ) const noexcept;
+	bool startReplay( void ) noexcept;
+	bool queueReplayTick( const sirInputReplayFrame_t &frame ) noexcept;
+	void stopReplay( void ) noexcept;
+	bool replayActive( void ) const noexcept;
+	bool queryAction( uint32_t nActionId, uint32_t nUser, sirInputActionState_t *pOut ) const noexcept;
 	SIRInputActions &actions( void ) noexcept;
 	const SIRInputActions &actions( void ) const noexcept;
 	SIRInputText &text( void ) noexcept;
@@ -81,12 +86,16 @@ private:
 	SIRInputActions m_Actions;
 	SIRInputText m_Text;
 	SIRInputHaptics m_Haptics;
+	sirInputReplayFrame_t m_ReplayFrame;
 	SIRInputDeviceRegistry m_Registry;
 	SIRInputFrameState m_State;
 	SIRInputBackend *m_pBackends[SIR_INPUT_BACKEND_CAPACITY];
 	uint32_t m_nBackendCount;
 	bool m_bStopping;
 	bool m_bHapticsPaused;
+	bool m_bReplayActive;
+	bool m_bReplayQueued;
+	uint64_t m_nCollectingTick;
 };
 
 #endif // __SIRENGINE_SIRINPUTSERVICE_H__

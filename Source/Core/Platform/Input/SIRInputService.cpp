@@ -22,8 +22,9 @@ static bool sirInputRumbleOutput( void *pContext, sirInputDeviceId_t hDevice, ui
 }
 
 SIRInputService::SIRInputService( void ) noexcept
-    : m_Actions(), m_Text(), m_Haptics(), m_Registry(), m_State(), m_pBackends{}, m_nBackendCount( 0 ),
-      m_bStopping( false ), m_bHapticsPaused( false )
+    : m_Actions(), m_Text(), m_Haptics(), m_ReplayFrame{}, m_Registry(), m_State(), m_pBackends{},
+      m_nBackendCount( 0 ), m_bStopping( false ), m_bHapticsPaused( false ), m_bReplayActive( false ),
+      m_bReplayQueued( false ), m_nCollectingTick( 0 )
 {
 }
 
@@ -66,6 +67,8 @@ bool SIRInputService::begin( uint64_t nTick ) noexcept
 		return false;
 	}
 	m_Text.begin( nTick );
+	m_nCollectingTick = nTick;
+	m_bReplayQueued = false;
 	return true;
 }
 
@@ -84,6 +87,9 @@ void SIRInputService::sample( void ) noexcept
 
 bool SIRInputService::publish( void ) noexcept
 {
+	if ( m_bReplayActive && !m_bReplayQueued ) {
+		return false;
+	}
 	if ( !m_State.publish( m_Registry ) ) {
 		return false;
 	}
@@ -107,10 +113,56 @@ const sirInputFrame_t *SIRInputService::frame( void ) const noexcept
 bool SIRInputService::recordReplayTick( SIRInputReplayTape &tape, const sirInputReplayKey_t *pKeys, uint32_t nCount ) const noexcept
 {
 	const sirInputFrame_t *pFrame = m_State.frame();
-	if ( m_bStopping || m_State.collecting() || pFrame == nullptr ) {
+	if ( m_bStopping || m_bReplayActive || m_State.collecting() || pFrame == nullptr ) {
 		return false;
 	}
 	return tape.append( pFrame->nTick, m_Actions, pKeys, nCount );
+}
+
+
+bool SIRInputService::startReplay( void ) noexcept
+{
+	if ( m_bStopping || m_State.collecting() || m_bReplayActive ) {
+		return false;
+	}
+	m_bReplayActive = true;
+	m_bReplayQueued = false;
+	m_ReplayFrame = {};
+	return true;
+}
+
+bool SIRInputService::queueReplayTick( const sirInputReplayFrame_t &frame ) noexcept
+{
+	if ( !m_bReplayActive || !m_State.collecting() || m_bReplayQueued || frame.nTick != m_nCollectingTick ||
+	     !SIRInputReplayTape::validateFrame( frame ) ) {
+		return false;
+	}
+	m_ReplayFrame = frame;
+	m_bReplayQueued = true;
+	return true;
+}
+
+void SIRInputService::stopReplay( void ) noexcept
+{
+	m_bReplayActive = false;
+	m_bReplayQueued = false;
+}
+
+bool SIRInputService::replayActive( void ) const noexcept
+{
+	return m_bReplayActive;
+}
+
+bool SIRInputService::queryAction( uint32_t nActionId, uint32_t nUser, sirInputActionState_t *pOut ) const noexcept
+{
+	if ( m_bReplayActive ) {
+		const sirInputFrame_t *pFrame = m_State.frame();
+		if ( m_State.collecting() || !m_bReplayQueued || pFrame == nullptr || pFrame->nTick != m_ReplayFrame.nTick ) {
+			return false;
+		}
+		return SIRInputReplayTape::query( m_ReplayFrame, nActionId, nUser, pOut );
+	}
+	return m_Actions.query( nActionId, nUser, pOut );
 }
 
 SIRInputActions &SIRInputService::actions( void ) noexcept
@@ -340,4 +392,8 @@ void SIRInputService::shutdown( void ) noexcept
 	m_Registry.reset();
 	m_Actions.clear();
 	m_Text.reset();
+	m_ReplayFrame = {};
+	m_bReplayActive = false;
+	m_bReplayQueued = false;
+	m_nCollectingTick = 0;
 }

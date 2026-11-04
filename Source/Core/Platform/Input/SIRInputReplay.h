@@ -70,6 +70,7 @@ public:
 	bool finished( void ) const noexcept;
 	uint32_t bytesUsed( void ) const noexcept;
 	sirInputReplayMode_t mode( void ) const noexcept;
+	static bool validateFrame( const sirInputReplayFrame_t &frame ) noexcept;
 	static bool query( const sirInputReplayFrame_t &frame, uint32_t nActionId, uint32_t nUser,
 	                   sirInputActionState_t *pOut ) noexcept;
 

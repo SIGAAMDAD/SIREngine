@@ -40,7 +40,7 @@ bool SIRInputUIDispatch::dispatch( const SIRInputService &input, const sirInputU
 	if ( consumer.pOnAction != nullptr ) {
 		for ( uint32_t i = 0; i < consumer.nActionCount; ++i ) {
 			sirInputActionState_t state = {};
-			if ( input.actions().query( consumer.pActionIds[i], consumer.nUser, &state ) ) {
+			if ( input.queryAction( consumer.pActionIds[i], consumer.nUser, &state ) ) {
 				consumer.pOnAction( consumer.pContext, &state );
 			}
 		}
