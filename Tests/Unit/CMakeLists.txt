@@ -94,3 +94,12 @@ add_executable(SIREditorAuthoringTests SIREditorAuthoringTests.cpp)
 target_link_libraries(SIREditorAuthoringTests PRIVATE SIR::EditorAuthoring)
 add_test(NAME editor.authoring.transactions-and-virtual-list COMMAND SIREditorAuthoringTests)
 sir_configure_owned_target(SIREditorAuthoringTests)
+
+# Native Godot-scene hierarchy intake for the editor-only authoring bridge.
+add_executable(SIREditorTextSceneTests SIREditorTextSceneTests.cpp)
+target_link_libraries(SIREditorTextSceneTests PRIVATE SIR::EditorAuthoring)
+target_compile_definitions(SIREditorTextSceneTests PRIVATE
+    SIR_EDITOR_TEST_SCENE="${PROJECT_SOURCE_DIR}/Tests/Fixtures/Editor/SourceGodotGetNode.tscn"
+    SIR_EDITOR_TEST_UI_SCENE="${PROJECT_SOURCE_DIR}/Tests/Fixtures/Editor/SourceGodotUI.tscn")
+add_test(NAME editor.authoring.godot-text-scene COMMAND SIREditorTextSceneTests)
+sir_configure_owned_target(SIREditorTextSceneTests)
