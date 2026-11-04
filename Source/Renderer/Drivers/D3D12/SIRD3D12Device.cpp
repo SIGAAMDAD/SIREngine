@@ -29,6 +29,7 @@ SIRD3D12ComputeQueue::SIRD3D12ComputeQueue( void ) noexcept
 
 SIRD3D12ComputeQueue::~SIRD3D12ComputeQueue( void ) noexcept
 {
+
 	shutdown();
 }
 
@@ -779,7 +780,6 @@ const SIRD3D12Transfers &SIRD3D12Device::getTransfers( void ) const noexcept
 {
 	return m_Transfers;
 }
-
 
 SIRD3D12ComputeQueue &SIRD3D12Device::getComputeQueue( void ) noexcept
 {

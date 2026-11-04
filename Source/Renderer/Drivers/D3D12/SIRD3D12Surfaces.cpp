@@ -33,8 +33,6 @@ SIRD3D12Surfaces::~SIRD3D12Surfaces( void ) noexcept
 	shutdown( false );
 }
 
-
-
 bool SIRD3D12Surfaces::initialize( SIRD3D12Device *pNative, SIRD3D12Resources *pResources, uint32_t nGeneration ) noexcept
 {
 	if ( m_pNative != nullptr || pNative == nullptr || pResources == nullptr || nGeneration == 0 ) {
