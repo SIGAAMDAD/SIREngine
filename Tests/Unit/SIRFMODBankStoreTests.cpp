@@ -965,11 +965,13 @@ static void testAudioOwnerThread( const sirContainerAllocator_t *pAllocator )
 	config.runtime.nMaxMixerControls = 1;
 	config.runtime.nMaxSnapshots = 1;
 	config.runtime.nEngineMemoryBudgetBytes = 1024 * 1024;
+	config.runtime.nNativeMemoryBudgetBytes = 16 * 1024 * 1024;
 	config.nativeOps.context = makeStudioOps( &fixture );
 	config.nativeOps.voice = makeVoiceOps( &fixture );
 	config.nativeOps.voice.setInstanceParameter = testRuntimeInstanceParameter;
 	config.nativeOps.voice.setGlobalParameter = testRuntimeGlobalParameter;
 	config.nativeOps.bank = makeBankOps( &fixture );
+	config.nativeOps.memory = { 1, testNativeMemoryInstall, testNativeMemoryStats };
 	config.nativeOps.mixer = {
 	    1, &fixture, testPinnedBusResolve, testPinnedVCAResolve, testPinnedSetVolume, testPinnedSetMute, testPinnedSetVolume };
 	config.nativeOps.snapshot = {
@@ -984,6 +986,11 @@ static void testAudioOwnerThread( const sirContainerAllocator_t *pAllocator )
 	}
 	checkBank( worker.getAutoRecoveryCount() == 1 );
 	checkBank( worker.getAutoRecoveryFailureCount() == 0 );
+	const sirFMODMemoryBudgetStats_t engineStats = worker.getEngineMemoryStats();
+	checkBank( engineStats.nBudgetBytes == 1024 * 1024 && engineStats.nCurrentBytes > 0 );
+	checkBank( engineStats.nCurrentBytes <= engineStats.nPeakBytes );
+	const sirFMODMemoryBudgetStats_t nativeStats = worker.getNativeMemoryStats();
+	checkBank( nativeStats.nBudgetBytes == 16 * 1024 * 1024 && nativeStats.nCurrentBytes == 4096 );
 
 	sirFMODThreadRequest_t request = {};
 	request.eOperation = SIR_FMOD_THREAD_LOAD_PACKAGE;
@@ -1065,6 +1072,7 @@ static void testAudioOwnerThread( const sirContainerAllocator_t *pAllocator )
 	checkBank( worker.submit( query, nQueryTicket ) == SIR_AUDIO_PENDING );
 	result = testWaitForTicket( worker, nQueryTicket );
 	checkBank( result.eResult == SIR_AUDIO_INVALID_HANDLE );
+	checkBank( worker.cancel( nQueryTicket ) == SIR_AUDIO_INVALID_HANDLE );
 	// Competing root-load requests must fail without consuming the active
 	// transaction's completion ticket or blocking ordinary dispatch.
 	uint64_t nSecondLoadTicket = 0;
@@ -1077,6 +1085,8 @@ static void testAudioOwnerThread( const sirContainerAllocator_t *pAllocator )
 	checkBank( worker.getDroppedLifecycleCount() <= 2 );
 	checkBank( worker.shutdown() == SIR_AUDIO_OK );
 	checkBank( !worker.isReady() );
+	checkBank( worker.getEngineMemoryStats().nCurrentBytes == 0 );
+	checkBank( worker.getNativeMemoryStats().nCurrentBytes == 0 );
 	manifest.shutdown();
 }
 

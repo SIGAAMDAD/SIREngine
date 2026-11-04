@@ -150,5 +150,8 @@ public:
 	uint32_t getDroppedLifecycleCount( void ) const noexcept;
 	uint32_t getAutoRecoveryCount( void ) const noexcept;
 	uint32_t getAutoRecoveryFailureCount( void ) const noexcept;
+	// Thread-safe memory snapshots; no FMOD calls or native pointers escape.
+	sirFMODMemoryBudgetStats_t getEngineMemoryStats( void ) noexcept;
+	sirFMODMemoryBudgetStats_t getNativeMemoryStats( void ) noexcept;
 };
 #endif // __SIRENGINE_SIRFMODAUDIOTHREAD_H__
