@@ -689,6 +689,43 @@ static void testPrioritySchedulingFairness( void )
 	memory.shutdown();
 }
 
+typedef struct sirTestNestedPump_s
+{
+	SIRTaskScheduler *pScheduler;
+	uint32_t nNestedRuns;
+} sirTestNestedPump_t;
+
+static sirTaskResult_t nestedPumpTask( void *pContext, sirTaskHandle_t ) noexcept
+{
+	sirTestNestedPump_t *pPump = ( sirTestNestedPump_t * )pContext;
+	pPump->nNestedRuns = pPump->pScheduler->pumpMain( 1 );
+	return SIR_TASK_RESULT_SUCCESS;
+}
+
+static void testNestedPumpAndCompletedPrerequisite( void )
+{
+	SIRMemoryManager memory;
+	const sirMemoryConfig_t memoryConfig = { 64ULL * 1024 * 1024, 16ULL * 1024 * 1024, 4ULL * 1024 * 1024, 16 };
+	SIR_TEST_CHECK( memory.init( memoryConfig ) );
+	SIRTaskScheduler scheduler;
+	SIR_TEST_CHECK( scheduler.init( &memory, { 8, 0, 8 } ) );
+	sirTestNestedPump_t context = { &scheduler, UINT32_MAX };
+	std::atomic<uint32_t> nCount( 0 );
+	sirTaskHandle_t first = {};
+	sirTaskHandle_t second = {};
+	sirTaskHandle_t third = {};
+	SIR_TEST_CHECK( scheduler.submit( nestedPumpTask, &context, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_MAIN, &first ) );
+	SIR_TEST_CHECK( scheduler.submit( countTask, &nCount, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_MAIN, &second ) );
+	SIR_TEST_CHECK( scheduler.pumpMain( 2 ) == 2 );
+	SIR_TEST_CHECK( context.nNestedRuns == 0 && nCount.load() == 1 );
+	SIR_TEST_CHECK( scheduler.submitAfter( countTask, &nCount, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_MAIN, &first, 1, &third ) );
+	SIR_TEST_CHECK( scheduler.getState( third ) == SIR_TASK_QUEUED );
+	SIR_TEST_CHECK( scheduler.pumpMain( 1 ) == 1 && nCount.load() == 2 );
+	SIR_TEST_CHECK( scheduler.releaseTask( first ) && scheduler.releaseTask( second ) && scheduler.releaseTask( third ) );
+	SIR_TEST_CHECK( scheduler.shutdown() );
+	memory.shutdown();
+}
+
 int main( void )
 {
 	testScheduler();
@@ -703,5 +740,6 @@ int main( void )
 	testInvalidInputAndProviderLifecycle();
 	testShutdownWithLiveTasksAndProviderWait();
 	testPrioritySchedulingFairness();
+	testNestedPumpAndCompletedPrerequisite();
 	return 0;
 }
