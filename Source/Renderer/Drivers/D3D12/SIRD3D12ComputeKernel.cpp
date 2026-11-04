@@ -131,7 +131,8 @@ bool SIRD3D12ComputeKernel::record( ID3D12Device *pDevice, SIRD3D12Memory *pMemo
 	const uint64_t nBytes = ( uint64_t )nElements * sizeof( uint32_t );
 	Microsoft::WRL::ComPtr<D3D12MA::Allocation> pOutput;
 	Microsoft::WRL::ComPtr<D3D12MA::Allocation> pReadback;
-	m_nLastError = pMemory->createBuffer( D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, nBytes, pOutput.GetAddressOf(), D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS );
+	m_nLastError = pMemory->createBuffer( D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, nBytes, pOutput.GetAddressOf(),
+	                                      D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS );
 	if ( FAILED( m_nLastError ) ) {
 		return false;
 	}
