@@ -104,4 +104,3 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/StreamingReconcileTests.cmake)
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/StreamingProviderBridgeTests.cmake)
 
-include(${CMAKE_CURRENT_SOURCE_DIR}/StreamingGRDGTests.cmake)

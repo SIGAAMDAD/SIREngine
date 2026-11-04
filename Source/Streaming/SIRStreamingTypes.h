@@ -25,7 +25,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // clang-format on
 
 // These identify demand units, not GRDG resource IDs or physical allocations.
-// The future GRDG adapter resolves a unit through the cooked manifest.
+// The GRDG resource owner resolves units through the cooked manifest.
 typedef enum sirStreamingUnitKind_e : uint8_t
 {
 	SIR_STREAMING_UNIT_WORLD_CELL = 0,
