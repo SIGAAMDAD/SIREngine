@@ -108,6 +108,12 @@ add_test(NAME core.platform.input.actions COMMAND SIRInputActionTests)
 set_tests_properties(core.platform.input.actions PROPERTIES LABELS "core;input;actions" TIMEOUT 60)
 sir_configure_owned_target(SIRInputActionTests)
 
+add_executable(SIRInputTextValidationTests SIRInputTextValidationTests.cpp)
+target_link_libraries(SIRInputTextValidationTests PRIVATE SIR::Core)
+add_test(NAME core.platform.input.text-validation COMMAND SIRInputTextValidationTests)
+set_tests_properties(core.platform.input.text-validation PROPERTIES LABELS "core;input;text;regression" TIMEOUT 60)
+sir_configure_owned_target(SIRInputTextValidationTests)
+
 add_executable(SIRInputPhase45Tests SIRInputPhase45Tests.cpp)
 target_link_libraries(SIRInputPhase45Tests PRIVATE SIR::Core)
 add_test(NAME core.platform.input.ui-haptics-profiles COMMAND SIRInputPhase45Tests)
