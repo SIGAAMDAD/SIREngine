@@ -90,6 +90,16 @@ bool SIRInputDeviceRegistry::inspectSlot( uint32_t nSlot, sirInputDeviceDescript
 	return true;
 }
 
+void SIRInputDeviceRegistry::snapshot( sirInputFrame_t &frame ) const noexcept
+{
+	for ( uint32_t i = 0; i < SIR_INPUT_DEVICE_CAPACITY; ++i ) {
+		const sirInputDeviceDescriptor_t &record = m_Devices[i];
+		frame.devices[i] = record.id;
+		frame.nConnected[i] = record.bConnected ? 1 : 0;
+		frame.nUsers[i] = record.bConnected ? record.nUserId : SIR_INPUT_NO_USER;
+	}
+}
+
 bool SIRInputDeviceRegistry::pairUser( sirInputDeviceId_t id, uint32_t nUser ) noexcept
 {
 	if ( !valid( id ) || ( nUser != SIR_INPUT_NO_USER && nUser >= SIR_INPUT_USER_CAPACITY ) ) {

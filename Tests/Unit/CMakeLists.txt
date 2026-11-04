@@ -109,3 +109,20 @@ if(SIR_INPUT_SOAK_TESTS)
     add_test(NAME core.platform.input.soak COMMAND SIRInputStressTests --soak)
     set_tests_properties(core.platform.input.soak PROPERTIES LABELS "core;input;soak" TIMEOUT 180)
 endif()
+
+# Sparse/dense frame snapshot differential, portable across Windows and Linux.
+add_executable(SIRInputSnapshotDeltaTests SIRInputSnapshotDeltaTests.cpp)
+target_link_libraries(SIRInputSnapshotDeltaTests PRIVATE SIR::Core)
+add_test(NAME core.platform.input.snapshot-delta COMMAND SIRInputSnapshotDeltaTests)
+set_tests_properties(core.platform.input.snapshot-delta PROPERTIES LABELS "core;input;regression" TIMEOUT 60)
+sir_configure_owned_target(SIRInputSnapshotDeltaTests)
+
+# Native evdev report batching under an instrumented pipe; no device permissions needed.
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    add_executable(SIRInputEvdevBatchTests SIRInputEvdevBatchTests.cpp)
+    target_link_libraries(SIRInputEvdevBatchTests PRIVATE SIR::Core)
+    target_link_options(SIRInputEvdevBatchTests PRIVATE "LINKER:--wrap=read")
+    add_test(NAME core.platform.input.evdev-batch COMMAND SIRInputEvdevBatchTests)
+    set_tests_properties(core.platform.input.evdev-batch PROPERTIES LABELS "core;input;regression" TIMEOUT 60)
+    sir_configure_owned_target(SIRInputEvdevBatchTests)
+endif()
