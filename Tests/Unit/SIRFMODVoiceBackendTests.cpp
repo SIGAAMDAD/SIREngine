@@ -155,7 +155,6 @@ static sirFMODNativeOps_t makeContextOps( sirFMODVoiceFixture_t *pFixture ) noex
 	         0x00020400,
 	         pFixture,
 
-
 	         testContextCreate,
 	         testContextGetCore,
 	         testContextVersion,
@@ -388,7 +387,7 @@ static void testAdvancedInstanceControls( const sirContainerAllocator_t *pAlloca
 	SIRFMODVoiceBackend backend;
 	checkVoice( backend.configure( &context, pAllocator, nativeOps, 1 ) == SIR_AUDIO_OK );
 	SIRAudioSystem audio;
-	const sirAudioSystemConfig_t config = { 1, 0, 12, 4, 4, 0 };
+	const sirAudioSystemConfig_t config = { 1, 0, 16, 4, 4, 0 };
 	checkVoice( audio.initialize( config, pAllocator, SIRFMODVoiceBackend::getBackendOps(), &backend ) == SIR_AUDIO_OK );
 	checkVoice( backend.registerEvent( 10, "event:/A" ) == SIR_AUDIO_OK );
 	sirAudioPlayingHandle_t playing = {};
