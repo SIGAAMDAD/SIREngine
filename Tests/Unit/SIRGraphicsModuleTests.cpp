@@ -248,10 +248,63 @@ static bool testBinaryModule( void ) noexcept
 	if ( sirGraphicsCreateABIPipeline( &device, &fixedPipeline, &hPipeline ) != SIR_GRAPHICS_UNSUPPORTED ) {
 		return false;
 	}
+	fixed.nTextureStageCount = 0;
+	programmable.nTextureUnits = 1;
+
+	// Author-ordered fallback prefers first eligible recipe, not API name.
+	sirGraphicsABIPipeline_t szVariants[3] = { pipeline, programmablePipeline, fixedPipeline };
+	uint32_t iSelected = 99;
+	if ( sirGraphicsSelectABIPipelineVariant( &device, szVariants, 3, &iSelected ) != SIR_GRAPHICS_SUCCESS || iSelected != 0 ) {
+		return false;
+	}
+	modern.nRequiredFeatures = SIR_GRAPHICS_FEATURE_RAY_TRACING;
+	iSelected = 99;
+	if ( sirGraphicsSelectABIPipelineVariant( &device, szVariants, 3, &iSelected ) != SIR_GRAPHICS_SUCCESS || iSelected != 1 ) {
+		return false;
+	}
+	programmable.nTextureUnits = 9;
+	iSelected = 99;
+	if ( sirGraphicsSelectABIPipelineVariant( &device, szVariants, 3, &iSelected ) != SIR_GRAPHICS_SUCCESS || iSelected != 2 ) {
+		return false;
+	}
+	fixed.nTextureStageCount = 5;
+	iSelected = 99;
+	if ( sirGraphicsSelectABIPipelineVariant( &device, szVariants, 3, &iSelected ) != SIR_GRAPHICS_UNSUPPORTED || iSelected != 99 ) {
+		return false;
+	}
+	fixed.nTextureStageCount = 0;
+	programmable.nTextureUnits = 1;
+	modern.nRequiredFeatures = SIR_GRAPHICS_FEATURE_COMPUTE;
+
+	szVariants[0].pModern = nullptr;
+	iSelected = 99;
+	if ( sirGraphicsSelectABIPipelineVariant( &device, szVariants, 3, &iSelected ) != SIR_GRAPHICS_INVALID_ARGUMENT ||
+	     iSelected != 99 ) {
+		return false;
+	}
+	szVariants[0].pModern = &modern;
+	if ( sirGraphicsSelectABIPipelineVariant( &device, szVariants, 17, &iSelected ) != SIR_GRAPHICS_CAPACITY_EXCEEDED ||
+	     iSelected != 99 ) {
+		return false;
+	}
+	if ( sirGraphicsSelectABIPipelineVariant( &device, szVariants, 0, &iSelected ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return false;
+	}
+	pMode( 0 );
+	if ( sirGraphicsSelectABIPipelineVariant( &device, &szVariants[1], 2, &iSelected ) != SIR_GRAPHICS_UNSUPPORTED ||
+	     iSelected != 99 ) {
+		return false;
+	}
+
 	pMode( 11 );
 	modelCaps.nDeviceGeneration = 77;
 	if ( sirGraphicsQueryABIPipelineModelCaps( &device, SIR_GRAPHICS_PIPELINE_MODEL_MODERN, &modelCaps ) != SIR_GRAPHICS_DRIVER_ERROR ||
 	     modelCaps.nDeviceGeneration != 77 ) {
+		return false;
+	}
+	iSelected = 99;
+	if ( sirGraphicsSelectABIPipelineVariant( &device, szVariants, 3, &iSelected ) != SIR_GRAPHICS_DRIVER_ERROR ||
+	     iSelected != 99 ) {
 		return false;
 	}
 	pMode( 0 );

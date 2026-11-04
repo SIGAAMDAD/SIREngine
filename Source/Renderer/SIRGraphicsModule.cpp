@@ -217,6 +217,49 @@ sirGraphicsABIResult_t sirGraphicsQueryABIPipelineModelCaps( const sirGraphicsAB
 	return SIR_GRAPHICS_SUCCESS;
 }
 
+sirGraphicsABIResult_t sirGraphicsSelectABIPipelineVariant( const sirGraphicsABIDevice_t *pDevice,
+                                                            const sirGraphicsABIPipeline_t *pCandidates, uint32_t nCount,
+                                                            uint32_t *pIndex ) noexcept
+{
+	if ( pCandidates == nullptr || pIndex == nullptr || nCount == 0 ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	if ( nCount > 16 ) {
+		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
+	}
+	const sirGraphicsABIResult_t eDevice = sirGraphicsValidateABIDevice( pDevice );
+	if ( eDevice != SIR_GRAPHICS_SUCCESS ) {
+		return eDevice;
+	}
+
+	for ( uint32_t iCandidate = 0; iCandidate < nCount; ++iCandidate ) {
+		const sirGraphicsABIPipeline_t *pPipeline = &pCandidates[iCandidate];
+		if ( pPipeline->nSize < sizeof( sirGraphicsABIPipeline_t ) ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
+		sirGraphicsABIPipelineModelCaps_t caps = {};
+		caps.nSize = sizeof( caps );
+		const sirGraphicsABIResult_t eCaps =
+		    sirGraphicsQueryABIPipelineModelCaps( pDevice, pPipeline->nModel, &caps );
+		if ( eCaps == SIR_GRAPHICS_UNSUPPORTED ) {
+			continue;
+		}
+		if ( eCaps != SIR_GRAPHICS_SUCCESS ) {
+			return eCaps;
+		}
+		const sirGraphicsABIResult_t eRecipe = sirGraphicsValidateABIPipeline( pPipeline, &caps );
+		if ( eRecipe == SIR_GRAPHICS_UNSUPPORTED ) {
+			continue;
+		}
+		if ( eRecipe != SIR_GRAPHICS_SUCCESS ) {
+			return eRecipe;
+		}
+		*pIndex = iCandidate;
+		return SIR_GRAPHICS_SUCCESS;
+	}
+	return SIR_GRAPHICS_UNSUPPORTED;
+}
+
 sirGraphicsABIResult_t sirGraphicsCreateABIPipeline( const sirGraphicsABIDevice_t *pDevice, const sirGraphicsABIPipeline_t *pDesc,
                                                      sirGraphicsHandle_t *pPipeline ) noexcept
 {

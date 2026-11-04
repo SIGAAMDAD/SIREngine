@@ -50,6 +50,13 @@ sirGraphicsABIResult_t sirGraphicsQueryABICapabilities( const sirGraphicsABIDevi
                                                         sirGraphicsABICapabilities_t *pInfo ) noexcept;
 sirGraphicsABIResult_t sirGraphicsQueryABIPipelineModelCaps( const sirGraphicsABIDevice_t *pDevice, uint32_t nModel,
                                                              sirGraphicsABIPipelineModelCaps_t *pCaps ) noexcept;
+// Candidates are ordered by the asset/render-path owner, not by API name.
+// Return the first compatible recipe; leave pIndex untouched on failure.
+// Unsupported models/recipes are skipped. Malformed recipes and driver faults
+// stop selection instead of silently falling through to another model.
+sirGraphicsABIResult_t sirGraphicsSelectABIPipelineVariant( const sirGraphicsABIDevice_t *pDevice,
+                                                            const sirGraphicsABIPipeline_t *pCandidates, uint32_t nCount,
+                                                            uint32_t *pIndex ) noexcept;
 sirGraphicsABIResult_t sirGraphicsCreateABIPipeline( const sirGraphicsABIDevice_t *pDevice, const sirGraphicsABIPipeline_t *pDesc,
                                                      sirGraphicsHandle_t *pPipeline ) noexcept;
 sirGraphicsABIResult_t sirGraphicsQueryABIFormat( const sirGraphicsABIDevice_t *pDevice, uint32_t nFormat,
