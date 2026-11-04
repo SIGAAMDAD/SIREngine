@@ -284,12 +284,12 @@ static bool testBindings( void ) noexcept
 	uint32_t nResult = 0;
 	const sirScriptReadFrame_t arguments = { &nArgument, sizeof( nArgument ), alignof( uint32_t ) };
 	const sirScriptWriteFrame_t result = { &nResult, sizeof( nResult ), alignof( uint32_t ) };
-	SIR_TEST_CHECK( registry.invokeNative( 11, 12, 1, arguments, result ) == SIR_SCRIPT_OK );
+	SIR_TEST_CHECK( registry.invokeNative( { 11, 12, 1, arguments, result } ) == SIR_SCRIPT_OK );
 	SIR_TEST_CHECK( nResult == 19 );
-	SIR_TEST_CHECK( registry.invokeNative( 11, 55, 1, arguments, result ) == SIR_SCRIPT_TYPE_MISMATCH );
-	SIR_TEST_CHECK( registry.invokeNative( 11, 12, 2, arguments, result ) == SIR_SCRIPT_TYPE_MISMATCH );
-	SIR_TEST_CHECK( registry.invokeNative( 11, 12, 1, { nullptr, 4, 4 }, result ) == SIR_SCRIPT_TYPE_MISMATCH );
-	SIR_TEST_CHECK( registry.invokeNative( 11, 12, 1, { &nArgument, 8, 4 }, result ) == SIR_SCRIPT_TYPE_MISMATCH );
+	SIR_TEST_CHECK( registry.invokeNative( { 11, 55, 1, arguments, result } ) == SIR_SCRIPT_TYPE_MISMATCH );
+	SIR_TEST_CHECK( registry.invokeNative( { 11, 12, 2, arguments, result } ) == SIR_SCRIPT_TYPE_MISMATCH );
+	SIR_TEST_CHECK( registry.invokeNative( { 11, 12, 1, { nullptr, 4, 4 }, result } ) == SIR_SCRIPT_TYPE_MISMATCH );
+	SIR_TEST_CHECK( registry.invokeNative( { 11, 12, 1, { &nArgument, 8, 4 }, result } ) == SIR_SCRIPT_TYPE_MISMATCH );
 	SIR_TEST_CHECK( registry.validateEvent( 25, arguments ) == SIR_SCRIPT_OK );
 	SIR_TEST_CHECK( registry.validateEvent( 25, { nullptr, 0, 1 } ) == SIR_SCRIPT_TYPE_MISMATCH );
 	SIR_TEST_CHECK( registry.validateEvent( 26, arguments ) == SIR_SCRIPT_NOT_FOUND );

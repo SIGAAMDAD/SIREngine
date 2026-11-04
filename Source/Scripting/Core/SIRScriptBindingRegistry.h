@@ -64,6 +64,17 @@ typedef struct sirScriptFunctionEntry_s
 	void *pUser;
 } sirScriptFunctionEntry_t;
 
+// Typed request shared by GraphVM and native host dispatch. Descriptor
+// layout, effects and revision remain owned by the published registry.
+typedef struct sirScriptNativeInvocation_s
+{
+	uint64_t nFunctionId;
+	uint64_t nSignatureId;
+	uint32_t nBindingRevision;
+	sirScriptReadFrame_t arguments;
+	sirScriptWriteFrame_t result;
+} sirScriptNativeInvocation_t;
+
 class SIRScriptBindingRegistry
 {
 public:
@@ -81,8 +92,7 @@ public:
 	sirScriptResult_t validateEvent( uint64_t nEventTypeId, sirScriptReadFrame_t payload ) const noexcept;
 	sirScriptResult_t validateQueuedEvent( uint64_t nEventTypeId, sirScriptReadFrame_t payload ) const noexcept;
 	sirScriptResult_t validateQueuedFrame( uint64_t nTypeId, sirScriptReadFrame_t frame ) const noexcept;
-	sirScriptResult_t invokeNative( uint64_t nFunctionId, uint64_t nSignatureId, uint32_t nBindingRevision, sirScriptReadFrame_t arguments,
-	                                sirScriptWriteFrame_t result ) const noexcept;
+	sirScriptResult_t invokeNative( const sirScriptNativeInvocation_t& request ) const noexcept;
 
 private:
 	static constexpr uint32_t MAX_TYPES = 64;
