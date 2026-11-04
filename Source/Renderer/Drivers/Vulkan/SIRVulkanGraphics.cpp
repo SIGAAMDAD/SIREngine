@@ -45,9 +45,8 @@ static sirGraphicsResult_t sirVulkanToGraphicsResult( sirVulkanResult_t eResult 
 	}
 }
 
-
-sirGraphicsResult_t sirVulkanDescribeAdapter( uint32_t nAdapterIndex, const sirVulkanAdapterInfo_t& native,
-                                               sirGraphicsAdapterInfo_t *pInfo ) noexcept
+sirGraphicsResult_t sirVulkanDescribeAdapter( uint32_t nAdapterIndex, const sirVulkanAdapterInfo_t &native,
+                                              sirGraphicsAdapterInfo_t *pInfo ) noexcept
 {
 	if ( pInfo == nullptr ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;

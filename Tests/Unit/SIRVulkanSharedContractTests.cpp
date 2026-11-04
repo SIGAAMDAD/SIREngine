@@ -36,16 +36,15 @@ int main( void )
 	nativeAdapter.bSoftwareAdapter = true;
 	memcpy( nativeAdapter.szDeviceName, "Synthetic Vulkan", sizeof( "Synthetic Vulkan" ) );
 	sirGraphicsAdapterInfo_t reported = {};
-	if ( sirVulkanDescribeAdapter( 3, nativeAdapter, &reported ) != SIR_GRAPHICS_SUCCESS ||
-	     reported.nAdapterIndex != 3 || reported.nVendorId != 0x1234 ||
-	     reported.nFeatureMask != SIR_GRAPHICS_FEATURE_COMPUTE || !reported.bSoftwareAdapter ||
+	if ( sirVulkanDescribeAdapter( 3, nativeAdapter, &reported ) != SIR_GRAPHICS_SUCCESS || reported.nAdapterIndex != 3 ||
+	     reported.nVendorId != 0x1234 || reported.nFeatureMask != SIR_GRAPHICS_FEATURE_COMPUTE || !reported.bSoftwareAdapter ||
 	     sirVulkanDescribeAdapter( 0, nativeAdapter, nullptr ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
 		return 8;
 	}
 	nativeAdapter.bComputeCapable = false;
 	nativeAdapter.bSoftwareAdapter = false;
-	if ( sirVulkanDescribeAdapter( 0, nativeAdapter, &reported ) != SIR_GRAPHICS_SUCCESS ||
-	     reported.nFeatureMask != 0 || reported.bSoftwareAdapter ) {
+	if ( sirVulkanDescribeAdapter( 0, nativeAdapter, &reported ) != SIR_GRAPHICS_SUCCESS || reported.nFeatureMask != 0 ||
+	     reported.bSoftwareAdapter ) {
 		return 9;
 	}
 

@@ -62,8 +62,7 @@ int main( void )
 	sirGraphicsAdapterInfo_t adapter = {};
 	if ( driver.getAdapterCount( &nAdapterCount ) != SIR_GRAPHICS_SUCCESS || nAdapterCount == 0 ||
 	     driver.queryAdapter( 0, &adapter ) != SIR_GRAPHICS_SUCCESS ||
-	     ( adapter.nFeatureMask & SIR_GRAPHICS_FEATURE_COMPUTE ) !=
-	         ( capabilities.nFeatureMask & SIR_GRAPHICS_FEATURE_COMPUTE ) ) {
+	     ( adapter.nFeatureMask & SIR_GRAPHICS_FEATURE_COMPUTE ) != ( capabilities.nFeatureMask & SIR_GRAPHICS_FEATURE_COMPUTE ) ) {
 		return 44;
 	}
 	sirGraphicsSelection_t selection = {};
@@ -119,8 +118,7 @@ int main( void )
 	     pDevice->retireResource( hCompute, pipelineCompletion ) != SIR_GRAPHICS_INVALID_HANDLE ) {
 		return 38;
 	}
-	if ( computeCompleted.nValue != 0 &&
-	     pDevice->wait( computeCompleted, 5000000000ULL ) != SIR_GRAPHICS_SUCCESS ) {
+	if ( computeCompleted.nValue != 0 && pDevice->wait( computeCompleted, 5000000000ULL ) != SIR_GRAPHICS_SUCCESS ) {
 		return 40;
 	}
 

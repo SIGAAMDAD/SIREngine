@@ -96,8 +96,8 @@ sirGraphicsResult_t sirVulkanPlanImageBarrier( const sirGraphicsBarrier_t &barri
                                                sirVulkanImageBarrier_t *pNative ) noexcept;
 sirGraphicsResult_t sirVulkanPlanBufferBarrier( const sirGraphicsBarrier_t &barrier, const sirVulkanBuffer_t *pBuffer,
                                                 sirVulkanBufferBarrier_t *pNative ) noexcept;
-sirGraphicsResult_t sirVulkanDescribeAdapter( uint32_t nAdapterIndex, const sirVulkanAdapterInfo_t& native,
-                                               sirGraphicsAdapterInfo_t *pInfo ) noexcept;
+sirGraphicsResult_t sirVulkanDescribeAdapter( uint32_t nAdapterIndex, const sirVulkanAdapterInfo_t &native,
+                                              sirGraphicsAdapterInfo_t *pInfo ) noexcept;
 
 // Each command list records up to eight ordered operations without CPU
 // allocation. Native submission validates the whole stream atomically.
