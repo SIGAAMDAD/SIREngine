@@ -146,8 +146,7 @@ sirGraphicsResult_t sirHiZBuildReference( const sirHiZLayout_t& layout, const si
 	     layout.nTexelCount > ( uint64_t )SIZE_MAX / sizeof( float ) ) {
 		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
 	}
-	if ( sirVisibilityRangesOverlap( source.pDepth, nRequiredInput * sizeof( float ), pOutput,
-	                                 layout.nTexelCount * sizeof( float ) ) ) {
+	if ( sirVisibilityRangesOverlap( source.pDepth, nRequiredInput * sizeof( float ), pOutput, layout.nTexelCount * sizeof( float ) ) ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	for ( uint32_t nY = 0; nY < layout.nHeight; ++nY ) {
@@ -264,6 +263,9 @@ sirGraphicsResult_t sirVisibilityCullReference( const sirVisibilityCullDesc_t& d
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( desc.nCandidateCount != 0 && desc.pCandidates == nullptr ) {
+/home/runner/work/SIREngine/SIREngine/Source/Renderer/Visibility/SIRVisibilityFoundation.h:153:128: error: code should be clang-formatted [-Wclang-format-violations]
+sirGraphicsResult_t sirVisibilityCullReference( const sirVisibilityCullDesc_t& desc, sirVisibilityOutput_t *pOutput ) noexcept;
+                                                                                                                               ^
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( desc.bHistoryValid && ( desc.pPyramid == nullptr || desc.nPyramidTexels < desc.pLayout->nTexelCount ) ) {

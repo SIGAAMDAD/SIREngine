@@ -152,7 +152,6 @@ sirGraphicsResult_t sirHiZTestRectangle( const sirHiZLayout_t& layout, const flo
 // before publishing results; does not allocate or partially update the output.
 sirGraphicsResult_t sirVisibilityCullReference( const sirVisibilityCullDesc_t& desc, sirVisibilityOutput_t *pOutput ) noexcept;
 
-
 // HIZ-00 v1: fixed-width modes, mip/index layout and shared CPU/GPU ABI.
 // Device residency, synchronization and serialized resource identity are
 // represented by later system contracts, not hidden in these reference PODs.
