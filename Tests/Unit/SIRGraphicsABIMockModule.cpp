@@ -31,7 +31,8 @@ static uint32_t s_nDeviceIdentity = 23;
 
 static bool mockHasGraphicsModels( void ) noexcept
 {
-	return s_nMockMode == 10 || ( s_nMockMode >= 14 && s_nMockMode <= 18 );
+	return s_nMockMode == 10 || ( s_nMockMode >= 14 && s_nMockMode <= 18 ) ||
+	       ( s_nMockMode >= 26 && s_nMockMode <= 29 );
 }
 
 extern "C" SIR_TEST_EXPORT void SIRSetGraphicsABIMockMode( uint32_t nMode ) noexcept
@@ -107,6 +108,9 @@ static uint32_t mockQueryCapabilities( void *, sirGraphicsABICapabilities_t *pIn
 		pInfo->nEnabledFeatures |= SIR_GRAPHICS_FEATURE_GRAPHICS | SIR_GRAPHICS_FEATURE_FIXED_FUNCTION;
 		pInfo->nPipelineModelMask = ( 1U << SIR_GRAPHICS_PIPELINE_MODEL_FIXED_FUNCTION ) - 1U;
 		pInfo->nMaximumColorAttachments = 1;
+	}
+	if ( s_nMockMode >= 26 && s_nMockMode <= 29 ) {
+		pInfo->nEnabledFeatures |= SIR_GRAPHICS_FEATURE_PRESENT;
 	}
 	pInfo->nEnabledQueues = 1U << SIR_GRAPHICS_QUEUE_DIRECT;
 	pInfo->nMaximumFramesInFlight = 2;
@@ -341,26 +345,63 @@ static uint32_t mockInvalidateBuffer( void *, const sirGraphicsABIBufferRange_t 
 	return SIR_GRAPHICS_ABI_UNSUPPORTED;
 }
 
-static uint32_t mockCreateSurface( void *, const sirGraphicsABINativeSurface_t *, const sirGraphicsABIPresentDesc_t *,
-                                   sirGraphicsHandle_t * ) noexcept
+static uint32_t mockCreateSurface( void *, const sirGraphicsABINativeSurface_t *pNative,
+                                   const sirGraphicsABIPresentDesc_t *pPresent, sirGraphicsHandle_t *pSurface ) noexcept
 {
-	return SIR_GRAPHICS_ABI_UNSUPPORTED;
+	if ( pNative == nullptr || pPresent == nullptr || pSurface == nullptr ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	if ( s_nMockMode < 26 || s_nMockMode > 29 ) {
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
+	if ( s_nMockMode == 28 ) {
+		return SIR_GRAPHICS_DEVICE_LOST;
+	}
+	*pSurface = { 8, 1, s_nMockMode == 27 ? 4U : 5U, SIR_GRAPHICS_HANDLE_SURFACE };
+	return SIR_GRAPHICS_SUCCESS;
 }
 
-static uint32_t mockResizeSurface( void *, sirGraphicsHandle_t, const sirGraphicsABINativeSurface_t *,
-                                   const sirGraphicsABIPresentDesc_t * ) noexcept
+static uint32_t mockResizeSurface( void *, sirGraphicsHandle_t hSurface, const sirGraphicsABINativeSurface_t *pNative,
+                                   const sirGraphicsABIPresentDesc_t *pPresent ) noexcept
 {
-	return SIR_GRAPHICS_ABI_UNSUPPORTED;
+	if ( pNative == nullptr || pPresent == nullptr || hSurface.eType != SIR_GRAPHICS_HANDLE_SURFACE ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	if ( s_nMockMode == 28 ) {
+		return SIR_GRAPHICS_DEVICE_LOST;
+	}
+	return s_nMockMode == 26 ? SIR_GRAPHICS_SUCCESS : SIR_GRAPHICS_UNSUPPORTED;
 }
 
-static uint32_t mockAcquireSurfaceImage( void *, sirGraphicsHandle_t, sirGraphicsSurfaceImage_t * ) noexcept
+static uint32_t mockAcquireSurfaceImage( void *, sirGraphicsHandle_t hSurface, sirGraphicsSurfaceImage_t *pImage ) noexcept
 {
-	return SIR_GRAPHICS_ABI_UNSUPPORTED;
+	if ( pImage == nullptr || hSurface.eType != SIR_GRAPHICS_HANDLE_SURFACE ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	if ( s_nMockMode == 28 ) {
+		return SIR_GRAPHICS_DEVICE_LOST;
+	}
+	if ( s_nMockMode < 26 || s_nMockMode > 29 ) {
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
+	*pImage = {};
+	pImage->hSurface = hSurface;
+	pImage->hImage = { 9, 1, s_nMockMode == 27 ? 4U : 5U, SIR_GRAPHICS_HANDLE_TEXTURE };
+	pImage->nAcquisitionId = s_nMockMode == 29 ? 0 : 41;
+	pImage->nWindowGeneration = 11;
+	return SIR_GRAPHICS_SUCCESS;
 }
 
-static uint32_t mockPresent( void *, const sirGraphicsSurfaceImage_t *, const sirGraphicsCompletion_t * ) noexcept
+static uint32_t mockPresent( void *, const sirGraphicsSurfaceImage_t *pImage, const sirGraphicsCompletion_t *pComplete ) noexcept
 {
-	return SIR_GRAPHICS_ABI_UNSUPPORTED;
+	if ( pImage == nullptr || pComplete == nullptr || pImage->nAcquisitionId == 0 ||
+	     pComplete->eQueue != SIR_GRAPHICS_QUEUE_DIRECT ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	if ( s_nMockMode == 28 ) {
+		return SIR_GRAPHICS_DEVICE_LOST;
+	}
+	return s_nMockMode == 26 ? SIR_GRAPHICS_SUCCESS : SIR_GRAPHICS_UNSUPPORTED;
 }
 static uint32_t mockCmdReset( void * ) noexcept
 {

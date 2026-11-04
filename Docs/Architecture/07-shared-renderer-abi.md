@@ -143,3 +143,14 @@ The native submission ABI still receives driver-owned opaque command-context poi
 The new host helpers do not own or copy command-list data and do not assume a particular queue implementation (Vulkan, D3D12, OpenGL or software). Native backends remain responsible for command-list lifetime, actual submission synchronization, single-use acquisition consumption, and GPU/device-loss recovery. The DLL/DSO mock tests cover unsupported queues, malformed tables, stale native generations, invalid submission waits, duplicate command pointers, invalid returned completions and DEVICE_LOST.
 
 **ABI v1.0 remains unchanged**: these are host-only functions layered over the existing native driver function table. ABI-05 is not complete until platform drivers and native state-machine tests pass.
+
+
+### ABI-05 window/surface lifecycle admission
+
+The host-side binary ABI v1 adds `sirGraphicsCreateABISurface`, `sirGraphicsResizeABISurface`, `sirGraphicsAcquireABISurfaceImage` and `sirGraphicsPresentABISurfaceImage`. No binary driver callback or ABI version was changed. The native driver remains the sole owner of window surfaces, images, synchronization reservations and present semantics; host wrappers only validate and dispatch.
+
+The surface description is size-tagged, carries a supported Win32/X11/Wayland platform, non-null window and nonzero window generation, and bounds the requested backbuffer count, dimensions, present mode, tearing/HDR flags and surface format. Device-enabled PRESENT capability and DIRECT queue are mandatory. HDR requests require HDR_OUTPUT. Format support is validated against the enabled adapter's optimal color-attachment format and non-MSAA sample-1 mask; the driver may reject platform-specific surface support. Surface creation publishes only a valid type/generation handle.
+
+Acquire validates a live surface and checks that the native response references **the same surface handle**, a valid texture handle from the current device, a nonzero one-use acquisition identity and window generation. Present requires the exact current device generation, DIRECT queue completion token and valid surface/image reservation metadata. Validation or native failure never mutates caller-owned result objects; DEVICE_LOST propagates unchanged. Resize does not magically preserve old acquisitions: the driver must invalidate stale image and window generations and enforce its own WSI state machine.
+
+The independent mock driver tests use a synthetic PRESENT device and cover normal create/resize/acquire/present, headless rejection, disabled HDR, malformed dimensions, stale returned surface/image handles, invalid acquisition IDs and device-loss propagation. **Native Vulkan/D3D12 WSI and visual swapchain conformance have not been demonstrated.** ABI-05 remains open pending real backend acceptance.

@@ -738,6 +738,82 @@ static bool testBinaryModule( void ) noexcept
 	     nDone != 7 ) {
 		return false;
 	}
+	// WSI is explicitly device-admitted: headless compute cannot publish
+	// a surface, and native surface/acquisition generations are checked.
+	sirGraphicsABINativeSurface_t native = {};
+	native.nSize = sizeof( native );
+	native.nPlatform = SIR_GRAPHICS_SURFACE_X11;
+	native.pWindow = &module;
+	native.pDisplayOrInstance = &module;
+	native.nWindowGeneration = 11;
+	sirGraphicsABIPresentDesc_t present = {};
+	present.nSize = sizeof( present );
+	present.nWidth = 640;
+	present.nHeight = 480;
+	present.nBackbufferCount = 2;
+	present.nFormat = SIR_GRAPHICS_FORMAT_RGBA8_UNORM;
+	present.nMode = SIR_GRAPHICS_PRESENT_FIFO;
+	sirGraphicsHandle_t hSurface = { 99, 1, 5, SIR_GRAPHICS_HANDLE_SURFACE };
+	if ( sirGraphicsCreateABISurface( &device, &native, &present, &hSurface ) != SIR_GRAPHICS_UNSUPPORTED ||
+	     hSurface.nSlot != 99 ) {
+		return false;
+	}
+	pMode( 26 );
+	if ( sirGraphicsCreateABISurface( &device, &native, &present, &hSurface ) != SIR_GRAPHICS_SUCCESS ||
+	     hSurface.eType != SIR_GRAPHICS_HANDLE_SURFACE || hSurface.nSlot != 8 ) {
+		return false;
+	}
+	if ( sirGraphicsResizeABISurface( &device, hSurface, &native, &present ) != SIR_GRAPHICS_SUCCESS ) {
+		return false;
+	}
+	sirGraphicsSurfaceImage_t surfaceImage = {};
+	if ( sirGraphicsAcquireABISurfaceImage( &device, hSurface, &surfaceImage ) != SIR_GRAPHICS_SUCCESS ||
+	     surfaceImage.hImage.eType != SIR_GRAPHICS_HANDLE_TEXTURE || surfaceImage.nAcquisitionId != 41 ) {
+		return false;
+	}
+	const sirGraphicsCompletion_t presentCompletion = { 5, SIR_GRAPHICS_QUEUE_DIRECT, 1 };
+	if ( sirGraphicsPresentABISurfaceImage( &device, &surfaceImage, &presentCompletion ) != SIR_GRAPHICS_SUCCESS ) {
+		return false;
+	}
+	present.nWidth = 0;
+	if ( sirGraphicsResizeABISurface( &device, hSurface, &native, &present ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return false;
+	}
+	present.nWidth = 640;
+	present.nHdr = 1;
+	if ( sirGraphicsCreateABISurface( &device, &native, &present, &hSurface ) != SIR_GRAPHICS_UNSUPPORTED ) {
+		return false;
+	}
+	present.nHdr = 0;
+	const sirGraphicsHandle_t validSurface = hSurface;
+	const sirGraphicsSurfaceImage_t validImage = surfaceImage;
+	pMode( 27 );
+	if ( sirGraphicsCreateABISurface( &device, &native, &present, &hSurface ) != SIR_GRAPHICS_DRIVER_ERROR ||
+	     hSurface.nSlot != validSurface.nSlot ||
+	     sirGraphicsAcquireABISurfaceImage( &device, hSurface, &surfaceImage ) != SIR_GRAPHICS_DRIVER_ERROR ||
+	     surfaceImage.nAcquisitionId != validImage.nAcquisitionId ) {
+		return false;
+	}
+	pMode( 29 );
+	if ( sirGraphicsAcquireABISurfaceImage( &device, hSurface, &surfaceImage ) != SIR_GRAPHICS_DRIVER_ERROR ||
+	     surfaceImage.nAcquisitionId != validImage.nAcquisitionId ) {
+		return false;
+	}
+	pMode( 28 );
+	if ( sirGraphicsCreateABISurface( &device, &native, &present, &hSurface ) != SIR_GRAPHICS_DEVICE_LOST ||
+	     sirGraphicsResizeABISurface( &device, hSurface, &native, &present ) != SIR_GRAPHICS_DEVICE_LOST ||
+	     sirGraphicsAcquireABISurfaceImage( &device, hSurface, &surfaceImage ) != SIR_GRAPHICS_DEVICE_LOST ||
+	     sirGraphicsPresentABISurfaceImage( &device, &surfaceImage, &presentCompletion ) != SIR_GRAPHICS_DEVICE_LOST ) {
+		return false;
+	}
+	pMode( 26 );
+	sirGraphicsCompletion_t invalidPresent = presentCompletion;
+	invalidPresent.nDeviceGeneration = 4;
+	if ( sirGraphicsPresentABISurfaceImage( &device, &surfaceImage, &invalidPresent ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return false;
+	}
+	pMode( 0 );
+
 	sirGraphicsMemoryBudget_t budget = {};
 	if ( sirGraphicsQueryABIMemoryBudget( &device, &budget ) != SIR_GRAPHICS_SUCCESS ||
 	     budget.nBudgetBytes != 1024U * 1024U ) {

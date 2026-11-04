@@ -95,6 +95,21 @@ sirGraphicsABIResult_t sirGraphicsPollABICompletion( const sirGraphicsABIDevice_
 sirGraphicsABIResult_t sirGraphicsWaitABICompletion( const sirGraphicsABIDevice_t *pDevice,
                                                      const sirGraphicsCompletion_t *pCompletion, uint64_t nTimeoutNs ) noexcept;
 
+// Host-side WSI contract: the native driver owns the surface, swapchain,
+// acquired image and one-use presentation synchronization.
+sirGraphicsABIResult_t sirGraphicsCreateABISurface( const sirGraphicsABIDevice_t *pDevice,
+                                                    const sirGraphicsABINativeSurface_t *pNative,
+                                                    const sirGraphicsABIPresentDesc_t *pPresent,
+                                                    sirGraphicsHandle_t *pSurface ) noexcept;
+sirGraphicsABIResult_t sirGraphicsResizeABISurface( const sirGraphicsABIDevice_t *pDevice, sirGraphicsHandle_t hSurface,
+                                                    const sirGraphicsABINativeSurface_t *pNative,
+                                                    const sirGraphicsABIPresentDesc_t *pPresent ) noexcept;
+sirGraphicsABIResult_t sirGraphicsAcquireABISurfaceImage( const sirGraphicsABIDevice_t *pDevice, sirGraphicsHandle_t hSurface,
+                                                          sirGraphicsSurfaceImage_t *pImage ) noexcept;
+sirGraphicsABIResult_t sirGraphicsPresentABISurfaceImage( const sirGraphicsABIDevice_t *pDevice,
+                                                          const sirGraphicsSurfaceImage_t *pImage,
+                                                          const sirGraphicsCompletion_t *pCompletion ) noexcept;
+
 // Returns a validated snapshot of the native device's current memory budget.
 // A zero native budget is an unknown limit, not a guaranteed free allocation.
 // The output is unchanged on driver error or incoherent counters.
