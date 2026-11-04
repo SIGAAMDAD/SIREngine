@@ -33,6 +33,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <dxgi1_6.h>
 #include <wrl/client.h>
 #include <Renderer/Drivers/D3D12/SIRD3D12Memory.h>
+#include <Renderer/Drivers/D3D12/SIRD3D12Diagnostics.h>
 #include <Renderer/SIRGraphicsTypes.h>
 #include <Renderer/Drivers/D3D12/SIRD3D12ComputeKernel.h>
 #include <Renderer/Drivers/D3D12/SIRD3D12GraphicsKernel.h>
@@ -130,6 +131,7 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12Fence> m_pGraphicsFence;
 	Microsoft::WRL::ComPtr<ID3D12Fence> m_pDirectComputeDependency;
 	SIRD3D12Memory m_Memory;
+	SIRD3D12Diagnostics m_Diagnostics;
 	SIRD3D12Transfers m_Transfers;
 	SIRD3D12ComputeQueue m_ComputeQueue;
 	SIRD3D12GraphicsKernel m_GraphicsKernel;
@@ -150,12 +152,16 @@ public:
 	SIRD3D12Device( const SIRD3D12Device & ) = delete;
 	SIRD3D12Device &operator=( const SIRD3D12Device & ) = delete;
 
-	bool initialize( bool bUseWarp, const sirD3D12TransferPoolConfig_t &transferConfig, SIRGeneralHeap *pCpuHeap = nullptr ) noexcept;
+	bool initialize( bool bUseWarp, const sirD3D12TransferPoolConfig_t &transferConfig, SIRGeneralHeap *pCpuHeap = nullptr,
+	                 const sirD3D12DiagnosticConfig_t &diagnostics = {} ) noexcept;
 	void shutdown( void ) noexcept;
 	bool isReady( void ) const noexcept;
 	bool queryAdapterInfo( sirD3D12AdapterInfo_t *pInfo ) const noexcept;
 	bool queryLocalMemory( sirD3D12MemoryInfo_t *pInfo ) const noexcept;
 	bool queryAllocationLedger( sirD3D12AllocationLedger_t *pLedger ) const noexcept;
+	bool queryDiagnostics( sirD3D12DiagnosticSnapshot_t *pSnapshot ) noexcept;
+	bool checkDeviceHealth( void ) noexcept;
+	void captureDeviceFailure( HRESULT nResult ) noexcept;
 	bool queryUnifiedMemory( bool *pUnified ) const noexcept;
 	HRESULT getLastError( void ) const noexcept;
 	ID3D12Device *getNativeDevice( void ) const noexcept;

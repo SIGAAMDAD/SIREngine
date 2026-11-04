@@ -50,6 +50,8 @@ public:
 	SIRD3D12RenderingDevice &operator=( const SIRD3D12RenderingDevice & ) = delete;
 
 	sirGraphicsResult_t initialize( bool bSoftware, const sirGraphicsDeviceCreateDesc_t &desc ) noexcept;
+	// Native-only snapshot for debug tools and hardware test harnesses.
+	sirGraphicsResult_t queryNativeDiagnostics( sirD3D12DiagnosticSnapshot_t *pSnapshot ) noexcept;
 
 	sirGraphicsBackend_t getBackend( void ) const noexcept override;
 	uint32_t getDeviceGeneration( void ) const noexcept override;
