@@ -54,8 +54,8 @@ int main( void )
 	image.header.eProvider = SIR_AUDIO_PROVIDER_FMOD;
 	image.header.nEndianness = SIR_AUDIO_MANIFEST_LITTLE_ENDIAN;
 	image.package = { 1, 101, 0, 0, 0 };
-	image.header.nContentHash = SIRAudioResourceStore::hashPayload(
-	    ( const uint8_t * )&image + sizeof( image.header.nContentHash ), sizeof( image ) - sizeof( image.header.nContentHash ) );
+	image.header.nContentHash = SIRAudioResourceStore::hashPayload( ( const uint8_t * )&image + sizeof( image.header.nContentHash ),
+	                                                                sizeof( image ) - sizeof( image.header.nContentHash ) );
 	SIRAudioResourceStore manifest;
 	if ( manifest.load( &image, sizeof( image ), SIR_AUDIO_PROVIDER_FMOD, 0, &allocator ) != SIR_AUDIO_MANIFEST_OK ) {
 		return 1;
