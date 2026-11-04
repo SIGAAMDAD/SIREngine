@@ -1,0 +1,4 @@
+add_executable(SIRStreamingReconcileTests SIRStreamingReconcileTests.cpp)
+target_link_libraries(SIRStreamingReconcileTests PRIVATE SIR::World)
+add_test(NAME streaming.world.reconcile COMMAND SIRStreamingReconcileTests)
+sir_configure_owned_target(SIRStreamingReconcileTests)

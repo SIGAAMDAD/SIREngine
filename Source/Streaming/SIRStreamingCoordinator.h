@@ -18,11 +18,9 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <SIRPCH.hpp>
 
-// clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
 	#pragma once
 #endif
-// clang-format on
 
 #include <Streaming/SIRStreamingTypes.h>
 
@@ -59,6 +57,9 @@ public:
 	// Each consumer submits its own demand. The future GRDG coordinator merges
 	// identical physical resource requests without creating duplicate payloads.
 	sirStreamingResult_t submit( const sirStreamingDemand_t &demand, sirStreamingTicket_t *pTicket ) noexcept;
+	// Refresh an existing ticket without restarting its provider work. Cannot
+	// revive cancellation or demote already-active provider resources.
+	sirStreamingResult_t updateDemand( sirStreamingTicket_t ticket, const sirStreamingDemand_t &demand ) noexcept;
 	sirStreamingResult_t query( sirStreamingTicket_t ticket, sirStreamingSnapshot_t *pSnapshot ) const noexcept;
 	sirStreamingResult_t advance( sirStreamingTicket_t ticket, sirStreamingStage_t eNextStage ) noexcept;
 	sirStreamingResult_t cancel( sirStreamingTicket_t ticket ) noexcept;

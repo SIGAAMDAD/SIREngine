@@ -20,8 +20,15 @@ and completion transfer. Core Jobs owns scheduling and worker/provider fences.
 - Cancellation of queued work frees its ticket; an in-flight or provider-owned
   operation stays pinned until completion and retirement acknowledgements.
   The engine must drain outstanding tickets before `shutdown` succeeds.
-- `submit`, `advance`, `cancel`, and `query` are owner-thread operations only.
+- `submit`, `updateDemand`, `advance`, `cancel`, and `query` are owner-thread operations only.
   Core Jobs will carry cross-thread producer messages when integrated.
+
+- `SIRStreamingDemandReconciler` consumes complete World Partition demand epochs,
+  preserves stable tickets, refreshes priorities/deadlines and target states,
+  cancels removed cells, and defers provider-pinned re-entry until retirement.
+  It does not advance physical provider or GRDG resource state.
+- Demand-set validation rejects stale epochs, duplicate keys, invalid ownership
+  and over-capacity snapshots before modifying coordinator tickets.
 
 ## Module boundaries for the complete system
 
@@ -52,6 +59,6 @@ and completion transfer. Core Jobs owns scheduling and worker/provider fences.
    test teleport, stale generations, cancellations and safe retirement.
 6. Measure budgets, p50/p95/p99 load-to-active latency and frame-time hitches.
 
-**Current limitation:** the new world partition generates demand but this branch does not stream bytes, cook packages,
+**Current limitation:** World Partition demand generation and ticket reconciliation are connected, but the branch does not stream bytes, cook packages,
 activate worlds or claim integration with unmerged PR #23. It establishes the
 buildable, tested demand/state authority and leaves data-plane ownership intact.

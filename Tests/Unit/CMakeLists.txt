@@ -99,3 +99,5 @@ sir_configure_owned_target(SIRGraphicsInterfaceTests)
 include(${CMAKE_CURRENT_SOURCE_DIR}/StreamingTests.cmake)
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/WorldPartitionTests.cmake)
+
+include(${CMAKE_CURRENT_SOURCE_DIR}/StreamingReconcileTests.cmake)
