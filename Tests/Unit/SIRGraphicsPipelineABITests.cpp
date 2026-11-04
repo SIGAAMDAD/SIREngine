@@ -106,6 +106,53 @@ static bool testModern( void ) noexcept
 		return false;
 	}
 	pipeline.nBindingCount = 0;
+	sirGraphicsBindingDesc_t binding = {};
+	binding.nBinding = 0;
+	binding.nArrayCount = 1;
+	binding.nShaderStageMask = SIR_GRAPHICS_STAGE_VERTEX;
+	binding.eType = SIR_GRAPHICS_BINDING_SAMPLED_TEXTURE;
+	pipeline.pBindings = &binding;
+	pipeline.nBindingCount = 1;
+	if ( !checkResult( sirGraphicsValidateABIPipeline( &pipeline, &caps ), SIR_GRAPHICS_SUCCESS, "valid binding" ) ) {
+		return false;
+	}
+	binding.nBinding = 16;
+	if ( !checkResult( sirGraphicsValidateABIPipeline( &pipeline, &caps ), SIR_GRAPHICS_UNSUPPORTED, "binding index limit" ) ) {
+		return false;
+	}
+	binding.nBinding = 0;
+	binding.nArrayCount = 20;
+	if ( !checkResult( sirGraphicsValidateABIPipeline( &pipeline, &caps ), SIR_GRAPHICS_UNSUPPORTED, "binding array limit" ) ) {
+		return false;
+	}
+	binding.nArrayCount = 1;
+	binding.nShaderStageMask = SIR_GRAPHICS_STAGE_COMPUTE;
+	if ( !checkResult( sirGraphicsValidateABIPipeline( &pipeline, &caps ), SIR_GRAPHICS_INVALID_ARGUMENT, "graphics stage mismatch" ) ) {
+		return false;
+	}
+	pipeline.nBindingCount = 0;
+	pipeline.pBindings = nullptr;
+	pipeline.szColorFormats[0] = SIR_GRAPHICS_FORMAT_D16_UNORM;
+	if ( !checkResult( sirGraphicsValidateABIPipeline( &pipeline, &caps ), SIR_GRAPHICS_INVALID_ARGUMENT, "depth-as-color" ) ) {
+		return false;
+	}
+	pipeline.szColorFormats[0] = SIR_GRAPHICS_FORMAT_RGBA8_UNORM;
+	pipeline.szBlendStates[0].nEnabled = 1;
+	pipeline.szBlendStates[0].nSourceColor = 99;
+	if ( !checkResult( sirGraphicsValidateABIPipeline( &pipeline, &caps ), SIR_GRAPHICS_INVALID_ARGUMENT, "invalid blend" ) ) {
+		return false;
+	}
+	pipeline.szBlendStates[0] = {};
+	sirGraphicsVertexAttribute_t attribute = {};
+	attribute.nLocation = 16;
+	attribute.eFormat = SIR_GRAPHICS_FORMAT_RGBA8_UNORM;
+	pipeline.pAttributes = &attribute;
+	pipeline.nAttributeCount = 1;
+	if ( !checkResult( sirGraphicsValidateABIPipeline( &pipeline, &caps ), SIR_GRAPHICS_UNSUPPORTED, "vertex attribute slot" ) ) {
+		return false;
+	}
+	pipeline.nAttributeCount = 0;
+	pipeline.pAttributes = nullptr;
 	pipeline.nType = SIR_GRAPHICS_PIPELINE_COMPUTE;
 	pipeline.nColorFormatCount = 0;
 	pipeline.vertexShader = {};

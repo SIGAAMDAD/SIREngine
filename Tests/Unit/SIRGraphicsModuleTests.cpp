@@ -202,6 +202,52 @@ static bool testBinaryModule( void ) noexcept
 	     modelCaps.nShaderStageMask != 0 || modelCaps.nMaximumTextureStages != 4 ) {
 		return false;
 	}
+	sirGraphicsABIProgrammableRecipe_t programmable = {};
+	programmable.nSize = sizeof( programmable );
+	programmable.nVertexShaderProfile = 101;
+	programmable.nFragmentShaderProfile = 101;
+	programmable.nTextureUnits = 1;
+	programmable.nVaryings = 1;
+	programmable.nConstantSlots = 1;
+	sirGraphicsABIPipeline_t programmablePipeline = {};
+	programmablePipeline.nSize = sizeof( programmablePipeline );
+	programmablePipeline.nModel = SIR_GRAPHICS_PIPELINE_MODEL_PROGRAMMABLE;
+	programmablePipeline.nType = SIR_GRAPHICS_PIPELINE_GRAPHICS;
+	programmablePipeline.nSampleCount = 1;
+	programmablePipeline.nColorFormatCount = 1;
+	programmablePipeline.szColorFormats[0] = SIR_GRAPHICS_FORMAT_RGBA8_UNORM;
+	programmablePipeline.vertexShader = { sizeof( sirGraphicsABIShaderCode_t ), SIR_GRAPHICS_SHADER_GLSL, &nShaderCode, 4, 1, "main" };
+	programmablePipeline.pixelShader = { sizeof( sirGraphicsABIShaderCode_t ), SIR_GRAPHICS_SHADER_GLSL, &nShaderCode, 4, 2, "main" };
+	programmablePipeline.pProgrammable = &programmable;
+	if ( sirGraphicsCreateABIPipeline( &device, &programmablePipeline, &hPipeline ) != SIR_GRAPHICS_SUCCESS ) {
+		return false;
+	}
+	programmable.nTextureUnits = 9;
+	if ( sirGraphicsCreateABIPipeline( &device, &programmablePipeline, &hPipeline ) != SIR_GRAPHICS_UNSUPPORTED ) {
+		return false;
+	}
+
+	sirGraphicsABIFixedRecipe_t fixed = {};
+	fixed.nSize = sizeof( fixed );
+	fixed.nRequiredFeatures = SIR_GRAPHICS_FIXED_TRANSFORM;
+	fixed.nFogMode = SIR_GRAPHICS_FIXED_FOG_NONE;
+	fixed.nAlphaCompare = SIR_GRAPHICS_COMPARE_ALWAYS;
+	fixed.fAlphaReference = 0.5f;
+	sirGraphicsABIPipeline_t fixedPipeline = {};
+	fixedPipeline.nSize = sizeof( fixedPipeline );
+	fixedPipeline.nModel = SIR_GRAPHICS_PIPELINE_MODEL_FIXED_FUNCTION;
+	fixedPipeline.nType = SIR_GRAPHICS_PIPELINE_FIXED_FUNCTION;
+	fixedPipeline.nSampleCount = 1;
+	fixedPipeline.nColorFormatCount = 1;
+	fixedPipeline.szColorFormats[0] = SIR_GRAPHICS_FORMAT_RGBA8_UNORM;
+	fixedPipeline.pFixed = &fixed;
+	if ( sirGraphicsCreateABIPipeline( &device, &fixedPipeline, &hPipeline ) != SIR_GRAPHICS_SUCCESS ) {
+		return false;
+	}
+	fixed.nTextureStageCount = 5;
+	if ( sirGraphicsCreateABIPipeline( &device, &fixedPipeline, &hPipeline ) != SIR_GRAPHICS_UNSUPPORTED ) {
+		return false;
+	}
 	pMode( 11 );
 	modelCaps.nDeviceGeneration = 77;
 	if ( sirGraphicsQueryABIPipelineModelCaps( &device, SIR_GRAPHICS_PIPELINE_MODEL_MODERN, &modelCaps ) != SIR_GRAPHICS_DRIVER_ERROR ||

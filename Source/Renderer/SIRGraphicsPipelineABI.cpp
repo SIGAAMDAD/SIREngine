@@ -125,6 +125,13 @@ sirGraphicsABIResult_t sirGraphicsValidateABIPipelineModelCaps( const sirGraphic
 		if ( pCaps->nMaximumVertexShaderProfile == 0 || pCaps->nMaximumFragmentShaderProfile == 0 ) {
 			return SIR_GRAPHICS_INVALID_ARGUMENT;
 		}
+		const uint32_t nModernStages = SIR_GRAPHICS_STAGE_COMPUTE | SIR_GRAPHICS_STAGE_MESH | SIR_GRAPHICS_STAGE_TASK;
+		if ( ( pCaps->nShaderStageMask & nModernStages ) != 0 ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
+		if ( ( pCaps->nRequiredFeatureMask & SIR_GRAPHICS_FEATURE_COMPUTE ) != 0 ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
 		if ( pCaps->nMaximumTextureUnits == 0 || pCaps->nMaximumVertexAttributes == 0 ) {
 			return SIR_GRAPHICS_INVALID_ARGUMENT;
 		}
@@ -162,6 +169,43 @@ static sirGraphicsABIResult_t sirGraphicsValidateABIPipelineCommon( const sirGra
 	     ( pPipeline->nAttributeCount > 0 && pPipeline->pAttributes == nullptr ) ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
+	const uint32_t nBoundStages = pPipeline->nType == SIR_GRAPHICS_PIPELINE_COMPUTE
+	                                  ? SIR_GRAPHICS_STAGE_COMPUTE
+	                                  : SIR_GRAPHICS_STAGE_VERTEX | SIR_GRAPHICS_STAGE_FRAGMENT;
+	for ( uint32_t iBinding = 0; iBinding < pPipeline->nBindingCount; ++iBinding ) {
+		const sirGraphicsBindingDesc_t *pBinding = &pPipeline->pBindings[iBinding];
+		if ( pBinding->nArrayCount == 0 || pBinding->nShaderStageMask == 0 ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
+		if ( pBinding->eType > SIR_GRAPHICS_BINDING_SAMPLER ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
+		if ( pBinding->nBinding >= pCaps->nMaximumBindings ||
+		     pBinding->nArrayCount > pCaps->nMaximumBindings - pBinding->nBinding ) {
+			return SIR_GRAPHICS_UNSUPPORTED;
+		}
+		if ( ( pBinding->nShaderStageMask & ~nBoundStages ) != 0 ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
+		if ( pPipeline->nModel == SIR_GRAPHICS_PIPELINE_MODEL_PROGRAMMABLE && pBinding->nSpace != 0 ) {
+			return SIR_GRAPHICS_UNSUPPORTED;
+		}
+		if ( pPipeline->nModel == SIR_GRAPHICS_PIPELINE_MODEL_PROGRAMMABLE &&
+		     pBinding->eType == SIR_GRAPHICS_BINDING_STORAGE_TEXTURE ) {
+			return SIR_GRAPHICS_UNSUPPORTED;
+		}
+	}
+	for ( uint32_t iAttribute = 0; iAttribute < pPipeline->nAttributeCount; ++iAttribute ) {
+		const sirGraphicsVertexAttribute_t *pAttribute = &pPipeline->pAttributes[iAttribute];
+		if ( pAttribute->nLocation >= pCaps->nMaximumVertexAttributes ||
+		     pAttribute->nBufferSlot >= pCaps->nMaximumVertexStreams ) {
+			return SIR_GRAPHICS_UNSUPPORTED;
+		}
+		if ( pAttribute->eFormat <= SIR_GRAPHICS_FORMAT_UNKNOWN ||
+		     pAttribute->eFormat > SIR_GRAPHICS_FORMAT_BC7_UNORM ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
+	}
 	if ( pPipeline->nColorFormatCount > pCaps->nMaximumColorAttachments || pPipeline->nColorFormatCount > 8 ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
@@ -179,14 +223,31 @@ static sirGraphicsABIResult_t sirGraphicsValidateABIPipelineCommon( const sirGra
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	for ( uint32_t i = 0; i < pPipeline->nColorFormatCount; ++i ) {
-		if ( pPipeline->szColorFormats[i] <= SIR_GRAPHICS_FORMAT_UNKNOWN || pPipeline->szColorFormats[i] > SIR_GRAPHICS_FORMAT_BC7_UNORM ) {
+		if ( pPipeline->szColorFormats[i] <= SIR_GRAPHICS_FORMAT_UNKNOWN ||
+		     pPipeline->szColorFormats[i] >= SIR_GRAPHICS_FORMAT_D16_UNORM ) {
 			return SIR_GRAPHICS_INVALID_ARGUMENT;
 		}
 		if ( pPipeline->szBlendStates[i].nEnabled > 1 || ( pPipeline->szBlendStates[i].nColorWriteMask & ~15U ) != 0 ) {
 			return SIR_GRAPHICS_INVALID_ARGUMENT;
 		}
+		const sirGraphicsABIBlendState_t *pBlend = &pPipeline->szBlendStates[i];
+		if ( pBlend->nEnabled != 0 ) {
+			if ( pBlend->nSourceColor > SIR_GRAPHICS_BLEND_ONE_MINUS_DST_ALPHA ||
+			     pBlend->nDestinationColor > SIR_GRAPHICS_BLEND_ONE_MINUS_DST_ALPHA ) {
+				return SIR_GRAPHICS_INVALID_ARGUMENT;
+			}
+			if ( pBlend->nSourceAlpha > SIR_GRAPHICS_BLEND_ONE_MINUS_DST_ALPHA ||
+			     pBlend->nDestinationAlpha > SIR_GRAPHICS_BLEND_ONE_MINUS_DST_ALPHA ) {
+				return SIR_GRAPHICS_INVALID_ARGUMENT;
+			}
+			if ( pBlend->nColorOperation > SIR_GRAPHICS_BLEND_MAX || pBlend->nAlphaOperation > SIR_GRAPHICS_BLEND_MAX ) {
+				return SIR_GRAPHICS_INVALID_ARGUMENT;
+			}
+		}
 	}
-	if ( pPipeline->nDepthFormat > SIR_GRAPHICS_FORMAT_BC7_UNORM ) {
+	if ( pPipeline->nDepthFormat != SIR_GRAPHICS_FORMAT_UNKNOWN &&
+	     ( pPipeline->nDepthFormat < SIR_GRAPHICS_FORMAT_D16_UNORM ||
+	       pPipeline->nDepthFormat > SIR_GRAPHICS_FORMAT_D32_FLOAT ) ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	return SIR_GRAPHICS_SUCCESS;
