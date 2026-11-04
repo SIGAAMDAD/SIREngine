@@ -127,7 +127,9 @@ bool SIRD3D12CommandList::initialize( SIRD3D12Device *pNative, SIRD3D12Resources
 	m_pResources = pResources;
 	m_pPipelines = pPipelines;
 	m_eQueue = eQueue;
-	m_bClosed = true;
+	// The newly created native list is closed, but no caller owns it yet.
+	// Keep the public slot free until acquire() gives it to a caller.
+	m_bClosed = false;
 	return true;
 }
 
@@ -735,7 +737,9 @@ sirGraphicsResult_t SIRD3D12Commands::acquire( sirGraphicsQueue_t eQueue, SIRGra
 	collectCompleted();
 	for ( uint32_t iSlot = 0; iSlot < s_nListsPerQueue; ++iSlot ) {
 		SIRD3D12CommandList &commands = m_szLists[eQueue][iSlot];
-		if ( commands.m_bRecording || commands.m_bSubmitted ) {
+		// A closed, unsubmitted list still belongs to its recording caller.
+		// Only a completed submission (or explicit reset) releases that claim.
+		if ( commands.m_bRecording || commands.m_bClosed || commands.m_bSubmitted ) {
 			continue;
 		}
 		const sirGraphicsResult_t eReset = commands.reset();
