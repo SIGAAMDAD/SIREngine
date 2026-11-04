@@ -26,12 +26,46 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <D3D12MemAlloc.h>
 
+typedef enum sirD3D12TransferPath_e : uint8_t
+{
+	SIR_D3D12_TRANSFER_DIRECT_UMA = 0,
+	SIR_D3D12_TRANSFER_DIRECT_GPU_UPLOAD = 1,
+	SIR_D3D12_TRANSFER_STAGED = 2
+} sirD3D12TransferPath_t;
+
+typedef struct sirD3D12TransferPoolConfig_s
+{
+	uint64_t nSlotBytes;
+	bool bPreferDirectMapped;
+} sirD3D12TransferPoolConfig_t;
+
+typedef struct sirD3D12ResidentTransferView_s
+{
+	ID3D12Resource *pWriteResource;
+	ID3D12Resource *pGpuResource;
+	ID3D12Resource *pReadbackResource;
+	uint8_t *pWriteBytes;
+	const uint8_t *pReadbackBytes;
+	uint64_t nSlotBytes;
+	uint64_t nReservedBufferBytes;
+	uint64_t nPersistentMappedBytes;
+	sirD3D12TransferPath_t ePath;
+} sirD3D12ResidentTransferView_t;
+
 // Native D3D12MA owner. The allocation owns its ID3D12Resource; callers
 // borrow Allocation::GetResource() without obtaining an extra COM reference.
 class SIRD3D12Memory
 {
 private:
 	D3D12MA::Allocator *m_pAllocator = nullptr;
+	D3D12MA::Allocation *m_pTransferWrite = nullptr;
+	D3D12MA::Allocation *m_pTransferGpu = nullptr;
+	D3D12MA::Allocation *m_pTransferReadback = nullptr;
+	uint8_t *m_pTransferWriteBytes = nullptr;
+	const uint8_t *m_pTransferReadbackBytes = nullptr;
+	uint64_t m_nTransferSlotBytes = 0;
+	uint64_t m_nTransferReservedBytes = 0;
+	sirD3D12TransferPath_t m_eTransferPath = SIR_D3D12_TRANSFER_STAGED;
 	HRESULT m_nLastError = S_OK;
 
 public:
@@ -42,6 +76,9 @@ public:
 
 	bool initialize( IDXGIAdapter *pAdapter, ID3D12Device *pDevice ) noexcept;
 	void shutdown( void ) noexcept;
+	bool initializeTransferArena( const sirD3D12TransferPoolConfig_t &config, uint32_t nSlots ) noexcept;
+	void releaseTransferArena( bool bGpuComplete ) noexcept;
+	bool queryTransferArena( sirD3D12ResidentTransferView_t *pView ) const noexcept;
 	// Called only when a GPU completion cannot be proved: intentionally retains
 	// native allocations rather than freeing memory still referenced by a queue.
 	void abandon( void ) noexcept;

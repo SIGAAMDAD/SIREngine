@@ -26,7 +26,8 @@ SIRD3D12Transfers::~SIRD3D12Transfers( void ) noexcept
 	shutdown();
 }
 
-bool SIRD3D12Transfers::initialize( ID3D12Device *pDevice, SIRD3D12Memory *pMemory ) noexcept
+bool SIRD3D12Transfers::initialize( ID3D12Device *pDevice, SIRD3D12Memory *pMemory,
+                                    const sirD3D12TransferPoolConfig_t &config ) noexcept
 {
 	if ( isReady() || m_pQueue != nullptr || m_bSubmissionUnsafe || pDevice == nullptr || pMemory == nullptr || !pMemory->isReady() ) {
 		m_nLastError = E_INVALIDARG;
@@ -55,6 +56,14 @@ bool SIRD3D12Transfers::initialize( ID3D12Device *pDevice, SIRD3D12Memory *pMemo
 		return false;
 	}
 
+	m_pMemory = pMemory;
+	if ( !m_pMemory->initializeTransferArena( config, s_nSlotCount ) ||
+	     !m_pMemory->queryTransferArena( &m_Arena ) ) {
+		m_nLastError = m_pMemory->getLastError();
+		shutdown();
+		return false;
+	}
+
 	for ( uint32_t iSlot = 0; iSlot < s_nSlotCount; ++iSlot ) {
 		sirD3D12TransferSlot_t *pSlot = &m_szSlots[iSlot];
 		m_nLastError = pDevice->CreateCommandAllocator( D3D12_COMMAND_LIST_TYPE_COPY, IID_PPV_ARGS( pSlot->pAllocator.GetAddressOf() ) );
@@ -73,8 +82,9 @@ bool SIRD3D12Transfers::initialize( ID3D12Device *pDevice, SIRD3D12Memory *pMemo
 			shutdown();
 			return false;
 		}
-		m_nLastError =
-		    pDevice->CreateCommandAllocator( D3D12_COMMAND_LIST_TYPE_COPY, IID_PPV_ARGS( pSlot->pReadbackAllocator.GetAddressOf() ) );
+		if ( m_Arena.ePath == SIR_D3D12_TRANSFER_STAGED ) {
+			m_nLastError =
+			    pDevice->CreateCommandAllocator( D3D12_COMMAND_LIST_TYPE_COPY, IID_PPV_ARGS( pSlot->pReadbackAllocator.GetAddressOf() ) );
 		if ( FAILED( m_nLastError ) ) {
 			shutdown();
 			return false;
@@ -90,33 +100,13 @@ bool SIRD3D12Transfers::initialize( ID3D12Device *pDevice, SIRD3D12Memory *pMemo
 			shutdown();
 			return false;
 		}
+		}
 	}
 
-	m_pMemory = pMemory;
 	m_nNextFence = 1;
 	m_nLastSubmittedFence = 0;
 	m_nLastError = S_OK;
 	return true;
-}
-
-void SIRD3D12Transfers::releaseSlotResources( sirD3D12TransferSlot_t *pSlot ) noexcept
-{
-	if ( pSlot->pReadback != nullptr ) {
-		pSlot->pReadback->Release();
-		pSlot->pReadback = nullptr;
-	}
-	if ( pSlot->pDevice != nullptr ) {
-		pSlot->pDevice->Release();
-		pSlot->pDevice = nullptr;
-	}
-	if ( pSlot->pUpload != nullptr ) {
-		pSlot->pUpload->Release();
-		pSlot->pUpload = nullptr;
-	}
-	pSlot->nCapacityBytes = 0;
-	pSlot->nBytes = 0;
-	pSlot->nFence = 0;
-	pSlot->bOccupied = false;
 }
 
 bool SIRD3D12Transfers::shutdown( void ) noexcept
@@ -129,21 +119,17 @@ bool SIRD3D12Transfers::shutdown( void ) noexcept
 	for ( uint32_t iSlot = 0; iSlot < s_nSlotCount; ++iSlot ) {
 		sirD3D12TransferSlot_t *pSlot = &m_szSlots[iSlot];
 		if ( bSafe ) {
-			releaseSlotResources( pSlot );
 			pSlot->pCommands.Reset();
 			pSlot->pAllocator.Reset();
 			pSlot->pReadbackCommands.Reset();
 			pSlot->pReadbackAllocator.Reset();
 		} else {
-			// A failed queue signal or wait gives no proof that submitted
-			// resources are retired; preserve the native backing.
+			// Retain native command objects and the resident arena when the
+			// GPU's last completion cannot be proved.
 			( void )pSlot->pCommands.Detach();
 			( void )pSlot->pAllocator.Detach();
 			( void )pSlot->pReadbackCommands.Detach();
 			( void )pSlot->pReadbackAllocator.Detach();
-			pSlot->pUpload = nullptr;
-			pSlot->pDevice = nullptr;
-			pSlot->pReadback = nullptr;
 		}
 		pSlot->bOccupied = false;
 		pSlot->nFence = 0;
@@ -160,6 +146,10 @@ bool SIRD3D12Transfers::shutdown( void ) noexcept
 		( void )m_pQueue.Detach();
 	}
 	m_hEvent = nullptr;
+	if ( bSafe && m_pMemory != nullptr ) {
+		m_pMemory->releaseTransferArena( true );
+	}
+	m_Arena = {};
 	m_pMemory = nullptr;
 	m_nLastSubmittedFence = 0;
 	m_bSubmissionUnsafe = !bSafe;
@@ -168,7 +158,8 @@ bool SIRD3D12Transfers::shutdown( void ) noexcept
 
 bool SIRD3D12Transfers::isReady( void ) const noexcept
 {
-	return m_pQueue != nullptr && m_pFence != nullptr && m_hEvent != nullptr && m_pMemory != nullptr && !m_bSubmissionUnsafe;
+	return m_pQueue != nullptr && m_pFence != nullptr && m_hEvent != nullptr && m_pMemory != nullptr &&
+	       m_Arena.pWriteBytes != nullptr && m_Arena.pReadbackBytes != nullptr && !m_bSubmissionUnsafe;
 }
 
 uint32_t SIRD3D12Transfers::getSlotCount( void ) const noexcept
@@ -179,6 +170,15 @@ uint32_t SIRD3D12Transfers::getSlotCount( void ) const noexcept
 uint64_t SIRD3D12Transfers::getCompletedCopyCount( void ) const noexcept
 {
 	return m_nCompletedCopies;
+}
+
+bool SIRD3D12Transfers::queryResidentArena( sirD3D12ResidentTransferView_t *pView ) const noexcept
+{
+	if ( pView == nullptr || !isReady() || m_Arena.pWriteBytes == nullptr ) {
+		return false;
+	}
+	*pView = m_Arena;
+	return true;
 }
 
 uint64_t SIRD3D12Transfers::getLastSubmittedFence( void ) const noexcept
@@ -234,40 +234,9 @@ sirD3D12TransferSlot_t *SIRD3D12Transfers::findSlot( sirD3D12TransferTicket_t ti
 	return pSlot;
 }
 
-bool SIRD3D12Transfers::growSlot( sirD3D12TransferSlot_t *pSlot, uint64_t nBytes ) noexcept
-{
-	if ( nBytes <= pSlot->nCapacityBytes ) {
-		return true;
-	}
-
-	Microsoft::WRL::ComPtr<D3D12MA::Allocation> pUpload;
-	Microsoft::WRL::ComPtr<D3D12MA::Allocation> pDevice;
-	Microsoft::WRL::ComPtr<D3D12MA::Allocation> pReadback;
-	m_nLastError = m_pMemory->createBuffer( D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ, nBytes, pUpload.GetAddressOf() );
-	if ( FAILED( m_nLastError ) ) {
-		return false;
-	}
-	m_nLastError = m_pMemory->createBuffer( D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_COMMON, nBytes, pDevice.GetAddressOf() );
-	if ( FAILED( m_nLastError ) ) {
-		return false;
-	}
-	m_nLastError = m_pMemory->createBuffer( D3D12_HEAP_TYPE_READBACK, D3D12_RESOURCE_STATE_COPY_DEST, nBytes, pReadback.GetAddressOf() );
-	if ( FAILED( m_nLastError ) ) {
-		return false;
-	}
-
-	releaseSlotResources( pSlot );
-	pSlot->pUpload = pUpload.Detach();
-	pSlot->pDevice = pDevice.Detach();
-	pSlot->pReadback = pReadback.Detach();
-	pSlot->nCapacityBytes = nBytes;
-	return true;
-}
-
 bool SIRD3D12Transfers::submit( const void *pSource, uint64_t nBytes, sirD3D12TransferTicket_t *pTicket ) noexcept
 {
-	constexpr uint64_t MAX_TRANSFER_BYTES = 16ULL * 1024ULL * 1024ULL;
-	if ( pTicket == nullptr || pSource == nullptr || nBytes == 0 || nBytes > MAX_TRANSFER_BYTES || !isReady() ||
+	if ( pTicket == nullptr || pSource == nullptr || nBytes == 0 || !isReady() ||
 	     m_nNextFence == UINT64_MAX || m_nNextSerial == UINT64_MAX ) {
 		m_nLastError = E_INVALIDARG;
 		return false;
@@ -286,18 +255,15 @@ bool SIRD3D12Transfers::submit( const void *pSource, uint64_t nBytes, sirD3D12Tr
 		return false;
 	}
 	sirD3D12TransferSlot_t *pSlot = &m_szSlots[iFree];
-	if ( !growSlot( pSlot, nBytes ) ) {
+	if ( nBytes > m_Arena.nSlotBytes ) {
+		m_nLastError = HRESULT_FROM_WIN32( ERROR_INSUFFICIENT_BUFFER );
 		return false;
 	}
 
-	D3D12_RANGE noRead = { 0, 0 };
-	void *pUploadBytes = nullptr;
-	m_nLastError = pSlot->pUpload->GetResource()->Map( 0, &noRead, &pUploadBytes );
-	if ( FAILED( m_nLastError ) || pUploadBytes == nullptr ) {
-		return false;
-	}
-	memcpy( pUploadBytes, pSource, ( size_t )nBytes );
-	pSlot->pUpload->GetResource()->Unmap( 0, nullptr );
+	const uint64_t nOffset = ( uint64_t )iFree * m_Arena.nSlotBytes;
+	// CPU writes into the persistently mapped, preallocated slice. Slot
+	// ownership excludes any overwrite until its copy fence completes.
+	memcpy( m_Arena.pWriteBytes + nOffset, pSource, ( size_t )nBytes );
 
 	m_nLastError = pSlot->pAllocator->Reset();
 	if ( FAILED( m_nLastError ) ) {
@@ -307,27 +273,34 @@ bool SIRD3D12Transfers::submit( const void *pSource, uint64_t nBytes, sirD3D12Tr
 	if ( FAILED( m_nLastError ) ) {
 		return false;
 	}
-	pSlot->pCommands->CopyBufferRegion( pSlot->pDevice->GetResource(), 0, pSlot->pUpload->GetResource(), 0, nBytes );
+	if ( m_Arena.ePath == SIR_D3D12_TRANSFER_STAGED ) {
+		pSlot->pCommands->CopyBufferRegion( m_Arena.pGpuResource, nOffset, m_Arena.pWriteResource, nOffset, nBytes );
+	} else {
+		pSlot->pCommands->CopyBufferRegion( m_Arena.pReadbackResource, nOffset, m_Arena.pWriteResource, nOffset, nBytes );
+	}
 	m_nLastError = pSlot->pCommands->Close();
 	if ( FAILED( m_nLastError ) ) {
 		return false;
 	}
 
-	// Copy queues cannot record transition barriers. By using separate
-	// ExecuteCommandLists calls, the DEFAULT buffer decays to COMMON after
-	// the upload, then promotes to COPY_SOURCE for the readback.
-	m_nLastError = pSlot->pReadbackAllocator->Reset();
-	if ( FAILED( m_nLastError ) ) {
-		return false;
-	}
-	m_nLastError = pSlot->pReadbackCommands->Reset( pSlot->pReadbackAllocator.Get(), nullptr );
-	if ( FAILED( m_nLastError ) ) {
-		return false;
-	}
-	pSlot->pReadbackCommands->CopyBufferRegion( pSlot->pReadback->GetResource(), 0, pSlot->pDevice->GetResource(), 0, nBytes );
-	m_nLastError = pSlot->pReadbackCommands->Close();
-	if ( FAILED( m_nLastError ) ) {
-		return false;
+	// Staged discrete memory needs a separate submission so the DEFAULT
+	// buffer can decay to COMMON before its COPY_SOURCE promotion. UMA and
+	// GPU_UPLOAD use the directly GPU-readable mapped source in one list.
+	if ( m_Arena.ePath == SIR_D3D12_TRANSFER_STAGED ) {
+		m_nLastError = pSlot->pReadbackAllocator->Reset();
+		if ( FAILED( m_nLastError ) ) {
+			return false;
+		}
+		m_nLastError = pSlot->pReadbackCommands->Reset( pSlot->pReadbackAllocator.Get(), nullptr );
+		if ( FAILED( m_nLastError ) ) {
+			return false;
+		}
+		pSlot->pReadbackCommands->CopyBufferRegion( m_Arena.pReadbackResource, nOffset, m_Arena.pGpuResource, nOffset,
+		                                           nBytes );
+		m_nLastError = pSlot->pReadbackCommands->Close();
+		if ( FAILED( m_nLastError ) ) {
+			return false;
+		}
 	}
 
 	pSlot->bOccupied = true;
@@ -337,7 +310,9 @@ bool SIRD3D12Transfers::submit( const void *pSource, uint64_t nBytes, sirD3D12Tr
 	ID3D12CommandList *pUploadLists[] = { pSlot->pCommands.Get() };
 	ID3D12CommandList *pReadbackLists[] = { pSlot->pReadbackCommands.Get() };
 	m_pQueue->ExecuteCommandLists( 1, pUploadLists );
-	m_pQueue->ExecuteCommandLists( 1, pReadbackLists );
+	if ( m_Arena.ePath == SIR_D3D12_TRANSFER_STAGED ) {
+		m_pQueue->ExecuteCommandLists( 1, pReadbackLists );
+	}
 	m_nLastError = m_pQueue->Signal( m_pFence.Get(), m_nNextFence );
 	if ( FAILED( m_nLastError ) ) {
 		m_bSubmissionUnsafe = true;
@@ -430,15 +405,8 @@ bool SIRD3D12Transfers::receive( sirD3D12TransferTicket_t ticket, void *pDestina
 		return false;
 	}
 
-	D3D12_RANGE read = { 0, ( SIZE_T )pSlot->nBytes };
-	D3D12_RANGE noWrite = { 0, 0 };
-	void *pBytes = nullptr;
-	m_nLastError = pSlot->pReadback->GetResource()->Map( 0, &read, &pBytes );
-	if ( FAILED( m_nLastError ) || pBytes == nullptr ) {
-		return false;
-	}
-	memcpy( pDestination, pBytes, ( size_t )pSlot->nBytes );
-	pSlot->pReadback->GetResource()->Unmap( 0, &noWrite );
+	const uint64_t nOffset = ( uint64_t )ticket.iSlot * m_Arena.nSlotBytes;
+	memcpy( pDestination, m_Arena.pReadbackBytes + nOffset, ( size_t )pSlot->nBytes );
 	pSlot->bOccupied = false;
 	pSlot->nFence = 0;
 	++m_nCompletedCopies;

@@ -353,7 +353,7 @@ SIRD3D12Device::~SIRD3D12Device( void ) noexcept
 	shutdown();
 }
 
-bool SIRD3D12Device::initialize( bool bUseWarp ) noexcept
+bool SIRD3D12Device::initialize( bool bUseWarp, const sirD3D12TransferPoolConfig_t &transferConfig ) noexcept
 {
 	if ( isReady() || m_pFactory != nullptr || m_bGraphicsUnsafe ) {
 		m_nLastError = E_FAIL;
@@ -456,7 +456,7 @@ bool SIRD3D12Device::initialize( bool bUseWarp ) noexcept
 		return false;
 	}
 
-	if ( !m_Transfers.initialize( m_pDevice.Get(), &m_Memory ) ) {
+	if ( !m_Transfers.initialize( m_pDevice.Get(), &m_Memory, transferConfig ) ) {
 		m_nLastError = m_Transfers.getLastError();
 		shutdown();
 		return false;

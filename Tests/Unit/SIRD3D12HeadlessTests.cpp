@@ -23,7 +23,20 @@ static bool testAsyncCopyQueue( SIRD3D12Device &device )
 {
 	SIRD3D12Transfers &transfers = device.getTransfers();
 	const uint32_t nSlots = transfers.getSlotCount();
-	if ( !transfers.isReady() || nSlots != 3 ) {
+	sirD3D12ResidentTransferView_t arena = {};
+	if ( !transfers.isReady() || nSlots != 3 || !transfers.queryResidentArena( &arena ) ||
+	     arena.nSlotBytes == 0 || arena.nReservedBufferBytes == 0 ||
+	     arena.nPersistentMappedBytes != arena.nSlotBytes * nSlots * 2 ||
+	     arena.pWriteBytes == nullptr || arena.pReadbackBytes == nullptr ||
+	     arena.pWriteResource == nullptr || arena.pReadbackResource == nullptr ) {
+		return false;
+	}
+	if ( ( arena.ePath == SIR_D3D12_TRANSFER_STAGED ) == ( arena.pWriteResource == arena.pGpuResource ) ) {
+		return false;
+	}
+	sirD3D12TransferTicket_t overCapacity = {};
+	const uint32_t nSample = 0x55aa11eeU;
+	if ( transfers.submit( &nSample, arena.nSlotBytes + 1, &overCapacity ) || overCapacity.nSerial != 0 ) {
 		return false;
 	}
 
@@ -87,6 +100,13 @@ static bool testAsyncCopyQueue( SIRD3D12Device &device )
 	bool bCompleted = false;
 	if ( transfers.poll( invalid, &bCompleted ) || transfers.poll( szTickets[0], &bCompleted ) ||
 	     transfers.submit( nullptr, 8, &invalid ) || transfers.submit( szInput[0], 0, &invalid ) ) {
+		return false;
+	}
+	sirD3D12ResidentTransferView_t after = {};
+	if ( !transfers.queryResidentArena( &after ) || arena.pWriteResource != after.pWriteResource ||
+	     arena.pGpuResource != after.pGpuResource || arena.pReadbackResource != after.pReadbackResource ||
+	     arena.pWriteBytes != after.pWriteBytes || arena.pReadbackBytes != after.pReadbackBytes ||
+	     arena.nReservedBufferBytes != after.nReservedBufferBytes ) {
 		return false;
 	}
 	return true;
@@ -601,6 +621,9 @@ static bool testOffscreenIndexedGraphics( SIRD3D12Device &device )
 int main( void )
 {
 	SIRD3D12Device device;
+	sirD3D12TransferPoolConfig_t transferConfig = {};
+	transferConfig.nSlotBytes = 64 * 1024;
+	transferConfig.bPreferDirectMapped = true;
 	sirD3D12AdapterInfo_t adapter = {};
 	sirD3D12MemoryInfo_t memory = {};
 	uint32_t szInput[32] = {};
@@ -612,11 +635,11 @@ int main( void )
 		return 1;
 	}
 
-	if ( !device.initialize( true ) ) {
+	if ( !device.initialize( true, transferConfig ) ) {
 		fprintf( stderr, "D3D12 WARP device initialization failed: HRESULT 0x%08lx\n", ( unsigned long )device.getLastError() );
 		return 1;
 	}
-	if ( !device.isReady() || device.initialize( true ) || !device.queryAdapterInfo( &adapter ) || !adapter.bSoftware ) {
+	if ( !device.isReady() || device.initialize( true, transferConfig ) || !device.queryAdapterInfo( &adapter ) || !adapter.bSoftware ) {
 		fputs( "D3D12 WARP adapter or lifecycle contract failed\n", stderr );
 		return 1;
 	}
@@ -695,8 +718,26 @@ int main( void )
 		fputs( "D3D12 accepted an operation after shutdown\n", stderr );
 		return 1;
 	}
-	if ( !device.initialize( true ) ) {
-		fputs( "D3D12 WARP reinitialization failed\n", stderr );
+	transferConfig.nSlotBytes = 4096;
+	transferConfig.bPreferDirectMapped = false;
+	if ( !device.initialize( true, transferConfig ) ) {
+		fputs( "D3D12 WARP forced-staging reinitialization failed\n", stderr );
+		return 1;
+	}
+	sirD3D12ResidentTransferView_t staged = {};
+	if ( !device.getTransfers().queryResidentArena( &staged ) ||
+	     staged.ePath != SIR_D3D12_TRANSFER_STAGED || staged.nSlotBytes != transferConfig.nSlotBytes ||
+	     staged.pWriteResource == staged.pGpuResource ) {
+		fputs( "D3D12 staging pool validation failed\n", stderr );
+		return 1;
+	}
+	sirD3D12TransferTicket_t stageTicket = {};
+	uint32_t szStagedOutput[32] = {};
+	if ( !device.getTransfers().submit( szInput, sizeof( szInput ), &stageTicket ) ||
+	     !device.getTransfers().wait( stageTicket, 15000 ) ||
+	     !device.getTransfers().receive( stageTicket, szStagedOutput, sizeof( szStagedOutput ) ) ||
+	     memcmp( szInput, szStagedOutput, sizeof( szInput ) ) != 0 ) {
+		fputs( "D3D12 forced staged transfer failed\n", stderr );
 		return 1;
 	}
 	D3D12MA::Allocation *pOldGeneration = nullptr;

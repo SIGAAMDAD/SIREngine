@@ -114,3 +114,21 @@ The kernel allocates a D3D12MA-backed DEFAULT texture with `ALLOW_RENDER_TARGET`
 Submission is nonblocking, returns the device-generation-bound graphics completion set, and retains all native objects until the graphics fence has completed. A second in-flight draw or invalid dimensions fail without reallocating the pending resources. The explicit readback call rejects wrong generations, stale fences, insufficient destination pitch and a second read of an already consumed target. Device shutdown drains DIRECT and releases graphics resources before freeing D3D12MA backing; if native completion cannot be proven, allocations and command objects are deliberately retained.
 
 The Windows WARP regression covers offscreen triangles at multiple resolutions, exact red interior and black-clear exterior pixels, invalid and stale completion inputs, pending-draw exclusivity and repeated reuse. This is a native offscreen graphics slice; DXGI presentation, general descriptor heaps, shader reflection, mesh streaming, GPU hardware profiling and GRDG resource ownership remain separate implementation stages.
+
+
+## Memory model rewrite — specialized resident transfer arenas
+
+The D3D12 transfer subsystem now uses **one preallocated resource per memory class**, with three fixed offset-addressed in-flight slots. The configuration is explicit in `SIRD3D12Device::initialize( bUseWarp, transferConfig )`, where `nSlotBytes` controls reserved capacity and `bPreferDirectMapped` selects direct GPU reads when the adapter supports an efficient path. Arena capacity is sealed immediately after startup: oversized submissions return an explicit insufficient-buffer result. The former per-slot `growSlot` allocation path was deleted, without compatibility overloads.
+
+`SIRD3D12Memory` owns the backing and persistent CPU mappings. It allocates mapped WRITE and READBACK buffers once and unmaps them only on proven GPU-safe shutdown. The COPY queue uses byte offsets within those resources; it does not create new GPU buffers or map/unmap them during `submit` or `receive`. In-flight serial/ticket and COPY fence semantics protect each slice against premature overwrite.
+
+The adapter-specific execution paths are:
+- **UMA:** a persistently mapped UPLOAD buffer is directly GPU-readable, copied to the persistently mapped READBACK buffer with one native COPY submission
+- **Supported GPU_UPLOAD:** one persistently mapped GPU_UPLOAD buffer provides GPU-local, CPU-write-combined storage and is copied directly to READBACK
+- **Discrete staging:** a persistently mapped UPLOAD buffer copies into one resident DEFAULT buffer, then to persistently mapped READBACK in two command-list executions separated by state decay, without allocating after initialization
+
+All paths expose the same ticket, serial validation, poll/wait, completion and lifetime behavior. When a queue's completion cannot be proved, native allocations and their persistent mappings remain retained with the D3D12MA allocator; unsafe shutdown must never unmap/release them.
+
+The WARP acceptance test verifies a direct adapter-selected path plus a deliberately forced staged path, over-capacity rejection, stable resource/mapping identities across repeated transfers, and the same byte-exact readback and fence behavior.
+
+**Remaining specialized allocation work:** migrate DXIL compute UAV/readback resources, offscreen graphics textures/vertex/index buffers, synchronous diagnostic copying, and native deferred-allocation nodes to separately budgeted pooled classes; integrate canonical GRDG allocation identities and physical backing accounting; add configurable editor-only growth and runtime seal enforcement for all GPU backing pools. Existing per-dispatch allocations in those other subsystems are independent unfinished work, not a compatibility API.
