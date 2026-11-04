@@ -38,7 +38,7 @@ jobs:
             sed "s|llvm-23.1.5-x86_64.tar.xz|${archive}|" | sha256sum --check -
           mkdir -p "${RUNNER_TEMP}/llvm23"
           tar -xJf "${archive}" -C "${RUNNER_TEMP}/llvm23"
-          clang_bin="$(find "${RUNNER_TEMP}/llvm23" -type f -name 'clang++' -print -quit)"
+          clang_bin="$(find "${RUNNER_TEMP}/llvm23" -name 'clang++' -print -quit)"
           test -n "${clang_bin}"
           toolbin="$(dirname "${clang_bin}")"
           test -x "${toolbin}/llvm-cov"
