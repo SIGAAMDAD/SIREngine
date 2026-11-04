@@ -19,7 +19,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 static sirLangGraphVMProgramSlot_t *sirLangBackendProgram( sirLangGraphVMBackend_t *pBackend, uint64_t nToken ) noexcept
 {
-	if ( pBackend == nullptr || nToken == 0 ) {
+	if ( pBackend == nullptr || pBackend->pPrograms == nullptr || nToken == 0 ) {
 		return nullptr;
 	}
 	for ( uint32_t iProgram = 0; iProgram < pBackend->nProgramCapacity; ++iProgram ) {
@@ -33,7 +33,7 @@ static sirLangGraphVMProgramSlot_t *sirLangBackendProgram( sirLangGraphVMBackend
 
 static sirLangGraphVMInstanceSlot_t *sirLangBackendInstance( sirLangGraphVMBackend_t *pBackend, uint64_t nToken ) noexcept
 {
-	if ( pBackend == nullptr || nToken == 0 ) {
+	if ( pBackend == nullptr || pBackend->pInstances == nullptr || nToken == 0 ) {
 		return nullptr;
 	}
 	for ( uint32_t iInstance = 0; iInstance < pBackend->nInstanceCapacity; ++iInstance ) {
