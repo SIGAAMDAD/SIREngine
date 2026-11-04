@@ -1,13 +1,13 @@
 # Implementation roadmap — Console / CVars / Commands
 
-**Base:** `develop@51666fadadf8112b3b2d5bf919ba11dde55d931b`.
+**Base:** reconciled with `develop@1e799f4283c054b1a891ad23acc09c39d690b9c1` for P0.
 **Branch:** `feature/console-cvars-commands`.
-**Current delivery:** docs/architecture only. **Runtime completeness: 0 console/CVar stages verified.**
+**Current delivery:** P0 shared contract validator and negative fixture verified locally; P1-P7 remain.
 No artificial duration or performance claims; milestones are dependency-ordered and accepted by source/build/test evidence.
 
 | ID | Scope and exclusive source owner | Depends | Deliverable / integration seam | Exit gate |
 |---|---|---|---|---|
-| P0 | Contracts, catalog identity; `Docs/Plans/ConsoleCVars/*` and future `Source/Core/Registration/SIRRegistrationTypes.h` | existing develop | Freeze names, flags, type set, precedence, callback ABI, event credit, error statuses and cooked schema | Contract review, failing negative catalog fixtures, source identity recorded |
+| P0 (complete) | Contracts, catalog identity; `Docs/Plans/ConsoleCVars/*` and future `Source/Core/Registration/SIRRegistrationTypes.h` | existing develop | Freeze names, flags, type set, precedence, callback ABI, event credit, error statuses and cooked schema | Contract review, failing negative catalog fixtures, source identity recorded |
 | P1 | String identity: `Source/Core/Strings/*`, tests `Tests/Unit/Strings/*` | P0 | Port `NMDStrings` from verified donor to SIRMemory and cooked ordinal lookup | Clang AST for actual TUs, malformed NMDS, hash collisions, lease/epoch, no fallback allocation |
 | P2 | Cooker/registration: `Source/Core/Registration/*`, `Tools/StringCatalogCooker/*`, `Tools/RegistrationCooker/*` | P1 | Deterministic cooked descriptors + versioned identity remap, dynamic overlay | Byte-identical recook, corrupt-section rejection, duplicate names/bindings rejected, CMake/GoogleTest |
 | P3 | Typed CVar storage: `Source/Core/CVars/*`, `Tests/Unit/CVars/*` | P2 + event-credit contract | Compact value banks, checked handles, transactional writes, precedence history, latched states, event publication | Zero-alloc scalar cached get/set under reserved credits, atomic rollback, OOM/stale/priority tests |
@@ -81,6 +81,8 @@ P6's event-name registry migration may begin when P1's atom contracts are frozen
 
 Single integration authority: this feature branch's branch owner; each milestone merges sequentially after its owning tests, with explicit interface checks. Keep source edits scoped to listed owners and notify Events/Config/Core before modifying shared files. Conventional Commit messages; no force push. All changes must be formatted with repository-pinned clang-format 23.1.5 where C++ is touched. Retain source provenance; do not accept 'pass' from documentation alone.
 
-## Open decisions (must not be silently decided)
+## Historical open decisions (resolved for the P0 implementation baseline)
 
 Full origin precedence order; included numeric/vector/path type set; namespace grammar and reserved built-ins; notification credit design; archive format and VFS readiness; latched phase; shipping/developer/editor permissions; exact donor source digest/latest revision.
+
+Selected P0 policies, ABI v1 layout, status and acceptance evidence: [P0_FREEZE.md](P0_FREEZE.md). Remaining P1-P7 work retains its own verification gates.

@@ -4,13 +4,13 @@
   "mode": "ARCHITECTURE",
   "objective": "Design and roadmap the unified SIREngine console, cooked command registry and typed CVar runtime",
   "approval": {
-    "status": "UNAPPROVED",
-    "evidence": "Owner requested branch and roadmap; target design proposals remain to review."
+    "status": "P0_IMPLEMENTATION_BASELINE",
+    "evidence": "P0_FREEZE.md; Clang23/GCC14 focused tests. P1-P7 are not implemented."
   },
   "baseline": {
     "repository": "SIGAAMDAD/SIREngine",
     "branch": "develop",
-    "sha": "51666fadadf8112b3b2d5bf919ba11dde55d931b",
+    "sha": "1e799f4283c054b1a891ad23acc09c39d690b9c1",
     "target_branch": "feature/console-cvars-commands"
   },
   "sources": [
@@ -186,7 +186,11 @@
     {
       "id": "P0",
       "owned_paths": [
-        "Docs/Plans/ConsoleCVars/*"
+        "Docs/Plans/ConsoleCVars/*",
+        "Source/Core/Registration/*",
+        "Source/Core/CMakeLists.txt",
+        "Tests/Unit/CMakeLists.txt",
+        "Tests/Unit/SIRRegistrationContractTests.cpp"
       ],
       "tasks": [
         "P0"
@@ -317,14 +321,19 @@
         "Build CONTRACT_REVIEW acceptance and negative cases"
       ],
       "test_ids": [
-        "TEST-DOC"
+        "TEST-DOC",
+        "TEST-P0-UNIT"
       ],
       "outputs": [
-        "Docs/Plans/ConsoleCVars/*"
+        "Docs/Plans/ConsoleCVars/*",
+        "Source/Core/Registration/SIRRegistrationTypes.h",
+        "Source/Core/Registration/SIRRegistrationTypes.cpp",
+        "Tests/Unit/SIRRegistrationContractTests.cpp"
       ],
       "stop_conditions": [
         "Unratified interface or unmet dependency gate"
-      ]
+      ],
+      "status": "IMPLEMENTED_LOCAL_TESTED"
     },
     {
       "id": "P1",
@@ -525,89 +534,100 @@
       "status": "NOT_RUN",
       "command": "GitHub branch readback from remote",
       "evidence_path": "Docs/Plans/ConsoleCVars/README.md"
+    },
+    {
+      "id": "TEST-P0-UNIT",
+      "requirement_ids": [
+        "REQ-001"
+      ],
+      "tier": "LOCAL_COMPILE_AND_UNIT",
+      "status": "PASS_LOCAL",
+      "command": "Clang 23.1.5 and GCC 14; -std=c++17 -Wall -Wextra -Wpedantic -Werror; contract executable and clang-format 23.1.5",
+      "evidence_path": "Tests/Unit/SIRRegistrationContractTests.cpp",
+      "limitations": "Native full-engine CMake and Windows not run"
     }
   ],
   "probes": [],
   "decisions": [
     {
       "id": "DEC-1",
-      "status": "OPEN",
+      "status": "FIXED_P0_BASELINE",
       "authority": "OWNER",
       "subject": "Override priority",
       "blocks": [
         "P0"
       ],
-      "evidence": "Review required"
+      "evidence": "Docs/Plans/ConsoleCVars/P0_FREEZE.md"
     },
     {
       "id": "DEC-2",
-      "status": "OPEN",
+      "status": "FIXED_P0_BASELINE",
       "authority": "OWNER",
       "subject": "CVar type set",
       "blocks": [
         "P0"
       ],
-      "evidence": "Review required"
+      "evidence": "Docs/Plans/ConsoleCVars/P0_FREEZE.md"
     },
     {
       "id": "DEC-3",
-      "status": "OPEN",
+      "status": "FIXED_P0_BASELINE",
       "authority": "OWNER",
       "subject": "Namespace grammar",
       "blocks": [
         "P0"
       ],
-      "evidence": "Review required"
+      "evidence": "Docs/Plans/ConsoleCVars/P0_FREEZE.md"
     },
     {
       "id": "DEC-4",
-      "status": "OPEN",
+      "status": "FIXED_P0_BASELINE",
       "authority": "OWNER",
       "subject": "Event notification reservation",
       "blocks": [
         "P0"
       ],
-      "evidence": "Review required"
+      "evidence": "Docs/Plans/ConsoleCVars/P0_FREEZE.md"
     },
     {
       "id": "DEC-5",
-      "status": "OPEN",
+      "status": "FIXED_P0_BASELINE",
       "authority": "OWNER",
       "subject": "Archive format",
       "blocks": [
         "P0"
       ],
-      "evidence": "Review required"
+      "evidence": "Docs/Plans/ConsoleCVars/P0_FREEZE.md"
     },
     {
       "id": "DEC-6",
-      "status": "OPEN",
+      "status": "FIXED_P0_BASELINE",
       "authority": "OWNER",
       "subject": "Latched apply phase",
       "blocks": [
         "P0"
       ],
-      "evidence": "Review required"
+      "evidence": "Docs/Plans/ConsoleCVars/P0_FREEZE.md"
     },
     {
       "id": "DEC-7",
-      "status": "OPEN",
+      "status": "FIXED_P0_BASELINE",
       "authority": "OWNER",
       "subject": "Origin/build permission matrix",
       "blocks": [
         "P0"
       ],
-      "evidence": "Review required"
+      "evidence": "Docs/Plans/ConsoleCVars/P0_FREEZE.md"
     },
     {
       "id": "DEC-8",
-      "status": "OPEN",
+      "status": "SUPERSEDED_BY_DEVELOP_STRING_POOL",
       "authority": "OWNER",
       "subject": "Exact donor archive digest",
       "blocks": [
         "P0"
       ],
-      "evidence": "Review required"
+      "evidence": "Docs/Plans/ConsoleCVars/P0_FREEZE.md"
     }
   ],
   "review_passes": [

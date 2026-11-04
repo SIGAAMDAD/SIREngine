@@ -34,7 +34,7 @@ template <typename T>
 class SIRPriorityLess
 {
 public:
-	bool operator()( const T &left, const T &right ) const noexcept( noexcept( left < right ) )
+	bool operator()( const T& left, const T& right ) const noexcept( noexcept( left < right ) )
 	{
 		return left < right;
 	}
@@ -46,7 +46,7 @@ class SIRPriorityQueue
 private:
 	static_assert( std::is_nothrow_move_constructible<T>::value && std::is_nothrow_move_assignable<T>::value,
 	               "Priority queue updates require noexcept movable values" );
-	static_assert( std::is_nothrow_invocable_r<bool, Compare, const T &, const T &>::value, "Priority comparisons must be noexcept" );
+	static_assert( std::is_nothrow_invocable_r<bool, Compare, const T&, const T&>::value, "Priority comparisons must be noexcept" );
 
 	SIRVector<T> m_values;
 	Compare m_compare;
@@ -118,7 +118,7 @@ public:
 	}
 
 	template <typename... Args>
-	sirContainerResult_t tryEmplace( Args &&...args )
+	sirContainerResult_t tryEmplace( Args&&...args )
 	{
 		sirContainerResult_t eResult = m_values.tryEmplaceBack( std::forward<Args>( args )... );
 		if ( eResult == SIR_CONTAINER_OK ) {
@@ -127,7 +127,7 @@ public:
 		return eResult;
 	}
 
-	sirContainerResult_t tryPush( const T &value )
+	sirContainerResult_t tryPush( const T& value )
 	{
 		sirContainerResult_t eResult = m_values.tryPushBack( value );
 		if ( eResult == SIR_CONTAINER_OK ) {

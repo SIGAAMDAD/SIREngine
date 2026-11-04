@@ -104,10 +104,10 @@ public:
 		release();
 	}
 
-	SIRString( const SIRString & ) = delete;
-	SIRString &operator=( const SIRString & ) = delete;
+	SIRString( const SIRString& ) = delete;
+	SIRString& operator=( const SIRString& ) = delete;
 
-	SIRString( SIRString &&other ) noexcept
+	SIRString( SIRString&& other ) noexcept
 	    : m_pAllocator( other.m_pAllocator ), m_nLength( other.m_nLength ), m_nCapacity( other.m_nCapacity )
 	{
 		if ( other.isInline() ) {
@@ -125,7 +125,7 @@ public:
 		other.m_szInline[0] = '\0';
 	}
 
-	SIRString &operator=( SIRString &&other ) noexcept
+	SIRString& operator=( SIRString&& other ) noexcept
 	{
 		if ( this != &other ) {
 			release();

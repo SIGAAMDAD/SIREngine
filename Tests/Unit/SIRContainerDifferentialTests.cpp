@@ -131,7 +131,7 @@ static void testMapAndSet( const sirContainerAllocator_t *pAllocator )
 		SIR_TEST_CHECK( map.getSize() == expectedMap.size() );
 		SIR_TEST_CHECK( set.getSize() == expectedSet.size() );
 	}
-	for ( const auto &entry : expectedMap ) {
+	for ( const auto& entry : expectedMap ) {
 		const uint32_t *pValue = map.find( entry.first );
 		SIR_TEST_CHECK( pValue != nullptr && *pValue == entry.second );
 	}
