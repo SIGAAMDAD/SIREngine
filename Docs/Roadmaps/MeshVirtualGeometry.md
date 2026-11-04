@@ -162,12 +162,12 @@ R0 contract #38 + CPU MeshCache #37
 
 | Category | Canonical/shared memory | Per-instance / derivative memory | Owner(s) |
 | --- | --- | --- | --- |
-| Pebbles, foliage, sticks, clutter | One geometry/cluster set per prototype, versioned under GRDG | Compact spatial transforms and variation; selected backend physics bodies on promotion; GPU wind/output only when required | World/Clutter, GPUScene, Jolt |
-| Rocks, boulders, modular buildings, occluders | Immutable CPU vertex/index streams; shared physics-ABI consumable collision source and CPU BVH query references; one compressed GPU mesh page set per asset/variant | Transforms, collision policy, Jolt body registration, visibility/material selections, HLOD/terrain cell activation | GRDG/NMD, MeshCache, Jolt, World and GPUScene |
+| Pebbles, foliage, sticks, clutter | One geometry/cluster set per prototype, versioned under GRDG | Compact spatial transforms and variation; selected backend physics bodies on promotion; GPU wind/output only when required | World/Clutter, GPUScene, Physics ABI |
+| Rocks, boulders, modular buildings, occluders | Immutable CPU vertex/index streams; shared physics-ABI consumable collision source and CPU BVH query references; one compressed GPU mesh page set per asset/variant | Transforms, collision policy, physics-ABI body registration, visibility/material selections, HLOD/terrain cell activation | GRDG/NMD, MeshCache, Jolt, World and GPUScene |
 | Weapons | One mesh asset and collision-shape definition | Carried skeletal attachment or dynamic dropped body with same mesh identity | Animation, World, Physics ABI |
 | NPCs / player / skeletal meshes | Immutable bind-pose mesh, skeleton hierarchy and animation clips | Per-entity bone pose, controller/ragdoll bodies, transient skin buffers, optional RT acceleration | Animation, Physics ABI, GPUScene and graphics driver |
 
-The engine must account for **distinct physical allocations once**, even when the same resource is referenced by multiple providers or instances. CPU collision BVH nodes and GPU BLAS/TLAS are derived allocations with independent lifetimes; source vertex pointer sharing is literal only for compatible CPU query/physics representations, not a fictional universal zero-copy GPU/Jolt pointer.
+The engine must account for **distinct physical allocations once**, even when the same resource is referenced by multiple providers or instances. CPU collision BVH nodes, physics-provider shape conversions, and GPU BLAS/TLAS are derived allocations with independent lifetimes; source vertex pointer sharing is literal only for compatible CPU query/physics representations, not a fictional universal zero-copy GPU/Jolt pointer.
 
 ## 6. Owners and merge boundaries
 
