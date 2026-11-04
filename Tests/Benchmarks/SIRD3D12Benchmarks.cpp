@@ -99,7 +99,10 @@ static bool sirBenchAdapter( SIRD3D12Driver &driver, bool bHardware, uint32_t *p
 		if ( driver.queryAdapter( i, &info ) != SIR_GRAPHICS_SUCCESS ) {
 			return false;
 		}
-		if ( info.bSoftwareAdapter == bHardware ) {
+		// Microsoft Basic Render Driver is a software fallback even when DXGI
+		// exposes it without the SOFTWARE flag. Hardware profiles require a
+		// physical vendor rather than that fallback adapter.
+		if ( info.bSoftwareAdapter == bHardware || ( bHardware && info.nVendorId == 0x1414U ) ) {
 			continue;
 		}
 		*pIndex = i;

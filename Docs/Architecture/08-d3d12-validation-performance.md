@@ -31,7 +31,7 @@ Owner boundaries:
 | GPU-based validation | `SIRD3D12DiagnosticsTests --gpu-validation --dred --cycles 32` | Slow, optional GPU validation of resource/descriptor states | Manual, Graphics Tools |
 | Physical GPU | `SIRD3D12DiagnosticsTests --hardware --cycles 1024` | Identical correctness tests on hardware, fails when a hardware adapter is unavailable | Dedicated runner |
 
-Each test must return a nonzero status on data corruption, failed queue submission, bad synchronization, or invalid expected results. Opt-in Graphics Tools modes return 77 if the requested API is not installed (CTest can display SKIP, not PASS). A hardware run must never silently substitute WARP.
+Each test must return a nonzero status on data corruption, failed queue submission, bad synchronization, or invalid expected results. Opt-in Graphics Tools modes return 77 if the requested API is not installed (CTest can display SKIP, not PASS). A hardware run must never silently substitute WARP. Reject the Microsoft Basic Render Driver fallback (vendor 0x1414) for physical-hardware profiles even if its DXGI adapter flags do not mark it as software.
 
 **Negative tests to extend later:** independently injected device-removal reason and forced native queue failures, missing pages / corrupt descriptors in an isolated sacrificial device, DXGI occlusion/fullscreen/HDR/tearing matrix, multithreaded use from actual supported entrypoints, and precise DRED breadcrumb/page-fault capture on a removed physical device. Tests that risk TDRs should run only on a dedicated disposable runner, never ordinary PR CI.
 

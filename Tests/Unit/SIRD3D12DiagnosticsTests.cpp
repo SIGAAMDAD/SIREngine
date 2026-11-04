@@ -171,7 +171,7 @@ int main( int argc, char **argv )
 		if ( driver.queryAdapter( iAdapter, &info ) != SIR_GRAPHICS_SUCCESS ) {
 			return 5;
 		}
-		if ( ( info.bSoftwareAdapter == false ) == bHardware ) {
+		if ( ( info.bSoftwareAdapter == false ) == bHardware && !( bHardware && info.nVendorId == 0x1414U ) ) {
 			nSelected = iAdapter;
 			break;
 		}
