@@ -15,7 +15,7 @@ A binding identifies action ID, context ID, user, physical device class, signal,
 
 `saveProfile` and `loadProfile` use an explicitly versioned little-endian stream, not raw C++ object bytes or pointer addresses. Header is 24 bytes: `SIRA` magic, version 1, 24-byte header size, context/action/binding counts and FNV-1a32 payload checksum. Context records are 16 bytes; action records 8 bytes; binding records 28 bytes. Numeric fields, reserved padding, counts, total length, unique IDs, binding conflicts and checksums are verified during deserialization. Loading is transactional: all records are validated into an independent temporary action map before the active settings are replaced. A failed load leaves existing settings intact.
 
-Recording/replay timestamps, profile origin signatures, editor UI for binding authoring, user-directed hardware capture, advanced input calibration and long-term migration across profile schema versions remain separate subsystems.
+The API supports bounded user-directed capture of the next pressed button or strongly deflected axis, with explicit PENDING, ACCEPTED and CONFLICT states; conflicts leave the prior binding intact. Editor UI for capture and profile authoring, recording/replay timestamps, profile origin signatures, advanced device calibration and long-term migrations across profile schema versions remain separate subsystems.
 
 ## Acceptance
 
