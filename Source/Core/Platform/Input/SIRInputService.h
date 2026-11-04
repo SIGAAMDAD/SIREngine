@@ -24,6 +24,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #endif
 // clang-format on
 
+#include <Core/Platform/Input/SIRInputActions.h>
 #include <Core/Platform/Input/SIRInputBackend.h>
 #include <Core/Platform/Input/SIRInputDeviceRegistry.h>
 #include <Core/Platform/Input/SIRInputFrameState.h>
@@ -44,6 +45,8 @@ public:
 	void setTimingMetricsEnabled( bool bEnabled ) noexcept;
 	bool recover( void ) noexcept;
 	const sirInputFrame_t *frame( void ) const noexcept;
+	SIRInputActions &actions( void ) noexcept;
+	const SIRInputActions &actions( void ) const noexcept;
 	bool connect( const sirInputHardwareKey_t &key, sirInputDeviceId_t *pOut ) noexcept;
 	bool disconnect( sirInputBackendId_t eSource, sirInputDeviceId_t hDevice ) noexcept;
 	bool pairUser( sirInputDeviceId_t hDevice, uint32_t nUser ) noexcept;
@@ -63,6 +66,7 @@ private:
 	bool verifyOwner( sirInputBackendId_t eSource, sirInputDeviceId_t id, sirInputDeviceDescriptor_t *pOut ) const noexcept;
 	bool hasBackend( sirInputBackendId_t eSource ) const noexcept;
 	sirInputTimestamp_t timestamp( uint64_t nNative, sirInputClockSource_t eClock ) const noexcept;
+	SIRInputActions m_Actions;
 	SIRInputDeviceRegistry m_Registry;
 	SIRInputFrameState m_State;
 	SIRInputBackend *m_pBackends[SIR_INPUT_BACKEND_CAPACITY];

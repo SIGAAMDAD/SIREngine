@@ -6,6 +6,7 @@ set(SIR_CORE_PLATFORM_COMMON
     SIRThread.cpp
     SIRSync.cpp
     SIRAtomic.cpp
+    Input/SIRInputActions.cpp
     Input/SIRInputDeviceRegistry.cpp
     Input/SIRInputControllerProfiles.cpp
     Input/SIRInputFrameState.cpp

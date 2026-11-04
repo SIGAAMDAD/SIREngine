@@ -16,7 +16,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Core/Platform/Input/SIRInputService.h>
 #include <Core/Platform/SIRPlatformTime.h>
 
-SIRInputService::SIRInputService( void ) noexcept : m_Registry(), m_State(), m_pBackends{}, m_nBackendCount( 0 ), m_bStopping( false )
+SIRInputService::SIRInputService( void ) noexcept : m_Actions(), m_Registry(), m_State(), m_pBackends{}, m_nBackendCount( 0 ), m_bStopping( false )
 {
 }
 
@@ -69,7 +69,14 @@ void SIRInputService::sample( void ) noexcept
 
 bool SIRInputService::publish( void ) noexcept
 {
-	return m_State.publish( m_Registry );
+	if ( !m_State.publish( m_Registry ) ) {
+		return false;
+	}
+	const sirInputFrame_t *pFrame = m_State.frame();
+	if ( pFrame != nullptr ) {
+		m_Actions.evaluate( *pFrame );
+	}
+	return true;
 }
 void SIRInputService::setTimingMetricsEnabled( bool bEnabled ) noexcept
 {
@@ -79,6 +86,16 @@ void SIRInputService::setTimingMetricsEnabled( bool bEnabled ) noexcept
 const sirInputFrame_t *SIRInputService::frame( void ) const noexcept
 {
 	return m_State.frame();
+}
+
+SIRInputActions &SIRInputService::actions( void ) noexcept
+{
+	return m_Actions;
+}
+
+const SIRInputActions &SIRInputService::actions( void ) const noexcept
+{
+	return m_Actions;
 }
 
 bool SIRInputService::recover( void ) noexcept
@@ -212,4 +229,5 @@ void SIRInputService::shutdown( void ) noexcept
 	m_nBackendCount = 0;
 	m_State.stop();
 	m_Registry.reset();
+	m_Actions.clear();
 }
