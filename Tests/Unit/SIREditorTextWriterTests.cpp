@@ -5,7 +5,6 @@
 #include <assert.h>
 #include <string.h>
 
-
 static void sirEditorWriterRealSceneRoundtrip( void )
 {
 	constexpr uint64_t N_MIB = UINT64_C( 1024 ) * 1024;
@@ -23,8 +22,7 @@ static void sirEditorWriterRealSceneRoundtrip( void )
 	uint32_t iLayout = UINT32_MAX;
 	for ( uint32_t iProperty = 0; iProperty < properties.nCount; ++iProperty ) {
 		const sirEditorTextProperty_t &property = properties.pProperties[iProperty];
-		if ( property.nNameLength == 11 &&
-		     memcmp( workspace.getSource() + property.nNameOffset, "layout_mode", 11 ) == 0 ) {
+		if ( property.nNameLength == 11 && memcmp( workspace.getSource() + property.nNameOffset, "layout_mode", 11 ) == 0 ) {
 			iLayout = iProperty;
 			break;
 		}
@@ -33,12 +31,12 @@ static void sirEditorWriterRealSceneRoundtrip( void )
 
 	const sirEditorTextEdit_t edit = { iLayout, "4", 1 };
 	size_t nOutputBytes = 0;
-	assert( sirEditorWriteScalarPatches( workspace.getSource(), workspace.getSourceBytes(), properties,
-	                                     &edit, 1, nullptr, 0, &nOutputBytes ) == SIR_EDITOR_WRITE_OK );
+	assert( sirEditorWriteScalarPatches( workspace.getSource(), workspace.getSourceBytes(), properties, &edit, 1, nullptr, 0,
+	                                     &nOutputBytes ) == SIR_EDITOR_WRITE_OK );
 	char szOutput[8192] = {};
 	assert( nOutputBytes < sizeof( szOutput ) );
-	assert( sirEditorWriteScalarPatches( workspace.getSource(), workspace.getSourceBytes(), properties,
-	                                     &edit, 1, szOutput, sizeof( szOutput ), &nOutputBytes ) == SIR_EDITOR_WRITE_OK );
+	assert( sirEditorWriteScalarPatches( workspace.getSource(), workspace.getSourceBytes(), properties, &edit, 1, szOutput,
+	                                     sizeof( szOutput ), &nOutputBytes ) == SIR_EDITOR_WRITE_OK );
 	workspace.close();
 
 	assert( workspace.openTextSource( szOutput, nOutputBytes ) == SIR_EDITOR_WORKSPACE_OK );
