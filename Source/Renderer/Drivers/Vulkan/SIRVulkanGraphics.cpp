@@ -49,11 +49,7 @@ void SIRVulkanCommandList::prepare( SIRVulkanRenderingDevice *pOwner ) noexcept
 {
 	m_pOwner = pOwner;
 	m_eState = SIR_VULKAN_COMMAND_RECORDING;
-	m_hSource = {};
-	m_hDestination = {};
-	m_nSourceOffset = 0;
-	m_nDestinationOffset = 0;
-	m_nBytes = 0;
+	m_nCopyCount = 0;
 	m_nLastCompletion = 0;
 	m_bHasCopy = false;
 	m_bHasTextureCopy = false;
@@ -73,17 +69,18 @@ sirGraphicsResult_t SIRVulkanCommandList::reset( void ) noexcept
 	m_TextureCopy = {};
 	m_Barrier = {};
 	m_bHasBarrier = false;
-	m_hSource = {};
-	m_hDestination = {};
-	m_nBytes = 0;
+	m_nCopyCount = 0;
 	return SIR_GRAPHICS_SUCCESS;
 }
 
 sirGraphicsResult_t SIRVulkanCommandList::copyBuffer( sirGraphicsHandle_t hDestination, uint64_t nDstOffset, sirGraphicsHandle_t hSource,
                                                       uint64_t nSrcOffset, uint64_t nBytes ) noexcept
 {
-	if ( m_eState != SIR_VULKAN_COMMAND_RECORDING || m_bHasCopy || m_bHasBarrier ) {
+	if ( m_eState != SIR_VULKAN_COMMAND_RECORDING || m_bHasBarrier || m_bHasTextureCopy ) {
 		return SIR_GRAPHICS_BUSY;
+	}
+	if ( m_nCopyCount >= SIR_VULKAN_COPY_BATCH_CAPACITY ) {
+		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
 	}
 	if ( m_pOwner == nullptr || nBytes == 0 ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
@@ -104,11 +101,7 @@ sirGraphicsResult_t SIRVulkanCommandList::copyBuffer( sirGraphicsHandle_t hDesti
 	     ( pDestination->native.nUsage & VK_BUFFER_USAGE_TRANSFER_DST_BIT ) == 0 ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	m_hSource = hSource;
-	m_hDestination = hDestination;
-	m_nSourceOffset = nSrcOffset;
-	m_nDestinationOffset = nDstOffset;
-	m_nBytes = nBytes;
+	m_szBufferCopies[m_nCopyCount++] = { hSource, hDestination, nSrcOffset, nDstOffset, nBytes };
 	m_bHasCopy = true;
 	return SIR_GRAPHICS_SUCCESS;
 }
@@ -506,16 +499,20 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::submit( sirGraphicsQueue_t eQueue,
 		transfer.bBufferToImage = copy.bBufferToTexture;
 		eSubmit = m_Native.submitBufferImageCopy( &pBuffer->native, &pImage->native, transfer, &native );
 	} else {
-		sirVulkanGraphicsBufferSlot_t *pSource = resolveBuffer( pList->m_hSource );
-		sirVulkanGraphicsBufferSlot_t *pDestination = resolveBuffer( pList->m_hDestination );
-		if ( pSource == nullptr || pDestination == nullptr ) {
-			return SIR_GRAPHICS_INVALID_HANDLE;
+		sirVulkanBufferCopy_t copies[SIR_VULKAN_COPY_BATCH_CAPACITY] = {};
+		for ( uint32_t iCopy = 0; iCopy < pList->m_nCopyCount; ++iCopy ) {
+			const sirVulkanGraphicsBufferCopy_t &copy = pList->m_szBufferCopies[iCopy];
+			sirVulkanGraphicsBufferSlot_t *pSource = resolveBuffer( copy.hSource );
+			sirVulkanGraphicsBufferSlot_t *pDestination = resolveBuffer( copy.hDestination );
+			if ( pSource == nullptr || pDestination == nullptr ) {
+				return SIR_GRAPHICS_INVALID_HANDLE;
+			}
+			if ( pSource->pMapped != nullptr || pDestination->pMapped != nullptr ) {
+				return SIR_GRAPHICS_BUSY;
+			}
+			copies[iCopy] = { &pSource->native, &pDestination->native, copy.nSourceOffset, copy.nDestinationOffset, copy.nBytes };
 		}
-		if ( pSource->pMapped != nullptr || pDestination->pMapped != nullptr ) {
-			return SIR_GRAPHICS_BUSY;
-		}
-		eSubmit = m_Native.submitBufferCopy( &pSource->native, pList->m_nSourceOffset, &pDestination->native, pList->m_nDestinationOffset,
-		                                     pList->m_nBytes, &native );
+		eSubmit = m_Native.submitBufferCopies( copies, pList->m_nCopyCount, &native );
 	}
 	if ( eSubmit != SIR_VULKAN_SUCCESS ) {
 		return sirVulkanToGraphicsResult( eSubmit );
