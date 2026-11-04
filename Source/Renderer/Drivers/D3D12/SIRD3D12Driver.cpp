@@ -70,7 +70,8 @@ uint32_t SIRD3D12RenderingDevice::getDeviceGeneration( void ) const noexcept
 	return ( uint32_t )native.nDeviceGeneration;
 }
 
-sirGraphicsResult_t SIRD3D12RenderingDevice::initialize( bool bSoftware, const sirGraphicsDeviceCreateDesc_t &desc,
+sirGraphicsResult_t SIRD3D12RenderingDevice::initialize( bool bSoftware, const sirGraphicsDeviceCreateDesc_t& desc,
+                                                         const sirD3D12NativeDeviceConfig_t& nativeConfig,
                                                          const sirD3D12SealedPoolConfig_t *pSealedPools ) noexcept
 {
 	if ( desc.nFramesInFlight == 0 || desc.nFramesInFlight > 3 ) {
@@ -82,7 +83,7 @@ sirGraphicsResult_t SIRD3D12RenderingDevice::initialize( bool bSoftware, const s
 	if ( pSealedPools != nullptr && !desc.bHeadless ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
-	if ( desc.bEnableGpuValidation && !desc.bEnableApiValidation ) {
+	if ( nativeConfig.diagnostics.bEnableGpuValidation && !nativeConfig.diagnostics.bEnableDebugLayer ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	const uint64_t nSlotBytes = desc.nUploadBudgetBytes == 0 ? 64 * 1024 : desc.nUploadBudgetBytes / 3;
@@ -93,11 +94,7 @@ sirGraphicsResult_t SIRD3D12RenderingDevice::initialize( bool bSoftware, const s
 	sirD3D12TransferPoolConfig_t config = {};
 	config.nSlotBytes = nSlotBytes;
 	config.bPreferDirectMapped = true;
-	sirD3D12DiagnosticConfig_t diagnostics = {};
-	diagnostics.bEnableDebugLayer = desc.bEnableApiValidation;
-	diagnostics.bEnableGpuValidation = desc.bEnableGpuValidation;
-	diagnostics.bEnableDred = desc.bEnableDeviceFaultDiagnostics;
-	if ( !m_Native.initialize( desc.nAdapterIndex, config, desc.pCpuHeap, diagnostics ) ) {
+	if ( !m_Native.initialize( desc.nAdapterIndex, config, nativeConfig.pCpuHeap, nativeConfig.diagnostics ) ) {
 		return m_Native.getLastError() == E_NOTIMPL ? SIR_GRAPHICS_UNSUPPORTED : SIR_GRAPHICS_DRIVER_ERROR;
 	}
 	m_bSoftware = bSoftware;
@@ -459,16 +456,34 @@ sirGraphicsResult_t SIRD3D12Driver::queryAdapter( uint32_t nAdapterIndex, sirGra
 }
 sirGraphicsResult_t SIRD3D12Driver::createDevice( const sirGraphicsDeviceCreateDesc_t &desc, SIRRenderingDevice **ppDevice ) noexcept
 {
-	return createDeviceInternal( desc, nullptr, ppDevice );
+	const sirD3D12NativeDeviceConfig_t nativeConfig = {};
+	return createDeviceInternal( desc, nativeConfig, nullptr, ppDevice );
 }
 
 sirGraphicsResult_t SIRD3D12Driver::createSealedDevice( const sirGraphicsDeviceCreateDesc_t &desc, const sirD3D12SealedPoolConfig_t &pools,
                                                         SIRRenderingDevice **ppDevice ) noexcept
 {
-	return createDeviceInternal( desc, &pools, ppDevice );
+	const sirD3D12NativeDeviceConfig_t nativeConfig = {};
+	return createDeviceInternal( desc, nativeConfig, &pools, ppDevice );
 }
 
-sirGraphicsResult_t SIRD3D12Driver::createDeviceInternal( const sirGraphicsDeviceCreateDesc_t &desc,
+sirGraphicsResult_t SIRD3D12Driver::createDeviceWithConfig( const sirGraphicsDeviceCreateDesc_t& desc,
+                                                          const sirD3D12NativeDeviceConfig_t& nativeConfig,
+                                                          SIRRenderingDevice **ppDevice ) noexcept
+{
+	return createDeviceInternal( desc, nativeConfig, nullptr, ppDevice );
+}
+
+sirGraphicsResult_t SIRD3D12Driver::createSealedDeviceWithConfig( const sirGraphicsDeviceCreateDesc_t& desc,
+                                                                const sirD3D12SealedPoolConfig_t& pools,
+                                                                const sirD3D12NativeDeviceConfig_t& nativeConfig,
+                                                                SIRRenderingDevice **ppDevice ) noexcept
+{
+	return createDeviceInternal( desc, nativeConfig, &pools, ppDevice );
+}
+
+sirGraphicsResult_t SIRD3D12Driver::createDeviceInternal( const sirGraphicsDeviceCreateDesc_t& desc,
+                                                          const sirD3D12NativeDeviceConfig_t& nativeConfig,
                                                           const sirD3D12SealedPoolConfig_t *pSealedPools,
                                                           SIRRenderingDevice **ppDevice ) noexcept
 {
@@ -487,7 +502,7 @@ sirGraphicsResult_t SIRD3D12Driver::createDeviceInternal( const sirGraphicsDevic
 	if ( info.bSoftwareAdapter && !desc.bAllowSoftware ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
-	const sirGraphicsResult_t eInitialize = m_Device.initialize( info.bSoftwareAdapter, desc, pSealedPools );
+	const sirGraphicsResult_t eInitialize = m_Device.initialize( info.bSoftwareAdapter, desc, nativeConfig, pSealedPools );
 	if ( eInitialize != SIR_GRAPHICS_SUCCESS ) {
 		return eInitialize;
 	}

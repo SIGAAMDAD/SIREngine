@@ -53,11 +53,12 @@ int main( void )
 	}
 	config.nResidentBudgetBytes = 0;
 	SIRGeneralHeap uninitialized;
-	config.pCpuHeap = &uninitialized;
-	if ( driver.createDevice( config, &pDevice ) != SIR_GRAPHICS_DRIVER_ERROR || pDevice != nullptr ) {
+	sirD3D12NativeDeviceConfig_t nativeConfig = {};
+	nativeConfig.pCpuHeap = &uninitialized;
+	if ( driver.createDeviceWithConfig( config, nativeConfig, &pDevice ) != SIR_GRAPHICS_DRIVER_ERROR || pDevice != nullptr ) {
 		return 5;
 	}
-	config.pCpuHeap = nullptr;
+	nativeConfig.pCpuHeap = nullptr;
 	if ( driver.createDevice( config, &pDevice ) != SIR_GRAPHICS_SUCCESS || pDevice == nullptr ) {
 		return 6;
 	}

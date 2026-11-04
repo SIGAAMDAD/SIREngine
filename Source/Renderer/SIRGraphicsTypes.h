@@ -24,8 +24,6 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #endif
 // clang-format on
 
-class SIRGeneralHeap;
-
 // Driver-neutral contract. No D3D, Vulkan, OpenGL, DXGI, SDL, or GRDG types.
 // Explicit capability results govern APIs with no compute/descriptor support.
 typedef enum sirGraphicsBackend_e : uint32_t
@@ -367,14 +365,6 @@ typedef struct sirGraphicsDeviceCreateDesc_s
 	uint64_t nReadbackBudgetBytes;
 	bool bHeadless;
 	bool bAllowSoftware;
-	// Optional host CPU metadata authority; must outlive native device shutdown.
-	// When provided, the heap must own the RENDERING_CPU domain.
-	SIRGeneralHeap *pCpuHeap;
-	// Opt-in driver diagnostics. Requested but unavailable capabilities fail
-	// device creation; validation and DRED are excluded from runtime timings.
-	bool bEnableApiValidation;
-	bool bEnableGpuValidation;
-	bool bEnableDeviceFaultDiagnostics;
 } sirGraphicsDeviceCreateDesc_t;
 
 typedef struct sirGraphicsMemoryBudget_s
