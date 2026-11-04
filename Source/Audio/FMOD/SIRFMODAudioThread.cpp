@@ -78,9 +78,8 @@ void SIRFMODAudioThread::releaseStorage( void ) noexcept
 sirAudioResult_t SIRFMODAudioThread::start( const sirFMODAudioThreadConfig_t &config ) noexcept
 {
 	if ( m_nState.load( SIR_MEMORY_ORDER_ACQUIRE ) != SIR_FMOD_THREAD_EMPTY || m_Thread.isJoinable() ||
-	     !SIRRawStorage::isValidAllocator( config.runtime.pAllocator ) || config.nRequestCapacity < 4 ||
-	     config.nRequestCapacity > 4096 || ( config.nRequestCapacity & ( config.nRequestCapacity - 1 ) ) != 0 ||
-	     config.nIdleSleepMilliseconds > 100 ) {
+	     !SIRRawStorage::isValidAllocator( config.runtime.pAllocator ) || config.nRequestCapacity < 4 || config.nRequestCapacity > 4096 ||
+	     ( config.nRequestCapacity & ( config.nRequestCapacity - 1 ) ) != 0 || config.nIdleSleepMilliseconds > 100 ) {
 		return SIR_AUDIO_INVALID_ARGUMENT;
 	}
 	m_Config = config;
@@ -237,8 +236,7 @@ sirAudioResult_t SIRFMODAudioThread::poll( uint64_t nTicket, sirFMODThreadResult
 				result = slot.result;
 				slot.nState.store( SIR_FMOD_SLOT_FREE, SIR_MEMORY_ORDER_RELEASE );
 				eResult = SIR_AUDIO_OK;
-			} else if ( nExpected == SIR_FMOD_SLOT_QUEUED || nExpected == SIR_FMOD_SLOT_EXECUTING ||
-			            nExpected == SIR_FMOD_SLOT_RESERVED ) {
+			} else if ( nExpected == SIR_FMOD_SLOT_QUEUED || nExpected == SIR_FMOD_SLOT_EXECUTING || nExpected == SIR_FMOD_SLOT_RESERVED ) {
 				eResult = SIR_AUDIO_PENDING;
 			}
 		}
@@ -355,8 +353,7 @@ void SIRFMODAudioThread::threadMain( void ) noexcept
 		if ( nActiveLoadTicket != 0 ) {
 			sirFMODThreadSlot_t &slot = m_pSlots[( uint32_t )( nActiveLoadTicket & 0xFFFFU )];
 			const bool bCancelled = slot.bCancel.load( SIR_MEMORY_ORDER_ACQUIRE ) != 0;
-			const sirAudioResult_t eProgress =
-			    bCancelled ? m_Runtime.cancelLoadPackage() : m_Runtime.pollLoadPackage();
+			const sirAudioResult_t eProgress = bCancelled ? m_Runtime.cancelLoadPackage() : m_Runtime.pollLoadPackage();
 			if ( m_Runtime.getPendingPackageId() == 0 ) {
 				sirFMODThreadResult_t result = {};
 				result.eResult = bCancelled && eProgress == SIR_AUDIO_CANCELLED ? SIR_AUDIO_CANCELLED : eProgress;
@@ -380,8 +377,8 @@ void SIRFMODAudioThread::threadMain( void ) noexcept
 			} else {
 				result.eResult = execute( slot.request, result );
 			}
-			if ( slot.request.eOperation == SIR_FMOD_THREAD_LOAD_PACKAGE &&
-			     result.eResult == SIR_AUDIO_PENDING && m_Runtime.getPendingPackageId() != 0 ) {
+			if ( slot.request.eOperation == SIR_FMOD_THREAD_LOAD_PACKAGE && result.eResult == SIR_AUDIO_PENDING &&
+			     m_Runtime.getPendingPackageId() != 0 ) {
 				nActiveLoadTicket = nTicket;
 			} else {
 				complete( nTicket, result );
@@ -389,8 +386,7 @@ void SIRFMODAudioThread::threadMain( void ) noexcept
 		}
 		std::unique_lock<std::mutex> lock( m_WaitMutex );
 		m_WaitCondition.wait_for( lock, std::chrono::milliseconds( m_Config.nIdleSleepMilliseconds ), [this]() {
-			return m_bStop.load( SIR_MEMORY_ORDER_ACQUIRE ) != 0 ||
-			       m_nWakes.exchange( 0, SIR_MEMORY_ORDER_ACQUIRE_RELEASE ) != 0;
+			return m_bStop.load( SIR_MEMORY_ORDER_ACQUIRE ) != 0 || m_nWakes.exchange( 0, SIR_MEMORY_ORDER_ACQUIRE_RELEASE ) != 0;
 		} );
 	}
 	if ( nActiveLoadTicket != 0 ) {

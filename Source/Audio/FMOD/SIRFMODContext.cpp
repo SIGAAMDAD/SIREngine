@@ -87,8 +87,7 @@ sirFMODContextResult_t SIRFMODContext::initialize( const sirFMODContextConfig_t 
 	if ( nRuntimeVersion != m_Ops.nSDKVersion ) {
 		return rollback( SIR_FMOD_VERSION_MISMATCH, 0 );
 	}
-	const int32_t nCallbackResult =
-	    m_Ops.registerDeviceLoss( m_Ops.pUserData, m_pCoreBorrowed, this, notifyDeviceLoss );
+	const int32_t nCallbackResult = m_Ops.registerDeviceLoss( m_Ops.pUserData, m_pCoreBorrowed, this, notifyDeviceLoss );
 	if ( nCallbackResult != 0 ) {
 		return rollback( SIR_FMOD_NATIVE_ERROR, nCallbackResult );
 	}

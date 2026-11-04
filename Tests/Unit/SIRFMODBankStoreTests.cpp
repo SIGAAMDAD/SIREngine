@@ -321,8 +321,16 @@ static int32_t testGetBankLoadingState( void *pData, void *, sirFMODSampleState_
 
 static sirFMODBankNativeOps_t makeBankOps( sirFMODBankFixture_t *pFixture ) noexcept
 {
-	return { 3, pFixture, testLoadBank, testUnloadBank, testPreloadBank, testSampleState, testContainsEvent,
-	         testContainsBankObject, testLoadBankAsync, testGetBankLoadingState };
+	return { 3,
+	         pFixture,
+	         testLoadBank,
+	         testUnloadBank,
+	         testPreloadBank,
+	         testSampleState,
+	         testContainsEvent,
+	         testContainsBankObject,
+	         testLoadBankAsync,
+	         testGetBankLoadingState };
 }
 
 static int32_t testPinnedBusResolve( void *pData, void *pStudio, const char *szPath, void **ppBus ) noexcept
@@ -646,6 +654,10 @@ static void testManifestPackageLoading( const sirContainerAllocator_t *pAllocato
 	sirFMODBankFixture_t fixture = {};
 	SIRFMODContext context;
 	const sirFMODContextConfig_t contextConfig = { 16, -1, 1, 1, 0, 0 };
+
+
+
+
 	checkBank( context.initialize( contextConfig, makeStudioOps( &fixture ) ) == SIR_FMOD_OK );
 	SIRFMODVoiceBackend voices;
 	checkBank( voices.configure( &context, pAllocator, makeVoiceOps( &fixture ), 2 ) == SIR_AUDIO_OK );
@@ -925,10 +937,10 @@ static void testAudioOwnerThread( const sirContainerAllocator_t *pAllocator )
 	config.nativeOps.voice.setInstanceParameter = testRuntimeInstanceParameter;
 	config.nativeOps.voice.setGlobalParameter = testRuntimeGlobalParameter;
 	config.nativeOps.bank = makeBankOps( &fixture );
-	config.nativeOps.mixer = { 1, &fixture, testPinnedBusResolve, testPinnedVCAResolve, testPinnedSetVolume,
-	                           testPinnedSetMute, testPinnedSetVolume };
-	config.nativeOps.snapshot = { 1, &fixture, testPinnedSnapshotResolve, testVoiceCreate, testVoiceStart,
-	                              testVoiceStop, testVoiceRelease };
+	config.nativeOps.mixer = {
+	    1, &fixture, testPinnedBusResolve, testPinnedVCAResolve, testPinnedSetVolume, testPinnedSetMute, testPinnedSetVolume };
+	config.nativeOps.snapshot = {
+	    1, &fixture, testPinnedSnapshotResolve, testVoiceCreate, testVoiceStart, testVoiceStop, testVoiceRelease };
 	config.nRequestCapacity = 64;
 	config.nIdleSleepMilliseconds = 1;
 	SIRFMODAudioThread worker;

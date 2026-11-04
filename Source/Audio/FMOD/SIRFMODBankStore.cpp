@@ -102,7 +102,6 @@ sirAudioResult_t SIRFMODBankStore::initialize( SIRFMODContext *pContext, SIRFMOD
 	m_pContext = pContext;
 	m_pVoices = pVoices;
 
-
 	m_pAllocator = pAllocator;
 	m_Ops = ops;
 	m_nBankCapacity = nMaxBanks;

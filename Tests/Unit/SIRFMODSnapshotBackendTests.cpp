@@ -126,9 +126,14 @@ static int32_t snapshotStudioRelease( void *pData, void *pStudio ) noexcept
 	return 0;
 }
 
+static int32_t snapshotRegisterDeviceLoss( void *, void *, void *, void ( * )( void * ) noexcept ) noexcept
+{
+	return 0;
+}
+
 static sirFMODNativeOps_t makeSnapshotContextOps( sirFMODSnapshotFixture_t *pFixture ) noexcept
 {
-	return { 1,
+	return { 2,
 	         0x00020400,
 	         pFixture,
 	         snapshotStudioCreate,
@@ -139,7 +144,8 @@ static sirFMODNativeOps_t makeSnapshotContextOps( sirFMODSnapshotFixture_t *pFix
 	         snapshotSetNoSound,
 	         snapshotStudioInitialize,
 	         snapshotStudioUpdate,
-	         snapshotStudioRelease };
+	         snapshotStudioRelease,
+	         snapshotRegisterDeviceLoss };
 }
 
 static int32_t snapshotResolve( void *pData, void *pStudio, const char *szPath, void **ppDescription ) noexcept
