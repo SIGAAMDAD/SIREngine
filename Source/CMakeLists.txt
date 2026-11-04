@@ -1,5 +1,6 @@
 add_subdirectory(Core)
 add_subdirectory(Renderer)
+add_subdirectory(Mesh)
 
 add_executable(SIREngine Main.cpp)
 target_link_libraries(SIREngine PRIVATE SIR::Core SIR::Graphics)
