@@ -25,10 +25,11 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // clang-format on
 
 #include <stdint.h>
+#include <Renderer/SIRGraphicsABIOperations.h>
 
 // ABI version 1 has an immutable mandatory prefix. Append optional entries
 // only in a new minor version; breaking layouts require a new major version.
-#define SIR_GRAPHICS_DRIVER_ABI_MAJOR 1U
+#define SIR_GRAPHICS_DRIVER_ABI_MAJOR 2U
 #define SIR_GRAPHICS_DRIVER_ABI_MINOR 0U
 #define SIR_GRAPHICS_DRIVER_ABI_ENTRY "SIRGetGraphicsDriverABI"
 
@@ -145,8 +146,30 @@ typedef struct sirGraphicsABIDevice_s
 	void *pDevice;
 	uint32_t ( *pQueryCapabilities )( void *pDevice, sirGraphicsABICapabilities_t *pInfo );
 	uint32_t ( *pQueryFormat )( void *pDevice, sirGraphicsABIFormat_t *pFormat );
-	uint32_t ( *pPoll )( void *pDevice, uint32_t nQueue, uint64_t nValue, uint32_t *pComplete );
-	uint32_t ( *pWait )( void *pDevice, uint32_t nQueue, uint64_t nValue, uint64_t nTimeoutNs );
+	uint32_t ( *pPoll )( void *pDevice, const sirGraphicsCompletion_t *pCompletion, uint32_t *pComplete );
+	uint32_t ( *pWait )( void *pDevice, const sirGraphicsCompletion_t *pCompletion, uint64_t nTimeoutNs );
+
+	uint32_t ( *pQueryMemoryBudget )( void *pDevice, sirGraphicsMemoryBudget_t *pBudget );
+	uint32_t ( *pCreateBuffer )( void *pDevice, const sirGraphicsBufferDesc_t *pDesc, sirGraphicsHandle_t *pHandle );
+	uint32_t ( *pCreateTexture )( void *pDevice, const sirGraphicsTextureDesc_t *pDesc, sirGraphicsHandle_t *pHandle );
+	uint32_t ( *pCreateView )( void *pDevice, const sirGraphicsViewDesc_t *pDesc, sirGraphicsHandle_t *pHandle );
+	uint32_t ( *pCreateSampler )( void *pDevice, const sirGraphicsSamplerDesc_t *pDesc, sirGraphicsHandle_t *pHandle );
+	uint32_t ( *pCreatePipeline )( void *pDevice, const sirGraphicsABIPipeline_t *pDesc, sirGraphicsHandle_t *pHandle );
+	uint32_t ( *pCreateBindingSet )( void *pDevice, sirGraphicsHandle_t hPipeline, uint32_t nSet, sirGraphicsHandle_t *pHandle );
+	uint32_t ( *pUpdateBindings )( void *pDevice, sirGraphicsHandle_t hSet, const sirGraphicsDescriptorWrite_t *pWrites, uint32_t nCount );
+	uint32_t ( *pMapBuffer )( void *pDevice, const sirGraphicsABIBufferRange_t *pRange, sirGraphicsMappedBuffer_t *pMapped );
+	uint32_t ( *pUnmapBuffer )( void *pDevice, const sirGraphicsABIBufferRange_t *pRange );
+	uint32_t ( *pFlushBuffer )( void *pDevice, const sirGraphicsABIBufferRange_t *pRange );
+	uint32_t ( *pInvalidateBuffer )( void *pDevice, const sirGraphicsABIBufferRange_t *pRange );
+	uint32_t ( *pAcquireCommands )( void *pDevice, uint32_t nQueue, sirGraphicsABICommandList_t *pCommands );
+	uint32_t ( *pSubmit )( void *pDevice, uint32_t nQueue, const sirGraphicsABISubmission_t *pBatch, sirGraphicsCompletion_t *pCompletion );
+	uint32_t ( *pRetireResource )( void *pDevice, sirGraphicsHandle_t hResource, const sirGraphicsCompletionSet_t *pCompletion );
+	uint32_t ( *pCreateSurface )( void *pDevice, const sirGraphicsABINativeSurface_t *pNative,
+	                              const sirGraphicsABIPresentDesc_t *pPresent, sirGraphicsHandle_t *pSurface );
+	uint32_t ( *pResizeSurface )( void *pDevice, sirGraphicsHandle_t hSurface, const sirGraphicsABINativeSurface_t *pNative,
+	                              const sirGraphicsABIPresentDesc_t *pPresent );
+	uint32_t ( *pAcquireSurfaceImage )( void *pDevice, sirGraphicsHandle_t hSurface, sirGraphicsSurfaceImage_t *pImage );
+	uint32_t ( *pPresent )( void *pDevice, const sirGraphicsSurfaceImage_t *pImage, const sirGraphicsCompletion_t *pComplete );
 	uint32_t ( *pShutdown )( void *pDevice );
 } sirGraphicsABIDevice_t;
 
@@ -186,6 +209,7 @@ sirGraphicsABIResult_t sirGraphicsValidateABIAdapter( const sirGraphicsABIAdapte
 sirGraphicsABIResult_t sirGraphicsValidateABICapabilities( const sirGraphicsABICapabilities_t *pInfo ) noexcept;
 sirGraphicsABIResult_t sirGraphicsValidateABIFormat( const sirGraphicsABIFormat_t *pFormat ) noexcept;
 sirGraphicsABIResult_t sirGraphicsValidateABIDevice( const sirGraphicsABIDevice_t *pDevice ) noexcept;
+sirGraphicsABIResult_t sirGraphicsValidateABICommandList( const sirGraphicsABICommandList_t *pCommands ) noexcept;
 sirGraphicsABIResult_t sirGraphicsSelectABIProfile( const sirGraphicsABICapabilities_t *pInfo, uint32_t *pProfile ) noexcept;
 
 static_assert( sizeof( void * ) == 8, "graphics module ABI requires a 64-bit process" );
