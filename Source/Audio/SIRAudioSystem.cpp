@@ -96,6 +96,13 @@ sirAudioResult_t SIRAudioSystem::initialize( const sirAudioSystemConfig_t &confi
 	return SIR_AUDIO_OK;
 }
 
+void SIRAudioSystem::setLifecycleCallback( sirAudioLifecycleCallback_t callback ) noexcept
+{
+	// Only the update owner may replace the callback; producers continue
+	// to submit commands without retaining pointers to callback state.
+	m_LifecycleCallback = callback;
+}
+
 void SIRAudioSystem::shutdown( void ) noexcept
 {
 	// All producers and the update owner must already be quiesced.
@@ -105,6 +112,7 @@ void SIRAudioSystem::shutdown( void ) noexcept
 	m_Backend = {};
 	m_pBackendContext = nullptr;
 	m_pResources = nullptr;
+	m_LifecycleCallback = {};
 	m_nResourceEpoch = 0;
 	m_bInitialized = false;
 	m_nEpoch = 0;
@@ -631,37 +639,47 @@ sirAudioResult_t SIRAudioSystem::getPlaybackState( sirAudioPlayingHandle_t hPlay
 	return SIR_AUDIO_OK;
 }
 
-void SIRAudioSystem::applyCompletion( const sirAudioCompletion_t &completion ) noexcept
+bool SIRAudioSystem::applyCompletion( const sirAudioCompletion_t &completion ) noexcept
 {
 	if ( !isValid( completion.hPlaying ) ) {
-		return;
+		return false;
 	}
 	sirAudioPlayingSlot_t &slot = m_pPlaying[completion.hPlaying.nSlot];
 	if ( completion.eType == SIR_AUDIO_COMPLETION_STARTED ) {
 		if ( completion.nSequence == slot.nStartSequence ) {
 			if ( slot.eState == SIR_AUDIO_PLAYBACK_QUEUED ) {
 				slot.eState = SIR_AUDIO_PLAYBACK_PLAYING;
-			} else if ( slot.eState == SIR_AUDIO_PLAYBACK_STOPPING && slot.eStateBeforeStop == SIR_AUDIO_PLAYBACK_QUEUED ) {
+				return true;
+			}
+			if ( slot.eState == SIR_AUDIO_PLAYBACK_STOPPING && slot.eStateBeforeStop == SIR_AUDIO_PLAYBACK_QUEUED ) {
 				slot.eStateBeforeStop = SIR_AUDIO_PLAYBACK_PLAYING;
+				return true;
 			}
 		}
 	} else if ( completion.eType == SIR_AUDIO_COMPLETION_FAILED ) {
-		if ( completion.nSequence == slot.nStartSequence ) {
+		if ( completion.nSequence == slot.nStartSequence &&
+		     ( slot.eState == SIR_AUDIO_PLAYBACK_QUEUED || slot.eState == SIR_AUDIO_PLAYBACK_STOPPING ) ) {
 			markTerminal( slot, SIR_AUDIO_PLAYBACK_FAILED );
-		} else if ( completion.nSequence == slot.nStopSequence && slot.eState == SIR_AUDIO_PLAYBACK_STOPPING ) {
+			return true;
+		}
+		if ( completion.nSequence == slot.nStopSequence && slot.eState == SIR_AUDIO_PLAYBACK_STOPPING ) {
 			slot.eState = slot.eStateBeforeStop;
 			slot.nStopSequence = 0;
+			return true;
 		}
 	} else if ( completion.eType == SIR_AUDIO_COMPLETION_STOPPED ) {
 		if ( completion.nSequence == slot.nStopSequence && slot.eState == SIR_AUDIO_PLAYBACK_STOPPING ) {
 			markTerminal( slot, SIR_AUDIO_PLAYBACK_FINISHED );
+			return true;
 		}
 	} else if ( completion.eType == SIR_AUDIO_COMPLETION_FINISHED ) {
 		if ( completion.nSequence == slot.nStartSequence &&
 		     ( slot.eState == SIR_AUDIO_PLAYBACK_PLAYING || slot.eState == SIR_AUDIO_PLAYBACK_STOPPING ) ) {
 			markTerminal( slot, SIR_AUDIO_PLAYBACK_FINISHED );
+			return true;
 		}
 	}
+	return false;
 }
 
 void SIRAudioSystem::failSubmission( const sirAudioCommand_t &command ) noexcept
@@ -689,7 +707,10 @@ void SIRAudioSystem::drainCompletions( void ) noexcept
 			nCount = 16;
 		}
 		for ( uint32_t iCompletion = 0; iCompletion < nCount; ++iCompletion ) {
-			applyCompletion( completions[iCompletion] );
+			const sirAudioCompletion_t &completion = completions[iCompletion];
+			if ( applyCompletion( completion ) && m_LifecycleCallback.pfnNotify != nullptr ) {
+				m_LifecycleCallback.pfnNotify( m_LifecycleCallback.pUserData, &completion );
+			}
 		}
 	} while ( nCount == 16 );
 }

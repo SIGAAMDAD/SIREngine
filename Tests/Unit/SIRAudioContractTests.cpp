@@ -133,6 +133,89 @@ static void testLifecycle( const sirContainerAllocator_t *pAllocator )
 	audio.shutdown();
 }
 
+typedef struct sirAudioLifecycleFixture_s
+{
+	uint32_t nNotifications;
+	uint32_t nStarted;
+	uint32_t nStopped;
+	uint32_t nFinished;
+	uint32_t nFailed;
+	uint64_t nLastSequence;
+} sirAudioLifecycleFixture_t;
+
+static void testLifecycleNotify( void *pData, const sirAudioCompletion_t *pCompletion ) noexcept
+{
+	sirAudioLifecycleFixture_t *pFixture = ( sirAudioLifecycleFixture_t * )pData;
+	testCheck( pCompletion != nullptr );
+	++pFixture->nNotifications;
+	pFixture->nLastSequence = pCompletion->nSequence;
+	if ( pCompletion->eType == SIR_AUDIO_COMPLETION_STARTED ) {
+		++pFixture->nStarted;
+	} else if ( pCompletion->eType == SIR_AUDIO_COMPLETION_STOPPED ) {
+		++pFixture->nStopped;
+	} else if ( pCompletion->eType == SIR_AUDIO_COMPLETION_FINISHED ) {
+		++pFixture->nFinished;
+	} else if ( pCompletion->eType == SIR_AUDIO_COMPLETION_FAILED ) {
+		++pFixture->nFailed;
+	}
+}
+
+static void testLifecycleNotifications( const sirContainerAllocator_t *pAllocator )
+{
+	SIRAudioMockBackend backend( pAllocator );
+	SIRAudioSystem audio;
+	const sirAudioSystemConfig_t config = { 1, 0, 8, 4, 4, 0 };
+	const sirAudioLifecycleCallback_t callback = { nullptr, nullptr };
+	audio.setLifecycleCallback( callback );
+	testCheck( audio.initialize( config, pAllocator, SIRAudioMockBackend::getOps(), &backend ) == SIR_AUDIO_OK );
+	sirAudioLifecycleFixture_t fixture = {};
+	audio.setLifecycleCallback( { &fixture, testLifecycleNotify } );
+	sirAudioPlayingHandle_t first = {};
+	testCheck( audio.playEvent( 100, {}, first ) == SIR_AUDIO_PENDING );
+	testCheck( audio.update() == 1 );
+	testCheck( fixture.nNotifications == 1 && fixture.nStarted == 1 );
+	const uint64_t nStartSequence = fixture.nLastSequence;
+	sirAudioCompletion_t stale = {};
+	stale.eType = SIR_AUDIO_COMPLETION_STARTED;
+	stale.hPlaying = first;
+	stale.nSequence = nStartSequence + 123;
+	testCheck( backend.injectCompletion( stale ) );
+	audio.update();
+	testCheck( fixture.nNotifications == 1 );
+	testCheck( audio.stopEvent( first, SIR_AUDIO_STOP_IMMEDIATE ) == SIR_AUDIO_PENDING );
+	testCheck( audio.update() == 1 && fixture.nStopped == 1 && fixture.nNotifications == 2 );
+	backend.failNextPlay();
+	sirAudioPlayingHandle_t second = {};
+	testCheck( audio.playEvent( 101, {}, second ) == SIR_AUDIO_PENDING );
+	testCheck( audio.update() == 1 );
+	testCheck( fixture.nFailed == 1 && fixture.nNotifications == 3 );
+	stale.eType = SIR_AUDIO_COMPLETION_FINISHED;
+	stale.hPlaying = first;
+	stale.nSequence = nStartSequence;
+	testCheck( backend.injectCompletion( stale ) );
+	audio.update();
+	testCheck( fixture.nNotifications == 3 );
+	sirAudioPlayingHandle_t third = {};
+	testCheck( audio.playEvent( 102, {}, third ) == SIR_AUDIO_PENDING );
+	testCheck( audio.update() == 1 );
+	testCheck( fixture.nStarted == 2 && fixture.nNotifications == 4 );
+	sirAudioCompletion_t done = {};
+	done.eType = SIR_AUDIO_COMPLETION_FINISHED;
+	done.hPlaying = third;
+	done.nSequence = fixture.nLastSequence;
+	testCheck( backend.injectCompletion( done ) );
+	audio.update();
+	testCheck( fixture.nFinished == 1 && fixture.nNotifications == 5 );
+	audio.setLifecycleCallback( {} );
+	audio.shutdown();
+	testCheck( audio.initialize( config, pAllocator, SIRAudioMockBackend::getOps(), &backend ) == SIR_AUDIO_OK );
+	sirAudioPlayingHandle_t fourth = {};
+	testCheck( audio.playEvent( 103, {}, fourth ) == SIR_AUDIO_PENDING );
+	audio.update();
+	testCheck( fixture.nNotifications == 5 );
+	audio.shutdown();
+}
+
 static void testQueueBoundaries( const sirContainerAllocator_t *pAllocator )
 {
 	SIRAudioQueue<sirAudioCompletion_t> queue;
@@ -388,6 +471,7 @@ int main( void )
 	testConcurrentQueue( &allocator );
 	testQueueBoundaries( &allocator );
 	testLifecycle( &allocator );
+	testLifecycleNotifications( &allocator );
 	testFailureAndCapacity( &allocator );
 	testStaleAfterReuse( &allocator );
 	testLateParameterFailure( &allocator );

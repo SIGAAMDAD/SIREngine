@@ -387,6 +387,12 @@ uint32_t SIRFMODRuntime::update( void ) noexcept
 	return isReady() ? m_Audio.update() : 0;
 }
 
+sirAudioResult_t SIRFMODRuntime::getPlayingTimeline( sirAudioPlayingHandle_t hPlaying, uint32_t &nMilliseconds ) noexcept
+{
+	nMilliseconds = 0;
+	return isReady() ? m_Voices.getPlayingTimeline( hPlaying, nMilliseconds ) : SIR_AUDIO_NOT_INITIALIZED;
+}
+
 bool SIRFMODRuntime::isReady( void ) const noexcept
 {
 	return m_bInitialized && m_Context.isReady() && m_pManifest != nullptr && m_pManifest->isLoaded() &&

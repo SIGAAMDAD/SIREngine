@@ -74,6 +74,7 @@ private:
 	sirAudioBackendOps_t m_Backend = {};
 	void *m_pBackendContext = nullptr;
 	const SIRAudioResourceStore *m_pResources = nullptr;
+	sirAudioLifecycleCallback_t m_LifecycleCallback = {};
 	uint64_t m_nResourceEpoch = 0;
 	SIRAudioQueue<sirAudioPacket_t> m_Commands;
 	SIRAudioQueue<sirAudioCommand_t> m_CriticalCommands;
@@ -93,7 +94,7 @@ private:
 	void markTerminal( sirAudioPlayingSlot_t &slot, sirAudioPlaybackState_t eState ) noexcept;
 	void applyReleaseResult( const sirAudioCommand_t &command, sirAudioResult_t eResult ) noexcept;
 	sirAudioResult_t enqueue( sirAudioCommand_t &command, bool bCritical, const sirAudioAttributes_t *pAttributes = nullptr ) noexcept;
-	void applyCompletion( const sirAudioCompletion_t &completion ) noexcept;
+	bool applyCompletion( const sirAudioCompletion_t &completion ) noexcept;
 	void failSubmission( const sirAudioCommand_t &command ) noexcept;
 	void drainCompletions( void ) noexcept;
 
@@ -107,6 +108,7 @@ public:
 	                             const sirAudioBackendOps_t &backend, void *pBackendContext,
 	                             const SIRAudioResourceStore *pResources = nullptr ) noexcept;
 	void shutdown( void ) noexcept;
+	void setLifecycleCallback( sirAudioLifecycleCallback_t callback ) noexcept;
 	sirAudioResult_t playEvent( uint64_t nEventId, sirAudioEmitterHandle_t hEmitter, sirAudioPlayingHandle_t &hPlaying ) noexcept;
 	sirAudioResult_t stopEvent( sirAudioPlayingHandle_t hPlaying, sirAudioStopMode_t eMode ) noexcept;
 	sirAudioResult_t setParameter( sirAudioPlayingHandle_t hPlaying, uint64_t nParameterId, float fValue ) noexcept;

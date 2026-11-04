@@ -149,6 +149,15 @@ typedef struct sirAudioCompletion_s
 	uint8_t nReserved[6];
 } sirAudioCompletion_t;
 
+// Invoked on the audio update owner after an accepted completion mutates
+// the logical playing state. The callback borrows the completion only
+// through its invocation; it must not synchronously destroy SIRAudioSystem.
+typedef struct sirAudioLifecycleCallback_s
+{
+	void *pUserData;
+	void ( *pfnNotify )( void *pUserData, const sirAudioCompletion_t *pCompletion ) noexcept;
+} sirAudioLifecycleCallback_t;
+
 typedef struct sirAudioBackendConfig_s
 {
 	uint32_t nMaxVoices;
