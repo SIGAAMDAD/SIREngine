@@ -53,6 +53,9 @@ sirEditorScalarResult_t sirEditorDecodeScalar( const char *pszText, size_t nByte
 		int64_t nValue = 0;
 		if ( *pFirst == '+' && nBytes > 1 ) {
 			++pFirst;
+			if ( *pFirst == '-' || *pFirst == '+' ) {
+				return SIR_EDITOR_SCALAR_INVALID_TEXT;
+			}
 		}
 		const std::from_chars_result result = std::from_chars( pFirst, pLast, nValue, 10 );
 		if ( result.ec != std::errc{} || result.ptr != pLast ) {
@@ -63,6 +66,9 @@ sirEditorScalarResult_t sirEditorDecodeScalar( const char *pszText, size_t nByte
 		uint64_t nValue = 0;
 		if ( *pFirst == '+' && nBytes > 1 ) {
 			++pFirst;
+			if ( *pFirst == '-' || *pFirst == '+' ) {
+				return SIR_EDITOR_SCALAR_INVALID_TEXT;
+			}
 		}
 		const std::from_chars_result result = std::from_chars( pFirst, pLast, nValue, 10 );
 		if ( result.ec != std::errc{} || result.ptr != pLast ) {
@@ -73,6 +79,9 @@ sirEditorScalarResult_t sirEditorDecodeScalar( const char *pszText, size_t nByte
 		double fValue = 0;
 		if ( *pFirst == '+' && nBytes > 1 ) {
 			++pFirst;
+			if ( *pFirst == '-' || *pFirst == '+' ) {
+				return SIR_EDITOR_SCALAR_INVALID_TEXT;
+			}
 		}
 		const std::from_chars_result result = std::from_chars( pFirst, pLast, fValue, std::chars_format::general );
 		if ( result.ec != std::errc{} || result.ptr != pLast || !std::isfinite( fValue ) ) {
