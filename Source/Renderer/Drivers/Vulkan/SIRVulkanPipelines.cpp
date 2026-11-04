@@ -38,7 +38,7 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::createPipeline( const sirGraphicsP
 	}
 	for ( uint32_t iSlot = 0; iSlot < SIR_VULKAN_PIPELINE_CAPACITY; ++iSlot ) {
 		sirVulkanGraphicsPipelineSlot_t *pSlot = &m_szPipelines[iSlot];
-		if ( pSlot->bActive || pSlot->nGeneration == 0 ) {
+		if ( pSlot->bActive || pSlot->bRetiring || pSlot->nGeneration == 0 ) {
 			continue;
 		}
 		const sirVulkanResult_t eCreate = m_Native.createComputePipeline( desc.computeShader.pBytes, desc.computeShader.nByteCount,

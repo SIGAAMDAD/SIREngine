@@ -45,6 +45,26 @@ static sirGraphicsResult_t sirVulkanToGraphicsResult( sirVulkanResult_t eResult 
 	}
 }
 
+
+sirGraphicsResult_t sirVulkanDescribeAdapter( uint32_t nAdapterIndex, const sirVulkanAdapterInfo_t& native,
+                                               sirGraphicsAdapterInfo_t *pInfo ) noexcept
+{
+	if ( pInfo == nullptr ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	*pInfo = {};
+	pInfo->nAdapterIndex = nAdapterIndex;
+	pInfo->nVendorId = native.nVendorId;
+	pInfo->nDeviceId = native.nDeviceId;
+	pInfo->nDedicatedVideoBytes = native.nDeviceLocalHeapBytes;
+	pInfo->nFeatureMask = native.bComputeCapable ? SIR_GRAPHICS_FEATURE_COMPUTE : 0;
+	pInfo->bSoftwareAdapter = native.bSoftwareAdapter;
+	pInfo->nApiVersion = { VK_API_VERSION_MAJOR( native.nApiVersion ), VK_API_VERSION_MINOR( native.nApiVersion ),
+	                       VK_API_VERSION_PATCH( native.nApiVersion ) };
+	memcpy( pInfo->szName, native.szDeviceName, sizeof( pInfo->szName ) );
+	return SIR_GRAPHICS_SUCCESS;
+}
+
 void SIRVulkanCommandList::prepare( SIRVulkanRenderingDevice *pOwner ) noexcept
 {
 	m_pOwner = pOwner;
@@ -183,6 +203,23 @@ void SIRVulkanRenderingDevice::collectRetired( void ) noexcept
 		return;
 	}
 	collectImageResources();
+	for ( uint32_t iSlot = 0; iSlot < SIR_VULKAN_PIPELINE_CAPACITY; ++iSlot ) {
+		sirVulkanGraphicsPipelineSlot_t *pSlot = &m_szPipelines[iSlot];
+		if ( !pSlot->bRetiring ) {
+			continue;
+		}
+		if ( pSlot->nRetireValue != 0 ) {
+			const sirVulkanCompletion_t completion = { m_nNativeSerial, pSlot->nRetireValue };
+			bool bCompleted = false;
+			if ( m_Native.queryCompletion( &completion, &bCompleted ) != SIR_VULKAN_SUCCESS || !bCompleted ) {
+				continue;
+			}
+		}
+		if ( m_Native.destroyComputePipeline( &pSlot->native ) == SIR_VULKAN_SUCCESS ) {
+			pSlot->bRetiring = false;
+			pSlot->nRetireValue = 0;
+		}
+	}
 	for ( uint32_t iSlot = 0; iSlot < SIR_VULKAN_BUFFER_CAPACITY; ++iSlot ) {
 		sirVulkanGraphicsBufferSlot_t *pSlot = &m_szBuffers[iSlot];
 		if ( !pSlot->bRetiring ) {
@@ -647,15 +684,11 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::retireResource( sirGraphicsHandle_
 		if ( completion.szQueueValues[SIR_GRAPHICS_QUEUE_DIRECT] < pSlot->native.nLastGpuUse ) {
 			return SIR_GRAPHICS_INVALID_ARGUMENT;
 		}
-		const sirVulkanResult_t eDestroy = m_Native.destroyComputePipeline( &pSlot->native );
-		if ( eDestroy == SIR_VULKAN_BUSY ) {
-			return SIR_GRAPHICS_BUSY;
-		}
-		if ( eDestroy != SIR_VULKAN_SUCCESS ) {
-			return SIR_GRAPHICS_DRIVER_ERROR;
-		}
 		pSlot->bActive = false;
+		pSlot->bRetiring = true;
+		pSlot->nRetireValue = completion.szQueueValues[SIR_GRAPHICS_QUEUE_DIRECT];
 		++pSlot->nGeneration;
+		collectRetired();
 		return SIR_GRAPHICS_SUCCESS;
 	}
 	if ( hResource.eType != SIR_GRAPHICS_HANDLE_BUFFER ) {
@@ -725,7 +758,7 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::shutdown( void ) noexcept
 		}
 	}
 	for ( uint32_t iSlot = 0; iSlot < SIR_VULKAN_PIPELINE_CAPACITY; ++iSlot ) {
-		if ( m_szPipelines[iSlot].bActive ) {
+		if ( m_szPipelines[iSlot].bActive || m_szPipelines[iSlot].bRetiring ) {
 			return SIR_GRAPHICS_BUSY;
 		}
 	}
@@ -770,15 +803,8 @@ sirGraphicsResult_t SIRVulkanDriver::queryAdapter( uint32_t nAdapterIndex, sirGr
 		( void )probe.shutdown();
 		return SIR_GRAPHICS_DRIVER_ERROR;
 	}
-	pInfo->nAdapterIndex = 0;
-	pInfo->nVendorId = native.nVendorId;
-	pInfo->nDeviceId = native.nDeviceId;
-	pInfo->nDedicatedVideoBytes = native.nDeviceLocalHeapBytes;
-	pInfo->nFeatureMask = 0;
-	pInfo->nApiVersion = { VK_API_VERSION_MAJOR( native.nApiVersion ), VK_API_VERSION_MINOR( native.nApiVersion ),
-	                       VK_API_VERSION_PATCH( native.nApiVersion ) };
-	memcpy( pInfo->szName, native.szDeviceName, sizeof( pInfo->szName ) );
-	return probe.shutdown() ? SIR_GRAPHICS_SUCCESS : SIR_GRAPHICS_DRIVER_ERROR;
+	const sirGraphicsResult_t eDescribe = sirVulkanDescribeAdapter( nAdapterIndex, native, pInfo );
+	return probe.shutdown() ? eDescribe : SIR_GRAPHICS_DRIVER_ERROR;
 }
 
 sirGraphicsResult_t SIRVulkanDriver::createDevice( const sirGraphicsDeviceCreateDesc_t &desc, SIRRenderingDevice **ppDevice ) noexcept
