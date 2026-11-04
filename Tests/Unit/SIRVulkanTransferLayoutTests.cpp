@@ -147,6 +147,56 @@ int main( void )
 	if ( sirVulkanValidateTextureTransfer( &buffer, &image, copy ) != SIR_VULKAN_INVALID_ARGUMENT ) {
 		return 20;
 	}
+	// Layouts are independently tracked for every mip/layer pair.
+	// The packed table must not change adjacent two-bit entries.
+	sirVulkanImage_t tracked = {};
+	tracked.nMips = 3;
+	tracked.nLayers = 2;
+	VkImageLayout layout = VK_IMAGE_LAYOUT_GENERAL;
+	if ( !sirVulkanGetSubresourceLayout( &tracked, 2, 1, &layout ) ||
+	     layout != VK_IMAGE_LAYOUT_UNDEFINED ||
+	     !sirVulkanSetSubresourceLayout( &tracked, 2, 1, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ) ||
+	     !sirVulkanGetSubresourceLayout( &tracked, 2, 1, &layout ) ||
+	     layout != VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ) {
+		return 21;
+	}
+	if ( !sirVulkanGetSubresourceLayout( &tracked, 0, 0, &layout ) || layout != VK_IMAGE_LAYOUT_UNDEFINED ||
+	     !sirVulkanGetSubresourceLayout( &tracked, 1, 1, &layout ) || layout != VK_IMAGE_LAYOUT_UNDEFINED ||
+	     !sirVulkanSetSubresourceLayout( &tracked, 1, 1, VK_IMAGE_LAYOUT_GENERAL ) ||
+	     !sirVulkanGetSubresourceLayout( &tracked, 2, 1, &layout ) ||
+	     layout != VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ||
+	     !sirVulkanGetSubresourceLayout( &tracked, 1, 1, &layout ) || layout != VK_IMAGE_LAYOUT_GENERAL ) {
+		return 22;
+	}
+	if ( sirVulkanSetSubresourceLayout( &tracked, 2, 1, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL ) ||
+	     !sirVulkanGetSubresourceLayout( &tracked, 2, 1, &layout ) ||
+	     layout != VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ||
+	     !sirVulkanSetSubresourceLayout( &tracked, 2, 1, VK_IMAGE_LAYOUT_UNDEFINED ) ||
+	     !sirVulkanGetSubresourceLayout( &tracked, 2, 1, &layout ) || layout != VK_IMAGE_LAYOUT_UNDEFINED ) {
+		return 23;
+	}
+	if ( sirVulkanGetSubresourceLayout( nullptr, 0, 0, &layout ) ||
+	     sirVulkanGetSubresourceLayout( &tracked, 3, 1, &layout ) ||
+	     sirVulkanGetSubresourceLayout( &tracked, 0, 2, &layout ) ||
+	     sirVulkanGetSubresourceLayout( &tracked, 0, 0, nullptr ) ||
+	     sirVulkanSetSubresourceLayout( &tracked, 3, 1, VK_IMAGE_LAYOUT_GENERAL ) ||
+	     sirVulkanSetSubresourceLayout( &tracked, 0, 2, VK_IMAGE_LAYOUT_GENERAL ) ) {
+		return 24;
+	}
+	// Final byte of the 4096-subresource table must be addressable.
+	tracked.nMips = 32;
+	tracked.nLayers = 128;
+	if ( !sirVulkanSetSubresourceLayout( &tracked, 31, 127, VK_IMAGE_LAYOUT_GENERAL ) ||
+	     !sirVulkanGetSubresourceLayout( &tracked, 31, 127, &layout ) || layout != VK_IMAGE_LAYOUT_GENERAL ||
+	     !sirVulkanGetSubresourceLayout( &tracked, 30, 127, &layout ) || layout != VK_IMAGE_LAYOUT_UNDEFINED ||
+	     !sirVulkanGetSubresourceLayout( &tracked, 31, 126, &layout ) || layout != VK_IMAGE_LAYOUT_UNDEFINED ) {
+		return 25;
+	}
+	tracked.nLayers = 129;
+	if ( sirVulkanGetSubresourceLayout( &tracked, 0, 0, &layout ) ||
+	     sirVulkanSetSubresourceLayout( &tracked, 0, 0, VK_IMAGE_LAYOUT_GENERAL ) ) {
+		return 26;
+	}
 	printf( "Vulkan transfer format and subresource contracts passed\n" );
 	return 0;
 }

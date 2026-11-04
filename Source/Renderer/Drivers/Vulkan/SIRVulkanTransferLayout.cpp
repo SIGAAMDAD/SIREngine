@@ -59,6 +59,74 @@ bool sirVulkanGetFormatBlock( VkFormat eFormat, sirVulkanFormatBlock_t *pBlock )
 	return true;
 }
 
+// Each 2-bit entry addresses one independently tracked mip/layer pair.
+// Values are final queued layouts; transient transfer layouts are command-local.
+static bool sirVulkanSubresourceIndex( const sirVulkanImage_t *pImage, uint32_t nMip, uint32_t nLayer,
+                                       uint32_t *pIndex ) noexcept
+{
+	if ( pImage == nullptr || pIndex == nullptr || pImage->nMips == 0 || pImage->nMips > 32 ||
+	     pImage->nLayers == 0 || pImage->nLayers > SIR_VULKAN_MAX_TRACKED_SUBRESOURCES / pImage->nMips ||
+	     nMip >= pImage->nMips || nLayer >= pImage->nLayers ) {
+		return false;
+	}
+	*pIndex = nLayer * pImage->nMips + nMip;
+	return true;
+}
+
+bool sirVulkanGetSubresourceLayout( const sirVulkanImage_t *pImage, uint32_t nMip, uint32_t nLayer,
+                                   VkImageLayout *pLayout ) noexcept
+{
+	if ( pLayout == nullptr ) {
+		return false;
+	}
+	*pLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	uint32_t nIndex = 0;
+	if ( !sirVulkanSubresourceIndex( pImage, nMip, nLayer, &nIndex ) ) {
+		return false;
+	}
+	const uint32_t nShift = ( nIndex & 3U ) * 2U;
+	const uint8_t nValue = ( pImage->szSubresourceLayouts[nIndex / 4] >> nShift ) & 3U;
+	switch ( nValue ) {
+	case 0:
+		return true;
+	case 1:
+		*pLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		return true;
+	case 2:
+		*pLayout = VK_IMAGE_LAYOUT_GENERAL;
+		return true;
+	default:
+		return false;
+	}
+}
+
+bool sirVulkanSetSubresourceLayout( sirVulkanImage_t *pImage, uint32_t nMip, uint32_t nLayer,
+                                   VkImageLayout eLayout ) noexcept
+{
+	uint32_t nIndex = 0;
+	if ( !sirVulkanSubresourceIndex( pImage, nMip, nLayer, &nIndex ) ) {
+		return false;
+	}
+	uint8_t nValue = 0;
+	switch ( eLayout ) {
+	case VK_IMAGE_LAYOUT_UNDEFINED:
+		break;
+	case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+		nValue = 1;
+		break;
+	case VK_IMAGE_LAYOUT_GENERAL:
+		nValue = 2;
+		break;
+	default:
+		return false;
+	}
+	const uint32_t nShift = ( nIndex & 3U ) * 2U;
+	const uint8_t nMask = ( uint8_t )( 3U << nShift );
+	uint8_t *pEntry = &pImage->szSubresourceLayouts[nIndex / 4];
+	*pEntry = ( uint8_t )( ( *pEntry & ~nMask ) | ( nValue << nShift ) );
+	return true;
+}
+
 sirVulkanResult_t sirVulkanValidateTextureTransfer( const sirVulkanBuffer_t *pBuffer, const sirVulkanImage_t *pImage,
                                                     const sirVulkanTextureTransfer_t &transfer ) noexcept
 {

@@ -103,7 +103,6 @@ typedef struct sirVulkanImage_s
 	uint64_t nDeviceSerial;
 	VkFormat eFormat;
 	VkImageType eType;
-	VkImageLayout eLayout;
 	uint64_t nLastGpuUse;
 	VkImageUsageFlags nUsage;
 	uint32_t nMips;
@@ -112,6 +111,8 @@ typedef struct sirVulkanImage_s
 	uint32_t nHeight;
 	uint32_t nDepth;
 	uint64_t szUploadedSubresources[SIR_VULKAN_MAX_TRACKED_SUBRESOURCES / 64];
+	// Two bits per mip/layer: undefined, shader-read-only, or general.
+	uint8_t szSubresourceLayouts[SIR_VULKAN_MAX_TRACKED_SUBRESOURCES / 4];
 	bool bCube;
 } sirVulkanImage_t;
 
@@ -138,6 +139,10 @@ typedef struct sirVulkanFormatBlock_s
 // The transfer validator has no Vulkan device dependency and is exercised
 // by CPU-only tests on hosts without Vulkan 1.4 hardware.
 bool sirVulkanGetFormatBlock( VkFormat eFormat, sirVulkanFormatBlock_t *pBlock ) noexcept;
+bool sirVulkanGetSubresourceLayout( const sirVulkanImage_t *pImage, uint32_t nMip, uint32_t nLayer,
+                                   VkImageLayout *pLayout ) noexcept;
+bool sirVulkanSetSubresourceLayout( sirVulkanImage_t *pImage, uint32_t nMip, uint32_t nLayer,
+                                   VkImageLayout eLayout ) noexcept;
 
 typedef struct sirVulkanTextureTransfer_s
 {

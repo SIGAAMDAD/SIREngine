@@ -36,12 +36,17 @@ sirVulkanResult_t SIRVulkanDevice::submitBufferImageCopy( sirVulkanBuffer_t *pBu
 		return SIR_VULKAN_INVALID_ARGUMENT;
 	}
 	if ( !bUpload && ( ( pBuffer->nUsage & VK_BUFFER_USAGE_TRANSFER_DST_BIT ) == 0 ||
-	                   ( pImage->nUsage & VK_IMAGE_USAGE_TRANSFER_SRC_BIT ) == 0 || pImage->eLayout == VK_IMAGE_LAYOUT_UNDEFINED ) ) {
+	                   ( pImage->nUsage & VK_IMAGE_USAGE_TRANSFER_SRC_BIT ) == 0 ) ) {
 		return SIR_VULKAN_INVALID_ARGUMENT;
 	}
 	const sirVulkanResult_t eValidation = sirVulkanValidateTextureTransfer( pBuffer, pImage, transfer );
 	if ( eValidation != SIR_VULKAN_SUCCESS ) {
 		return eValidation;
+	}
+	VkImageLayout eOld = VK_IMAGE_LAYOUT_UNDEFINED;
+	if ( !sirVulkanGetSubresourceLayout( pImage, transfer.nMip, transfer.nLayer, &eOld ) ||
+	     ( !bUpload && eOld == VK_IMAGE_LAYOUT_UNDEFINED ) ) {
+		return SIR_VULKAN_INVALID_ARGUMENT;
 	}
 
 	uint64_t nCompleted = 0;
@@ -73,7 +78,6 @@ sirVulkanResult_t SIRVulkanDevice::submitBufferImageCopy( sirVulkanBuffer_t *pBu
 		return SIR_VULKAN_NATIVE_FAILURE;
 	}
 
-	const VkImageLayout eOld = pImage->eLayout;
 	const VkImageLayout eTransfer = bUpload ? VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL : VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
 	VkImageMemoryBarrier2 before = {};
 	before.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
@@ -88,10 +92,10 @@ sirVulkanResult_t SIRVulkanDevice::submitBufferImageCopy( sirVulkanBuffer_t *pBu
 	before.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 	before.image = pImage->hImage;
 	before.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-	before.subresourceRange.baseMipLevel = 0;
-	before.subresourceRange.levelCount = pImage->nMips;
-	before.subresourceRange.baseArrayLayer = 0;
-	before.subresourceRange.layerCount = pImage->nLayers;
+	before.subresourceRange.baseMipLevel = transfer.nMip;
+	before.subresourceRange.levelCount = 1;
+	before.subresourceRange.baseArrayLayer = transfer.nLayer;
+	before.subresourceRange.layerCount = 1;
 
 	VkMemoryBarrier2 host = {};
 	host.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2;
@@ -140,9 +144,13 @@ sirVulkanResult_t SIRVulkanDevice::submitBufferImageCopy( sirVulkanBuffer_t *pBu
 		m_pfnCmdCopyImageToBuffer2( pSlot->hCommandBuffer, &info );
 	}
 
-	const VkImageLayout eFinal = bUpload ? ( ( pImage->nUsage & VK_IMAGE_USAGE_SAMPLED_BIT ) != 0 ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-	                                                                                              : VK_IMAGE_LAYOUT_GENERAL )
-	                                     : eOld;
+	const VkImageLayout eFinal = bUpload
+	                                 ? ( ( pImage->nUsage & VK_IMAGE_USAGE_STORAGE_BIT ) != 0
+	                                         ? VK_IMAGE_LAYOUT_GENERAL
+	                                         : ( pImage->nUsage & VK_IMAGE_USAGE_SAMPLED_BIT ) != 0
+	                                               ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+	                                               : VK_IMAGE_LAYOUT_GENERAL )
+	                                 : eOld;
 	VkImageMemoryBarrier2 after = before;
 	after.srcStageMask = VK_PIPELINE_STAGE_2_COPY_BIT;
 	after.srcAccessMask = bUpload ? VK_ACCESS_2_TRANSFER_WRITE_BIT : VK_ACCESS_2_TRANSFER_READ_BIT;
@@ -182,7 +190,9 @@ sirVulkanResult_t SIRVulkanDevice::submitBufferImageCopy( sirVulkanBuffer_t *pBu
 	pSlot->nLastValue = nNext;
 	pBuffer->nLastGpuUse = nNext;
 	pImage->nLastGpuUse = nNext;
-	pImage->eLayout = eFinal;
+	// The single owner queue serializes submissions. Publish the final layout
+	// only after vkQueueSubmit2 succeeds, never on recording/submit failure.
+	( void )sirVulkanSetSubresourceLayout( pImage, transfer.nMip, transfer.nLayer, eFinal );
 	if ( bUpload ) {
 		const uint32_t nIndex = transfer.nLayer * pImage->nMips + transfer.nMip;
 		pImage->szUploadedSubresources[nIndex / 64] |= 1ULL << ( nIndex % 64 );

@@ -52,7 +52,6 @@ sirVulkanResult_t SIRVulkanDevice::createImage( const VkImageCreateInfo &info, s
 	pImage->nDeviceSerial = m_nDeviceSerial;
 	pImage->eFormat = info.format;
 	pImage->eType = info.imageType;
-	pImage->eLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 	pImage->nLastGpuUse = 0;
 	pImage->nLayers = info.arrayLayers;
 	pImage->nMips = info.mipLevels;
@@ -60,6 +59,7 @@ sirVulkanResult_t SIRVulkanDevice::createImage( const VkImageCreateInfo &info, s
 	pImage->nHeight = info.extent.height;
 	pImage->nDepth = info.extent.depth;
 	memset( pImage->szUploadedSubresources, 0, sizeof( pImage->szUploadedSubresources ) );
+	memset( pImage->szSubresourceLayouts, 0, sizeof( pImage->szSubresourceLayouts ) );
 	pImage->nUsage = info.usage;
 	pImage->bCube = ( info.flags & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT ) != 0;
 	++m_nLiveImages;
