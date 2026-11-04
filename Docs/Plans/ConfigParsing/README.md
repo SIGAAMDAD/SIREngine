@@ -9,3 +9,5 @@ Supported target formats: Valve KV1/VDF, KV3 text/binary, Valve CFG, JSON, CSV, 
 Implementation stages: source and vendor audit; common contracts; native lightweight codecs; hierarchical codecs; binary KV3 and explicit cooked configuration; editor preservation and platform acceptance. Each stage and code ownership area is in IMPLEMENTATION.md.
 
 **Verification status:** local Clang 17-mode `-Werror` ASan/UBSan and optimized build/test executions passed (`0 failures`) against minimal source-contract fixtures. Full repository CMake/Windows/Linux builds, pinned clang-format 22.1.5, conformance, fuzzing, memory-manager integration, benchmarks and editor integration remain **NOT_RUN**. Exact backend pinning and binary KV3 version coverage remain implementation decisions.
+
+**Testing and performance:** [source-grounded integration tests, engine-backed benchmark cases and local measured results](TESTING-AND-PERFORMANCE.md). The expanded source patch is prepared locally pending the mandatory pinned formatter gate.
