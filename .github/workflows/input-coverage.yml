@@ -52,46 +52,7 @@ jobs:
         run: |
           set -euo pipefail
           test -x out/InputCoverage/Tests/Unit/SIRInputX11WindowTests
-          ctest --test-dir out/InputCoverage -N -R '^core[.]platform[.]input[.]x11-window
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p out/InputCoverage/profiles
-          export LLVM_PROFILE_FILE="$PWD/out/InputCoverage/profiles/%p-%m.profraw"
-          ctest --test-dir out/InputCoverage --output-on-failure -R '^core[.]platform[.]input|^core[.]application[.]input-lifecycle'
-      - name: Export strict source coverage
-        shell: bash
-        run: |
-          set -euo pipefail
-          mapfile -t profiles < <(find out/InputCoverage/profiles -name '*.profraw' -type f | sort)
-          test "${#profiles[@]}" -gt 0
-          llvm-profdata-18 merge -sparse "${profiles[@]}" -o out/InputCoverage/merged.profdata
-          mapfile -t binaries < <(find out/InputCoverage/Tests/Unit -maxdepth 1 -type f -executable \( -name 'SIRInput*' -o -name 'SIRGameInputCodecTests' -o -name 'SIRApplicationInputTests' \) | sort)
-          test "${#binaries[@]}" -gt 0
-          objects=()
-          for binary in "${binaries[@]:1}"; do
-            objects+=("-object=$binary")
-          done
-          llvm-cov-18 export "${binaries[0]}" "${objects[@]}" -instr-profile=out/InputCoverage/merged.profdata > out/InputCoverage/llvm-export.json
-          python3 Build/Scripts/InputCoverage.py \
-            --source "$PWD" \
-            --compdb out/InputCoverage/compile_commands.json \
-            --export out/InputCoverage/llvm-export.json \
-            --report out/InputCoverage/summary.json
-      - name: Preserve actual source coverage evidence
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: sir-native-input-llvm-coverage-linux
-          path: |
-            out/InputCoverage/summary.json
-            out/InputCoverage/llvm-export.json
-            out/InputCoverage/merged.profdata
-            out/InputCoverage/compile_commands.json
-            out/InputCoverage/Testing/Temporary/LastTest.log
-          if-no-files-found: warn
-          retention-days: 30
- | grep -Fq 'core.platform.input.x11-window'
+          ctest --test-dir out/InputCoverage -N -R '^core[.]platform[.]input[.]x11-window$' | grep -Fq 'core.platform.input.x11-window'
       - name: Execute input regression and 9.6M-request soak
         shell: bash
         run: |
