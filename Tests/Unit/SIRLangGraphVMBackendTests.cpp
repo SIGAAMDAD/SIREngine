@@ -14,6 +14,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Scripting/Language/SIRLangGraphVMBackend.h>
+#include <Scripting/Language/SIRLangNativeBinding.h>
 
 #include <assert.h>
 #include <string.h>
@@ -120,8 +121,49 @@ static void testBackendLifecycle( void ) noexcept
 	api.pStop( api.pUser );
 }
 
+
+static sirScriptResult_t testNativeThunk( void *, sirScriptReadFrame_t arguments, sirScriptWriteFrame_t result ) noexcept
+{
+	if ( arguments.nBytes != sizeof( sirLangVMValue_t ) || result.nBytes != sizeof( sirLangVMValue_t ) ) {
+		return SIR_SCRIPT_TYPE_MISMATCH;
+	}
+	const sirLangVMValue_t& input = *( const sirLangVMValue_t * )arguments.pData;
+	sirLangVMValue_t *pOutput = ( sirLangVMValue_t * )result.pData;
+	*pOutput = { input.nBits + 1, input.eType };
+	return SIR_SCRIPT_OK;
+}
+
+static void testImmutableNativeBinding( void ) noexcept
+{
+	SIRScriptBindingRegistry registry;
+	constexpr uint32_t TYPE_FLAGS = SIR_SCRIPT_TYPE_PLAIN_BYTES | SIR_SCRIPT_TYPE_NO_POINTERS;
+	assert( registry.registerType( { 10, sizeof( sirLangVMValue_t ), alignof( sirLangVMValue_t ), TYPE_FLAGS } ) == SIR_SCRIPT_OK );
+	assert( registry.registerType( { 11, sizeof( sirLangVMValue_t ), alignof( sirLangVMValue_t ), TYPE_FLAGS } ) == SIR_SCRIPT_OK );
+	assert( registry.registerFunction( { 999, 123, 10, 11, 0, 1, SIR_LANG_EFFECT_STATE_READ }, testNativeThunk, nullptr ) == SIR_SCRIPT_OK );
+	assert( registry.publish() == SIR_SCRIPT_OK );
+	const sirLangNativeBindingContext_t context = { &registry, registry.schemaFingerprint(), 0 };
+	const sirLangVMValue_t input = { 7, SIR_LANG_VALUE_U16 };
+	sirLangVMCall_t call = {};
+	call.nFunctionId = 999;
+	call.nSignatureId = 123;
+	call.nBindingRevision = 1;
+	call.nOwnerLane = 0;
+	call.nEffects = SIR_LANG_EFFECT_STATE_READ;
+	call.pArguments = &input;
+	call.nArgumentCount = 1;
+	sirLangVMValue_t output = {};
+	assert( SIRLangInvokeNativeBinding( call, &output, ( void * )&context ) == SIR_LANG_VM_OK );
+	assert( output.nBits == 8 && output.eType == SIR_LANG_VALUE_U16 );
+	call.nEffects = SIR_LANG_EFFECT_STATE_WRITE;
+	assert( SIRLangInvokeNativeBinding( call, &output, ( void * )&context ) == SIR_LANG_VM_INVALID_CAPABILITY );
+	call.nEffects = SIR_LANG_EFFECT_STATE_READ;
+	call.nBindingRevision = 2;
+	assert( SIRLangInvokeNativeBinding( call, &output, ( void * )&context ) == SIR_LANG_VM_INVALID_CAPABILITY );
+}
+
 int main( void )
 {
 	testBackendLifecycle();
+	testImmutableNativeBinding();
 	return 0;
 }
