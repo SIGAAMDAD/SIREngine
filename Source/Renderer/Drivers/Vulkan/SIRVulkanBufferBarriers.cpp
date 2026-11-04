@@ -18,8 +18,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // The shared graphics barrier has no buffer offset/range. Buffer
 // transitions therefore synchronize the entire native allocation.
 // Vulkan buffer barriers order access; buffers have no image-like layout.
-static sirGraphicsResult_t sirVulkanBufferAccess( sirGraphicsState_t eState, VkBufferUsageFlags nUsage,
-                                                  VkPipelineStageFlags2 *pStages, VkAccessFlags2 *pAccess ) noexcept
+static sirGraphicsResult_t sirVulkanBufferAccess( sirGraphicsState_t eState, VkBufferUsageFlags nUsage, VkPipelineStageFlags2 *pStages,
+                                                  VkAccessFlags2 *pAccess ) noexcept
 {
 	if ( pStages == nullptr || pAccess == nullptr ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
@@ -108,13 +108,13 @@ sirGraphicsResult_t sirVulkanPlanBufferBarrier( const sirGraphicsBarrier_t &barr
 	} else if ( barrier.eBefore == barrier.eAfter ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	const sirGraphicsResult_t eBefore = sirVulkanBufferAccess( barrier.eBefore, pBuffer->nUsage,
-	                                                          &pNative->nSourceStages, &pNative->nSourceAccess );
+	const sirGraphicsResult_t eBefore =
+	    sirVulkanBufferAccess( barrier.eBefore, pBuffer->nUsage, &pNative->nSourceStages, &pNative->nSourceAccess );
 	if ( eBefore != SIR_GRAPHICS_SUCCESS ) {
 		return eBefore;
 	}
-	const sirGraphicsResult_t eAfter = sirVulkanBufferAccess( barrier.eAfter, pBuffer->nUsage,
-	                                                         &pNative->nDestinationStages, &pNative->nDestinationAccess );
+	const sirGraphicsResult_t eAfter =
+	    sirVulkanBufferAccess( barrier.eAfter, pBuffer->nUsage, &pNative->nDestinationStages, &pNative->nDestinationAccess );
 	if ( eAfter != SIR_GRAPHICS_SUCCESS ) {
 		return eAfter;
 	}

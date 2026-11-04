@@ -343,8 +343,7 @@ int main( void )
 	storageBarrier.eAfter = SIR_GRAPHICS_STATE_SHADER_WRITE;
 	if ( pDevice->acquireCommands( SIR_GRAPHICS_QUEUE_DIRECT, &pMixed ) != SIR_GRAPHICS_SUCCESS || pMixed == nullptr ||
 	     pMixed->copyBuffer( hGpu, 2048, hSource, 0, sizeof( szExpected ) ) != SIR_GRAPHICS_SUCCESS ||
-	     pMixed->barrier( &bufferBarrier, 1 ) != SIR_GRAPHICS_SUCCESS ||
-	     pMixed->barrier( &storageBarrier, 1 ) != SIR_GRAPHICS_SUCCESS ||
+	     pMixed->barrier( &bufferBarrier, 1 ) != SIR_GRAPHICS_SUCCESS || pMixed->barrier( &storageBarrier, 1 ) != SIR_GRAPHICS_SUCCESS ||
 	     pMixed->copyBufferTexture( mixedCopy ) != SIR_GRAPHICS_SUCCESS || pMixed->barrier( &mixedBarrier, 1 ) != SIR_GRAPHICS_SUCCESS ) {
 		return 33;
 	}

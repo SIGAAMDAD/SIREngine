@@ -478,8 +478,7 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::submit( sirGraphicsQueue_t eQueue,
 			}
 			nativeOp.eKind = SIR_VULKAN_RECORDED_BUFFER_BARRIER;
 			nativeOp.pBuffer = &pBuffer->native;
-			const sirGraphicsResult_t ePlan = sirVulkanPlanBufferBarrier( op.barrier, &pBuffer->native,
-			                                                             &nativeOp.bufferBarrier );
+			const sirGraphicsResult_t ePlan = sirVulkanPlanBufferBarrier( op.barrier, &pBuffer->native, &nativeOp.bufferBarrier );
 			if ( ePlan != SIR_GRAPHICS_SUCCESS ) {
 				return ePlan;
 			}

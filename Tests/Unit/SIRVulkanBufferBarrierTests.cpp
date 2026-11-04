@@ -21,19 +21,17 @@ int main( void )
 {
 	sirVulkanBuffer_t buffer = {};
 	buffer.nSize = 4096;
-	buffer.nUsage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT |
-	                VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
-	                VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+	buffer.nUsage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
+	                VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
 	sirGraphicsBarrier_t barrier = {};
 	barrier.eType = SIR_GRAPHICS_BARRIER_TRANSITION;
 	barrier.eBefore = SIR_GRAPHICS_STATE_COPY_DESTINATION;
 	barrier.eAfter = SIR_GRAPHICS_STATE_COPY_SOURCE;
 	sirVulkanBufferBarrier_t native = {};
 	if ( sirVulkanPlanBufferBarrier( barrier, &buffer, &native ) != SIR_GRAPHICS_SUCCESS ||
-	     native.nSourceStages != VK_PIPELINE_STAGE_2_COPY_BIT ||
-	     native.nDestinationStages != VK_PIPELINE_STAGE_2_COPY_BIT ||
-	     native.nSourceAccess != VK_ACCESS_2_TRANSFER_WRITE_BIT ||
-	     native.nDestinationAccess != VK_ACCESS_2_TRANSFER_READ_BIT || native.bUav ) {
+	     native.nSourceStages != VK_PIPELINE_STAGE_2_COPY_BIT || native.nDestinationStages != VK_PIPELINE_STAGE_2_COPY_BIT ||
+	     native.nSourceAccess != VK_ACCESS_2_TRANSFER_WRITE_BIT || native.nDestinationAccess != VK_ACCESS_2_TRANSFER_READ_BIT ||
+	     native.bUav ) {
 		return 1;
 	}
 	sirVulkanRecordedCommand_t commands[2] = {};
@@ -52,8 +50,8 @@ int main( void )
 	barrier.eType = SIR_GRAPHICS_BARRIER_UAV;
 	barrier.eBefore = SIR_GRAPHICS_STATE_SHADER_WRITE;
 	barrier.eAfter = SIR_GRAPHICS_STATE_SHADER_WRITE;
-	if ( sirVulkanPlanBufferBarrier( barrier, &buffer, &native ) != SIR_GRAPHICS_SUCCESS ||
-	     !native.bUav || native.nSourceAccess != VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT ||
+	if ( sirVulkanPlanBufferBarrier( barrier, &buffer, &native ) != SIR_GRAPHICS_SUCCESS || !native.bUav ||
+	     native.nSourceAccess != VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT ||
 	     native.nDestinationAccess != VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT ) {
 		return 4;
 	}

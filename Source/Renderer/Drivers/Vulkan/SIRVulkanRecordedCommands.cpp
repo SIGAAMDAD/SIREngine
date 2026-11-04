@@ -112,13 +112,11 @@ sirVulkanResult_t sirVulkanValidateRecordedCommands( const sirVulkanRecordedComm
 		}
 		if ( command.eKind == SIR_VULKAN_RECORDED_BUFFER_BARRIER ) {
 			const sirVulkanBufferBarrier_t &barrier = command.bufferBarrier;
-			if ( command.pBuffer == nullptr || command.pBuffer->nSize == 0 ||
-			     barrier.nDestinationStages == VK_PIPELINE_STAGE_2_NONE ||
+			if ( command.pBuffer == nullptr || command.pBuffer->nSize == 0 || barrier.nDestinationStages == VK_PIPELINE_STAGE_2_NONE ||
 			     ( barrier.nSourceStages == VK_PIPELINE_STAGE_2_NONE && barrier.nSourceAccess != VK_ACCESS_2_NONE ) ||
-			     ( barrier.bUav &&
-			       ( ( command.pBuffer->nUsage & VK_BUFFER_USAGE_STORAGE_BUFFER_BIT ) == 0 ||
-			         ( barrier.nSourceAccess & VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT ) == 0 ||
-			         ( barrier.nDestinationAccess & VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT ) == 0 ) ) ) {
+			     ( barrier.bUav && ( ( command.pBuffer->nUsage & VK_BUFFER_USAGE_STORAGE_BUFFER_BIT ) == 0 ||
+			                         ( barrier.nSourceAccess & VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT ) == 0 ||
+			                         ( barrier.nDestinationAccess & VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT ) == 0 ) ) ) {
 				return SIR_VULKAN_INVALID_ARGUMENT;
 			}
 			continue;

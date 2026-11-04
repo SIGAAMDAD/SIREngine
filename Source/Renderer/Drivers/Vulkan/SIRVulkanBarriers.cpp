@@ -148,8 +148,8 @@ sirGraphicsResult_t SIRVulkanCommandList::barrier( const sirGraphicsBarrier_t *p
 		if ( !pImage->bActive || pImage->nGeneration != barrier.hResource.nGeneration ) {
 			return SIR_GRAPHICS_INVALID_HANDLE;
 		}
-		if ( barrier.nMipCount != 1 || barrier.nLayerCount != 1 ||
-		     barrier.nBaseMip >= pImage->native.nMips || barrier.nBaseLayer >= pImage->native.nLayers ) {
+		if ( barrier.nMipCount != 1 || barrier.nLayerCount != 1 || barrier.nBaseMip >= pImage->native.nMips ||
+		     barrier.nBaseLayer >= pImage->native.nLayers ) {
 			return SIR_GRAPHICS_UNSUPPORTED;
 		}
 		if ( m_nOperationCount == 0 && iBarrier == 0 ) {
@@ -163,8 +163,8 @@ sirGraphicsResult_t SIRVulkanCommandList::barrier( const sirGraphicsBarrier_t *p
 	for ( uint32_t iBarrier = 0; iBarrier < nCount; ++iBarrier ) {
 		sirVulkanGraphicsOperation_t &operation = m_szOperations[m_nOperationCount++];
 		operation = {};
-		operation.eKind = pBarriers[iBarrier].hResource.eType == SIR_GRAPHICS_HANDLE_BUFFER
-		                      ? SIR_VULKAN_GRAPHICS_BUFFER_BARRIER : SIR_VULKAN_GRAPHICS_IMAGE_BARRIER;
+		operation.eKind = pBarriers[iBarrier].hResource.eType == SIR_GRAPHICS_HANDLE_BUFFER ? SIR_VULKAN_GRAPHICS_BUFFER_BARRIER
+		                                                                                    : SIR_VULKAN_GRAPHICS_IMAGE_BARRIER;
 		operation.barrier = pBarriers[iBarrier];
 	}
 	return SIR_GRAPHICS_SUCCESS;
