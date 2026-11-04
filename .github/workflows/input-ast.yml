@@ -1,0 +1,58 @@
+name: SIREngine native input Clang 23 AST qualification
+
+on:
+  push:
+    branches: [feature/native-input-foundation]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  linux-input-clang23-ast:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: jwlawson/actions-setup-cmake@v2.2.0
+        with:
+          cmake-version: '4.4.5'
+      - name: Install upstream LLVM 23 compiler
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /usr/share/keyrings/llvm-snapshot.asc >/dev/null
+          echo 'deb [signed-by=/usr/share/keyrings/llvm-snapshot.asc] https://apt.llvm.org/noble/ llvm-toolchain-noble-23 main' | sudo tee /etc/apt/sources.list.d/llvm23.list
+          sudo apt-get update -qq
+          sudo apt-get install -y clang-23
+          clang++-23 --version
+      - name: Configure authentic Clang 23 native compilation database
+        run: >
+          cmake -S . -B out/InputAST -G Ninja
+          -DCMAKE_BUILD_TYPE=Debug
+          -DCMAKE_C_COMPILER=clang-23
+          -DCMAKE_CXX_COMPILER=clang++-23
+          -DSIR_BUILD_TESTS=OFF
+          -DSIR_ENABLE_PCH=OFF
+          -DSIR_ENABLE_UNITY=OFF
+          -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+      - name: Compile production SIRCore with Clang 23
+        run: cmake --build out/InputAST --target SIRCore --parallel 3
+      - name: Generate complete AST for actual Linux input compilation units
+        run: >
+          python3 Build/Scripts/InputAST.py
+          --root .
+          --compdb out/InputAST/compile_commands.json
+          --out out/InputAST/ast
+      - name: Preserve Clang 23 ASTs and compiler provenance
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sir-input-clang23-ast-linux
+          path: |
+            out/InputAST/ast/
+            out/InputAST/compile_commands.json
+          if-no-files-found: warn
+          retention-days: 14
