@@ -180,6 +180,7 @@ typedef uint32_t ( *sirGraphicsABIFactory_t )( uint32_t nMajor, uint32_t nMinor,
 // Host-side validation; never calls untrusted function pointers.
 sirGraphicsABIResult_t sirGraphicsNegotiateDriverABI( sirGraphicsABIFactory_t pFactory, const sirGraphicsABIHost_t *pHost,
                                                       sirGraphicsABIDriver_t *pDriver ) noexcept;
+sirGraphicsABIResult_t sirGraphicsProbeABIAdapter( const sirGraphicsABIDriver_t *pDriver, uint32_t nAdapterIndex, sirGraphicsABIAdapter_t *pAdapter ) noexcept;
 sirGraphicsABIResult_t sirGraphicsValidateABIHost( const sirGraphicsABIHost_t *pHost ) noexcept;
 sirGraphicsABIResult_t sirGraphicsValidateABIDriver( const sirGraphicsABIDriver_t *pDriver ) noexcept;
 sirGraphicsABIResult_t sirGraphicsValidateABIAdapter( const sirGraphicsABIAdapter_t *pAdapter ) noexcept;
