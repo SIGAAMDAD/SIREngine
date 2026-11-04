@@ -105,4 +105,9 @@ target_link_libraries(SIRShaderPipelineTests PRIVATE SIR::Graphics)
 add_test(NAME renderer.shader.pipeline COMMAND SIRShaderPipelineTests)
 sir_configure_owned_target(SIRShaderPipelineTests)
 
+add_executable(SIRShaderContractsTests Shaders/SIRShaderContractsTests.cpp)
+target_link_libraries(SIRShaderContractsTests PRIVATE SIR::Graphics)
+add_test(NAME renderer.shader.contracts COMMAND SIRShaderContractsTests)
+sir_configure_owned_target(SIRShaderContractsTests)
+
 add_subdirectory(Config)
