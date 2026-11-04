@@ -89,3 +89,9 @@ add_executable(SIRContainerHeapAdapterTests SIRContainerHeapAdapterTests.cpp)
 target_link_libraries(SIRContainerHeapAdapterTests PRIVATE SIR::Core)
 add_test(NAME core.containers.heap-adapter COMMAND SIRContainerHeapAdapterTests)
 sir_configure_owned_target(SIRContainerHeapAdapterTests)
+
+# Shared renderer contract tests run on Windows/Linux without a GPU or native driver.
+add_executable(SIRGraphicsInterfaceTests SIRGraphicsInterfaceTests.cpp)
+target_link_libraries(SIRGraphicsInterfaceTests PRIVATE SIR::Graphics)
+add_test(NAME renderer.graphics.interface COMMAND SIRGraphicsInterfaceTests)
+sir_configure_owned_target(SIRGraphicsInterfaceTests)
