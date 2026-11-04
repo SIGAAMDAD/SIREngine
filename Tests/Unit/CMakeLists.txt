@@ -161,6 +161,8 @@ find_package(Python3 QUIET COMPONENTS Interpreter)
 if(Python3_Interpreter_FOUND)
     add_test(NAME profiling.scheduler.experiment-analysis
         COMMAND "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/Tests/Profiling/TestSIRSchedulerComparison.py")
+    add_test(NAME profiling.grdg.benchmark-validator
+        COMMAND "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/Tests/Profiling/TestSIRGRDGBenchmarkValidator.py")
 endif()
 
 add_executable(SIRSchedulerQueueCandidateTests

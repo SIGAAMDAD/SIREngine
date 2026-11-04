@@ -54,6 +54,25 @@ python3 Tests/Profiling/ValidateSIRGRDGBenchmarks.py \
 
 The comparison rejects incompatible host/CPU/build metadata. A >20% higher median triggers a failure **only when the caller supplies a comparable baseline**. There is no invented fixed nanosecond cutoff and no benchmark performance verdict until the current CI run produces results.
 
+## Instrumented compiler coverage
+
+`.github/workflows/grdg-coverage.yml` builds the same native source through the
+Ninja tooling preset with GCC `--coverage`, runs all relevant GRDG/Core Jobs/
+Platform/memory CTests, and gathers per-translation-unit line and branch
+coverage using `gcov --json-format --branch-probabilities --branch-counts`.
+
+`Tests/Profiling/CollectSIRGRDGCoverage.py` verifies that nine required
+production translation units actually produced instrumented object data and
+writes machine-readable `grdg-coverage.json` plus an accompanying Markdown
+report as an Actions artifact. The job rejects missing objects, incomplete
+collections and zero executed statements. The first run will establish
+measured line/branch percentages; numeric percentage acceptance thresholds
+can then be selected from actual results rather than invented values.
+
+`profiling.grdg.benchmark-validator` exercises seven positive/negative
+regression checks on the benchmark JSON validator, including missing cases,
+invalid observations, host mismatch and a measured >20% time regression.
+
 ## Remaining measurement work
 
-Line/branch coverage percentages require instrumented compiler coverage artifacts; a test count is not a line coverage percentage. Multi-worker contention, cold disk I/O, memory pressure, actual GPU/physics/audio provider timings and long-running stress under real asset streams require dedicated, controlled experiments. These are separate acceptance findings, not implied PASS by unit-test success.
+Line/branch coverage is recorded from instrumented GCC objects in the dedicated coverage job. Test count and instrumentation percentage are reported separately. Multi-worker contention, cold disk I/O, memory pressure, actual GPU/physics/audio provider timings and long-running stress under real asset streams require dedicated, controlled experiments. These are separate acceptance findings, not implied PASS by unit-test success.

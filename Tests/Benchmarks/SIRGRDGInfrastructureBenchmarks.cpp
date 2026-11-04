@@ -104,8 +104,7 @@ public:
 			m_Bytes[( size_t )i] = ( uint8_t )( ( i * 83 + ( i >> 8 ) + 41 ) & 255 );
 		}
 		SIRPlatformFile::remove( SIR_GRDG_BENCHMARK_FILE );
-		if ( m_File.open( SIR_GRDG_BENCHMARK_FILE, SIR_FILE_OPEN_WRITE | SIR_FILE_OPEN_CREATE | SIR_FILE_OPEN_TRUNCATE ) !=
-		     SIR_FILE_OK ) {
+		if ( m_File.open( SIR_GRDG_BENCHMARK_FILE, SIR_FILE_OPEN_WRITE | SIR_FILE_OPEN_CREATE | SIR_FILE_OPEN_TRUNCATE ) != SIR_FILE_OK ) {
 			return false;
 		}
 		uint64_t nWritten = 0;
@@ -268,8 +267,7 @@ static void SIRBenchmarkGRDGPublishReplace( benchmark::State &state )
 static void SIRBenchmarkGRDGFileIngest( benchmark::State &state )
 {
 	const uint64_t nBytes = ( uint64_t )state.range( 0 );
-	const sirResourceFileReadMode_t eMode =
-	    state.range( 1 ) == 0 ? SIR_RESOURCE_FILE_READ_AT : SIR_RESOURCE_FILE_READ_MAPPED;
+	const sirResourceFileReadMode_t eMode = state.range( 1 ) == 0 ? SIR_RESOURCE_FILE_READ_AT : SIR_RESOURCE_FILE_READ_MAPPED;
 	SIRGRDGBenchmarkFixture fixture;
 	if ( !fixture.init() ) {
 		state.SkipWithError( "Cannot create GRDG ingest fixture" );
@@ -306,8 +304,7 @@ static void SIRBenchmarkGRDGFileIngest( benchmark::State &state )
 		for ( auto _ : state ) {
 			( void )_;
 			request.nExpectedRevision = nRevision;
-			if ( loader.begin( SIR_GRDG_BENCHMARK_FILE, request ) != SIR_RESOURCE_RESULT_SUCCESS ||
-			     scheduler.pumpCPU( 1 ) != 1 ) {
+			if ( loader.begin( SIR_GRDG_BENCHMARK_FILE, request ) != SIR_RESOURCE_RESULT_SUCCESS || scheduler.pumpCPU( 1 ) != 1 ) {
 				state.SkipWithError( "GRDG ingest dispatch failed" );
 				bFailed = true;
 				break;
