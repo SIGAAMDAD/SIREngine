@@ -267,8 +267,6 @@ int main( void )
 		return 24;
 	}
 
-
-
 	if ( pDevice->mapBuffer( hReadback, 0, sizeof( szExpected ), &mapped ) != SIR_GRAPHICS_SUCCESS ||
 	     pDevice->invalidateBuffer( hReadback, 0, sizeof( szExpected ) ) != SIR_GRAPHICS_SUCCESS ||
 	     memcmp( mapped.pData, szExpected, sizeof( szExpected ) ) != 0 ||
