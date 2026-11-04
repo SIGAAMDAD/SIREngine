@@ -101,3 +101,5 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/StreamingTests.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/WorldPartitionTests.cmake)
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/StreamingReconcileTests.cmake)
+
+include(${CMAKE_CURRENT_SOURCE_DIR}/StreamingProviderBridgeTests.cmake)

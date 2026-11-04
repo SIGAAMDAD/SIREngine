@@ -1,7 +1,7 @@
 # Demand and lifecycle authority only. Physical payloads remain in GRDG.
 add_library(SIRStreaming STATIC
     SIRStreamingCoordinator.cpp
-    SIRStreamingDemandReconciler.cpp)
+    SIRStreamingDemandReconciler.cpp SIRStreamingProviderBridge.cpp)
 add_library(SIR::Streaming ALIAS SIRStreaming)
 target_include_directories(SIRStreaming PUBLIC
     "${PROJECT_SOURCE_DIR}/Source"
