@@ -41,6 +41,12 @@ typedef struct sirFMODVoiceNativeOps_s
 	int32_t ( *stopInstance )( void *pUserData, void *pInstance, sirAudioStopMode_t eMode ) noexcept;
 	int32_t ( *isStopped )( void *pUserData, void *pInstance, uint8_t *pbStopped ) noexcept;
 	int32_t ( *releaseInstance )( void *pUserData, void *pInstance ) noexcept;
+	int32_t ( *setInstanceParameter )( void *pUserData, void *pInstance, uint64_t nNativeId, float fValue ) noexcept;
+	int32_t ( *setGlobalParameter )( void *pUserData, void *pStudio, uint64_t nNativeId, float fValue ) noexcept;
+	int32_t ( *setInstanceSpatial )( void *pUserData, void *pInstance, const sirAudioAttributes_t *pAttributes ) noexcept;
+	int32_t ( *setListenerSpatial )( void *pUserData, void *pStudio, uint32_t iListener, const sirAudioAttributes_t *pAttributes ) noexcept;
+	int32_t ( *setListenerCount )( void *pUserData, void *pStudio, uint32_t nListeners ) noexcept;
+	int32_t ( *setListenerWeight )( void *pUserData, void *pStudio, uint32_t iListener, float fWeight ) noexcept;
 } sirFMODVoiceNativeOps_t;
 
 typedef struct sirFMODRegisteredEvent_s
@@ -49,16 +55,34 @@ typedef struct sirFMODRegisteredEvent_s
 	void *pDescription;
 } sirFMODRegisteredEvent_t;
 
+typedef struct sirFMODParameterBinding_s
+{
+	uint64_t nControlId;
+	uint64_t nNativeId;
+	sirAudioControlScope_t eScope;
+	uint8_t nReserved[7];
+} sirFMODParameterBinding_t;
+
+typedef struct sirFMODEmitterSpatial_s
+{
+	sirAudioEmitterHandle_t hEmitter;
+	sirAudioAttributes_t attributes;
+	uint8_t bHasAttributes;
+	uint8_t nReserved[7];
+} sirFMODEmitterSpatial_t;
+
 typedef struct sirFMODVoiceSlot_s
 {
 	sirAudioPlayingHandle_t hPlaying;
+	sirAudioEmitterHandle_t hEmitter;
 	void *pInstance;
 	uint64_t nEventId;
 	uint64_t nStartSequence;
 	uint64_t nStopSequence;
 	uint8_t bStopRequested;
 	uint8_t bStartFailed;
-	uint8_t nReserved[6];
+	uint8_t bSpatialDirty;
+	uint8_t nReserved[5];
 } sirFMODVoiceSlot_t;
 
 class SIRFMODVoiceBackend
@@ -68,11 +92,17 @@ private:
 	const sirContainerAllocator_t *m_pAllocator = nullptr;
 	sirFMODVoiceNativeOps_t m_Ops = {};
 	sirFMODRegisteredEvent_t *m_pEvents = nullptr;
+	sirFMODParameterBinding_t *m_pParameters = nullptr;
+	sirFMODEmitterSpatial_t *m_pEmitters = nullptr;
 	sirFMODVoiceSlot_t *m_pVoices = nullptr;
 	sirAudioCompletion_t *m_pCompletions = nullptr;
 	uint64_t m_nContextEpoch = 0;
 	uint32_t m_nEventCapacity = 0;
 	uint32_t m_nEventCount = 0;
+	uint32_t m_nParameterCapacity = 0;
+	uint32_t m_nParameterCount = 0;
+	uint32_t m_nEmitterCapacity = 0;
+	uint32_t m_nListenerCapacity = 0;
 	uint32_t m_nVoiceCapacity = 0;
 	uint32_t m_nCompletionCapacity = 0;
 	uint32_t m_iCompletionRead = 0;
@@ -92,8 +122,10 @@ private:
 	                                               const sirAudioAttributes_t *pAttributes ) noexcept;
 
 	bool findEvent( uint64_t nEventId, uint32_t &iEvent ) const noexcept;
+	bool findParameter( uint64_t nControlId, uint32_t &iParameter ) const noexcept;
 	bool writeCompletion( const sirAudioCompletion_t &completion ) noexcept;
 	void pollVoices( void ) noexcept;
+	void retrySpatial( void ) noexcept;
 	void releaseStorage( void ) noexcept;
 	sirAudioResult_t submitOne( const sirAudioCommand_t &command ) noexcept;
 
@@ -104,9 +136,12 @@ public:
 	SIRFMODVoiceBackend &operator=( const SIRFMODVoiceBackend & ) = delete;
 
 	sirAudioResult_t configure( SIRFMODContext *pContext, const sirContainerAllocator_t *pAllocator, const sirFMODVoiceNativeOps_t &ops,
-	                            uint32_t nMaxRegisteredEvents ) noexcept;
+	                            uint32_t nMaxRegisteredEvents, uint32_t nMaxRegisteredParameters = 0, uint32_t nMaxEmitters = 0,
+	                            uint32_t nMaxListeners = 0 ) noexcept;
 	sirAudioResult_t registerEvent( uint64_t nEventId, const char *szPath ) noexcept;
 	sirAudioResult_t unregisterEvent( uint64_t nEventId ) noexcept;
+	sirAudioResult_t registerParameter( uint64_t nControlId, uint64_t nNativeId, sirAudioControlScope_t eScope ) noexcept;
+	sirAudioResult_t unregisterParameter( uint64_t nControlId ) noexcept;
 	bool isInitialized( void ) const noexcept;
 	bool isEventInUse( uint64_t nEventId ) const noexcept;
 	uint32_t getActiveVoiceCount( void ) const noexcept;
