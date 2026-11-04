@@ -1,0 +1,45 @@
+name: SIREngine native input reproducible source snapshot
+
+on:
+  push:
+    branches: [feature/native-input-foundation]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source-snapshot:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Fetch pinned test dependencies
+        run: git submodule update --init ThirdParty/GoogleTest ThirdParty/GoogleBenchmark
+      - name: Assemble SHA-identified source snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p out/source-snapshot/worktree
+          git archive --format=tar HEAD | tar -xf - -C out/source-snapshot/worktree
+          mkdir -p out/source-snapshot/worktree/ThirdParty
+          cp -a ThirdParty/GoogleTest out/source-snapshot/worktree/ThirdParty/
+          cp -a ThirdParty/GoogleBenchmark out/source-snapshot/worktree/ThirdParty/
+          rm -rf out/source-snapshot/worktree/ThirdParty/GoogleTest/.git
+          rm -rf out/source-snapshot/worktree/ThirdParty/GoogleBenchmark/.git
+          git rev-parse HEAD > out/source-snapshot/worktree/.sir-source-commit.txt
+          git rev-parse HEAD^{tree} > out/source-snapshot/worktree/.sir-source-tree.txt
+          git ls-tree -r HEAD > out/source-snapshot/worktree/.sir-source-index.txt
+          git submodule status > out/source-snapshot/worktree/.sir-submodule-pins.txt
+          tar -czf out/source-snapshot/source.tar.gz -C out/source-snapshot/worktree .
+          sha256sum out/source-snapshot/source.tar.gz
+      - name: Retain complete native input source with test dependencies
+        uses: actions/upload-artifact@v4
+        with:
+          name: sir-input-source-snapshot
+          path: out/source-snapshot/source.tar.gz
+          if-no-files-found: error
+          retention-days: 7
