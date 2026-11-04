@@ -120,6 +120,15 @@ SIRVulkanRenderingDevice::SIRVulkanRenderingDevice( void ) noexcept
 	for ( uint32_t iSlot = 0; iSlot < SIR_VULKAN_BUFFER_CAPACITY; ++iSlot ) {
 		m_szBuffers[iSlot].nGeneration = 1;
 	}
+	for ( uint32_t iSlot = 0; iSlot < SIR_VULKAN_TEXTURE_CAPACITY; ++iSlot ) {
+		m_szImages[iSlot].nGeneration = 1;
+	}
+	for ( uint32_t iSlot = 0; iSlot < SIR_VULKAN_VIEW_CAPACITY; ++iSlot ) {
+		m_szViews[iSlot].nGeneration = 1;
+	}
+	for ( uint32_t iSlot = 0; iSlot < SIR_VULKAN_SAMPLER_CAPACITY; ++iSlot ) {
+		m_szSamplers[iSlot].nGeneration = 1;
+	}
 }
 
 SIRVulkanRenderingDevice::~SIRVulkanRenderingDevice( void ) noexcept
@@ -171,6 +180,7 @@ void SIRVulkanRenderingDevice::collectRetired( void ) noexcept
 	if ( !m_bReady ) {
 		return;
 	}
+	collectImageResources();
 	for ( uint32_t iSlot = 0; iSlot < SIR_VULKAN_BUFFER_CAPACITY; ++iSlot ) {
 		sirVulkanGraphicsBufferSlot_t *pSlot = &m_szBuffers[iSlot];
 		if ( !pSlot->bRetiring ) {
@@ -497,6 +507,9 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::wait( const sirGraphicsCompletion_
 sirGraphicsResult_t SIRVulkanRenderingDevice::retireResource( sirGraphicsHandle_t hResource,
                                                               const sirGraphicsCompletionSet_t &completion ) noexcept
 {
+	if ( hResource.eType != SIR_GRAPHICS_HANDLE_BUFFER ) {
+		return retireImageResource( hResource, completion );
+	}
 	sirVulkanGraphicsBufferSlot_t *pSlot = resolveBuffer( hResource );
 	if ( pSlot == nullptr ) {
 		return SIR_GRAPHICS_INVALID_HANDLE;
@@ -543,6 +556,21 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::shutdown( void ) noexcept
 				return SIR_GRAPHICS_BUSY;
 			}
 			pList->m_eState = SIR_VULKAN_COMMAND_FREE;
+		}
+	}
+	for ( uint32_t iSlot = 0; iSlot < SIR_VULKAN_TEXTURE_CAPACITY; ++iSlot ) {
+		if ( m_szImages[iSlot].bActive || m_szImages[iSlot].bRetiring ) {
+			return SIR_GRAPHICS_BUSY;
+		}
+	}
+	for ( uint32_t iSlot = 0; iSlot < SIR_VULKAN_VIEW_CAPACITY; ++iSlot ) {
+		if ( m_szViews[iSlot].bActive || m_szViews[iSlot].bRetiring ) {
+			return SIR_GRAPHICS_BUSY;
+		}
+	}
+	for ( uint32_t iSlot = 0; iSlot < SIR_VULKAN_SAMPLER_CAPACITY; ++iSlot ) {
+		if ( m_szSamplers[iSlot].bActive || m_szSamplers[iSlot].bRetiring ) {
+			return SIR_GRAPHICS_BUSY;
 		}
 	}
 	if ( !m_Native.shutdown() ) {

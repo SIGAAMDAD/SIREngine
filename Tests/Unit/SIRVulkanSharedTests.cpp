@@ -150,6 +150,54 @@ int main( void )
 	completed.nDeviceGeneration = pDevice->getDeviceGeneration();
 	completed.nQueueMask = 1U << SIR_GRAPHICS_QUEUE_DIRECT;
 	completed.szQueueValues[SIR_GRAPHICS_QUEUE_DIRECT] = second.nValue;
+
+	// The new image path creates actual Vulkan images/views/samplers through
+	// VMA, then verifies the image-view lifetime dependency and stale handles.
+	sirGraphicsTextureDesc_t texture = {};
+	texture.nWidth = 16;
+	texture.nHeight = 16;
+	texture.nDepth = 1;
+	texture.nArrayLayers = 1;
+	texture.nMipLevels = 1;
+	texture.nSampleCount = 1;
+	texture.nUsage = SIR_GRAPHICS_USAGE_SAMPLED | SIR_GRAPHICS_USAGE_COPY_DESTINATION;
+	texture.eDimension = SIR_GRAPHICS_TEXTURE_2D;
+	texture.eFormat = SIR_GRAPHICS_FORMAT_RGBA8_UNORM;
+	texture.eMemory = SIR_GRAPHICS_MEMORY_GPU_LOCAL;
+	sirGraphicsHandle_t hTexture = {};
+	if ( pDevice->createTexture( texture, &hTexture ) != SIR_GRAPHICS_SUCCESS || hTexture.eType != SIR_GRAPHICS_HANDLE_TEXTURE ) {
+		return 17;
+	}
+	sirGraphicsViewDesc_t view = {};
+	view.hResource = hTexture;
+	view.eFormat = SIR_GRAPHICS_FORMAT_RGBA8_UNORM;
+	view.nMipLevels = 1;
+	view.nLayers = 1;
+	view.nUsage = SIR_GRAPHICS_USAGE_SAMPLED;
+	sirGraphicsHandle_t hView = {};
+	if ( pDevice->createView( view, &hView ) != SIR_GRAPHICS_SUCCESS || hView.eType != SIR_GRAPHICS_HANDLE_VIEW ||
+	     driver.destroyDevice( pDevice ) != SIR_GRAPHICS_BUSY || pDevice->retireResource( hTexture, completed ) != SIR_GRAPHICS_BUSY ) {
+		return 18;
+	}
+	sirGraphicsSamplerDesc_t sampler = {};
+	sampler.eFilter = SIR_GRAPHICS_FILTER_TRILINEAR;
+	sampler.eAddressU = SIR_GRAPHICS_ADDRESS_REPEAT;
+	sampler.eAddressV = SIR_GRAPHICS_ADDRESS_CLAMP;
+	sampler.eAddressW = SIR_GRAPHICS_ADDRESS_REPEAT;
+	sampler.fMaximumAnisotropy = 1.0f;
+	sampler.fMinimumLod = 0.0f;
+	sampler.fMaximumLod = 1.0f;
+	sirGraphicsHandle_t hSampler = {};
+	if ( pDevice->createSampler( sampler, &hSampler ) != SIR_GRAPHICS_SUCCESS || hSampler.eType != SIR_GRAPHICS_HANDLE_SAMPLER ) {
+		return 19;
+	}
+	if ( pDevice->retireResource( hView, completed ) != SIR_GRAPHICS_SUCCESS ||
+	     pDevice->retireResource( hTexture, completed ) != SIR_GRAPHICS_SUCCESS ||
+	     pDevice->retireResource( hSampler, completed ) != SIR_GRAPHICS_SUCCESS ||
+	     pDevice->retireResource( hView, completed ) != SIR_GRAPHICS_INVALID_HANDLE ||
+	     pDevice->retireResource( hTexture, completed ) != SIR_GRAPHICS_INVALID_HANDLE ) {
+		return 20;
+	}
 	if ( pDevice->retireResource( hSource, completed ) != SIR_GRAPHICS_SUCCESS ||
 	     pDevice->retireResource( hGpu, completed ) != SIR_GRAPHICS_SUCCESS ||
 	     pDevice->retireResource( hReadback, completed ) != SIR_GRAPHICS_SUCCESS ||

@@ -252,7 +252,7 @@ sirVulkanResult_t SIRVulkanDevice::initialize( void ) noexcept
 		return SIR_VULKAN_ALLOCATION_FAILED;
 	}
 
-	if ( !initializeTransferQueue() ) {
+	if ( !initializeTransferQueue() || !loadImageDispatch() ) {
 		shutdown();
 		return SIR_VULKAN_NATIVE_FAILURE;
 	}
@@ -264,7 +264,7 @@ sirVulkanResult_t SIRVulkanDevice::initialize( void ) noexcept
 
 bool SIRVulkanDevice::shutdown( void ) noexcept
 {
-	if ( m_nLiveBuffers != 0 ) {
+	if ( m_nLiveBuffers != 0 || m_nLiveImages != 0 || m_nLiveImageViews != 0 || m_nLiveSamplers != 0 ) {
 		return false;
 	}
 
@@ -328,6 +328,9 @@ bool SIRVulkanDevice::queryMemoryStats( sirVulkanMemoryStats_t *pStats ) const n
 		pStats->nEstimatedBudgetBytes += budgets[iHeap].budget;
 	}
 	pStats->nLiveBuffers = m_nLiveBuffers;
+	pStats->nLiveImages = m_nLiveImages;
+	pStats->nLiveImageViews = m_nLiveImageViews;
+	pStats->nLiveSamplers = m_nLiveSamplers;
 	return true;
 }
 

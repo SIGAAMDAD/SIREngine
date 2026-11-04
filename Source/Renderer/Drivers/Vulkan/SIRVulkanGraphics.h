@@ -7,6 +7,7 @@ This Source Code Form is subject to the terms of the Mozilla Public
 License, v2. If a copy of the MPL was not distributed with this
 file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+
 This software is provided "as is", without warranty of any kind,
 express or implied, including but not limited to the warranties
 of merchantability, fitness for a particular purpose and noninfringement.
@@ -48,6 +49,35 @@ typedef struct sirVulkanGraphicsBufferSlot_s
 	bool bActive;
 	bool bRetiring;
 } sirVulkanGraphicsBufferSlot_t;
+
+typedef struct sirVulkanGraphicsImageSlot_s
+{
+	sirVulkanImage_t native;
+	uint32_t nGeneration;
+	uint32_t nViewCount;
+	uint64_t nRetireValue;
+	bool bActive;
+	bool bRetiring;
+} sirVulkanGraphicsImageSlot_t;
+
+typedef struct sirVulkanGraphicsViewSlot_s
+{
+	sirVulkanImageView_t native;
+	uint32_t nGeneration;
+	uint32_t nImageSlot;
+	uint64_t nRetireValue;
+	bool bActive;
+	bool bRetiring;
+} sirVulkanGraphicsViewSlot_t;
+
+typedef struct sirVulkanGraphicsSamplerSlot_s
+{
+	sirVulkanSampler_t native;
+	uint32_t nGeneration;
+	uint64_t nRetireValue;
+	bool bActive;
+	bool bRetiring;
+} sirVulkanGraphicsSamplerSlot_t;
 
 // Commands are borrowed from a fixed device-owned pool. The first native
 // integration slice supports one recorded buffer copy per submission.
@@ -136,8 +166,14 @@ private:
 	friend class SIRVulkanCommandList;
 
 	static constexpr uint32_t SIR_VULKAN_BUFFER_CAPACITY = 64;
+	static constexpr uint32_t SIR_VULKAN_TEXTURE_CAPACITY = 64;
+	static constexpr uint32_t SIR_VULKAN_VIEW_CAPACITY = 128;
+	static constexpr uint32_t SIR_VULKAN_SAMPLER_CAPACITY = 64;
 	SIRVulkanDevice m_Native;
 	sirVulkanGraphicsBufferSlot_t m_szBuffers[SIR_VULKAN_BUFFER_CAPACITY] = {};
+	sirVulkanGraphicsImageSlot_t m_szImages[SIR_VULKAN_TEXTURE_CAPACITY] = {};
+	sirVulkanGraphicsViewSlot_t m_szViews[SIR_VULKAN_VIEW_CAPACITY] = {};
+	sirVulkanGraphicsSamplerSlot_t m_szSamplers[SIR_VULKAN_SAMPLER_CAPACITY] = {};
 	SIRVulkanCommandList m_szCommands[SIR_VULKAN_TRANSFER_SLOT_COUNT];
 	uint64_t m_nNativeSerial = 0;
 	uint64_t m_nLastCompletion = 0;
@@ -147,6 +183,8 @@ private:
 	sirVulkanGraphicsBufferSlot_t *resolveBuffer( sirGraphicsHandle_t handle ) noexcept;
 	const sirVulkanGraphicsBufferSlot_t *resolveBuffer( sirGraphicsHandle_t handle ) const noexcept;
 	void collectRetired( void ) noexcept;
+	void collectImageResources( void ) noexcept;
+	sirGraphicsResult_t retireImageResource( sirGraphicsHandle_t hResource, const sirGraphicsCompletionSet_t &completion ) noexcept;
 	sirGraphicsResult_t initialize( void ) noexcept;
 
 	friend class SIRVulkanDriver;
@@ -183,27 +221,9 @@ public:
 	sirGraphicsResult_t shutdown( void ) noexcept override;
 
 	// Unimplemented features fail explicitly rather than returning fake handles.
-	sirGraphicsResult_t createTexture( const sirGraphicsTextureDesc_t &, sirGraphicsHandle_t *pHandle ) noexcept override
-	{
-		if ( pHandle != nullptr ) {
-			*pHandle = {};
-		}
-		return SIR_GRAPHICS_UNSUPPORTED;
-	}
-	sirGraphicsResult_t createView( const sirGraphicsViewDesc_t &, sirGraphicsHandle_t *pHandle ) noexcept override
-	{
-		if ( pHandle != nullptr ) {
-			*pHandle = {};
-		}
-		return SIR_GRAPHICS_UNSUPPORTED;
-	}
-	sirGraphicsResult_t createSampler( const sirGraphicsSamplerDesc_t &, sirGraphicsHandle_t *pHandle ) noexcept override
-	{
-		if ( pHandle != nullptr ) {
-			*pHandle = {};
-		}
-		return SIR_GRAPHICS_UNSUPPORTED;
-	}
+	sirGraphicsResult_t createTexture( const sirGraphicsTextureDesc_t &desc, sirGraphicsHandle_t *pHandle ) noexcept override;
+	sirGraphicsResult_t createView( const sirGraphicsViewDesc_t &desc, sirGraphicsHandle_t *pHandle ) noexcept override;
+	sirGraphicsResult_t createSampler( const sirGraphicsSamplerDesc_t &desc, sirGraphicsHandle_t *pHandle ) noexcept override;
 	sirGraphicsResult_t createPipeline( const sirGraphicsPipelineDesc_t &, sirGraphicsHandle_t *pHandle ) noexcept override
 	{
 		if ( pHandle != nullptr ) {
