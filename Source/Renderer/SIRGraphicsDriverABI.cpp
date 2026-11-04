@@ -15,6 +15,35 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Renderer/SIRGraphicsDriverABI.h>
 #include <Renderer/SIRGraphicsTypes.h>
+#include <string.h>
+
+sirGraphicsABIResult_t sirGraphicsNegotiateDriverABI( sirGraphicsABIFactory_t pFactory, const sirGraphicsABIHost_t *pHost,
+                                                      sirGraphicsABIDriver_t *pDriver ) noexcept
+{
+	if ( pFactory == nullptr || pDriver == nullptr || pDriver->nSize < sizeof( sirGraphicsABIDriver_t ) ) {
+		return SIR_GRAPHICS_ABI_INVALID_ARGUMENT;
+	}
+	const sirGraphicsABIResult_t eHostStatus = sirGraphicsValidateABIHost( pHost );
+	if ( eHostStatus != SIR_GRAPHICS_ABI_SUCCESS ) {
+		return eHostStatus;
+	}
+	sirGraphicsABIDriver_t driver = {};
+	driver.nSize = sizeof( driver );
+	const uint32_t nStatus = pFactory( SIR_GRAPHICS_DRIVER_ABI_MAJOR, SIR_GRAPHICS_DRIVER_ABI_MINOR, pHost, &driver );
+	if ( nStatus != SIR_GRAPHICS_ABI_SUCCESS ) {
+		return nStatus <= SIR_GRAPHICS_ABI_DRIVER_ERROR ? ( sirGraphicsABIResult_t )nStatus : SIR_GRAPHICS_ABI_DRIVER_ERROR;
+	}
+	const sirGraphicsABIResult_t eDriverStatus = sirGraphicsValidateABIDriver( &driver );
+	if ( eDriverStatus != SIR_GRAPHICS_ABI_SUCCESS ) {
+		if ( driver.pReleaseDriver != nullptr && driver.pDriver != nullptr ) {
+			driver.pReleaseDriver( driver.pDriver );
+		}
+		return eDriverStatus;
+	}
+	memcpy( pDriver, &driver, sizeof( driver ) );
+	return SIR_GRAPHICS_ABI_SUCCESS;
+}
+
 
 sirGraphicsABIResult_t sirGraphicsValidateABIHost( const sirGraphicsABIHost_t *pHost ) noexcept
 {
