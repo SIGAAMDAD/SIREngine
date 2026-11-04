@@ -107,8 +107,7 @@ static void SIRBenchmarkPlatformWriteAt( benchmark::State &state )
 	for ( auto _ : state ) {
 		( void )_;
 		uint64_t nTransferred = 0;
-		if ( fixture.getFile().writeAt( nOffset, fixture.getExpected(), nBytes, &nTransferred ) != SIR_FILE_OK ||
-		     nTransferred != nBytes ) {
+		if ( fixture.getFile().writeAt( nOffset, fixture.getExpected(), nBytes, &nTransferred ) != SIR_FILE_OK || nTransferred != nBytes ) {
 			state.SkipWithError( "writeAt failed" );
 			bFailed = true;
 			break;
