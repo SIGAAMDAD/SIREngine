@@ -108,8 +108,8 @@ sirGraphicsResult_t SIRVulkanCommandList::copyBufferTexture( const sirGraphicsBu
 	if ( m_nOperationCount >= SIR_VULKAN_COPY_BATCH_CAPACITY ) {
 		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
 	}
-	if ( m_pOwner == nullptr || copy.nWidth == 0 || copy.nHeight == 0 || copy.nDepth != 1 || copy.nZ != 0 || copy.nX > INT32_MAX ||
-	     copy.nY > INT32_MAX ) {
+	if ( m_pOwner == nullptr || copy.nWidth == 0 || copy.nHeight == 0 || copy.nDepth == 0 || copy.nX > INT32_MAX ||
+	     copy.nY > INT32_MAX || copy.nZ > INT32_MAX ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	const sirVulkanGraphicsBufferSlot_t *pBuffer = m_pOwner->resolveBuffer( copy.hBuffer );
@@ -145,8 +145,8 @@ sirGraphicsResult_t SIRVulkanCommandList::copyBufferTexture( const sirGraphicsBu
 	transfer.nBufferImageHeight = copy.nRowsPerImage;
 	transfer.nMip = copy.nMip;
 	transfer.nLayer = copy.nLayer;
-	transfer.offset = { ( int32_t )copy.nX, ( int32_t )copy.nY, 0 };
-	transfer.extent = { copy.nWidth, copy.nHeight, 1 };
+	transfer.offset = { ( int32_t )copy.nX, ( int32_t )copy.nY, ( int32_t )copy.nZ };
+	transfer.extent = { copy.nWidth, copy.nHeight, copy.nDepth };
 	transfer.bBufferToImage = copy.bBufferToTexture;
 	// A readback may follow an upload to the same subresource in this
 	// command list; validate it against a local initialization snapshot.

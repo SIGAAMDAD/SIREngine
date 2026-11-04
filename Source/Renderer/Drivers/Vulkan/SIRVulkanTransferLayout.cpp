@@ -126,10 +126,14 @@ bool sirVulkanSetSubresourceLayout( sirVulkanImage_t *pImage, uint32_t nMip, uin
 sirVulkanResult_t sirVulkanValidateTextureTransfer( const sirVulkanBuffer_t *pBuffer, const sirVulkanImage_t *pImage,
                                                     const sirVulkanTextureTransfer_t &transfer ) noexcept
 {
-	if ( pBuffer == nullptr || pImage == nullptr || pImage->eType != VK_IMAGE_TYPE_2D || pImage->nMips == 0 || pImage->nMips > 32 ||
-	     pImage->nLayers == 0 || pImage->nLayers > SIR_VULKAN_MAX_TRACKED_SUBRESOURCES / pImage->nMips || transfer.nMip >= pImage->nMips ||
-	     transfer.nLayer >= pImage->nLayers || transfer.extent.width == 0 || transfer.extent.height == 0 || transfer.extent.depth != 1 ||
-	     transfer.offset.z != 0 || transfer.offset.x < 0 || transfer.offset.y < 0 ) {
+	if ( pBuffer == nullptr || pImage == nullptr ||
+	     ( pImage->eType != VK_IMAGE_TYPE_2D && pImage->eType != VK_IMAGE_TYPE_3D ) || pImage->nMips == 0 ||
+	     pImage->nMips > 32 || pImage->nLayers == 0 ||
+	     pImage->nLayers > SIR_VULKAN_MAX_TRACKED_SUBRESOURCES / pImage->nMips || transfer.nMip >= pImage->nMips ||
+	     transfer.nLayer >= pImage->nLayers || transfer.extent.width == 0 || transfer.extent.height == 0 ||
+	     transfer.extent.depth == 0 || transfer.offset.x < 0 || transfer.offset.y < 0 || transfer.offset.z < 0 ||
+	     ( pImage->eType == VK_IMAGE_TYPE_2D && ( transfer.extent.depth != 1 || transfer.offset.z != 0 ) ) ||
+	     ( pImage->eType == VK_IMAGE_TYPE_3D && ( pImage->nLayers != 1 || transfer.nLayer != 0 ) ) ) {
 		return SIR_VULKAN_INVALID_ARGUMENT;
 	}
 
@@ -144,6 +148,14 @@ sirVulkanResult_t sirVulkanValidateTextureTransfer( const sirVulkanBuffer_t *pBu
 	}
 	if ( nMipHeight == 0 ) {
 		nMipHeight = 1;
+	}
+	uint32_t nMipDepth = pImage->nDepth >> transfer.nMip;
+	if ( nMipDepth == 0 ) {
+		nMipDepth = 1;
+	}
+	const uint32_t nZ = ( uint32_t )transfer.offset.z;
+	if ( nZ >= nMipDepth || transfer.extent.depth > nMipDepth - nZ ) {
+		return SIR_VULKAN_INVALID_ARGUMENT;
 	}
 	const uint32_t nX = ( uint32_t )transfer.offset.x;
 	const uint32_t nY = ( uint32_t )transfer.offset.y;
@@ -188,7 +200,17 @@ sirVulkanResult_t sirVulkanValidateTextureTransfer( const sirVulkanBuffer_t *pBu
 	if ( nRowPitch == 0 || nCopyBlockRows == 0 || nCopyBlockRows - 1 > ( UINT64_MAX - nLastRowBytes ) / nRowPitch ) {
 		return SIR_VULKAN_INVALID_ARGUMENT;
 	}
-	const uint64_t nRequiredBytes = ( nCopyBlockRows - 1 ) * nRowPitch + nLastRowBytes;
+	const uint64_t nLastSliceBytes = ( nCopyBlockRows - 1 ) * nRowPitch + nLastRowBytes;
+	const uint64_t nImageRows = transfer.nBufferImageHeight != 0 ? transfer.nBufferImageHeight / block.nBlockHeight : nCopyBlockRows;
+	if ( nImageRows > UINT64_MAX / nRowPitch ) {
+		return SIR_VULKAN_INVALID_ARGUMENT;
+	}
+	const uint64_t nSlicePitch = nImageRows * nRowPitch;
+	const uint64_t nCopySlices = transfer.extent.depth;
+	if ( nCopySlices - 1 > ( UINT64_MAX - nLastSliceBytes ) / nSlicePitch ) {
+		return SIR_VULKAN_INVALID_ARGUMENT;
+	}
+	const uint64_t nRequiredBytes = ( nCopySlices - 1 ) * nSlicePitch + nLastSliceBytes;
 	if ( nRequiredBytes > pBuffer->nSize - transfer.nBufferOffset ) {
 		return SIR_VULKAN_INVALID_ARGUMENT;
 	}

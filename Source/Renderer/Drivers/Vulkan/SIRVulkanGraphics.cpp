@@ -639,8 +639,8 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::submit( sirGraphicsQueue_t eQueue,
 				transfer.nBufferImageHeight = copy.nRowsPerImage;
 				transfer.nMip = copy.nMip;
 				transfer.nLayer = copy.nLayer;
-				transfer.offset = { ( int32_t )copy.nX, ( int32_t )copy.nY, 0 };
-				transfer.extent = { copy.nWidth, copy.nHeight, 1 };
+				transfer.offset = { ( int32_t )copy.nX, ( int32_t )copy.nY, ( int32_t )copy.nZ };
+				transfer.extent = { copy.nWidth, copy.nHeight, copy.nDepth };
 				transfer.bBufferToImage = copy.bBufferToTexture;
 				nativeOp.eKind = SIR_VULKAN_RECORDED_TEXTURE_COPY;
 				nativeOp.pBuffer = &pBuffer->native;
