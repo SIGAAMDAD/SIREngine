@@ -76,8 +76,8 @@ public:
 	SIRFMODSnapshotBackend( const SIRFMODSnapshotBackend & ) = delete;
 	SIRFMODSnapshotBackend &operator=( const SIRFMODSnapshotBackend & ) = delete;
 
-	sirAudioResult_t configure( SIRFMODContext *pContext, const sirContainerAllocator_t *pAllocator,
-	                            const sirFMODSnapshotNativeOps_t &ops, uint32_t nMaxSnapshots ) noexcept;
+	sirAudioResult_t configure( SIRFMODContext *pContext, const sirContainerAllocator_t *pAllocator, const sirFMODSnapshotNativeOps_t &ops,
+	                            uint32_t nMaxSnapshots ) noexcept;
 	sirAudioResult_t initialize( void ) noexcept;
 	sirAudioResult_t shutdown( void ) noexcept;
 	sirAudioResult_t registerSnapshot( uint64_t nSnapshotId, const char *szPath ) noexcept;

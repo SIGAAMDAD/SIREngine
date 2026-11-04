@@ -128,9 +128,18 @@ static int32_t snapshotStudioRelease( void *pData, void *pStudio ) noexcept
 
 static sirFMODNativeOps_t makeSnapshotContextOps( sirFMODSnapshotFixture_t *pFixture ) noexcept
 {
-	return { 1, 0x00020400, pFixture, snapshotStudioCreate, snapshotGetCore, snapshotGetVersion,
-	         snapshotGetDriverCount, snapshotSetDriver, snapshotSetNoSound, snapshotStudioInitialize,
-	         snapshotStudioUpdate, snapshotStudioRelease };
+	return { 1,
+	         0x00020400,
+	         pFixture,
+	         snapshotStudioCreate,
+	         snapshotGetCore,
+	         snapshotGetVersion,
+	         snapshotGetDriverCount,
+	         snapshotSetDriver,
+	         snapshotSetNoSound,
+	         snapshotStudioInitialize,
+	         snapshotStudioUpdate,
+	         snapshotStudioRelease };
 }
 
 static int32_t snapshotResolve( void *pData, void *pStudio, const char *szPath, void **ppDescription ) noexcept

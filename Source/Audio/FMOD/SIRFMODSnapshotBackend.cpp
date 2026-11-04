@@ -28,17 +28,15 @@ SIRFMODSnapshotBackend::~SIRFMODSnapshotBackend( void ) noexcept
 
 bool SIRFMODSnapshotBackend::isReady( void ) const noexcept
 {
-	return m_bInitialized && m_pContext != nullptr && m_pContext->isReady() &&
-	       m_pContext->getEpoch() == m_nContextEpoch;
+	return m_bInitialized && m_pContext != nullptr && m_pContext->isReady() && m_pContext->getEpoch() == m_nContextEpoch;
 }
 
 sirAudioResult_t SIRFMODSnapshotBackend::configure( SIRFMODContext *pContext, const sirContainerAllocator_t *pAllocator,
                                                     const sirFMODSnapshotNativeOps_t &ops, uint32_t nMaxSnapshots ) noexcept
 {
 	if ( m_pContext != nullptr || m_bInitialized || pContext == nullptr || !pContext->isReady() ||
-	     !SIRRawStorage::isValidAllocator( pAllocator ) || nMaxSnapshots == 0 || ops.nAbiVersion != 1 ||
-	     ops.resolveSnapshot == nullptr || ops.createInstance == nullptr || ops.startInstance == nullptr ||
-	     ops.stopInstance == nullptr || ops.releaseInstance == nullptr ) {
+	     !SIRRawStorage::isValidAllocator( pAllocator ) || nMaxSnapshots == 0 || ops.nAbiVersion != 1 || ops.resolveSnapshot == nullptr ||
+	     ops.createInstance == nullptr || ops.startInstance == nullptr || ops.stopInstance == nullptr || ops.releaseInstance == nullptr ) {
 		return SIR_AUDIO_INVALID_ARGUMENT;
 	}
 
@@ -51,8 +49,7 @@ sirAudioResult_t SIRFMODSnapshotBackend::configure( SIRFMODContext *pContext, co
 
 sirAudioResult_t SIRFMODSnapshotBackend::initialize( void ) noexcept
 {
-	if ( m_pContext == nullptr || m_pAllocator == nullptr || m_bInitialized || m_nCapacity == 0 ||
-	     !m_pContext->isReady() ) {
+	if ( m_pContext == nullptr || m_pAllocator == nullptr || m_bInitialized || m_nCapacity == 0 || !m_pContext->isReady() ) {
 		return SIR_AUDIO_NOT_INITIALIZED;
 	}
 
@@ -92,8 +89,7 @@ void SIRFMODSnapshotBackend::releaseStorage( void ) noexcept
 	m_bInitialized = false;
 }
 
-sirAudioResult_t SIRFMODSnapshotBackend::releaseInstance( sirFMODSnapshotRecord_t &record, bool bStop,
-                                                           sirAudioStopMode_t eMode ) noexcept
+sirAudioResult_t SIRFMODSnapshotBackend::releaseInstance( sirFMODSnapshotRecord_t &record, bool bStop, sirAudioStopMode_t eMode ) noexcept
 {
 	if ( record.pInstance == nullptr ) {
 		return SIR_AUDIO_OK;
@@ -130,8 +126,7 @@ sirAudioResult_t SIRFMODSnapshotBackend::shutdown( void ) noexcept
 		}
 	} else {
 		for ( uint32_t iSnapshot = 0; iSnapshot < m_nCount; ++iSnapshot ) {
-			const sirAudioResult_t eResult =
-			    releaseInstance( m_pSnapshots[iSnapshot], true, SIR_AUDIO_STOP_IMMEDIATE );
+			const sirAudioResult_t eResult = releaseInstance( m_pSnapshots[iSnapshot], true, SIR_AUDIO_STOP_IMMEDIATE );
 			if ( eResult != SIR_AUDIO_OK ) {
 				return eResult;
 			}
@@ -181,8 +176,7 @@ sirAudioResult_t SIRFMODSnapshotBackend::registerSnapshot( uint64_t nSnapshotId,
 	}
 
 	if ( iInsert < m_nCount ) {
-		memmove( m_pSnapshots + iInsert + 1, m_pSnapshots + iInsert,
-		         ( size_t )( m_nCount - iInsert ) * sizeof( sirFMODSnapshotRecord_t ) );
+		memmove( m_pSnapshots + iInsert + 1, m_pSnapshots + iInsert, ( size_t )( m_nCount - iInsert ) * sizeof( sirFMODSnapshotRecord_t ) );
 	}
 	m_pSnapshots[iInsert] = { nSnapshotId, pDescription, nullptr, 0, {} };
 	++m_nCount;

@@ -52,6 +52,11 @@ static int32_t fmodSnapshotReleaseInstance( void *, void *pInstance ) noexcept
 
 sirFMODSnapshotNativeOps_t sirGetFMODSnapshotNativeOps( void ) noexcept
 {
-	return { 1, nullptr, fmodSnapshotResolve, fmodSnapshotCreateInstance, fmodSnapshotStartInstance, fmodSnapshotStopInstance,
+	return { 1,
+	         nullptr,
+	         fmodSnapshotResolve,
+	         fmodSnapshotCreateInstance,
+	         fmodSnapshotStartInstance,
+	         fmodSnapshotStopInstance,
 	         fmodSnapshotReleaseInstance };
 }
