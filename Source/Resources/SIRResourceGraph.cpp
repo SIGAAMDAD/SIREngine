@@ -1220,7 +1220,7 @@ SIRResourceResult SIRResourceGraphWriter::publish( const SIRResourcePublication 
 	pRecord->m_Info.m_nRevision = pPrior ? pPrior->m_Info.m_nRevision + 1 : 1;
 	pRecord->m_Handle =
 	    pPrior ? pPrior->m_Handle
-		       : SIRResourceHandle{ ( uint32_t )iSlot, m_pGraph->m_pSlots[iSlot].m_nNextGeneration, rPublication.m_Key.m_nTypeId, 0 };
+	           : SIRResourceHandle{ ( uint32_t )iSlot, m_pGraph->m_pSlots[iSlot].m_nNextGeneration, rPublication.m_Key.m_nTypeId, 0 };
 	for ( uint32_t iEdge = 0; iEdge < rPublication.m_nDependencyCount; ++iEdge ) {
 		pRecord->m_pDependencies[iEdge] = rPublication.m_pDependencies[iEdge];
 	}
