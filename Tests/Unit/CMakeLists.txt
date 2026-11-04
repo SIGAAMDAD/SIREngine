@@ -101,3 +101,5 @@ target_link_libraries(SIRGraphicsInterfaceTests PRIVATE SIR::Graphics)
 add_test(NAME renderer.graphics.interface COMMAND SIRGraphicsInterfaceTests)
 sir_configure_owned_target(SIRGraphicsInterfaceTests)
 add_subdirectory(Config)
+
+include(${CMAKE_CURRENT_SOURCE_DIR}/MeshCacheTests.cmake)
