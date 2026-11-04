@@ -26,6 +26,9 @@ int main( int nArgs, const char *const *pszArgs )
 	bool bCompilerFlags = false;
 	bool bForceCorrupt = false;
 	bool bForceFailure = false;
+	bool bNoOutput = false;
+	bool bShortOutput = false;
+	bool bUnaligned = false;
 	for ( int iArg = 1; iArg < nArgs; ++iArg ) {
 		const std::string sArg = pszArgs[iArg];
 		if ( sArg == "-Fo" && iArg + 1 < nArgs ) {
@@ -46,6 +49,9 @@ int main( int nArgs, const char *const *pszArgs )
 			const std::string sDefinition = pszArgs[++iArg];
 			bForceCorrupt |= sDefinition == "CORRUPT=1";
 			bForceFailure |= sDefinition == "FAIL=1";
+			bNoOutput |= sDefinition == "NO_OUTPUT=1";
+			bShortOutput |= sDefinition == "SHORT=1";
+			bUnaligned |= sDefinition == "UNALIGNED=1";
 		} else if ( iArg == nArgs - 1 ) {
 			sInput = sArg;
 		}
@@ -60,11 +66,19 @@ int main( int nArgs, const char *const *pszArgs )
 	if ( bForceFailure ) {
 		return 9;
 	}
+	if ( bNoOutput ) {
+		return 0;
+	}
 	std::ofstream output( sOutput, std::ios::binary );
 	const char szSpirvMagic[4] = { 3, 2, 0x23, 7 };
 	const char *pszMagic = bForceCorrupt ? "BAD!" : bSpirv ? szSpirvMagic : "DXBC";
 	output.write( pszMagic, 4 );
 	const char szPadding[28] = {};
-	output.write( szPadding, sizeof( szPadding ) );
+	if ( !bShortOutput ) {
+		output.write( szPadding, sizeof( szPadding ) );
+	}
+	if ( bUnaligned ) {
+		output.put( 0 );
+	}
 	return output ? 0 : 5;
 }
