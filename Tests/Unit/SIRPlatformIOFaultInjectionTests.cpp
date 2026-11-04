@@ -53,6 +53,7 @@ static std::atomic<bool> s_bPageFault{ false };
 static std::atomic<bool> s_bUnmapFault{ false };
 static std::atomic<bool> s_bNegativeFileSize{ false };
 static std::atomic<bool> s_bNegativeFileInfo{ false };
+static std::atomic<bool> s_bHugeFileTime{ false };
 static std::atomic<bool> s_bSyncFileFault{ false };
 static std::atomic<bool> s_bTruncateFault{ false };
 static std::atomic<bool> s_bCloseFault{ false };
@@ -164,6 +165,9 @@ extern "C" int __wrap_stat( const char *pszPath, struct stat *pInfo )
 	if ( nResult == 0 && s_bNegativeFileInfo.exchange( false, std::memory_order_relaxed ) ) {
 		pInfo->st_size = -1;
 		pInfo->st_mtim.tv_sec = -1;
+	}
+	if ( nResult == 0 && s_bHugeFileTime.exchange( false, std::memory_order_relaxed ) ) {
+		pInfo->st_mtim.tv_sec = INT64_MAX;
 	}
 	return nResult;
 }
@@ -301,6 +305,12 @@ static void sirTestInjectedPositionalTransfers( void )
 	SIR_CHECK( file.open( pszPath, SIR_FILE_OPEN_READ ) == SIR_FILE_ACCESS_DENIED && !file.isOpen() );
 	s_nOpenFault.store( EOVERFLOW, std::memory_order_relaxed );
 	SIR_CHECK( file.open( pszPath, SIR_FILE_OPEN_READ ) == SIR_FILE_OUT_OF_RANGE && !file.isOpen() );
+	s_bSizeFault.store( true, std::memory_order_relaxed );
+	SIR_CHECK( file.open( pszPath, SIR_FILE_OPEN_CREATE | SIR_FILE_OPEN_TRUNCATE | SIR_FILE_OPEN_READ | SIR_FILE_OPEN_WRITE ) ==
+	           SIR_FILE_IO_ERROR );
+	s_bNegativeFileSize.store( true, std::memory_order_relaxed );
+	SIR_CHECK( file.open( pszPath, SIR_FILE_OPEN_CREATE | SIR_FILE_OPEN_TRUNCATE | SIR_FILE_OPEN_READ | SIR_FILE_OPEN_WRITE ) ==
+	           SIR_FILE_IO_ERROR );
 	SIR_CHECK( file.open( pszPath, SIR_FILE_OPEN_CREATE | SIR_FILE_OPEN_TRUNCATE | SIR_FILE_OPEN_READ | SIR_FILE_OPEN_WRITE ) ==
 	           SIR_FILE_OK );
 
@@ -367,11 +377,14 @@ static void sirTestInjectedPositionalTransfers( void )
 	sirFileInfo_t invalidInfo = {};
 	SIR_CHECK( SIRPlatformFile::getInfo( pszPath, &invalidInfo ) == SIR_FILE_OK );
 	SIR_CHECK( invalidInfo.nSizeBytes == 0 && invalidInfo.nModifiedUnixNanoseconds == 0 );
+	s_bHugeFileTime.store( true, std::memory_order_relaxed );
+	SIR_CHECK( SIRPlatformFile::getInfo( pszPath, &invalidInfo ) == SIR_FILE_OK && invalidInfo.nModifiedUnixNanoseconds == 0 );
 	SIR_CHECK( file.close() == SIR_FILE_OK );
 	SIR_CHECK( file.open( pszPath, SIR_FILE_OPEN_WRITE | SIR_FILE_OPEN_APPEND ) == SIR_FILE_OK );
 	uint8_t szAppend[8] = { 1, 2, 3, 4, 5, 6, 7, 8 };
 	SIR_CHECK( file.write( szAppend, 8, nullptr ) == SIR_FILE_INVALID_ARGUMENT );
 	SIR_CHECK( file.write( nullptr, 8, &nTransferred ) == SIR_FILE_INVALID_ARGUMENT );
+	SIR_CHECK( file.write( nullptr, 0, &nTransferred ) == SIR_FILE_OK && nTransferred == 0 );
 	s_bSizeFault.store( true, std::memory_order_relaxed );
 	SIR_CHECK( file.seek( 0, SIR_FILE_SEEK_END, nullptr ) == SIR_FILE_IO_ERROR );
 	SIR_CHECK( file.truncate( UINT64_C( 0x8000000000000000 ) ) == SIR_FILE_OUT_OF_RANGE );
@@ -384,6 +397,8 @@ static void sirTestInjectedPositionalTransfers( void )
 	s_nAppendWriteFault.store( 4, std::memory_order_relaxed );
 	SIR_CHECK( file.write( szAppend, 8, &nTransferred ) == SIR_FILE_OK && nTransferred == 8 );
 	s_nAppendWriteFault.store( 0, std::memory_order_relaxed );
+	s_bSizeFault.store( true, std::memory_order_relaxed );
+	SIR_CHECK( file.write( szAppend, 8, &nTransferred ) == SIR_FILE_OK && nTransferred == 8 );
 	s_bSyncFileFault.store( true, std::memory_order_relaxed );
 	SIR_CHECK( file.flush() == SIR_FILE_IO_ERROR );
 	s_bTruncateFault.store( true, std::memory_order_relaxed );
