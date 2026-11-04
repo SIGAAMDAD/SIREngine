@@ -20,6 +20,7 @@ struct SIRTestAllocatorStats
 {
 	std::atomic<int32_t> m_nOutstanding;
 	std::atomic<uint64_t> m_nOutstandingBytes;
+
 	std::atomic<bool> m_bFailNext;
 };
 
@@ -1266,6 +1267,143 @@ static void testPublicValidationAndReadViewBoundaries( void )
 	REQUIRE( alloc.m_nOutstanding.load() == 0 );
 }
 
+static void testWriterInputValidationAndStagingLifecycle( void )
+{
+	SIRTestAllocatorStats alloc = {};
+	{
+		SIRResourceGraphConfig cfg = testConfig( alloc, 3 );
+		cfg.m_nMaxStaging = 1;
+		SIRResourceGraph graph( cfg );
+		REQUIRE( graph.isReady() );
+		SIRResourceGraphWriter *pWriter = graph.getWriter();
+		REQUIRE( pWriter != nullptr );
+		SIRResourceHandle hFirst = {};
+		SIRResourceHandle hSecond = {};
+		SIRResourceHandle ignored = {};
+		SIRResourceStagingHandle staging = {};
+		SIRResourceMutableBytes bytes = {};
+		SIRResourceInvalidationEvent event = {};
+		uint32_t nCount = 0;
+		uint64_t nCursor = 0;
+		uint64_t nSequence = 0;
+		REQUIRE( pWriter->request( key( 1, 0 ), &ignored ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		REQUIRE( pWriter->request( key( 1 ), nullptr ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		REQUIRE( pWriter->request( key( 1 ), &hFirst ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( pWriter->request( key( 1 ), &ignored ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( hFirst.m_nSlot == ignored.m_nSlot );
+		REQUIRE( pWriter->request( key( 2 ), &hSecond ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( pWriter->request( key( 3 ), &ignored ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( pWriter->request( key( 4 ), &ignored ) == SIR_RESOURCE_RESULT_OUT_OF_BUDGET );
+		REQUIRE( pWriter->allocateStaging( 0, 8, 9, &staging, &bytes ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		REQUIRE( pWriter->allocateStaging( 16, 0, 9, &staging, &bytes ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		REQUIRE( pWriter->allocateStaging( 16, 3, 9, &staging, &bytes ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		REQUIRE( pWriter->allocateStaging( 16, 8, 9, nullptr, &bytes ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		REQUIRE( pWriter->allocateStaging( 16, 8, 9, &staging, nullptr ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		REQUIRE( pWriter->allocateStaging( UINT64_MAX, 8, 9, &staging, &bytes ) == SIR_RESOURCE_RESULT_OUT_OF_BUDGET );
+		REQUIRE( pWriter->allocateStaging( 16, 8, 9, &staging, &bytes ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( pWriter->allocateStaging( 16, 8, 9, &staging, &bytes ) == SIR_RESOURCE_RESULT_OUT_OF_BUDGET );
+		REQUIRE( pWriter->cancelStaging( { UINT32_MAX, 0 } ) == SIR_RESOURCE_RESULT_INVALID_HANDLE );
+		REQUIRE( pWriter->cancelStaging( { staging.m_nSlot, staging.m_nGeneration + 1 } ) == SIR_RESOURCE_RESULT_INVALID_HANDLE );
+		REQUIRE( pWriter->cancelStaging( staging ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( pWriter->cancelStaging( staging ) == SIR_RESOURCE_RESULT_INVALID_HANDLE );
+		REQUIRE( pWriter->collectDependents( key( 1, 0 ), nullptr, 0, &nCount ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		REQUIRE( pWriter->collectDependents( key( 1 ), nullptr, 0, nullptr ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		REQUIRE( pWriter->collectDependents( key( 1 ), nullptr, 1, &nCount ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		REQUIRE( pWriter->collectDependents( key( 1 ), nullptr, 0, &nCount ) == SIR_RESOURCE_RESULT_SUCCESS && nCount == 0 );
+		REQUIRE( pWriter->pollInvalidations( 0, nullptr, 0, nullptr, &nCursor ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		REQUIRE( pWriter->pollInvalidations( 0, nullptr, 0, &nCount, nullptr ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		REQUIRE( pWriter->pollInvalidations( 0, nullptr, 1, &nCount, &nCursor ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		REQUIRE( pWriter->pollInvalidations( 1, &event, 1, &nCount, &nCursor ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		REQUIRE( pWriter->pollInvalidations( 0, &event, 1, &nCount, &nCursor ) == SIR_RESOURCE_RESULT_SUCCESS && nCount == 0 );
+		REQUIRE( pWriter->getInvalidationSequence( hFirst, nullptr ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		REQUIRE( pWriter->getInvalidationSequence( { UINT32_MAX, 0, 0, 0 }, &nSequence ) == SIR_RESOURCE_RESULT_INVALID_HANDLE );
+		REQUIRE( pWriter->getInvalidationSequence( hFirst, &nSequence ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( pWriter->compileDependencyOrder( hFirst, nullptr, 0, nullptr ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		REQUIRE( pWriter->compileDependencyOrder( hFirst, nullptr, 1, &nCount ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		REQUIRE( pWriter->compileDependencyOrder( { UINT32_MAX, 0, 0, 0 }, nullptr, 0, &nCount ) == SIR_RESOURCE_RESULT_INVALID_HANDLE );
+		SIRResourceDependencyPlanEntry plan[3] = {};
+		REQUIRE( pWriter->compileDependencyOrder( hFirst, nullptr, 0, &nCount ) == SIR_RESOURCE_RESULT_OUT_OF_BUDGET && nCount == 1 );
+		REQUIRE( pWriter->compileDependencyOrder( hFirst, plan, 3, &nCount ) == SIR_RESOURCE_RESULT_SUCCESS && nCount == 1 );
+		REQUIRE( pWriter->validateTaskPlan( nullptr, 1 ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		REQUIRE( pWriter->validateTaskPlan( plan, 0 ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		REQUIRE( pWriter->validateTaskPlan( plan, 4 ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		REQUIRE( pWriter->validateTaskPlan( plan, 1 ) == SIR_RESOURCE_RESULT_SUCCESS );
+		const SIRResourceDependencyPlanEntry original = plan[0];
+		plan[0].eState = SIR_RESOURCE_STATE_FAILED;
+		REQUIRE( pWriter->validateTaskPlan( plan, 1 ) == SIR_RESOURCE_RESULT_STALE_REVISION );
+		plan[0] = original;
+		SIRResourcePublication publication = { key( 1 ), SIR_RESOURCE_KIND_COMPOSITION, 1, 1, nullptr, 0, nullptr, 0 };
+		REQUIRE( pWriter->publish( publication, nullptr ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		publication.m_Key = key( 1, 0 );
+		REQUIRE( pWriter->publish( publication, &ignored ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		publication.m_Key = key( 1 );
+		publication.m_nSchemaVersion = 0;
+		REQUIRE( pWriter->publish( publication, &ignored ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		publication.m_nSchemaVersion = 1;
+		publication.m_eKind = ( SIRResourceKind )255;
+		REQUIRE( pWriter->publish( publication, &ignored ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		publication.m_eKind = SIR_RESOURCE_KIND_COMPOSITION;
+		publication.m_nChunkCount = 1;
+		REQUIRE( pWriter->publish( publication, &ignored ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		publication.m_nChunkCount = 0;
+		publication.m_nDependencyCount = 1;
+		REQUIRE( pWriter->publish( publication, &ignored ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		publication.m_nDependencyCount = 0;
+		REQUIRE( pWriter->publishExpected( publication, 0, nullptr ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		REQUIRE( pWriter->publishExpected( publication, 9, &ignored ) == SIR_RESOURCE_RESULT_STALE_REVISION );
+		SIRResourceDependency badEdge = { key( 99, 0 ), SIR_RESOURCE_EDGE_KIND_OPTIONAL, {} };
+		publication.m_pDependencies = &badEdge;
+		publication.m_nDependencyCount = 1;
+		REQUIRE( pWriter->publish( publication, &ignored ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		badEdge.m_Target = key( 99 );
+		badEdge.m_eKind = ( SIRResourceEdgeKind )255;
+		REQUIRE( pWriter->publish( publication, &ignored ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		badEdge.m_eKind = SIR_RESOURCE_EDGE_KIND_REQUIRED;
+		REQUIRE( pWriter->publish( publication, &ignored ) == SIR_RESOURCE_RESULT_DEPENDENCY_MISSING );
+		badEdge.m_Target = key( 1 );
+		REQUIRE( pWriter->publish( publication, &ignored ) == SIR_RESOURCE_RESULT_DEPENDENCY_CYCLE );
+		publication.m_nDependencyCount = 0;
+		publication.m_pDependencies = nullptr;
+		SIRResourceChunkPublication invalidChunk = { { 0 }, content( 123 ), { UINT32_MAX, 0 }, false };
+		publication.m_nChunkCount = 1;
+		publication.m_pChunks = &invalidChunk;
+		REQUIRE( pWriter->publish( publication, &ignored ) == SIR_RESOURCE_RESULT_INVALID_HANDLE );
+		invalidChunk.m_bReuseExisting = true;
+		REQUIRE( pWriter->publish( publication, &ignored ) == SIR_RESOURCE_RESULT_MISSING_CHUNK );
+		publication.m_nChunkCount = 0;
+		publication.m_pChunks = nullptr;
+		REQUIRE( pWriter->publish( publication, &hFirst ) == SIR_RESOURCE_RESULT_SUCCESS );
+		publication.m_eKind = SIR_RESOURCE_KIND_BLOB;
+		REQUIRE( pWriter->publish( publication, &ignored ) == SIR_RESOURCE_RESULT_TYPE_MISMATCH );
+		REQUIRE( pWriter->markFailed( hFirst, SIR_RESOURCE_RESULT_SUCCESS ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		REQUIRE( pWriter->markFailed( hFirst, SIR_RESOURCE_RESULT_FAILED ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		std::atomic<bool> bWrongWriter{ false };
+		std::thread other( [&]() {
+			uint32_t count = 0;
+			uint64_t cursor = 0;
+			SIRResourceHandle out = {};
+			SIRResourceStagingHandle stage = {};
+			SIRResourceMutableBytes data = {};
+			bWrongWriter.store( pWriter->request( key( 100 ), &out ) == SIR_RESOURCE_RESULT_WRITER_VIOLATION &&
+			                    pWriter->publish( publication, &out ) == SIR_RESOURCE_RESULT_WRITER_VIOLATION &&
+			                    pWriter->publishExpected( publication, 1, &out ) == SIR_RESOURCE_RESULT_WRITER_VIOLATION &&
+			                    pWriter->allocateStaging( 8, 8, 9, &stage, &data ) == SIR_RESOURCE_RESULT_WRITER_VIOLATION &&
+			                    pWriter->cancelStaging( staging ) == SIR_RESOURCE_RESULT_WRITER_VIOLATION &&
+			                    pWriter->retire( hFirst ) == SIR_RESOURCE_RESULT_WRITER_VIOLATION &&
+			                    pWriter->markFailed( hFirst, SIR_RESOURCE_RESULT_FAILED ) == SIR_RESOURCE_RESULT_WRITER_VIOLATION &&
+			                    pWriter->evictChunk( hFirst, { 0 } ) == SIR_RESOURCE_RESULT_WRITER_VIOLATION &&
+			                    pWriter->collectRetired( 10 ) == 0 &&
+			                    pWriter->compileDependencyOrder( hFirst, plan, 3, &count ) == SIR_RESOURCE_RESULT_WRITER_VIOLATION &&
+			                    pWriter->validateTaskPlan( plan, 1 ) == SIR_RESOURCE_RESULT_WRITER_VIOLATION &&
+			                    pWriter->collectDependents( key( 1 ), &out, 1, &count ) == SIR_RESOURCE_RESULT_WRITER_VIOLATION &&
+			                    pWriter->pollInvalidations( 0, &event, 1, &count, &cursor ) == SIR_RESOURCE_RESULT_WRITER_VIOLATION );
+		} );
+		other.join();
+		REQUIRE( bWrongWriter.load() );
+	}
+	REQUIRE( alloc.m_nOutstanding.load() == 0 );
+}
+
 int main( void )
 {
 	testScopeLifetimeAndDeduplication();
@@ -1282,11 +1420,13 @@ int main( void )
 	testAtomicReadIndexCollisionsAndChurn();
 	testEpochReclamationWithOverlappingScopes();
 	testReaderEpochSlotExhaustion();
+
 	testDeterministicDependencyOrderCompilation();
 	testCoreTaskGraphResourceDependencies();
 	testCoreTaskGraphFailureAndCancellation();
 	testCoreTaskGraphStaleRevisionsAndBudget();
 	testPublicValidationAndReadViewBoundaries();
+	testWriterInputValidationAndStagingLifecycle();
 	printf( "PASS: GRDG resource registry, publication, deduplication, lifetime, concurrency\n" );
 	return 0;
 }
