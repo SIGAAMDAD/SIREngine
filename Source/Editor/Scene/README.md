@@ -31,4 +31,25 @@ partially committing authoring state.
 **Outstanding R2/R3:** actual Godot-derived method dispatch/signals, string
 atom and mathematical property codecs, automatic reflection/property binding,
 ResourceLoader/ResourceSaver, full Godot scene/Variant serialization and
-inherited/instanced scene resolution, and a validated atomic file-save workflow.
+inherited/instanced scene resolution, and complete scene-inheritance resolution.
+
+## Native scene save/reopen
+
+`SIREditorFileSave` stages serialized scene bytes into an exclusively created
+sibling path supplied by the caller. The Linux implementation writes, syncs,
+renames and synchronizes the parent directory, preserving regular-file
+permissions; Windows uses UTF-8 to wide-path conversion, CreateFileW,
+FlushFileBuffers and MoveFileExW with replace/write-through semantics. The
+function distinguishes failure before replacement from replacement committed
+without confirmed directory durability. A failed save does not mutate the
+canonical editor document or the original source buffer.
+
+`sirEditorSaveBoundScene` exports the bounded supported scalar subset from
+the native editor journal into caller-owned scratch, then publishes it through
+the file writer. For subsequent edits, close and reopen the workspace to
+reconcile the new serialized spans. Fixture tests validate real disk
+save/reopen and verify that scalar edits preserve untouched serialized
+strings, resources, vector expressions and connection blocks.
+
+The writer does not claim full Godot resource serialization, inherited-scene
+save semantics or editor UI integration.

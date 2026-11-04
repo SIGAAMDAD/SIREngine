@@ -203,6 +203,12 @@ target_compile_definitions(SIREditorRealSceneScalarRoundtripTests PRIVATE
 add_test(NAME editor.scene.real-fixture-scalar-roundtrip COMMAND SIREditorRealSceneScalarRoundtripTests)
 sir_configure_owned_target(SIREditorRealSceneScalarRoundtripTests)
 
+# Real crash-conscious scene file replacement, staging collisions and failed rename.
+add_executable(SIREditorFileSaveTests SIREditorFileSaveTests.cpp)
+target_link_libraries(SIREditorFileSaveTests PRIVATE SIR::EditorAuthoring)
+add_test(NAME editor.scene.atomic-file-save COMMAND SIREditorFileSaveTests)
+sir_configure_owned_target(SIREditorFileSaveTests)
+
 # Source-format scalar edit preservation and fail-closed writer.
 add_executable(SIREditorTextWriterTests SIREditorTextWriterTests.cpp)
 target_link_libraries(SIREditorTextWriterTests PRIVATE SIR::EditorAuthoring)
