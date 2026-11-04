@@ -60,10 +60,9 @@ static sirScriptResult_t sirLangBackendStart( void *pContext ) noexcept
 	if ( pBackend == nullptr || pBackend->bStarted ) {
 		return SIR_SCRIPT_WRONG_STATE;
 	}
-	if ( pBackend->pPrograms == nullptr || pBackend->pInstances == nullptr ||
-	     pBackend->nProgramCapacity == 0 || pBackend->nInstanceCapacity == 0 ||
-	     pBackend->nFormatId == 0 || pBackend->nSchemaId == 0 ||
-	     pBackend->nLayoutDigest == 0 || pBackend->nBindingDigest == 0 || pBackend->nFuelPerInvoke == 0 ) {
+	if ( pBackend->pPrograms == nullptr || pBackend->pInstances == nullptr || pBackend->nProgramCapacity == 0 ||
+	     pBackend->nInstanceCapacity == 0 || pBackend->nFormatId == 0 || pBackend->nSchemaId == 0 || pBackend->nLayoutDigest == 0 ||
+	     pBackend->nBindingDigest == 0 || pBackend->nFuelPerInvoke == 0 ) {
 		return SIR_SCRIPT_INVALID_ARGUMENT;
 	}
 	for ( uint32_t iProgram = 0; iProgram < pBackend->nProgramCapacity; ++iProgram ) {
@@ -94,8 +93,8 @@ static sirScriptResult_t sirLangBackendLoad( void *pContext, sirScriptProgramVie
 	if ( pBackend == nullptr || !pBackend->bStarted ) {
 		return SIR_SCRIPT_WRONG_STATE;
 	}
-	if ( pToken == nullptr || view.nFormatId != pBackend->nFormatId ||
-	     view.pData == nullptr || view.nBytes > UINT32_MAX || view.nBytes < SIR_LANG_BYTECODE_HEADER_BYTES ) {
+	if ( pToken == nullptr || view.nFormatId != pBackend->nFormatId || view.pData == nullptr || view.nBytes > UINT32_MAX ||
+	     view.nBytes < SIR_LANG_BYTECODE_HEADER_BYTES ) {
 		return SIR_SCRIPT_TYPE_MISMATCH;
 	}
 	*pToken = 0;
@@ -104,8 +103,7 @@ static sirScriptResult_t sirLangBackendLoad( void *pContext, sirScriptProgramVie
 		if ( slot.bLoaded ) {
 			continue;
 		}
-		const sirLangVMError_t eDecode = SIRLangDecodeGraphVM( ( const uint8_t * )view.pData, ( uint32_t )view.nBytes,
-		                                                       &slot.storage );
+		const sirLangVMError_t eDecode = SIRLangDecodeGraphVM( ( const uint8_t * )view.pData, ( uint32_t )view.nBytes, &slot.storage );
 		if ( eDecode != SIR_LANG_VM_OK ) {
 			return SIR_SCRIPT_TYPE_MISMATCH;
 		}
@@ -231,8 +229,7 @@ static sirScriptResult_t sirLangBackendInvoke( void *pContext, const sirScriptIn
 	}
 
 	const uint32_t nExpectedBytes = pFunction->nParameterCount * sizeof( sirLangVMValue_t );
-	if ( pRequest->arguments.nBytes != nExpectedBytes ||
-	     ( nExpectedBytes > 0 && pRequest->arguments.pData == nullptr ) ||
+	if ( pRequest->arguments.nBytes != nExpectedBytes || ( nExpectedBytes > 0 && pRequest->arguments.pData == nullptr ) ||
 	     ( pFunction->eReturnType == SIR_LANG_VALUE_VOID && pRequest->result.nBytes != 0 ) ||
 	     ( pFunction->eReturnType != SIR_LANG_VALUE_VOID &&
 	       ( pRequest->result.nBytes != sizeof( sirLangVMValue_t ) || pRequest->result.pData == nullptr ) ) ) {

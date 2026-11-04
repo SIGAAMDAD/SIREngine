@@ -35,10 +35,10 @@ public:
 	SIRScriptServer( void ) noexcept;
 	~SIRScriptServer( void ) noexcept;
 
-	SIRScriptBindingRegistry &bindings( void ) noexcept;
-	SIRScriptCodeManager &codeManager( void ) noexcept;
+	SIRScriptBindingRegistry& bindings( void ) noexcept;
+	SIRScriptCodeManager& codeManager( void ) noexcept;
 	sirScriptResult_t useCodeManagerSource( void ) noexcept;
-	SIRScriptRuntime &runtime( void ) noexcept;
+	SIRScriptRuntime& runtime( void ) noexcept;
 
 private:
 	SIRScriptBindingRegistry m_Bindings;

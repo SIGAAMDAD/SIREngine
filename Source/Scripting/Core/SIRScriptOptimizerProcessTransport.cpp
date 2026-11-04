@@ -68,7 +68,7 @@ bool SIRScriptOptimizerProcessTransport::hasFailed( void ) const noexcept
 	return m_bFailed.load( std::memory_order_acquire );
 }
 
-sirScriptResult_t SIRScriptOptimizerProcessTransport::configure( const sirScriptOptimizerProcessConfig_t &config ) noexcept
+sirScriptResult_t SIRScriptOptimizerProcessTransport::configure( const sirScriptOptimizerProcessConfig_t& config ) noexcept
 {
 	if ( std::this_thread::get_id() != m_OwnerThread ) {
 		return SIR_SCRIPT_BUSY;

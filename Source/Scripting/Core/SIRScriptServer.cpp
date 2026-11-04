@@ -26,17 +26,17 @@ SIRScriptServer::~SIRScriptServer( void ) noexcept
 	( void )m_CodeManager.shutdown();
 }
 
-SIRScriptBindingRegistry &SIRScriptServer::bindings( void ) noexcept
+SIRScriptBindingRegistry& SIRScriptServer::bindings( void ) noexcept
 {
 	return m_Bindings;
 }
 
-SIRScriptRuntime &SIRScriptServer::runtime( void ) noexcept
+SIRScriptRuntime& SIRScriptServer::runtime( void ) noexcept
 {
 	return m_Runtime;
 }
 
-SIRScriptCodeManager &SIRScriptServer::codeManager( void ) noexcept
+SIRScriptCodeManager& SIRScriptServer::codeManager( void ) noexcept
 {
 	return m_CodeManager;
 }

@@ -96,8 +96,8 @@ public:
 	SIRScriptScheduler( void ) noexcept;
 	~SIRScriptScheduler( void ) noexcept;
 
-	sirScriptResult_t setPayloadAllocator( const sirScriptPayloadAllocatorAPI_t &api ) noexcept;
-	sirScriptResult_t enqueue( sirScriptPhase_t ePhase, const sirScriptScheduledCall_t &call, const void *pPayload,
+	sirScriptResult_t setPayloadAllocator( const sirScriptPayloadAllocatorAPI_t& api ) noexcept;
+	sirScriptResult_t enqueue( sirScriptPhase_t ePhase, const sirScriptScheduledCall_t& call, const void *pPayload,
 	                           sirScriptTaskHandle_t *pHandle ) noexcept;
 	void releasePayload( sirScriptScheduledCall_t *pCall ) noexcept;
 	uint64_t allocatedPayloadBytes( void ) const noexcept;
