@@ -253,7 +253,7 @@ static void backendDestroy( void *pUser, uint64_t ) noexcept
 {
 	++( ( sirCodeTestBackend_t * )pUser )->nDestroys;
 }
-static sirScriptResult_t backendInvoke( void *pUser, uint64_t, uint64_t, sirScriptReadFrame_t, sirScriptWriteFrame_t ) noexcept
+static sirScriptResult_t backendInvoke( void *pUser, const sirScriptInvokeRequest_t * ) noexcept
 {
 	++( ( sirCodeTestBackend_t * )pUser )->nCalls;
 	return SIR_SCRIPT_OK;
