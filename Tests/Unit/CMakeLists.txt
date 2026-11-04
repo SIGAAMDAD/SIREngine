@@ -158,3 +158,15 @@ add_executable(SIRObjectRegistryTests SIRObjectRegistryTests.cpp)
 target_link_libraries(SIRObjectRegistryTests PRIVATE SIR::Core)
 add_test(NAME core.objects.registry-and-lifetime COMMAND SIRObjectRegistryTests)
 sir_configure_owned_target(SIRObjectRegistryTests)
+
+# Native SIREngine resource identity and dependency DAG without a foreign loader.
+add_executable(SIRResourceCatalogTests SIRResourceCatalogTests.cpp)
+target_link_libraries(SIRResourceCatalogTests PRIVATE SIR::Resources)
+add_test(NAME resources.catalog.dependency-validation COMMAND SIRResourceCatalogTests)
+sir_configure_owned_target(SIRResourceCatalogTests)
+
+# Source-format scalar edit preservation and fail-closed writer.
+add_executable(SIREditorTextWriterTests SIREditorTextWriterTests.cpp)
+target_link_libraries(SIREditorTextWriterTests PRIVATE SIR::EditorAuthoring)
+add_test(NAME editor.scene.text-scalar-writer COMMAND SIREditorTextWriterTests)
+sir_configure_owned_target(SIREditorTextWriterTests)
