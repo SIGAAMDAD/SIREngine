@@ -67,3 +67,8 @@ add_executable(SIRLangSemanticTests SIRLangSemanticTests.cpp)
 target_link_libraries(SIRLangSemanticTests PRIVATE SIR::Scripting)
 add_test(NAME scripting.language.semantic COMMAND SIRLangSemanticTests)
 sir_configure_owned_target(SIRLangSemanticTests)
+
+add_executable(SIRLangSignaturesTests SIRLangSignaturesTests.cpp)
+target_link_libraries(SIRLangSignaturesTests PRIVATE SIR::Scripting)
+add_test(NAME scripting.language.signatures COMMAND SIRLangSignaturesTests)
+sir_configure_owned_target(SIRLangSignaturesTests)
