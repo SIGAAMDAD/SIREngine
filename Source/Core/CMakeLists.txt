@@ -12,6 +12,7 @@ endif()
 
 add_subdirectory(Platform)
 target_sources(SIRCore PRIVATE Memory/SIRMemoryManager.cpp)
+target_sources(SIRCore PRIVATE Objects/SIRObjectRegistry.cpp)
 add_subdirectory(Memory)
 add_subdirectory(Events)
 sir_configure_owned_target(SIRCore)

@@ -152,3 +152,9 @@ target_compile_definitions(SIREditorTextPropertiesTests PRIVATE
 add_test(NAME editor.authoring.source-properties COMMAND SIREditorTextPropertiesTests)
 sir_configure_owned_target(SIREditorTextPropertiesTests)
 
+
+# SIREngine native object/type/property reflection and generation-safe handles.
+add_executable(SIRObjectRegistryTests SIRObjectRegistryTests.cpp)
+target_link_libraries(SIRObjectRegistryTests PRIVATE SIR::Core)
+add_test(NAME core.objects.registry-and-lifetime COMMAND SIRObjectRegistryTests)
+sir_configure_owned_target(SIRObjectRegistryTests)
