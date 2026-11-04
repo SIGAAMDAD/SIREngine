@@ -145,12 +145,14 @@ static void testBooleanShortCircuit( void ) noexcept
 	    "fn lazy_and(flag: bool) -> bool:\n"
 	    "    return flag and ((1u16 / 0u16) == 1u16)\n"
 	    "fn lazy_or(flag: bool) -> bool:\n"
-	    "    return flag or ((1u16 / 0u16) == 1u16)\n";
+	    "    return flag or ((1u16 / 0u16) == 1u16)\n"
+	    "fn lazy_xor(a: bool, b: bool) -> bool:\n"
+	    "    return a xor b\n";
 
 	const sirLangSourceView_t source = { ( const uint8_t * )szSource, sizeof( szSource ) - 1 };
 	assert( SIRLangCompileSource( source, &fixture.workspace ) );
 	const sirLangCIRProgram_t& program = fixture.workspace.cir.program;
-	assert( program.nFunctionCount == 2 );
+	assert( program.nFunctionCount == 3 );
 	assert( SIRLangVerifyCIR( &program ) == SIR_LANG_VM_OK );
 
 	sirLangVMValue_t argument = { 0, SIR_LANG_VALUE_BOOL };
@@ -172,6 +174,25 @@ static void testBooleanShortCircuit( void ) noexcept
 	assert( result.eError == SIR_LANG_VM_OK && result.result.eType == SIR_LANG_VALUE_BOOL && result.result.nBits == 1 );
 	argument.nBits = 0;
 	assert( SIRLangRunGraphVM( &program, invocation ).eError == SIR_LANG_VM_DIVIDE_ZERO );
+
+	sirLangVMValue_t szXorArguments[2] = { { 0, SIR_LANG_VALUE_BOOL }, { 0, SIR_LANG_VALUE_BOOL } };
+	invocation.nFunctionId = program.pFunctions[2].nFunctionId;
+	invocation.pArguments = szXorArguments;
+	invocation.nArgumentCount = 2;
+	result = SIRLangRunGraphVM( &program, invocation );
+	assert( result.eError == SIR_LANG_VM_OK && result.result.nBits == 0 );
+	szXorArguments[1].nBits = 1;
+	result = SIRLangRunGraphVM( &program, invocation );
+	assert( result.eError == SIR_LANG_VM_OK && result.result.nBits == 1 );
+	szXorArguments[0].nBits = 1;
+	result = SIRLangRunGraphVM( &program, invocation );
+	assert( result.eError == SIR_LANG_VM_OK && result.result.nBits == 0 );
+
+	setupFixture( &fixture );
+	static constexpr char szInvalid[] = "fn invalid(value: u16) -> bool:\n"
+	                                    "    return value xor 1u16\n";
+	assert( !SIRLangCompileSource( { ( const uint8_t * )szInvalid, sizeof( szInvalid ) - 1 }, &fixture.workspace ) );
+	assert( fixture.workspace.report.ePhase == SIR_LANG_COMPILE_SIGNATURES );
 }
 
 int main( void )
