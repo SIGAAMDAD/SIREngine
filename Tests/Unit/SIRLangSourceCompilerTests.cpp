@@ -127,6 +127,7 @@ static void testRejectedSource( void ) noexcept
 	assert( !SIRLangCompileSource( { ( const uint8_t * )szInvalid, sizeof( szInvalid ) - 1 }, &fixture.workspace ) );
 	assert( fixture.workspace.report.ePhase == SIR_LANG_COMPILE_PARSE );
 	assert( fixture.workspace.report.nStageResult != 0 );
+	assert( fixture.workspace.cir.program.nFunctionCount == 0 );
 
 	setupFixture( &fixture );
 	fixture.workspace.cir.nLayoutDigest = 0;

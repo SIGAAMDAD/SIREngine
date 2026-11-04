@@ -76,6 +76,7 @@ bool SIRLangCompileSource( const sirLangSourceView_t& source, sirLangCompileWork
 	                                     &pWorkspace->cir.program };
 	const sirLangEffectError_t eEffects = SIRLangAnalyzeEffects( inputs, &pWorkspace->effects );
 	if ( eEffects != SIR_LANG_EFFECT_OK ) {
+		pWorkspace->cir.program = {};
 		pWorkspace->report.nStageResult = ( uint32_t )eEffects;
 		pWorkspace->report.iErrorNode = pWorkspace->effects.iErrorNode;
 		return false;
