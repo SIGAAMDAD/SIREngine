@@ -441,6 +441,8 @@ static bool testCompiledDxilCompute( SIRD3D12Device &device )
 		const uint32_t nSeed = 0x1234567u ^ ( iPass * 0x9e3779b9u );
 		sirD3D12CompletionSet_t submitted = {};
 		if ( !device.submitComputeKernel( nCount, nSeed, &submitted ) || submitted.nComputeFence == 0 ) {
+			fprintf( stderr, "DXIL compute dispatch failed for %u values: HRESULT 0x%08lx\n", nCount,
+			         ( unsigned long )device.getLastError() );
 			return false;
 		}
 		if ( device.submitComputeKernel( nCount, nSeed, &rejected ) ) {
@@ -454,6 +456,8 @@ static bool testCompiledDxilCompute( SIRD3D12Device &device )
 		}
 		if ( !device.getComputeQueue().waitForFence( submitted.nComputeFence, 15000 ) ||
 		     !device.getComputeQueue().readKernel( submitted.nComputeFence, szOutput, nCount ) ) {
+			fprintf( stderr, "DXIL compute readback failed for %u values: HRESULT 0x%08lx\n", nCount,
+			         ( unsigned long )device.getComputeQueue().getLastError() );
 			return false;
 		}
 

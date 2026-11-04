@@ -262,8 +262,7 @@ bool SIRD3D12ComputeQueue::submitMarkerAfterFence( ID3D12Fence *pDependencyFence
 	return true;
 }
 
-bool SIRD3D12ComputeQueue::initializeKernel( ID3D12Device *pDevice, const void *pDxil,
-                                               size_t nDxilBytes ) noexcept
+bool SIRD3D12ComputeQueue::initializeKernel( ID3D12Device *pDevice, const void *pDxil, size_t nDxilBytes ) noexcept
 {
 	if ( !isReady() ) {
 		m_nLastError = E_FAIL;
@@ -274,8 +273,8 @@ bool SIRD3D12ComputeQueue::initializeKernel( ID3D12Device *pDevice, const void *
 	return bReady;
 }
 
-bool SIRD3D12ComputeQueue::dispatchKernel( ID3D12Device *pDevice, SIRD3D12Memory *pMemory,
-                                            uint32_t nElements, uint32_t nSeed, uint64_t *pFenceValue ) noexcept
+bool SIRD3D12ComputeQueue::dispatchKernel( ID3D12Device *pDevice, SIRD3D12Memory *pMemory, uint32_t nElements, uint32_t nSeed,
+                                           uint64_t *pFenceValue ) noexcept
 {
 	if ( pFenceValue == nullptr ) {
 		m_nLastError = E_POINTER;

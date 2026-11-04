@@ -47,7 +47,8 @@ public:
 	void abandon( void ) noexcept;
 	bool isReady( void ) const noexcept;
 	HRESULT createBuffer( D3D12_HEAP_TYPE eHeapType, D3D12_RESOURCE_STATES eInitialState, uint64_t nBytes,
-	                      D3D12MA::Allocation **ppAllocation ) noexcept;
+	                      D3D12MA::Allocation **ppAllocation,
+	                      D3D12_RESOURCE_FLAGS eResourceFlags = D3D12_RESOURCE_FLAG_NONE ) noexcept;
 	HRESULT getLastError( void ) const noexcept;
 };
 

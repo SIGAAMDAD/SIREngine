@@ -53,8 +53,8 @@ public:
 	bool initialize( ID3D12Device *pDevice, const void *pDxil, size_t nDxilBytes ) noexcept;
 	bool isReady( void ) const noexcept;
 	bool hasPending( void ) const noexcept;
-	bool record( ID3D12Device *pDevice, SIRD3D12Memory *pMemory, ID3D12GraphicsCommandList *pCommands,
-	             uint32_t nElements, uint32_t nSeed ) noexcept;
+	bool record( ID3D12Device *pDevice, SIRD3D12Memory *pMemory, ID3D12GraphicsCommandList *pCommands, uint32_t nElements,
+	             uint32_t nSeed ) noexcept;
 	void submitted( uint64_t nFence ) noexcept;
 	bool readback( ID3D12Fence *pFence, uint64_t nFence, uint32_t *pOutput, uint32_t nCapacity ) noexcept;
 	void cancelUnsubmitted( void ) noexcept;

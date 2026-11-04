@@ -57,7 +57,7 @@ bool SIRD3D12Memory::isReady( void ) const noexcept
 }
 
 HRESULT SIRD3D12Memory::createBuffer( D3D12_HEAP_TYPE eHeapType, D3D12_RESOURCE_STATES eInitialState, uint64_t nBytes,
-                                      D3D12MA::Allocation **ppAllocation ) noexcept
+                                      D3D12MA::Allocation **ppAllocation, D3D12_RESOURCE_FLAGS eResourceFlags ) noexcept
 {
 	if ( ppAllocation == nullptr ) {
 		m_nLastError = E_POINTER;
@@ -78,6 +78,7 @@ HRESULT SIRD3D12Memory::createBuffer( D3D12_HEAP_TYPE eHeapType, D3D12_RESOURCE_
 	resource.Format = DXGI_FORMAT_UNKNOWN;
 	resource.SampleDesc.Count = 1;
 	resource.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+	resource.Flags = eResourceFlags;
 	D3D12MA::ALLOCATION_DESC allocation = {};
 	allocation.HeapType = eHeapType;
 

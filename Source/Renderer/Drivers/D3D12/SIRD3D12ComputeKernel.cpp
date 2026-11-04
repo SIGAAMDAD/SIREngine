@@ -29,8 +29,7 @@ SIRD3D12ComputeKernel::~SIRD3D12ComputeKernel( void ) noexcept
 
 bool SIRD3D12ComputeKernel::initialize( ID3D12Device *pDevice, const void *pDxil, size_t nDxilBytes ) noexcept
 {
-	if ( pDevice == nullptr || pDxil == nullptr || nDxilBytes < 16 || nDxilBytes > 4 * 1024 * 1024 ||
-	     m_pPipelineState != nullptr ) {
+	if ( pDevice == nullptr || pDxil == nullptr || nDxilBytes < 16 || nDxilBytes > 4 * 1024 * 1024 || m_pPipelineState != nullptr ) {
 		m_nLastError = E_INVALIDARG;
 		return false;
 	}
@@ -68,14 +67,14 @@ bool SIRD3D12ComputeKernel::initialize( ID3D12Device *pDevice, const void *pDxil
 
 	Microsoft::WRL::ComPtr<ID3DBlob> pRootBinary;
 	Microsoft::WRL::ComPtr<ID3DBlob> pErrors;
-	m_nLastError = D3D12SerializeRootSignature( &rootDesc, D3D_ROOT_SIGNATURE_VERSION_1, pRootBinary.GetAddressOf(),
-	                                            pErrors.GetAddressOf() );
+	m_nLastError =
+	    D3D12SerializeRootSignature( &rootDesc, D3D_ROOT_SIGNATURE_VERSION_1, pRootBinary.GetAddressOf(), pErrors.GetAddressOf() );
 	if ( FAILED( m_nLastError ) ) {
 		return false;
 	}
 
 	m_nLastError = pDevice->CreateRootSignature( 0, pRootBinary->GetBufferPointer(), pRootBinary->GetBufferSize(),
-	                                            IID_PPV_ARGS( m_pRootSignature.GetAddressOf() ) );
+	                                             IID_PPV_ARGS( m_pRootSignature.GetAddressOf() ) );
 	if ( FAILED( m_nLastError ) ) {
 		return false;
 	}
@@ -119,12 +118,12 @@ void SIRD3D12ComputeKernel::clearPending( void ) noexcept
 	m_nElementCount = 0;
 }
 
-bool SIRD3D12ComputeKernel::record( ID3D12Device *pDevice, SIRD3D12Memory *pMemory,
-                                    ID3D12GraphicsCommandList *pCommands, uint32_t nElements, uint32_t nSeed ) noexcept
+bool SIRD3D12ComputeKernel::record( ID3D12Device *pDevice, SIRD3D12Memory *pMemory, ID3D12GraphicsCommandList *pCommands,
+                                    uint32_t nElements, uint32_t nSeed ) noexcept
 {
 	constexpr uint32_t MAX_DISPATCH_ELEMENTS = 4096;
-	if ( !isReady() || hasPending() || pDevice == nullptr || pMemory == nullptr || pCommands == nullptr ||
-	     nElements == 0 || nElements > MAX_DISPATCH_ELEMENTS ) {
+	if ( !isReady() || hasPending() || pDevice == nullptr || pMemory == nullptr || pCommands == nullptr || nElements == 0 ||
+	     nElements > MAX_DISPATCH_ELEMENTS ) {
 		m_nLastError = E_INVALIDARG;
 		return false;
 	}
@@ -132,13 +131,11 @@ bool SIRD3D12ComputeKernel::record( ID3D12Device *pDevice, SIRD3D12Memory *pMemo
 	const uint64_t nBytes = ( uint64_t )nElements * sizeof( uint32_t );
 	Microsoft::WRL::ComPtr<D3D12MA::Allocation> pOutput;
 	Microsoft::WRL::ComPtr<D3D12MA::Allocation> pReadback;
-	m_nLastError = pMemory->createBuffer( D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, nBytes,
-	                                      pOutput.GetAddressOf() );
+	m_nLastError = pMemory->createBuffer( D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, nBytes, pOutput.GetAddressOf(), D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS );
 	if ( FAILED( m_nLastError ) ) {
 		return false;
 	}
-	m_nLastError = pMemory->createBuffer( D3D12_HEAP_TYPE_READBACK, D3D12_RESOURCE_STATE_COPY_DEST, nBytes,
-	                                      pReadback.GetAddressOf() );
+	m_nLastError = pMemory->createBuffer( D3D12_HEAP_TYPE_READBACK, D3D12_RESOURCE_STATE_COPY_DEST, nBytes, pReadback.GetAddressOf() );
 	if ( FAILED( m_nLastError ) ) {
 		return false;
 	}
@@ -159,8 +156,7 @@ bool SIRD3D12ComputeKernel::record( ID3D12Device *pDevice, SIRD3D12Memory *pMemo
 	uav.Buffer.NumElements = nElements;
 	uav.Buffer.StructureByteStride = sizeof( uint32_t );
 	uav.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
-	pDevice->CreateUnorderedAccessView( pOutput->GetResource(), nullptr, &uav,
-	                                    m_pUavHeap->GetCPUDescriptorHandleForHeapStart() );
+	pDevice->CreateUnorderedAccessView( pOutput->GetResource(), nullptr, &uav, m_pUavHeap->GetCPUDescriptorHandleForHeapStart() );
 
 	ID3D12DescriptorHeap *pHeaps[] = { m_pUavHeap.Get() };
 	pCommands->SetDescriptorHeaps( 1, pHeaps );
@@ -192,11 +188,10 @@ void SIRD3D12ComputeKernel::submitted( uint64_t nFence ) noexcept
 	m_nSubmissionFence = nFence;
 }
 
-bool SIRD3D12ComputeKernel::readback( ID3D12Fence *pFence, uint64_t nFence, uint32_t *pOutput,
-                                     uint32_t nCapacity ) noexcept
+bool SIRD3D12ComputeKernel::readback( ID3D12Fence *pFence, uint64_t nFence, uint32_t *pOutput, uint32_t nCapacity ) noexcept
 {
-	if ( pFence == nullptr || pOutput == nullptr || !hasPending() || m_nSubmissionFence == 0 ||
-	     nFence != m_nSubmissionFence || nCapacity < m_nElementCount ) {
+	if ( pFence == nullptr || pOutput == nullptr || !hasPending() || m_nSubmissionFence == 0 || nFence != m_nSubmissionFence ||
+	     nCapacity < m_nElementCount ) {
 		m_nLastError = E_INVALIDARG;
 		return false;
 	}
