@@ -105,6 +105,11 @@ static void testVirtualBackingFaultRecovery( void )
 	s_bFailDiscard.store( true, std::memory_order_relaxed );
 	SIR_MEMORY_FAULT_CHECK( !memory.releaseRecyclableMetadataPage( pPage ) );
 	SIR_MEMORY_FAULT_CHECK( memory.releaseRecyclableMetadataPage( pPage ) );
+	s_bFailProtection.store( true, std::memory_order_relaxed );
+	SIR_MEMORY_FAULT_CHECK( memory.allocateRecyclableMetadataPage() == nullptr );
+	void *pReused = memory.allocateRecyclableMetadataPage();
+	SIR_MEMORY_FAULT_CHECK( pReused == pPage );
+	SIR_MEMORY_FAULT_CHECK( memory.releaseRecyclableMetadataPage( pReused ) );
 	memory.shutdown();
 }
 
