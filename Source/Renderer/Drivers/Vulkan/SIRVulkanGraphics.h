@@ -86,10 +86,17 @@ typedef struct sirVulkanGraphicsSamplerSlot_s
 sirGraphicsResult_t sirVulkanPlanImageBarrier( const sirGraphicsBarrier_t &barrier, const sirVulkanImage_t *pImage,
                                                sirVulkanImageBarrier_t *pNative ) noexcept;
 
-// Commands are borrowed from a fixed device-owned pool. The first native
-// integration slice supports one recorded buffer copy per submission.
-// Closing an empty command list releases its slot. Resetting a closed,
-// unsubmitted list returns it to recording so it can be cancelled.
+// Command lists use bounded, preallocated recording. Buffer copies may be
+// batched, while image copies and barriers remain single-operation commands.
+// Closing an empty command list releases its slot.
+typedef struct sirVulkanGraphicsBufferCopy_s
+{
+	sirGraphicsHandle_t hSource;
+	sirGraphicsHandle_t hDestination;
+	uint64_t nSourceOffset;
+	uint64_t nDestinationOffset;
+	uint64_t nBytes;
+} sirVulkanGraphicsBufferCopy_t;
 class SIRVulkanCommandList final : public SIRGraphicsCommandList
 {
 private:
@@ -97,11 +104,8 @@ private:
 
 	SIRVulkanRenderingDevice *m_pOwner = nullptr;
 	sirVulkanCommandState_t m_eState = SIR_VULKAN_COMMAND_FREE;
-	sirGraphicsHandle_t m_hSource = {};
-	sirGraphicsHandle_t m_hDestination = {};
-	uint64_t m_nSourceOffset = 0;
-	uint64_t m_nDestinationOffset = 0;
-	uint64_t m_nBytes = 0;
+	sirVulkanGraphicsBufferCopy_t m_szBufferCopies[SIR_VULKAN_COPY_BATCH_CAPACITY] = {};
+	uint32_t m_nCopyCount = 0;
 	uint64_t m_nLastCompletion = 0;
 	sirGraphicsBufferTextureCopy_t m_TextureCopy = {};
 	sirGraphicsBarrier_t m_Barrier = {};

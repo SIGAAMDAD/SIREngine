@@ -17,6 +17,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Renderer/SIRGraphicsRegistry.h>
 
 #include <stdio.h>
+
 #include <string.h>
 
 int main( void )
@@ -144,10 +145,47 @@ int main( void )
 	     pDevice->unmapBuffer( hReadback, 0, sizeof( szExpected ) ) != SIR_GRAPHICS_SUCCESS ) {
 		return 12;
 	}
+	// A full eight-operation command list must submit as one GPU timeline
+	// value while preserving chained upload -> device -> readback ordering.
+	SIRGraphicsCommandList *pBatch = nullptr;
+	if ( pDevice->acquireCommands( SIR_GRAPHICS_QUEUE_DIRECT, &pBatch ) != SIR_GRAPHICS_SUCCESS || pBatch == nullptr ) {
+		return 28;
+	}
+	for ( uint32_t iCopy = 0; iCopy < SIR_VULKAN_COPY_BATCH_CAPACITY; ++iCopy ) {
+		const uint64_t nOffset = ( iCopy / 2 ) * sizeof( szExpected );
+		const sirGraphicsResult_t eRecord = ( iCopy & 1 ) == 0
+		                                        ? pBatch->copyBuffer( hGpu, nOffset, hSource, 0, sizeof( szExpected ) )
+		                                        : pBatch->copyBuffer( hReadback, nOffset, hGpu, nOffset, sizeof( szExpected ) );
+		if ( eRecord != SIR_GRAPHICS_SUCCESS ) {
+			return 29;
+		}
+	}
+	if ( pBatch->copyBuffer( hGpu, 1024, hSource, 0, sizeof( szExpected ) ) != SIR_GRAPHICS_CAPACITY_EXCEEDED ||
+	     pBatch->close() != SIR_GRAPHICS_SUCCESS ) {
+		return 30;
+	}
+	sirGraphicsSubmission_t batchSubmission = {};
+	batchSubmission.ppCommandLists = &pBatch;
+	batchSubmission.nCommandListCount = 1;
+	batchSubmission.pWaits = &second;
+	batchSubmission.nWaitCount = 1;
+	sirGraphicsCompletion_t batchCompleted = {};
+	if ( pDevice->submit( SIR_GRAPHICS_QUEUE_DIRECT, batchSubmission, &batchCompleted ) != SIR_GRAPHICS_SUCCESS ||
+	     batchCompleted.nValue != second.nValue + 1 || pDevice->wait( batchCompleted, 5000000000ull ) != SIR_GRAPHICS_SUCCESS ) {
+		return 31;
+	}
+	const uint64_t nBatchReadOffset = 3 * sizeof( szExpected );
+	if ( pDevice->mapBuffer( hReadback, nBatchReadOffset, sizeof( szExpected ), &mapped ) != SIR_GRAPHICS_SUCCESS ||
+	     pDevice->invalidateBuffer( hReadback, nBatchReadOffset, sizeof( szExpected ) ) != SIR_GRAPHICS_SUCCESS ||
+	     memcmp( mapped.pData, szExpected, sizeof( szExpected ) ) != 0 ||
+	     pDevice->unmapBuffer( hReadback, nBatchReadOffset, sizeof( szExpected ) ) != SIR_GRAPHICS_SUCCESS ) {
+		return 32;
+	}
+
 	sirGraphicsCompletionSet_t completed = {};
 	completed.nDeviceGeneration = pDevice->getDeviceGeneration();
 	completed.nQueueMask = 1U << SIR_GRAPHICS_QUEUE_DIRECT;
-	completed.szQueueValues[SIR_GRAPHICS_QUEUE_DIRECT] = second.nValue;
+	completed.szQueueValues[SIR_GRAPHICS_QUEUE_DIRECT] = batchCompleted.nValue;
 
 	// The new image path creates actual Vulkan images/views/samplers through
 	// VMA, then verifies the image-view lifetime dependency and stale handles.

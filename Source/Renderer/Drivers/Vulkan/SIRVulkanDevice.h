@@ -75,6 +75,7 @@ typedef struct sirVulkanCompletion_s
 } sirVulkanCompletion_t;
 
 constexpr uint32_t SIR_VULKAN_TRANSFER_SLOT_COUNT = 8;
+constexpr uint32_t SIR_VULKAN_COPY_BATCH_CAPACITY = 8;
 constexpr uint32_t SIR_VULKAN_MAX_TRACKED_SUBRESOURCES = 4096;
 
 typedef struct sirVulkanTransferSlot_s
@@ -94,6 +95,18 @@ typedef struct sirVulkanBuffer_s
 	uint64_t nLastGpuUse;
 	bool bHostVisible;
 } sirVulkanBuffer_t;
+
+typedef struct sirVulkanBufferCopy_s
+{
+	sirVulkanBuffer_t *pSource;
+	sirVulkanBuffer_t *pDestination;
+	uint64_t nSourceOffset;
+	uint64_t nDestinationOffset;
+	uint64_t nBytes;
+} sirVulkanBufferCopy_t;
+
+// Pure validation, independent of the Vulkan loader and physical device.
+sirVulkanResult_t sirVulkanValidateBufferCopies( const sirVulkanBufferCopy_t *pCopies, uint32_t nCount ) noexcept;
 
 typedef struct sirVulkanImage_s
 {
@@ -255,6 +268,8 @@ public:
 	sirVulkanResult_t readBuffer( sirVulkanBuffer_t *pBuffer, uint64_t nOffset, void *pData, uint64_t nBytes ) noexcept;
 	sirVulkanResult_t submitBufferCopy( sirVulkanBuffer_t *pSource, uint64_t nSourceOffset, sirVulkanBuffer_t *pDestination,
 	                                    uint64_t nDestinationOffset, uint64_t nBytes, sirVulkanCompletion_t *pCompletion ) noexcept;
+	sirVulkanResult_t submitBufferCopies( const sirVulkanBufferCopy_t *pCopies, uint32_t nCount,
+	                                      sirVulkanCompletion_t *pCompletion ) noexcept;
 	sirVulkanResult_t submitImageBarrier( sirVulkanImage_t *pImage, const sirVulkanImageBarrier_t &barrier,
 	                                      sirVulkanCompletion_t *pCompletion ) noexcept;
 	sirVulkanResult_t submitBufferImageCopy( sirVulkanBuffer_t *pBuffer, sirVulkanImage_t *pImage,

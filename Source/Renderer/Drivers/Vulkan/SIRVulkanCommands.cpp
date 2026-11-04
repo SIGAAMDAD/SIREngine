@@ -180,32 +180,55 @@ sirVulkanResult_t SIRVulkanDevice::readBuffer( sirVulkanBuffer_t *pBuffer, uint6
 	return eResult == VK_SUCCESS ? SIR_VULKAN_SUCCESS : SIR_VULKAN_NATIVE_FAILURE;
 }
 
+sirVulkanResult_t sirVulkanValidateBufferCopies( const sirVulkanBufferCopy_t *pCopies, uint32_t nCount ) noexcept
+{
+	if ( pCopies == nullptr || nCount == 0 || nCount > SIR_VULKAN_COPY_BATCH_CAPACITY ) {
+		return SIR_VULKAN_INVALID_ARGUMENT;
+	}
+	for ( uint32_t iCopy = 0; iCopy < nCount; ++iCopy ) {
+		const sirVulkanBufferCopy_t &copy = pCopies[iCopy];
+		if ( copy.pSource == nullptr || copy.pDestination == nullptr || copy.pSource == copy.pDestination || copy.nBytes == 0 ||
+		     ( copy.pSource->nUsage & VK_BUFFER_USAGE_TRANSFER_SRC_BIT ) == 0 ||
+		     ( copy.pDestination->nUsage & VK_BUFFER_USAGE_TRANSFER_DST_BIT ) == 0 || copy.nSourceOffset > copy.pSource->nSize ||
+		     copy.nBytes > copy.pSource->nSize - copy.nSourceOffset || copy.nDestinationOffset > copy.pDestination->nSize ||
+		     copy.nBytes > copy.pDestination->nSize - copy.nDestinationOffset ) {
+			return SIR_VULKAN_INVALID_ARGUMENT;
+		}
+	}
+	return SIR_VULKAN_SUCCESS;
+}
+
 sirVulkanResult_t SIRVulkanDevice::submitBufferCopy( sirVulkanBuffer_t *pSource, uint64_t nSourceOffset, sirVulkanBuffer_t *pDestination,
                                                      uint64_t nDestinationOffset, uint64_t nBytes,
                                                      sirVulkanCompletion_t *pCompletion ) noexcept
 {
+	const sirVulkanBufferCopy_t copy = { pSource, pDestination, nSourceOffset, nDestinationOffset, nBytes };
+	return submitBufferCopies( &copy, 1, pCompletion );
+}
+
+sirVulkanResult_t SIRVulkanDevice::submitBufferCopies( const sirVulkanBufferCopy_t *pCopies, uint32_t nCount,
+                                                       sirVulkanCompletion_t *pCompletion ) noexcept
+{
 	if ( pCompletion != nullptr ) {
-		memset( pCompletion, 0, sizeof( *pCompletion ) );
+		*pCompletion = {};
 	}
 	if ( !m_bReady || m_bDeviceLost ) {
 		return SIR_VULKAN_INVALID_STATE;
 	}
-	if ( pCompletion == nullptr || pSource == nullptr || pDestination == nullptr || pSource == pDestination ||
-	     pSource->pOwnerAllocator != m_Allocator || pDestination->pOwnerAllocator != m_Allocator ||
-	     pSource->nDeviceSerial != m_nDeviceSerial || pDestination->nDeviceSerial != m_nDeviceSerial ) {
+	if ( pCompletion == nullptr || m_nLastTransferValue == UINT64_MAX ||
+	     sirVulkanValidateBufferCopies( pCopies, nCount ) != SIR_VULKAN_SUCCESS ) {
 		return SIR_VULKAN_INVALID_ARGUMENT;
 	}
-	if ( pSource->hBuffer == VK_NULL_HANDLE || pDestination->hBuffer == VK_NULL_HANDLE || pSource->hBuffer == pDestination->hBuffer ||
-	     nBytes == 0 || ( pSource->nUsage & VK_BUFFER_USAGE_TRANSFER_SRC_BIT ) == 0 ||
-	     ( pDestination->nUsage & VK_BUFFER_USAGE_TRANSFER_DST_BIT ) == 0 ) {
-		return SIR_VULKAN_INVALID_ARGUMENT;
-	}
-	if ( nSourceOffset > pSource->nSize || nBytes > pSource->nSize - nSourceOffset || nDestinationOffset > pDestination->nSize ||
-	     nBytes > pDestination->nSize - nDestinationOffset ) {
-		return SIR_VULKAN_INVALID_ARGUMENT;
-	}
-	if ( m_nLastTransferValue == UINT64_MAX ) {
-		return SIR_VULKAN_INVALID_STATE;
+	// Validate the entire batch before recording any native command. A failed
+	// validation must neither submit partial work nor change completion state.
+	for ( uint32_t iCopy = 0; iCopy < nCount; ++iCopy ) {
+		const sirVulkanBufferCopy_t &copy = pCopies[iCopy];
+		if ( copy.pSource->hBuffer == VK_NULL_HANDLE || copy.pDestination->hBuffer == VK_NULL_HANDLE ||
+		     copy.pSource->hBuffer == copy.pDestination->hBuffer || copy.pSource->pOwnerAllocator != m_Allocator ||
+		     copy.pDestination->pOwnerAllocator != m_Allocator || copy.pSource->nDeviceSerial != m_nDeviceSerial ||
+		     copy.pDestination->nDeviceSerial != m_nDeviceSerial ) {
+			return SIR_VULKAN_INVALID_ARGUMENT;
+		}
 	}
 
 	uint64_t nCompleted = 0;
@@ -214,7 +237,6 @@ sirVulkanResult_t SIRVulkanDevice::submitBufferCopy( sirVulkanBuffer_t *pSource,
 		m_bDeviceLost = ePoll == VK_ERROR_DEVICE_LOST;
 		return SIR_VULKAN_NATIVE_FAILURE;
 	}
-
 	sirVulkanTransferSlot_t *pSlot = nullptr;
 	for ( uint32_t iCheck = 0; iCheck < SIR_VULKAN_TRANSFER_SLOT_COUNT; ++iCheck ) {
 		const uint32_t iSlot = ( m_iNextTransferSlot + iCheck ) % SIR_VULKAN_TRANSFER_SLOT_COUNT;
@@ -238,6 +260,9 @@ sirVulkanResult_t SIRVulkanDevice::submitBufferCopy( sirVulkanBuffer_t *pSource,
 		return SIR_VULKAN_NATIVE_FAILURE;
 	}
 
+	// Between each copy, order writes so a later copy can read an earlier
+	// destination. This supports CPU upload -> GPU staging -> readback within
+	// one native command buffer and one timeline value.
 	VkMemoryBarrier2 barrier = {};
 	barrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2;
 	barrier.srcStageMask = VK_PIPELINE_STAGE_2_HOST_BIT | VK_PIPELINE_STAGE_2_COPY_BIT;
@@ -248,20 +273,22 @@ sirVulkanResult_t SIRVulkanDevice::submitBufferCopy( sirVulkanBuffer_t *pSource,
 	dependency.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
 	dependency.memoryBarrierCount = 1;
 	dependency.pMemoryBarriers = &barrier;
-	m_pfnCmdPipelineBarrier2( pSlot->hCommandBuffer, &dependency );
-
-	VkBufferCopy2 region = {};
-	region.sType = VK_STRUCTURE_TYPE_BUFFER_COPY_2;
-	region.srcOffset = nSourceOffset;
-	region.dstOffset = nDestinationOffset;
-	region.size = nBytes;
-	VkCopyBufferInfo2 copyInfo = {};
-	copyInfo.sType = VK_STRUCTURE_TYPE_COPY_BUFFER_INFO_2;
-	copyInfo.srcBuffer = pSource->hBuffer;
-	copyInfo.dstBuffer = pDestination->hBuffer;
-	copyInfo.regionCount = 1;
-	copyInfo.pRegions = &region;
-	m_pfnCmdCopyBuffer2( pSlot->hCommandBuffer, &copyInfo );
+	for ( uint32_t iCopy = 0; iCopy < nCount; ++iCopy ) {
+		const sirVulkanBufferCopy_t &copy = pCopies[iCopy];
+		m_pfnCmdPipelineBarrier2( pSlot->hCommandBuffer, &dependency );
+		VkBufferCopy2 region = {};
+		region.sType = VK_STRUCTURE_TYPE_BUFFER_COPY_2;
+		region.srcOffset = copy.nSourceOffset;
+		region.dstOffset = copy.nDestinationOffset;
+		region.size = copy.nBytes;
+		VkCopyBufferInfo2 copyInfo = {};
+		copyInfo.sType = VK_STRUCTURE_TYPE_COPY_BUFFER_INFO_2;
+		copyInfo.srcBuffer = copy.pSource->hBuffer;
+		copyInfo.dstBuffer = copy.pDestination->hBuffer;
+		copyInfo.regionCount = 1;
+		copyInfo.pRegions = &region;
+		m_pfnCmdCopyBuffer2( pSlot->hCommandBuffer, &copyInfo );
+	}
 	if ( m_pfnEndCommandBuffer( pSlot->hCommandBuffer ) != VK_SUCCESS ) {
 		return SIR_VULKAN_NATIVE_FAILURE;
 	}
@@ -281,7 +308,6 @@ sirVulkanResult_t SIRVulkanDevice::submitBufferCopy( sirVulkanBuffer_t *pSource,
 	submitInfo.pCommandBufferInfos = &commandInfo;
 	submitInfo.signalSemaphoreInfoCount = 1;
 	submitInfo.pSignalSemaphoreInfos = &signalInfo;
-
 	const VkResult eSubmit = m_pfnQueueSubmit2( m_GraphicsQueue, 1, &submitInfo, VK_NULL_HANDLE );
 	if ( eSubmit != VK_SUCCESS ) {
 		m_bDeviceLost = eSubmit == VK_ERROR_DEVICE_LOST;
@@ -289,8 +315,10 @@ sirVulkanResult_t SIRVulkanDevice::submitBufferCopy( sirVulkanBuffer_t *pSource,
 	}
 	m_nLastTransferValue = nSignalValue;
 	pSlot->nLastValue = nSignalValue;
-	pSource->nLastGpuUse = nSignalValue;
-	pDestination->nLastGpuUse = nSignalValue;
+	for ( uint32_t iCopy = 0; iCopy < nCount; ++iCopy ) {
+		pCopies[iCopy].pSource->nLastGpuUse = nSignalValue;
+		pCopies[iCopy].pDestination->nLastGpuUse = nSignalValue;
+	}
 	pCompletion->nDeviceSerial = m_nDeviceSerial;
 	pCompletion->nValue = nSignalValue;
 	return SIR_VULKAN_SUCCESS;
