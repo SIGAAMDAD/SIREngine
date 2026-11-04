@@ -1125,6 +1125,147 @@ static void testCoreTaskGraphStaleRevisionsAndBudget( void )
 	REQUIRE( alloc.m_nOutstanding.load() == 0 );
 }
 
+static void testPublicValidationAndReadViewBoundaries( void )
+{
+	SIRTestAllocatorStats alloc = {};
+	{
+		SIRResourceGraphConfig bad = testConfig( alloc, 8 );
+		bad.m_Allocator.m_pfnAllocate = nullptr;
+		SIRResourceGraph invalid( bad );
+		REQUIRE( !invalid.isReady() && invalid.getWriter() == nullptr );
+		SIRResourceReadScope absent( invalid );
+		REQUIRE( !absent.isActive() );
+	}
+	{
+		SIRResourceGraphConfig bad = testConfig( alloc, 8 );
+		bad.m_Allocator.m_pfnFree = nullptr;
+		SIRResourceGraph invalid( bad );
+		REQUIRE( !invalid.isReady() );
+	}
+	{
+		SIRResourceGraphConfig bad = testConfig( alloc, 8 );
+		bad.m_nMaxResources = 0;
+		SIRResourceGraph invalid( bad );
+		REQUIRE( !invalid.isReady() );
+	}
+	{
+		SIRResourceGraphConfig bad = testConfig( alloc, 8 );
+		bad.m_nMaxResources = ( uint32_t )INT32_MAX + 1;
+		SIRResourceGraph invalid( bad );
+		REQUIRE( !invalid.isReady() );
+	}
+	{
+		SIRResourceGraphConfig bad = testConfig( alloc, 8 );
+		bad.m_nMaxStaging = 0;
+		SIRResourceGraph invalid( bad );
+		REQUIRE( !invalid.isReady() );
+	}
+	{
+		SIRResourceGraphConfig bad = testConfig( alloc, 8 );
+		bad.m_nMaxProviderPins = 0;
+		SIRResourceGraph invalid( bad );
+		REQUIRE( !invalid.isReady() );
+	}
+	{
+		SIRResourceGraphConfig bad = testConfig( alloc, 8, 1 );
+		SIRResourceGraph invalid( bad );
+		REQUIRE( !invalid.isReady() );
+	}
+	{
+		SIRResourceGraphConfig cfg = testConfig( alloc, 8 );
+		cfg.m_nMaxProviderPins = 1;
+		cfg.nMaxReaders = 2;
+		SIRResourceGraph graph( cfg );
+		REQUIRE( graph.isReady() );
+		SIRResourceGraphWriter *pWriter = graph.getWriter();
+		REQUIRE( pWriter != nullptr );
+		const SIRResourceHandle source = publishText( *pWriter, key( 801 ), "validation", 801 );
+		SIRResourceDependency edge = { key( 99999 ), SIR_RESOURCE_EDGE_KIND_OPTIONAL, {} };
+		SIRResourcePublication scene = { key( 802 ), SIR_RESOURCE_KIND_COMPOSITION, 1, 1, nullptr, 0, &edge, 1 };
+		SIRResourceHandle sceneHandle = {};
+		REQUIRE( pWriter->publish( scene, &sceneHandle ) == SIR_RESOURCE_RESULT_SUCCESS );
+		SIRResourceHandle lookup = {};
+		SIRResourceView sourceView;
+		SIRResourceView sceneView;
+		SIRResourceView missingView;
+		SIRResourceConstBytes bytes = {};
+		SIRResourceInfo info = {};
+		SIRResourceChunkInfo chunkInfo = {};
+		SIRResourceDependency dependency = {};
+		SIRResourcePinHandle pin = {};
+		REQUIRE( !missingView.isValid() && missingView.getKind() == SIR_RESOURCE_KIND_BLOB && missingView.getRevision() == 0 &&
+		         missingView.getHandle().m_nGeneration == 0 );
+		REQUIRE( missingView.getInfo( &info ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		REQUIRE( missingView.getChunk( { 0 }, &bytes ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		REQUIRE( missingView.getChunkInfo( 0, &chunkInfo ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		REQUIRE( missingView.getDependency( 0, &dependency ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		std::atomic<bool> bWriterRejected{ false };
+		std::thread other( [&]() { bWriterRejected.store( graph.getWriter() == nullptr && graph.getStats().m_nLiveResources == 0 ); } );
+		other.join();
+		REQUIRE( bWriterRejected.load() );
+		{
+			SIRResourceReadScope scope( graph );
+			REQUIRE( scope.isActive() );
+			SIRResourceReadScope second( graph );
+			REQUIRE( second.isActive() );
+			SIRResourceReadScope exhausted( graph );
+			REQUIRE( !exhausted.isActive() );
+			REQUIRE( graph.find( exhausted, key( 801 ), &lookup ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+			REQUIRE( graph.find( scope, key( 801 ), nullptr ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+			REQUIRE( graph.find( scope, key( 801, 0 ), &lookup ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+			REQUIRE( graph.find( scope, key( 9999 ), &lookup ) == SIR_RESOURCE_RESULT_INVALID_HANDLE );
+			REQUIRE( graph.find( scope, key( 801 ), &lookup ) == SIR_RESOURCE_RESULT_SUCCESS );
+			REQUIRE( lookup.m_nSlot == source.m_nSlot );
+			REQUIRE( graph.resolve( scope, source, nullptr ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+			REQUIRE( graph.resolve( exhausted, source, &sourceView ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+			REQUIRE( graph.resolve( scope, { UINT32_MAX, 0, 0, 0 }, &sourceView ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+			REQUIRE( graph.resolve( scope, { source.m_nSlot, 0, source.m_nTypeId, 0 }, &sourceView ) ==
+			         SIR_RESOURCE_RESULT_INVALID_HANDLE );
+			REQUIRE( graph.resolve( scope, source, &sourceView ) == SIR_RESOURCE_RESULT_SUCCESS );
+			REQUIRE( graph.resolve( scope, sceneHandle, &sceneView ) == SIR_RESOURCE_RESULT_SUCCESS );
+			REQUIRE( sourceView.getInfo( nullptr ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+			REQUIRE( sourceView.getInfo( &info ) == SIR_RESOURCE_RESULT_SUCCESS );
+			REQUIRE( sourceView.getKind() == SIR_RESOURCE_KIND_BLOB && sourceView.getRevision() == 1 );
+			REQUIRE( sourceView.getChunk( { 0 }, nullptr ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+			REQUIRE( sourceView.getChunk( { 999 }, &bytes ) == SIR_RESOURCE_RESULT_MISSING_CHUNK );
+			REQUIRE( sourceView.getChunkInfo( 0, nullptr ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+			REQUIRE( sourceView.getChunkInfo( 99, &chunkInfo ) == SIR_RESOURCE_RESULT_MISSING_CHUNK );
+			REQUIRE( sourceView.getChunkInfo( 0, &chunkInfo ) == SIR_RESOURCE_RESULT_SUCCESS );
+			REQUIRE( sourceView.getDependency( 0, nullptr ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+			REQUIRE( sourceView.getDependency( 0, &dependency ) == SIR_RESOURCE_RESULT_DEPENDENCY_MISSING );
+			REQUIRE( sceneView.getDependency( 0, &dependency ) == SIR_RESOURCE_RESULT_SUCCESS );
+			REQUIRE( graph.resolveDependency( scope, sceneView, 0, nullptr ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+			REQUIRE( graph.resolveDependency( scope, missingView, 0, &missingView ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+			REQUIRE( graph.resolveDependency( scope, sceneView, 1, &missingView ) == SIR_RESOURCE_RESULT_DEPENDENCY_MISSING );
+			REQUIRE( graph.resolveDependency( scope, sceneView, 0, &missingView ) == SIR_RESOURCE_RESULT_DEPENDENCY_MISSING );
+			SIRBlobResourceView blob( sourceView );
+			REQUIRE( blob.getBytes( { 0 }, { 0, 2 }, nullptr ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+			REQUIRE( blob.getBytes( { 0 }, { UINT64_MAX, 1 }, &bytes ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+			REQUIRE( blob.getBytes( { 0 }, { 0, UINT64_MAX }, &bytes ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+			REQUIRE( blob.getBytes( { 0 }, { 0, 2 }, &bytes ) == SIR_RESOURCE_RESULT_SUCCESS );
+			REQUIRE( bytes.m_nSize == 2 );
+			REQUIRE( blob.getBytes( { 999 }, { 0, 2 }, &bytes ) == SIR_RESOURCE_RESULT_MISSING_CHUNK );
+			REQUIRE( graph.pinForProvider( scope, sourceView, 0, &pin ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+			REQUIRE( graph.pinForProvider( scope, sourceView, 1, nullptr ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+			REQUIRE( graph.pinForProvider( scope, missingView, 1, &pin ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+			REQUIRE( graph.pinForProvider( exhausted, sourceView, 1, &pin ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+			REQUIRE( graph.pinForProvider( scope, sourceView, 1, &pin ) == SIR_RESOURCE_RESULT_SUCCESS );
+			SIRResourcePinHandle ignored = {};
+			REQUIRE( graph.pinForProvider( scope, sourceView, 1, &ignored ) == SIR_RESOURCE_RESULT_OUT_OF_BUDGET );
+			REQUIRE( graph.releaseProviderPin( { pin.m_nSlot, pin.m_nGeneration + 1 } ) == SIR_RESOURCE_RESULT_INVALID_HANDLE );
+			REQUIRE( graph.releaseProviderPin( pin ) == SIR_RESOURCE_RESULT_SUCCESS );
+			REQUIRE( graph.releaseProviderPin( pin ) == SIR_RESOURCE_RESULT_INVALID_HANDLE );
+			REQUIRE( graph.releaseProviderPin( { UINT32_MAX, 0 } ) == SIR_RESOURCE_RESULT_INVALID_HANDLE );
+		}
+		REQUIRE( pWriter->evictChunk( source, { 999 } ) == SIR_RESOURCE_RESULT_MISSING_CHUNK );
+		REQUIRE( pWriter->markFailed( source, SIR_RESOURCE_RESULT_FAILED ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		REQUIRE( pWriter->retire( source ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( pWriter->collectRetired( 0 ) == 0 );
+		REQUIRE( pWriter->collectRetired( 10 ) >= 1 );
+	}
+	REQUIRE( alloc.m_nOutstanding.load() == 0 );
+}
+
 int main( void )
 {
 	testScopeLifetimeAndDeduplication();
@@ -1145,6 +1286,7 @@ int main( void )
 	testCoreTaskGraphResourceDependencies();
 	testCoreTaskGraphFailureAndCancellation();
 	testCoreTaskGraphStaleRevisionsAndBudget();
+	testPublicValidationAndReadViewBoundaries();
 	printf( "PASS: GRDG resource registry, publication, deduplication, lifetime, concurrency\n" );
 	return 0;
 }
