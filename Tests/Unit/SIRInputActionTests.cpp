@@ -309,10 +309,153 @@ static bool sirTestPhysicalRebindCapture( void )
 	return true;
 }
 
+static bool sirTestActionValidationBoundaries( void ) noexcept
+{
+	SIRInputActions actions;
+	sirInputActionState_t state = {};
+	if ( actions.addAction( 0, 0 ) || actions.addAction( 1, SIR_INPUT_USER_CAPACITY ) || actions.addContext( 0, 0, 1, true ) ||
+	     actions.addContext( 1, SIR_INPUT_USER_CAPACITY, 1, true ) || actions.setContextActive( 1, 0, true ) ||
+	     actions.query( 1, 0, &state ) || actions.describeBinding( 0, nullptr ) || actions.removeBinding( 0 ) ||
+	     actions.beginCapture( 0 ) ) {
+		return false;
+	}
+	if ( !actions.addAction( 1, 0 ) || !actions.addContext( 1, 0, 100, true ) || actions.addAction( 1, 0 ) ||
+	     actions.addContext( 1, 0, 10, true ) || actions.query( 1, 0, nullptr ) || !actions.query( 1, 0, &state ) ||
+	     !actions.setContextActive( 1, 0, true ) ) {
+		return false;
+	}
+	const sirInputActionBinding_t base =
+	    sirTestBinding( 1, 1, 8, SIR_INPUT_NO_CHORD, SIR_INPUT_KEYBOARD, SIR_INPUT_BUTTON, SIR_INPUT_BIND_NONE );
+	sirInputActionBinding_t invalid = base;
+	invalid.nActionId = 99;
+	if ( actions.addBinding( invalid ) ) {
+		return false;
+	}
+	invalid = base;
+	invalid.nContextId = 99;
+	if ( actions.addBinding( invalid ) ) {
+		return false;
+	}
+	invalid = base;
+	invalid.eSignal = SIR_INPUT_MOTION;
+	if ( actions.addBinding( invalid ) ) {
+		return false;
+	}
+	invalid = base;
+	invalid.eClass = ( sirInputDeviceClass_t )255;
+	if ( actions.addBinding( invalid ) ) {
+		return false;
+	}
+	invalid = base;
+	invalid.nControl = SIR_INPUT_BUTTON_CAPACITY;
+	if ( actions.addBinding( invalid ) ) {
+		return false;
+	}
+	invalid = base;
+	invalid.eSignal = SIR_INPUT_AXIS;
+	invalid.nControl = SIR_INPUT_AXIS_CAPACITY;
+	if ( actions.addBinding( invalid ) ) {
+		return false;
+	}
+	invalid = base;
+	invalid.nChord = SIR_INPUT_BUTTON_CAPACITY;
+	if ( actions.addBinding( invalid ) ) {
+		return false;
+	}
+	invalid = base;
+	invalid.nDeadzone = -1;
+	if ( actions.addBinding( invalid ) ) {
+		return false;
+	}
+	invalid.nDeadzone = 32767;
+	if ( actions.addBinding( invalid ) ) {
+		return false;
+	}
+	invalid = base;
+	invalid.nScale = -32768;
+	if ( actions.addBinding( invalid ) ) {
+		return false;
+	}
+	invalid.nScale = 32768;
+	if ( actions.addBinding( invalid ) ) {
+		return false;
+	}
+	invalid = base;
+	invalid.nFlags = 0x80;
+	if ( actions.addBinding( invalid ) ) {
+		return false;
+	}
+	invalid = base;
+	invalid.eSignal = SIR_INPUT_AXIS;
+	invalid.nFlags = SIR_INPUT_BIND_TOGGLE;
+	if ( actions.addBinding( invalid ) ) {
+		return false;
+	}
+	if ( !actions.addBinding( base ) || actions.addBinding( base ) || actions.bindingCount() != 1 ||
+	     actions.describeBinding( 0, nullptr ) || actions.describeBinding( 1, &invalid ) ) {
+		return false;
+	}
+	invalid = base;
+	invalid.nActionId = 2;
+	if ( actions.rebind( 0, invalid ) ) {
+		return false;
+	}
+	invalid = base;
+	invalid.nContextId = 2;
+	if ( actions.rebind( 0, invalid ) ) {
+		return false;
+	}
+	invalid = base;
+	invalid.nUser = 1;
+	if ( actions.rebind( 0, invalid ) || actions.rebind( 1, base ) ) {
+		return false;
+	}
+	if ( !actions.setContextActive( 1, 0, false ) || actions.beginCapture( 0 ) || !actions.setContextActive( 1, 0, true ) ) {
+		return false;
+	}
+	invalid = base;
+	invalid.nControl = 9;
+	if ( !actions.addBinding( invalid ) || !actions.beginCapture( 0 ) || actions.removeBinding( 0 ) || actions.beginCapture( 1 ) ||
+	     actions.captureStatus() != SIR_INPUT_CAPTURE_PENDING ) {
+		return false;
+	}
+	actions.cancelCapture();
+	if ( actions.captureStatus() != SIR_INPUT_CAPTURE_IDLE || !actions.removeBinding( 0 ) || !actions.describeBinding( 0, &invalid ) ||
+	     invalid.nControl != 9 || actions.removeBinding( 1 ) || !actions.removeBinding( 0 ) || actions.bindingCount() != 0 ) {
+		return false;
+	}
+	uint8_t szBytes[256] = {};
+	uint32_t nWritten = 0;
+	if ( actions.saveProfile( nullptr, sizeof( szBytes ), &nWritten ) || nWritten == 0 ||
+	     !actions.saveProfile( szBytes, sizeof( szBytes ), nullptr ) ||
+	     actions.loadProfile( szBytes, SIR_INPUT_PROFILE_HEADER_BYTES - 1 ) ) {
+		return false;
+	}
+	actions.clear();
+	if ( actions.bindingCount() != 0 || actions.contextCount() != 0 || actions.query( 1, 0, &state ) ) {
+		return false;
+	}
+	SIRInputActions bounded;
+	for ( uint32_t i = 0; i < SIR_INPUT_ACTION_CAPACITY; ++i ) {
+		if ( !bounded.addAction( 1000 + i, 0 ) ) {
+			return false;
+		}
+	}
+	if ( bounded.addAction( 9999, 0 ) ) {
+		return false;
+	}
+	for ( uint32_t i = 0; i < SIR_INPUT_CONTEXT_CAPACITY; ++i ) {
+		if ( !bounded.addContext( 2000 + i, 0, 0, true ) ) {
+			return false;
+		}
+	}
+	return !bounded.addContext( 9999, 0, 0, true );
+}
+
 int main( void )
 {
 	if ( !sirTestContextsAndRebinding() || !sirTestChordShortTransitionsAndToggle() || !sirTestControllerAxis() ||
-	     !sirTestProfileRoundTripAndRejection() || !sirTestPhysicalRebindCapture() ) {
+	     !sirTestProfileRoundTripAndRejection() || !sirTestPhysicalRebindCapture() || !sirTestActionValidationBoundaries() ) {
 		fputs( "SIRInputActionTests FAILED\n", stderr );
 		return 1;
 	}
