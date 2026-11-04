@@ -1041,10 +1041,16 @@ static void testAudioOwnerThread( const sirContainerAllocator_t *pAllocator )
 	request = {};
 	request.eOperation = SIR_FMOD_THREAD_RELEASE_PACKAGE;
 	request.nId = 2;
-	uint64_t nReleaseTicket = 0;
-	checkBank( worker.submit( request, nReleaseTicket ) == SIR_AUDIO_PENDING );
-	result = testWaitForTicket( worker, nReleaseTicket );
-	checkBank( result.eResult == SIR_AUDIO_OK || result.eResult == SIR_AUDIO_BUSY );
+	result.eResult = SIR_AUDIO_BUSY;
+	for ( uint32_t iAttempt = 0; iAttempt < 100 && result.eResult == SIR_AUDIO_BUSY; ++iAttempt ) {
+		uint64_t nReleaseTicket = 0;
+		checkBank( worker.submit( request, nReleaseTicket ) == SIR_AUDIO_PENDING );
+		result = testWaitForTicket( worker, nReleaseTicket );
+		if ( result.eResult == SIR_AUDIO_BUSY ) {
+			std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
+		}
+	}
+	checkBank( result.eResult == SIR_AUDIO_OK );
 	request = {};
 	request.eOperation = SIR_FMOD_THREAD_LOAD_PACKAGE;
 	request.nId = 2;
@@ -1059,6 +1065,12 @@ static void testAudioOwnerThread( const sirContainerAllocator_t *pAllocator )
 	checkBank( worker.submit( query, nQueryTicket ) == SIR_AUDIO_PENDING );
 	result = testWaitForTicket( worker, nQueryTicket );
 	checkBank( result.eResult == SIR_AUDIO_INVALID_HANDLE );
+	// Competing root-load requests must fail without consuming the active
+	// transaction's completion ticket or blocking ordinary dispatch.
+	uint64_t nSecondLoadTicket = 0;
+	checkBank( worker.submit( request, nSecondLoadTicket ) == SIR_AUDIO_PENDING );
+	result = testWaitForTicket( worker, nSecondLoadTicket );
+	checkBank( result.eResult == SIR_AUDIO_BUSY );
 	checkBank( worker.cancel( nCancelledTicket ) == SIR_AUDIO_OK );
 	result = testWaitForTicket( worker, nCancelledTicket );
 	checkBank( result.eResult == SIR_AUDIO_CANCELLED );
