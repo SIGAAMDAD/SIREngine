@@ -421,7 +421,7 @@ sirGraphicsResult_t SIRD3D12CommandList::copyBufferTexture( const sirGraphicsBuf
 	D3D12_TEXTURE_COPY_LOCATION subresource = {};
 	subresource.pResource = pTexture->pAllocation->GetResource();
 	subresource.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-	subresource.SubresourceIndex = D3D12CalcSubresource( copy.nMip, copy.nLayer, 0, pTexture->nMips, pTexture->nLayers );
+	subresource.SubresourceIndex = copy.nMip + copy.nLayer * pTexture->nMips;
 	if ( copy.bBufferToTexture ) {
 		m_pCommands->CopyTextureRegion( &subresource, copy.nX, copy.nY, 0, &placed, nullptr );
 	} else {
