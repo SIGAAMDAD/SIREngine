@@ -726,6 +726,34 @@ static void testNestedPumpAndCompletedPrerequisite( void )
 	memory.shutdown();
 }
 
+static void testMetadataExhaustionAndInvalidPredecessors( void )
+{
+	SIRMemoryManager tiny;
+	const sirMemoryConfig_t tinyConfig = { 16ULL * 1024 * 1024, 32ULL * 1024, 128ULL * 1024, 4 };
+	SIR_TEST_CHECK( tiny.init( tinyConfig ) );
+	SIRTaskScheduler unavailable;
+	SIR_TEST_CHECK( !unavailable.init( &tiny, { 512, 0, 512 } ) );
+	SIR_TEST_CHECK( !unavailable.shutdown() );
+	tiny.shutdown();
+	SIRMemoryManager memory;
+	const sirMemoryConfig_t config = { 64ULL * 1024 * 1024, 16ULL * 1024 * 1024, 4ULL * 1024 * 1024, 8 };
+	SIR_TEST_CHECK( memory.init( config ) );
+	SIRTaskScheduler scheduler;
+	SIR_TEST_CHECK( scheduler.init( &memory, { 8, 0, 8 } ) );
+	sirTaskHandle_t ignored = {};
+	const sirTaskHandle_t stale = { UINT32_MAX, 0 };
+	SIR_TEST_CHECK( !scheduler.submitAfter( countTask, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_MAIN, &stale, 1, &ignored ) );
+	std::atomic<uint32_t> nCounter( 0 );
+	sirTaskHandle_t parent = {};
+	SIR_TEST_CHECK( scheduler.submit( countTask, &nCounter, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_MAIN, &parent ) );
+	const sirTaskHandle_t duplicates[2] = { parent, parent };
+	SIR_TEST_CHECK( !scheduler.submitAfter( countTask, &nCounter, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_MAIN, duplicates, 2, &ignored ) );
+	SIR_TEST_CHECK( scheduler.cancel( parent ) );
+	SIR_TEST_CHECK( scheduler.releaseTask( parent ) );
+	SIR_TEST_CHECK( scheduler.shutdown() );
+	memory.shutdown();
+}
+
 int main( void )
 {
 	testScheduler();
@@ -741,5 +769,6 @@ int main( void )
 	testShutdownWithLiveTasksAndProviderWait();
 	testPrioritySchedulingFairness();
 	testNestedPumpAndCompletedPrerequisite();
+	testMetadataExhaustionAndInvalidPredecessors();
 	return 0;
 }
