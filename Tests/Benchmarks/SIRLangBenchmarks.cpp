@@ -19,10 +19,11 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <benchmark/benchmark.h>
 
-static sirLangCIRProgram_t makeScalarProgram( sirLangCIRFunction_t *pFunction,
-                                               sirLangCIRInstruction_t szInstructions[2],
-                                               sirLangValueKind_t *pType ) noexcept
+static sirLangCIRProgram_t makeScalarProgram( sirLangCIRFunction_t *pFunction, sirLangCIRInstruction_t szInstructions[2],
+                                              sirLangValueKind_t *pType ) noexcept
 {
+
+
 	*pFunction = { 100, 0, 2, 1, 1, 0, SIR_LANG_VALUE_U16 };
 	szInstructions[0] = { SIR_LANG_OP_PARAMETER, SIR_LANG_VALUE_U16, 0, 0, 0, 0, 0, 0, 0 };
 	szInstructions[1] = { SIR_LANG_OP_RETURN, SIR_LANG_VALUE_U16, 0, UINT32_MAX, 0, 0, 0, 0, 0 };
@@ -112,8 +113,7 @@ static void SIRBenchmarkGraphVMBytecodeDecode( benchmark::State& state )
 }
 BENCHMARK( SIRBenchmarkGraphVMBytecodeDecode );
 
-static sirScriptResult_t sirBenchmarkNativeThunk( void *, sirScriptReadFrame_t arguments,
-                                                  sirScriptWriteFrame_t result ) noexcept
+static sirScriptResult_t sirBenchmarkNativeThunk( void *, sirScriptReadFrame_t arguments, sirScriptWriteFrame_t result ) noexcept
 {
 	if ( arguments.nBytes != sizeof( sirLangVMValue_t ) || result.nBytes != sizeof( sirLangVMValue_t ) ) {
 		return SIR_SCRIPT_TYPE_MISMATCH;
