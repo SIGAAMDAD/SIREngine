@@ -1,3 +1,5 @@
+
+
 /*
 ===========================================================================
 SIREngine MPLv2 Source Code
@@ -88,9 +90,9 @@ SIRResourceResult SIRResourceFileLoad::begin( const char *pszUtf8Path, const sir
 		return SIR_RESOURCE_RESULT_BUSY;
 	}
 	if ( !m_pGraph->isReady() || pszUtf8Path == nullptr || pszUtf8Path[0] == '\0' || rRequest.keyResource.m_nTypeId == 0 ||
-	     rRequest.eKind > SIR_RESOURCE_KIND_COMPOSITION || rRequest.eMode > SIR_RESOURCE_FILE_READ_MAPPED ||
-	     rRequest.nSchemaVersion == 0 || rRequest.nFileBytes == 0 || rRequest.nFileBytes > SIZE_MAX ||
-	     rRequest.nAlignment == 0 || ( rRequest.nAlignment & ( rRequest.nAlignment - 1 ) ) != 0 ||
+	     rRequest.eKind > SIR_RESOURCE_KIND_COMPOSITION || rRequest.eMode > SIR_RESOURCE_FILE_READ_MAPPED || rRequest.nSchemaVersion == 0 ||
+	     rRequest.nFileBytes == 0 || rRequest.nFileBytes > SIZE_MAX || rRequest.nAlignment == 0 ||
+	     ( rRequest.nAlignment & ( rRequest.nAlignment - 1 ) ) != 0 ||
 	     ( rRequest.nDependencyCount != 0 && rRequest.pDependencies == nullptr ) ) {
 		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
 	}
@@ -105,8 +107,7 @@ SIRResourceResult SIRResourceFileLoad::begin( const char *pszUtf8Path, const sir
 		return SIR_RESOURCE_RESULT_FAILED;
 	}
 	if ( rRequest.nFileOffset >= nFileSize || rRequest.nFileBytes > nFileSize - rRequest.nFileOffset ||
-	     rRequest.nFileOffset > ( uint64_t )INT64_MAX ||
-	     rRequest.nFileBytes > ( uint64_t )INT64_MAX - rRequest.nFileOffset ) {
+	     rRequest.nFileOffset > ( uint64_t )INT64_MAX || rRequest.nFileBytes > ( uint64_t )INT64_MAX - rRequest.nFileOffset ) {
 		m_eLastFileResult = SIR_FILE_OUT_OF_RANGE;
 		m_File.close();
 		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
@@ -142,8 +143,8 @@ sirTaskResult_t SIRResourceFileLoad::readTask( void *pContext, sirTaskHandle_t h
 	}
 	if ( pLoad->m_Request.eMode == SIR_RESOURCE_FILE_READ_MAPPED ) {
 		SIRPlatformFileMapping mapping;
-		pLoad->m_eTransferResult = mapping.map( pLoad->m_File, pLoad->m_Request.nFileOffset, pLoad->m_Request.nFileBytes,
-		                                       SIR_FILE_MAP_READ_ONLY );
+		pLoad->m_eTransferResult =
+		    mapping.map( pLoad->m_File, pLoad->m_Request.nFileOffset, pLoad->m_Request.nFileBytes, SIR_FILE_MAP_READ_ONLY );
 		if ( pLoad->m_eTransferResult != SIR_FILE_OK ) {
 			return SIR_TASK_RESULT_FAILURE;
 		}
@@ -151,8 +152,8 @@ sirTaskResult_t SIRResourceFileLoad::readTask( void *pContext, sirTaskHandle_t h
 		pLoad->m_eTransferResult = mapping.unmap();
 	} else {
 		uint64_t nTransferred = 0;
-		pLoad->m_eTransferResult = pLoad->m_File.readAt( pLoad->m_Request.nFileOffset, pLoad->m_Bytes.m_pData,
-		                                                pLoad->m_Request.nFileBytes, &nTransferred );
+		pLoad->m_eTransferResult =
+		    pLoad->m_File.readAt( pLoad->m_Request.nFileOffset, pLoad->m_Bytes.m_pData, pLoad->m_Request.nFileBytes, &nTransferred );
 		if ( pLoad->m_eTransferResult == SIR_FILE_OK && nTransferred != pLoad->m_Request.nFileBytes ) {
 			pLoad->m_eTransferResult = SIR_FILE_END_OF_FILE;
 		}
@@ -186,8 +187,7 @@ SIRResourceResult SIRResourceFileLoad::poll( SIRResourceHandle *pResource ) noex
 		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
 	}
 	const sirTaskState_t eState = m_pScheduler->getState( m_Task );
-	if ( eState == SIR_TASK_QUEUED || eState == SIR_TASK_BLOCKED || eState == SIR_TASK_RUNNING ||
-	     eState == SIR_TASK_AWAITING_PROVIDER ) {
+	if ( eState == SIR_TASK_QUEUED || eState == SIR_TASK_BLOCKED || eState == SIR_TASK_RUNNING || eState == SIR_TASK_AWAITING_PROVIDER ) {
 		return SIR_RESOURCE_RESULT_BUSY;
 	}
 	if ( eState != SIR_TASK_COMPLETED && eState != SIR_TASK_FAILED && eState != SIR_TASK_CANCELLED ) {
@@ -202,9 +202,9 @@ SIRResourceResult SIRResourceFileLoad::poll( SIRResourceHandle *pResource ) noex
 	SIRResourceResult eResult = SIR_RESOURCE_RESULT_FAILED;
 	if ( !m_bDiscard && eState == SIR_TASK_COMPLETED && m_eTransferResult == SIR_FILE_OK ) {
 		const SIRResourceChunkPublication chunk = { m_Request.idChunk, m_Request.keyContent, m_Staging, false };
-		const SIRResourcePublication publication = { m_Request.keyResource, m_Request.eKind, m_Request.nSchemaVersion,
-		                                            m_Request.nFormatId, &chunk, 1, m_Request.pDependencies,
-		                                            m_Request.nDependencyCount };
+		const SIRResourcePublication publication = {
+		    m_Request.keyResource,   m_Request.eKind,           m_Request.nSchemaVersion, m_Request.nFormatId, &chunk, 1,
+		    m_Request.pDependencies, m_Request.nDependencyCount };
 		eResult = pWriter->publishExpected( publication, m_Request.nExpectedRevision, pResource );
 		if ( eResult == SIR_RESOURCE_RESULT_SUCCESS ) {
 			// Ownership moved to the canonical record; the staging slot is empty.
