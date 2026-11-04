@@ -28,6 +28,7 @@ add_library(SIRScripting STATIC
     Language/SIRLangGraphVMBackend.cpp
     Language/SIRLangNativeBinding.cpp
     Language/SIRLangDiagnostics.cpp
+    Language/SIRLangCookRecipe.cpp
 )
 find_package(Threads REQUIRED)
 add_library(SIR::Scripting ALIAS SIRScripting)
