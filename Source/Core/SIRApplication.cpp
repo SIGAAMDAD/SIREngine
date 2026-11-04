@@ -1,7 +1,8 @@
 #include <Core/SIRApplication.h>
 
 SIRApplication::SIRApplication( void ) noexcept
-    : m_eState( SIR_APP_UNINITIALIZED ), m_nTicks( 0 ), m_nSystemCount( 0 ), m_nInitializedSystems( 0 ), m_EventRegistry(), m_pInput( nullptr ), m_pInputPump( nullptr ), m_pInputPumpContext( nullptr )
+    : m_eState( SIR_APP_UNINITIALIZED ), m_nTicks( 0 ), m_nSystemCount( 0 ), m_nInitializedSystems( 0 ), m_EventRegistry(),
+      m_pInput( nullptr ), m_pInputPump( nullptr ), m_pInputPumpContext( nullptr )
 {
 }
 
