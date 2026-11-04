@@ -85,6 +85,7 @@ public:
 	const sirEditorTextSceneIndex_t &getSceneIndex( void ) const noexcept;
 	const sirEditorTextResourceIndex_t &getResourceIndex( void ) const noexcept;
 	SIREditorSceneDocument &getDocument( void ) noexcept;
+	const SIREditorSceneDocument &getDocument( void ) const noexcept;
 	SIREditorHierarchyModel &getHierarchy( void ) noexcept;
 };
 

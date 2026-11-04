@@ -1,0 +1,8 @@
+[gd_scene format=3]
+
+[node name="BridgeSmoke" type="Node2D"]
+
+[node name="ViewportAnchor" type="Node2D" parent="."]
+
+[node name="Label" type="Label" parent="ViewportAnchor"]
+text = "SIREngine scene dock smoke"
