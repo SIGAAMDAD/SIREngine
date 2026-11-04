@@ -8,6 +8,7 @@ endif()
 add_library(SIRVulkan STATIC
     SIRVulkanDevice.cpp
     SIRVulkanCommands.cpp
+    SIRVulkanRecordedCommands.cpp
     SIRVulkanGraphics.cpp
     SIRVulkanImages.cpp
     SIRVulkanTextures.cpp

@@ -124,6 +124,11 @@ if(SIR_WITH_VULKAN)
     add_test(NAME render.vulkan.transfer-layout COMMAND SIRVulkanTransferLayoutTests)
     sir_configure_owned_target(SIRVulkanTransferLayoutTests)
 
+    add_executable(SIRVulkanRecordedCommandsTests SIRVulkanRecordedCommandsTests.cpp)
+    target_link_libraries(SIRVulkanRecordedCommandsTests PRIVATE SIR::Vulkan)
+    add_test(NAME render.vulkan.recorded-commands COMMAND SIRVulkanRecordedCommandsTests)
+    sir_configure_owned_target(SIRVulkanRecordedCommandsTests)
+
     add_executable(SIRVulkanCopyBatchTests SIRVulkanCopyBatchTests.cpp)
     target_link_libraries(SIRVulkanCopyBatchTests PRIVATE SIR::Vulkan)
     add_test(NAME render.vulkan.copy-batch COMMAND SIRVulkanCopyBatchTests)

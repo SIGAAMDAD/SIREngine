@@ -311,7 +311,59 @@ int main( void )
 	     pDevice->unmapBuffer( hReadback, 0, sizeof( szExpected ) ) != SIR_GRAPHICS_SUCCESS ) {
 		return 25;
 	}
-	completed.szQueueValues[SIR_GRAPHICS_QUEUE_DIRECT] = downloaded.nValue;
+	// Submit an ordered mixed command list on one direct queue timeline:
+// buffer copy -> image upload -> two image transitions -> image readback.
+	SIRGraphicsCommandList *pMixed = nullptr;
+	sirGraphicsBufferTextureCopy_t mixedCopy = {};
+	mixedCopy.hBuffer = hGpu;
+	mixedCopy.hTexture = hTexture;
+	mixedCopy.nBufferOffset = 2048;
+	mixedCopy.nWidth = 4;
+	mixedCopy.nHeight = 8;
+	mixedCopy.nDepth = 1;
+	mixedCopy.nMip = 0;
+	mixedCopy.nLayer = 0;
+	mixedCopy.bBufferToTexture = true;
+	sirGraphicsBarrier_t mixedBarrier = {};
+	mixedBarrier.hResource = hTexture;
+	mixedBarrier.eType = SIR_GRAPHICS_BARRIER_TRANSITION;
+	mixedBarrier.eBefore = SIR_GRAPHICS_STATE_COMMON;
+	mixedBarrier.eAfter = SIR_GRAPHICS_STATE_SHADER_READ;
+	mixedBarrier.nMipCount = 1;
+	mixedBarrier.nLayerCount = 1;
+	if ( pDevice->acquireCommands( SIR_GRAPHICS_QUEUE_DIRECT, &pMixed ) != SIR_GRAPHICS_SUCCESS ||
+	     pMixed == nullptr || pMixed->copyBuffer( hGpu, 2048, hSource, 0, sizeof( szExpected ) ) != SIR_GRAPHICS_SUCCESS ||
+	     pMixed->copyBufferTexture( mixedCopy ) != SIR_GRAPHICS_SUCCESS ||
+	     pMixed->barrier( &mixedBarrier, 1 ) != SIR_GRAPHICS_SUCCESS ) {
+		return 33;
+	}
+	mixedBarrier.eBefore = SIR_GRAPHICS_STATE_SHADER_READ;
+	mixedBarrier.eAfter = SIR_GRAPHICS_STATE_COMMON;
+	mixedCopy.hBuffer = hReadback;
+	mixedCopy.bBufferToTexture = false;
+	if ( pMixed->barrier( &mixedBarrier, 1 ) != SIR_GRAPHICS_SUCCESS ||
+	     pMixed->copyBufferTexture( mixedCopy ) != SIR_GRAPHICS_SUCCESS ||
+	     pMixed->close() != SIR_GRAPHICS_SUCCESS ) {
+		return 34;
+	}
+	sirGraphicsSubmission_t mixedSubmission = {};
+	mixedSubmission.ppCommandLists = &pMixed;
+	mixedSubmission.nCommandListCount = 1;
+	mixedSubmission.pWaits = &downloaded;
+	mixedSubmission.nWaitCount = 1;
+	sirGraphicsCompletion_t mixedCompleted = {};
+	if ( pDevice->submit( SIR_GRAPHICS_QUEUE_DIRECT, mixedSubmission, &mixedCompleted ) != SIR_GRAPHICS_SUCCESS ||
+	     mixedCompleted.nValue != downloaded.nValue + 1 ||
+	     pDevice->wait( mixedCompleted, 5000000000ull ) != SIR_GRAPHICS_SUCCESS ) {
+		return 35;
+	}
+	if ( pDevice->mapBuffer( hReadback, 2048, sizeof( szExpected ), &mapped ) != SIR_GRAPHICS_SUCCESS ||
+	     pDevice->invalidateBuffer( hReadback, 2048, sizeof( szExpected ) ) != SIR_GRAPHICS_SUCCESS ||
+	     memcmp( mapped.pData, szExpected, sizeof( szExpected ) ) != 0 ||
+	     pDevice->unmapBuffer( hReadback, 2048, sizeof( szExpected ) ) != SIR_GRAPHICS_SUCCESS ) {
+		return 36;
+	}
+	completed.szQueueValues[SIR_GRAPHICS_QUEUE_DIRECT] = mixedCompleted.nValue;
 	if ( pDevice->retireResource( hView, completed ) != SIR_GRAPHICS_SUCCESS ||
 	     pDevice->retireResource( hTexture, completed ) != SIR_GRAPHICS_SUCCESS ||
 	     pDevice->retireResource( hSampler, completed ) != SIR_GRAPHICS_SUCCESS ||

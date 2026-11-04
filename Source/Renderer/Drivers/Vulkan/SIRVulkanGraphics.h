@@ -86,17 +86,28 @@ typedef struct sirVulkanGraphicsSamplerSlot_s
 sirGraphicsResult_t sirVulkanPlanImageBarrier( const sirGraphicsBarrier_t &barrier, const sirVulkanImage_t *pImage,
                                                sirVulkanImageBarrier_t *pNative ) noexcept;
 
-// Command lists use bounded, preallocated recording. Buffer copies may be
-// batched, while image copies and barriers remain single-operation commands.
+// Each command list records up to eight ordered operations without CPU
+// allocation. Native submission validates the whole stream atomically.
 // Closing an empty command list releases its slot.
-typedef struct sirVulkanGraphicsBufferCopy_s
+typedef enum sirVulkanGraphicsOpKind_e : uint8_t
 {
+	SIR_VULKAN_GRAPHICS_BUFFER_COPY = 0,
+	SIR_VULKAN_GRAPHICS_TEXTURE_COPY,
+	SIR_VULKAN_GRAPHICS_IMAGE_BARRIER
+} sirVulkanGraphicsOpKind_t;
+
+typedef struct sirVulkanGraphicsOperation_s
+{
+	sirVulkanGraphicsOpKind_t eKind;
 	sirGraphicsHandle_t hSource;
 	sirGraphicsHandle_t hDestination;
 	uint64_t nSourceOffset;
 	uint64_t nDestinationOffset;
 	uint64_t nBytes;
-} sirVulkanGraphicsBufferCopy_t;
+	sirGraphicsBufferTextureCopy_t textureCopy;
+	sirGraphicsBarrier_t barrier;
+} sirVulkanGraphicsOperation_t;
+
 class SIRVulkanCommandList final : public SIRGraphicsCommandList
 {
 private:
@@ -104,14 +115,9 @@ private:
 
 	SIRVulkanRenderingDevice *m_pOwner = nullptr;
 	sirVulkanCommandState_t m_eState = SIR_VULKAN_COMMAND_FREE;
-	sirVulkanGraphicsBufferCopy_t m_szBufferCopies[SIR_VULKAN_COPY_BATCH_CAPACITY] = {};
-	uint32_t m_nCopyCount = 0;
+	 sirVulkanGraphicsOperation_t m_szOperations[SIR_VULKAN_COPY_BATCH_CAPACITY] = {};
+	uint32_t m_nOperationCount = 0;
 	uint64_t m_nLastCompletion = 0;
-	sirGraphicsBufferTextureCopy_t m_TextureCopy = {};
-	sirGraphicsBarrier_t m_Barrier = {};
-	bool m_bHasBarrier = false;
-	bool m_bHasCopy = false;
-	bool m_bHasTextureCopy = false;
 
 	void prepare( SIRVulkanRenderingDevice *pOwner ) noexcept;
 

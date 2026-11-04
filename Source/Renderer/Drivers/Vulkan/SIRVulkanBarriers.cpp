@@ -104,7 +104,7 @@ sirGraphicsResult_t sirVulkanPlanImageBarrier( const sirGraphicsBarrier_t &barri
 
 sirGraphicsResult_t SIRVulkanCommandList::barrier( const sirGraphicsBarrier_t *pBarriers, uint32_t nCount ) noexcept
 {
-	if ( m_eState != SIR_VULKAN_COMMAND_RECORDING || m_bHasCopy || m_bHasBarrier || m_pOwner == nullptr ) {
+	if ( m_eState != SIR_VULKAN_COMMAND_RECORDING || m_pOwner == nullptr ) {
 		return SIR_GRAPHICS_BUSY;
 	}
 	if ( nCount == 0 ) {
@@ -113,25 +113,42 @@ sirGraphicsResult_t SIRVulkanCommandList::barrier( const sirGraphicsBarrier_t *p
 	if ( pBarriers == nullptr ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	if ( nCount != 1 ) {
-		return SIR_GRAPHICS_UNSUPPORTED;
+	if ( nCount > SIR_VULKAN_COPY_BATCH_CAPACITY - m_nOperationCount ) {
+		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
 	}
-	const sirGraphicsBarrier_t &barrier = pBarriers[0];
-	if ( barrier.hResource.eType != SIR_GRAPHICS_HANDLE_TEXTURE || barrier.hResource.nDeviceGeneration != m_pOwner->m_nDeviceGeneration ||
-	     barrier.hResource.nSlot >= SIRVulkanRenderingDevice::SIR_VULKAN_TEXTURE_CAPACITY ) {
-		return SIR_GRAPHICS_INVALID_HANDLE;
+	// Prevalidate the entire array before modifying the recorded stream.
+	for ( uint32_t iBarrier = 0; iBarrier < nCount; ++iBarrier ) {
+		const sirGraphicsBarrier_t &barrier = pBarriers[iBarrier];
+		if ( barrier.eType != SIR_GRAPHICS_BARRIER_TRANSITION && barrier.eType != SIR_GRAPHICS_BARRIER_UAV ) {
+			return SIR_GRAPHICS_UNSUPPORTED;
+		}
+		if ( barrier.hResource.eType != SIR_GRAPHICS_HANDLE_TEXTURE ||
+		     barrier.hResource.nDeviceGeneration != m_pOwner->m_nDeviceGeneration ||
+		     barrier.hResource.nSlot >= SIRVulkanRenderingDevice::SIR_VULKAN_TEXTURE_CAPACITY ) {
+			return SIR_GRAPHICS_INVALID_HANDLE;
+		}
+		const sirVulkanGraphicsImageSlot_t *pImage = &m_pOwner->m_szImages[barrier.hResource.nSlot];
+		if ( !pImage->bActive || pImage->nGeneration != barrier.hResource.nGeneration ) {
+			return SIR_GRAPHICS_INVALID_HANDLE;
+		}
+		if ( barrier.nMipCount != 1 || barrier.nLayerCount != 1 ||
+		     barrier.nBaseMip >= pImage->native.nMips || barrier.nBaseLayer >= pImage->native.nLayers ) {
+			return SIR_GRAPHICS_UNSUPPORTED;
+		}
+		if ( m_nOperationCount == 0 && iBarrier == 0 ) {
+			sirVulkanImageBarrier_t planned = {};
+			const sirGraphicsResult_t ePlan = sirVulkanPlanImageBarrier( barrier, &pImage->native, &planned );
+			if ( ePlan != SIR_GRAPHICS_SUCCESS ) {
+				return ePlan;
+			}
+		}
 	}
-	const sirVulkanGraphicsImageSlot_t *pImage = &m_pOwner->m_szImages[barrier.hResource.nSlot];
-	if ( !pImage->bActive || pImage->nGeneration != barrier.hResource.nGeneration ) {
-		return SIR_GRAPHICS_INVALID_HANDLE;
+	for ( uint32_t iBarrier = 0; iBarrier < nCount; ++iBarrier ) {
+		sirVulkanGraphicsOperation_t &operation = m_szOperations[m_nOperationCount++];
+		operation = {};
+		operation.eKind = SIR_VULKAN_GRAPHICS_IMAGE_BARRIER;
+		operation.barrier = pBarriers[iBarrier];
 	}
-	sirVulkanImageBarrier_t native = {};
-	const sirGraphicsResult_t ePlan = sirVulkanPlanImageBarrier( barrier, &pImage->native, &native );
-	if ( ePlan != SIR_GRAPHICS_SUCCESS ) {
-		return ePlan;
-	}
-	m_Barrier = barrier;
-	m_bHasBarrier = true;
 	return SIR_GRAPHICS_SUCCESS;
 }
 
