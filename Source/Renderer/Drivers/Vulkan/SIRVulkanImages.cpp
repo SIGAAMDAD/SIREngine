@@ -41,6 +41,10 @@ sirVulkanResult_t SIRVulkanDevice::createImage( const VkImageCreateInfo &info, s
 	VmaAllocationCreateInfo allocation = {};
 	allocation.usage = VMA_MEMORY_USAGE_AUTO;
 	allocation.flags = VMA_ALLOCATION_CREATE_WITHIN_BUDGET_BIT;
+	if ( m_bSealedPools ) {
+		allocation.pool = m_szSealedPools[0];
+		allocation.flags |= VMA_ALLOCATION_CREATE_NEVER_ALLOCATE_BIT;
+	}
 	const VkResult eCreate = vmaCreateImage( m_Allocator, &info, &allocation, &pImage->hImage, &pImage->pAllocation, nullptr );
 	if ( eCreate != VK_SUCCESS ) {
 		pImage->hImage = VK_NULL_HANDLE;

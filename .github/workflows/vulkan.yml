@@ -31,7 +31,7 @@ jobs:
       - name: Configure native Vulkan backend
         run: cmake --preset tooling -DSIR_WITH_VULKAN=ON -DSIR_WITH_GOOGLETEST=OFF
       - name: Compile Vulkan and native tests
-        run: cmake --build --preset tooling --target SIRVulkanDeviceTests SIRVulkanContractTests SIRVulkanSharedContractTests SIRVulkanTransferLayoutTests SIRVulkanBarrierTests SIRVulkanBufferBarrierTests SIRVulkanCopyBatchTests SIRVulkanRecordedCommandsTests SIRVulkanShaderTests SIRVulkanSharedTests
+        run: cmake --build --preset tooling --target SIRVulkanDeviceTests SIRVulkanMemoryPolicyTests SIRVulkanSealedPoolTests SIRVulkanContractTests SIRVulkanSharedContractTests SIRVulkanTransferLayoutTests SIRVulkanBarrierTests SIRVulkanBufferBarrierTests SIRVulkanCopyBatchTests SIRVulkanRecordedCommandsTests SIRVulkanShaderTests SIRVulkanSharedTests
       - name: Headless Vulkan/VMA unit smoke
         run: ctest --preset tooling --output-on-failure -R '^render[.]vulkan[.]'
 
@@ -50,6 +50,6 @@ jobs:
       - name: Configure native Vulkan backend
         run: cmake --preset dev -DSIR_WITH_VULKAN=ON -DSIR_WITH_GOOGLETEST=OFF
       - name: Compile Vulkan and native tests
-        run: cmake --build --preset dev --target SIRVulkanDeviceTests SIRVulkanContractTests SIRVulkanSharedContractTests SIRVulkanTransferLayoutTests SIRVulkanBarrierTests SIRVulkanBufferBarrierTests SIRVulkanCopyBatchTests SIRVulkanRecordedCommandsTests SIRVulkanShaderTests SIRVulkanSharedTests
+        run: cmake --build --preset dev --target SIRVulkanDeviceTests SIRVulkanMemoryPolicyTests SIRVulkanSealedPoolTests SIRVulkanContractTests SIRVulkanSharedContractTests SIRVulkanTransferLayoutTests SIRVulkanBarrierTests SIRVulkanBufferBarrierTests SIRVulkanCopyBatchTests SIRVulkanRecordedCommandsTests SIRVulkanShaderTests SIRVulkanSharedTests
       - name: Validate contract paths and hardware-dependent smoke
         run: ctest --preset dev --output-on-failure -R '^render[.]vulkan[.]'

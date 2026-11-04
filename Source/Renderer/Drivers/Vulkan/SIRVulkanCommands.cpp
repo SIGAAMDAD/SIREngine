@@ -168,15 +168,13 @@ sirVulkanResult_t SIRVulkanDevice::readBuffer( sirVulkanBuffer_t *pBuffer, uint6
 		return SIR_VULKAN_BUSY;
 	}
 
-	void *pMapped = nullptr;
-	if ( vmaMapMemory( m_Allocator, pBuffer->pAllocation, &pMapped ) != VK_SUCCESS || pMapped == nullptr ) {
-		return SIR_VULKAN_NATIVE_FAILURE;
+	if ( pBuffer->pMappedData == nullptr ) {
+		return SIR_VULKAN_INVALID_STATE;
 	}
 	const VkResult eResult = vmaInvalidateAllocation( m_Allocator, pBuffer->pAllocation, nOffset, nBytes );
 	if ( eResult == VK_SUCCESS ) {
-		memcpy( pData, ( const uint8_t * )pMapped + nOffset, ( size_t )nBytes );
+		memcpy( pData, ( const uint8_t * )pBuffer->pMappedData + nOffset, ( size_t )nBytes );
 	}
-	vmaUnmapMemory( m_Allocator, pBuffer->pAllocation );
 	return eResult == VK_SUCCESS ? SIR_VULKAN_SUCCESS : SIR_VULKAN_NATIVE_FAILURE;
 }
 

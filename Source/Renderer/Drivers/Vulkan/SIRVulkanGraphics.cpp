@@ -136,12 +136,12 @@ SIRVulkanRenderingDevice::~SIRVulkanRenderingDevice( void ) noexcept
 	( void )shutdown();
 }
 
-sirGraphicsResult_t SIRVulkanRenderingDevice::initialize( void ) noexcept
+sirGraphicsResult_t SIRVulkanRenderingDevice::initialize( const sirVulkanPoolBudget_t *pBudget ) noexcept
 {
 	if ( m_bReady ) {
 		return SIR_GRAPHICS_BUSY;
 	}
-	const sirVulkanResult_t eInitialize = m_Native.initialize();
+	const sirVulkanResult_t eInitialize = m_Native.initialize( pBudget );
 	if ( eInitialize != SIR_VULKAN_SUCCESS ) {
 		return sirVulkanToGraphicsResult( eInitialize );
 	}
@@ -329,15 +329,13 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::mapBuffer( sirGraphicsHandle_t hBu
 			return sirVulkanToGraphicsResult( eWait );
 		}
 	}
-	void *pBase = nullptr;
-	const VkResult eMap = vmaMapMemory( pSlot->native.pOwnerAllocator, pSlot->native.pAllocation, &pBase );
-	if ( eMap != VK_SUCCESS || pBase == nullptr ) {
+	if ( pSlot->native.pMappedData == nullptr ) {
 		return SIR_GRAPHICS_DRIVER_ERROR;
 	}
-	pSlot->pMapped = pBase;
+	pSlot->pMapped = pSlot->native.pMappedData;
 	pSlot->nMappedOffset = nOffset;
 	pSlot->nMappedBytes = nBytes;
-	*pMapped = { ( uint8_t * )pBase + nOffset, nOffset, nBytes };
+	*pMapped = { ( uint8_t * )pSlot->native.pMappedData + nOffset, nOffset, nBytes };
 	return SIR_GRAPHICS_SUCCESS;
 }
 
@@ -350,7 +348,6 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::unmapBuffer( sirGraphicsHandle_t h
 	if ( pSlot->pMapped == nullptr || nOffset != pSlot->nMappedOffset || nBytes != pSlot->nMappedBytes ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	vmaUnmapMemory( pSlot->native.pOwnerAllocator, pSlot->native.pAllocation );
 	pSlot->pMapped = nullptr;
 	pSlot->nMappedOffset = 0;
 	pSlot->nMappedBytes = 0;
@@ -773,12 +770,17 @@ sirGraphicsResult_t SIRVulkanDriver::createDevice( const sirGraphicsDeviceCreate
 	if ( desc.nRequiredFeatures != 0 ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
-	// Device-budget sealing, custom residency and presentation are separate
-	// native work packages. They must not silently succeed in this slice.
-	if ( !desc.bHeadless || desc.nResidentBudgetBytes != 0 || desc.nUploadBudgetBytes != 0 || desc.nReadbackBudgetBytes != 0 ) {
+	if ( !desc.bHeadless ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
-	const sirGraphicsResult_t eResult = m_Device.initialize();
+	const bool bHasBudgets = desc.nResidentBudgetBytes != 0 || desc.nUploadBudgetBytes != 0 ||
+	                         desc.nReadbackBudgetBytes != 0;
+	const sirVulkanPoolBudget_t budgets = { desc.nResidentBudgetBytes, desc.nUploadBudgetBytes,
+	                                       desc.nReadbackBudgetBytes };
+	if ( bHasBudgets && !sirVulkanValidatePoolBudget( &budgets ) ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	const sirGraphicsResult_t eResult = m_Device.initialize( bHasBudgets ? &budgets : nullptr );
 	if ( eResult == SIR_GRAPHICS_SUCCESS ) {
 		*ppDevice = &m_Device;
 	}
