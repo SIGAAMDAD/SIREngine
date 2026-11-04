@@ -1,3 +1,8 @@
+add_executable(SIREngineLifecycleTests SIREngineLifecycleTests.cpp)
+target_link_libraries(SIREngineLifecycleTests PRIVATE SIR::Core)
+add_test(NAME core.application.system-lifecycle COMMAND SIREngineLifecycleTests)
+sir_configure_owned_target(SIREngineLifecycleTests)
+
 add_executable(SIRApplicationTests SIRApplicationTests.cpp)
 target_link_libraries(SIRApplicationTests PRIVATE SIR::Core)
 add_test(NAME core.application.lifecycle COMMAND SIRApplicationTests)

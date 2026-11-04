@@ -1,4 +1,4 @@
-add_library(SIRCore STATIC SIRApplication.cpp)
+add_library(SIRCore STATIC SIRApplication.cpp Systems/SIREngineSystem.cpp)
 add_library(SIR::Core ALIAS SIRCore)
 target_include_directories(SIRCore PUBLIC
     "${PROJECT_SOURCE_DIR}/Source"
