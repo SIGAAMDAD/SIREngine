@@ -78,6 +78,80 @@ static bool testBinaryModule( void ) noexcept
 		return false;
 	}
 
+	// ABI v1 ranks physical adapters even when the software adapter is first.
+	const sirGraphicsABIModule_t *szModules[] = { &module };
+	sirGraphicsABIModuleSelection_t policy = {};
+	policy.nSize = sizeof( policy );
+	policy.nBackend = SIR_GRAPHICS_BACKEND_AUTO;
+	policy.nAllowSoftware = 1;
+	policy.nRequiredFeatures = SIR_GRAPHICS_FEATURE_COMPUTE;
+	sirGraphicsABIAdapterChoice_t choice = {};
+	choice.nSize = sizeof( choice );
+	choice.nModuleIndex = 99;
+	pMode( 12 );
+	if ( sirGraphicsSelectABIModuleAdapter( szModules, 1, &policy, &choice ) != SIR_GRAPHICS_SUCCESS ||
+	     choice.nModuleIndex != 0 || choice.adapter.nIndex != 2 ||
+	     choice.adapter.nKind != SIR_GRAPHICS_ABI_ADAPTER_DISCRETE ) {
+		return false;
+	}
+	policy.nRequiredFeatures = SIR_GRAPHICS_FEATURE_COMPUTE | SIR_GRAPHICS_FEATURE_GRAPHICS;
+	if ( sirGraphicsSelectABIModuleAdapter( szModules, 1, &policy, &choice ) != SIR_GRAPHICS_SUCCESS ||
+	     choice.adapter.nIndex != 0 || choice.adapter.nKind != SIR_GRAPHICS_ABI_ADAPTER_SOFTWARE ) {
+		return false;
+	}
+	policy.nAllowSoftware = 0;
+	choice.nModuleIndex = 99;
+	if ( sirGraphicsSelectABIModuleAdapter( szModules, 1, &policy, &choice ) != SIR_GRAPHICS_UNSUPPORTED ||
+	     choice.nModuleIndex != 99 ) {
+		return false;
+	}
+	policy.nAllowSoftware = 1;
+	policy.nBackend = SIR_GRAPHICS_BACKEND_D3D12;
+	if ( sirGraphicsSelectABIModuleAdapter( szModules, 1, &policy, &choice ) != SIR_GRAPHICS_UNSUPPORTED ||
+	     choice.nModuleIndex != 99 ) {
+		return false;
+	}
+	policy.nBackend = SIR_GRAPHICS_BACKEND_VULKAN;
+	policy.nMinimumApiMajor = 1;
+	policy.nMinimumApiMinor = 5;
+	if ( sirGraphicsSelectABIModuleAdapter( szModules, 1, &policy, &choice ) != SIR_GRAPHICS_UNSUPPORTED ) {
+		return false;
+	}
+	policy.nMinimumApiMinor = 4;
+	if ( sirGraphicsSelectABIModuleAdapter( szModules, 1, &policy, &choice ) != SIR_GRAPHICS_SUCCESS ) {
+		return false;
+	}
+	policy.nBackend = SIR_GRAPHICS_BACKEND_AUTO;
+	choice.nModuleIndex = 99;
+	if ( sirGraphicsSelectABIModuleAdapter( szModules, 1, &policy, &choice ) != SIR_GRAPHICS_INVALID_ARGUMENT ||
+	     choice.nModuleIndex != 99 ) {
+		return false;
+	}
+	policy.nMinimumApiMajor = 0;
+	policy.nMinimumApiMinor = 0;
+	policy.nRequiredFeatures = SIR_GRAPHICS_FEATURE_COMPUTE;
+	pMode( 1 );
+	if ( sirGraphicsSelectABIModuleAdapter( szModules, 1, &policy, &choice ) != SIR_GRAPHICS_DRIVER_ERROR ||
+	     choice.nModuleIndex != 99 ) {
+		return false;
+	}
+	pMode( 9 );
+	if ( sirGraphicsSelectABIModuleAdapter( szModules, 1, &policy, &choice ) != SIR_GRAPHICS_CAPACITY_EXCEEDED ) {
+		return false;
+	}
+	pMode( 13 );
+	choice.nModuleIndex = 99;
+	if ( sirGraphicsSelectABIModuleAdapter( szModules, 1, &policy, &choice ) != SIR_GRAPHICS_DRIVER_ERROR ||
+	     choice.nModuleIndex != 99 ) {
+		return false;
+	}
+	pMode( 0 );
+	policy.nAllowSoftware = 0;
+	if ( sirGraphicsSelectABIModuleAdapter( szModules, 1, &policy, &choice ) != SIR_GRAPHICS_UNSUPPORTED ) {
+		return false;
+	}
+	policy.nAllowSoftware = 1;
+
 	sirGraphicsABIDeviceRequest_t request = {};
 	request.nSize = sizeof( request );
 	request.nAdapterIndex = 0;

@@ -25,6 +25,132 @@ static sirGraphicsABIResult_t sirGraphicsResultFromProvider( uint32_t nResult ) 
 	return ( sirGraphicsABIResult_t )nResult;
 }
 
+static uint32_t sirGraphicsABICountFeatureBits( uint64_t nMask ) noexcept
+{
+	uint32_t nCount = 0;
+	while ( nMask != 0 ) {
+		nMask &= nMask - 1;
+		++nCount;
+	}
+	return nCount;
+}
+
+static bool sirGraphicsABIPreferAdapter( const sirGraphicsABIAdapter_t& candidate, const sirGraphicsABIAdapter_t& current ) noexcept
+{
+	const bool bSoftwareCandidate = candidate.nKind == SIR_GRAPHICS_ABI_ADAPTER_SOFTWARE;
+	const bool bSoftwareCurrent = current.nKind == SIR_GRAPHICS_ABI_ADAPTER_SOFTWARE;
+	if ( bSoftwareCandidate != bSoftwareCurrent ) {
+		return !bSoftwareCandidate;
+	}
+	const uint32_t nCandidateFeatures = sirGraphicsABICountFeatureBits( candidate.nFeatureMask );
+	const uint32_t nCurrentFeatures = sirGraphicsABICountFeatureBits( current.nFeatureMask );
+	if ( nCandidateFeatures != nCurrentFeatures ) {
+		return nCandidateFeatures > nCurrentFeatures;
+	}
+	if ( candidate.nDedicatedBytes != current.nDedicatedBytes ) {
+		return candidate.nDedicatedBytes > current.nDedicatedBytes;
+	}
+	if ( candidate.nSharedBytes != current.nSharedBytes ) {
+		return candidate.nSharedBytes > current.nSharedBytes;
+	}
+	if ( candidate.nBackend != current.nBackend ) {
+		return candidate.nBackend < current.nBackend;
+	}
+	if ( candidate.nStableId != current.nStableId ) {
+		return candidate.nStableId < current.nStableId;
+	}
+	return candidate.nIndex < current.nIndex;
+}
+
+sirGraphicsABIResult_t sirGraphicsSelectABIModuleAdapter( const sirGraphicsABIModule_t *const *ppModules, uint32_t nModuleCount,
+                                                          const sirGraphicsABIModuleSelection_t *pPolicy,
+                                                          sirGraphicsABIAdapterChoice_t *pChoice ) noexcept
+{
+	if ( ppModules == nullptr || pPolicy == nullptr || pChoice == nullptr || nModuleCount == 0 ||
+	     pPolicy->nSize < sizeof( sirGraphicsABIModuleSelection_t ) ||
+	     pChoice->nSize < sizeof( sirGraphicsABIAdapterChoice_t ) ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	if ( nModuleCount > 16 ) {
+		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
+	}
+	if ( pPolicy->nBackend > SIR_GRAPHICS_BACKEND_OPENGL || pPolicy->nAllowSoftware > 1 || pPolicy->nReserved != 0 ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	if ( pPolicy->nBackend == SIR_GRAPHICS_BACKEND_AUTO &&
+	     ( pPolicy->nMinimumApiMajor != 0 || pPolicy->nMinimumApiMinor != 0 ) ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	if ( pPolicy->nMinimumApiMajor == 0 && pPolicy->nMinimumApiMinor != 0 ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+
+	sirGraphicsABIAdapterChoice_t best = {};
+	best.nSize = sizeof( best );
+	bool bFound = false;
+	for ( uint32_t iModule = 0; iModule < nModuleCount; ++iModule ) {
+		const sirGraphicsABIModule_t *pModule = ppModules[iModule];
+		if ( pModule == nullptr ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
+		const sirGraphicsABIResult_t eDriver = sirGraphicsValidateABIDriver( &pModule->driver );
+		if ( eDriver != SIR_GRAPHICS_SUCCESS ) {
+			return eDriver;
+		}
+		if ( pPolicy->nBackend != SIR_GRAPHICS_BACKEND_AUTO && pModule->driver.nBackend != pPolicy->nBackend ) {
+			continue;
+		}
+		uint32_t nAdapterCount = 0;
+		const sirGraphicsABIResult_t eCount =
+		    sirGraphicsResultFromProvider( pModule->driver.pAdapterCount( pModule->driver.pDriver, &nAdapterCount ) );
+		if ( eCount == SIR_GRAPHICS_UNSUPPORTED && pPolicy->nBackend == SIR_GRAPHICS_BACKEND_AUTO ) {
+			continue;
+		}
+		if ( eCount != SIR_GRAPHICS_SUCCESS ) {
+			return eCount;
+		}
+		if ( nAdapterCount > 256 ) {
+			return SIR_GRAPHICS_CAPACITY_EXCEEDED;
+		}
+		for ( uint32_t iAdapter = 0; iAdapter < nAdapterCount; ++iAdapter ) {
+			sirGraphicsABIAdapter_t adapter = {};
+			adapter.nSize = sizeof( adapter );
+			adapter.nIndex = iAdapter;
+			const sirGraphicsABIResult_t eAdapter =
+			    sirGraphicsResultFromProvider( pModule->driver.pQueryAdapter( pModule->driver.pDriver, &adapter ) );
+			if ( eAdapter != SIR_GRAPHICS_SUCCESS ) {
+				return eAdapter;
+			}
+			if ( sirGraphicsValidateABIAdapter( &adapter ) != SIR_GRAPHICS_SUCCESS ||
+			     adapter.nIndex != iAdapter || adapter.nBackend != pModule->driver.nBackend ) {
+				return SIR_GRAPHICS_DRIVER_ERROR;
+			}
+			if ( adapter.nKind == SIR_GRAPHICS_ABI_ADAPTER_SOFTWARE && pPolicy->nAllowSoftware == 0 ) {
+				continue;
+			}
+			if ( ( adapter.nFeatureMask & pPolicy->nRequiredFeatures ) != pPolicy->nRequiredFeatures ) {
+				continue;
+			}
+			if ( pPolicy->nMinimumApiMajor != 0 &&
+			     ( adapter.nApiMajor < pPolicy->nMinimumApiMajor ||
+		       ( adapter.nApiMajor == pPolicy->nMinimumApiMajor &&
+		         adapter.nApiMinor < pPolicy->nMinimumApiMinor ) ) ) {
+				continue;
+			}
+			if ( !bFound || sirGraphicsABIPreferAdapter( adapter, best.adapter ) ) {
+				best.nModuleIndex = iModule;
+				best.adapter = adapter;
+				bFound = true;
+			}
+		}
+	}
+	if ( !bFound ) {
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
+	memcpy( pChoice, &best, sizeof( best ) );
+	return SIR_GRAPHICS_SUCCESS;
+}
+
 sirGraphicsABIResult_t sirGraphicsLoadABIModule( const char *pszPath, const sirGraphicsABIHost_t *pHost,
                                                  sirGraphicsABIModule_t *pModule ) noexcept
 {

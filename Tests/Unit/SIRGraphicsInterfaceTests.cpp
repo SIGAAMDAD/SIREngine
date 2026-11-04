@@ -26,6 +26,12 @@ public:
 		m_nAdapterCount = nCount;
 	}
 
+	void setMemory( uint64_t nDedicated, uint64_t nShared ) noexcept
+	{
+		m_Adapter.nDedicatedVideoBytes = nDedicated;
+		m_Adapter.nSharedSystemBytes = nShared;
+	}
+
 	sirGraphicsBackend_t getBackend( void ) const noexcept override
 	{
 		return m_eBackend;
@@ -274,6 +280,95 @@ static bool testRegistry( void ) noexcept
 	       registry.unregisterDriver( SIR_GRAPHICS_BACKEND_OPENGL ) == SIR_GRAPHICS_SUCCESS && registry.getCount() == 0;
 }
 
+static bool testRankedSelection( void ) noexcept
+{
+	SIRGraphicsRegistry registry;
+	constexpr uint64_t GRAPHICS = SIR_GRAPHICS_FEATURE_GRAPHICS;
+	constexpr uint64_t COMPUTE = SIR_GRAPHICS_FEATURE_COMPUTE;
+	SIRGraphicsTestDriver software( SIR_GRAPHICS_BACKEND_OPENGL, GRAPHICS | COMPUTE | SIR_GRAPHICS_FEATURE_HDR_OUTPUT, 2, 1, true );
+	SIRGraphicsTestDriver d3d12( SIR_GRAPHICS_BACKEND_D3D12, GRAPHICS | COMPUTE, 12, 0, false );
+	SIRGraphicsTestDriver vulkan( SIR_GRAPHICS_BACKEND_VULKAN, GRAPHICS | COMPUTE, 1, 4, false );
+	d3d12.setMemory( 2048, 0 );
+	vulkan.setMemory( 4096, 0 );
+
+	// Deliberately register software first and Vulkan last.
+	if ( registry.registerDriver( &software ) != SIR_GRAPHICS_SUCCESS ||
+	     registry.registerDriver( &d3d12 ) != SIR_GRAPHICS_SUCCESS ||
+	     registry.registerDriver( &vulkan ) != SIR_GRAPHICS_SUCCESS ) {
+		return false;
+	}
+
+	sirGraphicsSelection_t selection = {};
+	selection.eBackend = SIR_GRAPHICS_BACKEND_AUTO;
+	selection.nRequiredFeatures = GRAPHICS;
+	selection.bAllowSoftware = true;
+	SIRGraphicsDriver *pDriver = nullptr;
+	sirGraphicsAdapterInfo_t adapter = {};
+
+	if ( registry.selectDriver( selection, &pDriver, &adapter ) != SIR_GRAPHICS_SUCCESS ||
+	     pDriver != &vulkan || adapter.bSoftwareAdapter ) {
+		return false;
+	}
+	// When dedicated memory differs but the feature set is the same, select
+	// the eligible device with more reported dedicated memory.
+	vulkan.setMemory( 1024, 0 );
+	if ( registry.selectDriver( selection, &pDriver, &adapter ) != SIR_GRAPHICS_SUCCESS || pDriver != &d3d12 ) {
+		return false;
+	}
+	// Deterministic backend tie-break is independent of registration order.
+	vulkan.setMemory( 2048, 0 );
+	if ( registry.selectDriver( selection, &pDriver, &adapter ) != SIR_GRAPHICS_SUCCESS || pDriver != &vulkan ) {
+		return false;
+	}
+
+	// Software is eligible only when the caller permits it, and only after
+	// feature and version checks have excluded every physical candidate.
+	selection.nRequiredFeatures = GRAPHICS | SIR_GRAPHICS_FEATURE_HDR_OUTPUT;
+	if ( registry.selectDriver( selection, &pDriver, &adapter ) != SIR_GRAPHICS_SUCCESS ||
+	     pDriver != &software || !adapter.bSoftwareAdapter ) {
+		return false;
+	}
+	selection.bAllowSoftware = false;
+	if ( registry.selectDriver( selection, &pDriver, &adapter ) != SIR_GRAPHICS_UNSUPPORTED || pDriver != nullptr ) {
+		return false;
+	}
+	selection.bAllowSoftware = true;
+
+	// Explicit backend selection remains strict; no cross-API software path.
+	selection.eBackend = SIR_GRAPHICS_BACKEND_D3D12;
+	if ( registry.selectDriver( selection, &pDriver, &adapter ) != SIR_GRAPHICS_UNSUPPORTED ) {
+		return false;
+	}
+	selection.eBackend = SIR_GRAPHICS_BACKEND_OPENGL;
+	if ( registry.selectDriver( selection, &pDriver, &adapter ) != SIR_GRAPHICS_SUCCESS || pDriver != &software ) {
+		return false;
+	}
+	// API versions cannot be compared across different backend version systems.
+	selection.eBackend = SIR_GRAPHICS_BACKEND_AUTO;
+	selection.nMinimumApiVersion = { 1, 4, 0 };
+	if ( registry.selectDriver( selection, &pDriver, &adapter ) != SIR_GRAPHICS_INVALID_ARGUMENT || pDriver != nullptr ) {
+		return false;
+	}
+	selection.nMinimumApiVersion = {};
+
+	SIRGraphicsRegistry invalidRegistry;
+	SIRGraphicsTestDriver invalid( SIR_GRAPHICS_BACKEND_VULKAN, GRAPHICS, 0, 0, false );
+	if ( invalidRegistry.registerDriver( &invalid ) != SIR_GRAPHICS_SUCCESS ) {
+		return false;
+	}
+	selection.eBackend = SIR_GRAPHICS_BACKEND_VULKAN;
+	selection.nRequiredFeatures = GRAPHICS;
+	if ( invalidRegistry.selectDriver( selection, &pDriver, &adapter ) != SIR_GRAPHICS_DRIVER_ERROR ) {
+		return false;
+	}
+	SIRGraphicsRegistry invalidFeatures;
+	SIRGraphicsTestDriver bogus( SIR_GRAPHICS_BACKEND_VULKAN, GRAPHICS | ( 1ULL << 63 ), 1, 4, false );
+	if ( invalidFeatures.registerDriver( &bogus ) != SIR_GRAPHICS_SUCCESS ) {
+		return false;
+	}
+	return invalidFeatures.selectDriver( selection, &pDriver, &adapter ) == SIR_GRAPHICS_DRIVER_ERROR;
+}
+
 static bool testHandlesAndCompletions( void ) noexcept
 {
 	sirGraphicsHandle_t handle = { 0, 1, 7, SIR_GRAPHICS_HANDLE_BUFFER };
@@ -485,6 +580,10 @@ int main( void )
 	if ( !testRegistry() ) {
 		fputs( "graphics.registry FAILED\n", stderr );
 		return 1;
+	}
+	if ( !testRankedSelection() ) {
+		fputs( "graphics.registry.ranking FAILED\n", stderr );
+		return 5;
 	}
 	if ( !testHandlesAndCompletions() ) {
 		fputs( "graphics.handles FAILED\n", stderr );

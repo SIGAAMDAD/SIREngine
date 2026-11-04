@@ -39,13 +39,17 @@ static uint32_t mockAdapterCount( void *, uint32_t *pCount ) noexcept
 	if ( pCount == nullptr ) {
 		return SIR_GRAPHICS_ABI_INVALID_ARGUMENT;
 	}
-	*pCount = s_nMockMode == 9 ? 257 : 1;
+	*pCount = s_nMockMode == 9 ? 257 : ( s_nMockMode == 12 ? 3 : 1 );
 	return SIR_GRAPHICS_ABI_SUCCESS;
 }
 
 static uint32_t mockQueryAdapter( void *, sirGraphicsABIAdapter_t *pInfo ) noexcept
 {
-	if ( pInfo == nullptr || pInfo->nSize < sizeof( sirGraphicsABIAdapter_t ) || pInfo->nIndex != 0 ) {
+	if ( pInfo == nullptr || pInfo->nSize < sizeof( sirGraphicsABIAdapter_t ) ) {
+		return SIR_GRAPHICS_ABI_INVALID_ARGUMENT;
+	}
+	if ( ( s_nMockMode == 12 && pInfo->nIndex >= 3 ) ||
+	     ( s_nMockMode != 12 && pInfo->nIndex != 0 ) ) {
 		return SIR_GRAPHICS_ABI_INVALID_ARGUMENT;
 	}
 	const uint32_t nIndex = pInfo->nIndex;
@@ -58,8 +62,21 @@ static uint32_t mockQueryAdapter( void *, sirGraphicsABIAdapter_t *pInfo ) noexc
 	pInfo->nApiMinor = 4;
 	pInfo->nStableId = 0x1234;
 	pInfo->nFeatureMask = SIR_GRAPHICS_FEATURE_COMPUTE;
+	if ( s_nMockMode == 12 ) {
+		pInfo->nKind = nIndex == 0 ? SIR_GRAPHICS_ABI_ADAPTER_SOFTWARE
+		                            : ( nIndex == 1 ? SIR_GRAPHICS_ABI_ADAPTER_INTEGRATED : SIR_GRAPHICS_ABI_ADAPTER_DISCRETE );
+		pInfo->nStableId = 0x1234 + nIndex;
+		pInfo->nDedicatedBytes = nIndex == 2 ? 4096 : 0;
+		pInfo->nSharedBytes = nIndex == 1 ? 8192 : 0;
+		if ( nIndex == 0 ) {
+			pInfo->nFeatureMask |= SIR_GRAPHICS_FEATURE_GRAPHICS;
+		}
+	}
 	if ( s_nMockMode == 10 ) {
 		pInfo->nFeatureMask |= SIR_GRAPHICS_FEATURE_GRAPHICS | SIR_GRAPHICS_FEATURE_FIXED_FUNCTION;
+	}
+	if ( s_nMockMode == 13 ) {
+		pInfo->nFeatureMask |= 1ULL << 63;
 	}
 	pInfo->nQueueMask = 1U << SIR_GRAPHICS_QUEUE_DIRECT;
 	memcpy( pInfo->szName, "Mock Vulkan CPU", sizeof( "Mock Vulkan CPU" ) );

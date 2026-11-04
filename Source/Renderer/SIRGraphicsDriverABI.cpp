@@ -78,7 +78,9 @@ sirGraphicsABIResult_t sirGraphicsValidateABIAdapter( const sirGraphicsABIAdapte
 {
 	if ( pAdapter == nullptr || pAdapter->nSize < sizeof( sirGraphicsABIAdapter_t ) || pAdapter->nBackend < SIR_GRAPHICS_BACKEND_VULKAN ||
 	     pAdapter->nBackend > SIR_GRAPHICS_BACKEND_OPENGL || pAdapter->nKind < SIR_GRAPHICS_ABI_ADAPTER_DISCRETE ||
-	     pAdapter->nKind > SIR_GRAPHICS_ABI_ADAPTER_OTHER || pAdapter->nQueueMask == 0 ||
+	     pAdapter->nKind > SIR_GRAPHICS_ABI_ADAPTER_OTHER || pAdapter->nApiMajor == 0 ||
+	     ( pAdapter->nFeatureMask & ~( ( SIR_GRAPHICS_FEATURE_PRESENT << 1 ) - 1ULL ) ) != 0 ||
+	     pAdapter->nQueueMask == 0 ||
 	     ( pAdapter->nQueueMask & ~( ( 1U << SIR_GRAPHICS_QUEUE_COUNT ) - 1U ) ) != 0 || pAdapter->nReserved != 0 ||
 	     pAdapter->szName[127] != '\0' ) {
 		return SIR_GRAPHICS_ABI_INVALID_ARGUMENT;

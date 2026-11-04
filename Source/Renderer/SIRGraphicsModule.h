@@ -36,6 +36,32 @@ typedef struct sirGraphicsABIModule_s
 	uint32_t nReserved;
 } sirGraphicsABIModule_t;
 
+// Host-side adapter admission policy. AUTO ranks across modules and adapters;
+// an explicit backend only considers that API. This is not a second DLL ABI.
+typedef struct sirGraphicsABIModuleSelection_s
+{
+	uint32_t nSize;
+	uint32_t nBackend;
+	uint32_t nMinimumApiMajor;
+	uint32_t nMinimumApiMinor;
+	uint32_t nAllowSoftware;
+	uint32_t nReserved;
+	uint64_t nRequiredFeatures;
+} sirGraphicsABIModuleSelection_t;
+
+typedef struct sirGraphicsABIAdapterChoice_s
+{
+	uint32_t nSize;
+	uint32_t nModuleIndex;
+	sirGraphicsABIAdapter_t adapter;
+} sirGraphicsABIAdapterChoice_t;
+
+// The module list is borrowed for this call. Enumeration and output are
+// bounded; no module or device is created and no allocation is performed.
+sirGraphicsABIResult_t sirGraphicsSelectABIModuleAdapter( const sirGraphicsABIModule_t *const *ppModules, uint32_t nModuleCount,
+                                                          const sirGraphicsABIModuleSelection_t *pPolicy,
+                                                          sirGraphicsABIAdapterChoice_t *pChoice ) noexcept;
+
 // Startup/shutdown only; the module must outlive every native device and
 // recorded command context. No implicit fallback or process-global registry.
 sirGraphicsABIResult_t sirGraphicsLoadABIModule( const char *pszPath, const sirGraphicsABIHost_t *pHost,
