@@ -49,6 +49,12 @@ static std::atomic<bool> s_bMapAccessFault{ false };
 static std::atomic<bool> s_bSizeFault{ false };
 static std::atomic<bool> s_bPageFault{ false };
 static std::atomic<bool> s_bUnmapFault{ false };
+static std::atomic<bool> s_bNegativeFileSize{ false };
+static std::atomic<bool> s_bNegativeFileInfo{ false };
+static std::atomic<bool> s_bSyncFileFault{ false };
+static std::atomic<bool> s_bTruncateFault{ false };
+static std::atomic<bool> s_bCloseFault{ false };
+static std::atomic<int> s_nAppendWriteFault{ 0 };
 static std::atomic<bool> s_bSyncFault{ false };
 static std::atomic<bool> s_bPipeFault{ false };
 static std::atomic<bool> s_bWaitFault{ false };
@@ -60,6 +66,11 @@ extern "C" ssize_t __real_pwrite( int nHandle, const void *pData, size_t nBytes,
 extern "C" void *__real_mmap( void *pAddress, size_t nBytes, int nProtection, int nFlags, int nHandle, off_t nOffset );
 extern "C" int __real_msync( void *pAddress, size_t nBytes, int nFlags );
 extern "C" int __real_fstat( int nHandle, struct stat *pInfo );
+extern "C" int __real_stat( const char *pszPath, struct stat *pInfo );
+extern "C" int __real_fsync( int nHandle );
+extern "C" int __real_ftruncate( int nHandle, off_t nSize );
+extern "C" int __real_close( int nHandle );
+extern "C" ssize_t __real_write( int nHandle, const void *pBytes, size_t nCount );
 extern "C" long __real_sysconf( int nParameter );
 extern "C" int __real_munmap( void *pAddress, size_t nBytes );
 extern "C" int __real_pipe2( int *pHandles, int nFlags );
@@ -117,7 +128,69 @@ extern "C" int __wrap_fstat( int nHandle, struct stat *pInfo )
 		errno = EIO;
 		return -1;
 	}
-	return __real_fstat( nHandle, pInfo );
+	const int nResult = __real_fstat( nHandle, pInfo );
+	if ( nResult == 0 && s_bNegativeFileSize.exchange( false, std::memory_order_relaxed ) ) {
+		pInfo->st_size = -1;
+	}
+	return nResult;
+}
+
+extern "C" int __wrap_stat( const char *pszPath, struct stat *pInfo )
+{
+	const int nResult = __real_stat( pszPath, pInfo );
+	if ( nResult == 0 && s_bNegativeFileInfo.exchange( false, std::memory_order_relaxed ) ) {
+		pInfo->st_size = -1;
+		pInfo->st_mtim.tv_sec = -1;
+	}
+	return nResult;
+}
+
+extern "C" int __wrap_fsync( int nHandle )
+{
+	if ( s_bSyncFileFault.exchange( false, std::memory_order_relaxed ) ) {
+		errno = EIO;
+		return -1;
+	}
+	return __real_fsync( nHandle );
+}
+
+extern "C" int __wrap_ftruncate( int nHandle, off_t nSize )
+{
+	if ( s_bTruncateFault.exchange( false, std::memory_order_relaxed ) ) {
+		errno = EINVAL;
+		return -1;
+	}
+	return __real_ftruncate( nHandle, nSize );
+}
+
+extern "C" int __wrap_close( int nHandle )
+{
+	if ( s_bCloseFault.exchange( false, std::memory_order_relaxed ) ) {
+		( void )__real_close( nHandle );
+		errno = EIO;
+		return -1;
+	}
+	return __real_close( nHandle );
+}
+
+extern "C" ssize_t __wrap_write( int nHandle, const void *pBytes, size_t nCount )
+{
+	const int nMode = s_nAppendWriteFault.load( std::memory_order_relaxed );
+	if ( nMode == 1 && s_nAppendWriteFault.exchange( 0, std::memory_order_relaxed ) == 1 ) {
+		errno = EINTR;
+		return -1;
+	}
+	if ( nMode == 2 ) {
+		errno = EIO;
+		return -1;
+	}
+	if ( nMode == 3 ) {
+		return 0;
+	}
+	if ( nMode == 4 ) {
+		return __real_write( nHandle, pBytes, nCount > 1 ? nCount / 2 : nCount );
+	}
+	return __real_write( nHandle, pBytes, nCount );
 }
 
 extern "C" long __wrap_sysconf( int nParameter )
@@ -258,8 +331,35 @@ static void sirTestInjectedPositionalTransfers( void )
 	SIR_CHECK( mapping.unmap() == SIR_FILE_IO_ERROR && mapping.isMapped() );
 	SIR_CHECK( mapping.unmap() == SIR_FILE_OK );
 	SIR_CHECK( file.readAt( 1, szActual, 1, &nTransferred ) == SIR_FILE_OK && szActual[0] == 0xA7 );
-
+	s_bNegativeFileSize.store( true, std::memory_order_relaxed );
+	uint64_t nInvalidSize = 0;
+	SIR_CHECK( file.getSize( &nInvalidSize ) == SIR_FILE_OUT_OF_RANGE );
+	s_bNegativeFileInfo.store( true, std::memory_order_relaxed );
+	sirFileInfo_t invalidInfo = {};
+	SIR_CHECK( SIRPlatformFile::getInfo( pszPath, &invalidInfo ) == SIR_FILE_OK );
+	SIR_CHECK( invalidInfo.nSizeBytes == 0 && invalidInfo.nModifiedUnixNanoseconds == 0 );
 	SIR_CHECK( file.close() == SIR_FILE_OK );
+	SIR_CHECK( file.open( pszPath, SIR_FILE_OPEN_WRITE | SIR_FILE_OPEN_APPEND ) == SIR_FILE_OK );
+	uint8_t szAppend[8] = { 1, 2, 3, 4, 5, 6, 7, 8 };
+	SIR_CHECK( file.write( szAppend, 8, nullptr ) == SIR_FILE_INVALID_ARGUMENT );
+	s_nAppendWriteFault.store( 1, std::memory_order_relaxed );
+	SIR_CHECK( file.write( szAppend, 8, &nTransferred ) == SIR_FILE_OK && nTransferred == 8 );
+	s_nAppendWriteFault.store( 2, std::memory_order_relaxed );
+	SIR_CHECK( file.write( szAppend, 8, &nTransferred ) == SIR_FILE_IO_ERROR && nTransferred == 0 );
+	s_nAppendWriteFault.store( 3, std::memory_order_relaxed );
+	SIR_CHECK( file.write( szAppend, 8, &nTransferred ) == SIR_FILE_IO_ERROR && nTransferred == 0 );
+	s_nAppendWriteFault.store( 4, std::memory_order_relaxed );
+	SIR_CHECK( file.write( szAppend, 8, &nTransferred ) == SIR_FILE_OK && nTransferred == 8 );
+	s_nAppendWriteFault.store( 0, std::memory_order_relaxed );
+	s_bSyncFileFault.store( true, std::memory_order_relaxed );
+	SIR_CHECK( file.flush() == SIR_FILE_IO_ERROR );
+	s_bTruncateFault.store( true, std::memory_order_relaxed );
+	SIR_CHECK( file.truncate( 8 ) == SIR_FILE_INVALID_ARGUMENT );
+	s_bCloseFault.store( true, std::memory_order_relaxed );
+	SIR_CHECK( file.close() == SIR_FILE_IO_ERROR && !file.isOpen() );
+	SIR_CHECK( SIRPlatformFile::renameReplace( "SIRFileMissingRenameSource.bin", "SIRFileMissingRenameDest.bin" ) == SIR_FILE_NOT_FOUND );
+
+
 	SIR_CHECK( SIRPlatformFile::remove( pszPath ) == SIR_FILE_OK );
 }
 
