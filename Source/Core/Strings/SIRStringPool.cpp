@@ -36,6 +36,9 @@ static constexpr size_t SIR_COOKED_HEADER_BYTES = 48;
 static constexpr uint32_t SIR_MAX_COOKED_TEXT_BYTES = 1024;
 static constexpr uint32_t SIR_DIRECT_TEXT_SLOT = UINT32_MAX;
 static constexpr uint32_t SIR_ENTRY_INDEX_MASK = 0x00ffffffU;
+static constexpr uint32_t SIR_DEFAULT_CACHE_COUNTS[SIR_STRING_CACHE_TIER_COUNT] = { 512, 256, 128, 64, 24, 12 };
+static constexpr uint32_t SIR_DEFAULT_CACHE_BYTES[SIR_STRING_CACHE_TIER_COUNT] = { 16, 64, 128, 256, 512, 1024 };
+static constexpr uint32_t SIR_INITIAL_CACHE_COUNTS[SIR_STRING_CACHE_TIER_COUNT] = { 16, 8, 4, 2, 1, 1 };
 static std::atomic<uint64_t> s_nNextAtomId( 1 );
 
 static bool reserveAtomIds( uint32_t count, uint32_t& baseId ) noexcept
@@ -293,7 +296,7 @@ SIRStringPool::SIRStringPool( void ) noexcept
     : m_pMemory( NULL ), m_nMemoryBytes( 0 ), m_nCursor( 0 ), m_bOwnsMemory( false ), m_Allocator(), m_nBaseId( 0 ), m_nCatalogHash( 0 ),
       m_nHashBuckets( 0 ), m_nMaxNames( 0 ), m_nCookedNames( 0 ), m_nDynamicTextCapacity( 0 ), m_nDynamicUsed( 0 ), m_nCacheCursor( 0 ),
       m_nCacheSlots( 0 ), m_nNextUnusedShort( 0 ), m_nNextUnusedLong( 0 ), m_nShortBytes( 0 ), m_nLongBytes( 0 ), m_nShortSlots( 0 ),
-      m_nLongSlots( 0 ), m_bAdaptiveBudgets( false ), m_nInitialNameBudget( 0 ), m_nInitialDynamicTextBudget( 0 ),
+      m_nLongSlots( 0 ), m_bTieredCache( false ), m_bAdaptiveBudgets( false ), m_nInitialNameBudget( 0 ), m_nInitialDynamicTextBudget( 0 ),
       m_nInitialShortSlots( 0 ), m_nInitialLongSlots( 0 ), m_nActiveNameBudget( 0 ), m_nActiveDynamicTextBudget( 0 ),
       m_nActiveShortSlots( 0 ), m_nActiveLongSlots( 0 ), m_nNames( 0 ), m_nDirectLeases( 0 ),
 #if SIR_STRING_GROUPED_INDEX
@@ -326,19 +329,47 @@ sirStringPoolConfig_t SIRStringPool::defaultConfig( void ) noexcept
 	config.nShortBytes = 128;
 	config.nLongBytes = 1024;
 	config.bAdaptiveBudgets = true;
+	config.bTieredCache = true;
+	for ( uint32_t iTier = 0; iTier < SIR_STRING_CACHE_TIER_COUNT; ++iTier ) {
+		config.nTierSlots[iTier] = SIR_DEFAULT_CACHE_COUNTS[iTier];
+		config.nTierBytes[iTier] = SIR_DEFAULT_CACHE_BYTES[iTier];
+	}
 	return config;
 }
 
 size_t SIRStringPool::requiredBytes( const sirStringPoolConfig_t& config, size_t cookedBytes ) noexcept
 {
 	if ( SIR_STRING_INDEX_TARGET_LOAD_PERCENT < 25 || SIR_STRING_INDEX_TARGET_LOAD_PERCENT > 85 || !isPowerOfTwo( config.nHashBuckets ) ||
-	     config.nMaxNames == 0 || config.nMaxNames > SIR_ENTRY_INDEX_MASK || config.nLongBytes < config.nShortBytes ||
-	     config.nLongBytes < SIR_MAX_COOKED_TEXT_BYTES || ( uint64_t )config.nShortSlots + config.nLongSlots > UINT32_MAX ||
+	     config.nMaxNames == 0 || config.nMaxNames > SIR_ENTRY_INDEX_MASK ||
 	     ( cookedBytes != 0 && cookedBytes < SIR_COOKED_HEADER_BYTES ) ||
 	     ( config.bAdaptiveBudgets &&
-	       ( config.nInitialNameBudget > config.nMaxNames || config.nInitialDynamicTextBytes > config.nDynamicTextBytes ||
-	         config.nInitialShortSlots > config.nShortSlots || config.nInitialLongSlots > config.nLongSlots ) ) ) {
+	       ( config.nInitialNameBudget > config.nMaxNames || config.nInitialDynamicTextBytes > config.nDynamicTextBytes ) ) ) {
 		return 0;
+	}
+	uint64_t nCacheSlots = 0;
+	if ( config.bTieredCache ) {
+		uint32_t nPreviousBytes = 0;
+		for ( uint32_t iTier = 0; iTier < SIR_STRING_CACHE_TIER_COUNT; ++iTier ) {
+			if ( config.nTierBytes[iTier] <= nPreviousBytes ||
+			     ( config.bAdaptiveBudgets && config.nInitialTierSlots[iTier] > config.nTierSlots[iTier] ) ) {
+				return 0;
+			}
+			nPreviousBytes = config.nTierBytes[iTier];
+			nCacheSlots += config.nTierSlots[iTier];
+		}
+		if ( nCacheSlots > UINT32_MAX || nPreviousBytes < SIR_MAX_COOKED_TEXT_BYTES ) {
+			return 0;
+		}
+	} else {
+		if ( config.nLongBytes < config.nShortBytes || config.nLongBytes < SIR_MAX_COOKED_TEXT_BYTES ||
+		     ( config.bAdaptiveBudgets &&
+		       ( config.nInitialShortSlots > config.nShortSlots || config.nInitialLongSlots > config.nLongSlots ) ) ) {
+			return 0;
+		}
+		nCacheSlots = ( uint64_t )config.nShortSlots + config.nLongSlots;
+		if ( nCacheSlots > UINT32_MAX ) {
+			return 0;
+		}
 	}
 	uint64_t requiredSlots =
 	    ( ( uint64_t )config.nMaxNames * 100 + SIR_STRING_INDEX_TARGET_LOAD_PERCENT - 1 ) / SIR_STRING_INDEX_TARGET_LOAD_PERCENT;
@@ -367,18 +398,25 @@ size_t SIRStringPool::requiredBytes( const sirStringPoolConfig_t& config, size_t
 	if ( !checkedMultiply( config.nMaxNames, sizeof( sirStringPoolDynamicEntry_t ), bytes ) || !checkedAdd( total, bytes ) ||
 	     !checkedMultiply( cookedUpper, sizeof( sirStringPoolCookedEntry_t ) + sizeof( uint64_t ) + sizeof( std::atomic<uint32_t> ),
 	                       bytes ) ||
-	     !checkedAdd( total, bytes ) ||
-	     !checkedMultiply( ( size_t )config.nShortSlots + config.nLongSlots, sizeof( sirStringPoolCacheSlot_t ), bytes ) ||
+	     !checkedAdd( total, bytes ) || !checkedMultiply( ( size_t )nCacheSlots, sizeof( sirStringPoolCacheSlot_t ), bytes ) ||
 	     !checkedAdd( total, bytes ) || !checkedAdd( total, ( size_t )config.nDynamicTextBytes + 1 ) ||
 	     !checkedAdd( total, cookedBytes ) ) {
 		return 0;
 	}
-	if ( !checkedMultiply( config.nShortSlots, ( size_t )config.nShortBytes + 1, bytes ) || !checkedAdd( total, bytes ) ||
-	     !checkedMultiply( config.nLongSlots, ( size_t )config.nLongBytes + 1, bytes ) || !checkedAdd( total, bytes ) ||
-	     !checkedAdd( total, 8 * 64 ) ) {
-		return 0;
+	if ( config.bTieredCache ) {
+		for ( uint32_t iTier = 0; iTier < SIR_STRING_CACHE_TIER_COUNT; ++iTier ) {
+			if ( !checkedMultiply( config.nTierSlots[iTier], ( size_t )config.nTierBytes[iTier] + 1, bytes ) ||
+			     !checkedAdd( total, bytes ) ) {
+				return 0;
+			}
+		}
+	} else {
+		if ( !checkedMultiply( config.nShortSlots, ( size_t )config.nShortBytes + 1, bytes ) || !checkedAdd( total, bytes ) ||
+		     !checkedMultiply( config.nLongSlots, ( size_t )config.nLongBytes + 1, bytes ) || !checkedAdd( total, bytes ) ) {
+			return 0;
+		}
 	}
-	return total;
+	return checkedAdd( total, 8 * 64 ) ? total : 0;
 }
 
 size_t SIRStringPool::requiredBytes( const sirStringPoolConfig_t& config, const void *pCooked, size_t cookedBytes ) noexcept
@@ -431,6 +469,14 @@ void SIRStringPool::resetState( void ) noexcept
 	m_nDynamicTextCapacity = m_nDynamicUsed = m_nCacheCursor = m_nCacheSlots = 0;
 	m_nNextUnusedShort = m_nNextUnusedLong = 0;
 	m_nShortSlots = m_nLongSlots = m_nShortBytes = m_nLongBytes = 0;
+	m_bTieredCache = false;
+	memset( m_nTierStart, 0, sizeof( m_nTierStart ) );
+	memset( m_nTierSlots, 0, sizeof( m_nTierSlots ) );
+	memset( m_nTierBytes, 0, sizeof( m_nTierBytes ) );
+	memset( m_nTierNext, 0, sizeof( m_nTierNext ) );
+	memset( m_nTierCursor, 0, sizeof( m_nTierCursor ) );
+	memset( m_nInitialTierSlots, 0, sizeof( m_nInitialTierSlots ) );
+	memset( m_nActiveTierSlots, 0, sizeof( m_nActiveTierSlots ) );
 	m_bAdaptiveBudgets = false;
 	m_nInitialNameBudget = m_nInitialDynamicTextBudget = m_nInitialShortSlots = m_nInitialLongSlots = 0;
 	m_nActiveNameBudget = m_nActiveDynamicTextBudget = m_nActiveShortSlots = m_nActiveLongSlots = 0;
@@ -495,8 +541,27 @@ bool SIRStringPool::initialize( const sirStringPoolSpan_t& span, const sirString
 	m_nLongSlots = config.nLongSlots;
 	m_nShortBytes = config.nShortBytes;
 	m_nLongBytes = config.nLongBytes;
-	m_nCacheSlots = m_nShortSlots + m_nLongSlots;
+	m_bTieredCache = config.bTieredCache;
+	m_nCacheSlots = m_bTieredCache ? 0 : m_nShortSlots + m_nLongSlots;
 	m_bAdaptiveBudgets = config.bAdaptiveBudgets;
+	for ( uint32_t iTier = 0; iTier < SIR_STRING_CACHE_TIER_COUNT; ++iTier ) {
+		m_nTierStart[iTier] = m_nCacheSlots;
+		m_nTierSlots[iTier] = 0;
+		m_nTierBytes[iTier] = 0;
+		m_nTierNext[iTier] = 0;
+		m_nTierCursor[iTier] = 0;
+		m_nInitialTierSlots[iTier] = 0;
+		m_nActiveTierSlots[iTier] = 0;
+		if ( m_bTieredCache ) {
+			m_nTierSlots[iTier] = config.nTierSlots[iTier];
+			m_nTierBytes[iTier] = config.nTierBytes[iTier];
+			m_nInitialTierSlots[iTier] = m_bAdaptiveBudgets ? initialBudget( config.nTierSlots[iTier], config.nInitialTierSlots[iTier],
+			                                                                 SIR_INITIAL_CACHE_COUNTS[iTier] )
+			                                                : config.nTierSlots[iTier];
+			m_nActiveTierSlots[iTier] = m_nInitialTierSlots[iTier];
+			m_nCacheSlots += m_nTierSlots[iTier];
+		}
+	}
 	m_nInitialNameBudget = m_bAdaptiveBudgets ? initialBudget( m_nMaxNames, config.nInitialNameBudget, 512 ) : m_nMaxNames;
 	m_nInitialDynamicTextBudget =
 	    m_bAdaptiveBudgets ? initialBudget( m_nDynamicTextCapacity, config.nInitialDynamicTextBytes, 65536 ) : m_nDynamicTextCapacity;
@@ -583,7 +648,15 @@ bool SIRStringPool::initialize( const sirStringPoolSpan_t& span, const sirString
 	}
 	for ( uint32_t i = 0; i < m_nCacheSlots; ++i ) {
 		new ( &m_pCache[i] ) sirStringPoolCacheSlot_t();
-		m_pCache[i].nCapacity = i < m_nShortSlots ? m_nShortBytes : m_nLongBytes;
+		if ( m_bTieredCache ) {
+			uint32_t iTier = 0;
+			while ( iTier + 1 < SIR_STRING_CACHE_TIER_COUNT && i >= m_nTierStart[iTier + 1] ) {
+				++iTier;
+			}
+			m_pCache[i].nCapacity = m_nTierBytes[iTier];
+		} else {
+			m_pCache[i].nCapacity = i < m_nShortSlots ? m_nShortBytes : m_nLongBytes;
+		}
 		m_pCache[i].pszData = ( char * )carve( ( size_t )m_pCache[i].nCapacity + 1, 1 );
 		if ( m_pCache[i].pszData == NULL ) {
 			resetState();
@@ -706,6 +779,11 @@ bool SIRStringPool::retireScope( void ) noexcept
 	}
 	m_nNextUnusedShort = 0;
 	m_nNextUnusedLong = m_nShortSlots;
+	for ( uint32_t iTier = 0; iTier < SIR_STRING_CACHE_TIER_COUNT; ++iTier ) {
+		m_nTierNext[iTier] = 0;
+		m_nTierCursor[iTier] = 0;
+		m_nActiveTierSlots[iTier] = m_nInitialTierSlots[iTier];
+	}
 	m_nActiveShortSlots = m_nInitialShortSlots;
 	m_nActiveLongSlots = m_nInitialLongSlots;
 	m_nActiveNameBudget = m_nInitialNameBudget < m_nCookedNames ? m_nCookedNames : m_nInitialNameBudget;
@@ -1261,6 +1339,93 @@ bool SIRStringPool::tryAcquireHot( uint32_t index, uint32_t atomId, SIRStringLea
 	return false;
 }
 
+sirStringStatus_t SIRStringPool::acquireTiered( uint32_t nIndex, SIRStringAtom atom, SIRStringLease& lease ) noexcept
+{
+	m_cacheLock.lock();
+	if ( tryAcquireHot( nIndex, atom.getId(), lease ) ) {
+		m_cacheLock.unlock();
+		return SIR_STRING_OK;
+	}
+	const uint32_t nBytes = m_pCooked[nIndex].nLength;
+	uint32_t nVictim = m_nCacheSlots;
+	uint32_t nSelectedTier = SIR_STRING_CACHE_TIER_COUNT;
+	uint32_t nTargetActive = 0;
+	for ( uint32_t iTier = 0; iTier < SIR_STRING_CACHE_TIER_COUNT; ++iTier ) {
+		if ( nBytes > m_nTierBytes[iTier] || m_nTierSlots[iTier] == 0 ) {
+			continue;
+		}
+		const uint32_t nStart = m_nTierStart[iTier];
+		const uint32_t nSlots = m_nTierSlots[iTier];
+		nTargetActive = m_nActiveTierSlots[iTier];
+		if ( m_nTierNext[iTier] < nSlots ) {
+			if ( m_nTierNext[iTier] >= nTargetActive ) {
+				nTargetActive = grownBudget( nTargetActive, m_nTierNext[iTier] + 1, nSlots );
+			}
+			if ( m_nTierNext[iTier] < nTargetActive ) {
+				const uint32_t iSlot = nStart + m_nTierNext[iTier];
+				uint32_t nExpected = 0;
+				if ( m_pCache[iSlot].nPins.compare_exchange_strong( nExpected, UINT32_MAX, std::memory_order_acq_rel,
+				                                                    std::memory_order_acquire ) ) {
+					nVictim = iSlot;
+					nSelectedTier = iTier;
+					break;
+				}
+			}
+		}
+		/* Reuse only slots already made active. When the first class is
+		   fully pinned, a larger compatible class can absorb the miss. */
+		for ( uint32_t nProbe = 0; nProbe < m_nTierNext[iTier]; ++nProbe ) {
+			const uint32_t iLocal = ( m_nTierCursor[iTier] + nProbe ) % nSlots;
+			const uint32_t iSlot = nStart + iLocal;
+			uint32_t nExpected = 0;
+			if ( m_pCache[iSlot].nPins.compare_exchange_strong( nExpected, UINT32_MAX, std::memory_order_acq_rel,
+			                                                    std::memory_order_acquire ) ) {
+				nVictim = iSlot;
+				nSelectedTier = iTier;
+				break;
+			}
+		}
+		if ( nVictim != m_nCacheSlots ) {
+			break;
+		}
+	}
+	if ( nVictim == m_nCacheSlots ) {
+		m_cacheLock.unlock();
+		return nBytes > m_nTierBytes[SIR_STRING_CACHE_TIER_COUNT - 1] ? SIR_STRING_OUTPUT_TOO_SMALL : SIR_STRING_ALL_SLOTS_PINNED;
+	}
+	sirStringPoolCacheSlot_t& slot = m_pCache[nVictim];
+	const uint32_t nOldId = slot.nAtomId.load( std::memory_order_relaxed );
+	if ( nOldId >= m_nBaseId && m_nBaseId != 0 ) {
+		const uint32_t nOldIndex = nOldId - m_nBaseId;
+		if ( nOldIndex < m_nCookedNames ) {
+			m_pCookedHot[nOldIndex].store( 0, std::memory_order_release );
+		}
+	}
+	slot.nAtomId.store( 0, std::memory_order_release );
+	uint32_t nWritten = 0;
+	if ( !decodeCooked( nIndex, slot.pszData, ( size_t )slot.nCapacity + 1, nWritten ) ) {
+		slot.nPins.store( 0, std::memory_order_release );
+		m_cacheLock.unlock();
+		return SIR_STRING_CORRUPT_CATALOG;
+	}
+	slot.nBytes = nWritten;
+	++slot.nGeneration;
+	if ( slot.nGeneration == 0 ) {
+		++slot.nGeneration;
+	}
+	if ( nOldId == 0 ) {
+		++m_nTierNext[nSelectedTier];
+	}
+	m_nActiveTierSlots[nSelectedTier] = nTargetActive;
+	m_nTierCursor[nSelectedTier] = ( nVictim - m_nTierStart[nSelectedTier] + 1 ) % m_nTierSlots[nSelectedTier];
+	slot.nAtomId.store( atom.getId(), std::memory_order_release );
+	slot.nPins.store( 1, std::memory_order_release );
+	m_pCookedHot[nIndex].store( nVictim + 1, std::memory_order_release );
+	lease.bind( this, { nVictim, atom.getId(), slot.nGeneration, slot.pszData, nWritten } );
+	m_cacheLock.unlock();
+	return SIR_STRING_OK;
+}
+
 sirStringStatus_t SIRStringPool::acquire( SIRStringAtom atom, SIRStringLease& lease ) noexcept
 {
 	if ( lease.m_pPool == this && lease.m_nAtomId == atom.getId() ) {
@@ -1292,6 +1457,9 @@ sirStringStatus_t SIRStringPool::acquire( SIRStringAtom atom, SIRStringLease& le
 	}
 	if ( tryAcquireHot( index, atom.getId(), lease ) ) {
 		return SIR_STRING_OK;
+	}
+	if ( m_bTieredCache ) {
+		return acquireTiered( index, atom, lease );
 	}
 	m_cacheLock.lock();
 	if ( tryAcquireHot( index, atom.getId(), lease ) ) {
@@ -1514,8 +1682,19 @@ sirStringPoolStats_t SIRStringPool::getStats( void ) const noexcept
 	stats.nPinnedLeases = m_nDirectLeases.load( std::memory_order_acquire );
 	if ( m_pCache ) {
 		m_cacheLock.lock();
-		stats.nActiveShortSlots = m_nActiveShortSlots;
-		stats.nActiveLongSlots = m_nActiveLongSlots;
+		if ( m_bTieredCache ) {
+			for ( uint32_t iTier = 0; iTier < SIR_STRING_CACHE_TIER_COUNT; ++iTier ) {
+				stats.nActiveTierSlots[iTier] = m_nActiveTierSlots[iTier];
+				if ( iTier < 3 ) {
+					stats.nActiveShortSlots += m_nActiveTierSlots[iTier];
+				} else {
+					stats.nActiveLongSlots += m_nActiveTierSlots[iTier];
+				}
+			}
+		} else {
+			stats.nActiveShortSlots = m_nActiveShortSlots;
+			stats.nActiveLongSlots = m_nActiveLongSlots;
+		}
 		for ( uint32_t i = 0; i < m_nCacheSlots; ++i ) {
 			if ( m_pCache[i].nAtomId.load( std::memory_order_acquire ) ) {
 				++stats.nCachedStrings;

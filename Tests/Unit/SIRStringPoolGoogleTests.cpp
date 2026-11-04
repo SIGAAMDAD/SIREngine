@@ -15,6 +15,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Core/Strings/SIRStringPool.h>
 #include <gtest/gtest.h>
+#include <algorithm>
 #include <atomic>
 #include <cstdlib>
 #include <cstring>
@@ -64,6 +65,7 @@ static sirStringPoolConfig_t sirPoolTestConfig( void )
 	config.nHashBuckets = 32;
 	config.nMaxNames = 16;
 	config.nDynamicTextBytes = 256;
+	config.bTieredCache = false;
 	config.nShortSlots = 2;
 	config.nLongSlots = 1;
 	config.nShortBytes = 16;
@@ -130,9 +132,14 @@ static std::vector<uint8_t> sirTestCatalog( const std::vector<sirTestCookedName_
 		sirTestAppend32( bytes, ( uint32_t )blob.size() );
 		sirTestAppend16( bytes, ( uint16_t )name.sText.size() );
 		if ( name.bCompressed ) {
-			sirTestAppend16( bytes, ( uint16_t )( 1 + name.sText.size() ) );
-			blob.push_back( ( uint8_t )( name.sText.size() - 1 ) );
-			blob.insert( blob.end(), name.sText.begin(), name.sText.end() );
+			const size_t nEncoded = name.sText.size() + ( name.sText.size() + 127 ) / 128;
+			sirTestAppend16( bytes, ( uint16_t )nEncoded );
+			for ( size_t iByte = 0; iByte < name.sText.size(); ) {
+				const size_t nChunk = std::min( ( size_t )128, name.sText.size() - iByte );
+				blob.push_back( ( uint8_t )( nChunk - 1 ) );
+				blob.insert( blob.end(), name.sText.begin() + iByte, name.sText.begin() + iByte + nChunk );
+				iByte += nChunk;
+			}
 		} else {
 			sirTestAppend16( bytes, ( uint16_t )( 0x8000u | name.sText.size() ) );
 			blob.insert( blob.end(), name.sText.begin(), name.sText.end() );
@@ -878,8 +885,15 @@ TEST( SIRStringPool, AdaptiveDefaultShapeAndEightThousandNames )
 	const sirStringPoolConfig_t config = SIRStringPool::defaultConfig();
 	EXPECT_EQ( config.nMaxNames, 8192u );
 	EXPECT_EQ( config.nHashBuckets, 16384u );
-	EXPECT_EQ( config.nShortSlots, 16u );
-	EXPECT_EQ( config.nShortBytes, 128u );
+	EXPECT_TRUE( config.bTieredCache );
+	EXPECT_EQ( config.nTierSlots[0], 512u );
+	EXPECT_EQ( config.nTierSlots[1], 256u );
+	EXPECT_EQ( config.nTierSlots[2], 128u );
+	EXPECT_EQ( config.nTierSlots[3], 64u );
+	EXPECT_EQ( config.nTierSlots[4], 24u );
+	EXPECT_EQ( config.nTierSlots[5], 12u );
+	EXPECT_EQ( config.nTierBytes[0], 16u );
+	EXPECT_EQ( config.nTierBytes[5], 1024u );
 	EXPECT_TRUE( config.bAdaptiveBudgets );
 
 	SIRStringPool pool;
@@ -887,8 +901,12 @@ TEST( SIRStringPool, AdaptiveDefaultShapeAndEightThousandNames )
 	EXPECT_TRUE( pool.initialize( { span.data(), span.size(), nullptr, 0 }, config ) );
 	EXPECT_EQ( pool.getStats().nActiveNameBudget, 512u );
 	EXPECT_EQ( pool.getStats().nActiveDynamicTextBudget, 65536u );
-	EXPECT_EQ( pool.getStats().nActiveShortSlots, 4u );
-	EXPECT_EQ( pool.getStats().nActiveLongSlots, 1u );
+	EXPECT_EQ( pool.getStats().nActiveTierSlots[0], 16u );
+	EXPECT_EQ( pool.getStats().nActiveTierSlots[1], 8u );
+	EXPECT_EQ( pool.getStats().nActiveTierSlots[2], 4u );
+	EXPECT_EQ( pool.getStats().nActiveTierSlots[3], 2u );
+	EXPECT_EQ( pool.getStats().nActiveTierSlots[4], 1u );
+	EXPECT_EQ( pool.getStats().nActiveTierSlots[5], 1u );
 
 	char szName[32] = {};
 	for ( uint32_t iName = 0; iName < 8192; ++iName ) {
@@ -1012,4 +1030,252 @@ TEST( SIRStringPool, FixedBudgetsAndInvalidAdaptiveLimits )
 	config.nInitialShortSlots = 0;
 	config.nInitialLongSlots = config.nLongSlots + 1;
 	EXPECT_EQ( SIRStringPool::requiredBytes( config, 0 ), 0u );
+}
+
+/* Six-tier admission, residency, and pinning regression coverage. */
+static sirStringPoolConfig_t sirTestSixTierSmall( void )
+{
+	sirStringPoolConfig_t config = SIRStringPool::defaultConfig();
+	config.nMaxNames = 32;
+	config.nDynamicTextBytes = 128;
+	config.nHashBuckets = 64;
+	for ( uint32_t iTier = 0; iTier < SIR_STRING_CACHE_TIER_COUNT; ++iTier ) {
+		config.nTierSlots[iTier] = 2;
+		config.nInitialTierSlots[iTier] = 1;
+	}
+	return config;
+}
+
+static std::string sirTestName( char nLetter, uint32_t nLength )
+{
+	return std::string( 1, nLetter ) + std::string( nLength - 1, 'q' );
+}
+
+TEST( SIRStringPool, SixTierDefaultCountsCapacitiesAndMemoryFootprint )
+{
+	const sirStringPoolConfig_t config = SIRStringPool::defaultConfig();
+	const uint32_t nCounts[] = { 512, 256, 128, 64, 24, 12 };
+	const uint32_t nBytes[] = { 16, 64, 128, 256, 512, 1024 };
+	for ( uint32_t iTier = 0; iTier < SIR_STRING_CACHE_TIER_COUNT; ++iTier ) {
+		EXPECT_EQ( config.nTierSlots[iTier], nCounts[iTier] );
+		EXPECT_EQ( config.nTierBytes[iTier], nBytes[iTier] );
+	}
+	SIRStringPool pool;
+	std::vector<uint8_t> span( SIRStringPool::requiredBytes( config, 0 ) );
+	ASSERT_TRUE( pool.initialize( { span.data(), span.size(), nullptr, 0 }, config ) );
+	EXPECT_EQ( pool.getStats().nDecodedSlotCount, 996u );
+	EXPECT_EQ( pool.getStats().nActiveShortSlots, 28u );
+	EXPECT_EQ( pool.getStats().nActiveLongSlots, 4u );
+	EXPECT_EQ( pool.getReservedBytes(), span.size() );
+	EXPECT_TRUE( pool.shutdown() );
+}
+
+TEST( SIRStringPool, SixTierAllBoundariesAndAdaptiveGrowth )
+{
+	const uint32_t nLengths[] = { 16, 64, 128, 256, 512, 1024 };
+	std::vector<sirTestCookedName_t> names;
+	for ( uint32_t iTier = 0; iTier < 6; ++iTier ) {
+		names.push_back( { sirTestName( ( char )( 'a' + iTier * 2 ), nLengths[iTier] ), true } );
+		names.push_back( { sirTestName( ( char )( 'b' + iTier * 2 ), nLengths[iTier] ), true } );
+	}
+	const auto catalog = sirTestCatalog( names );
+	const auto config = sirTestSixTierSmall();
+	SIRStringPool pool;
+	std::vector<uint8_t> span;
+	ASSERT_TRUE( sirTestInitCatalog( &pool, catalog, config, &span ) );
+	SIRStringLease leases[12];
+	for ( uint32_t i = 0; i < names.size(); ++i ) {
+		EXPECT_EQ( pool.acquire( pool.find( names[i].sText.data(), names[i].sText.size() ), leases[i] ), SIR_STRING_OK );
+		EXPECT_EQ( leases[i].bytes(), names[i].sText.size() );
+		EXPECT_EQ( memcmp( leases[i].data(), names[i].sText.data(), names[i].sText.size() ), 0 );
+	}
+	EXPECT_EQ( pool.getStats().nPinnedLeases, 12u );
+	for ( uint32_t iTier = 0; iTier < SIR_STRING_CACHE_TIER_COUNT; ++iTier ) {
+		EXPECT_EQ( pool.getStats().nActiveTierSlots[iTier], 2u );
+	}
+	EXPECT_FALSE( pool.retireScope() );
+	for ( SIRStringLease& lease : leases ) {
+		lease.release();
+	}
+	EXPECT_TRUE( pool.retireScope() );
+	for ( uint32_t iTier = 0; iTier < SIR_STRING_CACHE_TIER_COUNT; ++iTier ) {
+		EXPECT_EQ( pool.getStats().nActiveTierSlots[iTier], 1u );
+	}
+	EXPECT_EQ( pool.getStats().nCachedStrings, 0u );
+	EXPECT_TRUE( pool.shutdown() );
+}
+
+TEST( SIRStringPool, SixTierExactSizeClassBoundaries )
+{
+	sirStringPoolConfig_t config = sirTestSixTierSmall();
+	const uint32_t nLengths[] = { 16, 17, 64, 65, 128, 129, 256, 257, 512, 513, 1024 };
+	std::vector<sirTestCookedName_t> names;
+	for ( uint32_t i = 0; i < 11; ++i ) {
+		names.push_back( { sirTestName( ( char )( 'a' + i ), nLengths[i] ), true } );
+	}
+	const auto catalog = sirTestCatalog( names );
+	SIRStringPool pool;
+	std::vector<uint8_t> span;
+	ASSERT_TRUE( sirTestInitCatalog( &pool, catalog, config, &span ) );
+	for ( const auto& name : names ) {
+		SIRStringLease lease;
+		EXPECT_EQ( pool.acquire( pool.find( name.sText.data(), name.sText.size() ), lease ), SIR_STRING_OK );
+		EXPECT_EQ( lease.bytes(), name.sText.size() );
+	}
+	EXPECT_EQ( pool.getStats().nCachedStrings, 11u );
+	EXPECT_TRUE( pool.shutdown() );
+}
+
+TEST( SIRStringPool, SixTierPinnedFallbackAndEviction )
+{
+	sirStringPoolConfig_t config = sirTestSixTierSmall();
+	for ( uint32_t iTier = 0; iTier < 6; ++iTier ) {
+		config.nTierSlots[iTier] = iTier < 2 ? 1u : 0u;
+		config.nInitialTierSlots[iTier] = 0;
+	}
+	const auto catalog = sirTestCatalog( { { "aa", true }, { "bb", true }, { "cc", true }, { "dd", true } } );
+	SIRStringPool pool;
+	std::vector<uint8_t> span;
+	ASSERT_TRUE( sirTestInitCatalog( &pool, catalog, config, &span ) );
+	SIRStringLease first, second, third;
+	EXPECT_EQ( pool.acquire( pool.find( "aa" ), first ), SIR_STRING_OK );
+	EXPECT_EQ( pool.acquire( pool.find( "bb" ), second ), SIR_STRING_OK );
+	EXPECT_EQ( pool.getStats().nActiveTierSlots[0], 1u );
+	EXPECT_EQ( pool.getStats().nActiveTierSlots[1], 1u );
+	EXPECT_EQ( pool.acquire( pool.find( "cc" ), third ), SIR_STRING_ALL_SLOTS_PINNED );
+	EXPECT_STREQ( first.data(), "aa" );
+	EXPECT_STREQ( second.data(), "bb" );
+	first.release();
+	EXPECT_EQ( pool.acquire( pool.find( "cc" ), third ), SIR_STRING_OK );
+	EXPECT_STREQ( third.data(), "cc" );
+	EXPECT_STREQ( second.data(), "bb" );
+	third.release();
+	second.release();
+	EXPECT_EQ( pool.acquire( pool.find( "dd" ), third ), SIR_STRING_OK );
+	third.release();
+	EXPECT_TRUE( pool.shutdown() );
+}
+
+TEST( SIRStringPool, SixTierZeroSlotAndInvalidConfigurationMatrix )
+{
+	sirStringPoolConfig_t config = sirTestSixTierSmall();
+	const size_t nOriginal = SIRStringPool::requiredBytes( config, 0 );
+	ASSERT_TRUE( nOriginal > 0 );
+	config.nTierBytes[3] = config.nTierBytes[2];
+	EXPECT_EQ( SIRStringPool::requiredBytes( config, 0 ), 0u );
+	config.nTierBytes[3] = 256;
+	config.nTierBytes[5] = 512;
+	EXPECT_EQ( SIRStringPool::requiredBytes( config, 0 ), 0u );
+	config.nTierBytes[5] = 1024;
+	config.nInitialTierSlots[1] = 3;
+	EXPECT_EQ( SIRStringPool::requiredBytes( config, 0 ), 0u );
+	config.nInitialTierSlots[1] = 1;
+	config.nTierSlots[0] = UINT32_MAX;
+	EXPECT_EQ( SIRStringPool::requiredBytes( config, 0 ), 0u );
+	config.nTierSlots[0] = 2;
+	for ( uint32_t iTier = 0; iTier < 6; ++iTier ) {
+		config.nTierSlots[iTier] = 0;
+		config.nInitialTierSlots[iTier] = 0;
+	}
+	EXPECT_TRUE( SIRStringPool::requiredBytes( config, 0 ) > 0 );
+	const auto catalog = sirTestCatalog( { { "alpha", true } } );
+	SIRStringPool pool;
+	std::vector<uint8_t> span;
+	EXPECT_TRUE( sirTestInitCatalog( &pool, catalog, config, &span ) );
+	SIRStringLease lease;
+	EXPECT_EQ( pool.acquire( pool.find( "alpha" ), lease ), SIR_STRING_ALL_SLOTS_PINNED );
+	EXPECT_TRUE( pool.shutdown() );
+}
+
+TEST( SIRStringPool, SixTierFixedBudgetsNoAdaptiveGrowth )
+{
+	const auto catalog = sirTestCatalog( { { "aa", true }, { "bb", true }, { "cc", true } } );
+	sirStringPoolConfig_t config = sirTestSixTierSmall();
+	config.bAdaptiveBudgets = false;
+	SIRStringPool pool;
+	std::vector<uint8_t> span;
+	ASSERT_TRUE( sirTestInitCatalog( &pool, catalog, config, &span ) );
+	for ( uint32_t iTier = 0; iTier < 6; ++iTier ) {
+		EXPECT_EQ( pool.getStats().nActiveTierSlots[iTier], 2u );
+	}
+	SIRStringLease lease;
+	EXPECT_EQ( pool.acquire( pool.find( "aa" ), lease ), SIR_STRING_OK );
+	lease.release();
+	EXPECT_TRUE( pool.shutdown() );
+}
+
+TEST( SIRStringPool, SixTierConcurrentMixedLengthAccess )
+{
+	const uint32_t nLengths[] = { 12, 40, 100, 190, 400, 900 };
+	std::vector<sirTestCookedName_t> names;
+	for ( uint32_t i = 0; i < 12; ++i ) {
+		names.push_back( { sirTestName( ( char )( 'a' + i ), nLengths[i % 6] ), true } );
+	}
+	sirStringPoolConfig_t config = sirTestSixTierSmall();
+	config.nTierSlots[0] = 4;
+	config.nTierSlots[1] = 4;
+	config.nTierSlots[2] = 4;
+	config.nTierSlots[3] = 4;
+	config.nTierSlots[4] = 4;
+	config.nTierSlots[5] = 4;
+	const auto catalog = sirTestCatalog( names );
+	SIRStringPool pool;
+	std::vector<uint8_t> span;
+	ASSERT_TRUE( sirTestInitCatalog( &pool, catalog, config, &span ) );
+	std::atomic<uint32_t> nErrors( 0 );
+	std::vector<std::thread> workers;
+	for ( uint32_t iWorker = 0; iWorker < 4; ++iWorker ) {
+		workers.emplace_back( [&, iWorker]() {
+			for ( uint32_t i = 0; i < 1200; ++i ) {
+				const uint32_t iName = ( i * 7 + iWorker * 3 ) % ( uint32_t )names.size();
+				SIRStringLease lease;
+				const auto& name = names[iName].sText;
+				if ( pool.acquire( pool.find( name.data(), name.size() ), lease ) != SIR_STRING_OK || lease.bytes() != name.size() ||
+				     memcmp( lease.data(), name.data(), name.size() ) != 0 ) {
+					nErrors.fetch_add( 1, std::memory_order_relaxed );
+				}
+			}
+		} );
+	}
+	for ( std::thread& worker : workers ) {
+		worker.join();
+	}
+	EXPECT_EQ( nErrors.load(), 0u );
+	EXPECT_EQ( pool.getStats().nPinnedLeases, 0u );
+	EXPECT_TRUE( pool.shutdown() );
+}
+
+TEST( SIRStringPool, SixTierCorruptCookedMissDoesNotConsumeBudget )
+{
+	auto catalog = sirTestCatalog( { { "compressed", true } } );
+	sirStringPoolConfig_t config = sirTestSixTierSmall();
+	SIRStringPool pool;
+	std::vector<uint8_t> span;
+	ASSERT_TRUE( sirTestInitCatalog( &pool, catalog, config, &span ) );
+	size_t iCatalog = span.size();
+	for ( size_t i = 0; i + catalog.size() <= span.size(); ++i ) {
+		if ( memcmp( span.data() + i, catalog.data(), catalog.size() ) == 0 ) {
+			iCatalog = i;
+			break;
+		}
+	}
+	ASSERT_TRUE( iCatalog < span.size() );
+	uint64_t nCatalogHash = 0;
+	for ( uint32_t iByte = 0; iByte < 8; ++iByte ) {
+		nCatalogHash |= ( uint64_t )catalog[36 + iByte] << ( iByte * 8 );
+	}
+	const SIRStringAtom atom = pool.atomFromCookedOrdinal( 0, nCatalogHash );
+	ASSERT_TRUE( atom.isValid() );
+	const size_t iToken = iCatalog + 56;
+	const uint8_t nPrevious = span[iToken];
+	span[iToken] = 127;
+	const uint32_t nBefore = pool.getStats().nActiveTierSlots[0];
+	SIRStringLease lease;
+	EXPECT_EQ( pool.acquire( atom, lease ), SIR_STRING_CORRUPT_CATALOG );
+	EXPECT_EQ( pool.getStats().nActiveTierSlots[0], nBefore );
+	EXPECT_EQ( pool.getStats().nCachedStrings, 0u );
+	span[iToken] = nPrevious;
+	EXPECT_EQ( pool.acquire( atom, lease ), SIR_STRING_OK );
+	lease.release();
+	EXPECT_TRUE( pool.shutdown() );
 }

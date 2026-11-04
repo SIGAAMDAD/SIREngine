@@ -31,6 +31,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 constexpr uint32_t SIR_STRING_TABLE_DEFAULT_SLOT_COUNT = 16384;
 constexpr uint32_t SIR_STRING_TABLE_DEFAULT_BLOCK_SIZE = 1U << 20;
 constexpr uint16_t SIR_STRING_CATALOG_VERSION = 1;
+constexpr uint32_t SIR_STRING_CACHE_TIER_COUNT = 6;
 
 /* Compile-time A/B switches for isolated hash experiments. */
 #ifndef SIR_STRING_GROUPED_INDEX
@@ -201,6 +202,12 @@ typedef struct sirStringPoolConfig_s
 	uint32_t nInitialDynamicTextBytes;
 	uint32_t nInitialShortSlots;
 	uint32_t nInitialLongSlots;
+	/* Six independently budgeted decoded-cache classes. Legacy two-tier
+	   fields above remain valid when bTieredCache is false. */
+	bool bTieredCache;
+	uint32_t nTierSlots[SIR_STRING_CACHE_TIER_COUNT];
+	uint32_t nTierBytes[SIR_STRING_CACHE_TIER_COUNT];
+	uint32_t nInitialTierSlots[SIR_STRING_CACHE_TIER_COUNT];
 } sirStringPoolConfig_t;
 
 /* On-disk SIRS v1 records are serialized as little-endian fields; do not
@@ -264,6 +271,7 @@ typedef struct sirStringPoolStats_s
 	uint32_t nActiveDynamicTextBudget;
 	uint32_t nActiveShortSlots;
 	uint32_t nActiveLongSlots;
+	uint32_t nActiveTierSlots[SIR_STRING_CACHE_TIER_COUNT];
 } sirStringPoolStats_t;
 
 typedef struct sirStringPoolCookedEntry_s sirStringPoolCookedEntry_t;
@@ -349,6 +357,7 @@ private:
 	SIRStringAtom makeAtom( uint32_t nLocalIndex ) const noexcept;
 	bool resolveIndex( SIRStringAtom atom, uint32_t& nIndex ) const noexcept;
 	bool tryAcquireHot( uint32_t nIndex, uint32_t nAtomId, SIRStringLease& lease ) const noexcept;
+	sirStringStatus_t acquireTiered( uint32_t nIndex, SIRStringAtom atom, SIRStringLease& lease ) noexcept;
 	void releaseLease( uint32_t nSlot, uint32_t nGeneration ) noexcept;
 	void resetState( void ) noexcept;
 
@@ -374,6 +383,14 @@ private:
 	uint32_t m_nLongBytes;
 	uint32_t m_nShortSlots;
 	uint32_t m_nLongSlots;
+	bool m_bTieredCache;
+	uint32_t m_nTierStart[SIR_STRING_CACHE_TIER_COUNT];
+	uint32_t m_nTierSlots[SIR_STRING_CACHE_TIER_COUNT];
+	uint32_t m_nTierBytes[SIR_STRING_CACHE_TIER_COUNT];
+	uint32_t m_nTierNext[SIR_STRING_CACHE_TIER_COUNT];
+	uint32_t m_nTierCursor[SIR_STRING_CACHE_TIER_COUNT];
+	uint32_t m_nInitialTierSlots[SIR_STRING_CACHE_TIER_COUNT];
+	uint32_t m_nActiveTierSlots[SIR_STRING_CACHE_TIER_COUNT];
 	bool m_bAdaptiveBudgets;
 	uint32_t m_nInitialNameBudget;
 	uint32_t m_nInitialDynamicTextBudget;
