@@ -483,6 +483,37 @@ int main( void )
 	     pDevice->retireResource( hSource, completed ) != SIR_GRAPHICS_INVALID_HANDLE ) {
 		return 13;
 	}
+	// Transition a complete 2x2 mip/layer image range in one GPU command.
+	sirGraphicsTextureDesc_t rangeDesc = texture;
+	rangeDesc.nUsage = SIR_GRAPHICS_USAGE_STORAGE | SIR_GRAPHICS_USAGE_SAMPLED;
+	sirGraphicsHandle_t hRange = {};
+	if ( pDevice->createTexture( rangeDesc, &hRange ) != SIR_GRAPHICS_SUCCESS ) {
+		return 50;
+	}
+	SIRGraphicsCommandList *pRange = nullptr;
+	sirGraphicsBarrier_t rangeBarrier = {};
+	rangeBarrier.hResource = hRange;
+	rangeBarrier.eType = SIR_GRAPHICS_BARRIER_TRANSITION;
+	rangeBarrier.eBefore = SIR_GRAPHICS_STATE_UNDEFINED;
+	rangeBarrier.eAfter = SIR_GRAPHICS_STATE_COMMON;
+	rangeBarrier.nMipCount = 2;
+	rangeBarrier.nLayerCount = 2;
+	if ( pDevice->acquireCommands( SIR_GRAPHICS_QUEUE_DIRECT, &pRange ) != SIR_GRAPHICS_SUCCESS || pRange == nullptr ||
+	     pRange->barrier( &rangeBarrier, 1 ) != SIR_GRAPHICS_SUCCESS || pRange->close() != SIR_GRAPHICS_SUCCESS ) {
+		return 51;
+	}
+	sirGraphicsSubmission_t rangeSubmit = {};
+	rangeSubmit.ppCommandLists = &pRange;
+	rangeSubmit.nCommandListCount = 1;
+	sirGraphicsCompletion_t rangeComplete = {};
+	if ( pDevice->submit( SIR_GRAPHICS_QUEUE_DIRECT, rangeSubmit, &rangeComplete ) != SIR_GRAPHICS_SUCCESS ||
+	     pDevice->wait( rangeComplete, 5000000000ULL ) != SIR_GRAPHICS_SUCCESS ) {
+		return 52;
+	}
+	completed.szQueueValues[SIR_GRAPHICS_QUEUE_DIRECT] = rangeComplete.nValue;
+	if ( pDevice->retireResource( hRange, completed ) != SIR_GRAPHICS_SUCCESS ) {
+		return 53;
+	}
 	if ( driver.destroyDevice( pDevice ) != SIR_GRAPHICS_SUCCESS || pDevice->getDeviceGeneration() != 0 ) {
 		return 14;
 	}

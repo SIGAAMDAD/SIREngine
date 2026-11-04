@@ -47,10 +47,10 @@ int main( void )
 	commands[1].textureCopy.bBufferToImage = true;
 	commands[2].eKind = SIR_VULKAN_RECORDED_IMAGE_BARRIER;
 	commands[2].pImage = &image;
-	commands[2].imageBarrier = { VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 0, 0, false };
+	commands[2].imageBarrier = { VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 0, 0, 1, 1, false };
 	commands[3].eKind = SIR_VULKAN_RECORDED_IMAGE_BARRIER;
 	commands[3].pImage = &image;
-	commands[3].imageBarrier = { VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, 0, 0, false };
+	commands[3].imageBarrier = { VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, 0, 0, 1, 1, false };
 	commands[4].eKind = SIR_VULKAN_RECORDED_TEXTURE_COPY;
 	commands[4].pBuffer = &readback;
 	commands[4].pImage = &image;
@@ -136,6 +136,37 @@ int main( void )
 	commands[6] = dispatch;
 	if ( sirVulkanValidateRecordedCommands( commands, 7 ) != SIR_VULKAN_SUCCESS ) {
 		return 16;
+	}
+	// A multi-subresource barrier validates every member and preserves original state.
+	sirVulkanImage_t range = {};
+	range.eFormat = VK_FORMAT_R8G8B8A8_UNORM;
+	range.eType = VK_IMAGE_TYPE_2D;
+	range.nMips = 2;
+	range.nLayers = 2;
+	range.nUsage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+	sirVulkanRecordedCommand_t rangeCommand = {};
+	rangeCommand.eKind = SIR_VULKAN_RECORDED_IMAGE_BARRIER;
+	rangeCommand.pImage = &range;
+	rangeCommand.imageBarrier = { VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL, 0, 0, 2, 2, false };
+	if ( sirVulkanValidateRecordedCommands( &rangeCommand, 1 ) != SIR_VULKAN_SUCCESS ) {
+		return 17;
+	}
+	VkImageLayout eTracked = VK_IMAGE_LAYOUT_GENERAL;
+	if ( !sirVulkanGetSubresourceLayout( &range, 1, 1, &eTracked ) || eTracked != VK_IMAGE_LAYOUT_UNDEFINED ) {
+		return 18;
+	}
+	if ( !sirVulkanSetSubresourceLayout( &range, 1, 0, VK_IMAGE_LAYOUT_GENERAL ) ||
+	     sirVulkanValidateRecordedCommands( &rangeCommand, 1 ) != SIR_VULKAN_INVALID_ARGUMENT ) {
+		return 19;
+	}
+	rangeCommand.imageBarrier.nMipCount = 0;
+	if ( sirVulkanValidateRecordedCommands( &rangeCommand, 1 ) != SIR_VULKAN_INVALID_ARGUMENT ) {
+		return 20;
+	}
+	rangeCommand.imageBarrier.nMipCount = 2;
+	rangeCommand.imageBarrier.nLayerCount = 3;
+	if ( sirVulkanValidateRecordedCommands( &rangeCommand, 1 ) != SIR_VULKAN_INVALID_ARGUMENT ) {
+		return 21;
 	}
 	printf( "Vulkan ordered mixed command validation passed\n" );
 	return 0;
