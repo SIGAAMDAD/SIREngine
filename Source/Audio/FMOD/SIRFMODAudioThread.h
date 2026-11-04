@@ -106,6 +106,7 @@ private:
 	SIRFMODRuntime m_Runtime;
 	SIRThread m_Thread;
 	SIRAudioQueue<uint64_t> m_Requests;
+	SIRAudioQueue<uint64_t> m_Critical;
 	SIRAudioQueue<sirAudioCompletion_t> m_Lifecycle;
 	sirFMODThreadSlot_t *m_pSlots = nullptr;
 	const sirContainerAllocator_t *m_pAllocator = nullptr;
@@ -115,6 +116,8 @@ private:
 	SIRAtomic<uint32_t> m_nNextSlot;
 	SIRAtomic<uint32_t> m_nWakes;
 	SIRAtomic<uint32_t> m_nDroppedLifecycle;
+	SIRAtomic<uint32_t> m_nAutoRecoveries;
+	SIRAtomic<uint32_t> m_nAutoRecoveryFailures;
 	SIRAtomic<uint32_t> m_nWorkerResult;
 	SIRAtomic<uint8_t> m_bAccepting;
 	SIRAtomic<uint8_t> m_bStop;
@@ -145,5 +148,7 @@ public:
 	bool pollLifecycle( sirAudioCompletion_t &completion ) noexcept;
 	bool isReady( void ) const noexcept;
 	uint32_t getDroppedLifecycleCount( void ) const noexcept;
+	uint32_t getAutoRecoveryCount( void ) const noexcept;
+	uint32_t getAutoRecoveryFailureCount( void ) const noexcept;
 };
 #endif // __SIRENGINE_SIRFMODAUDIOTHREAD_H__

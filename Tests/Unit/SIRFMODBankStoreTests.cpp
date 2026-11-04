@@ -19,6 +19,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Core/Containers/SIRRawStorage.h>
 #include <Audio/FMOD/SIRFMODAudioThread.h>
 #include <chrono>
+#include <atomic>
 #include <thread>
 #include <Audio/FMOD/SIRFMODRuntime.h>
 #include <Audio/FMOD/SIRFMODMixerBackend.h>
@@ -86,6 +87,10 @@ typedef struct sirFMODBankFixture_s
 	bool bBankA;
 	bool bBankB;
 	bool bStudio;
+	bool bTriggerDeviceLost;
+	void *pDeviceOwner;
+	void ( *pfnDeviceSignal )( void * ) noexcept;
+	uint32_t nDeviceDriverSelections;
 } sirFMODBankFixture_t;
 
 static int32_t testStudioCreate( void *pData, void **ppStudio ) noexcept
@@ -110,8 +115,9 @@ static int32_t testStudioDrivers( void *, void *, int32_t *pCount ) noexcept
 	*pCount = 1;
 	return 0;
 }
-static int32_t testStudioDriver( void *, void *, int32_t ) noexcept
+static int32_t testStudioDriver( void *pUserData, void *, int32_t ) noexcept
 {
+	++( ( sirFMODBankFixture_t * )pUserData )->nDeviceDriverSelections;
 	return 0;
 }
 static int32_t testStudioNoSound( void *, void * ) noexcept
@@ -122,8 +128,13 @@ static int32_t testStudioInitialize( void *, void *, const sirFMODContextConfig_
 {
 	return 0;
 }
-static int32_t testStudioUpdate( void *, void * ) noexcept
+static int32_t testStudioUpdate( void *pUserData, void * ) noexcept
 {
+	sirFMODBankFixture_t *pFixture = ( sirFMODBankFixture_t * )pUserData;
+	if ( pFixture->bTriggerDeviceLost && pFixture->pfnDeviceSignal != nullptr ) {
+		pFixture->bTriggerDeviceLost = false;
+		pFixture->pfnDeviceSignal( pFixture->pDeviceOwner );
+	}
 	return 0;
 }
 static int32_t testStudioRelease( void *pData, void * ) noexcept
@@ -131,8 +142,12 @@ static int32_t testStudioRelease( void *pData, void * ) noexcept
 	( ( sirFMODBankFixture_t * )pData )->bStudio = false;
 	return 0;
 }
-static int32_t testStudioDeviceLossCallback( void *, void *, void *, void ( * )( void * ) noexcept ) noexcept
+static int32_t testStudioDeviceLossCallback( void *pUserData, void *, void *pOwner,
+                                              void ( *pfnSignal )( void * ) noexcept ) noexcept
 {
+	sirFMODBankFixture_t *pFixture = ( sirFMODBankFixture_t * )pUserData;
+	pFixture->pDeviceOwner = pOwner;
+	pFixture->pfnDeviceSignal = pfnSignal;
 	return 0;
 }
 
@@ -962,7 +977,14 @@ static void testAudioOwnerThread( const sirContainerAllocator_t *pAllocator )
 	config.nRequestCapacity = 64;
 	config.nIdleSleepMilliseconds = 1;
 	SIRFMODAudioThread worker;
+	fixture.bTriggerDeviceLost = true;
 	checkBank( worker.start( config ) == SIR_AUDIO_OK && worker.isReady() );
+	for ( uint32_t iAttempt = 0; iAttempt < 1000 && worker.getAutoRecoveryCount() == 0; ++iAttempt ) {
+		std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
+	}
+	checkBank( worker.getAutoRecoveryCount() == 1 );
+	checkBank( worker.getAutoRecoveryFailureCount() == 0 );
+
 	sirFMODThreadRequest_t request = {};
 	request.eOperation = SIR_FMOD_THREAD_LOAD_PACKAGE;
 	request.nId = 2;
@@ -973,6 +995,33 @@ static void testAudioOwnerThread( const sirContainerAllocator_t *pAllocator )
 	sirFMODThreadResult_t result = testWaitForTicket( worker, nLoadTicket );
 	checkBank( result.eResult == SIR_AUDIO_OK );
 	checkBank( worker.poll( nLoadTicket, result ) == SIR_AUDIO_INVALID_HANDLE );
+	std::atomic<uint32_t> nCompletedStress( 0 );
+	std::thread producers[4];
+	for ( uint32_t iProducer = 0; iProducer < 4; ++iProducer ) {
+		producers[iProducer] = std::thread( [&worker, &nCompletedStress]() {
+			for ( uint32_t iRequest = 0; iRequest < 128; ++iRequest ) {
+				sirFMODThreadRequest_t query = {};
+				query.eOperation = SIR_FMOD_THREAD_QUERY_PLAYBACK;
+				uint64_t nTicket = 0;
+				sirAudioResult_t eSubmit = SIR_AUDIO_CAPACITY;
+				for ( uint32_t iTry = 0; iTry < 1000; ++iTry ) {
+					eSubmit = worker.submit( query, nTicket );
+					if ( eSubmit != SIR_AUDIO_CAPACITY ) {
+						break;
+					}
+					std::this_thread::yield();
+				}
+				checkBank( eSubmit == SIR_AUDIO_PENDING );
+				const sirFMODThreadResult_t answer = testWaitForTicket( worker, nTicket );
+				checkBank( answer.eResult == SIR_AUDIO_INVALID_HANDLE );
+				++nCompletedStress;
+			}
+		} );
+	}
+	for ( std::thread &producer : producers ) {
+		producer.join();
+	}
+	checkBank( nCompletedStress.load() == 512 );
 	request = {};
 	request.eOperation = SIR_FMOD_THREAD_PLAY_EVENT;
 	request.nId = 101;
@@ -1002,6 +1051,14 @@ static void testAudioOwnerThread( const sirContainerAllocator_t *pAllocator )
 	fixture.nAsyncPolls = 1000000;
 	uint64_t nCancelledTicket = 0;
 	checkBank( worker.submit( request, nCancelledTicket ) == SIR_AUDIO_PENDING );
+	std::this_thread::sleep_for( std::chrono::milliseconds( 8 ) );
+	// A pending bank load must not block control/query traffic.
+	sirFMODThreadRequest_t query = {};
+	query.eOperation = SIR_FMOD_THREAD_QUERY_PLAYBACK;
+	uint64_t nQueryTicket = 0;
+	checkBank( worker.submit( query, nQueryTicket ) == SIR_AUDIO_PENDING );
+	result = testWaitForTicket( worker, nQueryTicket );
+	checkBank( result.eResult == SIR_AUDIO_INVALID_HANDLE );
 	checkBank( worker.cancel( nCancelledTicket ) == SIR_AUDIO_OK );
 	result = testWaitForTicket( worker, nCancelledTicket );
 	checkBank( result.eResult == SIR_AUDIO_CANCELLED );
