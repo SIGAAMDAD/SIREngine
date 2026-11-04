@@ -21,3 +21,7 @@ endif()
 if(SIR_WITH_VULKAN)
     add_subdirectory(Drivers/Vulkan)
 endif()
+
+if(SIR_WITH_OPENGL)
+    add_subdirectory(Drivers/OpenGL)
+endif()

@@ -1,0 +1,390 @@
+/*
+===========================================================================
+SIREngine MPLv2 Source Code
+Copyright (C) 2023-2027 Noah Van Til
+
+This Source Code Form is subject to the terms of the Mozilla Public
+License, v2. If a copy of the MPL was not distributed with this
+file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+This software is provided "as is", without warranty of any kind,
+express or implied, including but not limited to the warranties
+of merchantability, fitness for a particular purpose and noninfringement.
+===========================================================================
+*/
+
+#include <Renderer/Drivers/OpenGL/SIRGLCapabilities.h>
+#include <Renderer/Drivers/OpenGL/SIRGLContext.h>
+#include <atomic>
+#include <new>
+#include <string.h>
+
+#if defined( _WIN32 )
+#define SIR_GL_EXPORT __declspec( dllexport )
+#else
+#define SIR_GL_EXPORT __attribute__( ( visibility( "default" ) ) )
+#endif
+
+typedef struct sirGLDriverState_s
+{
+	sirGraphicsABIHost_t host;
+	std::atomic<uint32_t> nLiveDevices;
+} sirGLDriverState_t;
+
+typedef struct sirGLDevice_s
+{
+	sirGLDriverState_t *pDriver;
+	sirGLNativeContext_t *pContext;
+	sirGLProbe_t probe;
+	uint32_t nGeneration;
+	uint64_t nResidentBudgetBytes;
+} sirGLDevice_t;
+
+static std::atomic<uint32_t> s_nGLDeviceGeneration( 1 );
+
+static uint32_t sirGLAdapterCount( void *pDriver, uint32_t *pCount ) noexcept
+{
+	if ( pDriver == nullptr || pCount == nullptr ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	*pCount = 0;
+	sirGLDriverState_t *pState = ( sirGLDriverState_t * )pDriver;
+	sirGLNativeContext_t *pContext = nullptr;
+	const uint32_t nStatus = sirGLCreateNativeContext( &pState->host, &pContext );
+	if ( nStatus == SIR_GRAPHICS_OUT_OF_MEMORY ) {
+		return nStatus;
+	}
+	if ( nStatus != SIR_GRAPHICS_SUCCESS ) {
+		return SIR_GRAPHICS_SUCCESS; // No admissible local GL46 context is an empty adapter list.
+	}
+	sirGLProbe_t probe = {};
+	if ( sirGLReadNativeProbe( pContext, &probe ) == SIR_GRAPHICS_SUCCESS && sirGLValidateCore46( &probe ) == SIR_GRAPHICS_SUCCESS ) {
+		*pCount = 1;
+	}
+	sirGLDestroyNativeContext( pContext );
+	return SIR_GRAPHICS_SUCCESS;
+}
+
+static uint32_t sirGLQueryAdapter( void *pDriver, sirGraphicsABIAdapter_t *pAdapter ) noexcept
+{
+	if ( pDriver == nullptr || pAdapter == nullptr || pAdapter->nSize < sizeof( *pAdapter ) || pAdapter->nIndex != 0 ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	sirGLDriverState_t *pState = ( sirGLDriverState_t * )pDriver;
+	sirGLNativeContext_t *pContext = nullptr;
+	const uint32_t nResult = sirGLCreateNativeContext( &pState->host, &pContext );
+	if ( nResult != SIR_GRAPHICS_SUCCESS ) {
+		return nResult;
+	}
+	sirGLProbe_t probe = {};
+	uint32_t nStatus = sirGLReadNativeProbe( pContext, &probe );
+	if ( nStatus == SIR_GRAPHICS_SUCCESS ) {
+		nStatus = sirGLBuildAdapter( &probe, pAdapter );
+	}
+	sirGLDestroyNativeContext( pContext );
+	return nStatus;
+}
+
+static uint32_t sirGLQueryCapabilities( void *pDevice, sirGraphicsABICapabilities_t *pCapabilities ) noexcept
+{
+	sirGLDevice_t *pState = ( sirGLDevice_t * )pDevice;
+	if ( pState == nullptr || pState->pContext == nullptr ) {
+		return SIR_GRAPHICS_DEVICE_LOST;
+	}
+	return sirGLBuildCapabilities( &pState->probe, pState->nGeneration, pCapabilities );
+}
+
+static uint32_t sirGLQueryFormat( void *pDevice, sirGraphicsABIFormat_t *pFormat ) noexcept
+{
+	if ( pDevice == nullptr ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	if ( pFormat == nullptr ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	return sirGLQuerySupportedFormat( pFormat->nFormat, pFormat );
+}
+
+static uint32_t sirGLQueryMemoryBudget( void *pDevice, sirGraphicsMemoryBudget_t *pBudget ) noexcept
+{
+	sirGLDevice_t *pState = ( sirGLDevice_t * )pDevice;
+	if ( pState == nullptr || pBudget == nullptr ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	if ( pState->pContext == nullptr ) {
+		return SIR_GRAPHICS_DEVICE_LOST;
+	}
+	*pBudget = {};
+	pBudget->nBudgetBytes = pState->nResidentBudgetBytes;
+	// Opaque OpenGL driver residency is not measurable from our unallocated resource pool.
+	return SIR_GRAPHICS_SUCCESS;
+}
+
+static uint32_t sirGLPoll( void *, const sirGraphicsCompletion_t *, uint32_t * ) noexcept
+{
+	return SIR_GRAPHICS_UNSUPPORTED;
+}
+
+static uint32_t sirGLWait( void *, const sirGraphicsCompletion_t *, uint64_t ) noexcept
+{
+	return SIR_GRAPHICS_UNSUPPORTED;
+}
+
+static uint32_t sirGLCreateBuffer( void *, const sirGraphicsBufferDesc_t *, sirGraphicsHandle_t * ) noexcept
+{
+	return SIR_GRAPHICS_UNSUPPORTED;
+}
+
+static uint32_t sirGLCreateTexture( void *, const sirGraphicsTextureDesc_t *, sirGraphicsHandle_t * ) noexcept
+{
+	return SIR_GRAPHICS_UNSUPPORTED;
+}
+
+static uint32_t sirGLCreateView( void *, const sirGraphicsViewDesc_t *, sirGraphicsHandle_t * ) noexcept
+{
+	return SIR_GRAPHICS_UNSUPPORTED;
+}
+
+static uint32_t sirGLCreateSampler( void *, const sirGraphicsSamplerDesc_t *, sirGraphicsHandle_t * ) noexcept
+{
+	return SIR_GRAPHICS_UNSUPPORTED;
+}
+
+static uint32_t sirGLCreatePipeline( void *, const sirGraphicsABIPipeline_t *, sirGraphicsHandle_t * ) noexcept
+{
+	return SIR_GRAPHICS_UNSUPPORTED;
+}
+
+static uint32_t sirGLCreateBindingSet( void *, sirGraphicsHandle_t, uint32_t, sirGraphicsHandle_t * ) noexcept
+{
+	return SIR_GRAPHICS_UNSUPPORTED;
+}
+
+static uint32_t sirGLUpdateBindings( void *, sirGraphicsHandle_t, const sirGraphicsDescriptorWrite_t *, uint32_t ) noexcept
+{
+	return SIR_GRAPHICS_UNSUPPORTED;
+}
+
+static uint32_t sirGLMapBuffer( void *, const sirGraphicsABIBufferRange_t *, sirGraphicsMappedBuffer_t * ) noexcept
+{
+	return SIR_GRAPHICS_UNSUPPORTED;
+}
+
+static uint32_t sirGLUnmapBuffer( void *, const sirGraphicsABIBufferRange_t * ) noexcept
+{
+	return SIR_GRAPHICS_UNSUPPORTED;
+}
+
+static uint32_t sirGLFlushBuffer( void *, const sirGraphicsABIBufferRange_t * ) noexcept
+{
+	return SIR_GRAPHICS_UNSUPPORTED;
+}
+
+static uint32_t sirGLInvalidateBuffer( void *, const sirGraphicsABIBufferRange_t * ) noexcept
+{
+	return SIR_GRAPHICS_UNSUPPORTED;
+}
+
+static uint32_t sirGLAcquireCommands( void *, uint32_t, sirGraphicsABICommandList_t * ) noexcept
+{
+	return SIR_GRAPHICS_UNSUPPORTED;
+}
+
+static uint32_t sirGLSubmit( void *, uint32_t, const sirGraphicsABISubmission_t *, sirGraphicsCompletion_t * ) noexcept
+{
+	return SIR_GRAPHICS_UNSUPPORTED;
+}
+
+static uint32_t sirGLRetireResource( void *, sirGraphicsHandle_t, const sirGraphicsCompletionSet_t * ) noexcept
+{
+	return SIR_GRAPHICS_UNSUPPORTED;
+}
+
+static uint32_t sirGLCreateSurface( void *, const sirGraphicsABINativeSurface_t *, const sirGraphicsABIPresentDesc_t *,
+                                    sirGraphicsHandle_t * ) noexcept
+{
+	return SIR_GRAPHICS_UNSUPPORTED;
+}
+
+static uint32_t sirGLResizeSurface( void *, sirGraphicsHandle_t, const sirGraphicsABINativeSurface_t *,
+                                    const sirGraphicsABIPresentDesc_t * ) noexcept
+{
+	return SIR_GRAPHICS_UNSUPPORTED;
+}
+
+static uint32_t sirGLAcquireSurfaceImage( void *, sirGraphicsHandle_t, sirGraphicsSurfaceImage_t * ) noexcept
+{
+	return SIR_GRAPHICS_UNSUPPORTED;
+}
+
+static uint32_t sirGLPresent( void *, const sirGraphicsSurfaceImage_t *, const sirGraphicsCompletion_t * ) noexcept
+{
+	return SIR_GRAPHICS_UNSUPPORTED;
+}
+
+static uint32_t sirGLShutdown( void *pDevice ) noexcept
+{
+	sirGLDevice_t *pState = ( sirGLDevice_t * )pDevice;
+	if ( pState == nullptr ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	if ( pState->pContext == nullptr ) {
+		return SIR_GRAPHICS_SUCCESS;
+	}
+	if ( !sirGLContextOwnsThread( pState->pContext ) ) {
+		return SIR_GRAPHICS_BUSY;
+	}
+	sirGLDestroyNativeContext( pState->pContext );
+	pState->pContext = nullptr;
+	return SIR_GRAPHICS_SUCCESS;
+}
+
+static uint32_t sirGLCreateDevice( void *pDriver, const sirGraphicsABIDeviceRequest_t *pRequest, sirGraphicsABIDevice_t *pDevice ) noexcept
+{
+	if ( pDriver == nullptr || pRequest == nullptr || pDevice == nullptr || pRequest->nSize < sizeof( *pRequest ) ||
+	     pDevice->nSize < sizeof( *pDevice ) || pRequest->nReserved != 0 || pRequest->nFramesInFlight == 0 ||
+	     pRequest->nAllowSoftware > 1 || pRequest->nHeadless > 1 ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	if ( pRequest->nAdapterIndex != 0 || pRequest->nFramesInFlight != 1 || pRequest->nHeadless != 1 || pRequest->nRequiredFeatures != 0 ) {
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
+	sirGLDriverState_t *pState = ( sirGLDriverState_t * )pDriver;
+	sirGLNativeContext_t *pContext = nullptr;
+	uint32_t nStatus = sirGLCreateNativeContext( &pState->host, &pContext );
+	if ( nStatus != SIR_GRAPHICS_SUCCESS ) {
+		return nStatus;
+	}
+	sirGLProbe_t probe = {};
+	nStatus = sirGLReadNativeProbe( pContext, &probe );
+	if ( nStatus == SIR_GRAPHICS_SUCCESS ) {
+		nStatus = sirGLValidateCore46( &probe );
+	}
+	if ( nStatus == SIR_GRAPHICS_SUCCESS && pRequest->nAllowSoftware == 0 ) {
+		sirGraphicsABIAdapter_t adapter = {};
+		adapter.nSize = sizeof( adapter );
+		if ( sirGLBuildAdapter( &probe, &adapter ) != SIR_GRAPHICS_SUCCESS || adapter.nKind == SIR_GRAPHICS_ABI_ADAPTER_SOFTWARE ) {
+			nStatus = SIR_GRAPHICS_UNSUPPORTED;
+		}
+	}
+	if ( nStatus != SIR_GRAPHICS_SUCCESS ) {
+		sirGLDestroyNativeContext( pContext );
+		return nStatus;
+	}
+	void *pMemory = pState->host.pAllocate( pState->host.pContext, sizeof( sirGLDevice_t ), alignof( sirGLDevice_t ) );
+	if ( pMemory == nullptr ) {
+		sirGLDestroyNativeContext( pContext );
+		return SIR_GRAPHICS_OUT_OF_MEMORY;
+	}
+	const uint32_t nGeneration = s_nGLDeviceGeneration.fetch_add( 1, std::memory_order_relaxed );
+	if ( nGeneration == 0 ) {
+		pState->host.pFree( pState->host.pContext, pMemory );
+		sirGLDestroyNativeContext( pContext );
+		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
+	}
+	sirGLDevice_t *pNew = ( sirGLDevice_t * )pMemory;
+	*pNew = {};
+	pNew->pDriver = pState;
+	pNew->pContext = pContext;
+	pNew->probe = probe;
+	pNew->nGeneration = nGeneration;
+	pNew->nResidentBudgetBytes = pRequest->nResidentBudgetBytes;
+
+	sirGraphicsABIDevice_t result = {};
+	result.nSize = sizeof( result );
+	result.pDevice = pNew;
+	result.pQueryCapabilities = sirGLQueryCapabilities;
+	result.pQueryFormat = sirGLQueryFormat;
+	result.pPoll = sirGLPoll;
+	result.pWait = sirGLWait;
+	result.pQueryMemoryBudget = sirGLQueryMemoryBudget;
+	result.pCreateBuffer = sirGLCreateBuffer;
+	result.pCreateTexture = sirGLCreateTexture;
+	result.pCreateView = sirGLCreateView;
+	result.pCreateSampler = sirGLCreateSampler;
+	result.pCreatePipeline = sirGLCreatePipeline;
+	result.pCreateBindingSet = sirGLCreateBindingSet;
+	result.pUpdateBindings = sirGLUpdateBindings;
+	result.pMapBuffer = sirGLMapBuffer;
+	result.pUnmapBuffer = sirGLUnmapBuffer;
+	result.pFlushBuffer = sirGLFlushBuffer;
+	result.pInvalidateBuffer = sirGLInvalidateBuffer;
+	result.pAcquireCommands = sirGLAcquireCommands;
+	result.pSubmit = sirGLSubmit;
+	result.pRetireResource = sirGLRetireResource;
+	result.pCreateSurface = sirGLCreateSurface;
+	result.pResizeSurface = sirGLResizeSurface;
+	result.pAcquireSurfaceImage = sirGLAcquireSurfaceImage;
+	result.pPresent = sirGLPresent;
+	result.pShutdown = sirGLShutdown;
+	pState->nLiveDevices.fetch_add( 1, std::memory_order_relaxed );
+	*pDevice = result;
+	return SIR_GRAPHICS_SUCCESS;
+}
+
+static uint32_t sirGLDestroyDevice( void *pDriver, sirGraphicsABIDevice_t *pDevice ) noexcept
+{
+	if ( pDriver == nullptr || pDevice == nullptr || pDevice->pDevice == nullptr ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	sirGLDriverState_t *pState = ( sirGLDriverState_t * )pDriver;
+	sirGLDevice_t *pNative = ( sirGLDevice_t * )pDevice->pDevice;
+	if ( pNative->pDriver != pState ) {
+		return SIR_GRAPHICS_INVALID_HANDLE;
+	}
+	const uint32_t nStatus = sirGLShutdown( pNative );
+	if ( nStatus != SIR_GRAPHICS_SUCCESS ) {
+		return nStatus;
+	}
+	pState->nLiveDevices.fetch_sub( 1, std::memory_order_relaxed );
+	pState->host.pFree( pState->host.pContext, pNative );
+	*pDevice = {};
+	return SIR_GRAPHICS_SUCCESS;
+}
+
+static void sirGLReleaseDriver( void *pDriver ) noexcept
+{
+	sirGLDriverState_t *pState = ( sirGLDriverState_t * )pDriver;
+	if ( pState == nullptr ) {
+		return;
+	}
+	if ( pState->nLiveDevices.load( std::memory_order_acquire ) != 0 ) {
+		pState->host.pLog( pState->host.pContext, 3, "OpenGL ABI module unloaded with live devices" );
+		return;
+	}
+	const sirGraphicsABIHost_t host = pState->host;
+	pState->~sirGLDriverState_t();
+	host.pFree( host.pContext, pState );
+}
+
+extern "C" SIR_GL_EXPORT uint32_t SIRGetGraphicsDriverABI( uint32_t nMajor, uint32_t nMinor, const sirGraphicsABIHost_t *pHost,
+                                                           sirGraphicsABIDriver_t *pDriver ) noexcept
+{
+	if ( nMajor != SIR_GRAPHICS_DRIVER_ABI_MAJOR || nMinor > SIR_GRAPHICS_DRIVER_ABI_MINOR ) {
+		return SIR_GRAPHICS_VERSION_MISMATCH;
+	}
+	if ( pHost == nullptr || pDriver == nullptr || pHost->nSize < sizeof( *pHost ) || pDriver->nSize < sizeof( *pDriver ) ||
+	     pHost->nMajor != SIR_GRAPHICS_DRIVER_ABI_MAJOR || pHost->nMinor < SIR_GRAPHICS_DRIVER_ABI_MINOR || pHost->nReserved != 0 ||
+	     pHost->pAllocate == nullptr || pHost->pFree == nullptr || pHost->pLog == nullptr ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	void *pMemory = pHost->pAllocate( pHost->pContext, sizeof( sirGLDriverState_t ), alignof( sirGLDriverState_t ) );
+	if ( pMemory == nullptr ) {
+		return SIR_GRAPHICS_OUT_OF_MEMORY;
+	}
+	sirGLDriverState_t *pState = new ( pMemory ) sirGLDriverState_t{};
+	pState->host = *pHost;
+	sirGraphicsABIDriver_t result = {};
+	result.nSize = sizeof( result );
+	result.nMajor = SIR_GRAPHICS_DRIVER_ABI_MAJOR;
+	result.nMinor = SIR_GRAPHICS_DRIVER_ABI_MINOR;
+	result.nBackend = SIR_GRAPHICS_BACKEND_OPENGL;
+	result.pDriver = pState;
+	result.pAdapterCount = sirGLAdapterCount;
+	result.pQueryAdapter = sirGLQueryAdapter;
+	result.pCreateDevice = sirGLCreateDevice;
+	result.pDestroyDevice = sirGLDestroyDevice;
+	result.pReleaseDriver = sirGLReleaseDriver;
+	*pDriver = result;
+	return SIR_GRAPHICS_SUCCESS;
+}

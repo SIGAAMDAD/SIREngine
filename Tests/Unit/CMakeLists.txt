@@ -116,4 +116,21 @@ target_compile_definitions(SIRGraphicsModuleTests PRIVATE SIR_TEST_ABI_MODULE_PA
 add_test(NAME renderer.graphics.binary-module COMMAND SIRGraphicsModuleTests)
 sir_configure_owned_target(SIRGraphicsModuleTests)
 
+if(SIR_WITH_OPENGL)
+    add_executable(SIRGL46FoundationTests
+        Renderer/OpenGL/SIRGLFoundationTests.cpp
+        "${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/OpenGL/SIRGLCapabilities.cpp")
+    target_link_libraries(SIRGL46FoundationTests PRIVATE SIR::Graphics)
+    sir_configure_owned_target(SIRGL46FoundationTests)
+    add_test(NAME renderer.opengl46.foundation COMMAND SIRGL46FoundationTests)
+
+    find_package(Threads REQUIRED)
+    add_executable(SIRGL46ModuleTests Renderer/OpenGL/SIRGLModuleTests.cpp)
+    target_link_libraries(SIRGL46ModuleTests PRIVATE SIR::Graphics Threads::Threads "${CMAKE_DL_LIBS}")
+    target_compile_definitions(SIRGL46ModuleTests PRIVATE SIR_TEST_GL46_MODULE_PATH="$<TARGET_FILE:SIRGL46Driver>")
+    add_dependencies(SIRGL46ModuleTests SIRGL46Driver)
+    sir_configure_owned_target(SIRGL46ModuleTests)
+    add_test(NAME renderer.opengl46.module COMMAND SIRGL46ModuleTests)
+endif()
+
 add_subdirectory(Config)

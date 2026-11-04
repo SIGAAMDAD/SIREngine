@@ -17,6 +17,7 @@ option(SIR_WITH_OPENAL "Resolve a system OpenAL implementation" OFF)
 option(SIR_WITH_OPENAL_SOFT "Build pinned OpenAL Soft" OFF)
 option(SIR_WITH_MESHOPTIMIZER "Build pinned meshoptimizer" OFF)
 option(SIR_WITH_MONO "Resolve Mono embedding SDK for C# scripting" OFF)
+option(SIR_WITH_OPENGL "Build the native OpenGL 4.6 rendering backend" OFF)
 
 include(Build/CMake/SIRBuildOptions.cmake)
 include(Build/CMake/SIRDependencies.cmake)
