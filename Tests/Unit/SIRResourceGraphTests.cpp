@@ -1105,6 +1105,11 @@ static void testCoreTaskGraphStaleRevisionsAndBudget( void )
 		REQUIRE( pWriter->compileTaskGraph( work.nodes[2].hResource, underBudget, plan, 8, describeResourceTest, &work, &nCount ) ==
 		         SIR_RESOURCE_RESULT_OUT_OF_BUDGET );
 		REQUIRE( underBudget.getPassCount() == 0 );
+		SIRTaskGraph insufficientPasses;
+		REQUIRE( insufficientPasses.init( &memory, { 2, 1, 16 } ) );
+		REQUIRE( pWriter->compileTaskGraph( work.nodes[2].hResource, insufficientPasses, plan, 8, describeResourceTest, &work, &nCount ) ==
+		         SIR_RESOURCE_RESULT_OUT_OF_BUDGET );
+		REQUIRE( insufficientPasses.getPassCount() == 0 );
 		SIRTaskGraph tasks;
 		REQUIRE( tasks.init( &memory, { 8, 1, 16 } ) );
 		std::atomic<uint32_t> eOther{ 0 };
@@ -1586,6 +1591,26 @@ static void testCompileTaskGraphInputRejection( void )
 	REQUIRE( allocator.m_nOutstanding.load() == 0 );
 }
 
+static void testRequestedRecordAllocationRollback( void )
+{
+	SIRTestAllocatorStats allocator = {};
+	{
+		SIRResourceGraph graph( testConfig( allocator, 8 ) );
+		REQUIRE( graph.isReady() );
+		SIRResourceGraphWriter *pWriter = graph.getWriter();
+		REQUIRE( pWriter != nullptr );
+		SIRResourceHandle resource = {};
+		allocator.m_bFailNext.store( true );
+		REQUIRE( pWriter->request( key( 17430 ), &resource ) == SIR_RESOURCE_RESULT_OUT_OF_BUDGET );
+		REQUIRE( graph.getStats().m_nLiveResources == 0 );
+		REQUIRE( pWriter->request( key( 17430 ), &resource ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( graph.getStats().m_nLiveResources == 1 );
+		REQUIRE( pWriter->retire( resource ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( pWriter->collectRetired( 8 ) == 1 );
+	}
+	REQUIRE( allocator.m_nOutstanding.load() == 0 );
+}
+
 int main( void )
 {
 	testScopeLifetimeAndDeduplication();
@@ -1613,6 +1638,7 @@ int main( void )
 	testContentKeyCollisionDoesNotAliasData();
 	testMultiChunkEvictionAndFailedReplacement();
 	testCompileTaskGraphInputRejection();
+	testRequestedRecordAllocationRollback();
 	printf( "PASS: GRDG resource registry, publication, deduplication, lifetime, concurrency\n" );
 	return 0;
 }
