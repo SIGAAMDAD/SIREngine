@@ -113,7 +113,7 @@ static bool testBinaryModule( void ) noexcept
 		return false;
 	}
 	pMode( 3 );
-	if ( sirGraphicsCreateABIDevice( &module, &request, &device ) != SIR_GRAPHICS_ABI_UNSUPPORTED || module.nActiveDevices != 0 ) {
+	if ( sirGraphicsCreateABIDevice( &module, &request, &device ) != SIR_GRAPHICS_ABI_DRIVER_ERROR || module.nActiveDevices != 0 ) {
 		return false;
 	}
 	pMode( 0 );
