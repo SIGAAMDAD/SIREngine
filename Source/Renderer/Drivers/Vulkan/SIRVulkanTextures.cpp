@@ -156,8 +156,8 @@ sirGraphicsResult_t SIRVulkanCommandList::copyBufferTexture( const sirGraphicsBu
 			const sirVulkanGraphicsOperation_t &prior = m_szOperations[iOp];
 			if ( prior.eKind == SIR_VULKAN_GRAPHICS_TEXTURE_COPY && prior.textureCopy.bBufferToTexture &&
 			     prior.textureCopy.hTexture.nSlot == copy.hTexture.nSlot &&
-			     prior.textureCopy.hTexture.nGeneration == copy.hTexture.nGeneration &&
-			     prior.textureCopy.nMip == copy.nMip && prior.textureCopy.nLayer == copy.nLayer ) {
+			     prior.textureCopy.hTexture.nGeneration == copy.hTexture.nGeneration && prior.textureCopy.nMip == copy.nMip &&
+			     prior.textureCopy.nLayer == copy.nLayer ) {
 				const uint32_t nIndex = copy.nLayer * imageState.nMips + copy.nMip;
 				imageState.szUploadedSubresources[nIndex / 64] |= 1ULL << ( nIndex % 64 );
 				break;
@@ -171,7 +171,7 @@ sirGraphicsResult_t SIRVulkanCommandList::copyBufferTexture( const sirGraphicsBu
 	if ( eValidation != SIR_VULKAN_SUCCESS ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	 sirVulkanGraphicsOperation_t &operation = m_szOperations[m_nOperationCount++];
+	sirVulkanGraphicsOperation_t &operation = m_szOperations[m_nOperationCount++];
 	operation = {};
 	operation.eKind = SIR_VULKAN_GRAPHICS_TEXTURE_COPY;
 	operation.textureCopy = copy;

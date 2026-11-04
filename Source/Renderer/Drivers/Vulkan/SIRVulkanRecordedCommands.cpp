@@ -22,12 +22,11 @@ static VkImageLayout sirVulkanRecordedUploadLayout( const sirVulkanImage_t *pIma
 	if ( ( pImage->nUsage & VK_IMAGE_USAGE_STORAGE_BIT ) != 0 ) {
 		return VK_IMAGE_LAYOUT_GENERAL;
 	}
-	return ( pImage->nUsage & VK_IMAGE_USAGE_SAMPLED_BIT ) != 0 ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-	                                                           : VK_IMAGE_LAYOUT_GENERAL;
+	return ( pImage->nUsage & VK_IMAGE_USAGE_SAMPLED_BIT ) != 0 ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL : VK_IMAGE_LAYOUT_GENERAL;
 }
 
-static sirVulkanImage_t *sirVulkanRecordedShadow( sirVulkanImage_t *pImage, sirVulkanImage_t **ppOriginals,
-                                                   sirVulkanImage_t *pShadows, uint32_t *pCount ) noexcept
+static sirVulkanImage_t *sirVulkanRecordedShadow( sirVulkanImage_t *pImage, sirVulkanImage_t **ppOriginals, sirVulkanImage_t *pShadows,
+                                                  uint32_t *pCount ) noexcept
 {
 	if ( pImage == nullptr || ppOriginals == nullptr || pShadows == nullptr || pCount == nullptr ) {
 		return nullptr;
@@ -45,8 +44,7 @@ static sirVulkanImage_t *sirVulkanRecordedShadow( sirVulkanImage_t *pImage, sirV
 	return &pShadows[( *pCount )++];
 }
 
-static sirVulkanResult_t sirVulkanAdvanceRecordedState( sirVulkanImage_t *pShadow,
-                                                        const sirVulkanRecordedCommand_t &command ) noexcept
+static sirVulkanResult_t sirVulkanAdvanceRecordedState( sirVulkanImage_t *pShadow, const sirVulkanRecordedCommand_t &command ) noexcept
 {
 	if ( pShadow == nullptr ) {
 		return SIR_VULKAN_INVALID_ARGUMENT;
@@ -74,11 +72,10 @@ static sirVulkanResult_t sirVulkanAdvanceRecordedState( sirVulkanImage_t *pShado
 	}
 	const sirVulkanImageBarrier_t &barrier = command.imageBarrier;
 	VkImageLayout eTracked = VK_IMAGE_LAYOUT_UNDEFINED;
-	if ( !sirVulkanGetSubresourceLayout( pShadow, barrier.nMip, barrier.nLayer, &eTracked ) ||
-	     eTracked != barrier.eBefore ||
+	if ( !sirVulkanGetSubresourceLayout( pShadow, barrier.nMip, barrier.nLayer, &eTracked ) || eTracked != barrier.eBefore ||
 	     ( barrier.eAfter != VK_IMAGE_LAYOUT_GENERAL && barrier.eAfter != VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ) ||
 	     ( barrier.bUav && ( barrier.eBefore != VK_IMAGE_LAYOUT_GENERAL || barrier.eAfter != VK_IMAGE_LAYOUT_GENERAL ||
-	                        ( pShadow->nUsage & VK_IMAGE_USAGE_STORAGE_BIT ) == 0 ) ) ||
+	                         ( pShadow->nUsage & VK_IMAGE_USAGE_STORAGE_BIT ) == 0 ) ) ||
 	     ( !barrier.bUav && barrier.eBefore == barrier.eAfter ) ) {
 		return SIR_VULKAN_INVALID_ARGUMENT;
 	}
@@ -97,8 +94,7 @@ static sirVulkanResult_t sirVulkanAdvanceRecordedState( sirVulkanImage_t *pShado
 	return SIR_VULKAN_SUCCESS;
 }
 
-sirVulkanResult_t sirVulkanValidateRecordedCommands( const sirVulkanRecordedCommand_t *pCommands,
-                                                      uint32_t nCount ) noexcept
+sirVulkanResult_t sirVulkanValidateRecordedCommands( const sirVulkanRecordedCommand_t *pCommands, uint32_t nCount ) noexcept
 {
 	if ( pCommands == nullptr || nCount == 0 || nCount > SIR_VULKAN_COPY_BATCH_CAPACITY ) {
 		return SIR_VULKAN_INVALID_ARGUMENT;
@@ -126,8 +122,8 @@ sirVulkanResult_t sirVulkanValidateRecordedCommands( const sirVulkanRecordedComm
 	return SIR_VULKAN_SUCCESS;
 }
 
-sirVulkanResult_t SIRVulkanDevice::submitRecordedCommands( const sirVulkanRecordedCommand_t *pCommands,
-                                                            uint32_t nCount, sirVulkanCompletion_t *pCompletion ) noexcept
+sirVulkanResult_t SIRVulkanDevice::submitRecordedCommands( const sirVulkanRecordedCommand_t *pCommands, uint32_t nCount,
+                                                           sirVulkanCompletion_t *pCompletion ) noexcept
 {
 	if ( pCompletion != nullptr ) {
 		*pCompletion = {};
@@ -145,8 +141,7 @@ sirVulkanResult_t SIRVulkanDevice::submitRecordedCommands( const sirVulkanRecord
 	for ( uint32_t iCommand = 0; iCommand < nCount; ++iCommand ) {
 		const sirVulkanRecordedCommand_t &command = pCommands[iCommand];
 		if ( command.eKind == SIR_VULKAN_RECORDED_BUFFER_COPY ) {
-			if ( command.bufferCopy.pSource->hBuffer == VK_NULL_HANDLE ||
-			     command.bufferCopy.pDestination->hBuffer == VK_NULL_HANDLE ||
+			if ( command.bufferCopy.pSource->hBuffer == VK_NULL_HANDLE || command.bufferCopy.pDestination->hBuffer == VK_NULL_HANDLE ||
 			     command.bufferCopy.pSource->hBuffer == command.bufferCopy.pDestination->hBuffer ||
 			     command.bufferCopy.pSource->pOwnerAllocator != m_Allocator ||
 			     command.bufferCopy.pDestination->pOwnerAllocator != m_Allocator ||
@@ -228,10 +223,11 @@ sirVulkanResult_t SIRVulkanDevice::submitRecordedCommands( const sirVulkanRecord
 			const sirVulkanImageBarrier_t &barrier = command.imageBarrier;
 			VkImageMemoryBarrier2 imageBarrier = {};
 			imageBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
-			imageBarrier.srcStageMask = barrier.eBefore == VK_IMAGE_LAYOUT_UNDEFINED ? VK_PIPELINE_STAGE_2_NONE
-			                                                                      : VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+			imageBarrier.srcStageMask =
+			    barrier.eBefore == VK_IMAGE_LAYOUT_UNDEFINED ? VK_PIPELINE_STAGE_2_NONE : VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
 			imageBarrier.srcAccessMask = barrier.eBefore == VK_IMAGE_LAYOUT_UNDEFINED
-			                                 ? VK_ACCESS_2_NONE : VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT;
+			                                 ? VK_ACCESS_2_NONE
+			                                 : VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT;
 			imageBarrier.dstStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
 			imageBarrier.dstAccessMask = VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT;
 			imageBarrier.oldLayout = barrier.eBefore;
@@ -260,8 +256,8 @@ sirVulkanResult_t SIRVulkanDevice::submitRecordedCommands( const sirVulkanRecord
 		VkImageMemoryBarrier2 before = {};
 		before.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
 		before.srcStageMask = eOld == VK_IMAGE_LAYOUT_UNDEFINED ? VK_PIPELINE_STAGE_2_NONE : VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
-		before.srcAccessMask = eOld == VK_IMAGE_LAYOUT_UNDEFINED
-		                           ? VK_ACCESS_2_NONE : VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT;
+		before.srcAccessMask =
+		    eOld == VK_IMAGE_LAYOUT_UNDEFINED ? VK_ACCESS_2_NONE : VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT;
 		before.dstStageMask = VK_PIPELINE_STAGE_2_COPY_BIT;
 		before.dstAccessMask = bUpload ? VK_ACCESS_2_TRANSFER_WRITE_BIT : VK_ACCESS_2_TRANSFER_READ_BIT;
 		before.oldLayout = eOld;

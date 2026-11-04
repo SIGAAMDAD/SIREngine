@@ -312,7 +312,7 @@ int main( void )
 		return 25;
 	}
 	// Submit an ordered mixed command list on one direct queue timeline:
-// buffer copy -> image upload -> two image transitions -> image readback.
+	// buffer copy -> image upload -> two image transitions -> image readback.
 	SIRGraphicsCommandList *pMixed = nullptr;
 	sirGraphicsBufferTextureCopy_t mixedCopy = {};
 	mixedCopy.hBuffer = hGpu;
@@ -331,18 +331,16 @@ int main( void )
 	mixedBarrier.eAfter = SIR_GRAPHICS_STATE_SHADER_READ;
 	mixedBarrier.nMipCount = 1;
 	mixedBarrier.nLayerCount = 1;
-	if ( pDevice->acquireCommands( SIR_GRAPHICS_QUEUE_DIRECT, &pMixed ) != SIR_GRAPHICS_SUCCESS ||
-	     pMixed == nullptr || pMixed->copyBuffer( hGpu, 2048, hSource, 0, sizeof( szExpected ) ) != SIR_GRAPHICS_SUCCESS ||
-	     pMixed->copyBufferTexture( mixedCopy ) != SIR_GRAPHICS_SUCCESS ||
-	     pMixed->barrier( &mixedBarrier, 1 ) != SIR_GRAPHICS_SUCCESS ) {
+	if ( pDevice->acquireCommands( SIR_GRAPHICS_QUEUE_DIRECT, &pMixed ) != SIR_GRAPHICS_SUCCESS || pMixed == nullptr ||
+	     pMixed->copyBuffer( hGpu, 2048, hSource, 0, sizeof( szExpected ) ) != SIR_GRAPHICS_SUCCESS ||
+	     pMixed->copyBufferTexture( mixedCopy ) != SIR_GRAPHICS_SUCCESS || pMixed->barrier( &mixedBarrier, 1 ) != SIR_GRAPHICS_SUCCESS ) {
 		return 33;
 	}
 	mixedBarrier.eBefore = SIR_GRAPHICS_STATE_SHADER_READ;
 	mixedBarrier.eAfter = SIR_GRAPHICS_STATE_COMMON;
 	mixedCopy.hBuffer = hReadback;
 	mixedCopy.bBufferToTexture = false;
-	if ( pMixed->barrier( &mixedBarrier, 1 ) != SIR_GRAPHICS_SUCCESS ||
-	     pMixed->copyBufferTexture( mixedCopy ) != SIR_GRAPHICS_SUCCESS ||
+	if ( pMixed->barrier( &mixedBarrier, 1 ) != SIR_GRAPHICS_SUCCESS || pMixed->copyBufferTexture( mixedCopy ) != SIR_GRAPHICS_SUCCESS ||
 	     pMixed->close() != SIR_GRAPHICS_SUCCESS ) {
 		return 34;
 	}
@@ -353,8 +351,7 @@ int main( void )
 	mixedSubmission.nWaitCount = 1;
 	sirGraphicsCompletion_t mixedCompleted = {};
 	if ( pDevice->submit( SIR_GRAPHICS_QUEUE_DIRECT, mixedSubmission, &mixedCompleted ) != SIR_GRAPHICS_SUCCESS ||
-	     mixedCompleted.nValue != downloaded.nValue + 1 ||
-	     pDevice->wait( mixedCompleted, 5000000000ull ) != SIR_GRAPHICS_SUCCESS ) {
+	     mixedCompleted.nValue != downloaded.nValue + 1 || pDevice->wait( mixedCompleted, 5000000000ull ) != SIR_GRAPHICS_SUCCESS ) {
 		return 35;
 	}
 	if ( pDevice->mapBuffer( hReadback, 2048, sizeof( szExpected ), &mapped ) != SIR_GRAPHICS_SUCCESS ||

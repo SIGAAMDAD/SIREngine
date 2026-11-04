@@ -194,8 +194,7 @@ typedef struct sirVulkanRecordedCommand_s
 } sirVulkanRecordedCommand_t;
 
 // Pure ordered preflight: never mutates caller-owned VkImage state.
-sirVulkanResult_t sirVulkanValidateRecordedCommands( const sirVulkanRecordedCommand_t *pCommands,
-                                                    uint32_t nCount ) noexcept;
+sirVulkanResult_t sirVulkanValidateRecordedCommands( const sirVulkanRecordedCommand_t *pCommands, uint32_t nCount ) noexcept;
 
 sirVulkanResult_t sirVulkanValidateTextureTransfer( const sirVulkanBuffer_t *pBuffer, const sirVulkanImage_t *pImage,
                                                     const sirVulkanTextureTransfer_t &transfer ) noexcept;
@@ -289,8 +288,8 @@ public:
 	sirVulkanResult_t readBuffer( sirVulkanBuffer_t *pBuffer, uint64_t nOffset, void *pData, uint64_t nBytes ) noexcept;
 	sirVulkanResult_t submitBufferCopy( sirVulkanBuffer_t *pSource, uint64_t nSourceOffset, sirVulkanBuffer_t *pDestination,
 	                                    uint64_t nDestinationOffset, uint64_t nBytes, sirVulkanCompletion_t *pCompletion ) noexcept;
-	 sirVulkanResult_t submitRecordedCommands( const sirVulkanRecordedCommand_t *pCommands, uint32_t nCount,
-	                                         sirVulkanCompletion_t *pCompletion ) noexcept;
+	sirVulkanResult_t submitRecordedCommands( const sirVulkanRecordedCommand_t *pCommands, uint32_t nCount,
+	                                          sirVulkanCompletion_t *pCompletion ) noexcept;
 	sirVulkanResult_t submitBufferCopies( const sirVulkanBufferCopy_t *pCopies, uint32_t nCount,
 	                                      sirVulkanCompletion_t *pCompletion ) noexcept;
 	sirVulkanResult_t submitImageBarrier( sirVulkanImage_t *pImage, const sirVulkanImageBarrier_t &barrier,

@@ -91,7 +91,7 @@ sirGraphicsResult_t SIRVulkanCommandList::copyBuffer( sirGraphicsHandle_t hDesti
 	     ( pDestination->native.nUsage & VK_BUFFER_USAGE_TRANSFER_DST_BIT ) == 0 ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	 sirVulkanGraphicsOperation_t &operation = m_szOperations[m_nOperationCount++];
+	sirVulkanGraphicsOperation_t &operation = m_szOperations[m_nOperationCount++];
 	operation = {};
 	operation.eKind = SIR_VULKAN_GRAPHICS_BUFFER_COPY;
 	operation.hSource = hSource;
@@ -468,8 +468,7 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::submit( sirGraphicsQueue_t eQueue,
 			nativeOp.bufferCopy = { &pSrc->native, &pDst->native, op.nSourceOffset, op.nDestinationOffset, op.nBytes };
 			continue;
 		}
-		const sirGraphicsHandle_t hTexture = op.eKind == SIR_VULKAN_GRAPHICS_TEXTURE_COPY
-		                                         ? op.textureCopy.hTexture : op.barrier.hResource;
+		const sirGraphicsHandle_t hTexture = op.eKind == SIR_VULKAN_GRAPHICS_TEXTURE_COPY ? op.textureCopy.hTexture : op.barrier.hResource;
 		if ( hTexture.eType != SIR_GRAPHICS_HANDLE_TEXTURE || hTexture.nDeviceGeneration != m_nDeviceGeneration ||
 		     hTexture.nSlot >= SIR_VULKAN_TEXTURE_CAPACITY ) {
 			return SIR_GRAPHICS_INVALID_HANDLE;
@@ -510,8 +509,7 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::submit( sirGraphicsQueue_t eQueue,
 			}
 			sirVulkanTextureTransfer_t transfer = {};
 			transfer.nBufferOffset = copy.nBufferOffset;
-			transfer.nBufferRowLength = copy.nBytesPerRow == 0 ? 0 :
-			                            ( copy.nBytesPerRow / block.nBytesPerBlock ) * block.nBlockWidth;
+			transfer.nBufferRowLength = copy.nBytesPerRow == 0 ? 0 : ( copy.nBytesPerRow / block.nBytesPerBlock ) * block.nBlockWidth;
 			transfer.nBufferImageHeight = copy.nRowsPerImage;
 			transfer.nMip = copy.nMip;
 			transfer.nLayer = copy.nLayer;
@@ -528,10 +526,10 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::submit( sirGraphicsQueue_t eQueue,
 			if ( transfer.bBufferToImage ) {
 				const uint32_t nIndex = transfer.nLayer * pShadow->nMips + transfer.nMip;
 				pShadow->szUploadedSubresources[nIndex / 64] |= 1ULL << ( nIndex % 64 );
-				const VkImageLayout eFinal = ( pShadow->nUsage & VK_IMAGE_USAGE_STORAGE_BIT ) != 0
-				                                 ? VK_IMAGE_LAYOUT_GENERAL
-				                                 : ( pShadow->nUsage & VK_IMAGE_USAGE_SAMPLED_BIT ) != 0
-				                                       ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL : VK_IMAGE_LAYOUT_GENERAL;
+				const VkImageLayout eFinal = ( pShadow->nUsage & VK_IMAGE_USAGE_STORAGE_BIT ) != 0 ? VK_IMAGE_LAYOUT_GENERAL
+				                             : ( pShadow->nUsage & VK_IMAGE_USAGE_SAMPLED_BIT ) != 0
+				                                 ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+				                                 : VK_IMAGE_LAYOUT_GENERAL;
 				( void )sirVulkanSetSubresourceLayout( pShadow, transfer.nMip, transfer.nLayer, eFinal );
 			}
 		} else if ( op.eKind == SIR_VULKAN_GRAPHICS_IMAGE_BARRIER ) {
@@ -540,8 +538,8 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::submit( sirGraphicsQueue_t eQueue,
 			if ( ePlan != SIR_GRAPHICS_SUCCESS ) {
 				return ePlan;
 			}
-			( void )sirVulkanSetSubresourceLayout( pShadow, nativeOp.imageBarrier.nMip,
-			                                       nativeOp.imageBarrier.nLayer, nativeOp.imageBarrier.eAfter );
+			( void )sirVulkanSetSubresourceLayout( pShadow, nativeOp.imageBarrier.nMip, nativeOp.imageBarrier.nLayer,
+			                                       nativeOp.imageBarrier.eAfter );
 		} else {
 			return SIR_GRAPHICS_INVALID_ARGUMENT;
 		}

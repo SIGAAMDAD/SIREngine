@@ -131,8 +131,8 @@ sirGraphicsResult_t SIRVulkanCommandList::barrier( const sirGraphicsBarrier_t *p
 		if ( !pImage->bActive || pImage->nGeneration != barrier.hResource.nGeneration ) {
 			return SIR_GRAPHICS_INVALID_HANDLE;
 		}
-		if ( barrier.nMipCount != 1 || barrier.nLayerCount != 1 ||
-		     barrier.nBaseMip >= pImage->native.nMips || barrier.nBaseLayer >= pImage->native.nLayers ) {
+		if ( barrier.nMipCount != 1 || barrier.nLayerCount != 1 || barrier.nBaseMip >= pImage->native.nMips ||
+		     barrier.nBaseLayer >= pImage->native.nLayers ) {
 			return SIR_GRAPHICS_UNSUPPORTED;
 		}
 		if ( m_nOperationCount == 0 && iBarrier == 0 ) {
@@ -201,6 +201,8 @@ sirVulkanResult_t SIRVulkanDevice::submitImageBarrier( sirVulkanImage_t *pImage,
 	begin.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 	if ( m_pfnBeginCommandBuffer( pSlot->hCommandBuffer, &begin ) != VK_SUCCESS ) {
 		return SIR_VULKAN_NATIVE_FAILURE;
+
+
 	}
 	VkImageMemoryBarrier2 transition = {};
 	transition.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;

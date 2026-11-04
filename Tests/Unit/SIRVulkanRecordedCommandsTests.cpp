@@ -35,8 +35,8 @@ int main( void )
 	image.nHeight = 8;
 	image.nMips = 1;
 	image.nLayers = 1;
-	image.nUsage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT |
-	               VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT;
+	image.nUsage =
+	    VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT;
 	sirVulkanRecordedCommand_t commands[SIR_VULKAN_COPY_BATCH_CAPACITY + 1] = {};
 	commands[0].eKind = SIR_VULKAN_RECORDED_BUFFER_COPY;
 	commands[0].bufferCopy = { &source, &staging, 0, 0, 256 };
@@ -61,8 +61,8 @@ int main( void )
 		return 1;
 	}
 	VkImageLayout layout = VK_IMAGE_LAYOUT_GENERAL;
-	if ( !sirVulkanGetSubresourceLayout( &image, 0, 0, &layout ) ||
-	     layout != VK_IMAGE_LAYOUT_UNDEFINED || image.szUploadedSubresources[0] != 0 ) {
+	if ( !sirVulkanGetSubresourceLayout( &image, 0, 0, &layout ) || layout != VK_IMAGE_LAYOUT_UNDEFINED ||
+	     image.szUploadedSubresources[0] != 0 ) {
 		return 2;
 	}
 	if ( sirVulkanValidateRecordedCommands( nullptr, 5 ) != SIR_VULKAN_INVALID_ARGUMENT ||
