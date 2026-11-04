@@ -104,7 +104,7 @@ static bool testNegotiation( void ) noexcept
 	if ( sirGraphicsNegotiateDriverABI( nullptr, &host, &driver ) != SIR_GRAPHICS_ABI_INVALID_ARGUMENT ) {
 		return false;
 	}
-	host.nMajor = 2;
+	host.nMajor = SIR_GRAPHICS_DRIVER_ABI_MAJOR + 1;
 	if ( sirGraphicsNegotiateDriverABI( testFactory, &host, &driver ) != SIR_GRAPHICS_ABI_VERSION_MISMATCH ) {
 		return false;
 	}

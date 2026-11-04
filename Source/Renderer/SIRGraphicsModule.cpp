@@ -86,7 +86,8 @@ sirGraphicsABIResult_t sirGraphicsQueryABIAdapter( const sirGraphicsABIModule_t 
 		return eDriver;
 	}
 	uint32_t nCount = 0;
-	const sirGraphicsABIResult_t eCount = sirGraphicsResultFromProvider( pModule->driver.pAdapterCount( pModule->driver.pDriver, &nCount ) );
+	const sirGraphicsABIResult_t eCount =
+	    sirGraphicsResultFromProvider( pModule->driver.pAdapterCount( pModule->driver.pDriver, &nCount ) );
 	if ( eCount != SIR_GRAPHICS_ABI_SUCCESS ) {
 		return eCount;
 	}
@@ -99,7 +100,8 @@ sirGraphicsABIResult_t sirGraphicsQueryABIAdapter( const sirGraphicsABIModule_t 
 	sirGraphicsABIAdapter_t adapter = {};
 	adapter.nSize = sizeof( adapter );
 	adapter.nIndex = nIndex;
-	const sirGraphicsABIResult_t eProbe = sirGraphicsResultFromProvider( pModule->driver.pQueryAdapter( pModule->driver.pDriver, &adapter ) );
+	const sirGraphicsABIResult_t eProbe =
+	    sirGraphicsResultFromProvider( pModule->driver.pQueryAdapter( pModule->driver.pDriver, &adapter ) );
 	if ( eProbe != SIR_GRAPHICS_ABI_SUCCESS ) {
 		return eProbe;
 	}
@@ -137,8 +139,8 @@ sirGraphicsABIResult_t sirGraphicsQueryABICapabilities( const sirGraphicsABIDevi
 sirGraphicsABIResult_t sirGraphicsQueryABIFormat( const sirGraphicsABIDevice_t *pDevice, uint32_t nFormat,
                                                   sirGraphicsABIFormat_t *pFormat ) noexcept
 {
-	if ( pFormat == nullptr || pFormat->nSize < sizeof( sirGraphicsABIFormat_t ) ||
-	     nFormat <= SIR_GRAPHICS_FORMAT_UNKNOWN || nFormat > SIR_GRAPHICS_FORMAT_BC7_UNORM ) {
+	if ( pFormat == nullptr || pFormat->nSize < sizeof( sirGraphicsABIFormat_t ) || nFormat <= SIR_GRAPHICS_FORMAT_UNKNOWN ||
+	     nFormat > SIR_GRAPHICS_FORMAT_BC7_UNORM ) {
 		return SIR_GRAPHICS_ABI_INVALID_ARGUMENT;
 	}
 	const sirGraphicsABIResult_t eDevice = sirGraphicsValidateABIDevice( pDevice );
@@ -159,14 +161,12 @@ sirGraphicsABIResult_t sirGraphicsQueryABIFormat( const sirGraphicsABIDevice_t *
 	return SIR_GRAPHICS_ABI_SUCCESS;
 }
 
-sirGraphicsABIResult_t sirGraphicsCreateABIDevice( sirGraphicsABIModule_t *pModule,
-                                                   const sirGraphicsABIDeviceRequest_t *pRequest,
+sirGraphicsABIResult_t sirGraphicsCreateABIDevice( sirGraphicsABIModule_t *pModule, const sirGraphicsABIDeviceRequest_t *pRequest,
                                                    sirGraphicsABIDevice_t *pDevice ) noexcept
 {
 	if ( pModule == nullptr || pRequest == nullptr || pRequest->nSize < sizeof( sirGraphicsABIDeviceRequest_t ) ||
 	     pRequest->nFramesInFlight == 0 || pRequest->nAllowSoftware > 1 || pDevice == nullptr ||
-	     pDevice->nSize < sizeof( sirGraphicsABIDevice_t ) ||
-	     pModule->nActiveDevices >= 16 ) {
+	     pDevice->nSize < sizeof( sirGraphicsABIDevice_t ) || pModule->nActiveDevices >= 16 ) {
 		return SIR_GRAPHICS_ABI_INVALID_ARGUMENT;
 	}
 	sirGraphicsABIAdapter_t adapter = {};
