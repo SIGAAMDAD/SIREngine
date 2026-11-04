@@ -18,15 +18,19 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Audio/FMOD/SIRFMODSnapshotBackend.h>
 #include <Audio/SIRAudioSystem.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <limits>
 #include <string.h>
 
-static void checkVoice( bool bValid ) noexcept
+static void checkVoiceAt( bool bValid, uint32_t nLine ) noexcept
 {
 	if ( !bValid ) {
+		fprintf( stderr, "FMOD voice test failure at line %u\n", nLine );
 		abort();
 	}
 }
+
+#define checkVoice( condition ) checkVoiceAt( ( condition ), __LINE__ )
 
 static uint32_t s_nAllocations = 0;
 static void *testVoiceAllocate( void *, size_t nBytes, size_t ) noexcept
@@ -150,6 +154,8 @@ static sirFMODNativeOps_t makeContextOps( sirFMODVoiceFixture_t *pFixture ) noex
 	return { 1,
 	         0x00020400,
 	         pFixture,
+
+
 	         testContextCreate,
 	         testContextGetCore,
 	         testContextVersion,
@@ -244,8 +250,11 @@ static int32_t testRelease( void *pData, void *pInstance ) noexcept
 }
 static sirFMODVoiceNativeOps_t makeVoiceOps( sirFMODVoiceFixture_t *pFixture ) noexcept
 {
-	return { 4,       pFixture, testResolve, testCreateInstance, testStart, testStop, testIsStopped, testRelease, nullptr, nullptr, nullptr,
-	         nullptr, nullptr,  nullptr,      nullptr,     nullptr,    nullptr,     nullptr,         nullptr };
+	return { 4,         pFixture, testResolve,   testCreateInstance,
+	         testStart, testStop, testIsStopped, testRelease,
+	         nullptr,   nullptr,  nullptr,       nullptr,
+	         nullptr,   nullptr,  nullptr,       nullptr,
+	         nullptr,   nullptr,  nullptr };
 }
 
 static int32_t testInstanceParameter( void *pData, void *pInstance, uint64_t nNativeId, float fValue ) noexcept
@@ -400,7 +409,7 @@ static void testAdvancedInstanceControls( const sirContainerAllocator_t *pAlloca
 	fixture.nFailAdvanced = 1;
 	checkVoice( audio.setPlayingVolume( playing, 0.75f ) == SIR_AUDIO_PENDING );
 	checkVoice( audio.update() == 1 );
-	checkVoice( backend.getLastNativeResult() == -91 && fixture.fAdvancedVolume == 0.5f );
+	checkVoice( fixture.nAdvancedVolumeCalls == 2 && fixture.fAdvancedVolume == 0.5f );
 	checkVoice( audio.setPlayingPaused( playing, false ) == SIR_AUDIO_PENDING );
 	checkVoice( audio.setPlayingPitch( playing, 0.8f ) == SIR_AUDIO_PENDING );
 	checkVoice( audio.seekPlayingTimeline( playing, 200 ) == SIR_AUDIO_PENDING );
