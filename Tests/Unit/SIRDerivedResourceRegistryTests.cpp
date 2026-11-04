@@ -324,7 +324,10 @@ static void testInvalidInputsAndCapacity( void )
 		REQUIRE( registry.registerProvider( 0, { &provider, releaseNative } ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
 		REQUIRE( registry.registerProvider( 7, { &provider, nullptr } ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
 		REQUIRE( registry.registerProvider( 7, { &provider, releaseNative } ) == SIR_RESOURCE_RESULT_SUCCESS );
-		REQUIRE( registry.updateCompletedFence( 8, 0 ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		REQUIRE( registry.registerProvider( 7, { &provider, releaseNative } ) == SIR_RESOURCE_RESULT_BUSY );
+		REQUIRE( registry.registerProvider( 8, { &provider, releaseNative } ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( registry.registerProvider( 9, { &provider, releaseNative } ) == SIR_RESOURCE_RESULT_OUT_OF_BUDGET );
+		REQUIRE( registry.updateCompletedFence( 9, 0 ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
 		REQUIRE( registry.getStats( nullptr ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
 		SIRDerivedResourceAccounting accounting = {};
 		REQUIRE( registry.getAccounting( { UINT32_MAX, 0 }, &accounting ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
