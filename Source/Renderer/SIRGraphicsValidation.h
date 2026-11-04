@@ -28,13 +28,13 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 bool sirGraphicsIsBackendValid( sirGraphicsBackend_t eBackend ) noexcept;
 bool sirGraphicsHasFeatures( uint64_t nAvailable, uint64_t nRequired ) noexcept;
-bool sirGraphicsIsHandleValid( const sirGraphicsHandle_t &handle, sirGraphicsHandleType_t eExpected, uint32_t nDeviceGeneration ) noexcept;
-bool sirGraphicsIsCompletionSetValid( const sirGraphicsCompletionSet_t &completion, uint32_t nDeviceGeneration ) noexcept;
-sirGraphicsResult_t sirGraphicsValidateBuffer( const sirGraphicsBufferDesc_t &desc ) noexcept;
-sirGraphicsResult_t sirGraphicsValidateTexture( const sirGraphicsTextureDesc_t &desc ) noexcept;
-sirGraphicsResult_t sirGraphicsValidateSampler( const sirGraphicsSamplerDesc_t &desc ) noexcept;
-sirGraphicsResult_t sirGraphicsValidatePipeline( const sirGraphicsPipelineDesc_t &desc ) noexcept;
-sirGraphicsResult_t sirGraphicsValidateSubmission( sirGraphicsQueue_t eQueue, const sirGraphicsSubmission_t &submission,
+bool sirGraphicsIsHandleValid( const sirGraphicsHandle_t& handle, sirGraphicsHandleType_t eExpected, uint32_t nDeviceGeneration ) noexcept;
+bool sirGraphicsIsCompletionSetValid( const sirGraphicsCompletionSet_t& completion, uint32_t nDeviceGeneration ) noexcept;
+sirGraphicsResult_t sirGraphicsValidateBuffer( const sirGraphicsBufferDesc_t& desc ) noexcept;
+sirGraphicsResult_t sirGraphicsValidateTexture( const sirGraphicsTextureDesc_t& desc ) noexcept;
+sirGraphicsResult_t sirGraphicsValidateSampler( const sirGraphicsSamplerDesc_t& desc ) noexcept;
+sirGraphicsResult_t sirGraphicsValidatePipeline( const sirGraphicsPipelineDesc_t& desc ) noexcept;
+sirGraphicsResult_t sirGraphicsValidateSubmission( sirGraphicsQueue_t eQueue, const sirGraphicsSubmission_t& submission,
                                                    uint32_t nDeviceGeneration ) noexcept;
 
 #endif // __SIRENGINE_SIRGRAPHICSVALIDATION_H__

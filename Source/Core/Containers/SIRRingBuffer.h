@@ -1,3 +1,5 @@
+
+
 /*
 ===========================================================================
 SIREngine MPLv2 Source Code
@@ -55,10 +57,10 @@ public:
 	{
 		clearAndRelease();
 	}
-	SIRRingBuffer( const SIRRingBuffer & ) = delete;
-	SIRRingBuffer &operator=( const SIRRingBuffer & ) = delete;
-	SIRRingBuffer( SIRRingBuffer && ) = delete;
-	SIRRingBuffer &operator=( SIRRingBuffer && ) = delete;
+	SIRRingBuffer( const SIRRingBuffer& ) = delete;
+	SIRRingBuffer& operator=( const SIRRingBuffer& ) = delete;
+	SIRRingBuffer( SIRRingBuffer&& ) = delete;
+	SIRRingBuffer& operator=( SIRRingBuffer&& ) = delete;
 
 	sirContainerResult_t tryInitialize( uint32_t nCapacity ) noexcept
 	{
@@ -111,7 +113,7 @@ public:
 	}
 
 	template <typename... Args>
-	sirContainerResult_t tryEmplaceFront( Args &&...args )
+	sirContainerResult_t tryEmplaceFront( Args&&...args )
 	{
 		if ( m_nCapacity == 0 ) {
 			return SIR_CONTAINER_INVALID_ARGUMENT;
@@ -126,17 +128,17 @@ public:
 		return SIR_CONTAINER_OK;
 	}
 
-	sirContainerResult_t tryPushFront( const T &value )
+	sirContainerResult_t tryPushFront( const T& value )
 	{
 		return tryEmplaceFront( value );
 	}
-	sirContainerResult_t tryPushFront( T &&value )
+	sirContainerResult_t tryPushFront( T&& value )
 	{
 		return tryEmplaceFront( std::move( value ) );
 	}
 
 	template <typename... Args>
-	sirContainerResult_t tryEmplaceBack( Args &&...args )
+	sirContainerResult_t tryEmplaceBack( Args&&...args )
 	{
 		if ( m_nCapacity == 0 ) {
 			return SIR_CONTAINER_INVALID_ARGUMENT;
@@ -150,11 +152,11 @@ public:
 		return SIR_CONTAINER_OK;
 	}
 
-	sirContainerResult_t tryPushBack( const T &value )
+	sirContainerResult_t tryPushBack( const T& value )
 	{
 		return tryEmplaceBack( value );
 	}
-	sirContainerResult_t tryPushBack( T &&value )
+	sirContainerResult_t tryPushBack( T&& value )
 	{
 		return tryEmplaceBack( std::move( value ) );
 	}

@@ -52,7 +52,6 @@ typedef struct sirMemoryDomainStats_s
 	uint64_t nPeakCommittedBytes;
 	uint64_t nCommitLimitBytes;
 } sirMemoryDomainStats_t;
-
 typedef struct sirMemoryConfig_s
 {
 	uint64_t nReserveBytes;
@@ -107,15 +106,15 @@ class SIRMemoryManager
 {
 public:
 	SIRMemoryManager( void );
-	explicit SIRMemoryManager( const sirMemoryConfig_t &config );
-	SIRMemoryManager( const sirMemoryConfig_t &config, const sirMemoryBudgetProfile_t &budget );
+	explicit SIRMemoryManager( const sirMemoryConfig_t& config );
+	SIRMemoryManager( const sirMemoryConfig_t& config, const sirMemoryBudgetProfile_t& budget );
 	~SIRMemoryManager();
 
-	SIRMemoryManager( const SIRMemoryManager & ) = delete;
-	SIRMemoryManager &operator=( const SIRMemoryManager & ) = delete;
+	SIRMemoryManager( const SIRMemoryManager& ) = delete;
+	SIRMemoryManager& operator=( const SIRMemoryManager& ) = delete;
 
-	bool init( const sirMemoryConfig_t &config );
-	bool initBudgeted( const sirMemoryConfig_t &config, const sirMemoryBudgetProfile_t &budget );
+	bool init( const sirMemoryConfig_t& config );
+	bool initBudgeted( const sirMemoryConfig_t& config, const sirMemoryBudgetProfile_t& budget );
 	bool setCommitBudgetBytes( uint64_t nNewBudget );
 	bool isInitialized( void ) const;
 	void shutdown( void );

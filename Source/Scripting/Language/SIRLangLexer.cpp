@@ -36,7 +36,6 @@ static sirLangToken_t sirLangToken( sirLangCursor_t start, sirLangTokenKind_t eK
 static bool sirLangIsDigit( uint8_t iByte ) noexcept
 {
 
-
 	return iByte >= '0' && iByte <= '9';
 }
 

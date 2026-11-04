@@ -11,6 +11,7 @@ This software is provided "as is", without warranty of any kind,
 express or implied, including but not limited to the warranties
 of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
+
 */
 
 #ifndef __SIRENGINE_SIRSYNC_H__
@@ -44,8 +45,8 @@ class SIRMutex
 public:
 	SIRMutex( void ) noexcept;
 	~SIRMutex();
-	SIRMutex( const SIRMutex & ) = delete;
-	SIRMutex &operator=( const SIRMutex & ) = delete;
+	SIRMutex( const SIRMutex& ) = delete;
+	SIRMutex& operator=( const SIRMutex& ) = delete;
 	void lock( void ) noexcept;
 	bool tryLock( void ) noexcept;
 	void unlock( void ) noexcept;
@@ -64,8 +65,8 @@ class SIRRecursiveMutex
 public:
 	SIRRecursiveMutex( void ) noexcept;
 	~SIRRecursiveMutex();
-	SIRRecursiveMutex( const SIRRecursiveMutex & ) = delete;
-	SIRRecursiveMutex &operator=( const SIRRecursiveMutex & ) = delete;
+	SIRRecursiveMutex( const SIRRecursiveMutex& ) = delete;
+	SIRRecursiveMutex& operator=( const SIRRecursiveMutex& ) = delete;
 	void lock( void ) noexcept;
 	bool tryLock( void ) noexcept;
 	void unlock( void ) noexcept;
@@ -83,9 +84,9 @@ class SIRConditionVariable
 public:
 	SIRConditionVariable( void ) noexcept;
 	~SIRConditionVariable();
-	SIRConditionVariable( const SIRConditionVariable & ) = delete;
-	SIRConditionVariable &operator=( const SIRConditionVariable & ) = delete;
-	void wait( SIRMutex &mutex ) noexcept;
+	SIRConditionVariable( const SIRConditionVariable& ) = delete;
+	SIRConditionVariable& operator=( const SIRConditionVariable& ) = delete;
+	void wait( SIRMutex& mutex ) noexcept;
 	void notifyOne( void ) noexcept;
 	void notifyAll( void ) noexcept;
 
@@ -101,8 +102,8 @@ class SIRSpinLock
 {
 public:
 	SIRSpinLock( void ) noexcept;
-	SIRSpinLock( const SIRSpinLock & ) = delete;
-	SIRSpinLock &operator=( const SIRSpinLock & ) = delete;
+	SIRSpinLock( const SIRSpinLock& ) = delete;
+	SIRSpinLock& operator=( const SIRSpinLock& ) = delete;
 	void lock( void ) noexcept;
 	bool tryLock( void ) noexcept;
 	void unlock( void ) noexcept;

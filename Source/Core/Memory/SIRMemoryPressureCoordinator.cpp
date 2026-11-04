@@ -64,7 +64,7 @@ bool SIRMemoryPressureCoordinator::init( SIRMemoryManager *pManager, uint32_t nO
 	return true;
 }
 
-bool SIRMemoryPressureCoordinator::registerOwner( const sirReclaimOwnerConfig_t &config, uint32_t *pIndex )
+bool SIRMemoryPressureCoordinator::registerOwner( const sirReclaimOwnerConfig_t& config, uint32_t *pIndex )
 {
 	// Registration must complete before pressure requests or owner services begin.
 	const uint32_t nIndex = m_nOwnerCount.load( SIR_MEMORY_ORDER_RELAXED );
@@ -79,7 +79,7 @@ bool SIRMemoryPressureCoordinator::registerOwner( const sirReclaimOwnerConfig_t 
 		}
 	}
 	for ( uint32_t k = 0; k < nIndex; ++k ) {
-		const sirOwner_t &existing = m_pOwners[k];
+		const sirOwner_t& existing = m_pOwners[k];
 		for ( uint32_t i = 0; i < config.nSegmentCount; ++i ) {
 			for ( uint32_t j = 0; j < existing.nSegmentCount; ++j ) {
 				if ( config.ppSegments[i] == existing.ppSegments[j] ) {
@@ -96,7 +96,7 @@ bool SIRMemoryPressureCoordinator::registerOwner( const sirReclaimOwnerConfig_t 
 	for ( uint32_t i = 0; i < config.nSegmentCount; ++i ) {
 		ppCopy[i] = config.ppSegments[i];
 	}
-	sirOwner_t &owner = m_pOwners[nIndex];
+	sirOwner_t& owner = m_pOwners[nIndex];
 	owner.pAllocator = config.pAllocator;
 	owner.ppSegments = ppCopy;
 	owner.nSegmentCount = config.nSegmentCount;
@@ -121,7 +121,7 @@ bool SIRMemoryPressureCoordinator::requestReclaim( uint64_t nTargetBytes )
 	// never accesses allocation state or invokes a trim callback.
 	const uint32_t nCount = m_nOwnerCount.load( SIR_MEMORY_ORDER_ACQUIRE );
 	for ( uint32_t i = 0; i < nCount; ++i ) {
-		SIRAtomic<uint64_t> &pending = m_pOwners[i].nPendingBytes;
+		SIRAtomic<uint64_t>& pending = m_pOwners[i].nPendingBytes;
 		uint64_t nOld = pending.load( SIR_MEMORY_ORDER_RELAXED );
 		while ( nOld < nTargetBytes &&
 		        !pending.compareExchangeWeak( nOld, nTargetBytes, SIR_MEMORY_ORDER_RELEASE, SIR_MEMORY_ORDER_RELAXED ) ) {
@@ -130,7 +130,7 @@ bool SIRMemoryPressureCoordinator::requestReclaim( uint64_t nTargetBytes )
 	return true;
 }
 
-uint64_t SIRMemoryPressureCoordinator::countOwnerCommitted( const sirOwner_t &owner ) const
+uint64_t SIRMemoryPressureCoordinator::countOwnerCommitted( const sirOwner_t& owner ) const
 {
 	uint64_t nBytes = 0;
 	for ( uint32_t i = 0; i < owner.nSegmentCount; ++i ) {
@@ -139,7 +139,7 @@ uint64_t SIRMemoryPressureCoordinator::countOwnerCommitted( const sirOwner_t &ow
 	return nBytes;
 }
 
-bool SIRMemoryPressureCoordinator::trimOwner( sirOwner_t &owner, uint64_t nTargetBytes )
+bool SIRMemoryPressureCoordinator::trimOwner( sirOwner_t& owner, uint64_t nTargetBytes )
 {
 	switch ( owner.nType ) {
 	case SIR_RECLAIM_COMPACT_BUCKET:
@@ -188,7 +188,7 @@ uint64_t SIRMemoryPressureCoordinator::serviceOwner( uint32_t nIndex )
 	if ( m_pOwners == nullptr || nIndex >= m_nOwnerCount.load( SIR_MEMORY_ORDER_ACQUIRE ) ) {
 		return 0;
 	}
-	sirOwner_t &owner = m_pOwners[nIndex];
+	sirOwner_t& owner = m_pOwners[nIndex];
 	uint64_t nRequested = 0;
 	{
 		SIRScopedLock<SIRMutex> lock( m_RequestMutex );
@@ -224,7 +224,7 @@ uint32_t SIRMemoryPressureCoordinator::findNextPendingOwner( uint32_t nMaxPriori
 	uint32_t nChosen = UINT32_MAX;
 	uint32_t nPriority = UINT32_MAX;
 	for ( uint32_t i = 0; i < nCount; ++i ) {
-		const sirOwner_t &owner = m_pOwners[i];
+		const sirOwner_t& owner = m_pOwners[i];
 		if ( owner.nPriority <= nMaxPriority && owner.nPriority <= nPriority &&
 		     owner.nPendingBytes.load( SIR_MEMORY_ORDER_ACQUIRE ) != 0 ) {
 			if ( owner.nPriority < nPriority || nChosen == UINT32_MAX ) {

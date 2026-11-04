@@ -21,16 +21,16 @@ struct sirEventTestContext_s
 	bool bNested = false;
 };
 
-static void SIRTestCountEvent( void *pContext, const int &value ) noexcept
+static void SIRTestCountEvent( void *pContext, const int& value ) noexcept
 {
-	sirEventTestContext_s &context = *( ( sirEventTestContext_s * )pContext );
+	sirEventTestContext_s& context = *( ( sirEventTestContext_s * )pContext );
 	context.nTotal += value;
 	++context.nCalls;
 }
 
-static void SIRTestRemoveNested( void *pContext, const int &value ) noexcept
+static void SIRTestRemoveNested( void *pContext, const int& value ) noexcept
 {
-	sirEventTestContext_s &context = *( ( sirEventTestContext_s * )pContext );
+	sirEventTestContext_s& context = *( ( sirEventTestContext_s * )pContext );
 	context.nTotal += value;
 	++context.nCalls;
 	if ( !context.bNested ) {
@@ -66,11 +66,11 @@ TEST( SIREventGoogleTest, DeferSubscriptionsUntilOutermostPublication )
 	} context{ nullptr, 0, 0 };
 	SIREvent<int, 4> event;
 	context.pEvent = &event;
-	auto subscriber = []( void *pContext, const int & ) noexcept {
-		context_t &state = *( ( context_t * )pContext );
+	auto subscriber = []( void *pContext, const int& ) noexcept {
+		context_t& state = *( ( context_t * )pContext );
 		++state.nInvoked;
 		if ( state.nAdded++ == 0 ) {
-			state.pEvent->subscribe( &state, []( void *p, const int & ) noexcept { ++( ( context_t * )p )->nInvoked; } );
+			state.pEvent->subscribe( &state, []( void *p, const int& ) noexcept { ++( ( context_t * )p )->nInvoked; } );
 			state.pEvent->publish( 3 );
 		}
 	};
@@ -105,13 +105,13 @@ TEST( SIREventGoogleTest, PreservePriorityAndReserveInflightSlot )
 	} context{};
 	SIREventQueue<int, 3> queue;
 	context.pQueue = &queue;
-	auto callback = []( void *pContext, const int &value ) noexcept {
-		context_t &state = *( ( context_t * )pContext );
+	auto callback = []( void *pContext, const int& value ) noexcept {
+		context_t& state = *( ( context_t * )pContext );
 		state.nOrder = state.nOrder * 10 + value;
 		if ( value == 2 ) {
 			state.pQueue->clear();
 			state.pQueue->enqueue(
-			    &state, []( void *p, const int &n ) noexcept { ( ( context_t * )p )->nOrder = ( ( context_t * )p )->nOrder * 10 + n; }, 3 );
+			    &state, []( void *p, const int& n ) noexcept { ( ( context_t * )p )->nOrder = ( ( context_t * )p )->nOrder * 10 + n; }, 3 );
 		}
 	};
 	ASSERT_TRUE( queue.enqueue( &context, callback, 1, SIR_EVENT_PRIORITY_LOW ) );
@@ -130,8 +130,8 @@ TEST( SIREventGoogleTest, StreamBuffersReentrantAppends )
 		SIREventStream<int, 4> *pStream;
 		uint32_t *pDelivered;
 	} context{ &stream, &nDelivered };
-	auto callback = []( void *pContext, const int &payload ) noexcept {
-		context_t &state = *( ( context_t * )pContext );
+	auto callback = []( void *pContext, const int& payload ) noexcept {
+		context_t& state = *( ( context_t * )pContext );
 		*state.pDelivered += payload;
 		if ( payload == 1 ) {
 			state.pStream->append( 2 );
@@ -179,7 +179,7 @@ TEST( SIREventGoogleTest, SchedulerCancellationAndRecurringDueTime )
 	SIREventScheduler<int, 4> scheduler;
 	int nSum = 0;
 	sirEventScheduleHandle_t scheduled{};
-	auto callback = []( void *pContext, const int &value ) noexcept { *( ( int * )pContext ) += value; };
+	auto callback = []( void *pContext, const int& value ) noexcept { *( ( int * )pContext ) += value; };
 	ASSERT_TRUE( scheduler.schedule( &nSum, callback, 3, 0, 5, 10, scheduled ) );
 	EXPECT_EQ( scheduler.pump( 4 ), 0U );
 	EXPECT_EQ( scheduler.pump( 5 ), 1U );
@@ -247,7 +247,7 @@ TEST( SIREventGoogleTest, ZeroDelaySchedulerDispatchesSynchronously )
 	SIREventScheduler<int, 2> scheduler;
 	int nSum = 0;
 	sirEventScheduleHandle_t handle{};
-	auto callback = []( void *pContext, const int &value ) noexcept { *( ( int * )pContext ) += value; };
+	auto callback = []( void *pContext, const int& value ) noexcept { *( ( int * )pContext ) += value; };
 	EXPECT_TRUE( scheduler.schedule( &nSum, callback, 7, 10, 0, 0, handle ) );
 	EXPECT_EQ( nSum, 7 );
 	EXPECT_EQ( scheduler.pendingCount(), 0U );
@@ -259,7 +259,7 @@ TEST( SIREventGoogleTest, SchedulerExhaustedTimestampDoesNotLoop )
 	SIREventScheduler<int, 2> scheduler;
 	int nSum = 0;
 	sirEventScheduleHandle_t handle{};
-	auto callback = []( void *pContext, const int &value ) noexcept { *( ( int * )pContext ) += value; };
+	auto callback = []( void *pContext, const int& value ) noexcept { *( ( int * )pContext ) += value; };
 	ASSERT_TRUE( scheduler.schedule( &nSum, callback, 1, UINT64_MAX - 3, 1, 10, handle ) );
 	EXPECT_EQ( scheduler.pump( UINT64_MAX ), 1U );
 	EXPECT_EQ( scheduler.pendingCount(), 0U );
