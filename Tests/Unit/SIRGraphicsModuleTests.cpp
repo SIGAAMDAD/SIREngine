@@ -151,6 +151,67 @@ static bool testBinaryModule( void ) noexcept
 		return false;
 	}
 
+	sirGraphicsABIPipelineModelCaps_t modelCaps = {};
+	modelCaps.nSize = sizeof( modelCaps );
+	if ( sirGraphicsQueryABIPipelineModelCaps( &device, SIR_GRAPHICS_PIPELINE_MODEL_MODERN, &modelCaps ) != SIR_GRAPHICS_SUCCESS ||
+	     modelCaps.nModel != SIR_GRAPHICS_PIPELINE_MODEL_MODERN || modelCaps.nDeviceGeneration != 5 ) {
+		return false;
+	}
+	modelCaps.nDeviceGeneration = 77;
+	if ( sirGraphicsQueryABIPipelineModelCaps( &device, SIR_GRAPHICS_PIPELINE_MODEL_PROGRAMMABLE, &modelCaps ) !=
+	         SIR_GRAPHICS_UNSUPPORTED ||
+	     modelCaps.nDeviceGeneration != 77 ) {
+		return false;
+	}
+	modelCaps.nSize = 1;
+	if ( sirGraphicsQueryABIPipelineModelCaps( &device, SIR_GRAPHICS_PIPELINE_MODEL_MODERN, &modelCaps ) !=
+	     SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return false;
+	}
+	modelCaps.nSize = sizeof( modelCaps );
+
+	uint32_t nShaderCode = 0x07230203;
+	sirGraphicsABIModernRecipe_t modern = {};
+	modern.nSize = sizeof( modern );
+	modern.nStageMask = SIR_GRAPHICS_STAGE_COMPUTE;
+	modern.nRequiredFeatures = SIR_GRAPHICS_FEATURE_COMPUTE;
+	sirGraphicsABIPipeline_t pipeline = {};
+	pipeline.nSize = sizeof( pipeline );
+	pipeline.nModel = SIR_GRAPHICS_PIPELINE_MODEL_MODERN;
+	pipeline.nType = SIR_GRAPHICS_PIPELINE_COMPUTE;
+	pipeline.nSampleCount = 1;
+	pipeline.computeShader = { sizeof( sirGraphicsABIShaderCode_t ), SIR_GRAPHICS_SHADER_SPIRV, &nShaderCode, 4, 1, "main" };
+	pipeline.pModern = &modern;
+	sirGraphicsHandle_t hPipeline = {};
+	if ( sirGraphicsCreateABIPipeline( &device, &pipeline, &hPipeline ) != SIR_GRAPHICS_SUCCESS ||
+	     hPipeline.nDeviceGeneration != 5 || hPipeline.eType != SIR_GRAPHICS_HANDLE_PIPELINE ) {
+		return false;
+	}
+	pipeline.pModern = nullptr;
+	if ( sirGraphicsCreateABIPipeline( &device, &pipeline, &hPipeline ) != SIR_GRAPHICS_INVALID_ARGUMENT ||
+	     hPipeline.nGeneration != 1 ) {
+		return false;
+	}
+	pipeline.pModern = &modern;
+
+	pMode( 10 );
+	if ( sirGraphicsQueryABIPipelineModelCaps( &device, SIR_GRAPHICS_PIPELINE_MODEL_PROGRAMMABLE, &modelCaps ) != SIR_GRAPHICS_SUCCESS ||
+	     modelCaps.nExecutionModel != SIR_GRAPHICS_EXECUTION_STATEFUL_SERIAL ) {
+		return false;
+	}
+	if ( sirGraphicsQueryABIPipelineModelCaps( &device, SIR_GRAPHICS_PIPELINE_MODEL_FIXED_FUNCTION, &modelCaps ) != SIR_GRAPHICS_SUCCESS ||
+	     modelCaps.nShaderStageMask != 0 || modelCaps.nMaximumTextureStages != 4 ) {
+		return false;
+	}
+	pMode( 11 );
+	modelCaps.nDeviceGeneration = 77;
+	if ( sirGraphicsQueryABIPipelineModelCaps( &device, SIR_GRAPHICS_PIPELINE_MODEL_MODERN, &modelCaps ) !=
+	         SIR_GRAPHICS_DRIVER_ERROR ||
+	     modelCaps.nDeviceGeneration != 77 ) {
+		return false;
+	}
+	pMode( 0 );
+
 	sirGraphicsABICommandList_t commands = {};
 	commands.nSize = sizeof( commands );
 	if ( device.pAcquireCommands( device.pDevice, SIR_GRAPHICS_QUEUE_DIRECT, &commands ) != SIR_GRAPHICS_ABI_SUCCESS ||

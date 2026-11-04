@@ -58,6 +58,9 @@ static uint32_t mockQueryAdapter( void *, sirGraphicsABIAdapter_t *pInfo ) noexc
 	pInfo->nApiMinor = 4;
 	pInfo->nStableId = 0x1234;
 	pInfo->nFeatureMask = SIR_GRAPHICS_FEATURE_COMPUTE;
+	if ( s_nMockMode == 10 ) {
+		pInfo->nFeatureMask |= SIR_GRAPHICS_FEATURE_GRAPHICS | SIR_GRAPHICS_FEATURE_FIXED_FUNCTION;
+	}
 	pInfo->nQueueMask = 1U << SIR_GRAPHICS_QUEUE_DIRECT;
 	memcpy( pInfo->szName, "Mock Vulkan CPU", sizeof( "Mock Vulkan CPU" ) );
 	return SIR_GRAPHICS_ABI_SUCCESS;
@@ -77,12 +80,78 @@ static uint32_t mockQueryCapabilities( void *, sirGraphicsABICapabilities_t *pIn
 	pInfo->nBackend = s_nMockMode == 3 ? SIR_GRAPHICS_BACKEND_D3D12 : SIR_GRAPHICS_BACKEND_VULKAN;
 	pInfo->nAdapterKind = SIR_GRAPHICS_ABI_ADAPTER_SOFTWARE;
 	pInfo->nEnabledFeatures = SIR_GRAPHICS_FEATURE_COMPUTE;
+	pInfo->nPipelineModelMask = 1U << ( SIR_GRAPHICS_PIPELINE_MODEL_MODERN - 1 );
+	if ( s_nMockMode == 10 ) {
+		pInfo->nEnabledFeatures |= SIR_GRAPHICS_FEATURE_GRAPHICS | SIR_GRAPHICS_FEATURE_FIXED_FUNCTION;
+		pInfo->nPipelineModelMask = ( 1U << SIR_GRAPHICS_PIPELINE_MODEL_FIXED_FUNCTION ) - 1U;
+		pInfo->nMaximumColorAttachments = 1;
+	}
 	pInfo->nEnabledQueues = 1U << SIR_GRAPHICS_QUEUE_DIRECT;
 	pInfo->nMaximumFramesInFlight = 2;
 	pInfo->nMaximumSamples = 1;
 	pInfo->nMaximumTextureDimension = 4096;
 	pInfo->nMaximumBindings = 16;
 	return SIR_GRAPHICS_ABI_SUCCESS;
+}
+
+// A synthetic provider exercises model discovery across the DSO boundary.
+// Mode 10 advertises all three models for conformance, not native GPU support.
+static uint32_t mockQueryPipelineModelCaps( void *, uint32_t nModel, sirGraphicsABIPipelineModelCaps_t *pCaps ) noexcept
+{
+	if ( pCaps == nullptr || pCaps->nSize < sizeof( sirGraphicsABIPipelineModelCaps_t ) ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	if ( nModel != SIR_GRAPHICS_PIPELINE_MODEL_MODERN && s_nMockMode != 10 && s_nMockMode != 11 ) {
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
+	if ( nModel < SIR_GRAPHICS_PIPELINE_MODEL_MODERN || nModel > SIR_GRAPHICS_PIPELINE_MODEL_FIXED_FUNCTION ) {
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
+	*pCaps = {};
+	pCaps->nSize = sizeof( *pCaps );
+	pCaps->nModel = nModel;
+	pCaps->nDeviceGeneration = s_nMockMode == 11 ? 4 : 5;
+	pCaps->nQueueMask = 1U << SIR_GRAPHICS_QUEUE_DIRECT;
+	pCaps->nMaximumSamples = 1;
+	pCaps->nMaximumTextureDimension = 4096;
+	pCaps->nMaximumBindings = 16;
+	pCaps->nMaximumVertexStreams = 4;
+	pCaps->nMaximumVertexAttributes = 8;
+	pCaps->nMaximumTextureUnits = 8;
+	pCaps->nMaximumColorAttachments = s_nMockMode == 10 ? 1 : 0;
+
+	if ( nModel == SIR_GRAPHICS_PIPELINE_MODEL_FIXED_FUNCTION ) {
+		pCaps->nExecutionModel = SIR_GRAPHICS_EXECUTION_STATEFUL_SERIAL;
+		pCaps->nRequiredFeatureMask = SIR_GRAPHICS_FEATURE_GRAPHICS | SIR_GRAPHICS_FEATURE_FIXED_FUNCTION;
+		pCaps->nMaximumTextureStages = 4;
+		pCaps->nMaximumFixedLights = 4;
+		pCaps->nFixedFeatureMask = SIR_GRAPHICS_FIXED_TRANSFORM | SIR_GRAPHICS_FIXED_LIGHTING |
+		                          SIR_GRAPHICS_FIXED_FOG | SIR_GRAPHICS_FIXED_ALPHA_TEST | SIR_GRAPHICS_FIXED_CPU_TRANSFORM;
+		pCaps->nFixedTextureOperationMask = ( 1U << SIR_GRAPHICS_FIXED_OP_DISABLE ) |
+		                                    ( 1U << SIR_GRAPHICS_FIXED_OP_SELECT ) | ( 1U << SIR_GRAPHICS_FIXED_OP_MODULATE );
+		pCaps->nFixedFogModeMask = ( 1U << SIR_GRAPHICS_FIXED_FOG_NONE ) | ( 1U << SIR_GRAPHICS_FIXED_FOG_LINEAR );
+		return SIR_GRAPHICS_SUCCESS;
+	}
+	if ( nModel == SIR_GRAPHICS_PIPELINE_MODEL_PROGRAMMABLE ) {
+		pCaps->nExecutionModel = SIR_GRAPHICS_EXECUTION_STATEFUL_SERIAL;
+		pCaps->nRequiredFeatureMask = SIR_GRAPHICS_FEATURE_GRAPHICS;
+		pCaps->nShaderStageMask = SIR_GRAPHICS_STAGE_VERTEX | SIR_GRAPHICS_STAGE_FRAGMENT;
+		pCaps->nShaderFormatMask = 1U << ( SIR_GRAPHICS_SHADER_GLSL - 1 );
+		pCaps->nMaximumVaryings = 8;
+		pCaps->nMaximumConstantSlots = 32;
+		pCaps->nMaximumVertexShaderProfile = 101;
+		pCaps->nMaximumFragmentShaderProfile = 101;
+		return SIR_GRAPHICS_SUCCESS;
+	}
+	pCaps->nExecutionModel = SIR_GRAPHICS_EXECUTION_EXPLICIT;
+	pCaps->nRequiredFeatureMask = SIR_GRAPHICS_FEATURE_COMPUTE;
+	pCaps->nShaderStageMask = SIR_GRAPHICS_STAGE_COMPUTE;
+	pCaps->nShaderFormatMask = 1U << ( SIR_GRAPHICS_SHADER_SPIRV - 1 );
+	if ( s_nMockMode == 10 ) {
+		pCaps->nRequiredFeatureMask |= SIR_GRAPHICS_FEATURE_GRAPHICS;
+		pCaps->nShaderStageMask |= SIR_GRAPHICS_STAGE_VERTEX | SIR_GRAPHICS_STAGE_FRAGMENT;
+	}
+	return SIR_GRAPHICS_SUCCESS;
 }
 
 static uint32_t mockQueryFormat( void *, sirGraphicsABIFormat_t *pInfo ) noexcept
@@ -147,9 +216,22 @@ static uint32_t mockCreateSampler( void *, const sirGraphicsSamplerDesc_t *, sir
 	return SIR_GRAPHICS_ABI_UNSUPPORTED;
 }
 
-static uint32_t mockCreatePipeline( void *, const sirGraphicsABIPipeline_t *, sirGraphicsHandle_t * ) noexcept
+static uint32_t mockCreatePipeline( void *, const sirGraphicsABIPipeline_t *pPipeline, sirGraphicsHandle_t *pHandle ) noexcept
 {
-	return SIR_GRAPHICS_ABI_UNSUPPORTED;
+	if ( pPipeline == nullptr || pHandle == nullptr ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	sirGraphicsABIPipelineModelCaps_t caps = {};
+	caps.nSize = sizeof( caps );
+	const uint32_t nQuery = mockQueryPipelineModelCaps( nullptr, pPipeline->nModel, &caps );
+	if ( nQuery != SIR_GRAPHICS_SUCCESS ) {
+		return nQuery;
+	}
+	if ( pPipeline->nModel != caps.nModel || pPipeline->nSize < sizeof( sirGraphicsABIPipeline_t ) ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	*pHandle = { 3, 1, 5, SIR_GRAPHICS_HANDLE_PIPELINE };
+	return SIR_GRAPHICS_SUCCESS;
 }
 
 static uint32_t mockCreateBindingSet( void *, sirGraphicsHandle_t, uint32_t, sirGraphicsHandle_t * ) noexcept
@@ -357,6 +439,7 @@ static uint32_t mockCreate( void *, const sirGraphicsABIDeviceRequest_t *pReques
 	pDevice->nSize = sizeof( *pDevice );
 	pDevice->pDevice = &s_nDeviceIdentity;
 	pDevice->pQueryCapabilities = mockQueryCapabilities;
+	pDevice->pQueryPipelineModelCaps = mockQueryPipelineModelCaps;
 	pDevice->pQueryFormat = mockQueryFormat;
 	pDevice->pPoll = mockPoll;
 	pDevice->pWait = mockWait;

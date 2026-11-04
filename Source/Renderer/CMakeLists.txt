@@ -3,6 +3,7 @@
 add_library(SIRGraphics STATIC
     SIRGraphicsDriverABI.cpp
     SIRGraphicsModule.cpp
+    SIRGraphicsPipelineABI.cpp
     SIRGraphicsRegistry.cpp
     SIRGraphicsValidation.cpp)
 add_library(SIR::Graphics ALIAS SIRGraphics)

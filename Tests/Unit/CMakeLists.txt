@@ -105,6 +105,11 @@ target_link_libraries(SIRGraphicsABITests PRIVATE SIR::Graphics)
 add_test(NAME renderer.graphics.binary-abi COMMAND SIRGraphicsABITests)
 sir_configure_owned_target(SIRGraphicsABITests)
 
+add_executable(SIRGraphicsPipelineABITests SIRGraphicsPipelineABITests.cpp)
+target_link_libraries(SIRGraphicsPipelineABITests PRIVATE SIR::Graphics)
+add_test(NAME renderer.graphics.pipeline-eras COMMAND SIRGraphicsPipelineABITests)
+sir_configure_owned_target(SIRGraphicsPipelineABITests)
+
 add_library(SIRGraphicsABIMockModule SHARED SIRGraphicsABIMockModule.cpp)
 target_link_libraries(SIRGraphicsABIMockModule PRIVATE SIR::Graphics)
 sir_configure_owned_target(SIRGraphicsABIMockModule)

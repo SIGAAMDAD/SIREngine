@@ -148,6 +148,7 @@ static bool testCapabilities( void ) noexcept
 	caps.nMaximumFramesInFlight = 2;
 	caps.nMaximumSamples = 1;
 	caps.nEnabledFeatures = SIR_GRAPHICS_FEATURE_COMPUTE;
+	caps.nPipelineModelMask = 1U << ( SIR_GRAPHICS_PIPELINE_MODEL_MODERN - 1 );
 	uint32_t nProfile = 99;
 	if ( sirGraphicsSelectABIProfile( &caps, &nProfile ) != SIR_GRAPHICS_ABI_SUCCESS || nProfile != 0 ) {
 		return false;

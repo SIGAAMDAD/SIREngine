@@ -185,6 +185,58 @@ typedef enum sirGraphicsShaderFormat_e : uint32_t
 	SIR_GRAPHICS_SHADER_FIXED_FUNCTION = 5
 } sirGraphicsShaderFormat_t;
 
+// Pipeline era and API execution style are independent capability axes.
+// Values are stable within the still-unreleased shared graphics ABI v1.
+typedef enum sirGraphicsPipelineModel_e : uint32_t
+{
+	SIR_GRAPHICS_PIPELINE_MODEL_MODERN = 1,
+	SIR_GRAPHICS_PIPELINE_MODEL_PROGRAMMABLE = 2,
+	SIR_GRAPHICS_PIPELINE_MODEL_FIXED_FUNCTION = 3
+} sirGraphicsPipelineModel_t;
+
+typedef enum sirGraphicsExecutionModel_e : uint32_t
+{
+	SIR_GRAPHICS_EXECUTION_EXPLICIT = 1,
+	SIR_GRAPHICS_EXECUTION_STATEFUL_SERIAL = 2
+} sirGraphicsExecutionModel_t;
+
+typedef enum sirGraphicsFixedFeature_e : uint32_t
+{
+	SIR_GRAPHICS_FIXED_TRANSFORM = 1U << 0,
+	SIR_GRAPHICS_FIXED_LIGHTING = 1U << 1,
+	SIR_GRAPHICS_FIXED_FOG = 1U << 2,
+	SIR_GRAPHICS_FIXED_ALPHA_TEST = 1U << 3,
+	SIR_GRAPHICS_FIXED_CPU_TRANSFORM = 1U << 4,
+	SIR_GRAPHICS_FIXED_TEXCOORD_GEN = 1U << 5
+} sirGraphicsFixedFeature_t;
+
+typedef enum sirGraphicsFixedTextureOp_e : uint32_t
+{
+	SIR_GRAPHICS_FIXED_OP_DISABLE = 0,
+	SIR_GRAPHICS_FIXED_OP_SELECT = 1,
+	SIR_GRAPHICS_FIXED_OP_MODULATE = 2,
+	SIR_GRAPHICS_FIXED_OP_ADD = 3,
+	SIR_GRAPHICS_FIXED_OP_SUBTRACT = 4,
+	SIR_GRAPHICS_FIXED_OP_INTERPOLATE = 5,
+	SIR_GRAPHICS_FIXED_OP_DOT3 = 6
+} sirGraphicsFixedTextureOp_t;
+
+typedef enum sirGraphicsFixedTextureArg_e : uint32_t
+{
+	SIR_GRAPHICS_FIXED_ARG_TEXTURE = 0,
+	SIR_GRAPHICS_FIXED_ARG_CURRENT = 1,
+	SIR_GRAPHICS_FIXED_ARG_DIFFUSE = 2,
+	SIR_GRAPHICS_FIXED_ARG_CONSTANT = 3
+} sirGraphicsFixedTextureArg_t;
+
+typedef enum sirGraphicsFixedFogMode_e : uint32_t
+{
+	SIR_GRAPHICS_FIXED_FOG_NONE = 0,
+	SIR_GRAPHICS_FIXED_FOG_LINEAR = 1,
+	SIR_GRAPHICS_FIXED_FOG_EXP = 2,
+	SIR_GRAPHICS_FIXED_FOG_EXP2 = 3
+} sirGraphicsFixedFogMode_t;
+
 typedef enum sirGraphicsPipelineType_e : uint32_t
 {
 	SIR_GRAPHICS_PIPELINE_GRAPHICS = 0,

@@ -48,6 +48,10 @@ sirGraphicsABIResult_t sirGraphicsCreateABIDevice( sirGraphicsABIModule_t *pModu
 sirGraphicsABIResult_t sirGraphicsDestroyABIDevice( sirGraphicsABIModule_t *pModule, sirGraphicsABIDevice_t *pDevice ) noexcept;
 sirGraphicsABIResult_t sirGraphicsQueryABICapabilities( const sirGraphicsABIDevice_t *pDevice, uint32_t nBackend,
                                                         sirGraphicsABICapabilities_t *pInfo ) noexcept;
+sirGraphicsABIResult_t sirGraphicsQueryABIPipelineModelCaps( const sirGraphicsABIDevice_t *pDevice, uint32_t nModel,
+                                                                     sirGraphicsABIPipelineModelCaps_t *pCaps ) noexcept;
+sirGraphicsABIResult_t sirGraphicsCreateABIPipeline( const sirGraphicsABIDevice_t *pDevice, const sirGraphicsABIPipeline_t *pDesc,
+                                                     sirGraphicsHandle_t *pPipeline ) noexcept;
 sirGraphicsABIResult_t sirGraphicsQueryABIFormat( const sirGraphicsABIDevice_t *pDevice, uint32_t nFormat,
                                                   sirGraphicsABIFormat_t *pFormat ) noexcept;
 

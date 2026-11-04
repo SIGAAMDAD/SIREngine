@@ -96,6 +96,15 @@ sirGraphicsABIResult_t sirGraphicsValidateABICapabilities( const sirGraphicsABIC
 	     ( pInfo->nEnabledFeatures & ~( ( SIR_GRAPHICS_FEATURE_PRESENT << 1 ) - 1ULL ) ) != 0 ) {
 		return SIR_GRAPHICS_ABI_INVALID_ARGUMENT;
 	}
+	const uint32_t nValidModels = ( 1U << SIR_GRAPHICS_PIPELINE_MODEL_FIXED_FUNCTION ) - 1U;
+	if ( pInfo->nPipelineModelMask == 0 || ( pInfo->nPipelineModelMask & ~nValidModels ) != 0 ) {
+		return SIR_GRAPHICS_ABI_INVALID_ARGUMENT;
+	}
+	const bool bFixedModel = ( pInfo->nPipelineModelMask & ( 1U << ( SIR_GRAPHICS_PIPELINE_MODEL_FIXED_FUNCTION - 1 ) ) ) != 0;
+	const bool bFixedFeature = ( pInfo->nEnabledFeatures & SIR_GRAPHICS_FEATURE_FIXED_FUNCTION ) != 0;
+	if ( bFixedModel != bFixedFeature ) {
+		return SIR_GRAPHICS_ABI_INVALID_ARGUMENT;
+	}
 	if ( ( pInfo->nEnabledFeatures & SIR_GRAPHICS_FEATURE_GRAPHICS ) != 0 &&
 	     ( pInfo->nEnabledQueues & ( 1U << SIR_GRAPHICS_QUEUE_DIRECT ) ) == 0 ) {
 		return SIR_GRAPHICS_ABI_INVALID_ARGUMENT;
@@ -136,6 +145,7 @@ sirGraphicsABIResult_t sirGraphicsValidateABIDevice( const sirGraphicsABIDevice_
 {
 	if ( pDevice == nullptr || pDevice->nSize < sizeof( sirGraphicsABIDevice_t ) || pDevice->nReserved != 0 ||
 	     pDevice->pDevice == nullptr || pDevice->pQueryCapabilities == nullptr || pDevice->pQueryFormat == nullptr ||
+	     pDevice->pQueryPipelineModelCaps == nullptr ||
 	     pDevice->pPoll == nullptr || pDevice->pWait == nullptr || pDevice->pShutdown == nullptr ||
 	     pDevice->pQueryMemoryBudget == nullptr || pDevice->pCreateBuffer == nullptr || pDevice->pCreateTexture == nullptr ||
 	     pDevice->pCreateView == nullptr || pDevice->pCreateSampler == nullptr || pDevice->pCreatePipeline == nullptr ||
