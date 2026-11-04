@@ -177,3 +177,18 @@ target_link_libraries(SIRSemaphoreTests PRIVATE SIR::Core)
 add_test(NAME core.platform.semaphore COMMAND SIRSemaphoreTests)
 sir_configure_owned_target(SIRSemaphoreTests)
 
+# Platform process, filesystem and current-thread controls.
+add_executable(SIRChildProcessTests SIRChildProcessTests.cpp)
+target_link_libraries(SIRChildProcessTests PRIVATE SIR::Core)
+add_test(NAME core.platform.child-process COMMAND SIRChildProcessTests)
+sir_configure_owned_target(SIRChildProcessTests)
+
+add_executable(SIRPlatformFileSystemTests SIRPlatformFileSystemTests.cpp)
+target_link_libraries(SIRPlatformFileSystemTests PRIVATE SIR::Core)
+add_test(NAME core.platform.filesystem COMMAND SIRPlatformFileSystemTests)
+sir_configure_owned_target(SIRPlatformFileSystemTests)
+
+add_executable(SIRPlatformThreadControlTests SIRPlatformThreadControlTests.cpp)
+target_link_libraries(SIRPlatformThreadControlTests PRIVATE SIR::Core)
+add_test(NAME core.platform.thread-control COMMAND SIRPlatformThreadControlTests)
+sir_configure_owned_target(SIRPlatformThreadControlTests)
