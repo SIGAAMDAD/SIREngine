@@ -37,7 +37,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 #define SIR_CHECK( condition )                                                                                                             \
 	do {                                                                                                                                   \
 		if ( !( condition ) ) {                                                                                                            \
-			fprintf( stderr, "%s:%d: %s\n", __FILE__, __LINE__, #condition );                                                             \
+			fprintf( stderr, "%s:%d: %s\n", __FILE__, __LINE__, #condition );                                                              \
 			abort();                                                                                                                       \
 		}                                                                                                                                  \
 	} while ( 0 )

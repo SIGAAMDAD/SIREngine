@@ -34,7 +34,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 #define SIR_CHECK( condition )                                                                                                             \
 	do {                                                                                                                                   \
 		if ( !( condition ) ) {                                                                                                            \
-			fprintf( stderr, "%s:%d: %s\n", __FILE__, __LINE__, #condition );                                                             \
+			fprintf( stderr, "%s:%d: %s\n", __FILE__, __LINE__, #condition );                                                              \
 			abort();                                                                                                                       \
 		}                                                                                                                                  \
 	} while ( 0 )
@@ -149,7 +149,7 @@ extern "C" int __wrap_sem_timedwait( sem_t *pSemaphore, const struct timespec *p
 }
 
 extern "C" int __wrap_posix_spawnp( pid_t *pPid, const char *pszName, const posix_spawn_file_actions_t *pActions,
-                                     const posix_spawnattr_t *pAttributes, char *const ppszArgs[], char *const ppszEnvironment[] )
+                                    const posix_spawnattr_t *pAttributes, char *const ppszArgs[], char *const ppszEnvironment[] )
 {
 	if ( s_bSpawnFault.exchange( false, std::memory_order_relaxed ) ) {
 		return ENOENT;
