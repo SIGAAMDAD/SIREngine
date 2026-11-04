@@ -510,8 +510,9 @@ static void testInvalidInputAndProviderLifecycle( void )
 	SIR_TEST_CHECK( !cold.waitTask( handle ) );
 	SIR_TEST_CHECK( !cold.cancel( handle ) );
 	SIR_TEST_CHECK( !cold.releaseTask( handle ) );
-	const sirTaskBatchTask_t batch[2] = { { countTask, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_MAIN },
-	                                      { countTask, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_MAIN } };
+	std::atomic<uint32_t> nBatchCount( 0 );
+	const sirTaskBatchTask_t batch[2] = { { countTask, &nBatchCount, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_MAIN },
+	                                      { countTask, &nBatchCount, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_MAIN } };
 	sirTaskBatchTask_t invalidBatch[2] = { batch[0], batch[1] };
 	const sirTaskBatchEdge_t edge = { 0, 1 };
 	sirTaskHandle_t batchHandles[2] = {};
@@ -563,7 +564,7 @@ static void testInvalidInputAndProviderLifecycle( void )
 	SIR_TEST_CHECK( !cold.cancel( handle ) );
 	SIR_TEST_CHECK( cold.releaseTask( handle ) );
 	SIR_TEST_CHECK( cold.submitBatch( batch, 2, &edge, 1, batchHandles ) );
-	SIR_TEST_CHECK( cold.pumpMain( 2 ) == 2 );
+	SIR_TEST_CHECK( cold.pumpMain( 2 ) == 2 && nBatchCount.load() == 2 );
 	SIR_TEST_CHECK( cold.getState( batchHandles[0] ) == SIR_TASK_COMPLETED );
 	SIR_TEST_CHECK( cold.releaseTask( batchHandles[0] ) && cold.releaseTask( batchHandles[1] ) );
 	SIR_TEST_CHECK( cold.shutdown() );
