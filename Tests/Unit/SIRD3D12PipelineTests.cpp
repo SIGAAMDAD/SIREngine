@@ -54,9 +54,8 @@ static bool sirLoadPipelineDxil( const char *pszPath, void **ppData, size_t *pSi
 	return true;
 }
 
-static int sirTestGeneralPipelines( SIRRenderingDevice *pDevice, uint32_t nGeneration,
-                                    const sirGraphicsShaderCode_t &computeShader, const sirGraphicsShaderCode_t &vertexShader,
-                                    const sirGraphicsShaderCode_t &pixelShader ) noexcept
+static int sirTestGeneralPipelines( SIRRenderingDevice *pDevice, uint32_t nGeneration, const sirGraphicsShaderCode_t &computeShader,
+                                    const sirGraphicsShaderCode_t &vertexShader, const sirGraphicsShaderCode_t &pixelShader ) noexcept
 {
 	sirGraphicsCompletionSet_t completed = {};
 	completed.nDeviceGeneration = nGeneration;
@@ -79,17 +78,15 @@ static int sirTestGeneralPipelines( SIRRenderingDevice *pDevice, uint32_t nGener
 	compute.pBindings = szBindings;
 	compute.nBindingCount = 2;
 	sirGraphicsHandle_t hCompute = {};
-	if ( pDevice->createPipeline( compute, &hCompute ) != SIR_GRAPHICS_SUCCESS ||
-	     hCompute.eType != SIR_GRAPHICS_HANDLE_PIPELINE || hCompute.nDeviceGeneration != nGeneration ||
-	     hCompute.nGeneration == 0 ) {
+	if ( pDevice->createPipeline( compute, &hCompute ) != SIR_GRAPHICS_SUCCESS || hCompute.eType != SIR_GRAPHICS_HANDLE_PIPELINE ||
+	     hCompute.nDeviceGeneration != nGeneration || hCompute.nGeneration == 0 ) {
 		return 10;
 	}
 
 	// Different UAV binding types collide in register u0/space0.
 	szBindings[1].eType = SIR_GRAPHICS_BINDING_STORAGE_TEXTURE;
 	sirGraphicsHandle_t hRejected = {};
-	if ( pDevice->createPipeline( compute, &hRejected ) != SIR_GRAPHICS_INVALID_ARGUMENT ||
-	     hRejected.nGeneration != 0 ) {
+	if ( pDevice->createPipeline( compute, &hRejected ) != SIR_GRAPHICS_INVALID_ARGUMENT || hRejected.nGeneration != 0 ) {
 		return 11;
 	}
 	szBindings[1].eType = SIR_GRAPHICS_BINDING_CONSTANT_BUFFER;
@@ -130,8 +127,8 @@ static int sirTestGeneralPipelines( SIRRenderingDevice *pDevice, uint32_t nGener
 	graphics.eTopology = SIR_GRAPHICS_TOPOLOGY_TRIANGLES;
 	graphics.eCullMode = SIR_GRAPHICS_CULL_NONE;
 	sirGraphicsHandle_t hGraphics = {};
-	if ( pDevice->createPipeline( graphics, &hGraphics ) != SIR_GRAPHICS_SUCCESS ||
-	     hGraphics.eType != SIR_GRAPHICS_HANDLE_PIPELINE || hGraphics.nGeneration == 0 ) {
+	if ( pDevice->createPipeline( graphics, &hGraphics ) != SIR_GRAPHICS_SUCCESS || hGraphics.eType != SIR_GRAPHICS_HANDLE_PIPELINE ||
+	     hGraphics.nGeneration == 0 ) {
 		return 14;
 	}
 
@@ -165,8 +162,8 @@ static int sirTestGeneralPipelines( SIRRenderingDevice *pDevice, uint32_t nGener
 		return 19;
 	}
 	sirGraphicsHandle_t hReused = {};
-	if ( pDevice->createPipeline( compute, &hReused ) != SIR_GRAPHICS_SUCCESS ||
-	     hReused.nSlot != hCompute.nSlot || hReused.nGeneration == hCompute.nGeneration ) {
+	if ( pDevice->createPipeline( compute, &hReused ) != SIR_GRAPHICS_SUCCESS || hReused.nSlot != hCompute.nSlot ||
+	     hReused.nGeneration == hCompute.nGeneration ) {
 		return 20;
 	}
 	if ( pDevice->retireResource( hGraphics, completed ) != SIR_GRAPHICS_SUCCESS ||
@@ -181,8 +178,7 @@ static int sirTestGeneralPipelines( SIRRenderingDevice *pDevice, uint32_t nGener
 			return 22;
 		}
 	}
-	if ( pDevice->createPipeline( compute, &hRejected ) != SIR_GRAPHICS_CAPACITY_EXCEEDED ||
-	     hRejected.nGeneration != 0 ) {
+	if ( pDevice->createPipeline( compute, &hRejected ) != SIR_GRAPHICS_CAPACITY_EXCEEDED || hRejected.nGeneration != 0 ) {
 		return 23;
 	}
 	for ( uint32_t iPipeline = 0; iPipeline < 64; ++iPipeline ) {

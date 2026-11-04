@@ -22,42 +22,67 @@ of merchantability, fitness for a particular purpose and noninfringement.
 static DXGI_FORMAT sirD3D12PipelineFormat( sirGraphicsFormat_t eFormat ) noexcept
 {
 	switch ( eFormat ) {
-		case SIR_GRAPHICS_FORMAT_RGBA8_UNORM: return DXGI_FORMAT_R8G8B8A8_UNORM;
-		case SIR_GRAPHICS_FORMAT_BGRA8_UNORM: return DXGI_FORMAT_B8G8R8A8_UNORM;
-		case SIR_GRAPHICS_FORMAT_RGBA8_SRGB: return DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
-		case SIR_GRAPHICS_FORMAT_RGBA16_FLOAT: return DXGI_FORMAT_R16G16B16A16_FLOAT;
-		case SIR_GRAPHICS_FORMAT_R8_UNORM: return DXGI_FORMAT_R8_UNORM;
-		case SIR_GRAPHICS_FORMAT_RG8_UNORM: return DXGI_FORMAT_R8G8_UNORM;
-		case SIR_GRAPHICS_FORMAT_R16_FLOAT: return DXGI_FORMAT_R16_FLOAT;
-		case SIR_GRAPHICS_FORMAT_R32_FLOAT: return DXGI_FORMAT_R32_FLOAT;
-		case SIR_GRAPHICS_FORMAT_R32_UINT: return DXGI_FORMAT_R32_UINT;
-		case SIR_GRAPHICS_FORMAT_RG32_FLOAT: return DXGI_FORMAT_R32G32_FLOAT;
-		case SIR_GRAPHICS_FORMAT_RGBA32_FLOAT: return DXGI_FORMAT_R32G32B32A32_FLOAT;
-		case SIR_GRAPHICS_FORMAT_D16_UNORM: return DXGI_FORMAT_D16_UNORM;
-		case SIR_GRAPHICS_FORMAT_D24_UNORM_S8_UINT: return DXGI_FORMAT_D24_UNORM_S8_UINT;
-		case SIR_GRAPHICS_FORMAT_D32_FLOAT: return DXGI_FORMAT_D32_FLOAT;
-		case SIR_GRAPHICS_FORMAT_BC1_UNORM: return DXGI_FORMAT_BC1_UNORM;
-		case SIR_GRAPHICS_FORMAT_BC3_UNORM: return DXGI_FORMAT_BC3_UNORM;
-		case SIR_GRAPHICS_FORMAT_BC5_UNORM: return DXGI_FORMAT_BC5_UNORM;
-		case SIR_GRAPHICS_FORMAT_BC7_UNORM: return DXGI_FORMAT_BC7_UNORM;
-		default: return DXGI_FORMAT_UNKNOWN;
+	case SIR_GRAPHICS_FORMAT_RGBA8_UNORM:
+		return DXGI_FORMAT_R8G8B8A8_UNORM;
+	case SIR_GRAPHICS_FORMAT_BGRA8_UNORM:
+		return DXGI_FORMAT_B8G8R8A8_UNORM;
+	case SIR_GRAPHICS_FORMAT_RGBA8_SRGB:
+		return DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+	case SIR_GRAPHICS_FORMAT_RGBA16_FLOAT:
+		return DXGI_FORMAT_R16G16B16A16_FLOAT;
+	case SIR_GRAPHICS_FORMAT_R8_UNORM:
+		return DXGI_FORMAT_R8_UNORM;
+	case SIR_GRAPHICS_FORMAT_RG8_UNORM:
+		return DXGI_FORMAT_R8G8_UNORM;
+	case SIR_GRAPHICS_FORMAT_R16_FLOAT:
+		return DXGI_FORMAT_R16_FLOAT;
+	case SIR_GRAPHICS_FORMAT_R32_FLOAT:
+		return DXGI_FORMAT_R32_FLOAT;
+	case SIR_GRAPHICS_FORMAT_R32_UINT:
+		return DXGI_FORMAT_R32_UINT;
+	case SIR_GRAPHICS_FORMAT_RG32_FLOAT:
+		return DXGI_FORMAT_R32G32_FLOAT;
+	case SIR_GRAPHICS_FORMAT_RGBA32_FLOAT:
+		return DXGI_FORMAT_R32G32B32A32_FLOAT;
+	case SIR_GRAPHICS_FORMAT_D16_UNORM:
+		return DXGI_FORMAT_D16_UNORM;
+	case SIR_GRAPHICS_FORMAT_D24_UNORM_S8_UINT:
+		return DXGI_FORMAT_D24_UNORM_S8_UINT;
+	case SIR_GRAPHICS_FORMAT_D32_FLOAT:
+		return DXGI_FORMAT_D32_FLOAT;
+	case SIR_GRAPHICS_FORMAT_BC1_UNORM:
+		return DXGI_FORMAT_BC1_UNORM;
+	case SIR_GRAPHICS_FORMAT_BC3_UNORM:
+		return DXGI_FORMAT_BC3_UNORM;
+	case SIR_GRAPHICS_FORMAT_BC5_UNORM:
+		return DXGI_FORMAT_BC5_UNORM;
+	case SIR_GRAPHICS_FORMAT_BC7_UNORM:
+		return DXGI_FORMAT_BC7_UNORM;
+	default:
+		return DXGI_FORMAT_UNKNOWN;
 	}
 }
 
 static uint32_t sirD3D12VertexFormatBytes( sirGraphicsFormat_t eFormat ) noexcept
 {
 	switch ( eFormat ) {
-		case SIR_GRAPHICS_FORMAT_R8_UNORM: return 1;
-		case SIR_GRAPHICS_FORMAT_RG8_UNORM:
-		case SIR_GRAPHICS_FORMAT_R16_FLOAT: return 2;
-		case SIR_GRAPHICS_FORMAT_RGBA8_UNORM:
-		case SIR_GRAPHICS_FORMAT_BGRA8_UNORM:
-		case SIR_GRAPHICS_FORMAT_R32_FLOAT:
-		case SIR_GRAPHICS_FORMAT_R32_UINT: return 4;
-		case SIR_GRAPHICS_FORMAT_RG32_FLOAT:
-		case SIR_GRAPHICS_FORMAT_RGBA16_FLOAT: return 8;
-		case SIR_GRAPHICS_FORMAT_RGBA32_FLOAT: return 16;
-		default: return 0;
+	case SIR_GRAPHICS_FORMAT_R8_UNORM:
+		return 1;
+	case SIR_GRAPHICS_FORMAT_RG8_UNORM:
+	case SIR_GRAPHICS_FORMAT_R16_FLOAT:
+		return 2;
+	case SIR_GRAPHICS_FORMAT_RGBA8_UNORM:
+	case SIR_GRAPHICS_FORMAT_BGRA8_UNORM:
+	case SIR_GRAPHICS_FORMAT_R32_FLOAT:
+	case SIR_GRAPHICS_FORMAT_R32_UINT:
+		return 4;
+	case SIR_GRAPHICS_FORMAT_RG32_FLOAT:
+	case SIR_GRAPHICS_FORMAT_RGBA16_FLOAT:
+		return 8;
+	case SIR_GRAPHICS_FORMAT_RGBA32_FLOAT:
+		return 16;
+	default:
+		return 0;
 	}
 }
 
@@ -71,12 +96,17 @@ static bool sirD3D12ValidDxil( const sirGraphicsShaderCode_t &shader ) noexcept
 static D3D12_DESCRIPTOR_RANGE_TYPE sirD3D12RangeType( sirGraphicsBindingType_t eType ) noexcept
 {
 	switch ( eType ) {
-		case SIR_GRAPHICS_BINDING_CONSTANT_BUFFER: return D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
-		case SIR_GRAPHICS_BINDING_SAMPLED_TEXTURE: return D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-		case SIR_GRAPHICS_BINDING_STORAGE_BUFFER:
-		case SIR_GRAPHICS_BINDING_STORAGE_TEXTURE: return D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
-		case SIR_GRAPHICS_BINDING_SAMPLER: return D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
-		default: return D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+	case SIR_GRAPHICS_BINDING_CONSTANT_BUFFER:
+		return D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
+	case SIR_GRAPHICS_BINDING_SAMPLED_TEXTURE:
+		return D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+	case SIR_GRAPHICS_BINDING_STORAGE_BUFFER:
+	case SIR_GRAPHICS_BINDING_STORAGE_TEXTURE:
+		return D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+	case SIR_GRAPHICS_BINDING_SAMPLER:
+		return D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
+	default:
+		return D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
 	}
 }
 
@@ -105,43 +135,68 @@ static D3D12_CULL_MODE sirD3D12Cull( sirGraphicsCullMode_t eCull ) noexcept
 static D3D12_COMPARISON_FUNC sirD3D12Compare( sirGraphicsCompareOp_t eCompare ) noexcept
 {
 	switch ( eCompare ) {
-		case SIR_GRAPHICS_COMPARE_NEVER: return D3D12_COMPARISON_FUNC_NEVER;
-		case SIR_GRAPHICS_COMPARE_LESS: return D3D12_COMPARISON_FUNC_LESS;
-		case SIR_GRAPHICS_COMPARE_EQUAL: return D3D12_COMPARISON_FUNC_EQUAL;
-		case SIR_GRAPHICS_COMPARE_LESS_EQUAL: return D3D12_COMPARISON_FUNC_LESS_EQUAL;
-		case SIR_GRAPHICS_COMPARE_GREATER: return D3D12_COMPARISON_FUNC_GREATER;
-		case SIR_GRAPHICS_COMPARE_NOT_EQUAL: return D3D12_COMPARISON_FUNC_NOT_EQUAL;
-		case SIR_GRAPHICS_COMPARE_GREATER_EQUAL: return D3D12_COMPARISON_FUNC_GREATER_EQUAL;
-		case SIR_GRAPHICS_COMPARE_ALWAYS: return D3D12_COMPARISON_FUNC_ALWAYS;
-		default: return D3D12_COMPARISON_FUNC_ALWAYS;
+	case SIR_GRAPHICS_COMPARE_NEVER:
+		return D3D12_COMPARISON_FUNC_NEVER;
+	case SIR_GRAPHICS_COMPARE_LESS:
+		return D3D12_COMPARISON_FUNC_LESS;
+	case SIR_GRAPHICS_COMPARE_EQUAL:
+		return D3D12_COMPARISON_FUNC_EQUAL;
+	case SIR_GRAPHICS_COMPARE_LESS_EQUAL:
+		return D3D12_COMPARISON_FUNC_LESS_EQUAL;
+	case SIR_GRAPHICS_COMPARE_GREATER:
+		return D3D12_COMPARISON_FUNC_GREATER;
+	case SIR_GRAPHICS_COMPARE_NOT_EQUAL:
+		return D3D12_COMPARISON_FUNC_NOT_EQUAL;
+	case SIR_GRAPHICS_COMPARE_GREATER_EQUAL:
+		return D3D12_COMPARISON_FUNC_GREATER_EQUAL;
+	case SIR_GRAPHICS_COMPARE_ALWAYS:
+		return D3D12_COMPARISON_FUNC_ALWAYS;
+	default:
+		return D3D12_COMPARISON_FUNC_ALWAYS;
 	}
 }
 
 static D3D12_BLEND sirD3D12BlendFactor( sirGraphicsBlendFactor_t eFactor ) noexcept
 {
 	switch ( eFactor ) {
-		case SIR_GRAPHICS_BLEND_ZERO: return D3D12_BLEND_ZERO;
-		case SIR_GRAPHICS_BLEND_ONE: return D3D12_BLEND_ONE;
-		case SIR_GRAPHICS_BLEND_SRC_COLOR: return D3D12_BLEND_SRC_COLOR;
-		case SIR_GRAPHICS_BLEND_ONE_MINUS_SRC_COLOR: return D3D12_BLEND_INV_SRC_COLOR;
-		case SIR_GRAPHICS_BLEND_DST_COLOR: return D3D12_BLEND_DEST_COLOR;
-		case SIR_GRAPHICS_BLEND_ONE_MINUS_DST_COLOR: return D3D12_BLEND_INV_DEST_COLOR;
-		case SIR_GRAPHICS_BLEND_SRC_ALPHA: return D3D12_BLEND_SRC_ALPHA;
-		case SIR_GRAPHICS_BLEND_ONE_MINUS_SRC_ALPHA: return D3D12_BLEND_INV_SRC_ALPHA;
-		case SIR_GRAPHICS_BLEND_DST_ALPHA: return D3D12_BLEND_DEST_ALPHA;
-		case SIR_GRAPHICS_BLEND_ONE_MINUS_DST_ALPHA: return D3D12_BLEND_INV_DEST_ALPHA;
-		default: return D3D12_BLEND_ONE;
+	case SIR_GRAPHICS_BLEND_ZERO:
+		return D3D12_BLEND_ZERO;
+	case SIR_GRAPHICS_BLEND_ONE:
+		return D3D12_BLEND_ONE;
+	case SIR_GRAPHICS_BLEND_SRC_COLOR:
+		return D3D12_BLEND_SRC_COLOR;
+	case SIR_GRAPHICS_BLEND_ONE_MINUS_SRC_COLOR:
+		return D3D12_BLEND_INV_SRC_COLOR;
+	case SIR_GRAPHICS_BLEND_DST_COLOR:
+		return D3D12_BLEND_DEST_COLOR;
+	case SIR_GRAPHICS_BLEND_ONE_MINUS_DST_COLOR:
+		return D3D12_BLEND_INV_DEST_COLOR;
+	case SIR_GRAPHICS_BLEND_SRC_ALPHA:
+		return D3D12_BLEND_SRC_ALPHA;
+	case SIR_GRAPHICS_BLEND_ONE_MINUS_SRC_ALPHA:
+		return D3D12_BLEND_INV_SRC_ALPHA;
+	case SIR_GRAPHICS_BLEND_DST_ALPHA:
+		return D3D12_BLEND_DEST_ALPHA;
+	case SIR_GRAPHICS_BLEND_ONE_MINUS_DST_ALPHA:
+		return D3D12_BLEND_INV_DEST_ALPHA;
+	default:
+		return D3D12_BLEND_ONE;
 	}
 }
 
 static D3D12_BLEND_OP sirD3D12BlendOperation( sirGraphicsBlendOp_t eOperation ) noexcept
 {
 	switch ( eOperation ) {
-		case SIR_GRAPHICS_BLEND_SUBTRACT: return D3D12_BLEND_OP_SUBTRACT;
-		case SIR_GRAPHICS_BLEND_REVERSE_SUBTRACT: return D3D12_BLEND_OP_REV_SUBTRACT;
-		case SIR_GRAPHICS_BLEND_MIN: return D3D12_BLEND_OP_MIN;
-		case SIR_GRAPHICS_BLEND_MAX: return D3D12_BLEND_OP_MAX;
-		default: return D3D12_BLEND_OP_ADD;
+	case SIR_GRAPHICS_BLEND_SUBTRACT:
+		return D3D12_BLEND_OP_SUBTRACT;
+	case SIR_GRAPHICS_BLEND_REVERSE_SUBTRACT:
+		return D3D12_BLEND_OP_REV_SUBTRACT;
+	case SIR_GRAPHICS_BLEND_MIN:
+		return D3D12_BLEND_OP_MIN;
+	case SIR_GRAPHICS_BLEND_MAX:
+		return D3D12_BLEND_OP_MAX;
+	default:
+		return D3D12_BLEND_OP_ADD;
 	}
 }
 
@@ -302,21 +357,20 @@ HRESULT SIRD3D12Pipelines::createRootSignature( const sirGraphicsPipelineDesc_t 
 	D3D12_ROOT_SIGNATURE_DESC root = {};
 	root.NumParameters = desc.nBindingCount;
 	root.pParameters = desc.nBindingCount == 0 ? nullptr : szParameters;
-	root.Flags = desc.eType == SIR_GRAPHICS_PIPELINE_GRAPHICS ? D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT :
-	                                                          D3D12_ROOT_SIGNATURE_FLAG_NONE;
+	root.Flags = desc.eType == SIR_GRAPHICS_PIPELINE_GRAPHICS ? D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT
+	                                                          : D3D12_ROOT_SIGNATURE_FLAG_NONE;
 	Microsoft::WRL::ComPtr<ID3DBlob> pRootBlob;
 	Microsoft::WRL::ComPtr<ID3DBlob> pErrors;
-	const HRESULT nSerialized = D3D12SerializeRootSignature( &root, D3D_ROOT_SIGNATURE_VERSION_1, pRootBlob.GetAddressOf(),
-	                                                        pErrors.GetAddressOf() );
+	const HRESULT nSerialized =
+	    D3D12SerializeRootSignature( &root, D3D_ROOT_SIGNATURE_VERSION_1, pRootBlob.GetAddressOf(), pErrors.GetAddressOf() );
 	if ( FAILED( nSerialized ) ) {
 		return nSerialized;
 	}
-	return m_pDevice->CreateRootSignature( 0, pRootBlob->GetBufferPointer(), pRootBlob->GetBufferSize(),
-	                                       IID_PPV_ARGS( ppRoot ) );
+	return m_pDevice->CreateRootSignature( 0, pRootBlob->GetBufferPointer(), pRootBlob->GetBufferSize(), IID_PPV_ARGS( ppRoot ) );
 }
 
 HRESULT SIRD3D12Pipelines::createComputeState( const sirGraphicsPipelineDesc_t &desc, ID3D12RootSignature *pRoot,
-                                                ID3D12PipelineState **ppPipeline ) noexcept
+                                               ID3D12PipelineState **ppPipeline ) noexcept
 {
 	D3D12_COMPUTE_PIPELINE_STATE_DESC native = {};
 	native.pRootSignature = pRoot;
@@ -326,7 +380,7 @@ HRESULT SIRD3D12Pipelines::createComputeState( const sirGraphicsPipelineDesc_t &
 }
 
 HRESULT SIRD3D12Pipelines::createGraphicsState( const sirGraphicsPipelineDesc_t &desc, ID3D12RootSignature *pRoot,
-                                                 ID3D12PipelineState **ppPipeline ) noexcept
+                                                ID3D12PipelineState **ppPipeline ) noexcept
 {
 	D3D12_INPUT_ELEMENT_DESC szAttributes[32] = {};
 	for ( uint32_t iAttribute = 0; iAttribute < desc.nAttributeCount; ++iAttribute ) {
@@ -348,10 +402,10 @@ HRESULT SIRD3D12Pipelines::createGraphicsState( const sirGraphicsPipelineDesc_t 
 	native.PS = { desc.pixelShader.pBytes, ( SIZE_T )desc.pixelShader.nByteCount };
 	native.SampleMask = UINT_MAX;
 	native.InputLayout = { desc.nAttributeCount == 0 ? nullptr : szAttributes, desc.nAttributeCount };
-	native.PrimitiveTopologyType = desc.eTopology == SIR_GRAPHICS_TOPOLOGY_POINTS ? D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT :
-	                              ( desc.eTopology == SIR_GRAPHICS_TOPOLOGY_LINES ||
-	                                desc.eTopology == SIR_GRAPHICS_TOPOLOGY_LINE_STRIP ) ? D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE :
-	                                                                              D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+	native.PrimitiveTopologyType = desc.eTopology == SIR_GRAPHICS_TOPOLOGY_POINTS ? D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT
+	                               : ( desc.eTopology == SIR_GRAPHICS_TOPOLOGY_LINES || desc.eTopology == SIR_GRAPHICS_TOPOLOGY_LINE_STRIP )
+	                                   ? D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE
+	                                   : D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 	native.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
 	native.RasterizerState.CullMode = sirD3D12Cull( desc.eCullMode );
 	native.RasterizerState.FrontCounterClockwise = FALSE;
@@ -382,8 +436,7 @@ HRESULT SIRD3D12Pipelines::createGraphicsState( const sirGraphicsPipelineDesc_t 
 	return m_pDevice->CreateGraphicsPipelineState( &native, IID_PPV_ARGS( ppPipeline ) );
 }
 
-sirGraphicsResult_t SIRD3D12Pipelines::createPipeline( const sirGraphicsPipelineDesc_t &desc,
-                                                       sirGraphicsHandle_t *pHandle ) noexcept
+sirGraphicsResult_t SIRD3D12Pipelines::createPipeline( const sirGraphicsPipelineDesc_t &desc, sirGraphicsHandle_t *pHandle ) noexcept
 {
 	if ( pHandle == nullptr ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
@@ -447,8 +500,8 @@ sirGraphicsResult_t SIRD3D12Pipelines::createPipeline( const sirGraphicsPipeline
 		return nRoot == E_OUTOFMEMORY ? SIR_GRAPHICS_OUT_OF_MEMORY : SIR_GRAPHICS_DRIVER_ERROR;
 	}
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> pPipeline;
-	const HRESULT nPipeline = bCompute ? createComputeState( desc, pRoot.Get(), pPipeline.GetAddressOf() ) :
-	                                     createGraphicsState( desc, pRoot.Get(), pPipeline.GetAddressOf() );
+	const HRESULT nPipeline = bCompute ? createComputeState( desc, pRoot.Get(), pPipeline.GetAddressOf() )
+	                                   : createGraphicsState( desc, pRoot.Get(), pPipeline.GetAddressOf() );
 	if ( FAILED( nPipeline ) ) {
 		return nPipeline == E_OUTOFMEMORY ? SIR_GRAPHICS_OUT_OF_MEMORY : SIR_GRAPHICS_DRIVER_ERROR;
 	}
@@ -499,7 +552,7 @@ sirGraphicsResult_t SIRD3D12Pipelines::retirePipeline( sirGraphicsHandle_t hPipe
 }
 
 bool SIRD3D12Pipelines::queryNative( sirGraphicsHandle_t hPipeline, ID3D12PipelineState **ppPipeline,
-                                    ID3D12RootSignature **ppRoot ) noexcept
+                                     ID3D12RootSignature **ppRoot ) noexcept
 {
 	if ( ppPipeline == nullptr || ppRoot == nullptr ) {
 		return false;
