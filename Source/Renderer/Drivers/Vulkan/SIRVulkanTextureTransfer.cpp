@@ -17,6 +17,9 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 sirVulkanResult_t SIRVulkanDevice::submitBufferImageCopy( sirVulkanBuffer_t *pBuffer, sirVulkanImage_t *pImage,
                                                           const sirVulkanTextureTransfer_t &transfer,
+  Source/Renderer/Drivers/Vulkan/SIRVulkanTextureTransfer.cpp
+
+
                                                           sirVulkanCompletion_t *pCompletion ) noexcept
 {
 	if ( pCompletion != nullptr ) {
@@ -35,8 +38,8 @@ sirVulkanResult_t SIRVulkanDevice::submitBufferImageCopy( sirVulkanBuffer_t *pBu
 	     ( ( pBuffer->nUsage & VK_BUFFER_USAGE_TRANSFER_SRC_BIT ) == 0 || ( pImage->nUsage & VK_IMAGE_USAGE_TRANSFER_DST_BIT ) == 0 ) ) {
 		return SIR_VULKAN_INVALID_ARGUMENT;
 	}
-	if ( !bUpload && ( ( pBuffer->nUsage & VK_BUFFER_USAGE_TRANSFER_DST_BIT ) == 0 ||
-	                   ( pImage->nUsage & VK_IMAGE_USAGE_TRANSFER_SRC_BIT ) == 0 ) ) {
+	if ( !bUpload &&
+	     ( ( pBuffer->nUsage & VK_BUFFER_USAGE_TRANSFER_DST_BIT ) == 0 || ( pImage->nUsage & VK_IMAGE_USAGE_TRANSFER_SRC_BIT ) == 0 ) ) {
 		return SIR_VULKAN_INVALID_ARGUMENT;
 	}
 	const sirVulkanResult_t eValidation = sirVulkanValidateTextureTransfer( pBuffer, pImage, transfer );
@@ -145,11 +148,9 @@ sirVulkanResult_t SIRVulkanDevice::submitBufferImageCopy( sirVulkanBuffer_t *pBu
 	}
 
 	const VkImageLayout eFinal = bUpload
-	                                 ? ( ( pImage->nUsage & VK_IMAGE_USAGE_STORAGE_BIT ) != 0
-	                                         ? VK_IMAGE_LAYOUT_GENERAL
-	                                         : ( pImage->nUsage & VK_IMAGE_USAGE_SAMPLED_BIT ) != 0
-	                                               ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-	                                               : VK_IMAGE_LAYOUT_GENERAL )
+	                                 ? ( ( pImage->nUsage & VK_IMAGE_USAGE_STORAGE_BIT ) != 0   ? VK_IMAGE_LAYOUT_GENERAL
+	                                     : ( pImage->nUsage & VK_IMAGE_USAGE_SAMPLED_BIT ) != 0 ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+	                                                                                            : VK_IMAGE_LAYOUT_GENERAL )
 	                                 : eOld;
 	VkImageMemoryBarrier2 after = before;
 	after.srcStageMask = VK_PIPELINE_STAGE_2_COPY_BIT;

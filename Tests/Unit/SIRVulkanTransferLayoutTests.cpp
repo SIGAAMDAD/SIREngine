@@ -153,32 +153,26 @@ int main( void )
 	tracked.nMips = 3;
 	tracked.nLayers = 2;
 	VkImageLayout layout = VK_IMAGE_LAYOUT_GENERAL;
-	if ( !sirVulkanGetSubresourceLayout( &tracked, 2, 1, &layout ) ||
-	     layout != VK_IMAGE_LAYOUT_UNDEFINED ||
+	if ( !sirVulkanGetSubresourceLayout( &tracked, 2, 1, &layout ) || layout != VK_IMAGE_LAYOUT_UNDEFINED ||
 	     !sirVulkanSetSubresourceLayout( &tracked, 2, 1, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ) ||
-	     !sirVulkanGetSubresourceLayout( &tracked, 2, 1, &layout ) ||
-	     layout != VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ) {
+	     !sirVulkanGetSubresourceLayout( &tracked, 2, 1, &layout ) || layout != VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ) {
 		return 21;
 	}
 	if ( !sirVulkanGetSubresourceLayout( &tracked, 0, 0, &layout ) || layout != VK_IMAGE_LAYOUT_UNDEFINED ||
 	     !sirVulkanGetSubresourceLayout( &tracked, 1, 1, &layout ) || layout != VK_IMAGE_LAYOUT_UNDEFINED ||
 	     !sirVulkanSetSubresourceLayout( &tracked, 1, 1, VK_IMAGE_LAYOUT_GENERAL ) ||
-	     !sirVulkanGetSubresourceLayout( &tracked, 2, 1, &layout ) ||
-	     layout != VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ||
+	     !sirVulkanGetSubresourceLayout( &tracked, 2, 1, &layout ) || layout != VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ||
 	     !sirVulkanGetSubresourceLayout( &tracked, 1, 1, &layout ) || layout != VK_IMAGE_LAYOUT_GENERAL ) {
 		return 22;
 	}
 	if ( sirVulkanSetSubresourceLayout( &tracked, 2, 1, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL ) ||
-	     !sirVulkanGetSubresourceLayout( &tracked, 2, 1, &layout ) ||
-	     layout != VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ||
+	     !sirVulkanGetSubresourceLayout( &tracked, 2, 1, &layout ) || layout != VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ||
 	     !sirVulkanSetSubresourceLayout( &tracked, 2, 1, VK_IMAGE_LAYOUT_UNDEFINED ) ||
 	     !sirVulkanGetSubresourceLayout( &tracked, 2, 1, &layout ) || layout != VK_IMAGE_LAYOUT_UNDEFINED ) {
 		return 23;
 	}
-	if ( sirVulkanGetSubresourceLayout( nullptr, 0, 0, &layout ) ||
-	     sirVulkanGetSubresourceLayout( &tracked, 3, 1, &layout ) ||
-	     sirVulkanGetSubresourceLayout( &tracked, 0, 2, &layout ) ||
-	     sirVulkanGetSubresourceLayout( &tracked, 0, 0, nullptr ) ||
+	if ( sirVulkanGetSubresourceLayout( nullptr, 0, 0, &layout ) || sirVulkanGetSubresourceLayout( &tracked, 3, 1, &layout ) ||
+	     sirVulkanGetSubresourceLayout( &tracked, 0, 2, &layout ) || sirVulkanGetSubresourceLayout( &tracked, 0, 0, nullptr ) ||
 	     sirVulkanSetSubresourceLayout( &tracked, 3, 1, VK_IMAGE_LAYOUT_GENERAL ) ||
 	     sirVulkanSetSubresourceLayout( &tracked, 0, 2, VK_IMAGE_LAYOUT_GENERAL ) ) {
 		return 24;
