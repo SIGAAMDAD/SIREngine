@@ -90,6 +90,13 @@ target_link_libraries(SIRContainerHeapAdapterTests PRIVATE SIR::Core)
 add_test(NAME core.containers.heap-adapter COMMAND SIRContainerHeapAdapterTests)
 sir_configure_owned_target(SIRContainerHeapAdapterTests)
 
+# Shared renderer contract tests run on Windows/Linux without a GPU or native driver.
+add_executable(SIRGraphicsInterfaceTests SIRGraphicsInterfaceTests.cpp)
+target_link_libraries(SIRGraphicsInterfaceTests PRIVATE SIR::Graphics)
+add_test(NAME renderer.graphics.interface COMMAND SIRGraphicsInterfaceTests)
+sir_configure_owned_target(SIRGraphicsInterfaceTests)
+
+
 if(SIR_WITH_VULKAN)
     add_executable(SIRVulkanDeviceTests SIRVulkanDeviceTests.cpp)
     target_link_libraries(SIRVulkanDeviceTests PRIVATE SIR::Vulkan)
@@ -101,4 +108,15 @@ if(SIR_WITH_VULKAN)
     target_link_libraries(SIRVulkanContractTests PRIVATE SIR::Vulkan)
     add_test(NAME render.vulkan.contracts COMMAND SIRVulkanContractTests)
     sir_configure_owned_target(SIRVulkanContractTests)
+
+    add_executable(SIRVulkanSharedContractTests SIRVulkanSharedContractTests.cpp)
+    target_link_libraries(SIRVulkanSharedContractTests PRIVATE SIR::Vulkan)
+    add_test(NAME render.vulkan.shared-contracts COMMAND SIRVulkanSharedContractTests)
+    sir_configure_owned_target(SIRVulkanSharedContractTests)
+
+    add_executable(SIRVulkanSharedTests SIRVulkanSharedTests.cpp)
+    target_link_libraries(SIRVulkanSharedTests PRIVATE SIR::Vulkan)
+    add_test(NAME render.vulkan.shared-api COMMAND SIRVulkanSharedTests)
+    set_tests_properties(render.vulkan.shared-api PROPERTIES SKIP_RETURN_CODE 77)
+    sir_configure_owned_target(SIRVulkanSharedTests)
 endif()
