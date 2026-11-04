@@ -71,6 +71,15 @@ typedef struct sirFMODEmitterSpatial_s
 	uint8_t nReserved[7];
 } sirFMODEmitterSpatial_t;
 
+typedef struct sirFMODEmitterParameter_s
+{
+	sirAudioEmitterHandle_t hEmitter;
+	uint64_t nControlId;
+	float fValue;
+	uint8_t bDirty;
+	uint8_t nReserved[3];
+} sirFMODEmitterParameter_t;
+
 typedef struct sirFMODVoiceSlot_s
 {
 	sirAudioPlayingHandle_t hPlaying;
@@ -94,6 +103,7 @@ private:
 	sirFMODRegisteredEvent_t *m_pEvents = nullptr;
 	sirFMODParameterBinding_t *m_pParameters = nullptr;
 	sirFMODEmitterSpatial_t *m_pEmitters = nullptr;
+	sirFMODEmitterParameter_t *m_pEmitterParameters = nullptr;
 	sirFMODVoiceSlot_t *m_pVoices = nullptr;
 	sirAudioCompletion_t *m_pCompletions = nullptr;
 	uint64_t m_nContextEpoch = 0;
@@ -102,6 +112,8 @@ private:
 	uint32_t m_nParameterCapacity = 0;
 	uint32_t m_nParameterCount = 0;
 	uint32_t m_nEmitterCapacity = 0;
+	uint32_t m_nEmitterParameterCapacity = 0;
+	uint32_t m_nEmitterParameterCount = 0;
 	uint32_t m_nListenerCapacity = 0;
 	uint32_t m_nVoiceCapacity = 0;
 	uint32_t m_nCompletionCapacity = 0;
@@ -126,6 +138,10 @@ private:
 	bool writeCompletion( const sirAudioCompletion_t &completion ) noexcept;
 	void pollVoices( void ) noexcept;
 	void retrySpatial( void ) noexcept;
+	void retryEmitterParameters( void ) noexcept;
+	void clearEmitterParameters( sirAudioEmitterHandle_t hEmitter ) noexcept;
+	sirAudioResult_t updateEmitterParameter( const sirAudioCommand_t &command ) noexcept;
+	sirAudioResult_t applyEmitterParametersToNewInstance( void *pInstance, sirAudioEmitterHandle_t hEmitter ) noexcept;
 	void releaseStorage( void ) noexcept;
 	sirAudioResult_t submitOne( const sirAudioCommand_t &command ) noexcept;
 
@@ -137,7 +153,7 @@ public:
 
 	sirAudioResult_t configure( SIRFMODContext *pContext, const sirContainerAllocator_t *pAllocator, const sirFMODVoiceNativeOps_t &ops,
 	                            uint32_t nMaxRegisteredEvents, uint32_t nMaxRegisteredParameters = 0, uint32_t nMaxEmitters = 0,
-	                            uint32_t nMaxListeners = 0 ) noexcept;
+	                            uint32_t nMaxListeners = 0, uint32_t nMaxEmitterParameters = 0 ) noexcept;
 	sirAudioResult_t registerEvent( uint64_t nEventId, const char *szPath ) noexcept;
 	sirAudioResult_t unregisterEvent( uint64_t nEventId ) noexcept;
 	sirAudioResult_t registerParameter( uint64_t nControlId, uint64_t nNativeId, sirAudioControlScope_t eScope ) noexcept;
