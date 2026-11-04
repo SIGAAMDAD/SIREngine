@@ -213,8 +213,8 @@ int main( void )
 	SIRGraphicsCommandList *pMultiUpload = nullptr;
 	SIRGraphicsCommandList *pMultiReadback = nullptr;
 	if ( pDevice->acquireCommands( SIR_GRAPHICS_QUEUE_DIRECT, &pMultiUpload ) != SIR_GRAPHICS_SUCCESS ||
-	     pDevice->acquireCommands( SIR_GRAPHICS_QUEUE_DIRECT, &pMultiReadback ) != SIR_GRAPHICS_SUCCESS ||
-	     pMultiUpload == nullptr || pMultiReadback == nullptr || pMultiUpload == pMultiReadback ||
+	     pDevice->acquireCommands( SIR_GRAPHICS_QUEUE_DIRECT, &pMultiReadback ) != SIR_GRAPHICS_SUCCESS || pMultiUpload == nullptr ||
+	     pMultiReadback == nullptr || pMultiUpload == pMultiReadback ||
 	     pMultiUpload->copyBuffer( hGpu, 0, hSource, 0, sizeof( szExpected ) ) != SIR_GRAPHICS_SUCCESS ||
 	     pMultiReadback->copyBuffer( hReadback, 0, hGpu, 0, sizeof( szExpected ) ) != SIR_GRAPHICS_SUCCESS ||
 	     pMultiUpload->close() != SIR_GRAPHICS_SUCCESS || pMultiReadback->close() != SIR_GRAPHICS_SUCCESS ) {
