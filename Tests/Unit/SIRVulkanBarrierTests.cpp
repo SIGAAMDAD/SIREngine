@@ -28,15 +28,15 @@ int main( void )
 	sirGraphicsBarrier_t barrier = {};
 	barrier.eType = SIR_GRAPHICS_BARRIER_TRANSITION;
 	barrier.eBefore = SIR_GRAPHICS_STATE_UNDEFINED;
+
 	barrier.eAfter = SIR_GRAPHICS_STATE_COMMON;
 	barrier.nBaseMip = 1;
 	barrier.nMipCount = 1;
 	barrier.nBaseLayer = 1;
 	barrier.nLayerCount = 1;
 	sirVulkanImageBarrier_t native = {};
-	if ( sirVulkanPlanImageBarrier( barrier, &image, &native ) != SIR_GRAPHICS_SUCCESS ||
-	     native.eBefore != VK_IMAGE_LAYOUT_UNDEFINED || native.eAfter != VK_IMAGE_LAYOUT_GENERAL ||
-	     native.nMip != 1 || native.nLayer != 1 || native.bUav ||
+	if ( sirVulkanPlanImageBarrier( barrier, &image, &native ) != SIR_GRAPHICS_SUCCESS || native.eBefore != VK_IMAGE_LAYOUT_UNDEFINED ||
+	     native.eAfter != VK_IMAGE_LAYOUT_GENERAL || native.nMip != 1 || native.nLayer != 1 || native.bUav ||
 	     !sirVulkanSetSubresourceLayout( &image, 1, 1, VK_IMAGE_LAYOUT_GENERAL ) ) {
 		return 1;
 	}
@@ -51,8 +51,7 @@ int main( void )
 	}
 	image.szUploadedSubresources[0] |= 1ULL << 3;
 	if ( sirVulkanPlanImageBarrier( barrier, &image, &native ) != SIR_GRAPHICS_SUCCESS ||
-	     native.eAfter != VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ||
-	     !sirVulkanSetSubresourceLayout( &image, 1, 1, native.eAfter ) ) {
+	     native.eAfter != VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL || !sirVulkanSetSubresourceLayout( &image, 1, 1, native.eAfter ) ) {
 		return 4;
 	}
 	barrier.eBefore = SIR_GRAPHICS_STATE_SHADER_READ;
@@ -65,8 +64,8 @@ int main( void )
 	barrier.eType = SIR_GRAPHICS_BARRIER_UAV;
 	barrier.eBefore = SIR_GRAPHICS_STATE_SHADER_WRITE;
 	barrier.eAfter = SIR_GRAPHICS_STATE_SHADER_WRITE;
-	if ( sirVulkanPlanImageBarrier( barrier, &image, &native ) != SIR_GRAPHICS_SUCCESS ||
-	     !native.bUav || native.eBefore != native.eAfter ) {
+	if ( sirVulkanPlanImageBarrier( barrier, &image, &native ) != SIR_GRAPHICS_SUCCESS || !native.bUav ||
+	     native.eBefore != native.eAfter ) {
 		return 6;
 	}
 	barrier.eAfter = SIR_GRAPHICS_STATE_SHADER_READ;

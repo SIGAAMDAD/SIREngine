@@ -81,8 +81,8 @@ sirGraphicsResult_t sirVulkanPlanImageBarrier( const sirGraphicsBarrier_t &barri
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( barrier.eType == SIR_GRAPHICS_BARRIER_UAV ) {
-		if ( eOld != VK_IMAGE_LAYOUT_GENERAL || eAfter != VK_IMAGE_LAYOUT_GENERAL ||
-		     barrier.eBefore != SIR_GRAPHICS_STATE_SHADER_WRITE || barrier.eAfter != SIR_GRAPHICS_STATE_SHADER_WRITE ) {
+		if ( eOld != VK_IMAGE_LAYOUT_GENERAL || eAfter != VK_IMAGE_LAYOUT_GENERAL || barrier.eBefore != SIR_GRAPHICS_STATE_SHADER_WRITE ||
+		     barrier.eAfter != SIR_GRAPHICS_STATE_SHADER_WRITE ) {
 			return SIR_GRAPHICS_INVALID_ARGUMENT;
 		}
 	} else if ( eOld == eAfter ) {
@@ -117,8 +117,7 @@ sirGraphicsResult_t SIRVulkanCommandList::barrier( const sirGraphicsBarrier_t *p
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
 	const sirGraphicsBarrier_t &barrier = pBarriers[0];
-	if ( barrier.hResource.eType != SIR_GRAPHICS_HANDLE_TEXTURE ||
-	     barrier.hResource.nDeviceGeneration != m_pOwner->m_nDeviceGeneration ||
+	if ( barrier.hResource.eType != SIR_GRAPHICS_HANDLE_TEXTURE || barrier.hResource.nDeviceGeneration != m_pOwner->m_nDeviceGeneration ||
 	     barrier.hResource.nSlot >= SIRVulkanRenderingDevice::SIR_VULKAN_TEXTURE_CAPACITY ) {
 		return SIR_GRAPHICS_INVALID_HANDLE;
 	}
@@ -145,20 +144,17 @@ sirVulkanResult_t SIRVulkanDevice::submitImageBarrier( sirVulkanImage_t *pImage,
 	if ( !m_bReady || m_bDeviceLost ) {
 		return SIR_VULKAN_INVALID_STATE;
 	}
-	if ( pImage == nullptr || pCompletion == nullptr || pImage->hImage == VK_NULL_HANDLE ||
-	     pImage->pOwnerAllocator != m_Allocator || pImage->nDeviceSerial != m_nDeviceSerial ||
-	     m_nLastTransferValue == UINT64_MAX ) {
+	if ( pImage == nullptr || pCompletion == nullptr || pImage->hImage == VK_NULL_HANDLE || pImage->pOwnerAllocator != m_Allocator ||
+	     pImage->nDeviceSerial != m_nDeviceSerial || m_nLastTransferValue == UINT64_MAX ) {
 		return SIR_VULKAN_INVALID_ARGUMENT;
 	}
 	VkImageLayout eTracked = VK_IMAGE_LAYOUT_UNDEFINED;
-	if ( !sirVulkanGetSubresourceLayout( pImage, barrier.nMip, barrier.nLayer, &eTracked ) ||
-	     eTracked != barrier.eBefore ||
+	if ( !sirVulkanGetSubresourceLayout( pImage, barrier.nMip, barrier.nLayer, &eTracked ) || eTracked != barrier.eBefore ||
 	     ( barrier.bUav && ( barrier.eBefore != VK_IMAGE_LAYOUT_GENERAL || barrier.eAfter != VK_IMAGE_LAYOUT_GENERAL ||
 	                         ( pImage->nUsage & VK_IMAGE_USAGE_STORAGE_BIT ) == 0 ) ) ||
 	     ( !barrier.bUav && barrier.eBefore == barrier.eAfter ) ||
 	     ( barrier.eAfter != VK_IMAGE_LAYOUT_GENERAL && barrier.eAfter != VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ) ||
-	     ( barrier.eAfter == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL &&
-	       ( pImage->nUsage & VK_IMAGE_USAGE_SAMPLED_BIT ) == 0 ) ) {
+	     ( barrier.eAfter == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL && ( pImage->nUsage & VK_IMAGE_USAGE_SAMPLED_BIT ) == 0 ) ) {
 		return SIR_VULKAN_INVALID_ARGUMENT;
 	}
 
@@ -191,11 +187,10 @@ sirVulkanResult_t SIRVulkanDevice::submitImageBarrier( sirVulkanImage_t *pImage,
 	}
 	VkImageMemoryBarrier2 transition = {};
 	transition.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
-	transition.srcStageMask = barrier.eBefore == VK_IMAGE_LAYOUT_UNDEFINED ? VK_PIPELINE_STAGE_2_NONE
-	                                                                        : VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
-	transition.srcAccessMask = barrier.eBefore == VK_IMAGE_LAYOUT_UNDEFINED
-	                               ? VK_ACCESS_2_NONE
-	                               : VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT;
+	transition.srcStageMask =
+	    barrier.eBefore == VK_IMAGE_LAYOUT_UNDEFINED ? VK_PIPELINE_STAGE_2_NONE : VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+	transition.srcAccessMask =
+	    barrier.eBefore == VK_IMAGE_LAYOUT_UNDEFINED ? VK_ACCESS_2_NONE : VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT;
 	transition.dstStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
 	transition.dstAccessMask = VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT;
 	transition.oldLayout = barrier.eBefore;

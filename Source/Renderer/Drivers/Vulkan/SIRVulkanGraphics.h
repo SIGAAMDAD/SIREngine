@@ -103,7 +103,7 @@ private:
 	uint64_t m_nDestinationOffset = 0;
 	uint64_t m_nBytes = 0;
 	uint64_t m_nLastCompletion = 0;
-	 sirGraphicsBufferTextureCopy_t m_TextureCopy = {};
+	sirGraphicsBufferTextureCopy_t m_TextureCopy = {};
 	sirGraphicsBarrier_t m_Barrier = {};
 	bool m_bHasBarrier = false;
 	bool m_bHasCopy = false;

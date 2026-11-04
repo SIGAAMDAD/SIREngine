@@ -162,8 +162,8 @@ int main( void )
 	texture.nArrayLayers = 2;
 	texture.nMipLevels = 2;
 	texture.nSampleCount = 1;
-	texture.nUsage = SIR_GRAPHICS_USAGE_SAMPLED | SIR_GRAPHICS_USAGE_STORAGE |
-	                 SIR_GRAPHICS_USAGE_COPY_DESTINATION | SIR_GRAPHICS_USAGE_COPY_SOURCE;
+	texture.nUsage =
+	    SIR_GRAPHICS_USAGE_SAMPLED | SIR_GRAPHICS_USAGE_STORAGE | SIR_GRAPHICS_USAGE_COPY_DESTINATION | SIR_GRAPHICS_USAGE_COPY_SOURCE;
 	texture.eDimension = SIR_GRAPHICS_TEXTURE_2D;
 	texture.eFormat = SIR_GRAPHICS_FORMAT_RGBA8_UNORM;
 	texture.eMemory = SIR_GRAPHICS_MEMORY_GPU_LOCAL;
@@ -270,6 +270,9 @@ int main( void )
 	     pDevice->wait( downloaded, 5000000000ull ) != SIR_GRAPHICS_SUCCESS ) {
 		return 24;
 	}
+
+
+
 	if ( pDevice->mapBuffer( hReadback, 0, sizeof( szExpected ), &mapped ) != SIR_GRAPHICS_SUCCESS ||
 	     pDevice->invalidateBuffer( hReadback, 0, sizeof( szExpected ) ) != SIR_GRAPHICS_SUCCESS ||
 	     memcmp( mapped.pData, szExpected, sizeof( szExpected ) ) != 0 ||
