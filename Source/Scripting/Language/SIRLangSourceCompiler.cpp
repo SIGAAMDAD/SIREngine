@@ -63,8 +63,7 @@ bool SIRLangCompileSource( const sirLangSourceView_t& source, sirLangCompileWork
 	}
 
 	pWorkspace->report.ePhase = SIR_LANG_COMPILE_CIR;
-	const sirLangLowerError_t eCIR =
-	    SIRLangBuildCIR( &pWorkspace->syntax, &pWorkspace->signatures, &pWorkspace->hir, &pWorkspace->cir );
+	const sirLangLowerError_t eCIR = SIRLangBuildCIR( &pWorkspace->syntax, &pWorkspace->signatures, &pWorkspace->hir, &pWorkspace->cir );
 	if ( eCIR != SIR_LANG_LOWER_OK ) {
 		pWorkspace->report.nStageResult = ( uint32_t )eCIR;
 		pWorkspace->report.iErrorNode = pWorkspace->cir.iErrorNode;
@@ -72,8 +71,7 @@ bool SIRLangCompileSource( const sirLangSourceView_t& source, sirLangCompileWork
 	}
 
 	pWorkspace->report.ePhase = SIR_LANG_COMPILE_EFFECTS;
-	const sirLangEffectInputs_t inputs = { &pWorkspace->syntax, &pWorkspace->hir, &pWorkspace->signatures,
-	                                     &pWorkspace->cir.program };
+	const sirLangEffectInputs_t inputs = { &pWorkspace->syntax, &pWorkspace->hir, &pWorkspace->signatures, &pWorkspace->cir.program };
 	const sirLangEffectError_t eEffects = SIRLangAnalyzeEffects( inputs, &pWorkspace->effects );
 	if ( eEffects != SIR_LANG_EFFECT_OK ) {
 		pWorkspace->cir.program = {};
