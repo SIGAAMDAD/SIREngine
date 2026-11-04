@@ -6,7 +6,7 @@ endif()
 
 file(REMOVE "${OUTPUT}")
 execute_process(
-    COMMAND "${COOKER}" "${INPUT}" "${OUTPUT}" 101 201 301 401
+    COMMAND "${COOKER}" "${INPUT}" "${OUTPUT}" 101 201 301 401 1 1
     RESULT_VARIABLE eResult
     OUTPUT_VARIABLE szOutput
     ERROR_VARIABLE szErrors
