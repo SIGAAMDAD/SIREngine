@@ -191,6 +191,87 @@ int main( void )
 	     sirVulkanSetSubresourceLayout( &tracked, 0, 0, VK_IMAGE_LAYOUT_GENERAL ) ) {
 		return 26;
 	}
+	// 3D buffer/image copies account for the full depth-slice footprint.
+	sirVulkanImage_t volume = {};
+	volume.eType = VK_IMAGE_TYPE_3D;
+	volume.eFormat = VK_FORMAT_R8G8B8A8_UNORM;
+	volume.nWidth = 8;
+	volume.nHeight = 8;
+	volume.nDepth = 4;
+	volume.nMips = 2;
+	volume.nLayers = 1;
+	volume.nUsage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+	sirVulkanBuffer_t volumeBuffer = {};
+	volumeBuffer.nUsage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+	sirVulkanTextureTransfer_t volumeCopy = {};
+	volumeCopy.offset = { 0, 0, 1 };
+	volumeCopy.extent = { 4, 2, 3 };
+	volumeCopy.bBufferToImage = true;
+	volumeBuffer.nSize = 95;
+	if ( sirVulkanValidateTextureTransfer( &volumeBuffer, &volume, volumeCopy ) != SIR_VULKAN_INVALID_ARGUMENT ) {
+		return 27;
+	}
+	volumeBuffer.nSize = 96;
+	if ( sirVulkanValidateTextureTransfer( &volumeBuffer, &volume, volumeCopy ) != SIR_VULKAN_SUCCESS ) {
+		return 28;
+	}
+	volumeCopy.nBufferRowLength = 8;
+	volumeCopy.nBufferImageHeight = 4;
+	volumeBuffer.nSize = 303;
+	if ( sirVulkanValidateTextureTransfer( &volumeBuffer, &volume, volumeCopy ) != SIR_VULKAN_INVALID_ARGUMENT ) {
+		return 29;
+	}
+	volumeBuffer.nSize = 304;
+	if ( sirVulkanValidateTextureTransfer( &volumeBuffer, &volume, volumeCopy ) != SIR_VULKAN_SUCCESS ) {
+		return 30;
+	}
+	volumeCopy.offset.z = 2;
+	if ( sirVulkanValidateTextureTransfer( &volumeBuffer, &volume, volumeCopy ) != SIR_VULKAN_INVALID_ARGUMENT ) {
+		return 31;
+	}
+	volumeCopy.offset.z = 0;
+	volumeCopy.nMip = 1;
+	volumeCopy.extent.depth = 2;
+	if ( sirVulkanValidateTextureTransfer( &volumeBuffer, &volume, volumeCopy ) != SIR_VULKAN_SUCCESS ) {
+		return 32;
+	}
+	volumeCopy.offset.z = 1;
+	if ( sirVulkanValidateTextureTransfer( &volumeBuffer, &volume, volumeCopy ) != SIR_VULKAN_INVALID_ARGUMENT ) {
+		return 33;
+	}
+	volumeCopy.offset.z = -1;
+	if ( sirVulkanValidateTextureTransfer( &volumeBuffer, &volume, volumeCopy ) != SIR_VULKAN_INVALID_ARGUMENT ) {
+		return 34;
+	}
+	volumeCopy.offset.z = 0;
+	volumeCopy.nLayer = 1;
+	if ( sirVulkanValidateTextureTransfer( &volumeBuffer, &volume, volumeCopy ) != SIR_VULKAN_INVALID_ARGUMENT ) {
+		return 35;
+	}
+	volumeCopy.nLayer = 0;
+	volumeCopy.extent.depth = 0;
+	if ( sirVulkanValidateTextureTransfer( &volumeBuffer, &volume, volumeCopy ) != SIR_VULKAN_INVALID_ARGUMENT ) {
+		return 36;
+	}
+	volumeCopy.extent.depth = 2;
+	volumeCopy.nMip = 0;
+	volumeCopy.bBufferToImage = false;
+	if ( sirVulkanValidateTextureTransfer( &volumeBuffer, &volume, volumeCopy ) != SIR_VULKAN_INVALID_ARGUMENT ) {
+		return 37;
+	}
+	volume.szUploadedSubresources[0] |= 1ULL;
+	if ( sirVulkanValidateTextureTransfer( &volumeBuffer, &volume, volumeCopy ) != SIR_VULKAN_SUCCESS ) {
+		return 38;
+	}
+	volume.eType = VK_IMAGE_TYPE_2D;
+	if ( sirVulkanValidateTextureTransfer( &volumeBuffer, &volume, volumeCopy ) != SIR_VULKAN_INVALID_ARGUMENT ) {
+		return 39;
+	}
+	volumeCopy.extent.depth = 1;
+	volumeCopy.offset.z = 1;
+	if ( sirVulkanValidateTextureTransfer( &volumeBuffer, &volume, volumeCopy ) != SIR_VULKAN_INVALID_ARGUMENT ) {
+		return 40;
+	}
 	printf( "Vulkan transfer format and subresource contracts passed\n" );
 	return 0;
 }

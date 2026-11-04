@@ -481,7 +481,71 @@ int main( void )
 	     pDevice->unmapBuffer( hReadback, 2048, sizeof( szExpected ) ) != SIR_GRAPHICS_SUCCESS ) {
 		return 36;
 	}
-	completed.szQueueValues[SIR_GRAPHICS_QUEUE_DIRECT] = mixedCompleted.nValue;
+	// Upload and read back three depth slices of a native 3D texture.
+	sirGraphicsTextureDesc_t volume = texture;
+	volume.nWidth = 4;
+	volume.nHeight = 2;
+	volume.nDepth = 4;
+	volume.nArrayLayers = 1;
+	volume.nMipLevels = 1;
+	volume.eDimension = SIR_GRAPHICS_TEXTURE_3D;
+	sirGraphicsHandle_t hVolume = {};
+	if ( pDevice->createTexture( volume, &hVolume ) != SIR_GRAPHICS_SUCCESS ) {
+		return 60;
+	}
+	sirGraphicsBufferTextureCopy_t volumeCopy = {};
+	volumeCopy.hBuffer = hSource;
+	volumeCopy.hTexture = hVolume;
+	volumeCopy.nWidth = 4;
+	volumeCopy.nHeight = 2;
+	volumeCopy.nZ = 1;
+	volumeCopy.nDepth = 3;
+	volumeCopy.bBufferToTexture = true;
+	SIRGraphicsCommandList *pVolumeUpload = nullptr;
+	if ( pDevice->acquireCommands( SIR_GRAPHICS_QUEUE_DIRECT, &pVolumeUpload ) != SIR_GRAPHICS_SUCCESS || pVolumeUpload == nullptr ) {
+		return 61;
+	}
+	volumeCopy.nZ = 3;
+	if ( pVolumeUpload->copyBufferTexture( volumeCopy ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return 62;
+	}
+	volumeCopy.nZ = 1;
+	if ( pVolumeUpload->copyBufferTexture( volumeCopy ) != SIR_GRAPHICS_SUCCESS || pVolumeUpload->close() != SIR_GRAPHICS_SUCCESS ) {
+		return 63;
+	}
+	sirGraphicsSubmission_t volumeSubmission = {};
+	volumeSubmission.ppCommandLists = &pVolumeUpload;
+	volumeSubmission.nCommandListCount = 1;
+	sirGraphicsCompletion_t volumeUploaded = {};
+	if ( pDevice->submit( SIR_GRAPHICS_QUEUE_DIRECT, volumeSubmission, &volumeUploaded ) != SIR_GRAPHICS_SUCCESS ||
+	     pDevice->wait( volumeUploaded, 5000000000ULL ) != SIR_GRAPHICS_SUCCESS ) {
+		return 64;
+	}
+	volumeCopy.hBuffer = hReadback;
+	volumeCopy.bBufferToTexture = false;
+	SIRGraphicsCommandList *pVolumeReadback = nullptr;
+	if ( pDevice->acquireCommands( SIR_GRAPHICS_QUEUE_DIRECT, &pVolumeReadback ) != SIR_GRAPHICS_SUCCESS || pVolumeReadback == nullptr ||
+	     pVolumeReadback->copyBufferTexture( volumeCopy ) != SIR_GRAPHICS_SUCCESS || pVolumeReadback->close() != SIR_GRAPHICS_SUCCESS ) {
+		return 65;
+	}
+	volumeSubmission.ppCommandLists = &pVolumeReadback;
+	sirGraphicsCompletion_t volumeDownloaded = {};
+	if ( pDevice->submit( SIR_GRAPHICS_QUEUE_DIRECT, volumeSubmission, &volumeDownloaded ) != SIR_GRAPHICS_SUCCESS ||
+	     pDevice->wait( volumeDownloaded, 5000000000ULL ) != SIR_GRAPHICS_SUCCESS ) {
+		return 66;
+	}
+	constexpr uint64_t VOLUME_BYTES = 4ULL * 2ULL * 3ULL * 4ULL;
+	if ( pDevice->mapBuffer( hReadback, 0, VOLUME_BYTES, &mapped ) != SIR_GRAPHICS_SUCCESS ||
+	     pDevice->invalidateBuffer( hReadback, 0, VOLUME_BYTES ) != SIR_GRAPHICS_SUCCESS ||
+	     memcmp( mapped.pData, szExpected, VOLUME_BYTES ) != 0 ||
+	     pDevice->unmapBuffer( hReadback, 0, VOLUME_BYTES ) != SIR_GRAPHICS_SUCCESS ) {
+		return 67;
+	}
+	completed.szQueueValues[SIR_GRAPHICS_QUEUE_DIRECT] = volumeDownloaded.nValue;
+	if ( pDevice->retireResource( hVolume, completed ) != SIR_GRAPHICS_SUCCESS ) {
+		return 68;
+	}
+	completed.szQueueValues[SIR_GRAPHICS_QUEUE_DIRECT] = volumeDownloaded.nValue;
 	if ( pDevice->retireResource( hView, completed ) != SIR_GRAPHICS_SUCCESS ||
 	     pDevice->retireResource( hTexture, completed ) != SIR_GRAPHICS_SUCCESS ||
 	     pDevice->retireResource( hSampler, completed ) != SIR_GRAPHICS_SUCCESS ||
