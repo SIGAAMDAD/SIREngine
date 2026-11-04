@@ -1,0 +1,55 @@
+name: Vulkan headless validation
+
+on:
+  pull_request:
+    branches: [develop, main]
+    paths:
+      - 'Source/Renderer/**'
+      - 'Source/CMakeLists.txt'
+      - 'CMakeLists.txt'
+      - 'Tests/Unit/SIRVulkanDeviceTests.cpp'
+      - 'Tests/Unit/CMakeLists.txt'
+      - '.github/workflows/vulkan.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  vulkan-linux:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Fetch pinned Vulkan dependencies
+        run: git submodule update --init ThirdParty/VulkanHeaders ThirdParty/VulkanMemoryAllocator
+      - name: Install Mesa Vulkan runtime
+        run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers libvulkan1
+      - uses: ./.github/actions/setup-build-tools
+      - name: Configure native Vulkan backend
+        run: cmake --preset tooling -DSIR_WITH_VULKAN=ON -DSIR_WITH_GOOGLETEST=OFF
+      - name: Compile Vulkan and native tests
+        run: cmake --build --preset tooling --target SIRVulkanDeviceTests SIRVulkanContractTests SIRVulkanSharedContractTests SIRVulkanSharedTests
+      - name: Headless Vulkan/VMA unit smoke
+        run: ctest --preset tooling --output-on-failure -R '^render[.]vulkan[.]'
+
+  vulkan-windows:
+    runs-on: windows-2022
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Fetch pinned Vulkan dependencies
+        run: git submodule update --init ThirdParty/VulkanHeaders ThirdParty/VulkanMemoryAllocator
+      - name: Set up MSVC compiler environment
+        uses: ilammy/msvc-dev-cmd@v1
+      - uses: ./.github/actions/setup-build-tools
+      - name: Configure native Vulkan backend
+        run: cmake --preset dev -DSIR_WITH_VULKAN=ON -DSIR_WITH_GOOGLETEST=OFF
+      - name: Compile Vulkan and native tests
+        run: cmake --build --preset dev --target SIRVulkanDeviceTests SIRVulkanContractTests SIRVulkanSharedContractTests SIRVulkanSharedTests
+      - name: Validate contract paths and hardware-dependent smoke
+        run: ctest --preset dev --output-on-failure -R '^render[.]vulkan[.]'
