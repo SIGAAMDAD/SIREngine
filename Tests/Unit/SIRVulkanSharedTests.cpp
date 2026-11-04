@@ -517,6 +517,29 @@ int main( void )
 	if ( driver.destroyDevice( pDevice ) != SIR_GRAPHICS_SUCCESS || pDevice->getDeviceGeneration() != 0 ) {
 		return 14;
 	}
+	// An adapter index must select the same physical device reported by enumeration.
+	if ( nAdapterCount > 1 ) {
+		sirGraphicsAdapterInfo_t secondAdapter = {};
+		if ( driver.queryAdapter( 1, &secondAdapter ) != SIR_GRAPHICS_SUCCESS || secondAdapter.nAdapterIndex != 1 ) {
+			return 54;
+		}
+		create.nAdapterIndex = 1;
+		pDevice = nullptr;
+		sirGraphicsCapabilities_t secondCapabilities = {};
+		if ( driver.createDevice( create, &pDevice ) != SIR_GRAPHICS_SUCCESS || pDevice == nullptr ||
+		     pDevice->queryCapabilities( &secondCapabilities ) != SIR_GRAPHICS_SUCCESS ||
+		     ( secondCapabilities.nFeatureMask & SIR_GRAPHICS_FEATURE_COMPUTE ) !=
+		         ( secondAdapter.nFeatureMask & SIR_GRAPHICS_FEATURE_COMPUTE ) ) {
+			return 55;
+		}
+		if ( driver.destroyDevice( pDevice ) != SIR_GRAPHICS_SUCCESS ) {
+			return 56;
+		}
+		create.nAdapterIndex = 0;
+	}
+	if ( driver.queryAdapter( nAdapterCount, &adapter ) != SIR_GRAPHICS_UNSUPPORTED ) {
+		return 57;
+	}
 	if ( ( capabilities.nFeatureMask & SIR_GRAPHICS_FEATURE_COMPUTE ) != 0 ) {
 		create.nRequiredFeatures = SIR_GRAPHICS_FEATURE_COMPUTE;
 		pDevice = nullptr;

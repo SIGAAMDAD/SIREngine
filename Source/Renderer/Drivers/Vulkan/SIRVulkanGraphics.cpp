@@ -185,12 +185,12 @@ SIRVulkanRenderingDevice::~SIRVulkanRenderingDevice( void ) noexcept
 	( void )shutdown();
 }
 
-sirGraphicsResult_t SIRVulkanRenderingDevice::initialize( const sirVulkanPoolBudget_t *pBudget ) noexcept
+sirGraphicsResult_t SIRVulkanRenderingDevice::initialize( const sirVulkanPoolBudget_t *pBudget, uint32_t nAdapterIndex ) noexcept
 {
 	if ( m_bReady ) {
 		return SIR_GRAPHICS_BUSY;
 	}
-	const sirVulkanResult_t eInitialize = m_Native.initialize( pBudget );
+	const sirVulkanResult_t eInitialize = m_Native.initialize( pBudget, nAdapterIndex );
 	if ( eInitialize != SIR_VULKAN_SUCCESS ) {
 		return sirVulkanToGraphicsResult( eInitialize );
 	}
@@ -841,18 +841,18 @@ sirGraphicsResult_t SIRVulkanDriver::getAdapterCount( uint32_t *pCount ) const n
 	if ( eResult != SIR_VULKAN_SUCCESS ) {
 		return sirVulkanToGraphicsResult( eResult );
 	}
-	*pCount = 1;
+	*pCount = probe.getAdapterCount();
 	return probe.shutdown() ? SIR_GRAPHICS_SUCCESS : SIR_GRAPHICS_DRIVER_ERROR;
 }
 
 sirGraphicsResult_t SIRVulkanDriver::queryAdapter( uint32_t nAdapterIndex, sirGraphicsAdapterInfo_t *pInfo ) const noexcept
 {
-	if ( pInfo == nullptr || nAdapterIndex != 0 ) {
+	if ( pInfo == nullptr || nAdapterIndex >= 32 ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	*pInfo = {};
 	SIRVulkanDevice probe;
-	const sirVulkanResult_t eResult = probe.initialize();
+	const sirVulkanResult_t eResult = probe.initialize( nullptr, nAdapterIndex );
 	if ( eResult != SIR_VULKAN_SUCCESS ) {
 		return sirVulkanToGraphicsResult( eResult );
 	}
@@ -871,7 +871,7 @@ sirGraphicsResult_t SIRVulkanDriver::createDevice( const sirGraphicsDeviceCreate
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	*ppDevice = nullptr;
-	if ( desc.nAdapterIndex != 0 || desc.nFramesInFlight == 0 || desc.nFramesInFlight > SIR_VULKAN_TRANSFER_SLOT_COUNT ) {
+	if ( desc.nAdapterIndex >= 32 || desc.nFramesInFlight == 0 || desc.nFramesInFlight > SIR_VULKAN_TRANSFER_SLOT_COUNT ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( ( desc.nRequiredFeatures & ~( uint64_t )SIR_GRAPHICS_FEATURE_COMPUTE ) != 0 ) {
@@ -885,7 +885,7 @@ sirGraphicsResult_t SIRVulkanDriver::createDevice( const sirGraphicsDeviceCreate
 	if ( bHasBudgets && !sirVulkanValidatePoolBudget( &budgets ) ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	const sirGraphicsResult_t eResult = m_Device.initialize( bHasBudgets ? &budgets : nullptr );
+	const sirGraphicsResult_t eResult = m_Device.initialize( bHasBudgets ? &budgets : nullptr, desc.nAdapterIndex );
 	if ( eResult != SIR_GRAPHICS_SUCCESS ) {
 		return eResult;
 	}

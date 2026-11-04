@@ -65,63 +65,115 @@ bool SIRVulkanDevice::loadInstanceDispatch( void ) noexcept
 	       m_pfnGetDeviceProcAddr && m_pfnGetPhysicalDeviceFeatures2;
 }
 
-bool SIRVulkanDevice::chooseAdapter( void ) noexcept
+uint32_t sirVulkanAdapterPriority( VkPhysicalDeviceType eType ) noexcept
+{
+	switch ( eType ) {
+	case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU:
+		return 4;
+	case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU:
+		return 3;
+	case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU:
+		return 2;
+	default:
+		return 1;
+	}
+}
+
+bool SIRVulkanDevice::chooseAdapter( uint32_t nAdapterIndex ) noexcept
 {
 	uint32_t nDeviceCount = 0;
-	if ( m_pfnEnumeratePhysicalDevices( m_Instance, &nDeviceCount, nullptr ) != VK_SUCCESS || nDeviceCount == 0 || nDeviceCount > 32 ) {
+	if ( m_pfnEnumeratePhysicalDevices( m_Instance, &nDeviceCount, nullptr ) != VK_SUCCESS || nDeviceCount == 0 ||
+	     nDeviceCount > 32 ) {
+		return false;
+	}
+	VkPhysicalDevice szDevices[32] = {};
+	if ( m_pfnEnumeratePhysicalDevices( m_Instance, &nDeviceCount, szDevices ) != VK_SUCCESS ) {
 		return false;
 	}
 
-	VkPhysicalDevice hDevices[32] = {};
-	if ( m_pfnEnumeratePhysicalDevices( m_Instance, &nDeviceCount, hDevices ) != VK_SUCCESS ) {
-		return false;
-	}
-
-	uint32_t nBestScore = 0;
+	VkPhysicalDevice szEligible[32] = {};
+	uint32_t szFamilies[32] = {};
+	uint32_t szPriorities[32] = {};
+	bool szCompute[32] = {};
+	uint32_t nEligibleCount = 0;
 	for ( uint32_t iDevice = 0; iDevice < nDeviceCount; ++iDevice ) {
 		VkPhysicalDeviceProperties properties = {};
-		m_pfnGetPhysicalDeviceProperties( hDevices[iDevice], &properties );
+		m_pfnGetPhysicalDeviceProperties( szDevices[iDevice], &properties );
 		if ( properties.apiVersion < VK_API_VERSION_1_4 ) {
 			continue;
 		}
-
+		VkPhysicalDeviceVulkan13Features features13 = {};
+		features13.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
+		VkPhysicalDeviceVulkan12Features features12 = {};
+		features12.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
+		features12.pNext = &features13;
+		VkPhysicalDeviceFeatures2 features = {};
+		features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+		features.pNext = &features12;
+		m_pfnGetPhysicalDeviceFeatures2( szDevices[iDevice], &features );
+		if ( features12.timelineSemaphore == VK_FALSE || features13.synchronization2 == VK_FALSE ) {
+			continue;
+		}
 		uint32_t nFamilyCount = 0;
-		m_pfnGetPhysicalDeviceQueueFamilyProperties( hDevices[iDevice], &nFamilyCount, nullptr );
+		m_pfnGetPhysicalDeviceQueueFamilyProperties( szDevices[iDevice], &nFamilyCount, nullptr );
 		if ( nFamilyCount == 0 || nFamilyCount > 64 ) {
 			continue;
 		}
-		VkQueueFamilyProperties families[64] = {};
-		m_pfnGetPhysicalDeviceQueueFamilyProperties( hDevices[iDevice], &nFamilyCount, families );
+		VkQueueFamilyProperties szFamiliesInfo[64] = {};
+		m_pfnGetPhysicalDeviceQueueFamilyProperties( szDevices[iDevice], &nFamilyCount, szFamiliesInfo );
+		uint32_t nSelectedFamily = UINT32_MAX;
+		bool bCompute = false;
 		for ( uint32_t iFamily = 0; iFamily < nFamilyCount; ++iFamily ) {
-			if ( families[iFamily].queueCount == 0 || ( families[iFamily].queueFlags & VK_QUEUE_GRAPHICS_BIT ) == 0 ) {
+			if ( szFamiliesInfo[iFamily].queueCount == 0 ||
+			     ( szFamiliesInfo[iFamily].queueFlags & VK_QUEUE_GRAPHICS_BIT ) == 0 ) {
 				continue;
 			}
-			const uint32_t nScore = properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU     ? 4
-			                        : properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU ? 3
-			                        : properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU    ? 2
-			                                                                                          : 1;
-			if ( nScore <= nBestScore ) {
+			const bool bFamilyCompute = ( szFamiliesInfo[iFamily].queueFlags & VK_QUEUE_COMPUTE_BIT ) != 0;
+			if ( nSelectedFamily == UINT32_MAX || ( bFamilyCompute && !bCompute ) ) {
+				nSelectedFamily = iFamily;
+				bCompute = bFamilyCompute;
+			}
+			if ( bCompute ) {
 				break;
 			}
-			nBestScore = nScore;
-			m_PhysicalDevice = hDevices[iDevice];
-			m_Adapter.nApiVersion = properties.apiVersion;
-			m_Adapter.nDriverVersion = properties.driverVersion;
-			m_Adapter.nVendorId = properties.vendorID;
-			m_Adapter.nDeviceId = properties.deviceID;
-			m_Adapter.nQueueFamilyIndex = iFamily;
-			m_Adapter.bComputeCapable = ( families[iFamily].queueFlags & VK_QUEUE_COMPUTE_BIT ) != 0;
-			m_Adapter.bSoftwareAdapter = properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_CPU;
-			memcpy( m_Adapter.szMaximumComputeGroupCount, properties.limits.maxComputeWorkGroupCount,
-			        sizeof( m_Adapter.szMaximumComputeGroupCount ) );
-			memcpy( m_Adapter.szDeviceName, properties.deviceName, sizeof( m_Adapter.szDeviceName ) );
-			break;
 		}
-	}
+		if ( nSelectedFamily == UINT32_MAX ) {
+			continue;
+		}
 
-	if ( m_PhysicalDevice == VK_NULL_HANDLE ) {
+		const uint32_t nPriority = sirVulkanAdapterPriority( properties.deviceType );
+		uint32_t iInsert = nEligibleCount;
+		while ( iInsert > 0 && szPriorities[iInsert - 1] < nPriority ) {
+			szEligible[iInsert] = szEligible[iInsert - 1];
+			szFamilies[iInsert] = szFamilies[iInsert - 1];
+			szCompute[iInsert] = szCompute[iInsert - 1];
+			szPriorities[iInsert] = szPriorities[iInsert - 1];
+			--iInsert;
+		}
+		szEligible[iInsert] = szDevices[iDevice];
+		szFamilies[iInsert] = nSelectedFamily;
+		szCompute[iInsert] = bCompute;
+		szPriorities[iInsert] = nPriority;
+		++nEligibleCount;
+	}
+	m_nEligibleAdapterCount = nEligibleCount;
+	if ( nAdapterIndex >= nEligibleCount ) {
 		return false;
 	}
+
+	m_PhysicalDevice = szEligible[nAdapterIndex];
+	VkPhysicalDeviceProperties selectedProperties = {};
+	m_pfnGetPhysicalDeviceProperties( m_PhysicalDevice, &selectedProperties );
+	m_Adapter.nApiVersion = selectedProperties.apiVersion;
+	m_Adapter.nDriverVersion = selectedProperties.driverVersion;
+	m_Adapter.nVendorId = selectedProperties.vendorID;
+	m_Adapter.nDeviceId = selectedProperties.deviceID;
+	m_Adapter.nQueueFamilyIndex = szFamilies[nAdapterIndex];
+	m_Adapter.bComputeCapable = szCompute[nAdapterIndex];
+	m_Adapter.bSoftwareAdapter = selectedProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_CPU;
+	memcpy( m_Adapter.szMaximumComputeGroupCount, selectedProperties.limits.maxComputeWorkGroupCount,
+	        sizeof( m_Adapter.szMaximumComputeGroupCount ) );
+	memcpy( m_Adapter.szDeviceName, selectedProperties.deviceName, sizeof( m_Adapter.szDeviceName ) );
 
 	VkPhysicalDeviceMemoryProperties memory = {};
 	m_pfnGetPhysicalDeviceMemoryProperties( m_PhysicalDevice, &memory );
@@ -135,7 +187,7 @@ bool SIRVulkanDevice::chooseAdapter( void ) noexcept
 	return true;
 }
 
-sirVulkanResult_t SIRVulkanDevice::initialize( const sirVulkanPoolBudget_t *pBudget ) noexcept
+sirVulkanResult_t SIRVulkanDevice::initialize( const sirVulkanPoolBudget_t *pBudget, uint32_t nAdapterIndex ) noexcept
 {
 	if ( m_bReady || m_Library.pNativeHandle != nullptr ) {
 		return SIR_VULKAN_INVALID_STATE;
@@ -193,7 +245,7 @@ sirVulkanResult_t SIRVulkanDevice::initialize( const sirVulkanPoolBudget_t *pBud
 		shutdown();
 		return SIR_VULKAN_NATIVE_FAILURE;
 	}
-	if ( !chooseAdapter() ) {
+	if ( !chooseAdapter( nAdapterIndex ) ) {
 		shutdown();
 		return SIR_VULKAN_DEVICE_UNAVAILABLE;
 	}
@@ -309,6 +361,7 @@ bool SIRVulkanDevice::shutdown( void ) noexcept
 	memset( &m_Adapter, 0, sizeof( m_Adapter ) );
 	m_nDeviceSerial = 0;
 	m_nLastTransferValue = 0;
+	m_nEligibleAdapterCount = 0;
 	m_nPeakCommittedBytes = 0;
 	m_nPeakAllocationBytes = 0;
 	m_nUploadMappedBytes = 0;
@@ -320,6 +373,11 @@ bool SIRVulkanDevice::shutdown( void ) noexcept
 bool SIRVulkanDevice::isReady( void ) const noexcept
 {
 	return m_bReady;
+}
+
+uint32_t SIRVulkanDevice::getAdapterCount( void ) const noexcept
+{
+	return m_bReady ? m_nEligibleAdapterCount : 0;
 }
 
 bool SIRVulkanDevice::queryAdapter( sirVulkanAdapterInfo_t *pAdapter ) const noexcept
