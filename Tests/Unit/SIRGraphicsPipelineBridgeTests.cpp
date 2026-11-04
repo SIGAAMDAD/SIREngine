@@ -98,17 +98,16 @@ static bool testModern( void ) noexcept
 	if ( !checkResult( sirGraphicsEncodeABIPipeline( source, &encoded ), SIR_GRAPHICS_SUCCESS, "modern bridge" ) ) {
 		return false;
 	}
-	if ( encoded.nSize != sizeof( encoded ) || encoded.nModel != SIR_GRAPHICS_PIPELINE_MODEL_MODERN ||
-	     encoded.pModern != &modern || encoded.pBindings != &binding ) {
+	if ( encoded.nSize != sizeof( encoded ) || encoded.nModel != SIR_GRAPHICS_PIPELINE_MODEL_MODERN || encoded.pModern != &modern ||
+	     encoded.pBindings != &binding ) {
 		return false;
 	}
 	if ( encoded.vertexShader.nSize != sizeof( sirGraphicsABIShaderCode_t ) ||
-	     encoded.vertexShader.nContentHash != source.vertexShader.nContentHash ||
-	     encoded.vertexShader.pBytes != s_nShaderWords ) {
+	     encoded.vertexShader.nContentHash != source.vertexShader.nContentHash || encoded.vertexShader.pBytes != s_nShaderWords ) {
 		return false;
 	}
-	if ( encoded.nDepthTest != 1 || encoded.nDepthWrite != 1 ||
-	     encoded.szBlendStates[0].nEnabled != 1 || encoded.szBlendStates[0].nColorWriteMask != 15 ) {
+	if ( encoded.nDepthTest != 1 || encoded.nDepthWrite != 1 || encoded.szBlendStates[0].nEnabled != 1 ||
+	     encoded.szBlendStates[0].nColorWriteMask != 15 ) {
 		return false;
 	}
 	if ( !checkResult( sirGraphicsValidateABIPipeline( &encoded, &caps ), SIR_GRAPHICS_SUCCESS, "modern native contract" ) ) {
@@ -212,8 +211,8 @@ static bool testFixed( void ) noexcept
 	if ( !checkResult( sirGraphicsEncodeABIPipeline( source, &encoded ), SIR_GRAPHICS_SUCCESS, "fixed bridge" ) ) {
 		return false;
 	}
-	if ( encoded.pFixed != &fixed || encoded.vertexShader.pBytes != nullptr ||
-	     encoded.pixelShader.pBytes != nullptr || encoded.computeShader.pBytes != nullptr ) {
+	if ( encoded.pFixed != &fixed || encoded.vertexShader.pBytes != nullptr || encoded.pixelShader.pBytes != nullptr ||
+	     encoded.computeShader.pBytes != nullptr ) {
 		return false;
 	}
 	if ( !checkResult( sirGraphicsValidateABIPipeline( &encoded, &caps ), SIR_GRAPHICS_SUCCESS, "fixed native contract" ) ) {
