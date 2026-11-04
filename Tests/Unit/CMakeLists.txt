@@ -89,3 +89,8 @@ add_executable(SIRContainerHeapAdapterTests SIRContainerHeapAdapterTests.cpp)
 target_link_libraries(SIRContainerHeapAdapterTests PRIVATE SIR::Core)
 add_test(NAME core.containers.heap-adapter COMMAND SIRContainerHeapAdapterTests)
 sir_configure_owned_target(SIRContainerHeapAdapterTests)
+
+add_executable(SIREditorAuthoringTests SIREditorAuthoringTests.cpp)
+target_link_libraries(SIREditorAuthoringTests PRIVATE SIR::EditorAuthoring)
+add_test(NAME editor.authoring.transactions-and-virtual-list COMMAND SIREditorAuthoringTests)
+sir_configure_owned_target(SIREditorAuthoringTests)
