@@ -47,7 +47,7 @@ SIRInputFrameState::SIRInputFrameState( void ) noexcept
 
 bool SIRInputFrameState::begin( uint64_t nTick ) noexcept
 {
-	if ( m_bCollecting || m_bOverflowed || ( m_bPublished && nTick <= m_nLastTick ) ) {
+	if ( nTick == 0 || m_bCollecting || m_bOverflowed || ( m_bPublished && nTick <= m_nLastTick ) ) {
 		return false;
 	}
 	for ( uint32_t i = 0; i < SIR_INPUT_DEVICE_CAPACITY; ++i ) {
