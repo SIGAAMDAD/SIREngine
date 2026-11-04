@@ -38,8 +38,7 @@ sirAudioBackendOps_t SIRFMODVoiceBackend::getBackendOps( void ) noexcept
 
 sirAudioResult_t SIRFMODVoiceBackend::configure( SIRFMODContext *pContext, const sirContainerAllocator_t *pAllocator,
                                                  const sirFMODVoiceNativeOps_t &ops, uint32_t nMaxRegisteredEvents,
-                                                 uint32_t nMaxRegisteredParameters, uint32_t nMaxEmitters,
-                                                 uint32_t nMaxListeners ) noexcept
+                                                 uint32_t nMaxRegisteredParameters, uint32_t nMaxEmitters, uint32_t nMaxListeners ) noexcept
 {
 	if ( m_bInitialized || m_pVoices != nullptr || pContext == nullptr || !pContext->isReady() || pAllocator == nullptr ||
 	     pAllocator->pfnAllocate == nullptr || pAllocator->pfnDeallocate == nullptr || nMaxRegisteredEvents == 0 || ops.nAbiVersion != 3 ||
@@ -47,8 +46,8 @@ sirAudioResult_t SIRFMODVoiceBackend::configure( SIRFMODContext *pContext, const
 	     ops.isStopped == nullptr || ops.releaseInstance == nullptr ||
 	     ( nMaxRegisteredParameters != 0 && ( ops.setInstanceParameter == nullptr || ops.setGlobalParameter == nullptr ) ) ||
 	     ( nMaxEmitters != 0 && ops.setInstanceSpatial == nullptr ) ||
-	     ( nMaxListeners != 0 && ( ops.setListenerSpatial == nullptr || ops.setListenerCount == nullptr ||
-	                               ops.setListenerWeight == nullptr ) ) ) {
+	     ( nMaxListeners != 0 &&
+	       ( ops.setListenerSpatial == nullptr || ops.setListenerCount == nullptr || ops.setListenerWeight == nullptr ) ) ) {
 		return SIR_AUDIO_INVALID_ARGUMENT;
 	}
 	m_pContext = pContext;
@@ -125,15 +124,15 @@ sirAudioResult_t SIRFMODVoiceBackend::initializeCallback( void *pContext, const 
 		memset( pBackend->m_pEmitters, 0, nEmitterBytes );
 	}
 	if ( pBackend->m_nListenerCapacity != 0 ) {
-		pBackend->m_nLastNativeResult = pBackend->m_Ops.setListenerCount( pBackend->m_Ops.pUserData,
-		    pBackend->m_pContext->m_pStudio, pBackend->m_nListenerCapacity );
+		pBackend->m_nLastNativeResult =
+		    pBackend->m_Ops.setListenerCount( pBackend->m_Ops.pUserData, pBackend->m_pContext->m_pStudio, pBackend->m_nListenerCapacity );
 		if ( pBackend->m_nLastNativeResult != 0 ) {
 			pBackend->releaseStorage();
 			return SIR_AUDIO_BACKEND_ERROR;
 		}
 		for ( uint32_t iListener = 0; iListener < pBackend->m_nListenerCapacity; ++iListener ) {
-			pBackend->m_nLastNativeResult = pBackend->m_Ops.setListenerWeight( pBackend->m_Ops.pUserData,
-			    pBackend->m_pContext->m_pStudio, iListener, 0.0f );
+			pBackend->m_nLastNativeResult =
+			    pBackend->m_Ops.setListenerWeight( pBackend->m_Ops.pUserData, pBackend->m_pContext->m_pStudio, iListener, 0.0f );
 			if ( pBackend->m_nLastNativeResult != 0 ) {
 				pBackend->releaseStorage();
 				return SIR_AUDIO_BACKEND_ERROR;
@@ -354,8 +353,7 @@ bool SIRFMODVoiceBackend::writeCompletion( const sirAudioCompletion_t &completio
 sirAudioResult_t SIRFMODVoiceBackend::submitOne( const sirAudioCommand_t &command ) noexcept
 {
 	if ( command.eType == SIR_AUDIO_COMMAND_RELEASE_EMITTER ) {
-		if ( command.hEmitter.nSlot >= m_nEmitterCapacity || command.hEmitter.nGeneration == 0 ||
-		     command.hEmitter.nEpoch == 0 ) {
+		if ( command.hEmitter.nSlot >= m_nEmitterCapacity || command.hEmitter.nGeneration == 0 || command.hEmitter.nEpoch == 0 ) {
 			return SIR_AUDIO_INVALID_HANDLE;
 		}
 		sirFMODEmitterSpatial_t &emitter = m_pEmitters[command.hEmitter.nSlot];
@@ -366,12 +364,10 @@ sirAudioResult_t SIRFMODVoiceBackend::submitOne( const sirAudioCommand_t &comman
 		return SIR_AUDIO_OK;
 	}
 	if ( command.eType == SIR_AUDIO_COMMAND_RELEASE_LISTENER ) {
-		if ( command.hEmitter.nSlot >= m_nListenerCapacity || command.hEmitter.nGeneration == 0 ||
-		     command.hEmitter.nEpoch == 0 ) {
+		if ( command.hEmitter.nSlot >= m_nListenerCapacity || command.hEmitter.nGeneration == 0 || command.hEmitter.nEpoch == 0 ) {
 			return SIR_AUDIO_INVALID_HANDLE;
 		}
-		m_nLastNativeResult = m_Ops.setListenerWeight( m_Ops.pUserData, m_pContext->m_pStudio,
-		                                              command.hEmitter.nSlot, 0.0f );
+		m_nLastNativeResult = m_Ops.setListenerWeight( m_Ops.pUserData, m_pContext->m_pStudio, command.hEmitter.nSlot, 0.0f );
 		return m_nLastNativeResult == 0 ? SIR_AUDIO_OK : SIR_AUDIO_BACKEND_ERROR;
 	}
 	if ( command.eType == SIR_AUDIO_COMMAND_SET_GLOBAL_PARAMETER ) {
@@ -380,8 +376,8 @@ sirAudioResult_t SIRFMODVoiceBackend::submitOne( const sirAudioCommand_t &comman
 		     m_Ops.setGlobalParameter == nullptr ) {
 			return SIR_AUDIO_UNSUPPORTED;
 		}
-		m_nLastNativeResult = m_Ops.setGlobalParameter( m_Ops.pUserData, m_pContext->m_pStudio,
-		                                                 m_pParameters[iParameter].nNativeId, command.fValue );
+		m_nLastNativeResult =
+		    m_Ops.setGlobalParameter( m_Ops.pUserData, m_pContext->m_pStudio, m_pParameters[iParameter].nNativeId, command.fValue );
 		return m_nLastNativeResult == 0 ? SIR_AUDIO_OK : SIR_AUDIO_BACKEND_ERROR;
 	}
 	if ( command.eType == SIR_AUDIO_COMMAND_PLAY ) {
@@ -481,12 +477,12 @@ sirAudioResult_t SIRFMODVoiceBackend::submitOne( const sirAudioCommand_t &comman
 		}
 		if ( command.eType == SIR_AUDIO_COMMAND_SET_PARAMETER ) {
 			uint32_t iParameter = 0;
-			if ( !findParameter( command.nControlId, iParameter ) ||
-			     m_pParameters[iParameter].eScope != SIR_AUDIO_CONTROL_PLAYING || m_Ops.setInstanceParameter == nullptr ) {
+			if ( !findParameter( command.nControlId, iParameter ) || m_pParameters[iParameter].eScope != SIR_AUDIO_CONTROL_PLAYING ||
+			     m_Ops.setInstanceParameter == nullptr ) {
 				return SIR_AUDIO_UNSUPPORTED;
 			}
-			m_nLastNativeResult = m_Ops.setInstanceParameter( m_Ops.pUserData, slot.pInstance,
-			                                                   m_pParameters[iParameter].nNativeId, command.fValue );
+			m_nLastNativeResult =
+			    m_Ops.setInstanceParameter( m_Ops.pUserData, slot.pInstance, m_pParameters[iParameter].nNativeId, command.fValue );
 			return m_nLastNativeResult == 0 ? SIR_AUDIO_OK : SIR_AUDIO_BACKEND_ERROR;
 		}
 		if ( slot.bStopRequested != 0 ) {
@@ -574,8 +570,7 @@ void SIRFMODVoiceBackend::retrySpatial( void ) noexcept
 {
 	for ( uint32_t iVoice = 0; iVoice < m_nVoiceCapacity; ++iVoice ) {
 		sirFMODVoiceSlot_t &slot = m_pVoices[iVoice];
-		if ( slot.pInstance == nullptr || slot.bStartFailed != 0 || slot.bSpatialDirty == 0 ||
-		     slot.hEmitter.nSlot >= m_nEmitterCapacity ) {
+		if ( slot.pInstance == nullptr || slot.bStartFailed != 0 || slot.bSpatialDirty == 0 || slot.hEmitter.nSlot >= m_nEmitterCapacity ) {
 			continue;
 		}
 		const sirFMODEmitterSpatial_t &emitter = m_pEmitters[slot.hEmitter.nSlot];
@@ -612,11 +607,11 @@ uint64_t SIRFMODVoiceBackend::capabilitiesCallback( const void * ) noexcept
 }
 
 sirAudioResult_t SIRFMODVoiceBackend::submitSpatialCallback( void *pContext, const sirAudioCommand_t *pCommand,
-                                                                       const sirAudioAttributes_t *pAttributes ) noexcept
+                                                             const sirAudioAttributes_t *pAttributes ) noexcept
 {
 	SIRFMODVoiceBackend *pBackend = ( SIRFMODVoiceBackend * )pContext;
-	if ( pBackend == nullptr || !pBackend->m_bInitialized || pBackend->m_pContext == nullptr ||
-	     !pBackend->m_pContext->isReady() || pBackend->m_pContext->getEpoch() != pBackend->m_nContextEpoch ) {
+	if ( pBackend == nullptr || !pBackend->m_bInitialized || pBackend->m_pContext == nullptr || !pBackend->m_pContext->isReady() ||
+	     pBackend->m_pContext->getEpoch() != pBackend->m_nContextEpoch ) {
 		return SIR_AUDIO_NOT_INITIALIZED;
 	}
 	if ( pCommand == nullptr || pAttributes == nullptr ) {
@@ -637,17 +632,16 @@ sirAudioResult_t SIRFMODVoiceBackend::submitSpatialCallback( void *pContext, con
 		if ( pCommand->hEmitter.nSlot >= pBackend->m_nListenerCapacity ) {
 			return SIR_AUDIO_INVALID_HANDLE;
 		}
-		pBackend->m_nLastNativeResult = pBackend->m_Ops.setListenerSpatial( pBackend->m_Ops.pUserData,
-		    pBackend->m_pContext->m_pStudio, pCommand->hEmitter.nSlot, pAttributes );
+		pBackend->m_nLastNativeResult = pBackend->m_Ops.setListenerSpatial( pBackend->m_Ops.pUserData, pBackend->m_pContext->m_pStudio,
+		                                                                    pCommand->hEmitter.nSlot, pAttributes );
 		if ( pBackend->m_nLastNativeResult != 0 ) {
 			return SIR_AUDIO_BACKEND_ERROR;
 		}
-		pBackend->m_nLastNativeResult = pBackend->m_Ops.setListenerWeight( pBackend->m_Ops.pUserData,
-		    pBackend->m_pContext->m_pStudio, pCommand->hEmitter.nSlot, 1.0f );
+		pBackend->m_nLastNativeResult =
+		    pBackend->m_Ops.setListenerWeight( pBackend->m_Ops.pUserData, pBackend->m_pContext->m_pStudio, pCommand->hEmitter.nSlot, 1.0f );
 		return pBackend->m_nLastNativeResult == 0 ? SIR_AUDIO_OK : SIR_AUDIO_BACKEND_ERROR;
 	}
-	if ( pCommand->eType != SIR_AUDIO_COMMAND_SET_ATTRIBUTES ||
-	     pCommand->hEmitter.nSlot >= pBackend->m_nEmitterCapacity ) {
+	if ( pCommand->eType != SIR_AUDIO_COMMAND_SET_ATTRIBUTES || pCommand->hEmitter.nSlot >= pBackend->m_nEmitterCapacity ) {
 		return SIR_AUDIO_INVALID_HANDLE;
 	}
 	sirFMODEmitterSpatial_t &emitter = pBackend->m_pEmitters[pCommand->hEmitter.nSlot];
@@ -657,10 +651,8 @@ sirAudioResult_t SIRFMODVoiceBackend::submitSpatialCallback( void *pContext, con
 	sirAudioResult_t eResult = SIR_AUDIO_OK;
 	for ( uint32_t iVoice = 0; iVoice < pBackend->m_nVoiceCapacity; ++iVoice ) {
 		sirFMODVoiceSlot_t &slot = pBackend->m_pVoices[iVoice];
-		if ( slot.pInstance == nullptr || slot.bStartFailed != 0 ||
-		     slot.hEmitter.nSlot != pCommand->hEmitter.nSlot ||
-		     slot.hEmitter.nGeneration != pCommand->hEmitter.nGeneration ||
-		     slot.hEmitter.nEpoch != pCommand->hEmitter.nEpoch ) {
+		if ( slot.pInstance == nullptr || slot.bStartFailed != 0 || slot.hEmitter.nSlot != pCommand->hEmitter.nSlot ||
+		     slot.hEmitter.nGeneration != pCommand->hEmitter.nGeneration || slot.hEmitter.nEpoch != pCommand->hEmitter.nEpoch ) {
 			continue;
 		}
 		pBackend->m_nLastNativeResult = pBackend->m_Ops.setInstanceSpatial( pBackend->m_Ops.pUserData, slot.pInstance, pAttributes );

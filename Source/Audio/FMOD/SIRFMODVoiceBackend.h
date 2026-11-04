@@ -44,8 +44,7 @@ typedef struct sirFMODVoiceNativeOps_s
 	int32_t ( *setInstanceParameter )( void *pUserData, void *pInstance, uint64_t nNativeId, float fValue ) noexcept;
 	int32_t ( *setGlobalParameter )( void *pUserData, void *pStudio, uint64_t nNativeId, float fValue ) noexcept;
 	int32_t ( *setInstanceSpatial )( void *pUserData, void *pInstance, const sirAudioAttributes_t *pAttributes ) noexcept;
-	int32_t ( *setListenerSpatial )( void *pUserData, void *pStudio, uint32_t iListener,
-	                                const sirAudioAttributes_t *pAttributes ) noexcept;
+	int32_t ( *setListenerSpatial )( void *pUserData, void *pStudio, uint32_t iListener, const sirAudioAttributes_t *pAttributes ) noexcept;
 	int32_t ( *setListenerCount )( void *pUserData, void *pStudio, uint32_t nListeners ) noexcept;
 	int32_t ( *setListenerWeight )( void *pUserData, void *pStudio, uint32_t iListener, float fWeight ) noexcept;
 } sirFMODVoiceNativeOps_t;
@@ -137,8 +136,8 @@ public:
 	SIRFMODVoiceBackend &operator=( const SIRFMODVoiceBackend & ) = delete;
 
 	sirAudioResult_t configure( SIRFMODContext *pContext, const sirContainerAllocator_t *pAllocator, const sirFMODVoiceNativeOps_t &ops,
-	                            uint32_t nMaxRegisteredEvents, uint32_t nMaxRegisteredParameters = 0,
-	                            uint32_t nMaxEmitters = 0, uint32_t nMaxListeners = 0 ) noexcept;
+	                            uint32_t nMaxRegisteredEvents, uint32_t nMaxRegisteredParameters = 0, uint32_t nMaxEmitters = 0,
+	                            uint32_t nMaxListeners = 0 ) noexcept;
 	sirAudioResult_t registerEvent( uint64_t nEventId, const char *szPath ) noexcept;
 	sirAudioResult_t unregisterEvent( uint64_t nEventId ) noexcept;
 	sirAudioResult_t registerParameter( uint64_t nControlId, uint64_t nNativeId, sirAudioControlScope_t eScope ) noexcept;

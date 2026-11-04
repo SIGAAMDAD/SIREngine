@@ -179,8 +179,8 @@ static int32_t testVoiceRelease( void *pData, void *pInstance ) noexcept
 }
 static sirFMODVoiceNativeOps_t makeVoiceOps( sirFMODBankFixture_t *pFixture ) noexcept
 {
-	return { 3, pFixture, testVoiceResolve, testVoiceCreate, testVoiceStart, testVoiceStop, testVoiceStopped, testVoiceRelease,
-	         nullptr, nullptr, nullptr, nullptr, nullptr, nullptr };
+	return { 3,       pFixture, testVoiceResolve, testVoiceCreate, testVoiceStart, testVoiceStop, testVoiceStopped, testVoiceRelease,
+	         nullptr, nullptr,  nullptr,          nullptr,         nullptr,        nullptr };
 }
 
 static int32_t testLoadBank( void *pData, void *pStudio, const char *szPath, void **ppBank ) noexcept

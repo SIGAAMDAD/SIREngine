@@ -225,8 +225,8 @@ static int32_t testRelease( void *pData, void *pInstance ) noexcept
 }
 static sirFMODVoiceNativeOps_t makeVoiceOps( sirFMODVoiceFixture_t *pFixture ) noexcept
 {
-	return { 3, pFixture, testResolve, testCreateInstance, testStart, testStop, testIsStopped, testRelease,
-	         nullptr, nullptr, nullptr, nullptr, nullptr, nullptr };
+	return { 3,       pFixture, testResolve, testCreateInstance, testStart, testStop, testIsStopped, testRelease, nullptr, nullptr, nullptr,
+	         nullptr, nullptr,  nullptr };
 }
 
 static int32_t testInstanceParameter( void *pData, void *pInstance, uint64_t nNativeId, float fValue ) noexcept
@@ -270,8 +270,7 @@ static int32_t testEmitterSpatial( void *pData, void *pInstance, const sirAudioA
 	return 0;
 }
 
-static int32_t testListenerSpatial( void *pData, void *pStudio, uint32_t iListener,
-                                    const sirAudioAttributes_t *pAttributes ) noexcept
+static int32_t testListenerSpatial( void *pData, void *pStudio, uint32_t iListener, const sirAudioAttributes_t *pAttributes ) noexcept
 {
 	sirFMODVoiceFixture_t *pFixture = ( sirFMODVoiceFixture_t * )pData;
 	checkVoice( pStudio == pFixture );

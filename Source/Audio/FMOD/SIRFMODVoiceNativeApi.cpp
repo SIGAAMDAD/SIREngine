@@ -101,8 +101,7 @@ static int32_t fmodSetInstanceSpatial( void *, void *pInstance, const sirAudioAt
 	return ( int32_t )( ( FMOD::Studio::EventInstance * )pInstance )->set3DAttributes( &attributes );
 }
 
-static int32_t fmodSetListenerSpatial( void *, void *pStudio, uint32_t iListener,
-                                      const sirAudioAttributes_t *pAttributes ) noexcept
+static int32_t fmodSetListenerSpatial( void *, void *pStudio, uint32_t iListener, const sirAudioAttributes_t *pAttributes ) noexcept
 {
 	const FMOD_3D_ATTRIBUTES attributes = fmodSpatialAttributes( pAttributes );
 	return ( int32_t )( ( FMOD::Studio::System * )pStudio )->setListenerAttributes( ( int )iListener, &attributes );
@@ -120,7 +119,18 @@ static int32_t fmodSetListenerWeight( void *, void *pStudio, uint32_t iListener,
 
 sirFMODVoiceNativeOps_t sirGetFMODVoiceNativeOps( void ) noexcept
 {
-	return { 3, nullptr, fmodResolveEvent, fmodCreateInstance, fmodStartInstance, fmodStopInstance, fmodIsStopped,
-	         fmodReleaseInstance, fmodSetInstanceParameter, fmodSetGlobalParameter, fmodSetInstanceSpatial,
-	         fmodSetListenerSpatial, fmodSetListenerCount, fmodSetListenerWeight };
+	return { 3,
+	         nullptr,
+	         fmodResolveEvent,
+	         fmodCreateInstance,
+	         fmodStartInstance,
+	         fmodStopInstance,
+	         fmodIsStopped,
+	         fmodReleaseInstance,
+	         fmodSetInstanceParameter,
+	         fmodSetGlobalParameter,
+	         fmodSetInstanceSpatial,
+	         fmodSetListenerSpatial,
+	         fmodSetListenerCount,
+	         fmodSetListenerWeight };
 }
