@@ -67,7 +67,7 @@ sirJobScratchToken_t SIRJobScratchAllocator::beginJob( uint32_t nSlot )
 	if ( m_pSlots == nullptr || nSlot >= m_nSlotCount ) {
 		return { UINT32_MAX, 0 };
 	}
-	sirJobSlot_t &slot = m_pSlots[nSlot];
+	sirJobSlot_t& slot = m_pSlots[nSlot];
 	uint32_t nExpected = 0;
 	if ( !slot.nState.compareExchangeStrong( nExpected, 1, SIR_MEMORY_ORDER_ACQUIRE_RELEASE ) ) {
 		return { UINT32_MAX, 0 };
@@ -87,7 +87,7 @@ void *SIRJobScratchAllocator::alloc( sirJobScratchToken_t token, uint64_t nBytes
 	if ( !isActive( token ) ) {
 		return nullptr;
 	}
-	sirJobSlot_t &slot = m_pSlots[token.nSlot];
+	sirJobSlot_t& slot = m_pSlots[token.nSlot];
 	void *pMemory = slot.Linear.alloc( nBytes, nAlignment );
 	if ( pMemory != nullptr ) {
 		const uint64_t nUsed = slot.Linear.getUsedBytes();
@@ -129,7 +129,7 @@ bool SIRJobScratchAllocator::finishJob( sirJobScratchToken_t token, uint64_t nWa
 	if ( !isActive( token ) ) {
 		return false;
 	}
-	sirJobSlot_t &slot = m_pSlots[token.nSlot];
+	sirJobSlot_t& slot = m_pSlots[token.nSlot];
 	if ( !slot.Linear.reset( false ) ) {
 		return false;
 	}

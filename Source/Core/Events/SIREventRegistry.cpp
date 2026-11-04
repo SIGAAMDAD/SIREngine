@@ -1,5 +1,7 @@
 /*
+
 ===========================================================================
+
 SIREngine MPLv2 Source Code
 Copyright (C) 2023-2027 Noah Van Til
 Ported from The Nomad Framework, Copyright (C) 2025-2027 Noah Van Til
@@ -24,7 +26,7 @@ SIREventRegistry::SIREventRegistry( void ) noexcept : m_Slots{}, m_nCount( 0 )
 }
 
 bool SIREventRegistry::registerEvent( uint32_t nTypeId, const char *pszName, uint32_t nBytes, uint32_t nAlignment,
-                                      sirEventHandle_t &handle ) noexcept
+                                      sirEventHandle_t& handle ) noexcept
 {
 	handle = {};
 	if ( nTypeId == 0 || pszName == nullptr || nBytes == 0 || nAlignment == 0 || ( nAlignment & ( nAlignment - 1 ) ) != 0 ) {
@@ -48,7 +50,7 @@ bool SIREventRegistry::registerEvent( uint32_t nTypeId, const char *pszName, uin
 	if ( nFree == MAX_EVENTS ) {
 		return false;
 	}
-	sirEventRegistrationSlot_t &slot = m_Slots[nFree];
+	sirEventRegistrationSlot_t& slot = m_Slots[nFree];
 	slot.descriptor.nTypeId = nTypeId;
 	slot.descriptor.nPayloadBytes = nBytes;
 	slot.descriptor.nPayloadAlignment = nAlignment;
@@ -65,7 +67,7 @@ bool SIREventRegistry::unregisterEvent( sirEventHandle_t handle ) noexcept
 		return false;
 	}
 	SIRScopedLock<SIRMutex> lock( m_Mutex );
-	sirEventRegistrationSlot_t &slot = m_Slots[handle.nSlot - 1];
+	sirEventRegistrationSlot_t& slot = m_Slots[handle.nSlot - 1];
 	if ( !slot.bUsed || slot.descriptor.nGeneration != handle.nGeneration ) {
 		return false;
 	}
@@ -77,7 +79,7 @@ bool SIREventRegistry::unregisterEvent( sirEventHandle_t handle ) noexcept
 	return true;
 }
 
-bool SIREventRegistry::findByType( uint32_t nTypeId, sirEventHandle_t &handle ) const noexcept
+bool SIREventRegistry::findByType( uint32_t nTypeId, sirEventHandle_t& handle ) const noexcept
 {
 	handle = {};
 	SIRScopedLock<SIRMutex> lock( m_Mutex );
@@ -90,13 +92,13 @@ bool SIREventRegistry::findByType( uint32_t nTypeId, sirEventHandle_t &handle ) 
 	return false;
 }
 
-bool SIREventRegistry::getDescriptor( sirEventHandle_t handle, sirRegisteredEvent_t &descriptor ) const noexcept
+bool SIREventRegistry::getDescriptor( sirEventHandle_t handle, sirRegisteredEvent_t& descriptor ) const noexcept
 {
 	if ( handle.nSlot == 0 || handle.nSlot > MAX_EVENTS ) {
 		return false;
 	}
 	SIRScopedLock<SIRMutex> lock( m_Mutex );
-	const sirEventRegistrationSlot_t &slot = m_Slots[handle.nSlot - 1];
+	const sirEventRegistrationSlot_t& slot = m_Slots[handle.nSlot - 1];
 	if ( !slot.bUsed || slot.descriptor.nGeneration != handle.nGeneration ) {
 		return false;
 	}
