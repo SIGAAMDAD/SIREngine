@@ -38,6 +38,13 @@ int main( void )
 	assert( catalog.buildLoadOrder( szOrder, 3, &nOrderCount ) == SIR_RESOURCE_CATALOG_NOT_FOUND );
 	assert( szOrder[0] == 111 );
 	szEdges[0].nTargetId = nPreviousTarget;
+	const uint64_t nOriginalCycleTarget = szEdges[1].nTargetId;
+	szEdges[1].nTargetId = 10;
+	szOrder[0] = 444;
+	assert( catalog.buildLoadOrder( szOrder, 3, &nOrderCount ) == SIR_RESOURCE_CATALOG_CYCLIC );
+	assert( szOrder[0] == 444 );
+	szEdges[1].nTargetId = nOriginalCycleTarget;
+	assert( catalog.buildLoadOrder( szOrder, 3, &nOrderCount ) == SIR_RESOURCE_CATALOG_OK );
 	assert( catalog.seal() == SIR_RESOURCE_CATALOG_OK );
 	assert( catalog.addResource( 17, 1, 170, SIR_RESOURCE_SOURCE_EXTERNAL ) == SIR_RESOURCE_CATALOG_SEALED );
 	catalog.shutdown();
