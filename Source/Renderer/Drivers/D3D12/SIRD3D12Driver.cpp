@@ -10,6 +10,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 This software is provided "as is", without warranty of any kind,
 express or implied, including but not limited to the warranties
 of merchantability, fitness for a particular purpose and noninfringement.
+
 ===========================================================================
 */
 
@@ -324,7 +325,8 @@ sirGraphicsResult_t SIRD3D12RenderingDevice::wait( const sirGraphicsCompletion_t
 	const sirGraphicsResult_t eAfter = poll( completion, &bCompleted );
 	return eAfter != SIR_GRAPHICS_SUCCESS ? eAfter : ( bCompleted ? SIR_GRAPHICS_SUCCESS : SIR_GRAPHICS_TIMEOUT );
 }
-sirGraphicsResult_t SIRD3D12RenderingDevice::retireResource( sirGraphicsHandle_t hResource, const sirGraphicsCompletionSet_t &completion ) noexcept
+sirGraphicsResult_t SIRD3D12RenderingDevice::retireResource( sirGraphicsHandle_t hResource,
+                                                             const sirGraphicsCompletionSet_t &completion ) noexcept
 {
 	return m_Resources.retireResource( hResource, completion );
 }

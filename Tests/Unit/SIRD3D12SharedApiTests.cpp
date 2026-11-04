@@ -28,6 +28,7 @@ int main( void )
 
 	uint32_t nAdapters = 0;
 	if ( driver.getAdapterCount( &nAdapters ) != SIR_GRAPHICS_SUCCESS || nAdapters == 0 || nAdapters > 2 ) {
+
 		return 2;
 	}
 	uint32_t nSoftwareIndex = UINT32_MAX;
@@ -83,8 +84,8 @@ int main( void )
 	buffer.nUsage = SIR_GRAPHICS_USAGE_VERTEX | SIR_GRAPHICS_USAGE_SAMPLED | SIR_GRAPHICS_USAGE_COPY_DESTINATION;
 	buffer.eMemory = SIR_GRAPHICS_MEMORY_GPU_LOCAL;
 	sirGraphicsHandle_t handle = {};
-	if ( pDevice->createBuffer( buffer, &handle ) != SIR_GRAPHICS_SUCCESS ||
-	     handle.nGeneration == 0 || handle.nDeviceGeneration != capabilities.nDeviceGeneration ) {
+	if ( pDevice->createBuffer( buffer, &handle ) != SIR_GRAPHICS_SUCCESS || handle.nGeneration == 0 ||
+	     handle.nDeviceGeneration != capabilities.nDeviceGeneration ) {
 		return 9;
 	}
 	sirGraphicsViewDesc_t view = {};
@@ -94,16 +95,14 @@ int main( void )
 	view.nLayers = 1;
 	view.nUsage = SIR_GRAPHICS_USAGE_SAMPLED;
 	sirGraphicsHandle_t hView = {};
-	if ( pDevice->createView( view, &hView ) != SIR_GRAPHICS_SUCCESS ||
-	     pDevice->retireResource( handle, immediate ) != SIR_GRAPHICS_BUSY ||
+	if ( pDevice->createView( view, &hView ) != SIR_GRAPHICS_SUCCESS || pDevice->retireResource( handle, immediate ) != SIR_GRAPHICS_BUSY ||
 	     pDevice->retireResource( hView, immediate ) != SIR_GRAPHICS_SUCCESS ||
 	     pDevice->retireResource( handle, immediate ) != SIR_GRAPHICS_SUCCESS ) {
 		return 14;
 	}
 	sirGraphicsHandle_t reused = {};
-	if ( pDevice->createBuffer( buffer, &reused ) != SIR_GRAPHICS_SUCCESS ||
-	     reused.nSlot != handle.nSlot || reused.nGeneration == handle.nGeneration ||
-	     pDevice->retireResource( handle, immediate ) != SIR_GRAPHICS_INVALID_HANDLE ||
+	if ( pDevice->createBuffer( buffer, &reused ) != SIR_GRAPHICS_SUCCESS || reused.nSlot != handle.nSlot ||
+	     reused.nGeneration == handle.nGeneration || pDevice->retireResource( handle, immediate ) != SIR_GRAPHICS_INVALID_HANDLE ||
 	     pDevice->retireResource( reused, immediate ) != SIR_GRAPHICS_SUCCESS ) {
 		return 15;
 	}
@@ -127,8 +126,7 @@ int main( void )
 	view.nLayers = 1;
 	view.nUsage = SIR_GRAPHICS_USAGE_CONSTANT;
 	sirGraphicsHandle_t cbv = {};
-	if ( pDevice->createView( view, &cbv ) != SIR_GRAPHICS_SUCCESS ||
-	     pDevice->retireResource( cbv, immediate ) != SIR_GRAPHICS_SUCCESS ||
+	if ( pDevice->createView( view, &cbv ) != SIR_GRAPHICS_SUCCESS || pDevice->retireResource( cbv, immediate ) != SIR_GRAPHICS_SUCCESS ||
 	     pDevice->retireResource( upload, immediate ) != SIR_GRAPHICS_SUCCESS ) {
 		return 18;
 	}
@@ -155,8 +153,7 @@ int main( void )
 	view.nLayers = 1;
 	view.nUsage = SIR_GRAPHICS_USAGE_COLOR_ATTACHMENT;
 	sirGraphicsHandle_t rtv = {};
-	if ( pDevice->createView( view, &rtv ) != SIR_GRAPHICS_SUCCESS ||
-	     pDevice->retireResource( rtv, immediate ) != SIR_GRAPHICS_SUCCESS ||
+	if ( pDevice->createView( view, &rtv ) != SIR_GRAPHICS_SUCCESS || pDevice->retireResource( rtv, immediate ) != SIR_GRAPHICS_SUCCESS ||
 	     pDevice->retireResource( hTexture, immediate ) != SIR_GRAPHICS_SUCCESS ) {
 		return 20;
 	}
@@ -186,8 +183,7 @@ int main( void )
 		}
 	}
 	sirGraphicsHandle_t hExcess = {};
-	if ( pDevice->createSampler( samplerMany, &hExcess ) != SIR_GRAPHICS_CAPACITY_EXCEEDED ||
-	     hExcess.nGeneration != 0 ) {
+	if ( pDevice->createSampler( samplerMany, &hExcess ) != SIR_GRAPHICS_CAPACITY_EXCEEDED || hExcess.nGeneration != 0 ) {
 		return 23;
 	}
 	for ( uint32_t iSampler = 0; iSampler < 128; ++iSampler ) {

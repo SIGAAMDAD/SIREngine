@@ -78,8 +78,7 @@ private:
 
 	sirGraphicsResult_t acquireSlot( sirGraphicsHandleType_t eType, uint32_t *pIndex, sirGraphicsHandle_t *pHandle ) noexcept;
 	sirD3D12ResourceSlot_t *findSlot( sirGraphicsHandle_t hHandle, sirGraphicsHandleType_t eType ) noexcept;
-	sirGraphicsResult_t reserveDescriptor( D3D12_DESCRIPTOR_HEAP_TYPE eHeap, uint32_t *pIndex,
-	                                      D3D12_CPU_DESCRIPTOR_HANDLE *pCpu ) noexcept;
+	sirGraphicsResult_t reserveDescriptor( D3D12_DESCRIPTOR_HEAP_TYPE eHeap, uint32_t *pIndex, D3D12_CPU_DESCRIPTOR_HANDLE *pCpu ) noexcept;
 	void releaseSlot( uint32_t iSlot ) noexcept;
 	bool validateRange( const sirD3D12ResourceSlot_t &slot, uint64_t nOffset, uint64_t nBytes ) const noexcept;
 	bool pollRetirement( const sirD3D12CompletionSet_t &completion, bool *pCompleted ) noexcept;
@@ -103,7 +102,7 @@ public:
 	sirGraphicsResult_t createView( const sirGraphicsViewDesc_t &desc, sirGraphicsHandle_t *pHandle ) noexcept;
 	sirGraphicsResult_t createSampler( const sirGraphicsSamplerDesc_t &desc, sirGraphicsHandle_t *pHandle ) noexcept;
 	sirGraphicsResult_t mapBuffer( sirGraphicsHandle_t hBuffer, uint64_t nOffset, uint64_t nBytes,
-	                             sirGraphicsMappedBuffer_t *pMapped ) noexcept;
+	                               sirGraphicsMappedBuffer_t *pMapped ) noexcept;
 	sirGraphicsResult_t unmapBuffer( sirGraphicsHandle_t hBuffer, uint64_t nOffset, uint64_t nBytes ) noexcept;
 	sirGraphicsResult_t flushBuffer( sirGraphicsHandle_t hBuffer, uint64_t nOffset, uint64_t nBytes ) noexcept;
 	sirGraphicsResult_t invalidateBuffer( sirGraphicsHandle_t hBuffer, uint64_t nOffset, uint64_t nBytes ) noexcept;

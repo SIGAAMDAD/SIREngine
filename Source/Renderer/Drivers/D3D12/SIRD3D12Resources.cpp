@@ -21,42 +21,67 @@ of merchantability, fitness for a particular purpose and noninfringement.
 static DXGI_FORMAT sirD3D12Format( sirGraphicsFormat_t eFormat ) noexcept
 {
 	switch ( eFormat ) {
-		case SIR_GRAPHICS_FORMAT_RGBA8_UNORM: return DXGI_FORMAT_R8G8B8A8_UNORM;
-		case SIR_GRAPHICS_FORMAT_BGRA8_UNORM: return DXGI_FORMAT_B8G8R8A8_UNORM;
-		case SIR_GRAPHICS_FORMAT_RGBA8_SRGB: return DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
-		case SIR_GRAPHICS_FORMAT_RGBA16_FLOAT: return DXGI_FORMAT_R16G16B16A16_FLOAT;
-		case SIR_GRAPHICS_FORMAT_R8_UNORM: return DXGI_FORMAT_R8_UNORM;
-		case SIR_GRAPHICS_FORMAT_RG8_UNORM: return DXGI_FORMAT_R8G8_UNORM;
-		case SIR_GRAPHICS_FORMAT_R16_FLOAT: return DXGI_FORMAT_R16_FLOAT;
-		case SIR_GRAPHICS_FORMAT_R32_FLOAT: return DXGI_FORMAT_R32_FLOAT;
-		case SIR_GRAPHICS_FORMAT_R32_UINT: return DXGI_FORMAT_R32_UINT;
-		case SIR_GRAPHICS_FORMAT_RG32_FLOAT: return DXGI_FORMAT_R32G32_FLOAT;
-		case SIR_GRAPHICS_FORMAT_RGBA32_FLOAT: return DXGI_FORMAT_R32G32B32A32_FLOAT;
-		case SIR_GRAPHICS_FORMAT_D16_UNORM: return DXGI_FORMAT_D16_UNORM;
-		case SIR_GRAPHICS_FORMAT_D24_UNORM_S8_UINT: return DXGI_FORMAT_D24_UNORM_S8_UINT;
-		case SIR_GRAPHICS_FORMAT_D32_FLOAT: return DXGI_FORMAT_D32_FLOAT;
-		case SIR_GRAPHICS_FORMAT_BC1_UNORM: return DXGI_FORMAT_BC1_UNORM;
-		case SIR_GRAPHICS_FORMAT_BC3_UNORM: return DXGI_FORMAT_BC3_UNORM;
-		case SIR_GRAPHICS_FORMAT_BC5_UNORM: return DXGI_FORMAT_BC5_UNORM;
-		case SIR_GRAPHICS_FORMAT_BC7_UNORM: return DXGI_FORMAT_BC7_UNORM;
-		default: return DXGI_FORMAT_UNKNOWN;
+	case SIR_GRAPHICS_FORMAT_RGBA8_UNORM:
+		return DXGI_FORMAT_R8G8B8A8_UNORM;
+	case SIR_GRAPHICS_FORMAT_BGRA8_UNORM:
+		return DXGI_FORMAT_B8G8R8A8_UNORM;
+	case SIR_GRAPHICS_FORMAT_RGBA8_SRGB:
+		return DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+	case SIR_GRAPHICS_FORMAT_RGBA16_FLOAT:
+		return DXGI_FORMAT_R16G16B16A16_FLOAT;
+	case SIR_GRAPHICS_FORMAT_R8_UNORM:
+		return DXGI_FORMAT_R8_UNORM;
+	case SIR_GRAPHICS_FORMAT_RG8_UNORM:
+		return DXGI_FORMAT_R8G8_UNORM;
+	case SIR_GRAPHICS_FORMAT_R16_FLOAT:
+		return DXGI_FORMAT_R16_FLOAT;
+	case SIR_GRAPHICS_FORMAT_R32_FLOAT:
+		return DXGI_FORMAT_R32_FLOAT;
+	case SIR_GRAPHICS_FORMAT_R32_UINT:
+		return DXGI_FORMAT_R32_UINT;
+	case SIR_GRAPHICS_FORMAT_RG32_FLOAT:
+		return DXGI_FORMAT_R32G32_FLOAT;
+	case SIR_GRAPHICS_FORMAT_RGBA32_FLOAT:
+		return DXGI_FORMAT_R32G32B32A32_FLOAT;
+	case SIR_GRAPHICS_FORMAT_D16_UNORM:
+		return DXGI_FORMAT_D16_UNORM;
+	case SIR_GRAPHICS_FORMAT_D24_UNORM_S8_UINT:
+		return DXGI_FORMAT_D24_UNORM_S8_UINT;
+	case SIR_GRAPHICS_FORMAT_D32_FLOAT:
+		return DXGI_FORMAT_D32_FLOAT;
+	case SIR_GRAPHICS_FORMAT_BC1_UNORM:
+		return DXGI_FORMAT_BC1_UNORM;
+	case SIR_GRAPHICS_FORMAT_BC3_UNORM:
+		return DXGI_FORMAT_BC3_UNORM;
+	case SIR_GRAPHICS_FORMAT_BC5_UNORM:
+		return DXGI_FORMAT_BC5_UNORM;
+	case SIR_GRAPHICS_FORMAT_BC7_UNORM:
+		return DXGI_FORMAT_BC7_UNORM;
+	default:
+		return DXGI_FORMAT_UNKNOWN;
 	}
 }
 
 static uint32_t sirD3D12FormatBytes( sirGraphicsFormat_t eFormat ) noexcept
 {
 	switch ( eFormat ) {
-		case SIR_GRAPHICS_FORMAT_R8_UNORM: return 1;
-		case SIR_GRAPHICS_FORMAT_RG8_UNORM:
-		case SIR_GRAPHICS_FORMAT_R16_FLOAT: return 2;
-		case SIR_GRAPHICS_FORMAT_R32_FLOAT:
-		case SIR_GRAPHICS_FORMAT_R32_UINT:
-		case SIR_GRAPHICS_FORMAT_RGBA8_UNORM:
-		case SIR_GRAPHICS_FORMAT_BGRA8_UNORM: return 4;
-		case SIR_GRAPHICS_FORMAT_RG32_FLOAT:
-		case SIR_GRAPHICS_FORMAT_RGBA16_FLOAT: return 8;
-		case SIR_GRAPHICS_FORMAT_RGBA32_FLOAT: return 16;
-		default: return 0;
+	case SIR_GRAPHICS_FORMAT_R8_UNORM:
+		return 1;
+	case SIR_GRAPHICS_FORMAT_RG8_UNORM:
+	case SIR_GRAPHICS_FORMAT_R16_FLOAT:
+		return 2;
+	case SIR_GRAPHICS_FORMAT_R32_FLOAT:
+	case SIR_GRAPHICS_FORMAT_R32_UINT:
+	case SIR_GRAPHICS_FORMAT_RGBA8_UNORM:
+	case SIR_GRAPHICS_FORMAT_BGRA8_UNORM:
+		return 4;
+	case SIR_GRAPHICS_FORMAT_RG32_FLOAT:
+	case SIR_GRAPHICS_FORMAT_RGBA16_FLOAT:
+		return 8;
+	case SIR_GRAPHICS_FORMAT_RGBA32_FLOAT:
+		return 16;
+	default:
+		return 0;
 	}
 }
 
@@ -74,10 +99,14 @@ static bool sirD3D12BlockCompressed( sirGraphicsFormat_t eFormat ) noexcept
 static D3D12_TEXTURE_ADDRESS_MODE sirD3D12Address( sirGraphicsAddressMode_t eMode ) noexcept
 {
 	switch ( eMode ) {
-		case SIR_GRAPHICS_ADDRESS_MIRROR: return D3D12_TEXTURE_ADDRESS_MODE_MIRROR;
-		case SIR_GRAPHICS_ADDRESS_CLAMP: return D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-		case SIR_GRAPHICS_ADDRESS_BORDER: return D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-		default: return D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+	case SIR_GRAPHICS_ADDRESS_MIRROR:
+		return D3D12_TEXTURE_ADDRESS_MODE_MIRROR;
+	case SIR_GRAPHICS_ADDRESS_CLAMP:
+		return D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+	case SIR_GRAPHICS_ADDRESS_BORDER:
+		return D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+	default:
+		return D3D12_TEXTURE_ADDRESS_MODE_WRAP;
 	}
 }
 
@@ -107,8 +136,8 @@ bool SIRD3D12Resources::initialize( SIRD3D12Device *pNative, uint32_t nGeneratio
 		D3D12_DESCRIPTOR_HEAP_DESC desc = {};
 		desc.Type = ( D3D12_DESCRIPTOR_HEAP_TYPE )iHeap;
 		desc.NumDescriptors = s_nDescriptorCapacity;
-		desc.Flags = iHeap <= D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER ? D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE :
-		                                                          D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+		desc.Flags =
+		    iHeap <= D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER ? D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE : D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 		if ( FAILED( m_pDevice->CreateDescriptorHeap( &desc, IID_PPV_ARGS( m_szDescriptorHeaps[iHeap].GetAddressOf() ) ) ) ) {
 			shutdown( true );
 			return false;
@@ -122,8 +151,7 @@ void SIRD3D12Resources::shutdown( bool bGpuComplete ) noexcept
 {
 	if ( bGpuComplete ) {
 		for ( uint32_t iSlot = 0; iSlot < s_nSlotCapacity; ++iSlot ) {
-			if ( m_szSlots[iSlot].eType == SIR_GRAPHICS_HANDLE_VIEW ||
-			     m_szSlots[iSlot].eType == SIR_GRAPHICS_HANDLE_SAMPLER ) {
+			if ( m_szSlots[iSlot].eType == SIR_GRAPHICS_HANDLE_VIEW || m_szSlots[iSlot].eType == SIR_GRAPHICS_HANDLE_SAMPLER ) {
 				releaseSlot( iSlot );
 			}
 		}
@@ -136,7 +164,7 @@ void SIRD3D12Resources::shutdown( bool bGpuComplete ) noexcept
 	} else {
 		// Retain heap COM references and allocation owners on uncertain GPU completion.
 		for ( uint32_t iHeap = 0; iHeap < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES; ++iHeap ) {
-			(void)m_szDescriptorHeaps[iHeap].Detach();
+			( void )m_szDescriptorHeaps[iHeap].Detach();
 		}
 	}
 	memset( m_szSlots, 0, sizeof( m_szSlots ) );
@@ -151,8 +179,7 @@ void SIRD3D12Resources::shutdown( bool bGpuComplete ) noexcept
 	m_nPeakAllocatedBytes = 0;
 }
 
-sirGraphicsResult_t SIRD3D12Resources::acquireSlot( sirGraphicsHandleType_t eType, uint32_t *pIndex,
-                                                    sirGraphicsHandle_t *pHandle ) noexcept
+sirGraphicsResult_t SIRD3D12Resources::acquireSlot( sirGraphicsHandleType_t eType, uint32_t *pIndex, sirGraphicsHandle_t *pHandle ) noexcept
 {
 	for ( uint32_t iSlot = 0; iSlot < s_nSlotCapacity; ++iSlot ) {
 		sirD3D12ResourceSlot_t &slot = m_szSlots[iSlot];
@@ -173,8 +200,7 @@ sirGraphicsResult_t SIRD3D12Resources::acquireSlot( sirGraphicsHandleType_t eTyp
 
 sirD3D12ResourceSlot_t *SIRD3D12Resources::findSlot( sirGraphicsHandle_t hHandle, sirGraphicsHandleType_t eType ) noexcept
 {
-	if ( m_pNative == nullptr || hHandle.nSlot >= s_nSlotCapacity ||
-	     !sirGraphicsIsHandleValid( hHandle, eType, m_nDeviceGeneration ) ) {
+	if ( m_pNative == nullptr || hHandle.nSlot >= s_nSlotCapacity || !sirGraphicsIsHandleValid( hHandle, eType, m_nDeviceGeneration ) ) {
 		return nullptr;
 	}
 	sirD3D12ResourceSlot_t &slot = m_szSlots[hHandle.nSlot];
@@ -296,8 +322,7 @@ uint64_t SIRD3D12Resources::getMappedReadbackBytes( void ) const noexcept
 	return nBytes;
 }
 
-sirGraphicsResult_t SIRD3D12Resources::createBuffer( const sirGraphicsBufferDesc_t &desc,
-                                                      sirGraphicsHandle_t *pHandle ) noexcept
+sirGraphicsResult_t SIRD3D12Resources::createBuffer( const sirGraphicsBufferDesc_t &desc, sirGraphicsHandle_t *pHandle ) noexcept
 {
 	if ( pHandle == nullptr ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
@@ -331,15 +356,14 @@ sirGraphicsResult_t SIRD3D12Resources::createBuffer( const sirGraphicsBufferDesc
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
 	D3D12MA::Allocation *pAllocation = nullptr;
-	const D3D12_RESOURCE_FLAGS eFlags = ( desc.nUsage & SIR_GRAPHICS_USAGE_STORAGE ) != 0 ?
-	                                          D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS : D3D12_RESOURCE_FLAG_NONE;
+	const D3D12_RESOURCE_FLAGS eFlags =
+	    ( desc.nUsage & SIR_GRAPHICS_USAGE_STORAGE ) != 0 ? D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS : D3D12_RESOURCE_FLAG_NONE;
 	const HRESULT nResult = m_pMemory->createBuffer( eHeap, eState, desc.nSizeBytes, &pAllocation, eFlags );
 	if ( FAILED( nResult ) || pAllocation == nullptr ) {
 		return nResult == E_OUTOFMEMORY ? SIR_GRAPHICS_OUT_OF_MEMORY : SIR_GRAPHICS_DRIVER_ERROR;
 	}
 	const uint64_t nAllocated = pAllocation->GetSize();
-	if ( nAllocated > UINT64_MAX - m_nAllocatedBytes ||
-	     ( m_nBudgetBytes != 0 && nAllocated > m_nBudgetBytes - m_nAllocatedBytes ) ) {
+	if ( nAllocated > UINT64_MAX - m_nAllocatedBytes || ( m_nBudgetBytes != 0 && nAllocated > m_nBudgetBytes - m_nAllocatedBytes ) ) {
 		pAllocation->Release();
 		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
 	}
@@ -377,8 +401,7 @@ sirGraphicsResult_t SIRD3D12Resources::createBuffer( const sirGraphicsBufferDesc
 	return SIR_GRAPHICS_SUCCESS;
 }
 
-sirGraphicsResult_t SIRD3D12Resources::createTexture( const sirGraphicsTextureDesc_t &desc,
-                                                       sirGraphicsHandle_t *pHandle ) noexcept
+sirGraphicsResult_t SIRD3D12Resources::createTexture( const sirGraphicsTextureDesc_t &desc, sirGraphicsHandle_t *pHandle ) noexcept
 {
 	if ( pHandle == nullptr ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
@@ -393,8 +416,7 @@ sirGraphicsResult_t SIRD3D12Resources::createTexture( const sirGraphicsTextureDe
 	}
 	collectRetired();
 	if ( desc.eMemory != SIR_GRAPHICS_MEMORY_GPU_LOCAL || desc.nWidth > D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION ||
-	     desc.nHeight > D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION || desc.nArrayLayers > UINT16_MAX ||
-	     desc.nDepth > UINT16_MAX ) {
+	     desc.nHeight > D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION || desc.nArrayLayers > UINT16_MAX || desc.nDepth > UINT16_MAX ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
 	if ( desc.nSampleCount > 1 && ( desc.nMipLevels != 1 || desc.eDimension != SIR_GRAPHICS_TEXTURE_2D ) ) {
@@ -412,9 +434,9 @@ sirGraphicsResult_t SIRD3D12Resources::createTexture( const sirGraphicsTextureDe
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
 	D3D12_RESOURCE_DESC resource = {};
-	resource.Dimension = desc.eDimension == SIR_GRAPHICS_TEXTURE_1D ? D3D12_RESOURCE_DIMENSION_TEXTURE1D :
-	                     desc.eDimension == SIR_GRAPHICS_TEXTURE_3D ? D3D12_RESOURCE_DIMENSION_TEXTURE3D :
-	                                                               D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+	resource.Dimension = desc.eDimension == SIR_GRAPHICS_TEXTURE_1D   ? D3D12_RESOURCE_DIMENSION_TEXTURE1D
+	                     : desc.eDimension == SIR_GRAPHICS_TEXTURE_3D ? D3D12_RESOURCE_DIMENSION_TEXTURE3D
+	                                                                  : D3D12_RESOURCE_DIMENSION_TEXTURE2D;
 	resource.Width = desc.nWidth;
 	resource.Height = desc.nHeight;
 	resource.DepthOrArraySize = ( UINT16 )( desc.eDimension == SIR_GRAPHICS_TEXTURE_3D ? desc.nDepth : desc.nArrayLayers );
@@ -473,8 +495,7 @@ sirGraphicsResult_t SIRD3D12Resources::createTexture( const sirGraphicsTextureDe
 	return SIR_GRAPHICS_SUCCESS;
 }
 
-sirGraphicsResult_t SIRD3D12Resources::createView( const sirGraphicsViewDesc_t &desc,
-                                                    sirGraphicsHandle_t *pHandle ) noexcept
+sirGraphicsResult_t SIRD3D12Resources::createView( const sirGraphicsViewDesc_t &desc, sirGraphicsHandle_t *pHandle ) noexcept
 {
 	if ( pHandle == nullptr ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
@@ -484,21 +505,19 @@ sirGraphicsResult_t SIRD3D12Resources::createView( const sirGraphicsViewDesc_t &
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	sirD3D12ResourceSlot_t *pResource = findSlot( desc.hResource, SIR_GRAPHICS_HANDLE_NONE );
-	if ( pResource == nullptr || ( pResource->eType != SIR_GRAPHICS_HANDLE_TEXTURE &&
-	                             pResource->eType != SIR_GRAPHICS_HANDLE_BUFFER ) ) {
+	if ( pResource == nullptr || ( pResource->eType != SIR_GRAPHICS_HANDLE_TEXTURE && pResource->eType != SIR_GRAPHICS_HANDLE_BUFFER ) ) {
 		return SIR_GRAPHICS_INVALID_HANDLE;
 	}
 	if ( ( pResource->nUsage & desc.nUsage ) == 0 ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	if ( pResource->eType == SIR_GRAPHICS_HANDLE_BUFFER &&
-	     desc.nUsage != SIR_GRAPHICS_USAGE_CONSTANT && desc.nUsage != SIR_GRAPHICS_USAGE_SAMPLED &&
-	     desc.nUsage != SIR_GRAPHICS_USAGE_STORAGE ) {
+	if ( pResource->eType == SIR_GRAPHICS_HANDLE_BUFFER && desc.nUsage != SIR_GRAPHICS_USAGE_CONSTANT &&
+	     desc.nUsage != SIR_GRAPHICS_USAGE_SAMPLED && desc.nUsage != SIR_GRAPHICS_USAGE_STORAGE ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
-	if ( pResource->eType == SIR_GRAPHICS_HANDLE_TEXTURE &&
-	     desc.nUsage != SIR_GRAPHICS_USAGE_SAMPLED && desc.nUsage != SIR_GRAPHICS_USAGE_STORAGE &&
-	     desc.nUsage != SIR_GRAPHICS_USAGE_COLOR_ATTACHMENT && desc.nUsage != SIR_GRAPHICS_USAGE_DEPTH_STENCIL ) {
+	if ( pResource->eType == SIR_GRAPHICS_HANDLE_TEXTURE && desc.nUsage != SIR_GRAPHICS_USAGE_SAMPLED &&
+	     desc.nUsage != SIR_GRAPHICS_USAGE_STORAGE && desc.nUsage != SIR_GRAPHICS_USAGE_COLOR_ATTACHMENT &&
+	     desc.nUsage != SIR_GRAPHICS_USAGE_DEPTH_STENCIL ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
 	D3D12_DESCRIPTOR_HEAP_TYPE eHeap = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
@@ -508,15 +527,14 @@ sirGraphicsResult_t SIRD3D12Resources::createView( const sirGraphicsViewDesc_t &
 		eHeap = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
 	}
 	collectRetired();
-	DXGI_FORMAT eFormat = desc.eFormat == SIR_GRAPHICS_FORMAT_UNKNOWN ? sirD3D12Format( pResource->eFormat ) :
-	                                                                   sirD3D12Format( desc.eFormat );
+	DXGI_FORMAT eFormat =
+	    desc.eFormat == SIR_GRAPHICS_FORMAT_UNKNOWN ? sirD3D12Format( pResource->eFormat ) : sirD3D12Format( desc.eFormat );
 	if ( pResource->eType == SIR_GRAPHICS_HANDLE_TEXTURE ) {
 		if ( desc.eFormat != SIR_GRAPHICS_FORMAT_UNKNOWN && desc.eFormat != pResource->eFormat ) {
 			return SIR_GRAPHICS_UNSUPPORTED;
 		}
-		if ( desc.nMipLevels == 0 || desc.nBaseMip >= pResource->nMips ||
-		     desc.nMipLevels > pResource->nMips - desc.nBaseMip || desc.nLayers == 0 ||
-		     desc.nBaseLayer >= pResource->nLayers || desc.nLayers > pResource->nLayers - desc.nBaseLayer ) {
+		if ( desc.nMipLevels == 0 || desc.nBaseMip >= pResource->nMips || desc.nMipLevels > pResource->nMips - desc.nBaseMip ||
+		     desc.nLayers == 0 || desc.nBaseLayer >= pResource->nLayers || desc.nLayers > pResource->nLayers - desc.nBaseLayer ) {
 			return SIR_GRAPHICS_INVALID_ARGUMENT;
 		}
 		if ( pResource->nSamples != 1 && desc.nUsage == SIR_GRAPHICS_USAGE_STORAGE ) {
@@ -525,8 +543,8 @@ sirGraphicsResult_t SIRD3D12Resources::createView( const sirGraphicsViewDesc_t &
 		if ( sirD3D12DepthFormat( pResource->eFormat ) && desc.nUsage != SIR_GRAPHICS_USAGE_DEPTH_STENCIL ) {
 			return SIR_GRAPHICS_UNSUPPORTED;
 		}
-		if ( pResource->eDimension == SIR_GRAPHICS_TEXTURE_CUBE &&
-		     ( desc.nBaseLayer % 6 != 0 || desc.nLayers % 6 != 0 ) && desc.nUsage == SIR_GRAPHICS_USAGE_SAMPLED ) {
+		if ( pResource->eDimension == SIR_GRAPHICS_TEXTURE_CUBE && ( desc.nBaseLayer % 6 != 0 || desc.nLayers % 6 != 0 ) &&
+		     desc.nUsage == SIR_GRAPHICS_USAGE_SAMPLED ) {
 			return SIR_GRAPHICS_INVALID_ARGUMENT;
 		}
 	} else {
@@ -534,8 +552,7 @@ sirGraphicsResult_t SIRD3D12Resources::createView( const sirGraphicsViewDesc_t &
 			return SIR_GRAPHICS_INVALID_ARGUMENT;
 		}
 		if ( desc.nUsage != SIR_GRAPHICS_USAGE_CONSTANT &&
-		     ( sirD3D12FormatBytes( desc.eFormat ) == 0 ||
-		       pResource->nSizeBytes % sirD3D12FormatBytes( desc.eFormat ) != 0 ) ) {
+		     ( sirD3D12FormatBytes( desc.eFormat ) == 0 || pResource->nSizeBytes % sirD3D12FormatBytes( desc.eFormat ) != 0 ) ) {
 			return SIR_GRAPHICS_UNSUPPORTED;
 		}
 		if ( desc.nUsage == SIR_GRAPHICS_USAGE_CONSTANT &&
@@ -716,8 +733,7 @@ sirGraphicsResult_t SIRD3D12Resources::createView( const sirGraphicsViewDesc_t &
 	return SIR_GRAPHICS_SUCCESS;
 }
 
-sirGraphicsResult_t SIRD3D12Resources::createSampler( const sirGraphicsSamplerDesc_t &desc,
-                                                       sirGraphicsHandle_t *pHandle ) noexcept
+sirGraphicsResult_t SIRD3D12Resources::createSampler( const sirGraphicsSamplerDesc_t &desc, sirGraphicsHandle_t *pHandle ) noexcept
 {
 	if ( pHandle == nullptr ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
@@ -747,10 +763,10 @@ sirGraphicsResult_t SIRD3D12Resources::createSampler( const sirGraphicsSamplerDe
 	slot.eDescriptorHeap = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
 	slot.iDescriptor = iDescriptor;
 	D3D12_SAMPLER_DESC sampler = {};
-	sampler.Filter = desc.eFilter == SIR_GRAPHICS_FILTER_NEAREST ? D3D12_FILTER_MIN_MAG_MIP_POINT :
-	                 desc.eFilter == SIR_GRAPHICS_FILTER_LINEAR ? D3D12_FILTER_MIN_MAG_LINEAR_MIP_POINT :
-	                 desc.eFilter == SIR_GRAPHICS_FILTER_TRILINEAR ? D3D12_FILTER_MIN_MAG_MIP_LINEAR :
-	                                                                D3D12_FILTER_ANISOTROPIC;
+	sampler.Filter = desc.eFilter == SIR_GRAPHICS_FILTER_NEAREST     ? D3D12_FILTER_MIN_MAG_MIP_POINT
+	                 : desc.eFilter == SIR_GRAPHICS_FILTER_LINEAR    ? D3D12_FILTER_MIN_MAG_LINEAR_MIP_POINT
+	                 : desc.eFilter == SIR_GRAPHICS_FILTER_TRILINEAR ? D3D12_FILTER_MIN_MAG_MIP_LINEAR
+	                                                                 : D3D12_FILTER_ANISOTROPIC;
 	sampler.AddressU = sirD3D12Address( desc.eAddressU );
 	sampler.AddressV = sirD3D12Address( desc.eAddressV );
 	sampler.AddressW = sirD3D12Address( desc.eAddressW );
@@ -764,7 +780,7 @@ sirGraphicsResult_t SIRD3D12Resources::createSampler( const sirGraphicsSamplerDe
 }
 
 sirGraphicsResult_t SIRD3D12Resources::mapBuffer( sirGraphicsHandle_t hBuffer, uint64_t nOffset, uint64_t nBytes,
-                                                   sirGraphicsMappedBuffer_t *pMapped ) noexcept
+                                                  sirGraphicsMappedBuffer_t *pMapped ) noexcept
 {
 	if ( pMapped == nullptr || nBytes == 0 ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
@@ -812,8 +828,7 @@ sirGraphicsResult_t SIRD3D12Resources::invalidateBuffer( sirGraphicsHandle_t hBu
 	return unmapBuffer( hBuffer, nOffset, nBytes );
 }
 
-sirGraphicsResult_t SIRD3D12Resources::retireResource( sirGraphicsHandle_t hHandle,
-                                                       const sirGraphicsCompletionSet_t &completion ) noexcept
+sirGraphicsResult_t SIRD3D12Resources::retireResource( sirGraphicsHandle_t hHandle, const sirGraphicsCompletionSet_t &completion ) noexcept
 {
 	sirD3D12ResourceSlot_t *pSlot = findSlot( hHandle, SIR_GRAPHICS_HANDLE_NONE );
 	if ( pSlot == nullptr ) {
