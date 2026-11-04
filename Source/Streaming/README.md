@@ -50,6 +50,12 @@ and completion transfer. Core Jobs owns scheduling and worker/provider fences.
   overlapping caller-owned storage. Pending I/O cancellation is drained before
   provider retirement. Resource handles are paired with immutable revisions;
   activation and retirement still require the actual backend's safe-point ack.
+- Logical units resolving to the same canonical GRDG key are validated at
+  mount time against identical source paths, file ranges, content identity,
+  schema and dependency contracts. Conflicting aliases fail initialization.
+- The `nMaxConcurrentLoads` configuration limits physical file transfers
+  independently of the number of resident tickets (zero selects capacity).
+  Per-pump `nActiveLoads` and `nMaxConcurrentLoads` expose this pressure.
 - The `SIR::StreamingGRDG` target and its file-load test are intentionally
   conditional on `SIR::Resources`. This branch contains concrete integration
   code, but it does not import or claim integration of the unmerged PR #23.
