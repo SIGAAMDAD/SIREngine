@@ -15,6 +15,7 @@ add_library(SIRScripting STATIC
     Core/SIRScriptScheduler.cpp
     Core/SIRScriptServer.cpp
     Core/SIRScriptSHA256.cpp
+    Language/SIRLangLexer.cpp
 )
 find_package(Threads REQUIRED)
 add_library(SIR::Scripting ALIAS SIRScripting)
