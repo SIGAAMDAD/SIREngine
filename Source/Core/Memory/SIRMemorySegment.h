@@ -48,6 +48,11 @@ public:
 	// Offsets and sizes must be multiples of the OS page size.
 	bool commit( uint64_t nOffset, uint64_t nBytes );
 	bool decommit( uint64_t nOffset, uint64_t nBytes );
+	// Exclusive owner registration is one-time; the caller guarantees all
+	// allocations and borrowed/pinned references are released before retire.
+	bool bindRetirementOwner( uint32_t nOwnerId, uint32_t nOwnerGeneration );
+	bool retireIdleRange( uint64_t nOffset, uint64_t nBytes, uint32_t nOwnerId, uint32_t nOwnerGeneration );
+	bool cancelRetiredRange( uint64_t nOffset, uint64_t nBytes, uint32_t nOwnerId, uint32_t nOwnerGeneration );
 
 	SIRMemoryManager *getManager( void ) const;
 
@@ -57,6 +62,9 @@ private:
 	SIRMemoryManager *m_pManager;
 	uint8_t *m_pBase;
 	uint64_t *m_pCommittedBits;
+	uint64_t *m_pPendingDecommitBits;
+	uint32_t m_nRetirementOwnerId;
+	uint32_t m_nRetirementOwnerGeneration;
 	uint64_t m_nReservedBytes;
 	uint64_t m_nCommittedBytes;
 	uint64_t m_nCommitLimitBytes;
