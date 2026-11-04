@@ -22,6 +22,7 @@ if(WIN32)
         Windows/SIRPlatformTimeWindows.cpp
         Windows/SIRPlatformProcessWindows.cpp
         Input/Windows/SIRWindowsRawBackend.cpp
+        Input/Windows/SIRWindowsRawDecode.cpp
         Input/Windows/SIRWindowsXInputBackend.cpp
     )
     target_link_libraries(SIRCore PRIVATE psapi user32)

@@ -18,14 +18,18 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <SIRPCH.hpp>
 
+// clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
-#pragma once
+	#pragma once
 #endif
+// clang-format on
 
 #include <Core/Platform/Input/SIRInputBackend.h>
 #include <Core/Platform/Input/SIRInputService.h>
 
 // Win32 window owner forwards WM_INPUT and WM_INPUT_DEVICE_CHANGE events.
+// After WM_INPUT with RIM_INPUT, the window procedure must call DefWindowProc
+// for the OS cleanup required by Win32.
 class SIRWindowsRawBackend final : public SIRInputBackend
 {
 public:
@@ -40,6 +44,7 @@ public:
 
 private:
 	bool processRaw( SIRInputService &service, void *pHRawInput ) noexcept;
+	bool drainBuffered( SIRInputService &service ) noexcept;
 	void *m_pWindow;
 };
 
