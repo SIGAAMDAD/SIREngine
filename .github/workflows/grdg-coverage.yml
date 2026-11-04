@@ -59,7 +59,7 @@ jobs:
           cmake --preset tooling
           -DCMAKE_C_COMPILER=gcc
           -DCMAKE_CXX_COMPILER=g++
-          -DCMAKE_CXX_FLAGS=--coverage
+          '-DCMAKE_CXX_FLAGS=--coverage -fprofile-update=atomic'
           -DCMAKE_EXE_LINKER_FLAGS=--coverage
           -DCMAKE_SHARED_LINKER_FLAGS=--coverage
           -DSIR_WITH_GOOGLETEST=ON
