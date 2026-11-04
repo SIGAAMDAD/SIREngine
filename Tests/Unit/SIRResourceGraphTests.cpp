@@ -1534,7 +1534,11 @@ static void testMultiChunkEvictionAndFailedReplacement( void )
 			memset( bytes[i].m_pData, ( int )( 0x31 + i ), 16 );
 			chunks[i] = { { i + 1 }, content( 901 + i ), staging[i], false };
 		}
-		SIRResourcePublication pub = { key( 902 ), SIR_RESOURCE_KIND_BLOB, 1, 1, chunks, 2, nullptr, 0 };
+		SIRResourcePublication prerequisite = { key( 901 ), SIR_RESOURCE_KIND_COMPOSITION, 1, 1, nullptr, 0, nullptr, 0 };
+		SIRResourceHandle prerequisiteHandle = {};
+		REQUIRE( pWriter->publish( prerequisite, &prerequisiteHandle ) == SIR_RESOURCE_RESULT_SUCCESS );
+		SIRResourceDependency dependency = { key( 901 ), SIR_RESOURCE_EDGE_KIND_REQUIRED, {} };
+		SIRResourcePublication pub = { key( 902 ), SIR_RESOURCE_KIND_BLOB, 1, 1, chunks, 2, &dependency, 1 };
 		SIRResourceHandle resource = {};
 		REQUIRE( pWriter->publish( pub, &resource ) == SIR_RESOURCE_RESULT_SUCCESS );
 		REQUIRE( graph.getStats().m_nUniqueChunks == 2 );
