@@ -65,3 +65,19 @@ The native CTest foundation target includes regression cases for offset
 aliases in both directions, candidate/pyramid ID corruption, ID-array overlap
 and output-descriptor overlap. The same CPU reference also provides the
 semantic oracle for later HIZ-03/HIZ-05 GPU readback tests.
+
+## GoogleTest and source-bound verification expansion
+
+`SIRVisibilityFoundationGoogleTests.cpp` adds twelve separately discoverable
+GoogleTest cases to the existing no-driver CTest oracle. The tests independently
+check NPOT minimum reduction, reverse-Z strict comparison, invalid depth and
+pyramid samples, source/output overlap, immutable input aliasing, transactional
+capacity errors, conservative missing-history behavior, revision invalidation,
+capability requirements, and randomized false-occlusion rejection.
+
+The `Verification/Systems/HiZ00.json` manifest names the exact CPU source
+root, two native CMake test targets, required CTest integration contracts and
+100% line/branch/function/region thresholds. Its ASan and UBSan requirements
+are independently exercised by the HIZ-00 CI sanitizer matrix. Successful
+tests do not imply that the coverage threshold was reached; instrumented
+LLVM profiles and exact-source coverage reports are still necessary.

@@ -106,6 +106,42 @@ jobs:
       - name: Verify no-op incremental rebuild
         run: cmake --build --preset dev
 
+  hiz-00-sanitizers:
+    name: HIZ-00 native reference / ${{ matrix.preset }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        preset: [asan, ubsan]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Fetch pinned GoogleTest
+        run: git submodule update --init ThirdParty/GoogleTest
+      - uses: ./.github/actions/setup-build-tools
+      - name: Configure sanitizer-specific engine
+        run: cmake --preset "${{ matrix.preset }}" -DSIR_WITH_GOOGLETEST=ON
+      - name: Build real Hi-Z production and test targets
+        run: >
+          cmake --build --preset "${{ matrix.preset }}"
+          --target SIRVisibilityFoundationTests SIRVisibilityFoundationGoogleTests
+      - name: Run every HIZ-00 CTest under sanitizer
+        run: >
+          ctest --preset "${{ matrix.preset }}"
+          --output-on-failure --no-tests=error
+          -R '^renderer[.]visibility[.]'
+          --output-junit "${{ github.workspace }}/hiz-00-${{ matrix.preset }}.xml"
+      - name: Preserve Hi-Z sanitizer test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hiz-00-${{ matrix.preset }}
+          path: hiz-00-${{ matrix.preset }}.xml
+          if-no-files-found: warn
+          retention-days: 14
+
   profiling-smoke:
     name: Google Benchmark compile and execution / Linux
     runs-on: ubuntu-24.04
