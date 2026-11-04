@@ -60,6 +60,7 @@ void SIRFMODAudioThread::leaveClient( void ) noexcept
 void SIRFMODAudioThread::releaseStorage( void ) noexcept
 {
 	m_Requests.shutdown();
+	m_Critical.shutdown();
 	m_Lifecycle.shutdown();
 	if ( m_pSlots != nullptr ) {
 		for ( uint32_t iSlot = 0; iSlot < m_nCapacity; ++iSlot ) {
@@ -104,7 +105,8 @@ sirAudioResult_t SIRFMODAudioThread::start( const sirFMODAudioThreadConfig_t &co
 		m_pSlots[iSlot].nGeneration = 0;
 		m_pSlots[iSlot].nState.store( SIR_FMOD_SLOT_FREE, SIR_MEMORY_ORDER_RELAXED );
 	}
-	if ( !m_Requests.initialize( m_pAllocator, m_nCapacity ) || !m_Lifecycle.initialize( m_pAllocator, m_nCapacity ) ) {
+	if ( !m_Requests.initialize( m_pAllocator, m_nCapacity ) || !m_Critical.initialize( m_pAllocator, m_nCapacity < 8 ? 2 : m_nCapacity >> 2 ) ||
+	     !m_Lifecycle.initialize( m_pAllocator, m_nCapacity ) ) {
 		releaseStorage();
 		return SIR_AUDIO_CAPACITY;
 	}
@@ -112,6 +114,8 @@ sirAudioResult_t SIRFMODAudioThread::start( const sirFMODAudioThreadConfig_t &co
 	m_nNextSlot.store( 0, SIR_MEMORY_ORDER_RELAXED );
 	m_nWakes.store( 0, SIR_MEMORY_ORDER_RELAXED );
 	m_nDroppedLifecycle.store( 0, SIR_MEMORY_ORDER_RELAXED );
+	m_nAutoRecoveries.store( 0, SIR_MEMORY_ORDER_RELAXED );
+	m_nAutoRecoveryFailures.store( 0, SIR_MEMORY_ORDER_RELAXED );
 	m_nWorkerResult.store( SIR_AUDIO_OK, SIR_MEMORY_ORDER_RELAXED );
 	m_bStop.store( 0, SIR_MEMORY_ORDER_RELAXED );
 	m_bAccepting.store( 0, SIR_MEMORY_ORDER_RELAXED );
@@ -183,7 +187,9 @@ sirAudioResult_t SIRFMODAudioThread::submit( const sirFMODThreadRequest_t &reque
 		slot.request = request;
 		slot.result = {};
 		slot.nState.store( SIR_FMOD_SLOT_QUEUED, SIR_MEMORY_ORDER_RELEASE );
-		if ( !m_Requests.tryPush( nNextTicket ) ) {
+		// Preserve PLAY -> STOP FIFO ordering within the normal request lane.
+		const bool bCritical = request.eOperation == SIR_FMOD_THREAD_RECOVER_OUTPUT;
+		if ( !( bCritical ? m_Critical.tryPush( nNextTicket ) : m_Requests.tryPush( nNextTicket ) ) ) {
 			slot.nState.store( SIR_FMOD_SLOT_FREE, SIR_MEMORY_ORDER_RELEASE );
 			leaveClient();
 			return SIR_AUDIO_CAPACITY;
@@ -263,6 +269,16 @@ bool SIRFMODAudioThread::isReady( void ) const noexcept
 uint32_t SIRFMODAudioThread::getDroppedLifecycleCount( void ) const noexcept
 {
 	return m_nDroppedLifecycle.load( SIR_MEMORY_ORDER_ACQUIRE );
+}
+
+uint32_t SIRFMODAudioThread::getAutoRecoveryCount( void ) const noexcept
+{
+	return m_nAutoRecoveries.load( SIR_MEMORY_ORDER_ACQUIRE );
+}
+
+uint32_t SIRFMODAudioThread::getAutoRecoveryFailureCount( void ) const noexcept
+{
+	return m_nAutoRecoveryFailures.load( SIR_MEMORY_ORDER_ACQUIRE );
 }
 
 void SIRFMODAudioThread::lifecycleCallback( void *pContext, const sirAudioCompletion_t *pCompletion ) noexcept
@@ -348,8 +364,24 @@ void SIRFMODAudioThread::threadMain( void ) noexcept
 	m_Runtime.getAudio().setLifecycleCallback( { this, lifecycleCallback } );
 	m_nState.store( SIR_FMOD_THREAD_READY, SIR_MEMORY_ORDER_RELEASE );
 	uint64_t nActiveLoadTicket = 0;
+	uint32_t nRecoveryBackoff = 0;
 	while ( m_bStop.load( SIR_MEMORY_ORDER_ACQUIRE ) == 0 ) {
 		m_Runtime.update();
+		if ( m_Runtime.getContext().needsDeviceRecovery() ) {
+			if ( nRecoveryBackoff == 0 ) {
+				const sirAudioResult_t eRecovery = m_Runtime.recoverOutput( m_Config.runtime.context.iOutputDriver, true );
+				if ( eRecovery == SIR_AUDIO_OK ) {
+					m_nAutoRecoveries.fetchAdd( 1, SIR_MEMORY_ORDER_RELAXED );
+				} else {
+					m_nAutoRecoveryFailures.fetchAdd( 1, SIR_MEMORY_ORDER_RELAXED );
+					nRecoveryBackoff = 10;
+				}
+			} else {
+				--nRecoveryBackoff;
+			}
+		} else {
+			nRecoveryBackoff = 0;
+		}
 		if ( nActiveLoadTicket != 0 ) {
 			sirFMODThreadSlot_t &slot = m_pSlots[( uint32_t )( nActiveLoadTicket & 0xFFFFU )];
 			const bool bCancelled = slot.bCancel.load( SIR_MEMORY_ORDER_ACQUIRE ) != 0;
@@ -363,7 +395,7 @@ void SIRFMODAudioThread::threadMain( void ) noexcept
 		}
 		for ( uint32_t iBatch = 0; nActiveLoadTicket == 0 && iBatch < 32; ++iBatch ) {
 			uint64_t nTicket = 0;
-			if ( !m_Requests.tryPop( nTicket ) ) {
+			if ( !m_Critical.tryPop( nTicket ) && !m_Requests.tryPop( nTicket ) ) {
 				break;
 			}
 			sirFMODThreadSlot_t &slot = m_pSlots[( uint32_t )( nTicket & 0xFFFFU )];
@@ -395,7 +427,7 @@ void SIRFMODAudioThread::threadMain( void ) noexcept
 		complete( nActiveLoadTicket, result );
 	}
 	uint64_t nTicket = 0;
-	while ( m_Requests.tryPop( nTicket ) ) {
+	while ( m_Critical.tryPop( nTicket ) || m_Requests.tryPop( nTicket ) ) {
 		sirFMODThreadResult_t result = {};
 		result.eResult = SIR_AUDIO_CANCELLED;
 		complete( nTicket, result );

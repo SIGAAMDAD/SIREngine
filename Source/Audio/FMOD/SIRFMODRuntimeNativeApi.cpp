@@ -17,6 +17,6 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 sirFMODRuntimeNativeOps_t sirGetFMODRuntimeNativeOps( void ) noexcept
 {
-	return { sirGetFMODNativeOps(), sirGetFMODVoiceNativeOps(), sirGetFMODBankNativeOps(), sirGetFMODMixerNativeOps(),
-	         sirGetFMODSnapshotNativeOps(), sirGetFMODNativeMemoryOps() };
+	return { sirGetFMODNativeOps(),      sirGetFMODVoiceNativeOps(),    sirGetFMODBankNativeOps(),
+	         sirGetFMODMixerNativeOps(), sirGetFMODSnapshotNativeOps(), sirGetFMODNativeMemoryOps() };
 }

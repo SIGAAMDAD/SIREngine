@@ -102,8 +102,7 @@ static void *F_CALL fmodNativeAllocateCallback( unsigned int nBytes, FMOD_MEMORY
 	return fmodNativeAllocate( nBytes, eType, pszSource );
 }
 
-static void *F_CALL fmodNativeReallocateCallback( void *pMemory, unsigned int nBytes, FMOD_MEMORY_TYPE eType,
-                                                  const char *pszSource )
+static void *F_CALL fmodNativeReallocateCallback( void *pMemory, unsigned int nBytes, FMOD_MEMORY_TYPE eType, const char *pszSource )
 {
 	return fmodNativeReallocate( pMemory, nBytes, eType, pszSource );
 }
@@ -120,8 +119,7 @@ static sirAudioResult_t sirInstallFMODNativeMemory( const sirContainerAllocator_
 	}
 	uint32_t nExpected = 0;
 	if ( !s_nFMODMemoryInstalled.compareExchangeStrong( nExpected, 1, SIR_MEMORY_ORDER_ACQUIRE_RELEASE ) ) {
-		if ( nExpected == 2 && s_nFMODNativeBudgetBytes == nBudgetBytes &&
-		     s_FMODNativeUpstream.pContext == pAllocator->pContext &&
+		if ( nExpected == 2 && s_nFMODNativeBudgetBytes == nBudgetBytes && s_FMODNativeUpstream.pContext == pAllocator->pContext &&
 		     s_FMODNativeUpstream.pfnAllocate == pAllocator->pfnAllocate &&
 		     s_FMODNativeUpstream.pfnDeallocate == pAllocator->pfnDeallocate ) {
 			return SIR_AUDIO_OK;
@@ -135,8 +133,8 @@ static sirAudioResult_t sirInstallFMODNativeMemory( const sirContainerAllocator_
 		return SIR_AUDIO_INVALID_ARGUMENT;
 	}
 	// Must run before any Studio or Core System object exists.
-	const FMOD_RESULT eResult = FMOD::Memory_Initialize(
-	    nullptr, 0, fmodNativeAllocateCallback, fmodNativeReallocateCallback, fmodNativeFreeCallback, FMOD_MEMORY_ALL );
+	const FMOD_RESULT eResult = FMOD::Memory_Initialize( nullptr, 0, fmodNativeAllocateCallback, fmodNativeReallocateCallback,
+	                                                     fmodNativeFreeCallback, FMOD_MEMORY_ALL );
 	if ( eResult != FMOD_OK ) {
 		s_FMODNativeBudget.shutdown();
 		s_nFMODMemoryInstalled.store( 0, SIR_MEMORY_ORDER_RELEASE );
@@ -148,8 +146,7 @@ static sirAudioResult_t sirInstallFMODNativeMemory( const sirContainerAllocator_
 
 static sirFMODMemoryBudgetStats_t sirGetFMODNativeMemoryStats( void ) noexcept
 {
-	return s_nFMODMemoryInstalled.load( SIR_MEMORY_ORDER_ACQUIRE ) == 2 ? s_FMODNativeBudget.getStats()
-	                                                                  : sirFMODMemoryBudgetStats_t{};
+	return s_nFMODMemoryInstalled.load( SIR_MEMORY_ORDER_ACQUIRE ) == 2 ? s_FMODNativeBudget.getStats() : sirFMODMemoryBudgetStats_t{};
 }
 
 sirFMODRuntimeMemoryNativeOps_t sirGetFMODNativeMemoryOps( void ) noexcept
