@@ -28,3 +28,4 @@ mkdir -p out/Nightly/Benchmarks
     --benchmark_out_format=json
 
 test -s "out/Nightly/Benchmarks/$label.json"
+python3 Tests/Profiling/ValidateSIRGRDGBenchmarks.py "out/Nightly/Benchmarks/$label.json"

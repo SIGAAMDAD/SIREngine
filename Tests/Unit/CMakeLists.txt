@@ -112,6 +112,13 @@ target_link_libraries(SIRResourceFileLoadTests PRIVATE SIR::Resources)
 add_test(NAME resources.streaming.native-file-io COMMAND SIRResourceFileLoadTests)
 sir_configure_owned_target(SIRResourceFileLoadTests)
 
+# Cross-subsystem stress matrix for native GRDG I/O, Core Jobs and staging.
+add_executable(SIRInfrastructureIntegrationTests SIRInfrastructureIntegrationTests.cpp)
+target_link_libraries(SIRInfrastructureIntegrationTests PRIVATE SIR::Resources)
+add_test(NAME resources.integration.stress COMMAND SIRInfrastructureIntegrationTests)
+set_tests_properties(resources.integration.stress PROPERTIES TIMEOUT 120)
+sir_configure_owned_target(SIRInfrastructureIntegrationTests)
+
 # Bounded provider-owned derived representations and fence-aware retirement.
 add_executable(SIRDerivedResourceRegistryTests SIRDerivedResourceRegistryTests.cpp)
 target_link_libraries(SIRDerivedResourceRegistryTests PRIVATE SIR::Resources)
