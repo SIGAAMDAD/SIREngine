@@ -320,8 +320,7 @@ static int sirTestRaster( SIRRenderingDevice *pDevice, uint32_t nGeneration, con
 	}
 	partial.eBefore = SIR_GRAPHICS_STATE_COPY_DESTINATION;
 	partial.eAfter = SIR_GRAPHICS_STATE_COMMON;
-	if ( pDirect->barrier( &partial, 1 ) != SIR_GRAPHICS_SUCCESS ||
-	     pDirect->barrier( &transition, 1 ) != SIR_GRAPHICS_SUCCESS ) {
+	if ( pDirect->barrier( &partial, 1 ) != SIR_GRAPHICS_SUCCESS || pDirect->barrier( &transition, 1 ) != SIR_GRAPHICS_SUCCESS ) {
 		return 58;
 	}
 	sirGraphicsColorAttachment_t color = {};

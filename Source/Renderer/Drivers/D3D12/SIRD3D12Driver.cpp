@@ -18,9 +18,9 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Renderer/SIRGraphicsValidation.h>
 #include <limits.h>
 
-static constexpr uint64_t SIR_D3D12_SHARED_FEATURES =
-    SIR_GRAPHICS_FEATURE_GRAPHICS | SIR_GRAPHICS_FEATURE_COMPUTE | SIR_GRAPHICS_FEATURE_COPY_QUEUE | SIR_GRAPHICS_FEATURE_SHADER_STORAGE |
-    SIR_GRAPHICS_FEATURE_MRT | SIR_GRAPHICS_FEATURE_PRESENT;
+static constexpr uint64_t SIR_D3D12_SHARED_FEATURES = SIR_GRAPHICS_FEATURE_GRAPHICS | SIR_GRAPHICS_FEATURE_COMPUTE |
+                                                      SIR_GRAPHICS_FEATURE_COPY_QUEUE | SIR_GRAPHICS_FEATURE_SHADER_STORAGE |
+                                                      SIR_GRAPHICS_FEATURE_MRT | SIR_GRAPHICS_FEATURE_PRESENT;
 
 static sirGraphicsResult_t sirD3D12FindAdapter( uint32_t nAdapterIndex, sirGraphicsAdapterInfo_t *pInfo ) noexcept
 {

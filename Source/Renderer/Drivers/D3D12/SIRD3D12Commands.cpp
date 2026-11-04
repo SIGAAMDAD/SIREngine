@@ -339,13 +339,12 @@ sirGraphicsResult_t SIRD3D12CommandList::barrier( const sirGraphicsBarrier_t *pB
 			return ePinned;
 		}
 		if ( source.eType == SIR_GRAPHICS_BARRIER_TRANSITION && pSlot->eType == SIR_GRAPHICS_HANDLE_TEXTURE &&
-		     ( source.nBaseMip != 0 || source.nBaseLayer != 0 ||
-		       ( source.nMipCount != 0 && source.nMipCount != pSlot->nMips ) ||
+		     ( source.nBaseMip != 0 || source.nBaseLayer != 0 || ( source.nMipCount != 0 && source.nMipCount != pSlot->nMips ) ||
 		       ( source.nLayerCount != 0 && source.nLayerCount != pSlot->nLayers ) ) ) {
 			D3D12_FEATURE_DATA_FORMAT_INFO formatInfo = {};
 			formatInfo.Format = pSlot->getNativeResource()->GetDesc().Format;
-			if ( FAILED( m_pNative->getNativeDevice()->CheckFeatureSupport( D3D12_FEATURE_FORMAT_INFO, &formatInfo,
-			                                                        sizeof( formatInfo ) ) ) ||
+			if ( FAILED(
+			         m_pNative->getNativeDevice()->CheckFeatureSupport( D3D12_FEATURE_FORMAT_INFO, &formatInfo, sizeof( formatInfo ) ) ) ||
 			     formatInfo.PlaneCount == 0 ) {
 				return SIR_GRAPHICS_UNSUPPORTED;
 			}
