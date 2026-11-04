@@ -203,8 +203,8 @@ sirGraphicsABIResult_t sirGraphicsCreateABIDevice( sirGraphicsABIModule_t *pModu
 		pModule->driver.pDestroyDevice( pModule->driver.pDriver, &device );
 		return eCaps;
 	}
-	if ( ( caps.nEnabledFeatures & pRequest->nRequiredFeatures ) != pRequest->nRequiredFeatures ||
-	     caps.nAdapterKind != adapter.nKind || caps.nMaximumFramesInFlight < pRequest->nFramesInFlight ) {
+	if ( ( caps.nEnabledFeatures & pRequest->nRequiredFeatures ) != pRequest->nRequiredFeatures || caps.nAdapterKind != adapter.nKind ||
+	     caps.nMaximumFramesInFlight < pRequest->nFramesInFlight ) {
 		pModule->driver.pDestroyDevice( pModule->driver.pDriver, &device );
 		return SIR_GRAPHICS_ABI_UNSUPPORTED;
 	}

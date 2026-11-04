@@ -104,8 +104,7 @@ static bool testBinaryModule( void ) noexcept
 		return false;
 	}
 	pMode( 8 );
-	if ( sirGraphicsCreateABIDevice( &module, &request, &device ) != SIR_GRAPHICS_DEVICE_LOST ||
-	     module.nActiveDevices != 0 ) {
+	if ( sirGraphicsCreateABIDevice( &module, &request, &device ) != SIR_GRAPHICS_DEVICE_LOST || module.nActiveDevices != 0 ) {
 		return false;
 	}
 	pMode( 5 );

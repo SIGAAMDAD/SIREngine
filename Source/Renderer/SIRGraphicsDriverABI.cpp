@@ -79,7 +79,8 @@ sirGraphicsABIResult_t sirGraphicsValidateABIAdapter( const sirGraphicsABIAdapte
 	if ( pAdapter == nullptr || pAdapter->nSize < sizeof( sirGraphicsABIAdapter_t ) || pAdapter->nBackend < SIR_GRAPHICS_BACKEND_VULKAN ||
 	     pAdapter->nBackend > SIR_GRAPHICS_BACKEND_OPENGL || pAdapter->nKind < SIR_GRAPHICS_ABI_ADAPTER_DISCRETE ||
 	     pAdapter->nKind > SIR_GRAPHICS_ABI_ADAPTER_OTHER || pAdapter->nQueueMask == 0 ||
-	     ( pAdapter->nQueueMask & ~( ( 1U << SIR_GRAPHICS_QUEUE_COUNT ) - 1U ) ) != 0 || pAdapter->nReserved != 0 || pAdapter->szName[127] != '\0' ) {
+	     ( pAdapter->nQueueMask & ~( ( 1U << SIR_GRAPHICS_QUEUE_COUNT ) - 1U ) ) != 0 || pAdapter->nReserved != 0 ||
+	     pAdapter->szName[127] != '\0' ) {
 		return SIR_GRAPHICS_ABI_INVALID_ARGUMENT;
 	}
 	return SIR_GRAPHICS_ABI_SUCCESS;
@@ -122,8 +123,7 @@ sirGraphicsABIResult_t sirGraphicsValidateABIFormat( const sirGraphicsABIFormat_
 {
 	if ( pFormat == nullptr || pFormat->nSize < sizeof( sirGraphicsABIFormat_t ) || pFormat->nFormat <= SIR_GRAPHICS_FORMAT_UNKNOWN ||
 	     pFormat->nFormat > SIR_GRAPHICS_FORMAT_BC7_UNORM || pFormat->nReserved != 0 ||
-	     ( ( pFormat->nOptimalFeatures | pFormat->nLinearFeatures ) & ~0x7FU ) != 0 ||
-	     ( pFormat->nSampleCountMask & ~0x7FU ) != 0 ) {
+	     ( ( pFormat->nOptimalFeatures | pFormat->nLinearFeatures ) & ~0x7FU ) != 0 || ( pFormat->nSampleCountMask & ~0x7FU ) != 0 ) {
 		return SIR_GRAPHICS_ABI_INVALID_ARGUMENT;
 	}
 	if ( pFormat->nSampleCountMask == 0 && ( pFormat->nOptimalFeatures | pFormat->nLinearFeatures ) != 0 ) {
