@@ -95,6 +95,28 @@ int main( void )
 			}
 		}
 	}
+	// Verify every dependent follows its dependencies, and that the plan
+	// remains deterministic when requested repeatedly.
+	uint64_t szOrder[32] = {};
+	uint64_t szSecondOrder[32] = {};
+	uint32_t nOrderCount = 0;
+	assert( catalog.buildLoadOrder( nullptr, 0, &nOrderCount ) == SIR_RESOURCE_CATALOG_OK );
+	assert( nOrderCount == 32 );
+	assert( catalog.buildLoadOrder( szOrder, 32, &nOrderCount ) == SIR_RESOURCE_CATALOG_OK );
+	assert( catalog.buildLoadOrder( szSecondOrder, 32, &nOrderCount ) == SIR_RESOURCE_CATALOG_OK );
+	uint32_t szPositions[32] = {};
+	for ( uint32_t iOrder = 0; iOrder < nOrderCount; ++iOrder ) {
+		assert( szOrder[iOrder] >= 1 && szOrder[iOrder] <= 32 );
+		assert( szOrder[iOrder] == szSecondOrder[iOrder] );
+		szPositions[szOrder[iOrder] - 1] = iOrder;
+	}
+	for ( uint32_t iOwner = 0; iOwner < 32; ++iOwner ) {
+		for ( uint32_t iTarget = 0; iTarget < 32; ++iTarget ) {
+			if ( szReference[iOwner][iTarget] ) {
+				assert( szPositions[iTarget] < szPositions[iOwner] );
+			}
+		}
+	}
 	assert( catalog.dependencyAt( nAccepted, &szDependencies[0] ) == SIR_RESOURCE_CATALOG_INVALID_ARGUMENT );
 	assert( catalog.seal() == SIR_RESOURCE_CATALOG_OK );
 	assert( catalog.addDependency( 1, 2 ) == SIR_RESOURCE_CATALOG_SEALED );
