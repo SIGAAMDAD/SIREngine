@@ -1,0 +1,4 @@
+add_executable(SIRConfigDelimitedTests SIRDelimitedTests.cpp)
+target_link_libraries(SIRConfigDelimitedTests PRIVATE SIR::Core)
+add_test(NAME core.config.delimited COMMAND SIRConfigDelimitedTests)
+sir_configure_owned_target(SIRConfigDelimitedTests)
