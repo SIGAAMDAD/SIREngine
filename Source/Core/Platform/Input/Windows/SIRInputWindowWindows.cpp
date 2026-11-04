@@ -26,9 +26,6 @@ static constexpr wchar_t s_szInputClass[] = L"SIREngineNativeInputWindow";
 
 static LRESULT CALLBACK sirInputNativeWindowProc( HWND hWindow, UINT nMessage, WPARAM nWParam, LPARAM nLParam )
 {
-  Source/Core/Platform/Input/Windows/SIRInputWindowWindows.cpp
-
-
 	if ( nMessage == WM_NCCREATE ) {
 		const CREATESTRUCTW *pCreate = ( const CREATESTRUCTW * )nLParam;
 		SetWindowLongPtrW( hWindow, GWLP_USERDATA, ( LONG_PTR )pCreate->lpCreateParams );
