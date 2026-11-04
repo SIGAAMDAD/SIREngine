@@ -886,13 +886,14 @@ bool SIRD3D12Device::submitGraphicsAfterCompute( const sirD3D12CompletionSet_t &
 }
 
 bool SIRD3D12Device::initializeGraphicsKernel( const void *pVertexDxil, size_t nVertexBytes, const void *pPixelDxil,
-                                               size_t nPixelBytes ) noexcept
+                                               size_t nPixelBytes, uint32_t nMaxWidth, uint32_t nMaxHeight ) noexcept
 {
 	if ( !isReady() ) {
 		m_nLastError = E_FAIL;
 		return false;
 	}
-	const bool bReady = m_GraphicsKernel.initialize( m_pDevice.Get(), pVertexDxil, nVertexBytes, pPixelDxil, nPixelBytes );
+	const bool bReady = m_GraphicsKernel.initialize( m_pDevice.Get(), &m_Memory, pVertexDxil, nVertexBytes, pPixelDxil, nPixelBytes,
+	                                                 nMaxWidth, nMaxHeight );
 	m_nLastError = m_GraphicsKernel.getLastError();
 	return bReady;
 }
@@ -919,7 +920,7 @@ bool SIRD3D12Device::submitGraphicsTriangle( uint32_t nWidth, uint32_t nHeight, 
 	m_pDirectComputeDependency.Reset();
 	m_nDirectDependencyFenceValue = 0;
 
-	if ( !m_GraphicsKernel.record( m_pDevice.Get(), &m_Memory, nWidth, nHeight ) ) {
+	if ( !m_GraphicsKernel.record( nWidth, nHeight ) ) {
 		m_nLastError = m_GraphicsKernel.getLastError();
 		return false;
 	}
@@ -958,6 +959,11 @@ bool SIRD3D12Device::readGraphicsTriangle( const sirD3D12CompletionSet_t &set, u
 	const bool bRead = m_GraphicsKernel.readback( m_pGraphicsFence.Get(), set.nGraphicsFence, pOutput, nRowPitch, nOutputBytes );
 	m_nLastError = m_GraphicsKernel.getLastError();
 	return bRead;
+}
+
+bool SIRD3D12Device::getGraphicsKernelCapacityForTest( uint32_t *pWidth, uint32_t *pHeight ) const noexcept
+{
+	return m_GraphicsKernel.queryCapacity( pWidth, pHeight );
 }
 
 bool SIRD3D12Device::createNativeBuffer( D3D12_HEAP_TYPE eHeapType, D3D12_RESOURCE_STATES eInitialState, uint64_t nBytes,

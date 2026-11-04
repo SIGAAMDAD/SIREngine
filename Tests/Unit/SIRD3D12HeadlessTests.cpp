@@ -545,14 +545,20 @@ static bool testOffscreenIndexedGraphics( SIRD3D12Device &device )
 		return false;
 	}
 
-	const bool bInitialized = device.initializeGraphicsKernel( pVertexDxil, nVertexBytes, pPixelDxil, nPixelBytes );
+	const bool bInitialized = device.initializeGraphicsKernel( pVertexDxil, nVertexBytes, pPixelDxil, nPixelBytes, 64, 48 );
 	free( pVertexDxil );
 	free( pPixelDxil );
 	if ( !bInitialized ) {
 		fprintf( stderr, "D3D12 graphics PSO initialization failed: HRESULT 0x%08lx\n", ( unsigned long )device.getLastError() );
 		return false;
 	}
-	if ( device.initializeGraphicsKernel( nullptr, 0, nullptr, 0 ) ) {
+	if ( device.initializeGraphicsKernel( nullptr, 0, nullptr, 0, 0, 0 ) ) {
+		return false;
+	}
+	uint32_t nMaxWidth = 0;
+	uint32_t nMaxHeight = 0;
+	if ( !device.getGraphicsKernelCapacityForTest( &nMaxWidth, &nMaxHeight ) ||
+	     nMaxWidth != 64 || nMaxHeight != 48 ) {
 		return false;
 	}
 

@@ -141,3 +141,12 @@ The DXIL compute kernel now requires a caller-provided resident element capacity
 Each submission reuses those resources and restores the output UAV to UNORDERED_ACCESS after COPY_SOURCE readback so the next dispatch starts in the same canonical resource state. Fence and single-in-flight checks protect the shared range. Result receipt clears only the submitted work state, keeping the allocation stable until GPU-safe shutdown.
 
 The WARP test configures a bounded 4,096-element resident capacity, dispatches different payload sizes and verifies exact output through the same previously-tested queue fence. Runtime pool capacity is now explicit, rather than silently allocating one UAV/readback pair for each dispatch.
+
+
+## Resident offscreen graphics buffers — specialized memory rewrite
+
+The headless graphics PSO now takes an explicit maximum render-target width and height. Its D3D12MA DEFAULT RTV texture, footprint-aligned READBACK resource, persistent-mapped UPLOAD vertex/index buffers, RTV descriptor, and DIRECT command allocator/list are created during kernel initialization. The old per-draw D3D12MA allocations, Map/Unmap, descriptor creation and command-object construction are deleted.
+
+Each indexed draw reuses those native objects after fence completion, applies a variable viewport/scissor within the resident texture, clears and draws, copies the visible region into the preallocated readback buffer, and transitions the texture back to RENDER_TARGET for reuse. Reading an already completed draw copies from the persistent READBACK mapping without freeing the resource.
+
+WARP tests declare one 64 x 48 resident render target and draw at 32 x 32, 17 x 29 and 64 x 48, verifying native resource reuse across different viewport dimensions. No overloads preserve the per-draw allocation API. This is a bounded headless fixture; production GRDG transient attachment pools, DXGI swapchain lifetime and GPU residency accounting remain future integration.
