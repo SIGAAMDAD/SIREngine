@@ -36,7 +36,8 @@ typedef enum sirEditorFileSaveResult_e : uint8_t
 	SIR_EDITOR_FILE_SAVE_REPLACE_FAILED = 5,
 	SIR_EDITOR_FILE_SAVE_COMMITTED_NOT_DURABLE = 6,
 	SIR_EDITOR_FILE_SAVE_OUT_OF_CAPACITY = 7,
-	SIR_EDITOR_FILE_SAVE_SERIALIZATION_FAILED = 8
+	SIR_EDITOR_FILE_SAVE_SERIALIZATION_FAILED = 8,
+	SIR_EDITOR_FILE_SAVE_UNSUPPORTED_EDIT = 9
 } sirEditorFileSaveResult_t;
 
 typedef struct sirEditorFileWriteRequest_s
@@ -50,6 +51,7 @@ typedef struct sirEditorFileWriteRequest_s
 typedef struct sirEditorSceneSaveRequest_s
 {
 	const sirEditorScalarBridge_t *pBridge;
+	const sirEditorTextSceneIndex_t *pSourceScene;
 	const char *pszDestination;
 	const char *pszTemporary;
 	char *pszScratch;
@@ -66,6 +68,7 @@ sirEditorFileSaveResult_t sirEditorWriteFileAtomically( const sirEditorFileWrite
 // Exports the canonical scene document to caller-owned scratch and then saves
 // it via the same atomic path; no second authored graph is created. The
 // workspace source remains the original snapshot until caller closes/reopens.
+// Node hierarchy mutations fail closed until a complete node writer is ported.
 sirEditorFileSaveResult_t sirEditorSaveBoundScene( const sirEditorSceneSaveRequest_t &request ) noexcept;
 
 #endif // __SIRENGINE_SIREDITORFILESAVE_H__

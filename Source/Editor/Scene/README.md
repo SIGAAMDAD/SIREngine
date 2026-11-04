@@ -53,3 +53,9 @@ strings, resources, vector expressions and connection blocks.
 
 The writer does not claim full Godot resource serialization, inherited-scene
 save semantics or editor UI integration.
+
+Scalar-only saves compare the current authored node set with the imported
+source scene before replacing disk bytes. New/deleted/reparented nodes, flag
+changes, and node reincarnation (stable ID reused with a new generation) are
+rejected until the full structural scene writer is available; no obsolete
+hierarchy is silently serialized.

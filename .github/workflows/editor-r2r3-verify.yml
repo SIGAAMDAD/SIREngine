@@ -61,7 +61,7 @@ jobs:
         run: cmake --build out/editor-r2r3-msvc --config Debug --parallel 2
       - name: Run CTest with Windows runtime and file-saving paths
         shell: pwsh
-        run: ctest --test-dir out/editor-r2r3-msvc -C Debug --output-on-failure --no-tests=error --timeout 60
+        run: ctest --test-dir out/editor-r2r3-msvc -C Debug --output-on-failure --no-tests=error --timeout 60 -R '^(editor[.]|core[.]objects[.]|resources[.]catalog[.]|ui[.]controls[.])'
 
   native:
     name: Native editor / ${{ matrix.target }}

@@ -174,6 +174,7 @@ int main( void )
 	assert( snprintf( szTemporaryPath, sizeof( szTemporaryPath ), "sir-editor-roundtrip-%lu.tscn.stage", nProcessId ) > 0 );
 	sirEditorSceneSaveRequest_t save = {};
 	save.pBridge = &bridge;
+	save.pSourceScene = &workspace.getSceneIndex();
 	save.pszDestination = szSavedPath;
 	save.pszTemporary = szTemporaryPath;
 	save.pszScratch = szOutput;
@@ -211,6 +212,26 @@ int main( void )
 	assert( fread( szPreserved, 1, nOutputBytes, pSaved ) == nOutputBytes );
 	assert( fclose( pSaved ) == 0 );
 	assert( memcmp( szPreserved, szReadBack, nOutputBytes ) == 0 );
+
+	// Structural edits must fail closed until the native node writer is ported.
+	assert( workspace.getDocument().beginEdit( workspace.getDocument().getRevision() ) == SIR_EDITOR_OK );
+	sirEditorNode_t shifted = {};
+	assert( workspace.getDocument().findNode( nPluginButton, &shifted ) == SIR_EDITOR_OK );
+	shifted.nFlags ^= 1;
+	assert( workspace.getDocument().queueUpsert( shifted ) == SIR_EDITOR_OK );
+	assert( workspace.getDocument().commitEdit() == SIR_EDITOR_OK );
+	assert( sirEditorSaveBoundScene( save ) == SIR_EDITOR_FILE_SAVE_UNSUPPORTED_EDIT );
+	assert( workspace.getDocument().undo() == SIR_EDITOR_OK );
+
+	// Reusing the same ID after removal increments its generation, even
+	// when its authored type, parent and flags are otherwise unchanged.
+	assert( workspace.getDocument().beginEdit( workspace.getDocument().getRevision() ) == SIR_EDITOR_OK );
+	assert( workspace.getDocument().queueRemove( nPluginButton ) == SIR_EDITOR_OK );
+	shifted.nFlags ^= 1;
+	assert( workspace.getDocument().queueUpsert( shifted ) == SIR_EDITOR_OK );
+	assert( workspace.getDocument().commitEdit() == SIR_EDITOR_OK );
+	assert( sirEditorSaveBoundScene( save ) == SIR_EDITOR_FILE_SAVE_UNSUPPORTED_EDIT );
+	assert( workspace.getDocument().undo() == SIR_EDITOR_OK );
 
 	assert( workspace.getDocument().undo() == SIR_EDITOR_OK );
 	assert( workspace.getDocument().findProperty( nVBox, 1, &value ) == SIR_EDITOR_OK );

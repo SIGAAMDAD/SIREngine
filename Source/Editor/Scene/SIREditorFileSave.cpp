@@ -205,8 +205,33 @@ sirEditorFileSaveResult_t sirEditorWriteFileAtomically( const sirEditorFileWrite
 
 sirEditorFileSaveResult_t sirEditorSaveBoundScene( const sirEditorSceneSaveRequest_t &request ) noexcept
 {
-	if ( request.pBridge == nullptr || request.pszScratch == nullptr || request.nScratchCapacity == 0 ) {
+	if ( request.pBridge == nullptr || request.pSourceScene == nullptr || request.pszScratch == nullptr ||
+	     request.nScratchCapacity == 0 ) {
 		return SIR_EDITOR_FILE_SAVE_INVALID_ARGUMENT;
+	}
+	const sirEditorTextSceneIndex_t &source = *request.pSourceScene;
+	if ( request.pBridge->pDocument == nullptr || source.storage.pNodes == nullptr || source.nNodeCount == 0 ||
+	     source.nNodeCount > source.storage.nNodeCapacity ) {
+		return SIR_EDITOR_FILE_SAVE_INVALID_ARGUMENT;
+	}
+	uint32_t nAuthoredNodes = 0;
+	uint64_t nRevision = 0;
+	const sirEditorResult_t eCount = request.pBridge->pDocument->copySnapshot( nullptr, 0, &nAuthoredNodes, &nRevision );
+	if ( eCount != SIR_EDITOR_OUT_OF_CAPACITY && eCount != SIR_EDITOR_OK ) {
+		return SIR_EDITOR_FILE_SAVE_SERIALIZATION_FAILED;
+	}
+	if ( nAuthoredNodes != source.nNodeCount ) {
+		return SIR_EDITOR_FILE_SAVE_UNSUPPORTED_EDIT;
+	}
+	for ( uint32_t iNode = 0; iNode < source.nNodeCount; ++iNode ) {
+		const sirEditorNode_t &original = source.storage.pNodes[iNode].node;
+		sirEditorNode_t current = {};
+		if ( request.pBridge->pDocument->findNode( original.nId, &current ) != SIR_EDITOR_OK ||
+		     current.nId != original.nId || current.nTypeId != original.nTypeId ||
+		     current.nParentId != original.nParentId || current.nFlags != original.nFlags ||
+		     original.nGeneration == UINT32_MAX || current.nGeneration != original.nGeneration + 1 ) {
+			return SIR_EDITOR_FILE_SAVE_UNSUPPORTED_EDIT;
+		}
 	}
 	size_t nOutputBytes = 0;
 	if ( sirEditorExportBoundScalars( *request.pBridge, nullptr, 0, &nOutputBytes ) != SIR_EDITOR_SCALAR_BRIDGE_OK ) {
