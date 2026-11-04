@@ -305,6 +305,10 @@ bool SIRVulkanDevice::shutdown( void ) noexcept
 	memset( &m_Adapter, 0, sizeof( m_Adapter ) );
 	m_nDeviceSerial = 0;
 	m_nLastTransferValue = 0;
+	m_nPeakCommittedBytes = 0;
+	m_nPeakAllocationBytes = 0;
+	m_nUploadMappedBytes = 0;
+	m_nReadbackMappedBytes = 0;
 	m_bDeviceLost = false;
 	return bIdle;
 }
@@ -338,6 +342,11 @@ bool SIRVulkanDevice::queryMemoryStats( sirVulkanMemoryStats_t *pStats ) const n
 		pStats->nEstimatedUsageBytes += budgets[iHeap].usage;
 		pStats->nEstimatedBudgetBytes += budgets[iHeap].budget;
 	}
+	pStats->nSealedBudgetBytes = m_nSealedBudgetBytes;
+	pStats->nPeakCommittedBytes = m_nPeakCommittedBytes;
+	pStats->nPeakAllocationBytes = m_nPeakAllocationBytes;
+	pStats->nUploadMappedBytes = m_nUploadMappedBytes;
+	pStats->nReadbackMappedBytes = m_nReadbackMappedBytes;
 	pStats->nLiveBuffers = m_nLiveBuffers;
 	pStats->nLiveImages = m_nLiveImages;
 	pStats->nLiveImageViews = m_nLiveImageViews;
@@ -348,11 +357,22 @@ bool SIRVulkanDevice::queryMemoryStats( sirVulkanMemoryStats_t *pStats ) const n
 sirVulkanResult_t SIRVulkanDevice::createBuffer( uint64_t nBytes, VkBufferUsageFlags nUsage, bool bHostVisible,
                                                  sirVulkanBuffer_t *pBuffer ) noexcept
 {
+	const sirVulkanBufferPlacement_t ePlacement =
+	    !bHostVisible ? SIR_VULKAN_BUFFER_GPU_LOCAL
+	                  : ( ( nUsage & VK_BUFFER_USAGE_TRANSFER_DST_BIT ) != 0 &&
+	                      ( nUsage & VK_BUFFER_USAGE_TRANSFER_SRC_BIT ) == 0 ) ? SIR_VULKAN_BUFFER_CPU_READBACK
+	                                                                            : SIR_VULKAN_BUFFER_CPU_UPLOAD;
+	return createBuffer( nBytes, nUsage, ePlacement, pBuffer );
+}
+
+sirVulkanResult_t SIRVulkanDevice::createBuffer( uint64_t nBytes, VkBufferUsageFlags nUsage,
+                                                 sirVulkanBufferPlacement_t ePlacement, sirVulkanBuffer_t *pBuffer ) noexcept
+{
 	if ( !m_bReady ) {
 		return SIR_VULKAN_INVALID_STATE;
 	}
 	if ( pBuffer == nullptr || nBytes == 0 || nUsage == 0 || pBuffer->hBuffer != VK_NULL_HANDLE || pBuffer->pAllocation != nullptr ||
-	     pBuffer->pOwnerAllocator != nullptr ) {
+	     pBuffer->pOwnerAllocator != nullptr || ePlacement > SIR_VULKAN_BUFFER_GPU_UPLOAD ) {
 		return SIR_VULKAN_INVALID_ARGUMENT;
 	}
 
@@ -364,23 +384,28 @@ sirVulkanResult_t SIRVulkanDevice::createBuffer( uint64_t nBytes, VkBufferUsageF
 	VmaAllocationCreateInfo allocationInfo = {};
 	allocationInfo.usage = VMA_MEMORY_USAGE_AUTO;
 	allocationInfo.flags = VMA_ALLOCATION_CREATE_WITHIN_BUDGET_BIT;
+	const bool bHostVisible = sirVulkanPlacementHostVisible( ePlacement );
 	if ( m_bSealedPools ) {
-		const uint32_t iPool =
-		    !bHostVisible                                                                                                  ? 0
-		    : ( ( nUsage & VK_BUFFER_USAGE_TRANSFER_DST_BIT ) != 0 && ( nUsage & VK_BUFFER_USAGE_TRANSFER_SRC_BIT ) == 0 ) ? 2
-		                                                                                                                   : 1;
-		allocationInfo.pool = m_szSealedPools[iPool];
+		allocationInfo.pool = m_szSealedPools[sirVulkanPlacementPool( ePlacement )];
 		allocationInfo.flags |= VMA_ALLOCATION_CREATE_NEVER_ALLOCATE_BIT;
 	}
 	if ( bHostVisible ) {
 		allocationInfo.flags |= VMA_ALLOCATION_CREATE_MAPPED_BIT;
-		if ( ( nUsage & VK_BUFFER_USAGE_TRANSFER_DST_BIT ) != 0 && ( nUsage & VK_BUFFER_USAGE_TRANSFER_SRC_BIT ) == 0 ) {
+		if ( ePlacement == SIR_VULKAN_BUFFER_CPU_READBACK ) {
 			allocationInfo.flags |= VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT;
 			allocationInfo.preferredFlags = VK_MEMORY_PROPERTY_HOST_CACHED_BIT;
 		} else {
 			allocationInfo.flags |= VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
 		}
+		if ( ePlacement == SIR_VULKAN_BUFFER_GPU_UPLOAD ) {
+			allocationInfo.preferredFlags |= VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+		}
 		allocationInfo.requiredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+	} else {
+		allocationInfo.preferredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+	}
+	if ( m_bSealedPools && !isSealedBufferMemoryType( bufferInfo, sirVulkanPlacementPool( ePlacement ) ) ) {
+		return SIR_VULKAN_API_UNSUPPORTED;
 	}
 	VmaAllocationInfo nativeAllocation = {};
 	if ( vmaCreateBuffer( m_Allocator, &bufferInfo, &allocationInfo, &pBuffer->hBuffer, &pBuffer->pAllocation, &nativeAllocation ) !=
@@ -396,13 +421,23 @@ sirVulkanResult_t SIRVulkanDevice::createBuffer( uint64_t nBytes, VkBufferUsageF
 		return SIR_VULKAN_NATIVE_FAILURE;
 	}
 	pBuffer->pMappedData = nativeAllocation.pMappedData;
+	pBuffer->nAllocationBytes = nativeAllocation.size;
+	pBuffer->ePlacement = ePlacement;
 	pBuffer->pOwnerAllocator = m_Allocator;
 	pBuffer->nSize = ( VkDeviceSize )nBytes;
 	pBuffer->nUsage = nUsage;
 	pBuffer->nDeviceSerial = m_nDeviceSerial;
 	pBuffer->nLastGpuUse = 0;
 	pBuffer->bHostVisible = bHostVisible;
+	if ( bHostVisible ) {
+		if ( ePlacement == SIR_VULKAN_BUFFER_CPU_READBACK ) {
+			m_nReadbackMappedBytes += pBuffer->nAllocationBytes;
+		} else {
+			m_nUploadMappedBytes += pBuffer->nAllocationBytes;
+		}
+	}
 	++m_nLiveBuffers;
+	updateMemoryHighWater();
 	return SIR_VULKAN_SUCCESS;
 }
 
@@ -438,6 +473,13 @@ sirVulkanResult_t SIRVulkanDevice::destroyIdleBuffer( sirVulkanBuffer_t *pBuffer
 	}
 	if ( !isBufferIdle( pBuffer ) ) {
 		return SIR_VULKAN_BUSY;
+	}
+	if ( pBuffer->bHostVisible ) {
+		if ( pBuffer->ePlacement == SIR_VULKAN_BUFFER_CPU_READBACK ) {
+			m_nReadbackMappedBytes -= pBuffer->nAllocationBytes;
+		} else {
+			m_nUploadMappedBytes -= pBuffer->nAllocationBytes;
+		}
 	}
 	vmaDestroyBuffer( m_Allocator, pBuffer->hBuffer, pBuffer->pAllocation );
 	memset( pBuffer, 0, sizeof( *pBuffer ) );

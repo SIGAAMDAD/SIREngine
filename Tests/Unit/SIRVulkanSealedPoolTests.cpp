@@ -31,18 +31,23 @@ int main( void )
 		return 1;
 	}
 	sirVulkanMemoryStats_t before = {};
-	if ( !device.queryMemoryStats( &before ) || before.nBlockBytes < budget.nResidentBytes + budget.nUploadBytes + budget.nReadbackBytes ) {
+	if ( !device.queryMemoryStats( &before ) || before.nBlockBytes < budget.nResidentBytes + budget.nUploadBytes + budget.nReadbackBytes ||
+	     before.nPeakCommittedBytes < before.nBlockBytes || before.nUploadMappedBytes != 0 || before.nReadbackMappedBytes != 0 ||
+	     before.nSealedBudgetBytes != budget.nResidentBytes + budget.nUploadBytes + budget.nReadbackBytes ) {
 		return 2;
 	}
 
 	sirVulkanBuffer_t upload = {};
 	sirVulkanBuffer_t readback = {};
 	sirVulkanBuffer_t gpu = {};
+	sirVulkanBuffer_t explicitReadback = {};
 	const VkBufferUsageFlags nTransfer = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 	if ( device.createBuffer( 65536, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, true, &upload ) != SIR_VULKAN_SUCCESS ||
 	     device.createBuffer( 65536, VK_BUFFER_USAGE_TRANSFER_DST_BIT, true, &readback ) != SIR_VULKAN_SUCCESS ||
-	     device.createBuffer( 65536, nTransfer, false, &gpu ) != SIR_VULKAN_SUCCESS || upload.pMappedData == nullptr ||
-	     readback.pMappedData == nullptr || gpu.pMappedData != nullptr ) {
+	     device.createBuffer( 65536, nTransfer, false, &gpu ) != SIR_VULKAN_SUCCESS ||
+	     device.createBuffer( 65536, nTransfer, SIR_VULKAN_BUFFER_CPU_READBACK, &explicitReadback ) != SIR_VULKAN_SUCCESS ||
+	     upload.pMappedData == nullptr || readback.pMappedData == nullptr || gpu.pMappedData != nullptr ||
+	     explicitReadback.pMappedData == nullptr || explicitReadback.ePlacement != SIR_VULKAN_BUFFER_CPU_READBACK ) {
 		return 3;
 	}
 	void *pOriginalUpload = upload.pMappedData;
@@ -69,7 +74,11 @@ int main( void )
 		return 5;
 	}
 	sirVulkanMemoryStats_t afterCreate = {};
-	if ( !device.queryMemoryStats( &afterCreate ) || afterCreate.nBlockBytes != before.nBlockBytes ) {
+	if ( !device.queryMemoryStats( &afterCreate ) || afterCreate.nBlockBytes != before.nBlockBytes ||
+	     afterCreate.nPeakCommittedBytes < afterCreate.nBlockBytes ||
+	     afterCreate.nPeakCommittedBytes < before.nPeakCommittedBytes ||
+	     afterCreate.nUploadMappedBytes < upload.nAllocationBytes ||
+	     afterCreate.nReadbackMappedBytes < readback.nAllocationBytes + explicitReadback.nAllocationBytes ) {
 		return 6;
 	}
 	sirVulkanBuffer_t oversized = {};
@@ -82,11 +91,14 @@ int main( void )
 		return 8;
 	}
 	if ( device.destroyImage( &image ) != SIR_VULKAN_SUCCESS || device.destroyIdleBuffer( &gpu ) != SIR_VULKAN_SUCCESS ||
-	     device.destroyIdleBuffer( &upload ) != SIR_VULKAN_SUCCESS || device.destroyIdleBuffer( &readback ) != SIR_VULKAN_SUCCESS ) {
+	     device.destroyIdleBuffer( &upload ) != SIR_VULKAN_SUCCESS || device.destroyIdleBuffer( &readback ) != SIR_VULKAN_SUCCESS ||
+	     device.destroyIdleBuffer( &explicitReadback ) != SIR_VULKAN_SUCCESS ) {
 		return 9;
 	}
 	sirVulkanMemoryStats_t afterRetire = {};
-	if ( !device.queryMemoryStats( &afterRetire ) || afterRetire.nBlockBytes != before.nBlockBytes || !device.shutdown() ) {
+	if ( !device.queryMemoryStats( &afterRetire ) || afterRetire.nBlockBytes != before.nBlockBytes ||
+	     afterRetire.nUploadMappedBytes != 0 || afterRetire.nReadbackMappedBytes != 0 ||
+	     afterRetire.nPeakCommittedBytes < afterCreate.nPeakCommittedBytes || !device.shutdown() ) {
 		return 10;
 	}
 	printf( "Sealed Vulkan pools and persistent mappings passed\n" );

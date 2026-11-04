@@ -28,6 +28,10 @@ int main( void )
 	if ( !sirVulkanValidatePoolBudget( &budget ) ) {
 		return 3;
 	}
+	const sirVulkanPoolBudget_t overflowing = { UINT64_MAX - 65535ULL, 65536, 65536 };
+	if ( sirVulkanValidatePoolBudget( &overflowing ) ) {
+		return 16;
+	}
 	budget.nResidentBytes++;
 	if ( sirVulkanValidatePoolBudget( &budget ) ) {
 		return 4;
@@ -60,6 +64,41 @@ int main( void )
 	create.nResidentBudgetBytes++;
 	if ( driver.createDevice( create, &pDevice ) != SIR_GRAPHICS_INVALID_ARGUMENT || pDevice != nullptr ) {
 		return 9;
+	}
+	if ( sirVulkanPlacementPool( SIR_VULKAN_BUFFER_GPU_LOCAL ) != 0 ||
+	     sirVulkanPlacementPool( SIR_VULKAN_BUFFER_CPU_UPLOAD ) != 1 ||
+	     sirVulkanPlacementPool( SIR_VULKAN_BUFFER_GPU_UPLOAD ) != 1 ||
+	     sirVulkanPlacementPool( SIR_VULKAN_BUFFER_CPU_READBACK ) != 2 ) {
+		return 10;
+	}
+	if ( sirVulkanPlacementHostVisible( SIR_VULKAN_BUFFER_GPU_LOCAL ) ||
+	     !sirVulkanPlacementHostVisible( SIR_VULKAN_BUFFER_CPU_UPLOAD ) ||
+	     !sirVulkanPlacementHostVisible( SIR_VULKAN_BUFFER_CPU_READBACK ) ||
+	     !sirVulkanPlacementHostVisible( SIR_VULKAN_BUFFER_GPU_UPLOAD ) ) {
+		return 11;
+	}
+	if ( !sirVulkanMemoryTypeCompatible( 0, 1U ) ||
+	     !sirVulkanMemoryTypeCompatible( 31, 1U << 31 ) ||
+	     sirVulkanMemoryTypeCompatible( 32, UINT32_MAX ) ||
+	     sirVulkanMemoryTypeCompatible( 3, 1U << 2 ) ||
+	     sirVulkanMemoryTypeCompatible( 0, 0 ) ) {
+		return 12;
+	}
+	uint64_t nPeakCommitted = 0;
+	uint64_t nPeakAllocated = 0;
+	sirVulkanAdvanceMemoryPeak( 1024, 512, &nPeakCommitted, &nPeakAllocated );
+	sirVulkanAdvanceMemoryPeak( 256, 128, &nPeakCommitted, &nPeakAllocated );
+	if ( nPeakCommitted != 1024 || nPeakAllocated != 512 ) {
+		return 13;
+	}
+	sirVulkanAdvanceMemoryPeak( 2048, 1024, &nPeakCommitted, &nPeakAllocated );
+	if ( nPeakCommitted != 2048 || nPeakAllocated != 1024 ) {
+		return 14;
+	}
+	sirVulkanAdvanceMemoryPeak( 4096, 4096, nullptr, &nPeakAllocated );
+	sirVulkanAdvanceMemoryPeak( 4096, 4096, &nPeakCommitted, nullptr );
+	if ( nPeakCommitted != 2048 || nPeakAllocated != 1024 ) {
+		return 15;
 	}
 	return 0;
 }

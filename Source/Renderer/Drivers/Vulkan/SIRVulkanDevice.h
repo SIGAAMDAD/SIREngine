@@ -61,6 +61,11 @@ typedef struct sirVulkanMemoryStats_s
 	uint64_t nAllocationBytes;
 	uint64_t nEstimatedUsageBytes;
 	uint64_t nEstimatedBudgetBytes;
+	uint64_t nSealedBudgetBytes;
+	uint64_t nPeakCommittedBytes;
+	uint64_t nPeakAllocationBytes;
+	uint64_t nUploadMappedBytes;
+	uint64_t nReadbackMappedBytes;
 	uint32_t nLiveBuffers;
 	uint32_t nLiveImages;
 	uint32_t nLiveImageViews;
@@ -106,6 +111,20 @@ typedef struct sirVulkanComputePipeline_s
 // the driver. Full semantic validation remains the shader cooker's job.
 bool sirVulkanValidateSpirv( const void *pBytes, uint64_t nByteCount, const char *pszEntryPoint ) noexcept;
 
+typedef enum sirVulkanBufferPlacement_e : uint8_t
+{
+	SIR_VULKAN_BUFFER_GPU_LOCAL = 0,
+	SIR_VULKAN_BUFFER_CPU_UPLOAD,
+	SIR_VULKAN_BUFFER_CPU_READBACK,
+	SIR_VULKAN_BUFFER_GPU_UPLOAD
+} sirVulkanBufferPlacement_t;
+
+bool sirVulkanPlacementHostVisible( sirVulkanBufferPlacement_t ePlacement ) noexcept;
+uint32_t sirVulkanPlacementPool( sirVulkanBufferPlacement_t ePlacement ) noexcept;
+bool sirVulkanMemoryTypeCompatible( uint32_t nPoolMemoryType, uint32_t nResourceMemoryTypes ) noexcept;
+void sirVulkanAdvanceMemoryPeak( uint64_t nCommittedBytes, uint64_t nAllocatedBytes, uint64_t *pPeakCommitted,
+                                 uint64_t *pPeakAllocated ) noexcept;
+
 typedef struct sirVulkanBuffer_s
 {
 	VkBuffer hBuffer;
@@ -117,6 +136,8 @@ typedef struct sirVulkanBuffer_s
 	uint64_t nLastGpuUse;
 	bool bHostVisible;
 	void *pMappedData;
+	uint64_t nAllocationBytes;
+	sirVulkanBufferPlacement_t ePlacement;
 } sirVulkanBuffer_t;
 
 typedef struct sirVulkanBufferCopy_s
@@ -276,7 +297,13 @@ private:
 	VkQueue m_GraphicsQueue;
 	VmaAllocator m_Allocator;
 	VmaPool m_szSealedPools[3] = {};
+	uint32_t m_szSealedMemoryTypes[3] = {};
 	bool m_bSealedPools = false;
+	uint64_t m_nSealedBudgetBytes = 0;
+	uint64_t m_nPeakCommittedBytes = 0;
+	uint64_t m_nPeakAllocationBytes = 0;
+	uint64_t m_nUploadMappedBytes = 0;
+	uint64_t m_nReadbackMappedBytes = 0;
 	VkCommandPool m_TransferCommandPool;
 	VkSemaphore m_TransferTimeline;
 	sirVulkanTransferSlot_t m_TransferSlots[SIR_VULKAN_TRANSFER_SLOT_COUNT];
@@ -298,8 +325,12 @@ private:
 	bool loadImageDispatch( void ) noexcept;
 	void destroyTransferQueue( void ) noexcept;
 	bool isBufferIdle( const sirVulkanBuffer_t *pBuffer ) const noexcept;
+	sirVulkanResult_t chooseResidentMemoryType( uint32_t *pMemoryType ) noexcept;
 	sirVulkanResult_t initializeSealedPools( const sirVulkanPoolBudget_t *pBudget ) noexcept;
 	void destroySealedPools( void ) noexcept;
+	void updateMemoryHighWater( void ) noexcept;
+	bool isSealedMemoryType( const VkImageCreateInfo& info ) const noexcept;
+	bool isSealedBufferMemoryType( const VkBufferCreateInfo& info, uint32_t iPool ) const noexcept;
 
 public:
 	SIRVulkanDevice( void ) noexcept;
@@ -318,6 +349,8 @@ public:
 	                                         sirVulkanComputePipeline_t *pPipeline ) noexcept;
 	sirVulkanResult_t destroyComputePipeline( sirVulkanComputePipeline_t *pPipeline ) noexcept;
 	sirVulkanResult_t createBuffer( uint64_t nBytes, VkBufferUsageFlags nUsage, bool bHostVisible, sirVulkanBuffer_t *pBuffer ) noexcept;
+	sirVulkanResult_t createBuffer( uint64_t nBytes, VkBufferUsageFlags nUsage, sirVulkanBufferPlacement_t ePlacement,
+	                                sirVulkanBuffer_t *pBuffer ) noexcept;
 	sirVulkanResult_t writeBuffer( sirVulkanBuffer_t *pBuffer, uint64_t nOffset, const void *pData, uint64_t nBytes ) noexcept;
 	sirVulkanResult_t createImage( const VkImageCreateInfo &info, sirVulkanImage_t *pImage ) noexcept;
 	sirVulkanResult_t destroyImage( sirVulkanImage_t *pImage ) noexcept;
