@@ -142,6 +142,9 @@ CMake Warning at Build/CMake/CIFormat.cmake:34 (message):
 	if ( !sealed.queryAllocationLedger( &reserved ) || reserved.nBlockBytes < 20ULL * 1024 * 1024 ) {
 		return 19;
 	}
+	if ( sealed.reserveExternalBytes( 4096 ) ) {
+		return 34;
+	}
 	D3D12MA::Allocation *szAllocations[5] = {};
 	const bool bCreated =
 	    SUCCEEDED( sealed.createBuffer( D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_COMMON, 4096, &szAllocations[0] ) ) &&

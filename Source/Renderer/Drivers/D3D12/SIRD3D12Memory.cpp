@@ -196,6 +196,10 @@ bool SIRD3D12Memory::configureSealedPools( const sirD3D12SealedPoolConfig_t &con
 
 bool SIRD3D12Memory::reserveExternalBytes( uint64_t nBytes ) noexcept
 {
+	// External backing is not covered by the fixed D3D12MA pools.
+	if ( m_bSealed ) {
+		return false;
+	}
 	sirD3D12AllocationLedger_t ledger = {};
 	if ( nBytes == 0 || !queryAllocationLedger( &ledger ) || ledger.nCommittedBytes > UINT64_MAX - nBytes ||
 	     ( m_nResidentLimitBytes != 0 &&
