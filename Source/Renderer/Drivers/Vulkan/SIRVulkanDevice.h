@@ -62,6 +62,9 @@ typedef struct sirVulkanMemoryStats_s
 	uint64_t nEstimatedUsageBytes;
 	uint64_t nEstimatedBudgetBytes;
 	uint32_t nLiveBuffers;
+	uint32_t nLiveImages;
+	uint32_t nLiveImageViews;
+	uint32_t nLiveSamplers;
 } sirVulkanMemoryStats_t;
 
 // Private Vulkan-driver ownership. No Vk or VMA types enter SIRRenderingDevice.
@@ -90,6 +93,33 @@ typedef struct sirVulkanBuffer_s
 	uint64_t nLastGpuUse;
 	bool bHostVisible;
 } sirVulkanBuffer_t;
+
+typedef struct sirVulkanImage_s
+{
+	VkImage hImage;
+	VmaAllocation pAllocation;
+	VmaAllocator pOwnerAllocator;
+	uint64_t nDeviceSerial;
+	VkFormat eFormat;
+	VkImageType eType;
+	VkImageUsageFlags nUsage;
+	uint32_t nMips;
+	uint32_t nLayers;
+	bool bCube;
+} sirVulkanImage_t;
+
+typedef struct sirVulkanImageView_s
+{
+	VkImageView hView;
+	VkImage hImage;
+	uint64_t nDeviceSerial;
+} sirVulkanImageView_t;
+
+typedef struct sirVulkanSampler_s
+{
+	VkSampler hSampler;
+	uint64_t nDeviceSerial;
+} sirVulkanSampler_t;
 
 // First headless slice: one owner thread creates and retires the native device.
 // Buffers must be retired before shutdown; queue submissions arrive in a later slice.
@@ -122,6 +152,10 @@ private:
 	PFN_vkDestroySemaphore m_pfnDestroySemaphore;
 	PFN_vkGetSemaphoreCounterValue m_pfnGetSemaphoreCounterValue;
 	PFN_vkWaitSemaphores m_pfnWaitSemaphores;
+	PFN_vkCreateImageView m_pfnCreateImageView = nullptr;
+	PFN_vkDestroyImageView m_pfnDestroyImageView = nullptr;
+	PFN_vkCreateSampler m_pfnCreateSampler = nullptr;
+	PFN_vkDestroySampler m_pfnDestroySampler = nullptr;
 	VkInstance m_Instance;
 	VkPhysicalDevice m_PhysicalDevice;
 	VkDevice m_Device;
@@ -136,11 +170,15 @@ private:
 	bool m_bDeviceLost;
 	sirVulkanAdapterInfo_t m_Adapter;
 	uint32_t m_nLiveBuffers;
+	uint32_t m_nLiveImages = 0;
+	uint32_t m_nLiveImageViews = 0;
+	uint32_t m_nLiveSamplers = 0;
 	bool m_bReady;
 
 	bool loadInstanceDispatch( void ) noexcept;
 	bool chooseAdapter( void ) noexcept;
 	bool initializeTransferQueue( void ) noexcept;
+	bool loadImageDispatch( void ) noexcept;
 	void destroyTransferQueue( void ) noexcept;
 	bool isBufferIdle( const sirVulkanBuffer_t *pBuffer ) const noexcept;
 
@@ -159,6 +197,13 @@ public:
 
 	sirVulkanResult_t createBuffer( uint64_t nBytes, VkBufferUsageFlags nUsage, bool bHostVisible, sirVulkanBuffer_t *pBuffer ) noexcept;
 	sirVulkanResult_t writeBuffer( sirVulkanBuffer_t *pBuffer, uint64_t nOffset, const void *pData, uint64_t nBytes ) noexcept;
+	sirVulkanResult_t createImage( const VkImageCreateInfo &info, sirVulkanImage_t *pImage ) noexcept;
+	sirVulkanResult_t destroyImage( sirVulkanImage_t *pImage ) noexcept;
+	sirVulkanResult_t createImageView( const sirVulkanImage_t *pImage, const VkImageViewCreateInfo &info,
+	                                   sirVulkanImageView_t *pView ) noexcept;
+	sirVulkanResult_t destroyImageView( sirVulkanImageView_t *pView ) noexcept;
+	sirVulkanResult_t createSampler( const VkSamplerCreateInfo &info, sirVulkanSampler_t *pSampler ) noexcept;
+	sirVulkanResult_t destroySampler( sirVulkanSampler_t *pSampler ) noexcept;
 	sirVulkanResult_t destroyIdleBuffer( sirVulkanBuffer_t *pBuffer ) noexcept;
 	sirVulkanResult_t readBuffer( sirVulkanBuffer_t *pBuffer, uint64_t nOffset, void *pData, uint64_t nBytes ) noexcept;
 	sirVulkanResult_t submitBufferCopy( sirVulkanBuffer_t *pSource, uint64_t nSourceOffset, sirVulkanBuffer_t *pDestination,
