@@ -468,6 +468,115 @@ static void testLocalCancellation( void )
 	memory.shutdown();
 }
 
+
+static sirTaskResult_t pendingProviderTask( void *, sirTaskHandle_t ) noexcept
+{
+	return SIR_TASK_RESULT_PENDING;
+}
+
+static void testInvalidInputAndProviderLifecycle( void )
+{
+	const sirMemoryConfig_t memoryConfig = { 64ULL * 1024 * 1024, 16ULL * 1024 * 1024, 4ULL * 1024 * 1024, 16 };
+	SIRMemoryManager memory;
+	SIRTaskScheduler cold;
+	sirTaskHandle_t handle = {};
+	sirTaskState_t state = SIR_TASK_INVALID;
+	sirTaskExecutor_t executor = SIR_TASK_EXEC_CPU;
+	SIR_TEST_CHECK( !cold.shutdown() );
+	SIR_TEST_CHECK( !cold.init( nullptr, { 8, 0, 8 } ) );
+	SIR_TEST_CHECK( !cold.init( &memory, { 8, 0, 8 } ) );
+	SIR_TEST_CHECK( !cold.bindProviderOwner( SIR_TASK_EXEC_RENDER ) );
+	SIR_TEST_CHECK( !cold.submit( countTask, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU, &handle ) );
+	SIR_TEST_CHECK( !cold.cancel( handle ) );
+	SIR_TEST_CHECK( !cold.releaseTask( handle ) );
+	SIR_TEST_CHECK( !cold.queryTask( handle, &state, &executor ) );
+	SIR_TEST_CHECK( cold.getState( handle ) == SIR_TASK_INVALID );
+	SIR_TEST_CHECK( !cold.completeProvider( handle, SIR_TASK_RESULT_SUCCESS ) );
+	SIR_TEST_CHECK( cold.pumpMain( 1 ) == 0 && cold.pumpCPU( 1 ) == 0 );
+	SIR_TEST_CHECK( memory.init( memoryConfig ) );
+	SIR_TEST_CHECK( !cold.init( &memory, { 0, 0, 0 } ) );
+	SIR_TEST_CHECK( !cold.init( &memory, { UINT32_MAX, 0, 0 } ) );
+	SIR_TEST_CHECK( !cold.init( &memory, { 8, 0, UINT32_MAX } ) );
+	SIR_TEST_CHECK( cold.init( &memory, { 8, 0, 8 } ) );
+	SIR_TEST_CHECK( !cold.init( &memory, { 8, 0, 8 } ) );
+	SIR_TEST_CHECK( !cold.submit( nullptr, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU, &handle ) );
+	SIR_TEST_CHECK( !cold.submit( countTask, nullptr, ( sirTaskPriority_t )255, SIR_TASK_EXEC_CPU, &handle ) );
+	SIR_TEST_CHECK( !cold.submit( countTask, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_COUNT, &handle ) );
+	SIR_TEST_CHECK( !cold.submit( countTask, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU, nullptr ) );
+	SIR_TEST_CHECK( !cold.submitAfter( countTask, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU, nullptr, 1, &handle ) );
+	SIR_TEST_CHECK( !cold.queryTask( handle, nullptr, &executor ) );
+	SIR_TEST_CHECK( !cold.queryTask( handle, &state, nullptr ) );
+	SIR_TEST_CHECK( !cold.queryTask( handle, &state, &executor ) );
+	SIR_TEST_CHECK( !cold.isCancellationRequested( handle ) );
+	SIR_TEST_CHECK( !cold.waitTask( handle ) );
+	SIR_TEST_CHECK( !cold.cancel( handle ) );
+	SIR_TEST_CHECK( !cold.releaseTask( handle ) );
+	const sirTaskBatchTask_t batch[2] = {
+	    { countTask, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_MAIN },
+	    { countTask, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_MAIN }
+	};
+	sirTaskBatchTask_t invalidBatch[2] = { batch[0], batch[1] };
+	const sirTaskBatchEdge_t edge = { 0, 1 };
+	sirTaskHandle_t batchHandles[2] = {};
+	SIR_TEST_CHECK( !cold.submitBatch( nullptr, 2, &edge, 1, batchHandles ) );
+	SIR_TEST_CHECK( !cold.submitBatch( batch, 2, &edge, 1, nullptr ) );
+	SIR_TEST_CHECK( !cold.submitBatch( batch, 0, &edge, 1, batchHandles ) );
+	SIR_TEST_CHECK( !cold.submitBatch( batch, 2, nullptr, 1, batchHandles ) );
+	invalidBatch[0].pFunction = nullptr;
+	SIR_TEST_CHECK( !cold.submitBatch( invalidBatch, 2, &edge, 1, batchHandles ) );
+	invalidBatch[0] = batch[0];
+	invalidBatch[1].ePriority = ( sirTaskPriority_t )255;
+	SIR_TEST_CHECK( !cold.submitBatch( invalidBatch, 2, &edge, 1, batchHandles ) );
+	invalidBatch[1] = batch[1];
+	invalidBatch[1].eExecutor = SIR_TASK_EXEC_COUNT;
+	SIR_TEST_CHECK( !cold.submitBatch( invalidBatch, 2, &edge, 1, batchHandles ) );
+	const sirTaskBatchEdge_t backward = { 1, 0 };
+	const sirTaskBatchEdge_t outOfRange = { 0, 2 };
+	SIR_TEST_CHECK( !cold.submitBatch( batch, 2, &backward, 1, batchHandles ) );
+	SIR_TEST_CHECK( !cold.submitBatch( batch, 2, &outOfRange, 1, batchHandles ) );
+	SIR_TEST_CHECK( !cold.bindProviderOwner( SIR_TASK_EXEC_CPU ) );
+	SIR_TEST_CHECK( !cold.bindProviderOwner( SIR_TASK_EXEC_COUNT ) );
+	SIR_TEST_CHECK( cold.pumpProvider( SIR_TASK_EXEC_CPU, 1 ) == 0 );
+	SIR_TEST_CHECK( cold.pumpProvider( SIR_TASK_EXEC_COUNT, 1 ) == 0 );
+	SIR_TEST_CHECK( !cold.completeProvider( handle, SIR_TASK_RESULT_PENDING ) );
+	SIR_TEST_CHECK( !cold.completeProvider( handle, SIR_TASK_RESULT_SUCCESS ) );
+	SIR_TEST_CHECK( !cold.submitAfter( countTask, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU,
+	                                &handle, UINT32_MAX, &handle ) );
+	SIR_TEST_CHECK( cold.submit( pendingProviderTask, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_RENDER, &handle ) );
+	SIR_TEST_CHECK( !cold.releaseTask( handle ) );
+	SIR_TEST_CHECK( cold.pumpProvider( SIR_TASK_EXEC_RENDER, 1 ) == 0 );
+	SIR_TEST_CHECK( cold.bindProviderOwner( SIR_TASK_EXEC_RENDER ) );
+	SIR_TEST_CHECK( cold.bindProviderOwner( SIR_TASK_EXEC_RENDER ) );
+	std::atomic<uint32_t> nWrongOwner{ 0 };
+	std::thread wrong( [&]() {
+		if ( cold.pumpProvider( SIR_TASK_EXEC_RENDER, 1 ) == 0 &&
+		     !cold.bindProviderOwner( SIR_TASK_EXEC_RENDER ) &&
+		     !cold.completeProvider( handle, SIR_TASK_RESULT_SUCCESS ) && !cold.shutdown() ) {
+			nWrongOwner.store( 1 );
+		}
+	} );
+	wrong.join();
+	SIR_TEST_CHECK( nWrongOwner.load() == 1 );
+	SIR_TEST_CHECK( cold.pumpProvider( SIR_TASK_EXEC_RENDER, 1 ) == 1 );
+	SIR_TEST_CHECK( cold.getState( handle ) == SIR_TASK_AWAITING_PROVIDER );
+	SIR_TEST_CHECK( !cold.shutdown() );
+	SIR_TEST_CHECK( !cold.completeProvider( handle, SIR_TASK_RESULT_PENDING ) );
+	SIR_TEST_CHECK( cold.cancel( handle ) );
+	SIR_TEST_CHECK( cold.isCancellationRequested( handle ) );
+	SIR_TEST_CHECK( cold.completeProvider( handle, SIR_TASK_RESULT_SUCCESS ) );
+	SIR_TEST_CHECK( cold.getState( handle ) == SIR_TASK_CANCELLED );
+	SIR_TEST_CHECK( !cold.cancel( handle ) );
+	SIR_TEST_CHECK( cold.releaseTask( handle ) );
+	SIR_TEST_CHECK( cold.submitBatch( batch, 2, &edge, 1, batchHandles ) );
+	SIR_TEST_CHECK( cold.pumpMain( 2 ) == 2 );
+	SIR_TEST_CHECK( cold.getState( batchHandles[0] ) == SIR_TASK_COMPLETED );
+	SIR_TEST_CHECK( cold.releaseTask( batchHandles[0] ) && cold.releaseTask( batchHandles[1] ) );
+	SIR_TEST_CHECK( cold.shutdown() );
+	SIR_TEST_CHECK( !cold.shutdown() );
+	SIR_TEST_CHECK( !cold.init( &memory, { 8, 0, 8 } ) );
+	memory.shutdown();
+}
+
 int main( void )
 {
 	testScheduler();
@@ -479,5 +588,6 @@ int main( void )
 	testFailedParentPropagation();
 	testWorkerStealing();
 	testLocalCancellation();
+	testInvalidInputAndProviderLifecycle();
 	return 0;
 }
