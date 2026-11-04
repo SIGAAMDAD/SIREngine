@@ -318,7 +318,12 @@ static bool testDeviceResyncAccounted( void )
 #if defined( __linux__ )
 static bool testEvdevCodes( void )
 {
-	return SIRLinuxEvdevBackend::mapButton( BTN_SOUTH ) == SIR_INPUT_PAD_SOUTH && SIRLinuxEvdevBackend::mapButton( KEY_A ) == -1 &&
+	return SIRLinuxEvdevBackend::physicalKey( "usb-0000:00:14.0-1/input0", 0x045e, 0x0b12 ) ==
+	           SIRLinuxEvdevBackend::physicalKey( "usb-0000:00:14.0-1/input1", 0x045e, 0x0b12 ) &&
+	       SIRLinuxEvdevBackend::physicalKey( "usb-0000:00:14.0-1/input0", 0x045e, 0x0b12 ) !=
+	           SIRLinuxEvdevBackend::physicalKey( "usb-0000:00:14.0-2/input0", 0x045e, 0x0b12 ) &&
+	       SIRLinuxEvdevBackend::physicalKey( nullptr, 0, 0 ) == 0 &&
+	       return SIRLinuxEvdevBackend::mapButton( BTN_SOUTH ) == SIR_INPUT_PAD_SOUTH && SIRLinuxEvdevBackend::mapButton( KEY_A ) == -1 &&
 	       SIRLinuxEvdevBackend::mapAxis( ABS_RX ) == SIR_INPUT_AXIS_RX && SIRLinuxEvdevBackend::mapAxis( ABS_HAT0X ) == -1 &&
 	       SIRLinuxEvdevBackend::normalize( -32768, -32768, 32767, false ) == -32767 &&
 	       SIRLinuxEvdevBackend::normalize( 32767, -32768, 32767, false ) == 32767 &&

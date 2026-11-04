@@ -50,6 +50,7 @@ bool SIRInputWindow::open( SIRInputService &input, SIRInputBackend &desktop ) no
 	}
 
 	XSelectInput( pDisplay, hWindow, SIRLinuxX11Backend::requiredEventMask() | StructureNotifyMask );
+	( void )SIRLinuxX11Backend::enableDetectableRepeat( pDisplay );
 	Atom nDelete = XInternAtom( pDisplay, "WM_DELETE_WINDOW", False );
 	XSetWMProtocols( pDisplay, hWindow, &nDelete, 1 );
 
@@ -81,12 +82,17 @@ bool SIRInputWindow::pump( SIRInputService &input ) noexcept
 			return false;
 		}
 		m_bAttached = true;
+		( void )pX11->enableRawPointer( ( Display * )m_pDisplay );
 	}
 
 	Display *pDisplay = ( Display * )m_pDisplay;
 	while ( m_bOpen && XPending( pDisplay ) > 0 ) {
 		XEvent event = {};
 		XNextEvent( pDisplay, &event );
+		if ( event.type == GenericEvent ) {
+			( void )pX11->processEvent( input, event );
+			continue;
+		}
 		if ( event.xany.window != ( Window )m_nWindow ) {
 			continue;
 		}

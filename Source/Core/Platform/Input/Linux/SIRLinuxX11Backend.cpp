@@ -16,10 +16,14 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Core/Platform/Input/Linux/SIRLinuxX11Backend.h>
 #include <X11/XKBlib.h>
 #include <limits.h>
+#include <math.h>
+#if defined( SIR_INPUT_XINPUT2_AVAILABLE )
+#include <X11/extensions/XInput2.h>
+#endif
 
 SIRLinuxX11Backend::SIRLinuxX11Backend( void ) noexcept
     : m_hWindow( 0 ), m_hKeyboard{}, m_hPointer{}, m_nRootX( 0 ), m_nRootY( 0 ), m_bAttached( false ), m_bFocused( false ),
-      m_bHaveMotion( false )
+      m_bHaveMotion( false ), m_bRawPointer( false ), m_nXiOpcode( 0 ), m_fMotionRemainderX( 0.0 ), m_fMotionRemainderY( 0.0 )
 {
 }
 
@@ -74,8 +78,83 @@ bool SIRLinuxX11Backend::attachWindow( SIRInputService &service, Window hWindow 
 	return true;
 }
 
+bool SIRLinuxX11Backend::enableRawPointer( Display *pDisplay ) noexcept
+{
+#if defined( SIR_INPUT_XINPUT2_AVAILABLE )
+	if ( pDisplay == nullptr || !m_bAttached || m_bRawPointer ) {
+		return false;
+	}
+	int nOpcode = 0;
+	int nEvent = 0;
+	int nError = 0;
+	if ( !XQueryExtension( pDisplay, "XInputExtension", &nOpcode, &nEvent, &nError ) ) {
+		return false;
+	}
+	int nMajor = 2;
+	int nMinor = 0;
+	if ( XIQueryVersion( pDisplay, &nMajor, &nMinor ) != Success || nMajor < 2 ) {
+		return false;
+	}
+	unsigned char szMask[XIMaskLen( XI_RawMotion )] = {};
+	XISetMask( szMask, XI_RawMotion );
+	XIEventMask mask = {};
+	mask.deviceid = XIAllMasterDevices;
+	mask.mask_len = sizeof( szMask );
+	mask.mask = szMask;
+	if ( XISelectEvents( pDisplay, DefaultRootWindow( pDisplay ), &mask, 1 ) != Success ) {
+		return false;
+	}
+	XFlush( pDisplay );
+	m_nXiOpcode = nOpcode;
+	m_bRawPointer = true;
+	m_fMotionRemainderX = 0.0;
+	m_fMotionRemainderY = 0.0;
+	return true;
+#else
+	( void )pDisplay;
+	return false;
+#endif
+}
+
 bool SIRLinuxX11Backend::processEvent( SIRInputService &service, const XEvent &event ) noexcept
 {
+#if defined( SIR_INPUT_XINPUT2_AVAILABLE )
+	if ( m_bAttached && m_bRawPointer && event.type == GenericEvent && event.xcookie.extension == m_nXiOpcode &&
+	     event.xcookie.display != nullptr ) {
+		XGenericEventCookie cookie = event.xcookie;
+		if ( !XGetEventData( event.xcookie.display, &cookie ) ) {
+			return false;
+		}
+		bool bProcessed = false;
+		if ( cookie.evtype == XI_RawMotion && cookie.data != nullptr && m_bFocused ) {
+			const XIRawEvent *pRaw = ( const XIRawEvent * )cookie.data;
+			const double *pValues = pRaw->raw_values;
+			double fDeltaX = 0.0;
+			double fDeltaY = 0.0;
+			for ( int iAxis = 0; iAxis < pRaw->valuators.mask_len * 8; ++iAxis ) {
+				if ( XIMaskIsSet( pRaw->valuators.mask, iAxis ) ) {
+					const double fValue = *pValues++;
+					if ( iAxis == 0 ) {
+						fDeltaX = fValue;
+					} else if ( iAxis == 1 ) {
+						fDeltaY = fValue;
+					}
+				}
+			}
+			if ( isfinite( fDeltaX ) && isfinite( fDeltaY ) ) {
+				const double fX = fDeltaX + m_fMotionRemainderX;
+				const double fY = fDeltaY + m_fMotionRemainderY;
+				const int32_t nX = fX > INT32_MAX ? INT32_MAX : ( fX < INT32_MIN ? INT32_MIN : ( int32_t )fX );
+				const int32_t nY = fY > INT32_MAX ? INT32_MAX : ( fY < INT32_MIN ? INT32_MIN : ( int32_t )fY );
+				m_fMotionRemainderX = fX > INT32_MAX || fX < INT32_MIN ? 0.0 : fX - nX;
+				m_fMotionRemainderY = fY > INT32_MAX || fY < INT32_MIN ? 0.0 : fY - nY;
+				bProcessed = ( nX == 0 && nY == 0 ) || service.emitPointer( id(), m_hPointer, SIR_INPUT_MOTION, 0, nX, nY );
+			}
+		}
+		XFreeEventData( event.xcookie.display, &cookie );
+		return bProcessed;
+	}
+#endif
 	if ( !m_bAttached || event.xany.window != m_hWindow ) {
 		return false;
 	}
@@ -116,6 +195,9 @@ bool SIRLinuxX11Backend::processEvent( SIRInputService &service, const XEvent &e
 		return service.emitControls( id(), m_hPointer, &change, 1 );
 	}
 	if ( event.type == MotionNotify ) {
+		if ( m_bRawPointer ) {
+			return true;
+		}
 		if ( !m_bHaveMotion ) {
 			m_nRootX = event.xmotion.x_root;
 			m_nRootY = event.xmotion.y_root;
@@ -143,4 +225,8 @@ void SIRLinuxX11Backend::stop( SIRInputService &service ) noexcept
 	m_hKeyboard = {};
 	m_hPointer = {};
 	m_bAttached = m_bFocused = m_bHaveMotion = false;
+	m_bRawPointer = false;
+	m_nXiOpcode = 0;
+	m_fMotionRemainderX = 0.0;
+	m_fMotionRemainderY = 0.0;
 }

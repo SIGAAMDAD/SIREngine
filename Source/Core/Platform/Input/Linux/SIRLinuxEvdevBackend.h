@@ -74,6 +74,7 @@ public:
 	void stop( SIRInputService &service ) noexcept override;
 	bool discover( SIRInputService &service, const char *pszDir = "/dev/input" ) noexcept;
 	bool addProfile( const sirInputControllerProfile_t &profile ) noexcept;
+	static uint64_t physicalKey( const char *pszPhys, uint16_t nVendor, uint16_t nProduct ) noexcept;
 	static int16_t mapButton( uint16_t nNative ) noexcept;
 	static int16_t mapAxis( uint16_t nNative ) noexcept;
 	static int32_t normalize( int32_t nValue, int32_t nMinimum, int32_t nMaximum, bool bTrigger ) noexcept;
