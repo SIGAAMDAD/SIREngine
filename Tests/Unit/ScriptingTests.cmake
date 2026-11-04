@@ -62,3 +62,8 @@ add_executable(SIRLangParserTests SIRLangParserTests.cpp)
 target_link_libraries(SIRLangParserTests PRIVATE SIR::Scripting)
 add_test(NAME scripting.language.parser COMMAND SIRLangParserTests)
 sir_configure_owned_target(SIRLangParserTests)
+
+add_executable(SIRLangSemanticTests SIRLangSemanticTests.cpp)
+target_link_libraries(SIRLangSemanticTests PRIVATE SIR::Scripting)
+add_test(NAME scripting.language.semantic COMMAND SIRLangSemanticTests)
+sir_configure_owned_target(SIRLangSemanticTests)
