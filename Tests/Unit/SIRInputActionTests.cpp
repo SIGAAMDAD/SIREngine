@@ -71,17 +71,17 @@ static bool sirTestContextsAndRebinding( void )
 	SIRInputService input;
 	SIRInputActionTestBackend backend;
 	SIRInputActions &actions = input.actions();
-	if ( !input.attach( backend ) || !actions.addAction( 1, 0 ) || !actions.addAction( 2, 0 ) ||
-	     !actions.addContext( 10, 0, 100, true ) || !actions.addContext( 20, 0, 0, true ) ) {
+	if ( !input.attach( backend ) || !actions.addAction( 1, 0 ) || !actions.addAction( 2, 0 ) || !actions.addContext( 10, 0, 100, true ) ||
+	     !actions.addContext( 20, 0, 0, true ) ) {
 		return false;
 	}
 
-	const sirInputActionBinding_t ui = sirTestBinding( 1, 10, 42, SIR_INPUT_NO_CHORD, SIR_INPUT_KEYBOARD, SIR_INPUT_BUTTON,
-	                                                   SIR_INPUT_BIND_CONSUME );
+	const sirInputActionBinding_t ui =
+	    sirTestBinding( 1, 10, 42, SIR_INPUT_NO_CHORD, SIR_INPUT_KEYBOARD, SIR_INPUT_BUTTON, SIR_INPUT_BIND_CONSUME );
 	const sirInputActionBinding_t game =
 	    sirTestBinding( 2, 20, 42, SIR_INPUT_NO_CHORD, SIR_INPUT_KEYBOARD, SIR_INPUT_BUTTON, SIR_INPUT_BIND_NONE );
-	if ( !actions.addBinding( ui ) || !actions.addBinding( game ) || actions.addBinding( ui ) ||
-	     actions.addContext( 10, 0, 1, true ) || actions.addAction( 1, 0 ) ) {
+	if ( !actions.addBinding( ui ) || !actions.addBinding( game ) || actions.addBinding( ui ) || actions.addContext( 10, 0, 1, true ) ||
+	     actions.addAction( 1, 0 ) ) {
 		return false;
 	}
 
@@ -94,9 +94,8 @@ static bool sirTestContextsAndRebinding( void )
 		return false;
 	}
 	sirInputDeviceId_t hKeyboard = {};
-	if ( !input.connect( { 0, 17, SIR_INPUT_TEST, SIR_INPUT_KEYBOARD }, &hKeyboard ) ||
-	     !sirEmitKey( input, hKeyboard, 42, true ) || !input.publish() ||
-	     !sirReadAction( input, 1, true, true, false ) || !sirReadAction( input, 2, false, false, false ) ) {
+	if ( !input.connect( { 0, 17, SIR_INPUT_TEST, SIR_INPUT_KEYBOARD }, &hKeyboard ) || !sirEmitKey( input, hKeyboard, 42, true ) ||
+	     !input.publish() || !sirReadAction( input, 1, true, true, false ) || !sirReadAction( input, 2, false, false, false ) ) {
 		return false;
 	}
 
@@ -137,8 +136,8 @@ static bool sirTestChordShortTransitionsAndToggle( void )
 	SIRInputService input;
 	SIRInputActionTestBackend backend;
 	SIRInputActions &actions = input.actions();
-	if ( !input.attach( backend ) || !actions.addContext( 20, 0, 10, true ) || !actions.addAction( 3, 0 ) ||
-	     !actions.addAction( 4, 0 ) || !actions.addAction( 5, 0 ) ) {
+	if ( !input.attach( backend ) || !actions.addContext( 20, 0, 10, true ) || !actions.addAction( 3, 0 ) || !actions.addAction( 4, 0 ) ||
+	     !actions.addAction( 5, 0 ) ) {
 		return false;
 	}
 
@@ -152,9 +151,8 @@ static bool sirTestChordShortTransitionsAndToggle( void )
 	}
 
 	sirInputDeviceId_t hKeyboard = {};
-	if ( !input.connect( { 0, 19, SIR_INPUT_TEST, SIR_INPUT_KEYBOARD }, &hKeyboard ) ||
-	     !sirEmitKey( input, hKeyboard, 33, true ) || !input.publish() ||
-	     !sirReadAction( input, 3, false, false, false ) ) {
+	if ( !input.connect( { 0, 19, SIR_INPUT_TEST, SIR_INPUT_KEYBOARD }, &hKeyboard ) || !sirEmitKey( input, hKeyboard, 33, true ) ||
+	     !input.publish() || !sirReadAction( input, 3, false, false, false ) ) {
 		return false;
 	}
 
@@ -168,9 +166,9 @@ static bool sirTestChordShortTransitionsAndToggle( void )
 		return false;
 	}
 
-	if ( !input.begin( 4 ) || !sirEmitKey( input, hKeyboard, 60, true ) ||
-	     !sirEmitKey( input, hKeyboard, 60, false ) || !sirEmitKey( input, hKeyboard, 50, true ) || !input.publish() ||
-	     !sirReadAction( input, 5, false, true, true ) || !sirReadAction( input, 4, true, true, false ) ) {
+	if ( !input.begin( 4 ) || !sirEmitKey( input, hKeyboard, 60, true ) || !sirEmitKey( input, hKeyboard, 60, false ) ||
+	     !sirEmitKey( input, hKeyboard, 50, true ) || !input.publish() || !sirReadAction( input, 5, false, true, true ) ||
+	     !sirReadAction( input, 4, true, true, false ) ) {
 		return false;
 	}
 	sirInputActionState_t tapState = {};
@@ -211,8 +209,7 @@ static bool sirTestControllerAxis( void )
 		return false;
 	}
 	const sirInputControlChange_t below = { SIR_INPUT_AXIS, SIR_INPUT_AXIS_LX, 4000 };
-	if ( !input.emitControls( SIR_INPUT_TEST, hPad, &below, 1 ) || !input.publish() ||
-	     !sirReadAction( input, 9, false, false, false ) ) {
+	if ( !input.emitControls( SIR_INPUT_TEST, hPad, &below, 1 ) || !input.publish() || !sirReadAction( input, 9, false, false, false ) ) {
 		return false;
 	}
 
@@ -238,8 +235,7 @@ static bool sirTestProfileRoundTripAndRejection( void )
 	if ( !source.addAction( 12, 0 ) || !source.addContext( 55, 0, 20, true ) ) {
 		return false;
 	}
-	const sirInputActionBinding_t binding =
-	    sirTestBinding( 12, 55, 61, 17, SIR_INPUT_KEYBOARD, SIR_INPUT_BUTTON, SIR_INPUT_BIND_CONSUME );
+	const sirInputActionBinding_t binding = sirTestBinding( 12, 55, 61, 17, SIR_INPUT_KEYBOARD, SIR_INPUT_BUTTON, SIR_INPUT_BIND_CONSUME );
 	if ( !source.addBinding( binding ) ) {
 		return false;
 	}
@@ -255,8 +251,8 @@ static bool sirTestProfileRoundTripAndRejection( void )
 		return false;
 	}
 	sirInputActionBinding_t actual = {};
-	if ( !decoded.describeBinding( 0, &actual ) || actual.nActionId != binding.nActionId ||
-	     actual.nControl != binding.nControl || actual.nChord != binding.nChord || actual.nFlags != binding.nFlags ) {
+	if ( !decoded.describeBinding( 0, &actual ) || actual.nActionId != binding.nActionId || actual.nControl != binding.nControl ||
+	     actual.nChord != binding.nChord || actual.nFlags != binding.nFlags ) {
 		return false;
 	}
 
@@ -288,28 +284,25 @@ static bool sirTestPhysicalRebindCapture( void )
 	    sirTestBinding( 10, 77, 70, SIR_INPUT_NO_CHORD, SIR_INPUT_KEYBOARD, SIR_INPUT_BUTTON, SIR_INPUT_BIND_NONE );
 	const sirInputActionBinding_t second =
 	    sirTestBinding( 11, 77, 71, SIR_INPUT_NO_CHORD, SIR_INPUT_KEYBOARD, SIR_INPUT_BUTTON, SIR_INPUT_BIND_NONE );
-	if ( !actions.addBinding( first ) || !actions.addBinding( second ) || !actions.beginCapture( 0 ) ||
-	     actions.beginCapture( 0 ) || actions.captureStatus() != SIR_INPUT_CAPTURE_PENDING || !input.begin( 1 ) ) {
+	if ( !actions.addBinding( first ) || !actions.addBinding( second ) || !actions.beginCapture( 0 ) || actions.beginCapture( 0 ) ||
+	     actions.captureStatus() != SIR_INPUT_CAPTURE_PENDING || !input.begin( 1 ) ) {
 		return false;
 	}
 	sirInputDeviceId_t hKeyboard = {};
-	if ( !input.connect( { 0, 19, SIR_INPUT_TEST, SIR_INPUT_KEYBOARD }, &hKeyboard ) ||
-	     !sirEmitKey( input, hKeyboard, 71, true ) || !input.publish() ||
-	     actions.captureStatus() != SIR_INPUT_CAPTURE_CONFLICT ) {
+	if ( !input.connect( { 0, 19, SIR_INPUT_TEST, SIR_INPUT_KEYBOARD }, &hKeyboard ) || !sirEmitKey( input, hKeyboard, 71, true ) ||
+	     !input.publish() || actions.captureStatus() != SIR_INPUT_CAPTURE_CONFLICT ) {
 		return false;
 	}
 
 	sirInputActionBinding_t current = {};
-	if ( !actions.describeBinding( 0, &current ) || current.nControl != 70 || !actions.beginCapture( 0 ) ||
-	     !input.begin( 2 ) || !sirEmitKey( input, hKeyboard, 72, true ) || !input.publish() ||
-	     actions.captureStatus() != SIR_INPUT_CAPTURE_ACCEPTED || !actions.describeBinding( 0, &current ) ||
-	     current.nControl != 72 ) {
+	if ( !actions.describeBinding( 0, &current ) || current.nControl != 70 || !actions.beginCapture( 0 ) || !input.begin( 2 ) ||
+	     !sirEmitKey( input, hKeyboard, 72, true ) || !input.publish() || actions.captureStatus() != SIR_INPUT_CAPTURE_ACCEPTED ||
+	     !actions.describeBinding( 0, &current ) || current.nControl != 72 ) {
 		return false;
 	}
 	actions.cancelCapture();
-	if ( actions.captureStatus() != SIR_INPUT_CAPTURE_IDLE || !input.begin( 3 ) ||
-	     !sirEmitKey( input, hKeyboard, 72, false ) || !input.publish() ||
-	     !sirReadAction( input, 10, false, false, true ) ) {
+	if ( actions.captureStatus() != SIR_INPUT_CAPTURE_IDLE || !input.begin( 3 ) || !sirEmitKey( input, hKeyboard, 72, false ) ||
+	     !input.publish() || !sirReadAction( input, 10, false, false, true ) ) {
 		return false;
 	}
 	input.shutdown();

@@ -17,16 +17,15 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <string.h>
 
 SIRInputHaptics::SIRInputHaptics( void ) noexcept : m_Effects{}, m_Motors{}, m_nGeneration( 1 ), m_nActive( 0 ), m_nOutput( 0 )
+
 {
 }
 
-bool SIRInputHaptics::schedule( const sirInputHapticRequest_t &request, uint64_t nNowNs,
-                               sirInputHapticHandle_t *pHandle ) noexcept
+bool SIRInputHaptics::schedule( const sirInputHapticRequest_t &request, uint64_t nNowNs, sirInputHapticHandle_t *pHandle ) noexcept
 {
 	const uint64_t nDuration = ( uint64_t )request.nAttackMs + request.nSustainMs + request.nReleaseMs;
 	if ( request.hDevice.nSlot >= SIR_INPUT_DEVICE_CAPACITY || request.hDevice.nGeneration == 0 || nDuration == 0 ||
-	     nDuration > SIR_INPUT_HAPTIC_MAX_DURATION_MS || ( request.nLeft == 0 && request.nRight == 0 ) ||
-	     pHandle == nullptr ) {
+	     nDuration > SIR_INPUT_HAPTIC_MAX_DURATION_MS || ( request.nLeft == 0 && request.nRight == 0 ) || pHandle == nullptr ) {
 		return false;
 	}
 
@@ -47,8 +46,8 @@ bool SIRInputHaptics::schedule( const sirInputHapticRequest_t &request, uint64_t
 
 bool SIRInputHaptics::cancel( sirInputHapticHandle_t hEffect ) noexcept
 {
-	if ( hEffect.nSlot >= SIR_INPUT_HAPTIC_EFFECT_CAPACITY ||
-	     !m_Effects[hEffect.nSlot].bActive || m_Effects[hEffect.nSlot].nGeneration != hEffect.nGeneration ) {
+	if ( hEffect.nSlot >= SIR_INPUT_HAPTIC_EFFECT_CAPACITY || !m_Effects[hEffect.nSlot].bActive ||
+	     m_Effects[hEffect.nSlot].nGeneration != hEffect.nGeneration ) {
 		return false;
 	}
 	m_Effects[hEffect.nSlot].bActive = false;
@@ -94,8 +93,7 @@ bool SIRInputHaptics::advance( uint64_t nNowNs, bool bPaused, sirInputRumbleSink
 			continue;
 		}
 		const uint32_t nGain = gain( effect, nNowNs );
-		const uint64_t nEnd = ( uint64_t )effect.request.nAttackMs + effect.request.nSustainMs +
-		                     effect.request.nReleaseMs;
+		const uint64_t nEnd = ( uint64_t )effect.request.nAttackMs + effect.request.nSustainMs + effect.request.nReleaseMs;
 		if ( nNowNs >= effect.nStartNs && ( nNowNs - effect.nStartNs ) / 1000000 >= nEnd ) {
 			effect.bActive = false;
 			--m_nActive;

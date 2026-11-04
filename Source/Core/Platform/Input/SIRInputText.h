@@ -21,6 +21,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
 	#pragma once
+
 #endif
 // clang-format on
 
@@ -61,13 +62,11 @@ public:
 	void clearPreedit( void ) noexcept;
 	const sirInputTextSnapshot_t &snapshot( void ) const noexcept;
 	void reset( void ) noexcept;
-	static bool decodeUtf8( const char *pszUtf8, uint32_t nBytes, uint32_t *pOut, uint32_t nCapacity,
-	                        uint32_t *pCount ) noexcept;
+	static bool decodeUtf8( const char *pszUtf8, uint32_t nBytes, uint32_t *pOut, uint32_t nCapacity, uint32_t *pCount ) noexcept;
 
 private:
 	static bool validCodepoint( uint32_t nCodepoint ) noexcept;
-	static bool decodeUtf16( const uint16_t *pUnits, uint32_t nCount, uint32_t *pOut, uint32_t nCapacity,
-	                         uint32_t *pWritten ) noexcept;
+	static bool decodeUtf16( const uint16_t *pUnits, uint32_t nCount, uint32_t *pOut, uint32_t nCapacity, uint32_t *pWritten ) noexcept;
 	void clearPreeditInternal( void ) noexcept;
 	sirInputTextSnapshot_t m_Snapshot;
 	uint16_t m_nPendingSurrogate;

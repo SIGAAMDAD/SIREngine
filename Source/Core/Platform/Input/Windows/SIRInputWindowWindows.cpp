@@ -50,7 +50,6 @@ static bool sirInputUpdateWinCursor( HWND hWindow, bool bCapture, bool *pCapture
 	return true;
 }
 
-
 static LRESULT CALLBACK sirInputNativeWindowProc( HWND hWindow, UINT nMessage, WPARAM nWParam, LPARAM nLParam )
 {
 	if ( nMessage == WM_NCCREATE ) {
@@ -86,7 +85,7 @@ bool SIRInputWindow::open( SIRInputService &input, SIRInputBackend &desktop ) no
 
 	WNDCLASSW windowClass = {};
 	windowClass.lpfnWndProc = sirInputNativeWindowProc;
-	windowClass.hCursor = LoadCursorW( nullptr, IDC_ARROW );
+	windowClass.hCursor = LoadCursorW( nullptr, MAKEINTRESOURCEW( OCR_NORMAL ) );
 	windowClass.hInstance = GetModuleHandleW( nullptr );
 	windowClass.lpszClassName = s_szInputClass;
 	const ATOM nClass = RegisterClassW( &windowClass );
@@ -147,8 +146,7 @@ intptr_t SIRInputWindow::dispatchNativeMessage( uint32_t nMessage, uintptr_t nWP
 		m_nWindow = 0;
 		return ( intptr_t )DefWindowProcW( hWindow, nMessage, ( WPARAM )nWParam, ( LPARAM )nLParam );
 	}
-	if ( nMessage == WM_SETCURSOR && m_eCursorMode != SIR_INPUT_CURSOR_FREE &&
-	     LOWORD( nLParam ) == HTCLIENT ) {
+	if ( nMessage == WM_SETCURSOR && m_eCursorMode != SIR_INPUT_CURSOR_FREE && LOWORD( nLParam ) == HTCLIENT ) {
 		SetCursor( nullptr );
 		return TRUE;
 	}
@@ -218,7 +216,6 @@ intptr_t SIRInputWindow::dispatchNativeMessage( uint32_t nMessage, uintptr_t nWP
 				return 0;
 			}
 		}
-
 	}
 	return ( intptr_t )DefWindowProcW( hWindow, nMessage, ( WPARAM )nWParam, ( LPARAM )nLParam );
 }

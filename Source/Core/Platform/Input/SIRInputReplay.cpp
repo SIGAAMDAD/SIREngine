@@ -48,8 +48,7 @@ uint16_t SIRInputReplayTape::read16( const uint8_t *pBytes ) noexcept
 
 uint32_t SIRInputReplayTape::read32( const uint8_t *pBytes ) noexcept
 {
-	return ( uint32_t )pBytes[0] | ( ( uint32_t )pBytes[1] << 8 ) | ( ( uint32_t )pBytes[2] << 16 ) |
-	       ( ( uint32_t )pBytes[3] << 24 );
+	return ( uint32_t )pBytes[0] | ( ( uint32_t )pBytes[1] << 8 ) | ( ( uint32_t )pBytes[2] << 16 ) | ( ( uint32_t )pBytes[3] << 24 );
 }
 
 uint64_t SIRInputReplayTape::read64( const uint8_t *pBytes ) noexcept
@@ -157,17 +156,15 @@ bool SIRInputReplayTape::beginRead( const uint8_t *pBuffer, uint32_t nBytes ) no
 
 bool SIRInputReplayTape::next( sirInputReplayFrame_t *pFrame ) noexcept
 {
-	if ( m_eMode != SIR_INPUT_REPLAY_READ || pFrame == nullptr ||
-	     m_nCapacity - m_nOffset < SIR_INPUT_REPLAY_HEADER_BYTES ) {
+	if ( m_eMode != SIR_INPUT_REPLAY_READ || pFrame == nullptr || m_nCapacity - m_nOffset < SIR_INPUT_REPLAY_HEADER_BYTES ) {
 		return false;
 	}
 	const uint8_t *pBytes = m_pRead + m_nOffset;
 	const uint32_t nCount = read32( pBytes + 16 );
 	const uint32_t nBytes = read32( pBytes + 20 );
 	const uint64_t nTick = read64( pBytes + 8 );
-	if ( read32( pBytes ) != SIR_INPUT_REPLAY_MAGIC || read16( pBytes + 4 ) != 1 ||
-	     read16( pBytes + 6 ) != SIR_INPUT_REPLAY_HEADER_BYTES || read32( pBytes + 28 ) != 0 ||
-	     nTick == 0 || nTick <= m_nLastTick || nCount > SIR_INPUT_ACTION_CAPACITY ) {
+	if ( read32( pBytes ) != SIR_INPUT_REPLAY_MAGIC || read16( pBytes + 4 ) != 1 || read16( pBytes + 6 ) != SIR_INPUT_REPLAY_HEADER_BYTES ||
+	     read32( pBytes + 28 ) != 0 || nTick == 0 || nTick <= m_nLastTick || nCount > SIR_INPUT_ACTION_CAPACITY ) {
 		return false;
 	}
 	const uint32_t nRequired = SIR_INPUT_REPLAY_HEADER_BYTES + nCount * SIR_INPUT_REPLAY_RECORD_BYTES;

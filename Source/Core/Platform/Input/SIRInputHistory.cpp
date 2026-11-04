@@ -52,7 +52,7 @@ bool SIRInputHistory::initialize( sirInputReplayFrame_t *pStorage, uint32_t nCap
 	return true;
 }
 
-bool SIRInputHistory::append( const sirInputReplayFrame_t& frame ) noexcept
+bool SIRInputHistory::append( const sirInputReplayFrame_t &frame ) noexcept
 {
 	if ( m_pStorage == nullptr || !SIRInputReplayTape::validateFrame( frame ) ) {
 		return false;
@@ -95,7 +95,7 @@ bool SIRInputHistory::rewindFrom( uint64_t nTick ) noexcept
 	return true;
 }
 
-bool SIRInputHistory::replaceFrom( const sirInputReplayFrame_t& frame ) noexcept
+bool SIRInputHistory::replaceFrom( const sirInputReplayFrame_t &frame ) noexcept
 {
 	if ( !SIRInputReplayTape::validateFrame( frame ) || m_nCount == 0 || frame.nTick < oldestTick() || frame.nTick > newestTick() ) {
 		return false;
@@ -113,7 +113,7 @@ static void sirHistoryHashInteger( uint64_t *pHash, uint64_t nValue, uint32_t nB
 	}
 }
 
-bool SIRInputHistory::hashFrame( const sirInputReplayFrame_t& frame, uint64_t *pOut ) noexcept
+bool SIRInputHistory::hashFrame( const sirInputReplayFrame_t &frame, uint64_t *pOut ) noexcept
 {
 	if ( pOut == nullptr || !SIRInputReplayTape::validateFrame( frame ) ) {
 		return false;
@@ -122,7 +122,7 @@ bool SIRInputHistory::hashFrame( const sirInputReplayFrame_t& frame, uint64_t *p
 	sirHistoryHashInteger( &nHash, frame.nTick, 8 );
 	sirHistoryHashInteger( &nHash, frame.nCount, 4 );
 	for ( uint32_t i = 0; i < frame.nCount; ++i ) {
-		const sirInputActionState_t& state = frame.actions[i];
+		const sirInputActionState_t &state = frame.actions[i];
 		sirHistoryHashInteger( &nHash, state.nActionId, 4 );
 		sirHistoryHashInteger( &nHash, state.nUser, 4 );
 		sirHistoryHashInteger( &nHash, ( uint32_t )state.nValue, 4 );

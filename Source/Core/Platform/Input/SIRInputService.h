@@ -50,10 +50,10 @@ public:
 	bool recover( void ) noexcept;
 	const sirInputFrame_t *frame( void ) const noexcept;
 	bool recordReplayTick( SIRInputReplayTape &tape, const sirInputReplayKey_t *pKeys, uint32_t nCount ) const noexcept;
-	bool captureHistoryTick( SIRInputHistory& history, const sirInputReplayKey_t *pKeys, uint32_t nCount ) const noexcept;
+	bool captureHistoryTick( SIRInputHistory &history, const sirInputReplayKey_t *pKeys, uint32_t nCount ) const noexcept;
 	bool startReplay( void ) noexcept;
 	bool queueReplayTick( const sirInputReplayFrame_t &frame ) noexcept;
-	bool queueHistoryTick( const SIRInputHistory& history, uint64_t nTick ) noexcept;
+	bool queueHistoryTick( const SIRInputHistory &history, uint64_t nTick ) noexcept;
 	void stopReplay( void ) noexcept;
 	bool replayActive( void ) const noexcept;
 	bool queryAction( uint32_t nActionId, uint32_t nUser, sirInputActionState_t *pOut ) const noexcept;

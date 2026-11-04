@@ -32,9 +32,9 @@ class SIRInputHistory
 {
 public:
 	SIRInputHistory( void ) noexcept;
-	SIRInputHistory( const SIRInputHistory& ) = delete;
+	SIRInputHistory( const SIRInputHistory & ) = delete;
 
-	SIRInputHistory& operator=( const SIRInputHistory& ) = delete;
+	SIRInputHistory &operator=( const SIRInputHistory & ) = delete;
 
 	uint32_t count( void ) const noexcept;
 	uint32_t capacity( void ) const noexcept;
@@ -42,16 +42,15 @@ public:
 	uint64_t newestTick( void ) const noexcept;
 
 	bool initialize( sirInputReplayFrame_t *pStorage, uint32_t nCapacity ) noexcept;
-	bool append( const sirInputReplayFrame_t& frame ) noexcept;
+	bool append( const sirInputReplayFrame_t &frame ) noexcept;
 	bool read( uint64_t nTick, sirInputReplayFrame_t *pOut ) const noexcept;
 	bool rewindFrom( uint64_t nTick ) noexcept;
-	bool replaceFrom( const sirInputReplayFrame_t& frame ) noexcept;
+	bool replaceFrom( const sirInputReplayFrame_t &frame ) noexcept;
 	bool digest( uint64_t nTick, uint64_t *pOut ) const noexcept;
 	void clear( void ) noexcept;
-	static bool hashFrame( const sirInputReplayFrame_t& frame, uint64_t *pOut ) noexcept;
+	static bool hashFrame( const sirInputReplayFrame_t &frame, uint64_t *pOut ) noexcept;
 
 protected:
-
 private:
 	sirInputReplayFrame_t *m_pStorage;
 	uint32_t m_nCapacity;

@@ -130,5 +130,5 @@ uint64_t SIRAllocationRouter::getRoutedCount( sirRoutingBacking_e backing ) cons
 {
 	return m_bInitialized && m_nOwnerToken == routerThreadToken() && backing > SIR_ROUTE_NONE && backing <= SIR_ROUTE_FRAME
 	           ? m_nCounts[backing].load( SIR_MEMORY_ORDER_RELAXED )
-	           : 0;
+			   : 0;
 }

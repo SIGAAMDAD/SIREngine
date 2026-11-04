@@ -16,6 +16,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Core/Platform/Input/Linux/SIRLinuxEvdevBackend.h>
 #include <Core/Platform/SIRPlatformTime.h>
 #include <dirent.h>
+
 #include <errno.h>
 #include <fcntl.h>
 #include <linux/input.h>
@@ -136,7 +137,6 @@ bool SIRLinuxEvdevBackend::addProfile( const sirInputControllerProfile_t &profil
 	}
 	return m_Profiles.add( profile );
 }
-
 
 bool SIRLinuxEvdevBackend::importCookedProfiles( const uint8_t *pBytes, uint32_t nBytes ) noexcept
 {
@@ -271,9 +271,8 @@ bool SIRLinuxEvdevBackend::openDevice( SIRInputService &service, const char *psz
 	const bool bHasIdentity = ioctl( nFd, EVIOCGID, &physicalIdentity ) == 0;
 	const bool bHasPath = ioctl( nFd, EVIOCGPHYS( sizeof( szPhysicalPath ) ), szPhysicalPath ) > 0;
 	szPhysicalPath[sizeof( szPhysicalPath ) - 1] = 0;
-	const uint64_t nPhysical = bHasPath && bHasIdentity
-	                               ? physicalKey( szPhysicalPath, physicalIdentity.vendor, physicalIdentity.product )
-	                               : 0;
+	const uint64_t nPhysical =
+	    bHasPath && bHasIdentity ? physicalKey( szPhysicalPath, physicalIdentity.vendor, physicalIdentity.product ) : 0;
 	sirInputDeviceId_t idOut = {};
 	if ( !service.connect( { nPhysical, nNative, id(), SIR_INPUT_CONTROLLER }, &idOut ) ) {
 		close( nFd );
@@ -632,8 +631,7 @@ uint32_t SIRLinuxEvdevBackend::hapticCapabilities( sirInputDeviceId_t hDevice ) 
 {
 	for ( uint32_t i = 0; i < SIR_INPUT_EVDEV_CAPACITY; ++i ) {
 		const sirInputEvdevSlot_t &slot = m_Slots[i];
-		if ( slot.bOpen && slot.bCanRumble && slot.id.nSlot == hDevice.nSlot &&
-		     slot.id.nGeneration == hDevice.nGeneration ) {
+		if ( slot.bOpen && slot.bCanRumble && slot.id.nSlot == hDevice.nSlot && slot.id.nGeneration == hDevice.nGeneration ) {
 			return SIR_INPUT_HAPTIC_CAP_RUMBLE;
 		}
 	}

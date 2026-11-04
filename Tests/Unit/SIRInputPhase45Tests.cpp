@@ -134,12 +134,11 @@ static bool sirTestTextAndUIRoute( void )
 	SIRInputUIHapticBackend backend;
 	SIRInputUIDispatch bridge;
 	sirInputUIHapticRecorder_t recorder = {};
-	if ( !input.attach( backend ) || !input.actions().addContext( 1, 0, 10, true ) ||
-	     !input.actions().addAction( 42, 0 ) ) {
+	if ( !input.attach( backend ) || !input.actions().addContext( 1, 0, 10, true ) || !input.actions().addAction( 42, 0 ) ) {
 		return false;
 	}
-	const sirInputActionBinding_t binding = { 42, 1, 15, SIR_INPUT_NO_CHORD, 0, 0, 32767,
-	                                         SIR_INPUT_KEYBOARD, SIR_INPUT_BUTTON, SIR_INPUT_BIND_NONE };
+	const sirInputActionBinding_t binding = {
+	    42, 1, 15, SIR_INPUT_NO_CHORD, 0, 0, 32767, SIR_INPUT_KEYBOARD, SIR_INPUT_BUTTON, SIR_INPUT_BIND_NONE };
 	if ( !input.actions().addBinding( binding ) ) {
 		return false;
 	}
@@ -159,33 +158,28 @@ static bool sirTestTextAndUIRoute( void )
 	}
 	const char szUtf8[4] = { 'A', ( char )0xe2, ( char )0x82, ( char )0xac };
 	const uint16_t szPreedit[2] = { 0x4e2d, 0x6587 };
-	if ( !input.text().appendUtf8( szUtf8, sizeof( szUtf8 ) ) ||
-	     !input.text().appendUtf16( 0xd83d ) || !input.text().appendUtf16( 0xde00 ) ||
-	     !input.text().setPreeditUtf16( szPreedit, 2, 1, 1 ) || !input.publish() ) {
+	if ( !input.text().appendUtf8( szUtf8, sizeof( szUtf8 ) ) || !input.text().appendUtf16( 0xd83d ) ||
+	     !input.text().appendUtf16( 0xde00 ) || !input.text().setPreeditUtf16( szPreedit, 2, 1, 1 ) || !input.publish() ) {
 		return false;
 	}
 
 	const sirInputTextSnapshot_t &text = input.text().snapshot();
-	if ( text.nTick != 1 || text.nCount != 3 || text.szCodepoints[0] != 'A' ||
-	     text.szCodepoints[1] != 0x20ac || text.szCodepoints[2] != 0x1f600 ||
-	     text.nPreeditCount != 2 || text.nCaret != 1 || text.nSelection != 1 ) {
+	if ( text.nTick != 1 || text.nCount != 3 || text.szCodepoints[0] != 'A' || text.szCodepoints[1] != 0x20ac ||
+	     text.szCodepoints[2] != 0x1f600 || text.nPreeditCount != 2 || text.nCaret != 1 || text.nSelection != 1 ) {
 		return false;
 	}
 	const uint32_t nActionId = 42;
-	sirInputUIConsumer_t consumer = { &recorder, &nActionId, 1, 0, sirRecordUIAction, sirRecordUIText,
-	                                 sirRecordUIPreedit, sirRecordUIFocus, sirRecordUIPointer };
-	if ( !bridge.dispatch( input, consumer ) || bridge.dispatch( input, consumer ) ||
-	     recorder.nTextCount != 3 || recorder.nCodepoint != 0x1f600 ||
-	     !recorder.bActionPressed || recorder.nActions != 1 || recorder.nPreeditCalls != 1 ||
+	sirInputUIConsumer_t consumer = { &recorder,        &nActionId,        1, 0, sirRecordUIAction, sirRecordUIText, sirRecordUIPreedit,
+	                                  sirRecordUIFocus, sirRecordUIPointer };
+	if ( !bridge.dispatch( input, consumer ) || bridge.dispatch( input, consumer ) || recorder.nTextCount != 3 ||
+	     recorder.nCodepoint != 0x1f600 || !recorder.bActionPressed || recorder.nActions != 1 || recorder.nPreeditCalls != 1 ||
 	     recorder.nPreeditLength != 2 || recorder.nFocusCalls != 1 || !recorder.bFocused || recorder.nPointerCalls != 1 ) {
 		return false;
 	}
 
 	input.text().setFocused( false );
-	if ( !input.begin( 2 ) || input.text().appendCodepoint( 'Z' ) ||
-	     !input.publish() || !bridge.dispatch( input, consumer ) ||
-	     recorder.nTextCount != 3 || recorder.nPreeditLength != 0 ||
-	     recorder.nFocusCalls != 2 || recorder.bFocused ) {
+	if ( !input.begin( 2 ) || input.text().appendCodepoint( 'Z' ) || !input.publish() || !bridge.dispatch( input, consumer ) ||
+	     recorder.nTextCount != 3 || recorder.nPreeditLength != 0 || recorder.nFocusCalls != 2 || recorder.bFocused ) {
 		return false;
 	}
 	input.shutdown();
@@ -200,8 +194,8 @@ static bool sirTestTextValidationAndOverflow( void )
 	text.begin( 1 );
 	const char szBadUtf8[] = { ( char )0xc0, ( char )0x80 };
 	const char szGoodUtf8[] = { ( char )0xf0, ( char )0x9f, ( char )0x8c, ( char )0x8d };
-	if ( text.appendUtf8( szBadUtf8, 2 ) || !text.appendUtf8( szGoodUtf8, 4 ) ||
-	     text.snapshot().nCount != 1 || text.snapshot().szCodepoints[0] != 0x1f30d ) {
+	if ( text.appendUtf8( szBadUtf8, 2 ) || !text.appendUtf8( szGoodUtf8, 4 ) || text.snapshot().nCount != 1 ||
+	     text.snapshot().szCodepoints[0] != 0x1f30d ) {
 		return false;
 	}
 	for ( uint32_t i = 1; i < SIR_INPUT_TEXT_CAPACITY; ++i ) {
@@ -255,8 +249,8 @@ static bool sirTestCookedControllerProfiles( void )
 		return false;
 	}
 	const sirInputControllerProfile_t *pFound = restored.find( 5, profile.nVendor, profile.nProduct );
-	if ( pFound == nullptr || pFound->buttons[1].nLogicalCode != SIR_INPUT_PAD_SOUTH ||
-	     !pFound->bReplaceButtons || !pFound->axes[0].bInvert ) {
+	if ( pFound == nullptr || pFound->buttons[1].nLogicalCode != SIR_INPUT_PAD_SOUTH || !pFound->bReplaceButtons ||
+	     !pFound->axes[0].bInvert ) {
 		return false;
 	}
 	uint8_t szRoundTrip[SIR_INPUT_COOKED_PROFILE_MAX_BYTES] = {};
@@ -266,14 +260,12 @@ static bool sirTestCookedControllerProfiles( void )
 		return false;
 	}
 	szBytes[nSize - 1] ^= 0x80;
-	if ( restored.loadCooked( szBytes, nSize ) || restored.loadCooked( szRoundTrip, nSize - 1 ) ||
-	     restored.count() != 1 ) {
+	if ( restored.loadCooked( szBytes, nSize ) || restored.loadCooked( szRoundTrip, nSize - 1 ) || restored.count() != 1 ) {
 		return false;
 	}
 #if defined( __linux__ )
 	SIRLinuxEvdevBackend backend;
-	if ( !backend.importCookedProfiles( szRoundTrip, nRoundTrip ) ||
-	     backend.importCookedProfiles( szRoundTrip, nRoundTrip ) ) {
+	if ( !backend.importCookedProfiles( szRoundTrip, nRoundTrip ) || backend.importCookedProfiles( szRoundTrip, nRoundTrip ) ) {
 		return false;
 	}
 #endif
@@ -288,24 +280,20 @@ static bool sirTestHapticMixing( void )
 	const sirInputHapticRequest_t slow = { hDevice, 60000, 10000, 10, 20, 10, 1 };
 	sirInputHapticHandle_t hLow = {};
 	if ( !haptics.schedule( slow, 1000000000ULL, &hLow ) || haptics.activeCount() != 1 ||
-	     !haptics.advance( 1010000000ULL, false, sirRecordRumble, &recorder ) ||
-	     recorder.nLeft != 60000 || recorder.nRight != 10000 ) {
+	     !haptics.advance( 1010000000ULL, false, sirRecordRumble, &recorder ) || recorder.nLeft != 60000 || recorder.nRight != 10000 ) {
 		return false;
 	}
 
 	const sirInputHapticRequest_t high = { hDevice, 5000, 40000, 0, 20, 0, 10 };
 	sirInputHapticHandle_t hHigh = {};
-	if ( !haptics.schedule( high, 1010000000ULL, &hHigh ) ||
-	     !haptics.advance( 1011000000ULL, false, sirRecordRumble, &recorder ) ||
-	     recorder.nLeft != 5000 || recorder.nRight != 40000 || !haptics.cancel( hHigh ) ||
-	     haptics.cancel( hHigh ) ) {
+	if ( !haptics.schedule( high, 1010000000ULL, &hHigh ) || !haptics.advance( 1011000000ULL, false, sirRecordRumble, &recorder ) ||
+	     recorder.nLeft != 5000 || recorder.nRight != 40000 || !haptics.cancel( hHigh ) || haptics.cancel( hHigh ) ) {
 		return false;
 	}
-	if ( !haptics.advance( 1020000000ULL, false, sirRecordRumble, &recorder ) ||
-	     recorder.nLeft != 60000 || !haptics.advance( 1035000000ULL, false, sirRecordRumble, &recorder ) ||
-	     recorder.nLeft == 0 || recorder.nLeft >= 60000 ||
-	     !haptics.advance( 1040000000ULL, false, sirRecordRumble, &recorder ) ||
-	     recorder.nLeft != 0 || recorder.nRight != 0 || haptics.activeCount() != 0 ) {
+	if ( !haptics.advance( 1020000000ULL, false, sirRecordRumble, &recorder ) || recorder.nLeft != 60000 ||
+	     !haptics.advance( 1035000000ULL, false, sirRecordRumble, &recorder ) || recorder.nLeft == 0 || recorder.nLeft >= 60000 ||
+	     !haptics.advance( 1040000000ULL, false, sirRecordRumble, &recorder ) || recorder.nLeft != 0 || recorder.nRight != 0 ||
+	     haptics.activeCount() != 0 ) {
 		return false;
 	}
 
@@ -343,8 +331,8 @@ static bool sirTestHapticDeviceLifecycle( void )
 	}
 	input.setHapticsPaused( false );
 	input.sample();
-	if ( backend.m_nLastLeft != 32000 || !input.disconnect( SIR_INPUT_TEST, hDevice ) ||
-	     input.activeHaptics() != 0 || backend.m_nLastLeft != 0 ) {
+	if ( backend.m_nLastLeft != 32000 || !input.disconnect( SIR_INPUT_TEST, hDevice ) || input.activeHaptics() != 0 ||
+	     backend.m_nLastLeft != 0 ) {
 		return false;
 	}
 	input.shutdown();
@@ -353,8 +341,8 @@ static bool sirTestHapticDeviceLifecycle( void )
 
 int main( void )
 {
-	if ( !sirTestTextAndUIRoute() || !sirTestTextValidationAndOverflow() || !sirTestCookedControllerProfiles() ||
-	     !sirTestHapticMixing() || !sirTestHapticDeviceLifecycle() ) {
+	if ( !sirTestTextAndUIRoute() || !sirTestTextValidationAndOverflow() || !sirTestCookedControllerProfiles() || !sirTestHapticMixing() ||
+	     !sirTestHapticDeviceLifecycle() ) {
 		fputs( "SIRInputPhase45Tests FAILED\n", stderr );
 		return 1;
 	}

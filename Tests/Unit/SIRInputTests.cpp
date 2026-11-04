@@ -322,10 +322,9 @@ static bool testEvdevCodes( void )
 	           SIRLinuxEvdevBackend::physicalKey( "usb-0000:00:14.0-1/input1", 0x045e, 0x0b12 ) &&
 	       SIRLinuxEvdevBackend::physicalKey( "usb-0000:00:14.0-1/input0", 0x045e, 0x0b12 ) !=
 	           SIRLinuxEvdevBackend::physicalKey( "usb-0000:00:14.0-2/input0", 0x045e, 0x0b12 ) &&
-	       SIRLinuxEvdevBackend::physicalKey( nullptr, 0, 0 ) == 0 &&
-	       SIRLinuxEvdevBackend::mapButton( BTN_SOUTH ) == SIR_INPUT_PAD_SOUTH && SIRLinuxEvdevBackend::mapButton( KEY_A ) == -1 &&
-	       SIRLinuxEvdevBackend::mapAxis( ABS_RX ) == SIR_INPUT_AXIS_RX && SIRLinuxEvdevBackend::mapAxis( ABS_HAT0X ) == -1 &&
-	       SIRLinuxEvdevBackend::normalize( -32768, -32768, 32767, false ) == -32767 &&
+	       SIRLinuxEvdevBackend::physicalKey( nullptr, 0, 0 ) == 0 && SIRLinuxEvdevBackend::mapButton( BTN_SOUTH ) == SIR_INPUT_PAD_SOUTH &&
+	       SIRLinuxEvdevBackend::mapButton( KEY_A ) == -1 && SIRLinuxEvdevBackend::mapAxis( ABS_RX ) == SIR_INPUT_AXIS_RX &&
+	       SIRLinuxEvdevBackend::mapAxis( ABS_HAT0X ) == -1 && SIRLinuxEvdevBackend::normalize( -32768, -32768, 32767, false ) == -32767 &&
 	       SIRLinuxEvdevBackend::normalize( 32767, -32768, 32767, false ) == 32767 &&
 	       SIRLinuxEvdevBackend::normalize( 255, 0, 255, true ) == 32767;
 }

@@ -299,10 +299,9 @@ bool SIRWindowsGameInputBackend::vibrate( sirInputDeviceId_t id, uint16_t nLeft,
 		if ( device.pDevice != nullptr && device.id.nSlot == id.nSlot && device.id.nGeneration == id.nGeneration ) {
 			device.nMotorLeft = nLeft;
 			device.nMotorRight = nRight;
-			const GameInput::v1::GameInputRumbleParams rumble = {
-			    ( float )nLeft / 65535.0f, ( float )nRight / 65535.0f,
-			    ( float )device.nTriggerLeft / 65535.0f, ( float )device.nTriggerRight / 65535.0f
-			};
+			const GameInput::v1::GameInputRumbleParams rumble = { ( float )nLeft / 65535.0f, ( float )nRight / 65535.0f,
+			                                                      ( float )device.nTriggerLeft / 65535.0f,
+			                                                      ( float )device.nTriggerRight / 65535.0f };
 			( ( GameInput::v1::IGameInputDevice * )device.pDevice )->SetRumbleState( &rumble );
 			return true;
 		}
@@ -317,10 +316,9 @@ bool SIRWindowsGameInputBackend::vibrateTriggers( sirInputDeviceId_t id, uint16_
 		if ( device.pDevice != nullptr && device.id.nSlot == id.nSlot && device.id.nGeneration == id.nGeneration ) {
 			device.nTriggerLeft = nLeft;
 			device.nTriggerRight = nRight;
-			const GameInput::v1::GameInputRumbleParams rumble = {
-			    ( float )device.nMotorLeft / 65535.0f, ( float )device.nMotorRight / 65535.0f,
-			    ( float )nLeft / 65535.0f, ( float )nRight / 65535.0f
-			};
+			const GameInput::v1::GameInputRumbleParams rumble = { ( float )device.nMotorLeft / 65535.0f,
+			                                                      ( float )device.nMotorRight / 65535.0f, ( float )nLeft / 65535.0f,
+			                                                      ( float )nRight / 65535.0f };
 			( ( GameInput::v1::IGameInputDevice * )device.pDevice )->SetRumbleState( &rumble );
 			return true;
 		}
@@ -332,8 +330,7 @@ uint32_t SIRWindowsGameInputBackend::hapticCapabilities( sirInputDeviceId_t hDev
 {
 	for ( uint32_t i = 0; i < SIR_INPUT_DEVICE_CAPACITY; ++i ) {
 		const sirGameInputNativeDevice_t &device = m_Devices[i];
-		if ( device.pDevice == nullptr || device.id.nSlot != hDevice.nSlot ||
-		     device.id.nGeneration != hDevice.nGeneration ) {
+		if ( device.pDevice == nullptr || device.id.nSlot != hDevice.nSlot || device.id.nGeneration != hDevice.nGeneration ) {
 			continue;
 		}
 		const GameInput::v1::GameInputDeviceInfo *pInfo = nullptr;

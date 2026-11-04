@@ -14,6 +14,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Core/Platform/Input/SIRInputService.h>
+
 #include <Core/Platform/SIRPlatformTime.h>
 
 static bool sirInputRumbleOutput( void *pContext, sirInputDeviceId_t hDevice, uint16_t nLeft, uint16_t nRight ) noexcept
@@ -22,9 +23,8 @@ static bool sirInputRumbleOutput( void *pContext, sirInputDeviceId_t hDevice, ui
 }
 
 SIRInputService::SIRInputService( void ) noexcept
-    : m_Actions(), m_Text(), m_Haptics(), m_ReplayFrame{}, m_Registry(), m_State(), m_pBackends{},
-      m_nBackendCount( 0 ), m_bStopping( false ), m_bHapticsPaused( false ), m_bReplayActive( false ),
-      m_bReplayQueued( false ), m_nCollectingTick( 0 )
+    : m_Actions(), m_Text(), m_Haptics(), m_ReplayFrame{}, m_Registry(), m_State(), m_pBackends{}, m_nBackendCount( 0 ),
+      m_bStopping( false ), m_bHapticsPaused( false ), m_bReplayActive( false ), m_bReplayQueued( false ), m_nCollectingTick( 0 )
 {
 }
 
@@ -79,8 +79,7 @@ void SIRInputService::sample( void ) noexcept
 			m_pBackends[i]->sample( *this );
 		}
 		if ( m_Haptics.hasWork() ) {
-			( void )m_Haptics.advance( SIRPlatformTime::getMonotonicNanoseconds(), m_bHapticsPaused,
-			                          sirInputRumbleOutput, this );
+			( void )m_Haptics.advance( SIRPlatformTime::getMonotonicNanoseconds(), m_bHapticsPaused, sirInputRumbleOutput, this );
 		}
 	}
 }
@@ -119,8 +118,7 @@ bool SIRInputService::recordReplayTick( SIRInputReplayTape &tape, const sirInput
 	return tape.append( pFrame->nTick, m_Actions, pKeys, nCount );
 }
 
-
-bool SIRInputService::captureHistoryTick( SIRInputHistory& history, const sirInputReplayKey_t *pKeys, uint32_t nCount ) const noexcept
+bool SIRInputService::captureHistoryTick( SIRInputHistory &history, const sirInputReplayKey_t *pKeys, uint32_t nCount ) const noexcept
 {
 	const sirInputFrame_t *pFrame = m_State.frame();
 	if ( m_bStopping || m_State.collecting() || pFrame == nullptr || nCount > SIR_INPUT_ACTION_CAPACITY ||
@@ -160,7 +158,7 @@ bool SIRInputService::queueReplayTick( const sirInputReplayFrame_t &frame ) noex
 	return true;
 }
 
-bool SIRInputService::queueHistoryTick( const SIRInputHistory& history, uint64_t nTick ) noexcept
+bool SIRInputService::queueHistoryTick( const SIRInputHistory &history, uint64_t nTick ) noexcept
 {
 	if ( !m_bReplayActive || !m_State.collecting() || nTick != m_nCollectingTick ) {
 		return false;

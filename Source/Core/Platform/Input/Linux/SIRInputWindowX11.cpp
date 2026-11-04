@@ -56,8 +56,8 @@ bool SIRInputWindow::open( SIRInputService &input, SIRInputBackend &desktop ) no
 		( void )XSetLocaleModifiers( "" );
 		XIM hInputMethod = XOpenIM( pDisplay, nullptr, nullptr, nullptr );
 		if ( hInputMethod != nullptr ) {
-			XIC hInputContext = XCreateIC( hInputMethod, XNInputStyle, XIMPreeditNothing | XIMStatusNothing,
-			                               XNClientWindow, hWindow, XNFocusWindow, hWindow, nullptr );
+			XIC hInputContext = XCreateIC( hInputMethod, XNInputStyle, XIMPreeditNothing | XIMStatusNothing, XNClientWindow, hWindow,
+			                               XNFocusWindow, hWindow, nullptr );
 			if ( hInputContext != nullptr ) {
 				m_pInputMethod = hInputMethod;
 				m_pInputContext = hInputContext;
@@ -136,10 +136,8 @@ bool SIRInputWindow::pump( SIRInputService &input ) noexcept
 				char szUtf8[1024] = {};
 				KeySym eKey = NoSymbol;
 				Status eStatus = XLookupNone;
-				const int nLength = Xutf8LookupString( ( XIC )m_pInputContext, &event.xkey, szUtf8, sizeof( szUtf8 ),
-				                                       &eKey, &eStatus );
-				if ( nLength > 0 && nLength <= ( int )sizeof( szUtf8 ) &&
-				     ( eStatus == XLookupChars || eStatus == XLookupBoth ) ) {
+				const int nLength = Xutf8LookupString( ( XIC )m_pInputContext, &event.xkey, szUtf8, sizeof( szUtf8 ), &eKey, &eStatus );
+				if ( nLength > 0 && nLength <= ( int )sizeof( szUtf8 ) && ( eStatus == XLookupChars || eStatus == XLookupBoth ) ) {
 					( void )input.text().appendUtf8( szUtf8, ( uint32_t )nLength );
 				}
 			}
@@ -189,8 +187,8 @@ bool SIRInputWindow::setCursorMode( sirInputCursorMode_t eMode ) noexcept
 		XDefineCursor( pDisplay, hWindow, ( Cursor )m_nInvisibleCursor );
 	}
 	if ( eMode == SIR_INPUT_CURSOR_CAPTURED && m_bFocused ) {
-		const int nResult = XGrabPointer( pDisplay, hWindow, True, ButtonPressMask | ButtonReleaseMask | PointerMotionMask,
-		                                  GrabModeAsync, GrabModeAsync, hWindow, ( Cursor )m_nInvisibleCursor, CurrentTime );
+		const int nResult = XGrabPointer( pDisplay, hWindow, True, ButtonPressMask | ButtonReleaseMask | PointerMotionMask, GrabModeAsync,
+		                                  GrabModeAsync, hWindow, ( Cursor )m_nInvisibleCursor, CurrentTime );
 		if ( nResult != GrabSuccess ) {
 			XFlush( pDisplay );
 			return false;

@@ -25,9 +25,9 @@ bool SIRInputUIDispatch::dispatch( const SIRInputService &input, const sirInputU
 {
 	const sirInputFrame_t *pFrame = input.frame();
 	const sirInputTextSnapshot_t &text = input.text().snapshot();
-	if ( pFrame == nullptr || pFrame->nTick == 0 || pFrame->nTick <= m_nLastTick ||
-	     pFrame->nTick != text.nTick || consumer.nActionCount > SIR_INPUT_ACTION_CAPACITY ||
-	     ( consumer.nActionCount != 0 && consumer.pActionIds == nullptr ) || consumer.nUser >= SIR_INPUT_USER_CAPACITY ) {
+	if ( pFrame == nullptr || pFrame->nTick == 0 || pFrame->nTick <= m_nLastTick || pFrame->nTick != text.nTick ||
+	     consumer.nActionCount > SIR_INPUT_ACTION_CAPACITY || ( consumer.nActionCount != 0 && consumer.pActionIds == nullptr ) ||
+	     consumer.nUser >= SIR_INPUT_USER_CAPACITY ) {
 		return false;
 	}
 
