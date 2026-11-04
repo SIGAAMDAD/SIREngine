@@ -56,7 +56,7 @@ static int sirTestNativeBindingSet( SIRRenderingDevice *pDevice, const sirGraphi
 	sirGraphicsCompletionSet_t idle = {};
 	idle.nDeviceGeneration = pDevice->getDeviceGeneration();
 	sirGraphicsBufferDesc_t output = {};
-	output.nSizeBytes = 64 * sizeof( uint32_t );
+	output.nSizeBytes = 4096 * sizeof( uint32_t );
 	output.nUsage = SIR_GRAPHICS_USAGE_STORAGE | SIR_GRAPHICS_USAGE_COPY_SOURCE;
 	output.eMemory = SIR_GRAPHICS_MEMORY_GPU_LOCAL;
 	sirGraphicsHandle_t hOutput = {};
@@ -171,6 +171,46 @@ static int sirTestNativeBindingSet( SIRRenderingDevice *pDevice, const sirGraphi
 	for ( uint32_t i = 0; i < 64; ++i ) {
 		if ( ( ( const uint32_t * )mapped.pData )[i] != 0x50000000U + 7U * i ) {
 			return 26;
+		}
+	}
+	// Retain the old kernel's boundary coverage on the *general* compute path.
+	// Repeated dispatches span different multiples of the 64-thread group.
+	const uint32_t szGroups[] = { 2, 3, 17, 64 };
+	for ( uint32_t iPass = 0; iPass < sizeof( szGroups ) / sizeof( szGroups[0] ); ++iPass ) {
+		SIRGraphicsCommandList *pNext = nullptr;
+		if ( pDevice->acquireCommands( SIR_GRAPHICS_QUEUE_COMPUTE, &pNext ) != SIR_GRAPHICS_SUCCESS || pNext == nullptr ) {
+			return 30;
+		}
+		transition.eBefore = SIR_GRAPHICS_STATE_COPY_SOURCE;
+		transition.eAfter = SIR_GRAPHICS_STATE_SHADER_WRITE;
+		if ( pNext->barrier( &transition, 1 ) != SIR_GRAPHICS_SUCCESS || pNext->bindPipeline( hPipeline ) != SIR_GRAPHICS_SUCCESS ||
+		     pNext->bindBindingSet( 0, hSet ) != SIR_GRAPHICS_SUCCESS ||
+		     pNext->dispatch( szGroups[iPass], 1, 1 ) != SIR_GRAPHICS_SUCCESS ) {
+			return 31;
+		}
+		transition.eBefore = SIR_GRAPHICS_STATE_SHADER_WRITE;
+		transition.eAfter = SIR_GRAPHICS_STATE_COPY_SOURCE;
+		if ( pNext->barrier( &uavBarrier, 1 ) != SIR_GRAPHICS_SUCCESS || pNext->barrier( &transition, 1 ) != SIR_GRAPHICS_SUCCESS ||
+		     pNext->copyBuffer( hReadback, 0, hOutput, 0, output.nSizeBytes ) != SIR_GRAPHICS_SUCCESS ||
+		     pNext->close() != SIR_GRAPHICS_SUCCESS ) {
+			return 32;
+		}
+		SIRGraphicsCommandList *szNext[] = { pNext };
+		sirGraphicsSubmission_t nextSubmission = {};
+		nextSubmission.ppCommandLists = szNext;
+		nextSubmission.nCommandListCount = 1;
+		sirGraphicsCompletion_t done = {};
+		if ( pDevice->submit( SIR_GRAPHICS_QUEUE_COMPUTE, nextSubmission, &done ) != SIR_GRAPHICS_SUCCESS ||
+		     pDevice->wait( done, 10000000000ULL ) != SIR_GRAPHICS_SUCCESS ) {
+			return 33;
+		}
+		if ( pDevice->mapBuffer( hReadback, 0, output.nSizeBytes, &mapped ) != SIR_GRAPHICS_SUCCESS ) {
+			return 34;
+		}
+		for ( uint32_t iValue = 0; iValue < szGroups[iPass] * 64; ++iValue ) {
+			if ( ( ( const uint32_t * )mapped.pData )[iValue] != 0x50000000U + 7U * iValue ) {
+				return 35;
+			}
 		}
 	}
 	if ( pDevice->retireResource( hSet, idle ) != SIR_GRAPHICS_SUCCESS ||

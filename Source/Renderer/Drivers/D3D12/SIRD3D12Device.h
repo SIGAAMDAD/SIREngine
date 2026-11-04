@@ -35,8 +35,6 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Renderer/Drivers/D3D12/SIRD3D12Memory.h>
 #include <Renderer/Drivers/D3D12/SIRD3D12Diagnostics.h>
 #include <Renderer/SIRGraphicsTypes.h>
-#include <Renderer/Drivers/D3D12/SIRD3D12ComputeKernel.h>
-#include <Renderer/Drivers/D3D12/SIRD3D12GraphicsKernel.h>
 #include <Renderer/Drivers/D3D12/SIRD3D12Transfers.h>
 
 typedef struct sirD3D12AdapterInfo_s
@@ -82,7 +80,6 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12CommandAllocator> m_pAllocator;
 	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> m_pCommands;
 	Microsoft::WRL::ComPtr<ID3D12Fence> m_pPendingDependencyFence;
-	SIRD3D12ComputeKernel m_Kernel;
 	HANDLE m_hEvent = nullptr;
 	uint64_t m_nNextFence = 1;
 	uint64_t m_nSubmittedFence = 0;
@@ -99,10 +96,6 @@ public:
 	bool shutdown( void ) noexcept;
 	bool isReady( void ) const noexcept;
 	bool submitMarker( uint64_t *pFenceValue ) noexcept;
-	bool initializeKernel( ID3D12Device *pDevice, SIRD3D12Memory *pMemory, const void *pDxil, size_t nDxilBytes,
-	                       uint32_t nMaxElements ) noexcept;
-	bool dispatchKernel( uint32_t nElements, uint32_t nSeed, uint64_t *pFenceValue ) noexcept;
-	bool readKernel( uint64_t nFence, uint32_t *pOutput, uint32_t nCapacity ) noexcept;
 	bool submitMarkerAfterFence( ID3D12Fence *pDependencyFence, uint64_t nDependencyFence, uint64_t *pFenceValue ) noexcept;
 	bool pollFence( uint64_t nFence, bool *pCompleted ) const noexcept;
 	bool waitForFence( uint64_t nFence, uint32_t nTimeoutMs ) noexcept;
@@ -134,7 +127,6 @@ private:
 	SIRD3D12Diagnostics m_Diagnostics;
 	SIRD3D12Transfers m_Transfers;
 	SIRD3D12ComputeQueue m_ComputeQueue;
-	SIRD3D12GraphicsKernel m_GraphicsKernel;
 	HANDLE m_hFenceEvent = nullptr;
 	uint64_t m_nNextFenceValue = 0;
 	uint64_t m_nDeviceGeneration = 0;
@@ -177,16 +169,9 @@ public:
 	bool snapshotCompletionSet( sirD3D12CompletionSet_t *pSet ) const noexcept;
 	bool pollCompletionSet( const sirD3D12CompletionSet_t &set, bool *pCompleted ) noexcept;
 	bool submitComputeMarker( sirD3D12CompletionSet_t *pSet ) noexcept;
-	bool initializeComputeKernel( const void *pDxil, size_t nDxilBytes, uint32_t nMaxElements ) noexcept;
-	bool submitComputeKernel( uint32_t nElements, uint32_t nSeed, sirD3D12CompletionSet_t *pSet ) noexcept;
 	bool submitComputeAfterCopy( sirD3D12TransferTicket_t ticket, sirD3D12CompletionSet_t *pSet ) noexcept;
 	bool submitGraphicsAfterCompute( const sirD3D12CompletionSet_t &computeSet, sirD3D12CompletionSet_t *pSet ) noexcept;
 	bool waitForGraphicsFence( uint64_t nFenceValue, uint32_t nTimeoutMs ) noexcept;
-	bool initializeGraphicsKernel( const void *pVertexDxil, size_t nVertexBytes, const void *pPixelDxil, size_t nPixelBytes,
-	                               uint32_t nMaxWidth, uint32_t nMaxHeight ) noexcept;
-	bool submitGraphicsTriangle( uint32_t nWidth, uint32_t nHeight, sirD3D12CompletionSet_t *pSet ) noexcept;
-	bool readGraphicsTriangle( const sirD3D12CompletionSet_t &set, uint8_t *pOutput, uint32_t nRowPitch, size_t nOutputBytes ) noexcept;
-	bool getGraphicsKernelCapacityForTest( uint32_t *pWidth, uint32_t *pHeight ) const noexcept;
 
 	// Native-only resource ownership; never pass D3D12MA pointers into GRDG.
 	bool createNativeBuffer( D3D12_HEAP_TYPE eHeapType, D3D12_RESOURCE_STATES eInitialState, uint64_t nBytes,

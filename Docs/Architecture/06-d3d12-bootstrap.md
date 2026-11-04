@@ -1,5 +1,10 @@
 # D3D12 headless bootstrap (experimental)
 
+> **Historical implementation journal.** This file records the early headless milestones and retains their original period-specific TODO lists. Its early "Remaining" paragraphs are not current status. The authoritative current D3D12 source/feature/acceptance matrix is [09-d3d12-driver-status.md](09-d3d12-driver-status.md), with test methodology in [08-d3d12-validation-performance.md](08-d3d12-validation-performance.md).
+>
+> Following the six validated implementation milestones, the consolidated branch includes bounded buffers/textures/descriptors, general pipeline and command submission, Win32 DXGI presentation, Core memory reporting, fault diagnostics and an opt-in physical hardware benchmark runner.
+
+
 **Branch:** `renderer/d3d12-headless-foundation`  
 **Base:** `develop` at `0a7d47de77130b63290ec4950bdf2e257dbfe326`  
 **Scope:** Native Windows Direct3D 12 foundation only; no GRDG, Vulkan, frame graph, window manager or shader cooker dependency.
