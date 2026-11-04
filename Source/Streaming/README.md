@@ -30,6 +30,16 @@ and completion transfer. Core Jobs owns scheduling and worker/provider fences.
 - Demand-set validation rejects stale epochs, duplicate keys, invalid ownership
   and over-capacity snapshots before modifying coordinator tickets.
 
+- `SIRStreamingProviderBridge` now polls coordinator tickets in bounded,
+  round-robin owner-thread slices, requests preparation/activation/retirement
+  through explicit provider callbacks, and accepts generation-checked
+  acknowledgements only after real provider completions. Preparation and
+  activation are not assumed successful from dispatch acceptance.
+- Cancellation during preparation and activation, activation failure, and
+  downgraded demand all retain outstanding provider ownership until retirement
+  is explicitly acknowledged. Forced external ticket recycling cannot free
+  a provider-pinned bridge slot.
+
 ## Module boundaries for the complete system
 
 | Layer | Planned owner | Contract / next component |
@@ -42,7 +52,7 @@ and completion transfer. Core Jobs owns scheduling and worker/provider fences.
 | Request coordination, dedup, publication | `Source/Resources` | GRDG writer and native streaming coordinator (PR #23 foundation) |
 | Native read/completion | `Source/Core/IO`, platform backends | Windows IOCP, Linux io_uring/pread fallback |
 | Terrain-specific residency | `Source/Terrain` | region pages, VT, HLOD, clipmap feedback |
-| Provider activation | Renderer, Jolt, navigation, scripting, FMOD | provider-safe fences, callbacks, version guards |
+| Provider activation | Renderer, Jolt, navigation, scripting, FMOD | generic generation-safe lifecycle/acknowledgement bridge implemented; GRDG and native provider adapters pending |
 | Diagnostics | Streaming + Core telemetry | load/eviction traces, load-to-active and p99 hitches |
 
 ## Integration sequence
@@ -59,6 +69,6 @@ and completion transfer. Core Jobs owns scheduling and worker/provider fences.
    test teleport, stale generations, cancellations and safe retirement.
 6. Measure budgets, p50/p95/p99 load-to-active latency and frame-time hitches.
 
-**Current limitation:** World Partition demand generation and ticket reconciliation are connected, but the branch does not stream bytes, cook packages,
+**Current limitation:** World Partition, ticket reconciliation, and provider lifecycle dispatch are connected, but the branch does not stream bytes, cook packages,
 activate worlds or claim integration with unmerged PR #23. It establishes the
 buildable, tested demand/state authority and leaves data-plane ownership intact.

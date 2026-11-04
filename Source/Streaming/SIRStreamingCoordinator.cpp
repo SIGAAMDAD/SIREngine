@@ -55,7 +55,9 @@ uint64_t SIRStreamingCoordinator::requiredBytes( uint32_t nCapacity ) noexcept
 
 sirStreamingResult_t SIRStreamingCoordinator::initialize( void *pStorage, uint64_t nStorageBytes, uint32_t nCapacity ) noexcept
 {
-	if ( m_bInitialized || m_bStopped || pStorage == nullptr || nCapacity == 0 ) {
+	const bool bInvalidState = m_bInitialized || m_bStopped;
+	const bool bInvalidStorage = pStorage == nullptr || nCapacity == 0;
+	if ( bInvalidState || bInvalidStorage ) {
 		return SIR_STREAMING_INVALID_ARGUMENT;
 	}
 	const uint64_t nRequiredBytes = requiredBytes( nCapacity );
@@ -77,7 +79,9 @@ sirStreamingResult_t SIRStreamingCoordinator::initialize( void *pStorage, uint64
 
 bool SIRStreamingCoordinator::isValid( sirStreamingTicket_t ticket ) const noexcept
 {
-	if ( !m_bInitialized || m_bStopped || ticket.nSlot >= m_nCapacity || ticket.nGeneration == 0 ) {
+	const bool bInactive = !m_bInitialized || m_bStopped;
+	const bool bInvalidTicket = ticket.nSlot >= m_nCapacity || ticket.nGeneration == 0;
+	if ( bInactive || bInvalidTicket ) {
 		return false;
 	}
 
@@ -181,6 +185,28 @@ sirStreamingResult_t SIRStreamingCoordinator::query( sirStreamingTicket_t ticket
 	return SIR_STREAMING_OK;
 }
 
+sirStreamingResult_t SIRStreamingCoordinator::querySlot( uint32_t iSlot, sirStreamingTicket_t *pTicket,
+                                                         sirStreamingSnapshot_t *pSnapshot ) const noexcept
+{
+	if ( !m_bInitialized || m_bStopped ) {
+		return SIR_STREAMING_NOT_READY;
+	}
+	if ( pTicket == nullptr || pSnapshot == nullptr || iSlot >= m_nCapacity ) {
+		return SIR_STREAMING_INVALID_ARGUMENT;
+	}
+
+	const sirStreamingSlot_t &slot = m_pSlots[iSlot];
+	if ( !slot.bOccupied ) {
+		return SIR_STREAMING_NOT_READY;
+	}
+
+	*pTicket = { iSlot, slot.nGeneration };
+	pSnapshot->demand = slot.demand;
+	pSnapshot->eStage = slot.eStage;
+	pSnapshot->bCancellationRequested = slot.bCancellationRequested;
+	return SIR_STREAMING_OK;
+}
+
 sirStreamingResult_t SIRStreamingCoordinator::advance( sirStreamingTicket_t ticket, sirStreamingStage_t eNextStage ) noexcept
 {
 	if ( !isValid( ticket ) ) {
@@ -201,8 +227,12 @@ sirStreamingResult_t SIRStreamingCoordinator::advance( sirStreamingTicket_t tick
 		slot.eStage = eNextStage;
 		return SIR_STREAMING_OK;
 	}
-	if ( eCurrent == SIR_STREAMING_STAGE_PREPARED && eNextStage == SIR_STREAMING_STAGE_ACTIVE &&
-	     slot.demand.eTarget == SIR_STREAMING_TARGET_ACTIVE && !slot.bCancellationRequested ) {
+	if ( eCurrent == SIR_STREAMING_STAGE_PREPARED && eNextStage == SIR_STREAMING_STAGE_FAILED ) {
+		slot.eStage = eNextStage;
+		return SIR_STREAMING_OK;
+	}
+	const bool bTargetActive = slot.demand.eTarget == SIR_STREAMING_TARGET_ACTIVE && !slot.bCancellationRequested;
+	if ( eCurrent == SIR_STREAMING_STAGE_PREPARED && eNextStage == SIR_STREAMING_STAGE_ACTIVE && bTargetActive ) {
 		slot.eStage = eNextStage;
 		return SIR_STREAMING_OK;
 	}

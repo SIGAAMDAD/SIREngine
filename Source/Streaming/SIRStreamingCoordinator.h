@@ -61,6 +61,8 @@ public:
 	// revive cancellation or demote already-active provider resources.
 	sirStreamingResult_t updateDemand( sirStreamingTicket_t ticket, const sirStreamingDemand_t &demand ) noexcept;
 	sirStreamingResult_t query( sirStreamingTicket_t ticket, sirStreamingSnapshot_t *pSnapshot ) const noexcept;
+	// Owner-thread enumeration for bounded dispatch. Empty slots return NOT_READY.
+	sirStreamingResult_t querySlot( uint32_t iSlot, sirStreamingTicket_t *pTicket, sirStreamingSnapshot_t *pSnapshot ) const noexcept;
 	sirStreamingResult_t advance( sirStreamingTicket_t ticket, sirStreamingStage_t eNextStage ) noexcept;
 	sirStreamingResult_t cancel( sirStreamingTicket_t ticket ) noexcept;
 	sirStreamingStats_t getStats( void ) const noexcept;

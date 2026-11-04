@@ -2,7 +2,7 @@
 
 **Baseline:** `develop` commit `be151c5ad3e98ea6fa6bdbfa87d07a83dc7e6546`.
 **Branch:** `feature/streaming-foundation`.
-**Status:** demand coordinator, spatial World Partition and epoch reconciliation implemented; no end-to-end asset I/O or world activation.
+**Status:** demand coordination, World Partition, epoch reconciliation, and provider completion bridge implemented; real GRDG/IO/provider adapters pending.
 
 Source design authorities: `SIR-WORLD-ARCH-001`, `SIR-IO-ARCH-001`,
 `SIR-IO-IMPL-001`, `GRDG-003` in the shared Nomad Drive. This branch introduces
@@ -30,6 +30,7 @@ only the interface owner for request intent and stage tracking.
 | --- | --- | --- |
 | Native demand coordinator | Compiled lifecycle shell, ticket metadata refresh and unit tests | No GRDG dependency |
 | Demand epoch reconciliation | Implemented complete-set validation, stable tickets, pending cancellation, deferred resubmission and integration tests | GRDG completion/retirement adapter |
+| Provider lifecycle bridge | Implemented bounded prepare/activate/cancel/retire dispatch and generation-safe owner-thread acknowledgements | Real canonical GRDG mapping and native provider backends |
 | GRDG adapter | Not implemented | Integrate PR #23 contracts |
 | SIRPack `.sirm/.sirp` reader/cooker | Not implemented | Finalize package ABI |
 | Core I/O native async | Not implemented | IOCP/io_uring contracts |
@@ -78,3 +79,27 @@ demotion, cancellation, and a full-capacity pending-provider case. Linux
 Clang 17 ASan/UBSan and libclang 23 structural checks passed for the local
 candidate. Repository-pinned clang-format 22.1.5 and full project CI remain
 outstanding acceptance gates.
+
+## Provider lifecycle dispatch — fourth native slice
+
+`Source/Streaming/SIRStreamingProviderBridge` consumes the coordinator's
+bounded slot enumeration and invokes caller-supplied request callbacks.
+Acceptance starts work; it does not publish a resource or certify a provider.
+Completion acknowledgements must be marshalled onto the streaming owner thread
+and occur only after the canonical GRDG writer and the affected provider have
+actually completed their relevant work. The bridge retains a generation-tagged
+slot until the retirement callback has completed and `acknowledgeRetired`
+explicitly releases the coordinator ticket. The bridge does not cache or own
+GRDG handles, cooked bytes, GPU allocations, physics bodies or audio banks.
+
+A PREPARED-to-FAILED transition supports activation failures. Downgrades to
+PREPARED during outstanding activation are converted into retirement, allowing
+the reconciler to request a fresh PREPARED ticket on a later epoch. Stale
+completions are rejected after ticket reuse; external ticket bypass fails closed
+instead of clearing an in-flight provider slot.
+
+A native CMake harness builds the coordinator, World Partition, reconciler and
+provider bridge with Clang 17 and Clang 23. Four test executables pass, including
+an integrated moving-source control-plane test. Clang 17 ASan/UBSan tests pass.
+The repository-pinned clang-format 22.1.5, full engine build, platform CI, and
+live GRDG/IO/provider tests are still outstanding.
