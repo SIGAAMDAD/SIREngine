@@ -168,3 +168,11 @@ target_compile_definitions(SIREditorTextPropertiesTests PRIVATE
     SIR_EDITOR_TEST_UI_SCENE="${PROJECT_SOURCE_DIR}/Tests/Fixtures/Editor/SourceGodotUI.tscn")
 add_test(NAME editor.authoring.source-properties COMMAND SIREditorTextPropertiesTests)
 sir_configure_owned_target(SIREditorTextPropertiesTests)
+
+# In-process ABI boundary for a future Godot-native Control/Inspector adapter.
+add_executable(SIREditorNativeBridgeTests SIREditorNativeBridgeTests.cpp)
+target_link_libraries(SIREditorNativeBridgeTests PRIVATE SIR::EditorNativeBridge)
+target_compile_definitions(SIREditorNativeBridgeTests PRIVATE
+    SIR_EDITOR_TEST_UI_SCENE="${PROJECT_SOURCE_DIR}/Tests/Fixtures/Editor/SourceGodotUI.tscn")
+add_test(NAME editor.bridge.native-abi COMMAND SIREditorNativeBridgeTests)
+sir_configure_owned_target(SIREditorNativeBridgeTests)

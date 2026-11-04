@@ -19,3 +19,12 @@ add_executable(SIREditor Main.cpp)
 target_link_libraries(SIREditor PRIVATE SIR::EditorAuthoring)
 target_compile_definitions(SIREditor PRIVATE SIR_VERSION="${PROJECT_VERSION}")
 sir_configure_owned_target(SIREditor)
+
+# Single-process, versioned POD/C-linkage interface to the native authoring
+# workspace. The supplied editor-domain segment stays owned by SIRMemoryManager.
+add_library(SIREditorNativeBridge STATIC Bridge/SIREditorNativeBridge.cpp)
+add_library(SIR::EditorNativeBridge ALIAS SIREditorNativeBridge)
+target_compile_features(SIREditorNativeBridge PUBLIC cxx_std_17)
+target_include_directories(SIREditorNativeBridge PUBLIC "${PROJECT_SOURCE_DIR}/Source" "${PROJECT_SOURCE_DIR}/Build/CMake")
+target_link_libraries(SIREditorNativeBridge PUBLIC SIR::EditorAuthoring)
+sir_configure_owned_target(SIREditorNativeBridge)
