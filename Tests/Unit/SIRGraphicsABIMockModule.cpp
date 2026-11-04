@@ -227,9 +227,19 @@ static uint32_t mockShutdown( void * ) noexcept
 	return SIR_GRAPHICS_ABI_SUCCESS;
 }
 
-static uint32_t mockCreateBuffer( void *, const sirGraphicsBufferDesc_t *, sirGraphicsHandle_t * ) noexcept
+static uint32_t mockCreateBuffer( void *, const sirGraphicsBufferDesc_t *pDesc, sirGraphicsHandle_t *pBuffer ) noexcept
 {
-	return SIR_GRAPHICS_ABI_UNSUPPORTED;
+	if ( pDesc == nullptr || pBuffer == nullptr ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	if ( s_nMockMode != 10 && s_nMockMode != 17 && s_nMockMode != 18 ) {
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
+	if ( s_nMockMode == 18 ) {
+		return SIR_GRAPHICS_DEVICE_LOST;
+	}
+	*pBuffer = { 5, 1, s_nMockMode == 17 ? 4U : 5U, SIR_GRAPHICS_HANDLE_BUFFER };
+	return SIR_GRAPHICS_SUCCESS;
 }
 
 static uint32_t mockCreateTexture( void *, const sirGraphicsTextureDesc_t *pDesc, sirGraphicsHandle_t *pTexture ) noexcept
@@ -247,14 +257,34 @@ static uint32_t mockCreateTexture( void *, const sirGraphicsTextureDesc_t *pDesc
 	return SIR_GRAPHICS_SUCCESS;
 }
 
-static uint32_t mockCreateView( void *, const sirGraphicsViewDesc_t *, sirGraphicsHandle_t * ) noexcept
+static uint32_t mockCreateView( void *, const sirGraphicsViewDesc_t *pDesc, sirGraphicsHandle_t *pView ) noexcept
 {
-	return SIR_GRAPHICS_ABI_UNSUPPORTED;
+	if ( pDesc == nullptr || pView == nullptr ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	if ( s_nMockMode != 10 && s_nMockMode != 17 && s_nMockMode != 18 ) {
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
+	if ( s_nMockMode == 18 ) {
+		return SIR_GRAPHICS_DEVICE_LOST;
+	}
+	*pView = { 6, 1, s_nMockMode == 17 ? 4U : 5U, SIR_GRAPHICS_HANDLE_VIEW };
+	return SIR_GRAPHICS_SUCCESS;
 }
 
-static uint32_t mockCreateSampler( void *, const sirGraphicsSamplerDesc_t *, sirGraphicsHandle_t * ) noexcept
+static uint32_t mockCreateSampler( void *, const sirGraphicsSamplerDesc_t *pDesc, sirGraphicsHandle_t *pSampler ) noexcept
 {
-	return SIR_GRAPHICS_ABI_UNSUPPORTED;
+	if ( pDesc == nullptr || pSampler == nullptr ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	if ( s_nMockMode != 10 && s_nMockMode != 17 && s_nMockMode != 18 ) {
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
+	if ( s_nMockMode == 18 ) {
+		return SIR_GRAPHICS_DEVICE_LOST;
+	}
+	*pSampler = { 7, 1, s_nMockMode == 17 ? 4U : 5U, SIR_GRAPHICS_HANDLE_SAMPLER };
+	return SIR_GRAPHICS_SUCCESS;
 }
 
 static uint32_t mockCreatePipeline( void *, const sirGraphicsABIPipeline_t *pPipeline, sirGraphicsHandle_t *pHandle ) noexcept
@@ -405,8 +435,16 @@ static uint32_t mockBudget( void *, sirGraphicsMemoryBudget_t *pBudget ) noexcep
 	if ( pBudget == nullptr ) {
 		return SIR_GRAPHICS_ABI_INVALID_ARGUMENT;
 	}
+	if ( s_nMockMode == 20 ) {
+		return SIR_GRAPHICS_DEVICE_LOST;
+	}
 	*pBudget = {};
 	pBudget->nBudgetBytes = 1024 * 1024;
+	if ( s_nMockMode == 19 ) {
+		pBudget->nCommittedBytes = 1;
+		pBudget->nResidentBytes = 2;
+		pBudget->nPeakCommittedBytes = 1;
+	}
 	return SIR_GRAPHICS_ABI_SUCCESS;
 }
 

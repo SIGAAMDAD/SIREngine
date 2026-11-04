@@ -389,6 +389,215 @@ static sirGraphicsABIResult_t sirGraphicsValidateABIAttachmentFormats( const sir
 	return SIR_GRAPHICS_SUCCESS;
 }
 
+sirGraphicsABIResult_t sirGraphicsQueryABIMemoryBudget( const sirGraphicsABIDevice_t *pDevice, sirGraphicsMemoryBudget_t *pBudget ) noexcept
+{
+	if ( pBudget == nullptr ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	const sirGraphicsABIResult_t eDevice = sirGraphicsValidateABIDevice( pDevice );
+	if ( eDevice != SIR_GRAPHICS_SUCCESS ) {
+		return eDevice;
+	}
+
+	sirGraphicsMemoryBudget_t budget = {};
+	const sirGraphicsABIResult_t eQuery =
+	    sirGraphicsResultFromProvider( pDevice->pQueryMemoryBudget( pDevice->pDevice, &budget ) );
+	if ( eQuery != SIR_GRAPHICS_SUCCESS ) {
+		return eQuery;
+	}
+	if ( budget.nResidentBytes > budget.nCommittedBytes ) {
+		return SIR_GRAPHICS_DRIVER_ERROR;
+	}
+	if ( budget.nPeakCommittedBytes != 0 && budget.nPeakCommittedBytes < budget.nCommittedBytes ) {
+		return SIR_GRAPHICS_DRIVER_ERROR;
+	}
+	*pBudget = budget;
+	return SIR_GRAPHICS_SUCCESS;
+}
+
+sirGraphicsABIResult_t sirGraphicsCreateABIBuffer( const sirGraphicsABIDevice_t *pDevice, const sirGraphicsBufferDesc_t *pDesc,
+                                                   sirGraphicsHandle_t *pBuffer ) noexcept
+{
+	if ( pDesc == nullptr || pBuffer == nullptr ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	const sirGraphicsABIResult_t eDescription = sirGraphicsValidateBuffer( *pDesc );
+	if ( eDescription != SIR_GRAPHICS_SUCCESS ) {
+		return eDescription;
+	}
+	const sirGraphicsABIResult_t eDevice = sirGraphicsValidateABIDevice( pDevice );
+	if ( eDevice != SIR_GRAPHICS_SUCCESS ) {
+		return eDevice;
+	}
+	sirGraphicsABICapabilities_t caps = {};
+	caps.nSize = sizeof( caps );
+	const sirGraphicsABIResult_t eCaps =
+	    sirGraphicsResultFromProvider( pDevice->pQueryCapabilities( pDevice->pDevice, &caps ) );
+	if ( eCaps != SIR_GRAPHICS_SUCCESS ) {
+		return eCaps;
+	}
+	if ( sirGraphicsValidateABICapabilities( &caps ) != SIR_GRAPHICS_SUCCESS ) {
+		return SIR_GRAPHICS_DRIVER_ERROR;
+	}
+	if ( ( pDesc->nUsage & ( SIR_GRAPHICS_USAGE_VERTEX | SIR_GRAPHICS_USAGE_INDEX ) ) != 0 &&
+	     ( caps.nEnabledFeatures & SIR_GRAPHICS_FEATURE_GRAPHICS ) == 0 ) {
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
+	if ( ( pDesc->nUsage & SIR_GRAPHICS_USAGE_STORAGE ) != 0 &&
+	     ( caps.nEnabledFeatures & SIR_GRAPHICS_FEATURE_SHADER_STORAGE ) == 0 ) {
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
+	if ( ( pDesc->nUsage & SIR_GRAPHICS_USAGE_INDIRECT ) != 0 &&
+	     ( caps.nEnabledFeatures & SIR_GRAPHICS_FEATURE_INDIRECT_DRAW ) == 0 ) {
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
+	if ( pDesc->eMemory == SIR_GRAPHICS_MEMORY_GPU_UPLOAD &&
+	     ( caps.nEnabledFeatures & SIR_GRAPHICS_FEATURE_GPU_UPLOAD ) == 0 ) {
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
+
+	sirGraphicsHandle_t hBuffer = {};
+	const sirGraphicsABIResult_t eCreate =
+	    sirGraphicsResultFromProvider( pDevice->pCreateBuffer( pDevice->pDevice, pDesc, &hBuffer ) );
+	if ( eCreate != SIR_GRAPHICS_SUCCESS ) {
+		return eCreate;
+	}
+	if ( hBuffer.eType != SIR_GRAPHICS_HANDLE_BUFFER || hBuffer.nGeneration == 0 ||
+	     hBuffer.nDeviceGeneration != caps.nDeviceGeneration ) {
+		return SIR_GRAPHICS_DRIVER_ERROR;
+	}
+	*pBuffer = hBuffer;
+	return SIR_GRAPHICS_SUCCESS;
+}
+
+sirGraphicsABIResult_t sirGraphicsCreateABIView( const sirGraphicsABIDevice_t *pDevice, const sirGraphicsViewDesc_t *pDesc,
+                                                 sirGraphicsHandle_t *pView ) noexcept
+{
+	if ( pDesc == nullptr || pView == nullptr || pDesc->nMipLevels == 0 || pDesc->nLayers == 0 ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	if ( pDesc->nBaseMip > UINT32_MAX - pDesc->nMipLevels ||
+	     pDesc->nBaseLayer > UINT32_MAX - pDesc->nLayers ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	constexpr uint32_t VIEW_USAGE_MASK = SIR_GRAPHICS_USAGE_SAMPLED | SIR_GRAPHICS_USAGE_STORAGE |
+	                                     SIR_GRAPHICS_USAGE_COLOR_ATTACHMENT | SIR_GRAPHICS_USAGE_DEPTH_STENCIL;
+	const uint32_t nUsage = pDesc->nUsage;
+	if ( nUsage == 0 || ( nUsage & ~VIEW_USAGE_MASK ) != 0 || ( nUsage & ( nUsage - 1 ) ) != 0 ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	const bool bTexture = pDesc->hResource.eType == SIR_GRAPHICS_HANDLE_TEXTURE;
+	const bool bBuffer = pDesc->hResource.eType == SIR_GRAPHICS_HANDLE_BUFFER;
+	if ( !bTexture && !bBuffer ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	if ( bBuffer && ( nUsage & ( SIR_GRAPHICS_USAGE_COLOR_ATTACHMENT | SIR_GRAPHICS_USAGE_DEPTH_STENCIL ) ) != 0 ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	if ( pDesc->eFormat > SIR_GRAPHICS_FORMAT_BC7_UNORM ||
+	     ( bTexture && pDesc->eFormat == SIR_GRAPHICS_FORMAT_UNKNOWN ) ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	const bool bDepthFormat = pDesc->eFormat >= SIR_GRAPHICS_FORMAT_D16_UNORM &&
+	                          pDesc->eFormat <= SIR_GRAPHICS_FORMAT_D32_FLOAT;
+	if ( ( bDepthFormat && nUsage == SIR_GRAPHICS_USAGE_COLOR_ATTACHMENT ) ||
+	     ( !bDepthFormat && nUsage == SIR_GRAPHICS_USAGE_DEPTH_STENCIL ) ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	const sirGraphicsABIResult_t eDevice = sirGraphicsValidateABIDevice( pDevice );
+	if ( eDevice != SIR_GRAPHICS_SUCCESS ) {
+		return eDevice;
+	}
+	sirGraphicsABICapabilities_t caps = {};
+	caps.nSize = sizeof( caps );
+	const sirGraphicsABIResult_t eCaps =
+	    sirGraphicsResultFromProvider( pDevice->pQueryCapabilities( pDevice->pDevice, &caps ) );
+	if ( eCaps != SIR_GRAPHICS_SUCCESS ) {
+		return eCaps;
+	}
+	if ( sirGraphicsValidateABICapabilities( &caps ) != SIR_GRAPHICS_SUCCESS ) {
+		return SIR_GRAPHICS_DRIVER_ERROR;
+	}
+	if ( !sirGraphicsIsHandleValid( pDesc->hResource, SIR_GRAPHICS_HANDLE_NONE, caps.nDeviceGeneration ) ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	if ( nUsage == SIR_GRAPHICS_USAGE_STORAGE &&
+	     ( caps.nEnabledFeatures & SIR_GRAPHICS_FEATURE_SHADER_STORAGE ) == 0 ) {
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
+	if ( bTexture ) {
+		sirGraphicsABIFormat_t format = {};
+		format.nSize = sizeof( format );
+		const sirGraphicsABIResult_t eFormat = sirGraphicsQueryABIFormat( pDevice, pDesc->eFormat, &format );
+		if ( eFormat != SIR_GRAPHICS_SUCCESS ) {
+			return eFormat;
+		}
+		uint32_t nRequired = 0;
+		if ( nUsage == SIR_GRAPHICS_USAGE_SAMPLED ) {
+			nRequired = SIR_GRAPHICS_ABI_FORMAT_SAMPLED;
+		} else if ( nUsage == SIR_GRAPHICS_USAGE_STORAGE ) {
+			nRequired = SIR_GRAPHICS_ABI_FORMAT_STORAGE;
+		} else if ( nUsage == SIR_GRAPHICS_USAGE_COLOR_ATTACHMENT ) {
+			nRequired = SIR_GRAPHICS_ABI_FORMAT_COLOR_ATTACHMENT;
+		} else {
+			nRequired = SIR_GRAPHICS_ABI_FORMAT_DEPTH_STENCIL;
+		}
+		if ( ( format.nOptimalFeatures & nRequired ) == 0 ) {
+			return SIR_GRAPHICS_UNSUPPORTED;
+		}
+	}
+	sirGraphicsHandle_t hView = {};
+	const sirGraphicsABIResult_t eCreate =
+	    sirGraphicsResultFromProvider( pDevice->pCreateView( pDevice->pDevice, pDesc, &hView ) );
+	if ( eCreate != SIR_GRAPHICS_SUCCESS ) {
+		return eCreate;
+	}
+	if ( hView.eType != SIR_GRAPHICS_HANDLE_VIEW || hView.nGeneration == 0 ||
+	     hView.nDeviceGeneration != caps.nDeviceGeneration ) {
+		return SIR_GRAPHICS_DRIVER_ERROR;
+	}
+	*pView = hView;
+	return SIR_GRAPHICS_SUCCESS;
+}
+
+sirGraphicsABIResult_t sirGraphicsCreateABISampler( const sirGraphicsABIDevice_t *pDevice, const sirGraphicsSamplerDesc_t *pDesc,
+                                                    sirGraphicsHandle_t *pSampler ) noexcept
+{
+	if ( pDesc == nullptr || pSampler == nullptr ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	const sirGraphicsABIResult_t eDescription = sirGraphicsValidateSampler( *pDesc );
+	if ( eDescription != SIR_GRAPHICS_SUCCESS ) {
+		return eDescription;
+	}
+	const sirGraphicsABIResult_t eDevice = sirGraphicsValidateABIDevice( pDevice );
+	if ( eDevice != SIR_GRAPHICS_SUCCESS ) {
+		return eDevice;
+	}
+	sirGraphicsABICapabilities_t caps = {};
+	caps.nSize = sizeof( caps );
+	const sirGraphicsABIResult_t eQuery =
+	    sirGraphicsResultFromProvider( pDevice->pQueryCapabilities( pDevice->pDevice, &caps ) );
+	if ( eQuery != SIR_GRAPHICS_SUCCESS ) {
+		return eQuery;
+	}
+	if ( sirGraphicsValidateABICapabilities( &caps ) != SIR_GRAPHICS_SUCCESS ) {
+		return SIR_GRAPHICS_DRIVER_ERROR;
+	}
+	sirGraphicsHandle_t hSampler = {};
+	const sirGraphicsABIResult_t eCreate =
+	    sirGraphicsResultFromProvider( pDevice->pCreateSampler( pDevice->pDevice, pDesc, &hSampler ) );
+	if ( eCreate != SIR_GRAPHICS_SUCCESS ) {
+		return eCreate;
+	}
+	if ( hSampler.eType != SIR_GRAPHICS_HANDLE_SAMPLER || hSampler.nGeneration == 0 ||
+	     hSampler.nDeviceGeneration != caps.nDeviceGeneration ) {
+		return SIR_GRAPHICS_DRIVER_ERROR;
+	}
+	*pSampler = hSampler;
+	return SIR_GRAPHICS_SUCCESS;
+}
+
 // The host admits resource creation using real device-enabled format facts;
 // the backend remains responsible for allocation, tiling and native ownership.
 sirGraphicsABIResult_t sirGraphicsCreateABITexture( const sirGraphicsABIDevice_t *pDevice, const sirGraphicsTextureDesc_t *pDesc,

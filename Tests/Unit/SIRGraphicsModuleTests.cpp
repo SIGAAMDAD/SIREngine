@@ -352,6 +352,49 @@ static bool testBinaryModule( void ) noexcept
 	programmable.nTextureUnits = 1;
 	modern.nRequiredFeatures = SIR_GRAPHICS_FEATURE_COMPUTE;
 
+	// Buffer and budget entry points must preserve the caller's handles and
+	// snapshots when a provider rejects allocation or reports device loss.
+	sirGraphicsBufferDesc_t buffer = {};
+	buffer.nSizeBytes = 4096;
+	buffer.nUsage = SIR_GRAPHICS_USAGE_COPY_SOURCE | SIR_GRAPHICS_USAGE_COPY_DESTINATION;
+	buffer.eMemory = SIR_GRAPHICS_MEMORY_GPU_LOCAL;
+	sirGraphicsHandle_t hBuffer = {};
+	if ( sirGraphicsCreateABIBuffer( &device, &buffer, &hBuffer ) != SIR_GRAPHICS_SUCCESS ||
+	     hBuffer.eType != SIR_GRAPHICS_HANDLE_BUFFER || hBuffer.nDeviceGeneration != 5 ) {
+		return false;
+	}
+	buffer.nSizeBytes = 0;
+	if ( sirGraphicsCreateABIBuffer( &device, &buffer, &hBuffer ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return false;
+	}
+	buffer.nSizeBytes = 4096;
+	buffer.nUsage = SIR_GRAPHICS_USAGE_STORAGE;
+	if ( sirGraphicsCreateABIBuffer( &device, &buffer, &hBuffer ) != SIR_GRAPHICS_UNSUPPORTED ) {
+		return false;
+	}
+	buffer.nUsage = SIR_GRAPHICS_USAGE_INDIRECT;
+	if ( sirGraphicsCreateABIBuffer( &device, &buffer, &hBuffer ) != SIR_GRAPHICS_UNSUPPORTED ) {
+		return false;
+	}
+	buffer.nUsage = SIR_GRAPHICS_USAGE_COPY_SOURCE;
+	buffer.eMemory = SIR_GRAPHICS_MEMORY_GPU_UPLOAD;
+	if ( sirGraphicsCreateABIBuffer( &device, &buffer, &hBuffer ) != SIR_GRAPHICS_UNSUPPORTED ) {
+		return false;
+	}
+	buffer.eMemory = SIR_GRAPHICS_MEMORY_GPU_LOCAL;
+	const sirGraphicsHandle_t originalBuffer = hBuffer;
+	pMode( 17 );
+	if ( sirGraphicsCreateABIBuffer( &device, &buffer, &hBuffer ) != SIR_GRAPHICS_DRIVER_ERROR ||
+	     hBuffer.nSlot != originalBuffer.nSlot || hBuffer.nDeviceGeneration != originalBuffer.nDeviceGeneration ) {
+		return false;
+	}
+	pMode( 18 );
+	if ( sirGraphicsCreateABIBuffer( &device, &buffer, &hBuffer ) != SIR_GRAPHICS_DEVICE_LOST ||
+	     hBuffer.nSlot != originalBuffer.nSlot || hBuffer.nDeviceGeneration != originalBuffer.nDeviceGeneration ) {
+		return false;
+	}
+	pMode( 10 );
+
 	// Native resource creation is admitted through real format and device
 	// limits before the provider is allowed to allocate GPU memory.
 	sirGraphicsTextureDesc_t texture = {};
@@ -370,6 +413,71 @@ static bool testBinaryModule( void ) noexcept
 	     hTexture.eType != SIR_GRAPHICS_HANDLE_TEXTURE || hTexture.nDeviceGeneration != 5 ) {
 		return false;
 	}
+	sirGraphicsViewDesc_t view = {};
+	view.hResource = hTexture;
+	view.eFormat = SIR_GRAPHICS_FORMAT_RGBA8_UNORM;
+	view.nMipLevels = 1;
+	view.nLayers = 1;
+	view.nUsage = SIR_GRAPHICS_USAGE_SAMPLED;
+	sirGraphicsHandle_t hView = {};
+	if ( sirGraphicsCreateABIView( &device, &view, &hView ) != SIR_GRAPHICS_SUCCESS ||
+	     hView.eType != SIR_GRAPHICS_HANDLE_VIEW || hView.nDeviceGeneration != 5 ) {
+		return false;
+	}
+	view.hResource.nDeviceGeneration = 4;
+	if ( sirGraphicsCreateABIView( &device, &view, &hView ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return false;
+	}
+	view.hResource = hTexture;
+	view.nLayers = 0;
+	if ( sirGraphicsCreateABIView( &device, &view, &hView ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return false;
+	}
+	view.nLayers = 1;
+	view.nUsage = SIR_GRAPHICS_USAGE_DEPTH_STENCIL;
+	if ( sirGraphicsCreateABIView( &device, &view, &hView ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return false;
+	}
+	view.eFormat = SIR_GRAPHICS_FORMAT_D16_UNORM;
+	view.nUsage = SIR_GRAPHICS_USAGE_SAMPLED;
+	if ( sirGraphicsCreateABIView( &device, &view, &hView ) != SIR_GRAPHICS_SUCCESS ) {
+		return false;
+	}
+	view.eFormat = SIR_GRAPHICS_FORMAT_RGBA8_UNORM;
+	view.hResource = hBuffer;
+	view.eFormat = SIR_GRAPHICS_FORMAT_UNKNOWN;
+	if ( sirGraphicsCreateABIView( &device, &view, &hView ) != SIR_GRAPHICS_SUCCESS ) {
+		return false;
+	}
+	view.hResource = hTexture;
+	view.eFormat = SIR_GRAPHICS_FORMAT_RGBA8_UNORM;
+
+	sirGraphicsSamplerDesc_t sampler = {};
+	sampler.fMaximumAnisotropy = 1.0f;
+	sampler.fMinimumLod = 0.0f;
+	sampler.fMaximumLod = 16.0f;
+	sirGraphicsHandle_t hSampler = {};
+	if ( sirGraphicsCreateABISampler( &device, &sampler, &hSampler ) != SIR_GRAPHICS_SUCCESS ||
+	     hSampler.eType != SIR_GRAPHICS_HANDLE_SAMPLER || hSampler.nDeviceGeneration != 5 ) {
+		return false;
+	}
+	sampler.fMaximumAnisotropy = 0.0f;
+	if ( sirGraphicsCreateABISampler( &device, &sampler, &hSampler ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return false;
+	}
+	sampler.fMaximumAnisotropy = 1.0f;
+	pMode( 17 );
+	if ( sirGraphicsCreateABIView( &device, &view, &hView ) != SIR_GRAPHICS_DRIVER_ERROR ||
+	     sirGraphicsCreateABISampler( &device, &sampler, &hSampler ) != SIR_GRAPHICS_DRIVER_ERROR ) {
+		return false;
+	}
+	pMode( 18 );
+	if ( sirGraphicsCreateABIView( &device, &view, &hView ) != SIR_GRAPHICS_DEVICE_LOST ||
+	     sirGraphicsCreateABISampler( &device, &sampler, &hSampler ) != SIR_GRAPHICS_DEVICE_LOST ) {
+		return false;
+	}
+	pMode( 10 );
+
 	texture.nWidth = 8192;
 	if ( sirGraphicsCreateABITexture( &device, &texture, &hTexture ) != SIR_GRAPHICS_UNSUPPORTED ) {
 		return false;
@@ -526,9 +634,22 @@ static bool testBinaryModule( void ) noexcept
 		return false;
 	}
 	sirGraphicsMemoryBudget_t budget = {};
-	if ( device.pQueryMemoryBudget( device.pDevice, &budget ) != SIR_GRAPHICS_ABI_SUCCESS || budget.nBudgetBytes != 1024U * 1024U ) {
+	if ( sirGraphicsQueryABIMemoryBudget( &device, &budget ) != SIR_GRAPHICS_SUCCESS ||
+	     budget.nBudgetBytes != 1024U * 1024U ) {
 		return false;
 	}
+	budget.nBudgetBytes = 12345;
+	pMode( 19 );
+	if ( sirGraphicsQueryABIMemoryBudget( &device, &budget ) != SIR_GRAPHICS_DRIVER_ERROR ||
+	     budget.nBudgetBytes != 12345 ) {
+		return false;
+	}
+	pMode( 20 );
+	if ( sirGraphicsQueryABIMemoryBudget( &device, &budget ) != SIR_GRAPHICS_DEVICE_LOST ||
+	     budget.nBudgetBytes != 12345 ) {
+		return false;
+	}
+	pMode( 0 );
 	if ( sirGraphicsDestroyABIDevice( &module, &device ) != SIR_GRAPHICS_ABI_SUCCESS || device.pDevice != nullptr ||
 	     module.nActiveDevices != 0 ) {
 		return false;

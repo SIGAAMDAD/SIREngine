@@ -83,6 +83,23 @@ sirGraphicsABIResult_t sirGraphicsQueryABIPipelineModelCaps( const sirGraphicsAB
 sirGraphicsABIResult_t sirGraphicsSelectABIPipelineVariant( const sirGraphicsABIDevice_t *pDevice,
                                                             const sirGraphicsABIPipeline_t *pCandidates, uint32_t nCount,
                                                             uint32_t *pIndex ) noexcept;
+// Returns a validated snapshot of the native device's current memory budget.
+// A zero native budget is an unknown limit, not a guaranteed free allocation.
+// The output is unchanged on driver error or incoherent counters.
+sirGraphicsABIResult_t sirGraphicsQueryABIMemoryBudget( const sirGraphicsABIDevice_t *pDevice, sirGraphicsMemoryBudget_t *pBudget ) noexcept;
+
+// Buffer allocation checks typed usage, enabled features and device generation
+// before publishing the native handle. Actual allocation policy stays native.
+sirGraphicsABIResult_t sirGraphicsCreateABIBuffer( const sirGraphicsABIDevice_t *pDevice, const sirGraphicsBufferDesc_t *pDesc,
+                                                   sirGraphicsHandle_t *pBuffer ) noexcept;
+
+// Typed views and samplers use the same host validation and generation
+// contract as buffers/textures. Resource-specific compatibility stays native.
+sirGraphicsABIResult_t sirGraphicsCreateABIView( const sirGraphicsABIDevice_t *pDevice, const sirGraphicsViewDesc_t *pDesc,
+                                                 sirGraphicsHandle_t *pView ) noexcept;
+sirGraphicsABIResult_t sirGraphicsCreateABISampler( const sirGraphicsABIDevice_t *pDevice, const sirGraphicsSamplerDesc_t *pDesc,
+                                                    sirGraphicsHandle_t *pSampler ) noexcept;
+
 // Enforces enabled format usages, multisampling and device bounds before
 // invoking the native texture allocator. pTexture is unchanged on failure.
 sirGraphicsABIResult_t sirGraphicsCreateABITexture( const sirGraphicsABIDevice_t *pDevice, const sirGraphicsTextureDesc_t *pDesc,

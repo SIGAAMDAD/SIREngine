@@ -126,10 +126,10 @@ sirGraphicsResult_t sirGraphicsValidateSampler( const sirGraphicsSamplerDesc_t& 
 	     desc.eAddressV > SIR_GRAPHICS_ADDRESS_BORDER || desc.eAddressW > SIR_GRAPHICS_ADDRESS_BORDER ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	if ( desc.fMaximumAnisotropy < 1.0f || desc.fMaximumAnisotropy > 16.0f ) {
+	if ( !( desc.fMaximumAnisotropy >= 1.0f && desc.fMaximumAnisotropy <= 16.0f ) ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	if ( desc.fMinimumLod > desc.fMaximumLod ) {
+	if ( !( desc.fMinimumLod <= desc.fMaximumLod ) ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	return SIR_GRAPHICS_SUCCESS;
