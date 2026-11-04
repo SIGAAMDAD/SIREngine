@@ -2,13 +2,13 @@
 
 **Base:** reconciled with `develop@1e799f4283c054b1a891ad23acc09c39d690b9c1` for P0.
 **Branch:** `feature/console-cvars-commands`.
-**Current delivery:** P0 shared contract validator and negative fixture verified locally; P1-P7 remain.
+**Current delivery:** P0 closed ([#274](https://github.com/SIGAAMDAD/SIREngine/issues/274)); P1 adapter implemented and locally syntax/fixture checked, full native StringPool integration awaiting CI. P2-P7 remain.
 No artificial duration or performance claims; milestones are dependency-ordered and accepted by source/build/test evidence.
 
 | ID | Scope and exclusive source owner | Depends | Deliverable / integration seam | Exit gate |
 |---|---|---|---|---|
 | P0 (complete) | Contracts, catalog identity; `Docs/Plans/ConsoleCVars/*` and future `Source/Core/Registration/SIRRegistrationTypes.h` | existing develop | Freeze names, flags, type set, precedence, callback ABI, event credit, error statuses and cooked schema | Contract review, failing negative catalog fixtures, source identity recorded |
-| P1 | String identity: `Source/Core/Strings/*`, tests `Tests/Unit/Strings/*` | P0 | Port `NMDStrings` from verified donor to SIRMemory and cooked ordinal lookup | Clang AST for actual TUs, malformed NMDS, hash collisions, lease/epoch, no fallback allocation |
+| P1 (verification pending) | String identity: `Source/Core/Strings/*`, tests `Tests/Unit/Strings/*` | P0 | Reuse developed native SIRStringPool, bind canonical console names and SIRS ordinal lookup; no second NMD port | Clang AST for actual TUs, malformed NMDS, hash collisions, lease/epoch, no fallback allocation |
 | P2 | Cooker/registration: `Source/Core/Registration/*`, `Tools/StringCatalogCooker/*`, `Tools/RegistrationCooker/*` | P1 | Deterministic cooked descriptors + versioned identity remap, dynamic overlay | Byte-identical recook, corrupt-section rejection, duplicate names/bindings rejected, CMake/GoogleTest |
 | P3 | Typed CVar storage: `Source/Core/CVars/*`, `Tests/Unit/CVars/*` | P2 + event-credit contract | Compact value banks, checked handles, transactional writes, precedence history, latched states, event publication | Zero-alloc scalar cached get/set under reserved credits, atomic rollback, OOM/stale/priority tests |
 | P4 | Native command backend: `Source/Core/Console/*`, `Tests/Unit/Console/*` | P2 + P3 | Cooked/dynamic command bindings, console ingress and pump, headless output/history/completion | Bounded grammar, permissions, callback unload, queue full, recursive exec, headless smoke |
@@ -28,6 +28,8 @@ P0 contracts
 ```
 
 P6's event-name registry migration may begin when P1's atom contracts are frozen but **must** be integrated by the Events owner; no competing edit to shared `SIREventRegistry` during P3/P4. Configuration codecs belong to existing `Source/Core/Config` ownership; P5 consumes only merged, real APIs and cannot invent a second tokenizer/parser family.
+
+> P1 implementation details: [P1_DELIVERY.md](P1_DELIVERY.md). Existing `Source/Core/Strings/SIRStringPool` and 40 StringPool GoogleTests are present on current develop; the name binding adapter is in `Source/Core/Registration` to retain subsystem layering.
 
 ## Detailed work units and acceptance
 

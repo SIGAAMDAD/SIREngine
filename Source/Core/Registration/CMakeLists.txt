@@ -1,1 +1,1 @@
-target_sources(SIRCore PRIVATE SIRRegistrationTypes.cpp)
+target_sources(SIRCore PRIVATE SIRRegistrationTypes.cpp SIRRegistrationStringBridge.cpp)

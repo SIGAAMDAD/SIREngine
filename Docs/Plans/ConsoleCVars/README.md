@@ -1,12 +1,12 @@
 # Console / CVar / Command System — implementation packet
 
 **Branch:** `feature/console-cvars-commands` created from `develop@51666fadadf8112b3b2d5bf919ba11dde55d931b` (2026-11-04).
-**State:** P0 native contract freeze and malformed catalog tests implemented; remaining P1-P7 runtime milestones pending.
+**State:** P0 closed; P1 string identity adapter source and tests implemented, native full integration pending. P2-P7 remain.
 **Design:** [Architecture](../../Architecture/20-console-cvars-commands.md).
 **Contracts:** [Interfaces](INTERFACES.md).
 **Milestones:** [Roadmap](ROADMAP.md).
 **Verification:** [Acceptance](ACCEPTANCE.md). **P0 contract:** [P0 Freeze](P0_FREEZE.md).
-**Machine task ledger:** [plan.json](plan.json).
+**P1 implementation:** [P1 Delivery](P1_DELIVERY.md). **Machine task ledger:** [plan.json](plan.json).
 
 ## Purpose
 
