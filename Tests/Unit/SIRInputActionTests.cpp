@@ -275,10 +275,51 @@ static bool sirTestProfileRoundTripAndRejection( void )
 	return true;
 }
 
+static bool sirTestPhysicalRebindCapture( void )
+{
+	SIRInputService input;
+	SIRInputActionTestBackend backend;
+	SIRInputActions &actions = input.actions();
+	if ( !input.attach( backend ) || !actions.addAction( 10, 0 ) || !actions.addAction( 11, 0 ) ||
+	     !actions.addContext( 77, 0, 20, true ) ) {
+		return false;
+	}
+	const sirInputActionBinding_t first =
+	    sirTestBinding( 10, 77, 70, SIR_INPUT_NO_CHORD, SIR_INPUT_KEYBOARD, SIR_INPUT_BUTTON, SIR_INPUT_BIND_NONE );
+	const sirInputActionBinding_t second =
+	    sirTestBinding( 11, 77, 71, SIR_INPUT_NO_CHORD, SIR_INPUT_KEYBOARD, SIR_INPUT_BUTTON, SIR_INPUT_BIND_NONE );
+	if ( !actions.addBinding( first ) || !actions.addBinding( second ) || !actions.beginCapture( 0 ) ||
+	     actions.beginCapture( 0 ) || actions.captureStatus() != SIR_INPUT_CAPTURE_PENDING || !input.begin( 1 ) ) {
+		return false;
+	}
+	sirInputDeviceId_t hKeyboard = {};
+	if ( !input.connect( { 0, 19, SIR_INPUT_TEST, SIR_INPUT_KEYBOARD }, &hKeyboard ) ||
+	     !sirEmitKey( input, hKeyboard, 71, true ) || !input.publish() ||
+	     actions.captureStatus() != SIR_INPUT_CAPTURE_CONFLICT ) {
+		return false;
+	}
+
+	sirInputActionBinding_t current = {};
+	if ( !actions.describeBinding( 0, &current ) || current.nControl != 70 || !actions.beginCapture( 0 ) ||
+	     !input.begin( 2 ) || !sirEmitKey( input, hKeyboard, 72, true ) || !input.publish() ||
+	     actions.captureStatus() != SIR_INPUT_CAPTURE_ACCEPTED || !actions.describeBinding( 0, &current ) ||
+	     current.nControl != 72 ) {
+		return false;
+	}
+	actions.cancelCapture();
+	if ( actions.captureStatus() != SIR_INPUT_CAPTURE_IDLE || !input.begin( 3 ) ||
+	     !sirEmitKey( input, hKeyboard, 72, false ) || !input.publish() ||
+	     !sirReadAction( input, 10, false, false, true ) ) {
+		return false;
+	}
+	input.shutdown();
+	return true;
+}
+
 int main( void )
 {
 	if ( !sirTestContextsAndRebinding() || !sirTestChordShortTransitionsAndToggle() || !sirTestControllerAxis() ||
-	     !sirTestProfileRoundTripAndRejection() ) {
+	     !sirTestProfileRoundTripAndRejection() || !sirTestPhysicalRebindCapture() ) {
 		fputs( "SIRInputActionTests FAILED\n", stderr );
 		return 1;
 	}
