@@ -65,6 +65,15 @@ typedef struct sirFMODRuntimeObjectResolver_s
 	                               const char **pszPath ) noexcept;
 } sirFMODRuntimeObjectResolver_t;
 
+// FMOD Memory_Initialize is process-global and must precede System::create.
+// The NMD allocator supplied at installation must remain process-lifetime.
+typedef struct sirFMODRuntimeMemoryNativeOps_s
+{
+	uint32_t nAbiVersion;
+	sirAudioResult_t ( *install )( const sirContainerAllocator_t *pAllocator, uint64_t nBudgetBytes ) noexcept;
+	sirFMODMemoryBudgetStats_t ( *getStats )( void ) noexcept;
+} sirFMODRuntimeMemoryNativeOps_t;
+
 typedef struct sirFMODRuntimeNativeOps_s
 {
 	sirFMODNativeOps_t context;
@@ -72,6 +81,7 @@ typedef struct sirFMODRuntimeNativeOps_s
 	sirFMODBankNativeOps_t bank;
 	sirFMODMixerNativeOps_t mixer;
 	sirFMODSnapshotNativeOps_t snapshot;
+	sirFMODRuntimeMemoryNativeOps_t memory;
 } sirFMODRuntimeNativeOps_t;
 
 typedef struct sirFMODRuntimeConfig_s
@@ -93,6 +103,7 @@ typedef struct sirFMODRuntimeConfig_s
 	uint32_t nMaxMixerControls;
 	uint32_t nMaxSnapshots;
 	uint64_t nEngineMemoryBudgetBytes;
+	uint64_t nNativeMemoryBudgetBytes;
 } sirFMODRuntimeConfig_t;
 
 // One audio owner. Quiesce producers before shutdown. Native FMOD objects,
@@ -121,6 +132,7 @@ private:
 	uint32_t m_nObjectCount = 0;
 	int32_t m_nLastNativeResult = 0;
 	bool m_bInitialized = false;
+	sirFMODMemoryBudgetStats_t ( *m_NativeMemoryStats )( void ) noexcept = nullptr;
 
 	sirAudioResult_t registerNativeParameters( void ) noexcept;
 	sirAudioResult_t bindPackageResources( void ) noexcept;
@@ -157,9 +169,11 @@ public:
 	SIRFMODPackageLoader &getPackages( void ) noexcept;
 	int32_t getLastNativeResult( void ) const noexcept;
 	sirFMODMemoryBudgetStats_t getMemoryStats( void ) const noexcept;
+	sirFMODMemoryBudgetStats_t getNativeMemoryStats( void ) const noexcept;
 };
 
 // Defined only in SDK-enabled SIRFMODRuntimeNativeApi.cpp.
 sirFMODRuntimeNativeOps_t sirGetFMODRuntimeNativeOps( void ) noexcept;
+sirFMODRuntimeMemoryNativeOps_t sirGetFMODNativeMemoryOps( void ) noexcept;
 
 #endif // __SIRENGINE_SIRFMODRUNTIME_H__

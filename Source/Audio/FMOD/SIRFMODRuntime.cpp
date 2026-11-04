@@ -45,6 +45,7 @@ void SIRFMODRuntime::releaseBindingStorage( void ) noexcept
 	m_nObjectCount = 0;
 	m_nManifestEpoch = 0;
 	m_bInitialized = false;
+	m_NativeMemoryStats = nullptr;
 	if ( m_Memory.shutdown() != SIR_AUDIO_OK ) {
 		abort();
 	}
@@ -78,12 +79,22 @@ sirAudioResult_t SIRFMODRuntime::initialize( const sirFMODRuntimeConfig_t &confi
 		}
 	}
 
+	if ( config.nNativeMemoryBudgetBytes != 0 ) {
+		if ( ops.memory.nAbiVersion != 1 || ops.memory.install == nullptr ) {
+			return SIR_AUDIO_UNSUPPORTED;
+		}
+		const sirAudioResult_t eNativeMemory = ops.memory.install( config.pAllocator, config.nNativeMemoryBudgetBytes );
+		if ( eNativeMemory != SIR_AUDIO_OK ) {
+			return eNativeMemory;
+		}
+	}
 	const sirAudioResult_t eMemory = m_Memory.configure( config.pAllocator, config.nEngineMemoryBudgetBytes );
 	if ( eMemory != SIR_AUDIO_OK ) {
 		return eMemory;
 	}
 	m_pManifest = config.pManifest;
 	m_pAllocator = m_Memory.getAllocator();
+	m_NativeMemoryStats = ops.memory.getStats;
 	m_pObjects = config.pObjects;
 	m_nObjectCount = config.nObjectCount;
 	m_nEventCount = config.pManifest->getEventCount();
@@ -486,6 +497,11 @@ SIRFMODPackageLoader &SIRFMODRuntime::getPackages( void ) noexcept
 sirFMODMemoryBudgetStats_t SIRFMODRuntime::getMemoryStats( void ) const noexcept
 {
 	return m_Memory.getStats();
+}
+
+sirFMODMemoryBudgetStats_t SIRFMODRuntime::getNativeMemoryStats( void ) const noexcept
+{
+	return m_NativeMemoryStats != nullptr ? m_NativeMemoryStats() : sirFMODMemoryBudgetStats_t{};
 }
 
 int32_t SIRFMODRuntime::getLastNativeResult( void ) const noexcept

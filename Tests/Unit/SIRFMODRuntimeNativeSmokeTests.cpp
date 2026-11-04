@@ -72,6 +72,7 @@ int main( void )
 	config.nMaxBankEventBindings = 1;
 	config.nMaxMixerControls = 1;
 	config.nMaxSnapshots = 1;
+	config.nNativeMemoryBudgetBytes = 64 * 1024 * 1024;
 	const sirFMODRuntimeNativeOps_t nativeOps = sirGetFMODRuntimeNativeOps();
 	for ( uint32_t iPass = 0; iPass < 2; ++iPass ) {
 		SIRFMODRuntime runtime;
