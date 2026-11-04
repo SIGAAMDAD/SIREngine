@@ -957,6 +957,31 @@ static bool describeResourceTest( void *pContext, const SIRResourceDependencyPla
 	return false;
 }
 
+typedef struct sirResourceMutationFactory_s
+{
+	sirResourceScheduledTestSet_t *pSet;
+	SIRResourceGraphWriter *pWriter;
+	uint64_t nAsset;
+	bool bMutated;
+} sirResourceMutationFactory_t;
+
+static bool describeResourceWithMutation( void *pContext, const SIRResourceDependencyPlanEntry &rEntry, sirTaskGraphPass_t *pPass ) noexcept
+{
+	sirResourceMutationFactory_t *pMutation = ( sirResourceMutationFactory_t * )pContext;
+	if ( !describeResourceTest( pMutation->pSet, rEntry, pPass ) ) {
+		return false;
+	}
+	if ( !pMutation->bMutated ) {
+		SIRResourcePublication changed = { key( pMutation->nAsset ), SIR_RESOURCE_KIND_COMPOSITION, 1, 1, nullptr, 0, nullptr, 0 };
+		SIRResourceHandle updated = {};
+		if ( pMutation->pWriter->publish( changed, &updated ) != SIR_RESOURCE_RESULT_SUCCESS ) {
+			return false;
+		}
+		pMutation->bMutated = true;
+	}
+	return true;
+}
+
 static SIRResourceHandle publishTaskNode( SIRResourceGraphWriter &rWriter, uint64_t nAsset,
                                           const SIRResourceDependency *pDependencies = nullptr, uint32_t nDependencies = 0 ) noexcept
 {
@@ -1132,6 +1157,13 @@ static void testCoreTaskGraphStaleRevisionsAndBudget( void )
 		REQUIRE( pWriter->compileTaskGraph( work.nodes[2].hResource, tasks, plan, 8, describeResourceTest, &work, &nCount ) ==
 		         SIR_RESOURCE_RESULT_FAILED );
 		REQUIRE( tasks.getPassCount() == 0 );
+		work.bRejectFactory = false;
+		SIRTaskGraph stale;
+		REQUIRE( stale.init( &memory, { 8, 1, 16 } ) );
+		sirResourceMutationFactory_t mutation = { &work, pWriter, 953, false };
+		REQUIRE( pWriter->compileTaskGraph( work.nodes[2].hResource, stale, plan, 8, describeResourceWithMutation, &mutation, &nCount ) ==
+		         SIR_RESOURCE_RESULT_STALE_REVISION );
+		REQUIRE( mutation.bMutated && stale.getPassCount() == 0 );
 	}
 	memory.shutdown();
 	REQUIRE( alloc.m_nOutstanding.load() == 0 );
