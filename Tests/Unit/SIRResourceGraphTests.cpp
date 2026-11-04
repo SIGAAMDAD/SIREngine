@@ -21,7 +21,6 @@ struct SIRTestAllocatorStats
 	std::atomic<int32_t> m_nOutstanding;
 	std::atomic<uint64_t> m_nOutstandingBytes;
 
-
 	std::atomic<bool> m_bFailNext;
 };
 
@@ -1421,6 +1420,8 @@ int main( void )
 	testAtomicReadIndexCollisionsAndChurn();
 	testEpochReclamationWithOverlappingScopes();
 	testReaderEpochSlotExhaustion();
+
+
 	testDeterministicDependencyOrderCompilation();
 	testCoreTaskGraphResourceDependencies();
 	testCoreTaskGraphFailureAndCancellation();
