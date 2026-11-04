@@ -456,11 +456,53 @@ static bool testSegmentBitmapMetadataExhaustion( void )
 	return true;
 }
 
+static bool testRecyclableFloorAndDomainBudget( void )
+{
+	const uint64_t nPage = SIRVirtualMemory::getPageSize();
+	if ( nPage == 0 ) {
+		return false;
+	}
+	SIRMemoryManager memory;
+	const sirMemoryConfig_t config = { nPage * 128, nPage * 32, nPage * 16, 2 };
+	if ( !memory.init( config ) || !memory.setDomainCommitLimit( SIR_MEMORY_DOMAIN_JOB_SCRATCH, nPage ) ||
+	     memory.allocateMetadata( nPage * 2, 8, SIR_MEMORY_DOMAIN_JOB_SCRATCH ) != nullptr ) {
+		return false;
+	}
+	void *szPages[16] = {};
+	uint32_t nCount = 0;
+	while ( nCount < 16 ) {
+		void *pPage = memory.allocateRecyclableMetadataPage( SIR_MEMORY_DOMAIN_NETWORKING );
+		if ( pPage == nullptr ) {
+			break;
+		}
+		szPages[nCount++] = pPage;
+	}
+	if ( nCount == 0 || nCount >= 16 || memory.allocateRecyclableMetadataPage( SIR_MEMORY_DOMAIN_NETWORKING ) != nullptr ) {
+		return false;
+	}
+	for ( uint32_t i = 0; i < nCount; ++i ) {
+		if ( !memory.releaseRecyclableMetadataPage( szPages[i], SIR_MEMORY_DOMAIN_NETWORKING ) ) {
+			return false;
+		}
+	}
+	if ( !memory.setDomainCommitLimit( SIR_MEMORY_DOMAIN_NETWORKING, nPage ) ) {
+		return false;
+	}
+	void *pReused = memory.allocateRecyclableMetadataPage( SIR_MEMORY_DOMAIN_NETWORKING );
+	if ( pReused == nullptr || memory.allocateRecyclableMetadataPage( SIR_MEMORY_DOMAIN_NETWORKING ) != nullptr ||
+	     !memory.releaseRecyclableMetadataPage( pReused, SIR_MEMORY_DOMAIN_NETWORKING ) ) {
+		return false;
+	}
+	memory.shutdown();
+	return true;
+}
+
 int main( void )
 {
 	if ( !testMemoryBudget() || !testCoreDomainMetadata() || !testBitmapAndRecommit() || !testOversizedRequests() ||
 	     !testFailedInitializationRecovery() || !testBackingTelemetry() || !testRetainedPageBacking() ||
-	     !testValidationAndBoundaryInputs() || !testTraceWrapAndSparseRetire() || !testSegmentBitmapMetadataExhaustion() ) {
+	     !testValidationAndBoundaryInputs() || !testTraceWrapAndSparseRetire() || !testSegmentBitmapMetadataExhaustion() ||
+	     !testRecyclableFloorAndDomainBudget() ) {
 		fputs( "SIR memory owner test failed\n", stderr );
 		return 1;
 	}
