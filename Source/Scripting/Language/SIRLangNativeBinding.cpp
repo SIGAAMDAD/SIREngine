@@ -52,7 +52,8 @@ sirLangVMError_t SIRLangInvokeNativeBinding( const sirLangVMCall_t& call, sirLan
 	    descriptor.nReturnTypeId != 0 ? ( uint32_t )sizeof( sirLangVMValue_t ) : 0,
 	    descriptor.nReturnTypeId != 0 ? ( uint32_t )alignof( sirLangVMValue_t ) : 1
 	};
-	const sirScriptResult_t eResult = pRegistry->invokeNative( call.nFunctionId, call.nSignatureId,
-	                                                          call.nBindingRevision, arguments, result );
+	const sirScriptNativeInvocation_t request = { call.nFunctionId, call.nSignatureId,
+	                                              call.nBindingRevision, arguments, result };
+	const sirScriptResult_t eResult = pRegistry->invokeNative( request );
 	return eResult == SIR_SCRIPT_OK ? SIR_LANG_VM_OK : SIR_LANG_VM_INVALID_CAPABILITY;
 }

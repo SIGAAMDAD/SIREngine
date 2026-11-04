@@ -302,18 +302,17 @@ sirScriptResult_t SIRScriptBindingRegistry::validateQueuedEvent( uint64_t nEvent
 	return SIR_SCRIPT_NOT_FOUND;
 }
 
-sirScriptResult_t SIRScriptBindingRegistry::invokeNative( uint64_t nFunctionId, uint64_t nSignatureId, uint32_t nBindingRevision,
-                                                          sirScriptReadFrame_t arguments, sirScriptWriteFrame_t result ) const noexcept
+sirScriptResult_t SIRScriptBindingRegistry::invokeNative( const sirScriptNativeInvocation_t& request ) const noexcept
 {
 	if ( !m_bPublished ) {
 		return SIR_SCRIPT_WRONG_STATE;
 	}
 	for ( uint32_t iFunction = 0; iFunction < m_nFunctions; ++iFunction ) {
 		const sirScriptFunctionEntry_t &entry = m_szFunctions[iFunction];
-		if ( entry.descriptor.nFunctionId != nFunctionId ) {
+		if ( entry.descriptor.nFunctionId != request.nFunctionId ) {
 			continue;
 		}
-		if ( entry.descriptor.nSignatureId != nSignatureId || entry.descriptor.nBindingRevision != nBindingRevision ) {
+		if ( entry.descriptor.nSignatureId != request.nSignatureId || entry.descriptor.nBindingRevision != request.nBindingRevision ) {
 			return SIR_SCRIPT_TYPE_MISMATCH;
 		}
 		const sirScriptTypeDescriptor_t *pArguments = findType( entry.descriptor.nArgumentsTypeId );
@@ -322,13 +321,13 @@ sirScriptResult_t SIRScriptBindingRegistry::invokeNative( uint64_t nFunctionId, 
 		const uint32_t nArgumentAlignment = pArguments != nullptr ? pArguments->nAlignment : 1;
 		const uint32_t nReturnBytes = pReturn != nullptr ? pReturn->nBytes : 0;
 		const uint32_t nReturnAlignment = pReturn != nullptr ? pReturn->nAlignment : 1;
-		if ( !checkReadFrame( arguments, nArgumentBytes, nArgumentAlignment ) ) {
+		if ( !checkReadFrame( request.arguments, nArgumentBytes, nArgumentAlignment ) ) {
 			return SIR_SCRIPT_TYPE_MISMATCH;
 		}
-		if ( !checkWriteFrame( result, nReturnBytes, nReturnAlignment ) ) {
+		if ( !checkWriteFrame( request.result, nReturnBytes, nReturnAlignment ) ) {
 			return SIR_SCRIPT_TYPE_MISMATCH;
 		}
-		return entry.pInvoke( entry.pUser, arguments, result );
+		return entry.pInvoke( entry.pUser, request.arguments, request.result );
 	}
 	return SIR_SCRIPT_NOT_FOUND;
 }
