@@ -5,6 +5,7 @@
 SIREngine MPLv2 Source Code
 Copyright (C) 2023-2027 Noah Van Til
 
+
 This Source Code Form is subject to the terms of the Mozilla Public
 License, v2. If a copy of the MPL was not distributed with this
 file, You can obtain one at https://mozilla.org/MPL/2.0/.
@@ -29,7 +30,6 @@ SIRD3D12ComputeQueue::SIRD3D12ComputeQueue( void ) noexcept
 SIRD3D12ComputeQueue::~SIRD3D12ComputeQueue( void ) noexcept
 {
 	shutdown();
-
 }
 
 bool SIRD3D12ComputeQueue::initialize( ID3D12Device *pDevice ) noexcept
