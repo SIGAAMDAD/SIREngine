@@ -171,9 +171,41 @@ static bool testSparseSnapshotAcrossBothBuffers( void ) noexcept
 	return true;
 }
 
+static bool testHighRatePointerPublication( void ) noexcept
+{
+	SIRInputService input;
+	SIRInputSnapshotTestBackend backend;
+	if ( !input.attach( backend ) || !input.begin( 1 ) ) {
+		return false;
+	}
+	sirInputDeviceId_t id = {};
+	if ( !input.connect( { 1, 31337, SIR_INPUT_TEST, SIR_INPUT_POINTER }, &id ) || !input.publish() ) {
+		return false;
+	}
+	for ( uint64_t nTick = 2; nTick < 20; ++nTick ) {
+		if ( !input.begin( nTick ) ) {
+			return false;
+		}
+		for ( uint32_t i = 0; i < 2000; ++i ) {
+			if ( !input.emitPointer( SIR_INPUT_TEST, id, SIR_INPUT_MOTION, 0, 1, -1, nTick * 10000 + i ) ) {
+				return false;
+			}
+		}
+		if ( !input.publish() ) {
+			return false;
+		}
+		const sirInputFrame_t *pFrame = input.frame();
+		if ( pFrame == nullptr || pFrame->nCount != 2000 || pFrame->state[id.nSlot].nMotionX != 2000 ||
+		     pFrame->state[id.nSlot].nMotionY != -2000 ) {
+			return false;
+		}
+	}
+	return true;
+}
+
 int main( void )
 {
-	if ( !testSparseSnapshotAcrossBothBuffers() ) {
+	if ( !testSparseSnapshotAcrossBothBuffers() || !testHighRatePointerPublication() ) {
 		fprintf( stderr, "SIRInputSnapshotDeltaTests FAIL\n" );
 		return 1;
 	}

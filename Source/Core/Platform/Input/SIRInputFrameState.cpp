@@ -172,15 +172,21 @@ bool SIRInputFrameState::postChanges( sirInputDeviceId_t id, sirInputDeviceClass
 		} else {
 			return false;
 		}
-		markStateDirty( id.nSlot );
 		if ( change.eSignal == SIR_INPUT_BUTTON ) {
-			m_nTransientMask |= UINT32_C( 1 ) << id.nSlot;
+			const uint32_t nMask = UINT32_C( 1 ) << id.nSlot;
+			if ( ( m_nTransientMask & nMask ) == 0 ) {
+				markStateDirty( id.nSlot );
+				m_nTransientMask |= nMask;
+			}
+		} else {
+			markStateDirty( id.nSlot );
 		}
 		const sirInputEvent_t event = { nTime, ++m_nSequence, id, change.nValue, 0, change.nControl, change.eSignal, eClass };
 		return append( event );
 	}
 
 	// Validate as one transaction, including repeated presses and releases.
+	bool bTransientChanged = false;
 	sirInputDeviceState_t scratch = m_Live[id.nSlot];
 	uint32_t nChanges = 0;
 	for ( uint32_t i = 0; i < nCount; ++i ) {
@@ -228,7 +234,7 @@ bool SIRInputFrameState::postChanges( sirInputDeviceId_t id, sirInputDeviceClass
 		if ( bChanged ) {
 			apply( state, change );
 			if ( change.eSignal == SIR_INPUT_BUTTON ) {
-				m_nTransientMask |= UINT32_C( 1 ) << id.nSlot;
+				bTransientChanged = true;
 			}
 			sirInputEvent_t event = { nTime, ++m_nSequence, id, change.nValue, 0, change.nControl, change.eSignal, eClass };
 			append( event );
@@ -236,6 +242,9 @@ bool SIRInputFrameState::postChanges( sirInputDeviceId_t id, sirInputDeviceClass
 	}
 	if ( nChanges != 0 ) {
 		markStateDirty( id.nSlot );
+		if ( bTransientChanged ) {
+			m_nTransientMask |= UINT32_C( 1 ) << id.nSlot;
+		}
 	}
 	return true;
 }
@@ -275,8 +284,11 @@ bool SIRInputFrameState::postPointer( sirInputDeviceId_t id, sirInputDeviceClass
 		sirInputDeviceState_t &state = m_Live[id.nSlot];
 		state.nMotionX = saturateInputMovement( state.nMotionX, nX );
 		state.nMotionY = saturateInputMovement( state.nMotionY, nY );
-		markStateDirty( id.nSlot );
-		m_nTransientMask |= UINT32_C( 1 ) << id.nSlot;
+		const uint32_t nMask = UINT32_C( 1 ) << id.nSlot;
+		if ( ( m_nTransientMask & nMask ) == 0 ) {
+			markStateDirty( id.nSlot );
+			m_nTransientMask |= nMask;
+		}
 	}
 	return true;
 }
