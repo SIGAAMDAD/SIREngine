@@ -573,7 +573,6 @@ static void testInvalidInputAndProviderLifecycle( void )
 	memory.shutdown();
 }
 
-
 typedef struct sirTestShutdownPoll_s
 {
 	SIRTaskScheduler *pScheduler;
@@ -616,8 +615,8 @@ static void testShutdownWithLiveTasksAndProviderWait( void )
 		SIR_TEST_CHECK( scheduler.submit( taskUntilShutdown, &context, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU, &running ) );
 		SIR_TEST_CHECK( waitForAtLeast( context.nStarted, 1 ) );
 		SIR_TEST_CHECK( scheduler.submit( countTask, &nExecuted, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU, &queued ) );
-		SIR_TEST_CHECK( scheduler.submitAfter( countTask, &nExecuted, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_MAIN,
-		                                  &queued, 1, &blocked ) );
+		SIR_TEST_CHECK(
+		    scheduler.submitAfter( countTask, &nExecuted, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_MAIN, &queued, 1, &blocked ) );
 		SIR_TEST_CHECK( scheduler.getState( running ) == SIR_TASK_RUNNING );
 		SIR_TEST_CHECK( scheduler.getState( queued ) == SIR_TASK_QUEUED );
 		SIR_TEST_CHECK( scheduler.getState( blocked ) == SIR_TASK_BLOCKED );
