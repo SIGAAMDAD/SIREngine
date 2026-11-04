@@ -341,9 +341,24 @@ static bool sirTestHapticDeviceLifecycle( void )
 
 int main( void )
 {
-	if ( !sirTestTextAndUIRoute() || !sirTestTextValidationAndOverflow() || !sirTestCookedControllerProfiles() || !sirTestHapticMixing() ||
-	     !sirTestHapticDeviceLifecycle() ) {
-		fputs( "SIRInputPhase45Tests FAILED\n", stderr );
+	if ( !sirTestTextAndUIRoute() ) {
+		fputs( "SIRInputPhase45Tests text-and-ui FAILED\n", stderr );
+		return 1;
+	}
+	if ( !sirTestTextValidationAndOverflow() ) {
+		fputs( "SIRInputPhase45Tests text-validation FAILED\n", stderr );
+		return 1;
+	}
+	if ( !sirTestCookedControllerProfiles() ) {
+		fputs( "SIRInputPhase45Tests cooked-profiles FAILED\n", stderr );
+		return 1;
+	}
+	if ( !sirTestHapticMixing() ) {
+		fputs( "SIRInputPhase45Tests haptic-mixing FAILED\n", stderr );
+		return 1;
+	}
+	if ( !sirTestHapticDeviceLifecycle() ) {
+		fputs( "SIRInputPhase45Tests haptic-lifecycle FAILED\n", stderr );
 		return 1;
 	}
 	puts( "SIRInputPhase45Tests PASS" );
