@@ -39,7 +39,7 @@ foreach(SIR_BACKEND vulkan d3d12)
             message(FATAL_ERROR "SPIR-V entry point or resource reflection missing: ${SIR_REFLECT_ERROR}")
         endif()
     else()
-        execute_process(COMMAND "${SIR_DXC}" -dumpbin -all "${SIR_FIRST}"
+        execute_process(COMMAND "${SIR_DXC}" -dumpbin "${SIR_FIRST}"
             RESULT_VARIABLE SIR_REFLECT_RESULT OUTPUT_VARIABLE SIR_REFLECTION ERROR_VARIABLE SIR_REFLECT_ERROR)
         if(NOT SIR_REFLECT_RESULT EQUAL 0 OR NOT SIR_REFLECTION MATCHES "Resource Bindings" OR
                 NOT SIR_REFLECTION MATCHES "outputData")
