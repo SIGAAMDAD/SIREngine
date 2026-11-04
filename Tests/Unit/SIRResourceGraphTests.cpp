@@ -1481,6 +1481,59 @@ static void testContentKeyCollisionDoesNotAliasData( void )
 	REQUIRE( allocator.m_nOutstanding.load() == 0 );
 }
 
+static void testMultiChunkEvictionAndFailedReplacement( void )
+{
+	SIRTestAllocatorStats allocator = {};
+	{
+		SIRResourceGraph graph( testConfig( allocator, 8 ) );
+		REQUIRE( graph.isReady() );
+		SIRResourceGraphWriter *pWriter = graph.getWriter();
+		REQUIRE( pWriter != nullptr );
+		SIRResourceStagingHandle staging[2] = {};
+		SIRResourceMutableBytes bytes[2] = {};
+		SIRResourceChunkPublication chunks[2] = {};
+		for ( uint32_t i = 0; i < 2; ++i ) {
+			REQUIRE( pWriter->allocateStaging( 16, 8, 9, &staging[i], &bytes[i] ) == SIR_RESOURCE_RESULT_SUCCESS );
+			memset( bytes[i].m_pData, ( int )( 0x31 + i ), 16 );
+			chunks[i] = { { i + 1 }, content( 901 + i ), staging[i], false };
+		}
+		SIRResourcePublication pub = { key( 902 ), SIR_RESOURCE_KIND_BLOB, 1, 1, chunks, 2, nullptr, 0 };
+		SIRResourceHandle resource = {};
+		REQUIRE( pWriter->publish( pub, &resource ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( graph.getStats().m_nUniqueChunks == 2 );
+		allocator.m_bFailNext.store( true );
+		REQUIRE( pWriter->evictChunk( resource, { 1 } ) == SIR_RESOURCE_RESULT_OUT_OF_BUDGET );
+		{
+			SIRResourceReadScope scope( graph );
+			SIRResourceView original;
+			REQUIRE( graph.resolve( scope, resource, &original ) == SIR_RESOURCE_RESULT_SUCCESS );
+			SIRResourceInfo info = {};
+			REQUIRE( original.getInfo( &info ) == SIR_RESOURCE_RESULT_SUCCESS && info.m_nChunkCount == 2 );
+		}
+		REQUIRE( pWriter->evictChunk( resource, { 1 } ) == SIR_RESOURCE_RESULT_SUCCESS );
+		{
+			SIRResourceReadScope scope( graph );
+			SIRResourceView replacement;
+			REQUIRE( graph.resolve( scope, resource, &replacement ) == SIR_RESOURCE_RESULT_SUCCESS );
+			SIRResourceConstBytes remaining = {};
+			REQUIRE( replacement.getChunk( { 1 }, &remaining ) == SIR_RESOURCE_RESULT_MISSING_CHUNK );
+			REQUIRE( replacement.getChunk( { 2 }, &remaining ) == SIR_RESOURCE_RESULT_SUCCESS );
+			REQUIRE( remaining.m_nSize == 16 && remaining.m_pData[0] == 0x32 );
+		}
+		REQUIRE( pWriter->evictChunk( resource, { 2 } ) == SIR_RESOURCE_RESULT_SUCCESS );
+		allocator.m_bFailNext.store( true );
+		REQUIRE( pWriter->markFailed( resource, SIR_RESOURCE_RESULT_FAILED ) == SIR_RESOURCE_RESULT_OUT_OF_BUDGET );
+		REQUIRE( pWriter->markFailed( resource, SIR_RESOURCE_RESULT_SUCCESS ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		REQUIRE( pWriter->markFailed( resource, SIR_RESOURCE_RESULT_FAILED ) == SIR_RESOURCE_RESULT_SUCCESS );
+		SIRResourceReadScope scope( graph );
+		SIRResourceView invalid;
+		REQUIRE( graph.resolve( scope, resource, &invalid ) == SIR_RESOURCE_RESULT_NOT_RESIDENT );
+		REQUIRE( pWriter->retire( resource ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( pWriter->collectRetired( 8 ) >= 1 );
+	}
+	REQUIRE( allocator.m_nOutstanding.load() == 0 );
+}
+
 int main( void )
 {
 	testScopeLifetimeAndDeduplication();
@@ -1506,6 +1559,7 @@ int main( void )
 	testWriterInputValidationAndStagingLifecycle();
 	testConstructorAllocationFailuresAndOverflow();
 	testContentKeyCollisionDoesNotAliasData();
+	testMultiChunkEvictionAndFailedReplacement();
 	printf( "PASS: GRDG resource registry, publication, deduplication, lifetime, concurrency\n" );
 	return 0;
 }
