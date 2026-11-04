@@ -1410,7 +1410,6 @@ static void testWriterInputValidationAndStagingLifecycle( void )
 	REQUIRE( alloc.m_nOutstanding.load() == 0 );
 }
 
-
 static void testConstructorAllocationFailuresAndOverflow( void )
 {
 	for ( uint32_t nFail = 1; nFail <= 13; ++nFail ) {
