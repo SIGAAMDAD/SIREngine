@@ -33,6 +33,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 typedef struct sirD3D12ResourceSlot_s
 {
 	D3D12MA::Allocation *pAllocation;
+	ID3D12Resource *pExternalResource;
 	void *pMappedBytes;
 	sirD3D12CompletionSet_t retireCompletion;
 	uint64_t nAllocationBytes;
@@ -56,6 +57,10 @@ typedef struct sirD3D12ResourceSlot_s
 	D3D12_DESCRIPTOR_HEAP_TYPE eDescriptorHeap;
 	bool bLive;
 	bool bRetiring;
+	ID3D12Resource *getNativeResource( void ) const noexcept
+	{
+		return pExternalResource != nullptr ? pExternalResource : ( pAllocation != nullptr ? pAllocation->GetResource() : nullptr );
+	}
 } sirD3D12ResourceSlot_t;
 
 // Fixed capacity is deliberate. Resource and descriptor creation are cold
@@ -75,6 +80,7 @@ private:
 	uint32_t m_nDeviceGeneration = 0;
 	uint64_t m_nBudgetBytes = 0;
 	uint64_t m_nAllocatedBytes = 0;
+	uint64_t m_nExternalBytes = 0;
 	uint64_t m_nPeakAllocatedBytes = 0;
 
 	sirGraphicsResult_t acquireSlot( sirGraphicsHandleType_t eType, uint32_t *pIndex, sirGraphicsHandle_t *pHandle ) noexcept;
@@ -98,6 +104,11 @@ public:
 	sirGraphicsResult_t retainCommandReference( sirGraphicsHandle_t hHandle ) noexcept;
 	void releaseCommandReference( sirGraphicsHandle_t hHandle ) noexcept;
 	uint64_t getAllocatedBytes( void ) const noexcept;
+	uint64_t getExternalBytes( void ) const noexcept;
+	sirGraphicsResult_t importExternalTexture( ID3D12Resource *pResource, sirGraphicsFormat_t eFormat,
+	                                           sirGraphicsHandle_t *pHandle ) noexcept;
+	bool canReleaseExternalTexture( sirGraphicsHandle_t hTexture ) noexcept;
+	sirGraphicsResult_t releaseExternalTexture( sirGraphicsHandle_t hTexture ) noexcept;
 	uint64_t getPeakAllocatedBytes( void ) const noexcept;
 	uint64_t getMappedUploadBytes( void ) const noexcept;
 	uint64_t getMappedReadbackBytes( void ) const noexcept;
