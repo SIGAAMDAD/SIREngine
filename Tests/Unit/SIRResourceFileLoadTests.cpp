@@ -1,4 +1,6 @@
 /*
+
+
 ===========================================================================
 SIREngine MPLv2 Source Code
 Copyright (C) 2023-2027 Noah Van Til
@@ -31,7 +33,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #define SIR_IO_CHECK( condition )                                                                                                          \
 	do {                                                                                                                                   \
 		if ( !( condition ) ) {                                                                                                            \
-			fprintf( stderr, "GRDG I/O failure %s:%d: %s\n", __FILE__, __LINE__, #condition );                                            \
+			fprintf( stderr, "GRDG I/O failure %s:%d: %s\n", __FILE__, __LINE__, #condition );                                             \
 			abort();                                                                                                                       \
 		}                                                                                                                                  \
 	} while ( false )
