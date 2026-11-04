@@ -16,6 +16,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Audio/FMOD/SIRFMODBankStore.h>
+#include <Core/Containers/SIRRawStorage.h>
 #include <Audio/FMOD/SIRFMODAudioThread.h>
 #include <chrono>
 #include <thread>
@@ -803,6 +804,19 @@ static sirAudioResult_t testResolveRuntimeObject( void *, sirFMODRuntimeObjectKi
 	return SIR_AUDIO_INVALID_ARGUMENT;
 }
 
+static uint32_t s_nNativeMemoryInstallCalls = 0;
+static sirAudioResult_t testNativeMemoryInstall( const sirContainerAllocator_t *pAllocator, uint64_t nBudgetBytes ) noexcept
+{
+	checkBank( SIRRawStorage::isValidAllocator( pAllocator ) );
+	checkBank( nBudgetBytes == 16 * 1024 * 1024 );
+	++s_nNativeMemoryInstallCalls;
+	return SIR_AUDIO_OK;
+}
+static sirFMODMemoryBudgetStats_t testNativeMemoryStats( void ) noexcept
+{
+	return { 16 * 1024 * 1024, 4096, 8192, 4, 0 };
+}
+
 static void testRuntimeComposition( const sirContainerAllocator_t *pAllocator )
 {
 	sirFMODBankFixture_t fixture = {};
@@ -835,6 +849,7 @@ static void testRuntimeComposition( const sirContainerAllocator_t *pAllocator )
 	config.nMaxBankEventBindings = 1;
 	config.nMaxMixerControls = 2;
 	config.nMaxSnapshots = 1;
+	config.nNativeMemoryBudgetBytes = 16 * 1024 * 1024;
 	sirFMODRuntimeNativeOps_t ops = {};
 	ops.context = makeStudioOps( &fixture );
 	ops.voice = makeVoiceOps( &fixture );
@@ -843,9 +858,12 @@ static void testRuntimeComposition( const sirContainerAllocator_t *pAllocator )
 	ops.bank = makeBankOps( &fixture );
 	ops.mixer = { 1, &fixture, testPinnedBusResolve, testPinnedVCAResolve, testPinnedSetVolume, testPinnedSetMute, testPinnedSetVolume };
 	ops.snapshot = { 1, &fixture, testPinnedSnapshotResolve, testVoiceCreate, testVoiceStart, testVoiceStop, testVoiceRelease };
+	ops.memory = { 1, testNativeMemoryInstall, testNativeMemoryStats };
 
 	SIRFMODRuntime runtime;
 	checkBank( runtime.initialize( config, ops ) == SIR_AUDIO_OK );
+	checkBank( s_nNativeMemoryInstallCalls == 1 );
+	checkBank( runtime.getNativeMemoryStats().nCurrentBytes == 4096 );
 	checkBank( runtime.isReady() );
 	checkBank( runtime.getMemoryStats().nCurrentBytes > 0 );
 	checkBank( runtime.getMemoryStats().nPeakBytes >= runtime.getMemoryStats().nCurrentBytes );
