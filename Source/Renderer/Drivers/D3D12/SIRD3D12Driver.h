@@ -29,6 +29,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Renderer/Drivers/D3D12/SIRD3D12Resources.h>
 #include <Renderer/Drivers/D3D12/SIRD3D12Pipelines.h>
 #include <Renderer/Drivers/D3D12/SIRD3D12Commands.h>
+#include <Renderer/Drivers/D3D12/SIRD3D12Bindings.h>
 #include <Renderer/Drivers/D3D12/SIRD3D12Surfaces.h>
 
 // Direct native implementation of the shared rendering-device contract.
@@ -39,6 +40,7 @@ private:
 	SIRD3D12Device m_Native;
 	SIRD3D12Resources m_Resources;
 	SIRD3D12Pipelines m_Pipelines;
+	SIRD3D12Bindings m_Bindings;
 	SIRD3D12Commands m_Commands;
 	SIRD3D12Surfaces m_Surfaces;
 	bool m_bSoftware = false;

@@ -38,21 +38,7 @@ jobs:
       - name: Set up MSVC compiler environment
         uses: ilammy/msvc-dev-cmd@v1
       - uses: ./.github/actions/setup-build-tools
-      - name: Install pinned DXC for offline test shaders
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = "Stop"
-          $version = "1.9.2609.5"
-          $root = Join-Path $env:RUNNER_TEMP "sir-dxc"
-          $archive = Join-Path $env:RUNNER_TEMP "sir-dxc.zip"
-          $uri = "https://api.nuget.org/v3-flatcontainer/microsoft.direct3d.dxc/$version/microsoft.direct3d.dxc.$version.nupkg"
-          Invoke-WebRequest -Uri $uri -OutFile $archive
-          Expand-Archive -Path $archive -DestinationPath $root -Force
-          $binary = Get-ChildItem -Path $root -Filter dxc.exe -Recurse |
-            Where-Object { $_.FullName -match '[\\/](x64|amd64)[\\/]' } |
-            Select-Object -First 1
-          if (-not $binary) { throw "Pinned DXC x64 compiler missing" }
-          Add-Content -Path $env:GITHUB_PATH -Value $binary.DirectoryName
+      - uses: ./.github/actions/setup-dxc
       - name: Configure optimized D3D12 profile
         run: cmake --preset profile -DSIR_WITH_D3D12=ON
       - name: Build performance and diagnostic binaries

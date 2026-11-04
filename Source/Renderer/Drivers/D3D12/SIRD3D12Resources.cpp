@@ -280,13 +280,72 @@ bool SIRD3D12Resources::queryDescriptor( sirGraphicsHandle_t hView, D3D12_DESCRI
 		return false;
 	}
 	*pDescriptor = {};
-	sirD3D12ResourceSlot_t *pSlot = findSlot( hView, SIR_GRAPHICS_HANDLE_VIEW );
-	if ( pSlot == nullptr || pSlot->eDescriptorHeap != eHeap || m_szDescriptorHeaps[eHeap] == nullptr ) {
+	sirD3D12ResourceSlot_t *pSlot = findSlot( hView, SIR_GRAPHICS_HANDLE_NONE );
+	if ( pSlot == nullptr || ( pSlot->eType != SIR_GRAPHICS_HANDLE_VIEW && pSlot->eType != SIR_GRAPHICS_HANDLE_SAMPLER ) ||
+	     pSlot->eDescriptorHeap != eHeap || m_szDescriptorHeaps[eHeap] == nullptr ) {
 		return false;
 	}
 	*pDescriptor = m_szDescriptorHeaps[eHeap]->GetCPUDescriptorHandleForHeapStart();
 	pDescriptor->ptr += ( SIZE_T )pSlot->iDescriptor * m_szDescriptorSizes[eHeap];
 	return true;
+}
+
+sirGraphicsResult_t SIRD3D12Resources::reserveDescriptorSpan( D3D12_DESCRIPTOR_HEAP_TYPE eHeap, uint32_t nCount, uint32_t *pIndex,
+                                                              D3D12_CPU_DESCRIPTOR_HANDLE *pCpu,
+                                                              D3D12_GPU_DESCRIPTOR_HANDLE *pGpu ) noexcept
+{
+	if ( pIndex == nullptr || pCpu == nullptr || pGpu == nullptr || nCount == 0 || nCount > s_nDescriptorCapacity ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	*pIndex = 0;
+	*pCpu = {};
+	*pGpu = {};
+	if ( eHeap != D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV && eHeap != D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER ) {
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
+	if ( m_pDevice == nullptr || m_szDescriptorHeaps[eHeap] == nullptr ) {
+		return SIR_GRAPHICS_DEVICE_LOST;
+	}
+	for ( uint32_t iStart = 0; iStart + nCount <= s_nDescriptorCapacity; ++iStart ) {
+		bool bAvailable = true;
+		for ( uint32_t i = 0; i < nCount; ++i ) {
+			if ( m_szDescriptorsUsed[eHeap][iStart + i] != 0 ) {
+				bAvailable = false;
+				break;
+			}
+		}
+		if ( !bAvailable ) {
+			continue;
+		}
+		for ( uint32_t i = 0; i < nCount; ++i ) {
+			m_szDescriptorsUsed[eHeap][iStart + i] = 1;
+		}
+		*pIndex = iStart;
+		*pCpu = m_szDescriptorHeaps[eHeap]->GetCPUDescriptorHandleForHeapStart();
+		pCpu->ptr += ( SIZE_T )iStart * m_szDescriptorSizes[eHeap];
+		*pGpu = m_szDescriptorHeaps[eHeap]->GetGPUDescriptorHandleForHeapStart();
+		pGpu->ptr += ( UINT64 )iStart * m_szDescriptorSizes[eHeap];
+		return SIR_GRAPHICS_SUCCESS;
+	}
+	return SIR_GRAPHICS_CAPACITY_EXCEEDED;
+}
+
+void SIRD3D12Resources::releaseDescriptorSpan( D3D12_DESCRIPTOR_HEAP_TYPE eHeap, uint32_t iStart, uint32_t nCount ) noexcept
+{
+	if ( ( eHeap != D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV && eHeap != D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER ) ||
+	     iStart >= s_nDescriptorCapacity || nCount > s_nDescriptorCapacity - iStart ) {
+		return;
+	}
+	for ( uint32_t i = 0; i < nCount; ++i ) {
+		m_szDescriptorsUsed[eHeap][iStart + i] = 0;
+	}
+}
+
+ID3D12DescriptorHeap *SIRD3D12Resources::getShaderVisibleHeap( D3D12_DESCRIPTOR_HEAP_TYPE eHeap ) noexcept
+{
+	return ( eHeap == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV || eHeap == D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER )
+	           ? m_szDescriptorHeaps[eHeap].Get()
+	           : nullptr;
 }
 
 sirGraphicsResult_t SIRD3D12Resources::retainCommandReference( sirGraphicsHandle_t hHandle ) noexcept
@@ -877,6 +936,10 @@ sirGraphicsResult_t SIRD3D12Resources::createSampler( const sirGraphicsSamplerDe
 	if ( eDescriptor != SIR_GRAPHICS_SUCCESS ) {
 		return eDescriptor;
 	}
+
+
+
+
 	uint32_t iSlot = 0;
 	const sirGraphicsResult_t eSlot = acquireSlot( SIR_GRAPHICS_HANDLE_SAMPLER, &iSlot, pHandle );
 	if ( eSlot != SIR_GRAPHICS_SUCCESS ) {
