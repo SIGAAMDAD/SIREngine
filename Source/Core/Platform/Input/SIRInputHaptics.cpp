@@ -16,7 +16,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Core/Platform/Input/SIRInputHaptics.h>
 #include <string.h>
 
-SIRInputHaptics::SIRInputHaptics( void ) noexcept : m_Effects{}, m_Motors{}, m_nGeneration( 1 )
+SIRInputHaptics::SIRInputHaptics( void ) noexcept : m_Effects{}, m_Motors{}, m_nGeneration( 1 ), m_nActive( 0 ), m_nOutput( 0 )
 {
 }
 
@@ -38,6 +38,7 @@ bool SIRInputHaptics::schedule( const sirInputHapticRequest_t &request, uint64_t
 			++m_nGeneration;
 		}
 		m_Effects[i] = { request, nNowNs, m_nGeneration, true };
+		++m_nActive;
 		*pHandle = { i, m_nGeneration };
 		return true;
 	}
@@ -51,6 +52,7 @@ bool SIRInputHaptics::cancel( sirInputHapticHandle_t hEffect ) noexcept
 		return false;
 	}
 	m_Effects[hEffect.nSlot].bActive = false;
+	--m_nActive;
 	return true;
 }
 
@@ -96,6 +98,7 @@ bool SIRInputHaptics::advance( uint64_t nNowNs, bool bPaused, sirInputRumbleSink
 		                     effect.request.nReleaseMs;
 		if ( nNowNs >= effect.nStartNs && ( nNowNs - effect.nStartNs ) / 1000000 >= nEnd ) {
 			effect.bActive = false;
+			--m_nActive;
 			continue;
 		}
 		if ( bPaused ) {
@@ -133,6 +136,7 @@ bool SIRInputHaptics::advance( uint64_t nNowNs, bool bPaused, sirInputRumbleSink
 				continue;
 			}
 			motor = {};
+			--m_nOutput;
 		}
 		if ( szPriority[i] < 0 ) {
 			continue;
@@ -141,6 +145,9 @@ bool SIRInputHaptics::advance( uint64_t nNowNs, bool bPaused, sirInputRumbleSink
 			if ( !pSink( pContext, szDevices[i], szLeft[i], szRight[i] ) ) {
 				bOkay = false;
 				continue;
+			}
+			if ( !motor.bActive ) {
+				++m_nOutput;
 			}
 			motor = { szDevices[i], szLeft[i], szRight[i], true };
 		}
@@ -154,6 +161,7 @@ void SIRInputHaptics::forgetDevice( sirInputDeviceId_t hDevice, sirInputRumbleSi
 		if ( m_Effects[i].bActive && m_Effects[i].request.hDevice.nSlot == hDevice.nSlot &&
 		     m_Effects[i].request.hDevice.nGeneration == hDevice.nGeneration ) {
 			m_Effects[i].bActive = false;
+			--m_nActive;
 		}
 	}
 	if ( hDevice.nSlot < SIR_INPUT_DEVICE_CAPACITY ) {
@@ -163,6 +171,7 @@ void SIRInputHaptics::forgetDevice( sirInputDeviceId_t hDevice, sirInputRumbleSi
 				( void )pSink( pContext, hDevice, 0, 0 );
 			}
 			motor = {};
+			--m_nOutput;
 		}
 	}
 }
@@ -176,13 +185,16 @@ void SIRInputHaptics::stopAll( sirInputRumbleSink_t pSink, void *pContext ) noex
 	}
 	memset( m_Motors, 0, sizeof( m_Motors ) );
 	memset( m_Effects, 0, sizeof( m_Effects ) );
+	m_nActive = 0;
+	m_nOutput = 0;
 }
 
 uint32_t SIRInputHaptics::activeCount( void ) const noexcept
 {
-	uint32_t nActive = 0;
-	for ( uint32_t i = 0; i < SIR_INPUT_HAPTIC_EFFECT_CAPACITY; ++i ) {
-		nActive += m_Effects[i].bActive ? 1U : 0U;
-	}
-	return nActive;
+	return m_nActive;
+}
+
+bool SIRInputHaptics::hasWork( void ) const noexcept
+{
+	return m_nActive != 0 || m_nOutput != 0;
 }
