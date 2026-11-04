@@ -23,6 +23,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 #include <errno.h>
 #include <fcntl.h>
 #include <spawn.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -43,6 +44,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 // GNU --wrap redirects only the test executable's linked references. No
 // production hook, replacement backend, or engine allocation is introduced.
 static std::atomic<int> s_nReadFault{ 0 };
+static std::atomic<int> s_nOpenFault{ 0 };
 static std::atomic<int> s_nWriteFault{ 0 };
 static std::atomic<bool> s_bMapFault{ false };
 static std::atomic<bool> s_bMapAccessFault{ false };
@@ -61,6 +63,7 @@ static std::atomic<bool> s_bWaitFault{ false };
 static std::atomic<bool> s_bTimedWaitFault{ false };
 static std::atomic<bool> s_bSpawnFault{ false };
 
+extern "C" int __real_open( const char *pszName, int nFlags, ... );
 extern "C" ssize_t __real_pread( int nHandle, void *pData, size_t nBytes, off_t nOffset );
 extern "C" ssize_t __real_pwrite( int nHandle, const void *pData, size_t nBytes, off_t nOffset );
 extern "C" void *__real_mmap( void *pAddress, size_t nBytes, int nProtection, int nFlags, int nHandle, off_t nOffset );
@@ -78,6 +81,23 @@ extern "C" int __real_sem_wait( sem_t *pSemaphore );
 extern "C" int __real_sem_timedwait( sem_t *pSemaphore, const struct timespec *pDeadline );
 extern "C" int __real_posix_spawnp( pid_t *pPid, const char *pszName, const posix_spawn_file_actions_t *pActions,
                                     const posix_spawnattr_t *pAttributes, char *const ppszArgs[], char *const ppszEnvironment[] );
+
+extern "C" int __wrap_open( const char *pszName, int nFlags, ... )
+{
+	const int nFault = s_nOpenFault.exchange( 0, std::memory_order_relaxed );
+	if ( nFault != 0 ) {
+		errno = nFault;
+		return -1;
+	}
+	if ( ( nFlags & O_CREAT ) != 0 ) {
+		va_list args;
+		va_start( args, nFlags );
+		const mode_t nMode = ( mode_t )va_arg( args, int );
+		va_end( args );
+		return __real_open( pszName, nFlags, nMode );
+	}
+	return __real_open( pszName, nFlags );
+}
 
 extern "C" ssize_t __wrap_pread( int nHandle, void *pData, size_t nBytes, off_t nOffset )
 {
@@ -118,6 +138,9 @@ extern "C" ssize_t __wrap_pwrite( int nHandle, const void *pData, size_t nBytes,
 	if ( nMode == 4 ) {
 		errno = EIO;
 		return -1;
+	}
+	if ( nMode == 5 ) {
+		return 0;
 	}
 	return __real_pwrite( nHandle, pData, nBytes, nOffset );
 }
@@ -274,6 +297,10 @@ static void sirTestInjectedPositionalTransfers( void )
 	const char *pszPath = "SIRPlatformIOFaultInjection.bin";
 	( void )SIRPlatformFile::remove( pszPath );
 	SIRPlatformFile file;
+	s_nOpenFault.store( EACCES, std::memory_order_relaxed );
+	SIR_CHECK( file.open( pszPath, SIR_FILE_OPEN_READ ) == SIR_FILE_ACCESS_DENIED && !file.isOpen() );
+	s_nOpenFault.store( EOVERFLOW, std::memory_order_relaxed );
+	SIR_CHECK( file.open( pszPath, SIR_FILE_OPEN_READ ) == SIR_FILE_OUT_OF_RANGE && !file.isOpen() );
 	SIR_CHECK( file.open( pszPath, SIR_FILE_OPEN_CREATE | SIR_FILE_OPEN_TRUNCATE | SIR_FILE_OPEN_READ | SIR_FILE_OPEN_WRITE ) ==
 	           SIR_FILE_OK );
 
@@ -311,6 +338,8 @@ static void sirTestInjectedPositionalTransfers( void )
 	SIR_CHECK( file.writeAt( 0, szExpected, 16, &nTransferred ) == SIR_FILE_NO_SPACE && nTransferred == 0 );
 	s_nWriteFault.store( 4, std::memory_order_relaxed );
 	SIR_CHECK( file.writeAt( 0, szExpected, 16, &nTransferred ) == SIR_FILE_IO_ERROR && nTransferred == 0 );
+	s_nWriteFault.store( 5, std::memory_order_relaxed );
+	SIR_CHECK( file.writeAt( 0, szExpected, 16, &nTransferred ) == SIR_FILE_IO_ERROR && nTransferred == 0 );
 	s_nWriteFault.store( 0, std::memory_order_relaxed );
 
 	SIRPlatformFileMapping mapping;
@@ -342,6 +371,10 @@ static void sirTestInjectedPositionalTransfers( void )
 	SIR_CHECK( file.open( pszPath, SIR_FILE_OPEN_WRITE | SIR_FILE_OPEN_APPEND ) == SIR_FILE_OK );
 	uint8_t szAppend[8] = { 1, 2, 3, 4, 5, 6, 7, 8 };
 	SIR_CHECK( file.write( szAppend, 8, nullptr ) == SIR_FILE_INVALID_ARGUMENT );
+	SIR_CHECK( file.write( nullptr, 8, &nTransferred ) == SIR_FILE_INVALID_ARGUMENT );
+	s_bSizeFault.store( true, std::memory_order_relaxed );
+	SIR_CHECK( file.seek( 0, SIR_FILE_SEEK_END, nullptr ) == SIR_FILE_IO_ERROR );
+	SIR_CHECK( file.truncate( UINT64_C( 0x8000000000000000 ) ) == SIR_FILE_OUT_OF_RANGE );
 	s_nAppendWriteFault.store( 1, std::memory_order_relaxed );
 	SIR_CHECK( file.write( szAppend, 8, &nTransferred ) == SIR_FILE_OK && nTransferred == 8 );
 	s_nAppendWriteFault.store( 2, std::memory_order_relaxed );
