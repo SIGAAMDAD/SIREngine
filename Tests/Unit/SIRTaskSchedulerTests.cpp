@@ -573,6 +573,63 @@ static void testInvalidInputAndProviderLifecycle( void )
 	memory.shutdown();
 }
 
+
+typedef struct sirTestShutdownPoll_s
+{
+	SIRTaskScheduler *pScheduler;
+	std::atomic<uint32_t> nStarted;
+} sirTestShutdownPoll_t;
+
+static sirTaskResult_t taskUntilShutdown( void *pContext, sirTaskHandle_t task ) noexcept
+{
+	sirTestShutdownPoll_t *pTest = ( sirTestShutdownPoll_t * )pContext;
+	pTest->nStarted.store( 1, std::memory_order_release );
+	while ( !pTest->pScheduler->isCancellationRequested( task ) ) {
+		std::this_thread::yield();
+	}
+	return SIR_TASK_RESULT_SUCCESS;
+}
+
+static void testShutdownWithLiveTasksAndProviderWait( void )
+{
+	const sirMemoryConfig_t memoryConfig = { 64ULL * 1024 * 1024, 16ULL * 1024 * 1024, 4ULL * 1024 * 1024, 16 };
+	SIRMemoryManager memory;
+	SIR_TEST_CHECK( memory.init( memoryConfig ) );
+	{
+		SIRTaskScheduler scheduler;
+		SIR_TEST_CHECK( scheduler.init( &memory, { 8, 1, 16 } ) );
+		SIR_TEST_CHECK( scheduler.pumpCPU( 1 ) == 0 );
+		SIR_TEST_CHECK( !scheduler.waitTask( { UINT32_MAX, 0 } ) );
+		SIR_TEST_CHECK( scheduler.bindProviderOwner( SIR_TASK_EXEC_RENDER ) );
+		sirTaskHandle_t provider = {};
+		SIR_TEST_CHECK( scheduler.submit( pendingProviderTask, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_RENDER, &provider ) );
+		SIR_TEST_CHECK( scheduler.pumpProvider( SIR_TASK_EXEC_RENDER, 1 ) == 1 );
+		SIR_TEST_CHECK( !scheduler.waitTask( provider ) );
+		SIR_TEST_CHECK( scheduler.completeProvider( provider, SIR_TASK_RESULT_SUCCESS ) );
+		SIR_TEST_CHECK( scheduler.releaseTask( provider ) );
+		sirTestShutdownPoll_t context = {};
+		context.pScheduler = &scheduler;
+		std::atomic<uint32_t> nExecuted( 0 );
+		sirTaskHandle_t running = {};
+		sirTaskHandle_t queued = {};
+		sirTaskHandle_t blocked = {};
+		SIR_TEST_CHECK( scheduler.submit( taskUntilShutdown, &context, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU, &running ) );
+		SIR_TEST_CHECK( waitForAtLeast( context.nStarted, 1 ) );
+		SIR_TEST_CHECK( scheduler.submit( countTask, &nExecuted, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU, &queued ) );
+		SIR_TEST_CHECK( scheduler.submitAfter( countTask, &nExecuted, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_MAIN,
+		                                  &queued, 1, &blocked ) );
+		SIR_TEST_CHECK( scheduler.getState( running ) == SIR_TASK_RUNNING );
+		SIR_TEST_CHECK( scheduler.getState( queued ) == SIR_TASK_QUEUED );
+		SIR_TEST_CHECK( scheduler.getState( blocked ) == SIR_TASK_BLOCKED );
+		std::thread unauthorized( [&]() { SIR_TEST_CHECK( !scheduler.shutdown() ); } );
+		unauthorized.join();
+		SIR_TEST_CHECK( scheduler.shutdown() );
+		SIR_TEST_CHECK( nExecuted.load() == 0 );
+		SIR_TEST_CHECK( scheduler.getState( running ) == SIR_TASK_INVALID );
+	}
+	memory.shutdown();
+}
+
 int main( void )
 {
 	testScheduler();
@@ -585,5 +642,6 @@ int main( void )
 	testWorkerStealing();
 	testLocalCancellation();
 	testInvalidInputAndProviderLifecycle();
+	testShutdownWithLiveTasksAndProviderWait();
 	return 0;
 }
