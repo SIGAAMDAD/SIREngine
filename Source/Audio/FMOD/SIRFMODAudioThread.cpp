@@ -217,10 +217,16 @@ sirAudioResult_t SIRFMODAudioThread::cancel( uint64_t nTicket ) noexcept
 		const uint32_t nState = slot.nState.load( SIR_MEMORY_ORDER_ACQUIRE );
 		if ( slot.nTicket.load( SIR_MEMORY_ORDER_ACQUIRE ) == nTicket &&
 		     ( nState == SIR_FMOD_SLOT_QUEUED || nState == SIR_FMOD_SLOT_EXECUTING ) ) {
-			slot.bCancel.store( 1, SIR_MEMORY_ORDER_RELEASE );
-			eResult = SIR_AUDIO_OK;
-			m_nWakes.fetchAdd( 1, SIR_MEMORY_ORDER_RELEASE );
-			m_WaitCondition.notify_one();
+			// Only a running asynchronous bank transaction can still be
+			// cancelled after dispatch. Other native calls are noninterruptible.
+			if ( nState == SIR_FMOD_SLOT_EXECUTING && slot.request.eOperation != SIR_FMOD_THREAD_LOAD_PACKAGE ) {
+				eResult = SIR_AUDIO_BUSY;
+			} else {
+				slot.bCancel.store( 1, SIR_MEMORY_ORDER_RELEASE );
+				eResult = SIR_AUDIO_OK;
+				m_nWakes.fetchAdd( 1, SIR_MEMORY_ORDER_RELEASE );
+				m_WaitCondition.notify_one();
+			}
 		}
 	}
 	leaveClient();
@@ -280,6 +286,26 @@ uint32_t SIRFMODAudioThread::getAutoRecoveryCount( void ) const noexcept
 uint32_t SIRFMODAudioThread::getAutoRecoveryFailureCount( void ) const noexcept
 {
 	return m_nAutoRecoveryFailures.load( SIR_MEMORY_ORDER_ACQUIRE );
+}
+
+sirFMODMemoryBudgetStats_t SIRFMODAudioThread::getEngineMemoryStats( void ) noexcept
+{
+	if ( !enterClient() ) {
+		return {};
+	}
+	const sirFMODMemoryBudgetStats_t stats = m_Runtime.getMemoryStats();
+	leaveClient();
+	return stats;
+}
+
+sirFMODMemoryBudgetStats_t SIRFMODAudioThread::getNativeMemoryStats( void ) noexcept
+{
+	if ( !enterClient() ) {
+		return {};
+	}
+	const sirFMODMemoryBudgetStats_t stats = m_Runtime.getNativeMemoryStats();
+	leaveClient();
+	return stats;
 }
 
 void SIRFMODAudioThread::lifecycleCallback( void *pContext, const sirAudioCompletion_t *pCompletion ) noexcept
