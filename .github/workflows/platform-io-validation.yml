@@ -23,6 +23,21 @@ permissions:
   contents: read
 
 jobs:
+  owned-format:
+    name: Pinned C++ formatting and source conventions
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install pinned clang-format
+        run: python3 -m pip install --disable-pip-version-check clang-format==22.1.5
+      - name: Enforce source formatting
+        run: cmake -P Build/CMake/CIFormat.cmake
+      - name: Enforce owned-source structure
+        run: cmake -P Build/CMake/CIStyle.cmake
+
   platform-io:
     name: Native I/O regression / ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
