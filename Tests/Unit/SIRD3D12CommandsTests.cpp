@@ -193,8 +193,7 @@ static int sirTestQueueSubmission( SIRRenderingDevice *pDevice, uint32_t nGenera
 		}
 	}
 	// A closed but not yet submitted command list must retain its slot.
-	if ( pDevice->acquireCommands( SIR_GRAPHICS_QUEUE_COPY, &pOverflow ) != SIR_GRAPHICS_CAPACITY_EXCEEDED ||
-	     pOverflow != nullptr ) {
+	if ( pDevice->acquireCommands( SIR_GRAPHICS_QUEUE_COPY, &pOverflow ) != SIR_GRAPHICS_CAPACITY_EXCEEDED || pOverflow != nullptr ) {
 		return 45;
 	}
 	sirGraphicsSubmission_t submission = {};
