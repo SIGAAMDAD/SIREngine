@@ -109,6 +109,9 @@ sirGraphicsResult_t SIRD3D12RenderingDevice::initialize( bool bSoftware, const s
 	if ( !sirGraphicsHasFeatures( SIR_D3D12_SHARED_FEATURES, desc.nRequiredFeatures ) ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
+	if ( desc.bEnableGpuValidation && !desc.bEnableApiValidation ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
 	const uint64_t nSlotBytes = desc.nUploadBudgetBytes == 0 ? 64 * 1024 : desc.nUploadBudgetBytes / 3;
 	if ( nSlotBytes == 0 || nSlotBytes > UINT64_MAX / 3 ||
 	     ( desc.nReadbackBudgetBytes != 0 && desc.nReadbackBudgetBytes / 3 < nSlotBytes ) ) {
@@ -122,9 +125,7 @@ sirGraphicsResult_t SIRD3D12RenderingDevice::initialize( bool bSoftware, const s
 	diagnostics.bEnableGpuValidation = desc.bEnableGpuValidation;
 	diagnostics.bEnableDred = desc.bEnableDeviceFaultDiagnostics;
 	if ( !m_Native.initialize( bSoftware, config, desc.pCpuHeap, diagnostics ) ) {
-		return m_Native.getLastError() == E_NOTIMPL      ? SIR_GRAPHICS_UNSUPPORTED
-		       : m_Native.getLastError() == E_INVALIDARG ? SIR_GRAPHICS_INVALID_ARGUMENT
-		                                                 : SIR_GRAPHICS_DRIVER_ERROR;
+		return m_Native.getLastError() == E_NOTIMPL ? SIR_GRAPHICS_UNSUPPORTED : SIR_GRAPHICS_DRIVER_ERROR;
 	}
 	m_bSoftware = bSoftware;
 	if ( !m_Native.getMemory()->configureResidentBudget( desc.nResidentBudgetBytes ) ) {

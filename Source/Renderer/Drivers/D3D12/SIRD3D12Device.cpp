@@ -948,11 +948,6 @@ bool SIRD3D12Device::submitGraphicsAfterCompute( const sirD3D12CompletionSet_t &
 
 	bool bPriorCompleted = false;
 
-
-
-
-
-
 	if ( !pollCompletionSet( computeSet, &bPriorCompleted ) || computeSet.nComputeFence == 0 ) {
 		m_nLastError = E_INVALIDARG;
 		return false;

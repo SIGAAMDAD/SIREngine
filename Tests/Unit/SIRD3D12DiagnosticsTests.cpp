@@ -177,7 +177,7 @@ int main( int argc, char **argv )
 		}
 	}
 	if ( nSelected == UINT32_MAX ) {
-		fprintf( stderr, "Requested D3D12 adapter type unavailable\\n" );
+		fprintf( stderr, "Requested D3D12 adapter type unavailable\n" );
 		return bHardware ? 6 : 77;
 	}
 	sirGraphicsDeviceCreateDesc_t config = {};
@@ -197,7 +197,7 @@ int main( int argc, char **argv )
 	config.bEnableDeviceFaultDiagnostics = bDred;
 	const sirGraphicsResult_t eCreated = driver.createDevice( config, &pDevice );
 	if ( ( bDebug || bDred ) && eCreated == SIR_GRAPHICS_UNSUPPORTED && pDevice == nullptr ) {
-		fprintf( stderr, "Requested D3D12 Graphics Tools diagnostics unavailable\\n" );
+		fprintf( stderr, "Requested D3D12 Graphics Tools diagnostics unavailable\n" );
 		return 77;
 	}
 	if ( eCreated != SIR_GRAPHICS_SUCCESS || pDevice == nullptr ) {
@@ -218,9 +218,9 @@ int main( int argc, char **argv )
 	}
 	const sirGraphicsResult_t eShutdown = driver.destroyDevice( pDevice );
 	if ( nFailure != 0 || eShutdown != SIR_GRAPHICS_SUCCESS ) {
-		fprintf( stderr, "D3D12 phase06 failed at stage %d, shutdown %u\\n", nFailure, ( unsigned )eShutdown );
+		fprintf( stderr, "D3D12 phase06 failed at stage %d, shutdown %u\n", nFailure, ( unsigned )eShutdown );
 		return nFailure != 0 ? nFailure : 11;
 	}
-	printf( "D3D12 phase06 %s correctness: %u COPY->COMPUTE->DIRECT cycles passed\\n", bHardware ? "hardware" : "WARP", nCycles );
+	printf( "D3D12 phase06 %s correctness: %u COPY->COMPUTE->DIRECT cycles passed\n", bHardware ? "hardware" : "WARP", nCycles );
 	return 0;
 }

@@ -71,7 +71,6 @@ static bool sirBenchStatistics( double *pSortedSamples, uint32_t nSamples, sirD3
 	pStats->fMaximumNs = pSortedSamples[nSamples - 1];
 	pStats->fP50Ns = pSortedSamples[( ( uint64_t )nSamples * 50 + 99 ) / 100 - 1];
 
-
 	pStats->fP95Ns = pSortedSamples[( ( uint64_t )nSamples * 95 + 99 ) / 100 - 1];
 	pStats->fP99Ns = pSortedSamples[( ( uint64_t )nSamples * 99 + 99 ) / 100 - 1];
 	for ( uint32_t iSample = 0; iSample < nSamples; ++iSample ) {
@@ -374,7 +373,7 @@ static void sirBenchWriteStats( FILE *pFile, const char *pszName, const sirD3D12
 {
 	fprintf( pFile,
 	         "    \"%s\": {\"mean_ns\": %.3f, \"p50_ns\": %.3f, \"p95_ns\": %.3f, \"p99_ns\": %.3f, "
-	         "\"min_ns\": %.3f, \"max_ns\": %.3f}%s\\n",
+	         "\"min_ns\": %.3f, \"max_ns\": %.3f}%s\n",
 	         pszName, s.fMeanNs, s.fP50Ns, s.fP95Ns, s.fP99Ns, s.fMinimumNs, s.fMaximumNs, bTrailingComma ? "," : "" );
 }
 
@@ -397,32 +396,32 @@ static void sirBenchWriteJsonString( FILE *pFile, const char *pszValue ) noexcep
 static void sirBenchWriteJson( FILE *pFile, const sirGraphicsAdapterInfo_t &adapter, bool bUma,
                                const sirD3D12BenchmarkResults_t &results ) noexcept
 {
-	fprintf( pFile, "{\\n  \"schema_version\": 1,\\n  \"backend\": \"d3d12\",\\n" );
+	fprintf( pFile, "{\n  \"schema_version\": 1,\n  \"backend\": \"d3d12\",\n" );
 	fprintf( pFile, "  \"adapter\": {\"name\": " );
 	sirBenchWriteJsonString( pFile, adapter.szName );
 	fprintf( pFile,
 	         ", \"vendor_id\": %u, \"device_id\": %u, \"software\": %s, "
-	         "\"uma\": %s, \"dedicated_video_bytes\": %llu, \"shared_system_bytes\": %llu},\\n",
+	         "\"uma\": %s, \"dedicated_video_bytes\": %llu, \"shared_system_bytes\": %llu},\n",
 	         adapter.nVendorId, adapter.nDeviceId, adapter.bSoftwareAdapter ? "true" : "false", bUma ? "true" : "false",
 	         ( unsigned long long )adapter.nDedicatedVideoBytes, ( unsigned long long )adapter.nSharedSystemBytes );
-	fprintf( pFile, "  \"warmup\": %u, \"iterations\": %u,\\n", results.nWarmup, results.nSamples );
+	fprintf( pFile, "  \"warmup\": %u, \"iterations\": %u,\n", results.nWarmup, results.nSamples );
 	fprintf( pFile,
 	         "  \"memory\": {\"budget_bytes\": %llu, \"committed_bytes\": %llu, "
-	         "\"peak_committed_bytes\": %llu, \"resident_bytes\": %llu},\\n",
+	         "\"peak_committed_bytes\": %llu, \"resident_bytes\": %llu},\n",
 	         ( unsigned long long )results.memory.nBudgetBytes, ( unsigned long long )results.memory.nCommittedBytes,
 	         ( unsigned long long )results.memory.nPeakCommittedBytes, ( unsigned long long )results.memory.nResidentBytes );
-	fprintf( pFile, "  \"cpu\": {\\n" );
+	fprintf( pFile, "  \"cpu\": {\n" );
 	sirBenchWriteStats( pFile, "buffer_create", results.createBuffer, true );
 	sirBenchWriteStats( pFile, "submit_empty", results.submitEmpty, true );
 	sirBenchWriteStats( pFile, "submit_and_wait", results.submitAndWait, true );
 	sirBenchWriteStats( pFile, "copy_256k_roundtrip", results.copyRoundtrip, false );
 	fprintf( pFile,
-	         "  },\\n  \"gpu_timestamp\": {\"available\": %s, \"frequency_hz\": %llu, "
-	         "\"copies_per_sample\": %u, \"bytes_per_copy\": %u,\\n",
+	         "  },\n  \"gpu_timestamp\": {\"available\": %s, \"frequency_hz\": %llu, "
+	         "\"copies_per_sample\": %u, \"bytes_per_copy\": %u,\n",
 	         results.bGpuTimestampAvailable ? "true" : "false", ( unsigned long long )results.nTimestampFrequency,
 	         results.nCopiesPerGpuSample, results.nGpuCopyBytes );
 	sirBenchWriteStats( pFile, "copy_gpu", results.gpuCopy, false );
-	fprintf( pFile, "  }\\n}\\n" );
+	fprintf( pFile, "  }\n}\n" );
 }
 
 int main( int argc, char **argv )
@@ -468,7 +467,7 @@ int main( int argc, char **argv )
 	sirGraphicsAdapterInfo_t adapter = {};
 	uint32_t nAdapterIndex = 0;
 	if ( !sirBenchAdapter( driver, bHardware, &nAdapterIndex, &adapter ) ) {
-		fprintf( stderr, "Requested %s adapter unavailable\\n", bHardware ? "hardware" : "WARP" );
+		fprintf( stderr, "Requested %s adapter unavailable\n", bHardware ? "hardware" : "WARP" );
 		return 8;
 	}
 	sirGraphicsDeviceCreateDesc_t config = {};
@@ -493,11 +492,11 @@ int main( int argc, char **argv )
 	const bool bCpuOkay = sirBenchCpuCases( pDevice, nWarmup, nIterations, nFrequency, &results );
 	const sirGraphicsResult_t eShutdown = driver.destroyDevice( pDevice );
 	if ( !bCpuOkay || eShutdown != SIR_GRAPHICS_SUCCESS ) {
-		fprintf( stderr, "CPU D3D12 performance benchmark failed\\n" );
+		fprintf( stderr, "CPU D3D12 performance benchmark failed\n" );
 		return 10;
 	}
 	if ( !sirBenchGpuTimestamps( !bHardware, &results ) ) {
-		fprintf( stderr, "GPU timestamp copy workload failed\\n" );
+		fprintf( stderr, "GPU timestamp copy workload failed\n" );
 		return 11;
 	}
 	FILE *pOutput = stdout;
