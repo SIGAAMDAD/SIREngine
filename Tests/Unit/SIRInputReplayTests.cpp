@@ -158,9 +158,62 @@ static bool sirTestReplayInvalidRecord( void ) noexcept
 	return true;
 }
 
+static bool sirTestAuthoritativePlayback( void ) noexcept
+{
+	SIRInputService playback;
+	if ( !playback.startReplay() || playback.startReplay() || !playback.replayActive() ||
+	     !playback.begin( 21 ) || playback.publish() ) {
+		return false;
+	}
+	sirInputReplayFrame_t first = {};
+	first.nTick = 21;
+	first.nCount = 2;
+	first.actions[0] = { 7, 0, 0, 2, false, true, true };
+	first.actions[1] = { 8, 1, 32767, 1, true, true, false };
+	sirInputReplayFrame_t invalid = first;
+	invalid.actions[0].bHeld = true;
+	if ( playback.queueReplayTick( invalid ) || !playback.queueReplayTick( first ) ||
+	     playback.queueReplayTick( first ) || !playback.publish() ) {
+		return false;
+	}
+	sirInputActionState_t state = {};
+	if ( !playback.queryAction( 7, 0, &state ) || state.nTransitions != 2 || !state.bPressed || !state.bReleased ||
+	     !playback.queryAction( 8, 1, &state ) || !state.bHeld || state.nValue != 32767 ) {
+		return false;
+	}
+	uint8_t szBuffer[128] = {};
+	SIRInputReplayTape writer;
+	const sirInputReplayKey_t key = { 7, 0 };
+	if ( !writer.beginRecord( szBuffer, sizeof( szBuffer ) ) ||
+	     playback.recordReplayTick( writer, &key, 1 ) || !playback.begin( 22 ) ||
+	     playback.queryAction( 7, 0, &state ) ) {
+		return false;
+	}
+	invalid = first;
+	if ( playback.queueReplayTick( invalid ) || playback.publish() ) {
+		return false;
+	}
+	sirInputReplayFrame_t second = {};
+	second.nTick = 22;
+	second.nCount = 1;
+	second.actions[0] = { 8, 1, 0, 1, false, false, true };
+	if ( !playback.queueReplayTick( second ) || !playback.publish() ||
+	     playback.queryAction( 7, 0, &state ) || !playback.queryAction( 8, 1, &state ) ||
+	     state.bHeld || !state.bReleased ) {
+		return false;
+	}
+	playback.stopReplay();
+	if ( playback.replayActive() || playback.queryAction( 8, 1, &state ) ) {
+		return false;
+	}
+	playback.shutdown();
+	return true;
+}
+
 int main( void )
 {
-	if ( !sirTestReplayServiceTick() || !sirTestReplayInvalidRecord() ) {
+	if ( !sirTestReplayServiceTick() || !sirTestReplayInvalidRecord() ||
+	     !sirTestAuthoritativePlayback() ) {
 		fputs( "SIRInputReplayTests FAILED\n", stderr );
 		return 1;
 	}

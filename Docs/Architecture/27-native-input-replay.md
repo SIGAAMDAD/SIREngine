@@ -9,7 +9,7 @@
 
 The tape takes an **externally owned byte buffer**, performs no memory allocation and has no native input/OS handles. The action set is caller-selected and is not inferred from per-platform key codes. Logical action IDs are stable across controller mapping/layout changes.
 
-Playback uses `beginRead`, `next`, `query`, `rewind` and `seek`. The reader verifies frame structure, version, checksum, monotonic tick ordering, valid action IDs/users/values and unique action-user keys before advancing its cursor or overwriting the caller's frame.
+Playback uses `beginRead`, `next`, `query`, `rewind` and `seek`. The reader verifies frame structure, version, checksum, monotonic tick ordering, valid action IDs/users/values and unique action-user keys before advancing its cursor or overwriting the caller's frame. The same `validateFrame` routine checks manually supplied playback frames.
 
 ## Little-endian version 1 frame format
 
@@ -32,7 +32,9 @@ Each action record is 20 bytes: logical action ID (4), user (4), signed value bi
 
 Replay records **logical action results**, not raw per-device events, hardware identifiers, physical sensor samples, cursor movement, text, IME compositions or user-entered strings. This keeps normal gameplay replay compact and prevents capture of typed text by default.
 
-This initial slice supports deterministic gameplay input inspection/consumption and tick seek but does not override a live `SIRInputService` or restore engine/gameplay world state. Full rollback will additionally need replay-mode ownership of the gameplay input source, deterministic world checkpoints, action-schema revisions and network rollback orchestration.
+`SIRInputService::startReplay()` enables the authoritative logical-action read path. Each collecting tick must receive exactly one valid, tick-matched `queueReplayTick(frame)` before publication; missing, duplicate, malformed or mismatched ticks are rejected without publishing. `SIRInputService::queryAction()` and the first-party `SIRInputUIDispatch` callback route through the recorded action states while replay is active, then return to live action mapping after `stopReplay()`. Recorded frames are copied into service-owned storage; playback never holds a borrowed pointer into caller memory. Normal raw input acquisition remains available for editor/window processing, but those native events cannot change the authoritative gameplay action query while replaying.
+
+Full deterministic world rollback additionally requires world-state checkpoints, action-schema revisions, simulation state restoration, and network rollback orchestration. Raw pointer events, UI text and native device state are outside this logical-action tape.
 
 ## Verification
 

@@ -193,14 +193,9 @@ bool SIRInputReplayTape::next( sirInputReplayFrame_t *pFrame ) noexcept
 		state.bHeld = ( nFlags & 1 ) != 0;
 		state.bPressed = ( nFlags & 2 ) != 0;
 		state.bReleased = ( nFlags & 4 ) != 0;
-		if ( !valid( state ) ) {
-			return false;
-		}
-		for ( uint32_t j = 0; j < i; ++j ) {
-			if ( state.nActionId == candidate.actions[j].nActionId && state.nUser == candidate.actions[j].nUser ) {
-				return false;
-			}
-		}
+	}
+	if ( !validateFrame( candidate ) ) {
+		return false;
 	}
 	*pFrame = candidate;
 	m_nOffset += nBytes;
@@ -258,6 +253,25 @@ uint32_t SIRInputReplayTape::bytesUsed( void ) const noexcept
 sirInputReplayMode_t SIRInputReplayTape::mode( void ) const noexcept
 {
 	return m_eMode;
+}
+
+bool SIRInputReplayTape::validateFrame( const sirInputReplayFrame_t &frame ) noexcept
+{
+	if ( frame.nTick == 0 || frame.nCount > SIR_INPUT_ACTION_CAPACITY ) {
+		return false;
+	}
+	for ( uint32_t i = 0; i < frame.nCount; ++i ) {
+		const sirInputActionState_t &state = frame.actions[i];
+		if ( !valid( state ) ) {
+			return false;
+		}
+		for ( uint32_t j = 0; j < i; ++j ) {
+			if ( state.nActionId == frame.actions[j].nActionId && state.nUser == frame.actions[j].nUser ) {
+				return false;
+			}
+		}
+	}
+	return true;
 }
 
 bool SIRInputReplayTape::query( const sirInputReplayFrame_t &frame, uint32_t nActionId, uint32_t nUser,
