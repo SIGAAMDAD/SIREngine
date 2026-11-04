@@ -52,3 +52,8 @@ add_executable(SIRScriptOptimizationRecipeTests SIRScriptOptimizationRecipeTests
 target_link_libraries(SIRScriptOptimizationRecipeTests PRIVATE SIR::Scripting)
 sir_configure_owned_target(SIRScriptOptimizationRecipeTests)
 add_test(NAME scripting.optimization-recipe COMMAND SIRScriptOptimizationRecipeTests)
+
+add_executable(SIRLangLexerTests SIRLangLexerTests.cpp)
+target_link_libraries(SIRLangLexerTests PRIVATE SIR::Scripting)
+add_test(NAME scripting.language.lexer COMMAND SIRLangLexerTests)
+sir_configure_owned_target(SIRLangLexerTests)
