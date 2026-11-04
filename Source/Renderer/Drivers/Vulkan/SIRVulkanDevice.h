@@ -217,6 +217,8 @@ typedef struct sirVulkanImageBarrier_s
 	VkImageLayout eAfter;
 	uint32_t nMip;
 	uint32_t nLayer;
+	uint32_t nMipCount;
+	uint32_t nLayerCount;
 	bool bUav;
 } sirVulkanImageBarrier_t;
 

@@ -664,8 +664,12 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::submit( sirGraphicsQueue_t eQueue,
 				if ( ePlan != SIR_GRAPHICS_SUCCESS ) {
 					return ePlan;
 				}
-				( void )sirVulkanSetSubresourceLayout( pShadow, nativeOp.imageBarrier.nMip, nativeOp.imageBarrier.nLayer,
-				                                       nativeOp.imageBarrier.eAfter );
+				for ( uint32_t iLayer = 0; iLayer < nativeOp.imageBarrier.nLayerCount; ++iLayer ) {
+					for ( uint32_t iMip = 0; iMip < nativeOp.imageBarrier.nMipCount; ++iMip ) {
+						( void )sirVulkanSetSubresourceLayout( pShadow, nativeOp.imageBarrier.nMip + iMip,
+						                                       nativeOp.imageBarrier.nLayer + iLayer, nativeOp.imageBarrier.eAfter );
+					}
+				}
 			} else {
 				return SIR_GRAPHICS_INVALID_ARGUMENT;
 			}

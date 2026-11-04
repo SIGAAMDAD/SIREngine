@@ -55,20 +55,17 @@ sirGraphicsResult_t sirVulkanPlanImageBarrier( const sirGraphicsBarrier_t &barri
 	if ( barrier.eType != SIR_GRAPHICS_BARRIER_TRANSITION && barrier.eType != SIR_GRAPHICS_BARRIER_UAV ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
-	if ( barrier.nMipCount != 1 || barrier.nLayerCount != 1 || barrier.nBaseMip >= pImage->nMips ||
-	     barrier.nBaseLayer >= pImage->nLayers ) {
+	if ( barrier.nMipCount == 0 || barrier.nLayerCount == 0 || barrier.nBaseMip >= pImage->nMips ||
+	     barrier.nBaseLayer >= pImage->nLayers || barrier.nMipCount > pImage->nMips - barrier.nBaseMip ||
+	     barrier.nLayerCount > pImage->nLayers - barrier.nBaseLayer ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
 	if ( pImage->eFormat == VK_FORMAT_D16_UNORM || pImage->eFormat == VK_FORMAT_D24_UNORM_S8_UINT ||
 	     pImage->eFormat == VK_FORMAT_D32_SFLOAT ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
-	VkImageLayout eOld = VK_IMAGE_LAYOUT_UNDEFINED;
 	VkImageLayout eBefore = VK_IMAGE_LAYOUT_UNDEFINED;
 	VkImageLayout eAfter = VK_IMAGE_LAYOUT_UNDEFINED;
-	if ( !sirVulkanGetSubresourceLayout( pImage, barrier.nBaseMip, barrier.nBaseLayer, &eOld ) ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
-	}
 	const sirGraphicsResult_t eBeforeResult = sirVulkanBarrierState( barrier.eBefore, pImage, &eBefore );
 	if ( eBeforeResult != SIR_GRAPHICS_SUCCESS ) {
 		return eBeforeResult;
@@ -77,27 +74,39 @@ sirGraphicsResult_t sirVulkanPlanImageBarrier( const sirGraphicsBarrier_t &barri
 	if ( eAfterResult != SIR_GRAPHICS_SUCCESS ) {
 		return eAfterResult;
 	}
-	if ( eOld != eBefore || eAfter == VK_IMAGE_LAYOUT_UNDEFINED ) {
+	if ( eAfter == VK_IMAGE_LAYOUT_UNDEFINED ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( barrier.eType == SIR_GRAPHICS_BARRIER_UAV ) {
-		if ( eOld != VK_IMAGE_LAYOUT_GENERAL || eAfter != VK_IMAGE_LAYOUT_GENERAL || barrier.eBefore != SIR_GRAPHICS_STATE_SHADER_WRITE ||
-		     barrier.eAfter != SIR_GRAPHICS_STATE_SHADER_WRITE ) {
+		if ( eBefore != VK_IMAGE_LAYOUT_GENERAL || eAfter != VK_IMAGE_LAYOUT_GENERAL ||
+		     barrier.eBefore != SIR_GRAPHICS_STATE_SHADER_WRITE || barrier.eAfter != SIR_GRAPHICS_STATE_SHADER_WRITE ) {
 			return SIR_GRAPHICS_INVALID_ARGUMENT;
 		}
-	} else if ( eOld == eAfter ) {
+	} else if ( eBefore == eAfter ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	if ( eAfter == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ) {
-		const uint32_t nIndex = barrier.nBaseLayer * pImage->nMips + barrier.nBaseMip;
-		if ( ( pImage->szUploadedSubresources[nIndex / 64] & ( 1ULL << ( nIndex % 64 ) ) ) == 0 ) {
-			return SIR_GRAPHICS_INVALID_ARGUMENT;
+	for ( uint32_t iLayer = 0; iLayer < barrier.nLayerCount; ++iLayer ) {
+		const uint32_t nLayer = barrier.nBaseLayer + iLayer;
+		for ( uint32_t iMip = 0; iMip < barrier.nMipCount; ++iMip ) {
+			const uint32_t nMip = barrier.nBaseMip + iMip;
+			VkImageLayout eTracked = VK_IMAGE_LAYOUT_UNDEFINED;
+			if ( !sirVulkanGetSubresourceLayout( pImage, nMip, nLayer, &eTracked ) || eTracked != eBefore ) {
+				return SIR_GRAPHICS_INVALID_ARGUMENT;
+			}
+			if ( eAfter == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ) {
+				const uint32_t nIndex = nLayer * pImage->nMips + nMip;
+				if ( ( pImage->szUploadedSubresources[nIndex / 64] & ( 1ULL << ( nIndex % 64 ) ) ) == 0 ) {
+					return SIR_GRAPHICS_INVALID_ARGUMENT;
+				}
+			}
 		}
 	}
-	pNative->eBefore = eOld;
+	pNative->eBefore = eBefore;
 	pNative->eAfter = eAfter;
 	pNative->nMip = barrier.nBaseMip;
 	pNative->nLayer = barrier.nBaseLayer;
+	pNative->nMipCount = barrier.nMipCount;
+	pNative->nLayerCount = barrier.nLayerCount;
 	pNative->bUav = barrier.eType == SIR_GRAPHICS_BARRIER_UAV;
 	return SIR_GRAPHICS_SUCCESS;
 }
@@ -148,8 +157,9 @@ sirGraphicsResult_t SIRVulkanCommandList::barrier( const sirGraphicsBarrier_t *p
 		if ( !pImage->bActive || pImage->nGeneration != barrier.hResource.nGeneration ) {
 			return SIR_GRAPHICS_INVALID_HANDLE;
 		}
-		if ( barrier.nMipCount != 1 || barrier.nLayerCount != 1 || barrier.nBaseMip >= pImage->native.nMips ||
-		     barrier.nBaseLayer >= pImage->native.nLayers ) {
+		if ( barrier.nMipCount == 0 || barrier.nLayerCount == 0 || barrier.nBaseMip >= pImage->native.nMips ||
+		     barrier.nBaseLayer >= pImage->native.nLayers || barrier.nMipCount > pImage->native.nMips - barrier.nBaseMip ||
+		     barrier.nLayerCount > pImage->native.nLayers - barrier.nBaseLayer ) {
 			return SIR_GRAPHICS_UNSUPPORTED;
 		}
 		if ( m_nOperationCount == 0 && iBarrier == 0 ) {
@@ -183,14 +193,31 @@ sirVulkanResult_t SIRVulkanDevice::submitImageBarrier( sirVulkanImage_t *pImage,
 	     pImage->nDeviceSerial != m_nDeviceSerial || m_nLastTransferValue == UINT64_MAX ) {
 		return SIR_VULKAN_INVALID_ARGUMENT;
 	}
-	VkImageLayout eTracked = VK_IMAGE_LAYOUT_UNDEFINED;
-	if ( !sirVulkanGetSubresourceLayout( pImage, barrier.nMip, barrier.nLayer, &eTracked ) || eTracked != barrier.eBefore ||
+	if ( barrier.nMipCount == 0 || barrier.nLayerCount == 0 || barrier.nMip >= pImage->nMips ||
+	     barrier.nLayer >= pImage->nLayers || barrier.nMipCount > pImage->nMips - barrier.nMip ||
+	     barrier.nLayerCount > pImage->nLayers - barrier.nLayer ||
 	     ( barrier.bUav && ( barrier.eBefore != VK_IMAGE_LAYOUT_GENERAL || barrier.eAfter != VK_IMAGE_LAYOUT_GENERAL ||
 	                         ( pImage->nUsage & VK_IMAGE_USAGE_STORAGE_BIT ) == 0 ) ) ||
 	     ( !barrier.bUav && barrier.eBefore == barrier.eAfter ) ||
 	     ( barrier.eAfter != VK_IMAGE_LAYOUT_GENERAL && barrier.eAfter != VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ) ||
 	     ( barrier.eAfter == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL && ( pImage->nUsage & VK_IMAGE_USAGE_SAMPLED_BIT ) == 0 ) ) {
 		return SIR_VULKAN_INVALID_ARGUMENT;
+	}
+	for ( uint32_t iLayer = 0; iLayer < barrier.nLayerCount; ++iLayer ) {
+		const uint32_t nLayer = barrier.nLayer + iLayer;
+		for ( uint32_t iMip = 0; iMip < barrier.nMipCount; ++iMip ) {
+			const uint32_t nMip = barrier.nMip + iMip;
+			VkImageLayout eTracked = VK_IMAGE_LAYOUT_UNDEFINED;
+			if ( !sirVulkanGetSubresourceLayout( pImage, nMip, nLayer, &eTracked ) || eTracked != barrier.eBefore ) {
+				return SIR_VULKAN_INVALID_ARGUMENT;
+			}
+			if ( barrier.eAfter == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ) {
+				const uint32_t nIndex = nLayer * pImage->nMips + nMip;
+				if ( ( pImage->szUploadedSubresources[nIndex / 64] & ( 1ULL << ( nIndex % 64 ) ) ) == 0 ) {
+					return SIR_VULKAN_INVALID_ARGUMENT;
+				}
+			}
+		}
 	}
 
 	uint64_t nCompleted = 0;
@@ -235,9 +262,9 @@ sirVulkanResult_t SIRVulkanDevice::submitImageBarrier( sirVulkanImage_t *pImage,
 	transition.image = pImage->hImage;
 	transition.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 	transition.subresourceRange.baseMipLevel = barrier.nMip;
-	transition.subresourceRange.levelCount = 1;
+	transition.subresourceRange.levelCount = barrier.nMipCount;
 	transition.subresourceRange.baseArrayLayer = barrier.nLayer;
-	transition.subresourceRange.layerCount = 1;
+	transition.subresourceRange.layerCount = barrier.nLayerCount;
 	VkDependencyInfo dependency = {};
 	dependency.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
 	dependency.imageMemoryBarrierCount = 1;
@@ -269,7 +296,11 @@ sirVulkanResult_t SIRVulkanDevice::submitImageBarrier( sirVulkanImage_t *pImage,
 	m_nLastTransferValue = nNext;
 	pSlot->nLastValue = nNext;
 	pImage->nLastGpuUse = nNext;
-	( void )sirVulkanSetSubresourceLayout( pImage, barrier.nMip, barrier.nLayer, barrier.eAfter );
+	for ( uint32_t iLayer = 0; iLayer < barrier.nLayerCount; ++iLayer ) {
+		for ( uint32_t iMip = 0; iMip < barrier.nMipCount; ++iMip ) {
+			( void )sirVulkanSetSubresourceLayout( pImage, barrier.nMip + iMip, barrier.nLayer + iLayer, barrier.eAfter );
+		}
+	}
 	pCompletion->nDeviceSerial = m_nDeviceSerial;
 	pCompletion->nValue = nNext;
 	return SIR_VULKAN_SUCCESS;

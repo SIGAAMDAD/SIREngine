@@ -114,6 +114,62 @@ int main( void )
 	     sirVulkanPlanImageBarrier( barrier, &image, nullptr ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
 		return 15;
 	}
+	// Range planning must check every mip and layer before accepting a transition.
+	sirVulkanImage_t range = {};
+	range.eType = VK_IMAGE_TYPE_2D;
+	range.eFormat = VK_FORMAT_R8G8B8A8_UNORM;
+	range.nMips = 2;
+	range.nLayers = 2;
+	range.nUsage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+	sirGraphicsBarrier_t rangeBarrier = {};
+	rangeBarrier.eType = SIR_GRAPHICS_BARRIER_TRANSITION;
+	rangeBarrier.eBefore = SIR_GRAPHICS_STATE_UNDEFINED;
+	rangeBarrier.eAfter = SIR_GRAPHICS_STATE_COMMON;
+	rangeBarrier.nMipCount = 2;
+	rangeBarrier.nLayerCount = 2;
+	if ( sirVulkanPlanImageBarrier( rangeBarrier, &range, &native ) != SIR_GRAPHICS_SUCCESS ||
+	     native.nMip != 0 || native.nLayer != 0 || native.nMipCount != 2 || native.nLayerCount != 2 ) {
+		return 16;
+	}
+	if ( !sirVulkanSetSubresourceLayout( &range, 0, 0, VK_IMAGE_LAYOUT_GENERAL ) ||
+	     sirVulkanPlanImageBarrier( rangeBarrier, &range, &native ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return 17;
+	}
+	rangeBarrier.nMipCount = 0;
+	if ( sirVulkanPlanImageBarrier( rangeBarrier, &range, &native ) != SIR_GRAPHICS_UNSUPPORTED ) {
+		return 18;
+	}
+	rangeBarrier.nMipCount = 2;
+	rangeBarrier.nBaseLayer = 1;
+	if ( sirVulkanPlanImageBarrier( rangeBarrier, &range, &native ) != SIR_GRAPHICS_UNSUPPORTED ) {
+		return 19;
+	}
+	rangeBarrier.nBaseLayer = 0;
+
+	sirVulkanImage_t uploaded = {};
+	uploaded.eType = VK_IMAGE_TYPE_2D;
+	uploaded.eFormat = VK_FORMAT_R8G8B8A8_UNORM;
+	uploaded.nMips = 2;
+	uploaded.nLayers = 2;
+	uploaded.nUsage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+	for ( uint32_t iLayer = 0; iLayer < uploaded.nLayers; ++iLayer ) {
+		for ( uint32_t iMip = 0; iMip < uploaded.nMips; ++iMip ) {
+			if ( !sirVulkanSetSubresourceLayout( &uploaded, iMip, iLayer, VK_IMAGE_LAYOUT_GENERAL ) ) {
+				return 20;
+			}
+		}
+	}
+	rangeBarrier.eBefore = SIR_GRAPHICS_STATE_COMMON;
+	rangeBarrier.eAfter = SIR_GRAPHICS_STATE_SHADER_READ;
+	uploaded.szUploadedSubresources[0] = 0x7ULL;
+	if ( sirVulkanPlanImageBarrier( rangeBarrier, &uploaded, &native ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return 21;
+	}
+	uploaded.szUploadedSubresources[0] = 0xFULL;
+	if ( sirVulkanPlanImageBarrier( rangeBarrier, &uploaded, &native ) != SIR_GRAPHICS_SUCCESS ||
+	     native.nMipCount != 2 || native.nLayerCount != 2 ) {
+		return 22;
+	}
 	printf( "Vulkan image barrier contracts passed\n" );
 	return 0;
 }
