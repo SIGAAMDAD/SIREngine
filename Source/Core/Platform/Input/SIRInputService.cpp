@@ -75,8 +75,10 @@ void SIRInputService::sample( void ) noexcept
 		for ( uint32_t i = 0; i < m_nBackendCount; ++i ) {
 			m_pBackends[i]->sample( *this );
 		}
-		( void )m_Haptics.advance( SIRPlatformTime::getMonotonicNanoseconds(), m_bHapticsPaused,
-		                          sirInputRumbleOutput, this );
+		if ( m_Haptics.hasWork() ) {
+			( void )m_Haptics.advance( SIRPlatformTime::getMonotonicNanoseconds(), m_bHapticsPaused,
+			                          sirInputRumbleOutput, this );
+		}
 	}
 }
 
@@ -139,7 +141,9 @@ void SIRInputService::setHapticsPaused( bool bPaused ) noexcept
 {
 	m_bHapticsPaused = bPaused;
 	if ( bPaused ) {
+		if ( m_Haptics.hasWork() ) {
 		( void )m_Haptics.advance( SIRPlatformTime::getMonotonicNanoseconds(), true, sirInputRumbleOutput, this );
+		}
 		for ( uint32_t i = 0; i < SIR_INPUT_DEVICE_CAPACITY; ++i ) {
 			sirInputDeviceDescriptor_t desc = {};
 			if ( m_Registry.inspectSlot( i, &desc ) && desc.bConnected && desc.key.eClass == SIR_INPUT_CONTROLLER ) {

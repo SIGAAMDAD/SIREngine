@@ -86,12 +86,15 @@ public:
 	void forgetDevice( sirInputDeviceId_t hDevice, sirInputRumbleSink_t pSink, void *pContext ) noexcept;
 	void stopAll( sirInputRumbleSink_t pSink, void *pContext ) noexcept;
 	uint32_t activeCount( void ) const noexcept;
+	bool hasWork( void ) const noexcept;
 
 private:
 	static uint32_t gain( const sirInputHapticEffect_t &effect, uint64_t nNowNs ) noexcept;
 	sirInputHapticEffect_t m_Effects[SIR_INPUT_HAPTIC_EFFECT_CAPACITY];
 	sirInputHapticMotorState_t m_Motors[SIR_INPUT_DEVICE_CAPACITY];
 	uint32_t m_nGeneration;
+	uint32_t m_nActive;
+	uint32_t m_nOutput;
 };
 
 #endif // __SIRENGINE_SIRINPUTHAPTICS_H__
