@@ -35,6 +35,7 @@ typedef struct sirD3D12PipelineSlot_s
 	sirGraphicsBindingDesc_t szBindings[32];
 	uint32_t nGeneration;
 	uint32_t nBindingCount;
+	uint32_t nCommandReferences;
 	sirGraphicsPipelineType_t eType;
 	sirGraphicsTopology_t eTopology;
 	bool bLive;
@@ -70,6 +71,9 @@ public:
 	bool initialize( SIRD3D12Device *pNative, uint32_t nGeneration ) noexcept;
 	void shutdown( bool bGpuComplete ) noexcept;
 	void collectRetired( void ) noexcept;
+	const sirD3D12PipelineSlot_t *querySlot( sirGraphicsHandle_t hPipeline ) noexcept;
+	sirGraphicsResult_t retainCommandReference( sirGraphicsHandle_t hPipeline ) noexcept;
+	void releaseCommandReference( sirGraphicsHandle_t hPipeline ) noexcept;
 	sirGraphicsResult_t createPipeline( const sirGraphicsPipelineDesc_t &desc, sirGraphicsHandle_t *pHandle ) noexcept;
 	sirGraphicsResult_t retirePipeline( sirGraphicsHandle_t hPipeline, const sirGraphicsCompletionSet_t &completion ) noexcept;
 	bool queryNative( sirGraphicsHandle_t hPipeline, ID3D12PipelineState **ppPipeline, ID3D12RootSignature **ppRoot ) noexcept;

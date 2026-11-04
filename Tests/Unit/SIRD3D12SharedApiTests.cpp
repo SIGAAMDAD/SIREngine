@@ -222,7 +222,8 @@ int main( void )
 		return 10;
 	}
 	SIRGraphicsCommandList *pCommands = nullptr;
-	if ( pDevice->acquireCommands( SIR_GRAPHICS_QUEUE_DIRECT, &pCommands ) != SIR_GRAPHICS_UNSUPPORTED || pCommands != nullptr ) {
+	if ( pDevice->acquireCommands( SIR_GRAPHICS_QUEUE_DIRECT, &pCommands ) != SIR_GRAPHICS_SUCCESS || pCommands == nullptr ||
+	     pCommands->getQueue() != SIR_GRAPHICS_QUEUE_DIRECT || pCommands->close() != SIR_GRAPHICS_SUCCESS ) {
 		return 11;
 	}
 	if ( driver.destroyDevice( pDevice ) != SIR_GRAPHICS_SUCCESS || driver.destroyDevice( pDevice ) != SIR_GRAPHICS_INVALID_HANDLE ) {

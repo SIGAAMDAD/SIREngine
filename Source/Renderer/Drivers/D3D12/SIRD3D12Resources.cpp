@@ -258,6 +258,48 @@ void SIRD3D12Resources::releaseSlot( uint32_t iSlot ) noexcept
 	slot.nGeneration = nGeneration;
 }
 
+const sirD3D12ResourceSlot_t *SIRD3D12Resources::querySlot( sirGraphicsHandle_t hHandle ) noexcept
+{
+	return findSlot( hHandle, SIR_GRAPHICS_HANDLE_NONE );
+}
+
+bool SIRD3D12Resources::queryDescriptor( sirGraphicsHandle_t hView, D3D12_DESCRIPTOR_HEAP_TYPE eHeap,
+                                         D3D12_CPU_DESCRIPTOR_HANDLE *pDescriptor ) noexcept
+{
+	if ( pDescriptor == nullptr ) {
+		return false;
+	}
+	*pDescriptor = {};
+	sirD3D12ResourceSlot_t *pSlot = findSlot( hView, SIR_GRAPHICS_HANDLE_VIEW );
+	if ( pSlot == nullptr || pSlot->eDescriptorHeap != eHeap || m_szDescriptorHeaps[eHeap] == nullptr ) {
+		return false;
+	}
+	*pDescriptor = m_szDescriptorHeaps[eHeap]->GetCPUDescriptorHandleForHeapStart();
+	pDescriptor->ptr += ( SIZE_T )pSlot->iDescriptor * m_szDescriptorSizes[eHeap];
+	return true;
+}
+
+sirGraphicsResult_t SIRD3D12Resources::retainCommandReference( sirGraphicsHandle_t hHandle ) noexcept
+{
+	sirD3D12ResourceSlot_t *pSlot = findSlot( hHandle, SIR_GRAPHICS_HANDLE_NONE );
+	if ( pSlot == nullptr ) {
+		return SIR_GRAPHICS_INVALID_HANDLE;
+	}
+	if ( pSlot->nCommandReferences == UINT32_MAX ) {
+		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
+	}
+	++pSlot->nCommandReferences;
+	return SIR_GRAPHICS_SUCCESS;
+}
+
+void SIRD3D12Resources::releaseCommandReference( sirGraphicsHandle_t hHandle ) noexcept
+{
+	sirD3D12ResourceSlot_t *pSlot = findSlot( hHandle, SIR_GRAPHICS_HANDLE_NONE );
+	if ( pSlot != nullptr && pSlot->nCommandReferences != 0 ) {
+		--pSlot->nCommandReferences;
+	}
+}
+
 bool SIRD3D12Resources::validateRange( const sirD3D12ResourceSlot_t &slot, uint64_t nOffset, uint64_t nBytes ) const noexcept
 {
 	return nBytes != 0 && nOffset <= slot.nSizeBytes && nBytes <= slot.nSizeBytes - nOffset;
@@ -581,6 +623,7 @@ sirGraphicsResult_t SIRD3D12Resources::createView( const sirGraphicsViewDesc_t &
 	slot.iDescriptor = iDescriptor;
 	slot.eDescriptorHeap = eHeap;
 	slot.hParent = desc.hResource;
+	slot.nUsage = desc.nUsage;
 	++pResource->nDependentViews;
 	ID3D12Resource *pNativeResource = pResource->pAllocation->GetResource();
 
@@ -837,7 +880,7 @@ sirGraphicsResult_t SIRD3D12Resources::retireResource( sirGraphicsHandle_t hHand
 	if ( !sirGraphicsIsCompletionSetValid( completion, m_nDeviceGeneration ) ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	if ( pSlot->nDependentViews != 0 ) {
+	if ( pSlot->nDependentViews != 0 || pSlot->nCommandReferences != 0 ) {
 		return SIR_GRAPHICS_BUSY;
 	}
 	sirD3D12CompletionSet_t native = {};
