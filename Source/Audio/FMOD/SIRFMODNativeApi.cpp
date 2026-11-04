@@ -85,9 +85,38 @@ static int32_t fmodReleaseStudio( void *, void *pStudio ) noexcept
 	return ( int32_t )( ( FMOD::Studio::System * )pStudio )->release();
 }
 
+static FMOD_RESULT F_CALLBACK fmodDeviceLossCallback( FMOD_SYSTEM *pSystem, FMOD_SYSTEM_CALLBACK_TYPE eType,
+                                                       void *, void * )
+{
+	if ( eType != FMOD_SYSTEM_CALLBACK_DEVICELOST ) {
+		return FMOD_OK;
+	}
+	void *pOwner = nullptr;
+	const FMOD_RESULT eGetUserData = ( ( FMOD::System * )pSystem )->getUserData( &pOwner );
+	if ( eGetUserData == FMOD_OK && pOwner != nullptr ) {
+		SIRFMODContext::notifyDeviceLoss( pOwner );
+	}
+	return FMOD_OK;
+}
+
+static int32_t fmodRegisterDeviceLoss( void *, void *pCore, void *pOwner,
+                                      void ( * )( void * ) noexcept ) noexcept
+{
+	FMOD::System *pSystem = ( FMOD::System * )pCore;
+	const FMOD_RESULT eData = pSystem->setUserData( pOwner );
+	if ( eData != FMOD_OK ) {
+		return ( int32_t )eData;
+	}
+	const FMOD_RESULT eResult = pSystem->setCallback( fmodDeviceLossCallback, FMOD_SYSTEM_CALLBACK_DEVICELOST );
+	if ( eResult != FMOD_OK ) {
+		pSystem->setUserData( nullptr );
+	}
+	return ( int32_t )eResult;
+}
+
 sirFMODNativeOps_t sirGetFMODNativeOps( void ) noexcept
 {
-	return { 1,
+	return { 2,
 	         FMOD_VERSION,
 	         nullptr,
 	         fmodCreateStudio,
@@ -98,5 +127,6 @@ sirFMODNativeOps_t sirGetFMODNativeOps( void ) noexcept
 	         fmodSetNoSound,
 	         fmodInitializeStudio,
 	         fmodUpdateStudio,
-	         fmodReleaseStudio };
+	         fmodReleaseStudio,
+	         fmodRegisterDeviceLoss };
 }

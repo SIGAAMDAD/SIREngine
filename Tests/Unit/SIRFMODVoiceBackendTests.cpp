@@ -149,9 +149,14 @@ static int32_t testContextRelease( void *pData, void * ) noexcept
 	return 0;
 }
 
+static int32_t testContextDeviceLossCallback( void *, void *, void *, void ( * )( void * ) noexcept ) noexcept
+{
+	return 0;
+}
+
 static sirFMODNativeOps_t makeContextOps( sirFMODVoiceFixture_t *pFixture ) noexcept
 {
-	return { 1,
+	return { 2,
 	         0x00020400,
 	         pFixture,
 
@@ -163,7 +168,8 @@ static sirFMODNativeOps_t makeContextOps( sirFMODVoiceFixture_t *pFixture ) noex
 	         testContextNoSound,
 	         testContextInitialize,
 	         testContextUpdate,
-	         testContextRelease };
+	         testContextRelease,
+	         testContextDeviceLossCallback };
 }
 
 static int32_t testResolve( void *pData, void *pStudio, const char *szPath, void **ppDescription ) noexcept
