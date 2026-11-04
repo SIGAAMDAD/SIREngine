@@ -10,6 +10,12 @@ set_tests_properties(launcher.unknown-option PROPERTIES WILL_FAIL TRUE)
 
 sir_configure_owned_target(SIRApplicationTests)
 
+add_executable(SIRApplicationInputTests SIRApplicationInputTests.cpp)
+target_link_libraries(SIRApplicationInputTests PRIVATE SIR::Core)
+add_test(NAME core.application.input-lifecycle COMMAND SIRApplicationInputTests)
+set_tests_properties(core.application.input-lifecycle PROPERTIES LABELS "core;input;integration" TIMEOUT 60)
+sir_configure_owned_target(SIRApplicationInputTests)
+
 add_library(SIRPlatformTestModule SHARED SIRDynamicLibraryFixture.cpp)
 sir_configure_owned_target(SIRPlatformTestModule)
 
