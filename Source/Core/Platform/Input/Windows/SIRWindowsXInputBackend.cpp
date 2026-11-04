@@ -153,6 +153,20 @@ bool SIRWindowsXInputBackend::vibrate( sirInputDeviceId_t id, uint16_t nLeft, ui
 	return false;
 }
 
+uint32_t SIRWindowsXInputBackend::hapticCapabilities( sirInputDeviceId_t hDevice ) const noexcept
+{
+	if ( m_pSetState == nullptr ) {
+		return SIR_INPUT_HAPTIC_CAP_NONE;
+	}
+	for ( uint32_t i = 0; i < 4; ++i ) {
+		const sirXInputNativeSlot_t &slot = m_Slots[i];
+		if ( slot.bConnected && slot.id.nSlot == hDevice.nSlot && slot.id.nGeneration == hDevice.nGeneration ) {
+			return SIR_INPUT_HAPTIC_CAP_RUMBLE;
+		}
+	}
+	return SIR_INPUT_HAPTIC_CAP_NONE;
+}
+
 void SIRWindowsXInputBackend::stop( SIRInputService &service ) noexcept
 {
 	for ( uint32_t i = 0; i < 4; ++i ) {

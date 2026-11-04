@@ -18,11 +18,14 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <SIRPCH.hpp>
 
+// clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
-#pragma once
+	#pragma once
 #endif
+// clang-format on
 
 #include <Core/Platform/Input/SIRInputTypes.h>
+#include <Core/Platform/Input/SIRInputHaptics.h>
 class SIRInputService;
 
 // UE ApplicationCore-style native I/O owner. Lifetime is explicit and borrowed;
@@ -35,6 +38,8 @@ public:
 	virtual void sample( SIRInputService &service ) noexcept = 0;
 	virtual void resynchronize( SIRInputService &service ) noexcept = 0;
 	virtual bool vibrate( sirInputDeviceId_t hDevice, uint16_t nLeft, uint16_t nRight ) noexcept = 0;
+	virtual uint32_t hapticCapabilities( sirInputDeviceId_t hDevice ) const noexcept;
+	virtual bool vibrateTriggers( sirInputDeviceId_t hDevice, uint16_t nLeft, uint16_t nRight ) noexcept;
 	virtual void stop( SIRInputService &service ) noexcept = 0;
 };
 

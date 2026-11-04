@@ -16,7 +16,13 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Core/Platform/Input/SIRInputService.h>
 #include <Core/Platform/SIRPlatformTime.h>
 
-SIRInputService::SIRInputService( void ) noexcept : m_Actions(), m_Registry(), m_State(), m_pBackends{}, m_nBackendCount( 0 ), m_bStopping( false )
+static bool sirInputRumbleOutput( void *pContext, sirInputDeviceId_t hDevice, uint16_t nLeft, uint16_t nRight ) noexcept
+{
+	return ( ( SIRInputService * )pContext )->vibrate( hDevice, nLeft, nRight );
+}
+
+SIRInputService::SIRInputService( void ) noexcept : m_Actions(), m_Text(), m_Haptics(), m_Registry(), m_State(), m_pBackends{}, m_nBackendCount( 0 ), m_bStopping( false ),
+      m_bHapticsPaused( false )
 {
 }
 
@@ -55,7 +61,11 @@ sirInputTimestamp_t SIRInputService::timestamp( uint64_t nNative, sirInputClockS
 
 bool SIRInputService::begin( uint64_t nTick ) noexcept
 {
-	return !m_bStopping && m_State.begin( nTick );
+	if ( m_bStopping || !m_State.begin( nTick ) ) {
+		return false;
+	}
+	m_Text.begin( nTick );
+	return true;
 }
 
 void SIRInputService::sample( void ) noexcept
@@ -64,6 +74,8 @@ void SIRInputService::sample( void ) noexcept
 		for ( uint32_t i = 0; i < m_nBackendCount; ++i ) {
 			m_pBackends[i]->sample( *this );
 		}
+		( void )m_Haptics.advance( SIRPlatformTime::getMonotonicNanoseconds(), m_bHapticsPaused,
+		                          sirInputRumbleOutput, this );
 	}
 }
 
@@ -72,6 +84,7 @@ bool SIRInputService::publish( void ) noexcept
 	if ( !m_State.publish( m_Registry ) ) {
 		return false;
 	}
+	m_Text.publish();
 	const sirInputFrame_t *pFrame = m_State.frame();
 	if ( pFrame != nullptr ) {
 		m_Actions.evaluate( *pFrame );
@@ -96,6 +109,80 @@ SIRInputActions &SIRInputService::actions( void ) noexcept
 const SIRInputActions &SIRInputService::actions( void ) const noexcept
 {
 	return m_Actions;
+}
+
+SIRInputText &SIRInputService::text( void ) noexcept
+{
+	return m_Text;
+}
+
+const SIRInputText &SIRInputService::text( void ) const noexcept
+{
+	return m_Text;
+}
+
+bool SIRInputService::scheduleRumble( const sirInputHapticRequest_t &request, sirInputHapticHandle_t *pHandle ) noexcept
+{
+	if ( m_bStopping || ( hapticCapabilities( request.hDevice ) & SIR_INPUT_HAPTIC_CAP_RUMBLE ) == 0 ) {
+		return false;
+	}
+	return m_Haptics.schedule( request, SIRPlatformTime::getMonotonicNanoseconds(), pHandle );
+}
+
+bool SIRInputService::cancelRumble( sirInputHapticHandle_t hEffect ) noexcept
+{
+	return m_Haptics.cancel( hEffect );
+}
+
+void SIRInputService::setHapticsPaused( bool bPaused ) noexcept
+{
+	m_bHapticsPaused = bPaused;
+	if ( bPaused ) {
+		( void )m_Haptics.advance( SIRPlatformTime::getMonotonicNanoseconds(), true, sirInputRumbleOutput, this );
+		for ( uint32_t i = 0; i < SIR_INPUT_DEVICE_CAPACITY; ++i ) {
+			sirInputDeviceDescriptor_t desc = {};
+			if ( m_Registry.inspectSlot( i, &desc ) && desc.bConnected && desc.key.eClass == SIR_INPUT_CONTROLLER ) {
+				( void )vibrateTriggers( desc.id, 0, 0 );
+			}
+		}
+	}
+}
+
+uint32_t SIRInputService::hapticCapabilities( sirInputDeviceId_t hDevice ) const noexcept
+{
+	sirInputDeviceDescriptor_t desc = {};
+	if ( !m_Registry.describe( hDevice, &desc ) || desc.key.eClass != SIR_INPUT_CONTROLLER ) {
+		return SIR_INPUT_HAPTIC_CAP_NONE;
+	}
+	for ( uint32_t i = 0; i < m_nBackendCount; ++i ) {
+		if ( m_pBackends[i]->id() == desc.key.eBackend ) {
+			return m_pBackends[i]->hapticCapabilities( hDevice );
+		}
+	}
+	return SIR_INPUT_HAPTIC_CAP_NONE;
+}
+
+bool SIRInputService::vibrateTriggers( sirInputDeviceId_t hDevice, uint16_t nLeft, uint16_t nRight ) noexcept
+{
+	if ( m_bStopping || ( m_bHapticsPaused && ( nLeft != 0 || nRight != 0 ) ) ||
+	     ( hapticCapabilities( hDevice ) & SIR_INPUT_HAPTIC_CAP_TRIGGER_RUMBLE ) == 0 ) {
+		return false;
+	}
+	sirInputDeviceDescriptor_t desc = {};
+	if ( !m_Registry.describe( hDevice, &desc ) ) {
+		return false;
+	}
+	for ( uint32_t i = 0; i < m_nBackendCount; ++i ) {
+		if ( m_pBackends[i]->id() == desc.key.eBackend ) {
+			return m_pBackends[i]->vibrateTriggers( hDevice, nLeft, nRight );
+		}
+	}
+	return false;
+}
+
+uint32_t SIRInputService::activeHaptics( void ) const noexcept
+{
+	return m_Haptics.activeCount();
 }
 
 bool SIRInputService::recover( void ) noexcept
@@ -136,6 +223,8 @@ bool SIRInputService::disconnect( sirInputBackendId_t eSource, sirInputDeviceId_
 	// Always retire the handle, even when queue capacity is exhausted.
 	const bool bQueued =
 	    m_State.postDevice( id, desc.key.eClass, SIR_INPUT_DISCONNECTED, timestamp( 0, SIR_INPUT_CLOCK_ENGINE_MONOTONIC ) );
+	m_Haptics.forgetDevice( id, sirInputRumbleOutput, this );
+	( void )vibrateTriggers( id, 0, 0 );
 	m_State.clearDevice( id );
 	m_Registry.disconnect( id );
 	return bQueued;
@@ -199,6 +288,9 @@ bool SIRInputService::loseBackendState( sirInputBackendId_t eSource ) noexcept
 
 bool SIRInputService::vibrate( sirInputDeviceId_t id, uint16_t nLeft, uint16_t nRight ) noexcept
 {
+	if ( m_bHapticsPaused && ( nLeft != 0 || nRight != 0 ) ) {
+		return false;
+	}
 	sirInputDeviceDescriptor_t desc = {};
 	if ( !m_Registry.describe( id, &desc ) || desc.key.eClass != SIR_INPUT_CONTROLLER ) {
 		return false;
@@ -221,6 +313,7 @@ void SIRInputService::shutdown( void ) noexcept
 	if ( m_bStopping ) {
 		return;
 	}
+	m_Haptics.stopAll( sirInputRumbleOutput, this );
 	m_bStopping = true;
 	for ( uint32_t i = m_nBackendCount; i > 0; --i ) {
 		m_pBackends[i - 1]->stop( *this );
@@ -230,4 +323,5 @@ void SIRInputService::shutdown( void ) noexcept
 	m_State.stop();
 	m_Registry.reset();
 	m_Actions.clear();
+	m_Text.reset();
 }

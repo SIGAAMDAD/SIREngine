@@ -137,6 +137,51 @@ bool SIRLinuxEvdevBackend::addProfile( const sirInputControllerProfile_t &profil
 	return m_Profiles.add( profile );
 }
 
+
+bool SIRLinuxEvdevBackend::importCookedProfiles( const uint8_t *pBytes, uint32_t nBytes ) noexcept
+{
+	if ( m_bProfilesFrozen ) {
+		return false;
+	}
+	for ( uint32_t i = 0; i < SIR_INPUT_EVDEV_CAPACITY; ++i ) {
+		if ( m_Slots[i].bOpen ) {
+			return false;
+		}
+	}
+	SIRInputControllerProfiles incoming;
+	if ( !incoming.loadCooked( pBytes, nBytes ) ) {
+		return false;
+	}
+	SIRInputControllerProfiles merged = m_Profiles;
+	for ( uint32_t i = 0; i < incoming.count(); ++i ) {
+		const sirInputControllerProfile_t *pProfile = incoming.profileAt( i );
+		if ( pProfile == nullptr || !merged.add( *pProfile ) ) {
+			return false;
+		}
+	}
+	m_Profiles = merged;
+	return true;
+}
+
+bool SIRLinuxEvdevBackend::loadCookedProfilesFile( const char *pszPath ) noexcept
+{
+	if ( pszPath == nullptr || pszPath[0] == 0 ) {
+		return false;
+	}
+	FILE *pFile = fopen( pszPath, "rb" );
+	if ( pFile == nullptr ) {
+		return false;
+	}
+	uint8_t szBytes[SIR_INPUT_COOKED_PROFILE_MAX_BYTES + 1] = {};
+	const size_t nRead = fread( szBytes, 1, sizeof( szBytes ), pFile );
+	const bool bComplete = ferror( pFile ) == 0 && feof( pFile ) != 0;
+	fclose( pFile );
+	if ( !bComplete || nRead > SIR_INPUT_COOKED_PROFILE_MAX_BYTES ) {
+		return false;
+	}
+	return importCookedProfiles( szBytes, ( uint32_t )nRead );
+}
+
 int16_t SIRLinuxEvdevBackend::resolveButton( const sirInputEvdevSlot_t &slot, uint16_t nCode ) noexcept
 {
 	if ( slot.bHasProfile ) {
@@ -581,6 +626,18 @@ bool SIRLinuxEvdevBackend::vibrate( sirInputDeviceId_t id, uint16_t nLeft, uint1
 		return write( slot.nFd, &play, sizeof( play ) ) == sizeof( play );
 	}
 	return false;
+}
+
+uint32_t SIRLinuxEvdevBackend::hapticCapabilities( sirInputDeviceId_t hDevice ) const noexcept
+{
+	for ( uint32_t i = 0; i < SIR_INPUT_EVDEV_CAPACITY; ++i ) {
+		const sirInputEvdevSlot_t &slot = m_Slots[i];
+		if ( slot.bOpen && slot.bCanRumble && slot.id.nSlot == hDevice.nSlot &&
+		     slot.id.nGeneration == hDevice.nGeneration ) {
+			return SIR_INPUT_HAPTIC_CAP_RUMBLE;
+		}
+	}
+	return SIR_INPUT_HAPTIC_CAP_NONE;
 }
 
 void SIRLinuxEvdevBackend::stop( SIRInputService &service ) noexcept

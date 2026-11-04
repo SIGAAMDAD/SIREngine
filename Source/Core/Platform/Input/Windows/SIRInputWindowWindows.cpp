@@ -21,8 +21,35 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #define WIN32_LEAN_AND_MEAN
 #endif
 #include <Windows.h>
+#include <imm.h>
 
 static constexpr wchar_t s_szInputClass[] = L"SIREngineNativeInputWindow";
+
+static bool sirInputUpdateWinCursor( HWND hWindow, bool bCapture, bool *pCaptured ) noexcept
+{
+	if ( !bCapture ) {
+		if ( *pCaptured ) {
+			ClipCursor( nullptr );
+			*pCaptured = false;
+		}
+		return true;
+	}
+	if ( hWindow == nullptr ) {
+		return false;
+	}
+	RECT bounds = {};
+	POINT origin = { 0, 0 };
+	if ( !GetClientRect( hWindow, &bounds ) || !ClientToScreen( hWindow, &origin ) ) {
+		return false;
+	}
+	OffsetRect( &bounds, origin.x, origin.y );
+	if ( !ClipCursor( &bounds ) ) {
+		return false;
+	}
+	*pCaptured = true;
+	return true;
+}
+
 
 static LRESULT CALLBACK sirInputNativeWindowProc( HWND hWindow, UINT nMessage, WPARAM nWParam, LPARAM nLParam )
 {
@@ -41,7 +68,8 @@ static LRESULT CALLBACK sirInputNativeWindowProc( HWND hWindow, UINT nMessage, W
 
 SIRInputWindow::SIRInputWindow( void ) noexcept
     : m_pInput( nullptr ), m_pDesktop( nullptr ), m_pDisplay( nullptr ), m_nWindow( 0 ), m_bOpen( false ), m_bAttached( false ),
-      m_bRegistered( false ), m_bFocusLost( false )
+      m_bRegistered( false ), m_bFocusLost( false ), m_bFocused( false ), m_bCursorCaptured( false ),
+      m_eCursorMode( SIR_INPUT_CURSOR_FREE ), m_pInputMethod( nullptr ), m_pInputContext( nullptr ), m_nInvisibleCursor( 0 )
 {
 }
 
@@ -58,6 +86,7 @@ bool SIRInputWindow::open( SIRInputService &input, SIRInputBackend &desktop ) no
 
 	WNDCLASSW windowClass = {};
 	windowClass.lpfnWndProc = sirInputNativeWindowProc;
+	windowClass.hCursor = LoadCursorW( nullptr, IDC_ARROW );
 	windowClass.hInstance = GetModuleHandleW( nullptr );
 	windowClass.lpszClassName = s_szInputClass;
 	const ATOM nClass = RegisterClassW( &windowClass );
@@ -108,6 +137,8 @@ intptr_t SIRInputWindow::dispatchNativeMessage( uint32_t nMessage, uintptr_t nWP
 		return 0;
 	}
 	if ( nMessage == WM_DESTROY ) {
+		( void )sirInputUpdateWinCursor( hWindow, false, &m_bCursorCaptured );
+		m_bFocused = false;
 		m_bOpen = false;
 		return 0;
 	}
@@ -116,16 +147,78 @@ intptr_t SIRInputWindow::dispatchNativeMessage( uint32_t nMessage, uintptr_t nWP
 		m_nWindow = 0;
 		return ( intptr_t )DefWindowProcW( hWindow, nMessage, ( WPARAM )nWParam, ( LPARAM )nLParam );
 	}
+	if ( nMessage == WM_SETCURSOR && m_eCursorMode != SIR_INPUT_CURSOR_FREE &&
+	     LOWORD( nLParam ) == HTCLIENT ) {
+		SetCursor( nullptr );
+		return TRUE;
+	}
+	if ( ( nMessage == WM_SIZE || nMessage == WM_MOVE ) && m_bCursorCaptured ) {
+		( void )sirInputUpdateWinCursor( hWindow, true, &m_bCursorCaptured );
+	}
 	if ( m_pInput != nullptr && m_pDesktop != nullptr ) {
+		if ( nMessage == WM_SETFOCUS ) {
+			m_bFocused = true;
+			m_pInput->text().setFocused( true );
+			m_pInput->setHapticsPaused( false );
+			if ( m_eCursorMode == SIR_INPUT_CURSOR_CAPTURED ) {
+				( void )sirInputUpdateWinCursor( hWindow, true, &m_bCursorCaptured );
+			}
+		}
+		if ( nMessage == WM_KILLFOCUS ) {
+			m_bFocused = false;
+			m_pInput->text().setFocused( false );
+			m_pInput->setHapticsPaused( true );
+			( void )sirInputUpdateWinCursor( hWindow, false, &m_bCursorCaptured );
+			m_bFocusLost = true;
+		}
+		if ( nMessage == WM_IME_STARTCOMPOSITION || nMessage == WM_IME_ENDCOMPOSITION ) {
+			m_pInput->text().clearPreedit();
+		}
+		if ( nMessage == WM_IME_COMPOSITION && ( nLParam & GCS_COMPSTR ) != 0 ) {
+			HIMC hContext = ImmGetContext( hWindow );
+			if ( hContext != nullptr ) {
+				const LONG nLength = ImmGetCompositionStringW( hContext, GCS_COMPSTR, nullptr, 0 );
+				if ( nLength >= 0 && ( uint32_t )nLength <= 2 * SIR_INPUT_PREEDIT_CAPACITY &&
+				     ( nLength % ( LONG )sizeof( uint16_t ) ) == 0 ) {
+					uint16_t szUnits[SIR_INPUT_PREEDIT_CAPACITY] = {};
+					const LONG nRead = nLength != 0 ? ImmGetCompositionStringW( hContext, GCS_COMPSTR, szUnits, nLength ) : 0;
+					const LONG nCaretUnits = ImmGetCompositionStringW( hContext, GCS_CURSORPOS, nullptr, 0 );
+					uint32_t nCaret = 0;
+					const uint32_t nUnits = ( uint32_t )nLength / sizeof( uint16_t );
+					const uint32_t nLimit = nCaretUnits < 0 ? 0 : ( uint32_t )nCaretUnits > nUnits ? nUnits : ( uint32_t )nCaretUnits;
+					for ( uint32_t i = 0; i < nLimit; ++i ) {
+						if ( szUnits[i] < 0xdc00 || szUnits[i] > 0xdfff ) {
+							++nCaret;
+						}
+					}
+					if ( nRead == nLength ) {
+						( void )m_pInput->text().setPreeditUtf16( szUnits, nUnits, nCaret, 0 );
+					}
+				}
+				ImmReleaseContext( hWindow, hContext );
+			}
+		}
+		if ( nMessage == WM_CHAR ) {
+			const uint16_t nUnit = ( uint16_t )nWParam;
+			if ( nUnit >= 32 || nUnit == 10 || nUnit == 13 || nUnit == 9 ) {
+				( void )m_pInput->text().appendUtf16( nUnit );
+			}
+			return 0;
+		}
+		if ( nMessage == WM_UNICHAR ) {
+			if ( nWParam == UNICODE_NOCHAR ) {
+				return TRUE;
+			}
+			( void )m_pInput->text().appendCodepoint( ( uint32_t )nWParam );
+			return 0;
+		}
 		if ( nMessage == WM_INPUT || nMessage == WM_INPUT_DEVICE_CHANGE ) {
 			( ( SIRWindowsRawBackend * )m_pDesktop )->processMessage( *m_pInput, nMessage, nWParam, nLParam );
 			if ( nMessage == WM_INPUT_DEVICE_CHANGE ) {
 				return 0;
 			}
 		}
-		if ( nMessage == WM_KILLFOCUS ) {
-			m_bFocusLost = true;
-		}
+
 	}
 	return ( intptr_t )DefWindowProcW( hWindow, nMessage, ( WPARAM )nWParam, ( LPARAM )nLParam );
 }
@@ -148,6 +241,36 @@ bool SIRInputWindow::pump( SIRInputService &input ) noexcept
 	return m_bOpen;
 }
 
+bool SIRInputWindow::setCursorMode( sirInputCursorMode_t eMode ) noexcept
+{
+	if ( eMode > SIR_INPUT_CURSOR_CAPTURED || !m_bOpen ) {
+		return false;
+	}
+	const bool bCapture = m_bFocused && eMode == SIR_INPUT_CURSOR_CAPTURED;
+	if ( !sirInputUpdateWinCursor( ( HWND )m_nWindow, bCapture, &m_bCursorCaptured ) ) {
+		return false;
+	}
+	m_eCursorMode = eMode;
+	return true;
+}
+
+sirInputCursorMode_t SIRInputWindow::cursorMode( void ) const noexcept
+{
+	return m_eCursorMode;
+}
+
+bool SIRInputWindow::focused( void ) const noexcept
+{
+	return m_bFocused;
+}
+
+void SIRInputWindow::setTextEnabled( bool bEnabled ) noexcept
+{
+	if ( m_pInput != nullptr ) {
+		m_pInput->text().setEnabled( bEnabled );
+	}
+}
+
 bool SIRInputWindow::isOpen( void ) const noexcept
 {
 	return m_bOpen;
@@ -155,6 +278,7 @@ bool SIRInputWindow::isOpen( void ) const noexcept
 
 void SIRInputWindow::close( void ) noexcept
 {
+	( void )sirInputUpdateWinCursor( ( HWND )m_nWindow, false, &m_bCursorCaptured );
 	if ( m_nWindow != 0 ) {
 		DestroyWindow( ( HWND )m_nWindow );
 		m_nWindow = 0;
@@ -164,6 +288,8 @@ void SIRInputWindow::close( void ) noexcept
 	}
 	m_bRegistered = false;
 	m_bFocusLost = false;
+	m_bFocused = false;
+	m_eCursorMode = SIR_INPUT_CURSOR_FREE;
 	m_bOpen = false;
 	m_bAttached = false;
 	m_pInput = nullptr;

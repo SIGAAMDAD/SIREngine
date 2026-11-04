@@ -13,7 +13,9 @@
 #endif
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <locale.h>
 
 #if defined( _WIN32 ) || defined( SIR_INPUT_X11_AVAILABLE )
 typedef struct sirInputNativePumpContext_s
@@ -52,6 +54,13 @@ static int sirRunNativeInputWindow( void )
 #else
 	SIRLinuxX11Backend desktop;
 	SIRLinuxEvdevBackend nativeControllers;
+	( void )setlocale( LC_CTYPE, "" );
+	const char *pszCookedProfiles = getenv( "SIR_INPUT_CONTROLLER_PROFILE_DB" );
+	if ( pszCookedProfiles != nullptr && pszCookedProfiles[0] != 0 &&
+	     !nativeControllers.loadCookedProfilesFile( pszCookedProfiles ) ) {
+		fputs( "Unable to load cooked controller profiles\n", stderr );
+		return 1;
+	}
 #endif
 	if ( !window.open( input, desktop ) ) {
 		fputs( "Unable to start native input window\n", stderr );
@@ -91,6 +100,7 @@ static int sirRunNativeInputWindow( void )
 	context.pEvdev = &nativeControllers;
 #endif
 
+	window.setTextEnabled( true );
 	SIRApplication application;
 	if ( !application.attachInput( input, sirPumpInputWindow, &context ) || !application.initialize() ) {
 		window.close();
