@@ -32,6 +32,7 @@ bool sirGraphicsIsHandleValid( const sirGraphicsHandle_t &handle, sirGraphicsHan
 bool sirGraphicsIsCompletionSetValid( const sirGraphicsCompletionSet_t &completion, uint32_t nDeviceGeneration ) noexcept;
 sirGraphicsResult_t sirGraphicsValidateBuffer( const sirGraphicsBufferDesc_t &desc ) noexcept;
 sirGraphicsResult_t sirGraphicsValidateTexture( const sirGraphicsTextureDesc_t &desc ) noexcept;
+sirGraphicsResult_t sirGraphicsValidateSampler( const sirGraphicsSamplerDesc_t &desc ) noexcept;
 sirGraphicsResult_t sirGraphicsValidatePipeline( const sirGraphicsPipelineDesc_t &desc ) noexcept;
 sirGraphicsResult_t sirGraphicsValidateSubmission( sirGraphicsQueue_t eQueue, const sirGraphicsSubmission_t &submission,
                                                    uint32_t nDeviceGeneration ) noexcept;

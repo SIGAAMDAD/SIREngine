@@ -119,6 +119,21 @@ sirGraphicsResult_t sirGraphicsValidateTexture( const sirGraphicsTextureDesc_t &
 	return SIR_GRAPHICS_SUCCESS;
 }
 
+sirGraphicsResult_t sirGraphicsValidateSampler( const sirGraphicsSamplerDesc_t &desc ) noexcept
+{
+	if ( desc.eFilter > SIR_GRAPHICS_FILTER_ANISOTROPIC || desc.eAddressU > SIR_GRAPHICS_ADDRESS_BORDER ||
+	     desc.eAddressV > SIR_GRAPHICS_ADDRESS_BORDER || desc.eAddressW > SIR_GRAPHICS_ADDRESS_BORDER ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	if ( desc.fMaximumAnisotropy < 1.0f || desc.fMaximumAnisotropy > 16.0f ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	if ( desc.fMinimumLod > desc.fMaximumLod ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	return SIR_GRAPHICS_SUCCESS;
+}
+
 static bool sirGraphicsValidShader( const sirGraphicsShaderCode_t &shader ) noexcept
 {
 	return shader.eFormat >= SIR_GRAPHICS_SHADER_DXIL && shader.eFormat <= SIR_GRAPHICS_SHADER_DXBC && shader.pBytes != nullptr &&
@@ -140,6 +155,16 @@ sirGraphicsResult_t sirGraphicsValidatePipeline( const sirGraphicsPipelineDesc_t
 	}
 	if ( desc.nColorFormatCount > 8 || desc.nBindingCount > 4096 || desc.nAttributeCount > 32 ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	constexpr uint32_t VALID_STAGE_MASK = ( SIR_GRAPHICS_STAGE_TASK << 1 ) - 1U;
+	for ( uint32_t iBinding = 0; iBinding < desc.nBindingCount; ++iBinding ) {
+		const sirGraphicsBindingDesc_t &binding = desc.pBindings[iBinding];
+		if ( binding.nArrayCount == 0 || binding.nShaderStageMask == 0 || ( binding.nShaderStageMask & ~VALID_STAGE_MASK ) != 0 ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
+		if ( binding.eType > SIR_GRAPHICS_BINDING_SAMPLER ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
 	}
 	if ( desc.eType == SIR_GRAPHICS_PIPELINE_COMPUTE ) {
 		if ( !sirGraphicsValidShader( desc.computeShader ) || !sirGraphicsEmptyShader( desc.vertexShader ) ) {
@@ -166,6 +191,26 @@ sirGraphicsResult_t sirGraphicsValidatePipeline( const sirGraphicsPipelineDesc_t
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 
+	if ( desc.eTopology > SIR_GRAPHICS_TOPOLOGY_PATCHES || desc.eCullMode > SIR_GRAPHICS_CULL_BACK ||
+	     desc.eDepthCompare > SIR_GRAPHICS_COMPARE_ALWAYS ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	for ( uint32_t iColor = 0; iColor < desc.nColorFormatCount; ++iColor ) {
+		const sirGraphicsBlendState_t &blend = desc.szBlendStates[iColor];
+		if ( !blend.bEnabled ) {
+			continue;
+		}
+		if ( blend.eSourceColor > SIR_GRAPHICS_BLEND_ONE_MINUS_DST_ALPHA ||
+		     blend.eDestinationColor > SIR_GRAPHICS_BLEND_ONE_MINUS_DST_ALPHA ||
+		     blend.eSourceAlpha > SIR_GRAPHICS_BLEND_ONE_MINUS_DST_ALPHA ||
+		     blend.eDestinationAlpha > SIR_GRAPHICS_BLEND_ONE_MINUS_DST_ALPHA ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
+		if ( blend.eColorOperation > SIR_GRAPHICS_BLEND_MAX || blend.eAlphaOperation > SIR_GRAPHICS_BLEND_MAX ||
+		     ( blend.nColorWriteMask & ~0xFU ) != 0 ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
+	}
 	if ( desc.nSampleCount == 0 || ( desc.nSampleCount & ( desc.nSampleCount - 1 ) ) != 0 ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
