@@ -1006,6 +1006,38 @@ static bool describeResourceWithRetirement( void *pContext, const SIRResourceDep
 	return true;
 }
 
+typedef struct sirResourceRebindFactory_s
+{
+	sirResourceScheduledTestSet_t *pSet;
+	SIRResourceGraphWriter *pWriter;
+	SIRResourceHandle hDependency;
+	SIRResourceKey originalKey;
+	SIRResourceKey replacementKey;
+	bool bRebound;
+} sirResourceRebindFactory_t;
+
+static bool describeResourceWithRebind( void *pContext, const SIRResourceDependencyPlanEntry &rEntry, sirTaskGraphPass_t *pPass ) noexcept
+{
+	sirResourceRebindFactory_t *pMutation = ( sirResourceRebindFactory_t * )pContext;
+	if ( !describeResourceTest( pMutation->pSet, rEntry, pPass ) ) {
+		return false;
+	}
+	if ( !pMutation->bRebound ) {
+		if ( pMutation->pWriter->retire( pMutation->hDependency ) != SIR_RESOURCE_RESULT_SUCCESS ) {
+			return false;
+		}
+		SIRResourcePublication replacement = { pMutation->replacementKey, SIR_RESOURCE_KIND_COMPOSITION, 1, 1, nullptr, 0, nullptr, 0 };
+		SIRResourcePublication revived = { pMutation->originalKey, SIR_RESOURCE_KIND_COMPOSITION, 1, 1, nullptr, 0, nullptr, 0 };
+		SIRResourceHandle ignored = {};
+		if ( pMutation->pWriter->publish( replacement, &ignored ) != SIR_RESOURCE_RESULT_SUCCESS ||
+		     pMutation->pWriter->publish( revived, &ignored ) != SIR_RESOURCE_RESULT_SUCCESS ) {
+			return false;
+		}
+		pMutation->bRebound = true;
+	}
+	return true;
+}
+
 static SIRResourceHandle publishTaskNode( SIRResourceGraphWriter &rWriter, uint64_t nAsset,
                                           const SIRResourceDependency *pDependencies = nullptr, uint32_t nDependencies = 0 ) noexcept
 {
@@ -1802,6 +1834,37 @@ static void testDependencyRetiredDuringTaskCompilation( void )
 	REQUIRE( allocator.m_nOutstanding.load() == 0 );
 }
 
+static void testStaleDependencyRebindingDuringTaskCompilation( void )
+{
+	SIRTestAllocatorStats allocator = {};
+	SIRMemoryManager memory;
+	initResourceTaskMemory( memory );
+	{
+		SIRResourceGraph graph( testConfig( allocator, 8 ) );
+		REQUIRE( graph.isReady() );
+		SIRResourceGraphWriter *pWriter = graph.getWriter();
+		REQUIRE( pWriter != nullptr );
+		sirResourceScheduledTestSet_t work = {};
+		work.nNodes = 2;
+		work.nodes[0].hResource = publishTaskNode( *pWriter, 44000 );
+		SIRResourceDependency edge = { key( 44000 ), SIR_RESOURCE_EDGE_KIND_REQUIRED, {} };
+		work.nodes[1].hResource = publishTaskNode( *pWriter, 44001, &edge, 1 );
+		SIRTaskGraph tasks;
+		REQUIRE( tasks.init( &memory, { 4, 1, 4 } ) );
+		SIRResourceDependencyPlanEntry plan[4] = {};
+		uint32_t nRequired = 0;
+		sirResourceRebindFactory_t mutation = { &work, pWriter, work.nodes[0].hResource, key( 44000 ), key( 44002 ), false };
+		const SIRResourceResult result =
+		    pWriter->compileTaskGraph( work.nodes[1].hResource, tasks, plan, 4, describeResourceWithRebind, &mutation, &nRequired );
+		REQUIRE( mutation.bRebound );
+		REQUIRE( result == SIR_RESOURCE_RESULT_STALE_REVISION );
+		REQUIRE( tasks.getPassCount() == 0 );
+		REQUIRE( pWriter->collectRetired( 8 ) >= 1 );
+	}
+	memory.shutdown();
+	REQUIRE( allocator.m_nOutstanding.load() == 0 );
+}
+
 int main( void )
 {
 	testScopeLifetimeAndDeduplication();
@@ -1834,6 +1897,7 @@ int main( void )
 	testPublicationCapacityAfterFullAdmission();
 	testReverseDependencyBucketCollisions();
 	testDependencyRetiredDuringTaskCompilation();
+	testStaleDependencyRebindingDuringTaskCompilation();
 	printf( "PASS: GRDG resource registry, publication, deduplication, lifetime, concurrency\n" );
 	return 0;
 }
