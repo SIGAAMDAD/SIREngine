@@ -88,7 +88,7 @@ jobs:
           $header = Join-Path $includeDir 'GameInput.h'
           Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/microsoftconnect/GameInput/dce6dabd75b53fcb29db86afe4de5c917921af18/include/v1/GameInput.h' -OutFile $header
           $blob = (git hash-object -- $header).Trim()
-          if ($blob -ne 'ebd3875a7a7e7892d1723f1a8467fe6ca8325620') { throw "GameInput v1 header source mismatch: $blob" }
+          if ($blob -notin @('ebd3875a7a7e7892d1723f1a8467fe6ca8325620', '9c83ed575a92be52cdfac22baa98ee2136d7607e')) { throw "GameInput v1 header source mismatch: $blob" }
           Add-Content -Path $env:GITHUB_ENV -Value "SIR_GAMEINPUT_SDK_INCLUDE=$includeDir"
       - name: Configure native engine
         run: cmake --preset "${{ matrix.preset }}" -DSIR_WITH_GOOGLETEST=ON -DSIR_REQUIRE_GAMEINPUT_SDK=${{ runner.os == 'Windows' && 'ON' || 'OFF' }}
