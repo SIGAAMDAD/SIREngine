@@ -114,6 +114,11 @@ if(SIR_WITH_VULKAN)
     add_test(NAME render.vulkan.shared-contracts COMMAND SIRVulkanSharedContractTests)
     sir_configure_owned_target(SIRVulkanSharedContractTests)
 
+    add_executable(SIRVulkanTransferLayoutTests SIRVulkanTransferLayoutTests.cpp)
+    target_link_libraries(SIRVulkanTransferLayoutTests PRIVATE SIR::Vulkan)
+    add_test(NAME render.vulkan.transfer-layout COMMAND SIRVulkanTransferLayoutTests)
+    sir_configure_owned_target(SIRVulkanTransferLayoutTests)
+
     add_executable(SIRVulkanSharedTests SIRVulkanSharedTests.cpp)
     target_link_libraries(SIRVulkanSharedTests PRIVATE SIR::Vulkan)
     add_test(NAME render.vulkan.shared-api COMMAND SIRVulkanSharedTests)

@@ -159,8 +159,8 @@ int main( void )
 	texture.nWidth = 16;
 	texture.nHeight = 16;
 	texture.nDepth = 1;
-	texture.nArrayLayers = 1;
-	texture.nMipLevels = 1;
+	texture.nArrayLayers = 2;
+	texture.nMipLevels = 2;
 	texture.nSampleCount = 1;
 	texture.nUsage = SIR_GRAPHICS_USAGE_SAMPLED | SIR_GRAPHICS_USAGE_COPY_DESTINATION | SIR_GRAPHICS_USAGE_COPY_SOURCE;
 	texture.eDimension = SIR_GRAPHICS_TEXTURE_2D;
@@ -198,6 +198,8 @@ int main( void )
 	sirGraphicsBufferTextureCopy_t copy = {};
 	copy.hBuffer = hSource;
 	copy.hTexture = hTexture;
+	copy.nMip = 1;
+	copy.nLayer = 1;
 	copy.nWidth = 4;
 	copy.nHeight = 8;
 	copy.nDepth = 1;

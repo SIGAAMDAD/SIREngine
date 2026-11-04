@@ -39,11 +39,9 @@ sirVulkanResult_t SIRVulkanDevice::submitBufferImageCopy( sirVulkanBuffer_t *pBu
 	                   ( pImage->nUsage & VK_IMAGE_USAGE_TRANSFER_SRC_BIT ) == 0 || pImage->eLayout == VK_IMAGE_LAYOUT_UNDEFINED ) ) {
 		return SIR_VULKAN_INVALID_ARGUMENT;
 	}
-	if ( pImage->eType != VK_IMAGE_TYPE_2D || pImage->eFormat != VK_FORMAT_R8G8B8A8_UNORM || transfer.extent.width == 0 ||
-	     transfer.extent.height == 0 || transfer.extent.depth != 1 || transfer.nMip >= pImage->nMips ||
-	     transfer.nLayer >= pImage->nLayers || transfer.offset.z != 0 || transfer.offset.x < 0 || transfer.offset.y < 0 ||
-	     transfer.nBufferOffset > pBuffer->nSize ) {
-		return SIR_VULKAN_INVALID_ARGUMENT;
+	const sirVulkanResult_t eValidation = sirVulkanValidateTextureTransfer( pBuffer, pImage, transfer );
+	if ( eValidation != SIR_VULKAN_SUCCESS ) {
+		return eValidation;
 	}
 
 	uint64_t nCompleted = 0;
@@ -185,6 +183,10 @@ sirVulkanResult_t SIRVulkanDevice::submitBufferImageCopy( sirVulkanBuffer_t *pBu
 	pBuffer->nLastGpuUse = nNext;
 	pImage->nLastGpuUse = nNext;
 	pImage->eLayout = eFinal;
+	if ( bUpload ) {
+		const uint32_t nIndex = transfer.nLayer * pImage->nMips + transfer.nMip;
+		pImage->szUploadedSubresources[nIndex / 64] |= 1ULL << ( nIndex % 64 );
+	}
 	pCompletion->nDeviceSerial = m_nDeviceSerial;
 	pCompletion->nValue = nNext;
 	return SIR_VULKAN_SUCCESS;

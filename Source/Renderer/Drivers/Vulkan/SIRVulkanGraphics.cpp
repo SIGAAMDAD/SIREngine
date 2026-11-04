@@ -473,7 +473,12 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::submit( sirGraphicsQueue_t eQueue,
 		}
 		sirVulkanTextureTransfer_t transfer = {};
 		transfer.nBufferOffset = copy.nBufferOffset;
-		transfer.nBufferRowLength = copy.nBytesPerRow == 0 ? 0 : copy.nBytesPerRow / 4;
+		sirVulkanFormatBlock_t block = {};
+		if ( !sirVulkanGetFormatBlock( pImage->native.eFormat, &block ) ) {
+			return SIR_GRAPHICS_UNSUPPORTED;
+		}
+		transfer.nBufferRowLength = copy.nBytesPerRow == 0 ? 0 :
+		                            ( copy.nBytesPerRow / block.nBytesPerBlock ) * block.nBlockWidth;
 		transfer.nBufferImageHeight = copy.nRowsPerImage;
 		transfer.nMip = copy.nMip;
 		transfer.nLayer = copy.nLayer;

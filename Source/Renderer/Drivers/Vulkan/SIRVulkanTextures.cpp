@@ -105,8 +105,8 @@ sirGraphicsResult_t SIRVulkanCommandList::copyBufferTexture( const sirGraphicsBu
 	if ( m_eState != SIR_VULKAN_COMMAND_RECORDING || m_bHasCopy ) {
 		return SIR_GRAPHICS_BUSY;
 	}
-	if ( m_pOwner == nullptr || copy.nWidth == 0 || copy.nHeight == 0 || copy.nDepth != 1 || copy.nMip != 0 || copy.nLayer != 0 ||
-	     copy.nZ != 0 || ( copy.nBufferOffset & 3U ) != 0 ) {
+	if ( m_pOwner == nullptr || copy.nWidth == 0 || copy.nHeight == 0 || copy.nDepth != 1 ||
+	     copy.nZ != 0 || copy.nX > INT32_MAX || copy.nY > INT32_MAX ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	const sirVulkanGraphicsBufferSlot_t *pBuffer = m_pOwner->resolveBuffer( copy.hBuffer );
@@ -119,30 +119,37 @@ sirGraphicsResult_t SIRVulkanCommandList::copyBufferTexture( const sirGraphicsBu
 	if ( !pImage->bActive || pImage->nGeneration != copy.hTexture.nGeneration ) {
 		return SIR_GRAPHICS_INVALID_HANDLE;
 	}
-	if ( pImage->native.eFormat != VK_FORMAT_R8G8B8A8_UNORM || pImage->native.eType != VK_IMAGE_TYPE_2D ) {
+	if ( pBuffer->pMapped != nullptr ) {
+		return SIR_GRAPHICS_BUSY;
+	}
+
+	sirVulkanFormatBlock_t block = {};
+	if ( !sirVulkanGetFormatBlock( pImage->native.eFormat, &block ) ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
-	if ( pBuffer->pMapped != nullptr || copy.nX > pImage->nWidth || copy.nY > pImage->nHeight || copy.nWidth > pImage->nWidth - copy.nX ||
-	     copy.nHeight > pImage->nHeight - copy.nY ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
-	}
-	if ( copy.bBufferToTexture ) {
-		if ( ( pBuffer->native.nUsage & VK_BUFFER_USAGE_TRANSFER_SRC_BIT ) == 0 ||
-		     ( pImage->native.nUsage & VK_IMAGE_USAGE_TRANSFER_DST_BIT ) == 0 ) {
+	sirVulkanTextureTransfer_t transfer = {};
+	transfer.nBufferOffset = copy.nBufferOffset;
+	if ( copy.nBytesPerRow != 0 ) {
+		if ( copy.nBytesPerRow % block.nBytesPerBlock != 0 ) {
 			return SIR_GRAPHICS_INVALID_ARGUMENT;
 		}
-	} else if ( ( pBuffer->native.nUsage & VK_BUFFER_USAGE_TRANSFER_DST_BIT ) == 0 ||
-	            ( pImage->native.nUsage & VK_IMAGE_USAGE_TRANSFER_SRC_BIT ) == 0 || pImage->native.eLayout == VK_IMAGE_LAYOUT_UNDEFINED ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+		const uint64_t nTexels = uint64_t( copy.nBytesPerRow / block.nBytesPerBlock ) * block.nBlockWidth;
+		if ( nTexels > UINT32_MAX ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
+		transfer.nBufferRowLength = ( uint32_t )nTexels;
 	}
-	const uint64_t nTightRow = uint64_t( copy.nWidth ) * 4;
-	const uint64_t nRowBytes = copy.nBytesPerRow == 0 ? nTightRow : uint64_t( copy.nBytesPerRow );
-	if ( ( nRowBytes & 3U ) != 0 || nRowBytes < nTightRow || ( copy.nRowsPerImage != 0 && copy.nRowsPerImage < copy.nHeight ) ||
-	     uint64_t( copy.nHeight - 1 ) > ( UINT64_MAX - nTightRow ) / nRowBytes ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	transfer.nBufferImageHeight = copy.nRowsPerImage;
+	transfer.nMip = copy.nMip;
+	transfer.nLayer = copy.nLayer;
+	transfer.offset = { ( int32_t )copy.nX, ( int32_t )copy.nY, 0 };
+	transfer.extent = { copy.nWidth, copy.nHeight, 1 };
+	transfer.bBufferToImage = copy.bBufferToTexture;
+	const sirVulkanResult_t eValidation = sirVulkanValidateTextureTransfer( &pBuffer->native, &pImage->native, transfer );
+	if ( eValidation == SIR_VULKAN_API_UNSUPPORTED ) {
+		return SIR_GRAPHICS_UNSUPPORTED;
 	}
-	const uint64_t nRequired = uint64_t( copy.nHeight - 1 ) * nRowBytes + nTightRow;
-	if ( copy.nBufferOffset > pBuffer->native.nSize || nRequired > pBuffer->native.nSize - copy.nBufferOffset ) {
+	if ( eValidation != SIR_VULKAN_SUCCESS ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	m_TextureCopy = copy;
