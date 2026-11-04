@@ -13,6 +13,30 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  source-snapshot:
+    name: Source checkout for local LLVM verification
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Checkout pinned native test dependency
+        run: git submodule update --init ThirdParty/GoogleTest
+      - name: Package exact revision without build artifacts or Git internals
+        shell: bash
+        run: |
+          set -euo pipefail
+          git rev-parse HEAD > source-sha.txt
+          tar --exclude=.git --exclude=out --exclude=.cache -czf "${RUNNER_TEMP}/sir-editor-r2r3-source.tar.gz" .
+      - name: Upload reproducible source snapshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: editor-r2r3-source-${{ github.sha }}
+          path: ${{ runner.temp }}/sir-editor-r2r3-source.tar.gz
+          if-no-files-found: error
+          retention-days: 3
+
   native:
     name: Native editor / ${{ matrix.target }}
     runs-on: ubuntu-24.04
