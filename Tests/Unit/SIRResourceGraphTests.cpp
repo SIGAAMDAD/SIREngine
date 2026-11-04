@@ -1476,6 +1476,10 @@ static void testWriterInputValidationAndStagingLifecycle( void )
 		REQUIRE( pWriter->publish( publication, &ignored ) == SIR_RESOURCE_RESULT_TYPE_MISMATCH );
 		REQUIRE( pWriter->markFailed( hFirst, SIR_RESOURCE_RESULT_SUCCESS ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
 		REQUIRE( pWriter->markFailed( hFirst, SIR_RESOURCE_RESULT_FAILED ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		const SIRResourceHandle invalidHandle = { UINT32_MAX, 0, 0, 0 };
+		REQUIRE( pWriter->markFailed( invalidHandle, SIR_RESOURCE_RESULT_FAILED ) == SIR_RESOURCE_RESULT_INVALID_HANDLE );
+		REQUIRE( pWriter->evictChunk( invalidHandle, { 0 } ) == SIR_RESOURCE_RESULT_INVALID_HANDLE );
+		REQUIRE( pWriter->retire( invalidHandle ) == SIR_RESOURCE_RESULT_INVALID_HANDLE );
 		std::atomic<bool> bWrongWriter{ false };
 		std::thread other( [&]() {
 			uint32_t count = 0;
@@ -1495,7 +1499,8 @@ static void testWriterInputValidationAndStagingLifecycle( void )
 			                    pWriter->compileDependencyOrder( hFirst, plan, 3, &count ) == SIR_RESOURCE_RESULT_WRITER_VIOLATION &&
 			                    pWriter->validateTaskPlan( plan, 1 ) == SIR_RESOURCE_RESULT_WRITER_VIOLATION &&
 			                    pWriter->collectDependents( key( 1 ), &out, 1, &count ) == SIR_RESOURCE_RESULT_WRITER_VIOLATION &&
-			                    pWriter->pollInvalidations( 0, &event, 1, &count, &cursor ) == SIR_RESOURCE_RESULT_WRITER_VIOLATION );
+			                    pWriter->pollInvalidations( 0, &event, 1, &count, &cursor ) == SIR_RESOURCE_RESULT_WRITER_VIOLATION &&
+			                    pWriter->getInvalidationSequence( hFirst, &cursor ) == SIR_RESOURCE_RESULT_WRITER_VIOLATION );
 		} );
 		other.join();
 		REQUIRE( bWrongWriter.load() );
