@@ -405,7 +405,9 @@
       "stop_conditions": [
         "Unratified interface or unmet dependency gate"
       ],
-      "status": "IMPLEMENTED_PENDING_CI"
+      "status": "PASS_GITHUB_NATIVE_CI",
+      "evidence_sha": "82ef00bc7042b8e788c45324fb2df9a5b5dcfc6b",
+      "evidence_url": "https://github.com/SIGAAMDAD/SIREngine/actions/runs/41936498553"
     },
     {
       "id": "P3",
@@ -584,9 +586,11 @@
         "REQ-001"
       ],
       "tier": "NATIVE_CMAKE_CTEST",
-      "status": "PENDING_EXACT_SHA_CI",
+      "status": "PASS_GITHUB_NATIVE_LINUX_WINDOWS",
       "command": "ctest -R core.registration.cooker",
-      "evidence_path": "Tests/Unit/SIRRegistrationCookerTests.cpp"
+      "evidence_path": "Tests/Unit/SIRRegistrationCookerTests.cpp",
+      "evidence_sha": "82ef00bc7042b8e788c45324fb2df9a5b5dcfc6b",
+      "evidence_url": "https://github.com/SIGAAMDAD/SIREngine/actions/runs/41936498553"
     },
     {
       "id": "TEST-P2-CLI",
@@ -594,9 +598,11 @@
         "REQ-001"
       ],
       "tier": "NATIVE_CMAKE_CTEST",
-      "status": "PENDING_EXACT_SHA_CI",
+      "status": "PASS_GITHUB_NATIVE_LINUX_WINDOWS",
       "command": "ctest -R core.registration.cooker-cli",
-      "evidence_path": "Tests/Unit/Registration/CookerCLI.cmake"
+      "evidence_path": "Tests/Unit/Registration/CookerCLI.cmake",
+      "evidence_sha": "82ef00bc7042b8e788c45324fb2df9a5b5dcfc6b",
+      "evidence_url": "https://github.com/SIGAAMDAD/SIREngine/actions/runs/41936498553"
     }
   ],
   "probes": [],

@@ -1,6 +1,6 @@
 # P2 — Cooked registration descriptors and dynamic overlay
 
-**Branch:** `feature/console-cvars-commands` — source authored for PR #275; tracking [issue #277](https://github.com/SIGAAMDAD/SIREngine/issues/277).
+**Branch:** `feature/console-cvars-commands` — verified on native Linux/Windows, tracking [closed issue #277](https://github.com/SIGAAMDAD/SIREngine/issues/277).
 
 ## Native runtime owner
 
@@ -26,6 +26,6 @@ The optional v1 scalability section remains empty until P6 defines grouped profi
 
 New `core.registration.cooker` linked native fixture validates shuffled-input byte equality, real SIRStringPool cooked identity, static command and CVar lookups, callback binding, dynamic module registration, stale handle reuse/unload, duplicate names, wrong ordinals, corrupted defaults and missing callbacks. `core.registration.cooker-cli` cooks re-ordered manifest files and compares SHA-256 outputs, then rejects duplicate manifests. Both are native CMake/CTest targets.
 
-**Pending this commit's CI:** Linux and Windows native build, both tests, source/formatter checks. P2 must remain open until exact-source tests pass. Future P3 owns live typed CVar storage and event-credit transaction commits; P4 owns command invocation and execution leases.
+**Acceptance PASS:** Commit `82ef00bc7042b8e788c45324fb2df9a5b5dcfc6b` passed native Linux 99/99 CTests and Windows 94/94 CTests in [SIREngine CI #41936498553](https://github.com/SIGAAMDAD/SIREngine/actions/runs/41936498553), including the new cooked registry and CLI tests. Source hygiene and clang-format 23.1.5 also passed. [P2 #277](https://github.com/SIGAAMDAD/SIREngine/issues/277) is closed. Future P3 owns live typed CVar storage and event-credit transaction commits; P4 owns command invocation and execution leases.
 
 **Caller-lifetime requirements:** Input SIRC bytes, SIRS pool and backing entry/name/binding buffers must remain alive until `SIRRegistrationCatalog::shutdown`. Shutdown/retirement requires no outstanding module callback invocation; P4 will enforce leases.
