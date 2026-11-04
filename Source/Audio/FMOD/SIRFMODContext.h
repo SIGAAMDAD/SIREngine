@@ -73,8 +73,7 @@ typedef struct sirFMODNativeOps_s
 	int32_t ( *initializeStudio )( void *pUserData, void *pStudio, const sirFMODContextConfig_t *pConfig ) noexcept;
 	int32_t ( *updateStudio )( void *pUserData, void *pStudio ) noexcept;
 	int32_t ( *releaseStudio )( void *pUserData, void *pStudio ) noexcept;
-	int32_t ( *registerDeviceLoss )( void *pUserData, void *pCore, void *pOwner,
-	                                void ( *pfnSignal )( void *pOwner ) noexcept ) noexcept;
+	int32_t ( *registerDeviceLoss )( void *pUserData, void *pCore, void *pOwner, void ( *pfnSignal )( void *pOwner ) noexcept ) noexcept;
 } sirFMODNativeOps_t;
 
 // The owner thread exclusively invokes all methods and quiesces callbacks

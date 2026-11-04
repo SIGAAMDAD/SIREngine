@@ -156,8 +156,7 @@ static int32_t fakeRelease( void *pUserData, void *pStudio ) noexcept
 	return nResult;
 }
 
-static int32_t fakeRegisterDeviceLoss( void *pUserData, void *pCore, void *pOwner,
-                                       void ( *pfnSignal )( void * ) noexcept ) noexcept
+static int32_t fakeRegisterDeviceLoss( void *pUserData, void *pCore, void *pOwner, void ( *pfnSignal )( void * ) noexcept ) noexcept
 {
 	sirFMODFixture_t *pFixture = ( sirFMODFixture_t * )pUserData;
 	checkFMOD( pCore == &pFixture->nVersion && pOwner != nullptr && pfnSignal != nullptr );

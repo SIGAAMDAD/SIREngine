@@ -85,8 +85,7 @@ static int32_t fmodReleaseStudio( void *, void *pStudio ) noexcept
 	return ( int32_t )( ( FMOD::Studio::System * )pStudio )->release();
 }
 
-static FMOD_RESULT F_CALLBACK fmodDeviceLossCallback( FMOD_SYSTEM *pSystem, FMOD_SYSTEM_CALLBACK_TYPE eType,
-                                                       void *, void * )
+static FMOD_RESULT F_CALLBACK fmodDeviceLossCallback( FMOD_SYSTEM *pSystem, FMOD_SYSTEM_CALLBACK_TYPE eType, void *, void * )
 {
 	if ( eType != FMOD_SYSTEM_CALLBACK_DEVICELOST ) {
 		return FMOD_OK;
@@ -99,8 +98,7 @@ static FMOD_RESULT F_CALLBACK fmodDeviceLossCallback( FMOD_SYSTEM *pSystem, FMOD
 	return FMOD_OK;
 }
 
-static int32_t fmodRegisterDeviceLoss( void *, void *pCore, void *pOwner,
-                                      void ( * )( void * ) noexcept ) noexcept
+static int32_t fmodRegisterDeviceLoss( void *, void *pCore, void *pOwner, void ( * )( void * ) noexcept ) noexcept
 {
 	FMOD::System *pSystem = ( FMOD::System * )pCore;
 	const FMOD_RESULT eData = pSystem->setUserData( pOwner );

@@ -120,9 +120,14 @@ static int32_t mixerStudioRelease( void *pData, void *pStudio ) noexcept
 	return 0;
 }
 
+static int32_t mixerRegisterDeviceLoss( void *, void *, void *, void ( * )( void * ) noexcept ) noexcept
+{
+	return 0;
+}
+
 static sirFMODNativeOps_t makeMixerStudioOps( sirFMODMixerFixture_t *pFixture ) noexcept
 {
-	return { 1,
+	return { 2,
 	         0x00020400,
 	         pFixture,
 	         mixerStudioCreate,
@@ -133,7 +138,8 @@ static sirFMODNativeOps_t makeMixerStudioOps( sirFMODMixerFixture_t *pFixture ) 
 	         mixerSetNoSound,
 	         mixerStudioInitialize,
 	         mixerStudioUpdate,
-	         mixerStudioRelease };
+	         mixerStudioRelease,
+	         mixerRegisterDeviceLoss };
 }
 
 static int32_t mixerResolveBus( void *pData, void *pStudio, const char *szPath, void **ppBus ) noexcept
