@@ -326,15 +326,13 @@ bool SIRFMODBankStore::isBoundTo( const SIRFMODContext *pContext ) const noexcep
 	return m_pContext == pContext && isReady();
 }
 
-sirAudioResult_t SIRFMODBankStore::containsBankObject( uint64_t nPackageId, sirFMODBankObjectKind_t eKind,
-                                                        const char *szPath ) noexcept
+sirAudioResult_t SIRFMODBankStore::containsBankObject( uint64_t nPackageId, sirFMODBankObjectKind_t eKind, const char *szPath ) noexcept
 {
 	if ( !isReady() ) {
 		return SIR_AUDIO_NOT_INITIALIZED;
 	}
 	if ( szPath == nullptr || szPath[0] == '\0' ||
-	     ( eKind != SIR_FMOD_BANK_OBJECT_BUS && eKind != SIR_FMOD_BANK_OBJECT_VCA &&
-	       eKind != SIR_FMOD_BANK_OBJECT_SNAPSHOT ) ) {
+	     ( eKind != SIR_FMOD_BANK_OBJECT_BUS && eKind != SIR_FMOD_BANK_OBJECT_VCA && eKind != SIR_FMOD_BANK_OBJECT_SNAPSHOT ) ) {
 		return SIR_AUDIO_INVALID_ARGUMENT;
 	}
 	uint32_t iBank = 0;
@@ -342,8 +340,8 @@ sirAudioResult_t SIRFMODBankStore::containsBankObject( uint64_t nPackageId, sirF
 		return SIR_AUDIO_INVALID_HANDLE;
 	}
 	uint8_t bFound = 0;
-	m_nLastNativeResult = m_Ops.containsObject( m_Ops.pUserData, m_pContext->m_pStudio, m_pBanks[iBank].pBank,
-	                                          eKind, szPath, m_pAllocator, &bFound );
+	m_nLastNativeResult =
+	    m_Ops.containsObject( m_Ops.pUserData, m_pContext->m_pStudio, m_pBanks[iBank].pBank, eKind, szPath, m_pAllocator, &bFound );
 	if ( m_nLastNativeResult != 0 ) {
 		return SIR_AUDIO_BACKEND_ERROR;
 	}

@@ -56,8 +56,8 @@ typedef struct sirFMODBankNativeOps_s
 	int32_t ( *sampleState )( void *pUserData, void *pBank, sirFMODSampleState_t *pState ) noexcept;
 	int32_t ( *containsEvent )( void *pUserData, void *pStudio, void *pBank, const char *szPath, const sirContainerAllocator_t *pAllocator,
 	                            uint8_t *pbFound ) noexcept;
-	int32_t ( *containsObject )( void *pUserData, void *pStudio, void *pBank, sirFMODBankObjectKind_t eKind,
-	                             const char *szPath, const sirContainerAllocator_t *pAllocator, uint8_t *pbFound ) noexcept;
+	int32_t ( *containsObject )( void *pUserData, void *pStudio, void *pBank, sirFMODBankObjectKind_t eKind, const char *szPath,
+	                             const sirContainerAllocator_t *pAllocator, uint8_t *pbFound ) noexcept;
 } sirFMODBankNativeOps_t;
 
 typedef struct sirFMODBankSlot_s

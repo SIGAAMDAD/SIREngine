@@ -96,9 +96,8 @@ static int32_t fmodCheckBankEvent( void *, void *pStudio, void *pBank, const cha
 	return ( int32_t )eResult;
 }
 
-static int32_t fmodCheckBankObject( void *, void *pStudio, void *pBank, sirFMODBankObjectKind_t eKind,
-                                    const char *szPath, const sirContainerAllocator_t *pAllocator,
-                                    uint8_t *pbFound ) noexcept
+static int32_t fmodCheckBankObject( void *, void *pStudio, void *pBank, sirFMODBankObjectKind_t eKind, const char *szPath,
+                                    const sirContainerAllocator_t *pAllocator, uint8_t *pbFound ) noexcept
 {
 	*pbFound = 0;
 	FMOD::Studio::System *pSystem = ( FMOD::Studio::System * )pStudio;
@@ -185,6 +184,12 @@ static int32_t fmodCheckBankObject( void *, void *pStudio, void *pBank, sirFMODB
 
 sirFMODBankNativeOps_t sirGetFMODBankNativeOps( void ) noexcept
 {
-	return { 2, nullptr, fmodLoadBankFile, fmodUnloadBank, fmodPreloadBankSamples, fmodGetBankSampleState,
-	         fmodCheckBankEvent, fmodCheckBankObject };
+	return { 2,
+	         nullptr,
+	         fmodLoadBankFile,
+	         fmodUnloadBank,
+	         fmodPreloadBankSamples,
+	         fmodGetBankSampleState,
+	         fmodCheckBankEvent,
+	         fmodCheckBankObject };
 }
