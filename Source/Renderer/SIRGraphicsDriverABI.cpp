@@ -31,7 +31,7 @@ sirGraphicsABIResult_t sirGraphicsNegotiateDriverABI( sirGraphicsABIFactory_t pF
 	driver.nSize = sizeof( driver );
 	const uint32_t nStatus = pFactory( SIR_GRAPHICS_DRIVER_ABI_MAJOR, SIR_GRAPHICS_DRIVER_ABI_MINOR, pHost, &driver );
 	if ( nStatus != SIR_GRAPHICS_ABI_SUCCESS ) {
-		return nStatus <= SIR_GRAPHICS_ABI_DRIVER_ERROR ? ( sirGraphicsABIResult_t )nStatus : SIR_GRAPHICS_ABI_DRIVER_ERROR;
+		return nStatus <= SIR_GRAPHICS_VERSION_MISMATCH ? ( sirGraphicsABIResult_t )nStatus : SIR_GRAPHICS_ABI_DRIVER_ERROR;
 	}
 	const sirGraphicsABIResult_t eDriverStatus = sirGraphicsValidateABIDriver( &driver );
 	if ( eDriverStatus != SIR_GRAPHICS_ABI_SUCCESS ) {

@@ -37,14 +37,14 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // All interface objects are borrowed until their owning destroy call returns.
 // Integers are host-endian, with an 8-bit byte and 64-bit pointer requirement.
 // Binary modules must use the same architecture and calling convention.
-typedef enum sirGraphicsABIResult_e : uint32_t
-{
-	SIR_GRAPHICS_ABI_SUCCESS = 0,
-	SIR_GRAPHICS_ABI_INVALID_ARGUMENT = 1,
-	SIR_GRAPHICS_ABI_VERSION_MISMATCH = 2,
-	SIR_GRAPHICS_ABI_UNSUPPORTED = 3,
-	SIR_GRAPHICS_ABI_DRIVER_ERROR = 4
-} sirGraphicsABIResult_t;
+// A binary callback returns the canonical graphics result code verbatim.
+// No parallel error numbering is introduced by the module interface.
+typedef sirGraphicsResult_t sirGraphicsABIResult_t;
+#define SIR_GRAPHICS_ABI_SUCCESS SIR_GRAPHICS_SUCCESS
+#define SIR_GRAPHICS_ABI_INVALID_ARGUMENT SIR_GRAPHICS_INVALID_ARGUMENT
+#define SIR_GRAPHICS_ABI_VERSION_MISMATCH SIR_GRAPHICS_VERSION_MISMATCH
+#define SIR_GRAPHICS_ABI_UNSUPPORTED SIR_GRAPHICS_UNSUPPORTED
+#define SIR_GRAPHICS_ABI_DRIVER_ERROR SIR_GRAPHICS_DRIVER_ERROR
 
 typedef enum sirGraphicsABIAdapterKind_e : uint32_t
 {
@@ -131,6 +131,8 @@ typedef struct sirGraphicsABIDeviceRequest_s
 	uint32_t nAdapterIndex;
 	uint32_t nFramesInFlight;
 	uint32_t nAllowSoftware;
+	uint32_t nHeadless;
+	uint32_t nReserved;
 	uint64_t nRequiredFeatures;
 	uint64_t nResidentBudgetBytes;
 	uint64_t nUploadBudgetBytes;

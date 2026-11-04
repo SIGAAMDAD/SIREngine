@@ -19,7 +19,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 static sirGraphicsABIResult_t sirGraphicsResultFromProvider( uint32_t nResult ) noexcept
 {
-	if ( nResult > SIR_GRAPHICS_ABI_DRIVER_ERROR ) {
+	if ( nResult > SIR_GRAPHICS_VERSION_MISMATCH ) {
 		return SIR_GRAPHICS_ABI_DRIVER_ERROR;
 	}
 	return ( sirGraphicsABIResult_t )nResult;
@@ -165,8 +165,8 @@ sirGraphicsABIResult_t sirGraphicsCreateABIDevice( sirGraphicsABIModule_t *pModu
                                                    sirGraphicsABIDevice_t *pDevice ) noexcept
 {
 	if ( pModule == nullptr || pRequest == nullptr || pRequest->nSize < sizeof( sirGraphicsABIDeviceRequest_t ) ||
-	     pRequest->nFramesInFlight == 0 || pRequest->nAllowSoftware > 1 || pDevice == nullptr ||
-	     pDevice->nSize < sizeof( sirGraphicsABIDevice_t ) || pModule->nActiveDevices >= 16 ) {
+	     pRequest->nFramesInFlight == 0 || pRequest->nAllowSoftware > 1 || pRequest->nHeadless > 1 || pRequest->nReserved != 0 ||
+	     pDevice == nullptr || pDevice->nSize < sizeof( sirGraphicsABIDevice_t ) || pModule->nActiveDevices >= 16 ) {
 		return SIR_GRAPHICS_ABI_INVALID_ARGUMENT;
 	}
 	sirGraphicsABIAdapter_t adapter = {};

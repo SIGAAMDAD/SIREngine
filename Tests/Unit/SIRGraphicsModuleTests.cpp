@@ -78,6 +78,7 @@ static bool testBinaryModule( void ) noexcept
 	request.nSize = sizeof( request );
 	request.nAdapterIndex = 0;
 	request.nFramesInFlight = 2;
+	request.nHeadless = 1;
 	request.nRequiredFeatures = SIR_GRAPHICS_FEATURE_COMPUTE;
 	sirGraphicsABIDevice_t device = {};
 	device.nSize = sizeof( device );
@@ -90,6 +91,14 @@ static bool testBinaryModule( void ) noexcept
 		return false;
 	}
 	request.nRequiredFeatures = SIR_GRAPHICS_FEATURE_COMPUTE;
+	pMode( 6 );
+	if ( sirGraphicsCreateABIDevice( &module, &request, &device ) != SIR_GRAPHICS_OUT_OF_MEMORY || module.nActiveDevices != 0 ) {
+		return false;
+	}
+	pMode( 7 );
+	if ( sirGraphicsCreateABIDevice( &module, &request, &device ) != SIR_GRAPHICS_BUSY || module.nActiveDevices != 0 ) {
+		return false;
+	}
 	pMode( 5 );
 	if ( sirGraphicsCreateABIDevice( &module, &request, &device ) != SIR_GRAPHICS_ABI_DRIVER_ERROR || module.nActiveDevices != 0 ||
 	     device.pDevice != nullptr ) {
