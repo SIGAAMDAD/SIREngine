@@ -125,3 +125,37 @@ until `releaseSubmitted` succeeds.
 This implementation compiles **resident and requested** resource dependencies
 without a GRDG-owned executor; streaming I/O work, CPU/GPU provider passes and
 resource publication are selected by clients and providers through Core Jobs.
+
+## Windows/Linux file-backed GRDG staging
+
+`SIRResourceFileLoad` joins native `SIRPlatformFile`, optional read-only
+`SIRPlatformFileMapping`, the Core `SIRTaskScheduler`, and the sole GRDG
+publication writer. The writer validates the range of an immutable source
+file and allocates the **canonical** GRDG staging buffer under a caller-supplied
+memory domain and limit. Core Jobs workers perform either positional reads
+directly into staging or a single copy from a mapped view into that staging.
+There is no second heap-owned byte cache or independent GRDG task scheduler.
+
+Instantiate one transfer per concurrent I/O request. `begin` submits a CPU
+task to Core Jobs. The scheduler owns the task queue, worker execution,
+cancellation and terminal state. The writer calls `poll` after the Core task
+becomes terminal; only successful exact-length reads invoke
+`publishExpected` with the supplied revision and immutable chunk identity.
+Rejected, cancelled, stale and failed transfers return their staging
+allocation to GRDG without exposing partial bytes to readers. Core task
+handles are released by `poll` after reaching terminal state.
+
+A source file must remain unchanged while the task is running (including
+mapped views). Dependency descriptors supplied with a request must remain
+valid until `poll` returns terminal. If a task is still running, cancel it
+through Core Jobs and poll until terminal before destroying the transfer or
+its graph. Each input file interval must specify its exact byte count,
+offset and trusted content key; import/validation and codec decoding remain
+independent cooker concerns. File-mapping versus positional reading is an
+explicit caller choice pending workload-specific profiling, rather than a
+hard-coded performance cutoff.
+
+`Tests/Unit/SIRResourceFileLoadTests.cpp` exercises simultaneous native
+and mapped loads, unaligned mapped offsets, writer-side publication,
+physical chunk deduplication, cancellation, stale revisions, bounded
+staging exhaustion/reuse and wrong-writer rejection.
