@@ -158,6 +158,8 @@ public:
 	bool queryUnifiedMemory( bool *pUnified ) const noexcept;
 	HRESULT getLastError( void ) const noexcept;
 	ID3D12Device *getNativeDevice( void ) const noexcept;
+	IDXGIFactory6 *getNativeFactory( void ) const noexcept;
+	ID3D12CommandQueue *getDirectQueue( void ) const noexcept;
 	SIRD3D12Memory *getMemory( void ) noexcept;
 	sirGraphicsResult_t submitRecorded( sirGraphicsQueue_t eQueue, ID3D12CommandList *const *ppLists, uint32_t nCount,
 	                                    const sirGraphicsCompletion_t *pWaits, uint32_t nWaitCount,

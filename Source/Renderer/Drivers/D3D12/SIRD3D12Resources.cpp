@@ -877,6 +877,9 @@ sirGraphicsResult_t SIRD3D12Resources::retireResource( sirGraphicsHandle_t hHand
 	if ( pSlot == nullptr ) {
 		return SIR_GRAPHICS_INVALID_HANDLE;
 	}
+	if ( pSlot->pExternalResource != nullptr ) {
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
 	if ( !sirGraphicsIsCompletionSetValid( completion, m_nDeviceGeneration ) ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}

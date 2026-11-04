@@ -745,6 +745,16 @@ bool SIRD3D12Device::queryUnifiedMemory( bool *pUnified ) const noexcept
 	return true;
 }
 
+IDXGIFactory6 *SIRD3D12Device::getNativeFactory( void ) const noexcept
+{
+	return isReady() ? m_pFactory.Get() : nullptr;
+}
+
+ID3D12CommandQueue *SIRD3D12Device::getDirectQueue( void ) const noexcept
+{
+	return isReady() ? m_pGraphicsQueue.Get() : nullptr;
+}
+
 ID3D12Device *SIRD3D12Device::getNativeDevice( void ) const noexcept
 {
 	return isReady() ? m_pDevice.Get() : nullptr;

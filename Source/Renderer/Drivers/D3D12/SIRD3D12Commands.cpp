@@ -770,9 +770,7 @@ sirGraphicsResult_t SIRD3D12Commands::submit( sirGraphicsQueue_t eQueue, const s
 	if ( eValid != SIR_GRAPHICS_SUCCESS ) {
 		return eValid;
 	}
-	if ( submission.nAcquisitionCount != 0 ) {
-		return SIR_GRAPHICS_UNSUPPORTED;
-	}
+	// Image token ownership is validated by SIRD3D12Surfaces before submission.
 	if ( submission.nCommandListCount > s_nListsPerQueue ) {
 		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
 	}
@@ -790,6 +788,31 @@ sirGraphicsResult_t SIRD3D12Commands::submit( sirGraphicsQueue_t eQueue, const s
 		}
 		for ( uint32_t iPrevious = 0; iPrevious < iList; ++iPrevious ) {
 			if ( submission.ppCommandLists[iPrevious] == submission.ppCommandLists[iList] ) {
+				return SIR_GRAPHICS_INVALID_ARGUMENT;
+			}
+		}
+		// External swapchain resources may be referenced only in a submission
+		// carrying the matching one-use image acquisition.
+		for ( uint32_t iRef = 0; iRef < pMatched->m_nReferenceCount; ++iRef ) {
+			const sirGraphicsHandle_t hRef = pMatched->m_szReferences[iRef];
+			const sirD3D12ResourceSlot_t *pResource = pMatched->m_pResources->querySlot( hRef );
+			sirGraphicsHandle_t hTexture = hRef;
+			if ( pResource != nullptr && pResource->eType == SIR_GRAPHICS_HANDLE_VIEW ) {
+				hTexture = pResource->hParent;
+				pResource = pMatched->m_pResources->querySlot( hTexture );
+			}
+			if ( pResource == nullptr || pResource->pExternalResource == nullptr ) {
+				continue;
+			}
+			bool bNamed = false;
+			for ( uint32_t iAcquire = 0; iAcquire < submission.nAcquisitionCount; ++iAcquire ) {
+				const sirGraphicsHandle_t &hImage = submission.pAcquisitions[iAcquire].hImage;
+				if ( hImage.nSlot == hTexture.nSlot && hImage.nGeneration == hTexture.nGeneration &&
+				     hImage.nDeviceGeneration == hTexture.nDeviceGeneration ) {
+					bNamed = true;
+				}
+			}
+			if ( !bNamed ) {
 				return SIR_GRAPHICS_INVALID_ARGUMENT;
 			}
 		}
