@@ -19,6 +19,31 @@ add_library(SIRScripting STATIC
     Language/SIRLangParser.cpp
     Language/SIRLangSemantic.cpp
     Language/SIRLangSignatures.cpp
+    Language/SIRLangTypeSystem.cpp
+    Language/SIRLangGraphVM.cpp
+    Language/SIRLangLowering.cpp
+    Language/SIRLangBytecode.cpp
+    Language/SIRLangEffects.cpp
+    Language/SIRLangTypeSystem.cpp
+    Language/SIRLangGraphVM.cpp
+    Language/SIRLangLowering.cpp
+    Language/SIRLangBytecode.cpp
+    Language/SIRLangEffects.cpp
+    Language/SIRLangTypeSystem.cpp
+    Language/SIRLangGraphVM.cpp
+    Language/SIRLangLowering.cpp
+    Language/SIRLangBytecode.cpp
+    Language/SIRLangEffects.cpp
+    Language/SIRLangTypeSystem.cpp
+    Language/SIRLangGraphVM.cpp
+    Language/SIRLangLowering.cpp
+    Language/SIRLangBytecode.cpp
+    Language/SIRLangEffects.cpp
+    Language/SIRLangTypeSystem.cpp
+    Language/SIRLangGraphVM.cpp
+    Language/SIRLangLowering.cpp
+    Language/SIRLangBytecode.cpp
+    Language/SIRLangEffects.cpp
 )
 find_package(Threads REQUIRED)
 add_library(SIR::Scripting ALIAS SIRScripting)
