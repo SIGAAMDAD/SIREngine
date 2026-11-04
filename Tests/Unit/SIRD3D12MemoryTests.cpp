@@ -153,6 +153,8 @@ int main( void )
 	}
 	D3D12MA::Allocation *pExcess = nullptr;
 	const HRESULT nOversized = sealed.createBuffer( D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_COMMON, 64ULL * 1024 * 1024, &pExcess );
+	D3D12MA::Allocation *pAbsentPool = nullptr;
+	const HRESULT nMissing = sealed.createBuffer( D3D12_HEAP_TYPE_GPU_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ, 4096, &pAbsentPool );
 	sirD3D12AllocationLedger_t stable = {};
 	const bool bStable = sealed.queryAllocationLedger( &stable ) && stable.nBlockBytes == reserved.nBlockBytes &&
 	                     stable.nCommittedBytes == reserved.nCommittedBytes;
@@ -165,7 +167,8 @@ int main( void )
 		}
 	}
 	sealed.shutdown();
-	if ( !bPlaced || nOversized != E_OUTOFMEMORY || pExcess != nullptr || !bStable ) {
+	if ( !bPlaced || nOversized != E_OUTOFMEMORY || pExcess != nullptr || nMissing != E_OUTOFMEMORY || pAbsentPool != nullptr ||
+	     !bStable ) {
 		return 20;
 	}
 	return 0;

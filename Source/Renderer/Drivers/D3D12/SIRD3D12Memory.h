@@ -111,7 +111,7 @@ public:
 
 	bool initialize( IDXGIAdapter *pAdapter, ID3D12Device *pDevice, SIRGeneralHeap *pCpuHeap = nullptr ) noexcept;
 	bool configureResidentBudget( uint64_t nBytes ) noexcept;
-	bool configureSealedPools( const sirD3D12SealedPoolConfig_t& config ) noexcept;
+	bool configureSealedPools( const sirD3D12SealedPoolConfig_t &config ) noexcept;
 	bool queryAllocationLedger( sirD3D12AllocationLedger_t *pLedger ) const noexcept;
 	bool reserveExternalBytes( uint64_t nBytes ) noexcept;
 	void releaseExternalBytes( uint64_t nBytes ) noexcept;
