@@ -272,6 +272,12 @@ sirAudioResult_t SIRFMODBankStore::unloadBank( uint64_t nPackageId ) noexcept
 	if ( !findBank( nPackageId, iBank ) ) {
 		return SIR_AUDIO_INVALID_ARGUMENT;
 	}
+	// A registered bus, VCA, or snapshot description can originate from any
+	// loaded bank. Fail closed until the controller releases every borrowed
+	// registration; this guard is constant time and allocation free.
+	if ( m_pContext->getBorrowedBankObjectCount() != 0 ) {
+		return SIR_AUDIO_BUSY;
+	}
 	for ( uint32_t iEvent = 0; iEvent < m_nEventCount; ++iEvent ) {
 		if ( m_pEvents[iEvent].nPackageId == nPackageId && m_pVoices->isEventInUse( m_pEvents[iEvent].nEventId ) ) {
 			return SIR_AUDIO_BUSY;

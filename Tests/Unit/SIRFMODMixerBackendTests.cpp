@@ -226,6 +226,7 @@ static void testMixerControls( const sirContainerAllocator_t *pAllocator )
 	checkMixer( mixer.registerVCA( 5, "vca:/Music" ) == SIR_AUDIO_INVALID_ARGUMENT );
 	checkMixer( mixer.registerBus( 11, "bus:/Master" ) == SIR_AUDIO_CAPACITY );
 	checkMixer( mixer.getControlCount() == 2 );
+	checkMixer( context.getBorrowedBankObjectCount() == 2 );
 
 	checkMixer( mixer.setBusVolume( 10, 0.75f ) == SIR_AUDIO_OK );
 	checkMixer( fixture.fBusVolume == 0.75f && fixture.nBusVolumeCalls == 1 );
@@ -248,6 +249,7 @@ static void testMixerControls( const sirContainerAllocator_t *pAllocator )
 	checkMixer( mixer.setBusVolume( 10, 0.5f ) == SIR_AUDIO_OK && fixture.fBusVolume == 0.5f );
 
 	checkMixer( mixer.unregisterControl( 10 ) == SIR_AUDIO_OK );
+	checkMixer( context.getBorrowedBankObjectCount() == 1 );
 	checkMixer( mixer.unregisterControl( 10 ) == SIR_AUDIO_INVALID_ARGUMENT );
 	checkMixer( mixer.registerBus( 2, "bus:/Master" ) == SIR_AUDIO_OK );
 	checkMixer( mixer.setBusVolume( 2, 0.1f ) == SIR_AUDIO_OK );
@@ -255,6 +257,7 @@ static void testMixerControls( const sirContainerAllocator_t *pAllocator )
 	checkMixer( mixer.getControlCount() == 2 );
 	mixer.shutdown();
 	checkMixer( mixer.getControlCount() == 0 );
+	checkMixer( context.getBorrowedBankObjectCount() == 0 );
 	checkMixer( mixer.setBusMute( 2, true ) == SIR_AUDIO_NOT_INITIALIZED );
 	checkMixer( context.shutdown() == SIR_FMOD_OK );
 }
@@ -272,11 +275,15 @@ static void testMixerAllocationAndEpoch( const sirContainerAllocator_t *pAllocat
 	s_bMixerFailAllocation = false;
 	checkMixer( mixer.initialize() == SIR_AUDIO_OK );
 	checkMixer( mixer.registerBus( 7, "bus:/Master" ) == SIR_AUDIO_OK );
+	checkMixer( context.getBorrowedBankObjectCount() == 1 );
+	checkMixer( context.shutdown() == SIR_FMOD_BAD_STATE );
+	checkMixer( context.isReady() );
+	checkMixer( mixer.setBusMute( 7, true ) == SIR_AUDIO_OK );
+	mixer.shutdown();
+	checkMixer( context.getBorrowedBankObjectCount() == 0 );
 	checkMixer( context.shutdown() == SIR_FMOD_OK );
-	checkMixer( mixer.setBusMute( 7, true ) == SIR_AUDIO_NOT_INITIALIZED );
 	checkMixer( context.initialize( config, makeMixerStudioOps( &fixture ) ) == SIR_FMOD_OK );
 	checkMixer( mixer.setBusVolume( 7, 0.4f ) == SIR_AUDIO_NOT_INITIALIZED );
-	mixer.shutdown();
 	checkMixer( context.shutdown() == SIR_FMOD_OK );
 }
 

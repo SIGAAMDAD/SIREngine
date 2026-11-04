@@ -72,6 +72,12 @@ sirAudioResult_t SIRFMODMixerBackend::initialize( void ) noexcept
 
 void SIRFMODMixerBackend::shutdown( void ) noexcept
 {
+	if ( m_nCount != 0 && !isReady() ) {
+		abort();
+	}
+	for ( uint32_t iControl = 0; iControl < m_nCount; ++iControl ) {
+		m_pContext->unpinBorrowedBankObject();
+	}
 	if ( m_pControls != nullptr ) {
 		SIRRawStorage::deallocate( m_pAllocator, m_pControls, ( size_t )m_nCapacity * sizeof( sirFMODMixerControl_t ),
 		                           alignof( sirFMODMixerControl_t ) );
@@ -131,6 +137,10 @@ sirAudioResult_t SIRFMODMixerBackend::registerControl( uint64_t nControlId, cons
 		return SIR_AUDIO_BACKEND_ERROR;
 	}
 
+	if ( !m_pContext->pinBorrowedBankObject() ) {
+		return SIR_AUDIO_CAPACITY;
+	}
+
 	if ( iInsert < m_nCount ) {
 		memmove( m_pControls + iInsert + 1, m_pControls + iInsert, ( size_t )( m_nCount - iInsert ) * sizeof( sirFMODMixerControl_t ) );
 	}
@@ -163,6 +173,7 @@ sirAudioResult_t SIRFMODMixerBackend::unregisterControl( uint64_t nControlId ) n
 		memmove( m_pControls + iIndex, m_pControls + iIndex + 1, ( size_t )( m_nCount - iIndex - 1 ) * sizeof( sirFMODMixerControl_t ) );
 	}
 	--m_nCount;
+	m_pContext->unpinBorrowedBankObject();
 	return SIR_AUDIO_OK;
 }
 
