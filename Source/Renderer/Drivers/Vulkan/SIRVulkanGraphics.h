@@ -99,6 +99,11 @@ sirGraphicsResult_t sirVulkanPlanBufferBarrier( const sirGraphicsBarrier_t &barr
 sirGraphicsResult_t sirVulkanDescribeAdapter( uint32_t nAdapterIndex, const sirVulkanAdapterInfo_t &native,
                                               sirGraphicsAdapterInfo_t *pInfo ) noexcept;
 sirGraphicsResult_t sirVulkanValidateBatchCounts( const uint32_t *pCounts, uint32_t nListCount, uint32_t *pTotal ) noexcept;
+// GPU-independent validation uses the same admission semantics as native creation.
+sirGraphicsResult_t sirVulkanDescribeCapabilities( const sirVulkanAdapterInfo_t &native, uint32_t nGeneration,
+                                                   sirGraphicsCapabilities_t *pCapabilities ) noexcept;
+sirGraphicsResult_t sirVulkanValidateDeviceAdmission( const sirGraphicsDeviceCreateDesc_t &request,
+                                                     const sirGraphicsCapabilities_t &available ) noexcept;
 
 // Each command list records up to eight ordered operations without CPU
 // allocation. Native submission validates the whole stream atomically.

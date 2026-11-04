@@ -43,6 +43,7 @@ int main( void )
 	create.nFramesInFlight = 2;
 	create.nRequiredFeatures = 0;
 	create.bHeadless = true;
+	create.bAllowSoftware = true;
 	SIRRenderingDevice *pDevice = nullptr;
 	const sirGraphicsResult_t eCreate = driver.createDevice( create, &pDevice );
 	if ( eCreate == SIR_GRAPHICS_UNSUPPORTED ) {
