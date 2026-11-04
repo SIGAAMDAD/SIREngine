@@ -138,6 +138,7 @@ public:
 	sirAudioResult_t releasePackage( uint64_t nPackageId ) noexcept;
 	sirAudioResult_t collectUnused( void ) noexcept;
 	uint32_t update( void ) noexcept;
+	sirAudioResult_t getPlayingTimeline( sirAudioPlayingHandle_t hPlaying, uint32_t &nMilliseconds ) noexcept;
 	bool isReady( void ) const noexcept;
 	SIRAudioSystem &getAudio( void ) noexcept;
 	SIRFMODContext &getContext( void ) noexcept;
