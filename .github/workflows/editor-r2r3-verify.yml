@@ -1,0 +1,120 @@
+name: SIREditor R2-R3 verification
+on:
+  push:
+    branches:
+      - feature/editor-migration-waves-0-2
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: editor-r2r3-${{ github.ref }}-${{ matrix.target || 'all' }}
+  cancel-in-progress: true
+
+jobs:
+  native:
+    name: Native editor / ${{ matrix.target }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: clang
+            compiler: clang++
+            asan: 'OFF'
+            ubsan: 'OFF'
+          - target: gcc
+            compiler: g++
+            asan: 'OFF'
+            ubsan: 'OFF'
+          - target: clang-sanitized
+            compiler: clang++
+            asan: 'ON'
+            ubsan: 'ON'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '4.4.5'
+      - name: Fetch pinned native tests
+        run: git submodule update --init ThirdParty/GoogleTest
+      - name: Configure native SIREngine and editor tests
+        run: >
+          cmake -S . -B out/editor-r2r3-${{ matrix.target }} -G Ninja
+          -DCMAKE_BUILD_TYPE=Debug
+          -DCMAKE_CXX_COMPILER=${{ matrix.compiler }}
+          -DSIR_BUILD_TESTS=ON -DSIR_WITH_GOOGLETEST=ON
+          -DSIR_ENABLE_ASAN=${{ matrix.asan }}
+          -DSIR_ENABLE_UBSAN=${{ matrix.ubsan }}
+      - name: Build native editor, resources and test executables
+        run: cmake --build out/editor-r2r3-${{ matrix.target }} --parallel 2
+      - name: Execute all native CTest suites
+        run: >
+          ctest --test-dir out/editor-r2r3-${{ matrix.target }}
+          --output-on-failure --no-tests=error --timeout 60
+      - name: Upload CTest logs on failure
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: editor-r2r3-${{ matrix.target }}-ctest
+          path: out/editor-r2r3-${{ matrix.target }}/Testing/
+          if-no-files-found: ignore
+
+  coverage:
+    name: Clang editor line/branch coverage
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '4.4.5'
+      - name: Fetch pinned native tests
+        run: git submodule update --init ThirdParty/GoogleTest
+      - name: Configure Clang instrumentation
+        run: >
+          cmake -S . -B out/editor-r2r3-coverage -G Ninja
+          -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_COMPILER=clang++
+          -DSIR_BUILD_TESTS=ON -DSIR_WITH_GOOGLETEST=ON
+          -DCMAKE_CXX_FLAGS="-O0 -g -fprofile-instr-generate -fcoverage-mapping"
+          -DCMAKE_EXE_LINKER_FLAGS="-fprofile-instr-generate -fcoverage-mapping"
+          -DCMAKE_SHARED_LINKER_FLAGS="-fprofile-instr-generate -fcoverage-mapping"
+      - name: Build instrumented native tests
+        run: cmake --build out/editor-r2r3-coverage --parallel 2
+      - name: Run complete instrumented tests
+        env:
+          LLVM_PROFILE_FILE: ${{ github.workspace }}/out/editor-r2r3-coverage/profiles/%p-%m.profraw
+        run: |
+          mkdir -p out/editor-r2r3-coverage/profiles
+          ctest --test-dir out/editor-r2r3-coverage --output-on-failure --no-tests=error --timeout 60
+      - name: Collect source coverage evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p out/editor-r2r3-coverage/reports
+          mapfile -t profiles < <(find out/editor-r2r3-coverage/profiles -name '*.profraw' -type f)
+          test "${#profiles[@]}" -gt 0
+          clang_version="$(clang++ -dumpversion | cut -d. -f1)"
+          profdata="$(command -v "llvm-profdata-${clang_version}" || command -v llvm-profdata)"
+          cov="$(command -v "llvm-cov-${clang_version}" || command -v llvm-cov)"
+          "${profdata}" merge -sparse "${profiles[@]}" -o out/editor-r2r3-coverage/reports/all.profdata
+          for name in SIREditorAuthoringTests SIREditorTypedPropertyTests SIREditorScalarCodecTests SIREditorScalarBindingTests SIREditorSceneWorkspaceTests SIRObjectRegistryTests SIRResourceCatalogTests; do
+            binary="out/editor-r2r3-coverage/Tests/Unit/${name}"
+            if [ -x "${binary}" ]; then
+              "${cov}" report "${binary}" -instr-profile=out/editor-r2r3-coverage/reports/all.profdata \
+                -ignore-filename-regex='ThirdParty|Tests/' > "out/editor-r2r3-coverage/reports/${name}.txt"
+            fi
+          done
+      - name: Retain measured coverage reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: editor-r2r3-llvm-coverage
+          path: out/editor-r2r3-coverage/reports/
+          if-no-files-found: warn
