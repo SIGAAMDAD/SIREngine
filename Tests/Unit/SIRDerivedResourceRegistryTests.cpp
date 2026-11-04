@@ -412,7 +412,6 @@ static void testInvalidInputsAndCapacity( void )
 	REQUIRE( allocator.nLive.load() == 0 );
 }
 
-
 static void testProviderPinCapacityAndReclaim( void )
 {
 	sirDerivedTestAllocator_t allocator = {};
