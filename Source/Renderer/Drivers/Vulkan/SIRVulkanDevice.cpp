@@ -264,7 +264,7 @@ sirVulkanResult_t SIRVulkanDevice::initialize( void ) noexcept
 
 bool SIRVulkanDevice::shutdown( void ) noexcept
 {
-	if ( m_nLiveBuffers != 0 || m_nLiveImages != 0 || m_nLiveImageViews != 0 || m_nLiveSamplers != 0 ) {
+	if ( m_nLiveBuffers != 0 || m_nLiveImages != 0 || m_nLiveImageViews != 0 || m_nLiveSamplers != 0 || m_nLivePipelines != 0 ) {
 		return false;
 	}
 
