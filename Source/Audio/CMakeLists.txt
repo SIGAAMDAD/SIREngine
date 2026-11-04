@@ -7,7 +7,7 @@ sir_configure_owned_target(SIRAudio)
 
 # FMOD context lifecycle controller is SDK-free; the licensed native bridge
 # is compiled exclusively for SDK-enabled engine configurations.
-add_library(SIRFMODContext STATIC FMOD/SIRFMODContext.cpp FMOD/SIRFMODVoiceBackend.cpp FMOD/SIRFMODBankStore.cpp FMOD/SIRFMODPackageLoader.cpp FMOD/SIRFMODMixerBackend.cpp FMOD/SIRFMODSnapshotBackend.cpp FMOD/SIRFMODRuntime.cpp)
+add_library(SIRFMODContext STATIC FMOD/SIRFMODContext.cpp FMOD/SIRFMODVoiceBackend.cpp FMOD/SIRFMODBankStore.cpp FMOD/SIRFMODPackageLoader.cpp FMOD/SIRFMODMixerBackend.cpp FMOD/SIRFMODSnapshotBackend.cpp FMOD/SIRFMODRuntime.cpp FMOD/SIRFMODMemoryBudget.cpp)
 add_library(SIR::FMODContext ALIAS SIRFMODContext)
 target_include_directories(SIRFMODContext PUBLIC "${PROJECT_SOURCE_DIR}/Source" "${PROJECT_SOURCE_DIR}/Build/CMake")
 target_compile_features(SIRFMODContext PUBLIC cxx_std_17)

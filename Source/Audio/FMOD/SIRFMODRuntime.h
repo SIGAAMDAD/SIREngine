@@ -26,6 +26,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Audio/FMOD/SIRFMODBankStore.h>
 #include <Audio/FMOD/SIRFMODMixerBackend.h>
+#include <Audio/FMOD/SIRFMODMemoryBudget.h>
 #include <Audio/FMOD/SIRFMODPackageLoader.h>
 #include <Audio/FMOD/SIRFMODSnapshotBackend.h>
 #include <Audio/FMOD/SIRFMODVoiceBackend.h>
@@ -91,6 +92,7 @@ typedef struct sirFMODRuntimeConfig_s
 	uint32_t nMaxBankEventBindings;
 	uint32_t nMaxMixerControls;
 	uint32_t nMaxSnapshots;
+	uint64_t nEngineMemoryBudgetBytes;
 } sirFMODRuntimeConfig_t;
 
 // One audio owner. Quiesce producers before shutdown. Native FMOD objects,
@@ -99,6 +101,7 @@ typedef struct sirFMODRuntimeConfig_s
 class SIRFMODRuntime
 {
 private:
+	SIRFMODMemoryBudget m_Memory;
 	SIRFMODContext m_Context;
 	SIRFMODVoiceBackend m_Voices;
 	SIRAudioSystem m_Audio;
@@ -147,6 +150,7 @@ public:
 	SIRFMODBankStore &getBanks( void ) noexcept;
 	SIRFMODPackageLoader &getPackages( void ) noexcept;
 	int32_t getLastNativeResult( void ) const noexcept;
+	sirFMODMemoryBudgetStats_t getMemoryStats( void ) const noexcept;
 };
 
 // Defined only in SDK-enabled SIRFMODRuntimeNativeApi.cpp.
