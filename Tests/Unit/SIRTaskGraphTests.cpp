@@ -183,6 +183,7 @@ static void testAtomicAdmissionAndExecution( void )
 	SIRTaskScheduler scheduler;
 	SIR_GRAPH_CHECK( scheduler.init( &memory, { 8, 0, 8 } ) );
 	SIR_GRAPH_CHECK( graph.submit( &scheduler ) );
+	SIR_GRAPH_CHECK( graph.compile() == SIR_TASK_GRAPH_INVALID );
 	SIR_GRAPH_CHECK( !graph.reset() );
 	SIR_GRAPH_CHECK( !graph.releaseSubmitted() );
 	SIR_GRAPH_CHECK( scheduler.pumpMain( 8 ) == 0 );
@@ -454,6 +455,7 @@ static void testGraphInputValidationAndInspection( void )
 	SIR_GRAPH_CHECK( !graph.init( &memory, { 2, UINT32_MAX / 2, 4 } ) );
 	SIR_GRAPH_CHECK( !graph.init( &memory, { 100000, 100000, 100000 } ) );
 	SIR_GRAPH_CHECK( graph.init( &memory, { 2, 2, 1 } ) );
+	SIR_GRAPH_CHECK( graph.getEdgeCount() == 0 );
 	SIR_GRAPH_CHECK( !graph.init( &memory, { 2, 2, 1 } ) );
 	SIR_GRAPH_CHECK( graph.compile() == SIR_TASK_GRAPH_INVALID );
 	SIR_GRAPH_CHECK( !graph.addPass( pass, nullptr, 1, &nPass ) );
