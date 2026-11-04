@@ -179,12 +179,14 @@ static uint32_t mockInvalidateBuffer( void *, const sirGraphicsABIBufferRange_t 
 	return SIR_GRAPHICS_ABI_UNSUPPORTED;
 }
 
-static uint32_t mockCreateSurface( void *, const sirGraphicsABINativeSurface_t *, const sirGraphicsABIPresentDesc_t *, sirGraphicsHandle_t * ) noexcept
+static uint32_t mockCreateSurface( void *, const sirGraphicsABINativeSurface_t *, const sirGraphicsABIPresentDesc_t *,
+                                   sirGraphicsHandle_t * ) noexcept
 {
 	return SIR_GRAPHICS_ABI_UNSUPPORTED;
 }
 
-static uint32_t mockResizeSurface( void *, sirGraphicsHandle_t, const sirGraphicsABINativeSurface_t *, const sirGraphicsABIPresentDesc_t * ) noexcept
+static uint32_t mockResizeSurface( void *, sirGraphicsHandle_t, const sirGraphicsABINativeSurface_t *,
+                                   const sirGraphicsABIPresentDesc_t * ) noexcept
 {
 	return SIR_GRAPHICS_ABI_UNSUPPORTED;
 }
@@ -284,8 +286,7 @@ static uint32_t mockBudget( void *, sirGraphicsMemoryBudget_t *pBudget ) noexcep
 
 static uint32_t mockRetire( void *, sirGraphicsHandle_t hResource, const sirGraphicsCompletionSet_t *pComplete ) noexcept
 {
-	if ( hResource.nDeviceGeneration != 5 || hResource.nGeneration == 0 || pComplete == nullptr ||
-	     pComplete->nDeviceGeneration != 5 ) {
+	if ( hResource.nDeviceGeneration != 5 || hResource.nGeneration == 0 || pComplete == nullptr || pComplete->nDeviceGeneration != 5 ) {
 		return SIR_GRAPHICS_ABI_INVALID_ARGUMENT;
 	}
 	return SIR_GRAPHICS_ABI_SUCCESS;
@@ -322,9 +323,8 @@ static uint32_t mockAcquireCommands( void *, uint32_t nQueue, sirGraphicsABIComm
 static uint32_t mockSubmit( void *, uint32_t nQueue, const sirGraphicsABISubmission_t *pBatch,
                             sirGraphicsCompletion_t *pCompletion ) noexcept
 {
-	if ( nQueue != SIR_GRAPHICS_QUEUE_DIRECT || pBatch == nullptr || pBatch->nSize < sizeof( *pBatch ) ||
-	     pBatch->nCommandListCount != 1 || pBatch->ppCommandLists == nullptr ||
-	     pBatch->ppCommandLists[0] != &s_nDeviceIdentity || pCompletion == nullptr ) {
+	if ( nQueue != SIR_GRAPHICS_QUEUE_DIRECT || pBatch == nullptr || pBatch->nSize < sizeof( *pBatch ) || pBatch->nCommandListCount != 1 ||
+	     pBatch->ppCommandLists == nullptr || pBatch->ppCommandLists[0] != &s_nDeviceIdentity || pCompletion == nullptr ) {
 		return SIR_GRAPHICS_ABI_INVALID_ARGUMENT;
 	}
 	++s_nSubmitted;
@@ -390,9 +390,8 @@ static void mockRelease( void * ) noexcept
 {
 }
 
-extern "C" SIR_TEST_EXPORT uint32_t SIRGetGraphicsDriverABI( uint32_t nMajor, uint32_t nMinor,
-                                                              const sirGraphicsABIHost_t *pHost,
-                                                              sirGraphicsABIDriver_t *pDriver ) noexcept
+extern "C" SIR_TEST_EXPORT uint32_t SIRGetGraphicsDriverABI( uint32_t nMajor, uint32_t nMinor, const sirGraphicsABIHost_t *pHost,
+                                                             sirGraphicsABIDriver_t *pDriver ) noexcept
 {
 	if ( nMajor != SIR_GRAPHICS_DRIVER_ABI_MAJOR || nMinor > SIR_GRAPHICS_DRIVER_ABI_MINOR ) {
 		return SIR_GRAPHICS_ABI_VERSION_MISMATCH;

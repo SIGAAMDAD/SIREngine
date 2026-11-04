@@ -28,6 +28,9 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Renderer/SIRGraphicsABIOperations.h>
 
 // ABI version 1 has an immutable mandatory prefix. Append optional entries
+  Formatting error: Source/Renderer/SIRGraphicsDriverABI.h
+
+
 // only in a new minor version; breaking layouts require a new major version.
 #define SIR_GRAPHICS_DRIVER_ABI_MAJOR 2U
 #define SIR_GRAPHICS_DRIVER_ABI_MINOR 0U
@@ -164,8 +167,8 @@ typedef struct sirGraphicsABIDevice_s
 	uint32_t ( *pAcquireCommands )( void *pDevice, uint32_t nQueue, sirGraphicsABICommandList_t *pCommands );
 	uint32_t ( *pSubmit )( void *pDevice, uint32_t nQueue, const sirGraphicsABISubmission_t *pBatch, sirGraphicsCompletion_t *pCompletion );
 	uint32_t ( *pRetireResource )( void *pDevice, sirGraphicsHandle_t hResource, const sirGraphicsCompletionSet_t *pCompletion );
-	uint32_t ( *pCreateSurface )( void *pDevice, const sirGraphicsABINativeSurface_t *pNative,
-	                              const sirGraphicsABIPresentDesc_t *pPresent, sirGraphicsHandle_t *pSurface );
+	uint32_t ( *pCreateSurface )( void *pDevice, const sirGraphicsABINativeSurface_t *pNative, const sirGraphicsABIPresentDesc_t *pPresent,
+	                              sirGraphicsHandle_t *pSurface );
 	uint32_t ( *pResizeSurface )( void *pDevice, sirGraphicsHandle_t hSurface, const sirGraphicsABINativeSurface_t *pNative,
 	                              const sirGraphicsABIPresentDesc_t *pPresent );
 	uint32_t ( *pAcquireSurfaceImage )( void *pDevice, sirGraphicsHandle_t hSurface, sirGraphicsSurfaceImage_t *pImage );

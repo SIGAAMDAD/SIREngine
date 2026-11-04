@@ -38,9 +38,11 @@ typedef struct sirGraphicsABIModule_s
 
 // Startup/shutdown only; the module must outlive every native device and
 // recorded command context. No implicit fallback or process-global registry.
-sirGraphicsABIResult_t sirGraphicsLoadABIModule( const char *pszPath, const sirGraphicsABIHost_t *pHost, sirGraphicsABIModule_t *pModule ) noexcept;
+sirGraphicsABIResult_t sirGraphicsLoadABIModule( const char *pszPath, const sirGraphicsABIHost_t *pHost,
+                                                 sirGraphicsABIModule_t *pModule ) noexcept;
 sirGraphicsABIResult_t sirGraphicsUnloadABIModule( sirGraphicsABIModule_t *pModule ) noexcept;
-sirGraphicsABIResult_t sirGraphicsQueryABIAdapter( const sirGraphicsABIModule_t *pModule, uint32_t nIndex, sirGraphicsABIAdapter_t *pAdapter ) noexcept;
+sirGraphicsABIResult_t sirGraphicsQueryABIAdapter( const sirGraphicsABIModule_t *pModule, uint32_t nIndex,
+                                                   sirGraphicsABIAdapter_t *pAdapter ) noexcept;
 sirGraphicsABIResult_t sirGraphicsCreateABIDevice( sirGraphicsABIModule_t *pModule, const sirGraphicsABIDeviceRequest_t *pRequest,
                                                    sirGraphicsABIDevice_t *pDevice ) noexcept;
 sirGraphicsABIResult_t sirGraphicsDestroyABIDevice( sirGraphicsABIModule_t *pModule, sirGraphicsABIDevice_t *pDevice ) noexcept;
