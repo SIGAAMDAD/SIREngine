@@ -237,10 +237,12 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::queryMemoryBudget( sirGraphicsMemo
 	if ( !m_Native.queryMemoryStats( &native ) ) {
 		return SIR_GRAPHICS_DRIVER_ERROR;
 	}
-	pBudget->nBudgetBytes = native.nEstimatedBudgetBytes;
+	pBudget->nBudgetBytes = native.nSealedBudgetBytes != 0 ? native.nSealedBudgetBytes : native.nEstimatedBudgetBytes;
 	pBudget->nCommittedBytes = native.nBlockBytes;
 	pBudget->nResidentBytes = native.nAllocationBytes;
-	pBudget->nPeakCommittedBytes = native.nBlockBytes;
+	pBudget->nPeakCommittedBytes = native.nPeakCommittedBytes;
+	pBudget->nUploadMappedBytes = native.nUploadMappedBytes;
+	pBudget->nReadbackMappedBytes = native.nReadbackMappedBytes;
 	return SIR_GRAPHICS_SUCCESS;
 }
 
@@ -257,7 +259,7 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::createBuffer( const sirGraphicsBuf
 	if ( eValidation != SIR_GRAPHICS_SUCCESS ) {
 		return eValidation;
 	}
-	// The native bootstrap has no custom-alignment or sealed-pool contract yet.
+	// Custom alignment and transient placement remain separate native work.
 	if ( desc.nAlignmentBytes != 0 || desc.eMemory == SIR_GRAPHICS_MEMORY_TRANSIENT ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
@@ -293,9 +295,11 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::createBuffer( const sirGraphicsBuf
 		if ( pSlot->bActive || pSlot->bRetiring || pSlot->nGeneration == 0 ) {
 			continue;
 		}
-		const bool bHostVisible = desc.eMemory == SIR_GRAPHICS_MEMORY_CPU_UPLOAD || desc.eMemory == SIR_GRAPHICS_MEMORY_CPU_READBACK ||
-		                          desc.eMemory == SIR_GRAPHICS_MEMORY_GPU_UPLOAD;
-		const sirVulkanResult_t eCreate = m_Native.createBuffer( desc.nSizeBytes, nUsage, bHostVisible, &pSlot->native );
+		const sirVulkanBufferPlacement_t ePlacement = desc.eMemory == SIR_GRAPHICS_MEMORY_CPU_UPLOAD     ? SIR_VULKAN_BUFFER_CPU_UPLOAD
+		                                              : desc.eMemory == SIR_GRAPHICS_MEMORY_CPU_READBACK ? SIR_VULKAN_BUFFER_CPU_READBACK
+		                                              : desc.eMemory == SIR_GRAPHICS_MEMORY_GPU_UPLOAD   ? SIR_VULKAN_BUFFER_GPU_UPLOAD
+		                                                                                                 : SIR_VULKAN_BUFFER_GPU_LOCAL;
+		const sirVulkanResult_t eCreate = m_Native.createBuffer( desc.nSizeBytes, nUsage, ePlacement, &pSlot->native );
 		if ( eCreate != SIR_VULKAN_SUCCESS ) {
 			return sirVulkanToGraphicsResult( eCreate );
 		}

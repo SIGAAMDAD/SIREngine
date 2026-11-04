@@ -42,6 +42,9 @@ sirVulkanResult_t SIRVulkanDevice::createImage( const VkImageCreateInfo &info, s
 	allocation.usage = VMA_MEMORY_USAGE_AUTO;
 	allocation.flags = VMA_ALLOCATION_CREATE_WITHIN_BUDGET_BIT;
 	if ( m_bSealedPools ) {
+		if ( !isSealedMemoryType( info ) ) {
+			return SIR_VULKAN_API_UNSUPPORTED;
+		}
 		allocation.pool = m_szSealedPools[0];
 		allocation.flags |= VMA_ALLOCATION_CREATE_NEVER_ALLOCATE_BIT;
 	}
@@ -67,6 +70,7 @@ sirVulkanResult_t SIRVulkanDevice::createImage( const VkImageCreateInfo &info, s
 	pImage->nUsage = info.usage;
 	pImage->bCube = ( info.flags & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT ) != 0;
 	++m_nLiveImages;
+	updateMemoryHighWater();
 	return SIR_VULKAN_SUCCESS;
 }
 
