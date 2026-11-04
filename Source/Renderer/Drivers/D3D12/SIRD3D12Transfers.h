@@ -69,7 +69,6 @@ private:
 	HRESULT m_nLastError = S_OK;
 
 	sirD3D12TransferSlot_t *findSlot( sirD3D12TransferTicket_t ticket ) noexcept;
-	bool waitForFence( uint64_t nFence, uint32_t nTimeoutMs ) noexcept;
 
 public:
 	SIRD3D12Transfers( void ) noexcept;
@@ -86,6 +85,11 @@ public:
 	uint64_t getCompletedCopyCount( void ) const noexcept;
 	bool queryResidentArena( sirD3D12ResidentTransferView_t *pView ) const noexcept;
 	uint64_t getLastSubmittedFence( void ) const noexcept;
+	bool waitForFence( uint64_t nFence, uint32_t nTimeoutMs ) noexcept;
+	ID3D12CommandQueue *getSubmissionQueue( void ) const noexcept;
+	ID3D12Fence *getSubmissionFence( void ) const noexcept;
+	bool submitRecorded( ID3D12CommandList *const *ppLists, uint32_t nCount, uint64_t *pFence ) noexcept;
+	void markSubmissionUnsafe( void ) noexcept;
 	bool getCompletedFence( uint64_t *pCompletedFence ) const noexcept;
 	// Borrowed native fence is valid for immediate use only; the receiver must AddRef.
 	bool queryDependency( sirD3D12TransferTicket_t ticket, ID3D12Fence **ppFence, uint64_t *pFenceValue ) const noexcept;

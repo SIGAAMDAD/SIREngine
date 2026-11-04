@@ -184,6 +184,43 @@ uint64_t SIRD3D12Transfers::getLastSubmittedFence( void ) const noexcept
 	return m_nLastSubmittedFence;
 }
 
+ID3D12CommandQueue *SIRD3D12Transfers::getSubmissionQueue( void ) const noexcept
+{
+	return isReady() ? m_pQueue.Get() : nullptr;
+}
+
+ID3D12Fence *SIRD3D12Transfers::getSubmissionFence( void ) const noexcept
+{
+	return isReady() ? m_pFence.Get() : nullptr;
+}
+
+bool SIRD3D12Transfers::submitRecorded( ID3D12CommandList *const *ppLists, uint32_t nCount, uint64_t *pFence ) noexcept
+{
+	if ( pFence == nullptr ) {
+		return false;
+	}
+	*pFence = 0;
+	if ( !isReady() || ppLists == nullptr || nCount == 0 || m_nNextFence == UINT64_MAX ) {
+		m_nLastError = E_INVALIDARG;
+		return false;
+	}
+	m_pQueue->ExecuteCommandLists( nCount, ppLists );
+	m_nLastError = m_pQueue->Signal( m_pFence.Get(), m_nNextFence );
+	if ( FAILED( m_nLastError ) ) {
+		m_bSubmissionUnsafe = true;
+		return false;
+	}
+	m_nLastSubmittedFence = m_nNextFence;
+	*pFence = m_nNextFence;
+	++m_nNextFence;
+	return true;
+}
+
+void SIRD3D12Transfers::markSubmissionUnsafe( void ) noexcept
+{
+	m_bSubmissionUnsafe = true;
+}
+
 bool SIRD3D12Transfers::getCompletedFence( uint64_t *pCompletedFence ) const noexcept
 {
 	if ( pCompletedFence == nullptr || !isReady() ) {

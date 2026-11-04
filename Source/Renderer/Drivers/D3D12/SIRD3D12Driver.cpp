@@ -137,6 +137,12 @@ sirGraphicsResult_t SIRD3D12RenderingDevice::initialize( bool bSoftware, const s
 		m_Native.shutdown();
 		return SIR_GRAPHICS_DRIVER_ERROR;
 	}
+	if ( !m_Commands.initialize( &m_Native, &m_Resources, &m_Pipelines ) ) {
+		m_Pipelines.shutdown( true );
+		m_Resources.shutdown( true );
+		m_Native.shutdown();
+		return SIR_GRAPHICS_DRIVER_ERROR;
+	}
 	return SIR_GRAPHICS_SUCCESS;
 }
 
@@ -249,22 +255,15 @@ sirGraphicsResult_t SIRD3D12RenderingDevice::invalidateBuffer( sirGraphicsHandle
 }
 sirGraphicsResult_t SIRD3D12RenderingDevice::acquireCommands( sirGraphicsQueue_t eQueue, SIRGraphicsCommandList **ppCommands ) noexcept
 {
-	if ( ppCommands == nullptr || eQueue >= SIR_GRAPHICS_QUEUE_COUNT ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
-	}
-	*ppCommands = nullptr;
-	return SIR_GRAPHICS_UNSUPPORTED;
+	return m_Commands.acquire( eQueue, ppCommands );
 }
+
 sirGraphicsResult_t SIRD3D12RenderingDevice::submit( sirGraphicsQueue_t eQueue, const sirGraphicsSubmission_t &submission,
                                                      sirGraphicsCompletion_t *pCompletion ) noexcept
 {
-	if ( pCompletion == nullptr ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
-	}
-	*pCompletion = {};
-	const sirGraphicsResult_t eValidation = sirGraphicsValidateSubmission( eQueue, submission, getDeviceGeneration() );
-	return eValidation == SIR_GRAPHICS_SUCCESS ? SIR_GRAPHICS_UNSUPPORTED : eValidation;
+	return m_Commands.submit( eQueue, submission, pCompletion );
 }
+
 sirGraphicsResult_t SIRD3D12RenderingDevice::poll( const sirGraphicsCompletion_t &completion, bool *pCompleted ) noexcept
 {
 	if ( pCompleted == nullptr ) {
@@ -314,7 +313,7 @@ sirGraphicsResult_t SIRD3D12RenderingDevice::wait( const sirGraphicsCompletion_t
 	} else if ( completion.eQueue == SIR_GRAPHICS_QUEUE_COMPUTE ) {
 		bResult = m_Native.getComputeQueue().waitForFence( completion.nValue, nBoundedMillis );
 	} else {
-		return SIR_GRAPHICS_UNSUPPORTED;
+		bResult = m_Native.getTransfers().waitForFence( completion.nValue, nBoundedMillis );
 	}
 	if ( bResult ) {
 		return SIR_GRAPHICS_SUCCESS;
@@ -325,6 +324,7 @@ sirGraphicsResult_t SIRD3D12RenderingDevice::wait( const sirGraphicsCompletion_t
 sirGraphicsResult_t SIRD3D12RenderingDevice::retireResource( sirGraphicsHandle_t hResource,
                                                              const sirGraphicsCompletionSet_t &completion ) noexcept
 {
+	m_Commands.collectCompleted();
 	if ( hResource.eType == SIR_GRAPHICS_HANDLE_PIPELINE ) {
 		return m_Pipelines.retirePipeline( hResource, completion );
 	}
@@ -358,16 +358,18 @@ sirGraphicsResult_t SIRD3D12RenderingDevice::present( const sirGraphicsSurfaceIm
 }
 sirGraphicsResult_t SIRD3D12RenderingDevice::shutdown( void ) noexcept
 {
-	if ( m_Native.isReady() ) {
-		sirD3D12CompletionSet_t snapshot = {};
-		bool bComplete = false;
-		if ( !m_Native.snapshotCompletionSet( &snapshot ) || !m_Native.pollCompletionSet( snapshot, &bComplete ) ) {
-			return SIR_GRAPHICS_DEVICE_LOST;
-		}
-		if ( !bComplete ) {
-			return SIR_GRAPHICS_BUSY;
-		}
+	if ( !m_Native.isReady() ) {
+		return SIR_GRAPHICS_DEVICE_LOST;
 	}
+	sirD3D12CompletionSet_t snapshot = {};
+	bool bComplete = false;
+	if ( !m_Native.snapshotCompletionSet( &snapshot ) || !m_Native.pollCompletionSet( snapshot, &bComplete ) ) {
+		return SIR_GRAPHICS_DEVICE_LOST;
+	}
+	if ( !bComplete ) {
+		return SIR_GRAPHICS_BUSY;
+	}
+	m_Commands.shutdown( true );
 	m_Pipelines.shutdown( true );
 	m_Resources.shutdown( true );
 	m_Native.shutdown();
