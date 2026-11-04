@@ -23,7 +23,6 @@ of merchantability, fitness for a particular purpose and noninfringement.
 static uint32_t s_nReleases = 0;
 static uint32_t s_nFactoryMode = 0;
 static uint32_t s_nDriverSentinel = 0;
-static uint32_t s_nDriverSentinel = 0;
 
 static void *testAllocate( void *, uint64_t nBytes, uint64_t ) noexcept
 {
