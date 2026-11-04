@@ -168,6 +168,8 @@ sir_configure_owned_target(SIRResourceCatalogTests)
 # Source-format scalar edit preservation and fail-closed writer.
 add_executable(SIREditorTextWriterTests SIREditorTextWriterTests.cpp)
 target_link_libraries(SIREditorTextWriterTests PRIVATE SIR::EditorAuthoring)
+target_compile_definitions(SIREditorTextWriterTests PRIVATE
+    SIR_EDITOR_TEST_UI_SCENE="${PROJECT_SOURCE_DIR}/Tests/Fixtures/Editor/SourceGodotUI.tscn")
 add_test(NAME editor.scene.text-scalar-writer COMMAND SIREditorTextWriterTests)
 sir_configure_owned_target(SIREditorTextWriterTests)
 
