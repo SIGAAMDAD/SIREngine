@@ -34,13 +34,10 @@ static uint32_t testNextRandom( uint32_t *pSeed ) noexcept
 TEST( SIRHiZFoundation, NPOTPyramidMatchesIndependentMinimum )
 {
 	const sirHiZLayout_t layout = testLayout( 7, 5 );
-	const float szDepth[35] = {
-		0.9f, 0.8f, 0.7f, 0.6f, 0.5f, 0.4f, 0.3f,
-		0.9f, 0.8f, 0.7f, 0.6f, 0.5f, 0.4f, 0.3f,
-		0.9f, 0.8f, 0.7f, 0.6f, 0.5f, 0.4f, 0.3f,
-		0.9f, 0.8f, 0.7f, 0.6f, 0.5f, 0.4f, 0.3f,
-		0.9f, 0.8f, 0.7f, 0.6f, 0.5f, 0.4f, 0.0f
-	};
+
+
+	const float szDepth[35] = { 0.9f, 0.8f, 0.7f, 0.6f, 0.5f, 0.4f, 0.3f, 0.9f, 0.8f, 0.7f, 0.6f, 0.5f, 0.4f, 0.3f, 0.9f, 0.8f, 0.7f, 0.6f,
+	                            0.5f, 0.4f, 0.3f, 0.9f, 0.8f, 0.7f, 0.6f, 0.5f, 0.4f, 0.3f, 0.9f, 0.8f, 0.7f, 0.6f, 0.5f, 0.4f, 0.0f };
 	float szPyramid[128] = {};
 	ASSERT_EQ( sirHiZBuildReference( layout, { szDepth, 35, 7 }, szPyramid, 128 ), SIR_GRAPHICS_SUCCESS );
 	for ( uint32_t iMip = 0; iMip < layout.nMipCount; ++iMip ) {
@@ -49,8 +46,10 @@ TEST( SIRHiZFoundation, NPOTPyramidMatchesIndependentMinimum )
 		for ( uint32_t nY = 0; nY < mip.nHeight; ++nY ) {
 			for ( uint32_t nX = 0; nX < mip.nWidth; ++nX ) {
 				float fExpected = 1.0f;
-				for ( uint64_t nSourceY = ( uint64_t )nY * nScale; nSourceY < ( uint64_t )( nY + 1 ) * nScale && nSourceY < 5; ++nSourceY ) {
-					for ( uint64_t nSourceX = ( uint64_t )nX * nScale; nSourceX < ( uint64_t )( nX + 1 ) * nScale && nSourceX < 7; ++nSourceX ) {
+				for ( uint64_t nSourceY = ( uint64_t )nY * nScale; nSourceY < ( uint64_t )( nY + 1 ) * nScale && nSourceY < 5;
+				      ++nSourceY ) {
+					for ( uint64_t nSourceX = ( uint64_t )nX * nScale; nSourceX < ( uint64_t )( nX + 1 ) * nScale && nSourceX < 7;
+					      ++nSourceX ) {
 						const float fDepth = szDepth[nSourceY * 7 + nSourceX];
 						if ( fDepth < fExpected ) {
 							fExpected = fDepth;
@@ -68,8 +67,8 @@ TEST( SIRHiZFoundation, NaNInfinityAndNegativeDepthDoNotWrite )
 	const sirHiZLayout_t layout = testLayout( 2, 2 );
 	float szDepth[4] = { 0.1f, 0.2f, 0.3f, 0.4f };
 	float szOutput[8] = { -7.0f, -7.0f, -7.0f, -7.0f, -7.0f, -7.0f, -7.0f, -7.0f };
-	const float szInvalid[4] = { std::numeric_limits<float>::quiet_NaN(), std::numeric_limits<float>::infinity(),
-	                             -0.1f, -std::numeric_limits<float>::infinity() };
+	const float szInvalid[4] = { std::numeric_limits<float>::quiet_NaN(), std::numeric_limits<float>::infinity(), -0.1f,
+	                             -std::numeric_limits<float>::infinity() };
 	for ( float fInvalid : szInvalid ) {
 		szDepth[3] = fInvalid;
 		EXPECT_EQ( sirHiZBuildReference( layout, { szDepth, 4, 2 }, szOutput, 8 ), SIR_GRAPHICS_INVALID_ARGUMENT );
@@ -308,8 +307,14 @@ TEST( SIRHiZFoundation, RandomizedReferenceNeverFalseOccludes )
 		for ( uint32_t iQuery = 0; iQuery < 32; ++iQuery ) {
 			const uint32_t nX = testNextRandom( &nSeed ) % nWidth;
 			const uint32_t nY = testNextRandom( &nSeed ) % nHeight;
-			sirHiZTest_t query = { nX, nY, nX + 1 + testNextRandom( &nSeed ) % ( nWidth - nX ),
-				                  nY + 1 + testNextRandom( &nSeed ) % ( nHeight - nY ), 0.4f, 0.002f, false, 0 };
+			sirHiZTest_t query = { nX,
+			                       nY,
+			                       nX + 1 + testNextRandom( &nSeed ) % ( nWidth - nX ),
+			                       nY + 1 + testNextRandom( &nSeed ) % ( nHeight - nY ),
+			                       0.4f,
+			                       0.002f,
+			                       false,
+			                       0 };
 			ASSERT_EQ( sirHiZTestRectangle( layout, szPyramid, 128, &query ), SIR_GRAPHICS_SUCCESS );
 			if ( query.bOccluded ) {
 				for ( uint32_t nSampleY = query.nMinY; nSampleY < query.nMaxY; ++nSampleY ) {
