@@ -330,8 +330,7 @@ static int sirTestRaster( SIRRenderingDevice *pDevice, uint32_t nGeneration, con
 	sirGraphicsBarrier_t storageUav = {};
 	storageUav.eType = SIR_GRAPHICS_BARRIER_UAV;
 	storageUav.hResource = hStorage;
-	if ( pDirect->barrier( &storageTransition, 1 ) != SIR_GRAPHICS_SUCCESS ||
-	     pDirect->barrier( &storageUav, 1 ) != SIR_GRAPHICS_SUCCESS ) {
+	if ( pDirect->barrier( &storageTransition, 1 ) != SIR_GRAPHICS_SUCCESS || pDirect->barrier( &storageUav, 1 ) != SIR_GRAPHICS_SUCCESS ) {
 		return 76;
 	}
 	storageTransition.eBefore = SIR_GRAPHICS_STATE_SHADER_WRITE;

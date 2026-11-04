@@ -445,10 +445,8 @@ sirGraphicsResult_t SIRD3D12CommandList::barrier( const sirGraphicsBarrier_t *pB
 		     pSlot->eMemory == SIR_GRAPHICS_MEMORY_GPU_LOCAL ) {
 			// UAV ordering preserves the current UAV access/layout; transitions
 			// use the explicit before/after states supplied by the caller.
-			const sirGraphicsState_t eBefore =
-			    source.eType == SIR_GRAPHICS_BARRIER_UAV ? SIR_GRAPHICS_STATE_SHADER_WRITE : source.eBefore;
-			const sirGraphicsState_t eAfter =
-			    source.eType == SIR_GRAPHICS_BARRIER_UAV ? SIR_GRAPHICS_STATE_SHADER_WRITE : source.eAfter;
+			const sirGraphicsState_t eBefore = source.eType == SIR_GRAPHICS_BARRIER_UAV ? SIR_GRAPHICS_STATE_SHADER_WRITE : source.eBefore;
+			const sirGraphicsState_t eAfter = source.eType == SIR_GRAPHICS_BARRIER_UAV ? SIR_GRAPHICS_STATE_SHADER_WRITE : source.eAfter;
 			const D3D12_BARRIER_SYNC eSyncBefore = sirD3D12EnhancedSync( eBefore );
 			const D3D12_BARRIER_SYNC eSyncAfter = sirD3D12EnhancedSync( eAfter );
 			const D3D12_BARRIER_ACCESS eAccessBefore = sirD3D12EnhancedAccess( eBefore );
@@ -473,15 +471,14 @@ sirGraphicsResult_t SIRD3D12CommandList::barrier( const sirGraphicsBarrier_t *pB
 				barrier.pResource = pSlot->getNativeResource();
 				const bool bUav = source.eType == SIR_GRAPHICS_BARRIER_UAV;
 				barrier.Subresources.IndexOrFirstMipLevel = bUav ? 0 : source.nBaseMip;
-				barrier.Subresources.NumMipLevels = bUav ? pSlot->nMips
-				                                   : source.nMipCount == 0 ? pSlot->nMips - source.nBaseMip
-				                                                           : source.nMipCount;
+				barrier.Subresources.NumMipLevels = bUav                    ? pSlot->nMips
+				                                    : source.nMipCount == 0 ? pSlot->nMips - source.nBaseMip
+				                                                            : source.nMipCount;
 				barrier.Subresources.FirstArraySlice = bUav ? 0 : source.nBaseLayer;
 				barrier.Subresources.NumArraySlices =
-				    bUav ? ( pSlot->eDimension == SIR_GRAPHICS_TEXTURE_3D ? 1 : pSlot->nLayers )
-				    : source.nLayerCount == 0
-				        ? ( pSlot->eDimension == SIR_GRAPHICS_TEXTURE_3D ? 1 : pSlot->nLayers ) - source.nBaseLayer
-				        : source.nLayerCount;
+				    bUav                      ? ( pSlot->eDimension == SIR_GRAPHICS_TEXTURE_3D ? 1 : pSlot->nLayers )
+				    : source.nLayerCount == 0 ? ( pSlot->eDimension == SIR_GRAPHICS_TEXTURE_3D ? 1 : pSlot->nLayers ) - source.nBaseLayer
+				                              : source.nLayerCount;
 				barrier.Subresources.FirstPlane = 0;
 				barrier.Subresources.NumPlanes = formatInfo.PlaneCount;
 				group.Type = D3D12_BARRIER_TYPE_TEXTURE;

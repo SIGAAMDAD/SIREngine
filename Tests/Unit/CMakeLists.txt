@@ -1,3 +1,8 @@
+add_executable(SIREngineLifecycleTests SIREngineLifecycleTests.cpp)
+target_link_libraries(SIREngineLifecycleTests PRIVATE SIR::Core)
+add_test(NAME core.application.system-lifecycle COMMAND SIREngineLifecycleTests)
+sir_configure_owned_target(SIREngineLifecycleTests)
+
 add_executable(SIRApplicationTests SIRApplicationTests.cpp)
 target_link_libraries(SIRApplicationTests PRIVATE SIR::Core)
 add_test(NAME core.application.lifecycle COMMAND SIRApplicationTests)
@@ -92,10 +97,9 @@ sir_configure_owned_target(SIRContainerHeapAdapterTests)
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/SIRD3D12Tests.cmake)
 
-# The portable contract runs independently of the native graphics driver.
+# Shared renderer contract tests run on Windows/Linux without a GPU or native driver.
 add_executable(SIRGraphicsInterfaceTests SIRGraphicsInterfaceTests.cpp)
 target_link_libraries(SIRGraphicsInterfaceTests PRIVATE SIR::Graphics)
 add_test(NAME renderer.graphics.interface COMMAND SIRGraphicsInterfaceTests)
 sir_configure_owned_target(SIRGraphicsInterfaceTests)
-
-
+add_subdirectory(Config)
