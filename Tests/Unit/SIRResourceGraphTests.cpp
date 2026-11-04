@@ -1643,6 +1643,39 @@ static void testRequestedRecordAllocationRollback( void )
 	REQUIRE( allocator.m_nOutstanding.load() == 0 );
 }
 
+static void testDuplicateStagingRejection( void )
+{
+	SIRTestAllocatorStats allocator = {};
+	{
+		SIRResourceGraph graph( testConfig( allocator, 8 ) );
+		REQUIRE( graph.isReady() );
+		SIRResourceGraphWriter *pWriter = graph.getWriter();
+		REQUIRE( pWriter != nullptr );
+		SIRResourceStagingHandle staging = {};
+		SIRResourceMutableBytes bytes = {};
+		REQUIRE( pWriter->allocateStaging( 16, 8, 9, &staging, &bytes ) == SIR_RESOURCE_RESULT_SUCCESS );
+		memset( bytes.m_pData, 0x55, 16 );
+		const SIRResourceChunkPublication chunkA = { { 0 }, content( 6001 ), staging, false };
+		const SIRResourceChunkPublication chunkB = { { 1 }, content( 6002 ), staging, false };
+		const SIRResourceChunkPublication duplicates[2] = { chunkA, chunkB };
+		SIRResourcePublication pub = { key( 6031 ), SIR_RESOURCE_KIND_BLOB, 1, 4, duplicates, 2, nullptr, 0 };
+		SIRResourceHandle handle = {};
+		REQUIRE( pWriter->publish( pub, &handle ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		REQUIRE( graph.getStats().m_nLiveResources == 0 );
+		SIRResourceChunkPublication stale = chunkA;
+		++stale.m_Staging.m_nGeneration;
+		pub.m_pChunks = &stale;
+		pub.m_nChunkCount = 1;
+		REQUIRE( pWriter->publish( pub, &handle ) == SIR_RESOURCE_RESULT_INVALID_HANDLE );
+		pub.m_pChunks = &chunkA;
+		REQUIRE( pWriter->publish( pub, &handle ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( pWriter->cancelStaging( staging ) == SIR_RESOURCE_RESULT_INVALID_HANDLE );
+		REQUIRE( pWriter->retire( handle ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( pWriter->collectRetired( 8 ) == 1 );
+	}
+	REQUIRE( allocator.m_nOutstanding.load() == 0 );
+}
+
 int main( void )
 {
 	testScopeLifetimeAndDeduplication();
@@ -1671,6 +1704,7 @@ int main( void )
 	testMultiChunkEvictionAndFailedReplacement();
 	testCompileTaskGraphInputRejection();
 	testRequestedRecordAllocationRollback();
+	testDuplicateStagingRejection();
 	printf( "PASS: GRDG resource registry, publication, deduplication, lifetime, concurrency\n" );
 	return 0;
 }
