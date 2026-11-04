@@ -74,12 +74,16 @@ uint32_t SIRD3D12RenderingDevice::getDeviceGeneration( void ) const noexcept
 	return ( uint32_t )native.nDeviceGeneration;
 }
 
-sirGraphicsResult_t SIRD3D12RenderingDevice::initialize( bool bSoftware, const sirGraphicsDeviceCreateDesc_t &desc ) noexcept
+sirGraphicsResult_t SIRD3D12RenderingDevice::initialize( bool bSoftware, const sirGraphicsDeviceCreateDesc_t &desc,
+                                                          const sirD3D12SealedPoolConfig_t *pSealedPools ) noexcept
 {
 	if ( desc.nFramesInFlight == 0 || desc.nFramesInFlight > 3 ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( !sirGraphicsHasFeatures( SIR_D3D12_SHARED_FEATURES, desc.nRequiredFeatures ) ) {
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
+	if ( pSealedPools != nullptr && !desc.bHeadless ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
 	if ( desc.bEnableGpuValidation && !desc.bEnableApiValidation ) {
@@ -139,6 +143,22 @@ sirGraphicsResult_t SIRD3D12RenderingDevice::initialize( bool bSoftware, const s
 		m_Native.shutdown();
 		return SIR_GRAPHICS_DRIVER_ERROR;
 	}
+	// Preallocate fixed resource backing after all driver startup allocations.
+	// Native D3D12 resources subsequently come only from these one-block pools.
+	if ( pSealedPools != nullptr && !m_Native.getMemory()->configureSealedPools( *pSealedPools ) ) {
+		const HRESULT nError = m_Native.getMemory()->getLastError();
+		m_Surfaces.shutdown( true );
+		m_Commands.shutdown( true );
+		m_Bindings.shutdown( true );
+		m_Pipelines.shutdown( true );
+		m_Resources.shutdown( true );
+		m_Native.shutdown();
+		return nError == E_INVALIDARG ? SIR_GRAPHICS_INVALID_ARGUMENT
+		       : nError == E_NOTIMPL ? SIR_GRAPHICS_UNSUPPORTED
+		       : nError == E_OUTOFMEMORY ? SIR_GRAPHICS_CAPACITY_EXCEEDED
+		                                 : SIR_GRAPHICS_DRIVER_ERROR;
+	}
+	m_bSealedPoolsActive = pSealedPools != nullptr;
 	return SIR_GRAPHICS_SUCCESS;
 }
 
@@ -366,6 +386,12 @@ sirGraphicsResult_t SIRD3D12RenderingDevice::createSurface( const sirGraphicsNat
                                                             const sirGraphicsPresentDesc_t &present,
                                                             sirGraphicsHandle_t *pSurface ) noexcept
 {
+	if ( m_bSealedPoolsActive ) {
+		if ( pSurface != nullptr ) {
+			*pSurface = {};
+		}
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
 	return m_Surfaces.createSurface( native, present, pSurface );
 }
 
@@ -410,6 +436,7 @@ sirGraphicsResult_t SIRD3D12RenderingDevice::shutdown( void ) noexcept
 	m_Pipelines.shutdown( true );
 	m_Resources.shutdown( true );
 	m_Native.shutdown();
+	m_bSealedPoolsActive = false;
 	return m_Native.isReady() ? SIR_GRAPHICS_DRIVER_ERROR : SIR_GRAPHICS_SUCCESS;
 }
 
@@ -436,6 +463,20 @@ sirGraphicsResult_t SIRD3D12Driver::queryAdapter( uint32_t nAdapterIndex, sirGra
 }
 sirGraphicsResult_t SIRD3D12Driver::createDevice( const sirGraphicsDeviceCreateDesc_t &desc, SIRRenderingDevice **ppDevice ) noexcept
 {
+	return createDeviceInternal( desc, nullptr, ppDevice );
+}
+
+sirGraphicsResult_t SIRD3D12Driver::createSealedDevice( const sirGraphicsDeviceCreateDesc_t &desc,
+                                                       const sirD3D12SealedPoolConfig_t &pools,
+                                                       SIRRenderingDevice **ppDevice ) noexcept
+{
+	return createDeviceInternal( desc, &pools, ppDevice );
+}
+
+sirGraphicsResult_t SIRD3D12Driver::createDeviceInternal( const sirGraphicsDeviceCreateDesc_t &desc,
+                                                         const sirD3D12SealedPoolConfig_t *pSealedPools,
+                                                         SIRRenderingDevice **ppDevice ) noexcept
+{
 	if ( ppDevice == nullptr ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
@@ -451,7 +492,7 @@ sirGraphicsResult_t SIRD3D12Driver::createDevice( const sirGraphicsDeviceCreateD
 	if ( info.bSoftwareAdapter && !desc.bAllowSoftware ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
-	const sirGraphicsResult_t eInitialize = m_Device.initialize( info.bSoftwareAdapter, desc );
+	const sirGraphicsResult_t eInitialize = m_Device.initialize( info.bSoftwareAdapter, desc, pSealedPools );
 	if ( eInitialize != SIR_GRAPHICS_SUCCESS ) {
 		return eInitialize;
 	}
