@@ -27,6 +27,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 #include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <time.h>
 #include <unistd.h>
@@ -44,6 +45,10 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 static std::atomic<int> s_nReadFault{ 0 };
 static std::atomic<int> s_nWriteFault{ 0 };
 static std::atomic<bool> s_bMapFault{ false };
+static std::atomic<bool> s_bMapAccessFault{ false };
+static std::atomic<bool> s_bSizeFault{ false };
+static std::atomic<bool> s_bPageFault{ false };
+static std::atomic<bool> s_bUnmapFault{ false };
 static std::atomic<bool> s_bSyncFault{ false };
 static std::atomic<bool> s_bPipeFault{ false };
 static std::atomic<bool> s_bWaitFault{ false };
@@ -54,6 +59,9 @@ extern "C" ssize_t __real_pread( int nHandle, void *pData, size_t nBytes, off_t 
 extern "C" ssize_t __real_pwrite( int nHandle, const void *pData, size_t nBytes, off_t nOffset );
 extern "C" void *__real_mmap( void *pAddress, size_t nBytes, int nProtection, int nFlags, int nHandle, off_t nOffset );
 extern "C" int __real_msync( void *pAddress, size_t nBytes, int nFlags );
+extern "C" int __real_fstat( int nHandle, struct stat *pInfo );
+extern "C" long __real_sysconf( int nParameter );
+extern "C" int __real_munmap( void *pAddress, size_t nBytes );
 extern "C" int __real_pipe2( int *pHandles, int nFlags );
 extern "C" int __real_sem_wait( sem_t *pSemaphore );
 extern "C" int __real_sem_timedwait( sem_t *pSemaphore, const struct timespec *pDeadline );
@@ -103,8 +111,39 @@ extern "C" ssize_t __wrap_pwrite( int nHandle, const void *pData, size_t nBytes,
 	return __real_pwrite( nHandle, pData, nBytes, nOffset );
 }
 
+extern "C" int __wrap_fstat( int nHandle, struct stat *pInfo )
+{
+	if ( s_bSizeFault.exchange( false, std::memory_order_relaxed ) ) {
+		errno = EIO;
+		return -1;
+	}
+	return __real_fstat( nHandle, pInfo );
+}
+
+extern "C" long __wrap_sysconf( int nParameter )
+{
+	if ( s_bPageFault.exchange( false, std::memory_order_relaxed ) ) {
+		errno = EINVAL;
+		return -1;
+	}
+	return __real_sysconf( nParameter );
+}
+
+extern "C" int __wrap_munmap( void *pAddress, size_t nBytes )
+{
+	if ( s_bUnmapFault.exchange( false, std::memory_order_relaxed ) ) {
+		errno = EIO;
+		return -1;
+	}
+	return __real_munmap( pAddress, nBytes );
+}
+
 extern "C" void *__wrap_mmap( void *pAddress, size_t nBytes, int nProtection, int nFlags, int nHandle, off_t nOffset )
 {
+	if ( s_bMapAccessFault.exchange( false, std::memory_order_relaxed ) ) {
+		errno = EACCES;
+		return MAP_FAILED;
+	}
 	if ( s_bMapFault.exchange( false, std::memory_order_relaxed ) ) {
 		errno = ENOMEM;
 		return MAP_FAILED;
@@ -202,13 +241,22 @@ static void sirTestInjectedPositionalTransfers( void )
 	s_nWriteFault.store( 0, std::memory_order_relaxed );
 
 	SIRPlatformFileMapping mapping;
+	s_bSizeFault.store( true, std::memory_order_relaxed );
+	SIR_CHECK( mapping.map( file, 1, 128, SIR_FILE_MAP_READ_WRITE ) == SIR_FILE_IO_ERROR && !mapping.isMapped() );
+	s_bPageFault.store( true, std::memory_order_relaxed );
+	SIR_CHECK( mapping.map( file, 1, 128, SIR_FILE_MAP_READ_WRITE ) == SIR_FILE_IO_ERROR && !mapping.isMapped() );
+	s_bMapAccessFault.store( true, std::memory_order_relaxed );
+	SIR_CHECK( mapping.map( file, 1, 128, SIR_FILE_MAP_READ_WRITE ) == SIR_FILE_ACCESS_DENIED && !mapping.isMapped() );
 	s_bMapFault.store( true, std::memory_order_relaxed );
 	SIR_CHECK( mapping.map( file, 1, 128, SIR_FILE_MAP_READ_WRITE ) == SIR_FILE_IO_ERROR && !mapping.isMapped() );
 	SIR_CHECK( mapping.map( file, 1, 128, SIR_FILE_MAP_READ_WRITE ) == SIR_FILE_OK );
 	mapping.getWritableData()[0] = 0xA7;
 	s_bSyncFault.store( true, std::memory_order_relaxed );
 	SIR_CHECK( mapping.flush() == SIR_FILE_IO_ERROR && mapping.isMapped() );
-	SIR_CHECK( mapping.flush() == SIR_FILE_OK && mapping.unmap() == SIR_FILE_OK );
+	SIR_CHECK( mapping.flush() == SIR_FILE_OK );
+	s_bUnmapFault.store( true, std::memory_order_relaxed );
+	SIR_CHECK( mapping.unmap() == SIR_FILE_IO_ERROR && mapping.isMapped() );
+	SIR_CHECK( mapping.unmap() == SIR_FILE_OK );
 	SIR_CHECK( file.readAt( 1, szActual, 1, &nTransferred ) == SIR_FILE_OK && szActual[0] == 0xA7 );
 
 	SIR_CHECK( file.close() == SIR_FILE_OK );
