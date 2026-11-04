@@ -414,6 +414,76 @@ static void testSpatialDriver( const sirContainerAllocator_t *pAllocator )
 	checkVoice( context.shutdown() == SIR_FMOD_OK );
 }
 
+static void testEmitterParameterDispatch( const sirContainerAllocator_t *pAllocator )
+{
+	sirFMODVoiceFixture_t fixture = {};
+	SIRFMODContext context;
+	const sirFMODContextConfig_t contextConfig = { 16, -1, 1, 1, 0, 0 };
+	checkVoice( context.initialize( contextConfig, makeContextOps( &fixture ) ) == SIR_FMOD_OK );
+	sirFMODVoiceNativeOps_t nativeOps = makeVoiceOps( &fixture );
+	nativeOps.setInstanceParameter = testInstanceParameter;
+	nativeOps.setGlobalParameter = testGlobalParameter;
+	nativeOps.setInstanceSpatial = testEmitterSpatial;
+	SIRFMODVoiceBackend backend;
+	checkVoice( backend.configure( &context, pAllocator, nativeOps, 1, 1, 2, 0, 1 ) == SIR_AUDIO_OK );
+	SIRAudioSystem audio;
+	const sirAudioSystemConfig_t config = { 2, 2, 8, 4, 4, 0 };
+	checkVoice( audio.initialize( config, pAllocator, SIRFMODVoiceBackend::getBackendOps(), &backend ) == SIR_AUDIO_OK );
+	checkVoice( backend.registerEvent( 10, "event:/A" ) == SIR_AUDIO_OK );
+	checkVoice( backend.registerParameter( 99, 0xABCDEF1234ULL, SIR_AUDIO_CONTROL_EMITTER ) == SIR_AUDIO_OK );
+	sirAudioEmitterHandle_t first = {};
+	sirAudioEmitterHandle_t second = {};
+	checkVoice( audio.registerEmitter( first ) == SIR_AUDIO_OK );
+	checkVoice( audio.registerEmitter( second ) == SIR_AUDIO_OK );
+	checkVoice( audio.setEmitterParameter( first, 99, 0.25f ) == SIR_AUDIO_PENDING );
+	audio.update();
+	checkVoice( fixture.nInstanceParameterCalls == 0 );
+	sirAudioCommand_t command = {};
+	command.eType = SIR_AUDIO_COMMAND_SET_EMITTER_PARAMETER;
+	command.hEmitter = second;
+	command.nControlId = 99;
+	command.fValue = 0.5f;
+	const sirAudioBackendOps_t ops = SIRFMODVoiceBackend::getBackendOps();
+	checkVoice( ops.submit( &backend, &command, 1 ) == SIR_AUDIO_CAPACITY );
+	command.nControlId = 123;
+	checkVoice( ops.submit( &backend, &command, 1 ) == SIR_AUDIO_UNSUPPORTED );
+	command.nControlId = 99;
+	command.hEmitter.nGeneration = 0;
+	checkVoice( ops.submit( &backend, &command, 1 ) == SIR_AUDIO_INVALID_HANDLE );
+	sirAudioPlayingHandle_t playing = {};
+	checkVoice( audio.playEvent( 10, first, playing ) == SIR_AUDIO_PENDING );
+	audio.update();
+	checkVoice( fixture.nInstanceParameterCalls == 1 );
+	checkVoice( fixture.nLastParameterId == 0xABCDEF1234ULL && fixture.fLastParameterValue == 0.25f );
+	checkVoice( audio.setEmitterParameter( first, 99, 0.5f ) == SIR_AUDIO_PENDING );
+	audio.update();
+	checkVoice( fixture.nInstanceParameterCalls == 2 && fixture.fLastParameterValue == 0.5f );
+	fixture.nFailParameter = 2;
+	checkVoice( audio.setEmitterParameter( first, 99, 0.75f ) == SIR_AUDIO_PENDING );
+	audio.update();
+	checkVoice( fixture.nFailParameter == 0 );
+	audio.update();
+	checkVoice( fixture.fLastParameterValue == 0.75f );
+	checkVoice( backend.getActiveVoiceCount() == 1 );
+	checkVoice( audio.stopEvent( playing, SIR_AUDIO_STOP_IMMEDIATE ) == SIR_AUDIO_PENDING );
+	audio.update();
+	checkVoice( audio.releaseEmitter( first ) == SIR_AUDIO_PENDING );
+	audio.update();
+	command.hEmitter = second;
+	checkVoice( ops.submit( &backend, &command, 1 ) == SIR_AUDIO_OK );
+	sirAudioPlayingHandle_t next = {};
+	checkVoice( audio.playEvent( 10, second, next ) == SIR_AUDIO_PENDING );
+	audio.update();
+	checkVoice( fixture.fLastParameterValue == 0.5f );
+	checkVoice( backend.unregisterParameter( 99 ) == SIR_AUDIO_OK );
+	checkVoice( audio.stopEvent( next, SIR_AUDIO_STOP_IMMEDIATE ) == SIR_AUDIO_PENDING );
+	audio.update();
+	checkVoice( audio.releaseEmitter( second ) == SIR_AUDIO_PENDING );
+	audio.update();
+	audio.shutdown();
+	checkVoice( context.shutdown() == SIR_FMOD_OK );
+}
+
 static void testVoiceLifecycle( const sirContainerAllocator_t *pAllocator )
 {
 	sirFMODVoiceFixture_t fixture = {};
@@ -594,6 +664,7 @@ int main( void )
 	testVoiceLifecycle( &allocator );
 	testParameterDispatch( &allocator );
 	testSpatialDriver( &allocator );
+	testEmitterParameterDispatch( &allocator );
 	testVoiceFailures( &allocator );
 	testCompletionReservations( &allocator );
 	testStartFailureCleanupRetry( &allocator );
