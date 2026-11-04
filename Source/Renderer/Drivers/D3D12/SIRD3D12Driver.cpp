@@ -75,7 +75,7 @@ uint32_t SIRD3D12RenderingDevice::getDeviceGeneration( void ) const noexcept
 }
 
 sirGraphicsResult_t SIRD3D12RenderingDevice::initialize( bool bSoftware, const sirGraphicsDeviceCreateDesc_t &desc,
-                                                          const sirD3D12SealedPoolConfig_t *pSealedPools ) noexcept
+                                                         const sirD3D12SealedPoolConfig_t *pSealedPools ) noexcept
 {
 	if ( desc.nFramesInFlight == 0 || desc.nFramesInFlight > 3 ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
@@ -153,8 +153,8 @@ sirGraphicsResult_t SIRD3D12RenderingDevice::initialize( bool bSoftware, const s
 		m_Pipelines.shutdown( true );
 		m_Resources.shutdown( true );
 		m_Native.shutdown();
-		return nError == E_INVALIDARG ? SIR_GRAPHICS_INVALID_ARGUMENT
-		       : nError == E_NOTIMPL ? SIR_GRAPHICS_UNSUPPORTED
+		return nError == E_INVALIDARG    ? SIR_GRAPHICS_INVALID_ARGUMENT
+		       : nError == E_NOTIMPL     ? SIR_GRAPHICS_UNSUPPORTED
 		       : nError == E_OUTOFMEMORY ? SIR_GRAPHICS_CAPACITY_EXCEEDED
 		                                 : SIR_GRAPHICS_DRIVER_ERROR;
 	}
@@ -466,16 +466,15 @@ sirGraphicsResult_t SIRD3D12Driver::createDevice( const sirGraphicsDeviceCreateD
 	return createDeviceInternal( desc, nullptr, ppDevice );
 }
 
-sirGraphicsResult_t SIRD3D12Driver::createSealedDevice( const sirGraphicsDeviceCreateDesc_t &desc,
-                                                       const sirD3D12SealedPoolConfig_t &pools,
-                                                       SIRRenderingDevice **ppDevice ) noexcept
+sirGraphicsResult_t SIRD3D12Driver::createSealedDevice( const sirGraphicsDeviceCreateDesc_t &desc, const sirD3D12SealedPoolConfig_t &pools,
+                                                        SIRRenderingDevice **ppDevice ) noexcept
 {
 	return createDeviceInternal( desc, &pools, ppDevice );
 }
 
 sirGraphicsResult_t SIRD3D12Driver::createDeviceInternal( const sirGraphicsDeviceCreateDesc_t &desc,
-                                                         const sirD3D12SealedPoolConfig_t *pSealedPools,
-                                                         SIRRenderingDevice **ppDevice ) noexcept
+                                                          const sirD3D12SealedPoolConfig_t *pSealedPools,
+                                                          SIRRenderingDevice **ppDevice ) noexcept
 {
 	if ( ppDevice == nullptr ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
