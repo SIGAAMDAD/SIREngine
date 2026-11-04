@@ -123,6 +123,16 @@ static void sirTestCapacityAtomicity( void )
 	                        "[node name=\"Child\" type=\"Node\" parent=\".\"]\n";
 	assert( sirEditorScanTextScene( szSource, sizeof( szSource ) - 1, &index ) == SIR_EDITOR_TEXT_OUT_OF_CAPACITY );
 	assert( index.nNodeCount == 0 && index.nPathBytes == 0 );
+	// A parent path can fit exactly while leaving zero bytes for the child's name.
+	const char szNested[] = "[gd_scene]\n[node name=\"Root\" type=\"Node\"]\n"
+	                        "[node name=\"A\" type=\"Node\" parent=\".\"]\n"
+	                        "[node name=\"B\" type=\"Node\" parent=\"A\"]\n";
+	char szExactParent[5] = {};
+	index.storage.pszPaths = szExactParent;
+	index.storage.nPathCapacity = 5;
+	assert( sirEditorScanTextScene( szNested, sizeof( szNested ) - 1, &index ) == SIR_EDITOR_TEXT_OUT_OF_CAPACITY );
+	assert( index.nNodeCount == 0 && index.nPathBytes == 0 );
+	index.storage.pszPaths = szPaths;
 	index.storage.nPathCapacity = 64;
 	char szLargerPaths[64] = {};
 	index.storage.pszPaths = szLargerPaths;

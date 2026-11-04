@@ -103,3 +103,11 @@ target_compile_definitions(SIREditorTextSceneTests PRIVATE
     SIR_EDITOR_TEST_UI_SCENE="${PROJECT_SOURCE_DIR}/Tests/Fixtures/Editor/SourceGodotUI.tscn")
 add_test(NAME editor.authoring.godot-text-scene COMMAND SIREditorTextSceneTests)
 sir_configure_owned_target(SIREditorTextSceneTests)
+
+# Read-only external and embedded resource-dependency validation.
+add_executable(SIREditorTextResourcesTests SIREditorTextResourcesTests.cpp)
+target_link_libraries(SIREditorTextResourcesTests PRIVATE SIR::EditorAuthoring)
+target_compile_definitions(SIREditorTextResourcesTests PRIVATE
+    SIR_EDITOR_TEST_UI_SCENE="${PROJECT_SOURCE_DIR}/Tests/Fixtures/Editor/SourceGodotUI.tscn")
+add_test(NAME editor.authoring.godot-text-resources COMMAND SIREditorTextResourcesTests)
+sir_configure_owned_target(SIREditorTextResourcesTests)

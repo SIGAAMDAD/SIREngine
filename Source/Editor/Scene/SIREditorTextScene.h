@@ -80,4 +80,64 @@ sirEditorTextSceneResult_t sirEditorScanTextScene( const char *pszSource, size_t
 sirEditorResult_t sirEditorReconcileTextScene( SIREditorSceneDocument &document, const sirEditorTextSceneIndex_t &index,
                                                sirEditorNode_t *pSnapshot, uint32_t nSnapshotCapacity ) noexcept;
 
+// Source-backed resource identity/dependency metadata for inspector and cook intake.
+// Offsets address the caller-owned .tscn bytes and remain valid only while those
+// bytes are retained. This index never owns or decodes Godot Variant payloads.
+typedef enum sirEditorTextResourceResult_e : uint8_t
+{
+	SIR_EDITOR_RESOURCE_OK = 0,
+	SIR_EDITOR_RESOURCE_INVALID_ARGUMENT = 1,
+	SIR_EDITOR_RESOURCE_INVALID_HEADER = 2,
+	SIR_EDITOR_RESOURCE_INVALID_TAG = 3,
+	SIR_EDITOR_RESOURCE_INVALID_DECLARATION = 4,
+	SIR_EDITOR_RESOURCE_DUPLICATE_ID = 5,
+	SIR_EDITOR_RESOURCE_MISSING_REFERENCE = 6,
+	SIR_EDITOR_RESOURCE_INVALID_REFERENCE = 7,
+	SIR_EDITOR_RESOURCE_OUT_OF_CAPACITY = 8
+} sirEditorTextResourceResult_t;
+
+typedef enum sirEditorTextResourceKind_e : uint8_t
+{
+	SIR_EDITOR_RESOURCE_EXTERNAL = 1,
+	SIR_EDITOR_RESOURCE_EMBEDDED = 2
+} sirEditorTextResourceKind_t;
+
+typedef struct sirEditorTextResource_s
+{
+	uint64_t nStableKey;
+	uint32_t nSourceLine;
+	uint32_t nIdOffset;
+	uint32_t nIdLength;
+	uint32_t nTypeOffset;
+	uint32_t nTypeLength;
+	uint32_t nPathOffset;
+	uint32_t nPathLength;
+	uint32_t nUidOffset;
+	uint32_t nUidLength;
+	sirEditorTextResourceKind_t eKind;
+} sirEditorTextResource_t;
+
+typedef struct sirEditorTextResourceIndex_s
+{
+	sirEditorTextResource_t *pResources;
+	uint32_t nCapacity;
+	uint32_t nCount;
+	uint32_t nErrorLine;
+} sirEditorTextResourceIndex_t;
+
+// Index [ext_resource] and [sub_resource] declarations and verify every
+// ExtResource(...) / SubResource(...) expression against declared local IDs.
+// Duplicate IDs are rejected within their respective resource kinds.
+// An empty resource list is valid with pResources=nullptr and nCapacity=0.
+// On failure, nCount is zero and nErrorLine identifies the source line.
+sirEditorTextResourceResult_t sirEditorScanTextResources( const char *pszSource, size_t nSourceBytes,
+                                                          sirEditorTextResourceIndex_t *pIndex ) noexcept;
+
+// Lookup a validated local resource ID, using the original source bytes.
+// Resource stable keys only identify declarations within a particular scene;
+// the importing editor must add its canonical source identity.
+sirEditorTextResourceResult_t sirEditorFindTextResource( const char *pszSource, const sirEditorTextResourceIndex_t &index,
+                                                         sirEditorTextResourceKind_t eKind, const char *pszId, uint32_t nIdLength,
+                                                         uint32_t *pOutIndex ) noexcept;
+
 #endif // __SIRENGINE_SIREDITORTEXTSCENE_H__
