@@ -41,57 +41,71 @@ static bool sirLangDiagnosticForNode( const sirLangSyntaxTree_t *pTree, uint32_t
 	return true;
 }
 
-bool SIRLangGetCompileDiagnostic( const sirLangCompileWorkspace_t *pWorkspace,
-                                  sirLangEditorDiagnostic_t *pDiagnostic ) noexcept
+uint32_t SIRLangCollectCompileDiagnostics( const sirLangCompileWorkspace_t *pWorkspace,
+                                           sirLangEditorDiagnostic_t *pDiagnostics, uint32_t nCapacity ) noexcept
 {
-	if ( pWorkspace == nullptr || pDiagnostic == nullptr ) {
-		return false;
-	}
-	*pDiagnostic = {};
-	pDiagnostic->ePhase = pWorkspace->report.ePhase;
-	pDiagnostic->nCode = pWorkspace->report.nStageResult;
-	if ( pWorkspace->report.ePhase == SIR_LANG_COMPILE_COMPLETE ) {
-		return false;
+	if ( pWorkspace == nullptr || pDiagnostics == nullptr || nCapacity == 0 ||
+	     pWorkspace->report.ePhase == SIR_LANG_COMPILE_COMPLETE ) {
+		return 0;
 	}
 
+	const sirLangCompilePhase_t ePhase = pWorkspace->report.ePhase;
 	const sirLangSyntaxTree_t& tree = pWorkspace->syntax;
-	switch ( pWorkspace->report.ePhase ) {
+	uint32_t nWritten = 0;
+	switch ( ePhase ) {
 	case SIR_LANG_COMPILE_PARSE:
-		if ( tree.pDiagnostics != nullptr && tree.nDiagnosticCount > 0 ) {
-			const sirLangParseDiagnostic_t& source = tree.pDiagnostics[0];
-			pDiagnostic->nOffset = source.nOffset;
-			pDiagnostic->nLength = source.nLength;
-			pDiagnostic->nLine = source.nLine;
-			pDiagnostic->nColumn = source.nColumn;
-			pDiagnostic->bHasSourceLocation = true;
+		if ( tree.pDiagnostics != nullptr ) {
+			for ( uint32_t i = 0; i < tree.nDiagnosticCount && nWritten < nCapacity; ++i ) {
+				const sirLangParseDiagnostic_t& source = tree.pDiagnostics[i];
+				sirLangEditorDiagnostic_t& output = pDiagnostics[nWritten++];
+				output = { ePhase, ( uint32_t )source.eError, source.nOffset, source.nLength,
+				           source.nLine, source.nColumn, true };
+			}
 		}
 		break;
 	case SIR_LANG_COMPILE_SEMANTIC:
-		if ( pWorkspace->semantic.pDiagnostics != nullptr && pWorkspace->semantic.nDiagnosticCount > 0 ) {
-			const sirLangSemanticDiagnostic_t& source = pWorkspace->semantic.pDiagnostics[0];
-			pDiagnostic->nOffset = source.nOffset;
-			pDiagnostic->nLine = source.nLine;
-			pDiagnostic->nColumn = source.nColumn;
-			pDiagnostic->bHasSourceLocation = true;
+		if ( pWorkspace->semantic.pDiagnostics != nullptr ) {
+			for ( uint32_t i = 0; i < pWorkspace->semantic.nDiagnosticCount && nWritten < nCapacity; ++i ) {
+				const sirLangSemanticDiagnostic_t& source = pWorkspace->semantic.pDiagnostics[i];
+				sirLangEditorDiagnostic_t& output = pDiagnostics[nWritten++];
+				output = { ePhase, ( uint32_t )source.eError, source.nOffset, 0,
+				           source.nLine, source.nColumn, true };
+				( void )sirLangDiagnosticForNode( &tree, source.iNode, &output );
+			}
 		}
 		break;
 	case SIR_LANG_COMPILE_SIGNATURES:
-		if ( pWorkspace->signatures.pDiagnostics != nullptr && pWorkspace->signatures.nDiagnosticCount > 0 ) {
-			const sirLangSignatureDiagnostic_t& source = pWorkspace->signatures.pDiagnostics[0];
-			pDiagnostic->nOffset = source.nOffset;
-			pDiagnostic->nLine = source.nLine;
-			pDiagnostic->nColumn = source.nColumn;
-			pDiagnostic->bHasSourceLocation = true;
+		if ( pWorkspace->signatures.pDiagnostics != nullptr ) {
+			for ( uint32_t i = 0; i < pWorkspace->signatures.nDiagnosticCount && nWritten < nCapacity; ++i ) {
+				const sirLangSignatureDiagnostic_t& source = pWorkspace->signatures.pDiagnostics[i];
+				sirLangEditorDiagnostic_t& output = pDiagnostics[nWritten++];
+				output = { ePhase, ( uint32_t )source.eError, source.nOffset, 0,
+				           source.nLine, source.nColumn, true };
+				( void )sirLangDiagnosticForNode( &tree, source.iNode, &output );
+			}
 		}
 		break;
+	case SIR_LANG_COMPILE_INPUT:
 	case SIR_LANG_COMPILE_HIR:
 	case SIR_LANG_COMPILE_CIR:
 	case SIR_LANG_COMPILE_EFFECTS:
-		( void )sirLangDiagnosticForNode( &tree, pWorkspace->report.iErrorNode, pDiagnostic );
-		break;
-	case SIR_LANG_COMPILE_INPUT:
 	case SIR_LANG_COMPILE_COMPLETE:
 		break;
 	}
-	return true;
+
+	if ( nWritten == 0 ) {
+		sirLangEditorDiagnostic_t& output = pDiagnostics[0];
+		output = {};
+		output.ePhase = ePhase;
+		output.nCode = pWorkspace->report.nStageResult;
+		( void )sirLangDiagnosticForNode( &tree, pWorkspace->report.iErrorNode, &output );
+		return 1;
+	}
+	return nWritten;
+}
+
+bool SIRLangGetCompileDiagnostic( const sirLangCompileWorkspace_t *pWorkspace,
+                                  sirLangEditorDiagnostic_t *pDiagnostic ) noexcept
+{
+	return SIRLangCollectCompileDiagnostics( pWorkspace, pDiagnostic, 1 ) == 1;
 }
