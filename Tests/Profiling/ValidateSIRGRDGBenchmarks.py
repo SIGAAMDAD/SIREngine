@@ -20,8 +20,19 @@ SCENARIOS = {
     ),
     "SIRBenchmarkGRDGPageRetireCancel": ("1", "16"),
     "SIRBenchmarkGRDGPageDrainRecommit": ("1", "16"),
+    "SIRBenchmarkPlatformReadAt": ("64/0", "4096/0", "4096/37", "65536/37", "1048576/37"),
+    "SIRBenchmarkPlatformWriteAt": ("64", "4096", "65536"),
+    "SIRBenchmarkPlatformSequentialReadSeek": ("4096", "65536"),
+    "SIRBenchmarkPlatformOpenClose": ("",),
+    "SIRBenchmarkPlatformMapAndCopy": ("4096", "65536", "1048576"),
+    "SIRBenchmarkPlatformMappedReuseCopy": ("4096", "65536", "1048576"),
+    "SIRBenchmarkPlatformFileInfo": ("",),
+    "SIRBenchmarkPlatformFileSystemQuery": ("",),
+    "SIRBenchmarkPlatformSemaphoreUncontended": ("",),
+    "SIRBenchmarkPlatformSemaphoreHandoff": ("",),
+    "SIRBenchmarkPlatformPipeLifecycleTransfer": ("4096", "65536"),
 }
-REQUIRED = {f"{family}/{case}" for family, cases in SCENARIOS.items() for case in cases}
+REQUIRED = {f"{family}/{case}" if case else family for family, cases in SCENARIOS.items() for case in cases}
 
 
 def read_measurements(path):
@@ -76,7 +87,7 @@ def main():
         parser.error("--max-regression-percent must be finite and non-negative")
     try:
         context, candidate = read_measurements(args.candidate)
-        print(f"GRDG benchmark coverage PASS: {len(candidate)} required median scenarios")
+        print(f"GRDG/platform I/O benchmark coverage PASS: {len(candidate)} required median scenarios")
         for name, (ns, _) in sorted(candidate.items()):
             print(f"  {name}: {ns:,.2f} ns median")
         if not args.baseline:
