@@ -28,14 +28,18 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Audio/SIRAudioResources.h>
 #include <Audio/SIRAudioSystem.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 
-static void checkBank( bool bValid ) noexcept
+static void checkBankAt( bool bValid, uint32_t nLine ) noexcept
 {
 	if ( !bValid ) {
+		fprintf( stderr, "FMOD bank regression failed at line %u\n", nLine );
 		abort();
 	}
 }
+
+#define checkBank( expression ) checkBankAt( ( expression ), __LINE__ )
 
 static uint32_t s_nAllocatedBlocks = 0;
 static uint32_t s_nFailAllocate = 0;
@@ -952,7 +956,7 @@ static void testAudioOwnerThread( const sirContainerAllocator_t *pAllocator )
 	sirFMODRuntimeTestManifest_t image = makeRuntimeManifest();
 	checkBank( manifest.load( &image, sizeof( image ), SIR_AUDIO_PROVIDER_FMOD, 0, pAllocator ) == SIR_AUDIO_MANIFEST_OK );
 	sirFMODAudioThreadConfig_t config = {};
-	config.runtime.context = { 16, -1, 1, 1, 0, 0 };
+	config.runtime.context = { 16, -1, 0, 1, 0, 0 };
 	config.runtime.audio = { 4, 0, 64, 16, 16, 0 };
 	config.runtime.pAllocator = pAllocator;
 	config.runtime.pManifest = &manifest;
