@@ -25,6 +25,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // clang-format on
 
 #include <Scripting/Core/SIRScriptRuntime.h>
+#include <Scripting/Core/SIRScriptCodeManager.h>
 
 // Owns shared schema publication and scripting lifecycle in that order.
 // No VM or native compiler dependency is introduced into the Core layer.
@@ -32,12 +33,16 @@ class SIRScriptServer
 {
 public:
 	SIRScriptServer( void ) noexcept;
+	~SIRScriptServer( void ) noexcept;
 
 	SIRScriptBindingRegistry &bindings( void ) noexcept;
+	SIRScriptCodeManager &codeManager( void ) noexcept;
+	sirScriptResult_t useCodeManagerSource( void ) noexcept;
 	SIRScriptRuntime &runtime( void ) noexcept;
 
 private:
 	SIRScriptBindingRegistry m_Bindings;
+	SIRScriptCodeManager m_CodeManager;
 	SIRScriptRuntime m_Runtime;
 };
 

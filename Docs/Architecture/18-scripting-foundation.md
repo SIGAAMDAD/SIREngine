@@ -76,3 +76,45 @@ The bounded owner-thread scheduler retains 64 task slots and its 256-byte inline
 The scheduler retains ownership until cancellation or shutdown, transfers an overflow lease to the pump when dequeued, and frees that lease after backend dispatch. A live dequeued task blocks allocator replacement until its callback finishes. Exact allocated bytes, active overflow allocation count, and peak bytes appear in `queryMemoryFootprint` without changing the backend ABI revision. Each overflow buffer has an explicit reclamation path; failure to allocate leaves queue occupancy unchanged. The scheduler destructor drains pending tasks, but the containing runtime's external program/backend shutdown order remains explicit.
 
 Tests verify deep-copy isolation, alignment, allocation failure, a rejected provider ABI, cancellation, slot reuse, queue draining, in-flight leases, shutdown reclamation, oversize rejection and memory telemetry. The actual engine SIRAllocationRouter adapter requires the native SIRCore build to verify its backing-pool and thread-owner behavior; standalone smoke uses a tagged aligned-heap provider to exercise the scheduler independently.
+
+## Language-neutral executable artifact activation (implementation slice 6)
+
+`SIRScriptCodeManager` stages immutable, externally produced code artifacts through
+`SIR_SCRIPT_PROGRAM_SOURCE_ABI_REVISION`. Each artifact carries the producing
+backend ID, program ID/revision, format ID, published binding-schema fingerprint,
+CPU/target identity and opaque build fingerprint. Staging validates these
+identities against the active published schema and configured target, acquires
+one provider lease, and checks the returned immutable view's identity and
+alignment. The build fingerprint is a cache key, not cryptographic content
+verification; the external artifact provider owns byte-integrity verification.
+No LLVM, JIT, language frontend, executable page mapping or process launch is
+introduced in the shared manager.
+
+Activation changes the revision available to **new** runtime program loads;
+previously loaded programs and instances continue under their existing
+runtime handles. The superseded artifact is retired and remains pinned until
+all host leases finish, then releases its provider lease. Host lease tokens
+are separately generated for each load and generation-checked against duplicate
+or stale releases. Staged artifacts can be discarded, active revisions can be
+retired, and shutdown rejects live runtime leases. Fixed capacity is 32
+artifact records and 128 independent host leases; capacity exhaustion returns
+an explicit status with no heap fallback. Staging, activation, retirement,
+acquire and release share the script owner lane. Provider callbacks cannot
+reenter the manager's mutable control plane.
+
+`SIRScriptServer` now constructs the code manager between the binding registry
+and runtime, exposes `codeManager()` and offers `useCodeManagerSource()` to
+connect its source adapter to `SIRScriptRuntime`. Configure the code manager's
+artifact provider, publish the binding registry, stage an artifact, activate it,
+then load the chosen active revision through the runtime. The server destructor shuts down the runtime before releasing the manager's
+provider leases. Join all event producers before server destruction; the whole
+shutdown sequence must execute on the scripting owner thread.
+The code manager retains artifact bytes by lease rather than copying them;
+it cannot verify or free memory from a provider that violates its contract.
+
+Tests cover schema/target mismatch, invalid acquired views, acquisition rollback,
+producer reentrancy, duplicate revisions, slot and lease saturation, wrong-thread
+access, stale handles, duplicate lease release, activation/retirement ordering,
+backend load-failure rollback, and coexistence of old loaded programs with
+new active revisions. Native compiler/optimizer workers and persistent artifact
+cache are separate integration stages.
