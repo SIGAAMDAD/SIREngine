@@ -26,25 +26,23 @@ sirVulkanResult_t SIRVulkanDevice::submitBufferImageCopy( sirVulkanBuffer_t *pBu
 		return SIR_VULKAN_INVALID_STATE;
 	}
 	if ( pBuffer == nullptr || pImage == nullptr || pCompletion == nullptr || pBuffer->hBuffer == VK_NULL_HANDLE ||
-	     pImage->hImage == VK_NULL_HANDLE || pBuffer->pOwnerAllocator != m_Allocator ||
-	     pImage->pOwnerAllocator != m_Allocator || pBuffer->nDeviceSerial != m_nDeviceSerial ||
-	     pImage->nDeviceSerial != m_nDeviceSerial || m_nLastTransferValue == UINT64_MAX ) {
+	     pImage->hImage == VK_NULL_HANDLE || pBuffer->pOwnerAllocator != m_Allocator || pImage->pOwnerAllocator != m_Allocator ||
+	     pBuffer->nDeviceSerial != m_nDeviceSerial || pImage->nDeviceSerial != m_nDeviceSerial || m_nLastTransferValue == UINT64_MAX ) {
 		return SIR_VULKAN_INVALID_ARGUMENT;
 	}
 	const bool bUpload = transfer.bBufferToImage;
-	if ( bUpload && ( ( pBuffer->nUsage & VK_BUFFER_USAGE_TRANSFER_SRC_BIT ) == 0 ||
-	                   ( pImage->nUsage & VK_IMAGE_USAGE_TRANSFER_DST_BIT ) == 0 ) ) {
+	if ( bUpload &&
+	     ( ( pBuffer->nUsage & VK_BUFFER_USAGE_TRANSFER_SRC_BIT ) == 0 || ( pImage->nUsage & VK_IMAGE_USAGE_TRANSFER_DST_BIT ) == 0 ) ) {
 		return SIR_VULKAN_INVALID_ARGUMENT;
 	}
 	if ( !bUpload && ( ( pBuffer->nUsage & VK_BUFFER_USAGE_TRANSFER_DST_BIT ) == 0 ||
-	                    ( pImage->nUsage & VK_IMAGE_USAGE_TRANSFER_SRC_BIT ) == 0 ||
-	                    pImage->eLayout == VK_IMAGE_LAYOUT_UNDEFINED ) ) {
+	                   ( pImage->nUsage & VK_IMAGE_USAGE_TRANSFER_SRC_BIT ) == 0 || pImage->eLayout == VK_IMAGE_LAYOUT_UNDEFINED ) ) {
 		return SIR_VULKAN_INVALID_ARGUMENT;
 	}
-	if ( pImage->eType != VK_IMAGE_TYPE_2D || pImage->eFormat != VK_FORMAT_R8G8B8A8_UNORM ||
-	     transfer.extent.width == 0 || transfer.extent.height == 0 || transfer.extent.depth != 1 ||
-	     transfer.nMip >= pImage->nMips || transfer.nLayer >= pImage->nLayers || transfer.offset.z != 0 ||
-	     transfer.offset.x < 0 || transfer.offset.y < 0 || transfer.nBufferOffset > pBuffer->nSize ) {
+	if ( pImage->eType != VK_IMAGE_TYPE_2D || pImage->eFormat != VK_FORMAT_R8G8B8A8_UNORM || transfer.extent.width == 0 ||
+	     transfer.extent.height == 0 || transfer.extent.depth != 1 || transfer.nMip >= pImage->nMips ||
+	     transfer.nLayer >= pImage->nLayers || transfer.offset.z != 0 || transfer.offset.x < 0 || transfer.offset.y < 0 ||
+	     transfer.nBufferOffset > pBuffer->nSize ) {
 		return SIR_VULKAN_INVALID_ARGUMENT;
 	}
 
@@ -82,9 +80,8 @@ sirVulkanResult_t SIRVulkanDevice::submitBufferImageCopy( sirVulkanBuffer_t *pBu
 	VkImageMemoryBarrier2 before = {};
 	before.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
 	before.srcStageMask = eOld == VK_IMAGE_LAYOUT_UNDEFINED ? VK_PIPELINE_STAGE_2_NONE : VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
-	before.srcAccessMask = eOld == VK_IMAGE_LAYOUT_UNDEFINED
-	                           ? VK_ACCESS_2_NONE
-	                           : VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT;
+	before.srcAccessMask =
+	    eOld == VK_IMAGE_LAYOUT_UNDEFINED ? VK_ACCESS_2_NONE : VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT;
 	before.dstStageMask = VK_PIPELINE_STAGE_2_COPY_BIT;
 	before.dstAccessMask = bUpload ? VK_ACCESS_2_TRANSFER_WRITE_BIT : VK_ACCESS_2_TRANSFER_READ_BIT;
 	before.oldLayout = eOld;
@@ -145,11 +142,9 @@ sirVulkanResult_t SIRVulkanDevice::submitBufferImageCopy( sirVulkanBuffer_t *pBu
 		m_pfnCmdCopyImageToBuffer2( pSlot->hCommandBuffer, &info );
 	}
 
-	const VkImageLayout eFinal = bUpload
-	                                 ? ( ( pImage->nUsage & VK_IMAGE_USAGE_SAMPLED_BIT ) != 0
-	                                         ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-	                                         : VK_IMAGE_LAYOUT_GENERAL )
-	                                 : eOld;
+	const VkImageLayout eFinal = bUpload ? ( ( pImage->nUsage & VK_IMAGE_USAGE_SAMPLED_BIT ) != 0 ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+	                                                                                              : VK_IMAGE_LAYOUT_GENERAL )
+	                                     : eOld;
 	VkImageMemoryBarrier2 after = before;
 	after.srcStageMask = VK_PIPELINE_STAGE_2_COPY_BIT;
 	after.srcAccessMask = bUpload ? VK_ACCESS_2_TRANSFER_WRITE_BIT : VK_ACCESS_2_TRANSFER_READ_BIT;

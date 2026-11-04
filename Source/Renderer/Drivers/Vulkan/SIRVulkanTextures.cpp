@@ -122,8 +122,8 @@ sirGraphicsResult_t SIRVulkanCommandList::copyBufferTexture( const sirGraphicsBu
 	if ( pImage->native.eFormat != VK_FORMAT_R8G8B8A8_UNORM || pImage->native.eType != VK_IMAGE_TYPE_2D ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
-	if ( pBuffer->pMapped != nullptr || copy.nX > pImage->nWidth || copy.nY > pImage->nHeight ||
-	     copy.nWidth > pImage->nWidth - copy.nX || copy.nHeight > pImage->nHeight - copy.nY ) {
+	if ( pBuffer->pMapped != nullptr || copy.nX > pImage->nWidth || copy.nY > pImage->nHeight || copy.nWidth > pImage->nWidth - copy.nX ||
+	     copy.nHeight > pImage->nHeight - copy.nY ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( copy.bBufferToTexture ) {
@@ -132,14 +132,12 @@ sirGraphicsResult_t SIRVulkanCommandList::copyBufferTexture( const sirGraphicsBu
 			return SIR_GRAPHICS_INVALID_ARGUMENT;
 		}
 	} else if ( ( pBuffer->native.nUsage & VK_BUFFER_USAGE_TRANSFER_DST_BIT ) == 0 ||
-	            ( pImage->native.nUsage & VK_IMAGE_USAGE_TRANSFER_SRC_BIT ) == 0 ||
-	            pImage->native.eLayout == VK_IMAGE_LAYOUT_UNDEFINED ) {
+	            ( pImage->native.nUsage & VK_IMAGE_USAGE_TRANSFER_SRC_BIT ) == 0 || pImage->native.eLayout == VK_IMAGE_LAYOUT_UNDEFINED ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	const uint64_t nTightRow = uint64_t( copy.nWidth ) * 4;
 	const uint64_t nRowBytes = copy.nBytesPerRow == 0 ? nTightRow : uint64_t( copy.nBytesPerRow );
-	if ( ( nRowBytes & 3U ) != 0 || nRowBytes < nTightRow ||
-	     ( copy.nRowsPerImage != 0 && copy.nRowsPerImage < copy.nHeight ) ||
+	if ( ( nRowBytes & 3U ) != 0 || nRowBytes < nTightRow || ( copy.nRowsPerImage != 0 && copy.nRowsPerImage < copy.nHeight ) ||
 	     uint64_t( copy.nHeight - 1 ) > ( UINT64_MAX - nTightRow ) / nRowBytes ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
