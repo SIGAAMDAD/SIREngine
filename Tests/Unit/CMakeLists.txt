@@ -278,3 +278,9 @@ add_executable(SIRRegistrationContractTests SIRRegistrationContractTests.cpp)
 target_link_libraries(SIRRegistrationContractTests PRIVATE SIR::Core)
 add_test(NAME core.registration.contract COMMAND SIRRegistrationContractTests)
 sir_configure_owned_target(SIRRegistrationContractTests)
+
+# P1: console/CVar names share the native SIRStringPool implementation.
+add_executable(SIRRegistrationStringBridgeTests SIRRegistrationStringBridgeTests.cpp)
+target_link_libraries(SIRRegistrationStringBridgeTests PRIVATE SIR::Core)
+add_test(NAME core.registration.string-bridge COMMAND SIRRegistrationStringBridgeTests)
+sir_configure_owned_target(SIRRegistrationStringBridgeTests)

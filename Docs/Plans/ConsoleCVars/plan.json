@@ -203,7 +203,9 @@
       "id": "P1",
       "owned_paths": [
         "Source/Core/Strings/*",
-        "Tests/Unit/Strings/*"
+        "Tests/Unit/Strings/*",
+        "Source/Core/Registration/SIRRegistrationStringBridge.*",
+        "Tests/Unit/SIRRegistrationStringBridgeTests.cpp"
       ],
       "tasks": [
         "P1"
@@ -346,19 +348,23 @@
         "P0"
       ],
       "steps": [
-        "Port SIRStringPool and leases",
-        "Build AST_UNIT acceptance and negative cases"
+        "Reuse existing SIRStringPool and its SIRS v1 cooked ordinal validation",
+        "Implement canonical console/CVar names bridge and reserved module names",
+        "Native CMake/CTest integration with malformed/stale/case/lookup/no-allocation tests"
       ],
       "test_ids": [
-        "TEST-DOC"
+        "TEST-DOC",
+        "TEST-P1-BRIDGE"
       ],
       "outputs": [
-        "Source/Core/Strings/*",
-        "Tests/Unit/Strings/*"
+        "Source/Core/Registration/SIRRegistrationStringBridge.h",
+        "Source/Core/Registration/SIRRegistrationStringBridge.cpp",
+        "Tests/Unit/SIRRegistrationStringBridgeTests.cpp"
       ],
       "stop_conditions": [
         "Unratified interface or unmet dependency gate"
-      ]
+      ],
+      "status": "IMPLEMENTED_PENDING_NATIVE_INTEGRATION"
     },
     {
       "id": "P2",
@@ -545,6 +551,17 @@
       "command": "Clang 23.1.5 and GCC 14; -std=c++17 -Wall -Wextra -Wpedantic -Werror; contract executable and clang-format 23.1.5",
       "evidence_path": "Tests/Unit/SIRRegistrationContractTests.cpp",
       "limitations": "Native full-engine CMake and Windows not run"
+    },
+    {
+      "id": "TEST-P1-BRIDGE",
+      "requirement_ids": [
+        "REQ-001"
+      ],
+      "tier": "LOCAL_TEST_DOUBLE",
+      "status": "PASS_LOCAL_TEST_DOUBLE",
+      "command": "Clang 23.1.5 and GCC C++17 -Wall -Wextra -Wpedantic -Werror; bridge linked against test-only SIRStringPool signature stub; 40 existing StringPool GoogleTests are not rerun",
+      "evidence_path": "Tests/Unit/SIRRegistrationStringBridgeTests.cpp",
+      "limitations": "Full engine SIRCore + real SIRStringPool link/CTest, actual Windows build, Clang AST configuration test NOT_RUN"
     }
   ],
   "probes": [],
