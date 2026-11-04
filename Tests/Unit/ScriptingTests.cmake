@@ -97,3 +97,8 @@ add_executable(SIRLangEffectsTests SIRLangEffectsTests.cpp)
 target_link_libraries(SIRLangEffectsTests PRIVATE SIR::Scripting)
 add_test(NAME scripting.language.effects COMMAND SIRLangEffectsTests)
 sir_configure_owned_target(SIRLangEffectsTests)
+
+add_executable(SIRLangSourceCompilerTests SIRLangSourceCompilerTests.cpp)
+target_link_libraries(SIRLangSourceCompilerTests PRIVATE SIR::Scripting)
+add_test(NAME scripting.language.source-compiler COMMAND SIRLangSourceCompilerTests)
+sir_configure_owned_target(SIRLangSourceCompilerTests)
