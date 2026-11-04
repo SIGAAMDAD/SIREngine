@@ -42,6 +42,7 @@ public:
 	bool disconnect( sirInputDeviceId_t id ) noexcept;
 	bool resolve( sirInputBackendId_t eBackend, uint64_t nNativeId, sirInputDeviceId_t *pResult ) const noexcept;
 	bool describe( sirInputDeviceId_t id, sirInputDeviceDescriptor_t *pOut ) const noexcept;
+	bool authorize( sirInputBackendId_t eSource, sirInputDeviceId_t id, sirInputDeviceClass_t *pClass ) const noexcept;
 	bool pairUser( sirInputDeviceId_t id, uint32_t nUser ) noexcept;
 	bool valid( sirInputDeviceId_t id ) const noexcept;
 	bool inspectSlot( uint32_t nSlot, sirInputDeviceDescriptor_t *pOut ) const noexcept;

@@ -81,6 +81,19 @@ bool SIRInputDeviceRegistry::describe( sirInputDeviceId_t id, sirInputDeviceDesc
 	return true;
 }
 
+bool SIRInputDeviceRegistry::authorize( sirInputBackendId_t eSource, sirInputDeviceId_t id, sirInputDeviceClass_t *pClass ) const noexcept
+{
+	if ( pClass == nullptr || id.nSlot >= SIR_INPUT_DEVICE_CAPACITY ) {
+		return false;
+	}
+	const sirInputDeviceDescriptor_t &record = m_Devices[id.nSlot];
+	if ( !record.bConnected || record.id.nGeneration != id.nGeneration || record.key.eBackend != eSource ) {
+		return false;
+	}
+	*pClass = record.key.eClass;
+	return true;
+}
+
 bool SIRInputDeviceRegistry::inspectSlot( uint32_t nSlot, sirInputDeviceDescriptor_t *pOut ) const noexcept
 {
 	if ( nSlot >= SIR_INPUT_DEVICE_CAPACITY || pOut == nullptr ) {
