@@ -102,8 +102,11 @@ static VkSamplerAddressMode sirVulkanSamplerAddress( sirGraphicsAddressMode_t eM
 
 sirGraphicsResult_t SIRVulkanCommandList::copyBufferTexture( const sirGraphicsBufferTextureCopy_t &copy ) noexcept
 {
-	if ( m_eState != SIR_VULKAN_COMMAND_RECORDING || m_bHasCopy || m_bHasBarrier ) {
+	if ( m_eState != SIR_VULKAN_COMMAND_RECORDING ) {
 		return SIR_GRAPHICS_BUSY;
+	}
+	if ( m_nOperationCount >= SIR_VULKAN_COPY_BATCH_CAPACITY ) {
+		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
 	}
 	if ( m_pOwner == nullptr || copy.nWidth == 0 || copy.nHeight == 0 || copy.nDepth != 1 || copy.nZ != 0 || copy.nX > INT32_MAX ||
 	     copy.nY > INT32_MAX ) {
@@ -145,16 +148,33 @@ sirGraphicsResult_t SIRVulkanCommandList::copyBufferTexture( const sirGraphicsBu
 	transfer.offset = { ( int32_t )copy.nX, ( int32_t )copy.nY, 0 };
 	transfer.extent = { copy.nWidth, copy.nHeight, 1 };
 	transfer.bBufferToImage = copy.bBufferToTexture;
-	const sirVulkanResult_t eValidation = sirVulkanValidateTextureTransfer( &pBuffer->native, &pImage->native, transfer );
+	// A readback may follow an upload to the same subresource in this
+	// command list; validate it against a local initialization snapshot.
+	sirVulkanImage_t imageState = pImage->native;
+	if ( !copy.bBufferToTexture && transfer.nMip < imageState.nMips && transfer.nLayer < imageState.nLayers ) {
+		for ( uint32_t iOp = 0; iOp < m_nOperationCount; ++iOp ) {
+			const sirVulkanGraphicsOperation_t &prior = m_szOperations[iOp];
+			if ( prior.eKind == SIR_VULKAN_GRAPHICS_TEXTURE_COPY && prior.textureCopy.bBufferToTexture &&
+			     prior.textureCopy.hTexture.nSlot == copy.hTexture.nSlot &&
+			     prior.textureCopy.hTexture.nGeneration == copy.hTexture.nGeneration && prior.textureCopy.nMip == copy.nMip &&
+			     prior.textureCopy.nLayer == copy.nLayer ) {
+				const uint32_t nIndex = copy.nLayer * imageState.nMips + copy.nMip;
+				imageState.szUploadedSubresources[nIndex / 64] |= 1ULL << ( nIndex % 64 );
+				break;
+			}
+		}
+	}
+	const sirVulkanResult_t eValidation = sirVulkanValidateTextureTransfer( &pBuffer->native, &imageState, transfer );
 	if ( eValidation == SIR_VULKAN_API_UNSUPPORTED ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
 	if ( eValidation != SIR_VULKAN_SUCCESS ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	m_TextureCopy = copy;
-	m_bHasCopy = true;
-	m_bHasTextureCopy = true;
+	sirVulkanGraphicsOperation_t &operation = m_szOperations[m_nOperationCount++];
+	operation = {};
+	operation.eKind = SIR_VULKAN_GRAPHICS_TEXTURE_COPY;
+	operation.textureCopy = copy;
 	return SIR_GRAPHICS_SUCCESS;
 }
 
