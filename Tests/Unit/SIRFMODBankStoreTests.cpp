@@ -119,9 +119,18 @@ static int32_t testStudioDrivers( void *, void *, int32_t *pCount ) noexcept
 	*pCount = 1;
 	return 0;
 }
+static std::atomic<uint32_t> s_nDriverGate( 0 );
+static std::atomic<uint32_t> s_nDriverEntered( 0 );
+
 static int32_t testStudioDriver( void *pUserData, void *, int32_t ) noexcept
 {
 	++( ( sirFMODBankFixture_t * )pUserData )->nDeviceDriverSelections;
+	if ( s_nDriverGate.load( std::memory_order_acquire ) != 0 ) {
+		s_nDriverEntered.store( 1, std::memory_order_release );
+		while ( s_nDriverGate.load( std::memory_order_acquire ) != 0 ) {
+			std::this_thread::yield();
+		}
+	}
 	return 0;
 }
 static int32_t testStudioNoSound( void *, void * ) noexcept
@@ -991,6 +1000,27 @@ static void testAudioOwnerThread( const sirContainerAllocator_t *pAllocator )
 	checkBank( engineStats.nCurrentBytes <= engineStats.nPeakBytes );
 	const sirFMODMemoryBudgetStats_t nativeStats = worker.getNativeMemoryStats();
 	checkBank( nativeStats.nBudgetBytes == 16 * 1024 * 1024 && nativeStats.nCurrentBytes == 4096 );
+
+	// Hold an already-dispatched Core output call. It cannot be
+	// interrupted and therefore must reject cancellation with BUSY.
+	s_nDriverEntered.store( 0, std::memory_order_relaxed );
+	s_nDriverGate.store( 1, std::memory_order_release );
+	sirFMODThreadRequest_t recovery = {};
+	recovery.eOperation = SIR_FMOD_THREAD_RECOVER_OUTPUT;
+	recovery.iDriver = 0;
+	recovery.bFlag = 1;
+	uint64_t nRecoveryTicket = 0;
+	checkBank( worker.submit( recovery, nRecoveryTicket ) == SIR_AUDIO_PENDING );
+	for ( uint32_t iAttempt = 0; iAttempt < 1000 && s_nDriverEntered.load( std::memory_order_acquire ) == 0;
+	      ++iAttempt ) {
+		std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
+	}
+	const bool bNativeEntered = s_nDriverEntered.load( std::memory_order_acquire ) != 0;
+	const sirAudioResult_t eCancelRecovery = bNativeEntered ? worker.cancel( nRecoveryTicket ) : SIR_AUDIO_INVALID_HANDLE;
+	s_nDriverGate.store( 0, std::memory_order_release );
+	checkBank( bNativeEntered && eCancelRecovery == SIR_AUDIO_BUSY );
+	const sirFMODThreadResult_t recoveryResult = testWaitForTicket( worker, nRecoveryTicket );
+	checkBank( recoveryResult.eResult == SIR_AUDIO_OK );
 
 	sirFMODThreadRequest_t request = {};
 	request.eOperation = SIR_FMOD_THREAD_LOAD_PACKAGE;
