@@ -114,7 +114,7 @@ bool SIRInputFrameState::apply( sirInputDeviceState_t &state, const sirInputCont
 }
 
 bool SIRInputFrameState::postChanges( sirInputDeviceId_t id, sirInputDeviceClass_t eClass, const sirInputControlChange_t *pChanges,
-                                      uint32_t nCount, uint64_t nTime ) noexcept
+                                      uint32_t nCount, const sirInputTimestamp_t &time ) noexcept
 {
 	if ( !m_bCollecting || m_bOverflowed || id.nSlot >= SIR_INPUT_DEVICE_CAPACITY || ( nCount != 0 && pChanges == nullptr ) ||
 	     nCount > SIR_INPUT_EVENT_CAPACITY ) {
@@ -181,7 +181,17 @@ bool SIRInputFrameState::postChanges( sirInputDeviceId_t id, sirInputDeviceClass
 		} else {
 			markStateDirty( id.nSlot );
 		}
-		const sirInputEvent_t event = { nTime, ++m_nSequence, id, change.nValue, 0, change.nControl, change.eSignal, eClass };
+		const sirInputEvent_t event = { time.nSourceNs,
+		                                ++m_nSequence,
+		                                id,
+		                                time.nReceivedNs,
+		                                change.nValue,
+		                                0,
+		                                change.nControl,
+		                                change.eSignal,
+		                                eClass,
+		                                time.eClock,
+		                                time.bNative ? SIR_INPUT_TIMESTAMP_NATIVE : ( uint8_t )0 };
 		return append( event );
 	}
 
@@ -236,7 +246,17 @@ bool SIRInputFrameState::postChanges( sirInputDeviceId_t id, sirInputDeviceClass
 			if ( change.eSignal == SIR_INPUT_BUTTON ) {
 				bTransientChanged = true;
 			}
-			sirInputEvent_t event = { nTime, ++m_nSequence, id, change.nValue, 0, change.nControl, change.eSignal, eClass };
+			sirInputEvent_t event = { time.nSourceNs,
+			                          ++m_nSequence,
+			                          id,
+			                          time.nReceivedNs,
+			                          change.nValue,
+			                          0,
+			                          change.nControl,
+			                          change.eSignal,
+			                          eClass,
+			                          time.eClock,
+			                          time.bNative ? SIR_INPUT_TIMESTAMP_NATIVE : ( uint8_t )0 };
 			append( event );
 		}
 	}
@@ -250,13 +270,23 @@ bool SIRInputFrameState::postChanges( sirInputDeviceId_t id, sirInputDeviceClass
 }
 
 bool SIRInputFrameState::postDevice( sirInputDeviceId_t id, sirInputDeviceClass_t eClass, sirInputSignal_t eSignal,
-                                     uint64_t nTime ) noexcept
+                                     const sirInputTimestamp_t &time ) noexcept
 {
 	if ( !m_bCollecting || id.nSlot >= SIR_INPUT_DEVICE_CAPACITY ||
 	     ( eSignal != SIR_INPUT_CONNECTED && eSignal != SIR_INPUT_DISCONNECTED && eSignal != SIR_INPUT_RESYNC ) ) {
 		return false;
 	}
-	sirInputEvent_t event = { nTime, ++m_nSequence, id, 0, 0, 0, eSignal, eClass };
+	sirInputEvent_t event = { time.nSourceNs,
+	                          ++m_nSequence,
+	                          id,
+	                          time.nReceivedNs,
+	                          0,
+	                          0,
+	                          0,
+	                          eSignal,
+	                          eClass,
+	                          time.eClock,
+	                          time.bNative ? SIR_INPUT_TIMESTAMP_NATIVE : ( uint8_t )0 };
 	if ( !append( event ) ) {
 		return false;
 	}
@@ -270,13 +300,23 @@ bool SIRInputFrameState::postDevice( sirInputDeviceId_t id, sirInputDeviceClass_
 }
 
 bool SIRInputFrameState::postPointer( sirInputDeviceId_t id, sirInputDeviceClass_t eClass, sirInputSignal_t eSignal, uint16_t nControl,
-                                      int32_t nX, int32_t nY, uint64_t nTime ) noexcept
+                                      int32_t nX, int32_t nY, const sirInputTimestamp_t &time ) noexcept
 {
 	if ( !m_bCollecting || m_bOverflowed || id.nSlot >= SIR_INPUT_DEVICE_CAPACITY || eClass != SIR_INPUT_POINTER ||
 	     ( eSignal != SIR_INPUT_MOTION && eSignal != SIR_INPUT_WHEEL ) ) {
 		return false;
 	}
-	sirInputEvent_t event = { nTime, ++m_nSequence, id, nX, nY, nControl, eSignal, eClass };
+	sirInputEvent_t event = { time.nSourceNs,
+	                          ++m_nSequence,
+	                          id,
+	                          time.nReceivedNs,
+	                          nX,
+	                          nY,
+	                          nControl,
+	                          eSignal,
+	                          eClass,
+	                          time.eClock,
+	                          time.bNative ? SIR_INPUT_TIMESTAMP_NATIVE : ( uint8_t )0 };
 	if ( !append( event ) ) {
 		return false;
 	}
@@ -311,6 +351,17 @@ bool SIRInputFrameState::publish( const SIRInputDeviceRegistry &registry ) noexc
 	frame.nTick = m_nTick;
 	frame.nCount = m_nCount;
 	frame.nResyncCount = m_nResync;
+	// Cutoff is the instant the owner freezes inputs for this simulation tick.
+	// Receipt time is always from SIRPlatformTime; source clocks may differ.
+	frame.nCutoffNs = SIRPlatformTime::getMonotonicNanoseconds();
+	frame.nOldestReceiptAgeNs = 0;
+	frame.nNewestReceiptAgeNs = 0;
+	if ( m_nCount != 0 ) {
+		const uint64_t nOldest = frame.events[0].nReceivedNs;
+		const uint64_t nNewest = frame.events[m_nCount - 1].nReceivedNs;
+		frame.nOldestReceiptAgeNs = frame.nCutoffNs >= nOldest ? frame.nCutoffNs - nOldest : 0;
+		frame.nNewestReceiptAgeNs = frame.nCutoffNs >= nNewest ? frame.nCutoffNs - nNewest : 0;
+	}
 	uint32_t nDirty = m_nStateDirty[nNext];
 	if ( nDirty == UINT32_MAX ) {
 		memcpy( frame.state, m_Live, sizeof( m_Live ) );
@@ -348,14 +399,18 @@ bool SIRInputFrameState::recover( const SIRInputDeviceRegistry &registry ) noexc
 		registry.inspectSlot( i, &descriptor );
 		if ( descriptor.bConnected ) {
 			clearDevice( descriptor.id );
-			sirInputEvent_t event = { SIRPlatformTime::getMonotonicNanoseconds(),
+			const uint64_t nNow = SIRPlatformTime::getMonotonicNanoseconds();
+			sirInputEvent_t event = { nNow,
 			                          ++m_nSequence,
 			                          descriptor.id,
+			                          nNow,
 			                          0,
 			                          0,
 			                          0,
 			                          SIR_INPUT_RESYNC,
-			                          descriptor.key.eClass };
+			                          descriptor.key.eClass,
+			                          SIR_INPUT_CLOCK_ENGINE_MONOTONIC,
+			                          0 };
 			append( event );
 			++m_nResync;
 		}

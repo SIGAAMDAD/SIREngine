@@ -20,6 +20,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <fcntl.h>
 #include <linux/input.h>
 #include <stdio.h>
+#include <time.h>
 #include <sys/inotify.h>
 #include <sys/ioctl.h>
 #include <sys/stat.h>
@@ -210,6 +211,8 @@ bool SIRLinuxEvdevBackend::openDevice( SIRInputService &service, const char *psz
 	slot.bOpen = true;
 	slot.id = idOut;
 	slot.nNative = nNative;
+	const int nClockId = CLOCK_MONOTONIC;
+	slot.bClockMonotonic = ioctl( nFd, EVIOCSCLOCKID, &nClockId ) == 0;
 	memcpy( slot.szPath, pszPath, strlen( pszPath ) + 1 );
 	input_id deviceIdentity = {};
 	if ( ioctl( nFd, EVIOCGID, &deviceIdentity ) == 0 ) {
@@ -468,7 +471,13 @@ void SIRLinuxEvdevBackend::sample( SIRInputService &service ) noexcept
 						slot.nPending = 0;
 						requery( service, slot, true );
 					} else if ( slot.nPending != 0 ) {
-						service.emitControls( id(), slot.id, slot.pending, slot.nPending );
+						uint64_t nSourceNs = 0;
+						if ( slot.bClockMonotonic && event.time.tv_sec >= 0 && event.time.tv_usec >= 0 && event.time.tv_usec < 1000000 &&
+						     ( uint64_t )event.time.tv_sec <= ( UINT64_MAX - 999999000ULL ) / 1000000000ULL ) {
+							nSourceNs = ( uint64_t )event.time.tv_sec * 1000000000ULL + ( uint64_t )event.time.tv_usec * 1000ULL;
+						}
+						service.emitControls( id(), slot.id, slot.pending, slot.nPending, nSourceNs,
+						                      nSourceNs != 0 ? SIR_INPUT_CLOCK_EVDEV_MONOTONIC : SIR_INPUT_CLOCK_ENGINE_MONOTONIC );
 						slot.nPending = 0;
 					}
 					continue;

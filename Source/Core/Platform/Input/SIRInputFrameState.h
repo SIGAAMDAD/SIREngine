@@ -18,9 +18,11 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <SIRPCH.hpp>
 
+// clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
-#pragma once
+	#pragma once
 #endif
+// clang-format on
 
 #include <Core/Platform/Input/SIRInputTypes.h>
 
@@ -32,11 +34,12 @@ class SIRInputFrameState
 public:
 	SIRInputFrameState( void ) noexcept;
 	bool begin( uint64_t nTick ) noexcept;
-	bool postDevice( sirInputDeviceId_t id, sirInputDeviceClass_t eClass, sirInputSignal_t eSignal, uint64_t nTime ) noexcept;
+	bool postDevice( sirInputDeviceId_t id, sirInputDeviceClass_t eClass, sirInputSignal_t eSignal,
+	                 const sirInputTimestamp_t &time ) noexcept;
 	bool postChanges( sirInputDeviceId_t id, sirInputDeviceClass_t eClass, const sirInputControlChange_t *pChanges, uint32_t nCount,
-	                  uint64_t nTime ) noexcept;
+	                  const sirInputTimestamp_t &time ) noexcept;
 	bool postPointer( sirInputDeviceId_t id, sirInputDeviceClass_t eClass, sirInputSignal_t eSignal, uint16_t nControl, int32_t nX,
-	                  int32_t nY, uint64_t nTime ) noexcept;
+	                  int32_t nY, const sirInputTimestamp_t &time ) noexcept;
 	void clearDevice( sirInputDeviceId_t id ) noexcept;
 	bool publish( const SIRInputDeviceRegistry &registry ) noexcept;
 	bool recover( const SIRInputDeviceRegistry &registry ) noexcept;

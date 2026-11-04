@@ -111,15 +111,18 @@ static bool testFrameBoundaries( void )
 	const uint32_t nMask42 = 1U << ( 42 % 32 );
 	if ( pFrame == nullptr || pFrame->nTick != 21 || pFrame->nCount != 4 || ( pFrame->state[h.nSlot].nPressed[42 / 32] & nMask42 ) == 0 ||
 	     ( pFrame->state[h.nSlot].nReleased[42 / 32] & nMask42 ) == 0 || ( pFrame->state[h.nSlot].nHeld[42 / 32] & nMask42 ) != 0 ||
-	     pFrame->events[1].nTimestampNs != 500 || pFrame->events[2].nValue != 0 || input.begin( 21 ) ) {
+	     pFrame->events[1].nTimestampNs != 500 || pFrame->events[1].nReceivedNs == 0 ||
+	     pFrame->events[1].eClock != SIR_INPUT_CLOCK_ENGINE_MONOTONIC ||
+	     ( pFrame->events[1].nTimestampFlags & SIR_INPUT_TIMESTAMP_NATIVE ) == 0 || pFrame->nCutoffNs < pFrame->events[1].nReceivedNs ||
+	     pFrame->nOldestReceiptAgeNs < pFrame->nNewestReceiptAgeNs || pFrame->events[2].nValue != 0 || input.begin( 21 ) ) {
 		return false;
 	}
 	if ( !input.begin( 22 ) || !input.publish() ) {
 		return false;
 	}
 	const sirInputFrame_t *pNext = input.frame();
-	return pNext != nullptr && pNext->nCount == 0 && pNext->state[h.nSlot].nPressed[42 / 32] == 0 &&
-	       ( pNext->state[h.nSlot].nHeld[43 / 32] & ( 1U << ( 43 % 32 ) ) ) != 0;
+	return pNext != nullptr && pNext->nCount == 0 && pNext->nOldestReceiptAgeNs == 0 && pNext->nNewestReceiptAgeNs == 0 &&
+	       pNext->state[h.nSlot].nPressed[42 / 32] == 0 && ( pNext->state[h.nSlot].nHeld[43 / 32] & ( 1U << ( 43 % 32 ) ) ) != 0;
 }
 
 static bool testAtomicOverflowAndRecovery( void )
