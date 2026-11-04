@@ -236,7 +236,11 @@ static sirEditorTextSceneResult_t sirEditorConsumeNode( const char *pszSource, s
 		if ( eParent != SIR_EDITOR_TEXT_OK ) {
 			return eParent;
 		}
-		if ( nParentLength != 1 || pIndex->storage.pszPaths[nPathStart] != '.' ) {
+		if ( nParentLength == 1 && pIndex->storage.pszPaths[nPathStart] == '.' ) {
+			// In Godot text scenes, parent="." identifies the scene root.
+			// Native parent ID zero is reserved for the root itself.
+			nParentId = pIndex->storage.pNodes[0].node.nId;
+		} else {
 			bool bFound = false;
 			for ( uint32_t iParent = 0; iParent < pIndex->nNodeCount; ++iParent ) {
 				const sirEditorTextSceneNode_t &candidate = pIndex->storage.pNodes[iParent];

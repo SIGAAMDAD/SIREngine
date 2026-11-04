@@ -111,3 +111,11 @@ target_compile_definitions(SIREditorTextResourcesTests PRIVATE
     SIR_EDITOR_TEST_UI_SCENE="${PROJECT_SOURCE_DIR}/Tests/Fixtures/Editor/SourceGodotUI.tscn")
 add_test(NAME editor.authoring.godot-text-resources COMMAND SIREditorTextResourcesTests)
 sir_configure_owned_target(SIREditorTextResourcesTests)
+
+# Editor-only scene tree projection, source ordering and virtualized layout.
+add_executable(SIREditorHierarchyModelTests SIREditorHierarchyModelTests.cpp)
+target_link_libraries(SIREditorHierarchyModelTests PRIVATE SIR::EditorAuthoring)
+target_compile_definitions(SIREditorHierarchyModelTests PRIVATE
+    SIR_EDITOR_TEST_UI_SCENE="${PROJECT_SOURCE_DIR}/Tests/Fixtures/Editor/SourceGodotUI.tscn")
+add_test(NAME editor.authoring.hierarchy-view-model COMMAND SIREditorHierarchyModelTests)
+sir_configure_owned_target(SIREditorHierarchyModelTests)

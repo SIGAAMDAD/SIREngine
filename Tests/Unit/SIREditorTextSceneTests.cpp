@@ -36,6 +36,7 @@ static void sirTestRealForkScene( void )
 	assert( index.nNodeCount == 6 );
 	assert( index.nErrorLine == 0 );
 	assert( index.storage.pNodes[0].node.nParentId == 0 );
+	assert( index.storage.pNodes[1].node.nParentId == index.storage.pNodes[0].node.nId );
 	assert( index.storage.pNodes[0].nPathLength == 0 );
 	assert( index.storage.pNodes[3].node.nParentId == index.storage.pNodes[2].node.nId );
 	assert( strcmp( szPaths + szNodes[3].nPathOffset, "UniqueNames/UniqueAnimationPlayer" ) == 0 );
