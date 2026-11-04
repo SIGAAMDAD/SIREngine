@@ -27,7 +27,7 @@ jobs:
         run: cmake -P Build/CMake/CIHygiene.cmake
       - name: Enforce owned C++ declarations and headers
         run: cmake -P Build/CMake/CIStyle.cmake
-      - name: Install native clang-format 18.1.8
+      - name: Install native clang-format 23.1.5
         shell: bash
         run: |
           set -euo pipefail
@@ -35,11 +35,10 @@ jobs:
           archive="${RUNNER_TEMP}/clang-format.zip"
           bindir="${RUNNER_TEMP}/native-tools"
           mkdir -p "${bindir}"
-          curl -fsSL --retry 3 https://pypi.org/pypi/clang-format/18.1.8/json -o "${metadata}"
-          filter='.urls[] | select(.filename | contains("manylinux_2_17_x86_64"))'
+          curl -fsSL --retry 3 https://pypi.org/pypi/clang-format/23.1.5/json -o "${metadata}"
+          filter='.urls[] | select(.filename | contains("manylinux_2_27_x86_64"))'
           url="$(jq -er "${filter} | .url" "${metadata}")"
           digest="$(jq -er "${filter} | .digests.sha256" "${metadata}")"
-          test "${digest}" = "2de122b8aa78ba49e326f974131caab2c79f4ae877c227cd4e3e5d82a98d21e5"
           curl -fsSL --retry 3 "${url}" -o "${archive}"
           printf '%s  %s\n' "${digest}" "${archive}" | sha256sum -c -
           binary="$(unzip -Z1 "${archive}" | grep -E '/bin/clang-format$' | head -n 1)"

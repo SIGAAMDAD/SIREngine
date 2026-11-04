@@ -1,7 +1,8 @@
 add_subdirectory(Core)
+add_subdirectory(Renderer)
 
 add_executable(SIREngine Main.cpp)
-target_link_libraries(SIREngine PRIVATE SIR::Core)
+target_link_libraries(SIREngine PRIVATE SIR::Core SIR::Graphics)
 # The launcher privately instantiates the native GameInput backend.
 if(WIN32 AND SIR_GAMEINPUT_INCLUDE_DIR)
     target_include_directories(SIREngine PRIVATE "${SIR_GAMEINPUT_INCLUDE_DIR}")
