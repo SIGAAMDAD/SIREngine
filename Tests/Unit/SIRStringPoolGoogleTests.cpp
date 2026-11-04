@@ -1279,3 +1279,699 @@ TEST( SIRStringPool, SixTierCorruptCookedMissDoesNotConsumeBudget )
 	lease.release();
 	EXPECT_TRUE( pool.shutdown() );
 }
+
+TEST( SIRStringPool, CoveragePreflightCorruptionMatrix )
+{
+	sirStringPoolConfig_t config = sirPoolTestConfig();
+	const std::vector<uint8_t> good = sirTestCatalog( { { "alpha", false }, { "beta", true } } );
+	const size_t nReserved = SIRStringPool::requiredBytes( config, good.data(), good.size() );
+	ASSERT_TRUE( nReserved > 0 );
+	std::vector<uint8_t> backing( nReserved + 1024 );
+	SIRStringPool pool;
+	for ( uint32_t iCase = 0; iCase < 12; ++iCase ) {
+		std::vector<uint8_t> malformed = good;
+		switch ( iCase ) {
+		case 0:
+			malformed[0] = 'X';
+			break;
+		case 1:
+			malformed[4] = 3;
+			break;
+		case 2:
+			sirTestStore16( malformed, 6, 1 );
+			break;
+		case 3:
+			sirTestStore32( malformed, 44, 0 );
+			break;
+		case 4:
+			sirTestStore32( malformed, 12, 8 );
+			break;
+		case 5:
+			sirTestStore32( malformed, 16, 8 );
+			break;
+		case 6:
+			sirTestStore32( malformed, 20, 8 );
+			break;
+		case 7:
+			sirTestStore32( malformed, 24, 0 );
+			break;
+		case 8:
+			sirTestStore64( malformed, 28, 0 );
+			break;
+		case 9:
+			sirTestStore64( malformed, 36, 0 );
+			break;
+		case 10:
+			sirTestStore32( malformed, 8, 1 );
+			break;
+		case 11:
+			sirTestStore32( malformed, 8, UINT32_MAX );
+			break;
+		}
+		EXPECT_FALSE( pool.initialize( { backing.data(), backing.size(), malformed.data(), malformed.size() }, config ) );
+		EXPECT_FALSE( pool.isInitialized() );
+	}
+	EXPECT_TRUE( pool.shutdown() );
+	EXPECT_FALSE( pool.retireScope() );
+	EXPECT_EQ( pool.getDecodedByteLength( SIRStringAtom( 10 ) ), 0u );
+	EXPECT_EQ( pool.getContentHash( SIRStringAtom( 10 ) ), 0u );
+}
+
+TEST( SIRStringPool, CoverageTierOverflowAndInvalidInitShapes )
+{
+	sirStringPoolConfig_t config = SIRStringPool::defaultConfig();
+	config.nTierSlots[0] = UINT32_MAX;
+	config.nTierSlots[1] = UINT32_MAX;
+	EXPECT_EQ( SIRStringPool::requiredBytes( config, 0 ), 0u );
+	config = SIRStringPool::defaultConfig();
+	config.nTierBytes[5] = 512;
+	EXPECT_EQ( SIRStringPool::requiredBytes( config, 0 ), 0u );
+	config = SIRStringPool::defaultConfig();
+	config.nTierBytes[5] = 2048;
+	EXPECT_TRUE( SIRStringPool::requiredBytes( config, 0 ) > 0 );
+	config = sirPoolTestConfig();
+	config.nHashBuckets = 1;
+	EXPECT_TRUE( SIRStringPool::requiredBytes( config, 0 ) > 0 );
+	config = sirPoolTestConfig();
+	config.nHashBuckets = 0x80000000u;
+	EXPECT_TRUE( SIRStringPool::requiredBytes( config, 0 ) > 0 );
+}
+
+TEST( SIRStringPool, CoverageHotPinAndDirectReadPaths )
+{
+	auto catalog = sirTestCatalog( { { "alpha", false }, { "bravo", true }, { "charlie", true } } );
+	auto config = sirTestSixTierSmall();
+	SIRStringPool pool;
+	std::vector<uint8_t> span;
+	ASSERT_TRUE( sirTestInitCatalog( &pool, catalog, config, &span ) );
+	const SIRStringAtom raw = pool.find( "alpha" );
+	const SIRStringAtom cooked = pool.find( "bravo" );
+	const SIRStringAtom third = pool.find( "charlie" );
+	const SIRStringAtom dynamic = pool.intern( "dynamically-registered" );
+	ASSERT_TRUE( raw.isValid() && cooked.isValid() && third.isValid() && dynamic.isValid() );
+	EXPECT_EQ( pool.getDecodedByteLength( raw ), 5u );
+	EXPECT_EQ( pool.getDecodedByteLength( cooked ), 5u );
+	EXPECT_EQ( pool.getDecodedByteLength( dynamic ), 22u );
+	EXPECT_EQ( pool.getContentHash( raw ), SIRStringPool::hashString( "alpha", 5 ) );
+	EXPECT_EQ( pool.getContentHash( cooked ), SIRStringPool::hashString( "bravo", 5 ) );
+	EXPECT_EQ( pool.getContentHash( dynamic ), SIRStringPool::hashString( "dynamically-registered", 22 ) );
+	uint32_t nBytes = 100;
+	EXPECT_STREQ( pool.peekRaw( raw, nBytes ), "alpha" );
+	EXPECT_STREQ( pool.peekRaw( dynamic, nBytes ), "dynamically-registered" );
+	EXPECT_EQ( pool.peekRaw( cooked, nBytes ), nullptr );
+	SIRStringLease first;
+	EXPECT_EQ( pool.acquire( cooked, first ), SIR_STRING_OK );
+	EXPECT_STREQ( first.data(), "bravo" );
+	SIRStringLease second;
+	EXPECT_EQ( pool.acquire( cooked, second ), SIR_STRING_OK );
+	EXPECT_STREQ( second.data(), "bravo" );
+	EXPECT_EQ( pool.getStats().nPinnedLeases, 2u );
+	first.release();
+	second.release();
+	SIRStringLease thirdLease;
+	EXPECT_EQ( pool.acquire( third, thirdLease ), SIR_STRING_OK );
+	thirdLease.release();
+	SIRStringLease rehot;
+	EXPECT_EQ( pool.acquire( cooked, rehot ), SIR_STRING_OK );
+	rehot.release();
+	EXPECT_EQ( pool.decodeInto( cooked, nullptr, 10, nBytes ), SIR_STRING_OUTPUT_TOO_SMALL );
+	char szBytes[64] = {};
+	EXPECT_EQ( pool.decodeInto( dynamic, szBytes, sizeof( szBytes ), nBytes ), SIR_STRING_OK );
+	EXPECT_STREQ( szBytes, "dynamically-registered" );
+	EXPECT_TRUE( pool.shutdown() );
+}
+
+TEST( SIRStringPool, CoverageTierPinnedFallbackAndRetirement )
+{
+	auto catalog = sirTestCatalog( { { "aaaaaaa", true }, { "bbbbbbb", true }, { "ccccccc", true }, { "ddddddd", true } } );
+	auto config = sirTestSixTierSmall();
+	for ( uint32_t i = 0; i < SIR_STRING_CACHE_TIER_COUNT; ++i ) {
+		config.nTierSlots[i] = 1;
+		config.nInitialTierSlots[i] = 1;
+	}
+	SIRStringPool pool;
+	std::vector<uint8_t> span;
+	ASSERT_TRUE( sirTestInitCatalog( &pool, catalog, config, &span ) );
+	SIRStringLease leases[4];
+	const char *names[] = { "aaaaaaa", "bbbbbbb", "ccccccc", "ddddddd" };
+	for ( uint32_t i = 0; i < 4; ++i ) {
+		EXPECT_EQ( pool.acquire( pool.find( names[i] ), leases[i] ), SIR_STRING_OK );
+		EXPECT_STREQ( leases[i].data(), names[i] );
+	}
+	EXPECT_FALSE( pool.retireScope() );
+	for ( SIRStringLease& lease : leases ) {
+		lease.release();
+	}
+	EXPECT_TRUE( pool.retireScope() );
+	const SIRStringAtom atom = pool.find( "aaaaaaa" );
+	EXPECT_TRUE( atom.isValid() );
+	EXPECT_EQ( pool.acquire( atom, leases[0] ), SIR_STRING_OK );
+	leases[0].release();
+	EXPECT_TRUE( pool.shutdown() );
+}
+
+/* Test-only negative-state instrumentation for private invariant guards.
+   This class is the sole friend of the pool and does not alter its ABI. */
+class SIRStringPoolTestAccess
+{
+public:
+	static void testCarveGuards( void )
+	{
+		sirPoolTestAllocator_t allocatorState = {};
+		sirContainerAllocator_t domain = sirPoolTestDomain( &allocatorState );
+		const sirStringPoolConfig_t config = sirPoolTestConfig();
+		SIRStringPool pool;
+		ASSERT_TRUE( pool.initialize( &domain, config ) );
+		uint8_t *pMemory = pool.m_pMemory;
+		const size_t nCapacity = pool.m_nMemoryBytes;
+		const size_t nCursor = pool.m_nCursor;
+		EXPECT_EQ( pool.carve( 1, 0 ), nullptr );
+		EXPECT_EQ( pool.carve( 1, 3 ), nullptr );
+		pool.m_pMemory = nullptr;
+		EXPECT_EQ( pool.carve( 1, 1 ), nullptr );
+		pool.m_pMemory = pMemory;
+		pool.m_nCursor = SIZE_MAX;
+		EXPECT_EQ( pool.carve( 1, 1 ), nullptr );
+		pool.m_nCursor = UINTPTR_MAX - ( uintptr_t )pMemory;
+		EXPECT_EQ( pool.carve( 1, 8 ), nullptr );
+		pool.m_nCursor = nCursor;
+		pool.m_nMemoryBytes = nCursor;
+		EXPECT_EQ( pool.carve( 1, 1 ), nullptr );
+		pool.m_nCursor = nCursor + 1;
+		EXPECT_EQ( pool.carve( 0, 1 ), nullptr );
+		pool.m_nCursor = nCursor;
+		pool.m_nMemoryBytes = nCapacity;
+		EXPECT_TRUE( pool.shutdown() );
+		EXPECT_EQ( allocatorState.nLive, 0u );
+	}
+
+	static void testCookedDecodingGuards( void )
+	{
+		const auto catalog = sirTestCatalog( { { "", true }, { "alpha", false }, { "bravo", true }, { "charlie", true } } );
+		const auto config = sirTestSixTierSmall();
+		SIRStringPool pool;
+		std::vector<uint8_t> span;
+		ASSERT_TRUE( sirTestInitCatalog( &pool, catalog, config, &span ) );
+		uint32_t nWritten = 0;
+		char szText[128] = {};
+		EXPECT_FALSE( pool.decodeCooked( 0, nullptr, sizeof( szText ), nWritten ) );
+		EXPECT_FALSE( pool.decodeCooked( UINT32_MAX, szText, sizeof( szText ), nWritten ) );
+		EXPECT_FALSE( pool.decodeCooked( 1, szText, 1, nWritten ) );
+		EXPECT_TRUE( pool.decodeCooked( 0, szText, sizeof( szText ), nWritten ) );
+		EXPECT_EQ( nWritten, 0u );
+		EXPECT_TRUE( pool.matchesCooked( 0, "", 0 ) );
+		EXPECT_FALSE( pool.matchesCooked( 0, "a", 1 ) );
+		EXPECT_TRUE( pool.matchesCooked( 1, "alpha", 5 ) );
+		EXPECT_FALSE( pool.matchesCooked( 1, "omega", 5 ) );
+		EXPECT_TRUE( pool.matchesCooked( 2, "bravo", 5 ) );
+		EXPECT_FALSE( pool.matchesCooked( 2, "wrong", 5 ) );
+		EXPECT_FALSE( pool.matchesCooked( 2, "b", 1 ) );
+		const SIRStringAtom dynamic = pool.intern( "dynamic" );
+		ASSERT_TRUE( dynamic.isValid() );
+		EXPECT_TRUE( pool.matchesDynamic( pool.m_nCookedNames, "dynamic", 7 ) );
+		EXPECT_FALSE( pool.matchesDynamic( pool.m_nCookedNames, "dynamic", 6 ) );
+		EXPECT_FALSE( pool.matchesDynamic( pool.m_nCookedNames, "missing", 7 ) );
+		EXPECT_FALSE( pool.matchesDynamic( pool.m_nCookedNames, "x", 1 ) );
+		const uint32_t nBlobBytes = pool.m_nBlobBytes;
+		pool.m_nBlobBytes = 0;
+		EXPECT_FALSE( pool.decodeCooked( 2, szText, sizeof( szText ), nWritten ) );
+		pool.m_nBlobBytes = nBlobBytes;
+		uint8_t *pBlob = const_cast<uint8_t *>( pool.m_pBlob );
+		const uint32_t nBravoOffset = ( uint32_t )catalog[48 + 16] | ( ( uint32_t )catalog[48 + 17] << 8 );
+		const uint8_t nOriginalToken = pBlob[nBravoOffset];
+		pBlob[nBravoOffset] = 127;
+		EXPECT_FALSE( pool.decodeCooked( 2, szText, sizeof( szText ), nWritten ) );
+		pBlob[nBravoOffset] = nOriginalToken;
+		EXPECT_TRUE( pool.decodeCooked( 2, szText, sizeof( szText ), nWritten ) );
+		EXPECT_STREQ( szText, "bravo" );
+		EXPECT_EQ( pool.makeAtom( UINT32_MAX ).getId(), 0u );
+		EXPECT_TRUE( pool.makeAtom( 0 ).isValid() );
+		const uint32_t nBuckets = pool.m_nHashBuckets;
+		pool.m_nHashBuckets = 0;
+		EXPECT_EQ( pool.findLocalFlat( "alpha", 5, SIRStringPool::hashString( "alpha", 5 ) ), 0u );
+		pool.m_nHashBuckets = nBuckets;
+		EXPECT_TRUE( pool.shutdown() );
+	}
+
+	static void testHotHintGuards( void )
+	{
+		const auto catalog = sirTestCatalog( { { "bravo", true }, { "charlie", true } } );
+		const auto config = sirTestSixTierSmall();
+		SIRStringPool pool;
+		std::vector<uint8_t> span;
+		ASSERT_TRUE( sirTestInitCatalog( &pool, catalog, config, &span ) );
+		SIRStringLease first;
+		const SIRStringAtom atom = pool.atomFromCookedOrdinal( 0, sirTestCatalogCorpusHash( catalog ) );
+		EXPECT_FALSE( pool.tryAcquireHot( 0, atom.getId(), first ) );
+		EXPECT_EQ( pool.acquire( atom, first ), SIR_STRING_OK );
+		SIRStringLease second;
+		EXPECT_FALSE( pool.tryAcquireHot( 0, atom.getId() + 1, second ) );
+		EXPECT_FALSE( pool.tryAcquireHot( 5, atom.getId(), second ) );
+		const uint32_t nHot = pool.m_pCookedHot[0].load( std::memory_order_relaxed );
+		ASSERT_TRUE( nHot != 0 );
+		pool.m_pCookedHot[0].store( pool.m_nCacheSlots + 1, std::memory_order_relaxed );
+		EXPECT_FALSE( pool.tryAcquireHot( 0, atom.getId(), second ) );
+		pool.m_pCookedHot[0].store( 0, std::memory_order_relaxed );
+		EXPECT_FALSE( pool.tryAcquireHot( 0, atom.getId(), second ) );
+		pool.m_pCookedHot[0].store( nHot, std::memory_order_relaxed );
+		EXPECT_TRUE( pool.tryAcquireHot( 0, atom.getId(), second ) );
+		EXPECT_EQ( pool.getStats().nPinnedLeases, 2u );
+		second.release();
+		first.release();
+		EXPECT_TRUE( pool.shutdown() );
+	}
+
+	static void testRawLoaderGuards( void )
+	{
+		const auto good = sirTestCatalog( { { "alpha", false }, { "beta", true } } );
+		const auto config = sirPoolTestConfig();
+		for ( uint32_t iCase = 0; iCase < 11; ++iCase ) {
+			SIRStringPool pool;
+			std::vector<uint8_t> span;
+			ASSERT_TRUE( sirTestInitCatalog( &pool, good, config, &span ) );
+			auto corrupted = good;
+			switch ( iCase ) {
+			case 0:
+				corrupted[0] = 'X';
+				break;
+			case 1:
+				corrupted[4] = 2;
+				break;
+			case 2:
+				corrupted[6] = 1;
+				break;
+			case 3:
+				sirTestStore32( corrupted, 44, 47 );
+				break;
+			case 4:
+				sirTestStore32( corrupted, 8, 1 );
+				break;
+			case 5:
+				sirTestStore32( corrupted, 12, 0 );
+				break;
+			case 6:
+				sirTestStore32( corrupted, 16, 1 );
+				break;
+			case 7:
+				sirTestStore32( corrupted, 20, 1 );
+				break;
+			case 8:
+				sirTestStore32( corrupted, 24, 0 );
+				break;
+			case 9:
+				sirTestStore64( corrupted, 28, 0 );
+				break;
+			case 10:
+				sirTestStore64( corrupted, 36, 0 );
+				break;
+			}
+			EXPECT_FALSE( pool.loadCatalog( corrupted.data(), corrupted.size() ) );
+			EXPECT_TRUE( pool.shutdown() );
+		}
+	}
+
+	static void testCatalogRecordCorruption( void )
+	{
+		const auto good = sirTestCatalog( { { "alpha", false }, { "bravo", true } } );
+		const auto config = sirPoolTestConfig();
+		for ( uint32_t iCase = 0; iCase < 15; ++iCase ) {
+			SIRStringPool pool;
+			std::vector<uint8_t> span;
+			ASSERT_TRUE( sirTestInitCatalog( &pool, good, config, &span ) );
+			auto bad = good;
+			const uint32_t nBlobStart = 48u + 16u;
+			switch ( iCase ) {
+			case 0:
+				sirTestStore16( bad, 48 + 4, 1025 );
+				break;
+			case 1:
+				sirTestStore16( bad, 48 + 6, 0x4005u );
+				break;
+			case 2:
+				sirTestStore16( bad, 48 + 6, 0xc005u );
+				break;
+			case 3:
+				sirTestStore32( bad, 48, 10000u );
+				break;
+			case 4:
+				sirTestStore16( bad, 48 + 6, 0xbfffu );
+				break;
+			case 5:
+				sirTestStore16( bad, 48 + 6, 0x8004u );
+				break;
+			case 6:
+				sirTestStore32( bad, 48, ( uint32_t )( bad.size() - nBlobStart - 5 ) );
+				break;
+			case 7:
+				bad[nBlobStart + 5] = 'X';
+				break;
+			case 8:
+				sirTestStore16( bad, 48 + 8 + 4, 6 );
+				break;
+			case 9:
+				bad[nBlobStart] = 0xff;
+				break;
+			case 10:
+				memcpy( bad.data() + nBlobStart, "zzzzz", 5 );
+				break;
+			case 11:
+				memcpy( bad.data() + nBlobStart, "bravo", 5 );
+				break;
+			case 12:
+				sirTestStore64( bad, 36, 0u );
+				break;
+			case 13:
+				sirTestStore16( bad, 48 + 8 + 6, 1 );
+				break;
+			case 14:
+				sirTestStore16( bad, 48 + 8 + 6, 0x8005u );
+				break;
+			}
+			sirTestRehashCatalog( bad );
+			EXPECT_FALSE( pool.loadCatalog( bad.data(), bad.size() ) );
+			EXPECT_TRUE( pool.shutdown() );
+		}
+	}
+
+	static void testDecodeCorruption( void )
+	{
+		const auto good = sirTestCatalog( { { "bravo", true }, { "charlie", true } } );
+		const auto config = sirTestSixTierSmall();
+		SIRStringPool pool;
+		std::vector<uint8_t> span;
+		ASSERT_TRUE( sirTestInitCatalog( &pool, good, config, &span ) );
+		uint8_t *pEntry = ( uint8_t * )pool.m_pCooked;
+		uint8_t saved[8] = {};
+		memcpy( saved, pEntry, sizeof( saved ) );
+		uint8_t *pBlob = const_cast<uint8_t *>( pool.m_pBlob );
+		const uint8_t savedToken = pBlob[0];
+		const uint8_t savedDistance = pBlob[1];
+		char szText[128] = {};
+		uint32_t nWritten = 0;
+		uint32_t nBadOffset = pool.m_nBlobBytes + 1;
+		memcpy( pEntry, &nBadOffset, sizeof( nBadOffset ) );
+		EXPECT_FALSE( pool.decodeCooked( 0, szText, sizeof( szText ), nWritten ) );
+		memcpy( pEntry, saved, sizeof( saved ) );
+		nBadOffset = pool.m_nBlobBytes;
+		memcpy( pEntry, &nBadOffset, sizeof( nBadOffset ) );
+		EXPECT_FALSE( pool.decodeCooked( 0, szText, sizeof( szText ), nWritten ) );
+		memcpy( pEntry, saved, sizeof( saved ) );
+		uint16_t nBadFlags = 0x4000u;
+		memcpy( pEntry + 6, &nBadFlags, sizeof( nBadFlags ) );
+		EXPECT_FALSE( pool.decodeCooked( 0, szText, sizeof( szText ), nWritten ) );
+		memcpy( pEntry, saved, sizeof( saved ) );
+		pBlob[0] = 128;
+		pBlob[1] = 0;
+		EXPECT_FALSE( pool.decodeCooked( 0, szText, sizeof( szText ), nWritten ) );
+		pBlob[1] = 1;
+		EXPECT_FALSE( pool.decodeCooked( 0, szText, sizeof( szText ), nWritten ) );
+		uint16_t nBadLength = 2;
+		memcpy( pEntry + 4, &nBadLength, sizeof( nBadLength ) );
+		EXPECT_FALSE( pool.decodeCooked( 0, szText, sizeof( szText ), nWritten ) );
+		memcpy( pEntry, saved, sizeof( saved ) );
+		nBadFlags = 1;
+		memcpy( pEntry + 6, &nBadFlags, sizeof( nBadFlags ) );
+		EXPECT_FALSE( pool.decodeCooked( 0, szText, sizeof( szText ), nWritten ) );
+		pBlob[0] = 1;
+		EXPECT_FALSE( pool.decodeCooked( 0, szText, sizeof( szText ), nWritten ) );
+		pBlob[0] = 0;
+		EXPECT_FALSE( pool.decodeCooked( 0, szText, sizeof( szText ), nWritten ) );
+		pBlob[0] = savedToken;
+		pBlob[1] = savedDistance;
+		memcpy( pEntry, saved, sizeof( saved ) );
+		const uint32_t nBase = pool.m_nBaseId;
+		pool.m_nBaseId = 0;
+		EXPECT_TRUE( pool.matchesCooked( 0, "bravo", 5 ) );
+		EXPECT_FALSE( pool.matchesCooked( 0, "other", 5 ) );
+		pBlob[0] = 127;
+		EXPECT_FALSE( pool.matchesCooked( 0, "bravo", 5 ) );
+		pBlob[0] = savedToken;
+		pool.m_nBaseId = nBase;
+		EXPECT_TRUE( pool.shutdown() );
+	}
+
+	static void testTierGenerationWrapAndStaleSlot( void )
+	{
+		const auto good = sirTestCatalog( { { "aaaaaaa", true }, { "bbbbbbb", true }, { "ccccccc", true } } );
+		auto config = sirTestSixTierSmall();
+		for ( uint32_t iTier = 0; iTier < SIR_STRING_CACHE_TIER_COUNT; ++iTier ) {
+			config.nTierSlots[iTier] = iTier == 0 ? 1 : 0;
+			config.nInitialTierSlots[iTier] = iTier == 0 ? 1 : 0;
+		}
+		SIRStringPool pool;
+		std::vector<uint8_t> span;
+		ASSERT_TRUE( sirTestInitCatalog( &pool, good, config, &span ) );
+		SIRStringLease lease;
+		const auto first = pool.atomFromCookedOrdinal( 0, sirTestCatalogCorpusHash( good ) );
+		const auto second = pool.atomFromCookedOrdinal( 1, sirTestCatalogCorpusHash( good ) );
+		EXPECT_EQ( pool.acquire( first, lease ), SIR_STRING_OK );
+		lease.release();
+		static_assert( sizeof( std::atomic<uint32_t> ) == sizeof( uint32_t ), "test fixture requires 32-bit atomics" );
+		uint8_t *pSlotBytes = ( uint8_t * )pool.m_pCache;
+		const uint32_t nWrap = UINT32_MAX;
+		memcpy( pSlotBytes + 8, &nWrap, sizeof( nWrap ) );
+		EXPECT_EQ( pool.acquire( second, lease ), SIR_STRING_OK );
+		uint32_t nGeneration = 0;
+		memcpy( &nGeneration, pSlotBytes + 8, sizeof( nGeneration ) );
+		EXPECT_EQ( nGeneration, 1u );
+		lease.release();
+		EXPECT_EQ( pool.m_pCookedHot[0].load(), 0u );
+		EXPECT_TRUE( pool.shutdown() );
+	}
+
+	static void testTextRefAndConfigurationEdges( void )
+	{
+		const auto good = sirTestCatalog( { { "bravo", true } } );
+		const auto config = sirPoolTestConfig();
+		SIRStringPool pool;
+		std::vector<uint8_t> span;
+		ASSERT_TRUE( sirTestInitCatalog( &pool, good, config, &span ) );
+		SIRStringTextRef reference;
+		const auto atom = pool.find( "bravo" );
+		const auto missing = pool.intern( "additional" );
+		const SIRStringAtom invalid( UINT32_MAX );
+		reference.set( &pool, invalid );
+		const char *pText = nullptr;
+		uint32_t nBytes = 0;
+		EXPECT_EQ( reference.get( pText, nBytes ), SIR_STRING_INVALID_ATOM );
+		EXPECT_EQ( pText, nullptr );
+		reference.set( &pool, atom );
+		reference.set( &pool, atom );
+		EXPECT_EQ( reference.get( pText, nBytes ), SIR_STRING_OK );
+		EXPECT_STREQ( pText, "bravo" );
+		reference.release();
+		EXPECT_TRUE( missing.isValid() );
+		EXPECT_TRUE( pool.shutdown() );
+		auto invalidConfig = SIRStringPool::defaultConfig();
+		invalidConfig.nTierBytes[5] = 1000;
+		EXPECT_EQ( SIRStringPool::requiredBytes( invalidConfig, 0 ), 0u );
+	}
+
+	static void testRawEmptyAndDirectDecodeBranches( void )
+	{
+		const auto catalog = sirTestCatalog( { { "", false }, { "alpha", false }, { "bravo", true } } );
+		const auto config = sirPoolTestConfig();
+		SIRStringPool pool;
+		std::vector<uint8_t> span;
+		ASSERT_TRUE( sirTestInitCatalog( &pool, catalog, config, &span ) );
+		const auto empty = pool.atomFromCookedOrdinal( 0, sirTestCatalogCorpusHash( catalog ) );
+		const auto raw = pool.atomFromCookedOrdinal( 1, sirTestCatalogCorpusHash( catalog ) );
+		const auto cooked = pool.atomFromCookedOrdinal( 2, sirTestCatalogCorpusHash( catalog ) );
+		EXPECT_TRUE( pool.matchesCooked( 0, "", 0 ) );
+		EXPECT_FALSE( pool.matchesCooked( 0, "X", 1 ) );
+		EXPECT_TRUE( pool.matchesCooked( 1, "alpha", 5 ) );
+		EXPECT_FALSE( pool.matchesCooked( 1, "other", 5 ) );
+		char szText[64] = {};
+		uint32_t nWritten = 0;
+		EXPECT_EQ( pool.decodeInto( empty, szText, sizeof( szText ), nWritten ), SIR_STRING_OK );
+		EXPECT_EQ( nWritten, 0u );
+		EXPECT_EQ( pool.decodeInto( raw, szText, sizeof( szText ), nWritten ), SIR_STRING_OK );
+		EXPECT_STREQ( szText, "alpha" );
+		EXPECT_EQ( pool.decodeInto( cooked, szText, sizeof( szText ), nWritten ), SIR_STRING_OK );
+		EXPECT_STREQ( szText, "bravo" );
+		EXPECT_TRUE( pool.shutdown() );
+		SIRStringPool dynamicPool;
+		std::vector<uint8_t> dynamicSpan( SIRStringPool::requiredBytes( config, 0 ) );
+		ASSERT_TRUE( dynamicPool.initialize( { dynamicSpan.data(), dynamicSpan.size(), nullptr, 0 }, config ) );
+		const auto dynamicEmpty = dynamicPool.intern( "", 0 );
+		EXPECT_TRUE( dynamicEmpty.isValid() );
+		EXPECT_TRUE( dynamicPool.matchesDynamic( 0, "", 0 ) );
+		EXPECT_FALSE( dynamicPool.matchesDynamic( 0, "a", 1 ) );
+		EXPECT_EQ( dynamicPool.decodeInto( dynamicEmpty, szText, sizeof( szText ), nWritten ), SIR_STRING_OK );
+		EXPECT_EQ( nWritten, 0u );
+		EXPECT_TRUE( dynamicPool.shutdown() );
+	}
+
+	static void testTierHotAndPinnedErrorBranches( void )
+	{
+		const auto catalog = sirTestCatalog( { { "aaaaaaa", true }, { "bbbbbbb", true } } );
+		auto config = sirTestSixTierSmall();
+		for ( uint32_t iTier = 0; iTier < SIR_STRING_CACHE_TIER_COUNT; ++iTier ) {
+			config.nTierSlots[iTier] = iTier == 0 ? 1 : 0;
+			config.nInitialTierSlots[iTier] = iTier == 0 ? 1 : 0;
+		}
+		SIRStringPool pool;
+		std::vector<uint8_t> span;
+		ASSERT_TRUE( sirTestInitCatalog( &pool, catalog, config, &span ) );
+		const auto first = pool.atomFromCookedOrdinal( 0, sirTestCatalogCorpusHash( catalog ) );
+		const auto second = pool.atomFromCookedOrdinal( 1, sirTestCatalogCorpusHash( catalog ) );
+		SIRStringLease lease;
+		EXPECT_EQ( pool.acquire( first, lease ), SIR_STRING_OK );
+		lease.release();
+		EXPECT_EQ( pool.acquireTiered( 0, first, lease ), SIR_STRING_OK );
+		lease.release();
+		uint8_t *pSlotBytes = ( uint8_t * )pool.m_pCache;
+		const uint32_t nForgedDynamicAtom = pool.m_nBaseId + pool.m_nCookedNames;
+		std::atomic<uint32_t> *pAtomId = ( std::atomic<uint32_t> * )( pSlotBytes + sizeof( std::atomic<uint32_t> ) );
+		pAtomId->store( nForgedDynamicAtom, std::memory_order_relaxed );
+		EXPECT_EQ( pool.acquireTiered( 1, second, lease ), SIR_STRING_OK );
+		lease.release();
+		EXPECT_TRUE( pool.shutdown() );
+		SIRStringPool rejected;
+		ASSERT_TRUE( sirTestInitCatalog( &rejected, catalog, config, &span ) );
+		std::atomic<uint32_t> *pPin = ( std::atomic<uint32_t> * )rejected.m_pCache;
+		pPin->store( 1, std::memory_order_relaxed );
+		EXPECT_EQ( rejected.acquireTiered( 0, rejected.atomFromCookedOrdinal( 0, sirTestCatalogCorpusHash( catalog ) ), lease ),
+		           SIR_STRING_ALL_SLOTS_PINNED );
+		pPin->store( 0, std::memory_order_relaxed );
+		EXPECT_TRUE( rejected.shutdown() );
+	}
+
+	static void testLegacyScanBranches( void )
+	{
+		const auto catalog = sirTestCatalog( { { "aaaaaaa", true }, { "bbbbbbb", true }, { "ccccccc", true } } );
+		auto config = sirPoolTestConfig();
+		config.nShortSlots = 3;
+		config.nLongSlots = 0;
+		config.nInitialShortSlots = 1;
+		SIRStringPool pool;
+		std::vector<uint8_t> span;
+		ASSERT_TRUE( sirTestInitCatalog( &pool, catalog, config, &span ) );
+		const uint64_t nHash = sirTestCatalogCorpusHash( catalog );
+		SIRStringLease lease;
+		EXPECT_EQ( pool.acquire( pool.atomFromCookedOrdinal( 0, nHash ), lease ), SIR_STRING_OK );
+		lease.release();
+		pool.m_nNextUnusedShort = pool.m_nShortSlots;
+		pool.m_nActiveShortSlots = 1;
+		pool.m_nCacheCursor = 1;
+		EXPECT_EQ( pool.acquire( pool.atomFromCookedOrdinal( 1, nHash ), lease ), SIR_STRING_OK );
+		lease.release();
+		EXPECT_TRUE( pool.shutdown() );
+		SIRStringPool generationPool;
+		config.nShortSlots = 1;
+		config.nInitialShortSlots = 1;
+		ASSERT_TRUE( sirTestInitCatalog( &generationPool, catalog, config, &span ) );
+		EXPECT_EQ( generationPool.acquire( generationPool.atomFromCookedOrdinal( 0, nHash ), lease ), SIR_STRING_OK );
+		lease.release();
+		uint8_t *pSlotBytes = ( uint8_t * )generationPool.m_pCache;
+		const uint32_t nWrap = UINT32_MAX;
+		memcpy( pSlotBytes + 8, &nWrap, sizeof( nWrap ) );
+		EXPECT_EQ( generationPool.acquire( generationPool.atomFromCookedOrdinal( 1, nHash ), lease ), SIR_STRING_OK );
+		uint32_t nGeneration = 0;
+		memcpy( &nGeneration, pSlotBytes + 8, sizeof( nGeneration ) );
+		EXPECT_EQ( nGeneration, 1u );
+		lease.release();
+		EXPECT_TRUE( generationPool.shutdown() );
+	}
+
+	static void testMalformedFallbackAndFullTable( void )
+	{
+		const auto catalog = sirTestCatalog( { { "bravo", true }, { "charlie", true } } );
+		auto config = sirPoolTestConfig();
+		config.nShortSlots = 1;
+		config.nLongSlots = 0;
+		config.nShortBytes = 16;
+		SIRStringPool pool;
+		std::vector<uint8_t> span;
+		ASSERT_TRUE( sirTestInitCatalog( &pool, catalog, config, &span ) );
+		const uint64_t nHash = sirTestCatalogCorpusHash( catalog );
+		const auto first = pool.atomFromCookedOrdinal( 0, nHash );
+		const auto second = pool.atomFromCookedOrdinal( 1, nHash );
+		SIRStringLease lease;
+		EXPECT_EQ( pool.acquire( first, lease ), SIR_STRING_OK );
+		char szText[32] = {};
+		uint32_t nWritten = 0;
+		EXPECT_EQ( pool.decodeInto( second, szText, sizeof( szText ), nWritten ), SIR_STRING_OK );
+		EXPECT_STREQ( szText, "charlie" );
+		uint8_t *pBlob = const_cast<uint8_t *>( pool.m_pBlob );
+		const uint8_t nOld = pBlob[6];
+		pBlob[6] = 127;
+		EXPECT_EQ( pool.decodeInto( second, szText, sizeof( szText ), nWritten ), SIR_STRING_CORRUPT_CATALOG );
+		pBlob[6] = nOld;
+		lease.release();
+		EXPECT_TRUE( pool.shutdown() );
+	}
+
+	static void testRemainingDefensiveBoundaries( void )
+	{
+		SIRStringPool uninitialized;
+		EXPECT_EQ( uninitialized.getStats().nCachedStrings, 0u );
+		const auto catalog = sirTestCatalog( { { "bravo", true } } );
+		auto config = sirTestSixTierSmall();
+		for ( uint32_t iTier = 0; iTier < SIR_STRING_CACHE_TIER_COUNT; ++iTier ) {
+			config.nTierSlots[iTier] = iTier == 0 ? 1 : 0;
+			config.nInitialTierSlots[iTier] = iTier == 0 ? 1 : 0;
+		}
+		SIRStringPool pool;
+		std::vector<uint8_t> span;
+		ASSERT_TRUE( sirTestInitCatalog( &pool, catalog, config, &span ) );
+		const auto atom = pool.atomFromCookedOrdinal( 0, sirTestCatalogCorpusHash( catalog ) );
+		SIRStringLease lease;
+		uint32_t szTierBytes[SIR_STRING_CACHE_TIER_COUNT] = {};
+		for ( uint32_t iTier = 0; iTier < SIR_STRING_CACHE_TIER_COUNT; ++iTier ) {
+			szTierBytes[iTier] = pool.m_nTierBytes[iTier];
+			pool.m_nTierBytes[iTier] = 1;
+		}
+		EXPECT_EQ( pool.acquireTiered( 0, atom, lease ), SIR_STRING_OUTPUT_TOO_SMALL );
+		for ( uint32_t iTier = 0; iTier < SIR_STRING_CACHE_TIER_COUNT; ++iTier ) {
+			pool.m_nTierBytes[iTier] = szTierBytes[iTier];
+		}
+		EXPECT_EQ( pool.acquire( atom, lease ), SIR_STRING_OK );
+		lease.release();
+		const uint32_t nBase = pool.m_nBaseId;
+		pool.m_nBaseId = 0;
+		EXPECT_EQ( pool.acquireTiered( 0, atom, lease ), SIR_STRING_OK );
+		lease.release();
+		pool.m_nBaseId = nBase;
+		const uint32_t nOriginalNames = pool.m_nNames.load( std::memory_order_relaxed );
+		pool.m_nNames.store( pool.m_nMaxNames, std::memory_order_relaxed );
+		EXPECT_FALSE( pool.intern( "new-descriptor" ).isValid() );
+		pool.m_nNames.store( nOriginalNames, std::memory_order_relaxed );
+		const uint32_t nTextCapacity = pool.m_nDynamicTextCapacity;
+		pool.m_nDynamicTextCapacity = 0;
+		EXPECT_FALSE( pool.intern( "new-descriptor" ).isValid() );
+		pool.m_nDynamicTextCapacity = nTextCapacity;
+		EXPECT_TRUE( pool.shutdown() );
+		auto legacy = sirPoolTestConfig();
+		legacy.nShortSlots = 0;
+		legacy.nLongSlots = 0;
+		SIRStringPool oldPool;
+		ASSERT_TRUE( sirTestInitCatalog( &oldPool, catalog, legacy, &span ) );
+		const uint32_t nLongBytes = oldPool.m_nLongBytes;
+		oldPool.m_nLongBytes = 1;
+		EXPECT_EQ( oldPool.acquire( oldPool.atomFromCookedOrdinal( 0, sirTestCatalogCorpusHash( catalog ) ), lease ),
+		           SIR_STRING_OUTPUT_TOO_SMALL );
+		oldPool.m_nLongBytes = nLongBytes;
+		EXPECT_TRUE( oldPool.shutdown() );
+	}
+
+protected:
+private:
+};
+
+TEST( SIRStringPool, CoverageFaultInjectedInternalGuards )
+{
+	SIRStringPoolTestAccess::testCarveGuards();
+	SIRStringPoolTestAccess::testCookedDecodingGuards();
+	SIRStringPoolTestAccess::testHotHintGuards();
+	SIRStringPoolTestAccess::testRawLoaderGuards();
+	SIRStringPoolTestAccess::testCatalogRecordCorruption();
+	SIRStringPoolTestAccess::testDecodeCorruption();
+	SIRStringPoolTestAccess::testTierGenerationWrapAndStaleSlot();
+	SIRStringPoolTestAccess::testTextRefAndConfigurationEdges();
+	SIRStringPoolTestAccess::testRawEmptyAndDirectDecodeBranches();
+	SIRStringPoolTestAccess::testTierHotAndPinnedErrorBranches();
+	SIRStringPoolTestAccess::testLegacyScanBranches();
+	SIRStringPoolTestAccess::testMalformedFallbackAndFullTable();
+	SIRStringPoolTestAccess::testRemainingDefensiveBoundaries();
+}

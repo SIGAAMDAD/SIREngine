@@ -338,6 +338,7 @@ public:
 protected:
 private:
 	friend class SIRStringLease;
+	friend class SIRStringPoolTestAccess;
 
 	static uint16_t readU16( const uint8_t *pBytes ) noexcept;
 	static uint32_t readU32( const uint8_t *pBytes ) noexcept;
