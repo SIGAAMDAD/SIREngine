@@ -4,6 +4,10 @@ SIREngine MPLv2 Source Code
 Copyright (C) 2023-2027 Noah Van Til
 
 This Source Code Form is subject to the terms of the Mozilla Public
+CMake Warning at Build/CMake/CIFormat.cmake:34 (message):
+  Formatting error: Source/Renderer/Drivers/D3D12/SIRD3D12Driver.cpp
+
+
 License, v2. If a copy of the MPL was not distributed with this
 file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
@@ -32,41 +36,10 @@ static sirGraphicsResult_t sirD3D12FindAdapter( uint32_t nAdapterIndex, sirGraph
 	if ( FAILED( CreateDXGIFactory2( 0, IID_PPV_ARGS( pFactory.GetAddressOf() ) ) ) ) {
 		return SIR_GRAPHICS_DRIVER_ERROR;
 	}
-	Microsoft::WRL::ComPtr<IDXGIAdapter4> pHardware;
-	for ( UINT iAdapter = 0; iAdapter < 256; ++iAdapter ) {
-		Microsoft::WRL::ComPtr<IDXGIAdapter4> pCandidate;
-		const HRESULT nEnum = pFactory->EnumAdapterByGpuPreference( iAdapter, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE,
-		                                                            IID_PPV_ARGS( pCandidate.GetAddressOf() ) );
-		if ( nEnum == DXGI_ERROR_NOT_FOUND ) {
-			break;
-		}
-		if ( FAILED( nEnum ) ) {
-			return SIR_GRAPHICS_DRIVER_ERROR;
-		}
-		DXGI_ADAPTER_DESC3 description = {};
-		if ( FAILED( pCandidate->GetDesc3( &description ) ) || ( description.Flags & DXGI_ADAPTER_FLAG3_SOFTWARE ) != 0 ) {
-			continue;
-		}
-		Microsoft::WRL::ComPtr<ID3D12Device> pProbe;
-		if ( SUCCEEDED( D3D12CreateDevice( pCandidate.Get(), D3D_FEATURE_LEVEL_12_0, IID_PPV_ARGS( pProbe.GetAddressOf() ) ) ) ) {
-			pHardware = pCandidate;
-			break;
-		}
-	}
-	const bool bHasHardware = pHardware != nullptr;
 	Microsoft::WRL::ComPtr<IDXGIAdapter4> pSelected;
-	if ( bHasHardware && nAdapterIndex == 0 ) {
-		pSelected = pHardware;
-	} else if ( nAdapterIndex == ( bHasHardware ? 1U : 0U ) ) {
-		if ( FAILED( pFactory->EnumWarpAdapter( IID_PPV_ARGS( pSelected.GetAddressOf() ) ) ) ) {
-			return SIR_GRAPHICS_UNSUPPORTED;
-		}
-		Microsoft::WRL::ComPtr<ID3D12Device> pProbe;
-		if ( FAILED( D3D12CreateDevice( pSelected.Get(), D3D_FEATURE_LEVEL_12_0, IID_PPV_ARGS( pProbe.GetAddressOf() ) ) ) ) {
-			return SIR_GRAPHICS_UNSUPPORTED;
-		}
-	} else {
-		return SIR_GRAPHICS_UNSUPPORTED;
+	const HRESULT nSelected = sirD3D12EnumerateAdapters( pFactory.Get(), nAdapterIndex, pSelected.GetAddressOf(), nullptr );
+	if ( FAILED( nSelected ) ) {
+		return nSelected == DXGI_ERROR_NOT_FOUND ? SIR_GRAPHICS_UNSUPPORTED : SIR_GRAPHICS_DRIVER_ERROR;
 	}
 	DXGI_ADAPTER_DESC3 desc = {};
 	if ( FAILED( pSelected->GetDesc3( &desc ) ) ) {
@@ -124,7 +97,7 @@ sirGraphicsResult_t SIRD3D12RenderingDevice::initialize( bool bSoftware, const s
 	diagnostics.bEnableDebugLayer = desc.bEnableApiValidation;
 	diagnostics.bEnableGpuValidation = desc.bEnableGpuValidation;
 	diagnostics.bEnableDred = desc.bEnableDeviceFaultDiagnostics;
-	if ( !m_Native.initialize( bSoftware, config, desc.pCpuHeap, diagnostics ) ) {
+	if ( !m_Native.initialize( desc.nAdapterIndex, config, desc.pCpuHeap, diagnostics ) ) {
 		return m_Native.getLastError() == E_NOTIMPL ? SIR_GRAPHICS_UNSUPPORTED : SIR_GRAPHICS_DRIVER_ERROR;
 	}
 	m_bSoftware = bSoftware;
@@ -174,6 +147,13 @@ sirGraphicsResult_t SIRD3D12RenderingDevice::queryNativeDiagnostics( sirD3D12Dia
 	return pSnapshot == nullptr                     ? SIR_GRAPHICS_INVALID_ARGUMENT
 	       : m_Native.queryDiagnostics( pSnapshot ) ? SIR_GRAPHICS_SUCCESS
 	                                                : SIR_GRAPHICS_DEVICE_LOST;
+}
+
+sirGraphicsResult_t SIRD3D12RenderingDevice::queryNativeAdapterInfo( sirD3D12AdapterInfo_t *pInfo ) const noexcept
+{
+	return pInfo == nullptr                     ? SIR_GRAPHICS_INVALID_ARGUMENT
+	       : m_Native.queryAdapterInfo( pInfo ) ? SIR_GRAPHICS_SUCCESS
+	                                            : SIR_GRAPHICS_DEVICE_LOST;
 }
 
 sirGraphicsResult_t SIRD3D12RenderingDevice::queryCapabilities( sirGraphicsCapabilities_t *pCapabilities ) const noexcept
@@ -443,13 +423,12 @@ sirGraphicsResult_t SIRD3D12Driver::getAdapterCount( uint32_t *pCount ) const no
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	*pCount = 0;
-	sirGraphicsAdapterInfo_t info = {};
-	sirGraphicsResult_t eFirst = sirD3D12FindAdapter( 0, &info );
-	if ( eFirst != SIR_GRAPHICS_SUCCESS ) {
-		return eFirst;
+	Microsoft::WRL::ComPtr<IDXGIFactory6> pFactory;
+	if ( FAILED( CreateDXGIFactory2( 0, IID_PPV_ARGS( pFactory.GetAddressOf() ) ) ) ) {
+		return SIR_GRAPHICS_DRIVER_ERROR;
 	}
-	*pCount = info.bSoftwareAdapter ? 1U : 2U;
-	return SIR_GRAPHICS_SUCCESS;
+	const HRESULT nResult = sirD3D12EnumerateAdapters( pFactory.Get(), UINT32_MAX, nullptr, pCount );
+	return SUCCEEDED( nResult ) ? SIR_GRAPHICS_SUCCESS : SIR_GRAPHICS_DRIVER_ERROR;
 }
 sirGraphicsResult_t SIRD3D12Driver::queryAdapter( uint32_t nAdapterIndex, sirGraphicsAdapterInfo_t *pInfo ) const noexcept
 {

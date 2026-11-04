@@ -27,25 +27,35 @@ int main( void )
 	}
 
 	uint32_t nAdapters = 0;
-	if ( driver.getAdapterCount( &nAdapters ) != SIR_GRAPHICS_SUCCESS || nAdapters == 0 || nAdapters > 2 ) {
-
+	if ( driver.getAdapterCount( &nAdapters ) != SIR_GRAPHICS_SUCCESS || nAdapters == 0 || nAdapters > 257 ) {
 		return 2;
 	}
 	uint32_t nSoftwareIndex = UINT32_MAX;
+	uint64_t szLuids[257] = {};
 	for ( uint32_t iAdapter = 0; iAdapter < nAdapters; ++iAdapter ) {
 		sirGraphicsAdapterInfo_t info = {};
 		if ( driver.queryAdapter( iAdapter, &info ) != SIR_GRAPHICS_SUCCESS || info.nAdapterIndex != iAdapter ||
 		     info.nApiVersion.nMajor != 12 ) {
 			return 3;
 		}
+		for ( uint32_t iPrevious = 0; iPrevious < iAdapter; ++iPrevious ) {
+			if ( szLuids[iPrevious] == info.nAdapterLuid ) {
+				return 4;
+			}
+		}
+		szLuids[iAdapter] = info.nAdapterLuid;
 		if ( info.bSoftwareAdapter ) {
+			if ( iAdapter != nAdapters - 1 || nSoftwareIndex != UINT32_MAX ) {
+				return 4;
+			}
 			nSoftwareIndex = iAdapter;
 		}
 	}
-	if ( nSoftwareIndex == UINT32_MAX ) {
+	sirGraphicsAdapterInfo_t invalid = {};
+	if ( nSoftwareIndex != nAdapters - 1 || driver.queryAdapter( nAdapters, &invalid ) != SIR_GRAPHICS_UNSUPPORTED ||
+	     driver.queryAdapter( 0, nullptr ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
 		return 4;
 	}
-
 	sirGraphicsSelection_t selection = {};
 	selection.eBackend = SIR_GRAPHICS_BACKEND_D3D12;
 	selection.nMinimumApiVersion = { 12, 0, 0 };
@@ -67,6 +77,13 @@ int main( void )
 	SIRRenderingDevice *pDevice = nullptr;
 	if ( driver.createDevice( config, &pDevice ) != SIR_GRAPHICS_SUCCESS || pDevice == nullptr ) {
 		return 6;
+	}
+	sirD3D12AdapterInfo_t active = {};
+	sirGraphicsAdapterInfo_t expected = {};
+	if ( driver.queryAdapter( nSoftwareIndex, &expected ) != SIR_GRAPHICS_SUCCESS ||
+	     static_cast<SIRD3D12RenderingDevice *>( pDevice )->queryNativeAdapterInfo( &active ) != SIR_GRAPHICS_SUCCESS ||
+	     ( uint64_t )active.nAdapterLuid != expected.nAdapterLuid || !active.bSoftware ) {
+		return 28;
 	}
 	SIRRenderingDevice *pDuplicate = pDevice;
 	if ( driver.createDevice( config, &pDuplicate ) != SIR_GRAPHICS_BUSY || pDuplicate != nullptr ) {
@@ -234,6 +251,25 @@ int main( void )
 	if ( driver.createDevice( config, &pDevice ) != SIR_GRAPHICS_SUCCESS || pDevice == nullptr ||
 	     pDevice->getDeviceGeneration() == capabilities.nDeviceGeneration || driver.destroyDevice( pDevice ) != SIR_GRAPHICS_SUCCESS ) {
 		return 13;
+	}
+	// Physical GPU runners verify that each reported index opens the matching native LUID.
+	config.bAllowSoftware = false;
+	for ( uint32_t iAdapter = 0; iAdapter < nSoftwareIndex; ++iAdapter ) {
+		sirGraphicsAdapterInfo_t reported = {};
+		if ( driver.queryAdapter( iAdapter, &reported ) != SIR_GRAPHICS_SUCCESS || reported.bSoftwareAdapter ) {
+			return 29;
+		}
+		config.nAdapterIndex = iAdapter;
+		pDevice = nullptr;
+		if ( driver.createDevice( config, &pDevice ) != SIR_GRAPHICS_SUCCESS || pDevice == nullptr ) {
+			return 30;
+		}
+		sirD3D12AdapterInfo_t native = {};
+		const bool bMatch = static_cast<SIRD3D12RenderingDevice *>( pDevice )->queryNativeAdapterInfo( &native ) == SIR_GRAPHICS_SUCCESS &&
+		                    ( uint64_t )native.nAdapterLuid == reported.nAdapterLuid && !native.bSoftware;
+		if ( driver.destroyDevice( pDevice ) != SIR_GRAPHICS_SUCCESS || !bMatch ) {
+			return 31;
+		}
 	}
 	return 0;
 }

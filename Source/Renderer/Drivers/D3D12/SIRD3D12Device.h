@@ -37,6 +37,11 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Renderer/SIRGraphicsTypes.h>
 #include <Renderer/Drivers/D3D12/SIRD3D12Transfers.h>
 
+// The same native DXGI ordering is used by adapter discovery and device creation.
+// Hardware adapters meeting FL12_0 precede the single supported WARP adapter.
+HRESULT sirD3D12EnumerateAdapters( IDXGIFactory6 *pFactory, uint32_t nRequestedIndex, IDXGIAdapter4 **ppSelected,
+                                   uint32_t *pCount ) noexcept;
+
 typedef struct sirD3D12AdapterInfo_s
 {
 	uint32_t nVendorId;
@@ -144,7 +149,7 @@ public:
 	SIRD3D12Device( const SIRD3D12Device & ) = delete;
 	SIRD3D12Device &operator=( const SIRD3D12Device & ) = delete;
 
-	bool initialize( bool bUseWarp, const sirD3D12TransferPoolConfig_t &transferConfig, SIRGeneralHeap *pCpuHeap = nullptr,
+	bool initialize( uint32_t nAdapterIndex, const sirD3D12TransferPoolConfig_t &transferConfig, SIRGeneralHeap *pCpuHeap = nullptr,
 	                 const sirD3D12DiagnosticConfig_t &diagnostics = {} ) noexcept;
 	void shutdown( void ) noexcept;
 	bool isReady( void ) const noexcept;
