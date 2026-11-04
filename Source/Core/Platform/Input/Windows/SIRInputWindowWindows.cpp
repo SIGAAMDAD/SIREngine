@@ -85,7 +85,7 @@ bool SIRInputWindow::open( SIRInputService &input, SIRInputBackend &desktop ) no
 
 	WNDCLASSW windowClass = {};
 	windowClass.lpfnWndProc = sirInputNativeWindowProc;
-	windowClass.hCursor = LoadCursorW( nullptr, MAKEINTRESOURCEW( OCR_NORMAL ) );
+	windowClass.hCursor = LoadCursorA( nullptr, IDC_ARROW );
 	windowClass.hInstance = GetModuleHandleW( nullptr );
 	windowClass.lpszClassName = s_szInputClass;
 	const ATOM nClass = RegisterClassW( &windowClass );

@@ -135,7 +135,8 @@ static bool testCapacityAndIdentity( void ) noexcept
 		}
 	}
 	input.shutdown();
-	return backend.m_nVibrations == SIR_INPUT_DEVICE_CAPACITY + SIR_INPUT_DEVICE_CAPACITY / 2 && backend.m_nStops == 1 && other.m_nStops == 1;
+	return backend.m_nVibrations == SIR_INPUT_DEVICE_CAPACITY + SIR_INPUT_DEVICE_CAPACITY / 2 && backend.m_nStops == 1 &&
+	       other.m_nStops == 1;
 }
 
 static bool testTransactionalAndOverflow( void ) noexcept
