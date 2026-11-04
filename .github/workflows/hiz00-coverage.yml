@@ -26,25 +26,21 @@ jobs:
       - uses: jwlawson/actions-setup-cmake@v2
         with:
           cmake-version: '4.4.5'
-      - name: Install matched LLVM 23.1.5 compiler and coverage tools
+      - name: Install matching Clang and LLVM 23 profiling tools
         shell: bash
         run: |
           set -euo pipefail
-          archive="${RUNNER_TEMP}/llvm-23.1.5-x86_64.tar.xz"
-          url="https://www.kernel.org/pub/tools/llvm/files"
-          curl --retry 3 -fsSL "${url}/llvm-23.1.5-x86_64.tar.xz" -o "${archive}"
-          curl --retry 3 -fsSL "${url}/sha256sums.asc" -o "${RUNNER_TEMP}/llvm-sha256sums.asc"
-          grep -E '[[:space:]]llvm-23[.]1[.]5-x86_64[.]tar[.]xz$' "${RUNNER_TEMP}/llvm-sha256sums.asc" |
-            sed "s|llvm-23.1.5-x86_64.tar.xz|${archive}|" | sha256sum --check -
-          mkdir -p "${RUNNER_TEMP}/llvm23"
-          tar -xJf "${archive}" -C "${RUNNER_TEMP}/llvm23"
-          clang_bin="$(find "${RUNNER_TEMP}/llvm23" -name 'clang++' -print -quit)"
-          test -n "${clang_bin}"
-          toolbin="$(dirname "${clang_bin}")"
-          test -x "${toolbin}/llvm-cov"
-          test -x "${toolbin}/llvm-profdata"
-          "${clang_bin}" --version | grep 'clang version 23[.]1[.]5'
-          "${toolbin}/llvm-cov" --version | grep '23[.]1[.]5'
+          curl --retry 3 -fsSL https://apt.llvm.org/llvm.sh -o "${RUNNER_TEMP}/llvm.sh"
+          sudo bash "${RUNNER_TEMP}/llvm.sh" 23
+          sudo apt-get install -y llvm-23 clang-23 libclang-rt-23-dev
+          toolbin="${RUNNER_TEMP}/hiz-llvm23/bin"
+          mkdir -p "${toolbin}"
+          ln -s "$(command -v clang++-23)" "${toolbin}/clang++"
+          ln -s "$(command -v llvm-cov-23)" "${toolbin}/llvm-cov"
+          ln -s "$(command -v llvm-profdata-23)" "${toolbin}/llvm-profdata"
+          "${toolbin}/clang++" --version | grep -E 'clang version 23[.]'
+          "${toolbin}/llvm-cov" --version | grep -E 'LLVM version 23[.]'
+          "${toolbin}/llvm-profdata" --version | grep -E 'LLVM version 23[.]'
           echo "${toolbin}" >> "${GITHUB_PATH}"
           echo "SIR_HIZ_LLVM_BIN=${toolbin}" >> "${GITHUB_ENV}"
       - name: Configure instrumented SIREngine CMake targets
