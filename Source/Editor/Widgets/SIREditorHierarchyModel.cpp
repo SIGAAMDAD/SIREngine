@@ -356,9 +356,10 @@ sirEditorHierarchyResult_t SIREditorHierarchyModel::getVisibleRange( uint64_t nS
 	if ( !m_bInitialized ) {
 		return SIR_EDITOR_HIERARCHY_NOT_INITIALIZED;
 	}
-	return m_List.getVisibleRange( nScroll, nViewportHeight, nOverscan, pOutRange ) == SIR_EDITOR_LIST_OK
-	           ? SIR_EDITOR_HIERARCHY_OK
-			   : SIR_EDITOR_HIERARCHY_INVALID_ARGUMENT;
+	if ( m_List.getVisibleRange( nScroll, nViewportHeight, nOverscan, pOutRange ) != SIR_EDITOR_LIST_OK ) {
+		return SIR_EDITOR_HIERARCHY_INVALID_ARGUMENT;
+	}
+	return SIR_EDITOR_HIERARCHY_OK;
 }
 
 sirEditorHierarchyResult_t SIREditorHierarchyModel::getVisibleRow( uint32_t iRow, sirEditorHierarchyRow_t *pOutRow ) const noexcept
