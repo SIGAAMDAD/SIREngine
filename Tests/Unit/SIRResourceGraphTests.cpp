@@ -1701,6 +1701,51 @@ static void testPublicationCapacityAfterFullAdmission( void )
 	REQUIRE( allocator.m_nOutstanding.load() == 0 );
 }
 
+static void testReverseDependencyBucketCollisions( void )
+{
+	SIRTestAllocatorStats allocator = {};
+	{
+		SIRResourceGraph graph( testConfig( allocator, 8 ) );
+		REQUIRE( graph.isReady() );
+		SIRResourceGraphWriter *pWriter = graph.getWriter();
+		REQUIRE( pWriter != nullptr );
+		const SIRResourceKey keyA = key( 70000 );
+		SIRResourceKey keyB = key( 70001 );
+		while ( SIRResourceKeyHash{}( keyB ) % 17 != SIRResourceKeyHash{}( keyA ) % 17 ) {
+			++keyB.m_nAssetId;
+		}
+		REQUIRE( keyB.m_nAssetId != keyA.m_nAssetId );
+		SIRResourcePublication sourceA = { keyA, SIR_RESOURCE_KIND_COMPOSITION, 1, 1, nullptr, 0, nullptr, 0 };
+		SIRResourcePublication sourceB = { keyB, SIR_RESOURCE_KIND_COMPOSITION, 1, 1, nullptr, 0, nullptr, 0 };
+		SIRResourceHandle handleA = {};
+		SIRResourceHandle handleB = {};
+		REQUIRE( pWriter->publish( sourceA, &handleA ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( pWriter->publish( sourceB, &handleB ) == SIR_RESOURCE_RESULT_SUCCESS );
+		SIRResourceDependency dependsOnA = { keyA, SIR_RESOURCE_EDGE_KIND_REQUIRED, {} };
+		SIRResourceDependency dependsOnB = { keyB, SIR_RESOURCE_EDGE_KIND_REQUIRED, {} };
+		SIRResourcePublication childA = { key( 90000 ), SIR_RESOURCE_KIND_COMPOSITION, 1, 1, nullptr, 0, &dependsOnA, 1 };
+		SIRResourcePublication childB = { key( 90001 ), SIR_RESOURCE_KIND_COMPOSITION, 1, 1, nullptr, 0, &dependsOnB, 1 };
+		SIRResourceHandle handleChildA = {};
+		SIRResourceHandle handleChildB = {};
+		REQUIRE( pWriter->publish( childA, &handleChildA ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( pWriter->publish( childB, &handleChildB ) == SIR_RESOURCE_RESULT_SUCCESS );
+		SIRResourceHandle dependents[4] = {};
+		uint32_t nFound = 0;
+		REQUIRE( pWriter->collectDependents( keyA, dependents, 4, &nFound ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( nFound == 1 && dependents[0].m_nSlot == handleChildA.m_nSlot );
+		REQUIRE( pWriter->collectDependents( keyB, dependents, 4, &nFound ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( nFound == 1 && dependents[0].m_nSlot == handleChildB.m_nSlot );
+		SIRResourceHandle next = {};
+		REQUIRE( pWriter->publish( sourceA, &next ) == SIR_RESOURCE_RESULT_SUCCESS );
+		uint64_t nChanged = 0;
+		uint64_t nUnchanged = 0;
+		REQUIRE( pWriter->getInvalidationSequence( handleChildA, &nChanged ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( pWriter->getInvalidationSequence( handleChildB, &nUnchanged ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( nChanged != 0 && nUnchanged == 0 );
+	}
+	REQUIRE( allocator.m_nOutstanding.load() == 0 );
+}
+
 int main( void )
 {
 	testScopeLifetimeAndDeduplication();
@@ -1731,6 +1776,7 @@ int main( void )
 	testRequestedRecordAllocationRollback();
 	testDuplicateStagingRejection();
 	testPublicationCapacityAfterFullAdmission();
+	testReverseDependencyBucketCollisions();
 	printf( "PASS: GRDG resource registry, publication, deduplication, lifetime, concurrency\n" );
 	return 0;
 }
