@@ -294,6 +294,15 @@ static int sirTestRaster( SIRRenderingDevice *pDevice, uint32_t nGeneration, con
 	if ( pDevice->createPipeline( pipeline, &hPipeline ) != SIR_GRAPHICS_SUCCESS ) {
 		return 56;
 	}
+	// Exercise direct-queue GPU-local UAV ordering independently of the raster target.
+	sirGraphicsBufferDesc_t storage = {};
+	storage.nSizeBytes = 4096;
+	storage.nUsage = SIR_GRAPHICS_USAGE_STORAGE | SIR_GRAPHICS_USAGE_COPY_SOURCE;
+	storage.eMemory = SIR_GRAPHICS_MEMORY_GPU_LOCAL;
+	sirGraphicsHandle_t hStorage = {};
+	if ( pDevice->createBuffer( storage, &hStorage ) != SIR_GRAPHICS_SUCCESS ) {
+		return 74;
+	}
 	SIRGraphicsCommandList *pDirect = nullptr;
 	if ( pDevice->acquireCommands( SIR_GRAPHICS_QUEUE_DIRECT, &pDirect ) != SIR_GRAPHICS_SUCCESS ) {
 		return 57;
@@ -306,6 +315,29 @@ static int sirTestRaster( SIRRenderingDevice *pDevice, uint32_t nGeneration, con
 	invalidBuffer.eAfter = SIR_GRAPHICS_STATE_COLOR_ATTACHMENT;
 	if ( pDirect->barrier( &invalidBuffer, 1 ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
 		return 72;
+	}
+	sirGraphicsBarrier_t invalidUav = {};
+	invalidUav.eType = SIR_GRAPHICS_BARRIER_UAV;
+	invalidUav.hResource = hVertices;
+	if ( pDirect->barrier( &invalidUav, 1 ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return 75;
+	}
+	sirGraphicsBarrier_t storageTransition = {};
+	storageTransition.eType = SIR_GRAPHICS_BARRIER_TRANSITION;
+	storageTransition.hResource = hStorage;
+	storageTransition.eBefore = SIR_GRAPHICS_STATE_COMMON;
+	storageTransition.eAfter = SIR_GRAPHICS_STATE_SHADER_WRITE;
+	sirGraphicsBarrier_t storageUav = {};
+	storageUav.eType = SIR_GRAPHICS_BARRIER_UAV;
+	storageUav.hResource = hStorage;
+	if ( pDirect->barrier( &storageTransition, 1 ) != SIR_GRAPHICS_SUCCESS ||
+	     pDirect->barrier( &storageUav, 1 ) != SIR_GRAPHICS_SUCCESS ) {
+		return 76;
+	}
+	storageTransition.eBefore = SIR_GRAPHICS_STATE_SHADER_WRITE;
+	storageTransition.eAfter = SIR_GRAPHICS_STATE_COPY_SOURCE;
+	if ( pDirect->barrier( &storageTransition, 1 ) != SIR_GRAPHICS_SUCCESS ) {
+		return 77;
 	}
 	sirGraphicsBarrier_t transition = {};
 	transition.eType = SIR_GRAPHICS_BARRIER_TRANSITION;
@@ -412,6 +444,7 @@ static int sirTestRaster( SIRRenderingDevice *pDevice, uint32_t nGeneration, con
 	     pDevice->retireResource( hReadback, immediate ) != SIR_GRAPHICS_SUCCESS ||
 	     pDevice->retireResource( hVertices, immediate ) != SIR_GRAPHICS_SUCCESS ||
 	     pDevice->retireResource( hIndices, immediate ) != SIR_GRAPHICS_SUCCESS ||
+	     pDevice->retireResource( hStorage, immediate ) != SIR_GRAPHICS_SUCCESS ||
 	     pDevice->retireResource( hPipeline, immediate ) != SIR_GRAPHICS_SUCCESS ) {
 		return 69;
 	}
