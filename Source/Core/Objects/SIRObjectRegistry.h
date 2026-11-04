@@ -93,6 +93,7 @@ public:
 	sirObjectResult_t seal( void ) noexcept;
 	const sirObjectTypeDescriptor_t *findType( uint32_t nTypeId ) const noexcept;
 	const sirObjectPropertyDescriptor_t *findProperty( uint32_t nTypeId, uint32_t nPropertyId ) const noexcept;
+	const sirObjectPropertyDescriptor_t *getPropertyDescriptor( uint32_t iProperty ) const noexcept;
 	sirObjectResult_t validateProperty( uint32_t nTypeId, uint32_t nPropertyId, const sirPropertyValue_t &value ) const noexcept;
 	uint32_t getTypeCount( void ) const noexcept;
 	uint32_t getPropertyCount( void ) const noexcept;
