@@ -20,6 +20,8 @@ struct SIRTestAllocatorStats
 {
 	std::atomic<int32_t> m_nOutstanding;
 	std::atomic<uint64_t> m_nOutstandingBytes;
+
+
 	std::atomic<bool> m_bFailNext;
 };
 
@@ -1266,7 +1268,6 @@ static void testPublicValidationAndReadViewBoundaries( void )
 	REQUIRE( alloc.m_nOutstanding.load() == 0 );
 }
 
-
 static void testWriterInputValidationAndStagingLifecycle( void )
 {
 	SIRTestAllocatorStats alloc = {};
@@ -1320,8 +1321,7 @@ static void testWriterInputValidationAndStagingLifecycle( void )
 		REQUIRE( pWriter->getInvalidationSequence( hFirst, &nSequence ) == SIR_RESOURCE_RESULT_SUCCESS );
 		REQUIRE( pWriter->compileDependencyOrder( hFirst, nullptr, 0, nullptr ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
 		REQUIRE( pWriter->compileDependencyOrder( hFirst, nullptr, 1, &nCount ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
-		REQUIRE( pWriter->compileDependencyOrder( { UINT32_MAX, 0, 0, 0 }, nullptr, 0, &nCount ) ==
-		         SIR_RESOURCE_RESULT_INVALID_HANDLE );
+		REQUIRE( pWriter->compileDependencyOrder( { UINT32_MAX, 0, 0, 0 }, nullptr, 0, &nCount ) == SIR_RESOURCE_RESULT_INVALID_HANDLE );
 		SIRResourceDependencyPlanEntry plan[3] = {};
 		REQUIRE( pWriter->compileDependencyOrder( hFirst, nullptr, 0, &nCount ) == SIR_RESOURCE_RESULT_OUT_OF_BUDGET && nCount == 1 );
 		REQUIRE( pWriter->compileDependencyOrder( hFirst, plan, 3, &nCount ) == SIR_RESOURCE_RESULT_SUCCESS && nCount == 1 );
@@ -1385,20 +1385,19 @@ static void testWriterInputValidationAndStagingLifecycle( void )
 			SIRResourceHandle out = {};
 			SIRResourceStagingHandle stage = {};
 			SIRResourceMutableBytes data = {};
-			bWrongWriter.store(
-			    pWriter->request( key( 100 ), &out ) == SIR_RESOURCE_RESULT_WRITER_VIOLATION &&
-			    pWriter->publish( publication, &out ) == SIR_RESOURCE_RESULT_WRITER_VIOLATION &&
-			    pWriter->publishExpected( publication, 1, &out ) == SIR_RESOURCE_RESULT_WRITER_VIOLATION &&
-			    pWriter->allocateStaging( 8, 8, 9, &stage, &data ) == SIR_RESOURCE_RESULT_WRITER_VIOLATION &&
-			    pWriter->cancelStaging( staging ) == SIR_RESOURCE_RESULT_WRITER_VIOLATION &&
-			    pWriter->retire( hFirst ) == SIR_RESOURCE_RESULT_WRITER_VIOLATION &&
-			    pWriter->markFailed( hFirst, SIR_RESOURCE_RESULT_FAILED ) == SIR_RESOURCE_RESULT_WRITER_VIOLATION &&
-			    pWriter->evictChunk( hFirst, { 0 } ) == SIR_RESOURCE_RESULT_WRITER_VIOLATION &&
-			    pWriter->collectRetired( 10 ) == 0 &&
-			    pWriter->compileDependencyOrder( hFirst, plan, 3, &count ) == SIR_RESOURCE_RESULT_WRITER_VIOLATION &&
-			    pWriter->validateTaskPlan( plan, 1 ) == SIR_RESOURCE_RESULT_WRITER_VIOLATION &&
-			    pWriter->collectDependents( key( 1 ), &out, 1, &count ) == SIR_RESOURCE_RESULT_WRITER_VIOLATION &&
-			    pWriter->pollInvalidations( 0, &event, 1, &count, &cursor ) == SIR_RESOURCE_RESULT_WRITER_VIOLATION );
+			bWrongWriter.store( pWriter->request( key( 100 ), &out ) == SIR_RESOURCE_RESULT_WRITER_VIOLATION &&
+			                    pWriter->publish( publication, &out ) == SIR_RESOURCE_RESULT_WRITER_VIOLATION &&
+			                    pWriter->publishExpected( publication, 1, &out ) == SIR_RESOURCE_RESULT_WRITER_VIOLATION &&
+			                    pWriter->allocateStaging( 8, 8, 9, &stage, &data ) == SIR_RESOURCE_RESULT_WRITER_VIOLATION &&
+			                    pWriter->cancelStaging( staging ) == SIR_RESOURCE_RESULT_WRITER_VIOLATION &&
+			                    pWriter->retire( hFirst ) == SIR_RESOURCE_RESULT_WRITER_VIOLATION &&
+			                    pWriter->markFailed( hFirst, SIR_RESOURCE_RESULT_FAILED ) == SIR_RESOURCE_RESULT_WRITER_VIOLATION &&
+			                    pWriter->evictChunk( hFirst, { 0 } ) == SIR_RESOURCE_RESULT_WRITER_VIOLATION &&
+			                    pWriter->collectRetired( 10 ) == 0 &&
+			                    pWriter->compileDependencyOrder( hFirst, plan, 3, &count ) == SIR_RESOURCE_RESULT_WRITER_VIOLATION &&
+			                    pWriter->validateTaskPlan( plan, 1 ) == SIR_RESOURCE_RESULT_WRITER_VIOLATION &&
+			                    pWriter->collectDependents( key( 1 ), &out, 1, &count ) == SIR_RESOURCE_RESULT_WRITER_VIOLATION &&
+			                    pWriter->pollInvalidations( 0, &event, 1, &count, &cursor ) == SIR_RESOURCE_RESULT_WRITER_VIOLATION );
 		} );
 		other.join();
 		REQUIRE( bWrongWriter.load() );
