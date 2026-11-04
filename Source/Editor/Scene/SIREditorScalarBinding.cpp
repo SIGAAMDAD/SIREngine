@@ -43,7 +43,7 @@ static bool sirEditorBridgeValid( const sirEditorScalarBridge_t& context ) noexc
 	if ( context.nBindingCount > context.pIndex->nCount ) {
 		return false;
 	}
-	if ( context.nBindingCount != 0 && ( context.pBindings == nullptr || context.pScratch == nullptr ) ) {
+	if ( context.nBindingCount != 0 && context.pBindings == nullptr ) {
 		return false;
 	}
 	return true;
@@ -177,7 +177,7 @@ sirEditorScalarBridgeResult_t sirEditorDiscoverScalarBindings( const sirEditorSc
 
 sirEditorScalarBridgeResult_t sirEditorImportBoundScalars( const sirEditorScalarBridge_t& context ) noexcept
 {
-	if ( !sirEditorBridgeValid( context ) ) {
+	if ( !sirEditorBridgeValid( context ) || ( context.nBindingCount != 0 && context.pScratch == nullptr ) ) {
 		return SIR_EDITOR_SCALAR_BRIDGE_INVALID_ARGUMENT;
 	}
 	if ( context.nBindingCount == 0 ) {
