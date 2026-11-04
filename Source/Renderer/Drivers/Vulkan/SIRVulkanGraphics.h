@@ -51,6 +51,8 @@ typedef struct sirVulkanGraphicsBufferSlot_s
 
 // Commands are borrowed from a fixed device-owned pool. The first native
 // integration slice supports one recorded buffer copy per submission.
+// Closing an empty command list releases its slot. Resetting a closed,
+// unsubmitted list returns it to recording so it can be cancelled.
 class SIRVulkanCommandList final : public SIRGraphicsCommandList
 {
 private:

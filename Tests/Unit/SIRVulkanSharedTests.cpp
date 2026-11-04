@@ -42,7 +42,7 @@ int main( void )
 	sirGraphicsDeviceCreateDesc_t create = {};
 	create.nAdapterIndex = 0;
 	create.nFramesInFlight = 2;
-	create.nRequiredFeatures = SIR_GRAPHICS_FEATURE_GRAPHICS;
+	create.nRequiredFeatures = 0;
 	create.bHeadless = true;
 	SIRRenderingDevice *pDevice = nullptr;
 	const sirGraphicsResult_t eCreate = driver.createDevice( create, &pDevice );
@@ -54,9 +54,15 @@ int main( void )
 		return 3;
 	}
 	if ( pDevice->getDeviceGeneration() == 0 || pDevice->queryCapabilities( &capabilities ) != SIR_GRAPHICS_SUCCESS ||
-	     capabilities.eBackend != SIR_GRAPHICS_BACKEND_VULKAN || ( capabilities.nFeatureMask & SIR_GRAPHICS_FEATURE_GRAPHICS ) == 0 ||
+	     capabilities.eBackend != SIR_GRAPHICS_BACKEND_VULKAN || ( capabilities.nFeatureMask & SIR_GRAPHICS_FEATURE_GRAPHICS ) != 0 ||
 	     ( capabilities.nQueueMask & ( 1U << SIR_GRAPHICS_QUEUE_DIRECT ) ) == 0 ) {
 		return 4;
+	}
+
+	SIRGraphicsCommandList *pCancelled = nullptr;
+	if ( pDevice->acquireCommands( SIR_GRAPHICS_QUEUE_DIRECT, &pCancelled ) != SIR_GRAPHICS_SUCCESS || pCancelled == nullptr ||
+	     driver.destroyDevice( pDevice ) != SIR_GRAPHICS_BUSY || pCancelled->close() != SIR_GRAPHICS_SUCCESS ) {
+		return 15;
 	}
 
 	sirGraphicsBufferDesc_t sourceDesc = {};
@@ -93,6 +99,14 @@ int main( void )
 	if ( pDevice->flushBuffer( hSource, 0, sizeof( szExpected ) ) != SIR_GRAPHICS_SUCCESS ||
 	     pDevice->unmapBuffer( hSource, 0, sizeof( szExpected ) ) != SIR_GRAPHICS_SUCCESS ) {
 		return 7;
+	}
+
+	SIRGraphicsCommandList *pAbandoned = nullptr;
+	if ( pDevice->acquireCommands( SIR_GRAPHICS_QUEUE_DIRECT, &pAbandoned ) != SIR_GRAPHICS_SUCCESS || pAbandoned == nullptr ||
+	     pAbandoned->copyBuffer( hGpu, 0, hSource, 0, sizeof( szExpected ) ) != SIR_GRAPHICS_SUCCESS ||
+	     pAbandoned->close() != SIR_GRAPHICS_SUCCESS || pAbandoned->reset() != SIR_GRAPHICS_SUCCESS ||
+	     pAbandoned->close() != SIR_GRAPHICS_SUCCESS ) {
+		return 16;
 	}
 
 	SIRGraphicsCommandList *pFirst = nullptr;
