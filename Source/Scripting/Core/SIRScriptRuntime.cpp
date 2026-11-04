@@ -625,19 +625,12 @@ sirScriptResult_t SIRScriptRuntime::enqueueEvent( uint64_t nEventTypeId, sirScri
 	if ( eValid != SIR_SCRIPT_OK ) {
 		return eValid;
 	}
-	if ( payload.nBytes > sizeof( sirScriptScheduledCall_t::szPayload ) || payload.nAlignment > alignof( sirScriptScheduledCall_t ) ) {
-		return SIR_SCRIPT_CAPACITY_EXCEEDED;
-	}
-
 	sirScriptScheduledCall_t call = {};
 	call.nDispatchId = nEventTypeId;
 	call.nBytes = payload.nBytes;
 	call.nAlignment = payload.nAlignment;
 	call.eKind = SIR_SCRIPT_SCHEDULED_EVENT;
-	if ( payload.nBytes != 0 ) {
-		memcpy( call.szPayload, payload.pData, payload.nBytes );
-	}
-	return m_Scheduler.enqueue( ePhase, call, pHandle );
+	return m_Scheduler.enqueue( ePhase, call, payload.pData, pHandle );
 }
 
 sirScriptResult_t SIRScriptRuntime::enqueueInvoke( sirScriptInstanceHandle_t instance, uint64_t nMethodId, uint64_t nArgumentsTypeId,
@@ -661,20 +654,13 @@ sirScriptResult_t SIRScriptRuntime::enqueueInvoke( sirScriptInstanceHandle_t ins
 	if ( eValid != SIR_SCRIPT_OK ) {
 		return eValid;
 	}
-	if ( arguments.nBytes > sizeof( sirScriptScheduledCall_t::szPayload ) || arguments.nAlignment > alignof( sirScriptScheduledCall_t ) ) {
-		return SIR_SCRIPT_CAPACITY_EXCEEDED;
-	}
-
 	sirScriptScheduledCall_t call = {};
 	call.instance = instance;
 	call.nDispatchId = nMethodId;
 	call.nBytes = arguments.nBytes;
 	call.nAlignment = arguments.nAlignment;
 	call.eKind = SIR_SCRIPT_SCHEDULED_INVOKE;
-	if ( arguments.nBytes != 0 ) {
-		memcpy( call.szPayload, arguments.pData, arguments.nBytes );
-	}
-	return m_Scheduler.enqueue( ePhase, call, pHandle );
+	return m_Scheduler.enqueue( ePhase, call, arguments.pData, pHandle );
 }
 
 sirScriptResult_t SIRScriptRuntime::cancelScheduled( sirScriptTaskHandle_t handle ) noexcept
@@ -683,6 +669,14 @@ sirScriptResult_t SIRScriptRuntime::cancelScheduled( sirScriptTaskHandle_t handl
 		return SIR_SCRIPT_BUSY;
 	}
 	return m_Scheduler.cancel( handle );
+}
+
+sirScriptResult_t SIRScriptRuntime::setPayloadAllocator( const sirScriptPayloadAllocatorAPI_t &api ) noexcept
+{
+	if ( !isOwnerThread() || m_bDispatching || m_bCallingBackend || m_bPumping || m_bShuttingDown ) {
+		return SIR_SCRIPT_BUSY;
+	}
+	return m_Scheduler.setPayloadAllocator( api );
 }
 
 uint32_t SIRScriptRuntime::pendingCount( sirScriptPhase_t ePhase ) const noexcept
@@ -711,7 +705,8 @@ sirScriptResult_t SIRScriptRuntime::pumpPhase( sirScriptPhase_t ePhase, uint32_t
 			break;
 		}
 		++*pProcessed;
-		const sirScriptReadFrame_t payload = { call.nBytes == 0 ? nullptr : call.szPayload, call.nBytes, call.nAlignment };
+		const void *pData = call.allocation.nToken != 0 ? call.allocation.pData : call.szPayload;
+		const sirScriptReadFrame_t payload = { call.nBytes == 0 ? nullptr : pData, call.nBytes, call.nAlignment };
 		const sirScriptWriteFrame_t emptyResult = { nullptr, 0, 1 };
 		sirScriptResult_t eResult = SIR_SCRIPT_OK;
 		if ( call.eKind == SIR_SCRIPT_SCHEDULED_EVENT ) {
@@ -724,6 +719,7 @@ sirScriptResult_t SIRScriptRuntime::pumpPhase( sirScriptPhase_t ePhase, uint32_t
 		if ( eFirstFailure == SIR_SCRIPT_OK && eResult != SIR_SCRIPT_OK ) {
 			eFirstFailure = eResult;
 		}
+		m_Scheduler.releasePayload( &call );
 	}
 	m_bPumping = false;
 	return eFirstFailure;
@@ -792,5 +788,12 @@ sirScriptRuntimeFootprint_t SIRScriptRuntime::queryMemoryFootprint( void ) const
 	}
 	const uint32_t nScheduled = m_Scheduler.pendingCount( SIR_SCRIPT_PHASE_EARLY ) + m_Scheduler.pendingCount( SIR_SCRIPT_PHASE_LATE );
 	const uint32_t nIngress = m_Ingress.pendingCount( SIR_SCRIPT_PHASE_EARLY ) + m_Ingress.pendingCount( SIR_SCRIPT_PHASE_LATE );
-	return { sizeof( *this ), sizeof( m_Scheduler ), sizeof( m_Ingress ), nScheduled, nIngress };
+	return { sizeof( *this ),
+	         sizeof( m_Scheduler ),
+	         sizeof( m_Ingress ),
+	         m_Scheduler.allocatedPayloadBytes(),
+	         m_Scheduler.peakPayloadBytes(),
+	         m_Scheduler.livePayloadCount(),
+	         nScheduled,
+	         nIngress };
 }

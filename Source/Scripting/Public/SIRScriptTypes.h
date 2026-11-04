@@ -26,6 +26,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 constexpr uint32_t SIR_SCRIPT_BACKEND_ABI_REVISION = 3;
 constexpr uint32_t SIR_SCRIPT_PROGRAM_SOURCE_ABI_REVISION = 1;
+constexpr uint32_t SIR_SCRIPT_PAYLOAD_ALLOCATOR_ABI_REVISION = 1;
 
 typedef enum sirScriptResult_e : uint8_t
 {

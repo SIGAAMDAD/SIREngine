@@ -63,6 +63,9 @@ typedef struct sirScriptRuntimeFootprint_s
 	uint64_t nRuntimeBytes;
 	uint64_t nSchedulerBytes;
 	uint64_t nIngressBytes;
+	uint64_t nExternalPayloadBytes;
+	uint64_t nPeakExternalPayloadBytes;
+	uint32_t nLiveExternalPayloads;
 	uint32_t nScheduledCalls;
 	uint32_t nIngressCalls;
 } sirScriptRuntimeFootprint_t;
@@ -107,6 +110,7 @@ public:
 	sirScriptResult_t enqueueInvoke( sirScriptInstanceHandle_t instance, uint64_t nMethodId, uint64_t nArgumentsTypeId,
 	                                 sirScriptReadFrame_t arguments, sirScriptPhase_t ePhase, sirScriptTaskHandle_t *pHandle ) noexcept;
 	sirScriptResult_t cancelScheduled( sirScriptTaskHandle_t handle ) noexcept;
+	sirScriptResult_t setPayloadAllocator( const sirScriptPayloadAllocatorAPI_t &api ) noexcept;
 	// Cross-thread: published registry and runtime must outlive every producer.
 	sirScriptResult_t postEvent( uint64_t nEventTypeId, sirScriptReadFrame_t payload, sirScriptPhase_t ePhase ) noexcept;
 	sirScriptResult_t pumpIngress( sirScriptPhase_t ePhase, uint32_t nBudget, uint32_t *pProcessed ) noexcept;

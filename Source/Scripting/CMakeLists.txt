@@ -1,6 +1,7 @@
 add_library(SIRScripting STATIC
     Core/SIRScriptBindingRegistry.cpp
     Core/SIRScriptIngress.cpp
+    Core/SIRScriptMemoryRouter.cpp
     Core/SIRScriptRuntime.cpp
     Core/SIRScriptScheduler.cpp
     Core/SIRScriptServer.cpp
