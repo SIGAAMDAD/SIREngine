@@ -24,6 +24,7 @@ typedef struct sirInputNativePumpContext_s
 #if defined( SIR_INPUT_X11_AVAILABLE ) && !defined( _WIN32 )
 	SIRLinuxEvdevBackend *pEvdev;
 	bool bDiscoveryAttempted;
+
 #endif
 } sirInputNativePumpContext_t;
 
@@ -56,8 +57,7 @@ static int sirRunNativeInputWindow( void )
 	SIRLinuxEvdevBackend nativeControllers;
 	( void )setlocale( LC_CTYPE, "" );
 	const char *pszCookedProfiles = getenv( "SIR_INPUT_CONTROLLER_PROFILE_DB" );
-	if ( pszCookedProfiles != nullptr && pszCookedProfiles[0] != 0 &&
-	     !nativeControllers.loadCookedProfilesFile( pszCookedProfiles ) ) {
+	if ( pszCookedProfiles != nullptr && pszCookedProfiles[0] != 0 && !nativeControllers.loadCookedProfilesFile( pszCookedProfiles ) ) {
 		fputs( "Unable to load cooked controller profiles\n", stderr );
 		return 1;
 	}

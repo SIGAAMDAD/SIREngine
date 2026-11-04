@@ -38,6 +38,7 @@ void SIRWindowsRawBackend::resynchronize( SIRInputService &service ) noexcept
 }
 bool SIRWindowsRawBackend::vibrate( sirInputDeviceId_t id, uint16_t nL, uint16_t nR ) noexcept
 {
+
 	( void )id;
 	( void )nL;
 	( void )nR;
@@ -127,15 +128,13 @@ bool SIRWindowsRawBackend::processMessage( SIRInputService &service, uint32_t nM
 		if ( GetRawInputDeviceInfoW( hNative, RIDI_DEVICEINFO, &info, &nSize ) == ( UINT )-1 ) {
 			return false;
 		}
-		const sirInputDeviceClass_t eClass =
-		    info.dwType == RIM_TYPEKEYBOARD ? SIR_INPUT_KEYBOARD : SIR_INPUT_POINTER;
+		const sirInputDeviceClass_t eClass = info.dwType == RIM_TYPEKEYBOARD ? SIR_INPUT_KEYBOARD : SIR_INPUT_POINTER;
 		if ( info.dwType != RIM_TYPEKEYBOARD && info.dwType != RIM_TYPEMOUSE ) {
 			return false;
 		}
 		sirInputDeviceId_t hDevice = {};
 		const uint64_t nNative = ( uint64_t )( uintptr_t )hNative;
-		return service.findDevice( id(), nNative, &hDevice ) ||
-		       service.connect( { 0, nNative, id(), eClass }, &hDevice );
+		return service.findDevice( id(), nNative, &hDevice ) || service.connect( { 0, nNative, id(), eClass }, &hDevice );
 	}
 	if ( nMessage == WM_INPUT_DEVICE_CHANGE && nWParam == GIDC_REMOVAL ) {
 		sirInputDeviceId_t h = {};

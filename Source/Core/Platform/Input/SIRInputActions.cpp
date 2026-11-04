@@ -17,7 +17,6 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <limits.h>
 #include <string.h>
 
-
 static void sirInputWriteU16( uint8_t *pData, uint16_t nValue ) noexcept
 {
 	pData[0] = ( uint8_t )nValue;
@@ -38,8 +37,7 @@ static uint16_t sirInputReadU16( const uint8_t *pData ) noexcept
 
 static uint32_t sirInputReadU32( const uint8_t *pData ) noexcept
 {
-	return ( uint32_t )pData[0] | ( ( uint32_t )pData[1] << 8 ) | ( ( uint32_t )pData[2] << 16 ) |
-	       ( ( uint32_t )pData[3] << 24 );
+	return ( uint32_t )pData[0] | ( ( uint32_t )pData[1] << 8 ) | ( ( uint32_t )pData[2] << 16 ) | ( ( uint32_t )pData[3] << 24 );
 }
 
 static uint32_t sirInputProfileHash( const uint8_t *pData, uint32_t nBytes ) noexcept
@@ -115,11 +113,11 @@ bool SIRInputActions::setContextActive( uint32_t nContextId, uint32_t nUser, boo
 bool SIRInputActions::bindingValid( const sirInputActionBinding_t &binding, int32_t iExclude ) const noexcept
 {
 	if ( actionIndex( binding.nActionId, binding.nUser ) < 0 || contextIndex( binding.nContextId, binding.nUser ) < 0 ||
-	     ( binding.eSignal != SIR_INPUT_BUTTON && binding.eSignal != SIR_INPUT_AXIS ) ||
-	     binding.eClass > SIR_INPUT_CONTROLLER || binding.nControl >= SIR_INPUT_BUTTON_CAPACITY ||
+	     ( binding.eSignal != SIR_INPUT_BUTTON && binding.eSignal != SIR_INPUT_AXIS ) || binding.eClass > SIR_INPUT_CONTROLLER ||
+	     binding.nControl >= SIR_INPUT_BUTTON_CAPACITY ||
 	     ( binding.eSignal == SIR_INPUT_AXIS && binding.nControl >= SIR_INPUT_AXIS_CAPACITY ) ||
-	     ( binding.nChord != SIR_INPUT_NO_CHORD && binding.nChord >= SIR_INPUT_BUTTON_CAPACITY ) ||
-	     binding.nDeadzone < 0 || binding.nDeadzone >= 32767 || binding.nScale < -32767 || binding.nScale > 32767 ||
+	     ( binding.nChord != SIR_INPUT_NO_CHORD && binding.nChord >= SIR_INPUT_BUTTON_CAPACITY ) || binding.nDeadzone < 0 ||
+	     binding.nDeadzone >= 32767 || binding.nScale < -32767 || binding.nScale > 32767 ||
 	     ( binding.nFlags & ~( SIR_INPUT_BIND_CONSUME | SIR_INPUT_BIND_TOGGLE ) ) != 0 ||
 	     ( ( binding.nFlags & SIR_INPUT_BIND_TOGGLE ) != 0 && binding.eSignal != SIR_INPUT_BUTTON ) ) {
 		return false;
@@ -153,8 +151,8 @@ bool SIRInputActions::rebind( uint32_t iBinding, const sirInputActionBinding_t &
 		return false;
 	}
 	const sirInputActionBinding_t &current = m_Bindings[iBinding];
-	if ( current.nActionId != binding.nActionId || current.nContextId != binding.nContextId ||
-	     current.nUser != binding.nUser || !bindingValid( binding, ( int32_t )iBinding ) ) {
+	if ( current.nActionId != binding.nActionId || current.nContextId != binding.nContextId || current.nUser != binding.nUser ||
+	     !bindingValid( binding, ( int32_t )iBinding ) ) {
 		return false;
 	}
 	m_Bindings[iBinding] = binding;
@@ -177,8 +175,7 @@ bool SIRInputActions::removeBinding( uint32_t iBinding ) noexcept
 
 bool SIRInputActions::beginCapture( uint32_t iBinding ) noexcept
 {
-	if ( iBinding >= m_nBindings || m_eCaptureStatus == SIR_INPUT_CAPTURE_PENDING ||
-	     !activeBinding( m_Bindings[iBinding], nullptr ) ) {
+	if ( iBinding >= m_nBindings || m_eCaptureStatus == SIR_INPUT_CAPTURE_PENDING || !activeBinding( m_Bindings[iBinding], nullptr ) ) {
 		return false;
 	}
 	m_iCaptureBinding = iBinding;
@@ -231,8 +228,7 @@ bool SIRInputActions::activeBinding( const sirInputActionBinding_t &binding, int
 bool SIRInputActions::bindingHeld( const sirInputActionBinding_t &binding, const sirInputFrame_t &frame ) const noexcept
 {
 	for ( uint32_t i = 0; i < SIR_INPUT_DEVICE_CAPACITY; ++i ) {
-		if ( !frame.nConnected[i] || m_Classes[i] != binding.eClass ||
-		     m_DeviceIds[i].nGeneration != frame.devices[i].nGeneration ) {
+		if ( !frame.nConnected[i] || m_Classes[i] != binding.eClass || m_DeviceIds[i].nGeneration != frame.devices[i].nGeneration ) {
 			continue;
 		}
 		const uint32_t nUser = frame.nUsers[i] == SIR_INPUT_NO_USER ? 0 : frame.nUsers[i];
@@ -261,8 +257,7 @@ int32_t SIRInputActions::bindingValue( const sirInputActionBinding_t &binding, c
 	}
 	int32_t nSelected = 0;
 	for ( uint32_t i = 0; i < SIR_INPUT_DEVICE_CAPACITY; ++i ) {
-		if ( !frame.nConnected[i] || m_Classes[i] != binding.eClass ||
-		     m_DeviceIds[i].nGeneration != frame.devices[i].nGeneration ) {
+		if ( !frame.nConnected[i] || m_Classes[i] != binding.eClass || m_DeviceIds[i].nGeneration != frame.devices[i].nGeneration ) {
 			continue;
 		}
 		const uint32_t nUser = frame.nUsers[i] == SIR_INPUT_NO_USER ? 0 : frame.nUsers[i];
@@ -321,9 +316,8 @@ void SIRInputActions::refreshAction( uint32_t iAction, const sirInputFrame_t &fr
 		if ( !activeBinding( binding, &nPriority ) || nPriority < nMinimumPriority || shadowed( binding, frame ) ) {
 			continue;
 		}
-		const int32_t nValue = ( binding.nFlags & SIR_INPUT_BIND_TOGGLE ) != 0
-		                           ? ( m_Toggled[iAction] ? 32767 : 0 )
-		                           : bindingValue( binding, frame );
+		const int32_t nValue =
+		    ( binding.nFlags & SIR_INPUT_BIND_TOGGLE ) != 0 ? ( m_Toggled[iAction] ? 32767 : 0 ) : bindingValue( binding, frame );
 		if ( ( nValue < 0 ? -( int64_t )nValue : nValue ) > ( nNewValue < 0 ? -( int64_t )nNewValue : nNewValue ) ) {
 			nNewValue = nValue;
 		}
@@ -415,8 +409,8 @@ void SIRInputActions::processEvent( const sirInputEvent_t &event, const sirInput
 		if ( iAction < 0 ) {
 			continue;
 		}
-		if ( ( binding.nFlags & SIR_INPUT_BIND_TOGGLE ) != 0 && event.eSignal == SIR_INPUT_BUTTON &&
-		     binding.nControl == event.nControl && event.nValue != 0 &&
+		if ( ( binding.nFlags & SIR_INPUT_BIND_TOGGLE ) != 0 && event.eSignal == SIR_INPUT_BUTTON && binding.nControl == event.nControl &&
+		     event.nValue != 0 &&
 		     ( binding.nChord == SIR_INPUT_NO_CHORD ||
 		       ( m_Held[iSlot][binding.nChord / 32] & ( UINT32_C( 1 ) << ( binding.nChord % 32 ) ) ) != 0 ) ) {
 			m_Toggled[iAction] = !m_Toggled[iAction];
@@ -468,7 +462,6 @@ void SIRInputActions::evaluate( const sirInputFrame_t &frame ) noexcept
 	m_nLastTick = frame.nTick;
 }
 
-
 bool SIRInputActions::saveProfile( uint8_t *pData, uint32_t nCapacity, uint32_t *pWritten ) const noexcept
 {
 	const uint32_t nRequired = SIR_INPUT_PROFILE_HEADER_BYTES + m_nContexts * SIR_INPUT_PROFILE_CONTEXT_BYTES +
@@ -515,31 +508,28 @@ bool SIRInputActions::saveProfile( uint8_t *pData, uint32_t nCapacity, uint32_t 
 		pData[nOffset + 26] = binding.nFlags;
 		nOffset += SIR_INPUT_PROFILE_BINDING_BYTES;
 	}
-	sirInputWriteU32( pData + 20, sirInputProfileHash( pData + SIR_INPUT_PROFILE_HEADER_BYTES,
-	                                                nRequired - SIR_INPUT_PROFILE_HEADER_BYTES ) );
+	sirInputWriteU32( pData + 20,
+	                  sirInputProfileHash( pData + SIR_INPUT_PROFILE_HEADER_BYTES, nRequired - SIR_INPUT_PROFILE_HEADER_BYTES ) );
 	return true;
 }
 
 bool SIRInputActions::loadProfile( const uint8_t *pData, uint32_t nBytes ) noexcept
 {
-	if ( pData == nullptr || nBytes < SIR_INPUT_PROFILE_HEADER_BYTES ||
-	     sirInputReadU32( pData ) != UINT32_C( 0x41524953 ) || sirInputReadU16( pData + 4 ) != 1 ||
-	     sirInputReadU16( pData + 6 ) != SIR_INPUT_PROFILE_HEADER_BYTES ) {
+	if ( pData == nullptr || nBytes < SIR_INPUT_PROFILE_HEADER_BYTES || sirInputReadU32( pData ) != UINT32_C( 0x41524953 ) ||
+	     sirInputReadU16( pData + 4 ) != 1 || sirInputReadU16( pData + 6 ) != SIR_INPUT_PROFILE_HEADER_BYTES ) {
 		return false;
 	}
 	const uint32_t nContexts = sirInputReadU32( pData + 8 );
 	const uint32_t nActions = sirInputReadU32( pData + 12 );
 	const uint32_t nBindings = sirInputReadU32( pData + 16 );
-	if ( nContexts > SIR_INPUT_CONTEXT_CAPACITY || nActions > SIR_INPUT_ACTION_CAPACITY ||
-	     nBindings > SIR_INPUT_BINDING_CAPACITY ) {
+	if ( nContexts > SIR_INPUT_CONTEXT_CAPACITY || nActions > SIR_INPUT_ACTION_CAPACITY || nBindings > SIR_INPUT_BINDING_CAPACITY ) {
 		return false;
 	}
 	const uint64_t nExpected = SIR_INPUT_PROFILE_HEADER_BYTES + ( uint64_t )nContexts * SIR_INPUT_PROFILE_CONTEXT_BYTES +
 	                           ( uint64_t )nActions * SIR_INPUT_PROFILE_ACTION_BYTES +
 	                           ( uint64_t )nBindings * SIR_INPUT_PROFILE_BINDING_BYTES;
-	if ( nExpected != nBytes ||
-	     sirInputReadU32( pData + 20 ) != sirInputProfileHash( pData + SIR_INPUT_PROFILE_HEADER_BYTES,
-	                                                          nBytes - SIR_INPUT_PROFILE_HEADER_BYTES ) ) {
+	if ( nExpected != nBytes || sirInputReadU32( pData + 20 ) != sirInputProfileHash( pData + SIR_INPUT_PROFILE_HEADER_BYTES,
+	                                                                                  nBytes - SIR_INPUT_PROFILE_HEADER_BYTES ) ) {
 		return false;
 	}
 

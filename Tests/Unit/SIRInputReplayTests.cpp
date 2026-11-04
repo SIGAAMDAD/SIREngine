@@ -49,15 +49,14 @@ static bool sirTestReplayServiceTick( void ) noexcept
 {
 	SIRInputService input;
 	SIRReplayTestBackend backend;
-	if ( !input.attach( backend ) || !input.actions().addContext( 10, 0, 100, true ) ||
-	     !input.actions().addAction( 7, 0 ) || !input.actions().addContext( 11, 1, 100, true ) ||
-	     !input.actions().addAction( 8, 1 ) ) {
+	if ( !input.attach( backend ) || !input.actions().addContext( 10, 0, 100, true ) || !input.actions().addAction( 7, 0 ) ||
+	     !input.actions().addContext( 11, 1, 100, true ) || !input.actions().addAction( 8, 1 ) ) {
 		return false;
 	}
-	const sirInputActionBinding_t first = { 7, 10, 42, SIR_INPUT_NO_CHORD, 0, 0, 32767,
-	                                       SIR_INPUT_KEYBOARD, SIR_INPUT_BUTTON, SIR_INPUT_BIND_NONE };
-	const sirInputActionBinding_t second = { 8, 11, 43, SIR_INPUT_NO_CHORD, 1, 0, 32767,
-	                                        SIR_INPUT_KEYBOARD, SIR_INPUT_BUTTON, SIR_INPUT_BIND_NONE };
+	const sirInputActionBinding_t first = {
+	    7, 10, 42, SIR_INPUT_NO_CHORD, 0, 0, 32767, SIR_INPUT_KEYBOARD, SIR_INPUT_BUTTON, SIR_INPUT_BIND_NONE };
+	const sirInputActionBinding_t second = {
+	    8, 11, 43, SIR_INPUT_NO_CHORD, 1, 0, 32767, SIR_INPUT_KEYBOARD, SIR_INPUT_BUTTON, SIR_INPUT_BIND_NONE };
 	if ( !input.actions().addBinding( first ) || !input.actions().addBinding( second ) ) {
 		return false;
 	}
@@ -70,20 +69,17 @@ static bool sirTestReplayServiceTick( void ) noexcept
 	sirInputDeviceId_t hFirst = {};
 	sirInputDeviceId_t hSecond = {};
 	if ( !input.connect( { 0, 100, SIR_INPUT_TEST, SIR_INPUT_KEYBOARD }, &hFirst ) ||
-	     !input.connect( { 0, 101, SIR_INPUT_TEST, SIR_INPUT_KEYBOARD }, &hSecond ) ||
-	     !input.pairUser( hSecond, 1 ) ) {
+	     !input.connect( { 0, 101, SIR_INPUT_TEST, SIR_INPUT_KEYBOARD }, &hSecond ) || !input.pairUser( hSecond, 1 ) ) {
 		return false;
 	}
 	const sirInputControlChange_t szTap[] = { { SIR_INPUT_BUTTON, 42, 1 }, { SIR_INPUT_BUTTON, 42, 0 } };
 	const sirInputControlChange_t szHeld = { SIR_INPUT_BUTTON, 43, 1 };
-	if ( !input.emitControls( SIR_INPUT_TEST, hFirst, szTap, 2 ) ||
-	     !input.emitControls( SIR_INPUT_TEST, hSecond, &szHeld, 1 ) ||
+	if ( !input.emitControls( SIR_INPUT_TEST, hFirst, szTap, 2 ) || !input.emitControls( SIR_INPUT_TEST, hSecond, &szHeld, 1 ) ||
 	     !input.publish() || !input.recordReplayTick( writer, szKeys, 2 ) ) {
 		return false;
 	}
 	const uint32_t nFirstBytes = writer.bytesUsed();
-	if ( nFirstBytes != SIR_INPUT_REPLAY_HEADER_BYTES + 2 * SIR_INPUT_REPLAY_RECORD_BYTES ||
-	     input.recordReplayTick( writer, szKeys, 2 ) ) {
+	if ( nFirstBytes != SIR_INPUT_REPLAY_HEADER_BYTES + 2 * SIR_INPUT_REPLAY_RECORD_BYTES || input.recordReplayTick( writer, szKeys, 2 ) ) {
 		return false;
 	}
 	const sirInputReplayKey_t szDuplicate[] = { { 7, 0 }, { 7, 0 } };
@@ -94,8 +90,8 @@ static bool sirTestReplayServiceTick( void ) noexcept
 		return false;
 	}
 	const sirInputControlChange_t szRelease = { SIR_INPUT_BUTTON, 43, 0 };
-	if ( !input.emitControls( SIR_INPUT_TEST, hSecond, &szRelease, 1 ) ||
-	     !input.publish() || !input.recordReplayTick( writer, szKeys, 2 ) ) {
+	if ( !input.emitControls( SIR_INPUT_TEST, hSecond, &szRelease, 1 ) || !input.publish() ||
+	     !input.recordReplayTick( writer, szKeys, 2 ) ) {
 		return false;
 	}
 
@@ -106,17 +102,16 @@ static bool sirTestReplayServiceTick( void ) noexcept
 	SIRInputReplayTape reader;
 	sirInputReplayFrame_t frame = {};
 	sirInputActionState_t state = {};
-	if ( !reader.beginRead( szTape, nTapeBytes ) || !reader.next( &frame ) ||
-	     frame.nTick != 21 || frame.nCount != 2 ||
-	     !SIRInputReplayTape::query( frame, 7, 0, &state ) || state.bHeld ||
-	     !state.bPressed || !state.bReleased || state.nTransitions != 2 ) {
+	if ( !reader.beginRead( szTape, nTapeBytes ) || !reader.next( &frame ) || frame.nTick != 21 || frame.nCount != 2 ||
+	     !SIRInputReplayTape::query( frame, 7, 0, &state ) || state.bHeld || !state.bPressed || !state.bReleased ||
+	     state.nTransitions != 2 ) {
 		return false;
 	}
 	if ( !SIRInputReplayTape::query( frame, 8, 1, &state ) || state.nValue != 32767 || !state.bHeld ) {
 		return false;
 	}
-	if ( !reader.next( &frame ) || frame.nTick != 22 || !SIRInputReplayTape::query( frame, 8, 1, &state ) ||
-	     state.bHeld || !state.bReleased || !reader.finished() || reader.next( &frame ) ) {
+	if ( !reader.next( &frame ) || frame.nTick != 22 || !SIRInputReplayTape::query( frame, 8, 1, &state ) || state.bHeld ||
+	     !state.bReleased || !reader.finished() || reader.next( &frame ) ) {
 		return false;
 	}
 	if ( !reader.seek( 21, &frame ) || frame.nTick != 21 || !reader.next( &frame ) || frame.nTick != 22 ) {
@@ -139,10 +134,8 @@ static bool sirTestReplayInvalidRecord( void ) noexcept
 	SIRInputReplayTape writer;
 	uint8_t szBytes[SIR_INPUT_REPLAY_MAX_FRAME_BYTES] = {};
 	SIRInputService input;
-	if ( writer.beginRecord( szBytes, SIR_INPUT_REPLAY_HEADER_BYTES - 1 ) ||
-	     !writer.beginRecord( szBytes, sizeof( szBytes ) ) ||
-	     writer.append( 0, input.actions(), nullptr, 0 ) ||
-	     !writer.append( 7, input.actions(), nullptr, 0 ) ||
+	if ( writer.beginRecord( szBytes, SIR_INPUT_REPLAY_HEADER_BYTES - 1 ) || !writer.beginRecord( szBytes, sizeof( szBytes ) ) ||
+	     writer.append( 0, input.actions(), nullptr, 0 ) || !writer.append( 7, input.actions(), nullptr, 0 ) ||
 	     writer.append( 7, input.actions(), nullptr, 0 ) ) {
 		return false;
 	}
@@ -161,8 +154,7 @@ static bool sirTestReplayInvalidRecord( void ) noexcept
 static bool sirTestAuthoritativePlayback( void ) noexcept
 {
 	SIRInputService playback;
-	if ( !playback.startReplay() || playback.startReplay() || !playback.replayActive() ||
-	     !playback.begin( 21 ) || playback.publish() ) {
+	if ( !playback.startReplay() || playback.startReplay() || !playback.replayActive() || !playback.begin( 21 ) || playback.publish() ) {
 		return false;
 	}
 	sirInputReplayFrame_t first = {};
@@ -172,8 +164,8 @@ static bool sirTestAuthoritativePlayback( void ) noexcept
 	first.actions[1] = { 8, 1, 32767, 1, true, true, false };
 	sirInputReplayFrame_t invalid = first;
 	invalid.actions[0].bHeld = true;
-	if ( playback.queueReplayTick( invalid ) || !playback.queueReplayTick( first ) ||
-	     playback.queueReplayTick( first ) || !playback.publish() ) {
+	if ( playback.queueReplayTick( invalid ) || !playback.queueReplayTick( first ) || playback.queueReplayTick( first ) ||
+	     !playback.publish() ) {
 		return false;
 	}
 	sirInputActionState_t state = {};
@@ -184,8 +176,7 @@ static bool sirTestAuthoritativePlayback( void ) noexcept
 	uint8_t szBuffer[128] = {};
 	SIRInputReplayTape writer;
 	const sirInputReplayKey_t key = { 7, 0 };
-	if ( !writer.beginRecord( szBuffer, sizeof( szBuffer ) ) ||
-	     playback.recordReplayTick( writer, &key, 1 ) || !playback.begin( 22 ) ||
+	if ( !writer.beginRecord( szBuffer, sizeof( szBuffer ) ) || playback.recordReplayTick( writer, &key, 1 ) || !playback.begin( 22 ) ||
 	     playback.queryAction( 7, 0, &state ) ) {
 		return false;
 	}
@@ -197,9 +188,8 @@ static bool sirTestAuthoritativePlayback( void ) noexcept
 	second.nTick = 22;
 	second.nCount = 1;
 	second.actions[0] = { 8, 1, 0, 1, false, false, true };
-	if ( !playback.queueReplayTick( second ) || !playback.publish() ||
-	     playback.queryAction( 7, 0, &state ) || !playback.queryAction( 8, 1, &state ) ||
-	     state.bHeld || !state.bReleased ) {
+	if ( !playback.queueReplayTick( second ) || !playback.publish() || playback.queryAction( 7, 0, &state ) ||
+	     !playback.queryAction( 8, 1, &state ) || state.bHeld || !state.bReleased ) {
 		return false;
 	}
 	playback.stopReplay();
@@ -216,12 +206,12 @@ static bool sirTestHistoryServiceCapture( void ) noexcept
 	SIRInputHistory history;
 	SIRInputService input;
 	SIRReplayTestBackend backend;
-	if ( !history.initialize( szStorage, 4 ) || !input.attach( backend ) ||
-	     !input.actions().addContext( 31, 0, 10, true ) || !input.actions().addAction( 91, 0 ) ) {
+	if ( !history.initialize( szStorage, 4 ) || !input.attach( backend ) || !input.actions().addContext( 31, 0, 10, true ) ||
+	     !input.actions().addAction( 91, 0 ) ) {
 		return false;
 	}
-	const sirInputActionBinding_t binding = { 91, 31, 66, SIR_INPUT_NO_CHORD, 0, 0, 32767,
-	                                         SIR_INPUT_KEYBOARD, SIR_INPUT_BUTTON, SIR_INPUT_BIND_NONE };
+	const sirInputActionBinding_t binding = {
+	    91, 31, 66, SIR_INPUT_NO_CHORD, 0, 0, 32767, SIR_INPUT_KEYBOARD, SIR_INPUT_BUTTON, SIR_INPUT_BIND_NONE };
 	if ( !input.actions().addBinding( binding ) || !input.begin( 51 ) ) {
 		return false;
 	}
@@ -229,26 +219,24 @@ static bool sirTestHistoryServiceCapture( void ) noexcept
 	const sirInputControlChange_t pressed = { SIR_INPUT_BUTTON, 66, 1 };
 	const sirInputReplayKey_t key = { 91, 0 };
 	if ( !input.connect( { 0, 801, SIR_INPUT_TEST, SIR_INPUT_KEYBOARD }, &hKeyboard ) ||
-	     !input.emitControls( SIR_INPUT_TEST, hKeyboard, &pressed, 1 ) ||
-	     input.captureHistoryTick( history, &key, 1 ) || !input.publish() ||
-	     !input.captureHistoryTick( history, &key, 1 ) || history.count() != 1 ) {
+	     !input.emitControls( SIR_INPUT_TEST, hKeyboard, &pressed, 1 ) || input.captureHistoryTick( history, &key, 1 ) ||
+	     !input.publish() || !input.captureHistoryTick( history, &key, 1 ) || history.count() != 1 ) {
 		return false;
 	}
 	const sirInputControlChange_t released = { SIR_INPUT_BUTTON, 66, 0 };
-	if ( !input.begin( 52 ) || !input.emitControls( SIR_INPUT_TEST, hKeyboard, &released, 1 ) ||
-	     !input.publish() || !input.captureHistoryTick( history, &key, 1 ) || history.count() != 2 ) {
+	if ( !input.begin( 52 ) || !input.emitControls( SIR_INPUT_TEST, hKeyboard, &released, 1 ) || !input.publish() ||
+	     !input.captureHistoryTick( history, &key, 1 ) || history.count() != 2 ) {
 		return false;
 	}
 	SIRInputService playback;
-	if ( !playback.startReplay() || !playback.begin( 51 ) ||
-	     playback.queueHistoryTick( history, 52 ) || !playback.queueHistoryTick( history, 51 ) ||
-	     !playback.publish() ) {
+	if ( !playback.startReplay() || !playback.begin( 51 ) || playback.queueHistoryTick( history, 52 ) ||
+	     !playback.queueHistoryTick( history, 51 ) || !playback.publish() ) {
 		return false;
 	}
 	sirInputActionState_t state = {};
-	if ( !playback.queryAction( 91, 0, &state ) || !state.bHeld || !state.bPressed ||
-	     !playback.begin( 52 ) || !playback.queueHistoryTick( history, 52 ) || !playback.publish() ||
-	     !playback.queryAction( 91, 0, &state ) || state.bHeld || !state.bReleased ) {
+	if ( !playback.queryAction( 91, 0, &state ) || !state.bHeld || !state.bPressed || !playback.begin( 52 ) ||
+	     !playback.queueHistoryTick( history, 52 ) || !playback.publish() || !playback.queryAction( 91, 0, &state ) || state.bHeld ||
+	     !state.bReleased ) {
 		return false;
 	}
 	input.shutdown();
@@ -258,8 +246,8 @@ static bool sirTestHistoryServiceCapture( void ) noexcept
 
 int main( void )
 {
-	if ( !sirTestReplayServiceTick() || !sirTestReplayInvalidRecord() ||
-	     !sirTestAuthoritativePlayback() || !sirTestHistoryServiceCapture() ) {
+	if ( !sirTestReplayServiceTick() || !sirTestReplayInvalidRecord() || !sirTestAuthoritativePlayback() ||
+	     !sirTestHistoryServiceCapture() ) {
 		fputs( "SIRInputReplayTests FAILED\n", stderr );
 		return 1;
 	}

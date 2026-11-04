@@ -98,8 +98,7 @@ bool SIRInputText::appendUtf16( uint16_t nUnit ) noexcept
 	return appendCodepoint( nUnit );
 }
 
-bool SIRInputText::decodeUtf8( const char *pszUtf8, uint32_t nBytes, uint32_t *pOut, uint32_t nCapacity,
-                               uint32_t *pCount ) noexcept
+bool SIRInputText::decodeUtf8( const char *pszUtf8, uint32_t nBytes, uint32_t *pOut, uint32_t nCapacity, uint32_t *pCount ) noexcept
 {
 	if ( ( pszUtf8 == nullptr && nBytes != 0 ) || pOut == nullptr || pCount == nullptr ) {
 		return false;
@@ -146,8 +145,7 @@ bool SIRInputText::decodeUtf8( const char *pszUtf8, uint32_t nBytes, uint32_t *p
 	return true;
 }
 
-bool SIRInputText::decodeUtf16( const uint16_t *pUnits, uint32_t nCount, uint32_t *pOut, uint32_t nCapacity,
-                                uint32_t *pWritten ) noexcept
+bool SIRInputText::decodeUtf16( const uint16_t *pUnits, uint32_t nCount, uint32_t *pOut, uint32_t nCapacity, uint32_t *pWritten ) noexcept
 {
 	if ( ( pUnits == nullptr && nCount != 0 ) || pOut == nullptr || pWritten == nullptr ) {
 		return false;
@@ -206,8 +204,8 @@ bool SIRInputText::setPreeditUtf16( const uint16_t *pUnits, uint32_t nCount, uin
 	}
 	uint32_t szDecoded[SIR_INPUT_PREEDIT_CAPACITY] = {};
 	uint32_t nDecoded = 0;
-	if ( !decodeUtf16( pUnits, nCount, szDecoded, SIR_INPUT_PREEDIT_CAPACITY, &nDecoded ) ||
-	     nCaret > nDecoded || nSelection > nDecoded - nCaret ) {
+	if ( !decodeUtf16( pUnits, nCount, szDecoded, SIR_INPUT_PREEDIT_CAPACITY, &nDecoded ) || nCaret > nDecoded ||
+	     nSelection > nDecoded - nCaret ) {
 		return false;
 	}
 	memcpy( m_Snapshot.szPreedit, szDecoded, nDecoded * sizeof( uint32_t ) );
@@ -218,12 +216,10 @@ bool SIRInputText::setPreeditUtf16( const uint16_t *pUnits, uint32_t nCount, uin
 	return true;
 }
 
-bool SIRInputText::setPreeditCodepoints( const uint32_t *pCodepoints, uint32_t nCount, uint32_t nCaret,
-                                         uint32_t nSelection ) noexcept
+bool SIRInputText::setPreeditCodepoints( const uint32_t *pCodepoints, uint32_t nCount, uint32_t nCaret, uint32_t nSelection ) noexcept
 {
-	if ( !m_bCollecting || !m_Snapshot.bEnabled || !m_Snapshot.bFocused ||
-	     nCount > SIR_INPUT_PREEDIT_CAPACITY || ( pCodepoints == nullptr && nCount != 0 ) ||
-	     nCaret > nCount || nSelection > nCount - nCaret ) {
+	if ( !m_bCollecting || !m_Snapshot.bEnabled || !m_Snapshot.bFocused || nCount > SIR_INPUT_PREEDIT_CAPACITY ||
+	     ( pCodepoints == nullptr && nCount != 0 ) || nCaret > nCount || nSelection > nCount - nCaret ) {
 		return false;
 	}
 	for ( uint32_t i = 0; i < nCount; ++i ) {
@@ -248,8 +244,8 @@ bool SIRInputText::setPreeditUtf8( const char *pszUtf8, uint32_t nBytes, uint32_
 	}
 	uint32_t szDecoded[SIR_INPUT_PREEDIT_CAPACITY] = {};
 	uint32_t nDecoded = 0;
-	if ( !decodeUtf8( pszUtf8, nBytes, szDecoded, SIR_INPUT_PREEDIT_CAPACITY, &nDecoded ) ||
-	     nCaret > nDecoded || nSelection > nDecoded - nCaret ) {
+	if ( !decodeUtf8( pszUtf8, nBytes, szDecoded, SIR_INPUT_PREEDIT_CAPACITY, &nDecoded ) || nCaret > nDecoded ||
+	     nSelection > nDecoded - nCaret ) {
 		return false;
 	}
 	memcpy( m_Snapshot.szPreedit, szDecoded, nDecoded * sizeof( uint32_t ) );
