@@ -3,7 +3,8 @@
 add_library(SIRGraphics STATIC
     SIRGraphicsRegistry.cpp
     SIRGraphicsValidation.cpp
-    SIRShaderPipeline.cpp)
+    SIRShaderPipeline.cpp
+    Shaders/SIRShaderContracts.cpp)
 add_library(SIR::Graphics ALIAS SIRGraphics)
 target_include_directories(SIRGraphics PUBLIC
     "${PROJECT_SOURCE_DIR}/Source"
