@@ -270,9 +270,35 @@ static int32_t testContainsEvent( void *pData, void *pStudio, void *pBank, const
 	*pbFound = pBank == &pFixture->bBankA && strcmp( szPath, "event:/A" ) == 0 ? 1 : 0;
 	return 0;
 }
+static int32_t testContainsBankObject( void *pData, void *pStudio, void *pBank,
+                                      sirFMODBankObjectKind_t eKind, const char *szPath,
+                                      const sirContainerAllocator_t *pAllocator, uint8_t *pbFound ) noexcept
+{
+	sirFMODBankFixture_t *pFixture = ( sirFMODBankFixture_t * )pData;
+	checkBank( pStudio == pFixture && pAllocator != nullptr );
+	if ( pFixture->nFailMembership != 0 ) {
+		--pFixture->nFailMembership;
+		return -45;
+	}
+	const bool bBankA = pBank == &pFixture->bBankA;
+	const bool bBankB = pBank == &pFixture->bBankB;
+	*pbFound = 0;
+	if ( eKind == SIR_FMOD_BANK_OBJECT_BUS && bBankA && strcmp( szPath, "bus:/Master" ) == 0 ) {
+		*pbFound = 1;
+	} else if ( eKind == SIR_FMOD_BANK_OBJECT_VCA && ( bBankA || bBankB ) &&
+	            strcmp( szPath, "vca:/Music" ) == 0 ) {
+		*pbFound = 1;
+	} else if ( eKind == SIR_FMOD_BANK_OBJECT_SNAPSHOT && bBankA &&
+	            strcmp( szPath, "snapshot:/Storm" ) == 0 ) {
+		*pbFound = 1;
+	}
+	return 0;
+}
+
 static sirFMODBankNativeOps_t makeBankOps( sirFMODBankFixture_t *pFixture ) noexcept
 {
-	return { 1, pFixture, testLoadBank, testUnloadBank, testPreloadBank, testSampleState, testContainsEvent };
+	return { 2, pFixture, testLoadBank, testUnloadBank, testPreloadBank, testSampleState,
+	         testContainsEvent, testContainsBankObject };
 }
 
 static int32_t testPinnedBusResolve( void *pData, void *pStudio, const char *szPath, void **ppBus ) noexcept
@@ -392,6 +418,7 @@ static void testScopedBankOwnership( const sirContainerAllocator_t *pAllocator )
 	checkBank( mixer.configure( &context, pAllocator, mixerOps, 2 ) == SIR_AUDIO_OK );
 	checkBank( mixer.initialize() == SIR_AUDIO_OK );
 	checkBank( mixer.registerBusFromBank( 10, 999, &banks, "bus:/Master" ) == SIR_AUDIO_INVALID_HANDLE );
+	checkBank( mixer.registerBusFromBank( 10, 2, &banks, "bus:/Master" ) == SIR_AUDIO_INVALID_ARGUMENT );
 	checkBank( mixer.registerBusFromBank( 10, 1, &banks, "bus:/Master" ) == SIR_AUDIO_OK );
 	checkBank( mixer.registerVCAFromBank( 20, 2, &banks, "vca:/Music" ) == SIR_AUDIO_OK );
 
@@ -400,6 +427,7 @@ static void testScopedBankOwnership( const sirContainerAllocator_t *pAllocator )
 	SIRFMODSnapshotBackend snapshots;
 	checkBank( snapshots.configure( &context, pAllocator, snapshotOps, 1 ) == SIR_AUDIO_OK );
 	checkBank( snapshots.initialize() == SIR_AUDIO_OK );
+		checkBank( snapshots.registerSnapshotFromBank( 30, 2, &banks, "snapshot:/Storm" ) == SIR_AUDIO_INVALID_ARGUMENT );
 	checkBank( snapshots.registerSnapshotFromBank( 30, 1, &banks, "snapshot:/Storm" ) == SIR_AUDIO_OK );
 	checkBank( banks.getBankObjectPinCount( 1 ) == 2 && banks.getBankObjectPinCount( 2 ) == 1 );
 	checkBank( context.getBorrowedBankObjectCount() == 3 && context.getUnscopedBankObjectCount() == 0 );

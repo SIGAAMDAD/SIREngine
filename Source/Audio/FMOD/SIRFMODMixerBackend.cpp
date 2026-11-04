@@ -134,6 +134,14 @@ sirAudioResult_t SIRFMODMixerBackend::registerControl( uint64_t nControlId, cons
 		return SIR_AUDIO_CAPACITY;
 	}
 
+	if ( pBankStore != nullptr ) {
+		const sirFMODBankObjectKind_t eBankKind =
+		    eKind == SIR_FMOD_MIXER_BUS ? SIR_FMOD_BANK_OBJECT_BUS : SIR_FMOD_BANK_OBJECT_VCA;
+		const sirAudioResult_t eMembership = pBankStore->containsBankObject( nPackageId, eBankKind, szPath );
+		if ( eMembership != SIR_AUDIO_OK ) {
+			return eMembership;
+		}
+	}
 	void *pNative = nullptr;
 	if ( eKind == SIR_FMOD_MIXER_BUS ) {
 		m_nLastNativeResult = m_Ops.resolveBus( m_Ops.pUserData, m_pContext->m_pStudio, szPath, &pNative );

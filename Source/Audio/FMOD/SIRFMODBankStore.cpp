@@ -72,8 +72,8 @@ sirAudioResult_t SIRFMODBankStore::initialize( SIRFMODContext *pContext, SIRFMOD
 {
 	if ( m_bInitialized || m_pBanks != nullptr || pContext == nullptr || !pContext->isReady() || pVoices == nullptr ||
 	     !pVoices->isInitialized() || !SIRRawStorage::isValidAllocator( pAllocator ) || nMaxBanks == 0 || nMaxEventBindings == 0 ||
-	     ops.nAbiVersion != 1 || ops.loadFile == nullptr || ops.unload == nullptr || ops.preloadSamples == nullptr ||
-	     ops.sampleState == nullptr || ops.containsEvent == nullptr ) {
+	     ops.nAbiVersion != 2 || ops.loadFile == nullptr || ops.unload == nullptr || ops.preloadSamples == nullptr ||
+	     ops.sampleState == nullptr || ops.containsEvent == nullptr || ops.containsObject == nullptr ) {
 		return SIR_AUDIO_INVALID_ARGUMENT;
 	}
 
@@ -324,6 +324,30 @@ sirAudioResult_t SIRFMODBankStore::shutdown( void ) noexcept
 bool SIRFMODBankStore::isBoundTo( const SIRFMODContext *pContext ) const noexcept
 {
 	return m_pContext == pContext && isReady();
+}
+
+sirAudioResult_t SIRFMODBankStore::containsBankObject( uint64_t nPackageId, sirFMODBankObjectKind_t eKind,
+                                                        const char *szPath ) noexcept
+{
+	if ( !isReady() ) {
+		return SIR_AUDIO_NOT_INITIALIZED;
+	}
+	if ( szPath == nullptr || szPath[0] == '\0' ||
+	     ( eKind != SIR_FMOD_BANK_OBJECT_BUS && eKind != SIR_FMOD_BANK_OBJECT_VCA &&
+	       eKind != SIR_FMOD_BANK_OBJECT_SNAPSHOT ) ) {
+		return SIR_AUDIO_INVALID_ARGUMENT;
+	}
+	uint32_t iBank = 0;
+	if ( !findBank( nPackageId, iBank ) || m_pBanks[iBank].bUsable == 0 ) {
+		return SIR_AUDIO_INVALID_HANDLE;
+	}
+	uint8_t bFound = 0;
+	m_nLastNativeResult = m_Ops.containsObject( m_Ops.pUserData, m_pContext->m_pStudio, m_pBanks[iBank].pBank,
+	                                          eKind, szPath, m_pAllocator, &bFound );
+	if ( m_nLastNativeResult != 0 ) {
+		return SIR_AUDIO_BACKEND_ERROR;
+	}
+	return bFound != 0 ? SIR_AUDIO_OK : SIR_AUDIO_INVALID_ARGUMENT;
 }
 
 sirAudioResult_t SIRFMODBankStore::pinBankObject( uint64_t nPackageId ) noexcept

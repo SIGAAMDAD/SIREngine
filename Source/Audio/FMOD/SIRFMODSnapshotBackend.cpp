@@ -191,6 +191,13 @@ sirAudioResult_t SIRFMODSnapshotBackend::registerSnapshotInternal( uint64_t nSna
 		return SIR_AUDIO_CAPACITY;
 	}
 
+	if ( pBankStore != nullptr ) {
+		const sirAudioResult_t eMembership =
+		    pBankStore->containsBankObject( nPackageId, SIR_FMOD_BANK_OBJECT_SNAPSHOT, szPath );
+		if ( eMembership != SIR_AUDIO_OK ) {
+			return eMembership;
+		}
+	}
 	void *pDescription = nullptr;
 	m_nLastNativeResult = m_Ops.resolveSnapshot( m_Ops.pUserData, m_pContext->m_pStudio, szPath, &pDescription );
 	if ( m_nLastNativeResult != 0 || pDescription == nullptr ) {
