@@ -144,6 +144,69 @@ sirResourceCatalogResult_t SIRResourceCatalog::addDependency( uint64_t nOwnerId,
 	return SIR_RESOURCE_CATALOG_OK;
 }
 
+// Compute a deterministic dependency-first resource order. All temporary
+// counts use the catalog's existing editor-domain scratch; no loader bytes
+// or additional catalog authority is allocated.
+sirResourceCatalogResult_t SIRResourceCatalog::buildLoadOrder( uint64_t *pOutIds, uint32_t nCapacity,
+                                                               uint32_t *pOutCount ) noexcept
+{
+	if ( m_pEntries == nullptr ) {
+		return SIR_RESOURCE_CATALOG_UNINITIALIZED;
+	}
+	if ( pOutCount == nullptr || ( pOutIds == nullptr && nCapacity != 0 ) ) {
+		return SIR_RESOURCE_CATALOG_INVALID_ARGUMENT;
+	}
+	*pOutCount = m_nEntryCount;
+	if ( pOutIds == nullptr && nCapacity == 0 ) {
+		return SIR_RESOURCE_CATALOG_OK;
+	}
+	if ( nCapacity < m_nEntryCount ) {
+		return SIR_RESOURCE_CATALOG_OUT_OF_CAPACITY;
+	}
+	// Validate catalog edges before touching user output.
+	for ( uint32_t iEdge = 0; iEdge < m_nDependencyCount; ++iEdge ) {
+		const sirResourceDependency_t& edge = m_pDependencies[iEdge];
+		if ( findIndex( edge.nOwnerId ) == UINT32_MAX || findIndex( edge.nTargetId ) == UINT32_MAX ) {
+			return SIR_RESOURCE_CATALOG_NOT_FOUND;
+		}
+	}
+	memset( m_pSeen, 0, m_nEntryCount );
+	memset( m_pScratch, 0, ( size_t )m_nEntryCount * sizeof( uint32_t ) );
+	for ( uint32_t iEdge = 0; iEdge < m_nDependencyCount; ++iEdge ) {
+		const uint32_t iOwner = findIndex( m_pDependencies[iEdge].nOwnerId );
+		if ( m_pScratch[iOwner] == UINT32_MAX ) {
+			return SIR_RESOURCE_CATALOG_OUT_OF_CAPACITY;
+		}
+		++m_pScratch[iOwner];
+	}
+	for ( uint32_t iOutput = 0; iOutput < m_nEntryCount; ++iOutput ) {
+		uint32_t iNext = UINT32_MAX;
+		for ( uint32_t iResource = 0; iResource < m_nEntryCount; ++iResource ) {
+			if ( m_pSeen[iResource] == 0 && m_pScratch[iResource] == 0 &&
+			     ( iNext == UINT32_MAX || m_pEntries[iResource].nId < m_pEntries[iNext].nId ) ) {
+				iNext = iResource;
+			}
+		}
+		if ( iNext == UINT32_MAX ) {
+			return SIR_RESOURCE_CATALOG_CYCLIC;
+		}
+		const uint64_t nCompletedId = m_pEntries[iNext].nId;
+		m_pSeen[iNext] = 1;
+		pOutIds[iOutput] = nCompletedId;
+		for ( uint32_t iEdge = 0; iEdge < m_nDependencyCount; ++iEdge ) {
+			const sirResourceDependency_t& edge = m_pDependencies[iEdge];
+			if ( edge.nTargetId == nCompletedId ) {
+				const uint32_t iOwner = findIndex( edge.nOwnerId );
+				if ( m_pScratch[iOwner] == 0 ) {
+					return SIR_RESOURCE_CATALOG_CYCLIC;
+				}
+				--m_pScratch[iOwner];
+			}
+		}
+	}
+	return SIR_RESOURCE_CATALOG_OK;
+}
+
 sirResourceCatalogResult_t SIRResourceCatalog::findResource( uint64_t nId, sirResourceEntry_t *pOutEntry ) const noexcept
 {
 	if ( m_pEntries == nullptr ) {
