@@ -55,17 +55,17 @@ jobs:
           mapfile -t profiles < <(find out/InputCoverage/profiles -name '*.profraw' -type f | sort)
           test "${#profiles[@]}" -gt 0
           llvm-profdata-18 merge -sparse "${profiles[@]}" -o out/InputCoverage/merged.profdata
-          mapfile -t binaries < <(find out/InputCoverage/Tests/Unit -maxdepth 1 -type f -executable \\( -name 'SIRInput*' -o -name 'SIRGameInputCodecTests' -o -name 'SIRApplicationInputTests' \\) | sort)
+          mapfile -t binaries < <(find out/InputCoverage/Tests/Unit -maxdepth 1 -type f -executable \( -name 'SIRInput*' -o -name 'SIRGameInputCodecTests' -o -name 'SIRApplicationInputTests' \) | sort)
           test "${#binaries[@]}" -gt 0
           objects=()
           for binary in "${binaries[@]:1}"; do
             objects+=("-object=$binary")
           done
           llvm-cov-18 export "${binaries[0]}" "${objects[@]}" -instr-profile=out/InputCoverage/merged.profdata > out/InputCoverage/llvm-export.json
-          python3 Build/Scripts/InputCoverage.py \\
-            --source "$PWD" \\
-            --compdb out/InputCoverage/compile_commands.json \\
-            --export out/InputCoverage/llvm-export.json \\
+          python3 Build/Scripts/InputCoverage.py \
+            --source "$PWD" \
+            --compdb out/InputCoverage/compile_commands.json \
+            --export out/InputCoverage/llvm-export.json \
             --report out/InputCoverage/summary.json
       - name: Preserve actual source coverage evidence
         if: always()
