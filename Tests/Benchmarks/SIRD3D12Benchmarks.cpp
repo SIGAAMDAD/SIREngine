@@ -70,6 +70,8 @@ static bool sirBenchStatistics( double *pSortedSamples, uint32_t nSamples, sirD3
 	pStats->fMinimumNs = pSortedSamples[0];
 	pStats->fMaximumNs = pSortedSamples[nSamples - 1];
 	pStats->fP50Ns = pSortedSamples[( ( uint64_t )nSamples * 50 + 99 ) / 100 - 1];
+
+
 	pStats->fP95Ns = pSortedSamples[( ( uint64_t )nSamples * 95 + 99 ) / 100 - 1];
 	pStats->fP99Ns = pSortedSamples[( ( uint64_t )nSamples * 99 + 99 ) / 100 - 1];
 	for ( uint32_t iSample = 0; iSample < nSamples; ++iSample ) {
@@ -87,8 +89,7 @@ static double sirBenchNanoseconds( LARGE_INTEGER nStart, LARGE_INTEGER nEnd, LAR
 	return ( double )( nEnd.QuadPart - nStart.QuadPart ) * 1000000000.0 / ( double )nFrequency.QuadPart;
 }
 
-static bool sirBenchAdapter( SIRD3D12Driver &driver, bool bHardware, uint32_t *pIndex,
-                             sirGraphicsAdapterInfo_t *pInfo ) noexcept
+static bool sirBenchAdapter( SIRD3D12Driver &driver, bool bHardware, uint32_t *pIndex, sirGraphicsAdapterInfo_t *pInfo ) noexcept
 {
 	uint32_t nAdapters = 0;
 	if ( pIndex == nullptr || pInfo == nullptr || driver.getAdapterCount( &nAdapters ) != SIR_GRAPHICS_SUCCESS ) {
@@ -109,8 +110,8 @@ static bool sirBenchAdapter( SIRD3D12Driver &driver, bool bHardware, uint32_t *p
 	return false;
 }
 
-static bool sirBenchCpuCases( SIRRenderingDevice *pDevice, uint32_t nWarmup, uint32_t nIterations,
-                              LARGE_INTEGER nFrequency, sirD3D12BenchmarkResults_t *pResults ) noexcept
+static bool sirBenchCpuCases( SIRRenderingDevice *pDevice, uint32_t nWarmup, uint32_t nIterations, LARGE_INTEGER nFrequency,
+                              sirD3D12BenchmarkResults_t *pResults ) noexcept
 {
 	sirGraphicsCompletionSet_t immediate = {};
 	immediate.nDeviceGeneration = pDevice->getDeviceGeneration();
@@ -140,8 +141,8 @@ static bool sirBenchCpuCases( SIRRenderingDevice *pDevice, uint32_t nWarmup, uin
 	}
 	for ( uint32_t i = 0; i < nTotal; ++i ) {
 		SIRGraphicsCommandList *pCommand = nullptr;
-		if ( pDevice->acquireCommands( SIR_GRAPHICS_QUEUE_DIRECT, &pCommand ) != SIR_GRAPHICS_SUCCESS ||
-		     pCommand == nullptr || pCommand->close() != SIR_GRAPHICS_SUCCESS ) {
+		if ( pDevice->acquireCommands( SIR_GRAPHICS_QUEUE_DIRECT, &pCommand ) != SIR_GRAPHICS_SUCCESS || pCommand == nullptr ||
+		     pCommand->close() != SIR_GRAPHICS_SUCCESS ) {
 			return false;
 		}
 		sirGraphicsSubmission_t submission = {};
@@ -193,8 +194,8 @@ static bool sirBenchCpuCases( SIRRenderingDevice *pDevice, uint32_t nWarmup, uin
 	memset( upload.pData, 0x57, BUFFER_BYTES );
 	for ( uint32_t i = 0; i < nTotal; ++i ) {
 		SIRGraphicsCommandList *pCommand = nullptr;
-		if ( pDevice->acquireCommands( SIR_GRAPHICS_QUEUE_COPY, &pCommand ) != SIR_GRAPHICS_SUCCESS ||
-		     pCommand == nullptr || pCommand->copyBuffer( hReadback, 0, hUpload, 0, BUFFER_BYTES ) != SIR_GRAPHICS_SUCCESS ||
+		if ( pDevice->acquireCommands( SIR_GRAPHICS_QUEUE_COPY, &pCommand ) != SIR_GRAPHICS_SUCCESS || pCommand == nullptr ||
+		     pCommand->copyBuffer( hReadback, 0, hUpload, 0, BUFFER_BYTES ) != SIR_GRAPHICS_SUCCESS ||
 		     pCommand->close() != SIR_GRAPHICS_SUCCESS ) {
 			return false;
 		}
@@ -244,8 +245,7 @@ static bool sirBenchGpuTimestamps( bool bWarp, sirD3D12BenchmarkResults_t *pResu
 	ID3D12CommandQueue *pQueue = device.getDirectQueue();
 	SIRD3D12Memory *pMemory = device.getMemory();
 	if ( pNative == nullptr || pQueue == nullptr || pMemory == nullptr ||
-	     FAILED( pQueue->GetTimestampFrequency( &pResults->nTimestampFrequency ) ) ||
-	     pResults->nTimestampFrequency == 0 ) {
+	     FAILED( pQueue->GetTimestampFrequency( &pResults->nTimestampFrequency ) ) || pResults->nTimestampFrequency == 0 ) {
 		device.shutdown();
 		return true;
 	}
@@ -264,15 +264,13 @@ static bool sirBenchGpuTimestamps( bool bWarp, sirD3D12BenchmarkResults_t *pResu
 	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> pCommands;
 	bool bSuccess = false;
 	bool bSubmissionInFlight = false;
-	if ( FAILED( pMemory->createBuffer( D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ,
-	                                   COPY_BYTES, &pUpload ) ) ||
-	     FAILED( pMemory->createBuffer( D3D12_HEAP_TYPE_READBACK, D3D12_RESOURCE_STATE_COPY_DEST,
-	                                   COPY_BYTES, &pReadback ) ) ||
-	     FAILED( pMemory->createBuffer( D3D12_HEAP_TYPE_READBACK, D3D12_RESOURCE_STATE_COPY_DEST,
-	                                   SAMPLES * 2 * sizeof( uint64_t ), &pStamps ) ) ||
+	if ( FAILED( pMemory->createBuffer( D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ, COPY_BYTES, &pUpload ) ) ||
+	     FAILED( pMemory->createBuffer( D3D12_HEAP_TYPE_READBACK, D3D12_RESOURCE_STATE_COPY_DEST, COPY_BYTES, &pReadback ) ) ||
+	     FAILED( pMemory->createBuffer( D3D12_HEAP_TYPE_READBACK, D3D12_RESOURCE_STATE_COPY_DEST, SAMPLES * 2 * sizeof( uint64_t ),
+	                                    &pStamps ) ) ||
 	     FAILED( pNative->CreateCommandAllocator( D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS( pAllocator.GetAddressOf() ) ) ) ||
 	     FAILED( pNative->CreateCommandList( 0, D3D12_COMMAND_LIST_TYPE_DIRECT, pAllocator.Get(), nullptr,
-	                                       IID_PPV_ARGS( pCommands.GetAddressOf() ) ) ) ) {
+	                                         IID_PPV_ARGS( pCommands.GetAddressOf() ) ) ) ) {
 		goto cleanup;
 	}
 	{
@@ -316,8 +314,8 @@ static bool sirBenchGpuTimestamps( bool bWarp, sirD3D12BenchmarkResults_t *pResu
 		for ( uint32_t iSample = 0; iSample < SAMPLES; ++iSample ) {
 			const uint64_t nStart = pTicks[iSample * 2];
 			const uint64_t nEnd = pTicks[iSample * 2 + 1];
-			s_szSamples0[iSample] = nEnd > nStart ?
-			    ( double )( nEnd - nStart ) * 1000000000.0 / ( double )pResults->nTimestampFrequency : 0.0;
+			s_szSamples0[iSample] =
+			    nEnd > nStart ? ( double )( nEnd - nStart ) * 1000000000.0 / ( double )pResults->nTimestampFrequency : 0.0;
 		}
 		D3D12_RANGE noWrite = { 0, 0 };
 		pStamps->GetResource()->Unmap( 0, &noWrite );
@@ -372,11 +370,11 @@ cleanup:
 	return bSuccess;
 }
 
-static void sirBenchWriteStats( FILE *pFile, const char *pszName, const sirD3D12BenchmarkStats_t &s,
-                                bool bTrailingComma ) noexcept
+static void sirBenchWriteStats( FILE *pFile, const char *pszName, const sirD3D12BenchmarkStats_t &s, bool bTrailingComma ) noexcept
 {
-	fprintf( pFile, "    \"%s\": {\"mean_ns\": %.3f, \"p50_ns\": %.3f, \"p95_ns\": %.3f, \"p99_ns\": %.3f, "
-	                "\"min_ns\": %.3f, \"max_ns\": %.3f}%s\\n",
+	fprintf( pFile,
+	         "    \"%s\": {\"mean_ns\": %.3f, \"p50_ns\": %.3f, \"p95_ns\": %.3f, \"p99_ns\": %.3f, "
+	         "\"min_ns\": %.3f, \"max_ns\": %.3f}%s\\n",
 	         pszName, s.fMeanNs, s.fP50Ns, s.fP95Ns, s.fP99Ns, s.fMinimumNs, s.fMaximumNs, bTrailingComma ? "," : "" );
 }
 
@@ -402,14 +400,15 @@ static void sirBenchWriteJson( FILE *pFile, const sirGraphicsAdapterInfo_t &adap
 	fprintf( pFile, "{\\n  \"schema_version\": 1,\\n  \"backend\": \"d3d12\",\\n" );
 	fprintf( pFile, "  \"adapter\": {\"name\": " );
 	sirBenchWriteJsonString( pFile, adapter.szName );
-	fprintf( pFile, ", \"vendor_id\": %u, \"device_id\": %u, \"software\": %s, "
-	                "\"uma\": %s, \"dedicated_video_bytes\": %llu, \"shared_system_bytes\": %llu},\\n",
-	         adapter.nVendorId, adapter.nDeviceId, adapter.bSoftwareAdapter ? "true" : "false",
-	         bUma ? "true" : "false", ( unsigned long long )adapter.nDedicatedVideoBytes,
-	         ( unsigned long long )adapter.nSharedSystemBytes );
+	fprintf( pFile,
+	         ", \"vendor_id\": %u, \"device_id\": %u, \"software\": %s, "
+	         "\"uma\": %s, \"dedicated_video_bytes\": %llu, \"shared_system_bytes\": %llu},\\n",
+	         adapter.nVendorId, adapter.nDeviceId, adapter.bSoftwareAdapter ? "true" : "false", bUma ? "true" : "false",
+	         ( unsigned long long )adapter.nDedicatedVideoBytes, ( unsigned long long )adapter.nSharedSystemBytes );
 	fprintf( pFile, "  \"warmup\": %u, \"iterations\": %u,\\n", results.nWarmup, results.nSamples );
-	fprintf( pFile, "  \"memory\": {\"budget_bytes\": %llu, \"committed_bytes\": %llu, "
-	                "\"peak_committed_bytes\": %llu, \"resident_bytes\": %llu},\\n",
+	fprintf( pFile,
+	         "  \"memory\": {\"budget_bytes\": %llu, \"committed_bytes\": %llu, "
+	         "\"peak_committed_bytes\": %llu, \"resident_bytes\": %llu},\\n",
 	         ( unsigned long long )results.memory.nBudgetBytes, ( unsigned long long )results.memory.nCommittedBytes,
 	         ( unsigned long long )results.memory.nPeakCommittedBytes, ( unsigned long long )results.memory.nResidentBytes );
 	fprintf( pFile, "  \"cpu\": {\\n" );
@@ -417,8 +416,9 @@ static void sirBenchWriteJson( FILE *pFile, const sirGraphicsAdapterInfo_t &adap
 	sirBenchWriteStats( pFile, "submit_empty", results.submitEmpty, true );
 	sirBenchWriteStats( pFile, "submit_and_wait", results.submitAndWait, true );
 	sirBenchWriteStats( pFile, "copy_256k_roundtrip", results.copyRoundtrip, false );
-	fprintf( pFile, "  },\\n  \"gpu_timestamp\": {\"available\": %s, \"frequency_hz\": %llu, "
-	                "\"copies_per_sample\": %u, \"bytes_per_copy\": %u,\\n",
+	fprintf( pFile,
+	         "  },\\n  \"gpu_timestamp\": {\"available\": %s, \"frequency_hz\": %llu, "
+	         "\"copies_per_sample\": %u, \"bytes_per_copy\": %u,\\n",
 	         results.bGpuTimestampAvailable ? "true" : "false", ( unsigned long long )results.nTimestampFrequency,
 	         results.nCopiesPerGpuSample, results.nGpuCopyBytes );
 	sirBenchWriteStats( pFile, "copy_gpu", results.gpuCopy, false );

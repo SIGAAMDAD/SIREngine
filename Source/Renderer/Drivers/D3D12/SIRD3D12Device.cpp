@@ -39,8 +39,6 @@ bool SIRD3D12ComputeQueue::initialize( ID3D12Device *pDevice ) noexcept
 		m_nLastError = E_INVALIDARG;
 		return false;
 	}
-	m_Diagnostics.attachDevice( m_pDevice.Get() );
-
 	D3D12_COMMAND_QUEUE_DESC queue = {};
 	queue.Type = D3D12_COMMAND_LIST_TYPE_COMPUTE;
 	queue.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
@@ -396,8 +394,8 @@ SIRD3D12Device::~SIRD3D12Device( void ) noexcept
 	shutdown();
 }
 
-bool SIRD3D12Device::initialize( bool bUseWarp, const sirD3D12TransferPoolConfig_t &transferConfig,
-                                SIRGeneralHeap *pCpuHeap, const sirD3D12DiagnosticConfig_t &diagnostics ) noexcept
+bool SIRD3D12Device::initialize( bool bUseWarp, const sirD3D12TransferPoolConfig_t &transferConfig, SIRGeneralHeap *pCpuHeap,
+                                 const sirD3D12DiagnosticConfig_t &diagnostics ) noexcept
 {
 	if ( isReady() || m_pFactory != nullptr || m_bGraphicsUnsafe ) {
 		m_nLastError = E_FAIL;
@@ -457,6 +455,8 @@ bool SIRD3D12Device::initialize( bool bUseWarp, const sirD3D12TransferPoolConfig
 		shutdown();
 		return false;
 	}
+
+	m_Diagnostics.attachDevice( m_pDevice.Get() );
 
 	D3D12_COMMAND_QUEUE_DESC queue = {};
 	queue.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
@@ -947,6 +947,12 @@ bool SIRD3D12Device::submitGraphicsAfterCompute( const sirD3D12CompletionSet_t &
 	*pSet = {};
 
 	bool bPriorCompleted = false;
+
+
+
+
+
+
 	if ( !pollCompletionSet( computeSet, &bPriorCompleted ) || computeSet.nComputeFence == 0 ) {
 		m_nLastError = E_INVALIDARG;
 		return false;

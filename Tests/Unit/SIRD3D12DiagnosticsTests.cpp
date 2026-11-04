@@ -5,6 +5,8 @@ Copyright (C) 2023-2027 Noah Van Til
 
 This Source Code Form is subject to the terms of the Mozilla Public
 License, v2. If a copy of the MPL was not distributed with this
+
+
 file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 This software is provided "as is", without warranty of any kind,
@@ -20,8 +22,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 static bool sirD3D12CheckStatusMapping( void ) noexcept
 {
-	return sirD3D12ClassifyStatus( S_OK ) == SIR_GRAPHICS_SUCCESS &&
-	       sirD3D12ClassifyStatus( S_FALSE ) == SIR_GRAPHICS_SUCCESS &&
+	return sirD3D12ClassifyStatus( S_OK ) == SIR_GRAPHICS_SUCCESS && sirD3D12ClassifyStatus( S_FALSE ) == SIR_GRAPHICS_SUCCESS &&
 	       sirD3D12ClassifyStatus( DXGI_ERROR_DEVICE_REMOVED ) == SIR_GRAPHICS_DEVICE_LOST &&
 	       sirD3D12ClassifyStatus( DXGI_ERROR_DEVICE_RESET ) == SIR_GRAPHICS_DEVICE_LOST &&
 	       sirD3D12ClassifyStatus( DXGI_ERROR_DEVICE_HUNG ) == SIR_GRAPHICS_DEVICE_LOST &&
@@ -67,8 +68,7 @@ static int sirD3D12RunStress( SIRRenderingDevice *pDevice, uint32_t nCycles ) no
 		}
 		SIRGraphicsCommandList *pCopy = nullptr;
 		if ( pDevice->acquireCommands( SIR_GRAPHICS_QUEUE_COPY, &pCopy ) != SIR_GRAPHICS_SUCCESS || pCopy == nullptr ||
-		     pCopy->copyBuffer( hReadback, 0, hUpload, 0, 4096 ) != SIR_GRAPHICS_SUCCESS ||
-		     pCopy->close() != SIR_GRAPHICS_SUCCESS ) {
+		     pCopy->copyBuffer( hReadback, 0, hUpload, 0, 4096 ) != SIR_GRAPHICS_SUCCESS || pCopy->close() != SIR_GRAPHICS_SUCCESS ) {
 			return 24;
 		}
 		sirGraphicsSubmission_t submission = {};
@@ -79,8 +79,8 @@ static int sirD3D12RunStress( SIRRenderingDevice *pDevice, uint32_t nCycles ) no
 			return 25;
 		}
 		SIRGraphicsCommandList *pCompute = nullptr;
-		if ( pDevice->acquireCommands( SIR_GRAPHICS_QUEUE_COMPUTE, &pCompute ) != SIR_GRAPHICS_SUCCESS ||
-		     pCompute == nullptr || pCompute->close() != SIR_GRAPHICS_SUCCESS ) {
+		if ( pDevice->acquireCommands( SIR_GRAPHICS_QUEUE_COMPUTE, &pCompute ) != SIR_GRAPHICS_SUCCESS || pCompute == nullptr ||
+		     pCompute->close() != SIR_GRAPHICS_SUCCESS ) {
 			return 26;
 		}
 		submission.ppCommandLists = &pCompute;
@@ -91,8 +91,8 @@ static int sirD3D12RunStress( SIRRenderingDevice *pDevice, uint32_t nCycles ) no
 			return 27;
 		}
 		SIRGraphicsCommandList *pDirect = nullptr;
-		if ( pDevice->acquireCommands( SIR_GRAPHICS_QUEUE_DIRECT, &pDirect ) != SIR_GRAPHICS_SUCCESS ||
-		     pDirect == nullptr || pDirect->close() != SIR_GRAPHICS_SUCCESS ) {
+		if ( pDevice->acquireCommands( SIR_GRAPHICS_QUEUE_DIRECT, &pDirect ) != SIR_GRAPHICS_SUCCESS || pDirect == nullptr ||
+		     pDirect->close() != SIR_GRAPHICS_SUCCESS ) {
 			return 28;
 		}
 		submission.ppCommandLists = &pDirect;
@@ -123,8 +123,8 @@ static int sirD3D12RunStress( SIRRenderingDevice *pDevice, uint32_t nCycles ) no
 		return 32;
 	}
 	sirGraphicsMemoryBudget_t after = {};
-	if ( pDevice->queryMemoryBudget( &after ) != SIR_GRAPHICS_SUCCESS ||
-	     after.nCommittedBytes > after.nPeakCommittedBytes || after.nPeakCommittedBytes < before.nPeakCommittedBytes ) {
+	if ( pDevice->queryMemoryBudget( &after ) != SIR_GRAPHICS_SUCCESS || after.nCommittedBytes > after.nPeakCommittedBytes ||
+	     after.nPeakCommittedBytes < before.nPeakCommittedBytes ) {
 		return 33;
 	}
 	return 0;
@@ -206,15 +206,14 @@ int main( int argc, char **argv )
 	SIRD3D12RenderingDevice *pNative = ( SIRD3D12RenderingDevice * )pDevice;
 	sirD3D12DiagnosticSnapshot_t snapshot = {};
 	if ( pNative->queryNativeDiagnostics( nullptr ) != SIR_GRAPHICS_INVALID_ARGUMENT ||
-	     pNative->queryNativeDiagnostics( &snapshot ) != SIR_GRAPHICS_SUCCESS ||
-	     snapshot.bDeviceRemoved || snapshot.bDredEnabled != bDred || snapshot.bDebugLayerEnabled != bDebug ||
-	     snapshot.bGpuValidationEnabled != bGpuValidation || snapshot.nDeviceRemovedReason != S_OK ) {
+	     pNative->queryNativeDiagnostics( &snapshot ) != SIR_GRAPHICS_SUCCESS || snapshot.bDeviceRemoved ||
+	     snapshot.bDredEnabled != bDred || snapshot.bDebugLayerEnabled != bDebug || snapshot.bGpuValidationEnabled != bGpuValidation ||
+	     snapshot.nDeviceRemovedReason != S_OK ) {
 		return 9;
 	}
 	int nFailure = sirD3D12RunStress( pDevice, nCycles );
 	snapshot = {};
-	if ( nFailure == 0 &&
-	     ( pNative->queryNativeDiagnostics( &snapshot ) != SIR_GRAPHICS_SUCCESS || snapshot.bDeviceRemoved ) ) {
+	if ( nFailure == 0 && ( pNative->queryNativeDiagnostics( &snapshot ) != SIR_GRAPHICS_SUCCESS || snapshot.bDeviceRemoved ) ) {
 		nFailure = 10;
 	}
 	const sirGraphicsResult_t eShutdown = driver.destroyDevice( pDevice );
@@ -222,7 +221,6 @@ int main( int argc, char **argv )
 		fprintf( stderr, "D3D12 phase06 failed at stage %d, shutdown %u\\n", nFailure, ( unsigned )eShutdown );
 		return nFailure != 0 ? nFailure : 11;
 	}
-	printf( "D3D12 phase06 %s correctness: %u COPY->COMPUTE->DIRECT cycles passed\\n",
-	        bHardware ? "hardware" : "WARP", nCycles );
+	printf( "D3D12 phase06 %s correctness: %u COPY->COMPUTE->DIRECT cycles passed\\n", bHardware ? "hardware" : "WARP", nCycles );
 	return 0;
 }

@@ -22,8 +22,8 @@ sirGraphicsResult_t sirD3D12ClassifyStatus( HRESULT nResult ) noexcept
 	if ( SUCCEEDED( nResult ) ) {
 		return SIR_GRAPHICS_SUCCESS;
 	}
-	if ( nResult == DXGI_ERROR_DEVICE_REMOVED || nResult == DXGI_ERROR_DEVICE_RESET ||
-	     nResult == DXGI_ERROR_DEVICE_HUNG || nResult == DXGI_ERROR_DRIVER_INTERNAL_ERROR ) {
+	if ( nResult == DXGI_ERROR_DEVICE_REMOVED || nResult == DXGI_ERROR_DEVICE_RESET || nResult == DXGI_ERROR_DEVICE_HUNG ||
+	     nResult == DXGI_ERROR_DRIVER_INTERNAL_ERROR ) {
 		return SIR_GRAPHICS_DEVICE_LOST;
 	}
 	if ( nResult == E_INVALIDARG || nResult == E_POINTER ) {

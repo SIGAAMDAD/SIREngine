@@ -122,9 +122,9 @@ sirGraphicsResult_t SIRD3D12RenderingDevice::initialize( bool bSoftware, const s
 	diagnostics.bEnableGpuValidation = desc.bEnableGpuValidation;
 	diagnostics.bEnableDred = desc.bEnableDeviceFaultDiagnostics;
 	if ( !m_Native.initialize( bSoftware, config, desc.pCpuHeap, diagnostics ) ) {
-		return m_Native.getLastError() == E_NOTIMPL ? SIR_GRAPHICS_UNSUPPORTED
+		return m_Native.getLastError() == E_NOTIMPL      ? SIR_GRAPHICS_UNSUPPORTED
 		       : m_Native.getLastError() == E_INVALIDARG ? SIR_GRAPHICS_INVALID_ARGUMENT
-		                                                : SIR_GRAPHICS_DRIVER_ERROR;
+		                                                 : SIR_GRAPHICS_DRIVER_ERROR;
 	}
 	m_bSoftware = bSoftware;
 	if ( !m_Native.getMemory()->configureResidentBudget( desc.nResidentBudgetBytes ) ) {
@@ -162,7 +162,7 @@ sirGraphicsResult_t SIRD3D12RenderingDevice::initialize( bool bSoftware, const s
 
 sirGraphicsResult_t SIRD3D12RenderingDevice::queryNativeDiagnostics( sirD3D12DiagnosticSnapshot_t *pSnapshot ) noexcept
 {
-	return pSnapshot == nullptr ? SIR_GRAPHICS_INVALID_ARGUMENT
+	return pSnapshot == nullptr                     ? SIR_GRAPHICS_INVALID_ARGUMENT
 	       : m_Native.queryDiagnostics( pSnapshot ) ? SIR_GRAPHICS_SUCCESS
 	                                                : SIR_GRAPHICS_DEVICE_LOST;
 }
