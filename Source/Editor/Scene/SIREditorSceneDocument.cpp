@@ -419,7 +419,18 @@ sirEditorResult_t SIREditorSceneDocument::discardOrphanedProperties( void ) noex
 			continue;
 		}
 		const uint32_t iNode = findSlot( m_Storage.pStaging, property.nNodeId );
-		if ( iNode != UINT32_MAX ) {
+		const uint32_t iPreviousNode = findSlot( m_Storage.pNodes, property.nNodeId );
+		const bool bSameGeneration = iNode != UINT32_MAX && iPreviousNode != UINT32_MAX &&
+		                             m_Storage.pNodes[iPreviousNode].nGeneration == m_Storage.pStaging[iNode].nGeneration;
+		bool bExplicitlyAssigned = false;
+		for ( uint32_t iMutation = 0; iMutation < m_nPendingPropertyCount; ++iMutation ) {
+			const sirEditorPropertyMutation_t& mutation = m_Storage.pPendingProperties[iMutation];
+			if ( !mutation.bRemove && mutation.property.nNodeId == property.nNodeId &&
+			     mutation.property.nPropertyId == property.nPropertyId ) {
+				bExplicitlyAssigned = true;
+			}
+		}
+		if ( iNode != UINT32_MAX && ( bSameGeneration || bExplicitlyAssigned ) ) {
 			if ( m_pRegistry == nullptr ||
 			     m_pRegistry->validateProperty( m_Storage.pStaging[iNode].nTypeId, property.nPropertyId, property.value ) != SIR_OBJECT_OK ) {
 				return SIR_EDITOR_INVALID_PROPERTY;
