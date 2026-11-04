@@ -37,6 +37,7 @@ public:
 	bool vibrate( sirInputDeviceId_t hDevice, uint16_t nLeft, uint16_t nRight ) noexcept override;
 	void stop( SIRInputService &service ) noexcept override;
 	bool attachWindow( SIRInputService &service, Window hWindow ) noexcept;
+	bool enableRawPointer( Display *pDisplay ) noexcept;
 	bool processEvent( SIRInputService &service, const XEvent &event ) noexcept;
 	static long requiredEventMask( void ) noexcept;
 	static bool enableDetectableRepeat( Display *pDisplay ) noexcept;
@@ -50,6 +51,10 @@ private:
 	bool m_bAttached;
 	bool m_bFocused;
 	bool m_bHaveMotion;
+	bool m_bRawPointer;
+	int m_nXiOpcode;
+	double m_fMotionRemainderX;
+	double m_fMotionRemainderY;
 };
 
 #endif // __SIRENGINE_SIRLINUXX11BACKEND_H__

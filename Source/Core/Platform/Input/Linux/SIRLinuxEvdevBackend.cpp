@@ -40,6 +40,28 @@ sirInputBackendId_t SIRLinuxEvdevBackend::id( void ) const noexcept
 	return SIR_INPUT_LINUX_EVDEV;
 }
 
+uint64_t SIRLinuxEvdevBackend::physicalKey( const char *pszPhys, uint16_t nVendor, uint16_t nProduct ) noexcept
+{
+	if ( pszPhys == nullptr || pszPhys[0] == 0 ) {
+		return 0;
+	}
+
+	uint64_t nHash = UINT64_C( 14695981039346656037 );
+	for ( const char *p = pszPhys; *p != 0; ++p ) {
+		// Linux composite interfaces commonly suffix a shared physical USB
+		// location with /inputN; these nodes must resolve to one gamepad.
+		if ( p[0] == '/' && strncmp( p, "/input", 6 ) == 0 && p[6] >= '0' && p[6] <= '9' ) {
+			break;
+		}
+		nHash = ( nHash ^ ( uint8_t )*p ) * UINT64_C( 1099511628211 );
+	}
+	nHash = ( nHash ^ ( uint8_t )( nVendor & 255 ) ) * UINT64_C( 1099511628211 );
+	nHash = ( nHash ^ ( uint8_t )( nVendor >> 8 ) ) * UINT64_C( 1099511628211 );
+	nHash = ( nHash ^ ( uint8_t )( nProduct & 255 ) ) * UINT64_C( 1099511628211 );
+	nHash = ( nHash ^ ( uint8_t )( nProduct >> 8 ) ) * UINT64_C( 1099511628211 );
+	return nHash != 0 ? nHash : 1;
+}
+
 int16_t SIRLinuxEvdevBackend::mapButton( uint16_t nNative ) noexcept
 {
 	switch ( nNative ) {
@@ -199,8 +221,16 @@ bool SIRLinuxEvdevBackend::openDevice( SIRInputService &service, const char *psz
 		close( nFd );
 		return false;
 	}
+	input_id physicalIdentity = {};
+	char szPhysicalPath[256] = {};
+	const bool bHasIdentity = ioctl( nFd, EVIOCGID, &physicalIdentity ) == 0;
+	const bool bHasPath = ioctl( nFd, EVIOCGPHYS( sizeof( szPhysicalPath ) ), szPhysicalPath ) > 0;
+	szPhysicalPath[sizeof( szPhysicalPath ) - 1] = 0;
+	const uint64_t nPhysical = bHasPath && bHasIdentity
+	                               ? physicalKey( szPhysicalPath, physicalIdentity.vendor, physicalIdentity.product )
+	                               : 0;
 	sirInputDeviceId_t idOut = {};
-	if ( !service.connect( { 0, nNative, id(), SIR_INPUT_CONTROLLER }, &idOut ) ) {
+	if ( !service.connect( { nPhysical, nNative, id(), SIR_INPUT_CONTROLLER }, &idOut ) ) {
 		close( nFd );
 		return false;
 	}
