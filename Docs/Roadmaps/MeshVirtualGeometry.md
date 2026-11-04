@@ -3,7 +3,7 @@
 **Canonical tracking issue:** [#36](https://github.com/SIGAAMDAD/SIREngine/issues/36)
 **Implementation branch:** [`feature/mesh-cache-foundation`](https://github.com/SIGAAMDAD/SIREngine/tree/feature/mesh-cache-foundation) at original foundation commit [`9f0a566a8d9d`](https://github.com/SIGAAMDAD/SIREngine/commit/9f0a566a8d9d091ebee47e4d701dbffe1a2b5b8e).
 **Base branch:** `develop` at `51666fadadf8112b3b2d5bf919ba11dde55d931b`.
-**Status (2026-11-04):** R0 independent CPU cache slice committed; 29 roadmap implementation/acceptance issues open. Remaining stages are requirements and executable plans, **not** implemented source.
+**Status (2026-11-04):** R0 independent CPU cache slice committed; 35 roadmap implementation/acceptance issues open (29 original + 6 cross-backend additions). Remaining stages are requirements and executable plans, **not** implemented source.
 **Source plan:** SIR-VG-001 (Nanite-inspired SIREngine-native virtualized geometry), SIR-VG-DISP-001 (baked displacement), existing `Docs/Architecture/20-mesh-cache-foundation.md`, and renderer/GRDG/Streaming design authorities.
 
 ## 1. Objectives and invariant boundaries
@@ -14,7 +14,7 @@ The independent CPU foundation in `Source/Mesh/SIRMeshCache.*` deliberately **do
 
 **Shipping displacement contract:** Static mesh height/displacement textures are authoring inputs only. Cook adaptive subdivisions and displaced final positions, optimize via meshoptimizer, produce compressed vertex/index/cluster/HLOD geometry and optional displaced collision, then ship *only* cooked data. A shipping SIRPack must contain no original displacement texture bytes, loadable source paths/IDs, runtime displacement sampler/binding, or transitive source dependency. Runtime uses precomputed LOD pages, without initial-scene or per-frame displacement/tessellation work for these baked assets.
 
-**Backend contract:** Vulkan/D3D12 (and other backends that later qualify) lower the same mesh, visibility and residency results through native commands. Indexed-indirect-count is baseline; mesh/task shaders, compute micropolygon and RT are optional measured capabilities. Do not transplant Epic-licensed Nanite code. Pin permissive meshoptimizer donor versions and license notices.
+**Backend contract:** one canonical cooked geometry hierarchy, resource identity, residency directory and complete-group LOD policy for EVERY graphics driver. The guaranteed common execution is CPU reference cut + conventional indexed drawing (GL1.2 uses legal client arrays). Vulkan/D3D12 indexed indirect, qualified GL4.6/D3D11 FL11 GPU execution, mesh/task shaders, compute software raster and RT are independently capability-gated accelerations. A legacy fixed-function backend must never depend on GPU compute, indirect, GLSL, FBO or a driver-specific culler. No Epic-licensed Nanite implementation/shaders copied; pin permissive meshoptimizer donors and license notices.
 
 ## 2. Stage index
 
@@ -23,51 +23,39 @@ The independent CPU foundation in `Source/Mesh/SIRMeshCache.*` deliberately **do
 | R0 | Independent baseline and authority freeze | 2 | [#37](https://github.com/SIGAAMDAD/SIREngine/issues/37), [#38](https://github.com/SIGAAMDAD/SIREngine/issues/38) |
 | R1 | Offline cooking, compressed clusters, no-source-map shipping | 4 | [#39](https://github.com/SIGAAMDAD/SIREngine/issues/39), [#40](https://github.com/SIGAAMDAD/SIREngine/issues/40), [#41](https://github.com/SIGAAMDAD/SIREngine/issues/41), [#42](https://github.com/SIGAAMDAD/SIREngine/issues/42) |
 | R2 | CPU canonical memory, Jolt shapes, BVH and collision policy | 3 | [#43](https://github.com/SIGAAMDAD/SIREngine/issues/43), [#44](https://github.com/SIGAAMDAD/SIREngine/issues/44), [#45](https://github.com/SIGAAMDAD/SIREngine/issues/45) |
-| R3 | Sealed GPU geometry page residency and driver ABI | 3 | [#47](https://github.com/SIGAAMDAD/SIREngine/issues/47), [#48](https://github.com/SIGAAMDAD/SIREngine/issues/48), [#49](https://github.com/SIGAAMDAD/SIREngine/issues/49) |
-| R4 | GPUScene, cluster traversal, first images | 3 | [#50](https://github.com/SIGAAMDAD/SIREngine/issues/50), [#51](https://github.com/SIGAAMDAD/SIREngine/issues/51), [#52](https://github.com/SIGAAMDAD/SIREngine/issues/52) |
+| R3 | Shared page residency, CPU derivatives, GPU pools and ABI | 4 | [#47](https://github.com/SIGAAMDAD/SIREngine/issues/47), [#48](https://github.com/SIGAAMDAD/SIREngine/issues/48), [#49](https://github.com/SIGAAMDAD/SIREngine/issues/49), [#268](https://github.com/SIGAAMDAD/SIREngine/issues/268) |
+| R4 | Shared scene, cluster cuts, CPU batches and GPU execution | 7 | [#50](https://github.com/SIGAAMDAD/SIREngine/issues/50), [#51](https://github.com/SIGAAMDAD/SIREngine/issues/51), [#52](https://github.com/SIGAAMDAD/SIREngine/issues/52), [#269](https://github.com/SIGAAMDAD/SIREngine/issues/269), [#270](https://github.com/SIGAAMDAD/SIREngine/issues/270), [#271](https://github.com/SIGAAMDAD/SIREngine/issues/271), [#272](https://github.com/SIGAAMDAD/SIREngine/issues/272) |
 | R5 | Streamed world geometry, terrain and HLOD integration | 3 | [#53](https://github.com/SIGAAMDAD/SIREngine/issues/53), [#54](https://github.com/SIGAAMDAD/SIREngine/issues/54), [#55](https://github.com/SIGAAMDAD/SIREngine/issues/55) |
 | R6 | Material recipes, clutter and static object lifetimes | 3 | [#62](https://github.com/SIGAAMDAD/SIREngine/issues/62), [#64](https://github.com/SIGAAMDAD/SIREngine/issues/64), [#66](https://github.com/SIGAAMDAD/SIREngine/issues/66) |
 | R7 | Skeletal entities and optional acceleration | 3 | [#67](https://github.com/SIGAAMDAD/SIREngine/issues/67), [#68](https://github.com/SIGAAMDAD/SIREngine/issues/68), [#69](https://github.com/SIGAAMDAD/SIREngine/issues/69) |
-| R8 | Editor, profiling, release and independent acceptance | 5 | [#70](https://github.com/SIGAAMDAD/SIREngine/issues/70), [#71](https://github.com/SIGAAMDAD/SIREngine/issues/71), [#72](https://github.com/SIGAAMDAD/SIREngine/issues/72), [#75](https://github.com/SIGAAMDAD/SIREngine/issues/75), [#76](https://github.com/SIGAAMDAD/SIREngine/issues/76) |
+| R8 | Editor, performance and per-driver acceptance | 6 | [#70](https://github.com/SIGAAMDAD/SIREngine/issues/70), [#71](https://github.com/SIGAAMDAD/SIREngine/issues/71), [#72](https://github.com/SIGAAMDAD/SIREngine/issues/72), [#75](https://github.com/SIGAAMDAD/SIREngine/issues/75), [#76](https://github.com/SIGAAMDAD/SIREngine/issues/76), [#273](https://github.com/SIGAAMDAD/SIREngine/issues/273) |
 
 ## 3. Dependency DAG
 
 ```text
-Independent baseline commit 9f0a566
-    |-- R0-01 coverage closure -------------------------------------------+
-    |-- R0-02 shared contract freeze                                      |
-                |                                                          |
-                +--> R1-01 SIRPack --> R1-02 cluster hierarchy             |
-                |                          |                               |
-                |                          +--> R1-03 displacement         |
-                |                                     |                    |
-                |                                     +--> R1-04 shipping  |
-                |                                                          |
-                +--> R2-01 canonical GRDG/NMD leases <---------------------+
-                |          +--> R2-02 Jolt shared static collision
-                |                     +--> R2-03 CPU BVH and queries
-                |
-                +--> R3-01 sealed GPU pages + R3-02 indirect device ABI
-                           +--> R3-03 page publication
-                                +--> R4-01 GPUScene
-                                +--> R4-02 cluster cut / Hi-Z
-                                        +--> R4-03 Vulkan/D3D12 parity
-                                        +--> R5-01 World/Streaming feedback
-                                              +--> R5-02 World Partition
-                                              +--> R5-03 Terrain HLOD
-                                              +--> R6-01 materials/shadows
-                                              +--> R6-02 clutter
-                                              +--> R6-03 static world/weapon lifecycle
-                                              +--> R8-01 editor / R8-02 perf
-                                              +--> R8-03 baseline acceptance
-                                              |
-                                              +--> R7-01 skeletal and skinning
-                                                   +--> R7-02 ragdoll physics
-                                                   +--> R7-03 advanced GPU (independent)
-                                                   +--> R8-04 optional capability QA
+R0 contract #38 + CPU MeshCache #37
+  +--> R1 cooker/SIRPack #39/#40 (+ baked displacement #41/#42)
+  +--> R2 canonical GRDG/CPU mesh and collision #43/#44/#45
+  +--> R3 common residency protocol #49 + CPU/legacy derivative #268
+  |       +--> Modern-only sealed GPU pool #47 and indirect ABI #48
+  +--> R4 CPU scene snapshot #50 + CPU cut/reference #51
+          +--> Common draw-plan and sorted draw batches #269
+                +--> Fixed function #270: GL1.2/1.5, D3D7/8
+                +--> Programmable #271: GL1.5 ext, GL2.x/3.3,
+                |                        D3D8/9/10/11 FL9/10
+                +--> Modern indexed-indirect first image #52: Vulkan/D3D12
+                +--> Modern added #272: GL4.6, D3D11 FL11
+                         +--> Advanced optional #69 (mesh/task/RT)
+  +--> R5 World/Streaming demand #53 + World Partition #54
+          +--> Terrain3D HLOD #55
+  +--> R6 materials / clutter / world objects #62/#64/#66
+  +--> R7 skeletal/ragdoll optional #67/#68
+  +--> R8 editor #70, benchmarks #71, modern GPU gate #72,
+          optional R7 gates #75/#76,
+          per-driver independent qualification #273
 ```
 
-The diagram is conceptual; **each task issue's explicit `Blocked by` list is the binding issue-level dependency specification**. R7 capabilities and R8-04 do not block baseline R8-03. No calendar release dates are assigned without measured implementation throughput and remaining prerequisites.
+**Scheduling:** #38 contract freeze and R1 cooked hierarchy enable CPU/cook/core verification before any GPU compute implementation. #49 shares root/page-transaction semantics across CPU and GPU; #47/#48 are required only by drivers using those capabilities. #51 produces a CPU scalar oracle before any Hi-Z/compute lowering. #52 is Vulkan/D3D12 *GPU-tier* acceptance rather than a global prerequisite to fixed or programmable execution. R5/6 streaming and materials integrate through the common residency/frame plan without requiring every driver to ship. R8-06 (#273) certifies individual driver capability tiers and never reports a broad hardware PASS from another backend. All existing source ownership and issue-specific dependencies must be reconciled to this graph before implementation.
 
 ## 4. Implementation issues and acceptance gates
 
@@ -103,23 +91,28 @@ The diagram is conceptual; **each task issue's explicit `Blocked by` list is the
 
 ### R3 — Sealed GPU geometry page residency and driver ABI
 
-**Exit gate:** Physical GPU memory allocated by driver within sealed budget; logical generation-safe page table and root fallback; native indexed-indirect-count and cross-queue fences; atomic page publication/retirement.
+**Exit gate:** complete-group generation-safe residency and root fallback across CPU and GPU with atomic publication/retirement; engine-budgeted CPU page derivatives. Sealed native GPU pools, indexed-indirect-count and cross-queue fences are separately admitted modern GPU capabilities.
 
 | ID | GitHub issue | Implementation slice |
 | --- | --- | --- |
 | `VG-R3-01` | [#47](https://github.com/SIGAAMDAD/SIREngine/issues/47) | Fixed GPU geometry page pool and directory |
 | `VG-R3-02` | [#48](https://github.com/SIGAAMDAD/SIREngine/issues/48) | Native Vulkan/D3D12 indexed-indirect-count ABI |
-| `VG-R3-03` | [#49](https://github.com/SIGAAMDAD/SIREngine/issues/49) | Dependency-complete GPU page install and retirement |
+| `VG-R3-03` | [#49](https://github.com/SIGAAMDAD/SIREngine/issues/49) | Dependency-complete common group/page publication and GPU derivative retirement |
+| `VG-R3-04` | [#268](https://github.com/SIGAAMDAD/SIREngine/issues/268) | CPU/legacy page backing and native buffer/client-array derivatives |
 
 ### R4 — GPUScene, cluster traversal, first images
 
-**Exit gate:** Packed instance records, bounded dirty uploads, CPU reference cluster cut, conservative frustum/cone/Hi-Z; real Vulkan and D3D12 screenshot/depth equivalence with stable root fallbacks.
+**Exit gate:** packed CPU scene instance snapshot with optional GPU mirror, reference cluster cut, deterministic draw plan, conservative frustum/cone/occlusion. Fixed/programmable execution and Vulkan/D3D12 screenshot/depth equivalence have independent native qualification gates; no mandatory Hi-Z on CPU driver tiers.
 
 | ID | GitHub issue | Implementation slice |
 | --- | --- | --- |
 | `VG-R4-01` | [#50](https://github.com/SIGAAMDAD/SIREngine/issues/50) | GPUScene instance tables and dirty journals |
 | `VG-R4-02` | [#51](https://github.com/SIGAAMDAD/SIREngine/issues/51) | Hierarchical cluster culling and screen-space LOD |
-| `VG-R4-03` | [#52](https://github.com/SIGAAMDAD/SIREngine/issues/52) | Vulkan/D3D12 indexed-indirect first-image parity |
+| `VG-R4-03` | [#52](https://github.com/SIGAAMDAD/SIREngine/issues/52) | Initial Vulkan/D3D12 modern GPU indirect parity |
+| `VG-R4-04` | [#269](https://github.com/SIGAAMDAD/SIREngine/issues/269) | Deterministic common complete-cut and material-sorted draw-plan compilation |
+| `VG-R4-05` | [#270](https://github.com/SIGAAMDAD/SIREngine/issues/270) | Fixed-function CPU/client-array/buffer execution (GL1.2/1.5, D3D7/8) |
+| `VG-R4-06` | [#271](https://github.com/SIGAAMDAD/SIREngine/issues/271) | Programmable-era CPU-batch execution (GL1.5 ext/2.x/3.3, D3D8/9/10/11 downlevel) |
+| `VG-R4-07` | [#272](https://github.com/SIGAAMDAD/SIREngine/issues/272) | Additional qualified GPU execution (GL4.6, D3D11 FL11) |
 
 ### R5 — Streamed world geometry, terrain and HLOD integration
 
@@ -153,7 +146,7 @@ The diagram is conceptual; **each task issue's explicit `Blocked by` list is the
 
 ### R8 — Editor, profiling, release and independent acceptance
 
-**Exit gate:** Editor/re-cook inspector, reproducible measured performance, 100% locally compilable first-party line/branch/function coverage, CTest/sanitizers, GPU hardware and zero source displacement texture in shipping packages; optional capability QA separate.
+**Exit gate:** editor/re-cook inspector, measured performance, 100% locally compilable first-party line/branch/function coverage, CTest/sanitizers, required hardware testing for each qualified tier, and zero source displacement texture in shipping packages. Optional capability QA and per-driver certification #273 are tracked independently.
 
 | ID | GitHub issue | Implementation slice |
 | --- | --- | --- |
@@ -162,6 +155,7 @@ The diagram is conceptual; **each task issue's explicit `Blocked by` list is the
 | `VG-R8-03` | [#72](https://github.com/SIGAAMDAD/SIREngine/issues/72) | Baseline integration and shipping acceptance |
 | `VG-R8-04` | [#75](https://github.com/SIGAAMDAD/SIREngine/issues/75) | Optional skeletal/ragdoll capability QA |
 | `VG-R8-05` | [#76](https://github.com/SIGAAMDAD/SIREngine/issues/76) | Optional mesh/task, software raster and hardware RT capability QA |
+| `VG-R8-06` | [#273](https://github.com/SIGAAMDAD/SIREngine/issues/273) | Per-driver scene/cut/capability and real hardware acceptance |
 
 
 ## 5. Shared memory / object treatment
@@ -186,7 +180,7 @@ The engine must account for **distinct physical allocations once**, even when th
 | Renderer/GPUScene/FrameGraph | Instance and draw snapshots, shared cull/LOD, pass ordering | MeshCache page/geometry directories | Driver-specific independent scene graph |
 | World/Streaming | Geometry and world cell demand, epoch/cancel policy | GPU request feedback and I/O | Mesh-residency-owned second demand scheduler or rejected provider adapter |
 | Physics/Jolt | Shape/BVH, rigid-body state, collision policy | Pinned immutable CPU triangle views | Duplicating canonical vertex data per static instance |
-| Vulkan and D3D12 | Native buffers, descriptor heaps, queue fences, indirect command lowering | Frozen shared renderer ABI | Divergent LOD/streaming algorithms |
+| Each native graphics driver | Native buffers or client arrays, per-API draw/queue lowering and completion | Common cooked geometry/cut/draw plan and frozen graphics ABI v1 | Driver-specific LOD or streaming policy; fictitious unsupported compute/indirect features |
 | Independent QA | Acceptance evidence and fault injection | Exact source SHA and hardware captures | Simulated or stale PASS as production verification |
 
 Integration requires an agreed frozen cross-owner ABI and exact source ancestry; work may be developed independently inside protected paths until those gates are passed. Do not merge any still-diverging GRDG/Streaming/driver feature branch by assumption.
@@ -199,14 +193,72 @@ Integration requires an agreed frozen cross-owner ABI and exact source ancestry;
 4. **Visual:** Conservative visible set and root fallback, crack-free LOD/HLOD boundaries, shadow/material/depth parity, transparent/masked capability-scoped results and stable rapid camera turns.
 5. **Physics:** Actual shared static CPU positions where selected, Jolt collision/reference parity and correct per-instance collision modes, ragdoll transitions separately scoped.
 6. **Shipping:** Baked static displacement source textures absent from runtime package, graph closure and filesystem; loader, geometry renderer and collision work with original authoring heightmap deleted.
-7. **Hardware / performance:** Vulkan and D3D12 GPU hardware captures (not CPU mock alone), driver memory counters, CMake/CTest/GoogleTest, sanitizer stress, exact source & driver IDs and p50/p95/p99 data. Track GPU geometry separately from textures, staging, descriptors and RT structures.
+7. **Hardware / performance:** per-tier real GL1.2/1.5/2.x/3.3/4.6 and D3D7/8/9/10/11/12 plus Vulkan device proof where the named backend ships (not CPU mock alone); drivers and OS with no available hardware marked NOT_RUN; measured memory/CPU submit and qualified GPU timing, CMake/CTest/GoogleTest and sanitizer stress, exact source & driver IDs and p50/p95/p99 data. Track GPU geometry separately from textures, staging, descriptors and RT structures.
 8. **Licensing:** Unreal Nanite source is behavior reference only; do not copy its implementation/shaders. Permissively licensed donors must be pinned and attributed.
 
 ## 8. Completion conventions
 
 - Each issue opens with `Task ID`, source touchpoints, direct blockers, writer, implementation contract, acceptance, negative cases and protected areas.
 - Mark a task completed only when the commit, compile/config/format/AST records and required test/benchmark evidence are attached to the exact issue. Passing a standalone CPU mock cannot certify hardware Vulkan/D3D12 behavior.
-- R8-03 is the **baseline virtualized geometry** release gate. R8-04 separately gates skinned/ragdoll capabilities. R8-05 independently gates mesh/task, software-raster and RT capabilities. Releases can distinguish supported hardware tiers without changing core mesh-format authority.
+- R8-03 is the **initial modern GPU virtualized geometry** release gate (Vulkan/D3D12). R8-06 (#273) separately qualifies each other native graphics-driver tier and the shared CPU/reference core. R8-04 separately gates skinned/ragdoll capabilities; R8-05 independently gates mesh/task, software-raster and RT capabilities. Releases can distinguish supported hardware tiers without changing core mesh-format authority.
 - Roadmap updates should edit this index and its corresponding GitHub issues together. Preserve direct issue dependency references.
 
 **Tracking:** [Master GitHub issue #36](https://github.com/SIGAAMDAD/SIREngine/issues/36) · [Source foundation](https://github.com/SIGAAMDAD/SIREngine/blob/feature/mesh-cache-foundation/Docs/Architecture/20-mesh-cache-foundation.md)
+
+## 9. Universal Nanite-derived execution contract (2026-11-04)
+
+**Owner request:** shared virtualized-geometry system for *all* graphics drivers, not Vulkan/D3D12-specific scene or streaming systems. This section is the binding cross-tier update to the original R3/R4/R8 GPU-first plan. Implementation tasks: #268, #269, #270, #271, #272 and #273. Native graphics ABI remains v1.0 and public shared graphics interfaces are owned by ABI #130.
+
+### 9.1 Invariants and pipeline
+
+1. **One cooked geometry authority:** SIRPack owns one versioned, deterministic cluster-group hierarchy with per-group bounds, monotonic geometric error, parent/child coverage, seam compatibility and material boundaries. Root coarse data must be admitted and pinned for any asset accepted on a device. Original displacement textures are absent from the runtime package by existing R1 terms. No per-backend mesh cook or scene ID.
+2. **One complete surface cut:** for every visible surface domain, either a parent coverage group or its *entire* child replacement group is selected, never both and never a partially resident group. Selection is by world/instance transform, frustum/LOD/error, optional occlusion and current complete-group residency, not by graphics API name. Required group pages (including seam/format derivatives) are published atomically and pinned until all commands using them finish.
+3. **One shared scene/LOD/draw plan:** CPU-side immutable scene snapshot (SoA instance+mesh key+revision+transform+material), per-view projected screen error and bounds, group IDs, selected resident page IDs, pass/material sorting and draw-range records. The plan contains logical IDs and source/device generations, no persistent native `GLuint`, `ID3D*`, `VkBuffer` or driver pointers. A backend maps logical records to native resources.
+4. **One page/demand owner:** GRDG canonical identity/revision; MeshCache immutable CPU read leases; Core Memory physical CPU backing; World/Streaming one request scheduler; SIRRenderingDevice native GPU/CPU-facing resources. CPU missing-page demand and optional bounded GPU feedback enter the same World/Streaming queue with epoch/cancel/source-revision validation. A stale request cannot activate old pages or evict the pinned root.
+5. **No mandatory advanced features:** CPU-selected complete cuts + legal indexed draws define the universal executable baseline; compute/SSBO/indirect/mesh shader/Hi-Z/occlusion query are selected by actual native capability, never required for an older driver. Shared graphics ABI remains **v1.0** and all special draw commands are optional v1 capabilities owned by #130.
+6. **Conservative visibility:** frustum + optional CPU BSP/PVS, cone and delayed occlusion may reject only proven invisible groups; unknown or stale occlusion keeps geometry visible. Reuse the shared Hi-Z #46 only on qualified GPU tiers. Depth, alpha and shadow passes may use independently budgeted cuts but must pin their own selected pages until completion.
+7. **Capacity-bounded and recoverable:** static memory/page/command/work capacities selected before sealing; overflowing a queue or out-of-budget streaming preserves a valid coarser root and returns a typed budget/fallback result. CPU client arrays and legacy VBOs remain alive until real native submission completion; GPU page retirement waits for actual device completion and generation.
+
+### 9.2 Portable data and callable seams (proposals, freeze with #38 and ABI #130)
+
+- `sirVGClusterGroup_t`: stable group/parent relationship, mesh revision, geometry error, bounds/cone, surface coverage key, packed page dependencies, material/vertex layout IDs and required seam group IDs. Cooked hierarchy accepts multiple sibling pages but activation is group-atomic.
+- `sirVGResidencySnapshot_t`: immutable per-device/page-generation complete-group availability and root pins, with CPU/GPU derivative readiness and submission completion; produced by the single residency owner.
+- `sirVGSceneSnapshot_t`: immutable per-frame SoA instance list with canonical mesh IDs/revisions, transforms, material recipe identities and validated bounds; GPUScene table is an optional mirrored projection.
+- `sirVGFramePlan_t`: canonical per-view ordered logical selected groups/draw ranges/material/pass memberships plus pending page demand. No native command handles.
+- `sirVGExecutionCaps_t`: **internal** capability classification: client arrays / indexed vertex buffers / programmable state / compute + SSBO + indirect / mesh or task shaders; orthogonal flags for hardware occlusion and native fences; derives from actual shared graphics ABI v1 capabilities.
+- `SIRVGTraversal::selectCut(view, scene, residency, plan)`: read-only selection producing complete groups or explicit bounded failure.
+- `SIRVGDrawCompiler::compile(plan, caps, batches)`: material-sort and group-aggregate results into a bounded `sirVGExecutionPlan_t`. Drivers only lower typed batches using normal graphics commands. Any shared binary ABI addition belongs to #130; these example C++ calls are internal proposal contracts until compiled and frozen.
+
+### 9.3 Native execution tiers
+
+| Driver/API | Common cut execution | Native lowerer |
+| --- | --- | --- |
+| GL1.2 | CPU BVH/PVS/LOD, fixed shaderless | client array indexed draw, material/lightmap-ordered larger batches |
+| GL1.5 | CPU BVH/LOD plus delayed optional occlusion query | core VBO indexed batches; optional ARB program recipe separately |
+| GL2.0/2.1 | CPU LOD/visibility | VBO/IBO, GLSL1.10/1.20 or fixed state; extension FBO only where valid |
+| GL3.3 | CPU LOD/visibility and instancing | VAO/VBO/IBO/UBO, indexed/instanced draw; no compute/indirect core |
+| GL4.6 | qualified GPU cluster/Hi-Z/compaction, CPU reference fallback | compute + SSBO + multi-draw indirect, correct GL barriers; optional extension mesh shaders |
+| D3D7/D3D8 fixed | CPU BVH/PVS/LOD | fixed-function VB/indexed draws, actual texture/light and index limits |
+| D3D8 programmable / D3D9 | CPU LOD and batch sorting | bounded native VB/IB+shader variants; avoid assumptions about compute or indirect |
+| D3D10/10.1 | CPU LOD/visibility | VB/IB indexed batches; no general DX12-style indirect execution |
+| D3D11 FL9_x/10_x | CPU LOD/visibility | D3D11 indexed/instanced draws, feature-level shader/format limits |
+| D3D11 FL11 | qualified compute/UAV/indirect if real caps permit | compute cull, indirect indexed draws or CPU batch fallback |
+| D3D12 / Vulkan | GPU cull, indirect indexed, CPU reference validation | native compute/graphics and explicit memory/synchronization; mesh/task optional |
+| Software provider (only when actually registered) | CPU cut | bounded CPU triangle raster or other defined software draw provider; no new backend registration implied |
+
+**Batching:** no draw-per-small-cluster on fixed/programmable hardware. Aggregate contiguous resident indices and compatible material passes into bounded larger batches; split 16-bit index windows and maintain each driver’s baseVertex/firstInstance semantics (CPU rebase or typed rejection). Reduced variant materials are authored/cooked, not silently guessed. The visual output may use tier-specific shading; geometric coverage and cut error are portable.
+
+### 9.4 Page lifecycle and exact failure behavior
+
+`ROOT_READY -> REQUESTED -> LOADING -> VERIFIED -> STAGED -> INSTALLED -> GROUP_READY -> ACTIVE`; cancellation/failure can only return to a still-valid ancestor. `INSTALLED` is not visible until every sibling/dependency and native upload completion is confirmed. An immutable frame-plan pins its complete cut and any backend-native derivative through the last CPU/GL/D3D/Vulkan submission completion. Superseded pages are `RETIRED_PENDING` until all readers/views/queues quiesce; only then `RECLAIMED`. Destroy/recreate device increments generation; all derived handles and occlusion history invalidate; canonical SIRPack/GRDG source revisions remain unaffected. A streaming teleport can select coarser roots immediately while fine pages are fetched.
+
+### 9.5 Release and falsification matrix
+
+- **Source:** one cooked SIRPack hash per mesh, deterministic clusters, monotonic group error, 100% group surface coverage and zero gaps/double-coverage on 1,000+ camera positions, LOD thresholds, region seams, teleports and camera rotations.
+- **Residency:** randomized child-page delays, corrupt hashes, canceled I/O, full GPU/CPU pool, concurrent 2–3 in-flight frames, missing seam neighbors, device loss, stale revision and forced root-only device all preserve legal rendered coverage, no pointer UAF or early fence retirement.
+- **API:** explicitly test no compute/indirect on GL1.x/2.x/3.3/D3D7–10 and D3D11 downlevel; GL1.2 no VBO; GL1.5 VBO/query result latency; GL4.6 and D3D11 FL11 GPU path only on verified native feature support; Vulkan/D3D12 indirect hazards and cross-queue completion.
+- **Visual:** identical selected geometry groups for same CPU oracle inputs regardless of API; conservative GPU visibility permitted to draw extras but may not discard a covered group; compare pixel silhouette and terrain/mesh seam geometry with material-specific tolerance, not byte-equal shading across eras.
+- **Performance:** capture draw count per material, cluster/triangle counts, CPU cut and batch/sort costs, I/O/decode/upload, physical logical page residency, p50/p95/p99 frame and scene update, GPU timings only when hardware provides them. Compare against conventional mesh LOD at equal rendered error across a representative world route. Every OS/API/GPU test is PASS/FAIL/NOT_RUN separately, with source revision and device driver ID.
+- **Quality:** C++17 pinned formatter, real Clang AST, CMake/CTest/GoogleTest, sanitizer and locally compiled source line/branch/function coverage; no QA pass from a mock or from issue text.
+
+**Scope and progress:** Documentation/issue roadmap only. Source contracts, geometry cooker, native drivers and GPU tests are not completed by this update. Existing 29 tasks remain open; new cross-tier tasks #268–#273 are open.
