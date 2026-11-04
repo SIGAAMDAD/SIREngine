@@ -104,6 +104,15 @@ const sirInputFrame_t *SIRInputService::frame( void ) const noexcept
 	return m_State.frame();
 }
 
+bool SIRInputService::recordReplayTick( SIRInputReplayTape &tape, const sirInputReplayKey_t *pKeys, uint32_t nCount ) const noexcept
+{
+	const sirInputFrame_t *pFrame = m_State.frame();
+	if ( m_bStopping || m_State.collecting() || pFrame == nullptr ) {
+		return false;
+	}
+	return tape.append( pFrame->nTick, m_Actions, pKeys, nCount );
+}
+
 SIRInputActions &SIRInputService::actions( void ) noexcept
 {
 	return m_Actions;
@@ -142,7 +151,7 @@ void SIRInputService::setHapticsPaused( bool bPaused ) noexcept
 	m_bHapticsPaused = bPaused;
 	if ( bPaused ) {
 		if ( m_Haptics.hasWork() ) {
-		( void )m_Haptics.advance( SIRPlatformTime::getMonotonicNanoseconds(), true, sirInputRumbleOutput, this );
+			( void )m_Haptics.advance( SIRPlatformTime::getMonotonicNanoseconds(), true, sirInputRumbleOutput, this );
 		}
 		for ( uint32_t i = 0; i < SIR_INPUT_DEVICE_CAPACITY; ++i ) {
 			sirInputDeviceDescriptor_t desc = {};
