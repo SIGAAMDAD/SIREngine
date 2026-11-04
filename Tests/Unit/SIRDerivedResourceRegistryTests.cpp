@@ -283,11 +283,142 @@ static void testConstructorOutOfMemory( void )
 	REQUIRE( allocator.nLive.load() == 0 );
 }
 
+
+static void testInvalidInputsAndCapacity( void )
+{
+	sirDerivedTestAllocator_t allocator = {};
+	{
+		SIRResourceGraph graph( graphConfig( allocator ) );
+		REQUIRE( graph.isReady() );
+		SIRResourceDerivedConfig badConfig = derivedConfig( allocator );
+		badConfig.nMaxProviders = 0;
+		{
+			SIRResourceDerivedRegistry invalid( graph, badConfig );
+			REQUIRE( !invalid.isReady() );
+			REQUIRE( invalid.registerProvider( 7, { nullptr, releaseNative } ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+			REQUIRE( invalid.updateCompletedFence( 7, 0 ) == SIR_RESOURCE_RESULT_FAILED );
+			SIRResourceDerivedStats invalidStats = {};
+			REQUIRE( invalid.getStats( &invalidStats ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		}
+		badConfig = derivedConfig( allocator );
+		badConfig.nMaxTrackedBytes = 0;
+		{
+			SIRResourceDerivedRegistry invalid( graph, badConfig );
+			REQUIRE( !invalid.isReady() );
+		}
+		badConfig = derivedConfig( allocator );
+		badConfig.allocator.m_pfnAllocate = nullptr;
+		{
+			SIRResourceDerivedRegistry invalid( graph, badConfig );
+			REQUIRE( !invalid.isReady() );
+		}
+		badConfig = derivedConfig( allocator );
+		badConfig.allocator.m_pfnFree = nullptr;
+		{
+			SIRResourceDerivedRegistry invalid( graph, badConfig );
+			REQUIRE( !invalid.isReady() );
+		}
+		const SIRResourceHandle hSource = publishSource( *graph.getWriter(), 400 );
+		SIRResourceDerivedRegistry registry( graph, derivedConfig( allocator ) );
+		REQUIRE( registry.isReady() );
+		sirDerivedTestProvider_t provider = {};
+		REQUIRE( registry.registerProvider( 0, { &provider, releaseNative } ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		REQUIRE( registry.registerProvider( 7, { &provider, nullptr } ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		REQUIRE( registry.registerProvider( 7, { &provider, releaseNative } ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( registry.updateCompletedFence( 8, 0 ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		REQUIRE( registry.getStats( nullptr ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		SIRDerivedResourceAccounting accounting = {};
+		REQUIRE( registry.getAccounting( { UINT32_MAX, 0 }, &accounting ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		REQUIRE( registry.getAccounting( { 0, 1 }, nullptr ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		REQUIRE( registry.getAccounting( { 0, 1 }, &accounting ) == SIR_RESOURCE_RESULT_INVALID_HANDLE );
+		REQUIRE( registry.retireRepresentation( { UINT32_MAX, 0 }, 0 ) == SIR_RESOURCE_RESULT_INVALID_HANDLE );
+		REQUIRE( registry.retireRepresentation( { 0, 1 }, 0 ) == SIR_RESOURCE_RESULT_INVALID_HANDLE );
+		SIRDerivedResourceHandle live[4] = {};
+		{
+			SIRResourceReadScope scope( graph );
+			SIRResourceView view;
+			REQUIRE( graph.resolve( scope, hSource, &view ) == SIR_RESOURCE_RESULT_SUCCESS );
+			const SIRDerivedResourceRegistration base = derived( hSource, 1, 7, 1, 500, 32 );
+			SIRDerivedResourceRegistration changed = base;
+			REQUIRE( registry.registerRepresentation( scope, view, base, nullptr ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+			changed.m_nNativeToken = 0;
+			REQUIRE( registry.registerRepresentation( scope, view, changed, &live[0] ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+			changed = base;
+			changed.m_Key.m_nRevision = 0;
+			REQUIRE( registry.registerRepresentation( scope, view, changed, &live[0] ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+			changed = base;
+			changed.m_Key.m_nRepresentationId = 0;
+			REQUIRE( registry.registerRepresentation( scope, view, changed, &live[0] ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+			changed = base;
+			changed.m_Key.m_nReserved = 1;
+			REQUIRE( registry.registerRepresentation( scope, view, changed, &live[0] ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+			changed = base;
+			changed.m_Key.m_Resource.m_nReserved = 1;
+			REQUIRE( registry.registerRepresentation( scope, view, changed, &live[0] ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+			changed = base;
+			changed.m_Accounting.m_eSpace = ( decltype( changed.m_Accounting.m_eSpace ) )255;
+			REQUIRE( registry.registerRepresentation( scope, view, changed, &live[0] ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+			changed = base;
+			changed.m_Accounting.m_nCommittedBytes = 0;
+			REQUIRE( registry.registerRepresentation( scope, view, changed, &live[0] ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+			changed = base;
+			changed.m_Accounting.m_nResidentBytes = 33;
+			REQUIRE( registry.registerRepresentation( scope, view, changed, &live[0] ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+			changed = base;
+			changed.m_Accounting.m_nSourceRevision = 0;
+			REQUIRE( registry.registerRepresentation( scope, view, changed, &live[0] ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+			changed = base;
+			changed.m_Key.m_nProviderId = 55;
+			REQUIRE( registry.registerRepresentation( scope, view, changed, &live[0] ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+			changed = base;
+			changed.m_Key.m_Resource.m_nGeneration++;
+			REQUIRE( registry.registerRepresentation( scope, view, changed, &live[0] ) == SIR_RESOURCE_RESULT_INVALID_HANDLE );
+			changed = base;
+			changed.m_Key.m_nRevision = 2;
+			changed.m_Accounting.m_nSourceRevision = 2;
+			REQUIRE( registry.registerRepresentation( scope, view, changed, &live[0] ) == SIR_RESOURCE_RESULT_INVALID_HANDLE );
+			changed = base;
+			changed.m_Accounting.m_nCommittedBytes = 301;
+			changed.m_Accounting.m_nResidentBytes = 293;
+			REQUIRE( registry.registerRepresentation( scope, view, changed, &live[0] ) == SIR_RESOURCE_RESULT_OUT_OF_BUDGET );
+			SIRResourceView invalidView;
+			REQUIRE( registry.registerRepresentation( scope, invalidView, base, &live[0] ) == SIR_RESOURCE_RESULT_INVALID_HANDLE );
+			std::thread unauthorized( [&]() {
+				SIRDerivedResourceHandle ignored = {};
+				SIRDerivedResourceAccounting ignoredAccounting = {};
+				SIRResourceDerivedStats ignoredStats = {};
+				REQUIRE( registry.registerProvider( 8, { &provider, releaseNative } ) == SIR_RESOURCE_RESULT_WRITER_VIOLATION );
+				REQUIRE( registry.registerRepresentation( scope, view, base, &ignored ) == SIR_RESOURCE_RESULT_WRITER_VIOLATION );
+				REQUIRE( registry.retireRepresentation( { 0, 1 }, 0 ) == SIR_RESOURCE_RESULT_WRITER_VIOLATION );
+				REQUIRE( registry.getAccounting( { 0, 1 }, &ignoredAccounting ) == SIR_RESOURCE_RESULT_WRITER_VIOLATION );
+				REQUIRE( registry.getStats( &ignoredStats ) == SIR_RESOURCE_RESULT_WRITER_VIOLATION );
+			} );
+			unauthorized.join();
+			for ( uint32_t i = 0; i < 4; ++i ) {
+				const SIRDerivedResourceRegistration registration = derived( hSource, 1, 7, i + 1, 500 + i, 32 );
+				REQUIRE( registry.registerRepresentation( scope, view, registration, &live[i] ) == SIR_RESOURCE_RESULT_SUCCESS );
+			}
+			changed = derived( hSource, 1, 7, 5, 505, 32 );
+			SIRDerivedResourceHandle ignored = {};
+			REQUIRE( registry.registerRepresentation( scope, view, changed, &ignored ) == SIR_RESOURCE_RESULT_OUT_OF_BUDGET );
+			REQUIRE( registry.getAccounting( { live[0].m_nSlot, live[0].m_nGeneration + 1 }, &accounting ) ==
+			         SIR_RESOURCE_RESULT_INVALID_HANDLE );
+		}
+		for ( uint32_t i = 0; i < 4; ++i ) {
+			REQUIRE( registry.retireRepresentation( live[i], 1 ) == SIR_RESOURCE_RESULT_SUCCESS );
+		}
+		REQUIRE( registry.updateCompletedFence( 7, 1 ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( provider.nReleased == 4 );
+	}
+	REQUIRE( allocator.nLive.load() == 0 );
+}
+
 int main( void )
 {
 	testProviderLifetimeAndPhysicalAccounting();
 	testRetryStaleGenerationAndWriterBoundary();
 	testConstructorOutOfMemory();
+	testInvalidInputsAndCapacity();
 	puts( "PASS: derived provider accounting, retirement fences, pins and ABA protection" );
 	return 0;
 }
