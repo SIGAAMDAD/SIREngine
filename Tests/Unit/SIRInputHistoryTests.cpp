@@ -120,9 +120,79 @@ static bool sirTestHistoryHash( void ) noexcept
 	return true;
 }
 
+static bool sirTestHistoryBoundaries( void ) noexcept
+{
+	SIRInputHistory history;
+	sirInputReplayFrame_t output = {};
+	sirInputReplayFrame_t frame = {};
+	frame.nTick = 5;
+	uint64_t nHash = 0;
+	if ( history.append( frame ) || history.read( 5, &output ) || history.rewindFrom( 5 ) || history.replaceFrom( frame ) ||
+	     history.digest( 5, &nHash ) || history.oldestTick() != 0 || history.newestTick() != 0 || history.count() != 0 ) {
+		return false;
+	}
+	if ( SIRInputHistory::hashFrame( frame, nullptr ) || !SIRInputHistory::hashFrame( frame, &nHash ) ) {
+		return false;
+	}
+	sirInputReplayFrame_t szStorage[2] = {};
+	if ( !history.initialize( szStorage, 2 ) || history.read( 5, &output ) || history.rewindFrom( 5 ) || history.replaceFrom( frame ) ||
+	     history.digest( 5, &nHash ) ) {
+		return false;
+	}
+	sirInputReplayFrame_t invalid = frame;
+	invalid.nTick = 0;
+	if ( history.append( invalid ) || history.replaceFrom( invalid ) || SIRInputHistory::hashFrame( invalid, &nHash ) ) {
+		return false;
+	}
+	if ( !history.append( frame ) || history.read( 5, nullptr ) || history.read( 4, &output ) || history.read( 6, &output ) ||
+	     history.digest( 5, nullptr ) || history.digest( 4, &nHash ) || history.digest( 6, &nHash ) || history.rewindFrom( 4 ) ||
+	     history.rewindFrom( 7 ) ) {
+		return false;
+	}
+	invalid = frame;
+	invalid.nTick = 4;
+	if ( history.replaceFrom( invalid ) ) {
+		return false;
+	}
+	invalid.nTick = 6;
+	if ( history.replaceFrom( invalid ) ) {
+		return false;
+	}
+	invalid.nTick = 5;
+	invalid.nCount = 1;
+	invalid.actions[0] = { 0, 0, 0, 0, false, false, false };
+	if ( history.replaceFrom( invalid ) || !history.read( 5, &output ) || output.nTick != 5 ) {
+		return false;
+	}
+	// Exercise every well-formed action flag combination without changing the frame's logical identity.
+	for ( uint32_t nFlags = 0; nFlags < 8; ++nFlags ) {
+		frame.nTick = 5;
+		frame.nCount = 1;
+		frame.actions[0] = { 7, 0, ( nFlags & 1 ) != 0 ? 32767 : 0, 1, ( nFlags & 1 ) != 0, ( nFlags & 2 ) != 0, ( nFlags & 4 ) != 0 };
+		if ( !SIRInputHistory::hashFrame( frame, &nHash ) || nHash == 0 ) {
+			return false;
+		}
+	}
+	if ( !history.rewindFrom( 6 ) || history.count() != 1 || !history.rewindFrom( 5 ) || history.count() != 0 || history.rewindFrom( 5 ) ) {
+		return false;
+	}
+	frame = {};
+	frame.nTick = UINT64_MAX;
+	if ( !history.append( frame ) ) {
+		return false;
+	}
+	frame.nTick = 1;
+	if ( history.append( frame ) || history.count() != 1 || history.newestTick() != UINT64_MAX || !history.rewindFrom( UINT64_MAX ) ||
+	     history.count() != 0 ) {
+		return false;
+	}
+	history.clear();
+	return history.capacity() == 2 && history.oldestTick() == 0 && history.newestTick() == 0;
+}
+
 int main( void )
 {
-	if ( !sirTestHistoryRing() || !sirTestHistoryHash() || !sirTestHistoryStress() ) {
+	if ( !sirTestHistoryRing() || !sirTestHistoryHash() || !sirTestHistoryStress() || !sirTestHistoryBoundaries() ) {
 		fputs( "SIRInputHistoryTests FAILED\n", stderr );
 		return 1;
 	}
