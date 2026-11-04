@@ -33,8 +33,8 @@ SIRD3D12GraphicsKernel::~SIRD3D12GraphicsKernel( void ) noexcept
 	shutdown( false );
 }
 
-bool SIRD3D12GraphicsKernel::initialize( ID3D12Device *pDevice, const void *pVertexDxil, size_t nVertexBytes,
-                                         const void *pPixelDxil, size_t nPixelBytes ) noexcept
+bool SIRD3D12GraphicsKernel::initialize( ID3D12Device *pDevice, const void *pVertexDxil, size_t nVertexBytes, const void *pPixelDxil,
+                                         size_t nPixelBytes ) noexcept
 {
 	if ( pDevice == nullptr || pVertexDxil == nullptr || pPixelDxil == nullptr || nVertexBytes < 16 || nPixelBytes < 16 ||
 	     nVertexBytes > 4 * 1024 * 1024 || nPixelBytes > 4 * 1024 * 1024 || m_pPipelineState != nullptr ) {
@@ -46,21 +46,19 @@ bool SIRD3D12GraphicsKernel::initialize( ID3D12Device *pDevice, const void *pVer
 	rootDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
 	Microsoft::WRL::ComPtr<ID3DBlob> pRootBlob;
 	Microsoft::WRL::ComPtr<ID3DBlob> pErrors;
-	m_nLastError = D3D12SerializeRootSignature( &rootDesc, D3D_ROOT_SIGNATURE_VERSION_1,
-	                                            pRootBlob.GetAddressOf(), pErrors.GetAddressOf() );
+	m_nLastError = D3D12SerializeRootSignature( &rootDesc, D3D_ROOT_SIGNATURE_VERSION_1, pRootBlob.GetAddressOf(), pErrors.GetAddressOf() );
 	if ( FAILED( m_nLastError ) ) {
 		return false;
 	}
 	m_nLastError = pDevice->CreateRootSignature( 0, pRootBlob->GetBufferPointer(), pRootBlob->GetBufferSize(),
-	                                            IID_PPV_ARGS( m_pRootSignature.GetAddressOf() ) );
+	                                             IID_PPV_ARGS( m_pRootSignature.GetAddressOf() ) );
 	if ( FAILED( m_nLastError ) ) {
 		return false;
 	}
 
 	const D3D12_INPUT_ELEMENT_DESC szLayout[] = {
-		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-		{ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
-	};
+	    { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+	    { "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 } };
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC pipeline = {};
 	pipeline.pRootSignature = m_pRootSignature.Get();
@@ -125,8 +123,7 @@ void SIRD3D12GraphicsKernel::releasePending( void ) noexcept
 	m_nHeight = 0;
 }
 
-bool SIRD3D12GraphicsKernel::record( ID3D12Device *pDevice, SIRD3D12Memory *pMemory, uint32_t nWidth,
-                                     uint32_t nHeight ) noexcept
+bool SIRD3D12GraphicsKernel::record( ID3D12Device *pDevice, SIRD3D12Memory *pMemory, uint32_t nWidth, uint32_t nHeight ) noexcept
 {
 	constexpr uint32_t MAX_DRAW_DIMENSION = 128;
 	if ( !isReady() || hasPending() || pDevice == nullptr || pMemory == nullptr || nWidth == 0 || nHeight == 0 ||
@@ -143,9 +140,8 @@ bool SIRD3D12GraphicsKernel::record( ID3D12Device *pDevice, SIRD3D12Memory *pMem
 	D3D12_CLEAR_VALUE clear = {};
 	clear.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	clear.Color[3] = 1.0f;
-	m_nLastError = pMemory->createTexture2D( nWidth, nHeight, DXGI_FORMAT_R8G8B8A8_UNORM,
-	                                         D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET, D3D12_RESOURCE_STATE_RENDER_TARGET,
-	                                         &clear, pTarget.GetAddressOf() );
+	m_nLastError = pMemory->createTexture2D( nWidth, nHeight, DXGI_FORMAT_R8G8B8A8_UNORM, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET,
+	                                         D3D12_RESOURCE_STATE_RENDER_TARGET, &clear, pTarget.GetAddressOf() );
 	if ( FAILED( m_nLastError ) ) {
 		return false;
 	}
@@ -158,26 +154,24 @@ bool SIRD3D12GraphicsKernel::record( ID3D12Device *pDevice, SIRD3D12Memory *pMem
 		m_nLastError = E_FAIL;
 		return false;
 	}
-	m_nLastError = pMemory->createBuffer( D3D12_HEAP_TYPE_READBACK, D3D12_RESOURCE_STATE_COPY_DEST, nReadbackBytes,
-	                                      pReadback.GetAddressOf() );
+	m_nLastError =
+	    pMemory->createBuffer( D3D12_HEAP_TYPE_READBACK, D3D12_RESOURCE_STATE_COPY_DEST, nReadbackBytes, pReadback.GetAddressOf() );
 	if ( FAILED( m_nLastError ) ) {
 		return false;
 	}
 
-	const sirD3D12TestVertex_t szVertices[3] = {
-		{ { -0.80f, -0.80f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } },
-		{ { 0.0f, 0.80f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } },
-		{ { 0.80f, -0.80f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } }
-	};
+	const sirD3D12TestVertex_t szVertices[3] = { { { -0.80f, -0.80f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } },
+	                                             { { 0.0f, 0.80f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } },
+	                                             { { 0.80f, -0.80f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } } };
 	const uint16_t szIndices[3] = { 0, 1, 2 };
 
-	m_nLastError = pMemory->createBuffer( D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ,
-	                                      sizeof( szVertices ), pVertices.GetAddressOf() );
+	m_nLastError =
+	    pMemory->createBuffer( D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ, sizeof( szVertices ), pVertices.GetAddressOf() );
 	if ( FAILED( m_nLastError ) ) {
 		return false;
 	}
-	m_nLastError = pMemory->createBuffer( D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ,
-	                                      sizeof( szIndices ), pIndices.GetAddressOf() );
+	m_nLastError =
+	    pMemory->createBuffer( D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ, sizeof( szIndices ), pIndices.GetAddressOf() );
 	if ( FAILED( m_nLastError ) ) {
 		return false;
 	}
@@ -217,8 +211,8 @@ bool SIRD3D12GraphicsKernel::record( ID3D12Device *pDevice, SIRD3D12Memory *pMem
 	if ( FAILED( m_nLastError ) ) {
 		return false;
 	}
-	m_nLastError = pDevice->CreateCommandList( 0, D3D12_COMMAND_LIST_TYPE_DIRECT, pAllocator.Get(),
-	                                           m_pPipelineState.Get(), IID_PPV_ARGS( pCommands.GetAddressOf() ) );
+	m_nLastError = pDevice->CreateCommandList( 0, D3D12_COMMAND_LIST_TYPE_DIRECT, pAllocator.Get(), m_pPipelineState.Get(),
+	                                           IID_PPV_ARGS( pCommands.GetAddressOf() ) );
 	if ( FAILED( m_nLastError ) ) {
 		return false;
 	}
@@ -232,10 +226,10 @@ bool SIRD3D12GraphicsKernel::record( ID3D12Device *pDevice, SIRD3D12Memory *pMem
 	pCommands->OMSetRenderTargets( 1, &hRtv, FALSE, nullptr );
 	pCommands->ClearRenderTargetView( hRtv, szClear, 0, nullptr );
 
-	const D3D12_VERTEX_BUFFER_VIEW vbv = { pVertices->GetResource()->GetGPUVirtualAddress(),
-		                                   ( UINT )sizeof( szVertices ), ( UINT )sizeof( sirD3D12TestVertex_t ) };
-	const D3D12_INDEX_BUFFER_VIEW ibv = { pIndices->GetResource()->GetGPUVirtualAddress(),
-	                                     ( UINT )sizeof( szIndices ), DXGI_FORMAT_R16_UINT };
+	const D3D12_VERTEX_BUFFER_VIEW vbv = { pVertices->GetResource()->GetGPUVirtualAddress(), ( UINT )sizeof( szVertices ),
+	                                       ( UINT )sizeof( sirD3D12TestVertex_t ) };
+	const D3D12_INDEX_BUFFER_VIEW ibv = { pIndices->GetResource()->GetGPUVirtualAddress(), ( UINT )sizeof( szIndices ),
+	                                      DXGI_FORMAT_R16_UINT };
 	pCommands->IASetPrimitiveTopology( D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
 	pCommands->IASetVertexBuffers( 0, 1, &vbv );
 	pCommands->IASetIndexBuffer( &ibv );
@@ -307,7 +301,8 @@ bool SIRD3D12GraphicsKernel::readback( ID3D12Fence *pFence, uint64_t nFence, uin
 		return false;
 	}
 
-	const SIZE_T nEnd = ( SIZE_T )( m_Footprint.Offset + ( uint64_t )m_Footprint.Footprint.RowPitch * ( m_nHeight - 1 ) + ( uint64_t )m_nWidth * 4 );
+	const SIZE_T nEnd =
+	    ( SIZE_T )( m_Footprint.Offset + ( uint64_t )m_Footprint.Footprint.RowPitch * ( m_nHeight - 1 ) + ( uint64_t )m_nWidth * 4 );
 	D3D12_RANGE read = { 0, nEnd };
 	D3D12_RANGE noWrite = { 0, 0 };
 	void *pMapped = nullptr;
@@ -318,8 +313,7 @@ bool SIRD3D12GraphicsKernel::readback( ID3D12Fence *pFence, uint64_t nFence, uin
 
 	const uint8_t *pSource = ( const uint8_t * )pMapped + m_Footprint.Offset;
 	for ( uint32_t iRow = 0; iRow < m_nHeight; ++iRow ) {
-		memcpy( pOutput + ( size_t )iRow * nRowPitch, pSource + ( size_t )iRow * m_Footprint.Footprint.RowPitch,
-		        ( size_t )m_nWidth * 4 );
+		memcpy( pOutput + ( size_t )iRow * nRowPitch, pSource + ( size_t )iRow * m_Footprint.Footprint.RowPitch, ( size_t )m_nWidth * 4 );
 	}
 	m_pReadback->GetResource()->Unmap( 0, &noWrite );
 	releasePending();

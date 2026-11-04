@@ -474,7 +474,6 @@ static bool testCompiledDxilCompute( SIRD3D12Device &device )
 	return true;
 }
 
-
 static bool loadGraphicsDxil( const char *pszPath, void **ppBytes, size_t *pSize )
 {
 	if ( pszPath == nullptr || ppBytes == nullptr || pSize == nullptr ) {
@@ -532,8 +531,7 @@ static bool testOffscreenIndexedGraphics( SIRD3D12Device &device )
 	free( pVertexDxil );
 	free( pPixelDxil );
 	if ( !bInitialized ) {
-		fprintf( stderr, "D3D12 graphics PSO initialization failed: HRESULT 0x%08lx\n",
-		         ( unsigned long )device.getLastError() );
+		fprintf( stderr, "D3D12 graphics PSO initialization failed: HRESULT 0x%08lx\n", ( unsigned long )device.getLastError() );
 		return false;
 	}
 	if ( device.initializeGraphicsKernel( nullptr, 0, nullptr, 0 ) ) {
@@ -580,20 +578,17 @@ static bool testOffscreenIndexedGraphics( SIRD3D12Device &device )
 
 		if ( !device.waitForGraphicsFence( submitted.nGraphicsFence, 15000 ) ||
 		     !device.readGraphicsTriangle( submitted, szPixels, nStride, sizeof( szPixels ) ) ) {
-			fprintf( stderr, "D3D12 graphics readback failed at %u: HRESULT 0x%08lx\n", iPass,
-			         ( unsigned long )device.getLastError() );
+			fprintf( stderr, "D3D12 graphics readback failed at %u: HRESULT 0x%08lx\n", iPass, ( unsigned long )device.getLastError() );
 			return false;
 		}
 
 		const uint8_t *pCenter = &szPixels[( nHeight / 2 ) * nStride + ( nWidth / 2 ) * 4];
 		const uint8_t *pCorner = &szPixels[0];
 		const uint8_t *pOutside = &szPixels[( nHeight - 1 ) * nStride + ( nWidth - 1 ) * 4];
-		if ( pCenter[0] < 225 || pCenter[1] > 15 || pCenter[2] > 15 || pCenter[3] != 255 ||
-		     pCorner[0] != 0 || pCorner[1] != 0 || pCorner[2] != 0 || pCorner[3] != 255 ||
-		     pOutside[0] != 0 || pOutside[1] != 0 || pOutside[2] != 0 || pOutside[3] != 255 ) {
-			fprintf( stderr, "D3D12 graphics pixel mismatch at %u: center %u/%u/%u/%u corner %u/%u/%u/%u\n",
-			         iPass, pCenter[0], pCenter[1], pCenter[2], pCenter[3],
-			         pCorner[0], pCorner[1], pCorner[2], pCorner[3] );
+		if ( pCenter[0] < 225 || pCenter[1] > 15 || pCenter[2] > 15 || pCenter[3] != 255 || pCorner[0] != 0 || pCorner[1] != 0 ||
+		     pCorner[2] != 0 || pCorner[3] != 255 || pOutside[0] != 0 || pOutside[1] != 0 || pOutside[2] != 0 || pOutside[3] != 255 ) {
+			fprintf( stderr, "D3D12 graphics pixel mismatch at %u: center %u/%u/%u/%u corner %u/%u/%u/%u\n", iPass, pCenter[0], pCenter[1],
+			         pCenter[2], pCenter[3], pCorner[0], pCorner[1], pCorner[2], pCorner[3] );
 			return false;
 		}
 		if ( device.readGraphicsTriangle( submitted, szPixels, nStride, sizeof( szPixels ) ) ) {

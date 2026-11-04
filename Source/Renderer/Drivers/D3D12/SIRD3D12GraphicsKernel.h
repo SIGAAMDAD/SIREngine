@@ -55,15 +55,14 @@ public:
 	SIRD3D12GraphicsKernel( const SIRD3D12GraphicsKernel & ) = delete;
 	SIRD3D12GraphicsKernel &operator=( const SIRD3D12GraphicsKernel & ) = delete;
 
-	bool initialize( ID3D12Device *pDevice, const void *pVertexDxil, size_t nVertexBytes,
-	                 const void *pPixelDxil, size_t nPixelBytes ) noexcept;
+	bool initialize( ID3D12Device *pDevice, const void *pVertexDxil, size_t nVertexBytes, const void *pPixelDxil,
+	                 size_t nPixelBytes ) noexcept;
 	bool isReady( void ) const noexcept;
 	bool hasPending( void ) const noexcept;
 	bool record( ID3D12Device *pDevice, SIRD3D12Memory *pMemory, uint32_t nWidth, uint32_t nHeight ) noexcept;
 	ID3D12CommandList *getRecordedList( void ) const noexcept;
 	void submitted( uint64_t nFence ) noexcept;
-	bool readback( ID3D12Fence *pFence, uint64_t nFence, uint8_t *pOutput, uint32_t nRowPitch,
-	               size_t nOutputBytes ) noexcept;
+	bool readback( ID3D12Fence *pFence, uint64_t nFence, uint8_t *pOutput, uint32_t nRowPitch, size_t nOutputBytes ) noexcept;
 	void cancelUnsubmitted( void ) noexcept;
 	void shutdown( bool bGpuCompleted ) noexcept;
 	HRESULT getLastError( void ) const noexcept;

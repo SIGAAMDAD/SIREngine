@@ -86,10 +86,9 @@ HRESULT SIRD3D12Memory::createBuffer( D3D12_HEAP_TYPE eHeapType, D3D12_RESOURCE_
 	return m_nLastError;
 }
 
-HRESULT SIRD3D12Memory::createTexture2D( uint32_t nWidth, uint32_t nHeight, DXGI_FORMAT eFormat,
-                                              D3D12_RESOURCE_FLAGS eFlags, D3D12_RESOURCE_STATES eInitialState,
-                                              const D3D12_CLEAR_VALUE *pClearValue,
-                                              D3D12MA::Allocation **ppAllocation ) noexcept
+HRESULT SIRD3D12Memory::createTexture2D( uint32_t nWidth, uint32_t nHeight, DXGI_FORMAT eFormat, D3D12_RESOURCE_FLAGS eFlags,
+                                         D3D12_RESOURCE_STATES eInitialState, const D3D12_CLEAR_VALUE *pClearValue,
+                                         D3D12MA::Allocation **ppAllocation ) noexcept
 {
 	if ( ppAllocation == nullptr ) {
 		m_nLastError = E_POINTER;
@@ -114,8 +113,7 @@ HRESULT SIRD3D12Memory::createTexture2D( uint32_t nWidth, uint32_t nHeight, DXGI
 
 	D3D12MA::ALLOCATION_DESC allocation = {};
 	allocation.HeapType = D3D12_HEAP_TYPE_DEFAULT;
-	m_nLastError = m_pAllocator->CreateResource( &allocation, &resource, eInitialState, pClearValue, ppAllocation,
-	                                             IID_NULL, nullptr );
+	m_nLastError = m_pAllocator->CreateResource( &allocation, &resource, eInitialState, pClearValue, ppAllocation, IID_NULL, nullptr );
 	return m_nLastError;
 }
 

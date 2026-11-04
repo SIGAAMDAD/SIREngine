@@ -598,8 +598,7 @@ void SIRD3D12Device::shutdown( void ) noexcept
 {
 	// DIRECT can wait on COMPUTE, and COMPUTE can wait on COPY.
 	// Drain dependent queues from the consumer back to the producer.
-	const bool bGraphicsSafe = !m_bGraphicsUnsafe &&
-	                           ( m_nNextFenceValue <= 1 || waitForGraphicsFence( m_nNextFenceValue - 1, 15000 ) );
+	const bool bGraphicsSafe = !m_bGraphicsUnsafe && ( m_nNextFenceValue <= 1 || waitForGraphicsFence( m_nNextFenceValue - 1, 15000 ) );
 	const bool bDirectSafe = bGraphicsSafe && retireDirectComputeDependency();
 	m_GraphicsKernel.shutdown( bDirectSafe );
 	const bool bCopySafe = waitForPendingCopy();
@@ -884,8 +883,8 @@ bool SIRD3D12Device::submitGraphicsAfterCompute( const sirD3D12CompletionSet_t &
 	return snapshotCompletionSet( pSet ) && pSet->nGraphicsFence == nGraphicsFence;
 }
 
-bool SIRD3D12Device::initializeGraphicsKernel( const void *pVertexDxil, size_t nVertexBytes,
-                                              const void *pPixelDxil, size_t nPixelBytes ) noexcept
+bool SIRD3D12Device::initializeGraphicsKernel( const void *pVertexDxil, size_t nVertexBytes, const void *pPixelDxil,
+                                               size_t nPixelBytes ) noexcept
 {
 	if ( !isReady() ) {
 		m_nLastError = E_FAIL;
@@ -896,8 +895,7 @@ bool SIRD3D12Device::initializeGraphicsKernel( const void *pVertexDxil, size_t n
 	return bReady;
 }
 
-bool SIRD3D12Device::submitGraphicsTriangle( uint32_t nWidth, uint32_t nHeight,
-                                             sirD3D12CompletionSet_t *pSet ) noexcept
+bool SIRD3D12Device::submitGraphicsTriangle( uint32_t nWidth, uint32_t nHeight, sirD3D12CompletionSet_t *pSet ) noexcept
 {
 	if ( pSet == nullptr || !isReady() || !m_GraphicsKernel.isReady() || m_GraphicsKernel.hasPending() ||
 	     m_nNextFenceValue == UINT64_MAX ) {
@@ -944,8 +942,8 @@ bool SIRD3D12Device::submitGraphicsTriangle( uint32_t nWidth, uint32_t nHeight,
 	return true;
 }
 
-bool SIRD3D12Device::readGraphicsTriangle( const sirD3D12CompletionSet_t &set, uint8_t *pOutput,
-                                            uint32_t nRowPitch, size_t nOutputBytes ) noexcept
+bool SIRD3D12Device::readGraphicsTriangle( const sirD3D12CompletionSet_t &set, uint8_t *pOutput, uint32_t nRowPitch,
+                                           size_t nOutputBytes ) noexcept
 {
 	bool bCompleted = false;
 	if ( !pollCompletionSet( set, &bCompleted ) ) {
@@ -955,8 +953,7 @@ bool SIRD3D12Device::readGraphicsTriangle( const sirD3D12CompletionSet_t &set, u
 		m_nLastError = HRESULT_FROM_WIN32( ERROR_BUSY );
 		return false;
 	}
-	const bool bRead = m_GraphicsKernel.readback( m_pGraphicsFence.Get(), set.nGraphicsFence, pOutput, nRowPitch,
-	                                             nOutputBytes );
+	const bool bRead = m_GraphicsKernel.readback( m_pGraphicsFence.Get(), set.nGraphicsFence, pOutput, nRowPitch, nOutputBytes );
 	m_nLastError = m_GraphicsKernel.getLastError();
 	return bRead;
 }

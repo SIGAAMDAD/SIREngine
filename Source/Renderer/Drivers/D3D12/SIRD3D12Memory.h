@@ -48,9 +48,9 @@ public:
 	bool isReady( void ) const noexcept;
 	HRESULT createBuffer( D3D12_HEAP_TYPE eHeapType, D3D12_RESOURCE_STATES eInitialState, uint64_t nBytes,
 	                      D3D12MA::Allocation **ppAllocation, D3D12_RESOURCE_FLAGS eResourceFlags = D3D12_RESOURCE_FLAG_NONE ) noexcept;
-	HRESULT createTexture2D( uint32_t nWidth, uint32_t nHeight, DXGI_FORMAT eFormat,
-	                        D3D12_RESOURCE_FLAGS eFlags, D3D12_RESOURCE_STATES eInitialState,
-	                        const D3D12_CLEAR_VALUE *pClearValue, D3D12MA::Allocation **ppAllocation ) noexcept;
+	HRESULT createTexture2D( uint32_t nWidth, uint32_t nHeight, DXGI_FORMAT eFormat, D3D12_RESOURCE_FLAGS eFlags,
+	                         D3D12_RESOURCE_STATES eInitialState, const D3D12_CLEAR_VALUE *pClearValue,
+	                         D3D12MA::Allocation **ppAllocation ) noexcept;
 	HRESULT getLastError( void ) const noexcept;
 };
 
