@@ -359,7 +359,6 @@ static void testRejectedRequestsAndTaskAdmission( void )
 	memory.shutdown();
 }
 
-
 #if defined( __linux__ )
 static void testInjectedResourceTransferFailures( void )
 {
