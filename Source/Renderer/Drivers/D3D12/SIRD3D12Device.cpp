@@ -624,6 +624,16 @@ bool SIRD3D12Device::queryUnifiedMemory( bool *pUnified ) const noexcept
 	return true;
 }
 
+ID3D12Device *SIRD3D12Device::getNativeDevice( void ) const noexcept
+{
+	return isReady() ? m_pDevice.Get() : nullptr;
+}
+
+SIRD3D12Memory *SIRD3D12Device::getMemory( void ) noexcept
+{
+	return isReady() ? &m_Memory : nullptr;
+}
+
 SIRD3D12Transfers &SIRD3D12Device::getTransfers( void ) noexcept
 {
 	return m_Transfers;

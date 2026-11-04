@@ -88,6 +88,8 @@ public:
 	HRESULT createTexture2D( uint32_t nWidth, uint32_t nHeight, DXGI_FORMAT eFormat, D3D12_RESOURCE_FLAGS eFlags,
 	                         D3D12_RESOURCE_STATES eInitialState, const D3D12_CLEAR_VALUE *pClearValue,
 	                         D3D12MA::Allocation **ppAllocation ) noexcept;
+	HRESULT createTexture( const D3D12_RESOURCE_DESC &resource, D3D12_RESOURCE_STATES eInitialState, const D3D12_CLEAR_VALUE *pClearValue,
+	                       D3D12MA::Allocation **ppAllocation ) noexcept;
 	HRESULT getLastError( void ) const noexcept;
 };
 
