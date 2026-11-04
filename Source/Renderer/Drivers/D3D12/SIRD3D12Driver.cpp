@@ -132,6 +132,11 @@ sirGraphicsResult_t SIRD3D12RenderingDevice::initialize( bool bSoftware, const s
 		m_Native.shutdown();
 		return SIR_GRAPHICS_DRIVER_ERROR;
 	}
+	if ( !m_Pipelines.initialize( &m_Native, getDeviceGeneration() ) ) {
+		m_Resources.shutdown( true );
+		m_Native.shutdown();
+		return SIR_GRAPHICS_DRIVER_ERROR;
+	}
 	return SIR_GRAPHICS_SUCCESS;
 }
 
@@ -210,15 +215,7 @@ sirGraphicsResult_t SIRD3D12RenderingDevice::createSampler( const sirGraphicsSam
 }
 sirGraphicsResult_t SIRD3D12RenderingDevice::createPipeline( const sirGraphicsPipelineDesc_t &desc, sirGraphicsHandle_t *pHandle ) noexcept
 {
-	if ( pHandle == nullptr ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
-	}
-	*pHandle = {};
-	const sirGraphicsResult_t eValidation = sirGraphicsValidatePipeline( desc );
-	if ( eValidation != SIR_GRAPHICS_SUCCESS ) {
-		return eValidation;
-	}
-	return SIR_GRAPHICS_UNSUPPORTED;
+	return m_Pipelines.createPipeline( desc, pHandle );
 }
 sirGraphicsResult_t SIRD3D12RenderingDevice::createBindingSet( sirGraphicsHandle_t, uint32_t, sirGraphicsHandle_t *pHandle ) noexcept
 {
@@ -328,6 +325,9 @@ sirGraphicsResult_t SIRD3D12RenderingDevice::wait( const sirGraphicsCompletion_t
 sirGraphicsResult_t SIRD3D12RenderingDevice::retireResource( sirGraphicsHandle_t hResource,
                                                              const sirGraphicsCompletionSet_t &completion ) noexcept
 {
+	if ( hResource.eType == SIR_GRAPHICS_HANDLE_PIPELINE ) {
+		return m_Pipelines.retirePipeline( hResource, completion );
+	}
 	return m_Resources.retireResource( hResource, completion );
 }
 sirGraphicsResult_t SIRD3D12RenderingDevice::createSurface( const sirGraphicsNativeSurface_t &, const sirGraphicsPresentDesc_t &,
@@ -368,6 +368,7 @@ sirGraphicsResult_t SIRD3D12RenderingDevice::shutdown( void ) noexcept
 			return SIR_GRAPHICS_BUSY;
 		}
 	}
+	m_Pipelines.shutdown( true );
 	m_Resources.shutdown( true );
 	m_Native.shutdown();
 	return m_Native.isReady() ? SIR_GRAPHICS_DRIVER_ERROR : SIR_GRAPHICS_SUCCESS;
