@@ -1481,7 +1481,6 @@ static void testContentKeyCollisionDoesNotAliasData( void )
 	REQUIRE( allocator.m_nOutstanding.load() == 0 );
 }
 
-
 static void testMultiChunkEvictionAndFailedReplacement( void )
 {
 	SIRTestAllocatorStats allocator = {};
