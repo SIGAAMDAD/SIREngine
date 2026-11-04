@@ -202,10 +202,11 @@ HRESULT SIRD3D12Memory::createBuffer( D3D12_HEAP_TYPE eHeapType, D3D12_RESOURCE_
 	resource.Flags = eResourceFlags;
 	D3D12MA::ALLOCATION_DESC allocation = {};
 	allocation.HeapType = eHeapType;
+	allocation.Flags = D3D12MA::ALLOCATION_FLAG_WITHIN_BUDGET;
 
 	m_nLastError = m_pAllocator->CreateResource( &allocation, &resource, eInitialState, nullptr, ppAllocation, IID_NULL, nullptr );
-	if ( SUCCEEDED( m_nLastError ) ) {
-		( void )enforceResidentLimit( ppAllocation );
+	if ( SUCCEEDED( m_nLastError ) && !enforceResidentLimit( ppAllocation ) ) {
+		return E_OUTOFMEMORY;
 	}
 	return m_nLastError;
 }
@@ -237,9 +238,10 @@ HRESULT SIRD3D12Memory::createTexture2D( uint32_t nWidth, uint32_t nHeight, DXGI
 
 	D3D12MA::ALLOCATION_DESC allocation = {};
 	allocation.HeapType = D3D12_HEAP_TYPE_DEFAULT;
+	allocation.Flags = D3D12MA::ALLOCATION_FLAG_WITHIN_BUDGET;
 	m_nLastError = m_pAllocator->CreateResource( &allocation, &resource, eInitialState, pClearValue, ppAllocation, IID_NULL, nullptr );
-	if ( SUCCEEDED( m_nLastError ) ) {
-		( void )enforceResidentLimit( ppAllocation );
+	if ( SUCCEEDED( m_nLastError ) && !enforceResidentLimit( ppAllocation ) ) {
+		return E_OUTOFMEMORY;
 	}
 	return m_nLastError;
 }
@@ -258,9 +260,10 @@ HRESULT SIRD3D12Memory::createTexture( const D3D12_RESOURCE_DESC &resource, D3D1
 	}
 	D3D12MA::ALLOCATION_DESC allocation = {};
 	allocation.HeapType = D3D12_HEAP_TYPE_DEFAULT;
+	allocation.Flags = D3D12MA::ALLOCATION_FLAG_WITHIN_BUDGET;
 	m_nLastError = m_pAllocator->CreateResource( &allocation, &resource, eInitialState, pClearValue, ppAllocation, IID_NULL, nullptr );
-	if ( SUCCEEDED( m_nLastError ) ) {
-		( void )enforceResidentLimit( ppAllocation );
+	if ( SUCCEEDED( m_nLastError ) && !enforceResidentLimit( ppAllocation ) ) {
+		return E_OUTOFMEMORY;
 	}
 	return m_nLastError;
 }

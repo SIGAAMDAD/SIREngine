@@ -94,5 +94,28 @@ int main( void )
 	if ( driver.destroyDevice( pDevice ) != SIR_GRAPHICS_SUCCESS ) {
 		return 12;
 	}
+
+	// Rejected D3D12MA allocations must report failure, with no owned allocation.
+	Microsoft::WRL::ComPtr<IDXGIFactory6> pFactory;
+	Microsoft::WRL::ComPtr<IDXGIAdapter4> pWarp;
+	Microsoft::WRL::ComPtr<ID3D12Device> pNativeDevice;
+	if ( FAILED( CreateDXGIFactory2( 0, IID_PPV_ARGS( pFactory.GetAddressOf() ) ) ) ||
+	     FAILED( pFactory->EnumWarpAdapter( IID_PPV_ARGS( pWarp.GetAddressOf() ) ) ) ||
+	     FAILED( D3D12CreateDevice( pWarp.Get(), D3D_FEATURE_LEVEL_12_0, IID_PPV_ARGS( pNativeDevice.GetAddressOf() ) ) ) ) {
+		return 13;
+	}
+	SIRD3D12Memory memory;
+	if ( !memory.initialize( pWarp.Get(), pNativeDevice.Get() ) || !memory.configureResidentBudget( 1 ) ) {
+		return 14;
+	}
+	D3D12MA::Allocation *pRejected = nullptr;
+	const HRESULT nRejected = memory.createBuffer( D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_COMMON, 4096, &pRejected );
+	if ( nRejected != E_OUTOFMEMORY || pRejected != nullptr || memory.getLastError() != E_OUTOFMEMORY ) {
+		if ( pRejected != nullptr ) {
+			pRejected->Release();
+		}
+		return 15;
+	}
+	memory.shutdown();
 	return 0;
 }

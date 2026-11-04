@@ -74,7 +74,8 @@ int main( void )
 	}
 	sirGraphicsCapabilities_t capabilities = {};
 	if ( pDevice->getBackend() != SIR_GRAPHICS_BACKEND_D3D12 || pDevice->queryCapabilities( &capabilities ) != SIR_GRAPHICS_SUCCESS ||
-	     capabilities.nDeviceGeneration == 0 || ( capabilities.nQueueMask & ( 1U << SIR_GRAPHICS_QUEUE_COPY ) ) == 0 ) {
+	     capabilities.nDeviceGeneration == 0 || ( capabilities.nQueueMask & ( 1U << SIR_GRAPHICS_QUEUE_COPY ) ) == 0 ||
+	     ( capabilities.nFeatureMask & SIR_GRAPHICS_FEATURE_INDIRECT_DRAW ) != 0 ) {
 		return 8;
 	}
 	sirGraphicsCompletionSet_t immediate = {};

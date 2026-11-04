@@ -246,8 +246,8 @@ static int sirTestRaster( SIRRenderingDevice *pDevice, uint32_t nGeneration, con
 	texture.nWidth = 16;
 	texture.nHeight = 16;
 	texture.nDepth = 1;
-	texture.nArrayLayers = 1;
-	texture.nMipLevels = 1;
+	texture.nArrayLayers = 2;
+	texture.nMipLevels = 4;
 	texture.nSampleCount = 1;
 	texture.nUsage = SIR_GRAPHICS_USAGE_COLOR_ATTACHMENT | SIR_GRAPHICS_USAGE_COPY_SOURCE;
 	texture.eDimension = SIR_GRAPHICS_TEXTURE_2D;
@@ -303,7 +303,24 @@ static int sirTestRaster( SIRRenderingDevice *pDevice, uint32_t nGeneration, con
 	transition.hResource = hTexture;
 	transition.eBefore = SIR_GRAPHICS_STATE_COMMON;
 	transition.eAfter = SIR_GRAPHICS_STATE_COLOR_ATTACHMENT;
-	if ( pDirect->barrier( &transition, 1 ) != SIR_GRAPHICS_SUCCESS ) {
+
+	// Exercise a nonzero mip/layer and reject a range beyond the image.
+	sirGraphicsBarrier_t partial = transition;
+	partial.eAfter = SIR_GRAPHICS_STATE_COPY_DESTINATION;
+	partial.nBaseMip = 4;
+	partial.nMipCount = 1;
+	partial.nBaseLayer = 1;
+	partial.nLayerCount = 1;
+	if ( pDirect->barrier( &partial, 1 ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return 70;
+	}
+	partial.nBaseMip = 2;
+	if ( pDirect->barrier( &partial, 1 ) != SIR_GRAPHICS_SUCCESS ) {
+		return 71;
+	}
+	partial.eBefore = SIR_GRAPHICS_STATE_COPY_DESTINATION;
+	partial.eAfter = SIR_GRAPHICS_STATE_COMMON;
+	if ( pDirect->barrier( &partial, 1 ) != SIR_GRAPHICS_SUCCESS || pDirect->barrier( &transition, 1 ) != SIR_GRAPHICS_SUCCESS ) {
 		return 58;
 	}
 	sirGraphicsColorAttachment_t color = {};

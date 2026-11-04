@@ -302,9 +302,13 @@ sirGraphicsResult_t SIRD3D12CommandList::barrier( const sirGraphicsBarrier_t *pB
 			         source.eAfter != SIR_GRAPHICS_STATE_COPY_DESTINATION ) ) ) {
 				return SIR_GRAPHICS_UNSUPPORTED;
 			}
-			if ( source.nBaseMip != 0 || source.nBaseLayer != 0 || ( source.nMipCount != 0 && source.nMipCount != pSlot->nMips ) ||
-			     ( source.nLayerCount != 0 && source.nLayerCount != pSlot->nLayers ) ) {
-				return SIR_GRAPHICS_UNSUPPORTED;
+			const uint32_t nMips = pSlot->eType == SIR_GRAPHICS_HANDLE_TEXTURE ? pSlot->nMips : 1;
+			const uint32_t nLayers =
+			    pSlot->eType == SIR_GRAPHICS_HANDLE_TEXTURE && pSlot->eDimension != SIR_GRAPHICS_TEXTURE_3D ? pSlot->nLayers : 1;
+			if ( nMips == 0 || nLayers == 0 || source.nBaseMip >= nMips || source.nBaseLayer >= nLayers ||
+			     ( source.nMipCount != 0 && source.nMipCount > nMips - source.nBaseMip ) ||
+			     ( source.nLayerCount != 0 && source.nLayerCount > nLayers - source.nBaseLayer ) ) {
+				return SIR_GRAPHICS_INVALID_ARGUMENT;
 			}
 			native.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
 			native.Transition.pResource = pSlot->getNativeResource();
@@ -334,7 +338,31 @@ sirGraphicsResult_t SIRD3D12CommandList::barrier( const sirGraphicsBarrier_t *pB
 		if ( ePinned != SIR_GRAPHICS_SUCCESS ) {
 			return ePinned;
 		}
-		m_pCommands->ResourceBarrier( 1, &native );
+		if ( source.eType == SIR_GRAPHICS_BARRIER_TRANSITION && pSlot->eType == SIR_GRAPHICS_HANDLE_TEXTURE &&
+		     ( source.nBaseMip != 0 || source.nBaseLayer != 0 || ( source.nMipCount != 0 && source.nMipCount != pSlot->nMips ) ||
+		       ( source.nLayerCount != 0 && source.nLayerCount != pSlot->nLayers ) ) ) {
+			D3D12_FEATURE_DATA_FORMAT_INFO formatInfo = {};
+			formatInfo.Format = pSlot->getNativeResource()->GetDesc().Format;
+			if ( FAILED(
+			         m_pNative->getNativeDevice()->CheckFeatureSupport( D3D12_FEATURE_FORMAT_INFO, &formatInfo, sizeof( formatInfo ) ) ) ||
+			     formatInfo.PlaneCount == 0 ) {
+				return SIR_GRAPHICS_UNSUPPORTED;
+			}
+			const uint32_t nMips = pSlot->nMips;
+			const uint32_t nLayers = pSlot->eDimension == SIR_GRAPHICS_TEXTURE_3D ? 1 : pSlot->nLayers;
+			const uint32_t nMipCount = source.nMipCount == 0 ? nMips - source.nBaseMip : source.nMipCount;
+			const uint32_t nLayerCount = source.nLayerCount == 0 ? nLayers - source.nBaseLayer : source.nLayerCount;
+			for ( uint32_t iPlane = 0; iPlane < formatInfo.PlaneCount; ++iPlane ) {
+				for ( uint32_t iLayer = source.nBaseLayer; iLayer < source.nBaseLayer + nLayerCount; ++iLayer ) {
+					for ( uint32_t iMip = source.nBaseMip; iMip < source.nBaseMip + nMipCount; ++iMip ) {
+						native.Transition.Subresource = iMip + iLayer * nMips + iPlane * nMips * nLayers;
+						m_pCommands->ResourceBarrier( 1, &native );
+					}
+				}
+			}
+		} else {
+			m_pCommands->ResourceBarrier( 1, &native );
+		}
 	}
 	return SIR_GRAPHICS_SUCCESS;
 }
