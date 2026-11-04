@@ -4,6 +4,7 @@ add_library(SIREditorAuthoring STATIC
     Scene/SIREditorTextScene.cpp
     Scene/SIREditorTextProperties.cpp
     Scene/SIREditorTextWriter.cpp
+    Scene/SIREditorScalarCodec.cpp
     Widgets/SIREditorVirtualList.cpp
     Widgets/SIREditorHierarchyModel.cpp
     Host/SIREditorSceneWorkspace.cpp)
