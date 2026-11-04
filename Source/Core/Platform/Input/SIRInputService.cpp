@@ -21,8 +21,9 @@ static bool sirInputRumbleOutput( void *pContext, sirInputDeviceId_t hDevice, ui
 	return ( ( SIRInputService * )pContext )->vibrate( hDevice, nLeft, nRight );
 }
 
-SIRInputService::SIRInputService( void ) noexcept : m_Actions(), m_Text(), m_Haptics(), m_Registry(), m_State(), m_pBackends{}, m_nBackendCount( 0 ), m_bStopping( false ),
-      m_bHapticsPaused( false )
+SIRInputService::SIRInputService( void ) noexcept
+    : m_Actions(), m_Text(), m_Haptics(), m_Registry(), m_State(), m_pBackends{}, m_nBackendCount( 0 ),
+      m_bStopping( false ), m_bHapticsPaused( false )
 {
 }
 
@@ -142,6 +143,7 @@ void SIRInputService::setHapticsPaused( bool bPaused ) noexcept
 		for ( uint32_t i = 0; i < SIR_INPUT_DEVICE_CAPACITY; ++i ) {
 			sirInputDeviceDescriptor_t desc = {};
 			if ( m_Registry.inspectSlot( i, &desc ) && desc.bConnected && desc.key.eClass == SIR_INPUT_CONTROLLER ) {
+				( void )vibrate( desc.id, 0, 0 );
 				( void )vibrateTriggers( desc.id, 0, 0 );
 			}
 		}
@@ -224,6 +226,7 @@ bool SIRInputService::disconnect( sirInputBackendId_t eSource, sirInputDeviceId_
 	const bool bQueued =
 	    m_State.postDevice( id, desc.key.eClass, SIR_INPUT_DISCONNECTED, timestamp( 0, SIR_INPUT_CLOCK_ENGINE_MONOTONIC ) );
 	m_Haptics.forgetDevice( id, sirInputRumbleOutput, this );
+	( void )vibrate( id, 0, 0 );
 	( void )vibrateTriggers( id, 0, 0 );
 	m_State.clearDevice( id );
 	m_Registry.disconnect( id );
