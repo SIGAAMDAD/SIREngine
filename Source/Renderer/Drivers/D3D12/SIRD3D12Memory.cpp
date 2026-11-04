@@ -24,7 +24,6 @@ static constexpr uint32_t SIR_D3D12_SEALED_UPLOAD_BUFFER = 3;
 static constexpr uint32_t SIR_D3D12_SEALED_READBACK_BUFFER = 4;
 static constexpr uint32_t SIR_D3D12_SEALED_GPU_UPLOAD_BUFFER = 5;
 
-
 static void *sirD3D12AllocateHostMetadata( size_t nBytes, size_t nAlignment, void *pUser ) noexcept
 {
 	SIRGeneralHeap *pHeap = ( SIRGeneralHeap * )pUser;

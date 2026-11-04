@@ -143,8 +143,8 @@ int main( void )
 	    SUCCEEDED( sealed.createBuffer( D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_COMMON, 4096, &szAllocations[0] ) ) &&
 	    SUCCEEDED( sealed.createBuffer( D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ, 4096, &szAllocations[1] ) ) &&
 	    SUCCEEDED( sealed.createBuffer( D3D12_HEAP_TYPE_READBACK, D3D12_RESOURCE_STATE_COPY_DEST, 4096, &szAllocations[2] ) ) &&
-	    SUCCEEDED( sealed.createTexture2D( 32, 32, DXGI_FORMAT_R8G8B8A8_UNORM, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, nullptr,
-	                                       &szAllocations[3] ) ) &&
+	    SUCCEEDED( sealed.createTexture2D( 32, 32, DXGI_FORMAT_R8G8B8A8_UNORM, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON,
+	                                       nullptr, &szAllocations[3] ) ) &&
 	    SUCCEEDED( sealed.createTexture2D( 32, 32, DXGI_FORMAT_R8G8B8A8_UNORM, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET,
 	                                       D3D12_RESOURCE_STATE_COMMON, nullptr, &szAllocations[4] ) );
 	bool bPlaced = bCreated;
