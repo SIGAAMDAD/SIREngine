@@ -105,4 +105,15 @@ target_link_libraries(SIRGraphicsABITests PRIVATE SIR::Graphics)
 add_test(NAME renderer.graphics.binary-abi COMMAND SIRGraphicsABITests)
 sir_configure_owned_target(SIRGraphicsABITests)
 
+add_library(SIRGraphicsABIMockModule SHARED SIRGraphicsABIMockModule.cpp)
+target_link_libraries(SIRGraphicsABIMockModule PRIVATE SIR::Graphics)
+sir_configure_owned_target(SIRGraphicsABIMockModule)
+
+add_executable(SIRGraphicsModuleTests SIRGraphicsModuleTests.cpp)
+target_link_libraries(SIRGraphicsModuleTests PRIVATE SIR::Graphics)
+add_dependencies(SIRGraphicsModuleTests SIRGraphicsABIMockModule)
+target_compile_definitions(SIRGraphicsModuleTests PRIVATE SIR_TEST_ABI_MODULE_PATH="$<TARGET_FILE:SIRGraphicsABIMockModule>")
+add_test(NAME renderer.graphics.binary-module COMMAND SIRGraphicsModuleTests)
+sir_configure_owned_target(SIRGraphicsModuleTests)
+
 add_subdirectory(Config)
