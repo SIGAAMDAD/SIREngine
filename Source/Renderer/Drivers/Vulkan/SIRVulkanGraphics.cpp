@@ -465,8 +465,7 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::submit( sirGraphicsQueue_t eQueue,
 		}
 		sirVulkanGraphicsImageSlot_t *pImage = &m_szImages[copy.hTexture.nSlot];
 		if ( !pImage->bActive || pImage->nGeneration != copy.hTexture.nGeneration ||
-		     copy.hTexture.nDeviceGeneration != m_nDeviceGeneration ||
-		     copy.hTexture.eType != SIR_GRAPHICS_HANDLE_TEXTURE ) {
+		     copy.hTexture.nDeviceGeneration != m_nDeviceGeneration || copy.hTexture.eType != SIR_GRAPHICS_HANDLE_TEXTURE ) {
 			return SIR_GRAPHICS_INVALID_HANDLE;
 		}
 		if ( pBuffer->pMapped != nullptr ) {
@@ -491,8 +490,8 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::submit( sirGraphicsQueue_t eQueue,
 		if ( pSource->pMapped != nullptr || pDestination->pMapped != nullptr ) {
 			return SIR_GRAPHICS_BUSY;
 		}
-		eSubmit = m_Native.submitBufferCopy( &pSource->native, pList->m_nSourceOffset, &pDestination->native,
-		                                     pList->m_nDestinationOffset, pList->m_nBytes, &native );
+		eSubmit = m_Native.submitBufferCopy( &pSource->native, pList->m_nSourceOffset, &pDestination->native, pList->m_nDestinationOffset,
+		                                     pList->m_nBytes, &native );
 	}
 	if ( eSubmit != SIR_VULKAN_SUCCESS ) {
 		return sirVulkanToGraphicsResult( eSubmit );

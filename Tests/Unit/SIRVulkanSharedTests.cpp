@@ -2,6 +2,8 @@
 ===========================================================================
 
 
+
+
 SIREngine MPLv2 Source Code
 Copyright (C) 2023-2027 Noah Van Til
 
@@ -201,9 +203,8 @@ int main( void )
 	copy.nDepth = 1;
 	copy.bBufferToTexture = true;
 	SIRGraphicsCommandList *pUpload = nullptr;
-	if ( pDevice->acquireCommands( SIR_GRAPHICS_QUEUE_DIRECT, &pUpload ) != SIR_GRAPHICS_SUCCESS ||
-	     pUpload == nullptr || pUpload->copyBufferTexture( copy ) != SIR_GRAPHICS_SUCCESS ||
-	     pUpload->close() != SIR_GRAPHICS_SUCCESS ) {
+	if ( pDevice->acquireCommands( SIR_GRAPHICS_QUEUE_DIRECT, &pUpload ) != SIR_GRAPHICS_SUCCESS || pUpload == nullptr ||
+	     pUpload->copyBufferTexture( copy ) != SIR_GRAPHICS_SUCCESS || pUpload->close() != SIR_GRAPHICS_SUCCESS ) {
 		return 21;
 	}
 	sirGraphicsSubmission_t uploadSubmission = {};
@@ -217,9 +218,8 @@ int main( void )
 	copy.hBuffer = hReadback;
 	copy.bBufferToTexture = false;
 	SIRGraphicsCommandList *pImageReadback = nullptr;
-	if ( pDevice->acquireCommands( SIR_GRAPHICS_QUEUE_DIRECT, &pImageReadback ) != SIR_GRAPHICS_SUCCESS ||
-	     pImageReadback == nullptr || pImageReadback->copyBufferTexture( copy ) != SIR_GRAPHICS_SUCCESS ||
-	     pImageReadback->close() != SIR_GRAPHICS_SUCCESS ) {
+	if ( pDevice->acquireCommands( SIR_GRAPHICS_QUEUE_DIRECT, &pImageReadback ) != SIR_GRAPHICS_SUCCESS || pImageReadback == nullptr ||
+	     pImageReadback->copyBufferTexture( copy ) != SIR_GRAPHICS_SUCCESS || pImageReadback->close() != SIR_GRAPHICS_SUCCESS ) {
 		return 23;
 	}
 	sirGraphicsSubmission_t readbackSubmission = {};

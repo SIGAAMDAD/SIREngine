@@ -44,9 +44,9 @@ bool SIRVulkanDevice::initializeTransferQueue( void ) noexcept
 	if ( m_pfnDeviceWaitIdle == nullptr || m_pfnCreateCommandPool == nullptr || m_pfnDestroyCommandPool == nullptr ||
 	     m_pfnAllocateCommandBuffers == nullptr || m_pfnResetCommandBuffer == nullptr || m_pfnBeginCommandBuffer == nullptr ||
 	     m_pfnEndCommandBuffer == nullptr || m_pfnCmdPipelineBarrier2 == nullptr || m_pfnCmdCopyBuffer2 == nullptr ||
-	     m_pfnCmdCopyBufferToImage2 == nullptr || m_pfnCmdCopyImageToBuffer2 == nullptr ||
-	     m_pfnQueueSubmit2 == nullptr || m_pfnCreateSemaphore == nullptr || m_pfnDestroySemaphore == nullptr ||
-	     m_pfnGetSemaphoreCounterValue == nullptr || m_pfnWaitSemaphores == nullptr ) {
+	     m_pfnCmdCopyBufferToImage2 == nullptr || m_pfnCmdCopyImageToBuffer2 == nullptr || m_pfnQueueSubmit2 == nullptr ||
+	     m_pfnCreateSemaphore == nullptr || m_pfnDestroySemaphore == nullptr || m_pfnGetSemaphoreCounterValue == nullptr ||
+	     m_pfnWaitSemaphores == nullptr ) {
 		return false;
 	}
 
