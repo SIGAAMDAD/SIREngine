@@ -271,11 +271,128 @@ static void testGraphIntegration( void )
 	memory.shutdown();
 }
 
+
+static sirTaskResult_t completedProvider( void *, sirTaskHandle_t ) noexcept
+{
+	return SIR_TASK_RESULT_SUCCESS;
+}
+
+static void testRejectedInitializationAndThreadAffinity( void )
+{
+	SIRMemoryManager memory;
+	SIRTaskScheduler scheduler;
+	SIRTaskFenceTracker tracker;
+	uint32_t nDone = UINT32_MAX;
+	SIR_FENCE_CHECK( !tracker.hasCapacity() && tracker.getPendingCount() == 0 );
+	SIR_FENCE_CHECK( !tracker.shutdown() );
+	SIR_FENCE_CHECK( !tracker.untrackLast( {} ) );
+	SIR_FENCE_CHECK( !tracker.advanceCompleted( 0, SIR_TASK_RESULT_SUCCESS, nullptr ) );
+	SIR_FENCE_CHECK( !tracker.advanceCompleted( 0, SIR_TASK_RESULT_SUCCESS, &nDone ) && nDone == 0 );
+	SIR_FENCE_CHECK( !tracker.init( nullptr, &scheduler, SIR_TASK_EXEC_RENDER, 1 ) );
+	SIR_FENCE_CHECK( !tracker.init( &memory, &scheduler, SIR_TASK_EXEC_RENDER, 1 ) );
+	initFenceMemory( memory );
+	SIR_FENCE_CHECK( scheduler.init( &memory, { 8, 0, 16 } ) );
+	SIR_FENCE_CHECK( !tracker.init( &memory, nullptr, SIR_TASK_EXEC_RENDER, 1 ) );
+	SIR_FENCE_CHECK( !tracker.init( &memory, &scheduler, SIR_TASK_EXEC_RENDER, 0 ) );
+	SIR_FENCE_CHECK( !tracker.init( &memory, &scheduler, SIR_TASK_EXEC_CPU, 1 ) );
+	SIR_FENCE_CHECK( !tracker.init( &memory, &scheduler, SIR_TASK_EXEC_COUNT, 1 ) );
+	SIR_FENCE_CHECK( tracker.init( &memory, &scheduler, SIR_TASK_EXEC_RENDER, 2 ) );
+	SIR_FENCE_CHECK( !tracker.init( &memory, &scheduler, SIR_TASK_EXEC_RENDER, 2 ) );
+	std::thread wrongThread( [&]() {
+		uint32_t nWrongDone = UINT32_MAX;
+		SIR_FENCE_CHECK( !tracker.shutdown() );
+		SIR_FENCE_CHECK( !tracker.hasCapacity() );
+		SIR_FENCE_CHECK( tracker.getPendingCount() == 0 );
+		SIR_FENCE_CHECK( !tracker.untrackLast( {} ) );
+		SIR_FENCE_CHECK( !tracker.track( {}, 1 ) );
+		SIR_FENCE_CHECK( !tracker.advanceCompleted( 1, SIR_TASK_RESULT_FAILURE, &nWrongDone ) && nWrongDone == 0 );
+		SIRTaskFenceTracker wrongOwner;
+		SIR_FENCE_CHECK( !wrongOwner.init( &memory, &scheduler, SIR_TASK_EXEC_RENDER, 1 ) );
+	} );
+	wrongThread.join();
+	SIR_FENCE_CHECK( tracker.shutdown() );
+	SIR_FENCE_CHECK( !tracker.init( &memory, &scheduler, SIR_TASK_EXEC_RENDER, 2 ) );
+	SIR_FENCE_CHECK( scheduler.shutdown() );
+	memory.shutdown();
+}
+
+static void testRejectedTasksAndFenceOrder( void )
+{
+	SIRMemoryManager memory;
+	initFenceMemory( memory );
+	SIRTaskScheduler scheduler;
+	SIR_FENCE_CHECK( scheduler.init( &memory, { 8, 0, 16 } ) );
+	SIRTaskFenceTracker tracker;
+	SIR_FENCE_CHECK( tracker.init( &memory, &scheduler, SIR_TASK_EXEC_RENDER, 3 ) );
+	sirTaskHandle_t ready = {};
+	sirTaskHandle_t completed = {};
+	sirTaskHandle_t wrongExecutor = {};
+	sirTaskHandle_t deferred = {};
+	SIR_FENCE_CHECK( scheduler.submit( deferredProvider, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_RENDER, &ready ) );
+	SIR_FENCE_CHECK( !tracker.track( ready, 5 ) );
+	SIR_FENCE_CHECK( scheduler.submit( completedProvider, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_RENDER, &completed ) );
+	SIR_FENCE_CHECK( scheduler.pumpProvider( SIR_TASK_EXEC_RENDER, 2 ) == 2 );
+	SIR_FENCE_CHECK( !tracker.track( completed, 5 ) );
+	SIR_FENCE_CHECK( scheduler.submit( deferredProvider, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU, &wrongExecutor ) );
+	SIR_FENCE_CHECK( !tracker.track( wrongExecutor, 5 ) );
+	SIR_FENCE_CHECK( !tracker.track( { UINT32_MAX, 0 }, 5 ) );
+	SIR_FENCE_CHECK( tracker.track( ready, 9 ) );
+	SIR_FENCE_CHECK( !tracker.track( ready, 8 ) );
+	SIR_FENCE_CHECK( !tracker.track( ready, 9 ) );
+	SIR_FENCE_CHECK( !tracker.untrackLast( ready ) );
+	SIR_FENCE_CHECK( !tracker.untrackLast( completed ) );
+	SIR_FENCE_CHECK( scheduler.submit( deferredProvider, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_RENDER, &deferred ) );
+	SIR_FENCE_CHECK( scheduler.pumpProvider( SIR_TASK_EXEC_RENDER, 1 ) == 1 );
+	SIR_FENCE_CHECK( tracker.track( deferred, 9 ) );
+	uint32_t nDone = UINT32_MAX;
+	SIR_FENCE_CHECK( !tracker.advanceCompleted( 9, SIR_TASK_RESULT_PENDING, &nDone ) && nDone == 0 );
+	SIR_FENCE_CHECK( tracker.advanceCompleted( 4, SIR_TASK_RESULT_SUCCESS, &nDone ) && nDone == 0 );
+	SIR_FENCE_CHECK( !tracker.advanceCompleted( 3, SIR_TASK_RESULT_SUCCESS, &nDone ) && nDone == 0 );
+	SIR_FENCE_CHECK( tracker.advanceCompleted( 9, SIR_TASK_RESULT_SUCCESS, &nDone ) && nDone == 2 );
+	SIR_FENCE_CHECK( !tracker.track( ready, 9 ) );
+	SIR_FENCE_CHECK( scheduler.pumpCPU( 1 ) == 1 );
+	SIR_FENCE_CHECK( scheduler.releaseTask( ready ) );
+	SIR_FENCE_CHECK( scheduler.releaseTask( completed ) );
+	SIR_FENCE_CHECK( scheduler.releaseTask( wrongExecutor ) );
+	SIR_FENCE_CHECK( scheduler.releaseTask( deferred ) );
+	SIR_FENCE_CHECK( tracker.shutdown() && scheduler.shutdown() );
+	memory.shutdown();
+}
+
+static void testRollbackWithEarlierPendingRecord( void )
+{
+	SIRMemoryManager memory;
+	initFenceMemory( memory );
+	SIRTaskScheduler scheduler;
+	SIR_FENCE_CHECK( scheduler.init( &memory, { 8, 0, 16 } ) );
+	SIRTaskFenceTracker tracker;
+	SIR_FENCE_CHECK( tracker.init( &memory, &scheduler, SIR_TASK_EXEC_RENDER, 2 ) );
+	sirFenceFinalizerContext_t finalizer = { 0, 0, true };
+	sirFenceTrackedContext_t firstContext = { &tracker, &finalizer, 10, false };
+	sirFenceTrackedContext_t rollbackContext = { &tracker, &finalizer, 11, true };
+	sirTaskHandle_t first = {};
+	sirTaskHandle_t undone = {};
+	SIR_FENCE_CHECK( scheduler.submit( registerFenceInsideCallback, &firstContext, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_RENDER, &first ) );
+	SIR_FENCE_CHECK( scheduler.submit( registerFenceInsideCallback, &rollbackContext, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_RENDER, &undone ) );
+	SIR_FENCE_CHECK( scheduler.pumpProvider( SIR_TASK_EXEC_RENDER, 2 ) == 2 );
+	SIR_FENCE_CHECK( scheduler.getState( first ) == SIR_TASK_AWAITING_PROVIDER );
+	SIR_FENCE_CHECK( scheduler.getState( undone ) == SIR_TASK_FAILED );
+	SIR_FENCE_CHECK( tracker.getPendingCount() == 1 );
+	uint32_t nDone = 0;
+	SIR_FENCE_CHECK( tracker.advanceCompleted( 10, SIR_TASK_RESULT_SUCCESS, &nDone ) && nDone == 1 );
+	SIR_FENCE_CHECK( scheduler.releaseTask( first ) && scheduler.releaseTask( undone ) );
+	SIR_FENCE_CHECK( tracker.shutdown() && scheduler.shutdown() );
+	memory.shutdown();
+}
+
 int main( void )
 {
 	testMonotonicFenceAndSafePoint();
 	testFinalizerRetryAndCancellation();
 	testAdmissionAndRollback();
 	testGraphIntegration();
+	testRejectedInitializationAndThreadAffinity();
+	testRejectedTasksAndFenceOrder();
+	testRollbackWithEarlierPendingRecord();
 	return 0;
 }
