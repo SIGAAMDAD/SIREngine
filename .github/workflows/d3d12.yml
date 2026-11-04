@@ -41,6 +41,6 @@ jobs:
       - name: Configure experimental D3D12
         run: cmake --preset dev -DSIR_WITH_D3D12=ON
       - name: Compile headless driver and tests
-        run: cmake --build --preset dev --target SIRD3D12HeadlessTests SIRD3D12SharedApiTests SIRD3D12PipelineTests SIRD3D12CommandsTests
+        run: cmake --build --preset dev --target SIRD3D12HeadlessTests SIRD3D12SharedApiTests SIRD3D12PipelineTests SIRD3D12CommandsTests SIRD3D12SurfaceTests SIRD3D12MemoryTests
       - name: Run native WARP device and transfer checks
         run: ctest --preset dev --output-on-failure -R '^renderer[.]d3d12[.]'
