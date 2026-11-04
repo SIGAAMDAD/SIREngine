@@ -937,9 +937,6 @@ sirGraphicsResult_t SIRD3D12Resources::createSampler( const sirGraphicsSamplerDe
 		return eDescriptor;
 	}
 
-
-
-
 	uint32_t iSlot = 0;
 	const sirGraphicsResult_t eSlot = acquireSlot( SIR_GRAPHICS_HANDLE_SAMPLER, &iSlot, pHandle );
 	if ( eSlot != SIR_GRAPHICS_SUCCESS ) {

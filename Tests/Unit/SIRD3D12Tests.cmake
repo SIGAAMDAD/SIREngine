@@ -30,11 +30,6 @@ if(SIR_WITH_D3D12)
         VERBATIM)
     add_custom_target(SIRD3D12GraphicsSmokeDXIL DEPENDS "${SIR_D3D12_VS_DXIL}" "${SIR_D3D12_PS_DXIL}")
     add_executable(SIRD3D12HeadlessTests SIRD3D12HeadlessTests.cpp)
-    add_dependencies(SIRD3D12HeadlessTests SIRD3D12ComputeSmokeDXIL SIRD3D12GraphicsSmokeDXIL)
-    target_compile_definitions(SIRD3D12HeadlessTests PRIVATE
-        SIR_D3D12_SMOKE_DXIL_PATH="${SIR_D3D12_SMOKE_DXIL}"
-        SIR_D3D12_VS_DXIL_PATH="${SIR_D3D12_VS_DXIL}"
-        SIR_D3D12_PS_DXIL_PATH="${SIR_D3D12_PS_DXIL}")
     target_link_libraries(SIRD3D12HeadlessTests PRIVATE SIR::D3D12)
     add_test(NAME renderer.d3d12.warp-headless COMMAND SIRD3D12HeadlessTests)
     sir_configure_owned_target(SIRD3D12HeadlessTests)
