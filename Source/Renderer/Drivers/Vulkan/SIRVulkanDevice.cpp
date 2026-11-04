@@ -365,8 +365,10 @@ sirVulkanResult_t SIRVulkanDevice::createBuffer( uint64_t nBytes, VkBufferUsageF
 	allocationInfo.usage = VMA_MEMORY_USAGE_AUTO;
 	allocationInfo.flags = VMA_ALLOCATION_CREATE_WITHIN_BUDGET_BIT;
 	if ( m_bSealedPools ) {
-		const uint32_t iPool = !bHostVisible ? 0 : ( ( nUsage & VK_BUFFER_USAGE_TRANSFER_DST_BIT ) != 0 &&
-		                                               ( nUsage & VK_BUFFER_USAGE_TRANSFER_SRC_BIT ) == 0 ) ? 2 : 1;
+		const uint32_t iPool =
+		    !bHostVisible                                                                                                  ? 0
+		    : ( ( nUsage & VK_BUFFER_USAGE_TRANSFER_DST_BIT ) != 0 && ( nUsage & VK_BUFFER_USAGE_TRANSFER_SRC_BIT ) == 0 ) ? 2
+		                                                                                                                   : 1;
 		allocationInfo.pool = m_szSealedPools[iPool];
 		allocationInfo.flags |= VMA_ALLOCATION_CREATE_NEVER_ALLOCATE_BIT;
 	}
@@ -381,8 +383,8 @@ sirVulkanResult_t SIRVulkanDevice::createBuffer( uint64_t nBytes, VkBufferUsageF
 		allocationInfo.requiredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 	}
 	VmaAllocationInfo nativeAllocation = {};
-	if ( vmaCreateBuffer( m_Allocator, &bufferInfo, &allocationInfo, &pBuffer->hBuffer, &pBuffer->pAllocation,
-	                      &nativeAllocation ) != VK_SUCCESS ) {
+	if ( vmaCreateBuffer( m_Allocator, &bufferInfo, &allocationInfo, &pBuffer->hBuffer, &pBuffer->pAllocation, &nativeAllocation ) !=
+	     VK_SUCCESS ) {
 		pBuffer->hBuffer = VK_NULL_HANDLE;
 		pBuffer->pAllocation = nullptr;
 		return SIR_VULKAN_ALLOCATION_FAILED;

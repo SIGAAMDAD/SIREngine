@@ -62,8 +62,8 @@ sirVulkanResult_t SIRVulkanDevice::initializeSealedPools( const sirVulkanPoolBud
 			selection.requiredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 		} else {
 			selection.requiredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-			selection.flags = iPool == 1 ? VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT
-			                             : VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT;
+			selection.flags =
+			    iPool == 1 ? VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT : VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT;
 			if ( iPool == 2 ) {
 				selection.preferredFlags = VK_MEMORY_PROPERTY_HOST_CACHED_BIT;
 			}

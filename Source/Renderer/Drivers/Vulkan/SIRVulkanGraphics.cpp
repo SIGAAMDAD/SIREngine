@@ -773,10 +773,8 @@ sirGraphicsResult_t SIRVulkanDriver::createDevice( const sirGraphicsDeviceCreate
 	if ( !desc.bHeadless ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
-	const bool bHasBudgets = desc.nResidentBudgetBytes != 0 || desc.nUploadBudgetBytes != 0 ||
-	                         desc.nReadbackBudgetBytes != 0;
-	const sirVulkanPoolBudget_t budgets = { desc.nResidentBudgetBytes, desc.nUploadBudgetBytes,
-	                                       desc.nReadbackBudgetBytes };
+	const bool bHasBudgets = desc.nResidentBudgetBytes != 0 || desc.nUploadBudgetBytes != 0 || desc.nReadbackBudgetBytes != 0;
+	const sirVulkanPoolBudget_t budgets = { desc.nResidentBudgetBytes, desc.nUploadBudgetBytes, desc.nReadbackBudgetBytes };
 	if ( bHasBudgets && !sirVulkanValidatePoolBudget( &budgets ) ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
