@@ -43,7 +43,7 @@ jobs:
           if-no-files-found: warn
           retention-days: 1
       - name: Install pinned clang-format
-        run: python3 -m pip install --disable-pip-version-check clang-format==22.1.5
+        run: python3 -m pip install --disable-pip-version-check clang-format==23.1.5
       - name: Verify owned-source formatting
         run: cmake -P Build/CMake/CIFormat.cmake
       - name: Fetch pinned GoogleTest
