@@ -39,21 +39,21 @@ extern "C" void *__real_mmap( void *pAddress, size_t nBytes, int nProtection, in
 
 extern "C" int __wrap_fstat( int nHandle, struct stat *pInfo )
 {
-    const int nOrdinal = s_nFailFstatOrdinal.load( std::memory_order_relaxed );
-    if ( nOrdinal > 0 && s_nFailFstatOrdinal.fetch_sub( 1, std::memory_order_relaxed ) == 1 ) {
-        errno = EIO;
-        return -1;
-    }
-    return __real_fstat( nHandle, pInfo );
+	const int nOrdinal = s_nFailFstatOrdinal.load( std::memory_order_relaxed );
+	if ( nOrdinal > 0 && s_nFailFstatOrdinal.fetch_sub( 1, std::memory_order_relaxed ) == 1 ) {
+		errno = EIO;
+		return -1;
+	}
+	return __real_fstat( nHandle, pInfo );
 }
 
 extern "C" void *__wrap_mmap( void *pAddress, size_t nBytes, int nProtection, int nFlags, int nHandle, off_t nOffset )
 {
-    if ( s_bFailMappedRead.exchange( false, std::memory_order_relaxed ) ) {
-        errno = EACCES;
-        return MAP_FAILED;
-    }
-    return __real_mmap( pAddress, nBytes, nProtection, nFlags, nHandle, nOffset );
+	if ( s_bFailMappedRead.exchange( false, std::memory_order_relaxed ) ) {
+		errno = EACCES;
+		return MAP_FAILED;
+	}
+	return __real_mmap( pAddress, nBytes, nProtection, nFlags, nHandle, nOffset );
 }
 #endif
 
@@ -363,32 +363,32 @@ static void testRejectedRequestsAndTaskAdmission( void )
 #if defined( __linux__ )
 static void testInjectedResourceTransferFailures( void )
 {
-    sirIOTestAlloc_t alloc = {};
-    SIRMemoryManager memory;
-    sirIOMemory( memory );
-    {
-        SIRResourceGraph graph( sirIOConfig( alloc ) );
-        SIR_IO_CHECK( graph.isReady() );
-        SIRTaskScheduler scheduler;
-        SIR_IO_CHECK( scheduler.init( &memory, { 8, 0, 16 } ) );
-        SIRResourceFileLoad load( graph, scheduler );
-        sirResourceFileLoadRequest_t request = sirIORequest( 5001, SIR_RESOURCE_FILE_READ_AT );
-        s_nFailFstatOrdinal.store( 2, std::memory_order_relaxed );
-        SIR_IO_CHECK( load.begin( SIR_IO_PATH, request ) == SIR_RESOURCE_RESULT_FAILED );
-        SIR_IO_CHECK( load.getLastFileResult() == SIR_FILE_IO_ERROR && !load.isActive() );
-        SIR_IO_CHECK( s_nFailFstatOrdinal.load( std::memory_order_relaxed ) == 0 );
-        request = sirIORequest( 5002, SIR_RESOURCE_FILE_READ_MAPPED );
-        SIR_IO_CHECK( load.begin( SIR_IO_PATH, request ) == SIR_RESOURCE_RESULT_SUCCESS );
-        s_bFailMappedRead.store( true, std::memory_order_relaxed );
-        SIR_IO_CHECK( scheduler.pumpCPU( 8 ) == 1 );
-        SIRResourceHandle ignored = {};
-        SIR_IO_CHECK( load.poll( &ignored ) == SIR_RESOURCE_RESULT_FAILED );
-        SIR_IO_CHECK( load.getLastFileResult() == SIR_FILE_ACCESS_DENIED );
-        SIR_IO_CHECK( !load.isActive() );
-        SIR_IO_CHECK( scheduler.shutdown() );
-    }
-    SIR_IO_CHECK( alloc.nOutstanding.load() == 0 );
-    memory.shutdown();
+	sirIOTestAlloc_t alloc = {};
+	SIRMemoryManager memory;
+	sirIOMemory( memory );
+	{
+		SIRResourceGraph graph( sirIOConfig( alloc ) );
+		SIR_IO_CHECK( graph.isReady() );
+		SIRTaskScheduler scheduler;
+		SIR_IO_CHECK( scheduler.init( &memory, { 8, 0, 16 } ) );
+		SIRResourceFileLoad load( graph, scheduler );
+		sirResourceFileLoadRequest_t request = sirIORequest( 5001, SIR_RESOURCE_FILE_READ_AT );
+		s_nFailFstatOrdinal.store( 2, std::memory_order_relaxed );
+		SIR_IO_CHECK( load.begin( SIR_IO_PATH, request ) == SIR_RESOURCE_RESULT_FAILED );
+		SIR_IO_CHECK( load.getLastFileResult() == SIR_FILE_IO_ERROR && !load.isActive() );
+		SIR_IO_CHECK( s_nFailFstatOrdinal.load( std::memory_order_relaxed ) == 0 );
+		request = sirIORequest( 5002, SIR_RESOURCE_FILE_READ_MAPPED );
+		SIR_IO_CHECK( load.begin( SIR_IO_PATH, request ) == SIR_RESOURCE_RESULT_SUCCESS );
+		s_bFailMappedRead.store( true, std::memory_order_relaxed );
+		SIR_IO_CHECK( scheduler.pumpCPU( 8 ) == 1 );
+		SIRResourceHandle ignored = {};
+		SIR_IO_CHECK( load.poll( &ignored ) == SIR_RESOURCE_RESULT_FAILED );
+		SIR_IO_CHECK( load.getLastFileResult() == SIR_FILE_ACCESS_DENIED );
+		SIR_IO_CHECK( !load.isActive() );
+		SIR_IO_CHECK( scheduler.shutdown() );
+	}
+	SIR_IO_CHECK( alloc.nOutstanding.load() == 0 );
+	memory.shutdown();
 }
 #endif
 

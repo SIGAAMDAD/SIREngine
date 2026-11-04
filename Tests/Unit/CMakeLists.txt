@@ -109,6 +109,11 @@ sir_configure_owned_target(SIRResourceMemoryIntegrationTests)
 # Native file/mapped-file loading through Core Jobs and GRDG staging.
 add_executable(SIRResourceFileLoadTests SIRResourceFileLoadTests.cpp)
 target_link_libraries(SIRResourceFileLoadTests PRIVATE SIR::Resources)
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    foreach(sirWrappedCall IN ITEMS fstat mmap)
+        target_link_options(SIRResourceFileLoadTests PRIVATE "LINKER:--wrap=${sirWrappedCall}")
+    endforeach()
+endif()
 add_test(NAME resources.streaming.native-file-io COMMAND SIRResourceFileLoadTests)
 sir_configure_owned_target(SIRResourceFileLoadTests)
 
