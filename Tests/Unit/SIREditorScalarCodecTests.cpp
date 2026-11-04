@@ -77,5 +77,40 @@ int main( void )
 	assert( sirEditorEncodeScalar( value, szOutput, sizeof( szOutput ), &nBytes ) == SIR_EDITOR_SCALAR_INVALID_ARGUMENT );
 	value.eKind = SIR_PROPERTY_RESOURCE_ID;
 	assert( sirEditorEncodeScalar( value, szOutput, sizeof( szOutput ), &nBytes ) == SIR_EDITOR_SCALAR_UNSUPPORTED_KIND );
+
+	// Deterministic differential roundtrips cover 12,000 randomized 64-bit
+	// integers and finite IEEE-754 payloads, including signed zero/subnormals.
+	uint64_t nSeed = UINT64_C( 0x129532acf0e71234 );
+	for ( uint32_t iCase = 0; iCase < 12000; ++iCase ) {
+		nSeed ^= nSeed << 13;
+		nSeed ^= nSeed >> 7;
+		nSeed ^= nSeed << 17;
+		const sirPropertyKind_t eKind = ( iCase % 3 == 0 ) ? SIR_PROPERTY_INT64
+		                                 : ( iCase % 3 == 1 ) ? SIR_PROPERTY_UINT64 : SIR_PROPERTY_REAL64;
+		sirPropertyValue_t original = {};
+		original.eKind = eKind;
+		original.nPayload = nSeed;
+		if ( eKind == SIR_PROPERTY_REAL64 ) {
+			double fFloat = 0;
+			memcpy( &fFloat, &original.nPayload, sizeof( fFloat ) );
+			if ( !std::isfinite( fFloat ) ) {
+				continue;
+			}
+		}
+		char szEncoded[128] = {};
+		size_t nEncodedBytes = 0;
+		assert( sirEditorEncodeScalar( original, szEncoded, sizeof( szEncoded ), &nEncodedBytes ) == SIR_EDITOR_SCALAR_OK );
+		sirPropertyValue_t parsed = {};
+		assert( sirEditorDecodeScalar( szEncoded, nEncodedBytes, eKind, &parsed ) == SIR_EDITOR_SCALAR_OK );
+		assert( parsed.eKind == original.eKind );
+		assert( parsed.nPayload == original.nPayload );
+	}
+	assert( sirEditorDecodeScalar( "1.0.3", 5, SIR_PROPERTY_REAL64, &value ) == SIR_EDITOR_SCALAR_INVALID_TEXT );
+	assert( sirEditorDecodeScalar( " 123", 4, SIR_PROPERTY_INT64, &value ) == SIR_EDITOR_SCALAR_INVALID_TEXT );
+	assert( sirEditorDecodeScalar( "-", 1, SIR_PROPERTY_INT64, &value ) == SIR_EDITOR_SCALAR_INVALID_TEXT );
+	assert( sirEditorDecodeScalar( "1e-10000", 8, SIR_PROPERTY_REAL64, &value ) == SIR_EDITOR_SCALAR_INVALID_TEXT );
+	value.eKind = SIR_PROPERTY_UINT64;
+	value.szReserved[0] = 0x01;
+	assert( sirEditorEncodeScalar( value, szOutput, sizeof( szOutput ), &nBytes ) == SIR_EDITOR_SCALAR_INVALID_ARGUMENT );
 	return 0;
 }
