@@ -790,7 +790,7 @@ sirGraphicsResult_t SIRVulkanDriver::createDevice( const sirGraphicsDeviceCreate
 	if ( desc.nAdapterIndex != 0 || desc.nFramesInFlight == 0 || desc.nFramesInFlight > SIR_VULKAN_TRANSFER_SLOT_COUNT ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	if ( desc.nRequiredFeatures != 0 ) {
+	if ( ( desc.nRequiredFeatures & ~( uint64_t )SIR_GRAPHICS_FEATURE_COMPUTE ) != 0 ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
 	if ( !desc.bHeadless ) {
@@ -802,10 +802,17 @@ sirGraphicsResult_t SIRVulkanDriver::createDevice( const sirGraphicsDeviceCreate
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	const sirGraphicsResult_t eResult = m_Device.initialize( bHasBudgets ? &budgets : nullptr );
-	if ( eResult == SIR_GRAPHICS_SUCCESS ) {
-		*ppDevice = &m_Device;
+	if ( eResult != SIR_GRAPHICS_SUCCESS ) {
+		return eResult;
 	}
-	return eResult;
+	sirGraphicsCapabilities_t capabilities = {};
+	if ( m_Device.queryCapabilities( &capabilities ) != SIR_GRAPHICS_SUCCESS ||
+	     ( capabilities.nFeatureMask & desc.nRequiredFeatures ) != desc.nRequiredFeatures ) {
+		( void )m_Device.shutdown();
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
+	*ppDevice = &m_Device;
+	return SIR_GRAPHICS_SUCCESS;
 }
 
 sirGraphicsResult_t SIRVulkanDriver::destroyDevice( SIRRenderingDevice *pDevice ) noexcept
