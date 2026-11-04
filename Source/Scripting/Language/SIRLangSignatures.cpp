@@ -464,7 +464,10 @@ static sirLangTypeIdentity_t sirLangInfer( sirLangSignatureState_t *pState, uint
 		break;
 	case SIR_LANG_SYNTAX_UNARY:
 		result = sirLangInfer( pState, node.nFirstChild );
-		if ( sirLangTextIs( pState, node.nStartToken, "not" ) ) {
+		if ( sirLangTextIs( pState, node.nStartToken, "not" ) || sirLangTextIs( pState, node.nStartToken, "!" ) ) {
+			if ( result.eValue != SIR_LANG_VALUE_UNKNOWN && result.eValue != SIR_LANG_VALUE_BOOL ) {
+				sirLangSignatureReport( pState, SIR_LANG_SIGNATURE_ARGUMENT_TYPE, iNode );
+			}
 			result = sirLangScalarType( SIR_LANG_VALUE_BOOL );
 		}
 		break;
@@ -477,14 +480,28 @@ static sirLangTypeIdentity_t sirLangInfer( sirLangSignatureState_t *pState, uint
 		const uint32_t iOperator = pState->pTree->pNodes[iLeft].nEndToken;
 		const bool bLogical = sirLangTextIs( pState, iOperator, "and" ) ||
 		                      sirLangTextIs( pState, iOperator, "or" ) || sirLangTextIs( pState, iOperator, "xor" );
-		if ( bLogical ) {
-			if ( ( left.eValue != SIR_LANG_VALUE_UNKNOWN && left.eValue != SIR_LANG_VALUE_BOOL ) ||
-			     ( right.eValue != SIR_LANG_VALUE_UNKNOWN && right.eValue != SIR_LANG_VALUE_BOOL ) ) {
+		const bool bArithmetic = sirLangTextIs( pState, iOperator, "+" ) ||
+		                         sirLangTextIs( pState, iOperator, "-" ) || sirLangTextIs( pState, iOperator, "*" ) ||
+		                         sirLangTextIs( pState, iOperator, "/" );
+		const bool bOrdered = sirLangTextIs( pState, iOperator, "<" ) || sirLangTextIs( pState, iOperator, ">" );
+		const bool bEquality = sirLangTextIs( pState, iOperator, "!" ) || sirLangTextIs( pState, iOperator, "=" );
+		const bool bBothKnown = left.eValue != SIR_LANG_VALUE_UNKNOWN && right.eValue != SIR_LANG_VALUE_UNKNOWN;
+		const bool bIntegerOperands = left.eValue >= SIR_LANG_VALUE_I8 && left.eValue <= SIR_LANG_VALUE_U64 &&
+		                              right.eValue >= SIR_LANG_VALUE_I8 && right.eValue <= SIR_LANG_VALUE_U64;
+		if ( bLogical && bBothKnown && ( left.eValue != SIR_LANG_VALUE_BOOL || right.eValue != SIR_LANG_VALUE_BOOL ) ) {
+			sirLangSignatureReport( pState, SIR_LANG_SIGNATURE_ARGUMENT_TYPE, iNode );
+		}
+		if ( bBothKnown && ( bArithmetic || bOrdered ) &&
+		     ( !bIntegerOperands || !sirLangTypeEqual( pState, left, right ) ) ) {
+			sirLangSignatureReport( pState, SIR_LANG_SIGNATURE_ARGUMENT_TYPE, iNode );
+		}
+		if ( bBothKnown && bEquality ) {
+			const bool bComparable = bIntegerOperands || ( left.eValue == SIR_LANG_VALUE_BOOL && right.eValue == SIR_LANG_VALUE_BOOL );
+			if ( !bComparable || !sirLangTypeEqual( pState, left, right ) ) {
 				sirLangSignatureReport( pState, SIR_LANG_SIGNATURE_ARGUMENT_TYPE, iNode );
 			}
 		}
-		if ( bLogical || sirLangTextIs( pState, iOperator, "<" ) || sirLangTextIs( pState, iOperator, ">" ) ||
-		     sirLangTextIs( pState, iOperator, "!" ) || sirLangTextIs( pState, iOperator, "=" ) ) {
+		if ( bLogical || bOrdered || bEquality ) {
 			result = sirLangScalarType( SIR_LANG_VALUE_BOOL );
 		}
 		break;
