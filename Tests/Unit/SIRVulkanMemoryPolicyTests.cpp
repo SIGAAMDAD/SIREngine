@@ -65,22 +65,17 @@ int main( void )
 	if ( driver.createDevice( create, &pDevice ) != SIR_GRAPHICS_INVALID_ARGUMENT || pDevice != nullptr ) {
 		return 9;
 	}
-	if ( sirVulkanPlacementPool( SIR_VULKAN_BUFFER_GPU_LOCAL ) != 0 ||
-	     sirVulkanPlacementPool( SIR_VULKAN_BUFFER_CPU_UPLOAD ) != 1 ||
-	     sirVulkanPlacementPool( SIR_VULKAN_BUFFER_GPU_UPLOAD ) != 1 ||
-	     sirVulkanPlacementPool( SIR_VULKAN_BUFFER_CPU_READBACK ) != 2 ) {
+	if ( sirVulkanPlacementPool( SIR_VULKAN_BUFFER_GPU_LOCAL ) != 0 || sirVulkanPlacementPool( SIR_VULKAN_BUFFER_CPU_UPLOAD ) != 1 ||
+	     sirVulkanPlacementPool( SIR_VULKAN_BUFFER_GPU_UPLOAD ) != 1 || sirVulkanPlacementPool( SIR_VULKAN_BUFFER_CPU_READBACK ) != 2 ) {
 		return 10;
 	}
-	if ( sirVulkanPlacementHostVisible( SIR_VULKAN_BUFFER_GPU_LOCAL ) ||
-	     !sirVulkanPlacementHostVisible( SIR_VULKAN_BUFFER_CPU_UPLOAD ) ||
+	if ( sirVulkanPlacementHostVisible( SIR_VULKAN_BUFFER_GPU_LOCAL ) || !sirVulkanPlacementHostVisible( SIR_VULKAN_BUFFER_CPU_UPLOAD ) ||
 	     !sirVulkanPlacementHostVisible( SIR_VULKAN_BUFFER_CPU_READBACK ) ||
 	     !sirVulkanPlacementHostVisible( SIR_VULKAN_BUFFER_GPU_UPLOAD ) ) {
 		return 11;
 	}
-	if ( !sirVulkanMemoryTypeCompatible( 0, 1U ) ||
-	     !sirVulkanMemoryTypeCompatible( 31, 1U << 31 ) ||
-	     sirVulkanMemoryTypeCompatible( 32, UINT32_MAX ) ||
-	     sirVulkanMemoryTypeCompatible( 3, 1U << 2 ) ||
+	if ( !sirVulkanMemoryTypeCompatible( 0, 1U ) || !sirVulkanMemoryTypeCompatible( 31, 1U << 31 ) ||
+	     sirVulkanMemoryTypeCompatible( 32, UINT32_MAX ) || sirVulkanMemoryTypeCompatible( 3, 1U << 2 ) ||
 	     sirVulkanMemoryTypeCompatible( 0, 0 ) ) {
 		return 12;
 	}

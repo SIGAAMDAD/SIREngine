@@ -43,8 +43,7 @@ bool sirVulkanValidatePoolBudget( const sirVulkanPoolBudget_t *pBudget ) noexcep
 			return false;
 		}
 	}
-	return szBudgets[0] <= UINT64_MAX - szBudgets[1] &&
-	       szBudgets[0] + szBudgets[1] <= UINT64_MAX - szBudgets[2];
+	return szBudgets[0] <= UINT64_MAX - szBudgets[1] && szBudgets[0] + szBudgets[1] <= UINT64_MAX - szBudgets[2];
 }
 
 void SIRVulkanDevice::destroySealedPools( void ) noexcept
@@ -76,8 +75,8 @@ sirVulkanResult_t SIRVulkanDevice::chooseResidentMemoryType( uint32_t *pMemoryTy
 	const PFN_vkDestroyImage pfnDestroyImage = ( PFN_vkDestroyImage )m_pfnGetDeviceProcAddr( m_Device, "vkDestroyImage" );
 	const PFN_vkGetImageMemoryRequirements pfnGetImageRequirements =
 	    ( PFN_vkGetImageMemoryRequirements )m_pfnGetDeviceProcAddr( m_Device, "vkGetImageMemoryRequirements" );
-	if ( pfnCreateBuffer == nullptr || pfnDestroyBuffer == nullptr || pfnGetBufferRequirements == nullptr ||
-	     pfnCreateImage == nullptr || pfnDestroyImage == nullptr || pfnGetImageRequirements == nullptr ) {
+	if ( pfnCreateBuffer == nullptr || pfnDestroyBuffer == nullptr || pfnGetBufferRequirements == nullptr || pfnCreateImage == nullptr ||
+	     pfnDestroyImage == nullptr || pfnGetImageRequirements == nullptr ) {
 		return SIR_VULKAN_API_UNSUPPORTED;
 	}
 	VkBufferCreateInfo probeBuffer = {};
@@ -207,7 +206,7 @@ void SIRVulkanDevice::updateMemoryHighWater( void ) noexcept
 	sirVulkanAdvanceMemoryPeak( nCommitted, nAllocated, &m_nPeakCommittedBytes, &m_nPeakAllocationBytes );
 }
 
-bool SIRVulkanDevice::isSealedMemoryType( const VkImageCreateInfo& info ) const noexcept
+bool SIRVulkanDevice::isSealedMemoryType( const VkImageCreateInfo &info ) const noexcept
 {
 	if ( !m_bSealedPools ) {
 		return true;
@@ -230,7 +229,7 @@ bool SIRVulkanDevice::isSealedMemoryType( const VkImageCreateInfo& info ) const 
 	return sirVulkanMemoryTypeCompatible( nType, requirements.memoryTypeBits );
 }
 
-bool SIRVulkanDevice::isSealedBufferMemoryType( const VkBufferCreateInfo& info, uint32_t iPool ) const noexcept
+bool SIRVulkanDevice::isSealedBufferMemoryType( const VkBufferCreateInfo &info, uint32_t iPool ) const noexcept
 {
 	if ( !m_bSealedPools ) {
 		return true;

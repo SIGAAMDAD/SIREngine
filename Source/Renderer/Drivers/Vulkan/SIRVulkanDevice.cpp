@@ -359,14 +359,14 @@ sirVulkanResult_t SIRVulkanDevice::createBuffer( uint64_t nBytes, VkBufferUsageF
 {
 	const sirVulkanBufferPlacement_t ePlacement =
 	    !bHostVisible ? SIR_VULKAN_BUFFER_GPU_LOCAL
-	                  : ( ( nUsage & VK_BUFFER_USAGE_TRANSFER_DST_BIT ) != 0 &&
-	                      ( nUsage & VK_BUFFER_USAGE_TRANSFER_SRC_BIT ) == 0 ) ? SIR_VULKAN_BUFFER_CPU_READBACK
-	                                                                            : SIR_VULKAN_BUFFER_CPU_UPLOAD;
+	    : ( ( nUsage & VK_BUFFER_USAGE_TRANSFER_DST_BIT ) != 0 && ( nUsage & VK_BUFFER_USAGE_TRANSFER_SRC_BIT ) == 0 )
+	        ? SIR_VULKAN_BUFFER_CPU_READBACK
+	        : SIR_VULKAN_BUFFER_CPU_UPLOAD;
 	return createBuffer( nBytes, nUsage, ePlacement, pBuffer );
 }
 
-sirVulkanResult_t SIRVulkanDevice::createBuffer( uint64_t nBytes, VkBufferUsageFlags nUsage,
-                                                 sirVulkanBufferPlacement_t ePlacement, sirVulkanBuffer_t *pBuffer ) noexcept
+sirVulkanResult_t SIRVulkanDevice::createBuffer( uint64_t nBytes, VkBufferUsageFlags nUsage, sirVulkanBufferPlacement_t ePlacement,
+                                                 sirVulkanBuffer_t *pBuffer ) noexcept
 {
 	if ( !m_bReady ) {
 		return SIR_VULKAN_INVALID_STATE;

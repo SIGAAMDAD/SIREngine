@@ -329,8 +329,8 @@ private:
 	sirVulkanResult_t initializeSealedPools( const sirVulkanPoolBudget_t *pBudget ) noexcept;
 	void destroySealedPools( void ) noexcept;
 	void updateMemoryHighWater( void ) noexcept;
-	bool isSealedMemoryType( const VkImageCreateInfo& info ) const noexcept;
-	bool isSealedBufferMemoryType( const VkBufferCreateInfo& info, uint32_t iPool ) const noexcept;
+	bool isSealedMemoryType( const VkImageCreateInfo &info ) const noexcept;
+	bool isSealedBufferMemoryType( const VkBufferCreateInfo &info, uint32_t iPool ) const noexcept;
 
 public:
 	SIRVulkanDevice( void ) noexcept;

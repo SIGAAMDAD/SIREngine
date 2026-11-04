@@ -295,11 +295,10 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::createBuffer( const sirGraphicsBuf
 		if ( pSlot->bActive || pSlot->bRetiring || pSlot->nGeneration == 0 ) {
 			continue;
 		}
-		const sirVulkanBufferPlacement_t ePlacement =
-		    desc.eMemory == SIR_GRAPHICS_MEMORY_CPU_UPLOAD     ? SIR_VULKAN_BUFFER_CPU_UPLOAD
-		    : desc.eMemory == SIR_GRAPHICS_MEMORY_CPU_READBACK ? SIR_VULKAN_BUFFER_CPU_READBACK
-		    : desc.eMemory == SIR_GRAPHICS_MEMORY_GPU_UPLOAD   ? SIR_VULKAN_BUFFER_GPU_UPLOAD
-		                                                      : SIR_VULKAN_BUFFER_GPU_LOCAL;
+		const sirVulkanBufferPlacement_t ePlacement = desc.eMemory == SIR_GRAPHICS_MEMORY_CPU_UPLOAD     ? SIR_VULKAN_BUFFER_CPU_UPLOAD
+		                                              : desc.eMemory == SIR_GRAPHICS_MEMORY_CPU_READBACK ? SIR_VULKAN_BUFFER_CPU_READBACK
+		                                              : desc.eMemory == SIR_GRAPHICS_MEMORY_GPU_UPLOAD   ? SIR_VULKAN_BUFFER_GPU_UPLOAD
+		                                                                                                 : SIR_VULKAN_BUFFER_GPU_LOCAL;
 		const sirVulkanResult_t eCreate = m_Native.createBuffer( desc.nSizeBytes, nUsage, ePlacement, &pSlot->native );
 		if ( eCreate != SIR_VULKAN_SUCCESS ) {
 			return sirVulkanToGraphicsResult( eCreate );

@@ -75,8 +75,7 @@ int main( void )
 	}
 	sirVulkanMemoryStats_t afterCreate = {};
 	if ( !device.queryMemoryStats( &afterCreate ) || afterCreate.nBlockBytes != before.nBlockBytes ||
-	     afterCreate.nPeakCommittedBytes < afterCreate.nBlockBytes ||
-	     afterCreate.nPeakCommittedBytes < before.nPeakCommittedBytes ||
+	     afterCreate.nPeakCommittedBytes < afterCreate.nBlockBytes || afterCreate.nPeakCommittedBytes < before.nPeakCommittedBytes ||
 	     afterCreate.nUploadMappedBytes < upload.nAllocationBytes ||
 	     afterCreate.nReadbackMappedBytes < readback.nAllocationBytes + explicitReadback.nAllocationBytes ) {
 		return 6;
@@ -96,9 +95,9 @@ int main( void )
 		return 9;
 	}
 	sirVulkanMemoryStats_t afterRetire = {};
-	if ( !device.queryMemoryStats( &afterRetire ) || afterRetire.nBlockBytes != before.nBlockBytes ||
-	     afterRetire.nUploadMappedBytes != 0 || afterRetire.nReadbackMappedBytes != 0 ||
-	     afterRetire.nPeakCommittedBytes < afterCreate.nPeakCommittedBytes || !device.shutdown() ) {
+	if ( !device.queryMemoryStats( &afterRetire ) || afterRetire.nBlockBytes != before.nBlockBytes || afterRetire.nUploadMappedBytes != 0 ||
+	     afterRetire.nReadbackMappedBytes != 0 || afterRetire.nPeakCommittedBytes < afterCreate.nPeakCommittedBytes ||
+	     !device.shutdown() ) {
 		return 10;
 	}
 	printf( "Sealed Vulkan pools and persistent mappings passed\n" );
