@@ -15,6 +15,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Core/Platform/Input/SIRInputService.h>
 #include <Core/Platform/Input/SIRInputControllerProfiles.h>
+#include <Core/Platform/SIRPlatformTime.h>
 #if defined( __linux__ )
 #include <Core/Platform/Input/Linux/SIRLinuxEvdevBackend.h>
 #include <linux/input.h>
@@ -84,7 +85,8 @@ static bool testOwnershipAndGeneration( void )
 		return false;
 	}
 	input.sample();
-	if ( !input.publish() || backend.m_nSamples != 1 || input.frame()->nCount != 3 || input.frame()->nConnected[other.nSlot] != 1 ||
+	if ( !input.publish() || backend.m_nSamples != 1 || input.frame()->nCount != 3 || input.frame()->nCutoffNs != 0 ||
+	     input.frame()->nOldestReceiptAgeNs != 0 || input.frame()->nConnected[other.nSlot] != 1 ||
 	     input.frame()->nUsers[other.nSlot] != SIR_INPUT_NO_USER ) {
 		return false;
 	}
@@ -104,25 +106,28 @@ static bool testFrameBoundaries( void )
 		return false;
 	}
 	const sirInputControlChange_t changes[] = { { SIR_INPUT_BUTTON, 42, 1 }, { SIR_INPUT_BUTTON, 42, 0 }, { SIR_INPUT_BUTTON, 43, 1 } };
-	if ( !input.emitControls( SIR_INPUT_TEST, h, changes, 3, 500 ) || input.begin( 22 ) || !input.publish() ) {
+	input.setTimingMetricsEnabled( true );
+	const uint64_t nStampedReceipt = SIRPlatformTime::getMonotonicNanoseconds();
+	if ( !input.emitControls( SIR_INPUT_TEST, h, changes, 3, nStampedReceipt ) || input.begin( 22 ) || !input.publish() ) {
 		return false;
 	}
 	const sirInputFrame_t *pFrame = input.frame();
 	const uint32_t nMask42 = 1U << ( 42 % 32 );
 	if ( pFrame == nullptr || pFrame->nTick != 21 || pFrame->nCount != 4 || ( pFrame->state[h.nSlot].nPressed[42 / 32] & nMask42 ) == 0 ||
 	     ( pFrame->state[h.nSlot].nReleased[42 / 32] & nMask42 ) == 0 || ( pFrame->state[h.nSlot].nHeld[42 / 32] & nMask42 ) != 0 ||
-	     pFrame->events[1].nTimestampNs != 500 || pFrame->events[1].nReceivedNs == 0 ||
-	     pFrame->events[1].eClock != SIR_INPUT_CLOCK_ENGINE_MONOTONIC ||
-	     ( pFrame->events[1].nTimestampFlags & SIR_INPUT_TIMESTAMP_NATIVE ) == 0 || pFrame->nCutoffNs < pFrame->events[1].nReceivedNs ||
-	     pFrame->nOldestReceiptAgeNs < pFrame->nNewestReceiptAgeNs || pFrame->events[2].nValue != 0 || input.begin( 21 ) ) {
+	     pFrame->events[1].nTimestampNs != nStampedReceipt || pFrame->events[1].nReceivedNs != nStampedReceipt ||
+	     pFrame->events[1].eClock != SIR_INPUT_CLOCK_ENGINE_MONOTONIC || pFrame->events[1].nTimestampFlags != 0 ||
+	     pFrame->nCutoffNs < pFrame->events[1].nReceivedNs || pFrame->nOldestReceiptAgeNs < pFrame->nNewestReceiptAgeNs ||
+	     pFrame->events[2].nValue != 0 || input.begin( 21 ) ) {
 		return false;
 	}
 	if ( !input.begin( 22 ) || !input.publish() ) {
 		return false;
 	}
 	const sirInputFrame_t *pNext = input.frame();
-	return pNext != nullptr && pNext->nCount == 0 && pNext->nOldestReceiptAgeNs == 0 && pNext->nNewestReceiptAgeNs == 0 &&
-	       pNext->state[h.nSlot].nPressed[42 / 32] == 0 && ( pNext->state[h.nSlot].nHeld[43 / 32] & ( 1U << ( 43 % 32 ) ) ) != 0;
+	return pNext != nullptr && pNext->nCount == 0 && pNext->nCutoffNs != 0 && pNext->nOldestReceiptAgeNs == 0 &&
+	       pNext->nNewestReceiptAgeNs == 0 && pNext->state[h.nSlot].nPressed[42 / 32] == 0 &&
+	       ( pNext->state[h.nSlot].nHeld[43 / 32] & ( 1U << ( 43 % 32 ) ) ) != 0;
 }
 
 static bool testAtomicOverflowAndRecovery( void )

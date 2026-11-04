@@ -42,6 +42,11 @@ bool SIRInputService::attach( SIRInputBackend &backend ) noexcept
 
 sirInputTimestamp_t SIRInputService::timestamp( uint64_t nNative, sirInputClockSource_t eClock ) const noexcept
 {
+	// A caller-supplied engine monotonic value is the receipt timestamp.
+	// Only genuinely independent source clocks require a second clock read.
+	if ( nNative != 0 && eClock == SIR_INPUT_CLOCK_ENGINE_MONOTONIC ) {
+		return { nNative, nNative, SIR_INPUT_CLOCK_ENGINE_MONOTONIC, 0 };
+	}
 	const uint64_t nReceivedNs = SIRPlatformTime::getMonotonicNanoseconds();
 	const bool bNative = nNative != 0;
 	return { bNative ? nNative : nReceivedNs, nReceivedNs, bNative ? eClock : SIR_INPUT_CLOCK_ENGINE_MONOTONIC,
@@ -66,6 +71,11 @@ bool SIRInputService::publish( void ) noexcept
 {
 	return m_State.publish( m_Registry );
 }
+void SIRInputService::setTimingMetricsEnabled( bool bEnabled ) noexcept
+{
+	m_State.setTimingMetricsEnabled( bEnabled );
+}
+
 const sirInputFrame_t *SIRInputService::frame( void ) const noexcept
 {
 	return m_State.frame();

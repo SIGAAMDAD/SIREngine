@@ -91,3 +91,34 @@ static void SIRBenchmarkInputSnapshotDirtyDevices( benchmark::State &state )
 }
 
 BENCHMARK( SIRBenchmarkInputSnapshotDirtyDevices )->Arg( 0 )->Arg( 1 )->Arg( 8 )->Arg( 32 );
+
+static void SIRBenchmarkInputTimestampMetrics( benchmark::State &state )
+{
+	SIRInputService input;
+	SIRInputSnapshotBenchmarkBackend backend;
+	if ( !input.attach( backend ) || !input.begin( 1 ) ) {
+		state.SkipWithError( "Unable to initialize input service" );
+		return;
+	}
+	sirInputDeviceId_t id = {};
+	if ( !input.connect( { 1, 1, SIR_INPUT_TEST, SIR_INPUT_POINTER }, &id ) || !input.publish() ) {
+		state.SkipWithError( "Unable to connect pointer" );
+		return;
+	}
+	const bool bTimingEnabled = state.range( 0 ) != 0;
+	input.setTimingMetricsEnabled( bTimingEnabled );
+	uint64_t nTick = 2;
+	for ( auto _ : state ) {
+		( void )_;
+		if ( !input.begin( nTick ) || !input.emitPointer( SIR_INPUT_TEST, id, SIR_INPUT_MOTION, 0, 1, -1 ) || !input.publish() ) {
+			state.SkipWithError( "Unable to publish timestamped input" );
+			return;
+		}
+		benchmark::DoNotOptimize( input.frame()->nCutoffNs );
+		++nTick;
+	}
+	state.counters["timing_enabled"] = bTimingEnabled ? 1.0 : 0.0;
+	state.counters["event_bytes"] = ( double )sizeof( sirInputEvent_t );
+}
+
+BENCHMARK( SIRBenchmarkInputTimestampMetrics )->Arg( 0 )->Arg( 1 );
