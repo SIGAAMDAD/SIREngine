@@ -132,3 +132,8 @@ add_executable(SIRLangDiagnosticsTests SIRLangDiagnosticsTests.cpp)
 target_link_libraries(SIRLangDiagnosticsTests PRIVATE SIR::Scripting)
 add_test(NAME scripting.language.diagnostics COMMAND SIRLangDiagnosticsTests)
 sir_configure_owned_target(SIRLangDiagnosticsTests)
+
+add_executable(SIRLangCookRecipeTests SIRLangCookRecipeTests.cpp)
+target_link_libraries(SIRLangCookRecipeTests PRIVATE SIR::Scripting)
+add_test(NAME scripting.language.cook-recipe COMMAND SIRLangCookRecipeTests)
+sir_configure_owned_target(SIRLangCookRecipeTests)
