@@ -44,7 +44,6 @@ sirGraphicsABIResult_t sirGraphicsNegotiateDriverABI( sirGraphicsABIFactory_t pF
 	return SIR_GRAPHICS_ABI_SUCCESS;
 }
 
-
 sirGraphicsABIResult_t sirGraphicsValidateABIHost( const sirGraphicsABIHost_t *pHost ) noexcept
 {
 	if ( pHost == nullptr || pHost->nSize < sizeof( sirGraphicsABIHost_t ) ) {
@@ -77,11 +76,10 @@ sirGraphicsABIResult_t sirGraphicsValidateABIDriver( const sirGraphicsABIDriver_
 
 sirGraphicsABIResult_t sirGraphicsValidateABIAdapter( const sirGraphicsABIAdapter_t *pAdapter ) noexcept
 {
-	if ( pAdapter == nullptr || pAdapter->nSize < sizeof( sirGraphicsABIAdapter_t ) ||
-	     pAdapter->nBackend < SIR_GRAPHICS_BACKEND_VULKAN || pAdapter->nBackend > SIR_GRAPHICS_BACKEND_OPENGL ||
-	     pAdapter->nKind < SIR_GRAPHICS_ABI_ADAPTER_DISCRETE || pAdapter->nKind > SIR_GRAPHICS_ABI_ADAPTER_OTHER ||
-	     pAdapter->nQueueMask == 0 || ( pAdapter->nQueueMask & ~( ( 1U << SIR_GRAPHICS_QUEUE_COUNT ) - 1U ) ) != 0 ||
-	     pAdapter->nReserved != 0 ) {
+	if ( pAdapter == nullptr || pAdapter->nSize < sizeof( sirGraphicsABIAdapter_t ) || pAdapter->nBackend < SIR_GRAPHICS_BACKEND_VULKAN ||
+	     pAdapter->nBackend > SIR_GRAPHICS_BACKEND_OPENGL || pAdapter->nKind < SIR_GRAPHICS_ABI_ADAPTER_DISCRETE ||
+	     pAdapter->nKind > SIR_GRAPHICS_ABI_ADAPTER_OTHER || pAdapter->nQueueMask == 0 ||
+	     ( pAdapter->nQueueMask & ~( ( 1U << SIR_GRAPHICS_QUEUE_COUNT ) - 1U ) ) != 0 || pAdapter->nReserved != 0 ) {
 		return SIR_GRAPHICS_ABI_INVALID_ARGUMENT;
 	}
 	return SIR_GRAPHICS_ABI_SUCCESS;
@@ -89,15 +87,11 @@ sirGraphicsABIResult_t sirGraphicsValidateABIAdapter( const sirGraphicsABIAdapte
 
 sirGraphicsABIResult_t sirGraphicsValidateABICapabilities( const sirGraphicsABICapabilities_t *pInfo ) noexcept
 {
-	if ( pInfo == nullptr || pInfo->nSize < sizeof( sirGraphicsABICapabilities_t ) ||
-	     pInfo->nDeviceGeneration == 0 || pInfo->nBackend < SIR_GRAPHICS_BACKEND_VULKAN ||
-	     pInfo->nBackend > SIR_GRAPHICS_BACKEND_OPENGL ||
-	     pInfo->nAdapterKind < SIR_GRAPHICS_ABI_ADAPTER_DISCRETE ||
-	     pInfo->nAdapterKind > SIR_GRAPHICS_ABI_ADAPTER_OTHER ||
-	     pInfo->nEnabledQueues == 0 ||
-	     ( pInfo->nEnabledQueues & ~( ( 1U << SIR_GRAPHICS_QUEUE_COUNT ) - 1U ) ) != 0 ||
-	     pInfo->nMaximumFramesInFlight == 0 || pInfo->nMaximumSamples == 0 ||
-	     pInfo->nUnifiedMemory > 1 || pInfo->nReserved != 0 ) {
+	if ( pInfo == nullptr || pInfo->nSize < sizeof( sirGraphicsABICapabilities_t ) || pInfo->nDeviceGeneration == 0 ||
+	     pInfo->nBackend < SIR_GRAPHICS_BACKEND_VULKAN || pInfo->nBackend > SIR_GRAPHICS_BACKEND_OPENGL ||
+	     pInfo->nAdapterKind < SIR_GRAPHICS_ABI_ADAPTER_DISCRETE || pInfo->nAdapterKind > SIR_GRAPHICS_ABI_ADAPTER_OTHER ||
+	     pInfo->nEnabledQueues == 0 || ( pInfo->nEnabledQueues & ~( ( 1U << SIR_GRAPHICS_QUEUE_COUNT ) - 1U ) ) != 0 ||
+	     pInfo->nMaximumFramesInFlight == 0 || pInfo->nMaximumSamples == 0 || pInfo->nUnifiedMemory > 1 || pInfo->nReserved != 0 ) {
 		return SIR_GRAPHICS_ABI_INVALID_ARGUMENT;
 	}
 	if ( ( pInfo->nEnabledFeatures & SIR_GRAPHICS_FEATURE_GRAPHICS ) != 0 &&
@@ -113,9 +107,8 @@ sirGraphicsABIResult_t sirGraphicsValidateABICapabilities( const sirGraphicsABIC
 
 sirGraphicsABIResult_t sirGraphicsValidateABIFormat( const sirGraphicsABIFormat_t *pFormat ) noexcept
 {
-	if ( pFormat == nullptr || pFormat->nSize < sizeof( sirGraphicsABIFormat_t ) ||
-	     pFormat->nFormat <= SIR_GRAPHICS_FORMAT_UNKNOWN || pFormat->nFormat > SIR_GRAPHICS_FORMAT_BC7_UNORM ||
-	     pFormat->nReserved != 0 ) {
+	if ( pFormat == nullptr || pFormat->nSize < sizeof( sirGraphicsABIFormat_t ) || pFormat->nFormat <= SIR_GRAPHICS_FORMAT_UNKNOWN ||
+	     pFormat->nFormat > SIR_GRAPHICS_FORMAT_BC7_UNORM || pFormat->nReserved != 0 ) {
 		return SIR_GRAPHICS_ABI_INVALID_ARGUMENT;
 	}
 	if ( pFormat->nSampleCountMask == 0 && ( pFormat->nOptimalFeatures | pFormat->nLinearFeatures ) != 0 ) {
@@ -126,10 +119,9 @@ sirGraphicsABIResult_t sirGraphicsValidateABIFormat( const sirGraphicsABIFormat_
 
 sirGraphicsABIResult_t sirGraphicsValidateABIDevice( const sirGraphicsABIDevice_t *pDevice ) noexcept
 {
-	if ( pDevice == nullptr || pDevice->nSize < sizeof( sirGraphicsABIDevice_t ) ||
-	     pDevice->nReserved != 0 || pDevice->pDevice == nullptr || pDevice->pQueryCapabilities == nullptr ||
-	     pDevice->pQueryFormat == nullptr || pDevice->pPoll == nullptr || pDevice->pWait == nullptr ||
-	     pDevice->pShutdown == nullptr ) {
+	if ( pDevice == nullptr || pDevice->nSize < sizeof( sirGraphicsABIDevice_t ) || pDevice->nReserved != 0 ||
+	     pDevice->pDevice == nullptr || pDevice->pQueryCapabilities == nullptr || pDevice->pQueryFormat == nullptr ||
+	     pDevice->pPoll == nullptr || pDevice->pWait == nullptr || pDevice->pShutdown == nullptr ) {
 		return SIR_GRAPHICS_ABI_INVALID_ARGUMENT;
 	}
 	return SIR_GRAPHICS_ABI_SUCCESS;
@@ -148,14 +140,12 @@ sirGraphicsABIResult_t sirGraphicsSelectABIProfile( const sirGraphicsABICapabili
 		return eStatus;
 	}
 	if ( ( pInfo->nEnabledFeatures & SIR_GRAPHICS_FEATURE_GRAPHICS ) == 0 ) {
-		return ( pInfo->nEnabledFeatures & SIR_GRAPHICS_FEATURE_COMPUTE ) != 0 ? SIR_GRAPHICS_ABI_SUCCESS :
-		                                                                            SIR_GRAPHICS_ABI_UNSUPPORTED;
+		return ( pInfo->nEnabledFeatures & SIR_GRAPHICS_FEATURE_COMPUTE ) != 0 ? SIR_GRAPHICS_ABI_SUCCESS : SIR_GRAPHICS_ABI_UNSUPPORTED;
 	}
 	*pProfile = 1;
-	const uint64_t nModern = SIR_GRAPHICS_FEATURE_COMPUTE | SIR_GRAPHICS_FEATURE_SHADER_STORAGE |
-	                         SIR_GRAPHICS_FEATURE_MRT | SIR_GRAPHICS_FEATURE_PRESENT;
-	if ( ( pInfo->nEnabledFeatures & nModern ) == nModern && pInfo->nMaximumColorAttachments >= 4 &&
-	     pInfo->nMaximumBindings >= 16 ) {
+	const uint64_t nModern =
+	    SIR_GRAPHICS_FEATURE_COMPUTE | SIR_GRAPHICS_FEATURE_SHADER_STORAGE | SIR_GRAPHICS_FEATURE_MRT | SIR_GRAPHICS_FEATURE_PRESENT;
+	if ( ( pInfo->nEnabledFeatures & nModern ) == nModern && pInfo->nMaximumColorAttachments >= 4 && pInfo->nMaximumBindings >= 16 ) {
 		*pProfile = 2;
 	}
 	return SIR_GRAPHICS_ABI_SUCCESS;
