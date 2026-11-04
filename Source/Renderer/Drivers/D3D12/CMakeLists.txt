@@ -10,6 +10,7 @@ endif()
 
 add_library(SIRD3D12 STATIC
     SIRD3D12Device.cpp
+    SIRD3D12Diagnostics.cpp
     SIRD3D12Driver.cpp
     SIRD3D12Memory.cpp
     SIRD3D12Resources.cpp

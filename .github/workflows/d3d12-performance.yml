@@ -1,0 +1,100 @@
+name: D3D12 validation and performance profiling
+
+on:
+  workflow_dispatch:
+    inputs:
+      adapter:
+        description: "WARP or a dedicated Windows runner with physical D3D12 hardware"
+        type: choice
+        options: [warp, hardware]
+        default: warp
+        required: true
+      iterations:
+        description: "Measured CPU samples per workload (1-4000)"
+        type: number
+        default: 384
+        required: true
+      diagnostics:
+        description: "Optional debug / DRED / GPU-based validation in the correctness test"
+        type: choice
+        options: [none, debug, dred, gpu-validation]
+        default: none
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  profile:
+    name: "D3D12 ${{ inputs.adapter }} native performance"
+    runs-on: ${{ inputs.adapter == 'hardware' && 'windows-d3d12-gpu' || 'windows-2022' }}
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Fetch pinned D3D12 allocator
+        run: git submodule update --init ThirdParty/D3D12MemoryAllocator
+      - name: Set up MSVC compiler environment
+        uses: ilammy/msvc-dev-cmd@v1
+      - uses: ./.github/actions/setup-build-tools
+      - name: Install pinned DXC for offline test shaders
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $version = "1.9.2609.5"
+          $root = Join-Path $env:RUNNER_TEMP "sir-dxc"
+          $archive = Join-Path $env:RUNNER_TEMP "sir-dxc.zip"
+          $uri = "https://api.nuget.org/v3-flatcontainer/microsoft.direct3d.dxc/$version/microsoft.direct3d.dxc.$version.nupkg"
+          Invoke-WebRequest -Uri $uri -OutFile $archive
+          Expand-Archive -Path $archive -DestinationPath $root -Force
+          $binary = Get-ChildItem -Path $root -Filter dxc.exe -Recurse |
+            Where-Object { $_.FullName -match '[\\/](x64|amd64)[\\/]' } |
+            Select-Object -First 1
+          if (-not $binary) { throw "Pinned DXC x64 compiler missing" }
+          Add-Content -Path $env:GITHUB_PATH -Value $binary.DirectoryName
+      - name: Configure optimized D3D12 profile
+        run: cmake --preset profile -DSIR_WITH_D3D12=ON
+      - name: Build performance and diagnostic binaries
+        run: cmake --build --preset profile --target SIRD3D12Benchmarks SIRD3D12DiagnosticsTests
+      - name: Run correctness stress and record benchmark JSON
+        shell: pwsh
+        env:
+          SIR_D3D12_ADAPTER: ${{ inputs.adapter }}
+          SIR_D3D12_ITERATIONS: ${{ inputs.iterations }}
+          SIR_D3D12_DIAGNOSTICS: ${{ inputs.diagnostics }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          $test = Get-ChildItem "out/Windows/profile" -Filter "SIRD3D12DiagnosticsTests.exe" -Recurse | Select-Object -First 1
+          $bench = Get-ChildItem "out/Windows/profile" -Filter "SIRD3D12Benchmarks.exe" -Recurse | Select-Object -First 1
+          if (-not $test -or -not $bench) { throw "Native D3D12 profile executables missing" }
+          $adapterArgs = @()
+          if ($env:SIR_D3D12_ADAPTER -eq "hardware") { $adapterArgs = @("--hardware") }
+          $diagnosticArgs = @()
+          switch ($env:SIR_D3D12_DIAGNOSTICS) {
+            "debug" { $diagnosticArgs = @("--debug") }
+            "dred" { $diagnosticArgs = @("--dred") }
+            "gpu-validation" { $diagnosticArgs = @("--gpu-validation", "--dred") }
+          }
+          $cycles = 1024
+          if ($env:SIR_D3D12_DIAGNOSTICS -eq "gpu-validation") { $cycles = 32 }
+          & $test.FullName @adapterArgs @diagnosticArgs --cycles $cycles
+          if ($LASTEXITCODE -ne 0) { throw "Native correctness/diagnostic workload failed or unsupported: $LASTEXITCODE" }
+          New-Item -ItemType Directory -Path "out/Nightly/Benchmarks" -Force | Out-Null
+          $output = "out/Nightly/Benchmarks/d3d12-$($env:SIR_D3D12_ADAPTER)-profile.json"
+          & $bench.FullName --adapter $env:SIR_D3D12_ADAPTER --iterations $env:SIR_D3D12_ITERATIONS --warmup 32 --output $output
+          if ($LASTEXITCODE -ne 0) { throw "D3D12 benchmark workload failed: $LASTEXITCODE" }
+          $data = Get-Content $output -Raw | ConvertFrom-Json
+          if ($data.schema_version -ne 1 -or -not $data.cpu -or -not $data.gpu_timestamp) { throw "D3D12 benchmark JSON invalid" }
+          if (($env:SIR_D3D12_ADAPTER -eq "warp") -ne ($data.adapter.software -eq $true)) {
+            throw "D3D12 performance adapter identity mismatch"
+          }
+          Get-Content $output
+      - name: Preserve machine-specific benchmark evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: d3d12-${{ inputs.adapter }}-performance
+          path: out/Nightly/Benchmarks/d3d12-*-profile.json
+          if-no-files-found: warn
+          retention-days: 30
