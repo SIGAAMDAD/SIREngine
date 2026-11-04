@@ -83,6 +83,18 @@ sirGraphicsABIResult_t sirGraphicsQueryABIPipelineModelCaps( const sirGraphicsAB
 sirGraphicsABIResult_t sirGraphicsSelectABIPipelineVariant( const sirGraphicsABIDevice_t *pDevice,
                                                             const sirGraphicsABIPipeline_t *pCandidates, uint32_t nCount,
                                                             uint32_t *pIndex ) noexcept;
+// Queue admission and completion token safety at the v1 module boundary.
+// All callback output is published only after native result verification.
+sirGraphicsABIResult_t sirGraphicsAcquireABICommands( const sirGraphicsABIDevice_t *pDevice, uint32_t nQueue,
+                                                      sirGraphicsABICommandList_t *pCommands ) noexcept;
+sirGraphicsABIResult_t sirGraphicsSubmitABICommands( const sirGraphicsABIDevice_t *pDevice, uint32_t nQueue,
+                                                     const sirGraphicsABISubmission_t *pSubmission,
+                                                     sirGraphicsCompletion_t *pCompletion ) noexcept;
+sirGraphicsABIResult_t sirGraphicsPollABICompletion( const sirGraphicsABIDevice_t *pDevice,
+                                                     const sirGraphicsCompletion_t *pCompletion, uint32_t *pDone ) noexcept;
+sirGraphicsABIResult_t sirGraphicsWaitABICompletion( const sirGraphicsABIDevice_t *pDevice,
+                                                     const sirGraphicsCompletion_t *pCompletion, uint64_t nTimeoutNs ) noexcept;
+
 // Returns a validated snapshot of the native device's current memory budget.
 // A zero native budget is an unknown limit, not a guaranteed free allocation.
 // The output is unchanged on driver error or incoherent counters.

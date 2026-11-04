@@ -389,6 +389,181 @@ static sirGraphicsABIResult_t sirGraphicsValidateABIAttachmentFormats( const sir
 	return SIR_GRAPHICS_SUCCESS;
 }
 
+// This callback result is the authority for the current device generation
+// and enabled queue mask, even if the caller still owns an older command list.
+static sirGraphicsABIResult_t sirGraphicsReadABIQueueCaps( const sirGraphicsABIDevice_t *pDevice,
+                                                           sirGraphicsABICapabilities_t *pCaps ) noexcept
+{
+	const sirGraphicsABIResult_t eDevice = sirGraphicsValidateABIDevice( pDevice );
+	if ( eDevice != SIR_GRAPHICS_SUCCESS ) {
+		return eDevice;
+	}
+	sirGraphicsABICapabilities_t caps = {};
+	caps.nSize = sizeof( caps );
+	const sirGraphicsABIResult_t eQuery =
+	    sirGraphicsResultFromProvider( pDevice->pQueryCapabilities( pDevice->pDevice, &caps ) );
+	if ( eQuery != SIR_GRAPHICS_SUCCESS ) {
+		return eQuery;
+	}
+	if ( sirGraphicsValidateABICapabilities( &caps ) != SIR_GRAPHICS_SUCCESS ) {
+		return SIR_GRAPHICS_DRIVER_ERROR;
+	}
+	*pCaps = caps;
+	return SIR_GRAPHICS_SUCCESS;
+}
+
+static bool sirGraphicsABIValidQueueCompletion( const sirGraphicsCompletion_t& completion,
+                                                 const sirGraphicsABICapabilities_t& caps ) noexcept
+{
+	return completion.nDeviceGeneration == caps.nDeviceGeneration && completion.nValue != 0 &&
+	       completion.eQueue < SIR_GRAPHICS_QUEUE_COUNT &&
+	       ( caps.nEnabledQueues & ( 1U << completion.eQueue ) ) != 0;
+}
+
+sirGraphicsABIResult_t sirGraphicsAcquireABICommands( const sirGraphicsABIDevice_t *pDevice, uint32_t nQueue,
+                                                      sirGraphicsABICommandList_t *pCommands ) noexcept
+{
+	if ( pCommands == nullptr || pCommands->nSize < sizeof( sirGraphicsABICommandList_t ) ||
+	     nQueue >= SIR_GRAPHICS_QUEUE_COUNT ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	sirGraphicsABICapabilities_t caps = {};
+	const sirGraphicsABIResult_t eCaps = sirGraphicsReadABIQueueCaps( pDevice, &caps );
+	if ( eCaps != SIR_GRAPHICS_SUCCESS ) {
+		return eCaps;
+	}
+	if ( ( caps.nEnabledQueues & ( 1U << nQueue ) ) == 0 ) {
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
+	sirGraphicsABICommandList_t commands = {};
+	commands.nSize = sizeof( commands );
+	const sirGraphicsABIResult_t eAcquire =
+	    sirGraphicsResultFromProvider( pDevice->pAcquireCommands( pDevice->pDevice, nQueue, &commands ) );
+	if ( eAcquire != SIR_GRAPHICS_SUCCESS ) {
+		return eAcquire;
+	}
+	if ( sirGraphicsValidateABICommandList( &commands ) != SIR_GRAPHICS_SUCCESS ||
+	     commands.nDeviceGeneration != caps.nDeviceGeneration || commands.nQueue != nQueue ) {
+		return SIR_GRAPHICS_DRIVER_ERROR;
+	}
+	*pCommands = commands;
+	return SIR_GRAPHICS_SUCCESS;
+}
+
+sirGraphicsABIResult_t sirGraphicsSubmitABICommands( const sirGraphicsABIDevice_t *pDevice, uint32_t nQueue,
+                                                     const sirGraphicsABISubmission_t *pSubmission,
+                                                     sirGraphicsCompletion_t *pCompletion ) noexcept
+{
+	if ( pSubmission == nullptr || pCompletion == nullptr || nQueue >= SIR_GRAPHICS_QUEUE_COUNT ||
+	     pSubmission->nSize < sizeof( sirGraphicsABISubmission_t ) || pSubmission->nReserved != 0 ||
+	     pSubmission->nCommandListCount == 0 || pSubmission->nCommandListCount > 64 ||
+	     pSubmission->ppCommandLists == nullptr || pSubmission->nWaitCount > 64 ||
+	     pSubmission->nAcquisitionCount > 8 ||
+	     ( pSubmission->nWaitCount != 0 && pSubmission->pWaits == nullptr ) ||
+	     ( pSubmission->nAcquisitionCount != 0 && pSubmission->pAcquisitions == nullptr ) ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	sirGraphicsABICapabilities_t caps = {};
+	const sirGraphicsABIResult_t eCaps = sirGraphicsReadABIQueueCaps( pDevice, &caps );
+	if ( eCaps != SIR_GRAPHICS_SUCCESS ) {
+		return eCaps;
+	}
+	if ( ( caps.nEnabledQueues & ( 1U << nQueue ) ) == 0 ) {
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
+	for ( uint32_t i = 0; i < pSubmission->nCommandListCount; ++i ) {
+		if ( pSubmission->ppCommandLists[i] == nullptr ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
+		for ( uint32_t j = 0; j < i; ++j ) {
+			if ( pSubmission->ppCommandLists[i] == pSubmission->ppCommandLists[j] ) {
+				return SIR_GRAPHICS_INVALID_ARGUMENT;
+			}
+		}
+	}
+	for ( uint32_t i = 0; i < pSubmission->nWaitCount; ++i ) {
+		if ( !sirGraphicsABIValidQueueCompletion( pSubmission->pWaits[i], caps ) ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
+	}
+	if ( pSubmission->nAcquisitionCount != 0 &&
+	     ( nQueue != SIR_GRAPHICS_QUEUE_DIRECT ||
+	       ( caps.nEnabledFeatures & SIR_GRAPHICS_FEATURE_PRESENT ) == 0 ) ) {
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
+	for ( uint32_t i = 0; i < pSubmission->nAcquisitionCount; ++i ) {
+		const sirGraphicsSurfaceImage_t& image = pSubmission->pAcquisitions[i];
+		if ( !sirGraphicsIsHandleValid( image.hSurface, SIR_GRAPHICS_HANDLE_SURFACE, caps.nDeviceGeneration ) ||
+		     !sirGraphicsIsHandleValid( image.hImage, SIR_GRAPHICS_HANDLE_TEXTURE, caps.nDeviceGeneration ) ||
+		     image.nAcquisitionId == 0 || image.nWindowGeneration == 0 ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
+		for ( uint32_t j = 0; j < i; ++j ) {
+			const sirGraphicsSurfaceImage_t& earlier = pSubmission->pAcquisitions[j];
+			if ( earlier.hSurface.nSlot == image.hSurface.nSlot &&
+			     earlier.hSurface.nGeneration == image.hSurface.nGeneration &&
+			     earlier.nAcquisitionId == image.nAcquisitionId ) {
+				return SIR_GRAPHICS_INVALID_ARGUMENT;
+			}
+		}
+	}
+	sirGraphicsCompletion_t completion = {};
+	const sirGraphicsABIResult_t eSubmit = sirGraphicsResultFromProvider(
+	    pDevice->pSubmit( pDevice->pDevice, nQueue, pSubmission, &completion ) );
+	if ( eSubmit != SIR_GRAPHICS_SUCCESS ) {
+		return eSubmit;
+	}
+	if ( !sirGraphicsABIValidQueueCompletion( completion, caps ) || completion.eQueue != nQueue ) {
+		return SIR_GRAPHICS_DRIVER_ERROR;
+	}
+	*pCompletion = completion;
+	return SIR_GRAPHICS_SUCCESS;
+}
+
+sirGraphicsABIResult_t sirGraphicsPollABICompletion( const sirGraphicsABIDevice_t *pDevice,
+                                                     const sirGraphicsCompletion_t *pCompletion, uint32_t *pDone ) noexcept
+{
+	if ( pCompletion == nullptr || pDone == nullptr ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	sirGraphicsABICapabilities_t caps = {};
+	const sirGraphicsABIResult_t eCaps = sirGraphicsReadABIQueueCaps( pDevice, &caps );
+	if ( eCaps != SIR_GRAPHICS_SUCCESS ) {
+		return eCaps;
+	}
+	if ( !sirGraphicsABIValidQueueCompletion( *pCompletion, caps ) ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	uint32_t nDone = 0;
+	const sirGraphicsABIResult_t ePoll =
+	    sirGraphicsResultFromProvider( pDevice->pPoll( pDevice->pDevice, pCompletion, &nDone ) );
+	if ( ePoll != SIR_GRAPHICS_SUCCESS ) {
+		return ePoll;
+	}
+	if ( nDone > 1 ) {
+		return SIR_GRAPHICS_DRIVER_ERROR;
+	}
+	*pDone = nDone;
+	return SIR_GRAPHICS_SUCCESS;
+}
+
+sirGraphicsABIResult_t sirGraphicsWaitABICompletion( const sirGraphicsABIDevice_t *pDevice,
+                                                     const sirGraphicsCompletion_t *pCompletion, uint64_t nTimeoutNs ) noexcept
+{
+	if ( pCompletion == nullptr ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	sirGraphicsABICapabilities_t caps = {};
+	const sirGraphicsABIResult_t eCaps = sirGraphicsReadABIQueueCaps( pDevice, &caps );
+	if ( eCaps != SIR_GRAPHICS_SUCCESS ) {
+		return eCaps;
+	}
+	if ( !sirGraphicsABIValidQueueCompletion( *pCompletion, caps ) ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	return sirGraphicsResultFromProvider( pDevice->pWait( pDevice->pDevice, pCompletion, nTimeoutNs ) );
+}
+
 sirGraphicsABIResult_t sirGraphicsQueryABIMemoryBudget( const sirGraphicsABIDevice_t *pDevice, sirGraphicsMemoryBudget_t *pBudget ) noexcept
 {
 	if ( pBudget == nullptr ) {

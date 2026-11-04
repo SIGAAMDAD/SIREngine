@@ -208,12 +208,18 @@ static uint32_t mockPoll( void *, const sirGraphicsCompletion_t *pCompletion, ui
 	     pCompletion->eQueue != SIR_GRAPHICS_QUEUE_DIRECT || pCompletion->nValue == 0 ) {
 		return SIR_GRAPHICS_ABI_INVALID_ARGUMENT;
 	}
-	*pDone = pCompletion->nValue <= s_nSubmitted ? 1 : 0;
+	if ( s_nMockMode == 25 ) {
+		return SIR_GRAPHICS_DEVICE_LOST;
+	}
+	*pDone = s_nMockMode == 24 ? 2U : ( pCompletion->nValue <= s_nSubmitted ? 1U : 0U );
 	return SIR_GRAPHICS_ABI_SUCCESS;
 }
 
 static uint32_t mockWait( void *, const sirGraphicsCompletion_t *pCompletion, uint64_t ) noexcept
 {
+	if ( s_nMockMode == 25 ) {
+		return SIR_GRAPHICS_DEVICE_LOST;
+	}
 	uint32_t nComplete = 0;
 	const uint32_t nResult = mockPoll( nullptr, pCompletion, &nComplete );
 	if ( nResult != SIR_GRAPHICS_ABI_SUCCESS ) {
@@ -461,10 +467,13 @@ static uint32_t mockAcquireCommands( void *, uint32_t nQueue, sirGraphicsABIComm
 	if ( nQueue != SIR_GRAPHICS_QUEUE_DIRECT || pCommands == nullptr || pCommands->nSize < sizeof( sirGraphicsABICommandList_t ) ) {
 		return SIR_GRAPHICS_ABI_INVALID_ARGUMENT;
 	}
+	if ( s_nMockMode == 25 ) {
+		return SIR_GRAPHICS_DEVICE_LOST;
+	}
 	*pCommands = {};
 	pCommands->nSize = sizeof( *pCommands );
-	pCommands->nDeviceGeneration = 5;
-	pCommands->nQueue = nQueue;
+	pCommands->nDeviceGeneration = s_nMockMode == 21 ? 4U : 5U;
+	pCommands->nQueue = s_nMockMode == 22 ? SIR_GRAPHICS_QUEUE_COMPUTE : nQueue;
 	pCommands->pCommands = &s_nDeviceIdentity;
 	pCommands->pReset = mockCmdReset;
 	pCommands->pBarrier = mockCmdBarrier;
@@ -491,8 +500,11 @@ static uint32_t mockSubmit( void *, uint32_t nQueue, const sirGraphicsABISubmiss
 	     pBatch->ppCommandLists == nullptr || pBatch->ppCommandLists[0] != &s_nDeviceIdentity || pCompletion == nullptr ) {
 		return SIR_GRAPHICS_ABI_INVALID_ARGUMENT;
 	}
+	if ( s_nMockMode == 25 ) {
+		return SIR_GRAPHICS_DEVICE_LOST;
+	}
 	++s_nSubmitted;
-	*pCompletion = { 5, SIR_GRAPHICS_QUEUE_DIRECT, s_nSubmitted };
+	*pCompletion = { s_nMockMode == 23 ? 4U : 5U, SIR_GRAPHICS_QUEUE_DIRECT, s_nSubmitted };
 	return SIR_GRAPHICS_ABI_SUCCESS;
 }
 

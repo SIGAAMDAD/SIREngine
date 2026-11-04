@@ -612,14 +612,41 @@ static bool testBinaryModule( void ) noexcept
 
 	sirGraphicsABICommandList_t commands = {};
 	commands.nSize = sizeof( commands );
-	if ( device.pAcquireCommands( device.pDevice, SIR_GRAPHICS_QUEUE_DIRECT, &commands ) != SIR_GRAPHICS_ABI_SUCCESS ||
-	     sirGraphicsValidateABICommandList( &commands ) != SIR_GRAPHICS_ABI_SUCCESS ||
+	if ( sirGraphicsAcquireABICommands( &device, SIR_GRAPHICS_QUEUE_DIRECT, &commands ) != SIR_GRAPHICS_SUCCESS ||
+	     sirGraphicsValidateABICommandList( &commands ) != SIR_GRAPHICS_SUCCESS ||
 	     commands.pReset( commands.pCommands ) != SIR_GRAPHICS_ABI_SUCCESS ||
 	     commands.pDispatch( commands.pCommands, 1, 1, 1 ) != SIR_GRAPHICS_ABI_SUCCESS ||
 	     commands.pDispatch( commands.pCommands, 0, 1, 1 ) != SIR_GRAPHICS_ABI_INVALID_ARGUMENT ||
 	     commands.pClose( commands.pCommands ) != SIR_GRAPHICS_ABI_SUCCESS ) {
 		return false;
 	}
+	if ( sirGraphicsAcquireABICommands( &device, SIR_GRAPHICS_QUEUE_COMPUTE, &commands ) != SIR_GRAPHICS_UNSUPPORTED ) {
+		return false;
+	}
+	const void *pOriginalCommands = commands.pCommands;
+	sirGraphicsABICommandList_t invalidCommands = commands;
+	invalidCommands.nSize = 1;
+	if ( sirGraphicsAcquireABICommands( &device, SIR_GRAPHICS_QUEUE_DIRECT, &invalidCommands ) !=
+	         SIR_GRAPHICS_INVALID_ARGUMENT ||
+	     invalidCommands.pCommands != pOriginalCommands ) {
+		return false;
+	}
+	pMode( 21 );
+	if ( sirGraphicsAcquireABICommands( &device, SIR_GRAPHICS_QUEUE_DIRECT, &commands ) != SIR_GRAPHICS_DRIVER_ERROR ||
+	     commands.pCommands != pOriginalCommands ) {
+		return false;
+	}
+	pMode( 22 );
+	if ( sirGraphicsAcquireABICommands( &device, SIR_GRAPHICS_QUEUE_DIRECT, &commands ) != SIR_GRAPHICS_DRIVER_ERROR ||
+	     commands.pCommands != pOriginalCommands ) {
+		return false;
+	}
+	pMode( 25 );
+	if ( sirGraphicsAcquireABICommands( &device, SIR_GRAPHICS_QUEUE_DIRECT, &commands ) != SIR_GRAPHICS_DEVICE_LOST ||
+	     commands.pCommands != pOriginalCommands ) {
+		return false;
+	}
+	pMode( 0 );
 	sirGraphicsABICommandList_t damaged = commands;
 	damaged.pDraw = nullptr;
 	if ( sirGraphicsValidateABICommandList( &damaged ) != SIR_GRAPHICS_ABI_INVALID_ARGUMENT ) {
@@ -631,17 +658,84 @@ static bool testBinaryModule( void ) noexcept
 	submission.nCommandListCount = 1;
 	submission.ppCommandLists = szCommandLists;
 	sirGraphicsCompletion_t completion = {};
-	if ( device.pSubmit( device.pDevice, SIR_GRAPHICS_QUEUE_DIRECT, &submission, &completion ) != SIR_GRAPHICS_ABI_SUCCESS ||
+	if ( sirGraphicsSubmitABICommands( &device, SIR_GRAPHICS_QUEUE_DIRECT, &submission, &completion ) != SIR_GRAPHICS_SUCCESS ||
 	     completion.nDeviceGeneration != 5 || completion.eQueue != SIR_GRAPHICS_QUEUE_DIRECT || completion.nValue == 0 ) {
 		return false;
 	}
 	uint32_t nDone = 0;
-	if ( device.pPoll( device.pDevice, &completion, &nDone ) != SIR_GRAPHICS_ABI_SUCCESS || nDone != 1 ||
-	     device.pWait( device.pDevice, &completion, 0 ) != SIR_GRAPHICS_ABI_SUCCESS ) {
+	if ( sirGraphicsPollABICompletion( &device, &completion, &nDone ) != SIR_GRAPHICS_SUCCESS || nDone != 1 ||
+	     sirGraphicsWaitABICompletion( &device, &completion, 0 ) != SIR_GRAPHICS_SUCCESS ) {
 		return false;
 	}
+	if ( sirGraphicsSubmitABICommands( &device, SIR_GRAPHICS_QUEUE_COMPUTE, &submission, &completion ) !=
+	     SIR_GRAPHICS_UNSUPPORTED ) {
+		return false;
+	}
+	const void *szDuplicates[] = { commands.pCommands, commands.pCommands };
+	submission.ppCommandLists = szDuplicates;
+	submission.nCommandListCount = 2;
+	if ( sirGraphicsSubmitABICommands( &device, SIR_GRAPHICS_QUEUE_DIRECT, &submission, &completion ) !=
+	     SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return false;
+	}
+	submission.ppCommandLists = szCommandLists;
+	submission.nCommandListCount = 1;
+	const sirGraphicsSurfaceImage_t acquired = {
+	    { 0, 1, 5, SIR_GRAPHICS_HANDLE_SURFACE }, { 1, 1, 5, SIR_GRAPHICS_HANDLE_TEXTURE }, 42, 1
+	};
+	submission.pAcquisitions = &acquired;
+	submission.nAcquisitionCount = 1;
+	if ( sirGraphicsSubmitABICommands( &device, SIR_GRAPHICS_QUEUE_DIRECT, &submission, &completion ) !=
+	     SIR_GRAPHICS_UNSUPPORTED ) {
+		return false;
+	}
+	submission.pAcquisitions = nullptr;
+	submission.nAcquisitionCount = 0;
+	submission.nReserved = 1;
+	if ( sirGraphicsSubmitABICommands( &device, SIR_GRAPHICS_QUEUE_DIRECT, &submission, &completion ) !=
+	     SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return false;
+	}
+	submission.nReserved = 0;
+	sirGraphicsCompletion_t invalidWait = completion;
+	invalidWait.nDeviceGeneration = 4;
+	submission.pWaits = &invalidWait;
+	submission.nWaitCount = 1;
+	if ( sirGraphicsSubmitABICommands( &device, SIR_GRAPHICS_QUEUE_DIRECT, &submission, &completion ) !=
+	     SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return false;
+	}
+	submission.pWaits = nullptr;
+	submission.nWaitCount = 0;
+	const sirGraphicsCompletion_t originalCompletion = completion;
+	pMode( 23 );
+	if ( sirGraphicsSubmitABICommands( &device, SIR_GRAPHICS_QUEUE_DIRECT, &submission, &completion ) !=
+	         SIR_GRAPHICS_DRIVER_ERROR ||
+	     completion.nValue != originalCompletion.nValue ) {
+		return false;
+	}
+	pMode( 25 );
+	if ( sirGraphicsSubmitABICommands( &device, SIR_GRAPHICS_QUEUE_DIRECT, &submission, &completion ) !=
+	         SIR_GRAPHICS_DEVICE_LOST ||
+	     completion.nValue != originalCompletion.nValue ) {
+		return false;
+	}
+	pMode( 0 );
+	nDone = 7;
+	pMode( 24 );
+	if ( sirGraphicsPollABICompletion( &device, &completion, &nDone ) != SIR_GRAPHICS_DRIVER_ERROR || nDone != 7 ) {
+		return false;
+	}
+	pMode( 25 );
+	if ( sirGraphicsPollABICompletion( &device, &completion, &nDone ) != SIR_GRAPHICS_DEVICE_LOST || nDone != 7 ||
+	     sirGraphicsWaitABICompletion( &device, &completion, 0 ) != SIR_GRAPHICS_DEVICE_LOST ) {
+		return false;
+	}
+	pMode( 0 );
 	completion.nDeviceGeneration = 4;
-	if ( device.pPoll( device.pDevice, &completion, &nDone ) != SIR_GRAPHICS_ABI_INVALID_ARGUMENT ) {
+	if ( sirGraphicsPollABICompletion( &device, &completion, &nDone ) != SIR_GRAPHICS_INVALID_ARGUMENT ||
+	     sirGraphicsWaitABICompletion( &device, &completion, 0 ) != SIR_GRAPHICS_INVALID_ARGUMENT ||
+	     nDone != 7 ) {
 		return false;
 	}
 	sirGraphicsMemoryBudget_t budget = {};
