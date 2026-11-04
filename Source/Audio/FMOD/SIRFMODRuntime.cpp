@@ -45,6 +45,9 @@ void SIRFMODRuntime::releaseBindingStorage( void ) noexcept
 	m_nObjectCount = 0;
 	m_nManifestEpoch = 0;
 	m_bInitialized = false;
+	if ( m_Memory.shutdown() != SIR_AUDIO_OK ) {
+		abort();
+	}
 }
 
 sirAudioResult_t SIRFMODRuntime::initialize( const sirFMODRuntimeConfig_t &config, const sirFMODRuntimeNativeOps_t &ops ) noexcept
@@ -75,8 +78,12 @@ sirAudioResult_t SIRFMODRuntime::initialize( const sirFMODRuntimeConfig_t &confi
 		}
 	}
 
+	const sirAudioResult_t eMemory = m_Memory.configure( config.pAllocator, config.nEngineMemoryBudgetBytes );
+	if ( eMemory != SIR_AUDIO_OK ) {
+		return eMemory;
+	}
 	m_pManifest = config.pManifest;
-	m_pAllocator = config.pAllocator;
+	m_pAllocator = m_Memory.getAllocator();
 	m_pObjects = config.pObjects;
 	m_nObjectCount = config.nObjectCount;
 	m_nEventCount = config.pManifest->getEventCount();
@@ -423,6 +430,11 @@ SIRFMODPackageLoader &SIRFMODRuntime::getPackages( void ) noexcept
 {
 	return m_Packages;
 }
+sirFMODMemoryBudgetStats_t SIRFMODRuntime::getMemoryStats( void ) const noexcept
+{
+	return m_Memory.getStats();
+}
+
 int32_t SIRFMODRuntime::getLastNativeResult( void ) const noexcept
 {
 	return m_nLastNativeResult;

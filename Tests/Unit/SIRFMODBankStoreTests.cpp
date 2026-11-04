@@ -779,6 +779,8 @@ static void testRuntimeComposition( const sirContainerAllocator_t *pAllocator )
 	SIRFMODRuntime runtime;
 	checkBank( runtime.initialize( config, ops ) == SIR_AUDIO_OK );
 	checkBank( runtime.isReady() );
+	checkBank( runtime.getMemoryStats().nCurrentBytes > 0 );
+	checkBank( runtime.getMemoryStats().nPeakBytes >= runtime.getMemoryStats().nCurrentBytes );
 	checkBank( runtime.loadPackage( 2, false ) == SIR_AUDIO_OK );
 	checkBank( runtime.getBanks().getLoadedBankCount() == 2 && runtime.getBanks().getBoundEventCount() == 1 );
 	checkBank( runtime.getContext().getBorrowedBankObjectCount() == 3 );
@@ -801,6 +803,7 @@ static void testRuntimeComposition( const sirContainerAllocator_t *pAllocator )
 	checkBank( runtime.collectUnused() == SIR_AUDIO_OK );
 	checkBank( runtime.getBanks().getLoadedBankCount() == 0 && runtime.getContext().getBorrowedBankObjectCount() == 0 );
 	checkBank( runtime.shutdown() == SIR_AUDIO_OK );
+	checkBank( runtime.getMemoryStats().nCurrentBytes == 0 );
 	checkBank( !runtime.isReady() && !fixture.bStudio );
 	manifest.shutdown();
 }
