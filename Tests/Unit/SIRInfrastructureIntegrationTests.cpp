@@ -30,12 +30,12 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <malloc.h>
 #endif
 
-#define SIR_INTEGRATION_CHECK( condition )                                                                                \
-	do {                                                                                                                   \
-		if ( !( condition ) ) {                                                                                             \
-			fprintf( stderr, "Infrastructure regression %s:%d: %s\n", __FILE__, __LINE__, #condition );                      \
-			abort();                                                                                                        \
-		}                                                                                                                  \
+#define SIR_INTEGRATION_CHECK( condition )                                                                                                 \
+	do {                                                                                                                                   \
+		if ( !( condition ) ) {                                                                                                            \
+			fprintf( stderr, "Infrastructure regression %s:%d: %s\n", __FILE__, __LINE__, #condition );                                    \
+			abort();                                                                                                                       \
+		}                                                                                                                                  \
 	} while ( false )
 
 static constexpr const char *SIR_INTEGRATION_FILE = "sir_infrastructure_stress_fixture.bin";
@@ -103,7 +103,7 @@ static void sirInfrastructureMemory( SIRMemoryManager &rMemory )
 }
 
 static sirResourceFileLoadRequest_t sirInfrastructureRequest( uint64_t nAsset, sirResourceFileReadMode_t eMode, uint64_t nOffset,
-                                                             uint64_t nBytes, uint64_t nExpectedRevision = 0 ) noexcept
+                                                              uint64_t nBytes, uint64_t nExpectedRevision = 0 ) noexcept
 {
 	sirResourceFileLoadRequest_t request = {};
 	request.keyResource = { nAsset, 71, 0 };
@@ -164,8 +164,7 @@ static void sirInfrastructureRunMatrix( const std::vector<uint8_t> &rBytes )
 		for ( uint32_t eMode = 0; eMode < 2; ++eMode ) {
 			for ( uint64_t nOffset : offsets ) {
 				for ( uint64_t nCount : lengths ) {
-					const sirResourceFileReadMode_t mode =
-					    eMode == 0 ? SIR_RESOURCE_FILE_READ_AT : SIR_RESOURCE_FILE_READ_MAPPED;
+					const sirResourceFileReadMode_t mode = eMode == 0 ? SIR_RESOURCE_FILE_READ_AT : SIR_RESOURCE_FILE_READ_MAPPED;
 					sirResourceFileLoadRequest_t request = sirInfrastructureRequest( nAsset++, mode, nOffset, nCount );
 					SIR_INTEGRATION_CHECK( load.begin( SIR_INTEGRATION_FILE, request ) == SIR_RESOURCE_RESULT_SUCCESS );
 					SIRResourceHandle pending = {};
@@ -312,9 +311,7 @@ static void sirInfrastructureRunRejections( void )
 		SIR_INTEGRATION_CHECK( load.begin( SIR_INTEGRATION_FILE, request ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
 		request.nDependencyCount = 0;
 		std::atomic<uint32_t> nOther( 0 );
-		std::thread wrongWriter( [&]() {
-			nOther.store( ( uint32_t )load.begin( SIR_INTEGRATION_FILE, request ) );
-		} );
+		std::thread wrongWriter( [&]() { nOther.store( ( uint32_t )load.begin( SIR_INTEGRATION_FILE, request ) ); } );
 		wrongWriter.join();
 		SIR_INTEGRATION_CHECK( nOther.load() == SIR_RESOURCE_RESULT_WRITER_VIOLATION );
 		SIR_INTEGRATION_CHECK( !load.getTaskHandle( nullptr ) );
