@@ -60,8 +60,8 @@ static bool rejectNestedAcknowledgement( void *pContext ) noexcept
 	sirFenceReentryContext_t *pReentry = ( sirFenceReentryContext_t * )pContext;
 	uint32_t nAcknowledged = UINT32_MAX;
 	if ( !pReentry->pTracker->advanceCompleted( 99, SIR_TASK_RESULT_SUCCESS, &nAcknowledged ) && nAcknowledged == 0 &&
-	     !pReentry->pTracker->hasCapacity() && !pReentry->pTracker->untrackLast( {} ) &&
-	     !pReentry->pTracker->shutdown() && !pReentry->pTracker->track( {}, 999 ) ) {
+	     !pReentry->pTracker->hasCapacity() && !pReentry->pTracker->untrackLast( {} ) && !pReentry->pTracker->shutdown() &&
+	     !pReentry->pTracker->track( {}, 999 ) ) {
 		++pReentry->nDenied;
 		return true;
 	}
