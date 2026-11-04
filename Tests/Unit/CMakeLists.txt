@@ -98,6 +98,17 @@ sir_configure_owned_target(SIRGraphicsInterfaceTests)
 
 
 if(SIR_WITH_VULKAN)
+    add_executable(SIRVulkanMemoryPolicyTests SIRVulkanMemoryPolicyTests.cpp)
+    target_link_libraries(SIRVulkanMemoryPolicyTests PRIVATE SIR::Vulkan)
+    add_test(NAME render.vulkan.memory-policy COMMAND SIRVulkanMemoryPolicyTests)
+    sir_configure_owned_target(SIRVulkanMemoryPolicyTests)
+
+    add_executable(SIRVulkanSealedPoolTests SIRVulkanSealedPoolTests.cpp)
+    target_link_libraries(SIRVulkanSealedPoolTests PRIVATE SIR::Vulkan)
+    add_test(NAME render.vulkan.sealed-pools COMMAND SIRVulkanSealedPoolTests)
+    set_tests_properties(render.vulkan.sealed-pools PROPERTIES SKIP_RETURN_CODE 77)
+    sir_configure_owned_target(SIRVulkanSealedPoolTests)
+
     add_executable(SIRVulkanDeviceTests SIRVulkanDeviceTests.cpp)
     target_link_libraries(SIRVulkanDeviceTests PRIVATE SIR::Vulkan)
     add_test(NAME render.vulkan.headless COMMAND SIRVulkanDeviceTests)

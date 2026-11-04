@@ -68,6 +68,16 @@ typedef struct sirVulkanMemoryStats_s
 } sirVulkanMemoryStats_t;
 
 // Private Vulkan-driver ownership. No Vk or VMA types enter SIRRenderingDevice.
+typedef struct sirVulkanPoolBudget_s
+{
+	uint64_t nResidentBytes;
+	uint64_t nUploadBytes;
+	uint64_t nReadbackBytes;
+} sirVulkanPoolBudget_t;
+
+// A non-null budget must specify three finite, block-aligned pools.
+bool sirVulkanValidatePoolBudget( const sirVulkanPoolBudget_t *pBudget ) noexcept;
+
 typedef struct sirVulkanCompletion_s
 {
 	uint64_t nDeviceSerial;
@@ -106,6 +116,7 @@ typedef struct sirVulkanBuffer_s
 	uint64_t nDeviceSerial;
 	uint64_t nLastGpuUse;
 	bool bHostVisible;
+	void *pMappedData;
 } sirVulkanBuffer_t;
 
 typedef struct sirVulkanBufferCopy_s
@@ -264,6 +275,8 @@ private:
 	VkDevice m_Device;
 	VkQueue m_GraphicsQueue;
 	VmaAllocator m_Allocator;
+	VmaPool m_szSealedPools[3] = {};
+	bool m_bSealedPools = false;
 	VkCommandPool m_TransferCommandPool;
 	VkSemaphore m_TransferTimeline;
 	sirVulkanTransferSlot_t m_TransferSlots[SIR_VULKAN_TRANSFER_SLOT_COUNT];
@@ -285,6 +298,8 @@ private:
 	bool loadImageDispatch( void ) noexcept;
 	void destroyTransferQueue( void ) noexcept;
 	bool isBufferIdle( const sirVulkanBuffer_t *pBuffer ) const noexcept;
+	sirVulkanResult_t initializeSealedPools( const sirVulkanPoolBudget_t *pBudget ) noexcept;
+	void destroySealedPools( void ) noexcept;
 
 public:
 	SIRVulkanDevice( void ) noexcept;
@@ -293,7 +308,7 @@ public:
 	SIRVulkanDevice( const SIRVulkanDevice & ) = delete;
 	SIRVulkanDevice &operator=( const SIRVulkanDevice & ) = delete;
 
-	sirVulkanResult_t initialize( void ) noexcept;
+	sirVulkanResult_t initialize( const sirVulkanPoolBudget_t *pBudget = nullptr ) noexcept;
 	bool shutdown( void ) noexcept;
 	bool isReady( void ) const noexcept;
 	bool queryAdapter( sirVulkanAdapterInfo_t *pAdapter ) const noexcept;

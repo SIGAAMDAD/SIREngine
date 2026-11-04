@@ -212,7 +212,7 @@ private:
 	void collectRetired( void ) noexcept;
 	void collectImageResources( void ) noexcept;
 	sirGraphicsResult_t retireImageResource( sirGraphicsHandle_t hResource, const sirGraphicsCompletionSet_t &completion ) noexcept;
-	sirGraphicsResult_t initialize( void ) noexcept;
+	sirGraphicsResult_t initialize( const sirVulkanPoolBudget_t *pBudget ) noexcept;
 
 	friend class SIRVulkanDriver;
 

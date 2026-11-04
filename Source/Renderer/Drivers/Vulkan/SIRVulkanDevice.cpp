@@ -131,10 +131,13 @@ bool SIRVulkanDevice::chooseAdapter( void ) noexcept
 	return true;
 }
 
-sirVulkanResult_t SIRVulkanDevice::initialize( void ) noexcept
+sirVulkanResult_t SIRVulkanDevice::initialize( const sirVulkanPoolBudget_t *pBudget ) noexcept
 {
 	if ( m_bReady || m_Library.pNativeHandle != nullptr ) {
 		return SIR_VULKAN_INVALID_STATE;
+	}
+	if ( pBudget != nullptr && !sirVulkanValidatePoolBudget( pBudget ) ) {
+		return SIR_VULKAN_INVALID_ARGUMENT;
 	}
 
 #if defined( _WIN32 )
@@ -251,6 +254,13 @@ sirVulkanResult_t SIRVulkanDevice::initialize( void ) noexcept
 		shutdown();
 		return SIR_VULKAN_ALLOCATION_FAILED;
 	}
+	if ( pBudget != nullptr ) {
+		const sirVulkanResult_t ePools = initializeSealedPools( pBudget );
+		if ( ePools != SIR_VULKAN_SUCCESS ) {
+			shutdown();
+			return ePools;
+		}
+	}
 
 	if ( !initializeTransferQueue() || !loadImageDispatch() ) {
 		shutdown();
@@ -274,6 +284,7 @@ bool SIRVulkanDevice::shutdown( void ) noexcept
 		bIdle = m_pfnDeviceWaitIdle( m_Device ) == VK_SUCCESS;
 	}
 	destroyTransferQueue();
+	destroySealedPools();
 	if ( m_Allocator != nullptr ) {
 		vmaDestroyAllocator( m_Allocator );
 		m_Allocator = nullptr;
@@ -353,7 +364,16 @@ sirVulkanResult_t SIRVulkanDevice::createBuffer( uint64_t nBytes, VkBufferUsageF
 	VmaAllocationCreateInfo allocationInfo = {};
 	allocationInfo.usage = VMA_MEMORY_USAGE_AUTO;
 	allocationInfo.flags = VMA_ALLOCATION_CREATE_WITHIN_BUDGET_BIT;
+	if ( m_bSealedPools ) {
+		const uint32_t iPool =
+		    !bHostVisible                                                                                                  ? 0
+		    : ( ( nUsage & VK_BUFFER_USAGE_TRANSFER_DST_BIT ) != 0 && ( nUsage & VK_BUFFER_USAGE_TRANSFER_SRC_BIT ) == 0 ) ? 2
+		                                                                                                                   : 1;
+		allocationInfo.pool = m_szSealedPools[iPool];
+		allocationInfo.flags |= VMA_ALLOCATION_CREATE_NEVER_ALLOCATE_BIT;
+	}
 	if ( bHostVisible ) {
+		allocationInfo.flags |= VMA_ALLOCATION_CREATE_MAPPED_BIT;
 		if ( ( nUsage & VK_BUFFER_USAGE_TRANSFER_DST_BIT ) != 0 && ( nUsage & VK_BUFFER_USAGE_TRANSFER_SRC_BIT ) == 0 ) {
 			allocationInfo.flags |= VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT;
 			allocationInfo.preferredFlags = VK_MEMORY_PROPERTY_HOST_CACHED_BIT;
@@ -362,12 +382,20 @@ sirVulkanResult_t SIRVulkanDevice::createBuffer( uint64_t nBytes, VkBufferUsageF
 		}
 		allocationInfo.requiredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 	}
-	if ( vmaCreateBuffer( m_Allocator, &bufferInfo, &allocationInfo, &pBuffer->hBuffer, &pBuffer->pAllocation, nullptr ) != VK_SUCCESS ) {
+	VmaAllocationInfo nativeAllocation = {};
+	if ( vmaCreateBuffer( m_Allocator, &bufferInfo, &allocationInfo, &pBuffer->hBuffer, &pBuffer->pAllocation, &nativeAllocation ) !=
+	     VK_SUCCESS ) {
 		pBuffer->hBuffer = VK_NULL_HANDLE;
 		pBuffer->pAllocation = nullptr;
 		return SIR_VULKAN_ALLOCATION_FAILED;
 	}
 
+	if ( bHostVisible && nativeAllocation.pMappedData == nullptr ) {
+		vmaDestroyBuffer( m_Allocator, pBuffer->hBuffer, pBuffer->pAllocation );
+		*pBuffer = {};
+		return SIR_VULKAN_NATIVE_FAILURE;
+	}
+	pBuffer->pMappedData = nativeAllocation.pMappedData;
 	pBuffer->pOwnerAllocator = m_Allocator;
 	pBuffer->nSize = ( VkDeviceSize )nBytes;
 	pBuffer->nUsage = nUsage;
@@ -391,14 +419,11 @@ sirVulkanResult_t SIRVulkanDevice::writeBuffer( sirVulkanBuffer_t *pBuffer, uint
 	if ( !isBufferIdle( pBuffer ) ) {
 		return SIR_VULKAN_BUSY;
 	}
-	void *pMapped = nullptr;
-	if ( vmaMapMemory( m_Allocator, pBuffer->pAllocation, &pMapped ) != VK_SUCCESS || pMapped == nullptr ) {
-		return SIR_VULKAN_NATIVE_FAILURE;
+	if ( pBuffer->pMappedData == nullptr ) {
+		return SIR_VULKAN_INVALID_STATE;
 	}
-
-	memcpy( ( uint8_t * )pMapped + nOffset, pData, ( size_t )nBytes );
+	memcpy( ( uint8_t * )pBuffer->pMappedData + nOffset, pData, ( size_t )nBytes );
 	const VkResult eFlush = vmaFlushAllocation( m_Allocator, pBuffer->pAllocation, nOffset, nBytes );
-	vmaUnmapMemory( m_Allocator, pBuffer->pAllocation );
 	return eFlush == VK_SUCCESS ? SIR_VULKAN_SUCCESS : SIR_VULKAN_NATIVE_FAILURE;
 }
 
