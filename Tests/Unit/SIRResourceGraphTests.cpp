@@ -990,7 +990,8 @@ typedef struct sirResourceRetireFactory_s
 	bool bRetired;
 } sirResourceRetireFactory_t;
 
-static bool describeResourceWithRetirement( void *pContext, const SIRResourceDependencyPlanEntry &rEntry, sirTaskGraphPass_t *pPass ) noexcept
+static bool describeResourceWithRetirement( void *pContext, const SIRResourceDependencyPlanEntry &rEntry,
+                                            sirTaskGraphPass_t *pPass ) noexcept
 {
 	sirResourceRetireFactory_t *pMutation = ( sirResourceRetireFactory_t * )pContext;
 	if ( !describeResourceTest( pMutation->pSet, rEntry, pPass ) ) {
@@ -1782,15 +1783,16 @@ static void testDependencyRetiredDuringTaskCompilation( void )
 		sirResourceScheduledTestSet_t work = {};
 		work.nNodes = 2;
 		work.nodes[0].hResource = publishTaskNode( *pWriter, 34000 + i * 10 );
-		SIRResourceDependency edge = { key( 34000 + i * 10 ), i == 0 ? SIR_RESOURCE_EDGE_KIND_REQUIRED : SIR_RESOURCE_EDGE_KIND_OPTIONAL, {} };
+		SIRResourceDependency edge = {
+		    key( 34000 + i * 10 ), i == 0 ? SIR_RESOURCE_EDGE_KIND_REQUIRED : SIR_RESOURCE_EDGE_KIND_OPTIONAL, {} };
 		work.nodes[1].hResource = publishTaskNode( *pWriter, 34001 + i * 10, &edge, 1 );
 		SIRTaskGraph tasks;
 		REQUIRE( tasks.init( &memory, { 4, 1, 4 } ) );
 		SIRResourceDependencyPlanEntry plan[4] = {};
 		uint32_t nRequired = 0;
 		sirResourceRetireFactory_t mutation = { &work, pWriter, work.nodes[0].hResource, false };
-		const SIRResourceResult result = pWriter->compileTaskGraph( work.nodes[1].hResource, tasks, plan, 4,
-		                                                            describeResourceWithRetirement, &mutation, &nRequired );
+		const SIRResourceResult result =
+		    pWriter->compileTaskGraph( work.nodes[1].hResource, tasks, plan, 4, describeResourceWithRetirement, &mutation, &nRequired );
 		REQUIRE( mutation.bRetired );
 		REQUIRE( result == ( i == 0 ? SIR_RESOURCE_RESULT_DEPENDENCY_MISSING : SIR_RESOURCE_RESULT_STALE_REVISION ) );
 		REQUIRE( tasks.getPassCount() == 0 );
