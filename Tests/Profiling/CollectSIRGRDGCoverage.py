@@ -54,6 +54,7 @@ def main():
         parser.error("build directory does not exist")
 
     result = {}
+    details = {}
     missing = []
     with tempfile.TemporaryDirectory() as workdir:
         for source in TARGETS:
@@ -86,7 +87,18 @@ def main():
             if len(matches) != 1:
                 missing.append(f"{source}: found {len(matches)} matching gcov JSON entries")
                 continue
-            result[source] = summary(matches[0].get("lines", []))
+            source_lines = matches[0].get("lines", [])
+            result[source] = summary(source_lines)
+            details[source] = [
+                {
+                    "line": entry["line_number"],
+                    "count": entry["count"],
+                    "branches": entry.get("branches", []),
+                }
+                for entry in source_lines
+                if isinstance(entry.get("count"), (int, float))
+                and (entry["count"] == 0 or any(branch.get("count", 0) == 0 for branch in entry.get("branches", [])))
+            ]
 
     report = {
         "tool": "gcc gcov json",
@@ -95,6 +107,10 @@ def main():
         "missing": missing,
     }
     (output / "grdg-coverage.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    (output / "grdg-coverage-detail.json").write_text(
+        json.dumps({"source_commit": "workflow checkout HEAD", "uncovered": details}, indent=2) + "\n",
+        encoding="utf-8",
+    )
     lines = [
         "# GRDG/Core C++ coverage (instrumented GCC)",
         "",
