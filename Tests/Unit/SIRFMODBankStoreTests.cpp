@@ -146,8 +146,7 @@ static int32_t testStudioRelease( void *pData, void * ) noexcept
 	( ( sirFMODBankFixture_t * )pData )->bStudio = false;
 	return 0;
 }
-static int32_t testStudioDeviceLossCallback( void *pUserData, void *, void *pOwner,
-                                              void ( *pfnSignal )( void * ) noexcept ) noexcept
+static int32_t testStudioDeviceLossCallback( void *pUserData, void *, void *pOwner, void ( *pfnSignal )( void * ) noexcept ) noexcept
 {
 	sirFMODBankFixture_t *pFixture = ( sirFMODBankFixture_t * )pUserData;
 	pFixture->pDeviceOwner = pOwner;
@@ -674,9 +673,6 @@ static void testManifestPackageLoading( const sirContainerAllocator_t *pAllocato
 	sirFMODBankFixture_t fixture = {};
 	SIRFMODContext context;
 	const sirFMODContextConfig_t contextConfig = { 16, -1, 1, 1, 0, 0 };
-
-
-
 
 	checkBank( context.initialize( contextConfig, makeStudioOps( &fixture ) ) == SIR_FMOD_OK );
 	SIRFMODVoiceBackend voices;

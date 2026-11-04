@@ -105,7 +105,8 @@ sirAudioResult_t SIRFMODAudioThread::start( const sirFMODAudioThreadConfig_t &co
 		m_pSlots[iSlot].nGeneration = 0;
 		m_pSlots[iSlot].nState.store( SIR_FMOD_SLOT_FREE, SIR_MEMORY_ORDER_RELAXED );
 	}
-	if ( !m_Requests.initialize( m_pAllocator, m_nCapacity ) || !m_Critical.initialize( m_pAllocator, m_nCapacity < 8 ? 2 : m_nCapacity >> 2 ) ||
+	if ( !m_Requests.initialize( m_pAllocator, m_nCapacity ) ||
+	     !m_Critical.initialize( m_pAllocator, m_nCapacity < 8 ? 2 : m_nCapacity >> 2 ) ||
 	     !m_Lifecycle.initialize( m_pAllocator, m_nCapacity ) ) {
 		releaseStorage();
 		return SIR_AUDIO_CAPACITY;
