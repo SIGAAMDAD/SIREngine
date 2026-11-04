@@ -114,3 +114,8 @@ add_executable(SIRLangGraphVMBackendTests SIRLangGraphVMBackendTests.cpp)
 target_link_libraries(SIRLangGraphVMBackendTests PRIVATE SIR::Scripting)
 add_test(NAME scripting.language.graphvm-backend COMMAND SIRLangGraphVMBackendTests)
 sir_configure_owned_target(SIRLangGraphVMBackendTests)
+
+add_executable(SIRLangRuntimeIntegrationTests SIRLangRuntimeIntegrationTests.cpp)
+target_link_libraries(SIRLangRuntimeIntegrationTests PRIVATE SIR::Scripting)
+add_test(NAME scripting.language.runtime-integration COMMAND SIRLangRuntimeIntegrationTests)
+sir_configure_owned_target(SIRLangRuntimeIntegrationTests)
