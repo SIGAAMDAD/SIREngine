@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: editor-r2r3-${{ github.ref }}-${{ matrix.target || 'all' }}
+  group: editor-r2r3-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
