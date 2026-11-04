@@ -309,34 +309,44 @@ static bool sirTestHapticDeviceLifecycle( void )
 	SIRInputService input;
 	SIRInputUIHapticBackend backend;
 	if ( !input.attach( backend ) || !input.begin( 1 ) ) {
+		fputs( "haptic-lifecycle step 1 failed\n", stderr );
 		return false;
 	}
 	sirInputDeviceId_t hDevice = {};
 	if ( !input.connect( { 0, 51, SIR_INPUT_TEST, SIR_INPUT_CONTROLLER }, &hDevice ) ||
 	     input.hapticCapabilities( hDevice ) != SIR_INPUT_HAPTIC_CAP_RUMBLE ) {
+		fputs( "haptic-lifecycle step 2 failed\n", stderr );
 		return false;
 	}
 	const sirInputHapticRequest_t request = { hDevice, 32000, 9000, 0, 1000, 0, 1 };
 	sirInputHapticHandle_t hEffect = {};
 	if ( !input.scheduleRumble( request, &hEffect ) || !input.scheduleRumble( request, nullptr ) ) {
+		fputs( "haptic-lifecycle step 3 failed\n", stderr );
 		return false;
 	}
 	input.sample();
 	if ( backend.m_nLastLeft != 32000 || input.activeHaptics() != 1 ) {
+		fputs( "haptic-lifecycle step 4 failed\n", stderr );
 		return false;
 	}
 	input.setHapticsPaused( true );
 	if ( backend.m_nLastLeft != 0 || backend.m_nLastRight != 0 ) {
+		fputs( "haptic-lifecycle step 5 failed\n", stderr );
 		return false;
 	}
 	input.setHapticsPaused( false );
 	input.sample();
 	if ( backend.m_nLastLeft != 32000 || !input.disconnect( SIR_INPUT_TEST, hDevice ) || input.activeHaptics() != 0 ||
 	     backend.m_nLastLeft != 0 ) {
+		fputs( "haptic-lifecycle step 6 failed\n", stderr );
 		return false;
 	}
 	input.shutdown();
-	return backend.m_nStops == 1;
+	if ( backend.m_nStops != 1 ) {
+		fputs( "haptic-lifecycle step 7 failed\n", stderr );
+		return false;
+	}
+	return true;
 }
 
 int main( void )
