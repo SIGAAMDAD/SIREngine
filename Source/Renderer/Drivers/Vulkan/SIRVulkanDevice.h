@@ -75,6 +75,7 @@ typedef struct sirVulkanCompletion_s
 } sirVulkanCompletion_t;
 
 constexpr uint32_t SIR_VULKAN_TRANSFER_SLOT_COUNT = 8;
+constexpr uint32_t SIR_VULKAN_MAX_TRACKED_SUBRESOURCES = 4096;
 
 typedef struct sirVulkanTransferSlot_s
 {
@@ -107,6 +108,10 @@ typedef struct sirVulkanImage_s
 	VkImageUsageFlags nUsage;
 	uint32_t nMips;
 	uint32_t nLayers;
+	uint32_t nWidth;
+	uint32_t nHeight;
+	uint32_t nDepth;
+	uint64_t szUploadedSubresources[SIR_VULKAN_MAX_TRACKED_SUBRESOURCES / 64];
 	bool bCube;
 } sirVulkanImage_t;
 
@@ -123,6 +128,17 @@ typedef struct sirVulkanSampler_s
 	uint64_t nDeviceSerial;
 } sirVulkanSampler_t;
 
+typedef struct sirVulkanFormatBlock_s
+{
+	uint32_t nBlockWidth;
+	uint32_t nBlockHeight;
+	uint32_t nBytesPerBlock;
+} sirVulkanFormatBlock_t;
+
+// The transfer validator has no Vulkan device dependency and is exercised
+// by CPU-only tests on hosts without Vulkan 1.4 hardware.
+bool sirVulkanGetFormatBlock( VkFormat eFormat, sirVulkanFormatBlock_t *pBlock ) noexcept;
+
 typedef struct sirVulkanTextureTransfer_s
 {
 	uint64_t nBufferOffset;
@@ -134,6 +150,9 @@ typedef struct sirVulkanTextureTransfer_s
 	VkExtent3D extent;
 	bool bBufferToImage;
 } sirVulkanTextureTransfer_t;
+
+sirVulkanResult_t sirVulkanValidateTextureTransfer( const sirVulkanBuffer_t *pBuffer, const sirVulkanImage_t *pImage,
+                                                    const sirVulkanTextureTransfer_t &transfer ) noexcept;
 
 // First headless slice: one owner thread creates and retires the native device.
 // Buffers must be retired before shutdown; queue submissions arrive in a later slice.

@@ -34,7 +34,8 @@ sirVulkanResult_t SIRVulkanDevice::createImage( const VkImageCreateInfo &info, s
 	}
 	if ( pImage == nullptr || pImage->hImage != VK_NULL_HANDLE || pImage->pAllocation != nullptr ||
 	     info.sType != VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO || info.extent.width == 0 || info.extent.height == 0 || info.extent.depth == 0 ||
-	     info.usage == 0 ) {
+	     info.usage == 0 || info.mipLevels == 0 || info.mipLevels > 32 || info.arrayLayers == 0 ||
+	     info.arrayLayers > SIR_VULKAN_MAX_TRACKED_SUBRESOURCES / info.mipLevels ) {
 		return SIR_VULKAN_INVALID_ARGUMENT;
 	}
 	VmaAllocationCreateInfo allocation = {};
@@ -55,6 +56,10 @@ sirVulkanResult_t SIRVulkanDevice::createImage( const VkImageCreateInfo &info, s
 	pImage->nLastGpuUse = 0;
 	pImage->nLayers = info.arrayLayers;
 	pImage->nMips = info.mipLevels;
+	pImage->nWidth = info.extent.width;
+	pImage->nHeight = info.extent.height;
+	pImage->nDepth = info.extent.depth;
+	memset( pImage->szUploadedSubresources, 0, sizeof( pImage->szUploadedSubresources ) );
 	pImage->nUsage = info.usage;
 	pImage->bCube = ( info.flags & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT ) != 0;
 	++m_nLiveImages;
