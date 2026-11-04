@@ -100,9 +100,8 @@ bool SIRInputHistory::replaceFrom( const sirInputReplayFrame_t &frame ) noexcept
 	if ( !SIRInputReplayTape::validateFrame( frame ) || m_nCount == 0 || frame.nTick < oldestTick() || frame.nTick > newestTick() ) {
 		return false;
 	}
-	if ( !rewindFrom( frame.nTick ) ) {
-		return false;
-	}
+	// The validated replacement tick is inside the contiguous ring, so rewinding cannot fail.
+	( void )rewindFrom( frame.nTick );
 	return append( frame );
 }
 

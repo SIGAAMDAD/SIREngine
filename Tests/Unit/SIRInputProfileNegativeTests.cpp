@@ -184,6 +184,86 @@ static bool sirProfileRejectedCookedData( void ) noexcept
 	return restored.profileAt( 0 )->nVendor == profile.nVendor;
 }
 
+static bool sirProfileSerializationBoundaries( void ) noexcept
+{
+	SIRInputControllerProfiles empty;
+	uint8_t szBytes[256] = {};
+	uint32_t nWritten = 0;
+	if ( !empty.saveCooked( szBytes, sizeof( szBytes ), nullptr ) || !empty.saveCooked( szBytes, sizeof( szBytes ), &nWritten ) ||
+	     nWritten != SIR_INPUT_COOKED_PROFILE_HEADER_BYTES ) {
+		return false;
+	}
+	SIRInputControllerProfiles restored;
+	if ( !restored.loadCooked( szBytes, nWritten ) || restored.count() != 0 ||
+	     restored.loadCooked( szBytes, SIR_INPUT_COOKED_PROFILE_HEADER_BYTES - 1 ) ) {
+		return false;
+	}
+	for ( uint32_t nFlags = 0; nFlags < 4; ++nFlags ) {
+		SIRInputControllerProfiles profiles;
+		sirInputControllerProfile_t profile = {};
+		profile.nBus = 7;
+		profile.nVendor = 0xaabb;
+		profile.nProduct = 0xccdd;
+		profile.bReplaceButtons = ( nFlags & 1 ) != 0;
+		profile.bReplaceAxes = ( nFlags & 2 ) != 0;
+		profile.nButtonCount = 1;
+		profile.nAxisCount = 1;
+		profile.buttons[0] = { 20, SIR_INPUT_PAD_EAST };
+		profile.axes[0] = { 30, SIR_INPUT_AXIS_LX, false };
+		if ( !profiles.add( profile ) || profiles.find( 7, profile.nVendor, profile.nProduct ) == nullptr ||
+		     profiles.find( 7, profile.nVendor, profile.nProduct + 1 ) != nullptr ||
+		     profiles.find( 7, profile.nVendor + 1, profile.nProduct ) != nullptr ) {
+			return false;
+		}
+		if ( !profiles.saveCooked( szBytes, sizeof( szBytes ), nullptr ) || !profiles.saveCooked( szBytes, sizeof( szBytes ), &nWritten ) ||
+		     nWritten != 42 || !restored.loadCooked( szBytes, nWritten ) ) {
+			return false;
+		}
+		const sirInputControllerProfile_t *pResult = restored.find( 7, 0xaabb, 0xccdd );
+		bool bInvert = true;
+		if ( pResult == nullptr || pResult->bReplaceButtons != profile.bReplaceButtons || pResult->bReplaceAxes != profile.bReplaceAxes ||
+		     SIRInputControllerProfiles::axis( *pResult, 30, &bInvert ) != SIR_INPUT_AXIS_LX || bInvert ) {
+			return false;
+		}
+		uint8_t szCorrupted[256] = {};
+		memcpy( szCorrupted, szBytes, nWritten );
+		sirProfileWrite32( szCorrupted + 12, SIR_INPUT_COOKED_PROFILE_HEADER_BYTES );
+		sirProfileWrite32( szCorrupted + 16, sirProfileChecksum( szCorrupted + SIR_INPUT_COOKED_PROFILE_HEADER_BYTES, 0 ) );
+		if ( restored.loadCooked( szCorrupted, SIR_INPUT_COOKED_PROFILE_HEADER_BYTES ) ) {
+			return false;
+		}
+		memcpy( szCorrupted, szBytes, nWritten );
+		szCorrupted[SIR_INPUT_COOKED_PROFILE_HEADER_BYTES + 8] = SIR_INPUT_CONTROLLER_BUTTON_MAP_CAPACITY + 1;
+		sirProfileWrite32( szCorrupted + 16, sirProfileChecksum( szCorrupted + SIR_INPUT_COOKED_PROFILE_HEADER_BYTES,
+		                                                         nWritten - SIR_INPUT_COOKED_PROFILE_HEADER_BYTES ) );
+		if ( restored.loadCooked( szCorrupted, nWritten ) ) {
+			return false;
+		}
+		memcpy( szCorrupted, szBytes, nWritten );
+		szCorrupted[SIR_INPUT_COOKED_PROFILE_HEADER_BYTES + 9] = SIR_INPUT_AXIS_COUNT + 1;
+		sirProfileWrite32( szCorrupted + 16, sirProfileChecksum( szCorrupted + SIR_INPUT_COOKED_PROFILE_HEADER_BYTES,
+		                                                         nWritten - SIR_INPUT_COOKED_PROFILE_HEADER_BYTES ) );
+		if ( restored.loadCooked( szCorrupted, nWritten ) ) {
+			return false;
+		}
+		if ( restored.count() != 1 || restored.profileAt( 0 )->nVendor != profile.nVendor ) {
+			return false;
+		}
+	}
+	sirInputControllerProfile_t first = {};
+	first.nBus = 5;
+	first.nVendor = 91;
+	first.nProduct = 101;
+	sirInputControllerProfile_t second = first;
+	second.nProduct = 102;
+	SIRInputControllerProfiles distinct;
+	if ( !distinct.add( first ) || !distinct.add( second ) || distinct.count() != 2 || distinct.find( 5, 91, 101 ) == nullptr ||
+	     distinct.find( 5, 91, 102 ) == nullptr ) {
+		return false;
+	}
+	return true;
+}
+
 int main( void )
 {
 	if ( !sirProfileInvalidRegistrations() ) {
@@ -192,6 +272,10 @@ int main( void )
 	}
 	if ( !sirProfileRejectedCookedData() ) {
 		fputs( "input profiles: corrupt cooked data FAILED\n", stderr );
+		return 1;
+	}
+	if ( !sirProfileSerializationBoundaries() ) {
+		fputs( "input profiles: serialization boundaries FAILED\n", stderr );
 		return 1;
 	}
 	puts( "SIRInputProfileNegativeTests PASS" );
