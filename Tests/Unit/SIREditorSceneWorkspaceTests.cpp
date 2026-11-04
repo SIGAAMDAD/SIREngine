@@ -57,7 +57,35 @@ static void sirTestSceneWorkspace( void )
 	assert( workspace.getHierarchy().getSelectedId() == nChild );
 	assert( workspace.getHierarchy().setExpanded( workspace.getDocument(), nRoot, false ) == SIR_EDITOR_HIERARCHY_OK );
 	assert( workspace.getHierarchy().getVisibleCount() == 1 );
+
+	// Source-backed editor nodes now have native typed property journal storage.
+	sirObjectTypeDescriptor_t szTypes[1] = {};
+	sirObjectPropertyDescriptor_t szDescriptors[1] = {};
+	SIRObjectRegistry registry;
+	assert( registry.initialize( szTypes, 1, szDescriptors, 1 ) == SIR_OBJECT_OK );
+	sirEditorNode_t root = {};
+	assert( workspace.getDocument().findNode( nRoot, &root ) == SIR_EDITOR_OK );
+	assert( registry.registerType( { root.nTypeId, 0, 11 } ) == SIR_OBJECT_OK );
+	assert( registry.registerProperty( { 17, root.nTypeId, 17, SIR_PROPERTY_UINT64, {} } ) == SIR_OBJECT_OK );
+	assert( registry.seal() == SIR_OBJECT_OK );
+	assert( workspace.getDocument().setPropertyRegistry( &registry ) == SIR_EDITOR_OK );
+	sirEditorProperty_t property = {};
+	property.nNodeId = nRoot;
+	property.nPropertyId = 17;
+	property.value.eKind = SIR_PROPERTY_UINT64;
+	property.value.nPayload = 123;
+	assert( workspace.getDocument().beginEdit( workspace.getDocument().getRevision() ) == SIR_EDITOR_OK );
+	assert( workspace.getDocument().queueSetProperty( property ) == SIR_EDITOR_OK );
+	assert( workspace.getDocument().commitEdit() == SIR_EDITOR_OK );
+	sirPropertyValue_t found = {};
+	assert( workspace.getDocument().findProperty( nRoot, 17, &found ) == SIR_EDITOR_OK );
+	assert( found.nPayload == 123 );
+	assert( workspace.getDocument().undo() == SIR_EDITOR_OK );
+	assert( workspace.getDocument().findProperty( nRoot, 17, &found ) == SIR_EDITOR_NOT_FOUND );
+	assert( workspace.getDocument().redo() == SIR_EDITOR_OK );
+	assert( workspace.getDocument().findProperty( nRoot, 17, &found ) == SIR_EDITOR_OK );
 	workspace.close();
+	registry.shutdown();
 	assert( !workspace.isOpen() );
 	assert( workspace.getSource() == nullptr );
 	assert( workspace.getResourceIndex().nCount == 0 );
