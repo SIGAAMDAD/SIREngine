@@ -40,6 +40,20 @@ and completion transfer. Core Jobs owns scheduling and worker/provider fences.
   is explicitly acknowledged. Forced external ticket recycling cannot free
   a provider-pinned bridge slot.
 
+- `SIRStreamingGRDGAdapter` binds sorted manifest-local units to the **real**
+  `SIRResourceFileLoad`, GRDG writer, Core Jobs and provider-pinning APIs from
+  the independent Resources integration. Concurrent consumers share a canonical
+  published resource; the adapter holds one provider pin per live ticket.
+  Successful preparation is acknowledged only after a matching published
+  schema/chunk and a live provider pin have been verified.
+- The adapter rejects obsolete resource revisions, invalid directories and
+  overlapping caller-owned storage. Pending I/O cancellation is drained before
+  provider retirement. Resource handles are paired with immutable revisions;
+  activation and retirement still require the actual backend's safe-point ack.
+- The `SIR::StreamingGRDG` target and its file-load test are intentionally
+  conditional on `SIR::Resources`. This branch contains concrete integration
+  code, but it does not import or claim integration of the unmerged PR #23.
+
 ## Module boundaries for the complete system
 
 | Layer | Planned owner | Contract / next component |
@@ -49,10 +63,10 @@ and completion transfer. Core Jobs owns scheduling and worker/provider fences.
 | Trajectory + offline prediction | `Source/Prediction` | `SIRPredictionSystem`, versioned demand epochs |
 | Entity FULL/REDUCED/COARSE/DORMANT | `Source/World/Entities` | `SIRWorldEntityResidency`, durable event cursors |
 | Pack manifests + compression | `Tools/SceneCooker` and `Source/Resources` | `.sirm/.sirp`, deterministic cooker and validated reader |
-| Request coordination, dedup, publication | `Source/Resources` | GRDG writer and native streaming coordinator (PR #23 foundation) |
+| Request coordination, dedup, publication | `Source/Resources` | typed bridge to PR #23's GRDG writer, file-load and provider pin APIs implemented; integration build pending |
 | Native read/completion | `Source/Core/IO`, platform backends | Windows IOCP, Linux io_uring/pread fallback |
 | Terrain-specific residency | `Source/Terrain` | region pages, VT, HLOD, clipmap feedback |
-| Provider activation | Renderer, Jolt, navigation, scripting, FMOD | generic generation-safe lifecycle/acknowledgement bridge implemented; GRDG and native provider adapters pending |
+| Provider activation | Renderer, Jolt, navigation, scripting, FMOD | GRDG preparation and pinning adapter implemented; native backend activation/retirement adapters pending |
 | Diagnostics | Streaming + Core telemetry | load/eviction traces, load-to-active and p99 hitches |
 
 ## Integration sequence
@@ -69,6 +83,5 @@ and completion transfer. Core Jobs owns scheduling and worker/provider fences.
    test teleport, stale generations, cancellations and safe retirement.
 6. Measure budgets, p50/p95/p99 load-to-active latency and frame-time hitches.
 
-**Current limitation:** World Partition, ticket reconciliation, and provider lifecycle dispatch are connected, but the branch does not stream bytes, cook packages,
-activate worlds or claim integration with unmerged PR #23. It establishes the
+**Current limitation:** the optional GRDG adapter compiles against its declared API and is tested with a local mock, but the branch cannot link/run PR #23's real loader until it is integrated. SIRPack cooking, native kernel-async I/O and world activation are not implemented. It establishes the
 buildable, tested demand/state authority and leaves data-plane ownership intact.
