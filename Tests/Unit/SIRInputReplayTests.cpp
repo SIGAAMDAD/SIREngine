@@ -244,10 +244,116 @@ static bool sirTestHistoryServiceCapture( void ) noexcept
 	return true;
 }
 
+static void sirReplayWrite32( uint8_t *pData, uint32_t nValue ) noexcept
+{
+	for ( uint32_t i = 0; i < 4; ++i ) {
+		pData[i] = ( uint8_t )( nValue >> ( 8 * i ) );
+	}
+}
+
+static uint32_t sirReplayChecksum( const uint8_t *pData, uint32_t nSize ) noexcept
+{
+	uint32_t nHash = UINT32_C( 2166136261 );
+	for ( uint32_t i = 0; i < nSize; ++i ) {
+		nHash = ( nHash ^ pData[i] ) * UINT32_C( 16777619 );
+	}
+	return nHash;
+}
+
+static bool sirReplayRejectsPacket( const uint8_t *pData, uint32_t nSize ) noexcept
+{
+	SIRInputReplayTape reader;
+	sirInputReplayFrame_t frame = {};
+	frame.nTick = 9999;
+	return reader.beginRead( pData, nSize ) && !reader.next( &frame ) && reader.bytesUsed() == 0 && frame.nTick == 9999;
+}
+
+static bool sirTestReplayMalformedHeaders( void ) noexcept
+{
+	SIRInputReplayTape writer;
+	SIRInputActions actions;
+	uint8_t szBytes[128] = {};
+	if ( writer.beginRecord( nullptr, sizeof( szBytes ) ) || !writer.beginRecord( szBytes, sizeof( szBytes ) ) ||
+	     !writer.append( 10, actions, nullptr, 0 ) || !writer.append( 11, actions, nullptr, 0 ) || writer.bytesUsed() != 64 ) {
+		return false;
+	}
+
+	SIRInputReplayTape reader;
+	sirInputReplayFrame_t frame = {};
+	if ( reader.beginRead( nullptr, sizeof( szBytes ) ) || !reader.beginRead( szBytes, 0 ) || reader.next( &frame ) ||
+	     !reader.beginRead( szBytes, 64 ) || reader.next( nullptr ) || !reader.next( &frame ) || frame.nTick != 10 ||
+	     !reader.next( &frame ) || frame.nTick != 11 || !reader.finished() || !reader.seek( 11, &frame ) || frame.nTick != 11 ||
+	     reader.seek( 12, &frame ) || reader.seek( 1, &frame ) ) {
+		return false;
+	}
+	reader.reset();
+	if ( reader.seek( 10, &frame ) || reader.seek( 10, nullptr ) ) {
+		return false;
+	}
+	const uint32_t szOffsets[] = { 0, 4, 6, 8, 16, 20, 24, 28 };
+	for ( uint32_t i = 0; i < sizeof( szOffsets ) / sizeof( szOffsets[0] ); ++i ) {
+		uint8_t szCorrupt[64] = {};
+		memcpy( szCorrupt, szBytes, sizeof( szCorrupt ) );
+		const uint32_t nOffset = szOffsets[i];
+		if ( nOffset == 8 ) {
+			szCorrupt[nOffset] = 0;
+		} else if ( nOffset == 24 ) {
+			szCorrupt[nOffset] ^= 0x80;
+		} else {
+			szCorrupt[nOffset] ^= 0xff;
+		}
+		if ( !sirReplayRejectsPacket( szCorrupt, sizeof( szCorrupt ) ) ) {
+			return false;
+		}
+	}
+	uint8_t szDuplicate[64] = {};
+	memcpy( szDuplicate, szBytes, sizeof( szDuplicate ) );
+	szDuplicate[32 + 8] = 10;
+	if ( !reader.beginRead( szDuplicate, sizeof( szDuplicate ) ) || !reader.next( &frame ) || reader.next( &frame ) ) {
+		return false;
+	}
+	return frame.nTick == 10;
+}
+
+static bool sirTestReplayMalformedActionRecords( void ) noexcept
+{
+	SIRInputActions actions;
+	const sirInputReplayKey_t key = { 10, 0 };
+	if ( !actions.addAction( key.nActionId, key.nUser ) ) {
+		return false;
+	}
+	uint8_t szBytes[128] = {};
+	SIRInputReplayTape writer;
+	if ( !writer.beginRecord( szBytes, sizeof( szBytes ) ) || !writer.append( 100, actions, &key, 1 ) ||
+	     writer.bytesUsed() != SIR_INPUT_REPLAY_HEADER_BYTES + SIR_INPUT_REPLAY_RECORD_BYTES ) {
+		return false;
+	}
+	const uint32_t nBytes = writer.bytesUsed();
+	SIRInputReplayTape reader;
+	sirInputReplayFrame_t frame = {};
+	if ( !reader.beginRead( szBytes, nBytes ) || !reader.next( &frame ) || frame.nTick != 100 || frame.nCount != 1 ||
+	     frame.actions[0].nActionId != 10 || frame.actions[0].bHeld ) {
+		return false;
+	}
+	const uint32_t szOffsets[] = { 32, 36, 40, 48, 48 };
+	const uint32_t szValues[] = { 0, SIR_INPUT_USER_CAPACITY, 0x80000000U, 0x80, 1 };
+	for ( uint32_t i = 0; i < sizeof( szOffsets ) / sizeof( szOffsets[0] ); ++i ) {
+		uint8_t szCorrupt[128] = {};
+		memcpy( szCorrupt, szBytes, nBytes );
+		sirReplayWrite32( szCorrupt + szOffsets[i], szValues[i] );
+		sirReplayWrite32( szCorrupt + 24,
+		                  sirReplayChecksum( szCorrupt + SIR_INPUT_REPLAY_HEADER_BYTES, nBytes - SIR_INPUT_REPLAY_HEADER_BYTES ) );
+		if ( !sirReplayRejectsPacket( szCorrupt, nBytes ) ) {
+			return false;
+		}
+	}
+	return !SIRInputReplayTape::validateFrame( { 0, 0, {} } );
+}
+
 int main( void )
 {
 	if ( !sirTestReplayServiceTick() || !sirTestReplayInvalidRecord() || !sirTestAuthoritativePlayback() ||
-	     !sirTestHistoryServiceCapture() ) {
+	     !sirTestHistoryServiceCapture() || !sirTestReplayMalformedHeaders() || !sirTestReplayMalformedActionRecords() ) {
 		fputs( "SIRInputReplayTests FAILED\n", stderr );
 		return 1;
 	}
