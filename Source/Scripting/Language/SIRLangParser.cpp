@@ -679,7 +679,7 @@ static uint32_t sirLangParseStatement( sirLangParserState_t *pState ) noexcept
 	return sirLangParseGenericLine( pState );
 }
 
-sirLangParseError_t SIRLangParse( const sirLangSourceView_t &source, sirLangSyntaxTree_t *pTree ) noexcept
+sirLangParseError_t SIRLangParse( const sirLangSourceView_t& source, sirLangSyntaxTree_t *pTree ) noexcept
 {
 	if ( pTree == nullptr || pTree->pTokens == nullptr || pTree->pNodes == nullptr || pTree->pDiagnostics == nullptr ||
 	     pTree->nTokenCapacity == 0 || pTree->nNodeCapacity == 0 || pTree->nDiagnosticCapacity == 0 ||
@@ -744,14 +744,14 @@ bool SIRLangSyntaxSpan( const sirLangSyntaxTree_t *pTree, uint32_t iNode, sirLan
 		*pSpan = { 0, pTree->source.nBytes };
 		return true;
 	}
-	const sirLangSyntaxNode_t &node = pTree->pNodes[iNode];
+	const sirLangSyntaxNode_t& node = pTree->pNodes[iNode];
 	if ( node.nStartToken >= pTree->nTokenCount || node.nEndToken > pTree->nTokenCount || node.nStartToken > node.nEndToken ) {
 		return false;
 	}
 	const uint32_t nStart = pTree->pTokens[node.nStartToken].nOffset;
 	uint32_t nEnd = nStart;
 	if ( node.nEndToken > node.nStartToken ) {
-		const sirLangToken_t &last = pTree->pTokens[node.nEndToken - 1];
+		const sirLangToken_t& last = pTree->pTokens[node.nEndToken - 1];
 		nEnd = last.nOffset + last.nLength;
 	}
 	if ( nEnd < nStart || nEnd > pTree->source.nBytes ) {
