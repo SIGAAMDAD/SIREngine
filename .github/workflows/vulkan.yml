@@ -2,12 +2,12 @@ name: Vulkan headless validation
 
 on:
   pull_request:
-    branches: [develop, main]
+    branches: [develop, main, renderer/shared-driver-api-v1]
     paths:
       - 'Source/Renderer/**'
       - 'Source/CMakeLists.txt'
       - 'CMakeLists.txt'
-      - 'Tests/Unit/SIRVulkanDeviceTests.cpp'
+      - 'Tests/Unit/SIRVulkan*.cpp'
       - 'Tests/Unit/CMakeLists.txt'
       - '.github/workflows/vulkan.yml'
   workflow_dispatch:
