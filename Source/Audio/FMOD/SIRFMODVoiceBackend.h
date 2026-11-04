@@ -28,6 +28,9 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Audio/SIRAudioBackend.h>
 #include <Core/Containers/SIRContainerResult.h>
 
+class SIRFMODMixerBackend;
+class SIRFMODSnapshotBackend;
+
 // FMOD SDK objects are provider-private. The native operations are injected so
 // that the exact same lifetime controller is testable without licensed binaries.
 // All operations are single-owner-thread; no native callback touches these slots.
@@ -100,6 +103,8 @@ private:
 	SIRFMODContext *m_pContext = nullptr;
 	const sirContainerAllocator_t *m_pAllocator = nullptr;
 	sirFMODVoiceNativeOps_t m_Ops = {};
+	SIRFMODMixerBackend *m_pMixerBackend = nullptr;
+	SIRFMODSnapshotBackend *m_pSnapshotBackend = nullptr;
 	sirFMODRegisteredEvent_t *m_pEvents = nullptr;
 	sirFMODParameterBinding_t *m_pParameters = nullptr;
 	sirFMODEmitterSpatial_t *m_pEmitters = nullptr;
@@ -154,6 +159,9 @@ public:
 	sirAudioResult_t configure( SIRFMODContext *pContext, const sirContainerAllocator_t *pAllocator, const sirFMODVoiceNativeOps_t &ops,
 	                            uint32_t nMaxRegisteredEvents, uint32_t nMaxRegisteredParameters = 0, uint32_t nMaxEmitters = 0,
 	                            uint32_t nMaxListeners = 0, uint32_t nMaxEmitterParameters = 0 ) noexcept;
+	// Borrowed controllers must remain alive through SIRAudioSystem::shutdown().
+	// Bind them after their initialize() and before this voice backend initializes.
+	sirAudioResult_t bindControllers( SIRFMODMixerBackend *pMixer, SIRFMODSnapshotBackend *pSnapshots ) noexcept;
 	sirAudioResult_t registerEvent( uint64_t nEventId, const char *szPath ) noexcept;
 	sirAudioResult_t unregisterEvent( uint64_t nEventId ) noexcept;
 	sirAudioResult_t registerParameter( uint64_t nControlId, uint64_t nNativeId, sirAudioControlScope_t eScope ) noexcept;

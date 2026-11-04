@@ -483,6 +483,80 @@ sirAudioResult_t SIRAudioSystem::setGlobalParameter( uint64_t nParameterId, floa
 	return enqueue( command, false );
 }
 
+sirAudioResult_t SIRAudioSystem::setBusVolume( uint64_t nBusId, float fVolume ) noexcept
+{
+	if ( !m_bInitialized ) {
+		return SIR_AUDIO_NOT_INITIALIZED;
+	}
+	if ( nBusId == 0 || !std::isfinite( fVolume ) || fVolume < 0.0f || fVolume > 1.0f ) {
+		return SIR_AUDIO_INVALID_ARGUMENT;
+	}
+	sirAudioCommand_t command = {};
+	command.eType = SIR_AUDIO_COMMAND_SET_BUS_VOLUME;
+	command.nControlId = nBusId;
+	command.fValue = fVolume;
+	return enqueue( command, false );
+}
+
+sirAudioResult_t SIRAudioSystem::setBusMute( uint64_t nBusId, bool bMute ) noexcept
+{
+	if ( !m_bInitialized ) {
+		return SIR_AUDIO_NOT_INITIALIZED;
+	}
+	if ( nBusId == 0 ) {
+		return SIR_AUDIO_INVALID_ARGUMENT;
+	}
+	sirAudioCommand_t command = {};
+	command.eType = SIR_AUDIO_COMMAND_SET_BUS_MUTE;
+	command.nControlId = nBusId;
+	command.fValue = bMute ? 1.0f : 0.0f;
+	return enqueue( command, false );
+}
+
+sirAudioResult_t SIRAudioSystem::setVCAVolume( uint64_t nVCAId, float fVolume ) noexcept
+{
+	if ( !m_bInitialized ) {
+		return SIR_AUDIO_NOT_INITIALIZED;
+	}
+	if ( nVCAId == 0 || !std::isfinite( fVolume ) || fVolume < 0.0f || fVolume > 1.0f ) {
+		return SIR_AUDIO_INVALID_ARGUMENT;
+	}
+	sirAudioCommand_t command = {};
+	command.eType = SIR_AUDIO_COMMAND_SET_VCA_VOLUME;
+	command.nControlId = nVCAId;
+	command.fValue = fVolume;
+	return enqueue( command, false );
+}
+
+sirAudioResult_t SIRAudioSystem::startSnapshot( uint64_t nSnapshotId ) noexcept
+{
+	if ( !m_bInitialized ) {
+		return SIR_AUDIO_NOT_INITIALIZED;
+	}
+	if ( nSnapshotId == 0 ) {
+		return SIR_AUDIO_INVALID_ARGUMENT;
+	}
+	sirAudioCommand_t command = {};
+	command.eType = SIR_AUDIO_COMMAND_START_SNAPSHOT;
+	command.nEventId = nSnapshotId;
+	return enqueue( command, false );
+}
+
+sirAudioResult_t SIRAudioSystem::stopSnapshot( uint64_t nSnapshotId, sirAudioStopMode_t eMode ) noexcept
+{
+	if ( !m_bInitialized ) {
+		return SIR_AUDIO_NOT_INITIALIZED;
+	}
+	if ( nSnapshotId == 0 || ( eMode != SIR_AUDIO_STOP_ALLOW_FADE && eMode != SIR_AUDIO_STOP_IMMEDIATE ) ) {
+		return SIR_AUDIO_INVALID_ARGUMENT;
+	}
+	sirAudioCommand_t command = {};
+	command.eType = SIR_AUDIO_COMMAND_STOP_SNAPSHOT;
+	command.nEventId = nSnapshotId;
+	command.eStopMode = eMode;
+	return enqueue( command, true );
+}
+
 sirAudioResult_t SIRAudioSystem::getPlaybackState( sirAudioPlayingHandle_t hPlaying, sirAudioPlaybackState_t &eState ) noexcept
 {
 	if ( !isValid( hPlaying ) ) {
