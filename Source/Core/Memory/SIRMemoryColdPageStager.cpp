@@ -51,7 +51,7 @@ bool SIRMemoryColdPageStager::add( SIRMemorySegment *pSegment, uint64_t nOffset,
 		return false;
 	}
 	if ( m_nCount != 0 ) {
-		const sirStageRange_t &prev = m_pRanges[m_nCount - 1];
+		const sirStageRange_t& prev = m_pRanges[m_nCount - 1];
 		if ( prev.pSegment == pSegment && nOffset < prev.nOffset ) {
 			return false;
 		}

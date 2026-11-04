@@ -35,8 +35,8 @@ class SIRLinearAllocator
 {
 public:
 	SIRLinearAllocator( void );
-	SIRLinearAllocator( const SIRLinearAllocator & ) = delete;
-	SIRLinearAllocator &operator=( const SIRLinearAllocator & ) = delete;
+	SIRLinearAllocator( const SIRLinearAllocator& ) = delete;
+	SIRLinearAllocator& operator=( const SIRLinearAllocator& ) = delete;
 
 	bool init( SIRMemorySegment *pSegment, uint64_t nCommitIncrementBytes = 0, uint64_t nUsableBytes = 0 );
 
