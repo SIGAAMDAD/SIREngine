@@ -65,8 +65,7 @@ sirAudioResult_t SIRFMODVoiceBackend::configure( SIRFMODContext *pContext, const
 	return SIR_AUDIO_OK;
 }
 
-sirAudioResult_t SIRFMODVoiceBackend::bindControllers( SIRFMODMixerBackend *pMixer,
-                                                        SIRFMODSnapshotBackend *pSnapshots ) noexcept
+sirAudioResult_t SIRFMODVoiceBackend::bindControllers( SIRFMODMixerBackend *pMixer, SIRFMODSnapshotBackend *pSnapshots ) noexcept
 {
 	if ( m_pContext == nullptr || !m_pContext->isReady() ) {
 		return SIR_AUDIO_NOT_INITIALIZED;
@@ -74,8 +73,7 @@ sirAudioResult_t SIRFMODVoiceBackend::bindControllers( SIRFMODMixerBackend *pMix
 	if ( m_bInitialized ) {
 		return SIR_AUDIO_BUSY;
 	}
-	if ( ( pMixer != nullptr && !pMixer->isBoundTo( m_pContext ) ) ||
-	     ( pSnapshots != nullptr && !pSnapshots->isBoundTo( m_pContext ) ) ) {
+	if ( ( pMixer != nullptr && !pMixer->isBoundTo( m_pContext ) ) || ( pSnapshots != nullptr && !pSnapshots->isBoundTo( m_pContext ) ) ) {
 		return SIR_AUDIO_INVALID_ARGUMENT;
 	}
 	m_pMixerBackend = pMixer;
@@ -518,10 +516,9 @@ sirAudioResult_t SIRFMODVoiceBackend::submitOne( const sirAudioCommand_t &comman
 		if ( m_pSnapshotBackend == nullptr ) {
 			return SIR_AUDIO_UNSUPPORTED;
 		}
-		const sirAudioResult_t eResult =
-		    command.eType == SIR_AUDIO_COMMAND_START_SNAPSHOT
-		        ? m_pSnapshotBackend->startSnapshot( command.nEventId )
-		        : m_pSnapshotBackend->stopSnapshot( command.nEventId, command.eStopMode );
+		const sirAudioResult_t eResult = command.eType == SIR_AUDIO_COMMAND_START_SNAPSHOT
+		                                     ? m_pSnapshotBackend->startSnapshot( command.nEventId )
+		                                     : m_pSnapshotBackend->stopSnapshot( command.nEventId, command.eStopMode );
 		m_nLastNativeResult = m_pSnapshotBackend->getLastNativeResult();
 		return eResult;
 	}
