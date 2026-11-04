@@ -211,3 +211,35 @@ swapping, missing-cache rollback, allocator failure, resident-budget pressure,
 wrong-thread rejection, and resource cleanup. This is a verified cache
 **provider**, not a native optimizer process, code executor or disk eviction
 manager. Those remain separate implementation stages.
+
+
+## Optimizer coordinator (implementation slice 9)
+
+`SIRScriptOptimizationCoordinator` is the bounded (64-job) owner-thread coordinator
+for the external compiler/optimizer. Its transport is a versioned, host-supplied
+child-process/IPC callback table: start, stop, atomic send of one 160-byte request,
+and nonblocking receive of one 200-byte reply. The transport owns process launch,
+pipe framing and watchdog; this module does not claim to launch an OS process.
+Requests receive monotonic process-lifetime job IDs; generation-checked host
+handles and terminal records are separate identities. Cancellation before dispatch
+skips the worker; cancellation after dispatch keeps a tombstone until the reply
+is drained or the worker stops. A malformed, unexpected or truncated wire reply
+invalidates the worker and fails outstanding in-flight jobs. Bounded pump budgets
+keep optimizer traffic off the frame's critical path.
+
+For successful completions, the coordinator checks the reply against the original
+request, registers its cache descriptor with `SIRScriptCachedProgramSource`, and
+stages through `SIRScriptCodeManager`. Staging acquires verified payload bytes
+from the persistent cache. Only then does optional activation make the revision
+visible to future runtime loads. Stage/activate failures unregister the source
+entry and discard staged code to avoid leaked ownership. A successful job
+transfers its source/code handles to the caller, which must retire/unregister
+those resources independently of the job record.
+
+No frontend, bytecode VM, LLVM optimizer, physical worker process, IPC pipe
+implementation, timeout watchdog or cache eviction policy is included here.
+A worker needs a separate canonical input staging contract because the existing
+fixed request record holds an input size and cache recipe key, not source bytes.
+The planned gameplay language and SUIL both use this pipeline after their own
+frontends produce canonical, versioned build recipes and backend-specific
+artifacts. Their language semantics remain outside the coordinator.
