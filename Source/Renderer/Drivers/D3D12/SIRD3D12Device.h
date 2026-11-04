@@ -150,8 +150,10 @@ public:
 	bool isReady( void ) const noexcept;
 	bool queryAdapterInfo( sirD3D12AdapterInfo_t *pInfo ) const noexcept;
 	bool queryLocalMemory( sirD3D12MemoryInfo_t *pInfo ) const noexcept;
+	bool queryUnifiedMemory( bool *pUnified ) const noexcept;
 	HRESULT getLastError( void ) const noexcept;
 	SIRD3D12Transfers &getTransfers( void ) noexcept;
+	const SIRD3D12Transfers &getTransfers( void ) const noexcept;
 	SIRD3D12ComputeQueue &getComputeQueue( void ) noexcept;
 	bool snapshotCompletionSet( sirD3D12CompletionSet_t *pSet ) const noexcept;
 	bool pollCompletionSet( const sirD3D12CompletionSet_t &set, bool *pCompleted ) noexcept;

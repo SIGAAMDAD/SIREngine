@@ -609,7 +609,27 @@ HRESULT SIRD3D12Device::getLastError( void ) const noexcept
 	return m_nLastError;
 }
 
+bool SIRD3D12Device::queryUnifiedMemory( bool *pUnified ) const noexcept
+{
+	if ( pUnified == nullptr || !isReady() ) {
+		return false;
+	}
+	*pUnified = false;
+	D3D12_FEATURE_DATA_ARCHITECTURE1 architecture = {};
+	architecture.NodeIndex = 0;
+	if ( FAILED( m_pDevice->CheckFeatureSupport( D3D12_FEATURE_ARCHITECTURE1, &architecture, sizeof( architecture ) ) ) ) {
+		return false;
+	}
+	*pUnified = architecture.UMA != FALSE;
+	return true;
+}
+
 SIRD3D12Transfers &SIRD3D12Device::getTransfers( void ) noexcept
+{
+	return m_Transfers;
+}
+
+const SIRD3D12Transfers &SIRD3D12Device::getTransfers( void ) const noexcept
 {
 	return m_Transfers;
 }

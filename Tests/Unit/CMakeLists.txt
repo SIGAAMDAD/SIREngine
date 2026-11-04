@@ -131,3 +131,16 @@ if(SIR_WITH_D3D12)
     add_test(NAME renderer.d3d12.warp-headless COMMAND SIRD3D12HeadlessTests)
     sir_configure_owned_target(SIRD3D12HeadlessTests)
 endif()
+
+# The portable contract runs independently of the native graphics driver.
+add_executable(SIRGraphicsInterfaceTests SIRGraphicsInterfaceTests.cpp)
+target_link_libraries(SIRGraphicsInterfaceTests PRIVATE SIR::Graphics)
+add_test(NAME renderer.graphics.interface COMMAND SIRGraphicsInterfaceTests)
+sir_configure_owned_target(SIRGraphicsInterfaceTests)
+
+if(SIR_WITH_D3D12)
+    add_executable(SIRD3D12SharedApiTests SIRD3D12SharedApiTests.cpp)
+    target_link_libraries(SIRD3D12SharedApiTests PRIVATE SIR::D3D12 SIR::Graphics)
+    add_test(NAME renderer.d3d12.shared-api COMMAND SIRD3D12SharedApiTests)
+    sir_configure_owned_target(SIRD3D12SharedApiTests)
+endif()
