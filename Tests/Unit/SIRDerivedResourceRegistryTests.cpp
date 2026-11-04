@@ -415,39 +415,39 @@ static void testInvalidInputsAndCapacity( void )
 
 static void testProviderPinCapacityAndReclaim( void )
 {
-    sirDerivedTestAllocator_t allocator = {};
-    {
-        SIRResourceGraphConfig config = graphConfig( allocator );
-        config.m_nMaxProviderPins = 1;
-        SIRResourceGraph graph( config );
-        REQUIRE( graph.isReady() );
-        SIRResourceGraphWriter *pWriter = graph.getWriter();
-        REQUIRE( pWriter != nullptr );
-        const SIRResourceHandle hSource = publishSource( *pWriter, 703 );
-        SIRResourceDerivedRegistry registry( graph, derivedConfig( allocator ) );
-        REQUIRE( registry.isReady() );
-        sirDerivedTestProvider_t provider = {};
-        REQUIRE( registry.registerProvider( 7, { &provider, releaseNative } ) == SIR_RESOURCE_RESULT_SUCCESS );
-        SIRDerivedResourceHandle first = {};
-        SIRDerivedResourceHandle second = {};
-        {
-            SIRResourceReadScope scope( graph );
-            SIRResourceView view;
-            REQUIRE( graph.resolve( scope, hSource, &view ) == SIR_RESOURCE_RESULT_SUCCESS );
-            const SIRDerivedResourceRegistration a = derived( hSource, 1, 7, 1, 900, 32 );
-            const SIRDerivedResourceRegistration b = derived( hSource, 1, 7, 2, 901, 32 );
-            REQUIRE( registry.registerRepresentation( scope, view, a, &first ) == SIR_RESOURCE_RESULT_SUCCESS );
-            REQUIRE( registry.registerRepresentation( scope, view, b, &second ) == SIR_RESOURCE_RESULT_OUT_OF_BUDGET );
-            REQUIRE( registry.retireRepresentation( first, 1 ) == SIR_RESOURCE_RESULT_SUCCESS );
-            REQUIRE( registry.updateCompletedFence( 7, 1 ) == SIR_RESOURCE_RESULT_SUCCESS );
-            REQUIRE( provider.nReleased == 1 );
-            REQUIRE( registry.registerRepresentation( scope, view, b, &second ) == SIR_RESOURCE_RESULT_SUCCESS );
-        }
-        REQUIRE( registry.retireRepresentation( second, 2 ) == SIR_RESOURCE_RESULT_SUCCESS );
-        REQUIRE( registry.updateCompletedFence( 7, 2 ) == SIR_RESOURCE_RESULT_SUCCESS );
-        REQUIRE( provider.nReleased == 2 );
-    }
-    REQUIRE( allocator.nLive.load() == 0 );
+	sirDerivedTestAllocator_t allocator = {};
+	{
+		SIRResourceGraphConfig config = graphConfig( allocator );
+		config.m_nMaxProviderPins = 1;
+		SIRResourceGraph graph( config );
+		REQUIRE( graph.isReady() );
+		SIRResourceGraphWriter *pWriter = graph.getWriter();
+		REQUIRE( pWriter != nullptr );
+		const SIRResourceHandle hSource = publishSource( *pWriter, 703 );
+		SIRResourceDerivedRegistry registry( graph, derivedConfig( allocator ) );
+		REQUIRE( registry.isReady() );
+		sirDerivedTestProvider_t provider = {};
+		REQUIRE( registry.registerProvider( 7, { &provider, releaseNative } ) == SIR_RESOURCE_RESULT_SUCCESS );
+		SIRDerivedResourceHandle first = {};
+		SIRDerivedResourceHandle second = {};
+		{
+			SIRResourceReadScope scope( graph );
+			SIRResourceView view;
+			REQUIRE( graph.resolve( scope, hSource, &view ) == SIR_RESOURCE_RESULT_SUCCESS );
+			const SIRDerivedResourceRegistration a = derived( hSource, 1, 7, 1, 900, 32 );
+			const SIRDerivedResourceRegistration b = derived( hSource, 1, 7, 2, 901, 32 );
+			REQUIRE( registry.registerRepresentation( scope, view, a, &first ) == SIR_RESOURCE_RESULT_SUCCESS );
+			REQUIRE( registry.registerRepresentation( scope, view, b, &second ) == SIR_RESOURCE_RESULT_OUT_OF_BUDGET );
+			REQUIRE( registry.retireRepresentation( first, 1 ) == SIR_RESOURCE_RESULT_SUCCESS );
+			REQUIRE( registry.updateCompletedFence( 7, 1 ) == SIR_RESOURCE_RESULT_SUCCESS );
+			REQUIRE( provider.nReleased == 1 );
+			REQUIRE( registry.registerRepresentation( scope, view, b, &second ) == SIR_RESOURCE_RESULT_SUCCESS );
+		}
+		REQUIRE( registry.retireRepresentation( second, 2 ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( registry.updateCompletedFence( 7, 2 ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( provider.nReleased == 2 );
+	}
+	REQUIRE( allocator.nLive.load() == 0 );
 }
 
 int main( void )
