@@ -53,10 +53,10 @@ public:
 	{
 		clear();
 	}
-	SIRStaticVector( const SIRStaticVector & ) = delete;
-	SIRStaticVector &operator=( const SIRStaticVector & ) = delete;
-	SIRStaticVector( SIRStaticVector && ) = delete;
-	SIRStaticVector &operator=( SIRStaticVector && ) = delete;
+	SIRStaticVector( const SIRStaticVector& ) = delete;
+	SIRStaticVector& operator=( const SIRStaticVector& ) = delete;
+	SIRStaticVector( SIRStaticVector&& ) = delete;
+	SIRStaticVector& operator=( SIRStaticVector&& ) = delete;
 
 	uint32_t getSize( void ) const noexcept
 	{
@@ -82,12 +82,12 @@ public:
 	{
 		return iIndex < m_nSize ? slot( iIndex ) : nullptr;
 	}
-	T &operator[]( uint32_t iIndex ) noexcept
+	T& operator[]( uint32_t iIndex ) noexcept
 	{
 		assert( iIndex < m_nSize );
 		return *slot( iIndex );
 	}
-	const T &operator[]( uint32_t iIndex ) const noexcept
+	const T& operator[]( uint32_t iIndex ) const noexcept
 	{
 		assert( iIndex < m_nSize );
 		return *slot( iIndex );
@@ -99,7 +99,7 @@ public:
 	}
 
 	template <typename... Args>
-	sirContainerResult_t tryEmplaceBack( Args &&...args )
+	sirContainerResult_t tryEmplaceBack( Args&&...args )
 	{
 		if ( m_nSize == N ) {
 			return SIR_CONTAINER_CAPACITY_EXCEEDED;
@@ -109,11 +109,11 @@ public:
 		return SIR_CONTAINER_OK;
 	}
 
-	sirContainerResult_t tryPushBack( const T &value )
+	sirContainerResult_t tryPushBack( const T& value )
 	{
 		return tryEmplaceBack( value );
 	}
-	sirContainerResult_t tryPushBack( T &&value )
+	sirContainerResult_t tryPushBack( T&& value )
 	{
 		return tryEmplaceBack( std::move( value ) );
 	}

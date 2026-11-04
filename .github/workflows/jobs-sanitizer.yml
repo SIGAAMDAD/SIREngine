@@ -1,0 +1,48 @@
+name: Scheduler sanitizers
+
+on:
+  pull_request:
+    branches: [develop, main]
+    paths:
+      - 'Source/Core/Jobs/**'
+      - 'Tests/Unit/SIRTask*'
+      - 'Tests/Unit/CMakeLists.txt'
+      - 'Tests/Unit/SIRInfrastructureIntegrationTests.cpp'
+      - 'Tests/Unit/SIRResourceFileLoadTests.cpp'
+      - 'Source/Resources/**'
+      - '.github/workflows/jobs-sanitizer.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  jobs-sanitizer:
+    name: Scheduler ASan + UBSan / Linux
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Fetch pinned GoogleTest
+        run: git submodule update --init ThirdParty/GoogleTest
+      - uses: ./.github/actions/setup-build-tools
+      - name: Configure native sanitized scheduler build
+        run: >
+          cmake --preset dev
+          -DSIR_WITH_GOOGLETEST=ON
+          -DSIR_ENABLE_ASAN=ON
+          -DSIR_ENABLE_UBSAN=ON
+      - name: Compile native engine and scheduler tests
+        run: cmake --build --preset dev
+      - name: Repeat scheduler tests under sanitizers
+        env:
+          ASAN_OPTIONS: detect_leaks=1:halt_on_error=1
+          UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+        run: >
+          ctest --preset dev
+          --output-on-failure
+          --no-tests=error
+          --repeat until-fail:5
+          -R '^(core[.]jobs[.]|resources[.](integration[.]stress|streaming[.]native-file-io))'
