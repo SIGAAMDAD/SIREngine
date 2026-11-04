@@ -8,6 +8,7 @@ set(SIR_CORE_PLATFORM_COMMON
     SIRAtomic.cpp
     Input/SIRInputActions.cpp
     Input/SIRInputReplay.cpp
+    Input/SIRInputHistory.cpp
     Input/SIRInputBackend.cpp
     Input/SIRInputText.cpp
     Input/SIRInputUIDispatch.cpp

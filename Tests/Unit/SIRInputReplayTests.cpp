@@ -210,10 +210,56 @@ static bool sirTestAuthoritativePlayback( void ) noexcept
 	return true;
 }
 
+static bool sirTestHistoryServiceCapture( void ) noexcept
+{
+	sirInputReplayFrame_t szStorage[4] = {};
+	SIRInputHistory history;
+	SIRInputService input;
+	SIRReplayTestBackend backend;
+	if ( !history.initialize( szStorage, 4 ) || !input.attach( backend ) ||
+	     !input.actions().addContext( 31, 0, 10, true ) || !input.actions().addAction( 91, 0 ) ) {
+		return false;
+	}
+	const sirInputActionBinding_t binding = { 91, 31, 66, SIR_INPUT_NO_CHORD, 0, 0, 32767,
+	                                         SIR_INPUT_KEYBOARD, SIR_INPUT_BUTTON, SIR_INPUT_BIND_NONE };
+	if ( !input.actions().addBinding( binding ) || !input.begin( 51 ) ) {
+		return false;
+	}
+	sirInputDeviceId_t hKeyboard = {};
+	const sirInputControlChange_t pressed = { SIR_INPUT_BUTTON, 66, 1 };
+	const sirInputReplayKey_t key = { 91, 0 };
+	if ( !input.connect( { 0, 801, SIR_INPUT_TEST, SIR_INPUT_KEYBOARD }, &hKeyboard ) ||
+	     !input.emitControls( SIR_INPUT_TEST, hKeyboard, &pressed, 1 ) ||
+	     input.captureHistoryTick( history, &key, 1 ) || !input.publish() ||
+	     !input.captureHistoryTick( history, &key, 1 ) || history.count() != 1 ) {
+		return false;
+	}
+	const sirInputControlChange_t released = { SIR_INPUT_BUTTON, 66, 0 };
+	if ( !input.begin( 52 ) || !input.emitControls( SIR_INPUT_TEST, hKeyboard, &released, 1 ) ||
+	     !input.publish() || !input.captureHistoryTick( history, &key, 1 ) || history.count() != 2 ) {
+		return false;
+	}
+	SIRInputService playback;
+	if ( !playback.startReplay() || !playback.begin( 51 ) ||
+	     playback.queueHistoryTick( history, 52 ) || !playback.queueHistoryTick( history, 51 ) ||
+	     !playback.publish() ) {
+		return false;
+	}
+	sirInputActionState_t state = {};
+	if ( !playback.queryAction( 91, 0, &state ) || !state.bHeld || !state.bPressed ||
+	     !playback.begin( 52 ) || !playback.queueHistoryTick( history, 52 ) || !playback.publish() ||
+	     !playback.queryAction( 91, 0, &state ) || state.bHeld || !state.bReleased ) {
+		return false;
+	}
+	input.shutdown();
+	playback.shutdown();
+	return true;
+}
+
 int main( void )
 {
 	if ( !sirTestReplayServiceTick() || !sirTestReplayInvalidRecord() ||
-	     !sirTestAuthoritativePlayback() ) {
+	     !sirTestAuthoritativePlayback() || !sirTestHistoryServiceCapture() ) {
 		fputs( "SIRInputReplayTests FAILED\n", stderr );
 		return 1;
 	}
