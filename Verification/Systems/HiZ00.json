@@ -1,0 +1,59 @@
+{
+  "schema": 1,
+  "system": "HiZ00",
+  "source_roots": [
+    "Source/Renderer/Visibility"
+  ],
+  "build_targets": [
+    "SIRVisibilityFoundationTests",
+    "SIRVisibilityFoundationGoogleTests"
+  ],
+  "test_regex": "^renderer\\.visibility\\.",
+  "cmake_defines": {
+    "SIR_WITH_GOOGLETEST": "ON",
+    "SIR_WITH_VULKAN": "OFF",
+    "SIR_WITH_D3D12": "OFF"
+  },
+  "coverage": {
+    "lines": 100,
+    "branches": 100,
+    "functions": 100,
+    "regions": 100
+  },
+  "contracts": [
+    {
+      "id": "hiz-cpu-reference",
+      "test_regex": "^renderer\\.visibility\\.foundation$",
+      "required": true
+    },
+    {
+      "id": "hiz-npot-pyramid",
+      "test_regex": "NPOTPyramidMatchesIndependentMinimum|OddEdgeChildAndReverseZStrictness",
+      "required": true
+    },
+    {
+      "id": "hiz-invalid-depth",
+      "test_regex": "NaNInfinityAndNegativeDepthDoNotWrite|InvalidPyramidAndOffViewportFailOpen",
+      "required": true
+    },
+    {
+      "id": "hiz-transactional-alias",
+      "test_regex": "OverlappingDepthAndOutputFailBeforeWrites|OverlappingOutputRangesAreRejected|ImmutableInputAliasingRejected|CapacityFailureIsTransactional",
+      "required": true
+    },
+    {
+      "id": "hiz-history-and-features",
+      "test_regex": "MissingHistoryMakesEveryCandidateVisible|HistoryRequiresConsecutiveMatchingView|GPURequirementsAndDisabledFallback",
+      "required": true
+    },
+    {
+      "id": "hiz-randomized-conservatism",
+      "test_regex": "RandomizedReferenceNeverFalseOccludes",
+      "required": true
+    }
+  ],
+  "required_gates": [
+    "asan",
+    "ubsan"
+  ]
+}
