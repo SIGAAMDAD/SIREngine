@@ -24,7 +24,6 @@ static constexpr uint32_t SIR_D3D12_SEALED_UPLOAD_BUFFER = 3;
 static constexpr uint32_t SIR_D3D12_SEALED_READBACK_BUFFER = 4;
 static constexpr uint32_t SIR_D3D12_SEALED_GPU_UPLOAD_BUFFER = 5;
 
-
 static void *sirD3D12AllocateHostMetadata( size_t nBytes, size_t nAlignment, void *pUser ) noexcept
 {
 	SIRGeneralHeap *pHeap = ( SIRGeneralHeap * )pUser;
@@ -356,9 +355,10 @@ HRESULT SIRD3D12Memory::createTexture2D( uint32_t nWidth, uint32_t nHeight, DXGI
 	allocation.HeapType = D3D12_HEAP_TYPE_DEFAULT;
 	allocation.Flags = D3D12MA::ALLOCATION_FLAG_WITHIN_BUDGET;
 	if ( m_bSealed ) {
-		const uint32_t iPool = ( resource.Flags & ( D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL ) ) != 0
-		                           ? SIR_D3D12_SEALED_ATTACHMENT_TEXTURE
-		                           : SIR_D3D12_SEALED_SAMPLED_TEXTURE;
+		const uint32_t iPool =
+		    ( resource.Flags & ( D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL ) ) != 0
+		        ? SIR_D3D12_SEALED_ATTACHMENT_TEXTURE
+		        : SIR_D3D12_SEALED_SAMPLED_TEXTURE;
 		if ( m_szSealedPools[iPool] == nullptr ) {
 			m_nLastError = E_OUTOFMEMORY;
 			return m_nLastError;
@@ -388,9 +388,10 @@ HRESULT SIRD3D12Memory::createTexture( const D3D12_RESOURCE_DESC &resource, D3D1
 	allocation.HeapType = D3D12_HEAP_TYPE_DEFAULT;
 	allocation.Flags = D3D12MA::ALLOCATION_FLAG_WITHIN_BUDGET;
 	if ( m_bSealed ) {
-		const uint32_t iPool = ( resource.Flags & ( D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL ) ) != 0
-		                           ? SIR_D3D12_SEALED_ATTACHMENT_TEXTURE
-		                           : SIR_D3D12_SEALED_SAMPLED_TEXTURE;
+		const uint32_t iPool =
+		    ( resource.Flags & ( D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL ) ) != 0
+		        ? SIR_D3D12_SEALED_ATTACHMENT_TEXTURE
+		        : SIR_D3D12_SEALED_SAMPLED_TEXTURE;
 		if ( m_szSealedPools[iPool] == nullptr ) {
 			m_nLastError = E_OUTOFMEMORY;
 			return m_nLastError;

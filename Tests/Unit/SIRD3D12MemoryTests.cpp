@@ -143,8 +143,8 @@ int main( void )
 	    SUCCEEDED( sealed.createBuffer( D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_COMMON, 4096, &szAllocations[0] ) ) &&
 	    SUCCEEDED( sealed.createBuffer( D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ, 4096, &szAllocations[1] ) ) &&
 	    SUCCEEDED( sealed.createBuffer( D3D12_HEAP_TYPE_READBACK, D3D12_RESOURCE_STATE_COPY_DEST, 4096, &szAllocations[2] ) ) &&
-	    SUCCEEDED( sealed.createTexture2D( 32, 32, DXGI_FORMAT_R8G8B8A8_UNORM, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, nullptr,
-	                                       &szAllocations[3] ) ) &&
+	    SUCCEEDED( sealed.createTexture2D( 32, 32, DXGI_FORMAT_R8G8B8A8_UNORM, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON,
+	                                       nullptr, &szAllocations[3] ) ) &&
 	    SUCCEEDED( sealed.createTexture2D( 32, 32, DXGI_FORMAT_R8G8B8A8_UNORM, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET,
 	                                       D3D12_RESOURCE_STATE_COMMON, nullptr, &szAllocations[4] ) );
 	bool bPlaced = bCreated;
@@ -153,6 +153,8 @@ int main( void )
 	}
 	D3D12MA::Allocation *pExcess = nullptr;
 	const HRESULT nOversized = sealed.createBuffer( D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_COMMON, 64ULL * 1024 * 1024, &pExcess );
+	D3D12MA::Allocation *pAbsentPool = nullptr;
+	const HRESULT nMissing = sealed.createBuffer( D3D12_HEAP_TYPE_GPU_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ, 4096, &pAbsentPool );
 	sirD3D12AllocationLedger_t stable = {};
 	const bool bStable = sealed.queryAllocationLedger( &stable ) && stable.nBlockBytes == reserved.nBlockBytes &&
 	                     stable.nCommittedBytes == reserved.nCommittedBytes;
@@ -165,7 +167,8 @@ int main( void )
 		}
 	}
 	sealed.shutdown();
-	if ( !bPlaced || nOversized != E_OUTOFMEMORY || pExcess != nullptr || !bStable ) {
+	if ( !bPlaced || nOversized != E_OUTOFMEMORY || pExcess != nullptr || nMissing != E_OUTOFMEMORY || pAbsentPool != nullptr ||
+	     !bStable ) {
 		return 20;
 	}
 	return 0;
