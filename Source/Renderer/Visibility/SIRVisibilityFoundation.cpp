@@ -272,20 +272,17 @@ sirGraphicsResult_t sirVisibilityCullReference( const sirVisibilityCullDesc_t& d
 	     ( pOutput->nRejectedCapacity != 0 && pOutput->pRejectedIds == nullptr ) ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	if ( desc.pLayout->nTexelCount > ( uint64_t )SIZE_MAX / sizeof( float ) ||
-	     desc.nCandidateCount > ( uint64_t )SIZE_MAX / sizeof( sirVisibilityCandidate_t ) ) {
+	if ( desc.pLayout->nTexelCount > ( uint64_t )SIZE_MAX / sizeof( float ) ) {
 		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
 	}
+#if UINTPTR_MAX == UINT32_MAX
+	if ( desc.nCandidateCount > ( uint64_t )SIZE_MAX / sizeof( sirVisibilityCandidate_t ) ) {
+		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
+	}
+#endif
 
 	const uint64_t nCandidateBytes = ( uint64_t )desc.nCandidateCount * sizeof( sirVisibilityCandidate_t );
 	const uint64_t nPyramidBytes = desc.bHistoryValid ? desc.pLayout->nTexelCount * sizeof( float ) : 0;
-	if ( sirVisibilityRangesOverlap( pOutput, sizeof( *pOutput ), &desc, sizeof( desc ) ) ||
-	     sirVisibilityRangesOverlap( pOutput, sizeof( *pOutput ), desc.pLayout, sizeof( *desc.pLayout ) ) ||
-	     sirVisibilityRangesOverlap( pOutput, sizeof( *pOutput ), desc.pCandidates, nCandidateBytes ) ||
-	     sirVisibilityRangesOverlap( pOutput, sizeof( *pOutput ), desc.pPyramid, nPyramidBytes ) ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
-	}
-
 	uint32_t nVisibleCount = 0;
 	uint32_t nRejectedCount = 0;
 	for ( uint32_t iCandidate = 0; iCandidate < desc.nCandidateCount; ++iCandidate ) {

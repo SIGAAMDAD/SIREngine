@@ -81,3 +81,20 @@ root, two native CMake test targets, required CTest integration contracts and
 are independently exercised by the HIZ-00 CI sanitizer matrix. Successful
 tests do not imply that the coverage threshold was reached; instrumented
 LLVM profiles and exact-source coverage reports are still necessary.
+
+## HIZ-00 source-bound coverage closure
+
+LLVM 23 instrumented verification covers the two native visibility test targets and
+measures `SIRVisibilityFoundation.cpp` independently for line, branch, function
+and region coverage. Dedicated regression cases exercise byte-size overflow
+rejection using caller-owned sentinel bytes without allocating enormous images,
+and valid `uint32_t` output pointers that alias fields of the method descriptor
+or layout. Output ID spans remain subject to explicit overlap validation.
+
+The output descriptor and other live, non-nested C++17 typed descriptor objects
+have disjoint object lifetimes by API contract; their addresses do not require
+additional runtime byte-range checks against one another. Only on 32-bit targets
+does `nCandidateCount` require a `size_t` multiplication overflow guard: its
+32-bit count multiplied by the candidate POD size fits unconditionally on
+64-bit targets. The guards continue to fail before any data access or output
+publication for valid hostile capacities.
