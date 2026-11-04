@@ -393,7 +393,8 @@ SIRD3D12Device::~SIRD3D12Device( void ) noexcept
 	shutdown();
 }
 
-bool SIRD3D12Device::initialize( bool bUseWarp, const sirD3D12TransferPoolConfig_t &transferConfig ) noexcept
+bool SIRD3D12Device::initialize( bool bUseWarp, const sirD3D12TransferPoolConfig_t &transferConfig,
+                                SIRGeneralHeap *pCpuHeap ) noexcept
 {
 	if ( isReady() || m_pFactory != nullptr || m_bGraphicsUnsafe ) {
 		m_nLastError = E_FAIL;
@@ -473,7 +474,7 @@ bool SIRD3D12Device::initialize( bool bUseWarp, const sirD3D12TransferPoolConfig
 		return false;
 	}
 
-	if ( !m_Memory.initialize( m_pAdapter.Get(), m_pDevice.Get() ) ) {
+	if ( !m_Memory.initialize( m_pAdapter.Get(), m_pDevice.Get(), pCpuHeap ) ) {
 		m_nLastError = m_Memory.getLastError();
 		shutdown();
 		return false;
@@ -705,6 +706,11 @@ bool SIRD3D12Device::queryAdapterInfo( sirD3D12AdapterInfo_t *pInfo ) const noex
 	pInfo->bSoftware = ( desc.Flags & DXGI_ADAPTER_FLAG3_SOFTWARE ) != 0;
 	memcpy( pInfo->szName, desc.Description, sizeof( pInfo->szName ) );
 	return true;
+}
+
+bool SIRD3D12Device::queryAllocationLedger( sirD3D12AllocationLedger_t *pLedger ) const noexcept
+{
+	return isReady() && m_Memory.queryAllocationLedger( pLedger );
 }
 
 bool SIRD3D12Device::queryLocalMemory( sirD3D12MemoryInfo_t *pInfo ) const noexcept

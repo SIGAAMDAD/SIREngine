@@ -150,11 +150,13 @@ public:
 	SIRD3D12Device( const SIRD3D12Device & ) = delete;
 	SIRD3D12Device &operator=( const SIRD3D12Device & ) = delete;
 
-	bool initialize( bool bUseWarp, const sirD3D12TransferPoolConfig_t &transferConfig ) noexcept;
+	bool initialize( bool bUseWarp, const sirD3D12TransferPoolConfig_t &transferConfig,
+	                 SIRGeneralHeap *pCpuHeap = nullptr ) noexcept;
 	void shutdown( void ) noexcept;
 	bool isReady( void ) const noexcept;
 	bool queryAdapterInfo( sirD3D12AdapterInfo_t *pInfo ) const noexcept;
 	bool queryLocalMemory( sirD3D12MemoryInfo_t *pInfo ) const noexcept;
+	bool queryAllocationLedger( sirD3D12AllocationLedger_t *pLedger ) const noexcept;
 	bool queryUnifiedMemory( bool *pUnified ) const noexcept;
 	HRESULT getLastError( void ) const noexcept;
 	ID3D12Device *getNativeDevice( void ) const noexcept;

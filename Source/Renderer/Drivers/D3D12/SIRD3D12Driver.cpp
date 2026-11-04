@@ -117,10 +117,14 @@ sirGraphicsResult_t SIRD3D12RenderingDevice::initialize( bool bSoftware, const s
 	sirD3D12TransferPoolConfig_t config = {};
 	config.nSlotBytes = nSlotBytes;
 	config.bPreferDirectMapped = true;
-	if ( !m_Native.initialize( bSoftware, config ) ) {
+	if ( !m_Native.initialize( bSoftware, config, desc.pCpuHeap ) ) {
 		return SIR_GRAPHICS_DRIVER_ERROR;
 	}
 	m_bSoftware = bSoftware;
+	if ( !m_Native.getMemory()->configureResidentBudget( desc.nResidentBudgetBytes ) ) {
+		m_Native.shutdown();
+		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
+	}
 	if ( getDeviceGeneration() == 0 ) {
 		m_Native.shutdown();
 		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
@@ -191,14 +195,19 @@ sirGraphicsResult_t SIRD3D12RenderingDevice::queryMemoryBudget( sirGraphicsMemor
 	if ( !m_Native.queryLocalMemory( &native ) ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
-	pBudget->nBudgetBytes = native.nBudgetBytes;
+	sirD3D12AllocationLedger_t ledger = {};
+	if ( !m_Native.queryAllocationLedger( &ledger ) ) {
+		return SIR_GRAPHICS_DEVICE_LOST;
+	}
+	pBudget->nBudgetBytes = ledger.nResidentLimitBytes != 0 && ledger.nResidentLimitBytes < native.nBudgetBytes
+	                            ? ledger.nResidentLimitBytes : native.nBudgetBytes;
 	pBudget->nResidentBytes = native.nCurrentUsageBytes;
-	pBudget->nCommittedBytes = m_Resources.getAllocatedBytes();
-	pBudget->nPeakCommittedBytes = m_Resources.getPeakAllocatedBytes();
+	pBudget->nCommittedBytes = ledger.nCommittedBytes;
+	pBudget->nPeakCommittedBytes = ledger.nPeakCommittedBytes;
 	sirD3D12ResidentTransferView_t transfer = {};
 	if ( m_Native.getTransfers().queryResidentArena( &transfer ) ) {
-		pBudget->nUploadMappedBytes = transfer.nReservedBufferBytes;
-		pBudget->nReadbackMappedBytes = transfer.nReservedBufferBytes;
+		pBudget->nUploadMappedBytes = transfer.nPersistentMappedBytes / 2;
+		pBudget->nReadbackMappedBytes = transfer.nPersistentMappedBytes / 2;
 	}
 	pBudget->nUploadMappedBytes += m_Resources.getMappedUploadBytes();
 	pBudget->nReadbackMappedBytes += m_Resources.getMappedReadbackBytes();
