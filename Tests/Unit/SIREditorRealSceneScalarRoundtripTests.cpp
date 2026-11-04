@@ -96,9 +96,9 @@ int main( void )
 	assert( nVBoxType != nButtonType && nVBox != nPluginButton );
 
 	sirObjectTypeDescriptor_t szTypes[2] = {};
-	sirObjectPropertyDescriptor_t szDescriptors[6] = {};
+	sirObjectPropertyDescriptor_t szDescriptors[7] = {};
 	SIRObjectRegistry registry;
-	assert( registry.initialize( szTypes, 2, szDescriptors, 6 ) == SIR_OBJECT_OK );
+	assert( registry.initialize( szTypes, 2, szDescriptors, 7 ) == SIR_OBJECT_OK );
 	assert( registry.registerType( { nVBoxType, 0, 201 } ) == SIR_OBJECT_OK );
 	assert( registry.registerType( { nButtonType, 0, 202 } ) == SIR_OBJECT_OK );
 	assert( registry.registerProperty( { 1, nVBoxType, 101, SIR_PROPERTY_REAL64, {} } ) == SIR_OBJECT_OK );
@@ -107,6 +107,7 @@ int main( void )
 	assert( registry.registerProperty( { 4, nVBoxType, 104, SIR_PROPERTY_REAL64, {} } ) == SIR_OBJECT_OK );
 	assert( registry.registerProperty( { 5, nButtonType, 105, SIR_PROPERTY_INT64, {} } ) == SIR_OBJECT_OK );
 	assert( registry.registerProperty( { 6, nVBoxType, 106, SIR_PROPERTY_INT64, {} } ) == SIR_OBJECT_OK );
+	assert( registry.registerProperty( { 7, nVBoxType, 107, SIR_PROPERTY_UINT64, {} } ) == SIR_OBJECT_OK );
 	assert( registry.seal() == SIR_OBJECT_OK );
 
 	sirEditorScalarBinding_t szBindings[16] = {};
@@ -229,6 +230,18 @@ int main( void )
 	assert( workspace.getDocument().queueRemove( nPluginButton ) == SIR_EDITOR_OK );
 	shifted.nFlags ^= 1;
 	assert( workspace.getDocument().queueUpsert( shifted ) == SIR_EDITOR_OK );
+	assert( workspace.getDocument().commitEdit() == SIR_EDITOR_OK );
+	assert( sirEditorSaveBoundScene( save ) == SIR_EDITOR_FILE_SAVE_UNSUPPORTED_EDIT );
+	assert( workspace.getDocument().undo() == SIR_EDITOR_OK );
+
+	// Typed values without a serialized scalar source binding are not lost.
+	assert( workspace.getDocument().beginEdit( workspace.getDocument().getRevision() ) == SIR_EDITOR_OK );
+	sirEditorProperty_t unbound = {};
+	unbound.nNodeId = nVBox;
+	unbound.nPropertyId = 7;
+	unbound.value.eKind = SIR_PROPERTY_UINT64;
+	unbound.value.nPayload = 1234;
+	assert( workspace.getDocument().queueSetProperty( unbound ) == SIR_EDITOR_OK );
 	assert( workspace.getDocument().commitEdit() == SIR_EDITOR_OK );
 	assert( sirEditorSaveBoundScene( save ) == SIR_EDITOR_FILE_SAVE_UNSUPPORTED_EDIT );
 	assert( workspace.getDocument().undo() == SIR_EDITOR_OK );

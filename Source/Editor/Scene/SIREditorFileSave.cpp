@@ -233,6 +233,16 @@ sirEditorFileSaveResult_t sirEditorSaveBoundScene( const sirEditorSceneSaveReque
 			return SIR_EDITOR_FILE_SAVE_UNSUPPORTED_EDIT;
 		}
 	}
+	// Only authored properties represented by this scalar binding table
+	// can be persisted. Added/unbound properties require the full writer.
+	uint32_t nAuthoredProperties = 0;
+	const sirEditorResult_t eProperties = request.pBridge->pDocument->copyPropertySnapshot( nullptr, 0, &nAuthoredProperties );
+	if ( eProperties != SIR_EDITOR_OUT_OF_CAPACITY && eProperties != SIR_EDITOR_OK ) {
+		return SIR_EDITOR_FILE_SAVE_SERIALIZATION_FAILED;
+	}
+	if ( nAuthoredProperties != request.pBridge->nBindingCount ) {
+		return SIR_EDITOR_FILE_SAVE_UNSUPPORTED_EDIT;
+	}
 	size_t nOutputBytes = 0;
 	if ( sirEditorExportBoundScalars( *request.pBridge, nullptr, 0, &nOutputBytes ) != SIR_EDITOR_SCALAR_BRIDGE_OK ) {
 		return SIR_EDITOR_FILE_SAVE_SERIALIZATION_FAILED;

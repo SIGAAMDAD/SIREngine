@@ -59,3 +59,7 @@ source scene before replacing disk bytes. New/deleted/reparented nodes, flag
 changes, and node reincarnation (stable ID reused with a new generation) are
 rejected until the full structural scene writer is available; no obsolete
 hierarchy is silently serialized.
+
+The scalar save path also refuses documents with added typed properties that
+lack serialized source bindings, preserving those authored values for the
+future complete property writer instead of silently dropping them.
