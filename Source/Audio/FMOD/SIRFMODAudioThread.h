@@ -90,8 +90,9 @@ typedef struct sirFMODAudioThreadConfig_s
 typedef struct sirFMODThreadSlot_s
 {
 	SIRAtomic<uint32_t> nState;
-	SIRAtomic<uint8_t> bCancel;
+	SIRAtomic<uint64_t> nCancelTicket;
 	SIRAtomic<uint64_t> nTicket;
+	SIRAtomic<uint8_t> nOperation;
 	uint32_t nGeneration;
 	sirFMODThreadRequest_t request;
 	sirFMODThreadResult_t result;

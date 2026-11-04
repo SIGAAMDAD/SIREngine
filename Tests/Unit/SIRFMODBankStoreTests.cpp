@@ -1036,6 +1036,7 @@ static void testAudioOwnerThread( const sirContainerAllocator_t *pAllocator )
 	std::thread producers[4];
 	for ( uint32_t iProducer = 0; iProducer < 4; ++iProducer ) {
 		producers[iProducer] = std::thread( [&worker, &nCompletedStress]() {
+			uint64_t nPreviousTicket = 0;
 			for ( uint32_t iRequest = 0; iRequest < 128; ++iRequest ) {
 				sirFMODThreadRequest_t query = {};
 				query.eOperation = SIR_FMOD_THREAD_QUERY_PLAYBACK;
@@ -1049,8 +1050,12 @@ static void testAudioOwnerThread( const sirContainerAllocator_t *pAllocator )
 					std::this_thread::yield();
 				}
 				checkBank( eSubmit == SIR_AUDIO_PENDING );
+				if ( nPreviousTicket != 0 ) {
+					checkBank( worker.cancel( nPreviousTicket ) == SIR_AUDIO_INVALID_HANDLE );
+				}
 				const sirFMODThreadResult_t answer = testWaitForTicket( worker, nTicket );
 				checkBank( answer.eResult == SIR_AUDIO_INVALID_HANDLE );
+				nPreviousTicket = nTicket;
 				++nCompletedStress;
 			}
 		} );
