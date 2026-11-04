@@ -4,7 +4,7 @@ find_package(Git REQUIRED)
 find_program(SIR_CLANG_FORMAT NAMES clang-format-23 clang-format REQUIRED)
 execute_process(COMMAND "${SIR_CLANG_FORMAT}" --version OUTPUT_VARIABLE sirVersion
     RESULT_VARIABLE sirStatus OUTPUT_STRIP_TRAILING_WHITESPACE)
-if(NOT sirStatus EQUAL 0 OR NOT sirVersion MATCHES "22\\.1\\.5")
+if(NOT sirStatus EQUAL 0 OR NOT sirVersion MATCHES "23\\.1\\.5")
     message(FATAL_ERROR "Expected clang-format 23.1.5; got: ${sirVersion}")
 endif()
 execute_process(COMMAND "${GIT_EXECUTABLE}" -C "${SIR_ROOT}" ls-files --
