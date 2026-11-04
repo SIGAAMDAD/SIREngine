@@ -124,27 +124,18 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12CommandQueue> m_pGraphicsQueue;
 	Microsoft::WRL::ComPtr<ID3D12Fence> m_pGraphicsFence;
 	Microsoft::WRL::ComPtr<ID3D12Fence> m_pDirectComputeDependency;
-	Microsoft::WRL::ComPtr<ID3D12CommandAllocator> m_pCopyAllocator;
-	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> m_pCopyCommands;
 	SIRD3D12Memory m_Memory;
 	SIRD3D12Transfers m_Transfers;
 	SIRD3D12ComputeQueue m_ComputeQueue;
 	SIRD3D12GraphicsKernel m_GraphicsKernel;
-	D3D12MA::Allocation *m_pPendingUpload = nullptr;
-	D3D12MA::Allocation *m_pPendingDevice = nullptr;
-	D3D12MA::Allocation *m_pPendingReadback = nullptr;
 	HANDLE m_hFenceEvent = nullptr;
 	uint64_t m_nNextFenceValue = 0;
 	uint64_t m_nDeviceGeneration = 0;
-	uint64_t m_nPendingFenceValue = 0;
 	uint64_t m_nDirectDependencyFenceValue = 0;
 	bool m_bGraphicsUnsafe = false;
-	uint64_t m_nCompletedCopyCount = 0;
 	HRESULT m_nLastError = S_OK;
 
-	bool waitForPendingCopy( void ) noexcept;
 	bool retireDirectComputeDependency( void ) noexcept;
-	void releasePendingCopy( void ) noexcept;
 	void releaseRetiredAllocations( bool bCompletionProven ) noexcept;
 
 public:
@@ -160,7 +151,6 @@ public:
 	bool queryAdapterInfo( sirD3D12AdapterInfo_t *pInfo ) const noexcept;
 	bool queryLocalMemory( sirD3D12MemoryInfo_t *pInfo ) const noexcept;
 	HRESULT getLastError( void ) const noexcept;
-	uint64_t getCompletedCopyCount( void ) const noexcept;
 	SIRD3D12Transfers &getTransfers( void ) noexcept;
 	SIRD3D12ComputeQueue &getComputeQueue( void ) noexcept;
 	bool snapshotCompletionSet( sirD3D12CompletionSet_t *pSet ) const noexcept;
@@ -186,9 +176,6 @@ public:
 	uint32_t getRetiredAllocationCount( void ) const noexcept;
 	uint32_t getRetirementCapacity( void ) const noexcept;
 
-	// Synchronous diagnostic fixture only; production transfers will use pooled,
-	// asynchronous allocations and queue-completion tokens.
-	bool copyRoundTripForTest( const void *pInput, void *pOutput, uint64_t nBytes ) noexcept;
 };
 
 #endif // __SIRENGINE_SIRD3D12DEVICE_H__

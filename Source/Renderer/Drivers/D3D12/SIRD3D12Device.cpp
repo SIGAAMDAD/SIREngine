@@ -441,23 +441,6 @@ bool SIRD3D12Device::initialize( bool bUseWarp, const sirD3D12TransferPoolConfig
 		return false;
 	}
 
-	m_nLastError = m_pDevice->CreateCommandAllocator( D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS( m_pCopyAllocator.GetAddressOf() ) );
-	if ( FAILED( m_nLastError ) ) {
-		shutdown();
-		return false;
-	}
-	m_nLastError = m_pDevice->CreateCommandList( 0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_pCopyAllocator.Get(), nullptr,
-	                                             IID_PPV_ARGS( m_pCopyCommands.GetAddressOf() ) );
-	if ( FAILED( m_nLastError ) ) {
-		shutdown();
-		return false;
-	}
-	m_nLastError = m_pCopyCommands->Close();
-	if ( FAILED( m_nLastError ) ) {
-		shutdown();
-		return false;
-	}
-
 	if ( !m_Transfers.initialize( m_pDevice.Get(), &m_Memory, transferConfig ) ) {
 		m_nLastError = m_Transfers.getLastError();
 		shutdown();
@@ -472,65 +455,6 @@ bool SIRD3D12Device::initialize( bool bUseWarp, const sirD3D12TransferPoolConfig
 	m_nNextFenceValue = 1;
 	m_nLastError = S_OK;
 	return true;
-}
-
-bool SIRD3D12Device::waitForPendingCopy( void ) noexcept
-{
-	if ( m_pPendingUpload == nullptr ) {
-		return true;
-	}
-	if ( m_pGraphicsQueue == nullptr || m_pGraphicsFence == nullptr || m_hFenceEvent == nullptr ) {
-		m_nLastError = E_FAIL;
-		return false;
-	}
-
-	if ( m_nPendingFenceValue == 0 ) {
-		const uint64_t nFence = m_nNextFenceValue;
-		m_nLastError = m_pGraphicsQueue->Signal( m_pGraphicsFence.Get(), nFence );
-		if ( FAILED( m_nLastError ) ) {
-			return false;
-		}
-		++m_nNextFenceValue;
-		m_nPendingFenceValue = nFence;
-	}
-	const uint64_t nCompleted = m_pGraphicsFence->GetCompletedValue();
-	if ( nCompleted == UINT64_MAX ) {
-		m_nLastError = DXGI_ERROR_DEVICE_REMOVED;
-		return false;
-	}
-	if ( nCompleted < m_nPendingFenceValue ) {
-		m_nLastError = m_pGraphicsFence->SetEventOnCompletion( m_nPendingFenceValue, m_hFenceEvent );
-		if ( FAILED( m_nLastError ) ) {
-			return false;
-		}
-		const DWORD nWait = WaitForSingleObject( m_hFenceEvent, 15000 );
-		if ( nWait != WAIT_OBJECT_0 ) {
-			m_nLastError = nWait == WAIT_TIMEOUT ? HRESULT_FROM_WIN32( ERROR_TIMEOUT ) : HRESULT_FROM_WIN32( GetLastError() );
-			return false;
-		}
-	}
-	if ( m_pGraphicsFence->GetCompletedValue() < m_nPendingFenceValue ) {
-		m_nLastError = E_FAIL;
-		return false;
-	}
-	return true;
-}
-
-void SIRD3D12Device::releasePendingCopy( void ) noexcept
-{
-	if ( m_pPendingReadback != nullptr ) {
-		m_pPendingReadback->Release();
-		m_pPendingReadback = nullptr;
-	}
-	if ( m_pPendingDevice != nullptr ) {
-		m_pPendingDevice->Release();
-		m_pPendingDevice = nullptr;
-	}
-	if ( m_pPendingUpload != nullptr ) {
-		m_pPendingUpload->Release();
-		m_pPendingUpload = nullptr;
-	}
-	m_nPendingFenceValue = 0;
 }
 
 bool SIRD3D12Device::waitForGraphicsFence( uint64_t nFenceValue, uint32_t nTimeoutMs ) noexcept
@@ -603,15 +527,11 @@ void SIRD3D12Device::shutdown( void ) noexcept
 	const bool bGraphicsSafe = !m_bGraphicsUnsafe && ( m_nNextFenceValue <= 1 || waitForGraphicsFence( m_nNextFenceValue - 1, 15000 ) );
 	const bool bDirectSafe = bGraphicsSafe && retireDirectComputeDependency();
 	m_GraphicsKernel.shutdown( bDirectSafe );
-	const bool bCopySafe = waitForPendingCopy();
 	const bool bComputeSafe = m_ComputeQueue.shutdown();
 	const bool bTransferSafe = m_Transfers.shutdown();
-	const bool bAllQueuesSafe = bDirectSafe && bCopySafe && bComputeSafe && bTransferSafe;
+	const bool bAllQueuesSafe = bDirectSafe && bComputeSafe && bTransferSafe;
 	releaseRetiredAllocations( bAllQueuesSafe );
 	if ( bAllQueuesSafe ) {
-		releasePendingCopy();
-		m_pCopyCommands.Reset();
-		m_pCopyAllocator.Reset();
 		m_Memory.shutdown();
 		m_pGraphicsQueue.Reset();
 		m_pGraphicsFence.Reset();
@@ -619,25 +539,19 @@ void SIRD3D12Device::shutdown( void ) noexcept
 	} else {
 		// The command list may still reference every pending allocation. Leak
 		// those native objects deliberately rather than create a GPU use-after-free.
-		( void )m_pCopyCommands.Detach();
-		( void )m_pCopyAllocator.Detach();
 		( void )m_pDirectComputeDependency.Detach();
 		( void )m_pGraphicsQueue.Detach();
 		( void )m_pGraphicsFence.Detach();
 		( void )m_pDevice.Detach();
 		m_Memory.abandon();
-		m_pPendingUpload = nullptr;
-		m_pPendingDevice = nullptr;
-		m_pPendingReadback = nullptr;
 	}
-	if ( bDirectSafe && bCopySafe && bComputeSafe && bTransferSafe && m_hFenceEvent != nullptr ) {
+	if ( bDirectSafe && bComputeSafe && bTransferSafe && m_hFenceEvent != nullptr ) {
 		CloseHandle( m_hFenceEvent );
 	}
 	m_hFenceEvent = nullptr;
 	m_pAdapter.Reset();
 	m_pFactory.Reset();
 	m_nNextFenceValue = 0;
-	m_nPendingFenceValue = 0;
 	m_nDirectDependencyFenceValue = 0;
 	m_bGraphicsUnsafe = !bDirectSafe;
 	m_nDeviceGeneration = 0;
@@ -646,7 +560,7 @@ void SIRD3D12Device::shutdown( void ) noexcept
 bool SIRD3D12Device::isReady( void ) const noexcept
 {
 	return m_pDevice != nullptr && m_pGraphicsQueue != nullptr && m_pGraphicsFence != nullptr && m_hFenceEvent != nullptr &&
-	       m_pCopyAllocator != nullptr && m_pCopyCommands != nullptr && m_Memory.isReady() && m_Transfers.isReady() &&
+	       m_Memory.isReady() && m_Transfers.isReady() &&
 	       m_ComputeQueue.isReady() && m_nDeviceGeneration != 0 && !m_bGraphicsUnsafe;
 }
 
@@ -693,11 +607,6 @@ bool SIRD3D12Device::queryLocalMemory( sirD3D12MemoryInfo_t *pInfo ) const noexc
 HRESULT SIRD3D12Device::getLastError( void ) const noexcept
 {
 	return m_nLastError;
-}
-
-uint64_t SIRD3D12Device::getCompletedCopyCount( void ) const noexcept
-{
-	return m_nCompletedCopyCount;
 }
 
 SIRD3D12Transfers &SIRD3D12Device::getTransfers( void ) noexcept
@@ -1047,89 +956,3 @@ uint32_t SIRD3D12Device::getRetirementCapacity( void ) const noexcept
 	return s_nRetirementCapacity;
 }
 
-bool SIRD3D12Device::copyRoundTripForTest( const void *pInput, void *pOutput, uint64_t nBytes ) noexcept
-{
-	constexpr uint64_t MAX_TEST_COPY_BYTES = 16ULL * 1024ULL * 1024ULL;
-	if ( !isReady() || pInput == nullptr || pOutput == nullptr || nBytes == 0 || nBytes > MAX_TEST_COPY_BYTES ) {
-		m_nLastError = E_INVALIDARG;
-		return false;
-	}
-
-	if ( m_pPendingUpload != nullptr ) {
-		if ( !waitForPendingCopy() ) {
-			return false;
-		}
-		releasePendingCopy();
-	}
-
-	Microsoft::WRL::ComPtr<D3D12MA::Allocation> pUpload;
-	Microsoft::WRL::ComPtr<D3D12MA::Allocation> pDeviceBuffer;
-	Microsoft::WRL::ComPtr<D3D12MA::Allocation> pReadback;
-	m_nLastError = m_Memory.createBuffer( D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ, nBytes, pUpload.GetAddressOf() );
-	if ( FAILED( m_nLastError ) ) {
-		return false;
-	}
-	m_nLastError = m_Memory.createBuffer( D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_COPY_DEST, nBytes, pDeviceBuffer.GetAddressOf() );
-	if ( FAILED( m_nLastError ) ) {
-		return false;
-	}
-	m_nLastError = m_Memory.createBuffer( D3D12_HEAP_TYPE_READBACK, D3D12_RESOURCE_STATE_COPY_DEST, nBytes, pReadback.GetAddressOf() );
-	if ( FAILED( m_nLastError ) ) {
-		return false;
-	}
-
-	D3D12_RANGE emptyRead = { 0, 0 };
-	void *pUploadBytes = nullptr;
-	m_nLastError = pUpload->GetResource()->Map( 0, &emptyRead, &pUploadBytes );
-	if ( FAILED( m_nLastError ) || pUploadBytes == nullptr ) {
-		return false;
-	}
-	memcpy( pUploadBytes, pInput, ( size_t )nBytes );
-	pUpload->GetResource()->Unmap( 0, nullptr );
-
-	m_nLastError = m_pCopyAllocator->Reset();
-	if ( FAILED( m_nLastError ) ) {
-		return false;
-	}
-	m_nLastError = m_pCopyCommands->Reset( m_pCopyAllocator.Get(), nullptr );
-	if ( FAILED( m_nLastError ) ) {
-		return false;
-	}
-	m_pCopyCommands->CopyBufferRegion( pDeviceBuffer->GetResource(), 0, pUpload->GetResource(), 0, nBytes );
-	D3D12_RESOURCE_BARRIER barrier = {};
-	barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-	barrier.Transition.pResource = pDeviceBuffer->GetResource();
-	barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-	barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
-	barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_SOURCE;
-	m_pCopyCommands->ResourceBarrier( 1, &barrier );
-	m_pCopyCommands->CopyBufferRegion( pReadback->GetResource(), 0, pDeviceBuffer->GetResource(), 0, nBytes );
-	m_nLastError = m_pCopyCommands->Close();
-	if ( FAILED( m_nLastError ) ) {
-		return false;
-	}
-
-	m_pPendingUpload = pUpload.Detach();
-	m_pPendingDevice = pDeviceBuffer.Detach();
-	m_pPendingReadback = pReadback.Detach();
-	m_nPendingFenceValue = 0;
-	ID3D12CommandList *pLists[] = { m_pCopyCommands.Get() };
-	m_pGraphicsQueue->ExecuteCommandLists( 1, pLists );
-	if ( !waitForPendingCopy() ) {
-		return false;
-	}
-
-	D3D12_RANGE readRange = { 0, ( SIZE_T )nBytes };
-	void *pReadBytes = nullptr;
-	m_nLastError = m_pPendingReadback->GetResource()->Map( 0, &readRange, &pReadBytes );
-	if ( FAILED( m_nLastError ) || pReadBytes == nullptr ) {
-		releasePendingCopy();
-		return false;
-	}
-	memcpy( pOutput, pReadBytes, ( size_t )nBytes );
-	m_pPendingReadback->GetResource()->Unmap( 0, &emptyRead );
-	releasePendingCopy();
-	++m_nCompletedCopyCount;
-	m_nLastError = S_OK;
-	return true;
-}

@@ -23,6 +23,7 @@ static bool testAsyncCopyQueue( SIRD3D12Device &device )
 {
 	SIRD3D12Transfers &transfers = device.getTransfers();
 	const uint32_t nSlots = transfers.getSlotCount();
+	const uint64_t nCompletedAtStart = transfers.getCompletedCopyCount();
 	sirD3D12ResidentTransferView_t arena = {};
 	if ( !transfers.isReady() || nSlots != 3 || !transfers.queryResidentArena( &arena ) || arena.nSlotBytes == 0 ||
 	     arena.nReservedBufferBytes == 0 || arena.nPersistentMappedBytes != arena.nSlotBytes * nSlots * 2 || arena.pWriteBytes == nullptr ||
@@ -90,7 +91,7 @@ static bool testAsyncCopyQueue( SIRD3D12Device &device )
 			}
 		}
 	}
-	if ( transfers.getCompletedCopyCount() != 3 + 96 - 14 ) {
+	if ( transfers.getCompletedCopyCount() != nCompletedAtStart + 3 + 96 - 14 ) {
 		return false;
 	}
 
@@ -632,8 +633,7 @@ int main( void )
 	uint32_t szInput[32] = {};
 	uint32_t szOutput[32] = {};
 
-	if ( device.isReady() || device.queryAdapterInfo( &adapter ) || device.queryLocalMemory( &memory ) ||
-	     device.copyRoundTripForTest( szInput, szOutput, sizeof( szInput ) ) ) {
+	if ( device.isReady() || device.queryAdapterInfo( &adapter ) || device.queryLocalMemory( &memory ) ) {
 		fputs( "D3D12 accepted an operation before initialization\n", stderr );
 		return 1;
 	}
@@ -650,9 +650,12 @@ int main( void )
 	for ( uint32_t iWord = 0; iWord < 32; ++iWord ) {
 		szInput[iWord] = 0x12345678U ^ ( iWord * 1337U );
 	}
-	if ( device.copyRoundTripForTest( nullptr, szOutput, sizeof( szInput ) ) ||
-	     device.copyRoundTripForTest( szInput, nullptr, sizeof( szInput ) ) || device.copyRoundTripForTest( szInput, szOutput, 0 ) ) {
-		fputs( "D3D12 invalid transfer accepted\n", stderr );
+	SIRD3D12Transfers &transfers = device.getTransfers();
+	sirD3D12TransferTicket_t invalidTransfer = {};
+	if ( transfers.submit( nullptr, sizeof( szInput ), &invalidTransfer ) ||
+	     transfers.submit( szInput, 0, &invalidTransfer ) ||
+	     transfers.submit( szInput, sizeof( szInput ), nullptr ) ) {
+		fputs( "D3D12 invalid resident transfer accepted\n", stderr );
 		return 1;
 	}
 
@@ -661,14 +664,18 @@ int main( void )
 			szInput[iWord] = ( iPass * 0x9e3779b9U ) ^ ( iWord * 1337U );
 		}
 		memset( szOutput, 0, sizeof( szOutput ) );
-		if ( !device.copyRoundTripForTest( szInput, szOutput, sizeof( szInput ) ) || memcmp( szInput, szOutput, sizeof( szInput ) ) != 0 ) {
-			fprintf( stderr, "D3D12 pooled command / D3D12MA transfer failed at pass %u: HRESULT 0x%08lx\n", iPass,
-			         ( unsigned long )device.getLastError() );
+		sirD3D12TransferTicket_t ticket = {};
+		if ( !transfers.submit( szInput, sizeof( szInput ), &ticket ) ||
+		     !transfers.wait( ticket, 15000 ) ||
+		     !transfers.receive( ticket, szOutput, sizeof( szOutput ) ) ||
+		     memcmp( szInput, szOutput, sizeof( szInput ) ) != 0 ) {
+			fprintf( stderr, "D3D12 resident transfer failed at pass %u: HRESULT 0x%08lx\n", iPass,
+			         ( unsigned long )transfers.getLastError() );
 			return 1;
 		}
 	}
-	if ( device.getCompletedCopyCount() != 64 ) {
-		fputs( "D3D12 completion counter drifted\n", stderr );
+	if ( transfers.getCompletedCopyCount() != 64 ) {
+		fputs( "D3D12 resident transfer completion counter drifted\n", stderr );
 		return 1;
 	}
 
@@ -716,8 +723,7 @@ int main( void )
 
 	device.shutdown();
 	device.shutdown();
-	if ( device.getRetiredAllocationCount() != 0 || device.isReady() ||
-	     device.copyRoundTripForTest( szInput, szOutput, sizeof( szInput ) ) ) {
+	if ( device.getRetiredAllocationCount() != 0 || device.isReady() ) {
 		fputs( "D3D12 accepted an operation after shutdown\n", stderr );
 		return 1;
 	}

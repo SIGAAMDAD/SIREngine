@@ -150,3 +150,12 @@ The headless graphics PSO now takes an explicit maximum render-target width and 
 Each indexed draw reuses those native objects after fence completion, applies a variable viewport/scissor within the resident texture, clears and draws, copies the visible region into the preallocated readback buffer, and transitions the texture back to RENDER_TARGET for reuse. Reading an already completed draw copies from the persistent READBACK mapping without freeing the resource.
 
 WARP tests declare one 64 x 48 resident render target and draw at 32 x 32, 17 x 29 and 64 x 48, verifying native resource reuse across different viewport dimensions. No overloads preserve the per-draw allocation API. This is a bounded headless fixture; production GRDG transient attachment pools, DXGI swapchain lifetime and GPU residency accounting remain future integration.
+
+
+## Removal of the redundant synchronous transfer fixture
+
+The old `SIRD3D12Device::copyRoundTripForTest` path, its private DIRECT queue command allocator/list, temporary upload/default/readback allocation triplet, pending-copy bookkeeping, and duplicate completion counter have been removed outright. These routines allocated and mapped new GPU resources for each invocation, contrary to the resident transfer ownership contract.
+
+Their correctness coverage now executes against `SIRD3D12Transfers` using its explicitly sized, persistently mapped arena and native COPY queue. The previous 64 repeated roundtrip cases, invalid inputs, byte-for-byte readback comparisons, and completed-copy checks are preserved in the test as direct transfer operations; asynchronous saturation, stale tickets, forced staging and cross-queue waits remain covered separately.
+
+No compatibility overload or old transfer abstraction remains in the native D3D12 device.
