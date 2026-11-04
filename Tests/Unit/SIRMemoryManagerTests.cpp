@@ -266,7 +266,6 @@ static bool testRetainedPageBacking( void )
 	return true;
 }
 
-
 static bool testValidationAndBoundaryInputs( void )
 {
 	const uint64_t nPage = SIRVirtualMemory::getPageSize();
@@ -279,15 +278,13 @@ static bool testValidationAndBoundaryInputs( void )
 		SIRMemoryManager cold;
 		SIRMemorySegment unattached;
 		if ( cold.setCommitBudgetBytes( nPage ) || cold.createSegment( "no", nPage ) != nullptr ||
-		     cold.allocateMetadata( nPage, 8 ) != nullptr ||
-		     cold.allocateRecyclableMetadataPage() != nullptr ||
+		     cold.allocateMetadata( nPage, 8 ) != nullptr || cold.allocateRecyclableMetadataPage() != nullptr ||
 		     cold.releaseRecyclableMetadataPage( nullptr ) || cold.setDomainCommitLimit( SIR_MEMORY_DOMAIN_CORE, nPage ) ||
-		     cold.getDomainStats( SIR_MEMORY_DOMAIN_CORE ).nCommittedBytes != 0 ||
-		     unattached.getPageSize() != 0 || unattached.getCommittedBytes() != 0 || unattached.getManager() != nullptr ||
-		     unattached.commit( 0, nPage ) || unattached.decommit( 0, nPage ) ||
-		     unattached.bindRetirementOwner( 1, 1 ) || unattached.retireIdleRange( 0, nPage, 1, 1 ) ||
-		     unattached.cancelRetiredRange( 0, nPage, 1, 1 ) || cold.copyTrace( nullptr, 1 ) != 0 ||
-		     cold.initTraceBuffer( 0 ) || cold.initTraceBuffer( 1 ) ) {
+		     cold.getDomainStats( SIR_MEMORY_DOMAIN_CORE ).nCommittedBytes != 0 || unattached.getPageSize() != 0 ||
+		     unattached.getCommittedBytes() != 0 || unattached.getManager() != nullptr || unattached.commit( 0, nPage ) ||
+		     unattached.decommit( 0, nPage ) || unattached.bindRetirementOwner( 1, 1 ) || unattached.retireIdleRange( 0, nPage, 1, 1 ) ||
+		     unattached.cancelRetiredRange( 0, nPage, 1, 1 ) || cold.copyTrace( nullptr, 1 ) != 0 || cold.initTraceBuffer( 0 ) ||
+		     cold.initTraceBuffer( 1 ) ) {
 			return false;
 		}
 		sirMemoryConfig_t invalid = valid;
@@ -315,39 +312,30 @@ static bool testValidationAndBoundaryInputs( void )
 		if ( cold.init( invalid ) ) {
 			return false;
 		}
-		if ( cold.initBudgeted( valid, { 0, nPage * 24 } ) ||
-		     cold.initBudgeted( valid, { nPage * 25, nPage * 24 } ) ||
-		     cold.initBudgeted( valid, { nPage * 16, nPage * 256 } ) ||
-		     cold.initBudgeted( valid, { nPage * 16 + 1, nPage * 24 } ) ||
+		if ( cold.initBudgeted( valid, { 0, nPage * 24 } ) || cold.initBudgeted( valid, { nPage * 25, nPage * 24 } ) ||
+		     cold.initBudgeted( valid, { nPage * 16, nPage * 256 } ) || cold.initBudgeted( valid, { nPage * 16 + 1, nPage * 24 } ) ||
 		     cold.initBudgeted( valid, { nPage * 16, nPage * 24 + 1 } ) ) {
 			return false;
 		}
 	}
 	{
 		SIRMemoryManager memory( valid, budget );
-		if ( !memory.isInitialized() || memory.init( valid ) ||
-		     memory.initBudgeted( valid, budget ) || memory.setCommitBudgetBytes( nPage * 12 ) ||
-		     memory.setCommitBudgetBytes( nPage * 24 + 1 ) ||
-		     memory.setCommitBudgetBytes( nPage * 25 ) ||
-		     !memory.setCommitBudgetBytes( nPage * 24 ) ||
+		if ( !memory.isInitialized() || memory.init( valid ) || memory.initBudgeted( valid, budget ) ||
+		     memory.setCommitBudgetBytes( nPage * 12 ) || memory.setCommitBudgetBytes( nPage * 24 + 1 ) ||
+		     memory.setCommitBudgetBytes( nPage * 25 ) || !memory.setCommitBudgetBytes( nPage * 24 ) ||
 		     memory.getStats().nCommitBudgetBytes != nPage * 24 ) {
 			return false;
 		}
 		const sirMemoryDomain_t invalidDomain = ( sirMemoryDomain_t )SIR_MEMORY_DOMAIN_COUNT;
-		if ( memory.getDomainStats( invalidDomain ).nCommittedBytes != 0 ||
-		     memory.setDomainCommitLimit( invalidDomain, nPage ) ||
+		if ( memory.getDomainStats( invalidDomain ).nCommittedBytes != 0 || memory.setDomainCommitLimit( invalidDomain, nPage ) ||
 		     memory.setDomainCommitLimit( SIR_MEMORY_DOMAIN_NETWORKING, 0 ) ||
-		     memory.setDomainCommitLimit( SIR_MEMORY_DOMAIN_NETWORKING, nPage + 1 ) ||
-		     memory.allocateMetadata( 0, 8 ) != nullptr ||
-		     memory.allocateMetadata( 8, 3 ) != nullptr ||
-		     memory.allocateMetadata( 8, 8, invalidDomain ) != nullptr ||
+		     memory.setDomainCommitLimit( SIR_MEMORY_DOMAIN_NETWORKING, nPage + 1 ) || memory.allocateMetadata( 0, 8 ) != nullptr ||
+		     memory.allocateMetadata( 8, 3 ) != nullptr || memory.allocateMetadata( 8, 8, invalidDomain ) != nullptr ||
 		     memory.allocateRecyclableMetadataPage( invalidDomain ) != nullptr ||
 		     memory.releaseRecyclableMetadataPage( nullptr, SIR_MEMORY_DOMAIN_NETWORKING ) ||
 		     memory.releaseRecyclableMetadataPage( ( void * )( uintptr_t )1, SIR_MEMORY_DOMAIN_NETWORKING ) ||
-		     memory.createSegment( nullptr, nPage ) != nullptr ||
-		     memory.createSegment( "invalid", nPage, 0, invalidDomain ) != nullptr ||
-		     memory.createSegment( "zero", 0 ) != nullptr ||
-		     memory.createSegment( "large", UINT64_MAX ) != nullptr ||
+		     memory.createSegment( nullptr, nPage ) != nullptr || memory.createSegment( "invalid", nPage, 0, invalidDomain ) != nullptr ||
+		     memory.createSegment( "zero", 0 ) != nullptr || memory.createSegment( "large", UINT64_MAX ) != nullptr ||
 		     memory.createSegment( "limit", nPage, nPage * 2 ) != nullptr ) {
 			return false;
 		}
@@ -355,18 +343,13 @@ static bool testValidationAndBoundaryInputs( void )
 		SIRMemorySegment *pSecond = memory.createSegment( "second", nPage * 2, 0, SIR_MEMORY_DOMAIN_GAMEPLAY );
 		if ( pFirst == nullptr || pSecond == nullptr || memory.createSegment( "third", nPage ) != nullptr ||
 		     pFirst->getReservedBytes() != nPage * 2 || pFirst->getCommitLimitBytes() != nPage ||
-		     pFirst->getDomain() != SIR_MEMORY_DOMAIN_STREAMING ||
-		     pSecond->getCommitLimitBytes() != nPage * 2 ||
-		     pFirst->commit( 0, 0 ) || pFirst->decommit( 0, 0 ) ||
-		     pFirst->commit( 1, nPage ) || pFirst->decommit( 1, nPage ) ||
-		     pFirst->commit( 0, nPage * 3 ) || pFirst->decommit( 0, nPage * 3 ) ||
-		     pFirst->commit( nPage * 3, nPage ) || pFirst->decommit( nPage * 3, nPage ) ) {
+		     pFirst->getDomain() != SIR_MEMORY_DOMAIN_STREAMING || pSecond->getCommitLimitBytes() != nPage * 2 || pFirst->commit( 0, 0 ) ||
+		     pFirst->decommit( 0, 0 ) || pFirst->commit( 1, nPage ) || pFirst->decommit( 1, nPage ) || pFirst->commit( 0, nPage * 3 ) ||
+		     pFirst->decommit( 0, nPage * 3 ) || pFirst->commit( nPage * 3, nPage ) || pFirst->decommit( nPage * 3, nPage ) ) {
 			return false;
 		}
-		if ( !memory.setDomainCommitLimit( SIR_MEMORY_DOMAIN_STREAMING, nPage ) ||
-		     !pFirst->commit( 0, nPage ) ||
-		     memory.setDomainCommitLimit( SIR_MEMORY_DOMAIN_STREAMING, nPage / 2 ) ||
-		     !pFirst->decommit( 0, nPage ) ) {
+		if ( !memory.setDomainCommitLimit( SIR_MEMORY_DOMAIN_STREAMING, nPage ) || !pFirst->commit( 0, nPage ) ||
+		     memory.setDomainCommitLimit( SIR_MEMORY_DOMAIN_STREAMING, nPage / 2 ) || !pFirst->decommit( 0, nPage ) ) {
 			return false;
 		}
 		if ( !memory.setDomainCommitLimit( SIR_MEMORY_DOMAIN_NETWORKING, nPage ) ) {
@@ -380,9 +363,8 @@ static bool testValidationAndBoundaryInputs( void )
 		     memory.releaseRecyclableMetadataPage( pPage, SIR_MEMORY_DOMAIN_NETWORKING ) ) {
 			return false;
 		}
-		if ( memory.initTraceBuffer( 0 ) || !memory.initTraceBuffer( 4 ) ||
-		     memory.initTraceBuffer( 4 ) || memory.copyTrace( nullptr, 1 ) != 0 ||
-		     memory.copyTrace( ( sirMemoryTraceEvent_t * )pPage, 0 ) != 0 ) {
+		if ( memory.initTraceBuffer( 0 ) || !memory.initTraceBuffer( 4 ) || memory.initTraceBuffer( 4 ) ||
+		     memory.copyTrace( nullptr, 1 ) != 0 || memory.copyTrace( ( sirMemoryTraceEvent_t * )pPage, 0 ) != 0 ) {
 			return false;
 		}
 		memory.shutdown();
