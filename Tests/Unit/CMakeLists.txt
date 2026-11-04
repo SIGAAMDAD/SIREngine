@@ -108,6 +108,12 @@ add_test(NAME core.platform.input.actions COMMAND SIRInputActionTests)
 set_tests_properties(core.platform.input.actions PROPERTIES LABELS "core;input;actions" TIMEOUT 60)
 sir_configure_owned_target(SIRInputActionTests)
 
+add_executable(SIRInputProfileNegativeTests SIRInputProfileNegativeTests.cpp)
+target_link_libraries(SIRInputProfileNegativeTests PRIVATE SIR::Core)
+add_test(NAME core.platform.input.profile-negative COMMAND SIRInputProfileNegativeTests)
+set_tests_properties(core.platform.input.profile-negative PROPERTIES LABELS "core;input;profiles;regression" TIMEOUT 60)
+sir_configure_owned_target(SIRInputProfileNegativeTests)
+
 add_executable(SIRInputFrameNegativeTests SIRInputFrameNegativeTests.cpp)
 target_link_libraries(SIRInputFrameNegativeTests PRIVATE SIR::Core)
 add_test(NAME core.platform.input.frame-negative COMMAND SIRInputFrameNegativeTests)
