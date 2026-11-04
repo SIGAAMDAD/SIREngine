@@ -93,6 +93,10 @@ static void testVirtualBackingFaultRecovery( void )
 	s_bFailProtection.store( true, std::memory_order_relaxed );
 	SIR_MEMORY_FAULT_CHECK( memory.allocateMetadata( nPage * 2, 8 ) == nullptr );
 	SIR_MEMORY_FAULT_CHECK( memory.allocateMetadata( nPage * 2, 8 ) != nullptr );
+	SIR_MEMORY_FAULT_CHECK( memory.allocateMetadata( nPage, 8 ) != nullptr );
+	SIR_MEMORY_FAULT_CHECK( memory.allocateMetadata( nPage, 8 ) != nullptr );
+	SIR_MEMORY_FAULT_CHECK( memory.allocateMetadata( nPage, 8, SIR_MEMORY_DOMAIN_CORE ) != nullptr );
+	SIR_MEMORY_FAULT_CHECK( memory.getDomainStats( SIR_MEMORY_DOMAIN_CORE ).nCommittedBytes >= nPage * 2 );
 	SIR_MEMORY_FAULT_CHECK( !memory.setDomainCommitLimit( SIR_MEMORY_DOMAIN_CORE, nPage ) );
 	s_bFailProtection.store( true, std::memory_order_relaxed );
 	SIR_MEMORY_FAULT_CHECK( memory.allocateRecyclableMetadataPage() == nullptr );
