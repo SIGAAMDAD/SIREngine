@@ -30,12 +30,28 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <errno.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 
 static std::atomic<int> s_nFailFstatOrdinal{ 0 };
 static std::atomic<bool> s_bFailMappedRead{ false };
+static std::atomic<int> s_nFailPreadMode{ 0 };
 
 extern "C" int __real_fstat( int nHandle, struct stat *pInfo );
+extern "C" ssize_t __real_pread( int nHandle, void *pDestination, size_t nBytes, off_t nOffset );
 extern "C" void *__real_mmap( void *pAddress, size_t nBytes, int nProtection, int nFlags, int nHandle, off_t nOffset );
+
+extern "C" ssize_t __wrap_pread( int nHandle, void *pDestination, size_t nBytes, off_t nOffset )
+{
+	const int nMode = s_nFailPreadMode.exchange( 0, std::memory_order_relaxed );
+	if ( nMode == 1 ) {
+		errno = EIO;
+		return -1;
+	}
+	if ( nMode == 2 ) {
+		return 0;
+	}
+	return __real_pread( nHandle, pDestination, nBytes, nOffset );
+}
 
 extern "C" int __wrap_fstat( int nHandle, struct stat *pInfo )
 {
@@ -383,6 +399,19 @@ static void testInjectedResourceTransferFailures( void )
 		SIRResourceHandle ignored = {};
 		SIR_IO_CHECK( load.poll( &ignored ) == SIR_RESOURCE_RESULT_FAILED );
 		SIR_IO_CHECK( load.getLastFileResult() == SIR_FILE_ACCESS_DENIED );
+		SIR_IO_CHECK( !load.isActive() );
+		request = sirIORequest( 5003, SIR_RESOURCE_FILE_READ_AT );
+		SIR_IO_CHECK( load.begin( SIR_IO_PATH, request ) == SIR_RESOURCE_RESULT_SUCCESS );
+		s_nFailPreadMode.store( 1, std::memory_order_relaxed );
+		SIR_IO_CHECK( scheduler.pumpCPU( 8 ) == 1 );
+		SIR_IO_CHECK( load.poll( &ignored ) == SIR_RESOURCE_RESULT_FAILED );
+		SIR_IO_CHECK( load.getLastFileResult() == SIR_FILE_IO_ERROR );
+		request = sirIORequest( 5004, SIR_RESOURCE_FILE_READ_AT );
+		SIR_IO_CHECK( load.begin( SIR_IO_PATH, request ) == SIR_RESOURCE_RESULT_SUCCESS );
+		s_nFailPreadMode.store( 2, std::memory_order_relaxed );
+		SIR_IO_CHECK( scheduler.pumpCPU( 8 ) == 1 );
+		SIR_IO_CHECK( load.poll( &ignored ) == SIR_RESOURCE_RESULT_FAILED );
+		SIR_IO_CHECK( load.getLastFileResult() == SIR_FILE_END_OF_FILE );
 		SIR_IO_CHECK( !load.isActive() );
 		SIR_IO_CHECK( scheduler.shutdown() );
 	}
