@@ -183,8 +183,6 @@ int main( void )
 		if ( eRecord != SIR_GRAPHICS_SUCCESS ) {
 			return 29;
 		}
-
-
 	}
 	if ( pBatch->copyBuffer( hGpu, 1024, hSource, 0, sizeof( szExpected ) ) != SIR_GRAPHICS_CAPACITY_EXCEEDED ||
 	     pBatch->close() != SIR_GRAPHICS_SUCCESS ) {
@@ -219,7 +217,8 @@ int main( void )
 	texture.nWidth = 16;
 	texture.nHeight = 16;
 	texture.nDepth = 1;
-	texture.nArrayLayers = 2;
+
+texture.nArrayLayers = 2;
 	texture.nMipLevels = 2;
 	texture.nSampleCount = 1;
 	texture.nUsage =
