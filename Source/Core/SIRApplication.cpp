@@ -1,6 +1,8 @@
 #include <Core/SIRApplication.h>
 
-SIRApplication::SIRApplication( void ) noexcept : m_eState( SIR_APP_UNINITIALIZED ), m_nTicks( 0 ), m_EventRegistry(), m_pInput( nullptr ), m_pInputPump( nullptr ), m_pInputPumpContext( nullptr )
+SIRApplication::SIRApplication( void ) noexcept
+    : m_eState( SIR_APP_UNINITIALIZED ), m_nTicks( 0 ), m_EventRegistry(), m_pInput( nullptr ), m_pInputPump( nullptr ),
+      m_pInputPumpContext( nullptr )
 {
 }
 
@@ -20,6 +22,8 @@ bool SIRApplication::initialize( void ) noexcept
 {
 	if ( m_eState != SIR_APP_UNINITIALIZED ) {
 		return false;
+
+
 	}
 
 	m_eState = SIR_APP_READY;

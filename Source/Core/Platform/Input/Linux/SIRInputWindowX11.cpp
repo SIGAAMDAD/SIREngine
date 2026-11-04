@@ -21,8 +21,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <X11/Xatom.h>
 
 SIRInputWindow::SIRInputWindow( void ) noexcept
-    : m_pInput( nullptr ), m_pDesktop( nullptr ), m_pDisplay( nullptr ), m_nWindow( 0 ), m_bOpen( false ),
-      m_bAttached( false ), m_bRegistered( false ), m_bFocusLost( false )
+    : m_pInput( nullptr ), m_pDesktop( nullptr ), m_pDisplay( nullptr ), m_nWindow( 0 ), m_bOpen( false ), m_bAttached( false ),
+      m_bRegistered( false ), m_bFocusLost( false )
 {
 }
 
