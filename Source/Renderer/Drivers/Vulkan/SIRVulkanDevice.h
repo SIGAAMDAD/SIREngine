@@ -155,6 +155,15 @@ bool sirVulkanGetFormatBlock( VkFormat eFormat, sirVulkanFormatBlock_t *pBlock )
 bool sirVulkanGetSubresourceLayout( const sirVulkanImage_t *pImage, uint32_t nMip, uint32_t nLayer, VkImageLayout *pLayout ) noexcept;
 bool sirVulkanSetSubresourceLayout( sirVulkanImage_t *pImage, uint32_t nMip, uint32_t nLayer, VkImageLayout eLayout ) noexcept;
 
+typedef struct sirVulkanBufferBarrier_s
+{
+	VkPipelineStageFlags2 nSourceStages;
+	VkPipelineStageFlags2 nDestinationStages;
+	VkAccessFlags2 nSourceAccess;
+	VkAccessFlags2 nDestinationAccess;
+	bool bUav;
+} sirVulkanBufferBarrier_t;
+
 typedef struct sirVulkanImageBarrier_s
 {
 	VkImageLayout eBefore;
@@ -180,13 +189,15 @@ typedef enum sirVulkanRecordedKind_e : uint8_t
 {
 	SIR_VULKAN_RECORDED_BUFFER_COPY = 0,
 	SIR_VULKAN_RECORDED_TEXTURE_COPY,
-	SIR_VULKAN_RECORDED_IMAGE_BARRIER
+	SIR_VULKAN_RECORDED_IMAGE_BARRIER,
+	SIR_VULKAN_RECORDED_BUFFER_BARRIER
 } sirVulkanRecordedKind_t;
 
 typedef struct sirVulkanRecordedCommand_s
 {
 	sirVulkanRecordedKind_t eKind;
 	sirVulkanBufferCopy_t bufferCopy;
+	sirVulkanBufferBarrier_t bufferBarrier;
 	sirVulkanBuffer_t *pBuffer;
 	sirVulkanImage_t *pImage;
 	sirVulkanTextureTransfer_t textureCopy;

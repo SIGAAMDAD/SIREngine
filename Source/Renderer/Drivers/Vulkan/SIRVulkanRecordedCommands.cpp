@@ -110,6 +110,19 @@ sirVulkanResult_t sirVulkanValidateRecordedCommands( const sirVulkanRecordedComm
 			}
 			continue;
 		}
+		if ( command.eKind == SIR_VULKAN_RECORDED_BUFFER_BARRIER ) {
+			const sirVulkanBufferBarrier_t &barrier = command.bufferBarrier;
+			if ( command.pBuffer == nullptr || command.pBuffer->nSize == 0 ||
+			     barrier.nDestinationStages == VK_PIPELINE_STAGE_2_NONE ||
+			     ( barrier.nSourceStages == VK_PIPELINE_STAGE_2_NONE && barrier.nSourceAccess != VK_ACCESS_2_NONE ) ||
+			     ( barrier.bUav &&
+			       ( ( command.pBuffer->nUsage & VK_BUFFER_USAGE_STORAGE_BUFFER_BIT ) == 0 ||
+			         ( barrier.nSourceAccess & VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT ) == 0 ||
+			         ( barrier.nDestinationAccess & VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT ) == 0 ) ) ) {
+				return SIR_VULKAN_INVALID_ARGUMENT;
+			}
+			continue;
+		}
 		if ( command.eKind != SIR_VULKAN_RECORDED_TEXTURE_COPY && command.eKind != SIR_VULKAN_RECORDED_IMAGE_BARRIER ) {
 			return SIR_VULKAN_INVALID_ARGUMENT;
 		}
@@ -147,6 +160,11 @@ sirVulkanResult_t SIRVulkanDevice::submitRecordedCommands( const sirVulkanRecord
 			     command.bufferCopy.pDestination->pOwnerAllocator != m_Allocator ||
 			     command.bufferCopy.pSource->nDeviceSerial != m_nDeviceSerial ||
 			     command.bufferCopy.pDestination->nDeviceSerial != m_nDeviceSerial ) {
+				return SIR_VULKAN_INVALID_ARGUMENT;
+			}
+		} else if ( command.eKind == SIR_VULKAN_RECORDED_BUFFER_BARRIER ) {
+			if ( command.pBuffer->hBuffer == VK_NULL_HANDLE || command.pBuffer->pOwnerAllocator != m_Allocator ||
+			     command.pBuffer->nDeviceSerial != m_nDeviceSerial ) {
 				return SIR_VULKAN_INVALID_ARGUMENT;
 			}
 		} else if ( command.pImage->hImage == VK_NULL_HANDLE || command.pImage->pOwnerAllocator != m_Allocator ||
@@ -213,6 +231,26 @@ sirVulkanResult_t SIRVulkanDevice::submitRecordedCommands( const sirVulkanRecord
 			info.regionCount = 1;
 			info.pRegions = &region;
 			m_pfnCmdCopyBuffer2( pSlot->hCommandBuffer, &info );
+			continue;
+		}
+		if ( command.eKind == SIR_VULKAN_RECORDED_BUFFER_BARRIER ) {
+			const sirVulkanBufferBarrier_t &barrier = command.bufferBarrier;
+			VkBufferMemoryBarrier2 native = {};
+			native.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2;
+			native.srcStageMask = barrier.nSourceStages;
+			native.srcAccessMask = barrier.nSourceAccess;
+			native.dstStageMask = barrier.nDestinationStages;
+			native.dstAccessMask = barrier.nDestinationAccess;
+			native.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			native.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			native.buffer = command.pBuffer->hBuffer;
+			native.offset = 0;
+			native.size = VK_WHOLE_SIZE;
+			VkDependencyInfo bufferDependency = {};
+			bufferDependency.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+			bufferDependency.bufferMemoryBarrierCount = 1;
+			bufferDependency.pBufferMemoryBarriers = &native;
+			m_pfnCmdPipelineBarrier2( pSlot->hCommandBuffer, &bufferDependency );
 			continue;
 		}
 		sirVulkanImage_t *pShadow = sirVulkanRecordedShadow( command.pImage, szOriginals, szShadows, &nImages );
@@ -347,6 +385,8 @@ sirVulkanResult_t SIRVulkanDevice::submitRecordedCommands( const sirVulkanRecord
 		if ( command.eKind == SIR_VULKAN_RECORDED_BUFFER_COPY ) {
 			command.bufferCopy.pSource->nLastGpuUse = nNext;
 			command.bufferCopy.pDestination->nLastGpuUse = nNext;
+		} else if ( command.eKind == SIR_VULKAN_RECORDED_BUFFER_BARRIER ) {
+			command.pBuffer->nLastGpuUse = nNext;
 		} else if ( command.eKind == SIR_VULKAN_RECORDED_TEXTURE_COPY ) {
 			command.pBuffer->nLastGpuUse = nNext;
 			command.pImage->nLastGpuUse = nNext;

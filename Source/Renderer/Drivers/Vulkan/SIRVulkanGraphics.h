@@ -85,6 +85,8 @@ typedef struct sirVulkanGraphicsSamplerSlot_s
 // subresource transition; callable without initializing a Vulkan device.
 sirGraphicsResult_t sirVulkanPlanImageBarrier( const sirGraphicsBarrier_t &barrier, const sirVulkanImage_t *pImage,
                                                sirVulkanImageBarrier_t *pNative ) noexcept;
+sirGraphicsResult_t sirVulkanPlanBufferBarrier( const sirGraphicsBarrier_t &barrier, const sirVulkanBuffer_t *pBuffer,
+                                                sirVulkanBufferBarrier_t *pNative ) noexcept;
 
 // Each command list records up to eight ordered operations without CPU
 // allocation. Native submission validates the whole stream atomically.
@@ -93,7 +95,8 @@ typedef enum sirVulkanGraphicsOpKind_e : uint8_t
 {
 	SIR_VULKAN_GRAPHICS_BUFFER_COPY = 0,
 	SIR_VULKAN_GRAPHICS_TEXTURE_COPY,
-	SIR_VULKAN_GRAPHICS_IMAGE_BARRIER
+	SIR_VULKAN_GRAPHICS_IMAGE_BARRIER,
+	SIR_VULKAN_GRAPHICS_BUFFER_BARRIER
 } sirVulkanGraphicsOpKind_t;
 
 typedef struct sirVulkanGraphicsOperation_s
