@@ -15,6 +15,9 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Scripting/Language/SIRLangSourceCompiler.h>
 #include <Scripting/Language/SIRLangBytecode.h>
+#include <Scripting/Language/SIRLangCookRecipe.h>
+#include <Scripting/Language/SIRLangDiagnostics.h>
+#include <Scripting/Core/SIRScriptSHA256.h>
 
 #include <errno.h>
 #include <stdio.h>
@@ -66,6 +69,21 @@ static bool sirLangParseId( const char *pszText, uint64_t *pValue ) noexcept
 	char *pszEnd = nullptr;
 	const unsigned long long nParsed = strtoull( pszText, &pszEnd, 0 );
 	if ( errno != 0 || pszEnd == pszText || *pszEnd != '\0' || nParsed == 0 ) {
+		return false;
+	}
+	*pValue = ( uint64_t )nParsed;
+	return true;
+}
+
+static bool sirLangParseOptionalFlags( const char *pszText, uint64_t *pValue ) noexcept
+{
+	if ( pszText == nullptr || pValue == nullptr || *pszText == '\0' || *pszText == '-' ) {
+		return false;
+	}
+	errno = 0;
+	char *pszEnd = nullptr;
+	const unsigned long long nParsed = strtoull( pszText, &pszEnd, 0 );
+	if ( errno != 0 || pszEnd == pszText || *pszEnd != '\0' ) {
 		return false;
 	}
 	*pValue = ( uint64_t )nParsed;
@@ -173,8 +191,9 @@ static bool sirLangWriteArtifact( const char *pszPath, uint32_t nBytes ) noexcep
 
 int main( int nArgc, char **ppszArgv )
 {
-	if ( nArgc != 7 || strcmp( ppszArgv[1], ppszArgv[2] ) == 0 ) {
-		fprintf( stderr, "Usage: SIRLangCooker <source.sir> <target.sirbc> <module_id> <schema_id> <layout_digest> <binding_digest>\n" );
+	if ( ( nArgc != 9 && nArgc != 10 ) || strcmp( ppszArgv[1], ppszArgv[2] ) == 0 ) {
+		fprintf( stderr, "Usage: SIRLangCooker <source.sir> <target.sirbc> <module_id> <schema_id> <layout_digest> "
+		                 "<binding_digest> <target_id> <toolchain_id> [optimization_flags]\n" );
 		return 2;
 	}
 
@@ -188,6 +207,18 @@ int main( int nArgc, char **ppszArgv )
 		return 2;
 	}
 
+	uint64_t nTargetId = 0;
+	uint64_t nToolchainId = 0;
+	uint64_t nOptimizationFlags = 0;
+	if ( !sirLangParseId( ppszArgv[7], &nTargetId ) || !sirLangParseId( ppszArgv[8], &nToolchainId ) ) {
+		fprintf( stderr, "SIRLangCooker: target/toolchain identities must be nonzero\n" );
+		return 2;
+	}
+	if ( nArgc == 10 && !sirLangParseOptionalFlags( ppszArgv[9], &nOptimizationFlags ) ) {
+		fprintf( stderr, "SIRLangCooker: invalid optimization flags\n" );
+		return 2;
+	}
+
 	sirLangSourceView_t source = {};
 	if ( !sirLangReadSource( ppszArgv[1], &source ) ) {
 		fprintf( stderr, "SIRLangCooker: unable to read source within %u-byte limit\n", SIR_LANG_COOK_MAX_SOURCE );
@@ -198,6 +229,37 @@ int main( int nArgc, char **ppszArgv )
 		fprintf( stderr, "SIRLangCooker: compilation failed at phase %u, error %u, node %u\n",
 		         ( unsigned )workspace.report.ePhase, ( unsigned )workspace.report.nStageResult,
 		         ( unsigned )workspace.report.iErrorNode );
+		sirLangEditorDiagnostic_t szErrors[16] = {};
+		const uint32_t nErrors = SIRLangCollectCompileDiagnostics( &workspace, szErrors, 16 );
+		for ( uint32_t iError = 0; iError < nErrors; ++iError ) {
+			const sirLangEditorDiagnostic_t& error = szErrors[iError];
+			fprintf( stderr, "SIRLangCooker: %u:%u phase %u code %u\n", error.nLine, error.nColumn,
+			         ( unsigned )error.ePhase, error.nCode );
+		}
+		return 4;
+	}
+
+	// A cooked package cannot claim a complete dependency closure until every
+	// imported module is recorded in the canonical recipe. Reject instead of
+	// silently creating an incomplete content-addressed artifact.
+	for ( uint32_t iNode = 0; iNode < workspace.syntax.nNodeCount; ++iNode ) {
+		if ( workspace.syntax.pNodes[iNode].eKind == SIR_LANG_SYNTAX_IMPORT ) {
+			fprintf( stderr, "SIRLangCooker: import closure not resolved\n" );
+			return 4;
+		}
+	}
+	sirLangCookIdentity_t identity = {};
+	identity.nModuleId = workspace.cir.nModuleId;
+	identity.nSchemaId = workspace.cir.nSchemaId;
+	identity.nLayoutDigest = workspace.cir.nLayoutDigest;
+	identity.nBindingDigest = workspace.cir.nBindingDigest;
+	identity.nTargetId = nTargetId;
+	identity.nToolchainId = nToolchainId;
+	identity.nOptimizationFlags = nOptimizationFlags;
+	SIRScriptSHA256::digest( source.pBytes, source.nBytes, identity.szSourceDigest );
+	sirScriptCacheKey_t key = {};
+	if ( SIRLangMakeCookKey( identity, nullptr, 0, &key ) != SIR_SCRIPT_OK ) {
+		fprintf( stderr, "SIRLangCooker: invalid canonical recipe\n" );
 		return 4;
 	}
 
@@ -214,5 +276,10 @@ int main( int nArgc, char **ppszArgv )
 	}
 
 	printf( "SIRLangCooker: produced %u bytes\n", nBytes );
+	printf( "cache_key=" );
+	for ( uint32_t iByte = 0; iByte < sizeof( key.szDigest ); ++iByte ) {
+		printf( "%02x", ( unsigned )key.szDigest[iByte] );
+	}
+	printf( "\n" );
 	return 0;
 }
