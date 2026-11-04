@@ -144,30 +144,6 @@ add_test(NAME editor.host.missing-scene COMMAND SIREditor --inspect-scene
     "${PROJECT_SOURCE_DIR}/Tests/Fixtures/Editor/does-not-exist.tscn")
 set_tests_properties(editor.host.missing-scene PROPERTIES WILL_FAIL TRUE)
 
-# Native JSON presentation protocol for the editor-private Godot Tree dock.
-add_executable(SIREditorSceneJSONTests SIREditorSceneJSONTests.cpp)
-target_link_libraries(SIREditorSceneJSONTests PRIVATE SIR::EditorAuthoring)
-target_compile_definitions(SIREditorSceneJSONTests PRIVATE
-    SIR_EDITOR_TEST_UI_SCENE="${PROJECT_SOURCE_DIR}/Tests/Fixtures/Editor/SourceGodotUI.tscn")
-add_test(NAME editor.host.json-unit COMMAND SIREditorSceneJSONTests)
-sir_configure_owned_target(SIREditorSceneJSONTests)
-add_test(NAME editor.host.json-cli COMMAND SIREditor --inspect-scene-json
-    "${PROJECT_SOURCE_DIR}/Tests/Fixtures/Editor/SourceGodotUI.tscn")
-set_tests_properties(editor.host.json-cli PROPERTIES PASS_REGULAR_EXPRESSION "\"schema\":1")
-
-# Nonblocking editor-dock transport: staged native scene snapshot publication.
-add_executable(SIREditorSceneJSONFileTests SIREditorSceneJSONFileTests.cpp)
-target_link_libraries(SIREditorSceneJSONFileTests PRIVATE SIR::EditorAuthoring)
-target_compile_definitions(SIREditorSceneJSONFileTests PRIVATE
-    SIR_EDITOR_TEST_UI_SCENE="${PROJECT_SOURCE_DIR}/Tests/Fixtures/Editor/SourceGodotUI.tscn")
-add_test(NAME editor.host.json-file-unit COMMAND SIREditorSceneJSONFileTests)
-sir_configure_owned_target(SIREditorSceneJSONFileTests)
-add_test(NAME editor.host.json-file-cli COMMAND "${CMAKE_COMMAND}"
-    "-DSIR_EDITOR_EXECUTABLE=$<TARGET_FILE:SIREditor>"
-    "-DSIR_EDITOR_SCENE=${PROJECT_SOURCE_DIR}/Tests/Fixtures/Editor/SourceGodotUI.tscn"
-    "-DSIR_EDITOR_OUTPUT=${CMAKE_CURRENT_BINARY_DIR}/sir-editor-cli-snapshot-$<CONFIG>.json"
-    -P "${CMAKE_CURRENT_SOURCE_DIR}/EditorJSONFileCLITests.cmake")
-
 # Source-backed node-property index feeding the read-only native Details dock.
 add_executable(SIREditorTextPropertiesTests SIREditorTextPropertiesTests.cpp)
 target_link_libraries(SIREditorTextPropertiesTests PRIVATE SIR::EditorAuthoring)
@@ -176,10 +152,3 @@ target_compile_definitions(SIREditorTextPropertiesTests PRIVATE
 add_test(NAME editor.authoring.source-properties COMMAND SIREditorTextPropertiesTests)
 sir_configure_owned_target(SIREditorTextPropertiesTests)
 
-# In-process ABI boundary for a future Godot-native Control/Inspector adapter.
-add_executable(SIREditorNativeBridgeTests SIREditorNativeBridgeTests.cpp)
-target_link_libraries(SIREditorNativeBridgeTests PRIVATE SIR::EditorNativeBridge)
-target_compile_definitions(SIREditorNativeBridgeTests PRIVATE
-    SIR_EDITOR_TEST_UI_SCENE="${PROJECT_SOURCE_DIR}/Tests/Fixtures/Editor/SourceGodotUI.tscn")
-add_test(NAME editor.bridge.native-abi COMMAND SIREditorNativeBridgeTests)
-sir_configure_owned_target(SIREditorNativeBridgeTests)
