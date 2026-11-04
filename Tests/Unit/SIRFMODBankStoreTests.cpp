@@ -326,8 +326,8 @@ static void testBorrowedBankObjectPins( const sirContainerAllocator_t *pAllocato
 	checkBank( banks.initialize( &context, &voices, pAllocator, makeBankOps( &fixture ), 2, 1 ) == SIR_AUDIO_OK );
 	checkBank( banks.loadBank( 1, "A.bank" ) == SIR_AUDIO_OK );
 
-	const sirFMODMixerNativeOps_t mixerOps = { 1, &fixture, testPinnedBusResolve, testPinnedVCAResolve,
-	                                            testPinnedSetVolume, testPinnedSetMute, testPinnedSetVolume };
+	const sirFMODMixerNativeOps_t mixerOps = {
+	    1, &fixture, testPinnedBusResolve, testPinnedVCAResolve, testPinnedSetVolume, testPinnedSetMute, testPinnedSetVolume };
 	SIRFMODMixerBackend mixer;
 	checkBank( mixer.configure( &context, pAllocator, mixerOps, 2 ) == SIR_AUDIO_OK );
 	checkBank( mixer.initialize() == SIR_AUDIO_OK );
@@ -335,8 +335,8 @@ static void testBorrowedBankObjectPins( const sirContainerAllocator_t *pAllocato
 	checkBank( mixer.registerVCA( 20, "vca:/Music" ) == SIR_AUDIO_OK );
 	checkBank( context.getBorrowedBankObjectCount() == 2 );
 
-	const sirFMODSnapshotNativeOps_t snapshotOps = { 1, &fixture, testPinnedSnapshotResolve, testVoiceCreate,
-	                                               testVoiceStart, testVoiceStop, testVoiceRelease };
+	const sirFMODSnapshotNativeOps_t snapshotOps = {
+	    1, &fixture, testPinnedSnapshotResolve, testVoiceCreate, testVoiceStart, testVoiceStop, testVoiceRelease };
 	SIRFMODSnapshotBackend snapshots;
 	checkBank( snapshots.configure( &context, pAllocator, snapshotOps, 1 ) == SIR_AUDIO_OK );
 	checkBank( snapshots.initialize() == SIR_AUDIO_OK );
