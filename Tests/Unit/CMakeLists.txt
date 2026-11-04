@@ -119,3 +119,20 @@ target_compile_definitions(SIREditorHierarchyModelTests PRIVATE
     SIR_EDITOR_TEST_UI_SCENE="${PROJECT_SOURCE_DIR}/Tests/Fixtures/Editor/SourceGodotUI.tscn")
 add_test(NAME editor.authoring.hierarchy-view-model COMMAND SIREditorHierarchyModelTests)
 sir_configure_owned_target(SIREditorHierarchyModelTests)
+
+# Native editor workspace and executable bootstrap over the Godot text-scene intake.
+add_executable(SIREditorSceneWorkspaceTests SIREditorSceneWorkspaceTests.cpp)
+target_link_libraries(SIREditorSceneWorkspaceTests PRIVATE SIR::EditorAuthoring)
+target_compile_definitions(SIREditorSceneWorkspaceTests PRIVATE
+    SIR_EDITOR_TEST_UI_SCENE="${PROJECT_SOURCE_DIR}/Tests/Fixtures/Editor/SourceGodotUI.tscn")
+add_test(NAME editor.host.scene-workspace COMMAND SIREditorSceneWorkspaceTests)
+sir_configure_owned_target(SIREditorSceneWorkspaceTests)
+
+add_test(NAME editor.host.version COMMAND SIREditor --version)
+set_tests_properties(editor.host.version PROPERTIES PASS_REGULAR_EXPRESSION "SIREditor native scene host")
+add_test(NAME editor.host.inspect-scene COMMAND SIREditor --inspect-scene
+    "${PROJECT_SOURCE_DIR}/Tests/Fixtures/Editor/SourceGodotUI.tscn")
+set_tests_properties(editor.host.inspect-scene PROPERTIES PASS_REGULAR_EXPRESSION "Nodes: 5")
+add_test(NAME editor.host.missing-scene COMMAND SIREditor --inspect-scene
+    "${PROJECT_SOURCE_DIR}/Tests/Fixtures/Editor/does-not-exist.tscn")
+set_tests_properties(editor.host.missing-scene PROPERTIES WILL_FAIL TRUE)
