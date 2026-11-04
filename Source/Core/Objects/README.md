@@ -8,8 +8,11 @@ owned strings. Registration is closed by `seal()`.
 `SIRObjectStore` provides generation-checked native object handles with
 explicit allocation and release in caller-owned slots. It is a runtime
 lifetime primitive; the existing `SIREditorSceneDocument` remains the sole
-writer of authored scene objects. Properties are not yet integrated with
-its atomic undo/redo transaction format.
+writer of authored scene objects. The editor authoring layer now uses these descriptors to validate typed scalar
+properties in SIREditorSceneDocument's single atomic node/property journal,
+with bounded caller-owned property slots, undo/redo, and deletion cleanup.
+Native method dispatch, signals, script binding, and math/string atom conversion
+are not yet ported.
 
 The implementation is an adaptation of Godot's object/type-registration
 concepts into SIREngine-owned IDs and memory, not a port of its `Object` or
