@@ -2,7 +2,7 @@
 
 **Baseline:** `develop` commit `be151c5ad3e98ea6fa6bdbfa87d07a83dc7e6546`.
 **Branch:** `feature/streaming-foundation`.
-**Status:** demand coordination, World Partition, epoch reconciliation, and provider completion bridge implemented; real GRDG/IO/provider adapters pending.
+**Status:** demand coordination, World Partition, epoch reconciliation, provider completion bridge and conditional GRDG file-loader adapter implemented; live GRDG build and provider backends pending.
 
 Source design authorities: `SIR-WORLD-ARCH-001`, `SIR-IO-ARCH-001`,
 `SIR-IO-IMPL-001`, `GRDG-003` in the shared Nomad Drive. This branch introduces
@@ -31,7 +31,7 @@ only the interface owner for request intent and stage tracking.
 | Native demand coordinator | Compiled lifecycle shell, ticket metadata refresh and unit tests | No GRDG dependency |
 | Demand epoch reconciliation | Implemented complete-set validation, stable tickets, pending cancellation, deferred resubmission and integration tests | GRDG completion/retirement adapter |
 | Provider lifecycle bridge | Implemented bounded prepare/activate/cancel/retire dispatch and generation-safe owner-thread acknowledgements | Real canonical GRDG mapping and native provider backends |
-| GRDG adapter | Not implemented | Integrate PR #23 contracts |
+| GRDG adapter | Concrete opt-in adapter for ResourceGraph, ResourceFileLoad, Core Jobs and provider pins; local fake-backend tests pass | Build/run with PR #23's live Resources integration |
 | SIRPack `.sirm/.sirp` reader/cooker | Not implemented | Finalize package ABI |
 | Core I/O native async | Not implemented | IOCP/io_uring contracts |
 | World Partition/cells/layers | Native sorted cell directory, spatial demand generation, layer filtering and source merge implemented; activation pending | Cooked package/StateStore integration |
@@ -103,3 +103,34 @@ provider bridge with Clang 17 and Clang 23. Four test executables pass, includin
 an integrated moving-source control-plane test. Clang 17 ASan/UBSan tests pass.
 The repository-pinned clang-format 22.1.5, full engine build, platform CI, and
 live GRDG/IO/provider tests are still outstanding.
+
+## GRDG file-loader integration — fifth native slice
+
+`Source/Streaming/SIRStreamingGRDGAdapter` is the dependency-gated native
+resource preparation adapter. It accepts a caller-owned, sorted in-memory
+binding directory mapping logical streamed units to cooked resource keys,
+file intervals and declared chunk/schema identities. It uses the actual
+`SIRResourceFileLoad` request/poll/cancel API and `SIRResourceGraphWriter`
+for authoritative staging/publication. Multiple consumers of the same key
+wait for one physical in-flight load and subsequently pin the single published
+resource individually; no second resource cache or allocator is created.
+
+Preparation checks the published schema, format, chunk identity and declared
+content key, then retains a canonical GRDG provider pin. Pinning validates
+identity metadata; cryptographic verification of raw file bytes belongs to
+SIRPack ingestion/codec validation and is not implemented here. The adapter
+passes both GRDG handle and published revision to the backend, monitors
+prepared/active revisions, and cancels stale tickets so the backend can retire
+safely. Cancellation of an in-flight file read waits for Core Jobs completion
+before issuing a final failure/retirement acknowledgment. Physical GRDG
+retirement remains in the resource owner; per-consumer retirement only releases
+the matching provider pin after backend acknowledgment.
+
+The `SIR::StreamingGRDG` CMake target and its real-file integration test are
+built only when `SIR::Resources` exists. Because PR #23 remains an unmerged
+draft, Clang 17/23, ASan/UBSan and five focused local harness tests used an
+API-matched fake GRDG/file-loader service for this slice. The actual PR #23
+library and Windows/Linux production CI were not compiled or executed here;
+the native integration test is registered to run when the dependency lands.
+The repository-pinned clang-format 22.1.5 gate is still outstanding; source
+was formatted and checked with clang-format 23.1.5.
