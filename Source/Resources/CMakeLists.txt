@@ -1,4 +1,4 @@
-add_library(SIRResources STATIC SIRResourceGraph.cpp SIRResourceMemoryAdapter.cpp SIRResourceDerivedRegistry.cpp SIRResourceTaskBatch.cpp)
+add_library(SIRResources STATIC SIRResourceGraph.cpp SIRResourceMemoryAdapter.cpp SIRResourceDerivedRegistry.cpp)
 add_library(SIR::Resources ALIAS SIRResources)
 find_package(Threads REQUIRED)
 target_link_libraries(SIRResources PUBLIC SIR::Core Threads::Threads)

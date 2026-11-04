@@ -26,6 +26,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include "SIRResourceViews.h"
 #include <Core/Containers/SIRFlatHashMap.h>
+#include <Core/Jobs/SIRTaskGraph.h>
 
 #include <atomic>
 #include <mutex>
@@ -127,8 +128,14 @@ typedef struct sirResourceDependencyPlanEntry_s
 	SIRResourceHandle hResource;
 	uint64_t nRevision;
 	SIRResourceState eState;
+	uint64_t nInvalidationSequence;
 } sirResourceDependencyPlanEntry_t;
 typedef sirResourceDependencyPlanEntry_t SIRResourceDependencyPlanEntry;
+
+// A construction callback describing Core Jobs passes. It never submits work.
+// The caller owns each pass context until SIRTaskGraph::releaseSubmitted().
+typedef bool ( *sirResourceTaskPassFactory_t )( void *pContext, const SIRResourceDependencyPlanEntry &rEntry,
+                                               sirTaskGraphPass_t *pPass ) noexcept;
 
 class SIRResourceGraphWriter
 {
@@ -163,6 +170,17 @@ public:
 	// insufficient output capacity leaves the caller's array untouched.
 	SIRResourceResult compileDependencyOrder( SIRResourceHandle hRoot, SIRResourceDependencyPlanEntry *pEntries, uint32_t nCapacity,
 	                                          uint32_t *pRequired ) noexcept;
+	// Build directly into the Core task graph, using its dependency scheduler.
+	// Caller supplies scratch plan entries; there is no GRDG dispatch queue.
+	// A fresh, initialized task graph is required. On failure it is reset.
+	// pfnDescribePass must not re-enter the resource writer or retain borrowed data.
+	SIRResourceResult compileTaskGraph( SIRResourceHandle hRoot, SIRTaskGraph &rTaskGraph,
+	                                    SIRResourceDependencyPlanEntry *pEntries, uint32_t nCapacity,
+	                                    sirResourceTaskPassFactory_t pfnDescribePass, void *pContext,
+	                                    uint32_t *pRequired ) noexcept;
+	// Invoke before submission and after Core Jobs reports terminal success.
+	// Rejection protects publication from changed revisions and invalidations.
+	SIRResourceResult validateTaskPlan( const SIRResourceDependencyPlanEntry *pEntries, uint32_t nCount ) noexcept;
 	// Poll retained change events in sequence order. Overflow means the caller
 	// must rebuild dependency state and resume at the reported latest cursor.
 	SIRResourceResult pollInvalidations( uint64_t nAfterSequence, SIRResourceInvalidationEvent *pEvents, uint32_t nCapacity,
