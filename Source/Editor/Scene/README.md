@@ -10,3 +10,25 @@ measure required storage, then supply exactly that much editor-domain memory
 and scan again. Error paths publish zero entries. The 65536-record bound and
 64-level nesting bound prevent uncontrolled parser work. Source text and
 result storage must be kept alive by the same authoring workspace.
+
+## Native typed scalar editing and source roundtrip
+
+`SIREditorSceneDocument` now journals typed property mutations in the same
+atomic revision and undo/redo history as authored node edits. Supported
+properties are validated through the existing SIRObjectRegistry metadata.
+The editor alone owns mutable authored state; the runtime SIRObjectStore
+remains a distinct generation-safe object lifetime service.
+
+`SIREditorScalarCodec` provides bounded, allocation-free conversion of
+boolean, signed/unsigned 64-bit, and finite 64-bit real scalars to/from
+Godot text-scene syntax. `SIREditorScalarBinding` maps explicitly supplied
+(node ID, property ID, source property index) bindings into one native
+document transaction, then can regenerate only those scalar spans while
+preserving all unrelated source bytes. The caller supplies every scratch
+buffer and serialized output buffer. Invalid bindings/values fail without
+partially committing authoring state.
+
+**Outstanding R2/R3:** actual Godot-derived method dispatch/signals, string
+atom and mathematical property codecs, automatic reflection/property binding,
+ResourceLoader/ResourceSaver, full Godot scene/Variant serialization and
+inherited/instanced scene resolution, and a validated atomic file-save workflow.
