@@ -142,6 +142,15 @@ bool sirVulkanGetFormatBlock( VkFormat eFormat, sirVulkanFormatBlock_t *pBlock )
 bool sirVulkanGetSubresourceLayout( const sirVulkanImage_t *pImage, uint32_t nMip, uint32_t nLayer, VkImageLayout *pLayout ) noexcept;
 bool sirVulkanSetSubresourceLayout( sirVulkanImage_t *pImage, uint32_t nMip, uint32_t nLayer, VkImageLayout eLayout ) noexcept;
 
+typedef struct sirVulkanImageBarrier_s
+{
+	VkImageLayout eBefore;
+	VkImageLayout eAfter;
+	uint32_t nMip;
+	uint32_t nLayer;
+	bool bUav;
+} sirVulkanImageBarrier_t;
+
 typedef struct sirVulkanTextureTransfer_s
 {
 	uint64_t nBufferOffset;
@@ -246,6 +255,8 @@ public:
 	sirVulkanResult_t readBuffer( sirVulkanBuffer_t *pBuffer, uint64_t nOffset, void *pData, uint64_t nBytes ) noexcept;
 	sirVulkanResult_t submitBufferCopy( sirVulkanBuffer_t *pSource, uint64_t nSourceOffset, sirVulkanBuffer_t *pDestination,
 	                                    uint64_t nDestinationOffset, uint64_t nBytes, sirVulkanCompletion_t *pCompletion ) noexcept;
+	 sirVulkanResult_t submitImageBarrier( sirVulkanImage_t *pImage, const sirVulkanImageBarrier_t &barrier,
+	                                    sirVulkanCompletion_t *pCompletion ) noexcept;
 	sirVulkanResult_t submitBufferImageCopy( sirVulkanBuffer_t *pBuffer, sirVulkanImage_t *pImage,
 	                                         const sirVulkanTextureTransfer_t &transfer, sirVulkanCompletion_t *pCompletion ) noexcept;
 	sirVulkanResult_t queryCompletion( const sirVulkanCompletion_t *pCompletion, bool *pComplete ) const noexcept;

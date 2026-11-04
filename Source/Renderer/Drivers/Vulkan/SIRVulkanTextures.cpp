@@ -102,7 +102,7 @@ static VkSamplerAddressMode sirVulkanSamplerAddress( sirGraphicsAddressMode_t eM
 
 sirGraphicsResult_t SIRVulkanCommandList::copyBufferTexture( const sirGraphicsBufferTextureCopy_t &copy ) noexcept
 {
-	if ( m_eState != SIR_VULKAN_COMMAND_RECORDING || m_bHasCopy ) {
+	if ( m_eState != SIR_VULKAN_COMMAND_RECORDING || m_bHasCopy || m_bHasBarrier ) {
 		return SIR_GRAPHICS_BUSY;
 	}
 	if ( m_pOwner == nullptr || copy.nWidth == 0 || copy.nHeight == 0 || copy.nDepth != 1 || copy.nZ != 0 || copy.nX > INT32_MAX ||

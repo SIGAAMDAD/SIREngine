@@ -162,7 +162,8 @@ int main( void )
 	texture.nArrayLayers = 2;
 	texture.nMipLevels = 2;
 	texture.nSampleCount = 1;
-	texture.nUsage = SIR_GRAPHICS_USAGE_SAMPLED | SIR_GRAPHICS_USAGE_COPY_DESTINATION | SIR_GRAPHICS_USAGE_COPY_SOURCE;
+	texture.nUsage = SIR_GRAPHICS_USAGE_SAMPLED | SIR_GRAPHICS_USAGE_STORAGE |
+	                 SIR_GRAPHICS_USAGE_COPY_DESTINATION | SIR_GRAPHICS_USAGE_COPY_SOURCE;
 	texture.eDimension = SIR_GRAPHICS_TEXTURE_2D;
 	texture.eFormat = SIR_GRAPHICS_FORMAT_RGBA8_UNORM;
 	texture.eMemory = SIR_GRAPHICS_MEMORY_GPU_LOCAL;
@@ -217,6 +218,41 @@ int main( void )
 	     pDevice->wait( uploaded, 5000000000ull ) != SIR_GRAPHICS_SUCCESS ) {
 		return 22;
 	}
+	// Exercise native synchronization2 transitions and storage UAV ordering
+	// on the same uploaded mip/layer before the readback.
+	sirGraphicsBarrier_t barrier = {};
+	barrier.hResource = hTexture;
+	barrier.nBaseMip = 1;
+	barrier.nMipCount = 1;
+	barrier.nBaseLayer = 1;
+	barrier.nLayerCount = 1;
+	const sirGraphicsState_t szBarrierBefore[3] = { SIR_GRAPHICS_STATE_COMMON, SIR_GRAPHICS_STATE_SHADER_READ,
+	                                                SIR_GRAPHICS_STATE_SHADER_WRITE };
+	const sirGraphicsState_t szBarrierAfter[3] = { SIR_GRAPHICS_STATE_SHADER_READ, SIR_GRAPHICS_STATE_SHADER_WRITE,
+	                                               SIR_GRAPHICS_STATE_SHADER_WRITE };
+	sirGraphicsCompletion_t barrierCompleted = uploaded;
+	for ( uint32_t iBarrier = 0; iBarrier < 3; ++iBarrier ) {
+		barrier.eType = iBarrier == 2 ? SIR_GRAPHICS_BARRIER_UAV : SIR_GRAPHICS_BARRIER_TRANSITION;
+		barrier.eBefore = szBarrierBefore[iBarrier];
+		barrier.eAfter = szBarrierAfter[iBarrier];
+		SIRGraphicsCommandList *pBarrierCommands = nullptr;
+		if ( pDevice->acquireCommands( SIR_GRAPHICS_QUEUE_DIRECT, &pBarrierCommands ) != SIR_GRAPHICS_SUCCESS ||
+		     pBarrierCommands == nullptr || pBarrierCommands->barrier( &barrier, 1 ) != SIR_GRAPHICS_SUCCESS ||
+		     pBarrierCommands->close() != SIR_GRAPHICS_SUCCESS ) {
+			return 26;
+		}
+		sirGraphicsSubmission_t barrierSubmission = {};
+		barrierSubmission.ppCommandLists = &pBarrierCommands;
+		barrierSubmission.nCommandListCount = 1;
+		barrierSubmission.pWaits = &barrierCompleted;
+		barrierSubmission.nWaitCount = 1;
+		sirGraphicsCompletion_t signaled = {};
+		if ( pDevice->submit( SIR_GRAPHICS_QUEUE_DIRECT, barrierSubmission, &signaled ) != SIR_GRAPHICS_SUCCESS ||
+		     pDevice->wait( signaled, 5000000000ull ) != SIR_GRAPHICS_SUCCESS ) {
+			return 27;
+		}
+		barrierCompleted = signaled;
+	}
 	copy.hBuffer = hReadback;
 	copy.bBufferToTexture = false;
 	SIRGraphicsCommandList *pImageReadback = nullptr;
@@ -227,7 +263,7 @@ int main( void )
 	sirGraphicsSubmission_t readbackSubmission = {};
 	readbackSubmission.ppCommandLists = &pImageReadback;
 	readbackSubmission.nCommandListCount = 1;
-	readbackSubmission.pWaits = &uploaded;
+	readbackSubmission.pWaits = &barrierCompleted;
 	readbackSubmission.nWaitCount = 1;
 	sirGraphicsCompletion_t downloaded = {};
 	if ( pDevice->submit( SIR_GRAPHICS_QUEUE_DIRECT, readbackSubmission, &downloaded ) != SIR_GRAPHICS_SUCCESS ||
