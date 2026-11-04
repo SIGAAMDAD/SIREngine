@@ -1,0 +1,1295 @@
+{
+  "format_version": "1.0",
+  "plan_id": "sirengine-config-parsing-20261103",
+  "mode": "IMPLEMENTATION",
+  "objective": "Implement per-format SIREngine configuration parsing and serialization with precise memory budgets",
+  "approval": {
+    "status": "UNAPPROVED",
+    "evidence": "Owner authorized planning and branch creation; exact plan digest has not been separately ratified"
+  },
+  "repository": "SIGAAMDAD/SIREngine",
+  "base_branch": "develop",
+  "base_sha": "0a7d47de77130b63290ec4950bdf2e257dbfe326",
+  "branch": "feature/config-parsing",
+  "execution_topology": {
+    "initiator": "human-authorized GitHub branch",
+    "runtime": "native SIREngine C++17; implementation not yet started",
+    "transport": "in-process callback source/sink",
+    "state_authority": "caller-owned document and SIR memory manager",
+    "continuation": "explicit source implementation commits; no scheduled workers"
+  },
+  "sources": [
+    {
+      "id": "SRC-OWNER",
+      "kind": "OWNER",
+      "path": "current conversation: 2026-11-03",
+      "locator": "configuration parsing format list; API request; documentation/branch/implementation plan request",
+      "quotation": "Valve configuration files, json, csv, tsv, ini, xml, yaml, toml; precise memory control; plan an api for each format; document that, create a branch for this, and plan complete implementation"
+    },
+    {
+      "id": "SRC-REPO",
+      "kind": "REPOSITORY",
+      "path": "SIGAAMDAD/SIREngine@0a7d47de",
+      "locator": "Source/Core/CMakeLists.txt; Source/Core/Containers/SIRContainerResult.h; Source/Core/Memory/SIRMemoryManager.h",
+      "quotation": "SIRCore, allocator callbacks and memory manager exist; no configuration parsing subsystem"
+    },
+    {
+      "id": "SRC-DOC",
+      "kind": "DOCUMENT",
+      "path": "Docs/Architecture/07-editor-cooking-runtime.md",
+      "locator": "editor preservation and cooked runtime",
+      "quotation": "editor source and deterministic cooked records are separate responsibilities"
+    }
+  ],
+  "requirements": [
+    {
+      "id": "REQ-FORMATS",
+      "statement": "Support JSON, CSV, TSV, INI, XML, YAML and TOML",
+      "authority": "OWNER_REQUIREMENT",
+      "source_ids": [
+        "SRC-OWNER"
+      ],
+      "task_ids": [
+        "C00",
+        "C05",
+        "C06",
+        "C08",
+        "C11",
+        "C12",
+        "C13"
+      ],
+      "test_ids": [
+        "T-CONTRACT",
+        "T-JSON",
+        "T-CSV",
+        "T-INI",
+        "T-XML",
+        "T-YAML",
+        "T-TOML"
+      ],
+      "prohibited": false
+    },
+    {
+      "id": "REQ-VALVE",
+      "statement": "Support Valve KeyValues 1/VDF, KV3 and console CFG through distinct APIs",
+      "authority": "OWNER_REQUIREMENT",
+      "source_ids": [
+        "SRC-OWNER"
+      ],
+      "task_ids": [
+        "C07",
+        "C09",
+        "C10",
+        "C14"
+      ],
+      "test_ids": [
+        "T-CONTRACT",
+        "T-VALVE"
+      ],
+      "prohibited": false
+    },
+    {
+      "id": "REQ-API",
+      "statement": "Publish an API for each format, with common IO, errors and ownership",
+      "authority": "OWNER_REQUIREMENT",
+      "source_ids": [
+        "SRC-OWNER"
+      ],
+      "task_ids": [
+        "C01",
+        "C03",
+        "C04",
+        "C05",
+        "C06",
+        "C09",
+        "C10",
+        "C15"
+      ],
+      "test_ids": [
+        "T-CONTRACT"
+      ],
+      "prohibited": false
+    },
+    {
+      "id": "REQ-MEMORY",
+      "statement": "Precise control of parser allocations and memory budgets",
+      "authority": "OWNER_REQUIREMENT",
+      "source_ids": [
+        "SRC-OWNER"
+      ],
+      "task_ids": [
+        "C00",
+        "C01",
+        "C02",
+        "C04",
+        "C08",
+        "C11",
+        "C12",
+        "C13",
+        "C14",
+        "C17"
+      ],
+      "test_ids": [
+        "T-BUDGET",
+        "T-XML",
+        "T-YAML"
+      ],
+      "prohibited": false
+    },
+    {
+      "id": "REQ-DEPS",
+      "statement": "Evaluate libucl rather than assume it fits; pin audited parser dependencies",
+      "authority": "OWNER_REQUIREMENT",
+      "source_ids": [
+        "SRC-OWNER"
+      ],
+      "task_ids": [
+        "C00",
+        "C16"
+      ],
+      "test_ids": [
+        "T-DEP"
+      ],
+      "prohibited": false
+    },
+    {
+      "id": "REQ-SAFETY",
+      "statement": "Bounded parsing and no implicit code execution, file or network effects",
+      "authority": "NECESSARY_IMPLEMENTATION_DECISION",
+      "source_ids": [
+        "SRC-REPO",
+        "SRC-DOC"
+      ],
+      "task_ids": [
+        "C03",
+        "C07",
+        "C12",
+        "C13"
+      ],
+      "test_ids": [
+        "T-XML",
+        "T-FUZZ"
+      ],
+      "prohibited": false
+    },
+    {
+      "id": "REQ-BUILD",
+      "statement": "Integrate native SIREngine C++17 CMake build and tests",
+      "authority": "SOURCE_FACT",
+      "source_ids": [
+        "SRC-REPO",
+        "SRC-DOC"
+      ],
+      "task_ids": [
+        "C16",
+        "C19"
+      ],
+      "test_ids": [
+        "T-PLAT"
+      ],
+      "prohibited": false
+    },
+    {
+      "id": "REQ-TESTS",
+      "statement": "Complete implementation includes conformance, unit, fuzz and performance testing",
+      "authority": "NECESSARY_IMPLEMENTATION_DECISION",
+      "source_ids": [
+        "SRC-REPO",
+        "SRC-DOC"
+      ],
+      "task_ids": [
+        "C17",
+        "C19"
+      ],
+      "test_ids": [
+        "T-FUZZ",
+        "T-PERF"
+      ],
+      "prohibited": false
+    },
+    {
+      "id": "REQ-COOK",
+      "statement": "Explicit deterministic cooked configuration support for runtime",
+      "authority": "DESIGN_PROPOSAL",
+      "source_ids": [
+        "SRC-REPO",
+        "SRC-DOC"
+      ],
+      "task_ids": [
+        "C15",
+        "C18"
+      ],
+      "test_ids": [
+        "T-COOK"
+      ],
+      "prohibited": false
+    },
+    {
+      "id": "REQ-EDITOR",
+      "statement": "Preserve editable-source semantics when editor consumers exist",
+      "authority": "SOURCE_FACT",
+      "source_ids": [
+        "SRC-REPO",
+        "SRC-DOC"
+      ],
+      "task_ids": [
+        "C18"
+      ],
+      "test_ids": [
+        "T-EDITOR"
+      ],
+      "prohibited": false
+    }
+  ],
+  "interfaces": [
+    {
+      "id": "IF-SHARED",
+      "kind": "FUNCTION",
+      "owner": "CONFIG-CORE",
+      "consumers": [
+        "CONFIG-FORMATS"
+      ],
+      "contract_path": "Docs/Plans/ConfigParsing/API.md",
+      "callable_parameters": [
+        "input",
+        "context",
+        "options",
+        "output",
+        "diagnostic"
+      ]
+    },
+    {
+      "id": "IF-MEMORY",
+      "kind": "FUNCTION",
+      "owner": "CONFIG-CORE",
+      "consumers": [
+        "CONFIG-FORMATS"
+      ],
+      "contract_path": "Docs/Plans/ConfigParsing/API.md",
+      "callable_parameters": [
+        "scope",
+        "nBytes",
+        "nAlignment",
+        "ppMemory"
+      ]
+    },
+    {
+      "id": "IF-SINK",
+      "kind": "FUNCTION",
+      "owner": "CONFIG-CORE",
+      "consumers": [
+        "CONFIG-FORMATS"
+      ],
+      "contract_path": "Docs/Plans/ConfigParsing/API.md",
+      "callable_parameters": [
+        "pContext",
+        "pBytes",
+        "nBytes"
+      ]
+    },
+    {
+      "id": "IF-FORMATS",
+      "kind": "FUNCTION",
+      "owner": "CONFIG-FORMATS",
+      "consumers": [
+        "CONFIG-CORE"
+      ],
+      "contract_path": "Docs/Plans/ConfigParsing/API.md",
+      "callable_parameters": [
+        "input",
+        "context",
+        "options",
+        "pDocument",
+        "pDiagnostic"
+      ]
+    }
+  ],
+  "state_domains": [
+    {
+      "id": "STATE-BUDGET",
+      "writer": "CONFIG-CORE",
+      "contract_path": "Docs/Plans/ConfigParsing/API.md"
+    },
+    {
+      "id": "STATE-DOCUMENT",
+      "writer": "CONFIG-FORMATS",
+      "contract_path": "Docs/Plans/ConfigParsing/API.md"
+    }
+  ],
+  "workgroups": [
+    {
+      "id": "CONFIG-CORE",
+      "owned_paths": [
+        "Source/Core/Config/SIRConfig*",
+        "Source/Core/Config/CMakeLists.txt",
+        "Docs/Plans/ConfigParsing/*",
+        "Source/Core/CMakeLists.txt",
+        "Build/CMake/*",
+        "ThirdParty/*"
+      ],
+      "tasks": [
+        "C00",
+        "C01",
+        "C02",
+        "C03",
+        "C04",
+        "C15",
+        "C16",
+        "C19"
+      ],
+      "depends_on": [],
+      "consumes": [],
+      "produces": [
+        "IF-SHARED",
+        "IF-MEMORY",
+        "IF-SINK"
+      ]
+    },
+    {
+      "id": "CONFIG-FORMATS",
+      "owned_paths": [
+        "Source/Core/Config/Formats/*",
+        "Tests/Unit/Config/*",
+        "Tests/Benchmarks/Config/*"
+      ],
+      "tasks": [
+        "C05",
+        "C06",
+        "C07",
+        "C08",
+        "C09",
+        "C10",
+        "C11",
+        "C12",
+        "C13",
+        "C14",
+        "C17"
+      ],
+      "depends_on": [
+        "CONFIG-CORE"
+      ],
+      "consumes": [
+        "IF-SHARED",
+        "IF-MEMORY",
+        "IF-SINK"
+      ],
+      "produces": [
+        "IF-FORMATS"
+      ]
+    },
+    {
+      "id": "CONFIG-INTEGRATION",
+      "owned_paths": [
+        "Source/Editor/*"
+      ],
+      "tasks": [
+        "C18"
+      ],
+      "depends_on": [
+        "CONFIG-FORMATS"
+      ],
+      "consumes": [
+        "IF-FORMATS"
+      ],
+      "produces": []
+    }
+  ],
+  "tasks": [
+    {
+      "id": "C00",
+      "workgroup": "CONFIG-CORE",
+      "requirement_ids": [
+        "REQ-FORMATS",
+        "REQ-MEMORY",
+        "REQ-DEPS"
+      ],
+      "depends_on": [],
+      "steps": [
+        "Implement Vendor/license/memory audit under Docs/Plans/ConfigParsing/*",
+        "Verify source provenance, formats and backend decision records against API.md and ACCEPTANCE.md"
+      ],
+      "test_ids": [
+        "T-CONTRACT",
+        "T-BUDGET",
+        "T-JSON",
+        "T-CSV",
+        "T-INI",
+        "T-XML",
+        "T-YAML",
+        "T-TOML",
+        "T-DEP"
+      ],
+      "outputs": [
+        "Docs/Plans/ConfigParsing/*",
+        "source provenance, formats and backend decision records"
+      ],
+      "stop_conditions": [
+        "Untracked allocation, incompatible signature, incomplete required grammar, or failed conformance"
+      ]
+    },
+    {
+      "id": "C01",
+      "workgroup": "CONFIG-CORE",
+      "requirement_ids": [
+        "REQ-API",
+        "REQ-MEMORY"
+      ],
+      "depends_on": [
+        "C00"
+      ],
+      "steps": [
+        "Implement Shared types, diagnostics, defaults under Source/Core/Config/SIRConfigTypes.h",
+        "Verify C++17 shared public types against API.md and ACCEPTANCE.md"
+      ],
+      "test_ids": [
+        "T-CONTRACT",
+        "T-BUDGET",
+        "T-XML",
+        "T-YAML"
+      ],
+      "outputs": [
+        "Source/Core/Config/SIRConfigTypes.h",
+        "C++17 shared public types"
+      ],
+      "stop_conditions": [
+        "Untracked allocation, incompatible signature, incomplete required grammar, or failed conformance"
+      ]
+    },
+    {
+      "id": "C02",
+      "workgroup": "CONFIG-CORE",
+      "requirement_ids": [
+        "REQ-MEMORY"
+      ],
+      "depends_on": [
+        "C01"
+      ],
+      "steps": [
+        "Implement Per-parse memory budget adapter under Source/Core/Config/SIRConfigBudget.*",
+        "Verify document and scratch live/peak budget enforcement against API.md and ACCEPTANCE.md"
+      ],
+      "test_ids": [
+        "T-BUDGET",
+        "T-XML",
+        "T-YAML"
+      ],
+      "outputs": [
+        "Source/Core/Config/SIRConfigBudget.*",
+        "document and scratch live/peak budget enforcement"
+      ],
+      "stop_conditions": [
+        "Untracked allocation, incompatible signature, incomplete required grammar, or failed conformance"
+      ]
+    },
+    {
+      "id": "C03",
+      "workgroup": "CONFIG-CORE",
+      "requirement_ids": [
+        "REQ-API",
+        "REQ-SAFETY"
+      ],
+      "depends_on": [
+        "C01",
+        "C02"
+      ],
+      "steps": [
+        "Implement Bounded input, sinks and resolver under Source/Core/Config/SIRConfigIO.*",
+        "Verify buffer and streaming IO contracts against API.md and ACCEPTANCE.md"
+      ],
+      "test_ids": [
+        "T-CONTRACT",
+        "T-XML",
+        "T-FUZZ"
+      ],
+      "outputs": [
+        "Source/Core/Config/SIRConfigIO.*",
+        "buffer and streaming IO contracts"
+      ],
+      "stop_conditions": [
+        "Untracked allocation, incompatible signature, incomplete required grammar, or failed conformance"
+      ]
+    },
+    {
+      "id": "C04",
+      "workgroup": "CONFIG-CORE",
+      "requirement_ids": [
+        "REQ-API",
+        "REQ-MEMORY"
+      ],
+      "depends_on": [
+        "C01",
+        "C02"
+      ],
+      "steps": [
+        "Implement Document and handle lifetimes under Source/Core/Config/SIRConfigDocument.h",
+        "Verify transactional publish and generation checks against API.md and ACCEPTANCE.md"
+      ],
+      "test_ids": [
+        "T-CONTRACT",
+        "T-BUDGET",
+        "T-XML",
+        "T-YAML"
+      ],
+      "outputs": [
+        "Source/Core/Config/SIRConfigDocument.h",
+        "transactional publish and generation checks"
+      ],
+      "stop_conditions": [
+        "Untracked allocation, incompatible signature, incomplete required grammar, or failed conformance"
+      ]
+    },
+    {
+      "id": "C05",
+      "workgroup": "CONFIG-FORMATS",
+      "requirement_ids": [
+        "REQ-FORMATS",
+        "REQ-API"
+      ],
+      "depends_on": [
+        "C02",
+        "C03"
+      ],
+      "steps": [
+        "Implement CSV/TSV streaming under Source/Core/Config/Formats/Delimited/*",
+        "Verify two dialect APIs with common row writer against API.md and ACCEPTANCE.md"
+      ],
+      "test_ids": [
+        "T-CONTRACT",
+        "T-JSON",
+        "T-CSV",
+        "T-INI",
+        "T-XML",
+        "T-YAML",
+        "T-TOML"
+      ],
+      "outputs": [
+        "Source/Core/Config/Formats/Delimited/*",
+        "two dialect APIs with common row writer"
+      ],
+      "stop_conditions": [
+        "Untracked allocation, incompatible signature, incomplete required grammar, or failed conformance"
+      ]
+    },
+    {
+      "id": "C06",
+      "workgroup": "CONFIG-FORMATS",
+      "requirement_ids": [
+        "REQ-FORMATS",
+        "REQ-API"
+      ],
+      "depends_on": [
+        "C03",
+        "C04"
+      ],
+      "steps": [
+        "Implement INI grammar and editor document under Source/Core/Config/Formats/INI/*",
+        "Verify configurable dialect and writer against API.md and ACCEPTANCE.md"
+      ],
+      "test_ids": [
+        "T-CONTRACT",
+        "T-JSON",
+        "T-CSV",
+        "T-INI",
+        "T-XML",
+        "T-YAML",
+        "T-TOML"
+      ],
+      "outputs": [
+        "Source/Core/Config/Formats/INI/*",
+        "configurable dialect and writer"
+      ],
+      "stop_conditions": [
+        "Untracked allocation, incompatible signature, incomplete required grammar, or failed conformance"
+      ]
+    },
+    {
+      "id": "C07",
+      "workgroup": "CONFIG-FORMATS",
+      "requirement_ids": [
+        "REQ-VALVE",
+        "REQ-SAFETY"
+      ],
+      "depends_on": [
+        "C03",
+        "C04"
+      ],
+      "steps": [
+        "Implement Valve CFG pure command tokenizer under Source/Core/Config/Formats/Valve/SIRValveCfg*",
+        "Verify ordered command list without execution against API.md and ACCEPTANCE.md"
+      ],
+      "test_ids": [
+        "T-CONTRACT",
+        "T-VALVE",
+        "T-XML",
+        "T-FUZZ"
+      ],
+      "outputs": [
+        "Source/Core/Config/Formats/Valve/SIRValveCfg*",
+        "ordered command list without execution"
+      ],
+      "stop_conditions": [
+        "Untracked allocation, incompatible signature, incomplete required grammar, or failed conformance"
+      ]
+    },
+    {
+      "id": "C08",
+      "workgroup": "CONFIG-FORMATS",
+      "requirement_ids": [
+        "REQ-FORMATS",
+        "REQ-MEMORY"
+      ],
+      "depends_on": [
+        "C00",
+        "C02",
+        "C04"
+      ],
+      "steps": [
+        "Implement JSON implementation under Source/Core/Config/Formats/JSON/*",
+        "Verify strict RFC 8259 reader/writer, pointers against API.md and ACCEPTANCE.md"
+      ],
+      "test_ids": [
+        "T-CONTRACT",
+        "T-BUDGET",
+        "T-JSON",
+        "T-CSV",
+        "T-INI",
+        "T-XML",
+        "T-YAML",
+        "T-TOML"
+      ],
+      "outputs": [
+        "Source/Core/Config/Formats/JSON/*",
+        "strict RFC 8259 reader/writer, pointers"
+      ],
+      "stop_conditions": [
+        "Untracked allocation, incompatible signature, incomplete required grammar, or failed conformance"
+      ]
+    },
+    {
+      "id": "C09",
+      "workgroup": "CONFIG-FORMATS",
+      "requirement_ids": [
+        "REQ-VALVE",
+        "REQ-API"
+      ],
+      "depends_on": [
+        "C03",
+        "C04"
+      ],
+      "steps": [
+        "Implement Valve KV1 implementation under Source/Core/Config/Formats/Valve/SIRValveKV1*",
+        "Verify duplicate-preserving tree, includes/base/conditions against API.md and ACCEPTANCE.md"
+      ],
+      "test_ids": [
+        "T-CONTRACT",
+        "T-VALVE"
+      ],
+      "outputs": [
+        "Source/Core/Config/Formats/Valve/SIRValveKV1*",
+        "duplicate-preserving tree, includes/base/conditions"
+      ],
+      "stop_conditions": [
+        "Untracked allocation, incompatible signature, incomplete required grammar, or failed conformance"
+      ]
+    },
+    {
+      "id": "C10",
+      "workgroup": "CONFIG-FORMATS",
+      "requirement_ids": [
+        "REQ-VALVE",
+        "REQ-API"
+      ],
+      "depends_on": [
+        "C03",
+        "C04"
+      ],
+      "steps": [
+        "Implement Valve KV3 text implementation under Source/Core/Config/Formats/Valve/SIRValveKV3*Text*",
+        "Verify typed KV3 text parser and writer against API.md and ACCEPTANCE.md"
+      ],
+      "test_ids": [
+        "T-CONTRACT",
+        "T-VALVE"
+      ],
+      "outputs": [
+        "Source/Core/Config/Formats/Valve/SIRValveKV3*Text*",
+        "typed KV3 text parser and writer"
+      ],
+      "stop_conditions": [
+        "Untracked allocation, incompatible signature, incomplete required grammar, or failed conformance"
+      ]
+    },
+    {
+      "id": "C11",
+      "workgroup": "CONFIG-FORMATS",
+      "requirement_ids": [
+        "REQ-FORMATS",
+        "REQ-MEMORY"
+      ],
+      "depends_on": [
+        "C00",
+        "C04"
+      ],
+      "steps": [
+        "Implement TOML implementation under Source/Core/Config/Formats/TOML/*",
+        "Verify TOML 1.0 and 1.1 typed parser/writer against API.md and ACCEPTANCE.md"
+      ],
+      "test_ids": [
+        "T-CONTRACT",
+        "T-BUDGET",
+        "T-JSON",
+        "T-CSV",
+        "T-INI",
+        "T-XML",
+        "T-YAML",
+        "T-TOML"
+      ],
+      "outputs": [
+        "Source/Core/Config/Formats/TOML/*",
+        "TOML 1.0 and 1.1 typed parser/writer"
+      ],
+      "stop_conditions": [
+        "Untracked allocation, incompatible signature, incomplete required grammar, or failed conformance"
+      ]
+    },
+    {
+      "id": "C12",
+      "workgroup": "CONFIG-FORMATS",
+      "requirement_ids": [
+        "REQ-FORMATS",
+        "REQ-SAFETY",
+        "REQ-MEMORY"
+      ],
+      "depends_on": [
+        "C00",
+        "C02",
+        "C03",
+        "C04"
+      ],
+      "steps": [
+        "Implement XML SAX and document implementation under Source/Core/Config/Formats/XML/*",
+        "Verify namespace, mixed-content, entity limits, nested allocator context against API.md and ACCEPTANCE.md"
+      ],
+      "test_ids": [
+        "T-CONTRACT",
+        "T-BUDGET",
+        "T-JSON",
+        "T-CSV",
+        "T-INI",
+        "T-XML",
+        "T-YAML",
+        "T-TOML",
+        "T-FUZZ"
+      ],
+      "outputs": [
+        "Source/Core/Config/Formats/XML/*",
+        "namespace, mixed-content, entity limits, nested allocator context"
+      ],
+      "stop_conditions": [
+        "Untracked allocation, incompatible signature, incomplete required grammar, or failed conformance"
+      ]
+    },
+    {
+      "id": "C13",
+      "workgroup": "CONFIG-FORMATS",
+      "requirement_ids": [
+        "REQ-FORMATS",
+        "REQ-SAFETY",
+        "REQ-MEMORY"
+      ],
+      "depends_on": [
+        "C00",
+        "C04"
+      ],
+      "steps": [
+        "Implement YAML typed graph implementation under Source/Core/Config/Formats/YAML/*",
+        "Verify YAML 1.2.2 graph, aliases, tags and multi-doc streams against API.md and ACCEPTANCE.md"
+      ],
+      "test_ids": [
+        "T-CONTRACT",
+        "T-BUDGET",
+        "T-JSON",
+        "T-CSV",
+        "T-INI",
+        "T-XML",
+        "T-YAML",
+        "T-TOML",
+        "T-FUZZ"
+      ],
+      "outputs": [
+        "Source/Core/Config/Formats/YAML/*",
+        "YAML 1.2.2 graph, aliases, tags and multi-doc streams"
+      ],
+      "stop_conditions": [
+        "Untracked allocation, incompatible signature, incomplete required grammar, or failed conformance"
+      ]
+    },
+    {
+      "id": "C14",
+      "workgroup": "CONFIG-FORMATS",
+      "requirement_ids": [
+        "REQ-VALVE",
+        "REQ-MEMORY"
+      ],
+      "depends_on": [
+        "C00",
+        "C10"
+      ],
+      "steps": [
+        "Implement Versioned binary KV3 under Source/Core/Config/Formats/Valve/SIRValveKV3Binary.*",
+        "Verify reference-backed decode and encode variants against API.md and ACCEPTANCE.md"
+      ],
+      "test_ids": [
+        "T-CONTRACT",
+        "T-BUDGET",
+        "T-VALVE",
+        "T-XML",
+        "T-YAML"
+      ],
+      "outputs": [
+        "Source/Core/Config/Formats/Valve/SIRValveKV3Binary.*",
+        "reference-backed decode and encode variants"
+      ],
+      "stop_conditions": [
+        "Untracked allocation, incompatible signature, incomplete required grammar, or failed conformance"
+      ]
+    },
+    {
+      "id": "C15",
+      "workgroup": "CONFIG-CORE",
+      "requirement_ids": [
+        "REQ-COOK",
+        "REQ-API"
+      ],
+      "depends_on": [
+        "C04",
+        "C08",
+        "C09",
+        "C10",
+        "C11",
+        "C12",
+        "C13"
+      ],
+      "steps": [
+        "Implement Explicit deterministic config cooking under Source/Core/Config/SIRConfigCook.*",
+        "Verify typed validated versioned cooked config against API.md and ACCEPTANCE.md"
+      ],
+      "test_ids": [
+        "T-CONTRACT",
+        "T-COOK"
+      ],
+      "outputs": [
+        "Source/Core/Config/SIRConfigCook.*",
+        "typed validated versioned cooked config"
+      ],
+      "stop_conditions": [
+        "Untracked allocation, incompatible signature, incomplete required grammar, or failed conformance"
+      ]
+    },
+    {
+      "id": "C16",
+      "workgroup": "CONFIG-CORE",
+      "requirement_ids": [
+        "REQ-BUILD",
+        "REQ-DEPS"
+      ],
+      "depends_on": [
+        "C00",
+        "C01"
+      ],
+      "steps": [
+        "Implement Build and third-party registration under Source/Core/Config/CMakeLists.txt",
+        "Verify SIRCore, vendor and CMake integrations against API.md and ACCEPTANCE.md"
+      ],
+      "test_ids": [
+        "T-DEP",
+        "T-PLAT"
+      ],
+      "outputs": [
+        "Source/Core/Config/CMakeLists.txt",
+        "SIRCore, vendor and CMake integrations"
+      ],
+      "stop_conditions": [
+        "Untracked allocation, incompatible signature, incomplete required grammar, or failed conformance"
+      ]
+    },
+    {
+      "id": "C17",
+      "workgroup": "CONFIG-FORMATS",
+      "requirement_ids": [
+        "REQ-TESTS",
+        "REQ-MEMORY"
+      ],
+      "depends_on": [
+        "C01",
+        "C02",
+        "C03",
+        "C04"
+      ],
+      "steps": [
+        "Implement Conformance, fuzz, benchmarks under Tests/Unit/Config/*",
+        "Verify registered fixtures, faults, fuzz corpora and profiles against API.md and ACCEPTANCE.md"
+      ],
+      "test_ids": [
+        "T-BUDGET",
+        "T-XML",
+        "T-YAML",
+        "T-FUZZ",
+        "T-PERF"
+      ],
+      "outputs": [
+        "Tests/Unit/Config/*",
+        "registered fixtures, faults, fuzz corpora and profiles"
+      ],
+      "stop_conditions": [
+        "Untracked allocation, incompatible signature, incomplete required grammar, or failed conformance"
+      ]
+    },
+    {
+      "id": "C18",
+      "workgroup": "CONFIG-INTEGRATION",
+      "requirement_ids": [
+        "REQ-EDITOR",
+        "REQ-COOK"
+      ],
+      "depends_on": [
+        "C15",
+        "C17"
+      ],
+      "steps": [
+        "Implement Editor and cooker integration under Source/Editor/*",
+        "Verify source-preserving editor integration when consumers are available against API.md and ACCEPTANCE.md"
+      ],
+      "test_ids": [
+        "T-COOK",
+        "T-EDITOR"
+      ],
+      "outputs": [
+        "Source/Editor/*",
+        "source-preserving editor integration when consumers are available"
+      ],
+      "stop_conditions": [
+        "Untracked allocation, incompatible signature, incomplete required grammar, or failed conformance"
+      ]
+    },
+    {
+      "id": "C19",
+      "workgroup": "CONFIG-CORE",
+      "requirement_ids": [
+        "REQ-BUILD",
+        "REQ-TESTS"
+      ],
+      "depends_on": [
+        "C05",
+        "C06",
+        "C07",
+        "C08",
+        "C09",
+        "C10",
+        "C11",
+        "C12",
+        "C13",
+        "C14",
+        "C15",
+        "C16",
+        "C17",
+        "C18"
+      ],
+      "steps": [
+        "Implement Full CI and release acceptance under Build/CMake/*",
+        "Verify platform, native, fuzz, format, memory and regression evidence against API.md and ACCEPTANCE.md"
+      ],
+      "test_ids": [
+        "T-PLAT",
+        "T-FUZZ",
+        "T-PERF"
+      ],
+      "outputs": [
+        "Build/CMake/*",
+        "platform, native, fuzz, format, memory and regression evidence"
+      ],
+      "stop_conditions": [
+        "Untracked allocation, incompatible signature, incomplete required grammar, or failed conformance"
+      ]
+    }
+  ],
+  "tests": [
+    {
+      "id": "T-CONTRACT",
+      "label": "Shared API and format parity",
+      "tier": "PLAN_STATIC",
+      "requirement_ids": [
+        "REQ-API",
+        "REQ-FORMATS",
+        "REQ-VALVE"
+      ],
+      "status": "NOT_RUN",
+      "command": "Implement and run corresponding case per Docs/Plans/ConfigParsing/ACCEPTANCE.md",
+      "evidence_path": null
+    },
+    {
+      "id": "T-BUDGET",
+      "label": "Allocator fault and bound tests",
+      "tier": "INTEGRATED_EXECUTABLE",
+      "requirement_ids": [
+        "REQ-MEMORY"
+      ],
+      "status": "NOT_RUN",
+      "command": "Implement and run corresponding case per Docs/Plans/ConfigParsing/ACCEPTANCE.md",
+      "evidence_path": null
+    },
+    {
+      "id": "T-VALVE",
+      "label": "KV1/KV3/CFG positive and negative fixtures",
+      "tier": "INTEGRATED_EXECUTABLE",
+      "requirement_ids": [
+        "REQ-VALVE"
+      ],
+      "status": "NOT_RUN",
+      "command": "Implement and run corresponding case per Docs/Plans/ConfigParsing/ACCEPTANCE.md",
+      "evidence_path": null
+    },
+    {
+      "id": "T-JSON",
+      "label": "JSONTest strict parser/writer",
+      "tier": "INTEGRATED_EXECUTABLE",
+      "requirement_ids": [
+        "REQ-FORMATS"
+      ],
+      "status": "NOT_RUN",
+      "command": "Implement and run corresponding case per Docs/Plans/ConfigParsing/ACCEPTANCE.md",
+      "evidence_path": null
+    },
+    {
+      "id": "T-CSV",
+      "label": "CSV/TSV streaming chunk boundaries",
+      "tier": "INTEGRATED_EXECUTABLE",
+      "requirement_ids": [
+        "REQ-FORMATS"
+      ],
+      "status": "NOT_RUN",
+      "command": "Implement and run corresponding case per Docs/Plans/ConfigParsing/ACCEPTANCE.md",
+      "evidence_path": null
+    },
+    {
+      "id": "T-INI",
+      "label": "INI dialect profiles and order-preserving writer",
+      "tier": "INTEGRATED_EXECUTABLE",
+      "requirement_ids": [
+        "REQ-FORMATS"
+      ],
+      "status": "NOT_RUN",
+      "command": "Implement and run corresponding case per Docs/Plans/ConfigParsing/ACCEPTANCE.md",
+      "evidence_path": null
+    },
+    {
+      "id": "T-XML",
+      "label": "XML conformance, entity and reentrant allocator",
+      "tier": "INTEGRATED_EXECUTABLE",
+      "requirement_ids": [
+        "REQ-FORMATS",
+        "REQ-MEMORY",
+        "REQ-SAFETY"
+      ],
+      "status": "NOT_RUN",
+      "command": "Implement and run corresponding case per Docs/Plans/ConfigParsing/ACCEPTANCE.md",
+      "evidence_path": null
+    },
+    {
+      "id": "T-YAML",
+      "label": "YAML 1.2.2 yaml-test-suite and alias cycles",
+      "tier": "INTEGRATED_EXECUTABLE",
+      "requirement_ids": [
+        "REQ-FORMATS",
+        "REQ-MEMORY"
+      ],
+      "status": "NOT_RUN",
+      "command": "Implement and run corresponding case per Docs/Plans/ConfigParsing/ACCEPTANCE.md",
+      "evidence_path": null
+    },
+    {
+      "id": "T-TOML",
+      "label": "TOML 1.0/1.1 official suites",
+      "tier": "INTEGRATED_EXECUTABLE",
+      "requirement_ids": [
+        "REQ-FORMATS"
+      ],
+      "status": "NOT_RUN",
+      "command": "Implement and run corresponding case per Docs/Plans/ConfigParsing/ACCEPTANCE.md",
+      "evidence_path": null
+    },
+    {
+      "id": "T-COOK",
+      "label": "Deterministic cook, bounds and schema version",
+      "tier": "INTEGRATED_EXECUTABLE",
+      "requirement_ids": [
+        "REQ-COOK"
+      ],
+      "status": "NOT_RUN",
+      "command": "Implement and run corresponding case per Docs/Plans/ConfigParsing/ACCEPTANCE.md",
+      "evidence_path": null
+    },
+    {
+      "id": "T-EDITOR",
+      "label": "Editor import/edit/save on actual consumers",
+      "tier": "INTEGRATED_EXECUTABLE",
+      "requirement_ids": [
+        "REQ-EDITOR"
+      ],
+      "status": "NOT_RUN",
+      "command": "Implement and run corresponding case per Docs/Plans/ConfigParsing/ACCEPTANCE.md",
+      "evidence_path": null
+    },
+    {
+      "id": "T-DEP",
+      "label": "Vendor allocation closure and licenses",
+      "tier": "INTEGRATED_EXECUTABLE",
+      "requirement_ids": [
+        "REQ-DEPS"
+      ],
+      "status": "NOT_RUN",
+      "command": "Implement and run corresponding case per Docs/Plans/ConfigParsing/ACCEPTANCE.md",
+      "evidence_path": null
+    },
+    {
+      "id": "T-PLAT",
+      "label": "Windows/Linux CMake and CTest/sanitizers",
+      "tier": "INTEGRATED_EXECUTABLE",
+      "requirement_ids": [
+        "REQ-BUILD"
+      ],
+      "status": "NOT_RUN",
+      "command": "Implement and run corresponding case per Docs/Plans/ConfigParsing/ACCEPTANCE.md",
+      "evidence_path": null
+    },
+    {
+      "id": "T-FUZZ",
+      "label": "Malformed inputs and finite budgets",
+      "tier": "INTEGRATED_EXECUTABLE",
+      "requirement_ids": [
+        "REQ-TESTS",
+        "REQ-SAFETY"
+      ],
+      "status": "NOT_RUN",
+      "command": "Implement and run corresponding case per Docs/Plans/ConfigParsing/ACCEPTANCE.md",
+      "evidence_path": null
+    },
+    {
+      "id": "T-PERF",
+      "label": "Google Benchmark profiles with memory tracking",
+      "tier": "INTEGRATED_EXECUTABLE",
+      "requirement_ids": [
+        "REQ-TESTS"
+      ],
+      "status": "NOT_RUN",
+      "command": "Implement and run corresponding case per Docs/Plans/ConfigParsing/ACCEPTANCE.md",
+      "evidence_path": null
+    }
+  ],
+  "probes": [
+    {
+      "id": "PROBE-HEAP",
+      "requirement_id": "REQ-MEMORY",
+      "kind": "MUST_CONTAIN",
+      "paths": [
+        "Docs/Plans/ConfigParsing/API.md"
+      ],
+      "regex": "pDocumentAllocator"
+    },
+    {
+      "id": "PROBE-XML",
+      "requirement_id": "REQ-FORMATS",
+      "kind": "MUST_CONTAIN",
+      "paths": [
+        "Docs/Plans/ConfigParsing/API.md"
+      ],
+      "regex": "SIRXmlEventReader"
+    }
+  ],
+  "decisions": [
+    {
+      "id": "D-VENDOR",
+      "status": "OPEN",
+      "authority": "IMPLEMENTATION",
+      "subject": "Select and pin vendor backends following allocator/conformance review",
+      "blocks": [
+        "C08",
+        "C11",
+        "C12",
+        "C13"
+      ],
+      "evidence": "candidate selection not run"
+    },
+    {
+      "id": "D-BINARY",
+      "status": "OPEN",
+      "authority": "IMPLEMENTATION",
+      "subject": "Enumerate proven Valve KV3 binary version+codec fixture coverage",
+      "blocks": [
+        "C14"
+      ],
+      "evidence": "reference fixture suite not yet acquired"
+    }
+  ],
+  "review_passes": [
+    {
+      "id": "SOURCE_FIDELITY",
+      "status": "NOT_RUN",
+      "evidence_path": null,
+      "observed": "Draft for review; no independent validator executed"
+    },
+    {
+      "id": "CONTRACT_CONSISTENCY",
+      "status": "NOT_RUN",
+      "evidence_path": null,
+      "observed": "Draft for review; no independent validator executed"
+    },
+    {
+      "id": "ADVERSARIAL",
+      "status": "NOT_RUN",
+      "evidence_path": null,
+      "observed": "Draft for review; no independent validator executed"
+    }
+  ],
+  "spec_files": [
+    "Docs/Architecture/19-configuration-parsing.md",
+    "Docs/Plans/ConfigParsing/API.md",
+    "Docs/Plans/ConfigParsing/IMPLEMENTATION.md",
+    "Docs/Plans/ConfigParsing/ACCEPTANCE.md"
+  ],
+  "acceptance_status": "NOT_RUN",
+  "implementation_progress": {
+    "source_commit": "ffbd58c2cfdf8406f71820c50bb80120cb78bc9e",
+    "scope_status": "PARTIAL",
+    "implemented_paths": [
+      "Source/Core/Config/SIRConfigTypes.h",
+      "Source/Core/Config/SIRConfigBudget.h",
+      "Source/Core/Config/SIRConfigBudget.cpp",
+      "Source/Core/Config/Formats/Delimited/SIRDelimited.h",
+      "Source/Core/Config/Formats/Delimited/SIRDelimited.cpp",
+      "Source/Core/Config/CMakeLists.txt",
+      "Tests/Unit/Config/SIRDelimitedTests.cpp",
+      "Tests/Unit/Config/CMakeLists.txt",
+      "Source/Core/CMakeLists.txt",
+      "Tests/Unit/CMakeLists.txt"
+    ],
+    "partial_task_ids": [
+      "C01",
+      "C02",
+      "C05",
+      "C16",
+      "C17"
+    ],
+    "local_verification": {
+      "status": "PASS",
+      "kind": "Clang 17-mode standalone compile and runtime tests",
+      "configurations": [
+        "-O0 -g -Wall -Wextra -Wpedantic -Werror -fsanitize=address,undefined",
+        "-O2 -DNDEBUG -Wall -Wextra -Wpedantic -Werror"
+      ],
+      "result": "0 test failures",
+      "limitations": "Minimal local contract headers, not entire SIREngine or pinned clang-format 22.1.5"
+    },
+    "integrated_tests_status": "NOT_RUN"
+  }
+}
