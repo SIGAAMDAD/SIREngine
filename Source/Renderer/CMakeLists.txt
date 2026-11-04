@@ -2,7 +2,8 @@
 # native driver is enabled, so backends cannot silently fork its contracts.
 add_library(SIRGraphics STATIC
     SIRGraphicsRegistry.cpp
-    SIRGraphicsValidation.cpp)
+    SIRGraphicsValidation.cpp
+    Visibility/SIRVisibilityFoundation.cpp)
 add_library(SIR::Graphics ALIAS SIRGraphics)
 target_include_directories(SIRGraphics PUBLIC
     "${PROJECT_SOURCE_DIR}/Source"
