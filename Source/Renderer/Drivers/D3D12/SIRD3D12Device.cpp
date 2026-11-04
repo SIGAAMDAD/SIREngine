@@ -147,6 +147,44 @@ HRESULT SIRD3D12ComputeQueue::getLastError( void ) const noexcept
 	return m_nLastError;
 }
 
+
+ID3D12CommandQueue *SIRD3D12ComputeQueue::getSubmissionQueue( void ) const noexcept
+{
+	return isReady() ? m_pQueue.Get() : nullptr;
+}
+
+ID3D12Fence *SIRD3D12ComputeQueue::getSubmissionFence( void ) const noexcept
+{
+	return isReady() ? m_pFence.Get() : nullptr;
+}
+
+bool SIRD3D12ComputeQueue::submitRecorded( ID3D12CommandList *const *ppLists, uint32_t nCount, uint64_t *pFence ) noexcept
+{
+	if ( pFence == nullptr ) {
+		return false;
+	}
+	*pFence = 0;
+	if ( !isReady() || ppLists == nullptr || nCount == 0 || m_nNextFence == UINT64_MAX ) {
+		m_nLastError = E_INVALIDARG;
+		return false;
+	}
+	m_pQueue->ExecuteCommandLists( nCount, ppLists );
+	m_nLastError = m_pQueue->Signal( m_pFence.Get(), m_nNextFence );
+	if ( FAILED( m_nLastError ) ) {
+		m_bUnsafe = true;
+		return false;
+	}
+	m_nSubmittedFence = m_nNextFence;
+	*pFence = m_nNextFence;
+	++m_nNextFence;
+	return true;
+}
+
+void SIRD3D12ComputeQueue::markSubmissionUnsafe( void ) noexcept
+{
+	m_bUnsafe = true;
+}
+
 bool SIRD3D12ComputeQueue::pollFence( uint64_t nFence, bool *pCompleted ) const noexcept
 {
 	if ( pCompleted == nullptr ) {
@@ -562,6 +600,91 @@ bool SIRD3D12Device::isReady( void ) const noexcept
 {
 	return m_pDevice != nullptr && m_pGraphicsQueue != nullptr && m_pGraphicsFence != nullptr && m_hFenceEvent != nullptr &&
 	       m_Memory.isReady() && m_Transfers.isReady() && m_ComputeQueue.isReady() && m_nDeviceGeneration != 0 && !m_bGraphicsUnsafe;
+}
+
+
+sirGraphicsResult_t SIRD3D12Device::submitRecorded( sirGraphicsQueue_t eQueue, ID3D12CommandList *const *ppLists, uint32_t nCount,
+                                                    const sirGraphicsCompletion_t *pWaits, uint32_t nWaitCount,
+                                                    sirGraphicsCompletion_t *pCompletion ) noexcept
+{
+	if ( pCompletion == nullptr ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	*pCompletion = {};
+	if ( !isReady() ) {
+		return SIR_GRAPHICS_DEVICE_LOST;
+	}
+	if ( eQueue >= SIR_GRAPHICS_QUEUE_COUNT || ppLists == nullptr || nCount == 0 || nCount > 4 ||
+	     ( nWaitCount != 0 && pWaits == nullptr ) || nWaitCount > 64 ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	sirD3D12CompletionSet_t submitted = {};
+	if ( !snapshotCompletionSet( &submitted ) ) {
+		return SIR_GRAPHICS_DEVICE_LOST;
+	}
+	ID3D12CommandQueue *pQueue = eQueue == SIR_GRAPHICS_QUEUE_DIRECT ? m_pGraphicsQueue.Get()
+	                          : eQueue == SIR_GRAPHICS_QUEUE_COMPUTE ? m_ComputeQueue.getSubmissionQueue()
+	                                                                 : m_Transfers.getSubmissionQueue();
+	if ( pQueue == nullptr ) {
+		return SIR_GRAPHICS_DEVICE_LOST;
+	}
+	ID3D12Fence *szDependencies[64] = {};
+	for ( uint32_t iWait = 0; iWait < nWaitCount; ++iWait ) {
+		const sirGraphicsCompletion_t &wait = pWaits[iWait];
+		if ( wait.nDeviceGeneration != submitted.nDeviceGeneration || wait.eQueue >= SIR_GRAPHICS_QUEUE_COUNT || wait.nValue == 0 ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
+		const uint64_t nLast = wait.eQueue == SIR_GRAPHICS_QUEUE_DIRECT ? submitted.nGraphicsFence
+		                     : wait.eQueue == SIR_GRAPHICS_QUEUE_COMPUTE ? submitted.nComputeFence
+		                                                                 : submitted.nCopyFence;
+		if ( wait.nValue > nLast ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
+		szDependencies[iWait] = wait.eQueue == SIR_GRAPHICS_QUEUE_DIRECT ? m_pGraphicsFence.Get()
+		                       : wait.eQueue == SIR_GRAPHICS_QUEUE_COMPUTE ? m_ComputeQueue.getSubmissionFence()
+		                                                                   : m_Transfers.getSubmissionFence();
+		if ( szDependencies[iWait] == nullptr ) {
+			return SIR_GRAPHICS_DEVICE_LOST;
+		}
+	}
+	for ( uint32_t iWait = 0; iWait < nWaitCount; ++iWait ) {
+		m_nLastError = pQueue->Wait( szDependencies[iWait], pWaits[iWait].nValue );
+		if ( FAILED( m_nLastError ) ) {
+			if ( eQueue == SIR_GRAPHICS_QUEUE_DIRECT ) {
+				m_bGraphicsUnsafe = true;
+			} else if ( eQueue == SIR_GRAPHICS_QUEUE_COMPUTE ) {
+				m_ComputeQueue.markSubmissionUnsafe();
+			} else {
+				m_Transfers.markSubmissionUnsafe();
+			}
+			return SIR_GRAPHICS_DRIVER_ERROR;
+		}
+	}
+	uint64_t nFence = 0;
+	if ( eQueue == SIR_GRAPHICS_QUEUE_DIRECT ) {
+		if ( m_nNextFenceValue == UINT64_MAX ) {
+			m_bGraphicsUnsafe = nWaitCount != 0;
+			return SIR_GRAPHICS_CAPACITY_EXCEEDED;
+		}
+		m_pGraphicsQueue->ExecuteCommandLists( nCount, ppLists );
+		m_nLastError = m_pGraphicsQueue->Signal( m_pGraphicsFence.Get(), m_nNextFenceValue );
+		if ( FAILED( m_nLastError ) ) {
+			m_bGraphicsUnsafe = true;
+			return SIR_GRAPHICS_DRIVER_ERROR;
+		}
+		nFence = m_nNextFenceValue;
+		++m_nNextFenceValue;
+	} else if ( eQueue == SIR_GRAPHICS_QUEUE_COMPUTE ) {
+		if ( !m_ComputeQueue.submitRecorded( ppLists, nCount, &nFence ) ) {
+			m_ComputeQueue.markSubmissionUnsafe();
+			return SIR_GRAPHICS_DRIVER_ERROR;
+		}
+	} else if ( !m_Transfers.submitRecorded( ppLists, nCount, &nFence ) ) {
+		m_Transfers.markSubmissionUnsafe();
+		return SIR_GRAPHICS_DRIVER_ERROR;
+	}
+	*pCompletion = { ( uint32_t )submitted.nDeviceGeneration, eQueue, nFence };
+	return SIR_GRAPHICS_SUCCESS;
 }
 
 bool SIRD3D12Device::queryAdapterInfo( sirD3D12AdapterInfo_t *pInfo ) const noexcept

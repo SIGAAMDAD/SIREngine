@@ -46,6 +46,7 @@ typedef struct sirD3D12ResourceSlot_s
 	uint32_t nMips;
 	uint32_t nSamples;
 	uint32_t nDependentViews;
+	uint32_t nCommandReferences;
 	uint32_t iDescriptor;
 	sirGraphicsHandle_t hParent;
 	sirGraphicsHandleType_t eType;
@@ -92,6 +93,11 @@ public:
 	bool initialize( SIRD3D12Device *pNative, uint32_t nGeneration, uint64_t nBudgetBytes ) noexcept;
 	void shutdown( bool bGpuComplete ) noexcept;
 	void collectRetired( void ) noexcept;
+	const sirD3D12ResourceSlot_t *querySlot( sirGraphicsHandle_t hHandle ) noexcept;
+	bool queryDescriptor( sirGraphicsHandle_t hView, D3D12_DESCRIPTOR_HEAP_TYPE eHeap,
+	                      D3D12_CPU_DESCRIPTOR_HANDLE *pDescriptor ) noexcept;
+	sirGraphicsResult_t retainCommandReference( sirGraphicsHandle_t hHandle ) noexcept;
+	void releaseCommandReference( sirGraphicsHandle_t hHandle ) noexcept;
 	uint64_t getAllocatedBytes( void ) const noexcept;
 	uint64_t getPeakAllocatedBytes( void ) const noexcept;
 	uint64_t getMappedUploadBytes( void ) const noexcept;

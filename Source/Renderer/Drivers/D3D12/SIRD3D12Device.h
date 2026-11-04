@@ -33,6 +33,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <dxgi1_6.h>
 #include <wrl/client.h>
 #include <Renderer/Drivers/D3D12/SIRD3D12Memory.h>
+#include <Renderer/SIRGraphicsTypes.h>
 #include <Renderer/Drivers/D3D12/SIRD3D12ComputeKernel.h>
 #include <Renderer/Drivers/D3D12/SIRD3D12GraphicsKernel.h>
 #include <Renderer/Drivers/D3D12/SIRD3D12Transfers.h>
@@ -108,6 +109,10 @@ public:
 	// Borrowed until the caller takes its own COM reference.
 	bool queryDependencyFence( uint64_t nFenceValue, ID3D12Fence **ppFence ) const noexcept;
 	uint64_t getLastSubmittedFence( void ) const noexcept;
+	ID3D12CommandQueue *getSubmissionQueue( void ) const noexcept;
+	ID3D12Fence *getSubmissionFence( void ) const noexcept;
+	bool submitRecorded( ID3D12CommandList *const *ppLists, uint32_t nCount, uint64_t *pFence ) noexcept;
+	void markSubmissionUnsafe( void ) noexcept;
 	HRESULT getLastError( void ) const noexcept;
 };
 
@@ -154,6 +159,9 @@ public:
 	HRESULT getLastError( void ) const noexcept;
 	ID3D12Device *getNativeDevice( void ) const noexcept;
 	SIRD3D12Memory *getMemory( void ) noexcept;
+	sirGraphicsResult_t submitRecorded( sirGraphicsQueue_t eQueue, ID3D12CommandList *const *ppLists, uint32_t nCount,
+	                                    const sirGraphicsCompletion_t *pWaits, uint32_t nWaitCount,
+	                                    sirGraphicsCompletion_t *pCompletion ) noexcept;
 	SIRD3D12Transfers &getTransfers( void ) noexcept;
 	const SIRD3D12Transfers &getTransfers( void ) const noexcept;
 	SIRD3D12ComputeQueue &getComputeQueue( void ) noexcept;
