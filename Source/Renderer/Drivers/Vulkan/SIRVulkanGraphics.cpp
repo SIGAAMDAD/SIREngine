@@ -468,6 +468,22 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::submit( sirGraphicsQueue_t eQueue,
 			nativeOp.bufferCopy = { &pSrc->native, &pDst->native, op.nSourceOffset, op.nDestinationOffset, op.nBytes };
 			continue;
 		}
+		if ( op.eKind == SIR_VULKAN_GRAPHICS_BUFFER_BARRIER ) {
+			sirVulkanGraphicsBufferSlot_t *pBuffer = resolveBuffer( op.barrier.hResource );
+			if ( pBuffer == nullptr ) {
+				return SIR_GRAPHICS_INVALID_HANDLE;
+			}
+			if ( pBuffer->pMapped != nullptr ) {
+				return SIR_GRAPHICS_BUSY;
+			}
+			nativeOp.eKind = SIR_VULKAN_RECORDED_BUFFER_BARRIER;
+			nativeOp.pBuffer = &pBuffer->native;
+			const sirGraphicsResult_t ePlan = sirVulkanPlanBufferBarrier( op.barrier, &pBuffer->native, &nativeOp.bufferBarrier );
+			if ( ePlan != SIR_GRAPHICS_SUCCESS ) {
+				return ePlan;
+			}
+			continue;
+		}
 		const sirGraphicsHandle_t hTexture = op.eKind == SIR_VULKAN_GRAPHICS_TEXTURE_COPY ? op.textureCopy.hTexture : op.barrier.hResource;
 		if ( hTexture.eType != SIR_GRAPHICS_HANDLE_TEXTURE || hTexture.nDeviceGeneration != m_nDeviceGeneration ||
 		     hTexture.nSlot >= SIR_VULKAN_TEXTURE_CAPACITY ) {

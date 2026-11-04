@@ -70,7 +70,7 @@ int main( void )
 	sourceDesc.eMemory = SIR_GRAPHICS_MEMORY_CPU_UPLOAD;
 	sirGraphicsBufferDesc_t gpuDesc = {};
 	gpuDesc.nSizeBytes = 4096;
-	gpuDesc.nUsage = SIR_GRAPHICS_USAGE_COPY_SOURCE | SIR_GRAPHICS_USAGE_COPY_DESTINATION;
+	gpuDesc.nUsage = SIR_GRAPHICS_USAGE_COPY_SOURCE | SIR_GRAPHICS_USAGE_COPY_DESTINATION | SIR_GRAPHICS_USAGE_STORAGE;
 	gpuDesc.eMemory = SIR_GRAPHICS_MEMORY_GPU_LOCAL;
 	sirGraphicsBufferDesc_t readbackDesc = {};
 	readbackDesc.nSizeBytes = 4096;
@@ -331,8 +331,19 @@ int main( void )
 	mixedBarrier.eAfter = SIR_GRAPHICS_STATE_SHADER_READ;
 	mixedBarrier.nMipCount = 1;
 	mixedBarrier.nLayerCount = 1;
+	sirGraphicsBarrier_t bufferBarrier = {};
+	bufferBarrier.hResource = hGpu;
+	bufferBarrier.eType = SIR_GRAPHICS_BARRIER_TRANSITION;
+	bufferBarrier.eBefore = SIR_GRAPHICS_STATE_COPY_DESTINATION;
+	bufferBarrier.eAfter = SIR_GRAPHICS_STATE_COPY_SOURCE;
+	sirGraphicsBarrier_t storageBarrier = {};
+	storageBarrier.hResource = hGpu;
+	storageBarrier.eType = SIR_GRAPHICS_BARRIER_UAV;
+	storageBarrier.eBefore = SIR_GRAPHICS_STATE_SHADER_WRITE;
+	storageBarrier.eAfter = SIR_GRAPHICS_STATE_SHADER_WRITE;
 	if ( pDevice->acquireCommands( SIR_GRAPHICS_QUEUE_DIRECT, &pMixed ) != SIR_GRAPHICS_SUCCESS || pMixed == nullptr ||
 	     pMixed->copyBuffer( hGpu, 2048, hSource, 0, sizeof( szExpected ) ) != SIR_GRAPHICS_SUCCESS ||
+	     pMixed->barrier( &bufferBarrier, 1 ) != SIR_GRAPHICS_SUCCESS || pMixed->barrier( &storageBarrier, 1 ) != SIR_GRAPHICS_SUCCESS ||
 	     pMixed->copyBufferTexture( mixedCopy ) != SIR_GRAPHICS_SUCCESS || pMixed->barrier( &mixedBarrier, 1 ) != SIR_GRAPHICS_SUCCESS ) {
 		return 33;
 	}

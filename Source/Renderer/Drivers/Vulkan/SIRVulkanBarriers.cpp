@@ -116,11 +116,28 @@ sirGraphicsResult_t SIRVulkanCommandList::barrier( const sirGraphicsBarrier_t *p
 	if ( nCount > SIR_VULKAN_COPY_BATCH_CAPACITY - m_nOperationCount ) {
 		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
 	}
-	// Prevalidate the entire array before modifying the recorded stream.
+	// Prevalidate all handles and buffer access scopes before recording.
+	// Image layout transitions after earlier operations are revalidated
+	// against the ordered shadow state during submission.
 	for ( uint32_t iBarrier = 0; iBarrier < nCount; ++iBarrier ) {
 		const sirGraphicsBarrier_t &barrier = pBarriers[iBarrier];
 		if ( barrier.eType != SIR_GRAPHICS_BARRIER_TRANSITION && barrier.eType != SIR_GRAPHICS_BARRIER_UAV ) {
 			return SIR_GRAPHICS_UNSUPPORTED;
+		}
+		if ( barrier.hResource.eType == SIR_GRAPHICS_HANDLE_BUFFER ) {
+			const sirVulkanGraphicsBufferSlot_t *pBuffer = m_pOwner->resolveBuffer( barrier.hResource );
+			if ( pBuffer == nullptr ) {
+				return SIR_GRAPHICS_INVALID_HANDLE;
+			}
+			if ( pBuffer->pMapped != nullptr ) {
+				return SIR_GRAPHICS_BUSY;
+			}
+			sirVulkanBufferBarrier_t native = {};
+			const sirGraphicsResult_t ePlan = sirVulkanPlanBufferBarrier( barrier, &pBuffer->native, &native );
+			if ( ePlan != SIR_GRAPHICS_SUCCESS ) {
+				return ePlan;
+			}
+			continue;
 		}
 		if ( barrier.hResource.eType != SIR_GRAPHICS_HANDLE_TEXTURE ||
 		     barrier.hResource.nDeviceGeneration != m_pOwner->m_nDeviceGeneration ||
@@ -146,7 +163,8 @@ sirGraphicsResult_t SIRVulkanCommandList::barrier( const sirGraphicsBarrier_t *p
 	for ( uint32_t iBarrier = 0; iBarrier < nCount; ++iBarrier ) {
 		sirVulkanGraphicsOperation_t &operation = m_szOperations[m_nOperationCount++];
 		operation = {};
-		operation.eKind = SIR_VULKAN_GRAPHICS_IMAGE_BARRIER;
+		operation.eKind = pBarriers[iBarrier].hResource.eType == SIR_GRAPHICS_HANDLE_BUFFER ? SIR_VULKAN_GRAPHICS_BUFFER_BARRIER
+		                                                                                    : SIR_VULKAN_GRAPHICS_IMAGE_BARRIER;
 		operation.barrier = pBarriers[iBarrier];
 	}
 	return SIR_GRAPHICS_SUCCESS;
