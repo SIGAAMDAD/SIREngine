@@ -80,8 +80,8 @@ public:
 	SIRFMODMixerBackend( const SIRFMODMixerBackend & ) = delete;
 	SIRFMODMixerBackend &operator=( const SIRFMODMixerBackend & ) = delete;
 
-	sirAudioResult_t configure( SIRFMODContext *pContext, const sirContainerAllocator_t *pAllocator,
-	                            const sirFMODMixerNativeOps_t &ops, uint32_t nMaxControls ) noexcept;
+	sirAudioResult_t configure( SIRFMODContext *pContext, const sirContainerAllocator_t *pAllocator, const sirFMODMixerNativeOps_t &ops,
+	                            uint32_t nMaxControls ) noexcept;
 	sirAudioResult_t initialize( void ) noexcept;
 	void shutdown( void ) noexcept;
 	sirAudioResult_t registerBus( uint64_t nControlId, const char *szPath ) noexcept;

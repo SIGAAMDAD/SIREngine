@@ -122,8 +122,18 @@ static int32_t mixerStudioRelease( void *pData, void *pStudio ) noexcept
 
 static sirFMODNativeOps_t makeMixerStudioOps( sirFMODMixerFixture_t *pFixture ) noexcept
 {
-	return { 1, 0x00020400, pFixture, mixerStudioCreate, mixerGetCore, mixerGetVersion, mixerGetDriverCount,
-	         mixerSetDriver, mixerSetNoSound, mixerStudioInitialize, mixerStudioUpdate, mixerStudioRelease };
+	return { 1,
+	         0x00020400,
+	         pFixture,
+	         mixerStudioCreate,
+	         mixerGetCore,
+	         mixerGetVersion,
+	         mixerGetDriverCount,
+	         mixerSetDriver,
+	         mixerSetNoSound,
+	         mixerStudioInitialize,
+	         mixerStudioUpdate,
+	         mixerStudioRelease };
 }
 
 static int32_t mixerResolveBus( void *pData, void *pStudio, const char *szPath, void **ppBus ) noexcept

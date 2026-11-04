@@ -33,8 +33,8 @@ sirAudioResult_t SIRFMODMixerBackend::configure( SIRFMODContext *pContext, const
                                                  const sirFMODMixerNativeOps_t &ops, uint32_t nMaxControls ) noexcept
 {
 	if ( m_pContext != nullptr || m_bInitialized || !SIRRawStorage::isValidAllocator( pAllocator ) || pContext == nullptr ||
-	     !pContext->isReady() || nMaxControls == 0 || ops.nAbiVersion != 1 || ops.resolveBus == nullptr ||
-	     ops.resolveVCA == nullptr || ops.setBusVolume == nullptr || ops.setBusMute == nullptr || ops.setVCAVolume == nullptr ) {
+	     !pContext->isReady() || nMaxControls == 0 || ops.nAbiVersion != 1 || ops.resolveBus == nullptr || ops.resolveVCA == nullptr ||
+	     ops.setBusVolume == nullptr || ops.setBusMute == nullptr || ops.setVCAVolume == nullptr ) {
 		return SIR_AUDIO_INVALID_ARGUMENT;
 	}
 
@@ -104,8 +104,7 @@ bool SIRFMODMixerBackend::findControl( uint64_t nControlId, uint32_t &iIndex ) c
 	return iLow < m_nCount && m_pControls[iLow].nControlId == nControlId;
 }
 
-sirAudioResult_t SIRFMODMixerBackend::registerControl( uint64_t nControlId, const char *szPath,
-                                                       sirFMODMixerControlKind_t eKind ) noexcept
+sirAudioResult_t SIRFMODMixerBackend::registerControl( uint64_t nControlId, const char *szPath, sirFMODMixerControlKind_t eKind ) noexcept
 {
 	if ( !isReady() ) {
 		return SIR_AUDIO_NOT_INITIALIZED;
@@ -133,8 +132,7 @@ sirAudioResult_t SIRFMODMixerBackend::registerControl( uint64_t nControlId, cons
 	}
 
 	if ( iInsert < m_nCount ) {
-		memmove( m_pControls + iInsert + 1, m_pControls + iInsert,
-		         ( size_t )( m_nCount - iInsert ) * sizeof( sirFMODMixerControl_t ) );
+		memmove( m_pControls + iInsert + 1, m_pControls + iInsert, ( size_t )( m_nCount - iInsert ) * sizeof( sirFMODMixerControl_t ) );
 	}
 	m_pControls[iInsert] = { nControlId, pNative, eKind, {} };
 	++m_nCount;
@@ -162,8 +160,7 @@ sirAudioResult_t SIRFMODMixerBackend::unregisterControl( uint64_t nControlId ) n
 	}
 
 	if ( iIndex + 1 < m_nCount ) {
-		memmove( m_pControls + iIndex, m_pControls + iIndex + 1,
-		         ( size_t )( m_nCount - iIndex - 1 ) * sizeof( sirFMODMixerControl_t ) );
+		memmove( m_pControls + iIndex, m_pControls + iIndex + 1, ( size_t )( m_nCount - iIndex - 1 ) * sizeof( sirFMODMixerControl_t ) );
 	}
 	--m_nCount;
 	return SIR_AUDIO_OK;
