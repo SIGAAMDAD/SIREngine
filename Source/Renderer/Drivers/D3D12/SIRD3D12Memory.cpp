@@ -17,6 +17,14 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Core/Memory/SIRGeneralHeap.h>
 #include <limits.h>
 
+static constexpr uint32_t SIR_D3D12_SEALED_DEVICE_BUFFER = 0;
+static constexpr uint32_t SIR_D3D12_SEALED_SAMPLED_TEXTURE = 1;
+static constexpr uint32_t SIR_D3D12_SEALED_ATTACHMENT_TEXTURE = 2;
+static constexpr uint32_t SIR_D3D12_SEALED_UPLOAD_BUFFER = 3;
+static constexpr uint32_t SIR_D3D12_SEALED_READBACK_BUFFER = 4;
+static constexpr uint32_t SIR_D3D12_SEALED_GPU_UPLOAD_BUFFER = 5;
+
+
 static void *sirD3D12AllocateHostMetadata( size_t nBytes, size_t nAlignment, void *pUser ) noexcept
 {
 	SIRGeneralHeap *pHeap = ( SIRGeneralHeap * )pUser;
@@ -107,6 +115,86 @@ bool SIRD3D12Memory::configureResidentBudget( uint64_t nBytes ) noexcept
 	return true;
 }
 
+bool SIRD3D12Memory::configureSealedPools( const sirD3D12SealedPoolConfig_t &config ) noexcept
+{
+	if ( m_pAllocator == nullptr || m_bSealed ) {
+		m_nLastError = E_INVALIDARG;
+		return false;
+	}
+	const uint64_t szPoolBytes[s_nSealedPoolCount] = { config.nDeviceBufferBytes,      config.nSampledTextureBytes,
+	                                                   config.nAttachmentTextureBytes, config.nUploadBufferBytes,
+	                                                   config.nReadbackBufferBytes,    config.nGpuUploadBufferBytes };
+	const D3D12_HEAP_TYPE szHeapTypes[s_nSealedPoolCount] = { D3D12_HEAP_TYPE_DEFAULT,  D3D12_HEAP_TYPE_DEFAULT,
+	                                                          D3D12_HEAP_TYPE_DEFAULT,  D3D12_HEAP_TYPE_UPLOAD,
+	                                                          D3D12_HEAP_TYPE_READBACK, D3D12_HEAP_TYPE_GPU_UPLOAD };
+	const D3D12_HEAP_FLAGS szHeapFlags[s_nSealedPoolCount] = {
+	    D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS,        D3D12_HEAP_FLAG_ALLOW_ONLY_NON_RT_DS_TEXTURES,
+	    D3D12_HEAP_FLAG_ALLOW_ONLY_RT_DS_TEXTURES, D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS,
+	    D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS,        D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS };
+	uint64_t nReserveBytes = 0;
+	constexpr uint64_t POOL_ALIGNMENT = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
+	for ( uint32_t iPool = 0; iPool < s_nSealedPoolCount; ++iPool ) {
+		const uint64_t nBytes = szPoolBytes[iPool];
+		if ( nBytes != 0 && ( nBytes < POOL_ALIGNMENT || nBytes % POOL_ALIGNMENT != 0 || nReserveBytes > UINT64_MAX - nBytes ) ) {
+			m_nLastError = E_INVALIDARG;
+			return false;
+		}
+		nReserveBytes += nBytes;
+	}
+	sirD3D12AllocationLedger_t before = {};
+	if ( nReserveBytes == 0 || !queryAllocationLedger( &before ) ) {
+		m_nLastError = E_INVALIDARG;
+		return false;
+	}
+	if ( m_nResidentLimitBytes != 0 &&
+	     ( before.nCommittedBytes > m_nResidentLimitBytes || nReserveBytes > m_nResidentLimitBytes - before.nCommittedBytes ) ) {
+		m_nLastError = E_OUTOFMEMORY;
+		return false;
+	}
+	D3D12MA::Pool *szPools[s_nSealedPoolCount] = {};
+	m_nLastError = S_OK;
+	for ( uint32_t iPool = 0; iPool < s_nSealedPoolCount; ++iPool ) {
+		if ( szPoolBytes[iPool] == 0 ) {
+			continue;
+		}
+		if ( iPool == SIR_D3D12_SEALED_GPU_UPLOAD_BUFFER && m_pAllocator->IsGPUUploadHeapSupported() == FALSE ) {
+			m_nLastError = E_NOTIMPL;
+			break;
+		}
+		D3D12MA::POOL_DESC desc = {};
+		desc.HeapProperties.Type = szHeapTypes[iPool];
+		desc.HeapFlags = szHeapFlags[iPool];
+		desc.BlockSize = szPoolBytes[iPool];
+		desc.MinBlockCount = 1;
+		desc.MaxBlockCount = 1;
+		m_nLastError = m_pAllocator->CreatePool( &desc, &szPools[iPool] );
+		if ( FAILED( m_nLastError ) ) {
+			break;
+		}
+	}
+	sirD3D12AllocationLedger_t after = {};
+	if ( SUCCEEDED( m_nLastError ) &&
+	     ( !queryAllocationLedger( &after ) || ( m_nResidentLimitBytes != 0 && after.nCommittedBytes > m_nResidentLimitBytes ) ) ) {
+		m_nLastError = E_OUTOFMEMORY;
+	}
+	if ( FAILED( m_nLastError ) ) {
+		for ( uint32_t iPool = 0; iPool < s_nSealedPoolCount; ++iPool ) {
+			if ( szPools[iPool] != nullptr ) {
+				szPools[iPool]->Release();
+			}
+		}
+		return false;
+	}
+	for ( uint32_t iPool = 0; iPool < s_nSealedPoolCount; ++iPool ) {
+		m_szSealedPools[iPool] = szPools[iPool];
+	}
+	m_bSealed = true;
+	if ( after.nCommittedBytes > m_nPeakTrackedBytes ) {
+		m_nPeakTrackedBytes = after.nCommittedBytes;
+	}
+	return true;
+}
+
 bool SIRD3D12Memory::reserveExternalBytes( uint64_t nBytes ) noexcept
 {
 	sirD3D12AllocationLedger_t ledger = {};
@@ -151,6 +239,13 @@ bool SIRD3D12Memory::enforceResidentLimit( D3D12MA::Allocation **ppAllocation ) 
 void SIRD3D12Memory::shutdown( void ) noexcept
 {
 	releaseTransferArena( true );
+	for ( uint32_t iPool = 0; iPool < s_nSealedPoolCount; ++iPool ) {
+		if ( m_szSealedPools[iPool] != nullptr ) {
+			m_szSealedPools[iPool]->Release();
+			m_szSealedPools[iPool] = nullptr;
+		}
+	}
+	m_bSealed = false;
 	if ( m_pAllocator != nullptr ) {
 		m_pAllocator->Release();
 		m_pAllocator = nullptr;
@@ -167,6 +262,10 @@ void SIRD3D12Memory::abandon( void ) noexcept
 	// The GPU may still use this arena. Preserve the native resources,
 	// including their persistent mappings, and the allocator that owns them.
 	releaseTransferArena( false );
+	for ( uint32_t iPool = 0; iPool < s_nSealedPoolCount; ++iPool ) {
+		m_szSealedPools[iPool] = nullptr;
+	}
+	m_bSealed = false;
 	m_pAllocator = nullptr;
 	m_pHostHeap = nullptr;
 	m_Callbacks = {};
@@ -203,6 +302,23 @@ HRESULT SIRD3D12Memory::createBuffer( D3D12_HEAP_TYPE eHeapType, D3D12_RESOURCE_
 	D3D12MA::ALLOCATION_DESC allocation = {};
 	allocation.HeapType = eHeapType;
 	allocation.Flags = D3D12MA::ALLOCATION_FLAG_WITHIN_BUDGET;
+	if ( m_bSealed ) {
+		uint32_t iPool = s_nSealedPoolCount;
+		if ( eHeapType == D3D12_HEAP_TYPE_DEFAULT ) {
+			iPool = SIR_D3D12_SEALED_DEVICE_BUFFER;
+		} else if ( eHeapType == D3D12_HEAP_TYPE_UPLOAD ) {
+			iPool = SIR_D3D12_SEALED_UPLOAD_BUFFER;
+		} else if ( eHeapType == D3D12_HEAP_TYPE_READBACK ) {
+			iPool = SIR_D3D12_SEALED_READBACK_BUFFER;
+		} else if ( eHeapType == D3D12_HEAP_TYPE_GPU_UPLOAD ) {
+			iPool = SIR_D3D12_SEALED_GPU_UPLOAD_BUFFER;
+		}
+		if ( iPool == s_nSealedPoolCount || m_szSealedPools[iPool] == nullptr ) {
+			m_nLastError = E_OUTOFMEMORY;
+			return m_nLastError;
+		}
+		allocation.CustomPool = m_szSealedPools[iPool];
+	}
 
 	m_nLastError = m_pAllocator->CreateResource( &allocation, &resource, eInitialState, nullptr, ppAllocation, IID_NULL, nullptr );
 	if ( SUCCEEDED( m_nLastError ) && !enforceResidentLimit( ppAllocation ) ) {
@@ -239,6 +355,16 @@ HRESULT SIRD3D12Memory::createTexture2D( uint32_t nWidth, uint32_t nHeight, DXGI
 	D3D12MA::ALLOCATION_DESC allocation = {};
 	allocation.HeapType = D3D12_HEAP_TYPE_DEFAULT;
 	allocation.Flags = D3D12MA::ALLOCATION_FLAG_WITHIN_BUDGET;
+	if ( m_bSealed ) {
+		const uint32_t iPool = ( resource.Flags & ( D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL ) ) != 0
+		                           ? SIR_D3D12_SEALED_ATTACHMENT_TEXTURE
+		                           : SIR_D3D12_SEALED_SAMPLED_TEXTURE;
+		if ( m_szSealedPools[iPool] == nullptr ) {
+			m_nLastError = E_OUTOFMEMORY;
+			return m_nLastError;
+		}
+		allocation.CustomPool = m_szSealedPools[iPool];
+	}
 	m_nLastError = m_pAllocator->CreateResource( &allocation, &resource, eInitialState, pClearValue, ppAllocation, IID_NULL, nullptr );
 	if ( SUCCEEDED( m_nLastError ) && !enforceResidentLimit( ppAllocation ) ) {
 		return E_OUTOFMEMORY;
@@ -261,6 +387,16 @@ HRESULT SIRD3D12Memory::createTexture( const D3D12_RESOURCE_DESC &resource, D3D1
 	D3D12MA::ALLOCATION_DESC allocation = {};
 	allocation.HeapType = D3D12_HEAP_TYPE_DEFAULT;
 	allocation.Flags = D3D12MA::ALLOCATION_FLAG_WITHIN_BUDGET;
+	if ( m_bSealed ) {
+		const uint32_t iPool = ( resource.Flags & ( D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL ) ) != 0
+		                           ? SIR_D3D12_SEALED_ATTACHMENT_TEXTURE
+		                           : SIR_D3D12_SEALED_SAMPLED_TEXTURE;
+		if ( m_szSealedPools[iPool] == nullptr ) {
+			m_nLastError = E_OUTOFMEMORY;
+			return m_nLastError;
+		}
+		allocation.CustomPool = m_szSealedPools[iPool];
+	}
 	m_nLastError = m_pAllocator->CreateResource( &allocation, &resource, eInitialState, pClearValue, ppAllocation, IID_NULL, nullptr );
 	if ( SUCCEEDED( m_nLastError ) && !enforceResidentLimit( ppAllocation ) ) {
 		return E_OUTOFMEMORY;
