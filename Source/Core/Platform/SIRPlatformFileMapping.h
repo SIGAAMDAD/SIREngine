@@ -56,12 +56,12 @@ private:
 public:
 	SIRPlatformFileMapping( void ) noexcept;
 	~SIRPlatformFileMapping( void ) noexcept;
-	SIRPlatformFileMapping( const SIRPlatformFileMapping & ) = delete;
-	SIRPlatformFileMapping &operator=( const SIRPlatformFileMapping & ) = delete;
-	SIRPlatformFileMapping( SIRPlatformFileMapping && ) = delete;
-	SIRPlatformFileMapping &operator=( SIRPlatformFileMapping && ) = delete;
+	SIRPlatformFileMapping( const SIRPlatformFileMapping& ) = delete;
+	SIRPlatformFileMapping& operator=( const SIRPlatformFileMapping& ) = delete;
+	SIRPlatformFileMapping( SIRPlatformFileMapping&& ) = delete;
+	SIRPlatformFileMapping& operator=( SIRPlatformFileMapping&& ) = delete;
 
-	sirFileResult_t map( const SIRPlatformFile &rFile, uint64_t nOffset, uint64_t nBytes, sirFileMapMode_t eMode ) noexcept;
+	sirFileResult_t map( const SIRPlatformFile& rFile, uint64_t nOffset, uint64_t nBytes, sirFileMapMode_t eMode ) noexcept;
 	sirFileResult_t unmap( void ) noexcept;
 	sirFileResult_t flush( void ) const noexcept;
 	bool isMapped( void ) const noexcept;

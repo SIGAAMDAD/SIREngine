@@ -37,13 +37,13 @@ static sirTaskResult_t sirBenchmarkDeferred( void *, sirTaskHandle_t ) noexcept
 	return SIR_TASK_RESULT_PENDING;
 }
 
-static bool sirInitBenchmarkMemory( SIRMemoryManager &memory ) noexcept
+static bool sirInitBenchmarkMemory( SIRMemoryManager& memory ) noexcept
 {
 	const sirMemoryConfig_t config = { 64ULL * 1024 * 1024, 32ULL * 1024 * 1024, 8ULL * 1024 * 1024, 32 };
 	return memory.init( config );
 }
 
-static void SIRBenchmarkTaskSubmitPumpRelease( benchmark::State &state )
+static void SIRBenchmarkTaskSubmitPumpRelease( benchmark::State& state )
 {
 	SIRMemoryManager memory;
 	if ( !sirInitBenchmarkMemory( memory ) ) {
@@ -71,7 +71,7 @@ static void SIRBenchmarkTaskSubmitPumpRelease( benchmark::State &state )
 	memory.shutdown();
 }
 
-static void SIRBenchmarkTaskBatch( benchmark::State &state )
+static void SIRBenchmarkTaskBatch( benchmark::State& state )
 {
 	SIRMemoryManager memory;
 	if ( !sirInitBenchmarkMemory( memory ) ) {
@@ -113,7 +113,7 @@ static void SIRBenchmarkTaskBatch( benchmark::State &state )
 	memory.shutdown();
 }
 
-static void SIRBenchmarkFenceAcknowledgement( benchmark::State &state )
+static void SIRBenchmarkFenceAcknowledgement( benchmark::State& state )
 {
 	SIRMemoryManager memory;
 	if ( !sirInitBenchmarkMemory( memory ) ) {
@@ -177,7 +177,7 @@ static sirTaskResult_t sirBenchmarkWorkerJob( void *pContext, sirTaskHandle_t ta
 	return SIR_TASK_RESULT_SUCCESS;
 }
 
-static void SIRBenchmarkWorkerBatch( benchmark::State &state )
+static void SIRBenchmarkWorkerBatch( benchmark::State& state )
 {
 	const uint32_t nWorkers = ( uint32_t )state.range( 0 );
 	const uint32_t nTasks = ( uint32_t )state.range( 1 );
@@ -231,7 +231,7 @@ static void SIRBenchmarkWorkerBatch( benchmark::State &state )
 
 // Pre-created producers avoid measuring OS thread creation. Their wakeup
 // cost is intentionally included in end-to-end multi-producer throughput.
-static void SIRBenchmarkConcurrentProducers( benchmark::State &state )
+static void SIRBenchmarkConcurrentProducers( benchmark::State& state )
 {
 	const uint32_t nProducers = ( uint32_t )state.range( 0 );
 	const uint32_t nWorkers = ( uint32_t )state.range( 1 );
@@ -321,7 +321,7 @@ static void SIRBenchmarkConcurrentProducers( benchmark::State &state )
 	memory.shutdown();
 }
 
-static void SIRBenchmarkWorkerFanInOut( benchmark::State &state )
+static void SIRBenchmarkWorkerFanInOut( benchmark::State& state )
 {
 	const uint32_t nWorkers = ( uint32_t )state.range( 0 );
 	const uint32_t nChildren = ( uint32_t )state.range( 1 );
@@ -375,7 +375,7 @@ static void SIRBenchmarkWorkerFanInOut( benchmark::State &state )
 	memory.shutdown();
 }
 
-static void SIRBenchmarkFenceBurst( benchmark::State &state )
+static void SIRBenchmarkFenceBurst( benchmark::State& state )
 {
 	const uint32_t nTasks = ( uint32_t )state.range( 0 );
 	SIRMemoryManager memory;
@@ -464,7 +464,7 @@ static sirTaskResult_t sirBenchmarkLatencyJob( void *pContext, sirTaskHandle_t )
 // Measures submit-to-callback-start latency under real worker contention.
 // Reported p50/p95/p99 are per-batch order statistics, averaged across runs.
 // Timestamp reads are part of the measured task workload; sorting is excluded.
-static void SIRBenchmarkWorkerDispatchLatency( benchmark::State &state )
+static void SIRBenchmarkWorkerDispatchLatency( benchmark::State& state )
 {
 	const uint32_t nWorkers = ( uint32_t )state.range( 0 );
 	constexpr uint32_t N_TASKS = 128;

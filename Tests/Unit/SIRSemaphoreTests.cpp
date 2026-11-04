@@ -74,7 +74,7 @@ static void testMultithread( void )
 	for ( uint32_t i = 0; i < N_THREADS * N_PER_THREAD; ++i ) {
 		SIR_TEST( semaphore.post() == SIR_SEMAPHORE_OK );
 	}
-	for ( auto &worker : workers ) {
+	for ( auto& worker : workers ) {
 		worker.join();
 	}
 	SIR_TEST( nCompleted.load( std::memory_order_relaxed ) == N_THREADS * N_PER_THREAD );

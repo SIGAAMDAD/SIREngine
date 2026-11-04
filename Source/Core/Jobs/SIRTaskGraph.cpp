@@ -98,7 +98,7 @@ SIRTaskGraph::~SIRTaskGraph()
 	}
 }
 
-bool SIRTaskGraph::init( SIRMemoryManager *pMemory, const sirTaskGraphConfig_t &config ) noexcept
+bool SIRTaskGraph::init( SIRMemoryManager *pMemory, const sirTaskGraphConfig_t& config ) noexcept
 {
 	if ( m_bInitialized || pMemory == nullptr || !pMemory->isInitialized() || config.nPassCapacity == 0 || config.nAccessCapacity == 0 ||
 	     config.nEdgeCapacity == 0 || config.nPassCapacity >= UINT32_MAX || config.nAccessCapacity >= UINT32_MAX ||
@@ -170,7 +170,7 @@ bool SIRTaskGraph::reset( void ) noexcept
 	return true;
 }
 
-bool SIRTaskGraph::addPass( const sirTaskGraphPass_t &pass, const sirTaskGraphAccess_t *pAccesses, uint32_t nAccesses,
+bool SIRTaskGraph::addPass( const sirTaskGraphPass_t& pass, const sirTaskGraphAccess_t *pAccesses, uint32_t nAccesses,
                             uint32_t *pnPassIndex ) noexcept
 {
 	if ( !m_bInitialized || m_bSubmitted || pnPassIndex == nullptr || pass.pFunction == nullptr || pass.eExecutor >= SIR_TASK_EXEC_COUNT ||
@@ -179,7 +179,7 @@ bool SIRTaskGraph::addPass( const sirTaskGraphPass_t &pass, const sirTaskGraphAc
 		return false;
 	}
 	for ( uint32_t iAccess = 0; iAccess < nAccesses; ++iAccess ) {
-		const sirTaskGraphAccess_t &access = pAccesses[iAccess];
+		const sirTaskGraphAccess_t& access = pAccesses[iAccess];
 		if ( ( access.keyResource.nLow == 0 && access.keyResource.nHigh == 0 ) || access.nBytes == 0 ||
 		     access.nBytes > UINT64_MAX - access.nOffset || access.eMode > SIR_TASK_GRAPH_WRITE ) {
 			return false;
@@ -188,7 +188,7 @@ bool SIRTaskGraph::addPass( const sirTaskGraphPass_t &pass, const sirTaskGraphAc
 	const uint32_t nPass = m_nPassCount;
 	m_pPasses[nPass] = { pass, m_nAccessCount, nAccesses };
 	for ( uint32_t iAccess = 0; iAccess < nAccesses; ++iAccess ) {
-		const sirTaskGraphAccess_t &access = pAccesses[iAccess];
+		const sirTaskGraphAccess_t& access = pAccesses[iAccess];
 		m_pAccesses[m_nAccessCount + iAccess] = { access.keyResource, access.nOffset, access.nOffset + access.nBytes, nPass, SIR_GRAPH_NONE,
 		                                          SIR_GRAPH_NONE,     access.eMode };
 	}
@@ -215,7 +215,7 @@ uint32_t SIRTaskGraph::findResourceBucket( sirTaskGraphResourceKey_t keyResource
 	const uint32_t nMask = m_nBucketCapacity - 1;
 	uint32_t nIndex = ( uint32_t )( sirGraphHashResource( keyResource ) ) & nMask;
 	for ( ;; ) {
-		sirTaskGraphResourceBucket_t &bucket = m_pBuckets[nIndex];
+		sirTaskGraphResourceBucket_t& bucket = m_pBuckets[nIndex];
 		if ( !bucket.bUsed ) {
 			bucket.bUsed = true;
 			bucket.keyResource = keyResource;
@@ -229,7 +229,7 @@ uint32_t SIRTaskGraph::findResourceBucket( sirTaskGraphResourceKey_t keyResource
 	}
 }
 
-bool SIRTaskGraph::overlaps( const sirTaskGraphAccessRecord_t &prior, const sirTaskGraphAccessRecord_t &current ) const noexcept
+bool SIRTaskGraph::overlaps( const sirTaskGraphAccessRecord_t& prior, const sirTaskGraphAccessRecord_t& current ) const noexcept
 {
 	return prior.nOffset < current.nEnd && current.nOffset < prior.nEnd;
 }
@@ -272,14 +272,14 @@ sirTaskGraphStatus_t SIRTaskGraph::compile( void ) noexcept
 		}
 	}
 	for ( uint32_t iPass = 0; iPass < m_nPassCount; ++iPass ) {
-		const sirTaskGraphPassRecord_t &pass = m_pPasses[iPass];
+		const sirTaskGraphPassRecord_t& pass = m_pPasses[iPass];
 		for ( uint32_t iAccess = pass.nFirstAccess; iAccess < pass.nFirstAccess + pass.nAccessCount; ++iAccess ) {
-			sirTaskGraphAccessRecord_t &access = m_pAccesses[iAccess];
+			sirTaskGraphAccessRecord_t& access = m_pAccesses[iAccess];
 			const uint32_t nBucket = findResourceBucket( access.keyResource );
-			sirTaskGraphResourceBucket_t &bucket = m_pBuckets[nBucket];
+			sirTaskGraphResourceBucket_t& bucket = m_pBuckets[nBucket];
 			uint32_t nEarlier = bucket.nHead;
 			while ( nEarlier != SIR_GRAPH_NONE ) {
-				sirTaskGraphAccessRecord_t &earlier = m_pAccesses[nEarlier];
+				sirTaskGraphAccessRecord_t& earlier = m_pAccesses[nEarlier];
 				const uint32_t nNext = earlier.nNext;
 				const bool bOverlap = overlaps( earlier, access );
 				if ( earlier.nPass != access.nPass && bOverlap &&
@@ -372,7 +372,7 @@ bool SIRTaskGraph::submit( SIRTaskScheduler *pScheduler ) noexcept
 	}
 	for ( uint32_t i = 0; i < m_nPassCount; ++i ) {
 		const uint32_t nPass = m_pTopological[i];
-		const sirTaskGraphPass_t &pass = m_pPasses[nPass].Pass;
+		const sirTaskGraphPass_t& pass = m_pPasses[nPass].Pass;
 		m_pReverse[nPass] = i;
 		m_pBatchTasks[i] = { pass.pFunction, pass.pContext, pass.ePriority, pass.eExecutor };
 	}
@@ -479,7 +479,7 @@ bool SIRTaskGraph::releaseSubmitted( void ) noexcept
 		}
 	}
 	for ( uint32_t i = 0; i < m_nPassCount; ++i ) {
-		sirTaskHandle_t &task = m_pBatchHandles[i];
+		sirTaskHandle_t& task = m_pBatchHandles[i];
 		if ( task.nGeneration != 0 ) {
 			if ( !m_pScheduler->releaseTask( task ) ) {
 				return false;

@@ -115,12 +115,12 @@ class SIRTaskGraph
 public:
 	SIRTaskGraph( void ) noexcept;
 	~SIRTaskGraph();
-	SIRTaskGraph( const SIRTaskGraph & ) = delete;
-	SIRTaskGraph &operator=( const SIRTaskGraph & ) = delete;
+	SIRTaskGraph( const SIRTaskGraph& ) = delete;
+	SIRTaskGraph& operator=( const SIRTaskGraph& ) = delete;
 
-	bool init( SIRMemoryManager *pMemory, const sirTaskGraphConfig_t &config ) noexcept;
+	bool init( SIRMemoryManager *pMemory, const sirTaskGraphConfig_t& config ) noexcept;
 	bool reset( void ) noexcept;
-	bool addPass( const sirTaskGraphPass_t &pass, const sirTaskGraphAccess_t *pAccesses, uint32_t nAccesses,
+	bool addPass( const sirTaskGraphPass_t& pass, const sirTaskGraphAccess_t *pAccesses, uint32_t nAccesses,
 	              uint32_t *pnPassIndex ) noexcept;
 	bool addDependency( uint32_t nBefore, uint32_t nAfter ) noexcept;
 	sirTaskGraphStatus_t compile( void ) noexcept;
@@ -144,7 +144,7 @@ public:
 
 private:
 	bool appendEdge( uint32_t nBefore, uint32_t nAfter ) noexcept;
-	bool overlaps( const sirTaskGraphAccessRecord_t &prior, const sirTaskGraphAccessRecord_t &current ) const noexcept;
+	bool overlaps( const sirTaskGraphAccessRecord_t& prior, const sirTaskGraphAccessRecord_t& current ) const noexcept;
 	uint32_t findResourceBucket( sirTaskGraphResourceKey_t keyResource ) noexcept;
 
 	SIRMemoryManager *m_pMemory;

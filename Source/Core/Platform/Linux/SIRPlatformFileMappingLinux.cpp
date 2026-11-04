@@ -30,7 +30,7 @@ SIRPlatformFileMapping::~SIRPlatformFileMapping( void ) noexcept
 	unmap();
 }
 
-sirFileResult_t SIRPlatformFileMapping::map( const SIRPlatformFile &rFile, uint64_t nOffset, uint64_t nBytes,
+sirFileResult_t SIRPlatformFileMapping::map( const SIRPlatformFile& rFile, uint64_t nOffset, uint64_t nBytes,
                                              sirFileMapMode_t eMode ) noexcept
 {
 	if ( isMapped() || !rFile.isOpen() || eMode > SIR_FILE_MAP_COPY_ON_WRITE || ( rFile.m_nFlags & SIR_FILE_OPEN_READ ) == 0 ||

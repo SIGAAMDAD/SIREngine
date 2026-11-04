@@ -59,7 +59,7 @@ public:
 
 	static sirThreadControlResult_t setCurrentName( const char *pszName ) noexcept;
 	static sirThreadControlResult_t getCurrentName( char *pszName, uint32_t nCapacity ) noexcept;
-	static sirThreadControlResult_t setCurrentAffinity( const sirThreadAffinity_t &rAffinity ) noexcept;
+	static sirThreadControlResult_t setCurrentAffinity( const sirThreadAffinity_t& rAffinity ) noexcept;
 	static sirThreadControlResult_t getCurrentAffinity( sirThreadAffinity_t *pAffinity ) noexcept;
 	static sirThreadControlResult_t setCurrentPriority( sirThreadPriority_t ePriority ) noexcept;
 };

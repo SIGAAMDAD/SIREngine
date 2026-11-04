@@ -80,10 +80,10 @@ private:
 public:
 	SIRPlatformFile( void ) noexcept;
 	~SIRPlatformFile( void ) noexcept;
-	SIRPlatformFile( const SIRPlatformFile & ) = delete;
-	SIRPlatformFile &operator=( const SIRPlatformFile & ) = delete;
-	SIRPlatformFile( SIRPlatformFile && ) = delete;
-	SIRPlatformFile &operator=( SIRPlatformFile && ) = delete;
+	SIRPlatformFile( const SIRPlatformFile& ) = delete;
+	SIRPlatformFile& operator=( const SIRPlatformFile& ) = delete;
+	SIRPlatformFile( SIRPlatformFile&& ) = delete;
+	SIRPlatformFile& operator=( SIRPlatformFile&& ) = delete;
 
 	sirFileResult_t open( const char *pszUtf8Path, uint32_t nFlags ) noexcept;
 	sirFileResult_t close( void ) noexcept;

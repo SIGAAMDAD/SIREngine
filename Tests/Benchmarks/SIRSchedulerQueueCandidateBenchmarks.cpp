@@ -39,7 +39,7 @@ static uint64_t sirQueueBenchmarkMix( uint64_t nValue ) noexcept
 	return nValue ^ ( nValue >> 31 );
 }
 
-static void SIRBenchmarkQueueCandidate( benchmark::State &state )
+static void SIRBenchmarkQueueCandidate( benchmark::State& state )
 {
 	const sirSchedulerQueueCandidate_t eKind = ( sirSchedulerQueueCandidate_t )state.range( 0 );
 	const uint32_t nWorkers = ( uint32_t )state.range( 1 );
@@ -173,7 +173,7 @@ static void SIRBenchmarkQueueCandidate( benchmark::State &state )
 	}
 	bStop.store( true, std::memory_order_release );
 	nEpoch.fetch_add( 1, std::memory_order_release );
-	for ( std::thread &worker : workers ) {
+	for ( std::thread& worker : workers ) {
 		worker.join();
 	}
 	if ( !bFailed ) {

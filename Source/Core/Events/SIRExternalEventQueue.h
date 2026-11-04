@@ -37,7 +37,7 @@ template <typename TPayload>
 class SIRExternalEventQueue
 {
 public:
-	typedef void ( *callback_t )( void *, const TPayload & ) noexcept;
+	typedef void ( *callback_t )( void *, const TPayload& ) noexcept;
 	static_assert( std::is_trivially_copyable<TPayload>::value, "Event payloads must be trivially copyable" );
 
 	SIRExternalEventQueue( void ) noexcept
@@ -45,8 +45,8 @@ public:
 	      m_bPumping( false ), m_bClearDuringPump( false )
 	{
 	}
-	SIRExternalEventQueue( const SIRExternalEventQueue & ) = delete;
-	SIRExternalEventQueue &operator=( const SIRExternalEventQueue & ) = delete;
+	SIRExternalEventQueue( const SIRExternalEventQueue& ) = delete;
+	SIRExternalEventQueue& operator=( const SIRExternalEventQueue& ) = delete;
 
 	static size_t requiredStorageBytes( uint32_t nCapacity ) noexcept
 	{
@@ -71,7 +71,7 @@ public:
 		return true;
 	}
 
-	bool enqueue( const TPayload &payload ) noexcept
+	bool enqueue( const TPayload& payload ) noexcept
 	{
 		if ( m_pEvents == nullptr || m_nCount == m_nCapacity ) {
 			return false;

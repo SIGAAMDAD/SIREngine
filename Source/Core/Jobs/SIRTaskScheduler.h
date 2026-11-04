@@ -70,10 +70,10 @@ class SIRTaskScheduler
 public:
 	SIRTaskScheduler( void ) noexcept;
 	~SIRTaskScheduler();
-	SIRTaskScheduler( const SIRTaskScheduler & ) = delete;
-	SIRTaskScheduler &operator=( const SIRTaskScheduler & ) = delete;
+	SIRTaskScheduler( const SIRTaskScheduler& ) = delete;
+	SIRTaskScheduler& operator=( const SIRTaskScheduler& ) = delete;
 
-	bool init( SIRMemoryManager *pMemory, const sirTaskSchedulerConfig_t &config ) noexcept;
+	bool init( SIRMemoryManager *pMemory, const sirTaskSchedulerConfig_t& config ) noexcept;
 	// Must be called by the owning initialization thread, outside callbacks.
 	bool shutdown( void ) noexcept;
 	bool submit( sirTaskFunction_t pFunction, void *pContext, sirTaskPriority_t ePriority, sirTaskExecutor_t eExecutor,
@@ -116,8 +116,8 @@ private:
 	bool isCurrentHandleLocked( sirTaskHandle_t task ) const noexcept;
 	void enqueueLocked( uint32_t nSlot ) noexcept;
 	uint32_t dequeueLocked( sirTaskExecutor_t eExecutor, uint32_t nWorker = UINT32_MAX ) noexcept;
-	uint32_t dequeueQueueLocked( sirTaskQueue_t &queue, bool bFromTail ) noexcept;
-	uint32_t selectPriorityLocked( sirTaskQueue_t &queue ) noexcept;
+	uint32_t dequeueQueueLocked( sirTaskQueue_t& queue, bool bFromTail ) noexcept;
+	uint32_t selectPriorityLocked( sirTaskQueue_t& queue ) noexcept;
 	void removeLocked( uint32_t nSlot ) noexcept;
 	void finishTask( uint32_t nSlot, sirTaskResult_t eResult ) noexcept;
 	void finishTaskLocked( uint32_t nSlot, sirTaskResult_t eResult ) noexcept;

@@ -45,8 +45,8 @@ class SIRTaskFenceTracker
 public:
 	SIRTaskFenceTracker( void ) noexcept;
 	~SIRTaskFenceTracker();
-	SIRTaskFenceTracker( const SIRTaskFenceTracker & ) = delete;
-	SIRTaskFenceTracker &operator=( const SIRTaskFenceTracker & ) = delete;
+	SIRTaskFenceTracker( const SIRTaskFenceTracker& ) = delete;
+	SIRTaskFenceTracker& operator=( const SIRTaskFenceTracker& ) = delete;
 
 	// Must run on the provider thread. Metadata is retained in the SIR domain
 	// until its manager is shut down; no hidden heap fallback.

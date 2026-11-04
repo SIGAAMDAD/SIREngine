@@ -54,7 +54,7 @@ public:
 		( void )SIRPlatformFile::remove( SIR_PLATFORM_IO_BENCH_PATH );
 	}
 
-	SIRPlatformFile &getFile( void ) noexcept
+	SIRPlatformFile& getFile( void ) noexcept
 	{
 		return m_File;
 	}
@@ -65,7 +65,7 @@ public:
 	}
 };
 
-static void SIRBenchmarkPlatformReadAt( benchmark::State &state )
+static void SIRBenchmarkPlatformReadAt( benchmark::State& state )
 {
 	SIRPlatformIOBenchmarkFixture fixture;
 	if ( !fixture.init() ) {
@@ -94,7 +94,7 @@ static void SIRBenchmarkPlatformReadAt( benchmark::State &state )
 	}
 }
 
-static void SIRBenchmarkPlatformWriteAt( benchmark::State &state )
+static void SIRBenchmarkPlatformWriteAt( benchmark::State& state )
 {
 	SIRPlatformIOBenchmarkFixture fixture;
 	if ( !fixture.init() ) {
@@ -119,7 +119,7 @@ static void SIRBenchmarkPlatformWriteAt( benchmark::State &state )
 	}
 }
 
-static void SIRBenchmarkPlatformSequentialReadSeek( benchmark::State &state )
+static void SIRBenchmarkPlatformSequentialReadSeek( benchmark::State& state )
 {
 	SIRPlatformIOBenchmarkFixture fixture;
 	if ( !fixture.init() ) {
@@ -148,7 +148,7 @@ static void SIRBenchmarkPlatformSequentialReadSeek( benchmark::State &state )
 	}
 }
 
-static void SIRBenchmarkPlatformOpenClose( benchmark::State &state )
+static void SIRBenchmarkPlatformOpenClose( benchmark::State& state )
 {
 	SIRPlatformIOBenchmarkFixture fixture;
 	if ( !fixture.init() ) {
@@ -170,7 +170,7 @@ static void SIRBenchmarkPlatformOpenClose( benchmark::State &state )
 	}
 }
 
-static void SIRBenchmarkPlatformMapAndCopy( benchmark::State &state )
+static void SIRBenchmarkPlatformMapAndCopy( benchmark::State& state )
 {
 	SIRPlatformIOBenchmarkFixture fixture;
 	if ( !fixture.init() ) {
@@ -204,7 +204,7 @@ static void SIRBenchmarkPlatformMapAndCopy( benchmark::State &state )
 	}
 }
 
-static void SIRBenchmarkPlatformMappedReuseCopy( benchmark::State &state )
+static void SIRBenchmarkPlatformMappedReuseCopy( benchmark::State& state )
 {
 	SIRPlatformIOBenchmarkFixture fixture;
 	if ( !fixture.init() ) {
@@ -232,7 +232,7 @@ static void SIRBenchmarkPlatformMappedReuseCopy( benchmark::State &state )
 	}
 }
 
-static void SIRBenchmarkPlatformFileInfo( benchmark::State &state )
+static void SIRBenchmarkPlatformFileInfo( benchmark::State& state )
 {
 	SIRPlatformIOBenchmarkFixture fixture;
 	if ( !fixture.init() ) {
@@ -252,7 +252,7 @@ static void SIRBenchmarkPlatformFileInfo( benchmark::State &state )
 	state.SetItemsProcessed( state.iterations() );
 }
 
-static void SIRBenchmarkPlatformFileSystemQuery( benchmark::State &state )
+static void SIRBenchmarkPlatformFileSystemQuery( benchmark::State& state )
 {
 	SIRPlatformIOBenchmarkFixture fixture;
 	if ( !fixture.init() ) {
@@ -272,7 +272,7 @@ static void SIRBenchmarkPlatformFileSystemQuery( benchmark::State &state )
 	state.SetItemsProcessed( state.iterations() );
 }
 
-static void SIRBenchmarkPlatformSemaphoreUncontended( benchmark::State &state )
+static void SIRBenchmarkPlatformSemaphoreUncontended( benchmark::State& state )
 {
 	SIRSemaphore semaphore;
 	if ( semaphore.create( 0 ) != SIR_SEMAPHORE_OK ) {
@@ -289,7 +289,7 @@ static void SIRBenchmarkPlatformSemaphoreUncontended( benchmark::State &state )
 	state.SetItemsProcessed( state.iterations() );
 }
 
-static void SIRBenchmarkPlatformSemaphoreHandoff( benchmark::State &state )
+static void SIRBenchmarkPlatformSemaphoreHandoff( benchmark::State& state )
 {
 	SIRSemaphore request;
 	SIRSemaphore response;
@@ -334,7 +334,7 @@ static void SIRBenchmarkPlatformSemaphoreHandoff( benchmark::State &state )
 	}
 }
 
-static void SIRBenchmarkPlatformPipeLifecycleTransfer( benchmark::State &state )
+static void SIRBenchmarkPlatformPipeLifecycleTransfer( benchmark::State& state )
 {
 	const uint64_t nBytes = ( uint64_t )state.range( 0 );
 	std::vector<uint8_t> szInput( ( size_t )nBytes );

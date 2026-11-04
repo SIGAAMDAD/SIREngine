@@ -38,10 +38,10 @@ class SIREngineSystem
 {
 public:
 	SIREngineSystem( void ) noexcept = default;
-	SIREngineSystem( const SIREngineSystem & ) = delete;
+	SIREngineSystem( const SIREngineSystem& ) = delete;
 	virtual ~SIREngineSystem( void ) noexcept;
 
-	SIREngineSystem &operator=( const SIREngineSystem & ) = delete;
+	SIREngineSystem& operator=( const SIREngineSystem& ) = delete;
 
 	virtual sirSystemResult_t initialize( void ) noexcept = 0;
 	virtual void update( float fDeltaSeconds ) noexcept;

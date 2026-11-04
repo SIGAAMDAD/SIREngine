@@ -61,10 +61,10 @@ private:
 public:
 	SIRSemaphore( void ) noexcept;
 	~SIRSemaphore( void ) noexcept;
-	SIRSemaphore( const SIRSemaphore & ) = delete;
-	SIRSemaphore &operator=( const SIRSemaphore & ) = delete;
-	SIRSemaphore( SIRSemaphore && ) = delete;
-	SIRSemaphore &operator=( SIRSemaphore && ) = delete;
+	SIRSemaphore( const SIRSemaphore& ) = delete;
+	SIRSemaphore& operator=( const SIRSemaphore& ) = delete;
+	SIRSemaphore( SIRSemaphore&& ) = delete;
+	SIRSemaphore& operator=( SIRSemaphore&& ) = delete;
 
 	sirSemaphoreResult_t create( uint32_t nInitialCount = 0 ) noexcept;
 	sirSemaphoreResult_t post( void ) noexcept;

@@ -43,7 +43,7 @@ static sirFileSystemResult_t sirFileSystemError( int nError ) noexcept
 	}
 }
 
-static void sirFileSystemStatInfo( const struct stat &rStat, sirFileSystemInfo_t *pInfo ) noexcept
+static void sirFileSystemStatInfo( const struct stat& rStat, sirFileSystemInfo_t *pInfo ) noexcept
 {
 	pInfo->nSizeBytes = rStat.st_size > 0 ? ( uint64_t )rStat.st_size : 0;
 	const uint64_t nSeconds = rStat.st_mtim.tv_sec >= 0 ? ( uint64_t )rStat.st_mtim.tv_sec : 0;

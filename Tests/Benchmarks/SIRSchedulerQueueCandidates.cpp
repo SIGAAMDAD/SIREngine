@@ -45,7 +45,7 @@ bool SIRSchedulerQueueCandidate::init( sirSchedulerQueueCandidate_t eKind, uint3
 
 bool SIRSchedulerQueueCandidate::lockedPush( uint32_t nOwner, uint64_t nToken ) noexcept
 {
-	sirSchedulerQueueShard_t &queue = m_pQueues[nOwner];
+	sirSchedulerQueueShard_t& queue = m_pQueues[nOwner];
 	std::unique_lock<std::mutex> lock( m_eKind == SIR_QUEUE_CANDIDATE_GLOBAL_LOCK ? m_GlobalMutex : queue.mutex );
 	if ( queue.nCount == m_nCapacity ) {
 		return false;
@@ -57,7 +57,7 @@ bool SIRSchedulerQueueCandidate::lockedPush( uint32_t nOwner, uint64_t nToken ) 
 
 bool SIRSchedulerQueueCandidate::lockedPop( uint32_t nOwner, uint64_t *pToken, bool bSteal ) noexcept
 {
-	sirSchedulerQueueShard_t &queue = m_pQueues[nOwner];
+	sirSchedulerQueueShard_t& queue = m_pQueues[nOwner];
 	std::unique_lock<std::mutex> lock( m_eKind == SIR_QUEUE_CANDIDATE_GLOBAL_LOCK ? m_GlobalMutex : queue.mutex );
 	if ( queue.nCount == 0 ) {
 		return false;
@@ -76,7 +76,7 @@ bool SIRSchedulerQueueCandidate::lockedPop( uint32_t nOwner, uint64_t *pToken, b
 // foreign pushes, arbitrary removals, or task-slot reclamation.
 bool SIRSchedulerQueueCandidate::chasePush( uint32_t nOwner, uint64_t nToken ) noexcept
 {
-	sirSchedulerQueueShard_t &queue = m_pQueues[nOwner];
+	sirSchedulerQueueShard_t& queue = m_pQueues[nOwner];
 	const uint64_t nBottom = queue.nBottom.load( std::memory_order_relaxed );
 	const uint64_t nTop = queue.nTop.load( std::memory_order_acquire );
 	if ( nBottom < nTop || nBottom - nTop >= m_nCapacity || nBottom == UINT64_MAX ) {
@@ -89,7 +89,7 @@ bool SIRSchedulerQueueCandidate::chasePush( uint32_t nOwner, uint64_t nToken ) n
 
 bool SIRSchedulerQueueCandidate::chasePop( uint32_t nOwner, uint64_t *pToken ) noexcept
 {
-	sirSchedulerQueueShard_t &queue = m_pQueues[nOwner];
+	sirSchedulerQueueShard_t& queue = m_pQueues[nOwner];
 	const uint64_t nCurrent = queue.nBottom.load( std::memory_order_relaxed );
 	if ( nCurrent == 0 ) {
 		return false;
@@ -115,7 +115,7 @@ bool SIRSchedulerQueueCandidate::chasePop( uint32_t nOwner, uint64_t *pToken ) n
 
 bool SIRSchedulerQueueCandidate::chaseSteal( uint32_t nVictim, uint64_t *pToken ) noexcept
 {
-	sirSchedulerQueueShard_t &queue = m_pQueues[nVictim];
+	sirSchedulerQueueShard_t& queue = m_pQueues[nVictim];
 	const uint64_t nTop = queue.nTop.load( std::memory_order_seq_cst );
 	const uint64_t nBottom = queue.nBottom.load( std::memory_order_seq_cst );
 	if ( nTop >= nBottom ) {

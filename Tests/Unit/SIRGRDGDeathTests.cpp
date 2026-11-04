@@ -85,7 +85,7 @@ static bool deathCompleteProviderEarly( void *pContext ) noexcept
 	return pRecord->pScheduler->completeProvider( pRecord->task, SIR_TASK_RESULT_SUCCESS );
 }
 
-static void deathInitMemory( SIRMemoryManager &rMemory )
+static void deathInitMemory( SIRMemoryManager& rMemory )
 {
 	const uint64_t nPage = SIRVirtualMemory::getPageSize();
 	const sirMemoryConfig_t config = { nPage * 128, nPage * 32, nPage * 8, 8 };

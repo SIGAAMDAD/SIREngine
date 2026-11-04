@@ -63,12 +63,12 @@ typedef struct sirResourceFileLoadRequest_s
 class SIRResourceFileLoad final
 {
 public:
-	SIRResourceFileLoad( SIRResourceGraph &rGraph, SIRTaskScheduler &rScheduler ) noexcept;
+	SIRResourceFileLoad( SIRResourceGraph& rGraph, SIRTaskScheduler& rScheduler ) noexcept;
 	~SIRResourceFileLoad( void ) noexcept;
-	SIRResourceFileLoad( const SIRResourceFileLoad & ) = delete;
-	SIRResourceFileLoad &operator=( const SIRResourceFileLoad & ) = delete;
+	SIRResourceFileLoad( const SIRResourceFileLoad& ) = delete;
+	SIRResourceFileLoad& operator=( const SIRResourceFileLoad& ) = delete;
 
-	SIRResourceResult begin( const char *pszUtf8Path, const sirResourceFileLoadRequest_t &rRequest ) noexcept;
+	SIRResourceResult begin( const char *pszUtf8Path, const sirResourceFileLoadRequest_t& rRequest ) noexcept;
 	// Core Jobs handle can be passed to waitTask() when worker threads exist.
 	bool getTaskHandle( sirTaskHandle_t *pHandle ) const noexcept;
 	// Returns BUSY until terminal. The writer publishes only on full success.

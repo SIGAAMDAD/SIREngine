@@ -16,7 +16,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Renderer/SIRGraphicsRegistry.h>
 #include <Renderer/SIRGraphicsValidation.h>
 
-static bool sirGraphicsVersionAtLeast( const sirGraphicsVersion_t &available, const sirGraphicsVersion_t &minimum ) noexcept
+static bool sirGraphicsVersionAtLeast( const sirGraphicsVersion_t& available, const sirGraphicsVersion_t& minimum ) noexcept
 {
 	if ( available.nMajor != minimum.nMajor ) {
 		return available.nMajor > minimum.nMajor;
@@ -76,7 +76,7 @@ SIRGraphicsDriver *SIRGraphicsRegistry::findDriver( sirGraphicsBackend_t eBacken
 	return nullptr;
 }
 
-sirGraphicsResult_t SIRGraphicsRegistry::selectDriver( const sirGraphicsSelection_t &selection, SIRGraphicsDriver **ppDriver,
+sirGraphicsResult_t SIRGraphicsRegistry::selectDriver( const sirGraphicsSelection_t& selection, SIRGraphicsDriver **ppDriver,
                                                        sirGraphicsAdapterInfo_t *pAdapter ) const noexcept
 {
 	if ( ppDriver == nullptr || pAdapter == nullptr || !sirGraphicsIsBackendValid( selection.eBackend ) ) {

@@ -32,7 +32,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 		}                                                                                                                                  \
 	} while ( 0 )
 
-static void initStressMemory( SIRMemoryManager &memory )
+static void initStressMemory( SIRMemoryManager& memory )
 {
 	const sirMemoryConfig_t config = { 64ULL * 1024 * 1024, 32ULL * 1024 * 1024, 16ULL * 1024 * 1024, 32 };
 	SIR_STRESS_CHECK( memory.init( config ) );

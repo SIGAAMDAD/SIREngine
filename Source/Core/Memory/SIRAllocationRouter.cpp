@@ -35,7 +35,7 @@ SIRAllocationRouter::SIRAllocationRouter( void ) : m_Config{}, m_nCounts{}, m_nO
 {
 }
 
-bool SIRAllocationRouter::init( const sirAllocationRouterConfig_t &config )
+bool SIRAllocationRouter::init( const sirAllocationRouterConfig_t& config )
 {
 	if ( m_bInitialized || config.nSmallMaximumBytes == 0 || config.nSmallMaximumBytes > 2048 ||
 	     config.nLargeMinimumBytes <= config.nSmallMaximumBytes || config.pBuddy == nullptr ||

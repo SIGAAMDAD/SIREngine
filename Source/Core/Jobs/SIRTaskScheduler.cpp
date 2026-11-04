@@ -85,7 +85,7 @@ SIRTaskScheduler::~SIRTaskScheduler()
 	}
 }
 
-bool SIRTaskScheduler::init( SIRMemoryManager *pMemory, const sirTaskSchedulerConfig_t &config ) noexcept
+bool SIRTaskScheduler::init( SIRMemoryManager *pMemory, const sirTaskSchedulerConfig_t& config ) noexcept
 {
 	if ( m_bEverInitialized || pMemory == nullptr || !pMemory->isInitialized() || config.nTaskCapacity == 0 ||
 	     config.nTaskCapacity == UINT32_MAX || ( ( uint64_t )config.nTaskCapacity * sizeof( sirTaskSlot_t ) ) > SIZE_MAX ||
@@ -146,7 +146,7 @@ bool SIRTaskScheduler::init( SIRMemoryManager *pMemory, const sirTaskSchedulerCo
 	m_nWorkerCount = config.nWorkerCount;
 	m_OwnerThread = std::this_thread::get_id();
 	for ( uint32_t iSlot = 0; iSlot < m_nTaskCapacity; ++iSlot ) {
-		sirTaskSlot_t &slot = m_pSlots[iSlot];
+		sirTaskSlot_t& slot = m_pSlots[iSlot];
 		slot.pFunction = nullptr;
 		slot.pContext = nullptr;
 		slot.nGeneration = 1;
@@ -192,7 +192,7 @@ bool SIRTaskScheduler::shutdown( void ) noexcept
 	}
 	m_bClosing = true;
 	for ( uint32_t iSlot = 0; iSlot < m_nTaskCapacity; ++iSlot ) {
-		sirTaskSlot_t &slot = m_pSlots[iSlot];
+		sirTaskSlot_t& slot = m_pSlots[iSlot];
 		if ( slot.eState == SIR_TASK_QUEUED || slot.eState == SIR_TASK_BLOCKED ) {
 			cancelTreeLocked( iSlot );
 		} else if ( slot.eState == SIR_TASK_RUNNING ) {
@@ -230,7 +230,7 @@ bool SIRTaskScheduler::isCurrentHandleLocked( sirTaskHandle_t task ) const noexc
 
 void SIRTaskScheduler::enqueueLocked( uint32_t nSlot ) noexcept
 {
-	sirTaskSlot_t &slot = m_pSlots[nSlot];
+	sirTaskSlot_t& slot = m_pSlots[nSlot];
 	const uint32_t nExecutor = ( uint32_t )slot.eExecutor;
 	const uint32_t nPriority = ( uint32_t )slot.ePriority;
 	// Tasks created or activated by a worker go to its local queue. External
@@ -238,7 +238,7 @@ void SIRTaskScheduler::enqueueLocked( uint32_t nSlot ) noexcept
 	const uint32_t nWorker = nExecutor == SIR_TASK_EXEC_CPU && s_pRunningScheduler == this && s_nRunningWorker < m_nWorkerCount
 	                             ? s_nRunningWorker
 	                             : SIR_TASK_NONE;
-	sirTaskQueue_t &queue = nWorker == SIR_TASK_NONE ? m_GlobalQueues[nExecutor] : m_pLocalQueues[nWorker];
+	sirTaskQueue_t& queue = nWorker == SIR_TASK_NONE ? m_GlobalQueues[nExecutor] : m_pLocalQueues[nWorker];
 	slot.nQueueWorker = nWorker;
 	slot.nPrev = queue.nTail[nPriority];
 	slot.nNext = SIR_TASK_NONE;
@@ -255,10 +255,10 @@ void SIRTaskScheduler::enqueueLocked( uint32_t nSlot ) noexcept
 
 void SIRTaskScheduler::removeLocked( uint32_t nSlot ) noexcept
 {
-	sirTaskSlot_t &slot = m_pSlots[nSlot];
+	sirTaskSlot_t& slot = m_pSlots[nSlot];
 	const uint32_t nExecutor = ( uint32_t )slot.eExecutor;
 	const uint32_t nPriority = ( uint32_t )slot.ePriority;
-	sirTaskQueue_t &queue = slot.nQueueWorker == SIR_TASK_NONE ? m_GlobalQueues[nExecutor] : m_pLocalQueues[slot.nQueueWorker];
+	sirTaskQueue_t& queue = slot.nQueueWorker == SIR_TASK_NONE ? m_GlobalQueues[nExecutor] : m_pLocalQueues[slot.nQueueWorker];
 	if ( slot.nPrev == SIR_TASK_NONE ) {
 		queue.nHead[nPriority] = slot.nNext;
 	} else {
@@ -277,7 +277,7 @@ void SIRTaskScheduler::removeLocked( uint32_t nSlot ) noexcept
 	}
 }
 
-uint32_t SIRTaskScheduler::selectPriorityLocked( sirTaskQueue_t &queue ) noexcept
+uint32_t SIRTaskScheduler::selectPriorityLocked( sirTaskQueue_t& queue ) noexcept
 {
 	const bool bCritical = queue.nHead[SIR_TASK_PRIORITY_CRITICAL] != SIR_TASK_NONE;
 	const bool bNormal = queue.nHead[SIR_TASK_PRIORITY_NORMAL] != SIR_TASK_NONE;
@@ -299,7 +299,7 @@ uint32_t SIRTaskScheduler::selectPriorityLocked( sirTaskQueue_t &queue ) noexcep
 	return SIR_TASK_NONE;
 }
 
-uint32_t SIRTaskScheduler::dequeueQueueLocked( sirTaskQueue_t &queue, bool bFromTail ) noexcept
+uint32_t SIRTaskScheduler::dequeueQueueLocked( sirTaskQueue_t& queue, bool bFromTail ) noexcept
 {
 	const uint32_t nPriority = selectPriorityLocked( queue );
 	if ( nPriority == SIR_TASK_NONE ) {
@@ -393,7 +393,7 @@ bool SIRTaskScheduler::submitAfter( sirTaskFunction_t pFunction, void *pContext,
 		return false;
 	}
 	const uint32_t nSlot = m_nFreeHead;
-	sirTaskSlot_t &slot = m_pSlots[nSlot];
+	sirTaskSlot_t& slot = m_pSlots[nSlot];
 	m_nFreeHead = slot.nNext;
 	slot.pFunction = pFunction;
 	slot.pContext = pContext;
@@ -417,7 +417,7 @@ bool SIRTaskScheduler::submitAfter( sirTaskFunction_t pFunction, void *pContext,
 				continue;
 			}
 			const uint32_t nEdge = m_nFreeEdgeHead;
-			sirTaskEdge_t &edge = m_pEdges[nEdge];
+			sirTaskEdge_t& edge = m_pEdges[nEdge];
 			m_nFreeEdgeHead = edge.nParentNext;
 			edge.nParent = nParent;
 			edge.nChild = nSlot;
@@ -455,7 +455,7 @@ bool SIRTaskScheduler::submitBatch( const sirTaskBatchTask_t *pTasks, uint32_t n
 	}
 	// Reject malformed batches before acquiring the lock or modifying any slot.
 	for ( uint32_t iTask = 0; iTask < nTasks; ++iTask ) {
-		const sirTaskBatchTask_t &task = pTasks[iTask];
+		const sirTaskBatchTask_t& task = pTasks[iTask];
 		if ( task.pFunction == nullptr || task.ePriority > SIR_TASK_PRIORITY_BACKGROUND || task.eExecutor >= SIR_TASK_EXEC_COUNT ) {
 			return false;
 		}
@@ -488,7 +488,7 @@ bool SIRTaskScheduler::submitBatch( const sirTaskBatchTask_t *pTasks, uint32_t n
 	// distinct, writable storage that does not alias pTasks or pEdges.
 	for ( uint32_t iTask = 0; iTask < nTasks; ++iTask ) {
 		const uint32_t nSlot = m_nFreeHead;
-		sirTaskSlot_t &slot = m_pSlots[nSlot];
+		sirTaskSlot_t& slot = m_pSlots[nSlot];
 		m_nFreeHead = slot.nNext;
 		slot.pFunction = pTasks[iTask].pFunction;
 		slot.pContext = pTasks[iTask].pContext;
@@ -510,7 +510,7 @@ bool SIRTaskScheduler::submitBatch( const sirTaskBatchTask_t *pTasks, uint32_t n
 		const uint32_t nParent = pOutHandles[pEdges[iEdge].nBefore].nSlot;
 		const uint32_t nChild = pOutHandles[pEdges[iEdge].nAfter].nSlot;
 		const uint32_t nEdge = m_nFreeEdgeHead;
-		sirTaskEdge_t &edge = m_pEdges[nEdge];
+		sirTaskEdge_t& edge = m_pEdges[nEdge];
 		m_nFreeEdgeHead = edge.nParentNext;
 		edge.nParent = nParent;
 		edge.nChild = nChild;
@@ -548,9 +548,9 @@ bool SIRTaskScheduler::submitBatch( const sirTaskBatchTask_t *pTasks, uint32_t n
 
 void SIRTaskScheduler::unlinkEdgeLocked( uint32_t nEdge ) noexcept
 {
-	sirTaskEdge_t &edge = m_pEdges[nEdge];
-	sirTaskSlot_t &parent = m_pSlots[edge.nParent];
-	sirTaskSlot_t &child = m_pSlots[edge.nChild];
+	sirTaskEdge_t& edge = m_pEdges[nEdge];
+	sirTaskSlot_t& parent = m_pSlots[edge.nParent];
+	sirTaskSlot_t& child = m_pSlots[edge.nChild];
 	if ( edge.nParentPrev == SIR_TASK_NONE ) {
 		parent.nOutgoingHead = edge.nParentNext;
 	} else {
@@ -581,7 +581,7 @@ void SIRTaskScheduler::cancelTreeLocked( uint32_t nSlot ) noexcept
 	m_pSlots[nSlot].nCascadeNext = SIR_TASK_NONE;
 	while ( nHead != SIR_TASK_NONE ) {
 		const uint32_t nCurrent = nHead;
-		sirTaskSlot_t &slot = m_pSlots[nCurrent];
+		sirTaskSlot_t& slot = m_pSlots[nCurrent];
 		nHead = slot.nCascadeNext;
 		slot.nCascadeNext = SIR_TASK_NONE;
 		slot.bCascadeQueued = false;
@@ -600,7 +600,7 @@ void SIRTaskScheduler::cancelTreeLocked( uint32_t nSlot ) noexcept
 			const uint32_t nEdge = slot.nOutgoingHead;
 			const uint32_t nChild = m_pEdges[nEdge].nChild;
 			unlinkEdgeLocked( nEdge );
-			sirTaskSlot_t &child = m_pSlots[nChild];
+			sirTaskSlot_t& child = m_pSlots[nChild];
 			if ( !child.bCascadeQueued && ( child.eState == SIR_TASK_BLOCKED || child.eState == SIR_TASK_QUEUED ) ) {
 				child.bCascadeQueued = true;
 				child.nCascadeNext = SIR_TASK_NONE;
@@ -641,7 +641,7 @@ bool SIRTaskScheduler::cancel( sirTaskHandle_t task ) noexcept
 		m_Mutex.unlock();
 		return false;
 	}
-	sirTaskSlot_t &slot = m_pSlots[task.nSlot];
+	sirTaskSlot_t& slot = m_pSlots[task.nSlot];
 	if ( slot.eState == SIR_TASK_QUEUED || slot.eState == SIR_TASK_BLOCKED ) {
 		cancelTreeLocked( task.nSlot );
 	} else if ( slot.eState == SIR_TASK_RUNNING || slot.eState == SIR_TASK_AWAITING_PROVIDER ) {
@@ -680,7 +680,7 @@ bool SIRTaskScheduler::queryTask( sirTaskHandle_t task, sirTaskState_t *pState, 
 		m_Mutex.unlock();
 		return false;
 	}
-	const sirTaskSlot_t &slot = m_pSlots[task.nSlot];
+	const sirTaskSlot_t& slot = m_pSlots[task.nSlot];
 	*pState = slot.eState;
 	*pExecutor = slot.eExecutor;
 	m_Mutex.unlock();
@@ -714,7 +714,7 @@ bool SIRTaskScheduler::releaseTask( sirTaskHandle_t task ) noexcept
 		m_Mutex.unlock();
 		return false;
 	}
-	sirTaskSlot_t &slot = m_pSlots[task.nSlot];
+	sirTaskSlot_t& slot = m_pSlots[task.nSlot];
 	if ( slot.eState == SIR_TASK_RUNNING || slot.eState == SIR_TASK_QUEUED || slot.eState == SIR_TASK_BLOCKED ||
 	     slot.eState == SIR_TASK_AWAITING_PROVIDER || slot.nIncomingHead != SIR_TASK_NONE || slot.nOutgoingHead != SIR_TASK_NONE ) {
 		m_Mutex.unlock();
@@ -735,7 +735,7 @@ bool SIRTaskScheduler::releaseTask( sirTaskHandle_t task ) noexcept
 
 void SIRTaskScheduler::finishTaskLocked( uint32_t nSlot, sirTaskResult_t eResult ) noexcept
 {
-	sirTaskSlot_t &slot = m_pSlots[nSlot];
+	sirTaskSlot_t& slot = m_pSlots[nSlot];
 	slot.eState =
 	    slot.bCancellationRequested ? SIR_TASK_CANCELLED : ( eResult == SIR_TASK_RESULT_SUCCESS ? SIR_TASK_COMPLETED : SIR_TASK_FAILED );
 	++m_nExecuted;
@@ -798,7 +798,7 @@ bool SIRTaskScheduler::completeProvider( sirTaskHandle_t task, sirTaskResult_t e
 		m_Mutex.unlock();
 		return false;
 	}
-	sirTaskSlot_t &slot = m_pSlots[task.nSlot];
+	sirTaskSlot_t& slot = m_pSlots[task.nSlot];
 	const uint32_t nExecutor = ( uint32_t )slot.eExecutor;
 	if ( nExecutor < SIR_TASK_EXEC_RENDER || nExecutor >= SIR_TASK_EXEC_COUNT || slot.eState != SIR_TASK_AWAITING_PROVIDER ||
 	     !m_bProviderBound[nExecutor - SIR_TASK_EXEC_RENDER] ||
@@ -838,7 +838,7 @@ uint32_t SIRTaskScheduler::pumpExecutor( sirTaskExecutor_t eExecutor, uint32_t n
 			m_Mutex.unlock();
 			break;
 		}
-		sirTaskSlot_t &slot = m_pSlots[nSlot];
+		sirTaskSlot_t& slot = m_pSlots[nSlot];
 		slot.eState = SIR_TASK_RUNNING;
 		const sirTaskFunction_t pFunction = slot.pFunction;
 		void *pContext = slot.pContext;
@@ -889,7 +889,7 @@ void SIRTaskScheduler::workerLoop( uint32_t nWorker ) noexcept
 			break;
 		}
 		const uint32_t nSlot = dequeueLocked( SIR_TASK_EXEC_CPU, nWorker );
-		sirTaskSlot_t &slot = m_pSlots[nSlot];
+		sirTaskSlot_t& slot = m_pSlots[nSlot];
 		slot.eState = SIR_TASK_RUNNING;
 		const sirTaskFunction_t pFunction = slot.pFunction;
 		void *pContext = slot.pContext;

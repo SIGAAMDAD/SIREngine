@@ -52,8 +52,8 @@ class SIRSchedulerQueueCandidate
 {
 public:
 	SIRSchedulerQueueCandidate( void ) noexcept = default;
-	SIRSchedulerQueueCandidate( const SIRSchedulerQueueCandidate & ) = delete;
-	SIRSchedulerQueueCandidate &operator=( const SIRSchedulerQueueCandidate & ) = delete;
+	SIRSchedulerQueueCandidate( const SIRSchedulerQueueCandidate& ) = delete;
+	SIRSchedulerQueueCandidate& operator=( const SIRSchedulerQueueCandidate& ) = delete;
 
 	// Capacity must be power-of-two. Only shard owner pushes and pops;
 	// unrelated threads may steal. The global-lock candidate deliberately

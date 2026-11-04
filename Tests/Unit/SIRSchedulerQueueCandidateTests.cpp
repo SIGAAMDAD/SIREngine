@@ -160,7 +160,7 @@ static void sirTestQueueContended( sirSchedulerQueueCandidate_t eKind )
 			nFinished.fetch_add( 1, std::memory_order_acq_rel );
 		} );
 	}
-	for ( std::thread &worker : workers ) {
+	for ( std::thread& worker : workers ) {
 		worker.join();
 	}
 	SIR_QUEUE_TEST( nFinished.load( std::memory_order_acquire ) == N_WORKERS );

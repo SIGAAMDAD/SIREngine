@@ -43,18 +43,18 @@ static uint32_t nextDerivedGeneration( uint32_t nGeneration ) noexcept
 	return nGeneration == UINT32_MAX ? 1 : nGeneration + 1;
 }
 
-static bool sameDerivedHandle( const SIRResourceHandle &rA, const SIRResourceHandle &rB ) noexcept
+static bool sameDerivedHandle( const SIRResourceHandle& rA, const SIRResourceHandle& rB ) noexcept
 {
 	return rA.m_nSlot == rB.m_nSlot && rA.m_nGeneration == rB.m_nGeneration && rA.m_nTypeId == rB.m_nTypeId;
 }
 
-static bool sameDerivedKey( const SIRDerivedResourceKey &rA, const SIRDerivedResourceKey &rB ) noexcept
+static bool sameDerivedKey( const SIRDerivedResourceKey& rA, const SIRDerivedResourceKey& rB ) noexcept
 {
 	return sameDerivedHandle( rA.m_Resource, rB.m_Resource ) && rA.m_nRevision == rB.m_nRevision && rA.m_nProviderId == rB.m_nProviderId &&
 	       rA.m_nRepresentationId == rB.m_nRepresentationId && rA.m_nVariantId == rB.m_nVariantId;
 }
 
-SIRResourceDerivedRegistry::SIRResourceDerivedRegistry( SIRResourceGraph &rGraph, const SIRResourceDerivedConfig &rConfig ) noexcept
+SIRResourceDerivedRegistry::SIRResourceDerivedRegistry( SIRResourceGraph& rGraph, const SIRResourceDerivedConfig& rConfig ) noexcept
     : m_pGraph( &rGraph ), m_Config( rConfig ), m_OwnerThread( std::this_thread::get_id() ), m_pProviders( nullptr ),
       m_pRepresentations( nullptr ), m_Stats{}, m_nTrackedBytes( 0 ), m_bReady( false )
 {
@@ -133,7 +133,7 @@ int32_t SIRResourceDerivedRegistry::findProvider( uint32_t nProviderId ) const n
 }
 
 SIRResourceResult SIRResourceDerivedRegistry::registerProvider( uint32_t nProviderId,
-                                                                const SIRDerivedProviderCallbacks &rCallbacks ) noexcept
+                                                                const SIRDerivedProviderCallbacks& rCallbacks ) noexcept
 {
 	if ( !isWriterThread() ) {
 		return SIR_RESOURCE_RESULT_WRITER_VIOLATION;
@@ -145,7 +145,7 @@ SIRResourceResult SIRResourceDerivedRegistry::registerProvider( uint32_t nProvid
 		return SIR_RESOURCE_RESULT_BUSY;
 	}
 	for ( uint32_t iProvider = 0; iProvider < m_Config.nMaxProviders; ++iProvider ) {
-		sirDerivedProviderSlot_t &rProvider = m_pProviders[iProvider];
+		sirDerivedProviderSlot_t& rProvider = m_pProviders[iProvider];
 		if ( !rProvider.bRegistered ) {
 			rProvider.callbacks = rCallbacks;
 			rProvider.nProviderId = nProviderId;
@@ -158,8 +158,8 @@ SIRResourceResult SIRResourceDerivedRegistry::registerProvider( uint32_t nProvid
 	return SIR_RESOURCE_RESULT_OUT_OF_BUDGET;
 }
 
-SIRResourceResult SIRResourceDerivedRegistry::registerRepresentation( const SIRResourceReadScope &rScope, const SIRResourceView &rSource,
-                                                                      const SIRDerivedResourceRegistration &rRegistration,
+SIRResourceResult SIRResourceDerivedRegistry::registerRepresentation( const SIRResourceReadScope& rScope, const SIRResourceView& rSource,
+                                                                      const SIRDerivedResourceRegistration& rRegistration,
                                                                       SIRDerivedResourceHandle *pHandle ) noexcept
 {
 	if ( !isWriterThread() ) {
@@ -169,7 +169,7 @@ SIRResourceResult SIRResourceDerivedRegistry::registerRepresentation( const SIRR
 	     !rRegistration.m_Key.m_nRepresentationId || rRegistration.m_Key.m_nReserved || rRegistration.m_Key.m_Resource.m_nReserved ) {
 		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
 	}
-	const SIRDerivedResourceAccounting &rAccounting = rRegistration.m_Accounting;
+	const SIRDerivedResourceAccounting& rAccounting = rRegistration.m_Accounting;
 	if ( rAccounting.m_eSpace > SIR_MEMORY_SPACE_EXTERNAL || rAccounting.m_nCommittedBytes == 0 ||
 	     rAccounting.m_nResidentBytes > rAccounting.m_nCommittedBytes ||
 	     rAccounting.m_nSourceRevision != rRegistration.m_Key.m_nRevision ) {
@@ -193,7 +193,7 @@ SIRResourceResult SIRResourceDerivedRegistry::registerRepresentation( const SIRR
 	}
 	uint32_t iFree = UINT32_MAX;
 	for ( uint32_t iSlot = 0; iSlot < m_Config.nMaxRepresentations; ++iSlot ) {
-		const sirDerivedRepresentationSlot_t &rSlot = m_pRepresentations[iSlot];
+		const sirDerivedRepresentationSlot_t& rSlot = m_pRepresentations[iSlot];
 		if ( !rSlot.bOccupied ) {
 			if ( iFree == UINT32_MAX ) {
 				iFree = iSlot;
@@ -215,7 +215,7 @@ SIRResourceResult SIRResourceDerivedRegistry::registerRepresentation( const SIRR
 	if ( ePin != SIR_RESOURCE_RESULT_SUCCESS ) {
 		return ePin;
 	}
-	sirDerivedRepresentationSlot_t &rSlot = m_pRepresentations[iFree];
+	sirDerivedRepresentationSlot_t& rSlot = m_pRepresentations[iFree];
 	rSlot.registration = rRegistration;
 	rSlot.pin = pin;
 	rSlot.nRetirementFence = 0;
@@ -235,10 +235,10 @@ SIRResourceResult SIRResourceDerivedRegistry::registerRepresentation( const SIRR
 
 SIRResourceResult SIRResourceDerivedRegistry::collectProvider( uint32_t iProvider ) noexcept
 {
-	sirDerivedProviderSlot_t &rProvider = m_pProviders[iProvider];
+	sirDerivedProviderSlot_t& rProvider = m_pProviders[iProvider];
 	bool bBusy = false;
 	for ( uint32_t iSlot = 0; iSlot < m_Config.nMaxRepresentations; ++iSlot ) {
-		sirDerivedRepresentationSlot_t &rSlot = m_pRepresentations[iSlot];
+		sirDerivedRepresentationSlot_t& rSlot = m_pRepresentations[iSlot];
 		if ( !rSlot.bOccupied || !rSlot.bRetiring || rSlot.registration.m_Key.m_nProviderId != rProvider.nProviderId ||
 		     rSlot.nRetirementFence > rProvider.nCompletedFence ) {
 			continue;
@@ -278,7 +278,7 @@ SIRResourceResult SIRResourceDerivedRegistry::retireRepresentation( SIRDerivedRe
 	if ( !m_bReady || hRepresentation.m_nSlot >= m_Config.nMaxRepresentations ) {
 		return SIR_RESOURCE_RESULT_INVALID_HANDLE;
 	}
-	sirDerivedRepresentationSlot_t &rSlot = m_pRepresentations[hRepresentation.m_nSlot];
+	sirDerivedRepresentationSlot_t& rSlot = m_pRepresentations[hRepresentation.m_nSlot];
 	if ( !rSlot.bOccupied || rSlot.nGeneration != hRepresentation.m_nGeneration ) {
 		return SIR_RESOURCE_RESULT_INVALID_HANDLE;
 	}
@@ -321,7 +321,7 @@ SIRResourceResult SIRResourceDerivedRegistry::getAccounting( SIRDerivedResourceH
 	if ( !m_bReady || !pAccounting || hRepresentation.m_nSlot >= m_Config.nMaxRepresentations ) {
 		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
 	}
-	const sirDerivedRepresentationSlot_t &rSlot = m_pRepresentations[hRepresentation.m_nSlot];
+	const sirDerivedRepresentationSlot_t& rSlot = m_pRepresentations[hRepresentation.m_nSlot];
 	if ( !rSlot.bOccupied || rSlot.nGeneration != hRepresentation.m_nGeneration ) {
 		return SIR_RESOURCE_RESULT_INVALID_HANDLE;
 	}

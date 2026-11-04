@@ -54,7 +54,7 @@ sirThreadControlResult_t SIRPlatformThreadControl::getCurrentName( char *pszName
 	return nWritten > 0 ? SIR_THREAD_CONTROL_OK : SIR_THREAD_CONTROL_INVALID_ARGUMENT;
 }
 
-sirThreadControlResult_t SIRPlatformThreadControl::setCurrentAffinity( const sirThreadAffinity_t &rAffinity ) noexcept
+sirThreadControlResult_t SIRPlatformThreadControl::setCurrentAffinity( const sirThreadAffinity_t& rAffinity ) noexcept
 {
 	if ( rAffinity.nMask == 0 ) {
 		return SIR_THREAD_CONTROL_INVALID_ARGUMENT;

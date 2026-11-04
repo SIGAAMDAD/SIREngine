@@ -44,8 +44,8 @@ public:
 	typedef void ( *threadFunction_t )( void *pUserData );
 
 	SIRThread( void ) noexcept;
-	SIRThread( const SIRThread & ) = delete;
-	SIRThread &operator=( const SIRThread & ) = delete;
+	SIRThread( const SIRThread& ) = delete;
+	SIRThread& operator=( const SIRThread& ) = delete;
 	~SIRThread();
 
 	bool start( threadFunction_t pFunction, void *pUserData ) noexcept;

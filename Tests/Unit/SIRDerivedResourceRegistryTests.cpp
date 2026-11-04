@@ -99,7 +99,7 @@ static bool releaseNative( void *pContext, uint64_t nToken ) noexcept
 	return true;
 }
 
-static SIRResourceGraphConfig graphConfig( sirDerivedTestAllocator_t &rAllocator ) noexcept
+static SIRResourceGraphConfig graphConfig( sirDerivedTestAllocator_t& rAllocator ) noexcept
 {
 	SIRResourceGraphConfig config = {};
 	config.m_Allocator = { &rAllocator, testAllocate, testFree };
@@ -111,7 +111,7 @@ static SIRResourceGraphConfig graphConfig( sirDerivedTestAllocator_t &rAllocator
 	return config;
 }
 
-static SIRResourceDerivedConfig derivedConfig( sirDerivedTestAllocator_t &rAllocator ) noexcept
+static SIRResourceDerivedConfig derivedConfig( sirDerivedTestAllocator_t& rAllocator ) noexcept
 {
 	SIRResourceDerivedConfig config = {};
 	config.allocator = { &rAllocator, testAllocate, testFree };
@@ -122,7 +122,7 @@ static SIRResourceDerivedConfig derivedConfig( sirDerivedTestAllocator_t &rAlloc
 	return config;
 }
 
-static SIRResourceHandle publishSource( SIRResourceGraphWriter &rWriter, uint64_t nAssetId ) noexcept
+static SIRResourceHandle publishSource( SIRResourceGraphWriter& rWriter, uint64_t nAssetId ) noexcept
 {
 	SIRResourcePublication publication = {};
 	publication.m_Key = { nAssetId, 17, 0 };

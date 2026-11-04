@@ -48,10 +48,10 @@ private:
 public:
 	SIRPlatformPipe( void ) noexcept;
 	~SIRPlatformPipe( void ) noexcept;
-	SIRPlatformPipe( const SIRPlatformPipe & ) = delete;
-	SIRPlatformPipe &operator=( const SIRPlatformPipe & ) = delete;
-	SIRPlatformPipe( SIRPlatformPipe && ) = delete;
-	SIRPlatformPipe &operator=( SIRPlatformPipe && ) = delete;
+	SIRPlatformPipe( const SIRPlatformPipe& ) = delete;
+	SIRPlatformPipe& operator=( const SIRPlatformPipe& ) = delete;
+	SIRPlatformPipe( SIRPlatformPipe&& ) = delete;
+	SIRPlatformPipe& operator=( SIRPlatformPipe&& ) = delete;
 
 	sirPipeResult_t create( void ) noexcept;
 	sirPipeResult_t read( void *pDestination, uint64_t nBytes, uint64_t *pTransferred ) noexcept;

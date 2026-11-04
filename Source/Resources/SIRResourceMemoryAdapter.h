@@ -37,8 +37,8 @@ class SIRResourceMemoryAdapter
 {
 public:
 	SIRResourceMemoryAdapter( void ) noexcept;
-	SIRResourceMemoryAdapter( const SIRResourceMemoryAdapter & ) = delete;
-	SIRResourceMemoryAdapter &operator=( const SIRResourceMemoryAdapter & ) = delete;
+	SIRResourceMemoryAdapter( const SIRResourceMemoryAdapter& ) = delete;
+	SIRResourceMemoryAdapter& operator=( const SIRResourceMemoryAdapter& ) = delete;
 
 	bool bindDomain( sirMemoryDomain_t eDomain, SIRGeneralHeap *pHeap ) noexcept;
 	SIRResourceAllocator getAllocator( void ) noexcept;

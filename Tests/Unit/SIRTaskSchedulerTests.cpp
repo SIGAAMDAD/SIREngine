@@ -369,7 +369,7 @@ static sirTaskResult_t fanoutTask( void *pContext, sirTaskHandle_t ) noexcept
 	return SIR_TASK_RESULT_SUCCESS;
 }
 
-static bool waitForAtLeast( std::atomic<uint32_t> &count, uint32_t nExpected )
+static bool waitForAtLeast( std::atomic<uint32_t>& count, uint32_t nExpected )
 {
 	const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds( 5 );
 	while ( count.load( std::memory_order_acquire ) < nExpected ) {
