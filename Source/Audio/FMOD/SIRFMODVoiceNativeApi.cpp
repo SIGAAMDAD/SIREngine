@@ -57,7 +57,70 @@ static int32_t fmodReleaseInstance( void *, void *pInstance ) noexcept
 	return ( int32_t )( ( FMOD::Studio::EventInstance * )pInstance )->release();
 }
 
+// FMOD_STUDIO_PARAMETER_ID is a pair of uint32_t values.
+static FMOD_STUDIO_PARAMETER_ID fmodUnpackParameterId( uint64_t nNativeId ) noexcept
+{
+	FMOD_STUDIO_PARAMETER_ID id = {};
+	id.data1 = ( unsigned int )nNativeId;
+	id.data2 = ( unsigned int )( nNativeId >> 32 );
+	return id;
+}
+
+static int32_t fmodSetInstanceParameter( void *, void *pInstance, uint64_t nNativeId, float fValue ) noexcept
+{
+	return ( int32_t )( ( FMOD::Studio::EventInstance * )pInstance )->setParameterByID( fmodUnpackParameterId( nNativeId ), fValue );
+}
+
+static int32_t fmodSetGlobalParameter( void *, void *pStudio, uint64_t nNativeId, float fValue ) noexcept
+{
+	return ( int32_t )( ( FMOD::Studio::System * )pStudio )->setParameterByID( fmodUnpackParameterId( nNativeId ), fValue );
+}
+
+static FMOD_VECTOR fmodSpatialVector( const float *pValues ) noexcept
+{
+	FMOD_VECTOR vector = {};
+	vector.x = pValues[0];
+	vector.y = pValues[1];
+	vector.z = pValues[2];
+	return vector;
+}
+
+static FMOD_3D_ATTRIBUTES fmodSpatialAttributes( const sirAudioAttributes_t *pAttributes ) noexcept
+{
+	FMOD_3D_ATTRIBUTES attributes = {};
+	attributes.position = fmodSpatialVector( pAttributes->fPosition );
+	attributes.velocity = fmodSpatialVector( pAttributes->fVelocity );
+	attributes.forward = fmodSpatialVector( pAttributes->fForward );
+	attributes.up = fmodSpatialVector( pAttributes->fUp );
+	return attributes;
+}
+
+static int32_t fmodSetInstanceSpatial( void *, void *pInstance, const sirAudioAttributes_t *pAttributes ) noexcept
+{
+	const FMOD_3D_ATTRIBUTES attributes = fmodSpatialAttributes( pAttributes );
+	return ( int32_t )( ( FMOD::Studio::EventInstance * )pInstance )->set3DAttributes( &attributes );
+}
+
+static int32_t fmodSetListenerSpatial( void *, void *pStudio, uint32_t iListener,
+                                      const sirAudioAttributes_t *pAttributes ) noexcept
+{
+	const FMOD_3D_ATTRIBUTES attributes = fmodSpatialAttributes( pAttributes );
+	return ( int32_t )( ( FMOD::Studio::System * )pStudio )->setListenerAttributes( ( int )iListener, &attributes );
+}
+
+static int32_t fmodSetListenerCount( void *, void *pStudio, uint32_t nListeners ) noexcept
+{
+	return ( int32_t )( ( FMOD::Studio::System * )pStudio )->setNumListeners( ( int )nListeners );
+}
+
+static int32_t fmodSetListenerWeight( void *, void *pStudio, uint32_t iListener, float fWeight ) noexcept
+{
+	return ( int32_t )( ( FMOD::Studio::System * )pStudio )->setListenerWeight( ( int )iListener, fWeight );
+}
+
 sirFMODVoiceNativeOps_t sirGetFMODVoiceNativeOps( void ) noexcept
 {
-	return { 1, nullptr, fmodResolveEvent, fmodCreateInstance, fmodStartInstance, fmodStopInstance, fmodIsStopped, fmodReleaseInstance };
+	return { 3, nullptr, fmodResolveEvent, fmodCreateInstance, fmodStartInstance, fmodStopInstance, fmodIsStopped,
+	         fmodReleaseInstance, fmodSetInstanceParameter, fmodSetGlobalParameter, fmodSetInstanceSpatial,
+	         fmodSetListenerSpatial, fmodSetListenerCount, fmodSetListenerWeight };
 }
