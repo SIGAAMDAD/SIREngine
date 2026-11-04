@@ -48,6 +48,27 @@ int main( void )
 		return 9;
 	}
 
+	uint32_t szBatchCounts[SIR_VULKAN_TRANSFER_SLOT_COUNT + 1] = { 1, 7 };
+	uint32_t nBatchTotal = 13;
+	if ( sirVulkanValidateBatchCounts( szBatchCounts, 2, &nBatchTotal ) != SIR_GRAPHICS_SUCCESS || nBatchTotal != 8 ) {
+		return 10;
+	}
+	szBatchCounts[1] = 8;
+	if ( sirVulkanValidateBatchCounts( szBatchCounts, 2, &nBatchTotal ) != SIR_GRAPHICS_CAPACITY_EXCEEDED || nBatchTotal != 0 ) {
+		return 11;
+	}
+	szBatchCounts[1] = 0;
+	if ( sirVulkanValidateBatchCounts( szBatchCounts, 2, &nBatchTotal ) != SIR_GRAPHICS_INVALID_ARGUMENT || nBatchTotal != 0 ) {
+		return 12;
+	}
+	if ( sirVulkanValidateBatchCounts( szBatchCounts, SIR_VULKAN_TRANSFER_SLOT_COUNT + 1, &nBatchTotal ) !=
+	         SIR_GRAPHICS_CAPACITY_EXCEEDED ||
+	     sirVulkanValidateBatchCounts( nullptr, 2, &nBatchTotal ) != SIR_GRAPHICS_INVALID_ARGUMENT ||
+	     sirVulkanValidateBatchCounts( szBatchCounts, 0, &nBatchTotal ) != SIR_GRAPHICS_INVALID_ARGUMENT ||
+	     sirVulkanValidateBatchCounts( szBatchCounts, 1, nullptr ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return 13;
+	}
+
 	SIRVulkanRenderingDevice inert;
 	sirGraphicsCapabilities_t capabilities = {};
 	sirGraphicsMemoryBudget_t budget = {};

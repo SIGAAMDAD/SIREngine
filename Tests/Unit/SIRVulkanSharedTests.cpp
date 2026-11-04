@@ -209,6 +209,39 @@ int main( void )
 	     pDevice->unmapBuffer( hReadback, 0, sizeof( szExpected ) ) != SIR_GRAPHICS_SUCCESS ) {
 		return 12;
 	}
+	// Multiple closed lists share one ordered native submission and completion.
+	SIRGraphicsCommandList *pMultiUpload = nullptr;
+	SIRGraphicsCommandList *pMultiReadback = nullptr;
+	if ( pDevice->acquireCommands( SIR_GRAPHICS_QUEUE_DIRECT, &pMultiUpload ) != SIR_GRAPHICS_SUCCESS ||
+	     pDevice->acquireCommands( SIR_GRAPHICS_QUEUE_DIRECT, &pMultiReadback ) != SIR_GRAPHICS_SUCCESS || pMultiUpload == nullptr ||
+	     pMultiReadback == nullptr || pMultiUpload == pMultiReadback ||
+	     pMultiUpload->copyBuffer( hGpu, 0, hSource, 0, sizeof( szExpected ) ) != SIR_GRAPHICS_SUCCESS ||
+	     pMultiReadback->copyBuffer( hReadback, 0, hGpu, 0, sizeof( szExpected ) ) != SIR_GRAPHICS_SUCCESS ||
+	     pMultiUpload->close() != SIR_GRAPHICS_SUCCESS || pMultiReadback->close() != SIR_GRAPHICS_SUCCESS ) {
+		return 46;
+	}
+	SIRGraphicsCommandList *szDuplicateLists[2] = { pMultiUpload, pMultiUpload };
+	sirGraphicsSubmission_t multiSubmit = {};
+	multiSubmit.ppCommandLists = szDuplicateLists;
+	multiSubmit.nCommandListCount = 2;
+	sirGraphicsCompletion_t multiCompleted = {};
+	if ( pDevice->submit( SIR_GRAPHICS_QUEUE_DIRECT, multiSubmit, &multiCompleted ) != SIR_GRAPHICS_INVALID_ARGUMENT ||
+	     multiCompleted.nValue != 0 ) {
+		return 47;
+	}
+	SIRGraphicsCommandList *szMultiLists[2] = { pMultiUpload, pMultiReadback };
+	multiSubmit.ppCommandLists = szMultiLists;
+	if ( pDevice->submit( SIR_GRAPHICS_QUEUE_DIRECT, multiSubmit, &multiCompleted ) != SIR_GRAPHICS_SUCCESS ||
+	     pDevice->wait( multiCompleted, 5000000000ULL ) != SIR_GRAPHICS_SUCCESS ) {
+		return 48;
+	}
+	if ( pDevice->mapBuffer( hReadback, 0, sizeof( szExpected ), &mapped ) != SIR_GRAPHICS_SUCCESS ||
+	     pDevice->invalidateBuffer( hReadback, 0, sizeof( szExpected ) ) != SIR_GRAPHICS_SUCCESS ||
+	     memcmp( mapped.pData, szExpected, sizeof( szExpected ) ) != 0 ||
+	     pDevice->unmapBuffer( hReadback, 0, sizeof( szExpected ) ) != SIR_GRAPHICS_SUCCESS ) {
+		return 49;
+	}
+
 	// A full eight-operation command list must submit as one GPU timeline
 	// value while preserving chained upload -> device -> readback ordering.
 	SIRGraphicsCommandList *pBatch = nullptr;
