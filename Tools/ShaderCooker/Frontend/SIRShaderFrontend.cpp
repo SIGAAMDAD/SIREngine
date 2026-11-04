@@ -206,7 +206,7 @@ static bool sirCookEvaluateCondition( const std::string& sRaw, const sirShaderCo
 		bInvert = true;
 		sTerm = sirCookTrim( sTerm.substr( 1 ) );
 	}
-	if ( sTerm.compare( 0, 7, "defined" ) == 0 ) {
+	if ( sTerm.compare( 0, 7, "defined" ) == 0 && ( sTerm.size() == 7 || sTerm[7] == '(' || sTerm[7] == ' ' || sTerm[7] == '\t' ) ) {
 		sTerm = sirCookTrim( sTerm.substr( 7 ) );
 		if ( sTerm.size() >= 2 && sTerm.front() == '(' && sTerm.back() == ')' ) {
 			sTerm = sirCookTrim( sTerm.substr( 1, sTerm.size() - 2 ) );

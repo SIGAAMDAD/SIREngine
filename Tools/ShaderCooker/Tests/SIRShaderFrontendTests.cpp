@@ -21,6 +21,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <iostream>
 #include <string>
 
+#if defined( __linux__ )
+#include <unistd.h>
+#endif
+
 static bool sirCookCheck( bool bCondition, const char *pszMessage )
 {
 	if ( !bCondition ) {
@@ -227,6 +231,17 @@ static bool sirCookBoundaryCases( const std::filesystem::path& sRoot )
 		return true;
 	};
 
+	// A name beginning with "defined" remains an ordinary macro identifier.
+	// Treating definedFOO as defined(FOO) would change the cooked include DAG.
+	if ( !checkSource( "#define FOO 1\n#if definedFOO\n#include \"missing.hlsli\"\n#else\nint correct;\n#endif\n", SIR_SHADER_COOK_OK,
+	                   "defined-prefix is an independent identifier" ) ||
+	     !checkSource( "#define definedFOO 1\n#if definedFOO\nint correct;\n#else\n#include \"missing.hlsli\"\n#endif\n",
+	                   SIR_SHADER_COOK_OK, "explicit defined-prefix macro truthiness" ) ||
+	     !checkSource( "#define FOO 1\n#if !definedFOO\nint correct;\n#else\n#include \"missing.hlsli\"\n#endif\n", SIR_SHADER_COOK_OK,
+	                   "negated undefined defined-prefix identifier" ) ) {
+		return false;
+	}
+
 	if ( !checkSource( "#if !defined(ABSENT)\nint present = 1;\n#endif\n", SIR_SHADER_COOK_OK, "negated defined" ) ||
 	     !checkSource( "#if UNKNOWN_MACRO\n#include \"missing.h\"\n#else\nint present = 1;\n#endif\n", SIR_SHADER_COOK_OK,
 	                   "undefined macro treated as zero" ) ||
@@ -402,6 +417,25 @@ static bool sirCookBoundaryCases( const std::filesystem::path& sRoot )
 	std::filesystem::remove( sRoot / "case/escape.hlsli" );
 	std::filesystem::remove( sExternal );
 
+	// On unprivileged Linux hosts a readable directory entry can still refer
+	// to a regular file that is impossible to open. Preserve the exact error.
+#if defined( __linux__ )
+	if ( geteuid() != 0 ) {
+		const std::filesystem::path sUnreadable = sRoot / "case/unreadable.hlsli";
+		sirCookPut( sUnreadable, "int hidden;\n" );
+		std::error_code ePermissions;
+		std::filesystem::permissions( sUnreadable, std::filesystem::perms::none, ePermissions );
+		if ( !ePermissions ) {
+			const bool bCorrect =
+			    checkSource( "#include \"unreadable.hlsli\"\n", SIR_SHADER_COOK_IO_ERROR, "unreadable regular shader source" );
+			std::filesystem::permissions( sUnreadable, std::filesystem::perms::owner_all, ePermissions );
+			if ( !bCorrect || ePermissions ) {
+				return false;
+			}
+		}
+	}
+#endif
+
 	// Exercise the distinct aggregate-input and unique-file admission limits.
 	std::string sUniqueIncludes;
 	for ( uint32_t iFile = 0; iFile < 9; ++iFile ) {
@@ -435,12 +469,49 @@ static bool sirCookBoundaryCases( const std::filesystem::path& sRoot )
 	return true;
 }
 
+static bool sirCookTargetMatrix( void )
+{
+	const uint32_t szStages[] = { SIR_GRAPHICS_STAGE_VERTEX,   SIR_GRAPHICS_STAGE_FRAGMENT,     SIR_GRAPHICS_STAGE_COMPUTE,
+	                              SIR_GRAPHICS_STAGE_GEOMETRY, SIR_GRAPHICS_STAGE_TESS_CONTROL, SIR_GRAPHICS_STAGE_TESS_EVALUATION,
+	                              SIR_GRAPHICS_STAGE_MESH,     SIR_GRAPHICS_STAGE_TASK };
+	const char *szProfiles[] = { "vs_6_6", "ps_6_6", "cs_6_6", "gs_6_6", "hs_6_6", "ds_6_6", "ms_6_6", "as_6_6" };
+	for ( const sirGraphicsBackend_t eBackend : { SIR_GRAPHICS_BACKEND_VULKAN, SIR_GRAPHICS_BACKEND_D3D12 } ) {
+		for ( uint32_t iStage = 0; iStage < 8; ++iStage ) {
+			std::string sProfile = "stale";
+			bool bSpirv = false;
+			const sirShaderCookResult_t eResult = sirShaderCookResolveTarget( eBackend, szStages[iStage], &sProfile, &bSpirv );
+			if ( !sirCookCheck( eResult == SIR_SHADER_COOK_OK && sProfile == szProfiles[iStage] &&
+			                        bSpirv == ( eBackend == SIR_GRAPHICS_BACKEND_VULKAN ),
+			                    "complete shader target matrix" ) ) {
+				return false;
+			}
+		}
+	}
+	std::string sProfile = "stale";
+	bool bSpirv = true;
+	if ( !sirCookCheck( sirShaderCookResolveTarget( SIR_GRAPHICS_BACKEND_OPENGL, SIR_GRAPHICS_STAGE_VERTEX, &sProfile, &bSpirv ) ==
+	                            SIR_SHADER_COOK_UNSUPPORTED &&
+	                        sProfile.empty() && !bSpirv,
+	                    "no unsupported legacy recipe" ) ||
+	     !sirCookCheck( sirShaderCookResolveTarget( SIR_GRAPHICS_BACKEND_VULKAN, SIR_GRAPHICS_STAGE_VERTEX, &sProfile, nullptr ) ==
+	                        SIR_SHADER_COOK_INVALID_ARGUMENT,
+	                    "null spirv flag rejected" ) ||
+	     !sirCookCheck( sirShaderCookResolveTarget( SIR_GRAPHICS_BACKEND_VULKAN, SIR_GRAPHICS_STAGE_VERTEX, nullptr, &bSpirv ) ==
+	                        SIR_SHADER_COOK_INVALID_ARGUMENT,
+	                    "null profile rejected" ) ||
+	     !sirCookCheck( sirShaderCookResolveTarget( SIR_GRAPHICS_BACKEND_D3D12, 0, &sProfile, &bSpirv ) == SIR_SHADER_COOK_INVALID_ARGUMENT,
+	                    "zero shader stage rejected" ) ) {
+		return false;
+	}
+	return true;
+}
+
 int main( void )
 {
 	const std::filesystem::path sRoot = std::filesystem::temp_directory_path() / "sir_shader_frontend_tests";
 	std::filesystem::remove_all( sRoot );
 	std::filesystem::create_directories( sRoot );
-	const bool bPassed = sirCookRun( sRoot ) && sirCookBoundaryCases( sRoot );
+	const bool bPassed = sirCookRun( sRoot ) && sirCookBoundaryCases( sRoot ) && sirCookTargetMatrix();
 	std::filesystem::remove_all( sRoot );
 	if ( bPassed ) {
 		std::cout << "SIRShaderFrontendTests passed\n";
