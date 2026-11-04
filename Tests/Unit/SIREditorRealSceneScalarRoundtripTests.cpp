@@ -15,12 +15,20 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Editor/Host/SIREditorSceneWorkspace.h>
 #include <Editor/Scene/SIREditorScalarBinding.h>
+#include <Editor/Scene/SIREditorFileSave.h>
 
 #include <Core/Memory/SIRMemoryManager.h>
 #include <Core/Memory/SIRMemorySegment.h>
 
 #include <assert.h>
+#include <stdio.h>
 #include <string.h>
+
+#if defined( _WIN32 )
+	#include <process.h>
+#else
+	#include <unistd.h>
+#endif
 
 static bool sirTestRoundtripAtomName( uint64_t nAtom, const char *pszText, uint32_t nBytes, void *pContext ) noexcept
 {
@@ -153,6 +161,57 @@ int main( void )
 	assert( strstr( szOutput, "[connection signal=\"pressed\"" ) != nullptr );
 	assert( strstr( szOutput, "ExtResource(\"1_j0gfq\")" ) != nullptr );
 
+	// Persist the edited native document to an actual sibling-staged file,
+	// validate the exact bytes, then reopen from disk instead of a memory span.
+	char szSavedPath[128] = {};
+	char szTemporaryPath[128] = {};
+#if defined( _WIN32 )
+	const unsigned long nProcessId = ( unsigned long )_getpid();
+#else
+	const unsigned long nProcessId = ( unsigned long )getpid();
+#endif
+	assert( snprintf( szSavedPath, sizeof( szSavedPath ), "sir-editor-roundtrip-%lu.tscn", nProcessId ) > 0 );
+	assert( snprintf( szTemporaryPath, sizeof( szTemporaryPath ), "sir-editor-roundtrip-%lu.tscn.stage", nProcessId ) > 0 );
+	sirEditorSceneSaveRequest_t save = {};
+	save.pBridge = &bridge;
+	save.pszDestination = szSavedPath;
+	save.pszTemporary = szTemporaryPath;
+	save.pszScratch = szOutput;
+	save.nScratchCapacity = sizeof( szOutput );
+	assert( sirEditorSaveBoundScene( save ) == SIR_EDITOR_FILE_SAVE_OK );
+	FILE *pSaved = fopen( szSavedPath, "rb" );
+	assert( pSaved != nullptr );
+	char szReadBack[8192] = {};
+	assert( fread( szReadBack, 1, nOutputBytes, pSaved ) == nOutputBytes );
+	assert( fgetc( pSaved ) == EOF );
+	assert( fclose( pSaved ) == 0 );
+	assert( memcmp( szReadBack, szOutput, nOutputBytes ) == 0 );
+
+	// A failed export cannot replace the committed scene file.
+	char szTooSmall[2] = {};
+	save.pszScratch = szTooSmall;
+	save.nScratchCapacity = sizeof( szTooSmall );
+	assert( sirEditorSaveBoundScene( save ) == SIR_EDITOR_FILE_SAVE_OUT_OF_CAPACITY );
+	save.pszScratch = szOutput;
+	save.nScratchCapacity = sizeof( szOutput );
+	assert( szReadBack[0] != '\0' );
+	pSaved = fopen( szSavedPath, "rb" );
+	assert( pSaved != nullptr );
+	char szPreserved[8192] = {};
+	assert( fread( szPreserved, 1, nOutputBytes, pSaved ) == nOutputBytes );
+	assert( fclose( pSaved ) == 0 );
+	assert( memcmp( szPreserved, szReadBack, nOutputBytes ) == 0 );
+
+	const uint32_t iOriginalProperty = szBindings[0].iSourceProperty;
+	szBindings[0].iSourceProperty = UINT32_MAX;
+	assert( sirEditorSaveBoundScene( save ) == SIR_EDITOR_FILE_SAVE_SERIALIZATION_FAILED );
+	szBindings[0].iSourceProperty = iOriginalProperty;
+	pSaved = fopen( szSavedPath, "rb" );
+	assert( pSaved != nullptr );
+	assert( fread( szPreserved, 1, nOutputBytes, pSaved ) == nOutputBytes );
+	assert( fclose( pSaved ) == 0 );
+	assert( memcmp( szPreserved, szReadBack, nOutputBytes ) == 0 );
+
 	assert( workspace.getDocument().undo() == SIR_EDITOR_OK );
 	assert( workspace.getDocument().findProperty( nVBox, 1, &value ) == SIR_EDITOR_OK );
 	memcpy( &fOffset, &value.nPayload, sizeof( fOffset ) );
@@ -160,7 +219,7 @@ int main( void )
 	assert( workspace.getDocument().redo() == SIR_EDITOR_OK );
 
 	workspace.close();
-	assert( workspace.openTextSource( szOutput, nOutputBytes ) == SIR_EDITOR_WORKSPACE_OK );
+	assert( workspace.openTextFile( szSavedPath ) == SIR_EDITOR_WORKSPACE_OK );
 	assert( workspace.getSceneIndex().nNodeCount == 5 );
 	assert( workspace.getResourceIndex().nCount == 1 );
 	assert( workspace.getPropertyIndex().nCount == 15 );
@@ -172,6 +231,8 @@ int main( void )
 	assert( workspace.getDocument().findProperty( nPluginButton, 5, &value ) == SIR_EDITOR_OK && value.nPayload == 3 );
 
 	workspace.close();
+	assert( remove( szSavedPath ) == 0 );
+	assert( fopen( szTemporaryPath, "rb" ) == nullptr );
 	assert( workspace.shutdown() );
 	registry.shutdown();
 	memory.shutdown();

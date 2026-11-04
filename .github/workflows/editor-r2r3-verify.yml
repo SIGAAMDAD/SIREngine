@@ -37,6 +37,32 @@ jobs:
           if-no-files-found: error
           retention-days: 3
 
+  windows-msvc:
+    name: Native editor / Windows MSVC
+    runs-on: windows-2025
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '4.4.5'
+      - name: Fetch pinned native tests
+        shell: pwsh
+        run: git submodule update --init ThirdParty/GoogleTest
+      - name: Configure native editor and resource test suites
+        shell: pwsh
+        run: >
+          cmake -S . -B out/editor-r2r3-msvc -G "Visual Studio 17 2022" -A x64
+          -DSIR_BUILD_TESTS=ON -DSIR_WITH_GOOGLETEST=ON
+      - name: Build all native SIREngine and editor tests
+        shell: pwsh
+        run: cmake --build out/editor-r2r3-msvc --config Debug --parallel 2
+      - name: Run CTest with Windows runtime and file-saving paths
+        shell: pwsh
+        run: ctest --test-dir out/editor-r2r3-msvc -C Debug --output-on-failure --no-tests=error --timeout 60
+
   native:
     name: Native editor / ${{ matrix.target }}
     runs-on: ubuntu-24.04
@@ -128,7 +154,7 @@ jobs:
           profdata="$(command -v "llvm-profdata-${clang_version}" || command -v llvm-profdata)"
           cov="$(command -v "llvm-cov-${clang_version}" || command -v llvm-cov)"
           "${profdata}" merge -sparse "${profiles[@]}" -o out/editor-r2r3-coverage/reports/all.profdata
-          for name in SIREditorAuthoringTests SIREditorTypedPropertyTests SIREditorScalarCodecTests SIREditorScalarBindingTests SIREditorSceneWorkspaceTests SIRObjectRegistryTests SIRResourceCatalogTests; do
+          for name in SIREditorAuthoringTests SIREditorTypedPropertyTests SIREditorScalarCodecTests SIREditorScalarBindingTests SIREditorSceneWorkspaceTests SIRObjectRegistryTests SIRResourceCatalogTests SIREditorFileSaveTests SIREditorRealSceneScalarRoundtripTests SIRResourceCatalogDifferentialTests SIREditorPropertyStressTests; do
             binary="out/editor-r2r3-coverage/Tests/Unit/${name}"
             if [ -x "${binary}" ]; then
               "${cov}" report "${binary}" -instr-profile=out/editor-r2r3-coverage/reports/all.profdata \
