@@ -214,8 +214,7 @@ int main( void )
 	if ( sirVulkanRecordedNeedsBufferBarrier( hazards, 0 ) || sirVulkanRecordedNeedsBufferBarrier( hazards, 1 ) ||
 	     !sirVulkanRecordedNeedsBufferBarrier( hazards, 2 ) || !sirVulkanRecordedNeedsBufferBarrier( hazards, 3 ) ||
 	     sirVulkanRecordedNeedsBufferBarrier( hazards, 4 ) || !sirVulkanRecordedNeedsBufferBarrier( hazards, 5 ) ||
-	     sirVulkanRecordedNeedsBufferBarrier( hazards, 6 ) ||
-	     sirVulkanRecordedNeedsBufferBarrier( nullptr, 1 ) ||
+	     sirVulkanRecordedNeedsBufferBarrier( hazards, 6 ) || sirVulkanRecordedNeedsBufferBarrier( nullptr, 1 ) ||
 	     sirVulkanRecordedNeedsBufferBarrier( hazards, SIR_VULKAN_COPY_BATCH_CAPACITY ) ) {
 		return 22;
 	}

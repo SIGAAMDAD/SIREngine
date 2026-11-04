@@ -75,6 +75,9 @@ typedef struct sirVulkanMemoryStats_s
 	uint32_t nLiveSamplers;
 } sirVulkanMemoryStats_t;
 
+// Higher scores appear first in the shared adapter registry.
+uint32_t sirVulkanAdapterPriority( VkPhysicalDeviceType eType ) noexcept;
+
 // Private Vulkan-driver ownership. No Vk or VMA types enter SIRRenderingDevice.
 typedef struct sirVulkanPoolBudget_s
 {
@@ -326,6 +329,7 @@ private:
 	uint32_t m_iNextTransferSlot;
 	bool m_bDeviceLost;
 	sirVulkanAdapterInfo_t m_Adapter;
+	uint32_t m_nEligibleAdapterCount = 0;
 	uint32_t m_nLiveBuffers;
 	uint32_t m_nLiveImages = 0;
 	uint32_t m_nLiveImageViews = 0;
@@ -334,7 +338,7 @@ private:
 	bool m_bReady;
 
 	bool loadInstanceDispatch( void ) noexcept;
-	bool chooseAdapter( void ) noexcept;
+	bool chooseAdapter( uint32_t nAdapterIndex ) noexcept;
 	bool initializeTransferQueue( void ) noexcept;
 	bool loadImageDispatch( void ) noexcept;
 	void destroyTransferQueue( void ) noexcept;
@@ -353,9 +357,10 @@ public:
 	SIRVulkanDevice( const SIRVulkanDevice & ) = delete;
 	SIRVulkanDevice &operator=( const SIRVulkanDevice & ) = delete;
 
-	sirVulkanResult_t initialize( const sirVulkanPoolBudget_t *pBudget = nullptr ) noexcept;
+	sirVulkanResult_t initialize( const sirVulkanPoolBudget_t *pBudget = nullptr, uint32_t nAdapterIndex = 0 ) noexcept;
 	bool shutdown( void ) noexcept;
 	bool isReady( void ) const noexcept;
+	uint32_t getAdapterCount( void ) const noexcept;
 	bool queryAdapter( sirVulkanAdapterInfo_t *pAdapter ) const noexcept;
 	bool queryMemoryStats( sirVulkanMemoryStats_t *pStats ) const noexcept;
 

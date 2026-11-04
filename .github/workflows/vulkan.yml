@@ -1,6 +1,8 @@
 name: Vulkan headless validation
 
 on:
+  push:
+    branches: [renderer/vulkan-headless-device]
   pull_request:
     branches: [develop, main, renderer/shared-driver-api-v1]
     paths:

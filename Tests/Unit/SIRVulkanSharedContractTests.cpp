@@ -69,6 +69,14 @@ int main( void )
 		return 13;
 	}
 
+	// Physical-device priority is stable and independent of the Vulkan loader.
+	if ( sirVulkanAdapterPriority( VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU ) != 4 ||
+	     sirVulkanAdapterPriority( VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU ) != 3 ||
+	     sirVulkanAdapterPriority( VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU ) != 2 ||
+	     sirVulkanAdapterPriority( VK_PHYSICAL_DEVICE_TYPE_CPU ) != 1 || sirVulkanAdapterPriority( VK_PHYSICAL_DEVICE_TYPE_OTHER ) != 1 ) {
+		return 14;
+	}
+
 	SIRVulkanRenderingDevice inert;
 	sirGraphicsCapabilities_t capabilities = {};
 	sirGraphicsMemoryBudget_t budget = {};
@@ -107,6 +115,13 @@ int main( void )
 		return 6;
 	}
 	create.nRequiredFeatures = 0;
+	create.nAdapterIndex = 32;
+	pDevice = reinterpret_cast<SIRRenderingDevice *>( &inert );
+	if ( driver.createDevice( create, &pDevice ) != SIR_GRAPHICS_INVALID_ARGUMENT || pDevice != nullptr ||
+	     driver.queryAdapter( 32, &reported ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return 15;
+	}
+	create.nAdapterIndex = 0;
 	create.nFramesInFlight = SIR_VULKAN_TRANSFER_SLOT_COUNT + 1;
 	pDevice = reinterpret_cast<SIRRenderingDevice *>( &inert );
 	if ( driver.createDevice( create, &pDevice ) != SIR_GRAPHICS_INVALID_ARGUMENT || pDevice != nullptr ) {

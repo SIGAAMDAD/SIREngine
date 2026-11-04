@@ -2,7 +2,7 @@ name: SIREngine CI
 
 on:
   push:
-    branches: [develop]
+    branches: [develop, renderer/vulkan-headless-device]
   pull_request:
     branches: [develop, main, renderer/shared-driver-api-v1]
   workflow_dispatch:
