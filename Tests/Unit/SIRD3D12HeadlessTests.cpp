@@ -652,8 +652,7 @@ int main( void )
 	}
 	SIRD3D12Transfers &transfers = device.getTransfers();
 	sirD3D12TransferTicket_t invalidTransfer = {};
-	if ( transfers.submit( nullptr, sizeof( szInput ), &invalidTransfer ) ||
-	     transfers.submit( szInput, 0, &invalidTransfer ) ||
+	if ( transfers.submit( nullptr, sizeof( szInput ), &invalidTransfer ) || transfers.submit( szInput, 0, &invalidTransfer ) ||
 	     transfers.submit( szInput, sizeof( szInput ), nullptr ) ) {
 		fputs( "D3D12 invalid resident transfer accepted\n", stderr );
 		return 1;
@@ -665,10 +664,8 @@ int main( void )
 		}
 		memset( szOutput, 0, sizeof( szOutput ) );
 		sirD3D12TransferTicket_t ticket = {};
-		if ( !transfers.submit( szInput, sizeof( szInput ), &ticket ) ||
-		     !transfers.wait( ticket, 15000 ) ||
-		     !transfers.receive( ticket, szOutput, sizeof( szOutput ) ) ||
-		     memcmp( szInput, szOutput, sizeof( szInput ) ) != 0 ) {
+		if ( !transfers.submit( szInput, sizeof( szInput ), &ticket ) || !transfers.wait( ticket, 15000 ) ||
+		     !transfers.receive( ticket, szOutput, sizeof( szOutput ) ) || memcmp( szInput, szOutput, sizeof( szInput ) ) != 0 ) {
 			fprintf( stderr, "D3D12 resident transfer failed at pass %u: HRESULT 0x%08lx\n", iPass,
 			         ( unsigned long )transfers.getLastError() );
 			return 1;

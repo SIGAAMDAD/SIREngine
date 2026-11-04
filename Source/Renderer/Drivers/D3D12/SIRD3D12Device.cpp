@@ -29,6 +29,7 @@ SIRD3D12ComputeQueue::SIRD3D12ComputeQueue( void ) noexcept
 SIRD3D12ComputeQueue::~SIRD3D12ComputeQueue( void ) noexcept
 {
 	shutdown();
+
 }
 
 bool SIRD3D12ComputeQueue::initialize( ID3D12Device *pDevice ) noexcept
@@ -560,8 +561,7 @@ void SIRD3D12Device::shutdown( void ) noexcept
 bool SIRD3D12Device::isReady( void ) const noexcept
 {
 	return m_pDevice != nullptr && m_pGraphicsQueue != nullptr && m_pGraphicsFence != nullptr && m_hFenceEvent != nullptr &&
-	       m_Memory.isReady() && m_Transfers.isReady() &&
-	       m_ComputeQueue.isReady() && m_nDeviceGeneration != 0 && !m_bGraphicsUnsafe;
+	       m_Memory.isReady() && m_Transfers.isReady() && m_ComputeQueue.isReady() && m_nDeviceGeneration != 0 && !m_bGraphicsUnsafe;
 }
 
 bool SIRD3D12Device::queryAdapterInfo( sirD3D12AdapterInfo_t *pInfo ) const noexcept
@@ -955,4 +955,3 @@ uint32_t SIRD3D12Device::getRetirementCapacity( void ) const noexcept
 {
 	return s_nRetirementCapacity;
 }
-

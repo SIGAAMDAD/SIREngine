@@ -175,7 +175,6 @@ public:
 	uint32_t collectRetiredAllocations( void ) noexcept;
 	uint32_t getRetiredAllocationCount( void ) const noexcept;
 	uint32_t getRetirementCapacity( void ) const noexcept;
-
 };
 
 #endif // __SIRENGINE_SIRD3D12DEVICE_H__
