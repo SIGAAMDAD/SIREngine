@@ -24,7 +24,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <stdint.h>
 
-constexpr uint32_t SIR_SCRIPT_BACKEND_ABI_REVISION = 3;
+constexpr uint32_t SIR_SCRIPT_BACKEND_ABI_REVISION = 4;
 constexpr uint32_t SIR_SCRIPT_PROGRAM_SOURCE_ABI_REVISION = 1;
 constexpr uint32_t SIR_SCRIPT_PAYLOAD_ALLOCATOR_ABI_REVISION = 1;
 
@@ -103,6 +103,15 @@ typedef struct sirScriptProgramSourceAPI_s
 
 // Backend-private tokens are opaque to the shared host. No VM pointer or
 // language-specific object crosses this interface.
+// One ABI-stable request keeps individual function signatures bounded.
+typedef struct sirScriptInvokeRequest_s
+{
+	uint64_t nInstanceToken;
+	uint64_t nMethodId;
+	sirScriptReadFrame_t arguments;
+	sirScriptWriteFrame_t result;
+} sirScriptInvokeRequest_t;
+
 typedef struct sirScriptBackendAPI_s
 {
 	uint32_t nABIRevision;
@@ -115,7 +124,7 @@ typedef struct sirScriptBackendAPI_s
 	sirScriptResult_t ( *pInitializeInstance )( void *, uint64_t ) noexcept;
 	void ( *pShutdownInstance )( void *, uint64_t ) noexcept;
 	void ( *pDestroyInstance )( void *, uint64_t ) noexcept;
-	sirScriptResult_t ( *pInvoke )( void *, uint64_t, uint64_t, sirScriptReadFrame_t, sirScriptWriteFrame_t ) noexcept;
+	sirScriptResult_t ( *pInvoke )( void *, const sirScriptInvokeRequest_t * ) noexcept;
 } sirScriptBackendAPI_t;
 
 #endif // __SIRENGINE_SIRSCRIPTTYPES_H__

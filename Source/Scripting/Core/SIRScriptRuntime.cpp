@@ -506,7 +506,8 @@ sirScriptResult_t SIRScriptRuntime::invoke( sirScriptInstanceHandle_t handle, ui
 	const sirScriptBackendSlot_t &backend = m_szBackends[program.iBackend];
 	slot.bInvoking = true;
 	m_bCallingBackend = true;
-	const sirScriptResult_t eResult = backend.api.pInvoke( backend.api.pUser, slot.nBackendToken, nMethodId, arguments, result );
+	const sirScriptInvokeRequest_t request = { slot.nBackendToken, nMethodId, arguments, result };
+	const sirScriptResult_t eResult = backend.api.pInvoke( backend.api.pUser, &request );
 	slot.bInvoking = false;
 	m_bCallingBackend = false;
 	return eResult;

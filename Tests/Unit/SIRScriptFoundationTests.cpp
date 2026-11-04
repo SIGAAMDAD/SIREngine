@@ -192,9 +192,13 @@ static void testDestroy( void *pContext, uint64_t ) noexcept
 	++( ( sirScriptTestBackend_t * )pContext )->nDestroys;
 }
 
-static sirScriptResult_t testInvoke( void *pContext, uint64_t, uint64_t nMethod, sirScriptReadFrame_t arguments,
-                                     sirScriptWriteFrame_t ) noexcept
+static sirScriptResult_t testInvoke( void *pContext, const sirScriptInvokeRequest_t *pRequest ) noexcept
 {
+	if ( pRequest == nullptr ) {
+		return SIR_SCRIPT_INVALID_ARGUMENT;
+	}
+	const uint64_t nMethod = pRequest->nMethodId;
+	const sirScriptReadFrame_t arguments = pRequest->arguments;
 	sirScriptTestBackend_t *pBackend = ( sirScriptTestBackend_t * )pContext;
 	++pBackend->nInvokes;
 	if ( nMethod == 77 && arguments.nBytes == sizeof( uint32_t ) ) {
