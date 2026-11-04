@@ -1,0 +1,5 @@
+cvar mod.title 53 8 0 88 Alpha title
+cvar r.vsync 52 0 1 0 1
+command mod.fly 2001 3 88 0
+cvar r.gamma 51 3 1 0 1065353216
+command HELP 1001 3 0 0

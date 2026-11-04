@@ -221,7 +221,14 @@
       "owned_paths": [
         "Source/Core/Registration/*",
         "Tools/StringCatalogCooker/*",
-        "Tools/RegistrationCooker/*"
+        "Tools/RegistrationCooker/*",
+        "Source/Core/Registration/SIRRegistrationCatalog.*",
+        "Tools/RegistrationCooker/*",
+        "Tools/StringCatalogCooker/*",
+        "Tests/Unit/SIRRegistrationCookerTests.cpp",
+        "Tests/Unit/Registration/*",
+        "CMakeLists.txt",
+        "Tests/Unit/CMakeLists.txt"
       ],
       "tasks": [
         "P2"
@@ -359,12 +366,13 @@
       "outputs": [
         "Source/Core/Registration/SIRRegistrationStringBridge.h",
         "Source/Core/Registration/SIRRegistrationStringBridge.cpp",
-        "Tests/Unit/SIRRegistrationStringBridgeTests.cpp"
+        "Tests/Unit/SIRRegistrationStringBridgeTests.cpp",
+        "https://github.com/SIGAAMDAD/SIREngine/issues/276"
       ],
       "stop_conditions": [
         "Unratified interface or unmet dependency gate"
       ],
-      "status": "IMPLEMENTED_PENDING_NATIVE_INTEGRATION"
+      "status": "PASS_GITHUB_NATIVE_CI"
     },
     {
       "id": "P2",
@@ -381,16 +389,23 @@
         "Build COOK_ROUNDTRIP acceptance and negative cases"
       ],
       "test_ids": [
-        "TEST-DOC"
+        "TEST-DOC",
+        "TEST-P2-UNIT",
+        "TEST-P2-CLI"
       ],
       "outputs": [
-        "Source/Core/Registration/*",
-        "Tools/StringCatalogCooker/*",
-        "Tools/RegistrationCooker/*"
+        "Source/Core/Registration/SIRRegistrationCatalog.h",
+        "Source/Core/Registration/SIRRegistrationCatalog.cpp",
+        "Tools/RegistrationCooker/SIRRegistrationCooker.cpp",
+        "Tools/RegistrationCooker/SIRRegistrationCookerMain.cpp",
+        "Tools/StringCatalogCooker/SIRStringCatalogCooker.cpp",
+        "Tests/Unit/SIRRegistrationCookerTests.cpp",
+        "Tests/Unit/Registration/CookerCLI.cmake"
       ],
       "stop_conditions": [
         "Unratified interface or unmet dependency gate"
-      ]
+      ],
+      "status": "IMPLEMENTED_PENDING_CI"
     },
     {
       "id": "P3",
@@ -562,6 +577,26 @@
       "command": "Clang 23.1.5 and GCC C++17 -Wall -Wextra -Wpedantic -Werror; bridge linked against test-only SIRStringPool signature stub; 40 existing StringPool GoogleTests are not rerun",
       "evidence_path": "Tests/Unit/SIRRegistrationStringBridgeTests.cpp",
       "limitations": "Full engine SIRCore + real SIRStringPool link/CTest, actual Windows build, Clang AST configuration test NOT_RUN"
+    },
+    {
+      "id": "TEST-P2-UNIT",
+      "requirement_ids": [
+        "REQ-001"
+      ],
+      "tier": "NATIVE_CMAKE_CTEST",
+      "status": "PENDING_EXACT_SHA_CI",
+      "command": "ctest -R core.registration.cooker",
+      "evidence_path": "Tests/Unit/SIRRegistrationCookerTests.cpp"
+    },
+    {
+      "id": "TEST-P2-CLI",
+      "requirement_ids": [
+        "REQ-001"
+      ],
+      "tier": "NATIVE_CMAKE_CTEST",
+      "status": "PENDING_EXACT_SHA_CI",
+      "command": "ctest -R core.registration.cooker-cli",
+      "evidence_path": "Tests/Unit/Registration/CookerCLI.cmake"
     }
   ],
   "probes": [],
