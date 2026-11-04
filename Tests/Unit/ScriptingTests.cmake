@@ -72,3 +72,28 @@ add_executable(SIRLangSignaturesTests SIRLangSignaturesTests.cpp)
 target_link_libraries(SIRLangSignaturesTests PRIVATE SIR::Scripting)
 add_test(NAME scripting.language.signatures COMMAND SIRLangSignaturesTests)
 sir_configure_owned_target(SIRLangSignaturesTests)
+
+add_executable(SIRLangTypeSystemTests SIRLangTypeSystemTests.cpp)
+target_link_libraries(SIRLangTypeSystemTests PRIVATE SIR::Scripting)
+add_test(NAME scripting.language.typesystem COMMAND SIRLangTypeSystemTests)
+sir_configure_owned_target(SIRLangTypeSystemTests)
+
+add_executable(SIRLangGraphVMTests SIRLangGraphVMTests.cpp)
+target_link_libraries(SIRLangGraphVMTests PRIVATE SIR::Scripting)
+add_test(NAME scripting.language.graphvm COMMAND SIRLangGraphVMTests)
+sir_configure_owned_target(SIRLangGraphVMTests)
+
+add_executable(SIRLangLoweringTests SIRLangLoweringTests.cpp)
+target_link_libraries(SIRLangLoweringTests PRIVATE SIR::Scripting)
+add_test(NAME scripting.language.lowering COMMAND SIRLangLoweringTests)
+sir_configure_owned_target(SIRLangLoweringTests)
+
+add_executable(SIRLangBytecodeTests SIRLangBytecodeTests.cpp)
+target_link_libraries(SIRLangBytecodeTests PRIVATE SIR::Scripting)
+add_test(NAME scripting.language.bytecode COMMAND SIRLangBytecodeTests)
+sir_configure_owned_target(SIRLangBytecodeTests)
+
+add_executable(SIRLangEffectsTests SIRLangEffectsTests.cpp)
+target_link_libraries(SIRLangEffectsTests PRIVATE SIR::Scripting)
+add_test(NAME scripting.language.effects COMMAND SIRLangEffectsTests)
+sir_configure_owned_target(SIRLangEffectsTests)
