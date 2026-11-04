@@ -19,14 +19,14 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <SIRPCH.hpp>
 
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
-	#pragma once
+#pragma once
 #endif
 
 #include <Scripting/Language/SIRLangToken.h>
 
 // Initializes bounded, allocation-free state. A nonempty source must have
 // valid bytes; the first call to Next reports an invalid source otherwise.
-void SIRLangLexerInit( sirLangLexer_t *pLexer, const sirLangSourceView_t &source ) noexcept;
+void SIRLangLexerInit( sirLangLexer_t *pLexer, const sirLangSourceView_t& source ) noexcept;
 
 // Returns a token with byte-oriented source location. After SIR_LANG_TOKEN_END
 // the lexer remains at END. Any ERROR token is recoverable except INVALID_SOURCE.
