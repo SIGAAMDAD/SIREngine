@@ -413,6 +413,9 @@ sirGraphicsResult_t SIRD3D12CommandList::barrier( const sirGraphicsBarrier_t *pB
 			native.Transition.StateAfter = sirD3D12BarrierState( source.eAfter );
 			native.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 		} else if ( source.eType == SIR_GRAPHICS_BARRIER_UAV ) {
+			if ( ( pSlot->nUsage & SIR_GRAPHICS_USAGE_STORAGE ) == 0 ) {
+				return SIR_GRAPHICS_INVALID_ARGUMENT;
+			}
 			native.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
 			native.UAV.pResource = pSlot->getNativeResource();
 		} else {
@@ -437,12 +440,19 @@ sirGraphicsResult_t SIRD3D12CommandList::barrier( const sirGraphicsBarrier_t *pB
 		}
 		// A resource created in a legacy non-COMMON heap state must continue using
 		// the legacy barrier API. Only DEFAULT GPU memory uses this enhanced path.
-		if ( m_pEnhancedCommands != nullptr && source.eType == SIR_GRAPHICS_BARRIER_TRANSITION &&
+		if ( m_pEnhancedCommands != nullptr &&
+		     ( source.eType == SIR_GRAPHICS_BARRIER_TRANSITION || source.eType == SIR_GRAPHICS_BARRIER_UAV ) &&
 		     pSlot->eMemory == SIR_GRAPHICS_MEMORY_GPU_LOCAL ) {
-			const D3D12_BARRIER_SYNC eSyncBefore = sirD3D12EnhancedSync( source.eBefore );
-			const D3D12_BARRIER_SYNC eSyncAfter = sirD3D12EnhancedSync( source.eAfter );
-			const D3D12_BARRIER_ACCESS eAccessBefore = sirD3D12EnhancedAccess( source.eBefore );
-			const D3D12_BARRIER_ACCESS eAccessAfter = sirD3D12EnhancedAccess( source.eAfter );
+			// UAV ordering preserves the current UAV access/layout; transitions
+			// use the explicit before/after states supplied by the caller.
+			const sirGraphicsState_t eBefore =
+			    source.eType == SIR_GRAPHICS_BARRIER_UAV ? SIR_GRAPHICS_STATE_SHADER_WRITE : source.eBefore;
+			const sirGraphicsState_t eAfter =
+			    source.eType == SIR_GRAPHICS_BARRIER_UAV ? SIR_GRAPHICS_STATE_SHADER_WRITE : source.eAfter;
+			const D3D12_BARRIER_SYNC eSyncBefore = sirD3D12EnhancedSync( eBefore );
+			const D3D12_BARRIER_SYNC eSyncAfter = sirD3D12EnhancedSync( eAfter );
+			const D3D12_BARRIER_ACCESS eAccessBefore = sirD3D12EnhancedAccess( eBefore );
+			const D3D12_BARRIER_ACCESS eAccessAfter = sirD3D12EnhancedAccess( eAfter );
 			D3D12_BARRIER_GROUP group = {};
 			group.NumBarriers = 1;
 			if ( pSlot->eType == SIR_GRAPHICS_HANDLE_TEXTURE ) {
@@ -458,15 +468,20 @@ sirGraphicsResult_t SIRD3D12CommandList::barrier( const sirGraphicsBarrier_t *pB
 				barrier.SyncAfter = eSyncAfter;
 				barrier.AccessBefore = eAccessBefore;
 				barrier.AccessAfter = eAccessAfter;
-				barrier.LayoutBefore = sirD3D12EnhancedLayout( source.eBefore );
-				barrier.LayoutAfter = sirD3D12EnhancedLayout( source.eAfter );
+				barrier.LayoutBefore = sirD3D12EnhancedLayout( eBefore );
+				barrier.LayoutAfter = sirD3D12EnhancedLayout( eAfter );
 				barrier.pResource = pSlot->getNativeResource();
-				barrier.Subresources.IndexOrFirstMipLevel = source.nBaseMip;
-				barrier.Subresources.NumMipLevels = source.nMipCount == 0 ? pSlot->nMips - source.nBaseMip : source.nMipCount;
-				barrier.Subresources.FirstArraySlice = source.nBaseLayer;
+				const bool bUav = source.eType == SIR_GRAPHICS_BARRIER_UAV;
+				barrier.Subresources.IndexOrFirstMipLevel = bUav ? 0 : source.nBaseMip;
+				barrier.Subresources.NumMipLevels = bUav ? pSlot->nMips
+				                                   : source.nMipCount == 0 ? pSlot->nMips - source.nBaseMip
+				                                                           : source.nMipCount;
+				barrier.Subresources.FirstArraySlice = bUav ? 0 : source.nBaseLayer;
 				barrier.Subresources.NumArraySlices =
-				    source.nLayerCount == 0 ? ( pSlot->eDimension == SIR_GRAPHICS_TEXTURE_3D ? 1 : pSlot->nLayers ) - source.nBaseLayer
-				                            : source.nLayerCount;
+				    bUav ? ( pSlot->eDimension == SIR_GRAPHICS_TEXTURE_3D ? 1 : pSlot->nLayers )
+				    : source.nLayerCount == 0
+				        ? ( pSlot->eDimension == SIR_GRAPHICS_TEXTURE_3D ? 1 : pSlot->nLayers ) - source.nBaseLayer
+				        : source.nLayerCount;
 				barrier.Subresources.FirstPlane = 0;
 				barrier.Subresources.NumPlanes = formatInfo.PlaneCount;
 				group.Type = D3D12_BARRIER_TYPE_TEXTURE;
