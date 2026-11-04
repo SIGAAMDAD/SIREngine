@@ -78,6 +78,7 @@ public:
 	sirResourceCatalogResult_t addResource( uint64_t nId, uint32_t nTypeId, uint64_t nPathAtom, sirResourceSource_t eSource ) noexcept;
 	sirResourceCatalogResult_t addDependency( uint64_t nOwnerId, uint64_t nTargetId ) noexcept;
 	sirResourceCatalogResult_t seal( void ) noexcept;
+	sirResourceCatalogResult_t buildLoadOrder( uint64_t *pOutIds, uint32_t nCapacity, uint32_t *pOutCount ) noexcept;
 	sirResourceCatalogResult_t findResource( uint64_t nId, sirResourceEntry_t *pOutEntry ) const noexcept;
 	sirResourceCatalogResult_t dependencyAt( uint32_t iDependency, sirResourceDependency_t *pOutDependency ) const noexcept;
 	uint32_t getResourceCount( void ) const noexcept;
