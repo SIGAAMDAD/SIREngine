@@ -126,6 +126,9 @@ SIRVulkanRenderingDevice::SIRVulkanRenderingDevice( void ) noexcept
 	for ( uint32_t iSlot = 0; iSlot < SIR_VULKAN_SAMPLER_CAPACITY; ++iSlot ) {
 		m_szSamplers[iSlot].nGeneration = 1;
 	}
+	for ( uint32_t iSlot = 0; iSlot < SIR_VULKAN_PIPELINE_CAPACITY; ++iSlot ) {
+		m_szPipelines[iSlot].nGeneration = 1;
+	}
 }
 
 SIRVulkanRenderingDevice::~SIRVulkanRenderingDevice( void ) noexcept
@@ -607,6 +610,34 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::wait( const sirGraphicsCompletion_
 sirGraphicsResult_t SIRVulkanRenderingDevice::retireResource( sirGraphicsHandle_t hResource,
                                                               const sirGraphicsCompletionSet_t &completion ) noexcept
 {
+	if ( hResource.eType == SIR_GRAPHICS_HANDLE_PIPELINE ) {
+		if ( !m_bReady || !sirGraphicsIsCompletionSetValid( completion, m_nDeviceGeneration ) ||
+		     ( completion.nQueueMask & ~( 1U << SIR_GRAPHICS_QUEUE_DIRECT ) ) != 0 ||
+		     completion.szQueueValues[SIR_GRAPHICS_QUEUE_DIRECT] > m_nLastCompletion ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
+		if ( !sirGraphicsIsHandleValid( hResource, SIR_GRAPHICS_HANDLE_PIPELINE, m_nDeviceGeneration ) ||
+		     hResource.nSlot >= SIR_VULKAN_PIPELINE_CAPACITY ) {
+			return SIR_GRAPHICS_INVALID_HANDLE;
+		}
+		sirVulkanGraphicsPipelineSlot_t *pSlot = &m_szPipelines[hResource.nSlot];
+		if ( !pSlot->bActive || pSlot->nGeneration != hResource.nGeneration ) {
+			return SIR_GRAPHICS_INVALID_HANDLE;
+		}
+		if ( completion.szQueueValues[SIR_GRAPHICS_QUEUE_DIRECT] < pSlot->native.nLastGpuUse ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
+		const sirVulkanResult_t eDestroy = m_Native.destroyComputePipeline( &pSlot->native );
+		if ( eDestroy == SIR_VULKAN_BUSY ) {
+			return SIR_GRAPHICS_BUSY;
+		}
+		if ( eDestroy != SIR_VULKAN_SUCCESS ) {
+			return SIR_GRAPHICS_DRIVER_ERROR;
+		}
+		pSlot->bActive = false;
+		++pSlot->nGeneration;
+		return SIR_GRAPHICS_SUCCESS;
+	}
 	if ( hResource.eType != SIR_GRAPHICS_HANDLE_BUFFER ) {
 		return retireImageResource( hResource, completion );
 	}
@@ -670,6 +701,11 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::shutdown( void ) noexcept
 	}
 	for ( uint32_t iSlot = 0; iSlot < SIR_VULKAN_SAMPLER_CAPACITY; ++iSlot ) {
 		if ( m_szSamplers[iSlot].bActive || m_szSamplers[iSlot].bRetiring ) {
+			return SIR_GRAPHICS_BUSY;
+		}
+	}
+	for ( uint32_t iSlot = 0; iSlot < SIR_VULKAN_PIPELINE_CAPACITY; ++iSlot ) {
+		if ( m_szPipelines[iSlot].bActive ) {
 			return SIR_GRAPHICS_BUSY;
 		}
 	}

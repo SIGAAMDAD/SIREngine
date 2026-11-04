@@ -58,6 +58,42 @@ int main( void )
 		return 4;
 	}
 
+	// Minimal descriptor-free SPIR-V compute entry point:
+	// OpCapability Shader, Logical GLSL450, LocalSize(1,1,1), empty main.
+	const uint32_t szComputeSpirv[] = {
+		0x07230203U, 0x00010000U, 0U, 6U, 0U,
+		0x00020011U, 1U,
+		0x0003000eU, 0U, 1U,
+		0x0005000fU, 5U, 4U, 0x6e69616dU, 0U,
+		0x00060010U, 4U, 17U, 1U, 1U, 1U,
+		0x00020013U, 1U,
+		0x00030021U, 2U, 1U,
+		0x00050036U, 1U, 4U, 0U, 2U,
+		0x000200f8U, 5U,
+		0x000100fdU,
+		0x00010038U
+	};
+	sirGraphicsPipelineDesc_t compute = {};
+	compute.eType = SIR_GRAPHICS_PIPELINE_COMPUTE;
+	compute.computeShader.eFormat = SIR_GRAPHICS_SHADER_SPIRV;
+	compute.computeShader.pBytes = szComputeSpirv;
+	compute.computeShader.nByteCount = sizeof( szComputeSpirv );
+	compute.computeShader.pszEntryPoint = "main";
+	sirGraphicsHandle_t hCompute = {};
+	if ( pDevice->createPipeline( compute, &hCompute ) != SIR_GRAPHICS_SUCCESS ||
+	     hCompute.eType != SIR_GRAPHICS_HANDLE_PIPELINE ||
+	     hCompute.nDeviceGeneration != pDevice->getDeviceGeneration() ||
+	     driver.destroyDevice( pDevice ) != SIR_GRAPHICS_BUSY ) {
+		return 37;
+	}
+	sirGraphicsCompletionSet_t pipelineCompletion = {};
+	pipelineCompletion.nDeviceGeneration = pDevice->getDeviceGeneration();
+	if ( pDevice->retireResource( hCompute, pipelineCompletion ) != SIR_GRAPHICS_SUCCESS ||
+	     pDevice->retireResource( hCompute, pipelineCompletion ) != SIR_GRAPHICS_INVALID_HANDLE ) {
+		return 38;
+	}
+
+
 	SIRGraphicsCommandList *pCancelled = nullptr;
 	if ( pDevice->acquireCommands( SIR_GRAPHICS_QUEUE_DIRECT, &pCancelled ) != SIR_GRAPHICS_SUCCESS || pCancelled == nullptr ||
 	     driver.destroyDevice( pDevice ) != SIR_GRAPHICS_BUSY || pCancelled->close() != SIR_GRAPHICS_SUCCESS ) {

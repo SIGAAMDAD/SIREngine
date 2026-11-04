@@ -114,6 +114,11 @@ if(SIR_WITH_VULKAN)
     add_test(NAME render.vulkan.shared-contracts COMMAND SIRVulkanSharedContractTests)
     sir_configure_owned_target(SIRVulkanSharedContractTests)
 
+    add_executable(SIRVulkanShaderTests SIRVulkanShaderTests.cpp)
+    target_link_libraries(SIRVulkanShaderTests PRIVATE SIR::Vulkan)
+    add_test(NAME render.vulkan.shader-envelope COMMAND SIRVulkanShaderTests)
+    sir_configure_owned_target(SIRVulkanShaderTests)
+
     add_executable(SIRVulkanBufferBarrierTests SIRVulkanBufferBarrierTests.cpp)
     target_link_libraries(SIRVulkanBufferBarrierTests PRIVATE SIR::Vulkan)
     add_test(NAME render.vulkan.buffer-barriers COMMAND SIRVulkanBufferBarrierTests)

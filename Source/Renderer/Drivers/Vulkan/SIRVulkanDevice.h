@@ -84,6 +84,18 @@ typedef struct sirVulkanTransferSlot_s
 	uint64_t nLastValue;
 } sirVulkanTransferSlot_t;
 
+typedef struct sirVulkanComputePipeline_s
+{
+	VkPipeline hPipeline;
+	VkPipelineLayout hLayout;
+	uint64_t nDeviceSerial;
+	uint64_t nLastGpuUse;
+} sirVulkanComputePipeline_t;
+
+// Validates the Vulkan/SPIR-V binary envelope before handing bytecode to
+// the driver. Full semantic validation remains the shader cooker's job.
+bool sirVulkanValidateSpirv( const void *pBytes, uint64_t nByteCount, const char *pszEntryPoint ) noexcept;
+
 typedef struct sirVulkanBuffer_s
 {
 	VkBuffer hBuffer;
@@ -264,6 +276,7 @@ private:
 	uint32_t m_nLiveImages = 0;
 	uint32_t m_nLiveImageViews = 0;
 	uint32_t m_nLiveSamplers = 0;
+	uint32_t m_nLivePipelines = 0;
 	bool m_bReady;
 
 	bool loadInstanceDispatch( void ) noexcept;
@@ -286,6 +299,9 @@ public:
 	bool queryAdapter( sirVulkanAdapterInfo_t *pAdapter ) const noexcept;
 	bool queryMemoryStats( sirVulkanMemoryStats_t *pStats ) const noexcept;
 
+	sirVulkanResult_t createComputePipeline( const void *pCode, uint64_t nCodeBytes, const char *pszEntryPoint,
+	                                         sirVulkanComputePipeline_t *pPipeline ) noexcept;
+	sirVulkanResult_t destroyComputePipeline( sirVulkanComputePipeline_t *pPipeline ) noexcept;
 	sirVulkanResult_t createBuffer( uint64_t nBytes, VkBufferUsageFlags nUsage, bool bHostVisible, sirVulkanBuffer_t *pBuffer ) noexcept;
 	sirVulkanResult_t writeBuffer( sirVulkanBuffer_t *pBuffer, uint64_t nOffset, const void *pData, uint64_t nBytes ) noexcept;
 	sirVulkanResult_t createImage( const VkImageCreateInfo &info, sirVulkanImage_t *pImage ) noexcept;

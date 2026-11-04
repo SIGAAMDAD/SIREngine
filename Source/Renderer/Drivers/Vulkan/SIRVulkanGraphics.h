@@ -72,6 +72,13 @@ typedef struct sirVulkanGraphicsViewSlot_s
 	bool bRetiring;
 } sirVulkanGraphicsViewSlot_t;
 
+typedef struct sirVulkanGraphicsPipelineSlot_s
+{
+	sirVulkanComputePipeline_t native;
+	uint32_t nGeneration;
+	bool bActive;
+} sirVulkanGraphicsPipelineSlot_t;
+
 typedef struct sirVulkanGraphicsSamplerSlot_s
 {
 	sirVulkanSampler_t native;
@@ -187,11 +194,13 @@ private:
 	static constexpr uint32_t SIR_VULKAN_TEXTURE_CAPACITY = 64;
 	static constexpr uint32_t SIR_VULKAN_VIEW_CAPACITY = 128;
 	static constexpr uint32_t SIR_VULKAN_SAMPLER_CAPACITY = 64;
+	static constexpr uint32_t SIR_VULKAN_PIPELINE_CAPACITY = 16;
 	SIRVulkanDevice m_Native;
 	sirVulkanGraphicsBufferSlot_t m_szBuffers[SIR_VULKAN_BUFFER_CAPACITY] = {};
 	sirVulkanGraphicsImageSlot_t m_szImages[SIR_VULKAN_TEXTURE_CAPACITY] = {};
 	sirVulkanGraphicsViewSlot_t m_szViews[SIR_VULKAN_VIEW_CAPACITY] = {};
 	sirVulkanGraphicsSamplerSlot_t m_szSamplers[SIR_VULKAN_SAMPLER_CAPACITY] = {};
+	sirVulkanGraphicsPipelineSlot_t m_szPipelines[SIR_VULKAN_PIPELINE_CAPACITY] = {};
 	SIRVulkanCommandList m_szCommands[SIR_VULKAN_TRANSFER_SLOT_COUNT];
 	uint64_t m_nNativeSerial = 0;
 	uint64_t m_nLastCompletion = 0;
@@ -242,13 +251,7 @@ public:
 	sirGraphicsResult_t createTexture( const sirGraphicsTextureDesc_t &desc, sirGraphicsHandle_t *pHandle ) noexcept override;
 	sirGraphicsResult_t createView( const sirGraphicsViewDesc_t &desc, sirGraphicsHandle_t *pHandle ) noexcept override;
 	sirGraphicsResult_t createSampler( const sirGraphicsSamplerDesc_t &desc, sirGraphicsHandle_t *pHandle ) noexcept override;
-	sirGraphicsResult_t createPipeline( const sirGraphicsPipelineDesc_t &, sirGraphicsHandle_t *pHandle ) noexcept override
-	{
-		if ( pHandle != nullptr ) {
-			*pHandle = {};
-		}
-		return SIR_GRAPHICS_UNSUPPORTED;
-	}
+	sirGraphicsResult_t createPipeline( const sirGraphicsPipelineDesc_t &desc, sirGraphicsHandle_t *pHandle ) noexcept override;
 	sirGraphicsResult_t createBindingSet( sirGraphicsHandle_t, uint32_t, sirGraphicsHandle_t *pHandle ) noexcept override
 	{
 		if ( pHandle != nullptr ) {
