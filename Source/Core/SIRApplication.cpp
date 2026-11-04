@@ -22,8 +22,6 @@ bool SIRApplication::initialize( void ) noexcept
 {
 	if ( m_eState != SIR_APP_UNINITIALIZED ) {
 		return false;
-
-
 	}
 
 	m_eState = SIR_APP_READY;
