@@ -47,3 +47,7 @@ sir_configure_owned_target(SIRScriptOptimizerWorker)
 add_executable(SIRLangCooker Tools/SIRLangCooker.cpp)
 target_link_libraries(SIRLangCooker PRIVATE SIR::Scripting)
 sir_configure_owned_target(SIRLangCooker)
+
+add_executable(SIRLangRunner Tools/SIRLangRunner.cpp)
+target_link_libraries(SIRLangRunner PRIVATE SIR::Scripting)
+sir_configure_owned_target(SIRLangRunner)

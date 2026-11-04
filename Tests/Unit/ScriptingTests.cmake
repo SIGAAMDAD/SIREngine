@@ -119,3 +119,11 @@ add_executable(SIRLangRuntimeIntegrationTests SIRLangRuntimeIntegrationTests.cpp
 target_link_libraries(SIRLangRuntimeIntegrationTests PRIVATE SIR::Scripting)
 add_test(NAME scripting.language.runtime-integration COMMAND SIRLangRuntimeIntegrationTests)
 sir_configure_owned_target(SIRLangRuntimeIntegrationTests)
+
+add_test(NAME scripting.language.cook-and-run
+    COMMAND ${CMAKE_COMMAND}
+        "-DCOOKER=$<TARGET_FILE:SIRLangCooker>"
+        "-DRUNNER=$<TARGET_FILE:SIRLangRunner>"
+        "-DINPUT=${CMAKE_CURRENT_LIST_DIR}/Fixtures/SIRLang/echo.sir"
+        "-DOUTPUT=${CMAKE_CURRENT_BINARY_DIR}/sirlang-execute.sirbc"
+        -P "${CMAKE_CURRENT_LIST_DIR}/SIRLangCookAndRun.cmake")
