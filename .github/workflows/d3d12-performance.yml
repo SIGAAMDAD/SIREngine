@@ -86,6 +86,9 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "D3D12 benchmark workload failed: $LASTEXITCODE" }
           $data = Get-Content $output -Raw | ConvertFrom-Json
           if ($data.schema_version -ne 1 -or -not $data.cpu -or -not $data.gpu_timestamp) { throw "D3D12 benchmark JSON invalid" }
+          if (($env:SIR_D3D12_ADAPTER -eq "warp") -ne ($data.adapter.software -eq $true)) {
+            throw "D3D12 performance adapter identity mismatch"
+          }
           Get-Content $output
       - name: Preserve machine-specific benchmark evidence
         if: always()

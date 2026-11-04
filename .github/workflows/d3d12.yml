@@ -54,6 +54,11 @@ jobs:
           New-Item -ItemType Directory -Path "out/Nightly/Benchmarks" -Force | Out-Null
           & $binary.FullName --adapter warp --warmup 16 --iterations 96 --output "out/Nightly/Benchmarks/d3d12-warp.json"
           if ($LASTEXITCODE -ne 0) { throw "D3D12 benchmark returned $LASTEXITCODE" }
+          $data = Get-Content "out/Nightly/Benchmarks/d3d12-warp.json" -Raw | ConvertFrom-Json
+          if ($data.adapter.software -ne $true) { throw "WARP benchmark selected a non-software adapter" }
+          if ($data.gpu_timestamp.frequency_hz -le 0 -or $data.cpu.submit_empty.p50_ns -lt 0) {
+            throw "D3D12 performance metrics invalid"
+          }
           Get-Content "out/Nightly/Benchmarks/d3d12-warp.json"
       - name: Preserve D3D12 performance evidence
         if: always()

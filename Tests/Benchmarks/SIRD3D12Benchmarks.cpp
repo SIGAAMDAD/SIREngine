@@ -99,7 +99,7 @@ static bool sirBenchAdapter( SIRD3D12Driver &driver, bool bHardware, uint32_t *p
 		if ( driver.queryAdapter( i, &info ) != SIR_GRAPHICS_SUCCESS ) {
 			return false;
 		}
-		if ( info.bSoftwareAdapter != bHardware ) {
+		if ( info.bSoftwareAdapter == bHardware ) {
 			continue;
 		}
 		*pIndex = i;
@@ -466,7 +466,8 @@ int main( int argc, char **argv )
 	SIRD3D12Driver driver;
 	sirGraphicsAdapterInfo_t adapter = {};
 	uint32_t nAdapterIndex = 0;
-	if ( !sirBenchAdapter( driver, bHardware, &nAdapterIndex, &adapter ) ) {
+	if ( !sirBenchAdapter( driver, bHardware, &nAdapterIndex, &adapter ) ||
+	     adapter.bSoftwareAdapter == bHardware ) {
 		fprintf( stderr, "Requested %s adapter unavailable\n", bHardware ? "hardware" : "WARP" );
 		return 8;
 	}
