@@ -62,16 +62,16 @@ public:
 	static constexpr uint32_t REQUEST_BYTES = 160;
 	static constexpr uint32_t REPLY_BYTES = 200;
 
-	static sirScriptResult_t encodeRequest( const sirScriptOptimizationRequest_t &request, uint8_t szOutput[REQUEST_BYTES] ) noexcept;
+	static sirScriptResult_t encodeRequest( const sirScriptOptimizationRequest_t& request, uint8_t szOutput[REQUEST_BYTES] ) noexcept;
 	static sirScriptResult_t decodeRequest( const uint8_t *pInput, uint32_t nBytes, sirScriptOptimizationRequest_t *pRequest ) noexcept;
-	static sirScriptResult_t encodeReply( const sirScriptOptimizationReply_t &reply, uint8_t szOutput[REPLY_BYTES] ) noexcept;
+	static sirScriptResult_t encodeReply( const sirScriptOptimizationReply_t& reply, uint8_t szOutput[REPLY_BYTES] ) noexcept;
 	static sirScriptResult_t decodeReply( const uint8_t *pInput, uint32_t nBytes, sirScriptOptimizationReply_t *pReply ) noexcept;
-	static sirScriptResult_t validateCompletion( const sirScriptOptimizationRequest_t &request,
-	                                             const sirScriptOptimizationReply_t &reply ) noexcept;
+	static sirScriptResult_t validateCompletion( const sirScriptOptimizationRequest_t& request,
+	                                             const sirScriptOptimizationReply_t& reply ) noexcept;
 
 private:
-	static bool validRequest( const sirScriptOptimizationRequest_t &request ) noexcept;
-	static bool validReply( const sirScriptOptimizationReply_t &reply ) noexcept;
+	static bool validRequest( const sirScriptOptimizationRequest_t& request ) noexcept;
+	static bool validReply( const sirScriptOptimizationReply_t& reply ) noexcept;
 };
 
 #endif // __SIRENGINE_SIRSCRIPTOPTIMIZATIONPROTOCOL_H__

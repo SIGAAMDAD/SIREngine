@@ -53,7 +53,7 @@ const sirScriptTypeDescriptor_t *SIRScriptBindingRegistry::findType( uint64_t nT
 	return nullptr;
 }
 
-sirScriptResult_t SIRScriptBindingRegistry::registerType( const sirScriptTypeDescriptor_t &descriptor ) noexcept
+sirScriptResult_t SIRScriptBindingRegistry::registerType( const sirScriptTypeDescriptor_t& descriptor ) noexcept
 {
 	if ( m_bPublished ) {
 		return SIR_SCRIPT_WRONG_STATE;
@@ -73,7 +73,7 @@ sirScriptResult_t SIRScriptBindingRegistry::registerType( const sirScriptTypeDes
 	return SIR_SCRIPT_OK;
 }
 
-sirScriptResult_t SIRScriptBindingRegistry::registerFunction( const sirScriptFunctionDescriptor_t &descriptor,
+sirScriptResult_t SIRScriptBindingRegistry::registerFunction( const sirScriptFunctionDescriptor_t& descriptor,
                                                               sirScriptNativeThunk_t pInvoke, void *pUser ) noexcept
 {
 	if ( m_bPublished ) {
@@ -101,7 +101,7 @@ sirScriptResult_t SIRScriptBindingRegistry::registerFunction( const sirScriptFun
 	return SIR_SCRIPT_OK;
 }
 
-sirScriptResult_t SIRScriptBindingRegistry::registerEvent( const sirScriptEventDescriptor_t &descriptor ) noexcept
+sirScriptResult_t SIRScriptBindingRegistry::registerEvent( const sirScriptEventDescriptor_t& descriptor ) noexcept
 {
 	if ( m_bPublished ) {
 		return SIR_SCRIPT_WRONG_STATE;
@@ -185,14 +185,14 @@ sirScriptResult_t SIRScriptBindingRegistry::publish( void ) noexcept
 	nHash = hashSchemaWord( nHash, m_nFunctions );
 	nHash = hashSchemaWord( nHash, m_nEvents );
 	for ( uint32_t iType = 0; iType < m_nTypes; ++iType ) {
-		const sirScriptTypeDescriptor_t &descriptor = m_szTypes[iType];
+		const sirScriptTypeDescriptor_t& descriptor = m_szTypes[iType];
 		nHash = hashSchemaWord( nHash, descriptor.nTypeId );
 		nHash = hashSchemaWord( nHash, descriptor.nBytes );
 		nHash = hashSchemaWord( nHash, descriptor.nAlignment );
 		nHash = hashSchemaWord( nHash, descriptor.nFlags );
 	}
 	for ( uint32_t iFunction = 0; iFunction < m_nFunctions; ++iFunction ) {
-		const sirScriptFunctionDescriptor_t &descriptor = m_szFunctions[iFunction].descriptor;
+		const sirScriptFunctionDescriptor_t& descriptor = m_szFunctions[iFunction].descriptor;
 		nHash = hashSchemaWord( nHash, descriptor.nFunctionId );
 		nHash = hashSchemaWord( nHash, descriptor.nSignatureId );
 		nHash = hashSchemaWord( nHash, descriptor.nArgumentsTypeId );
@@ -202,7 +202,7 @@ sirScriptResult_t SIRScriptBindingRegistry::publish( void ) noexcept
 		nHash = hashSchemaWord( nHash, descriptor.nEffects );
 	}
 	for ( uint32_t iEvent = 0; iEvent < m_nEvents; ++iEvent ) {
-		const sirScriptEventDescriptor_t &descriptor = m_szEvents[iEvent];
+		const sirScriptEventDescriptor_t& descriptor = m_szEvents[iEvent];
 		nHash = hashSchemaWord( nHash, descriptor.nEventTypeId );
 		nHash = hashSchemaWord( nHash, descriptor.nPayloadTypeId );
 	}
@@ -255,7 +255,7 @@ sirScriptResult_t SIRScriptBindingRegistry::validateEvent( uint64_t nEventTypeId
 		return SIR_SCRIPT_WRONG_STATE;
 	}
 	for ( uint32_t iEvent = 0; iEvent < m_nEvents; ++iEvent ) {
-		const sirScriptEventDescriptor_t &descriptor = m_szEvents[iEvent];
+		const sirScriptEventDescriptor_t& descriptor = m_szEvents[iEvent];
 		if ( descriptor.nEventTypeId != nEventTypeId ) {
 			continue;
 		}
@@ -308,7 +308,7 @@ sirScriptResult_t SIRScriptBindingRegistry::invokeNative( const sirScriptNativeI
 		return SIR_SCRIPT_WRONG_STATE;
 	}
 	for ( uint32_t iFunction = 0; iFunction < m_nFunctions; ++iFunction ) {
-		const sirScriptFunctionEntry_t &entry = m_szFunctions[iFunction];
+		const sirScriptFunctionEntry_t& entry = m_szFunctions[iFunction];
 		if ( entry.descriptor.nFunctionId != request.nFunctionId ) {
 			continue;
 		}

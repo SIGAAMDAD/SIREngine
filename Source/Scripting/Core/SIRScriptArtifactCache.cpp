@@ -136,7 +136,7 @@ bool SIRScriptArtifactCache::isOwnerThread( void ) const noexcept
 	return std::this_thread::get_id() == m_OwnerThread;
 }
 
-bool SIRScriptArtifactCache::validKey( const sirScriptCacheKey_t &key ) const noexcept
+bool SIRScriptArtifactCache::validKey( const sirScriptCacheKey_t& key ) const noexcept
 {
 	uint8_t nCombined = 0;
 	for ( uint32_t iByte = 0; iByte < sizeof( key.szDigest ); ++iByte ) {
@@ -174,7 +174,7 @@ sirScriptResult_t SIRScriptArtifactCache::makeKey( const void *pCanonicalRecipe,
 	return SIR_SCRIPT_OK;
 }
 
-bool SIRScriptArtifactCache::formatPath( const sirScriptCacheKey_t &key, char szPath[MAX_PATH_BYTES] ) const noexcept
+bool SIRScriptArtifactCache::formatPath( const sirScriptCacheKey_t& key, char szPath[MAX_PATH_BYTES] ) const noexcept
 {
 	if ( !validKey( key ) || m_nMaximumArtifactBytes == 0 ) {
 		return false;
@@ -195,21 +195,21 @@ bool SIRScriptArtifactCache::formatPath( const sirScriptCacheKey_t &key, char sz
 	return true;
 }
 
-bool SIRScriptArtifactCache::validDescriptor( const sirScriptCachedArtifact_t &descriptor ) const noexcept
+bool SIRScriptArtifactCache::validDescriptor( const sirScriptCachedArtifact_t& descriptor ) const noexcept
 {
-	const sirScriptCodeArtifact_t &artifact = descriptor.artifact;
+	const sirScriptCodeArtifact_t& artifact = descriptor.artifact;
 	return validKey( descriptor.key ) && artifact.nBackendId != 0 && artifact.nProgramId != 0 && artifact.nRevision != 0 &&
 	       artifact.nFormatId != 0 && artifact.nSchemaFingerprint != 0 && artifact.nTargetId != 0 && artifact.nBuildFingerprint != 0 &&
 	       descriptor.nBytes != 0 && descriptor.nBytes <= m_nMaximumArtifactBytes && descriptor.nAlignment <= 4096 &&
 	       scriptIsPowerOfTwo( descriptor.nAlignment );
 }
 
-void SIRScriptArtifactCache::encodeHeader( const sirScriptCachedArtifact_t &descriptor, uint8_t szHeader[HEADER_BYTES] ) noexcept
+void SIRScriptArtifactCache::encodeHeader( const sirScriptCachedArtifact_t& descriptor, uint8_t szHeader[HEADER_BYTES] ) noexcept
 {
 	memset( szHeader, 0, HEADER_BYTES );
 	memcpy( szHeader, s_szCacheMagic, sizeof( s_szCacheMagic ) );
 	scriptWriteLE32( szHeader + 8, s_nCacheVersion );
-	const sirScriptCodeArtifact_t &a = descriptor.artifact;
+	const sirScriptCodeArtifact_t& a = descriptor.artifact;
 	const uint64_t szFields[7] = { a.nBackendId,         a.nProgramId, a.nRevision,        a.nFormatId,
 	                               a.nSchemaFingerprint, a.nTargetId,  a.nBuildFingerprint };
 	for ( uint32_t iField = 0; iField < 7; ++iField ) {
@@ -227,7 +227,7 @@ bool SIRScriptArtifactCache::decodeHeader( const uint8_t szHeader[HEADER_BYTES],
 	     scriptReadLE32( szHeader + 12 ) != 0 || scriptReadLE32( szHeader + 148 ) != 0 ) {
 		return false;
 	}
-	sirScriptCachedArtifact_t &entry = *pDescriptor;
+	sirScriptCachedArtifact_t& entry = *pDescriptor;
 	uint64_t *pszFields[7] = { &entry.artifact.nBackendId,       &entry.artifact.nProgramId,         &entry.artifact.nRevision,
 	                           &entry.artifact.nFormatId,        &entry.artifact.nSchemaFingerprint, &entry.artifact.nTargetId,
 	                           &entry.artifact.nBuildFingerprint };
@@ -241,7 +241,7 @@ bool SIRScriptArtifactCache::decodeHeader( const uint8_t szHeader[HEADER_BYTES],
 	return true;
 }
 
-bool SIRScriptArtifactCache::sameDescriptor( const sirScriptCachedArtifact_t &a, const sirScriptCachedArtifact_t &b ) noexcept
+bool SIRScriptArtifactCache::sameDescriptor( const sirScriptCachedArtifact_t& a, const sirScriptCachedArtifact_t& b ) noexcept
 {
 	return a.artifact.nBackendId == b.artifact.nBackendId && a.artifact.nProgramId == b.artifact.nProgramId &&
 	       a.artifact.nRevision == b.artifact.nRevision && a.artifact.nFormatId == b.artifact.nFormatId &&
@@ -250,7 +250,7 @@ bool SIRScriptArtifactCache::sameDescriptor( const sirScriptCachedArtifact_t &a,
 	       memcmp( a.key.szDigest, b.key.szDigest, 32 ) == 0 && memcmp( a.szPayloadDigest, b.szPayloadDigest, 32 ) == 0;
 }
 
-sirScriptResult_t SIRScriptArtifactCache::store( const sirScriptCodeArtifact_t &artifact, sirScriptCacheKey_t key, const void *pBytes,
+sirScriptResult_t SIRScriptArtifactCache::store( const sirScriptCodeArtifact_t& artifact, sirScriptCacheKey_t key, const void *pBytes,
                                                  uint64_t nBytes, uint32_t nAlignment, sirScriptCachedArtifact_t *pDescriptor ) noexcept
 {
 	if ( !isOwnerThread() ) {
@@ -335,7 +335,7 @@ sirScriptResult_t SIRScriptArtifactCache::store( const sirScriptCodeArtifact_t &
 	return SIR_SCRIPT_OK;
 }
 
-sirScriptResult_t SIRScriptArtifactCache::fetch( const sirScriptCachedArtifact_t &descriptor, void *pOutput,
+sirScriptResult_t SIRScriptArtifactCache::fetch( const sirScriptCachedArtifact_t& descriptor, void *pOutput,
                                                  uint64_t nCapacity ) const noexcept
 {
 	if ( !isOwnerThread() ) {

@@ -81,11 +81,11 @@ class SIRScriptCodeManager
 public:
 	explicit SIRScriptCodeManager( const SIRScriptBindingRegistry *pRegistry ) noexcept;
 	~SIRScriptCodeManager( void ) noexcept;
-	SIRScriptCodeManager( const SIRScriptCodeManager & ) = delete;
-	SIRScriptCodeManager &operator=( const SIRScriptCodeManager & ) = delete;
+	SIRScriptCodeManager( const SIRScriptCodeManager& ) = delete;
+	SIRScriptCodeManager& operator=( const SIRScriptCodeManager& ) = delete;
 
-	sirScriptResult_t configure( uint64_t nTargetId, const sirScriptProgramSourceAPI_t &provider ) noexcept;
-	sirScriptResult_t stage( const sirScriptCodeArtifact_t &artifact, sirScriptCodeHandle_t *pHandle ) noexcept;
+	sirScriptResult_t configure( uint64_t nTargetId, const sirScriptProgramSourceAPI_t& provider ) noexcept;
+	sirScriptResult_t stage( const sirScriptCodeArtifact_t& artifact, sirScriptCodeHandle_t *pHandle ) noexcept;
 	sirScriptResult_t activate( sirScriptCodeHandle_t handle ) noexcept;
 	sirScriptResult_t discard( sirScriptCodeHandle_t handle ) noexcept;
 	sirScriptResult_t retire( sirScriptCodeHandle_t handle ) noexcept;
@@ -99,7 +99,7 @@ private:
 	static constexpr uint32_t MAX_LEASES = 128;
 
 	static uint32_t nextGeneration( uint32_t nGeneration ) noexcept;
-	static bool validView( const sirScriptProgramView_t &view, const sirScriptCodeArtifact_t &artifact ) noexcept;
+	static bool validView( const sirScriptProgramView_t& view, const sirScriptCodeArtifact_t& artifact ) noexcept;
 	static sirScriptResult_t acquireThunk( void *pUser, uint64_t nBackendId, uint64_t nProgramId, uint64_t nRevision,
 	                                       sirScriptProgramView_t *pView, uint64_t *pToken ) noexcept;
 	static void releaseThunk( void *pUser, uint64_t nToken ) noexcept;

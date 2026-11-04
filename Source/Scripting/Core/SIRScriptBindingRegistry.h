@@ -80,10 +80,10 @@ class SIRScriptBindingRegistry
 public:
 	SIRScriptBindingRegistry( void ) noexcept;
 
-	sirScriptResult_t registerType( const sirScriptTypeDescriptor_t &descriptor ) noexcept;
-	sirScriptResult_t registerFunction( const sirScriptFunctionDescriptor_t &descriptor, sirScriptNativeThunk_t pInvoke,
+	sirScriptResult_t registerType( const sirScriptTypeDescriptor_t& descriptor ) noexcept;
+	sirScriptResult_t registerFunction( const sirScriptFunctionDescriptor_t& descriptor, sirScriptNativeThunk_t pInvoke,
 	                                    void *pUser ) noexcept;
-	sirScriptResult_t registerEvent( const sirScriptEventDescriptor_t &descriptor ) noexcept;
+	sirScriptResult_t registerEvent( const sirScriptEventDescriptor_t& descriptor ) noexcept;
 	sirScriptResult_t publish( void ) noexcept;
 	bool isPublished( void ) const noexcept;
 	uint64_t schemaFingerprint( void ) const noexcept;
