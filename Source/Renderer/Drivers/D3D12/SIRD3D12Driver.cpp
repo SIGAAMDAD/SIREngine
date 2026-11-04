@@ -253,8 +253,7 @@ sirGraphicsResult_t SIRD3D12RenderingDevice::invalidateBuffer( sirGraphicsHandle
 {
 	return m_Resources.invalidateBuffer( hBuffer, nOffset, nBytes );
 }
-sirGraphicsResult_t SIRD3D12RenderingDevice::acquireCommands( sirGraphicsQueue_t eQueue,
-                                                                 SIRGraphicsCommandList **ppCommands ) noexcept
+sirGraphicsResult_t SIRD3D12RenderingDevice::acquireCommands( sirGraphicsQueue_t eQueue, SIRGraphicsCommandList **ppCommands ) noexcept
 {
 	return m_Commands.acquire( eQueue, ppCommands );
 }

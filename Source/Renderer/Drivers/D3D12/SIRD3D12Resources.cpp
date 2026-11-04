@@ -264,7 +264,7 @@ const sirD3D12ResourceSlot_t *SIRD3D12Resources::querySlot( sirGraphicsHandle_t 
 }
 
 bool SIRD3D12Resources::queryDescriptor( sirGraphicsHandle_t hView, D3D12_DESCRIPTOR_HEAP_TYPE eHeap,
-                                        D3D12_CPU_DESCRIPTOR_HANDLE *pDescriptor ) noexcept
+                                         D3D12_CPU_DESCRIPTOR_HANDLE *pDescriptor ) noexcept
 {
 	if ( pDescriptor == nullptr ) {
 		return false;

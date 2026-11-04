@@ -147,7 +147,6 @@ HRESULT SIRD3D12ComputeQueue::getLastError( void ) const noexcept
 	return m_nLastError;
 }
 
-
 ID3D12CommandQueue *SIRD3D12ComputeQueue::getSubmissionQueue( void ) const noexcept
 {
 	return isReady() ? m_pQueue.Get() : nullptr;
@@ -602,7 +601,6 @@ bool SIRD3D12Device::isReady( void ) const noexcept
 	       m_Memory.isReady() && m_Transfers.isReady() && m_ComputeQueue.isReady() && m_nDeviceGeneration != 0 && !m_bGraphicsUnsafe;
 }
 
-
 sirGraphicsResult_t SIRD3D12Device::submitRecorded( sirGraphicsQueue_t eQueue, ID3D12CommandList *const *ppLists, uint32_t nCount,
                                                     const sirGraphicsCompletion_t *pWaits, uint32_t nWaitCount,
                                                     sirGraphicsCompletion_t *pCompletion ) noexcept
@@ -622,9 +620,9 @@ sirGraphicsResult_t SIRD3D12Device::submitRecorded( sirGraphicsQueue_t eQueue, I
 	if ( !snapshotCompletionSet( &submitted ) ) {
 		return SIR_GRAPHICS_DEVICE_LOST;
 	}
-	ID3D12CommandQueue *pQueue = eQueue == SIR_GRAPHICS_QUEUE_DIRECT ? m_pGraphicsQueue.Get()
-	                          : eQueue == SIR_GRAPHICS_QUEUE_COMPUTE ? m_ComputeQueue.getSubmissionQueue()
-	                                                                 : m_Transfers.getSubmissionQueue();
+	ID3D12CommandQueue *pQueue = eQueue == SIR_GRAPHICS_QUEUE_DIRECT    ? m_pGraphicsQueue.Get()
+	                             : eQueue == SIR_GRAPHICS_QUEUE_COMPUTE ? m_ComputeQueue.getSubmissionQueue()
+	                                                                    : m_Transfers.getSubmissionQueue();
 	if ( pQueue == nullptr ) {
 		return SIR_GRAPHICS_DEVICE_LOST;
 	}
@@ -634,15 +632,15 @@ sirGraphicsResult_t SIRD3D12Device::submitRecorded( sirGraphicsQueue_t eQueue, I
 		if ( wait.nDeviceGeneration != submitted.nDeviceGeneration || wait.eQueue >= SIR_GRAPHICS_QUEUE_COUNT || wait.nValue == 0 ) {
 			return SIR_GRAPHICS_INVALID_ARGUMENT;
 		}
-		const uint64_t nLast = wait.eQueue == SIR_GRAPHICS_QUEUE_DIRECT ? submitted.nGraphicsFence
-		                     : wait.eQueue == SIR_GRAPHICS_QUEUE_COMPUTE ? submitted.nComputeFence
-		                                                                 : submitted.nCopyFence;
+		const uint64_t nLast = wait.eQueue == SIR_GRAPHICS_QUEUE_DIRECT    ? submitted.nGraphicsFence
+		                       : wait.eQueue == SIR_GRAPHICS_QUEUE_COMPUTE ? submitted.nComputeFence
+		                                                                   : submitted.nCopyFence;
 		if ( wait.nValue > nLast ) {
 			return SIR_GRAPHICS_INVALID_ARGUMENT;
 		}
-		szDependencies[iWait] = wait.eQueue == SIR_GRAPHICS_QUEUE_DIRECT ? m_pGraphicsFence.Get()
-		                       : wait.eQueue == SIR_GRAPHICS_QUEUE_COMPUTE ? m_ComputeQueue.getSubmissionFence()
-		                                                                   : m_Transfers.getSubmissionFence();
+		szDependencies[iWait] = wait.eQueue == SIR_GRAPHICS_QUEUE_DIRECT    ? m_pGraphicsFence.Get()
+		                        : wait.eQueue == SIR_GRAPHICS_QUEUE_COMPUTE ? m_ComputeQueue.getSubmissionFence()
+		                                                                    : m_Transfers.getSubmissionFence();
 		if ( szDependencies[iWait] == nullptr ) {
 			return SIR_GRAPHICS_DEVICE_LOST;
 		}

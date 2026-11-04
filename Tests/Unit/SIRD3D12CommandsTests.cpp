@@ -51,9 +51,9 @@ static bool sirLoadCommandShader( const char *pszPath, void **ppData, size_t *pB
 	return true;
 }
 
-static sirGraphicsResult_t sirTestSubmit( SIRRenderingDevice *pDevice, sirGraphicsQueue_t eQueue,
-                                         SIRGraphicsCommandList *pCommands, const sirGraphicsCompletion_t *pWaits,
-                                         uint32_t nWaitCount, sirGraphicsCompletion_t *pCompletion ) noexcept
+static sirGraphicsResult_t sirTestSubmit( SIRRenderingDevice *pDevice, sirGraphicsQueue_t eQueue, SIRGraphicsCommandList *pCommands,
+                                          const sirGraphicsCompletion_t *pWaits, uint32_t nWaitCount,
+                                          sirGraphicsCompletion_t *pCompletion ) noexcept
 {
 	SIRGraphicsCommandList *szCommands[] = { pCommands };
 	sirGraphicsSubmission_t submission = {};
@@ -64,8 +64,7 @@ static sirGraphicsResult_t sirTestSubmit( SIRRenderingDevice *pDevice, sirGraphi
 	return pDevice->submit( eQueue, submission, pCompletion );
 }
 
-static int sirTestCopies( SIRRenderingDevice *pDevice, uint32_t nGeneration,
-                          sirGraphicsCompletion_t *pCopyCompletion ) noexcept
+static int sirTestCopies( SIRRenderingDevice *pDevice, uint32_t nGeneration, sirGraphicsCompletion_t *pCopyCompletion ) noexcept
 {
 	sirGraphicsBufferDesc_t desc = {};
 	desc.nSizeBytes = 4096;
@@ -127,8 +126,7 @@ static int sirTestCopies( SIRRenderingDevice *pDevice, uint32_t nGeneration,
 	return 0;
 }
 
-static int sirTestQueueSubmission( SIRRenderingDevice *pDevice, uint32_t nGeneration,
-                                   const sirGraphicsShaderCode_t &computeCode,
+static int sirTestQueueSubmission( SIRRenderingDevice *pDevice, uint32_t nGeneration, const sirGraphicsShaderCode_t &computeCode,
                                    const sirGraphicsCompletion_t &copyCompletion ) noexcept
 {
 	sirGraphicsPipelineDesc_t desc = {};
@@ -140,8 +138,7 @@ static int sirTestQueueSubmission( SIRRenderingDevice *pDevice, uint32_t nGenera
 	}
 	SIRGraphicsCommandList *pCommands = nullptr;
 	if ( pDevice->acquireCommands( SIR_GRAPHICS_QUEUE_COMPUTE, &pCommands ) != SIR_GRAPHICS_SUCCESS || pCommands == nullptr ||
-	     pCommands->bindPipeline( hPipeline ) != SIR_GRAPHICS_SUCCESS ||
-	     pCommands->dispatch( 1, 1, 1 ) != SIR_GRAPHICS_SUCCESS ) {
+	     pCommands->bindPipeline( hPipeline ) != SIR_GRAPHICS_SUCCESS || pCommands->dispatch( 1, 1, 1 ) != SIR_GRAPHICS_SUCCESS ) {
 		return 31;
 	}
 	sirGraphicsCompletionSet_t immediate = {};
@@ -153,17 +150,14 @@ static int sirTestQueueSubmission( SIRRenderingDevice *pDevice, uint32_t nGenera
 	++future.nValue;
 	sirGraphicsCompletion_t rejected = {};
 	if ( pCommands->close() != SIR_GRAPHICS_SUCCESS ||
-	     sirTestSubmit( pDevice, SIR_GRAPHICS_QUEUE_COMPUTE, pCommands, &future, 1, &rejected ) !=
-	         SIR_GRAPHICS_INVALID_ARGUMENT ) {
+	     sirTestSubmit( pDevice, SIR_GRAPHICS_QUEUE_COMPUTE, pCommands, &future, 1, &rejected ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
 		return 33;
 	}
 	sirGraphicsCompletion_t computeComplete = {};
-	if ( sirTestSubmit( pDevice, SIR_GRAPHICS_QUEUE_COMPUTE, pCommands, &copyCompletion, 1, &computeComplete ) !=
-	     SIR_GRAPHICS_SUCCESS ) {
+	if ( sirTestSubmit( pDevice, SIR_GRAPHICS_QUEUE_COMPUTE, pCommands, &copyCompletion, 1, &computeComplete ) != SIR_GRAPHICS_SUCCESS ) {
 		return 34;
 	}
-	if ( sirTestSubmit( pDevice, SIR_GRAPHICS_QUEUE_COMPUTE, pCommands, nullptr, 0, &rejected ) !=
-	     SIR_GRAPHICS_INVALID_ARGUMENT ) {
+	if ( sirTestSubmit( pDevice, SIR_GRAPHICS_QUEUE_COMPUTE, pCommands, nullptr, 0, &rejected ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
 		return 35;
 	}
 	if ( pDevice->wait( computeComplete, 10000000000ULL ) != SIR_GRAPHICS_SUCCESS ) {
@@ -190,8 +184,7 @@ static int sirTestQueueSubmission( SIRRenderingDevice *pDevice, uint32_t nGenera
 		}
 	}
 	SIRGraphicsCommandList *pOverflow = nullptr;
-	if ( pDevice->acquireCommands( SIR_GRAPHICS_QUEUE_COPY, &pOverflow ) != SIR_GRAPHICS_CAPACITY_EXCEEDED ||
-	     pOverflow != nullptr ) {
+	if ( pDevice->acquireCommands( SIR_GRAPHICS_QUEUE_COPY, &pOverflow ) != SIR_GRAPHICS_CAPACITY_EXCEEDED || pOverflow != nullptr ) {
 		return 41;
 	}
 	for ( uint32_t iSlot = 0; iSlot < 4; ++iSlot ) {
@@ -205,8 +198,7 @@ static int sirTestQueueSubmission( SIRRenderingDevice *pDevice, uint32_t nGenera
 	sirGraphicsCompletion_t fourComplete = {};
 	if ( pDevice->submit( SIR_GRAPHICS_QUEUE_COPY, submission, &fourComplete ) != SIR_GRAPHICS_SUCCESS ||
 	     pDevice->wait( fourComplete, 10000000000ULL ) != SIR_GRAPHICS_SUCCESS ||
-	     pDevice->acquireCommands( SIR_GRAPHICS_QUEUE_COPY, &pOverflow ) != SIR_GRAPHICS_SUCCESS ||
-	     pOverflow == nullptr ) {
+	     pDevice->acquireCommands( SIR_GRAPHICS_QUEUE_COPY, &pOverflow ) != SIR_GRAPHICS_SUCCESS || pOverflow == nullptr ) {
 		return 43;
 	}
 	if ( pOverflow->close() != SIR_GRAPHICS_SUCCESS ) {
@@ -215,8 +207,8 @@ static int sirTestQueueSubmission( SIRRenderingDevice *pDevice, uint32_t nGenera
 	return 0;
 }
 
-static int sirTestRaster( SIRRenderingDevice *pDevice, uint32_t nGeneration,
-                          const sirGraphicsShaderCode_t &vertexCode, const sirGraphicsShaderCode_t &pixelCode ) noexcept
+static int sirTestRaster( SIRRenderingDevice *pDevice, uint32_t nGeneration, const sirGraphicsShaderCode_t &vertexCode,
+                          const sirGraphicsShaderCode_t &pixelCode ) noexcept
 {
 	sirGraphicsBufferDesc_t upload = {};
 	upload.nSizeBytes = 3 * 8 * sizeof( float );
@@ -226,11 +218,8 @@ static int sirTestRaster( SIRRenderingDevice *pDevice, uint32_t nGeneration,
 	if ( pDevice->createBuffer( upload, &hVertices ) != SIR_GRAPHICS_SUCCESS ) {
 		return 50;
 	}
-	const float szVertices[24] = {
-		-0.7f, -0.7f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f,
-		0.0f, 0.7f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f,
-		0.7f, -0.7f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f
-	};
+	const float szVertices[24] = { -0.7f, -0.7f, 0.0f, 1.0f, 1.0f, 0.0f,  0.0f, 1.0f, 0.0f, 0.7f, 0.0f, 1.0f,
+	                               1.0f,  0.0f,  0.0f, 1.0f, 0.7f, -0.7f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f };
 	sirGraphicsMappedBuffer_t mapped = {};
 	if ( pDevice->mapBuffer( hVertices, 0, sizeof( szVertices ), &mapped ) != SIR_GRAPHICS_SUCCESS ) {
 		return 51;
@@ -321,8 +310,7 @@ static int sirTestRaster( SIRRenderingDevice *pDevice, uint32_t nGeneration,
 	sirGraphicsRenderPass_t pass = {};
 	pass.pColors = &color;
 	pass.nColorCount = 1;
-	if ( pDirect->beginRenderPass( pass ) != SIR_GRAPHICS_SUCCESS ||
-	     pDirect->bindPipeline( hPipeline ) != SIR_GRAPHICS_SUCCESS ||
+	if ( pDirect->beginRenderPass( pass ) != SIR_GRAPHICS_SUCCESS || pDirect->bindPipeline( hPipeline ) != SIR_GRAPHICS_SUCCESS ||
 	     pDirect->bindVertexBuffer( 0, hVertices, 0, 32 ) != SIR_GRAPHICS_SUCCESS ||
 	     pDirect->bindIndexBuffer( hIndices, 0, false ) != SIR_GRAPHICS_SUCCESS ) {
 		return 59;
@@ -332,8 +320,7 @@ static int sirTestRaster( SIRRenderingDevice *pDevice, uint32_t nGeneration,
 	viewport.fHeight = 16.0f;
 	viewport.fMaximumDepth = 1.0f;
 	sirGraphicsRect_t rect = { 0, 0, 16, 16 };
-	if ( pDirect->setViewport( viewport, rect ) != SIR_GRAPHICS_SUCCESS ||
-	     pDirect->drawIndexed( 3, 1, 0, 0, 0 ) != SIR_GRAPHICS_SUCCESS ||
+	if ( pDirect->setViewport( viewport, rect ) != SIR_GRAPHICS_SUCCESS || pDirect->drawIndexed( 3, 1, 0, 0, 0 ) != SIR_GRAPHICS_SUCCESS ||
 	     pDirect->endRenderPass() != SIR_GRAPHICS_SUCCESS ) {
 		return 60;
 	}

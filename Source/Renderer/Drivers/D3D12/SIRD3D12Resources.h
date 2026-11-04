@@ -94,8 +94,7 @@ public:
 	void shutdown( bool bGpuComplete ) noexcept;
 	void collectRetired( void ) noexcept;
 	const sirD3D12ResourceSlot_t *querySlot( sirGraphicsHandle_t hHandle ) noexcept;
-	bool queryDescriptor( sirGraphicsHandle_t hView, D3D12_DESCRIPTOR_HEAP_TYPE eHeap,
-	                      D3D12_CPU_DESCRIPTOR_HANDLE *pDescriptor ) noexcept;
+	bool queryDescriptor( sirGraphicsHandle_t hView, D3D12_DESCRIPTOR_HEAP_TYPE eHeap, D3D12_CPU_DESCRIPTOR_HANDLE *pDescriptor ) noexcept;
 	sirGraphicsResult_t retainCommandReference( sirGraphicsHandle_t hHandle ) noexcept;
 	void releaseCommandReference( sirGraphicsHandle_t hHandle ) noexcept;
 	uint64_t getAllocatedBytes( void ) const noexcept;

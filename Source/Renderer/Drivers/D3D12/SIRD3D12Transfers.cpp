@@ -184,7 +184,6 @@ uint64_t SIRD3D12Transfers::getLastSubmittedFence( void ) const noexcept
 	return m_nLastSubmittedFence;
 }
 
-
 ID3D12CommandQueue *SIRD3D12Transfers::getSubmissionQueue( void ) const noexcept
 {
 	return isReady() ? m_pQueue.Get() : nullptr;

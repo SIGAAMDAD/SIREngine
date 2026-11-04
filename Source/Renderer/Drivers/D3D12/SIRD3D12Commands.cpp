@@ -98,8 +98,8 @@ static uint32_t sirD3D12TexelBytes( sirGraphicsFormat_t eFormat ) noexcept
 	}
 }
 
-bool SIRD3D12CommandList::initialize( SIRD3D12Device *pNative, SIRD3D12Resources *pResources,
-                                      SIRD3D12Pipelines *pPipelines, sirGraphicsQueue_t eQueue ) noexcept
+bool SIRD3D12CommandList::initialize( SIRD3D12Device *pNative, SIRD3D12Resources *pResources, SIRD3D12Pipelines *pPipelines,
+                                      sirGraphicsQueue_t eQueue ) noexcept
 {
 	if ( m_pNative != nullptr || pNative == nullptr || pResources == nullptr || pPipelines == nullptr ||
 	     eQueue >= SIR_GRAPHICS_QUEUE_COUNT ) {
@@ -113,8 +113,8 @@ bool SIRD3D12CommandList::initialize( SIRD3D12Device *pNative, SIRD3D12Resources
 	if ( FAILED( pDevice->CreateCommandAllocator( eNativeQueue, IID_PPV_ARGS( m_pAllocator.GetAddressOf() ) ) ) ) {
 		return false;
 	}
-	if ( FAILED( pDevice->CreateCommandList( 0, eNativeQueue, m_pAllocator.Get(), nullptr,
-	                                        IID_PPV_ARGS( m_pCommands.GetAddressOf() ) ) ) ) {
+	if ( FAILED(
+	         pDevice->CreateCommandList( 0, eNativeQueue, m_pAllocator.Get(), nullptr, IID_PPV_ARGS( m_pCommands.GetAddressOf() ) ) ) ) {
 		m_pAllocator.Reset();
 		return false;
 	}
@@ -187,9 +187,8 @@ sirGraphicsResult_t SIRD3D12CommandList::pin( sirGraphicsHandle_t hHandle ) noex
 	if ( m_nReferenceCount == s_nReferenceCapacity ) {
 		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
 	}
-	const sirGraphicsResult_t eResult = hHandle.eType == SIR_GRAPHICS_HANDLE_PIPELINE
-	                                        ? m_pPipelines->retainCommandReference( hHandle )
-	                                        : m_pResources->retainCommandReference( hHandle );
+	const sirGraphicsResult_t eResult = hHandle.eType == SIR_GRAPHICS_HANDLE_PIPELINE ? m_pPipelines->retainCommandReference( hHandle )
+	                                                                                  : m_pResources->retainCommandReference( hHandle );
 	if ( eResult != SIR_GRAPHICS_SUCCESS ) {
 		return eResult;
 	}
@@ -289,12 +288,11 @@ sirGraphicsResult_t SIRD3D12CommandList::barrier( const sirGraphicsBarrier_t *pB
 			if ( m_eQueue == SIR_GRAPHICS_QUEUE_COPY &&
 			     ( ( source.eBefore != SIR_GRAPHICS_STATE_COMMON && source.eBefore != SIR_GRAPHICS_STATE_COPY_SOURCE &&
 			         source.eBefore != SIR_GRAPHICS_STATE_COPY_DESTINATION ) ||
-		       ( source.eAfter != SIR_GRAPHICS_STATE_COMMON && source.eAfter != SIR_GRAPHICS_STATE_COPY_SOURCE &&
-		         source.eAfter != SIR_GRAPHICS_STATE_COPY_DESTINATION ) ) ) {
+			       ( source.eAfter != SIR_GRAPHICS_STATE_COMMON && source.eAfter != SIR_GRAPHICS_STATE_COPY_SOURCE &&
+			         source.eAfter != SIR_GRAPHICS_STATE_COPY_DESTINATION ) ) ) {
 				return SIR_GRAPHICS_UNSUPPORTED;
 			}
-			if ( source.nBaseMip != 0 || source.nBaseLayer != 0 ||
-			     ( source.nMipCount != 0 && source.nMipCount != pSlot->nMips ) ||
+			if ( source.nBaseMip != 0 || source.nBaseLayer != 0 || ( source.nMipCount != 0 && source.nMipCount != pSlot->nMips ) ||
 			     ( source.nLayerCount != 0 && source.nLayerCount != pSlot->nLayers ) ) {
 				return SIR_GRAPHICS_UNSUPPORTED;
 			}
@@ -331,24 +329,23 @@ sirGraphicsResult_t SIRD3D12CommandList::barrier( const sirGraphicsBarrier_t *pB
 	return SIR_GRAPHICS_SUCCESS;
 }
 
-sirGraphicsResult_t SIRD3D12CommandList::copyBuffer( sirGraphicsHandle_t hDestination, uint64_t nDstOffset,
-                                                     sirGraphicsHandle_t hSource, uint64_t nSrcOffset, uint64_t nBytes ) noexcept
+sirGraphicsResult_t SIRD3D12CommandList::copyBuffer( sirGraphicsHandle_t hDestination, uint64_t nDstOffset, sirGraphicsHandle_t hSource,
+                                                     uint64_t nSrcOffset, uint64_t nBytes ) noexcept
 {
 	if ( !validRecording() || m_bRenderPass ) {
 		return SIR_GRAPHICS_BUSY;
 	}
 	const sirD3D12ResourceSlot_t *pDst = m_pResources->querySlot( hDestination );
 	const sirD3D12ResourceSlot_t *pSrc = m_pResources->querySlot( hSource );
-	if ( pDst == nullptr || pSrc == nullptr || pDst->eType != SIR_GRAPHICS_HANDLE_BUFFER ||
-	     pSrc->eType != SIR_GRAPHICS_HANDLE_BUFFER ) {
+	if ( pDst == nullptr || pSrc == nullptr || pDst->eType != SIR_GRAPHICS_HANDLE_BUFFER || pSrc->eType != SIR_GRAPHICS_HANDLE_BUFFER ) {
 		return SIR_GRAPHICS_INVALID_HANDLE;
 	}
-	if ( nBytes == 0 || nDstOffset > pDst->nSizeBytes || nSrcOffset > pSrc->nSizeBytes ||
-	     nBytes > pDst->nSizeBytes - nDstOffset || nBytes > pSrc->nSizeBytes - nSrcOffset ) {
+	if ( nBytes == 0 || nDstOffset > pDst->nSizeBytes || nSrcOffset > pSrc->nSizeBytes || nBytes > pDst->nSizeBytes - nDstOffset ||
+	     nBytes > pSrc->nSizeBytes - nSrcOffset ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	if ( ( pDst->nUsage & SIR_GRAPHICS_USAGE_COPY_DESTINATION ) == 0 ||
-	     ( pSrc->nUsage & SIR_GRAPHICS_USAGE_COPY_SOURCE ) == 0 || hDestination.nSlot == hSource.nSlot ) {
+	if ( ( pDst->nUsage & SIR_GRAPHICS_USAGE_COPY_DESTINATION ) == 0 || ( pSrc->nUsage & SIR_GRAPHICS_USAGE_COPY_SOURCE ) == 0 ||
+	     hDestination.nSlot == hSource.nSlot ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	sirGraphicsResult_t ePinned = pin( hDestination );
@@ -359,8 +356,7 @@ sirGraphicsResult_t SIRD3D12CommandList::copyBuffer( sirGraphicsHandle_t hDestin
 	if ( ePinned != SIR_GRAPHICS_SUCCESS ) {
 		return ePinned;
 	}
-	m_pCommands->CopyBufferRegion( pDst->pAllocation->GetResource(), nDstOffset,
-	                               pSrc->pAllocation->GetResource(), nSrcOffset, nBytes );
+	m_pCommands->CopyBufferRegion( pDst->pAllocation->GetResource(), nDstOffset, pSrc->pAllocation->GetResource(), nSrcOffset, nBytes );
 	return SIR_GRAPHICS_SUCCESS;
 }
 
@@ -385,13 +381,11 @@ sirGraphicsResult_t SIRD3D12CommandList::copyBufferTexture( const sirGraphicsBuf
 	}
 	const uint32_t nMipWidth = pTexture->nWidth >> copy.nMip ? pTexture->nWidth >> copy.nMip : 1;
 	const uint32_t nMipHeight = pTexture->nHeight >> copy.nMip ? pTexture->nHeight >> copy.nMip : 1;
-	if ( copy.nX > nMipWidth || copy.nY > nMipHeight || copy.nWidth > nMipWidth - copy.nX ||
-	     copy.nHeight > nMipHeight - copy.nY ) {
+	if ( copy.nX > nMipWidth || copy.nY > nMipHeight || copy.nWidth > nMipWidth - copy.nX || copy.nHeight > nMipHeight - copy.nY ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	if ( copy.nBytesPerRow == 0 || copy.nBytesPerRow % D3D12_TEXTURE_DATA_PITCH_ALIGNMENT != 0 ||
-	     copy.nRowsPerImage != copy.nHeight || copy.nBufferOffset % D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT != 0 ||
-	     ( uint64_t )copy.nWidth * nTexelBytes > copy.nBytesPerRow ) {
+	if ( copy.nBytesPerRow == 0 || copy.nBytesPerRow % D3D12_TEXTURE_DATA_PITCH_ALIGNMENT != 0 || copy.nRowsPerImage != copy.nHeight ||
+	     copy.nBufferOffset % D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT != 0 || ( uint64_t )copy.nWidth * nTexelBytes > copy.nBytesPerRow ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	const uint64_t nNeeded = ( uint64_t )copy.nBytesPerRow * copy.nHeight;
@@ -473,8 +467,7 @@ sirGraphicsResult_t SIRD3D12CommandList::beginRenderPass( const sirGraphicsRende
 			return ePinned;
 		}
 	}
-	m_pCommands->OMSetRenderTargets( pass.nColorCount, pass.nColorCount == 0 ? nullptr : szColors, FALSE,
-	                                 bDepth ? &depth : nullptr );
+	m_pCommands->OMSetRenderTargets( pass.nColorCount, pass.nColorCount == 0 ? nullptr : szColors, FALSE, bDepth ? &depth : nullptr );
 	for ( uint32_t iColor = 0; iColor < pass.nColorCount; ++iColor ) {
 		const sirGraphicsColorAttachment_t &attachment = pass.pColors[iColor];
 		if ( attachment.bClear ) {
@@ -482,8 +475,7 @@ sirGraphicsResult_t SIRD3D12CommandList::beginRenderPass( const sirGraphicsRende
 		}
 	}
 	if ( bDepth && pass.bClearDepth ) {
-		m_pCommands->ClearDepthStencilView( depth, D3D12_CLEAR_FLAG_DEPTH, pass.fClearDepth, ( UINT8 )pass.nClearStencil, 0,
-		                                    nullptr );
+		m_pCommands->ClearDepthStencilView( depth, D3D12_CLEAR_FLAG_DEPTH, pass.fClearDepth, ( UINT8 )pass.nClearStencil, 0, nullptr );
 	}
 	m_bRenderPass = true;
 	return SIR_GRAPHICS_SUCCESS;
@@ -553,8 +545,8 @@ sirGraphicsResult_t SIRD3D12CommandList::bindVertexBuffer( uint32_t nSlot, sirGr
 	if ( pBuffer == nullptr || pBuffer->eType != SIR_GRAPHICS_HANDLE_BUFFER ) {
 		return SIR_GRAPHICS_INVALID_HANDLE;
 	}
-	if ( nSlot >= 16 || nStrideBytes == 0 || nOffsetBytes >= pBuffer->nSizeBytes ||
-	     pBuffer->nSizeBytes - nOffsetBytes > UINT32_MAX || ( pBuffer->nUsage & SIR_GRAPHICS_USAGE_VERTEX ) == 0 ) {
+	if ( nSlot >= 16 || nStrideBytes == 0 || nOffsetBytes >= pBuffer->nSizeBytes || pBuffer->nSizeBytes - nOffsetBytes > UINT32_MAX ||
+	     ( pBuffer->nUsage & SIR_GRAPHICS_USAGE_VERTEX ) == 0 ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	const sirGraphicsResult_t ePinned = pin( hBuffer );
@@ -569,8 +561,7 @@ sirGraphicsResult_t SIRD3D12CommandList::bindVertexBuffer( uint32_t nSlot, sirGr
 	return SIR_GRAPHICS_SUCCESS;
 }
 
-sirGraphicsResult_t SIRD3D12CommandList::bindIndexBuffer( sirGraphicsHandle_t hBuffer, uint64_t nOffsetBytes,
-                                                          bool bIndex32 ) noexcept
+sirGraphicsResult_t SIRD3D12CommandList::bindIndexBuffer( sirGraphicsHandle_t hBuffer, uint64_t nOffsetBytes, bool bIndex32 ) noexcept
 {
 	if ( !validRecording() ) {
 		return SIR_GRAPHICS_BUSY;
@@ -583,8 +574,8 @@ sirGraphicsResult_t SIRD3D12CommandList::bindIndexBuffer( sirGraphicsHandle_t hB
 		return SIR_GRAPHICS_INVALID_HANDLE;
 	}
 	const uint32_t nIndexBytes = bIndex32 ? 4U : 2U;
-	if ( nOffsetBytes >= pBuffer->nSizeBytes || nOffsetBytes % nIndexBytes != 0 ||
-	     pBuffer->nSizeBytes - nOffsetBytes > UINT32_MAX || ( pBuffer->nUsage & SIR_GRAPHICS_USAGE_INDEX ) == 0 ) {
+	if ( nOffsetBytes >= pBuffer->nSizeBytes || nOffsetBytes % nIndexBytes != 0 || pBuffer->nSizeBytes - nOffsetBytes > UINT32_MAX ||
+	     ( pBuffer->nUsage & SIR_GRAPHICS_USAGE_INDEX ) == 0 ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	const sirGraphicsResult_t ePinned = pin( hBuffer );
@@ -599,8 +590,7 @@ sirGraphicsResult_t SIRD3D12CommandList::bindIndexBuffer( sirGraphicsHandle_t hB
 	return SIR_GRAPHICS_SUCCESS;
 }
 
-sirGraphicsResult_t SIRD3D12CommandList::setViewport( const sirGraphicsViewport_t &viewport,
-                                                      const sirGraphicsRect_t &scissor ) noexcept
+sirGraphicsResult_t SIRD3D12CommandList::setViewport( const sirGraphicsViewport_t &viewport, const sirGraphicsRect_t &scissor ) noexcept
 {
 	if ( !validRecording() ) {
 		return SIR_GRAPHICS_BUSY;
@@ -608,9 +598,8 @@ sirGraphicsResult_t SIRD3D12CommandList::setViewport( const sirGraphicsViewport_
 	if ( m_eQueue != SIR_GRAPHICS_QUEUE_DIRECT ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
-	if ( !( viewport.fWidth > 0.0f ) || !( viewport.fHeight > 0.0f ) || viewport.fMinimumDepth < 0.0f ||
-	     viewport.fMaximumDepth > 1.0f || viewport.fMinimumDepth > viewport.fMaximumDepth ||
-	     scissor.nLeft >= scissor.nRight || scissor.nTop >= scissor.nBottom ) {
+	if ( !( viewport.fWidth > 0.0f ) || !( viewport.fHeight > 0.0f ) || viewport.fMinimumDepth < 0.0f || viewport.fMaximumDepth > 1.0f ||
+	     viewport.fMinimumDepth > viewport.fMaximumDepth || scissor.nLeft >= scissor.nRight || scissor.nTop >= scissor.nBottom ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	D3D12_VIEWPORT native = {};
@@ -642,8 +631,8 @@ sirGraphicsResult_t SIRD3D12CommandList::draw( uint32_t nVertices, uint32_t nIns
 	return SIR_GRAPHICS_SUCCESS;
 }
 
-sirGraphicsResult_t SIRD3D12CommandList::drawIndexed( uint32_t nIndices, uint32_t nInstances, uint32_t nFirstIndex,
-                                                      int32_t nVertexOffset, uint32_t nFirstInstance ) noexcept
+sirGraphicsResult_t SIRD3D12CommandList::drawIndexed( uint32_t nIndices, uint32_t nInstances, uint32_t nFirstIndex, int32_t nVertexOffset,
+                                                      uint32_t nFirstInstance ) noexcept
 {
 	if ( !validRecording() || !m_bRenderPass || !m_bPipelineBound || m_ePipelineType != SIR_GRAPHICS_PIPELINE_GRAPHICS ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
@@ -691,8 +680,7 @@ SIRD3D12Commands::~SIRD3D12Commands( void ) noexcept
 	shutdown( false );
 }
 
-bool SIRD3D12Commands::initialize( SIRD3D12Device *pNative, SIRD3D12Resources *pResources,
-                                   SIRD3D12Pipelines *pPipelines ) noexcept
+bool SIRD3D12Commands::initialize( SIRD3D12Device *pNative, SIRD3D12Resources *pResources, SIRD3D12Pipelines *pPipelines ) noexcept
 {
 	if ( m_pNative != nullptr || pNative == nullptr || pResources == nullptr || pPipelines == nullptr ) {
 		return false;
@@ -761,7 +749,7 @@ sirGraphicsResult_t SIRD3D12Commands::acquire( sirGraphicsQueue_t eQueue, SIRGra
 }
 
 sirGraphicsResult_t SIRD3D12Commands::submit( sirGraphicsQueue_t eQueue, const sirGraphicsSubmission_t &submission,
-                                             sirGraphicsCompletion_t *pCompletion ) noexcept
+                                              sirGraphicsCompletion_t *pCompletion ) noexcept
 {
 	if ( pCompletion == nullptr ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;

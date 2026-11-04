@@ -73,21 +73,20 @@ public:
 	sirGraphicsQueue_t getQueue( void ) const noexcept override;
 	sirGraphicsResult_t reset( void ) noexcept override;
 	sirGraphicsResult_t barrier( const sirGraphicsBarrier_t *pBarriers, uint32_t nCount ) noexcept override;
-	sirGraphicsResult_t copyBuffer( sirGraphicsHandle_t hDestination, uint64_t nDstOffset, sirGraphicsHandle_t hSource,
-	                                uint64_t nSrcOffset, uint64_t nBytes ) noexcept override;
+	sirGraphicsResult_t copyBuffer( sirGraphicsHandle_t hDestination, uint64_t nDstOffset, sirGraphicsHandle_t hSource, uint64_t nSrcOffset,
+	                                uint64_t nBytes ) noexcept override;
 	sirGraphicsResult_t copyBufferTexture( const sirGraphicsBufferTextureCopy_t &copy ) noexcept override;
 	sirGraphicsResult_t beginRenderPass( const sirGraphicsRenderPass_t &pass ) noexcept override;
 	sirGraphicsResult_t endRenderPass( void ) noexcept override;
 	sirGraphicsResult_t bindPipeline( sirGraphicsHandle_t hPipeline ) noexcept override;
 	sirGraphicsResult_t bindBindingSet( uint32_t nSetIndex, sirGraphicsHandle_t hBindingSet ) noexcept override;
 	sirGraphicsResult_t bindVertexBuffer( uint32_t nSlot, sirGraphicsHandle_t hBuffer, uint64_t nOffsetBytes,
-	                                     uint32_t nStrideBytes ) noexcept override;
+	                                      uint32_t nStrideBytes ) noexcept override;
 	sirGraphicsResult_t bindIndexBuffer( sirGraphicsHandle_t hBuffer, uint64_t nOffsetBytes, bool bIndex32 ) noexcept override;
 	sirGraphicsResult_t setViewport( const sirGraphicsViewport_t &viewport, const sirGraphicsRect_t &scissor ) noexcept override;
-	sirGraphicsResult_t draw( uint32_t nVertices, uint32_t nInstances, uint32_t nFirstVertex,
-	                         uint32_t nFirstInstance ) noexcept override;
-	sirGraphicsResult_t drawIndexed( uint32_t nIndices, uint32_t nInstances, uint32_t nFirstIndex,
-	                                int32_t nVertexOffset, uint32_t nFirstInstance ) noexcept override;
+	sirGraphicsResult_t draw( uint32_t nVertices, uint32_t nInstances, uint32_t nFirstVertex, uint32_t nFirstInstance ) noexcept override;
+	sirGraphicsResult_t drawIndexed( uint32_t nIndices, uint32_t nInstances, uint32_t nFirstIndex, int32_t nVertexOffset,
+	                                 uint32_t nFirstInstance ) noexcept override;
 	sirGraphicsResult_t dispatch( uint32_t nX, uint32_t nY, uint32_t nZ ) noexcept override;
 	sirGraphicsResult_t close( void ) noexcept override;
 };
@@ -109,7 +108,7 @@ public:
 	void collectCompleted( void ) noexcept;
 	sirGraphicsResult_t acquire( sirGraphicsQueue_t eQueue, SIRGraphicsCommandList **ppCommands ) noexcept;
 	sirGraphicsResult_t submit( sirGraphicsQueue_t eQueue, const sirGraphicsSubmission_t &submission,
-	                           sirGraphicsCompletion_t *pCompletion ) noexcept;
+	                            sirGraphicsCompletion_t *pCompletion ) noexcept;
 };
 
 #endif // __SIRENGINE_SIRD3D12COMMANDS_H__
