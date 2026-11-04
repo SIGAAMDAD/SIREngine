@@ -203,10 +203,11 @@ static void testRealSourceThroughRuntime( void )
 
 	assert( runtime.destroyInstance( instance ) == SIR_SCRIPT_OK );
 	assert( runtime.unloadProgram( program ) == SIR_SCRIPT_OK );
-	assert( source.stats().nActiveLeases == 0 );
+	assert( server.codeManager().stats().nActiveRuntimeLeases == 0 );
 	assert( runtime.stopBackend( 123 ) == SIR_SCRIPT_OK );
 	assert( runtime.unregisterBackend( 123 ) == SIR_SCRIPT_OK );
 	assert( server.codeManager().shutdown() == SIR_SCRIPT_OK );
+	assert( source.stats().nActiveLeases == 0 );
 	assert( source.unregisterArtifact( entry ) == SIR_SCRIPT_OK );
 	assert( source.shutdown() == SIR_SCRIPT_OK );
 	assert( cache.erase( key ) == SIR_SCRIPT_OK );
