@@ -75,9 +75,8 @@ static void sirTestRefreshCatalog( std::vector<uint8_t>& bytes )
 		}
 	}
 	sirTestWrite64( bytes.data() + 96, nDescriptorHash );
-	sirTestWrite64( bytes.data() + 104,
-	                sirTestHash( bytes.data() + SIR_REGISTRATION_CATALOG_HEADER_BYTES,
-	                             bytes.size() - SIR_REGISTRATION_CATALOG_HEADER_BYTES, SIR_REGISTRATION_HASH_BASIS ) );
+	sirTestWrite64( bytes.data() + 104, sirTestHash( bytes.data() + SIR_REGISTRATION_CATALOG_HEADER_BYTES,
+	                                                 bytes.size() - SIR_REGISTRATION_CATALOG_HEADER_BYTES, SIR_REGISTRATION_HASH_BASIS ) );
 }
 
 static sirRegistrationCookDefinition_t sirTestCommand( const char *pszName, uint64_t nBindingId, uint32_t nOwner )
@@ -91,8 +90,7 @@ static sirRegistrationCookDefinition_t sirTestCommand( const char *pszName, uint
 	return value;
 }
 
-static sirRegistrationCookDefinition_t sirTestCVar( const char *pszName, uint32_t nSchemaId, sirCVarType_t eType,
-                                                    uint64_t nDefaultBits )
+static sirRegistrationCookDefinition_t sirTestCVar( const char *pszName, uint32_t nSchemaId, sirCVarType_t eType, uint64_t nDefaultBits )
 {
 	sirRegistrationCookDefinition_t value = {};
 	value.sName = pszName;
@@ -121,7 +119,7 @@ static void sirTestCookValidation( void )
 	assert( cookedStrings == expectedStrings );
 	assert( cookedRegistrations == expectedRegistrations );
 	assert( sirValidateRegistrationCatalog( cookedRegistrations.data(), cookedRegistrations.size(),
-	                                         sirTestU64( cookedStrings.data() + 36 ) ) == SIR_REGISTRATION_OK );
+	                                        sirTestU64( cookedStrings.data() + 36 ) ) == SIR_REGISTRATION_OK );
 
 	const auto good = definitions;
 	definitions.push_back( sirTestCommand( "HELP", 3001, 0 ) );
@@ -183,10 +181,8 @@ static void sirTestRuntime( void )
 	SIRStringAtom szAtoms[8];
 	uint32_t szNameIds[8] = {};
 	uint64_t szBindingIds[8] = {};
-	sirRegistrationBinding_t szBindings[2] = {
-		{ 1001, 0, sirTestCallback, &s_nCallbackCount },
-		{ 2001, 88, sirTestCallback, &s_nCallbackCount }
-	};
+	sirRegistrationBinding_t szBindings[2] = { { 1001, 0, sirTestCallback, &s_nCallbackCount },
+	                                           { 2001, 88, sirTestCallback, &s_nCallbackCount } };
 	sirRegistrationCatalogInit_t init = {};
 	init.pBytes = cookedRegistrations.data();
 	init.nBytes = cookedRegistrations.size();
@@ -240,6 +236,7 @@ static void sirTestRuntime( void )
 	assert( handle.nSlot == oldHandle.nSlot && handle.nGeneration != oldHandle.nGeneration );
 	assert( registry.getEntry( oldHandle, &pEntry ) == SIR_REGISTRATION_STALE_HANDLE );
 	desc.name = { "sir.debug", 9, 88 };
+	desc.nSchemaId = 55;
 	assert( registry.registerDynamic( desc, &handle ) == SIR_REGISTRATION_DENIED );
 	assert( registry.unregisterModule( 88 ) == 2 );
 	assert( registry.getCount() == 3 );

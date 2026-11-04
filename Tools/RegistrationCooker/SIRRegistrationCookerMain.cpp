@@ -56,8 +56,8 @@ static bool sirParseCookLine( const std::string& sLine, sirRegistrationCookDefin
 	uint64_t nSecond = 0;
 	uint64_t nThird = 0;
 	uint64_t nFourth = 0;
-	if ( !sirReadCookValue( line, &nFirst ) || !sirReadCookValue( line, &nSecond ) ||
-	     !sirReadCookValue( line, &nThird ) || !sirReadCookValue( line, &nFourth ) ) {
+	if ( !sirReadCookValue( line, &nFirst ) || !sirReadCookValue( line, &nSecond ) || !sirReadCookValue( line, &nThird ) ||
+	     !sirReadCookValue( line, &nFourth ) ) {
 		return false;
 	}
 	if ( nSecond > UINT32_MAX || nThird > UINT32_MAX || nFourth > UINT32_MAX ) {

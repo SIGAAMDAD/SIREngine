@@ -89,8 +89,7 @@ bool sirCookStringCatalog( const std::vector<std::string>& names, std::vector<ui
 		nCorpus = sirStringCookHash( &nSeparator, 1, nCorpus );
 		nOffset += ( uint32_t )sName.size() + 1;
 	}
-	sirStringCookWrite64( result.data() + 28, sirStringCookHash( result.data() + 48, result.size() - 48,
-	                                                       SIR_REGISTRATION_HASH_BASIS ) );
+	sirStringCookWrite64( result.data() + 28, sirStringCookHash( result.data() + 48, result.size() - 48, SIR_REGISTRATION_HASH_BASIS ) );
 	sirStringCookWrite64( result.data() + 36, nCorpus );
 	output.swap( result );
 	*pContentHash = nCorpus;
