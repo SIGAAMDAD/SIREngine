@@ -7,3 +7,13 @@ add_executable(SIRScriptCodeManagerTests SIRScriptCodeManagerTests.cpp)
 target_link_libraries(SIRScriptCodeManagerTests PRIVATE SIR::Scripting)
 add_test(NAME scripting.code-manager COMMAND SIRScriptCodeManagerTests)
 sir_configure_owned_target(SIRScriptCodeManagerTests)
+
+add_executable(SIRScriptArtifactCacheTests SIRScriptArtifactCacheTests.cpp)
+target_link_libraries(SIRScriptArtifactCacheTests PRIVATE SIR::Scripting)
+add_test(NAME scripting.artifact-cache COMMAND SIRScriptArtifactCacheTests)
+sir_configure_owned_target(SIRScriptArtifactCacheTests)
+
+add_executable(SIRScriptOptimizationProtocolTests SIRScriptOptimizationProtocolTests.cpp)
+target_link_libraries(SIRScriptOptimizationProtocolTests PRIVATE SIR::Scripting)
+add_test(NAME scripting.optimization-protocol COMMAND SIRScriptOptimizationProtocolTests)
+sir_configure_owned_target(SIRScriptOptimizationProtocolTests)
