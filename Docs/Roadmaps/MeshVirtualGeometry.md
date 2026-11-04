@@ -2,15 +2,15 @@
 
 **Canonical tracking issue:** [#36](https://github.com/SIGAAMDAD/SIREngine/issues/36)
 **Implementation branch:** [`feature/mesh-cache-foundation`](https://github.com/SIGAAMDAD/SIREngine/tree/feature/mesh-cache-foundation) at original foundation commit [`9f0a566a8d9d`](https://github.com/SIGAAMDAD/SIREngine/commit/9f0a566a8d9d091ebee47e4d701dbffe1a2b5b8e).
-**Base branch:** `develop` at `51666fadadf8112b3b2d5bf919ba11dde55d931b`.
-**Status (2026-11-04):** R0 independent CPU cache slice committed; 35 roadmap implementation/acceptance issues open (29 original + 6 cross-backend additions). Remaining stages are requirements and executable plans, **not** implemented source.
+**Upstream synchronization:** merged `develop` at `1e799f4283c054b1a891ad23acc09c39d690b9c1` into this feature branch with merge commit `559719d484ec32e4fe06ee7ea093956172977632`, retaining the prior mesh history and the GRDG/Core/CMake work. Subsequent integration must recheck the moving `develop` head.
+**Status (2026-11-04):** R0 independent CPU cache slice committed; 35 roadmap implementation/acceptance issues open (29 original + 6 cross-backend additions). Upstream GRDG/Core has been merged into the mesh branch; cross-subsystem mesh integration is still pending. Remaining stages are requirements and executable plans, **not** implemented source.
 **Source plan:** SIR-VG-001 (Nanite-inspired SIREngine-native virtualized geometry), SIR-VG-DISP-001 (baked displacement), existing `Docs/Architecture/20-mesh-cache-foundation.md`, and renderer/GRDG/Streaming design authorities.
 
 ## 1. Objectives and invariant boundaries
 
 SIREngine will share immutable static source geometry across rendering, CPU physics/collision, BVH queries and many world instances. One canonical mesh identity/revision belongs to GRDG; CPU memory is physically allocated/accounted through SIRMemoryManager; `SIRMeshCache` owns logical geometry lookups/leases; `SIRRenderingDevice` alone owns GPU buffers and native queue submissions. Streaming demand is unified through World/Streaming, not another mesh-specific scheduler.
 
-The independent CPU foundation in `Source/Mesh/SIRMeshCache.*` deliberately **does not depend** on unmerged GRDG, Jolt, Terrain3D or GPU drivers. Its published semantics currently cover caller-provided fixed-capacity slot backing, immutable borrowed source pointers, source-pin callback retirement, generation-safe handles and duplicate key rejection. It has native CMake and unit test targets. Earlier local validation reported 84.76% line and 71.63% branch coverage; **R0-01 is outstanding** and requires fresh exact-SHA results.
+The independent CPU foundation in `Source/Mesh/SIRMeshCache.*` deliberately **does not depend** on GRDG, a physics backend, Terrain3D or GPU drivers. Its published semantics currently cover caller-provided fixed-capacity slot backing, immutable borrowed source pointers, source-pin callback retirement, generation-safe handles and duplicate key rejection. It has native CMake and unit test targets. Earlier local validation reported 84.76% line and 71.63% branch coverage; **R0-01 is outstanding** and requires fresh exact-SHA results.
 
 **Shipping displacement contract:** Static mesh height/displacement textures are authoring inputs only. Cook adaptive subdivisions and displaced final positions, optimize via meshoptimizer, produce compressed vertex/index/cluster/HLOD geometry and optional displaced collision, then ship *only* cooked data. A shipping SIRPack must contain no original displacement texture bytes, loadable source paths/IDs, runtime displacement sampler/binding, or transitive source dependency. Runtime uses precomputed LOD pages, without initial-scene or per-frame displacement/tessellation work for these baked assets.
 
@@ -22,7 +22,7 @@ The independent CPU foundation in `Source/Mesh/SIRMeshCache.*` deliberately **do
 | --- | --- | ---: | --- |
 | R0 | Independent baseline and authority freeze | 2 | [#37](https://github.com/SIGAAMDAD/SIREngine/issues/37), [#38](https://github.com/SIGAAMDAD/SIREngine/issues/38) |
 | R1 | Offline cooking, compressed clusters, no-source-map shipping | 4 | [#39](https://github.com/SIGAAMDAD/SIREngine/issues/39), [#40](https://github.com/SIGAAMDAD/SIREngine/issues/40), [#41](https://github.com/SIGAAMDAD/SIREngine/issues/41), [#42](https://github.com/SIGAAMDAD/SIREngine/issues/42) |
-| R2 | CPU canonical memory, Jolt shapes, BVH and collision policy | 3 | [#43](https://github.com/SIGAAMDAD/SIREngine/issues/43), [#44](https://github.com/SIGAAMDAD/SIREngine/issues/44), [#45](https://github.com/SIGAAMDAD/SIREngine/issues/45) |
+| R2 | CPU canonical memory, physics-ABI shape providers, BVH and collision policy | 3 | [#43](https://github.com/SIGAAMDAD/SIREngine/issues/43), [#44](https://github.com/SIGAAMDAD/SIREngine/issues/44), [#45](https://github.com/SIGAAMDAD/SIREngine/issues/45) |
 | R3 | Shared page residency, CPU derivatives, GPU pools and ABI | 4 | [#47](https://github.com/SIGAAMDAD/SIREngine/issues/47), [#48](https://github.com/SIGAAMDAD/SIREngine/issues/48), [#49](https://github.com/SIGAAMDAD/SIREngine/issues/49), [#268](https://github.com/SIGAAMDAD/SIREngine/issues/268) |
 | R4 | Shared scene, cluster cuts, CPU batches and GPU execution | 7 | [#50](https://github.com/SIGAAMDAD/SIREngine/issues/50), [#51](https://github.com/SIGAAMDAD/SIREngine/issues/51), [#52](https://github.com/SIGAAMDAD/SIREngine/issues/52), [#269](https://github.com/SIGAAMDAD/SIREngine/issues/269), [#270](https://github.com/SIGAAMDAD/SIREngine/issues/270), [#271](https://github.com/SIGAAMDAD/SIREngine/issues/271), [#272](https://github.com/SIGAAMDAD/SIREngine/issues/272) |
 | R5 | Streamed world geometry, terrain and HLOD integration | 3 | [#53](https://github.com/SIGAAMDAD/SIREngine/issues/53), [#54](https://github.com/SIGAAMDAD/SIREngine/issues/54), [#55](https://github.com/SIGAAMDAD/SIREngine/issues/55) |
@@ -79,14 +79,14 @@ R0 contract #38 + CPU MeshCache #37
 | `VG-R1-03` | [#41](https://github.com/SIGAAMDAD/SIREngine/issues/41) | Offline adaptive heightmap displacement |
 | `VG-R1-04` | [#42](https://github.com/SIGAAMDAD/SIREngine/issues/42) | No displacement-source textures in shipping packages |
 
-### R2 — CPU canonical memory, Jolt shapes, BVH and collision policy
+### R2 — CPU canonical memory, shared physics ABI, BVH and collision policy
 
-**Exit gate:** Identical static CPU vertex/index pointers safely shared across relevant physics and CPU BVH consumers; Jolt collision built and retired with exact revisions; no copying per repeated instance.
+**Exit gate:** Common physics-ABI descriptors and pinned immutable mesh leases compile against an independent fake provider before any native physics backend integration; backend-derived collision built and retired with exact geometry revisions. Zero-copy CPU geometry borrowing is permitted only when layout, alignment, lifetime and backend capabilities permit; otherwise account a single revision-keyed converted representation. No per-instance duplicate source geometry.
 
 | ID | GitHub issue | Implementation slice |
 | --- | --- | --- |
 | `VG-R2-01` | [#43](https://github.com/SIGAAMDAD/SIREngine/issues/43) | GRDG/NMD immutable mesh geometry leases |
-| `VG-R2-02` | [#44](https://github.com/SIGAAMDAD/SIREngine/issues/44) | Shared static Jolt collision shapes and per-instance policy |
+| `VG-R2-02` | [#44](https://github.com/SIGAAMDAD/SIREngine/issues/44) | Shared static collision shape providers behind physics ABI, plus per-instance policy |
 | `VG-R2-03` | [#45](https://github.com/SIGAAMDAD/SIREngine/issues/45) | CPU BVH/query, navigation and collision revisioning |
 
 ### R3 — Sealed GPU geometry page residency and driver ABI
@@ -136,12 +136,12 @@ R0 contract #38 + CPU MeshCache #37
 
 ### R7 — Skeletal entities and optional acceleration
 
-**Exit gate:** Individually tested optional capability sets: immutable bind geometry + per-entity poses; Jolt ragdolls and hit zones; mesh/task shaders, software micropolygon and RT acceleration backed by measured hardware gains.
+**Exit gate:** Individually tested optional capability sets: immutable bind geometry + per-entity poses; backend-neutral physics-ABI ragdolls and hit zones; mesh/task shaders, software micropolygon and RT acceleration backed by measured hardware gains.
 
 | ID | GitHub issue | Implementation slice |
 | --- | --- | --- |
 | `VG-R7-01` | [#67](https://github.com/SIGAAMDAD/SIREngine/issues/67) | Shared bind geometry, rig and GPU skinning |
-| `VG-R7-02` | [#68](https://github.com/SIGAAMDAD/SIREngine/issues/68) | Dynamic character Jolt collision and ragdolls |
+| `VG-R7-02` | [#68](https://github.com/SIGAAMDAD/SIREngine/issues/68) | Dynamic character physics-ABI hit zones and ragdolls |
 | `VG-R7-03` | [#69](https://github.com/SIGAAMDAD/SIREngine/issues/69) | Optional mesh shaders, software raster and RT |
 
 ### R8 — Editor, profiling, release and independent acceptance
@@ -162,10 +162,10 @@ R0 contract #38 + CPU MeshCache #37
 
 | Category | Canonical/shared memory | Per-instance / derivative memory | Owner(s) |
 | --- | --- | --- | --- |
-| Pebbles, foliage, sticks, clutter | One geometry/cluster set per prototype, versioned under GRDG | Compact spatial transforms and variation; selected Jolt bodies on promotion; GPU wind/output only when required | World/Clutter, GPUScene, Jolt |
-| Rocks, boulders, modular buildings, occluders | Immutable CPU vertex/index streams; shared Jolt-compatible collision source and CPU BVH query references; one compressed GPU mesh page set per asset/variant | Transforms, collision policy, Jolt body registration, visibility/material selections, HLOD/terrain cell activation | GRDG/NMD, MeshCache, Jolt, World and GPUScene |
-| Weapons | One mesh asset and collision-shape definition | Carried skeletal attachment or dynamic dropped body with same mesh identity | Animation, World, Jolt |
-| NPCs / player / skeletal meshes | Immutable bind-pose mesh, skeleton hierarchy and animation clips | Per-entity bone pose, controller/ragdoll bodies, transient skin buffers, optional RT acceleration | Animation, Jolt, GPUScene and graphics driver |
+| Pebbles, foliage, sticks, clutter | One geometry/cluster set per prototype, versioned under GRDG | Compact spatial transforms and variation; selected backend physics bodies on promotion; GPU wind/output only when required | World/Clutter, GPUScene, Jolt |
+| Rocks, boulders, modular buildings, occluders | Immutable CPU vertex/index streams; shared physics-ABI consumable collision source and CPU BVH query references; one compressed GPU mesh page set per asset/variant | Transforms, collision policy, Jolt body registration, visibility/material selections, HLOD/terrain cell activation | GRDG/NMD, MeshCache, Jolt, World and GPUScene |
+| Weapons | One mesh asset and collision-shape definition | Carried skeletal attachment or dynamic dropped body with same mesh identity | Animation, World, Physics ABI |
+| NPCs / player / skeletal meshes | Immutable bind-pose mesh, skeleton hierarchy and animation clips | Per-entity bone pose, controller/ragdoll bodies, transient skin buffers, optional RT acceleration | Animation, Physics ABI, GPUScene and graphics driver |
 
 The engine must account for **distinct physical allocations once**, even when the same resource is referenced by multiple providers or instances. CPU collision BVH nodes and GPU BLAS/TLAS are derived allocations with independent lifetimes; source vertex pointer sharing is literal only for compatible CPU query/physics representations, not a fictional universal zero-copy GPU/Jolt pointer.
 
@@ -179,7 +179,7 @@ The engine must account for **distinct physical allocations once**, even when th
 | Geometry cooker/SIRPack | Cooked format, hashes, cluster geometry, offline displacement | Source editor images (cook-only) | Shipping displacement source texture dependencies |
 | Renderer/GPUScene/FrameGraph | Instance and draw snapshots, shared cull/LOD, pass ordering | MeshCache page/geometry directories | Driver-specific independent scene graph |
 | World/Streaming | Geometry and world cell demand, epoch/cancel policy | GPU request feedback and I/O | Mesh-residency-owned second demand scheduler or rejected provider adapter |
-| Physics/Jolt | Shape/BVH, rigid-body state, collision policy | Pinned immutable CPU triangle views | Duplicating canonical vertex data per static instance |
+| Physics ABI / backend provider | Stable shape/body/query descriptors, derived shape/BVH allocations, rigid-body and collision policy within the physics subsystem | Pinned immutable CPU triangle leases and revisioned geometry keys | Backend-native types or backend-specific assumptions in MeshCache/cooker/SIRPack; per-instance copied canonical geometry |
 | Each native graphics driver | Native buffers or client arrays, per-API draw/queue lowering and completion | Common cooked geometry/cut/draw plan and frozen graphics ABI v1 | Driver-specific LOD or streaming policy; fictitious unsupported compute/indirect features |
 | Independent QA | Acceptance evidence and fault injection | Exact source SHA and hardware captures | Simulated or stale PASS as production verification |
 
@@ -191,7 +191,7 @@ Integration requires an agreed frozen cross-owner ABI and exact source ancestry;
 2. **Local coverage:** 100% line, branch and function coverage for all locally compilable first-party code within the active implementation scope, measured from source-based coverage and exact build flags; also test negative states. Hardware/platform-only paths reported separately until executable.
 3. **Memory / concurrency:** Immutable source bytes never reclaimed before last read/provider pin; GPU pages never recycled before graphics/compute/copy and AS consumers retire; no hidden SEALED allocations. Reused world objects do not duplicate canonical buffers.
 4. **Visual:** Conservative visible set and root fallback, crack-free LOD/HLOD boundaries, shadow/material/depth parity, transparent/masked capability-scoped results and stable rapid camera turns.
-5. **Physics:** Actual shared static CPU positions where selected, Jolt collision/reference parity and correct per-instance collision modes, ragdoll transitions separately scoped.
+5. **Physics:** Backend-neutral physics ABI compile and fake-provider contract tests first; then selected backend collision/query parity, lifetime and per-instance collision modes, with ragdoll transitions separately scoped. Record zero-copy vs converted backing honestly.
 6. **Shipping:** Baked static displacement source textures absent from runtime package, graph closure and filesystem; loader, geometry renderer and collision work with original authoring heightmap deleted.
 7. **Hardware / performance:** per-tier real GL1.2/1.5/2.x/3.3/4.6 and D3D7/8/9/10/11/12 plus Vulkan device proof where the named backend ships (not CPU mock alone); drivers and OS with no available hardware marked NOT_RUN; measured memory/CPU submit and qualified GPU timing, CMake/CTest/GoogleTest and sanitizer stress, exact source & driver IDs and p50/p95/p99 data. Track GPU geometry separately from textures, staging, descriptors and RT structures.
 8. **Licensing:** Unreal Nanite source is behavior reference only; do not copy its implementation/shaders. Permissively licensed donors must be pinned and attributed.
@@ -264,3 +264,49 @@ Integration requires an agreed frozen cross-owner ABI and exact source ancestry;
 - **Quality:** C++17 pinned formatter, real Clang AST, CMake/CTest/GoogleTest, sanitizer and locally compiled source line/branch/function coverage; no QA pass from a mock or from issue text.
 
 **Scope and progress:** Documentation/issue roadmap only. Source contracts, geometry cooker, native drivers and GPU tests are not completed by this update. Existing 29 tasks remain open; new cross-tier tasks #268–#273 are open.
+
+## 10. Shared physics ABI rebaseline (2026-11-04; prospective ABI, not implemented)
+
+**Owner directive:** meshing must target a future common SIREngine physics ABI, **not** Jolt APIs. The ABI itself is still a separate future subsystem; this roadmap freezes meshing-facing *requirements and ownership*, not concrete public physics header layout or backend selection. Do not fabricate a complete physics API or introduce Jolt-specific ABI members while that work is unfinished.
+
+### 10.1 Ownership and dependency contract
+
+| Authority | Owns | Meshing-facing contract |
+| --- | --- | --- |
+| GRDG | Canonical geometry key/revision, source publication, reader epochs, provider pins | Supplies immutable source identity and revisioned lease ownership; mesh source is never a physics-owned canonical allocation |
+| SIRMemoryManager | Physical CPU backing and accounting | Pin source/converted derivatives with exact physical allocation attribution |
+| SIRMeshCache | Cache slots, immutable CPU geometry borrow, generation and retirement | Expose backend-independent typed views; never include Jolt headers or backend structs |
+| Geometry cooker/SIRPack | Geometry, optional collision cooking recipe, persistent collision source metadata | Serialize portable topology, vertex attributes, bounds, surface/material/profile IDs and error/version metadata; never serialize runtime backend pointers, bodies or Jolt-specific binary layouts as the canonical source |
+| Shared physics ABI owner (future) | Public shape/body/query/activation contracts, capability negotiation and dispatch | Defines backend-neutral stable descriptor types, typed result/errors, async completion/read-retirement and backend selection. Meshing consumes only a jointly frozen contract |
+| Physics provider/backend | Derived collision acceleration, shape/backing handles, body state, query execution and backend device/world lifecycle | May borrow compatible pinned CPU geometry or build an explicitly accounted derived representation; never claims ownership of canonical mesh bytes |
+| World/Streaming | Spatial activation demand, cancellation, cell/instance lifetime and priorities | Distinct collision readiness requirements from visual LOD demand; revision/epoch checks at publication |
+| Renderer | GPU geometry, visual LOD, cull and graphics queue completion | Cannot prematurely retire CPU source still pinned by a physics job or body/shape |
+
+**Call and dataflow, as future contract requirements:** SIRPack/GRDG publishes source geometry revision -> MeshCache gives an immutable scoped vertex/index/attribute lease -> physics ABI validates requested collision profile, supported geometry and backend capabilities -> physics provider either borrows a compatible source or constructs a bounded, versioned converted acceleration/shape -> provider returns a generation-safe opaque shape identity + readiness/retirement status -> World binds bodies/instances through physics ABI -> asynchronous query/body/shape readers pin required representations -> eviction occurs only after readers, jobs, physics world references and provider completions end. Never infer that every provider can consume the same layout zero-copy.
+
+### 10.2 Required ABI negotiations (freeze with future physics-ABI owner)
+
+1. **Topology/layout:** indexed triangle soup, valid winding, 16/32-bit index capability, native scalar widths, finite positions, alignment/stride, local coordinates, optional quantized cooked data and conversion policy. Stable geometry key+revision are separate from backend shape identity.
+2. **Collision profiles:** static triangle mesh, reduced proxy/convex primitive, compound, trigger/sensor, dynamic convex, character/kinematic and ragdoll articulations; capabilities and unsupported paths are explicit rather than silently converted.
+3. **Geometry publication:** ownership of immutable source lease, converted shape backing, per-instance transform and collision flags; no hidden independent mesh authoring ownership in physics.
+4. **Queries and control:** ray/sweep/overlap and filter/mask semantics, coordinate conventions, hit IDs/material/surface attribution, cancellation/deadline behavior and deterministic test oracles. The physics ABI owns the calls; MeshCache exposes geometry, not query implementations.
+5. **Concurrency and lifetime:** atomic generation+revision checks, reader pins, async cook/activation completion, World unload, rollback/cancel, shape reuse, backend reset and shutdown; typed failure statuses.
+6. **Memory accounting:** physical source bytes counted once by CPU allocator; each backend converted BVH/shape separately charged, reused by key/revision/profile/backend configuration; refuse unbounded copy-per-instance and hidden growth after resource admission.
+
+**Backend examples:** Jolt may be the first concrete provider, but it receives these contracts through the shared ABI. Other physics engines and a fake/reference test provider must compile without modifying Meshing public headers or SIRPack canonical schema.
+
+### 10.3 Existing task changes and acceptance gates
+
+- **R0 #38:** add frozen meshing-facing requirements and jointly agreed future physics ABI type ownership. A concrete ABI header/type may be produced only by the physics ABI owner; current MeshCache remains independent.
+- **R1 #39/#40/#41:** cooker outputs portable collision inputs/profiles without backend-only data. Static baked displacement must give coherent visual and collision geometry revision; backend-specific cooked accelerations are separately keyed derivatives.
+- **R2 #43:** connect MeshCache source lease to GRDG and memory accounting while maintaining backend independence.
+- **R2 #44:** implement a physics-ABI shape-provider *consumer* plus fake-provider contract tests first; selected backend provider support is a downstream task after the ABI freezes. Test static shape sharing, distinct per-instance transform/body policy, unsupported profiles and safe disposal.
+- **R2 #45:** share immutable source geometry for independent CPU BVH/query/navigation and physics-ABI providers; validate revisioned recook and query parity against a reference oracle.
+- **R5 #54/#55:** World/Streaming requests collision activation separately from visual HLOD; stale/canceled revisions never activate shapes, old bodies/shapes are retired after physics completion.
+- **R6 #64/#66:** clutter promotion, buildings, boulders and picked-up/dropped weapons operate on ABI shape/body identities, never Jolt object references.
+- **R7 #67/#68:** bind geometry, per-entity pose output, hit zones, ragdoll joints/attachments use ABI capabilities and generated backend derivatives; exclude native Jolt structures from animation/meshing surfaces.
+- **R8 #72/#75/#273:** compile independent fake provider and one genuine physics backend, validate shape/query parity and world behavior on actual native builds. Mark each backend/hardware/platform PASS/FAIL/NOT_RUN independently; the fake provider cannot certify Jolt or a different native backend.
+
+**Adversarial fixture matrix:** backend rejects triangle index width; invalid indices/NaNs; pointer alignment mismatch; source pin ends before async cook; same geometry revision under incompatible collision profile; old body still referencing retired revision; shape completion arrives after cell unload; two providers share accidental native handle ID; backend reset invalidates opaque IDs; unsupported ragdoll silently enabled; backend duplicates source per instance; shape cleanup occurs before physics job acknowledgment. Pair each rejection with a valid input and assert the correct error and retained root/geometry fallback.
+
+**Dependency guard:** No physics ABI implementation is presumed complete. Mesh work not needing physics ABI (R0 source cache, R1 geometry cook, R3 general residency and R4 draw-plan) can proceed independently. Physics-facing R2 #44 and dependent R5/R6/R7 integration cannot be accepted until the actual shared ABI is compiled and verified.
