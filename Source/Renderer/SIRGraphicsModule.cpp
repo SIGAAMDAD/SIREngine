@@ -165,9 +165,8 @@ sirGraphicsABIResult_t sirGraphicsCreateABIDevice( sirGraphicsABIModule_t *pModu
                                                    sirGraphicsABIDevice_t *pDevice ) noexcept
 {
 	if ( pModule == nullptr || pRequest == nullptr || pRequest->nSize < sizeof( sirGraphicsABIDeviceRequest_t ) ||
-	     pRequest->nFramesInFlight == 0 || pRequest->nAllowSoftware > 1 || pRequest->nHeadless > 1 ||
-	     pRequest->nReserved != 0 || pDevice == nullptr ||
-	     pDevice->nSize < sizeof( sirGraphicsABIDevice_t ) || pModule->nActiveDevices >= 16 ) {
+	     pRequest->nFramesInFlight == 0 || pRequest->nAllowSoftware > 1 || pRequest->nHeadless > 1 || pRequest->nReserved != 0 ||
+	     pDevice == nullptr || pDevice->nSize < sizeof( sirGraphicsABIDevice_t ) || pModule->nActiveDevices >= 16 ) {
 		return SIR_GRAPHICS_ABI_INVALID_ARGUMENT;
 	}
 	sirGraphicsABIAdapter_t adapter = {};

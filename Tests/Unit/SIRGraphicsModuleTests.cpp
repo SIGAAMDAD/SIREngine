@@ -92,13 +92,11 @@ static bool testBinaryModule( void ) noexcept
 	}
 	request.nRequiredFeatures = SIR_GRAPHICS_FEATURE_COMPUTE;
 	pMode( 6 );
-	if ( sirGraphicsCreateABIDevice( &module, &request, &device ) != SIR_GRAPHICS_OUT_OF_MEMORY ||
-	     module.nActiveDevices != 0 ) {
+	if ( sirGraphicsCreateABIDevice( &module, &request, &device ) != SIR_GRAPHICS_OUT_OF_MEMORY || module.nActiveDevices != 0 ) {
 		return false;
 	}
 	pMode( 7 );
-	if ( sirGraphicsCreateABIDevice( &module, &request, &device ) != SIR_GRAPHICS_BUSY ||
-	     module.nActiveDevices != 0 ) {
+	if ( sirGraphicsCreateABIDevice( &module, &request, &device ) != SIR_GRAPHICS_BUSY || module.nActiveDevices != 0 ) {
 		return false;
 	}
 	pMode( 5 );
