@@ -413,6 +413,9 @@ static bool testTraceWrapAndSparseRetire( void )
 	     !pSegment->retireIdleRange( nPage * 2, nPage, 5, 7 ) ) {
 		return false;
 	}
+	if ( !pSegment->commit( nPage * 3, nPage ) ) {
+		return false;
+	}
 	const sirPageDrainReport_t waiting = memory.drainPendingDecommits( nPage - 1 );
 	if ( waiting.nRemainingPendingBytes != nPage * 2 || waiting.nCompletedRuns != 0 ) {
 		return false;
