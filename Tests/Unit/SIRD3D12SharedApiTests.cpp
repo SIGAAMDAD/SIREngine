@@ -18,6 +18,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <stdio.h>
 #include <string.h>
 
+static_assert( sizeof( sirGraphicsDeviceCreateDesc_t ) == 48, "D3D12 requires the shared 48-byte descriptor ABI" );
+static_assert( sizeof( sirGraphicsHandle_t ) == 16, "Graphics handles must stay 16 bytes" );
+static_assert( sizeof( sirGraphicsCompletion_t ) == 16, "Graphics completion tokens must stay 16 bytes" );
+
 int main( void )
 {
 	SIRD3D12Driver driver;

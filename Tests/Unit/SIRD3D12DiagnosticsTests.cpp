@@ -188,14 +188,15 @@ int main( int argc, char **argv )
 	config.bAllowSoftware = !bHardware;
 	config.bHeadless = true;
 	SIRRenderingDevice *pDevice = nullptr;
-	config.bEnableGpuValidation = true;
-	if ( driver.createDevice( config, &pDevice ) != SIR_GRAPHICS_INVALID_ARGUMENT || pDevice != nullptr ) {
+	sirD3D12NativeDeviceConfig_t nativeConfig = {};
+	nativeConfig.diagnostics.bEnableGpuValidation = true;
+	if ( driver.createDeviceWithConfig( config, nativeConfig, &pDevice ) != SIR_GRAPHICS_INVALID_ARGUMENT || pDevice != nullptr ) {
 		return 7;
 	}
-	config.bEnableGpuValidation = bGpuValidation;
-	config.bEnableApiValidation = bDebug;
-	config.bEnableDeviceFaultDiagnostics = bDred;
-	const sirGraphicsResult_t eCreated = driver.createDevice( config, &pDevice );
+	nativeConfig.diagnostics.bEnableGpuValidation = bGpuValidation;
+	nativeConfig.diagnostics.bEnableDebugLayer = bDebug;
+	nativeConfig.diagnostics.bEnableDred = bDred;
+	const sirGraphicsResult_t eCreated = driver.createDeviceWithConfig( config, nativeConfig, &pDevice );
 	if ( ( bDebug || bDred ) && eCreated == SIR_GRAPHICS_UNSUPPORTED && pDevice == nullptr ) {
 		fprintf( stderr, "Requested D3D12 Graphics Tools diagnostics unavailable\n" );
 		return 77;
