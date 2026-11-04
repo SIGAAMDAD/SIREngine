@@ -106,6 +106,12 @@ target_link_libraries(SIRResourceMemoryIntegrationTests PRIVATE SIR::Resources)
 add_test(NAME resources.memory.domains COMMAND SIRResourceMemoryIntegrationTests)
 sir_configure_owned_target(SIRResourceMemoryIntegrationTests)
 
+# Native file/mapped-file loading through Core Jobs and GRDG staging.
+add_executable(SIRResourceFileLoadTests SIRResourceFileLoadTests.cpp)
+target_link_libraries(SIRResourceFileLoadTests PRIVATE SIR::Resources)
+add_test(NAME resources.streaming.native-file-io COMMAND SIRResourceFileLoadTests)
+sir_configure_owned_target(SIRResourceFileLoadTests)
+
 # Bounded provider-owned derived representations and fence-aware retirement.
 add_executable(SIRDerivedResourceRegistryTests SIRDerivedResourceRegistryTests.cpp)
 target_link_libraries(SIRDerivedResourceRegistryTests PRIVATE SIR::Resources)
