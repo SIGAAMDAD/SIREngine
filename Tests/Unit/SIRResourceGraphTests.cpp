@@ -1676,6 +1676,27 @@ static void testDuplicateStagingRejection( void )
 	REQUIRE( allocator.m_nOutstanding.load() == 0 );
 }
 
+static void testPublicationCapacityAfterFullAdmission( void )
+{
+	SIRTestAllocatorStats allocator = {};
+	{
+		SIRResourceGraph graph( testConfig( allocator, 3 ) );
+		REQUIRE( graph.isReady() );
+		SIRResourceGraphWriter *pWriter = graph.getWriter();
+		REQUIRE( pWriter != nullptr );
+		for ( uint64_t i = 0; i < 3; ++i ) {
+			SIRResourcePublication publication = { key( 30500 + i ), SIR_RESOURCE_KIND_COMPOSITION, 1, 1, nullptr, 0, nullptr, 0 };
+			SIRResourceHandle accepted = {};
+			REQUIRE( pWriter->publish( publication, &accepted ) == SIR_RESOURCE_RESULT_SUCCESS );
+		}
+		SIRResourcePublication overflow = { key( 30503 ), SIR_RESOURCE_KIND_COMPOSITION, 1, 1, nullptr, 0, nullptr, 0 };
+		SIRResourceHandle rejected = {};
+		REQUIRE( pWriter->publish( overflow, &rejected ) == SIR_RESOURCE_RESULT_OUT_OF_BUDGET );
+		REQUIRE( graph.getStats().m_nLiveResources == 3 );
+	}
+	REQUIRE( allocator.m_nOutstanding.load() == 0 );
+}
+
 int main( void )
 {
 	testScopeLifetimeAndDeduplication();
@@ -1705,6 +1726,7 @@ int main( void )
 	testCompileTaskGraphInputRejection();
 	testRequestedRecordAllocationRollback();
 	testDuplicateStagingRejection();
+	testPublicationCapacityAfterFullAdmission();
 	printf( "PASS: GRDG resource registry, publication, deduplication, lifetime, concurrency\n" );
 	return 0;
 }
