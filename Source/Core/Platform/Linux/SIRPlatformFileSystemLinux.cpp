@@ -46,7 +46,10 @@ static sirFileSystemResult_t sirFileSystemError( int nError ) noexcept
 static void sirFileSystemStatInfo( const struct stat &rStat, sirFileSystemInfo_t *pInfo ) noexcept
 {
 	pInfo->nSizeBytes = rStat.st_size > 0 ? ( uint64_t )rStat.st_size : 0;
-	pInfo->nModifiedNanoseconds = ( uint64_t )rStat.st_mtim.tv_sec * 1000000000ULL + ( uint64_t )rStat.st_mtim.tv_nsec;
+	const uint64_t nSeconds = rStat.st_mtim.tv_sec >= 0 ? ( uint64_t )rStat.st_mtim.tv_sec : 0;
+	pInfo->nModifiedNanoseconds = nSeconds <= ( UINT64_MAX - 999999999ULL ) / 1000000000ULL
+	                                  ? nSeconds * 1000000000ULL + ( rStat.st_mtim.tv_sec >= 0 ? ( uint64_t )rStat.st_mtim.tv_nsec : 0 )
+	                                  : UINT64_MAX;
 	pInfo->eType = S_ISREG( rStat.st_mode )   ? SIR_FILESYSTEM_REGULAR_FILE
 	               : S_ISDIR( rStat.st_mode ) ? SIR_FILESYSTEM_DIRECTORY
 	               : S_ISLNK( rStat.st_mode ) ? SIR_FILESYSTEM_SYMLINK

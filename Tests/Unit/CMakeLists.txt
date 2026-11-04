@@ -201,3 +201,25 @@ add_executable(SIRPlatformThreadControlTests SIRPlatformThreadControlTests.cpp)
 target_link_libraries(SIRPlatformThreadControlTests PRIVATE SIR::Core)
 add_test(NAME core.platform.thread-control COMMAND SIRPlatformThreadControlTests)
 sir_configure_owned_target(SIRPlatformThreadControlTests)
+
+
+# Extended cross-platform I/O regression matrix, including descriptor and
+# handle lifecycle, concurrent positional writes, mapping, pipe and IPC tests.
+add_executable(SIRPlatformIORegressionTests SIRPlatformIORegressionTests.cpp)
+target_link_libraries(SIRPlatformIORegressionTests PRIVATE SIR::Core)
+add_test(NAME core.platform.io.regression COMMAND SIRPlatformIORegressionTests)
+set_tests_properties(core.platform.io.regression PROPERTIES TIMEOUT 120)
+sir_configure_owned_target(SIRPlatformIORegressionTests)
+
+# Production Linux syscalls are intercepted at the final test link boundary.
+# Fault injection does not modify the shipping platform implementation.
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    add_executable(SIRPlatformIOFaultInjectionTests SIRPlatformIOFaultInjectionTests.cpp)
+    target_link_libraries(SIRPlatformIOFaultInjectionTests PRIVATE SIR::Core)
+    foreach(sirWrappedCall IN ITEMS pread pwrite mmap msync pipe2 sem_wait sem_timedwait posix_spawnp)
+        target_link_options(SIRPlatformIOFaultInjectionTests PRIVATE "LINKER:--wrap=${sirWrappedCall}")
+    endforeach()
+    add_test(NAME core.platform.io.fault-injection COMMAND SIRPlatformIOFaultInjectionTests)
+    set_tests_properties(core.platform.io.fault-injection PROPERTIES TIMEOUT 60)
+    sir_configure_owned_target(SIRPlatformIOFaultInjectionTests)
+endif()
