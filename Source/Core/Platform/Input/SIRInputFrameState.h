@@ -44,6 +44,7 @@ public:
 	bool publish( const SIRInputDeviceRegistry &registry ) noexcept;
 	bool recover( const SIRInputDeviceRegistry &registry ) noexcept;
 	bool canPost( uint32_t nCount ) const noexcept;
+	void setTimingMetricsEnabled( bool bEnabled ) noexcept;
 	bool overflowed( void ) const noexcept;
 	bool collecting( void ) const noexcept;
 	uint64_t lastPublishedTick( void ) const noexcept;
@@ -67,6 +68,7 @@ private:
 	bool m_bCollecting;
 	bool m_bOverflowed;
 	bool m_bPublished;
+	bool m_bTimingMetricsEnabled;
 };
 
 #endif // __SIRENGINE_SIRINPUTFRAMESTATE_H__

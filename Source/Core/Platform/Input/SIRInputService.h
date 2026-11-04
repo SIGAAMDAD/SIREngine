@@ -41,6 +41,7 @@ public:
 	bool begin( uint64_t nTick ) noexcept;
 	void sample( void ) noexcept;
 	bool publish( void ) noexcept;
+	void setTimingMetricsEnabled( bool bEnabled ) noexcept;
 	bool recover( void ) noexcept;
 	const sirInputFrame_t *frame( void ) const noexcept;
 	bool connect( const sirInputHardwareKey_t &key, sirInputDeviceId_t *pOut ) noexcept;

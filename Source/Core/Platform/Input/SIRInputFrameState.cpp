@@ -40,7 +40,8 @@ static int32_t saturateInputMovement( int32_t nOld, int32_t nDelta ) noexcept
 
 SIRInputFrameState::SIRInputFrameState( void ) noexcept
     : m_Live{}, m_Frames{}, m_nTick( 0 ), m_nSequence( 0 ), m_nLastTick( 0 ), m_nCount( 0 ), m_nPublishedIndex( 0 ), m_nResync( 0 ),
-      m_nStateDirty{ UINT32_MAX, UINT32_MAX }, m_nTransientMask( 0 ), m_bCollecting( false ), m_bOverflowed( false ), m_bPublished( false )
+      m_nStateDirty{ UINT32_MAX, UINT32_MAX }, m_nTransientMask( 0 ), m_bCollecting( false ), m_bOverflowed( false ), m_bPublished( false ),
+      m_bTimingMetricsEnabled( false )
 {
 }
 
@@ -353,14 +354,17 @@ bool SIRInputFrameState::publish( const SIRInputDeviceRegistry &registry ) noexc
 	frame.nResyncCount = m_nResync;
 	// Cutoff is the instant the owner freezes inputs for this simulation tick.
 	// Receipt time is always from SIRPlatformTime; source clocks may differ.
-	frame.nCutoffNs = SIRPlatformTime::getMonotonicNanoseconds();
+	frame.nCutoffNs = 0;
 	frame.nOldestReceiptAgeNs = 0;
 	frame.nNewestReceiptAgeNs = 0;
-	if ( m_nCount != 0 ) {
-		const uint64_t nOldest = frame.events[0].nReceivedNs;
-		const uint64_t nNewest = frame.events[m_nCount - 1].nReceivedNs;
-		frame.nOldestReceiptAgeNs = frame.nCutoffNs >= nOldest ? frame.nCutoffNs - nOldest : 0;
-		frame.nNewestReceiptAgeNs = frame.nCutoffNs >= nNewest ? frame.nCutoffNs - nNewest : 0;
+	if ( m_bTimingMetricsEnabled ) {
+		frame.nCutoffNs = SIRPlatformTime::getMonotonicNanoseconds();
+		if ( m_nCount != 0 ) {
+			const uint64_t nOldest = frame.events[0].nReceivedNs;
+			const uint64_t nNewest = frame.events[m_nCount - 1].nReceivedNs;
+			frame.nOldestReceiptAgeNs = frame.nCutoffNs >= nOldest ? frame.nCutoffNs - nOldest : 0;
+			frame.nNewestReceiptAgeNs = frame.nCutoffNs >= nNewest ? frame.nCutoffNs - nNewest : 0;
+		}
 	}
 	uint32_t nDirty = m_nStateDirty[nNext];
 	if ( nDirty == UINT32_MAX ) {
@@ -379,6 +383,11 @@ bool SIRInputFrameState::publish( const SIRInputDeviceRegistry &registry ) noexc
 	m_bPublished = true;
 	m_bCollecting = false;
 	return true;
+}
+
+void SIRInputFrameState::setTimingMetricsEnabled( bool bEnabled ) noexcept
+{
+	m_bTimingMetricsEnabled = bEnabled;
 }
 
 bool SIRInputFrameState::canPost( uint32_t nCount ) const noexcept
