@@ -188,6 +188,28 @@ sirEditorWorkspaceResult_t SIREditorSceneWorkspace::finishOpen( size_t nSourceBy
 	documentStorage.nDeltaCapacity = nHistoryDeltas;
 	documentStorage.nFrameCapacity = 2;
 	documentStorage.nIndexCapacity = nIndexCapacity;
+	// Give the authoring workspace typed property storage without creating a
+	// second owner of the authored scene graph or its undo/redo history.
+	if ( m_Properties.nCount > UINT32_MAX / 4 - nNodes ) {
+		rollbackOpen();
+		return SIR_EDITOR_WORKSPACE_OUT_OF_MEMORY;
+	}
+	const uint32_t nPropertySlots = m_Properties.nCount + nNodes;
+	const uint32_t nPropertyDeltaSlots = nPropertySlots * 2;
+	documentStorage.pProperties = sirEditorHostAllocate<sirEditorProperty_t>( m_Arena, nPropertySlots );
+	documentStorage.pPropertyStaging = sirEditorHostAllocate<sirEditorProperty_t>( m_Arena, nPropertySlots );
+	documentStorage.pPendingProperties = sirEditorHostAllocate<sirEditorPropertyMutation_t>( m_Arena, nPropertySlots );
+	documentStorage.pPendingPropertyDeltas = sirEditorHostAllocate<sirEditorPropertyDelta_t>( m_Arena, nPropertyDeltaSlots );
+	documentStorage.pHistoryPropertyDeltas = sirEditorHostAllocate<sirEditorPropertyDelta_t>( m_Arena, nPropertyDeltaSlots );
+	documentStorage.nPropertyCapacity = nPropertySlots;
+	documentStorage.nPendingPropertyCapacity = nPropertySlots;
+	documentStorage.nPropertyDeltaCapacity = nPropertyDeltaSlots;
+	if ( documentStorage.pProperties == nullptr || documentStorage.pPropertyStaging == nullptr ||
+	     documentStorage.pPendingProperties == nullptr || documentStorage.pPendingPropertyDeltas == nullptr ||
+	     documentStorage.pHistoryPropertyDeltas == nullptr ) {
+		rollbackOpen();
+		return SIR_EDITOR_WORKSPACE_OUT_OF_MEMORY;
+	}
 	sirEditorNode_t *pReconcileScratch = sirEditorHostAllocate<sirEditorNode_t>( m_Arena, nNodes );
 	if ( pReconcileScratch == nullptr || m_Document.initialize( documentStorage ) != SIR_EDITOR_OK ) {
 		rollbackOpen();
