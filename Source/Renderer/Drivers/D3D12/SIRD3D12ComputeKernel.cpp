@@ -27,8 +27,8 @@ SIRD3D12ComputeKernel::~SIRD3D12ComputeKernel( void ) noexcept
 	shutdown( false );
 }
 
-bool SIRD3D12ComputeKernel::initialize( ID3D12Device *pDevice, SIRD3D12Memory *pMemory,
-                                          const void *pDxil, size_t nDxilBytes, uint32_t nMaxElements ) noexcept
+bool SIRD3D12ComputeKernel::initialize( ID3D12Device *pDevice, SIRD3D12Memory *pMemory, const void *pDxil, size_t nDxilBytes,
+                                        uint32_t nMaxElements ) noexcept
 {
 	if ( pDevice == nullptr || pMemory == nullptr || !pMemory->isReady() || pDxil == nullptr || nDxilBytes < 16 ||
 	     nDxilBytes > 4 * 1024 * 1024 || nMaxElements == 0 || nMaxElements > ( 1U << 20 ) || m_pPipelineState != nullptr ) {
@@ -94,8 +94,8 @@ bool SIRD3D12ComputeKernel::initialize( ID3D12Device *pDevice, SIRD3D12Memory *p
 	// Allocate one resident UAV/readback pair for the entire shader lifetime.
 	// No D3D12MA or descriptor allocation is allowed in record().
 	const uint64_t nBytes = ( uint64_t )nMaxElements * sizeof( uint32_t );
-	m_nLastError = pMemory->createBuffer( D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, nBytes,
-	                                      &m_pOutput, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS );
+	m_nLastError = pMemory->createBuffer( D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, nBytes, &m_pOutput,
+	                                      D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS );
 	if ( FAILED( m_nLastError ) ) {
 		shutdown( true );
 		return false;
@@ -121,8 +121,7 @@ bool SIRD3D12ComputeKernel::initialize( ID3D12Device *pDevice, SIRD3D12Memory *p
 	uav.Buffer.NumElements = nMaxElements;
 	uav.Buffer.StructureByteStride = sizeof( uint32_t );
 	uav.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
-	pDevice->CreateUnorderedAccessView( m_pOutput->GetResource(), nullptr, &uav,
-	                                    m_pUavHeap->GetCPUDescriptorHandleForHeapStart() );
+	pDevice->CreateUnorderedAccessView( m_pOutput->GetResource(), nullptr, &uav, m_pUavHeap->GetCPUDescriptorHandleForHeapStart() );
 
 	void *pMapped = nullptr;
 	m_nLastError = m_pReadback->GetResource()->Map( 0, nullptr, &pMapped );
@@ -138,8 +137,8 @@ bool SIRD3D12ComputeKernel::initialize( ID3D12Device *pDevice, SIRD3D12Memory *p
 
 bool SIRD3D12ComputeKernel::isReady( void ) const noexcept
 {
-	return m_pRootSignature != nullptr && m_pPipelineState != nullptr && m_pOutput != nullptr &&
-	       m_pReadback != nullptr && m_pReadbackMapped != nullptr && m_pUavHeap != nullptr;
+	return m_pRootSignature != nullptr && m_pPipelineState != nullptr && m_pOutput != nullptr && m_pReadback != nullptr &&
+	       m_pReadbackMapped != nullptr && m_pUavHeap != nullptr;
 }
 
 bool SIRD3D12ComputeKernel::hasPending( void ) const noexcept
@@ -159,11 +158,9 @@ void SIRD3D12ComputeKernel::clearPending( void ) noexcept
 	m_nElementCount = 0;
 }
 
-bool SIRD3D12ComputeKernel::record( ID3D12GraphicsCommandList *pCommands, uint32_t nElements,
-                                    uint32_t nSeed ) noexcept
+bool SIRD3D12ComputeKernel::record( ID3D12GraphicsCommandList *pCommands, uint32_t nElements, uint32_t nSeed ) noexcept
 {
-	if ( !isReady() || hasPending() || pCommands == nullptr || nElements == 0 ||
-	     nElements > m_nResidentElementCapacity ) {
+	if ( !isReady() || hasPending() || pCommands == nullptr || nElements == 0 || nElements > m_nResidentElementCapacity ) {
 		m_nLastError = E_INVALIDARG;
 		return false;
 	}
@@ -184,8 +181,7 @@ bool SIRD3D12ComputeKernel::record( ID3D12GraphicsCommandList *pCommands, uint32
 	barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
 	barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_SOURCE;
 	pCommands->ResourceBarrier( 1, &barrier );
-	pCommands->CopyBufferRegion( m_pReadback->GetResource(), 0, m_pOutput->GetResource(), 0,
-	                             ( uint64_t )nElements * sizeof( uint32_t ) );
+	pCommands->CopyBufferRegion( m_pReadback->GetResource(), 0, m_pOutput->GetResource(), 0, ( uint64_t )nElements * sizeof( uint32_t ) );
 	// Resident UAV returns to its canonical state for the next dispatch.
 	barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_SOURCE;
 	barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;

@@ -13,6 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
+
+
 #include <Renderer/Drivers/D3D12/SIRD3D12Device.h>
 
 #include <string.h>
@@ -262,8 +264,8 @@ bool SIRD3D12ComputeQueue::submitMarkerAfterFence( ID3D12Fence *pDependencyFence
 	return true;
 }
 
-bool SIRD3D12ComputeQueue::initializeKernel( ID3D12Device *pDevice, SIRD3D12Memory *pMemory,
-                                               const void *pDxil, size_t nDxilBytes, uint32_t nMaxElements ) noexcept
+bool SIRD3D12ComputeQueue::initializeKernel( ID3D12Device *pDevice, SIRD3D12Memory *pMemory, const void *pDxil, size_t nDxilBytes,
+                                             uint32_t nMaxElements ) noexcept
 {
 	if ( !isReady() ) {
 		m_nLastError = E_FAIL;
@@ -745,8 +747,7 @@ bool SIRD3D12Device::pollCompletionSet( const sirD3D12CompletionSet_t &set, bool
 	return true;
 }
 
-bool SIRD3D12Device::initializeComputeKernel( const void *pDxil, size_t nDxilBytes,
-                                             uint32_t nMaxElements ) noexcept
+bool SIRD3D12Device::initializeComputeKernel( const void *pDxil, size_t nDxilBytes, uint32_t nMaxElements ) noexcept
 {
 	if ( !isReady() ) {
 		m_nLastError = E_FAIL;

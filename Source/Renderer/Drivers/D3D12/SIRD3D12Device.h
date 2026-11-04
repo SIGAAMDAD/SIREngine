@@ -98,7 +98,7 @@ public:
 	bool isReady( void ) const noexcept;
 	bool submitMarker( uint64_t *pFenceValue ) noexcept;
 	bool initializeKernel( ID3D12Device *pDevice, SIRD3D12Memory *pMemory, const void *pDxil, size_t nDxilBytes,
-	                      uint32_t nMaxElements ) noexcept;
+	                       uint32_t nMaxElements ) noexcept;
 	bool dispatchKernel( uint32_t nElements, uint32_t nSeed, uint64_t *pFenceValue ) noexcept;
 	bool readKernel( uint64_t nFence, uint32_t *pOutput, uint32_t nCapacity ) noexcept;
 	bool submitMarkerAfterFence( ID3D12Fence *pDependencyFence, uint64_t nDependencyFence, uint64_t *pFenceValue ) noexcept;

@@ -53,8 +53,7 @@ public:
 	SIRD3D12ComputeKernel( const SIRD3D12ComputeKernel & ) = delete;
 	SIRD3D12ComputeKernel &operator=( const SIRD3D12ComputeKernel & ) = delete;
 
-	bool initialize( ID3D12Device *pDevice, SIRD3D12Memory *pMemory,
-	                 const void *pDxil, size_t nDxilBytes, uint32_t nMaxElements ) noexcept;
+	bool initialize( ID3D12Device *pDevice, SIRD3D12Memory *pMemory, const void *pDxil, size_t nDxilBytes, uint32_t nMaxElements ) noexcept;
 	bool isReady( void ) const noexcept;
 	bool hasPending( void ) const noexcept;
 	uint32_t getResidentElementCapacity( void ) const noexcept;
