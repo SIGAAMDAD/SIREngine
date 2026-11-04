@@ -214,7 +214,7 @@ sirGraphicsABIResult_t sirGraphicsValidateABICapabilities( const sirGraphicsABIC
 sirGraphicsABIResult_t sirGraphicsValidateABIFormat( const sirGraphicsABIFormat_t *pFormat ) noexcept;
 sirGraphicsABIResult_t sirGraphicsValidateABIPipelineModelCaps( const sirGraphicsABIPipelineModelCaps_t *pCaps ) noexcept;
 sirGraphicsABIResult_t sirGraphicsValidateABIPipeline( const sirGraphicsABIPipeline_t *pPipeline,
-                                                      const sirGraphicsABIPipelineModelCaps_t *pCaps ) noexcept;
+                                                       const sirGraphicsABIPipelineModelCaps_t *pCaps ) noexcept;
 sirGraphicsABIResult_t sirGraphicsValidateABIDevice( const sirGraphicsABIDevice_t *pDevice ) noexcept;
 sirGraphicsABIResult_t sirGraphicsValidateABICommandList( const sirGraphicsABICommandList_t *pCommands ) noexcept;
 sirGraphicsABIResult_t sirGraphicsSelectABIProfile( const sirGraphicsABICapabilities_t *pInfo, uint32_t *pProfile ) noexcept;

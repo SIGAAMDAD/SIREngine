@@ -162,7 +162,7 @@ sirGraphicsABIResult_t sirGraphicsQueryABIFormat( const sirGraphicsABIDevice_t *
 }
 
 sirGraphicsABIResult_t sirGraphicsQueryABIPipelineModelCaps( const sirGraphicsABIDevice_t *pDevice, uint32_t nModel,
-                                                                       sirGraphicsABIPipelineModelCaps_t *pCaps ) noexcept
+                                                             sirGraphicsABIPipelineModelCaps_t *pCaps ) noexcept
 {
 	if ( pCaps == nullptr || pCaps->nSize < sizeof( sirGraphicsABIPipelineModelCaps_t ) ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
@@ -209,10 +209,8 @@ sirGraphicsABIResult_t sirGraphicsQueryABIPipelineModelCaps( const sirGraphicsAB
 	if ( ( caps.nQueueMask & ~deviceCaps.nEnabledQueues ) != 0 ) {
 		return SIR_GRAPHICS_DRIVER_ERROR;
 	}
-	if ( caps.nMaximumSamples > deviceCaps.nMaximumSamples ||
-	     caps.nMaximumColorAttachments > deviceCaps.nMaximumColorAttachments ||
-	     caps.nMaximumTextureDimension > deviceCaps.nMaximumTextureDimension ||
-	     caps.nMaximumBindings > deviceCaps.nMaximumBindings ) {
+	if ( caps.nMaximumSamples > deviceCaps.nMaximumSamples || caps.nMaximumColorAttachments > deviceCaps.nMaximumColorAttachments ||
+	     caps.nMaximumTextureDimension > deviceCaps.nMaximumTextureDimension || caps.nMaximumBindings > deviceCaps.nMaximumBindings ) {
 		return SIR_GRAPHICS_DRIVER_ERROR;
 	}
 	memcpy( pCaps, &caps, sizeof( caps ) );
@@ -237,8 +235,7 @@ sirGraphicsABIResult_t sirGraphicsCreateABIPipeline( const sirGraphicsABIDevice_
 	}
 
 	sirGraphicsHandle_t hPipeline = {};
-	const sirGraphicsABIResult_t eCreate =
-	    sirGraphicsResultFromProvider( pDevice->pCreatePipeline( pDevice->pDevice, pDesc, &hPipeline ) );
+	const sirGraphicsABIResult_t eCreate = sirGraphicsResultFromProvider( pDevice->pCreatePipeline( pDevice->pDevice, pDesc, &hPipeline ) );
 	if ( eCreate != SIR_GRAPHICS_SUCCESS ) {
 		return eCreate;
 	}

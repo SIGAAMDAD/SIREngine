@@ -125,10 +125,10 @@ static uint32_t mockQueryPipelineModelCaps( void *, uint32_t nModel, sirGraphics
 		pCaps->nRequiredFeatureMask = SIR_GRAPHICS_FEATURE_GRAPHICS | SIR_GRAPHICS_FEATURE_FIXED_FUNCTION;
 		pCaps->nMaximumTextureStages = 4;
 		pCaps->nMaximumFixedLights = 4;
-		pCaps->nFixedFeatureMask = SIR_GRAPHICS_FIXED_TRANSFORM | SIR_GRAPHICS_FIXED_LIGHTING |
-		                          SIR_GRAPHICS_FIXED_FOG | SIR_GRAPHICS_FIXED_ALPHA_TEST | SIR_GRAPHICS_FIXED_CPU_TRANSFORM;
-		pCaps->nFixedTextureOperationMask = ( 1U << SIR_GRAPHICS_FIXED_OP_DISABLE ) |
-		                                    ( 1U << SIR_GRAPHICS_FIXED_OP_SELECT ) | ( 1U << SIR_GRAPHICS_FIXED_OP_MODULATE );
+		pCaps->nFixedFeatureMask = SIR_GRAPHICS_FIXED_TRANSFORM | SIR_GRAPHICS_FIXED_LIGHTING | SIR_GRAPHICS_FIXED_FOG |
+		                           SIR_GRAPHICS_FIXED_ALPHA_TEST | SIR_GRAPHICS_FIXED_CPU_TRANSFORM;
+		pCaps->nFixedTextureOperationMask =
+		    ( 1U << SIR_GRAPHICS_FIXED_OP_DISABLE ) | ( 1U << SIR_GRAPHICS_FIXED_OP_SELECT ) | ( 1U << SIR_GRAPHICS_FIXED_OP_MODULATE );
 		pCaps->nFixedFogModeMask = ( 1U << SIR_GRAPHICS_FIXED_FOG_NONE ) | ( 1U << SIR_GRAPHICS_FIXED_FOG_LINEAR );
 		return SIR_GRAPHICS_SUCCESS;
 	}

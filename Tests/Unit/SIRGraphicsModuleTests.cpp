@@ -183,13 +183,12 @@ static bool testBinaryModule( void ) noexcept
 	pipeline.computeShader = { sizeof( sirGraphicsABIShaderCode_t ), SIR_GRAPHICS_SHADER_SPIRV, &nShaderCode, 4, 1, "main" };
 	pipeline.pModern = &modern;
 	sirGraphicsHandle_t hPipeline = {};
-	if ( sirGraphicsCreateABIPipeline( &device, &pipeline, &hPipeline ) != SIR_GRAPHICS_SUCCESS ||
-	     hPipeline.nDeviceGeneration != 5 || hPipeline.eType != SIR_GRAPHICS_HANDLE_PIPELINE ) {
+	if ( sirGraphicsCreateABIPipeline( &device, &pipeline, &hPipeline ) != SIR_GRAPHICS_SUCCESS || hPipeline.nDeviceGeneration != 5 ||
+	     hPipeline.eType != SIR_GRAPHICS_HANDLE_PIPELINE ) {
 		return false;
 	}
 	pipeline.pModern = nullptr;
-	if ( sirGraphicsCreateABIPipeline( &device, &pipeline, &hPipeline ) != SIR_GRAPHICS_INVALID_ARGUMENT ||
-	     hPipeline.nGeneration != 1 ) {
+	if ( sirGraphicsCreateABIPipeline( &device, &pipeline, &hPipeline ) != SIR_GRAPHICS_INVALID_ARGUMENT || hPipeline.nGeneration != 1 ) {
 		return false;
 	}
 	pipeline.pModern = &modern;
@@ -205,8 +204,7 @@ static bool testBinaryModule( void ) noexcept
 	}
 	pMode( 11 );
 	modelCaps.nDeviceGeneration = 77;
-	if ( sirGraphicsQueryABIPipelineModelCaps( &device, SIR_GRAPHICS_PIPELINE_MODEL_MODERN, &modelCaps ) !=
-	         SIR_GRAPHICS_DRIVER_ERROR ||
+	if ( sirGraphicsQueryABIPipelineModelCaps( &device, SIR_GRAPHICS_PIPELINE_MODEL_MODERN, &modelCaps ) != SIR_GRAPHICS_DRIVER_ERROR ||
 	     modelCaps.nDeviceGeneration != 77 ) {
 		return false;
 	}
