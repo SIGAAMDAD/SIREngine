@@ -49,6 +49,8 @@ int main( void )
 	assert( sirEditorDecodeScalar( "TRUE", 4, SIR_PROPERTY_BOOL, &value ) == SIR_EDITOR_SCALAR_INVALID_TEXT );
 	assert( sirEditorDecodeScalar( "true ", 5, SIR_PROPERTY_BOOL, &value ) == SIR_EDITOR_SCALAR_INVALID_TEXT );
 	assert( sirEditorDecodeScalar( "8x", 2, SIR_PROPERTY_INT64, &value ) == SIR_EDITOR_SCALAR_INVALID_TEXT );
+	assert( sirEditorDecodeScalar( "+-1", 3, SIR_PROPERTY_INT64, &value ) == SIR_EDITOR_SCALAR_INVALID_TEXT );
+	assert( sirEditorDecodeScalar( "+-1.5", 5, SIR_PROPERTY_REAL64, &value ) == SIR_EDITOR_SCALAR_INVALID_TEXT );
 	assert( sirEditorDecodeScalar( "-1", 2, SIR_PROPERTY_UINT64, &value ) == SIR_EDITOR_SCALAR_INVALID_TEXT );
 	assert( sirEditorDecodeScalar( "18446744073709551616", 20, SIR_PROPERTY_UINT64, &value ) == SIR_EDITOR_SCALAR_INVALID_TEXT );
 	assert( sirEditorDecodeScalar( "1e999", 5, SIR_PROPERTY_REAL64, &value ) == SIR_EDITOR_SCALAR_INVALID_TEXT );
