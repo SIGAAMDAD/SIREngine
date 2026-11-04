@@ -115,6 +115,13 @@ static bool testFramedTransport( const char *pszExecutable ) noexcept
 	SIR_TEST_CHECK( SIRScriptOptimizationProtocol::encodeRequest( fixtureRequest( 13 ), szWire ) == SIR_SCRIPT_OK );
 	SIR_TEST_CHECK( transport.send( szWire, sizeof( szWire ) ) == SIR_SCRIPT_OK );
 	SIR_TEST_CHECK( waitReply( &transport, 13 ) );
+
+	// Force CR, LF and Ctrl-Z in both request and reply IDs. Windows CRT
+	// text-mode pipes otherwise rewrite or truncate these wire messages.
+	constexpr uint64_t BINARY_CONTROL_JOB_ID = UINT64_C( 0x1A0A0D0A );
+	SIR_TEST_CHECK( SIRScriptOptimizationProtocol::encodeRequest( fixtureRequest( BINARY_CONTROL_JOB_ID ), szWire ) == SIR_SCRIPT_OK );
+	SIR_TEST_CHECK( transport.send( szWire, sizeof( szWire ) ) == SIR_SCRIPT_OK );
+	SIR_TEST_CHECK( waitReply( &transport, BINARY_CONTROL_JOB_ID ) );
 	transport.stop();
 	return true;
 }

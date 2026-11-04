@@ -19,6 +19,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <stdio.h>
 #include <string.h>
 #include <thread>
+#if defined( _WIN32 )
+#include <fcntl.h>
+#include <io.h>
+#endif
 
 static bool fixtureReadExact( uint8_t *pData, uint32_t nBytes ) noexcept
 {
@@ -38,6 +42,13 @@ int main( int nArguments, char **pszArguments )
 	if ( nArguments < 2 ) {
 		return 2;
 	}
+#if defined( _WIN32 )
+	// Protocol frames contain arbitrary binary bytes. Win32 text streams
+	// translate CR/LF and treat Ctrl-Z as EOF, corrupting framed messages.
+	if ( _setmode( _fileno( stdin ), _O_BINARY ) == -1 || _setmode( _fileno( stdout ), _O_BINARY ) == -1 ) {
+		return 8;
+	}
+#endif
 	setvbuf( stdout, nullptr, _IONBF, 0 );
 	if ( strcmp( pszArguments[1], "exit" ) == 0 ) {
 		return 0;
