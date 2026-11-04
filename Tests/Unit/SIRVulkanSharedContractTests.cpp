@@ -53,6 +53,18 @@ int main( void )
 	     driver.destroyDevice( &inert ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
 		return 4;
 	}
+	create.bHeadless = true;
+	create.nRequiredFeatures = SIR_GRAPHICS_FEATURE_GRAPHICS;
+	pDevice = reinterpret_cast<SIRRenderingDevice *>( &inert );
+	if ( driver.createDevice( create, &pDevice ) != SIR_GRAPHICS_UNSUPPORTED || pDevice != nullptr ) {
+		return 6;
+	}
+	create.nRequiredFeatures = 0;
+	create.nFramesInFlight = SIR_VULKAN_TRANSFER_SLOT_COUNT + 1;
+	pDevice = reinterpret_cast<SIRRenderingDevice *>( &inert );
+	if ( driver.createDevice( create, &pDevice ) != SIR_GRAPHICS_INVALID_ARGUMENT || pDevice != nullptr ) {
+		return 7;
+	}
 	if ( registry.unregisterDriver( SIR_GRAPHICS_BACKEND_VULKAN ) != SIR_GRAPHICS_SUCCESS || registry.getCount() != 0 ) {
 		return 5;
 	}

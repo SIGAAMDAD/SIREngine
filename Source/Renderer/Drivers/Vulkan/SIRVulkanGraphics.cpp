@@ -60,9 +60,10 @@ void SIRVulkanCommandList::prepare( SIRVulkanRenderingDevice *pOwner ) noexcept
 
 sirGraphicsResult_t SIRVulkanCommandList::reset( void ) noexcept
 {
-	if ( m_eState != SIR_VULKAN_COMMAND_RECORDING ) {
+	if ( m_eState != SIR_VULKAN_COMMAND_RECORDING && m_eState != SIR_VULKAN_COMMAND_CLOSED ) {
 		return SIR_GRAPHICS_BUSY;
 	}
+	m_eState = SIR_VULKAN_COMMAND_RECORDING;
 	m_bHasCopy = false;
 	m_hSource = {};
 	m_hDestination = {};
@@ -106,10 +107,11 @@ sirGraphicsResult_t SIRVulkanCommandList::copyBuffer( sirGraphicsHandle_t hDesti
 
 sirGraphicsResult_t SIRVulkanCommandList::close( void ) noexcept
 {
-	if ( m_eState != SIR_VULKAN_COMMAND_RECORDING || !m_bHasCopy ) {
+	if ( m_eState != SIR_VULKAN_COMMAND_RECORDING ) {
 		return SIR_GRAPHICS_BUSY;
 	}
-	m_eState = SIR_VULKAN_COMMAND_CLOSED;
+	// Closing an empty list cancels the borrow instead of exhausting the pool.
+	m_eState = m_bHasCopy ? SIR_VULKAN_COMMAND_CLOSED : SIR_VULKAN_COMMAND_FREE;
 	return SIR_GRAPHICS_SUCCESS;
 }
 
@@ -204,7 +206,8 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::queryCapabilities( sirGraphicsCapa
 	pCapabilities->eBackend = SIR_GRAPHICS_BACKEND_VULKAN;
 	pCapabilities->nApiVersion = { VK_API_VERSION_MAJOR( adapter.nApiVersion ), VK_API_VERSION_MINOR( adapter.nApiVersion ),
 	                               VK_API_VERSION_PATCH( adapter.nApiVersion ) };
-	pCapabilities->nFeatureMask = SIR_GRAPHICS_FEATURE_GRAPHICS;
+	// Transfer is implemented; graphics drawing and compute remain unavailable.
+	pCapabilities->nFeatureMask = 0;
 	pCapabilities->nQueueMask = 1U << SIR_GRAPHICS_QUEUE_DIRECT;
 	pCapabilities->nMaximumFramesInFlight = SIR_VULKAN_TRANSFER_SLOT_COUNT;
 	pCapabilities->nDeviceGeneration = m_nDeviceGeneration;
@@ -528,6 +531,20 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::shutdown( void ) noexcept
 			return SIR_GRAPHICS_BUSY;
 		}
 	}
+	for ( uint32_t iSlot = 0; iSlot < SIR_VULKAN_TRANSFER_SLOT_COUNT; ++iSlot ) {
+		SIRVulkanCommandList *pList = &m_szCommands[iSlot];
+		if ( pList->m_eState == SIR_VULKAN_COMMAND_RECORDING || pList->m_eState == SIR_VULKAN_COMMAND_CLOSED ) {
+			return SIR_GRAPHICS_BUSY;
+		}
+		if ( pList->m_eState == SIR_VULKAN_COMMAND_SUBMITTED ) {
+			const sirVulkanCompletion_t completion = { m_nNativeSerial, pList->m_nLastCompletion };
+			bool bCompleted = false;
+			if ( m_Native.queryCompletion( &completion, &bCompleted ) != SIR_VULKAN_SUCCESS || !bCompleted ) {
+				return SIR_GRAPHICS_BUSY;
+			}
+			pList->m_eState = SIR_VULKAN_COMMAND_FREE;
+		}
+	}
 	if ( !m_Native.shutdown() ) {
 		return SIR_GRAPHICS_DRIVER_ERROR;
 	}
@@ -573,7 +590,7 @@ sirGraphicsResult_t SIRVulkanDriver::queryAdapter( uint32_t nAdapterIndex, sirGr
 	pInfo->nVendorId = native.nVendorId;
 	pInfo->nDeviceId = native.nDeviceId;
 	pInfo->nDedicatedVideoBytes = native.nDeviceLocalHeapBytes;
-	pInfo->nFeatureMask = SIR_GRAPHICS_FEATURE_GRAPHICS;
+	pInfo->nFeatureMask = 0;
 	pInfo->nApiVersion = { VK_API_VERSION_MAJOR( native.nApiVersion ), VK_API_VERSION_MINOR( native.nApiVersion ),
 	                       VK_API_VERSION_PATCH( native.nApiVersion ) };
 	memcpy( pInfo->szName, native.szDeviceName, sizeof( pInfo->szName ) );
@@ -586,9 +603,11 @@ sirGraphicsResult_t SIRVulkanDriver::createDevice( const sirGraphicsDeviceCreate
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	*ppDevice = nullptr;
-	if ( desc.nAdapterIndex != 0 || desc.nFramesInFlight == 0 ||
-	     ( desc.nRequiredFeatures & ~uint64_t( SIR_GRAPHICS_FEATURE_GRAPHICS ) ) != 0 ) {
+	if ( desc.nAdapterIndex != 0 || desc.nFramesInFlight == 0 || desc.nFramesInFlight > SIR_VULKAN_TRANSFER_SLOT_COUNT ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	if ( desc.nRequiredFeatures != 0 ) {
+		return SIR_GRAPHICS_UNSUPPORTED;
 	}
 	// Device-budget sealing, custom residency and presentation are separate
 	// native work packages. They must not silently succeed in this slice.
