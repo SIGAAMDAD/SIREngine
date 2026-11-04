@@ -359,7 +359,6 @@ static void sirTestInjectedPositionalTransfers( void )
 	SIR_CHECK( file.close() == SIR_FILE_IO_ERROR && !file.isOpen() );
 	SIR_CHECK( SIRPlatformFile::renameReplace( "SIRFileMissingRenameSource.bin", "SIRFileMissingRenameDest.bin" ) == SIR_FILE_NOT_FOUND );
 
-
 	SIR_CHECK( SIRPlatformFile::remove( pszPath ) == SIR_FILE_OK );
 }
 
