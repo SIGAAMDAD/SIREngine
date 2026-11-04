@@ -58,6 +58,8 @@ typedef struct sirFMODBankNativeOps_s
 	                            uint8_t *pbFound ) noexcept;
 	int32_t ( *containsObject )( void *pUserData, void *pStudio, void *pBank, sirFMODBankObjectKind_t eKind, const char *szPath,
 	                             const sirContainerAllocator_t *pAllocator, uint8_t *pbFound ) noexcept;
+	int32_t ( *loadFileAsync )( void *pUserData, void *pStudio, const char *szPath, void **ppBank ) noexcept;
+	int32_t ( *getLoadState )( void *pUserData, void *pBank, sirFMODSampleState_t *pState ) noexcept;
 } sirFMODBankNativeOps_t;
 
 typedef struct sirFMODBankSlot_s
@@ -109,6 +111,8 @@ public:
 	sirAudioResult_t initialize( SIRFMODContext *pContext, SIRFMODVoiceBackend *pVoices, const sirContainerAllocator_t *pAllocator,
 	                             const sirFMODBankNativeOps_t &ops, uint32_t nMaxBanks, uint32_t nMaxEventBindings ) noexcept;
 	sirAudioResult_t loadBank( uint64_t nPackageId, const char *szBankPath ) noexcept;
+	sirAudioResult_t beginLoadBank( uint64_t nPackageId, const char *szBankPath ) noexcept;
+	sirAudioResult_t pollBankLoad( uint64_t nPackageId ) noexcept;
 	sirAudioResult_t bindEvent( uint64_t nPackageId, uint64_t nEventId, const char *szEventPath ) noexcept;
 	sirAudioResult_t unbindEvent( uint64_t nPackageId, uint64_t nEventId ) noexcept;
 	sirAudioResult_t preloadSamples( uint64_t nPackageId ) noexcept;

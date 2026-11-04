@@ -34,7 +34,8 @@ typedef enum sirAudioResult_e : uint8_t
 	SIR_AUDIO_BACKEND_ERROR = 5,
 	SIR_AUDIO_INVALID_ARGUMENT = 6,
 	SIR_AUDIO_NOT_INITIALIZED = 7,
-	SIR_AUDIO_BUSY = 8
+	SIR_AUDIO_BUSY = 8,
+	SIR_AUDIO_CANCELLED = 9
 } sirAudioResult_t;
 
 typedef enum sirAudioPlaybackState_e : uint8_t

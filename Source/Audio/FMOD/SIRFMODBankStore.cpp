@@ -72,8 +72,8 @@ sirAudioResult_t SIRFMODBankStore::initialize( SIRFMODContext *pContext, SIRFMOD
 {
 	if ( m_bInitialized || m_pBanks != nullptr || pContext == nullptr || !pContext->isReady() || pVoices == nullptr ||
 	     !pVoices->isInitialized() || !SIRRawStorage::isValidAllocator( pAllocator ) || nMaxBanks == 0 || nMaxEventBindings == 0 ||
-	     ops.nAbiVersion != 2 || ops.loadFile == nullptr || ops.unload == nullptr || ops.preloadSamples == nullptr ||
-	     ops.sampleState == nullptr || ops.containsEvent == nullptr || ops.containsObject == nullptr ) {
+	     ops.nAbiVersion != 3 || ops.loadFile == nullptr || ops.unload == nullptr || ops.preloadSamples == nullptr ||
+	     ops.sampleState == nullptr || ops.containsEvent == nullptr || ops.containsObject == nullptr || ops.loadFileAsync == nullptr || ops.getLoadState == nullptr ) {
 		return SIR_AUDIO_INVALID_ARGUMENT;
 	}
 
@@ -141,6 +141,63 @@ sirAudioResult_t SIRFMODBankStore::loadBank( uint64_t nPackageId, const char *sz
 	return SIR_AUDIO_OK;
 }
 
+sirAudioResult_t SIRFMODBankStore::beginLoadBank( uint64_t nPackageId, const char *szBankPath ) noexcept
+{
+	if ( !isReady() ) {
+		return SIR_AUDIO_NOT_INITIALIZED;
+	}
+	if ( nPackageId == 0 || szBankPath == nullptr || szBankPath[0] == '\0' ) {
+		return SIR_AUDIO_INVALID_ARGUMENT;
+	}
+	uint32_t iBank = 0;
+	if ( findBank( nPackageId, iBank ) ) {
+		return SIR_AUDIO_INVALID_ARGUMENT;
+	}
+	if ( m_nBankCount == m_nBankCapacity ) {
+		return SIR_AUDIO_CAPACITY;
+	}
+	void *pBank = nullptr;
+	m_nLastNativeResult = m_Ops.loadFileAsync( m_Ops.pUserData, m_pContext->m_pStudio, szBankPath, &pBank );
+	if ( m_nLastNativeResult != 0 || pBank == nullptr ) {
+		if ( pBank != nullptr ) {
+			m_pBanks[m_nBankCount++] = { nPackageId, pBank, 0, 0, 0, {} };
+		}
+		return SIR_AUDIO_BACKEND_ERROR;
+	}
+	// bUsable==2 is pending metadata. Descriptions cannot resolve yet.
+	m_pBanks[m_nBankCount++] = { nPackageId, pBank, 0, 0, 2, {} };
+	return SIR_AUDIO_PENDING;
+}
+
+sirAudioResult_t SIRFMODBankStore::pollBankLoad( uint64_t nPackageId ) noexcept
+{
+	if ( !isReady() ) {
+		return SIR_AUDIO_NOT_INITIALIZED;
+	}
+	uint32_t iBank = 0;
+	if ( !findBank( nPackageId, iBank ) ) {
+		return SIR_AUDIO_INVALID_HANDLE;
+	}
+	sirFMODBankSlot_t &bank = m_pBanks[iBank];
+	if ( bank.bUsable == 1 ) {
+		return SIR_AUDIO_OK;
+	}
+	if ( bank.bUsable != 2 ) {
+		return SIR_AUDIO_BACKEND_ERROR;
+	}
+	sirFMODSampleState_t eState = SIR_FMOD_SAMPLE_UNLOADED;
+	m_nLastNativeResult = m_Ops.getLoadState( m_Ops.pUserData, bank.pBank, &eState );
+	if ( m_nLastNativeResult != 0 || eState == SIR_FMOD_SAMPLE_ERROR || eState == SIR_FMOD_SAMPLE_UNLOADED ) {
+		bank.bUsable = 0;
+		return SIR_AUDIO_BACKEND_ERROR;
+	}
+	if ( eState == SIR_FMOD_SAMPLE_LOADING ) {
+		return SIR_AUDIO_PENDING;
+	}
+	bank.bUsable = 1;
+	return SIR_AUDIO_OK;
+}
+
 sirAudioResult_t SIRFMODBankStore::bindEvent( uint64_t nPackageId, uint64_t nEventId, const char *szEventPath ) noexcept
 {
 	if ( !isReady() ) {
@@ -150,7 +207,7 @@ sirAudioResult_t SIRFMODBankStore::bindEvent( uint64_t nPackageId, uint64_t nEve
 		return SIR_AUDIO_INVALID_ARGUMENT;
 	}
 	uint32_t iBank = 0;
-	if ( !findBank( nPackageId, iBank ) || m_pBanks[iBank].bUsable == 0 ) {
+	if ( !findBank( nPackageId, iBank ) || m_pBanks[iBank].bUsable != 1 ) {
 		return SIR_AUDIO_INVALID_ARGUMENT;
 	}
 	if ( m_nEventCount == m_nEventCapacity ) {
@@ -210,7 +267,7 @@ sirAudioResult_t SIRFMODBankStore::preloadSamples( uint64_t nPackageId ) noexcep
 		return SIR_AUDIO_NOT_INITIALIZED;
 	}
 	uint32_t iBank = 0;
-	if ( !findBank( nPackageId, iBank ) || m_pBanks[iBank].bUsable == 0 ) {
+	if ( !findBank( nPackageId, iBank ) || m_pBanks[iBank].bUsable != 1 ) {
 		return SIR_AUDIO_INVALID_ARGUMENT;
 	}
 	if ( m_pBanks[iBank].bPreloadRequested != 0 ) {
@@ -230,7 +287,7 @@ sirAudioResult_t SIRFMODBankStore::getSampleState( uint64_t nPackageId, sirFMODS
 		return SIR_AUDIO_NOT_INITIALIZED;
 	}
 	uint32_t iBank = 0;
-	if ( !findBank( nPackageId, iBank ) || m_pBanks[iBank].bUsable == 0 ) {
+	if ( !findBank( nPackageId, iBank ) || m_pBanks[iBank].bUsable != 1 ) {
 		return SIR_AUDIO_INVALID_ARGUMENT;
 	}
 	if ( m_pBanks[iBank].bPreloadRequested == 0 ) {
@@ -336,7 +393,7 @@ sirAudioResult_t SIRFMODBankStore::containsBankObject( uint64_t nPackageId, sirF
 		return SIR_AUDIO_INVALID_ARGUMENT;
 	}
 	uint32_t iBank = 0;
-	if ( !findBank( nPackageId, iBank ) || m_pBanks[iBank].bUsable == 0 ) {
+	if ( !findBank( nPackageId, iBank ) || m_pBanks[iBank].bUsable != 1 ) {
 		return SIR_AUDIO_INVALID_HANDLE;
 	}
 	uint8_t bFound = 0;
@@ -354,7 +411,7 @@ sirAudioResult_t SIRFMODBankStore::pinBankObject( uint64_t nPackageId ) noexcept
 		return SIR_AUDIO_NOT_INITIALIZED;
 	}
 	uint32_t iBank = 0;
-	if ( !findBank( nPackageId, iBank ) || m_pBanks[iBank].bUsable == 0 ) {
+	if ( !findBank( nPackageId, iBank ) || m_pBanks[iBank].bUsable != 1 ) {
 		return SIR_AUDIO_INVALID_HANDLE;
 	}
 	if ( m_pBanks[iBank].nBorrowedObjects == UINT32_MAX ) {
@@ -382,7 +439,7 @@ uint32_t SIRFMODBankStore::getBankObjectPinCount( uint64_t nPackageId ) const no
 bool SIRFMODBankStore::hasLoadedBank( uint64_t nPackageId ) const noexcept
 {
 	uint32_t iBank = 0;
-	return isReady() && findBank( nPackageId, iBank ) && m_pBanks[iBank].bUsable != 0;
+	return isReady() && findBank( nPackageId, iBank ) && m_pBanks[iBank].bUsable == 1;
 }
 
 uint32_t SIRFMODBankStore::getLoadedBankCount( void ) const noexcept

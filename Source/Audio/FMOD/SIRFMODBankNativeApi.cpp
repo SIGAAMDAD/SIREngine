@@ -182,14 +182,44 @@ static int32_t fmodCheckBankObject( void *, void *pStudio, void *pBank, sirFMODB
 	return ( int32_t )eResult;
 }
 
+static int32_t fmodLoadBankFileAsync( void *, void *pStudio, const char *szPath, void **ppBank ) noexcept
+{
+	FMOD::Studio::Bank *pBank = nullptr;
+	const FMOD_RESULT eResult =
+	    ( ( FMOD::Studio::System * )pStudio )->loadBankFile( szPath, FMOD_STUDIO_LOAD_BANK_NONBLOCKING, &pBank );
+	*ppBank = pBank;
+	return ( int32_t )eResult;
+}
+
+static int32_t fmodGetBankLoadingState( void *, void *pBank, sirFMODSampleState_t *pState ) noexcept
+{
+	FMOD_STUDIO_LOADING_STATE eNativeState = FMOD_STUDIO_LOADING_STATE_UNLOADED;
+	const FMOD_RESULT eResult = ( ( FMOD::Studio::Bank * )pBank )->getLoadingState( &eNativeState );
+	if ( eResult != FMOD_OK ) {
+		return ( int32_t )eResult;
+	}
+	if ( eNativeState == FMOD_STUDIO_LOADING_STATE_LOADED ) {
+		*pState = SIR_FMOD_SAMPLE_READY;
+	} else if ( eNativeState == FMOD_STUDIO_LOADING_STATE_LOADING ) {
+		*pState = SIR_FMOD_SAMPLE_LOADING;
+	} else if ( eNativeState == FMOD_STUDIO_LOADING_STATE_ERROR ) {
+		*pState = SIR_FMOD_SAMPLE_ERROR;
+	} else {
+		*pState = SIR_FMOD_SAMPLE_UNLOADED;
+	}
+	return ( int32_t )FMOD_OK;
+}
+
 sirFMODBankNativeOps_t sirGetFMODBankNativeOps( void ) noexcept
 {
-	return { 2,
+	return { 3,
 	         nullptr,
 	         fmodLoadBankFile,
 	         fmodUnloadBank,
 	         fmodPreloadBankSamples,
 	         fmodGetBankSampleState,
 	         fmodCheckBankEvent,
-	         fmodCheckBankObject };
+	         fmodCheckBankObject,
+	         fmodLoadBankFileAsync,
+	         fmodGetBankLoadingState };
 }
