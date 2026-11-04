@@ -1,5 +1,7 @@
 /*
+
 ===========================================================================
+
 SIREngine MPLv2 Source Code
 Copyright (C) 2023-2027 Noah Van Til
 
@@ -183,7 +185,8 @@ static int32_t testVoiceRelease( void *pData, void *pInstance ) noexcept
 static sirFMODVoiceNativeOps_t makeVoiceOps( sirFMODBankFixture_t *pFixture ) noexcept
 {
 	return { 4,       pFixture, testVoiceResolve, testVoiceCreate, testVoiceStart, testVoiceStop, testVoiceStopped, testVoiceRelease,
-	         nullptr, nullptr,  nullptr,          nullptr,         nullptr,        nullptr, nullptr, nullptr, nullptr, nullptr, nullptr };
+	         nullptr, nullptr,  nullptr,          nullptr,         nullptr,        nullptr,       nullptr,          nullptr,
+	         nullptr, nullptr,  nullptr };
 }
 
 static int32_t testLoadBank( void *pData, void *pStudio, const char *szPath, void **ppBank ) noexcept
@@ -383,8 +386,8 @@ static void testScopedBankOwnership( const sirContainerAllocator_t *pAllocator )
 	checkBank( banks.loadBank( 1, "A.bank" ) == SIR_AUDIO_OK );
 	checkBank( banks.loadBank( 2, "B.bank" ) == SIR_AUDIO_OK );
 
-	const sirFMODMixerNativeOps_t mixerOps = { 1, &fixture, testPinnedBusResolve, testPinnedVCAResolve,
-	                                            testPinnedSetVolume, testPinnedSetMute, testPinnedSetVolume };
+	const sirFMODMixerNativeOps_t mixerOps = {
+	    1, &fixture, testPinnedBusResolve, testPinnedVCAResolve, testPinnedSetVolume, testPinnedSetMute, testPinnedSetVolume };
 	SIRFMODMixerBackend mixer;
 	checkBank( mixer.configure( &context, pAllocator, mixerOps, 2 ) == SIR_AUDIO_OK );
 	checkBank( mixer.initialize() == SIR_AUDIO_OK );
@@ -392,8 +395,8 @@ static void testScopedBankOwnership( const sirContainerAllocator_t *pAllocator )
 	checkBank( mixer.registerBusFromBank( 10, 1, &banks, "bus:/Master" ) == SIR_AUDIO_OK );
 	checkBank( mixer.registerVCAFromBank( 20, 2, &banks, "vca:/Music" ) == SIR_AUDIO_OK );
 
-	const sirFMODSnapshotNativeOps_t snapshotOps = { 1, &fixture, testPinnedSnapshotResolve, testVoiceCreate,
-	                                               testVoiceStart, testVoiceStop, testVoiceRelease };
+	const sirFMODSnapshotNativeOps_t snapshotOps = {
+	    1, &fixture, testPinnedSnapshotResolve, testVoiceCreate, testVoiceStart, testVoiceStop, testVoiceRelease };
 	SIRFMODSnapshotBackend snapshots;
 	checkBank( snapshots.configure( &context, pAllocator, snapshotOps, 1 ) == SIR_AUDIO_OK );
 	checkBank( snapshots.initialize() == SIR_AUDIO_OK );

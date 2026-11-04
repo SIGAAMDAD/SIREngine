@@ -687,14 +687,12 @@ sirAudioResult_t SIRFMODVoiceBackend::submitOne( const sirAudioCommand_t &comman
 				if ( m_Ops.setInstancePaused == nullptr ) {
 					return SIR_AUDIO_UNSUPPORTED;
 				}
-				m_nLastNativeResult = m_Ops.setInstancePaused( m_Ops.pUserData, slot.pInstance,
-				                                             command.fValue != 0.0f ? 1 : 0 );
+				m_nLastNativeResult = m_Ops.setInstancePaused( m_Ops.pUserData, slot.pInstance, command.fValue != 0.0f ? 1 : 0 );
 			} else {
 				if ( m_Ops.setInstanceTimeline == nullptr ) {
 					return SIR_AUDIO_UNSUPPORTED;
 				}
-				m_nLastNativeResult = m_Ops.setInstanceTimeline( m_Ops.pUserData, slot.pInstance,
-				                                               ( int32_t )command.nControlId );
+				m_nLastNativeResult = m_Ops.setInstanceTimeline( m_Ops.pUserData, slot.pInstance, ( int32_t )command.nControlId );
 			}
 			return m_nLastNativeResult == 0 ? SIR_AUDIO_OK : SIR_AUDIO_BACKEND_ERROR;
 		}
@@ -932,20 +930,18 @@ uint32_t SIRFMODVoiceBackend::getActiveVoiceCount( void ) const noexcept
 	return nCount;
 }
 
-sirAudioResult_t SIRFMODVoiceBackend::getPlayingTimeline( sirAudioPlayingHandle_t hPlaying,
-                                                            uint32_t &nMilliseconds ) noexcept
+sirAudioResult_t SIRFMODVoiceBackend::getPlayingTimeline( sirAudioPlayingHandle_t hPlaying, uint32_t &nMilliseconds ) noexcept
 {
 	nMilliseconds = 0;
-	if ( !m_bInitialized || m_pContext == nullptr || !m_pContext->isReady() ||
-	     m_pContext->getEpoch() != m_nContextEpoch ) {
+	if ( !m_bInitialized || m_pContext == nullptr || !m_pContext->isReady() || m_pContext->getEpoch() != m_nContextEpoch ) {
 		return SIR_AUDIO_NOT_INITIALIZED;
 	}
 	if ( hPlaying.nSlot >= m_nVoiceCapacity || m_Ops.getInstanceTimeline == nullptr ) {
 		return SIR_AUDIO_INVALID_HANDLE;
 	}
 	const sirFMODVoiceSlot_t &slot = m_pVoices[hPlaying.nSlot];
-	if ( slot.pInstance == nullptr || slot.bStartFailed != 0 ||
-	     slot.hPlaying.nEpoch != hPlaying.nEpoch || slot.hPlaying.nGeneration != hPlaying.nGeneration ) {
+	if ( slot.pInstance == nullptr || slot.bStartFailed != 0 || slot.hPlaying.nEpoch != hPlaying.nEpoch ||
+	     slot.hPlaying.nGeneration != hPlaying.nGeneration ) {
 		return SIR_AUDIO_INVALID_HANDLE;
 	}
 	int32_t nPosition = 0;
