@@ -171,5 +171,98 @@ int main( void )
 	     !bStable ) {
 		return 20;
 	}
+
+
+	// Native renderer startup must seal the resource pools before exposing the device.
+	sirD3D12SealedPoolConfig_t sealedProfile = {};
+	sealedProfile.nDeviceBufferBytes = 4 * 1024 * 1024;
+	sealedProfile.nSampledTextureBytes = 4 * 1024 * 1024;
+	sealedProfile.nAttachmentTextureBytes = 4 * 1024 * 1024;
+	sealedProfile.nUploadBufferBytes = 4 * 1024 * 1024;
+	sealedProfile.nReadbackBufferBytes = 4 * 1024 * 1024;
+
+	SIRRenderingDevice *pSealedDevice = nullptr;
+	if ( driver.createSealedDevice( config, {}, &pSealedDevice ) != SIR_GRAPHICS_INVALID_ARGUMENT || pSealedDevice != nullptr ) {
+		return 21;
+	}
+	config.bHeadless = false;
+	if ( driver.createSealedDevice( config, sealedProfile, &pSealedDevice ) != SIR_GRAPHICS_UNSUPPORTED || pSealedDevice != nullptr ) {
+		return 22;
+	}
+	config.bHeadless = true;
+	config.nResidentBudgetBytes = 1;
+	if ( driver.createSealedDevice( config, sealedProfile, &pSealedDevice ) != SIR_GRAPHICS_CAPACITY_EXCEEDED ||
+	     pSealedDevice != nullptr ) {
+		return 23;
+	}
+	config.nResidentBudgetBytes = 0;
+	if ( driver.createSealedDevice( config, sealedProfile, &pSealedDevice ) != SIR_GRAPHICS_SUCCESS ||
+	     pSealedDevice == nullptr ) {
+		return 24;
+	}
+	sirGraphicsMemoryBudget_t sealedBaseline = {};
+	if ( pSealedDevice->queryMemoryBudget( &sealedBaseline ) != SIR_GRAPHICS_SUCCESS ||
+	     sealedBaseline.nCommittedBytes < 20ULL * 1024 * 1024 ) {
+		return 25;
+	}
+	sirGraphicsNativeSurface_t surface = {};
+	sirGraphicsPresentDesc_t present = {};
+	sirGraphicsHandle_t hSurface = {};
+	if ( pSealedDevice->createSurface( surface, present, &hSurface ) != SIR_GRAPHICS_UNSUPPORTED ||
+	     hSurface.nGeneration != 0 ) {
+		return 26;
+	}
+	sirGraphicsBufferDesc_t resourceBuffer = {};
+	resourceBuffer.nSizeBytes = 4096;
+	resourceBuffer.nUsage = SIR_GRAPHICS_USAGE_COPY_SOURCE | SIR_GRAPHICS_USAGE_COPY_DESTINATION;
+	resourceBuffer.eMemory = SIR_GRAPHICS_MEMORY_GPU_LOCAL;
+	sirGraphicsHandle_t hGpuBuffer = {};
+	if ( pSealedDevice->createBuffer( resourceBuffer, &hGpuBuffer ) != SIR_GRAPHICS_SUCCESS ) {
+		return 27;
+	}
+	sirGraphicsTextureDesc_t resourceTexture = {};
+	resourceTexture.nWidth = 32;
+	resourceTexture.nHeight = 32;
+	resourceTexture.nDepth = 1;
+	resourceTexture.nArrayLayers = 1;
+	resourceTexture.nMipLevels = 1;
+	resourceTexture.nSampleCount = 1;
+	resourceTexture.nUsage = SIR_GRAPHICS_USAGE_SAMPLED;
+	resourceTexture.eDimension = SIR_GRAPHICS_TEXTURE_2D;
+	resourceTexture.eFormat = SIR_GRAPHICS_FORMAT_RGBA8_UNORM;
+	resourceTexture.eMemory = SIR_GRAPHICS_MEMORY_GPU_LOCAL;
+	sirGraphicsHandle_t hSampledTexture = {};
+	if ( pSealedDevice->createTexture( resourceTexture, &hSampledTexture ) != SIR_GRAPHICS_SUCCESS ) {
+		return 28;
+	}
+	resourceTexture.nUsage = SIR_GRAPHICS_USAGE_COLOR_ATTACHMENT;
+	sirGraphicsHandle_t hAttachmentTexture = {};
+	if ( pSealedDevice->createTexture( resourceTexture, &hAttachmentTexture ) != SIR_GRAPHICS_SUCCESS ) {
+		return 29;
+	}
+	resourceBuffer.nSizeBytes = 64ULL * 1024 * 1024;
+	sirGraphicsHandle_t hOversized = {};
+	if ( pSealedDevice->createBuffer( resourceBuffer, &hOversized ) != SIR_GRAPHICS_OUT_OF_MEMORY ||
+	     hOversized.nGeneration != 0 ) {
+		return 30;
+	}
+	sirGraphicsMemoryBudget_t sealedAllocated = {};
+	if ( pSealedDevice->queryMemoryBudget( &sealedAllocated ) != SIR_GRAPHICS_SUCCESS ||
+	     sealedAllocated.nCommittedBytes != sealedBaseline.nCommittedBytes ) {
+		return 31;
+	}
+	sirGraphicsCompletionSet_t sealedComplete = {};
+	sealedComplete.nDeviceGeneration = pSealedDevice->getDeviceGeneration();
+	if ( pSealedDevice->retireResource( hGpuBuffer, sealedComplete ) != SIR_GRAPHICS_SUCCESS ||
+	     pSealedDevice->retireResource( hSampledTexture, sealedComplete ) != SIR_GRAPHICS_SUCCESS ||
+	     pSealedDevice->retireResource( hAttachmentTexture, sealedComplete ) != SIR_GRAPHICS_SUCCESS ) {
+		return 32;
+	}
+	sirGraphicsMemoryBudget_t sealedRetired = {};
+	if ( pSealedDevice->queryMemoryBudget( &sealedRetired ) != SIR_GRAPHICS_SUCCESS ||
+	     sealedRetired.nCommittedBytes != sealedBaseline.nCommittedBytes ||
+	     driver.destroyDevice( pSealedDevice ) != SIR_GRAPHICS_SUCCESS ) {
+		return 33;
+	}
 	return 0;
 }

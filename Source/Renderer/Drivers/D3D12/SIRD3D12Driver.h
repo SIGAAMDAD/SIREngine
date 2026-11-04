@@ -44,6 +44,7 @@ private:
 	SIRD3D12Commands m_Commands;
 	SIRD3D12Surfaces m_Surfaces;
 	bool m_bSoftware = false;
+	bool m_bSealedPoolsActive = false;
 
 public:
 	SIRD3D12RenderingDevice( void ) noexcept = default;
@@ -51,7 +52,8 @@ public:
 	SIRD3D12RenderingDevice( const SIRD3D12RenderingDevice & ) = delete;
 	SIRD3D12RenderingDevice &operator=( const SIRD3D12RenderingDevice & ) = delete;
 
-	sirGraphicsResult_t initialize( bool bSoftware, const sirGraphicsDeviceCreateDesc_t &desc ) noexcept;
+	sirGraphicsResult_t initialize( bool bSoftware, const sirGraphicsDeviceCreateDesc_t &desc,
+	                             const sirD3D12SealedPoolConfig_t *pSealedPools ) noexcept;
 	// Native-only snapshot for debug tools and hardware test harnesses.
 	sirGraphicsResult_t queryNativeDiagnostics( sirD3D12DiagnosticSnapshot_t *pSnapshot ) noexcept;
 	sirGraphicsResult_t queryNativeAdapterInfo( sirD3D12AdapterInfo_t *pInfo ) const noexcept;
@@ -100,6 +102,10 @@ private:
 	SIRD3D12RenderingDevice m_Device;
 	bool m_bDeviceActive = false;
 
+	sirGraphicsResult_t createDeviceInternal( const sirGraphicsDeviceCreateDesc_t &desc,
+	                                         const sirD3D12SealedPoolConfig_t *pSealedPools,
+	                                         SIRRenderingDevice **ppDevice ) noexcept;
+
 public:
 	SIRD3D12Driver( void ) noexcept = default;
 	SIRD3D12Driver( const SIRD3D12Driver & ) = delete;
@@ -109,6 +115,10 @@ public:
 	sirGraphicsResult_t getAdapterCount( uint32_t *pCount ) const noexcept override;
 	sirGraphicsResult_t queryAdapter( uint32_t nAdapterIndex, sirGraphicsAdapterInfo_t *pInfo ) const noexcept override;
 	sirGraphicsResult_t createDevice( const sirGraphicsDeviceCreateDesc_t &desc, SIRRenderingDevice **ppDevice ) noexcept override;
+	// Native explicit-memory path; the shared rendering-device ABI remains unchanged.
+	sirGraphicsResult_t createSealedDevice( const sirGraphicsDeviceCreateDesc_t &desc,
+	                                       const sirD3D12SealedPoolConfig_t &pools,
+	                                       SIRRenderingDevice **ppDevice ) noexcept;
 	sirGraphicsResult_t destroyDevice( SIRRenderingDevice *pDevice ) noexcept override;
 };
 
