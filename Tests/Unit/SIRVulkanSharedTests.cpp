@@ -218,7 +218,7 @@ int main( void )
 	texture.nHeight = 16;
 	texture.nDepth = 1;
 
-texture.nArrayLayers = 2;
+	texture.nArrayLayers = 2;
 	texture.nMipLevels = 2;
 	texture.nSampleCount = 1;
 	texture.nUsage =
