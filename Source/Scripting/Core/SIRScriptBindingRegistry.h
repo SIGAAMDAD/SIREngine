@@ -46,6 +46,7 @@ typedef struct sirScriptFunctionDescriptor_s
 	uint64_t nReturnTypeId;    // zero identifies the void return frame
 	uint32_t nOwnerLane;
 	uint32_t nBindingRevision;
+	uint32_t nEffects;
 } sirScriptFunctionDescriptor_t;
 
 typedef struct sirScriptEventDescriptor_s
@@ -75,6 +76,7 @@ public:
 	sirScriptResult_t publish( void ) noexcept;
 	bool isPublished( void ) const noexcept;
 	uint64_t schemaFingerprint( void ) const noexcept;
+	bool describeFunction( uint64_t nFunctionId, sirScriptFunctionDescriptor_t *pDescriptor ) const noexcept;
 	bool hasEvent( uint64_t nEventTypeId ) const noexcept;
 	sirScriptResult_t validateEvent( uint64_t nEventTypeId, sirScriptReadFrame_t payload ) const noexcept;
 	sirScriptResult_t validateQueuedEvent( uint64_t nEventTypeId, sirScriptReadFrame_t payload ) const noexcept;
