@@ -30,3 +30,13 @@ there is no scene/Variant runtime mirroring or editor-history mutation.
 Native file-mode acceptance is exercised by `editor.host.json-file-unit` and
 `editor.host.json-file-cli` CTest cases. Godot GUI process lifecycle and dock
 selection still require a real fork editor smoke test.
+
+The dock also shows a **Native serialized properties** table for the selected
+scene node. It is read-only and contains the original `.tscn` property names,
+serialized value previews, source lines and full-value byte counts. The
+underlying native property scanner handles nested/multiline serialized values
+without creating or mutating Godot `Variant`s. This table is an additional
+inspector aid, not a replacement for Godot's normal editable Inspector.
+The dock caps the total property index at 8192 records and displays at most
+256 entries for one selected node; native transport previews cap each value
+at 512 bytes. The native parser itself supports up to 65536 property entries.

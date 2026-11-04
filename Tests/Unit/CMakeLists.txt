@@ -160,3 +160,11 @@ add_test(NAME editor.host.json-file-cli COMMAND "${CMAKE_COMMAND}"
     "-DSIR_EDITOR_SCENE=${PROJECT_SOURCE_DIR}/Tests/Fixtures/Editor/SourceGodotUI.tscn"
     "-DSIR_EDITOR_OUTPUT=${CMAKE_CURRENT_BINARY_DIR}/sir-editor-cli-snapshot-$<CONFIG>.json"
     -P "${CMAKE_CURRENT_SOURCE_DIR}/EditorJSONFileCLITests.cmake")
+
+# Source-backed node-property index feeding the read-only native Details dock.
+add_executable(SIREditorTextPropertiesTests SIREditorTextPropertiesTests.cpp)
+target_link_libraries(SIREditorTextPropertiesTests PRIVATE SIR::EditorAuthoring)
+target_compile_definitions(SIREditorTextPropertiesTests PRIVATE
+    SIR_EDITOR_TEST_UI_SCENE="${PROJECT_SOURCE_DIR}/Tests/Fixtures/Editor/SourceGodotUI.tscn")
+add_test(NAME editor.authoring.source-properties COMMAND SIREditorTextPropertiesTests)
+sir_configure_owned_target(SIREditorTextPropertiesTests)

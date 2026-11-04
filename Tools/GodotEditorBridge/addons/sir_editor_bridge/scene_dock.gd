@@ -3,12 +3,17 @@ extends VBoxContainer
 
 const HOST_SETTING: String = "sir_editor/host_binary"
 const MAX_TREE_ROWS: int = 2048
+const MAX_PROPERTIES: int = 8192
+const MAX_PROPERTIES_PER_NODE: int = 256
 const MAX_JSON_BYTES: int = 4 * 1024 * 1024
 const PROCESS_TIMEOUT_MSEC: int = 30000
 
 var _binary: LineEdit
 var _status: Label
 var _tree: Tree
+var _property_tree: Tree
+var _property_label: Label
+var _properties_by_node: Dictionary = {}
 var _items_by_id: Dictionary = {}
 var _snapshot_scene: String = ""
 var _snapshot_hash: String = ""
@@ -55,6 +60,20 @@ func _ready() -> void:
     _tree.item_selected.connect(_on_item_selected)
     add_child(_tree)
 
+    _property_label = Label.new()
+    _property_label.text = "Native serialized properties (read-only)"
+    add_child(_property_label)
+
+    _property_tree = Tree.new()
+    _property_tree.hide_root = true
+    _property_tree.columns = 2
+    _property_tree.column_titles_visible = true
+    _property_tree.set_column_title(0, "Property")
+    _property_tree.set_column_title(1, "Serialized value")
+    _property_tree.custom_minimum_size = Vector2(0, 150)
+    _property_tree.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    add_child(_property_tree)
+
 
 func _exit_tree() -> void:
     shutdown_bridge()
@@ -91,8 +110,13 @@ func invalidate_snapshot() -> void:
     _snapshot_scene = ""
     _snapshot_hash = ""
     _items_by_id.clear()
+    _properties_by_node.clear()
     if _tree != null:
         _tree.clear()
+    if _property_tree != null:
+        _property_tree.clear()
+    if _property_label != null:
+        _property_label.text = "Native serialized properties (read-only)"
     if _status != null:
         _status.text = "Scene changed. Save and Refresh for a native snapshot."
 
@@ -212,6 +236,9 @@ func _valid_snapshot(snapshot: Dictionary) -> bool:
         return false
     if nodes.is_empty() or nodes.size() > MAX_TREE_ROWS:
         return false
+    var properties: Variant = snapshot.get("properties", null)
+    if typeof(properties) != TYPE_ARRAY or properties.size() > MAX_PROPERTIES:
+        return false
 
     var seen: Dictionary = {}
     for node_data in nodes:
@@ -230,13 +257,33 @@ func _valid_snapshot(snapshot: Dictionary) -> bool:
         if parent != "0" and not seen.has(parent):
             return false
         seen[id_value] = true
+    for property_data in properties:
+        if typeof(property_data) != TYPE_DICTIONARY:
+            return false
+        if typeof(property_data.get("node", null)) != TYPE_STRING or not seen.has(property_data["node"]):
+            return false
+        if typeof(property_data.get("name", null)) != TYPE_STRING or typeof(property_data.get("value", null)) != TYPE_STRING:
+            return false
+        if typeof(property_data.get("line", null)) not in [TYPE_INT, TYPE_FLOAT]:
+            return false
+        if typeof(property_data.get("bytes", null)) not in [TYPE_INT, TYPE_FLOAT]:
+            return false
+        if typeof(property_data.get("truncated", null)) != TYPE_BOOL:
+            return false
     return true
 
 
 func _show_snapshot(snapshot: Dictionary, source_scene: String) -> void:
     _rebuilding = true
     _tree.clear()
+    _property_tree.clear()
     _items_by_id.clear()
+    _properties_by_node.clear()
+    for property_data in snapshot["properties"]:
+        var property_node: String = property_data["node"]
+        if not _properties_by_node.has(property_node):
+            _properties_by_node[property_node] = []
+        _properties_by_node[property_node].append(property_data)
     var tree_root: TreeItem = _tree.create_item()
     for node_data in snapshot["nodes"]:
         var id_value: String = node_data["id"]
@@ -244,14 +291,14 @@ func _show_snapshot(snapshot: Dictionary, source_scene: String) -> void:
         var parent_item: TreeItem = tree_root if parent_id == "0" else _items_by_id[parent_id]
         var item: TreeItem = _tree.create_item(parent_item)
         item.set_text(0, node_data["name"])
-        item.set_metadata(0, node_data["path"])
+        item.set_metadata(0, {"path": node_data["path"], "id": id_value})
         item.set_tooltip_text(0, "Source line %s | Native ID %s" % [str(node_data["line"]), id_value])
         _items_by_id[id_value] = item
 
     _snapshot_scene = source_scene
     _rebuilding = false
-    _status.text = "%d nodes, %d resources | native revision %s | saved file only" % [
-        snapshot["nodes"].size(), snapshot["resources"].size(), str(snapshot["revision"])]
+    _status.text = "%d nodes, %d resources, %d properties | native revision %s | saved file only" % [
+        snapshot["nodes"].size(), snapshot["resources"].size(), snapshot["properties"].size(), str(snapshot["revision"])]
 
 
 func _on_item_selected() -> void:
@@ -268,7 +315,8 @@ func _on_item_selected() -> void:
     var selected_item: TreeItem = _tree.get_selected()
     if selected_item == null:
         return
-    var relative_path: String = String(selected_item.get_metadata(0))
+    var selected_data: Dictionary = selected_item.get_metadata(0)
+    var relative_path: String = selected_data["path"]
     var selected_node: Node = scene_root if relative_path.is_empty() else scene_root.get_node_or_null(NodePath(relative_path))
     if selected_node == null:
         _status.text = "The saved snapshot is stale. Save and Refresh."
@@ -277,3 +325,23 @@ func _on_item_selected() -> void:
     editor_selection.clear()
     editor_selection.add_node(selected_node)
     EditorInterface.edit_node(selected_node)
+    _show_node_properties(selected_data["id"])
+
+
+func _show_node_properties(node_id: String) -> void:
+    _property_tree.clear()
+    var property_root: TreeItem = _property_tree.create_item()
+    var entries: Array = _properties_by_node.get(node_id, [])
+    var count: int = mini(entries.size(), MAX_PROPERTIES_PER_NODE)
+    for index in range(count):
+        var property_data: Dictionary = entries[index]
+        var entry: TreeItem = _property_tree.create_item(property_root)
+        var property_name: String = property_data["name"]
+        var value: String = property_data["value"]
+        entry.set_text(0, property_name)
+        entry.set_text(1, value.replace("\n", " ").substr(0, 100))
+        entry.set_tooltip_text(1, "Line %s | %s source bytes%s\n%s" % [
+            str(property_data["line"]), str(property_data["bytes"]),
+            " | preview truncated" if property_data["truncated"] else "", value])
+    _property_label.text = "Native serialized properties: %d%s (read-only)" % [
+        entries.size(), " | first %d shown" % MAX_PROPERTIES_PER_NODE if entries.size() > count else ""]

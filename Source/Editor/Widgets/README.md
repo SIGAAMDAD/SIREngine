@@ -36,3 +36,8 @@ Godot editor private authoring kernel is a subsequent migration stage.
 The text-scene intake now resolves Godot `parent="."` to the scene root
 node ID rather than encoding it as a second root; this is essential for a
 correct visible hierarchy projection.
+
+The transitional Godot EditorDock exposes the native read-only source-backed
+node properties in a second two-column Tree. This is separate from the full
+Godot Inspector's PropertyInfo/Variant editing infrastructure, which remains
+to be migrated into the standalone graphical SIREditor.

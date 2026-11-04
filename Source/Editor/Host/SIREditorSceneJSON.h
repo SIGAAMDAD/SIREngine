@@ -31,6 +31,8 @@ class SIREditorSceneWorkspace;
 // Version 1 is a read-only editor presentation contract. All 64-bit IDs are
 // decimal strings so client runtimes cannot lose identity through JSON numbers.
 // Source/path strings remain valid only while the workspace is open.
+// The additive properties array contains bounded serialized previews, never
+// decoded Godot Variant values or editor-owned PropertyInfo objects.
 bool sirEditorWriteSceneJSON( const SIREditorSceneWorkspace &workspace, const char *pszScenePath, FILE *pOutput ) noexcept;
 
 // File-output protocol for OS.create_process consumers: write a sibling staging

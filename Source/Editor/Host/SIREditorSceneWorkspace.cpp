@@ -58,7 +58,8 @@ static T *sirEditorHostAllocate( SIRLinearAllocator &arena, uint32_t nCount ) no
 }
 
 SIREditorSceneWorkspace::SIREditorSceneWorkspace( void ) noexcept
-    : m_Scene{}, m_Resources{}, m_pszSource( nullptr ), m_nSourceBytes( 0 ), m_nErrorLine( 0 ), m_bInitialized( false ), m_bOpen( false )
+    : m_Scene{}, m_Resources{}, m_Properties{}, m_pszSource( nullptr ), m_nSourceBytes( 0 ), m_nErrorLine( 0 ), m_bInitialized( false ),
+      m_bOpen( false )
 {
 }
 
@@ -99,6 +100,7 @@ void SIREditorSceneWorkspace::rollbackOpen( void ) noexcept
 	}
 	m_Scene = {};
 	m_Resources = {};
+	m_Properties = {};
 	m_pszSource = nullptr;
 	m_nSourceBytes = 0;
 	m_bOpen = false;
@@ -145,6 +147,27 @@ sirEditorWorkspaceResult_t SIREditorSceneWorkspace::finishOpen( size_t nSourceBy
 		m_nErrorLine = m_Resources.nErrorLine;
 		rollbackOpen();
 		return SIR_EDITOR_WORKSPACE_INVALID_RESOURCES;
+	}
+
+	sirEditorTextPropertyIndex_t measuredProperties = {};
+	const sirEditorTextPropertyResult_t eMeasure =
+	    sirEditorScanNodeTextProperties( m_pszSource, nSourceBytes, m_Scene, &measuredProperties );
+	if ( eMeasure != SIR_EDITOR_PROPERTY_OK ) {
+		m_nErrorLine = measuredProperties.nErrorLine;
+		rollbackOpen();
+		return SIR_EDITOR_WORKSPACE_INVALID_PROPERTIES;
+	}
+	m_Properties.nCapacity = measuredProperties.nCount;
+	m_Properties.pProperties = sirEditorHostAllocate<sirEditorTextProperty_t>( m_Arena, m_Properties.nCapacity );
+	if ( m_Properties.nCapacity != 0 && m_Properties.pProperties == nullptr ) {
+		rollbackOpen();
+		return SIR_EDITOR_WORKSPACE_OUT_OF_MEMORY;
+	}
+	const sirEditorTextPropertyResult_t eProperties = sirEditorScanNodeTextProperties( m_pszSource, nSourceBytes, m_Scene, &m_Properties );
+	if ( eProperties != SIR_EDITOR_PROPERTY_OK || m_Properties.nCount != measuredProperties.nCount ) {
+		m_nErrorLine = m_Properties.nErrorLine;
+		rollbackOpen();
+		return SIR_EDITOR_WORKSPACE_INVALID_PROPERTIES;
 	}
 
 	const uint32_t nHistoryDeltas = nNodes * 2;
@@ -305,6 +328,10 @@ const sirEditorTextSceneIndex_t &SIREditorSceneWorkspace::getSceneIndex( void ) 
 const sirEditorTextResourceIndex_t &SIREditorSceneWorkspace::getResourceIndex( void ) const noexcept
 {
 	return m_Resources;
+}
+const sirEditorTextPropertyIndex_t &SIREditorSceneWorkspace::getPropertyIndex( void ) const noexcept
+{
+	return m_Properties;
 }
 SIREditorSceneDocument &SIREditorSceneWorkspace::getDocument( void ) noexcept
 {
