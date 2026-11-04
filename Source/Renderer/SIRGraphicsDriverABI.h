@@ -27,9 +27,9 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <stdint.h>
 #include <Renderer/SIRGraphicsABIOperations.h>
 
-// ABI version 2 has an immutable mandatory prefix. Append optional entries
-// only in a new minor version; breaking layouts require a new major version.
-#define SIR_GRAPHICS_DRIVER_ABI_MAJOR 2U
+// ABI version 1 is the ongoing foundation contract. Complete the mandatory
+// tables and pipeline model descriptions without bumping the draft version.
+#define SIR_GRAPHICS_DRIVER_ABI_MAJOR 1U
 #define SIR_GRAPHICS_DRIVER_ABI_MINOR 0U
 #define SIR_GRAPHICS_DRIVER_ABI_ENTRY "SIRGetGraphicsDriverABI"
 
