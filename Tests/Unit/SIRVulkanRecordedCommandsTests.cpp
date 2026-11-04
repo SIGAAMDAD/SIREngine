@@ -168,6 +168,31 @@ int main( void )
 	if ( sirVulkanValidateRecordedCommands( &rangeCommand, 1 ) != SIR_VULKAN_INVALID_ARGUMENT ) {
 		return 21;
 	}
+	// Chained range barriers use shadow state without changing the original image.
+	sirVulkanImage_t orderedRange = {};
+	orderedRange.eFormat = VK_FORMAT_R8G8B8A8_UNORM;
+	orderedRange.eType = VK_IMAGE_TYPE_2D;
+	orderedRange.nMips = 2;
+	orderedRange.nLayers = 2;
+	orderedRange.nUsage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+	orderedRange.szUploadedSubresources[0] = 0xFULL;
+	sirVulkanRecordedCommand_t szRangeSequence[2] = {};
+	szRangeSequence[0].eKind = SIR_VULKAN_RECORDED_IMAGE_BARRIER;
+	szRangeSequence[0].pImage = &orderedRange;
+	szRangeSequence[0].imageBarrier = { VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL, 0, 0, 2, 2, false };
+	szRangeSequence[1].eKind = SIR_VULKAN_RECORDED_IMAGE_BARRIER;
+	szRangeSequence[1].pImage = &orderedRange;
+	szRangeSequence[1].imageBarrier = { VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 0, 0, 2, 2, false };
+	VkImageLayout eOrdered = VK_IMAGE_LAYOUT_GENERAL;
+	if ( sirVulkanValidateRecordedCommands( szRangeSequence, 2 ) != SIR_VULKAN_SUCCESS ||
+	     !sirVulkanGetSubresourceLayout( &orderedRange, 1, 1, &eOrdered ) || eOrdered != VK_IMAGE_LAYOUT_UNDEFINED ) {
+		return 23;
+	}
+	szRangeSequence[1].imageBarrier.nLayerCount = 3;
+	if ( sirVulkanValidateRecordedCommands( szRangeSequence, 2 ) != SIR_VULKAN_INVALID_ARGUMENT ) {
+		return 24;
+	}
+
 	// Independent copies need no internal memory barrier; aliased read/write buffers do.
 	sirVulkanRecordedCommand_t hazards[7] = {};
 	hazards[0].eKind = SIR_VULKAN_RECORDED_BUFFER_COPY;
