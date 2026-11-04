@@ -23,7 +23,13 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <stdlib.h>
 #include <sys/mman.h>
 
-#define SIR_MEMORY_FAULT_CHECK( condition ) do { if ( !( condition ) ) { fprintf( stderr, "%s:%d: %s\n", __FILE__, __LINE__, #condition ); abort(); } } while ( 0 )
+#define SIR_MEMORY_FAULT_CHECK( condition )                                                                                                \
+	do {                                                                                                                                   \
+		if ( !( condition ) ) {                                                                                                            \
+			fprintf( stderr, "%s:%d: %s\n", __FILE__, __LINE__, #condition );                                                              \
+			abort();                                                                                                                       \
+		}                                                                                                                                  \
+	} while ( 0 )
 
 static std::atomic<bool> s_bFailReserve{ false };
 static std::atomic<bool> s_bFailProtection{ false };
@@ -35,71 +41,71 @@ extern "C" int __real_madvise( void *pAddress, size_t nBytes, int nAdvice );
 
 extern "C" void *__wrap_mmap( void *pAddress, size_t nBytes, int nProtection, int nFlags, int nHandle, off_t nOffset )
 {
-    if ( s_bFailReserve.exchange( false, std::memory_order_relaxed ) ) {
-        errno = ENOMEM;
-        return MAP_FAILED;
-    }
-    return __real_mmap( pAddress, nBytes, nProtection, nFlags, nHandle, nOffset );
+	if ( s_bFailReserve.exchange( false, std::memory_order_relaxed ) ) {
+		errno = ENOMEM;
+		return MAP_FAILED;
+	}
+	return __real_mmap( pAddress, nBytes, nProtection, nFlags, nHandle, nOffset );
 }
 
 extern "C" int __wrap_mprotect( void *pAddress, size_t nBytes, int nProtection )
 {
-    if ( s_bFailProtection.exchange( false, std::memory_order_relaxed ) ) {
-        errno = ENOMEM;
-        return -1;
-    }
-    return __real_mprotect( pAddress, nBytes, nProtection );
+	if ( s_bFailProtection.exchange( false, std::memory_order_relaxed ) ) {
+		errno = ENOMEM;
+		return -1;
+	}
+	return __real_mprotect( pAddress, nBytes, nProtection );
 }
 
 extern "C" int __wrap_madvise( void *pAddress, size_t nBytes, int nAdvice )
 {
-    if ( s_bFailDiscard.exchange( false, std::memory_order_relaxed ) ) {
-        errno = EIO;
-        return -1;
-    }
-    return __real_madvise( pAddress, nBytes, nAdvice );
+	if ( s_bFailDiscard.exchange( false, std::memory_order_relaxed ) ) {
+		errno = EIO;
+		return -1;
+	}
+	return __real_madvise( pAddress, nBytes, nAdvice );
 }
 
 static void testVirtualBackingFaultRecovery( void )
 {
-    const uint64_t nPage = SIRVirtualMemory::getPageSize();
-    SIR_MEMORY_FAULT_CHECK( nPage != 0 );
-    SIRMemoryManager memory;
-    const sirMemoryConfig_t config = { nPage * 128, nPage * 32, nPage * 8, 4 };
-    s_bFailReserve.store( true, std::memory_order_relaxed );
-    SIR_MEMORY_FAULT_CHECK( !memory.init( config ) && !memory.isInitialized() );
-    s_bFailProtection.store( true, std::memory_order_relaxed );
-    SIR_MEMORY_FAULT_CHECK( !memory.init( config ) && !memory.isInitialized() );
-    SIR_MEMORY_FAULT_CHECK( memory.init( config ) );
-    SIRMemorySegment *pSegment = memory.createSegment( "fault-backing", nPage * 4, nPage * 4, SIR_MEMORY_DOMAIN_STREAMING );
-    SIR_MEMORY_FAULT_CHECK( pSegment != nullptr );
-    s_bFailProtection.store( true, std::memory_order_relaxed );
-    SIR_MEMORY_FAULT_CHECK( !pSegment->commit( 0, nPage ) );
-    SIR_MEMORY_FAULT_CHECK( memory.getPageBackingStats().nFailedCommitCalls == 1 );
-    SIR_MEMORY_FAULT_CHECK( pSegment->commit( 0, nPage ) );
-    volatile uint8_t *pData = ( volatile uint8_t * )pSegment->getBase();
-    pData[0] = 0xA9;
-    s_bFailDiscard.store( true, std::memory_order_relaxed );
-    SIR_MEMORY_FAULT_CHECK( !pSegment->decommit( 0, nPage ) );
-    SIR_MEMORY_FAULT_CHECK( pData[0] == 0xA9 );
-    SIR_MEMORY_FAULT_CHECK( memory.getPageBackingStats().nFailedDecommitCalls == 1 );
-    SIR_MEMORY_FAULT_CHECK( pSegment->decommit( 0, nPage ) );
-    s_bFailProtection.store( true, std::memory_order_relaxed );
-    SIR_MEMORY_FAULT_CHECK( memory.allocateMetadata( nPage * 2, 8 ) == nullptr );
-    SIR_MEMORY_FAULT_CHECK( memory.allocateMetadata( nPage * 2, 8 ) != nullptr );
-    SIR_MEMORY_FAULT_CHECK( !memory.setDomainCommitLimit( SIR_MEMORY_DOMAIN_CORE, nPage ) );
-    s_bFailProtection.store( true, std::memory_order_relaxed );
-    SIR_MEMORY_FAULT_CHECK( memory.allocateRecyclableMetadataPage() == nullptr );
-    void *pPage = memory.allocateRecyclableMetadataPage();
-    SIR_MEMORY_FAULT_CHECK( pPage != nullptr );
-    s_bFailDiscard.store( true, std::memory_order_relaxed );
-    SIR_MEMORY_FAULT_CHECK( !memory.releaseRecyclableMetadataPage( pPage ) );
-    SIR_MEMORY_FAULT_CHECK( memory.releaseRecyclableMetadataPage( pPage ) );
-    memory.shutdown();
+	const uint64_t nPage = SIRVirtualMemory::getPageSize();
+	SIR_MEMORY_FAULT_CHECK( nPage != 0 );
+	SIRMemoryManager memory;
+	const sirMemoryConfig_t config = { nPage * 128, nPage * 32, nPage * 8, 4 };
+	s_bFailReserve.store( true, std::memory_order_relaxed );
+	SIR_MEMORY_FAULT_CHECK( !memory.init( config ) && !memory.isInitialized() );
+	s_bFailProtection.store( true, std::memory_order_relaxed );
+	SIR_MEMORY_FAULT_CHECK( !memory.init( config ) && !memory.isInitialized() );
+	SIR_MEMORY_FAULT_CHECK( memory.init( config ) );
+	SIRMemorySegment *pSegment = memory.createSegment( "fault-backing", nPage * 4, nPage * 4, SIR_MEMORY_DOMAIN_STREAMING );
+	SIR_MEMORY_FAULT_CHECK( pSegment != nullptr );
+	s_bFailProtection.store( true, std::memory_order_relaxed );
+	SIR_MEMORY_FAULT_CHECK( !pSegment->commit( 0, nPage ) );
+	SIR_MEMORY_FAULT_CHECK( memory.getPageBackingStats().nFailedCommitCalls == 1 );
+	SIR_MEMORY_FAULT_CHECK( pSegment->commit( 0, nPage ) );
+	volatile uint8_t *pData = ( volatile uint8_t * )pSegment->getBase();
+	pData[0] = 0xA9;
+	s_bFailDiscard.store( true, std::memory_order_relaxed );
+	SIR_MEMORY_FAULT_CHECK( !pSegment->decommit( 0, nPage ) );
+	SIR_MEMORY_FAULT_CHECK( pData[0] == 0xA9 );
+	SIR_MEMORY_FAULT_CHECK( memory.getPageBackingStats().nFailedDecommitCalls == 1 );
+	SIR_MEMORY_FAULT_CHECK( pSegment->decommit( 0, nPage ) );
+	s_bFailProtection.store( true, std::memory_order_relaxed );
+	SIR_MEMORY_FAULT_CHECK( memory.allocateMetadata( nPage * 2, 8 ) == nullptr );
+	SIR_MEMORY_FAULT_CHECK( memory.allocateMetadata( nPage * 2, 8 ) != nullptr );
+	SIR_MEMORY_FAULT_CHECK( !memory.setDomainCommitLimit( SIR_MEMORY_DOMAIN_CORE, nPage ) );
+	s_bFailProtection.store( true, std::memory_order_relaxed );
+	SIR_MEMORY_FAULT_CHECK( memory.allocateRecyclableMetadataPage() == nullptr );
+	void *pPage = memory.allocateRecyclableMetadataPage();
+	SIR_MEMORY_FAULT_CHECK( pPage != nullptr );
+	s_bFailDiscard.store( true, std::memory_order_relaxed );
+	SIR_MEMORY_FAULT_CHECK( !memory.releaseRecyclableMetadataPage( pPage ) );
+	SIR_MEMORY_FAULT_CHECK( memory.releaseRecyclableMetadataPage( pPage ) );
+	memory.shutdown();
 }
 
 int main( void )
 {
-    testVirtualBackingFaultRecovery();
-    return 0;
+	testVirtualBackingFaultRecovery();
+	return 0;
 }
