@@ -1,6 +1,7 @@
 add_subdirectory(Core)
 add_subdirectory(Renderer)
 add_subdirectory(Resources)
+add_subdirectory(UI)
 add_subdirectory(Editor)
 
 add_executable(SIREngine Main.cpp)

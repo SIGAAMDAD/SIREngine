@@ -170,3 +170,9 @@ add_executable(SIREditorTextWriterTests SIREditorTextWriterTests.cpp)
 target_link_libraries(SIREditorTextWriterTests PRIVATE SIR::EditorAuthoring)
 add_test(NAME editor.scene.text-scalar-writer COMMAND SIREditorTextWriterTests)
 sir_configure_owned_target(SIREditorTextWriterTests)
+
+# Retained SIREngine-native control hierarchy, focus, layout, clipping and input.
+add_executable(SIRControlTreeTests SIRControlTreeTests.cpp)
+target_link_libraries(SIRControlTreeTests PRIVATE SIR::UI)
+add_test(NAME ui.controls.layout-and-focus COMMAND SIRControlTreeTests)
+sir_configure_owned_target(SIRControlTreeTests)
