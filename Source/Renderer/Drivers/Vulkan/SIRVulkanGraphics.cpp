@@ -476,8 +476,8 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::submit( sirGraphicsQueue_t eQueue,
 		}
 		if ( op.eKind == SIR_VULKAN_GRAPHICS_COMPUTE_DISPATCH ) {
 			const sirGraphicsHandle_t hPipeline = op.hPipeline;
-			if ( hPipeline.eType != SIR_GRAPHICS_HANDLE_PIPELINE ||
-			     hPipeline.nDeviceGeneration != m_nDeviceGeneration || hPipeline.nSlot >= SIR_VULKAN_PIPELINE_CAPACITY ) {
+			if ( hPipeline.eType != SIR_GRAPHICS_HANDLE_PIPELINE || hPipeline.nDeviceGeneration != m_nDeviceGeneration ||
+			     hPipeline.nSlot >= SIR_VULKAN_PIPELINE_CAPACITY ) {
 				return SIR_GRAPHICS_INVALID_HANDLE;
 			}
 			sirVulkanGraphicsPipelineSlot_t *pPipeline = &m_szPipelines[hPipeline.nSlot];

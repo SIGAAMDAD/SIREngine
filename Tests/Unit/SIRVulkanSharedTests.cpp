@@ -79,11 +79,9 @@ int main( void )
 	pipelineCompletion.nDeviceGeneration = pDevice->getDeviceGeneration();
 	if ( ( capabilities.nFeatureMask & SIR_GRAPHICS_FEATURE_COMPUTE ) != 0 ) {
 		SIRGraphicsCommandList *pCompute = nullptr;
-		if ( pDevice->acquireCommands( SIR_GRAPHICS_QUEUE_DIRECT, &pCompute ) != SIR_GRAPHICS_SUCCESS ||
-		     pCompute == nullptr || pCompute->dispatch( 1, 1, 1 ) != SIR_GRAPHICS_INVALID_HANDLE ||
-		     pCompute->bindPipeline( hCompute ) != SIR_GRAPHICS_SUCCESS ||
-		     pCompute->dispatch( 0, 1, 1 ) != SIR_GRAPHICS_INVALID_ARGUMENT ||
-		     pCompute->dispatch( 1, 1, 1 ) != SIR_GRAPHICS_SUCCESS ||
+		if ( pDevice->acquireCommands( SIR_GRAPHICS_QUEUE_DIRECT, &pCompute ) != SIR_GRAPHICS_SUCCESS || pCompute == nullptr ||
+		     pCompute->dispatch( 1, 1, 1 ) != SIR_GRAPHICS_INVALID_HANDLE || pCompute->bindPipeline( hCompute ) != SIR_GRAPHICS_SUCCESS ||
+		     pCompute->dispatch( 0, 1, 1 ) != SIR_GRAPHICS_INVALID_ARGUMENT || pCompute->dispatch( 1, 1, 1 ) != SIR_GRAPHICS_SUCCESS ||
 		     pCompute->close() != SIR_GRAPHICS_SUCCESS ) {
 			return 39;
 		}

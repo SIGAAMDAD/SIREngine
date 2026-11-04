@@ -122,8 +122,7 @@ sirVulkanResult_t sirVulkanValidateRecordedCommands( const sirVulkanRecordedComm
 			continue;
 		}
 		if ( command.eKind == SIR_VULKAN_RECORDED_COMPUTE_DISPATCH ) {
-			if ( command.pPipeline == nullptr || command.nGroupCountX == 0 ||
-			     command.nGroupCountY == 0 || command.nGroupCountZ == 0 ) {
+			if ( command.pPipeline == nullptr || command.nGroupCountX == 0 || command.nGroupCountY == 0 || command.nGroupCountZ == 0 ) {
 				return SIR_VULKAN_INVALID_ARGUMENT;
 			}
 			continue;
@@ -176,8 +175,7 @@ sirVulkanResult_t SIRVulkanDevice::submitRecordedCommands( const sirVulkanRecord
 			if ( !m_Adapter.bComputeCapable ) {
 				return SIR_VULKAN_API_UNSUPPORTED;
 			}
-			if ( command.pPipeline->hPipeline == VK_NULL_HANDLE ||
-			     command.pPipeline->nDeviceSerial != m_nDeviceSerial ||
+			if ( command.pPipeline->hPipeline == VK_NULL_HANDLE || command.pPipeline->nDeviceSerial != m_nDeviceSerial ||
 			     command.nGroupCountX > m_Adapter.szMaximumComputeGroupCount[0] ||
 			     command.nGroupCountY > m_Adapter.szMaximumComputeGroupCount[1] ||
 			     command.nGroupCountZ > m_Adapter.szMaximumComputeGroupCount[2] ) {
