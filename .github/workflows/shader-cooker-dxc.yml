@@ -1,0 +1,58 @@
+name: ShaderCooker native DXC validation
+
+on:
+  pull_request:
+    branches: [develop]
+    paths:
+      - 'Tools/ShaderCooker/**'
+      - 'CMakeLists.txt'
+      - '.github/workflows/shader-cooker-dxc.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native-dxc:
+    name: Real DXIL/SPIR-V compilation and reflection / Linux
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-build-tools
+      - name: Install independently pinned DXC 1.9.2609 and SPIRV-Tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq spirv-tools
+          archive="${RUNNER_TEMP}/dxc.tar.gz"
+          root="${RUNNER_TEMP}/sir-dxc"
+          mkdir -p "${root}"
+          curl -fsSL --retry 3 \
+            https://github.com/microsoft/DirectXShaderCompiler/releases/download/v1.9.2609/linux_dxc_2026_09_28.x86_x64.tar.gz \
+            -o "${archive}"
+          echo "96faadc7f5c282d2ffda49804beb4c3ee38127bc252b723234e3c5cdf7aa39a1  ${archive}" | sha256sum -c -
+          tar -xzf "${archive}" -C "${root}"
+          dxc="$(find "${root}" -type f -name dxc -print -quit)"
+          test -n "${dxc}"
+          chmod +x "${dxc}"
+          echo "SIR_DXC_EXECUTABLE=${dxc}" >> "${GITHUB_ENV}"
+          echo "LD_LIBRARY_PATH=${root}/lib" >> "${GITHUB_ENV}"
+      - name: Configure native shader cooker
+        shell: bash
+        run: >
+          cmake --preset dev
+          -DSIR_SHADER_DXC_EXECUTABLE="${SIR_DXC_EXECUTABLE}"
+      - name: Compile offline shader cooker and tests
+        run: >
+          cmake --build --preset dev
+          --target SIRShaderCooker SIRShaderFrontendTests SIRMockDxc
+      - name: Verify real DXC outputs and shader cooker regressions
+        run: >
+          ctest --preset dev
+          --output-on-failure
+          --no-tests=error
+          -R '^shader[.]cooker[.]'

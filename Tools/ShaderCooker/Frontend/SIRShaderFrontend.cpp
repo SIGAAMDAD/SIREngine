@@ -19,6 +19,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <algorithm>
 #include <fstream>
 #include <iterator>
+#include <cctype>
 #include <set>
 #include <unordered_map>
 
@@ -39,6 +40,8 @@ typedef struct sirShaderCookContext_s
 	std::set<std::string> szActive;
 	std::set<std::string> szOnce;
 	std::unordered_map<std::string, size_t> szKnownFiles;
+	std::unordered_map<std::string, std::string> szCachedSources;
+	std::unordered_map<std::string, std::string> szMacros;
 	size_t nTotalBytes = 0;
 } sirShaderCookContext_t;
 
@@ -154,6 +157,99 @@ static int32_t sirCookReadDirective( const std::string& sLine, std::string *pInc
 	return sirCookIsLogicalPath( *pInclude ) ? 1 : -1;
 }
 
+typedef struct sirShaderCookCondition_s
+{
+	bool bParentActive = false;
+	bool bAnyTaken = false;
+	bool bElseSeen = false;
+} sirShaderCookCondition_t;
+
+static std::string sirCookTrim( const std::string& sText )
+{
+	const size_t iStart = sText.find_first_not_of( " \t" );
+	if ( iStart == std::string::npos ) {
+		return {};
+	}
+	const size_t iEnd = sText.find_last_not_of( " \t" );
+	return sText.substr( iStart, iEnd - iStart + 1 );
+}
+
+static void sirCookSplitDirective( const std::string& sLine, std::string *pWord, std::string *pArgument )
+{
+	pWord->clear();
+	pArgument->clear();
+	const size_t iFirst = sLine.find_first_not_of( " \t" );
+	if ( iFirst == std::string::npos || sLine[iFirst] != '#' ) {
+		return;
+	}
+	const size_t iName = sLine.find_first_not_of( " \t", iFirst + 1 );
+	if ( iName == std::string::npos ) {
+		return;
+	}
+	const size_t iEnd = sLine.find_first_of( " \t", iName );
+	*pWord = sLine.substr( iName, iEnd - iName );
+	if ( iEnd != std::string::npos ) {
+		*pArgument = sirCookTrim( sLine.substr( iEnd + 1 ) );
+	}
+}
+
+static bool sirCookEvaluateCondition( const std::string& sRaw, const sirShaderCookContext_t& context, bool *pValue )
+{
+	const std::string sExpression = sirCookTrim( sRaw );
+	if ( sExpression == "0" || sExpression == "1" ) {
+		*pValue = sExpression == "1";
+		return true;
+	}
+	bool bInvert = false;
+	std::string sTerm = sExpression;
+	if ( !sTerm.empty() && sTerm[0] == '!' ) {
+		bInvert = true;
+		sTerm = sirCookTrim( sTerm.substr( 1 ) );
+	}
+	if ( sTerm.compare( 0, 7, "defined" ) == 0 ) {
+		sTerm = sirCookTrim( sTerm.substr( 7 ) );
+		if ( sTerm.size() >= 2 && sTerm.front() == '(' && sTerm.back() == ')' ) {
+			sTerm = sirCookTrim( sTerm.substr( 1, sTerm.size() - 2 ) );
+		}
+		if ( !sirCookIsIdentifier( sTerm ) ) {
+			return false;
+		}
+		*pValue = ( context.szMacros.find( sTerm ) != context.szMacros.end() ) != bInvert;
+		return true;
+	}
+	const auto sirIsDecimal = []( const std::string& sNumber, bool *pNonZero ) {
+		if ( sNumber.empty() ) {
+			return false;
+		}
+		*pNonZero = false;
+		for ( char nDigit : sNumber ) {
+			if ( nDigit < '0' || nDigit > '9' ) {
+				return false;
+			}
+			*pNonZero |= nDigit != '0';
+		}
+		return true;
+	};
+	bool bNumeric = false;
+	if ( sirIsDecimal( sTerm, &bNumeric ) ) {
+		*pValue = bNumeric != bInvert;
+		return true;
+	}
+	if ( !sirCookIsIdentifier( sTerm ) ) {
+		return false;
+	}
+	const auto found = context.szMacros.find( sTerm );
+	if ( found == context.szMacros.end() ) {
+		*pValue = bInvert;
+		return true;
+	}
+	if ( !sirIsDecimal( found->second, &bNumeric ) ) {
+		return false;
+	}
+	*pValue = bNumeric != bInvert;
+	return true;
+}
+
 static sirShaderCookResult_t sirCookExpand( sirShaderCookContext_t *pContext, const std::string& sLogicalPath, size_t nDepth )
 {
 	if ( nDepth > SIR_COOK_MAX_DEPTH ) {
@@ -178,63 +274,149 @@ static sirShaderCookResult_t sirCookExpand( sirShaderCookContext_t *pContext, co
 		*pContext->pDiagnostic = "shader include cycle: " + sPath;
 		return SIR_SHADER_COOK_INCLUDE_CYCLE;
 	}
-	if ( !std::filesystem::is_regular_file( sDiskFile, eError ) || eError ) {
-		*pContext->pDiagnostic = "shader source is missing or not a file: " + sPath;
-		return SIR_SHADER_COOK_IO_ERROR;
+	std::string sSource;
+	size_t nIndex = 0;
+	const auto known = pContext->szKnownFiles.find( sPath );
+	if ( known != pContext->szKnownFiles.end() ) {
+		nIndex = known->second;
+		sSource = pContext->szCachedSources.at( sPath );
+	} else {
+		if ( !std::filesystem::is_regular_file( sDiskFile, eError ) || eError ) {
+			*pContext->pDiagnostic = "shader source is missing or not a file: " + sPath;
+			return SIR_SHADER_COOK_IO_ERROR;
+		}
+		const auto nSize = std::filesystem::file_size( sDiskFile, eError );
+		if ( eError ) {
+			*pContext->pDiagnostic = "cannot stat shader source: " + sPath;
+			return SIR_SHADER_COOK_IO_ERROR;
+		}
+		if ( nSize > SIR_COOK_MAX_FILE_BYTES || nSize > SIR_COOK_MAX_TOTAL_BYTES - pContext->nTotalBytes ||
+		     pContext->szKnownFiles.size() >= SIR_COOK_MAX_FILES ) {
+			*pContext->pDiagnostic = "shader source capacity exceeded: " + sPath;
+			return SIR_SHADER_COOK_CAPACITY_EXCEEDED;
+		}
+		std::ifstream stream( sDiskFile, std::ios::binary );
+		if ( !stream ) {
+			*pContext->pDiagnostic = "cannot open shader source: " + sPath;
+			return SIR_SHADER_COOK_IO_ERROR;
+		}
+		const std::string sRaw( ( std::istreambuf_iterator<char>( stream ) ), std::istreambuf_iterator<char>() );
+		if ( stream.bad() || sRaw.size() != nSize || sRaw.find( '\0' ) != std::string::npos ) {
+			*pContext->pDiagnostic = "invalid or incomplete shader source: " + sPath;
+			return SIR_SHADER_COOK_IO_ERROR;
+		}
+		pContext->nTotalBytes += sRaw.size();
+		sSource = sirCookNormalizeNewlines( sRaw );
+		nIndex = pContext->pManifest->szFiles.size();
+		pContext->pManifest->szFiles.push_back( { sPath, sirCookHash( SIR_COOK_FNV_BASIS, sSource ), {} } );
+		pContext->szKnownFiles.emplace( sPath, nIndex );
+		pContext->szCachedSources.emplace( sPath, sSource );
 	}
-	const auto nSize = std::filesystem::file_size( sDiskFile, eError );
-	if ( eError ) {
-		*pContext->pDiagnostic = "cannot stat shader source: " + sPath;
-		return SIR_SHADER_COOK_IO_ERROR;
-	}
-	if ( nSize > SIR_COOK_MAX_FILE_BYTES || nSize > SIR_COOK_MAX_TOTAL_BYTES - pContext->nTotalBytes ||
-	     pContext->szKnownFiles.size() >= SIR_COOK_MAX_FILES ) {
-		*pContext->pDiagnostic = "shader source capacity exceeded: " + sPath;
-		return SIR_SHADER_COOK_CAPACITY_EXCEEDED;
-	}
-	std::ifstream stream( sDiskFile, std::ios::binary );
-	if ( !stream ) {
-		*pContext->pDiagnostic = "cannot open shader source: " + sPath;
-		return SIR_SHADER_COOK_IO_ERROR;
-	}
-	const std::string sRaw( ( std::istreambuf_iterator<char>( stream ) ), std::istreambuf_iterator<char>() );
-	if ( stream.bad() || sRaw.size() != nSize || sRaw.find( '\0' ) != std::string::npos ) {
-		*pContext->pDiagnostic = "invalid or incomplete shader source: " + sPath;
-		return SIR_SHADER_COOK_IO_ERROR;
-	}
-	pContext->nTotalBytes += sRaw.size();
-	const std::string sSource = sirCookNormalizeNewlines( sRaw );
-	const size_t nIndex = pContext->pManifest->szFiles.size();
-	pContext->pManifest->szFiles.push_back( { sPath, sirCookHash( SIR_COOK_FNV_BASIS, sSource ), {} } );
-	pContext->szKnownFiles.emplace( sPath, nIndex );
 	pContext->szActive.insert( sPath );
 	pContext->pManifest->sExpandedSource += "#line 1 \"" + sPath + "\"\n";
 
+	std::vector<sirShaderCookCondition_t> szConditions;
+	bool bActive = true;
+	bool bInBlockComment = false;
 	size_t iLine = 0;
 	uint32_t nLine = 1;
-	bool bInBlockComment = false;
 	while ( iLine < sSource.size() ) {
 		const size_t iEnd = sSource.find( '\n', iLine );
 		const std::string sLine = sSource.substr( iLine, iEnd == std::string::npos ? std::string::npos : iEnd - iLine );
-		std::string sInclude;
-		const int32_t nDirective = bInBlockComment ? 0 : sirCookReadDirective( sLine, &sInclude );
-		if ( nDirective == -1 ) {
-			*pContext->pDiagnostic = "unsupported include directive: " + sPath + ":" + std::to_string( nLine );
-			return SIR_SHADER_COOK_BAD_DIRECTIVE;
+		std::string sWord;
+		std::string sArgument;
+		if ( !bInBlockComment ) {
+			sirCookSplitDirective( sLine, &sWord, &sArgument );
 		}
-		if ( nDirective == 2 ) {
-			pContext->szOnce.insert( sPath );
-			pContext->pManifest->sExpandedSource.push_back( '\n' );
-		} else if ( nDirective == 1 ) {
-			const std::string sChild = ( std::filesystem::path( sPath ).parent_path() / sInclude ).lexically_normal().generic_string();
-			pContext->pManifest->szFiles[nIndex].szIncludes.push_back( sChild );
-			const sirShaderCookResult_t eResult = sirCookExpand( pContext, sChild, nDepth + 1 );
-			if ( eResult != SIR_SHADER_COOK_OK ) {
-				return eResult;
+		const bool bConditional =
+		    sWord == "if" || sWord == "ifdef" || sWord == "ifndef" || sWord == "elif" || sWord == "else" || sWord == "endif";
+		if ( bConditional ) {
+			if ( sWord == "if" || sWord == "ifdef" || sWord == "ifndef" ) {
+				bool bCondition = false;
+				if ( bActive ) {
+					if ( sWord == "if" ) {
+						if ( !sirCookEvaluateCondition( sArgument, *pContext, &bCondition ) ) {
+							*pContext->pDiagnostic = "unsupported conditional expression: " + sPath + ":" + std::to_string( nLine );
+							return SIR_SHADER_COOK_BAD_DIRECTIVE;
+						}
+					} else {
+						if ( !sirCookIsIdentifier( sArgument ) ) {
+							*pContext->pDiagnostic = "invalid conditional identifier: " + sPath + ":" + std::to_string( nLine );
+							return SIR_SHADER_COOK_BAD_DIRECTIVE;
+						}
+						bCondition = pContext->szMacros.find( sArgument ) != pContext->szMacros.end();
+						if ( sWord == "ifndef" ) {
+							bCondition = !bCondition;
+						}
+					}
+				}
+				szConditions.push_back( { bActive, bCondition, false } );
+				bActive = bActive && bCondition;
+			} else {
+				if ( szConditions.empty() || ( sWord != "endif" && szConditions.back().bElseSeen ) ) {
+					*pContext->pDiagnostic = "unbalanced shader conditional: " + sPath + ":" + std::to_string( nLine );
+					return SIR_SHADER_COOK_BAD_DIRECTIVE;
+				}
+				sirShaderCookCondition_t& condition = szConditions.back();
+				if ( sWord == "endif" ) {
+					bActive = condition.bParentActive;
+					szConditions.pop_back();
+				} else if ( sWord == "else" ) {
+					if ( !sArgument.empty() ) {
+						*pContext->pDiagnostic = "invalid shader else directive";
+						return SIR_SHADER_COOK_BAD_DIRECTIVE;
+					}
+					condition.bElseSeen = true;
+					bActive = condition.bParentActive && !condition.bAnyTaken;
+					condition.bAnyTaken = true;
+				} else {
+					bool bBranch = false;
+					if ( condition.bParentActive && !condition.bAnyTaken && !sirCookEvaluateCondition( sArgument, *pContext, &bBranch ) ) {
+						*pContext->pDiagnostic = "unsupported shader elif expression";
+						return SIR_SHADER_COOK_BAD_DIRECTIVE;
+					}
+					bActive = condition.bParentActive && !condition.bAnyTaken && bBranch;
+					condition.bAnyTaken |= bActive;
+				}
 			}
-			pContext->pManifest->sExpandedSource += "#line " + std::to_string( nLine + 1 ) + " \"" + sPath + "\"\n";
-		} else {
 			pContext->pManifest->sExpandedSource += sLine + '\n';
+		} else if ( !bActive ) {
+			pContext->pManifest->sExpandedSource.push_back( '\n' );
+		} else if ( sWord == "define" || sWord == "undef" ) {
+			const size_t iSpace = sArgument.find_first_of( " \t(" );
+			const std::string sName = sArgument.substr( 0, iSpace );
+			if ( !sirCookIsIdentifier( sName ) ) {
+				*pContext->pDiagnostic = "invalid shader macro name";
+				return SIR_SHADER_COOK_BAD_DIRECTIVE;
+			}
+			if ( sWord == "undef" ) {
+				pContext->szMacros.erase( sName );
+			} else {
+				const std::string sValue = iSpace == std::string::npos ? "1" : sirCookTrim( sArgument.substr( iSpace ) );
+				pContext->szMacros[sName] = sValue.empty() ? "1" : sValue;
+			}
+			pContext->pManifest->sExpandedSource += sLine + '\n';
+		} else {
+			std::string sInclude;
+			const int32_t nDirective = bInBlockComment ? 0 : sirCookReadDirective( sLine, &sInclude );
+			if ( nDirective == -1 ) {
+				*pContext->pDiagnostic = "unsupported include directive: " + sPath + ":" + std::to_string( nLine );
+				return SIR_SHADER_COOK_BAD_DIRECTIVE;
+			}
+			if ( nDirective == 2 ) {
+				pContext->szOnce.insert( sPath );
+				pContext->pManifest->sExpandedSource.push_back( '\n' );
+			} else if ( nDirective == 1 ) {
+				const std::string sChild = ( std::filesystem::path( sPath ).parent_path() / sInclude ).lexically_normal().generic_string();
+				pContext->pManifest->szFiles[nIndex].szIncludes.push_back( sChild );
+				const sirShaderCookResult_t eResult = sirCookExpand( pContext, sChild, nDepth + 1 );
+				if ( eResult != SIR_SHADER_COOK_OK ) {
+					return eResult;
+				}
+				pContext->pManifest->sExpandedSource += "#line " + std::to_string( nLine + 1 ) + " \"" + sPath + "\"\n";
+			} else {
+				pContext->pManifest->sExpandedSource += sLine + '\n';
+			}
 		}
 		for ( size_t iChar = 0; iChar + 1 < sLine.size(); ++iChar ) {
 			if ( bInBlockComment ) {
@@ -260,6 +442,10 @@ static sirShaderCookResult_t sirCookExpand( sirShaderCookContext_t *pContext, co
 		}
 		++nLine;
 		iLine = iEnd == std::string::npos ? sSource.size() : iEnd + 1;
+	}
+	if ( !szConditions.empty() ) {
+		*pContext->pDiagnostic = "unterminated shader conditional: " + sPath;
+		return SIR_SHADER_COOK_BAD_DIRECTIVE;
 	}
 	pContext->szActive.erase( sPath );
 	return SIR_SHADER_COOK_OK;
@@ -316,6 +502,9 @@ sirShaderCookResult_t sirShaderCookPreprocess( const sirShaderCookRequest_t& req
 	}
 	context.pManifest = pManifest;
 	context.pDiagnostic = pDiagnostic;
+	for ( const sirShaderCookDefine_t& definition : pManifest->szDefines ) {
+		context.szMacros.emplace( definition.sName, definition.sValue );
+	}
 	const sirShaderCookResult_t eResult = sirCookExpand( &context, request.sEntryFile, 0 );
 	if ( eResult != SIR_SHADER_COOK_OK ) {
 		*pManifest = {};
@@ -326,6 +515,7 @@ sirShaderCookResult_t sirShaderCookPreprocess( const sirShaderCookRequest_t& req
 	uint64_t nClosure = SIR_COOK_FNV_BASIS;
 	for ( sirShaderCookFile_t& file : pManifest->szFiles ) {
 		std::sort( file.szIncludes.begin(), file.szIncludes.end() );
+		file.szIncludes.erase( std::unique( file.szIncludes.begin(), file.szIncludes.end() ), file.szIncludes.end() );
 		nClosure = sirCookHash( nClosure, file.sPath );
 		nClosure = sirCookHash( nClosure, std::to_string( file.nContentHash ) );
 		for ( const std::string& sInclude : file.szIncludes ) {

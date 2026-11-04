@@ -40,3 +40,20 @@ if(SIR_BUILD_TESTS)
         sir_configure_owned_target(SIRMockDxc)
     endif()
 endif()
+
+# Supply an explicit host DXC binary to activate genuine offline compiler tests.
+# No DXC binary is bundled and no runtime compiler is added to the engine.
+set(SIR_SHADER_DXC_EXECUTABLE "" CACHE FILEPATH "Pinned offline DXC executable for shader acceptance")
+if(SIR_BUILD_TESTS AND NOT SIR_SHADER_DXC_EXECUTABLE STREQUAL "")
+    find_program(SIR_SHADER_SPIRV_VAL NAMES spirv-val REQUIRED)
+    find_program(SIR_SHADER_SPIRV_DIS NAMES spirv-dis REQUIRED)
+    add_test(NAME shader.cooker.native-dxc
+        COMMAND "${CMAKE_COMMAND}"
+            "-DSIR_COOKER=$<TARGET_FILE:SIRShaderCooker>"
+            "-DSIR_DXC=${SIR_SHADER_DXC_EXECUTABLE}"
+            "-DSIR_SPIRV_VAL=${SIR_SHADER_SPIRV_VAL}"
+            "-DSIR_SPIRV_DIS=${SIR_SHADER_SPIRV_DIS}"
+            "-DSIR_FIXTURES=${CMAKE_CURRENT_SOURCE_DIR}/Tests/Fixtures"
+            "-DSIR_OUTPUT_DIR=${CMAKE_CURRENT_BINARY_DIR}/NativeDXCTest"
+            -P "${CMAKE_CURRENT_SOURCE_DIR}/Tests/SIRShaderCookerNativeDXCTests.cmake")
+endif()
