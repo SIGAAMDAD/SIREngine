@@ -907,7 +907,6 @@ static void testDeterministicDependencyOrderCompilation( void )
 	REQUIRE( alloc.m_nOutstanding.load() == 0 );
 }
 
-
 typedef struct sirResourceScheduledTestNode_s
 {
 	SIRResourceHandle hResource;
@@ -935,8 +934,7 @@ static sirTaskResult_t executeResourceTest( void *pContext, sirTaskHandle_t ) no
 	return pNode->bFail ? SIR_TASK_RESULT_FAILURE : SIR_TASK_RESULT_SUCCESS;
 }
 
-static bool describeResourceTest( void *pContext, const SIRResourceDependencyPlanEntry &rEntry,
-                                  sirTaskGraphPass_t *pPass ) noexcept
+static bool describeResourceTest( void *pContext, const SIRResourceDependencyPlanEntry &rEntry, sirTaskGraphPass_t *pPass ) noexcept
 {
 	sirResourceScheduledTestSet_t *pSet = ( sirResourceScheduledTestSet_t * )pContext;
 	if ( pSet->bRejectFactory || rEntry.nRevision == 0 || pPass == nullptr ) {
@@ -944,8 +942,7 @@ static bool describeResourceTest( void *pContext, const SIRResourceDependencyPla
 	}
 	for ( uint32_t i = 0; i < pSet->nNodes; ++i ) {
 		sirResourceScheduledTestNode_t &rNode = pSet->nodes[i];
-		if ( rNode.hResource.m_nSlot == rEntry.hResource.m_nSlot &&
-		     rNode.hResource.m_nGeneration == rEntry.hResource.m_nGeneration ) {
+		if ( rNode.hResource.m_nSlot == rEntry.hResource.m_nSlot && rNode.hResource.m_nGeneration == rEntry.hResource.m_nGeneration ) {
 			*pPass = { executeResourceTest, &rNode, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU };
 			return true;
 		}
@@ -1011,8 +1008,7 @@ static void testCoreTaskGraphResourceDependencies( void )
 		REQUIRE( pWriter->compileTaskGraph( work.nodes[3].hResource, tasks, plan, 8, describeResourceTest, &work, &nCount ) ==
 		         SIR_RESOURCE_RESULT_SUCCESS );
 		REQUIRE( nCount == 4 && tasks.getPassCount() == 4 && tasks.getEdgeCount() == 3 );
-		REQUIRE( resourceTaskHasEdge( tasks, 0, 2 ) && resourceTaskHasEdge( tasks, 1, 2 ) &&
-		         resourceTaskHasEdge( tasks, 2, 3 ) );
+		REQUIRE( resourceTaskHasEdge( tasks, 0, 2 ) && resourceTaskHasEdge( tasks, 1, 2 ) && resourceTaskHasEdge( tasks, 2, 3 ) );
 		REQUIRE( !resourceTaskHasEdge( tasks, 0, 1 ) );
 		REQUIRE( pWriter->validateTaskPlan( plan, nCount ) == SIR_RESOURCE_RESULT_SUCCESS );
 		REQUIRE( tasks.submit( &scheduler ) );
@@ -1045,7 +1041,7 @@ static void testCoreTaskGraphFailureAndCancellation( void )
 		work.nodes[0].hResource = publishTaskNode( *pWriter, 901 );
 		work.nodes[1].hResource = publishTaskNode( *pWriter, 902 );
 		SIRResourceDependency dependencies[2] = { { key( 901 ), SIR_RESOURCE_EDGE_KIND_REQUIRED, {} },
-		                                           { key( 902 ), SIR_RESOURCE_EDGE_KIND_REQUIRED, {} } };
+		                                          { key( 902 ), SIR_RESOURCE_EDGE_KIND_REQUIRED, {} } };
 		work.nodes[2].hResource = publishTaskNode( *pWriter, 903, dependencies, 2 );
 		work.nodes[2].pPreA = &work.nodes[0].nRuns;
 		work.nodes[2].pPreB = &work.nodes[1].nRuns;
@@ -1092,7 +1088,7 @@ static void testCoreTaskGraphStaleRevisionsAndBudget( void )
 		work.nodes[0].hResource = publishTaskNode( *pWriter, 951 );
 		work.nodes[1].hResource = publishTaskNode( *pWriter, 952 );
 		SIRResourceDependency dependencies[2] = { { key( 951 ), SIR_RESOURCE_EDGE_KIND_REQUIRED, {} },
-		                                           { key( 952 ), SIR_RESOURCE_EDGE_KIND_REQUIRED, {} } };
+		                                          { key( 952 ), SIR_RESOURCE_EDGE_KIND_REQUIRED, {} } };
 		work.nodes[2].hResource = publishTaskNode( *pWriter, 953, dependencies, 2 );
 
 		SIRTaskGraph underBudget;
@@ -1107,8 +1103,7 @@ static void testCoreTaskGraphStaleRevisionsAndBudget( void )
 		std::atomic<uint32_t> eOther{ 0 };
 		std::thread other( [&]() {
 			uint32_t nOtherCount = 0;
-			eOther.store( pWriter->compileTaskGraph( work.nodes[2].hResource, tasks, plan, 8, describeResourceTest, &work,
-			                                       &nOtherCount ) );
+			eOther.store( pWriter->compileTaskGraph( work.nodes[2].hResource, tasks, plan, 8, describeResourceTest, &work, &nOtherCount ) );
 		} );
 		other.join();
 		REQUIRE( eOther.load() == SIR_RESOURCE_RESULT_WRITER_VIOLATION );

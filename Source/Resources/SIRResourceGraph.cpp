@@ -766,9 +766,7 @@ SIRResourceResult SIRResourceGraphWriter::compileDependencyOrder( SIRResourceHan
 	return SIR_RESOURCE_RESULT_SUCCESS;
 }
 
-
-SIRResourceResult SIRResourceGraphWriter::validateTaskPlan( const SIRResourceDependencyPlanEntry *pEntries,
-                                                            uint32_t nCount ) noexcept
+SIRResourceResult SIRResourceGraphWriter::validateTaskPlan( const SIRResourceDependencyPlanEntry *pEntries, uint32_t nCount ) noexcept
 {
 	if ( !m_pGraph->isWriterThread() ) {
 		return SIR_RESOURCE_RESULT_WRITER_VIOLATION;
@@ -789,15 +787,14 @@ SIRResourceResult SIRResourceGraphWriter::validateTaskPlan( const SIRResourceDep
 }
 
 SIRResourceResult SIRResourceGraphWriter::compileTaskGraph( SIRResourceHandle hRoot, SIRTaskGraph &rTaskGraph,
-                                                           SIRResourceDependencyPlanEntry *pEntries, uint32_t nCapacity,
-                                                           sirResourceTaskPassFactory_t pfnDescribePass, void *pContext,
-                                                           uint32_t *pRequired ) noexcept
+                                                            SIRResourceDependencyPlanEntry *pEntries, uint32_t nCapacity,
+                                                            sirResourceTaskPassFactory_t pfnDescribePass, void *pContext,
+                                                            uint32_t *pRequired ) noexcept
 {
 	if ( !m_pGraph->isWriterThread() ) {
 		return SIR_RESOURCE_RESULT_WRITER_VIOLATION;
 	}
-	if ( pRequired == nullptr || pEntries == nullptr || nCapacity == 0 || pfnDescribePass == nullptr ||
-	     rTaskGraph.getPassCount() != 0 ) {
+	if ( pRequired == nullptr || pEntries == nullptr || nCapacity == 0 || pfnDescribePass == nullptr || rTaskGraph.getPassCount() != 0 ) {
 		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
 	}
 	*pRequired = 0;
