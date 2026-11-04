@@ -51,7 +51,8 @@ typedef enum sirGraphicsResult_e : uint32_t
 	SIR_GRAPHICS_TIMEOUT = 7,
 	SIR_GRAPHICS_SURFACE_CHANGED = 8,
 	SIR_GRAPHICS_DEVICE_LOST = 9,
-	SIR_GRAPHICS_DRIVER_ERROR = 10
+	SIR_GRAPHICS_DRIVER_ERROR = 10,
+	SIR_GRAPHICS_VERSION_MISMATCH = 11
 } sirGraphicsResult_t;
 
 typedef enum sirGraphicsFeature_e : uint64_t

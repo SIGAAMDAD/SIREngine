@@ -343,6 +343,12 @@ static uint32_t mockCreate( void *, const sirGraphicsABIDeviceRequest_t *pReques
 	if ( s_nMockMode == 4 ) {
 		return 99;
 	}
+	if ( s_nMockMode == 6 ) {
+		return SIR_GRAPHICS_OUT_OF_MEMORY;
+	}
+	if ( s_nMockMode == 7 ) {
+		return SIR_GRAPHICS_BUSY;
+	}
 	++s_nLiveDevices;
 	*pDevice = {};
 	pDevice->nSize = sizeof( *pDevice );
