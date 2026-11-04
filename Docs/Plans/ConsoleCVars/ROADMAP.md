@@ -2,14 +2,14 @@
 
 **Base:** reconciled with `develop@1e799f4283c054b1a891ad23acc09c39d690b9c1` for P0.
 **Branch:** `feature/console-cvars-commands`.
-**Current delivery:** P0 closed ([#274](https://github.com/SIGAAMDAD/SIREngine/issues/274)); P1 adapter implemented and locally syntax/fixture checked, full native StringPool integration awaiting CI. P2-P7 remain.
+**Current delivery:** P0 closed ([#274](https://github.com/SIGAAMDAD/SIREngine/issues/274)); P1 closed after Linux/Windows native CI PASS (#276); P2 cooker/catalog/overlay source and tests authored (#277), pending exact-source CI acceptance; P3-P7 remain.
 No artificial duration or performance claims; milestones are dependency-ordered and accepted by source/build/test evidence.
 
 | ID | Scope and exclusive source owner | Depends | Deliverable / integration seam | Exit gate |
 |---|---|---|---|---|
 | P0 (complete) | Contracts, catalog identity; `Docs/Plans/ConsoleCVars/*` and future `Source/Core/Registration/SIRRegistrationTypes.h` | existing develop | Freeze names, flags, type set, precedence, callback ABI, event credit, error statuses and cooked schema | Contract review, failing negative catalog fixtures, source identity recorded |
-| P1 (verification pending) | String identity: `Source/Core/Strings/*`, tests `Tests/Unit/Strings/*` | P0 | Reuse developed native SIRStringPool, bind canonical console names and SIRS ordinal lookup; no second NMD port | Clang AST for actual TUs, malformed NMDS, hash collisions, lease/epoch, no fallback allocation |
-| P2 | Cooker/registration: `Source/Core/Registration/*`, `Tools/StringCatalogCooker/*`, `Tools/RegistrationCooker/*` | P1 | Deterministic cooked descriptors + versioned identity remap, dynamic overlay | Byte-identical recook, corrupt-section rejection, duplicate names/bindings rejected, CMake/GoogleTest |
+| P1 (complete) | String identity: `Source/Core/Strings/*`, tests `Tests/Unit/Strings/*` | P0 | Reuse developed native SIRStringPool, bind canonical console names and SIRS ordinal lookup; no second NMD port | Clang AST for actual TUs, malformed NMDS, hash collisions, lease/epoch, no fallback allocation |
+| P2 (CI pending) | Cooker/registration: `Source/Core/Registration/*`, `Tools/StringCatalogCooker/*`, `Tools/RegistrationCooker/*` | P1 | Deterministic cooked descriptors + versioned identity remap, dynamic overlay | Byte-identical recook, corrupt-section rejection, duplicate names/bindings rejected, CMake/GoogleTest |
 | P3 | Typed CVar storage: `Source/Core/CVars/*`, `Tests/Unit/CVars/*` | P2 + event-credit contract | Compact value banks, checked handles, transactional writes, precedence history, latched states, event publication | Zero-alloc scalar cached get/set under reserved credits, atomic rollback, OOM/stale/priority tests |
 | P4 | Native command backend: `Source/Core/Console/*`, `Tests/Unit/Console/*` | P2 + P3 | Cooked/dynamic command bindings, console ingress and pump, headless output/history/completion | Bounded grammar, permissions, callback unload, queue full, recursive exec, headless smoke |
 | P5 | Config/archives: `Source/Core/CVars/SIRCVarConfigAdapter.*`, `Source/Core/Console/SIRConsoleConfigAdapter.*` | P3 + P4 + actual Config codec and VFS APIs | Typed startup user/project overrides, validated `exec`, ARCHIVE save/load via VFS | Parse failure no effects, batch atomicity, deterministic archive, failed rename recovery |
@@ -88,3 +88,5 @@ Single integration authority: this feature branch's branch owner; each milestone
 Full origin precedence order; included numeric/vector/path type set; namespace grammar and reserved built-ins; notification credit design; archive format and VFS readiness; latched phase; shipping/developer/editor permissions; exact donor source digest/latest revision.
 
 Selected P0 policies, ABI v1 layout, status and acceptance evidence: [P0_FREEZE.md](P0_FREEZE.md). Remaining P1-P7 work retains its own verification gates.
+
+P2 artifact and acceptance record: [P2_DELIVERY.md](P2_DELIVERY.md). P1 #276 closed after 97/97 Linux and 92/92 Windows native CTests; P2 [#277](https://github.com/SIGAAMDAD/SIREngine/issues/277) is the acceptance gate.

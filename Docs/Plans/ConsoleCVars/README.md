@@ -1,12 +1,12 @@
 # Console / CVar / Command System — implementation packet
 
 **Branch:** `feature/console-cvars-commands` created from `develop@51666fadadf8112b3b2d5bf919ba11dde55d931b` (2026-11-04).
-**State:** P0 closed; P1 string identity adapter source and tests implemented, native full integration pending. P2-P7 remain.
+**State:** P0 and P1 closed; P2 cooked registration implementation submitted, exact-source CI acceptance pending. P3-P7 remain.
 **Design:** [Architecture](../../Architecture/20-console-cvars-commands.md).
 **Contracts:** [Interfaces](INTERFACES.md).
 **Milestones:** [Roadmap](ROADMAP.md).
 **Verification:** [Acceptance](ACCEPTANCE.md). **P0 contract:** [P0 Freeze](P0_FREEZE.md).
-**P1 implementation:** [P1 Delivery](P1_DELIVERY.md). **Machine task ledger:** [plan.json](plan.json).
+**P1 implementation:** [P1 Delivery](P1_DELIVERY.md). **P2 implementation:** [P2 Delivery](P2_DELIVERY.md). **Machine task ledger:** [plan.json](plan.json).
 
 ## Purpose
 
@@ -14,7 +14,7 @@ Build one native, memory-accounted, cooked-and-dynamic command/CVar registry usi
 
 ## Current baseline vs future work
 
-Verified current develop has SIRMemory, typed SIREvent queues, SIREngineSystem/SIRApplication lifecycle and partial Core/Config (CSV/TSV). Strings is already present on current develop; P0 adds Registration contract types, validator and target. CVars and Console remain unimplemented. The legacy ConsoleManager remains on main only as a behavior reference. This packet adds plans and makes no product-code modifications.
+Verified current develop has SIRMemory, typed SIREvent queues, SIREngineSystem/SIRApplication lifecycle and partial Core/Config (CSV/TSV). Strings is already present on current develop; P0 adds Registration contract types, validator and target. CVars and Console remain unimplemented. The legacy ConsoleManager remains on main only as a behavior reference. This packet tracks the implemented P0-P2 source and makes no product-code modifications.
 
 ## Source references
 

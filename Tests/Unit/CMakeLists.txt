@@ -284,3 +284,16 @@ add_executable(SIRRegistrationStringBridgeTests SIRRegistrationStringBridgeTests
 target_link_libraries(SIRRegistrationStringBridgeTests PRIVATE SIR::Core)
 add_test(NAME core.registration.string-bridge COMMAND SIRRegistrationStringBridgeTests)
 sir_configure_owned_target(SIRRegistrationStringBridgeTests)
+
+# P2: cooked metadata, runtime activation and dynamic registration without a second name pool.
+add_executable(SIRRegistrationCookerTests SIRRegistrationCookerTests.cpp)
+target_link_libraries(SIRRegistrationCookerTests PRIVATE SIRRegistrationCookerLib SIR::Core)
+add_test(NAME core.registration.cooker COMMAND SIRRegistrationCookerTests)
+sir_configure_owned_target(SIRRegistrationCookerTests)
+
+# P2 offline tool determinism and invalid manifest rejection.
+add_test(NAME core.registration.cooker-cli COMMAND "${CMAKE_COMMAND}"
+    "-DSIR_COOKER=$<TARGET_FILE:SIRRegistrationCooker>"
+    "-DSIR_FIXTURES=${PROJECT_SOURCE_DIR}/Tests/Unit/Registration"
+    "-DSIR_OUT=${PROJECT_BINARY_DIR}/RegistrationCookerSmoke"
+    -P "${PROJECT_SOURCE_DIR}/Tests/Unit/Registration/CookerCLI.cmake")

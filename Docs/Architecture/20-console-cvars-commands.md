@@ -1,6 +1,6 @@
 # 20 — Console, CVars, Commands and Cooked Registration
 
-**Status:** DESIGN / IMPLEMENTATION ROADMAP — no runtime implementation claimed.
+**Status:** P0/P1 completed; P2 cooked registration implementation submitted for CI; CVar value storage, console dispatch and archive/persistence are future P3–P7.
 **Baseline:** `SIGAAMDAD/SIREngine develop@51666fadadf8112b3b2d5bf919ba11dde55d931b` (2026-11-04).
 **Branch:** `feature/console-cvars-commands` from that exact commit.
 **Execution packet:** [ConsoleCVars](../Plans/ConsoleCVars/README.md).
