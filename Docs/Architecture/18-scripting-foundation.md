@@ -243,3 +243,37 @@ fixed request record holds an input size and cache recipe key, not source bytes.
 The planned gameplay language and SUIL both use this pipeline after their own
 frontends produce canonical, versioned build recipes and backend-specific
 artifacts. Their language semantics remain outside the coordinator.
+
+## Asynchronous external optimizer process transport (implementation slice 10)
+
+`SIRScriptOptimizerProcessTransport` is the concrete Windows/Linux child-process
+adapter for the Stage 9 transport ABI. It launches a configured executable
+without a shell, connects a dedicated stdin/stdout pipe pair, and runs one
+writer thread and one reader thread. The owner-thread `send()` callback copies
+one complete 160-byte request into a bounded 16-frame queue, while `receive()`
+returns only complete 200-byte replies from another bounded 16-frame queue.
+Both callbacks return `SIR_SCRIPT_BUSY` rather than waiting for OS I/O.
+The worker must reserve stdout exclusively for canonical binary protocol
+records and use stderr for diagnostic text. Requests and replies are checked
+by `SIRScriptOptimizationProtocol`, which remains backend-independent.
+
+The process configuration owns the executable path, up to eight copied
+arguments, and an optional reply-progress watchdog deadline in milliseconds.
+The watchdog fires only while requests remain outstanding. EOF, partial frame,
+pipe errors, worker exit, and an expired watchdog return a transport failure;
+`SIRScriptOptimizationCoordinator` then stops the worker and fails its
+in-flight jobs. `stop()` terminates the child, unblocks and joins both I/O
+threads, reaps its process and closes pipe handles before clearing queues.
+On Linux, the writer thread blocks SIGPIPE so an exited worker cannot kill
+the host; child creation uses `posix_spawnp` with file actions. On Windows,
+`CreateProcessA` is used with redirected inherited pipe handles and the same
+thread-owned blocking-I/O model. This implementation does not set process
+priority or create a sandboxed worker security context.
+
+The CTest fixture launches an actual worker process and tests segmented pipe
+frames, worker failure/EOF, truncated replies, watchdog termination,
+transport restart, and coordinator job completion over IPC. These are
+protocol and lifecycle tests, **not** compiler tests: the fixture emits a
+valid failure reply without generating optimized code. A production worker
+must implement canonical input staging, compilation/optimization and
+SHA-256-verified artifact cache publishing before returning success.

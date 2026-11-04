@@ -7,13 +7,15 @@ add_library(SIRScripting STATIC
     Core/SIRScriptMemoryRouter.cpp
     Core/SIRScriptOptimizationProtocol.cpp
     Core/SIRScriptOptimizationCoordinator.cpp
+    Core/SIRScriptOptimizerProcessTransport.cpp
     Core/SIRScriptRuntime.cpp
     Core/SIRScriptScheduler.cpp
     Core/SIRScriptServer.cpp
     Core/SIRScriptSHA256.cpp
 )
+find_package(Threads REQUIRED)
 add_library(SIR::Scripting ALIAS SIRScripting)
-target_link_libraries(SIRScripting PUBLIC SIR::Core)
+target_link_libraries(SIRScripting PUBLIC SIR::Core Threads::Threads)
 target_include_directories(SIRScripting PUBLIC
     "${PROJECT_SOURCE_DIR}/Source"
     "${PROJECT_SOURCE_DIR}/Build/CMake")
