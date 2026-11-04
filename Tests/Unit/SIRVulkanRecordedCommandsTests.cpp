@@ -168,6 +168,32 @@ int main( void )
 	if ( sirVulkanValidateRecordedCommands( &rangeCommand, 1 ) != SIR_VULKAN_INVALID_ARGUMENT ) {
 		return 21;
 	}
+	// Independent copies need no internal memory barrier; aliased read/write buffers do.
+	sirVulkanRecordedCommand_t hazards[7] = {};
+	hazards[0].eKind = SIR_VULKAN_RECORDED_BUFFER_COPY;
+	hazards[0].bufferCopy = { &source, &staging, 0, 0, 256 };
+	hazards[1].eKind = SIR_VULKAN_RECORDED_BUFFER_COPY;
+	hazards[1].bufferCopy = { &source, &readback, 0, 0, 256 };
+	hazards[2].eKind = SIR_VULKAN_RECORDED_BUFFER_COPY;
+	hazards[2].bufferCopy = { &staging, &readback, 0, 256, 256 };
+	hazards[3].eKind = SIR_VULKAN_RECORDED_TEXTURE_COPY;
+	hazards[3].pBuffer = &readback;
+	hazards[3].textureCopy.bBufferToImage = true;
+	hazards[4].eKind = SIR_VULKAN_RECORDED_TEXTURE_COPY;
+	hazards[4].pBuffer = &source;
+	hazards[4].textureCopy.bBufferToImage = true;
+	hazards[5].eKind = SIR_VULKAN_RECORDED_TEXTURE_COPY;
+	hazards[5].pBuffer = &source;
+	hazards[5].textureCopy.bBufferToImage = false;
+	hazards[6].eKind = SIR_VULKAN_RECORDED_COMPUTE_DISPATCH;
+	if ( sirVulkanRecordedNeedsBufferBarrier( hazards, 0 ) || sirVulkanRecordedNeedsBufferBarrier( hazards, 1 ) ||
+	     !sirVulkanRecordedNeedsBufferBarrier( hazards, 2 ) || !sirVulkanRecordedNeedsBufferBarrier( hazards, 3 ) ||
+	     sirVulkanRecordedNeedsBufferBarrier( hazards, 4 ) || !sirVulkanRecordedNeedsBufferBarrier( hazards, 5 ) ||
+	     sirVulkanRecordedNeedsBufferBarrier( hazards, 6 ) ||
+	     sirVulkanRecordedNeedsBufferBarrier( nullptr, 1 ) ||
+	     sirVulkanRecordedNeedsBufferBarrier( hazards, SIR_VULKAN_COPY_BATCH_CAPACITY ) ) {
+		return 22;
+	}
 	printf( "Vulkan ordered mixed command validation passed\n" );
 	return 0;
 }

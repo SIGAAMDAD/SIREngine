@@ -110,6 +110,46 @@ static sirVulkanResult_t sirVulkanAdvanceRecordedState( sirVulkanImage_t *pShado
 	return SIR_VULKAN_SUCCESS;
 }
 
+static void sirVulkanRecordedBufferAccess( const sirVulkanRecordedCommand_t &command, const sirVulkanBuffer_t **ppRead,
+                                            const sirVulkanBuffer_t **ppWrite ) noexcept
+{
+	*ppRead = nullptr;
+	*ppWrite = nullptr;
+	if ( command.eKind == SIR_VULKAN_RECORDED_BUFFER_COPY ) {
+		*ppRead = command.bufferCopy.pSource;
+		*ppWrite = command.bufferCopy.pDestination;
+	} else if ( command.eKind == SIR_VULKAN_RECORDED_TEXTURE_COPY ) {
+		if ( command.textureCopy.bBufferToImage ) {
+			*ppRead = command.pBuffer;
+		} else {
+			*ppWrite = command.pBuffer;
+		}
+	}
+}
+
+bool sirVulkanRecordedNeedsBufferBarrier( const sirVulkanRecordedCommand_t *pCommands, uint32_t nIndex ) noexcept
+{
+	if ( pCommands == nullptr || nIndex == 0 || nIndex >= SIR_VULKAN_COPY_BATCH_CAPACITY ) {
+		return false;
+	}
+	const sirVulkanBuffer_t *pRead = nullptr;
+	const sirVulkanBuffer_t *pWrite = nullptr;
+	sirVulkanRecordedBufferAccess( pCommands[nIndex], &pRead, &pWrite );
+	if ( pRead == nullptr && pWrite == nullptr ) {
+		return false;
+	}
+	for ( uint32_t iEarlier = 0; iEarlier < nIndex; ++iEarlier ) {
+		const sirVulkanBuffer_t *pEarlierRead = nullptr;
+		const sirVulkanBuffer_t *pEarlierWrite = nullptr;
+		sirVulkanRecordedBufferAccess( pCommands[iEarlier], &pEarlierRead, &pEarlierWrite );
+		if ( ( pWrite != nullptr && ( pWrite == pEarlierRead || pWrite == pEarlierWrite ) ) ||
+		     ( pRead != nullptr && pRead == pEarlierWrite ) ) {
+			return true;
+		}
+	}
+	return false;
+}
+
 sirVulkanResult_t sirVulkanValidateRecordedCommands( const sirVulkanRecordedCommand_t *pCommands, uint32_t nCount ) noexcept
 {
 	if ( pCommands == nullptr || nCount == 0 || nCount > SIR_VULKAN_COPY_BATCH_CAPACITY ) {
@@ -245,9 +285,24 @@ sirVulkanResult_t SIRVulkanDevice::submitRecordedCommands( const sirVulkanRecord
 	dependency.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
 	dependency.memoryBarrierCount = 1;
 	dependency.pMemoryBarriers = &memory;
+	// A single boundary barrier covers host writes and earlier queue submissions.
+	m_pfnCmdPipelineBarrier2( pSlot->hCommandBuffer, &dependency );
+
+	VkMemoryBarrier2 transferMemory = {};
+	transferMemory.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2;
+	transferMemory.srcStageMask = VK_PIPELINE_STAGE_2_COPY_BIT;
+	transferMemory.srcAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT | VK_ACCESS_2_TRANSFER_WRITE_BIT;
+	transferMemory.dstStageMask = VK_PIPELINE_STAGE_2_COPY_BIT;
+	transferMemory.dstAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT | VK_ACCESS_2_TRANSFER_WRITE_BIT;
+	VkDependencyInfo transferDependency = {};
+	transferDependency.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+	transferDependency.memoryBarrierCount = 1;
+	transferDependency.pMemoryBarriers = &transferMemory;
 	for ( uint32_t iCommand = 0; iCommand < nCount; ++iCommand ) {
 		const sirVulkanRecordedCommand_t &command = pCommands[iCommand];
-		m_pfnCmdPipelineBarrier2( pSlot->hCommandBuffer, &dependency );
+		if ( sirVulkanRecordedNeedsBufferBarrier( pCommands, iCommand ) ) {
+			m_pfnCmdPipelineBarrier2( pSlot->hCommandBuffer, &transferDependency );
+		}
 		if ( command.eKind == SIR_VULKAN_RECORDED_BUFFER_COPY ) {
 			VkBufferCopy2 region = {};
 			region.sType = VK_STRUCTURE_TYPE_BUFFER_COPY_2;

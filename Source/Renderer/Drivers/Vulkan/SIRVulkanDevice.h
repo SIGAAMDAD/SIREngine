@@ -260,6 +260,8 @@ typedef struct sirVulkanRecordedCommand_s
 
 // Pure ordered preflight: never mutates caller-owned VkImage state.
 sirVulkanResult_t sirVulkanValidateRecordedCommands( const sirVulkanRecordedCommand_t *pCommands, uint32_t nCount ) noexcept;
+// Whether this command needs a transfer-stage memory dependency on an earlier buffer access.
+bool sirVulkanRecordedNeedsBufferBarrier( const sirVulkanRecordedCommand_t *pCommands, uint32_t nIndex ) noexcept;
 
 sirVulkanResult_t sirVulkanValidateTextureTransfer( const sirVulkanBuffer_t *pBuffer, const sirVulkanImage_t *pImage,
                                                     const sirVulkanTextureTransfer_t &transfer ) noexcept;
