@@ -392,8 +392,8 @@ static sirShaderCookResult_t sirCookExpand( sirShaderCookContext_t *pContext, co
 			if ( sWord == "undef" ) {
 				pContext->szMacros.erase( sName );
 			} else {
-				const std::string sValue = iSpace == std::string::npos ? "1" : sirCookTrim( sArgument.substr( iSpace ) );
-				pContext->szMacros[sName] = sValue.empty() ? "1" : sValue;
+				const std::string sValue = iSpace == std::string::npos ? "" : sirCookTrim( sArgument.substr( iSpace ) );
+				pContext->szMacros[sName] = sValue;
 			}
 			pContext->pManifest->sExpandedSource += sLine + '\n';
 		} else {

@@ -205,12 +205,126 @@ static bool sirCookRun( const std::filesystem::path& sRoot )
 	                     "legacy recipe and null guards" );
 }
 
+static bool sirCookBoundaryCases( const std::filesystem::path& sRoot )
+{
+	sirShaderCookRequest_t request = {};
+	request.sRoot = sRoot;
+	request.sEntryFile = "case/main.hlsl";
+	request.sEntryPoint = "main";
+	request.eBackend = SIR_GRAPHICS_BACKEND_VULKAN;
+	request.nStage = SIR_GRAPHICS_STAGE_COMPUTE;
+
+	sirShaderCookManifest_t manifest = {};
+	std::string sDiagnostic;
+	const auto checkSource = [&]( const std::string& sSource, sirShaderCookResult_t eExpected, const char *pszDescription ) {
+		sirCookPut( sRoot / "case/main.hlsl", sSource );
+		const sirShaderCookResult_t eActual = sirShaderCookPreprocess( request, &manifest, &sDiagnostic );
+		if ( eActual != eExpected ) {
+			std::cerr << "FAIL " << pszDescription << ": expected " << ( uint32_t )eExpected << ", got " << ( uint32_t )eActual << ": "
+			          << sDiagnostic << '\n';
+			return false;
+		}
+		return true;
+	};
+
+	if ( !checkSource( "#if !defined(ABSENT)\nint present = 1;\n#endif\n", SIR_SHADER_COOK_OK, "negated defined" ) ||
+	     !checkSource( "#if UNKNOWN_MACRO\n#include \"missing.h\"\n#else\nint present = 1;\n#endif\n", SIR_SHADER_COOK_OK,
+	                   "undefined macro treated as zero" ) ||
+	     !checkSource( "#define MARKER 0\n#if !MARKER\nint present = 1;\n#endif\n", SIR_SHADER_COOK_OK, "inverted zero macro" ) ||
+	     !checkSource( "#define MARKER nope\n#if MARKER\n#endif\n", SIR_SHADER_COOK_BAD_DIRECTIVE, "unsupported macro expression" ) ||
+	     !checkSource( "#if defined(1BAD)\n#endif\n", SIR_SHADER_COOK_BAD_DIRECTIVE, "invalid defined identifier" ) ||
+	     !checkSource( "#ifdef 1BAD\n#endif\n", SIR_SHADER_COOK_BAD_DIRECTIVE, "invalid ifdef identifier" ) ||
+	     !checkSource( "#if 0\n#else extra\n#endif\n", SIR_SHADER_COOK_BAD_DIRECTIVE, "else argument" ) ||
+	     !checkSource( "#if 0\n#elif A && B\n#endif\n", SIR_SHADER_COOK_BAD_DIRECTIVE, "invalid elif expression" ) ||
+	     !checkSource( "#if 1\n#else\n#elif 1\n#endif\n", SIR_SHADER_COOK_BAD_DIRECTIVE, "elif after else" ) ||
+	     !checkSource( "#else\n", SIR_SHADER_COOK_BAD_DIRECTIVE, "orphan else" ) ||
+	     !checkSource( "#define 1BAD 1\n", SIR_SHADER_COOK_BAD_DIRECTIVE, "invalid define name" ) ||
+	     !checkSource( "#undef 1BAD\n", SIR_SHADER_COOK_BAD_DIRECTIVE, "invalid undef name" ) ||
+	     !checkSource( "#include\n", SIR_SHADER_COOK_BAD_DIRECTIVE, "missing include argument" ) ||
+	     !checkSource( "#include \"unterminated\n", SIR_SHADER_COOK_BAD_DIRECTIVE, "unterminated include string" ) ||
+	     !checkSource( "#include \"good.h\" invalid\n", SIR_SHADER_COOK_BAD_DIRECTIVE, "include junk suffix" ) ||
+	     !checkSource( "#include \"bad+name.h\"\n", SIR_SHADER_COOK_BAD_DIRECTIVE, "invalid include characters" ) ||
+	     !checkSource( "#include \"../outside.h\"\n", SIR_SHADER_COOK_IO_ERROR, "missing parent include" ) ||
+	     !checkSource( "#pragma once\n#pragma unrelated\n", SIR_SHADER_COOK_OK, "pragma handling" ) ||
+	     !checkSource( "/*\n#include \"missing.h\"\n*/\nint active = 1;\n", SIR_SHADER_COOK_OK, "block comment include" ) ||
+	     !checkSource( "// #include \"missing.h\"\n", SIR_SHADER_COOK_OK, "line comment include" ) ||
+	     !checkSource( "#include \"notthere.h\"\n", SIR_SHADER_COOK_IO_ERROR, "nonexistent child" ) ||
+	     !checkSource( "#if 0\n#if A && B\n#endif\n#endif\n", SIR_SHADER_COOK_OK, "inactive nested expression" ) ) {
+		return false;
+	}
+
+	request.sEntryFile = "";
+	if ( !sirCookCheck( sirShaderCookPreprocess( request, &manifest, &sDiagnostic ) == SIR_SHADER_COOK_INVALID_ARGUMENT,
+	                    "empty entry path" ) ) {
+		return false;
+	}
+	request.sEntryFile = "case/main.hlsl";
+	request.sEntryPoint = "bad-name";
+	if ( !sirCookCheck( sirShaderCookPreprocess( request, &manifest, &sDiagnostic ) == SIR_SHADER_COOK_INVALID_ARGUMENT,
+	                    "invalid entrypoint identifier" ) ) {
+		return false;
+	}
+	request.sEntryPoint = "main";
+	request.szDefines.resize( 65, { "DEFINED", "1" } );
+	if ( !sirCookCheck( sirShaderCookPreprocess( request, &manifest, &sDiagnostic ) == SIR_SHADER_COOK_INVALID_ARGUMENT,
+	                    "define capacity" ) ) {
+		return false;
+	}
+	request.szDefines.clear();
+	request.sRoot = sRoot / "does-not-exist";
+	if ( !sirCookCheck( sirShaderCookPreprocess( request, &manifest, &sDiagnostic ) == SIR_SHADER_COOK_IO_ERROR,
+	                    "nonexistent shader root" ) ) {
+		return false;
+	}
+	request.sRoot = sRoot;
+
+	// Reject embedded NUL even when the underlying file exists and passes stat.
+	if ( !checkSource( std::string( "int main() {\0}\n", 15 ), SIR_SHADER_COOK_IO_ERROR, "embedded NUL" ) ) {
+		return false;
+	}
+	if ( !checkSource( std::string( ( 1U << 20 ) + 1, 'x' ), SIR_SHADER_COOK_CAPACITY_EXCEEDED, "file byte limit" ) ) {
+		return false;
+	}
+
+	if ( !checkSource( "#define EMPTY\n#ifdef EMPTY\nint present = 1;\n#endif\n", SIR_SHADER_COOK_OK, "empty macro exists" ) ||
+	     !checkSource( "#define EMPTY\n#if EMPTY\n#endif\n", SIR_SHADER_COOK_BAD_DIRECTIVE, "empty macro not numeric" ) ||
+	     !checkSource( "#if 2\nint present = 1;\n#endif\n", SIR_SHADER_COOK_OK, "numeric nonzero condition" ) ||
+	     !checkSource( "#if\n#endif\n", SIR_SHADER_COOK_BAD_DIRECTIVE, "empty conditional" ) ||
+	     !checkSource( "#\n", SIR_SHADER_COOK_OK, "empty directive" ) || !checkSource( "   \t\n", SIR_SHADER_COOK_OK, "whitespace line" ) ||
+	     !checkSource( "#pragma unrelated\n", SIR_SHADER_COOK_OK, "unrelated pragma" ) ||
+	     !checkSource( "#include \"" + std::string( 252, 'a' ) + "\"\n", SIR_SHADER_COOK_PATH_ESCAPE, "normalized child path too long" ) ) {
+		return false;
+	}
+
+	// One small physical file may be included repeatedly, but its expanded
+	// representation must stay within the admitted 16 MiB budget.
+	sirCookPut( sRoot / "case/shared.hlsli", std::string( ( 1U << 20 ) - 128, 'x' ) + "\n" );
+	std::string sRepeated;
+	for ( uint32_t iInclude = 0; iInclude < 18; ++iInclude ) {
+		sRepeated += "#include \"shared.hlsli\"\n";
+	}
+	if ( !checkSource( sRepeated, SIR_SHADER_COOK_CAPACITY_EXCEEDED, "expanded source limit" ) ) {
+		return false;
+	}
+
+	// Depth is independent of the number-of-files and byte budgets.
+	for ( uint32_t iDepth = 0; iDepth < 66; ++iDepth ) {
+		sirCookPut( sRoot / "case" / ( "depth" + std::to_string( iDepth ) + ".hlsli" ),
+		            "#include \"depth" + std::to_string( iDepth + 1 ) + ".hlsli\"\n" );
+	}
+	if ( !checkSource( "#include \"depth0.hlsli\"\n", SIR_SHADER_COOK_CAPACITY_EXCEEDED, "include depth limit" ) ) {
+		return false;
+	}
+
+	return true;
+}
+
 int main( void )
 {
 	const std::filesystem::path sRoot = std::filesystem::temp_directory_path() / "sir_shader_frontend_tests";
 	std::filesystem::remove_all( sRoot );
 	std::filesystem::create_directories( sRoot );
-	const bool bPassed = sirCookRun( sRoot );
+	const bool bPassed = sirCookRun( sRoot ) && sirCookBoundaryCases( sRoot );
 	std::filesystem::remove_all( sRoot );
 	if ( bPassed ) {
 		std::cout << "SIRShaderFrontendTests passed\n";
