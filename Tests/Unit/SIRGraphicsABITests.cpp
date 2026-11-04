@@ -22,6 +22,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 static uint32_t s_nReleases = 0;
 static uint32_t s_nFactoryMode = 0;
+static uint32_t s_nDriverSentinel = 0;
 
 static void *testAllocate( void *, uint64_t nBytes, uint64_t ) noexcept
 {
@@ -72,7 +73,7 @@ static uint32_t testFactory( uint32_t nMajor, uint32_t nMinor, const sirGraphics
 	pDriver->nMajor = SIR_GRAPHICS_DRIVER_ABI_MAJOR;
 	pDriver->nMinor = SIR_GRAPHICS_DRIVER_ABI_MINOR;
 	pDriver->nBackend = SIR_GRAPHICS_BACKEND_VULKAN;
-	pDriver->pDriver = pDriver;
+	pDriver->pDriver = &s_nDriverSentinel;
 	pDriver->pAdapterCount = testCount;
 	pDriver->pQueryAdapter = testAdapter;
 	pDriver->pCreateDevice = testCreate;
