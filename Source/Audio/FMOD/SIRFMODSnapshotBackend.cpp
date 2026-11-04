@@ -165,14 +165,14 @@ sirAudioResult_t SIRFMODSnapshotBackend::registerSnapshot( uint64_t nSnapshotId,
 	return registerSnapshotInternal( nSnapshotId, szPath, nullptr, 0 );
 }
 
-sirAudioResult_t SIRFMODSnapshotBackend::registerSnapshotFromBank( uint64_t nSnapshotId, uint64_t nPackageId,
-                                                                   SIRFMODBankStore *pBankStore, const char *szPath ) noexcept
+sirAudioResult_t SIRFMODSnapshotBackend::registerSnapshotFromBank( uint64_t nSnapshotId, uint64_t nPackageId, SIRFMODBankStore *pBankStore,
+                                                                   const char *szPath ) noexcept
 {
 	return registerSnapshotInternal( nSnapshotId, szPath, pBankStore, nPackageId );
 }
 
-sirAudioResult_t SIRFMODSnapshotBackend::registerSnapshotInternal( uint64_t nSnapshotId, const char *szPath,
-                                                                    SIRFMODBankStore *pBankStore, uint64_t nPackageId ) noexcept
+sirAudioResult_t SIRFMODSnapshotBackend::registerSnapshotInternal( uint64_t nSnapshotId, const char *szPath, SIRFMODBankStore *pBankStore,
+                                                                   uint64_t nPackageId ) noexcept
 {
 	if ( !isReady() ) {
 		return SIR_AUDIO_NOT_INITIALIZED;

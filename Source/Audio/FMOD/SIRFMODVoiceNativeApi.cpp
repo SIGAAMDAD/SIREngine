@@ -117,9 +117,34 @@ static int32_t fmodSetListenerWeight( void *, void *pStudio, uint32_t iListener,
 	return ( int32_t )( ( FMOD::Studio::System * )pStudio )->setListenerWeight( ( int )iListener, fWeight );
 }
 
+static int32_t fmodSetInstanceVolume( void *, void *pInstance, float fVolume ) noexcept
+{
+	return ( int32_t )( ( FMOD::Studio::EventInstance * )pInstance )->setVolume( fVolume );
+}
+
+static int32_t fmodSetInstancePitch( void *, void *pInstance, float fPitch ) noexcept
+{
+	return ( int32_t )( ( FMOD::Studio::EventInstance * )pInstance )->setPitch( fPitch );
+}
+
+static int32_t fmodSetInstancePaused( void *, void *pInstance, uint8_t bPaused ) noexcept
+{
+	return ( int32_t )( ( FMOD::Studio::EventInstance * )pInstance )->setPaused( bPaused != 0 );
+}
+
+static int32_t fmodSetInstanceTimeline( void *, void *pInstance, int32_t nMilliseconds ) noexcept
+{
+	return ( int32_t )( ( FMOD::Studio::EventInstance * )pInstance )->setTimelinePosition( nMilliseconds );
+}
+
+static int32_t fmodGetInstanceTimeline( void *, void *pInstance, int32_t *pnMilliseconds ) noexcept
+{
+	return ( int32_t )( ( FMOD::Studio::EventInstance * )pInstance )->getTimelinePosition( ( int * )pnMilliseconds );
+}
+
 sirFMODVoiceNativeOps_t sirGetFMODVoiceNativeOps( void ) noexcept
 {
-	return { 3,
+	return { 4,
 	         nullptr,
 	         fmodResolveEvent,
 	         fmodCreateInstance,
@@ -132,5 +157,10 @@ sirFMODVoiceNativeOps_t sirGetFMODVoiceNativeOps( void ) noexcept
 	         fmodSetInstanceSpatial,
 	         fmodSetListenerSpatial,
 	         fmodSetListenerCount,
-	         fmodSetListenerWeight };
+	         fmodSetListenerWeight,
+	         fmodSetInstanceVolume,
+	         fmodSetInstancePitch,
+	         fmodSetInstancePaused,
+	         fmodSetInstanceTimeline,
+	         fmodGetInstanceTimeline };
 }

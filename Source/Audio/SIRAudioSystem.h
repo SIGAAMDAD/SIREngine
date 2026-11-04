@@ -110,6 +110,10 @@ public:
 	sirAudioResult_t playEvent( uint64_t nEventId, sirAudioEmitterHandle_t hEmitter, sirAudioPlayingHandle_t &hPlaying ) noexcept;
 	sirAudioResult_t stopEvent( sirAudioPlayingHandle_t hPlaying, sirAudioStopMode_t eMode ) noexcept;
 	sirAudioResult_t setParameter( sirAudioPlayingHandle_t hPlaying, uint64_t nParameterId, float fValue ) noexcept;
+	sirAudioResult_t setPlayingVolume( sirAudioPlayingHandle_t hPlaying, float fVolume ) noexcept;
+	sirAudioResult_t setPlayingPitch( sirAudioPlayingHandle_t hPlaying, float fPitch ) noexcept;
+	sirAudioResult_t setPlayingPaused( sirAudioPlayingHandle_t hPlaying, bool bPaused ) noexcept;
+	sirAudioResult_t seekPlayingTimeline( sirAudioPlayingHandle_t hPlaying, uint32_t nMilliseconds ) noexcept;
 	sirAudioResult_t registerEmitter( sirAudioEmitterHandle_t &hEmitter ) noexcept;
 	sirAudioResult_t releaseEmitter( sirAudioEmitterHandle_t hEmitter ) noexcept;
 	sirAudioResult_t setEmitterAttributes( sirAudioEmitterHandle_t hEmitter, const sirAudioAttributes_t &attributes ) noexcept;

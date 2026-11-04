@@ -76,7 +76,7 @@ private:
 	bool isReady( void ) const noexcept;
 	bool findControl( uint64_t nControlId, uint32_t &iIndex ) const noexcept;
 	sirAudioResult_t registerControl( uint64_t nControlId, const char *szPath, sirFMODMixerControlKind_t eKind,
-	                                 SIRFMODBankStore *pBankStore = nullptr, uint64_t nPackageId = 0 ) noexcept;
+	                                  SIRFMODBankStore *pBankStore = nullptr, uint64_t nPackageId = 0 ) noexcept;
 	sirAudioResult_t setVolume( uint64_t nControlId, float fVolume, sirFMODMixerControlKind_t eKind ) noexcept;
 
 public:

@@ -207,8 +207,7 @@ uint32_t SIRFMODContext::getRuntimeVersion( void ) const noexcept
 
 bool SIRFMODContext::pinBorrowedBankObject( bool bBankScoped ) noexcept
 {
-	if ( !isReady() || m_nBorrowedBankObjects == UINT32_MAX ||
-	     ( !bBankScoped && m_nUnscopedBankObjects == UINT32_MAX ) ) {
+	if ( !isReady() || m_nBorrowedBankObjects == UINT32_MAX || ( !bBankScoped && m_nUnscopedBankObjects == UINT32_MAX ) ) {
 		return false;
 	}
 	++m_nBorrowedBankObjects;

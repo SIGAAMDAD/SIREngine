@@ -74,6 +74,15 @@ typedef struct sirFMODVoiceFixture_s
 	uint64_t nLastParameterId = 0;
 	float fLastParameterValue = 0.0f;
 	uint32_t nFailParameter = 0;
+	uint32_t nAdvancedVolumeCalls = 0;
+	uint32_t nAdvancedPitchCalls = 0;
+	uint32_t nAdvancedPauseCalls = 0;
+	uint32_t nAdvancedSeekCalls = 0;
+	uint32_t nFailAdvanced = 0;
+	float fAdvancedVolume = 1.0f;
+	float fAdvancedPitch = 1.0f;
+	uint8_t bAdvancedPaused = 0;
+	int32_t nAdvancedTimeline = 0;
 	uint32_t nEmitterSpatialCalls = 0;
 	uint32_t nListenerSpatialCalls = 0;
 	uint32_t nListenerCountCalls = 0;
@@ -235,8 +244,8 @@ static int32_t testRelease( void *pData, void *pInstance ) noexcept
 }
 static sirFMODVoiceNativeOps_t makeVoiceOps( sirFMODVoiceFixture_t *pFixture ) noexcept
 {
-	return { 3,       pFixture, testResolve, testCreateInstance, testStart, testStop, testIsStopped, testRelease, nullptr, nullptr, nullptr,
-	         nullptr, nullptr,  nullptr };
+	return { 4,       pFixture, testResolve, testCreateInstance, testStart, testStop, testIsStopped, testRelease, nullptr, nullptr, nullptr,
+	         nullptr, nullptr,  nullptr,      nullptr,     nullptr,    nullptr,     nullptr,         nullptr };
 }
 
 static int32_t testInstanceParameter( void *pData, void *pInstance, uint64_t nNativeId, float fValue ) noexcept
@@ -305,6 +314,105 @@ static int32_t testListenerWeight( void *pData, void *pStudio, uint32_t iListene
 	++pFixture->nListenerWeightCalls;
 	pFixture->fListenerWeight = fWeight;
 	return 0;
+}
+
+static int32_t testAdvancedVolume( void *pData, void *pInstance, float fVolume ) noexcept
+{
+	sirFMODVoiceFixture_t *pFixture = ( sirFMODVoiceFixture_t * )pData;
+	checkVoice( pInstance != nullptr );
+	++pFixture->nAdvancedVolumeCalls;
+	if ( pFixture->nFailAdvanced != 0 ) {
+		--pFixture->nFailAdvanced;
+		return -91;
+	}
+	pFixture->fAdvancedVolume = fVolume;
+	return 0;
+}
+
+static int32_t testAdvancedPitch( void *pData, void *pInstance, float fPitch ) noexcept
+{
+	sirFMODVoiceFixture_t *pFixture = ( sirFMODVoiceFixture_t * )pData;
+	checkVoice( pInstance != nullptr );
+	++pFixture->nAdvancedPitchCalls;
+	pFixture->fAdvancedPitch = fPitch;
+	return 0;
+}
+
+static int32_t testAdvancedPaused( void *pData, void *pInstance, uint8_t bPaused ) noexcept
+{
+	sirFMODVoiceFixture_t *pFixture = ( sirFMODVoiceFixture_t * )pData;
+	checkVoice( pInstance != nullptr );
+	++pFixture->nAdvancedPauseCalls;
+	pFixture->bAdvancedPaused = bPaused;
+	return 0;
+}
+
+static int32_t testAdvancedSeek( void *pData, void *pInstance, int32_t nMilliseconds ) noexcept
+{
+	sirFMODVoiceFixture_t *pFixture = ( sirFMODVoiceFixture_t * )pData;
+	checkVoice( pInstance != nullptr );
+	++pFixture->nAdvancedSeekCalls;
+	pFixture->nAdvancedTimeline = nMilliseconds;
+	return 0;
+}
+
+static int32_t testAdvancedQuery( void *pData, void *pInstance, int32_t *pnMilliseconds ) noexcept
+{
+	sirFMODVoiceFixture_t *pFixture = ( sirFMODVoiceFixture_t * )pData;
+	checkVoice( pInstance != nullptr );
+	*pnMilliseconds = pFixture->nAdvancedTimeline;
+	return 0;
+}
+
+static void testAdvancedInstanceControls( const sirContainerAllocator_t *pAllocator )
+{
+	sirFMODVoiceFixture_t fixture = {};
+	SIRFMODContext context;
+	const sirFMODContextConfig_t contextConfig = { 16, -1, 1, 1, 0, 0 };
+	checkVoice( context.initialize( contextConfig, makeContextOps( &fixture ) ) == SIR_FMOD_OK );
+	sirFMODVoiceNativeOps_t nativeOps = makeVoiceOps( &fixture );
+	nativeOps.setInstanceVolume = testAdvancedVolume;
+	nativeOps.setInstancePitch = testAdvancedPitch;
+	nativeOps.setInstancePaused = testAdvancedPaused;
+	nativeOps.setInstanceTimeline = testAdvancedSeek;
+	nativeOps.getInstanceTimeline = testAdvancedQuery;
+	SIRFMODVoiceBackend backend;
+	checkVoice( backend.configure( &context, pAllocator, nativeOps, 1 ) == SIR_AUDIO_OK );
+	SIRAudioSystem audio;
+	const sirAudioSystemConfig_t config = { 1, 0, 12, 4, 4, 0 };
+	checkVoice( audio.initialize( config, pAllocator, SIRFMODVoiceBackend::getBackendOps(), &backend ) == SIR_AUDIO_OK );
+	checkVoice( backend.registerEvent( 10, "event:/A" ) == SIR_AUDIO_OK );
+	sirAudioPlayingHandle_t playing = {};
+	checkVoice( audio.playEvent( 10, {}, playing ) == SIR_AUDIO_PENDING );
+	checkVoice( audio.update() == 1 );
+	checkVoice( audio.setPlayingVolume( playing, -0.1f ) == SIR_AUDIO_INVALID_ARGUMENT );
+	checkVoice( audio.setPlayingPitch( playing, 0.0f ) == SIR_AUDIO_INVALID_ARGUMENT );
+	checkVoice( audio.seekPlayingTimeline( playing, 0x80000000U ) == SIR_AUDIO_INVALID_ARGUMENT );
+	checkVoice( audio.setPlayingVolume( playing, 0.5f ) == SIR_AUDIO_PENDING );
+	checkVoice( audio.setPlayingPitch( playing, 1.25f ) == SIR_AUDIO_PENDING );
+	checkVoice( audio.setPlayingPaused( playing, true ) == SIR_AUDIO_PENDING );
+	checkVoice( audio.seekPlayingTimeline( playing, 1234 ) == SIR_AUDIO_PENDING );
+	checkVoice( audio.update() == 4 );
+	checkVoice( fixture.fAdvancedVolume == 0.5f && fixture.fAdvancedPitch == 1.25f );
+	checkVoice( fixture.bAdvancedPaused == 1 && fixture.nAdvancedTimeline == 1234 );
+	uint32_t nTimeline = 0;
+	checkVoice( backend.getPlayingTimeline( playing, nTimeline ) == SIR_AUDIO_OK && nTimeline == 1234 );
+	fixture.nFailAdvanced = 1;
+	checkVoice( audio.setPlayingVolume( playing, 0.75f ) == SIR_AUDIO_PENDING );
+	checkVoice( audio.update() == 1 );
+	checkVoice( backend.getLastNativeResult() == -91 && fixture.fAdvancedVolume == 0.5f );
+	checkVoice( audio.setPlayingPaused( playing, false ) == SIR_AUDIO_PENDING );
+	checkVoice( audio.setPlayingPitch( playing, 0.8f ) == SIR_AUDIO_PENDING );
+	checkVoice( audio.seekPlayingTimeline( playing, 200 ) == SIR_AUDIO_PENDING );
+	checkVoice( audio.update() == 3 );
+	checkVoice( fixture.bAdvancedPaused == 0 && fixture.fAdvancedPitch == 0.8f );
+	checkVoice( backend.getPlayingTimeline( playing, nTimeline ) == SIR_AUDIO_OK && nTimeline == 200 );
+	checkVoice( audio.stopEvent( playing, SIR_AUDIO_STOP_IMMEDIATE ) == SIR_AUDIO_PENDING );
+	checkVoice( audio.update() == 1 );
+	checkVoice( backend.getPlayingTimeline( playing, nTimeline ) == SIR_AUDIO_INVALID_HANDLE );
+	checkVoice( audio.setPlayingVolume( playing, 0.5f ) == SIR_AUDIO_INVALID_HANDLE );
+	audio.shutdown();
+	checkVoice( context.shutdown() == SIR_FMOD_OK );
 }
 
 static void testParameterDispatch( const sirContainerAllocator_t *pAllocator )
@@ -821,6 +929,7 @@ int main( void )
 	const sirContainerAllocator_t allocator = { nullptr, testVoiceAllocate, testVoiceDeallocate, 0, 0 };
 	testVoiceLifecycle( &allocator );
 	testParameterDispatch( &allocator );
+	testAdvancedInstanceControls( &allocator );
 	testSpatialDriver( &allocator );
 	testEmitterParameterDispatch( &allocator );
 	testPortableMixerAndSnapshotRouting( &allocator );
