@@ -312,6 +312,18 @@ static void testInvalidInputsAndCapacity( void )
 			REQUIRE( invalid.getStats( &invalidStats ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
 		}
 		badConfig = derivedConfig( allocator );
+		badConfig.nMaxRepresentations = 0;
+		{
+			const uint32_t nBefore = allocator.nLive.load();
+			SIRResourceDerivedRegistry invalid( graph, badConfig );
+			REQUIRE( !invalid.isReady() && allocator.nLive.load() == nBefore );
+			SIRDerivedResourceAccounting ignored = {};
+			SIRDerivedResourceHandle handle = {};
+			REQUIRE( invalid.retireRepresentation( handle, 0 ) == SIR_RESOURCE_RESULT_INVALID_HANDLE );
+			REQUIRE( invalid.getAccounting( handle, &ignored ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+			REQUIRE( invalid.registerProvider( 7, { nullptr, releaseNative } ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		}
+		badConfig = derivedConfig( allocator );
 		badConfig.nMaxTrackedBytes = 0;
 		{
 			SIRResourceDerivedRegistry invalid( graph, badConfig );

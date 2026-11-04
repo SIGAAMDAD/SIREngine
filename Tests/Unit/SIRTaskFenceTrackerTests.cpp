@@ -338,7 +338,10 @@ static void testRejectedTasksAndFenceOrder( void )
 	SIR_FENCE_CHECK( scheduler.submit( deferredProvider, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU, &wrongExecutor ) );
 	SIR_FENCE_CHECK( !tracker.track( wrongExecutor, 5 ) );
 	SIR_FENCE_CHECK( !tracker.track( { UINT32_MAX, 0 }, 5 ) );
+	SIR_FENCE_CHECK( !tracker.untrackLast( ready ) );
 	SIR_FENCE_CHECK( tracker.track( ready, 9 ) );
+	const sirTaskHandle_t wrongGeneration = { ready.nSlot, ready.nGeneration + 1 };
+	SIR_FENCE_CHECK( !tracker.untrackLast( wrongGeneration ) );
 	SIR_FENCE_CHECK( !tracker.track( ready, 8 ) );
 	SIR_FENCE_CHECK( !tracker.track( ready, 9 ) );
 	SIR_FENCE_CHECK( !tracker.untrackLast( ready ) );
@@ -389,6 +392,22 @@ static void testRollbackWithEarlierPendingRecord( void )
 	memory.shutdown();
 }
 
+static void testDestructorShutsDownQuiescentTracker( void )
+{
+	SIRMemoryManager memory;
+	initFenceMemory( memory );
+	SIRTaskScheduler scheduler;
+	SIR_FENCE_CHECK( scheduler.init( &memory, { 4, 0, 4 } ) );
+	{
+		SIRTaskFenceTracker tracker;
+		SIR_FENCE_CHECK( tracker.init( &memory, &scheduler, SIR_TASK_EXEC_RENDER, 1 ) );
+		SIR_FENCE_CHECK( tracker.hasCapacity() );
+		// Destruction without an explicit shutdown is valid for a quiescent tracker.
+	}
+	SIR_FENCE_CHECK( scheduler.shutdown() );
+	memory.shutdown();
+}
+
 int main( void )
 {
 	testMonotonicFenceAndSafePoint();
@@ -398,5 +417,6 @@ int main( void )
 	testRejectedInitializationAndThreadAffinity();
 	testRejectedTasksAndFenceOrder();
 	testRollbackWithEarlierPendingRecord();
+	testDestructorShutsDownQuiescentTracker();
 	return 0;
 }

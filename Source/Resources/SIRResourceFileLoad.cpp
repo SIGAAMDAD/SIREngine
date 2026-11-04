@@ -154,9 +154,6 @@ sirTaskResult_t SIRResourceFileLoad::readTask( void *pContext, sirTaskHandle_t h
 		uint64_t nTransferred = 0;
 		pLoad->m_eTransferResult =
 		    pLoad->m_File.readAt( pLoad->m_Request.nFileOffset, pLoad->m_Bytes.m_pData, pLoad->m_Request.nFileBytes, &nTransferred );
-		if ( pLoad->m_eTransferResult == SIR_FILE_OK && nTransferred != pLoad->m_Request.nFileBytes ) {
-			pLoad->m_eTransferResult = SIR_FILE_END_OF_FILE;
-		}
 	}
 	return pLoad->m_eTransferResult == SIR_FILE_OK ? SIR_TASK_RESULT_SUCCESS : SIR_TASK_RESULT_FAILURE;
 }

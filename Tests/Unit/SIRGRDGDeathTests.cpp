@@ -196,6 +196,11 @@ static void deathPrematureProviderCompletion( void )
 	uint32_t nAcknowledged = 0;
 	SIR_DEATH_CHECK( !tracker.advanceCompleted( 1, SIR_TASK_RESULT_SUCCESS, &nAcknowledged ) );
 	SIR_DEATH_CHECK( nAcknowledged == 0 && tracker.getPendingCount() == 1 );
+	// A failed provider acknowledgement preserves the successful finalizer
+	// and must not invoke it again on a subsequent drain attempt.
+	SIR_DEATH_CHECK( !tracker.advanceCompleted( 1, SIR_TASK_RESULT_SUCCESS, &nAcknowledged ) );
+	SIR_DEATH_CHECK( nAcknowledged == 0 && tracker.getPendingCount() == 1 );
+	SIR_DEATH_CHECK( !tracker.untrackLast( task ) );
 	// The tracker cannot finalize a provider slot completed by another owner.
 	// Leaving it live must trigger the destructor's ownership guard.
 }
@@ -247,6 +252,31 @@ static void deathSubmittedTaskGraph( void )
 	SIR_DEATH_CHECK( graph.submit( &scheduler ) );
 }
 
+static void deathExternallyReleasedTaskGraph( void )
+{
+	SIRMemoryManager memory;
+	deathInitMemory( memory );
+	SIRTaskScheduler scheduler;
+	SIR_DEATH_CHECK( scheduler.init( &memory, { 4, 0, 4 } ) );
+	SIRTaskGraph graph;
+	SIR_DEATH_CHECK( graph.init( &memory, { 2, 1, 2 } ) );
+	const sirTaskGraphPass_t pass = { deathGraphPass, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU };
+	uint32_t nPass = UINT32_MAX;
+	SIR_DEATH_CHECK( graph.addPass( pass, nullptr, 0, &nPass ) );
+	SIR_DEATH_CHECK( graph.compile() == SIR_TASK_GRAPH_OK );
+	SIR_DEATH_CHECK( graph.submit( &scheduler ) );
+	SIR_DEATH_CHECK( scheduler.pumpCPU( 1 ) == 1 );
+	sirTaskHandle_t task = {};
+	SIR_DEATH_CHECK( graph.getSubmittedHandle( 0, &task ) );
+	SIR_DEATH_CHECK( scheduler.releaseTask( task ) );
+	sirTaskGraphExecutionSummary_t summary = {};
+	SIR_DEATH_CHECK( !graph.queryExecution( &summary ) );
+	SIR_DEATH_CHECK( !graph.cancelExecution() );
+	SIR_DEATH_CHECK( !graph.releaseSubmitted() );
+	// A submitted graph whose scheduler handle was externally recycled is
+	// still an outstanding lifetime obligation, rejected by its destructor.
+}
+
 static void testExpectedAbort( void ( *pfnScenario )( void ) )
 {
 	const pid_t nChild = fork();
@@ -277,6 +307,7 @@ int main( void )
 	testExpectedAbort( deathGraphWithActiveReader );
 	testExpectedAbort( deathGraphWithProviderPin );
 	testExpectedAbort( deathSubmittedTaskGraph );
+	testExpectedAbort( deathExternallyReleasedTaskGraph );
 	SIR_DEATH_CHECK( SIRPlatformFile::remove( "sir_grdg_death_test.bin" ) == SIR_FILE_OK );
 	puts( "PASS: GRDG lifecycle destructor invariants reject active ownership" );
 	return 0;
