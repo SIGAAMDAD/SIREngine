@@ -14,7 +14,6 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Editor/Host/SIREditorSceneWorkspace.h>
-#include <Editor/Host/SIREditorSceneJSON.h>
 
 #include <Core/Memory/SIRMemoryManager.h>
 #include <Core/Memory/SIRMemorySegment.h>
@@ -25,11 +24,9 @@ of merchantability, fitness for a particular purpose and noninfringement.
 static void sirEditorPrintHelp( void ) noexcept
 {
 	puts( "Usage: SIREditor --inspect-scene <path.tscn>" );
-	puts( "       SIREditor --inspect-scene-json <path.tscn>" );
-	puts( "       SIREditor --inspect-scene-json-file <path.tscn> <output.json>" );
 	puts( "       SIREditor --version" );
 	puts( "       SIREditor --help" );
-	puts( "Scene inspection is read-only; serialized properties remain owned by Godot." );
+	puts( "Inspect the native SIREngine scene intake without altering the source file." );
 }
 
 static void sirEditorPrintSceneNodes( const SIREditorSceneWorkspace &workspace ) noexcept
@@ -72,7 +69,7 @@ static void sirEditorPrintResources( const SIREditorSceneWorkspace &workspace ) 
 	}
 }
 
-static int sirEditorInspectScene( const char *pszPath, bool bJSON, const char *pszOutputPath = nullptr ) noexcept
+static int sirEditorInspectScene( const char *pszPath ) noexcept
 {
 	constexpr uint64_t N_MIB = UINT64_C( 1024 ) * 1024;
 	SIRMemoryManager memory;
@@ -98,13 +95,6 @@ static int sirEditorInspectScene( const char *pszPath, bool bJSON, const char *p
 		return 2;
 	}
 
-	if ( bJSON ) {
-		if ( pszOutputPath != nullptr ) {
-			return sirEditorWriteSceneJSONFile( workspace, pszPath, pszOutputPath ) ? 0 : 4;
-		}
-		return sirEditorWriteSceneJSON( workspace, pszPath, stdout ) ? 0 : 4;
-	}
-
 	printf( "SIREditor scene: %s\n", pszPath );
 	printf( "Nodes: %u\n", workspace.getSceneIndex().nNodeCount );
 	printf( "Resources: %u\n", workspace.getResourceIndex().nCount );
@@ -126,13 +116,7 @@ int main( int nArgs, char **pszArgs )
 		return 0;
 	}
 	if ( nArgs == 3 && strcmp( pszArgs[1], "--inspect-scene" ) == 0 ) {
-		return sirEditorInspectScene( pszArgs[2], false );
-	}
-	if ( nArgs == 3 && strcmp( pszArgs[1], "--inspect-scene-json" ) == 0 ) {
-		return sirEditorInspectScene( pszArgs[2], true );
-	}
-	if ( nArgs == 4 && strcmp( pszArgs[1], "--inspect-scene-json-file" ) == 0 ) {
-		return sirEditorInspectScene( pszArgs[2], true, pszArgs[3] );
+		return sirEditorInspectScene( pszArgs[2] );
 	}
 	sirEditorPrintHelp();
 	return 2;
