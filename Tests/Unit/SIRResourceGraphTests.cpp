@@ -620,6 +620,8 @@ static void testInvalidationJournalOverflowAndResume( void )
 		SIRResourceInvalidationEvent events[2] = {};
 		uint32_t nWritten = 0;
 		uint64_t nCursor = UINT64_MAX;
+		REQUIRE( pWriter->pollInvalidations( 0, nullptr, 0, &nWritten, &nCursor ) == SIR_RESOURCE_RESULT_OUT_OF_BUDGET );
+		REQUIRE( nWritten == 0 && nCursor == 0 );
 		REQUIRE( pWriter->pollInvalidations( 0, events, 1, &nWritten, &nCursor ) == SIR_RESOURCE_RESULT_SUCCESS );
 		REQUIRE( nWritten == 1 && nCursor == 1 && events[0].m_nJournalSequence == 1 );
 		REQUIRE( events[0].m_Dependent.m_nSlot == hB.m_nSlot && events[0].m_Cause.m_nAssetId == 500 );
@@ -1304,6 +1306,15 @@ static void testPublicValidationAndReadViewBoundaries( void )
 		other.join();
 		REQUIRE( bWriterRejected.load() );
 		{
+			SIRResourceGraph different( testConfig( alloc, 2 ) );
+			REQUIRE( different.isReady() );
+			SIRResourceReadScope differentScope( different );
+			SIRResourceView otherView;
+			REQUIRE( graph.find( differentScope, key( 801 ), &lookup ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+			REQUIRE( graph.resolve( differentScope, source, &otherView ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+			REQUIRE( graph.pinForProvider( differentScope, otherView, 1, &pin ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		}
+		{
 			SIRResourceReadScope scope( graph );
 			REQUIRE( scope.isActive() );
 			SIRResourceReadScope second( graph );
@@ -1902,6 +1913,48 @@ static void testSharedChunkAllocationRollback( void )
 	}
 }
 
+static void testResourceKeyAndContentFieldSeparation( void )
+{
+	SIRTestAllocatorStats alloc = {};
+	{
+		SIRResourceGraph graph( testConfig( alloc, 16 ) );
+		REQUIRE( graph.isReady() );
+		SIRResourceGraphWriter *pWriter = graph.getWriter();
+		REQUIRE( pWriter != nullptr );
+		SIRResourceKey variants[3] = { key( 50000 ), key( 50001 ), key( 50000 ) };
+		variants[2].m_nVariantId = 1;
+		SIRResourceHandle handles[3] = {};
+		for ( uint32_t i = 0; i < 3; ++i ) {
+			const SIRResourcePublication p = { variants[i], SIR_RESOURCE_KIND_COMPOSITION, 1, 1, nullptr, 0, nullptr, 0 };
+			REQUIRE( pWriter->publish( p, &handles[i] ) == SIR_RESOURCE_RESULT_SUCCESS );
+		}
+		{
+			SIRResourceReadScope scope( graph );
+			SIRResourceHandle found = {};
+			for ( uint32_t i = 0; i < 3; ++i ) {
+				REQUIRE( graph.find( scope, variants[i], &found ) == SIR_RESOURCE_RESULT_SUCCESS );
+				REQUIRE( found.m_nSlot == handles[i].m_nSlot );
+			}
+		}
+		SIRResourceContentKey fields[4] = { content( 51100 ), content( 51100 ), content( 51100 ), content( 51100 ) };
+		fields[1].m_nHashHi ^= 1;
+		fields[2].m_nFormatId += 1;
+		fields[3].m_nEncodingId += 1;
+		for ( uint32_t i = 0; i < 4; ++i ) {
+			SIRResourceStagingHandle staging = {};
+			SIRResourceMutableBytes bytes = {};
+			REQUIRE( pWriter->allocateStaging( 8, 8, 9, &staging, &bytes ) == SIR_RESOURCE_RESULT_SUCCESS );
+			memset( bytes.m_pData, 0xAC, 8 );
+			const SIRResourceChunkPublication chunk = { { 0 }, fields[i], staging, false };
+			const SIRResourcePublication pub = { key( 52000 + i ), SIR_RESOURCE_KIND_BLOB, 1, 1, &chunk, 1, nullptr, 0 };
+			SIRResourceHandle result = {};
+			REQUIRE( pWriter->publish( pub, &result ) == SIR_RESOURCE_RESULT_SUCCESS );
+		}
+		REQUIRE( graph.getStats().m_nUniqueChunks == 4 );
+	}
+	REQUIRE( alloc.m_nOutstanding.load() == 0 );
+}
+
 int main( void )
 {
 	testScopeLifetimeAndDeduplication();
@@ -1936,6 +1989,7 @@ int main( void )
 	testDependencyRetiredDuringTaskCompilation();
 	testStaleDependencyRebindingDuringTaskCompilation();
 	testSharedChunkAllocationRollback();
+	testResourceKeyAndContentFieldSeparation();
 	printf( "PASS: GRDG resource registry, publication, deduplication, lifetime, concurrency\n" );
 	return 0;
 }

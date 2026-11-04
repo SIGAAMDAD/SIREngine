@@ -242,9 +242,8 @@ sirFileResult_t SIRPlatformFile::write( const void *pSource, uint64_t nBytes, ui
 		return SIR_FILE_INVALID_ARGUMENT;
 	}
 	*pTransferred = 0;
-	if ( !isOpen() ) {
-		return SIR_FILE_CLOSED;
-	}
+	// An append flag is present only while a native handle is open:
+	// close() clears m_nFlags before closing the descriptor.
 	if ( nBytes != 0 && pSource == nullptr ) {
 		return SIR_FILE_INVALID_ARGUMENT;
 	}

@@ -12,6 +12,7 @@ on:
       - 'Source/Core/Platform/**'
       - 'Tests/Unit/**'
       - 'Tests/Profiling/CollectSIRGRDGCoverage.py'
+      - 'Tests/Profiling/TestSIRGRDGCoverageCollector.py'
       - '.github/workflows/grdg-coverage.yml'
   workflow_dispatch:
 
@@ -70,11 +71,14 @@ jobs:
           --output-on-failure
           --no-tests=error
           -R '^(resources[.]|core[.]jobs[.]|core[.]platform[.]|core[.]memory[.])'
+      - name: Run collector regression tests
+        run: python3 Tests/Profiling/TestSIRGRDGCoverageCollector.py
       - name: Measure line and branch coverage
         run: >
           python3 Tests/Profiling/CollectSIRGRDGCoverage.py
           --build out/Linux/tooling
           --output out/Nightly/GRDGCoverage
+          --source-commit "${GITHUB_SHA}"
           --min-line-percent 80
           --min-branch-percent 60
       - name: Upload instrumented coverage report

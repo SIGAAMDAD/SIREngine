@@ -42,7 +42,9 @@ sirFileResult_t SIRPlatformFileMapping::map( const SIRPlatformFile &rFile, uint6
 	if ( eResult != SIR_FILE_OK ) {
 		return eResult;
 	}
-	if ( nOffset >= nFileBytes || nOffset > ( uint64_t )INT64_MAX ) {
+	// getSize() reads a signed off_t, so a valid offset strictly smaller
+	// than nFileBytes cannot exceed INT64_MAX.
+	if ( nOffset >= nFileBytes ) {
 		return SIR_FILE_OUT_OF_RANGE;
 	}
 	if ( nBytes == 0 ) {
@@ -59,8 +61,12 @@ sirFileResult_t SIRPlatformFileMapping::map( const SIRPlatformFile &rFile, uint6
 	const uint64_t nAlignment = ( uint64_t )nPage;
 	const uint64_t nAlignedOffset = nOffset - ( nOffset % nAlignment );
 	const uint64_t nDelta = nOffset - nAlignedOffset;
-	if ( nBytes > SIZE_MAX - nDelta || nAlignedOffset > ( uint64_t )INT64_MAX ) {
-		return SIR_FILE_OUT_OF_RANGE;
+	// nDelta + nBytes <= nFileBytes - nAlignedOffset <= INT64_MAX.
+	// The size_t overflow guard remains necessary only for 32-bit Linux.
+	if constexpr ( sizeof( size_t ) < sizeof( uint64_t ) ) {
+		if ( nBytes > SIZE_MAX - nDelta ) {
+			return SIR_FILE_OUT_OF_RANGE;
+		}
 	}
 	const uint64_t nMappedBytes = nDelta + nBytes;
 	const int nProtection = PROT_READ | ( eMode == SIR_FILE_MAP_READ_ONLY ? 0 : PROT_WRITE );
