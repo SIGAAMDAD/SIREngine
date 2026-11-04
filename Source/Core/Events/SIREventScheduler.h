@@ -42,7 +42,7 @@ struct sirEventSchedulerSlot_s
 {
 	TPayload payload;
 	void *pContext = nullptr;
-	void ( *pCallback )( void *, const TPayload & ) noexcept = nullptr;
+	void ( *pCallback )( void *, const TPayload& ) noexcept = nullptr;
 	uint64_t nDue = 0;
 	uint64_t nInterval = 0;
 	uint64_t nOrder = 0;
@@ -58,7 +58,7 @@ template <typename TPayload, uint32_t Capacity = 128>
 class SIREventScheduler
 {
 public:
-	typedef void ( *callback_t )( void *pContext, const TPayload &payload ) noexcept;
+	typedef void ( *callback_t )( void *pContext, const TPayload& payload ) noexcept;
 	static_assert( Capacity > 0, "Scheduler needs slots" );
 	static_assert( std::is_trivially_copyable<TPayload>::value, "Scheduler payloads must be POD" );
 
@@ -69,18 +69,18 @@ public:
 			m_Slots[i].nGeneration = 1;
 		}
 	}
-	SIREventScheduler( const SIREventScheduler & ) = delete;
-	SIREventScheduler &operator=( const SIREventScheduler & ) = delete;
+	SIREventScheduler( const SIREventScheduler& ) = delete;
+	SIREventScheduler& operator=( const SIREventScheduler& ) = delete;
 
-	bool schedule( void *pContext, callback_t pCallback, const TPayload &payload, uint64_t nNow, uint64_t nDelay, uint64_t nInterval,
-	               sirEventScheduleHandle_t &handle ) noexcept
+	bool schedule( void *pContext, callback_t pCallback, const TPayload& payload, uint64_t nNow, uint64_t nDelay, uint64_t nInterval,
+	               sirEventScheduleHandle_t& handle ) noexcept
 	{
 		handle = {};
 		if ( pCallback == nullptr || m_nFreeHead == 0 || nNow > UINT64_MAX - nDelay || ( nInterval != 0 && nDelay == 0 ) ) {
 			return false;
 		}
 		const uint32_t nIndex = m_nFreeHead;
-		sirEventSchedulerSlot_s<TPayload> &slot = m_Slots[nIndex];
+		sirEventSchedulerSlot_s<TPayload>& slot = m_Slots[nIndex];
 		m_nFreeHead = slot.nNextFree;
 		slot.payload = payload;
 		slot.pContext = pContext;
@@ -106,7 +106,7 @@ public:
 		if ( handle.pOwner != this || handle.nSlot == 0 || handle.nSlot > Capacity ) {
 			return false;
 		}
-		sirEventSchedulerSlot_s<TPayload> &slot = m_Slots[handle.nSlot];
+		sirEventSchedulerSlot_s<TPayload>& slot = m_Slots[handle.nSlot];
 		if ( slot.nGeneration != handle.nGeneration || slot.nState == SIR_EVENT_TIMER_FREE || slot.nState == SIR_EVENT_TIMER_CANCELLED ) {
 			return false;
 		}
@@ -128,7 +128,7 @@ public:
 		uint32_t nDelivered = 0;
 		while ( m_nCount != 0 && nDelivered < nBudget ) {
 			const uint32_t nIndex = m_nHeap[0];
-			sirEventSchedulerSlot_s<TPayload> &slot = m_Slots[nIndex];
+			sirEventSchedulerSlot_s<TPayload>& slot = m_Slots[nIndex];
 			if ( slot.nDue > nNow ) {
 				break;
 			}
@@ -188,8 +188,8 @@ public:
 private:
 	bool less( uint32_t nA, uint32_t nB ) const noexcept
 	{
-		const sirEventSchedulerSlot_s<TPayload> &a = m_Slots[nA];
-		const sirEventSchedulerSlot_s<TPayload> &b = m_Slots[nB];
+		const sirEventSchedulerSlot_s<TPayload>& a = m_Slots[nA];
+		const sirEventSchedulerSlot_s<TPayload>& b = m_Slots[nB];
 		return a.nDue < b.nDue || ( a.nDue == b.nDue && a.nOrder < b.nOrder );
 	}
 	void swapHeap( uint32_t nA, uint32_t nB ) noexcept
@@ -250,7 +250,7 @@ private:
 	}
 	void release( uint32_t nIndex ) noexcept
 	{
-		sirEventSchedulerSlot_s<TPayload> &slot = m_Slots[nIndex];
+		sirEventSchedulerSlot_s<TPayload>& slot = m_Slots[nIndex];
 		slot.nState = SIR_EVENT_TIMER_FREE;
 		if ( ++slot.nGeneration == 0 ) {
 			++slot.nGeneration;

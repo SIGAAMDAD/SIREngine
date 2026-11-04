@@ -102,10 +102,10 @@ public:
 	uint32_t getSeatCount( void ) const;
 
 private:
-	bool ownsThread( const sirSeat_t &seat ) const;
-	bool freeLocal( sirSeat_t &seat, void *pMemory, uint32_t nBytes, bool bRemote = false );
-	static void lockInbox( sirSeat_t &seat );
-	static void unlockInbox( sirSeat_t &seat );
+	bool ownsThread( const sirSeat_t& seat ) const;
+	bool freeLocal( sirSeat_t& seat, void *pMemory, uint32_t nBytes, bool bRemote = false );
+	static void lockInbox( sirSeat_t& seat );
+	static void unlockInbox( sirSeat_t& seat );
 
 	SIRMemoryManager *m_pManager;
 	sirSeat_t *m_pSeats;

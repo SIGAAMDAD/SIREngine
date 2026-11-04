@@ -32,7 +32,7 @@ bool SIRSharedMemoryPool::init( SIRMemorySegment *pSegment )
 	return true;
 }
 
-bool SIRSharedMemoryPool::allocateRegion( uint64_t nBytes, sirSharedMemoryRegion_t &region )
+bool SIRSharedMemoryPool::allocateRegion( uint64_t nBytes, sirSharedMemoryRegion_t& region )
 {
 	if ( m_pSegment == nullptr || nBytes == 0 ) {
 		return false;
@@ -50,7 +50,7 @@ bool SIRSharedMemoryPool::allocateRegion( uint64_t nBytes, sirSharedMemoryRegion
 	return true;
 }
 
-bool SIRSharedMemoryPool::releaseLastRegion( const sirSharedMemoryRegion_t &region )
+bool SIRSharedMemoryPool::releaseLastRegion( const sirSharedMemoryRegion_t& region )
 {
 	if ( region.pSegment != m_pSegment || region.nReservedBytes == 0 || region.nReservedBytes > m_nCursor ||
 	     region.nOffsetBytes != m_nCursor - region.nReservedBytes ) {
@@ -74,7 +74,7 @@ SIRMemorySegment *SIRSharedMemoryPool::getSegment( void ) const
 	return m_pSegment;
 }
 
-void *SIRSharedMemoryPool::getBase( const sirSharedMemoryRegion_t &region )
+void *SIRSharedMemoryPool::getBase( const sirSharedMemoryRegion_t& region )
 {
 	if ( region.pSegment == nullptr || region.nOffsetBytes > region.pSegment->getReservedBytes() ||
 	     region.nReservedBytes > region.pSegment->getReservedBytes() - region.nOffsetBytes ) {
@@ -83,7 +83,7 @@ void *SIRSharedMemoryPool::getBase( const sirSharedMemoryRegion_t &region )
 	return static_cast<uint8_t *>( region.pSegment->getBase() ) + region.nOffsetBytes;
 }
 
-bool SIRSharedMemoryPool::commit( const sirSharedMemoryRegion_t &region, uint64_t nOffset, uint64_t nBytes )
+bool SIRSharedMemoryPool::commit( const sirSharedMemoryRegion_t& region, uint64_t nOffset, uint64_t nBytes )
 {
 	if ( getBase( region ) == nullptr || nOffset > region.nReservedBytes || nBytes > region.nReservedBytes - nOffset ) {
 		return false;
@@ -91,7 +91,7 @@ bool SIRSharedMemoryPool::commit( const sirSharedMemoryRegion_t &region, uint64_
 	return nBytes == 0 || region.pSegment->commit( region.nOffsetBytes + nOffset, nBytes );
 }
 
-bool SIRSharedMemoryPool::decommit( const sirSharedMemoryRegion_t &region, uint64_t nOffset, uint64_t nBytes )
+bool SIRSharedMemoryPool::decommit( const sirSharedMemoryRegion_t& region, uint64_t nOffset, uint64_t nBytes )
 {
 	if ( getBase( region ) == nullptr || nOffset > region.nReservedBytes || nBytes > region.nReservedBytes - nOffset ) {
 		return false;
