@@ -58,6 +58,8 @@ void SIRVulkanCommandList::prepare( SIRVulkanRenderingDevice *pOwner ) noexcept
 	m_bHasCopy = false;
 	m_bHasTextureCopy = false;
 	m_TextureCopy = {};
+	m_Barrier = {};
+	m_bHasBarrier = false;
 }
 
 sirGraphicsResult_t SIRVulkanCommandList::reset( void ) noexcept
@@ -69,6 +71,8 @@ sirGraphicsResult_t SIRVulkanCommandList::reset( void ) noexcept
 	m_bHasCopy = false;
 	m_bHasTextureCopy = false;
 	m_TextureCopy = {};
+	m_Barrier = {};
+	m_bHasBarrier = false;
 	m_hSource = {};
 	m_hDestination = {};
 	m_nBytes = 0;
@@ -78,7 +82,7 @@ sirGraphicsResult_t SIRVulkanCommandList::reset( void ) noexcept
 sirGraphicsResult_t SIRVulkanCommandList::copyBuffer( sirGraphicsHandle_t hDestination, uint64_t nDstOffset, sirGraphicsHandle_t hSource,
                                                       uint64_t nSrcOffset, uint64_t nBytes ) noexcept
 {
-	if ( m_eState != SIR_VULKAN_COMMAND_RECORDING || m_bHasCopy ) {
+	if ( m_eState != SIR_VULKAN_COMMAND_RECORDING || m_bHasCopy || m_bHasBarrier ) {
 		return SIR_GRAPHICS_BUSY;
 	}
 	if ( m_pOwner == nullptr || nBytes == 0 ) {
@@ -115,7 +119,7 @@ sirGraphicsResult_t SIRVulkanCommandList::close( void ) noexcept
 		return SIR_GRAPHICS_BUSY;
 	}
 	// Closing an empty list cancels the borrow instead of exhausting the pool.
-	m_eState = m_bHasCopy ? SIR_VULKAN_COMMAND_CLOSED : SIR_VULKAN_COMMAND_FREE;
+	m_eState = ( m_bHasCopy || m_bHasBarrier ) ? SIR_VULKAN_COMMAND_CLOSED : SIR_VULKAN_COMMAND_FREE;
 	return SIR_GRAPHICS_SUCCESS;
 }
 
@@ -452,12 +456,28 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::submit( sirGraphicsQueue_t eQueue,
 			break;
 		}
 	}
-	if ( pList == nullptr || pList->m_eState != SIR_VULKAN_COMMAND_CLOSED || !pList->m_bHasCopy ) {
+	if ( pList == nullptr || pList->m_eState != SIR_VULKAN_COMMAND_CLOSED || ( !pList->m_bHasCopy && !pList->m_bHasBarrier ) ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	sirVulkanCompletion_t native = {};
 	sirVulkanResult_t eSubmit = SIR_VULKAN_INVALID_ARGUMENT;
-	if ( pList->m_bHasTextureCopy ) {
+	if ( pList->m_bHasBarrier ) {
+		const sirGraphicsHandle_t hImage = pList->m_Barrier.hResource;
+		if ( hImage.eType != SIR_GRAPHICS_HANDLE_TEXTURE || hImage.nDeviceGeneration != m_nDeviceGeneration ||
+		     hImage.nSlot >= SIR_VULKAN_TEXTURE_CAPACITY ) {
+			return SIR_GRAPHICS_INVALID_HANDLE;
+		}
+		sirVulkanGraphicsImageSlot_t *pImage = &m_szImages[hImage.nSlot];
+		if ( !pImage->bActive || pImage->nGeneration != hImage.nGeneration ) {
+			return SIR_GRAPHICS_INVALID_HANDLE;
+		}
+		sirVulkanImageBarrier_t planned = {};
+		const sirGraphicsResult_t ePlan = sirVulkanPlanImageBarrier( pList->m_Barrier, &pImage->native, &planned );
+		if ( ePlan != SIR_GRAPHICS_SUCCESS ) {
+			return ePlan;
+		}
+		eSubmit = m_Native.submitImageBarrier( &pImage->native, planned, &native );
+	} else if ( pList->m_bHasTextureCopy ) {
 		const sirGraphicsBufferTextureCopy_t &copy = pList->m_TextureCopy;
 		sirVulkanGraphicsBufferSlot_t *pBuffer = resolveBuffer( copy.hBuffer );
 		if ( pBuffer == nullptr || copy.hTexture.nSlot >= SIR_VULKAN_TEXTURE_CAPACITY ) {

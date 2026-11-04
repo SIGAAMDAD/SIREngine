@@ -81,6 +81,11 @@ typedef struct sirVulkanGraphicsSamplerSlot_s
 	bool bRetiring;
 } sirVulkanGraphicsSamplerSlot_t;
 
+// Translates a shared image barrier into one explicitly validated native
+// subresource transition; callable without initializing a Vulkan device.
+sirGraphicsResult_t sirVulkanPlanImageBarrier( const sirGraphicsBarrier_t &barrier, const sirVulkanImage_t *pImage,
+                                               sirVulkanImageBarrier_t *pNative ) noexcept;
+
 // Commands are borrowed from a fixed device-owned pool. The first native
 // integration slice supports one recorded buffer copy per submission.
 // Closing an empty command list releases its slot. Resetting a closed,
@@ -99,6 +104,8 @@ private:
 	uint64_t m_nBytes = 0;
 	uint64_t m_nLastCompletion = 0;
 	sirGraphicsBufferTextureCopy_t m_TextureCopy = {};
+	sirGraphicsBarrier_t m_Barrier = {};
+	bool m_bHasBarrier = false;
 	bool m_bHasCopy = false;
 	bool m_bHasTextureCopy = false;
 
@@ -114,10 +121,7 @@ public:
 	                                uint64_t nBytes ) noexcept override;
 	sirGraphicsResult_t close( void ) noexcept override;
 
-	sirGraphicsResult_t barrier( const sirGraphicsBarrier_t *, uint32_t nCount ) noexcept override
-	{
-		return nCount == 0 ? SIR_GRAPHICS_SUCCESS : SIR_GRAPHICS_UNSUPPORTED;
-	}
+	sirGraphicsResult_t barrier( const sirGraphicsBarrier_t *pBarriers, uint32_t nCount ) noexcept override;
 	sirGraphicsResult_t copyBufferTexture( const sirGraphicsBufferTextureCopy_t &copy ) noexcept override;
 	sirGraphicsResult_t beginRenderPass( const sirGraphicsRenderPass_t & ) noexcept override
 	{
