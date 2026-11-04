@@ -1,0 +1,2 @@
+fn echo_signed(value: i16) -> i16:
+    return value
