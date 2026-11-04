@@ -18,6 +18,10 @@ jobs:
           persist-credentials: false
       - name: Fetch pinned GoogleTest
         run: git submodule update --init ThirdParty/GoogleTest
+      - name: Require native Linux X11 dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y libx11-dev libxext-dev libxrandr-dev xvfb xauth
       - uses: jwlawson/actions-setup-cmake@v2.2.0
         with:
           cmake-version: '4.4.5'
@@ -35,6 +39,7 @@ jobs:
           -DCMAKE_CXX_COMPILER=clang++-18
           -DCMAKE_CXX_FLAGS="-O0 -g -fprofile-instr-generate -fcoverage-mapping"
           -DCMAKE_EXE_LINKER_FLAGS="-fprofile-instr-generate"
+          -DSIR_WITH_X11_INPUT=ON
           -DSIR_BUILD_TESTS=ON
           -DSIR_WITH_GOOGLETEST=ON
           -DSIR_ENABLE_PCH=OFF
@@ -42,6 +47,51 @@ jobs:
           -DSIR_INPUT_SOAK_TESTS=ON
       - name: Compile instrumented engine and tests
         run: cmake --build out/InputCoverage --parallel 3
+      - name: Reject missing Xvfb-backed native X11 coverage tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -x out/InputCoverage/Tests/Unit/SIRInputX11WindowTests
+          ctest --test-dir out/InputCoverage -N -R '^core[.]platform[.]input[.]x11-window
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p out/InputCoverage/profiles
+          export LLVM_PROFILE_FILE="$PWD/out/InputCoverage/profiles/%p-%m.profraw"
+          ctest --test-dir out/InputCoverage --output-on-failure -R '^core[.]platform[.]input|^core[.]application[.]input-lifecycle'
+      - name: Export strict source coverage
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t profiles < <(find out/InputCoverage/profiles -name '*.profraw' -type f | sort)
+          test "${#profiles[@]}" -gt 0
+          llvm-profdata-18 merge -sparse "${profiles[@]}" -o out/InputCoverage/merged.profdata
+          mapfile -t binaries < <(find out/InputCoverage/Tests/Unit -maxdepth 1 -type f -executable \( -name 'SIRInput*' -o -name 'SIRGameInputCodecTests' -o -name 'SIRApplicationInputTests' \) | sort)
+          test "${#binaries[@]}" -gt 0
+          objects=()
+          for binary in "${binaries[@]:1}"; do
+            objects+=("-object=$binary")
+          done
+          llvm-cov-18 export "${binaries[0]}" "${objects[@]}" -instr-profile=out/InputCoverage/merged.profdata > out/InputCoverage/llvm-export.json
+          python3 Build/Scripts/InputCoverage.py \
+            --source "$PWD" \
+            --compdb out/InputCoverage/compile_commands.json \
+            --export out/InputCoverage/llvm-export.json \
+            --report out/InputCoverage/summary.json
+      - name: Preserve actual source coverage evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sir-native-input-llvm-coverage-linux
+          path: |
+            out/InputCoverage/summary.json
+            out/InputCoverage/llvm-export.json
+            out/InputCoverage/merged.profdata
+            out/InputCoverage/compile_commands.json
+            out/InputCoverage/Testing/Temporary/LastTest.log
+          if-no-files-found: warn
+          retention-days: 30
+ | grep -Fq 'core.platform.input.x11-window'
       - name: Execute input regression and 9.6M-request soak
         shell: bash
         run: |
