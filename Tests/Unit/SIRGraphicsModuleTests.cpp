@@ -69,6 +69,10 @@ static bool testBinaryModule( void ) noexcept
 	if ( sirGraphicsQueryABIAdapter( &module, 0, &adapter ) != SIR_GRAPHICS_ABI_DRIVER_ERROR || adapter.nStableId != 0x4321 ) {
 		return false;
 	}
+	pMode( 9 );
+	if ( sirGraphicsQueryABIAdapter( &module, 0, &adapter ) != SIR_GRAPHICS_CAPACITY_EXCEEDED ) {
+		return false;
+	}
 	pMode( 0 );
 	if ( sirGraphicsQueryABIAdapter( &module, 1, &adapter ) != SIR_GRAPHICS_ABI_UNSUPPORTED ) {
 		return false;
@@ -99,6 +103,11 @@ static bool testBinaryModule( void ) noexcept
 	if ( sirGraphicsCreateABIDevice( &module, &request, &device ) != SIR_GRAPHICS_BUSY || module.nActiveDevices != 0 ) {
 		return false;
 	}
+	pMode( 8 );
+	if ( sirGraphicsCreateABIDevice( &module, &request, &device ) != SIR_GRAPHICS_DEVICE_LOST ||
+	     module.nActiveDevices != 0 ) {
+		return false;
+	}
 	pMode( 5 );
 	if ( sirGraphicsCreateABIDevice( &module, &request, &device ) != SIR_GRAPHICS_ABI_DRIVER_ERROR || module.nActiveDevices != 0 ||
 	     device.pDevice != nullptr ) {
@@ -112,7 +121,7 @@ static bool testBinaryModule( void ) noexcept
 	if ( sirGraphicsCreateABIDevice( &module, &request, &device ) != SIR_GRAPHICS_ABI_SUCCESS || module.nActiveDevices != 1 ) {
 		return false;
 	}
-	if ( sirGraphicsUnloadABIModule( &module ) != SIR_GRAPHICS_ABI_UNSUPPORTED ) {
+	if ( sirGraphicsUnloadABIModule( &module ) != SIR_GRAPHICS_BUSY ) {
 		return false;
 	}
 	sirGraphicsABICapabilities_t caps = {};

@@ -39,7 +39,7 @@ static uint32_t mockAdapterCount( void *, uint32_t *pCount ) noexcept
 	if ( pCount == nullptr ) {
 		return SIR_GRAPHICS_ABI_INVALID_ARGUMENT;
 	}
-	*pCount = 1;
+	*pCount = s_nMockMode == 9 ? 257 : 1;
 	return SIR_GRAPHICS_ABI_SUCCESS;
 }
 
@@ -65,6 +65,9 @@ static uint32_t mockQueryAdapter( void *, sirGraphicsABIAdapter_t *pInfo ) noexc
 
 static uint32_t mockQueryCapabilities( void *, sirGraphicsABICapabilities_t *pInfo ) noexcept
 {
+	if ( s_nMockMode == 8 ) {
+		return SIR_GRAPHICS_DEVICE_LOST;
+	}
 	if ( pInfo == nullptr || pInfo->nSize < sizeof( sirGraphicsABICapabilities_t ) ) {
 		return SIR_GRAPHICS_ABI_INVALID_ARGUMENT;
 	}

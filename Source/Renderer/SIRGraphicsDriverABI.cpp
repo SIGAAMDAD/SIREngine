@@ -79,7 +79,7 @@ sirGraphicsABIResult_t sirGraphicsValidateABIAdapter( const sirGraphicsABIAdapte
 	if ( pAdapter == nullptr || pAdapter->nSize < sizeof( sirGraphicsABIAdapter_t ) || pAdapter->nBackend < SIR_GRAPHICS_BACKEND_VULKAN ||
 	     pAdapter->nBackend > SIR_GRAPHICS_BACKEND_OPENGL || pAdapter->nKind < SIR_GRAPHICS_ABI_ADAPTER_DISCRETE ||
 	     pAdapter->nKind > SIR_GRAPHICS_ABI_ADAPTER_OTHER || pAdapter->nQueueMask == 0 ||
-	     ( pAdapter->nQueueMask & ~( ( 1U << SIR_GRAPHICS_QUEUE_COUNT ) - 1U ) ) != 0 || pAdapter->nReserved != 0 ) {
+	     ( pAdapter->nQueueMask & ~( ( 1U << SIR_GRAPHICS_QUEUE_COUNT ) - 1U ) ) != 0 || pAdapter->nReserved != 0 || pAdapter->szName[127] != '\0' ) {
 		return SIR_GRAPHICS_ABI_INVALID_ARGUMENT;
 	}
 	return SIR_GRAPHICS_ABI_SUCCESS;
@@ -91,7 +91,8 @@ sirGraphicsABIResult_t sirGraphicsValidateABICapabilities( const sirGraphicsABIC
 	     pInfo->nBackend < SIR_GRAPHICS_BACKEND_VULKAN || pInfo->nBackend > SIR_GRAPHICS_BACKEND_OPENGL ||
 	     pInfo->nAdapterKind < SIR_GRAPHICS_ABI_ADAPTER_DISCRETE || pInfo->nAdapterKind > SIR_GRAPHICS_ABI_ADAPTER_OTHER ||
 	     pInfo->nEnabledQueues == 0 || ( pInfo->nEnabledQueues & ~( ( 1U << SIR_GRAPHICS_QUEUE_COUNT ) - 1U ) ) != 0 ||
-	     pInfo->nMaximumFramesInFlight == 0 || pInfo->nMaximumSamples == 0 || pInfo->nUnifiedMemory > 1 || pInfo->nReserved != 0 ) {
+	     pInfo->nMaximumFramesInFlight == 0 || pInfo->nMaximumSamples == 0 || pInfo->nUnifiedMemory > 1 || pInfo->nReserved != 0 ||
+	     ( pInfo->nEnabledFeatures & ~( ( SIR_GRAPHICS_FEATURE_PRESENT << 1 ) - 1ULL ) ) != 0 ) {
 		return SIR_GRAPHICS_ABI_INVALID_ARGUMENT;
 	}
 	if ( ( pInfo->nEnabledFeatures & SIR_GRAPHICS_FEATURE_GRAPHICS ) != 0 &&
@@ -102,13 +103,27 @@ sirGraphicsABIResult_t sirGraphicsValidateABICapabilities( const sirGraphicsABIC
 	     ( pInfo->nEnabledFeatures & SIR_GRAPHICS_FEATURE_GRAPHICS ) == 0 ) {
 		return SIR_GRAPHICS_ABI_INVALID_ARGUMENT;
 	}
+	if ( ( pInfo->nEnabledFeatures & SIR_GRAPHICS_FEATURE_ASYNC_COMPUTE ) != 0 &&
+	     ( pInfo->nEnabledQueues & ( 1U << SIR_GRAPHICS_QUEUE_COMPUTE ) ) == 0 ) {
+		return SIR_GRAPHICS_ABI_INVALID_ARGUMENT;
+	}
+	if ( ( pInfo->nEnabledFeatures & SIR_GRAPHICS_FEATURE_COPY_QUEUE ) != 0 &&
+	     ( pInfo->nEnabledQueues & ( 1U << SIR_GRAPHICS_QUEUE_COPY ) ) == 0 ) {
+		return SIR_GRAPHICS_ABI_INVALID_ARGUMENT;
+	}
+	if ( ( pInfo->nEnabledFeatures & SIR_GRAPHICS_FEATURE_COMPUTE ) != 0 &&
+	     ( pInfo->nEnabledQueues & ( ( 1U << SIR_GRAPHICS_QUEUE_DIRECT ) | ( 1U << SIR_GRAPHICS_QUEUE_COMPUTE ) ) ) == 0 ) {
+		return SIR_GRAPHICS_ABI_INVALID_ARGUMENT;
+	}
 	return SIR_GRAPHICS_ABI_SUCCESS;
 }
 
 sirGraphicsABIResult_t sirGraphicsValidateABIFormat( const sirGraphicsABIFormat_t *pFormat ) noexcept
 {
 	if ( pFormat == nullptr || pFormat->nSize < sizeof( sirGraphicsABIFormat_t ) || pFormat->nFormat <= SIR_GRAPHICS_FORMAT_UNKNOWN ||
-	     pFormat->nFormat > SIR_GRAPHICS_FORMAT_BC7_UNORM || pFormat->nReserved != 0 ) {
+	     pFormat->nFormat > SIR_GRAPHICS_FORMAT_BC7_UNORM || pFormat->nReserved != 0 ||
+	     ( ( pFormat->nOptimalFeatures | pFormat->nLinearFeatures ) & ~0x7FU ) != 0 ||
+	     ( pFormat->nSampleCountMask & ~0x7FU ) != 0 ) {
 		return SIR_GRAPHICS_ABI_INVALID_ARGUMENT;
 	}
 	if ( pFormat->nSampleCountMask == 0 && ( pFormat->nOptimalFeatures | pFormat->nLinearFeatures ) != 0 ) {
