@@ -429,11 +429,38 @@ static bool testTraceWrapAndSparseRetire( void )
 	return true;
 }
 
+static bool testSegmentBitmapMetadataExhaustion( void )
+{
+	const uint64_t nPage = SIRVirtualMemory::getPageSize();
+	if ( nPage == 0 ) {
+		return false;
+	}
+	const sirMemoryConfig_t config = { nPage * 128, nPage * 24, nPage * 4, 4 };
+	SIRMemoryManager memory;
+	if ( !memory.init( config ) || memory.allocateMetadata( 1, 8 ) == nullptr ) {
+		return false;
+	}
+	const uint64_t nUsed = memory.getStats().nMetadataUsedBytes;
+	if ( nUsed >= config.nMetadataBytes - 16 ) {
+		return false;
+	}
+	const uint64_t nLeaveOneBitmap = config.nMetadataBytes - nUsed - sizeof( uint64_t );
+	if ( memory.allocateMetadata( nLeaveOneBitmap, 1 ) == nullptr ) {
+		return false;
+	}
+	if ( memory.createSegment( "pending-bitmap-denial", nPage * 2 ) != nullptr ||
+	     memory.createSegment( "first-bitmap-denial", nPage * 2 ) != nullptr || memory.getStats().nSegmentCount != 0 ) {
+		return false;
+	}
+	memory.shutdown();
+	return true;
+}
+
 int main( void )
 {
 	if ( !testMemoryBudget() || !testCoreDomainMetadata() || !testBitmapAndRecommit() || !testOversizedRequests() ||
 	     !testFailedInitializationRecovery() || !testBackingTelemetry() || !testRetainedPageBacking() ||
-	     !testValidationAndBoundaryInputs() || !testTraceWrapAndSparseRetire() ) {
+	     !testValidationAndBoundaryInputs() || !testTraceWrapAndSparseRetire() || !testSegmentBitmapMetadataExhaustion() ) {
 		fputs( "SIR memory owner test failed\n", stderr );
 		return 1;
 	}
