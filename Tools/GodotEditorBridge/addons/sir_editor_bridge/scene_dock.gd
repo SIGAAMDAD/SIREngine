@@ -15,6 +15,8 @@ var _property_tree: Tree
 var _property_label: Label
 var _properties_by_node: Dictionary = {}
 var _items_by_id: Dictionary = {}
+var _items_by_path: Dictionary = {}
+var _native_session: RefCounted = null
 var _snapshot_scene: String = ""
 var _snapshot_hash: String = ""
 var _rebuilding: bool = false
@@ -74,6 +76,10 @@ func _ready() -> void:
     _property_tree.size_flags_vertical = Control.SIZE_EXPAND_FILL
     add_child(_property_tree)
 
+    # Keep the native hierarchy and Godot's own selection in sync.
+    var editor_selection: EditorSelection = EditorInterface.get_selection()
+    editor_selection.selection_changed.connect(_on_editor_selection_changed)
+
 
 func _exit_tree() -> void:
     shutdown_bridge()
@@ -81,6 +87,12 @@ func _exit_tree() -> void:
 
 func shutdown_bridge() -> void:
     _cancel_active_request()
+    var editor_selection: EditorSelection = EditorInterface.get_selection()
+    if editor_selection.selection_changed.is_connected(_on_editor_selection_changed):
+        editor_selection.selection_changed.disconnect(_on_editor_selection_changed)
+    if _native_session != null:
+        _native_session.call("close_scene")
+        _native_session = null
 
 
 func _remove_output_files(path: String) -> void:
@@ -110,7 +122,10 @@ func invalidate_snapshot() -> void:
     _snapshot_scene = ""
     _snapshot_hash = ""
     _items_by_id.clear()
+    _items_by_path.clear()
     _properties_by_node.clear()
+    if _native_session != null:
+        _native_session.call("close_scene")
     if _tree != null:
         _tree.clear()
     if _property_tree != null:
@@ -141,6 +156,7 @@ func _on_refresh_pressed() -> void:
     _snapshot_scene = ""
     _snapshot_hash = ""
     _items_by_id.clear()
+    _items_by_path.clear()
     _properties_by_node.clear()
     _tree.clear()
     _property_tree.clear()
@@ -154,15 +170,18 @@ func _on_refresh_pressed() -> void:
     # Use one source model per refresh on the Godot editor thread; this path
     # performs no JSON serialization, subprocess spawn or temporary file IO.
     if direct_available:
-        var native_session: RefCounted = ClassDB.instantiate("SIREditorGodotSession") as RefCounted
-        if native_session == null:
+        # Keep a single native session for this dock. Re-opening a scene resets
+        # its generation without creating another SIRMemoryManager reservation.
+        if _native_session == null:
+            _native_session = ClassDB.instantiate("SIREditorGodotSession") as RefCounted
+        if _native_session == null:
             _status.text = "Cannot construct the native editor extension session."
             return
-        var opened: bool = bool(native_session.call("open_scene", disk_path))
-        var snapshot: Dictionary = native_session.call("get_snapshot") if opened else {}
-        var native_error: String = str(native_session.call("get_last_error"))
-        native_session.call("close_scene")
-        native_session = null
+        _native_session.call("close_scene")
+        var opened: bool = bool(_native_session.call("open_scene", disk_path))
+        var snapshot: Dictionary = _native_session.call("get_snapshot") if opened else {}
+        var native_error: String = str(_native_session.call("get_last_error"))
+        _native_session.call("close_scene")
         if not opened:
             _status.text = "Native in-process inspection failed: %s" % native_error
             return
@@ -306,6 +325,7 @@ func _show_snapshot(snapshot: Dictionary, source_scene: String) -> void:
     _tree.clear()
     _property_tree.clear()
     _items_by_id.clear()
+    _items_by_path.clear()
     _properties_by_node.clear()
     for property_data in snapshot["properties"]:
         var property_node: String = property_data["node"]
@@ -322,11 +342,50 @@ func _show_snapshot(snapshot: Dictionary, source_scene: String) -> void:
         item.set_metadata(0, {"path": node_data["path"], "id": id_value})
         item.set_tooltip_text(0, "Source line %s | Native ID %s" % [str(node_data["line"]), id_value])
         _items_by_id[id_value] = item
+        _items_by_path[node_data["path"]] = item
 
     _snapshot_scene = source_scene
     _rebuilding = false
     _status.text = "%d nodes, %d resources, %d properties | native revision %s | saved file only" % [
         snapshot["nodes"].size(), snapshot["resources"].size(), snapshot["properties"].size(), str(snapshot["revision"])]
+    _on_editor_selection_changed()
+
+
+
+func _on_editor_selection_changed() -> void:
+    if _rebuilding or _snapshot_scene.is_empty() or _tree == null:
+        return
+
+    var scene_root: Node = EditorInterface.get_edited_scene_root()
+    if scene_root == null or scene_root.scene_file_path != _snapshot_scene:
+        invalidate_snapshot()
+        return
+
+    var selected_nodes: Array[Node] = EditorInterface.get_selection().get_selected_nodes()
+    if selected_nodes.size() != 1:
+        _rebuilding = true
+        _tree.deselect_all()
+        _rebuilding = false
+        _property_tree.clear()
+        _property_label.text = "Native serialized properties (read-only)"
+        return
+
+    var selected_node: Node = selected_nodes[0]
+    if selected_node != scene_root and not scene_root.is_ancestor_of(selected_node):
+        return
+
+    var relative_path: String = "" if selected_node == scene_root else str(scene_root.get_path_to(selected_node))
+    var item: TreeItem = _items_by_path.get(relative_path, null)
+    if item == null:
+        # The live authoring tree may contain nodes absent from the saved scene.
+        return
+
+    _rebuilding = true
+    _tree.set_selected(item, 0)
+    _tree.scroll_to_item(item)
+    _rebuilding = false
+    var selected_data: Dictionary = item.get_metadata(0)
+    _show_node_properties(str(selected_data["id"]))
 
 
 func _on_item_selected() -> void:

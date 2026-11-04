@@ -4,11 +4,11 @@ Open `Tools/GodotEditorBridge` as a project in the supplied Godot 4.8 fork. Its 
 
 Build the native SIREngine `SIREditor` executable first. In the **SIREngine Scene** dock, enter the absolute path to that executable, open and save `Scenes/BridgeSmoke.tscn` (or another `.tscn` scene) in the Godot editor, and press **Refresh**. The dock requests `--inspect-scene-json` and shows the native hierarchy using Godot's actual `Tree` control. Clicking a row selects the corresponding Godot scene `Node` in the existing inspector. The plugin is editor-only, does not change the scene or write resource files, and clears stale snapshots when the scene changes or saves.
 
-The bridge is a transitional integration and smoke-test surface for Godot `EditorDock`, `Control`, `Tree`, `EditorSelection`, and native SIREngine scene identity. It is not yet the standalone SIREngine graphical editor kernel. It uses an explicitly requested blocking native inspection of **saved** text scenes, caps the display at 2048 nodes and does not claim virtualized Godot Tree rendering. The native virtualized hierarchy model will replace this preview when the full editor-private Godot kernel and direct native widget bridge are hosted by SIREngine.
+The bridge is a transitional integration and smoke-test surface for Godot `EditorDock`, `Control`, `Tree`, `EditorSelection`, and native SIREngine scene identity. It is not yet the standalone SIREngine graphical editor kernel. With the optional native extension installed, it reads a **saved** scene through an in-process native session. Otherwise it uses the asynchronous CLI/JSON path. The dock caps display at 2048 nodes and does not claim virtualized Godot `Tree` rendering. The native virtualized hierarchy model will replace this preview when the full editor-private Godot kernel and native widget bridge are hosted by SIREngine.
 
 `--inspect-scene-json` schema v1 contains string-valued 64-bit IDs, source-order node records, decoded relative NodePaths, line numbers and resource index metadata. It never returns Godot Variant payloads or serialized property values.
 
-The Godot plugin has been source-checked against the uploaded Godot fork API (`EditorPlugin.add_dock`, `EditorDock`, `EditorInterface`, `Tree`, `OS.execute`). Its runtime smoke test requires the Godot editor executable and a GUI session; the native CMake/CTest suite cannot certify that integration without those prerequisites.
+The Godot plugin has been source-checked against the uploaded Godot fork API (`EditorPlugin.add_dock`, `EditorDock`, `EditorInterface`, `EditorSelection.selection_changed`, `Tree.set_selected`, `Tree.scroll_to_item`, and `OS.create_process`). A genuine editor GUI smoke test is required to validate the signal timing and native extension loading; native CMake/CTest alone cannot certify these interactions.
 
 
 ## Nonblocking inspection (migration phase)
@@ -76,3 +76,12 @@ Node system. Its authoring segment uses SIREngine's `SIRMemoryManager` domain
 will pass the existing central editor segment instead of creating a temporary
 segment in the Godot process. Neither a real GDExtension build against this
 fork nor a graphical editor smoke test is covered by default CI.
+
+
+## Persistent native session and two-way selection synchronization
+
+When the optional `SIREditorGodotSession` is available, the dock retains one `RefCounted` session until plugin teardown. Each refresh closes/reopens only the underlying native scene workspace. The native memory reservation is not recreated per refresh. Scene changes and saves invalidate the snapshot and close its active document; plugin unload destroys the session and disconnects selection signals.
+
+Selection is bidirectional. Choosing an item in the SIREngine dock still selects that live Godot node in the editor Inspector. Selecting exactly one node in Godot's main scene tree now selects and scrolls to the matching native dock row and displays that node's source property preview. Multi-selection clears the dock selection; live nodes absent from the saved scene are left unchanged. This reflects **saved source metadata**, not live unsaved property mutations.
+
+**Graphical smoke procedure (not yet executed):** Load the supplied Godot 4.8 fork, enable the addon, save and refresh a scene with a nested child, then (1) select the nested child in Godot's main Scene dock and verify its native row and properties, (2) select a native row and verify the Godot Inspector, (3) clear or multi-select in Godot and verify the native selection clears, (4) refresh repeatedly and confirm the same extension session remains active without increasing native editor-domain committed memory, (5) save/switch scenes and confirm stale selection is discarded, and (6) unload the addon without leaked connections or active processes. Repeat with the direct extension installed and the asynchronous CLI fallback.
