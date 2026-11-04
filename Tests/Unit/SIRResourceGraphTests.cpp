@@ -78,7 +78,7 @@ static void testFree( void *pContext, void *pData, uint64_t nBytes, uint32_t nAl
 		}                                                                                                                                  \
 	} while ( false )
 
-static SIRResourceGraphConfig testConfig( SIRTestAllocatorStats &rStats, uint32_t nSlots = 64, uint64_t nBudget = 4 * 1024 * 1024 ) noexcept
+static SIRResourceGraphConfig testConfig( SIRTestAllocatorStats& rStats, uint32_t nSlots = 64, uint64_t nBudget = 4 * 1024 * 1024 ) noexcept
 {
 	SIRResourceGraphConfig config = {};
 	config.m_Allocator = { &rStats, testAllocate, testFree };
@@ -100,7 +100,7 @@ static SIRResourceContentKey content( uint64_t nHash ) noexcept
 	return { nHash, nHash ^ 0x9E3779B97F4A7C15ULL, 4, 0 };
 }
 
-static SIRResourceHandle publishText( SIRResourceGraphWriter &rWriter, SIRResourceKey resourceKey, const char *szData, uint64_t nHash,
+static SIRResourceHandle publishText( SIRResourceGraphWriter& rWriter, SIRResourceKey resourceKey, const char *szData, uint64_t nHash,
                                       SIRResourceChunkId chunkId = { 0 } ) noexcept
 {
 	SIRResourceStagingHandle staging = {};
@@ -359,7 +359,7 @@ static void testConcurrentReadersAndWriterBoundary( void )
 			publishText( *pWriter, key( 55 ), szData, 55 + iPass );
 			pWriter->collectRetired( 4 );
 		}
-		for ( std::thread &rReader : threads ) {
+		for ( std::thread& rReader : threads ) {
 			rReader.join();
 		}
 		REQUIRE( nErrors.load() == 0 );
@@ -722,7 +722,7 @@ static void testAtomicReadIndexCollisionsAndChurn( void )
 		std::atomic<bool> bRunning{ true };
 		std::atomic<uint32_t> nFailures{ 0 };
 		std::thread readers[4];
-		for ( std::thread &rThread : readers ) {
+		for ( std::thread& rThread : readers ) {
 			rThread = std::thread( [&]() {
 				while ( bRunning.load( std::memory_order_acquire ) ) {
 					SIRResourceReadScope scope( graph );
@@ -746,7 +746,7 @@ static void testAtomicReadIndexCollisionsAndChurn( void )
 			( void )pWriter->collectRetired( 10 );
 		}
 		bRunning.store( false, std::memory_order_release );
-		for ( std::thread &rThread : readers ) {
+		for ( std::thread& rThread : readers ) {
 			rThread.join();
 		}
 		REQUIRE( nFailures.load() == 0 );
@@ -943,14 +943,14 @@ static sirTaskResult_t executeResourceTest( void *pContext, sirTaskHandle_t ) no
 	return pNode->bFail ? SIR_TASK_RESULT_FAILURE : SIR_TASK_RESULT_SUCCESS;
 }
 
-static bool describeResourceTest( void *pContext, const SIRResourceDependencyPlanEntry &rEntry, sirTaskGraphPass_t *pPass ) noexcept
+static bool describeResourceTest( void *pContext, const SIRResourceDependencyPlanEntry& rEntry, sirTaskGraphPass_t *pPass ) noexcept
 {
 	sirResourceScheduledTestSet_t *pSet = ( sirResourceScheduledTestSet_t * )pContext;
 	if ( pSet->bRejectFactory || rEntry.nRevision == 0 || pPass == nullptr ) {
 		return false;
 	}
 	for ( uint32_t i = 0; i < pSet->nNodes; ++i ) {
-		sirResourceScheduledTestNode_t &rNode = pSet->nodes[i];
+		sirResourceScheduledTestNode_t& rNode = pSet->nodes[i];
 		if ( rNode.hResource.m_nSlot == rEntry.hResource.m_nSlot && rNode.hResource.m_nGeneration == rEntry.hResource.m_nGeneration ) {
 			*pPass = { executeResourceTest, &rNode, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU };
 			return true;
@@ -967,7 +967,7 @@ typedef struct sirResourceMutationFactory_s
 	bool bMutated;
 } sirResourceMutationFactory_t;
 
-static bool describeResourceWithMutation( void *pContext, const SIRResourceDependencyPlanEntry &rEntry, sirTaskGraphPass_t *pPass ) noexcept
+static bool describeResourceWithMutation( void *pContext, const SIRResourceDependencyPlanEntry& rEntry, sirTaskGraphPass_t *pPass ) noexcept
 {
 	sirResourceMutationFactory_t *pMutation = ( sirResourceMutationFactory_t * )pContext;
 	if ( !describeResourceTest( pMutation->pSet, rEntry, pPass ) ) {
@@ -992,7 +992,7 @@ typedef struct sirResourceRetireFactory_s
 	bool bRetired;
 } sirResourceRetireFactory_t;
 
-static bool describeResourceWithRetirement( void *pContext, const SIRResourceDependencyPlanEntry &rEntry,
+static bool describeResourceWithRetirement( void *pContext, const SIRResourceDependencyPlanEntry& rEntry,
                                             sirTaskGraphPass_t *pPass ) noexcept
 {
 	sirResourceRetireFactory_t *pMutation = ( sirResourceRetireFactory_t * )pContext;
@@ -1018,7 +1018,7 @@ typedef struct sirResourceRebindFactory_s
 	bool bRebound;
 } sirResourceRebindFactory_t;
 
-static bool describeResourceWithRebind( void *pContext, const SIRResourceDependencyPlanEntry &rEntry, sirTaskGraphPass_t *pPass ) noexcept
+static bool describeResourceWithRebind( void *pContext, const SIRResourceDependencyPlanEntry& rEntry, sirTaskGraphPass_t *pPass ) noexcept
 {
 	sirResourceRebindFactory_t *pMutation = ( sirResourceRebindFactory_t * )pContext;
 	if ( !describeResourceTest( pMutation->pSet, rEntry, pPass ) ) {
@@ -1040,7 +1040,7 @@ static bool describeResourceWithRebind( void *pContext, const SIRResourceDepende
 	return true;
 }
 
-static SIRResourceHandle publishTaskNode( SIRResourceGraphWriter &rWriter, uint64_t nAsset,
+static SIRResourceHandle publishTaskNode( SIRResourceGraphWriter& rWriter, uint64_t nAsset,
                                           const SIRResourceDependency *pDependencies = nullptr, uint32_t nDependencies = 0 ) noexcept
 {
 	SIRResourcePublication pub = { key( nAsset ), SIR_RESOURCE_KIND_COMPOSITION, 1, 1, nullptr, 0, pDependencies, nDependencies };
@@ -1049,7 +1049,7 @@ static SIRResourceHandle publishTaskNode( SIRResourceGraphWriter &rWriter, uint6
 	return hResult;
 }
 
-static bool resourceTaskHasEdge( const SIRTaskGraph &rTasks, uint32_t nBefore, uint32_t nAfter ) noexcept
+static bool resourceTaskHasEdge( const SIRTaskGraph& rTasks, uint32_t nBefore, uint32_t nAfter ) noexcept
 {
 	for ( uint32_t i = 0; i < rTasks.getEdgeCount(); ++i ) {
 		sirTaskGraphEdge_t edge = {};
@@ -1061,7 +1061,7 @@ static bool resourceTaskHasEdge( const SIRTaskGraph &rTasks, uint32_t nBefore, u
 	return false;
 }
 
-static void initResourceTaskMemory( SIRMemoryManager &rMemory )
+static void initResourceTaskMemory( SIRMemoryManager& rMemory )
 {
 	const sirMemoryConfig_t config = { 64ULL * 1024 * 1024, 32ULL * 1024 * 1024, 8ULL * 1024 * 1024, 32 };
 	REQUIRE( rMemory.init( config ) );

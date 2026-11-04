@@ -23,7 +23,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <stdlib.h>
 #include <string.h>
 
-SIRResourceFileLoad::SIRResourceFileLoad( SIRResourceGraph &rGraph, SIRTaskScheduler &rScheduler ) noexcept
+SIRResourceFileLoad::SIRResourceFileLoad( SIRResourceGraph& rGraph, SIRTaskScheduler& rScheduler ) noexcept
     : m_pGraph( &rGraph ), m_pScheduler( &rScheduler ), m_File(), m_Request{}, m_Staging{}, m_Bytes{}, m_Task{ UINT32_MAX, 0 },
       m_eTransferResult( SIR_FILE_OK ), m_eLastFileResult( SIR_FILE_OK ), m_bActive( false ), m_bDiscard( false )
 {
@@ -80,7 +80,7 @@ void SIRResourceFileLoad::closeTransfer( void ) noexcept
 	m_bDiscard = false;
 }
 
-SIRResourceResult SIRResourceFileLoad::begin( const char *pszUtf8Path, const sirResourceFileLoadRequest_t &rRequest ) noexcept
+SIRResourceResult SIRResourceFileLoad::begin( const char *pszUtf8Path, const sirResourceFileLoadRequest_t& rRequest ) noexcept
 {
 	SIRResourceGraphWriter *pWriter = m_pGraph->getWriter();
 	if ( pWriter == nullptr ) {

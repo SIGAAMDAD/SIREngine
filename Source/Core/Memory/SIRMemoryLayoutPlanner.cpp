@@ -30,7 +30,7 @@ static bool sirAddLayoutBytes( uint64_t *pTotal, uint64_t nBytes )
 	return true;
 }
 
-bool SIRMemoryLayoutPlanner::preflight( const sirMemoryConfig_t &config, const sirMemoryBudgetProfile_t &budget,
+bool SIRMemoryLayoutPlanner::preflight( const sirMemoryConfig_t& config, const sirMemoryBudgetProfile_t& budget,
                                         const sirMemoryLayoutEntry_t *pEntries, uint32_t nEntryCount, sirMemoryLayoutResult_t *pResult )
 {
 	if ( pResult == nullptr || ( pEntries == nullptr && nEntryCount != 0 ) || nEntryCount > config.nMaxSegments ||
@@ -61,7 +61,7 @@ bool SIRMemoryLayoutPlanner::preflight( const sirMemoryConfig_t &config, const s
 	uint64_t nRequiredMetadata = ( ( uint64_t )( config.nMaxSegments ) ) * sizeof( SIRMemorySegment );
 	uint64_t nTotalData = 0;
 	for ( uint32_t i = 0; i < nEntryCount; ++i ) {
-		const sirMemoryLayoutEntry_t &entry = pEntries[i];
+		const sirMemoryLayoutEntry_t& entry = pEntries[i];
 		uint64_t nBytes = 0;
 		if ( entry.nReserveBytes == 0 ) {
 			return false;

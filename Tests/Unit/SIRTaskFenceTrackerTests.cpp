@@ -100,7 +100,7 @@ static sirTaskResult_t registerFenceInsideCallback( void *pContext, sirTaskHandl
 	return SIR_TASK_RESULT_PENDING;
 }
 
-static void initFenceMemory( SIRMemoryManager &memory )
+static void initFenceMemory( SIRMemoryManager& memory )
 {
 	const sirMemoryConfig_t config = { 64ULL * 1024 * 1024, 32ULL * 1024 * 1024, 8ULL * 1024 * 1024, 32 };
 	SIR_FENCE_CHECK( memory.init( config ) );

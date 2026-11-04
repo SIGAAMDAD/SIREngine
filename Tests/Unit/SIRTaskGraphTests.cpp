@@ -47,7 +47,7 @@ static SIRMemoryManager *sirGraphMakeMemory( SIRMemoryManager *pMemory )
 	return pMemory;
 }
 
-static bool graphHasEdge( const SIRTaskGraph &graph, uint32_t nBefore, uint32_t nAfter )
+static bool graphHasEdge( const SIRTaskGraph& graph, uint32_t nBefore, uint32_t nAfter )
 {
 	for ( uint32_t iEdge = 0; iEdge < graph.getEdgeCount(); ++iEdge ) {
 		sirTaskGraphEdge_t edge = {};
@@ -277,8 +277,8 @@ static void testRandomizedRangeHazards( void )
 		}
 		for ( uint32_t iBefore = 0; iBefore < N_PASSES; ++iBefore ) {
 			for ( uint32_t iAfter = iBefore + 1; iAfter < N_PASSES; ++iAfter ) {
-				const sirTaskGraphAccess_t &before = accesses[iBefore];
-				const sirTaskGraphAccess_t &after = accesses[iAfter];
+				const sirTaskGraphAccess_t& before = accesses[iBefore];
+				const sirTaskGraphAccess_t& after = accesses[iAfter];
 				const bool bOverlap = before.nOffset < after.nOffset + after.nBytes && after.nOffset < before.nOffset + before.nBytes;
 				if ( before.keyResource.nLow == after.keyResource.nLow && before.keyResource.nHigh == after.keyResource.nHigh && bOverlap &&
 				     ( before.eMode == SIR_TASK_GRAPH_WRITE || after.eMode == SIR_TASK_GRAPH_WRITE ) ) {

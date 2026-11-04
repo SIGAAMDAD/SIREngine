@@ -134,7 +134,7 @@ static void sirTestPlatformFile( void )
 			}
 		} );
 	}
-	for ( std::thread &rWorker : workers ) {
+	for ( std::thread& rWorker : workers ) {
 		rWorker.join();
 	}
 	SIR_REQUIRE( nValid.load( std::memory_order_relaxed ) == 1024 );

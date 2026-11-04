@@ -73,7 +73,7 @@ static void sirGRDGBenchmarkFree( void *pContext, void *pData, uint64_t, uint32_
 #endif
 }
 
-static SIRResourceGraphConfig sirGRDGBenchmarkConfig( sirGRDGBenchmarkAllocator_t &rAllocator, uint32_t nResources ) noexcept
+static SIRResourceGraphConfig sirGRDGBenchmarkConfig( sirGRDGBenchmarkAllocator_t& rAllocator, uint32_t nResources ) noexcept
 {
 	SIRResourceGraphConfig config = {};
 	config.m_Allocator = { &rAllocator, sirGRDGBenchmarkAllocate, sirGRDGBenchmarkFree };
@@ -86,7 +86,7 @@ static SIRResourceGraphConfig sirGRDGBenchmarkConfig( sirGRDGBenchmarkAllocator_
 	return config;
 }
 
-static bool sirGRDGBenchmarkMemory( SIRMemoryManager &rMemory ) noexcept
+static bool sirGRDGBenchmarkMemory( SIRMemoryManager& rMemory ) noexcept
 {
 	return rMemory.init( { 64ULL * 1024 * 1024, 32ULL * 1024 * 1024, 8ULL * 1024 * 1024, 32 } );
 }
@@ -122,7 +122,7 @@ public:
 	}
 };
 
-static void SIRBenchmarkGRDGNativeReadAt( benchmark::State &state )
+static void SIRBenchmarkGRDGNativeReadAt( benchmark::State& state )
 {
 	SIRGRDGBenchmarkFixture fixture;
 	if ( !fixture.init() ) {
@@ -148,7 +148,7 @@ static void SIRBenchmarkGRDGNativeReadAt( benchmark::State &state )
 	state.SetBytesProcessed( state.iterations() * ( int64_t )nBytes );
 }
 
-static void SIRBenchmarkGRDGMappedCopy( benchmark::State &state )
+static void SIRBenchmarkGRDGMappedCopy( benchmark::State& state )
 {
 	SIRGRDGBenchmarkFixture fixture;
 	if ( !fixture.init() ) {
@@ -180,7 +180,7 @@ static void SIRBenchmarkGRDGMappedCopy( benchmark::State &state )
 	state.SetBytesProcessed( state.iterations() * ( int64_t )nBytes );
 }
 
-static void SIRBenchmarkGRDGLookup( benchmark::State &state )
+static void SIRBenchmarkGRDGLookup( benchmark::State& state )
 {
 	const uint32_t nResources = ( uint32_t )state.range( 0 );
 	sirGRDGBenchmarkAllocator_t allocator = {};
@@ -220,7 +220,7 @@ static void SIRBenchmarkGRDGLookup( benchmark::State &state )
 	state.counters["active_records"] = ( double )graph.getStats().m_nLiveResources;
 }
 
-static void SIRBenchmarkGRDGPublishReplace( benchmark::State &state )
+static void SIRBenchmarkGRDGPublishReplace( benchmark::State& state )
 {
 	const uint64_t nBytes = ( uint64_t )state.range( 0 );
 	sirGRDGBenchmarkAllocator_t allocator = {};
@@ -264,7 +264,7 @@ static void SIRBenchmarkGRDGPublishReplace( benchmark::State &state )
 	state.counters["committed_bytes"] = ( double )graph.getStats().m_nCommittedBytes;
 }
 
-static void SIRBenchmarkGRDGFileIngest( benchmark::State &state )
+static void SIRBenchmarkGRDGFileIngest( benchmark::State& state )
 {
 	const uint64_t nBytes = ( uint64_t )state.range( 0 );
 	const sirResourceFileReadMode_t eMode = state.range( 1 ) == 0 ? SIR_RESOURCE_FILE_READ_AT : SIR_RESOURCE_FILE_READ_MAPPED;
@@ -333,7 +333,7 @@ static void SIRBenchmarkGRDGFileIngest( benchmark::State &state )
 	}
 }
 
-static void SIRBenchmarkGRDGPageRetireCancel( benchmark::State &state )
+static void SIRBenchmarkGRDGPageRetireCancel( benchmark::State& state )
 {
 	SIRMemoryManager memory;
 	if ( !sirGRDGBenchmarkMemory( memory ) ) {
@@ -363,7 +363,7 @@ static void SIRBenchmarkGRDGPageRetireCancel( benchmark::State &state )
 	memory.shutdown();
 }
 
-static void SIRBenchmarkGRDGPageDrainRecommit( benchmark::State &state )
+static void SIRBenchmarkGRDGPageDrainRecommit( benchmark::State& state )
 {
 	SIRMemoryManager memory;
 	if ( !sirGRDGBenchmarkMemory( memory ) ) {

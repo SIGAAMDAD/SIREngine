@@ -66,10 +66,10 @@ private:
 public:
 	SIRChildProcess( void ) noexcept;
 	~SIRChildProcess( void ) noexcept;
-	SIRChildProcess( const SIRChildProcess & ) = delete;
-	SIRChildProcess &operator=( const SIRChildProcess & ) = delete;
+	SIRChildProcess( const SIRChildProcess& ) = delete;
+	SIRChildProcess& operator=( const SIRChildProcess& ) = delete;
 
-	sirChildProcessResult_t start( const sirChildProcessLaunch_t &rLaunch ) noexcept;
+	sirChildProcessResult_t start( const sirChildProcessLaunch_t& rLaunch ) noexcept;
 	sirChildProcessResult_t poll( bool *pbExited, uint32_t *pnExitCode ) noexcept;
 	sirChildProcessResult_t wait( uint32_t *pnExitCode ) noexcept;
 	sirChildProcessResult_t waitFor( uint32_t nMilliseconds, uint32_t *pnExitCode ) noexcept;

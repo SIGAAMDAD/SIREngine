@@ -22,7 +22,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <thread>
 #include <vector>
 
-static bool sirInitExperimentMemory( SIRMemoryManager &memory )
+static bool sirInitExperimentMemory( SIRMemoryManager& memory )
 {
 	const sirMemoryConfig_t config = { 256ULL * 1024 * 1024, 96ULL * 1024 * 1024, 64ULL * 1024 * 1024, 32 };
 	return memory.init( config );
@@ -69,7 +69,7 @@ static sirTaskResult_t sirExperimentCallback( void *pContext, sirTaskHandle_t ) 
 
 // E02: isolate scheduler overhead from benchmark-induced shared cache contention.
 // mode 0 = per-task cache-line isolated result; mode 1 = shared atomic update.
-static void SIRBenchmarkExperimentContention( benchmark::State &state )
+static void SIRBenchmarkExperimentContention( benchmark::State& state )
 {
 	const uint32_t nWorkers = ( uint32_t )state.range( 0 );
 	const uint32_t nMode = ( uint32_t )state.range( 1 );
@@ -133,7 +133,7 @@ BENCHMARK( SIRBenchmarkExperimentContention )
     ->Args( { 8, 1 } );
 
 // G01/G02: keep identical useful work while varying the number of task envelopes.
-static void SIRBenchmarkExperimentGranularity( benchmark::State &state )
+static void SIRBenchmarkExperimentGranularity( benchmark::State& state )
 {
 	const uint32_t nWorkers = ( uint32_t )state.range( 0 );
 	const uint32_t nChunk = ( uint32_t )state.range( 1 );
@@ -228,7 +228,7 @@ static sirTaskResult_t sirExperimentSpawnCallback( void *pContext, sirTaskHandle
 }
 
 // Q06/Q07: deliberately produces *worker-local* jobs so real theft can occur.
-static void SIRBenchmarkExperimentLocalSteal( benchmark::State &state )
+static void SIRBenchmarkExperimentLocalSteal( benchmark::State& state )
 {
 	const uint32_t nWorkers = ( uint32_t )state.range( 0 );
 	const uint32_t nChildren = ( uint32_t )state.range( 1 );
@@ -283,7 +283,7 @@ static void SIRBenchmarkExperimentLocalSteal( benchmark::State &state )
 BENCHMARK( SIRBenchmarkExperimentLocalSteal )->Args( { 2, 64 } )->Args( { 4, 128 } )->Args( { 8, 256 } );
 
 // D06: isolate batch submission + execution across chain, star, and diamond DAGs.
-static void SIRBenchmarkExperimentDagShape( benchmark::State &state )
+static void SIRBenchmarkExperimentDagShape( benchmark::State& state )
 {
 	const uint32_t nWorkers = ( uint32_t )state.range( 0 );
 	const uint32_t nTasks = ( uint32_t )state.range( 1 );
@@ -357,7 +357,7 @@ BENCHMARK( SIRBenchmarkExperimentDagShape )
 
 // D08: graph compilation only; reset/addPass are excluded from timing.
 // mode 0 = unique resources, 1 = all readers, 2 = overlapping read/write.
-static void SIRBenchmarkExperimentGraphCompile( benchmark::State &state )
+static void SIRBenchmarkExperimentGraphCompile( benchmark::State& state )
 {
 	const uint32_t nPasses = ( uint32_t )state.range( 0 );
 	const uint32_t nMode = ( uint32_t )state.range( 1 );

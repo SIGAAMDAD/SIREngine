@@ -77,7 +77,7 @@ static sirTaskResult_t sirReplayTask( void *pContext, sirTaskHandle_t ) noexcept
 
 // Workload IDs: 0 renderer, 1 terrain, 2 AI, 3 physics, 4 streaming, 5 audio/events.
 // Run each with equal input count and constant result checksum across all policies.
-static void SIRBenchmarkExperimentReplay( benchmark::State &state )
+static void SIRBenchmarkExperimentReplay( benchmark::State& state )
 {
 	const uint32_t nProfile = ( uint32_t )state.range( 0 );
 	const uint32_t nWorkers = ( uint32_t )state.range( 1 );

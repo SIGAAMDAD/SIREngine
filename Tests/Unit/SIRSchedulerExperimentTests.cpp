@@ -31,7 +31,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 		}                                                                                                                                  \
 	} while ( 0 )
 
-static bool sirExperimentMemory( SIRMemoryManager &memory )
+static bool sirExperimentMemory( SIRMemoryManager& memory )
 {
 	const sirMemoryConfig_t config = { 128ULL * 1024 * 1024, 64ULL * 1024 * 1024, 32ULL * 1024 * 1024, 32 };
 	return memory.init( config );

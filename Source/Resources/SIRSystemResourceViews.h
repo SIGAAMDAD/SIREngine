@@ -32,7 +32,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 class SIRTextResourceView final : public SIRBlobResourceView
 {
 public:
-	explicit SIRTextResourceView( const SIRResourceView &rView ) noexcept : SIRBlobResourceView( rView )
+	explicit SIRTextResourceView( const SIRResourceView& rView ) noexcept : SIRBlobResourceView( rView )
 	{
 	}
 	SIRResourceResult getUtf8( SIRResourceChunkId id, SIRResourceConstBytes *pBytes ) const noexcept;
@@ -41,7 +41,7 @@ public:
 class SIRShaderResourceView final : public SIRBlobResourceView
 {
 public:
-	explicit SIRShaderResourceView( const SIRResourceView &rView ) noexcept : SIRBlobResourceView( rView )
+	explicit SIRShaderResourceView( const SIRResourceView& rView ) noexcept : SIRBlobResourceView( rView )
 	{
 	}
 	SIRResourceResult getEntryPoint( uint32_t nStageId, SIRResourceConstBytes *pBytes ) const noexcept;
@@ -50,7 +50,7 @@ public:
 class SIRScriptResourceView final : public SIRBlobResourceView
 {
 public:
-	explicit SIRScriptResourceView( const SIRResourceView &rView ) noexcept : SIRBlobResourceView( rView )
+	explicit SIRScriptResourceView( const SIRResourceView& rView ) noexcept : SIRBlobResourceView( rView )
 	{
 	}
 	SIRResourceResult getModule( SIRResourceConstBytes *pBytes ) const noexcept;
@@ -59,7 +59,7 @@ public:
 class SIRAudioBankResourceView final : public SIRBlobResourceView
 {
 public:
-	explicit SIRAudioBankResourceView( const SIRResourceView &rView ) noexcept : SIRBlobResourceView( rView )
+	explicit SIRAudioBankResourceView( const SIRResourceView& rView ) noexcept : SIRBlobResourceView( rView )
 	{
 	}
 	SIRResourceResult getBankMemory( SIRResourceConstBytes *pBytes ) const noexcept;
@@ -68,7 +68,7 @@ public:
 class SIRRenderTextureView final : public SIRImageResourceView
 {
 public:
-	explicit SIRRenderTextureView( const SIRResourceView &rView ) noexcept : SIRImageResourceView( rView )
+	explicit SIRRenderTextureView( const SIRResourceView& rView ) noexcept : SIRImageResourceView( rView )
 	{
 	}
 	SIRResourceResult getUploadPlane( uint32_t iMip, uint32_t iLayer, SIRResourceConstBytes *pBytes ) const noexcept;
@@ -77,7 +77,7 @@ public:
 class SIRRenderMeshView final : public SIRGeometryResourceView
 {
 public:
-	explicit SIRRenderMeshView( const SIRResourceView &rView ) noexcept : SIRGeometryResourceView( rView )
+	explicit SIRRenderMeshView( const SIRResourceView& rView ) noexcept : SIRGeometryResourceView( rView )
 	{
 	}
 	SIRResourceResult getDrawIndices( uint32_t iLod, uint32_t iSubmesh, SIRResourceConstBytes *pBytes ) const noexcept;
@@ -86,7 +86,7 @@ public:
 class SIRCollisionMeshView final : public SIRGeometryResourceView
 {
 public:
-	explicit SIRCollisionMeshView( const SIRResourceView &rView ) noexcept : SIRGeometryResourceView( rView )
+	explicit SIRCollisionMeshView( const SIRResourceView& rView ) noexcept : SIRGeometryResourceView( rView )
 	{
 	}
 	SIRResourceResult getCollisionIndices( uint32_t iLod, SIRResourceConstBytes *pBytes ) const noexcept;
@@ -95,7 +95,7 @@ public:
 class SIRNavigationGeometryView final : public SIRGeometryResourceView
 {
 public:
-	explicit SIRNavigationGeometryView( const SIRResourceView &rView ) noexcept : SIRGeometryResourceView( rView )
+	explicit SIRNavigationGeometryView( const SIRResourceView& rView ) noexcept : SIRGeometryResourceView( rView )
 	{
 	}
 	SIRResourceResult getWalkableIndices( uint32_t iLod, SIRResourceConstBytes *pBytes ) const noexcept;
@@ -104,7 +104,7 @@ public:
 class SIRSkinnedMeshView final : public SIRGeometryResourceView
 {
 public:
-	explicit SIRSkinnedMeshView( const SIRResourceView &rView ) noexcept : SIRGeometryResourceView( rView )
+	explicit SIRSkinnedMeshView( const SIRResourceView& rView ) noexcept : SIRGeometryResourceView( rView )
 	{
 	}
 	SIRResourceResult getJointInfluences( uint32_t iLod, SIRResourceConstBytes *pBytes ) const noexcept;
@@ -113,7 +113,7 @@ public:
 class SIRHeightFieldView : public SIRFieldResourceView
 {
 public:
-	explicit SIRHeightFieldView( const SIRResourceView &rView ) noexcept : SIRFieldResourceView( rView )
+	explicit SIRHeightFieldView( const SIRResourceView& rView ) noexcept : SIRFieldResourceView( rView )
 	{
 	}
 	SIRResourceResult getHeights( uint32_t iMip, uint32_t nTileId, SIRResourceConstBytes *pBytes ) const noexcept;
@@ -122,7 +122,7 @@ public:
 class SIRTerrainHeightView final : public SIRHeightFieldView
 {
 public:
-	explicit SIRTerrainHeightView( const SIRResourceView &rView ) noexcept : SIRHeightFieldView( rView )
+	explicit SIRTerrainHeightView( const SIRResourceView& rView ) noexcept : SIRHeightFieldView( rView )
 	{
 	}
 	SIRResourceResult getHeightPatch( uint32_t iLod, uint32_t nTileId, SIRResourceConstBytes *pBytes ) const noexcept;
@@ -131,7 +131,7 @@ public:
 class SIRCollisionHeightView final : public SIRHeightFieldView
 {
 public:
-	explicit SIRCollisionHeightView( const SIRResourceView &rView ) noexcept : SIRHeightFieldView( rView )
+	explicit SIRCollisionHeightView( const SIRResourceView& rView ) noexcept : SIRHeightFieldView( rView )
 	{
 	}
 	SIRResourceResult getCollisionPatch( uint32_t iLod, uint32_t nTileId, SIRResourceConstBytes *pBytes ) const noexcept;
@@ -140,7 +140,7 @@ public:
 class SIRVolumeFieldView final : public SIRFieldResourceView
 {
 public:
-	explicit SIRVolumeFieldView( const SIRResourceView &rView ) noexcept : SIRFieldResourceView( rView )
+	explicit SIRVolumeFieldView( const SIRResourceView& rView ) noexcept : SIRFieldResourceView( rView )
 	{
 	}
 	SIRResourceResult getBrick( uint32_t iMip, uint32_t nBrickId, SIRResourceConstBytes *pBytes ) const noexcept;
@@ -149,7 +149,7 @@ public:
 class SIRParameterSetView : public SIRTableResourceView
 {
 public:
-	explicit SIRParameterSetView( const SIRResourceView &rView ) noexcept : SIRTableResourceView( rView )
+	explicit SIRParameterSetView( const SIRResourceView& rView ) noexcept : SIRTableResourceView( rView )
 	{
 	}
 	SIRResourceResult findParameter( uint64_t nParameterId, SIRResourceConstBytes *pValue ) const noexcept;
@@ -158,7 +158,7 @@ public:
 class SIRPhysicsMaterialView final : public SIRParameterSetView
 {
 public:
-	explicit SIRPhysicsMaterialView( const SIRResourceView &rView ) noexcept : SIRParameterSetView( rView )
+	explicit SIRPhysicsMaterialView( const SIRResourceView& rView ) noexcept : SIRParameterSetView( rView )
 	{
 	}
 	SIRResourceResult getPhysicalProperties( SIRResourceConstBytes *pProperties ) const noexcept;
@@ -167,7 +167,7 @@ public:
 class SIRNavigationGraphView final : public SIRGraphResourceView
 {
 public:
-	explicit SIRNavigationGraphView( const SIRResourceView &rView ) noexcept : SIRGraphResourceView( rView )
+	explicit SIRNavigationGraphView( const SIRResourceView& rView ) noexcept : SIRGraphResourceView( rView )
 	{
 	}
 	SIRResourceResult getAdjacency( uint32_t nNodeId, SIRResourceConstBytes *pAdjacentNodes ) const noexcept;
@@ -176,7 +176,7 @@ public:
 class SIRSkeletonView final : public SIRHierarchyResourceView
 {
 public:
-	explicit SIRSkeletonView( const SIRResourceView &rView ) noexcept : SIRHierarchyResourceView( rView )
+	explicit SIRSkeletonView( const SIRResourceView& rView ) noexcept : SIRHierarchyResourceView( rView )
 	{
 	}
 	SIRResourceResult getBindPose( SIRResourceConstBytes *pPose ) const noexcept;
@@ -185,7 +185,7 @@ public:
 class SIRAnimationClipView final : public SIRTimeSeriesResourceView
 {
 public:
-	explicit SIRAnimationClipView( const SIRResourceView &rView ) noexcept : SIRTimeSeriesResourceView( rView )
+	explicit SIRAnimationClipView( const SIRResourceView& rView ) noexcept : SIRTimeSeriesResourceView( rView )
 	{
 	}
 	SIRResourceResult getAnimationTrack( uint32_t iTrack, SIRResourceConstBytes *pKeys ) const noexcept;
@@ -194,7 +194,7 @@ public:
 class SIRAudioClipView final : public SIRSampleStreamResourceView
 {
 public:
-	explicit SIRAudioClipView( const SIRResourceView &rView ) noexcept : SIRSampleStreamResourceView( rView )
+	explicit SIRAudioClipView( const SIRResourceView& rView ) noexcept : SIRSampleStreamResourceView( rView )
 	{
 	}
 	SIRResourceResult getEncodedAudioBlock( uint32_t nBlockId, SIRResourceConstBytes *pBytes ) const noexcept;
@@ -203,7 +203,7 @@ public:
 class SIRSceneView final : public SIRCompositionResourceView
 {
 public:
-	explicit SIRSceneView( const SIRResourceView &rView ) noexcept : SIRCompositionResourceView( rView )
+	explicit SIRSceneView( const SIRResourceView& rView ) noexcept : SIRCompositionResourceView( rView )
 	{
 	}
 	SIRResourceResult getSceneChild( uint32_t iChild, SIRResourceDependency *pDependency ) const noexcept;
@@ -212,7 +212,7 @@ public:
 class SIRPrefabView final : public SIRCompositionResourceView
 {
 public:
-	explicit SIRPrefabView( const SIRResourceView &rView ) noexcept : SIRCompositionResourceView( rView )
+	explicit SIRPrefabView( const SIRResourceView& rView ) noexcept : SIRCompositionResourceView( rView )
 	{
 	}
 	SIRResourceResult getPrefabChild( uint32_t iChild, SIRResourceDependency *pDependency ) const noexcept;
@@ -221,7 +221,7 @@ public:
 class SIRWorldCellView final : public SIRCompositionResourceView
 {
 public:
-	explicit SIRWorldCellView( const SIRResourceView &rView ) noexcept : SIRCompositionResourceView( rView )
+	explicit SIRWorldCellView( const SIRResourceView& rView ) noexcept : SIRCompositionResourceView( rView )
 	{
 	}
 	SIRResourceResult getResidentChild( uint32_t iChild, SIRResourceDependency *pDependency ) const noexcept;
@@ -230,7 +230,7 @@ public:
 class SIRTerrainTileView final : public SIRCompositionResourceView
 {
 public:
-	explicit SIRTerrainTileView( const SIRResourceView &rView ) noexcept : SIRCompositionResourceView( rView )
+	explicit SIRTerrainTileView( const SIRResourceView& rView ) noexcept : SIRCompositionResourceView( rView )
 	{
 	}
 	SIRResourceResult getTerrainLayer( uint32_t iLayer, SIRResourceDependency *pDependency ) const noexcept;
@@ -239,7 +239,7 @@ public:
 class SIRMaterialView final : public SIRCompositionResourceView
 {
 public:
-	explicit SIRMaterialView( const SIRResourceView &rView ) noexcept : SIRCompositionResourceView( rView )
+	explicit SIRMaterialView( const SIRResourceView& rView ) noexcept : SIRCompositionResourceView( rView )
 	{
 	}
 	SIRResourceResult getMaterialInput( uint32_t iInput, SIRResourceDependency *pDependency ) const noexcept;
@@ -248,7 +248,7 @@ public:
 class SIRAudioEventView final : public SIRCompositionResourceView
 {
 public:
-	explicit SIRAudioEventView( const SIRResourceView &rView ) noexcept : SIRCompositionResourceView( rView )
+	explicit SIRAudioEventView( const SIRResourceView& rView ) noexcept : SIRCompositionResourceView( rView )
 	{
 	}
 	SIRResourceResult getSoundSource( uint32_t iSource, SIRResourceDependency *pDependency ) const noexcept;

@@ -83,7 +83,7 @@ static void sirInfrastructureRelease( void *pContext, void *pData, uint64_t nByt
 #endif
 }
 
-static SIRResourceGraphConfig sirInfrastructureConfig( sirInfrastructureAllocStats_t &rStats, uint32_t nResources,
+static SIRResourceGraphConfig sirInfrastructureConfig( sirInfrastructureAllocStats_t& rStats, uint32_t nResources,
                                                        uint32_t nStaging ) noexcept
 {
 	SIRResourceGraphConfig config = {};
@@ -97,7 +97,7 @@ static SIRResourceGraphConfig sirInfrastructureConfig( sirInfrastructureAllocSta
 	return config;
 }
 
-static void sirInfrastructureMemory( SIRMemoryManager &rMemory )
+static void sirInfrastructureMemory( SIRMemoryManager& rMemory )
 {
 	SIR_INTEGRATION_CHECK( rMemory.init( { 64ULL * 1024 * 1024, 32ULL * 1024 * 1024, 8ULL * 1024 * 1024, 32 } ) );
 }
@@ -121,7 +121,7 @@ static sirResourceFileLoadRequest_t sirInfrastructureRequest( uint64_t nAsset, s
 	return request;
 }
 
-static void sirInfrastructureMakeFile( const std::vector<uint8_t> &rBytes )
+static void sirInfrastructureMakeFile( const std::vector<uint8_t>& rBytes )
 {
 	SIRPlatformFile::remove( SIR_INTEGRATION_FILE );
 	SIRPlatformFile file;
@@ -133,7 +133,7 @@ static void sirInfrastructureMakeFile( const std::vector<uint8_t> &rBytes )
 	SIR_INTEGRATION_CHECK( file.close() == SIR_FILE_OK );
 }
 
-static void sirInfrastructureVerify( SIRResourceGraph &rGraph, SIRResourceHandle hResource, const std::vector<uint8_t> &rBytes,
+static void sirInfrastructureVerify( SIRResourceGraph& rGraph, SIRResourceHandle hResource, const std::vector<uint8_t>& rBytes,
                                      uint64_t nOffset, uint64_t nCount, uint64_t nRevision )
 {
 	SIRResourceReadScope scope( rGraph );
@@ -147,7 +147,7 @@ static void sirInfrastructureVerify( SIRResourceGraph &rGraph, SIRResourceHandle
 	SIR_INTEGRATION_CHECK( memcmp( bytes.m_pData, rBytes.data() + nOffset, ( size_t )nCount ) == 0 );
 }
 
-static void sirInfrastructureRunMatrix( const std::vector<uint8_t> &rBytes )
+static void sirInfrastructureRunMatrix( const std::vector<uint8_t>& rBytes )
 {
 	sirInfrastructureAllocStats_t alloc = {};
 	SIRMemoryManager memory;
@@ -218,7 +218,7 @@ static void sirInfrastructureRunBackpressureAndCancellation( void )
 	memory.shutdown();
 }
 
-static void sirInfrastructureRunConcurrentWorkers( const std::vector<uint8_t> &rBytes )
+static void sirInfrastructureRunConcurrentWorkers( const std::vector<uint8_t>& rBytes )
 {
 	sirInfrastructureAllocStats_t alloc = {};
 	SIRMemoryManager memory;
@@ -251,7 +251,7 @@ static void sirInfrastructureRunConcurrentWorkers( const std::vector<uint8_t> &r
 	memory.shutdown();
 }
 
-static void sirInfrastructureRunRevisionChurn( const std::vector<uint8_t> &rBytes )
+static void sirInfrastructureRunRevisionChurn( const std::vector<uint8_t>& rBytes )
 {
 	sirInfrastructureAllocStats_t alloc = {};
 	SIRMemoryManager memory;

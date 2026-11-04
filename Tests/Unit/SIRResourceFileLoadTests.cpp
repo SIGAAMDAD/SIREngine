@@ -144,7 +144,7 @@ static void sirIOFree( void *pContext, void *pMemory, uint64_t, uint32_t, uint32
 #endif
 }
 
-static SIRResourceGraphConfig sirIOConfig( sirIOTestAlloc_t &rAlloc, uint32_t nStaging = 4 ) noexcept
+static SIRResourceGraphConfig sirIOConfig( sirIOTestAlloc_t& rAlloc, uint32_t nStaging = 4 ) noexcept
 {
 	SIRResourceGraphConfig config = {};
 	config.m_Allocator = { &rAlloc, sirIOAlloc, sirIOFree };
@@ -173,7 +173,7 @@ static sirResourceFileLoadRequest_t sirIORequest( uint64_t nAsset, sirResourceFi
 	return request;
 }
 
-static void sirIOMemory( SIRMemoryManager &rMemory )
+static void sirIOMemory( SIRMemoryManager& rMemory )
 {
 	const sirMemoryConfig_t config = { 64ULL * 1024 * 1024, 32ULL * 1024 * 1024, 8ULL * 1024 * 1024, 32 };
 	SIR_IO_CHECK( rMemory.init( config ) );

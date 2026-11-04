@@ -37,13 +37,13 @@ private:
 	uint64_t m_nReaderToken;
 
 public:
-	explicit SIRResourceReadScope( const SIRResourceGraph &rGraph ) noexcept;
+	explicit SIRResourceReadScope( const SIRResourceGraph& rGraph ) noexcept;
 	~SIRResourceReadScope( void ) noexcept;
 
-	SIRResourceReadScope( const SIRResourceReadScope & ) = delete;
-	SIRResourceReadScope &operator=( const SIRResourceReadScope & ) = delete;
-	SIRResourceReadScope( SIRResourceReadScope && ) = delete;
-	SIRResourceReadScope &operator=( SIRResourceReadScope && ) = delete;
+	SIRResourceReadScope( const SIRResourceReadScope& ) = delete;
+	SIRResourceReadScope& operator=( const SIRResourceReadScope& ) = delete;
+	SIRResourceReadScope( SIRResourceReadScope&& ) = delete;
+	SIRResourceReadScope& operator=( SIRResourceReadScope&& ) = delete;
 
 	bool isActive( void ) const noexcept;
 
@@ -151,7 +151,7 @@ class SIRBlobResourceView : public SIRResourceView
 {
 public:
 	static constexpr SIRResourceKind RESOURCE_KIND = SIR_RESOURCE_KIND_BLOB;
-	explicit SIRBlobResourceView( const SIRResourceView &rView ) noexcept : SIRResourceView( rView )
+	explicit SIRBlobResourceView( const SIRResourceView& rView ) noexcept : SIRResourceView( rView )
 	{
 	}
 	SIRResourceResult getBytes( SIRResourceChunkId id, SIRResourceByteRange range, SIRResourceConstBytes *pBytes ) const noexcept;
@@ -161,7 +161,7 @@ class SIRImageResourceView : public SIRResourceView
 {
 public:
 	static constexpr SIRResourceKind RESOURCE_KIND = SIR_RESOURCE_KIND_IMAGE;
-	explicit SIRImageResourceView( const SIRResourceView &rView ) noexcept : SIRResourceView( rView )
+	explicit SIRImageResourceView( const SIRResourceView& rView ) noexcept : SIRResourceView( rView )
 	{
 	}
 	SIRResourceResult describeImage( SIRImageDesc *pDesc ) const noexcept;
@@ -172,7 +172,7 @@ class SIRGeometryResourceView : public SIRResourceView
 {
 public:
 	static constexpr SIRResourceKind RESOURCE_KIND = SIR_RESOURCE_KIND_GEOMETRY;
-	explicit SIRGeometryResourceView( const SIRResourceView &rView ) noexcept : SIRResourceView( rView )
+	explicit SIRGeometryResourceView( const SIRResourceView& rView ) noexcept : SIRResourceView( rView )
 	{
 	}
 	SIRResourceResult describeGeometry( SIRGeometryDesc *pDesc ) const noexcept;
@@ -185,7 +185,7 @@ class SIRFieldResourceView : public SIRResourceView
 {
 public:
 	static constexpr SIRResourceKind RESOURCE_KIND = SIR_RESOURCE_KIND_FIELD;
-	explicit SIRFieldResourceView( const SIRResourceView &rView ) noexcept : SIRResourceView( rView )
+	explicit SIRFieldResourceView( const SIRResourceView& rView ) noexcept : SIRResourceView( rView )
 	{
 	}
 	SIRResourceResult describeField( SIRFieldDesc *pDesc ) const noexcept;
@@ -196,7 +196,7 @@ class SIRTableResourceView : public SIRResourceView
 {
 public:
 	static constexpr SIRResourceKind RESOURCE_KIND = SIR_RESOURCE_KIND_TABLE;
-	explicit SIRTableResourceView( const SIRResourceView &rView ) noexcept : SIRResourceView( rView )
+	explicit SIRTableResourceView( const SIRResourceView& rView ) noexcept : SIRResourceView( rView )
 	{
 	}
 	SIRResourceResult describeTable( SIRTableDesc *pDesc ) const noexcept;
@@ -207,7 +207,7 @@ class SIRGraphResourceView : public SIRResourceView
 {
 public:
 	static constexpr SIRResourceKind RESOURCE_KIND = SIR_RESOURCE_KIND_GRAPH;
-	explicit SIRGraphResourceView( const SIRResourceView &rView ) noexcept : SIRResourceView( rView )
+	explicit SIRGraphResourceView( const SIRResourceView& rView ) noexcept : SIRResourceView( rView )
 	{
 	}
 	SIRResourceResult describeGraph( SIRGraphDesc *pDesc ) const noexcept;
@@ -219,7 +219,7 @@ class SIRHierarchyResourceView : public SIRResourceView
 {
 public:
 	static constexpr SIRResourceKind RESOURCE_KIND = SIR_RESOURCE_KIND_HIERARCHY;
-	explicit SIRHierarchyResourceView( const SIRResourceView &rView ) noexcept : SIRResourceView( rView )
+	explicit SIRHierarchyResourceView( const SIRResourceView& rView ) noexcept : SIRResourceView( rView )
 	{
 	}
 	SIRResourceResult describeHierarchy( SIRHierarchyDesc *pDesc ) const noexcept;
@@ -231,7 +231,7 @@ class SIRTimeSeriesResourceView : public SIRResourceView
 {
 public:
 	static constexpr SIRResourceKind RESOURCE_KIND = SIR_RESOURCE_KIND_TIME_SERIES;
-	explicit SIRTimeSeriesResourceView( const SIRResourceView &rView ) noexcept : SIRResourceView( rView )
+	explicit SIRTimeSeriesResourceView( const SIRResourceView& rView ) noexcept : SIRResourceView( rView )
 	{
 	}
 	SIRResourceResult describeTimeSeries( SIRTimeSeriesDesc *pDesc ) const noexcept;
@@ -242,7 +242,7 @@ class SIRSampleStreamResourceView : public SIRResourceView
 {
 public:
 	static constexpr SIRResourceKind RESOURCE_KIND = SIR_RESOURCE_KIND_SAMPLE_STREAM;
-	explicit SIRSampleStreamResourceView( const SIRResourceView &rView ) noexcept : SIRResourceView( rView )
+	explicit SIRSampleStreamResourceView( const SIRResourceView& rView ) noexcept : SIRResourceView( rView )
 	{
 	}
 	SIRResourceResult describeStream( SIRStreamDesc *pDesc ) const noexcept;
@@ -253,7 +253,7 @@ class SIRCompositionResourceView : public SIRResourceView
 {
 public:
 	static constexpr SIRResourceKind RESOURCE_KIND = SIR_RESOURCE_KIND_COMPOSITION;
-	explicit SIRCompositionResourceView( const SIRResourceView &rView ) noexcept : SIRResourceView( rView )
+	explicit SIRCompositionResourceView( const SIRResourceView& rView ) noexcept : SIRResourceView( rView )
 	{
 	}
 	SIRResourceResult getChild( uint32_t iChild, SIRResourceDependency *pChild ) const noexcept;
@@ -261,7 +261,7 @@ public:
 
 // Checked typed conversion: never reinterpret one canonical payload as an unrelated family.
 template <class T>
-SIRResourceResult tryCastResourceView( const SIRResourceView &rView, T *pOut ) noexcept
+SIRResourceResult tryCastResourceView( const SIRResourceView& rView, T *pOut ) noexcept
 {
 	if ( pOut == nullptr ) {
 		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;

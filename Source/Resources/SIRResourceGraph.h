@@ -46,7 +46,7 @@ typedef struct sirReadKeyIndexCell_s sirReadKeyIndexCell_t;
 class SIRResourceKeyHash
 {
 public:
-	size_t operator()( const SIRResourceKey &rKey ) const noexcept
+	size_t operator()( const SIRResourceKey& rKey ) const noexcept
 	{
 		uint64_t nHash = rKey.m_nAssetId;
 		nHash ^= ( uint64_t )rKey.m_nTypeId * UINT64_C( 0x9e3779b97f4a7c15 );
@@ -58,7 +58,7 @@ public:
 class SIRResourceKeyEqual
 {
 public:
-	bool operator()( const SIRResourceKey &rLeft, const SIRResourceKey &rRight ) const noexcept
+	bool operator()( const SIRResourceKey& rLeft, const SIRResourceKey& rRight ) const noexcept
 	{
 		return rLeft.m_nAssetId == rRight.m_nAssetId && rLeft.m_nTypeId == rRight.m_nTypeId && rLeft.m_nVariantId == rRight.m_nVariantId;
 	}
@@ -134,27 +134,27 @@ typedef sirResourceDependencyPlanEntry_t SIRResourceDependencyPlanEntry;
 
 // A construction callback describing Core Jobs passes. It never submits work.
 // The caller owns each pass context until SIRTaskGraph::releaseSubmitted().
-typedef bool ( *sirResourceTaskPassFactory_t )( void *pContext, const SIRResourceDependencyPlanEntry &rEntry,
+typedef bool ( *sirResourceTaskPassFactory_t )( void *pContext, const SIRResourceDependencyPlanEntry& rEntry,
                                                 sirTaskGraphPass_t *pPass ) noexcept;
 
 class SIRResourceGraphWriter
 {
 private:
 	SIRResourceGraph *m_pGraph;
-	explicit SIRResourceGraphWriter( SIRResourceGraph &rGraph ) noexcept;
+	explicit SIRResourceGraphWriter( SIRResourceGraph& rGraph ) noexcept;
 
 public:
-	SIRResourceGraphWriter( const SIRResourceGraphWriter & ) = delete;
-	SIRResourceGraphWriter &operator=( const SIRResourceGraphWriter & ) = delete;
+	SIRResourceGraphWriter( const SIRResourceGraphWriter& ) = delete;
+	SIRResourceGraphWriter& operator=( const SIRResourceGraphWriter& ) = delete;
 
 	SIRResourceResult allocateStaging( uint64_t nSize, uint32_t nAlignment, uint32_t nDomainId, SIRResourceStagingHandle *pHandle,
 	                                   SIRResourceMutableBytes *pBytes ) noexcept;
 	SIRResourceResult cancelStaging( SIRResourceStagingHandle hStaging ) noexcept;
-	SIRResourceResult request( const SIRResourceKey &rKey, SIRResourceHandle *pHandle ) noexcept;
-	SIRResourceResult publish( const SIRResourcePublication &rPublication, SIRResourceHandle *pHandle ) noexcept;
+	SIRResourceResult request( const SIRResourceKey& rKey, SIRResourceHandle *pHandle ) noexcept;
+	SIRResourceResult publish( const SIRResourcePublication& rPublication, SIRResourceHandle *pHandle ) noexcept;
 	// Require the exact currently published revision (0 when absent or requested).
 	// Failed version checks do not consume staging or mutate the published record.
-	SIRResourceResult publishExpected( const SIRResourcePublication &rPublication, uint64_t nExpectedRevision,
+	SIRResourceResult publishExpected( const SIRResourcePublication& rPublication, uint64_t nExpectedRevision,
 	                                   SIRResourceHandle *pHandle ) noexcept;
 	SIRResourceResult markFailed( SIRResourceHandle hResource, SIRResourceResult eCause ) noexcept;
 	SIRResourceResult evictChunk( SIRResourceHandle hResource, SIRResourceChunkId id ) noexcept;
@@ -162,7 +162,7 @@ public:
 	uint32_t collectRetired( uint32_t nMaxRecords ) noexcept;
 	// Writer-side reverse dependency lookups. An undersized output returns
 	// OUT_OF_BUDGET and still reports the full deduplicated count.
-	SIRResourceResult collectDependents( const SIRResourceKey &rTarget, SIRResourceHandle *pHandles, uint32_t nCapacity,
+	SIRResourceResult collectDependents( const SIRResourceKey& rTarget, SIRResourceHandle *pHandles, uint32_t nCapacity,
 	                                     uint32_t *pTotal ) noexcept;
 	SIRResourceResult getInvalidationSequence( SIRResourceHandle hResource, uint64_t *pSequence ) noexcept;
 	// Compile a dependency-first order from existing resource records, without
@@ -174,7 +174,7 @@ public:
 	// Caller supplies scratch plan entries; there is no GRDG dispatch queue.
 	// A fresh, initialized task graph is required. On failure it is reset.
 	// pfnDescribePass must not re-enter the resource writer or retain borrowed data.
-	SIRResourceResult compileTaskGraph( SIRResourceHandle hRoot, SIRTaskGraph &rTaskGraph, SIRResourceDependencyPlanEntry *pEntries,
+	SIRResourceResult compileTaskGraph( SIRResourceHandle hRoot, SIRTaskGraph& rTaskGraph, SIRResourceDependencyPlanEntry *pEntries,
 	                                    uint32_t nCapacity, sirResourceTaskPassFactory_t pfnDescribePass, void *pContext,
 	                                    uint32_t *pRequired ) noexcept;
 	// Invoke before submission and after Core Jobs reports terminal success.
@@ -240,19 +240,19 @@ private:
 	void *allocate( uint64_t nSize, uint32_t nAlignment, uint32_t nDomain ) noexcept;
 	void release( void *pData, uint64_t nSize, uint32_t nAlignment, uint32_t nDomain ) noexcept;
 	bool isWriterThread( void ) const noexcept;
-	int32_t findSlot( const SIRResourceKey &rKey ) const noexcept;
+	int32_t findSlot( const SIRResourceKey& rKey ) const noexcept;
 	int32_t findEmptySlot( void ) const noexcept;
 	SIRPublishedResourceRecord *allocateRecord( uint32_t nChunkCount, uint32_t nDependencyCount ) noexcept;
 	void destroyRecord( SIRPublishedResourceRecord *pRecord ) noexcept;
 	void pushRetired( SIRPublishedResourceRecord *pRecord ) noexcept;
 	void publishRecord( uint32_t iSlot, SIRPublishedResourceRecord *pRecord ) noexcept;
-	SIRSharedResourceChunk *findMatchingChunk( const SIRResourceContentKey &rKey, const uint8_t *pData, uint64_t nSize, uint32_t nAlignment,
+	SIRSharedResourceChunk *findMatchingChunk( const SIRResourceContentKey& rKey, const uint8_t *pData, uint64_t nSize, uint32_t nAlignment,
 	                                           const SIRPublishedResourceRecord *pPending ) const noexcept;
-	bool reachesKey( const SIRResourceKey &rCurrent, const SIRResourceKey &rTarget ) noexcept;
-	SIRResourceResult validateDependencies( const SIRResourcePublication &rPublication ) noexcept;
+	bool reachesKey( const SIRResourceKey& rCurrent, const SIRResourceKey& rTarget ) noexcept;
+	SIRResourceResult validateDependencies( const SIRResourcePublication& rPublication ) noexcept;
 	SIRResourceResult checkHandle( SIRResourceHandle hResource, SIRPublishedResourceRecord **pRecord ) const noexcept;
 	SIRResourceResult prepareChunk( SIRPublishedResourceRecord *pRecord, uint32_t iChunk,
-	                                const SIRResourceChunkPublication &rInput ) noexcept;
+	                                const SIRResourceChunkPublication& rInput ) noexcept;
 	void abandonUnpublishedRecord( SIRPublishedResourceRecord *pRecord ) noexcept;
 	void adoptPublishedRecordChunks( SIRPublishedResourceRecord *pRecord ) noexcept;
 	SIRResourceResult buildReplacement( SIRPublishedResourceRecord *pCurrent, uint32_t iExcludeChunk, SIRResourceState eState,
@@ -262,24 +262,24 @@ private:
 	bool canReplaceReverseEdges( uint32_t iSourceSlot, uint32_t nNewEdges ) const noexcept;
 	void removeReverseEdges( uint32_t iSourceSlot ) noexcept;
 	void addReverseEdges( uint32_t iSourceSlot, const SIRResourceDependency *pEdges, uint32_t nEdges ) noexcept;
-	void invalidateReverseDependents( const SIRResourceKey &rChangedKey ) noexcept;
+	void invalidateReverseDependents( const SIRResourceKey& rChangedKey ) noexcept;
 	void updateReadKeyIndex( const SIRPublishedResourceRecord *pPrior, const SIRPublishedResourceRecord *pPublished ) noexcept;
 
 public:
-	explicit SIRResourceGraph( const SIRResourceGraphConfig &rConfig ) noexcept;
+	explicit SIRResourceGraph( const SIRResourceGraphConfig& rConfig ) noexcept;
 	~SIRResourceGraph( void ) noexcept;
 
-	SIRResourceGraph( const SIRResourceGraph & ) = delete;
-	SIRResourceGraph &operator=( const SIRResourceGraph & ) = delete;
+	SIRResourceGraph( const SIRResourceGraph& ) = delete;
+	SIRResourceGraph& operator=( const SIRResourceGraph& ) = delete;
 
 	bool isReady( void ) const noexcept;
 	SIRResourceGraphWriter *getWriter( void ) noexcept;
 	SIRResourceGraphStats getStats( void ) const noexcept;
-	SIRResourceResult find( const SIRResourceReadScope &rScope, const SIRResourceKey &rKey, SIRResourceHandle *pHandle ) const noexcept;
-	SIRResourceResult resolve( const SIRResourceReadScope &rScope, SIRResourceHandle hResource, SIRResourceView *pView ) const noexcept;
-	SIRResourceResult resolveDependency( const SIRResourceReadScope &rScope, const SIRResourceView &rParent, uint32_t iDependency,
+	SIRResourceResult find( const SIRResourceReadScope& rScope, const SIRResourceKey& rKey, SIRResourceHandle *pHandle ) const noexcept;
+	SIRResourceResult resolve( const SIRResourceReadScope& rScope, SIRResourceHandle hResource, SIRResourceView *pView ) const noexcept;
+	SIRResourceResult resolveDependency( const SIRResourceReadScope& rScope, const SIRResourceView& rParent, uint32_t iDependency,
 	                                     SIRResourceView *pChild ) const noexcept;
-	SIRResourceResult pinForProvider( const SIRResourceReadScope &rScope, const SIRResourceView &rView, uint32_t nProviderId,
+	SIRResourceResult pinForProvider( const SIRResourceReadScope& rScope, const SIRResourceView& rView, uint32_t nProviderId,
 	                                  SIRResourcePinHandle *pPin ) const noexcept;
 	SIRResourceResult releaseProviderPin( SIRResourcePinHandle hPin ) const noexcept;
 
@@ -362,16 +362,16 @@ private:
 	void releaseMetadata( void ) noexcept;
 
 public:
-	SIRResourceDerivedRegistry( SIRResourceGraph &rGraph, const SIRResourceDerivedConfig &rConfig ) noexcept;
+	SIRResourceDerivedRegistry( SIRResourceGraph& rGraph, const SIRResourceDerivedConfig& rConfig ) noexcept;
 	~SIRResourceDerivedRegistry( void ) noexcept;
 
-	SIRResourceDerivedRegistry( const SIRResourceDerivedRegistry & ) = delete;
-	SIRResourceDerivedRegistry &operator=( const SIRResourceDerivedRegistry & ) = delete;
+	SIRResourceDerivedRegistry( const SIRResourceDerivedRegistry& ) = delete;
+	SIRResourceDerivedRegistry& operator=( const SIRResourceDerivedRegistry& ) = delete;
 
 	bool isReady( void ) const noexcept;
-	SIRResourceResult registerProvider( uint32_t nProviderId, const SIRDerivedProviderCallbacks &rCallbacks ) noexcept;
-	SIRResourceResult registerRepresentation( const SIRResourceReadScope &rScope, const SIRResourceView &rSource,
-	                                          const SIRDerivedResourceRegistration &rRegistration,
+	SIRResourceResult registerProvider( uint32_t nProviderId, const SIRDerivedProviderCallbacks& rCallbacks ) noexcept;
+	SIRResourceResult registerRepresentation( const SIRResourceReadScope& rScope, const SIRResourceView& rSource,
+	                                          const SIRDerivedResourceRegistration& rRegistration,
 	                                          SIRDerivedResourceHandle *pHandle ) noexcept;
 	SIRResourceResult retireRepresentation( SIRDerivedResourceHandle hRepresentation, uint64_t nCompletionFence ) noexcept;
 	SIRResourceResult updateCompletedFence( uint32_t nProviderId, uint64_t nCompletedFence ) noexcept;

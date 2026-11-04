@@ -42,7 +42,7 @@ static sirTaskResult_t providerCount( void *pContext, sirTaskHandle_t ) noexcept
 	return SIR_TASK_RESULT_SUCCESS;
 }
 
-static void initProviderMemory( SIRMemoryManager &memory )
+static void initProviderMemory( SIRMemoryManager& memory )
 {
 	const sirMemoryConfig_t config = { 64ULL * 1024 * 1024, 32ULL * 1024 * 1024, 8ULL * 1024 * 1024, 32 };
 	SIR_PROVIDER_CHECK( memory.init( config ) );

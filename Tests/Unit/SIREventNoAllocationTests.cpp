@@ -50,7 +50,7 @@ void operator delete[]( void *pData, size_t ) noexcept
 	free( pData );
 }
 
-static void sirEventNoAllocSum( void *pContext, const uint32_t &nValue ) noexcept
+static void sirEventNoAllocSum( void *pContext, const uint32_t& nValue ) noexcept
 {
 	*( ( uint64_t * )pContext ) += nValue;
 }
@@ -60,7 +60,7 @@ static void sirEventNoAllocDirty( void *pContext, sirCompactEventRef_t ref ) noe
 	*( ( uint64_t * )pContext ) += ref.nSlot;
 }
 
-static void sirEventNoAllocPhase( void *pContext, sirEventTargetRef_t, const uint32_t &nValue ) noexcept
+static void sirEventNoAllocPhase( void *pContext, sirEventTargetRef_t, const uint32_t& nValue ) noexcept
 {
 	*( ( uint64_t * )pContext ) += nValue;
 }

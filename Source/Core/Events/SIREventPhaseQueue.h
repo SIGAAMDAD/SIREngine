@@ -56,7 +56,7 @@ template <typename TPayload, uint32_t PhaseCount = 4, uint32_t Capacity = 256, t
 class SIREventPhaseQueue
 {
 public:
-	typedef void ( *callback_t )( void *, TTarget, const TPayload & ) noexcept;
+	typedef void ( *callback_t )( void *, TTarget, const TPayload& ) noexcept;
 	typedef bool ( *validator_t )( void *, TTarget ) noexcept;
 	static_assert( PhaseCount > 0 && Capacity > 0, "Phased queues require phases and slots" );
 	static_assert( std::is_trivially_copyable<TPayload>::value, "Phased queue payload must be POD" );
@@ -69,10 +69,10 @@ public:
 			m_Events[i].nNext = i == Capacity ? 0 : i + 1;
 		}
 	}
-	SIREventPhaseQueue( const SIREventPhaseQueue & ) = delete;
-	SIREventPhaseQueue &operator=( const SIREventPhaseQueue & ) = delete;
+	SIREventPhaseQueue( const SIREventPhaseQueue& ) = delete;
+	SIREventPhaseQueue& operator=( const SIREventPhaseQueue& ) = delete;
 
-	bool enqueue( uint32_t nPhase, const TPayload &payload, TTarget target = {} ) noexcept
+	bool enqueue( uint32_t nPhase, const TPayload& payload, TTarget target = {} ) noexcept
 	{
 		if ( nPhase >= PhaseCount || m_nFreeHead == 0 ) {
 			return false;
@@ -87,7 +87,7 @@ public:
 			}
 		}
 		const uint32_t nIndex = m_nFreeHead;
-		sirPhasedEvent_s<TPayload, TTarget> &entry = m_Events[nIndex];
+		sirPhasedEvent_s<TPayload, TTarget>& entry = m_Events[nIndex];
 		m_nFreeHead = entry.nNext;
 		entry.payload = payload;
 		entry.target = target;
@@ -119,7 +119,7 @@ public:
 		uint32_t nExamined = 0;
 		while ( nIndex != 0 && nExamined < nBudget ) {
 			++nExamined;
-			sirPhasedEvent_s<TPayload, TTarget> &entry = m_Events[nIndex];
+			sirPhasedEvent_s<TPayload, TTarget>& entry = m_Events[nIndex];
 			const uint32_t nNext = entry.nNext;
 			if ( entry.target.isValid() && ( pValidator == nullptr || !pValidator( pContext, entry.target ) ) ) {
 				++m_nStaleDiscarded;

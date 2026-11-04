@@ -51,13 +51,13 @@ static bool sirWindowsPathToWide( const char *pszPath, wchar_t *pszOutput, int n
 	       MultiByteToWideChar( CP_UTF8, MB_ERR_INVALID_CHARS, pszPath, -1, pszOutput, nCapacity ) > 0;
 }
 
-static uint64_t sirWindowsFileTimeNanoseconds( const FILETIME &rTime ) noexcept
+static uint64_t sirWindowsFileTimeNanoseconds( const FILETIME& rTime ) noexcept
 {
 	const uint64_t nTicks = ( ( uint64_t )rTime.dwHighDateTime << 32 ) | ( uint64_t )rTime.dwLowDateTime;
 	return nTicks >= 116444736000000000ULL ? ( nTicks - 116444736000000000ULL ) * 100ULL : 0;
 }
 
-static void sirWindowsFillFileInfo( DWORD nAttributes, DWORD nSizeHigh, DWORD nSizeLow, const FILETIME &rTime,
+static void sirWindowsFillFileInfo( DWORD nAttributes, DWORD nSizeHigh, DWORD nSizeLow, const FILETIME& rTime,
                                     sirFileSystemInfo_t *pInfo ) noexcept
 {
 	pInfo->nSizeBytes = ( ( uint64_t )nSizeHigh << 32 ) | nSizeLow;

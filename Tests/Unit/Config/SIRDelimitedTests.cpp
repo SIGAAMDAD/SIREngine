@@ -86,7 +86,7 @@ static sirConfigResult_t sinkWrite( void *pContext, const uint8_t *pBytes, uint6
 	return SIR_CONFIG_OK;
 }
 
-static bool equalField( const sirDelimitedRowView_t &row, uint32_t iField, const char *pBytes, uint32_t nBytes ) noexcept
+static bool equalField( const sirDelimitedRowView_t& row, uint32_t iField, const char *pBytes, uint32_t nBytes ) noexcept
 {
 	return iField < row.nFields && row.pFields[iField].value.nBytes == nBytes &&
 	       ( nBytes == 0 || memcmp( row.pFields[iField].value.pBytes, pBytes, nBytes ) == 0 );
@@ -112,7 +112,7 @@ static void testBudgets( const sirContainerAllocator_t *pBacking ) noexcept
 	check( budget.shutdown(), "budget shutdown" );
 }
 
-static void testDelimited( const sirConfigParseContext_t &context, const sirDelimitedOptions_t &options ) noexcept
+static void testDelimited( const sirConfigParseContext_t& context, const sirDelimitedOptions_t& options ) noexcept
 {
 	const char szText[] = "a,\"b,c\",\"x\"\"y\"\r\n\"multi\nline\",,z\nlast,field,\n";
 	SIRDelimitedReader reader;
@@ -129,7 +129,7 @@ static void testDelimited( const sirConfigParseContext_t &context, const sirDeli
 	reader.close();
 }
 
-static void testStream( const sirConfigParseContext_t &context, const sirDelimitedOptions_t &options ) noexcept
+static void testStream( const sirConfigParseContext_t& context, const sirDelimitedOptions_t& options ) noexcept
 {
 	const char szText[] = "x,\"ab\r\ncd\"\r\ny,z\r\n";
 	for ( uint32_t nChunk = 1; nChunk <= 7; ++nChunk ) {
@@ -147,7 +147,7 @@ static void testStream( const sirConfigParseContext_t &context, const sirDelimit
 	}
 }
 
-static void testWriter( const sirConfigParseContext_t &context, const sirDelimitedOptions_t &options ) noexcept
+static void testWriter( const sirConfigParseContext_t& context, const sirDelimitedOptions_t& options ) noexcept
 {
 	sirTestSink_t output = { {}, 0, 1024 };
 	sirConfigSink_t sink = { &output, sinkWrite };
@@ -169,7 +169,7 @@ static void testWriter( const sirConfigParseContext_t &context, const sirDelimit
 	writer.close();
 }
 
-static void testFailures( sirConfigParseContext_t context, const sirDelimitedOptions_t &options ) noexcept
+static void testFailures( sirConfigParseContext_t context, const sirDelimitedOptions_t& options ) noexcept
 {
 	const char szBroken[] = "a,\"unfinished";
 	SIRDelimitedReader reader;
@@ -197,7 +197,7 @@ static void testFailures( sirConfigParseContext_t context, const sirDelimitedOpt
 	reader.close();
 }
 
-static void testTSV( const sirConfigParseContext_t &context ) noexcept
+static void testTSV( const sirConfigParseContext_t& context ) noexcept
 {
 	const sirDelimitedOptions_t options = SIRTsv::defaultOptions();
 	const char szText[] = "name\tvalue\r\nalpha\t\"tab\tinside\"\n";
@@ -228,7 +228,7 @@ static void testOutOfMemory( const sirContainerAllocator_t *pBacking, sirConfigP
 	check( tiny.getLiveBytes() == 0 && tiny.shutdown(), "denied parse releases scratch" );
 }
 
-static void testOutputLimit( sirConfigParseContext_t context, const sirDelimitedOptions_t &options ) noexcept
+static void testOutputLimit( sirConfigParseContext_t context, const sirDelimitedOptions_t& options ) noexcept
 {
 	context.limits.nMaxOutputBytes = 4;
 	sirTestSink_t output = { {}, 0, 1024 };

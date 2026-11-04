@@ -57,7 +57,7 @@ sirThreadControlResult_t SIRPlatformThreadControl::getCurrentName( char *pszName
 	return sirThreadResultFromErrno( pthread_getname_np( pthread_self(), pszName, nCapacity ) );
 }
 
-sirThreadControlResult_t SIRPlatformThreadControl::setCurrentAffinity( const sirThreadAffinity_t &rAffinity ) noexcept
+sirThreadControlResult_t SIRPlatformThreadControl::setCurrentAffinity( const sirThreadAffinity_t& rAffinity ) noexcept
 {
 	if ( rAffinity.nMask == 0 ) {
 		return SIR_THREAD_CONTROL_INVALID_ARGUMENT;

@@ -83,7 +83,7 @@ SIRChildProcess::~SIRChildProcess( void ) noexcept
 	( void )close();
 }
 
-sirChildProcessResult_t SIRChildProcess::start( const sirChildProcessLaunch_t &rLaunch ) noexcept
+sirChildProcessResult_t SIRChildProcess::start( const sirChildProcessLaunch_t& rLaunch ) noexcept
 {
 	if ( isOpen() ) {
 		return SIR_CHILD_PROCESS_ALREADY_OPEN;

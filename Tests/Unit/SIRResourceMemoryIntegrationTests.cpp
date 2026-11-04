@@ -43,7 +43,7 @@ public:
 	SIRBuddyAllocator m_Large;
 	SIRGeneralHeap m_Heap;
 
-	bool init( SIRMemoryManager &rMemory, sirMemoryDomain_t eDomain, const char *szSmall, const char *szMedium, const char *szLarge )
+	bool init( SIRMemoryManager& rMemory, sirMemoryDomain_t eDomain, const char *szSmall, const char *szMedium, const char *szLarge )
 	{
 		const uint64_t nPage = SIRVirtualMemory::getPageSize();
 		SIRMemorySegment *pSmall = rMemory.createSegment( szSmall, nPage * 256, 0, eDomain );

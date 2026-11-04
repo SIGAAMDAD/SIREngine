@@ -114,7 +114,7 @@ bool SIRTaskFenceTracker::track( sirTaskHandle_t task, uint64_t nFenceValue, sir
 		return false;
 	}
 	for ( uint32_t i = 0; i < m_nPending; ++i ) {
-		const sirTaskFenceRecord_t &record = m_pRecords[( m_nHead + i ) % m_nCapacity];
+		const sirTaskFenceRecord_t& record = m_pRecords[( m_nHead + i ) % m_nCapacity];
 		if ( record.hTask.nSlot == task.nSlot && record.hTask.nGeneration == task.nGeneration ) {
 			return false;
 		}
@@ -132,7 +132,7 @@ bool SIRTaskFenceTracker::untrackLast( sirTaskHandle_t task ) noexcept
 		return false;
 	}
 	const uint32_t nLast = ( m_nHead + m_nPending - 1 ) % m_nCapacity;
-	const sirTaskFenceRecord_t &record = m_pRecords[nLast];
+	const sirTaskFenceRecord_t& record = m_pRecords[nLast];
 	if ( record.hTask.nSlot != task.nSlot || record.hTask.nGeneration != task.nGeneration || record.bFinalized ||
 	     m_pScheduler->getState( task ) != SIR_TASK_RUNNING ) {
 		return false;
@@ -155,7 +155,7 @@ bool SIRTaskFenceTracker::drain( uint64_t nCompletedFence, sirTaskResult_t eResu
 	m_bDraining = true;
 	m_nCompletedFence = nCompletedFence;
 	while ( m_nPending != 0 ) {
-		sirTaskFenceRecord_t &record = m_pRecords[m_nHead];
+		sirTaskFenceRecord_t& record = m_pRecords[m_nHead];
 		if ( record.nFence > nCompletedFence ) {
 			break;
 		}
