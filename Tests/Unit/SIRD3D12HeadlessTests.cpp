@@ -437,13 +437,13 @@ static bool testCompiledDxilCompute( SIRD3D12Device &device )
 		return false;
 	}
 
-	const bool bLoaded = device.initializeComputeKernel( pShader, nRead );
+	const bool bLoaded = device.initializeComputeKernel( pShader, nRead, 4096 );
 	free( pShader );
 	if ( !bLoaded ) {
 		fprintf( stderr, "DXIL compute PSO creation failed: HRESULT 0x%08lx\n", ( unsigned long )device.getLastError() );
 		return false;
 	}
-	if ( device.initializeComputeKernel( nullptr, 0 ) ) {
+	if ( device.initializeComputeKernel( nullptr, 0, 0 ) ) {
 		return false;
 	}
 

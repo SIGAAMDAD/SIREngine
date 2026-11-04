@@ -132,3 +132,12 @@ All paths expose the same ticket, serial validation, poll/wait, completion and l
 The WARP acceptance test verifies a direct adapter-selected path plus a deliberately forced staged path, over-capacity rejection, stable resource/mapping identities across repeated transfers, and the same byte-exact readback and fence behavior.
 
 **Remaining specialized allocation work:** migrate DXIL compute UAV/readback resources, offscreen graphics textures/vertex/index buffers, synchronous diagnostic copying, and native deferred-allocation nodes to separately budgeted pooled classes; integrate canonical GRDG allocation identities and physical backing accounting; add configurable editor-only growth and runtime seal enforcement for all GPU backing pools. Existing per-dispatch allocations in those other subsystems are independent unfinished work, not a compatibility API.
+
+
+## Sealed compute allocations and persistent readback
+
+The DXIL compute kernel now requires a caller-provided resident element capacity. Pipeline initialization creates exactly one D3D12MA DEFAULT UAV, one READBACK buffer, and a shader-visible UAV descriptor; the readback buffer is mapped once for its lifetime. The old allocation and Map/Unmap calls during every dispatch were deleted.
+
+Each submission reuses those resources and restores the output UAV to UNORDERED_ACCESS after COPY_SOURCE readback so the next dispatch starts in the same canonical resource state. Fence and single-in-flight checks protect the shared range. Result receipt clears only the submitted work state, keeping the allocation stable until GPU-safe shutdown.
+
+The WARP test configures a bounded 4,096-element resident capacity, dispatches different payload sizes and verifies exact output through the same previously-tested queue fence. Runtime pool capacity is now explicit, rather than silently allocating one UAV/readback pair for each dispatch.

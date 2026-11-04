@@ -97,9 +97,9 @@ public:
 	bool shutdown( void ) noexcept;
 	bool isReady( void ) const noexcept;
 	bool submitMarker( uint64_t *pFenceValue ) noexcept;
-	bool initializeKernel( ID3D12Device *pDevice, const void *pDxil, size_t nDxilBytes ) noexcept;
-	bool dispatchKernel( ID3D12Device *pDevice, SIRD3D12Memory *pMemory, uint32_t nElements, uint32_t nSeed,
-	                     uint64_t *pFenceValue ) noexcept;
+	bool initializeKernel( ID3D12Device *pDevice, SIRD3D12Memory *pMemory, const void *pDxil, size_t nDxilBytes,
+	                      uint32_t nMaxElements ) noexcept;
+	bool dispatchKernel( uint32_t nElements, uint32_t nSeed, uint64_t *pFenceValue ) noexcept;
 	bool readKernel( uint64_t nFence, uint32_t *pOutput, uint32_t nCapacity ) noexcept;
 	bool submitMarkerAfterFence( ID3D12Fence *pDependencyFence, uint64_t nDependencyFence, uint64_t *pFenceValue ) noexcept;
 	bool pollFence( uint64_t nFence, bool *pCompleted ) const noexcept;
@@ -166,7 +166,7 @@ public:
 	bool snapshotCompletionSet( sirD3D12CompletionSet_t *pSet ) const noexcept;
 	bool pollCompletionSet( const sirD3D12CompletionSet_t &set, bool *pCompleted ) noexcept;
 	bool submitComputeMarker( sirD3D12CompletionSet_t *pSet ) noexcept;
-	bool initializeComputeKernel( const void *pDxil, size_t nDxilBytes ) noexcept;
+	bool initializeComputeKernel( const void *pDxil, size_t nDxilBytes, uint32_t nMaxElements ) noexcept;
 	bool submitComputeKernel( uint32_t nElements, uint32_t nSeed, sirD3D12CompletionSet_t *pSet ) noexcept;
 	bool submitComputeAfterCopy( sirD3D12TransferTicket_t ticket, sirD3D12CompletionSet_t *pSet ) noexcept;
 	bool submitGraphicsAfterCompute( const sirD3D12CompletionSet_t &computeSet, sirD3D12CompletionSet_t *pSet ) noexcept;

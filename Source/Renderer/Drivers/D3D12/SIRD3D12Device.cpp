@@ -262,19 +262,19 @@ bool SIRD3D12ComputeQueue::submitMarkerAfterFence( ID3D12Fence *pDependencyFence
 	return true;
 }
 
-bool SIRD3D12ComputeQueue::initializeKernel( ID3D12Device *pDevice, const void *pDxil, size_t nDxilBytes ) noexcept
+bool SIRD3D12ComputeQueue::initializeKernel( ID3D12Device *pDevice, SIRD3D12Memory *pMemory,
+                                               const void *pDxil, size_t nDxilBytes, uint32_t nMaxElements ) noexcept
 {
 	if ( !isReady() ) {
 		m_nLastError = E_FAIL;
 		return false;
 	}
-	const bool bReady = m_Kernel.initialize( pDevice, pDxil, nDxilBytes );
+	const bool bReady = m_Kernel.initialize( pDevice, pMemory, pDxil, nDxilBytes, nMaxElements );
 	m_nLastError = m_Kernel.getLastError();
 	return bReady;
 }
 
-bool SIRD3D12ComputeQueue::dispatchKernel( ID3D12Device *pDevice, SIRD3D12Memory *pMemory, uint32_t nElements, uint32_t nSeed,
-                                           uint64_t *pFenceValue ) noexcept
+bool SIRD3D12ComputeQueue::dispatchKernel( uint32_t nElements, uint32_t nSeed, uint64_t *pFenceValue ) noexcept
 {
 	if ( pFenceValue == nullptr ) {
 		m_nLastError = E_POINTER;
@@ -305,7 +305,7 @@ bool SIRD3D12ComputeQueue::dispatchKernel( ID3D12Device *pDevice, SIRD3D12Memory
 	if ( FAILED( m_nLastError ) ) {
 		return false;
 	}
-	if ( !m_Kernel.record( pDevice, pMemory, m_pCommands.Get(), nElements, nSeed ) ) {
+	if ( !m_Kernel.record( m_pCommands.Get(), nElements, nSeed ) ) {
 		m_nLastError = m_Kernel.getLastError();
 		m_Kernel.cancelUnsubmitted();
 		( void )m_pCommands->Close();
@@ -745,13 +745,14 @@ bool SIRD3D12Device::pollCompletionSet( const sirD3D12CompletionSet_t &set, bool
 	return true;
 }
 
-bool SIRD3D12Device::initializeComputeKernel( const void *pDxil, size_t nDxilBytes ) noexcept
+bool SIRD3D12Device::initializeComputeKernel( const void *pDxil, size_t nDxilBytes,
+                                             uint32_t nMaxElements ) noexcept
 {
 	if ( !isReady() ) {
 		m_nLastError = E_FAIL;
 		return false;
 	}
-	const bool bReady = m_ComputeQueue.initializeKernel( m_pDevice.Get(), pDxil, nDxilBytes );
+	const bool bReady = m_ComputeQueue.initializeKernel( m_pDevice.Get(), &m_Memory, pDxil, nDxilBytes, nMaxElements );
 	m_nLastError = m_ComputeQueue.getLastError();
 	return bReady;
 }
@@ -765,7 +766,7 @@ bool SIRD3D12Device::submitComputeKernel( uint32_t nElements, uint32_t nSeed, si
 	*pSet = {};
 
 	uint64_t nSubmitted = 0;
-	if ( !m_ComputeQueue.dispatchKernel( m_pDevice.Get(), &m_Memory, nElements, nSeed, &nSubmitted ) ) {
+	if ( !m_ComputeQueue.dispatchKernel( nElements, nSeed, &nSubmitted ) ) {
 		m_nLastError = m_ComputeQueue.getLastError();
 		return false;
 	}

@@ -38,6 +38,9 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_pUavHeap;
 	D3D12MA::Allocation *m_pOutput = nullptr;
 	D3D12MA::Allocation *m_pReadback = nullptr;
+	const uint8_t *m_pReadbackMapped = nullptr;
+	uint32_t m_nResidentElementCapacity = 0;
+	bool m_bPending = false;
 	uint64_t m_nSubmissionFence = 0;
 	uint32_t m_nElementCount = 0;
 	HRESULT m_nLastError = S_OK;
@@ -50,11 +53,12 @@ public:
 	SIRD3D12ComputeKernel( const SIRD3D12ComputeKernel & ) = delete;
 	SIRD3D12ComputeKernel &operator=( const SIRD3D12ComputeKernel & ) = delete;
 
-	bool initialize( ID3D12Device *pDevice, const void *pDxil, size_t nDxilBytes ) noexcept;
+	bool initialize( ID3D12Device *pDevice, SIRD3D12Memory *pMemory,
+	                 const void *pDxil, size_t nDxilBytes, uint32_t nMaxElements ) noexcept;
 	bool isReady( void ) const noexcept;
 	bool hasPending( void ) const noexcept;
-	bool record( ID3D12Device *pDevice, SIRD3D12Memory *pMemory, ID3D12GraphicsCommandList *pCommands, uint32_t nElements,
-	             uint32_t nSeed ) noexcept;
+	uint32_t getResidentElementCapacity( void ) const noexcept;
+	bool record( ID3D12GraphicsCommandList *pCommands, uint32_t nElements, uint32_t nSeed ) noexcept;
 	void submitted( uint64_t nFence ) noexcept;
 	bool readback( ID3D12Fence *pFence, uint64_t nFence, uint32_t *pOutput, uint32_t nCapacity ) noexcept;
 	void cancelUnsubmitted( void ) noexcept;
