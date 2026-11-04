@@ -189,6 +189,12 @@ target_link_libraries(SIREditorScalarBindingTests PRIVATE SIR::EditorAuthoring)
 add_test(NAME editor.scene.typed-scalar-binding COMMAND SIREditorScalarBindingTests)
 sir_configure_owned_target(SIREditorScalarBindingTests)
 
+# Independent reference graph validates resource DAG, duplicate, and cycle checks.
+add_executable(SIRResourceCatalogDifferentialTests SIRResourceCatalogDifferentialTests.cpp)
+target_link_libraries(SIRResourceCatalogDifferentialTests PRIVATE SIR::Resources)
+add_test(NAME resources.catalog.differential-dag COMMAND SIRResourceCatalogDifferentialTests)
+sir_configure_owned_target(SIRResourceCatalogDifferentialTests)
+
 # Source-format scalar edit preservation and fail-closed writer.
 add_executable(SIREditorTextWriterTests SIREditorTextWriterTests.cpp)
 target_link_libraries(SIREditorTextWriterTests PRIVATE SIR::EditorAuthoring)
