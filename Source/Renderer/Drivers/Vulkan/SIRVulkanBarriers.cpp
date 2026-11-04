@@ -201,8 +201,6 @@ sirVulkanResult_t SIRVulkanDevice::submitImageBarrier( sirVulkanImage_t *pImage,
 	begin.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 	if ( m_pfnBeginCommandBuffer( pSlot->hCommandBuffer, &begin ) != VK_SUCCESS ) {
 		return SIR_VULKAN_NATIVE_FAILURE;
-
-
 	}
 	VkImageMemoryBarrier2 transition = {};
 	transition.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
