@@ -236,10 +236,8 @@ bool SIRTaskGraph::overlaps( const sirTaskGraphAccessRecord_t &prior, const sirT
 
 bool SIRTaskGraph::appendEdge( uint32_t nBefore, uint32_t nAfter ) noexcept
 {
-	// Read and write views within a single pass execute together.
-	if ( nBefore == nAfter ) {
-		return true;
-	}
+	// All callers provide distinct passes: explicit edges reject self-dependencies
+	// at admission, and hazard analysis compares accesses from different passes.
 	for ( uint32_t nEdge = m_pFirstOut[nBefore]; nEdge != SIR_GRAPH_NONE; nEdge = m_pEdgeNext[nEdge] ) {
 		if ( m_pEdges[nEdge].nAfter == nAfter ) {
 			return true;

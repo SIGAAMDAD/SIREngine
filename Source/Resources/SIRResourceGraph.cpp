@@ -154,13 +154,15 @@ SIRResourceGraph::SIRResourceGraph( const SIRResourceGraphConfig &rConfig ) noex
 	}
 	const uint64_t nDesiredEdges =
 	    m_Config.m_nMaxDependencyEdges ? m_Config.m_nMaxDependencyEdges : ( uint64_t )m_Config.m_nMaxResources * 4;
-	if ( !nDesiredEdges || nDesiredEdges > UINT32_MAX || m_Config.m_nMaxResources > ( UINT32_MAX - 1 ) / 2 ) {
+	// Resource count is nonzero and <= INT32_MAX above; only the default edge multiplier can overflow uint32_t.
+	if ( nDesiredEdges > UINT32_MAX ) {
 		return;
 	}
 	m_nMaxDependencyEdges = ( uint32_t )nDesiredEdges;
 	const uint64_t nDesiredEvents =
 	    m_Config.m_nMaxInvalidationEvents ? m_Config.m_nMaxInvalidationEvents : ( uint64_t )m_Config.m_nMaxResources * 4;
-	if ( !nDesiredEvents || nDesiredEvents > UINT32_MAX ) {
+	// A nonzero resource count always produces a nonzero explicit or default event capacity.
+	if ( nDesiredEvents > UINT32_MAX ) {
 		return;
 	}
 	m_nMaxInvalidationEvents = ( uint32_t )nDesiredEvents;
@@ -1218,7 +1220,7 @@ SIRResourceResult SIRResourceGraphWriter::publish( const SIRResourcePublication 
 	pRecord->m_Info.m_nRevision = pPrior ? pPrior->m_Info.m_nRevision + 1 : 1;
 	pRecord->m_Handle =
 	    pPrior ? pPrior->m_Handle
-	           : SIRResourceHandle{ ( uint32_t )iSlot, m_pGraph->m_pSlots[iSlot].m_nNextGeneration, rPublication.m_Key.m_nTypeId, 0 };
+		       : SIRResourceHandle{ ( uint32_t )iSlot, m_pGraph->m_pSlots[iSlot].m_nNextGeneration, rPublication.m_Key.m_nTypeId, 0 };
 	for ( uint32_t iEdge = 0; iEdge < rPublication.m_nDependencyCount; ++iEdge ) {
 		pRecord->m_pDependencies[iEdge] = rPublication.m_pDependencies[iEdge];
 	}

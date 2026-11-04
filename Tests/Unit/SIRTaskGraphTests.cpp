@@ -352,6 +352,7 @@ static void testGraphExecutionSummaryAndProviderLifetime( void )
 	SIR_GRAPH_CHECK( !graph.queryExecution( &summary ) );
 	SIR_GRAPH_CHECK( !graph.cancelExecution() );
 	SIR_GRAPH_CHECK( graph.submit( &scheduler ) );
+	SIR_GRAPH_CHECK( !graph.queryExecution( nullptr ) );
 	SIR_GRAPH_CHECK( graph.queryExecution( &summary ) );
 	SIR_GRAPH_CHECK( summary.nPending == 3 && summary.nSucceeded == 0 );
 	SIR_GRAPH_CHECK( summary.eState == SIR_TASK_GRAPH_EXEC_PENDING );
@@ -368,6 +369,9 @@ static void testGraphExecutionSummaryAndProviderLifetime( void )
 	SIR_GRAPH_CHECK( summary.eState == SIR_TASK_GRAPH_EXEC_SUCCEEDED );
 	SIR_GRAPH_CHECK( summary.nPending == 0 && summary.nSucceeded == 3 );
 	SIR_GRAPH_CHECK( nCalls.load() == 3 );
+	// Cancellation of a wholly terminal graph is a successful no-op.
+	SIR_GRAPH_CHECK( graph.cancelExecution() );
+	SIR_GRAPH_CHECK( graph.queryExecution( &summary ) && summary.nSucceeded == 3 );
 	SIR_GRAPH_CHECK( graph.releaseSubmitted() );
 	SIR_GRAPH_CHECK( !graph.queryExecution( &summary ) );
 	SIR_GRAPH_CHECK( graph.reset() );

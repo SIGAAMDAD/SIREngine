@@ -150,6 +150,39 @@ static bool testBitmapAndRecommit( void )
 	return true;
 }
 
+static bool testWholeThreeWordBitmapCommitAndDecommit( void )
+{
+	const uint64_t nPage = SIRVirtualMemory::getPageSize();
+	if ( nPage == 0 ) {
+		return false;
+	}
+	SIRMemoryManager memory;
+	const sirMemoryConfig_t config = { nPage * 512, nPage * 240, nPage * 16, 4 };
+	if ( !memory.init( config ) ) {
+		return false;
+	}
+	SIRMemorySegment *pSegment = memory.createSegment( "three-word-bitmap", nPage * 192, 0, SIR_MEMORY_DOMAIN_RESOURCE_RESIDENT );
+	if ( pSegment == nullptr || !pSegment->commit( 0, nPage * 192 ) || pSegment->getCommittedBytes() != nPage * 192 ) {
+		return false;
+	}
+	// Exercise both writes to the interior bitmap word, not just its two boundary words.
+	uint8_t *pBytes = ( uint8_t * )pSegment->getBase();
+	pBytes[nPage * 80] = 0x5A;
+	pBytes[nPage * 160] = 0xA5;
+	if ( !pSegment->decommit( 0, nPage * 192 ) || pSegment->getCommittedBytes() != 0 ||
+	     memory.getDomainStats( SIR_MEMORY_DOMAIN_RESOURCE_RESIDENT ).nCommittedBytes != 0 ) {
+		return false;
+	}
+	if ( !pSegment->commit( nPage * 80, nPage ) || !pSegment->commit( nPage * 160, nPage ) || pBytes[nPage * 80] != 0 ||
+	     pBytes[nPage * 160] != 0 || pSegment->getCommittedBytes() != nPage * 2 || !pSegment->decommit( nPage * 80, nPage ) ||
+	     !pSegment->decommit( nPage * 160, nPage ) ) {
+		return false;
+	}
+	const bool bEmpty = pSegment->getCommittedBytes() == 0;
+	memory.shutdown();
+	return bEmpty;
+}
+
 static bool testOversizedRequests( void )
 {
 	const uint64_t nPage = SIRVirtualMemory::getPageSize();
@@ -432,6 +465,38 @@ static bool testTraceWrapAndSparseRetire( void )
 	return true;
 }
 
+static bool testPartialSparseRetirementAcrossBitmapWords( void )
+{
+	const uint64_t nPage = SIRVirtualMemory::getPageSize();
+	if ( nPage == 0 ) {
+		return false;
+	}
+	SIRMemoryManager memory;
+	const sirMemoryConfig_t config = { nPage * 512, nPage * 256, nPage * 16, 8 };
+	if ( !memory.init( config ) ) {
+		return false;
+	}
+	SIRMemorySegment *pSegment = memory.createSegment( "sparse-bitmap-drain", nPage * 130 );
+	if ( pSegment == nullptr || !pSegment->commit( nPage * 62, nPage * 4 ) || !pSegment->commit( nPage * 127, nPage * 3 ) ||
+	     !pSegment->bindRetirementOwner( 17, 19 ) || !pSegment->retireIdleRange( nPage * 62, nPage * 4, 17, 19 ) ||
+	     !pSegment->retireIdleRange( nPage * 127, nPage * 3, 17, 19 ) ) {
+		return false;
+	}
+	// A bounded first drain splits the run at the 64-page bitmap boundary.
+	const sirPageDrainReport_t first = memory.drainPendingDecommits( nPage * 2 );
+	if ( first.nCompletedRuns != 1 || first.nFailedRuns != 0 || first.nDecommittedBytes != nPage * 2 ||
+	     first.nRemainingPendingBytes != nPage * 5 ) {
+		return false;
+	}
+	const sirPageDrainReport_t rest = memory.drainPendingDecommits( nPage * 8 );
+	if ( rest.nCompletedRuns != 2 || rest.nFailedRuns != 0 || rest.nDecommittedBytes != nPage * 5 || rest.nRemainingPendingBytes != 0 ||
+	     pSegment->getCommittedBytes() != 0 ) {
+		return false;
+	}
+	memory.shutdown();
+	return true;
+}
+
 static bool testSegmentBitmapMetadataExhaustion( void )
 {
 	const uint64_t nPage = SIRVirtualMemory::getPageSize();
@@ -451,8 +516,10 @@ static bool testSegmentBitmapMetadataExhaustion( void )
 	if ( memory.allocateMetadata( nLeaveOneBitmap, 1 ) == nullptr ) {
 		return false;
 	}
+	const uint64_t nBeforeFailure = memory.getStats().nMetadataUsedBytes;
 	if ( memory.createSegment( "pending-bitmap-denial", nPage * 2 ) != nullptr ||
-	     memory.createSegment( "first-bitmap-denial", nPage * 2 ) != nullptr || memory.getStats().nSegmentCount != 0 ) {
+	     memory.createSegment( "first-bitmap-denial", nPage * 2 ) != nullptr || memory.getStats().nSegmentCount != 0 ||
+	     memory.getStats().nMetadataUsedBytes != nBeforeFailure ) {
 		return false;
 	}
 	memory.shutdown();
@@ -545,10 +612,11 @@ static bool testRetirementRangeRejectionMatrix( void )
 
 int main( void )
 {
-	if ( !testMemoryBudget() || !testCoreDomainMetadata() || !testBitmapAndRecommit() || !testOversizedRequests() ||
-	     !testFailedInitializationRecovery() || !testBackingTelemetry() || !testRetainedPageBacking() ||
+	if ( !testMemoryBudget() || !testCoreDomainMetadata() || !testBitmapAndRecommit() || !testWholeThreeWordBitmapCommitAndDecommit() ||
+	     !testOversizedRequests() || !testFailedInitializationRecovery() || !testBackingTelemetry() || !testRetainedPageBacking() ||
 	     !testValidationAndBoundaryInputs() || !testTraceWrapAndSparseRetire() || !testSegmentBitmapMetadataExhaustion() ||
-	     !testRecyclableFloorAndDomainBudget() || !testRetirementRangeRejectionMatrix() ) {
+	     !testRecyclableFloorAndDomainBudget() || !testRetirementRangeRejectionMatrix() ||
+	     !testPartialSparseRetirementAcrossBitmapWords() ) {
 		fputs( "SIR memory owner test failed\n", stderr );
 		return 1;
 	}

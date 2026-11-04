@@ -36,6 +36,8 @@ static std::atomic<int> s_nFailFstatOrdinal{ 0 };
 static std::atomic<bool> s_bFailMappedRead{ false };
 static std::atomic<bool> s_bFailMappedUnmap{ false };
 static std::atomic<int> s_nFailPreadMode{ 0 };
+static std::atomic<bool> s_bPreadEntered{ false };
+static std::atomic<bool> s_bPreadRelease{ false };
 
 extern "C" int __real_fstat( int nHandle, struct stat *pInfo );
 extern "C" int __real_munmap( void *pBase, size_t nBytes );
@@ -60,6 +62,12 @@ extern "C" ssize_t __wrap_pread( int nHandle, void *pDestination, size_t nBytes,
 	}
 	if ( nMode == 2 ) {
 		return 0;
+	}
+	if ( nMode == 3 ) {
+		s_bPreadEntered.store( true, std::memory_order_release );
+		while ( !s_bPreadRelease.load( std::memory_order_acquire ) ) {
+			std::this_thread::yield();
+		}
 	}
 	return __real_pread( nHandle, pDestination, nBytes, nOffset );
 }
@@ -331,6 +339,56 @@ static void testExternalTaskReleaseRecovery( void )
 	memory.shutdown();
 }
 
+static void testDiscardAfterTerminalTransfer( void )
+{
+	sirIOTestAlloc_t alloc = {};
+	SIRMemoryManager memory;
+	sirIOMemory( memory );
+	{
+		SIRResourceGraph graph( sirIOConfig( alloc ) );
+		SIR_IO_CHECK( graph.isReady() );
+		SIRTaskScheduler scheduler;
+		SIR_IO_CHECK( scheduler.init( &memory, { 8, 0, 16 } ) );
+		SIRResourceFileLoad load( graph, scheduler );
+		const int32_t nBaseline = alloc.nOutstanding.load();
+		SIRResourceHandle resource = {};
+		sirResourceFileLoadRequest_t request = sirIORequest( 6021, SIR_RESOURCE_FILE_READ_AT );
+
+		// A completed transfer can still be explicitly discarded before publication.
+		SIR_IO_CHECK( load.begin( SIR_IO_PATH, request ) == SIR_RESOURCE_RESULT_SUCCESS );
+		SIR_IO_CHECK( scheduler.pumpCPU( 1 ) == 1 );
+		SIR_IO_CHECK( load.cancel() == SIR_RESOURCE_RESULT_SUCCESS );
+		SIR_IO_CHECK( load.poll( &resource ) == SIR_RESOURCE_RESULT_FAILED );
+		SIR_IO_CHECK( !load.isActive() && graph.getStats().m_nLiveResources == 0 );
+		SIR_IO_CHECK( alloc.nOutstanding.load() == nBaseline );
+
+#if defined( __linux__ )
+		// Discarding an already-failed native I/O task must also release staging.
+		request.keyResource.m_nAssetId = 6022;
+		SIR_IO_CHECK( load.begin( SIR_IO_PATH, request ) == SIR_RESOURCE_RESULT_SUCCESS );
+		s_nFailPreadMode.store( 1, std::memory_order_relaxed );
+		SIR_IO_CHECK( scheduler.pumpCPU( 1 ) == 1 );
+		SIR_IO_CHECK( load.cancel() == SIR_RESOURCE_RESULT_SUCCESS );
+		SIR_IO_CHECK( load.poll( &resource ) == SIR_RESOURCE_RESULT_FAILED );
+		SIR_IO_CHECK( load.getLastFileResult() == SIR_FILE_IO_ERROR );
+		SIR_IO_CHECK( alloc.nOutstanding.load() == nBaseline );
+#endif
+
+		// The same transfer object must remain reusable after both terminal paths.
+		request.keyResource.m_nAssetId = 6023;
+		SIR_IO_CHECK( load.begin( SIR_IO_PATH, request ) == SIR_RESOURCE_RESULT_SUCCESS );
+		SIR_IO_CHECK( scheduler.pumpCPU( 1 ) == 1 );
+		SIR_IO_CHECK( load.poll( &resource ) == SIR_RESOURCE_RESULT_SUCCESS );
+		SIR_IO_CHECK( graph.getStats().m_nLiveResources == 1 );
+		SIR_IO_CHECK( graph.getWriter()->retire( resource ) == SIR_RESOURCE_RESULT_SUCCESS );
+		SIR_IO_CHECK( graph.getWriter()->collectRetired( 4 ) == 1 );
+		SIR_IO_CHECK( alloc.nOutstanding.load() == nBaseline );
+		SIR_IO_CHECK( scheduler.shutdown() );
+	}
+	SIR_IO_CHECK( alloc.nOutstanding.load() == 0 );
+	memory.shutdown();
+}
+
 static sirTaskResult_t sirIOIdleTask( void *, sirTaskHandle_t ) noexcept
 {
 	return SIR_TASK_RESULT_SUCCESS;
@@ -415,6 +473,50 @@ static void testRejectedRequestsAndTaskAdmission( void )
 }
 
 #if defined( __linux__ )
+static void testCancellationOfRunningNativeRead( void )
+{
+	sirIOTestAlloc_t alloc = {};
+	SIRMemoryManager memory;
+	sirIOMemory( memory );
+	{
+		SIRResourceGraph graph( sirIOConfig( alloc ) );
+		SIR_IO_CHECK( graph.isReady() );
+		SIRTaskScheduler scheduler;
+		SIR_IO_CHECK( scheduler.init( &memory, { 8, 1, 16 } ) );
+		SIRResourceFileLoad load( graph, scheduler );
+		const int32_t nBaseline = alloc.nOutstanding.load();
+		const sirResourceFileLoadRequest_t request = sirIORequest( 6031, SIR_RESOURCE_FILE_READ_AT );
+		s_bPreadEntered.store( false, std::memory_order_release );
+		s_bPreadRelease.store( false, std::memory_order_release );
+		s_nFailPreadMode.store( 3, std::memory_order_release );
+		SIR_IO_CHECK( load.begin( SIR_IO_PATH, request ) == SIR_RESOURCE_RESULT_SUCCESS );
+		bool bEntered = false;
+		for ( uint32_t nAttempt = 0; nAttempt < 2000000; ++nAttempt ) {
+			if ( s_bPreadEntered.load( std::memory_order_acquire ) ) {
+				bEntered = true;
+				break;
+			}
+			std::this_thread::yield();
+		}
+		SIR_IO_CHECK( bEntered );
+		sirTaskHandle_t task = {};
+		SIR_IO_CHECK( load.getTaskHandle( &task ) );
+		SIR_IO_CHECK( scheduler.getState( task ) == SIR_TASK_RUNNING );
+		SIRResourceHandle ignored = {};
+		SIR_IO_CHECK( load.poll( &ignored ) == SIR_RESOURCE_RESULT_BUSY );
+		SIR_IO_CHECK( load.cancel() == SIR_RESOURCE_RESULT_SUCCESS );
+		SIR_IO_CHECK( scheduler.isCancellationRequested( task ) );
+		s_bPreadRelease.store( true, std::memory_order_release );
+		SIR_IO_CHECK( scheduler.waitTask( task ) );
+		SIR_IO_CHECK( load.poll( &ignored ) == SIR_RESOURCE_RESULT_FAILED );
+		SIR_IO_CHECK( !load.isActive() && graph.getStats().m_nLiveResources == 0 );
+		SIR_IO_CHECK( alloc.nOutstanding.load() == nBaseline );
+		SIR_IO_CHECK( scheduler.shutdown() );
+	}
+	SIR_IO_CHECK( alloc.nOutstanding.load() == 0 );
+	memory.shutdown();
+}
+
 static void testInjectedResourceTransferFailures( void )
 {
 	sirIOTestAlloc_t alloc = {};
@@ -483,8 +585,10 @@ int main( void )
 	testBoundsAndStagingReuse();
 	testRejectedRequestsAndTaskAdmission();
 	testExternalTaskReleaseRecovery();
+	testDiscardAfterTerminalTransfer();
 #if defined( __linux__ )
 	testInjectedResourceTransferFailures();
+	testCancellationOfRunningNativeRead();
 #endif
 	SIR_IO_CHECK( SIRPlatformFile::remove( SIR_IO_PATH ) == SIR_FILE_OK );
 	printf( "PASS: native file reads, mapped GRDG staging, Core Jobs, deduplication, revision and cancellation\n" );

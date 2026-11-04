@@ -754,6 +754,78 @@ static void testMetadataExhaustionAndInvalidPredecessors( void )
 	memory.shutdown();
 }
 
+static void testWorkerAndEdgeMetadataAdmissionFailure( void )
+{
+	const sirMemoryConfig_t config = { 64ULL * 1024 * 1024, 64ULL * 1024, 8ULL * 1024 * 1024, 16 };
+	{
+		SIRMemoryManager memory;
+		SIR_TEST_CHECK( memory.init( config ) );
+		SIRTaskScheduler scheduler;
+		// Small slot metadata succeeds, but thousands of worker records cannot fit.
+		// Failed worker admission must not start any native worker threads.
+		SIR_TEST_CHECK( !scheduler.init( &memory, { 8, 32768, 8 } ) );
+		SIR_TEST_CHECK( scheduler.getActiveCount() == 0 );
+		SIR_TEST_CHECK( !scheduler.shutdown() );
+		memory.shutdown();
+	}
+	{
+		SIRMemoryManager memory;
+		SIR_TEST_CHECK( memory.init( config ) );
+		SIRTaskScheduler scheduler;
+		// Worker metadata is admitted, but the declared dependency edge pool
+		// is too large for the arena. Neither failure may publish a scheduler.
+		SIR_TEST_CHECK( !scheduler.init( &memory, { 8, 1, UINT32_MAX - 1 } ) );
+		SIR_TEST_CHECK( scheduler.getActiveCount() == 0 );
+		SIR_TEST_CHECK( !scheduler.shutdown() );
+		memory.shutdown();
+	}
+}
+
+static void testSchedulerDestructorWithoutExplicitShutdown( void )
+{
+	const sirMemoryConfig_t memoryConfig = { 64ULL * 1024 * 1024, 16ULL * 1024 * 1024, 4ULL * 1024 * 1024, 16 };
+	SIRMemoryManager memory;
+	SIR_TEST_CHECK( memory.init( memoryConfig ) );
+	{
+		SIRTaskScheduler scheduler;
+		SIR_TEST_CHECK( scheduler.init( &memory, { 4, 0, 1 } ) );
+		SIR_TEST_CHECK( scheduler.getActiveCount() == 0 );
+		// Verify that the destructor shuts down an initialized but idle scheduler.
+	}
+	memory.shutdown();
+}
+
+static void testBatchRejectsExhaustedLiveDependencyEdges( void )
+{
+	const sirMemoryConfig_t memoryConfig = { 64ULL * 1024 * 1024, 16ULL * 1024 * 1024, 4ULL * 1024 * 1024, 16 };
+	SIRMemoryManager memory;
+	SIR_TEST_CHECK( memory.init( memoryConfig ) );
+	SIRTaskScheduler scheduler;
+	SIR_TEST_CHECK( scheduler.init( &memory, { 8, 0, 1 } ) );
+
+	std::atomic<uint32_t> nCalls{ 0 };
+	sirTaskHandle_t hParent = {};
+	sirTaskHandle_t hChild = {};
+	SIR_TEST_CHECK( scheduler.submit( countTask, &nCalls, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_MAIN, &hParent ) );
+	SIR_TEST_CHECK( scheduler.submitAfter( countTask, &nCalls, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_MAIN, &hParent, 1, &hChild ) );
+	SIR_TEST_CHECK( scheduler.getState( hChild ) == SIR_TASK_BLOCKED );
+	const sirTaskBatchTask_t tasks[2] = { { countTask, &nCalls, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_MAIN },
+	                                      { countTask, &nCalls, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_MAIN } };
+	const sirTaskBatchEdge_t edge = { 0, 1 };
+	sirTaskHandle_t handles[2] = { { UINT32_MAX, UINT32_MAX }, { UINT32_MAX, UINT32_MAX } };
+	SIR_TEST_CHECK( !scheduler.submitBatch( tasks, 2, &edge, 1, handles ) );
+	SIR_TEST_CHECK( handles[0].nSlot == UINT32_MAX && handles[1].nSlot == UINT32_MAX );
+	SIR_TEST_CHECK( scheduler.getActiveCount() == 2 );
+
+	SIR_TEST_CHECK( scheduler.cancel( hParent ) );
+	SIR_TEST_CHECK( scheduler.getState( hChild ) == SIR_TASK_CANCELLED );
+	SIR_TEST_CHECK( scheduler.releaseTask( hChild ) );
+	SIR_TEST_CHECK( scheduler.releaseTask( hParent ) );
+	SIR_TEST_CHECK( nCalls.load() == 0 );
+	SIR_TEST_CHECK( scheduler.shutdown() );
+	memory.shutdown();
+}
+
 int main( void )
 {
 	testScheduler();
@@ -770,5 +842,8 @@ int main( void )
 	testPrioritySchedulingFairness();
 	testNestedPumpAndCompletedPrerequisite();
 	testMetadataExhaustionAndInvalidPredecessors();
+	testWorkerAndEdgeMetadataAdmissionFailure();
+	testSchedulerDestructorWithoutExplicitShutdown();
+	testBatchRejectsExhaustedLiveDependencyEdges();
 	return 0;
 }

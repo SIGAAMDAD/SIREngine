@@ -1332,6 +1332,9 @@ static void testPublicValidationAndReadViewBoundaries( void )
 			REQUIRE( graph.resolve( scope, { UINT32_MAX, 0, 0, 0 }, &sourceView ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
 			REQUIRE( graph.resolve( scope, { source.m_nSlot, 0, source.m_nTypeId, 0 }, &sourceView ) ==
 			         SIR_RESOURCE_RESULT_INVALID_HANDLE );
+			SIRResourceHandle wrongType = source;
+			++wrongType.m_nTypeId;
+			REQUIRE( graph.resolve( scope, wrongType, &sourceView ) == SIR_RESOURCE_RESULT_INVALID_HANDLE );
 			REQUIRE( graph.resolve( scope, source, &sourceView ) == SIR_RESOURCE_RESULT_SUCCESS );
 			REQUIRE( graph.resolve( scope, sceneHandle, &sceneView ) == SIR_RESOURCE_RESULT_SUCCESS );
 			REQUIRE( sourceView.getInfo( nullptr ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
@@ -1517,6 +1520,45 @@ static void testWriterInputValidationAndStagingLifecycle( void )
 		REQUIRE( bWrongWriter.load() );
 	}
 	REQUIRE( alloc.m_nOutstanding.load() == 0 );
+}
+
+static void testInvalidGraphConfigurationPreflight( void )
+{
+	// These configuration failures must be rejected before the graph allocates
+	// any memory. Each case exercises an independent required input contract.
+	for ( uint32_t iCase = 0; iCase < 6; ++iCase ) {
+		SIRTestAllocatorStats allocator = {};
+		// Count allocations without inducing a failure at any feasible ordinal.
+		allocator.m_nFailOnAllocation.store( UINT32_MAX, std::memory_order_relaxed );
+		SIRResourceGraphConfig config = testConfig( allocator, 8 );
+		switch ( iCase ) {
+		case 0:
+			config.m_Allocator.m_pfnAllocate = nullptr;
+			break;
+		case 1:
+			config.m_Allocator.m_pfnFree = nullptr;
+			break;
+		case 2:
+			config.m_nMaxResources = 0;
+			break;
+		case 3:
+			config.m_nMaxStaging = 0;
+			break;
+		case 4:
+			config.m_nMaxProviderPins = 0;
+			break;
+		case 5:
+			config.m_nMaxResources = ( uint32_t )INT32_MAX + 1U;
+			break;
+		}
+		{
+			SIRResourceGraph graph( config );
+			REQUIRE( !graph.isReady() );
+			REQUIRE( graph.getWriter() == nullptr );
+		}
+		REQUIRE( allocator.m_nAllocationCalls.load( std::memory_order_relaxed ) == 0 );
+		REQUIRE( allocator.m_nOutstanding.load( std::memory_order_relaxed ) == 0 );
+	}
 }
 
 static void testConstructorAllocationFailuresAndOverflow( void )
@@ -2021,6 +2063,7 @@ int main( void )
 	testCoreTaskGraphStaleRevisionsAndBudget();
 	testPublicValidationAndReadViewBoundaries();
 	testWriterInputValidationAndStagingLifecycle();
+	testInvalidGraphConfigurationPreflight();
 	testConstructorAllocationFailuresAndOverflow();
 	testContentKeyCollisionDoesNotAliasData();
 	testMultiChunkEvictionAndFailedReplacement();

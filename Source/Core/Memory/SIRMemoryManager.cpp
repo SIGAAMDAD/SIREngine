@@ -277,18 +277,17 @@ SIRMemorySegment *SIRMemoryManager::createSegment( const char *pszName, uint64_t
 
 	const uint64_t nPages = nCapacity / m_nPageSize;
 	const uint64_t nWords = ( nPages / 64 ) + ( ( nPages % 64 ) != 0 ? 1 : 0 );
-	if ( nWords > UINT64_MAX / sizeof( uint64_t ) ) {
+	if ( nWords > UINT64_MAX / ( 2 * sizeof( uint64_t ) ) ) {
 		return nullptr;
 	}
 
-	uint64_t *pBits = ( ( uint64_t * )( allocateMetadataLocked( nWords * sizeof( uint64_t ), alignof( uint64_t ), eDomain ) ) );
+	// Both bitmaps are allocated atomically from the metadata bump allocator.
+	// A second allocation failure must not strand the first bitmap's storage.
+	uint64_t *pBits = ( ( uint64_t * )( allocateMetadataLocked( nWords * 2 * sizeof( uint64_t ), alignof( uint64_t ), eDomain ) ) );
 	if ( pBits == nullptr ) {
 		return nullptr;
 	}
-	uint64_t *pPendingBits = ( ( uint64_t * )( allocateMetadataLocked( nWords * sizeof( uint64_t ), alignof( uint64_t ), eDomain ) ) );
-	if ( pPendingBits == nullptr ) {
-		return nullptr;
-	}
+	uint64_t *pPendingBits = pBits + nWords;
 
 	SIRMemorySegment *pSegment = m_pSegments + m_nSegmentCount;
 	pSegment->m_pManager = this;
@@ -884,9 +883,8 @@ sirPageDrainReport_t SIRMemoryManager::drainPendingDecommits( uint64_t nMaxBytes
 				++nPage;
 				++nRunPages;
 			}
-			if ( nRunPages == 0 ) {
-				break;
-			}
+			// The first pending page is in range and at least one page of budget remains,
+			// so the run always contains that page before proceeding to decommit.
 			const uint64_t nBytes = nRunPages * m_nPageSize;
 			if ( !SIRVirtualMemory::decommit( pSegment->m_pBase + nFirst * m_nPageSize, nBytes ) ) {
 				++report.nFailedRuns;
