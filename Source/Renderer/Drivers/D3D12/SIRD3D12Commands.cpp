@@ -230,6 +230,7 @@ bool SIRD3D12CommandList::completeSubmission( void ) noexcept
 	}
 	releaseReferences();
 	m_bSubmitted = false;
+	m_bClosed = false;
 	m_nSubmittedFence = 0;
 	return true;
 }
@@ -769,7 +770,11 @@ sirGraphicsResult_t SIRD3D12Commands::submit( sirGraphicsQueue_t eQueue, const s
 	if ( m_pNative == nullptr || !m_pNative->isReady() ) {
 		return SIR_GRAPHICS_DEVICE_LOST;
 	}
-	const sirGraphicsResult_t eValid = sirGraphicsValidateSubmission( eQueue, submission, m_pNative->getDeviceGeneration32() );
+	sirD3D12CompletionSet_t snapshot = {};
+	if ( !m_pNative->snapshotCompletionSet( &snapshot ) || snapshot.nDeviceGeneration > UINT32_MAX ) {
+		return SIR_GRAPHICS_DEVICE_LOST;
+	}
+	const sirGraphicsResult_t eValid = sirGraphicsValidateSubmission( eQueue, submission, ( uint32_t )snapshot.nDeviceGeneration );
 	if ( eValid != SIR_GRAPHICS_SUCCESS ) {
 		return eValid;
 	}

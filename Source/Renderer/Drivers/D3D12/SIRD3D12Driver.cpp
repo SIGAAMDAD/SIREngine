@@ -359,15 +359,16 @@ sirGraphicsResult_t SIRD3D12RenderingDevice::present( const sirGraphicsSurfaceIm
 }
 sirGraphicsResult_t SIRD3D12RenderingDevice::shutdown( void ) noexcept
 {
-	if ( m_Native.isReady() ) {
-		sirD3D12CompletionSet_t snapshot = {};
-		bool bComplete = false;
-		if ( !m_Native.snapshotCompletionSet( &snapshot ) || !m_Native.pollCompletionSet( snapshot, &bComplete ) ) {
-			return SIR_GRAPHICS_DEVICE_LOST;
-		}
-		if ( !bComplete ) {
-			return SIR_GRAPHICS_BUSY;
-		}
+	if ( !m_Native.isReady() ) {
+		return SIR_GRAPHICS_DEVICE_LOST;
+	}
+	sirD3D12CompletionSet_t snapshot = {};
+	bool bComplete = false;
+	if ( !m_Native.snapshotCompletionSet( &snapshot ) || !m_Native.pollCompletionSet( snapshot, &bComplete ) ) {
+		return SIR_GRAPHICS_DEVICE_LOST;
+	}
+	if ( !bComplete ) {
+		return SIR_GRAPHICS_BUSY;
 	}
 	m_Commands.shutdown( true );
 	m_Pipelines.shutdown( true );
