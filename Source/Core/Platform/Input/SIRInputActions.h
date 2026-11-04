@@ -42,6 +42,14 @@ typedef enum sirInputBindingFlags_e : uint8_t
 	SIR_INPUT_BIND_TOGGLE = 2
 } sirInputBindingFlags_t;
 
+typedef enum sirInputCaptureStatus_e : uint8_t
+{
+	SIR_INPUT_CAPTURE_IDLE = 0,
+	SIR_INPUT_CAPTURE_PENDING = 1,
+	SIR_INPUT_CAPTURE_ACCEPTED = 2,
+	SIR_INPUT_CAPTURE_CONFLICT = 3
+} sirInputCaptureStatus_t;
+
 typedef struct sirInputActionContext_s
 {
 	uint32_t nContextId;
@@ -86,6 +94,9 @@ public:
 	bool addBinding( const sirInputActionBinding_t &binding ) noexcept;
 	bool rebind( uint32_t iBinding, const sirInputActionBinding_t &binding ) noexcept;
 	bool removeBinding( uint32_t iBinding ) noexcept;
+	bool beginCapture( uint32_t iBinding ) noexcept;
+	void cancelCapture( void ) noexcept;
+	sirInputCaptureStatus_t captureStatus( void ) const noexcept;
 	bool describeBinding( uint32_t iBinding, sirInputActionBinding_t *pOut ) const noexcept;
 	bool query( uint32_t nActionId, uint32_t nUser, sirInputActionState_t *pOut ) const noexcept;
 	void evaluate( const sirInputFrame_t &frame ) noexcept;
@@ -119,6 +130,8 @@ private:
 	uint32_t m_nActions;
 	uint64_t m_nLastTick;
 	bool m_bContextDirty;
+	sirInputCaptureStatus_t m_eCaptureStatus;
+	uint32_t m_iCaptureBinding;
 };
 
 #endif // __SIRENGINE_SIRINPUTACTIONS_H__
