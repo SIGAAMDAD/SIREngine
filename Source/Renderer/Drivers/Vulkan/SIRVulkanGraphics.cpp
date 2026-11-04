@@ -837,12 +837,8 @@ sirGraphicsResult_t SIRVulkanDriver::getAdapterCount( uint32_t *pCount ) const n
 	}
 	*pCount = 0;
 	SIRVulkanDevice probe;
-	const sirVulkanResult_t eResult = probe.initialize();
-	if ( eResult != SIR_VULKAN_SUCCESS ) {
-		return sirVulkanToGraphicsResult( eResult );
-	}
-	*pCount = probe.getAdapterCount();
-	return probe.shutdown() ? SIR_GRAPHICS_SUCCESS : SIR_GRAPHICS_DRIVER_ERROR;
+	const sirVulkanResult_t eResult = probe.probeAdapters( 0, pCount, nullptr );
+	return sirVulkanToGraphicsResult( eResult );
 }
 
 sirGraphicsResult_t SIRVulkanDriver::queryAdapter( uint32_t nAdapterIndex, sirGraphicsAdapterInfo_t *pInfo ) const noexcept
@@ -852,17 +848,12 @@ sirGraphicsResult_t SIRVulkanDriver::queryAdapter( uint32_t nAdapterIndex, sirGr
 	}
 	*pInfo = {};
 	SIRVulkanDevice probe;
-	const sirVulkanResult_t eResult = probe.initialize( nullptr, nAdapterIndex );
+	sirVulkanAdapterInfo_t native = {};
+	const sirVulkanResult_t eResult = probe.probeAdapters( nAdapterIndex, nullptr, &native );
 	if ( eResult != SIR_VULKAN_SUCCESS ) {
 		return sirVulkanToGraphicsResult( eResult );
 	}
-	sirVulkanAdapterInfo_t native = {};
-	if ( !probe.queryAdapter( &native ) ) {
-		( void )probe.shutdown();
-		return SIR_GRAPHICS_DRIVER_ERROR;
-	}
-	const sirGraphicsResult_t eDescribe = sirVulkanDescribeAdapter( nAdapterIndex, native, pInfo );
-	return probe.shutdown() ? eDescribe : SIR_GRAPHICS_DRIVER_ERROR;
+	return sirVulkanDescribeAdapter( nAdapterIndex, native, pInfo );
 }
 
 sirGraphicsResult_t SIRVulkanDriver::createDevice( const sirGraphicsDeviceCreateDesc_t &desc, SIRRenderingDevice **ppDevice ) noexcept

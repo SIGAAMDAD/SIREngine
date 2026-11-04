@@ -185,13 +185,10 @@ bool SIRVulkanDevice::chooseAdapter( uint32_t nAdapterIndex ) noexcept
 	return true;
 }
 
-sirVulkanResult_t SIRVulkanDevice::initialize( const sirVulkanPoolBudget_t *pBudget, uint32_t nAdapterIndex ) noexcept
+sirVulkanResult_t SIRVulkanDevice::initializeInstance( void ) noexcept
 {
 	if ( m_bReady || m_Library.pNativeHandle != nullptr ) {
 		return SIR_VULKAN_INVALID_STATE;
-	}
-	if ( pBudget != nullptr && !sirVulkanValidatePoolBudget( pBudget ) ) {
-		return SIR_VULKAN_INVALID_ARGUMENT;
 	}
 
 #if defined( _WIN32 )
@@ -242,6 +239,54 @@ sirVulkanResult_t SIRVulkanDevice::initialize( const sirVulkanPoolBudget_t *pBud
 	if ( !loadInstanceDispatch() ) {
 		shutdown();
 		return SIR_VULKAN_NATIVE_FAILURE;
+	}
+	return SIR_VULKAN_SUCCESS;
+}
+
+sirVulkanResult_t SIRVulkanDevice::probeAdapters( uint32_t nAdapterIndex, uint32_t *pCount,
+                                                  sirVulkanAdapterInfo_t *pAdapter ) noexcept
+{
+	if ( ( pCount == nullptr && pAdapter == nullptr ) || nAdapterIndex >= 32 ) {
+		return SIR_VULKAN_INVALID_ARGUMENT;
+	}
+	if ( m_bReady || m_Library.pNativeHandle != nullptr ) {
+		return SIR_VULKAN_INVALID_STATE;
+	}
+	if ( pCount != nullptr ) {
+		*pCount = 0;
+	}
+	if ( pAdapter != nullptr ) {
+		*pAdapter = {};
+	}
+	const sirVulkanResult_t eInstance = initializeInstance();
+	if ( eInstance != SIR_VULKAN_SUCCESS ) {
+		return eInstance;
+	}
+	const bool bSelected = chooseAdapter( pAdapter != nullptr ? nAdapterIndex : 0 );
+	const uint32_t nEligible = m_nEligibleAdapterCount;
+	if ( pCount != nullptr ) {
+		*pCount = nEligible;
+	}
+	if ( pAdapter != nullptr && bSelected ) {
+		*pAdapter = m_Adapter;
+	}
+	if ( !shutdown() ) {
+		return SIR_VULKAN_NATIVE_FAILURE;
+	}
+	return bSelected ? SIR_VULKAN_SUCCESS : SIR_VULKAN_DEVICE_UNAVAILABLE;
+}
+
+sirVulkanResult_t SIRVulkanDevice::initialize( const sirVulkanPoolBudget_t *pBudget, uint32_t nAdapterIndex ) noexcept
+{
+	if ( m_bReady || m_Library.pNativeHandle != nullptr ) {
+		return SIR_VULKAN_INVALID_STATE;
+	}
+	if ( pBudget != nullptr && !sirVulkanValidatePoolBudget( pBudget ) ) {
+		return SIR_VULKAN_INVALID_ARGUMENT;
+	}
+	const sirVulkanResult_t eInstance = initializeInstance();
+	if ( eInstance != SIR_VULKAN_SUCCESS ) {
+		return eInstance;
 	}
 	if ( !chooseAdapter( nAdapterIndex ) ) {
 		shutdown();

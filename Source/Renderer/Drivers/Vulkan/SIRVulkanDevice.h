@@ -337,6 +337,7 @@ private:
 	uint32_t m_nLivePipelines = 0;
 	bool m_bReady;
 
+	sirVulkanResult_t initializeInstance( void ) noexcept;
 	bool loadInstanceDispatch( void ) noexcept;
 	bool chooseAdapter( uint32_t nAdapterIndex ) noexcept;
 	bool initializeTransferQueue( void ) noexcept;
@@ -358,6 +359,7 @@ public:
 	SIRVulkanDevice &operator=( const SIRVulkanDevice & ) = delete;
 
 	sirVulkanResult_t initialize( const sirVulkanPoolBudget_t *pBudget = nullptr, uint32_t nAdapterIndex = 0 ) noexcept;
+	sirVulkanResult_t probeAdapters( uint32_t nAdapterIndex, uint32_t *pCount, sirVulkanAdapterInfo_t *pAdapter ) noexcept;
 	bool shutdown( void ) noexcept;
 	bool isReady( void ) const noexcept;
 	uint32_t getAdapterCount( void ) const noexcept;

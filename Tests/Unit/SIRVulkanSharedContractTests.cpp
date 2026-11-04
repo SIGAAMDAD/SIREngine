@@ -77,6 +77,14 @@ int main( void )
 		return 14;
 	}
 
+	SIRVulkanDevice invalidProbe;
+	uint32_t nCount = 19;
+	if ( invalidProbe.probeAdapters( 0, nullptr, nullptr ) != SIR_VULKAN_INVALID_ARGUMENT ||
+	     invalidProbe.probeAdapters( 32, &nCount, nullptr ) != SIR_VULKAN_INVALID_ARGUMENT ||
+	     invalidProbe.isReady() || invalidProbe.getAdapterCount() != 0 ) {
+		return 16;
+	}
+
 	SIRVulkanRenderingDevice inert;
 	sirGraphicsCapabilities_t capabilities = {};
 	sirGraphicsMemoryBudget_t budget = {};

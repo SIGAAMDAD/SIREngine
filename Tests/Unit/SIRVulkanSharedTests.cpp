@@ -65,6 +65,20 @@ int main( void )
 	     ( adapter.nFeatureMask & SIR_GRAPHICS_FEATURE_COMPUTE ) != ( capabilities.nFeatureMask & SIR_GRAPHICS_FEATURE_COMPUTE ) ) {
 		return 44;
 	}
+	// Instance-only physical-device enumeration must leave the logical device inactive.
+	SIRVulkanDevice probe;
+	sirVulkanAdapterInfo_t nativeAdapter = {};
+	uint32_t nProbed = 0;
+	if ( probe.probeAdapters( 0, &nProbed, &nativeAdapter ) != SIR_VULKAN_SUCCESS || probe.isReady() ||
+	     probe.getAdapterCount() != 0 || nProbed != nAdapterCount || nativeAdapter.nVendorId != adapter.nVendorId ||
+	     nativeAdapter.nDeviceId != adapter.nDeviceId ) {
+		return 58;
+	}
+	if ( probe.probeAdapters( nAdapterCount, nullptr, &nativeAdapter ) != SIR_VULKAN_DEVICE_UNAVAILABLE ||
+	     probe.isReady() ) {
+		return 59;
+	}
+
 	sirGraphicsSelection_t selection = {};
 	selection.eBackend = SIR_GRAPHICS_BACKEND_VULKAN;
 	selection.nRequiredFeatures = capabilities.nFeatureMask & SIR_GRAPHICS_FEATURE_COMPUTE;
