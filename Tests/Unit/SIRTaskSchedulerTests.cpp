@@ -1,5 +1,7 @@
 /*
 ===========================================================================
+
+
 SIREngine MPLv2 Source Code
 Copyright (C) 2023-2027 Noah Van Til
 
@@ -468,7 +470,6 @@ static void testLocalCancellation( void )
 	memory.shutdown();
 }
 
-
 static sirTaskResult_t pendingProviderTask( void *, sirTaskHandle_t ) noexcept
 {
 	return SIR_TASK_RESULT_PENDING;
@@ -511,10 +512,8 @@ static void testInvalidInputAndProviderLifecycle( void )
 	SIR_TEST_CHECK( !cold.waitTask( handle ) );
 	SIR_TEST_CHECK( !cold.cancel( handle ) );
 	SIR_TEST_CHECK( !cold.releaseTask( handle ) );
-	const sirTaskBatchTask_t batch[2] = {
-	    { countTask, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_MAIN },
-	    { countTask, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_MAIN }
-	};
+	const sirTaskBatchTask_t batch[2] = { { countTask, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_MAIN },
+	                                      { countTask, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_MAIN } };
 	sirTaskBatchTask_t invalidBatch[2] = { batch[0], batch[1] };
 	const sirTaskBatchEdge_t edge = { 0, 1 };
 	sirTaskHandle_t batchHandles[2] = {};
@@ -540,8 +539,7 @@ static void testInvalidInputAndProviderLifecycle( void )
 	SIR_TEST_CHECK( cold.pumpProvider( SIR_TASK_EXEC_COUNT, 1 ) == 0 );
 	SIR_TEST_CHECK( !cold.completeProvider( handle, SIR_TASK_RESULT_PENDING ) );
 	SIR_TEST_CHECK( !cold.completeProvider( handle, SIR_TASK_RESULT_SUCCESS ) );
-	SIR_TEST_CHECK( !cold.submitAfter( countTask, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU,
-	                                &handle, UINT32_MAX, &handle ) );
+	SIR_TEST_CHECK( !cold.submitAfter( countTask, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU, &handle, UINT32_MAX, &handle ) );
 	SIR_TEST_CHECK( cold.submit( pendingProviderTask, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_RENDER, &handle ) );
 	SIR_TEST_CHECK( !cold.releaseTask( handle ) );
 	SIR_TEST_CHECK( cold.pumpProvider( SIR_TASK_EXEC_RENDER, 1 ) == 0 );
@@ -549,8 +547,7 @@ static void testInvalidInputAndProviderLifecycle( void )
 	SIR_TEST_CHECK( cold.bindProviderOwner( SIR_TASK_EXEC_RENDER ) );
 	std::atomic<uint32_t> nWrongOwner{ 0 };
 	std::thread wrong( [&]() {
-		if ( cold.pumpProvider( SIR_TASK_EXEC_RENDER, 1 ) == 0 &&
-		     !cold.bindProviderOwner( SIR_TASK_EXEC_RENDER ) &&
+		if ( cold.pumpProvider( SIR_TASK_EXEC_RENDER, 1 ) == 0 && !cold.bindProviderOwner( SIR_TASK_EXEC_RENDER ) &&
 		     !cold.completeProvider( handle, SIR_TASK_RESULT_SUCCESS ) && !cold.shutdown() ) {
 			nWrongOwner.store( 1 );
 		}
