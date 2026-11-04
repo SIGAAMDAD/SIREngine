@@ -139,10 +139,8 @@ typedef struct sirVulkanFormatBlock_s
 // The transfer validator has no Vulkan device dependency and is exercised
 // by CPU-only tests on hosts without Vulkan 1.4 hardware.
 bool sirVulkanGetFormatBlock( VkFormat eFormat, sirVulkanFormatBlock_t *pBlock ) noexcept;
-bool sirVulkanGetSubresourceLayout( const sirVulkanImage_t *pImage, uint32_t nMip, uint32_t nLayer,
-                                   VkImageLayout *pLayout ) noexcept;
-bool sirVulkanSetSubresourceLayout( sirVulkanImage_t *pImage, uint32_t nMip, uint32_t nLayer,
-                                   VkImageLayout eLayout ) noexcept;
+bool sirVulkanGetSubresourceLayout( const sirVulkanImage_t *pImage, uint32_t nMip, uint32_t nLayer, VkImageLayout *pLayout ) noexcept;
+bool sirVulkanSetSubresourceLayout( sirVulkanImage_t *pImage, uint32_t nMip, uint32_t nLayer, VkImageLayout eLayout ) noexcept;
 
 typedef struct sirVulkanTextureTransfer_s
 {

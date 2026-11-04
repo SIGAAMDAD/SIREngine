@@ -61,20 +61,17 @@ bool sirVulkanGetFormatBlock( VkFormat eFormat, sirVulkanFormatBlock_t *pBlock )
 
 // Each 2-bit entry addresses one independently tracked mip/layer pair.
 // Values are final queued layouts; transient transfer layouts are command-local.
-static bool sirVulkanSubresourceIndex( const sirVulkanImage_t *pImage, uint32_t nMip, uint32_t nLayer,
-                                       uint32_t *pIndex ) noexcept
+static bool sirVulkanSubresourceIndex( const sirVulkanImage_t *pImage, uint32_t nMip, uint32_t nLayer, uint32_t *pIndex ) noexcept
 {
-	if ( pImage == nullptr || pIndex == nullptr || pImage->nMips == 0 || pImage->nMips > 32 ||
-	     pImage->nLayers == 0 || pImage->nLayers > SIR_VULKAN_MAX_TRACKED_SUBRESOURCES / pImage->nMips ||
-	     nMip >= pImage->nMips || nLayer >= pImage->nLayers ) {
+	if ( pImage == nullptr || pIndex == nullptr || pImage->nMips == 0 || pImage->nMips > 32 || pImage->nLayers == 0 ||
+	     pImage->nLayers > SIR_VULKAN_MAX_TRACKED_SUBRESOURCES / pImage->nMips || nMip >= pImage->nMips || nLayer >= pImage->nLayers ) {
 		return false;
 	}
 	*pIndex = nLayer * pImage->nMips + nMip;
 	return true;
 }
 
-bool sirVulkanGetSubresourceLayout( const sirVulkanImage_t *pImage, uint32_t nMip, uint32_t nLayer,
-                                   VkImageLayout *pLayout ) noexcept
+bool sirVulkanGetSubresourceLayout( const sirVulkanImage_t *pImage, uint32_t nMip, uint32_t nLayer, VkImageLayout *pLayout ) noexcept
 {
 	if ( pLayout == nullptr ) {
 		return false;
@@ -100,8 +97,7 @@ bool sirVulkanGetSubresourceLayout( const sirVulkanImage_t *pImage, uint32_t nMi
 	}
 }
 
-bool sirVulkanSetSubresourceLayout( sirVulkanImage_t *pImage, uint32_t nMip, uint32_t nLayer,
-                                   VkImageLayout eLayout ) noexcept
+bool sirVulkanSetSubresourceLayout( sirVulkanImage_t *pImage, uint32_t nMip, uint32_t nLayer, VkImageLayout eLayout ) noexcept
 {
 	uint32_t nIndex = 0;
 	if ( !sirVulkanSubresourceIndex( pImage, nMip, nLayer, &nIndex ) ) {
