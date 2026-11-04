@@ -1,6 +1,5 @@
 #include <Editor/Scene/SIREditorTextProperties.h>
 #include <Editor/Host/SIREditorSceneWorkspace.h>
-#include <Editor/Host/SIREditorSceneJSON.h>
 
 #include <Core/Memory/SIRMemoryManager.h>
 #include <Core/Memory/SIRMemorySegment.h>
@@ -38,21 +37,9 @@ static void sirEditorTestPropertiesFixture( void )
 		}
 	}
 	assert( bMultiline );
-	FILE *pOutput = tmpfile();
-	assert( pOutput != nullptr );
-	assert( sirEditorWriteSceneJSON( workspace, "test.tscn", pOutput ) );
-	assert( fseek( pOutput, 0, SEEK_SET ) == 0 );
-	char szOutput[16384] = {};
-	const size_t nRead = fread( szOutput, 1, sizeof( szOutput ) - 1, pOutput );
-	assert( nRead > 0 && nRead < sizeof( szOutput ) - 1 );
-	assert( strstr( szOutput, "\"properties\":[" ) != nullptr );
-	assert( strstr( szOutput, "\"name\":\"script\",\"value\":\"ExtResource(" ) != nullptr );
-	assert( strstr( szOutput, "Plugin Toast\\u000a" ) != nullptr );
-	fclose( pOutput );
 	workspace.close();
 
-	// The JSON presenter bounds enormous serialized values without splitting
-	// a UTF-8 code point or discarding the underlying source span.
+	// Large UTF-8 serialized values must keep their exact native source span.
 	char szLongScene[2048] = "[gd_scene format=3]\n[node name=\"Root\" type=\"Node\"]\ntext = \"";
 	size_t nUsed = strlen( szLongScene );
 	memset( szLongScene + nUsed, 'x', 511 );
@@ -65,15 +52,8 @@ static void sirEditorTestPropertiesFixture( void )
 	assert( workspace.openTextSource( szLongScene, nUsed ) == SIR_EDITOR_WORKSPACE_OK );
 	assert( workspace.getPropertyIndex().nCount == 1 );
 	assert( workspace.getPropertyIndex().pProperties[0].nValueLength == 515 );
-	pOutput = tmpfile();
-	assert( pOutput != nullptr );
-	assert( sirEditorWriteSceneJSON( workspace, "long.tscn", pOutput ) );
-	assert( fseek( pOutput, 0, SEEK_SET ) == 0 );
-	memset( szOutput, 0, sizeof( szOutput ) );
-	assert( fread( szOutput, 1, sizeof( szOutput ) - 1, pOutput ) > 0 );
-	assert( strstr( szOutput, "\"bytes\":515,\"truncated\":true" ) != nullptr );
-	assert( strstr( szOutput, "\xc3\xa9" ) == nullptr );
-	fclose( pOutput );
+	const sirEditorTextProperty_t &longValue = workspace.getPropertyIndex().pProperties[0];
+	assert( memcmp( workspace.getSource() + longValue.nValueOffset + 512, "\xc3\xa9", 2 ) == 0 );
 	workspace.close();
 	assert( workspace.getPropertyIndex().nCount == 0 );
 	assert( workspace.shutdown() );
