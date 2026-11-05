@@ -57,7 +57,7 @@ static bool sirD3D11FillBaseLimits( uint32_t nLevel, sirD3D11FeatureProfile_t *p
 		pProfile->nMaximumTexture2D = 16384;
 		pProfile->nMaximumColorTargets = 8;
 		pProfile->nMaximumShaderResourceSlots = 128;
-		pProfile->nMaximumUavSlots = 8;
+		pProfile->nMaximumUavSlots = nLevel == SIR_D3D11_FEATURE_LEVEL_11_1 ? 64U : 8U;
 		pProfile->nShaderProfile = SIR_D3D11_SHADER_PROFILE_5_0;
 		pProfile->nSupportsIndexedInstancing = 1;
 		return true;
@@ -75,6 +75,9 @@ sirGraphicsResult_t sirD3D11BuildFeatureProfile( const sirD3D11FeatureProbe_t *p
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( !sirD3D11ValidProbeFlags( pProbe ) ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	if ( pProbe->nFeatureLevel == SIR_D3D11_FEATURE_LEVEL_11_1 && pProbe->nD3D11_1InterfaceAvailable == 0 ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 

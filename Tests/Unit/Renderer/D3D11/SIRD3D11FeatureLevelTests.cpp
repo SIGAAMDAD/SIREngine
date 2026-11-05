@@ -36,6 +36,7 @@ int main( void )
 		sirD3D11FeatureProbe_t probe = {};
 		probe.nSize = sizeof( probe );
 		probe.nFeatureLevel = nLevels[iLevel];
+		probe.nD3D11_1InterfaceAvailable = iLevel == 6 ? 1U : 0U;
 		sirD3D11FeatureProfile_t profile = {};
 		profile.nSize = sizeof( profile );
 		sirD3D11Check( sirD3D11BuildFeatureProfile( &probe, &profile ) == SIR_GRAPHICS_SUCCESS );
@@ -47,6 +48,7 @@ int main( void )
 		sirD3D11Check( ( profile.nEnabledFeatures & SIR_GRAPHICS_FEATURE_ASYNC_COMPUTE ) == 0 );
 		sirD3D11Check( profile.nMaximumTexture2D >= 2048 );
 		sirD3D11Check( profile.nMaximumColorTargets >= 1 );
+		sirD3D11Check( profile.nMaximumUavSlots == ( iLevel == 6 ? 64U : iLevel == 5 ? 8U : 0U ) );
 		sirD3D11Check( ( ( profile.nEnabledFeatures & SIR_GRAPHICS_FEATURE_TESSELLATION ) != 0 ) == ( iLevel >= 5 ) );
 		sirD3D11Check( ( ( profile.nEnabledFeatures & SIR_GRAPHICS_FEATURE_GEOMETRY_SHADER ) != 0 ) == ( iLevel >= 3 ) );
 		probe.nMultisampleAvailable = 1;
@@ -84,6 +86,15 @@ int main( void )
 	probe.nReserved = 0;
 	probe.nComputeShader4xAvailable = 2;
 	sirD3D11Check( sirD3D11BuildFeatureProfile( &probe, &profile ) == SIR_GRAPHICS_INVALID_ARGUMENT );
+	probe.nComputeShader4xAvailable = 0;
+	probe.nFeatureLevel = SIR_D3D11_FEATURE_LEVEL_11_1;
+	probe.nD3D11_1InterfaceAvailable = 0;
+	const sirD3D11FeatureProfile_t previous = profile;
+	sirD3D11Check( sirD3D11BuildFeatureProfile( &probe, &profile ) == SIR_GRAPHICS_INVALID_ARGUMENT );
+	sirD3D11Check( memcmp( &previous, &profile, sizeof( profile ) ) == 0 );
+	probe.nD3D11_1InterfaceAvailable = 1;
+	sirD3D11Check( sirD3D11BuildFeatureProfile( &probe, &profile ) == SIR_GRAPHICS_SUCCESS );
+	sirD3D11Check( profile.nMaximumUavSlots == 64U );
 	printf( "D3D11 capability tests: %u assertions, %u failures\n", s_nAssertions, s_nFailures );
 	return s_nFailures == 0 ? 0 : 1;
 }
