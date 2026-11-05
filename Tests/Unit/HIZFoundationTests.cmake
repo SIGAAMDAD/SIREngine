@@ -18,3 +18,9 @@ add_executable(SIRHiZDispatchTests SIRHiZDispatchTests.cpp)
 target_link_libraries(SIRHiZDispatchTests PRIVATE SIR::Graphics)
 add_test(NAME renderer.visibility.dispatch COMMAND SIRHiZDispatchTests)
 sir_configure_owned_target(SIRHiZDispatchTests)
+
+# HIZ-03 caller-owned history images, fence accounting and device-loss invalidation.
+add_executable(SIRHiZHistoryTests SIRHiZHistoryTests.cpp)
+target_link_libraries(SIRHiZHistoryTests PRIVATE SIR::Graphics)
+add_test(NAME renderer.visibility.history COMMAND SIRHiZHistoryTests)
+sir_configure_owned_target(SIRHiZHistoryTests)
