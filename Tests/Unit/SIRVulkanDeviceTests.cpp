@@ -39,6 +39,51 @@ int main( void )
 		return 3;
 	}
 
+	// Reject image-view aspects that the image format cannot contain, before the native call.
+	VkImageCreateInfo imageInfo = {};
+	imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+	imageInfo.imageType = VK_IMAGE_TYPE_2D;
+	imageInfo.format = VK_FORMAT_R8G8B8A8_UNORM;
+	imageInfo.extent = { 4, 4, 1 };
+	imageInfo.mipLevels = 1;
+	imageInfo.arrayLayers = 1;
+	imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+	imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+	imageInfo.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
+	imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+	imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	sirVulkanImage_t image = {};
+	if ( device.createImage( imageInfo, &image ) != SIR_VULKAN_SUCCESS ) {
+		return 20;
+	}
+	VkImageViewCreateInfo viewInfo = {};
+	viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+	viewInfo.image = image.hImage;
+	viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+	viewInfo.format = image.eFormat;
+	viewInfo.subresourceRange.levelCount = 1;
+	viewInfo.subresourceRange.layerCount = 1;
+	sirVulkanImageView_t view = {};
+	viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+	if ( device.createImageView( &image, viewInfo, &view ) != SIR_VULKAN_INVALID_ARGUMENT || view.hView != VK_NULL_HANDLE ) {
+		return 21;
+	}
+	viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_COLOR_BIT;
+	if ( device.createImageView( &image, viewInfo, &view ) != SIR_VULKAN_INVALID_ARGUMENT || view.hView != VK_NULL_HANDLE ) {
+		return 22;
+	}
+	viewInfo.subresourceRange.aspectMask = 0;
+	if ( device.createImageView( &image, viewInfo, &view ) != SIR_VULKAN_INVALID_ARGUMENT || view.hView != VK_NULL_HANDLE ) {
+		return 23;
+	}
+	viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	if ( device.createImageView( &image, viewInfo, &view ) != SIR_VULKAN_SUCCESS ) {
+		return 24;
+	}
+	if ( device.destroyImageView( &view ) != SIR_VULKAN_SUCCESS || device.destroyImage( &image ) != SIR_VULKAN_SUCCESS ) {
+		return 25;
+	}
+
 	sirVulkanMemoryStats_t before = {};
 	if ( !device.queryMemoryStats( &before ) || before.nLiveBuffers != 0 ) {
 		return 4;
