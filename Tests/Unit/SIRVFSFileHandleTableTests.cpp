@@ -189,10 +189,37 @@ static void sirVFSTestZeroCapacityAndParallelRelease( void )
 	sirVFSRequire( files.shutdown() == SIR_VFS_OK, "concurrent cleanup" );
 }
 
+static void sirVFSTestWriteOnlyLeaseCannotOpenRead( void )
+{
+	SIRVFSMountTable mounts( 1, 2 );
+	sirVFSMountDescriptor_t desc = {};
+	strcpy( desc.szNamespace, "user" );
+	desc.nSourceId = 61;
+	desc.nAllowedOps = SIR_VFS_ACCESS_WRITE;
+	desc.eKind = SIR_VFS_BACKEND_MEMORY;
+	desc.bTrusted = true;
+	sirVFSMountHandle_t mount = {};
+	sirVFSRequire( mounts.mount( desc, &mount ) == SIR_VFS_OK, "write-only mount" );
+	const sirVFSPath_t path = sirVFSTestPath( "user:/secret" );
+	sirVFSMountCandidate_t writeCandidate = {};
+	sirVFSRequire( mounts.acquireWriteTarget( path, mount, &writeCandidate ) == SIR_VFS_OK, "write-only lease" );
+	SIRVFSFileHandleTable files( mounts, 1, 1 );
+	sirVFSFileHandle_t opened = { 7, 7 };
+	sirVFSRequire( files.openResolved( path, writeCandidate.lease, &opened ) == SIR_VFS_FORBIDDEN, "deny read on write-only mount" );
+	sirVFSRequire( opened.nSlot == 7 && opened.nGeneration == 7, "read-denied output atomic" );
+	sirVFSMountCandidate_t check = {};
+	sirVFSRequire( mounts.retain( writeCandidate.lease, &check ) == SIR_VFS_OK, "denied open released retained pin" );
+	sirVFSRequire( mounts.release( check.lease ) == SIR_VFS_OK, "release extra lease" );
+	sirVFSRequire( mounts.release( writeCandidate.lease ) == SIR_VFS_OK, "release write lease" );
+	sirVFSRequire( files.shutdown() == SIR_VFS_OK, "write-only table shutdown" );
+	sirVFSRequire( mounts.unmount( mount ) == SIR_VFS_OK, "write-only mount cleanup" );
+}
+
 int main( void )
 {
 	sirVFSTestSourcePinAndRetirement();
 	sirVFSTestRetainAndValidation();
 	sirVFSTestZeroCapacityAndParallelRelease();
+	sirVFSTestWriteOnlyLeaseCannotOpenRead();
 	return 0;
 }

@@ -97,7 +97,8 @@ sirVFSResult_t SIRVFSFileHandleTable::openResolved( const sirVFSPath_t& path, si
 	if ( eRetain != SIR_VFS_OK ) {
 		return eRetain;
 	}
-	if ( strlen( retained.descriptor.szNamespace ) != path.nNamespaceLength ||
+	if ( ( retained.descriptor.nAllowedOps & SIR_VFS_ACCESS_READ ) == 0 ||
+	     strlen( retained.descriptor.szNamespace ) != path.nNamespaceLength ||
 	     memcmp( retained.descriptor.szNamespace, path.szPath, path.nNamespaceLength ) != 0 ) {
 		( void )m_Table.release( retained.lease );
 		return SIR_VFS_FORBIDDEN;
