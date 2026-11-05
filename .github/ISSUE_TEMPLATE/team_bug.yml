@@ -1,7 +1,7 @@
 name: Defect report
 description: Report a reproducible issue for AI triage or a future human maintainer.
 title: "[Bug] "
-labels: ["marathon:tracked"]
+labels: ["marathon:tracked", "kind:bug"]
 body:
   - type: dropdown
     id: severity
