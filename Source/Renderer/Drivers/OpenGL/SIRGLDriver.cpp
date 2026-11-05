@@ -15,6 +15,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Renderer/Drivers/OpenGL/SIRGLCapabilities.h>
 #include <Renderer/Drivers/OpenGL/SIRGLContext.h>
+#include <Renderer/Drivers/OpenGL/SIRGLHandlePool.h>
 #include <atomic>
 #include <new>
 #include <string.h>
@@ -36,6 +37,7 @@ typedef struct sirGLDevice_s
 	sirGLDriverState_t *pDriver;
 	sirGLNativeContext_t *pContext;
 	sirGLProbe_t probe;
+	sirGLHandlePool_t handles;
 	uint32_t nGeneration;
 	uint64_t nResidentBudgetBytes;
 } sirGLDevice_t;
@@ -249,6 +251,10 @@ static uint32_t sirGLShutdown( void *pDevice ) noexcept
 	if ( !sirGLContextOwnsThread( pState->pContext ) ) {
 		return SIR_GRAPHICS_BUSY;
 	}
+	const sirGraphicsResult_t eStatus = sirGLHandlePoolShutdown( &pState->handles );
+	if ( eStatus != SIR_GRAPHICS_SUCCESS ) {
+		return eStatus;
+	}
 	sirGLDestroyNativeContext( pState->pContext );
 	pState->pContext = nullptr;
 	return SIR_GRAPHICS_SUCCESS;
@@ -304,6 +310,13 @@ static uint32_t sirGLCreateDevice( void *pDriver, const sirGraphicsABIDeviceRequ
 	pNew->probe = probe;
 	pNew->nGeneration = nGeneration;
 	pNew->nResidentBudgetBytes = pRequest->nResidentBudgetBytes;
+	// Native GL objects will be stored here without per-object CPU allocations.
+	nStatus = sirGLHandlePoolInit( &pNew->handles, &pState->host, nGeneration, 1024 );
+	if ( nStatus != SIR_GRAPHICS_SUCCESS ) {
+		pState->host.pFree( pState->host.pContext, pNew );
+		sirGLDestroyNativeContext( pContext );
+		return nStatus;
+	}
 
 	sirGraphicsABIDevice_t result = {};
 	result.nSize = sizeof( result );
