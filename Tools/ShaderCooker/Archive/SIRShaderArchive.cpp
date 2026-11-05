@@ -225,6 +225,15 @@ sirShaderCookResult_t sirShaderArchiveValidate( const void *pArchive, uint64_t n
 		if ( sirArchiveRead64( pRecord + 16 ) != sirArchiveHashBytes( pData + nOffset, nLength ) ) {
 			return SIR_SHADER_COOK_INVALID_ARGUMENT;
 		}
+		// Two physical records with identical format and bytes violate content addressing.
+		for ( uint32_t iEarlier = 0; iEarlier < iUnique; ++iEarlier ) {
+			const uint8_t *pEarlier = pData + nUniqueStart + iEarlier * SIR_SHADER_ARCHIVE_UNIQUE_BYTES;
+			if ( sirArchiveRead32( pEarlier ) == sirArchiveRead32( pRecord ) && sirArchiveRead32( pEarlier + 8 ) == nLength &&
+			     sirArchiveRead64( pEarlier + 16 ) == sirArchiveRead64( pRecord + 16 ) &&
+			     memcmp( pData + sirArchiveRead32( pEarlier + 4 ), pData + nOffset, nLength ) == 0 ) {
+				return SIR_SHADER_COOK_INVALID_ARGUMENT;
+			}
+		}
 		nCursor += nLength;
 	}
 	if ( nCursor != nBytes ) {
