@@ -30,12 +30,12 @@ static uint64_t sirShaderGRDGHashScalar( uint64_t nHash, uint64_t nValue ) noexc
 
 static bool sirShaderGRDGFormatsValid( const sirShaderGRDGFormats_t& formats ) noexcept
 {
-	return formats.nShaderTypeId != 0 && formats.nShaderFormatId != 0 && formats.nMaterialTypeId != 0 &&
-	       formats.nMaterialFormatId != 0 && formats.nShaderTypeId != formats.nMaterialTypeId;
+	return formats.nShaderTypeId != 0 && formats.nShaderFormatId != 0 && formats.nMaterialTypeId != 0 && formats.nMaterialFormatId != 0 &&
+	       formats.nShaderTypeId != formats.nMaterialTypeId;
 }
 
-static SIRResourceResult sirShaderGRDGCheckView( const SIRResourceView& view, SIRResourceKind eKind, uint32_t nTypeId,
-                                                 uint32_t nFormatId, SIRResourceInfo *pInfo ) noexcept
+static SIRResourceResult sirShaderGRDGCheckView( const SIRResourceView& view, SIRResourceKind eKind, uint32_t nTypeId, uint32_t nFormatId,
+                                                 SIRResourceInfo *pInfo ) noexcept
 {
 	if ( !view.isValid() ) {
 		return SIR_RESOURCE_RESULT_INVALID_HANDLE;
@@ -54,13 +54,14 @@ static SIRResourceResult sirShaderGRDGCheckView( const SIRResourceView& view, SI
 }
 
 SIRResourceResult sirShaderProjectPackage( const SIRResourceView& view, const sirShaderGRDGFormats_t& formats,
-                                            const sirShaderPackageValidation_t& validation, sirShaderPackageProjection_t *pOut ) noexcept
+                                           const sirShaderPackageValidation_t& validation, sirShaderPackageProjection_t *pOut ) noexcept
 {
 	if ( pOut == nullptr || !sirShaderGRDGFormatsValid( formats ) ) {
 		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
 	}
 	SIRResourceInfo info = {};
-	SIRResourceResult eResult = sirShaderGRDGCheckView( view, SIR_RESOURCE_KIND_BLOB, formats.nShaderTypeId, formats.nShaderFormatId, &info );
+	SIRResourceResult eResult =
+	    sirShaderGRDGCheckView( view, SIR_RESOURCE_KIND_BLOB, formats.nShaderTypeId, formats.nShaderFormatId, &info );
 	if ( eResult != SIR_RESOURCE_RESULT_SUCCESS ) {
 		return eResult;
 	}
@@ -72,7 +73,8 @@ SIRResourceResult sirShaderProjectPackage( const SIRResourceView& view, const si
 	sirShaderPackageHeader_t header = {};
 	if ( sirShaderDecodePackageHeader( bytes.m_pData, bytes.m_nSize, &header ) != SIR_GRAPHICS_SUCCESS ||
 	     header.nAssetId != info.m_Key.m_nAssetId ||
-	     sirShaderValidatePackage( bytes.m_pData, bytes.m_nSize, validation.eFormat, validation.nAvailableFeatures ) != SIR_GRAPHICS_SUCCESS ) {
+	     sirShaderValidatePackage( bytes.m_pData, bytes.m_nSize, validation.eFormat, validation.nAvailableFeatures ) !=
+	         SIR_GRAPHICS_SUCCESS ) {
 		return SIR_RESOURCE_RESULT_INVALID_FORMAT;
 	}
 	*pOut = { view, bytes, header, info.m_nRevision };
@@ -80,10 +82,9 @@ SIRResourceResult sirShaderProjectPackage( const SIRResourceView& view, const si
 }
 
 SIRResourceResult sirShaderProjectStage( const sirShaderPackageProjection_t& package, uint32_t iStage,
-                                          sirShaderStageProjection_t *pOut ) noexcept
+                                         sirShaderStageProjection_t *pOut ) noexcept
 {
-	if ( pOut == nullptr || !package.view.isValid() || package.bytes.m_pData == nullptr ||
-	     iStage >= package.header.nStageCount ) {
+	if ( pOut == nullptr || !package.view.isValid() || package.bytes.m_pData == nullptr || iStage >= package.header.nStageCount ) {
 		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
 	}
 	const uint64_t nRecordOffset = ( uint64_t )package.header.nStageOffset + iStage * SIR_SHADER_PACKAGE_STAGE_BYTES;
@@ -91,12 +92,10 @@ SIRResourceResult sirShaderProjectStage( const sirShaderPackageProjection_t& pac
 		return SIR_RESOURCE_RESULT_INVALID_FORMAT;
 	}
 	sirShaderStageRecord_t stage = {};
-	if ( sirShaderDecodeStage( package.bytes.m_pData + nRecordOffset, SIR_SHADER_PACKAGE_STAGE_BYTES, &stage ) !=
-	     SIR_GRAPHICS_SUCCESS ) {
+	if ( sirShaderDecodeStage( package.bytes.m_pData + nRecordOffset, SIR_SHADER_PACKAGE_STAGE_BYTES, &stage ) != SIR_GRAPHICS_SUCCESS ) {
 		return SIR_RESOURCE_RESULT_INVALID_FORMAT;
 	}
-	if ( stage.nPayloadOffset > package.bytes.m_nSize ||
-	     stage.nPayloadBytes > package.bytes.m_nSize - stage.nPayloadOffset ) {
+	if ( stage.nPayloadOffset > package.bytes.m_nSize || stage.nPayloadBytes > package.bytes.m_nSize - stage.nPayloadOffset ) {
 		return SIR_RESOURCE_RESULT_INVALID_FORMAT;
 	}
 	*pOut = { stage, { package.bytes.m_pData + stage.nPayloadOffset, stage.nPayloadBytes } };
@@ -104,7 +103,7 @@ SIRResourceResult sirShaderProjectStage( const sirShaderPackageProjection_t& pac
 }
 
 SIRResourceResult sirShaderProjectMaterial( const SIRResourceView& view, const sirShaderGRDGFormats_t& formats,
-                                             sirShaderMaterialProjection_t *pOut ) noexcept
+                                            sirShaderMaterialProjection_t *pOut ) noexcept
 {
 	if ( pOut == nullptr || !sirShaderGRDGFormatsValid( formats ) ) {
 		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
@@ -122,8 +121,8 @@ SIRResourceResult sirShaderProjectMaterial( const SIRResourceView& view, const s
 	}
 	sirShaderMaterialHeader_t header = {};
 	if ( sirShaderDecodeMaterialHeader( bytes.m_pData, bytes.m_nSize, &header ) != SIR_GRAPHICS_SUCCESS ||
-	     sirShaderValidateMaterial( bytes.m_pData, bytes.m_nSize ) != SIR_GRAPHICS_SUCCESS ||
-	     header.nAssetId != info.m_Key.m_nAssetId || header.nDependencyCount != info.m_nDependencyCount ) {
+	     sirShaderValidateMaterial( bytes.m_pData, bytes.m_nSize ) != SIR_GRAPHICS_SUCCESS || header.nAssetId != info.m_Key.m_nAssetId ||
+	     header.nDependencyCount != info.m_nDependencyCount ) {
 		return SIR_RESOURCE_RESULT_INVALID_FORMAT;
 	}
 	for ( uint32_t iPass = 0; iPass < header.nPassCount; ++iPass ) {
@@ -145,16 +144,15 @@ SIRResourceResult sirShaderProjectMaterial( const SIRResourceView& view, const s
 }
 
 SIRResourceResult sirShaderProjectMaterialPass( const sirShaderMaterialProjection_t& material, uint32_t nPass,
-                                                 sirShaderMaterialPassRecord_t *pOut ) noexcept
+                                                sirShaderMaterialPassRecord_t *pOut ) noexcept
 {
-	if ( pOut == nullptr || !material.view.isValid() || material.bytes.m_pData == nullptr ||
-	     nPass < SIR_SHADER_PASS_COLOR || nPass > SIR_SHADER_PASS_COMPUTE ) {
+	if ( pOut == nullptr || !material.view.isValid() || material.bytes.m_pData == nullptr || nPass < SIR_SHADER_PASS_COLOR ||
+	     nPass > SIR_SHADER_PASS_COMPUTE ) {
 		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
 	}
 	for ( uint32_t iPass = 0; iPass < material.header.nPassCount; ++iPass ) {
 		sirShaderMaterialPassRecord_t pass = {};
-		const uint8_t *pRecord =
-		    material.bytes.m_pData + SIR_SHADER_MATERIAL_HEADER_BYTES + iPass * SIR_SHADER_MATERIAL_PASS_BYTES;
+		const uint8_t *pRecord = material.bytes.m_pData + SIR_SHADER_MATERIAL_HEADER_BYTES + iPass * SIR_SHADER_MATERIAL_PASS_BYTES;
 		if ( sirShaderDecodeMaterialPass( pRecord, SIR_SHADER_MATERIAL_PASS_BYTES, &pass ) != SIR_GRAPHICS_SUCCESS ) {
 			return SIR_RESOURCE_RESULT_INVALID_FORMAT;
 		}
@@ -167,10 +165,10 @@ SIRResourceResult sirShaderProjectMaterialPass( const sirShaderMaterialProjectio
 }
 
 SIRResourceResult sirShaderSnapshotMaterial( const SIRResourceGraph& graph, const SIRResourceReadScope& scope,
-                                              const sirShaderMaterialProjection_t& material, sirShaderMaterialSnapshot_t *pOut ) noexcept
+                                             const sirShaderMaterialProjection_t& material, sirShaderMaterialSnapshot_t *pOut ) noexcept
 {
-	if ( pOut == nullptr || !scope.isActive() || !material.view.isValid() || material.header.nDependencyCount >
-	     SIR_SHADER_MATERIAL_MAX_DEPENDENCIES ) {
+	if ( pOut == nullptr || !scope.isActive() || !material.view.isValid() ||
+	     material.header.nDependencyCount > SIR_SHADER_MATERIAL_MAX_DEPENDENCIES ) {
 		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
 	}
 	const uint32_t nCount = material.header.nDependencyCount;
@@ -195,8 +193,8 @@ SIRResourceResult sirShaderSnapshotMaterial( const SIRResourceGraph& graph, cons
 		if ( !bResident && edge.m_eKind == SIR_RESOURCE_EDGE_KIND_REQUIRED ) {
 			return SIR_RESOURCE_RESULT_DEPENDENCY_MISSING;
 		}
-		if ( !bResident && eResult != SIR_RESOURCE_RESULT_DEPENDENCY_MISSING &&
-		     eResult != SIR_RESOURCE_RESULT_NOT_RESIDENT && eResult != SIR_RESOURCE_RESULT_INVALID_HANDLE ) {
+		if ( !bResident && eResult != SIR_RESOURCE_RESULT_DEPENDENCY_MISSING && eResult != SIR_RESOURCE_RESULT_NOT_RESIDENT &&
+		     eResult != SIR_RESOURCE_RESULT_INVALID_HANDLE ) {
 			return eResult;
 		}
 		sirShaderDependencyRevision_t item = {};
@@ -212,7 +210,7 @@ SIRResourceResult sirShaderSnapshotMaterial( const SIRResourceGraph& graph, cons
 		nHash = sirShaderGRDGHashScalar( nHash, item.key.m_nVariantId );
 		nHash = sirShaderGRDGHashScalar( nHash, item.nGraphRevision );
 		nHash = sirShaderGRDGHashScalar( nHash, ( uint64_t )item.eKind | ( ( uint64_t )item.eEdgeKind << 8 ) |
-		                                                  ( ( uint64_t )item.bResident << 16 ) );
+		                                            ( ( uint64_t )item.bResident << 16 ) );
 		pOut->pDependencies[iEdge] = item;
 	}
 	pOut->nFingerprint = nHash;
@@ -221,10 +219,9 @@ SIRResourceResult sirShaderSnapshotMaterial( const SIRResourceGraph& graph, cons
 }
 
 SIRResourceResult sirShaderStampMaterialInvalidation( SIRResourceGraphWriter& writer, const SIRResourceView& view,
-                                                       sirShaderMaterialSnapshot_t *pSnapshot ) noexcept
+                                                      sirShaderMaterialSnapshot_t *pSnapshot ) noexcept
 {
-	if ( pSnapshot == nullptr || !view.isValid() || view.getKind() != SIR_RESOURCE_KIND_COMPOSITION ||
-	     pSnapshot->nFingerprint == 0 ) {
+	if ( pSnapshot == nullptr || !view.isValid() || view.getKind() != SIR_RESOURCE_KIND_COMPOSITION || pSnapshot->nFingerprint == 0 ) {
 		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
 	}
 	uint64_t nSequence = 0;
@@ -254,7 +251,7 @@ static SIRResourceContentKey sirShaderGRDGContentKey( const void *pBytes, uint64
 }
 
 SIRResourceResult sirShaderPublishPackage( SIRResourceGraphWriter& writer, const sirShaderGRDGFormats_t& formats,
-                                            const sirShaderPublicationRequest_t& request, SIRResourceHandle *pHandle ) noexcept
+                                           const sirShaderPublicationRequest_t& request, SIRResourceHandle *pHandle ) noexcept
 {
 	if ( pHandle == nullptr || !sirShaderGRDGFormatsValid( formats ) || request.key.m_nTypeId != formats.nShaderTypeId ||
 	     request.pBytes == nullptr || request.nBytes > SIR_SHADER_PACKAGE_MAX_BYTES ||
@@ -275,9 +272,10 @@ SIRResourceResult sirShaderPublishPackage( SIRResourceGraphWriter& writer, const
 		return eResult;
 	}
 	memcpy( writable.m_pData, request.pBytes, ( size_t )request.nBytes );
-	SIRResourceChunkPublication chunk = { { 0 }, sirShaderGRDGContentKey( writable.m_pData, request.nBytes, formats.nShaderFormatId ), staging, false };
-	SIRResourcePublication publication = { request.key, SIR_RESOURCE_KIND_BLOB, 1, formats.nShaderFormatId, &chunk, 1,
-		                                    request.pDependencies, request.nDependencyCount };
+	SIRResourceChunkPublication chunk = {
+	    { 0 }, sirShaderGRDGContentKey( writable.m_pData, request.nBytes, formats.nShaderFormatId ), staging, false };
+	SIRResourcePublication publication = { request.key,           SIR_RESOURCE_KIND_BLOB,  1, formats.nShaderFormatId, &chunk, 1,
+	                                       request.pDependencies, request.nDependencyCount };
 	eResult = writer.publishExpected( publication, request.nExpectedRevision, pHandle );
 	if ( eResult != SIR_RESOURCE_RESULT_SUCCESS ) {
 		( void )writer.cancelStaging( staging );
@@ -286,7 +284,7 @@ SIRResourceResult sirShaderPublishPackage( SIRResourceGraphWriter& writer, const
 }
 
 SIRResourceResult sirShaderPublishMaterial( SIRResourceGraphWriter& writer, const sirShaderGRDGFormats_t& formats,
-                                             const sirShaderPublicationRequest_t& request, SIRResourceHandle *pHandle ) noexcept
+                                            const sirShaderPublicationRequest_t& request, SIRResourceHandle *pHandle ) noexcept
 {
 	if ( pHandle == nullptr || !sirShaderGRDGFormatsValid( formats ) || request.key.m_nTypeId != formats.nMaterialTypeId ||
 	     request.pBytes == nullptr || ( request.nDependencyCount != 0 && request.pDependencies == nullptr ) ) {
@@ -294,8 +292,8 @@ SIRResourceResult sirShaderPublishMaterial( SIRResourceGraphWriter& writer, cons
 	}
 	sirShaderMaterialHeader_t header = {};
 	if ( sirShaderDecodeMaterialHeader( request.pBytes, request.nBytes, &header ) != SIR_GRAPHICS_SUCCESS ||
-	     sirShaderValidateMaterial( request.pBytes, request.nBytes ) != SIR_GRAPHICS_SUCCESS ||
-	     header.nAssetId != request.key.m_nAssetId || header.nDependencyCount != request.nDependencyCount ) {
+	     sirShaderValidateMaterial( request.pBytes, request.nBytes ) != SIR_GRAPHICS_SUCCESS || header.nAssetId != request.key.m_nAssetId ||
+	     header.nDependencyCount != request.nDependencyCount ) {
 		return SIR_RESOURCE_RESULT_INVALID_FORMAT;
 	}
 	for ( uint32_t iPass = 0; iPass < header.nPassCount; ++iPass ) {
@@ -317,12 +315,14 @@ SIRResourceResult sirShaderPublishMaterial( SIRResourceGraphWriter& writer, cons
 		return eResult;
 	}
 	memcpy( writable.m_pData, request.pBytes, ( size_t )request.nBytes );
-	SIRResourceChunkPublication chunk = { { 0 }, sirShaderGRDGContentKey( writable.m_pData, request.nBytes, formats.nMaterialFormatId ), staging, false };
-	SIRResourcePublication publication = { request.key, SIR_RESOURCE_KIND_COMPOSITION, 1, formats.nMaterialFormatId, &chunk, 1,
-		                                    request.pDependencies, request.nDependencyCount };
+	SIRResourceChunkPublication chunk = {
+	    { 0 }, sirShaderGRDGContentKey( writable.m_pData, request.nBytes, formats.nMaterialFormatId ), staging, false };
+	SIRResourcePublication publication = { request.key,           SIR_RESOURCE_KIND_COMPOSITION, 1, formats.nMaterialFormatId, &chunk, 1,
+	                                       request.pDependencies, request.nDependencyCount };
 	eResult = writer.publishExpected( publication, request.nExpectedRevision, pHandle );
 	if ( eResult != SIR_RESOURCE_RESULT_SUCCESS ) {
 		( void )writer.cancelStaging( staging );
 	}
 	return eResult;
 }
+
