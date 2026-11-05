@@ -67,6 +67,7 @@ typedef struct sirP5FileFixture_s
 {
 	const char *pszContents;
 	uint32_t nReads;
+	uint32_t nCorruptMode;
 } sirP5FileFixture_t;
 
 static sirConfigResult_t sirP5ReadFixture( void *pContext, sirConsoleConfigReadRequest_t *pRequest ) noexcept
@@ -82,6 +83,15 @@ static sirConfigResult_t sirP5ReadFixture( void *pContext, sirConsoleConfigReadR
 	}
 	memcpy( pRequest->pBytes, pFixture->pszContents, nLength );
 	pRequest->nRead = ( uint32_t )nLength;
+	if ( pFixture->nCorruptMode == 1 ) {
+		pRequest->pBytes = nullptr;
+	} else if ( pFixture->nCorruptMode == 2 ) {
+		pRequest->nCapacity = UINT32_MAX;
+	} else if ( pFixture->nCorruptMode == 3 ) {
+		pRequest->pszName = "other.ini";
+	} else if ( pFixture->nCorruptMode == 4 ) {
+		pRequest->nNameBytes = 1;
+	}
 	return SIR_CONFIG_OK;
 }
 
@@ -258,7 +268,7 @@ int main( void )
 	assert( adapter.writeArchive( archiveSink, SIR_CONSOLE_CAP_READ, 5, &nWritten ) == SIR_CONFIG_LIMIT_EXCEEDED );
 
 	const char *pszExecInput = "[CVars]\nr.alpha = 77\n";
-	sirP5FileFixture_t fixture = { pszExecInput, 0 };
+	sirP5FileFixture_t fixture = { pszExecInput, 0, 0 };
 	uint8_t szFile[1024] = {};
 	sirConsoleConfigStorage_t execStorage = { szFile, sizeof( szFile ), sirP5ReadFixture, &fixture };
 	SIRConsoleConfigAdapter exec;
@@ -279,6 +289,14 @@ int main( void )
 	assert( SIRConsoleConfigAdapter::execute( &exec, "user.ini", 8, submission ) == SIR_REGISTRATION_TYPE_MISMATCH );
 	assert( cvars.getRevision() == nBeforeFailedExec );
 	assert( cvars.getValue( bindings[0].cvar, SIR_CONSOLE_CAP_READ, &value ) == SIR_REGISTRATION_OK && value.nBits == 77 );
+	fixture.pszContents = "[CVars]\nr.alpha = 99\n";
+	for ( uint32_t nMode = 1; nMode <= 4; ++nMode ) {
+		fixture.nCorruptMode = nMode;
+		assert( SIRConsoleConfigAdapter::execute( &exec, "user.ini", 8, submission ) == SIR_REGISTRATION_BAD_SCHEMA );
+		assert( cvars.getRevision() == nBeforeFailedExec );
+		assert( cvars.getValue( bindings[0].cvar, SIR_CONSOLE_CAP_READ, &value ) == SIR_REGISTRATION_OK && value.nBits == 77 );
+	}
+	fixture.nCorruptMode = 0;
 	submission.origin.nCapabilities &= ~SIR_CONSOLE_CAP_WRITE;
 	assert( SIRConsoleConfigAdapter::execute( &exec, "user.ini", 8, submission ) == SIR_REGISTRATION_DENIED );
 
