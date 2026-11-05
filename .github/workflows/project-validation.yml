@@ -43,4 +43,12 @@ jobs:
               assert 'jobs' in data and data['jobs'], path
               assert 'on' in data or True in data, path
               print('VALID', path)
+          for path in sorted(pathlib.Path('.github/ISSUE_TEMPLATE').glob('*.yml')):
+              data = yaml.safe_load(path.read_text())
+              assert isinstance(data, dict), path
+              if path.name != 'config.yml':
+                  assert data.get('name') and data.get('body'), path
+                  assert 'marathon:approved' not in data.get('labels', []), path
+                  assert 'marathon:merge-approved' not in data.get('labels', []), path
+              print('VALID', path)
           PY
