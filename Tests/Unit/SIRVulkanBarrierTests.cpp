@@ -170,6 +170,50 @@ int main( void )
 	     native.nLayerCount != 2 ) {
 		return 22;
 	}
+	// Transfer layouts remain valid final states across separate command submissions.
+	sirVulkanImage_t copyImage = {};
+	copyImage.eType = VK_IMAGE_TYPE_2D;
+	copyImage.eFormat = VK_FORMAT_R8G8B8A8_UNORM;
+	copyImage.nMips = 1;
+	copyImage.nLayers = 1;
+	copyImage.nUsage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+	sirGraphicsBarrier_t copyBarrier = {};
+	copyBarrier.eType = SIR_GRAPHICS_BARRIER_TRANSITION;
+	copyBarrier.eBefore = SIR_GRAPHICS_STATE_UNDEFINED;
+	copyBarrier.eAfter = SIR_GRAPHICS_STATE_COPY_DESTINATION;
+	copyBarrier.nMipCount = 1;
+	copyBarrier.nLayerCount = 1;
+	if ( sirVulkanPlanImageBarrier( copyBarrier, &copyImage, &native ) != SIR_GRAPHICS_SUCCESS ||
+	     native.eAfter != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL || !sirVulkanSetSubresourceLayout( &copyImage, 0, 0, native.eAfter ) ) {
+		return 23;
+	}
+	copyBarrier.eBefore = SIR_GRAPHICS_STATE_COPY_DESTINATION;
+	copyBarrier.eAfter = SIR_GRAPHICS_STATE_COPY_SOURCE;
+	if ( sirVulkanPlanImageBarrier( copyBarrier, &copyImage, &native ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return 24;
+	}
+	copyImage.szUploadedSubresources[0] = 1;
+	if ( sirVulkanPlanImageBarrier( copyBarrier, &copyImage, &native ) != SIR_GRAPHICS_SUCCESS ||
+	     native.eBefore != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL || native.eAfter != VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL ||
+	     !sirVulkanSetSubresourceLayout( &copyImage, 0, 0, native.eAfter ) ) {
+		return 25;
+	}
+	copyBarrier.eBefore = SIR_GRAPHICS_STATE_COPY_SOURCE;
+	copyBarrier.eAfter = SIR_GRAPHICS_STATE_SHADER_READ;
+	if ( sirVulkanPlanImageBarrier( copyBarrier, &copyImage, &native ) != SIR_GRAPHICS_SUCCESS ||
+	     native.eBefore != VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL || native.eAfter != VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ) {
+		return 26;
+	}
+	copyImage.nUsage &= ~VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+	copyBarrier.eAfter = SIR_GRAPHICS_STATE_COPY_SOURCE;
+	if ( sirVulkanPlanImageBarrier( copyBarrier, &copyImage, &native ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return 27;
+	}
+	copyImage.nUsage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+	copyBarrier.eAfter = SIR_GRAPHICS_STATE_COPY_DESTINATION;
+	if ( sirVulkanPlanImageBarrier( copyBarrier, &copyImage, &native ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return 28;
+	}
 	printf( "Vulkan image barrier contracts passed\n" );
 	return 0;
 }

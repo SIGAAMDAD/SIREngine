@@ -148,7 +148,7 @@ int main( void )
 		return 20;
 	}
 	// Layouts are independently tracked for every mip/layer pair.
-	// The packed table must not change adjacent two-bit entries.
+	// The packed table must not change adjacent four-bit entries.
 	sirVulkanImage_t tracked = {};
 	tracked.nMips = 3;
 	tracked.nLayers = 2;
@@ -165,8 +165,8 @@ int main( void )
 	     !sirVulkanGetSubresourceLayout( &tracked, 1, 1, &layout ) || layout != VK_IMAGE_LAYOUT_GENERAL ) {
 		return 22;
 	}
-	if ( sirVulkanSetSubresourceLayout( &tracked, 2, 1, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL ) ||
-	     !sirVulkanGetSubresourceLayout( &tracked, 2, 1, &layout ) || layout != VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ||
+	if ( !sirVulkanSetSubresourceLayout( &tracked, 2, 1, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL ) ||
+	     !sirVulkanGetSubresourceLayout( &tracked, 2, 1, &layout ) || layout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL ||
 	     !sirVulkanSetSubresourceLayout( &tracked, 2, 1, VK_IMAGE_LAYOUT_UNDEFINED ) ||
 	     !sirVulkanGetSubresourceLayout( &tracked, 2, 1, &layout ) || layout != VK_IMAGE_LAYOUT_UNDEFINED ) {
 		return 23;
@@ -394,6 +394,36 @@ int main( void )
 	if ( sirVulkanTextureTransferFootprint( nullptr, footprint, &nSpan ) || nSpan != 0 ||
 	     sirVulkanTextureTransferFootprint( &footprintImage, footprint, nullptr ) ) {
 		return 60;
+	}
+	// The four-bit state encoding preserves neighboring mips and the final table entry.
+	tracked = {};
+	tracked.nMips = 32;
+	tracked.nLayers = 128;
+	if ( !sirVulkanSetSubresourceLayout( &tracked, 30, 127, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL ) ||
+	     !sirVulkanSetSubresourceLayout( &tracked, 31, 127, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL ) ||
+	     !sirVulkanGetSubresourceLayout( &tracked, 30, 127, &layout ) || layout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL ||
+	     !sirVulkanGetSubresourceLayout( &tracked, 31, 127, &layout ) || layout != VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL ||
+	     !sirVulkanGetSubresourceLayout( &tracked, 29, 127, &layout ) || layout != VK_IMAGE_LAYOUT_UNDEFINED ||
+	     !sirVulkanSetSubresourceLayout( &tracked, 30, 127, VK_IMAGE_LAYOUT_GENERAL ) ||
+	     !sirVulkanGetSubresourceLayout( &tracked, 31, 127, &layout ) || layout != VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL ) {
+		return 61;
+	}
+	if ( sirVulkanSetSubresourceLayout( &tracked, 30, 127, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR ) ||
+	     !sirVulkanGetSubresourceLayout( &tracked, 30, 127, &layout ) || layout != VK_IMAGE_LAYOUT_GENERAL ) {
+		return 62;
+	}
+	// Public upload-layout queries cannot index beyond the fixed 4096-subresource table.
+	tracked.nLayers = 129;
+	sirVulkanTextureTransfer_t outOfRange = {};
+	outOfRange.bBufferToImage = true;
+	outOfRange.extent = { 1, 1, 1 };
+	outOfRange.nLayer = 128;
+	tracked.nWidth = 1;
+	tracked.nHeight = 1;
+	tracked.eType = VK_IMAGE_TYPE_2D;
+	if ( sirVulkanTransferCoversSubresource( &tracked, outOfRange ) ||
+	     sirVulkanUploadFinalLayout( &tracked, outOfRange ) != VK_IMAGE_LAYOUT_UNDEFINED ) {
+		return 63;
 	}
 	printf( "Vulkan transfer format and subresource contracts passed\n" );
 	return 0;

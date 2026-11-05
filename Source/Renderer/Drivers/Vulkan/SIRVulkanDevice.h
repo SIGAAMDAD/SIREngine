@@ -175,8 +175,8 @@ typedef struct sirVulkanImage_s
 	uint32_t nHeight;
 	uint32_t nDepth;
 	uint64_t szUploadedSubresources[SIR_VULKAN_MAX_TRACKED_SUBRESOURCES / 64];
-	// Two bits per mip/layer: undefined, shader-read-only, or general.
-	uint8_t szSubresourceLayouts[SIR_VULKAN_MAX_TRACKED_SUBRESOURCES / 4];
+	// Four bits per mip/layer: persistent color layouts including transfer source/destination.
+	uint8_t szSubresourceLayouts[SIR_VULKAN_MAX_TRACKED_SUBRESOURCES / 2];
 	bool bCube;
 } sirVulkanImage_t;
 
