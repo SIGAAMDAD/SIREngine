@@ -57,3 +57,43 @@ jobs:
           ctest --test-dir out/Linux/tooling --output-on-failure --no-tests=error
           --repeat until-fail:3
           -R '^terrain[.]'
+
+  terrain-windows:
+    name: Terrain native C++17 / Windows MSVC
+    runs-on: windows-2022
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: ilammy/msvc-dev-cmd@v1
+      - name: Install pinned CMake 4.4.5 without GitHub API setup requests
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $archive = Join-Path $env:RUNNER_TEMP 'cmake-4.4.5-windows-x86_64.zip'
+          Invoke-WebRequest -Uri 'https://cmake.org/files/v4.4/cmake-4.4.5-windows-x86_64.zip' -OutFile $archive
+          $digest = (Get-FileHash -Path $archive -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($digest -ne '326c826486d46a23cf9d5a1c9ee3a567d427bdd02c4a34071937a2a675cff004') { throw 'CMake checksum mismatch' }
+          $root = Join-Path $env:RUNNER_TEMP 'sir-cmake'
+          Expand-Archive -Path $archive -DestinationPath $root -Force
+          $bin = Join-Path $root 'cmake-4.4.5-windows-x86_64/bin'
+          Add-Content -Path $env:GITHUB_PATH -Value $bin
+          & (Join-Path $bin 'cmake.exe') --version
+      - name: Configure native terrain with Ninja tooling preset
+        run: >
+          cmake --preset tooling
+          -DSIR_BUILD_TESTS=ON
+          -DSIR_WITH_GOOGLETEST=OFF
+      - name: Build all native terrain regression targets
+        run: >
+          cmake --build out/Windows/tooling --parallel 3 --target
+          SIRTerrainHeightfieldCodecTests
+          SIRTerrainRegionCatalogTests
+          SIRTerrainHeightfieldViewTests
+          SIRTerrainResourceBridgeTests
+          SIRTerrainRegionBundleTests
+      - name: Run terrain CTests under MSVC
+        run: >
+          ctest --test-dir out/Windows/tooling --output-on-failure --no-tests=error
+          -R '^terrain[.]'
