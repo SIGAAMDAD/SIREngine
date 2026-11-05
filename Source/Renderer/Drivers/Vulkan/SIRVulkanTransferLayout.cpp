@@ -153,6 +153,51 @@ VkImageLayout sirVulkanUploadFinalLayout( const sirVulkanImage_t *pImage, const 
 	return VK_IMAGE_LAYOUT_GENERAL;
 }
 
+bool sirVulkanTextureTransferFootprint( const sirVulkanImage_t *pImage, const sirVulkanTextureTransfer_t& transfer,
+                                        uint64_t *pBytes ) noexcept
+{
+	if ( pBytes == nullptr ) {
+		return false;
+	}
+	*pBytes = 0;
+	if ( pImage == nullptr || transfer.extent.width == 0 || transfer.extent.height == 0 || transfer.extent.depth == 0 ) {
+		return false;
+	}
+
+	sirVulkanFormatBlock_t block = {};
+	if ( !sirVulkanGetFormatBlock( pImage->eFormat, &block ) ) {
+		return false;
+	}
+	if ( transfer.nBufferRowLength != 0 &&
+	     ( transfer.nBufferRowLength < transfer.extent.width || transfer.nBufferRowLength % block.nBlockWidth != 0 ) ) {
+		return false;
+	}
+	if ( transfer.nBufferImageHeight != 0 &&
+	     ( transfer.nBufferImageHeight < transfer.extent.height || transfer.nBufferImageHeight % block.nBlockHeight != 0 ) ) {
+		return false;
+	}
+
+	const uint64_t nBlockRows = ( uint64_t( transfer.extent.height ) + block.nBlockHeight - 1 ) / block.nBlockHeight;
+	const uint64_t nBlockColumns = ( uint64_t( transfer.extent.width ) + block.nBlockWidth - 1 ) / block.nBlockWidth;
+	const uint64_t nRowBlocks = transfer.nBufferRowLength != 0 ? transfer.nBufferRowLength / block.nBlockWidth : nBlockColumns;
+	const uint64_t nRowPitch = nRowBlocks * block.nBytesPerBlock;
+	const uint64_t nLastRowBytes = nBlockColumns * block.nBytesPerBlock;
+	if ( nRowPitch == 0 || nBlockRows == 0 || nBlockRows - 1 > ( UINT64_MAX - nLastRowBytes ) / nRowPitch ) {
+		return false;
+	}
+	const uint64_t nLastSliceBytes = ( nBlockRows - 1 ) * nRowPitch + nLastRowBytes;
+	const uint64_t nImageRows = transfer.nBufferImageHeight != 0 ? transfer.nBufferImageHeight / block.nBlockHeight : nBlockRows;
+	if ( nImageRows > UINT64_MAX / nRowPitch ) {
+		return false;
+	}
+	const uint64_t nSlicePitch = nImageRows * nRowPitch;
+	if ( uint64_t( transfer.extent.depth ) - 1 > ( UINT64_MAX - nLastSliceBytes ) / nSlicePitch ) {
+		return false;
+	}
+	*pBytes = ( uint64_t( transfer.extent.depth ) - 1 ) * nSlicePitch + nLastSliceBytes;
+	return true;
+}
+
 sirVulkanResult_t sirVulkanValidateTextureTransfer( const sirVulkanBuffer_t *pBuffer, const sirVulkanImage_t *pImage,
                                                     const sirVulkanTextureTransfer_t& transfer ) noexcept
 {
@@ -221,26 +266,9 @@ sirVulkanResult_t sirVulkanValidateTextureTransfer( const sirVulkanBuffer_t *pBu
 		return SIR_VULKAN_INVALID_ARGUMENT;
 	}
 
-	const uint64_t nCopyBlockRows = ( uint64_t( transfer.extent.height ) + block.nBlockHeight - 1 ) / block.nBlockHeight;
-	const uint64_t nCopyBlockColumns = ( uint64_t( transfer.extent.width ) + block.nBlockWidth - 1 ) / block.nBlockWidth;
-	const uint64_t nRowBlocks = transfer.nBufferRowLength != 0 ? transfer.nBufferRowLength / block.nBlockWidth : nCopyBlockColumns;
-	const uint64_t nRowPitch = nRowBlocks * block.nBytesPerBlock;
-	const uint64_t nLastRowBytes = nCopyBlockColumns * block.nBytesPerBlock;
-	if ( nRowPitch == 0 || nCopyBlockRows == 0 || nCopyBlockRows - 1 > ( UINT64_MAX - nLastRowBytes ) / nRowPitch ) {
-		return SIR_VULKAN_INVALID_ARGUMENT;
-	}
-	const uint64_t nLastSliceBytes = ( nCopyBlockRows - 1 ) * nRowPitch + nLastRowBytes;
-	const uint64_t nImageRows = transfer.nBufferImageHeight != 0 ? transfer.nBufferImageHeight / block.nBlockHeight : nCopyBlockRows;
-	if ( nImageRows > UINT64_MAX / nRowPitch ) {
-		return SIR_VULKAN_INVALID_ARGUMENT;
-	}
-	const uint64_t nSlicePitch = nImageRows * nRowPitch;
-	const uint64_t nCopySlices = transfer.extent.depth;
-	if ( nCopySlices - 1 > ( UINT64_MAX - nLastSliceBytes ) / nSlicePitch ) {
-		return SIR_VULKAN_INVALID_ARGUMENT;
-	}
-	const uint64_t nRequiredBytes = ( nCopySlices - 1 ) * nSlicePitch + nLastSliceBytes;
-	if ( nRequiredBytes > pBuffer->nSize - transfer.nBufferOffset ) {
+	uint64_t nRequiredBytes = 0;
+	if ( !sirVulkanTextureTransferFootprint( pImage, transfer, &nRequiredBytes ) ||
+	     nRequiredBytes > pBuffer->nSize - transfer.nBufferOffset ) {
 		return SIR_VULKAN_INVALID_ARGUMENT;
 	}
 	return SIR_VULKAN_SUCCESS;

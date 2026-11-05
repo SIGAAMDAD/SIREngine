@@ -267,6 +267,10 @@ sirVulkanResult_t sirVulkanValidateRecordedCommands( const sirVulkanRecordedComm
 // Whether this command needs a transfer-stage memory dependency on an earlier buffer access.
 bool sirVulkanRecordedNeedsBufferBarrier( const sirVulkanRecordedCommand_t *pCommands, uint32_t nIndex ) noexcept;
 
+// Exact byte span from the first to last copied byte, including row/slice strides.
+// Independently validates the transfer's block-aligned buffer footprint.
+bool sirVulkanTextureTransferFootprint( const sirVulkanImage_t *pImage, const sirVulkanTextureTransfer_t& transfer,
+                                        uint64_t *pBytes ) noexcept;
 sirVulkanResult_t sirVulkanValidateTextureTransfer( const sirVulkanBuffer_t *pBuffer, const sirVulkanImage_t *pImage,
                                                     const sirVulkanTextureTransfer_t& transfer ) noexcept;
 // Conservatively track initialization of an entire mip/layer, not merely a written region.

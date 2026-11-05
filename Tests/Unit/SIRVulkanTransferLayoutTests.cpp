@@ -346,6 +346,55 @@ int main( void )
 	if ( !sirVulkanTransferCoversSubresource( &coverage, uploaded ) ) {
 		return 51;
 	}
+	// Exact transfer footprints exclude trailing unused staging-buffer capacity.
+	sirVulkanImage_t footprintImage = {};
+	footprintImage.eType = VK_IMAGE_TYPE_2D;
+	footprintImage.eFormat = VK_FORMAT_R8G8B8A8_UNORM;
+	sirVulkanTextureTransfer_t footprint = {};
+	footprint.extent = { 8, 8, 1 };
+	uint64_t nSpan = 99;
+	if ( !sirVulkanTextureTransferFootprint( &footprintImage, footprint, &nSpan ) || nSpan != 256 ) {
+		return 52;
+	}
+	footprint.nBufferRowLength = 12;
+	if ( !sirVulkanTextureTransferFootprint( &footprintImage, footprint, &nSpan ) || nSpan != 368 ) {
+		return 53;
+	}
+	footprint.nBufferImageHeight = 12;
+	footprint.extent.depth = 2;
+	if ( !sirVulkanTextureTransferFootprint( &footprintImage, footprint, &nSpan ) || nSpan != 944 ) {
+		return 54;
+	}
+	footprintImage.eFormat = VK_FORMAT_BC1_RGBA_UNORM_BLOCK;
+	footprint = {};
+	footprint.extent = { 10, 6, 1 };
+	if ( !sirVulkanTextureTransferFootprint( &footprintImage, footprint, &nSpan ) || nSpan != 48 ) {
+		return 55;
+	}
+	footprint.nBufferRowLength = 16;
+	if ( !sirVulkanTextureTransferFootprint( &footprintImage, footprint, &nSpan ) || nSpan != 56 ) {
+		return 56;
+	}
+	footprint.nBufferImageHeight = 7;
+	if ( sirVulkanTextureTransferFootprint( &footprintImage, footprint, &nSpan ) || nSpan != 0 ) {
+		return 57;
+	}
+	footprint.nBufferImageHeight = 0;
+	footprint.nBufferRowLength = UINT32_MAX;
+	if ( sirVulkanTextureTransferFootprint( &footprintImage, footprint, &nSpan ) || nSpan != 0 ) {
+		return 58;
+	}
+	footprint.nBufferRowLength = 0;
+	footprint.extent.depth = UINT32_MAX;
+	footprint.extent.height = UINT32_MAX;
+	footprint.nBufferImageHeight = 4294967292U;
+	if ( sirVulkanTextureTransferFootprint( &footprintImage, footprint, &nSpan ) || nSpan != 0 ) {
+		return 59;
+	}
+	if ( sirVulkanTextureTransferFootprint( nullptr, footprint, &nSpan ) || nSpan != 0 ||
+	     sirVulkanTextureTransferFootprint( &footprintImage, footprint, nullptr ) ) {
+		return 60;
+	}
 	printf( "Vulkan transfer format and subresource contracts passed\n" );
 	return 0;
 }
