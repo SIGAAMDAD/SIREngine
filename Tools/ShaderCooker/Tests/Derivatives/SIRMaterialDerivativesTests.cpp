@@ -68,6 +68,18 @@ static void testTriangleGradientAndFootprint( void ) noexcept
 	REQUIRE( sirMaterialPlanTextureSample( uv, texture, &plan ) == SIR_SHADER_COOK_OK );
 	REQUIRE( testNear( plan.fMajorAxis, 2048.0 ) && testNear( plan.fMinorAxis, 256.0 ) );
 	REQUIRE( testNear( plan.fAnisotropy, 8.0 ) && testNear( plan.fMipLevel, 10.0 ) );
+	// A sheared Jacobian has ellipse axes equal to its singular values,
+	// not the lengths of its two column vectors.
+	uv.szDdx[0] = 1.0 / 1024.0;
+	uv.szDdx[1] = 0.0;
+	uv.szDdy[0] = 1.0 / 1024.0;
+	uv.szDdy[1] = 1.0 / 1024.0;
+	REQUIRE( sirMaterialPlanTextureSample( uv, texture, &plan ) == SIR_SHADER_COOK_OK );
+	const double fGoldenRatio = ( 1.0 + std::sqrt( 5.0 ) ) * 0.5;
+	REQUIRE( testNear( plan.fMajorAxis, fGoldenRatio ) );
+	REQUIRE( testNear( plan.fMinorAxis, 1.0 / fGoldenRatio ) );
+	REQUIRE( testNear( plan.fAnisotropy, fGoldenRatio * fGoldenRatio ) );
+
 	uv.bValid = false;
 	REQUIRE( sirMaterialPlanTextureSample( uv, texture, &plan ) == SIR_SHADER_COOK_OK );
 	REQUIRE( plan.eMode == SIR_MATERIAL_SAMPLE_EXPLICIT_LOD && !plan.bDerivativeValid );

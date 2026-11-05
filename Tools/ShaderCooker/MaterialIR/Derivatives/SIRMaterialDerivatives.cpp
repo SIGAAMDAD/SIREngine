@@ -249,15 +249,28 @@ sirShaderCookResult_t sirMaterialPlanTextureSample( const sirMaterialGradient_t&
 		*pOutput = result;
 		return SIR_SHADER_COOK_OK;
 	}
-	const double fDX = std::hypot( uv.szDdx[0] * texture.nWidth, uv.szDdx[1] * texture.nHeight );
-	const double fDY = std::hypot( uv.szDdy[0] * texture.nWidth, uv.szDdy[1] * texture.nHeight );
-	if ( !std::isfinite( fDX ) || !std::isfinite( fDY ) ) {
+	// The SVD of the texture-space 2x2 Jacobian gives the actual
+	// anisotropic ellipse. Column lengths alone are wrong for shear.
+	const double fUx = uv.szDdx[0] * texture.nWidth;
+	const double fVx = uv.szDdx[1] * texture.nHeight;
+	const double fUy = uv.szDdy[0] * texture.nWidth;
+	const double fVy = uv.szDdy[1] * texture.nHeight;
+	const double fXX = fUx * fUx + fVx * fVx;
+	const double fYY = fUy * fUy + fVy * fVy;
+	const double fXY = fUx * fUy + fVx * fVy;
+	const double fTrace = fXX + fYY;
+	const double fDiscriminant = std::hypot( fXX - fYY, 2.0 * fXY );
+	const double fMajorSquared = 0.5 * ( fTrace + fDiscriminant );
+	const double fDeterminant = fUx * fVy - fUy * fVx;
+	const double fMinorSquared = fMajorSquared > 0.0 ? ( fDeterminant * fDeterminant ) / fMajorSquared : 0.0;
+	if ( !std::isfinite( fMajorSquared ) || !std::isfinite( fMinorSquared ) ||
+	     fMajorSquared < 0.0 || fMinorSquared < 0.0 ) {
 		return SIR_SHADER_COOK_UNSUPPORTED;
 	}
 	result.eMode = SIR_MATERIAL_SAMPLE_GRADIENT;
 	result.bDerivativeValid = true;
-	result.fMajorAxis = std::fmax( fDX, fDY );
-	result.fMinorAxis = std::fmin( fDX, fDY );
+	result.fMajorAxis = std::sqrt( fMajorSquared );
+	result.fMinorAxis = std::sqrt( fMinorSquared );
 	result.fAnisotropy = result.fMajorAxis / std::fmax( result.fMinorAxis, 1e-12 );
 	result.fMipLevel = std::fmax( 0.0, std::fmin( ( double )texture.nMaximumMip, std::log2( std::fmax( result.fMajorAxis, 1.0 ) ) ) );
 	if ( !std::isfinite( result.fAnisotropy ) || !std::isfinite( result.fMipLevel ) ) {
