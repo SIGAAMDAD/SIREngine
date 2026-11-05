@@ -66,7 +66,9 @@ typedef struct sirEditorSceneSaveRequest_s
 	bool bRejectExternalChanges = false;
 } sirEditorSceneSaveRequest_t;
 
-// Creates an exclusively owned sibling temporary file; writes, flushes and
+// Delegates exclusive sibling staging and atomic replacement to SIRFileSystem;
+// the editor owns its authoring byte budget and result mapping.
+// The platform service writes, flushes and
 // syncs its contents before atomic replacement. On pre-replace failures the
 // destination remains untouched and the temporary file is removed. A
 // durability failure after replacement is reported separately because the

@@ -14,6 +14,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Editor/Scene/SIREditorFileSave.h>
+#include <Core/Platform/SIRFileSystem.h>
 
 #include <assert.h>
 #include <stdlib.h>
@@ -72,6 +73,17 @@ int main( void )
 	const char *pszOriginal = "[gd_scene format=3]\n[node name=\"Old\" type=\"Node\"]\n";
 	const char *pszReplacement = "[gd_scene format=3]\n[node name=\"New\" type=\"Node\"]\n";
 	sirEditorTestWriteOriginal( szDestination, pszOriginal );
+	// Platform service works independently of the editor authoring facade.
+	sirFileSystemAtomicWriteRequest_t platform = { szDestination, szTemporary, pszOriginal, strlen( pszOriginal ) };
+	platform.pExpectedBytes = pszOriginal;
+	platform.nExpectedBytes = strlen( pszOriginal );
+	assert( SIRFileSystem::writeAtomically( platform ) == SIR_FILE_SYSTEM_OK );
+	sirEditorTestReadExact( szDestination, pszOriginal, strlen( pszOriginal ) );
+	platform.pExpectedBytes = "stale revision";
+	platform.nExpectedBytes = strlen( "stale revision" );
+	assert( SIRFileSystem::writeAtomically( platform ) == SIR_FILE_SYSTEM_CONFLICT );
+	sirEditorTestReadExact( szDestination, pszOriginal, strlen( pszOriginal ) );
+	assert( fopen( szTemporary, "rb" ) == nullptr );
 	sirEditorFileWriteRequest_t request = { szDestination, szTemporary, pszReplacement, strlen( pszReplacement ) };
 	assert( sirEditorWriteFileAtomically( request ) == SIR_EDITOR_FILE_SAVE_OK );
 	sirEditorTestReadExact( szDestination, pszReplacement, strlen( pszReplacement ) );
