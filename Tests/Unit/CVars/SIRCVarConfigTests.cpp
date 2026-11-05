@@ -16,6 +16,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Core/CVars/SIRCVarConfigAdapter.h>
 #include <Core/CVars/SIRCVarValueCodec.h>
 #include <Core/Console/SIRConsoleConfigAdapter.h>
+#include <Core/Console/SIRConsoleSystem.h>
+#include <Core/SIRApplication.h>
 #include <Core/Config/SIRConfigAtomicFile.h>
 #include <Tools/RegistrationCooker/SIRRegistrationCooker.h>
 #ifdef NDEBUG
@@ -333,6 +335,31 @@ int main( void )
 	assert( cvars.getRevision() == nBeforeConsoleError );
 	assert( cvars.getValue( bindings[0].cvar, SIR_CONSOLE_CAP_READ, &value ) == SIR_REGISTRATION_OK && value.nBits == 88 );
 	console.shutdown();
+
+	// SIRApplication owns the lifecycle transition and bounded owner-thread pump.
+	sirConsoleSystemConfig_t runtimeConfig = { &registration, &cvars, &pool, consoleStorage, 2 };
+	SIRConsoleSystem runtime( runtimeConfig );
+	SIRApplication runtimeApplication;
+	assert( runtimeApplication.registerSystem( &runtime ) );
+	assert( runtimeApplication.initialize() && runtime.isInitialized() );
+	assert( runtime.getConsole().submit( "help", 4, { submission.origin, 303 } ) == SIR_REGISTRATION_OK );
+	assert( runtimeApplication.tick() );
+	assert( runtime.getLastPumpResult() == SIR_REGISTRATION_OK );
+	assert( runtime.getLastPumpReport().nProcessed == 1 && runtime.getLastPumpReport().nSucceeded == 1 );
+	assert( runtime.getConsole().submit( "help", 4, { submission.origin, 304 } ) == SIR_REGISTRATION_OK );
+	assert( runtimeApplication.shutdown() == SIR_SYSTEM_OK );
+	assert( runtimeApplication.getState() == SIR_APP_STOPPED && !runtime.isInitialized() );
+	assert( runtime.getConsole().submit( "help", 4, { submission.origin, 305 } ) == SIR_REGISTRATION_NOT_INITIALIZED );
+
+	// Failed console initialization must roll the application back to STOPPED.
+	sirConsoleSystemConfig_t invalidRuntime = runtimeConfig;
+	invalidRuntime.storage.nRequestCapacity = 0;
+	SIRConsoleSystem invalidSystem( invalidRuntime );
+	SIRApplication invalidApplication;
+	assert( invalidApplication.registerSystem( &invalidSystem ) );
+	assert( !invalidApplication.initialize() );
+	assert( invalidApplication.getState() == SIR_APP_STOPPED && !invalidSystem.isInitialized() );
+
 	exec.shutdown();
 	adapter.shutdown();
 	cvars.shutdown();
