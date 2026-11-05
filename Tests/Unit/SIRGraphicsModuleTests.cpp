@@ -189,6 +189,170 @@ static bool testBinaryModule( void ) noexcept
 	if ( sirGraphicsCreateABIDevice( &module, &request, &device ) != SIR_GRAPHICS_ABI_SUCCESS || module.nActiveDevices != 1 ) {
 		return false;
 	}
+	// Validate every mandatory native function-table slot independently.
+	sirGraphicsABIDevice_t invalidDevice = device;
+	invalidDevice.nSize = 1;
+	if ( sirGraphicsValidateABIDevice( &invalidDevice ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return false;
+	}
+	invalidDevice = device;
+	invalidDevice.nReserved = 1;
+	if ( sirGraphicsValidateABIDevice( &invalidDevice ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return false;
+	}
+	invalidDevice = device;
+	invalidDevice.pQueryCapabilities = nullptr;
+	if ( sirGraphicsValidateABIDevice( &invalidDevice ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		fputs( "Missing callback pQueryCapabilities was accepted\n", stderr );
+		return false;
+	}
+	invalidDevice = device;
+	invalidDevice.pQueryFormat = nullptr;
+	if ( sirGraphicsValidateABIDevice( &invalidDevice ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		fputs( "Missing callback pQueryFormat was accepted\n", stderr );
+		return false;
+	}
+	invalidDevice = device;
+	invalidDevice.pQueryPipelineModelCaps = nullptr;
+	if ( sirGraphicsValidateABIDevice( &invalidDevice ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		fputs( "Missing callback pQueryPipelineModelCaps was accepted\n", stderr );
+		return false;
+	}
+	invalidDevice = device;
+	invalidDevice.pPoll = nullptr;
+	if ( sirGraphicsValidateABIDevice( &invalidDevice ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		fputs( "Missing callback pPoll was accepted\n", stderr );
+		return false;
+	}
+	invalidDevice = device;
+	invalidDevice.pWait = nullptr;
+	if ( sirGraphicsValidateABIDevice( &invalidDevice ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		fputs( "Missing callback pWait was accepted\n", stderr );
+		return false;
+	}
+	invalidDevice = device;
+	invalidDevice.pQueryMemoryBudget = nullptr;
+	if ( sirGraphicsValidateABIDevice( &invalidDevice ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		fputs( "Missing callback pQueryMemoryBudget was accepted\n", stderr );
+		return false;
+	}
+	invalidDevice = device;
+	invalidDevice.pCreateBuffer = nullptr;
+	if ( sirGraphicsValidateABIDevice( &invalidDevice ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		fputs( "Missing callback pCreateBuffer was accepted\n", stderr );
+		return false;
+	}
+	invalidDevice = device;
+	invalidDevice.pCreateTexture = nullptr;
+	if ( sirGraphicsValidateABIDevice( &invalidDevice ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		fputs( "Missing callback pCreateTexture was accepted\n", stderr );
+		return false;
+	}
+	invalidDevice = device;
+	invalidDevice.pCreateView = nullptr;
+	if ( sirGraphicsValidateABIDevice( &invalidDevice ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		fputs( "Missing callback pCreateView was accepted\n", stderr );
+		return false;
+	}
+	invalidDevice = device;
+	invalidDevice.pCreateSampler = nullptr;
+	if ( sirGraphicsValidateABIDevice( &invalidDevice ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		fputs( "Missing callback pCreateSampler was accepted\n", stderr );
+		return false;
+	}
+	invalidDevice = device;
+	invalidDevice.pCreatePipeline = nullptr;
+	if ( sirGraphicsValidateABIDevice( &invalidDevice ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		fputs( "Missing callback pCreatePipeline was accepted\n", stderr );
+		return false;
+	}
+	invalidDevice = device;
+	invalidDevice.pCreateBindingSet = nullptr;
+	if ( sirGraphicsValidateABIDevice( &invalidDevice ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		fputs( "Missing callback pCreateBindingSet was accepted\n", stderr );
+		return false;
+	}
+	invalidDevice = device;
+	invalidDevice.pUpdateBindings = nullptr;
+	if ( sirGraphicsValidateABIDevice( &invalidDevice ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		fputs( "Missing callback pUpdateBindings was accepted\n", stderr );
+		return false;
+	}
+	invalidDevice = device;
+	invalidDevice.pMapBuffer = nullptr;
+	if ( sirGraphicsValidateABIDevice( &invalidDevice ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		fputs( "Missing callback pMapBuffer was accepted\n", stderr );
+		return false;
+	}
+	invalidDevice = device;
+	invalidDevice.pUnmapBuffer = nullptr;
+	if ( sirGraphicsValidateABIDevice( &invalidDevice ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		fputs( "Missing callback pUnmapBuffer was accepted\n", stderr );
+		return false;
+	}
+	invalidDevice = device;
+	invalidDevice.pFlushBuffer = nullptr;
+	if ( sirGraphicsValidateABIDevice( &invalidDevice ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		fputs( "Missing callback pFlushBuffer was accepted\n", stderr );
+		return false;
+	}
+	invalidDevice = device;
+	invalidDevice.pInvalidateBuffer = nullptr;
+	if ( sirGraphicsValidateABIDevice( &invalidDevice ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		fputs( "Missing callback pInvalidateBuffer was accepted\n", stderr );
+		return false;
+	}
+	invalidDevice = device;
+	invalidDevice.pAcquireCommands = nullptr;
+	if ( sirGraphicsValidateABIDevice( &invalidDevice ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		fputs( "Missing callback pAcquireCommands was accepted\n", stderr );
+		return false;
+	}
+	invalidDevice = device;
+	invalidDevice.pSubmit = nullptr;
+	if ( sirGraphicsValidateABIDevice( &invalidDevice ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		fputs( "Missing callback pSubmit was accepted\n", stderr );
+		return false;
+	}
+	invalidDevice = device;
+	invalidDevice.pRetireResource = nullptr;
+	if ( sirGraphicsValidateABIDevice( &invalidDevice ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		fputs( "Missing callback pRetireResource was accepted\n", stderr );
+		return false;
+	}
+	invalidDevice = device;
+	invalidDevice.pCreateSurface = nullptr;
+	if ( sirGraphicsValidateABIDevice( &invalidDevice ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		fputs( "Missing callback pCreateSurface was accepted\n", stderr );
+		return false;
+	}
+	invalidDevice = device;
+	invalidDevice.pResizeSurface = nullptr;
+	if ( sirGraphicsValidateABIDevice( &invalidDevice ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		fputs( "Missing callback pResizeSurface was accepted\n", stderr );
+		return false;
+	}
+	invalidDevice = device;
+	invalidDevice.pAcquireSurfaceImage = nullptr;
+	if ( sirGraphicsValidateABIDevice( &invalidDevice ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		fputs( "Missing callback pAcquireSurfaceImage was accepted\n", stderr );
+		return false;
+	}
+	invalidDevice = device;
+	invalidDevice.pPresent = nullptr;
+	if ( sirGraphicsValidateABIDevice( &invalidDevice ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		fputs( "Missing callback pPresent was accepted\n", stderr );
+		return false;
+	}
+	invalidDevice = device;
+	invalidDevice.pShutdown = nullptr;
+	if ( sirGraphicsValidateABIDevice( &invalidDevice ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		fputs( "Missing callback pShutdown was accepted\n", stderr );
+		return false;
+	}
+	if ( sirGraphicsValidateABIDevice( &device ) != SIR_GRAPHICS_SUCCESS ) {
+		return false;
+	}
 	if ( sirGraphicsUnloadABIModule( &module ) != SIR_GRAPHICS_BUSY ) {
 		return false;
 	}
@@ -634,6 +798,134 @@ static bool testBinaryModule( void ) noexcept
 		return false;
 	}
 	pMode( 0 );
+	// Every command callback is a required ABI v1 capability-table slot.
+	{
+		sirGraphicsABICommandList_t invalid = commands;
+		invalid.pReset = nullptr;
+		if ( sirGraphicsValidateABICommandList( &invalid ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+			fputs( "Missing command callback pReset was accepted\n", stderr );
+			return false;
+		}
+	}
+	{
+		sirGraphicsABICommandList_t invalid = commands;
+		invalid.pBarrier = nullptr;
+		if ( sirGraphicsValidateABICommandList( &invalid ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+			fputs( "Missing command callback pBarrier was accepted\n", stderr );
+			return false;
+		}
+	}
+	{
+		sirGraphicsABICommandList_t invalid = commands;
+		invalid.pCopyBuffer = nullptr;
+		if ( sirGraphicsValidateABICommandList( &invalid ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+			fputs( "Missing command callback pCopyBuffer was accepted\n", stderr );
+			return false;
+		}
+	}
+	{
+		sirGraphicsABICommandList_t invalid = commands;
+		invalid.pCopyBufferTexture = nullptr;
+		if ( sirGraphicsValidateABICommandList( &invalid ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+			fputs( "Missing command callback pCopyBufferTexture was accepted\n", stderr );
+			return false;
+		}
+	}
+	{
+		sirGraphicsABICommandList_t invalid = commands;
+		invalid.pBeginRenderPass = nullptr;
+		if ( sirGraphicsValidateABICommandList( &invalid ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+			fputs( "Missing command callback pBeginRenderPass was accepted\n", stderr );
+			return false;
+		}
+	}
+	{
+		sirGraphicsABICommandList_t invalid = commands;
+		invalid.pEndRenderPass = nullptr;
+		if ( sirGraphicsValidateABICommandList( &invalid ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+			fputs( "Missing command callback pEndRenderPass was accepted\n", stderr );
+			return false;
+		}
+	}
+	{
+		sirGraphicsABICommandList_t invalid = commands;
+		invalid.pBindPipeline = nullptr;
+		if ( sirGraphicsValidateABICommandList( &invalid ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+			fputs( "Missing command callback pBindPipeline was accepted\n", stderr );
+			return false;
+		}
+	}
+	{
+		sirGraphicsABICommandList_t invalid = commands;
+		invalid.pBindBindingSet = nullptr;
+		if ( sirGraphicsValidateABICommandList( &invalid ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+			fputs( "Missing command callback pBindBindingSet was accepted\n", stderr );
+			return false;
+		}
+	}
+	{
+		sirGraphicsABICommandList_t invalid = commands;
+		invalid.pBindVertexBuffer = nullptr;
+		if ( sirGraphicsValidateABICommandList( &invalid ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+			fputs( "Missing command callback pBindVertexBuffer was accepted\n", stderr );
+			return false;
+		}
+	}
+	{
+		sirGraphicsABICommandList_t invalid = commands;
+		invalid.pBindIndexBuffer = nullptr;
+		if ( sirGraphicsValidateABICommandList( &invalid ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+			fputs( "Missing command callback pBindIndexBuffer was accepted\n", stderr );
+			return false;
+		}
+	}
+	{
+		sirGraphicsABICommandList_t invalid = commands;
+		invalid.pSetViewport = nullptr;
+		if ( sirGraphicsValidateABICommandList( &invalid ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+			fputs( "Missing command callback pSetViewport was accepted\n", stderr );
+			return false;
+		}
+	}
+	{
+		sirGraphicsABICommandList_t invalid = commands;
+		invalid.pDraw = nullptr;
+		if ( sirGraphicsValidateABICommandList( &invalid ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+			fputs( "Missing command callback pDraw was accepted\n", stderr );
+			return false;
+		}
+	}
+	{
+		sirGraphicsABICommandList_t invalid = commands;
+		invalid.pDrawIndexed = nullptr;
+		if ( sirGraphicsValidateABICommandList( &invalid ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+			fputs( "Missing command callback pDrawIndexed was accepted\n", stderr );
+			return false;
+		}
+	}
+	{
+		sirGraphicsABICommandList_t invalid = commands;
+		invalid.pDispatch = nullptr;
+		if ( sirGraphicsValidateABICommandList( &invalid ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+			fputs( "Missing command callback pDispatch was accepted\n", stderr );
+			return false;
+		}
+	}
+	{
+		sirGraphicsABICommandList_t invalid = commands;
+		invalid.pClose = nullptr;
+		if ( sirGraphicsValidateABICommandList( &invalid ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+			fputs( "Missing command callback pClose was accepted\n", stderr );
+			return false;
+		}
+	}
+	{
+		sirGraphicsABICommandList_t invalid = commands;
+		invalid.nQueue = SIR_GRAPHICS_QUEUE_COUNT;
+		if ( sirGraphicsValidateABICommandList( &invalid ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+			return false;
+		}
+	}
 	sirGraphicsABICommandList_t damaged = commands;
 	damaged.pDraw = nullptr;
 	if ( sirGraphicsValidateABICommandList( &damaged ) != SIR_GRAPHICS_ABI_INVALID_ARGUMENT ) {
