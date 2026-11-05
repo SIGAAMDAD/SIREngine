@@ -197,7 +197,7 @@ sirRegistrationResult_t SIRRegistrationCatalog::getEntry( sirRegistrationHandle_
 }
 
 sirRegistrationResult_t SIRRegistrationCatalog::getAtIndex( uint32_t iEntry, const sirRegistrationEntry_t **ppEntry,
-                                                               sirRegistrationHandle_t *pHandle ) const noexcept
+                                                            sirRegistrationHandle_t *pHandle ) const noexcept
 {
 	if ( ppEntry == nullptr || pHandle == nullptr ) {
 		return SIR_REGISTRATION_INVALID_ARGUMENT;
