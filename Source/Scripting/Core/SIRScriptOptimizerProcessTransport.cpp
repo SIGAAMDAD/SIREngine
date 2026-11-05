@@ -314,8 +314,10 @@ bool SIRScriptOptimizerProcessTransport::spawn( void ) noexcept
 	bool bSuccess = scriptTransportSetCloseOnExec( szInput[0] ) && scriptTransportSetCloseOnExec( szInput[1] ) &&
 	                scriptTransportSetCloseOnExec( szOutput[0] ) && scriptTransportSetCloseOnExec( szOutput[1] );
 	posix_spawn_file_actions_t actions;
+	bool bActionsInitialized = false;
 	if ( bSuccess ) {
-		bSuccess = posix_spawn_file_actions_init( &actions ) == 0;
+		bActionsInitialized = posix_spawn_file_actions_init( &actions ) == 0;
+		bSuccess = bActionsInitialized;
 	}
 	if ( bSuccess ) {
 		bSuccess = posix_spawn_file_actions_adddup2( &actions, szInput[0], STDIN_FILENO ) == 0 &&
@@ -336,6 +338,8 @@ bool SIRScriptOptimizerProcessTransport::spawn( void ) noexcept
 		if ( bSuccess ) {
 			m_nChildPid = ( int )nPid;
 		}
+	}
+	if ( bActionsInitialized ) {
 		( void )posix_spawn_file_actions_destroy( &actions );
 	}
 	close( szInput[0] );
