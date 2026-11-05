@@ -1,9 +1,9 @@
 #include <Editor/Host/SIREditorSceneWorkspace.h>
 
 #include <Core/Memory/SIRMemorySegment.h>
+#include <Core/Platform/SIRFileSystem.h>
 
 #include <limits.h>
-#include <stdio.h>
 #include <string.h>
 
 static constexpr size_t SIR_EDITOR_MAX_SOURCE_BYTES = 32ULL * 1024ULL * 1024ULL;
@@ -278,32 +278,24 @@ sirEditorWorkspaceResult_t SIREditorSceneWorkspace::openTextFile( const char *ps
 	if ( pszPath == nullptr || *pszPath == '\0' ) {
 		return SIR_EDITOR_WORKSPACE_INVALID_ARGUMENT;
 	}
-	FILE *pFile = fopen( pszPath, "rb" );
-	if ( pFile == nullptr ) {
+
+	size_t nFileBytes = 0;
+	if ( SIRFileSystem::readFile( pszPath, nullptr, 0, &nFileBytes ) != SIR_FILE_SYSTEM_OK || nFileBytes == 0 ||
+	     nFileBytes > SIR_EDITOR_MAX_SOURCE_BYTES ) {
 		return SIR_EDITOR_WORKSPACE_FILE_IO;
 	}
-	if ( fseek( pFile, 0, SEEK_END ) != 0 ) {
-		fclose( pFile );
-		return SIR_EDITOR_WORKSPACE_FILE_IO;
-	}
-	long nFileBytes = ftell( pFile );
-	if ( nFileBytes <= 0 || ( uint64_t )nFileBytes > SIR_EDITOR_MAX_SOURCE_BYTES || fseek( pFile, 0, SEEK_SET ) != 0 ) {
-		fclose( pFile );
-		return SIR_EDITOR_WORKSPACE_FILE_IO;
-	}
-	char *pDestination = allocateSource( ( size_t )nFileBytes );
-	if ( pDestination == nullptr ) {
-		fclose( pFile );
+	char *pszDestination = allocateSource( nFileBytes );
+	if ( pszDestination == nullptr ) {
 		return SIR_EDITOR_WORKSPACE_OUT_OF_MEMORY;
 	}
-	const size_t nRead = fread( pDestination, 1, ( size_t )nFileBytes, pFile );
-	const bool bRead = nRead == ( size_t )nFileBytes && ferror( pFile ) == 0;
-	fclose( pFile );
-	if ( !bRead ) {
+
+	size_t nReadBytes = 0;
+	const sirFileSystemResult_t eRead = SIRFileSystem::readFile( pszPath, pszDestination, nFileBytes, &nReadBytes );
+	if ( eRead != SIR_FILE_SYSTEM_OK || nReadBytes != nFileBytes ) {
 		rollbackOpen();
 		return SIR_EDITOR_WORKSPACE_FILE_IO;
 	}
-	return finishOpen( ( size_t )nFileBytes );
+	return finishOpen( nReadBytes );
 }
 
 void SIREditorSceneWorkspace::close( void ) noexcept
