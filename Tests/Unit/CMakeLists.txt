@@ -126,6 +126,12 @@ add_test(NAME core.platform.input.frame-negative COMMAND SIRInputFrameNegativeTe
 set_tests_properties(core.platform.input.frame-negative PROPERTIES LABELS "core;input;regression" TIMEOUT 60)
 sir_configure_owned_target(SIRInputFrameNegativeTests)
 
+add_executable(SIRInputServiceBoundaryTests SIRInputServiceBoundaryTests.cpp)
+target_link_libraries(SIRInputServiceBoundaryTests PRIVATE SIR::Core)
+add_test(NAME core.platform.input.service-boundary COMMAND SIRInputServiceBoundaryTests)
+set_tests_properties(core.platform.input.service-boundary PROPERTIES LABELS "core;input;regression" TIMEOUT 60)
+sir_configure_owned_target(SIRInputServiceBoundaryTests)
+
 add_executable(SIRInputContractGapTests SIRInputContractGapTests.cpp)
 target_link_libraries(SIRInputContractGapTests PRIVATE SIR::Core)
 add_test(NAME core.platform.input.contract-regressions COMMAND SIRInputContractGapTests)
