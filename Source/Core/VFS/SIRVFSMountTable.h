@@ -37,7 +37,8 @@ typedef enum sirVFSResult_e : uint8_t
 	SIR_VFS_FORBIDDEN,
 	SIR_VFS_NOT_FOUND,
 	SIR_VFS_NO_CAPACITY,
-	SIR_VFS_STALE_HANDLE
+	SIR_VFS_STALE_HANDLE,
+	SIR_VFS_IO_ERROR
 } sirVFSResult_t;
 
 typedef enum sirVFSBackendKind_e : uint8_t
