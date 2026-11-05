@@ -25,3 +25,10 @@ endif()
 if(SIR_WITH_VULKAN)
     add_subdirectory(Drivers/Vulkan)
 endif()
+
+# Opt-in legacy drivers and OpenGL 4.6 consume the same shared renderer contract.
+add_subdirectory(Drivers/D3D10)
+add_subdirectory(Drivers/D3D11)
+if(SIR_WITH_OPENGL)
+    add_subdirectory(Drivers/OpenGL)
+endif()
