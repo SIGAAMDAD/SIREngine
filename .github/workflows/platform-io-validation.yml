@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - 'test/platform-io-*'
+      - feature/native-input-foundation
   pull_request:
     branches:
       - develop
@@ -58,8 +59,19 @@ jobs:
         if: runner.os == 'Windows'
         uses: ilammy/msvc-dev-cmd@v1
       - uses: ./.github/actions/setup-build-tools
+      - name: Fetch pinned GameInput v1 native SDK header
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $includeDir = Join-Path $env:RUNNER_TEMP 'sir-gameinput-v1'
+          New-Item -ItemType Directory -Path $includeDir -Force | Out-Null
+          $header = Join-Path $includeDir 'GameInput.h'
+          Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/microsoftconnect/GameInput/dce6dabd75b53fcb29db86afe4de5c917921af18/include/v1/GameInput.h' -OutFile $header
+          $blob = (git hash-object -- $header).Trim()
+          if ($blob -notin @('ebd3875a7a7e7892d1723f1a8467fe6ca8325620', '9c83ed575a92be52cdfac22baa98ee2136d7607e')) { throw "GameInput v1 header source mismatch: $blob" }
+          Add-Content -Path $env:GITHUB_ENV -Value "SIR_GAMEINPUT_SDK_INCLUDE=$includeDir"
       - name: Configure native C++17
-        run: cmake --preset dev -DSIR_WITH_GOOGLETEST=ON
+        run: cmake --preset dev -DSIR_WITH_GOOGLETEST=ON -DSIR_REQUIRE_GAMEINPUT_SDK=${{ runner.os == 'Windows' && 'ON' || 'OFF' }}
       - name: Build production platform library and regression tests
         run: cmake --build --preset dev
       - name: Run platform regressions repeatedly

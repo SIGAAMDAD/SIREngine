@@ -47,13 +47,34 @@ if(WIN32)
     if(SIR_WITH_GAMEINPUT)
         find_path(SIR_GAMEINPUT_INCLUDE_DIR NAMES GameInput.h HINTS "$ENV{SIR_GAMEINPUT_SDK_INCLUDE}")
         if(SIR_GAMEINPUT_INCLUDE_DIR)
+            # Some Windows SDKs expose a different, incompatible GameInput.h.
+            # Compile the actual v1 symbols before enabling the native backend.
+            include(CheckCXXSourceCompiles)
+            include(CMakePushCheckState)
+            cmake_push_check_state(RESET)
+            set(CMAKE_REQUIRED_INCLUDES "${SIR_GAMEINPUT_INCLUDE_DIR}")
+            unset(SIR_GAMEINPUT_SDK_IS_V1 CACHE)
+            check_cxx_source_compiles([=[
+                #include <Windows.h>
+                #include <GameInput.h>
+                #if !defined(GAMEINPUT_API_VERSION) || GAMEINPUT_API_VERSION != 1
+                    #error SIREngine requires the GameInput v1 SDK
+                #endif
+                static_assert(GameInput::v1::GameInputGamepadA == 0x00000004);
+                int main() { return 0; }
+            ]=] SIR_GAMEINPUT_SDK_IS_V1)
+            cmake_pop_check_state()
+        endif()
+        if(SIR_GAMEINPUT_INCLUDE_DIR AND SIR_GAMEINPUT_SDK_IS_V1)
             list(APPEND SIR_CORE_PLATFORM_OS
                 Input/Windows/SIRWindowsGameInputBackend.cpp
                 Input/Windows/SIRWindowsGameInputCodec.cpp)
             target_include_directories(SIRCore PRIVATE "${SIR_GAMEINPUT_INCLUDE_DIR}")
             target_compile_definitions(SIRCore PUBLIC SIR_INPUT_GAMEINPUT_AVAILABLE=1)
         elseif(SIR_REQUIRE_GAMEINPUT_SDK)
-            message(FATAL_ERROR "Native GameInput SDK v1 header required but GameInput.h was not found")
+            message(FATAL_ERROR "GameInput v1 SDK required but the selected GameInput.h is missing or incompatible")
+        elseif(SIR_GAMEINPUT_INCLUDE_DIR)
+            message(STATUS "GameInput.h is not the v1 SDK; native GameInput disabled (XInput fallback remains available)")
         endif()
     elseif(SIR_REQUIRE_GAMEINPUT_SDK)
         message(FATAL_ERROR "SIR_REQUIRE_GAMEINPUT_SDK requires SIR_WITH_GAMEINPUT=ON")
