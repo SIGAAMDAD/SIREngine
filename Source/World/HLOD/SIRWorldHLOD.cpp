@@ -57,6 +57,9 @@ static sirWorldHLODResult_t sirWorldHLODPlanInternal( const sirWorldHLODInput_t&
 			return SIR_WORLD_HLOD_INVALID_HIERARCHY;
 		}
 		if ( node.nChildCount == 0 ) {
+			if ( node.nFirstChild != 0 ) {
+				return SIR_WORLD_HLOD_INVALID_HIERARCHY;
+			}
 			continue;
 		}
 		if ( node.nFirstChild <= iNode || node.nFirstChild >= input.nNodeCount || node.nChildCount > input.nNodeCount - node.nFirstChild ) {
