@@ -131,6 +131,10 @@ static bool testImportsAndInvalidRanges( void ) noexcept
 	if ( graph.addResource( imported, &nResource ) != SIR_GRAPHICS_SUCCESS || graph.addPass( pass, &nPass ) != SIR_GRAPHICS_SUCCESS ) {
 		return false;
 	}
+	uint32_t nDuplicate = 0;
+	if ( graph.addResource( imported, &nDuplicate ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return false;
+	}
 	const sirFrameGraphAccess_t read = makeAccess( nPass, nResource, SIR_GRAPHICS_STATE_SHADER_READ, false );
 	if ( graph.addAccess( read ) != SIR_GRAPHICS_SUCCESS || graph.addAccess( read ) != SIR_GRAPHICS_SUCCESS ) {
 		return false;
@@ -189,16 +193,266 @@ static bool testUnsupportedQueuesAndPartialRanges( void ) noexcept
 	narrow = makeAccess( 1, nResource, SIR_GRAPHICS_STATE_SHADER_READ, false );
 	narrow.nMipCount = 2;
 	graph.addAccess( narrow );
-	return graph.compile( caps, &compiled ) == SIR_GRAPHICS_UNSUPPORTED;
+	return graph.compile( caps, &compiled ) == SIR_GRAPHICS_INVALID_ARGUMENT;
 }
+
+static bool testDisjointWriteUnion( void ) noexcept
+{
+	SIRFrameGraph graph;
+	uint32_t nResource = 0;
+	uint32_t nPass = 0;
+	const sirFrameGraphPass_t pass = { SIR_GRAPHICS_QUEUE_DIRECT, 0, false };
+	if ( graph.addResource( makeTransient( 2 ), &nResource ) != SIR_GRAPHICS_SUCCESS ) {
+		return false;
+	}
+	for ( uint32_t iPass = 0; iPass != 3; ++iPass ) {
+		if ( graph.addPass( pass, &nPass ) != SIR_GRAPHICS_SUCCESS ) {
+			return false;
+		}
+	}
+	sirFrameGraphAccess_t writeFirst = makeAccess( 0, nResource, SIR_GRAPHICS_STATE_COLOR_ATTACHMENT, true );
+	sirFrameGraphAccess_t writeSecond = makeAccess( 1, nResource, SIR_GRAPHICS_STATE_COLOR_ATTACHMENT, true );
+	writeSecond.nBaseMip = 1;
+	sirFrameGraphAccess_t readBoth = makeAccess( 2, nResource, SIR_GRAPHICS_STATE_SHADER_READ, false );
+	readBoth.nMipCount = 2;
+	if ( graph.addAccess( writeFirst ) != SIR_GRAPHICS_SUCCESS || graph.addAccess( writeSecond ) != SIR_GRAPHICS_SUCCESS ||
+	     graph.addAccess( readBoth ) != SIR_GRAPHICS_SUCCESS ) {
+		return false;
+	}
+	sirFrameGraphCompiled_t compiled = {};
+	if ( graph.compile( makeCaps(), &compiled ) != SIR_GRAPHICS_SUCCESS || compiled.nDependencyCount != 2 ||
+	     compiled.nTransitionCount != 4 || compiled.szFirstUse[nResource] != 0 || compiled.szLastUse[nResource] != 2 ) {
+		return false;
+	}
+	return compiled.szTransitions[2].nBeforePass == 0 && compiled.szTransitions[3].nBeforePass == 1 &&
+	       compiled.szTransitions[2].nBaseMip == 0 && compiled.szTransitions[3].nBaseMip == 1;
+}
+
+static bool testImportedMixedState( void ) noexcept
+{
+	SIRFrameGraph graph;
+	uint32_t nResource = 0;
+	uint32_t nPass = 0;
+	sirFrameGraphResource_t imported = makeTransient( 2 );
+	imported.bImported = true;
+	imported.eInitialState = SIR_GRAPHICS_STATE_SHADER_READ;
+	imported.hImported.eType = SIR_GRAPHICS_HANDLE_TEXTURE;
+	imported.hImported.nGeneration = 4;
+	imported.hImported.nDeviceGeneration = 2;
+	const sirFrameGraphPass_t compute = { SIR_GRAPHICS_QUEUE_COMPUTE, 0, false };
+	const sirFrameGraphPass_t direct = { SIR_GRAPHICS_QUEUE_DIRECT, 0, false };
+	if ( graph.addResource( imported, &nResource ) != SIR_GRAPHICS_SUCCESS || graph.addPass( compute, &nPass ) != SIR_GRAPHICS_SUCCESS ||
+	     graph.addPass( direct, &nPass ) != SIR_GRAPHICS_SUCCESS ) {
+		return false;
+	}
+	sirFrameGraphAccess_t writeMip = makeAccess( 0, nResource, SIR_GRAPHICS_STATE_SHADER_WRITE, true );
+	sirFrameGraphAccess_t readBoth = makeAccess( 1, nResource, SIR_GRAPHICS_STATE_SHADER_READ, false );
+	readBoth.nMipCount = 2;
+	if ( graph.addAccess( writeMip ) != SIR_GRAPHICS_SUCCESS || graph.addAccess( readBoth ) != SIR_GRAPHICS_SUCCESS ) {
+		return false;
+	}
+	sirFrameGraphCompiled_t compiled = {};
+	if ( graph.compile( makeCaps(), &compiled ) != SIR_GRAPHICS_SUCCESS || compiled.nTransitionCount != 2 ||
+	     compiled.nDependencyCount != 1 ) {
+		return false;
+	}
+	return compiled.szTransitions[1].nBaseMip == 0 && compiled.szTransitions[1].nMipCount == 1 &&
+	       compiled.szTransitions[1].eFromQueue == SIR_GRAPHICS_QUEUE_COMPUTE &&
+	       compiled.szTransitions[1].eToQueue == SIR_GRAPHICS_QUEUE_DIRECT;
+}
+
+static bool testWARAndWAW( void ) noexcept
+{
+	SIRFrameGraph graph;
+	uint32_t nResource = 0;
+	uint32_t nPass = 0;
+	sirFrameGraphResource_t imported = makeTransient();
+	imported.eType = SIR_GRAPHICS_HANDLE_BUFFER;
+	imported.bImported = true;
+	imported.eInitialState = SIR_GRAPHICS_STATE_SHADER_READ;
+	imported.hImported.eType = SIR_GRAPHICS_HANDLE_BUFFER;
+	imported.hImported.nGeneration = 2;
+	imported.hImported.nDeviceGeneration = 2;
+	const sirFrameGraphPass_t direct = { SIR_GRAPHICS_QUEUE_DIRECT, 0, false };
+	const sirFrameGraphPass_t compute = { SIR_GRAPHICS_QUEUE_COMPUTE, 0, false };
+	if ( graph.addResource( imported, &nResource ) != SIR_GRAPHICS_SUCCESS || graph.addPass( direct, &nPass ) != SIR_GRAPHICS_SUCCESS ||
+	     graph.addPass( compute, &nPass ) != SIR_GRAPHICS_SUCCESS || graph.addPass( direct, &nPass ) != SIR_GRAPHICS_SUCCESS ) {
+		return false;
+	}
+	if ( graph.addAccess( makeAccess( 0, nResource, SIR_GRAPHICS_STATE_SHADER_READ, false ) ) != SIR_GRAPHICS_SUCCESS ||
+	     graph.addAccess( makeAccess( 1, nResource, SIR_GRAPHICS_STATE_SHADER_WRITE, true ) ) != SIR_GRAPHICS_SUCCESS ||
+	     graph.addAccess( makeAccess( 2, nResource, SIR_GRAPHICS_STATE_COPY_DESTINATION, true ) ) != SIR_GRAPHICS_SUCCESS ) {
+		return false;
+	}
+	sirFrameGraphCompiled_t compiled = {};
+	return graph.compile( makeCaps(), &compiled ) == SIR_GRAPHICS_SUCCESS && compiled.nDependencyCount == 3 &&
+	       compiled.nTransitionCount == 2 && compiled.szTransitions[0].bWriteHazard && compiled.szTransitions[1].bWriteHazard;
+}
+
+static bool testQueueLegalityAndSparseRanges( void ) noexcept
+{
+	SIRFrameGraph graph;
+	uint32_t nResource = 0;
+	uint32_t nPass = 0;
+	sirFrameGraphResource_t sparse = makeTransient( UINT32_MAX );
+	sparse.nArrayLayers = UINT32_MAX;
+	if ( graph.addResource( sparse, &nResource ) != SIR_GRAPHICS_SUCCESS ) {
+		return false;
+	}
+	const sirFrameGraphPass_t compute = { SIR_GRAPHICS_QUEUE_COMPUTE, 0, false };
+	const sirFrameGraphPass_t copy = { SIR_GRAPHICS_QUEUE_COPY, 0, false };
+	if ( graph.addPass( compute, &nPass ) != SIR_GRAPHICS_SUCCESS || graph.addPass( copy, &nPass ) != SIR_GRAPHICS_SUCCESS ) {
+		return false;
+	}
+	sirFrameGraphAccess_t invalidCompute = makeAccess( 0, nResource, SIR_GRAPHICS_STATE_COLOR_ATTACHMENT, true );
+	sirFrameGraphAccess_t invalidCopy = makeAccess( 1, nResource, SIR_GRAPHICS_STATE_SHADER_READ, false );
+	if ( graph.addAccess( invalidCompute ) != SIR_GRAPHICS_INVALID_ARGUMENT ||
+	     graph.addAccess( invalidCopy ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return false;
+	}
+	sirFrameGraphAccess_t far = makeAccess( 0, nResource, SIR_GRAPHICS_STATE_SHADER_WRITE, true );
+	far.nBaseMip = UINT32_MAX - 1;
+	far.nBaseLayer = UINT32_MAX - 1;
+	if ( graph.addAccess( far ) != SIR_GRAPHICS_SUCCESS ) {
+		return false;
+	}
+	sirFrameGraphCompiled_t compiled = {};
+	return graph.compile( makeCaps(), &compiled ) == SIR_GRAPHICS_UNSUPPORTED;
+}
+
+static bool testSamePassDisjointAndAtomicFailure( void ) noexcept
+{
+	SIRFrameGraph graph;
+	uint32_t nResource = 0;
+	uint32_t nPass = 0;
+	const sirFrameGraphPass_t direct = { SIR_GRAPHICS_QUEUE_DIRECT, 0, false };
+	if ( graph.addResource( makeTransient( 2 ), &nResource ) != SIR_GRAPHICS_SUCCESS ||
+	     graph.addPass( direct, &nPass ) != SIR_GRAPHICS_SUCCESS || graph.addPass( direct, &nPass ) != SIR_GRAPHICS_SUCCESS ) {
+		return false;
+	}
+	sirFrameGraphAccess_t first = makeAccess( 0, nResource, SIR_GRAPHICS_STATE_COLOR_ATTACHMENT, true );
+	sirFrameGraphAccess_t second = first;
+	second.nBaseMip = 1;
+	sirFrameGraphAccess_t readBoth = makeAccess( 1, nResource, SIR_GRAPHICS_STATE_SHADER_READ, false );
+	readBoth.nMipCount = 2;
+	if ( graph.addAccess( first ) != SIR_GRAPHICS_SUCCESS || graph.addAccess( second ) != SIR_GRAPHICS_SUCCESS ||
+	     graph.addAccess( readBoth ) != SIR_GRAPHICS_SUCCESS ) {
+		return false;
+	}
+	sirFrameGraphCompiled_t compiled = {};
+	if ( graph.compile( makeCaps(), &compiled ) != SIR_GRAPHICS_SUCCESS || compiled.nDependencyCount != 1 ) {
+		return false;
+	}
+	graph.reset();
+	graph.addResource( makeTransient( 2 ), &nResource );
+	graph.addPass( direct, &nPass );
+	graph.addPass( direct, &nPass );
+	graph.addAccess( first );
+	graph.addAccess( readBoth );
+	return graph.compile( makeCaps(), &compiled ) == SIR_GRAPHICS_INVALID_ARGUMENT && compiled.nPassCount == 0 &&
+	       compiled.nDependencyCount == 0 && compiled.nTransitionCount == 0;
+}
+
+static bool testLayerWriteUnion( void ) noexcept
+{
+	SIRFrameGraph graph;
+	uint32_t nResource = 0;
+	uint32_t nPass = 0;
+	sirFrameGraphResource_t layered = makeTransient();
+	layered.nArrayLayers = 2;
+	const sirFrameGraphPass_t pass = { SIR_GRAPHICS_QUEUE_DIRECT, 0, false };
+	if ( graph.addResource( layered, &nResource ) != SIR_GRAPHICS_SUCCESS ) {
+		return false;
+	}
+	for ( uint32_t iPass = 0; iPass != 3; ++iPass ) {
+		if ( graph.addPass( pass, &nPass ) != SIR_GRAPHICS_SUCCESS ) {
+			return false;
+		}
+	}
+	sirFrameGraphAccess_t first = makeAccess( 0, nResource, SIR_GRAPHICS_STATE_COLOR_ATTACHMENT, true );
+	sirFrameGraphAccess_t second = makeAccess( 1, nResource, SIR_GRAPHICS_STATE_COLOR_ATTACHMENT, true );
+	second.nBaseLayer = 1;
+	sirFrameGraphAccess_t read = makeAccess( 2, nResource, SIR_GRAPHICS_STATE_SHADER_READ, false );
+	read.nLayerCount = 2;
+	if ( graph.addAccess( first ) != SIR_GRAPHICS_SUCCESS || graph.addAccess( second ) != SIR_GRAPHICS_SUCCESS ||
+	     graph.addAccess( read ) != SIR_GRAPHICS_SUCCESS ) {
+		return false;
+	}
+	sirFrameGraphCompiled_t compiled = {};
+	return graph.compile( makeCaps(), &compiled ) == SIR_GRAPHICS_SUCCESS && compiled.nDependencyCount == 2 &&
+	       compiled.nTransitionCount == 4 && compiled.szTransitions[2].nBaseLayer == 0 && compiled.szTransitions[3].nBaseLayer == 1;
+}
+
+static bool testBoundedRegionWork( void ) noexcept
+{
+	SIRFrameGraph graph;
+	uint32_t nResource = 0;
+	uint32_t nPass = 0;
+	sirFrameGraphResource_t imported = makeTransient( 32 );
+	imported.nArrayLayers = 32;
+	imported.bImported = true;
+	imported.eInitialState = SIR_GRAPHICS_STATE_SHADER_READ;
+	imported.hImported.eType = SIR_GRAPHICS_HANDLE_TEXTURE;
+	imported.hImported.nGeneration = 1;
+	imported.hImported.nDeviceGeneration = 2;
+	const sirFrameGraphPass_t pass = { SIR_GRAPHICS_QUEUE_DIRECT, 0, false };
+	if ( graph.addResource( imported, &nResource ) != SIR_GRAPHICS_SUCCESS || graph.addPass( pass, &nPass ) != SIR_GRAPHICS_SUCCESS ||
+	     graph.addPass( pass, &nPass ) != SIR_GRAPHICS_SUCCESS ) {
+		return false;
+	}
+	for ( uint32_t iIndex = 0; iIndex < 32; ++iIndex ) {
+		sirFrameGraphAccess_t readMip = makeAccess( 0, nResource, SIR_GRAPHICS_STATE_SHADER_READ, false );
+		readMip.nBaseMip = iIndex;
+		readMip.nLayerCount = 32;
+		if ( graph.addAccess( readMip ) != SIR_GRAPHICS_SUCCESS ) {
+			return false;
+		}
+	}
+	for ( uint32_t iIndex = 0; iIndex < 32; ++iIndex ) {
+		sirFrameGraphAccess_t readLayer = makeAccess( 0, nResource, SIR_GRAPHICS_STATE_SHADER_READ, false );
+		readLayer.nBaseLayer = iIndex;
+		readLayer.nMipCount = 32;
+		if ( graph.addAccess( readLayer ) != SIR_GRAPHICS_SUCCESS ) {
+			return false;
+		}
+	}
+	for ( uint32_t iIndex = 0; iIndex < 9; ++iIndex ) {
+		sirFrameGraphAccess_t readWide = makeAccess( 1, nResource, SIR_GRAPHICS_STATE_SHADER_READ, false );
+		readWide.nMipCount = 32;
+		readWide.nLayerCount = 32;
+		if ( graph.addAccess( readWide ) != SIR_GRAPHICS_SUCCESS ) {
+			return false;
+		}
+	}
+	sirFrameGraphCompiled_t compiled = {};
+	return graph.compile( makeCaps(), &compiled ) == SIR_GRAPHICS_CAPACITY_EXCEEDED && compiled.nTransitionCount == 0 &&
+	       compiled.nPassCount == 0;
+}
+
+typedef struct sirFrameGraphTestCase_s
+{
+	const char *pszName;
+	bool ( *pTest )( void ) noexcept;
+} sirFrameGraphTestCase_t;
 
 int main( void )
 {
-	const bool bPass = testHazardsAndQueueOwnership() && testTransientAndCycleRejection() && testImportsAndInvalidRanges() &&
-	                   testUnsupportedQueuesAndPartialRanges();
-	if ( !bPass ) {
-		fprintf( stderr, "FrameGraph graph compiler regression failed\n" );
-		return 1;
+	const sirFrameGraphTestCase_t szCases[] = { { "hazards/queue ownership", testHazardsAndQueueOwnership },
+	                                            { "transient/cycle", testTransientAndCycleRejection },
+	                                            { "imports/ranges", testImportsAndInvalidRanges },
+	                                            { "unsupported/partial", testUnsupportedQueuesAndPartialRanges },
+	                                            { "split-write union", testDisjointWriteUnion },
+	                                            { "mixed imported state", testImportedMixedState },
+	                                            { "WAR/WAW", testWARAndWAW },
+	                                            { "queue legality/sparse", testQueueLegalityAndSparseRanges },
+	                                            { "same-pass/rollback", testSamePassDisjointAndAtomicFailure },
+	                                            { "layer-write union", testLayerWriteUnion },
+	                                            { "bounded region work", testBoundedRegionWork } };
+	for ( uint32_t iCase = 0; iCase < sizeof( szCases ) / sizeof( szCases[0] ); ++iCase ) {
+		if ( !szCases[iCase].pTest() ) {
+			fprintf( stderr, "FrameGraph regression failed: %s\n", szCases[iCase].pszName );
+			return 1;
+		}
 	}
 	fprintf( stdout, "FrameGraph graph compiler regression passed\n" );
 	return 0;
