@@ -52,12 +52,12 @@ class SIREventRegistry
 public:
 	static constexpr uint32_t MAX_EVENTS = 64;
 	SIREventRegistry( void ) noexcept;
-	SIREventRegistry( const SIREventRegistry & ) = delete;
-	SIREventRegistry &operator=( const SIREventRegistry & ) = delete;
-	bool registerEvent( uint32_t nTypeId, const char *pszName, uint32_t nBytes, uint32_t nAlignment, sirEventHandle_t &handle ) noexcept;
+	SIREventRegistry( const SIREventRegistry& ) = delete;
+	SIREventRegistry& operator=( const SIREventRegistry& ) = delete;
+	bool registerEvent( uint32_t nTypeId, const char *pszName, uint32_t nBytes, uint32_t nAlignment, sirEventHandle_t& handle ) noexcept;
 	bool unregisterEvent( sirEventHandle_t handle ) noexcept;
-	bool findByType( uint32_t nTypeId, sirEventHandle_t &handle ) const noexcept;
-	bool getDescriptor( sirEventHandle_t handle, sirRegisteredEvent_t &descriptor ) const noexcept;
+	bool findByType( uint32_t nTypeId, sirEventHandle_t& handle ) const noexcept;
+	bool getDescriptor( sirEventHandle_t handle, sirRegisteredEvent_t& descriptor ) const noexcept;
 	void clear( void ) noexcept;
 	uint32_t count( void ) const noexcept;
 

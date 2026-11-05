@@ -1,5 +1,7 @@
 /*
+
 ===========================================================================
+
 SIREngine MPLv2 Source Code
 Copyright (C) 2023-2027 Noah Van Til
 
@@ -13,6 +15,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
+#include <Renderer/SIRGraphicsABIOperations.h>
 #include <Renderer/Drivers/D3D12/SIRD3D12Driver.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -54,8 +57,8 @@ static bool sirLoadPipelineDxil( const char *pszPath, void **ppData, size_t *pSi
 	return true;
 }
 
-static int sirTestGeneralPipelines( SIRRenderingDevice *pDevice, uint32_t nGeneration, const sirGraphicsShaderCode_t &computeShader,
-                                    const sirGraphicsShaderCode_t &vertexShader, const sirGraphicsShaderCode_t &pixelShader ) noexcept
+static int sirTestGeneralPipelines( SIRRenderingDevice *pDevice, uint32_t nGeneration, const sirGraphicsShaderCode_t& computeShader,
+                                    const sirGraphicsShaderCode_t& vertexShader, const sirGraphicsShaderCode_t& pixelShader ) noexcept
 {
 	sirGraphicsCompletionSet_t completed = {};
 	completed.nDeviceGeneration = nGeneration;
@@ -73,7 +76,14 @@ static int sirTestGeneralPipelines( SIRRenderingDevice *pDevice, uint32_t nGener
 	szBindings[1].eType = SIR_GRAPHICS_BINDING_CONSTANT_BUFFER;
 
 	sirGraphicsPipelineDesc_t compute = {};
+	sirGraphicsABIModernRecipe_t computeRecipe = {};
+	computeRecipe.nSize = sizeof( computeRecipe );
+	computeRecipe.nStageMask = SIR_GRAPHICS_STAGE_COMPUTE;
+	computeRecipe.nRequiredFeatures = SIR_GRAPHICS_FEATURE_COMPUTE;
+	compute.eModel = SIR_GRAPHICS_PIPELINE_MODEL_MODERN;
+	compute.pModern = &computeRecipe;
 	compute.eType = SIR_GRAPHICS_PIPELINE_COMPUTE;
+	compute.nSampleCount = 1;
 	compute.computeShader = computeShader;
 	compute.pBindings = szBindings;
 	compute.nBindingCount = 2;
@@ -115,6 +125,12 @@ static int sirTestGeneralPipelines( SIRRenderingDevice *pDevice, uint32_t nGener
 	szAttributes[1].nStrideBytes = 32;
 	szAttributes[1].eFormat = SIR_GRAPHICS_FORMAT_RGBA32_FLOAT;
 	sirGraphicsPipelineDesc_t graphics = {};
+	sirGraphicsABIModernRecipe_t graphicsRecipe = {};
+	graphicsRecipe.nSize = sizeof( graphicsRecipe );
+	graphicsRecipe.nStageMask = SIR_GRAPHICS_STAGE_VERTEX | SIR_GRAPHICS_STAGE_FRAGMENT;
+	graphicsRecipe.nRequiredFeatures = SIR_GRAPHICS_FEATURE_GRAPHICS;
+	graphics.eModel = SIR_GRAPHICS_PIPELINE_MODEL_MODERN;
+	graphics.pModern = &graphicsRecipe;
 	graphics.eType = SIR_GRAPHICS_PIPELINE_GRAPHICS;
 	graphics.vertexShader = vertexShader;
 	graphics.pixelShader = pixelShader;

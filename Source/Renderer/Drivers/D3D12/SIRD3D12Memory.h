@@ -106,17 +106,17 @@ private:
 public:
 	SIRD3D12Memory( void ) noexcept;
 	~SIRD3D12Memory( void ) noexcept;
-	SIRD3D12Memory( const SIRD3D12Memory & ) = delete;
-	SIRD3D12Memory &operator=( const SIRD3D12Memory & ) = delete;
+	SIRD3D12Memory( const SIRD3D12Memory& ) = delete;
+	SIRD3D12Memory& operator=( const SIRD3D12Memory& ) = delete;
 
 	bool initialize( IDXGIAdapter *pAdapter, ID3D12Device *pDevice, SIRGeneralHeap *pCpuHeap = nullptr ) noexcept;
 	bool configureResidentBudget( uint64_t nBytes ) noexcept;
-	bool configureSealedPools( const sirD3D12SealedPoolConfig_t &config ) noexcept;
+	bool configureSealedPools( const sirD3D12SealedPoolConfig_t& config ) noexcept;
 	bool queryAllocationLedger( sirD3D12AllocationLedger_t *pLedger ) const noexcept;
 	bool reserveExternalBytes( uint64_t nBytes ) noexcept;
 	void releaseExternalBytes( uint64_t nBytes ) noexcept;
 	void shutdown( void ) noexcept;
-	bool initializeTransferArena( const sirD3D12TransferPoolConfig_t &config, uint32_t nSlots ) noexcept;
+	bool initializeTransferArena( const sirD3D12TransferPoolConfig_t& config, uint32_t nSlots ) noexcept;
 	void releaseTransferArena( bool bGpuComplete ) noexcept;
 	bool queryTransferArena( sirD3D12ResidentTransferView_t *pView ) const noexcept;
 	// Called only when a GPU completion cannot be proved: intentionally retains
@@ -128,7 +128,7 @@ public:
 	HRESULT createTexture2D( uint32_t nWidth, uint32_t nHeight, DXGI_FORMAT eFormat, D3D12_RESOURCE_FLAGS eFlags,
 	                         D3D12_RESOURCE_STATES eInitialState, const D3D12_CLEAR_VALUE *pClearValue,
 	                         D3D12MA::Allocation **ppAllocation ) noexcept;
-	HRESULT createTexture( const D3D12_RESOURCE_DESC &resource, D3D12_RESOURCE_STATES eInitialState, const D3D12_CLEAR_VALUE *pClearValue,
+	HRESULT createTexture( const D3D12_RESOURCE_DESC& resource, D3D12_RESOURCE_STATES eInitialState, const D3D12_CLEAR_VALUE *pClearValue,
 	                       D3D12MA::Allocation **ppAllocation ) noexcept;
 	HRESULT getLastError( void ) const noexcept;
 };

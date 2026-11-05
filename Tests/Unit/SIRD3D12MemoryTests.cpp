@@ -51,6 +51,7 @@ int main( void )
 	if ( driver.createDevice( config, &pDevice ) != SIR_GRAPHICS_CAPACITY_EXCEEDED || pDevice != nullptr ) {
 		return 4;
 	}
+
 	config.nResidentBudgetBytes = 0;
 	SIRGeneralHeap uninitialized;
 	sirD3D12NativeDeviceConfig_t nativeConfig = {};
@@ -148,9 +149,9 @@ int main( void )
 	    SUCCEEDED( sealed.createBuffer( D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ, 4096, &szAllocations[1] ) ) &&
 	    SUCCEEDED( sealed.createBuffer( D3D12_HEAP_TYPE_READBACK, D3D12_RESOURCE_STATE_COPY_DEST, 4096, &szAllocations[2] ) ) &&
 	    SUCCEEDED( sealed.createTexture2D( 32, 32, DXGI_FORMAT_R8G8B8A8_UNORM, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON,
-	                                       nullptr, &szAllocations[3] ) ) &&
+		                                   nullptr, &szAllocations[3] ) ) &&
 	    SUCCEEDED( sealed.createTexture2D( 32, 32, DXGI_FORMAT_R8G8B8A8_UNORM, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET,
-	                                       D3D12_RESOURCE_STATE_COMMON, nullptr, &szAllocations[4] ) );
+		                                   D3D12_RESOURCE_STATE_COMMON, nullptr, &szAllocations[4] ) );
 	bool bPlaced = bCreated;
 	for ( uint32_t iResource = 0; iResource < 5; ++iResource ) {
 		bPlaced = bPlaced && szAllocations[iResource] != nullptr && szAllocations[iResource]->GetHeap() != nullptr;

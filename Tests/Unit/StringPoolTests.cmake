@@ -1,0 +1,7 @@
+if(SIR_WITH_GOOGLETEST)
+    add_executable(SIRStringPoolGoogleTests SIRStringPoolGoogleTests.cpp)
+    target_compile_features(SIRStringPoolGoogleTests PRIVATE cxx_std_17)
+    target_link_libraries(SIRStringPoolGoogleTests PRIVATE SIR::Core gtest_main)
+    add_test(NAME core.strings.pool.googletest COMMAND SIRStringPoolGoogleTests)
+    sir_configure_owned_target(SIRStringPoolGoogleTests)
+endif()

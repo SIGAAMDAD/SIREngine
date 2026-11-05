@@ -15,6 +15,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Renderer/Drivers/D3D12/SIRD3D12Driver.h>
+#include <Renderer/SIRGraphicsABIOperations.h>
 #include <Renderer/SIRGraphicsValidation.h>
 #include <limits.h>
 
@@ -182,6 +183,7 @@ sirGraphicsResult_t SIRD3D12RenderingDevice::queryCapabilities( sirGraphicsCapab
 	pCapabilities->eBackend = getBackend();
 	pCapabilities->nApiVersion = { 12, 0, 0 };
 	pCapabilities->nFeatureMask = SIR_D3D12_SHARED_FEATURES;
+	pCapabilities->nPipelineModelMask = 1U << ( SIR_GRAPHICS_PIPELINE_MODEL_MODERN - 1 );
 	pCapabilities->nQueueMask = ( 1U << SIR_GRAPHICS_QUEUE_COUNT ) - 1U;
 	pCapabilities->nMaximumFramesInFlight = 3;
 	pCapabilities->nMaximumBindingSlots = 128;
@@ -194,6 +196,45 @@ sirGraphicsResult_t SIRD3D12RenderingDevice::queryCapabilities( sirGraphicsCapab
 	if ( m_Native.queryUnifiedMemory( &bUnified ) ) {
 		pCapabilities->bUnifiedMemory = bUnified;
 	}
+	return SIR_GRAPHICS_SUCCESS;
+}
+
+sirGraphicsResult_t SIRD3D12RenderingDevice::queryPipelineModelCaps( sirGraphicsPipelineModel_t eModel,
+                                                                     sirGraphicsABIPipelineModelCaps_t *pCaps ) const noexcept
+{
+	if ( pCaps == nullptr ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	if ( eModel != SIR_GRAPHICS_PIPELINE_MODEL_MODERN ) {
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
+
+	sirGraphicsCapabilities_t available = {};
+	const sirGraphicsResult_t eResult = queryCapabilities( &available );
+	if ( eResult != SIR_GRAPHICS_SUCCESS ) {
+		return eResult;
+	}
+
+	sirGraphicsABIPipelineModelCaps_t caps = {};
+	caps.nSize = sizeof( caps );
+	caps.nDeviceGeneration = available.nDeviceGeneration;
+	caps.nModel = SIR_GRAPHICS_PIPELINE_MODEL_MODERN;
+	caps.nExecutionModel = SIR_GRAPHICS_EXECUTION_EXPLICIT;
+	caps.nShaderStageMask = SIR_GRAPHICS_STAGE_VERTEX | SIR_GRAPHICS_STAGE_FRAGMENT | SIR_GRAPHICS_STAGE_COMPUTE;
+	caps.nQueueMask = available.nQueueMask;
+	caps.nRequiredFeatureMask = SIR_GRAPHICS_FEATURE_GRAPHICS | SIR_GRAPHICS_FEATURE_COMPUTE;
+	caps.nShaderFormatMask = 1U << ( SIR_GRAPHICS_SHADER_DXIL - 1 );
+	caps.nMaximumTextureUnits = available.nMaximumBindingSlots;
+	caps.nMaximumVertexStreams = 32;
+	caps.nMaximumVertexAttributes = 32;
+	caps.nMaximumVaryings = 16;
+	caps.nMaximumConstantSlots = 14;
+	caps.nMaximumBindings = available.nMaximumBindingSlots;
+	caps.nMaximumColorAttachments = available.nMaximumColorAttachments;
+	caps.nMaximumSamples = available.nMaximumSampleCount;
+	caps.nMaximumTextureDimension = available.nMaximumTextureDimension;
+	caps.nSupportsNPOT = 1;
+	*pCaps = caps;
 	return SIR_GRAPHICS_SUCCESS;
 }
 
@@ -231,23 +272,23 @@ sirGraphicsResult_t SIRD3D12RenderingDevice::queryMemoryBudget( sirGraphicsMemor
 
 // General GPU resources and descriptor ownership are provided by the native
 // resource table; pipeline/command/presentation stages remain separate.
-sirGraphicsResult_t SIRD3D12RenderingDevice::createBuffer( const sirGraphicsBufferDesc_t &desc, sirGraphicsHandle_t *pHandle ) noexcept
+sirGraphicsResult_t SIRD3D12RenderingDevice::createBuffer( const sirGraphicsBufferDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept
 {
 	return m_Resources.createBuffer( desc, pHandle );
 }
-sirGraphicsResult_t SIRD3D12RenderingDevice::createTexture( const sirGraphicsTextureDesc_t &desc, sirGraphicsHandle_t *pHandle ) noexcept
+sirGraphicsResult_t SIRD3D12RenderingDevice::createTexture( const sirGraphicsTextureDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept
 {
 	return m_Resources.createTexture( desc, pHandle );
 }
-sirGraphicsResult_t SIRD3D12RenderingDevice::createView( const sirGraphicsViewDesc_t &desc, sirGraphicsHandle_t *pHandle ) noexcept
+sirGraphicsResult_t SIRD3D12RenderingDevice::createView( const sirGraphicsViewDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept
 {
 	return m_Resources.createView( desc, pHandle );
 }
-sirGraphicsResult_t SIRD3D12RenderingDevice::createSampler( const sirGraphicsSamplerDesc_t &desc, sirGraphicsHandle_t *pHandle ) noexcept
+sirGraphicsResult_t SIRD3D12RenderingDevice::createSampler( const sirGraphicsSamplerDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept
 {
 	return m_Resources.createSampler( desc, pHandle );
 }
-sirGraphicsResult_t SIRD3D12RenderingDevice::createPipeline( const sirGraphicsPipelineDesc_t &desc, sirGraphicsHandle_t *pHandle ) noexcept
+sirGraphicsResult_t SIRD3D12RenderingDevice::createPipeline( const sirGraphicsPipelineDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept
 {
 	return m_Pipelines.createPipeline( desc, pHandle );
 }
@@ -284,7 +325,7 @@ sirGraphicsResult_t SIRD3D12RenderingDevice::acquireCommands( sirGraphicsQueue_t
 	return m_Commands.acquire( eQueue, ppCommands );
 }
 
-sirGraphicsResult_t SIRD3D12RenderingDevice::submit( sirGraphicsQueue_t eQueue, const sirGraphicsSubmission_t &submission,
+sirGraphicsResult_t SIRD3D12RenderingDevice::submit( sirGraphicsQueue_t eQueue, const sirGraphicsSubmission_t& submission,
                                                      sirGraphicsCompletion_t *pCompletion ) noexcept
 {
 	if ( pCompletion == nullptr ) {
@@ -302,7 +343,7 @@ sirGraphicsResult_t SIRD3D12RenderingDevice::submit( sirGraphicsQueue_t eQueue, 
 	return eSubmit;
 }
 
-sirGraphicsResult_t SIRD3D12RenderingDevice::poll( const sirGraphicsCompletion_t &completion, bool *pCompleted ) noexcept
+sirGraphicsResult_t SIRD3D12RenderingDevice::poll( const sirGraphicsCompletion_t& completion, bool *pCompleted ) noexcept
 {
 	if ( pCompleted == nullptr ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
@@ -333,7 +374,7 @@ sirGraphicsResult_t SIRD3D12RenderingDevice::poll( const sirGraphicsCompletion_t
 	}
 	return m_Native.pollCompletionSet( native, pCompleted ) ? SIR_GRAPHICS_SUCCESS : SIR_GRAPHICS_DEVICE_LOST;
 }
-sirGraphicsResult_t SIRD3D12RenderingDevice::wait( const sirGraphicsCompletion_t &completion, uint64_t nTimeoutNanoseconds ) noexcept
+sirGraphicsResult_t SIRD3D12RenderingDevice::wait( const sirGraphicsCompletion_t& completion, uint64_t nTimeoutNanoseconds ) noexcept
 {
 	bool bCompleted = false;
 	const sirGraphicsResult_t eResult = poll( completion, &bCompleted );
@@ -360,7 +401,7 @@ sirGraphicsResult_t SIRD3D12RenderingDevice::wait( const sirGraphicsCompletion_t
 	return eAfter != SIR_GRAPHICS_SUCCESS ? eAfter : ( bCompleted ? SIR_GRAPHICS_SUCCESS : SIR_GRAPHICS_TIMEOUT );
 }
 sirGraphicsResult_t SIRD3D12RenderingDevice::retireResource( sirGraphicsHandle_t hResource,
-                                                             const sirGraphicsCompletionSet_t &completion ) noexcept
+                                                             const sirGraphicsCompletionSet_t& completion ) noexcept
 {
 	m_Commands.collectCompleted();
 	m_Bindings.collectRetired();
@@ -375,8 +416,8 @@ sirGraphicsResult_t SIRD3D12RenderingDevice::retireResource( sirGraphicsHandle_t
 	}
 	return m_Resources.retireResource( hResource, completion );
 }
-sirGraphicsResult_t SIRD3D12RenderingDevice::createSurface( const sirGraphicsNativeSurface_t &native,
-                                                            const sirGraphicsPresentDesc_t &present,
+sirGraphicsResult_t SIRD3D12RenderingDevice::createSurface( const sirGraphicsNativeSurface_t& native,
+                                                            const sirGraphicsPresentDesc_t& present,
                                                             sirGraphicsHandle_t *pSurface ) noexcept
 {
 	if ( m_bSealedPoolsActive ) {
@@ -388,8 +429,8 @@ sirGraphicsResult_t SIRD3D12RenderingDevice::createSurface( const sirGraphicsNat
 	return m_Surfaces.createSurface( native, present, pSurface );
 }
 
-sirGraphicsResult_t SIRD3D12RenderingDevice::resizeSurface( sirGraphicsHandle_t hSurface, const sirGraphicsNativeSurface_t &native,
-                                                            const sirGraphicsPresentDesc_t &present ) noexcept
+sirGraphicsResult_t SIRD3D12RenderingDevice::resizeSurface( sirGraphicsHandle_t hSurface, const sirGraphicsNativeSurface_t& native,
+                                                            const sirGraphicsPresentDesc_t& present ) noexcept
 {
 	m_Commands.collectCompleted();
 	return m_Surfaces.resizeSurface( hSurface, native, present );
@@ -400,8 +441,8 @@ sirGraphicsResult_t SIRD3D12RenderingDevice::acquireSurfaceImage( sirGraphicsHan
 	return m_Surfaces.acquireSurfaceImage( hSurface, pImage );
 }
 
-sirGraphicsResult_t SIRD3D12RenderingDevice::present( const sirGraphicsSurfaceImage_t &image,
-                                                      const sirGraphicsCompletion_t &renderComplete ) noexcept
+sirGraphicsResult_t SIRD3D12RenderingDevice::present( const sirGraphicsSurfaceImage_t& image,
+                                                      const sirGraphicsCompletion_t& renderComplete ) noexcept
 {
 	const sirGraphicsResult_t eResult = m_Surfaces.present( image, renderComplete );
 	if ( eResult == SIR_GRAPHICS_DEVICE_LOST ) {
@@ -454,13 +495,13 @@ sirGraphicsResult_t SIRD3D12Driver::queryAdapter( uint32_t nAdapterIndex, sirGra
 {
 	return sirD3D12FindAdapter( nAdapterIndex, pInfo );
 }
-sirGraphicsResult_t SIRD3D12Driver::createDevice( const sirGraphicsDeviceCreateDesc_t &desc, SIRRenderingDevice **ppDevice ) noexcept
+sirGraphicsResult_t SIRD3D12Driver::createDevice( const sirGraphicsDeviceCreateDesc_t& desc, SIRRenderingDevice **ppDevice ) noexcept
 {
 	const sirD3D12NativeDeviceConfig_t nativeConfig = {};
 	return createDeviceInternal( desc, nativeConfig, nullptr, ppDevice );
 }
 
-sirGraphicsResult_t SIRD3D12Driver::createSealedDevice( const sirGraphicsDeviceCreateDesc_t &desc, const sirD3D12SealedPoolConfig_t &pools,
+sirGraphicsResult_t SIRD3D12Driver::createSealedDevice( const sirGraphicsDeviceCreateDesc_t& desc, const sirD3D12SealedPoolConfig_t& pools,
                                                         SIRRenderingDevice **ppDevice ) noexcept
 {
 	const sirD3D12NativeDeviceConfig_t nativeConfig = {};
@@ -468,16 +509,16 @@ sirGraphicsResult_t SIRD3D12Driver::createSealedDevice( const sirGraphicsDeviceC
 }
 
 sirGraphicsResult_t SIRD3D12Driver::createDeviceWithConfig( const sirGraphicsDeviceCreateDesc_t& desc,
-                                                          const sirD3D12NativeDeviceConfig_t& nativeConfig,
-                                                          SIRRenderingDevice **ppDevice ) noexcept
+                                                            const sirD3D12NativeDeviceConfig_t& nativeConfig,
+                                                            SIRRenderingDevice **ppDevice ) noexcept
 {
 	return createDeviceInternal( desc, nativeConfig, nullptr, ppDevice );
 }
 
 sirGraphicsResult_t SIRD3D12Driver::createSealedDeviceWithConfig( const sirGraphicsDeviceCreateDesc_t& desc,
-                                                                const sirD3D12SealedPoolConfig_t& pools,
-                                                                const sirD3D12NativeDeviceConfig_t& nativeConfig,
-                                                                SIRRenderingDevice **ppDevice ) noexcept
+                                                                  const sirD3D12SealedPoolConfig_t& pools,
+                                                                  const sirD3D12NativeDeviceConfig_t& nativeConfig,
+                                                                  SIRRenderingDevice **ppDevice ) noexcept
 {
 	return createDeviceInternal( desc, nativeConfig, &pools, ppDevice );
 }

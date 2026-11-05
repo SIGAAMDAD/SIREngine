@@ -15,7 +15,7 @@
 #include <stdint.h>
 #include <thread>
 
-static void sirFurtherSum( void *pContext, const uint32_t &value ) noexcept
+static void sirFurtherSum( void *pContext, const uint32_t& value ) noexcept
 {
 	*( ( uint64_t * )pContext ) += value;
 }
@@ -134,9 +134,9 @@ typedef struct sirFurtherQueueContext_s
 	bool bClearOnce;
 } sirFurtherQueueContext_t;
 
-static void sirFurtherQueueCallback( void *pContext, const uint32_t &value ) noexcept
+static void sirFurtherQueueCallback( void *pContext, const uint32_t& value ) noexcept
 {
-	sirFurtherQueueContext_t &ctx = *( ( sirFurtherQueueContext_t * )pContext );
+	sirFurtherQueueContext_t& ctx = *( ( sirFurtherQueueContext_t * )pContext );
 	ctx.szValues[ctx.nCount++] = value;
 	if ( ctx.bClearOnce ) {
 		ctx.bClearOnce = false;
@@ -287,8 +287,8 @@ TEST( SIREventFurtherOptimizationGoogleTest, BudgetedPhaseProcessingPreservesOld
 		uint32_t szValues[8];
 		uint32_t nCount;
 	} state{ &queue, {}, 0 };
-	auto cb = []( void *pContext, sirEventTargetRef_t, const uint32_t &value ) noexcept {
-		state_s &ctx = *( ( state_s * )pContext );
+	auto cb = []( void *pContext, sirEventTargetRef_t, const uint32_t& value ) noexcept {
+		state_s& ctx = *( ( state_s * )pContext );
 		ctx.szValues[ctx.nCount++] = value;
 		if ( value == 1 ) {
 			ctx.pQueue->enqueue( 0, 9 );
@@ -405,7 +405,7 @@ TEST( SIREventFurtherOptimizationGoogleTest, RandomizedDirtySetMatchesReferenceA
 		bool bSorted;
 	} state{};
 	auto cb = []( void *pContext, sirCompactEventRef_t ref ) noexcept {
-		context_s &ctx = *( ( context_s * )pContext );
+		context_s& ctx = *( ( context_s * )pContext );
 		if ( ref.nSlot <= ctx.nLast || ref.nSlot > 130 ) {
 			ctx.bSorted = false;
 		}
@@ -449,8 +449,8 @@ TEST( SIREventFurtherOptimizationGoogleTest, RandomizedChannelFifoMatchesReferen
 	std::deque<uint32_t> reference;
 	context.pReference = &reference;
 	context.bCorrect = true;
-	auto callback = []( void *pContext, const uint32_t &value ) noexcept {
-		context_s &ctx = *( ( context_s * )pContext );
+	auto callback = []( void *pContext, const uint32_t& value ) noexcept {
+		context_s& ctx = *( ( context_s * )pContext );
 		if ( ctx.pReference->empty() || ctx.pReference->front() != value ) {
 			ctx.bCorrect = false;
 		} else {
@@ -499,7 +499,7 @@ TEST( SIREventFurtherOptimizationGoogleTest, CompactPhaseStorageValidatesEightBy
 	auto validator = []( void *pContext, sirCompactEventRef_t ref ) noexcept {
 		return ref.nGeneration == ( ( context_s * )pContext )->nExpectedGeneration;
 	};
-	auto callback = []( void *pContext, sirCompactEventRef_t, const uint32_t &payload ) noexcept {
+	auto callback = []( void *pContext, sirCompactEventRef_t, const uint32_t& payload ) noexcept {
 		( ( context_s * )pContext )->nTotal += payload;
 	};
 	EXPECT_EQ( queue.pumpPhase( 0, &state, callback, validator ), 2U );

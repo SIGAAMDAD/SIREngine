@@ -13,6 +13,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
+#include <Renderer/SIRGraphicsABIOperations.h>
 #include <Renderer/Drivers/D3D12/SIRD3D12Driver.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -126,11 +127,18 @@ static int sirTestCopies( SIRRenderingDevice *pDevice, uint32_t nGeneration, sir
 	return 0;
 }
 
-static int sirTestQueueSubmission( SIRRenderingDevice *pDevice, uint32_t nGeneration, const sirGraphicsShaderCode_t &computeCode,
-                                   const sirGraphicsCompletion_t &copyCompletion ) noexcept
+static int sirTestQueueSubmission( SIRRenderingDevice *pDevice, uint32_t nGeneration, const sirGraphicsShaderCode_t& computeCode,
+                                   const sirGraphicsCompletion_t& copyCompletion ) noexcept
 {
 	sirGraphicsPipelineDesc_t desc = {};
+	sirGraphicsABIModernRecipe_t descRecipe = {};
+	descRecipe.nSize = sizeof( descRecipe );
+	descRecipe.nStageMask = SIR_GRAPHICS_STAGE_COMPUTE;
+	descRecipe.nRequiredFeatures = SIR_GRAPHICS_FEATURE_COMPUTE;
+	desc.eModel = SIR_GRAPHICS_PIPELINE_MODEL_MODERN;
+	desc.pModern = &descRecipe;
 	desc.eType = SIR_GRAPHICS_PIPELINE_COMPUTE;
+	desc.nSampleCount = 1;
 	desc.computeShader = computeCode;
 	sirGraphicsHandle_t hPipeline = {};
 	if ( pDevice->createPipeline( desc, &hPipeline ) != SIR_GRAPHICS_SUCCESS ) {
@@ -211,8 +219,8 @@ static int sirTestQueueSubmission( SIRRenderingDevice *pDevice, uint32_t nGenera
 	return 0;
 }
 
-static int sirTestRaster( SIRRenderingDevice *pDevice, uint32_t nGeneration, const sirGraphicsShaderCode_t &vertexCode,
-                          const sirGraphicsShaderCode_t &pixelCode ) noexcept
+static int sirTestRaster( SIRRenderingDevice *pDevice, uint32_t nGeneration, const sirGraphicsShaderCode_t& vertexCode,
+                          const sirGraphicsShaderCode_t& pixelCode ) noexcept
 {
 	sirGraphicsBufferDesc_t upload = {};
 	upload.nSizeBytes = 3 * 8 * sizeof( float );
@@ -279,6 +287,12 @@ static int sirTestRaster( SIRRenderingDevice *pDevice, uint32_t nGeneration, con
 	szAttributes[1].nStrideBytes = 32;
 	szAttributes[1].eFormat = SIR_GRAPHICS_FORMAT_RGBA32_FLOAT;
 	sirGraphicsPipelineDesc_t pipeline = {};
+	sirGraphicsABIModernRecipe_t pipelineRecipe = {};
+	pipelineRecipe.nSize = sizeof( pipelineRecipe );
+	pipelineRecipe.nStageMask = SIR_GRAPHICS_STAGE_VERTEX | SIR_GRAPHICS_STAGE_FRAGMENT;
+	pipelineRecipe.nRequiredFeatures = SIR_GRAPHICS_FEATURE_GRAPHICS;
+	pipeline.eModel = SIR_GRAPHICS_PIPELINE_MODEL_MODERN;
+	pipeline.pModern = &pipelineRecipe;
 	pipeline.eType = SIR_GRAPHICS_PIPELINE_GRAPHICS;
 	pipeline.vertexShader = vertexCode;
 	pipeline.pixelShader = pixelCode;

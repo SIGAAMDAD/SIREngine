@@ -71,7 +71,7 @@ sirBlock_t *SIRMediumPageAllocator::block( uint32_t nExtent, uint32_t nOffset ) 
 
 bool SIRMediumPageAllocator::ensureExtent( uint32_t nExtent )
 {
-	sirMediumPageExtent_t &extent = m_pExtents[nExtent];
+	sirMediumPageExtent_t& extent = m_pExtents[nExtent];
 	if ( extent.bCommitted ) {
 		return true;
 	}
@@ -85,7 +85,7 @@ bool SIRMediumPageAllocator::ensureExtent( uint32_t nExtent )
 
 void SIRMediumPageAllocator::removeFree( uint32_t nExtent, uint32_t nOffset )
 {
-	sirMediumPageExtent_t &extent = m_pExtents[nExtent];
+	sirMediumPageExtent_t& extent = m_pExtents[nExtent];
 	sirBlock_t *pBlock = block( nExtent, nOffset );
 	if ( pBlock->nPrevFree == SIR_NONE ) {
 		extent.nFreeHead = pBlock->nNextFree;
@@ -99,7 +99,7 @@ void SIRMediumPageAllocator::removeFree( uint32_t nExtent, uint32_t nOffset )
 
 void SIRMediumPageAllocator::insertFree( uint32_t nExtent, uint32_t nOffset )
 {
-	sirMediumPageExtent_t &extent = m_pExtents[nExtent];
+	sirMediumPageExtent_t& extent = m_pExtents[nExtent];
 	sirBlock_t *pBlock = block( nExtent, nOffset );
 	pBlock->nSizeFlags |= SIR_FREE;
 	pBlock->nNextFree = extent.nFreeHead;
@@ -133,7 +133,7 @@ void *SIRMediumPageAllocator::alloc( uint32_t nBytes, uint32_t nAlignment )
 	// a later committed extent had enough space for the request.
 	for ( uint32_t nPass = 0; nPass < 2; ++nPass )
 		for ( uint32_t i = 0; i < m_nExtentCount; ++i ) {
-			sirMediumPageExtent_t &extent = m_pExtents[i];
+			sirMediumPageExtent_t& extent = m_pExtents[i];
 			const bool bWasCommitted = extent.bCommitted;
 			if ( nPass == 0 && !bWasCommitted ) {
 				continue;
@@ -238,7 +238,7 @@ bool SIRMediumPageAllocator::free( void *pMemory )
 	if ( !resolve( pMemory, &nExtent, &nOffset, nullptr ) ) {
 		return false;
 	}
-	sirMediumPageExtent_t &extent = m_pExtents[nExtent];
+	sirMediumPageExtent_t& extent = m_pExtents[nExtent];
 	const uint64_t nIndex = ( ( ( uint64_t )( nExtent ) ) * m_nExtentBytes + nOffset ) / 16;
 	m_pLiveStarts[nIndex >> 6] &= ~( uint64_t( 1 ) << ( nIndex & 63 ) );
 	sirBlock_t *pBlock = block( nExtent, nOffset );
@@ -275,7 +275,7 @@ uint64_t SIRMediumPageAllocator::trimEmptyPages( uint32_t nMaximumWarmPages )
 	uint64_t nReleased = 0;
 	uint32_t nWarm = 0;
 	for ( uint32_t i = 0; i < m_nExtentCount; ++i ) {
-		sirMediumPageExtent_t &extent = m_pExtents[i];
+		sirMediumPageExtent_t& extent = m_pExtents[i];
 		if ( !extent.bCommitted || extent.nLive != 0 ) {
 			continue;
 		}

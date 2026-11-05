@@ -40,8 +40,8 @@ class SIRRingAllocator
 {
 public:
 	SIRRingAllocator( void );
-	SIRRingAllocator( const SIRRingAllocator & ) = delete;
-	SIRRingAllocator &operator=( const SIRRingAllocator & ) = delete;
+	SIRRingAllocator( const SIRRingAllocator& ) = delete;
+	SIRRingAllocator& operator=( const SIRRingAllocator& ) = delete;
 
 	static uint64_t getRequiredMetadataBytes( uint32_t nMaxAllocations );
 	bool init( SIRMemorySegment *pSegment, uint32_t nMaxAllocations );

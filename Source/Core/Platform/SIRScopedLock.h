@@ -30,19 +30,19 @@ class SIRScopedLock
 {
 public:
 	typedef Lockable mutex_type;
-	explicit SIRScopedLock( Lockable &lock ) noexcept;
+	explicit SIRScopedLock( Lockable& lock ) noexcept;
 	~SIRScopedLock() noexcept;
-	SIRScopedLock( const SIRScopedLock & ) = delete;
-	SIRScopedLock &operator=( const SIRScopedLock & ) = delete;
-	SIRScopedLock( SIRScopedLock && ) = delete;
-	SIRScopedLock &operator=( SIRScopedLock && ) = delete;
+	SIRScopedLock( const SIRScopedLock& ) = delete;
+	SIRScopedLock& operator=( const SIRScopedLock& ) = delete;
+	SIRScopedLock( SIRScopedLock&& ) = delete;
+	SIRScopedLock& operator=( SIRScopedLock&& ) = delete;
 
 private:
-	Lockable &m_Lock;
+	Lockable& m_Lock;
 };
 
 template <typename Lockable>
-SIRScopedLock<Lockable>::SIRScopedLock( Lockable &lock ) noexcept : m_Lock( lock )
+SIRScopedLock<Lockable>::SIRScopedLock( Lockable& lock ) noexcept : m_Lock( lock )
 {
 	m_Lock.lock();
 }
@@ -54,26 +54,26 @@ SIRScopedLock<Lockable>::~SIRScopedLock() noexcept
 }
 
 template <typename Lockable>
-SIRScopedLock( Lockable & ) -> SIRScopedLock<Lockable>;
+SIRScopedLock( Lockable& ) -> SIRScopedLock<Lockable>;
 
 template <typename Lockable>
 class SIRConditionalScopedLock
 {
 public:
-	explicit SIRConditionalScopedLock( Lockable &lock, bool bEnabled ) noexcept;
+	explicit SIRConditionalScopedLock( Lockable& lock, bool bEnabled ) noexcept;
 	~SIRConditionalScopedLock() noexcept;
-	SIRConditionalScopedLock( const SIRConditionalScopedLock & ) = delete;
-	SIRConditionalScopedLock &operator=( const SIRConditionalScopedLock & ) = delete;
-	SIRConditionalScopedLock( SIRConditionalScopedLock && ) = delete;
-	SIRConditionalScopedLock &operator=( SIRConditionalScopedLock && ) = delete;
+	SIRConditionalScopedLock( const SIRConditionalScopedLock& ) = delete;
+	SIRConditionalScopedLock& operator=( const SIRConditionalScopedLock& ) = delete;
+	SIRConditionalScopedLock( SIRConditionalScopedLock&& ) = delete;
+	SIRConditionalScopedLock& operator=( SIRConditionalScopedLock&& ) = delete;
 
 private:
-	Lockable &m_Lock;
+	Lockable& m_Lock;
 	bool m_bEnabled;
 };
 
 template <typename Lockable>
-SIRConditionalScopedLock<Lockable>::SIRConditionalScopedLock( Lockable &lock, bool bEnabled ) noexcept
+SIRConditionalScopedLock<Lockable>::SIRConditionalScopedLock( Lockable& lock, bool bEnabled ) noexcept
     : m_Lock( lock ), m_bEnabled( bEnabled )
 {
 	if ( m_bEnabled ) {
@@ -90,6 +90,6 @@ SIRConditionalScopedLock<Lockable>::~SIRConditionalScopedLock() noexcept
 }
 
 template <typename Lockable>
-SIRConditionalScopedLock( Lockable &, bool ) -> SIRConditionalScopedLock<Lockable>;
+SIRConditionalScopedLock( Lockable&, bool ) -> SIRConditionalScopedLock<Lockable>;
 
 #endif // __SIRENGINE_SIRSCOPEDLOCK_H__

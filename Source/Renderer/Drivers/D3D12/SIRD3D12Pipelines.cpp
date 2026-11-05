@@ -22,6 +22,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 static DXGI_FORMAT sirD3D12PipelineFormat( sirGraphicsFormat_t eFormat ) noexcept
 {
 	switch ( eFormat ) {
+
 	case SIR_GRAPHICS_FORMAT_RGBA8_UNORM:
 		return DXGI_FORMAT_R8G8B8A8_UNORM;
 	case SIR_GRAPHICS_FORMAT_BGRA8_UNORM:
@@ -86,7 +87,7 @@ static uint32_t sirD3D12VertexFormatBytes( sirGraphicsFormat_t eFormat ) noexcep
 	}
 }
 
-static bool sirD3D12ValidDxil( const sirGraphicsShaderCode_t &shader ) noexcept
+static bool sirD3D12ValidDxil( const sirGraphicsShaderCode_t& shader ) noexcept
 {
 	constexpr uint64_t MAX_DXIL_BYTES = 16ULL * 1024ULL * 1024ULL;
 	return shader.eFormat == SIR_GRAPHICS_SHADER_DXIL && shader.pBytes != nullptr && shader.nByteCount >= 16 &&
@@ -200,7 +201,7 @@ static D3D12_BLEND_OP sirD3D12BlendOperation( sirGraphicsBlendOp_t eOperation ) 
 	}
 }
 
-static bool sirD3D12ValidateBindings( const sirGraphicsPipelineDesc_t &desc ) noexcept
+static bool sirD3D12ValidateBindings( const sirGraphicsPipelineDesc_t& desc ) noexcept
 {
 	constexpr uint32_t MAX_BINDINGS = 32;
 	constexpr uint32_t MAX_DESCRIPTOR_ARRAY = 128;
@@ -208,7 +209,7 @@ static bool sirD3D12ValidateBindings( const sirGraphicsPipelineDesc_t &desc ) no
 		return false;
 	}
 	for ( uint32_t iBinding = 0; iBinding < desc.nBindingCount; ++iBinding ) {
-		const sirGraphicsBindingDesc_t &binding = desc.pBindings[iBinding];
+		const sirGraphicsBindingDesc_t& binding = desc.pBindings[iBinding];
 		if ( binding.nArrayCount > MAX_DESCRIPTOR_ARRAY || binding.nBinding > UINT32_MAX - binding.nArrayCount ) {
 			return false;
 		}
@@ -220,7 +221,7 @@ static bool sirD3D12ValidateBindings( const sirGraphicsPipelineDesc_t &desc ) no
 			return false;
 		}
 		for ( uint32_t iPrior = 0; iPrior < iBinding; ++iPrior ) {
-			const sirGraphicsBindingDesc_t &prior = desc.pBindings[iPrior];
+			const sirGraphicsBindingDesc_t& prior = desc.pBindings[iPrior];
 			if ( binding.nSpace != prior.nSpace || sirD3D12RangeType( binding.eType ) != sirD3D12RangeType( prior.eType ) ) {
 				continue;
 			}
@@ -234,10 +235,10 @@ static bool sirD3D12ValidateBindings( const sirGraphicsPipelineDesc_t &desc ) no
 	return true;
 }
 
-static bool sirD3D12ValidateAttributes( const sirGraphicsPipelineDesc_t &desc ) noexcept
+static bool sirD3D12ValidateAttributes( const sirGraphicsPipelineDesc_t& desc ) noexcept
 {
 	for ( uint32_t iAttribute = 0; iAttribute < desc.nAttributeCount; ++iAttribute ) {
-		const sirGraphicsVertexAttribute_t &attribute = desc.pAttributes[iAttribute];
+		const sirGraphicsVertexAttribute_t& attribute = desc.pAttributes[iAttribute];
 		const uint32_t nBytes = sirD3D12VertexFormatBytes( attribute.eFormat );
 		if ( nBytes == 0 || attribute.nLocation >= 32 || attribute.nBufferSlot >= 16 || attribute.nStrideBytes == 0 ) {
 			return false;
@@ -275,7 +276,7 @@ bool SIRD3D12Pipelines::initialize( SIRD3D12Device *pNative, uint32_t nGeneratio
 
 void SIRD3D12Pipelines::releaseSlot( uint32_t iSlot ) noexcept
 {
-	sirD3D12PipelineSlot_t &slot = m_szSlots[iSlot];
+	sirD3D12PipelineSlot_t& slot = m_szSlots[iSlot];
 	if ( !slot.bLive && !slot.bRetiring ) {
 		return;
 	}
@@ -311,7 +312,7 @@ sirD3D12PipelineSlot_t *SIRD3D12Pipelines::findSlot( sirGraphicsHandle_t hPipeli
 	     !sirGraphicsIsHandleValid( hPipeline, SIR_GRAPHICS_HANDLE_PIPELINE, m_nDeviceGeneration ) ) {
 		return nullptr;
 	}
-	sirD3D12PipelineSlot_t &slot = m_szSlots[hPipeline.nSlot];
+	sirD3D12PipelineSlot_t& slot = m_szSlots[hPipeline.nSlot];
 	if ( !slot.bLive || slot.nGeneration != hPipeline.nGeneration ) {
 		return nullptr;
 	}
@@ -350,7 +351,7 @@ void SIRD3D12Pipelines::collectRetired( void ) noexcept
 		return;
 	}
 	for ( uint32_t iSlot = 0; iSlot < s_nPipelineCapacity; ++iSlot ) {
-		sirD3D12PipelineSlot_t &slot = m_szSlots[iSlot];
+		sirD3D12PipelineSlot_t& slot = m_szSlots[iSlot];
 		if ( !slot.bRetiring ) {
 			continue;
 		}
@@ -364,12 +365,12 @@ void SIRD3D12Pipelines::collectRetired( void ) noexcept
 	}
 }
 
-HRESULT SIRD3D12Pipelines::createRootSignature( const sirGraphicsPipelineDesc_t &desc, ID3D12RootSignature **ppRoot ) noexcept
+HRESULT SIRD3D12Pipelines::createRootSignature( const sirGraphicsPipelineDesc_t& desc, ID3D12RootSignature **ppRoot ) noexcept
 {
 	D3D12_DESCRIPTOR_RANGE szRanges[32] = {};
 	D3D12_ROOT_PARAMETER szParameters[32] = {};
 	for ( uint32_t iBinding = 0; iBinding < desc.nBindingCount; ++iBinding ) {
-		const sirGraphicsBindingDesc_t &binding = desc.pBindings[iBinding];
+		const sirGraphicsBindingDesc_t& binding = desc.pBindings[iBinding];
 		szRanges[iBinding].RangeType = sirD3D12RangeType( binding.eType );
 		szRanges[iBinding].NumDescriptors = binding.nArrayCount;
 		szRanges[iBinding].BaseShaderRegister = binding.nBinding;
@@ -395,7 +396,7 @@ HRESULT SIRD3D12Pipelines::createRootSignature( const sirGraphicsPipelineDesc_t 
 	return m_pDevice->CreateRootSignature( 0, pRootBlob->GetBufferPointer(), pRootBlob->GetBufferSize(), IID_PPV_ARGS( ppRoot ) );
 }
 
-HRESULT SIRD3D12Pipelines::createComputeState( const sirGraphicsPipelineDesc_t &desc, ID3D12RootSignature *pRoot,
+HRESULT SIRD3D12Pipelines::createComputeState( const sirGraphicsPipelineDesc_t& desc, ID3D12RootSignature *pRoot,
                                                ID3D12PipelineState **ppPipeline ) noexcept
 {
 	D3D12_COMPUTE_PIPELINE_STATE_DESC native = {};
@@ -405,13 +406,13 @@ HRESULT SIRD3D12Pipelines::createComputeState( const sirGraphicsPipelineDesc_t &
 	return m_pDevice->CreateComputePipelineState( &native, IID_PPV_ARGS( ppPipeline ) );
 }
 
-HRESULT SIRD3D12Pipelines::createGraphicsState( const sirGraphicsPipelineDesc_t &desc, ID3D12RootSignature *pRoot,
+HRESULT SIRD3D12Pipelines::createGraphicsState( const sirGraphicsPipelineDesc_t& desc, ID3D12RootSignature *pRoot,
                                                 ID3D12PipelineState **ppPipeline ) noexcept
 {
 	D3D12_INPUT_ELEMENT_DESC szAttributes[32] = {};
 	for ( uint32_t iAttribute = 0; iAttribute < desc.nAttributeCount; ++iAttribute ) {
-		const sirGraphicsVertexAttribute_t &attribute = desc.pAttributes[iAttribute];
-		D3D12_INPUT_ELEMENT_DESC &native = szAttributes[iAttribute];
+		const sirGraphicsVertexAttribute_t& attribute = desc.pAttributes[iAttribute];
+		D3D12_INPUT_ELEMENT_DESC& native = szAttributes[iAttribute];
 		// Cooked DXIL uses the deterministic SIR vertex-location mapping:
 		// location 0 = POSITION0, 1 = COLOR0, 2+ = TEXCOORD(location-2).
 		native.SemanticName = attribute.nLocation == 0 ? "POSITION" : ( attribute.nLocation == 1 ? "COLOR" : "TEXCOORD" );
@@ -446,8 +447,8 @@ HRESULT SIRD3D12Pipelines::createGraphicsState( const sirGraphicsPipelineDesc_t 
 	native.SampleDesc.Count = desc.nSampleCount;
 	native.BlendState.IndependentBlendEnable = TRUE;
 	for ( uint32_t iColor = 0; iColor < desc.nColorFormatCount; ++iColor ) {
-		const sirGraphicsBlendState_t &blend = desc.szBlendStates[iColor];
-		D3D12_RENDER_TARGET_BLEND_DESC &nativeBlend = native.BlendState.RenderTarget[iColor];
+		const sirGraphicsBlendState_t& blend = desc.szBlendStates[iColor];
+		D3D12_RENDER_TARGET_BLEND_DESC& nativeBlend = native.BlendState.RenderTarget[iColor];
 		native.RTVFormats[iColor] = sirD3D12PipelineFormat( desc.szColorFormats[iColor] );
 		nativeBlend.BlendEnable = blend.bEnabled ? TRUE : FALSE;
 		nativeBlend.LogicOpEnable = FALSE;
@@ -462,7 +463,7 @@ HRESULT SIRD3D12Pipelines::createGraphicsState( const sirGraphicsPipelineDesc_t 
 	return m_pDevice->CreateGraphicsPipelineState( &native, IID_PPV_ARGS( ppPipeline ) );
 }
 
-sirGraphicsResult_t SIRD3D12Pipelines::createPipeline( const sirGraphicsPipelineDesc_t &desc, sirGraphicsHandle_t *pHandle ) noexcept
+sirGraphicsResult_t SIRD3D12Pipelines::createPipeline( const sirGraphicsPipelineDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept
 {
 	if ( pHandle == nullptr ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
@@ -532,7 +533,7 @@ sirGraphicsResult_t SIRD3D12Pipelines::createPipeline( const sirGraphicsPipeline
 		return nPipeline == E_OUTOFMEMORY ? SIR_GRAPHICS_OUT_OF_MEMORY : SIR_GRAPHICS_DRIVER_ERROR;
 	}
 
-	sirD3D12PipelineSlot_t &slot = m_szSlots[iFree];
+	sirD3D12PipelineSlot_t& slot = m_szSlots[iFree];
 	const uint32_t nGeneration = slot.nGeneration + 1;
 	slot = {};
 	slot.nGeneration = nGeneration;
@@ -550,7 +551,7 @@ sirGraphicsResult_t SIRD3D12Pipelines::createPipeline( const sirGraphicsPipeline
 }
 
 sirGraphicsResult_t SIRD3D12Pipelines::retirePipeline( sirGraphicsHandle_t hPipeline,
-                                                       const sirGraphicsCompletionSet_t &completion ) noexcept
+                                                       const sirGraphicsCompletionSet_t& completion ) noexcept
 {
 	sirD3D12PipelineSlot_t *pSlot = findSlot( hPipeline );
 	if ( pSlot == nullptr ) {

@@ -67,7 +67,7 @@ sirD3D12BindingSetSlot_t *SIRD3D12Bindings::findSlot( sirGraphicsHandle_t hSet )
 	     !sirGraphicsIsHandleValid( hSet, SIR_GRAPHICS_HANDLE_BINDING_SET, m_nDeviceGeneration ) ) {
 		return nullptr;
 	}
-	sirD3D12BindingSetSlot_t &slot = m_szSets[hSet.nSlot];
+	sirD3D12BindingSetSlot_t& slot = m_szSets[hSet.nSlot];
 	return slot.bLive && slot.nGeneration == hSet.nGeneration ? &slot : nullptr;
 }
 
@@ -78,7 +78,7 @@ const sirD3D12BindingSetSlot_t *SIRD3D12Bindings::querySlot( sirGraphicsHandle_t
 
 void SIRD3D12Bindings::releaseSlot( uint32_t iSlot ) noexcept
 {
-	sirD3D12BindingSetSlot_t &slot = m_szSets[iSlot];
+	sirD3D12BindingSetSlot_t& slot = m_szSets[iSlot];
 	if ( !slot.bLive && !slot.bRetiring ) {
 		return;
 	}
@@ -88,7 +88,7 @@ void SIRD3D12Bindings::releaseSlot( uint32_t iSlot ) noexcept
 		}
 	}
 	for ( uint32_t iRange = 0; iRange < slot.nRangeCount; ++iRange ) {
-		const sirD3D12BindingRange_t &range = slot.szRanges[iRange];
+		const sirD3D12BindingRange_t& range = slot.szRanges[iRange];
 		if ( range.bAllocated ) {
 			m_pResources->releaseDescriptorSpan( range.eHeap, range.iDescriptor, range.nDescriptorCount );
 		}
@@ -101,7 +101,7 @@ void SIRD3D12Bindings::releaseSlot( uint32_t iSlot ) noexcept
 	slot.nGeneration = nGeneration;
 }
 
-bool SIRD3D12Bindings::pollRetirement( const sirD3D12CompletionSet_t &completion, bool *pCompleted ) noexcept
+bool SIRD3D12Bindings::pollRetirement( const sirD3D12CompletionSet_t& completion, bool *pCompleted ) noexcept
 {
 	return m_pNative != nullptr && m_pNative->pollCompletionSet( completion, pCompleted );
 }
@@ -112,7 +112,7 @@ void SIRD3D12Bindings::collectRetired( void ) noexcept
 		return;
 	}
 	for ( uint32_t iSlot = 0; iSlot < s_nSetCapacity; ++iSlot ) {
-		sirD3D12BindingSetSlot_t &slot = m_szSets[iSlot];
+		sirD3D12BindingSetSlot_t& slot = m_szSets[iSlot];
 		if ( !slot.bRetiring || slot.nCommandReferences != 0 ) {
 			continue;
 		}
@@ -142,7 +142,7 @@ sirGraphicsResult_t SIRD3D12Bindings::createSet( sirGraphicsHandle_t hPipeline, 
 	uint32_t nRanges = 0;
 	uint32_t nTotal = 0;
 	for ( uint32_t i = 0; i < pPipeline->nBindingCount; ++i ) {
-		const sirGraphicsBindingDesc_t &binding = pPipeline->szBindings[i];
+		const sirGraphicsBindingDesc_t& binding = pPipeline->szBindings[i];
 		if ( binding.nSpace != nSetIndex ) {
 			continue;
 		}
@@ -151,7 +151,7 @@ sirGraphicsResult_t SIRD3D12Bindings::createSet( sirGraphicsHandle_t hPipeline, 
 			return SIR_GRAPHICS_CAPACITY_EXCEEDED;
 		}
 		for ( uint32_t j = 0; j < i; ++j ) {
-			const sirGraphicsBindingDesc_t &prior = pPipeline->szBindings[j];
+			const sirGraphicsBindingDesc_t& prior = pPipeline->szBindings[j];
 			if ( prior.nSpace == nSetIndex && prior.nBinding == binding.nBinding ) {
 				// Descriptor writes identify registers, not range type.
 				return SIR_GRAPHICS_INVALID_ARGUMENT;
@@ -178,7 +178,7 @@ sirGraphicsResult_t SIRD3D12Bindings::createSet( sirGraphicsHandle_t hPipeline, 
 	if ( ePin != SIR_GRAPHICS_SUCCESS ) {
 		return ePin;
 	}
-	sirD3D12BindingSetSlot_t &slot = m_szSets[iFree];
+	sirD3D12BindingSetSlot_t& slot = m_szSets[iFree];
 	const uint32_t nGeneration = slot.nGeneration + 1;
 	slot = {};
 	slot.nGeneration = nGeneration;
@@ -186,11 +186,11 @@ sirGraphicsResult_t SIRD3D12Bindings::createSet( sirGraphicsHandle_t hPipeline, 
 	slot.nSetIndex = nSetIndex;
 	slot.bLive = true;
 	for ( uint32_t i = 0; i < pPipeline->nBindingCount; ++i ) {
-		const sirGraphicsBindingDesc_t &binding = pPipeline->szBindings[i];
+		const sirGraphicsBindingDesc_t& binding = pPipeline->szBindings[i];
 		if ( binding.nSpace != nSetIndex ) {
 			continue;
 		}
-		sirD3D12BindingRange_t &range = slot.szRanges[slot.nRangeCount];
+		sirD3D12BindingRange_t& range = slot.szRanges[slot.nRangeCount];
 		range.desc = binding;
 		range.nRootIndex = i;
 		range.nFlatStart = slot.nFlatCount;
@@ -211,7 +211,7 @@ sirGraphicsResult_t SIRD3D12Bindings::createSet( sirGraphicsHandle_t hPipeline, 
 	return SIR_GRAPHICS_SUCCESS;
 }
 
-bool SIRD3D12Bindings::isComplete( const sirD3D12BindingSetSlot_t &slot ) const noexcept
+bool SIRD3D12Bindings::isComplete( const sirD3D12BindingSetSlot_t& slot ) const noexcept
 {
 	if ( slot.nRangeCount == 0 ) {
 		return false;
@@ -250,7 +250,7 @@ sirGraphicsResult_t SIRD3D12Bindings::updateSet( sirGraphicsHandle_t hSet, const
 	D3D12_CPU_DESCRIPTOR_HANDLE szTarget[s_nDescriptorCapacity] = {};
 	D3D12_DESCRIPTOR_HEAP_TYPE szHeaps[s_nDescriptorCapacity] = {};
 	for ( uint32_t iWrite = 0; iWrite < nWriteCount; ++iWrite ) {
-		const sirGraphicsDescriptorWrite_t &write = pWrites[iWrite];
+		const sirGraphicsDescriptorWrite_t& write = pWrites[iWrite];
 		if ( write.nOffsetBytes != 0 || write.nRangeBytes != 0 ) {
 			return SIR_GRAPHICS_UNSUPPORTED;
 		}
@@ -305,7 +305,7 @@ sirGraphicsResult_t SIRD3D12Bindings::updateSet( sirGraphicsHandle_t hSet, const
 	}
 	for ( uint32_t iWrite = 0; iWrite < nWriteCount; ++iWrite ) {
 		m_pDevice->CopyDescriptorsSimple( 1, szTarget[iWrite], szSource[iWrite], szHeaps[iWrite] );
-		sirGraphicsHandle_t &hOld = pSlot->szResources[szFlat[iWrite]];
+		sirGraphicsHandle_t& hOld = pSlot->szResources[szFlat[iWrite]];
 		if ( hOld.nGeneration != 0 ) {
 			m_pResources->releaseCommandReference( hOld );
 		}
@@ -335,7 +335,7 @@ void SIRD3D12Bindings::releaseCommandReference( sirGraphicsHandle_t hSet ) noexc
 	}
 }
 
-sirGraphicsResult_t SIRD3D12Bindings::retireSet( sirGraphicsHandle_t hSet, const sirGraphicsCompletionSet_t &completion ) noexcept
+sirGraphicsResult_t SIRD3D12Bindings::retireSet( sirGraphicsHandle_t hSet, const sirGraphicsCompletionSet_t& completion ) noexcept
 {
 	sirD3D12BindingSetSlot_t *pSlot = findSlot( hSet );
 	if ( pSlot == nullptr ) {
