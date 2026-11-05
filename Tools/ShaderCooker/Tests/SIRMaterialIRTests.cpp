@@ -300,6 +300,46 @@ static void testReflectionBindingValidation( void ) noexcept
 	REQUIRE( entry.nReflectionSignature == nFirstSignature );
 }
 
+static void testStageTopology( void ) noexcept
+{
+	sirMaterialIRNode_t szNodes[2] = {};
+	szNodes[0] = makeNode( SIR_MATERIAL_IR_CONSTANT, SIR_MATERIAL_IR_FLOAT4 );
+	szNodes[1] = makeNode( SIR_MATERIAL_IR_OUTPUT, SIR_MATERIAL_IR_FLOAT4, 0 );
+	sirMaterialIRPass_t pass = { SIR_SHADER_PASS_COLOR, 1, SIR_GRAPHICS_STAGE_VERTEX, SIR_GRAPHICS_FEATURE_GRAPHICS };
+	sirMaterialIRGraph_t graph = {};
+	graph.nAssetId = 42;
+	graph.nSourceHash = 98;
+	graph.pNodes = szNodes;
+	graph.nNodeCount = 2;
+	graph.pPasses = &pass;
+	graph.nPassCount = 1;
+	sirMaterialShaderMapEntry_t szEntries[1] = {};
+	sirMaterialIRCompileOutput_t output = { szEntries, 1, 0, 0 };
+	const sirMaterialIRCompileOptions_t options = { SIR_GRAPHICS_FEATURE_GRAPHICS | SIR_GRAPHICS_FEATURE_MESH_SHADER |
+	                                                    SIR_GRAPHICS_FEATURE_TESSELLATION | SIR_GRAPHICS_FEATURE_GEOMETRY_SHADER,
+	                                                false };
+	REQUIRE( sirMaterialIRCompile( graph, options, &output ) == SIR_SHADER_COOK_OK );
+	pass.nRequiredFeatures |= SIR_GRAPHICS_FEATURE_MESH_SHADER;
+	pass.nStageMask = SIR_GRAPHICS_STAGE_TASK;
+	REQUIRE( sirMaterialIRCompile( graph, options, &output ) == SIR_SHADER_COOK_INVALID_ARGUMENT );
+	pass.nStageMask = SIR_GRAPHICS_STAGE_MESH | SIR_GRAPHICS_STAGE_TASK;
+	REQUIRE( sirMaterialIRCompile( graph, options, &output ) == SIR_SHADER_COOK_OK );
+	pass.nStageMask |= SIR_GRAPHICS_STAGE_VERTEX;
+	REQUIRE( sirMaterialIRCompile( graph, options, &output ) == SIR_SHADER_COOK_INVALID_ARGUMENT );
+	pass.nRequiredFeatures = SIR_GRAPHICS_FEATURE_GRAPHICS | SIR_GRAPHICS_FEATURE_TESSELLATION;
+	pass.nStageMask = SIR_GRAPHICS_STAGE_VERTEX | SIR_GRAPHICS_STAGE_TESS_CONTROL;
+	REQUIRE( sirMaterialIRCompile( graph, options, &output ) == SIR_SHADER_COOK_INVALID_ARGUMENT );
+	pass.nStageMask = SIR_GRAPHICS_STAGE_TESS_CONTROL | SIR_GRAPHICS_STAGE_TESS_EVALUATION;
+	REQUIRE( sirMaterialIRCompile( graph, options, &output ) == SIR_SHADER_COOK_INVALID_ARGUMENT );
+	pass.nStageMask |= SIR_GRAPHICS_STAGE_VERTEX;
+	REQUIRE( sirMaterialIRCompile( graph, options, &output ) == SIR_SHADER_COOK_OK );
+	pass.nRequiredFeatures = SIR_GRAPHICS_FEATURE_GRAPHICS | SIR_GRAPHICS_FEATURE_GEOMETRY_SHADER;
+	pass.nStageMask = SIR_GRAPHICS_STAGE_GEOMETRY;
+	REQUIRE( sirMaterialIRCompile( graph, options, &output ) == SIR_SHADER_COOK_INVALID_ARGUMENT );
+	pass.nStageMask |= SIR_GRAPHICS_STAGE_VERTEX;
+	REQUIRE( sirMaterialIRCompile( graph, options, &output ) == SIR_SHADER_COOK_OK );
+}
+
 int main( void )
 {
 	testDeterministicMaps();
@@ -307,5 +347,6 @@ int main( void )
 	testStaticDynamicSeparation();
 	testSampleOperandValidation();
 	testReflectionBindingValidation();
+	testStageTopology();
 	return 0;
 }

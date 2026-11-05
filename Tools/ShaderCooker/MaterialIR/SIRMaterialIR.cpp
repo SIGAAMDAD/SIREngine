@@ -125,6 +125,25 @@ static bool sirMaterialIRPermutationValid( const sirMaterialIRGraph_t& graph, ui
 	return true;
 }
 
+static bool sirMaterialIRStageTopologyValid( uint32_t nStages ) noexcept
+{
+	const bool bMesh = ( nStages & SIR_GRAPHICS_STAGE_MESH ) != 0;
+	const bool bTask = ( nStages & SIR_GRAPHICS_STAGE_TASK ) != 0;
+	const bool bTessControl = ( nStages & SIR_GRAPHICS_STAGE_TESS_CONTROL ) != 0;
+	const bool bTessEvaluation = ( nStages & SIR_GRAPHICS_STAGE_TESS_EVALUATION ) != 0;
+	if ( ( bTask && !bMesh ) || bTessControl != bTessEvaluation ) {
+		return false;
+	}
+	if ( ( bMesh || bTask ) && ( nStages & ( SIR_GRAPHICS_STAGE_VERTEX | SIR_GRAPHICS_STAGE_GEOMETRY | SIR_GRAPHICS_STAGE_TESS_CONTROL |
+	                                         SIR_GRAPHICS_STAGE_TESS_EVALUATION ) ) != 0 ) {
+		return false;
+	}
+	if ( ( bTessControl || ( nStages & SIR_GRAPHICS_STAGE_GEOMETRY ) != 0 ) && ( nStages & SIR_GRAPHICS_STAGE_VERTEX ) == 0 ) {
+		return false;
+	}
+	return true;
+}
+
 static bool sirMaterialIRStageFeaturesValid( const sirMaterialIRPass_t& pass ) noexcept
 {
 	uint64_t nStageFeatures = pass.ePass == SIR_SHADER_PASS_COMPUTE ? SIR_GRAPHICS_FEATURE_COMPUTE : SIR_GRAPHICS_FEATURE_GRAPHICS;
@@ -254,7 +273,7 @@ sirShaderCookResult_t sirMaterialIRCompile( const sirMaterialIRGraph_t& graph, c
 		if ( ( pass.nStageMask & SIR_GRAPHICS_STAGE_COMPUTE ) != 0 && pass.nStageMask != SIR_GRAPHICS_STAGE_COMPUTE ) {
 			return SIR_SHADER_COOK_INVALID_ARGUMENT;
 		}
-		if ( !sirMaterialIRStageFeaturesValid( pass ) ) {
+		if ( !sirMaterialIRStageTopologyValid( pass.nStageMask ) || !sirMaterialIRStageFeaturesValid( pass ) ) {
 			return SIR_SHADER_COOK_INVALID_ARGUMENT;
 		}
 		nPreviousPass = pass.ePass;
