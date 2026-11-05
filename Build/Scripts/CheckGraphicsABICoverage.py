@@ -27,8 +27,12 @@ def main():
     destination = pathlib.Path(sys.argv[3])
     data = json.loads(source.read_text(encoding="utf-8"))
     minimum = int(os.environ.get("SIR_GRAPHICS_ABI_MIN_COVERAGE", "90"))
-    if minimum < 0 or minimum > 100:
-        raise SystemExit("coverage threshold must be 0..100")
+    thresholds = {
+        metric: int(os.environ.get("SIR_GRAPHICS_ABI_MIN_" + metric.upper(), str(minimum)))
+        for metric in METRICS
+    }
+    if any(percent < 0 or percent > 100 for percent in thresholds.values()):
+        raise SystemExit("coverage thresholds must be 0..100")
     measured = {}
     for entry in data.get("data", []):
         for file in entry.get("files", []):
@@ -66,12 +70,14 @@ def main():
             errors.append(metric + ": empty denominator")
             continue
         item["percent"] = round(100.0 * item["covered"] / item["count"], 2)
-        if item["percent"] < minimum:
-            errors.append(metric + ": " + str(item["percent"]) + "% below " + str(minimum) + "%")
+        # Do not round before comparison: 99.995% must fail a 100% gate.
+        if item["covered"] * 100 < item["count"] * thresholds[metric]:
+            errors.append(metric + ": " + str(item["percent"]) + "% below " + str(thresholds[metric]) + "%")
     result = {
         "system": "GraphicsABI",
         "source_scope": list(SOURCE_FILES),
         "minimum_percent": minimum,
+        "minimum_percent_by_metric": thresholds,
         "metrics": totals,
         "missing_sources": missing,
         "status": "PASS" if not errors else "FAIL",
