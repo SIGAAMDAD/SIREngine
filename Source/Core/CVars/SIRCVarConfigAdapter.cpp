@@ -114,8 +114,12 @@ sirConfigResult_t SIRCVarConfigAdapter::applyIni( const sirConfigInput_t& input,
 	if ( !isInitialized() ) {
 		return SIR_CONFIG_INVALID_ARGUMENT;
 	}
-	uint32_t nEntries = 0;
-	sirConfigResult_t eResult = SIRIniCodec::parse( input, m_Storage.limits, m_Storage.ini, &nEntries, pDiagnostic );
+	sirIniParseResult_t parse = {};
+	sirConfigResult_t eResult = SIRIniCodec::parse( input, m_Storage.limits, m_Storage.ini, &parse );
+	const uint32_t nEntries = parse.nCount;
+	if ( pDiagnostic != nullptr ) {
+		*pDiagnostic = parse.diagnostic;
+	}
 	if ( eResult != SIR_CONFIG_OK ) {
 		return eResult;
 	}
@@ -213,8 +217,9 @@ sirConfigResult_t SIRCVarConfigAdapter::writeArchive( const sirConfigSink_t& sin
 			return sirCVarConfigStatus( eRead );
 		}
 		entry.pszValue = m_Storage.ini.pszValues + ( size_t )nCount * m_Storage.ini.nValueStride;
-		const sirRegistrationResult_t eFormat =
-		    sirCVarFormatText( ( sirCVarType_t )pDescriptor->nType, value, entry.pszValue, m_Storage.ini.nValueStride, &entry.nValueBytes );
+		sirCVarTextBuffer_t output = { entry.pszValue, m_Storage.ini.nValueStride, 0 };
+		const sirRegistrationResult_t eFormat = sirCVarFormatText( ( sirCVarType_t )pDescriptor->nType, value, &output );
+		entry.nValueBytes = output.nLength;
 		if ( eFormat != SIR_REGISTRATION_OK ) {
 			return sirCVarConfigStatus( eFormat );
 		}

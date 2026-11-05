@@ -38,6 +38,12 @@ typedef struct sirIniEntry_s
 	bool bQuoted;
 } sirIniEntry_t;
 
+typedef struct sirIniParseResult_s
+{
+	uint32_t nCount;
+	sirConfigDiagnostic_t diagnostic;
+} sirIniParseResult_t;
+
 typedef struct sirIniStorage_s
 {
 	sirIniEntry_t *pEntries;
@@ -56,7 +62,7 @@ public:
 	~SIRIniCodec( void ) = delete;
 
 	static sirConfigResult_t parse( const sirConfigInput_t& input, const sirConfigLimits_t& limits, const sirIniStorage_t& storage,
-	                                uint32_t *pCount, sirConfigDiagnostic_t *pDiagnostic ) noexcept;
+	                                sirIniParseResult_t *pResult ) noexcept;
 	static sirConfigResult_t write( const sirIniEntry_t *pEntries, uint32_t nCount, const sirConfigSink_t& sink,
 	                                uint64_t nMaxBytes ) noexcept;
 

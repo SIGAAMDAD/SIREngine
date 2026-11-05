@@ -114,9 +114,14 @@ sirRegistrationResult_t sirCVarParseText( sirCVarType_t eType, const char *pszIn
 	return SIR_REGISTRATION_TYPE_MISMATCH;
 }
 
-sirRegistrationResult_t sirCVarFormatText( sirCVarType_t eType, const sirCVarValue_t& value, char *pszOutput, uint32_t nCapacity,
-                                           uint32_t *pLength ) noexcept
+sirRegistrationResult_t sirCVarFormatText( sirCVarType_t eType, const sirCVarValue_t& value, sirCVarTextBuffer_t *pBuffer ) noexcept
 {
+	if ( pBuffer == nullptr ) {
+		return SIR_REGISTRATION_INVALID_ARGUMENT;
+	}
+	char *pszOutput = pBuffer->pszOutput;
+	const uint32_t nCapacity = pBuffer->nCapacity;
+	uint32_t *pLength = &pBuffer->nLength;
 	if ( pszOutput == nullptr || pLength == nullptr || nCapacity == 0 || eType >= SIR_CVAR_TYPE_COUNT ) {
 		return SIR_REGISTRATION_INVALID_ARGUMENT;
 	}
