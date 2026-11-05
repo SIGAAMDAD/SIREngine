@@ -352,3 +352,6 @@ endif()
 
 add_subdirectory(Config)
 include(${CMAKE_CURRENT_SOURCE_DIR}/StringPoolTests.cmake)
+
+# Portable D3D11 feature-level admission and opt-in Windows registration.
+add_subdirectory(Renderer/D3D11)

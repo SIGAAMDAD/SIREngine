@@ -23,3 +23,6 @@ endif()
 if(SIR_WITH_VULKAN)
     add_subdirectory(Drivers/Vulkan)
 endif()
+
+# D3D11 capability admission is portable; the native target is opt-in.
+add_subdirectory(Drivers/D3D11)
