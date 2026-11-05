@@ -95,6 +95,21 @@ if(SIR_MESH_ENABLE_COVERAGE)
                 -P "${CMAKE_CURRENT_LIST_DIR}/VerifyCoverage.cmake"
         DEPENDS SIRMeshCacheTests SIRMeshCacheStateTests SIRMeshCacheEdgeTests
                 SIRMeshCacheGenerationTests SIRMeshCacheBorrowLimitTests SIRMeshCacheAllocationTests
+                SIRMeshCacheOwnerLimitTests SIRVGFramePlanTests
         USES_TERMINAL
-        COMMENT "Run all real MeshCache tests and require 100% production-source line/branch/function coverage")
+        COMMENT "Run all real CPU mesh tests and require 100% production-source line/branch/function coverage")
+endif()
+
+# Native graphics ABI is deliberately not linked into the portable CPU plan.
+add_library(SIRVGFramePlan STATIC "${SIR_MESH_SOURCE_ROOT}/Mesh/SIRVGFramePlan.cpp")
+target_include_directories(SIRVGFramePlan PUBLIC "${SIR_MESH_SOURCE_ROOT}" "${SIR_MESH_BUILD_ROOT}")
+target_compile_options(SIRVGFramePlan PRIVATE -Wall -Wextra -Wpedantic -Werror)
+add_executable(SIRVGFramePlanTests "${CMAKE_CURRENT_LIST_DIR}/../../Unit/SIRVGFramePlanTests.cpp")
+target_link_libraries(SIRVGFramePlanTests PRIVATE SIRVGFramePlan)
+target_compile_options(SIRVGFramePlanTests PRIVATE -Wall -Wextra -Wpedantic -Werror)
+add_test(NAME mesh.vg.frame-plan COMMAND SIRVGFramePlanTests)
+if(SIR_MESH_ENABLE_COVERAGE)
+    target_compile_options(SIRVGFramePlan PRIVATE -fprofile-instr-generate -fcoverage-mapping)
+    target_compile_options(SIRVGFramePlanTests PRIVATE -fprofile-instr-generate -fcoverage-mapping)
+    target_link_options(SIRVGFramePlanTests PRIVATE -fprofile-instr-generate)
 endif()

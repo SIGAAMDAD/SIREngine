@@ -45,3 +45,8 @@ target_include_directories(SIRMeshCacheOwnerLimitTests PRIVATE "${PROJECT_SOURCE
 target_compile_definitions(SIRMeshCacheOwnerLimitTests PRIVATE SIR_MESH_TEST_OWNER_ID_SEED=18446744073709551614ULL)
 add_test(NAME mesh.cache.owner-id-limit COMMAND SIRMeshCacheOwnerLimitTests)
 sir_configure_owned_target(SIRMeshCacheOwnerLimitTests)
+
+add_executable(SIRVGFramePlanTests SIRVGFramePlanTests.cpp)
+target_link_libraries(SIRVGFramePlanTests PRIVATE SIR::VGFramePlan)
+add_test(NAME mesh.vg.frame-plan COMMAND SIRVGFramePlanTests)
+sir_configure_owned_target(SIRVGFramePlanTests)
