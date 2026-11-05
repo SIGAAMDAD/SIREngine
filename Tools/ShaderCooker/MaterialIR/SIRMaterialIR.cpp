@@ -93,7 +93,7 @@ static bool sirMaterialIRValidateNode( const sirMaterialIRGraph_t& graph, uint32
 	default:
 		return false;
 	}
-	*pSwitchMask = nUsed;
+	pSwitchMask[iNode] = nUsed;
 	return true;
 }
 
@@ -175,7 +175,7 @@ sirShaderCookResult_t sirMaterialIRCompile( const sirMaterialIRGraph_t& graph, c
 	}
 	uint32_t szNodeMasks[SIR_MATERIAL_IR_MAX_NODES] = {};
 	for ( uint32_t iNode = 0; iNode < graph.nNodeCount; ++iNode ) {
-		if ( !sirMaterialIRValidateNode( graph, iNode, nStaticBits, &szNodeMasks[iNode] ) ) {
+		if ( !sirMaterialIRValidateNode( graph, iNode, nStaticBits, szNodeMasks ) ) {
 			return SIR_SHADER_COOK_INVALID_ARGUMENT;
 		}
 	}
