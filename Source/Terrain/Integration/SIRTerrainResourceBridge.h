@@ -26,14 +26,21 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Resources/SIRResourceGraph.h>
 #include <Terrain/Data/SIRTerrainHeightfieldView.h>
-#include <Terrain/Data/SIRTerrainRegionCatalog.h>
 
 constexpr uint32_t SIR_TERRAIN_HEIGHTFIELD_RESOURCE_TYPE = UINT32_C( 0x54484631 );
 constexpr uint32_t SIR_TERRAIN_HEIGHTFIELD_FORMAT = UINT32_C( 0x00010001 );
 
+typedef struct sirTerrainRegionIdentity_s
+{
+	uint64_t nAssetId;
+	uint32_t nCookedVariantId;
+	int32_t iRegionX;
+	int32_t iRegionZ;
+} sirTerrainRegionIdentity_t;
+
 typedef struct sirTerrainRegionPublishRequest_s
 {
-	uint32_t nWorldVariant;
+	sirTerrainRegionIdentity_t identity;
 	uint32_t nStagingDomain;
 	uint64_t nExpectedGraphRevision;
 	uint64_t nMinimumTerrainRevision;
@@ -44,12 +51,12 @@ typedef struct sirTerrainRegionPublishRequest_s
 class SIRTerrainResourceBridge
 {
 public:
-	static SIRResourceKey getKey( sirTerrainRegionKey_t region, uint32_t nWorldVariant ) noexcept;
+	static SIRResourceKey getKey( const sirTerrainRegionIdentity_t& identity ) noexcept;
 
 	static SIRResourceResult publish( SIRResourceGraph& graph, sirTerrainConstByteSpan_t source,
 	                                  const sirTerrainRegionPublishRequest_t& request, SIRResourceHandle& handle ) noexcept;
-	static SIRResourceResult open( const SIRResourceGraph& graph, const SIRResourceReadScope& scope, const SIRResourceKey& key,
-	                               sirTerrainR16View_t& view ) noexcept;
+	static SIRResourceResult open( const SIRResourceGraph& graph, const SIRResourceReadScope& scope,
+	                               const sirTerrainRegionIdentity_t& identity, sirTerrainR16View_t& view ) noexcept;
 
 protected:
 private:
