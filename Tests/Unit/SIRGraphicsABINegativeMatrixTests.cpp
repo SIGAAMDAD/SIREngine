@@ -31,14 +31,13 @@ static bool expectStatus( uint32_t nActual, uint32_t nExpected, const char *pszC
 	return true;
 }
 
-#define REQUIRE_BAD( type, base, field, bad, function )                            \
-	do {                                                                          \
-		type mutated = base;                                                      \
-		mutated.field = bad;                                                      \
-		if ( !expectStatus( function( &mutated ), SIR_GRAPHICS_INVALID_ARGUMENT,   \
-		                    #field "=" #bad ) ) {                                 \
-			return false;                                                         \
-		}                                                                         \
+#define REQUIRE_BAD( type, base, field, bad, function )                                                                                    \
+	do {                                                                                                                                   \
+		type mutated = base;                                                                                                               \
+		mutated.field = bad;                                                                                                               \
+		if ( !expectStatus( function( &mutated ), SIR_GRAPHICS_INVALID_ARGUMENT, #field "=" #bad ) ) {                                     \
+			return false;                                                                                                                  \
+		}                                                                                                                                  \
 	} while ( 0 )
 
 static bool testAdapter( void ) noexcept
@@ -104,12 +103,16 @@ static bool testCapabilities( void ) noexcept
 	REQUIRE_BAD( sirGraphicsABICapabilities_t, caps, nEnabledFeatures, 1ULL << 63, sirGraphicsValidateABICapabilities );
 	REQUIRE_BAD( sirGraphicsABICapabilities_t, caps, nPipelineModelMask, 0, sirGraphicsValidateABICapabilities );
 	REQUIRE_BAD( sirGraphicsABICapabilities_t, caps, nPipelineModelMask, 1U << 31, sirGraphicsValidateABICapabilities );
-	REQUIRE_BAD( sirGraphicsABICapabilities_t, caps, nEnabledFeatures, SIR_GRAPHICS_FEATURE_FIXED_FUNCTION, sirGraphicsValidateABICapabilities );
-	REQUIRE_BAD( sirGraphicsABICapabilities_t, caps, nPipelineModelMask, 1U << ( SIR_GRAPHICS_PIPELINE_MODEL_FIXED_FUNCTION - 1 ), sirGraphicsValidateABICapabilities );
+	REQUIRE_BAD( sirGraphicsABICapabilities_t, caps, nEnabledFeatures, SIR_GRAPHICS_FEATURE_FIXED_FUNCTION,
+	             sirGraphicsValidateABICapabilities );
+	REQUIRE_BAD( sirGraphicsABICapabilities_t, caps, nPipelineModelMask, 1U << ( SIR_GRAPHICS_PIPELINE_MODEL_FIXED_FUNCTION - 1 ),
+	             sirGraphicsValidateABICapabilities );
 	REQUIRE_BAD( sirGraphicsABICapabilities_t, caps, nEnabledQueues, 1U << SIR_GRAPHICS_QUEUE_COPY, sirGraphicsValidateABICapabilities );
 	REQUIRE_BAD( sirGraphicsABICapabilities_t, caps, nEnabledFeatures, SIR_GRAPHICS_FEATURE_PRESENT, sirGraphicsValidateABICapabilities );
-	REQUIRE_BAD( sirGraphicsABICapabilities_t, caps, nEnabledFeatures, SIR_GRAPHICS_FEATURE_ASYNC_COMPUTE, sirGraphicsValidateABICapabilities );
-	REQUIRE_BAD( sirGraphicsABICapabilities_t, caps, nEnabledFeatures, SIR_GRAPHICS_FEATURE_COPY_QUEUE, sirGraphicsValidateABICapabilities );
+	REQUIRE_BAD( sirGraphicsABICapabilities_t, caps, nEnabledFeatures, SIR_GRAPHICS_FEATURE_ASYNC_COMPUTE,
+	             sirGraphicsValidateABICapabilities );
+	REQUIRE_BAD( sirGraphicsABICapabilities_t, caps, nEnabledFeatures, SIR_GRAPHICS_FEATURE_COPY_QUEUE,
+	             sirGraphicsValidateABICapabilities );
 	sirGraphicsABICapabilities_t compute = caps;
 	compute.nEnabledFeatures = SIR_GRAPHICS_FEATURE_COMPUTE;
 	compute.nEnabledQueues = 1U << SIR_GRAPHICS_QUEUE_COPY;
@@ -179,13 +182,17 @@ static bool testModelCaps( void ) noexcept
 	REQUIRE_BAD( sirGraphicsABIPipelineModelCaps_t, caps, nFixedFeatureMask, 1U << 31, sirGraphicsValidateABIPipelineModelCaps );
 	REQUIRE_BAD( sirGraphicsABIPipelineModelCaps_t, caps, nFixedTextureOperationMask, 1U << 31, sirGraphicsValidateABIPipelineModelCaps );
 	REQUIRE_BAD( sirGraphicsABIPipelineModelCaps_t, caps, nFixedFogModeMask, 1U << 31, sirGraphicsValidateABIPipelineModelCaps );
-	REQUIRE_BAD( sirGraphicsABIPipelineModelCaps_t, caps, nFixedFeatureMask, SIR_GRAPHICS_FIXED_TRANSFORM, sirGraphicsValidateABIPipelineModelCaps );
+	REQUIRE_BAD( sirGraphicsABIPipelineModelCaps_t, caps, nFixedFeatureMask, SIR_GRAPHICS_FIXED_TRANSFORM,
+	             sirGraphicsValidateABIPipelineModelCaps );
 	REQUIRE_BAD( sirGraphicsABIPipelineModelCaps_t, caps, nMaximumFixedLights, 1, sirGraphicsValidateABIPipelineModelCaps );
 	REQUIRE_BAD( sirGraphicsABIPipelineModelCaps_t, caps, nShaderStageMask, 0, sirGraphicsValidateABIPipelineModelCaps );
 	REQUIRE_BAD( sirGraphicsABIPipelineModelCaps_t, caps, nShaderFormatMask, 0, sirGraphicsValidateABIPipelineModelCaps );
-	REQUIRE_BAD( sirGraphicsABIPipelineModelCaps_t, caps, nShaderStageMask, SIR_GRAPHICS_STAGE_FRAGMENT, sirGraphicsValidateABIPipelineModelCaps );
-	REQUIRE_BAD( sirGraphicsABIPipelineModelCaps_t, caps, nRequiredFeatureMask, SIR_GRAPHICS_FEATURE_COMPUTE, sirGraphicsValidateABIPipelineModelCaps );
-	REQUIRE_BAD( sirGraphicsABIPipelineModelCaps_t, caps, nRequiredFeatureMask, SIR_GRAPHICS_FEATURE_GRAPHICS, sirGraphicsValidateABIPipelineModelCaps );
+	REQUIRE_BAD( sirGraphicsABIPipelineModelCaps_t, caps, nShaderStageMask, SIR_GRAPHICS_STAGE_FRAGMENT,
+	             sirGraphicsValidateABIPipelineModelCaps );
+	REQUIRE_BAD( sirGraphicsABIPipelineModelCaps_t, caps, nRequiredFeatureMask, SIR_GRAPHICS_FEATURE_COMPUTE,
+	             sirGraphicsValidateABIPipelineModelCaps );
+	REQUIRE_BAD( sirGraphicsABIPipelineModelCaps_t, caps, nRequiredFeatureMask, SIR_GRAPHICS_FEATURE_GRAPHICS,
+	             sirGraphicsValidateABIPipelineModelCaps );
 	return true;
 }
 
@@ -231,17 +238,17 @@ static bool testSourcePipeline( void ) noexcept
 		return false;
 	}
 	test = source;
-	test.nTopology = ( sirGraphicsTopology_t )( SIR_GRAPHICS_TOPOLOGY_PATCHES + 1 );
+	test.eTopology = ( sirGraphicsTopology_t )( SIR_GRAPHICS_TOPOLOGY_PATCHES + 1 );
 	if ( !expectStatus( sirGraphicsValidatePipeline( test ), SIR_GRAPHICS_INVALID_ARGUMENT, "source invalid topology" ) ) {
 		return false;
 	}
 	test = source;
-	test.nCullMode = ( sirGraphicsCullMode_t )( SIR_GRAPHICS_CULL_BACK + 1 );
+	test.eCullMode = ( sirGraphicsCullMode_t )( SIR_GRAPHICS_CULL_BACK + 1 );
 	if ( !expectStatus( sirGraphicsValidatePipeline( test ), SIR_GRAPHICS_INVALID_ARGUMENT, "source invalid culling" ) ) {
 		return false;
 	}
 	test = source;
-	test.nDepthCompare = ( sirGraphicsCompareOp_t )( SIR_GRAPHICS_COMPARE_ALWAYS + 1 );
+	test.eDepthCompare = ( sirGraphicsCompareOp_t )( SIR_GRAPHICS_COMPARE_ALWAYS + 1 );
 	if ( !expectStatus( sirGraphicsValidatePipeline( test ), SIR_GRAPHICS_INVALID_ARGUMENT, "source invalid depth comparison" ) ) {
 		return false;
 	}
