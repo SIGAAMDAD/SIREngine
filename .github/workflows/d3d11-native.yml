@@ -30,28 +30,10 @@ jobs:
         run: git submodule update --init ThirdParty/GoogleTest
       - name: Initialize MSVC
         uses: ilammy/msvc-dev-cmd@v1
-      - name: Install pinned CMake 4.4.5 and FASTBuild 1.20 without GitHub API release discovery
-        shell: bash
-        run: |
-          set -euo pipefail
-          root="${RUNNER_TEMP}/sir-d3d11-tools"
-          mkdir -p "${root}/cmake" "${root}/fastbuild" "${root}/bin"
-          curl -fsSL --retry 3 "https://cmake.org/files/v4.4/cmake-4.4.5-windows-x86_64.zip" -o "${root}/cmake.zip"
-          unzip -q "${root}/cmake.zip" -d "${root}/cmake"
-          cmake_bin="$(find "${root}/cmake" -type f -name cmake.exe -print -quit)"
-          test -n "${cmake_bin}"
-          echo "$(dirname "${cmake_bin}")" >> "${GITHUB_PATH}"
-          curl -fsSL --retry 3 "https://www.fastbuild.org/downloads/v1.20/FASTBuild-Windows-x64-v1.20.zip" -o "${root}/fastbuild.zip"
-          unzip -q "${root}/fastbuild.zip" -d "${root}/fastbuild"
-          fastbuild_bin="$(find "${root}/fastbuild" -type f -name FBuild.exe -print -quit)"
-          test -n "${fastbuild_bin}"
-          cp "${fastbuild_bin}" "${root}/bin/FBuild.exe"
-          echo "${root}/bin" >> "${GITHUB_PATH}"
-          "${cmake_bin}" --version
-          "${root}/bin/FBuild.exe" -version
+      - uses: ./.github/actions/setup-build-tools
       - name: Configure native D3D11
         run: cmake --preset dev -DSIR_WITH_D3D11=ON -DSIR_WITH_GOOGLETEST=ON
       - name: Compile real Windows SDK backend and tests
-        run: cmake --build --preset dev --target SIRD3D11RegistrationTests SIRD3D11FeatureLevelTests
+        run: cmake --build --preset dev --target SIRD3D11RegistrationTests SIRD3D11FeatureLevelTests SIRD3D11FormatValidationTests SIRD3D11FormatProbeTests
       - name: Execute D3D11 native device and WARP tests
         run: ctest --preset dev --output-on-failure -R '^renderer[.]d3d11[.]'

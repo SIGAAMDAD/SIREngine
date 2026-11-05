@@ -27,6 +27,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Renderer/SIRRenderingDevice.h>
 #include <Renderer/SIRGraphicsABIOperations.h>
 #include <Renderer/Drivers/D3D11/SIRD3D11FeatureLevels.h>
+#include <Renderer/Drivers/D3D11/SIRD3D11Formats.h>
 
 // The public class holds opaque, singly owned COM references. No Windows SDK
 // types cross this header. Device creation occurs in the driver implementation.
@@ -54,6 +55,7 @@ public:
 	sirGraphicsResult_t queryPipelineModelCaps( sirGraphicsPipelineModel_t eModel,
 	                                            sirGraphicsABIPipelineModelCaps_t *pCaps ) const noexcept override;
 	sirGraphicsResult_t queryMemoryBudget( sirGraphicsMemoryBudget_t *pBudget ) const noexcept override;
+	sirGraphicsResult_t queryNativeFormatSupport( sirGraphicsFormat_t eFormat, sirD3D11FormatSupport_t *pSupport ) const noexcept;
 	sirGraphicsResult_t createBuffer( const sirGraphicsBufferDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept override;
 	sirGraphicsResult_t createTexture( const sirGraphicsTextureDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept override;
 	sirGraphicsResult_t createView( const sirGraphicsViewDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept override;

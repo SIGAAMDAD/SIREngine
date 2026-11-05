@@ -39,6 +39,17 @@ uint32_t SIRD3D11Device::getDeviceGeneration( void ) const noexcept
 	return m_pNativeDevice != nullptr ? m_nDeviceGeneration : 0U;
 }
 
+static uint32_t sirD3D11MaximumColorSamples( void *pNativeDevice ) noexcept
+{
+	sirD3D11FormatSupport_t support = {};
+	support.nSize = sizeof( support );
+	if ( sirD3D11QueryFormatSupport( pNativeDevice, SIR_GRAPHICS_FORMAT_RGBA8_UNORM, &support ) != SIR_GRAPHICS_SUCCESS ) {
+		return 1;
+	}
+	const uint32_t nSamples = sirD3D11GetMaxSampleCount( &support );
+	return nSamples > 0 ? nSamples : 1;
+}
+
 sirGraphicsResult_t SIRD3D11Device::queryCapabilities( sirGraphicsCapabilities_t *pCapabilities ) const noexcept
 {
 	if ( pCapabilities == nullptr ) {
@@ -58,7 +69,7 @@ sirGraphicsResult_t SIRD3D11Device::queryCapabilities( sirGraphicsCapabilities_t
 	pCapabilities->nMaximumColorAttachments = m_profile.nMaximumColorTargets;
 	pCapabilities->nMaximumFramesInFlight = m_nFramesInFlight;
 	pCapabilities->nMaximumBindingSlots = m_profile.nMaximumShaderResourceSlots;
-	pCapabilities->nMaximumSampleCount = ( m_profile.nEnabledFeatures & SIR_GRAPHICS_FEATURE_MULTISAMPLE ) != 0 ? 2U : 1U;
+	pCapabilities->nMaximumSampleCount = sirD3D11MaximumColorSamples( m_pNativeDevice );
 	pCapabilities->nDeviceGeneration = m_nDeviceGeneration;
 	pCapabilities->bSoftwareAdapter = m_bSoftwareAdapter;
 	return SIR_GRAPHICS_SUCCESS;
@@ -97,13 +108,22 @@ sirGraphicsResult_t SIRD3D11Device::queryPipelineModelCaps( sirGraphicsPipelineM
 	caps.nMaximumTextureUnits = m_profile.nMaximumShaderResourceSlots;
 	caps.nMaximumBindings = m_profile.nMaximumShaderResourceSlots;
 	caps.nMaximumColorAttachments = m_profile.nMaximumColorTargets;
-	caps.nMaximumSamples = ( m_profile.nEnabledFeatures & SIR_GRAPHICS_FEATURE_MULTISAMPLE ) != 0 ? 2U : 1U;
+	caps.nMaximumSamples = sirD3D11MaximumColorSamples( m_pNativeDevice );
 	caps.nMaximumTextureDimension = m_profile.nMaximumTexture2D;
 	caps.nMaximumVertexShaderProfile = m_profile.nShaderProfile;
 	caps.nMaximumFragmentShaderProfile = m_profile.nShaderProfile;
 	caps.nSupportsNPOT = m_profile.nFeatureLevel >= SIR_D3D11_FEATURE_LEVEL_10_0 ? 1U : 0U;
 	*pCaps = caps;
 	return SIR_GRAPHICS_SUCCESS;
+}
+
+sirGraphicsResult_t SIRD3D11Device::queryNativeFormatSupport( sirGraphicsFormat_t eFormat,
+                                                              sirD3D11FormatSupport_t *pSupport ) const noexcept
+{
+	if ( m_pNativeDevice == nullptr ) {
+		return SIR_GRAPHICS_DEVICE_LOST;
+	}
+	return sirD3D11QueryFormatSupport( m_pNativeDevice, eFormat, pSupport );
 }
 
 sirGraphicsResult_t SIRD3D11Device::queryMemoryBudget( sirGraphicsMemoryBudget_t *pBudget ) const noexcept
