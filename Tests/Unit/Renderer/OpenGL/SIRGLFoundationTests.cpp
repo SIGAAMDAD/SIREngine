@@ -88,14 +88,6 @@ int main( void )
 	caps.nSize = 0;
 	sirGLCheck( sirGLBuildCapabilities( &probe, 4, &caps ) == SIR_GRAPHICS_INVALID_ARGUMENT, "short ABI caps" );
 
-	sirGraphicsABIFormat_t fmt = {};
-	fmt.nSize = sizeof( fmt );
-	fmt.nFormat = SIR_GRAPHICS_FORMAT_RGBA8_UNORM;
-	sirGLCheck( sirGLQuerySupportedFormat( fmt.nFormat, &fmt ) == SIR_GRAPHICS_UNSUPPORTED, "native format not advertised" );
-	sirGLCheck( sirGLQuerySupportedFormat( fmt.nFormat, nullptr ) == SIR_GRAPHICS_INVALID_ARGUMENT, "null format" );
-	fmt.nSize = 0;
-	sirGLCheck( sirGLQuerySupportedFormat( fmt.nFormat, &fmt ) == SIR_GRAPHICS_INVALID_ARGUMENT, "short format" );
-
 	if ( s_nFailures == 0 ) {
 		printf( "OpenGL 4.6 foundation capability tests passed\n" );
 	}

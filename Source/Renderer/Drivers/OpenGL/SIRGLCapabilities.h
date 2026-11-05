@@ -30,6 +30,5 @@ sirGraphicsResult_t sirGLValidateCore46( const sirGLProbe_t *pProbe ) noexcept;
 sirGraphicsResult_t sirGLBuildAdapter( const sirGLProbe_t *pProbe, sirGraphicsABIAdapter_t *pAdapter ) noexcept;
 sirGraphicsResult_t sirGLBuildCapabilities( const sirGLProbe_t *pProbe, uint32_t nGeneration,
                                             sirGraphicsABICapabilities_t *pCapabilities ) noexcept;
-sirGraphicsResult_t sirGLQuerySupportedFormat( uint32_t nFormat, sirGraphicsABIFormat_t *pFormat ) noexcept;
 
 #endif // __SIRENGINE_SIRGLCAPABILITIES_H__
