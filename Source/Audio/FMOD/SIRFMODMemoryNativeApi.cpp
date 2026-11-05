@@ -17,6 +17,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Core/Containers/SIRRawStorage.h>
 #include <fmod.hpp>
 #include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 
 // FMOD's callbacks are process-global and may run on streaming/mixer threads.
@@ -121,7 +122,8 @@ static sirAudioResult_t sirInstallFMODNativeMemory( const sirContainerAllocator_
 	if ( !s_nFMODMemoryInstalled.compareExchangeStrong( nExpected, 1, SIR_MEMORY_ORDER_ACQUIRE_RELEASE ) ) {
 		if ( nExpected == 2 && s_nFMODNativeBudgetBytes == nBudgetBytes && s_FMODNativeUpstream.pContext == pAllocator->pContext &&
 		     s_FMODNativeUpstream.pfnAllocate == pAllocator->pfnAllocate &&
-		     s_FMODNativeUpstream.pfnDeallocate == pAllocator->pfnDeallocate ) {
+		     s_FMODNativeUpstream.pfnDeallocate == pAllocator->pfnDeallocate && s_FMODNativeUpstream.nDomainId == pAllocator->nDomainId &&
+		     s_FMODNativeUpstream.nOwnerTag == pAllocator->nOwnerTag ) {
 			return SIR_AUDIO_OK;
 		}
 		return SIR_AUDIO_BUSY;
