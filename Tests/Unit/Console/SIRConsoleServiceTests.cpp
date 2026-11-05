@@ -343,6 +343,8 @@ int main( void )
 	char szHistoryBuffer[128] = {};
 	sirConsoleHistoryView_t history = { szHistoryBuffer, sizeof( szHistoryBuffer ), 0, 0 };
 	assert( console.readHistory( 0, &history ) == SIR_REGISTRATION_OK );
+	assert( strcmp( szHistoryBuffer, "get r.count" ) == 0 && history.nRequestId == 17 );
+	assert( console.readHistory( 2, &history ) == SIR_REGISTRATION_OK );
 	assert( strcmp( szHistoryBuffer, "exec profile.cfg" ) == 0 && history.nRequestId == 15 );
 
 	assert( console.submit( "mod.ping \"hello world\"", 22, { user.origin, 100 } ) == SIR_REGISTRATION_OK );
