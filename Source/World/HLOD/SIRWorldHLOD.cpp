@@ -25,7 +25,20 @@ static bool sirWorldHLODIsReady( const sirWorldHLODInput_t& input, uint32_t iNod
 	       resident.nSourceRevision == input.pNodes[iNode].nSourceRevision;
 }
 
-sirWorldHLODResult_t sirWorldHLODPlan( const sirWorldHLODInput_t& input, sirWorldHLODOutput_t& output ) noexcept
+// A previously split node uses the lower coarsening threshold until the
+// camera has moved sufficiently far away. Source/world reloading invalidates
+// retained split state, while absent history preserves the original behavior.
+static bool sirWorldHLODWantsChildren( const sirWorldHLODInput_t& input, const sirWorldHLODHistory_t *pHistory, uint32_t iNode ) noexcept
+{
+	if ( input.pProjectedError[iNode] > input.fMaxProjectedError ) {
+		return true;
+	}
+	return pHistory != nullptr && pHistory->nWorldGeneration == input.nWorldGeneration && pHistory->pPreviouslySplit[iNode] != 0 &&
+	       input.pProjectedError[iNode] > pHistory->fCoarsenProjectedError;
+}
+
+static sirWorldHLODResult_t sirWorldHLODPlanInternal( const sirWorldHLODInput_t& input, sirWorldHLODOutput_t& output,
+                                                      const sirWorldHLODHistory_t *pHistory ) noexcept
 {
 	if ( input.pNodes == nullptr || input.pResidency == nullptr || input.pProjectedError == nullptr || output.pScratch == nullptr ||
 	     output.pnSelectedCount == nullptr || output.pnDemandCount == nullptr || input.nNodeCount == 0 ||
@@ -76,7 +89,7 @@ sirWorldHLODResult_t sirWorldHLODPlan( const sirWorldHLODInput_t& input, sirWorl
 			}
 		}
 		output.pScratch[iNode].bCanCover = bReady || bChildrenCover;
-		output.pScratch[iNode].bUseChildren = bChildrenCover && ( input.pProjectedError[iNode] > input.fMaxProjectedError || !bReady );
+		output.pScratch[iNode].bUseChildren = bChildrenCover && ( sirWorldHLODWantsChildren( input, pHistory, iNode ) || !bReady );
 	}
 	if ( !output.pScratch[0].bCanCover ) {
 		return SIR_WORLD_HLOD_NO_RESIDENT_CUT;
@@ -99,7 +112,7 @@ sirWorldHLODResult_t sirWorldHLODPlan( const sirWorldHLODInput_t& input, sirWorl
 			continue;
 		}
 		++nSelected;
-		if ( input.pProjectedError[iNode] <= input.fMaxProjectedError ) {
+		if ( !sirWorldHLODWantsChildren( input, pHistory, iNode ) ) {
 			continue;
 		}
 		for ( uint32_t iChild = node.nFirstChild; iChild < node.nFirstChild + node.nChildCount; ++iChild ) {
@@ -130,4 +143,19 @@ sirWorldHLODResult_t sirWorldHLODPlan( const sirWorldHLODInput_t& input, sirWorl
 	*output.pnSelectedCount = nWritten;
 	*output.pnDemandCount = nRequested;
 	return SIR_WORLD_HLOD_OK;
+}
+
+sirWorldHLODResult_t sirWorldHLODPlan( const sirWorldHLODInput_t& input, sirWorldHLODOutput_t& output ) noexcept
+{
+	return sirWorldHLODPlanInternal( input, output, nullptr );
+}
+
+sirWorldHLODResult_t sirWorldHLODPlanHysteretic( const sirWorldHLODInput_t& input, const sirWorldHLODHistory_t& history,
+                                                 sirWorldHLODOutput_t& output ) noexcept
+{
+	if ( history.pPreviouslySplit == nullptr || history.nWorldGeneration == 0 || !isfinite( history.fCoarsenProjectedError ) ||
+	     history.fCoarsenProjectedError < 0.0f || history.fCoarsenProjectedError > input.fMaxProjectedError ) {
+		return SIR_WORLD_HLOD_INVALID_ARGUMENT;
+	}
+	return sirWorldHLODPlanInternal( input, output, &history );
 }

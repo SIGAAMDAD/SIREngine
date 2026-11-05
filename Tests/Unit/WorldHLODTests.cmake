@@ -22,3 +22,8 @@ add_executable(SIRWorldHLODDemandTests SIRWorldHLODDemandTests.cpp)
 target_link_libraries(SIRWorldHLODDemandTests PRIVATE SIR::WorldHLOD)
 add_test(NAME world.hlod.demand-reconcile COMMAND SIRWorldHLODDemandTests)
 sir_configure_owned_target(SIRWorldHLODDemandTests)
+
+add_executable(SIRWorldHLODProjectionTests SIRWorldHLODProjectionTests.cpp)
+target_link_libraries(SIRWorldHLODProjectionTests PRIVATE SIR::WorldHLOD)
+add_test(NAME world.hlod.projection COMMAND SIRWorldHLODProjectionTests)
+sir_configure_owned_target(SIRWorldHLODProjectionTests)
