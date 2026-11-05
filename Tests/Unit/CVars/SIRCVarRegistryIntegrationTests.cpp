@@ -37,6 +37,8 @@ static void sirTestGroupSink( void *, uint32_t nGroup, uint64_t nRevision ) noex
 	s_nLastRevision = nRevision;
 	uint64_t nToken = 0;
 	assert( s_pRegistry->prepareBatch( &s_ReentrantWrite, 1, &nToken ) == SIR_REGISTRATION_DENIED );
+	s_pRegistry->shutdown();
+	assert( s_pRegistry->isInitialized() );
 }
 
 static uint64_t sirTestU64( const uint8_t *pBytes ) noexcept
@@ -164,9 +166,11 @@ int main( void )
 	std::thread other( [&registry, &handles, &wrongThreadStatus]() {
 		sirCVarValue_t out = {};
 		wrongThreadStatus.store( ( int )registry.getValue( handles[0], SIR_CONSOLE_CAP_READ, &out ) );
+		registry.shutdown();
 	} );
 	other.join();
 	assert( wrongThreadStatus.load() == SIR_REGISTRATION_WRONG_THREAD );
+	assert( registry.isInitialized() );
 	const sirCVarOrigin_t console = {
 	    SIR_CVAR_SOURCE_SESSION_CONSOLE, 1, SIR_CONSOLE_CAP_WRITE | SIR_CONSOLE_CAP_READ, false, false, false, false };
 	sirCVarValue_t got = {};

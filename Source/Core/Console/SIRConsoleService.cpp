@@ -496,6 +496,13 @@ sirRegistrationResult_t SIRConsoleService::executeBuiltin( const sirConsoleSubmi
 		if ( eResult != SIR_REGISTRATION_OK ) {
 			return eResult;
 		}
+		if ( ( pEntry->nFlags & SIR_CVAR_FLAG_HIDDEN ) != 0 && ( submission.origin.nCapabilities & SIR_CONSOLE_CAP_ADMIN ) == 0 ) {
+			return SIR_REGISTRATION_DENIED;
+		}
+		if ( pEntry->eKind == SIR_REGISTRATION_COMMAND &&
+		     ( submission.origin.nCapabilities & pEntry->nCapabilities ) != pEntry->nCapabilities ) {
+			return SIR_REGISTRATION_DENIED;
+		}
 		if ( ( pEntry->nFlags & SIR_CVAR_FLAG_SENSITIVE ) != 0 && ( submission.origin.nCapabilities & SIR_CONSOLE_CAP_SENSITIVE ) == 0 ) {
 			return SIR_REGISTRATION_DENIED;
 		}
@@ -750,6 +757,9 @@ sirRegistrationResult_t SIRConsoleService::unloadModule( uint32_t nOwnerId, uint
 
 void SIRConsoleService::shutdown( void ) noexcept
 {
+	if ( isInitialized() && ( !ownerThread() || m_bPumping ) ) {
+		return;
+	}
 	// All producers and module callbacks must be joined before shutdown.
 	m_bAccepting.store( false, std::memory_order_release );
 	m_pRegistration = nullptr;

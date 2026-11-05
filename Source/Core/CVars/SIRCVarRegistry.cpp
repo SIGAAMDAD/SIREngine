@@ -830,6 +830,9 @@ uint32_t SIRCVarRegistry::pumpGroups( sirCVarGroupSink_t pfnSink, void *pContext
 
 void SIRCVarRegistry::shutdown( void ) noexcept
 {
+	if ( isInitialized() && ( !ownerThread() || m_bPumping ) ) {
+		return;
+	}
 	m_pRegistration = nullptr;
 	m_Storage = {};
 	m_nRevision = 0;
