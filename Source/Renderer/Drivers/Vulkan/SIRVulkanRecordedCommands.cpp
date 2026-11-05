@@ -159,6 +159,36 @@ bool sirVulkanRecordedNeedsBufferBarrier( const sirVulkanRecordedCommand_t *pCom
 	return false;
 }
 
+static bool sirVulkanRecordedValidBufferScope( VkPipelineStageFlags2 nStages, VkAccessFlags2 nAccess, VkBufferUsageFlags nUsage ) noexcept
+{
+	if ( nStages == VK_PIPELINE_STAGE_2_NONE ) {
+		return nAccess == VK_ACCESS_2_NONE;
+	}
+	if ( nAccess == VK_ACCESS_2_NONE ) {
+		return false;
+	}
+	if ( nStages == VK_PIPELINE_STAGE_2_COPY_BIT ) {
+		const VkAccessFlags2 nAllowed = ( ( nUsage & VK_BUFFER_USAGE_TRANSFER_SRC_BIT ) != 0 ? VK_ACCESS_2_TRANSFER_READ_BIT : 0 ) |
+		                                ( ( nUsage & VK_BUFFER_USAGE_TRANSFER_DST_BIT ) != 0 ? VK_ACCESS_2_TRANSFER_WRITE_BIT : 0 );
+		return ( nAccess & ~nAllowed ) == 0;
+	}
+	if ( nStages == VK_PIPELINE_STAGE_2_VERTEX_INPUT_BIT ) {
+		const VkAccessFlags2 nAllowed =
+		    ( ( nUsage & VK_BUFFER_USAGE_VERTEX_BUFFER_BIT ) != 0 ? VK_ACCESS_2_VERTEX_ATTRIBUTE_READ_BIT : 0 ) |
+		    ( ( nUsage & VK_BUFFER_USAGE_INDEX_BUFFER_BIT ) != 0 ? VK_ACCESS_2_INDEX_READ_BIT : 0 );
+		return ( nAccess & ~nAllowed ) == 0;
+	}
+	if ( nStages == VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT ) {
+		const VkAccessFlags2 nAllowed = VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT |
+		                                ( ( nUsage & VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT ) != 0 ? VK_ACCESS_2_UNIFORM_READ_BIT : 0 ) |
+		                                ( ( nUsage & VK_BUFFER_USAGE_STORAGE_BUFFER_BIT ) != 0
+		                                      ? VK_ACCESS_2_SHADER_STORAGE_READ_BIT | VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT
+		                                      : 0 );
+		return ( nAccess & ~nAllowed ) == 0;
+	}
+	return false;
+}
+
 sirVulkanResult_t sirVulkanValidateRecordedCommands( const sirVulkanRecordedCommand_t *pCommands, uint32_t nCount ) noexcept
 {
 	if ( pCommands == nullptr || nCount == 0 || nCount > SIR_VULKAN_COPY_BATCH_CAPACITY ) {
@@ -178,7 +208,8 @@ sirVulkanResult_t sirVulkanValidateRecordedCommands( const sirVulkanRecordedComm
 		if ( command.eKind == SIR_VULKAN_RECORDED_BUFFER_BARRIER ) {
 			const sirVulkanBufferBarrier_t& barrier = command.bufferBarrier;
 			if ( command.pBuffer == nullptr || command.pBuffer->nSize == 0 || barrier.nDestinationStages == VK_PIPELINE_STAGE_2_NONE ||
-			     ( barrier.nSourceStages == VK_PIPELINE_STAGE_2_NONE && barrier.nSourceAccess != VK_ACCESS_2_NONE ) ||
+			     !sirVulkanRecordedValidBufferScope( barrier.nSourceStages, barrier.nSourceAccess, command.pBuffer->nUsage ) ||
+			     !sirVulkanRecordedValidBufferScope( barrier.nDestinationStages, barrier.nDestinationAccess, command.pBuffer->nUsage ) ||
 			     ( barrier.bUav && ( ( command.pBuffer->nUsage & VK_BUFFER_USAGE_STORAGE_BUFFER_BIT ) == 0 ||
 			                         ( barrier.nSourceAccess & VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT ) == 0 ||
 			                         ( barrier.nDestinationAccess & VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT ) == 0 ) ) ) {

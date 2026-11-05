@@ -154,6 +154,47 @@ int main( void )
 	     native.nSourceAccess != VK_ACCESS_2_TRANSFER_WRITE_BIT || native.nDestinationAccess != VK_ACCESS_2_TRANSFER_READ_BIT ) {
 		return 22;
 	}
+	// Reject native synchronization scopes incompatible with their stages and buffer usage.
+	buffer.nUsage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+	barrier.eType = SIR_GRAPHICS_BARRIER_TRANSITION;
+	barrier.eBefore = SIR_GRAPHICS_STATE_COPY_DESTINATION;
+	barrier.eAfter = SIR_GRAPHICS_STATE_COPY_SOURCE;
+	if ( sirVulkanPlanBufferBarrier( barrier, &buffer, &native ) != SIR_GRAPHICS_SUCCESS ) {
+		return 23;
+	}
+	commands[0].eKind = SIR_VULKAN_RECORDED_BUFFER_BARRIER;
+	commands[0].pBuffer = &buffer;
+	commands[0].bufferBarrier = native;
+	if ( sirVulkanValidateRecordedCommands( commands, 1 ) != SIR_VULKAN_SUCCESS ) {
+		return 24;
+	}
+	commands[0].bufferBarrier.nSourceAccess = VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT;
+	if ( sirVulkanValidateRecordedCommands( commands, 1 ) != SIR_VULKAN_INVALID_ARGUMENT ) {
+		return 25;
+	}
+	commands[0].bufferBarrier = native;
+	commands[0].bufferBarrier.nDestinationAccess = VK_ACCESS_2_INDEX_READ_BIT;
+	if ( sirVulkanValidateRecordedCommands( commands, 1 ) != SIR_VULKAN_INVALID_ARGUMENT ) {
+		return 26;
+	}
+	commands[0].bufferBarrier = native;
+	commands[0].bufferBarrier.nSourceStages = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+	commands[0].bufferBarrier.nSourceAccess = VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT;
+	if ( sirVulkanValidateRecordedCommands( commands, 1 ) != SIR_VULKAN_INVALID_ARGUMENT ) {
+		return 27;
+	}
+	commands[0].bufferBarrier = native;
+	commands[0].bufferBarrier.nSourceAccess = VK_ACCESS_2_NONE;
+	if ( sirVulkanValidateRecordedCommands( commands, 1 ) != SIR_VULKAN_INVALID_ARGUMENT ) {
+		return 28;
+	}
+	commands[0].bufferBarrier = native;
+	barrier.eBefore = SIR_GRAPHICS_STATE_UNDEFINED;
+	barrier.eAfter = SIR_GRAPHICS_STATE_COPY_DESTINATION;
+	if ( sirVulkanPlanBufferBarrier( barrier, &buffer, &commands[0].bufferBarrier ) != SIR_GRAPHICS_SUCCESS ||
+	     sirVulkanValidateRecordedCommands( commands, 1 ) != SIR_VULKAN_SUCCESS ) {
+		return 29;
+	}
 	printf( "Vulkan buffer barrier contracts passed\n" );
 	return 0;
 }
