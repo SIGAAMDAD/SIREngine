@@ -285,6 +285,41 @@ int main( void )
 	     pDevice->retireResource( hDimension, immediate ) != SIR_GRAPHICS_SUCCESS ) {
 		return 39;
 	}
+	texture.nWidth = 8;
+	texture.nHeight = 8;
+	texture.nDepth = 4;
+	texture.nArrayLayers = 1;
+	texture.nMipLevels = 2;
+	texture.nSampleCount = 1;
+	texture.nUsage = SIR_GRAPHICS_USAGE_STORAGE;
+	texture.eDimension = SIR_GRAPHICS_TEXTURE_3D;
+	texture.eFormat = SIR_GRAPHICS_FORMAT_RGBA8_UNORM;
+	sirGraphicsHandle_t hVolume = {};
+	if ( pDevice->createTexture( texture, &hVolume ) != SIR_GRAPHICS_SUCCESS ) {
+		return 45;
+	}
+	view = {};
+	view.hResource = hVolume;
+	view.eFormat = texture.eFormat;
+	view.nBaseMip = 0;
+	view.nMipLevels = 2;
+	view.nLayers = 1;
+	view.nUsage = SIR_GRAPHICS_USAGE_STORAGE;
+	sirGraphicsHandle_t hVolumeUav = {};
+	if ( pDevice->createView( view, &hVolumeUav ) != SIR_GRAPHICS_UNSUPPORTED || hVolumeUav.nGeneration != 0 ) {
+		return 46;
+	}
+	view.nBaseMip = 1;
+	if ( pDevice->createView( view, &hVolumeUav ) != SIR_GRAPHICS_INVALID_ARGUMENT || hVolumeUav.nGeneration != 0 ) {
+		return 47;
+	}
+	view.nMipLevels = 1;
+	if ( pDevice->createView( view, &hVolumeUav ) != SIR_GRAPHICS_SUCCESS ||
+	     pDevice->retireResource( hVolume, immediate ) != SIR_GRAPHICS_BUSY ||
+	     pDevice->retireResource( hVolumeUav, immediate ) != SIR_GRAPHICS_SUCCESS ||
+	     pDevice->retireResource( hVolume, immediate ) != SIR_GRAPHICS_SUCCESS ) {
+		return 48;
+	}
 	sirGraphicsSamplerDesc_t sampler = {};
 	sampler.eFilter = SIR_GRAPHICS_FILTER_LINEAR;
 	sampler.fMaximumAnisotropy = 1.0f;
