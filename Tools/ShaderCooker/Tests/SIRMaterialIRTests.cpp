@@ -205,11 +205,77 @@ static void testSampleOperandValidation( void ) noexcept
 	REQUIRE( sirMaterialIRCompile( graph, options, &output ) == SIR_SHADER_COOK_OK );
 }
 
+static void testReflectionBindingValidation( void ) noexcept
+{
+	sirMaterialIRNode_t szNodes[2] = {};
+	szNodes[0] = makeNode( SIR_MATERIAL_IR_CONSTANT, SIR_MATERIAL_IR_FLOAT4 );
+	szNodes[1] = makeNode( SIR_MATERIAL_IR_OUTPUT, SIR_MATERIAL_IR_FLOAT4, 0 );
+	sirMaterialIRPass_t pass = { SIR_SHADER_PASS_COLOR, 1, SIR_GRAPHICS_STAGE_FRAGMENT, SIR_GRAPHICS_FEATURE_GRAPHICS };
+	uint8_t szBindings[2 * SIR_SHADER_PACKAGE_BINDING_BYTES] = {};
+	szBindings[4] = SIR_GRAPHICS_BINDING_SAMPLED_TEXTURE;
+	szBindings[8] = SIR_SHADER_BINDING_MATERIAL;
+	szBindings[9] = SIR_GRAPHICS_STAGE_FRAGMENT;
+	szBindings[12] = 1;
+	szBindings[16] = 0x42;
+	szBindings[24 + 2] = 1;
+	szBindings[24 + 4] = SIR_GRAPHICS_BINDING_SAMPLER;
+	szBindings[24 + 8] = SIR_SHADER_BINDING_MATERIAL;
+	szBindings[24 + 9] = SIR_GRAPHICS_STAGE_FRAGMENT;
+	szBindings[24 + 12] = 1;
+	szBindings[24 + 16] = 0x43;
+	sirMaterialIRGraph_t graph = {};
+	graph.nAssetId = 47;
+	graph.nSourceHash = 71;
+	graph.pNodes = szNodes;
+	graph.nNodeCount = 2;
+	graph.pPasses = &pass;
+	graph.nPassCount = 1;
+	graph.pEncodedBindings = szBindings;
+	graph.nBindingCount = 2;
+	sirMaterialShaderMapEntry_t entry = {};
+	sirMaterialIRCompileOutput_t output = { &entry, 1, 0, 0 };
+	sirMaterialIRCompileOptions_t options = { SIR_GRAPHICS_FEATURE_GRAPHICS, false };
+	REQUIRE( sirMaterialIRCompile( graph, options, &output ) == SIR_SHADER_COOK_OK );
+	REQUIRE( output.nRequiredCount == 1 && output.nProducedCount == 1 );
+	const uint64_t nFirstSignature = entry.nReflectionSignature;
+	szBindings[24 + 16] = 0x44;
+	REQUIRE( sirMaterialIRCompile( graph, options, &output ) == SIR_SHADER_COOK_OK );
+	REQUIRE( entry.nReflectionSignature != nFirstSignature );
+	szBindings[24 + 16] = 0x43;
+	szBindings[24 + 2] = 0;
+	REQUIRE( sirMaterialIRCompile( graph, options, &output ) == SIR_SHADER_COOK_INVALID_ARGUMENT );
+	szBindings[24 + 2] = 1;
+	szBindings[2] = 2;
+	REQUIRE( sirMaterialIRCompile( graph, options, &output ) == SIR_SHADER_COOK_INVALID_ARGUMENT );
+	szBindings[2] = 0;
+	szBindings[4] = SIR_GRAPHICS_BINDING_SAMPLER + 1;
+	REQUIRE( sirMaterialIRCompile( graph, options, &output ) == SIR_SHADER_COOK_INVALID_ARGUMENT );
+	szBindings[4] = SIR_GRAPHICS_BINDING_SAMPLED_TEXTURE;
+	szBindings[8] = SIR_SHADER_BINDING_DRAW + 1;
+	REQUIRE( sirMaterialIRCompile( graph, options, &output ) == SIR_SHADER_COOK_INVALID_ARGUMENT );
+	szBindings[8] = SIR_SHADER_BINDING_MATERIAL;
+	szBindings[9] = SIR_GRAPHICS_STAGE_VERTEX;
+	REQUIRE( sirMaterialIRCompile( graph, options, &output ) == SIR_SHADER_COOK_INVALID_ARGUMENT );
+	szBindings[9] = SIR_GRAPHICS_STAGE_FRAGMENT;
+	szBindings[12] = 0;
+	REQUIRE( sirMaterialIRCompile( graph, options, &output ) == SIR_SHADER_COOK_INVALID_ARGUMENT );
+	szBindings[12] = 1;
+	szBindings[14] = 1;
+	REQUIRE( sirMaterialIRCompile( graph, options, &output ) == SIR_SHADER_COOK_INVALID_ARGUMENT );
+	szBindings[14] = 0;
+	szBindings[16] = 0;
+	REQUIRE( sirMaterialIRCompile( graph, options, &output ) == SIR_SHADER_COOK_INVALID_ARGUMENT );
+	szBindings[16] = 0x42;
+	REQUIRE( sirMaterialIRCompile( graph, options, &output ) == SIR_SHADER_COOK_OK );
+	REQUIRE( entry.nReflectionSignature == nFirstSignature );
+}
+
 int main( void )
 {
 	testDeterministicMaps();
 	testInvalidGraphs();
 	testStaticDynamicSeparation();
 	testSampleOperandValidation();
+	testReflectionBindingValidation();
 	return 0;
 }

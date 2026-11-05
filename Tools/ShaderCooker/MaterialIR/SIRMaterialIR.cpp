@@ -125,6 +125,52 @@ static bool sirMaterialIRPermutationValid( const sirMaterialIRGraph_t& graph, ui
 	return true;
 }
 
+static uint16_t sirMaterialIRRead16( const uint8_t *pBytes ) noexcept
+{
+	return ( uint16_t )( ( uint16_t )pBytes[0] | ( ( uint16_t )pBytes[1] << 8 ) );
+}
+
+static uint32_t sirMaterialIRRead32( const uint8_t *pBytes ) noexcept
+{
+	return ( uint32_t )pBytes[0] | ( ( uint32_t )pBytes[1] << 8 ) | ( ( uint32_t )pBytes[2] << 16 ) | ( ( uint32_t )pBytes[3] << 24 );
+}
+
+// Verify the canonical 24-byte little-endian reflection records before
+// deriving the same signature consumed by native shader-package validation.
+static bool sirMaterialIRBindingsValid( const sirMaterialIRGraph_t& graph, uint32_t nStages ) noexcept
+{
+	uint16_t nPreviousSet = 0;
+	uint16_t nPreviousSpace = 0;
+	uint16_t nPreviousBinding = 0;
+	for ( uint32_t iBinding = 0; iBinding < graph.nBindingCount; ++iBinding ) {
+		const uint8_t *pRecord = graph.pEncodedBindings + iBinding * SIR_SHADER_PACKAGE_BINDING_BYTES;
+		const uint16_t nSet = sirMaterialIRRead16( pRecord );
+		const uint16_t nBinding = sirMaterialIRRead16( pRecord + 2 );
+		const uint32_t nType = sirMaterialIRRead32( pRecord + 4 );
+		const uint32_t nFrequency = pRecord[8];
+		const uint32_t nVisibility = pRecord[9];
+		const uint16_t nSpace = sirMaterialIRRead16( pRecord + 10 );
+		const uint16_t nCount = sirMaterialIRRead16( pRecord + 12 );
+		const uint16_t nFlags = sirMaterialIRRead16( pRecord + 14 );
+		uint64_t nNameHash = 0;
+		for ( uint32_t iByte = 0; iByte < 8; ++iByte ) {
+			nNameHash |= ( uint64_t )pRecord[16 + iByte] << ( 8 * iByte );
+		}
+		if ( nType > SIR_GRAPHICS_BINDING_SAMPLER || nFrequency > SIR_SHADER_BINDING_DRAW || nVisibility == 0 ||
+		     ( nVisibility & ~nStages ) != 0 || nCount == 0 || nFlags != 0 || nNameHash == 0 ) {
+			return false;
+		}
+		if ( iBinding != 0 && ( nSet < nPreviousSet || ( nSet == nPreviousSet && nSpace < nPreviousSpace ) ||
+		                        ( nSet == nPreviousSet && nSpace == nPreviousSpace && nBinding <= nPreviousBinding ) ) ) {
+			return false;
+		}
+		nPreviousSet = nSet;
+		nPreviousSpace = nSpace;
+		nPreviousBinding = nBinding;
+	}
+	return true;
+}
+
 static uint64_t sirMaterialIRReflectionHash( const sirMaterialIRGraph_t& graph ) noexcept
 {
 	uint64_t nHash = sirMaterialIRHash( 14695981039346656037ULL, graph.nBindingCount );
@@ -179,6 +225,7 @@ sirShaderCookResult_t sirMaterialIRCompile( const sirMaterialIRGraph_t& graph, c
 		}
 	}
 	uint32_t nPreviousPass = 0;
+	uint32_t nStages = 0;
 	for ( uint32_t iPass = 0; iPass < graph.nPassCount; ++iPass ) {
 		const sirMaterialIRPass_t& pass = graph.pPasses[iPass];
 		if ( pass.ePass <= nPreviousPass || pass.ePass > SIR_SHADER_PASS_COMPUTE || pass.iOutput >= graph.nNodeCount ||
@@ -193,6 +240,10 @@ sirShaderCookResult_t sirMaterialIRCompile( const sirMaterialIRGraph_t& graph, c
 			return SIR_SHADER_COOK_INVALID_ARGUMENT;
 		}
 		nPreviousPass = pass.ePass;
+		nStages |= pass.nStageMask;
+	}
+	if ( !sirMaterialIRBindingsValid( graph, nStages ) ) {
+		return SIR_SHADER_COOK_INVALID_ARGUMENT;
 	}
 	// Enumerate semantic static bits in bit order, independent of switch
 	// descriptor order. Up to eight static choices, with bounded CPU work.
