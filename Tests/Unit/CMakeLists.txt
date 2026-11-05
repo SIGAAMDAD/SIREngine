@@ -351,6 +351,14 @@ if(SIR_WITH_GOOGLETEST)
 endif()
 
 if(SIR_WITH_OPENGL)
+    add_executable(SIRGL46BuffersTests
+        Renderer/OpenGL/SIRGLBuffersTests.cpp
+        "${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/OpenGL/SIRGLBuffers.cpp"
+        "${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/OpenGL/SIRGLFunctionLoader.cpp")
+    target_link_libraries(SIRGL46BuffersTests PRIVATE SIR::Graphics)
+    sir_configure_owned_target(SIRGL46BuffersTests)
+    add_test(NAME renderer.opengl46.buffers COMMAND SIRGL46BuffersTests)
+
     add_executable(SIRGL46HandlePoolTests
         Renderer/OpenGL/SIRGLHandlePoolTests.cpp
         "${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/OpenGL/SIRGLHandlePool.cpp")

@@ -100,7 +100,7 @@ typedef struct sirGLNativeContext_s
 #endif
 } sirGLNativeContext_t;
 
-static void *sirGLResolveNativeProcedure( void *pUserData, const char *pszName ) noexcept
+void *sirGLResolveNativeProcedure( void *pUserData, const char *pszName ) noexcept
 {
 	sirGLNativeContext_t *pContext = ( sirGLNativeContext_t * )pUserData;
 	if ( pContext == nullptr || pszName == nullptr || !sirGLContextOwnsThread( pContext ) ) {

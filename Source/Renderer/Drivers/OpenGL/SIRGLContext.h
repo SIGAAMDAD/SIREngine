@@ -46,5 +46,6 @@ sirGraphicsResult_t sirGLCreateNativeContext( const sirGraphicsABIHost_t *pHost,
 void sirGLDestroyNativeContext( sirGLNativeContext_t *pContext ) noexcept;
 sirGraphicsResult_t sirGLReadNativeProbe( sirGLNativeContext_t *pContext, sirGLProbe_t *pProbe ) noexcept;
 bool sirGLContextOwnsThread( const sirGLNativeContext_t *pContext ) noexcept;
+void *sirGLResolveNativeProcedure( void *pUserData, const char *pszName ) noexcept;
 
 #endif // __SIRENGINE_SIRGLCONTEXT_H__

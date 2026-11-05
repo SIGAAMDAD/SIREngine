@@ -14,6 +14,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Renderer/Drivers/OpenGL/SIRGLCapabilities.h>
+#include <Renderer/Drivers/OpenGL/SIRGLBuffers.h>
 #include <Renderer/Drivers/OpenGL/SIRGLContext.h>
 #include <Renderer/Drivers/OpenGL/SIRGLHandlePool.h>
 #include <atomic>
@@ -38,6 +39,9 @@ typedef struct sirGLDevice_s
 	sirGLNativeContext_t *pContext;
 	sirGLProbe_t probe;
 	sirGLHandlePool_t handles;
+	sirGLBufferDispatch_t buffers;
+	uint64_t nCommittedBufferBytes;
+	uint64_t nPeakBufferBytes;
 	uint32_t nGeneration;
 	uint64_t nResidentBudgetBytes;
 } sirGLDevice_t;
@@ -133,6 +137,9 @@ static uint32_t sirGLQueryMemoryBudget( void *pDevice, sirGraphicsMemoryBudget_t
 	}
 	*pBudget = {};
 	pBudget->nBudgetBytes = pState->nResidentBudgetBytes;
+	// These are GL storage requests, not measured driver VRAM residency.
+	pBudget->nCommittedBytes = pState->nCommittedBufferBytes;
+	pBudget->nPeakCommittedBytes = pState->nPeakBufferBytes;
 	// Opaque OpenGL driver residency is not measurable from our unallocated resource pool.
 	return SIR_GRAPHICS_SUCCESS;
 }
@@ -147,9 +154,48 @@ static uint32_t sirGLWait( void *, const sirGraphicsCompletion_t *, uint64_t ) n
 	return SIR_GRAPHICS_UNSUPPORTED;
 }
 
-static uint32_t sirGLCreateBuffer( void *, const sirGraphicsBufferDesc_t *, sirGraphicsHandle_t * ) noexcept
+static uint32_t sirGLCreateBuffer( void *pDevice, const sirGraphicsBufferDesc_t *pDesc, sirGraphicsHandle_t *pHandle ) noexcept
 {
-	return SIR_GRAPHICS_UNSUPPORTED;
+	if ( pDevice == nullptr || pDesc == nullptr || pHandle == nullptr ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	sirGLDevice_t *pState = ( sirGLDevice_t * )pDevice;
+	if ( pState->pContext == nullptr ) {
+		return SIR_GRAPHICS_DEVICE_LOST;
+	}
+	if ( !sirGLContextOwnsThread( pState->pContext ) ) {
+		return SIR_GRAPHICS_BUSY;
+	}
+	if ( pState->handles.nFreeHead == UINT32_MAX ) {
+		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
+	}
+	if ( pDesc->nSizeBytes > UINT64_MAX - pState->nCommittedBufferBytes ) {
+		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
+	}
+	if ( pState->nResidentBudgetBytes != 0 ) {
+		if ( pDesc->nSizeBytes > pState->nResidentBudgetBytes ) {
+			return SIR_GRAPHICS_CAPACITY_EXCEEDED;
+		}
+		if ( pState->nCommittedBufferBytes > pState->nResidentBudgetBytes - pDesc->nSizeBytes ) {
+			return SIR_GRAPHICS_CAPACITY_EXCEEDED;
+		}
+	}
+	uint32_t nName = 0;
+	uint32_t nStatus = sirGLCreateNativeBuffer( &pState->buffers, pDesc, &nName );
+	if ( nStatus != SIR_GRAPHICS_SUCCESS ) {
+		return nStatus;
+	}
+	const sirGLNativeResource_t native = { nName, SIR_GRAPHICS_HANDLE_BUFFER, pDesc->nSizeBytes };
+	nStatus = sirGLHandlePoolInsert( &pState->handles, &native, pHandle );
+	if ( nStatus != SIR_GRAPHICS_SUCCESS ) {
+		( void )sirGLDeleteNativeBuffer( &pState->buffers, nName );
+		return nStatus;
+	}
+	pState->nCommittedBufferBytes += pDesc->nSizeBytes;
+	if ( pState->nCommittedBufferBytes > pState->nPeakBufferBytes ) {
+		pState->nPeakBufferBytes = pState->nCommittedBufferBytes;
+	}
+	return SIR_GRAPHICS_SUCCESS;
 }
 
 static uint32_t sirGLCreateTexture( void *, const sirGraphicsTextureDesc_t *, sirGraphicsHandle_t * ) noexcept
@@ -212,9 +258,49 @@ static uint32_t sirGLSubmit( void *, uint32_t, const sirGraphicsABISubmission_t 
 	return SIR_GRAPHICS_UNSUPPORTED;
 }
 
-static uint32_t sirGLRetireResource( void *, sirGraphicsHandle_t, const sirGraphicsCompletionSet_t * ) noexcept
+static uint32_t sirGLRetireResource( void *pDevice, sirGraphicsHandle_t hResource, const sirGraphicsCompletionSet_t *pCompletion ) noexcept
 {
-	return SIR_GRAPHICS_UNSUPPORTED;
+	if ( pDevice == nullptr ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	sirGLDevice_t *pState = ( sirGLDevice_t * )pDevice;
+	if ( pState->pContext == nullptr ) {
+		return SIR_GRAPHICS_DEVICE_LOST;
+	}
+	if ( !sirGLContextOwnsThread( pState->pContext ) ) {
+		return SIR_GRAPHICS_BUSY;
+	}
+	// GPU submissions and fence-backed retirement are not yet implemented.
+	if ( pCompletion != nullptr ) {
+		if ( pCompletion->nDeviceGeneration != pState->nGeneration ) {
+			return SIR_GRAPHICS_INVALID_HANDLE;
+		}
+		if ( pCompletion->nQueueMask != 0 ) {
+			return SIR_GRAPHICS_UNSUPPORTED;
+		}
+		for ( uint32_t i = 0; i < SIR_GRAPHICS_QUEUE_COUNT; ++i ) {
+			if ( pCompletion->szQueueValues[i] != 0 ) {
+				return SIR_GRAPHICS_INVALID_ARGUMENT;
+			}
+		}
+	}
+	sirGLNativeResource_t resource = {};
+	uint32_t nStatus = sirGLHandlePoolFind( &pState->handles, hResource, &resource );
+	if ( nStatus != SIR_GRAPHICS_SUCCESS ) {
+		return nStatus;
+	}
+	if ( resource.eType != SIR_GRAPHICS_HANDLE_BUFFER ) {
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
+	nStatus = sirGLDeleteNativeBuffer( &pState->buffers, resource.nName );
+	if ( nStatus != SIR_GRAPHICS_SUCCESS ) {
+		return nStatus;
+	}
+	nStatus = sirGLHandlePoolTake( &pState->handles, hResource, &resource );
+	if ( nStatus == SIR_GRAPHICS_SUCCESS ) {
+		pState->nCommittedBufferBytes -= resource.nRequestedBytes;
+	}
+	return nStatus;
 }
 
 static uint32_t sirGLCreateSurface( void *, const sirGraphicsABINativeSurface_t *, const sirGraphicsABIPresentDesc_t *,
@@ -313,6 +399,13 @@ static uint32_t sirGLCreateDevice( void *pDriver, const sirGraphicsABIDeviceRequ
 	// Native GL objects will be stored here without per-object CPU allocations.
 	nStatus = sirGLHandlePoolInit( &pNew->handles, &pState->host, nGeneration, 1024 );
 	if ( nStatus != SIR_GRAPHICS_SUCCESS ) {
+		pState->host.pFree( pState->host.pContext, pNew );
+		sirGLDestroyNativeContext( pContext );
+		return nStatus;
+	}
+	nStatus = sirGLLoadBufferDispatch( sirGLResolveNativeProcedure, pContext, &pNew->buffers );
+	if ( nStatus != SIR_GRAPHICS_SUCCESS ) {
+		( void )sirGLHandlePoolShutdown( &pNew->handles );
 		pState->host.pFree( pState->host.pContext, pNew );
 		sirGLDestroyNativeContext( pContext );
 		return nStatus;
