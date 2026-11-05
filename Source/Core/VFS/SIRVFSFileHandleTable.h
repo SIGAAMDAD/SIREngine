@@ -81,6 +81,7 @@ public:
 
 	sirVFSResult_t openResolved( const sirVFSPath_t& path, sirVFSMountLease_t sourceLease, sirVFSFileHandle_t *pHandle ) noexcept;
 	sirVFSResult_t borrow( sirVFSFileHandle_t handle, sirVFSFileView_t *pView ) noexcept;
+	sirVFSResult_t retainBorrow( sirVFSFileBorrow_t borrow, sirVFSFileView_t *pView ) noexcept;
 	sirVFSResult_t releaseBorrow( sirVFSFileBorrow_t borrow ) noexcept;
 	sirVFSResult_t close( sirVFSFileHandle_t handle ) noexcept;
 	sirVFSResult_t shutdown( void ) noexcept;

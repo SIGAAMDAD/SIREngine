@@ -382,3 +382,9 @@ add_executable(SIRPlatformRootDirectoryTests SIRPlatformRootDirectoryTests.cpp)
 target_link_libraries(SIRPlatformRootDirectoryTests PRIVATE SIR::Core)
 add_test(NAME core.platform.rooted-directory COMMAND SIRPlatformRootDirectoryTests)
 sir_configure_owned_target(SIRPlatformRootDirectoryTests)
+
+# Generation-pinned VFS directory source to native platform read integration.
+add_executable(SIRVFSDirectorySourceTests SIRVFSDirectorySourceTests.cpp)
+target_link_libraries(SIRVFSDirectorySourceTests PRIVATE SIR::Core)
+add_test(NAME core.vfs.directory-source COMMAND SIRVFSDirectorySourceTests)
+sir_configure_owned_target(SIRVFSDirectorySourceTests)
