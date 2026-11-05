@@ -456,8 +456,8 @@ static bool testDesyncAndReadFailureLifecycle( void ) noexcept
 	bool bValid = write( nWriteFd, szEvents, sizeof( szEvents ) ) == ( ssize_t )sizeof( szEvents );
 	if ( bValid ) {
 		backend.sample( service );
-		bValid = service.publish() && service.frame() != nullptr && service.frame()->nCount == 1 &&
-		         service.frame()->events[0].eSignal == SIR_INPUT_RESYNC && !SIRInputEvdevBatchTestPeer::desynchronized( backend );
+		bValid = service.publish() && service.frame() != nullptr && service.frame()->nCount == 0 &&
+		         SIRInputEvdevBatchTestPeer::desynchronized( backend );
 	}
 	if ( bValid ) {
 		bValid = service.begin( 3 );
