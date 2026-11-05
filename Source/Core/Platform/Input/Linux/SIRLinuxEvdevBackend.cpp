@@ -391,13 +391,14 @@ bool SIRLinuxEvdevBackend::discover( SIRInputService& service, const char *pszDi
 
 bool SIRLinuxEvdevBackend::requery( SIRInputService& service, sirInputEvdevSlot_t& slot, bool bReset ) noexcept
 {
-	if ( bReset && !service.loseState( id(), slot.id ) ) {
-		return false;
-	}
 	unsigned long nKeys[( KEY_MAX + sizeof( unsigned long ) * 8 ) / ( sizeof( unsigned long ) * 8 )] = {};
 	sirInputControlChange_t changes[SIR_INPUT_EVDEV_REPORT_CAPACITY] = {};
 	uint32_t nCount = 0;
 	if ( ioctl( slot.nFd, EVIOCGKEY( sizeof( nKeys ) ), nKeys ) < 0 ) {
+		return false;
+	}
+	// The authoritative key query must succeed before retiring the old state.
+	if ( bReset && !service.loseState( id(), slot.id ) ) {
 		return false;
 	}
 	for ( uint16_t nCode = BTN_GAMEPAD; nCode < KEY_MAX && nCount < SIR_INPUT_EVDEV_REPORT_CAPACITY; ++nCode ) {
@@ -517,10 +518,15 @@ void SIRLinuxEvdevBackend::sample( SIRInputService& service ) noexcept
 		// boundaries and keep incomplete device reports across read calls.
 		input_event szEvents[64] = {};
 		uint32_t nConsumed = 0;
+		uint32_t nInterrupted = 0;
 		while ( nConsumed < 512 ) {
 			const uint32_t nRequest = ( 512 - nConsumed ) < 64 ? ( 512 - nConsumed ) : 64;
 			const ssize_t nRead = read( slot.nFd, szEvents, nRequest * sizeof( szEvents[0] ) );
 			if ( nRead < 0 && errno == EINTR ) {
+				// Signals must not defeat the bounded event acquisition budget.
+				if ( ++nInterrupted >= 4 ) {
+					break;
+				}
 				continue;
 			}
 			if ( nRead < 0 && ( errno == EAGAIN || errno == EWOULDBLOCK ) ) {
@@ -541,9 +547,10 @@ void SIRLinuxEvdevBackend::sample( SIRInputService& service ) noexcept
 				}
 				if ( event.type == EV_SYN && event.code == SYN_REPORT ) {
 					if ( slot.bDesynchronized ) {
-						slot.bDesynchronized = false;
 						slot.nPending = 0;
-						requery( service, slot, true );
+						if ( requery( service, slot, true ) ) {
+							slot.bDesynchronized = false;
+						}
 					} else if ( slot.nPending != 0 ) {
 						uint64_t nSourceNs = 0;
 						if ( slot.bClockMonotonic && event.time.tv_sec >= 0 && event.time.tv_usec >= 0 && event.time.tv_usec < 1000000 &&
