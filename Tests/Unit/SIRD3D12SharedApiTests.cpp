@@ -133,6 +133,24 @@ int main( void )
 	view.nMipLevels = 1;
 	view.nLayers = 1;
 	view.nUsage = SIR_GRAPHICS_USAGE_SAMPLED;
+	sirGraphicsHandle_t hRanged = {};
+	view.nBufferOffsetBytes = 256;
+	view.nBufferSizeBytes = 512;
+	if ( pDevice->createView( view, &hRanged ) != SIR_GRAPHICS_SUCCESS ||
+	     pDevice->retireResource( hRanged, immediate ) != SIR_GRAPHICS_SUCCESS ) {
+		return 40;
+	}
+	view.nBufferOffsetBytes = 2;
+	if ( pDevice->createView( view, &hRanged ) != SIR_GRAPHICS_INVALID_ARGUMENT || hRanged.nGeneration != 0 ) {
+		return 41;
+	}
+	view.nBufferOffsetBytes = 4092;
+	view.nBufferSizeBytes = 8;
+	if ( pDevice->createView( view, &hRanged ) != SIR_GRAPHICS_INVALID_ARGUMENT || hRanged.nGeneration != 0 ) {
+		return 42;
+	}
+	view.nBufferOffsetBytes = 0;
+	view.nBufferSizeBytes = 0;
 	sirGraphicsHandle_t hView = {};
 	if ( pDevice->createView( view, &hView ) != SIR_GRAPHICS_SUCCESS || pDevice->retireResource( handle, immediate ) != SIR_GRAPHICS_BUSY ||
 	     pDevice->retireResource( hView, immediate ) != SIR_GRAPHICS_SUCCESS ||
@@ -164,6 +182,14 @@ int main( void )
 	view.nMipLevels = 1;
 	view.nLayers = 1;
 	view.nUsage = SIR_GRAPHICS_USAGE_CONSTANT;
+	view.nBufferOffsetBytes = 128;
+	view.nBufferSizeBytes = 512;
+	sirGraphicsHandle_t hBadCbv = {};
+	if ( pDevice->createView( view, &hBadCbv ) != SIR_GRAPHICS_UNSUPPORTED || hBadCbv.nGeneration != 0 ) {
+		return 43;
+	}
+	view.nBufferOffsetBytes = 256;
+	view.nBufferSizeBytes = 512;
 	sirGraphicsHandle_t cbv = {};
 	if ( pDevice->createView( view, &cbv ) != SIR_GRAPHICS_SUCCESS || pDevice->retireResource( cbv, immediate ) != SIR_GRAPHICS_SUCCESS ||
 	     pDevice->retireResource( upload, immediate ) != SIR_GRAPHICS_SUCCESS ) {
@@ -191,6 +217,12 @@ int main( void )
 	view.nMipLevels = 1;
 	view.nLayers = 1;
 	view.nUsage = SIR_GRAPHICS_USAGE_COLOR_ATTACHMENT;
+	view.nBufferOffsetBytes = 16;
+	sirGraphicsHandle_t hBadTextureView = {};
+	if ( pDevice->createView( view, &hBadTextureView ) != SIR_GRAPHICS_INVALID_ARGUMENT || hBadTextureView.nGeneration != 0 ) {
+		return 44;
+	}
+	view.nBufferOffsetBytes = 0;
 	sirGraphicsHandle_t rtv = {};
 	if ( pDevice->createView( view, &rtv ) != SIR_GRAPHICS_SUCCESS || pDevice->retireResource( rtv, immediate ) != SIR_GRAPHICS_SUCCESS ||
 	     pDevice->retireResource( hTexture, immediate ) != SIR_GRAPHICS_SUCCESS ) {

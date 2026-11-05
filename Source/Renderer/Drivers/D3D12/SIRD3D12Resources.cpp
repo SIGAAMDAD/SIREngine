@@ -749,7 +749,12 @@ sirGraphicsResult_t SIRD3D12Resources::createView( const sirGraphicsViewDesc_t& 
 	collectRetired();
 	DXGI_FORMAT eFormat =
 	    desc.eFormat == SIR_GRAPHICS_FORMAT_UNKNOWN ? sirD3D12Format( pResource->eFormat ) : sirD3D12Format( desc.eFormat );
+	uint64_t nBufferOffset = 0;
+	uint64_t nBufferBytes = 0;
 	if ( pResource->eType == SIR_GRAPHICS_HANDLE_TEXTURE ) {
+		if ( desc.nBufferOffsetBytes != 0 || desc.nBufferSizeBytes != 0 ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
 		if ( desc.eFormat != SIR_GRAPHICS_FORMAT_UNKNOWN && desc.eFormat != pResource->eFormat ) {
 			return SIR_GRAPHICS_UNSUPPORTED;
 		}
@@ -768,16 +773,29 @@ sirGraphicsResult_t SIRD3D12Resources::createView( const sirGraphicsViewDesc_t& 
 			return SIR_GRAPHICS_INVALID_ARGUMENT;
 		}
 	} else {
-		if ( desc.nBaseMip != 0 || desc.nMipLevels > 1 || desc.nBaseLayer != 0 || desc.nLayers > 1 ) {
+		if ( desc.nBaseMip != 0 || desc.nMipLevels > 1 || desc.nBaseLayer != 0 || desc.nLayers > 1 ||
+		     desc.nBufferOffsetBytes >= pResource->nSizeBytes ) {
 			return SIR_GRAPHICS_INVALID_ARGUMENT;
 		}
-		if ( desc.nUsage != SIR_GRAPHICS_USAGE_CONSTANT &&
-		     ( sirD3D12FormatBytes( desc.eFormat ) == 0 || pResource->nSizeBytes % sirD3D12FormatBytes( desc.eFormat ) != 0 ) ) {
-			return SIR_GRAPHICS_UNSUPPORTED;
+		nBufferOffset = desc.nBufferOffsetBytes;
+		nBufferBytes = desc.nBufferSizeBytes == 0 ? pResource->nSizeBytes - nBufferOffset : desc.nBufferSizeBytes;
+		if ( nBufferBytes == 0 || nBufferBytes > pResource->nSizeBytes - nBufferOffset ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
 		}
-		if ( desc.nUsage == SIR_GRAPHICS_USAGE_CONSTANT &&
-		     ( pResource->nSizeBytes > D3D12_REQ_CONSTANT_BUFFER_ELEMENT_COUNT * 16 ||
-		       pResource->nSizeBytes % D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT != 0 ) ) {
+		if ( desc.nUsage != SIR_GRAPHICS_USAGE_CONSTANT ) {
+			const uint32_t nElementBytes = sirD3D12FormatBytes( desc.eFormat );
+			if ( nElementBytes == 0 ) {
+				return SIR_GRAPHICS_UNSUPPORTED;
+			}
+			if ( nBufferOffset % nElementBytes != 0 || nBufferBytes % nElementBytes != 0 ) {
+				return SIR_GRAPHICS_INVALID_ARGUMENT;
+			}
+			if ( nBufferBytes / nElementBytes > UINT32_MAX ) {
+				return SIR_GRAPHICS_UNSUPPORTED;
+			}
+		} else if ( nBufferOffset % D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT != 0 ||
+		            nBufferBytes % D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT != 0 ||
+		            nBufferBytes > D3D12_REQ_CONSTANT_BUFFER_ELEMENT_COUNT * 16 ) {
 			return SIR_GRAPHICS_UNSUPPORTED;
 		}
 	}
@@ -807,12 +825,12 @@ sirGraphicsResult_t SIRD3D12Resources::createView( const sirGraphicsViewDesc_t& 
 
 	if ( desc.nUsage == SIR_GRAPHICS_USAGE_CONSTANT ) {
 		D3D12_CONSTANT_BUFFER_VIEW_DESC cbv = {};
-		cbv.BufferLocation = pNativeResource->GetGPUVirtualAddress();
-		cbv.SizeInBytes = ( UINT )pResource->nSizeBytes;
+		cbv.BufferLocation = pNativeResource->GetGPUVirtualAddress() + nBufferOffset;
+		cbv.SizeInBytes = ( UINT )nBufferBytes;
 		m_pDevice->CreateConstantBufferView( &cbv, hCpu );
 	} else if ( pResource->eType == SIR_GRAPHICS_HANDLE_BUFFER ) {
 		const uint32_t nElementBytes = sirD3D12FormatBytes( desc.eFormat );
-		const uint64_t nElements = pResource->nSizeBytes / nElementBytes;
+		const uint64_t nElements = nBufferBytes / nElementBytes;
 		if ( nElements > UINT32_MAX ) {
 			releaseSlot( iSlot );
 			*pHandle = {};
@@ -822,6 +840,7 @@ sirGraphicsResult_t SIRD3D12Resources::createView( const sirGraphicsViewDesc_t& 
 			D3D12_UNORDERED_ACCESS_VIEW_DESC uav = {};
 			uav.Format = eFormat;
 			uav.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
+			uav.Buffer.FirstElement = nBufferOffset / nElementBytes;
 			uav.Buffer.NumElements = ( UINT )nElements;
 			m_pDevice->CreateUnorderedAccessView( pNativeResource, nullptr, &uav, hCpu );
 		} else {
@@ -829,6 +848,7 @@ sirGraphicsResult_t SIRD3D12Resources::createView( const sirGraphicsViewDesc_t& 
 			srv.Format = eFormat;
 			srv.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
 			srv.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+			srv.Buffer.FirstElement = nBufferOffset / nElementBytes;
 			srv.Buffer.NumElements = ( UINT )nElements;
 			m_pDevice->CreateShaderResourceView( pNativeResource, &srv, hCpu );
 		}
