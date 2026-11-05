@@ -26,7 +26,7 @@ bool sirGraphicsHasFeatures( uint64_t nAvailable, uint64_t nRequired ) noexcept
 	return ( nAvailable & nRequired ) == nRequired;
 }
 
-bool sirGraphicsIsHandleValid( const sirGraphicsHandle_t& handle, sirGraphicsHandleType_t eExpected, uint32_t nDeviceGeneration ) noexcept
+bool sirGraphicsIsHandleValid( const sirGraphicsHandle_t &handle, sirGraphicsHandleType_t eExpected, uint32_t nDeviceGeneration ) noexcept
 {
 	if ( handle.nGeneration == 0 || nDeviceGeneration == 0 || handle.nDeviceGeneration != nDeviceGeneration ) {
 		return false;
@@ -37,7 +37,7 @@ bool sirGraphicsIsHandleValid( const sirGraphicsHandle_t& handle, sirGraphicsHan
 	return eExpected == SIR_GRAPHICS_HANDLE_NONE || handle.eType == eExpected;
 }
 
-bool sirGraphicsIsCompletionSetValid( const sirGraphicsCompletionSet_t& completion, uint32_t nDeviceGeneration ) noexcept
+bool sirGraphicsIsCompletionSetValid( const sirGraphicsCompletionSet_t &completion, uint32_t nDeviceGeneration ) noexcept
 {
 	constexpr uint32_t VALID_QUEUE_MASK = ( 1U << SIR_GRAPHICS_QUEUE_COUNT ) - 1U;
 	if ( nDeviceGeneration == 0 || completion.nDeviceGeneration != nDeviceGeneration ) {
@@ -63,7 +63,7 @@ static bool sirGraphicsValidUsage( uint32_t nUsage ) noexcept
 	return nUsage != 0 && ( nUsage & ~VALID_USAGE_MASK ) == 0;
 }
 
-sirGraphicsResult_t sirGraphicsValidateBuffer( const sirGraphicsBufferDesc_t& desc ) noexcept
+sirGraphicsResult_t sirGraphicsValidateBuffer( const sirGraphicsBufferDesc_t &desc ) noexcept
 {
 	if ( desc.nSizeBytes == 0 || !sirGraphicsValidUsage( desc.nUsage ) ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
@@ -83,7 +83,7 @@ sirGraphicsResult_t sirGraphicsValidateBuffer( const sirGraphicsBufferDesc_t& de
 	return SIR_GRAPHICS_SUCCESS;
 }
 
-sirGraphicsResult_t sirGraphicsValidateTexture( const sirGraphicsTextureDesc_t& desc ) noexcept
+sirGraphicsResult_t sirGraphicsValidateTexture( const sirGraphicsTextureDesc_t &desc ) noexcept
 {
 	if ( desc.nWidth == 0 || desc.nHeight == 0 || desc.nDepth == 0 ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
@@ -120,7 +120,7 @@ sirGraphicsResult_t sirGraphicsValidateTexture( const sirGraphicsTextureDesc_t& 
 	return SIR_GRAPHICS_SUCCESS;
 }
 
-sirGraphicsResult_t sirGraphicsValidateSampler( const sirGraphicsSamplerDesc_t& desc ) noexcept
+sirGraphicsResult_t sirGraphicsValidateSampler( const sirGraphicsSamplerDesc_t &desc ) noexcept
 {
 	if ( desc.eFilter > SIR_GRAPHICS_FILTER_ANISOTROPIC || desc.eAddressU > SIR_GRAPHICS_ADDRESS_BORDER ||
 	     desc.eAddressV > SIR_GRAPHICS_ADDRESS_BORDER || desc.eAddressW > SIR_GRAPHICS_ADDRESS_BORDER ) {
@@ -135,18 +135,18 @@ sirGraphicsResult_t sirGraphicsValidateSampler( const sirGraphicsSamplerDesc_t& 
 	return SIR_GRAPHICS_SUCCESS;
 }
 
-static bool sirGraphicsValidShader( const sirGraphicsShaderCode_t& shader ) noexcept
+static bool sirGraphicsValidShader( const sirGraphicsShaderCode_t &shader ) noexcept
 {
 	return shader.eFormat >= SIR_GRAPHICS_SHADER_DXIL && shader.eFormat <= SIR_GRAPHICS_SHADER_DXBC && shader.pBytes != nullptr &&
 	       shader.nByteCount >= 4;
 }
 
-static bool sirGraphicsEmptyShader( const sirGraphicsShaderCode_t& shader ) noexcept
+static bool sirGraphicsEmptyShader( const sirGraphicsShaderCode_t &shader ) noexcept
 {
 	return shader.pBytes == nullptr && shader.nByteCount == 0 && shader.nContentHash == 0;
 }
 
-static sirGraphicsResult_t sirGraphicsValidateSourcePipelineModel( const sirGraphicsPipelineDesc_t& desc ) noexcept
+static sirGraphicsResult_t sirGraphicsValidateSourcePipelineModel( const sirGraphicsPipelineDesc_t &desc ) noexcept
 {
 	if ( desc.eModel == SIR_GRAPHICS_PIPELINE_MODEL_MODERN ) {
 		if ( desc.pModern == nullptr || desc.pProgrammable != nullptr || desc.pFixed != nullptr ) {
@@ -196,7 +196,7 @@ static sirGraphicsResult_t sirGraphicsValidateSourcePipelineModel( const sirGrap
 	return SIR_GRAPHICS_INVALID_ARGUMENT;
 }
 
-sirGraphicsResult_t sirGraphicsValidatePipeline( const sirGraphicsPipelineDesc_t& desc ) noexcept
+sirGraphicsResult_t sirGraphicsValidatePipeline( const sirGraphicsPipelineDesc_t &desc ) noexcept
 {
 	const sirGraphicsResult_t eModel = sirGraphicsValidateSourcePipelineModel( desc );
 	if ( eModel != SIR_GRAPHICS_SUCCESS ) {
@@ -213,7 +213,7 @@ sirGraphicsResult_t sirGraphicsValidatePipeline( const sirGraphicsPipelineDesc_t
 	}
 	constexpr uint32_t VALID_STAGE_MASK = ( SIR_GRAPHICS_STAGE_TASK << 1 ) - 1U;
 	for ( uint32_t iBinding = 0; iBinding < desc.nBindingCount; ++iBinding ) {
-		const sirGraphicsBindingDesc_t& binding = desc.pBindings[iBinding];
+		const sirGraphicsBindingDesc_t &binding = desc.pBindings[iBinding];
 		if ( binding.nArrayCount == 0 || binding.nShaderStageMask == 0 || ( binding.nShaderStageMask & ~VALID_STAGE_MASK ) != 0 ) {
 			return SIR_GRAPHICS_INVALID_ARGUMENT;
 		}
@@ -254,7 +254,7 @@ sirGraphicsResult_t sirGraphicsValidatePipeline( const sirGraphicsPipelineDesc_t
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	for ( uint32_t iColor = 0; iColor < desc.nColorFormatCount; ++iColor ) {
-		const sirGraphicsBlendState_t& blend = desc.szBlendStates[iColor];
+		const sirGraphicsBlendState_t &blend = desc.szBlendStates[iColor];
 		if ( !blend.bEnabled ) {
 			continue;
 		}
@@ -280,7 +280,7 @@ sirGraphicsResult_t sirGraphicsValidatePipeline( const sirGraphicsPipelineDesc_t
 	return SIR_GRAPHICS_SUCCESS;
 }
 
-sirGraphicsResult_t sirGraphicsValidateSubmission( sirGraphicsQueue_t eQueue, const sirGraphicsSubmission_t& submission,
+sirGraphicsResult_t sirGraphicsValidateSubmission( sirGraphicsQueue_t eQueue, const sirGraphicsSubmission_t &submission,
                                                    uint32_t nDeviceGeneration ) noexcept
 {
 	if ( eQueue >= SIR_GRAPHICS_QUEUE_COUNT || nDeviceGeneration == 0 ) {
@@ -302,14 +302,14 @@ sirGraphicsResult_t sirGraphicsValidateSubmission( sirGraphicsQueue_t eQueue, co
 		}
 	}
 	for ( uint32_t iWait = 0; iWait < submission.nWaitCount; ++iWait ) {
-		const sirGraphicsCompletion_t& completion = submission.pWaits[iWait];
+		const sirGraphicsCompletion_t &completion = submission.pWaits[iWait];
 		if ( completion.nDeviceGeneration != nDeviceGeneration || completion.eQueue >= SIR_GRAPHICS_QUEUE_COUNT ||
 		     completion.nValue == 0 ) {
 			return SIR_GRAPHICS_INVALID_ARGUMENT;
 		}
 	}
 	for ( uint32_t iImage = 0; iImage < submission.nAcquisitionCount; ++iImage ) {
-		const sirGraphicsSurfaceImage_t& image = submission.pAcquisitions[iImage];
+		const sirGraphicsSurfaceImage_t &image = submission.pAcquisitions[iImage];
 		if ( !sirGraphicsIsHandleValid( image.hSurface, SIR_GRAPHICS_HANDLE_SURFACE, nDeviceGeneration ) ) {
 			return SIR_GRAPHICS_INVALID_ARGUMENT;
 		}

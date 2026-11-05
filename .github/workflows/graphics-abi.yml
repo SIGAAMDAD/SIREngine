@@ -30,6 +30,33 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  source-snapshot:
+    name: Export exact ABI source for local verification
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Fetch pinned GoogleTest
+        run: git submodule update --init ThirdParty/GoogleTest
+      - name: Package native source and test toolchain inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          tar -czf "${RUNNER_TEMP}/graphics-abi-source.tar.gz" \
+            --exclude-vcs --exclude=.cache --exclude=out \
+            Build Source Tests ThirdParty Verification \
+            CMakeLists.txt CMakePresets.json .clang-format .gitmodules
+          git rev-parse HEAD
+      - name: Publish exact-head source snapshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: graphics-abi-v1-source-snapshot
+          path: ${{ runner.temp }}/graphics-abi-source.tar.gz
+          if-no-files-found: error
+          retention-days: 14
+
   source:
     name: Pinned style and source hygiene
     runs-on: ubuntu-24.04

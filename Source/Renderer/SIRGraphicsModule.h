@@ -90,35 +90,33 @@ sirGraphicsABIResult_t sirGraphicsAcquireABICommands( const sirGraphicsABIDevice
 sirGraphicsABIResult_t sirGraphicsSubmitABICommands( const sirGraphicsABIDevice_t *pDevice, uint32_t nQueue,
                                                      const sirGraphicsABISubmission_t *pSubmission,
                                                      sirGraphicsCompletion_t *pCompletion ) noexcept;
-sirGraphicsABIResult_t sirGraphicsPollABICompletion( const sirGraphicsABIDevice_t *pDevice,
-                                                     const sirGraphicsCompletion_t *pCompletion, uint32_t *pDone ) noexcept;
-sirGraphicsABIResult_t sirGraphicsWaitABICompletion( const sirGraphicsABIDevice_t *pDevice,
-                                                     const sirGraphicsCompletion_t *pCompletion, uint64_t nTimeoutNs ) noexcept;
+sirGraphicsABIResult_t sirGraphicsPollABICompletion( const sirGraphicsABIDevice_t *pDevice, const sirGraphicsCompletion_t *pCompletion,
+                                                     uint32_t *pDone ) noexcept;
+sirGraphicsABIResult_t sirGraphicsWaitABICompletion( const sirGraphicsABIDevice_t *pDevice, const sirGraphicsCompletion_t *pCompletion,
+                                                     uint64_t nTimeoutNs ) noexcept;
 
 // Host-side WSI contract: the native driver owns the surface, swapchain,
 // acquired image and one-use presentation synchronization.
-sirGraphicsABIResult_t sirGraphicsCreateABISurface( const sirGraphicsABIDevice_t *pDevice,
-                                                    const sirGraphicsABINativeSurface_t *pNative,
-                                                    const sirGraphicsABIPresentDesc_t *pPresent,
-                                                    sirGraphicsHandle_t *pSurface ) noexcept;
+sirGraphicsABIResult_t sirGraphicsCreateABISurface( const sirGraphicsABIDevice_t *pDevice, const sirGraphicsABINativeSurface_t *pNative,
+                                                    const sirGraphicsABIPresentDesc_t *pPresent, sirGraphicsHandle_t *pSurface ) noexcept;
 sirGraphicsABIResult_t sirGraphicsResizeABISurface( const sirGraphicsABIDevice_t *pDevice, sirGraphicsHandle_t hSurface,
                                                     const sirGraphicsABINativeSurface_t *pNative,
                                                     const sirGraphicsABIPresentDesc_t *pPresent ) noexcept;
 sirGraphicsABIResult_t sirGraphicsAcquireABISurfaceImage( const sirGraphicsABIDevice_t *pDevice, sirGraphicsHandle_t hSurface,
                                                           sirGraphicsSurfaceImage_t *pImage ) noexcept;
-sirGraphicsABIResult_t sirGraphicsPresentABISurfaceImage( const sirGraphicsABIDevice_t *pDevice,
-                                                          const sirGraphicsSurfaceImage_t *pImage,
+sirGraphicsABIResult_t sirGraphicsPresentABISurfaceImage( const sirGraphicsABIDevice_t *pDevice, const sirGraphicsSurfaceImage_t *pImage,
                                                           const sirGraphicsCompletion_t *pCompletion ) noexcept;
 
 // Retirement is a native ownership operation gated by validated queue fences.
 // An empty completion set denotes a resource with no outstanding GPU users.
 sirGraphicsABIResult_t sirGraphicsRetireABIResource( const sirGraphicsABIDevice_t *pDevice, sirGraphicsHandle_t hResource,
-                                                    const sirGraphicsCompletionSet_t *pComplete ) noexcept;
+                                                     const sirGraphicsCompletionSet_t *pComplete ) noexcept;
 
 // Returns a validated snapshot of the native device's current memory budget.
 // A zero native budget is an unknown limit, not a guaranteed free allocation.
 // The output is unchanged on driver error or incoherent counters.
-sirGraphicsABIResult_t sirGraphicsQueryABIMemoryBudget( const sirGraphicsABIDevice_t *pDevice, sirGraphicsMemoryBudget_t *pBudget ) noexcept;
+sirGraphicsABIResult_t sirGraphicsQueryABIMemoryBudget( const sirGraphicsABIDevice_t *pDevice,
+                                                        sirGraphicsMemoryBudget_t *pBudget ) noexcept;
 
 // Buffer allocation checks typed usage, enabled features and device generation
 // before publishing the native handle. Actual allocation policy stays native.

@@ -94,8 +94,7 @@ sirGraphicsABIResult_t sirGraphicsValidateABIPipelineStructure( const sirGraphic
 		if ( pPipeline->nType != SIR_GRAPHICS_PIPELINE_FIXED_FUNCTION || pPipeline->nBindingCount != 0 ) {
 			return SIR_GRAPHICS_INVALID_ARGUMENT;
 		}
-		if ( !sirGraphicsABIShaderIsEmpty( &pPipeline->vertexShader ) ||
-		     !sirGraphicsABIShaderIsEmpty( &pPipeline->pixelShader ) ||
+		if ( !sirGraphicsABIShaderIsEmpty( &pPipeline->vertexShader ) || !sirGraphicsABIShaderIsEmpty( &pPipeline->pixelShader ) ||
 		     !sirGraphicsABIShaderIsEmpty( &pPipeline->computeShader ) ) {
 			return SIR_GRAPHICS_INVALID_ARGUMENT;
 		}
@@ -124,9 +123,8 @@ sirGraphicsABIResult_t sirGraphicsValidateABIPipelineStructure( const sirGraphic
 		if ( pRecipe->nVertexShaderProfile == 0 || pRecipe->nFragmentShaderProfile == 0 ) {
 			return SIR_GRAPHICS_INVALID_ARGUMENT;
 		}
-		if ( sirGraphicsABIShaderIsEmpty( &pPipeline->vertexShader ) ||
-		     sirGraphicsABIShaderIsEmpty( &pPipeline->pixelShader ) ||
-	     !sirGraphicsABIShaderIsEmpty( &pPipeline->computeShader ) ) {
+		if ( sirGraphicsABIShaderIsEmpty( &pPipeline->vertexShader ) || sirGraphicsABIShaderIsEmpty( &pPipeline->pixelShader ) ||
+		     !sirGraphicsABIShaderIsEmpty( &pPipeline->computeShader ) ) {
 			return SIR_GRAPHICS_INVALID_ARGUMENT;
 		}
 		return SIR_GRAPHICS_SUCCESS;
@@ -139,8 +137,7 @@ sirGraphicsABIResult_t sirGraphicsValidateABIPipelineStructure( const sirGraphic
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( pPipeline->nType == SIR_GRAPHICS_PIPELINE_COMPUTE ) {
-		if ( !sirGraphicsABIShaderIsEmpty( &pPipeline->vertexShader ) ||
-		     !sirGraphicsABIShaderIsEmpty( &pPipeline->pixelShader ) ||
+		if ( !sirGraphicsABIShaderIsEmpty( &pPipeline->vertexShader ) || !sirGraphicsABIShaderIsEmpty( &pPipeline->pixelShader ) ||
 		     sirGraphicsABIShaderIsEmpty( &pPipeline->computeShader ) ) {
 			return SIR_GRAPHICS_INVALID_ARGUMENT;
 		}
@@ -152,8 +149,7 @@ sirGraphicsABIResult_t sirGraphicsValidateABIPipelineStructure( const sirGraphic
 	if ( pPipeline->nType != SIR_GRAPHICS_PIPELINE_GRAPHICS ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	if ( sirGraphicsABIShaderIsEmpty( &pPipeline->vertexShader ) ||
-	     sirGraphicsABIShaderIsEmpty( &pPipeline->pixelShader ) ||
+	if ( sirGraphicsABIShaderIsEmpty( &pPipeline->vertexShader ) || sirGraphicsABIShaderIsEmpty( &pPipeline->pixelShader ) ||
 	     !sirGraphicsABIShaderIsEmpty( &pPipeline->computeShader ) ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}

@@ -187,12 +187,10 @@ static bool testGenerationMutations( uint32_t iIteration ) noexcept
 int main( void )
 {
 	for ( uint32_t i = 0; i < 4096; ++i ) {
-		if ( !testBufferMutations( i ) || !testTextureMutations( i ) ||
-		     !testSamplerMutations( i ) || !testGenerationMutations( i ) ) {
+		if ( !testBufferMutations( i ) || !testTextureMutations( i ) || !testSamplerMutations( i ) || !testGenerationMutations( i ) ) {
 			return 1;
 		}
 	}
-	printf( "PASS: %u deterministic property assertions, seed=0x%llx\n", s_nCases,
-	        ( unsigned long long )RANDOM_SEED );
+	printf( "PASS: %u deterministic property assertions, seed=0x%llx\n", s_nCases, ( unsigned long long )RANDOM_SEED );
 	return 0;
 }

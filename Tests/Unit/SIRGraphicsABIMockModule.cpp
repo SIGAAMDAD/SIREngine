@@ -31,8 +31,7 @@ static uint32_t s_nDeviceIdentity = 23;
 
 static bool mockHasGraphicsModels( void ) noexcept
 {
-	return s_nMockMode == 10 || ( s_nMockMode >= 14 && s_nMockMode <= 18 ) ||
-	       ( s_nMockMode >= 26 && s_nMockMode <= 29 );
+	return s_nMockMode == 10 || ( s_nMockMode >= 14 && s_nMockMode <= 18 ) || ( s_nMockMode >= 26 && s_nMockMode <= 29 );
 }
 
 extern "C" SIR_TEST_EXPORT void SIRSetGraphicsABIMockMode( uint32_t nMode ) noexcept
@@ -54,8 +53,7 @@ static uint32_t mockQueryAdapter( void *, sirGraphicsABIAdapter_t *pInfo ) noexc
 	if ( pInfo == nullptr || pInfo->nSize < sizeof( sirGraphicsABIAdapter_t ) ) {
 		return SIR_GRAPHICS_ABI_INVALID_ARGUMENT;
 	}
-	if ( ( s_nMockMode == 12 && pInfo->nIndex >= 3 ) ||
-	     ( s_nMockMode != 12 && pInfo->nIndex != 0 ) ) {
+	if ( ( s_nMockMode == 12 && pInfo->nIndex >= 3 ) || ( s_nMockMode != 12 && pInfo->nIndex != 0 ) ) {
 		return SIR_GRAPHICS_ABI_INVALID_ARGUMENT;
 	}
 	const uint32_t nIndex = pInfo->nIndex;
@@ -70,7 +68,7 @@ static uint32_t mockQueryAdapter( void *, sirGraphicsABIAdapter_t *pInfo ) noexc
 	pInfo->nFeatureMask = SIR_GRAPHICS_FEATURE_COMPUTE;
 	if ( s_nMockMode == 12 ) {
 		pInfo->nKind = nIndex == 0 ? SIR_GRAPHICS_ABI_ADAPTER_SOFTWARE
-		                            : ( nIndex == 1 ? SIR_GRAPHICS_ABI_ADAPTER_INTEGRATED : SIR_GRAPHICS_ABI_ADAPTER_DISCRETE );
+		                           : ( nIndex == 1 ? SIR_GRAPHICS_ABI_ADAPTER_INTEGRATED : SIR_GRAPHICS_ABI_ADAPTER_DISCRETE );
 		pInfo->nStableId = 0x1234 + nIndex;
 		pInfo->nDedicatedBytes = nIndex == 2 ? 4096 : 0;
 		pInfo->nSharedBytes = nIndex == 1 ? 8192 : 0;
@@ -345,8 +343,8 @@ static uint32_t mockInvalidateBuffer( void *, const sirGraphicsABIBufferRange_t 
 	return SIR_GRAPHICS_ABI_UNSUPPORTED;
 }
 
-static uint32_t mockCreateSurface( void *, const sirGraphicsABINativeSurface_t *pNative,
-                                   const sirGraphicsABIPresentDesc_t *pPresent, sirGraphicsHandle_t *pSurface ) noexcept
+static uint32_t mockCreateSurface( void *, const sirGraphicsABINativeSurface_t *pNative, const sirGraphicsABIPresentDesc_t *pPresent,
+                                   sirGraphicsHandle_t *pSurface ) noexcept
 {
 	if ( pNative == nullptr || pPresent == nullptr || pSurface == nullptr ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
@@ -394,8 +392,7 @@ static uint32_t mockAcquireSurfaceImage( void *, sirGraphicsHandle_t hSurface, s
 
 static uint32_t mockPresent( void *, const sirGraphicsSurfaceImage_t *pImage, const sirGraphicsCompletion_t *pComplete ) noexcept
 {
-	if ( pImage == nullptr || pComplete == nullptr || pImage->nAcquisitionId == 0 ||
-	     pComplete->eQueue != SIR_GRAPHICS_QUEUE_DIRECT ) {
+	if ( pImage == nullptr || pComplete == nullptr || pImage->nAcquisitionId == 0 || pComplete->eQueue != SIR_GRAPHICS_QUEUE_DIRECT ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( s_nMockMode == 28 ) {

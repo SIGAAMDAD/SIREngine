@@ -292,8 +292,7 @@ static bool testRankedSelection( void ) noexcept
 	vulkan.setMemory( 4096, 0 );
 
 	// Deliberately register software first and Vulkan last.
-	if ( registry.registerDriver( &software ) != SIR_GRAPHICS_SUCCESS ||
-	     registry.registerDriver( &d3d12 ) != SIR_GRAPHICS_SUCCESS ||
+	if ( registry.registerDriver( &software ) != SIR_GRAPHICS_SUCCESS || registry.registerDriver( &d3d12 ) != SIR_GRAPHICS_SUCCESS ||
 	     registry.registerDriver( &vulkan ) != SIR_GRAPHICS_SUCCESS ) {
 		return false;
 	}
@@ -305,8 +304,8 @@ static bool testRankedSelection( void ) noexcept
 	SIRGraphicsDriver *pDriver = nullptr;
 	sirGraphicsAdapterInfo_t adapter = {};
 
-	if ( registry.selectDriver( selection, &pDriver, &adapter ) != SIR_GRAPHICS_SUCCESS ||
-	     pDriver != &vulkan || adapter.bSoftwareAdapter ) {
+	if ( registry.selectDriver( selection, &pDriver, &adapter ) != SIR_GRAPHICS_SUCCESS || pDriver != &vulkan ||
+	     adapter.bSoftwareAdapter ) {
 		return false;
 	}
 	// When dedicated memory differs but the feature set is the same, select
@@ -324,8 +323,8 @@ static bool testRankedSelection( void ) noexcept
 	// Software is eligible only when the caller permits it, and only after
 	// feature and version checks have excluded every physical candidate.
 	selection.nRequiredFeatures = GRAPHICS | SIR_GRAPHICS_FEATURE_HDR_OUTPUT;
-	if ( registry.selectDriver( selection, &pDriver, &adapter ) != SIR_GRAPHICS_SUCCESS ||
-	     pDriver != &software || !adapter.bSoftwareAdapter ) {
+	if ( registry.selectDriver( selection, &pDriver, &adapter ) != SIR_GRAPHICS_SUCCESS || pDriver != &software ||
+	     !adapter.bSoftwareAdapter ) {
 		return false;
 	}
 	selection.bAllowSoftware = false;

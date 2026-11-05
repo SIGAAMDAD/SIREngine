@@ -89,26 +89,23 @@ static bool testBinaryModule( void ) noexcept
 	choice.nSize = sizeof( choice );
 	choice.nModuleIndex = 99;
 	pMode( 12 );
-	if ( sirGraphicsSelectABIModuleAdapter( szModules, 1, &policy, &choice ) != SIR_GRAPHICS_SUCCESS ||
-	     choice.nModuleIndex != 0 || choice.adapter.nIndex != 2 ||
-	     choice.adapter.nKind != SIR_GRAPHICS_ABI_ADAPTER_DISCRETE ) {
+	if ( sirGraphicsSelectABIModuleAdapter( szModules, 1, &policy, &choice ) != SIR_GRAPHICS_SUCCESS || choice.nModuleIndex != 0 ||
+	     choice.adapter.nIndex != 2 || choice.adapter.nKind != SIR_GRAPHICS_ABI_ADAPTER_DISCRETE ) {
 		return false;
 	}
 	policy.nRequiredFeatures = SIR_GRAPHICS_FEATURE_COMPUTE | SIR_GRAPHICS_FEATURE_GRAPHICS;
-	if ( sirGraphicsSelectABIModuleAdapter( szModules, 1, &policy, &choice ) != SIR_GRAPHICS_SUCCESS ||
-	     choice.adapter.nIndex != 0 || choice.adapter.nKind != SIR_GRAPHICS_ABI_ADAPTER_SOFTWARE ) {
+	if ( sirGraphicsSelectABIModuleAdapter( szModules, 1, &policy, &choice ) != SIR_GRAPHICS_SUCCESS || choice.adapter.nIndex != 0 ||
+	     choice.adapter.nKind != SIR_GRAPHICS_ABI_ADAPTER_SOFTWARE ) {
 		return false;
 	}
 	policy.nAllowSoftware = 0;
 	choice.nModuleIndex = 99;
-	if ( sirGraphicsSelectABIModuleAdapter( szModules, 1, &policy, &choice ) != SIR_GRAPHICS_UNSUPPORTED ||
-	     choice.nModuleIndex != 99 ) {
+	if ( sirGraphicsSelectABIModuleAdapter( szModules, 1, &policy, &choice ) != SIR_GRAPHICS_UNSUPPORTED || choice.nModuleIndex != 99 ) {
 		return false;
 	}
 	policy.nAllowSoftware = 1;
 	policy.nBackend = SIR_GRAPHICS_BACKEND_D3D12;
-	if ( sirGraphicsSelectABIModuleAdapter( szModules, 1, &policy, &choice ) != SIR_GRAPHICS_UNSUPPORTED ||
-	     choice.nModuleIndex != 99 ) {
+	if ( sirGraphicsSelectABIModuleAdapter( szModules, 1, &policy, &choice ) != SIR_GRAPHICS_UNSUPPORTED || choice.nModuleIndex != 99 ) {
 		return false;
 	}
 	policy.nBackend = SIR_GRAPHICS_BACKEND_VULKAN;
@@ -131,8 +128,7 @@ static bool testBinaryModule( void ) noexcept
 	policy.nMinimumApiMinor = 0;
 	policy.nRequiredFeatures = SIR_GRAPHICS_FEATURE_COMPUTE;
 	pMode( 1 );
-	if ( sirGraphicsSelectABIModuleAdapter( szModules, 1, &policy, &choice ) != SIR_GRAPHICS_DRIVER_ERROR ||
-	     choice.nModuleIndex != 99 ) {
+	if ( sirGraphicsSelectABIModuleAdapter( szModules, 1, &policy, &choice ) != SIR_GRAPHICS_DRIVER_ERROR || choice.nModuleIndex != 99 ) {
 		return false;
 	}
 	pMode( 9 );
@@ -141,8 +137,7 @@ static bool testBinaryModule( void ) noexcept
 	}
 	pMode( 13 );
 	choice.nModuleIndex = 99;
-	if ( sirGraphicsSelectABIModuleAdapter( szModules, 1, &policy, &choice ) != SIR_GRAPHICS_DRIVER_ERROR ||
-	     choice.nModuleIndex != 99 ) {
+	if ( sirGraphicsSelectABIModuleAdapter( szModules, 1, &policy, &choice ) != SIR_GRAPHICS_DRIVER_ERROR || choice.nModuleIndex != 99 ) {
 		return false;
 	}
 	pMode( 0 );
@@ -359,8 +354,8 @@ static bool testBinaryModule( void ) noexcept
 	buffer.nUsage = SIR_GRAPHICS_USAGE_COPY_SOURCE | SIR_GRAPHICS_USAGE_COPY_DESTINATION;
 	buffer.eMemory = SIR_GRAPHICS_MEMORY_GPU_LOCAL;
 	sirGraphicsHandle_t hBuffer = {};
-	if ( sirGraphicsCreateABIBuffer( &device, &buffer, &hBuffer ) != SIR_GRAPHICS_SUCCESS ||
-	     hBuffer.eType != SIR_GRAPHICS_HANDLE_BUFFER || hBuffer.nDeviceGeneration != 5 ) {
+	if ( sirGraphicsCreateABIBuffer( &device, &buffer, &hBuffer ) != SIR_GRAPHICS_SUCCESS || hBuffer.eType != SIR_GRAPHICS_HANDLE_BUFFER ||
+	     hBuffer.nDeviceGeneration != 5 ) {
 		return false;
 	}
 	buffer.nSizeBytes = 0;
@@ -384,13 +379,13 @@ static bool testBinaryModule( void ) noexcept
 	buffer.eMemory = SIR_GRAPHICS_MEMORY_GPU_LOCAL;
 	const sirGraphicsHandle_t originalBuffer = hBuffer;
 	pMode( 17 );
-	if ( sirGraphicsCreateABIBuffer( &device, &buffer, &hBuffer ) != SIR_GRAPHICS_DRIVER_ERROR ||
-	     hBuffer.nSlot != originalBuffer.nSlot || hBuffer.nDeviceGeneration != originalBuffer.nDeviceGeneration ) {
+	if ( sirGraphicsCreateABIBuffer( &device, &buffer, &hBuffer ) != SIR_GRAPHICS_DRIVER_ERROR || hBuffer.nSlot != originalBuffer.nSlot ||
+	     hBuffer.nDeviceGeneration != originalBuffer.nDeviceGeneration ) {
 		return false;
 	}
 	pMode( 18 );
-	if ( sirGraphicsCreateABIBuffer( &device, &buffer, &hBuffer ) != SIR_GRAPHICS_DEVICE_LOST ||
-	     hBuffer.nSlot != originalBuffer.nSlot || hBuffer.nDeviceGeneration != originalBuffer.nDeviceGeneration ) {
+	if ( sirGraphicsCreateABIBuffer( &device, &buffer, &hBuffer ) != SIR_GRAPHICS_DEVICE_LOST || hBuffer.nSlot != originalBuffer.nSlot ||
+	     hBuffer.nDeviceGeneration != originalBuffer.nDeviceGeneration ) {
 		return false;
 	}
 	pMode( 10 );
@@ -420,8 +415,8 @@ static bool testBinaryModule( void ) noexcept
 	view.nLayers = 1;
 	view.nUsage = SIR_GRAPHICS_USAGE_SAMPLED;
 	sirGraphicsHandle_t hView = {};
-	if ( sirGraphicsCreateABIView( &device, &view, &hView ) != SIR_GRAPHICS_SUCCESS ||
-	     hView.eType != SIR_GRAPHICS_HANDLE_VIEW || hView.nDeviceGeneration != 5 ) {
+	if ( sirGraphicsCreateABIView( &device, &view, &hView ) != SIR_GRAPHICS_SUCCESS || hView.eType != SIR_GRAPHICS_HANDLE_VIEW ||
+	     hView.nDeviceGeneration != 5 ) {
 		return false;
 	}
 	view.hResource.nDeviceGeneration = 4;
@@ -561,39 +556,33 @@ static bool testBinaryModule( void ) noexcept
 	modern.nRequiredFeatures = SIR_GRAPHICS_FEATURE_RAY_TRACING;
 	pMode( 14 );
 	iSelected = 99;
-	if ( sirGraphicsSelectABIPipelineVariant( &device, szVariants, 3, &iSelected ) != SIR_GRAPHICS_UNSUPPORTED ||
-	     iSelected != 99 ) {
+	if ( sirGraphicsSelectABIPipelineVariant( &device, szVariants, 3, &iSelected ) != SIR_GRAPHICS_UNSUPPORTED || iSelected != 99 ) {
 		return false;
 	}
 	pMode( 16 );
-	if ( sirGraphicsSelectABIPipelineVariant( &device, szVariants, 3, &iSelected ) != SIR_GRAPHICS_DRIVER_ERROR ||
-	     iSelected != 99 ) {
+	if ( sirGraphicsSelectABIPipelineVariant( &device, szVariants, 3, &iSelected ) != SIR_GRAPHICS_DRIVER_ERROR || iSelected != 99 ) {
 		return false;
 	}
 	pMode( 10 );
-	if ( sirGraphicsSelectABIPipelineVariant( &device, szVariants, 3, &iSelected ) != SIR_GRAPHICS_SUCCESS ||
-	     iSelected != 1 ) {
+	if ( sirGraphicsSelectABIPipelineVariant( &device, szVariants, 3, &iSelected ) != SIR_GRAPHICS_SUCCESS || iSelected != 1 ) {
 		return false;
 	}
 	modern.nRequiredFeatures = SIR_GRAPHICS_FEATURE_COMPUTE;
 
 	szVariants[0].pModern = nullptr;
 	iSelected = 99;
-	if ( sirGraphicsSelectABIPipelineVariant( &device, szVariants, 3, &iSelected ) != SIR_GRAPHICS_INVALID_ARGUMENT ||
-	     iSelected != 99 ) {
+	if ( sirGraphicsSelectABIPipelineVariant( &device, szVariants, 3, &iSelected ) != SIR_GRAPHICS_INVALID_ARGUMENT || iSelected != 99 ) {
 		return false;
 	}
 	szVariants[0].pModern = &modern;
-	if ( sirGraphicsSelectABIPipelineVariant( &device, szVariants, 17, &iSelected ) != SIR_GRAPHICS_CAPACITY_EXCEEDED ||
-	     iSelected != 99 ) {
+	if ( sirGraphicsSelectABIPipelineVariant( &device, szVariants, 17, &iSelected ) != SIR_GRAPHICS_CAPACITY_EXCEEDED || iSelected != 99 ) {
 		return false;
 	}
 	if ( sirGraphicsSelectABIPipelineVariant( &device, szVariants, 0, &iSelected ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
 		return false;
 	}
 	pMode( 0 );
-	if ( sirGraphicsSelectABIPipelineVariant( &device, &szVariants[1], 2, &iSelected ) != SIR_GRAPHICS_UNSUPPORTED ||
-	     iSelected != 99 ) {
+	if ( sirGraphicsSelectABIPipelineVariant( &device, &szVariants[1], 2, &iSelected ) != SIR_GRAPHICS_UNSUPPORTED || iSelected != 99 ) {
 		return false;
 	}
 
@@ -604,8 +593,7 @@ static bool testBinaryModule( void ) noexcept
 		return false;
 	}
 	iSelected = 99;
-	if ( sirGraphicsSelectABIPipelineVariant( &device, szVariants, 3, &iSelected ) != SIR_GRAPHICS_DRIVER_ERROR ||
-	     iSelected != 99 ) {
+	if ( sirGraphicsSelectABIPipelineVariant( &device, szVariants, 3, &iSelected ) != SIR_GRAPHICS_DRIVER_ERROR || iSelected != 99 ) {
 		return false;
 	}
 	pMode( 0 );
@@ -626,8 +614,7 @@ static bool testBinaryModule( void ) noexcept
 	const void *pOriginalCommands = commands.pCommands;
 	sirGraphicsABICommandList_t invalidCommands = commands;
 	invalidCommands.nSize = 1;
-	if ( sirGraphicsAcquireABICommands( &device, SIR_GRAPHICS_QUEUE_DIRECT, &invalidCommands ) !=
-	         SIR_GRAPHICS_INVALID_ARGUMENT ||
+	if ( sirGraphicsAcquireABICommands( &device, SIR_GRAPHICS_QUEUE_DIRECT, &invalidCommands ) != SIR_GRAPHICS_INVALID_ARGUMENT ||
 	     invalidCommands.pCommands != pOriginalCommands ) {
 		return false;
 	}
@@ -667,33 +654,28 @@ static bool testBinaryModule( void ) noexcept
 	     sirGraphicsWaitABICompletion( &device, &completion, 0 ) != SIR_GRAPHICS_SUCCESS ) {
 		return false;
 	}
-	if ( sirGraphicsSubmitABICommands( &device, SIR_GRAPHICS_QUEUE_COMPUTE, &submission, &completion ) !=
-	     SIR_GRAPHICS_UNSUPPORTED ) {
+	if ( sirGraphicsSubmitABICommands( &device, SIR_GRAPHICS_QUEUE_COMPUTE, &submission, &completion ) != SIR_GRAPHICS_UNSUPPORTED ) {
 		return false;
 	}
 	const void *szDuplicates[] = { commands.pCommands, commands.pCommands };
 	submission.ppCommandLists = szDuplicates;
 	submission.nCommandListCount = 2;
-	if ( sirGraphicsSubmitABICommands( &device, SIR_GRAPHICS_QUEUE_DIRECT, &submission, &completion ) !=
-	     SIR_GRAPHICS_INVALID_ARGUMENT ) {
+	if ( sirGraphicsSubmitABICommands( &device, SIR_GRAPHICS_QUEUE_DIRECT, &submission, &completion ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
 		return false;
 	}
 	submission.ppCommandLists = szCommandLists;
 	submission.nCommandListCount = 1;
 	const sirGraphicsSurfaceImage_t acquired = {
-	    { 0, 1, 5, SIR_GRAPHICS_HANDLE_SURFACE }, { 1, 1, 5, SIR_GRAPHICS_HANDLE_TEXTURE }, 42, 1
-	};
+	    { 0, 1, 5, SIR_GRAPHICS_HANDLE_SURFACE }, { 1, 1, 5, SIR_GRAPHICS_HANDLE_TEXTURE }, 42, 1 };
 	submission.pAcquisitions = &acquired;
 	submission.nAcquisitionCount = 1;
-	if ( sirGraphicsSubmitABICommands( &device, SIR_GRAPHICS_QUEUE_DIRECT, &submission, &completion ) !=
-	     SIR_GRAPHICS_UNSUPPORTED ) {
+	if ( sirGraphicsSubmitABICommands( &device, SIR_GRAPHICS_QUEUE_DIRECT, &submission, &completion ) != SIR_GRAPHICS_UNSUPPORTED ) {
 		return false;
 	}
 	submission.pAcquisitions = nullptr;
 	submission.nAcquisitionCount = 0;
 	submission.nReserved = 1;
-	if ( sirGraphicsSubmitABICommands( &device, SIR_GRAPHICS_QUEUE_DIRECT, &submission, &completion ) !=
-	     SIR_GRAPHICS_INVALID_ARGUMENT ) {
+	if ( sirGraphicsSubmitABICommands( &device, SIR_GRAPHICS_QUEUE_DIRECT, &submission, &completion ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
 		return false;
 	}
 	submission.nReserved = 0;
@@ -701,22 +683,19 @@ static bool testBinaryModule( void ) noexcept
 	invalidWait.nDeviceGeneration = 4;
 	submission.pWaits = &invalidWait;
 	submission.nWaitCount = 1;
-	if ( sirGraphicsSubmitABICommands( &device, SIR_GRAPHICS_QUEUE_DIRECT, &submission, &completion ) !=
-	     SIR_GRAPHICS_INVALID_ARGUMENT ) {
+	if ( sirGraphicsSubmitABICommands( &device, SIR_GRAPHICS_QUEUE_DIRECT, &submission, &completion ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
 		return false;
 	}
 	submission.pWaits = nullptr;
 	submission.nWaitCount = 0;
 	const sirGraphicsCompletion_t originalCompletion = completion;
 	pMode( 23 );
-	if ( sirGraphicsSubmitABICommands( &device, SIR_GRAPHICS_QUEUE_DIRECT, &submission, &completion ) !=
-	         SIR_GRAPHICS_DRIVER_ERROR ||
+	if ( sirGraphicsSubmitABICommands( &device, SIR_GRAPHICS_QUEUE_DIRECT, &submission, &completion ) != SIR_GRAPHICS_DRIVER_ERROR ||
 	     completion.nValue != originalCompletion.nValue ) {
 		return false;
 	}
 	pMode( 25 );
-	if ( sirGraphicsSubmitABICommands( &device, SIR_GRAPHICS_QUEUE_DIRECT, &submission, &completion ) !=
-	         SIR_GRAPHICS_DEVICE_LOST ||
+	if ( sirGraphicsSubmitABICommands( &device, SIR_GRAPHICS_QUEUE_DIRECT, &submission, &completion ) != SIR_GRAPHICS_DEVICE_LOST ||
 	     completion.nValue != originalCompletion.nValue ) {
 		return false;
 	}
@@ -734,8 +713,7 @@ static bool testBinaryModule( void ) noexcept
 	pMode( 0 );
 	completion.nDeviceGeneration = 4;
 	if ( sirGraphicsPollABICompletion( &device, &completion, &nDone ) != SIR_GRAPHICS_INVALID_ARGUMENT ||
-	     sirGraphicsWaitABICompletion( &device, &completion, 0 ) != SIR_GRAPHICS_INVALID_ARGUMENT ||
-	     nDone != 7 ) {
+	     sirGraphicsWaitABICompletion( &device, &completion, 0 ) != SIR_GRAPHICS_INVALID_ARGUMENT || nDone != 7 ) {
 		return false;
 	}
 	// WSI is explicitly device-admitted: headless compute cannot publish
@@ -754,8 +732,7 @@ static bool testBinaryModule( void ) noexcept
 	present.nFormat = SIR_GRAPHICS_FORMAT_RGBA8_UNORM;
 	present.nMode = SIR_GRAPHICS_PRESENT_FIFO;
 	sirGraphicsHandle_t hSurface = { 99, 1, 5, SIR_GRAPHICS_HANDLE_SURFACE };
-	if ( sirGraphicsCreateABISurface( &device, &native, &present, &hSurface ) != SIR_GRAPHICS_UNSUPPORTED ||
-	     hSurface.nSlot != 99 ) {
+	if ( sirGraphicsCreateABISurface( &device, &native, &present, &hSurface ) != SIR_GRAPHICS_UNSUPPORTED || hSurface.nSlot != 99 ) {
 		return false;
 	}
 	pMode( 26 );
@@ -843,19 +820,16 @@ static bool testBinaryModule( void ) noexcept
 	pMode( 0 );
 
 	sirGraphicsMemoryBudget_t budget = {};
-	if ( sirGraphicsQueryABIMemoryBudget( &device, &budget ) != SIR_GRAPHICS_SUCCESS ||
-	     budget.nBudgetBytes != 1024U * 1024U ) {
+	if ( sirGraphicsQueryABIMemoryBudget( &device, &budget ) != SIR_GRAPHICS_SUCCESS || budget.nBudgetBytes != 1024U * 1024U ) {
 		return false;
 	}
 	budget.nBudgetBytes = 12345;
 	pMode( 19 );
-	if ( sirGraphicsQueryABIMemoryBudget( &device, &budget ) != SIR_GRAPHICS_DRIVER_ERROR ||
-	     budget.nBudgetBytes != 12345 ) {
+	if ( sirGraphicsQueryABIMemoryBudget( &device, &budget ) != SIR_GRAPHICS_DRIVER_ERROR || budget.nBudgetBytes != 12345 ) {
 		return false;
 	}
 	pMode( 20 );
-	if ( sirGraphicsQueryABIMemoryBudget( &device, &budget ) != SIR_GRAPHICS_DEVICE_LOST ||
-	     budget.nBudgetBytes != 12345 ) {
+	if ( sirGraphicsQueryABIMemoryBudget( &device, &budget ) != SIR_GRAPHICS_DEVICE_LOST || budget.nBudgetBytes != 12345 ) {
 		return false;
 	}
 	pMode( 0 );

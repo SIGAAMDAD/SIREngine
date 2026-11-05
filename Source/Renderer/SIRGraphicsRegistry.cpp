@@ -40,8 +40,8 @@ static uint32_t sirGraphicsCountFeatureBits( uint64_t nMask ) noexcept
 	return nCount;
 }
 
-static bool sirGraphicsPreferAdapter( const sirGraphicsAdapterInfo_t& candidate, sirGraphicsBackend_t eCandidate,
-                                      const sirGraphicsAdapterInfo_t& current, sirGraphicsBackend_t eCurrent ) noexcept
+static bool sirGraphicsPreferAdapter( const sirGraphicsAdapterInfo_t &candidate, sirGraphicsBackend_t eCandidate,
+                                      const sirGraphicsAdapterInfo_t &current, sirGraphicsBackend_t eCurrent ) noexcept
 {
 	if ( candidate.bSoftwareAdapter != current.bSoftwareAdapter ) {
 		return !candidate.bSoftwareAdapter;
