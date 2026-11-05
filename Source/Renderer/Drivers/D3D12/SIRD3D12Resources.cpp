@@ -953,8 +953,8 @@ sirGraphicsResult_t SIRD3D12Resources::createView( const sirGraphicsViewDesc_t& 
 		}
 		m_pDevice->CreateDepthStencilView( pNativeResource, &dsv, hCpu );
 	} else if ( desc.nUsage == SIR_GRAPHICS_USAGE_STORAGE ) {
-		if ( ( pResource->eDimension != SIR_GRAPHICS_TEXTURE_2D && pResource->eDimension != SIR_GRAPHICS_TEXTURE_3D ) || desc.nMipLevels != 1 ||
-		     pResource->nSamples != 1 ) {
+		if ( ( pResource->eDimension != SIR_GRAPHICS_TEXTURE_2D && pResource->eDimension != SIR_GRAPHICS_TEXTURE_3D ) ||
+		     desc.nMipLevels != 1 || pResource->nSamples != 1 ) {
 			releaseSlot( iSlot );
 			*pHandle = {};
 			return SIR_GRAPHICS_UNSUPPORTED;
