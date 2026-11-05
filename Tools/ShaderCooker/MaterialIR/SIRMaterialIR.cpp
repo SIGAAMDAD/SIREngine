@@ -223,11 +223,10 @@ sirShaderCookResult_t sirMaterialIRCompile( const sirMaterialIRGraph_t& graph, c
 	}
 	pOutput->nRequiredCount = 0;
 	pOutput->nProducedCount = 0;
-	if ( graph.nAssetId == 0 || graph.nSourceHash == 0 || graph.nNodeCount == 0 ||
-	     graph.nNodeCount > SIR_MATERIAL_IR_MAX_NODES || graph.nPassCount == 0 || graph.nPassCount > SIR_MATERIAL_IR_MAX_PASSES ||
-	     graph.nSwitchCount > SIR_MATERIAL_IR_MAX_SWITCHES || graph.nBindingCount > SIR_MATERIAL_IR_MAX_BINDINGS ||
-	     graph.pNodes == nullptr || graph.pPasses == nullptr || ( graph.nSwitchCount != 0 && graph.pSwitches == nullptr ) ||
-	     ( graph.nBindingCount != 0 && graph.pEncodedBindings == nullptr ) ) {
+	if ( graph.nAssetId == 0 || graph.nSourceHash == 0 || graph.nNodeCount == 0 || graph.nNodeCount > SIR_MATERIAL_IR_MAX_NODES ||
+	     graph.nPassCount == 0 || graph.nPassCount > SIR_MATERIAL_IR_MAX_PASSES || graph.nSwitchCount > SIR_MATERIAL_IR_MAX_SWITCHES ||
+	     graph.nBindingCount > SIR_MATERIAL_IR_MAX_BINDINGS || graph.pNodes == nullptr || graph.pPasses == nullptr ||
+	     ( graph.nSwitchCount != 0 && graph.pSwitches == nullptr ) || ( graph.nBindingCount != 0 && graph.pEncodedBindings == nullptr ) ) {
 		return SIR_SHADER_COOK_INVALID_ARGUMENT;
 	}
 	uint32_t nDeclaredBits = 0;
