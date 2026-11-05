@@ -1,101 +1,73 @@
-# SIREngine GitHub Project — AI-first development, human-maintained future
+# SIREngine GitHub Project — manual-first operations
 
-**GitHub Projects V2 is the only project-management board.** GitHub Issues describe approved or proposed work, pull requests contain source changes, and GitHub Actions plus repository scripts keep project metadata consistent. No SQLite or outside coordination service is required.
+**Project model:** AI writes the initial plans and implementation under human authority; the same GitHub Project and issue/PR workflow can later be maintained by a human team. The project board is the visible work queue. There is no SQLite database, background scheduler, custom Projects GraphQL operator, project token, or mandatory repository-side project-management script.
 
-## Authority and meaning of fields
+**Human authority:** The owner approves architecture, scope, plan revisions, and integration. A board item or label never grants those permissions by itself. A worker launched with an explicit owner instruction may implement exactly one suitable existing issue within the authorized selection set; it must record the issue number, revision and authorization when claiming. Changed scope needs a new owner decision. PR merging requires separate approval of its exact head SHA and destination.
 
-The human owner decides architecture, milestone revisions, implementation scope and integration. A new issue, tracking label, priority field, or board status **does not grant authority**. Approved implementation scope requires a recorded owner decision for an exact plan revision and enumerated work-package IDs. A PR merge requires a separate decision tied to the exact head SHA and destination base, or an explicit owner-authored standing policy.
+## One-time GitHub Project UI setup
 
-GitHub board fields describe **workflow metadata**; the Marathon worker must check the authenticated original approval receipt and dependency closure before claiming work. Team members may edit project presentation fields, issue forms and reports without changing this authority boundary.
+The connected GitHub app exposes Issues, PRs and repository files, but no Projects V2 fields, views, or board-membership mutation. **These UI actions remain unverified until a human project administrator completes them:**
 
-## Configuration: activate the existing SIREngine project
+1. Open the existing **SIREngine** GitHub Project and select **Workflows > Auto-add to project > Edit**. Select repository `SIGAAMDAD/SIREngine`; use `is:issue,pr label:"marathon:tracked"`; choose **Save and turn on workflow**. This supports both issues and PRs.
+2. Bulk-add **existing** SIREngine records using **Add item > Add from repository**, filtering `label:marathon:tracked`. Auto-add only handles newly created or updated matching items, not historic backfill. Verify actual board membership, including closed issues/merged PRs.
+3. Keep GitHub's native **Status** field simple: **Todo**, **In progress**, **Done**. Use issue/PR labels for more detailed state. **Item added to project** can set Todo. Enable **Issue closed** and **PR merged** → Done. **Do not enable a workflow that closes an issue simply because its board status becomes Done**.
+4. Create saved views described below, using each exact filter. Views reorganize the same records; they do not create or duplicate issues.
+5. Add optional `Priority` and `Subsystem` single-select fields only if the team needs them. Labels are the authoritative filterable metadata available to manually launched chats through the current connector.
+6. Populate the Project README/About with a link to this file, issue #281, the linked GitHub repository, and the Manual Worker Quickstart. No new project or external dashboard is needed.
 
-The GitHub connector used to produce this patch has no Projects V2 GraphQL/board access, so the following activation must be completed with project credentials. The automation **never creates a new project** and refuses ambiguous project titles.
+## Recommended saved views
 
-1. Review PR #280 and merge its exact accepted revision into the default branch **main**. Project workflow files must be on the default branch to handle repository events.
-2. In repository Settings > Secrets and variables > Actions, configure the secret **SIR_PROJECT_TOKEN**. For this user-owned project, a personal access token (classic) with the GitHub **project** scope is the documented route; grant appropriate repository permissions as needed. Never write the token to an issue, source file or project field. GitHub's default GITHUB_TOKEN cannot mutate Projects V2.
-3. Optional: set repository variable **SIR_PROJECT_NUMBER** from the existing project URL (for example, /users/SIGAAMDAD/projects/N). With no number, the script resolves the exact title **SIREngine**, failing if that title is ambiguous.
-4. In Actions, run **SIREngine project operations** with operation **provision-labels**, first preview (apply false), then apply true. This adds missing label definitions without applying any approval label to an issue.
-5. Run operation **provision**, first preview and then apply. It creates missing fields and saved views on the **existing** SIREngine project; it never alters an existing field type or overwrites an existing saved view.
-6. Run operation **backfill**, first preview and then apply (limit 0 means all). This adds all repository issues and PRs carrying **marathon:tracked**, including historical closed records, then initializes recognized metadata. Backfill is idempotent.
-7. Review the **hierarchy** preview. It only proposes native sub-issue links when an issue body explicitly identifies a Canonical parent or Parent issue. Apply only after reviewing the listed exact parent/child pairs. Existing conflicting parents are preserved.
-8. Verify a fresh issue and PR are added and updated automatically by the repository-side project workflow.
-9. Optionally enable GitHub Projects' built-in **Auto-add to project** for repository SIGAAMDAD/SIREngine with filter **is:issue,pr label:"marathon:tracked"** as a fallback. GitHub built-in Auto-add does not retroactively add old items; the backfill operation above covers history.
+| View | Layout | Filter | Manual purpose |
+|---|---|---|---|
+| All work | Table | `repo:SIGAAMDAD/SIREngine label:marathon:tracked` | Full inventory |
+| Pick a task | Table | `is:issue is:open -label:kind:roadmap -label:marathon:active -label:marathon:blocked` | Candidate pool; worker verifies owner authority, dependency and paths before selection |
+| In progress | Board | `is:issue is:open label:marathon:active` | Current claimed tasks |
+| Roadmaps | Table | `is:issue label:kind:roadmap` | Subsystem plans, parent issues |
+| Milestones | Roadmap | `is:issue label:kind:milestone` | Parent progress and native sub-issues |
+| PR review | Table | `is:pr is:open` | Drafts, reviews and exact-SHA QA |
+| Blocked | Table | `is:open label:marathon:blocked` | Unmet dependencies and unresolved ownership |
+| Verification | Table | `is:open label:kind:verification` | Explicit source/QA gates |
+| Completed history | Table | `is:closed` | Verified completed and historical work |
 
-The workflow is triggered for issue/PR lifecycle changes and runs a weekday audit. With the project token absent, it issues a warning rather than claiming project synchronization succeeded. A separate intake workflow automatically applies **marathon:tracked** to new issues and PRs.
+For Pick a task, sort by Priority if maintained, or choose uniformly at random from the **verified eligible** candidates. A saved view is a shortlist, not proof a task is approved or conflict-free. Use GitHub's native sub-issues on parent milestones where available and supported, rather than inventing duplicate tracking documents.
 
-## Provisioned project fields
+## Minimal labels
 
-The provisioner adds missing fields only. It leaves GitHub's native **Status** field and any existing team fields intact.
+- `marathon:tracked`: administrative issue/PR intake only. The `.github/workflows/project-intake.yml` default-branch workflow labels newly opened and reopened issues/PRs.
+- `kind:roadmap`, `kind:milestone`, `kind:implementation`, `kind:verification`, `kind:bug`, `kind:documentation`: work type.
+- `subsystem:*`, `priority:p0` through `priority:p3`: optional classification.
+- `marathon:approved`: a pointer to separately verified owner approval for the **exact** plan revision; never apply it without the decision.
+- `marathon:ready`: requirements checked; a worker still verifies approval and dependencies.
+- `marathon:active`: manually claimed/in-progress; not an atomic exclusive lock.
+- `marathon:blocked`: cannot proceed with a documented blocker.
+- `marathon:merge-approved`: a pointer to a separate owner decision for the exact PR head/base; the label alone never suffices.
 
-| Field | Type | Usage |
-|---|---|---|
-| Delivery Stage | Single select | Proposed, Approved, Ready, In progress, In review, Verification, Awaiting merge approval, Blocked, Done, Closed without merge |
-| Priority | Single select | P0, P1, P2, P3 from explicitly applied priority labels |
-| Subsystem | Single select | Core, Renderer, GRDG, Shaders, OpenGL, DirectX, Vulkan, Meshing, Terrain, Physics, Audio, Input, Scripting, Console, Editor, World, Networking, QA, Other |
-| Work Type | Single select | Roadmap, Milestone, Implementation, Bug, Verification, Documentation, PR |
-| Pipeline Era | Single select | Fixed function, Programmable, Modern, Cross-era |
-| Plan Revision | Text | Explicitly documented plan revision |
-| Worker ID | Text | Assigned worker or human maintainer |
-| Target Branch | Text | PR base or manually assigned implementation target |
-| Integration Wave | Text | Owner-defined merge wave |
-| Coverage (%) | Number | Verified coverage reported by reviewer; never guessed from issue closure |
-| Target Date | Date | Owner/team planning target, never an inferred deadline |
+Do not treat a sub-issue as complete until its merged source and acceptance evidence are confirmed. Close a parent milestone only after all required children and gates pass.
 
-Subsequent event synchronization follows repository state and metadata labels. **marathon:manual-stage** preserves a human-maintained Delivery Stage. Nonterminal work type and subsystem classification can also be edited by team members. A closed unmerged PR is not counted as merged or successful delivery.
+## Manual worker lifecycle
 
-## Provisioned views
+1. The owner starts a ChatGPT worker using the [Manual Worker Quickstart](ManualWorkerQuickstart.md) and grants permission to execute a defined existing issue or a random choice from an explicitly authorized set.
+2. Worker reads **current** open issue/PR data (paginate the complete backlog), excludes claimed/blocked/unauthorized work, checks the parent plan and dependencies, chooses a bounded work package, and checks path overlap.
+3. If multiple workers may run, use the existing `ops/sirengine-control` branch: create a fixed `.sir-marathon/claims/issue-N.json` file, verify ownership/token and check again before publication. This uses GitHub API file operations, **not a local script**. One manual worker at a time can instead use a clearly documented issue claim, but labels/assignees are not atomic.
+4. Mark `marathon:active`, post a comment with worker ID, branch, source baseline, exclusive paths, owner authorization and next acceptance gate. Recheck claim before publishing source changes.
+5. Implement on the existing dedicated branch where appropriate, run required checks, commit, publish a PR and cite exact head SHA and evidence. Leave truthful NOT_RUN/FAIL/BLOCKED gates.
+6. Request independent verification where required. Do not merge without owner approval. The owner or integrator merges verified, authorized PRs, then updates and closes verified child issues and parent milestones.
+7. Re-read the queue and choose another **independent, authorized** task if the launch instruction permits more work. End on no eligible work, collision/blocker with no safe alternative, or execution limit; post a durable checkpoint.
 
-| View | Layout | Intended use |
-|---|---|---|
-| Master Backlog | Table | All tracked repository work |
-| Intake | Table | Proposed issues and review intake |
-| Roadmaps | Roadmap | Roadmap parents |
-| Milestones | Roadmap | Milestone parents and target dates |
-| Ready for AI | Table | Currently marked ready tasks |
-| Active Development | Board | Open work grouped by delivery stage |
-| PR Review | Table | Open pull requests |
-| Verification | Table | Independent QA work |
-| Blocked | Table | Issues awaiting prerequisites |
-| Completed History | Table | Closed issues and PRs |
+**Random choice does not bypass dependency or ownership checks.** Broad roadmap parents are coordination containers; their implementation children are the normal execution units.
 
-The GraphQL provisioning creates views with layouts and initial filters. Configure grouping, column visibility, roadmap date fields, sorting and chart appearance in the GitHub Projects UI; the supported API does not set all these UI presentation settings.
+## Review and handover
 
-## Recommended native board presentation
+- Issue forms: `.github/ISSUE_TEMPLATE/` for roadmap/milestone proposals, implementation packages, QA and bugs.
+- PR checks: `.github/PULL_REQUEST_TEMPLATE.md`.
+- Team review ownership: `.github/CODEOWNERS`.
+- Contributor entry: `CONTRIBUTING.md`.
+- Claim and checkpoint policy: `ops/sirengine-control` (already initialized).
+- Project setup issue: https://github.com/SIGAAMDAD/SIREngine/issues/281.
+- Initial configuration PR: https://github.com/SIGAAMDAD/SIREngine/pull/280.
 
-- Group **Active Development** by Delivery Stage and sort by Priority, then issue number.
-- Display Subsystem, Priority, Work Type, assigned maintainer and linked PRs on the Master Backlog.
-- Use **Target Date** for the roadmap timeline. Unscheduled milestones remain unscheduled rather than receiving fabricated dates.
-- Enable GitHub's built-in **Issue closed** and **PR merged** status workflows, after confirming they do not conflict with your preferred Status field.
-- Configure Insights charts in the UI for current item breakdown by Delivery Stage/Subsystem, issues closed per week, PR merges per week, open blocked items and workload by maintainer. Historical engine implementation percentage is not derivable from GitHub issue counts.
+**Limitations:** GitHub Projects V2's actual views, fields, status automations and existing record membership cannot be changed through the present connected GitHub app. This file defines the specific UI configuration, not proof of deployment. The repository-side template/workflow changes activate only after the owner authorizes and performs the PR merge to default branch.
 
-The weekday **report** run publishes downloadable **metrics.json** and **summary.md** artifacts and an Actions job summary. It reports issue/PR counts and recent activity. This is factual repository activity, not test coverage or engine completion.
+## Tracking location
 
-## Lifecycle, AI dispatch, and cross-chat coordination
-
-1. A planning chat creates or revises a roadmap/milestone with explicit work-package keys and acceptance criteria. **marathon:tracked** enrolls it; its scope is proposed until owner review.
-2. The owner approves a revision and package allowlist with an auditable GitHub receipt. The director decomposes that scope into bounded child issues and checks dependencies.
-3. The director applies **marathon:ready** only when prerequisites and write ownership are clear. A worker independently checks owner approval before taking a task.
-4. Workers use separate branches, preserve exact source SHAs, update GitHub issue/PR checkpoints and hand work to independent QA.
-5. The integrator merges only exact-revision authorized PRs with required current-SHA evidence. The accepted issue is then closed, and parent issue progress is reconciled.
-6. A resumed or replacement worker reads current GitHub issue/branch/PR/claim state; no ChatGPT conversation is automatically awakened by a GitHub event.
-
-GitHub issue assignment and labels do **not** provide atomic distributed locks. The Marathon coordination policy may use per-issue claim files on a separate GitHub control branch and must serialize conflicting source ownership. That branch must never merge into engine code.
-
-## Team handover
-
-Repository forms cover milestones, work packages, verification and defect reports. CONTRIBUTING.md and CODEOWNERS define how the future human team uses the same procedures. AI and human submissions receive the same source review and verification.
-
-Project admins can reorganize views, charts, optional fields and release cadence without changing issue IDs, PR provenance or approval history. Changing approved architecture or package scope still requires another owner decision.
-
-## Verification and limitations
-
-- Code for the board operator and offline tests: Tools/ProjectManagement.
-- Workflow syntax and offline tests: **Project automation validation**, automatically run on PRs affecting this system.
-- The project-specific token and actual board activation are not available to the connected GitHub app; successful repository CI is not evidence of live Projects V2 mutation.
-- The setup script does not create or modify custom Insights charts, board grouping configurations, native Project automation definitions, or a new project object. The listed UI configuration remains an explicit project-administration step.
-- Exact project membership, field/view creation, backfill, and live webhooks must be verified by an authorized project run after deployment.
-
-## Historical intake
-
-As of the initial 2026-11-04 audit, 239 issues and 40 PRs were labeled **marathon:tracked** without altering their status. Newer intake issues and PRs are also tracked. The backfill operator recomputes the current complete inventory from GitHub rather than relying on that snapshot.
+GitHub issues are the canonical milestone/task/status records. Drive is for architecture, research and interface specifications; milestone lists and completion tracking must not be independently maintained in Drive.
