@@ -350,26 +350,12 @@ if(SIR_WITH_GOOGLETEST)
         PROPERTIES LABELS "graphics-abi;gtest;conformance" TIMEOUT 90)
 endif()
 
-# Backend-neutral virtual texture residency lifecycle and fence safety.
-add_executable(SIRVirtualTextureResidencyTests SIRVirtualTextureResidencyTests.cpp)
-target_link_libraries(SIRVirtualTextureResidencyTests PRIVATE SIR::Graphics)
-add_test(NAME renderer.virtual-texturing.residency COMMAND SIRVirtualTextureResidencyTests)
-set_tests_properties(renderer.virtual-texturing.residency PROPERTIES LABELS "virtual-texturing;cpu;conformance" TIMEOUT 90)
-sir_configure_owned_target(SIRVirtualTextureResidencyTests)
-
-# Deterministic cooked VT manifests, block alignment, gutters and mip fallback.
-add_executable(SIRVirtualTextureManifestTests SIRVirtualTextureManifestTests.cpp)
-target_link_libraries(SIRVirtualTextureManifestTests PRIVATE SIR::Graphics)
-add_test(NAME renderer.virtual-texturing.manifest COMMAND SIRVirtualTextureManifestTests)
-set_tests_properties(renderer.virtual-texturing.manifest PROPERTIES LABELS "virtual-texturing;cpu;conformance" TIMEOUT 90)
-sir_configure_owned_target(SIRVirtualTextureManifestTests)
-
-# Prevalidated file interval -> GRDG staging/publication -> borrowed VT manifest.
-add_executable(SIRVirtualTextureResourceIOTests SIRVirtualTextureResourceIOTests.cpp)
-target_link_libraries(SIRVirtualTextureResourceIOTests PRIVATE SIR::Graphics SIR::Resources)
-add_test(NAME renderer.virtual-texturing.grdg-file-io COMMAND SIRVirtualTextureResourceIOTests)
-set_tests_properties(renderer.virtual-texturing.grdg-file-io PROPERTIES LABELS "virtual-texturing;cpu;integration" TIMEOUT 90)
-sir_configure_owned_target(SIRVirtualTextureResourceIOTests)
+# Terrain3D Sparse VT V1 feedback, package ABI, and compact-tail port conformance.
+add_executable(SIRVirtualTexturePortTests SIRVirtualTexturePortTests.cpp)
+target_link_libraries(SIRVirtualTexturePortTests PRIVATE SIR::Graphics)
+add_test(NAME renderer.virtual-texturing.terrain3d-v1 COMMAND SIRVirtualTexturePortTests)
+set_tests_properties(renderer.virtual-texturing.terrain3d-v1 PROPERTIES LABELS "virtual-texturing;cpu;terrain3d-port" TIMEOUT 90)
+sir_configure_owned_target(SIRVirtualTexturePortTests)
 
 add_subdirectory(Config)
 include(${CMAKE_CURRENT_SOURCE_DIR}/StringPoolTests.cmake)

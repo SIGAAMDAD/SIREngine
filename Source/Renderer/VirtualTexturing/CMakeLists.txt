@@ -1,2 +1,2 @@
-# Owned shared virtual-texture page residency. Native backends remain separate.
-target_sources(SIRGraphics PRIVATE SIRVirtualTextureResidency.cpp SIRVirtualTextureManifest.cpp SIRVirtualTextureResourceIO.cpp)
+# Native Terrain3D Sparse VT V1 port. No prototype VT source is compiled.
+target_sources(SIRGraphics PRIVATE SIRVirtualTextureFeedback.cpp SIRVirtualTexturePackage.cpp)
