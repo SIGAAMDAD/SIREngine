@@ -402,11 +402,85 @@ static bool sirTestReplayTapeValidationBoundaries( void ) noexcept
 	return !SIRInputReplayTape::query( frame, 7, 0, &output ) && !SIRInputReplayTape::validateFrame( frame );
 }
 
+static bool sirTestReplayModeAndMultiuserBoundaries( void ) noexcept
+{
+	SIRInputReplayTape writer;
+	if ( writer.finished() || writer.bytesUsed() != 0 ) {
+		return false;
+	}
+	writer.rewind();
+	SIRInputActions actions;
+	const sirInputReplayKey_t keys[] = { { 7, 0 }, { 7, 1 } };
+	if ( !actions.addAction( 7, 0 ) || !actions.addAction( 7, 1 ) ) {
+		return false;
+	}
+	uint8_t buffer[256] = {};
+	if ( !writer.beginRecord( buffer, sizeof( buffer ) ) || writer.finished() || writer.append( 1, actions, nullptr, 1 ) ||
+	     writer.append( 1, actions, keys, SIR_INPUT_ACTION_CAPACITY + 1 ) || !writer.append( 1, actions, keys, 2 ) ||
+	     writer.bytesUsed() != SIR_INPUT_REPLAY_HEADER_BYTES + 2 * SIR_INPUT_REPLAY_RECORD_BYTES ) {
+		return false;
+	}
+	const uint32_t nBytes = writer.bytesUsed();
+	writer.rewind();
+	if ( writer.bytesUsed() != nBytes || writer.finished() ) {
+		return false;
+	}
+	SIRInputReplayTape reader;
+	sirInputReplayFrame_t frame = {};
+	if ( reader.next( &frame ) || reader.seek( 1, &frame ) || !reader.beginRead( buffer, nBytes ) || reader.finished() ||
+	     reader.seek( 1, nullptr ) || !reader.next( &frame ) || frame.nCount != 2 || frame.actions[0].nUser != 0 ||
+	     frame.actions[1].nUser != 1 || !reader.finished() || reader.next( &frame ) ) {
+		return false;
+	}
+	reader.rewind();
+	if ( reader.finished() || reader.next( nullptr ) || !reader.seek( 1, &frame ) || !reader.finished() ) {
+		return false;
+	}
+	reader.reset();
+	return !reader.finished() && !reader.next( &frame ) && !reader.seek( 1, &frame ) && reader.bytesUsed() == 0;
+}
+
+static bool sirTestReplayRejectsOutOfRangeActionState( void ) noexcept
+{
+	SIRInputActions actions;
+	if ( !actions.addAction( 77, 0 ) || !actions.addContext( 33, 0, 1, true ) ) {
+		return false;
+	}
+	const sirInputActionBinding_t binding = {
+	    77, 33, 0, SIR_INPUT_NO_CHORD, 0, 0, 32767, SIR_INPUT_CONTROLLER, SIR_INPUT_AXIS, SIR_INPUT_BIND_NONE };
+	if ( !actions.addBinding( binding ) ) {
+		return false;
+	}
+	// Deliberately bypass the physical collector's Q15 checks to prove that
+	// the replay writer rejects a malformed logical action before serialization.
+	sirInputFrame_t frame = {};
+	frame.nTick = 1;
+	frame.nCount = 1;
+	frame.devices[0] = { 0, 1 };
+	frame.events[0].hDevice = { 0, 1 };
+	frame.events[0].eClass = SIR_INPUT_CONTROLLER;
+	frame.events[0].eSignal = SIR_INPUT_CONNECTED;
+	frame.nConnected[0] = 1;
+	frame.nUsers[0] = 0;
+	frame.state[0].nAxes[0] = 65535;
+	actions.evaluate( frame );
+	sirInputActionState_t action = {};
+	if ( !actions.query( 77, 0, &action ) || action.nValue != 65535 || !action.bHeld ) {
+		return false;
+	}
+	const sirInputReplayKey_t key = { 77, 0 };
+	uint8_t bytes[128] = {};
+	SIRInputReplayTape writer;
+	return writer.beginRecord( bytes, sizeof( bytes ) ) && !writer.append( 1, actions, &key, 1 ) && writer.bytesUsed() == 0 &&
+	       bytes[0] == 0;
+}
+
 int main( void )
 {
 	if ( !sirTestReplayServiceTick() || !sirTestReplayInvalidRecord() || !sirTestAuthoritativePlayback() ||
 	     !sirTestHistoryServiceCapture() || !sirTestReplayMalformedHeaders() || !sirTestReplayMalformedActionRecords() ||
-	     !sirTestReplayTapeValidationBoundaries() ) {
+	     !sirTestReplayTapeValidationBoundaries() || !sirTestReplayModeAndMultiuserBoundaries() ||
+	     !sirTestReplayRejectsOutOfRangeActionState() ) {
 		fputs( "SIRInputReplayTests FAILED\n", stderr );
 		return 1;
 	}
