@@ -3,7 +3,8 @@
 add_library(SIRGraphics STATIC
     SIRGraphicsRegistry.cpp
     SIRGraphicsValidation.cpp
-    Visibility/SIRVisibilityFoundation.cpp)
+    Visibility/SIRVisibilityFoundation.cpp
+    Visibility/SIRHiZDispatch.cpp)
 add_library(SIR::Graphics ALIAS SIRGraphics)
 target_include_directories(SIRGraphics PUBLIC
     "${PROJECT_SOURCE_DIR}/Source"
