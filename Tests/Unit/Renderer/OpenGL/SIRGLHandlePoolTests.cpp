@@ -64,7 +64,10 @@ int main( void )
 	s_bFailAllocation = false;
 	sirGLCheck( sirGLHandlePoolInit( &pool, &host, 41, 2 ) == SIR_GRAPHICS_SUCCESS, "initialize" );
 	sirGLCheck( sirGLHandlePoolInit( &pool, &host, 41, 2 ) == SIR_GRAPHICS_BUSY, "double init" );
-	sirGLNativeResource_t resource = { 11, SIR_GRAPHICS_HANDLE_BUFFER, 2048 };
+	sirGLNativeResource_t resource = {};
+	resource.nName = 11;
+	resource.eType = SIR_GRAPHICS_HANDLE_BUFFER;
+	resource.nRequestedBytes = 2048;
 	sirGraphicsHandle_t first = {};
 	sirGraphicsHandle_t second = {};
 	sirGraphicsHandle_t third = {};
@@ -96,6 +99,32 @@ int main( void )
 	sirGLCheck( sirGLHandlePoolShutdown( &pool ) == SIR_GRAPHICS_SUCCESS, "shutdown" );
 	sirGLCheck( sirGLHandlePoolShutdown( &pool ) == SIR_GRAPHICS_SUCCESS, "idempotent shutdown" );
 	sirGLCheck( s_nOutstanding == 0, "no allocations left" );
+	sirGLCheck( sirGLHandlePoolInit( &pool, &host, 55, 3 ) == SIR_GRAPHICS_SUCCESS, "dependent pool initialized" );
+	sirGLNativeResource_t parent = {};
+	parent.nName = 81;
+	parent.eType = SIR_GRAPHICS_HANDLE_TEXTURE;
+	parent.nRequestedBytes = 4096;
+	sirGraphicsHandle_t hParent = {};
+	sirGLCheck( sirGLHandlePoolInsert( &pool, &parent, &hParent ) == SIR_GRAPHICS_SUCCESS, "texture parent inserted" );
+	sirGLNativeResource_t child = {};
+	child.nName = 82;
+	child.eType = SIR_GRAPHICS_HANDLE_VIEW;
+	child.hParent = hParent;
+	sirGraphicsHandle_t hView = {};
+	sirGLCheck( sirGLHandlePoolInsert( &pool, &child, &hView ) == SIR_GRAPHICS_SUCCESS, "dependent view inserted" );
+	sirGLCheck( pool.pSlots[hParent.nSlot].nChildCount == 1, "parent reference retained" );
+	sirGLCheck( sirGLHandlePoolTake( &pool, hParent, &found ) == SIR_GRAPHICS_BUSY, "live view prevents parent retirement" );
+	sirGLCheck( sirGLHandlePoolShutdown( &pool ) == SIR_GRAPHICS_BUSY, "dependent resources prevent shutdown" );
+	sirGLCheck( sirGLHandlePoolTake( &pool, hView, &found ) == SIR_GRAPHICS_SUCCESS, "view retirement" );
+	sirGLCheck( pool.pSlots[hParent.nSlot].nChildCount == 0, "view releases parent reference" );
+	sirGLCheck( sirGLHandlePoolInsert( &pool, &child, &hView ) == SIR_GRAPHICS_SUCCESS, "view slot reusable" );
+	sirGLCheck( sirGLHandlePoolTake( &pool, hView, &found ) == SIR_GRAPHICS_SUCCESS, "second view retirement" );
+	sirGLCheck( sirGLHandlePoolTake( &pool, hParent, &found ) == SIR_GRAPHICS_SUCCESS, "parent retired after views" );
+	sirGLCheck( sirGLHandlePoolInsert( &pool, &child, &hView ) == SIR_GRAPHICS_INVALID_HANDLE, "stale parent rejected" );
+	child.hParent = {};
+	sirGLCheck( sirGLHandlePoolInsert( &pool, &child, &hView ) == SIR_GRAPHICS_INVALID_HANDLE, "missing parent rejected" );
+	sirGLCheck( sirGLHandlePoolShutdown( &pool ) == SIR_GRAPHICS_SUCCESS, "dependent pool shutdown" );
+	sirGLCheck( s_nOutstanding == 0, "dependent pool allocation released" );
 	if ( s_nFailures == 0 ) {
 		printf( "GL46 generation-safe handle pool tests passed\n" );
 	}
