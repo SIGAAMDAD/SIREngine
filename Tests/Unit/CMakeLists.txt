@@ -351,6 +351,14 @@ if(SIR_WITH_GOOGLETEST)
 endif()
 
 if(SIR_WITH_OPENGL)
+    add_executable(SIRGL46FramebufferTests
+        Renderer/OpenGL/SIRGLFramebuffersTests.cpp
+        "${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/OpenGL/SIRGLFramebuffers.cpp"
+        "${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/OpenGL/SIRGLFunctionLoader.cpp")
+    target_link_libraries(SIRGL46FramebufferTests PRIVATE SIR::Graphics)
+    sir_configure_owned_target(SIRGL46FramebufferTests)
+    add_test(NAME renderer.opengl46.framebuffers COMMAND SIRGL46FramebufferTests)
+
     add_executable(SIRGL46FormatsTests
         Renderer/OpenGL/SIRGLFormatsTests.cpp
         "${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/OpenGL/SIRGLFormats.cpp"

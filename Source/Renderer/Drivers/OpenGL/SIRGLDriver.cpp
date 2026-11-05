@@ -17,6 +17,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Renderer/Drivers/OpenGL/SIRGLBuffers.h>
 #include <Renderer/Drivers/OpenGL/SIRGLContext.h>
 #include <Renderer/Drivers/OpenGL/SIRGLFormats.h>
+#include <Renderer/Drivers/OpenGL/SIRGLFramebuffers.h>
 #include <Renderer/Drivers/OpenGL/SIRGLHandlePool.h>
 #include <Renderer/Drivers/OpenGL/SIRGLSamplers.h>
 #include <Renderer/Drivers/OpenGL/SIRGLTextures.h>
@@ -46,6 +47,7 @@ typedef struct sirGLDevice_s
 	sirGLSamplerDispatch_t samplers;
 	sirGLTextureDispatch_t textures;
 	sirGLFormatDispatch_t formats;
+	sirGLFramebufferDispatch_t framebuffers;
 	uint64_t nCommittedResourceBytes;
 	uint64_t nPeakResourceBytes;
 	uint32_t nGeneration;
@@ -557,6 +559,9 @@ static uint32_t sirGLCreateDevice( void *pDriver, const sirGraphicsABIDeviceRequ
 	}
 	if ( nStatus == SIR_GRAPHICS_SUCCESS ) {
 		nStatus = sirGLLoadFormatDispatch( sirGLResolveNativeProcedure, pContext, &pNew->formats );
+	}
+	if ( nStatus == SIR_GRAPHICS_SUCCESS ) {
+		nStatus = sirGLLoadFramebufferDispatch( sirGLResolveNativeProcedure, pContext, &pNew->framebuffers );
 	}
 	if ( nStatus != SIR_GRAPHICS_SUCCESS ) {
 		( void )sirGLHandlePoolShutdown( &pNew->handles );
