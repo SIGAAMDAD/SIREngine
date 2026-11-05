@@ -357,5 +357,12 @@ add_test(NAME renderer.virtual-texturing.residency COMMAND SIRVirtualTextureResi
 set_tests_properties(renderer.virtual-texturing.residency PROPERTIES LABELS "virtual-texturing;cpu;conformance" TIMEOUT 90)
 sir_configure_owned_target(SIRVirtualTextureResidencyTests)
 
+# Deterministic cooked VT manifests, block alignment, gutters and mip fallback.
+add_executable(SIRVirtualTextureManifestTests SIRVirtualTextureManifestTests.cpp)
+target_link_libraries(SIRVirtualTextureManifestTests PRIVATE SIR::Graphics)
+add_test(NAME renderer.virtual-texturing.manifest COMMAND SIRVirtualTextureManifestTests)
+set_tests_properties(renderer.virtual-texturing.manifest PROPERTIES LABELS "virtual-texturing;cpu;conformance" TIMEOUT 90)
+sir_configure_owned_target(SIRVirtualTextureManifestTests)
+
 add_subdirectory(Config)
 include(${CMAKE_CURRENT_SOURCE_DIR}/StringPoolTests.cmake)
