@@ -363,14 +363,14 @@ static bool testRandomDifferential( void ) noexcept
 		sirHiZLayout_t layout = {};
 		REQUIRE( sirHiZCalculateLayout( nWidth, nHeight, &layout ) == SIR_GRAPHICS_SUCCESS );
 		std::vector<float> szDepth( ( size_t )nWidth * nHeight );
-		for ( float &fValue : szDepth ) {
+		for ( float& fValue : szDepth ) {
 			fValue = ( float )( nextRandom( &nSeed ) % 1000 ) / 1000.0f;
 		}
 		std::vector<float> szPyramid( ( size_t )layout.nTexelCount );
 		sirHiZSource_t source = { szDepth.data(), szDepth.size(), nWidth };
 		REQUIRE( sirHiZBuildReference( layout, source, szPyramid.data(), szPyramid.size() ) == SIR_GRAPHICS_SUCCESS );
 		for ( uint32_t iMip = 0; iMip < layout.nMipCount; ++iMip ) {
-			const sirHiZMip_t &mip = layout.szMips[iMip];
+			const sirHiZMip_t& mip = layout.szMips[iMip];
 			const uint32_t nScale = 1U << iMip;
 			for ( uint32_t nY = 0; nY < mip.nHeight; ++nY ) {
 				for ( uint32_t nX = 0; nX < mip.nWidth; ++nX ) {

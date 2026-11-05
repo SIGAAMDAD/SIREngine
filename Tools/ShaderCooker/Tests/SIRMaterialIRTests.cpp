@@ -414,7 +414,6 @@ static void testPortablePipelineRecipes( void ) noexcept
 	REQUIRE( sirMaterialIRBuildPipelineRecipe( graph, broken, settings, &recipe ) == SIR_SHADER_COOK_INVALID_ARGUMENT );
 }
 
-
 static void testCookedMaterialPassProjection( void ) noexcept
 {
 	sirMaterialIRNode_t szNodes[2] = {};
