@@ -95,8 +95,9 @@ class SIRScriptOptimizationCoordinator
 {
 public:
 	SIRScriptOptimizationCoordinator( void ) noexcept;
-	~SIRScriptOptimizationCoordinator( void ) noexcept;
 	SIRScriptOptimizationCoordinator( const SIRScriptOptimizationCoordinator& ) = delete;
+	~SIRScriptOptimizationCoordinator( void ) noexcept;
+
 	SIRScriptOptimizationCoordinator& operator=( const SIRScriptOptimizationCoordinator& ) = delete;
 
 	sirScriptResult_t configure( const sirScriptOptimizationTransportAPI_t& transport, SIRScriptCachedProgramSource *pSource,
@@ -109,8 +110,12 @@ public:
 	sirScriptResult_t release( sirScriptOptimizationJobHandle_t handle ) noexcept;
 	sirScriptResult_t pump( uint32_t nSendBudget, uint32_t nReceiveBudget, sirScriptOptimizationPumpStats_t *pStats ) noexcept;
 	sirScriptResult_t workerFailed( void ) noexcept;
+	// Retry only after the crashed worker has stopped; keep the public handle,
+	// but issue a new wire ID so stale replies cannot match the retried job.
+	sirScriptResult_t retryFailed( sirScriptOptimizationJobHandle_t handle ) noexcept;
 	sirScriptResult_t shutdown( void ) noexcept;
 
+protected:
 private:
 	static constexpr uint32_t MAX_JOBS = 64;
 	static uint32_t nextGeneration( uint32_t nGeneration ) noexcept;
