@@ -102,9 +102,11 @@ static void testPerspectiveFiniteDifference( void ) noexcept
 	REQUIRE( sirMaterialTriangleUVGradients( input, &uv ) == SIR_SHADER_COOK_OK );
 	const double fEpsilon = 1e-4;
 	const double fDX = ( testPerspectiveU( input, input.fScreenX + fEpsilon, input.fScreenY ) -
-	                     testPerspectiveU( input, input.fScreenX - fEpsilon, input.fScreenY ) ) / ( 2.0 * fEpsilon );
+	                     testPerspectiveU( input, input.fScreenX - fEpsilon, input.fScreenY ) ) /
+	                   ( 2.0 * fEpsilon );
 	const double fDY = ( testPerspectiveU( input, input.fScreenX, input.fScreenY + fEpsilon ) -
-	                     testPerspectiveU( input, input.fScreenX, input.fScreenY - fEpsilon ) ) / ( 2.0 * fEpsilon );
+	                     testPerspectiveU( input, input.fScreenX, input.fScreenY - fEpsilon ) ) /
+	                   ( 2.0 * fEpsilon );
 	REQUIRE( testNear( uv.szDdx[0], fDX, 1e-8 ) && testNear( uv.szDdy[0], fDY, 1e-8 ) );
 	// Mirroring and unwrapped island coordinates are triangle-local; no
 	// raster-quad derivatives from adjacent triangles can contaminate them.
@@ -112,8 +114,11 @@ static void testPerspectiveFiniteDifference( void ) noexcept
 	input.vertices[1].fU = 10.0;
 	input.vertices[2].fU = 8.0;
 	REQUIRE( sirMaterialTriangleUVGradients( input, &uv ) == SIR_SHADER_COOK_OK );
-	REQUIRE( testNear( uv.szDdx[0], ( testPerspectiveU( input, input.fScreenX + fEpsilon, input.fScreenY ) -
-	                                testPerspectiveU( input, input.fScreenX - fEpsilon, input.fScreenY ) ) / ( 2.0 * fEpsilon ), 1e-8 ) );
+	REQUIRE( testNear( uv.szDdx[0],
+	                   ( testPerspectiveU( input, input.fScreenX + fEpsilon, input.fScreenY ) -
+	                     testPerspectiveU( input, input.fScreenX - fEpsilon, input.fScreenY ) ) /
+	                       ( 2.0 * fEpsilon ),
+	                   1e-8 ) );
 }
 
 static void testDegenerateReject( void ) noexcept
@@ -149,8 +154,7 @@ static sirMaterialGradient_t testScalar( double fValue, double fDx, double fDy )
 
 static void testChainRuleAndBranches( void ) noexcept
 {
-	sirMaterialGradient_t szPrior[3] = { testScalar( 2.0, 1.0, 2.0 ), testScalar( 3.0, 4.0, 5.0 ),
-		                                 testScalar( 1.0, 0.0, 0.0 ) };
+	sirMaterialGradient_t szPrior[3] = { testScalar( 2.0, 1.0, 2.0 ), testScalar( 3.0, 4.0, 5.0 ), testScalar( 1.0, 0.0, 0.0 ) };
 	sirMaterialIRNode_t node = {};
 	node.eOp = SIR_MATERIAL_IR_MULTIPLY;
 	node.eType = SIR_MATERIAL_IR_FLOAT;
@@ -164,8 +168,7 @@ static void testChainRuleAndBranches( void ) noexcept
 	REQUIRE( testNear( output.szDdx[0], 11.0 ) && testNear( output.szDdy[0], 16.0 ) );
 	node.eOp = SIR_MATERIAL_IR_ADD;
 	REQUIRE( sirMaterialPropagateGradients( eval, &output ) == SIR_SHADER_COOK_OK );
-	REQUIRE( testNear( output.szValue[0], 5.0 ) && testNear( output.szDdx[0], 5.0 ) &&
-	         testNear( output.szDdy[0], 7.0 ) );
+	REQUIRE( testNear( output.szValue[0], 5.0 ) && testNear( output.szDdx[0], 5.0 ) && testNear( output.szDdy[0], 7.0 ) );
 	node.eOp = SIR_MATERIAL_IR_STATIC_SWITCH;
 	node.nSwitchBit = 4;
 	eval.nEnabledSwitches = 4;
@@ -218,24 +221,20 @@ static void testTriplanarAndSamplingEmission( void ) noexcept
 	REQUIRE( result.xy.bDiscontinuous && result.xz.bDiscontinuous && result.yz.bDiscontinuous );
 	char szHLSL[180] = {};
 	uint32_t nRequired = 0;
-	sirMaterialSampleHLSL_t sample = { "AlbedoTex", "AnisoSampler", "uv", "uvDx", "uvDy",
-		                               SIR_MATERIAL_SAMPLE_GRADIENT };
+	sirMaterialSampleHLSL_t sample = { "AlbedoTex", "AnisoSampler", "uv", "uvDx", "uvDy", SIR_MATERIAL_SAMPLE_GRADIENT };
 	REQUIRE( sirMaterialEmitSampleHLSL( sample, nullptr, 0, &nRequired ) == SIR_SHADER_COOK_CAPACITY_EXCEEDED );
 	REQUIRE( nRequired > 25 );
-	REQUIRE( sirMaterialEmitSampleHLSL( sample, szHLSL, nRequired - 1, &nRequired ) ==
-	         SIR_SHADER_COOK_CAPACITY_EXCEEDED );
+	REQUIRE( sirMaterialEmitSampleHLSL( sample, szHLSL, nRequired - 1, &nRequired ) == SIR_SHADER_COOK_CAPACITY_EXCEEDED );
 	REQUIRE( sirMaterialEmitSampleHLSL( sample, szHLSL, sizeof( szHLSL ), &nRequired ) == SIR_SHADER_COOK_OK );
 	REQUIRE( strcmp( szHLSL, "AlbedoTex.SampleGrad( AnisoSampler, uv, uvDx, uvDy )" ) == 0 );
 	sample.eMode = SIR_MATERIAL_SAMPLE_EXPLICIT_LOD;
 	REQUIRE( sirMaterialEmitSampleHLSL( sample, szHLSL, sizeof( szHLSL ), &nRequired ) == SIR_SHADER_COOK_OK );
 	REQUIRE( strcmp( szHLSL, "AlbedoTex.SampleLevel( AnisoSampler, uv, 0.0 )" ) == 0 );
 	sample.pszTexture = "Bad.Name";
-	REQUIRE( sirMaterialEmitSampleHLSL( sample, szHLSL, sizeof( szHLSL ), &nRequired ) ==
-	         SIR_SHADER_COOK_INVALID_ARGUMENT );
+	REQUIRE( sirMaterialEmitSampleHLSL( sample, szHLSL, sizeof( szHLSL ), &nRequired ) == SIR_SHADER_COOK_INVALID_ARGUMENT );
 	sample.pszTexture = "AlbedoTex";
 	sample.eMode = ( sirMaterialSampleMode_t )3;
-	REQUIRE( sirMaterialEmitSampleHLSL( sample, szHLSL, sizeof( szHLSL ), &nRequired ) ==
-	         SIR_SHADER_COOK_INVALID_ARGUMENT );
+	REQUIRE( sirMaterialEmitSampleHLSL( sample, szHLSL, sizeof( szHLSL ), &nRequired ) == SIR_SHADER_COOK_INVALID_ARGUMENT );
 }
 
 int main( void )

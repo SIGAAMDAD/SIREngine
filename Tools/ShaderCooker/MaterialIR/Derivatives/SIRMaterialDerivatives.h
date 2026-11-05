@@ -110,15 +110,13 @@ typedef struct sirMaterialTriplanarGradients_s
 	sirMaterialGradient_t yz;
 } sirMaterialTriplanarGradients_t;
 
-sirShaderCookResult_t sirMaterialTriangleUVGradients( const sirMaterialTriangleSample_t& input,
-                                                      sirMaterialGradient_t *pOutput ) noexcept;
-sirShaderCookResult_t sirMaterialPropagateGradients( const sirMaterialGradientEval_t& input,
-                                                    sirMaterialGradient_t *pOutput ) noexcept;
+sirShaderCookResult_t sirMaterialTriangleUVGradients( const sirMaterialTriangleSample_t& input, sirMaterialGradient_t *pOutput ) noexcept;
+sirShaderCookResult_t sirMaterialPropagateGradients( const sirMaterialGradientEval_t& input, sirMaterialGradient_t *pOutput ) noexcept;
 sirShaderCookResult_t sirMaterialTriplanarGradients( const sirMaterialGradient_t& worldPosition,
                                                      sirMaterialTriplanarGradients_t *pOutput ) noexcept;
 sirShaderCookResult_t sirMaterialPlanTextureSample( const sirMaterialGradient_t& uv, const sirMaterialTextureFootprint_t& texture,
                                                     sirMaterialSamplePlan_t *pOutput ) noexcept;
-sirShaderCookResult_t sirMaterialEmitSampleHLSL( const sirMaterialSampleHLSL_t& input, char *pszOutput,
-                                                 uint32_t nCapacity, uint32_t *pRequiredBytes ) noexcept;
+sirShaderCookResult_t sirMaterialEmitSampleHLSL( const sirMaterialSampleHLSL_t& input, char *pszOutput, uint32_t nCapacity,
+                                                 uint32_t *pRequiredBytes ) noexcept;
 
 #endif // __SIRENGINE_SIRMATERIALDERIVATIVES_H__

@@ -25,11 +25,12 @@ static bool sirDerivativeFinite( const sirMaterialGradient_t& gradient ) noexcep
 		return false;
 	}
 	for ( uint32_t i = 0; i < gradient.nComponents; ++i ) {
-		if ( !std::isfinite( gradient.szValue[i] ) || !std::isfinite( gradient.szDdx[i] ) ||
-		     !std::isfinite( gradient.szDdy[i] ) ) {
+		if ( !std::isfinite( gradient.szValue[i] ) || !std::isfinite( gradient.szDdx[i] ) || !std::isfinite( gradient.szDdy[i] ) ) {
 			return false;
 		}
 	}
+
+
 	return true;
 }
 
@@ -39,8 +40,7 @@ static bool sirDerivativeVertexFinite( const sirMaterialScreenVertex_t& vertex )
 	       std::isfinite( vertex.fV ) && std::isfinite( vertex.fReciprocalW ) && vertex.fReciprocalW > 0.0;
 }
 
-sirShaderCookResult_t sirMaterialTriangleUVGradients( const sirMaterialTriangleSample_t& input,
-                                                      sirMaterialGradient_t *pOutput ) noexcept
+sirShaderCookResult_t sirMaterialTriangleUVGradients( const sirMaterialTriangleSample_t& input, sirMaterialGradient_t *pOutput ) noexcept
 {
 	if ( pOutput == nullptr || !std::isfinite( input.fScreenX ) || !std::isfinite( input.fScreenY ) ) {
 		return SIR_SHADER_COOK_INVALID_ARGUMENT;
@@ -58,16 +58,14 @@ sirShaderCookResult_t sirMaterialTriangleUVGradients( const sirMaterialTriangleS
 	const double fACX = c.fScreenX - a.fScreenX;
 	const double fACY = c.fScreenY - a.fScreenY;
 	const double fArea = fABX * fACY - fACX * fABY;
-	const double fExtent = std::fmax( 1.0, std::fmax( std::fmax( std::fabs( fABX ), std::fabs( fABY ) ),
-	                                                     std::fmax( std::fabs( fACX ), std::fabs( fACY ) ) ) );
+	const double fExtent =
+	    std::fmax( 1.0, std::fmax( std::fmax( std::fabs( fABX ), std::fabs( fABY ) ), std::fmax( std::fabs( fACX ), std::fabs( fACY ) ) ) );
 	if ( !std::isfinite( fArea ) || std::fabs( fArea ) <= 1e-12 * fExtent * fExtent ) {
 		*pOutput = {};
 		return SIR_SHADER_COOK_UNSUPPORTED;
 	}
-	const double fL1 = ( ( input.fScreenX - a.fScreenX ) * fACY -
-	                     ( input.fScreenY - a.fScreenY ) * fACX ) / fArea;
-	const double fL2 = ( fABX * ( input.fScreenY - a.fScreenY ) -
-	                     fABY * ( input.fScreenX - a.fScreenX ) ) / fArea;
+	const double fL1 = ( ( input.fScreenX - a.fScreenX ) * fACY - ( input.fScreenY - a.fScreenY ) * fACX ) / fArea;
+	const double fL2 = ( fABX * ( input.fScreenY - a.fScreenY ) - fABY * ( input.fScreenX - a.fScreenX ) ) / fArea;
 	const double fL0 = 1.0 - fL1 - fL2;
 	const double szL[3] = { fL0, fL1, fL2 };
 	const double szDx[3] = { ( b.fScreenY - c.fScreenY ) / fArea, fACY / fArea, -fABY / fArea };
@@ -120,12 +118,10 @@ static uint32_t sirDerivativeNodeWidth( sirMaterialIRType_t eType ) noexcept
 
 static bool sirDerivativeValidInput( const sirMaterialGradientEval_t& input, uint16_t iIndex, uint32_t nComponents ) noexcept
 {
-	return iIndex < input.nPriorCount && input.pPrior[iIndex].nComponents == nComponents &&
-	       sirDerivativeFinite( input.pPrior[iIndex] );
+	return iIndex < input.nPriorCount && input.pPrior[iIndex].nComponents == nComponents && sirDerivativeFinite( input.pPrior[iIndex] );
 }
 
-sirShaderCookResult_t sirMaterialPropagateGradients( const sirMaterialGradientEval_t& input,
-                                                    sirMaterialGradient_t *pOutput ) noexcept
+sirShaderCookResult_t sirMaterialPropagateGradients( const sirMaterialGradientEval_t& input, sirMaterialGradient_t *pOutput ) noexcept
 {
 	if ( pOutput == nullptr || input.pNode == nullptr || ( input.nPriorCount != 0 && input.pPrior == nullptr ) ) {
 		return SIR_SHADER_COOK_INVALID_ARGUMENT;
@@ -138,8 +134,7 @@ sirShaderCookResult_t sirMaterialPropagateGradients( const sirMaterialGradientEv
 	if ( node.eOp == SIR_MATERIAL_IR_CONSTANT || node.eOp == SIR_MATERIAL_IR_PARAMETER ) {
 		// The caller seeds authored constants or dynamic parameters, along
 		// with their known gradients, before requesting propagation.
-		return pOutput->nComponents == nWidth && sirDerivativeFinite( *pOutput ) ? SIR_SHADER_COOK_OK :
-		                                                                        SIR_SHADER_COOK_INVALID_ARGUMENT;
+		return pOutput->nComponents == nWidth && sirDerivativeFinite( *pOutput ) ? SIR_SHADER_COOK_OK : SIR_SHADER_COOK_INVALID_ARGUMENT;
 	}
 	const uint32_t nA = node.iA;
 	const uint32_t nB = node.iB;
@@ -182,8 +177,7 @@ sirShaderCookResult_t sirMaterialPropagateGradients( const sirMaterialGradientEv
 		}
 		const sirMaterialGradient_t& condition = input.pPrior[nA];
 		result = input.pPrior[condition.szValue[0] != 0.0 ? nB : nC];
-		const bool bUniform = condition.bValid && !condition.bDiscontinuous &&
-		                      condition.szDdx[0] == 0.0 && condition.szDdy[0] == 0.0;
+		const bool bUniform = condition.bValid && !condition.bDiscontinuous && condition.szDdx[0] == 0.0 && condition.szDdy[0] == 0.0;
 		result.bValid = result.bValid && bUniform;
 		result.bDiscontinuous = result.bDiscontinuous || !bUniform;
 		break;
@@ -195,8 +189,8 @@ sirShaderCookResult_t sirMaterialPropagateGradients( const sirMaterialGradientEv
 		result = input.pPrior[nA];
 		break;
 	case SIR_MATERIAL_IR_SAMPLE_2D:
-		if ( nWidth != 4 || node.iB >= input.nPriorCount ||
-		     !sirDerivativeValidInput( input, node.iB, 2 ) || node.iA >= input.nPriorCount ) {
+		if ( nWidth != 4 || node.iB >= input.nPriorCount || !sirDerivativeValidInput( input, node.iB, 2 ) ||
+		     node.iA >= input.nPriorCount ) {
 			return SIR_SHADER_COOK_INVALID_ARGUMENT;
 		}
 		// SampleGrad is emitted separately for this node. A texture's
@@ -245,8 +239,8 @@ sirShaderCookResult_t sirMaterialTriplanarGradients( const sirMaterialGradient_t
 sirShaderCookResult_t sirMaterialPlanTextureSample( const sirMaterialGradient_t& uv, const sirMaterialTextureFootprint_t& texture,
                                                     sirMaterialSamplePlan_t *pOutput ) noexcept
 {
-	if ( pOutput == nullptr || texture.nWidth == 0 || texture.nHeight == 0 || texture.nMaximumMip > 31 ||
-	     texture.nReserved != 0 || uv.nComponents != 2 || !sirDerivativeFinite( uv ) ) {
+	if ( pOutput == nullptr || texture.nWidth == 0 || texture.nHeight == 0 || texture.nMaximumMip > 31 || texture.nReserved != 0 ||
+	     uv.nComponents != 2 || !sirDerivativeFinite( uv ) ) {
 		return SIR_SHADER_COOK_INVALID_ARGUMENT;
 	}
 	sirMaterialSamplePlan_t result = {};
@@ -266,8 +260,7 @@ sirShaderCookResult_t sirMaterialPlanTextureSample( const sirMaterialGradient_t&
 	result.fMajorAxis = std::fmax( fDX, fDY );
 	result.fMinorAxis = std::fmin( fDX, fDY );
 	result.fAnisotropy = result.fMajorAxis / std::fmax( result.fMinorAxis, 1e-12 );
-	result.fMipLevel = std::fmax( 0.0, std::fmin( ( double )texture.nMaximumMip,
-	                                           std::log2( std::fmax( result.fMajorAxis, 1.0 ) ) ) );
+	result.fMipLevel = std::fmax( 0.0, std::fmin( ( double )texture.nMaximumMip, std::log2( std::fmax( result.fMajorAxis, 1.0 ) ) ) );
 	if ( !std::isfinite( result.fAnisotropy ) || !std::isfinite( result.fMipLevel ) ) {
 		return SIR_SHADER_COOK_UNSUPPORTED;
 	}
@@ -292,21 +285,21 @@ static bool sirDerivativeIdentifier( const char *pszName ) noexcept
 	return nLength != 0 && nLength < 64;
 }
 
-sirShaderCookResult_t sirMaterialEmitSampleHLSL( const sirMaterialSampleHLSL_t& input, char *pszOutput,
-                                                 uint32_t nCapacity, uint32_t *pRequiredBytes ) noexcept
+sirShaderCookResult_t sirMaterialEmitSampleHLSL( const sirMaterialSampleHLSL_t& input, char *pszOutput, uint32_t nCapacity,
+                                                 uint32_t *pRequiredBytes ) noexcept
 {
-	if ( pRequiredBytes == nullptr || !sirDerivativeIdentifier( input.pszTexture ) ||
-	     !sirDerivativeIdentifier( input.pszSampler ) || !sirDerivativeIdentifier( input.pszUV ) ||
+	if ( pRequiredBytes == nullptr || !sirDerivativeIdentifier( input.pszTexture ) || !sirDerivativeIdentifier( input.pszSampler ) ||
+	     !sirDerivativeIdentifier( input.pszUV ) ||
 	     ( input.eMode != SIR_MATERIAL_SAMPLE_GRADIENT && input.eMode != SIR_MATERIAL_SAMPLE_EXPLICIT_LOD ) ||
 	     ( input.eMode == SIR_MATERIAL_SAMPLE_GRADIENT &&
 	       ( !sirDerivativeIdentifier( input.pszDdx ) || !sirDerivativeIdentifier( input.pszDdy ) ) ) ) {
 		return SIR_SHADER_COOK_INVALID_ARGUMENT;
 	}
 	const bool bGradient = input.eMode == SIR_MATERIAL_SAMPLE_GRADIENT;
-	const int nLength = bGradient ?
-	                        snprintf( nullptr, 0, "%s.SampleGrad( %s, %s, %s, %s )", input.pszTexture, input.pszSampler,
-	                                  input.pszUV, input.pszDdx, input.pszDdy ) :
-	                        snprintf( nullptr, 0, "%s.SampleLevel( %s, %s, 0.0 )", input.pszTexture, input.pszSampler, input.pszUV );
+	const int nLength = bGradient
+	                        ? snprintf( nullptr, 0, "%s.SampleGrad( %s, %s, %s, %s )", input.pszTexture, input.pszSampler, input.pszUV,
+	                                    input.pszDdx, input.pszDdy )
+	                        : snprintf( nullptr, 0, "%s.SampleLevel( %s, %s, 0.0 )", input.pszTexture, input.pszSampler, input.pszUV );
 	if ( nLength < 0 || ( uint32_t )nLength == UINT32_MAX ) {
 		return SIR_SHADER_COOK_UNSUPPORTED;
 	}
@@ -315,10 +308,9 @@ sirShaderCookResult_t sirMaterialEmitSampleHLSL( const sirMaterialSampleHLSL_t& 
 	if ( pszOutput == nullptr || nCapacity < nRequired ) {
 		return SIR_SHADER_COOK_CAPACITY_EXCEEDED;
 	}
-	const int nWritten = bGradient ?
-	                         snprintf( pszOutput, nCapacity, "%s.SampleGrad( %s, %s, %s, %s )", input.pszTexture,
-	                                   input.pszSampler, input.pszUV, input.pszDdx, input.pszDdy ) :
-	                         snprintf( pszOutput, nCapacity, "%s.SampleLevel( %s, %s, 0.0 )", input.pszTexture,
-	                                   input.pszSampler, input.pszUV );
+	const int nWritten =
+	    bGradient ? snprintf( pszOutput, nCapacity, "%s.SampleGrad( %s, %s, %s, %s )", input.pszTexture, input.pszSampler, input.pszUV,
+		                      input.pszDdx, input.pszDdy )
+		          : snprintf( pszOutput, nCapacity, "%s.SampleLevel( %s, %s, 0.0 )", input.pszTexture, input.pszSampler, input.pszUV );
 	return nWritten == nLength ? SIR_SHADER_COOK_OK : SIR_SHADER_COOK_UNSUPPORTED;
 }
