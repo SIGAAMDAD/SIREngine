@@ -729,6 +729,181 @@ static bool testModuleLifecyclePreflightMatrix( const sirGraphicsABIHost_t &host
 	return true;
 }
 
+static uint32_t s_nNativeHandleFaultMode = 0;
+static uint32_t ( *s_pOriginalNativeBuffer )( void *, const sirGraphicsBufferDesc_t *, sirGraphicsHandle_t * ) = nullptr;
+static uint32_t ( *s_pOriginalNativeTexture )( void *, const sirGraphicsTextureDesc_t *, sirGraphicsHandle_t * ) = nullptr;
+static uint32_t ( *s_pOriginalNativeView )( void *, const sirGraphicsViewDesc_t *, sirGraphicsHandle_t * ) = nullptr;
+static uint32_t ( *s_pOriginalNativeSampler )( void *, const sirGraphicsSamplerDesc_t *, sirGraphicsHandle_t * ) = nullptr;
+static uint32_t ( *s_pOriginalNativePipeline )( void *, const sirGraphicsABIPipeline_t *, sirGraphicsHandle_t * ) = nullptr;
+
+static uint32_t testCorruptNativeHandle( uint32_t eResult, sirGraphicsHandle_t *pHandle ) noexcept
+{
+	if ( eResult != SIR_GRAPHICS_SUCCESS ) {
+		return eResult;
+	}
+	if ( s_nNativeHandleFaultMode == 1 ) {
+		pHandle->eType = SIR_GRAPHICS_HANDLE_NONE;
+	} else if ( s_nNativeHandleFaultMode == 2 ) {
+		pHandle->nGeneration = 0;
+	} else if ( s_nNativeHandleFaultMode == 3 ) {
+		pHandle->nDeviceGeneration = 4;
+	}
+	return SIR_GRAPHICS_SUCCESS;
+}
+
+static uint32_t testCreateNativeBufferHandle( void *pNative, const sirGraphicsBufferDesc_t *pDesc, sirGraphicsHandle_t *pHandle ) noexcept
+{
+	return testCorruptNativeHandle( s_pOriginalNativeBuffer( pNative, pDesc, pHandle ), pHandle );
+}
+
+static uint32_t testCreateNativeTextureHandle( void *pNative, const sirGraphicsTextureDesc_t *pDesc, sirGraphicsHandle_t *pHandle ) noexcept
+{
+	return testCorruptNativeHandle( s_pOriginalNativeTexture( pNative, pDesc, pHandle ), pHandle );
+}
+
+static uint32_t testCreateNativeViewHandle( void *pNative, const sirGraphicsViewDesc_t *pDesc, sirGraphicsHandle_t *pHandle ) noexcept
+{
+	return testCorruptNativeHandle( s_pOriginalNativeView( pNative, pDesc, pHandle ), pHandle );
+}
+
+static uint32_t testCreateNativeSamplerHandle( void *pNative, const sirGraphicsSamplerDesc_t *pDesc, sirGraphicsHandle_t *pHandle ) noexcept
+{
+	return testCorruptNativeHandle( s_pOriginalNativeSampler( pNative, pDesc, pHandle ), pHandle );
+}
+
+static uint32_t testCreateNativePipelineHandle( void *pNative, const sirGraphicsABIPipeline_t *pDesc,
+                                                sirGraphicsHandle_t *pHandle ) noexcept
+{
+	return testCorruptNativeHandle( s_pOriginalNativePipeline( pNative, pDesc, pHandle ), pHandle );
+}
+
+static bool testNativeHandleReturnContractMatrix( const sirGraphicsABIDevice_t *pDevice, sirMockSetMode_t pMode ) noexcept
+{
+	pMode( 10 );
+	sirGraphicsABIDevice_t device = *pDevice;
+	s_pOriginalNativeBuffer = pDevice->pCreateBuffer;
+	s_pOriginalNativeTexture = pDevice->pCreateTexture;
+	s_pOriginalNativeView = pDevice->pCreateView;
+	s_pOriginalNativeSampler = pDevice->pCreateSampler;
+	s_pOriginalNativePipeline = pDevice->pCreatePipeline;
+	device.pCreateBuffer = testCreateNativeBufferHandle;
+	device.pCreateTexture = testCreateNativeTextureHandle;
+	device.pCreateView = testCreateNativeViewHandle;
+	device.pCreateSampler = testCreateNativeSamplerHandle;
+	device.pCreatePipeline = testCreateNativePipelineHandle;
+	sirGraphicsBufferDesc_t buffer = {};
+	buffer.nSizeBytes = 128;
+	buffer.nUsage = SIR_GRAPHICS_USAGE_COPY_DESTINATION;
+	buffer.eMemory = SIR_GRAPHICS_MEMORY_GPU_LOCAL;
+	sirGraphicsTextureDesc_t texture = {};
+	texture.nWidth = 16;
+	texture.nHeight = 16;
+	texture.nDepth = 1;
+	texture.nArrayLayers = 1;
+	texture.nMipLevels = 1;
+	texture.nSampleCount = 1;
+	texture.nUsage = SIR_GRAPHICS_USAGE_SAMPLED;
+	texture.eDimension = SIR_GRAPHICS_TEXTURE_2D;
+	texture.eFormat = SIR_GRAPHICS_FORMAT_RGBA8_UNORM;
+	texture.eMemory = SIR_GRAPHICS_MEMORY_GPU_LOCAL;
+	sirGraphicsViewDesc_t view = {};
+	view.hResource = { 4, 1, 5, SIR_GRAPHICS_HANDLE_TEXTURE };
+	view.eFormat = SIR_GRAPHICS_FORMAT_RGBA8_UNORM;
+	view.nUsage = SIR_GRAPHICS_USAGE_SAMPLED;
+	view.nMipLevels = 1;
+	view.nLayers = 1;
+	sirGraphicsSamplerDesc_t sampler = {};
+	sampler.fMaximumAnisotropy = 1;
+	sampler.fMaximumLod = 16;
+	sirGraphicsABIModernRecipe_t modern = {};
+	modern.nSize = sizeof( modern );
+	modern.nStageMask = SIR_GRAPHICS_STAGE_COMPUTE;
+	modern.nRequiredFeatures = SIR_GRAPHICS_FEATURE_COMPUTE;
+	uint32_t nShader = 0x07230203;
+	sirGraphicsABIPipeline_t pipeline = {};
+	pipeline.nSize = sizeof( pipeline );
+	pipeline.nType = SIR_GRAPHICS_PIPELINE_COMPUTE;
+	pipeline.nModel = SIR_GRAPHICS_PIPELINE_MODEL_MODERN;
+	pipeline.nSampleCount = 1;
+	pipeline.computeShader = { sizeof( sirGraphicsABIShaderCode_t ), SIR_GRAPHICS_SHADER_SPIRV, &nShader, 4, 1, "main" };
+	pipeline.pModern = &modern;
+	for ( uint32_t i = 0; i <= 3; ++i ) {
+		s_nNativeHandleFaultMode = i;
+		const sirGraphicsResult_t eExpected = i == 0 ? SIR_GRAPHICS_SUCCESS : SIR_GRAPHICS_DRIVER_ERROR;
+		sirGraphicsHandle_t handle = { 99, 1, 5, SIR_GRAPHICS_HANDLE_BUFFER };
+#define CHECK_NATIVE_HANDLE( expression, name )                                                                                            \
+	if ( ( expression ) != eExpected || ( i != 0 && handle.nSlot != 99 ) ) {                                                               \
+		fprintf( stderr, "Native %s handle contract mode %u failed\n", name, i );                                                          \
+		s_nNativeHandleFaultMode = 0;                                                                                                      \
+		pMode( 0 );                                                                                                                        \
+		return false;                                                                                                                      \
+	}
+		CHECK_NATIVE_HANDLE( sirGraphicsCreateABIBuffer( &device, &buffer, &handle ), "buffer" );
+		handle = { 99, 1, 5, SIR_GRAPHICS_HANDLE_TEXTURE };
+		CHECK_NATIVE_HANDLE( sirGraphicsCreateABITexture( &device, &texture, &handle ), "texture" );
+		handle = { 99, 1, 5, SIR_GRAPHICS_HANDLE_VIEW };
+		CHECK_NATIVE_HANDLE( sirGraphicsCreateABIView( &device, &view, &handle ), "view" );
+		handle = { 99, 1, 5, SIR_GRAPHICS_HANDLE_SAMPLER };
+		CHECK_NATIVE_HANDLE( sirGraphicsCreateABISampler( &device, &sampler, &handle ), "sampler" );
+		handle = { 99, 1, 5, SIR_GRAPHICS_HANDLE_PIPELINE };
+		CHECK_NATIVE_HANDLE( sirGraphicsCreateABIPipeline( &device, &pipeline, &handle ), "pipeline" );
+#undef CHECK_NATIVE_HANDLE
+	}
+	s_nNativeHandleFaultMode = 0;
+	pMode( 0 );
+	return true;
+}
+
+static uint32_t s_nMemoryBudgetFaultMode = 0;
+
+static uint32_t testQueryNativeBudgetFault( void *, sirGraphicsMemoryBudget_t *pBudget ) noexcept
+{
+	if ( s_nMemoryBudgetFaultMode == 5 ) {
+		return SIR_GRAPHICS_DEVICE_LOST;
+	}
+	if ( s_nMemoryBudgetFaultMode == 6 ) {
+		return 99;
+	}
+	*pBudget = {};
+	pBudget->nBudgetBytes = 1024;
+	pBudget->nCommittedBytes = 256;
+	pBudget->nResidentBytes = 128;
+	pBudget->nPeakCommittedBytes = 256;
+	if ( s_nMemoryBudgetFaultMode == 1 ) {
+		pBudget->nPeakCommittedBytes = 0;
+	} else if ( s_nMemoryBudgetFaultMode == 2 ) {
+		pBudget->nPeakCommittedBytes = 127;
+	} else if ( s_nMemoryBudgetFaultMode == 3 ) {
+		pBudget->nResidentBytes = 300;
+	} else if ( s_nMemoryBudgetFaultMode == 4 ) {
+		pBudget->nPeakCommittedBytes = 257;
+	}
+	return SIR_GRAPHICS_SUCCESS;
+}
+
+static bool testMemoryBudgetProviderMatrix( const sirGraphicsABIDevice_t *pDevice ) noexcept
+{
+	sirGraphicsABIDevice_t wrapped = *pDevice;
+	wrapped.pQueryMemoryBudget = testQueryNativeBudgetFault;
+	for ( uint32_t i = 0; i <= 6; ++i ) {
+		s_nMemoryBudgetFaultMode = i;
+		sirGraphicsMemoryBudget_t budget = {};
+		budget.nCommittedBytes = 777;
+		const sirGraphicsResult_t eStatus = sirGraphicsQueryABIMemoryBudget( &wrapped, &budget );
+		const sirGraphicsResult_t eExpected = i == 2 || i == 3 || i == 6 ? SIR_GRAPHICS_DRIVER_ERROR
+		                                      : i == 5                   ? SIR_GRAPHICS_DEVICE_LOST
+		                                                                 : SIR_GRAPHICS_SUCCESS;
+		if ( eStatus != eExpected || ( eStatus != SIR_GRAPHICS_SUCCESS && budget.nCommittedBytes != 777 ) ||
+		     ( eStatus == SIR_GRAPHICS_SUCCESS && budget.nCommittedBytes != 256 ) ) {
+			fprintf( stderr, "Memory budget provider fault mode %u returned %u expected %u\n", i, eStatus, eExpected );
+			s_nMemoryBudgetFaultMode = 0;
+			return false;
+		}
+	}
+	s_nMemoryBudgetFaultMode = 0;
+	return true;
+}
+
 static uint32_t s_nSyntheticAdapterMode = 0;
 
 static uint32_t testCountRankedAdapters( void *, uint32_t *pCount ) noexcept
@@ -1040,7 +1215,13 @@ static bool testBinaryModule( void ) noexcept
 	if ( !testNativeResourceAdmissionMatrix( &device, pMode ) ) {
 		return false;
 	}
+	if ( !testNativeHandleReturnContractMatrix( &device, pMode ) ) {
+		return false;
+	}
 	if ( !testModelProviderContractMatrix( &device, pMode ) ) {
+		return false;
+	}
+	if ( !testMemoryBudgetProviderMatrix( &device ) ) {
 		return false;
 	}
 	if ( !testHostProviderFaults( &device ) ) {
