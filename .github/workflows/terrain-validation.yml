@@ -23,17 +23,27 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - uses: ./.github/actions/setup-build-tools
-      - name: Configure sanitized native terrain
+      - name: Install pinned CMake 4.4.5 without GitHub API setup requests
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="${RUNNER_TEMP}/cmake-4.4.5-linux-x86_64.tar.gz"
+          curl -fsSL --retry 3 https://cmake.org/files/v4.4/cmake-4.4.5-linux-x86_64.tar.gz -o "${archive}"
+          printf '%s  %s\n' 'ed85135c5a5135b45e50423cb406dea04ca3338da0b8ef3c9ede963559680be0' "${archive}" | sha256sum -c -
+          mkdir -p "${RUNNER_TEMP}/sir-cmake"
+          tar -xzf "${archive}" -C "${RUNNER_TEMP}/sir-cmake" --strip-components=1
+          echo "${RUNNER_TEMP}/sir-cmake/bin" >> "${GITHUB_PATH}"
+          "${RUNNER_TEMP}/sir-cmake/bin/cmake" --version
+      - name: Configure sanitized native terrain with Ninja tooling preset
         run: >
-          cmake --preset dev
+          cmake --preset tooling
           -DSIR_BUILD_TESTS=ON
           -DSIR_WITH_GOOGLETEST=OFF
           -DSIR_ENABLE_ASAN=ON
           -DSIR_ENABLE_UBSAN=ON
       - name: Build terrain and all terrain regression targets
         run: >
-          cmake --build --preset dev --target
+          cmake --build out/Linux/tooling --parallel 3 --target
           SIRTerrainHeightfieldCodecTests
           SIRTerrainRegionCatalogTests
           SIRTerrainHeightfieldViewTests
@@ -44,6 +54,6 @@ jobs:
           ASAN_OPTIONS: detect_leaks=1:halt_on_error=1
           UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
         run: >
-          ctest --preset dev --output-on-failure --no-tests=error
+          ctest --test-dir out/Linux/tooling --output-on-failure --no-tests=error
           --repeat until-fail:3
           -R '^terrain[.]'
