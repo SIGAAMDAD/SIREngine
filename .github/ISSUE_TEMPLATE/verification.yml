@@ -1,0 +1,38 @@
+name: Independent verification
+description: Request exact-revision CI, compiler, coverage or integration validation.
+title: "[Verification] "
+labels: ["marathon:tracked"]
+body:
+  - type: input
+    id: candidate
+    attributes:
+      label: Candidate PR or source commit
+      description: Full 40-character SHA and PR URL where available
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Required verification matrix
+      description: Compiler/toolchain, CMake targets, tests, branches, native platform/driver gates
+    validations:
+      required: true
+  - type: textarea
+    id: negatives
+    attributes:
+      label: Negative and regression cases
+    validations:
+      required: true
+  - type: textarea
+    id: requirements
+    attributes:
+      label: Coverage and performance requirements
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence or blocking dependencies
+      description: CI URLs, commands, test logs, unavailable hardware, reproducibility
+    validations:
+      required: false
