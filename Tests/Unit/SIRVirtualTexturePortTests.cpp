@@ -17,6 +17,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Renderer/VirtualTexturing/SIRVirtualTextureFeedback.h>
 #include <Renderer/VirtualTexturing/SIRVirtualTexturePackage.h>
 #include <Renderer/VirtualTexturing/SIRVirtualTexturePackReader.h>
+#include <Renderer/VirtualTexturing/SIRVirtualTexturePackFileSource.h>
 
 #include <stdio.h>
 #include <vector>
@@ -364,6 +365,43 @@ static bool testValidatedPack( void )
 	return true;
 }
 
+static bool testPackFileSource( void )
+{
+	static constexpr const char *pszPath = "sir_vt_sparse_v1_native_test.pack";
+	std::vector<uint8_t> bytes = makeValidPack();
+	SIRPlatformFile writer;
+	SIR_TEST( writer.open( pszPath, SIR_FILE_OPEN_WRITE | SIR_FILE_OPEN_CREATE | SIR_FILE_OPEN_TRUNCATE ) == SIR_FILE_OK );
+	uint64_t nWritten = 0;
+	SIR_TEST( writer.write( bytes.data(), bytes.size(), &nWritten ) == SIR_FILE_OK && nWritten == bytes.size() );
+	SIR_TEST( writer.close() == SIR_FILE_OK );
+	std::vector<uint8_t> metadata( 8192 );
+	SIRVirtualTexturePackFileSource source;
+	sirVirtualTexturePackView_t view = {};
+	sirVirtualTexturePackMetadataBuffer_t buffer = { metadata.data(), metadata.size() };
+	SIR_TEST( !source.open( pszPath, { metadata.data(), 32 }, true, &view ) && !source.isOpen() );
+	SIR_TEST( source.open( pszPath, buffer, true, &view ) && source.isOpen() );
+	SIR_TEST( source.getPayloadBytes() == sirVTPackPhysicalTileBytes( SIR_VT_PHYSICAL_BC1 ) );
+	SIR_TEST( source.getPackageGeneration() == 1 && source.getReadCount() == 0 );
+	uint8_t szPayload[64] = {};
+	SIR_TEST( source.readPayload( 3, szPayload, sizeof( szPayload ) ) );
+	SIR_TEST( memcmp( szPayload, bytes.data() + view.header.nPayloadDataOffset + 3, sizeof( szPayload ) ) == 0 );
+	SIR_TEST( source.getReadCount() == 1 );
+	SIR_TEST( !source.readPayload( source.getPayloadBytes() - 7, szPayload, sizeof( szPayload ) ) );
+	SIR_TEST( !source.readPayload( 0, nullptr, 64 ) && !source.readPayload( 0, szPayload, 0 ) );
+	source.close();
+	SIR_TEST( !source.isOpen() && !source.readPayload( 0, szPayload, 64 ) );
+	bytes.back() ^= 0x55;
+	SIR_TEST( writer.open( pszPath, SIR_FILE_OPEN_WRITE | SIR_FILE_OPEN_TRUNCATE ) == SIR_FILE_OK );
+	SIR_TEST( writer.write( bytes.data(), bytes.size(), &nWritten ) == SIR_FILE_OK && nWritten == bytes.size() );
+	SIR_TEST( writer.close() == SIR_FILE_OK );
+	SIR_TEST( !source.open( pszPath, buffer, true, &view ) && !source.isOpen() );
+	SIR_TEST( source.open( pszPath, buffer, false, &view ) && source.isOpen() );
+	SIR_TEST( view.bMetadataOnly && view.szDirectories[SIR_VT_PACK_PAYLOAD_DATA].pData == nullptr );
+	source.close();
+	SIR_TEST( SIRPlatformFile::remove( pszPath ) == SIR_FILE_OK );
+	return true;
+}
+
 static bool testCompactTail( void ) noexcept
 {
 	sirVirtualTextureTailRequest_t request = { 0, 4, 128, 64, true };
@@ -386,7 +424,8 @@ static bool testCompactTail( void ) noexcept
 
 int main( void )
 {
-	if ( !testFeedbackGrid() || !testFeedbackMulti() || !testPackContract() || !testValidatedPack() || !testCompactTail() ) {
+	if ( !testFeedbackGrid() || !testFeedbackMulti() || !testPackContract() || !testValidatedPack() || !testPackFileSource() ||
+	     !testCompactTail() ) {
 		return 1;
 	}
 	printf( "Terrain3D VT V1 native port contracts PASS\n" );

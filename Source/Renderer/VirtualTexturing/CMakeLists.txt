@@ -2,4 +2,5 @@
 target_sources(SIRGraphics PRIVATE
     SIRVirtualTextureFeedback.cpp
     SIRVirtualTexturePackage.cpp
-    SIRVirtualTexturePackReader.cpp)
+    SIRVirtualTexturePackReader.cpp
+    SIRVirtualTexturePackFileSource.cpp)
