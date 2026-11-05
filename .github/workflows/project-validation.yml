@@ -1,0 +1,46 @@
+name: Project automation validation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "Tools/ProjectManagement/**"
+      - ".github/workflows/project-*.yml"
+      - "Docs/ProjectManagement/**"
+      - ".github/ISSUE_TEMPLATE/**"
+      - ".github/PULL_REQUEST_TEMPLATE.md"
+      - "CONTRIBUTING.md"
+  push:
+    branches: [main]
+    paths:
+      - "Tools/ProjectManagement/**"
+      - ".github/workflows/project-*.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  project-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compile Python project tooling
+        run: python -m compileall -q Tools/ProjectManagement
+      - name: Run offline project-management acceptance tests
+        run: python -m unittest discover -s Tools/ProjectManagement/tests -p 'test_*.py' -v
+      - name: Validate workflow YAML
+        run: |
+          python -m pip install 'PyYAML==6.0.2'
+          python - <<'PY'
+          import pathlib
+          import yaml
+          for path in sorted(pathlib.Path('.github/workflows').glob('project-*.yml')):
+              data = yaml.safe_load(path.read_text())
+              assert isinstance(data, dict), path
+              assert 'jobs' in data and data['jobs'], path
+              assert 'on' in data or True in data, path
+              print('VALID', path)
+          PY
