@@ -16,7 +16,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Renderer/SIRGraphicsRegistry.h>
 #include <Renderer/SIRGraphicsValidation.h>
 
-static bool sirGraphicsVersionAtLeast( const sirGraphicsVersion_t &available, const sirGraphicsVersion_t &minimum ) noexcept
+static bool sirGraphicsVersionAtLeast( const sirGraphicsVersion_t& available, const sirGraphicsVersion_t& minimum ) noexcept
 {
 	if ( available.nMajor != minimum.nMajor ) {
 		return available.nMajor > minimum.nMajor;
@@ -40,8 +40,8 @@ static uint32_t sirGraphicsCountFeatureBits( uint64_t nMask ) noexcept
 	return nCount;
 }
 
-static bool sirGraphicsPreferAdapter( const sirGraphicsAdapterInfo_t &candidate, sirGraphicsBackend_t eCandidate,
-                                      const sirGraphicsAdapterInfo_t &current, sirGraphicsBackend_t eCurrent ) noexcept
+static bool sirGraphicsPreferAdapter( const sirGraphicsAdapterInfo_t& candidate, sirGraphicsBackend_t eCandidate,
+                                      const sirGraphicsAdapterInfo_t& current, sirGraphicsBackend_t eCurrent ) noexcept
 {
 	if ( candidate.bSoftwareAdapter != current.bSoftwareAdapter ) {
 		return !candidate.bSoftwareAdapter;
@@ -112,7 +112,7 @@ SIRGraphicsDriver *SIRGraphicsRegistry::findDriver( sirGraphicsBackend_t eBacken
 	return nullptr;
 }
 
-sirGraphicsResult_t SIRGraphicsRegistry::selectDriver( const sirGraphicsSelection_t &selection, SIRGraphicsDriver **ppDriver,
+sirGraphicsResult_t SIRGraphicsRegistry::selectDriver( const sirGraphicsSelection_t& selection, SIRGraphicsDriver **ppDriver,
                                                        sirGraphicsAdapterInfo_t *pAdapter ) const noexcept
 {
 	if ( ppDriver == nullptr || pAdapter == nullptr || !sirGraphicsIsBackendValid( selection.eBackend ) ) {

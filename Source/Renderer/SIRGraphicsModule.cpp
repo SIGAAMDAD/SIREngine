@@ -36,7 +36,7 @@ static uint32_t sirGraphicsABICountFeatureBits( uint64_t nMask ) noexcept
 	return nCount;
 }
 
-static bool sirGraphicsABIPreferAdapter( const sirGraphicsABIAdapter_t &candidate, const sirGraphicsABIAdapter_t &current ) noexcept
+static bool sirGraphicsABIPreferAdapter( const sirGraphicsABIAdapter_t& candidate, const sirGraphicsABIAdapter_t& current ) noexcept
 {
 	const bool bSoftwareCandidate = candidate.nKind == SIR_GRAPHICS_ABI_ADAPTER_SOFTWARE;
 	const bool bSoftwareCurrent = current.nKind == SIR_GRAPHICS_ABI_ADAPTER_SOFTWARE;
@@ -408,8 +408,8 @@ static sirGraphicsABIResult_t sirGraphicsReadABIQueueCaps( const sirGraphicsABID
 	return SIR_GRAPHICS_SUCCESS;
 }
 
-static bool sirGraphicsABIValidQueueCompletion( const sirGraphicsCompletion_t &completion,
-                                                const sirGraphicsABICapabilities_t &caps ) noexcept
+static bool sirGraphicsABIValidQueueCompletion( const sirGraphicsCompletion_t& completion,
+                                                const sirGraphicsABICapabilities_t& caps ) noexcept
 {
 	return completion.nDeviceGeneration == caps.nDeviceGeneration && completion.nValue != 0 &&
 	       completion.eQueue < SIR_GRAPHICS_QUEUE_COUNT && ( caps.nEnabledQueues & ( 1U << completion.eQueue ) ) != 0;
@@ -483,14 +483,14 @@ sirGraphicsABIResult_t sirGraphicsSubmitABICommands( const sirGraphicsABIDevice_
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
 	for ( uint32_t i = 0; i < pSubmission->nAcquisitionCount; ++i ) {
-		const sirGraphicsSurfaceImage_t &image = pSubmission->pAcquisitions[i];
+		const sirGraphicsSurfaceImage_t& image = pSubmission->pAcquisitions[i];
 		if ( !sirGraphicsIsHandleValid( image.hSurface, SIR_GRAPHICS_HANDLE_SURFACE, caps.nDeviceGeneration ) ||
 		     !sirGraphicsIsHandleValid( image.hImage, SIR_GRAPHICS_HANDLE_TEXTURE, caps.nDeviceGeneration ) || image.nAcquisitionId == 0 ||
 		     image.nWindowGeneration == 0 ) {
 			return SIR_GRAPHICS_INVALID_ARGUMENT;
 		}
 		for ( uint32_t j = 0; j < i; ++j ) {
-			const sirGraphicsSurfaceImage_t &earlier = pSubmission->pAcquisitions[j];
+			const sirGraphicsSurfaceImage_t& earlier = pSubmission->pAcquisitions[j];
 			if ( earlier.hSurface.nSlot == image.hSurface.nSlot && earlier.hSurface.nGeneration == image.hSurface.nGeneration &&
 			     earlier.nAcquisitionId == image.nAcquisitionId ) {
 				return SIR_GRAPHICS_INVALID_ARGUMENT;
@@ -558,7 +558,7 @@ sirGraphicsABIResult_t sirGraphicsWaitABICompletion( const sirGraphicsABIDevice_
 static sirGraphicsABIResult_t sirGraphicsValidateABISurfaceDesc( const sirGraphicsABIDevice_t *pDevice,
                                                                  const sirGraphicsABINativeSurface_t *pNative,
                                                                  const sirGraphicsABIPresentDesc_t *pPresent,
-                                                                 const sirGraphicsABICapabilities_t &caps ) noexcept
+                                                                 const sirGraphicsABICapabilities_t& caps ) noexcept
 {
 	if ( pNative == nullptr || pPresent == nullptr || pNative->nSize < sizeof( sirGraphicsABINativeSurface_t ) ||
 	     pPresent->nSize < sizeof( sirGraphicsABIPresentDesc_t ) || pNative->pWindow == nullptr || pNative->nWindowGeneration == 0 ||

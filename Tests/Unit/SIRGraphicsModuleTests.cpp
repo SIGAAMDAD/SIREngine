@@ -557,7 +557,7 @@ static bool testNativeResourceAdmissionMatrix( const sirGraphicsABIDevice_t *pDe
 	return true;
 }
 
-static bool testDeviceRequestPreflightMatrix( sirGraphicsABIModule_t *pModule, const sirGraphicsABIDeviceRequest_t &valid ) noexcept
+static bool testDeviceRequestPreflightMatrix( sirGraphicsABIModule_t *pModule, const sirGraphicsABIDeviceRequest_t& valid ) noexcept
 {
 	sirGraphicsABIDevice_t output = {};
 	output.nSize = sizeof( output );
@@ -683,7 +683,7 @@ static bool testModelProviderContractMatrix( const sirGraphicsABIDevice_t *pDevi
 	return true;
 }
 
-static bool testModuleLifecyclePreflightMatrix( const sirGraphicsABIHost_t &host, const sirGraphicsABIModule_t &live ) noexcept
+static bool testModuleLifecyclePreflightMatrix( const sirGraphicsABIHost_t& host, const sirGraphicsABIModule_t& live ) noexcept
 {
 	sirGraphicsABIModule_t empty = {};
 #define CHECK_MODULE_PREFLIGHT( expression, expected, label )                                                                              \

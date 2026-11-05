@@ -16,7 +16,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Renderer/SIRGraphicsPipelineBridge.h>
 #include <Renderer/SIRGraphicsValidation.h>
 
-static sirGraphicsABIShaderCode_t sirGraphicsEncodeShaderCode( const sirGraphicsShaderCode_t &source ) noexcept
+static sirGraphicsABIShaderCode_t sirGraphicsEncodeShaderCode( const sirGraphicsShaderCode_t& source ) noexcept
 {
 	sirGraphicsABIShaderCode_t code = {};
 	code.nSize = sizeof( code );
@@ -28,7 +28,7 @@ static sirGraphicsABIShaderCode_t sirGraphicsEncodeShaderCode( const sirGraphics
 	return code;
 }
 
-static sirGraphicsABIBlendState_t sirGraphicsEncodeBlendState( const sirGraphicsBlendState_t &source ) noexcept
+static sirGraphicsABIBlendState_t sirGraphicsEncodeBlendState( const sirGraphicsBlendState_t& source ) noexcept
 {
 	sirGraphicsABIBlendState_t blend = {};
 	blend.nSourceColor = ( uint32_t )source.eSourceColor;
@@ -42,7 +42,7 @@ static sirGraphicsABIBlendState_t sirGraphicsEncodeBlendState( const sirGraphics
 	return blend;
 }
 
-sirGraphicsResult_t sirGraphicsEncodeABIPipeline( const sirGraphicsPipelineDesc_t &source, sirGraphicsABIPipeline_t *pEncoded ) noexcept
+sirGraphicsResult_t sirGraphicsEncodeABIPipeline( const sirGraphicsPipelineDesc_t& source, sirGraphicsABIPipeline_t *pEncoded ) noexcept
 {
 	if ( pEncoded == nullptr ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
