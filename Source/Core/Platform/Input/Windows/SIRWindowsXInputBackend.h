@@ -41,11 +41,11 @@ public:
 	SIRWindowsXInputBackend( void ) noexcept;
 	sirInputBackendId_t id( void ) const noexcept override;
 	bool initialize( void ) noexcept;
-	void sample( SIRInputService &service ) noexcept override;
-	void resynchronize( SIRInputService &service ) noexcept override;
+	void sample( SIRInputService& service ) noexcept override;
+	void resynchronize( SIRInputService& service ) noexcept override;
 	bool vibrate( sirInputDeviceId_t hDevice, uint16_t nLeft, uint16_t nRight ) noexcept override;
 	uint32_t hapticCapabilities( sirInputDeviceId_t hDevice ) const noexcept override;
-	void stop( SIRInputService &service ) noexcept override;
+	void stop( SIRInputService& service ) noexcept override;
 
 private:
 	void *m_pLibrary;

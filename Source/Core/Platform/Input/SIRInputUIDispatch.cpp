@@ -21,10 +21,10 @@ SIRInputUIDispatch::SIRInputUIDispatch( void ) noexcept
 {
 }
 
-bool SIRInputUIDispatch::dispatch( const SIRInputService &input, const sirInputUIConsumer_t &consumer ) noexcept
+bool SIRInputUIDispatch::dispatch( const SIRInputService& input, const sirInputUIConsumer_t& consumer ) noexcept
 {
 	const sirInputFrame_t *pFrame = input.frame();
-	const sirInputTextSnapshot_t &text = input.text().snapshot();
+	const sirInputTextSnapshot_t& text = input.text().snapshot();
 	// FrameState rejects tick zero before publication; only validate consumer and tick ownership here.
 	if ( pFrame == nullptr || pFrame->nTick <= m_nLastTick || pFrame->nTick != text.nTick ||
 	     consumer.nActionCount > SIR_INPUT_ACTION_CAPACITY || ( consumer.nActionCount != 0 && consumer.pActionIds == nullptr ) ||
@@ -49,7 +49,7 @@ bool SIRInputUIDispatch::dispatch( const SIRInputService &input, const sirInputU
 
 	if ( consumer.pOnPointer != nullptr ) {
 		for ( uint32_t i = 0; i < pFrame->nCount; ++i ) {
-			const sirInputEvent_t &event = pFrame->events[i];
+			const sirInputEvent_t& event = pFrame->events[i];
 			if ( event.eClass == SIR_INPUT_POINTER ) {
 				consumer.pOnPointer( consumer.pContext, &event );
 			}

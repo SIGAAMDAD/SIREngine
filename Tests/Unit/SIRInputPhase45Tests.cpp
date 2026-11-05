@@ -29,11 +29,11 @@ public:
 	{
 		return SIR_INPUT_TEST;
 	}
-	void sample( SIRInputService &service ) noexcept override
+	void sample( SIRInputService& service ) noexcept override
 	{
 		( void )service;
 	}
-	void resynchronize( SIRInputService &service ) noexcept override
+	void resynchronize( SIRInputService& service ) noexcept override
 	{
 		( void )service;
 	}
@@ -50,7 +50,7 @@ public:
 		( void )hDevice;
 		return SIR_INPUT_HAPTIC_CAP_RUMBLE;
 	}
-	void stop( SIRInputService &service ) noexcept override
+	void stop( SIRInputService& service ) noexcept override
 	{
 		( void )service;
 		++m_nStops;
@@ -163,7 +163,7 @@ static bool sirTestTextAndUIRoute( void )
 		return false;
 	}
 
-	const sirInputTextSnapshot_t &text = input.text().snapshot();
+	const sirInputTextSnapshot_t& text = input.text().snapshot();
 	if ( text.nTick != 1 || text.nCount != 3 || text.szCodepoints[0] != 'A' || text.szCodepoints[1] != 0x20ac ||
 	     text.szCodepoints[2] != 0x1f600 || text.nPreeditCount != 2 || text.nCaret != 1 || text.nSelection != 1 ) {
 		return false;

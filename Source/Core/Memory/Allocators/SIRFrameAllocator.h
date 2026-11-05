@@ -47,10 +47,10 @@ class SIRFrameAllocator
 {
 public:
 	SIRFrameAllocator( void );
-	SIRFrameAllocator( const SIRFrameAllocator & ) = delete;
-	SIRFrameAllocator &operator=( const SIRFrameAllocator & ) = delete;
-	SIRFrameAllocator( SIRFrameAllocator && ) = delete;
-	SIRFrameAllocator &operator=( SIRFrameAllocator && ) = delete;
+	SIRFrameAllocator( const SIRFrameAllocator& ) = delete;
+	SIRFrameAllocator& operator=( const SIRFrameAllocator& ) = delete;
+	SIRFrameAllocator( SIRFrameAllocator&& ) = delete;
+	SIRFrameAllocator& operator=( SIRFrameAllocator&& ) = delete;
 
 	// The slot descriptors live in SIRMemoryManager's precommitted metadata.
 	static uint64_t getRequiredMetadataBytes( uint32_t nSlotCount );

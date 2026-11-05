@@ -77,7 +77,7 @@ SIRInputWindow::~SIRInputWindow( void )
 	close();
 }
 
-bool SIRInputWindow::open( SIRInputService &input, SIRInputBackend &desktop ) noexcept
+bool SIRInputWindow::open( SIRInputService& input, SIRInputBackend& desktop ) noexcept
 {
 	if ( m_pInput != nullptr || m_nWindow != 0 || desktop.id() != SIR_INPUT_WIN_RAW ) {
 		return false;
@@ -102,7 +102,7 @@ bool SIRInputWindow::open( SIRInputService &input, SIRInputBackend &desktop ) no
 	}
 
 	m_nWindow = ( uintptr_t )hWindow;
-	SIRWindowsRawBackend &raw = ( SIRWindowsRawBackend & )desktop;
+	SIRWindowsRawBackend& raw = ( SIRWindowsRawBackend& )desktop;
 	if ( !raw.attachWindow( hWindow ) ) {
 		close();
 		return false;
@@ -220,7 +220,7 @@ intptr_t SIRInputWindow::dispatchNativeMessage( uint32_t nMessage, uintptr_t nWP
 	return ( intptr_t )DefWindowProcW( hWindow, nMessage, ( WPARAM )nWParam, ( LPARAM )nLParam );
 }
 
-bool SIRInputWindow::pump( SIRInputService &input ) noexcept
+bool SIRInputWindow::pump( SIRInputService& input ) noexcept
 {
 	if ( &input != m_pInput || !m_bOpen ) {
 		return false;

@@ -120,7 +120,7 @@ int32_t SIRWindowsGameInputBackend::findDevice( const void *pDevice ) const noex
 	return -1;
 }
 
-bool SIRWindowsGameInputBackend::addDevice( SIRInputService &service, void *pDevice ) noexcept
+bool SIRWindowsGameInputBackend::addDevice( SIRInputService& service, void *pDevice ) noexcept
 {
 	if ( findDevice( pDevice ) >= 0 ) {
 		return true;
@@ -142,7 +142,7 @@ bool SIRWindowsGameInputBackend::addDevice( SIRInputService &service, void *pDev
 	return false;
 }
 
-void SIRWindowsGameInputBackend::dropDevice( SIRInputService &service, uint32_t iSlot ) noexcept
+void SIRWindowsGameInputBackend::dropDevice( SIRInputService& service, uint32_t iSlot ) noexcept
 {
 	if ( m_Devices[iSlot].pDevice == nullptr ) {
 		return;
@@ -152,7 +152,7 @@ void SIRWindowsGameInputBackend::dropDevice( SIRInputService &service, uint32_t 
 	m_Devices[iSlot] = {};
 }
 
-void SIRWindowsGameInputBackend::consumeDeviceChanges( SIRInputService &service ) noexcept
+void SIRWindowsGameInputBackend::consumeDeviceChanges( SIRInputService& service ) noexcept
 {
 	for ( uint32_t i = 0; i < PENDING_CAPACITY; ++i ) {
 		GameInput::v1::IGameInputDevice *pDevice =
@@ -171,7 +171,7 @@ void SIRWindowsGameInputBackend::consumeDeviceChanges( SIRInputService &service 
 	}
 }
 
-bool SIRWindowsGameInputBackend::processReading( SIRInputService &service, void *pReading ) noexcept
+bool SIRWindowsGameInputBackend::processReading( SIRInputService& service, void *pReading ) noexcept
 {
 	GameInput::v1::IGameInputReading *pNative = ( GameInput::v1::IGameInputReading * )pReading;
 	GameInput::v1::IGameInputDevice *pDevice = nullptr;
@@ -216,7 +216,7 @@ bool SIRWindowsGameInputBackend::processReading( SIRInputService &service, void 
 	return true;
 }
 
-void SIRWindowsGameInputBackend::invalidateHistory( SIRInputService &service ) noexcept
+void SIRWindowsGameInputBackend::invalidateHistory( SIRInputService& service ) noexcept
 {
 	if ( m_pCursor != nullptr ) {
 		( ( GameInput::v1::IGameInputReading * )m_pCursor )->Release();
@@ -245,7 +245,7 @@ void SIRWindowsGameInputBackend::refreshEnumeration( void ) noexcept
 	                                        ( GameInput::v1::GameInputCallbackToken * )&m_nDeviceCallback );
 }
 
-void SIRWindowsGameInputBackend::sample( SIRInputService &service ) noexcept
+void SIRWindowsGameInputBackend::sample( SIRInputService& service ) noexcept
 {
 	GameInput::v1::IGameInput *pInput = ( GameInput::v1::IGameInput * )m_pInput;
 	if ( pInput == nullptr ) {
@@ -284,7 +284,7 @@ void SIRWindowsGameInputBackend::sample( SIRInputService &service ) noexcept
 	}
 }
 
-void SIRWindowsGameInputBackend::resynchronize( SIRInputService &service ) noexcept
+void SIRWindowsGameInputBackend::resynchronize( SIRInputService& service ) noexcept
 {
 	invalidateHistory( service );
 	if ( m_pInput != nullptr ) {
@@ -295,7 +295,7 @@ void SIRWindowsGameInputBackend::resynchronize( SIRInputService &service ) noexc
 bool SIRWindowsGameInputBackend::vibrate( sirInputDeviceId_t id, uint16_t nLeft, uint16_t nRight ) noexcept
 {
 	for ( uint32_t i = 0; i < SIR_INPUT_DEVICE_CAPACITY; ++i ) {
-		sirGameInputNativeDevice_t &device = m_Devices[i];
+		sirGameInputNativeDevice_t& device = m_Devices[i];
 		if ( device.pDevice != nullptr && device.id.nSlot == id.nSlot && device.id.nGeneration == id.nGeneration ) {
 			device.nMotorLeft = nLeft;
 			device.nMotorRight = nRight;
@@ -312,7 +312,7 @@ bool SIRWindowsGameInputBackend::vibrate( sirInputDeviceId_t id, uint16_t nLeft,
 bool SIRWindowsGameInputBackend::vibrateTriggers( sirInputDeviceId_t id, uint16_t nLeft, uint16_t nRight ) noexcept
 {
 	for ( uint32_t i = 0; i < SIR_INPUT_DEVICE_CAPACITY; ++i ) {
-		sirGameInputNativeDevice_t &device = m_Devices[i];
+		sirGameInputNativeDevice_t& device = m_Devices[i];
 		if ( device.pDevice != nullptr && device.id.nSlot == id.nSlot && device.id.nGeneration == id.nGeneration ) {
 			device.nTriggerLeft = nLeft;
 			device.nTriggerRight = nRight;
@@ -329,7 +329,7 @@ bool SIRWindowsGameInputBackend::vibrateTriggers( sirInputDeviceId_t id, uint16_
 uint32_t SIRWindowsGameInputBackend::hapticCapabilities( sirInputDeviceId_t hDevice ) const noexcept
 {
 	for ( uint32_t i = 0; i < SIR_INPUT_DEVICE_CAPACITY; ++i ) {
-		const sirGameInputNativeDevice_t &device = m_Devices[i];
+		const sirGameInputNativeDevice_t& device = m_Devices[i];
 		if ( device.pDevice == nullptr || device.id.nSlot != hDevice.nSlot || device.id.nGeneration != hDevice.nGeneration ) {
 			continue;
 		}
@@ -351,7 +351,7 @@ uint32_t SIRWindowsGameInputBackend::hapticCapabilities( sirInputDeviceId_t hDev
 	return SIR_INPUT_HAPTIC_CAP_NONE;
 }
 
-void SIRWindowsGameInputBackend::stop( SIRInputService &service ) noexcept
+void SIRWindowsGameInputBackend::stop( SIRInputService& service ) noexcept
 {
 	GameInput::v1::IGameInput *pInput = ( GameInput::v1::IGameInput * )m_pInput;
 	if ( pInput != nullptr && m_nDeviceCallback != 0 ) {

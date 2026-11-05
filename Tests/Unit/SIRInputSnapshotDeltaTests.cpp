@@ -24,11 +24,11 @@ public:
 	{
 		return SIR_INPUT_TEST;
 	}
-	void sample( SIRInputService &service ) noexcept override
+	void sample( SIRInputService& service ) noexcept override
 	{
 		( void )service;
 	}
-	void resynchronize( SIRInputService &service ) noexcept override
+	void resynchronize( SIRInputService& service ) noexcept override
 	{
 		( void )service;
 	}
@@ -39,13 +39,13 @@ public:
 		( void )nRight;
 		return false;
 	}
-	void stop( SIRInputService &service ) noexcept override
+	void stop( SIRInputService& service ) noexcept override
 	{
 		( void )service;
 	}
 };
 
-static uint32_t nextInputTestRandom( uint32_t &nSeed ) noexcept
+static uint32_t nextInputTestRandom( uint32_t& nSeed ) noexcept
 {
 	nSeed ^= nSeed << 13;
 	nSeed ^= nSeed >> 17;

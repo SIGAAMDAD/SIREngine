@@ -28,11 +28,11 @@ sirInputBackendId_t SIRWindowsRawBackend::id( void ) const noexcept
 {
 	return SIR_INPUT_WIN_RAW;
 }
-void SIRWindowsRawBackend::sample( SIRInputService &service ) noexcept
+void SIRWindowsRawBackend::sample( SIRInputService& service ) noexcept
 {
 	( void )service;
 }
-void SIRWindowsRawBackend::resynchronize( SIRInputService &service ) noexcept
+void SIRWindowsRawBackend::resynchronize( SIRInputService& service ) noexcept
 {
 	( void )service;
 }
@@ -59,7 +59,7 @@ bool SIRWindowsRawBackend::attachWindow( void *pWindow ) noexcept
 	return true;
 }
 
-bool SIRWindowsRawBackend::processRaw( SIRInputService &service, void *pHRawInput ) noexcept
+bool SIRWindowsRawBackend::processRaw( SIRInputService& service, void *pHRawInput ) noexcept
 {
 	UINT nBytes = 0;
 	if ( GetRawInputData( ( HRAWINPUT )pHRawInput, RID_INPUT, nullptr, &nBytes, sizeof( RAWINPUTHEADER ) ) != 0 ||
@@ -77,7 +77,7 @@ bool SIRWindowsRawBackend::processRaw( SIRInputService &service, void *pHRawInpu
 
 // WM_INPUT's lParam is no longer in the raw queue once dispatched. Process it
 // individually, then drain later queued WM_INPUT reports in bounded batches.
-bool SIRWindowsRawBackend::drainBuffered( SIRInputService &service ) noexcept
+bool SIRWindowsRawBackend::drainBuffered( SIRInputService& service ) noexcept
 {
 	if ( ( HIWORD( GetQueueStatus( QS_RAWINPUT ) ) & QS_RAWINPUT ) == 0 ) {
 		return true;
@@ -105,7 +105,7 @@ bool SIRWindowsRawBackend::drainBuffered( SIRInputService &service ) noexcept
 	return true;
 }
 
-bool SIRWindowsRawBackend::processMessage( SIRInputService &service, uint32_t nMessage, uintptr_t nWParam, intptr_t nLParam ) noexcept
+bool SIRWindowsRawBackend::processMessage( SIRInputService& service, uint32_t nMessage, uintptr_t nWParam, intptr_t nLParam ) noexcept
 {
 	if ( m_pWindow == nullptr ) {
 		return false;
@@ -148,7 +148,7 @@ bool SIRWindowsRawBackend::processMessage( SIRInputService &service, uint32_t nM
 	return false;
 }
 
-void SIRWindowsRawBackend::stop( SIRInputService &service ) noexcept
+void SIRWindowsRawBackend::stop( SIRInputService& service ) noexcept
 {
 	if ( m_pWindow == nullptr ) {
 		return;

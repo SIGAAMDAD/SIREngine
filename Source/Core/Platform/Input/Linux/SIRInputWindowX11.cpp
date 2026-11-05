@@ -33,7 +33,7 @@ SIRInputWindow::~SIRInputWindow( void )
 	close();
 }
 
-bool SIRInputWindow::open( SIRInputService &input, SIRInputBackend &desktop ) noexcept
+bool SIRInputWindow::open( SIRInputService& input, SIRInputBackend& desktop ) noexcept
 {
 	if ( m_pInput != nullptr || m_pDisplay != nullptr || desktop.id() != SIR_INPUT_LINUX_X11 ) {
 		return false;
@@ -86,7 +86,7 @@ bool SIRInputWindow::open( SIRInputService &input, SIRInputBackend &desktop ) no
 	return true;
 }
 
-bool SIRInputWindow::pump( SIRInputService &input ) noexcept
+bool SIRInputWindow::pump( SIRInputService& input ) noexcept
 {
 	if ( !m_bOpen || &input != m_pInput ) {
 		return false;

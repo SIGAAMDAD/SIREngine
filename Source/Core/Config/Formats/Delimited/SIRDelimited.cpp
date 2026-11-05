@@ -30,21 +30,20 @@ SIRDelimitedReader::~SIRDelimitedReader( void ) noexcept
 {
 	close();
 }
-
-bool SIRDelimitedReader::validOptions( const sirDelimitedOptions_t &options ) const noexcept
+bool SIRDelimitedReader::validOptions( const sirDelimitedOptions_t& options ) const noexcept
 {
 	return options.nDelimiter != '\r' && options.nDelimiter != '\n' && options.nDelimiter != options.nQuote && options.nQuote != '\r' &&
 	       options.nQuote != '\n';
 }
 
-sirConfigResult_t SIRDelimitedReader::openCommon( const sirConfigParseContext_t &context, const sirDelimitedOptions_t &options ) noexcept
+sirConfigResult_t SIRDelimitedReader::openCommon( const sirConfigParseContext_t& context, const sirDelimitedOptions_t& options ) noexcept
 {
 	if ( m_bOpened || !validOptions( options ) || context.pScratchAllocator == nullptr ||
 	     context.pScratchAllocator->pfnAllocate == nullptr || context.pScratchAllocator->pfnDeallocate == nullptr ) {
 		return SIR_CONFIG_INVALID_ARGUMENT;
 	}
 
-	const sirConfigLimits_t &limits = context.limits;
+	const sirConfigLimits_t& limits = context.limits;
 	if ( limits.nMaxInputBytes == 0 || limits.nMaxScratchLiveBytes == 0 || limits.nMaxScalarBytes == 0 || limits.nMaxRowBytes == 0 ||
 	     limits.nMaxColumns == 0 || limits.nMaxRows == 0 ) {
 		return SIR_CONFIG_INVALID_ARGUMENT;
@@ -57,8 +56,8 @@ sirConfigResult_t SIRDelimitedReader::openCommon( const sirConfigParseContext_t 
 	return SIR_CONFIG_OK;
 }
 
-sirConfigResult_t SIRDelimitedReader::openBuffer( const sirConfigInput_t &input, const sirConfigParseContext_t &context,
-                                                  const sirDelimitedOptions_t &options ) noexcept
+sirConfigResult_t SIRDelimitedReader::openBuffer( const sirConfigInput_t& input, const sirConfigParseContext_t& context,
+                                                  const sirDelimitedOptions_t& options ) noexcept
 {
 	if ( input.nBytes != 0 && input.pBytes == nullptr ) {
 		return SIR_CONFIG_INVALID_ARGUMENT;
@@ -77,8 +76,8 @@ sirConfigResult_t SIRDelimitedReader::openBuffer( const sirConfigInput_t &input,
 	return SIR_CONFIG_OK;
 }
 
-sirConfigResult_t SIRDelimitedReader::openStream( const sirConfigSource_t &source, const sirConfigParseContext_t &context,
-                                                  const sirDelimitedOptions_t &options ) noexcept
+sirConfigResult_t SIRDelimitedReader::openStream( const sirConfigSource_t& source, const sirConfigParseContext_t& context,
+                                                  const sirDelimitedOptions_t& options ) noexcept
 {
 	if ( source.pfnRead == nullptr ) {
 		return SIR_CONFIG_INVALID_ARGUMENT;
@@ -253,7 +252,7 @@ sirConfigResult_t SIRDelimitedReader::completeField( void ) noexcept
 		m_nFieldCapacity = nNext;
 	}
 
-	sirDelimitedField_t &field = m_pFields[m_nFields++];
+	sirDelimitedField_t& field = m_pFields[m_nFields++];
 	field.nOffset = m_nFieldStart;
 	field.value.nBytes = m_nRowBytes - m_nFieldStart;
 	field.value.pBytes = nullptr;
@@ -267,7 +266,7 @@ sirConfigResult_t SIRDelimitedReader::completeRow( sirDelimitedRowView_t *pRow )
 		return SIR_CONFIG_LIMIT_EXCEEDED;
 	}
 	for ( uint32_t iField = 0; iField < m_nFields; ++iField ) {
-		sirDelimitedField_t &field = m_pFields[iField];
+		sirDelimitedField_t& field = m_pFields[iField];
 		field.value.pBytes = m_pRowBytes == nullptr ? "" : ( const char * )m_pRowBytes + field.nOffset;
 	}
 	pRow->pFields = m_pFields;
@@ -386,8 +385,8 @@ SIRDelimitedWriter::SIRDelimitedWriter( void ) noexcept
 {
 }
 
-sirConfigResult_t SIRDelimitedWriter::open( const sirConfigSink_t &sink, const sirConfigParseContext_t &context,
-                                            const sirDelimitedOptions_t &options ) noexcept
+sirConfigResult_t SIRDelimitedWriter::open( const sirConfigSink_t& sink, const sirConfigParseContext_t& context,
+                                            const sirDelimitedOptions_t& options ) noexcept
 {
 	if ( m_bOpened || sink.pfnWrite == nullptr || context.limits.nMaxOutputBytes == 0 || context.limits.nMaxRows == 0 ||
 	     context.limits.nMaxColumns == 0 || context.limits.nMaxScalarBytes == 0 || context.limits.nMaxRowBytes == 0 ||
@@ -402,7 +401,7 @@ sirConfigResult_t SIRDelimitedWriter::open( const sirConfigSink_t &sink, const s
 	return SIR_CONFIG_OK;
 }
 
-bool SIRDelimitedWriter::needsQuote( const sirStringView_t &field ) const noexcept
+bool SIRDelimitedWriter::needsQuote( const sirStringView_t& field ) const noexcept
 {
 	for ( uint32_t iByte = 0; iByte < field.nBytes; ++iByte ) {
 		const uint8_t nByte = ( uint8_t )field.pBytes[iByte];
@@ -421,7 +420,7 @@ sirConfigResult_t SIRDelimitedWriter::computeRowBytes( const sirStringView_t *pF
 	}
 	uint64_t nTotal = ( uint64_t )( nFieldCount - 1 ) + ( m_Options.bWriteCRLF ? 2u : 1u );
 	for ( uint32_t iField = 0; iField < nFieldCount; ++iField ) {
-		const sirStringView_t &field = pFields[iField];
+		const sirStringView_t& field = pFields[iField];
 		if ( ( field.pBytes == nullptr && field.nBytes != 0 ) || field.nBytes > m_Limits.nMaxScalarBytes ) {
 			return SIR_CONFIG_INVALID_ARGUMENT;
 		}
@@ -493,7 +492,7 @@ sirConfigResult_t SIRDelimitedWriter::writeRow( const sirStringView_t *pFields, 
 				return eResult;
 			}
 		}
-		const sirStringView_t &field = pFields[iField];
+		const sirStringView_t& field = pFields[iField];
 		const bool bQuoted = needsQuote( field );
 		if ( bQuoted ) {
 			eResult = writeByte( m_Options.nQuote );

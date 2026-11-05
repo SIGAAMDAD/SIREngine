@@ -128,18 +128,18 @@ public:
 
 	SIRAtomic( void ) noexcept;
 	explicit SIRAtomic( T value ) noexcept;
-	SIRAtomic( const SIRAtomic & ) = delete;
-	SIRAtomic &operator=( const SIRAtomic & ) = delete;
-	SIRAtomic( SIRAtomic && ) = delete;
-	SIRAtomic &operator=( SIRAtomic && ) = delete;
+	SIRAtomic( const SIRAtomic& ) = delete;
+	SIRAtomic& operator=( const SIRAtomic& ) = delete;
+	SIRAtomic( SIRAtomic&& ) = delete;
+	SIRAtomic& operator=( SIRAtomic&& ) = delete;
 
 	T load( sirMemoryOrder_t eOrder = SIR_MEMORY_ORDER_SEQUENTIAL ) const noexcept;
 	void store( T value, sirMemoryOrder_t eOrder = SIR_MEMORY_ORDER_SEQUENTIAL ) noexcept;
 	T exchange( T desired, sirMemoryOrder_t eOrder = SIR_MEMORY_ORDER_SEQUENTIAL ) noexcept;
-	bool compareExchangeStrong( T &expected, T desired, sirMemoryOrder_t eOrder = SIR_MEMORY_ORDER_SEQUENTIAL ) noexcept;
-	bool compareExchangeStrong( T &expected, T desired, sirMemoryOrder_t eSuccess, sirMemoryOrder_t eFailure ) noexcept;
-	bool compareExchangeWeak( T &expected, T desired, sirMemoryOrder_t eOrder = SIR_MEMORY_ORDER_SEQUENTIAL ) noexcept;
-	bool compareExchangeWeak( T &expected, T desired, sirMemoryOrder_t eSuccess, sirMemoryOrder_t eFailure ) noexcept;
+	bool compareExchangeStrong( T& expected, T desired, sirMemoryOrder_t eOrder = SIR_MEMORY_ORDER_SEQUENTIAL ) noexcept;
+	bool compareExchangeStrong( T& expected, T desired, sirMemoryOrder_t eSuccess, sirMemoryOrder_t eFailure ) noexcept;
+	bool compareExchangeWeak( T& expected, T desired, sirMemoryOrder_t eOrder = SIR_MEMORY_ORDER_SEQUENTIAL ) noexcept;
+	bool compareExchangeWeak( T& expected, T desired, sirMemoryOrder_t eSuccess, sirMemoryOrder_t eFailure ) noexcept;
 
 	template <typename U = T,
 	          typename std::enable_if<std::is_same<U, T>::value && ( std::is_integral<U>::value || std::is_floating_point<U>::value ) &&
@@ -261,13 +261,13 @@ T SIRAtomic<T>::exchange( T desired, sirMemoryOrder_t eOrder ) noexcept
 }
 
 template <typename T>
-bool SIRAtomic<T>::compareExchangeStrong( T &expected, T desired, sirMemoryOrder_t eOrder ) noexcept
+bool SIRAtomic<T>::compareExchangeStrong( T& expected, T desired, sirMemoryOrder_t eOrder ) noexcept
 {
 	return compareExchangeStrong( expected, desired, eOrder, SIRAtomicOrder::failureOrder( eOrder ) );
 }
 
 template <typename T>
-bool SIRAtomic<T>::compareExchangeStrong( T &expected, T desired, sirMemoryOrder_t eSuccess, sirMemoryOrder_t eFailure ) noexcept
+bool SIRAtomic<T>::compareExchangeStrong( T& expected, T desired, sirMemoryOrder_t eSuccess, sirMemoryOrder_t eFailure ) noexcept
 {
 	const sirMemoryOrder_t eNormalized = SIRAtomicOrder::normalizeFailure( eSuccess, eFailure );
 	return m_value.compare_exchange_strong( expected, desired, SIRAtomicOrder::toNative( eSuccess ),
@@ -275,13 +275,13 @@ bool SIRAtomic<T>::compareExchangeStrong( T &expected, T desired, sirMemoryOrder
 }
 
 template <typename T>
-bool SIRAtomic<T>::compareExchangeWeak( T &expected, T desired, sirMemoryOrder_t eOrder ) noexcept
+bool SIRAtomic<T>::compareExchangeWeak( T& expected, T desired, sirMemoryOrder_t eOrder ) noexcept
 {
 	return compareExchangeWeak( expected, desired, eOrder, SIRAtomicOrder::failureOrder( eOrder ) );
 }
 
 template <typename T>
-bool SIRAtomic<T>::compareExchangeWeak( T &expected, T desired, sirMemoryOrder_t eSuccess, sirMemoryOrder_t eFailure ) noexcept
+bool SIRAtomic<T>::compareExchangeWeak( T& expected, T desired, sirMemoryOrder_t eSuccess, sirMemoryOrder_t eFailure ) noexcept
 {
 	const sirMemoryOrder_t eNormalized = SIRAtomicOrder::normalizeFailure( eSuccess, eFailure );
 	return m_value.compare_exchange_weak( expected, desired, SIRAtomicOrder::toNative( eSuccess ),
@@ -513,8 +513,8 @@ class SIRAtomicFlag
 {
 public:
 	SIRAtomicFlag( void ) noexcept;
-	SIRAtomicFlag( const SIRAtomicFlag & ) = delete;
-	SIRAtomicFlag &operator=( const SIRAtomicFlag & ) = delete;
+	SIRAtomicFlag( const SIRAtomicFlag& ) = delete;
+	SIRAtomicFlag& operator=( const SIRAtomicFlag& ) = delete;
 	bool test( sirMemoryOrder_t eOrder = SIR_MEMORY_ORDER_SEQUENTIAL ) const noexcept;
 	bool testAndSet( sirMemoryOrder_t eOrder = SIR_MEMORY_ORDER_SEQUENTIAL ) noexcept;
 	void clear( sirMemoryOrder_t eOrder = SIR_MEMORY_ORDER_SEQUENTIAL ) noexcept;

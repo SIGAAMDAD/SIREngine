@@ -25,7 +25,7 @@ public:
 	{
 		return SIR_INPUT_TEST;
 	}
-	void sample( SIRInputService &input ) noexcept override
+	void sample( SIRInputService& input ) noexcept override
 	{
 		++m_nSamples;
 		if ( m_bConnectOnSample ) {
@@ -33,7 +33,7 @@ public:
 			( void )input.connect( { 0, 99, id(), SIR_INPUT_KEYBOARD }, &m_hDevice );
 		}
 	}
-	void resynchronize( SIRInputService &input ) noexcept override
+	void resynchronize( SIRInputService& input ) noexcept override
 	{
 		( void )input;
 		++m_nResyncs;
@@ -45,7 +45,7 @@ public:
 		( void )nRight;
 		return false;
 	}
-	void stop( SIRInputService &input ) noexcept override
+	void stop( SIRInputService& input ) noexcept override
 	{
 		( void )input;
 		++m_nStops;
@@ -64,7 +64,7 @@ typedef struct sirInputAppTestContext_s
 	bool bReject;
 } sirInputAppTestContext_t;
 
-static bool sirApplicationInputPump( SIRInputService &input, void *pContext )
+static bool sirApplicationInputPump( SIRInputService& input, void *pContext )
 {
 	sirInputAppTestContext_t *pTest = ( sirInputAppTestContext_t * )pContext;
 	++pTest->nPumps;

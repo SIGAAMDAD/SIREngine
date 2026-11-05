@@ -49,7 +49,7 @@ class SIRInputUIDispatch
 {
 public:
 	SIRInputUIDispatch( void ) noexcept;
-	bool dispatch( const SIRInputService &input, const sirInputUIConsumer_t &consumer ) noexcept;
+	bool dispatch( const SIRInputService& input, const sirInputUIConsumer_t& consumer ) noexcept;
 	void reset( void ) noexcept;
 
 private:

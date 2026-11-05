@@ -17,7 +17,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Core/Platform/Input/SIRInputService.h>
 #include <Core/Platform/SIRPlatformTime.h>
 
-bool sirInputDecodeWindowsRawRecord( SIRInputService &service, const RAWINPUT &input ) noexcept
+bool sirInputDecodeWindowsRawRecord( SIRInputService& service, const RAWINPUT& input ) noexcept
 {
 	if ( input.header.dwType != RIM_TYPEKEYBOARD && input.header.dwType != RIM_TYPEMOUSE ) {
 		return true;
@@ -34,7 +34,7 @@ bool sirInputDecodeWindowsRawRecord( SIRInputService &service, const RAWINPUT &i
 		return false;
 	}
 	if ( eClass == SIR_INPUT_KEYBOARD ) {
-		const RAWKEYBOARD &key = input.data.keyboard;
+		const RAWKEYBOARD& key = input.data.keyboard;
 		if ( key.MakeCode == 0 ) {
 			return true;
 		}
@@ -43,7 +43,7 @@ bool sirInputDecodeWindowsRawRecord( SIRInputService &service, const RAWINPUT &i
 		const sirInputControlChange_t change = { SIR_INPUT_BUTTON, nScan, ( key.Flags & RI_KEY_BREAK ) ? 0 : 1 };
 		return service.emitControls( SIR_INPUT_WIN_RAW, hDevice, &change, 1, nReceivedNs );
 	}
-	const RAWMOUSE &mouse = input.data.mouse;
+	const RAWMOUSE& mouse = input.data.mouse;
 	sirInputControlChange_t changes[10] = {};
 	uint32_t nCount = 0;
 	const uint16_t nDown[5] = { RI_MOUSE_LEFT_BUTTON_DOWN, RI_MOUSE_RIGHT_BUTTON_DOWN, RI_MOUSE_MIDDLE_BUTTON_DOWN, RI_MOUSE_BUTTON_4_DOWN,
@@ -78,7 +78,7 @@ bool sirInputDecodeWindowsRawRecord( SIRInputService &service, const RAWINPUT &i
 
 // Validate every variable-length native record before following its aligned stride.
 // The kernel owns the buffer; the input service owns event/order publication.
-bool sirInputDecodeWindowsRawBatch( SIRInputService &service, const RAWINPUT *pRecords, uint32_t nCount, uint32_t nCapacityBytes ) noexcept
+bool sirInputDecodeWindowsRawBatch( SIRInputService& service, const RAWINPUT *pRecords, uint32_t nCount, uint32_t nCapacityBytes ) noexcept
 {
 	if ( pRecords == nullptr || nCount == 0 || nCapacityBytes < sizeof( RAWINPUTHEADER ) ) {
 		return false;

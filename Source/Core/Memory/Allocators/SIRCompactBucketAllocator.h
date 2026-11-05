@@ -120,11 +120,11 @@ public:
 	SIRCompactBucketAllocator( void );
 	~SIRCompactBucketAllocator( void );
 	static bool retireRegistered( SIRCompactBucketAllocator *pAllocator );
-	SIRCompactBucketAllocator( const SIRCompactBucketAllocator & ) = delete;
-	SIRCompactBucketAllocator &operator=( const SIRCompactBucketAllocator & ) = delete;
+	SIRCompactBucketAllocator( const SIRCompactBucketAllocator& ) = delete;
+	SIRCompactBucketAllocator& operator=( const SIRCompactBucketAllocator& ) = delete;
 
-	static uint64_t getRequiredMetadataBytes( uint64_t nSegmentBytes, const sirCompactBucketConfig_t &config );
-	bool init( SIRMemorySegment *pSegment, const sirCompactBucketConfig_t &config );
+	static uint64_t getRequiredMetadataBytes( uint64_t nSegmentBytes, const sirCompactBucketConfig_t& config );
+	bool init( SIRMemorySegment *pSegment, const sirCompactBucketConfig_t& config );
 	bool attach( uint32_t *pSeat = nullptr );
 	bool detach( void );
 	bool retireThread( void );

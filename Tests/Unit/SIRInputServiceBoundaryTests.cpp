@@ -28,13 +28,13 @@ public:
 		return m_eBackend;
 	}
 
-	void sample( SIRInputService &input ) noexcept override
+	void sample( SIRInputService& input ) noexcept override
 	{
 		( void )input;
 		++m_nSamples;
 	}
 
-	void resynchronize( SIRInputService &input ) noexcept override
+	void resynchronize( SIRInputService& input ) noexcept override
 	{
 		( void )input;
 		++m_nResyncs;
@@ -64,7 +64,7 @@ public:
 		return true;
 	}
 
-	void stop( SIRInputService &input ) noexcept override
+	void stop( SIRInputService& input ) noexcept override
 	{
 		( void )input;
 		++m_nStops;

@@ -38,7 +38,7 @@ bool SIRInputService::hasBackend( sirInputBackendId_t eSource ) const noexcept
 	return false;
 }
 
-bool SIRInputService::attach( SIRInputBackend &backend ) noexcept
+bool SIRInputService::attach( SIRInputBackend& backend ) noexcept
 {
 	if ( m_bStopping || m_State.collecting() || m_nBackendCount == SIR_INPUT_BACKEND_CAPACITY || backend.id() == 0 ||
 	     hasBackend( backend.id() ) ) {
@@ -109,7 +109,7 @@ const sirInputFrame_t *SIRInputService::frame( void ) const noexcept
 	return m_State.frame();
 }
 
-bool SIRInputService::recordReplayTick( SIRInputReplayTape &tape, const sirInputReplayKey_t *pKeys, uint32_t nCount ) const noexcept
+bool SIRInputService::recordReplayTick( SIRInputReplayTape& tape, const sirInputReplayKey_t *pKeys, uint32_t nCount ) const noexcept
 {
 	const sirInputFrame_t *pFrame = m_State.frame();
 	if ( m_bStopping || m_bReplayActive || m_State.collecting() || pFrame == nullptr ) {
@@ -118,7 +118,7 @@ bool SIRInputService::recordReplayTick( SIRInputReplayTape &tape, const sirInput
 	return tape.append( pFrame->nTick, m_Actions, pKeys, nCount );
 }
 
-bool SIRInputService::captureHistoryTick( SIRInputHistory &history, const sirInputReplayKey_t *pKeys, uint32_t nCount ) const noexcept
+bool SIRInputService::captureHistoryTick( SIRInputHistory& history, const sirInputReplayKey_t *pKeys, uint32_t nCount ) const noexcept
 {
 	const sirInputFrame_t *pFrame = m_State.frame();
 	if ( m_bStopping || m_State.collecting() || pFrame == nullptr || nCount > SIR_INPUT_ACTION_CAPACITY ||
@@ -147,7 +147,7 @@ bool SIRInputService::startReplay( void ) noexcept
 	return true;
 }
 
-bool SIRInputService::queueReplayTick( const sirInputReplayFrame_t &frame ) noexcept
+bool SIRInputService::queueReplayTick( const sirInputReplayFrame_t& frame ) noexcept
 {
 	if ( !m_bReplayActive || !m_State.collecting() || m_bReplayQueued || frame.nTick != m_nCollectingTick ||
 	     !SIRInputReplayTape::validateFrame( frame ) ) {
@@ -158,7 +158,7 @@ bool SIRInputService::queueReplayTick( const sirInputReplayFrame_t &frame ) noex
 	return true;
 }
 
-bool SIRInputService::queueHistoryTick( const SIRInputHistory &history, uint64_t nTick ) noexcept
+bool SIRInputService::queueHistoryTick( const SIRInputHistory& history, uint64_t nTick ) noexcept
 {
 	if ( !m_bReplayActive || !m_State.collecting() || nTick != m_nCollectingTick ) {
 		return false;
@@ -190,27 +190,27 @@ bool SIRInputService::queryAction( uint32_t nActionId, uint32_t nUser, sirInputA
 	return m_Actions.query( nActionId, nUser, pOut );
 }
 
-SIRInputActions &SIRInputService::actions( void ) noexcept
+SIRInputActions& SIRInputService::actions( void ) noexcept
 {
 	return m_Actions;
 }
 
-const SIRInputActions &SIRInputService::actions( void ) const noexcept
+const SIRInputActions& SIRInputService::actions( void ) const noexcept
 {
 	return m_Actions;
 }
 
-SIRInputText &SIRInputService::text( void ) noexcept
+SIRInputText& SIRInputService::text( void ) noexcept
 {
 	return m_Text;
 }
 
-const SIRInputText &SIRInputService::text( void ) const noexcept
+const SIRInputText& SIRInputService::text( void ) const noexcept
 {
 	return m_Text;
 }
 
-bool SIRInputService::scheduleRumble( const sirInputHapticRequest_t &request, sirInputHapticHandle_t *pHandle ) noexcept
+bool SIRInputService::scheduleRumble( const sirInputHapticRequest_t& request, sirInputHapticHandle_t *pHandle ) noexcept
 {
 	if ( m_bStopping || ( hapticCapabilities( request.hDevice ) & SIR_INPUT_HAPTIC_CAP_RUMBLE ) == 0 ) {
 		return false;
@@ -293,7 +293,7 @@ bool SIRInputService::verifyOwner( sirInputBackendId_t eSource, sirInputDeviceId
 	return hasBackend( eSource ) && m_Registry.describe( id, pOut ) && pOut->key.eBackend == eSource;
 }
 
-bool SIRInputService::connect( const sirInputHardwareKey_t &key, sirInputDeviceId_t *pOut ) noexcept
+bool SIRInputService::connect( const sirInputHardwareKey_t& key, sirInputDeviceId_t *pOut ) noexcept
 {
 	if ( m_bStopping || !m_State.collecting() || !hasBackend( key.eBackend ) || pOut == nullptr || !m_State.canPost( 1 ) ||
 	     !m_Registry.connect( key, pOut ) ) {

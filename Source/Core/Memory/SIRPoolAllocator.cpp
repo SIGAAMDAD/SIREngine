@@ -247,7 +247,7 @@ bool SIRPoolAllocator::free( void *pMemory )
 	}
 	const uint32_t nSlot = ( ( uint32_t )( nIndex ) );
 	const uint64_t nMask = 1ull << ( nSlot % 64 );
-	uint64_t &nWord = m_pLiveBits[nSlot / 64];
+	uint64_t& nWord = m_pLiveBits[nSlot / 64];
 	if ( ( nWord & nMask ) == 0 ) {
 		return false;
 	}

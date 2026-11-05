@@ -32,13 +32,13 @@ class SIRLinuxX11Backend final : public SIRInputBackend
 public:
 	explicit SIRLinuxX11Backend( void ) noexcept;
 	sirInputBackendId_t id( void ) const noexcept override;
-	void sample( SIRInputService &service ) noexcept override;
-	void resynchronize( SIRInputService &service ) noexcept override;
+	void sample( SIRInputService& service ) noexcept override;
+	void resynchronize( SIRInputService& service ) noexcept override;
 	bool vibrate( sirInputDeviceId_t hDevice, uint16_t nLeft, uint16_t nRight ) noexcept override;
-	void stop( SIRInputService &service ) noexcept override;
-	bool attachWindow( SIRInputService &service, Window hWindow ) noexcept;
+	void stop( SIRInputService& service ) noexcept override;
+	bool attachWindow( SIRInputService& service, Window hWindow ) noexcept;
 	bool enableRawPointer( Display *pDisplay ) noexcept;
-	bool processEvent( SIRInputService &service, const XEvent &event ) noexcept;
+	bool processEvent( SIRInputService& service, const XEvent& event ) noexcept;
 	static long requiredEventMask( void ) noexcept;
 	static bool enableDetectableRepeat( Display *pDisplay ) noexcept;
 

@@ -60,7 +60,7 @@ class SIRInputReplayTape
 public:
 	SIRInputReplayTape( void ) noexcept;
 	bool beginRecord( uint8_t *pBuffer, uint32_t nCapacity ) noexcept;
-	bool append( uint64_t nTick, const SIRInputActions &actions, const sirInputReplayKey_t *pKeys, uint32_t nCount ) noexcept;
+	bool append( uint64_t nTick, const SIRInputActions& actions, const sirInputReplayKey_t *pKeys, uint32_t nCount ) noexcept;
 	bool beginRead( const uint8_t *pBuffer, uint32_t nBytes ) noexcept;
 	bool next( sirInputReplayFrame_t *pFrame ) noexcept;
 	bool seek( uint64_t nTick, sirInputReplayFrame_t *pFrame ) noexcept;
@@ -69,8 +69,8 @@ public:
 	bool finished( void ) const noexcept;
 	uint32_t bytesUsed( void ) const noexcept;
 	sirInputReplayMode_t mode( void ) const noexcept;
-	static bool validateFrame( const sirInputReplayFrame_t &frame ) noexcept;
-	static bool query( const sirInputReplayFrame_t &frame, uint32_t nActionId, uint32_t nUser, sirInputActionState_t *pOut ) noexcept;
+	static bool validateFrame( const sirInputReplayFrame_t& frame ) noexcept;
+	static bool query( const sirInputReplayFrame_t& frame, uint32_t nActionId, uint32_t nUser, sirInputActionState_t *pOut ) noexcept;
 
 private:
 	static void write16( uint8_t *pBytes, uint16_t nValue ) noexcept;
@@ -80,7 +80,7 @@ private:
 	static uint32_t read32( const uint8_t *pBytes ) noexcept;
 	static uint64_t read64( const uint8_t *pBytes ) noexcept;
 	static uint32_t checksum( const uint8_t *pBytes, uint32_t nLength ) noexcept;
-	static bool valid( const sirInputActionState_t &state ) noexcept;
+	static bool valid( const sirInputActionState_t& state ) noexcept;
 
 	uint8_t *m_pWrite;
 	const uint8_t *m_pRead;

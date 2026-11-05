@@ -68,13 +68,13 @@ class SIRLinuxEvdevBackend final : public SIRInputBackend
 public:
 	SIRLinuxEvdevBackend( void ) noexcept;
 	sirInputBackendId_t id( void ) const noexcept override;
-	void sample( SIRInputService &service ) noexcept override;
-	void resynchronize( SIRInputService &service ) noexcept override;
+	void sample( SIRInputService& service ) noexcept override;
+	void resynchronize( SIRInputService& service ) noexcept override;
 	bool vibrate( sirInputDeviceId_t id, uint16_t nLeft, uint16_t nRight ) noexcept override;
 	uint32_t hapticCapabilities( sirInputDeviceId_t hDevice ) const noexcept override;
-	void stop( SIRInputService &service ) noexcept override;
-	bool discover( SIRInputService &service, const char *pszDir = "/dev/input" ) noexcept;
-	bool addProfile( const sirInputControllerProfile_t &profile ) noexcept;
+	void stop( SIRInputService& service ) noexcept override;
+	bool discover( SIRInputService& service, const char *pszDir = "/dev/input" ) noexcept;
+	bool addProfile( const sirInputControllerProfile_t& profile ) noexcept;
 	bool importCookedProfiles( const uint8_t *pBytes, uint32_t nBytes ) noexcept;
 	bool loadCookedProfilesFile( const char *pszPath ) noexcept;
 	static uint64_t physicalKey( const char *pszPhys, uint16_t nVendor, uint16_t nProduct ) noexcept;
@@ -84,12 +84,12 @@ public:
 
 private:
 	friend class SIRInputEvdevBatchTestPeer;
-	bool openDevice( SIRInputService &service, const char *pszPath ) noexcept;
-	bool requery( SIRInputService &service, sirInputEvdevSlot_t &slot, bool bReset ) noexcept;
-	void closeDevice( SIRInputService &service, sirInputEvdevSlot_t &slot ) noexcept;
-	void pollHotplug( SIRInputService &service ) noexcept;
-	bool queueChange( sirInputEvdevSlot_t &slot, sirInputSignal_t eSignal, uint16_t nCode, int32_t nValue ) noexcept;
-	static int16_t resolveButton( const sirInputEvdevSlot_t &slot, uint16_t nCode ) noexcept;
+	bool openDevice( SIRInputService& service, const char *pszPath ) noexcept;
+	bool requery( SIRInputService& service, sirInputEvdevSlot_t& slot, bool bReset ) noexcept;
+	void closeDevice( SIRInputService& service, sirInputEvdevSlot_t& slot ) noexcept;
+	void pollHotplug( SIRInputService& service ) noexcept;
+	bool queueChange( sirInputEvdevSlot_t& slot, sirInputSignal_t eSignal, uint16_t nCode, int32_t nValue ) noexcept;
+	static int16_t resolveButton( const sirInputEvdevSlot_t& slot, uint16_t nCode ) noexcept;
 	sirInputEvdevSlot_t m_Slots[SIR_INPUT_EVDEV_CAPACITY];
 	SIRInputControllerProfiles m_Profiles;
 	bool m_bProfilesFrozen;

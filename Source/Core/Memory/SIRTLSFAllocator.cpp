@@ -156,7 +156,7 @@ void SIRTLSFAllocator::insertFree( uint32_t nOffset )
 	uint32_t nFirst = 0;
 	uint32_t nSecond = 0;
 	mapSize( SIRHeapBlock::size( pBlock ), false, &nFirst, &nSecond );
-	uint32_t &nHead = m_nFreeHeads[nFirst][nSecond];
+	uint32_t& nHead = m_nFreeHeads[nFirst][nSecond];
 	pBlock->nSizeAndFlags |= SIRHeapBlock::FREE;
 	pBlock->nPreviousFreeOffset = SIRHeapBlock::NONE;
 	pBlock->nNextFreeOffset = nHead;
@@ -174,7 +174,7 @@ void SIRTLSFAllocator::removeFree( uint32_t nOffset )
 	uint32_t nFirst = 0;
 	uint32_t nSecond = 0;
 	mapSize( SIRHeapBlock::size( pBlock ), false, &nFirst, &nSecond );
-	uint32_t &nHead = m_nFreeHeads[nFirst][nSecond];
+	uint32_t& nHead = m_nFreeHeads[nFirst][nSecond];
 	if ( pBlock->nPreviousFreeOffset == SIRHeapBlock::NONE ) {
 		nHead = pBlock->nNextFreeOffset;
 	} else {

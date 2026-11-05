@@ -34,7 +34,7 @@ bool SIRInputDeviceRegistry::resolve( sirInputBackendId_t eBackend, uint64_t nNa
 		return false;
 	}
 	for ( uint32_t i = 0; i < SIR_INPUT_DEVICE_CAPACITY; ++i ) {
-		const sirInputDeviceDescriptor_t &record = m_Devices[i];
+		const sirInputDeviceDescriptor_t& record = m_Devices[i];
 		if ( record.bConnected && record.key.eBackend == eBackend && record.key.nNativeId == nNativeId ) {
 			*pResult = record.id;
 			return true;
@@ -43,7 +43,7 @@ bool SIRInputDeviceRegistry::resolve( sirInputBackendId_t eBackend, uint64_t nNa
 	return false;
 }
 
-bool SIRInputDeviceRegistry::connect( const sirInputHardwareKey_t &key, sirInputDeviceId_t *pResult ) noexcept
+bool SIRInputDeviceRegistry::connect( const sirInputHardwareKey_t& key, sirInputDeviceId_t *pResult ) noexcept
 {
 	if ( pResult == nullptr || key.nNativeId == 0 || key.eBackend == 0 || key.eClass > SIR_INPUT_CONTROLLER ) {
 		return false;
@@ -53,13 +53,13 @@ bool SIRInputDeviceRegistry::connect( const sirInputHardwareKey_t &key, sirInput
 		return false;
 	}
 	for ( uint32_t i = 0; i < SIR_INPUT_DEVICE_CAPACITY; ++i ) {
-		const sirInputDeviceDescriptor_t &record = m_Devices[i];
+		const sirInputDeviceDescriptor_t& record = m_Devices[i];
 		if ( key.nPhysicalId != 0 && record.bConnected && record.key.nPhysicalId == key.nPhysicalId && record.key.eClass == key.eClass ) {
 			return false; // GameInput/XInput/HID duplicates must be arbitrated before publication.
 		}
 	}
 	for ( uint32_t i = 0; i < SIR_INPUT_DEVICE_CAPACITY; ++i ) {
-		sirInputDeviceDescriptor_t &record = m_Devices[i];
+		sirInputDeviceDescriptor_t& record = m_Devices[i];
 		if ( !record.bConnected ) {
 			record.key = key;
 			record.nUserId = SIR_INPUT_NO_USER;
@@ -86,7 +86,7 @@ bool SIRInputDeviceRegistry::authorize( sirInputBackendId_t eSource, sirInputDev
 	if ( pClass == nullptr || id.nSlot >= SIR_INPUT_DEVICE_CAPACITY ) {
 		return false;
 	}
-	const sirInputDeviceDescriptor_t &record = m_Devices[id.nSlot];
+	const sirInputDeviceDescriptor_t& record = m_Devices[id.nSlot];
 	if ( !record.bConnected || record.id.nGeneration != id.nGeneration || record.key.eBackend != eSource ) {
 		return false;
 	}
@@ -103,10 +103,10 @@ bool SIRInputDeviceRegistry::inspectSlot( uint32_t nSlot, sirInputDeviceDescript
 	return true;
 }
 
-void SIRInputDeviceRegistry::snapshot( sirInputFrame_t &frame ) const noexcept
+void SIRInputDeviceRegistry::snapshot( sirInputFrame_t& frame ) const noexcept
 {
 	for ( uint32_t i = 0; i < SIR_INPUT_DEVICE_CAPACITY; ++i ) {
-		const sirInputDeviceDescriptor_t &record = m_Devices[i];
+		const sirInputDeviceDescriptor_t& record = m_Devices[i];
 		frame.devices[i] = record.id;
 		frame.nConnected[i] = record.bConnected ? 1 : 0;
 		frame.nUsers[i] = record.bConnected ? record.nUserId : SIR_INPUT_NO_USER;
@@ -127,7 +127,7 @@ bool SIRInputDeviceRegistry::disconnect( sirInputDeviceId_t id ) noexcept
 	if ( !valid( id ) ) {
 		return false;
 	}
-	sirInputDeviceDescriptor_t &record = m_Devices[id.nSlot];
+	sirInputDeviceDescriptor_t& record = m_Devices[id.nSlot];
 	record.bConnected = false;
 	record.nUserId = SIR_INPUT_NO_USER;
 	++record.id.nGeneration;
@@ -146,7 +146,7 @@ uint32_t SIRInputDeviceRegistry::count( void ) const noexcept
 void SIRInputDeviceRegistry::reset( void ) noexcept
 {
 	for ( uint32_t i = 0; i < SIR_INPUT_DEVICE_CAPACITY; ++i ) {
-		sirInputDeviceDescriptor_t &record = m_Devices[i];
+		sirInputDeviceDescriptor_t& record = m_Devices[i];
 		record.bConnected = false;
 		record.nUserId = SIR_INPUT_NO_USER;
 		++record.id.nGeneration;

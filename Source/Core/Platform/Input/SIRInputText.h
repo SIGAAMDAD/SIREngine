@@ -60,7 +60,7 @@ public:
 	bool setPreeditCodepoints( const uint32_t *pCodepoints, uint32_t nCount, uint32_t nCaret, uint32_t nSelection ) noexcept;
 	bool setPreeditUtf8( const char *pszUtf8, uint32_t nBytes, uint32_t nCaret, uint32_t nSelection ) noexcept;
 	void clearPreedit( void ) noexcept;
-	const sirInputTextSnapshot_t &snapshot( void ) const noexcept;
+	const sirInputTextSnapshot_t& snapshot( void ) const noexcept;
 	void reset( void ) noexcept;
 	static bool decodeUtf8( const char *pszUtf8, uint32_t nBytes, uint32_t *pOut, uint32_t nCapacity, uint32_t *pCount ) noexcept;
 

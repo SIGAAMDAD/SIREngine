@@ -154,7 +154,7 @@ SIRConditionVariable::~SIRConditionVariable()
 #endif
 }
 
-void SIRConditionVariable::wait( SIRMutex &mutex ) noexcept
+void SIRConditionVariable::wait( SIRMutex& mutex ) noexcept
 {
 #if defined( _WIN32 )
 	const BOOL bResult = SleepConditionVariableSRW( &m_hCondition, &mutex.m_hMutex, INFINITE, 0 );

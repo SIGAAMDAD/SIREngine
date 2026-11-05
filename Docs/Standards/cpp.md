@@ -18,6 +18,8 @@ Every SIREngine-owned header uses the 2023–2027 SIREngine MPLv2 notice, `__SIR
 
 - C++17, compiler extensions disabled; pinned clang-format 23.1.5 and the repository's `.clang-format`.
 - Four-column tabs, 140-column limit. Structural class/struct/enum/namespace/function opening braces on separate lines; braces always required on control flow.
+- Reference ampersands bind to their types (`T&`, `T&&`); pointer stars retain right alignment (`T *p`). The canonical `.clang-format` explicitly sets `ReferenceAlignment: Left` and `PointerAlignment: Right`.
+- In classes, order public/protected/private, then constructors/destructor, operators, getters/setters, and ordinary methods. Limit explicit function parameters to four and keep signatures on a single line where the 140-column limit permits.
 - Zero-argument methods use `( void )`. Use `nullptr`, meaningful `constexpr`, and source-justified `noexcept`.
 - Mandatory storage prefixes: `m_` instance fields, `s_` static storage, `g_` external globals. Semantic prefixes: `n` count, `i` index, `p` pointer, `sz` fixed array or C string, `psz` dynamically allocated array, `f` float, `b` boolean and `e` enum. Combine where applicable.
 - Shared constants, when introduced, use approved uppercase `SNAKE_CASE` `constexpr` declarations in the corresponding owning headers. The removed experimental `SIRConstants.h` is not an API.

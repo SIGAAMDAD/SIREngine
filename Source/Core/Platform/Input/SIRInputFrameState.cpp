@@ -76,7 +76,7 @@ void SIRInputFrameState::markStateDirty( uint32_t nSlot ) noexcept
 	m_nStateDirty[1] |= nMask;
 }
 
-bool SIRInputFrameState::append( const sirInputEvent_t &event ) noexcept
+bool SIRInputFrameState::append( const sirInputEvent_t& event ) noexcept
 {
 	if ( m_bOverflowed || m_nCount >= SIR_INPUT_EVENT_CAPACITY ) {
 		m_bOverflowed = true;
@@ -86,7 +86,7 @@ bool SIRInputFrameState::append( const sirInputEvent_t &event ) noexcept
 	return true;
 }
 
-bool SIRInputFrameState::apply( sirInputDeviceState_t &state, const sirInputControlChange_t &change ) const noexcept
+bool SIRInputFrameState::apply( sirInputDeviceState_t& state, const sirInputControlChange_t& change ) const noexcept
 {
 	if ( change.eSignal == SIR_INPUT_BUTTON ) {
 		if ( change.nControl >= SIR_INPUT_BUTTON_CAPACITY || ( change.nValue != 0 && change.nValue != 1 ) ) {
@@ -115,7 +115,7 @@ bool SIRInputFrameState::apply( sirInputDeviceState_t &state, const sirInputCont
 }
 
 bool SIRInputFrameState::postChanges( sirInputDeviceId_t id, sirInputDeviceClass_t eClass, const sirInputControlChange_t *pChanges,
-                                      uint32_t nCount, const sirInputTimestamp_t &time ) noexcept
+                                      uint32_t nCount, const sirInputTimestamp_t& time ) noexcept
 {
 	if ( !m_bCollecting || m_bOverflowed || id.nSlot >= SIR_INPUT_DEVICE_CAPACITY || ( nCount != 0 && pChanges == nullptr ) ||
 	     nCount > SIR_INPUT_EVENT_CAPACITY ) {
@@ -124,8 +124,8 @@ bool SIRInputFrameState::postChanges( sirInputDeviceId_t id, sirInputDeviceClass
 	// The common native path emits a single physical transition. Avoid a
 	// full device-state scratch copy and a second scan for that case.
 	if ( nCount == 1 ) {
-		const sirInputControlChange_t &change = pChanges[0];
-		sirInputDeviceState_t &state = m_Live[id.nSlot];
+		const sirInputControlChange_t& change = pChanges[0];
+		sirInputDeviceState_t& state = m_Live[id.nSlot];
 		bool bChanged = false;
 		if ( change.eSignal == SIR_INPUT_BUTTON ) {
 			if ( change.nControl >= SIR_INPUT_BUTTON_CAPACITY || ( change.nValue != 0 && change.nValue != 1 ) ) {
@@ -201,7 +201,7 @@ bool SIRInputFrameState::postChanges( sirInputDeviceId_t id, sirInputDeviceClass
 	sirInputDeviceState_t scratch = m_Live[id.nSlot];
 	uint32_t nChanges = 0;
 	for ( uint32_t i = 0; i < nCount; ++i ) {
-		const sirInputControlChange_t &change = pChanges[i];
+		const sirInputControlChange_t& change = pChanges[i];
 		if ( change.eSignal == SIR_INPUT_BUTTON && change.nControl >= SIR_INPUT_BUTTON_CAPACITY ) {
 			return false;
 		}
@@ -225,8 +225,8 @@ bool SIRInputFrameState::postChanges( sirInputDeviceId_t id, sirInputDeviceClass
 		return false;
 	}
 	for ( uint32_t i = 0; i < nCount; ++i ) {
-		const sirInputControlChange_t &change = pChanges[i];
-		sirInputDeviceState_t &state = m_Live[id.nSlot];
+		const sirInputControlChange_t& change = pChanges[i];
+		sirInputDeviceState_t& state = m_Live[id.nSlot];
 		bool bChanged = false;
 		if ( change.eSignal == SIR_INPUT_BUTTON ) {
 			const uint32_t nWord = change.nControl / 32;
@@ -271,7 +271,7 @@ bool SIRInputFrameState::postChanges( sirInputDeviceId_t id, sirInputDeviceClass
 }
 
 bool SIRInputFrameState::postDevice( sirInputDeviceId_t id, sirInputDeviceClass_t eClass, sirInputSignal_t eSignal,
-                                     const sirInputTimestamp_t &time ) noexcept
+                                     const sirInputTimestamp_t& time ) noexcept
 {
 	if ( !m_bCollecting || id.nSlot >= SIR_INPUT_DEVICE_CAPACITY ||
 	     ( eSignal != SIR_INPUT_CONNECTED && eSignal != SIR_INPUT_DISCONNECTED && eSignal != SIR_INPUT_RESYNC ) ) {
@@ -301,7 +301,7 @@ bool SIRInputFrameState::postDevice( sirInputDeviceId_t id, sirInputDeviceClass_
 }
 
 bool SIRInputFrameState::postPointer( sirInputDeviceId_t id, sirInputDeviceClass_t eClass, sirInputSignal_t eSignal, uint16_t nControl,
-                                      int32_t nX, int32_t nY, const sirInputTimestamp_t &time ) noexcept
+                                      int32_t nX, int32_t nY, const sirInputTimestamp_t& time ) noexcept
 {
 	if ( !m_bCollecting || m_bOverflowed || id.nSlot >= SIR_INPUT_DEVICE_CAPACITY || eClass != SIR_INPUT_POINTER ||
 	     ( eSignal != SIR_INPUT_MOTION && eSignal != SIR_INPUT_WHEEL ) ) {
@@ -322,7 +322,7 @@ bool SIRInputFrameState::postPointer( sirInputDeviceId_t id, sirInputDeviceClass
 		return false;
 	}
 	if ( eSignal == SIR_INPUT_MOTION ) {
-		sirInputDeviceState_t &state = m_Live[id.nSlot];
+		sirInputDeviceState_t& state = m_Live[id.nSlot];
 		state.nMotionX = saturateInputMovement( state.nMotionX, nX );
 		state.nMotionY = saturateInputMovement( state.nMotionY, nY );
 		const uint32_t nMask = UINT32_C( 1 ) << id.nSlot;
@@ -342,13 +342,13 @@ void SIRInputFrameState::clearDevice( sirInputDeviceId_t id ) noexcept
 	}
 }
 
-bool SIRInputFrameState::publish( const SIRInputDeviceRegistry &registry ) noexcept
+bool SIRInputFrameState::publish( const SIRInputDeviceRegistry& registry ) noexcept
 {
 	if ( !m_bCollecting || m_bOverflowed ) {
 		return false;
 	}
 	const uint32_t nNext = m_nPublishedIndex ^ 1;
-	sirInputFrame_t &frame = m_Frames[nNext];
+	sirInputFrame_t& frame = m_Frames[nNext];
 	frame.nTick = m_nTick;
 	frame.nCount = m_nCount;
 	frame.nResyncCount = m_nResync;
@@ -395,7 +395,7 @@ bool SIRInputFrameState::canPost( uint32_t nCount ) const noexcept
 	return m_bCollecting && !m_bOverflowed && nCount <= SIR_INPUT_EVENT_CAPACITY - m_nCount;
 }
 
-bool SIRInputFrameState::recover( const SIRInputDeviceRegistry &registry ) noexcept
+bool SIRInputFrameState::recover( const SIRInputDeviceRegistry& registry ) noexcept
 {
 	if ( !m_bCollecting || !m_bOverflowed ) {
 		return false;

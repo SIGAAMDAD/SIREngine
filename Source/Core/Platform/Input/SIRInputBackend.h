@@ -35,12 +35,12 @@ class SIRInputBackend
 public:
 	virtual ~SIRInputBackend() = default;
 	virtual sirInputBackendId_t id( void ) const noexcept = 0;
-	virtual void sample( SIRInputService &service ) noexcept = 0;
-	virtual void resynchronize( SIRInputService &service ) noexcept = 0;
+	virtual void sample( SIRInputService& service ) noexcept = 0;
+	virtual void resynchronize( SIRInputService& service ) noexcept = 0;
 	virtual bool vibrate( sirInputDeviceId_t hDevice, uint16_t nLeft, uint16_t nRight ) noexcept = 0;
 	virtual uint32_t hapticCapabilities( sirInputDeviceId_t hDevice ) const noexcept;
 	virtual bool vibrateTriggers( sirInputDeviceId_t hDevice, uint16_t nLeft, uint16_t nRight ) noexcept;
-	virtual void stop( SIRInputService &service ) noexcept = 0;
+	virtual void stop( SIRInputService& service ) noexcept = 0;
 };
 
 #endif // __SIRENGINE_SIRINPUTBACKEND_H__

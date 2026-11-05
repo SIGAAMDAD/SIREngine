@@ -21,7 +21,7 @@ SIRInputHaptics::SIRInputHaptics( void ) noexcept : m_Effects{}, m_Motors{}, m_n
 {
 }
 
-bool SIRInputHaptics::schedule( const sirInputHapticRequest_t &request, uint64_t nNowNs, sirInputHapticHandle_t *pHandle ) noexcept
+bool SIRInputHaptics::schedule( const sirInputHapticRequest_t& request, uint64_t nNowNs, sirInputHapticHandle_t *pHandle ) noexcept
 {
 	const uint64_t nDuration = ( uint64_t )request.nAttackMs + request.nSustainMs + request.nReleaseMs;
 	if ( request.hDevice.nSlot >= SIR_INPUT_DEVICE_CAPACITY || request.hDevice.nGeneration == 0 || nDuration == 0 ||
@@ -55,9 +55,9 @@ bool SIRInputHaptics::cancel( sirInputHapticHandle_t hEffect ) noexcept
 	return true;
 }
 
-uint32_t SIRInputHaptics::gain( const sirInputHapticEffect_t &effect, uint64_t nNowNs ) noexcept
+uint32_t SIRInputHaptics::gain( const sirInputHapticEffect_t& effect, uint64_t nNowNs ) noexcept
 {
-	const sirInputHapticRequest_t &request = effect.request;
+	const sirInputHapticRequest_t& request = effect.request;
 	const uint64_t nElapsed = nNowNs < effect.nStartNs ? 0 : ( nNowNs - effect.nStartNs ) / 1000000;
 	const uint64_t nAttackEnd = request.nAttackMs;
 	const uint64_t nSustainEnd = nAttackEnd + request.nSustainMs;
@@ -88,7 +88,7 @@ bool SIRInputHaptics::advance( uint64_t nNowNs, bool bPaused, sirInputRumbleSink
 		szPriority[i] = -1;
 	}
 	for ( uint32_t i = 0; i < SIR_INPUT_HAPTIC_EFFECT_CAPACITY; ++i ) {
-		sirInputHapticEffect_t &effect = m_Effects[i];
+		sirInputHapticEffect_t& effect = m_Effects[i];
 		if ( !effect.bActive ) {
 			continue;
 		}
@@ -127,7 +127,7 @@ bool SIRInputHaptics::advance( uint64_t nNowNs, bool bPaused, sirInputRumbleSink
 
 	bool bOkay = true;
 	for ( uint32_t i = 0; i < SIR_INPUT_DEVICE_CAPACITY; ++i ) {
-		sirInputHapticMotorState_t &motor = m_Motors[i];
+		sirInputHapticMotorState_t& motor = m_Motors[i];
 		if ( motor.bActive && ( szPriority[i] < 0 || motor.hDevice.nGeneration != szDevices[i].nGeneration ) ) {
 			if ( !pSink( pContext, motor.hDevice, 0, 0 ) ) {
 				bOkay = false;
@@ -163,7 +163,7 @@ void SIRInputHaptics::forgetDevice( sirInputDeviceId_t hDevice, sirInputRumbleSi
 		}
 	}
 	if ( hDevice.nSlot < SIR_INPUT_DEVICE_CAPACITY ) {
-		sirInputHapticMotorState_t &motor = m_Motors[hDevice.nSlot];
+		sirInputHapticMotorState_t& motor = m_Motors[hDevice.nSlot];
 		if ( motor.bActive && motor.hDevice.nGeneration == hDevice.nGeneration ) {
 			if ( pSink != nullptr ) {
 				( void )pSink( pContext, hDevice, 0, 0 );

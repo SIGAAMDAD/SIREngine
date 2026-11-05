@@ -23,7 +23,6 @@ of merchantability, fitness for a particular purpose and noninfringement.
 	#pragma once
 #endif
 // clang-format on
-
 #include <Core/Memory/SIRMemoryManager.h>
 #include <Core/Memory/SIRMemorySegment.h>
 #include <Core/Platform/SIRVirtualMemory.h>
@@ -65,7 +64,7 @@ public:
 	{
 		return m_nPage;
 	}
-	SIRMemoryManager &manager( void )
+	SIRMemoryManager& manager( void )
 	{
 		return m_Manager;
 	}
@@ -94,13 +93,13 @@ private:
 	uint64_t m_nState;
 };
 
-static bool sirTestDisjoint( const std::vector<sirTestLiveBlock_t> &blocks, const void *pMemory, uint64_t nBytes )
+static bool sirTestDisjoint( const std::vector<sirTestLiveBlock_t>& blocks, const void *pMemory, uint64_t nBytes )
 {
 	const uintptr_t nStart = ( uintptr_t )pMemory;
 	if ( nBytes == 0 || nStart > UINTPTR_MAX - nBytes ) {
 		return false;
 	}
-	for ( const sirTestLiveBlock_t &block : blocks ) {
+	for ( const sirTestLiveBlock_t& block : blocks ) {
 		const uintptr_t nExisting = ( uintptr_t )block.pMemory;
 		if ( nExisting < nStart + nBytes && nStart < nExisting + block.nRequested ) {
 			return false;
@@ -109,7 +108,7 @@ static bool sirTestDisjoint( const std::vector<sirTestLiveBlock_t> &blocks, cons
 	return true;
 }
 
-static bool sirTestPattern( const sirTestLiveBlock_t &block )
+static bool sirTestPattern( const sirTestLiveBlock_t& block )
 {
 	const uint8_t *pBytes = ( const uint8_t * )block.pMemory;
 	for ( uint32_t iByte = 0; iByte < block.nRequested; ++iByte ) {
@@ -123,7 +122,7 @@ static bool sirTestPattern( const sirTestLiveBlock_t &block )
 // Every trace starts with a fixed seed and keeps a byte-for-byte ledger of
 // live records, validating disjointness, requested sizes and alignment.
 template <typename TAllocator>
-static bool sirTestVariableTrace( TAllocator &allocator, uint32_t nIterations, uint32_t nMaximumSize, uint64_t nSeed )
+static bool sirTestVariableTrace( TAllocator& allocator, uint32_t nIterations, uint32_t nMaximumSize, uint64_t nSeed )
 {
 	SIRTestRandom random( nSeed );
 	std::vector<sirTestLiveBlock_t> live;
@@ -155,14 +154,14 @@ static bool sirTestVariableTrace( TAllocator &allocator, uint32_t nIterations, u
 		live.push_back( { pNew, nBytes, nPattern } );
 		++nSuccesses;
 		if ( ( iOperation & 63 ) == 0 ) {
-			for ( const sirTestLiveBlock_t &block : live ) {
+			for ( const sirTestLiveBlock_t& block : live ) {
 				if ( !sirTestPattern( block ) ) {
 					return false;
 				}
 			}
 		}
 	}
-	for ( const sirTestLiveBlock_t &block : live ) {
+	for ( const sirTestLiveBlock_t& block : live ) {
 		if ( !sirTestPattern( block ) || !allocator.free( block.pMemory ) ) {
 			return false;
 		}
@@ -171,7 +170,7 @@ static bool sirTestVariableTrace( TAllocator &allocator, uint32_t nIterations, u
 }
 
 template <typename TAllocator>
-static bool sirTestFixedTrace( TAllocator &allocator, uint32_t nIterations, uint32_t nPayloadBytes, uint64_t nSeed )
+static bool sirTestFixedTrace( TAllocator& allocator, uint32_t nIterations, uint32_t nPayloadBytes, uint64_t nSeed )
 {
 	SIRTestRandom random( nSeed );
 	std::vector<sirTestLiveBlock_t> live;
@@ -200,7 +199,7 @@ static bool sirTestFixedTrace( TAllocator &allocator, uint32_t nIterations, uint
 		live.push_back( { pNew, nPayloadBytes, nPattern } );
 		++nSuccesses;
 	}
-	for ( const sirTestLiveBlock_t &block : live ) {
+	for ( const sirTestLiveBlock_t& block : live ) {
 		if ( !sirTestPattern( block ) || !allocator.free( block.pMemory ) ) {
 			return false;
 		}

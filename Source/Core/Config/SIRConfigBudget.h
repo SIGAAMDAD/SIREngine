@@ -31,8 +31,8 @@ class SIRConfigBudget
 {
 public:
 	SIRConfigBudget( void ) noexcept;
-	SIRConfigBudget( const SIRConfigBudget & ) = delete;
-	SIRConfigBudget &operator=( const SIRConfigBudget & ) = delete;
+	SIRConfigBudget( const SIRConfigBudget& ) = delete;
+	SIRConfigBudget& operator=( const SIRConfigBudget& ) = delete;
 	~SIRConfigBudget( void ) noexcept;
 
 	bool init( const sirContainerAllocator_t *pBacking, uint64_t nHardLimitBytes ) noexcept;

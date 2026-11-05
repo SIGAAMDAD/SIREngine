@@ -1,0 +1,99 @@
+name: Platform I/O regression and benchmark validation
+
+on:
+  push:
+    branches:
+      - 'test/platform-io-*'
+  pull_request:
+    branches:
+      - develop
+      - main
+      - integration/grdg-scheduler-platform-20261103
+    paths:
+      - 'Source/Core/Platform/**'
+      - 'Tests/Unit/SIRPlatformIO*'
+      - 'Tests/Benchmarks/SIRPlatformIOBenchmarks.cpp'
+      - 'Tests/Profiling/ValidateSIRGRDGBenchmarks.py'
+      - 'Tests/Unit/CMakeLists.txt'
+      - 'Tests/Benchmarks/CMakeLists.txt'
+      - '.github/workflows/platform-io-validation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  owned-format:
+    name: Pinned C++ formatting and source conventions
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install pinned clang-format
+        run: python3 -m pip install --disable-pip-version-check clang-format==23.1.5
+      - name: Enforce source formatting
+        run: cmake -P Build/CMake/CIFormat.cmake
+      - name: Enforce owned-source structure
+        run: cmake -P Build/CMake/CIStyle.cmake
+
+  platform-io:
+    name: Native I/O regression / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+          - os: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Fetch GoogleTest
+        run: git submodule update --init ThirdParty/GoogleTest
+      - name: Configure MSVC
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+      - uses: ./.github/actions/setup-build-tools
+      - name: Configure native C++17
+        run: cmake --preset dev -DSIR_WITH_GOOGLETEST=ON
+      - name: Build production platform library and regression tests
+        run: cmake --build --preset dev
+      - name: Run platform regressions repeatedly
+        run: >
+          ctest --preset dev --output-on-failure --no-tests=error
+          -R '^core[.]platform[.]' --repeat until-fail:5
+
+  platform-benchmarks:
+    name: Optimized native I/O / Linux
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Fetch profiling sources
+        run: git submodule update --init ThirdParty/GoogleTest ThirdParty/GoogleBenchmark
+      - uses: ./.github/actions/setup-build-tools
+      - name: Configure optimized C++17
+        run: >
+          cmake --preset profile
+          -DSIR_WITH_GOOGLETEST=ON
+          -DSIR_WITH_GOOGLE_BENCHMARK=ON
+          -DSIR_BUILD_BENCHMARKS=ON
+      - name: Build full benchmark executable
+        run: cmake --build --preset profile
+      - name: Run new and existing benchmark scenarios with five repetitions
+        shell: bash
+        run: bash Build/Scripts/RunGoogleBenchmarks.sh platform-io
+      - name: Preserve source-grounded measurements
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: platform-io-benchmark-json
+          path: out/Nightly/Benchmarks/platform-io.json
+          if-no-files-found: warn
+          retention-days: 14

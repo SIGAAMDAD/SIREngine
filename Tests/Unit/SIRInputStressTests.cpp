@@ -32,12 +32,12 @@ public:
 		return m_eBackend;
 	}
 
-	void sample( SIRInputService &service ) noexcept override
+	void sample( SIRInputService& service ) noexcept override
 	{
 		( void )service;
 	}
 
-	void resynchronize( SIRInputService &service ) noexcept override
+	void resynchronize( SIRInputService& service ) noexcept override
 	{
 		( void )service;
 		++m_nResyncs;
@@ -52,7 +52,7 @@ public:
 		return true;
 	}
 
-	void stop( SIRInputService &service ) noexcept override
+	void stop( SIRInputService& service ) noexcept override
 	{
 		( void )service;
 		++m_nStops;
@@ -66,7 +66,7 @@ private:
 	sirInputBackendId_t m_eBackend;
 };
 
-static uint32_t randomInput( uint32_t &nSeed ) noexcept
+static uint32_t randomInput( uint32_t& nSeed ) noexcept
 {
 	nSeed ^= nSeed << 13;
 	nSeed ^= nSeed >> 17;
@@ -305,7 +305,7 @@ static bool testDeterministicEvents( uint32_t nTicks, uint32_t nEventsPerTick ) 
 			nLastSequence = pFrame->events[i].nSequence;
 		}
 		for ( uint32_t i = 0; i < 4; ++i ) {
-			const sirInputDeviceState_t &state = pFrame->state[ids[i].nSlot];
+			const sirInputDeviceState_t& state = pFrame->state[ids[i].nSlot];
 			if ( pFrame->nConnected[ids[i].nSlot] != 1 || memcmp( state.nHeld, nHeld[i], sizeof( state.nHeld ) ) != 0 ||
 			     memcmp( state.nPressed, nPressed[i], sizeof( state.nPressed ) ) != 0 ||
 			     memcmp( state.nReleased, nReleased[i], sizeof( state.nReleased ) ) != 0 ||
