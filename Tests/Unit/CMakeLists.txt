@@ -351,6 +351,13 @@ if(SIR_WITH_GOOGLETEST)
 endif()
 
 if(SIR_WITH_OPENGL)
+    add_executable(SIRGL46FramebufferCacheTests
+        Renderer/OpenGL/SIRGLFramebufferCacheTests.cpp
+        "${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/OpenGL/SIRGLFramebufferCache.cpp")
+    target_link_libraries(SIRGL46FramebufferCacheTests PRIVATE SIR::Graphics)
+    sir_configure_owned_target(SIRGL46FramebufferCacheTests)
+    add_test(NAME renderer.opengl46.framebuffer-cache COMMAND SIRGL46FramebufferCacheTests)
+
     add_executable(SIRGL46FramebufferTests
         Renderer/OpenGL/SIRGLFramebuffersTests.cpp
         "${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/OpenGL/SIRGLFramebuffers.cpp"

@@ -9,7 +9,8 @@ add_library(SIRGL46Driver MODULE
     SIRGLSamplers.cpp
     SIRGLTextures.cpp
     SIRGLFormats.cpp
-    SIRGLFramebuffers.cpp)
+    SIRGLFramebuffers.cpp
+    SIRGLFramebufferCache.cpp)
 target_include_directories(SIRGL46Driver PRIVATE
     "${PROJECT_SOURCE_DIR}/Source"
     "${PROJECT_SOURCE_DIR}/Build/CMake")
