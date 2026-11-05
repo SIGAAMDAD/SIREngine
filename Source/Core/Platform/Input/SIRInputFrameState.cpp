@@ -360,8 +360,17 @@ bool SIRInputFrameState::publish( const SIRInputDeviceRegistry& registry ) noexc
 	if ( m_bTimingMetricsEnabled ) {
 		frame.nCutoffNs = SIRPlatformTime::getMonotonicNanoseconds();
 		if ( m_nCount != 0 ) {
-			const uint64_t nOldest = frame.events[0].nReceivedNs;
-			const uint64_t nNewest = frame.events[m_nCount - 1].nReceivedNs;
+			uint64_t nOldest = UINT64_MAX;
+			uint64_t nNewest = 0;
+			for ( uint32_t i = 0; i < m_nCount; ++i ) {
+				const uint64_t nReceived = frame.events[i].nReceivedNs;
+				if ( nReceived < nOldest ) {
+					nOldest = nReceived;
+				}
+				if ( nReceived > nNewest ) {
+					nNewest = nReceived;
+				}
+			}
 			frame.nOldestReceiptAgeNs = frame.nCutoffNs >= nOldest ? frame.nCutoffNs - nOldest : 0;
 			frame.nNewestReceiptAgeNs = frame.nCutoffNs >= nNewest ? frame.nCutoffNs - nNewest : 0;
 		}
