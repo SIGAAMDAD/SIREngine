@@ -481,7 +481,7 @@ sirRegistrationResult_t SIRConsoleService::executeBuiltin( const sirConsoleSubmi
 	if ( sirConsoleCaseEqual( pszName, "help" ) ) {
 		if ( args.nCount == 1 ) {
 			return outputText( submission.nRequestId, SIR_REGISTRATION_OK,
-			                   "help list get set reset toggle (exec awaits P5 Config adapter)" );
+			                   "help list get set reset toggle exec (INI Config adapter)" );
 		}
 		if ( args.nCount != 2 ) {
 			return SIR_REGISTRATION_INVALID_ARGUMENT;
@@ -505,8 +505,13 @@ sirRegistrationResult_t SIRConsoleService::executeBuiltin( const sirConsoleSubmi
 		return outputText( submission.nRequestId, SIR_REGISTRATION_OK, pEntry->eKind == SIR_REGISTRATION_COMMAND ? "command" : "cvar" );
 	}
 	if ( sirConsoleCaseEqual( pszName, "exec" ) ) {
-		// The actual CFG codec/validated batch adapter belongs to P5.
-		return SIR_REGISTRATION_BAD_SCHEMA;
+		if ( args.nCount != 2 ) {
+			return SIR_REGISTRATION_INVALID_ARGUMENT;
+		}
+		if ( m_Storage.pfnExec == nullptr ) {
+			return SIR_REGISTRATION_BAD_SCHEMA;
+		}
+		return m_Storage.pfnExec( m_Storage.pExecContext, args.szArgs[1].pszText, args.szArgs[1].nBytes, submission );
 	}
 	return SIR_REGISTRATION_NOT_FOUND;
 }
