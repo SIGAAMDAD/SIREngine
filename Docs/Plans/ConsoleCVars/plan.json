@@ -526,7 +526,10 @@
       "stop_conditions": [
         "Unratified interface or unmet dependency gate"
       ],
-      "status": "IMPLEMENTED_PENDING_NATIVE_CI_AND_VFS"
+      "status": "NATIVE_VERIFIED_VFS_PENDING",
+      "evidence_sha": "9175f0ef45be95e1f0896cdea2439ce889acbff0",
+      "evidence_url": "https://github.com/SIGAAMDAD/SIREngine/actions/runs/41956547368",
+      "blocking_issue": "https://github.com/SIGAAMDAD/SIREngine/issues/283"
     },
     {
       "id": "P6",
@@ -681,9 +684,11 @@
         "REQ-003"
       ],
       "tier": "NATIVE_CMAKE_CTEST",
-      "status": "PENDING_EXACT_SHA_CI",
+      "status": "PASS_GITHUB_NATIVE_LINUX_WINDOWS",
       "command": "ctest -R core.config.ini --output-on-failure",
-      "evidence_path": "Tests/Unit/Config/SIRIniTests.cpp"
+      "evidence_path": "Tests/Unit/Config/SIRIniTests.cpp",
+      "evidence_sha": "9175f0ef45be95e1f0896cdea2439ce889acbff0",
+      "evidence_url": "https://github.com/SIGAAMDAD/SIREngine/actions/runs/41956547368"
     },
     {
       "id": "TEST-P5-CVAR",
@@ -692,9 +697,11 @@
         "REQ-003"
       ],
       "tier": "NATIVE_CMAKE_CTEST",
-      "status": "PENDING_EXACT_SHA_CI",
+      "status": "PASS_GITHUB_NATIVE_LINUX_WINDOWS",
       "command": "ctest -R core.cvars.config --output-on-failure",
-      "evidence_path": "Tests/Unit/CVars/SIRCVarConfigTests.cpp"
+      "evidence_path": "Tests/Unit/CVars/SIRCVarConfigTests.cpp",
+      "evidence_sha": "9175f0ef45be95e1f0896cdea2439ce889acbff0",
+      "evidence_url": "https://github.com/SIGAAMDAD/SIREngine/actions/runs/41956547368"
     }
   ],
   "probes": [],
