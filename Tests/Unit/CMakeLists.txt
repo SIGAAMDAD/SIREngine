@@ -18,6 +18,11 @@ target_link_libraries(SIRTerrainResourceBridgeTests PRIVATE SIR::Terrain)
 add_test(NAME terrain.resources.grdg-bridge COMMAND SIRTerrainResourceBridgeTests)
 sir_configure_owned_target(SIRTerrainResourceBridgeTests)
 
+add_executable(SIRTerrainRegionBundleTests SIRTerrainRegionBundleTests.cpp)
+target_link_libraries(SIRTerrainRegionBundleTests PRIVATE SIR::Terrain)
+add_test(NAME terrain.data.region-bundle COMMAND SIRTerrainRegionBundleTests)
+sir_configure_owned_target(SIRTerrainRegionBundleTests)
+
 add_executable(SIREngineLifecycleTests SIREngineLifecycleTests.cpp)
 target_link_libraries(SIREngineLifecycleTests PRIVATE SIR::Core)
 add_test(NAME core.application.system-lifecycle COMMAND SIREngineLifecycleTests)
