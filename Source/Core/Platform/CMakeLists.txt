@@ -17,6 +17,7 @@ if(WIN32)
         Windows/SIRDynamicLibraryWindows.cpp
         Windows/SIRPlatformTimeWindows.cpp
         Windows/SIRPlatformProcessWindows.cpp
+        Windows/SIRFileLockWindows.cpp
     )
     target_link_libraries(SIRCore PRIVATE psapi)
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
@@ -28,6 +29,7 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         Linux/SIRDynamicLibraryLinux.cpp
         Linux/SIRPlatformTimeLinux.cpp
         Linux/SIRPlatformProcessLinux.cpp
+        Linux/SIRFileLockLinux.cpp
     )
 else()
     message(FATAL_ERROR "SIRCore platform services currently support Windows and Linux")

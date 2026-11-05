@@ -25,6 +25,11 @@ target_link_libraries(SIRSystemTests PRIVATE SIR::Core)
 add_test(NAME core.platform.lifecycle COMMAND SIRSystemTests)
 sir_configure_owned_target(SIRSystemTests)
 
+add_executable(SIRFileLockTests SIRFileLockTests.cpp)
+target_link_libraries(SIRFileLockTests PRIVATE SIR::Core)
+add_test(NAME core.platform.file-lock COMMAND SIRFileLockTests)
+sir_configure_owned_target(SIRFileLockTests)
+
 add_executable(SIRMemoryManagerTests SIRMemoryManagerTests.cpp)
 target_link_libraries(SIRMemoryManagerTests PRIVATE SIR::Core)
 add_test(NAME core.memory.manager COMMAND SIRMemoryManagerTests)

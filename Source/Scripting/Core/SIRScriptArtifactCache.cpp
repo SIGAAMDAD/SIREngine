@@ -14,10 +14,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Scripting/Core/SIRScriptArtifactCache.h>
+#include <Core/Platform/SIRFileLock.h>
 #include <Scripting/Core/SIRScriptSHA256.h>
 
 #include <atomic>
-#include <errno.h>
 #include <stdio.h>
 #include <string.h>
 #if defined( _WIN32 )
@@ -28,7 +28,6 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <sys/stat.h>
 #else
 #include <fcntl.h>
-#include <sys/file.h>
 #include <unistd.h>
 #endif
 
@@ -128,86 +127,15 @@ static FILE *scriptCreateExclusive( const char *szTemp ) noexcept
 	return pFile;
 }
 
-// The lock file persists so that concurrent processes always lock the same
-// inode. The OS releases its byte-range/file lock if a writer crashes.
-class SIRScriptScopedCacheLock
+// Cache policy: the sidecar lock is stable across artifact replacement and
+// remains on disk while independently owned cache processes may be active.
+static bool scriptMakeCacheLockPath( const char *pszArtifact, char *pszOutput, size_t nCapacity ) noexcept
 {
-public:
-	explicit SIRScriptScopedCacheLock( const char *pszArtifactPath ) noexcept;
-	~SIRScriptScopedCacheLock( void ) noexcept;
-
-	bool isLocked( void ) const noexcept;
-
-protected:
-private:
-#if defined( _WIN32 )
-	HANDLE m_pHandle;
-#else
-	int m_nDescriptor;
-#endif
-};
-
-SIRScriptScopedCacheLock::SIRScriptScopedCacheLock( const char *pszArtifactPath ) noexcept
-#if defined( _WIN32 )
-    : m_pHandle( INVALID_HANDLE_VALUE )
-#else
-    : m_nDescriptor( -1 )
-#endif
-{
-	char szLockPath[1024] = {};
-	const int nLength = snprintf( szLockPath, sizeof( szLockPath ), "%s.lock", pszArtifactPath );
-	if ( nLength <= 0 || ( size_t )nLength >= sizeof( szLockPath ) ) {
-		return;
+	if ( pszArtifact == nullptr || pszOutput == nullptr || nCapacity == 0 ) {
+		return false;
 	}
-#if defined( _WIN32 )
-	m_pHandle = CreateFileA( szLockPath, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_ALWAYS,
-	                         FILE_ATTRIBUTE_NORMAL, nullptr );
-	if ( m_pHandle == INVALID_HANDLE_VALUE ) {
-		return;
-	}
-	OVERLAPPED overlapped = {};
-	if ( !LockFileEx( m_pHandle, LOCKFILE_EXCLUSIVE_LOCK, 0, 1, 0, &overlapped ) ) {
-		( void )CloseHandle( m_pHandle );
-		m_pHandle = INVALID_HANDLE_VALUE;
-	}
-#else
-	m_nDescriptor = open( szLockPath, O_RDWR | O_CREAT, 0600 );
-	if ( m_nDescriptor < 0 ) {
-		return;
-	}
-	while ( flock( m_nDescriptor, LOCK_EX ) != 0 ) {
-		if ( errno != EINTR ) {
-			( void )close( m_nDescriptor );
-			m_nDescriptor = -1;
-			return;
-		}
-	}
-#endif
-}
-
-SIRScriptScopedCacheLock::~SIRScriptScopedCacheLock( void ) noexcept
-{
-#if defined( _WIN32 )
-	if ( m_pHandle != INVALID_HANDLE_VALUE ) {
-		OVERLAPPED overlapped = {};
-		( void )UnlockFileEx( m_pHandle, 0, 1, 0, &overlapped );
-		( void )CloseHandle( m_pHandle );
-	}
-#else
-	if ( m_nDescriptor >= 0 ) {
-		( void )flock( m_nDescriptor, LOCK_UN );
-		( void )close( m_nDescriptor );
-	}
-#endif
-}
-
-bool SIRScriptScopedCacheLock::isLocked( void ) const noexcept
-{
-#if defined( _WIN32 )
-	return m_pHandle != INVALID_HANDLE_VALUE;
-#else
-	return m_nDescriptor >= 0;
-#endif
+	const int nLength = snprintf( pszOutput, nCapacity, "%s.lock", pszArtifact );
+	return nLength > 0 && ( size_t )nLength < nCapacity;
 }
 
 SIRScriptArtifactCache::SIRScriptArtifactCache( void ) noexcept
@@ -359,7 +287,11 @@ sirScriptResult_t SIRScriptArtifactCache::store( const sirScriptCodeArtifact_t& 
 
 	// A build-recipe key cannot silently change its output or target metadata.
 	// Keep the entire validation-and-replacement transaction under one OS lock.
-	SIRScriptScopedCacheLock lock( szFinal );
+	char szLockPath[MAX_PATH_BYTES] = {};
+	if ( !scriptMakeCacheLockPath( szFinal, szLockPath, sizeof( szLockPath ) ) ) {
+		return SIR_SCRIPT_INVALID_ARGUMENT;
+	}
+	SIRFileLock lock( szLockPath );
 	if ( !lock.isLocked() ) {
 		return SIR_SCRIPT_BACKEND_FAILURE;
 	}
@@ -470,7 +402,11 @@ sirScriptResult_t SIRScriptArtifactCache::erase( sirScriptCacheKey_t key ) noexc
 	if ( !formatPath( key, szPath ) ) {
 		return SIR_SCRIPT_INVALID_ARGUMENT;
 	}
-	SIRScriptScopedCacheLock lock( szPath );
+	char szLockPath[MAX_PATH_BYTES] = {};
+	if ( !scriptMakeCacheLockPath( szPath, szLockPath, sizeof( szLockPath ) ) ) {
+		return SIR_SCRIPT_INVALID_ARGUMENT;
+	}
+	SIRFileLock lock( szLockPath );
 	if ( !lock.isLocked() ) {
 		return SIR_SCRIPT_BACKEND_FAILURE;
 	}
