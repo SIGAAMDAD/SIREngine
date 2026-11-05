@@ -199,6 +199,7 @@ static void testGRDGPublication( void ) noexcept
 		const SIRResourceKey materialKey = { 66, 43, 0 };
 		const SIRResourceKey optionalImageKey = { 911, 32, 0 };
 		const sirShaderPackageValidation_t validation = { SIR_GRAPHICS_SHADER_SPIRV, SIR_GRAPHICS_FEATURE_GRAPHICS };
+		sirShaderStagePins_t pinnedRevision = {};
 
 		uint8_t szShader[120] = {};
 		uint8_t szMaterial[80] = {};
@@ -251,6 +252,9 @@ static void testGRDGPublication( void ) noexcept
 			REQUIRE( !resolved.bFixedFunction && resolved.hShader.m_nSlot == hShader.m_nSlot );
 			REQUIRE( resolved.binary.m_nSize == 8 && resolved.binary.m_pData == shader.bytes.m_pData + 112 );
 			REQUIRE( resolved.nShaderGraphRevision == 1 && resolved.nShaderSourceRevision == 37 );
+			REQUIRE( sirShaderPinResolvedStage( context, resolved, 9, &pinnedRevision ) == SIR_RESOURCE_RESULT_SUCCESS );
+			REQUIRE( pinnedRevision.bMaterialPinned && pinnedRevision.bShaderPinned );
+
 			stageRequest.nStageMask = SIR_GRAPHICS_STAGE_FRAGMENT;
 			REQUIRE( sirShaderResolveMaterialStage( context, material, stageRequest, &resolved ) ==
 			         SIR_RESOURCE_RESULT_DEPENDENCY_MISSING );
@@ -291,6 +295,10 @@ static void testGRDGPublication( void ) noexcept
 			REQUIRE( sirShaderStampMaterialInvalidation( *pWriter, currentMaterialView, &updated ) == SIR_RESOURCE_RESULT_SUCCESS );
 			REQUIRE( updated.nInvalidationSequence != 0 );
 		}
+		REQUIRE( pWriter->collectRetired( 8 ) == 0 );
+		REQUIRE( sirShaderReleaseStagePins( graph, &pinnedRevision ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( !pinnedRevision.bMaterialPinned && !pinnedRevision.bShaderPinned );
+		REQUIRE( sirShaderReleaseStagePins( graph, &pinnedRevision ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
 		REQUIRE( pWriter->collectRetired( 8 ) >= 1 );
 		// An arriving optional image changes dependency fingerprints without
 		// republishing the material's canonical composition bytes.
@@ -321,6 +329,39 @@ static void testGRDGPublication( void ) noexcept
 		szMaterial[79] ^= 0x77;
 		REQUIRE( sirShaderPublishMaterial( *pWriter, formats, materialRequest, &hMaterial ) == SIR_RESOURCE_RESULT_SUCCESS );
 		REQUIRE( graph.getStats().m_nUniqueChunks == 3 || graph.getStats().m_nUniqueChunks == 2 );
+		// A shaderless cooked pass is still a real material resource with
+		// a provider pin, but must not manufacture a native shader module.
+		uint8_t szFixedMaterial[80] = {};
+		const SIRResourceKey fixedKey = { 88, 43, 0 };
+		REQUIRE( testCookMaterial( szFixedMaterial, sizeof( szFixedMaterial ), 88, SIR_SHADER_MATERIAL_NO_SHADER ) );
+		sirShaderPublicationRequest_t fixedRequest = {};
+		fixedRequest.key = fixedKey;
+		fixedRequest.pBytes = szFixedMaterial;
+		fixedRequest.nBytes = sizeof( szFixedMaterial );
+		SIRResourceHandle hFixed = {};
+		REQUIRE( sirShaderPublishMaterial( *pWriter, formats, fixedRequest, &hFixed ) == SIR_RESOURCE_RESULT_SUCCESS );
+		{
+			SIRResourceReadScope scope( graph );
+			SIRResourceView view;
+			REQUIRE( graph.resolve( scope, hFixed, &view ) == SIR_RESOURCE_RESULT_SUCCESS );
+			sirShaderMaterialProjection_t material = {};
+			REQUIRE( sirShaderProjectMaterial( view, formats, &material ) == SIR_RESOURCE_RESULT_SUCCESS );
+			sirShaderLibraryContext_t context = { &graph, &scope, formats };
+			sirShaderResolveStageRequest_t request = {};
+			request.ePass = SIR_SHADER_PASS_COLOR;
+			request.nStageMask = SIR_GRAPHICS_STAGE_VERTEX;
+			request.validation = { SIR_GRAPHICS_SHADER_FIXED_FUNCTION, SIR_GRAPHICS_FEATURE_FIXED_FUNCTION };
+			sirShaderResolvedStage_t stage = {};
+			REQUIRE( sirShaderResolveMaterialStage( context, material, request, &stage ) == SIR_RESOURCE_RESULT_SUCCESS );
+			REQUIRE( stage.bFixedFunction && stage.binary.m_pData == nullptr && stage.material.nRenderStateHash == 29 );
+			sirShaderStagePins_t pins = {};
+			REQUIRE( sirShaderPinResolvedStage( context, stage, 9, &pins ) == SIR_RESOURCE_RESULT_SUCCESS );
+			REQUIRE( pins.bMaterialPinned && !pins.bShaderPinned );
+			REQUIRE( sirShaderReleaseStagePins( graph, &pins ) == SIR_RESOURCE_RESULT_SUCCESS );
+			request.validation.nAvailableFeatures = 0;
+			REQUIRE( sirShaderResolveMaterialStage( context, material, request, &stage ) == SIR_RESOURCE_RESULT_INVALID_FORMAT );
+		}
+		REQUIRE( pWriter->retire( hFixed ) == SIR_RESOURCE_RESULT_SUCCESS );
 		REQUIRE( pWriter->retire( hMaterial ) == SIR_RESOURCE_RESULT_SUCCESS );
 		REQUIRE( pWriter->retire( hShader ) == SIR_RESOURCE_RESULT_SUCCESS );
 		REQUIRE( pWriter->retire( hImage ) == SIR_RESOURCE_RESULT_SUCCESS );

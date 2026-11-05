@@ -34,6 +34,7 @@ SIRResourceResult sirShaderResolveMaterialStage( const sirShaderLibraryContext_t
 		}
 		sirShaderResolvedStage_t fixed = {};
 		fixed.material = pass;
+		fixed.materialView = material.view;
 		fixed.nMaterialGraphRevision = material.nGraphRevision;
 		fixed.bFixedFunction = true;
 		*pOut = fixed;
@@ -71,6 +72,8 @@ SIRResourceResult sirShaderResolveMaterialStage( const sirShaderLibraryContext_t
 		}
 		sirShaderResolvedStage_t resolved = {};
 		resolved.material = pass;
+		resolved.materialView = material.view;
+		resolved.shaderView = source;
 		resolved.stage = candidate.stage;
 		resolved.hShader = source.getHandle();
 		resolved.binary = candidate.binary;
@@ -81,4 +84,52 @@ SIRResourceResult sirShaderResolveMaterialStage( const sirShaderLibraryContext_t
 		return SIR_RESOURCE_RESULT_SUCCESS;
 	}
 	return SIR_RESOURCE_RESULT_DEPENDENCY_MISSING;
+}
+
+SIRResourceResult sirShaderPinResolvedStage( const sirShaderLibraryContext_t& context, const sirShaderResolvedStage_t& resolved,
+                                             uint32_t nProviderId, sirShaderStagePins_t *pOut ) noexcept
+{
+	if ( pOut == nullptr || context.pGraph == nullptr || context.pScope == nullptr || !context.pScope->isActive() ||
+	     nProviderId == 0 || !resolved.materialView.isValid() || resolved.materialView.getRevision() != resolved.nMaterialGraphRevision ) {
+		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
+	}
+	if ( !resolved.bFixedFunction &&
+	     ( !resolved.shaderView.isValid() || resolved.shaderView.getRevision() != resolved.nShaderGraphRevision ) ) {
+		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
+	}
+	sirShaderStagePins_t pins = {};
+	SIRResourceResult eResult = context.pGraph->pinForProvider( *context.pScope, resolved.materialView, nProviderId, &pins.hMaterial );
+	if ( eResult != SIR_RESOURCE_RESULT_SUCCESS ) {
+		return eResult;
+	}
+	pins.bMaterialPinned = true;
+	if ( !resolved.bFixedFunction ) {
+		eResult = context.pGraph->pinForProvider( *context.pScope, resolved.shaderView, nProviderId, &pins.hShader );
+		if ( eResult != SIR_RESOURCE_RESULT_SUCCESS ) {
+			( void )context.pGraph->releaseProviderPin( pins.hMaterial );
+			return eResult;
+		}
+		pins.bShaderPinned = true;
+	}
+	*pOut = pins;
+	return SIR_RESOURCE_RESULT_SUCCESS;
+}
+
+SIRResourceResult sirShaderReleaseStagePins( const SIRResourceGraph& graph, sirShaderStagePins_t *pPins ) noexcept
+{
+	if ( pPins == nullptr || !pPins->bMaterialPinned ) {
+		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
+	}
+	if ( pPins->bShaderPinned ) {
+		const SIRResourceResult eResult = graph.releaseProviderPin( pPins->hShader );
+		if ( eResult != SIR_RESOURCE_RESULT_SUCCESS ) {
+			return eResult;
+		}
+		pPins->bShaderPinned = false;
+	}
+	const SIRResourceResult eResult = graph.releaseProviderPin( pPins->hMaterial );
+	if ( eResult == SIR_RESOURCE_RESULT_SUCCESS ) {
+		pPins->bMaterialPinned = false;
+	}
+	return eResult;
 }
