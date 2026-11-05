@@ -336,6 +336,27 @@ static int sirTestRaster( SIRRenderingDevice *pDevice, uint32_t nGeneration, con
 	if ( pDirect->barrier( &invalidUav, 1 ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
 		return 75;
 	}
+	// A valid first barrier followed by an invalid barrier must retain no resource.
+	sirGraphicsBufferDesc_t probe = {};
+	probe.nSizeBytes = 256;
+	probe.nUsage = SIR_GRAPHICS_USAGE_COPY_SOURCE;
+	probe.eMemory = SIR_GRAPHICS_MEMORY_GPU_LOCAL;
+	sirGraphicsHandle_t hAtomicProbe = {};
+	if ( pDevice->createBuffer( probe, &hAtomicProbe ) != SIR_GRAPHICS_SUCCESS ) {
+		return 78;
+	}
+	sirGraphicsBarrier_t szAtomicBatch[2] = {};
+	szAtomicBatch[0].eType = SIR_GRAPHICS_BARRIER_TRANSITION;
+	szAtomicBatch[0].hResource = hAtomicProbe;
+	szAtomicBatch[0].eBefore = SIR_GRAPHICS_STATE_COMMON;
+	szAtomicBatch[0].eAfter = SIR_GRAPHICS_STATE_COPY_SOURCE;
+	szAtomicBatch[1] = invalidBuffer;
+	sirGraphicsCompletionSet_t noGpuWork = {};
+	noGpuWork.nDeviceGeneration = nGeneration;
+	if ( pDirect->barrier( szAtomicBatch, 2 ) != SIR_GRAPHICS_INVALID_ARGUMENT ||
+	     pDevice->retireResource( hAtomicProbe, noGpuWork ) != SIR_GRAPHICS_SUCCESS ) {
+		return 79;
+	}
 	sirGraphicsBarrier_t storageTransition = {};
 	storageTransition.eType = SIR_GRAPHICS_BARRIER_TRANSITION;
 	storageTransition.hResource = hStorage;
