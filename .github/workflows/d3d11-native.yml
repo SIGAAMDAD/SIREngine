@@ -1,0 +1,39 @@
+name: D3D11 native Windows device qualification
+
+on:
+  push:
+    branches: [renderer/d3d11-native-foundation]
+    paths:
+      - 'Source/Renderer/Drivers/D3D11/**'
+      - 'Tests/Unit/Renderer/D3D11/**'
+      - '.github/workflows/d3d11-native.yml'
+  pull_request:
+    branches: [develop]
+    paths:
+      - 'Source/Renderer/Drivers/D3D11/**'
+      - 'Tests/Unit/Renderer/D3D11/**'
+      - '.github/workflows/d3d11-native.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows-d3d11:
+    runs-on: windows-2022
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Fetch native GoogleTest sources
+        run: git submodule update --init ThirdParty/GoogleTest
+      - name: Initialize MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+      - uses: ./.github/actions/setup-build-tools
+      - name: Configure native D3D11
+        run: cmake --preset dev -DSIR_WITH_D3D11=ON -DSIR_WITH_GOOGLETEST=ON
+      - name: Compile real Windows SDK backend and tests
+        run: cmake --build --preset dev --target SIRD3D11RegistrationTests SIRD3D11FeatureLevelTests
+      - name: Execute D3D11 native device and WARP tests
+        run: ctest --preset dev --output-on-failure -R '^renderer[.]d3d11[.]'
