@@ -352,7 +352,7 @@ int main( void )
 	assert( console.submit( szBorrowed, 4, { user.origin, 400 } ) == SIR_REGISTRATION_OK );
 	memcpy( szBorrowed, "nope", 4 );
 	assert( console.pump( 0, &report ) == SIR_REGISTRATION_OK && report.nSucceeded == 1 );
-	assert( sirTestHasOutput( 400, SIR_REGISTRATION_OK, "help list get set reset toggle (exec awaits P5 Config adapter)" ) );
+	assert( sirTestHasOutput( 400, SIR_REGISTRATION_OK, "help list get set reset toggle exec (INI Config adapter)" ) );
 	assert( console.submit( nullptr, 4, { user.origin, 401 } ) == SIR_REGISTRATION_INVALID_ARGUMENT );
 	assert( console.submit( "", 0, { user.origin, 401 } ) == SIR_REGISTRATION_INVALID_ARGUMENT );
 	char szOversized[130] = {};
@@ -393,7 +393,7 @@ int main( void )
 	assert( s_nCallbackCount == 1 && s_nLeaseAcquire == 1 && s_nLeaseRelease == 1 );
 	assert( sirTestHasOutput( 100, SIR_REGISTRATION_OK, "pong" ) );
 	assert( console.pump( 16, &report ) == SIR_REGISTRATION_OK && report.nProcessed == 1 );
-	assert( sirTestHasOutput( 1100, SIR_REGISTRATION_OK, "help list get set reset toggle (exec awaits P5 Config adapter)" ) );
+	assert( sirTestHasOutput( 1100, SIR_REGISTRATION_OK, "help list get set reset toggle exec (INI Config adapter)" ) );
 	// A failed module-code pin prevents native callback entry.
 	s_bModuleAlive = false;
 	assert( console.submit( "mod.ping", 8, { user.origin, 111 } ) == SIR_REGISTRATION_OK );
