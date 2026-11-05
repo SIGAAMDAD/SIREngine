@@ -75,7 +75,7 @@ public:
 		return SIR_GRAPHICS_SUCCESS;
 	}
 
-	sirGraphicsResult_t createDevice( const sirGraphicsDeviceCreateDesc_t &desc, SIRRenderingDevice **ppDevice ) noexcept override
+	sirGraphicsResult_t createDevice( const sirGraphicsDeviceCreateDesc_t& desc, SIRRenderingDevice **ppDevice ) noexcept override
 	{
 		( void )desc;
 		if ( ppDevice == nullptr ) {
@@ -130,13 +130,13 @@ public:
 		return SIR_GRAPHICS_SUCCESS;
 	}
 
-	sirGraphicsResult_t copyBufferTexture( const sirGraphicsBufferTextureCopy_t &copy ) noexcept override
+	sirGraphicsResult_t copyBufferTexture( const sirGraphicsBufferTextureCopy_t& copy ) noexcept override
 	{
 		( void )copy;
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
 
-	sirGraphicsResult_t beginRenderPass( const sirGraphicsRenderPass_t &pass ) noexcept override
+	sirGraphicsResult_t beginRenderPass( const sirGraphicsRenderPass_t& pass ) noexcept override
 	{
 		( void )pass;
 		return SIR_GRAPHICS_SUCCESS;
@@ -178,7 +178,7 @@ public:
 		return SIR_GRAPHICS_SUCCESS;
 	}
 
-	sirGraphicsResult_t setViewport( const sirGraphicsViewport_t &viewport, const sirGraphicsRect_t &scissor ) noexcept override
+	sirGraphicsResult_t setViewport( const sirGraphicsViewport_t& viewport, const sirGraphicsRect_t& scissor ) noexcept override
 	{
 		( void )viewport;
 		( void )scissor;
