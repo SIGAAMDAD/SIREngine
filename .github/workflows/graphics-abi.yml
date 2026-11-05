@@ -179,6 +179,8 @@ jobs:
         shell: bash
         env:
           SIR_GRAPHICS_ABI_MIN_COVERAGE: "90"
+          SIR_GRAPHICS_ABI_MIN_LINES: "100"
+          SIR_GRAPHICS_ABI_MIN_BRANCHES: "95"
         run: bash Build/Scripts/RunGraphicsABICoverage.sh
       - name: Preserve profiles, counters, and summary
         if: always()
