@@ -1,6 +1,6 @@
 # P5 — Typed configuration and archive integration
 
-**Branch:** `feature/console-cvars-commands` · [issue #282](https://github.com/SIGAAMDAD/SIREngine/issues/282) · **Status:** native source implementation and tests authored, exact-commit CI pending; VFS provider unavailable.
+**Branch:** `feature/console-cvars-commands` · [issue #282](https://github.com/SIGAAMDAD/SIREngine/issues/282) · **Status:** native Windows/Linux source acceptance PASS; canonical user:/ VFS integration remains OPEN (#282, #283).
 
 ## Existing source authority and implementation
 
@@ -14,10 +14,16 @@ On the inspected develop baseline, `Source/Core/Config` contained `SIRConfigBudg
 
 ## Verified local checks and pending gates
 
-Local GCC 14, C++17 `-Wall -Wextra -Wpedantic -Werror` syntax validation of all new translation units and the real native INI codec test linked against a platform-file interface-compatible test double with ASan+UBSan: PASS. Authored C++ formatted with clang-format 23.1.5. Native real PlatformFile and full engine CMake/CTest on Linux and Windows: PENDING.
+Local GCC 14 C++17 strict-warning syntax checks and the ASan+UBSan INI fixture: PASS. Pinned clang-format 23.1.5: PASS. Native real PlatformFile and linked SIRCore engine tests: [CI #41956547368](https://github.com/SIGAAMDAD/SIREngine/actions/runs/41956547368) at exact source SHA `9175f0ef45be95e1f0896cdea2439ce889acbff0`: Linux **103/103 CTests** and Windows **98/98 CTests** passed, including `core.config.ini`, `core.cvars.config`, and `core.console.service`. Exact source allocator sanitizer, scheduler sanitizer and GRDG coverage workflows also passed; source-based console P7 coverage is not claimed.
 
 Added native tests: `core.config.ini` covers malformed/overlong/duplicate/UTF-8 input, quoted escapes, bounded output, actual file atomic replacement and failure. `core.cvars.config` covers real SIRS/SIRC cooked definitions, typed set/restore, full-file rollback, read-only policy, reproducible archive, archive atomic replace and Config-mediated `exec`. External user:/ VFS mount provider and Valve CFG codec are absent in this exact source snapshot; their integration remains OPEN rather than represented as implemented.
 
 ## Runtime contract
 
 Only the owner thread calls CVar adapter apply/export. File resolvers and file URI policy are caller-owned; all parser working memory, typed write spans and output buffers use supplied fixed capacities. `exec` currently accepts `*.ini` files through the callback, not Valve CFG command scripts. Callback input buffers remain borrowed until the adapter returns. File output is an on-disk transactional replace, not an in-memory registry transaction. The console's existing pump and error output own request diagnostics.
+
+## Final P5 source repair and remaining gate
+
+The native queue-to-`exec` integration fixture identified a missing P4 builtin callback dispatch on commit `b20a09e1560acc5394ad4b933bc90976aec97d77`. `b664aef18d49cb908429804cb7f4877fd362fa8a` connected `exec` to `pfnExec` when installed; `9175f0ef45be95e1f0896cdea2439ce889acbff0` restored the P4 help fixture expectations and exact clang-format. The final SHA was tested on both native platforms. Absent callback remains a rejected `exec` request.
+
+P5's **native Config codec, archive and platform-file work is verified**. Full milestone completion is blocked on the canonical VFS `user:/` mount provider, path ownership and mount-safe atomic replacement, tracked by [dependency #283](https://github.com/SIGAAMDAD/SIREngine/issues/283). No VFS code was fabricated or silently substituted. Valve CFG execution is deferred until a real corresponding codec exists. The P5 tracking [issue #282](https://github.com/SIGAAMDAD/SIREngine/issues/282) remains open.
