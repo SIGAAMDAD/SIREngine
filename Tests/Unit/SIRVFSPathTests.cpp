@@ -15,16 +15,23 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Core/VFS/SIRVFSPath.h>
 
-#include <assert.h>
+#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+
+static void sirVFSRequire( bool bResult )
+{
+	if ( !bResult ) {
+		abort();
+	}
+}
 
 static void sirVFSTestOk( const char *pszInput, const char *pszExpected )
 {
 	sirVFSPath_t path = {};
-	assert( SIRVFSPath::normalize( pszInput, ( uint32_t )strlen( pszInput ), &path ) == SIR_VFS_PATH_OK );
-	assert( strcmp( path.szPath, pszExpected ) == 0 );
-	assert( path.nLength == strlen( pszExpected ) );
+	sirVFSRequire( SIRVFSPath::normalize( pszInput, ( uint32_t )strlen( pszInput ), &path ) == SIR_VFS_PATH_OK );
+	sirVFSRequire( strcmp( path.szPath, pszExpected ) == 0 );
+	sirVFSRequire( path.nLength == strlen( pszExpected ) );
 }
 
 static void sirVFSTestFailure( const char *pszInput, uint32_t nInputBytes, sirVFSPathResult_t eExpected )
@@ -35,8 +42,8 @@ static void sirVFSTestFailure( const char *pszInput, uint32_t nInputBytes, sirVF
 	if ( actual != eExpected ) {
 		fprintf( stderr, "Failed: %s got %u expected %u\n", pszInput, ( unsigned )actual, ( unsigned )eExpected );
 	}
-	assert( actual == eExpected );
-	assert( strcmp( path.szPath, "unchanged" ) == 0 );
+	sirVFSRequire( actual == eExpected );
+	sirVFSRequire( strcmp( path.szPath, "unchanged" ) == 0 );
 }
 
 int main( void )
@@ -68,7 +75,7 @@ int main( void )
 	const char szTooLong[SIR_VFS_MAX_PATH_BYTES] = {};
 	sirVFSTestFailure( szTooLong, sizeof( szTooLong ), SIR_VFS_PATH_TOO_LONG );
 	sirVFSPath_t path = {};
-	assert( SIRVFSPath::normalize( nullptr, 3, &path ) == SIR_VFS_PATH_INVALID_ARGUMENT );
-	assert( SIRVFSPath::normalize( "game:/a", 7, nullptr ) == SIR_VFS_PATH_INVALID_ARGUMENT );
+	sirVFSRequire( SIRVFSPath::normalize( nullptr, 3, &path ) == SIR_VFS_PATH_INVALID_ARGUMENT );
+	sirVFSRequire( SIRVFSPath::normalize( "game:/a", 7, nullptr ) == SIR_VFS_PATH_INVALID_ARGUMENT );
 	return 0;
 }
