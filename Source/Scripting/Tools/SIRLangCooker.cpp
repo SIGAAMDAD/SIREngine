@@ -20,9 +20,19 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Scripting/Core/SIRScriptSHA256.h>
 
 #include <errno.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#if defined( _WIN32 )
+#include <io.h>
+#include <process.h>
+#include <sys/stat.h>
+#include <windows.h>
+#else
+#include <unistd.h>
+#endif
 
 constexpr uint32_t SIR_LANG_COOK_MAX_SOURCE = 131072;
 constexpr uint32_t SIR_LANG_COOK_MAX_TOKENS = 8192;
@@ -154,39 +164,118 @@ static bool sirLangReadSource( const char *pszPath, sirLangSourceView_t *pSource
 	return true;
 }
 
+static FILE *sirLangOpenTemporary( const char *pszTarget, char *pszTemporary, size_t nCapacity ) noexcept
+{
+#if defined( _WIN32 )
+	const unsigned long nProcessId = ( unsigned long )_getpid();
+#else
+	const unsigned long nProcessId = ( unsigned long )getpid();
+#endif
+
+	for ( uint32_t iAttempt = 0; iAttempt < 32; ++iAttempt ) {
+		const int nLength = snprintf( pszTemporary, nCapacity, "%s.tmp-%lu-%u", pszTarget, nProcessId, iAttempt );
+		if ( nLength < 0 || ( size_t )nLength >= nCapacity ) {
+			return nullptr;
+		}
+
+#if defined( _WIN32 )
+		const int nDescriptor = _open( pszTemporary, _O_CREAT | _O_EXCL | _O_WRONLY | _O_BINARY, _S_IREAD | _S_IWRITE );
+#else
+		const int nDescriptor = open( pszTemporary, O_CREAT | O_EXCL | O_WRONLY, 0600 );
+#endif
+		if ( nDescriptor < 0 ) {
+			if ( errno == EEXIST ) {
+				continue;
+			}
+			return nullptr;
+		}
+
+#if defined( _WIN32 )
+		FILE *pFile = _fdopen( nDescriptor, "wb" );
+#else
+		FILE *pFile = fdopen( nDescriptor, "wb" );
+#endif
+		if ( pFile == nullptr ) {
+#if defined( _WIN32 )
+			( void )_close( nDescriptor );
+#else
+			( void )close( nDescriptor );
+#endif
+			( void )remove( pszTemporary );
+		}
+		return pFile;
+	}
+	return nullptr;
+}
+
+static bool sirLangFlushTemporary( FILE *pFile ) noexcept
+{
+	if ( fflush( pFile ) != 0 ) {
+		return false;
+	}
+#if defined( _WIN32 )
+	return _commit( _fileno( pFile ) ) == 0;
+#else
+	return fsync( fileno( pFile ) ) == 0;
+#endif
+}
+
+static bool sirLangPublishTemporary( const char *pszTemporary, const char *pszTarget ) noexcept
+{
+#if defined( _WIN32 )
+	// The absence of MOVEFILE_REPLACE_EXISTING makes publication no-clobber.
+	return MoveFileExA( pszTemporary, pszTarget, MOVEFILE_WRITE_THROUGH ) != 0;
+#else
+	// Publish on the same filesystem without replacing a competing winner.
+	const char *pszSeparator = strrchr( pszTarget, '/' );
+	char szDirectory[4096] = {};
+	if ( pszSeparator == nullptr ) {
+		szDirectory[0] = '.';
+	} else {
+		size_t nDirectoryLength = ( size_t )( pszSeparator - pszTarget );
+		if ( nDirectoryLength == 0 ) {
+			nDirectoryLength = 1;
+		}
+		if ( nDirectoryLength >= sizeof( szDirectory ) ) {
+			return false;
+		}
+		memcpy( szDirectory, pszTarget, nDirectoryLength );
+	}
+
+	const int nDirectory = open( szDirectory, O_RDONLY | O_DIRECTORY );
+	if ( nDirectory < 0 ) {
+		return false;
+	}
+	const bool bLinked = link( pszTemporary, pszTarget ) == 0;
+	const bool bSynced = bLinked && fsync( nDirectory ) == 0;
+	const bool bClosed = close( nDirectory ) == 0;
+	return bSynced && bClosed;
+#endif
+}
+
 static bool sirLangWriteArtifact( const char *pszPath, uint32_t nBytes ) noexcept
 {
 	if ( pszPath == nullptr || nBytes == 0 || nBytes > sizeof( s_Buffers.szBytecode ) ) {
 		return false;
 	}
 
-	// Publish only a complete compiled object. A pre-existing target is never
-	// deleted or partially overwritten by a failed cook.
-	FILE *pExisting = fopen( pszPath, "rb" );
-	if ( pExisting != nullptr ) {
-		( void )fclose( pExisting );
-		return false;
-	}
-
 	char szTemporary[4096] = {};
-	const size_t nLength = strlen( pszPath );
-	if ( nLength > sizeof( szTemporary ) - sizeof( ".tmp" ) ) {
-		return false;
-	}
-	memcpy( szTemporary, pszPath, nLength );
-	memcpy( szTemporary + nLength, ".tmp", sizeof( ".tmp" ) );
-	FILE *pFile = fopen( szTemporary, "wb" );
+	FILE *pFile = sirLangOpenTemporary( pszPath, szTemporary, sizeof( szTemporary ) );
 	if ( pFile == nullptr ) {
 		return false;
 	}
 
 	const bool bWritten = fwrite( s_Buffers.szBytecode, 1, nBytes, pFile ) == nBytes;
+	const bool bFlushed = bWritten && sirLangFlushTemporary( pFile );
 	const bool bClosed = fclose( pFile ) == 0;
-	if ( !bWritten || !bClosed || rename( szTemporary, pszPath ) != 0 ) {
+	if ( !bFlushed || !bClosed ) {
 		( void )remove( szTemporary );
 		return false;
 	}
-	return true;
+
+	const bool bPublished = sirLangPublishTemporary( szTemporary, pszPath );
+	( void )remove( szTemporary );
+	return bPublished;
 }
 
 int main( int nArgc, char **ppszArgv )
