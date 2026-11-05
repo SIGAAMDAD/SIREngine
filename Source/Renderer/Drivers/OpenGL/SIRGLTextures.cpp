@@ -37,15 +37,19 @@ sirGraphicsResult_t sirGLLoadTextureDispatch( sirGLProcedureLookup_t pLookup, vo
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	void *pCreate = pLookup( pContext, "glCreateTextures" );
+	void *pGen = pLookup( pContext, "glGenTextures" );
+	void *pView = pLookup( pContext, "glTextureView" );
 	void *pStorage = pLookup( pContext, "glTextureStorage2D" );
 	void *pDelete = pLookup( pContext, "glDeleteTextures" );
 	void *pError = pLookup( pContext, "glGetError" );
-	if ( !sirGLIsUsableProcedure( pCreate ) || !sirGLIsUsableProcedure( pStorage ) || !sirGLIsUsableProcedure( pDelete ) ||
-	     !sirGLIsUsableProcedure( pError ) ) {
+	if ( !sirGLIsUsableProcedure( pCreate ) || !sirGLIsUsableProcedure( pGen ) || !sirGLIsUsableProcedure( pView ) ||
+	     !sirGLIsUsableProcedure( pStorage ) || !sirGLIsUsableProcedure( pDelete ) || !sirGLIsUsableProcedure( pError ) ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
 	sirGLTextureDispatch_t result = {};
 	result.pCreateTextures = ( decltype( result.pCreateTextures ) )pCreate;
+	result.pGenTextures = ( decltype( result.pGenTextures ) )pGen;
+	result.pTextureView = ( decltype( result.pTextureView ) )pView;
 	result.pTextureStorage2D = ( decltype( result.pTextureStorage2D ) )pStorage;
 	result.pDeleteTextures = ( decltype( result.pDeleteTextures ) )pDelete;
 	result.pGetError = ( decltype( result.pGetError ) )pError;
@@ -140,6 +144,37 @@ sirGraphicsResult_t sirGLCreateNativeTexture2D( const sirGLTextureDispatch_t *pA
 		return sirGLTextureError( nStorageError );
 	}
 	pTexture->nName = nName;
+	return SIR_GRAPHICS_SUCCESS;
+}
+
+sirGraphicsResult_t sirGLCreateNativeTextureView( const sirGLTextureDispatch_t *pAPI, const sirGLTextureViewCreateInfo_t *pInfo,
+                                                  uint32_t *pName ) noexcept
+{
+	if ( pAPI == nullptr || pInfo == nullptr || pName == nullptr || pAPI->pGenTextures == nullptr || pAPI->pTextureView == nullptr ||
+	     pAPI->pDeleteTextures == nullptr || pAPI->pGetError == nullptr || pInfo->nParentName == 0 || pInfo->nInternalFormat == 0 ||
+	     pInfo->nMipLevels == 0 ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	if ( pAPI->pGetError() != SIR_GL_TEX_NO_ERROR ) {
+		return SIR_GRAPHICS_DRIVER_ERROR;
+	}
+	uint32_t nName = 0;
+	// GL requires an unbound glGenTextures name, not a DSA-created texture object.
+	pAPI->pGenTextures( 1, &nName );
+	const uint32_t nGenError = pAPI->pGetError();
+	if ( nGenError != SIR_GL_TEX_NO_ERROR || nName == 0 ) {
+		if ( nName != 0 ) {
+			pAPI->pDeleteTextures( 1, &nName );
+		}
+		return sirGLTextureError( nGenError );
+	}
+	pAPI->pTextureView( nName, SIR_GL_TEXTURE_2D, pInfo->nParentName, pInfo->nInternalFormat, pInfo->nBaseMip, pInfo->nMipLevels, 0, 1 );
+	const uint32_t nViewError = pAPI->pGetError();
+	if ( nViewError != SIR_GL_TEX_NO_ERROR ) {
+		pAPI->pDeleteTextures( 1, &nName );
+		return sirGLTextureError( nViewError );
+	}
+	*pName = nName;
 	return SIR_GRAPHICS_SUCCESS;
 }
 

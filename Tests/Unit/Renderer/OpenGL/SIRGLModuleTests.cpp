@@ -177,6 +177,30 @@ int main( void )
 			                    hTexture.eType == SIR_GRAPHICS_HANDLE_TEXTURE,
 			                "native 2D texture ABI allocation" );
 			if ( hTexture.nGeneration != 0 ) {
+				sirGraphicsViewDesc_t view = {};
+				view.hResource = hTexture;
+				view.eFormat = SIR_GRAPHICS_FORMAT_RGBA8_UNORM;
+				view.nBaseMip = 1;
+				view.nMipLevels = 2;
+				view.nLayers = 1;
+				view.nUsage = SIR_GRAPHICS_USAGE_SAMPLED;
+				sirGraphicsHandle_t hView = {};
+				sirGLTestCheck( device.pCreateView( device.pDevice, &view, &hView ) == SIR_GRAPHICS_SUCCESS &&
+				                    hView.eType == SIR_GRAPHICS_HANDLE_VIEW,
+				                "native 2D mip view allocated" );
+				view.nBaseMip = 3;
+				sirGraphicsHandle_t hBadView = {};
+				sirGLTestCheck( device.pCreateView( device.pDevice, &view, &hBadView ) == SIR_GRAPHICS_INVALID_ARGUMENT,
+				                "out-of-range mip view refused" );
+				view.nBaseMip = 1;
+				if ( hView.nGeneration != 0 ) {
+					sirGLTestCheck( device.pRetireResource( device.pDevice, hTexture, nullptr ) == SIR_GRAPHICS_BUSY,
+					                "live child view prevents texture retirement" );
+					sirGLTestCheck( device.pRetireResource( device.pDevice, hView, nullptr ) == SIR_GRAPHICS_SUCCESS,
+					                "native mip view retirement" );
+					sirGLTestCheck( device.pRetireResource( device.pDevice, hView, nullptr ) == SIR_GRAPHICS_INVALID_HANDLE,
+					                "stale view rejected" );
+				}
 				sirGraphicsMemoryBudget_t textureBudget = {};
 				sirGLTestCheck( device.pQueryMemoryBudget( device.pDevice, &textureBudget ) == SIR_GRAPHICS_SUCCESS &&
 				                    textureBudget.nCommittedBytes == 672,

@@ -195,7 +195,10 @@ static uint32_t sirGLCreateBuffer( void *pDevice, const sirGraphicsBufferDesc_t 
 	if ( nStatus != SIR_GRAPHICS_SUCCESS ) {
 		return nStatus;
 	}
-	const sirGLNativeResource_t native = { nName, SIR_GRAPHICS_HANDLE_BUFFER, pDesc->nSizeBytes };
+	sirGLNativeResource_t native = {};
+	native.nName = nName;
+	native.eType = SIR_GRAPHICS_HANDLE_BUFFER;
+	native.nRequestedBytes = pDesc->nSizeBytes;
 	nStatus = sirGLHandlePoolInsert( &pState->handles, &native, pHandle );
 	if ( nStatus != SIR_GRAPHICS_SUCCESS ) {
 		( void )sirGLDeleteNativeBuffer( &pState->buffers, nName );
@@ -247,7 +250,14 @@ static uint32_t sirGLCreateTexture( void *pDevice, const sirGraphicsTextureDesc_
 	if ( nStatus != SIR_GRAPHICS_SUCCESS ) {
 		return nStatus;
 	}
-	const sirGLNativeResource_t native = { texture.nName, SIR_GRAPHICS_HANDLE_TEXTURE, texture.nRequestedBytes };
+	sirGLNativeResource_t native = {};
+	native.nName = texture.nName;
+	native.eType = SIR_GRAPHICS_HANDLE_TEXTURE;
+	native.nRequestedBytes = texture.nRequestedBytes;
+	native.nInternalFormat = texture.nInternalFormat;
+	native.eFormat = pDesc->eFormat;
+	native.nMipLevels = pDesc->nMipLevels;
+	native.nUsage = pDesc->nUsage;
 	nStatus = sirGLHandlePoolInsert( &pState->handles, &native, pHandle );
 	if ( nStatus != SIR_GRAPHICS_SUCCESS ) {
 		( void )sirGLDeleteNativeTexture( &pState->textures, texture.nName );
@@ -260,9 +270,53 @@ static uint32_t sirGLCreateTexture( void *pDevice, const sirGraphicsTextureDesc_
 	return SIR_GRAPHICS_SUCCESS;
 }
 
-static uint32_t sirGLCreateView( void *, const sirGraphicsViewDesc_t *, sirGraphicsHandle_t * ) noexcept
+static uint32_t sirGLCreateView( void *pDevice, const sirGraphicsViewDesc_t *pDesc, sirGraphicsHandle_t *pHandle ) noexcept
 {
-	return SIR_GRAPHICS_UNSUPPORTED;
+	if ( pDevice == nullptr || pDesc == nullptr || pHandle == nullptr ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	sirGLDevice_t *pState = ( sirGLDevice_t * )pDevice;
+	if ( pState->pContext == nullptr ) {
+		return SIR_GRAPHICS_DEVICE_LOST;
+	}
+	if ( !sirGLContextOwnsThread( pState->pContext ) ) {
+		return SIR_GRAPHICS_BUSY;
+	}
+	if ( pState->handles.nFreeHead == UINT32_MAX ) {
+		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
+	}
+	sirGLNativeResource_t parent = {};
+	uint32_t nStatus = sirGLHandlePoolFind( &pState->handles, pDesc->hResource, &parent );
+	if ( nStatus != SIR_GRAPHICS_SUCCESS ) {
+		return nStatus;
+	}
+	if ( parent.eType != SIR_GRAPHICS_HANDLE_TEXTURE ) {
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
+	if ( pDesc->nMipLevels == 0 || pDesc->nLayers == 0 || pDesc->nBufferOffsetBytes != 0 || pDesc->nBufferSizeBytes != 0 ||
+	     pDesc->nBaseMip >= parent.nMipLevels || pDesc->nMipLevels > parent.nMipLevels - pDesc->nBaseMip ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	// Only immutable 2D sampled views with the parent's exact storage format are implemented.
+	if ( pDesc->eFormat != parent.eFormat || pDesc->nUsage != SIR_GRAPHICS_USAGE_SAMPLED ||
+	     ( parent.nUsage & SIR_GRAPHICS_USAGE_SAMPLED ) == 0 || pDesc->nBaseLayer != 0 || pDesc->nLayers != 1 ) {
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
+	const sirGLTextureViewCreateInfo_t info = { parent.nName, parent.nInternalFormat, pDesc->nBaseMip, pDesc->nMipLevels };
+	uint32_t nName = 0;
+	nStatus = sirGLCreateNativeTextureView( &pState->textures, &info, &nName );
+	if ( nStatus != SIR_GRAPHICS_SUCCESS ) {
+		return nStatus;
+	}
+	sirGLNativeResource_t native = {};
+	native.nName = nName;
+	native.eType = SIR_GRAPHICS_HANDLE_VIEW;
+	native.hParent = pDesc->hResource;
+	nStatus = sirGLHandlePoolInsert( &pState->handles, &native, pHandle );
+	if ( nStatus != SIR_GRAPHICS_SUCCESS ) {
+		( void )sirGLDeleteNativeTexture( &pState->textures, nName );
+	}
+	return nStatus;
 }
 
 static uint32_t sirGLCreateSampler( void *pDevice, const sirGraphicsSamplerDesc_t *pDesc, sirGraphicsHandle_t *pHandle ) noexcept
@@ -285,7 +339,9 @@ static uint32_t sirGLCreateSampler( void *pDevice, const sirGraphicsSamplerDesc_
 	if ( nStatus != SIR_GRAPHICS_SUCCESS ) {
 		return nStatus;
 	}
-	const sirGLNativeResource_t native = { nName, SIR_GRAPHICS_HANDLE_SAMPLER, 0 };
+	sirGLNativeResource_t native = {};
+	native.nName = nName;
+	native.eType = SIR_GRAPHICS_HANDLE_SAMPLER;
 	nStatus = sirGLHandlePoolInsert( &pState->handles, &native, pHandle );
 	if ( nStatus != SIR_GRAPHICS_SUCCESS ) {
 		( void )sirGLDeleteNativeSampler( &pState->samplers, nName );
@@ -369,11 +425,14 @@ static uint32_t sirGLRetireResource( void *pDevice, sirGraphicsHandle_t hResourc
 	if ( nStatus != SIR_GRAPHICS_SUCCESS ) {
 		return nStatus;
 	}
+	if ( resource.eType == SIR_GRAPHICS_HANDLE_TEXTURE && pState->handles.pSlots[hResource.nSlot].nChildCount != 0 ) {
+		return SIR_GRAPHICS_BUSY;
+	}
 	if ( resource.eType == SIR_GRAPHICS_HANDLE_BUFFER ) {
 		nStatus = sirGLDeleteNativeBuffer( &pState->buffers, resource.nName );
 	} else if ( resource.eType == SIR_GRAPHICS_HANDLE_SAMPLER ) {
 		nStatus = sirGLDeleteNativeSampler( &pState->samplers, resource.nName );
-	} else if ( resource.eType == SIR_GRAPHICS_HANDLE_TEXTURE ) {
+	} else if ( resource.eType == SIR_GRAPHICS_HANDLE_TEXTURE || resource.eType == SIR_GRAPHICS_HANDLE_VIEW ) {
 		nStatus = sirGLDeleteNativeTexture( &pState->textures, resource.nName );
 	} else {
 		return SIR_GRAPHICS_UNSUPPORTED;
@@ -382,7 +441,8 @@ static uint32_t sirGLRetireResource( void *pDevice, sirGraphicsHandle_t hResourc
 		return nStatus;
 	}
 	nStatus = sirGLHandlePoolTake( &pState->handles, hResource, &resource );
-	if ( nStatus == SIR_GRAPHICS_SUCCESS && resource.eType != SIR_GRAPHICS_HANDLE_SAMPLER ) {
+	if ( nStatus == SIR_GRAPHICS_SUCCESS &&
+	     ( resource.eType == SIR_GRAPHICS_HANDLE_BUFFER || resource.eType == SIR_GRAPHICS_HANDLE_TEXTURE ) ) {
 		pState->nCommittedResourceBytes -= resource.nRequestedBytes;
 	}
 	return nStatus;

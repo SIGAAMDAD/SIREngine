@@ -21,6 +21,13 @@ static int s_nFailures = 0;
 static uint32_t s_nError = 0;
 static uint32_t s_nCreateError = 0;
 static uint32_t s_nStorageError = 0;
+static uint32_t s_nGenError = 0;
+static uint32_t s_nViewError = 0;
+static uint32_t s_nGenerated = 0;
+static uint32_t s_nViewed = 0;
+static uint32_t s_nViewParent = 0;
+static uint32_t s_nViewMip = 0;
+static uint32_t s_nViewLevels = 0;
 static uint32_t s_nCreated = 0;
 static uint32_t s_nDeleted = 0;
 static int32_t s_nLevels = 0;
@@ -43,6 +50,28 @@ static void sirGLFakeCreate( uint32_t nTarget, int32_t, uint32_t *pName ) noexce
 	s_nLastTarget = nTarget;
 	*pName = s_bZeroName ? 0 : 53;
 	s_nError = s_nCreateError;
+}
+
+static void sirGLFakeGen( int32_t, uint32_t *pName ) noexcept
+{
+	++s_nGenerated;
+	*pName = s_bZeroName ? 0 : 91;
+	s_nError = s_nGenError;
+}
+
+static void sirGLFakeView( uint32_t, uint32_t nTarget, uint32_t nParent, uint32_t, uint32_t nBaseMip, uint32_t nLevels, uint32_t nBaseLayer,
+                           uint32_t nLayers ) noexcept
+{
+	++s_nViewed;
+	s_nLastTarget = nTarget;
+	s_nViewParent = nParent;
+	s_nViewMip = nBaseMip;
+	s_nViewLevels = nLevels;
+	if ( nBaseLayer != 0 || nLayers != 1 ) {
+		s_nError = 0x0502;
+	} else {
+		s_nError = s_nViewError;
+	}
 }
 
 static void sirGLFakeStorage( uint32_t, int32_t nLevels, uint32_t nFormat, int32_t, int32_t ) noexcept
@@ -72,6 +101,12 @@ static void *sirGLFakeLookup( void *, const char *pszName ) noexcept
 	if ( strcmp( pszName, "glCreateTextures" ) == 0 ) {
 		return ( void * )sirGLFakeCreate;
 	}
+	if ( strcmp( pszName, "glGenTextures" ) == 0 ) {
+		return ( void * )sirGLFakeGen;
+	}
+	if ( strcmp( pszName, "glTextureView" ) == 0 ) {
+		return ( void * )sirGLFakeView;
+	}
 	if ( strcmp( pszName, "glTextureStorage2D" ) == 0 ) {
 		return ( void * )sirGLFakeStorage;
 	}
@@ -90,6 +125,8 @@ int main( void )
 	sirGLCheck( sirGLLoadTextureDispatch( nullptr, &api, &api ) == SIR_GRAPHICS_INVALID_ARGUMENT, "null loader" );
 	s_pszMissing = "glTextureStorage2D";
 	sirGLCheck( sirGLLoadTextureDispatch( sirGLFakeLookup, &api, &api ) == SIR_GRAPHICS_UNSUPPORTED, "missing storage function" );
+	s_pszMissing = "glTextureView";
+	sirGLCheck( sirGLLoadTextureDispatch( sirGLFakeLookup, &api, &api ) == SIR_GRAPHICS_UNSUPPORTED, "missing texture view" );
 	s_pszMissing = nullptr;
 	sirGLCheck( sirGLLoadTextureDispatch( sirGLFakeLookup, &api, &api ) == SIR_GRAPHICS_SUCCESS, "load texture functions" );
 
@@ -154,6 +191,27 @@ int main( void )
 	sirGLCheck( sirGLCreateNativeTexture2D( &api, &desc, &texture ) == SIR_GRAPHICS_OUT_OF_MEMORY, "storage OOM" );
 	sirGLCheck( s_nDeleted == 3 && s_nCreated == 4, "failure rollback" );
 	sirGLCheck( sirGLDeleteNativeTexture( &api, 0 ) == SIR_GRAPHICS_INVALID_ARGUMENT, "zero delete" );
+	sirGLTextureViewCreateInfo_t view = { 53, 0x8058, 1, 2 };
+	uint32_t nViewName = 0;
+	sirGLCheck( sirGLCreateNativeTextureView( &api, &view, &nViewName ) == SIR_GRAPHICS_SUCCESS && nViewName == 91 && s_nViewParent == 53 &&
+	                s_nLastTarget == 0x0DE1 && s_nViewMip == 1 && s_nViewLevels == 2,
+	            "2D immutable texture view" );
+	sirGLCheck( sirGLDeleteNativeTexture( &api, nViewName ) == SIR_GRAPHICS_SUCCESS, "delete texture view" );
+	view.nMipLevels = 0;
+	sirGLCheck( sirGLCreateNativeTextureView( &api, &view, &nViewName ) == SIR_GRAPHICS_INVALID_ARGUMENT, "empty view" );
+	view.nMipLevels = 2;
+	s_nError = 0x0502;
+	sirGLCheck( sirGLCreateNativeTextureView( &api, &view, &nViewName ) == SIR_GRAPHICS_DRIVER_ERROR, "pending view error" );
+	s_nGenError = 0x0505;
+	sirGLCheck( sirGLCreateNativeTextureView( &api, &view, &nViewName ) == SIR_GRAPHICS_OUT_OF_MEMORY, "view name OOM" );
+	s_nGenError = 0;
+	s_bZeroName = true;
+	sirGLCheck( sirGLCreateNativeTextureView( &api, &view, &nViewName ) == SIR_GRAPHICS_DRIVER_ERROR, "zero view name" );
+	s_bZeroName = false;
+	s_nViewError = 0x0502;
+	sirGLCheck( sirGLCreateNativeTextureView( &api, &view, &nViewName ) == SIR_GRAPHICS_DRIVER_ERROR, "view invalid operation" );
+	s_nViewError = 0;
+	sirGLCheck( s_nGenerated == 4 && s_nViewed == 2 && s_nDeleted == 6, "view failures release native names" );
 	if ( s_nFailures == 0 ) {
 		printf( "GL46 native texture storage tests passed\n" );
 	}

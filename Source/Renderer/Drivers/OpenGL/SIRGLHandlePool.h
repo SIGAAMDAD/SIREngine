@@ -31,6 +31,11 @@ typedef struct sirGLNativeResource_s
 	uint32_t nName;
 	sirGraphicsHandleType_t eType;
 	uint64_t nRequestedBytes;
+	uint32_t nInternalFormat;
+	sirGraphicsFormat_t eFormat;
+	uint32_t nMipLevels;
+	uint32_t nUsage;
+	sirGraphicsHandle_t hParent;
 } sirGLNativeResource_t;
 
 typedef struct sirGLHandleSlot_s
@@ -38,6 +43,7 @@ typedef struct sirGLHandleSlot_s
 	sirGLNativeResource_t resource;
 	uint32_t nGeneration;
 	uint32_t nNextFree;
+	uint32_t nChildCount;
 	bool bLive;
 } sirGLHandleSlot_t;
 

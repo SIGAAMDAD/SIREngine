@@ -59,11 +59,30 @@ sirGraphicsResult_t sirGLHandlePoolInsert( sirGLHandlePool_t *pPool, const sirGL
 	if ( pPool->nFreeHead == UINT32_MAX ) {
 		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
 	}
+	if ( pResource->eType == SIR_GRAPHICS_HANDLE_VIEW ) {
+		sirGLNativeResource_t parent = {};
+		const sirGraphicsResult_t eParent = sirGLHandlePoolFind( pPool, pResource->hParent, &parent );
+		if ( eParent != SIR_GRAPHICS_SUCCESS ) {
+			return eParent;
+		}
+		if ( parent.eType != SIR_GRAPHICS_HANDLE_TEXTURE ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
+		if ( pPool->pSlots[pResource->hParent.nSlot].nChildCount == UINT32_MAX ) {
+			return SIR_GRAPHICS_CAPACITY_EXCEEDED;
+		}
+	} else if ( pResource->hParent.nGeneration != 0 ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
 	const uint32_t nSlot = pPool->nFreeHead;
 	sirGLHandleSlot_t *pSlot = &pPool->pSlots[nSlot];
 	pPool->nFreeHead = pSlot->nNextFree;
 	pSlot->resource = *pResource;
+	pSlot->nChildCount = 0;
 	pSlot->bLive = true;
+	if ( pResource->eType == SIR_GRAPHICS_HANDLE_VIEW ) {
+		++pPool->pSlots[pResource->hParent.nSlot].nChildCount;
+	}
 	++pPool->nActive;
 	*pHandle = { nSlot, pSlot->nGeneration, pPool->nDeviceGeneration, pResource->eType };
 	return SIR_GRAPHICS_SUCCESS;
@@ -93,6 +112,17 @@ sirGraphicsResult_t sirGLHandlePoolTake( sirGLHandlePool_t *pPool, sirGraphicsHa
 		return eStatus;
 	}
 	sirGLHandleSlot_t *pSlot = &pPool->pSlots[hHandle.nSlot];
+	if ( pSlot->nChildCount != 0 ) {
+		return SIR_GRAPHICS_BUSY;
+	}
+	if ( pSlot->resource.eType == SIR_GRAPHICS_HANDLE_VIEW ) {
+		sirGLNativeResource_t parent = {};
+		const sirGraphicsResult_t eParent = sirGLHandlePoolFind( pPool, pSlot->resource.hParent, &parent );
+		if ( eParent != SIR_GRAPHICS_SUCCESS || pPool->pSlots[pSlot->resource.hParent.nSlot].nChildCount == 0 ) {
+			return SIR_GRAPHICS_INVALID_HANDLE;
+		}
+		--pPool->pSlots[pSlot->resource.hParent.nSlot].nChildCount;
+	}
 	pSlot->resource = {};
 	pSlot->bLive = false;
 	--pPool->nActive;
