@@ -37,8 +37,8 @@ class SIRDeferredEventChannel
 public:
 	typedef typename SIREvent<TPayload, ListenerCapacity>::callback_t callback_t;
 	SIRDeferredEventChannel( void ) noexcept = default;
-	SIRDeferredEventChannel( const SIRDeferredEventChannel & ) = delete;
-	SIRDeferredEventChannel &operator=( const SIRDeferredEventChannel & ) = delete;
+	SIRDeferredEventChannel( const SIRDeferredEventChannel& ) = delete;
+	SIRDeferredEventChannel& operator=( const SIRDeferredEventChannel& ) = delete;
 
 	sirSubscriptionHandle_t subscribe( void *pContext, callback_t pCallback ) noexcept
 	{
@@ -48,7 +48,7 @@ public:
 	{
 		return m_Event.unsubscribe( handle );
 	}
-	bool enqueue( const TPayload &payload ) noexcept
+	bool enqueue( const TPayload& payload ) noexcept
 	{
 		if constexpr ( FilterUnobserved ) {
 			if ( m_Event.subscriberCount() == 0 ) {
@@ -68,7 +68,7 @@ public:
 	}
 	uint32_t pump( void ) noexcept
 	{
-		return m_Stream.drain( this, []( void *pContext, const TPayload &payload ) noexcept {
+		return m_Stream.drain( this, []( void *pContext, const TPayload& payload ) noexcept {
 			( ( SIRDeferredEventChannel * )pContext )->m_Event.publish( payload );
 		} );
 	}

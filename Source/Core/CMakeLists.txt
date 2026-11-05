@@ -1,4 +1,4 @@
-add_library(SIRCore STATIC SIRApplication.cpp)
+add_library(SIRCore STATIC SIRApplication.cpp Systems/SIREngineSystem.cpp)
 add_library(SIR::Core ALIAS SIRCore)
 target_include_directories(SIRCore PUBLIC
     "${PROJECT_SOURCE_DIR}/Source"
@@ -14,4 +14,7 @@ add_subdirectory(Platform)
 target_sources(SIRCore PRIVATE Memory/SIRMemoryManager.cpp)
 add_subdirectory(Memory)
 add_subdirectory(Events)
+add_subdirectory(Config)
+add_subdirectory(Strings)
+add_subdirectory(Jobs)
 sir_configure_owned_target(SIRCore)

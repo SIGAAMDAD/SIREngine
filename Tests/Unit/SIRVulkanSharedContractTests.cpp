@@ -46,8 +46,8 @@ int main( void )
 	if ( sirVulkanDescribeCapabilities( nativeAdapter, 41, &synthetic ) != SIR_GRAPHICS_SUCCESS ||
 	     synthetic.eBackend != SIR_GRAPHICS_BACKEND_VULKAN || synthetic.nDeviceGeneration != 41 ||
 	     synthetic.nMaximumTextureDimension != 8192 || synthetic.nMaximumSampleCount != 1 ||
-	     synthetic.nFeatureMask != SIR_GRAPHICS_FEATURE_COMPUTE || !synthetic.bSoftwareAdapter ||
-	     synthetic.nMaximumColorAttachments != 0 || synthetic.nMaximumBindingSlots != 0 ) {
+	     synthetic.nFeatureMask != SIR_GRAPHICS_FEATURE_COMPUTE || !synthetic.bSoftwareAdapter || synthetic.nMaximumColorAttachments != 0 ||
+	     synthetic.nMaximumBindingSlots != 0 ) {
 		return 17;
 	}
 	sirGraphicsDeviceCreateDesc_t admission = {};

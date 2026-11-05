@@ -14,6 +14,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Renderer/Drivers/Vulkan/SIRVulkanGraphics.h>
+#include <Renderer/SIRGraphicsABIOperations.h>
 #include <Renderer/SIRGraphicsValidation.h>
 #include <Core/Platform/SIRAtomic.h>
 
@@ -45,7 +46,7 @@ static sirGraphicsResult_t sirVulkanToGraphicsResult( sirVulkanResult_t eResult 
 	}
 }
 
-sirGraphicsResult_t sirVulkanDescribeAdapter( uint32_t nAdapterIndex, const sirVulkanAdapterInfo_t &native,
+sirGraphicsResult_t sirVulkanDescribeAdapter( uint32_t nAdapterIndex, const sirVulkanAdapterInfo_t& native,
                                               sirGraphicsAdapterInfo_t *pInfo ) noexcept
 {
 	if ( pInfo == nullptr ) {
@@ -65,7 +66,7 @@ sirGraphicsResult_t sirVulkanDescribeAdapter( uint32_t nAdapterIndex, const sirV
 	return SIR_GRAPHICS_SUCCESS;
 }
 
-sirGraphicsResult_t sirVulkanDescribeCapabilities( const sirVulkanAdapterInfo_t &native, uint32_t nGeneration,
+sirGraphicsResult_t sirVulkanDescribeCapabilities( const sirVulkanAdapterInfo_t& native, uint32_t nGeneration,
                                                    sirGraphicsCapabilities_t *pCapabilities ) noexcept
 {
 	if ( pCapabilities == nullptr ) {
@@ -81,6 +82,7 @@ sirGraphicsResult_t sirVulkanDescribeCapabilities( const sirVulkanAdapterInfo_t 
 	// The current native backend exposes a single direct queue and descriptor-free compute.
 	pCapabilities->nFeatureMask = native.bComputeCapable ? SIR_GRAPHICS_FEATURE_COMPUTE : 0;
 	pCapabilities->nQueueMask = 1U << SIR_GRAPHICS_QUEUE_DIRECT;
+	pCapabilities->nPipelineModelMask = native.bComputeCapable ? ( 1U << ( SIR_GRAPHICS_PIPELINE_MODEL_MODERN - 1 ) ) : 0;
 	pCapabilities->nMaximumTextureDimension = native.nMaximumTextureDimension;
 	pCapabilities->nMaximumFramesInFlight = SIR_VULKAN_TRANSFER_SLOT_COUNT;
 	pCapabilities->nMaximumSampleCount = 1;
@@ -89,8 +91,8 @@ sirGraphicsResult_t sirVulkanDescribeCapabilities( const sirVulkanAdapterInfo_t 
 	return SIR_GRAPHICS_SUCCESS;
 }
 
-sirGraphicsResult_t sirVulkanValidateDeviceAdmission( const sirGraphicsDeviceCreateDesc_t &request,
-                                                     const sirGraphicsCapabilities_t &available ) noexcept
+sirGraphicsResult_t sirVulkanValidateDeviceAdmission( const sirGraphicsDeviceCreateDesc_t& request,
+                                                      const sirGraphicsCapabilities_t& available ) noexcept
 {
 	if ( ( available.nFeatureMask & request.nRequiredFeatures ) != request.nRequiredFeatures ||
 	     ( available.bSoftwareAdapter && !request.bAllowSoftware ) ) {
@@ -175,7 +177,7 @@ sirGraphicsResult_t SIRVulkanCommandList::copyBuffer( sirGraphicsHandle_t hDesti
 	     ( pDestination->native.nUsage & VK_BUFFER_USAGE_TRANSFER_DST_BIT ) == 0 ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	sirVulkanGraphicsOperation_t &operation = m_szOperations[m_nOperationCount++];
+	sirVulkanGraphicsOperation_t& operation = m_szOperations[m_nOperationCount++];
 	operation = {};
 	operation.eKind = SIR_VULKAN_GRAPHICS_BUFFER_COPY;
 	operation.hSource = hSource;
@@ -317,6 +319,41 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::queryCapabilities( sirGraphicsCapa
 	return sirVulkanDescribeCapabilities( adapter, m_nDeviceGeneration, pCapabilities );
 }
 
+sirGraphicsResult_t SIRVulkanRenderingDevice::queryPipelineModelCaps( sirGraphicsPipelineModel_t eModel,
+                                                                      sirGraphicsABIPipelineModelCaps_t *pCaps ) const noexcept
+{
+	if ( pCaps == nullptr ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	if ( eModel != SIR_GRAPHICS_PIPELINE_MODEL_MODERN ) {
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
+
+	sirGraphicsCapabilities_t available = {};
+	const sirGraphicsResult_t eResult = queryCapabilities( &available );
+	if ( eResult != SIR_GRAPHICS_SUCCESS ) {
+		return eResult;
+	}
+	if ( ( available.nFeatureMask & SIR_GRAPHICS_FEATURE_COMPUTE ) == 0 ) {
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
+
+	sirGraphicsABIPipelineModelCaps_t caps = {};
+	caps.nSize = sizeof( caps );
+	caps.nDeviceGeneration = available.nDeviceGeneration;
+	caps.nModel = SIR_GRAPHICS_PIPELINE_MODEL_MODERN;
+	caps.nExecutionModel = SIR_GRAPHICS_EXECUTION_EXPLICIT;
+	caps.nShaderStageMask = SIR_GRAPHICS_STAGE_COMPUTE;
+	caps.nQueueMask = available.nQueueMask;
+	caps.nRequiredFeatureMask = SIR_GRAPHICS_FEATURE_COMPUTE;
+	caps.nShaderFormatMask = 1U << ( SIR_GRAPHICS_SHADER_SPIRV - 1 );
+	caps.nMaximumSamples = available.nMaximumSampleCount;
+	caps.nMaximumTextureDimension = available.nMaximumTextureDimension;
+	caps.nSupportsNPOT = 1;
+	*pCaps = caps;
+	return SIR_GRAPHICS_SUCCESS;
+}
+
 sirGraphicsResult_t SIRVulkanRenderingDevice::queryMemoryBudget( sirGraphicsMemoryBudget_t *pBudget ) const noexcept
 {
 	if ( pBudget == nullptr ) {
@@ -339,7 +376,7 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::queryMemoryBudget( sirGraphicsMemo
 	return SIR_GRAPHICS_SUCCESS;
 }
 
-sirGraphicsResult_t SIRVulkanRenderingDevice::createBuffer( const sirGraphicsBufferDesc_t &desc, sirGraphicsHandle_t *pHandle ) noexcept
+sirGraphicsResult_t SIRVulkanRenderingDevice::createBuffer( const sirGraphicsBufferDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept
 {
 	if ( pHandle == nullptr ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
@@ -512,7 +549,7 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::acquireCommands( sirGraphicsQueue_
 	return SIR_GRAPHICS_BUSY;
 }
 
-sirGraphicsResult_t SIRVulkanRenderingDevice::submit( sirGraphicsQueue_t eQueue, const sirGraphicsSubmission_t &submission,
+sirGraphicsResult_t SIRVulkanRenderingDevice::submit( sirGraphicsQueue_t eQueue, const sirGraphicsSubmission_t& submission,
                                                       sirGraphicsCompletion_t *pCompletion ) noexcept
 {
 	if ( pCompletion == nullptr ) {
@@ -530,7 +567,7 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::submit( sirGraphicsQueue_t eQueue,
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
 	for ( uint32_t iWait = 0; iWait < submission.nWaitCount; ++iWait ) {
-		const sirGraphicsCompletion_t &wait = submission.pWaits[iWait];
+		const sirGraphicsCompletion_t& wait = submission.pWaits[iWait];
 		if ( wait.eQueue != SIR_GRAPHICS_QUEUE_DIRECT || wait.nValue > m_nLastCompletion ) {
 			return SIR_GRAPHICS_UNSUPPORTED;
 		}
@@ -572,8 +609,8 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::submit( sirGraphicsQueue_t eQueue,
 	for ( uint32_t iList = 0; iList < submission.nCommandListCount; ++iList ) {
 		const SIRVulkanCommandList *pList = szLists[iList];
 		for ( uint32_t iCommand = 0; iCommand < pList->m_nOperationCount; ++iCommand ) {
-			const sirVulkanGraphicsOperation_t &op = pList->m_szOperations[iCommand];
-			sirVulkanRecordedCommand_t &nativeOp = commands[nRecorded++];
+			const sirVulkanGraphicsOperation_t& op = pList->m_szOperations[iCommand];
+			sirVulkanRecordedCommand_t& nativeOp = commands[nRecorded++];
 			if ( op.eKind == SIR_VULKAN_GRAPHICS_BUFFER_COPY ) {
 				sirVulkanGraphicsBufferSlot_t *pSrc = resolveBuffer( op.hSource );
 				sirVulkanGraphicsBufferSlot_t *pDst = resolveBuffer( op.hDestination );
@@ -647,7 +684,7 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::submit( sirGraphicsQueue_t eQueue,
 			}
 			nativeOp.pImage = &pImage->native;
 			if ( op.eKind == SIR_VULKAN_GRAPHICS_TEXTURE_COPY ) {
-				const sirGraphicsBufferTextureCopy_t &copy = op.textureCopy;
+				const sirGraphicsBufferTextureCopy_t& copy = op.textureCopy;
 				sirVulkanGraphicsBufferSlot_t *pBuffer = resolveBuffer( copy.hBuffer );
 				if ( pBuffer == nullptr ) {
 					return SIR_GRAPHICS_INVALID_HANDLE;
@@ -717,7 +754,7 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::submit( sirGraphicsQueue_t eQueue,
 	return SIR_GRAPHICS_SUCCESS;
 }
 
-sirGraphicsResult_t SIRVulkanRenderingDevice::poll( const sirGraphicsCompletion_t &completion, bool *pCompleted ) noexcept
+sirGraphicsResult_t SIRVulkanRenderingDevice::poll( const sirGraphicsCompletion_t& completion, bool *pCompleted ) noexcept
 {
 	if ( pCompleted == nullptr ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
@@ -735,7 +772,7 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::poll( const sirGraphicsCompletion_
 	return sirVulkanToGraphicsResult( ePoll );
 }
 
-sirGraphicsResult_t SIRVulkanRenderingDevice::wait( const sirGraphicsCompletion_t &completion, uint64_t nTimeoutNs ) noexcept
+sirGraphicsResult_t SIRVulkanRenderingDevice::wait( const sirGraphicsCompletion_t& completion, uint64_t nTimeoutNs ) noexcept
 {
 	if ( !m_bReady || completion.nDeviceGeneration != m_nDeviceGeneration || completion.eQueue != SIR_GRAPHICS_QUEUE_DIRECT ||
 	     completion.nValue == 0 || completion.nValue > m_nLastCompletion ) {
@@ -750,7 +787,7 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::wait( const sirGraphicsCompletion_
 }
 
 sirGraphicsResult_t SIRVulkanRenderingDevice::retireResource( sirGraphicsHandle_t hResource,
-                                                              const sirGraphicsCompletionSet_t &completion ) noexcept
+                                                              const sirGraphicsCompletionSet_t& completion ) noexcept
 {
 	if ( hResource.eType == SIR_GRAPHICS_HANDLE_PIPELINE ) {
 		if ( !m_bReady || !sirGraphicsIsCompletionSetValid( completion, m_nDeviceGeneration ) ||
@@ -883,7 +920,7 @@ sirGraphicsResult_t SIRVulkanDriver::queryAdapter( uint32_t nAdapterIndex, sirGr
 	return sirVulkanDescribeAdapter( nAdapterIndex, native, pInfo );
 }
 
-sirGraphicsResult_t SIRVulkanDriver::createDevice( const sirGraphicsDeviceCreateDesc_t &desc, SIRRenderingDevice **ppDevice ) noexcept
+sirGraphicsResult_t SIRVulkanDriver::createDevice( const sirGraphicsDeviceCreateDesc_t& desc, SIRRenderingDevice **ppDevice ) noexcept
 {
 	if ( ppDevice == nullptr ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;

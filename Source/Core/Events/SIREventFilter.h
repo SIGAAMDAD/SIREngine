@@ -32,8 +32,8 @@ template <typename TPayload>
 class SIREventFilter
 {
 public:
-	typedef bool ( *predicate_t )( void *pContext, const TPayload &payload ) noexcept;
-	typedef void ( *callback_t )( void *pContext, const TPayload &payload ) noexcept;
+	typedef bool ( *predicate_t )( void *pContext, const TPayload& payload ) noexcept;
+	typedef void ( *callback_t )( void *pContext, const TPayload& payload ) noexcept;
 	SIREventFilter( void *pContext, predicate_t pPredicate, callback_t pCallback, uint32_t nSkip = 0,
 	                uint32_t nLimit = UINT32_MAX ) noexcept
 	    : m_pContext( pContext ), m_pPredicate( pPredicate ), m_pCallback( pCallback ), m_nSkip( nSkip ), m_nLimit( nLimit ),
@@ -41,7 +41,7 @@ public:
 	{
 	}
 
-	bool publish( const TPayload &payload ) noexcept
+	bool publish( const TPayload& payload ) noexcept
 	{
 		if ( m_pCallback == nullptr || m_nDelivered == m_nLimit || ( m_pPredicate != nullptr && !m_pPredicate( m_pContext, payload ) ) ) {
 			return false;

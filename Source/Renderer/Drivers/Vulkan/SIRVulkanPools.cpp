@@ -206,7 +206,7 @@ void SIRVulkanDevice::updateMemoryHighWater( void ) noexcept
 	sirVulkanAdvanceMemoryPeak( nCommitted, nAllocated, &m_nPeakCommittedBytes, &m_nPeakAllocationBytes );
 }
 
-bool SIRVulkanDevice::isSealedMemoryType( const VkImageCreateInfo &info ) const noexcept
+bool SIRVulkanDevice::isSealedMemoryType( const VkImageCreateInfo& info ) const noexcept
 {
 	if ( !m_bSealedPools ) {
 		return true;
@@ -229,7 +229,7 @@ bool SIRVulkanDevice::isSealedMemoryType( const VkImageCreateInfo &info ) const 
 	return sirVulkanMemoryTypeCompatible( nType, requirements.memoryTypeBits );
 }
 
-bool SIRVulkanDevice::isSealedBufferMemoryType( const VkBufferCreateInfo &info, uint32_t iPool ) const noexcept
+bool SIRVulkanDevice::isSealedBufferMemoryType( const VkBufferCreateInfo& info, uint32_t iPool ) const noexcept
 {
 	if ( !m_bSealedPools ) {
 		return true;

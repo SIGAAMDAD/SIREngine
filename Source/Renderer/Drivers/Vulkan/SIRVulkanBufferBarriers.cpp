@@ -85,7 +85,7 @@ static sirGraphicsResult_t sirVulkanBufferAccess( sirGraphicsState_t eState, VkB
 	}
 }
 
-sirGraphicsResult_t sirVulkanPlanBufferBarrier( const sirGraphicsBarrier_t &barrier, const sirVulkanBuffer_t *pBuffer,
+sirGraphicsResult_t sirVulkanPlanBufferBarrier( const sirGraphicsBarrier_t& barrier, const sirVulkanBuffer_t *pBuffer,
                                                 sirVulkanBufferBarrier_t *pNative ) noexcept
 {
 	if ( pBuffer == nullptr || pNative == nullptr || pBuffer->nSize == 0 ) {

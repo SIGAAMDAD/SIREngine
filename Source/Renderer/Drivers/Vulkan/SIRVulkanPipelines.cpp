@@ -16,7 +16,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Renderer/Drivers/Vulkan/SIRVulkanGraphics.h>
 #include <Renderer/SIRGraphicsValidation.h>
 
-sirGraphicsResult_t SIRVulkanRenderingDevice::createPipeline( const sirGraphicsPipelineDesc_t &desc, sirGraphicsHandle_t *pHandle ) noexcept
+sirGraphicsResult_t SIRVulkanRenderingDevice::createPipeline( const sirGraphicsPipelineDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept
 {
 	if ( pHandle == nullptr ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
@@ -108,7 +108,7 @@ sirGraphicsResult_t SIRVulkanCommandList::dispatch( uint32_t nGroupCountX, uint3
 	     nGroupCountZ > adapter.szMaximumComputeGroupCount[2] ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	sirVulkanGraphicsOperation_t &operation = m_szOperations[m_nOperationCount++];
+	sirVulkanGraphicsOperation_t& operation = m_szOperations[m_nOperationCount++];
 	operation = {};
 	operation.eKind = SIR_VULKAN_GRAPHICS_COMPUTE_DISPATCH;
 	operation.hPipeline = hPipeline;

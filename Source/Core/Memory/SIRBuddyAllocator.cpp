@@ -317,7 +317,7 @@ void SIRBuddyAllocator::writeCommitState( uint32_t nNode, uint8_t nState )
 {
 	const uint32_t nBit = nNode * 2;
 	const uint8_t nMask = ( ( uint8_t )( 3u << ( nBit % 8 ) ) );
-	uint8_t &nWord = m_pCommitTree[nBit / 8];
+	uint8_t& nWord = m_pCommitTree[nBit / 8];
 	nWord = ( ( uint8_t )( ( nWord & ~nMask ) | ( nState << ( nBit % 8 ) ) ) );
 }
 
@@ -372,7 +372,7 @@ void SIRBuddyAllocator::setLeafCommitRange( uint32_t nFirst, uint32_t nCount, bo
 		const uint32_t nBit = nIndex & 63;
 		const uint32_t nSpan = ( nLast - nIndex ) < ( 64 - nBit ) ? ( nLast - nIndex ) : ( 64 - nBit );
 		const uint64_t nMask = ( nSpan == 64 ? UINT64_MAX : ( ( 1ull << nSpan ) - 1 ) ) << nBit;
-		uint64_t &nWord = m_pCommittedLeafBits[nIndex >> 6];
+		uint64_t& nWord = m_pCommittedLeafBits[nIndex >> 6];
 		nWord = bCommitted ? ( nWord | nMask ) : ( nWord & ~nMask );
 		nIndex += nSpan;
 	}

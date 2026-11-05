@@ -38,8 +38,8 @@ class SIRBuddyAllocator
 {
 public:
 	SIRBuddyAllocator( void );
-	SIRBuddyAllocator( const SIRBuddyAllocator & ) = delete;
-	SIRBuddyAllocator &operator=( const SIRBuddyAllocator & ) = delete;
+	SIRBuddyAllocator( const SIRBuddyAllocator& ) = delete;
+	SIRBuddyAllocator& operator=( const SIRBuddyAllocator& ) = delete;
 
 	static uint64_t getRequiredMetadataBytes( uint64_t nCapacityBytes, uint64_t nMinimumBlockBytes );
 

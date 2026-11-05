@@ -1,3 +1,4 @@
+
 /*
 ===========================================================================
 SIREngine MPLv2 Source Code
@@ -52,7 +53,7 @@ public:
 	                                               uint32_t nAlignment );
 	static uint64_t estimateCompactBucketColdMetadata( uint64_t nSegmentBytes, uint32_t nSlabBytes, uint32_t nWorkerSeats,
 	                                                   uint32_t nAlignment );
-	static bool preflight( const sirMemoryConfig_t &config, const sirMemoryBudgetProfile_t &budget, const sirMemoryLayoutEntry_t *pEntries,
+	static bool preflight( const sirMemoryConfig_t& config, const sirMemoryBudgetProfile_t& budget, const sirMemoryLayoutEntry_t *pEntries,
 	                       uint32_t nEntryCount, sirMemoryLayoutResult_t *pResult );
 };
 

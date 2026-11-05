@@ -27,7 +27,7 @@ bool SIRVulkanDevice::loadImageDispatch( void ) noexcept
 	       m_pfnDestroySampler != nullptr;
 }
 
-sirVulkanResult_t SIRVulkanDevice::createImage( const VkImageCreateInfo &info, sirVulkanImage_t *pImage ) noexcept
+sirVulkanResult_t SIRVulkanDevice::createImage( const VkImageCreateInfo& info, sirVulkanImage_t *pImage ) noexcept
 {
 	if ( !m_bReady || m_bDeviceLost ) {
 		return SIR_VULKAN_INVALID_STATE;
@@ -96,7 +96,7 @@ sirVulkanResult_t SIRVulkanDevice::destroyImage( sirVulkanImage_t *pImage ) noex
 	return SIR_VULKAN_SUCCESS;
 }
 
-sirVulkanResult_t SIRVulkanDevice::createImageView( const sirVulkanImage_t *pImage, const VkImageViewCreateInfo &info,
+sirVulkanResult_t SIRVulkanDevice::createImageView( const sirVulkanImage_t *pImage, const VkImageViewCreateInfo& info,
                                                     sirVulkanImageView_t *pView ) noexcept
 {
 	if ( !m_bReady || m_bDeviceLost ) {
@@ -137,7 +137,7 @@ sirVulkanResult_t SIRVulkanDevice::destroyImageView( sirVulkanImageView_t *pView
 	return SIR_VULKAN_SUCCESS;
 }
 
-sirVulkanResult_t SIRVulkanDevice::createSampler( const VkSamplerCreateInfo &info, sirVulkanSampler_t *pSampler ) noexcept
+sirVulkanResult_t SIRVulkanDevice::createSampler( const VkSamplerCreateInfo& info, sirVulkanSampler_t *pSampler ) noexcept
 {
 	if ( !m_bReady || m_bDeviceLost ) {
 		return SIR_VULKAN_INVALID_STATE;

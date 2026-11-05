@@ -100,7 +100,7 @@ static VkSamplerAddressMode sirVulkanSamplerAddress( sirGraphicsAddressMode_t eM
 	}
 }
 
-sirGraphicsResult_t SIRVulkanCommandList::copyBufferTexture( const sirGraphicsBufferTextureCopy_t &copy ) noexcept
+sirGraphicsResult_t SIRVulkanCommandList::copyBufferTexture( const sirGraphicsBufferTextureCopy_t& copy ) noexcept
 {
 	if ( m_eState != SIR_VULKAN_COMMAND_RECORDING ) {
 		return SIR_GRAPHICS_BUSY;
@@ -153,7 +153,7 @@ sirGraphicsResult_t SIRVulkanCommandList::copyBufferTexture( const sirGraphicsBu
 	sirVulkanImage_t imageState = pImage->native;
 	if ( !copy.bBufferToTexture && transfer.nMip < imageState.nMips && transfer.nLayer < imageState.nLayers ) {
 		for ( uint32_t iOp = 0; iOp < m_nOperationCount; ++iOp ) {
-			const sirVulkanGraphicsOperation_t &prior = m_szOperations[iOp];
+			const sirVulkanGraphicsOperation_t& prior = m_szOperations[iOp];
 			if ( prior.eKind == SIR_VULKAN_GRAPHICS_TEXTURE_COPY && prior.textureCopy.bBufferToTexture &&
 			     prior.textureCopy.hTexture.nSlot == copy.hTexture.nSlot &&
 			     prior.textureCopy.hTexture.nGeneration == copy.hTexture.nGeneration && prior.textureCopy.nMip == copy.nMip &&
@@ -171,14 +171,14 @@ sirGraphicsResult_t SIRVulkanCommandList::copyBufferTexture( const sirGraphicsBu
 	if ( eValidation != SIR_VULKAN_SUCCESS ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	sirVulkanGraphicsOperation_t &operation = m_szOperations[m_nOperationCount++];
+	sirVulkanGraphicsOperation_t& operation = m_szOperations[m_nOperationCount++];
 	operation = {};
 	operation.eKind = SIR_VULKAN_GRAPHICS_TEXTURE_COPY;
 	operation.textureCopy = copy;
 	return SIR_GRAPHICS_SUCCESS;
 }
 
-sirGraphicsResult_t SIRVulkanRenderingDevice::createTexture( const sirGraphicsTextureDesc_t &desc, sirGraphicsHandle_t *pHandle ) noexcept
+sirGraphicsResult_t SIRVulkanRenderingDevice::createTexture( const sirGraphicsTextureDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept
 {
 	if ( pHandle == nullptr ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
@@ -251,7 +251,7 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::createTexture( const sirGraphicsTe
 	return SIR_GRAPHICS_CAPACITY_EXCEEDED;
 }
 
-sirGraphicsResult_t SIRVulkanRenderingDevice::createView( const sirGraphicsViewDesc_t &desc, sirGraphicsHandle_t *pHandle ) noexcept
+sirGraphicsResult_t SIRVulkanRenderingDevice::createView( const sirGraphicsViewDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept
 {
 	if ( pHandle == nullptr ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
@@ -335,7 +335,7 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::createView( const sirGraphicsViewD
 	return SIR_GRAPHICS_CAPACITY_EXCEEDED;
 }
 
-sirGraphicsResult_t SIRVulkanRenderingDevice::createSampler( const sirGraphicsSamplerDesc_t &desc, sirGraphicsHandle_t *pHandle ) noexcept
+sirGraphicsResult_t SIRVulkanRenderingDevice::createSampler( const sirGraphicsSamplerDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept
 {
 	if ( pHandle == nullptr ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
@@ -442,7 +442,7 @@ void SIRVulkanRenderingDevice::collectImageResources( void ) noexcept
 }
 
 sirGraphicsResult_t SIRVulkanRenderingDevice::retireImageResource( sirGraphicsHandle_t hResource,
-                                                                   const sirGraphicsCompletionSet_t &completion ) noexcept
+                                                                   const sirGraphicsCompletionSet_t& completion ) noexcept
 {
 	if ( !m_bReady || !sirGraphicsIsCompletionSetValid( completion, m_nDeviceGeneration ) ||
 	     ( completion.nQueueMask & ~( 1U << SIR_GRAPHICS_QUEUE_DIRECT ) ) != 0 ||

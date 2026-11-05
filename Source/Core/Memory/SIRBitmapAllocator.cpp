@@ -168,7 +168,7 @@ void SIRBitmapAllocator::updateWordSummary( uint32_t nWordIndex, bool bAvailable
 {
 	uint32_t nIndex = nWordIndex;
 	for ( uint32_t i = 1; i < m_nLevels; ++i ) {
-		uint64_t &nWord = m_pLevels[i][nIndex >> 6];
+		uint64_t& nWord = m_pLevels[i][nIndex >> 6];
 		const bool bWasEmpty = nWord == 0;
 		const uint64_t nMask = 1ull << ( nIndex & 63 );
 		if ( bAvailable ) {
@@ -191,8 +191,9 @@ void SIRBitmapAllocator::changeFreeRange( uint32_t nBegin, uint32_t nEnd, bool b
 		const uint32_t nBit = ( ( uint32_t )( nStart & 63 ) );
 		const uint32_t nCount = ( ( uint32_t )( ( nEnd - nStart ) < ( 64 - nBit ) ? ( nEnd - nStart ) : ( 64 - nBit ) ) );
 		const uint64_t nMask = ( nCount == 64 ? UINT64_MAX : ( ( 1ull << nCount ) - 1 ) ) << nBit;
-		uint64_t &nWord = m_pLevels[0][nWordIndex];
+		uint64_t& nWord = m_pLevels[0][nWordIndex];
 		const bool bWasEmpty = nWord == 0;
+
 		if ( bSetFree ) {
 			nWord |= nMask;
 		} else {
@@ -209,7 +210,7 @@ void SIRBitmapAllocator::setFree( uint32_t nSlot )
 {
 	uint32_t nIndex = nSlot;
 	for ( uint32_t i = 0; i < m_nLevels; ++i ) {
-		uint64_t &nWord = m_pLevels[i][nIndex / 64];
+		uint64_t& nWord = m_pLevels[i][nIndex / 64];
 		const uint64_t nBefore = nWord;
 		nWord |= 1ull << ( nIndex % 64 );
 		if ( nBefore != 0 ) {
@@ -307,7 +308,7 @@ void *SIRBitmapAllocator::alloc( void )
 	if ( nIndex >= m_nActiveSlots ) {
 		return nullptr;
 	}
-	uint64_t &nFreeWord = m_pLevels[0][nWordIndex];
+	uint64_t& nFreeWord = m_pLevels[0][nWordIndex];
 	nFreeWord &= ~( 1ull << ( nIndex & 63 ) );
 	if ( nFreeWord == 0 ) {
 		updateWordSummary( nWordIndex, false );

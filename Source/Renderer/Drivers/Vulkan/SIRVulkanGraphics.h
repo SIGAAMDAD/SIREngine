@@ -92,18 +92,18 @@ typedef struct sirVulkanGraphicsSamplerSlot_s
 
 // Translates a shared image barrier into one explicitly validated native
 // subresource transition; callable without initializing a Vulkan device.
-sirGraphicsResult_t sirVulkanPlanImageBarrier( const sirGraphicsBarrier_t &barrier, const sirVulkanImage_t *pImage,
+sirGraphicsResult_t sirVulkanPlanImageBarrier( const sirGraphicsBarrier_t& barrier, const sirVulkanImage_t *pImage,
                                                sirVulkanImageBarrier_t *pNative ) noexcept;
-sirGraphicsResult_t sirVulkanPlanBufferBarrier( const sirGraphicsBarrier_t &barrier, const sirVulkanBuffer_t *pBuffer,
+sirGraphicsResult_t sirVulkanPlanBufferBarrier( const sirGraphicsBarrier_t& barrier, const sirVulkanBuffer_t *pBuffer,
                                                 sirVulkanBufferBarrier_t *pNative ) noexcept;
-sirGraphicsResult_t sirVulkanDescribeAdapter( uint32_t nAdapterIndex, const sirVulkanAdapterInfo_t &native,
+sirGraphicsResult_t sirVulkanDescribeAdapter( uint32_t nAdapterIndex, const sirVulkanAdapterInfo_t& native,
                                               sirGraphicsAdapterInfo_t *pInfo ) noexcept;
 sirGraphicsResult_t sirVulkanValidateBatchCounts( const uint32_t *pCounts, uint32_t nListCount, uint32_t *pTotal ) noexcept;
 // GPU-independent validation uses the same admission semantics as native creation.
-sirGraphicsResult_t sirVulkanDescribeCapabilities( const sirVulkanAdapterInfo_t &native, uint32_t nGeneration,
+sirGraphicsResult_t sirVulkanDescribeCapabilities( const sirVulkanAdapterInfo_t& native, uint32_t nGeneration,
                                                    sirGraphicsCapabilities_t *pCapabilities ) noexcept;
-sirGraphicsResult_t sirVulkanValidateDeviceAdmission( const sirGraphicsDeviceCreateDesc_t &request,
-                                                     const sirGraphicsCapabilities_t &available ) noexcept;
+sirGraphicsResult_t sirVulkanValidateDeviceAdmission( const sirGraphicsDeviceCreateDesc_t& request,
+                                                      const sirGraphicsCapabilities_t& available ) noexcept;
 
 // Each command list records up to eight ordered operations without CPU
 // allocation. Native submission validates the whole stream atomically.
@@ -158,8 +158,8 @@ public:
 	sirGraphicsResult_t close( void ) noexcept override;
 
 	sirGraphicsResult_t barrier( const sirGraphicsBarrier_t *pBarriers, uint32_t nCount ) noexcept override;
-	sirGraphicsResult_t copyBufferTexture( const sirGraphicsBufferTextureCopy_t &copy ) noexcept override;
-	sirGraphicsResult_t beginRenderPass( const sirGraphicsRenderPass_t & ) noexcept override
+	sirGraphicsResult_t copyBufferTexture( const sirGraphicsBufferTextureCopy_t& copy ) noexcept override;
+	sirGraphicsResult_t beginRenderPass( const sirGraphicsRenderPass_t& ) noexcept override
 	{
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
@@ -180,7 +180,7 @@ public:
 	{
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
-	sirGraphicsResult_t setViewport( const sirGraphicsViewport_t &, const sirGraphicsRect_t & ) noexcept override
+	sirGraphicsResult_t setViewport( const sirGraphicsViewport_t&, const sirGraphicsRect_t& ) noexcept override
 	{
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
@@ -221,7 +221,7 @@ private:
 	const sirVulkanGraphicsBufferSlot_t *resolveBuffer( sirGraphicsHandle_t handle ) const noexcept;
 	void collectRetired( void ) noexcept;
 	void collectImageResources( void ) noexcept;
-	sirGraphicsResult_t retireImageResource( sirGraphicsHandle_t hResource, const sirGraphicsCompletionSet_t &completion ) noexcept;
+	sirGraphicsResult_t retireImageResource( sirGraphicsHandle_t hResource, const sirGraphicsCompletionSet_t& completion ) noexcept;
 	sirGraphicsResult_t initialize( const sirVulkanPoolBudget_t *pBudget, uint32_t nAdapterIndex ) noexcept;
 
 	friend class SIRVulkanDriver;
@@ -230,8 +230,8 @@ public:
 	SIRVulkanRenderingDevice( void ) noexcept;
 	~SIRVulkanRenderingDevice( void ) noexcept override;
 
-	SIRVulkanRenderingDevice( const SIRVulkanRenderingDevice & ) = delete;
-	SIRVulkanRenderingDevice &operator=( const SIRVulkanRenderingDevice & ) = delete;
+	SIRVulkanRenderingDevice( const SIRVulkanRenderingDevice& ) = delete;
+	SIRVulkanRenderingDevice& operator=( const SIRVulkanRenderingDevice& ) = delete;
 
 	sirGraphicsBackend_t getBackend( void ) const noexcept override
 	{
@@ -242,26 +242,28 @@ public:
 		return m_nDeviceGeneration;
 	}
 	sirGraphicsResult_t queryCapabilities( sirGraphicsCapabilities_t *pCapabilities ) const noexcept override;
+	sirGraphicsResult_t queryPipelineModelCaps( sirGraphicsPipelineModel_t eModel,
+	                                            sirGraphicsABIPipelineModelCaps_t *pCaps ) const noexcept override;
 	sirGraphicsResult_t queryMemoryBudget( sirGraphicsMemoryBudget_t *pBudget ) const noexcept override;
-	sirGraphicsResult_t createBuffer( const sirGraphicsBufferDesc_t &desc, sirGraphicsHandle_t *pHandle ) noexcept override;
+	sirGraphicsResult_t createBuffer( const sirGraphicsBufferDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept override;
 	sirGraphicsResult_t mapBuffer( sirGraphicsHandle_t hBuffer, uint64_t nOffset, uint64_t nBytes,
 	                               sirGraphicsMappedBuffer_t *pMapped ) noexcept override;
 	sirGraphicsResult_t unmapBuffer( sirGraphicsHandle_t hBuffer, uint64_t nOffset, uint64_t nBytes ) noexcept override;
 	sirGraphicsResult_t flushBuffer( sirGraphicsHandle_t hBuffer, uint64_t nOffset, uint64_t nBytes ) noexcept override;
 	sirGraphicsResult_t invalidateBuffer( sirGraphicsHandle_t hBuffer, uint64_t nOffset, uint64_t nBytes ) noexcept override;
 	sirGraphicsResult_t acquireCommands( sirGraphicsQueue_t eQueue, SIRGraphicsCommandList **ppCommands ) noexcept override;
-	sirGraphicsResult_t submit( sirGraphicsQueue_t eQueue, const sirGraphicsSubmission_t &submission,
+	sirGraphicsResult_t submit( sirGraphicsQueue_t eQueue, const sirGraphicsSubmission_t& submission,
 	                            sirGraphicsCompletion_t *pCompletion ) noexcept override;
-	sirGraphicsResult_t poll( const sirGraphicsCompletion_t &completion, bool *pCompleted ) noexcept override;
-	sirGraphicsResult_t wait( const sirGraphicsCompletion_t &completion, uint64_t nTimeoutNs ) noexcept override;
-	sirGraphicsResult_t retireResource( sirGraphicsHandle_t hResource, const sirGraphicsCompletionSet_t &completion ) noexcept override;
+	sirGraphicsResult_t poll( const sirGraphicsCompletion_t& completion, bool *pCompleted ) noexcept override;
+	sirGraphicsResult_t wait( const sirGraphicsCompletion_t& completion, uint64_t nTimeoutNs ) noexcept override;
+	sirGraphicsResult_t retireResource( sirGraphicsHandle_t hResource, const sirGraphicsCompletionSet_t& completion ) noexcept override;
 	sirGraphicsResult_t shutdown( void ) noexcept override;
 
 	// Unimplemented features fail explicitly rather than returning fake handles.
-	sirGraphicsResult_t createTexture( const sirGraphicsTextureDesc_t &desc, sirGraphicsHandle_t *pHandle ) noexcept override;
-	sirGraphicsResult_t createView( const sirGraphicsViewDesc_t &desc, sirGraphicsHandle_t *pHandle ) noexcept override;
-	sirGraphicsResult_t createSampler( const sirGraphicsSamplerDesc_t &desc, sirGraphicsHandle_t *pHandle ) noexcept override;
-	sirGraphicsResult_t createPipeline( const sirGraphicsPipelineDesc_t &desc, sirGraphicsHandle_t *pHandle ) noexcept override;
+	sirGraphicsResult_t createTexture( const sirGraphicsTextureDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept override;
+	sirGraphicsResult_t createView( const sirGraphicsViewDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept override;
+	sirGraphicsResult_t createSampler( const sirGraphicsSamplerDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept override;
+	sirGraphicsResult_t createPipeline( const sirGraphicsPipelineDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept override;
 	sirGraphicsResult_t createBindingSet( sirGraphicsHandle_t, uint32_t, sirGraphicsHandle_t *pHandle ) noexcept override
 	{
 		if ( pHandle != nullptr ) {
@@ -273,7 +275,7 @@ public:
 	{
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
-	sirGraphicsResult_t createSurface( const sirGraphicsNativeSurface_t &, const sirGraphicsPresentDesc_t &,
+	sirGraphicsResult_t createSurface( const sirGraphicsNativeSurface_t&, const sirGraphicsPresentDesc_t&,
 	                                   sirGraphicsHandle_t *pHandle ) noexcept override
 	{
 		if ( pHandle != nullptr ) {
@@ -281,8 +283,8 @@ public:
 		}
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
-	sirGraphicsResult_t resizeSurface( sirGraphicsHandle_t, const sirGraphicsNativeSurface_t &,
-	                                   const sirGraphicsPresentDesc_t & ) noexcept override
+	sirGraphicsResult_t resizeSurface( sirGraphicsHandle_t, const sirGraphicsNativeSurface_t&,
+	                                   const sirGraphicsPresentDesc_t& ) noexcept override
 	{
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
@@ -293,7 +295,7 @@ public:
 		}
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
-	sirGraphicsResult_t present( const sirGraphicsSurfaceImage_t &, const sirGraphicsCompletion_t & ) noexcept override
+	sirGraphicsResult_t present( const sirGraphicsSurfaceImage_t&, const sirGraphicsCompletion_t& ) noexcept override
 	{
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
@@ -311,7 +313,7 @@ public:
 	}
 	sirGraphicsResult_t getAdapterCount( uint32_t *pCount ) const noexcept override;
 	sirGraphicsResult_t queryAdapter( uint32_t nAdapterIndex, sirGraphicsAdapterInfo_t *pInfo ) const noexcept override;
-	sirGraphicsResult_t createDevice( const sirGraphicsDeviceCreateDesc_t &desc, SIRRenderingDevice **ppDevice ) noexcept override;
+	sirGraphicsResult_t createDevice( const sirGraphicsDeviceCreateDesc_t& desc, SIRRenderingDevice **ppDevice ) noexcept override;
 	sirGraphicsResult_t destroyDevice( SIRRenderingDevice *pDevice ) noexcept override;
 };
 

@@ -39,9 +39,9 @@ TEST( SIREventOptimizationGoogleTest, SpscBatchProtectsActivePayloadFromReentran
 	ASSERT_EQ( ring.enqueueBatch( values, 4 ), 4U );
 	uint32_t nTotal = 0;
 	uint32_t nNested = 100;
-	const uint32_t nCount = ring.drainBatch( [&]( const uint32_t &value ) noexcept {
+	const uint32_t nCount = ring.drainBatch( [&]( const uint32_t& value ) noexcept {
 		nTotal += value;
-		nNested = ring.drainBatch( []( const uint32_t & ) noexcept {} );
+		nNested = ring.drainBatch( []( const uint32_t& ) noexcept {} );
 		uint32_t nOutput = 0;
 		EXPECT_FALSE( ring.tryDequeue( nOutput ) );
 	} );
@@ -54,7 +54,7 @@ TEST( SIREventOptimizationGoogleTest, StaticEventSealsAndDoesNotMutate )
 {
 	SIRStaticEvent<uint32_t, 2> event;
 	uint32_t nSum = 0;
-	auto callback = []( void *pContext, const uint32_t &value ) noexcept { *( ( uint32_t * )pContext ) += value; };
+	auto callback = []( void *pContext, const uint32_t& value ) noexcept { *( ( uint32_t * )pContext ) += value; };
 	EXPECT_FALSE( event.publish( 1 ) );
 	ASSERT_TRUE( event.subscribe( &nSum, callback ) );
 	ASSERT_TRUE( event.subscribe( &nSum, callback ) );
@@ -73,7 +73,7 @@ TEST( SIREventOptimizationGoogleTest, DeferredAndAsyncBatchPreserveDeliveryBound
 	SIRAsyncEventChannel<uint32_t, 8, 1> async;
 	uint32_t nA = 0;
 	uint32_t nB = 0;
-	auto callback = []( void *pContext, const uint32_t &value ) noexcept { *( ( uint32_t * )pContext ) += value; };
+	auto callback = []( void *pContext, const uint32_t& value ) noexcept { *( ( uint32_t * )pContext ) += value; };
 	ASSERT_TRUE( deferred.subscribe( &nA, callback ).isValid() );
 	ASSERT_TRUE( async.subscribe( &nB, callback ).isValid() );
 	const uint32_t values[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9 };
@@ -102,8 +102,8 @@ TEST( SIREventOptimizationGoogleTest, MailboxValidatesProducerAndRoundRobinFairn
 	ASSERT_EQ( mailbox.publishBatch( a, payloads, 4 ), 4U );
 	ASSERT_EQ( mailbox.publishBatch( b, payloads, 4 ), 4U );
 	uint32_t nSum = 0;
-	EXPECT_EQ( mailbox.pump( [&]( const uint32_t &value ) noexcept { nSum += value; }, 3, 1 ), 2U );
-	EXPECT_EQ( mailbox.pump( [&]( const uint32_t &value ) noexcept { nSum += value; }, 6, 3 ), 6U );
+	EXPECT_EQ( mailbox.pump( [&]( const uint32_t& value ) noexcept { nSum += value; }, 3, 1 ), 2U );
+	EXPECT_EQ( mailbox.pump( [&]( const uint32_t& value ) noexcept { nSum += value; }, 6, 3 ), 6U );
 	EXPECT_EQ( nSum, 92U );
 	EXPECT_EQ( mailbox.approximatePendingCount(), 0U );
 	const sirEventProducerHandle_t bogus{ &mailbox, a.nSlot, a.nGeneration + 1 };
@@ -152,7 +152,7 @@ TEST( SIREventOptimizationGoogleTest, FourProducersMaintainIndependentFifoUnderP
 	bool bCorrect = true;
 	while ( nDelivered < NUM_PRODUCERS * NUM_PER_PRODUCER ) {
 		const uint32_t nBatch = mailbox.pump(
-		    [&]( const sirEventStampedTest_t &value ) noexcept {
+		    [&]( const sirEventStampedTest_t& value ) noexcept {
 			    if ( value.nProducer >= NUM_PRODUCERS || value.nSequence != nSeen[value.nProducer] ) {
 				    bCorrect = false;
 			    } else {
@@ -198,8 +198,8 @@ TEST( SIREventOptimizationGoogleTest, PhasedDeliveryRejectsStaleAndDefersReentra
 	auto validator = []( void *pContext, sirEventTargetRef_t ref ) noexcept {
 		return ref.nIdentifier == 42 && ref.nGeneration == ( ( state_t * )pContext )->nGeneration && ref.nDomain == 1;
 	};
-	auto callback = []( void *pContext, sirEventTargetRef_t, const uint32_t &value ) noexcept {
-		state_t &s = *( ( state_t * )pContext );
+	auto callback = []( void *pContext, sirEventTargetRef_t, const uint32_t& value ) noexcept {
+		state_t& s = *( ( state_t * )pContext );
 		s.nSum += value;
 		if ( value == 7 ) {
 			s.pQueue->enqueue( 1, 5 );
@@ -226,7 +226,7 @@ TEST( SIREventOptimizationGoogleTest, SharedMpscIngressBackpressureAndFifo )
 	EXPECT_EQ( ingress.tryEnqueue( 9 ), SIR_EVENT_ENQUEUE_FULL );
 	uint32_t nTotal = 0;
 	uint32_t nNext = 0;
-	EXPECT_EQ( ingress.drain( [&]( const uint32_t &value ) noexcept {
+	EXPECT_EQ( ingress.drain( [&]( const uint32_t& value ) noexcept {
 		EXPECT_EQ( value, nNext++ );
 		nTotal += value;
 	} ),
@@ -258,7 +258,7 @@ TEST( SIREventOptimizationGoogleTest, SharedMpscIngressStressFourProducers )
 	uint32_t nDelivered = 0;
 	while ( nDelivered < NUM_PRODUCERS * NUM_PER_PRODUCER ) {
 		nDelivered += ingress.drain(
-		    [&]( const sirEventStampedTest_t &event ) noexcept {
+		    [&]( const sirEventStampedTest_t& event ) noexcept {
 			    if ( event.nProducer >= NUM_PRODUCERS || nNext[event.nProducer] != event.nSequence ) {
 				    bOrdered = false;
 			    } else {
@@ -279,7 +279,7 @@ TEST( SIREventOptimizationGoogleTest, TimingWheelCancellationBudgetAndRecurrence
 {
 	SIREventTimingWheel<uint32_t, 8, 16> wheel;
 	uint32_t nSum = 0;
-	auto callback = []( void *pContext, const uint32_t &value ) noexcept { *( ( uint32_t * )pContext ) += value; };
+	auto callback = []( void *pContext, const uint32_t& value ) noexcept { *( ( uint32_t * )pContext ) += value; };
 	sirEventScheduleHandle_t cancelled{};
 	sirEventScheduleHandle_t periodic{};
 	sirEventScheduleHandle_t oneShot{};
@@ -312,8 +312,8 @@ TEST( SIREventOptimizationGoogleTest, TimingWheelClearFromCallbackInvalidatesCol
 		SIREventTimingWheel<uint32_t, 8, 16> *pWheel;
 		uint32_t *pCount;
 	} context{ &wheel, &nDelivered };
-	auto callback = []( void *pContext, const uint32_t & ) noexcept {
-		context_s &s = *( ( context_s * )pContext );
+	auto callback = []( void *pContext, const uint32_t& ) noexcept {
+		context_s& s = *( ( context_s * )pContext );
 		++*s.pCount;
 		s.pWheel->clear();
 	};
@@ -335,7 +335,7 @@ TEST( SIREventOptimizationGoogleTest, TimingWheelBoundsAndExhaustion )
 {
 	SIREventTimingWheel<uint32_t, 2, 8> wheel;
 	uint32_t nSum = 0;
-	auto callback = []( void *pContext, const uint32_t &value ) noexcept { *( ( uint32_t * )pContext ) += value; };
+	auto callback = []( void *pContext, const uint32_t& value ) noexcept { *( ( uint32_t * )pContext ) += value; };
 	sirEventScheduleHandle_t h{};
 	EXPECT_FALSE( wheel.schedule( &nSum, callback, 1, 0, 8, 0, h ) );
 	ASSERT_TRUE( wheel.schedule( &nSum, callback, 1, UINT64_MAX - 3, 1, 1, h ) );
@@ -366,7 +366,7 @@ TEST( SIREventOptimizationGoogleTest, TimingWheelMatchesHeapOneShotRandomizedTim
 		nSeed = nSeed * 1664525U + 1013904223U;
 		return nSeed;
 	};
-	auto callback = []( void *pContext, const uint32_t &nId ) noexcept { ++( ( context_s * )pContext )->nCalls[nId]; };
+	auto callback = []( void *pContext, const uint32_t& nId ) noexcept { ++( ( context_s * )pContext )->nCalls[nId]; };
 	for ( uint64_t nTick = 0; nTick < 2500; ++nTick ) {
 		const uint32_t nInsert = next() % 4;
 		for ( uint32_t i = 0; i < nInsert; ++i ) {
@@ -406,8 +406,8 @@ TEST( SIREventOptimizationGoogleTest, PhaseQueueReportsGlobalCapacityAndDefersSa
 		uint32_t nFailed;
 		uint32_t nAccepted;
 	} context{ &queue, 0, 0, 0 };
-	auto callback = []( void *pContext, sirEventTargetRef_t, const uint32_t &value ) noexcept {
-		context_s &s = *( ( context_s * )pContext );
+	auto callback = []( void *pContext, sirEventTargetRef_t, const uint32_t& value ) noexcept {
+		context_s& s = *( ( context_s * )pContext );
 		s.nSum += value;
 		if ( s.pQueue->enqueue( 0, value + 10 ) ) {
 			++s.nAccepted;
@@ -432,7 +432,7 @@ TEST( SIREventOptimizationGoogleTest, SealedStaticEventSupportsConcurrentReaders
 {
 	SIRStaticEvent<uint32_t, 2> event;
 	std::atomic<uint64_t> nTotal{ 0 };
-	auto callback = []( void *pContext, const uint32_t &value ) noexcept {
+	auto callback = []( void *pContext, const uint32_t& value ) noexcept {
 		( ( std::atomic<uint64_t> * )pContext )->fetch_add( value, std::memory_order_relaxed );
 	};
 	ASSERT_TRUE( event.subscribe( &nTotal, callback ) );
@@ -445,7 +445,7 @@ TEST( SIREventOptimizationGoogleTest, SealedStaticEventSupportsConcurrentReaders
 			}
 		} );
 	}
-	for ( std::thread &thread : readers ) {
+	for ( std::thread& thread : readers ) {
 		thread.join();
 	}
 	EXPECT_EQ( nTotal.load( std::memory_order_relaxed ), 80000U );

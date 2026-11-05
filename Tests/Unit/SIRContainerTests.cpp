@@ -109,14 +109,14 @@ public:
 	{
 		++s_nLive;
 	}
-	SIRTestLiveObject( const SIRTestLiveObject &other ) : m_nValue( other.m_nValue )
+	SIRTestLiveObject( const SIRTestLiveObject& other ) : m_nValue( other.m_nValue )
 	{
 		if ( s_bThrowOnCopy ) {
 			throw std::runtime_error( "copy injection" );
 		}
 		++s_nLive;
 	}
-	SIRTestLiveObject( SIRTestLiveObject &&other ) noexcept( false ) : m_nValue( other.m_nValue )
+	SIRTestLiveObject( SIRTestLiveObject&& other ) noexcept( false ) : m_nValue( other.m_nValue )
 	{
 		++s_nLive;
 	}
@@ -177,7 +177,7 @@ static void testVectors( const sirContainerAllocator_t *pAllocator, sirTestAlloc
 		bool bCaught = false;
 		try {
 			objects.tryReserve( 128 );
-		} catch ( const std::runtime_error & ) {
+		} catch ( const std::runtime_error& ) {
 			bCaught = true;
 		}
 		SIRTestLiveObject::s_bThrowOnCopy = false;
@@ -265,7 +265,7 @@ static void testAssociative( const sirContainerAllocator_t *pAllocator, sirTestA
 		bool bCaught = false;
 		try {
 			objects.tryReserve( 200 );
-		} catch ( const std::runtime_error & ) {
+		} catch ( const std::runtime_error& ) {
 			bCaught = true;
 		}
 		SIRTestLiveObject::s_bThrowOnCopy = false;

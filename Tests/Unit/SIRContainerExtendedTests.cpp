@@ -88,11 +88,11 @@ public:
 	{
 		++s_nLive;
 	}
-	SIRTrackedValue( SIRTrackedValue &&other ) noexcept : m_nValue( other.m_nValue )
+	SIRTrackedValue( SIRTrackedValue&& other ) noexcept : m_nValue( other.m_nValue )
 	{
 		++s_nLive;
 	}
-	SIRTrackedValue( const SIRTrackedValue &other ) noexcept : m_nValue( other.m_nValue )
+	SIRTrackedValue( const SIRTrackedValue& other ) noexcept : m_nValue( other.m_nValue )
 	{
 		++s_nLive;
 	}
