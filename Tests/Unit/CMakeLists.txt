@@ -309,3 +309,14 @@ add_executable(SIRConsoleServiceTests Console/SIRConsoleServiceTests.cpp)
 target_link_libraries(SIRConsoleServiceTests PRIVATE SIRRegistrationCookerLib SIR::Core)
 add_test(NAME core.console.service COMMAND SIRConsoleServiceTests)
 sir_configure_owned_target(SIRConsoleServiceTests)
+
+# P5: native Core/Config INI codec, native platform atomic file, typed CVar archive and exec integration.
+add_executable(SIRIniConfigTests Config/SIRIniTests.cpp)
+target_link_libraries(SIRIniConfigTests PRIVATE SIR::Core)
+add_test(NAME core.config.ini COMMAND SIRIniConfigTests)
+sir_configure_owned_target(SIRIniConfigTests)
+
+add_executable(SIRCVarConfigTests CVars/SIRCVarConfigTests.cpp)
+target_link_libraries(SIRCVarConfigTests PRIVATE SIRRegistrationCookerLib SIR::Core)
+add_test(NAME core.cvars.config COMMAND SIRCVarConfigTests)
+sir_configure_owned_target(SIRCVarConfigTests)

@@ -1,1 +1,1 @@
-target_sources(SIRCore PRIVATE SIRConsoleService.cpp)
+target_sources(SIRCore PRIVATE SIRConsoleService.cpp SIRConsoleConfigAdapter.cpp)

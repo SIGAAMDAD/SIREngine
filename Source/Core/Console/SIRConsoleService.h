@@ -58,6 +58,8 @@ typedef struct sirConsoleOutput_s
 typedef void ( *sirConsoleOutputSink_t )( void *pContext, const sirConsoleOutput_t& output ) noexcept;
 typedef bool ( *sirConsoleModuleAcquire_t )( void *pContext, uint32_t nOwnerId ) noexcept;
 typedef void ( *sirConsoleModuleRelease_t )( void *pContext, uint32_t nOwnerId ) noexcept;
+typedef sirRegistrationResult_t ( *sirConsoleExecHandler_t )( void *pContext, const char *pszFileName, uint32_t nBytes,
+                                                              const sirConsoleSubmission_t& submission ) noexcept;
 
 class SIRConsoleService;
 
@@ -115,6 +117,8 @@ typedef struct sirConsoleStorage_s
 	sirConsoleModuleAcquire_t pfnAcquireModule;
 	sirConsoleModuleRelease_t pfnReleaseModule;
 	void *pModuleContext;
+	sirConsoleExecHandler_t pfnExec;
+	void *pExecContext;
 } sirConsoleStorage_t;
 
 typedef struct sirConsolePumpReport_s

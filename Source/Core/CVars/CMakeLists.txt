@@ -1,1 +1,1 @@
-target_sources(SIRCore PRIVATE SIRCVarRegistry.cpp)
+target_sources(SIRCore PRIVATE SIRCVarRegistry.cpp SIRCVarValueCodec.cpp SIRCVarConfigAdapter.cpp)
