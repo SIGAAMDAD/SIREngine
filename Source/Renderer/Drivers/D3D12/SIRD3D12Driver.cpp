@@ -189,7 +189,14 @@ sirGraphicsResult_t SIRD3D12RenderingDevice::queryCapabilities( sirGraphicsCapab
 	pCapabilities->nMaximumBindingSlots = 128;
 	pCapabilities->nMaximumTextureDimension = D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION;
 	pCapabilities->nMaximumColorAttachments = D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT;
-	pCapabilities->nMaximumSampleCount = 1;
+	uint32_t nMaximumSamples = 1;
+	constexpr uint32_t SAMPLE_COUNTS[] = { 2, 4, 8, 16, 32 };
+	for ( uint32_t nSampleCount : SAMPLE_COUNTS ) {
+		if ( sirD3D12SupportsSampleCount( m_Native.getNativeDevice(), DXGI_FORMAT_R8G8B8A8_UNORM, nSampleCount ) ) {
+			nMaximumSamples = nSampleCount;
+		}
+	}
+	pCapabilities->nMaximumSampleCount = nMaximumSamples;
 	pCapabilities->nDeviceGeneration = nGeneration;
 	pCapabilities->bSoftwareAdapter = m_bSoftware;
 	bool bUnified = false;

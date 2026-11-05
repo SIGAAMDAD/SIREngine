@@ -37,6 +37,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Renderer/SIRGraphicsTypes.h>
 #include <Renderer/Drivers/D3D12/SIRD3D12Transfers.h>
 
+bool sirD3D12SupportsSampleCount( ID3D12Device *pDevice, DXGI_FORMAT eFormat, uint32_t nSampleCount ) noexcept;
+
 // The same native DXGI ordering is used by adapter discovery and device creation.
 // Hardware adapters meeting FL12_0 precede the single supported WARP adapter.
 HRESULT sirD3D12EnumerateAdapters( IDXGIFactory6 *pFactory, uint32_t nRequestedIndex, IDXGIAdapter4 **ppSelected,

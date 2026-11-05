@@ -100,6 +100,10 @@ int main( void )
 	     ( capabilities.nFeatureMask & SIR_GRAPHICS_FEATURE_INDIRECT_DRAW ) != 0 ) {
 		return 8;
 	}
+	if ( capabilities.nMaximumSampleCount == 0 || capabilities.nMaximumSampleCount > 32 ||
+	     ( capabilities.nMaximumSampleCount & ( capabilities.nMaximumSampleCount - 1 ) ) != 0 ) {
+		return 31;
+	}
 	sirGraphicsABIPipelineModelCaps_t modelCaps = {};
 	if ( pDevice->queryPipelineModelCaps( SIR_GRAPHICS_PIPELINE_MODEL_MODERN, &modelCaps ) != SIR_GRAPHICS_SUCCESS ||
 	     modelCaps.nModel != SIR_GRAPHICS_PIPELINE_MODEL_MODERN || modelCaps.nDeviceGeneration != capabilities.nDeviceGeneration ||
@@ -193,6 +197,24 @@ int main( void )
 		return 20;
 	}
 
+	texture.nSampleCount = 64;
+	sirGraphicsHandle_t hUnsupportedMsaa = {};
+	if ( pDevice->createTexture( texture, &hUnsupportedMsaa ) != SIR_GRAPHICS_UNSUPPORTED || hUnsupportedMsaa.nGeneration != 0 ) {
+		return 32;
+	}
+	if ( capabilities.nMaximumSampleCount > 1 ) {
+		texture.nSampleCount = capabilities.nMaximumSampleCount;
+		texture.nUsage = SIR_GRAPHICS_USAGE_COLOR_ATTACHMENT;
+		sirGraphicsHandle_t hMsaa = {};
+		if ( pDevice->createTexture( texture, &hMsaa ) != SIR_GRAPHICS_SUCCESS ||
+		     pDevice->retireResource( hMsaa, immediate ) != SIR_GRAPHICS_SUCCESS ) {
+			return 33;
+		}
+		texture.nUsage = SIR_GRAPHICS_USAGE_STORAGE;
+		if ( pDevice->createTexture( texture, &hUnsupportedMsaa ) != SIR_GRAPHICS_UNSUPPORTED || hUnsupportedMsaa.nGeneration != 0 ) {
+			return 34;
+		}
+	}
 	sirGraphicsSamplerDesc_t sampler = {};
 	sampler.eFilter = SIR_GRAPHICS_FILTER_LINEAR;
 	sampler.fMaximumAnisotropy = 1.0f;
