@@ -19,6 +19,11 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Renderer/VirtualTexturing/SIRVirtualTexturePackReader.h>
 #include <Renderer/VirtualTexturing/SIRVirtualTexturePackFileSource.h>
 #include <Renderer/VirtualTexturing/SIRVirtualTexturePackWriter.h>
+#include <Renderer/VirtualTexturing/SIRVirtualTextureClusterDecode.h>
+
+#if defined( SIR_VT_TEST_ZSTD )
+#include <zstd.h>
+#endif
 
 #include <stdio.h>
 #include <vector>
@@ -316,6 +321,109 @@ static bool testPackContract( void )
 	return true;
 }
 
+static bool testNativeClusterDecode( void )
+{
+	std::vector<uint8_t> bytes = makeValidPack();
+	const sirVirtualTexturePackInput_t input = { bytes.data(), bytes.size(), bytes.size(), false };
+	sirVirtualTexturePackView_t view = {};
+	SIR_TEST( sirVTPackOpenValidated( input, &view ) );
+	const uint32_t nDecoded = ( uint32_t )view.header.nPayloadDataBytes;
+	std::vector<uint8_t> decoded( nDecoded, 0xCE );
+	sirVirtualTextureClusterBuffers_t buffers = { bytes.data() + view.header.nPayloadDataOffset, nDecoded, decoded.data(), nDecoded };
+	SIR_TEST( sirVTDecodePackCluster( view, 0, buffers, nullptr ) );
+	SIR_TEST( memcmp( decoded.data(), buffers.pStoredBytes, nDecoded ) == 0 );
+	SIR_TEST( !sirVTDecodePackCluster( view, 1, buffers, nullptr ) );
+	buffers.nDecodedCapacity = nDecoded - 1;
+	SIR_TEST( !sirVTDecodePackCluster( view, 0, buffers, nullptr ) );
+	buffers.nDecodedCapacity = nDecoded;
+	buffers.nStoredCapacity = nDecoded - 1;
+	SIR_TEST( !sirVTDecodePackCluster( view, 0, buffers, nullptr ) );
+	buffers.nStoredCapacity = nDecoded;
+	buffers.pDecodedBytes = ( uint8_t * )buffers.pStoredBytes;
+	SIR_TEST( sirVTDecodePackCluster( view, 0, buffers, nullptr ) );
+
+	// File-backed metadata-only cluster decoding uses the same validated V1 records.
+	const char *pszPath = "sir_vt_decode_native_test.pack";
+	SIRPlatformFile file;
+	SIR_TEST( file.open( pszPath, SIR_FILE_OPEN_WRITE | SIR_FILE_OPEN_CREATE | SIR_FILE_OPEN_TRUNCATE ) == SIR_FILE_OK );
+	uint64_t nWritten = 0;
+	SIR_TEST( file.write( bytes.data(), bytes.size(), &nWritten ) == SIR_FILE_OK && nWritten == bytes.size() );
+	SIR_TEST( file.close() == SIR_FILE_OK );
+	std::vector<uint8_t> metadata( ( size_t )view.header.nPayloadDataOffset );
+	SIRVirtualTexturePackFileSource source;
+	sirVirtualTexturePackView_t fromDisk = {};
+	SIR_TEST( source.open( pszPath, { metadata.data(), metadata.size() }, true, &fromDisk ) );
+	std::vector<uint8_t> stored( nDecoded );
+	buffers = { stored.data(), nDecoded, decoded.data(), nDecoded };
+	SIR_TEST( source.readCluster( fromDisk, 0, buffers, nullptr ) );
+	SIR_TEST( source.getReadCount() == 1 && memcmp( stored.data(), decoded.data(), nDecoded ) == 0 );
+	fromDisk.header.nContentSignature++;
+	SIR_TEST( !source.readCluster( fromDisk, 0, buffers, nullptr ) && source.getReadCount() == 1 );
+	fromDisk.header.nContentSignature--;
+	fromDisk.header.nPackageGeneration++;
+	SIR_TEST( !source.readCluster( fromDisk, 0, buffers, nullptr ) && source.getReadCount() == 1 );
+	source.close();
+	SIR_TEST( SIRPlatformFile::remove( pszPath ) == SIR_FILE_OK );
+	return true;
+}
+
+#if defined( SIR_VT_TEST_ZSTD )
+static bool sirVTTestDecodeZstd( void *, const sirVirtualTextureCodecFrame_t& frame, uint32_t *pProducedBytes ) noexcept
+{
+	const size_t nDecoded = ZSTD_decompress( frame.pOutput, frame.nOutputCapacity, frame.pInput, frame.nInputBytes );
+	if ( ZSTD_isError( nDecoded ) || nDecoded > UINT32_MAX ) {
+		return false;
+	}
+	*pProducedBytes = ( uint32_t )nDecoded;
+	return true;
+}
+
+static bool testCompressedClusterDecode( void )
+{
+	const std::vector<uint8_t> original = makeValidPack();
+	sirVirtualTexturePackHeader_t header = {};
+	memcpy( &header, original.data(), sizeof( header ) );
+	const uint32_t nDecoded = ( uint32_t )header.nPayloadDataBytes;
+	const size_t nBound = ZSTD_compressBound( nDecoded );
+	std::vector<uint8_t> encoded( nBound );
+	const size_t nStored = ZSTD_compress( encoded.data(), encoded.size(), original.data() + header.nPayloadDataOffset, nDecoded, 3 );
+	SIR_TEST( !ZSTD_isError( nStored ) && nStored > 0 && nStored < nDecoded );
+	encoded.resize( nStored );
+	std::vector<uint8_t> bytes( ( size_t )header.nPayloadDataOffset + nStored );
+	memcpy( bytes.data(), original.data(), ( size_t )header.nPayloadDataOffset );
+	memcpy( bytes.data() + header.nPayloadDataOffset, encoded.data(), encoded.size() );
+	header.nPayloadDataBytes = nStored;
+	header.nPackageBytes = bytes.size();
+	header.nFlags |= SIR_VT_PACK_FLAG_OUTER_COMPRESSION;
+	sirVirtualTexturePackClusterRecord_t cluster = {};
+	memcpy( &cluster, bytes.data() + header.nClusterDirectoryOffset, sizeof( cluster ) );
+	cluster.nStoredBytes = nStored;
+	cluster.nCodec = 1;
+	cluster.nChecksum = sirVTPackChecksum32( encoded.data(), nStored );
+	cluster.nContentSignature = sirVTPackHash64( encoded.data(), nStored );
+	putRecord( bytes, header.nClusterDirectoryOffset, cluster );
+	putRecord( bytes, 0, header );
+	signPack( bytes );
+	sirVirtualTexturePackView_t view = {};
+	const sirVirtualTexturePackInput_t input = { bytes.data(), bytes.size(), bytes.size(), false };
+	SIR_TEST( sirVTPackOpenValidated( input, &view ) );
+	std::vector<uint8_t> decoded( nDecoded, 0xCE );
+	sirVirtualTextureClusterBuffers_t buffers = { encoded.data(), ( uint32_t )encoded.size(), decoded.data(), nDecoded };
+	const sirVirtualTextureClusterCodec_t codec = { nullptr, sirVTTestDecodeZstd };
+	SIR_TEST( !sirVTDecodePackCluster( view, 0, buffers, nullptr ) );
+	SIR_TEST( sirVTDecodePackCluster( view, 0, buffers, &codec ) );
+	SIR_TEST( memcmp( decoded.data(), original.data() + header.nPayloadDataOffset, nDecoded ) == 0 );
+	buffers.pDecodedBytes = ( uint8_t * )buffers.pStoredBytes;
+	SIR_TEST( !sirVTDecodePackCluster( view, 0, buffers, &codec ) );
+	buffers.pDecodedBytes = decoded.data();
+	encoded[3] ^= 0x7A;
+	SIR_TEST( !sirVTDecodePackCluster( view, 0, buffers, &codec ) );
+	encoded[3] ^= 0x7A;
+	SIR_TEST( sirVTDecodePackCluster( view, 0, buffers, &codec ) );
+	return true;
+}
+#endif
+
 static bool testValidatedPack( void )
 {
 	std::vector<uint8_t> bytes = makeValidPack();
@@ -521,9 +629,14 @@ static bool testNativePackWriter( void )
 int main( void )
 {
 	if ( !testFeedbackGrid() || !testFeedbackMulti() || !testPackContract() || !testValidatedPack() || !testPackFileSource() ||
-	     !testCompactTail() || !testNativePackWriter() ) {
+	     !testCompactTail() || !testNativePackWriter() || !testNativeClusterDecode() ) {
 		return 1;
 	}
+#if defined( SIR_VT_TEST_ZSTD )
+	if ( !testCompressedClusterDecode() ) {
+		return 1;
+	}
+#endif
 	printf( "Terrain3D VT V1 native port contracts PASS\n" );
 	return 0;
 }

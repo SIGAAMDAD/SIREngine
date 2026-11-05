@@ -26,7 +26,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // clang-format on
 
 #include <Core/Platform/SIRPlatformFile.h>
-#include <Renderer/VirtualTexturing/SIRVirtualTexturePackReader.h>
+#include <Renderer/VirtualTexturing/SIRVirtualTextureClusterDecode.h>
 
 typedef struct sirVirtualTexturePackMetadataBuffer_s
 {
@@ -52,6 +52,8 @@ public:
 	bool open( const char *pszPath, const sirVirtualTexturePackMetadataBuffer_t& buffer, bool bStrictHash,
 	           sirVirtualTexturePackView_t *pView ) noexcept;
 	bool readPayload( uint64_t nOffset, void *pDestination, uint32_t nBytes ) noexcept;
+	bool readCluster( const sirVirtualTexturePackView_t& view, uint32_t nClusterId, const sirVirtualTextureClusterBuffers_t& buffers,
+	                  const sirVirtualTextureClusterCodec_t *pCodec ) noexcept;
 	void close( void ) noexcept;
 
 protected:
@@ -62,6 +64,7 @@ private:
 	uint64_t m_nPayloadBytes;
 	uint64_t m_nReadCount;
 	uint32_t m_nPackageGeneration;
+	uint64_t m_nPackageSignature;
 };
 
 #endif // __SIRENGINE_SIRVIRTUALTEXTUREPACKFILESOURCE_H__
