@@ -33,12 +33,17 @@ static bool sirRootReservedDevice( const char *pszComponent, uint32_t nLength ) 
 		return ( a == 'c' && b == 'o' && c == 'n' ) || ( a == 'p' && b == 'r' && c == 'n' ) || ( a == 'a' && b == 'u' && c == 'x' ) ||
 		       ( a == 'n' && b == 'u' && c == 'l' );
 	}
-	if ( nStem == 4 ) {
+	if ( nStem == 4 || nStem == 5 ) {
 		const uint8_t a = sirRootLowerAscii( ( uint8_t )pszComponent[0] );
 		const uint8_t b = sirRootLowerAscii( ( uint8_t )pszComponent[1] );
 		const uint8_t c = sirRootLowerAscii( ( uint8_t )pszComponent[2] );
 		const uint8_t d = ( uint8_t )pszComponent[3];
-		return d >= '1' && d <= '9' && ( ( a == 'c' && b == 'o' && c == 'm' ) || ( a == 'l' && b == 'p' && c == 't' ) );
+		const bool bDevice = ( a == 'c' && b == 'o' && c == 'm' ) || ( a == 'l' && b == 'p' && c == 't' );
+		if ( nStem == 4 ) {
+			return bDevice && d >= '1' && d <= '9';
+		}
+		const uint8_t nSuperscript = ( uint8_t )pszComponent[4];
+		return bDevice && d == 0xc2 && ( nSuperscript == 0xb9 || nSuperscript == 0xb2 || nSuperscript == 0xb3 );
 	}
 	return false;
 }

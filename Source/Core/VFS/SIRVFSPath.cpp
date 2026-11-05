@@ -80,14 +80,17 @@ static bool sirVFSReservedSegment( const char *pszSegment, uint32_t nLength ) no
 			return true;
 		}
 	}
-	if ( nStem == 4 ) {
+	if ( nStem == 4 || nStem == 5 ) {
 		const uint8_t a = sirVFSFoldAscii( ( uint8_t )pszSegment[0] );
 		const uint8_t b = sirVFSFoldAscii( ( uint8_t )pszSegment[1] );
 		const uint8_t c = sirVFSFoldAscii( ( uint8_t )pszSegment[2] );
 		const uint8_t d = ( uint8_t )pszSegment[3];
-		if ( d >= '1' && d <= '9' && ( ( a == 'c' && b == 'o' && c == 'm' ) || ( a == 'l' && b == 'p' && c == 't' ) ) ) {
-			return true;
+		const bool bDevice = ( a == 'c' && b == 'o' && c == 'm' ) || ( a == 'l' && b == 'p' && c == 't' );
+		if ( nStem == 4 ) {
+			return bDevice && d >= '1' && d <= '9';
 		}
+		const uint8_t nSuperscript = ( uint8_t )pszSegment[4];
+		return bDevice && d == 0xc2 && ( nSuperscript == 0xb9 || nSuperscript == 0xb2 || nSuperscript == 0xb3 );
 	}
 	return false;
 }
