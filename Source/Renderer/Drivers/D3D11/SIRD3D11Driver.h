@@ -25,14 +25,15 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // clang-format on
 
 #include <Renderer/SIRGraphicsRegistry.h>
+#include <Renderer/Drivers/D3D11/SIRD3D11Device.h>
 
-// Registration is explicit and caller-owned; no implicit platform selection.
-// Device discovery, creation, and COM ownership are introduced by D11-02.
+// The driver owns one bounded, in-place native device (no heap allocation).
+// Public headers contain no COM/DXGI/Windows SDK declarations.
 class SIRD3D11Driver final : public SIRGraphicsDriver
 {
 public:
 	SIRD3D11Driver( void ) noexcept = default;
-	~SIRD3D11Driver( void ) noexcept override = default;
+	~SIRD3D11Driver( void ) noexcept override;
 
 	sirGraphicsBackend_t getBackend( void ) const noexcept override;
 	sirGraphicsResult_t getAdapterCount( uint32_t *pCount ) const noexcept override;
@@ -43,6 +44,8 @@ public:
 
 protected:
 private:
+	alignas( SIRD3D11Device ) uint8_t m_szDeviceStorage[sizeof( SIRD3D11Device )] = {};
+	SIRD3D11Device *m_pActiveDevice = nullptr;
 };
 
 sirGraphicsResult_t sirD3D11RegisterDriver( SIRGraphicsRegistry *pRegistry, SIRD3D11Driver *pDriver ) noexcept;

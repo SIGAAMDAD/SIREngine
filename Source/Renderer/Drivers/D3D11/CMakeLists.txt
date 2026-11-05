@@ -20,7 +20,7 @@ if(SIR_WITH_D3D11)
         message(FATAL_ERROR "SIR_WITH_D3D11 requires Windows SDK d3d11.h and dxgi.h")
     endif()
 
-    add_library(SIRD3D11 STATIC SIRD3D11Driver.cpp)
+    add_library(SIRD3D11 STATIC SIRD3D11Driver.cpp SIRD3D11Device.cpp)
     add_library(SIR::D3D11 ALIAS SIRD3D11)
     target_include_directories(SIRD3D11 PUBLIC
         "${PROJECT_SOURCE_DIR}/Source"
