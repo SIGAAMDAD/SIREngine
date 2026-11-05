@@ -38,7 +38,9 @@ typedef enum sirVFSResult_e : uint8_t
 	SIR_VFS_NOT_FOUND,
 	SIR_VFS_NO_CAPACITY,
 	SIR_VFS_STALE_HANDLE,
-	SIR_VFS_IO_ERROR
+	SIR_VFS_IO_ERROR,
+	SIR_VFS_BUSY,
+	SIR_VFS_STOPPED
 } sirVFSResult_t;
 
 typedef enum sirVFSBackendKind_e : uint8_t
@@ -129,6 +131,7 @@ public:
 	sirVFSResult_t unmount( sirVFSMountHandle_t handle ) noexcept;
 	sirVFSResult_t acquireCandidates( const sirVFSPath_t& path, uint32_t nOperation, sirVFSCandidateList_t *pCandidates ) noexcept;
 	sirVFSResult_t acquireWriteTarget( const sirVFSPath_t& path, sirVFSMountHandle_t handle, sirVFSMountCandidate_t *pCandidate ) noexcept;
+	sirVFSResult_t retain( sirVFSMountLease_t lease, sirVFSMountCandidate_t *pCandidate ) noexcept;
 	sirVFSResult_t release( sirVFSMountLease_t lease ) noexcept;
 
 protected:

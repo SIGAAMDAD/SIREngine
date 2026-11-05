@@ -249,6 +249,43 @@ sirVFSResult_t SIRVFSMountTable::acquireWriteTarget( const sirVFSPath_t& path, s
 	return SIR_VFS_OK;
 }
 
+sirVFSResult_t SIRVFSMountTable::retain( sirVFSMountLease_t lease, sirVFSMountCandidate_t *pCandidate ) noexcept
+{
+	if ( pCandidate == nullptr || lease.nSlot == 0 || lease.nSlot > m_nMountCapacity || lease.nToken == 0 ) {
+		return SIR_VFS_INVALID_ARGUMENT;
+	}
+	const SIRScopedLock<SIRMutex> guard( m_Mutex );
+	sirVFSMountSlot_t& slot = m_szMounts[lease.nSlot - 1];
+	if ( slot.nGeneration != lease.nGeneration || slot.nPins == 0 ) {
+		return SIR_VFS_STALE_HANDLE;
+	}
+	bool bFound = false;
+	for ( uint32_t i = 0; i < m_nLeaseCapacity; ++i ) {
+		const sirVFSLeaseSlot_t& ticket = m_szLeases[i];
+		if ( ticket.bActive && ticket.nMountSlot == lease.nSlot - 1 && ticket.nToken == lease.nToken ) {
+			bFound = true;
+			break;
+		}
+	}
+	if ( !bFound ) {
+		return SIR_VFS_STALE_HANDLE;
+	}
+	if ( m_nNextToken == UINT64_MAX ) {
+		return SIR_VFS_NO_CAPACITY;
+	}
+	const uint32_t nLease = findFreeLease();
+	if ( nLease == m_nLeaseCapacity ) {
+		return SIR_VFS_NO_CAPACITY;
+	}
+	sirVFSLeaseSlot_t& retained = m_szLeases[nLease];
+	retained.nToken = m_nNextToken++;
+	retained.nMountSlot = lease.nSlot - 1;
+	retained.bActive = true;
+	++slot.nPins;
+	*pCandidate = { slot.descriptor, { lease.nSlot, lease.nGeneration, retained.nToken } };
+	return SIR_VFS_OK;
+}
+
 sirVFSResult_t SIRVFSMountTable::release( sirVFSMountLease_t lease ) noexcept
 {
 	if ( lease.nSlot == 0 || lease.nSlot > m_nMountCapacity || lease.nToken == 0 ) {
