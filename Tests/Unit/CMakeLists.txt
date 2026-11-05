@@ -215,9 +215,22 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND SIR_WITH_X11_INPUT)
     if(X11_FOUND AND SIR_XVFB_RUN)
         add_executable(SIRInputX11WindowTests SIRInputX11WindowTests.cpp)
         target_link_libraries(SIRInputX11WindowTests PRIVATE SIR::Core X11::X11)
+        target_link_options(SIRInputX11WindowTests PRIVATE
+            "LINKER:--wrap=XCreateSimpleWindow"
+            "LINKER:--wrap=XCreateBitmapFromData"
+            "LINKER:--wrap=XCreatePixmapCursor"
+            "LINKER:--wrap=XGrabPointer"
+            "LINKER:--wrap=XFilterEvent"
+            "LINKER:--wrap=XNextEvent")
         add_test(NAME core.platform.input.x11-window COMMAND "${SIR_XVFB_RUN}" -a "$<TARGET_FILE:SIRInputX11WindowTests>")
         set_tests_properties(core.platform.input.x11-window PROPERTIES LABELS "core;input;x11;integration" TIMEOUT 60)
         sir_configure_owned_target(SIRInputX11WindowTests)
+        add_executable(SIRInputX11IMEFallbackTests SIRInputX11IMEFallbackTests.cpp)
+        target_link_libraries(SIRInputX11IMEFallbackTests PRIVATE SIR::Core X11::X11)
+        target_link_options(SIRInputX11IMEFallbackTests PRIVATE "LINKER:--wrap=XCreateIC")
+        add_test(NAME core.platform.input.x11-ime-fallback COMMAND "${SIR_XVFB_RUN}" -a "$<TARGET_FILE:SIRInputX11IMEFallbackTests>")
+        set_tests_properties(core.platform.input.x11-ime-fallback PROPERTIES LABELS "core;input;x11;integration" TIMEOUT 60)
+        sir_configure_owned_target(SIRInputX11IMEFallbackTests)
     endif()
 endif()
 
