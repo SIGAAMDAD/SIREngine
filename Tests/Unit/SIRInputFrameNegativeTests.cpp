@@ -15,6 +15,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Core/Platform/Input/SIRInputFrameState.h>
 #include <Core/Platform/Input/SIRInputDeviceRegistry.h>
+#include <Core/Platform/SIRPlatformTime.h>
 #include <stdio.h>
 
 static bool sirFrameNegativeParameters( void ) noexcept
@@ -137,6 +138,50 @@ static bool sirFrameNegativeFullAxisAndPointer( void ) noexcept
 	return state.lastPublishedTick() == 2;
 }
 
+static bool sirFrameReceiptAgeOrdering( void ) noexcept
+{
+	SIRInputFrameState state;
+	SIRInputDeviceRegistry registry;
+	const uint64_t nNow = SIRPlatformTime::getMonotonicNanoseconds();
+	if ( nNow < UINT64_C( 4000000 ) || !state.begin( 1 ) ) {
+		return false;
+	}
+	state.setTimingMetricsEnabled( true );
+	const sirInputTimestamp_t szTimes[] = {
+	    { nNow - UINT64_C( 1000000 ), nNow - UINT64_C( 1000000 ), SIR_INPUT_CLOCK_ENGINE_MONOTONIC, 0 },
+	    { nNow - UINT64_C( 4000000 ), nNow - UINT64_C( 4000000 ), SIR_INPUT_CLOCK_ENGINE_MONOTONIC, 0 },
+	    { nNow - UINT64_C( 2000000 ), nNow - UINT64_C( 2000000 ), SIR_INPUT_CLOCK_ENGINE_MONOTONIC, 0 } };
+	const sirInputDeviceId_t hDevice = { 0, 1 };
+	for ( uint32_t i = 0; i < 3; ++i ) {
+		if ( !state.postPointer( hDevice, SIR_INPUT_POINTER, SIR_INPUT_MOTION, 0, 1, 0, szTimes[i] ) ) {
+			return false;
+		}
+	}
+	if ( !state.publish( registry ) ) {
+		return false;
+	}
+	const sirInputFrame_t *pFrame = state.frame();
+	if ( pFrame == nullptr || pFrame->nCount != 3 || pFrame->nCutoffNs < nNow ) {
+		return false;
+	}
+	if ( pFrame->nOldestReceiptAgeNs != pFrame->nCutoffNs - szTimes[1].nReceivedNs ||
+	     pFrame->nNewestReceiptAgeNs != pFrame->nCutoffNs - szTimes[0].nReceivedNs ) {
+		return false;
+	}
+	if ( !state.begin( 2 ) ) {
+		return false;
+	}
+	state.setTimingMetricsEnabled( false );
+	if ( !state.publish( registry ) ) {
+		return false;
+	}
+	pFrame = state.frame();
+	if ( pFrame == nullptr || pFrame->nCutoffNs != 0 ) {
+		return false;
+	}
+	return pFrame->nOldestReceiptAgeNs == 0 && pFrame->nNewestReceiptAgeNs == 0;
+}
+
 int main( void )
 {
 	if ( !sirFrameNegativeParameters() ) {
@@ -149,6 +194,10 @@ int main( void )
 	}
 	if ( !sirFrameNegativeFullAxisAndPointer() ) {
 		fputs( "input frame negative: full axis/pointer FAILED\n", stderr );
+		return 1;
+	}
+	if ( !sirFrameReceiptAgeOrdering() ) {
+		fputs( "input frame negative: receipt ordering FAILED\n", stderr );
 		return 1;
 	}
 	puts( "SIRInputFrameNegativeTests PASS" );
