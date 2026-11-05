@@ -88,4 +88,18 @@ if(SIR_BUILD_TESTS AND NOT SIR_SHADER_DXC_EXECUTABLE STREQUAL "")
             "-DSIR_FIXTURES=${CMAKE_CURRENT_SOURCE_DIR}/Tests/Fixtures"
             "-DSIR_OUTPUT_DIR=${CMAKE_CURRENT_BINARY_DIR}/NativeDXCTest"
             -P "${CMAKE_CURRENT_SOURCE_DIR}/Tests/SIRShaderCookerNativeDXCTests.cmake")
+    add_executable(SIRMaterialIREmitterDxcFixture Tests/SIRMaterialIREmitterDxcFixture.cpp)
+    target_link_libraries(SIRMaterialIREmitterDxcFixture PRIVATE SIR::ShaderCookFrontend)
+    if(COMMAND sir_configure_owned_target)
+        sir_configure_owned_target(SIRMaterialIREmitterDxcFixture)
+    endif()
+    add_test(NAME shader.cooker.material-ir-native-dxc
+        COMMAND "${CMAKE_COMMAND}"
+            "-DSIR_EMITTER_FIXTURE=$<TARGET_FILE:SIRMaterialIREmitterDxcFixture>"
+            "-DSIR_DXC=${SIR_SHADER_DXC_EXECUTABLE}"
+            "-DSIR_SPIRV_VAL=${SIR_SHADER_SPIRV_VAL}"
+            "-DSIR_SPIRV_DIS=${SIR_SHADER_SPIRV_DIS}"
+            "-DSIR_OUTPUT_DIR=${CMAKE_CURRENT_BINARY_DIR}/MaterialIRNativeDXCTest"
+            -P "${CMAKE_CURRENT_SOURCE_DIR}/Tests/SIRMaterialIREmitterNativeDXCTests.cmake")
+
 endif()
