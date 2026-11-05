@@ -1,6 +1,6 @@
 # P3 — Typed CVar banks and atomic transactions
 
-**Branch:** `feature/console-cvars-commands` · [P3 issue #278](https://github.com/SIGAAMDAD/SIREngine/issues/278) · **Status:** implemented, native CI pending.
+**Branch:** `feature/console-cvars-commands` · [P3 issue #278](https://github.com/SIGAAMDAD/SIREngine/issues/278) · **Status:** native CI accepted; P3 #278 closed.
 
 ## Runtime implementation
 
@@ -18,9 +18,11 @@ Source precedence is ENGINE_DEFAULT < DEVICE_PROFILE < PROJECT_PROFILE < USER_AR
 
 - **PASS locally:** isolated SIRCVarRegistry + real P0 flag validator compiled with GCC 14 `-std=c++17 -Wall -Wextra -Wpedantic -Werror`; focused mock-P2 transaction test executed successfully; ASan+UBSan test binary executed successfully; authored C++ formatted with pinned clang-format 23.1.5.
 - **Added native CMake/CTest:** `core.cvars.registry` exercises real P2 registration cooker, SIRS string pool, SIRC catalog and typed CVar banks; preflight/cancel/commit, precedence fallback, latched string snapshots, permission failures, full event credits, grouped sinks, stale dynamic module handles, caller memory sizing and wrong-owner-thread checks.
-- **Pending:** native Linux/Windows exact-SHA engine link/CTest, exact-source style CI and all-platform acceptance. Local mock integration is not a substitute for native end-to-end testing.
+- **PASS:** Exact-source `261e668f04eec44b14a5e22b117415e570ee9625` passed Linux **100/100 CTests** and Windows **95/95 CTests**, including real P2 cooked-catalog CVar integration, text-only storage and failure-atomic override exhaustion. [Native CI run 41939420523](https://github.com/SIGAAMDAD/SIREngine/actions/runs/41939420523) compiled and linked the engine and passed source hygiene/clang-format. Local mock-source Clang 23.1.5/GCC 14 and GCC ASan+UBSan were also run. P3 issue #278 closed. Full P7 source-based coverage and independent benchmark comparison remain future work.
 - **Remaining milestones:** P4 command execution and P5 typed archive/Config integration; P6 consumer/sink wiring and P7 exhaustive branch coverage/benchmarks.
 
 ## Lifetime and memory contract
 
 The caller allocates and retains all arrays, value banks and text slabs through `shutdown`. `nStringStride` is the maximum UTF-8 value length plus one terminator; each slab advertises its byte length, which is checked before initialization. Cooked default text pointers borrow the P2 catalog blob and must remain immutable and live for the registry lifetime. Event text remains stable until `popEvent` or `pumpGroups`. Calls are owner-thread-only at P3; cross-thread producer ingress is the responsibility of P4.
+
+The final source has a separate UTF-8 arena and **no numeric-bank slot for text-only CVars**. A test verifies a string-only registry initializes successfully with both numeric-bank capacities set to zero. A separate one-slot override arena test rejects two-write batches without publishing partial state.
