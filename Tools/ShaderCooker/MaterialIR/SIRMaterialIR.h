@@ -25,6 +25,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // clang-format on
 
 #include <Renderer/Shaders/SIRShaderContracts.h>
+#include <Renderer/Shaders/SIRShaderMaterial.h>
 #include <Tools/ShaderCooker/Frontend/SIRShaderFrontend.h>
 
 constexpr uint32_t SIR_MATERIAL_IR_MAX_NODES = 64;
@@ -151,5 +152,18 @@ typedef struct sirMaterialIRPipelineSettings_s
 sirShaderCookResult_t sirMaterialIRBuildPipelineRecipe( const sirMaterialIRGraph_t& graph, const sirMaterialShaderMapEntry_t& entry,
                                                         const sirMaterialIRPipelineSettings_t& settings,
                                                         sirShaderPipelineRecipe_t *pRecipe ) noexcept;
+
+// Offline projection into the existing material-pass wire record. The
+// serializer remains the authoritative owner of the byte format and hash.
+typedef struct sirMaterialIRCookedPassSettings_s
+{
+	sirMaterialIRPipelineSettings_t pipeline;
+	uint32_t iShaderDependency;
+	uint32_t nDependencyCount;
+} sirMaterialIRCookedPassSettings_t;
+
+sirShaderCookResult_t sirMaterialIRBuildCookedPass( const sirMaterialIRGraph_t& graph, const sirMaterialShaderMapEntry_t& entry,
+                                                    const sirMaterialIRCookedPassSettings_t& settings,
+                                                    sirShaderMaterialPassRecord_t *pPass ) noexcept;
 
 #endif // __SIRENGINE_SIRMATERIALIR_H__
