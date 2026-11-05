@@ -105,6 +105,8 @@ sirVulkanResult_t SIRVulkanDevice::createImageView( const sirVulkanImage_t *pIma
 	if ( pImage == nullptr || pView == nullptr || pImage->hImage == VK_NULL_HANDLE || pImage->pOwnerAllocator != m_Allocator ||
 	     pImage->nDeviceSerial != m_nDeviceSerial || pView->hView != VK_NULL_HANDLE ||
 	     info.sType != VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO || info.image != pImage->hImage || info.format != pImage->eFormat ||
+	     info.subresourceRange.aspectMask == 0 ||
+	     ( info.subresourceRange.aspectMask & ~sirVulkanImageAspectMask( pImage->eFormat ) ) != 0 ||
 	     info.subresourceRange.levelCount == 0 || info.subresourceRange.layerCount == 0 ||
 	     info.subresourceRange.baseMipLevel >= pImage->nMips ||
 	     info.subresourceRange.levelCount > pImage->nMips - info.subresourceRange.baseMipLevel ||
