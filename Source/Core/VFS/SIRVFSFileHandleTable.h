@@ -47,6 +47,7 @@ typedef struct sirVFSFileView_s
 	sirVFSMountDescriptor_t descriptor;
 	sirVFSPath_t path;
 	sirVFSFileBorrow_t borrow;
+	sirVFSMountHandle_t sourceMount;
 } sirVFSFileView_t;
 
 typedef struct sirVFSFileSlot_s
@@ -78,6 +79,8 @@ public:
 
 	SIRVFSFileHandleTable( const SIRVFSFileHandleTable& ) = delete;
 	SIRVFSFileHandleTable& operator=( const SIRVFSFileHandleTable& ) = delete;
+
+	bool usesMountTable( const SIRVFSMountTable& table ) const noexcept;
 
 	sirVFSResult_t openResolved( const sirVFSPath_t& path, sirVFSMountLease_t sourceLease, sirVFSFileHandle_t *pHandle ) noexcept;
 	sirVFSResult_t borrow( sirVFSFileHandle_t handle, sirVFSFileView_t *pView ) noexcept;

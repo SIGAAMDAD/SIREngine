@@ -18,7 +18,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <string.h>
 
-SIRVFSDirectorySource::SIRVFSDirectorySource( void ) noexcept : m_Descriptor{}, m_bReady( false ), m_bRetired( false )
+SIRVFSDirectorySource::SIRVFSDirectorySource( void ) noexcept
+    : m_pMountTable( nullptr ), m_MountLease{}, m_Descriptor{}, m_bReady( false ), m_bRetired( false )
 {
 }
 
@@ -53,37 +54,34 @@ sirVFSResult_t SIRVFSDirectorySource::fileResult( sirFileResult_t eResult ) noex
 	}
 }
 
-sirVFSResult_t SIRVFSDirectorySource::bind( const char *pszRootPath, const sirVFSMountDescriptor_t& descriptor ) noexcept
+sirVFSResult_t SIRVFSDirectorySource::bind( SIRVFSMountTable& table, sirVFSMountLease_t lease, const char *pszRootPath ) noexcept
 {
-	if ( pszRootPath == nullptr || descriptor.eKind != SIR_VFS_BACKEND_DIRECTORY || descriptor.nSourceId == 0 ||
-	     ( descriptor.nAllowedOps & SIR_VFS_ACCESS_READ ) == 0 ) {
-		return SIR_VFS_INVALID_ARGUMENT;
-	}
-	uint32_t nNamespaceLength = 0;
-	while ( nNamespaceLength <= SIR_VFS_MAX_NAMESPACE_BYTES && descriptor.szNamespace[nNamespaceLength] != '\0' ) {
-		++nNamespaceLength;
-	}
-	if ( nNamespaceLength < 2 || nNamespaceLength > SIR_VFS_MAX_NAMESPACE_BYTES ) {
-		return SIR_VFS_INVALID_ARGUMENT;
-	}
-	char szNamespaceRoot[SIR_VFS_MAX_NAMESPACE_BYTES + 3] = {};
-	memcpy( szNamespaceRoot, descriptor.szNamespace, nNamespaceLength );
-	szNamespaceRoot[nNamespaceLength] = ':';
-	szNamespaceRoot[nNamespaceLength + 1] = '/';
-	sirVFSPath_t canonical = {};
-	if ( SIRVFSPath::normalize( szNamespaceRoot, nNamespaceLength + 2, &canonical ) != SIR_VFS_PATH_OK ||
-	     memcmp( szNamespaceRoot, canonical.szPath, nNamespaceLength + 2 ) != 0 ) {
+	if ( pszRootPath == nullptr || pszRootPath[0] == '\0' ) {
 		return SIR_VFS_INVALID_ARGUMENT;
 	}
 	const SIRScopedLock<SIRMutex> guard( m_Mutex );
 	if ( m_bRetired || m_bReady ) {
 		return SIR_VFS_STOPPED;
 	}
+	// Authenticate the mount slot and generation against the live lease pool.
+	// This source owns a separate mount pin until terminal close.
+	sirVFSMountCandidate_t retained = {};
+	const sirVFSResult_t eRetain = table.retain( lease, &retained );
+	if ( eRetain != SIR_VFS_OK ) {
+		return eRetain;
+	}
+	if ( retained.descriptor.eKind != SIR_VFS_BACKEND_DIRECTORY || ( retained.descriptor.nAllowedOps & SIR_VFS_ACCESS_READ ) == 0 ) {
+		( void )table.release( retained.lease );
+		return SIR_VFS_FORBIDDEN;
+	}
 	const sirVFSResult_t eOpen = fileResult( m_Root.openRoot( pszRootPath ) );
 	if ( eOpen != SIR_VFS_OK ) {
+		( void )table.release( retained.lease );
 		return eOpen;
 	}
-	m_Descriptor = descriptor;
+	m_pMountTable = &table;
+	m_MountLease = retained.lease;
+	m_Descriptor = retained.descriptor;
 	m_bReady = true;
 	return SIR_VFS_OK;
 }
@@ -104,13 +102,15 @@ sirVFSResult_t SIRVFSDirectorySource::openRead( SIRVFSFileHandleTable& files, si
 	}
 	const sirVFSMountDescriptor_t& source = retained.descriptor;
 	const uint32_t nNamespaceLength = retained.path.nNamespaceLength;
-	const bool bMatch =
-	    source.eKind == SIR_VFS_BACKEND_DIRECTORY && ( source.nAllowedOps & SIR_VFS_ACCESS_READ ) != 0 &&
-	    source.nSourceId == m_Descriptor.nSourceId && source.nSourceRevision == m_Descriptor.nSourceRevision &&
-	    source.nOwnerScope == m_Descriptor.nOwnerScope && source.bTrusted == m_Descriptor.bTrusted &&
-	    strcmp( source.szNamespace, m_Descriptor.szNamespace ) == 0 && nNamespaceLength == strlen( m_Descriptor.szNamespace ) &&
-	    memcmp( retained.path.szPath, m_Descriptor.szNamespace, nNamespaceLength ) == 0 && retained.path.nLength > nNamespaceLength + 2 &&
-	    retained.path.szPath[nNamespaceLength] == ':' && retained.path.szPath[nNamespaceLength + 1] == '/';
+	const bool bMatch = files.usesMountTable( *m_pMountTable ) && retained.sourceMount.nSlot == m_MountLease.nSlot &&
+	                    retained.sourceMount.nGeneration == m_MountLease.nGeneration && source.eKind == SIR_VFS_BACKEND_DIRECTORY &&
+	                    ( source.nAllowedOps & SIR_VFS_ACCESS_READ ) != 0 && source.nSourceId == m_Descriptor.nSourceId &&
+	                    source.nSourceRevision == m_Descriptor.nSourceRevision && source.nOwnerScope == m_Descriptor.nOwnerScope &&
+	                    source.bTrusted == m_Descriptor.bTrusted && strcmp( source.szNamespace, m_Descriptor.szNamespace ) == 0 &&
+	                    nNamespaceLength == strlen( m_Descriptor.szNamespace ) &&
+	                    memcmp( retained.path.szPath, m_Descriptor.szNamespace, nNamespaceLength ) == 0 &&
+	                    retained.path.nLength > nNamespaceLength + 2 && retained.path.szPath[nNamespaceLength] == ':' &&
+	                    retained.path.szPath[nNamespaceLength + 1] == '/';
 	sirVFSResult_t eResult = SIR_VFS_FORBIDDEN;
 	if ( bMatch ) {
 		const char *pszRelativePath = retained.path.szPath + nNamespaceLength + 2;
@@ -132,5 +132,14 @@ sirVFSResult_t SIRVFSDirectorySource::close( void ) noexcept
 	}
 	m_bRetired = true;
 	m_bReady = false;
-	return fileResult( m_Root.close() );
+	const sirVFSResult_t eClose = fileResult( m_Root.close() );
+	if ( m_pMountTable != nullptr ) {
+		const sirVFSResult_t eRelease = m_pMountTable->release( m_MountLease );
+		m_pMountTable = nullptr;
+		m_MountLease = {};
+		if ( eRelease != SIR_VFS_OK ) {
+			return eRelease;
+		}
+	}
+	return eClose;
 }

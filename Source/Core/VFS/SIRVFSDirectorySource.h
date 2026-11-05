@@ -42,7 +42,7 @@ public:
 
 	bool isOpen( void ) const noexcept;
 
-	sirVFSResult_t bind( const char *pszRootPath, const sirVFSMountDescriptor_t& descriptor ) noexcept;
+	sirVFSResult_t bind( SIRVFSMountTable& table, sirVFSMountLease_t lease, const char *pszRootPath ) noexcept;
 	sirVFSResult_t openRead( SIRVFSFileHandleTable& files, sirVFSFileBorrow_t ticket, SIRPlatformFile *pFile ) noexcept;
 	sirVFSResult_t close( void ) noexcept;
 
@@ -52,6 +52,8 @@ private:
 
 	mutable SIRMutex m_Mutex;
 	SIRPlatformRootDirectory m_Root;
+	SIRVFSMountTable *m_pMountTable;
+	sirVFSMountLease_t m_MountLease;
 	sirVFSMountDescriptor_t m_Descriptor;
 	bool m_bReady;
 	bool m_bRetired;
