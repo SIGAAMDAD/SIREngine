@@ -434,3 +434,14 @@ set_tests_properties(renderer.framegraph.transient PROPERTIES LABELS "framegraph
 sir_configure_owned_target(SIRFrameGraphTransientTests)
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/MeshCacheTests.cmake)
+
+# Cross-owner provider completion and graphics binary boundary conformance.
+add_executable(SIRProviderCompletionTests SIRProviderCompletionTests.cpp)
+target_link_libraries(SIRProviderCompletionTests PRIVATE SIR::Resources)
+add_test(NAME resources.provider.multilane-contract COMMAND SIRProviderCompletionTests)
+sir_configure_owned_target(SIRProviderCompletionTests)
+
+add_executable(SIRGraphicsABISharedBoundaryTests SIRGraphicsABISharedBoundaryTests.cpp)
+target_link_libraries(SIRGraphicsABISharedBoundaryTests PRIVATE SIR::Graphics)
+add_test(NAME renderer.graphics.shared-boundary COMMAND SIRGraphicsABISharedBoundaryTests)
+sir_configure_owned_target(SIRGraphicsABISharedBoundaryTests)
