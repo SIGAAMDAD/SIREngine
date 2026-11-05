@@ -165,6 +165,11 @@ uint32_t SIRRegistrationCatalog::getCount( void ) const noexcept
 	return m_nLiveCount;
 }
 
+uint32_t SIRRegistrationCatalog::getCapacity( void ) const noexcept
+{
+	return m_nCapacity;
+}
+
 uint32_t SIRRegistrationCatalog::getCookedCount( void ) const noexcept
 {
 	return m_nCookedCount;
@@ -188,6 +193,29 @@ sirRegistrationResult_t SIRRegistrationCatalog::getEntry( sirRegistrationHandle_
 		return SIR_REGISTRATION_STALE_HANDLE;
 	}
 	*ppEntry = &entry;
+	return SIR_REGISTRATION_OK;
+}
+
+sirRegistrationResult_t SIRRegistrationCatalog::getAtIndex( uint32_t iEntry, const sirRegistrationEntry_t **ppEntry,
+                                                               sirRegistrationHandle_t *pHandle ) const noexcept
+{
+	if ( ppEntry == nullptr || pHandle == nullptr ) {
+		return SIR_REGISTRATION_INVALID_ARGUMENT;
+	}
+	*ppEntry = nullptr;
+	*pHandle = {};
+	if ( !m_bInitialized ) {
+		return SIR_REGISTRATION_NOT_INITIALIZED;
+	}
+	if ( iEntry >= m_nCapacity ) {
+		return SIR_REGISTRATION_BAD_BOUNDS;
+	}
+	const sirRegistrationEntry_t& entry = m_pEntries[iEntry];
+	if ( !entry.bActive ) {
+		return SIR_REGISTRATION_NOT_FOUND;
+	}
+	*ppEntry = &entry;
+	*pHandle = { iEntry + 1, entry.nGeneration };
 	return SIR_REGISTRATION_OK;
 }
 

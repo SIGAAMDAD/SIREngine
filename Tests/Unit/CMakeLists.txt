@@ -303,3 +303,9 @@ add_executable(SIRCVarRegistryTests CVars/SIRCVarRegistryIntegrationTests.cpp)
 target_link_libraries(SIRCVarRegistryTests PRIVATE SIRRegistrationCookerLib SIR::Core)
 add_test(NAME core.cvars.registry COMMAND SIRCVarRegistryTests)
 sir_configure_owned_target(SIRCVarRegistryTests)
+
+# P4: owner-thread console pump, module command leases, typed CVar built-ins and bounded MPSC ingress.
+add_executable(SIRConsoleServiceTests Console/SIRConsoleServiceTests.cpp)
+target_link_libraries(SIRConsoleServiceTests PRIVATE SIRRegistrationCookerLib SIR::Core)
+add_test(NAME core.console.service COMMAND SIRConsoleServiceTests)
+sir_configure_owned_target(SIRConsoleServiceTests)
