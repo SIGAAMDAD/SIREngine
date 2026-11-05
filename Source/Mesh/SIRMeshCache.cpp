@@ -20,6 +20,14 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <new>
 #include <stdint.h>
 
+// The stand-alone generation-exhaustion fixture seeds near UINT32_MAX.
+// Ordinary engine builds always start at zero.
+#ifdef SIR_MESH_TEST_GENERATION_SEED
+static constexpr uint32_t SIR_MESH_INITIAL_GENERATION = SIR_MESH_TEST_GENERATION_SEED;
+#else
+static constexpr uint32_t SIR_MESH_INITIAL_GENERATION = 0;
+#endif
+
 typedef struct sirMeshCacheSlot_s
 {
 	sirMeshGeometrySource_t source;
@@ -67,8 +75,8 @@ static bool validateMeshSource( const sirMeshGeometrySource_t *pSource ) noexcep
 }
 
 SIRMeshCache::SIRMeshCache( void ) noexcept
-    : m_pSlots( nullptr ), m_nCapacity( 0 ), m_nResidentCount( 0 ), m_nBorrowCount( 0 ), m_nNextGeneration( 0 ), m_bReady( false ),
-      m_bShuttingDown( false )
+    : m_pSlots( nullptr ), m_nCapacity( 0 ), m_nResidentCount( 0 ), m_nBorrowCount( 0 ), m_nNextGeneration( SIR_MESH_INITIAL_GENERATION ),
+      m_bReady( false ), m_bShuttingDown( false )
 {
 }
 
@@ -154,11 +162,14 @@ sirMeshResult_t SIRMeshCache::insert( const sirMeshGeometrySource_t *pSource, si
 		return SIR_MESH_OUT_OF_CAPACITY;
 	}
 
+	// Never recycle a generation: a previously returned handle must not
+	// become valid again, even after repeated shutdown/reinitialize cycles.
+	if ( m_nNextGeneration == UINT32_MAX ) {
+		return SIR_MESH_OUT_OF_CAPACITY;
+	}
+
 	sirMeshCacheSlot_t *pSlot = &m_pSlots[iFree];
 	++m_nNextGeneration;
-	if ( m_nNextGeneration == 0 ) {
-		++m_nNextGeneration;
-	}
 	pSlot->nGeneration = m_nNextGeneration;
 	pSlot->source = *pSource;
 	pSlot->nBorrows = 0;

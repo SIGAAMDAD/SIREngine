@@ -14,3 +14,16 @@ add_executable(SIRMeshCacheTests "${CMAKE_CURRENT_LIST_DIR}/../../Unit/SIRMeshCa
 target_link_libraries(SIRMeshCacheTests PRIVATE SIRMeshCache)
 target_compile_options(SIRMeshCacheTests PRIVATE -Wall -Wextra -Wpedantic -Werror)
 add_test(NAME mesh.cache.foundation COMMAND SIRMeshCacheTests)
+add_executable(SIRMeshCacheStateTests "${CMAKE_CURRENT_LIST_DIR}/../../Unit/SIRMeshCacheStateTests.cpp")
+target_link_libraries(SIRMeshCacheStateTests PRIVATE SIRMeshCache)
+target_compile_options(SIRMeshCacheStateTests PRIVATE -Wall -Wextra -Wpedantic -Werror)
+add_test(NAME mesh.cache.state-model COMMAND SIRMeshCacheStateTests)
+# Build an isolated fixture of the same implementation to exercise the unreachable
+# UINT32 generation exhaustion boundary without billions of real insertions.
+add_executable(SIRMeshCacheGenerationTests
+    "${SIR_MESH_SOURCE_ROOT}/Mesh/SIRMeshCache.cpp"
+    "${CMAKE_CURRENT_LIST_DIR}/../../Unit/SIRMeshCacheGenerationTests.cpp")
+target_include_directories(SIRMeshCacheGenerationTests PRIVATE "${SIR_MESH_SOURCE_ROOT}" "${SIR_MESH_BUILD_ROOT}")
+target_compile_definitions(SIRMeshCacheGenerationTests PRIVATE SIR_MESH_TEST_GENERATION_SEED=4294967293U)
+target_compile_options(SIRMeshCacheGenerationTests PRIVATE -Wall -Wextra -Wpedantic -Werror)
+add_test(NAME mesh.cache.generation-exhaustion COMMAND SIRMeshCacheGenerationTests)

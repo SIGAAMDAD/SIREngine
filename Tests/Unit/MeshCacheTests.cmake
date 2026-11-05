@@ -3,3 +3,16 @@ add_executable(SIRMeshCacheTests SIRMeshCacheTests.cpp)
 target_link_libraries(SIRMeshCacheTests PRIVATE SIR::MeshCache)
 add_test(NAME mesh.cache.foundation COMMAND SIRMeshCacheTests)
 sir_configure_owned_target(SIRMeshCacheTests)
+
+add_executable(SIRMeshCacheStateTests SIRMeshCacheStateTests.cpp)
+target_link_libraries(SIRMeshCacheStateTests PRIVATE SIR::MeshCache)
+add_test(NAME mesh.cache.state-model COMMAND SIRMeshCacheStateTests)
+sir_configure_owned_target(SIRMeshCacheStateTests)
+
+add_executable(SIRMeshCacheGenerationTests
+    ${PROJECT_SOURCE_DIR}/Source/Mesh/SIRMeshCache.cpp
+    SIRMeshCacheGenerationTests.cpp)
+target_include_directories(SIRMeshCacheGenerationTests PRIVATE "${PROJECT_SOURCE_DIR}/Source" "${PROJECT_SOURCE_DIR}/Build/CMake")
+target_compile_definitions(SIRMeshCacheGenerationTests PRIVATE SIR_MESH_TEST_GENERATION_SEED=4294967293U)
+add_test(NAME mesh.cache.generation-exhaustion COMMAND SIRMeshCacheGenerationTests)
+sir_configure_owned_target(SIRMeshCacheGenerationTests)
