@@ -439,7 +439,9 @@
       "stop_conditions": [
         "Unratified interface or unmet dependency gate"
       ],
-      "status": "IMPLEMENTED_PENDING_NATIVE_CI"
+      "status": "PASS_GITHUB_NATIVE_CI",
+      "evidence_sha": "261e668f04eec44b14a5e22b117415e570ee9625",
+      "evidence_url": "https://github.com/SIGAAMDAD/SIREngine/actions/runs/41939420523"
     },
     {
       "id": "P4",
@@ -618,9 +620,11 @@
         "REQ-003"
       ],
       "tier": "NATIVE_CMAKE_CTEST",
-      "status": "PENDING_EXACT_SHA_CI",
+      "status": "PASS_GITHUB_NATIVE_LINUX_WINDOWS",
       "command": "ctest --output-on-failure -R core.cvars.registry",
-      "evidence_path": "Tests/Unit/CVars/SIRCVarRegistryIntegrationTests.cpp"
+      "evidence_path": "Tests/Unit/CVars/SIRCVarRegistryIntegrationTests.cpp",
+      "evidence_sha": "261e668f04eec44b14a5e22b117415e570ee9625",
+      "evidence_url": "https://github.com/SIGAAMDAD/SIREngine/actions/runs/41939420523"
     }
   ],
   "probes": [],
