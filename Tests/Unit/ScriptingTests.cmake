@@ -43,6 +43,12 @@ target_link_libraries(SIRScriptOptimizerProcessTransportTests PRIVATE SIR::Scrip
 sir_configure_owned_target(SIRScriptOptimizerProcessTransportTests)
 add_test(NAME scripting.optimizer-process-transport COMMAND SIRScriptOptimizerProcessTransportTests $<TARGET_FILE:SIRScriptOptimizerWorkerFixture>)
 
+add_executable(SIRScriptOptimizerRestartTests SIRScriptOptimizerRestartTests.cpp)
+target_link_libraries(SIRScriptOptimizerRestartTests PRIVATE SIR::Scripting)
+add_dependencies(SIRScriptOptimizerRestartTests SIRScriptOptimizerWorkerFixture)
+add_test(NAME scripting.optimizer-process-restart COMMAND SIRScriptOptimizerRestartTests $<TARGET_FILE:SIRScriptOptimizerWorkerFixture>)
+sir_configure_owned_target(SIRScriptOptimizerRestartTests)
+
 add_library(SIRScriptOptimizerTestBackend SHARED SIRScriptOptimizerTestBackend.cpp)
 target_include_directories(SIRScriptOptimizerTestBackend PRIVATE "${PROJECT_SOURCE_DIR}/Source" "${PROJECT_SOURCE_DIR}/Build/CMake")
 target_compile_features(SIRScriptOptimizerTestBackend PRIVATE cxx_std_17)
