@@ -40,10 +40,14 @@ static uint32_t s_nLeaseAcquire = 0;
 static uint32_t s_nLeaseRelease = 0;
 static bool s_bModuleAlive = true;
 static bool s_bSubmittedRecursive = false;
+static SIRConsoleService *s_pOutputConsole = nullptr;
 
 static void sirTestOutput( void *, const sirConsoleOutput_t& output ) noexcept
 {
 	s_Results.push_back( { output.nRequestId, output.eResult, std::string( output.pszText, output.nBytes ) } );
+	assert( s_pOutputConsole != nullptr );
+	s_pOutputConsole->shutdown();
+	assert( s_pOutputConsole->isInitialized() );
 }
 
 static bool sirTestAcquire( void *, uint32_t nOwnerId ) noexcept
@@ -77,6 +81,8 @@ static void sirTestCallback( void *, const void *pInvocation, const void *pArgum
 	const sirConsoleArguments_t& args = *( const sirConsoleArguments_t * )pArguments;
 	assert( args.nCount >= 1 );
 	++s_nCallbackCount;
+	invocation.pConsole->shutdown();
+	assert( invocation.pConsole->isInitialized() );
 	if ( args.nCount > 1 && strcmp( args.szArgs[1].pszText, "spam" ) == 0 ) {
 		for ( uint32_t iMessage = 0; iMessage < 32; ++iMessage ) {
 			const sirConsoleOutput_t output = { invocation.submission.nRequestId, SIR_REGISTRATION_OK, "spam", 4 };
@@ -276,6 +282,7 @@ int main( void )
 	assert( invalid.initialize( registration, cvars, pool, wrong ) == SIR_REGISTRATION_INVALID_ARGUMENT );
 	SIRConsoleService console;
 	assert( console.initialize( registration, cvars, pool, storage ) == SIR_REGISTRATION_OK );
+	s_pOutputConsole = &console;
 
 	const uint32_t nAll = SIR_CONSOLE_CAP_READ | SIR_CONSOLE_CAP_WRITE | SIR_CONSOLE_CAP_EXECUTE;
 	const sirConsoleSubmission_t user = { sirTestOrigin( nAll ), 1 };
@@ -284,6 +291,14 @@ int main( void )
 	assert( console.pump( 1, &report ) == SIR_REGISTRATION_OK );
 	assert( report.nProcessed == 1 && report.nSucceeded == 1 );
 	assert( sirTestHasOutput( 1, SIR_REGISTRATION_OK, "10" ) );
+	const sirCVarOrigin_t sensitive = sirTestOrigin( nAll | SIR_CONSOLE_CAP_SENSITIVE );
+	const sirCVarOrigin_t privileged = sirTestOrigin( nAll | SIR_CONSOLE_CAP_SENSITIVE | SIR_CONSOLE_CAP_ADMIN );
+	assert( console.submit( "help r.secret", 13, { sensitive, 180 } ) == SIR_REGISTRATION_OK );
+	assert( console.pump( 0, &report ) == SIR_REGISTRATION_OK && report.nRejected == 1 );
+	assert( sirTestHasOutput( 180, SIR_REGISTRATION_DENIED, "command rejected" ) );
+	assert( console.submit( "help r.secret", 13, { privileged, 181 } ) == SIR_REGISTRATION_OK );
+	assert( console.pump( 0, &report ) == SIR_REGISTRATION_OK && report.nSucceeded == 1 );
+	assert( sirTestHasOutput( 181, SIR_REGISTRATION_OK, "cvar" ) );
 	assert( console.submit( "set r.count 25", 14, { user.origin, 2 } ) == SIR_REGISTRATION_OK );
 	assert( console.pump( 0, &report ) == SIR_REGISTRATION_OK && report.nSucceeded == 1 );
 	assert( console.submit( "get r.count", 11, { user.origin, 3 } ) == SIR_REGISTRATION_OK );
@@ -455,11 +470,14 @@ int main( void )
 	std::thread other( [&console, &eWrongThread]() {
 		sirConsolePumpReport_t wrongReport = {};
 		eWrongThread.store( console.pump( 1, &wrongReport ) );
+		console.shutdown();
 	} );
 	other.join();
 	assert( eWrongThread.load() == SIR_REGISTRATION_WRONG_THREAD );
+	assert( console.isInitialized() );
 	assert( console.getHistoryCount() == 8 );
 	console.shutdown();
+	s_pOutputConsole = nullptr;
 	assert( console.submit( "help", 4, user ) == SIR_REGISTRATION_NOT_INITIALIZED );
 	cvars.shutdown();
 	registration.shutdown();
