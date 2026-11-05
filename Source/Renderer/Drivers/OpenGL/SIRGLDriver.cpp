@@ -18,6 +18,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Renderer/Drivers/OpenGL/SIRGLContext.h>
 #include <Renderer/Drivers/OpenGL/SIRGLFormats.h>
 #include <Renderer/Drivers/OpenGL/SIRGLFramebuffers.h>
+#include <Renderer/Drivers/OpenGL/SIRGLFramebufferCache.h>
 #include <Renderer/Drivers/OpenGL/SIRGLHandlePool.h>
 #include <Renderer/Drivers/OpenGL/SIRGLSamplers.h>
 #include <Renderer/Drivers/OpenGL/SIRGLTextures.h>
@@ -48,6 +49,7 @@ typedef struct sirGLDevice_s
 	sirGLTextureDispatch_t textures;
 	sirGLFormatDispatch_t formats;
 	sirGLFramebufferDispatch_t framebuffers;
+	sirGLFramebufferCache_t framebufferCache;
 	uint64_t nCommittedResourceBytes;
 	uint64_t nPeakResourceBytes;
 	uint32_t nGeneration;
@@ -430,6 +432,12 @@ static uint32_t sirGLRetireResource( void *pDevice, sirGraphicsHandle_t hResourc
 	if ( resource.eType == SIR_GRAPHICS_HANDLE_TEXTURE && pState->handles.pSlots[hResource.nSlot].nChildCount != 0 ) {
 		return SIR_GRAPHICS_BUSY;
 	}
+	if ( resource.eType == SIR_GRAPHICS_HANDLE_TEXTURE || resource.eType == SIR_GRAPHICS_HANDLE_VIEW ) {
+		nStatus = sirGLFramebufferCacheInvalidate( &pState->framebufferCache, hResource );
+		if ( nStatus != SIR_GRAPHICS_SUCCESS ) {
+			return nStatus;
+		}
+	}
 	if ( resource.eType == SIR_GRAPHICS_HANDLE_BUFFER ) {
 		nStatus = sirGLDeleteNativeBuffer( &pState->buffers, resource.nName );
 	} else if ( resource.eType == SIR_GRAPHICS_HANDLE_SAMPLER ) {
@@ -484,7 +492,14 @@ static uint32_t sirGLShutdown( void *pDevice ) noexcept
 	if ( !sirGLContextOwnsThread( pState->pContext ) ) {
 		return SIR_GRAPHICS_BUSY;
 	}
-	const sirGraphicsResult_t eStatus = sirGLHandlePoolShutdown( &pState->handles );
+	if ( pState->handles.nActive != 0 ) {
+		return SIR_GRAPHICS_BUSY;
+	}
+	sirGraphicsResult_t eStatus = sirGLFramebufferCacheShutdown( &pState->framebufferCache );
+	if ( eStatus != SIR_GRAPHICS_SUCCESS ) {
+		return eStatus;
+	}
+	eStatus = sirGLHandlePoolShutdown( &pState->handles );
 	if ( eStatus != SIR_GRAPHICS_SUCCESS ) {
 		return eStatus;
 	}
@@ -562,6 +577,14 @@ static uint32_t sirGLCreateDevice( void *pDriver, const sirGraphicsABIDeviceRequ
 	}
 	if ( nStatus == SIR_GRAPHICS_SUCCESS ) {
 		nStatus = sirGLLoadFramebufferDispatch( sirGLResolveNativeProcedure, pContext, &pNew->framebuffers );
+	}
+	if ( nStatus == SIR_GRAPHICS_SUCCESS ) {
+		sirGLFramebufferCacheConfig_t cacheConfig = {};
+		cacheConfig.pHost = &pState->host;
+		cacheConfig.pResources = &pNew->handles;
+		cacheConfig.pDispatch = &pNew->framebuffers;
+		cacheConfig.nCapacity = 64;
+		nStatus = sirGLFramebufferCacheInit( &pNew->framebufferCache, &cacheConfig );
 	}
 	if ( nStatus != SIR_GRAPHICS_SUCCESS ) {
 		( void )sirGLHandlePoolShutdown( &pNew->handles );
