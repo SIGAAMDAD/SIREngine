@@ -61,12 +61,17 @@ bool SIRFrameGraph::isReadableState( sirGraphicsState_t eState ) noexcept
 	}
 }
 
-bool SIRFrameGraph::overlaps( const sirFrameGraphAccess_t& a, const sirFrameGraphAccess_t& b ) noexcept
+static bool sirFrameGraphOverlaps( const sirFrameGraphAccess_t& a, const sirFrameGraphAccess_t& b ) noexcept
 {
 	if ( a.nResource != b.nResource || a.nBaseMip >= b.nBaseMip + b.nMipCount || b.nBaseMip >= a.nBaseMip + a.nMipCount ) {
 		return false;
 	}
 	return a.nBaseLayer < b.nBaseLayer + b.nLayerCount && b.nBaseLayer < a.nBaseLayer + a.nLayerCount;
+}
+
+bool SIRFrameGraph::overlaps( const sirFrameGraphAccess_t& a, const sirFrameGraphAccess_t& b ) noexcept
+{
+	return sirFrameGraphOverlaps( a, b );
 }
 
 bool SIRFrameGraph::covers( const sirFrameGraphAccess_t& a, const sirFrameGraphAccess_t& b ) noexcept
@@ -75,6 +80,41 @@ bool SIRFrameGraph::covers( const sirFrameGraphAccess_t& a, const sirFrameGraphA
 		return false;
 	}
 	return a.nBaseLayer <= b.nBaseLayer && a.nBaseLayer + a.nLayerCount >= b.nBaseLayer + b.nLayerCount;
+}
+
+// Sorted, duplicate-free subresource boundaries partition arbitrary overlapping
+// mip/layer rectangles without allocating a dense texture-sized state table.
+static void sirFrameGraphInsertCut( uint32_t *pCuts, uint32_t *pCount, uint32_t nValue ) noexcept
+{
+	uint32_t iCut = 0;
+	while ( iCut < *pCount && pCuts[iCut] < nValue ) {
+		++iCut;
+	}
+	if ( iCut < *pCount && pCuts[iCut] == nValue ) {
+		return;
+	}
+	for ( uint32_t iMove = *pCount; iMove > iCut; --iMove ) {
+		pCuts[iMove] = pCuts[iMove - 1];
+	}
+	pCuts[iCut] = nValue;
+	++*pCount;
+}
+
+typedef struct sirFrameGraphCompileContext_s
+{
+	const sirFrameGraphResource_t *pResources;
+	const sirFrameGraphPass_t *pPasses;
+	uint8_t *pEdges;
+	uint32_t nCellsRemaining;
+} sirFrameGraphCompileContext_t;
+
+static bool sirFrameGraphRequiresOrdering( const sirFrameGraphAccess_t& previous, const sirFrameGraphAccess_t& current,
+                                           const sirFrameGraphPass_t *pPasses ) noexcept
+{
+	if ( previous.bWrite || current.bWrite || previous.eState != current.eState ) {
+		return true;
+	}
+	return pPasses[previous.nPass].eQueue != pPasses[current.nPass].eQueue;
 }
 
 sirGraphicsResult_t SIRFrameGraph::addResource( const sirFrameGraphResource_t& resource, uint32_t *pIndex ) noexcept
@@ -92,7 +132,7 @@ sirGraphicsResult_t SIRFrameGraph::addResource( const sirFrameGraphResource_t& r
 	                             resource.hImported.nDeviceGeneration == 0 ) ) {
 		return SIR_GRAPHICS_INVALID_HANDLE;
 	}
-	if ( resource.eInitialQueue >= SIR_GRAPHICS_QUEUE_COUNT ) {
+	if ( resource.eInitialQueue >= SIR_GRAPHICS_QUEUE_COUNT || resource.eInitialState > SIR_GRAPHICS_STATE_PRESENT ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( !resource.bImported && resource.eInitialState != SIR_GRAPHICS_STATE_UNDEFINED ) {
@@ -100,6 +140,22 @@ sirGraphicsResult_t SIRFrameGraph::addResource( const sirFrameGraphResource_t& r
 	}
 	if ( m_nResourceCount == SIR_FRAMEGRAPH_MAX_RESOURCES ) {
 		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
+	}
+	// A physical imported resource must have one graph identity so no alias
+	// can evade declared access hazards by registering the same handle twice.
+	if ( resource.bImported ) {
+		for ( uint32_t iResource = 0; iResource < m_nResourceCount; ++iResource ) {
+			const sirFrameGraphResource_t& existing = m_szResources[iResource];
+			if ( !existing.bImported || existing.eType != resource.eType ) {
+				continue;
+			}
+			const bool bSameSlot =
+			    existing.hImported.nSlot == resource.hImported.nSlot && existing.hImported.nGeneration == resource.hImported.nGeneration;
+			const bool bSameDevice = existing.hImported.nDeviceGeneration == resource.hImported.nDeviceGeneration;
+			if ( bSameSlot && bSameDevice ) {
+				return SIR_GRAPHICS_INVALID_ARGUMENT;
+			}
+		}
 	}
 
 	*pIndex = m_nResourceCount;
@@ -137,6 +193,16 @@ sirGraphicsResult_t SIRFrameGraph::addAccess( const sirFrameGraphAccess_t& acces
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( access.bWrite ? !isWritableState( access.eState ) : !isReadableState( access.eState ) ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	const sirGraphicsQueue_t eQueue = m_szPasses[access.nPass].eQueue;
+	if ( eQueue == SIR_GRAPHICS_QUEUE_COPY && access.eState != SIR_GRAPHICS_STATE_COPY_SOURCE &&
+	     access.eState != SIR_GRAPHICS_STATE_COPY_DESTINATION ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	if ( eQueue == SIR_GRAPHICS_QUEUE_COMPUTE &&
+	     ( access.eState == SIR_GRAPHICS_STATE_COLOR_ATTACHMENT || access.eState == SIR_GRAPHICS_STATE_DEPTH_WRITE ||
+	       access.eState == SIR_GRAPHICS_STATE_PRESENT ) ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( m_nAccessCount == SIR_FRAMEGRAPH_MAX_ACCESSES ) {
@@ -204,67 +270,145 @@ sirGraphicsResult_t SIRFrameGraph::validateCapabilities( const sirGraphicsCapabi
 	return SIR_GRAPHICS_SUCCESS;
 }
 
-sirGraphicsResult_t SIRFrameGraph::buildTransitions( uint8_t *pszEdges, sirFrameGraphCompiled_t *pCompiled ) const noexcept
+static sirGraphicsResult_t sirFrameGraphAppendTransition( const sirFrameGraphTransition_t& transition,
+                                                          sirFrameGraphCompiled_t *pCompiled ) noexcept
 {
-	for ( uint32_t iAccess = 0; iAccess < m_nAccessCount; ++iAccess ) {
-		const sirFrameGraphAccess_t& access = m_szAccesses[iAccess];
-		const sirFrameGraphResource_t& resource = m_szResources[access.nResource];
-		uint32_t iLast = SIR_FRAMEGRAPH_INVALID_INDEX;
-		bool bWritten = resource.bImported && resource.eInitialState != SIR_GRAPHICS_STATE_UNDEFINED;
+	if ( pCompiled->nTransitionCount != 0 ) {
+		sirFrameGraphTransition_t& previous = pCompiled->szTransitions[pCompiled->nTransitionCount - 1];
+		const bool bSameIdentity = previous.nResource == transition.nResource && previous.nBeforePass == transition.nBeforePass &&
+		                           previous.nAfterPass == transition.nAfterPass;
+		const bool bSameStates = previous.eBefore == transition.eBefore && previous.eAfter == transition.eAfter &&
+		                         previous.bWriteHazard == transition.bWriteHazard;
+		const bool bSameQueues = previous.eFromQueue == transition.eFromQueue && previous.eToQueue == transition.eToQueue;
+		if ( bSameIdentity && bSameStates && bSameQueues ) {
+			const bool bNextMip = previous.nBaseLayer == transition.nBaseLayer && previous.nLayerCount == transition.nLayerCount &&
+			                      previous.nBaseMip + previous.nMipCount == transition.nBaseMip;
+			const bool bNextLayer = previous.nBaseMip == transition.nBaseMip && previous.nMipCount == transition.nMipCount &&
+			                        previous.nBaseLayer + previous.nLayerCount == transition.nBaseLayer;
+			if ( bNextMip ) {
+				previous.nMipCount += transition.nMipCount;
+				return SIR_GRAPHICS_SUCCESS;
+			}
+			if ( bNextLayer ) {
+				previous.nLayerCount += transition.nLayerCount;
+				return SIR_GRAPHICS_SUCCESS;
+			}
+		}
+	}
+	if ( pCompiled->nTransitionCount >= SIR_FRAMEGRAPH_MAX_TRANSITIONS ) {
+		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
+	}
+	pCompiled->szTransitions[pCompiled->nTransitionCount++] = transition;
+	return SIR_GRAPHICS_SUCCESS;
+}
 
-		for ( uint32_t iPrevious = 0; iPrevious < iAccess; ++iPrevious ) {
-			const sirFrameGraphAccess_t& previous = m_szAccesses[iPrevious];
-			if ( !overlaps( previous, access ) ) {
-				continue;
-			}
-			// Partial overlap requires a separate per-subresource state compiler.
-			if ( !covers( previous, access ) ) {
-				return SIR_GRAPHICS_UNSUPPORTED;
-			}
-			iLast = iPrevious;
-			bWritten = bWritten || previous.bWrite;
-			if ( previous.nPass != access.nPass && requiresOrdering( previous, access ) ) {
-				pszEdges[previous.nPass * SIR_FRAMEGRAPH_MAX_PASSES + access.nPass] = 1;
-			}
-		}
-		if ( !access.bWrite && !bWritten ) {
-			return SIR_GRAPHICS_INVALID_ARGUMENT;
-		}
+static sirGraphicsResult_t sirFrameGraphCompileAccess( const sirFrameGraphAccess_t *pAccesses, uint32_t iAccess,
+                                                       sirFrameGraphCompileContext_t *pContext,
+                                                       sirFrameGraphCompiled_t *pCompiled ) noexcept
+{
+	const sirFrameGraphAccess_t& access = pAccesses[iAccess];
+	const sirFrameGraphResource_t& resource = pContext->pResources[access.nResource];
+	uint32_t szMipCuts[SIR_FRAMEGRAPH_MAX_ACCESSES * 2 + 2] = { access.nBaseMip, access.nBaseMip + access.nMipCount };
+	uint32_t szLayerCuts[SIR_FRAMEGRAPH_MAX_ACCESSES * 2 + 2] = { access.nBaseLayer, access.nBaseLayer + access.nLayerCount };
+	uint32_t nMipCuts = 2;
+	uint32_t nLayerCuts = 2;
 
-		sirGraphicsState_t eBefore = resource.eInitialState;
-		sirGraphicsQueue_t eQueueBefore = resource.eInitialQueue;
-		uint32_t nBeforePass = SIR_FRAMEGRAPH_INVALID_INDEX;
-		bool bPriorWrite = false;
-		if ( iLast != SIR_FRAMEGRAPH_INVALID_INDEX ) {
-			const sirFrameGraphAccess_t& previous = m_szAccesses[iLast];
-			eBefore = previous.eState;
-			eQueueBefore = m_szPasses[previous.nPass].eQueue;
-			nBeforePass = previous.nPass;
-			bPriorWrite = previous.bWrite;
-		}
-		const sirGraphicsQueue_t eQueueAfter = m_szPasses[access.nPass].eQueue;
-		bool bTransition = iLast == SIR_FRAMEGRAPH_INVALID_INDEX || eBefore != access.eState || eQueueBefore != eQueueAfter;
-		bTransition = bTransition || bPriorWrite || access.bWrite;
-		if ( !bTransition ) {
+	for ( uint32_t iPrevious = 0; iPrevious < iAccess; ++iPrevious ) {
+		const sirFrameGraphAccess_t& previous = pAccesses[iPrevious];
+		if ( !sirFrameGraphOverlaps( previous, access ) ) {
 			continue;
 		}
-		if ( pCompiled->nTransitionCount == SIR_FRAMEGRAPH_MAX_TRANSITIONS ) {
-			return SIR_GRAPHICS_CAPACITY_EXCEEDED;
+		if ( previous.nPass != access.nPass && sirFrameGraphRequiresOrdering( previous, access, pContext->pPasses ) ) {
+			pContext->pEdges[previous.nPass * SIR_FRAMEGRAPH_MAX_PASSES + access.nPass] = 1;
 		}
 
-		sirFrameGraphTransition_t& transition = pCompiled->szTransitions[pCompiled->nTransitionCount++];
-		transition.nResource = access.nResource;
-		transition.nBeforePass = nBeforePass;
-		transition.nAfterPass = access.nPass;
-		transition.nBaseMip = access.nBaseMip;
-		transition.nMipCount = access.nMipCount;
-		transition.nBaseLayer = access.nBaseLayer;
-		transition.nLayerCount = access.nLayerCount;
-		transition.eFromQueue = eQueueBefore;
-		transition.eToQueue = eQueueAfter;
-		transition.eBefore = eBefore;
-		transition.eAfter = access.eState;
-		transition.bWriteHazard = bPriorWrite && access.bWrite;
+		const uint32_t nMipBegin = previous.nBaseMip > access.nBaseMip ? previous.nBaseMip : access.nBaseMip;
+		const uint32_t nMipEnd = previous.nBaseMip + previous.nMipCount < access.nBaseMip + access.nMipCount
+		                             ? previous.nBaseMip + previous.nMipCount
+		                             : access.nBaseMip + access.nMipCount;
+		const uint32_t nLayerBegin = previous.nBaseLayer > access.nBaseLayer ? previous.nBaseLayer : access.nBaseLayer;
+		const uint32_t nLayerEnd = previous.nBaseLayer + previous.nLayerCount < access.nBaseLayer + access.nLayerCount
+		                               ? previous.nBaseLayer + previous.nLayerCount
+		                               : access.nBaseLayer + access.nLayerCount;
+		sirFrameGraphInsertCut( szMipCuts, &nMipCuts, nMipBegin );
+		sirFrameGraphInsertCut( szMipCuts, &nMipCuts, nMipEnd );
+		sirFrameGraphInsertCut( szLayerCuts, &nLayerCuts, nLayerBegin );
+		sirFrameGraphInsertCut( szLayerCuts, &nLayerCuts, nLayerEnd );
+	}
+
+	const uint64_t nCellCount = ( uint64_t )( nMipCuts - 1 ) * ( nLayerCuts - 1 );
+	if ( nCellCount > pContext->nCellsRemaining ) {
+		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
+	}
+	pContext->nCellsRemaining -= ( uint32_t )nCellCount;
+
+	for ( uint32_t iLayer = 0; iLayer + 1 < nLayerCuts; ++iLayer ) {
+		for ( uint32_t iMip = 0; iMip + 1 < nMipCuts; ++iMip ) {
+			sirFrameGraphAccess_t cell = access;
+			cell.nBaseMip = szMipCuts[iMip];
+			cell.nMipCount = szMipCuts[iMip + 1] - szMipCuts[iMip];
+			cell.nBaseLayer = szLayerCuts[iLayer];
+			cell.nLayerCount = szLayerCuts[iLayer + 1] - szLayerCuts[iLayer];
+
+			uint32_t iLast = SIR_FRAMEGRAPH_INVALID_INDEX;
+			bool bInitialized = resource.bImported && resource.eInitialState != SIR_GRAPHICS_STATE_UNDEFINED;
+			for ( uint32_t iPrevious = iAccess; iPrevious != 0; --iPrevious ) {
+				const sirFrameGraphAccess_t& previous = pAccesses[iPrevious - 1];
+				if ( !sirFrameGraphOverlaps( previous, cell ) ) {
+					continue;
+				}
+				if ( iLast == SIR_FRAMEGRAPH_INVALID_INDEX ) {
+					iLast = iPrevious - 1;
+				}
+				bInitialized = bInitialized || previous.bWrite;
+			}
+			if ( !access.bWrite && !bInitialized ) {
+				return SIR_GRAPHICS_INVALID_ARGUMENT;
+			}
+
+			sirFrameGraphTransition_t transition = {};
+			transition.nResource = access.nResource;
+			transition.nBeforePass = SIR_FRAMEGRAPH_INVALID_INDEX;
+			transition.nAfterPass = access.nPass;
+			transition.nBaseMip = cell.nBaseMip;
+			transition.nMipCount = cell.nMipCount;
+			transition.nBaseLayer = cell.nBaseLayer;
+			transition.nLayerCount = cell.nLayerCount;
+			transition.eFromQueue = resource.eInitialQueue;
+			transition.eToQueue = pContext->pPasses[access.nPass].eQueue;
+			transition.eBefore = resource.eInitialState;
+			transition.eAfter = access.eState;
+			transition.bWriteHazard = access.bWrite;
+			if ( iLast != SIR_FRAMEGRAPH_INVALID_INDEX ) {
+				const sirFrameGraphAccess_t& previous = pAccesses[iLast];
+				transition.nBeforePass = previous.nPass;
+				transition.eFromQueue = pContext->pPasses[previous.nPass].eQueue;
+				transition.eBefore = previous.eState;
+				transition.bWriteHazard = previous.bWrite || access.bWrite;
+			}
+			const bool bStateChanged = transition.eBefore != transition.eAfter;
+			const bool bQueueChanged = transition.eFromQueue != transition.eToQueue;
+			if ( !bStateChanged && !bQueueChanged && !transition.bWriteHazard ) {
+				continue;
+			}
+			const sirGraphicsResult_t eResult = sirFrameGraphAppendTransition( transition, pCompiled );
+			if ( eResult != SIR_GRAPHICS_SUCCESS ) {
+				return eResult;
+			}
+		}
+	}
+	return SIR_GRAPHICS_SUCCESS;
+}
+
+sirGraphicsResult_t SIRFrameGraph::buildTransitions( uint8_t *pszEdges, sirFrameGraphCompiled_t *pCompiled ) const noexcept
+{
+	constexpr uint32_t MAX_REGION_CELLS = 8192;
+	sirFrameGraphCompileContext_t context = { m_szResources, m_szPasses, pszEdges, MAX_REGION_CELLS };
+	for ( uint32_t iAccess = 0; iAccess < m_nAccessCount; ++iAccess ) {
+		const sirGraphicsResult_t eResult = sirFrameGraphCompileAccess( m_szAccesses, iAccess, &context, pCompiled );
+		if ( eResult != SIR_GRAPHICS_SUCCESS ) {
+			return eResult;
+		}
 	}
 	return SIR_GRAPHICS_SUCCESS;
 }
