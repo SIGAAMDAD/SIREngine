@@ -312,6 +312,31 @@ int main( void )
 	assert( textRegistry.getValue( textHandle, SIR_CONSOLE_CAP_READ, &got ) == SIR_REGISTRATION_OK );
 	assert( got.nTextBytes == 4 && memcmp( got.pszText, "base", 4 ) == 0 );
 	textRegistry.shutdown();
+	// A full override arena must reject an entire batch before publishing any write.
+	sirCVarStorage_t small = storage;
+	small.nOverrides = 1;
+	SIRCVarRegistry limited;
+	assert( limited.initialize( registration, small ) == SIR_REGISTRATION_OK );
+	sirCVarHandle_t limitedHandles[2] = {};
+	const char *szLimitedNames[2] = { "r.value", "r.wide" };
+	for ( uint32_t iSlot = 0; iSlot < 2; ++iSlot ) {
+		sirRegistrationHandle_t sourceHandle = {};
+		assert( registration.find( szLimitedNames[iSlot], strlen( szLimitedNames[iSlot] ), &sourceHandle ) == SIR_REGISTRATION_OK );
+		sirCVarDefinition_t definition = {};
+		assert( sirCVarDefinitionFromCooked( registration, sourceHandle, cookedSource, &definition ) == SIR_REGISTRATION_OK );
+		assert( limited.bind( definition, &limitedHandles[iSlot] ) == SIR_REGISTRATION_OK );
+	}
+	sirCVarWrite_t failWrites[2] = {};
+	failWrites[0] = { limitedHandles[0], console, { 70, nullptr, 0 }, false };
+	failWrites[1] = { limitedHandles[1], console, { 700, nullptr, 0 }, false };
+	assert( limited.prepareBatch( failWrites, 2, &token ) == SIR_REGISTRATION_CAPACITY_EXCEEDED );
+	assert( limited.getPendingEvents() == 0 );
+	assert( limited.getValue( limitedHandles[0], SIR_CONSOLE_CAP_READ, &got ) == SIR_REGISTRATION_OK && got.nBits == 10 );
+	assert( limited.getValue( limitedHandles[1], SIR_CONSOLE_CAP_READ, &got ) == SIR_REGISTRATION_OK && got.nBits == 0 );
+	assert( limited.prepareBatch( failWrites, 1, &token ) == SIR_REGISTRATION_OK );
+	assert( limited.commitBatch( token ) == SIR_REGISTRATION_OK );
+	assert( limited.prepareBatch( failWrites + 1, 1, &token ) == SIR_REGISTRATION_CAPACITY_EXCEEDED );
+	limited.shutdown();
 	registration.shutdown();
 	assert( pool.shutdown() );
 	return 0;
