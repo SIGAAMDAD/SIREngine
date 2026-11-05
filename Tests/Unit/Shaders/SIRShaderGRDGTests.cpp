@@ -14,6 +14,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Renderer/Shaders/SIRShaderGRDG.h>
+#include <Renderer/Shaders/SIRShaderLibrary.h>
 
 #include <atomic>
 #include <stdio.h>
@@ -240,6 +241,20 @@ static void testGRDGPublication( void ) noexcept
 			REQUIRE( shader.nGraphRevision == 1 && shader.header.nSourceRevision == 37 );
 			REQUIRE( sirShaderProjectMaterial( materialView, formats, &material ) == SIR_RESOURCE_RESULT_SUCCESS );
 			REQUIRE( material.nGraphRevision == 1 && material.header.nSourceRevision == 9 );
+			sirShaderLibraryContext_t context = { &graph, &scope, formats };
+			sirShaderResolveStageRequest_t stageRequest = {};
+			stageRequest.ePass = SIR_SHADER_PASS_COLOR;
+			stageRequest.nStageMask = SIR_GRAPHICS_STAGE_VERTEX;
+			stageRequest.validation = validation;
+			sirShaderResolvedStage_t resolved = {};
+			REQUIRE( sirShaderResolveMaterialStage( context, material, stageRequest, &resolved ) == SIR_RESOURCE_RESULT_SUCCESS );
+			REQUIRE( !resolved.bFixedFunction && resolved.hShader.m_nSlot == hShader.m_nSlot );
+			REQUIRE( resolved.binary.m_nSize == 8 && resolved.binary.m_pData == shader.bytes.m_pData + 112 );
+			REQUIRE( resolved.nShaderGraphRevision == 1 && resolved.nShaderSourceRevision == 37 );
+			stageRequest.nStageMask = SIR_GRAPHICS_STAGE_FRAGMENT;
+			REQUIRE( sirShaderResolveMaterialStage( context, material, stageRequest, &resolved ) ==
+			         SIR_RESOURCE_RESULT_DEPENDENCY_MISSING );
+
 			sirShaderStageProjection_t stage = {};
 			REQUIRE( sirShaderProjectStage( shader, 0, &stage ) == SIR_RESOURCE_RESULT_SUCCESS );
 			REQUIRE( stage.binary.m_nSize == 8 && stage.stage.nStageMask == SIR_GRAPHICS_STAGE_VERTEX );
