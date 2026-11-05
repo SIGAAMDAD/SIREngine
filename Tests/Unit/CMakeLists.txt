@@ -280,5 +280,10 @@ target_link_libraries(SIRShaderContractsTests PRIVATE SIR::Graphics)
 add_test(NAME renderer.shader.contracts COMMAND SIRShaderContractsTests)
 sir_configure_owned_target(SIRShaderContractsTests)
 
+add_executable(SIRShaderGRDGTests Shaders/SIRShaderGRDGTests.cpp)
+target_link_libraries(SIRShaderGRDGTests PRIVATE SIR::Graphics)
+add_test(NAME renderer.shader.grdg COMMAND SIRShaderGRDGTests)
+sir_configure_owned_target(SIRShaderGRDGTests)
+
 add_subdirectory(Config)
 include(${CMAKE_CURRENT_SOURCE_DIR}/StringPoolTests.cmake)
