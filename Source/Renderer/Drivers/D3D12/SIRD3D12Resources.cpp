@@ -597,8 +597,15 @@ sirGraphicsResult_t SIRD3D12Resources::createTexture( const sirGraphicsTextureDe
 		return SIR_GRAPHICS_DEVICE_LOST;
 	}
 	collectRetired();
-	if ( desc.eMemory != SIR_GRAPHICS_MEMORY_GPU_LOCAL || desc.nWidth > D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION ||
-	     desc.nHeight > D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION || desc.nArrayLayers > UINT16_MAX || desc.nDepth > UINT16_MAX ) {
+	uint32_t nMaxExtent = D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION;
+	if ( desc.eDimension == SIR_GRAPHICS_TEXTURE_1D ) {
+		nMaxExtent = D3D12_REQ_TEXTURE1D_U_DIMENSION;
+	} else if ( desc.eDimension == SIR_GRAPHICS_TEXTURE_3D ) {
+		nMaxExtent = D3D12_REQ_TEXTURE3D_U_V_OR_W_DIMENSION;
+	}
+	if ( desc.eMemory != SIR_GRAPHICS_MEMORY_GPU_LOCAL || desc.nWidth > nMaxExtent || desc.nHeight > nMaxExtent ||
+	     ( desc.eDimension == SIR_GRAPHICS_TEXTURE_3D && desc.nDepth > nMaxExtent ) ||
+	     desc.nArrayLayers > D3D12_REQ_TEXTURE2D_ARRAY_AXIS_DIMENSION ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
 	if ( desc.nSampleCount > 1 && ( desc.nMipLevels != 1 || desc.eDimension != SIR_GRAPHICS_TEXTURE_2D ) ) {
@@ -648,7 +655,14 @@ sirGraphicsResult_t SIRD3D12Resources::createTexture( const sirGraphicsTextureDe
 	if ( FAILED( m_pDevice->CheckFeatureSupport( D3D12_FEATURE_FORMAT_SUPPORT, &formatSupport, sizeof( formatSupport ) ) ) ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
-	uint32_t nRequiredSupport = 0;
+	uint32_t nRequiredSupport = D3D12_FORMAT_SUPPORT1_TEXTURE2D;
+	if ( desc.eDimension == SIR_GRAPHICS_TEXTURE_1D ) {
+		nRequiredSupport = D3D12_FORMAT_SUPPORT1_TEXTURE1D;
+	} else if ( desc.eDimension == SIR_GRAPHICS_TEXTURE_3D ) {
+		nRequiredSupport = D3D12_FORMAT_SUPPORT1_TEXTURE3D;
+	} else if ( desc.eDimension == SIR_GRAPHICS_TEXTURE_CUBE ) {
+		nRequiredSupport = D3D12_FORMAT_SUPPORT1_TEXTURECUBE;
+	}
 	if ( ( desc.nUsage & SIR_GRAPHICS_USAGE_COLOR_ATTACHMENT ) != 0 ) {
 		nRequiredSupport |= D3D12_FORMAT_SUPPORT1_RENDER_TARGET;
 	}
