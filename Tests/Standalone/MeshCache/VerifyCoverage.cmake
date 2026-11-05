@@ -8,8 +8,8 @@ endforeach()
 
 file(GLOB sirProfiles "${SIR_MESH_COVERAGE_DIR}/mesh-*.profraw")
 list(LENGTH sirProfiles sirProfileCount)
-if(sirProfileCount LESS 6)
-    message(FATAL_ERROR "Expected coverage profiles from six independent MeshCache tests, found ${sirProfileCount}")
+if(sirProfileCount LESS 7)
+    message(FATAL_ERROR "Expected coverage profiles from seven independent MeshCache tests, found ${sirProfileCount}")
 endif()
 
 set(sirProfdata "${SIR_MESH_COVERAGE_DIR}/combined.profdata")
@@ -27,7 +27,7 @@ if(CMAKE_HOST_WIN32)
 endif()
 set(sirExportArgs -summary-only "-instr-profile=${sirProfdata}")
 foreach(sirExecutable IN ITEMS SIRMeshCacheStateTests SIRMeshCacheEdgeTests
-        SIRMeshCacheGenerationTests SIRMeshCacheBorrowLimitTests SIRMeshCacheAllocationTests)
+        SIRMeshCacheGenerationTests SIRMeshCacheBorrowLimitTests SIRMeshCacheAllocationTests SIRMeshCacheOwnerLimitTests)
     list(APPEND sirExportArgs "-object=${SIR_MESH_BUILD_DIR}/${sirExecutable}${sirExecutableSuffix}")
 endforeach()
 execute_process(

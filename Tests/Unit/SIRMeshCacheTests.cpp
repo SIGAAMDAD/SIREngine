@@ -173,7 +173,7 @@ static bool testMalformedGeometry( void ) noexcept
 		return false;
 	if ( !require( owner.nReleases == 0 && cache.getResidentCount() == 0, "malformed: ownership unchanged" ) )
 		return false;
-	sirMeshHandle_t invalid = { UINT32_MAX, UINT32_MAX };
+	sirMeshHandle_t invalid = { UINT32_MAX, UINT32_MAX, UINT64_MAX };
 	sirMeshGeometryRead_t read = {};
 	if ( !require( cache.find( nullptr, &handle ) == SIR_MESH_INVALID_ARGUMENT, "malformed: null lookup key" ) ||
 	     !require( cache.find( &source.key, nullptr ) == SIR_MESH_INVALID_ARGUMENT, "malformed: null lookup output" ) ||

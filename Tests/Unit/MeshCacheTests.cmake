@@ -37,3 +37,11 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 endif()
 add_test(NAME mesh.cache.allocation-free COMMAND SIRMeshCacheAllocationTests)
 sir_configure_owned_target(SIRMeshCacheAllocationTests)
+
+add_executable(SIRMeshCacheOwnerLimitTests
+    ${PROJECT_SOURCE_DIR}/Source/Mesh/SIRMeshCache.cpp
+    SIRMeshCacheOwnerLimitTests.cpp)
+target_include_directories(SIRMeshCacheOwnerLimitTests PRIVATE "${PROJECT_SOURCE_DIR}/Source" "${PROJECT_SOURCE_DIR}/Build/CMake")
+target_compile_definitions(SIRMeshCacheOwnerLimitTests PRIVATE SIR_MESH_TEST_OWNER_ID_SEED=18446744073709551614ULL)
+add_test(NAME mesh.cache.owner-id-limit COMMAND SIRMeshCacheOwnerLimitTests)
+sir_configure_owned_target(SIRMeshCacheOwnerLimitTests)

@@ -16,6 +16,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Mesh/SIRMeshCache.h>
 
 #include <assert.h>
+#include <mutex>
 #include <math.h>
 #include <new>
 #include <stdint.h>
@@ -35,6 +36,27 @@ static constexpr uint32_t SIR_MESH_MAX_BORROWS = SIR_MESH_TEST_MAX_BORROWS;
 #else
 static constexpr uint32_t SIR_MESH_MAX_BORROWS = UINT32_MAX;
 #endif
+
+// Each cache initialization receives a unique, nonzero owner ID within this linked MeshCache implementation.
+// Saturate rather than recycle IDs so a foreign/stale handle never aliases.
+#ifdef SIR_MESH_TEST_OWNER_ID_SEED
+static constexpr uint64_t SIR_MESH_INITIAL_OWNER_ID = SIR_MESH_TEST_OWNER_ID_SEED;
+#else
+static constexpr uint64_t SIR_MESH_INITIAL_OWNER_ID = 1;
+#endif
+static std::mutex s_MeshCacheOwnerIdMutex;
+static uint64_t s_nNextMeshCacheOwnerId = SIR_MESH_INITIAL_OWNER_ID;
+
+static uint64_t allocateMeshCacheOwnerId( void ) noexcept
+{
+	// This lock is only acquired on cache initialization, never during
+	// insert, lookup, acquire, retire, release or shutdown.
+	std::lock_guard<std::mutex> guard( s_MeshCacheOwnerIdMutex );
+	if ( s_nNextMeshCacheOwnerId == UINT64_MAX ) {
+		return 0;
+	}
+	return s_nNextMeshCacheOwnerId++;
+}
 
 typedef struct sirMeshCacheSlot_s
 {
@@ -84,7 +106,7 @@ static bool validateMeshSource( const sirMeshGeometrySource_t *pSource ) noexcep
 
 SIRMeshCache::SIRMeshCache( void ) noexcept
     : m_pSlots( nullptr ), m_nCapacity( 0 ), m_nResidentCount( 0 ), m_nBorrowCount( 0 ), m_nNextGeneration( SIR_MESH_INITIAL_GENERATION ),
-      m_bReady( false ), m_bShuttingDown( false )
+      m_nOwnerId( 0 ), m_bReady( false ), m_bShuttingDown( false )
 {
 }
 
@@ -130,7 +152,13 @@ sirMeshResult_t SIRMeshCache::initialize( void *pStorage, uint64_t nStorageBytes
 		return SIR_MESH_INVALID_ARGUMENT;
 	}
 
+	const uint64_t nOwnerId = allocateMeshCacheOwnerId();
+	if ( nOwnerId == 0 ) {
+		return SIR_MESH_OUT_OF_CAPACITY;
+	}
+
 	m_pSlots = ( sirMeshCacheSlot_t * )pStorage;
+	m_nOwnerId = nOwnerId;
 	m_nCapacity = nCapacity;
 	m_nResidentCount = 0;
 	m_nBorrowCount = 0;
@@ -144,7 +172,8 @@ sirMeshResult_t SIRMeshCache::initialize( void *pStorage, uint64_t nStorageBytes
 bool SIRMeshCache::isValidHandle( sirMeshHandle_t handle ) const noexcept
 {
 	// Only called after the public entrypoint has checked m_bReady.
-	return handle.nSlot < m_nCapacity && m_pSlots[handle.nSlot].bOccupied && m_pSlots[handle.nSlot].nGeneration == handle.nGeneration;
+	return handle.nOwnerId == m_nOwnerId && handle.nSlot < m_nCapacity && m_pSlots[handle.nSlot].bOccupied &&
+	       m_pSlots[handle.nSlot].nGeneration == handle.nGeneration;
 }
 
 sirMeshResult_t SIRMeshCache::insert( const sirMeshGeometrySource_t *pSource, sirMeshHandle_t *pHandle ) noexcept
@@ -184,7 +213,7 @@ sirMeshResult_t SIRMeshCache::insert( const sirMeshGeometrySource_t *pSource, si
 	pSlot->bRetiring = false;
 	pSlot->bOccupied = true;
 	++m_nResidentCount;
-	*pHandle = { iFree, pSlot->nGeneration };
+	*pHandle = { iFree, pSlot->nGeneration, m_nOwnerId };
 	return SIR_MESH_OK;
 }
 
@@ -201,7 +230,7 @@ sirMeshResult_t SIRMeshCache::find( const sirMeshKey_t *pKey, sirMeshHandle_t *p
 	for ( uint32_t iSlot = 0; iSlot < m_nCapacity; ++iSlot ) {
 		const sirMeshCacheSlot_t *pSlot = &m_pSlots[iSlot];
 		if ( pSlot->bOccupied && !pSlot->bRetiring && sameMeshKey( &pSlot->source.key, pKey ) ) {
-			*pHandle = { iSlot, pSlot->nGeneration };
+			*pHandle = { iSlot, pSlot->nGeneration, m_nOwnerId };
 			return SIR_MESH_OK;
 		}
 	}
@@ -312,6 +341,7 @@ sirMeshResult_t SIRMeshCache::shutdown( void ) noexcept
 	}
 	m_pSlots = nullptr;
 	m_nCapacity = 0;
+	m_nOwnerId = 0;
 	m_bShuttingDown = false;
 	return SIR_MESH_OK;
 }

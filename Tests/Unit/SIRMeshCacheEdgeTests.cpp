@@ -16,8 +16,16 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Mesh/SIRMeshCache.h>
 
 #include <limits>
+#include <new>
+#include <stddef.h>
+#include <type_traits>
 #include <stdio.h>
 #include <stdlib.h>
+
+static_assert( sizeof( sirMeshHandle_t ) == 16, "Mesh handle ABI requires 128 bits" );
+static_assert( offsetof( sirMeshHandle_t, nOwnerId ) == 8, "Mesh handle owner ID offset must be stable" );
+static_assert( std::is_trivially_copyable<sirMeshHandle_t>::value, "Mesh handle must remain POD" );
+static_assert( sizeof( sirMeshKey_t ) == 24, "Serialized mesh key must remain independent of runtime handle" );
 
 typedef struct sirMeshEdgePin_s
 {
@@ -201,11 +209,11 @@ static void testMeshKeysAndLeases( void ) noexcept
 	requireMesh( another.nGeneration != handle.nGeneration, "slot generation updated" );
 	requireMesh( cache.acquire( handle, &read ) == SIR_MESH_STALE_HANDLE, "ABA rejection" );
 	requireMesh( cache.release( another ) == SIR_MESH_INVALID_ARGUMENT, "release without acquire" );
-	const sirMeshHandle_t outOfRange = { 800, 1 };
+	const sirMeshHandle_t outOfRange = { 800, 1, another.nOwnerId };
 	requireMesh( cache.acquire( outOfRange, &read ) == SIR_MESH_STALE_HANDLE, "out-of-range slot" );
-	const sirMeshHandle_t emptySlot = { 1, 999 };
+	const sirMeshHandle_t emptySlot = { 1, 999, another.nOwnerId };
 	requireMesh( cache.acquire( emptySlot, &read ) == SIR_MESH_STALE_HANDLE, "empty slot" );
-	const sirMeshHandle_t wrongGeneration = { another.nSlot, another.nGeneration + 1 };
+	const sirMeshHandle_t wrongGeneration = { another.nSlot, another.nGeneration + 1, another.nOwnerId };
 	requireMesh( cache.acquire( wrongGeneration, &read ) == SIR_MESH_STALE_HANDLE, "wrong generation" );
 	sirMeshGeometrySource_t second = makeMesh( &szPins[2], 3, 5 );
 	requireMesh( cache.insert( &second, &handle ) == SIR_MESH_OK, "insert different variant" );
@@ -248,8 +256,75 @@ static void testMeshReentrantShutdown( void ) noexcept
 	requireMesh( cache.shutdown() == SIR_MESH_OK, "shutdown again" );
 }
 
+static void testCacheOwnerScope( void ) noexcept
+{
+	alignas( 64 ) uint8_t szStorageA[4096] = {};
+	alignas( 64 ) uint8_t szStorageB[4096] = {};
+	alignas( SIRMeshCache ) uint8_t szCacheStorage[sizeof( SIRMeshCache )] = {};
+	sirMeshEdgePin_t szPins[3] = {};
+	SIRMeshCache first;
+	SIRMeshCache second;
+	requireMesh( first.initialize( szStorageA, sizeof( szStorageA ), 1 ) == SIR_MESH_OK, "owner: init first" );
+	requireMesh( second.initialize( szStorageB, sizeof( szStorageB ), 1 ) == SIR_MESH_OK, "owner: init second" );
+	sirMeshGeometrySource_t sourceA = makeMesh( &szPins[0], 31, 0 );
+	sirMeshGeometrySource_t sourceB = makeMesh( &szPins[1], 32, 0 );
+	sirMeshHandle_t handleA = {};
+	sirMeshHandle_t handleB = {};
+	sirMeshGeometryRead_t read = {};
+	requireMesh( first.insert( &sourceA, &handleA ) == SIR_MESH_OK, "owner: insert first" );
+	requireMesh( second.insert( &sourceB, &handleB ) == SIR_MESH_OK, "owner: insert second" );
+	requireMesh( handleA.nSlot == handleB.nSlot && handleA.nGeneration == handleB.nGeneration,
+	             "owner: reproduce identical slot/generation" );
+	requireMesh( handleA.nOwnerId != 0 && handleB.nOwnerId != 0 && handleA.nOwnerId != handleB.nOwnerId,
+	             "owner: unique initialization epochs" );
+	requireMesh( second.acquire( handleA, &read ) == SIR_MESH_STALE_HANDLE && read.pPositionsXYZ == nullptr,
+	             "owner: reject foreign acquire" );
+	requireMesh( second.release( handleA ) == SIR_MESH_STALE_HANDLE, "owner: reject foreign release" );
+	requireMesh( second.retire( handleA ) == SIR_MESH_STALE_HANDLE, "owner: reject foreign retirement" );
+	requireMesh( first.acquire( handleB, &read ) == SIR_MESH_STALE_HANDLE, "owner: reject reverse foreign acquire" );
+	requireMesh( second.getResidentCount() == 1 && second.getBorrowCount() == 0 && szPins[1].nReleased == 0,
+	             "owner: foreign handles did not mutate cache" );
+	sirMeshHandle_t found = {};
+	requireMesh( second.find( &sourceB.key, &found ) == SIR_MESH_OK && found.nOwnerId == handleB.nOwnerId,
+	             "owner: lookup carries owner token" );
+	requireMesh( first.shutdown() == SIR_MESH_OK && second.shutdown() == SIR_MESH_OK, "owner: shutdown both caches" );
+	requireMesh( szPins[0].nReleased == 1 && szPins[1].nReleased == 1, "owner: exact pin releases" );
+	requireMesh( first.initialize( szStorageA, sizeof( szStorageA ), 1 ) == SIR_MESH_OK, "owner: reinitialize first cache" );
+	sirMeshGeometrySource_t sourceC = makeMesh( &szPins[2], 33, 0 );
+	sirMeshHandle_t handleC = {};
+	requireMesh( first.insert( &sourceC, &handleC ) == SIR_MESH_OK, "owner: insert after reinitialization" );
+	requireMesh( handleC.nOwnerId != handleA.nOwnerId && first.acquire( handleA, &read ) == SIR_MESH_STALE_HANDLE,
+	             "owner: old epoch cannot resolve after reinitialization" );
+	requireMesh( first.shutdown() == SIR_MESH_OK && szPins[2].nReleased == 1, "owner: finish reinitialized cache" );
+
+	// Placement-new at the identical address must not revive old handles.
+	SIRMeshCache *pOriginal = new ( szCacheStorage ) SIRMeshCache();
+	requireMesh( pOriginal->initialize( szStorageA, sizeof( szStorageA ), 1 ) == SIR_MESH_OK, "owner: placement cache initialize" );
+	sirMeshEdgePin_t firstPlacementPin = {};
+	sirMeshGeometrySource_t firstPlacementSource = makeMesh( &firstPlacementPin, 41, 0 );
+	sirMeshHandle_t placementOld = {};
+	requireMesh( pOriginal->insert( &firstPlacementSource, &placementOld ) == SIR_MESH_OK, "owner: placement cache insert" );
+	requireMesh( pOriginal->shutdown() == SIR_MESH_OK, "owner: placement cache shutdown" );
+	pOriginal->~SIRMeshCache();
+	SIRMeshCache *pReplacement = new ( szCacheStorage ) SIRMeshCache();
+	requireMesh( pReplacement->initialize( szStorageA, sizeof( szStorageA ), 1 ) == SIR_MESH_OK, "owner: replacement cache initialize" );
+	sirMeshEdgePin_t replacementPin = {};
+	sirMeshGeometrySource_t replacementSource = makeMesh( &replacementPin, 42, 0 );
+	sirMeshHandle_t replacementHandle = {};
+	requireMesh( pReplacement->insert( &replacementSource, &replacementHandle ) == SIR_MESH_OK, "owner: replacement cache insert" );
+	requireMesh( replacementHandle.nSlot == placementOld.nSlot && replacementHandle.nGeneration == placementOld.nGeneration,
+	             "owner: placement-new reproduces original collision" );
+	requireMesh( replacementHandle.nOwnerId != placementOld.nOwnerId &&
+	                 pReplacement->acquire( placementOld, &read ) == SIR_MESH_STALE_HANDLE,
+	             "owner: old placement handle rejected" );
+	requireMesh( pReplacement->shutdown() == SIR_MESH_OK, "owner: replacement shutdown" );
+	pReplacement->~SIRMeshCache();
+	requireMesh( firstPlacementPin.nReleased == 1 && replacementPin.nReleased == 1, "owner: placement pin releases" );
+}
+
 int main( void )
 {
+	testCacheOwnerScope();
 	testMeshInvalidSources();
 	testMeshKeysAndLeases();
 	testMeshReentrantShutdown();

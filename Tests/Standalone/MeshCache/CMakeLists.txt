@@ -51,6 +51,15 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 endif()
 add_test(NAME mesh.cache.allocation-free COMMAND SIRMeshCacheAllocationTests)
 
+# Isolated owner-ID saturation fixture; production counter starts at one.
+add_executable(SIRMeshCacheOwnerLimitTests
+    "${SIR_MESH_SOURCE_ROOT}/Mesh/SIRMeshCache.cpp"
+    "${CMAKE_CURRENT_LIST_DIR}/../../Unit/SIRMeshCacheOwnerLimitTests.cpp")
+target_include_directories(SIRMeshCacheOwnerLimitTests PRIVATE "${SIR_MESH_SOURCE_ROOT}" "${SIR_MESH_BUILD_ROOT}")
+target_compile_definitions(SIRMeshCacheOwnerLimitTests PRIVATE SIR_MESH_TEST_OWNER_ID_SEED=18446744073709551614ULL)
+target_compile_options(SIRMeshCacheOwnerLimitTests PRIVATE -Wall -Wextra -Wpedantic -Werror)
+add_test(NAME mesh.cache.owner-id-limit COMMAND SIRMeshCacheOwnerLimitTests)
+
 # Explicit opt-in source-based coverage admission for the standalone CPU cache.
 # Only this standalone harness is instrumented; production engine targets are not.
 option(SIR_MESH_ENABLE_COVERAGE "Enable LLVM coverage verification for the standalone mesh cache" OFF)
@@ -65,7 +74,7 @@ if(SIR_MESH_ENABLE_COVERAGE)
     find_program(SIR_MESH_LLVM_PROFDATA NAMES llvm-profdata REQUIRED)
     find_program(SIR_MESH_LLVM_COV NAMES llvm-cov REQUIRED)
     foreach(sirTarget IN ITEMS SIRMeshCache SIRMeshCacheTests SIRMeshCacheStateTests SIRMeshCacheEdgeTests
-            SIRMeshCacheGenerationTests SIRMeshCacheBorrowLimitTests SIRMeshCacheAllocationTests)
+            SIRMeshCacheGenerationTests SIRMeshCacheBorrowLimitTests SIRMeshCacheAllocationTests SIRMeshCacheOwnerLimitTests)
         target_compile_options(${sirTarget} PRIVATE -fprofile-instr-generate -fcoverage-mapping)
         if(NOT sirTarget STREQUAL "SIRMeshCache")
             target_link_options(${sirTarget} PRIVATE -fprofile-instr-generate)
