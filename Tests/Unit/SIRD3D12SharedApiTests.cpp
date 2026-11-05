@@ -227,6 +227,32 @@ int main( void )
 	     pDevice->retireResource( hStorageTexture, immediate ) != SIR_GRAPHICS_SUCCESS ) {
 		return 36;
 	}
+	texture.nWidth = 8;
+	texture.nHeight = 8;
+	texture.nDepth = 4;
+	texture.nArrayLayers = 1;
+	texture.nSampleCount = 1;
+	texture.nMipLevels = 1;
+	texture.nUsage = SIR_GRAPHICS_USAGE_SAMPLED;
+	texture.eDimension = SIR_GRAPHICS_TEXTURE_3D;
+	texture.eFormat = SIR_GRAPHICS_FORMAT_RGBA8_UNORM;
+	sirGraphicsHandle_t hDimension = {};
+	if ( pDevice->createTexture( texture, &hDimension ) != SIR_GRAPHICS_SUCCESS ||
+	     pDevice->retireResource( hDimension, immediate ) != SIR_GRAPHICS_SUCCESS ) {
+		return 37;
+	}
+	texture.nWidth = 2049;
+	if ( pDevice->createTexture( texture, &hDimension ) != SIR_GRAPHICS_UNSUPPORTED || hDimension.nGeneration != 0 ) {
+		return 38;
+	}
+	texture.nWidth = 8;
+	texture.nDepth = 1;
+	texture.nArrayLayers = 6;
+	texture.eDimension = SIR_GRAPHICS_TEXTURE_CUBE;
+	if ( pDevice->createTexture( texture, &hDimension ) != SIR_GRAPHICS_SUCCESS ||
+	     pDevice->retireResource( hDimension, immediate ) != SIR_GRAPHICS_SUCCESS ) {
+		return 39;
+	}
 	sirGraphicsSamplerDesc_t sampler = {};
 	sampler.eFilter = SIR_GRAPHICS_FILTER_LINEAR;
 	sampler.fMaximumAnisotropy = 1.0f;
