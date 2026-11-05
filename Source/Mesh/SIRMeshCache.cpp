@@ -28,6 +28,14 @@ static constexpr uint32_t SIR_MESH_INITIAL_GENERATION = SIR_MESH_TEST_GENERATION
 static constexpr uint32_t SIR_MESH_INITIAL_GENERATION = 0;
 #endif
 
+// Standalone boundary tests use a reduced limit to verify counter saturation.
+// The shipping build always retains the full uint32_t borrow range.
+#ifdef SIR_MESH_TEST_MAX_BORROWS
+static constexpr uint32_t SIR_MESH_MAX_BORROWS = SIR_MESH_TEST_MAX_BORROWS;
+#else
+static constexpr uint32_t SIR_MESH_MAX_BORROWS = UINT32_MAX;
+#endif
+
 typedef struct sirMeshCacheSlot_s
 {
 	sirMeshGeometrySource_t source;
@@ -135,8 +143,8 @@ sirMeshResult_t SIRMeshCache::initialize( void *pStorage, uint64_t nStorageBytes
 
 bool SIRMeshCache::isValidHandle( sirMeshHandle_t handle ) const noexcept
 {
-	return m_bReady && handle.nSlot < m_nCapacity && m_pSlots[handle.nSlot].bOccupied &&
-	       m_pSlots[handle.nSlot].nGeneration == handle.nGeneration;
+	// Only called after the public entrypoint has checked m_bReady.
+	return handle.nSlot < m_nCapacity && m_pSlots[handle.nSlot].bOccupied && m_pSlots[handle.nSlot].nGeneration == handle.nGeneration;
 }
 
 sirMeshResult_t SIRMeshCache::insert( const sirMeshGeometrySource_t *pSource, sirMeshHandle_t *pHandle ) noexcept
@@ -217,7 +225,7 @@ sirMeshResult_t SIRMeshCache::acquire( sirMeshHandle_t handle, sirMeshGeometryRe
 	if ( pSlot->bRetiring ) {
 		return SIR_MESH_RETIRED;
 	}
-	if ( pSlot->nBorrows == UINT32_MAX || m_nBorrowCount == UINT32_MAX ) {
+	if ( pSlot->nBorrows == SIR_MESH_MAX_BORROWS || m_nBorrowCount == SIR_MESH_MAX_BORROWS ) {
 		return SIR_MESH_OUT_OF_CAPACITY;
 	}
 
