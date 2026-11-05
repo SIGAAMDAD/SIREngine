@@ -1,0 +1,48 @@
+name: Input branch upstream synchronization bundle
+
+on:
+  push:
+    branches: [feature/native-input-foundation]
+    paths:
+      - .github/workflows/input-upstream-sync-bundle.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  capture:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Capture exact input and develop Git object history
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p out/input-upstream-sync
+          git fetch --no-tags origin             '+refs/heads/develop:refs/remotes/origin/develop'             '+refs/heads/feature/native-input-foundation:refs/remotes/origin/feature/native-input-foundation'
+          git update-ref refs/heads/snapshot-input "$GITHUB_SHA"
+          git update-ref refs/heads/snapshot-develop "$(git rev-parse refs/remotes/origin/develop)"
+          git rev-parse refs/heads/snapshot-input > out/input-upstream-sync/input.sha
+          git rev-parse refs/heads/snapshot-develop > out/input-upstream-sync/develop.sha
+          git merge-base refs/heads/snapshot-input refs/heads/snapshot-develop > out/input-upstream-sync/merge-base.sha
+          set +e
+          git merge-tree --write-tree refs/heads/snapshot-input refs/heads/snapshot-develop > out/input-upstream-sync/merge-tree.txt 2>&1
+          result=$?
+          set -e
+          printf '%s\n' "$result" > out/input-upstream-sync/merge-tree.exit
+          git bundle create out/input-upstream-sync/input-develop.bundle refs/heads/snapshot-input refs/heads/snapshot-develop
+          git bundle verify out/input-upstream-sync/input-develop.bundle
+          sha256sum out/input-upstream-sync/input-develop.bundle > out/input-upstream-sync/bundle.sha256
+          cat out/input-upstream-sync/input.sha out/input-upstream-sync/develop.sha out/input-upstream-sync/merge-base.sha out/input-upstream-sync/merge-tree.exit
+      - name: Upload authenticated Git history and merge preflight
+        uses: actions/upload-artifact@v4
+        with:
+          name: sir-input-upstream-git-bundle
+          path: out/input-upstream-sync/
+          if-no-files-found: error
+          retention-days: 7
