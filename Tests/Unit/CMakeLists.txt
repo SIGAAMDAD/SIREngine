@@ -222,3 +222,9 @@ add_executable(SIRControlTreeTests SIRControlTreeTests.cpp)
 target_link_libraries(SIRControlTreeTests PRIVATE SIR::UI)
 add_test(NAME ui.controls.layout-and-focus COMMAND SIRControlTreeTests)
 sir_configure_owned_target(SIRControlTreeTests)
+
+# Platform-owned bounded binary file reading, regular-file rejection and capacity gates.
+add_executable(SIRFileSystemReadTests SIRFileSystemReadTests.cpp)
+target_link_libraries(SIRFileSystemReadTests PRIVATE SIR::Core)
+add_test(NAME core.platform.file-read COMMAND SIRFileSystemReadTests)
+sir_configure_owned_target(SIRFileSystemReadTests)

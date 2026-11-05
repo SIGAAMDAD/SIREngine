@@ -68,6 +68,53 @@ static sirFileSystemResult_t sirFileSystemCheckExpected( const char *pszDestinat
 	return close( nFile ) == 0 ? SIR_FILE_SYSTEM_OK : SIR_FILE_SYSTEM_IO_ERROR;
 }
 
+sirFileSystemResult_t SIRFileSystem::readFilePlatform( const char *pszPath, char *pszOutput, size_t nCapacity, size_t *pOutBytes ) noexcept
+{
+	const int nFile = open( pszPath, O_RDONLY | O_CLOEXEC | O_NOFOLLOW | O_NONBLOCK );
+	if ( nFile < 0 ) {
+		return errno == ELOOP ? SIR_FILE_SYSTEM_INVALID_PATH : SIR_FILE_SYSTEM_IO_ERROR;
+	}
+	struct stat metadata = {};
+	if ( fstat( nFile, &metadata ) != 0 ) {
+		close( nFile );
+		return SIR_FILE_SYSTEM_IO_ERROR;
+	}
+	if ( !S_ISREG( metadata.st_mode ) || metadata.st_size < 0 ) {
+		close( nFile );
+		return SIR_FILE_SYSTEM_INVALID_PATH;
+	}
+	const uint64_t nFileBytes = ( uint64_t )metadata.st_size;
+	if ( nFileBytes > SIZE_MAX ) {
+		close( nFile );
+		return SIR_FILE_SYSTEM_OUT_OF_CAPACITY;
+	}
+	*pOutBytes = ( size_t )nFileBytes;
+	if ( pszOutput == nullptr ) {
+		return close( nFile ) == 0 ? SIR_FILE_SYSTEM_OK : SIR_FILE_SYSTEM_IO_ERROR;
+	}
+	if ( nCapacity < nFileBytes ) {
+		close( nFile );
+		return SIR_FILE_SYSTEM_OUT_OF_CAPACITY;
+	}
+	size_t nRead = 0;
+	while ( nRead < nFileBytes ) {
+		const ssize_t nActual = read( nFile, pszOutput + nRead, ( size_t )nFileBytes - nRead );
+		if ( nActual < 0 && errno == EINTR ) {
+			continue;
+		}
+		if ( nActual <= 0 ) {
+			close( nFile );
+			return SIR_FILE_SYSTEM_IO_ERROR;
+		}
+		nRead += ( size_t )nActual;
+	}
+	char szExtra[1] = {};
+	const ssize_t nExtra = read( nFile, szExtra, sizeof( szExtra ) );
+	const bool bComplete = nExtra == 0;
+	const bool bClosed = close( nFile ) == 0;
+	return bComplete && bClosed ? SIR_FILE_SYSTEM_OK : SIR_FILE_SYSTEM_IO_ERROR;
+}
+
 sirFileSystemResult_t SIRFileSystem::writeAtomicallyPlatform( const sirFileSystemAtomicWriteRequest_t &request ) noexcept
 {
 	// Do not discard symlinks, devices or special files under an authored scene path.
