@@ -49,6 +49,7 @@ jobs:
           SIRTerrainHeightfieldViewTests
           SIRTerrainResourceBridgeTests
           SIRTerrainRegionBundleTests
+          SIRTerrainRegionPersistenceTests
       - name: Run terrain CTests with ASan and UBSan
         env:
           ASAN_OPTIONS: detect_leaks=1:halt_on_error=1
@@ -93,6 +94,7 @@ jobs:
           SIRTerrainHeightfieldViewTests
           SIRTerrainResourceBridgeTests
           SIRTerrainRegionBundleTests
+          SIRTerrainRegionPersistenceTests
       - name: Run terrain CTests under MSVC
         run: >
           ctest --test-dir out/Windows/tooling --output-on-failure --no-tests=error
