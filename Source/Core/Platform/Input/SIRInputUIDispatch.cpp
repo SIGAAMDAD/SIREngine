@@ -32,11 +32,18 @@ bool SIRInputUIDispatch::dispatch( const SIRInputService& input, const sirInputU
 		return false;
 	}
 
-	if ( consumer.pOnFocus != nullptr && ( !m_bFocusKnown || m_bFocused != text.bFocused ) ) {
-		consumer.pOnFocus( consumer.pContext, text.bFocused );
-	}
+	const bool bNotifyFocus = !m_bFocusKnown || m_bFocused != text.bFocused;
+	const bool bNotifyPreedit = m_nLastTick == 0 || m_nPreeditRevision != text.nPreeditRevision;
+	// Reserve the tick before invoking consumer callbacks. Reentrant dispatch
+	// must not publish the same immutable snapshot more than once.
+	m_nLastTick = pFrame->nTick;
+	m_nPreeditRevision = text.nPreeditRevision;
 	m_bFocused = text.bFocused;
 	m_bFocusKnown = true;
+
+	if ( consumer.pOnFocus != nullptr && bNotifyFocus ) {
+		consumer.pOnFocus( consumer.pContext, text.bFocused );
+	}
 
 	if ( consumer.pOnAction != nullptr ) {
 		for ( uint32_t i = 0; i < consumer.nActionCount; ++i ) {
@@ -61,12 +68,10 @@ bool SIRInputUIDispatch::dispatch( const SIRInputService& input, const sirInputU
 			consumer.pOnText( consumer.pContext, text.szCodepoints[i] );
 		}
 	}
-	if ( consumer.pOnPreedit != nullptr && ( m_nLastTick == 0 || m_nPreeditRevision != text.nPreeditRevision ) ) {
+	if ( consumer.pOnPreedit != nullptr && bNotifyPreedit ) {
 		consumer.pOnPreedit( consumer.pContext, text.szPreedit, text.nPreeditCount, text.nCaret, text.nSelection );
 	}
 
-	m_nPreeditRevision = text.nPreeditRevision;
-	m_nLastTick = pFrame->nTick;
 	return true;
 }
 
