@@ -714,12 +714,11 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::submit( sirGraphicsQueue_t eQueue,
 					return sirVulkanToGraphicsResult( eCheck );
 				}
 				if ( transfer.bBufferToImage ) {
-					const uint32_t nIndex = transfer.nLayer * pShadow->nMips + transfer.nMip;
-					pShadow->szUploadedSubresources[nIndex / 64] |= 1ULL << ( nIndex % 64 );
-					const VkImageLayout eFinal = ( pShadow->nUsage & VK_IMAGE_USAGE_STORAGE_BIT ) != 0 ? VK_IMAGE_LAYOUT_GENERAL
-					                             : ( pShadow->nUsage & VK_IMAGE_USAGE_SAMPLED_BIT ) != 0
-					                                 ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-					                                 : VK_IMAGE_LAYOUT_GENERAL;
+					const VkImageLayout eFinal = sirVulkanUploadFinalLayout( pShadow, transfer );
+					if ( sirVulkanTransferCoversSubresource( pShadow, transfer ) ) {
+						const uint32_t nIndex = transfer.nLayer * pShadow->nMips + transfer.nMip;
+						pShadow->szUploadedSubresources[nIndex / 64] |= 1ULL << ( nIndex % 64 );
+					}
 					( void )sirVulkanSetSubresourceLayout( pShadow, transfer.nMip, transfer.nLayer, eFinal );
 				}
 			} else if ( op.eKind == SIR_VULKAN_GRAPHICS_IMAGE_BARRIER ) {
