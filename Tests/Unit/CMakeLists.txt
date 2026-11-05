@@ -1,3 +1,8 @@
+add_executable(SIRTerrainHeightfieldCodecTests SIRTerrainHeightfieldCodecTests.cpp)
+target_link_libraries(SIRTerrainHeightfieldCodecTests PRIVATE SIR::Terrain)
+add_test(NAME terrain.data.heightfield-codec COMMAND SIRTerrainHeightfieldCodecTests)
+sir_configure_owned_target(SIRTerrainHeightfieldCodecTests)
+
 add_executable(SIREngineLifecycleTests SIREngineLifecycleTests.cpp)
 target_link_libraries(SIREngineLifecycleTests PRIVATE SIR::Core)
 add_test(NAME core.application.system-lifecycle COMMAND SIREngineLifecycleTests)
