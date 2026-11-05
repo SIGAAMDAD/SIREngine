@@ -144,6 +144,49 @@ sirVFSResult_t SIRVFSFileHandleTable::borrow( sirVFSFileHandle_t handle, sirVFSF
 	return SIR_VFS_OK;
 }
 
+sirVFSResult_t SIRVFSFileHandleTable::retainBorrow( sirVFSFileBorrow_t borrow, sirVFSFileView_t *pView ) noexcept
+{
+	if ( pView == nullptr ) {
+		return SIR_VFS_INVALID_ARGUMENT;
+	}
+	if ( borrow.nSlot == 0 || borrow.nSlot > m_nFileCapacity || borrow.nToken == 0 ) {
+		return SIR_VFS_STALE_HANDLE;
+	}
+	const SIRScopedLock<SIRMutex> guard( m_Mutex );
+	if ( m_bStopped ) {
+		return SIR_VFS_STOPPED;
+	}
+	sirVFSFileSlot_t& slot = m_szFiles[borrow.nSlot - 1];
+	if ( slot.nGeneration != borrow.nGeneration || slot.nBorrows == 0 || ( !slot.bOpen && !slot.bClosing ) ) {
+		return SIR_VFS_STALE_HANDLE;
+	}
+	bool bFound = false;
+	for ( uint32_t i = 0; i < m_nBorrowCapacity; ++i ) {
+		const sirVFSFileBorrowSlot_t& record = m_szBorrows[i];
+		if ( record.bActive && record.nFileSlot == borrow.nSlot - 1 && record.nToken == borrow.nToken ) {
+			bFound = true;
+			break;
+		}
+	}
+	if ( !bFound ) {
+		return SIR_VFS_STALE_HANDLE;
+	}
+	if ( m_nNextToken == UINT64_MAX ) {
+		return SIR_VFS_NO_CAPACITY;
+	}
+	const uint32_t nBorrow = findFreeBorrow();
+	if ( nBorrow == m_nBorrowCapacity ) {
+		return SIR_VFS_NO_CAPACITY;
+	}
+	sirVFSFileBorrowSlot_t& retained = m_szBorrows[nBorrow];
+	retained.nToken = m_nNextToken++;
+	retained.nFileSlot = borrow.nSlot - 1;
+	retained.bActive = true;
+	++slot.nBorrows;
+	*pView = { slot.descriptor, slot.path, { borrow.nSlot, borrow.nGeneration, retained.nToken } };
+	return SIR_VFS_OK;
+}
+
 sirVFSResult_t SIRVFSFileHandleTable::close( sirVFSFileHandle_t handle ) noexcept
 {
 	if ( handle.nSlot == 0 || handle.nSlot > m_nFileCapacity ) {
