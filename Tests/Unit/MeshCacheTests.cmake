@@ -50,3 +50,9 @@ add_executable(SIRVGFramePlanTests SIRVGFramePlanTests.cpp)
 target_link_libraries(SIRVGFramePlanTests PRIVATE SIR::VGFramePlan)
 add_test(NAME mesh.vg.frame-plan COMMAND SIRVGFramePlanTests)
 sir_configure_owned_target(SIRVGFramePlanTests)
+
+# Canonical MeshCache key identity, source-revision overlap and shared geometry leases.
+add_executable(SIRMeshCacheIdentityTests SIRMeshCacheIdentityTests.cpp)
+target_link_libraries(SIRMeshCacheIdentityTests PRIVATE SIR::MeshCache)
+add_test(NAME mesh.cache.identity-revision COMMAND SIRMeshCacheIdentityTests)
+sir_configure_owned_target(SIRMeshCacheIdentityTests)
