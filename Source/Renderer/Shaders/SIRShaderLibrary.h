@@ -47,6 +47,8 @@ typedef struct sirShaderResolvedStage_s
 	sirShaderMaterialPassRecord_t material;
 	sirShaderStageRecord_t stage;
 	SIRResourceHandle hShader;
+	SIRResourceView materialView;
+	SIRResourceView shaderView;
 	SIRResourceConstBytes binary;
 	uint64_t nMaterialGraphRevision;
 	uint64_t nShaderGraphRevision;
@@ -54,9 +56,23 @@ typedef struct sirShaderResolvedStage_s
 	bool bFixedFunction;
 } sirShaderResolvedStage_t;
 
+typedef struct sirShaderStagePins_s
+{
+	SIRResourcePinHandle hMaterial;
+	SIRResourcePinHandle hShader;
+	bool bMaterialPinned;
+	bool bShaderPinned;
+} sirShaderStagePins_t;
+
 // On success the binary pointer remains borrowed from the active scope.
 // Consumers must pin the exact revision before scheduling native GPU work.
 SIRResourceResult sirShaderResolveMaterialStage( const sirShaderLibraryContext_t& context, const sirShaderMaterialProjection_t& material,
                                                  const sirShaderResolveStageRequest_t& request, sirShaderResolvedStage_t *pOut ) noexcept;
+
+// Pin the exact source records captured by the read scope. The provider
+// releases these handles after all driver queue completions using this work.
+SIRResourceResult sirShaderPinResolvedStage( const sirShaderLibraryContext_t& context, const sirShaderResolvedStage_t& resolved,
+                                             uint32_t nProviderId, sirShaderStagePins_t *pOut ) noexcept;
+SIRResourceResult sirShaderReleaseStagePins( const SIRResourceGraph& graph, sirShaderStagePins_t *pPins ) noexcept;
 
 #endif // __SIRENGINE_SIRSHADERLIBRARY_H__
