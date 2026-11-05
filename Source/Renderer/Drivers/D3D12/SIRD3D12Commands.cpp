@@ -414,8 +414,7 @@ sirGraphicsResult_t SIRD3D12CommandList::barrier( const sirGraphicsBarrier_t *pB
 			     !sirD3D12ValidResourceState( pSlot->eType, source.eAfter ) ) {
 				return SIR_GRAPHICS_INVALID_ARGUMENT;
 			}
-			if ( !sirD3D12ValidQueueState( m_eQueue, source.eBefore ) ||
-			     !sirD3D12ValidQueueState( m_eQueue, source.eAfter ) ) {
+			if ( !sirD3D12ValidQueueState( m_eQueue, source.eBefore ) || !sirD3D12ValidQueueState( m_eQueue, source.eAfter ) ) {
 				return SIR_GRAPHICS_UNSUPPORTED;
 			}
 			const uint32_t nMips = pSlot->eType == SIR_GRAPHICS_HANDLE_TEXTURE ? pSlot->nMips : 1;
@@ -512,8 +511,7 @@ sirGraphicsResult_t SIRD3D12CommandList::barrier( const sirGraphicsBarrier_t *pB
 			     !sirD3D12ValidResourceState( pSlot->eType, source.eAfter ) ) {
 				return SIR_GRAPHICS_INVALID_ARGUMENT;
 			}
-			if ( !sirD3D12ValidQueueState( m_eQueue, source.eBefore ) ||
-			     !sirD3D12ValidQueueState( m_eQueue, source.eAfter ) ) {
+			if ( !sirD3D12ValidQueueState( m_eQueue, source.eBefore ) || !sirD3D12ValidQueueState( m_eQueue, source.eAfter ) ) {
 				return SIR_GRAPHICS_UNSUPPORTED;
 			}
 			const uint32_t nMips = pSlot->eType == SIR_GRAPHICS_HANDLE_TEXTURE ? pSlot->nMips : 1;
