@@ -42,10 +42,10 @@ static sirConfigResult_t sirIniTestWrite( void *pContext, const uint8_t *pBytes,
 }
 
 static sirConfigResult_t sirIniTestParse( const char *pszText, const sirConfigLimits_t& limits, const sirIniStorage_t& storage,
-                                          uint32_t *pCount, sirConfigDiagnostic_t *pDiagnostic ) noexcept
+                                          sirIniParseResult_t *pResult ) noexcept
 {
 	const sirConfigInput_t input = { ( const uint8_t * )pszText, strlen( pszText ), {} };
-	return SIRIniCodec::parse( input, limits, storage, pCount, pDiagnostic );
+	return SIRIniCodec::parse( input, limits, storage, pResult );
 }
 
 int main( void )
@@ -58,35 +58,33 @@ int main( void )
 	limits.nMaxScalarBytes = 127;
 	limits.nMaxRowBytes = 256;
 	limits.nMaxNodes = 6;
-	uint32_t nCount = 0;
-	sirConfigDiagnostic_t diagnostic = {};
+	sirIniParseResult_t result = {};
 	const char *pszInput = "; Comment\r\n[CVars]\r\nr.alpha = \"a\\n\\t\\\"b\\\\c\" ; comment\r\nr.gamma = 12.5\n";
-	assert( sirIniTestParse( pszInput, limits, storage, &nCount, &diagnostic ) == SIR_CONFIG_OK );
-	assert( nCount == 2 );
+	assert( sirIniTestParse( pszInput, limits, storage, &result ) == SIR_CONFIG_OK );
+	assert( result.nCount == 2 );
 	assert( strcmp( szEntries[0].szSection, "CVars" ) == 0 && strcmp( szEntries[0].szKey, "r.alpha" ) == 0 );
 	assert( szEntries[0].nValueBytes == 7 && memcmp( szEntries[0].pszValue, "a\n\t\"b\\c", 7 ) == 0 );
 	assert( strcmp( szEntries[1].pszValue, "12.5" ) == 0 );
 	sirIniTestSink_t sink = {};
 	const sirConfigSink_t writer = { &sink, sirIniTestWrite };
-	assert( SIRIniCodec::write( szEntries, nCount, writer, sizeof( sink.szText ) - 1 ) == SIR_CONFIG_OK );
+	assert( SIRIniCodec::write( szEntries, result.nCount, writer, sizeof( sink.szText ) - 1 ) == SIR_CONFIG_OK );
 	assert( strcmp( sink.szText, "[CVars]\nr.alpha = \"a\\n\\t\\\"b\\\\c\"\nr.gamma = \"12.5\"\n" ) == 0 );
-	assert( sirIniTestParse( sink.szText, limits, storage, &nCount, &diagnostic ) == SIR_CONFIG_OK );
-	assert( nCount == 2 && szEntries[0].nValueBytes == 7 );
+	assert( sirIniTestParse( sink.szText, limits, storage, &result ) == SIR_CONFIG_OK );
+	assert( result.nCount == 2 && szEntries[0].nValueBytes == 7 );
 
-	assert( sirIniTestParse( "[CVars]\nr.foo=1\nR.FOO=2\n", limits, storage, &nCount, &diagnostic ) == SIR_CONFIG_DUPLICATE_KEY );
-	assert( diagnostic.nLine == 3 );
-	assert( sirIniTestParse( "[CVars]\nr.foo=\"unclosed\n", limits, storage, &nCount, &diagnostic ) == SIR_CONFIG_SYNTAX_ERROR );
-	assert( sirIniTestParse( "[CVars]\nr.foo=\"bad\\q\"\n", limits, storage, &nCount, &diagnostic ) == SIR_CONFIG_SYNTAX_ERROR );
-	assert( sirIniTestParse( "[CVars]\nr.foo=\"x\"extra\n", limits, storage, &nCount, &diagnostic ) == SIR_CONFIG_SYNTAX_ERROR );
-	assert( sirIniTestParse( "[CVars]\nr.foo=2\r\n[]\n", limits, storage, &nCount, &diagnostic ) == SIR_CONFIG_SYNTAX_ERROR );
-	assert( sirIniTestParse( "broken", limits, storage, &nCount, &diagnostic ) == SIR_CONFIG_SYNTAX_ERROR );
+	assert( sirIniTestParse( "[CVars]\nr.foo=1\nR.FOO=2\n", limits, storage, &result ) == SIR_CONFIG_DUPLICATE_KEY );
+	assert( result.diagnostic.nLine == 3 );
+	assert( sirIniTestParse( "[CVars]\nr.foo=\"unclosed\n", limits, storage, &result ) == SIR_CONFIG_SYNTAX_ERROR );
+	assert( sirIniTestParse( "[CVars]\nr.foo=\"bad\\q\"\n", limits, storage, &result ) == SIR_CONFIG_SYNTAX_ERROR );
+	assert( sirIniTestParse( "[CVars]\nr.foo=\"x\"extra\n", limits, storage, &result ) == SIR_CONFIG_SYNTAX_ERROR );
+	assert( sirIniTestParse( "[CVars]\nr.foo=2\r\n[]\n", limits, storage, &result ) == SIR_CONFIG_SYNTAX_ERROR );
+	assert( sirIniTestParse( "broken", limits, storage, &result ) == SIR_CONFIG_SYNTAX_ERROR );
 	const uint8_t szInvalidUtf8[] = { '[', 'C', 'V', 'a', 'r', 's', ']', '\n', 'x', '=', 0xc0, 0xaf, '\n' };
-	assert( SIRIniCodec::parse( { szInvalidUtf8, sizeof( szInvalidUtf8 ), {} }, limits, storage, &nCount, &diagnostic ) ==
-	        SIR_CONFIG_INVALID_ENCODING );
+	assert( SIRIniCodec::parse( { szInvalidUtf8, sizeof( szInvalidUtf8 ), {} }, limits, storage, &result ) == SIR_CONFIG_INVALID_ENCODING );
 	const uint8_t szNul[] = { 'x', '=', '1', 0, '\n' };
-	assert( SIRIniCodec::parse( { szNul, sizeof( szNul ), {} }, limits, storage, &nCount, &diagnostic ) == SIR_CONFIG_INVALID_ENCODING );
+	assert( SIRIniCodec::parse( { szNul, sizeof( szNul ), {} }, limits, storage, &result ) == SIR_CONFIG_INVALID_ENCODING );
 	limits.nMaxInputBytes = 4;
-	assert( sirIniTestParse( "[CVars]", limits, storage, &nCount, &diagnostic ) == SIR_CONFIG_LIMIT_EXCEEDED );
+	assert( sirIniTestParse( "[CVars]", limits, storage, &result ) == SIR_CONFIG_LIMIT_EXCEEDED );
 	limits.nMaxInputBytes = 1024;
 	assert( SIRIniCodec::write( szEntries, 2, writer, 3 ) == SIR_CONFIG_LIMIT_EXCEEDED );
 

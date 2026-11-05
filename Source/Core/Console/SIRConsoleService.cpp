@@ -350,8 +350,8 @@ sirRegistrationResult_t SIRConsoleService::printValue( const sirConsoleSubmissio
 		return writeOutput( output );
 	}
 	char szValue[128] = {};
-	uint32_t nLength = 0;
-	const sirRegistrationResult_t eFormat = sirCVarFormatText( eType, value, szValue, sizeof( szValue ), &nLength );
+	sirCVarTextBuffer_t output = { szValue, sizeof( szValue ), 0 };
+	const sirRegistrationResult_t eFormat = sirCVarFormatText( eType, value, &output );
 	if ( eFormat != SIR_REGISTRATION_OK ) {
 		return eFormat;
 	}
