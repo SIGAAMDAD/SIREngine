@@ -2,9 +2,9 @@ name: SIREngine CI
 
 on:
   push:
-    branches: [develop, renderer/vulkan-headless-device]
+    branches: [develop]
   pull_request:
-    branches: [develop, main, renderer/shared-driver-api-v1]
+    branches: [develop, main]
   workflow_dispatch:
 
 permissions:
@@ -27,7 +27,7 @@ jobs:
         run: cmake -P Build/CMake/CIHygiene.cmake
       - name: Enforce owned C++ declarations and headers
         run: cmake -P Build/CMake/CIStyle.cmake
-      - name: Install native clang-format 22.1.5
+      - name: Install native clang-format 23.1.5
         shell: bash
         run: |
           set -euo pipefail
@@ -35,7 +35,7 @@ jobs:
           archive="${RUNNER_TEMP}/clang-format.zip"
           bindir="${RUNNER_TEMP}/native-tools"
           mkdir -p "${bindir}"
-          curl -fsSL --retry 3 https://pypi.org/pypi/clang-format/22.1.5/json -o "${metadata}"
+          curl -fsSL --retry 3 https://pypi.org/pypi/clang-format/23.1.5/json -o "${metadata}"
           filter='.urls[] | select(.filename | contains("manylinux_2_27_x86_64"))'
           url="$(jq -er "${filter} | .url" "${metadata}")"
           digest="$(jq -er "${filter} | .digests.sha256" "${metadata}")"

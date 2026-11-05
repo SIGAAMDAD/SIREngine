@@ -16,7 +16,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Renderer/Drivers/Vulkan/SIRVulkanDevice.h>
 
 sirVulkanResult_t SIRVulkanDevice::submitBufferImageCopy( sirVulkanBuffer_t *pBuffer, sirVulkanImage_t *pImage,
-                                                          const sirVulkanTextureTransfer_t &transfer,
+                                                          const sirVulkanTextureTransfer_t& transfer,
                                                           sirVulkanCompletion_t *pCompletion ) noexcept
 {
 	if ( pCompletion != nullptr ) {

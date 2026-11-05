@@ -186,7 +186,7 @@ sirVulkanResult_t sirVulkanValidateBufferCopies( const sirVulkanBufferCopy_t *pC
 		return SIR_VULKAN_INVALID_ARGUMENT;
 	}
 	for ( uint32_t iCopy = 0; iCopy < nCount; ++iCopy ) {
-		const sirVulkanBufferCopy_t &copy = pCopies[iCopy];
+		const sirVulkanBufferCopy_t& copy = pCopies[iCopy];
 		if ( copy.pSource == nullptr || copy.pDestination == nullptr || copy.pSource == copy.pDestination || copy.nBytes == 0 ||
 		     ( copy.pSource->nUsage & VK_BUFFER_USAGE_TRANSFER_SRC_BIT ) == 0 ||
 		     ( copy.pDestination->nUsage & VK_BUFFER_USAGE_TRANSFER_DST_BIT ) == 0 || copy.nSourceOffset > copy.pSource->nSize ||
@@ -222,7 +222,7 @@ sirVulkanResult_t SIRVulkanDevice::submitBufferCopies( const sirVulkanBufferCopy
 	// Validate the entire batch before recording any native command. A failed
 	// validation must neither submit partial work nor change completion state.
 	for ( uint32_t iCopy = 0; iCopy < nCount; ++iCopy ) {
-		const sirVulkanBufferCopy_t &copy = pCopies[iCopy];
+		const sirVulkanBufferCopy_t& copy = pCopies[iCopy];
 		if ( copy.pSource->hBuffer == VK_NULL_HANDLE || copy.pDestination->hBuffer == VK_NULL_HANDLE ||
 		     copy.pSource->hBuffer == copy.pDestination->hBuffer || copy.pSource->pOwnerAllocator != m_Allocator ||
 		     copy.pDestination->pOwnerAllocator != m_Allocator || copy.pSource->nDeviceSerial != m_nDeviceSerial ||
@@ -274,7 +274,7 @@ sirVulkanResult_t SIRVulkanDevice::submitBufferCopies( const sirVulkanBufferCopy
 	dependency.memoryBarrierCount = 1;
 	dependency.pMemoryBarriers = &barrier;
 	for ( uint32_t iCopy = 0; iCopy < nCount; ++iCopy ) {
-		const sirVulkanBufferCopy_t &copy = pCopies[iCopy];
+		const sirVulkanBufferCopy_t& copy = pCopies[iCopy];
 		m_pfnCmdPipelineBarrier2( pSlot->hCommandBuffer, &dependency );
 		VkBufferCopy2 region = {};
 		region.sType = VK_STRUCTURE_TYPE_BUFFER_COPY_2;

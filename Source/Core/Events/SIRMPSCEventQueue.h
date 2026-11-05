@@ -28,8 +28,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Core/Platform/SIRAtomic.h>
 #include <stdint.h>
 #include <type_traits>
-
 template <typename TPayload>
+
 struct sirMPSCEventSlot_s
 {
 	SIRAtomic<uint64_t> nSequence;
@@ -57,17 +57,17 @@ public:
 			m_Slots[i].nSequence.store( i, SIR_MEMORY_ORDER_RELAXED );
 		}
 	}
-	SIRMPSCEventQueue( const SIRMPSCEventQueue & ) = delete;
-	SIRMPSCEventQueue &operator=( const SIRMPSCEventQueue & ) = delete;
+	SIRMPSCEventQueue( const SIRMPSCEventQueue& ) = delete;
+	SIRMPSCEventQueue& operator=( const SIRMPSCEventQueue& ) = delete;
 
-	sirEventEnqueueStatus_t tryEnqueue( const TPayload &payload ) noexcept
+	sirEventEnqueueStatus_t tryEnqueue( const TPayload& payload ) noexcept
 	{
 		if ( m_bStopped.load( SIR_MEMORY_ORDER_ACQUIRE ) ) {
 			return SIR_EVENT_ENQUEUE_STOPPED;
 		}
 		uint64_t nPosition = m_nTail.load( SIR_MEMORY_ORDER_RELAXED );
 		for ( ;; ) {
-			sirMPSCEventSlot_s<TPayload> &slot = m_Slots[nPosition & ( Capacity - 1 )];
+			sirMPSCEventSlot_s<TPayload>& slot = m_Slots[nPosition & ( Capacity - 1 )];
 			const uint64_t nSequence = slot.nSequence.load( SIR_MEMORY_ORDER_ACQUIRE );
 			const int64_t nDifference = ( int64_t )( nSequence - nPosition );
 			if ( nDifference == 0 ) {
@@ -86,7 +86,7 @@ public:
 		}
 	}
 
-	bool tryDequeue( TPayload &output ) noexcept
+	bool tryDequeue( TPayload& output ) noexcept
 	{
 		if ( m_bDraining ) {
 			return false;
@@ -117,10 +117,10 @@ public:
 	}
 
 private:
-	bool dequeueOne( TPayload &output ) noexcept
+	bool dequeueOne( TPayload& output ) noexcept
 	{
 		const uint64_t nPosition = m_nHead;
-		sirMPSCEventSlot_s<TPayload> &slot = m_Slots[nPosition & ( Capacity - 1 )];
+		sirMPSCEventSlot_s<TPayload>& slot = m_Slots[nPosition & ( Capacity - 1 )];
 		if ( slot.nSequence.load( SIR_MEMORY_ORDER_ACQUIRE ) != nPosition + 1 ) {
 			return false;
 		}

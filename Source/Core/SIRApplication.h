@@ -25,29 +25,46 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // clang-format on
 
 #include <Core/Events/SIREventRegistry.h>
+#include <Core/Systems/SIREngineSystem.h>
+
+constexpr uint32_t SIR_APPLICATION_MAX_SYSTEMS = 16;
 
 typedef enum sirAppState_e : uint8_t
 {
 	SIR_APP_UNINITIALIZED = 0,
 	SIR_APP_READY = 1,
-	SIR_APP_STOPPED = 2
+	SIR_APP_STOPPED = 2,
+	SIR_APP_STARTING = 3,
+	SIR_APP_STOPPING = 4
 } sirAppState_t;
 
+// Registered systems are borrowed and must outlive application shutdown.
+// Registration order determines initialization and frame-update order;
+// successfully initialized systems shut down in reverse order.
 class SIRApplication
 {
+public:
+	SIRApplication( void ) noexcept;
+
+	sirAppState_t getState( void ) const noexcept;
+	uint64_t getTickCount( void ) const noexcept;
+	uint32_t getSystemCount( void ) const noexcept;
+	SIREventRegistry& getEventRegistry( void ) noexcept;
+
+	bool registerSystem( SIREngineSystem *pSystem ) noexcept;
+	bool initialize( void ) noexcept;
+	bool tick( float fDeltaSeconds = 0.0f ) noexcept;
+	bool fixedTick( float fFixedDeltaSeconds ) noexcept;
+	sirSystemResult_t shutdown( void ) noexcept;
+
+protected:
 private:
 	sirAppState_t m_eState;
 	uint64_t m_nTicks;
+	uint32_t m_nSystemCount;
+	uint32_t m_nInitializedSystems;
+	SIREngineSystem *m_szSystems[SIR_APPLICATION_MAX_SYSTEMS] = {};
 	SIREventRegistry m_EventRegistry;
-
-public:
-	SIRApplication( void ) noexcept;
-	bool initialize( void ) noexcept;
-	bool tick( void ) noexcept;
-	void shutdown( void ) noexcept;
-	sirAppState_t getState( void ) const noexcept;
-	uint64_t getTickCount( void ) const noexcept;
-	SIREventRegistry &getEventRegistry( void ) noexcept;
 };
 
 #endif // __SIRENGINE_SIRAPPLICATION_H__

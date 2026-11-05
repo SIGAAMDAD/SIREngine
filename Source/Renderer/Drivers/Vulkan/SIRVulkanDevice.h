@@ -268,7 +268,7 @@ sirVulkanResult_t sirVulkanValidateRecordedCommands( const sirVulkanRecordedComm
 bool sirVulkanRecordedNeedsBufferBarrier( const sirVulkanRecordedCommand_t *pCommands, uint32_t nIndex ) noexcept;
 
 sirVulkanResult_t sirVulkanValidateTextureTransfer( const sirVulkanBuffer_t *pBuffer, const sirVulkanImage_t *pImage,
-                                                    const sirVulkanTextureTransfer_t &transfer ) noexcept;
+                                                    const sirVulkanTextureTransfer_t& transfer ) noexcept;
 
 // First headless slice: one owner thread creates and retires the native device.
 // Buffers must be retired before shutdown; queue submissions arrive in a later slice.
@@ -349,15 +349,15 @@ private:
 	sirVulkanResult_t initializeSealedPools( const sirVulkanPoolBudget_t *pBudget ) noexcept;
 	void destroySealedPools( void ) noexcept;
 	void updateMemoryHighWater( void ) noexcept;
-	bool isSealedMemoryType( const VkImageCreateInfo &info ) const noexcept;
-	bool isSealedBufferMemoryType( const VkBufferCreateInfo &info, uint32_t iPool ) const noexcept;
+	bool isSealedMemoryType( const VkImageCreateInfo& info ) const noexcept;
+	bool isSealedBufferMemoryType( const VkBufferCreateInfo& info, uint32_t iPool ) const noexcept;
 
 public:
 	SIRVulkanDevice( void ) noexcept;
 	~SIRVulkanDevice( void ) noexcept;
 
-	SIRVulkanDevice( const SIRVulkanDevice & ) = delete;
-	SIRVulkanDevice &operator=( const SIRVulkanDevice & ) = delete;
+	SIRVulkanDevice( const SIRVulkanDevice& ) = delete;
+	SIRVulkanDevice& operator=( const SIRVulkanDevice& ) = delete;
 
 	sirVulkanResult_t initialize( const sirVulkanPoolBudget_t *pBudget = nullptr, uint32_t nAdapterIndex = 0 ) noexcept;
 	sirVulkanResult_t probeAdapters( uint32_t nAdapterIndex, uint32_t *pCount, sirVulkanAdapterInfo_t *pAdapter ) noexcept;
@@ -374,12 +374,12 @@ public:
 	sirVulkanResult_t createBuffer( uint64_t nBytes, VkBufferUsageFlags nUsage, sirVulkanBufferPlacement_t ePlacement,
 	                                sirVulkanBuffer_t *pBuffer ) noexcept;
 	sirVulkanResult_t writeBuffer( sirVulkanBuffer_t *pBuffer, uint64_t nOffset, const void *pData, uint64_t nBytes ) noexcept;
-	sirVulkanResult_t createImage( const VkImageCreateInfo &info, sirVulkanImage_t *pImage ) noexcept;
+	sirVulkanResult_t createImage( const VkImageCreateInfo& info, sirVulkanImage_t *pImage ) noexcept;
 	sirVulkanResult_t destroyImage( sirVulkanImage_t *pImage ) noexcept;
-	sirVulkanResult_t createImageView( const sirVulkanImage_t *pImage, const VkImageViewCreateInfo &info,
+	sirVulkanResult_t createImageView( const sirVulkanImage_t *pImage, const VkImageViewCreateInfo& info,
 	                                   sirVulkanImageView_t *pView ) noexcept;
 	sirVulkanResult_t destroyImageView( sirVulkanImageView_t *pView ) noexcept;
-	sirVulkanResult_t createSampler( const VkSamplerCreateInfo &info, sirVulkanSampler_t *pSampler ) noexcept;
+	sirVulkanResult_t createSampler( const VkSamplerCreateInfo& info, sirVulkanSampler_t *pSampler ) noexcept;
 	sirVulkanResult_t destroySampler( sirVulkanSampler_t *pSampler ) noexcept;
 	sirVulkanResult_t destroyIdleBuffer( sirVulkanBuffer_t *pBuffer ) noexcept;
 	sirVulkanResult_t readBuffer( sirVulkanBuffer_t *pBuffer, uint64_t nOffset, void *pData, uint64_t nBytes ) noexcept;
@@ -389,10 +389,10 @@ public:
 	                                          sirVulkanCompletion_t *pCompletion ) noexcept;
 	sirVulkanResult_t submitBufferCopies( const sirVulkanBufferCopy_t *pCopies, uint32_t nCount,
 	                                      sirVulkanCompletion_t *pCompletion ) noexcept;
-	sirVulkanResult_t submitImageBarrier( sirVulkanImage_t *pImage, const sirVulkanImageBarrier_t &barrier,
+	sirVulkanResult_t submitImageBarrier( sirVulkanImage_t *pImage, const sirVulkanImageBarrier_t& barrier,
 	                                      sirVulkanCompletion_t *pCompletion ) noexcept;
 	sirVulkanResult_t submitBufferImageCopy( sirVulkanBuffer_t *pBuffer, sirVulkanImage_t *pImage,
-	                                         const sirVulkanTextureTransfer_t &transfer, sirVulkanCompletion_t *pCompletion ) noexcept;
+	                                         const sirVulkanTextureTransfer_t& transfer, sirVulkanCompletion_t *pCompletion ) noexcept;
 	sirVulkanResult_t queryCompletion( const sirVulkanCompletion_t *pCompletion, bool *pComplete ) const noexcept;
 	sirVulkanResult_t waitCompletion( const sirVulkanCompletion_t *pCompletion, uint64_t nTimeoutNs ) const noexcept;
 };

@@ -20,15 +20,13 @@ set(sirRequired
     Source/CMakeLists.txt Source/Core/CMakeLists.txt
     Source/Core/SIRApplication.h Source/Core/SIRApplication.cpp Source/Main.cpp
     .github/workflows/ci.yml .github/workflows/nightly.yml
-    Docs/Milestones/README.md
-    Docs/Milestones/03-Terrain.md
     Source/Terrain/README.md Source/Terrain/Editor/README.md)
 foreach(sirPath IN LISTS sirRequired)
     if(NOT sirPath IN_LIST sirFiles)
         message(FATAL_ERROR "Required source missing: ${sirPath}")
     endif()
 endforeach()
-set(sirAllowedDirectories .github Build Docs Source Tests ThirdParty Tools)
+set(sirAllowedDirectories .github Build Docs Source Tests ThirdParty Tools Verification)
 foreach(sirPath IN LISTS sirFiles)
     if(sirPath MATCHES "^(out/|build/|CMakeFiles/|\\.vs/|include/|src/|scripts/|engine/|third_party/|tests/)")
         message(FATAL_ERROR "Obsolete/generated directory tracked: ${sirPath}")

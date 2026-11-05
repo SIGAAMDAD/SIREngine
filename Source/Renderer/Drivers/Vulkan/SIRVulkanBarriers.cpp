@@ -3,6 +3,8 @@
 SIREngine MPLv2 Source Code
 Copyright (C) 2023-2027 Noah Van Til
 
+
+
 This Source Code Form is subject to the terms of the Mozilla Public
 License, v2. If a copy of the MPL was not distributed with this
 file, You can obtain one at https://mozilla.org/MPL/2.0/.
@@ -45,7 +47,7 @@ static sirGraphicsResult_t sirVulkanBarrierState( sirGraphicsState_t eState, con
 	}
 }
 
-sirGraphicsResult_t sirVulkanPlanImageBarrier( const sirGraphicsBarrier_t &barrier, const sirVulkanImage_t *pImage,
+sirGraphicsResult_t sirVulkanPlanImageBarrier( const sirGraphicsBarrier_t& barrier, const sirVulkanImage_t *pImage,
                                                sirVulkanImageBarrier_t *pNative ) noexcept
 {
 	if ( pNative == nullptr || pImage == nullptr ) {
@@ -128,7 +130,7 @@ sirGraphicsResult_t SIRVulkanCommandList::barrier( const sirGraphicsBarrier_t *p
 	// Image layout transitions after earlier operations are revalidated
 	// against the ordered shadow state during submission.
 	for ( uint32_t iBarrier = 0; iBarrier < nCount; ++iBarrier ) {
-		const sirGraphicsBarrier_t &barrier = pBarriers[iBarrier];
+		const sirGraphicsBarrier_t& barrier = pBarriers[iBarrier];
 		if ( barrier.eType != SIR_GRAPHICS_BARRIER_TRANSITION && barrier.eType != SIR_GRAPHICS_BARRIER_UAV ) {
 			return SIR_GRAPHICS_UNSUPPORTED;
 		}
@@ -170,7 +172,7 @@ sirGraphicsResult_t SIRVulkanCommandList::barrier( const sirGraphicsBarrier_t *p
 		}
 	}
 	for ( uint32_t iBarrier = 0; iBarrier < nCount; ++iBarrier ) {
-		sirVulkanGraphicsOperation_t &operation = m_szOperations[m_nOperationCount++];
+		sirVulkanGraphicsOperation_t& operation = m_szOperations[m_nOperationCount++];
 		operation = {};
 		operation.eKind = pBarriers[iBarrier].hResource.eType == SIR_GRAPHICS_HANDLE_BUFFER ? SIR_VULKAN_GRAPHICS_BUFFER_BARRIER
 		                                                                                    : SIR_VULKAN_GRAPHICS_IMAGE_BARRIER;
@@ -179,7 +181,7 @@ sirGraphicsResult_t SIRVulkanCommandList::barrier( const sirGraphicsBarrier_t *p
 	return SIR_GRAPHICS_SUCCESS;
 }
 
-sirVulkanResult_t SIRVulkanDevice::submitImageBarrier( sirVulkanImage_t *pImage, const sirVulkanImageBarrier_t &barrier,
+sirVulkanResult_t SIRVulkanDevice::submitImageBarrier( sirVulkanImage_t *pImage, const sirVulkanImageBarrier_t& barrier,
                                                        sirVulkanCompletion_t *pCompletion ) noexcept
 {
 	if ( pCompletion != nullptr ) {

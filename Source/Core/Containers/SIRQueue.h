@@ -59,15 +59,15 @@ public:
 		return m_ring.front();
 	}
 	template <typename... Args>
-	sirContainerResult_t tryEmplace( Args &&...args )
+	sirContainerResult_t tryEmplace( Args&&...args )
 	{
 		return m_ring.tryEmplaceBack( std::forward<Args>( args )... );
 	}
-	sirContainerResult_t tryPush( const T &value )
+	sirContainerResult_t tryPush( const T& value )
 	{
 		return m_ring.tryPushBack( value );
 	}
-	sirContainerResult_t tryPush( T &&value )
+	sirContainerResult_t tryPush( T&& value )
 	{
 		return m_ring.tryPushBack( std::move( value ) );
 	}

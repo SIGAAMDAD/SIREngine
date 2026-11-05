@@ -60,10 +60,10 @@ private:
 
 public:
 	SIRContainerHeapAdapter( void ) noexcept = default;
-	SIRContainerHeapAdapter( const SIRContainerHeapAdapter & ) = delete;
-	SIRContainerHeapAdapter &operator=( const SIRContainerHeapAdapter & ) = delete;
-	SIRContainerHeapAdapter( SIRContainerHeapAdapter && ) = delete;
-	SIRContainerHeapAdapter &operator=( SIRContainerHeapAdapter && ) = delete;
+	SIRContainerHeapAdapter( const SIRContainerHeapAdapter& ) = delete;
+	SIRContainerHeapAdapter& operator=( const SIRContainerHeapAdapter& ) = delete;
+	SIRContainerHeapAdapter( SIRContainerHeapAdapter&& ) = delete;
+	SIRContainerHeapAdapter& operator=( SIRContainerHeapAdapter&& ) = delete;
 
 	bool init( SIRGeneralHeap *pHeap, sirMemoryDomain_t eDomain, uint32_t nOwnerTag ) noexcept
 	{

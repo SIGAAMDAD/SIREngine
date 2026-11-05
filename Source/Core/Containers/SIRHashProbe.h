@@ -60,7 +60,7 @@ public:
 	static void setControl( uint8_t *pControl, uint32_t iBucket, uint8_t nState ) noexcept
 	{
 		if constexpr ( bCompactControl ) {
-			uint8_t &nByte = pControl[iBucket >> 2];
+			uint8_t& nByte = pControl[iBucket >> 2];
 			uint32_t nShift = ( iBucket & 3 ) * 2;
 			nByte = ( uint8_t )( ( nByte & ~( 3u << nShift ) ) | ( ( uint32_t )nState << nShift ) );
 		} else {

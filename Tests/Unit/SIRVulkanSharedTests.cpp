@@ -14,6 +14,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Renderer/Drivers/Vulkan/SIRVulkanGraphics.h>
+#include <Renderer/SIRGraphicsABIOperations.h>
 #include <Renderer/SIRGraphicsRegistry.h>
 
 #include <stdio.h>
@@ -59,6 +60,17 @@ int main( void )
 		return 4;
 	}
 
+	sirGraphicsABIPipelineModelCaps_t modelCaps = {};
+	if ( pDevice->queryPipelineModelCaps( SIR_GRAPHICS_PIPELINE_MODEL_MODERN, &modelCaps ) != SIR_GRAPHICS_SUCCESS ||
+	     modelCaps.nModel != SIR_GRAPHICS_PIPELINE_MODEL_MODERN || modelCaps.nDeviceGeneration != capabilities.nDeviceGeneration ||
+	     modelCaps.nShaderStageMask != SIR_GRAPHICS_STAGE_COMPUTE ||
+	     modelCaps.nShaderFormatMask != ( 1U << ( SIR_GRAPHICS_SHADER_SPIRV - 1 ) ) ) {
+		return 70;
+	}
+	if ( pDevice->queryPipelineModelCaps( SIR_GRAPHICS_PIPELINE_MODEL_FIXED_FUNCTION, &modelCaps ) != SIR_GRAPHICS_UNSUPPORTED ||
+	     pDevice->queryPipelineModelCaps( SIR_GRAPHICS_PIPELINE_MODEL_MODERN, nullptr ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return 71;
+	}
 	uint32_t nAdapterCount = 0;
 	sirGraphicsAdapterInfo_t adapter = {};
 	if ( driver.getAdapterCount( &nAdapterCount ) != SIR_GRAPHICS_SUCCESS || nAdapterCount == 0 ||
@@ -96,7 +108,14 @@ int main( void )
 	    4U,          0x6e69616dU, 0U,          0x00060010U, 4U, 17U,         1U, 1U,          1U, 0x00020013U, 1U,          0x00030021U,
 	    2U,          1U,          0x00050036U, 1U,          4U, 0U,          2U, 0x000200f8U, 5U, 0x000100fdU, 0x00010038U };
 	sirGraphicsPipelineDesc_t compute = {};
+	sirGraphicsABIModernRecipe_t modernRecipe = {};
+	modernRecipe.nSize = sizeof( modernRecipe );
+	modernRecipe.nStageMask = SIR_GRAPHICS_STAGE_COMPUTE;
+	modernRecipe.nRequiredFeatures = SIR_GRAPHICS_FEATURE_COMPUTE;
+	compute.eModel = SIR_GRAPHICS_PIPELINE_MODEL_MODERN;
+	compute.pModern = &modernRecipe;
 	compute.eType = SIR_GRAPHICS_PIPELINE_COMPUTE;
+	compute.nSampleCount = 1;
 	compute.computeShader.eFormat = SIR_GRAPHICS_SHADER_SPIRV;
 	compute.computeShader.pBytes = szComputeSpirv;
 	compute.computeShader.nByteCount = sizeof( szComputeSpirv );

@@ -64,8 +64,8 @@ class SIRCacheAllocator
 {
 public:
 	SIRCacheAllocator( void );
-	SIRCacheAllocator( const SIRCacheAllocator & ) = delete;
-	SIRCacheAllocator &operator=( const SIRCacheAllocator & ) = delete;
+	SIRCacheAllocator( const SIRCacheAllocator& ) = delete;
+	SIRCacheAllocator& operator=( const SIRCacheAllocator& ) = delete;
 
 	static uint64_t getRequiredMetadataBytes( uint64_t nSegmentBytes, uint64_t nMinimumBlockBytes, uint32_t nMaxEntries );
 	bool init( SIRMemorySegment *pSegment, uint32_t nMaxEntries, uint64_t nMinimumBlockBytes = 0 );
@@ -97,7 +97,7 @@ private:
 	bool evictIndex( uint32_t nIndex, bool bEvicted );
 	bool acquireIndex( uint32_t *pIndex );
 	void returnIndex( uint32_t nIndex );
-	uint8_t *entryAddress( const sirCacheDesc_t &desc ) const;
+	uint8_t *entryAddress( const sirCacheDesc_t& desc ) const;
 
 	SIRBuddyAllocator m_Buddy;
 	SIRMemorySegment *m_pSegment;

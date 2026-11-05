@@ -94,14 +94,14 @@ public:
 	{
 		++s_nLive;
 	}
-	SIRTestCopyFailure( const SIRTestCopyFailure &other ) : m_nValue( other.m_nValue )
+	SIRTestCopyFailure( const SIRTestCopyFailure& other ) : m_nValue( other.m_nValue )
 	{
 		if ( s_bFail ) {
 			throw std::runtime_error( "copy-failure injection" );
 		}
 		++s_nLive;
 	}
-	SIRTestCopyFailure( SIRTestCopyFailure &&other ) noexcept( false ) : m_nValue( other.m_nValue )
+	SIRTestCopyFailure( SIRTestCopyFailure&& other ) noexcept( false ) : m_nValue( other.m_nValue )
 	{
 		++s_nLive;
 	}
@@ -124,7 +124,7 @@ static void sirTestExceptionRollback( const sirContainerAllocator_t *pAllocator 
 	bool bCaught = false;
 	try {
 		values.tryEmplaceBack( 99 );
-	} catch ( const std::runtime_error & ) {
+	} catch ( const std::runtime_error& ) {
 		bCaught = true;
 	}
 	SIRTestCopyFailure::s_bFail = false;
@@ -166,7 +166,7 @@ static void sirTestAliasing( const sirContainerAllocator_t *pAllocator, sirOptim
 		for ( int iIndex = 0; iIndex < 7; ++iIndex ) {
 			SIR_CHECK( values.tryInsert( iIndex, 100 + iIndex ) == SIR_CONTAINER_OK );
 		}
-		const int &nNewKey = *values.find( 0 );
+		const int& nNewKey = *values.find( 0 );
 		SIR_CHECK( values.tryEmplace( nNewKey, 999 ) == SIR_CONTAINER_OK );
 		SIR_CHECK( values.find( 100 ) != nullptr && *values.find( 100 ) == 999 );
 		SIR_CHECK( values.find( 0 ) != nullptr && *values.find( 0 ) == 100 );
@@ -176,7 +176,7 @@ static void sirTestAliasing( const sirContainerAllocator_t *pAllocator, sirOptim
 		for ( int iIndex = 0; iIndex < 7; ++iIndex ) {
 			SIR_CHECK( values.tryInsert( iIndex, 100 + iIndex ) == SIR_CONTAINER_OK );
 		}
-		const int &nNewValue = *values.find( 0 );
+		const int& nNewValue = *values.find( 0 );
 		SIR_CHECK( values.tryEmplace( 999, nNewValue ) == SIR_CONTAINER_OK );
 		SIR_CHECK( values.find( 999 ) != nullptr && *values.find( 999 ) == 100 );
 	}
@@ -195,7 +195,7 @@ static void sirTestAliasing( const sirContainerAllocator_t *pAllocator, sirOptim
 		for ( int iIndex = 0; iIndex < 7; ++iIndex ) {
 			SIR_CHECK( values.tryInsert( iIndex, 100 + iIndex ) == SIR_CONTAINER_OK );
 		}
-		const int &nKey = *values.find( 0 );
+		const int& nKey = *values.find( 0 );
 		pState->nFailAt = pState->nAllocations + 1;
 		SIR_CHECK( values.tryEmplace( nKey, 999 ) == SIR_CONTAINER_OUT_OF_MEMORY );
 		pState->nFailAt = 0;

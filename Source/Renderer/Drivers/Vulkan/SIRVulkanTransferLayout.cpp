@@ -124,7 +124,7 @@ bool sirVulkanSetSubresourceLayout( sirVulkanImage_t *pImage, uint32_t nMip, uin
 }
 
 sirVulkanResult_t sirVulkanValidateTextureTransfer( const sirVulkanBuffer_t *pBuffer, const sirVulkanImage_t *pImage,
-                                                    const sirVulkanTextureTransfer_t &transfer ) noexcept
+                                                    const sirVulkanTextureTransfer_t& transfer ) noexcept
 {
 	if ( pBuffer == nullptr || pImage == nullptr || ( pImage->eType != VK_IMAGE_TYPE_2D && pImage->eType != VK_IMAGE_TYPE_3D ) ||
 	     pImage->nMips == 0 || pImage->nMips > 32 || pImage->nLayers == 0 ||

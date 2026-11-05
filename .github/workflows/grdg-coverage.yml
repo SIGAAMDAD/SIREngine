@@ -1,0 +1,91 @@
+name: GRDG instrumented C++ coverage
+
+on:
+  push:
+    branches: [test/grdg-exhaustive-coverage-20261104]
+  pull_request:
+    branches: [develop, main]
+    paths:
+      - 'Source/Resources/**'
+      - 'Source/Core/Jobs/**'
+      - 'Source/Core/Memory/**'
+      - 'Source/Core/Platform/**'
+      - 'Tests/Unit/**'
+      - 'Tests/Profiling/CollectSIRGRDGCoverage.py'
+      - 'Tests/Profiling/TestSIRGRDGCoverageCollector.py'
+      - '.github/workflows/grdg-coverage.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  grdg-coverage:
+    name: GCC line and branch coverage / Linux
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Snapshot GRDG source for exact-revision coverage analysis
+        uses: actions/upload-artifact@v4
+        with:
+          name: grdg-source-snapshot
+          path: |
+            Source/
+            Tests/
+            Build/
+            CMakeLists.txt
+            CMakePresets.json
+            .clang-format
+            .clang-format-ignore
+          if-no-files-found: warn
+          retention-days: 1
+      - name: Install pinned clang-format
+        run: python3 -m pip install --disable-pip-version-check clang-format==23.1.5
+      - name: Verify owned-source formatting
+        run: cmake -P Build/CMake/CIFormat.cmake
+      - name: Fetch pinned GoogleTest
+        run: git submodule update --init ThirdParty/GoogleTest
+      - uses: ./.github/actions/setup-build-tools
+      - name: Verify GCC/gcov and Ninja
+        run: |
+          g++ --version
+          gcov --version
+          ninja --version
+      - name: Configure instrumented Ninja tooling preset
+        run: >
+          cmake --preset tooling
+          -DCMAKE_C_COMPILER=gcc
+          -DCMAKE_CXX_COMPILER=g++
+          '-DCMAKE_CXX_FLAGS=--coverage -fprofile-update=atomic'
+          -DCMAKE_EXE_LINKER_FLAGS=--coverage
+          -DCMAKE_SHARED_LINKER_FLAGS=--coverage
+          -DSIR_WITH_GOOGLETEST=ON
+      - name: Build instrumented engine and native tests
+        run: cmake --build out/Linux/tooling --parallel 3
+      - name: Execute integrated GRDG/Core CTests
+        run: >
+          ctest --test-dir out/Linux/tooling
+          --output-on-failure
+          --no-tests=error
+          -R '^(resources[.]|core[.]jobs[.]|core[.]platform[.]|core[.]memory[.])'
+      - name: Run collector regression tests
+        run: python3 Tests/Profiling/TestSIRGRDGCoverageCollector.py
+      - name: Measure line and branch coverage
+        run: >
+          python3 Tests/Profiling/CollectSIRGRDGCoverage.py
+          --build out/Linux/tooling
+          --output out/Nightly/GRDGCoverage
+          --source-commit "${GITHUB_SHA}"
+          --min-line-percent 80
+          --min-branch-percent 60
+      - name: Upload instrumented coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: grdg-core-gcc-coverage
+          path: out/Nightly/GRDGCoverage/
+          if-no-files-found: warn
+          retention-days: 14
