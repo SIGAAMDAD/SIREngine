@@ -1,27 +1,25 @@
 # Contributing to SIREngine
 
-SIREngine is initially AI-created and will transition to a team-maintained development process. GitHub Projects is the shared planning and delivery interface. The owner remains the final authority for architecture, implementation scope, and integration.
+SIREngine's initial development is AI-created and manually directed. The same **GitHub Project, Issues, PRs, review rules and source evidence** are designed for a future human-maintained team.
 
-## Starting work
+## Before starting
 
-1. Check the SIREngine Project and existing issues first. Reuse an issue rather than creating a duplicate roadmap.
-2. For proposed designs, use the architecture milestone issue form. Marking an issue tracked does not approve the design.
-3. Implementation issues refer to an explicit owner-approved plan revision, parent issue, work-package key, dependencies and owned writable paths.
-4. Claim an eligible issue under the active coordination policy before editing shared source.
-5. Create a branch scoped to the issue, commit focused source and tests, and open a PR linked to the issue.
-6. Record actual checks, source SHA, missing platform/hardware evidence, and independent QA where required.
-7. Integration requires the owner's approval of the exact PR revision and target branch, followed by the required checks.
+1. Read the current `develop` branch, subsystem documentation and [GitHub Project operating guide](Docs/ProjectManagement/GitHubProjects.md).
+2. Reuse an existing issue. Use a roadmap/milestone issue form for new architecture proposals, and implementation or verification forms for bounded work.
+3. The human owner decides architecture, plan revisions, implemented scope and integration. A label, project column, or CI success is not approval by itself.
+4. Manual workers should use the [Manual Worker Quickstart](Docs/ProjectManagement/ManualWorkerQuickstart.md). Select only an eligible task within the explicit owner-authorized selection set; check dependencies, active claims, existing branches, and path ownership.
+5. Post a GitHub claim before editing. Concurrent workers use the existing GitHub-only `ops/sirengine-control` claim branch; there is no external scheduler or required SQLite database.
+6. Develop on a dedicated branch, preserve source ownership, run source-specific checks, and attach exact SHA build/test/coverage evidence to a linked PR.
+7. Independent QA records what was run and what was NOT_RUN. Integration requires separately recorded owner approval of the exact PR head and destination branch.
+8. After verified integration, update and close the corresponding task and any fully accepted parent milestone. Leave unfinished work with a durable issue/PR checkpoint.
 
-## AI and human collaboration
+## Standards and review
 
-AI-authored issues and code follow the same review and evidence rules as human-authored work. GitHub records the canonical state. Human contributors can use the same issue forms, project views, branch ownership records, and CI gates without adopting an AI-specific tool.
+- SIREngine follows C++17, repository-specific formatting, shared resource ownership/GRDG contracts, and explicit ABI gates. Inspect current source before relying on older planning documents.
+- Do not commit generated build trees, SDK redistributables, secrets or cache artifacts.
+- CODEOWNERS identifies review responsibility; later contributors can be added through normal repository administration.
+- Issue templates are located in `.github/ISSUE_TEMPLATE/`; PR checklist in `.github/PULL_REQUEST_TEMPLATE.md`.
 
-There is no automatic architectural approval and no automatic source merge arising from a project status, label, or passing CI result.
+## Project board
 
-## Technical conventions
-
-Read the current instructions, current branch and relevant subsystem documentation. SIREngine uses C++17, shared allocator/resource ownership, explicit driver contracts, and repository-specific formatting/test rules. The current source controls over stale roadmap summaries. Do not commit generated build trees, installed SDKs, secrets or CI cache artifacts.
-
-## Project operations
-
-The board provisioning, automation and team handoff process is documented in Docs/ProjectManagement/GitHubProjects.md. The project operations workflow supports owner-run setup, backfill, status synchronization and workload audit reports. Its project mutation credential is provided by repository maintainers; it is never stored in source.
+The SIREngine GitHub Project is the sole task/milestone tracking system. Technical architecture and research may remain in Google Drive, with links to canonical GitHub milestones. All board curation can be done from native GitHub UI and the connected GitHub Issue/PR tools. There is no mandatory project-management script, scheduled job, or custom GraphQL token.
