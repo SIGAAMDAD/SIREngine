@@ -1,0 +1,163 @@
+name: Shared Graphics ABI v1 Verification
+
+on:
+  push:
+    branches:
+      - renderer/shared-driver-api-v1
+    paths:
+      - "Source/Renderer/**"
+      - "Tests/Unit/SIRGraphics*"
+      - "Tests/Unit/CMakeLists.txt"
+      - "Build/CMake/**"
+      - "Build/Scripts/*GraphicsABI*"
+      - "Verification/Systems/GraphicsABI.json"
+      - ".github/workflows/graphics-abi.yml"
+  pull_request:
+    branches: [develop]
+    paths:
+      - "Source/Renderer/**"
+      - "Tests/Unit/SIRGraphics*"
+      - "Tests/Unit/CMakeLists.txt"
+      - "Build/Scripts/*GraphicsABI*"
+      - ".github/workflows/graphics-abi.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: graphics-abi-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  source:
+    name: Pinned style and source hygiene
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Source policy checks
+        run: |
+          cmake -P Build/CMake/CIHygiene.cmake
+          cmake -P Build/CMake/CIStyle.cmake
+      - name: Install pinned clang-format 23.1.5
+        shell: bash
+        run: |
+          set -euo pipefail
+          metadata="${RUNNER_TEMP}/clang-format.json"
+          archive="${RUNNER_TEMP}/clang-format.zip"
+          bindir="${RUNNER_TEMP}/native-tools"
+          mkdir -p "${bindir}"
+          curl -fsSL --retry 3 https://pypi.org/pypi/clang-format/23.1.5/json -o "${metadata}"
+          filter='.urls[] | select(.filename | contains("manylinux_2_27_x86_64"))'
+          url="$(jq -er "${filter} | .url" "${metadata}")"
+          digest="$(jq -er "${filter} | .digests.sha256" "${metadata}")"
+          curl -fsSL --retry 3 "${url}" -o "${archive}"
+          printf '%s  %s\n' "${digest}" "${archive}" | sha256sum -c -
+          binary="$(unzip -Z1 "${archive}" | grep -E '/bin/clang-format$' | head -n 1)"
+          unzip -p "${archive}" "${binary}" > "${bindir}/clang-format"
+          chmod +x "${bindir}/clang-format"
+          echo "${bindir}" >> "${GITHUB_PATH}"
+      - name: Source formatting check
+        run: cmake -P Build/CMake/CIFormat.cmake
+
+  native:
+    name: C++17 ABI CTest / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Fetch pinned GoogleTest
+        run: git submodule update --init ThirdParty/GoogleTest
+      - name: MSVC environment
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+      - uses: ./.github/actions/setup-build-tools
+      - name: Configure
+        run: cmake --preset dev -DSIR_WITH_GOOGLETEST=ON
+      - name: Compile ABI and independent tests
+        run: >
+          cmake --build --preset dev --target
+          SIRGraphicsInterfaceTests SIRGraphicsABITests
+          SIRGraphicsPipelineABITests SIRGraphicsPipelineBridgeTests
+          SIRGraphicsABIMockModule SIRGraphicsModuleTests
+          SIRGraphicsABIContractTests SIRGraphicsABIPropertyTests
+          SIRGraphicsABIEraMatrixTests SIRGraphicsABIAssertionGoogleTests
+      - name: Run all renderer graphics contracts
+        run: >
+          ctest --preset dev --output-on-failure --no-tests=error
+          -R '^renderer[.]graphics[.]'
+
+  sanitizers:
+    name: Linux ${{ matrix.kind }} ABI conformance
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        kind: [asan, ubsan]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Fetch pinned GoogleTest
+        run: git submodule update --init ThirdParty/GoogleTest
+      - uses: ./.github/actions/setup-build-tools
+      - name: Configure sanitizer
+        run: cmake --preset "${{ matrix.kind }}" -DSIR_WITH_GOOGLETEST=ON
+      - name: Compile sanitizer ABI tests
+        run: >
+          cmake --build --preset "${{ matrix.kind }}" --target
+          SIRGraphicsInterfaceTests SIRGraphicsABITests
+          SIRGraphicsPipelineABITests SIRGraphicsPipelineBridgeTests
+          SIRGraphicsABIMockModule SIRGraphicsModuleTests
+          SIRGraphicsABIContractTests SIRGraphicsABIPropertyTests
+          SIRGraphicsABIEraMatrixTests SIRGraphicsABIAssertionGoogleTests
+      - name: Run ABI sanitizer tests
+        env:
+          ASAN_OPTIONS: detect_leaks=1:abort_on_error=1
+          UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
+        run: >
+          ctest --preset "${{ matrix.kind }}" --output-on-failure --no-tests=error
+          -R '^renderer[.]graphics[.]'
+
+  llvm-coverage:
+    name: LLVM source coverage / Linux
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Fetch pinned GoogleTest
+        run: git submodule update --init ThirdParty/GoogleTest
+      - uses: ./.github/actions/setup-build-tools
+      - name: Prepare matching LLVM coverage tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y clang-18 llvm-18 ninja-build
+          clang++-18 --version
+          llvm-cov-18 --version
+      - name: Build, run, and measure ABI implementation
+        shell: bash
+        env:
+          SIR_GRAPHICS_ABI_MIN_COVERAGE: "90"
+        run: bash Build/Scripts/RunGraphicsABICoverage.sh
+      - name: Preserve profiles, counters, and summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: graphics-abi-v1-llvm-coverage
+          path: out/Verification/GraphicsABI/
+          if-no-files-found: warn
+          retention-days: 14

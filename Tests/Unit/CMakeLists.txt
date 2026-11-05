@@ -126,4 +126,44 @@ target_compile_definitions(SIRGraphicsModuleTests PRIVATE SIR_TEST_ABI_MODULE_PA
 add_test(NAME renderer.graphics.binary-module COMMAND SIRGraphicsModuleTests)
 sir_configure_owned_target(SIRGraphicsModuleTests)
 
+# Shared ABI v1 conformance is runnable without Vulkan, Direct3D or a GPU.
+# The independent suites keep layout drift, pipeline eras and invalid inputs
+# separately addressable by CTest, sanitizers and source-based LLVM coverage.
+add_executable(SIRGraphicsABIContractTests SIRGraphicsABIContractTests.cpp)
+target_link_libraries(SIRGraphicsABIContractTests PRIVATE SIR::Graphics)
+add_test(NAME renderer.graphics.contract COMMAND SIRGraphicsABIContractTests)
+sir_configure_owned_target(SIRGraphicsABIContractTests)
+
+add_executable(SIRGraphicsABIPropertyTests SIRGraphicsABIPropertyTests.cpp)
+target_link_libraries(SIRGraphicsABIPropertyTests PRIVATE SIR::Graphics)
+add_test(NAME renderer.graphics.properties COMMAND SIRGraphicsABIPropertyTests)
+sir_configure_owned_target(SIRGraphicsABIPropertyTests)
+
+add_executable(SIRGraphicsABIEraMatrixTests SIRGraphicsABIEraMatrixTests.cpp)
+target_link_libraries(SIRGraphicsABIEraMatrixTests PRIVATE SIR::Graphics)
+add_test(NAME renderer.graphics.era-matrix COMMAND SIRGraphicsABIEraMatrixTests)
+sir_configure_owned_target(SIRGraphicsABIEraMatrixTests)
+
+set_tests_properties(
+    renderer.graphics.interface
+    renderer.graphics.binary-abi
+    renderer.graphics.pipeline-eras
+    renderer.graphics.pipeline-bridge
+    renderer.graphics.binary-module
+    renderer.graphics.contract
+    renderer.graphics.properties
+    renderer.graphics.era-matrix
+    PROPERTIES LABELS "graphics-abi;cpu;conformance" TIMEOUT 90)
+
+if(SIR_WITH_GOOGLETEST)
+    include(GoogleTest)
+    add_executable(SIRGraphicsABIAssertionGoogleTests SIRGraphicsABIAssertionGoogleTests.cpp)
+    target_link_libraries(SIRGraphicsABIAssertionGoogleTests PRIVATE SIR::Graphics gtest_main)
+    sir_configure_owned_target(SIRGraphicsABIAssertionGoogleTests)
+    gtest_discover_tests(SIRGraphicsABIAssertionGoogleTests
+        TEST_PREFIX "renderer.graphics.gtest."
+        DISCOVERY_MODE PRE_TEST
+        PROPERTIES LABELS "graphics-abi;gtest;conformance" TIMEOUT 90)
+endif()
+
 add_subdirectory(Config)
