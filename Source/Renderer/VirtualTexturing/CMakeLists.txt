@@ -1,2 +1,5 @@
 # Native Terrain3D Sparse VT V1 port. No prototype VT source is compiled.
-target_sources(SIRGraphics PRIVATE SIRVirtualTextureFeedback.cpp SIRVirtualTexturePackage.cpp)
+target_sources(SIRGraphics PRIVATE
+    SIRVirtualTextureFeedback.cpp
+    SIRVirtualTexturePackage.cpp
+    SIRVirtualTexturePackReader.cpp)
