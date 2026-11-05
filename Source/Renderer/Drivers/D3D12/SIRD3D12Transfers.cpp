@@ -197,12 +197,19 @@ ID3D12Fence *SIRD3D12Transfers::getSubmissionFence( void ) const noexcept
 bool SIRD3D12Transfers::submitRecorded( ID3D12CommandList *const *ppLists, uint32_t nCount, uint64_t *pFence ) noexcept
 {
 	if ( pFence == nullptr ) {
+		m_nLastError = E_POINTER;
 		return false;
 	}
 	*pFence = 0;
-	if ( !isReady() || ppLists == nullptr || nCount == 0 || m_nNextFence == UINT64_MAX ) {
+	if ( !isReady() || ppLists == nullptr || nCount == 0 || nCount > 4 || m_nNextFence == UINT64_MAX ) {
 		m_nLastError = E_INVALIDARG;
 		return false;
+	}
+	for ( uint32_t iList = 0; iList < nCount; ++iList ) {
+		if ( ppLists[iList] == nullptr ) {
+			m_nLastError = E_INVALIDARG;
+			return false;
+		}
 	}
 	m_pQueue->ExecuteCommandLists( nCount, ppLists );
 	m_nLastError = m_pQueue->Signal( m_pFence.Get(), m_nNextFence );
@@ -271,12 +278,15 @@ sirD3D12TransferSlot_t *SIRD3D12Transfers::findSlot( sirD3D12TransferTicket_t ti
 
 bool SIRD3D12Transfers::submit( const void *pSource, uint64_t nBytes, sirD3D12TransferTicket_t *pTicket ) noexcept
 {
-	if ( pTicket == nullptr || pSource == nullptr || nBytes == 0 || !isReady() || m_nNextFence == UINT64_MAX ||
-	     m_nNextSerial == UINT64_MAX ) {
-		m_nLastError = E_INVALIDARG;
+	if ( pTicket == nullptr ) {
+		m_nLastError = E_POINTER;
 		return false;
 	}
 	*pTicket = {};
+	if ( pSource == nullptr || nBytes == 0 || !isReady() || m_nNextFence == UINT64_MAX || m_nNextSerial == UINT64_MAX ) {
+		m_nLastError = E_INVALIDARG;
+		return false;
+	}
 
 	uint32_t iFree = s_nSlotCount;
 	for ( uint32_t iSlot = 0; iSlot < s_nSlotCount; ++iSlot ) {
@@ -388,6 +398,10 @@ bool SIRD3D12Transfers::waitForFence( uint64_t nFence, uint32_t nTimeoutMs ) noe
 {
 	if ( m_pFence == nullptr || m_hEvent == nullptr ) {
 		m_nLastError = E_FAIL;
+		return false;
+	}
+	if ( nFence == 0 || nFence > m_nLastSubmittedFence ) {
+		m_nLastError = E_INVALIDARG;
 		return false;
 	}
 	const uint64_t nCompleted = m_pFence->GetCompletedValue();
