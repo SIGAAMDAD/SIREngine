@@ -370,3 +370,9 @@ add_executable(SIRVFSOverlayResolverTests SIRVFSOverlayResolverTests.cpp)
 target_link_libraries(SIRVFSOverlayResolverTests PRIVATE SIR::Core)
 add_test(NAME core.vfs.overlay-resolver COMMAND SIRVFSOverlayResolverTests)
 sir_configure_owned_target(SIRVFSOverlayResolverTests)
+
+# VFS immutable logical file identity, source pins and deferred close.
+add_executable(SIRVFSFileHandleTableTests SIRVFSFileHandleTableTests.cpp)
+target_link_libraries(SIRVFSFileHandleTableTests PRIVATE SIR::Core)
+add_test(NAME core.vfs.file-handle-lifetime COMMAND SIRVFSFileHandleTableTests)
+sir_configure_owned_target(SIRVFSFileHandleTableTests)
