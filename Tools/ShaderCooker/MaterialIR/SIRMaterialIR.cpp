@@ -138,7 +138,12 @@ static uint64_t sirMaterialIRReflectionHash( const sirMaterialIRGraph_t& graph )
 sirShaderCookResult_t sirMaterialIRCompile( const sirMaterialIRGraph_t& graph, const sirMaterialIRCompileOptions_t& options,
                                             sirMaterialIRCompileOutput_t *pOutput ) noexcept
 {
-	if ( pOutput == nullptr || graph.nAssetId == 0 || graph.nSourceHash == 0 || graph.nNodeCount == 0 ||
+	if ( pOutput == nullptr ) {
+		return SIR_SHADER_COOK_INVALID_ARGUMENT;
+	}
+	pOutput->nRequiredCount = 0;
+	pOutput->nProducedCount = 0;
+	if ( graph.nAssetId == 0 || graph.nSourceHash == 0 || graph.nNodeCount == 0 ||
 	     graph.nNodeCount > SIR_MATERIAL_IR_MAX_NODES || graph.nPassCount == 0 || graph.nPassCount > SIR_MATERIAL_IR_MAX_PASSES ||
 	     graph.nSwitchCount > SIR_MATERIAL_IR_MAX_SWITCHES || graph.nBindingCount > SIR_MATERIAL_IR_MAX_BINDINGS ||
 	     graph.pNodes == nullptr || graph.pPasses == nullptr || ( graph.nSwitchCount != 0 && graph.pSwitches == nullptr ) ||

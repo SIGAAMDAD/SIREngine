@@ -88,6 +88,10 @@ static void testDeterministicMaps( void ) noexcept
 	szSwitches[1] = temp;
 	REQUIRE( sirMaterialIRCompile( graph, options, &output ) == SIR_SHADER_COOK_OK );
 	REQUIRE( szEntries[0].nCodeHash == nFirstHash );
+	output.nCapacity = 1;
+	REQUIRE( sirMaterialIRCompile( graph, options, &output ) == SIR_SHADER_COOK_CAPACITY_EXCEEDED );
+	REQUIRE( output.nRequiredCount == 8 && output.nProducedCount == 0 );
+	REQUIRE( szEntries[0].nCodeHash == nFirstHash );
 }
 
 static void testInvalidGraphs( void ) noexcept
@@ -126,11 +130,15 @@ static void testInvalidGraphs( void ) noexcept
 	graph.pPasses = &pass;
 	sirMaterialIRCompileOptions_t unsupported = { 0, false };
 	REQUIRE( sirMaterialIRCompile( graph, unsupported, &output ) == SIR_SHADER_COOK_UNSUPPORTED );
+	REQUIRE( output.nProducedCount == 0 && output.nRequiredCount == 0 );
 	graph.nNodeCount = SIR_MATERIAL_IR_MAX_NODES + 1;
 	REQUIRE( sirMaterialIRCompile( graph, options, &output ) == SIR_SHADER_COOK_INVALID_ARGUMENT );
 	graph.nNodeCount = 3;
 	graph.pNodes = nullptr;
+	output.nRequiredCount = 99;
+	output.nProducedCount = 99;
 	REQUIRE( sirMaterialIRCompile( graph, options, &output ) == SIR_SHADER_COOK_INVALID_ARGUMENT );
+	REQUIRE( output.nRequiredCount == 0 && output.nProducedCount == 0 );
 }
 
 static void testStaticDynamicSeparation( void ) noexcept
