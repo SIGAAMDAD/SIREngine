@@ -1,3 +1,4 @@
+include(${CMAKE_CURRENT_SOURCE_DIR}/WorldHLODTests.cmake)
 add_executable(SIREngineLifecycleTests SIREngineLifecycleTests.cpp)
 target_link_libraries(SIREngineLifecycleTests PRIVATE SIR::Core)
 add_test(NAME core.application.system-lifecycle COMMAND SIREngineLifecycleTests)
