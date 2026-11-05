@@ -17,14 +17,6 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <string.h>
 
-static VkImageLayout sirVulkanRecordedUploadLayout( const sirVulkanImage_t *pImage ) noexcept
-{
-	if ( ( pImage->nUsage & VK_IMAGE_USAGE_STORAGE_BIT ) != 0 ) {
-		return VK_IMAGE_LAYOUT_GENERAL;
-	}
-	return ( pImage->nUsage & VK_IMAGE_USAGE_SAMPLED_BIT ) != 0 ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL : VK_IMAGE_LAYOUT_GENERAL;
-}
-
 static sirVulkanImage_t *sirVulkanRecordedShadow( sirVulkanImage_t *pImage, sirVulkanImage_t **ppOriginals, sirVulkanImage_t *pShadows,
                                                   uint32_t *pCount ) noexcept
 {
@@ -60,10 +52,12 @@ static sirVulkanResult_t sirVulkanAdvanceRecordedState( sirVulkanImage_t *pShado
 			return SIR_VULKAN_INVALID_ARGUMENT;
 		}
 		if ( command.textureCopy.bBufferToImage ) {
-			const uint32_t nIndex = command.textureCopy.nLayer * pShadow->nMips + command.textureCopy.nMip;
-			pShadow->szUploadedSubresources[nIndex / 64] |= 1ULL << ( nIndex % 64 );
-			( void )sirVulkanSetSubresourceLayout( pShadow, command.textureCopy.nMip, command.textureCopy.nLayer,
-			                                       sirVulkanRecordedUploadLayout( pShadow ) );
+			const VkImageLayout eFinal = sirVulkanUploadFinalLayout( pShadow, command.textureCopy );
+			if ( sirVulkanTransferCoversSubresource( pShadow, command.textureCopy ) ) {
+				const uint32_t nIndex = command.textureCopy.nLayer * pShadow->nMips + command.textureCopy.nMip;
+				pShadow->szUploadedSubresources[nIndex / 64] |= 1ULL << ( nIndex % 64 );
+			}
+			( void )sirVulkanSetSubresourceLayout( pShadow, command.textureCopy.nMip, command.textureCopy.nLayer, eFinal );
 		}
 		return SIR_VULKAN_SUCCESS;
 	}
@@ -438,7 +432,7 @@ sirVulkanResult_t SIRVulkanDevice::submitRecordedCommands( const sirVulkanRecord
 		after.dstStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
 		after.dstAccessMask = VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT;
 		after.oldLayout = eTransfer;
-		after.newLayout = bUpload ? sirVulkanRecordedUploadLayout( pShadow ) : eOld;
+		after.newLayout = bUpload ? sirVulkanUploadFinalLayout( pShadow, copy ) : eOld;
 		imageDependency.pImageMemoryBarriers = &after;
 		m_pfnCmdPipelineBarrier2( pSlot->hCommandBuffer, &imageDependency );
 		( void )sirVulkanAdvanceRecordedState( pShadow, command );

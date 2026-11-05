@@ -272,6 +272,68 @@ int main( void )
 	if ( sirVulkanValidateTextureTransfer( &volumeBuffer, &volume, volumeCopy ) != SIR_VULKAN_INVALID_ARGUMENT ) {
 		return 40;
 	}
+	// Initialization is per entire mip/layer, not per uploaded rectangle or depth slice.
+	sirVulkanImage_t coverage = {};
+	coverage.eType = VK_IMAGE_TYPE_2D;
+	coverage.nWidth = 16;
+	coverage.nHeight = 8;
+	coverage.nDepth = 1;
+	coverage.nMips = 3;
+	coverage.nLayers = 2;
+	coverage.nUsage = VK_IMAGE_USAGE_SAMPLED_BIT;
+	sirVulkanTextureTransfer_t uploaded = {};
+	uploaded.bBufferToImage = true;
+	uploaded.nMip = 1;
+	uploaded.nLayer = 1;
+	uploaded.extent = { 8, 4, 1 };
+	if ( !sirVulkanTransferCoversSubresource( &coverage, uploaded ) ||
+	     sirVulkanUploadFinalLayout( &coverage, uploaded ) != VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ) {
+		return 41;
+	}
+	uploaded.extent.width = 4;
+	if ( sirVulkanTransferCoversSubresource( &coverage, uploaded ) ||
+	     sirVulkanUploadFinalLayout( &coverage, uploaded ) != VK_IMAGE_LAYOUT_GENERAL ) {
+		return 42;
+	}
+	coverage.szUploadedSubresources[0] = 1ULL << ( uploaded.nLayer * coverage.nMips + uploaded.nMip );
+	if ( sirVulkanUploadFinalLayout( &coverage, uploaded ) != VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ) {
+		return 43;
+	}
+	coverage.nUsage |= VK_IMAGE_USAGE_STORAGE_BIT;
+	if ( sirVulkanUploadFinalLayout( &coverage, uploaded ) != VK_IMAGE_LAYOUT_GENERAL ) {
+		return 44;
+	}
+	uploaded.extent.width = 8;
+	uploaded.offset.x = 1;
+	if ( sirVulkanTransferCoversSubresource( &coverage, uploaded ) ) {
+		return 45;
+	}
+	uploaded.offset.x = 0;
+	uploaded.bBufferToImage = false;
+	if ( sirVulkanTransferCoversSubresource( &coverage, uploaded ) ) {
+		return 46;
+	}
+	uploaded.bBufferToImage = true;
+	uploaded.nMip = coverage.nMips;
+	if ( sirVulkanTransferCoversSubresource( &coverage, uploaded ) ||
+	     sirVulkanUploadFinalLayout( &coverage, uploaded ) != VK_IMAGE_LAYOUT_UNDEFINED ||
+	     sirVulkanTransferCoversSubresource( nullptr, uploaded ) ) {
+		return 47;
+	}
+	coverage.eType = VK_IMAGE_TYPE_3D;
+	coverage.nMips = 2;
+	coverage.nLayers = 1;
+	coverage.nDepth = 4;
+	uploaded.nMip = 1;
+	uploaded.nLayer = 0;
+	uploaded.extent = { 8, 4, 2 };
+	if ( !sirVulkanTransferCoversSubresource( &coverage, uploaded ) ) {
+		return 48;
+	}
+	uploaded.extent.depth = 1;
+	if ( sirVulkanTransferCoversSubresource( &coverage, uploaded ) ) {
+		return 49;
+	}
 	printf( "Vulkan transfer format and subresource contracts passed\n" );
 	return 0;
 }

@@ -144,11 +144,7 @@ sirVulkanResult_t SIRVulkanDevice::submitBufferImageCopy( sirVulkanBuffer_t *pBu
 		m_pfnCmdCopyImageToBuffer2( pSlot->hCommandBuffer, &info );
 	}
 
-	const VkImageLayout eFinal = bUpload
-	                                 ? ( ( pImage->nUsage & VK_IMAGE_USAGE_STORAGE_BIT ) != 0   ? VK_IMAGE_LAYOUT_GENERAL
-	                                     : ( pImage->nUsage & VK_IMAGE_USAGE_SAMPLED_BIT ) != 0 ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-	                                                                                            : VK_IMAGE_LAYOUT_GENERAL )
-	                                 : eOld;
+	const VkImageLayout eFinal = bUpload ? sirVulkanUploadFinalLayout( pImage, transfer ) : eOld;
 	VkImageMemoryBarrier2 after = before;
 	after.srcStageMask = VK_PIPELINE_STAGE_2_COPY_BIT;
 	after.srcAccessMask = bUpload ? VK_ACCESS_2_TRANSFER_WRITE_BIT : VK_ACCESS_2_TRANSFER_READ_BIT;
@@ -191,7 +187,7 @@ sirVulkanResult_t SIRVulkanDevice::submitBufferImageCopy( sirVulkanBuffer_t *pBu
 	// The single owner queue serializes submissions. Publish the final layout
 	// only after vkQueueSubmit2 succeeds, never on recording/submit failure.
 	( void )sirVulkanSetSubresourceLayout( pImage, transfer.nMip, transfer.nLayer, eFinal );
-	if ( bUpload ) {
+	if ( bUpload && sirVulkanTransferCoversSubresource( pImage, transfer ) ) {
 		const uint32_t nIndex = transfer.nLayer * pImage->nMips + transfer.nMip;
 		pImage->szUploadedSubresources[nIndex / 64] |= 1ULL << ( nIndex % 64 );
 	}

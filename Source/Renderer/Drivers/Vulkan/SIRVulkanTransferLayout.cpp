@@ -123,6 +123,36 @@ bool sirVulkanSetSubresourceLayout( sirVulkanImage_t *pImage, uint32_t nMip, uin
 	return true;
 }
 
+bool sirVulkanTransferCoversSubresource( const sirVulkanImage_t *pImage, const sirVulkanTextureTransfer_t& transfer ) noexcept
+{
+	if ( pImage == nullptr || !transfer.bBufferToImage || pImage->nMips == 0 || pImage->nMips > 32 || transfer.nMip >= pImage->nMips ||
+	     pImage->nLayers == 0 || transfer.nLayer >= pImage->nLayers || pImage->nWidth == 0 || pImage->nHeight == 0 ||
+	     pImage->nDepth == 0 ) {
+		return false;
+	}
+	const uint32_t nWidth = pImage->nWidth >> transfer.nMip;
+	const uint32_t nHeight = pImage->nHeight >> transfer.nMip;
+	const uint32_t nDepth = pImage->eType == VK_IMAGE_TYPE_3D ? pImage->nDepth >> transfer.nMip : 1U;
+	return transfer.offset.x == 0 && transfer.offset.y == 0 && transfer.offset.z == 0 &&
+	       transfer.extent.width == ( nWidth != 0 ? nWidth : 1U ) && transfer.extent.height == ( nHeight != 0 ? nHeight : 1U ) &&
+	       transfer.extent.depth == ( nDepth != 0 ? nDepth : 1U );
+}
+
+VkImageLayout sirVulkanUploadFinalLayout( const sirVulkanImage_t *pImage, const sirVulkanTextureTransfer_t& transfer ) noexcept
+{
+	if ( pImage == nullptr || transfer.nMip >= pImage->nMips || transfer.nLayer >= pImage->nLayers || pImage->nMips == 0 ||
+	     pImage->nMips > 32 || pImage->nLayers == 0 ) {
+		return VK_IMAGE_LAYOUT_UNDEFINED;
+	}
+	const uint32_t nIndex = transfer.nLayer * pImage->nMips + transfer.nMip;
+	const bool bInitialized = sirVulkanTransferCoversSubresource( pImage, transfer ) ||
+	                          ( pImage->szUploadedSubresources[nIndex / 64] & ( 1ULL << ( nIndex % 64 ) ) ) != 0;
+	if ( bInitialized && ( pImage->nUsage & VK_IMAGE_USAGE_SAMPLED_BIT ) != 0 && ( pImage->nUsage & VK_IMAGE_USAGE_STORAGE_BIT ) == 0 ) {
+		return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	}
+	return VK_IMAGE_LAYOUT_GENERAL;
+}
+
 sirVulkanResult_t sirVulkanValidateTextureTransfer( const sirVulkanBuffer_t *pBuffer, const sirVulkanImage_t *pImage,
                                                     const sirVulkanTextureTransfer_t& transfer ) noexcept
 {

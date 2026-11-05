@@ -218,6 +218,47 @@ int main( void )
 	     sirVulkanRecordedNeedsBufferBarrier( hazards, SIR_VULKAN_COPY_BATCH_CAPACITY ) ) {
 		return 22;
 	}
+	// Partial writes must not authorize readback or a shader-readable layout.
+	sirVulkanImage_t partiallyUploaded = {};
+	partiallyUploaded.eFormat = VK_FORMAT_R8G8B8A8_UNORM;
+	partiallyUploaded.eType = VK_IMAGE_TYPE_2D;
+	partiallyUploaded.nWidth = 8;
+	partiallyUploaded.nHeight = 8;
+	partiallyUploaded.nDepth = 1;
+	partiallyUploaded.nMips = 1;
+	partiallyUploaded.nLayers = 1;
+	partiallyUploaded.nUsage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+	sirVulkanRecordedCommand_t coverageCommands[3] = {};
+	coverageCommands[0].eKind = SIR_VULKAN_RECORDED_TEXTURE_COPY;
+	coverageCommands[0].pBuffer = &staging;
+	coverageCommands[0].pImage = &partiallyUploaded;
+	coverageCommands[0].textureCopy.bBufferToImage = true;
+	coverageCommands[0].textureCopy.extent = { 4, 8, 1 };
+	coverageCommands[1].eKind = SIR_VULKAN_RECORDED_IMAGE_BARRIER;
+	coverageCommands[1].pImage = &partiallyUploaded;
+	coverageCommands[1].imageBarrier = { VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 0, 0, 1, 1, false };
+	if ( sirVulkanValidateRecordedCommands( coverageCommands, 2 ) != SIR_VULKAN_INVALID_ARGUMENT ||
+	     partiallyUploaded.szUploadedSubresources[0] != 0 ) {
+		return 25;
+	}
+	coverageCommands[1].eKind = SIR_VULKAN_RECORDED_TEXTURE_COPY;
+	coverageCommands[1].pBuffer = &readback;
+	coverageCommands[1].textureCopy.extent = { 4, 8, 1 };
+	coverageCommands[1].textureCopy.bBufferToImage = false;
+	if ( sirVulkanValidateRecordedCommands( coverageCommands, 2 ) != SIR_VULKAN_INVALID_ARGUMENT ) {
+		return 26;
+	}
+	coverageCommands[1] = coverageCommands[0];
+	coverageCommands[1].textureCopy.extent = { 8, 8, 1 };
+	coverageCommands[2].eKind = SIR_VULKAN_RECORDED_TEXTURE_COPY;
+	coverageCommands[2].pBuffer = &readback;
+	coverageCommands[2].pImage = &partiallyUploaded;
+	coverageCommands[2].textureCopy.extent = { 8, 8, 1 };
+	coverageCommands[2].textureCopy.bBufferToImage = false;
+	if ( sirVulkanValidateRecordedCommands( coverageCommands, 3 ) != SIR_VULKAN_SUCCESS ||
+	     partiallyUploaded.szUploadedSubresources[0] != 0 ) {
+		return 27;
+	}
 	printf( "Vulkan ordered mixed command validation passed\n" );
 	return 0;
 }

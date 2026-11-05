@@ -158,9 +158,17 @@ sirGraphicsResult_t SIRVulkanCommandList::copyBufferTexture( const sirGraphicsBu
 			     prior.textureCopy.hTexture.nSlot == copy.hTexture.nSlot &&
 			     prior.textureCopy.hTexture.nGeneration == copy.hTexture.nGeneration && prior.textureCopy.nMip == copy.nMip &&
 			     prior.textureCopy.nLayer == copy.nLayer ) {
-				const uint32_t nIndex = copy.nLayer * imageState.nMips + copy.nMip;
-				imageState.szUploadedSubresources[nIndex / 64] |= 1ULL << ( nIndex % 64 );
-				break;
+				sirVulkanTextureTransfer_t earlier = {};
+				earlier.nMip = prior.textureCopy.nMip;
+				earlier.nLayer = prior.textureCopy.nLayer;
+				earlier.offset = { ( int32_t )prior.textureCopy.nX, ( int32_t )prior.textureCopy.nY, ( int32_t )prior.textureCopy.nZ };
+				earlier.extent = { prior.textureCopy.nWidth, prior.textureCopy.nHeight, prior.textureCopy.nDepth };
+				earlier.bBufferToImage = true;
+				if ( sirVulkanTransferCoversSubresource( &imageState, earlier ) ) {
+					const uint32_t nIndex = copy.nLayer * imageState.nMips + copy.nMip;
+					imageState.szUploadedSubresources[nIndex / 64] |= 1ULL << ( nIndex % 64 );
+					break;
+				}
 			}
 		}
 	}
