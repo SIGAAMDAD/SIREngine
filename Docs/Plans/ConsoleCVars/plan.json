@@ -477,7 +477,9 @@
       "stop_conditions": [
         "Unratified interface or unmet dependency gate"
       ],
-      "status": "IMPLEMENTED_PENDING_NATIVE_CI"
+      "status": "PASS_GITHUB_NATIVE_CI",
+      "evidence_sha": "8bc25857357bc2b052b2eee9d9cf8799bff56f22",
+      "evidence_url": "https://github.com/SIGAAMDAD/SIREngine/actions/runs/41949529591"
     },
     {
       "id": "P5",
@@ -644,9 +646,11 @@
         "REQ-003"
       ],
       "tier": "NATIVE_CMAKE_CTEST",
-      "status": "PENDING_EXACT_SHA_CI",
+      "status": "PASS_GITHUB_NATIVE_LINUX_WINDOWS",
       "command": "ctest --output-on-failure -R core.console.service",
-      "evidence_path": "Tests/Unit/Console/SIRConsoleServiceTests.cpp"
+      "evidence_path": "Tests/Unit/Console/SIRConsoleServiceTests.cpp",
+      "evidence_sha": "8bc25857357bc2b052b2eee9d9cf8799bff56f22",
+      "evidence_url": "https://github.com/SIGAAMDAD/SIREngine/actions/runs/41949529591"
     }
   ],
   "probes": [],
