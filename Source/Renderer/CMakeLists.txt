@@ -1,6 +1,7 @@
 # Shared, platform-independent rendering ABI. Always compiled, even when no
 # native driver is enabled, so backends cannot silently fork its contracts.
 add_library(SIRGraphics STATIC
+    Graph/SIRFrameGraph.cpp
     SIRGraphicsDriverABI.cpp
     SIRGraphicsModule.cpp
     SIRGraphicsPipelineABI.cpp
