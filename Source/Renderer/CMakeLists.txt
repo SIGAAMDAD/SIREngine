@@ -3,6 +3,8 @@
 add_library(SIRGraphics STATIC
     SIRGraphicsDriverABI.cpp
     SIRGraphicsModule.cpp
+    SIRGraphicsPipelineABI.cpp
+    SIRGraphicsPipelineBridge.cpp
     SIRGraphicsRegistry.cpp
     SIRGraphicsValidation.cpp)
 add_library(SIR::Graphics ALIAS SIRGraphics)
@@ -21,7 +23,6 @@ endif()
 if(SIR_WITH_VULKAN)
     add_subdirectory(Drivers/Vulkan)
 endif()
-
 if(SIR_WITH_OPENGL)
     add_subdirectory(Drivers/OpenGL)
 endif()

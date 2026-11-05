@@ -55,13 +55,13 @@ SIRThreadLocalAllocator::SIRThreadLocalAllocator( void )
 {
 }
 
-void SIRThreadLocalAllocator::lockInbox( sirSeat_t &seat )
+void SIRThreadLocalAllocator::lockInbox( sirSeat_t& seat )
 {
 	while ( seat.InboxLock.testAndSet( SIR_MEMORY_ORDER_ACQUIRE ) ) {
 	}
 }
 
-void SIRThreadLocalAllocator::unlockInbox( sirSeat_t &seat )
+void SIRThreadLocalAllocator::unlockInbox( sirSeat_t& seat )
 {
 	seat.InboxLock.clear( SIR_MEMORY_ORDER_RELEASE );
 }
@@ -100,7 +100,7 @@ bool SIRThreadLocalAllocator::init( SIRMemoryManager *pManager, SIRMemorySegment
 	sirSeat_t *pArray = ( ( sirSeat_t * )( pSeats ) );
 	for ( uint32_t i = 0; i < nSeats; ++i ) {
 		new ( pArray + i ) sirSeat_t();
-		sirSeat_t &seat = pArray[i];
+		sirSeat_t& seat = pArray[i];
 		seat.pInbox = ( ( sirRemoteFree_t * )( pQueue ) ) + ( ( uint64_t )( i ) ) * nInboxCapacity;
 		for ( uint32_t c = 0; c < SIR_CLASSES; ++c ) {
 			SIRMemorySegment *pSegment = ppSegments[i * SIR_CLASSES + c];
@@ -132,7 +132,7 @@ bool SIRThreadLocalAllocator::init( SIRMemoryManager *pManager, SIRMemorySegment
 	return true;
 }
 
-bool SIRThreadLocalAllocator::ownsThread( const sirSeat_t &seat ) const
+bool SIRThreadLocalAllocator::ownsThread( const sirSeat_t& seat ) const
 {
 	return seat.nState.load( SIR_MEMORY_ORDER_ACQUIRE ) == 1 && seat.nOwnerThread == sirGetCurrentThreadOwner();
 }
@@ -142,7 +142,7 @@ bool SIRThreadLocalAllocator::attachThread( uint32_t nSeat )
 	if ( m_pSeats == nullptr || nSeat >= m_nSeatCount || s_ThreadSeat.pAllocator != nullptr ) {
 		return false;
 	}
-	sirSeat_t &seat = m_pSeats[nSeat];
+	sirSeat_t& seat = m_pSeats[nSeat];
 	uint32_t nExpected = 0;
 	if ( !seat.nState.compareExchangeStrong( nExpected, 1, SIR_MEMORY_ORDER_ACQUIRE_RELEASE ) ) {
 		return false;
@@ -165,7 +165,7 @@ bool SIRThreadLocalAllocator::detachThread( void )
 	if ( s_ThreadSeat.pAllocator != this ) {
 		return false;
 	}
-	sirSeat_t &seat = m_pSeats[s_ThreadSeat.nSeat];
+	sirSeat_t& seat = m_pSeats[s_ThreadSeat.nSeat];
 	if ( !ownsThread( seat ) ) {
 		return false;
 	}
@@ -187,7 +187,7 @@ void *SIRThreadLocalAllocator::alloc( uint32_t nBytes, uint32_t nAlignment )
 	if ( s_ThreadSeat.pAllocator != this || nAlignment > m_nAlignment || !SIR_IS_POWER_OF_TWO( nAlignment ) ) {
 		return nullptr;
 	}
-	sirSeat_t &seat = *( ( sirSeat_t * )( s_ThreadSeat.pSeat ) );
+	sirSeat_t& seat = *( ( sirSeat_t * )( s_ThreadSeat.pSeat ) );
 	const uint32_t nClass = SIRSizeClassAllocator::getClassIndex( nBytes );
 	if ( nClass >= SIR_CLASSES ) {
 		return nullptr;
@@ -218,14 +218,14 @@ void *SIRThreadLocalAllocator::alloc( uint32_t nBytes, uint32_t nAlignment )
 	return pMemory;
 }
 
-bool SIRThreadLocalAllocator::freeLocal( sirSeat_t &seat, void *pMemory, uint32_t nBytes, bool bRemote )
+bool SIRThreadLocalAllocator::freeLocal( sirSeat_t& seat, void *pMemory, uint32_t nBytes, bool bRemote )
 {
 	const uint32_t nClass = SIRSizeClassAllocator::getClassIndex( nBytes );
 	uint64_t nSlot = 0;
 	if ( nClass >= SIR_CLASSES || seat.nLiveBytes < nBytes || !seat.Classes[nClass].getSlotIndex( pMemory, &nSlot ) ) {
 		return false;
 	}
-	SIRAtomic<uint8_t> &claim = seat.pSlotClaims[nClass][nSlot];
+	SIRAtomic<uint8_t>& claim = seat.pSlotClaims[nClass][nSlot];
 	uint8_t nExpected = bRemote ? 2 : 1;
 	if ( !claim.compareExchangeStrong( nExpected, 0, SIR_MEMORY_ORDER_ACQUIRE_RELEASE ) ) {
 		return false;
@@ -244,7 +244,7 @@ bool SIRThreadLocalAllocator::free( void *pMemory, uint32_t nBytes, uint32_t nAl
 	if ( s_ThreadSeat.pAllocator != this || nAlignment > m_nAlignment || !SIR_IS_POWER_OF_TWO( nAlignment ) ) {
 		return false;
 	}
-	sirSeat_t &seat = *( ( sirSeat_t * )( s_ThreadSeat.pSeat ) );
+	sirSeat_t& seat = *( ( sirSeat_t * )( s_ThreadSeat.pSeat ) );
 	return freeLocal( seat, pMemory, nBytes );
 }
 
@@ -258,7 +258,7 @@ bool SIRThreadLocalAllocator::queueRemoteFree( sirThreadSeatToken_t token, void 
 	if ( nClass >= SIR_CLASSES ) {
 		return false;
 	}
-	sirSeat_t &seat = m_pSeats[token.nSeat];
+	sirSeat_t& seat = m_pSeats[token.nSeat];
 	lockInbox( seat );
 	uint64_t nSlot = 0;
 	const bool bValid = seat.nState.load( SIR_MEMORY_ORDER_ACQUIRE ) == 1 &&
@@ -287,7 +287,7 @@ uint32_t SIRThreadLocalAllocator::drainRemote( uint32_t nMaximum )
 	if ( s_ThreadSeat.pAllocator != this || nMaximum == 0 ) {
 		return 0;
 	}
-	sirSeat_t &seat = *( ( sirSeat_t * )( s_ThreadSeat.pSeat ) );
+	sirSeat_t& seat = *( ( sirSeat_t * )( s_ThreadSeat.pSeat ) );
 	uint32_t nDrained = 0;
 	while ( nDrained < nMaximum ) {
 		lockInbox( seat );
@@ -326,7 +326,7 @@ bool SIRThreadLocalAllocator::trimSeat( uint32_t nSeat, uint32_t nWarmPerClass )
 	if ( drainRemote() == 0 ) {
 		// No queued work or a failed free; proceed only if queue empty.
 	}
-	sirSeat_t &seat = m_pSeats[nSeat];
+	sirSeat_t& seat = m_pSeats[nSeat];
 	lockInbox( seat );
 	const bool bEmpty = seat.nInboxCount == 0;
 	unlockInbox( seat );
@@ -347,13 +347,13 @@ bool SIRThreadLocalAllocator::shutdown( void )
 		return false;
 	}
 	for ( uint32_t i = 0; i < m_nSeatCount; ++i ) {
-		sirSeat_t &seat = m_pSeats[i];
+		sirSeat_t& seat = m_pSeats[i];
 		if ( seat.nState.load( SIR_MEMORY_ORDER_ACQUIRE ) != 0 || seat.nInboxCount != 0 || seat.nLiveBytes != 0 ) {
 			return false;
 		}
 	}
 	for ( uint32_t i = 0; i < m_nSeatCount; ++i ) {
-		sirSeat_t &seat = m_pSeats[i];
+		sirSeat_t& seat = m_pSeats[i];
 		for ( uint32_t c = 0; c < SIR_CLASSES; ++c ) {
 			if ( !seat.Classes[c].shutdown() ) {
 				return false;
@@ -374,7 +374,7 @@ sirThreadAllocatorStats_t SIRThreadLocalAllocator::getStats( void ) const
 		return stats;
 	}
 	for ( uint32_t i = 0; i < m_nSeatCount; ++i ) {
-		const sirSeat_t &seat = m_pSeats[i];
+		const sirSeat_t& seat = m_pSeats[i];
 		// Cold query must occur at quiescent safepoint; live counters are
 		// owner-writable without atomics to keep the allocation path local.
 		stats.nLivePayloadBytes += seat.nLiveBytes;

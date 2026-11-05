@@ -1,4 +1,5 @@
 /*
+
 ===========================================================================
 SIREngine MPLv2 Source Code
 Copyright (C) 2023-2027 Noah Van Til
@@ -55,8 +56,8 @@ class SIRSlabAllocator
 {
 public:
 	SIRSlabAllocator( void );
-	SIRSlabAllocator( const SIRSlabAllocator & ) = delete;
-	SIRSlabAllocator &operator=( const SIRSlabAllocator & ) = delete;
+	SIRSlabAllocator( const SIRSlabAllocator& ) = delete;
+	SIRSlabAllocator& operator=( const SIRSlabAllocator& ) = delete;
 
 	static uint64_t getRequiredMetadataBytes( uint64_t nSegmentBytes, uint64_t nSlabBytes, uint32_t nObjectBytes = 16,
 	                                          uint32_t nAlignment = 16 );

@@ -36,8 +36,8 @@ class SIRBitmapAllocator
 {
 public:
 	SIRBitmapAllocator( void );
-	SIRBitmapAllocator( const SIRBitmapAllocator & ) = delete;
-	SIRBitmapAllocator &operator=( const SIRBitmapAllocator & ) = delete;
+	SIRBitmapAllocator( const SIRBitmapAllocator& ) = delete;
+	SIRBitmapAllocator& operator=( const SIRBitmapAllocator& ) = delete;
 
 	static uint64_t getRequiredMetadataBytes( uint64_t nSegmentBytes, uint32_t nObjectBytes, uint32_t nAlignment = 16 );
 	bool init( SIRMemorySegment *pSegment, uint32_t nObjectBytes, uint32_t nAlignment = 16, uint64_t nCommitIncrementBytes = 0 );

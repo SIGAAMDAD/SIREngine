@@ -94,6 +94,21 @@ static uint32_t sirGLQueryCapabilities( void *pDevice, sirGraphicsABICapabilitie
 	return sirGLBuildCapabilities( &pState->probe, pState->nGeneration, pCapabilities );
 }
 
+static uint32_t sirGLQueryPipelineModelCaps( void *pDevice, uint32_t nModel, sirGraphicsABIPipelineModelCaps_t *pCaps ) noexcept
+{
+	if ( pDevice == nullptr || pCaps == nullptr || pCaps->nSize < sizeof( *pCaps ) ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	const sirGLDevice_t *pState = ( const sirGLDevice_t * )pDevice;
+	if ( pState->pContext == nullptr ) {
+		return SIR_GRAPHICS_DEVICE_LOST;
+	}
+	// The context foundation has no executable graphics or compute pipelines.
+	// No pipeline model may be admitted until native GL programs and draws exist.
+	( void )nModel;
+	return SIR_GRAPHICS_UNSUPPORTED;
+}
+
 static uint32_t sirGLQueryFormat( void *pDevice, sirGraphicsABIFormat_t *pFormat ) noexcept
 {
 	if ( pDevice == nullptr ) {
@@ -294,6 +309,7 @@ static uint32_t sirGLCreateDevice( void *pDriver, const sirGraphicsABIDeviceRequ
 	result.nSize = sizeof( result );
 	result.pDevice = pNew;
 	result.pQueryCapabilities = sirGLQueryCapabilities;
+	result.pQueryPipelineModelCaps = sirGLQueryPipelineModelCaps;
 	result.pQueryFormat = sirGLQueryFormat;
 	result.pPoll = sirGLPoll;
 	result.pWait = sirGLWait;

@@ -48,7 +48,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 		}                                                                                                                                  \
 	} while ( 0 )
 
-static bool testPrimitiveAllocators( SIRMemoryManager &memory, uint64_t nPage )
+static bool testPrimitiveAllocators( SIRMemoryManager& memory, uint64_t nPage )
 {
 	SIRMemorySegment *pLinear = memory.createSegment( "test.linear", nPage * 32 );
 	SIRMemorySegment *pPool = memory.createSegment( "test.pool", nPage * 32 );
@@ -92,7 +92,7 @@ static bool testPrimitiveAllocators( SIRMemoryManager &memory, uint64_t nPage )
 	return true;
 }
 
-static bool testVariableAllocators( SIRMemoryManager &memory, uint64_t nPage )
+static bool testVariableAllocators( SIRMemoryManager& memory, uint64_t nPage )
 {
 	SIRMemorySegment *pTLSF = memory.createSegment( "test.tlsf", nPage * 64 );
 	SIRMemorySegment *pBuddy = memory.createSegment( "test.buddy", nPage * 64 );
@@ -123,7 +123,7 @@ static bool testVariableAllocators( SIRMemoryManager &memory, uint64_t nPage )
 	return true;
 }
 
-static bool testEpochAllocators( SIRMemoryManager &memory, uint64_t nPage )
+static bool testEpochAllocators( SIRMemoryManager& memory, uint64_t nPage )
 {
 	SIRMemorySegment *pFrameA = memory.createSegment( "test.frame.a", nPage * 16 );
 	SIRMemorySegment *pFrameB = memory.createSegment( "test.frame.b", nPage * 16 );
@@ -150,7 +150,7 @@ static bool testEpochAllocators( SIRMemoryManager &memory, uint64_t nPage )
 	return true;
 }
 
-static bool testHandleAllocator( SIRMemoryManager &memory, uint64_t nPage )
+static bool testHandleAllocator( SIRMemoryManager& memory, uint64_t nPage )
 {
 	SIRMemorySegment *pSegment = memory.createSegment( "test.handle", nPage * 32 );
 	SIR_CHECK( pSegment != nullptr );

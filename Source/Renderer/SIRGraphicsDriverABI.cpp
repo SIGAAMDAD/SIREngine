@@ -3,6 +3,7 @@
 SIREngine MPLv2 Source Code
 Copyright (C) 2023-2027 Noah Van Til
 
+
 This Source Code Form is subject to the terms of the Mozilla Public
 License, v2. If a copy of the MPL was not distributed with this
 file, You can obtain one at https://mozilla.org/MPL/2.0/.
@@ -78,7 +79,8 @@ sirGraphicsABIResult_t sirGraphicsValidateABIAdapter( const sirGraphicsABIAdapte
 {
 	if ( pAdapter == nullptr || pAdapter->nSize < sizeof( sirGraphicsABIAdapter_t ) || pAdapter->nBackend < SIR_GRAPHICS_BACKEND_VULKAN ||
 	     pAdapter->nBackend > SIR_GRAPHICS_BACKEND_OPENGL || pAdapter->nKind < SIR_GRAPHICS_ABI_ADAPTER_DISCRETE ||
-	     pAdapter->nKind > SIR_GRAPHICS_ABI_ADAPTER_OTHER || pAdapter->nQueueMask == 0 ||
+	     pAdapter->nKind > SIR_GRAPHICS_ABI_ADAPTER_OTHER || pAdapter->nApiMajor == 0 ||
+	     ( pAdapter->nFeatureMask & ~( ( SIR_GRAPHICS_FEATURE_PRESENT << 1 ) - 1ULL ) ) != 0 || pAdapter->nQueueMask == 0 ||
 	     ( pAdapter->nQueueMask & ~( ( 1U << SIR_GRAPHICS_QUEUE_COUNT ) - 1U ) ) != 0 || pAdapter->nReserved != 0 ||
 	     pAdapter->szName[127] != '\0' ) {
 		return SIR_GRAPHICS_ABI_INVALID_ARGUMENT;
@@ -94,6 +96,15 @@ sirGraphicsABIResult_t sirGraphicsValidateABICapabilities( const sirGraphicsABIC
 	     pInfo->nEnabledQueues == 0 || ( pInfo->nEnabledQueues & ~( ( 1U << SIR_GRAPHICS_QUEUE_COUNT ) - 1U ) ) != 0 ||
 	     pInfo->nMaximumFramesInFlight == 0 || pInfo->nMaximumSamples == 0 || pInfo->nUnifiedMemory > 1 || pInfo->nReserved != 0 ||
 	     ( pInfo->nEnabledFeatures & ~( ( SIR_GRAPHICS_FEATURE_PRESENT << 1 ) - 1ULL ) ) != 0 ) {
+		return SIR_GRAPHICS_ABI_INVALID_ARGUMENT;
+	}
+	const uint32_t nValidModels = ( 1U << SIR_GRAPHICS_PIPELINE_MODEL_FIXED_FUNCTION ) - 1U;
+	if ( pInfo->nPipelineModelMask == 0 || ( pInfo->nPipelineModelMask & ~nValidModels ) != 0 ) {
+		return SIR_GRAPHICS_ABI_INVALID_ARGUMENT;
+	}
+	const bool bFixedModel = ( pInfo->nPipelineModelMask & ( 1U << ( SIR_GRAPHICS_PIPELINE_MODEL_FIXED_FUNCTION - 1 ) ) ) != 0;
+	const bool bFixedFeature = ( pInfo->nEnabledFeatures & SIR_GRAPHICS_FEATURE_FIXED_FUNCTION ) != 0;
+	if ( bFixedModel != bFixedFeature ) {
 		return SIR_GRAPHICS_ABI_INVALID_ARGUMENT;
 	}
 	if ( ( pInfo->nEnabledFeatures & SIR_GRAPHICS_FEATURE_GRAPHICS ) != 0 &&
@@ -136,14 +147,14 @@ sirGraphicsABIResult_t sirGraphicsValidateABIDevice( const sirGraphicsABIDevice_
 {
 	if ( pDevice == nullptr || pDevice->nSize < sizeof( sirGraphicsABIDevice_t ) || pDevice->nReserved != 0 ||
 	     pDevice->pDevice == nullptr || pDevice->pQueryCapabilities == nullptr || pDevice->pQueryFormat == nullptr ||
-	     pDevice->pPoll == nullptr || pDevice->pWait == nullptr || pDevice->pShutdown == nullptr ||
-	     pDevice->pQueryMemoryBudget == nullptr || pDevice->pCreateBuffer == nullptr || pDevice->pCreateTexture == nullptr ||
-	     pDevice->pCreateView == nullptr || pDevice->pCreateSampler == nullptr || pDevice->pCreatePipeline == nullptr ||
-	     pDevice->pCreateBindingSet == nullptr || pDevice->pUpdateBindings == nullptr || pDevice->pMapBuffer == nullptr ||
-	     pDevice->pUnmapBuffer == nullptr || pDevice->pFlushBuffer == nullptr || pDevice->pInvalidateBuffer == nullptr ||
-	     pDevice->pAcquireCommands == nullptr || pDevice->pSubmit == nullptr || pDevice->pRetireResource == nullptr ||
-	     pDevice->pCreateSurface == nullptr || pDevice->pResizeSurface == nullptr || pDevice->pAcquireSurfaceImage == nullptr ||
-	     pDevice->pPresent == nullptr ) {
+	     pDevice->pQueryPipelineModelCaps == nullptr || pDevice->pPoll == nullptr || pDevice->pWait == nullptr ||
+	     pDevice->pShutdown == nullptr || pDevice->pQueryMemoryBudget == nullptr || pDevice->pCreateBuffer == nullptr ||
+	     pDevice->pCreateTexture == nullptr || pDevice->pCreateView == nullptr || pDevice->pCreateSampler == nullptr ||
+	     pDevice->pCreatePipeline == nullptr || pDevice->pCreateBindingSet == nullptr || pDevice->pUpdateBindings == nullptr ||
+	     pDevice->pMapBuffer == nullptr || pDevice->pUnmapBuffer == nullptr || pDevice->pFlushBuffer == nullptr ||
+	     pDevice->pInvalidateBuffer == nullptr || pDevice->pAcquireCommands == nullptr || pDevice->pSubmit == nullptr ||
+	     pDevice->pRetireResource == nullptr || pDevice->pCreateSurface == nullptr || pDevice->pResizeSurface == nullptr ||
+	     pDevice->pAcquireSurfaceImage == nullptr || pDevice->pPresent == nullptr ) {
 		return SIR_GRAPHICS_ABI_INVALID_ARGUMENT;
 	}
 	return SIR_GRAPHICS_ABI_SUCCESS;

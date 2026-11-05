@@ -36,8 +36,8 @@ class SIRFreeListAllocator
 {
 public:
 	SIRFreeListAllocator( void );
-	SIRFreeListAllocator( const SIRFreeListAllocator & ) = delete;
-	SIRFreeListAllocator &operator=( const SIRFreeListAllocator & ) = delete;
+	SIRFreeListAllocator( const SIRFreeListAllocator& ) = delete;
+	SIRFreeListAllocator& operator=( const SIRFreeListAllocator& ) = delete;
 
 	bool init( SIRMemorySegment *pSegment, uint32_t nCommitIncrementBytes = 65536 );
 	void *alloc( uint32_t nBytes, uint32_t nAlignment = 16 );

@@ -117,6 +117,12 @@ int main( void )
 		sirGLTestCheck( driver.pCreateDevice( driver.pDriver, &request, &device ) == SIR_GRAPHICS_SUCCESS,
 		                "real headless GL46 context created" );
 		if ( device.pDevice != nullptr ) {
+			sirGraphicsABIPipelineModelCaps_t model = {};
+			model.nSize = sizeof( model );
+			sirGLTestCheck( device.pQueryPipelineModelCaps != nullptr, "pipeline-model query callback provided" );
+			sirGLTestCheck( device.pQueryPipelineModelCaps( device.pDevice, SIR_GRAPHICS_PIPELINE_MODEL_MODERN, &model ) ==
+			                    SIR_GRAPHICS_UNSUPPORTED,
+			                "unimplemented pipeline model denied" );
 			sirGraphicsABICapabilities_t caps = {};
 			caps.nSize = sizeof( caps );
 			sirGLTestCheck( device.pQueryCapabilities( device.pDevice, &caps ) == SIR_GRAPHICS_SUCCESS, "real GL46 capabilities" );
