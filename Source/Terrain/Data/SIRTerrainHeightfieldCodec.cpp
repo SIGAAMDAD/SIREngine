@@ -81,6 +81,13 @@ static uint32_t sirTerrainChecksum( const uint8_t *pData, size_t nBytes ) noexce
 	return nHash;
 }
 
+static bool sirTerrainSpansOverlap( const void *pLeft, size_t nLeft, const void *pRight, size_t nRight ) noexcept
+{
+	const uintptr_t nL = ( uintptr_t )pLeft;
+	const uintptr_t nR = ( uintptr_t )pRight;
+	return nL <= nR ? nR - nL < nLeft : nL - nR < nRight;
+}
+
 bool SIRTerrainHeightfieldCodec::isValidDescriptor( const sirTerrainRegionDescriptor_t& descriptor ) noexcept
 {
 	return descriptor.nRevision != 0 && SIRTerrainHeightfieldCodec::getEncodedByteCount( descriptor.nResolution ) != 0 &&
@@ -107,6 +114,10 @@ sirTerrainCodecResult_t SIRTerrainHeightfieldCodec::encode( const sirTerrainRegi
 	const size_t nBytes = getEncodedByteCount( descriptor.nResolution );
 	if ( heights.nCapacity < nCount || output.nCapacity < nBytes ) {
 		return SIR_TERRAIN_CODEC_BUFFER_TOO_SMALL;
+	}
+	if ( sirTerrainSpansOverlap( heights.pData, nCount * sizeof( float ), output.pData, nBytes ) ||
+	     sirTerrainSpansOverlap( &descriptor, sizeof( descriptor ), output.pData, nBytes ) ) {
+		return SIR_TERRAIN_CODEC_INVALID_ARGUMENT;
 	}
 	for ( size_t nIndex = 0; nIndex < nCount; ++nIndex ) {
 		if ( !isfinite( heights.pData[nIndex] ) ) {
@@ -147,6 +158,9 @@ sirTerrainCodecResult_t SIRTerrainHeightfieldCodec::inspect( sirTerrainConstByte
                                                              uint64_t nMinimumRevision ) noexcept
 {
 	if ( !input.pData ) {
+		return SIR_TERRAIN_CODEC_INVALID_ARGUMENT;
+	}
+	if ( sirTerrainSpansOverlap( input.pData, input.nCapacity, &descriptor, sizeof( descriptor ) ) ) {
 		return SIR_TERRAIN_CODEC_INVALID_ARGUMENT;
 	}
 	if ( input.nCapacity < HEADER_BYTES ) {
@@ -215,6 +229,12 @@ sirTerrainCodecResult_t SIRTerrainHeightfieldCodec::decode( sirTerrainConstByteS
 	const size_t nCount = ( size_t )decoded.nResolution * decoded.nResolution;
 	if ( output.nCapacity < nCount ) {
 		return SIR_TERRAIN_CODEC_BUFFER_TOO_SMALL;
+	}
+	const size_t nDecodedBytes = nCount * sizeof( float );
+	if ( sirTerrainSpansOverlap( input.pData, input.nCapacity, output.pData, nDecodedBytes ) ||
+	     sirTerrainSpansOverlap( &descriptor, sizeof( descriptor ), output.pData, nDecodedBytes ) ||
+	     sirTerrainSpansOverlap( input.pData, input.nCapacity, &descriptor, sizeof( descriptor ) ) ) {
+		return SIR_TERRAIN_CODEC_INVALID_ARGUMENT;
 	}
 	const double fRange = ( double )decoded.fMaxHeight - decoded.fMinHeight;
 	for ( size_t nIndex = 0; nIndex < nCount; ++nIndex ) {

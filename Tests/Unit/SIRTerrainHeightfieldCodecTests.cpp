@@ -15,6 +15,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Terrain/Data/SIRTerrainHeightfieldCodec.h>
 
+#include <float.h>
 #include <math.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -79,6 +80,76 @@ int main( void )
 	descriptor.fMinHeight = NAN;
 	CHECK( SIRTerrainHeightfieldCodec::encode( descriptor, heights, writable ) == SIR_TERRAIN_CODEC_INVALID_ARGUMENT );
 	descriptor.fMinHeight = -100.0f;
+
+	// Reject buffer aliases before mutating the encoded source, decoded output or descriptor.
+	alignas( sirTerrainRegionDescriptor_t ) uint8_t szAliased[128] = {};
+	memcpy( szAliased, szHeights, sizeof( szHeights ) );
+	CHECK( SIRTerrainHeightfieldCodec::encode( descriptor, { ( const float * )szAliased, 4 }, { szAliased, nBytes } ) ==
+	       SIR_TERRAIN_CODEC_INVALID_ARGUMENT );
+	CHECK( memcmp( szAliased, szHeights, sizeof( szHeights ) ) == 0 );
+	memcpy( szAliased, output.data(), nBytes );
+	CHECK( SIRTerrainHeightfieldCodec::decode( { szAliased, nBytes }, readDescriptor, { ( float * )( szAliased + 64 ), 4 } ) ==
+	       SIR_TERRAIN_CODEC_INVALID_ARGUMENT );
+	CHECK( memcmp( szAliased, output.data(), nBytes ) == 0 );
+	CHECK( SIRTerrainHeightfieldCodec::inspect( { szAliased, nBytes }, *( sirTerrainRegionDescriptor_t * )szAliased ) ==
+	       SIR_TERRAIN_CODEC_INVALID_ARGUMENT );
+	CHECK( memcmp( szAliased, output.data(), nBytes ) == 0 );
+	CHECK( SIRTerrainHeightfieldCodec::decode( { szAliased, nBytes }, *( sirTerrainRegionDescriptor_t * )szAliased, { szDecoded, 4 } ) ==
+	       SIR_TERRAIN_CODEC_INVALID_ARGUMENT );
+	CHECK( memcmp( szAliased, output.data(), nBytes ) == 0 );
+	memcpy( szAliased, &descriptor, sizeof( descriptor ) );
+	CHECK( SIRTerrainHeightfieldCodec::encode( *( const sirTerrainRegionDescriptor_t * )szAliased, heights, { szAliased, nBytes } ) ==
+	       SIR_TERRAIN_CODEC_INVALID_ARGUMENT );
+	CHECK( memcmp( szAliased, &descriptor, sizeof( descriptor ) ) == 0 );
+	CHECK( SIRTerrainHeightfieldCodec::decode( encoded, *( sirTerrainRegionDescriptor_t * )szAliased, { ( float * )szAliased, 4 } ) ==
+	       SIR_TERRAIN_CODEC_INVALID_ARGUMENT );
+
+	// Exercise every short-circuit validation and non-mutating codec failure path.
+	sirTerrainRegionDescriptor_t invalidDescriptor = descriptor;
+	invalidDescriptor.nRevision = 0;
+	CHECK( !SIRTerrainHeightfieldCodec::isValidDescriptor( invalidDescriptor ) );
+	invalidDescriptor = descriptor;
+	invalidDescriptor.nResolution = 0;
+	CHECK( !SIRTerrainHeightfieldCodec::isValidDescriptor( invalidDescriptor ) );
+	invalidDescriptor = descriptor;
+	invalidDescriptor.fMaxHeight = INFINITY;
+	CHECK( !SIRTerrainHeightfieldCodec::isValidDescriptor( invalidDescriptor ) );
+	invalidDescriptor = descriptor;
+	invalidDescriptor.fMaxHeight = descriptor.fMinHeight;
+	CHECK( !SIRTerrainHeightfieldCodec::isValidDescriptor( invalidDescriptor ) );
+	invalidDescriptor = descriptor;
+	invalidDescriptor.fMinHeight = -FLT_MAX;
+	invalidDescriptor.fMaxHeight = FLT_MAX;
+	CHECK( !SIRTerrainHeightfieldCodec::isValidDescriptor( invalidDescriptor ) );
+	CHECK( SIRTerrainHeightfieldCodec::encode( descriptor, { nullptr, 4 }, writable ) == SIR_TERRAIN_CODEC_INVALID_ARGUMENT );
+	CHECK( SIRTerrainHeightfieldCodec::encode( descriptor, heights, { nullptr, nBytes } ) == SIR_TERRAIN_CODEC_INVALID_ARGUMENT );
+	CHECK( SIRTerrainHeightfieldCodec::inspect( { nullptr, nBytes }, readDescriptor ) == SIR_TERRAIN_CODEC_INVALID_ARGUMENT );
+	CHECK( SIRTerrainHeightfieldCodec::inspect( { output.data(), 63 }, readDescriptor ) == SIR_TERRAIN_CODEC_BUFFER_TOO_SMALL );
+	CHECK( SIRTerrainHeightfieldCodec::decode( encoded, readDescriptor, { nullptr, 4 } ) == SIR_TERRAIN_CODEC_INVALID_ARGUMENT );
+
+	std::vector<uint8_t> malformed = output;
+	malformed[6] = 0;
+	CHECK( SIRTerrainHeightfieldCodec::inspect( { malformed.data(), malformed.size() }, readDescriptor ) ==
+	       SIR_TERRAIN_CODEC_INVALID_FORMAT );
+	malformed = output;
+	malformed[8] = 0;
+	CHECK( SIRTerrainHeightfieldCodec::inspect( { malformed.data(), malformed.size() }, readDescriptor ) ==
+	       SIR_TERRAIN_CODEC_INVALID_FORMAT );
+	malformed = output;
+	malformed[28] = 0;
+	CHECK( SIRTerrainHeightfieldCodec::inspect( { malformed.data(), malformed.size() }, readDescriptor ) ==
+	       SIR_TERRAIN_CODEC_INVALID_FORMAT );
+	malformed = output;
+	malformed[0] = '!';
+	CHECK( SIRTerrainHeightfieldCodec::decode( { malformed.data(), malformed.size() }, readDescriptor, decoded ) ==
+	       SIR_TERRAIN_CODEC_INVALID_FORMAT );
+	malformed = output;
+	malformed.push_back( 0 );
+	CHECK( SIRTerrainHeightfieldCodec::inspect( { malformed.data(), malformed.size() }, readDescriptor ) ==
+	       SIR_TERRAIN_CODEC_INVALID_FORMAT );
+	float szLowHeight[4] = { -200.0f, 0.0f, 900.0f, 1200.0f };
+	CHECK( SIRTerrainHeightfieldCodec::encode( descriptor, { szLowHeight, 4 }, secondOutput ) == SIR_TERRAIN_CODEC_SUCCESS );
+	CHECK( identical[64] == 0 && identical[65] == 0 );
 
 	output[67] ^= 1;
 	CHECK( SIRTerrainHeightfieldCodec::inspect( encoded, readDescriptor ) == SIR_TERRAIN_CODEC_BAD_CHECKSUM );
