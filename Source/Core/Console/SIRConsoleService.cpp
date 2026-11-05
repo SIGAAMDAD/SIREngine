@@ -3,6 +3,7 @@
 SIREngine MPLv2 Source Code
 Copyright (C) 2023-2027 Noah Van Til
 
+
 This Source Code Form is subject to the terms of the Mozilla Public
 License, v2. If a copy of the MPL was not distributed with this
 file, You can obtain one at https://mozilla.org/MPL/2.0/.
@@ -480,8 +481,7 @@ sirRegistrationResult_t SIRConsoleService::executeBuiltin( const sirConsoleSubmi
 	}
 	if ( sirConsoleCaseEqual( pszName, "help" ) ) {
 		if ( args.nCount == 1 ) {
-			return outputText( submission.nRequestId, SIR_REGISTRATION_OK,
-			                   "help list get set reset toggle exec (INI Config adapter)" );
+			return outputText( submission.nRequestId, SIR_REGISTRATION_OK, "help list get set reset toggle exec (INI Config adapter)" );
 		}
 		if ( args.nCount != 2 ) {
 			return SIR_REGISTRATION_INVALID_ARGUMENT;
