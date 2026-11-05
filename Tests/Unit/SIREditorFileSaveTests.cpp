@@ -99,6 +99,32 @@ int main( void )
 	sirEditorTestReadExact( szTemporary, "owned by another process", strlen( "owned by another process" ) );
 	assert( remove( szTemporary ) == 0 );
 
+	// Optimistic scene-save guard refuses stale disk revisions without staging.
+	request.pExpectedBytes = pszUpdated;
+	request.nExpectedBytes = strlen( pszUpdated );
+	request.pBytes = pszReplacement;
+	request.nBytes = strlen( pszReplacement );
+	sirEditorTestWriteOriginal( szDestination, "changed outside editor" );
+	assert( sirEditorWriteFileAtomically( request ) == SIR_EDITOR_FILE_SAVE_CONFLICT );
+	sirEditorTestReadExact( szDestination, "changed outside editor", strlen( "changed outside editor" ) );
+	assert( fopen( szTemporary, "rb" ) == nullptr );
+	sirEditorTestWriteOriginal( szDestination, pszUpdated );
+	request.nExpectedBytes -= 1;
+	assert( sirEditorWriteFileAtomically( request ) == SIR_EDITOR_FILE_SAVE_CONFLICT );
+	request.nExpectedBytes += 1;
+	assert( sirEditorWriteFileAtomically( request ) == SIR_EDITOR_FILE_SAVE_OK );
+	sirEditorTestReadExact( szDestination, pszReplacement, strlen( pszReplacement ) );
+
+	// No implicit Save As when an opened destination has been deleted.
+	assert( remove( szDestination ) == 0 );
+	assert( sirEditorWriteFileAtomically( request ) == SIR_EDITOR_FILE_SAVE_CONFLICT );
+	assert( fopen( szTemporary, "rb" ) == nullptr );
+	sirEditorTestWriteOriginal( szDestination, pszUpdated );
+	request.pExpectedBytes = nullptr;
+	request.nExpectedBytes = 0;
+	request.pBytes = pszUpdated;
+	request.nBytes = strlen( pszUpdated );
+
 	// Exercise binary zero bytes and a payload exceeding the Windows 1 MiB
 	// WriteFile chunk bound, including exact byte count and staging cleanup.
 	const size_t nBinaryBytes = 1024 * 1024 + 17;
