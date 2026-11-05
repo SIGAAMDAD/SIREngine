@@ -297,3 +297,9 @@ add_test(NAME core.registration.cooker-cli COMMAND "${CMAKE_COMMAND}"
     "-DSIR_FIXTURES=${PROJECT_SOURCE_DIR}/Tests/Unit/Registration"
     "-DSIR_OUT=${PROJECT_BINARY_DIR}/RegistrationCookerSmoke"
     -P "${PROJECT_SOURCE_DIR}/Tests/Unit/Registration/CookerCLI.cmake")
+
+# P3: typed CVar banks, transactional precedence, latched values and bounded event credits.
+add_executable(SIRCVarRegistryTests CVars/SIRCVarRegistryIntegrationTests.cpp)
+target_link_libraries(SIRCVarRegistryTests PRIVATE SIRRegistrationCookerLib SIR::Core)
+add_test(NAME core.cvars.registry COMMAND SIRCVarRegistryTests)
+sir_configure_owned_target(SIRCVarRegistryTests)

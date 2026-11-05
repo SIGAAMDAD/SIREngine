@@ -1,12 +1,12 @@
 # Console / CVar / Command System — implementation packet
 
 **Branch:** `feature/console-cvars-commands` created from `develop@51666fadadf8112b3b2d5bf919ba11dde55d931b` (2026-11-04).
-**State:** P0 and P1 closed; P2 cooked registration implemented, native Linux/Windows tested and closed (#277). P3-P7 remain.
+**State:** P0 and P1 closed; P2 cooked registration implemented, native Linux/Windows tested and closed (#277). P3 implementation authored and awaiting native CI (#278); P4-P7 remain.
 **Design:** [Architecture](../../Architecture/20-console-cvars-commands.md).
 **Contracts:** [Interfaces](INTERFACES.md).
 **Milestones:** [Roadmap](ROADMAP.md).
 **Verification:** [Acceptance](ACCEPTANCE.md). **P0 contract:** [P0 Freeze](P0_FREEZE.md).
-**P1 implementation:** [P1 Delivery](P1_DELIVERY.md). **P2 implementation:** [P2 Delivery](P2_DELIVERY.md). **Machine task ledger:** [plan.json](plan.json).
+**P1 implementation:** [P1 Delivery](P1_DELIVERY.md). **P2 implementation:** [P2 Delivery](P2_DELIVERY.md). **P3 implementation:** [P3 Delivery](P3_DELIVERY.md). **Machine task ledger:** [plan.json](plan.json).
 
 ## Purpose
 
