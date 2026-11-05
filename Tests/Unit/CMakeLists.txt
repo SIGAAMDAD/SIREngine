@@ -364,5 +364,12 @@ add_test(NAME renderer.virtual-texturing.manifest COMMAND SIRVirtualTextureManif
 set_tests_properties(renderer.virtual-texturing.manifest PROPERTIES LABELS "virtual-texturing;cpu;conformance" TIMEOUT 90)
 sir_configure_owned_target(SIRVirtualTextureManifestTests)
 
+# Prevalidated file interval -> GRDG staging/publication -> borrowed VT manifest.
+add_executable(SIRVirtualTextureResourceIOTests SIRVirtualTextureResourceIOTests.cpp)
+target_link_libraries(SIRVirtualTextureResourceIOTests PRIVATE SIR::Graphics SIR::Resources)
+add_test(NAME renderer.virtual-texturing.grdg-file-io COMMAND SIRVirtualTextureResourceIOTests)
+set_tests_properties(renderer.virtual-texturing.grdg-file-io PROPERTIES LABELS "virtual-texturing;cpu;integration" TIMEOUT 90)
+sir_configure_owned_target(SIRVirtualTextureResourceIOTests)
+
 add_subdirectory(Config)
 include(${CMAKE_CURRENT_SOURCE_DIR}/StringPoolTests.cmake)
