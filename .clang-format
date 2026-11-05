@@ -30,6 +30,7 @@ SpacesInParensOptions:
   InCStyleCasts: true
   Other: true
 PointerAlignment: Right
+ReferenceAlignment: Left
 DerivePointerAlignment: false
 SortIncludes: Never
 IndentCaseLabels: false

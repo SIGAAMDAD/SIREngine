@@ -3,12 +3,12 @@
 #include <Core/Events/SIRSPSCEventRing.h>
 #include <benchmark/benchmark.h>
 
-static void SIRBenchmarkEventCallback( void *pContext, const uint32_t &payload ) noexcept
+static void SIRBenchmarkEventCallback( void *pContext, const uint32_t& payload ) noexcept
 {
 	*( ( uint64_t * )pContext ) += payload;
 }
 
-static void SIRBenchmarkTypedPublish( benchmark::State &state )
+static void SIRBenchmarkTypedPublish( benchmark::State& state )
 {
 	SIREvent<uint32_t, 32> event;
 	uint64_t nTotal = 0;
@@ -28,7 +28,7 @@ static void SIRBenchmarkTypedPublish( benchmark::State &state )
 }
 BENCHMARK( SIRBenchmarkTypedPublish )->Arg( 0 )->Arg( 1 )->Arg( 4 )->Arg( 8 )->Arg( 16 )->Arg( 32 );
 
-static void SIRBenchmarkDirectCall( benchmark::State &state )
+static void SIRBenchmarkDirectCall( benchmark::State& state )
 {
 	uint64_t nTotal = 0;
 	for ( auto _ : state ) {
@@ -39,7 +39,7 @@ static void SIRBenchmarkDirectCall( benchmark::State &state )
 }
 BENCHMARK( SIRBenchmarkDirectCall );
 
-static void SIRBenchmarkStreamAppendDrain( benchmark::State &state )
+static void SIRBenchmarkStreamAppendDrain( benchmark::State& state )
 {
 	SIREventStream<uint32_t, 256> stream;
 	uint64_t nTotal = 0;
@@ -55,7 +55,7 @@ static void SIRBenchmarkStreamAppendDrain( benchmark::State &state )
 }
 BENCHMARK( SIRBenchmarkStreamAppendDrain );
 
-static void SIRBenchmarkRingRoundTrip( benchmark::State &state )
+static void SIRBenchmarkRingRoundTrip( benchmark::State& state )
 {
 	SIRSPSCEventRing<uint32_t, 256> ring;
 	uint32_t nValue = 0;
@@ -75,7 +75,7 @@ BENCHMARK( SIRBenchmarkRingRoundTrip );
 #include <Core/Events/SIREventTimingWheel.h>
 #include <Core/Events/SIREventScheduler.h>
 
-static void SIRBenchmarkStaticTypedPublish( benchmark::State &state )
+static void SIRBenchmarkStaticTypedPublish( benchmark::State& state )
 {
 	SIRStaticEvent<uint32_t, 32> event;
 	uint64_t nTotal = 0;
@@ -94,7 +94,7 @@ static void SIRBenchmarkStaticTypedPublish( benchmark::State &state )
 }
 BENCHMARK( SIRBenchmarkStaticTypedPublish )->Arg( 1 )->Arg( 8 )->Arg( 32 );
 
-static void SIRBenchmarkSpscBatchRoundTrip( benchmark::State &state )
+static void SIRBenchmarkSpscBatchRoundTrip( benchmark::State& state )
 {
 	SIRSPSCEventRing<uint32_t, 256> ring;
 	uint32_t szInput[128]{};
@@ -115,7 +115,7 @@ static void SIRBenchmarkSpscBatchRoundTrip( benchmark::State &state )
 }
 BENCHMARK( SIRBenchmarkSpscBatchRoundTrip )->Arg( 16 )->Arg( 64 )->Arg( 128 );
 
-static void SIRBenchmarkMpscRoundTrip( benchmark::State &state )
+static void SIRBenchmarkMpscRoundTrip( benchmark::State& state )
 {
 	SIRMPSCEventQueue<uint32_t, 256> ingress;
 	uint32_t nOutput = 0;
@@ -130,7 +130,7 @@ static void SIRBenchmarkMpscRoundTrip( benchmark::State &state )
 }
 BENCHMARK( SIRBenchmarkMpscRoundTrip );
 
-static void SIRBenchmarkMailboxBatchPump( benchmark::State &state )
+static void SIRBenchmarkMailboxBatchPump( benchmark::State& state )
 {
 	SIREventMailbox<uint32_t, 2, 256> mailbox;
 	const sirEventProducerHandle_t first = mailbox.registerProducer();
@@ -144,7 +144,7 @@ static void SIRBenchmarkMailboxBatchPump( benchmark::State &state )
 	for ( auto _ : state ) {
 		( void )_;
 		if ( mailbox.publishBatch( first, szBatch, 64 ) != 64 || mailbox.publishBatch( second, szBatch, 64 ) != 64 ||
-		     mailbox.pump( [&nTotal]( const uint32_t &value ) noexcept { nTotal += value; }, 128, 64 ) != 128 ) {
+		     mailbox.pump( [&nTotal]( const uint32_t& value ) noexcept { nTotal += value; }, 128, 64 ) != 128 ) {
 			state.SkipWithError( "mailbox batch pump failed" );
 			break;
 		}
@@ -154,7 +154,7 @@ static void SIRBenchmarkMailboxBatchPump( benchmark::State &state )
 }
 BENCHMARK( SIRBenchmarkMailboxBatchPump );
 
-static void SIRBenchmarkDenseHeapTimers( benchmark::State &state )
+static void SIRBenchmarkDenseHeapTimers( benchmark::State& state )
 {
 	SIREventScheduler<uint32_t, 64> scheduler;
 	uint64_t nTotal = 0;
@@ -178,7 +178,7 @@ static void SIRBenchmarkDenseHeapTimers( benchmark::State &state )
 }
 BENCHMARK( SIRBenchmarkDenseHeapTimers );
 
-static void SIRBenchmarkDenseWheelTimers( benchmark::State &state )
+static void SIRBenchmarkDenseWheelTimers( benchmark::State& state )
 {
 	SIREventTimingWheel<uint32_t, 64, 256> scheduler;
 	uint64_t nTotal = 0;
@@ -210,7 +210,7 @@ BENCHMARK( SIRBenchmarkDenseWheelTimers );
 #include <Core/Events/SIRExternalEventQueue.h>
 #include <Core/Events/SIREventPhaseQueue.h>
 
-static void SIRBenchmarkChannelQueueDispatch( benchmark::State &state )
+static void SIRBenchmarkChannelQueueDispatch( benchmark::State& state )
 {
 	SIRChannelEventQueue<uint32_t, 256> queue;
 	uint64_t nTotal = 0;
@@ -229,7 +229,7 @@ static void SIRBenchmarkChannelQueueDispatch( benchmark::State &state )
 }
 BENCHMARK( SIRBenchmarkChannelQueueDispatch );
 
-static void SIRBenchmarkExternalQueueDispatch( benchmark::State &state )
+static void SIRBenchmarkExternalQueueDispatch( benchmark::State& state )
 {
 	uint32_t szSlots[256];
 	SIRExternalEventQueue<uint32_t> queue;
@@ -249,7 +249,7 @@ static void SIRBenchmarkExternalQueueDispatch( benchmark::State &state )
 }
 BENCHMARK( SIRBenchmarkExternalQueueDispatch );
 
-static void SIRBenchmarkSpscSpanRoundTrip( benchmark::State &state )
+static void SIRBenchmarkSpscSpanRoundTrip( benchmark::State& state )
 {
 	SIRSPSCEventRing<uint32_t, 256> ring;
 	uint32_t szBatch[128];
@@ -278,7 +278,7 @@ static void SIRBenchmarkSpscSpanRoundTrip( benchmark::State &state )
 }
 BENCHMARK( SIRBenchmarkSpscSpanRoundTrip )->Arg( 16 )->Arg( 64 )->Arg( 128 );
 
-static void SIRBenchmarkCoalescedDirtyIDs( benchmark::State &state )
+static void SIRBenchmarkCoalescedDirtyIDs( benchmark::State& state )
 {
 	SIRDirtyEventSet<4096, false> dirty;
 	uint64_t nDelivered = 0;
@@ -298,7 +298,7 @@ static void SIRBenchmarkCoalescedDirtyIDs( benchmark::State &state )
 }
 BENCHMARK( SIRBenchmarkCoalescedDirtyIDs );
 
-static void SIRBenchmarkSparseBitmapWheel( benchmark::State &state )
+static void SIRBenchmarkSparseBitmapWheel( benchmark::State& state )
 {
 	SIREventTimingWheel<uint32_t, 64, 256> wheel;
 	uint64_t nNow = 100000;
@@ -320,11 +320,11 @@ static void SIRBenchmarkSparseBitmapWheel( benchmark::State &state )
 }
 BENCHMARK( SIRBenchmarkSparseBitmapWheel );
 
-static void SIRBenchmarkPhaseBudget( benchmark::State &state )
+static void SIRBenchmarkPhaseBudget( benchmark::State& state )
 {
 	SIRCompactPhaseQueue<uint32_t, 2, 256> queue;
 	uint64_t nTotal = 0;
-	auto callback = []( void *pContext, sirCompactEventRef_t, const uint32_t &payload ) noexcept {
+	auto callback = []( void *pContext, sirCompactEventRef_t, const uint32_t& payload ) noexcept {
 		*( ( uint64_t * )pContext ) += payload;
 	};
 	for ( auto _ : state ) {

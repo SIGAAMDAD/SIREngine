@@ -95,7 +95,7 @@ bool SIRHandleHeap::acquireHandle( uint32_t *pIndex )
 
 void SIRHandleHeap::recycleHandle( uint32_t nIndex )
 {
-	sirHandleDesc_t &desc = m_pHandles[nIndex];
+	sirHandleDesc_t& desc = m_pHandles[nIndex];
 	desc.nStatePin = 0;
 	++desc.nGeneration;
 	if ( desc.nGeneration != 0 ) {
@@ -124,19 +124,19 @@ void SIRHandleHeap::recycleExtent( uint32_t nIndex )
 }
 
 template <bool bSizeTree>
-sirTreeLinks_t &SIRHandleHeap::getLinks( uint32_t nIndex )
+sirTreeLinks_t& SIRHandleHeap::getLinks( uint32_t nIndex )
 {
 	return bSizeTree ? m_pExtents[nIndex].size : m_pExtents[nIndex].address;
 }
 
 template <bool bSizeTree>
-const sirTreeLinks_t &SIRHandleHeap::getLinks( uint32_t nIndex ) const
+const sirTreeLinks_t& SIRHandleHeap::getLinks( uint32_t nIndex ) const
 {
 	return bSizeTree ? m_pExtents[nIndex].size : m_pExtents[nIndex].address;
 }
 
 template <bool bSizeTree>
-uint32_t &SIRHandleHeap::root( void )
+uint32_t& SIRHandleHeap::root( void )
 {
 	return bSizeTree ? m_nSizeRoot : m_nAddressRoot;
 }
@@ -150,8 +150,8 @@ uint32_t SIRHandleHeap::rootValue( void ) const
 template <bool bSizeTree>
 bool SIRHandleHeap::treeLess( uint32_t nLeft, uint32_t nRight ) const
 {
-	const sirHandleHeapExtent_t &left = m_pExtents[nLeft];
-	const sirHandleHeapExtent_t &right = m_pExtents[nRight];
+	const sirHandleHeapExtent_t& left = m_pExtents[nLeft];
+	const sirHandleHeapExtent_t& right = m_pExtents[nRight];
 	if ( bSizeTree && left.nBytes != right.nBytes ) {
 		return left.nBytes < right.nBytes;
 	}
@@ -167,7 +167,7 @@ uint8_t SIRHandleHeap::treeHeight( uint32_t nNode ) const
 template <bool bSizeTree>
 void SIRHandleHeap::updateHeight( uint32_t nNode )
 {
-	sirTreeLinks_t &links = getLinks<bSizeTree>( nNode );
+	sirTreeLinks_t& links = getLinks<bSizeTree>( nNode );
 	const uint8_t nLeft = treeHeight<bSizeTree>( links.nLeft );
 	const uint8_t nRight = treeHeight<bSizeTree>( links.nRight );
 	links.nHeight = ( ( uint8_t )( ( nLeft > nRight ? nLeft : nRight ) + 1 ) );
@@ -229,16 +229,16 @@ void SIRHandleHeap::rebalance( uint32_t nNode )
 	while ( nNode != SIR_HANDLE_NONE ) {
 		const uint8_t nOldHeight = treeHeight<bSizeTree>( nNode );
 		updateHeight<bSizeTree>( nNode );
-		const sirTreeLinks_t &links = getLinks<bSizeTree>( nNode );
+		const sirTreeLinks_t& links = getLinks<bSizeTree>( nNode );
 		const int nBalance = ( ( int )( treeHeight<bSizeTree>( links.nLeft ) ) ) - ( ( int )( treeHeight<bSizeTree>( links.nRight ) ) );
 		if ( nBalance > 1 ) {
-			const sirTreeLinks_t &left = getLinks<bSizeTree>( links.nLeft );
+			const sirTreeLinks_t& left = getLinks<bSizeTree>( links.nLeft );
 			if ( treeHeight<bSizeTree>( left.nRight ) > treeHeight<bSizeTree>( left.nLeft ) ) {
 				rotateLeft<bSizeTree>( links.nLeft );
 			}
 			nNode = rotateRight<bSizeTree>( nNode );
 		} else if ( nBalance < -1 ) {
-			const sirTreeLinks_t &right = getLinks<bSizeTree>( links.nRight );
+			const sirTreeLinks_t& right = getLinks<bSizeTree>( links.nRight );
 			if ( treeHeight<bSizeTree>( right.nLeft ) > treeHeight<bSizeTree>( right.nRight ) ) {
 				rotateRight<bSizeTree>( links.nRight );
 			}
@@ -254,7 +254,7 @@ void SIRHandleHeap::rebalance( uint32_t nNode )
 template <bool bSizeTree>
 void SIRHandleHeap::treeInsert( uint32_t nIndex )
 {
-	sirTreeLinks_t &links = getLinks<bSizeTree>( nIndex );
+	sirTreeLinks_t& links = getLinks<bSizeTree>( nIndex );
 	links.nLeft = SIR_HANDLE_NONE;
 	links.nRight = SIR_HANDLE_NONE;
 	links.nParent = SIR_HANDLE_NONE;
@@ -498,7 +498,7 @@ void *SIRHandleHeap::alloc( uint32_t nBytes, uint32_t nAlignment, sirMemoryHandl
 		}
 		m_nHighWater = ( ( uint32_t )( nEnd ) );
 	} else {
-		sirHandleHeapExtent_t &extent = m_pExtents[nChosenExtent];
+		sirHandleHeapExtent_t& extent = m_pExtents[nChosenExtent];
 		removeExtent( nChosenExtent );
 		if ( nBlockBytes == extent.nBytes ) {
 			recycleExtent( nChosenExtent );
@@ -513,10 +513,10 @@ void *SIRHandleHeap::alloc( uint32_t nBytes, uint32_t nAlignment, sirMemoryHandl
 	if ( !acquireHandle( &nHandleIndex ) ) {
 		return nullptr;
 	}
-	sirHandleDesc_t &desc = m_pHandles[nHandleIndex];
+	sirHandleDesc_t& desc = m_pHandles[nHandleIndex];
 	desc.nBlockOffset = nBlockOffset;
 	desc.nUserOffset = nUserOffset;
-	sirHandleCold_t &cold = m_pCold[nHandleIndex];
+	sirHandleCold_t& cold = m_pCold[nHandleIndex];
 	cold.nBlockBytes = nBlockBytes;
 	cold.nPayloadBytes = nBytes;
 	cold.nAlignment = nAlignment;
@@ -660,8 +660,8 @@ bool SIRHandleHeap::compact( void )
 	uint32_t nPreflightGaps = 0;
 	uint32_t nPreviousEnd = 0;
 	for ( uint32_t i = nSortHead; i != SIR_HANDLE_NONE; i = m_pCold[i].nNextFree ) {
-		const sirHandleDesc_t &desc = m_pHandles[i];
-		const sirHandleCold_t &cold = m_pCold[i];
+		const sirHandleDesc_t& desc = m_pHandles[i];
+		const sirHandleCold_t& cold = m_pCold[i];
 		const uint64_t nOldEnd = ( ( uint64_t )( desc.nBlockOffset ) ) + cold.nBlockBytes;
 		if ( desc.nBlockOffset < nPreviousEnd || nOldEnd > m_nHighWater || desc.nUserOffset < desc.nBlockOffset ||
 		     ( ( uint64_t )( desc.nUserOffset ) ) + cold.nPayloadBytes > nOldEnd ) {
@@ -688,8 +688,8 @@ bool SIRHandleHeap::compact( void )
 
 	uint32_t nCursor = 0;
 	for ( uint32_t i = nSortHead; i != SIR_HANDLE_NONE; i = m_pCold[i].nNextFree ) {
-		sirHandleDesc_t &desc = m_pHandles[i];
-		sirHandleCold_t &cold = m_pCold[i];
+		sirHandleDesc_t& desc = m_pHandles[i];
+		sirHandleCold_t& cold = m_pCold[i];
 		const uint32_t nOldEnd = desc.nBlockOffset + cold.nBlockBytes;
 		if ( ( desc.nStatePin >> 1 ) != 0 ) {
 			nCursor = nOldEnd;
@@ -717,8 +717,8 @@ bool SIRHandleHeap::compact( void )
 	m_nSizeRoot = SIR_HANDLE_NONE;
 	uint32_t nEnd = 0;
 	for ( uint32_t i = nSortHead; i != SIR_HANDLE_NONE; i = m_pCold[i].nNextFree ) {
-		const sirHandleDesc_t &desc = m_pHandles[i];
-		const sirHandleCold_t &cold = m_pCold[i];
+		const sirHandleDesc_t& desc = m_pHandles[i];
+		const sirHandleCold_t& cold = m_pCold[i];
 		if ( desc.nBlockOffset > nEnd && !insertExtent( nEnd, desc.nBlockOffset - nEnd ) ) {
 			return false;
 		}

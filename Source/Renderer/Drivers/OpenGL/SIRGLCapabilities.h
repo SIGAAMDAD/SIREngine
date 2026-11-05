@@ -18,9 +18,11 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <SIRPCH.hpp>
 
+// clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
 	#pragma once
 #endif
+// clang-format on
 
 #include <Renderer/Drivers/OpenGL/SIRGLContext.h>
 

@@ -1,7 +1,7 @@
 #include <Core/SIRApplication.h>
 #include <benchmark/benchmark.h>
 
-static void SIRBenchmarkApplicationTick( benchmark::State &benchmarkState )
+static void SIRBenchmarkApplicationTick( benchmark::State& benchmarkState )
 {
 	SIRApplication application;
 	if ( !application.initialize() ) {
@@ -17,7 +17,7 @@ static void SIRBenchmarkApplicationTick( benchmark::State &benchmarkState )
 	benchmark::DoNotOptimize( application.getTickCount() );
 }
 
-static void SIRBenchmarkApplicationLifecycle( benchmark::State &benchmarkState )
+static void SIRBenchmarkApplicationLifecycle( benchmark::State& benchmarkState )
 {
 	for ( auto _ : benchmarkState ) {
 		( void )_;

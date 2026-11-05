@@ -50,6 +50,114 @@ typedef struct sirGraphicsABIBlendState_s
 	uint32_t nEnabled;
 } sirGraphicsABIBlendState_t;
 
+typedef struct sirGraphicsABIPipelineModelCaps_s
+{
+	uint32_t nSize;
+	uint32_t nDeviceGeneration;
+	uint32_t nModel;
+	uint32_t nExecutionModel;
+	uint32_t nShaderStageMask;
+	uint32_t nQueueMask;
+	uint64_t nRequiredFeatureMask;
+	uint32_t nShaderFormatMask;
+	uint32_t nMaximumTextureUnits;
+	uint32_t nMaximumTextureStages;
+	uint32_t nMaximumFixedLights;
+	uint32_t nMaximumVertexStreams;
+	uint32_t nMaximumVertexAttributes;
+	uint32_t nMaximumVaryings;
+	uint32_t nMaximumConstantSlots;
+	uint32_t nMaximumBindings;
+	uint32_t nMaximumColorAttachments;
+	uint32_t nMaximumSamples;
+	uint32_t nMaximumTextureDimension;
+	uint32_t nMaximumVertexShaderProfile;
+	uint32_t nMaximumFragmentShaderProfile;
+	uint32_t nFixedFeatureMask;
+	uint32_t nFixedTextureOperationMask;
+	uint32_t nFixedFogModeMask;
+	uint32_t nSupportsNPOT;
+	uint32_t nReserved;
+} sirGraphicsABIPipelineModelCaps_t;
+
+typedef struct sirGraphicsABIModernRecipe_s
+{
+	uint32_t nSize;
+	uint32_t nStageMask;
+	uint64_t nRequiredFeatures;
+	uint64_t nBindingLayoutHash;
+	uint64_t nCookedVariantHash;
+} sirGraphicsABIModernRecipe_t;
+
+typedef struct sirGraphicsABIProgrammableRecipe_s
+{
+	uint32_t nSize;
+	uint32_t nVertexShaderProfile;
+	uint32_t nFragmentShaderProfile;
+	uint32_t nTextureUnits;
+	uint32_t nVaryings;
+	uint32_t nConstantSlots;
+	uint32_t nReserved;
+	uint64_t nStateBundleHash;
+} sirGraphicsABIProgrammableRecipe_t;
+
+typedef struct sirGraphicsABIFixedStage_s
+{
+	uint32_t nTextureUnit;
+	uint32_t nCoordinateSet;
+	uint32_t nColorOperation;
+	uint32_t nAlphaOperation;
+	uint32_t nColorArgument0;
+	uint32_t nColorArgument1;
+	uint32_t nAlphaArgument0;
+	uint32_t nAlphaArgument1;
+	float szConstantColor[4];
+} sirGraphicsABIFixedStage_t;
+
+typedef struct sirGraphicsABIFixedLight_s
+{
+	float szPosition[4];
+	float szDirection[4];
+	float szDiffuse[4];
+	float szSpecular[4];
+	float fRange;
+	float fConstantAttenuation;
+	float fLinearAttenuation;
+	float fQuadraticAttenuation;
+} sirGraphicsABIFixedLight_t;
+
+typedef struct sirGraphicsABIFixedMaterial_s
+{
+	float szAmbient[4];
+	float szDiffuse[4];
+	float szSpecular[4];
+	float szEmissive[4];
+	float fPower;
+	uint32_t nReserved;
+} sirGraphicsABIFixedMaterial_t;
+
+typedef struct sirGraphicsABIFixedRecipe_s
+{
+	uint32_t nSize;
+	uint32_t nRequiredFeatures;
+	uint32_t nTextureStageCount;
+	uint32_t nLightCount;
+	const sirGraphicsABIFixedStage_t *pStages;
+	const sirGraphicsABIFixedLight_t *pLights;
+	uint32_t nFogMode;
+	uint32_t nAlphaCompare;
+	float fAlphaReference;
+	float fFogStart;
+	float fFogEnd;
+	float fFogDensity;
+	float szFogColor[4];
+	uint32_t nReserved;
+	sirGraphicsABIFixedMaterial_t material;
+	float szWorld[16];
+	float szView[16];
+	float szProjection[16];
+} sirGraphicsABIFixedRecipe_t;
+
 typedef struct sirGraphicsABIPipeline_s
 {
 	uint32_t nSize;
@@ -71,6 +179,11 @@ typedef struct sirGraphicsABIPipeline_s
 	sirGraphicsABIBlendState_t szBlendStates[8];
 	uint32_t nDepthTest;
 	uint32_t nDepthWrite;
+	uint32_t nModel;
+	uint32_t nReserved;
+	const sirGraphicsABIModernRecipe_t *pModern;
+	const sirGraphicsABIProgrammableRecipe_t *pProgrammable;
+	const sirGraphicsABIFixedRecipe_t *pFixed;
 } sirGraphicsABIPipeline_t;
 
 typedef struct sirGraphicsABIBufferRange_s
@@ -228,6 +341,8 @@ typedef struct sirGraphicsABICommandList_s
 } sirGraphicsABICommandList_t;
 
 static_assert( sizeof( sirGraphicsABIDraw_t ) == 16, "draw ABI layout" );
+static_assert( sizeof( sirGraphicsABIFixedStage_t ) == 48, "fixed stage ABI layout" );
+static_assert( sizeof( sirGraphicsABIFixedLight_t ) == 80, "fixed light ABI layout" );
 static_assert( sizeof( sirGraphicsABIDrawIndexed_t ) == 24, "indexed draw ABI layout" );
 static_assert( sizeof( sirGraphicsABIBufferRange_t ) == 40, "buffer range ABI layout" );
 static_assert( sizeof( sirGraphicsABIColorAttachment_t ) == 40, "attachment ABI layout" );

@@ -112,6 +112,7 @@ typedef struct sirGraphicsABICapabilities_s
 	uint32_t nMaximumFramesInFlight;
 	uint32_t nShaderProfile;
 	uint32_t nUnifiedMemory;
+	uint32_t nPipelineModelMask;
 	uint32_t nReserved;
 } sirGraphicsABICapabilities_t;
 
@@ -148,6 +149,7 @@ typedef struct sirGraphicsABIDevice_s
 	void *pDevice;
 	uint32_t ( *pQueryCapabilities )( void *pDevice, sirGraphicsABICapabilities_t *pInfo );
 	uint32_t ( *pQueryFormat )( void *pDevice, sirGraphicsABIFormat_t *pFormat );
+	uint32_t ( *pQueryPipelineModelCaps )( void *pDevice, uint32_t nModel, sirGraphicsABIPipelineModelCaps_t *pCaps );
 	uint32_t ( *pPoll )( void *pDevice, const sirGraphicsCompletion_t *pCompletion, uint32_t *pComplete );
 	uint32_t ( *pWait )( void *pDevice, const sirGraphicsCompletion_t *pCompletion, uint64_t nTimeoutNs );
 
@@ -210,6 +212,10 @@ sirGraphicsABIResult_t sirGraphicsValidateABIDriver( const sirGraphicsABIDriver_
 sirGraphicsABIResult_t sirGraphicsValidateABIAdapter( const sirGraphicsABIAdapter_t *pAdapter ) noexcept;
 sirGraphicsABIResult_t sirGraphicsValidateABICapabilities( const sirGraphicsABICapabilities_t *pInfo ) noexcept;
 sirGraphicsABIResult_t sirGraphicsValidateABIFormat( const sirGraphicsABIFormat_t *pFormat ) noexcept;
+sirGraphicsABIResult_t sirGraphicsValidateABIPipelineModelCaps( const sirGraphicsABIPipelineModelCaps_t *pCaps ) noexcept;
+sirGraphicsABIResult_t sirGraphicsValidateABIPipelineStructure( const sirGraphicsABIPipeline_t *pPipeline ) noexcept;
+sirGraphicsABIResult_t sirGraphicsValidateABIPipeline( const sirGraphicsABIPipeline_t *pPipeline,
+                                                       const sirGraphicsABIPipelineModelCaps_t *pCaps ) noexcept;
 sirGraphicsABIResult_t sirGraphicsValidateABIDevice( const sirGraphicsABIDevice_t *pDevice ) noexcept;
 sirGraphicsABIResult_t sirGraphicsValidateABICommandList( const sirGraphicsABICommandList_t *pCommands ) noexcept;
 sirGraphicsABIResult_t sirGraphicsSelectABIProfile( const sirGraphicsABICapabilities_t *pInfo, uint32_t *pProfile ) noexcept;

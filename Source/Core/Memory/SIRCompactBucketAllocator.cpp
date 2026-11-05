@@ -132,7 +132,7 @@ bool SIRCompactBucketAllocator::retireRegistered( SIRCompactBucketAllocator *pAl
 	return false;
 }
 
-uint64_t SIRCompactBucketAllocator::getRequiredMetadataBytes( uint64_t nSegmentBytes, const sirCompactBucketConfig_t &config )
+uint64_t SIRCompactBucketAllocator::getRequiredMetadataBytes( uint64_t nSegmentBytes, const sirCompactBucketConfig_t& config )
 {
 	if ( !SIR_IS_POWER_OF_TWO( config.nSlabBytes ) || ( config.nAlignment != 8 && config.nAlignment != 16 ) ||
 	     config.nMaximumSmallBytes == 0 || config.nMaximumSmallBytes > 2048 || config.nWorkerSeats == 0 || config.nClassProfile > 3 ||
@@ -166,7 +166,7 @@ uint64_t SIRCompactBucketAllocator::getRequiredMetadataBytes( uint64_t nSegmentB
 	return nStates + nDesc + nSeatBytes + nQueueBytes + 128;
 }
 
-bool SIRCompactBucketAllocator::init( SIRMemorySegment *pSegment, const sirCompactBucketConfig_t &config )
+bool SIRCompactBucketAllocator::init( SIRMemorySegment *pSegment, const sirCompactBucketConfig_t& config )
 {
 	if ( m_pSegment != nullptr || pSegment == nullptr || config.nSlabBytes < pSegment->getPageSize() ||
 	     config.nSlabBytes % pSegment->getPageSize() != 0 || config.nSlabBytes < config.nMaximumSmallBytes ||
@@ -327,7 +327,7 @@ bool SIRCompactBucketAllocator::findSeat( uint32_t *pSeat ) const
 	if ( m_pSegment == nullptr || s_BucketBinding.pAllocator != this || s_BucketBinding.nSeat >= m_nSeatCount ) {
 		return false;
 	}
-	const sirBucketSeat_t &seat = m_pSeats[s_BucketBinding.nSeat];
+	const sirBucketSeat_t& seat = m_pSeats[s_BucketBinding.nSeat];
 	if ( seat.nOwnerToken.load( SIR_MEMORY_ORDER_ACQUIRE ) != bucketThreadToken() ||
 	     seat.nGeneration.load( SIR_MEMORY_ORDER_ACQUIRE ) != s_BucketBinding.nGeneration ) {
 		return false;
@@ -408,7 +408,7 @@ bool SIRCompactBucketAllocator::claimState( uint32_t nSlab, uint32_t nSlot, uint
 	}
 	const uint32_t nShift = ( nSlot & 31 ) * 2;
 	const uint64_t nMask = 3ull << nShift;
-	SIRAtomic<uint64_t> &word = pWords[nSlot >> 5];
+	SIRAtomic<uint64_t>& word = pWords[nSlot >> 5];
 	uint64_t nOld = word.load( SIR_MEMORY_ORDER_ACQUIRE );
 	for ( ;; ) {
 		if ( ( ( nOld & nMask ) >> nShift ) != nExpected ) {
@@ -513,11 +513,11 @@ void SIRCompactBucketAllocator::releaseStateBlock( SIRAtomic<uint64_t> *pBlock )
 
 void SIRCompactBucketAllocator::linkPartial( uint32_t nSeat, uint32_t nClass, uint32_t nSlab )
 {
-	sirBucketSlab_t &slab = ( *loadSlab( nSlab ) );
+	sirBucketSlab_t& slab = ( *loadSlab( nSlab ) );
 	if ( slab.bInPartial ) {
 		return;
 	}
-	sirBucketSeat_t &seat = m_pSeats[nSeat];
+	sirBucketSeat_t& seat = m_pSeats[nSeat];
 	slab.nPartialPrev = SIR_BUCKET_NONE;
 	slab.nPartialNext = seat.pPartialHead[nClass];
 	if ( slab.nPartialNext != SIR_BUCKET_NONE ) {
@@ -529,11 +529,11 @@ void SIRCompactBucketAllocator::linkPartial( uint32_t nSeat, uint32_t nClass, ui
 
 void SIRCompactBucketAllocator::unlinkPartial( uint32_t nSeat, uint32_t nClass, uint32_t nSlab )
 {
-	sirBucketSlab_t &slab = ( *loadSlab( nSlab ) );
+	sirBucketSlab_t& slab = ( *loadSlab( nSlab ) );
 	if ( !slab.bInPartial ) {
 		return;
 	}
-	sirBucketSeat_t &seat = m_pSeats[nSeat];
+	sirBucketSeat_t& seat = m_pSeats[nSeat];
 	if ( slab.nPartialPrev == SIR_BUCKET_NONE ) {
 		seat.pPartialHead[nClass] = slab.nPartialNext;
 	} else {
@@ -552,7 +552,7 @@ void SIRCompactBucketAllocator::unlinkPartial( uint32_t nSeat, uint32_t nClass, 
 // is visible. The epoch check rejects a token resolved before slab reuse.
 bool SIRCompactBucketAllocator::enterProducer( uint32_t nSlab, uint32_t nEpoch )
 {
-	sirBucketSlab_t &slab = ( *loadSlab( nSlab ) );
+	sirBucketSlab_t& slab = ( *loadSlab( nSlab ) );
 	uint32_t nOld = slab.nAccessGate.load( SIR_MEMORY_ORDER_ACQUIRE );
 	while ( ( nOld & SIR_BUCKET_RETIRED ) == 0 ) {
 		if ( nOld == SIR_BUCKET_RETIRED - 1 ) {
@@ -576,10 +576,10 @@ void SIRCompactBucketAllocator::exitProducer( uint32_t nSlab )
 
 bool SIRCompactBucketAllocator::fillActive( uint32_t nSeat, uint32_t nClass )
 {
-	sirBucketSeat_t &seat = m_pSeats[nSeat];
+	sirBucketSeat_t& seat = m_pSeats[nSeat];
 	// Remote returns are already claimed and published. Reclaim them before
 	// committing an additional slab when the active class just ran out.
-	sirBucketInbox_t &inbox = *seat.pRemote;
+	sirBucketInbox_t& inbox = *seat.pRemote;
 	bool bHasRemote = false;
 	for ( uint32_t i = 0; i < m_nDirtyGroupsPerSeat; ++i ) {
 		bHasRemote |= inbox.pDirtyGroupWords[i].load( SIR_MEMORY_ORDER_ACQUIRE ) != 0;
@@ -589,7 +589,7 @@ bool SIRCompactBucketAllocator::fillActive( uint32_t nSeat, uint32_t nClass )
 	}
 	const uint32_t nActive = seat.pActive[nClass];
 	if ( nActive != SIR_BUCKET_NONE ) {
-		const sirBucketSlab_t &active = *loadSlab( nActive );
+		const sirBucketSlab_t& active = *loadSlab( nActive );
 		if ( active.nFreeHead != SIR_BUCKET_NONE || active.nFresh.load( SIR_MEMORY_ORDER_RELAXED ) < getSlotCapacity( nClass ) ) {
 			return true;
 		}
@@ -643,7 +643,7 @@ bool SIRCompactBucketAllocator::fillActive( uint32_t nSeat, uint32_t nClass )
 		pDescriptor = new ( pStorage ) sirBucketSlab_t();
 		m_pDirectory[nSlab].pDescriptor.store( pDescriptor, SIR_MEMORY_ORDER_RELEASE );
 	}
-	sirBucketSlab_t &slab = *pDescriptor;
+	sirBucketSlab_t& slab = *pDescriptor;
 	SIRAtomic<uint64_t> *pStateBlock = allocateStateBlock();
 	if ( pStateBlock == nullptr ) {
 		slab.nNeutralNext = m_nNeutralHead;
@@ -687,7 +687,7 @@ void *SIRCompactBucketAllocator::alloc( uint32_t nBytes, uint32_t nAlignment )
 		return nullptr;
 	}
 	const uint32_t nClass = m_nClassMap[( nBytes - 1 ) >> m_nAlignmentShift];
-	sirBucketSeat_t &owner = m_pSeats[nSeat];
+	sirBucketSeat_t& owner = m_pSeats[nSeat];
 	uint32_t nSlab = owner.pActive[nClass];
 	// Only the owning seat writes the active descriptor cache. Descriptor
 	// storage is stable until shutdown; neutralization invalidates this slot.
@@ -700,7 +700,7 @@ void *SIRCompactBucketAllocator::alloc( uint32_t nBytes, uint32_t nAlignment )
 		nSlab = owner.pActive[nClass];
 		pDescriptor = owner.pActiveDescriptor[nClass];
 	}
-	sirBucketSlab_t &slab = *pDescriptor;
+	sirBucketSlab_t& slab = *pDescriptor;
 	uint32_t nSlot = slab.nFreeHead;
 	uint8_t *pSlab = m_pBase + ( ( uint64_t )( nSlab ) ) * m_nSlabBytes;
 	if ( nSlot != SIR_BUCKET_NONE ) {
@@ -710,7 +710,7 @@ void *SIRCompactBucketAllocator::alloc( uint32_t nBytes, uint32_t nAlignment )
 		// Recycled slots are exclusively popped by their owning seat. A
 		// single atomic bit-set preserves neighboring remote transitions in
 		// the packed word without the extra CAS retry and load.
-		SIRAtomic<uint64_t> &word = slab.pStates[nSlot >> 5];
+		SIRAtomic<uint64_t>& word = slab.pStates[nSlot >> 5];
 		const uint32_t nShift = ( nSlot & 31 ) * 2;
 		const uint64_t nPrevious = word.fetchOr( 1ull << nShift, SIR_MEMORY_ORDER_ACQUIRE_RELEASE );
 		if ( ( ( nPrevious >> nShift ) & 3ull ) != 0 ) {
@@ -729,7 +729,7 @@ void *SIRCompactBucketAllocator::alloc( uint32_t nBytes, uint32_t nAlignment )
 		// Readers on other threads observe the release-store in resolve().
 		nSlot = slab.nFresh.load( SIR_MEMORY_ORDER_RELAXED );
 		slab.nFresh.store( nSlot + 1, SIR_MEMORY_ORDER_RELEASE );
-		SIRAtomic<uint64_t> &word = slab.pStates[nSlot >> 5];
+		SIRAtomic<uint64_t>& word = slab.pStates[nSlot >> 5];
 		const uint32_t nShift = ( nSlot & 31 ) * 2;
 		const uint64_t nMask = 1ull << nShift;
 		const uint64_t nPrevious = word.fetchOr( nMask, SIR_MEMORY_ORDER_ACQUIRE_RELEASE );
@@ -741,7 +741,7 @@ void *SIRCompactBucketAllocator::alloc( uint32_t nBytes, uint32_t nAlignment )
 			return nullptr;
 		}
 	}
-	sirBucketSeat_t &seat = m_pSeats[nSeat];
+	sirBucketSeat_t& seat = m_pSeats[nSeat];
 	if ( slab.bWarmRetained ) {
 		// Only the owning seat can allocate or drain this slab.
 		slab.bWarmRetained = false;
@@ -808,7 +808,7 @@ uint32_t SIRCompactBucketAllocator::getUsableSize( const void *pMemory ) const
 
 void SIRCompactBucketAllocator::makeNeutral( uint32_t nSlab )
 {
-	sirBucketSlab_t &slab = ( *loadSlab( nSlab ) );
+	sirBucketSlab_t& slab = ( *loadSlab( nSlab ) );
 	if ( slab.nLive != 0 ) {
 		return;
 	}
@@ -852,7 +852,7 @@ void SIRCompactBucketAllocator::makeNeutral( uint32_t nSlab )
 
 void SIRCompactBucketAllocator::releaseSlot( uint32_t nSlab, uint32_t nSlot )
 {
-	sirBucketSlab_t &slab = ( *loadSlab( nSlab ) );
+	sirBucketSlab_t& slab = ( *loadSlab( nSlab ) );
 	const uint32_t nClass = slab.nClass.load( SIR_MEMORY_ORDER_RELAXED );
 	uint8_t *pSlot = m_pBase + ( ( uint64_t )( nSlab ) ) * m_nSlabBytes + nSlot * m_nClassStride[nClass];
 	std::memcpy( pSlot, &slab.nFreeHead, sizeof( uint32_t ) );
@@ -860,7 +860,7 @@ void SIRCompactBucketAllocator::releaseSlot( uint32_t nSlab, uint32_t nSlot )
 	--slab.nLive;
 	const uint32_t nOwnerSeat = slab.nSeat.load( SIR_MEMORY_ORDER_RELAXED );
 	if ( nOwnerSeat < m_nSeatCount ) {
-		sirBucketSeat_t &seat = m_pSeats[nOwnerSeat];
+		sirBucketSeat_t& seat = m_pSeats[nOwnerSeat];
 		if ( seat.nOrphan.load( SIR_MEMORY_ORDER_ACQUIRE ) != 0 ) {
 			seat.nLive.fetchSub( 1, SIR_MEMORY_ORDER_RELAXED );
 		} else {
@@ -900,7 +900,7 @@ bool SIRCompactBucketAllocator::free( void *pMemory )
 	if ( !resolve( pMemory, &loc ) ) {
 		return false;
 	}
-	sirBucketSlab_t &slab = ( *loadSlab( loc.nSlab ) );
+	sirBucketSlab_t& slab = ( *loadSlab( loc.nSlab ) );
 	const uint32_t nSeat = getAttachedSeat();
 	if ( nSeat == slab.nSeat.load( SIR_MEMORY_ORDER_ACQUIRE ) &&
 	     m_pSeats[nSeat].nGeneration.load( SIR_MEMORY_ORDER_ACQUIRE ) == slab.nSeatGeneration.load( SIR_MEMORY_ORDER_ACQUIRE ) ) {
@@ -943,7 +943,7 @@ bool SIRCompactBucketAllocator::free( void *pMemory )
 
 void SIRCompactBucketAllocator::publishDirtySlab( uint32_t nSeat, uint32_t nSlab )
 {
-	sirBucketInbox_t &inbox = *m_pSeats[nSeat].pRemote;
+	sirBucketInbox_t& inbox = *m_pSeats[nSeat].pRemote;
 	const uint32_t nWord = nSlab >> 6;
 	inbox.pDirtySlabWords[nWord].fetchOr( 1ull << ( nSlab & 63 ), SIR_MEMORY_ORDER_RELEASE );
 	inbox.pDirtyGroupWords[nWord >> 6].fetchOr( 1ull << ( nWord & 63 ), SIR_MEMORY_ORDER_RELEASE );
@@ -951,7 +951,7 @@ void SIRCompactBucketAllocator::publishDirtySlab( uint32_t nSeat, uint32_t nSlab
 
 uint32_t SIRCompactBucketAllocator::drainDirtySlab( uint32_t nSeat, uint32_t nSlab, uint32_t nMaximum )
 {
-	sirBucketSlab_t &slab = ( *loadSlab( nSlab ) );
+	sirBucketSlab_t& slab = ( *loadSlab( nSlab ) );
 	if ( slab.nSeat.load( SIR_MEMORY_ORDER_ACQUIRE ) != nSeat || slab.nClass.load( SIR_MEMORY_ORDER_ACQUIRE ) >= m_nClassCount ||
 	     slab.pDirtyStateWords == nullptr ) {
 		return 0;
@@ -1008,7 +1008,7 @@ uint32_t SIRCompactBucketAllocator::drainDirtySlab( uint32_t nSeat, uint32_t nSl
 
 uint32_t SIRCompactBucketAllocator::drainSeat( uint32_t nSeat, uint32_t nMaximum )
 {
-	sirBucketInbox_t &inbox = *m_pSeats[nSeat].pRemote;
+	sirBucketInbox_t& inbox = *m_pSeats[nSeat].pRemote;
 	uint32_t nDrained = 0;
 	for ( uint32_t group = 0; group < m_nDirtyGroupsPerSeat && nDrained < nMaximum; ++group ) {
 		uint64_t nGroups = inbox.pDirtyGroupWords[group].exchange( 0, SIR_MEMORY_ORDER_ACQUIRE_RELEASE );
@@ -1167,7 +1167,7 @@ uint64_t SIRCompactBucketAllocator::trimEmptySlabs( uint32_t nMaximumWarm )
 	uint32_t nWarm = 0;
 	uint64_t nReleased = 0;
 	for ( uint32_t i = m_nNeutralHead; i != SIR_BUCKET_NONE; i = ( *loadSlab( i ) ).nNeutralNext ) {
-		sirBucketSlab_t &slab = ( *loadSlab( i ) );
+		sirBucketSlab_t& slab = ( *loadSlab( i ) );
 		if ( !slab.bCommitted ) {
 			continue;
 		}

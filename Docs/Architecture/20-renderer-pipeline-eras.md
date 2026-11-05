@@ -1,13 +1,13 @@
 # SIREngine renderer pipeline eras — one graphics ABI v1
 
-**Status:** source-grounded architectural contract and implementation plan, **not** an implemented three-era renderer. **Authority:** owner directive on 2026-11-04 to establish modern, programmable and very-legacy pipeline models before further shared driver changes; the shared graphics ABI remains **v1.0** during foundation work.
+**Status:** shared binary ABI v1 pipeline-model types, device discovery, tagged recipes and portable validation implemented; no native three-era renderer has been executed. **Authority:** owner directive on 2026-11-04 to establish modern, programmable and very-legacy pipeline models before further shared driver changes; the shared graphics ABI remains **v1.0** during foundation work.
 
 **Tracked by:** [SIR-ABI-v1 #130](https://github.com/SIGAAMDAD/SIREngine/issues/130); [native convergence #125](https://github.com/SIGAAMDAD/SIREngine/issues/125); [shader program #77](https://github.com/SIGAAMDAD/SIREngine/issues/77) and [legacy shader qualification #89](https://github.com/SIGAAMDAD/SIREngine/issues/89). **Owned branch:** `renderer/shared-driver-api-v1`.
 
 ## Source-backed starting point and gaps
 
 - `SIRGraphicsTypes.h` already defines per-API backend IDs, feature masks, `SIR_GRAPHICS_PIPELINE_GRAPHICS`, `SIR_GRAPHICS_PIPELINE_COMPUTE`, `SIR_GRAPHICS_PIPELINE_FIXED_FUNCTION`, shader payload formats, states and generation-scoped 16-byte handles.
-- `SIRGraphicsDriverABI.h` and `SIRGraphicsABIOperations.h` already define one exported driver factory and device/command callback tables. `sirGraphicsABIPipeline_t` has shaders and raster/depth/blend values but does **not** identify the selected historical pipeline model, expose fixed-function material/stage state or separately enumerate bounded programmable-stage limits.
+- `SIRGraphicsDriverABI.h`, `SIRGraphicsABIOperations.h`, and `SIRGraphicsPipelineABI.cpp` now expose the model-specific device callback, model-tagged pipeline recipes, modern/programmable shader profiles, and shaderless fixed-function lights/materials/stages with portable negative validation.
 - `sirGraphicsSelectABIProfile` currently returns headless-compute/reduced-graphics/modern-graphics levels (0/1/2). It must remain distinct from historical pipeline-model support.
 - The native D3D12 and Vulkan paths live on separate branches. OpenGL and D3D7–11 are not integrated into the shared branch. No three-era native execution or image parity is proven.
 
@@ -48,7 +48,7 @@ This table lists *candidates* and limiting expectations, never automatic promise
 
 ### Shared admission and identity
 
-Proposed global types are `sirGraphicsPipelineModel_t` (`SIR_GRAPHICS_PIPELINE_MODEL_MODERN`, `SIR_GRAPHICS_PIPELINE_MODEL_PROGRAMMABLE`, `SIR_GRAPHICS_PIPELINE_MODEL_FIXED_FUNCTION`), `sirGraphicsExecutionModel_t` (`EXPLICIT`, `STATEFUL_SERIAL`), `sirGraphicsABIPipelineModelCaps_t` and `sirGraphicsABIPipelineRecipe_t`. These **do not exist in source yet**. Names remain proposals until ABI-PM01 lands.
+Implemented global types: `sirGraphicsPipelineModel_t` (modern, programmable, fixed-function), `sirGraphicsExecutionModel_t` (explicit, stateful-serial), and `sirGraphicsABIPipelineModelCaps_t`. `sirGraphicsABIPipeline_t` contains `nModel` and mutually exclusive pointers to the concrete `sirGraphicsABIModernRecipe_t`, `sirGraphicsABIProgrammableRecipe_t` and `sirGraphicsABIFixedRecipe_t`. A separate `sirGraphicsABIPipelineRecipe_t` wrapper is not used.
 
 The v1 device shall enumerate supported pipeline models and query caps per model before pipeline creation. A size-tagged binary capability record shall include:
 - Model bitset and valid execution mode(s), graphics/present queue masks, supported shader stages and corresponding shader language/bytecode profiles; do not confuse shader-stage availability with API version.
@@ -84,7 +84,7 @@ Offline materials cook into compact **shaderless** fixed-function recipes: mater
 
 ## Required ABI v1 discipline
 
-The **binary module ABI stays at major 1 and minor 0** through the pending foundation/era-model freeze. The previously authored `major=2` value is to be reset to 1; no new version numbering will be used simply for adding or rearranging still-unreleased v1 drafts. Keep one entry point and one module boundary across all models. Add model-discovery and tagged-pipeline definitions to the existing *v1* shared headers before native drivers adopt them. The current coarse 0/1/2 classifier is an independent graphics-feature tier; rename/replace it only by an explicit source migration with test updates.
+The **binary module ABI is major 1 and minor 0**, and stays there throughout the foundation. No version increments are permitted simply for completing or rearranging the still-unreleased v1 contracts. Keep one entry point and one module boundary across all models. Add model-discovery and tagged-pipeline definitions to the existing *v1* shared headers before native drivers adopt them. The current coarse 0/1/2 classifier is an independent graphics-feature tier; rename/replace it only by an explicit source migration with test updates.
 
 ## Ownership and implementation order
 
@@ -105,4 +105,19 @@ Dependency graph: **PM00 → PM01 → (PM02 + PM03) → PM04 → PM05**. Work on
 
 Mandatory negative matrix: GL1.3 compute/storage/shader request; D3D7 shader request; D3D8 dual-model but unsupported shader stage; GL2.1 valid FFP plus valid GLSL; GL3.2 **core** FFP request; GL4.6 modern model with *stateful* serial execution; absent sampler unit, over-limit fixed lights/stages, unsupported texture format/NPOT, missing cooked shader/material tier, invalid queue, stale device generation, device loss/resize, capability mismatch on cached recipe.
 
-**Status gate:** architecture planned/published, **no three-model native runtime conformance yet**. Do not close PM01–PM05 on mock tests or source compilation alone.
+**Status gate:** PM01 portable capability and recipe validation is implemented with CPU and dynamic-module mock tests; native Vulkan/D3D12/OpenGL/legacy exports and visual conformance are outstanding. Mock tests and C++ compilation are not native GPU acceptance evidence.
+
+### Implemented PM01 source integration and calling contract
+
+- `sirGraphicsABICapabilities_t::nPipelineModelMask` uses bit `(nModel - 1)`, with model enum values 1/2/3. Drivers report only device-enabled models. `sirGraphicsABIDevice_t::pQueryPipelineModelCaps` returns size-tagged, generation-tagged, requested-model-specific support and limits; `sirGraphicsQueryABIPipelineModelCaps` rejects unadvertised models, malformed responses, unsupported queues/features, and limits exceeding the device's enabled capabilities without mutating the caller's output on failure.
+- `sirGraphicsValidateABIPipelineModelCaps` and `sirGraphicsValidateABIPipeline` validate execution mode, shader formats/stages, fixed-function capability flags, sample counts, rendering format/binding limits and mutually exclusive recipe tags. `sirGraphicsCreateABIPipeline` queries real model caps, validates the recipe, calls the native driver and verifies the returned typed device-generation handle. This host wrapper is the required engine-side creation entry point.
+- Fixed-function recipes carry transformation matrices, bounded texture combiners, material lighting, fixed lights, fog and alpha state. Programmable recipes carry bounded shader profiles and resource-slot demands. Modern recipes carry required feature/stage masks and cooked shader/binding signatures. These records and their stage/light arrays are borrowed for the duration of `pCreatePipeline`; backend-owned persistent pipeline objects must deep-copy any persistent data.
+- `Tests/Unit/SIRGraphicsPipelineABITests.cpp` covers all three model validators and negative cases. `renderer.graphics.binary-module` additionally checks discovery, invalid model generations and modern-compute pipeline creation through an independent mock DLL/DSO. CI acceptance is recorded against the exact branch SHA; these mocks are not implementation of native legacy rendering.
+
+### Source-to-binary pipeline bridge (ABI v1)
+
+The shared C++ `sirGraphicsPipelineDesc_t` now carries an explicit `sirGraphicsPipelineModel_t` and pointers to the **same** typed modern/programmable/fixed-function recipe structs as the binary device table. This avoids a second set of recipe layouts. `sirGraphicsCapabilities_t::nPipelineModelMask` exposes source-level model availability, and `SIRRenderingDevice::queryPipelineModelCaps` requires source-native providers to supply size-tagged, generation-scoped model information. Driver branches must implement that virtual method when adopting this shared v1 contract; their absence of an override is a compile-time convergence obligation.
+
+`sirGraphicsEncodeABIPipeline` (new `SIRGraphicsPipelineBridge.h/.cpp`) converts source C++ shader payloads, topology, bindings, vertex attributes, color/depth formats, blend state and model recipes to the fixed-width binary `sirGraphicsABIPipeline_t`. It makes **no allocations**, preserves all borrowed source pointers for the duration of pipeline creation and leaves the destination untouched when source validation fails. Source validation rejects the old untagged default, conflicting or missing recipe pointers, invalid recipe sizes, and incompatible modern stage/pipeline kinds. `renderer.graphics.pipeline-bridge` tests acceptance and negative cases for all three models. Binary and source APIs remain **one ABI v1.0**; no version increment.
+
+These helpers are source/ABI convergence, **not** native Vulkan/D3D12/GL/legacy pipeline lowering. Backends must still compile and run the native implementations, including accurate device-query responses and hardware image tests, before native integration can be certified.

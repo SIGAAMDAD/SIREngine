@@ -185,6 +185,58 @@ typedef enum sirGraphicsShaderFormat_e : uint32_t
 	SIR_GRAPHICS_SHADER_FIXED_FUNCTION = 5
 } sirGraphicsShaderFormat_t;
 
+// Pipeline era and API execution style are independent capability axes.
+// Values are stable within the still-unreleased shared graphics ABI v1.
+typedef enum sirGraphicsPipelineModel_e : uint32_t
+{
+	SIR_GRAPHICS_PIPELINE_MODEL_MODERN = 1,
+	SIR_GRAPHICS_PIPELINE_MODEL_PROGRAMMABLE = 2,
+	SIR_GRAPHICS_PIPELINE_MODEL_FIXED_FUNCTION = 3
+} sirGraphicsPipelineModel_t;
+
+typedef enum sirGraphicsExecutionModel_e : uint32_t
+{
+	SIR_GRAPHICS_EXECUTION_EXPLICIT = 1,
+	SIR_GRAPHICS_EXECUTION_STATEFUL_SERIAL = 2
+} sirGraphicsExecutionModel_t;
+
+typedef enum sirGraphicsFixedFeature_e : uint32_t
+{
+	SIR_GRAPHICS_FIXED_TRANSFORM = 1U << 0,
+	SIR_GRAPHICS_FIXED_LIGHTING = 1U << 1,
+	SIR_GRAPHICS_FIXED_FOG = 1U << 2,
+	SIR_GRAPHICS_FIXED_ALPHA_TEST = 1U << 3,
+	SIR_GRAPHICS_FIXED_CPU_TRANSFORM = 1U << 4,
+	SIR_GRAPHICS_FIXED_TEXCOORD_GEN = 1U << 5
+} sirGraphicsFixedFeature_t;
+
+typedef enum sirGraphicsFixedTextureOp_e : uint32_t
+{
+	SIR_GRAPHICS_FIXED_OP_DISABLE = 0,
+	SIR_GRAPHICS_FIXED_OP_SELECT = 1,
+	SIR_GRAPHICS_FIXED_OP_MODULATE = 2,
+	SIR_GRAPHICS_FIXED_OP_ADD = 3,
+	SIR_GRAPHICS_FIXED_OP_SUBTRACT = 4,
+	SIR_GRAPHICS_FIXED_OP_INTERPOLATE = 5,
+	SIR_GRAPHICS_FIXED_OP_DOT3 = 6
+} sirGraphicsFixedTextureOp_t;
+
+typedef enum sirGraphicsFixedTextureArg_e : uint32_t
+{
+	SIR_GRAPHICS_FIXED_ARG_TEXTURE = 0,
+	SIR_GRAPHICS_FIXED_ARG_CURRENT = 1,
+	SIR_GRAPHICS_FIXED_ARG_DIFFUSE = 2,
+	SIR_GRAPHICS_FIXED_ARG_CONSTANT = 3
+} sirGraphicsFixedTextureArg_t;
+
+typedef enum sirGraphicsFixedFogMode_e : uint32_t
+{
+	SIR_GRAPHICS_FIXED_FOG_NONE = 0,
+	SIR_GRAPHICS_FIXED_FOG_LINEAR = 1,
+	SIR_GRAPHICS_FIXED_FOG_EXP = 2,
+	SIR_GRAPHICS_FIXED_FOG_EXP2 = 3
+} sirGraphicsFixedFogMode_t;
+
 typedef enum sirGraphicsPipelineType_e : uint32_t
 {
 	SIR_GRAPHICS_PIPELINE_GRAPHICS = 0,
@@ -302,6 +354,13 @@ typedef struct sirGraphicsVersion_s
 	uint32_t nPatch;
 } sirGraphicsVersion_t;
 
+// Source-facing pipeline descriptors borrow the same typed, SDK-neutral
+// era recipes as the v1 binary tables. No parallel recipe layouts.
+typedef struct sirGraphicsABIModernRecipe_s sirGraphicsABIModernRecipe_t;
+typedef struct sirGraphicsABIProgrammableRecipe_s sirGraphicsABIProgrammableRecipe_t;
+typedef struct sirGraphicsABIFixedRecipe_s sirGraphicsABIFixedRecipe_t;
+typedef struct sirGraphicsABIPipelineModelCaps_s sirGraphicsABIPipelineModelCaps_t;
+
 // The slot may be zero. A zero generation or zero device generation is invalid.
 // The backend selects resource-table ownership; no GRDG identity is embedded.
 typedef struct sirGraphicsHandle_s
@@ -332,6 +391,7 @@ typedef struct sirGraphicsCapabilities_s
 	sirGraphicsVersion_t nApiVersion;
 	uint64_t nFeatureMask;
 	uint32_t nQueueMask;
+	uint32_t nPipelineModelMask;
 	uint32_t nMaximumTextureDimension;
 	uint32_t nMaximumColorAttachments;
 	uint32_t nMaximumFramesInFlight;
@@ -409,6 +469,9 @@ typedef struct sirGraphicsViewDesc_s
 	uint32_t nBaseLayer;
 	uint32_t nLayers;
 	uint32_t nUsage;
+	// Texture views use mip/layer ranges; buffer views use byte ranges.
+	uint64_t nBufferOffsetBytes;
+	uint64_t nBufferSizeBytes;
 } sirGraphicsViewDesc_t;
 
 typedef struct sirGraphicsSamplerDesc_s
@@ -481,6 +544,10 @@ typedef struct sirGraphicsPipelineDesc_s
 	sirGraphicsBlendState_t szBlendStates[8];
 	bool bDepthTest;
 	bool bDepthWrite;
+	sirGraphicsPipelineModel_t eModel;
+	const sirGraphicsABIModernRecipe_t *pModern;
+	const sirGraphicsABIProgrammableRecipe_t *pProgrammable;
+	const sirGraphicsABIFixedRecipe_t *pFixed;
 } sirGraphicsPipelineDesc_t;
 
 typedef struct sirGraphicsDescriptorWrite_s
@@ -599,5 +666,6 @@ typedef struct sirGraphicsSurfaceImage_s
 
 static_assert( sizeof( sirGraphicsHandle_t ) == 16, "portable GPU resource handles must occupy 16 bytes" );
 static_assert( sizeof( sirGraphicsCompletion_t ) == 16, "portable GPU fence tokens must occupy 16 bytes" );
+static_assert( sizeof( sirGraphicsViewDesc_t ) == 56, "portable graphics view descriptors must occupy 56 bytes" );
 
 #endif // __SIRENGINE_SIRGRAPHICSTYPES_H__

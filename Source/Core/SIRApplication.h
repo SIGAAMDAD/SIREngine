@@ -49,7 +49,7 @@ public:
 	sirAppState_t getState( void ) const noexcept;
 	uint64_t getTickCount( void ) const noexcept;
 	uint32_t getSystemCount( void ) const noexcept;
-	SIREventRegistry &getEventRegistry( void ) noexcept;
+	SIREventRegistry& getEventRegistry( void ) noexcept;
 
 	bool registerSystem( SIREngineSystem *pSystem ) noexcept;
 	bool initialize( void ) noexcept;

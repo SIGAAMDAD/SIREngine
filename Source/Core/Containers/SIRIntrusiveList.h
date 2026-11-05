@@ -48,10 +48,10 @@ public:
 	{
 		clear();
 	}
-	SIRIntrusiveList( const SIRIntrusiveList & ) = delete;
-	SIRIntrusiveList &operator=( const SIRIntrusiveList & ) = delete;
-	SIRIntrusiveList( SIRIntrusiveList && ) = delete;
-	SIRIntrusiveList &operator=( SIRIntrusiveList && ) = delete;
+	SIRIntrusiveList( const SIRIntrusiveList& ) = delete;
+	SIRIntrusiveList& operator=( const SIRIntrusiveList& ) = delete;
+	SIRIntrusiveList( SIRIntrusiveList&& ) = delete;
+	SIRIntrusiveList& operator=( SIRIntrusiveList&& ) = delete;
 
 	uint32_t getSize( void ) const noexcept
 	{

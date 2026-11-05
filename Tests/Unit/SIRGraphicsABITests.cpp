@@ -85,6 +85,16 @@ static uint32_t testFactory( uint32_t nMajor, uint32_t nMinor, const sirGraphics
 		pDriver->nMajor = 999;
 	} else if ( s_nFactoryMode == 3 ) {
 		return SIR_GRAPHICS_ABI_UNSUPPORTED;
+	} else if ( s_nFactoryMode == 4 ) {
+		return UINT32_MAX;
+	} else if ( s_nFactoryMode == 5 ) {
+		pDriver->pReleaseDriver = nullptr;
+	} else if ( s_nFactoryMode == 6 ) {
+		pDriver->pDriver = nullptr;
+	} else if ( s_nFactoryMode == 7 ) {
+		pDriver->nSize = 1;
+	} else if ( s_nFactoryMode == 8 ) {
+		pDriver->nBackend = 99;
 	}
 	return SIR_GRAPHICS_ABI_SUCCESS;
 }
@@ -148,6 +158,7 @@ static bool testCapabilities( void ) noexcept
 	caps.nMaximumFramesInFlight = 2;
 	caps.nMaximumSamples = 1;
 	caps.nEnabledFeatures = SIR_GRAPHICS_FEATURE_COMPUTE;
+	caps.nPipelineModelMask = 1U << ( SIR_GRAPHICS_PIPELINE_MODEL_MODERN - 1 );
 	uint32_t nProfile = 99;
 	if ( sirGraphicsSelectABIProfile( &caps, &nProfile ) != SIR_GRAPHICS_ABI_SUCCESS || nProfile != 0 ) {
 		return false;
@@ -199,13 +210,122 @@ static bool testLayoutsAndFormats( void ) noexcept
 	return sirGraphicsValidateABIFormat( &format ) == SIR_GRAPHICS_ABI_INVALID_ARGUMENT;
 }
 
+static bool testExtendedNegotiationFailures( void ) noexcept
+{
+	sirGraphicsABIHost_t host = {};
+	host.nSize = sizeof( host );
+	host.nMajor = SIR_GRAPHICS_DRIVER_ABI_MAJOR;
+	host.nMinor = SIR_GRAPHICS_DRIVER_ABI_MINOR;
+	host.pAllocate = testAllocate;
+	host.pFree = testFree;
+	host.pLog = testLog;
+	sirGraphicsABIDriver_t driver = {};
+	driver.nSize = sizeof( driver );
+	if ( sirGraphicsNegotiateDriverABI( testFactory, &host, nullptr ) != SIR_GRAPHICS_INVALID_ARGUMENT )
+		return false;
+	driver.nSize = 1;
+	if ( sirGraphicsNegotiateDriverABI( testFactory, &host, &driver ) != SIR_GRAPHICS_INVALID_ARGUMENT )
+		return false;
+	driver.nSize = sizeof( driver );
+	if ( sirGraphicsNegotiateDriverABI( testFactory, nullptr, &driver ) != SIR_GRAPHICS_INVALID_ARGUMENT )
+		return false;
+	host.pAllocate = nullptr;
+	if ( sirGraphicsNegotiateDriverABI( testFactory, &host, &driver ) != SIR_GRAPHICS_INVALID_ARGUMENT )
+		return false;
+	host.pAllocate = testAllocate;
+	host.pLog = nullptr;
+	if ( sirGraphicsNegotiateDriverABI( testFactory, &host, &driver ) != SIR_GRAPHICS_INVALID_ARGUMENT )
+		return false;
+	host.pLog = testLog;
+	host.nSize = 1;
+	if ( sirGraphicsNegotiateDriverABI( testFactory, &host, &driver ) != SIR_GRAPHICS_INVALID_ARGUMENT )
+		return false;
+	host.nSize = sizeof( host );
+	host.nReserved = 1;
+	if ( sirGraphicsNegotiateDriverABI( testFactory, &host, &driver ) != SIR_GRAPHICS_INVALID_ARGUMENT )
+		return false;
+	host.nReserved = 0;
+	for ( uint32_t mode = 4; mode <= 8; ++mode ) {
+		s_nFactoryMode = mode;
+		const uint32_t expected = mode == 4 ? SIR_GRAPHICS_DRIVER_ERROR : SIR_GRAPHICS_INVALID_ARGUMENT;
+		if ( sirGraphicsNegotiateDriverABI( testFactory, &host, &driver ) != expected || driver.pDriver != nullptr ) {
+			fprintf( stderr, "factory rejection mode %u failed\n", mode );
+			return false;
+		}
+	}
+	s_nFactoryMode = 0;
+	driver.nSize = sizeof( driver );
+	if ( testFactory( SIR_GRAPHICS_DRIVER_ABI_MAJOR, SIR_GRAPHICS_DRIVER_ABI_MINOR, &host, &driver ) != SIR_GRAPHICS_SUCCESS )
+		return false;
+#define CHECK_DRIVER( field, value, expected )                                                                                             \
+	{                                                                                                                                      \
+		sirGraphicsABIDriver_t bad = driver;                                                                                               \
+		bad.field = value;                                                                                                                 \
+		if ( sirGraphicsValidateABIDriver( &bad ) != expected ) {                                                                          \
+			fprintf( stderr, "Driver field rejection failure: %s\n", #field );                                                             \
+			return false;                                                                                                                  \
+		}                                                                                                                                  \
+	}
+	CHECK_DRIVER( nSize, 1, SIR_GRAPHICS_INVALID_ARGUMENT );
+	CHECK_DRIVER( nMajor, 2, SIR_GRAPHICS_VERSION_MISMATCH );
+	CHECK_DRIVER( nBackend, 0, SIR_GRAPHICS_INVALID_ARGUMENT );
+	CHECK_DRIVER( nBackend, 99, SIR_GRAPHICS_INVALID_ARGUMENT );
+	CHECK_DRIVER( pDriver, nullptr, SIR_GRAPHICS_INVALID_ARGUMENT );
+	CHECK_DRIVER( pAdapterCount, nullptr, SIR_GRAPHICS_INVALID_ARGUMENT );
+	CHECK_DRIVER( pQueryAdapter, nullptr, SIR_GRAPHICS_INVALID_ARGUMENT );
+	CHECK_DRIVER( pCreateDevice, nullptr, SIR_GRAPHICS_INVALID_ARGUMENT );
+	CHECK_DRIVER( pDestroyDevice, nullptr, SIR_GRAPHICS_INVALID_ARGUMENT );
+	CHECK_DRIVER( pReleaseDriver, nullptr, SIR_GRAPHICS_INVALID_ARGUMENT );
+#undef CHECK_DRIVER
+	return true;
+}
+
+static bool testProfileBoundaries( void ) noexcept
+{
+	sirGraphicsABICapabilities_t caps = {};
+	caps.nSize = sizeof( caps );
+	caps.nBackend = SIR_GRAPHICS_BACKEND_VULKAN;
+	caps.nAdapterKind = SIR_GRAPHICS_ABI_ADAPTER_INTEGRATED;
+	caps.nDeviceGeneration = 5;
+	caps.nEnabledQueues = 1U << SIR_GRAPHICS_QUEUE_DIRECT;
+	caps.nMaximumSamples = 1;
+	caps.nMaximumFramesInFlight = 2;
+	caps.nPipelineModelMask = 1U << ( SIR_GRAPHICS_PIPELINE_MODEL_MODERN - 1 );
+	uint32_t nProfile = 99;
+	if ( sirGraphicsSelectABIProfile( &caps, nullptr ) != SIR_GRAPHICS_INVALID_ARGUMENT )
+		return false;
+	if ( sirGraphicsSelectABIProfile( &caps, &nProfile ) != SIR_GRAPHICS_UNSUPPORTED || nProfile != 0 )
+		return false;
+	caps.nEnabledFeatures = SIR_GRAPHICS_FEATURE_COMPUTE;
+	if ( sirGraphicsSelectABIProfile( &caps, &nProfile ) != SIR_GRAPHICS_SUCCESS || nProfile != 0 )
+		return false;
+	caps.nEnabledFeatures = SIR_GRAPHICS_FEATURE_GRAPHICS | SIR_GRAPHICS_FEATURE_COMPUTE | SIR_GRAPHICS_FEATURE_SHADER_STORAGE |
+	                        SIR_GRAPHICS_FEATURE_MRT | SIR_GRAPHICS_FEATURE_PRESENT;
+	caps.nMaximumColorAttachments = 4;
+	caps.nMaximumBindings = 16;
+	if ( sirGraphicsSelectABIProfile( &caps, &nProfile ) != SIR_GRAPHICS_SUCCESS || nProfile != 2 )
+		return false;
+	caps.nMaximumColorAttachments = 3;
+	if ( sirGraphicsSelectABIProfile( &caps, &nProfile ) != SIR_GRAPHICS_SUCCESS || nProfile != 1 )
+		return false;
+	caps.nMaximumColorAttachments = 4;
+	caps.nMaximumBindings = 15;
+	if ( sirGraphicsSelectABIProfile( &caps, &nProfile ) != SIR_GRAPHICS_SUCCESS || nProfile != 1 )
+		return false;
+	caps.nMaximumBindings = 16;
+	caps.nEnabledFeatures &= ~SIR_GRAPHICS_FEATURE_PRESENT;
+	if ( sirGraphicsSelectABIProfile( &caps, &nProfile ) != SIR_GRAPHICS_SUCCESS || nProfile != 1 )
+		return false;
+	return true;
+}
+
 int main( void )
 {
-	if ( !testNegotiation() ) {
+	if ( !testNegotiation() || !testExtendedNegotiationFailures() ) {
 		fputs( "graphics.abi.negotiation FAILED\n", stderr );
 		return 1;
 	}
-	if ( !testCapabilities() ) {
+	if ( !testCapabilities() || !testProfileBoundaries() ) {
 		fputs( "graphics.abi.capabilities FAILED\n", stderr );
 		return 2;
 	}
