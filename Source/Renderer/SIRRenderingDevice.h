@@ -78,6 +78,9 @@ public:
 	virtual sirGraphicsBackend_t getBackend( void ) const noexcept = 0;
 	virtual uint32_t getDeviceGeneration( void ) const noexcept = 0;
 	virtual sirGraphicsResult_t queryCapabilities( sirGraphicsCapabilities_t *pCapabilities ) const noexcept = 0;
+	// Device-advertised pipeline-era support; no inference from backend or API version.
+	virtual sirGraphicsResult_t queryPipelineModelCaps( sirGraphicsPipelineModel_t eModel,
+	                                                    sirGraphicsABIPipelineModelCaps_t *pCaps ) const noexcept = 0;
 	virtual sirGraphicsResult_t queryMemoryBudget( sirGraphicsMemoryBudget_t *pBudget ) const noexcept = 0;
 
 	virtual sirGraphicsResult_t createBuffer( const sirGraphicsBufferDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept = 0;

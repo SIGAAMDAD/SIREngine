@@ -1,4 +1,5 @@
 #include <Renderer/SIRGraphicsRegistry.h>
+#include <Renderer/SIRGraphicsABIOperations.h>
 #include <Renderer/SIRGraphicsValidation.h>
 
 #include <stdio.h>
@@ -9,6 +10,8 @@ private:
 	sirGraphicsBackend_t m_eBackend;
 	sirGraphicsAdapterInfo_t m_Adapter = {};
 	uint32_t m_nAdapterCount = 1;
+	sirGraphicsResult_t m_eCountResult = SIR_GRAPHICS_SUCCESS;
+	sirGraphicsResult_t m_eQueryResult = SIR_GRAPHICS_SUCCESS;
 
 public:
 	SIRGraphicsTestDriver( sirGraphicsBackend_t eBackend, uint64_t nFeatures, uint32_t nMajor, uint32_t nMinor, bool bSoftware ) noexcept
@@ -25,6 +28,23 @@ public:
 		m_nAdapterCount = nCount;
 	}
 
+	void setProviderResults( sirGraphicsResult_t eCount, sirGraphicsResult_t eQuery ) noexcept
+	{
+		m_eCountResult = eCount;
+		m_eQueryResult = eQuery;
+	}
+
+	void setFeatures( uint64_t nFeatures ) noexcept
+	{
+		m_Adapter.nFeatureMask = nFeatures;
+	}
+
+	void setMemory( uint64_t nDedicated, uint64_t nShared ) noexcept
+	{
+		m_Adapter.nDedicatedVideoBytes = nDedicated;
+		m_Adapter.nSharedSystemBytes = nShared;
+	}
+
 	sirGraphicsBackend_t getBackend( void ) const noexcept override
 	{
 		return m_eBackend;
@@ -35,6 +55,9 @@ public:
 		if ( pCount == nullptr ) {
 			return SIR_GRAPHICS_INVALID_ARGUMENT;
 		}
+		if ( m_eCountResult != SIR_GRAPHICS_SUCCESS ) {
+			return m_eCountResult;
+		}
 		*pCount = m_nAdapterCount;
 		return SIR_GRAPHICS_SUCCESS;
 	}
@@ -43,6 +66,9 @@ public:
 	{
 		if ( pInfo == nullptr || nAdapterIndex >= m_nAdapterCount ) {
 			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
+		if ( m_eQueryResult != SIR_GRAPHICS_SUCCESS ) {
+			return m_eQueryResult;
 		}
 		*pInfo = m_Adapter;
 		pInfo->nAdapterIndex = nAdapterIndex;
@@ -201,7 +227,7 @@ static bool testRegistry( void ) noexcept
 	SIRGraphicsTestDriver ogl( SIR_GRAPHICS_BACKEND_OPENGL, SIR_GRAPHICS_FEATURE_GRAPHICS, 2, 1, true );
 	SIRGraphicsTestDriver invalid( SIR_GRAPHICS_BACKEND_AUTO, SIR_GRAPHICS_FEATURE_GRAPHICS, 1, 0, false );
 
-	if ( registry.getCount() != 0 || registry.registerDriver( nullptr ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+	if ( registry.getCapacity() == 0 || registry.getCount() != 0 || registry.registerDriver( nullptr ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
 		return false;
 	}
 	if ( registry.registerDriver( &invalid ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
@@ -271,6 +297,189 @@ static bool testRegistry( void ) noexcept
 	}
 	return registry.unregisterDriver( SIR_GRAPHICS_BACKEND_VULKAN ) == SIR_GRAPHICS_SUCCESS &&
 	       registry.unregisterDriver( SIR_GRAPHICS_BACKEND_OPENGL ) == SIR_GRAPHICS_SUCCESS && registry.getCount() == 0;
+}
+
+static bool testRankedSelection( void ) noexcept
+{
+	SIRGraphicsRegistry registry;
+	constexpr uint64_t GRAPHICS = SIR_GRAPHICS_FEATURE_GRAPHICS;
+	constexpr uint64_t COMPUTE = SIR_GRAPHICS_FEATURE_COMPUTE;
+	SIRGraphicsTestDriver software( SIR_GRAPHICS_BACKEND_OPENGL, GRAPHICS | COMPUTE | SIR_GRAPHICS_FEATURE_HDR_OUTPUT, 2, 1, true );
+	SIRGraphicsTestDriver d3d12( SIR_GRAPHICS_BACKEND_D3D12, GRAPHICS | COMPUTE, 12, 0, false );
+	SIRGraphicsTestDriver vulkan( SIR_GRAPHICS_BACKEND_VULKAN, GRAPHICS | COMPUTE, 1, 4, false );
+	d3d12.setMemory( 2048, 0 );
+	vulkan.setMemory( 4096, 0 );
+
+	// Deliberately register software first and Vulkan last.
+	if ( registry.registerDriver( &software ) != SIR_GRAPHICS_SUCCESS || registry.registerDriver( &d3d12 ) != SIR_GRAPHICS_SUCCESS ||
+	     registry.registerDriver( &vulkan ) != SIR_GRAPHICS_SUCCESS ) {
+		return false;
+	}
+
+	sirGraphicsSelection_t selection = {};
+	selection.eBackend = SIR_GRAPHICS_BACKEND_AUTO;
+	selection.nRequiredFeatures = GRAPHICS;
+	selection.bAllowSoftware = true;
+	SIRGraphicsDriver *pDriver = nullptr;
+	sirGraphicsAdapterInfo_t adapter = {};
+
+	if ( registry.selectDriver( selection, &pDriver, &adapter ) != SIR_GRAPHICS_SUCCESS || pDriver != &vulkan ||
+	     adapter.bSoftwareAdapter ) {
+		return false;
+	}
+	// Two otherwise identical adapters from one backend select the lower
+	// stable index deterministically, independent of enumeration order.
+	vulkan.setAdapterCount( 2 );
+	if ( registry.selectDriver( selection, &pDriver, &adapter ) != SIR_GRAPHICS_SUCCESS || pDriver != &vulkan ||
+	     adapter.nAdapterIndex != 0 ) {
+		return false;
+	}
+	vulkan.setAdapterCount( 1 );
+	// Ranking must prefer a larger supported feature set before memory.
+	vulkan.setFeatures( GRAPHICS | COMPUTE | SIR_GRAPHICS_FEATURE_HDR_OUTPUT );
+	vulkan.setMemory( 1, 0 );
+	if ( registry.selectDriver( selection, &pDriver, &adapter ) != SIR_GRAPHICS_SUCCESS || pDriver != &vulkan ) {
+		return false;
+	}
+	vulkan.setFeatures( GRAPHICS | COMPUTE );
+	vulkan.setMemory( 4096, 0 );
+	// When dedicated memory differs but the feature set is the same, select
+	// the eligible device with more reported dedicated memory.
+	vulkan.setMemory( 1024, 0 );
+	if ( registry.selectDriver( selection, &pDriver, &adapter ) != SIR_GRAPHICS_SUCCESS || pDriver != &d3d12 ) {
+		return false;
+	}
+	// Deterministic backend tie-break is independent of registration order.
+	vulkan.setMemory( 2048, 0 );
+	if ( registry.selectDriver( selection, &pDriver, &adapter ) != SIR_GRAPHICS_SUCCESS || pDriver != &vulkan ) {
+		return false;
+	}
+
+	// Shared system memory provides the next deterministic tie-break when
+	// dedicated memory and capabilities are identical.
+	vulkan.setMemory( 2048, 1024 );
+	d3d12.setMemory( 2048, 512 );
+	if ( registry.selectDriver( selection, &pDriver, &adapter ) != SIR_GRAPHICS_SUCCESS || pDriver != &vulkan ) {
+		return false;
+	}
+	d3d12.setMemory( 2048, 2048 );
+	if ( registry.selectDriver( selection, &pDriver, &adapter ) != SIR_GRAPHICS_SUCCESS || pDriver != &d3d12 ) {
+		return false;
+	}
+	vulkan.setMemory( 2048, 0 );
+	d3d12.setMemory( 2048, 0 );
+	// Software is eligible only when the caller permits it, and only after
+	// feature and version checks have excluded every physical candidate.
+	selection.nRequiredFeatures = GRAPHICS | SIR_GRAPHICS_FEATURE_HDR_OUTPUT;
+	if ( registry.selectDriver( selection, &pDriver, &adapter ) != SIR_GRAPHICS_SUCCESS || pDriver != &software ||
+	     !adapter.bSoftwareAdapter ) {
+		return false;
+	}
+	selection.bAllowSoftware = false;
+	if ( registry.selectDriver( selection, &pDriver, &adapter ) != SIR_GRAPHICS_UNSUPPORTED || pDriver != nullptr ) {
+		return false;
+	}
+	selection.bAllowSoftware = true;
+
+	// Explicit backend selection remains strict; no cross-API software path.
+	selection.eBackend = SIR_GRAPHICS_BACKEND_D3D12;
+	if ( registry.selectDriver( selection, &pDriver, &adapter ) != SIR_GRAPHICS_UNSUPPORTED ) {
+		return false;
+	}
+	selection.eBackend = SIR_GRAPHICS_BACKEND_OPENGL;
+	if ( registry.selectDriver( selection, &pDriver, &adapter ) != SIR_GRAPHICS_SUCCESS || pDriver != &software ) {
+		return false;
+	}
+	// API versions cannot be compared across different backend version systems.
+	selection.eBackend = SIR_GRAPHICS_BACKEND_AUTO;
+	selection.nMinimumApiVersion = { 1, 4, 0 };
+	if ( registry.selectDriver( selection, &pDriver, &adapter ) != SIR_GRAPHICS_INVALID_ARGUMENT || pDriver != nullptr ) {
+		return false;
+	}
+	selection.nMinimumApiVersion = {};
+
+	SIRGraphicsRegistry invalidRegistry;
+	SIRGraphicsTestDriver invalid( SIR_GRAPHICS_BACKEND_VULKAN, GRAPHICS, 0, 0, false );
+	if ( invalidRegistry.registerDriver( &invalid ) != SIR_GRAPHICS_SUCCESS ) {
+		return false;
+	}
+	selection.eBackend = SIR_GRAPHICS_BACKEND_VULKAN;
+	selection.nRequiredFeatures = GRAPHICS;
+	if ( invalidRegistry.selectDriver( selection, &pDriver, &adapter ) != SIR_GRAPHICS_DRIVER_ERROR ) {
+		return false;
+	}
+	SIRGraphicsRegistry invalidFeatures;
+	SIRGraphicsTestDriver bogus( SIR_GRAPHICS_BACKEND_VULKAN, GRAPHICS | ( 1ULL << 63 ), 1, 4, false );
+	if ( invalidFeatures.registerDriver( &bogus ) != SIR_GRAPHICS_SUCCESS ) {
+		return false;
+	}
+	return invalidFeatures.selectDriver( selection, &pDriver, &adapter ) == SIR_GRAPHICS_DRIVER_ERROR;
+}
+
+static bool testRegistryBackendFailurePolicy( void ) noexcept
+{
+	SIRGraphicsRegistry registry;
+	SIRGraphicsTestDriver vulkan( SIR_GRAPHICS_BACKEND_VULKAN, SIR_GRAPHICS_FEATURE_GRAPHICS, 1, 4, false );
+	SIRGraphicsTestDriver d3d12( SIR_GRAPHICS_BACKEND_D3D12, SIR_GRAPHICS_FEATURE_GRAPHICS, 12, 0, false );
+	SIRGraphicsTestDriver invalid( ( sirGraphicsBackend_t )99, SIR_GRAPHICS_FEATURE_GRAPHICS, 1, 0, false );
+	if ( registry.registerDriver( &vulkan ) != SIR_GRAPHICS_SUCCESS || registry.registerDriver( &d3d12 ) != SIR_GRAPHICS_SUCCESS ||
+	     registry.registerDriver( &invalid ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return false;
+	}
+	sirGraphicsSelection_t selection = {};
+	selection.eBackend = SIR_GRAPHICS_BACKEND_AUTO;
+	selection.nRequiredFeatures = SIR_GRAPHICS_FEATURE_GRAPHICS;
+	SIRGraphicsDriver *pChosen = nullptr;
+	sirGraphicsAdapterInfo_t adapter = {};
+#define CHECK_REGISTRY( expected, label )                                                                                                  \
+	if ( registry.selectDriver( selection, &pChosen, &adapter ) != expected ) {                                                            \
+		fputs( "Registry error policy: " label "\n", stderr );                                                                             \
+		return false;                                                                                                                      \
+	}
+	vulkan.setProviderResults( SIR_GRAPHICS_DEVICE_LOST, SIR_GRAPHICS_SUCCESS );
+	CHECK_REGISTRY( SIR_GRAPHICS_SUCCESS, "AUTO skips failed adapter count" );
+	if ( pChosen != &d3d12 ) {
+		return false;
+	}
+	selection.eBackend = SIR_GRAPHICS_BACKEND_VULKAN;
+	CHECK_REGISTRY( SIR_GRAPHICS_DEVICE_LOST, "explicit adapter count failure propagates" );
+	selection.eBackend = SIR_GRAPHICS_BACKEND_AUTO;
+	vulkan.setProviderResults( SIR_GRAPHICS_SUCCESS, SIR_GRAPHICS_DEVICE_LOST );
+	CHECK_REGISTRY( SIR_GRAPHICS_SUCCESS, "AUTO skips failed adapter query" );
+	if ( pChosen != &d3d12 ) {
+		return false;
+	}
+	selection.eBackend = SIR_GRAPHICS_BACKEND_VULKAN;
+	CHECK_REGISTRY( SIR_GRAPHICS_DEVICE_LOST, "explicit query failure propagates" );
+	vulkan.setProviderResults( SIR_GRAPHICS_SUCCESS, SIR_GRAPHICS_SUCCESS );
+	vulkan.setAdapterCount( 0 );
+	selection.eBackend = SIR_GRAPHICS_BACKEND_AUTO;
+	CHECK_REGISTRY( SIR_GRAPHICS_SUCCESS, "empty adapter provider skipped" );
+	if ( pChosen != &d3d12 ) {
+		return false;
+	}
+	vulkan.setAdapterCount( 1 );
+	selection.nMinimumApiVersion = { 0, 0, 1 };
+	CHECK_REGISTRY( SIR_GRAPHICS_INVALID_ARGUMENT, "AUTO forbids patch-level API minimum" );
+	selection.eBackend = SIR_GRAPHICS_BACKEND_VULKAN;
+	CHECK_REGISTRY( SIR_GRAPHICS_INVALID_ARGUMENT, "explicit minor without major forbidden" );
+	selection.nMinimumApiVersion = { 1, 4, 1 };
+	CHECK_REGISTRY( SIR_GRAPHICS_UNSUPPORTED, "patch version greater than adapter version" );
+	selection.nMinimumApiVersion = { 1, 4, 0 };
+	CHECK_REGISTRY( SIR_GRAPHICS_SUCCESS, "equal patch version succeeds" );
+	selection.nMinimumApiVersion = { 1, 0, 0 };
+	CHECK_REGISTRY( SIR_GRAPHICS_SUCCESS, "older minor version admitted" );
+	selection.nMinimumApiVersion = { 2, 0, 0 };
+	CHECK_REGISTRY( SIR_GRAPHICS_UNSUPPORTED, "greater API major rejected" );
+	selection.nMinimumApiVersion = {};
+	selection.eBackend = SIR_GRAPHICS_BACKEND_AUTO;
+	if ( registry.selectDriver( selection, &pChosen, nullptr ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return false;
+	}
+	selection.nRequiredFeatures = SIR_GRAPHICS_FEATURE_RAY_TRACING;
+	CHECK_REGISTRY( SIR_GRAPHICS_UNSUPPORTED, "feature floor higher than every adapter" );
+#undef CHECK_REGISTRY
+	return true;
 }
 
 static bool testHandlesAndCompletions( void ) noexcept
@@ -382,8 +591,14 @@ static bool testResourcesAndPipelines( void ) noexcept
 	}
 
 	const uint32_t szFakeShader[] = { 0x07230203, 0, 0, 0 };
+	sirGraphicsABIModernRecipe_t modern = {};
+	modern.nSize = sizeof( modern );
+	modern.nStageMask = SIR_GRAPHICS_STAGE_COMPUTE;
 	sirGraphicsPipelineDesc_t pipeline = {};
 	pipeline.eType = SIR_GRAPHICS_PIPELINE_COMPUTE;
+	pipeline.eModel = SIR_GRAPHICS_PIPELINE_MODEL_MODERN;
+	pipeline.pModern = &modern;
+	pipeline.nSampleCount = 1;
 	pipeline.computeShader = { SIR_GRAPHICS_SHADER_SPIRV, szFakeShader, sizeof( szFakeShader ), 1, "main" };
 	if ( sirGraphicsValidatePipeline( pipeline ) != SIR_GRAPHICS_SUCCESS ) {
 		return false;
@@ -394,6 +609,7 @@ static bool testResourcesAndPipelines( void ) noexcept
 	}
 	pipeline.nAttributeCount = 0;
 	pipeline.eType = SIR_GRAPHICS_PIPELINE_GRAPHICS;
+	modern.nStageMask = SIR_GRAPHICS_STAGE_VERTEX | SIR_GRAPHICS_STAGE_FRAGMENT;
 	pipeline.computeShader = {};
 	pipeline.vertexShader = { SIR_GRAPHICS_SHADER_SPIRV, szFakeShader, sizeof( szFakeShader ), 2, "main" };
 	pipeline.pixelShader = { SIR_GRAPHICS_SHADER_DXIL, szFakeShader, sizeof( szFakeShader ), 3, "main" };
@@ -418,6 +634,11 @@ static bool testResourcesAndPipelines( void ) noexcept
 	pipeline.eType = SIR_GRAPHICS_PIPELINE_FIXED_FUNCTION;
 	pipeline.vertexShader = {};
 	pipeline.pixelShader = {};
+	sirGraphicsABIFixedRecipe_t fixed = {};
+	fixed.nSize = sizeof( fixed );
+	pipeline.eModel = SIR_GRAPHICS_PIPELINE_MODEL_FIXED_FUNCTION;
+	pipeline.pModern = nullptr;
+	pipeline.pFixed = &fixed;
 	return sirGraphicsValidatePipeline( pipeline ) == SIR_GRAPHICS_SUCCESS;
 }
 
@@ -467,11 +688,205 @@ static bool testSubmissions( void ) noexcept
 	return sirGraphicsValidateSubmission( SIR_GRAPHICS_QUEUE_COMPUTE, submission, 27 ) == SIR_GRAPHICS_INVALID_ARGUMENT;
 }
 
+static bool testSubmissionBoundaryMatrix( void ) noexcept
+{
+	SIRGraphicsTestCommandList direct( SIR_GRAPHICS_QUEUE_DIRECT );
+	SIRGraphicsTestCommandList compute( SIR_GRAPHICS_QUEUE_COMPUTE );
+	SIRGraphicsCommandList *szLists[] = { &direct };
+	sirGraphicsCompletion_t wait = { 27, SIR_GRAPHICS_QUEUE_DIRECT, 1 };
+	sirGraphicsSurfaceImage_t image = {};
+	image.hSurface = { 0, 1, 27, SIR_GRAPHICS_HANDLE_SURFACE };
+	image.hImage = { 1, 1, 27, SIR_GRAPHICS_HANDLE_TEXTURE };
+	image.nAcquisitionId = 1;
+	image.nWindowGeneration = 1;
+	sirGraphicsSubmission_t base = { szLists, &wait, &image, 1, 1, 1 };
+#define CHECK_SUBMISSION_BOUNDARY( observed, expected, label )                                                                             \
+	if ( ( observed ) != ( expected ) ) {                                                                                                  \
+		fputs( "Invalid source submission: " label "\n", stderr );                                                                         \
+		return false;                                                                                                                      \
+	}
+	CHECK_SUBMISSION_BOUNDARY( sirGraphicsValidateSubmission( SIR_GRAPHICS_QUEUE_DIRECT, base, 27 ), SIR_GRAPHICS_SUCCESS,
+	                           "valid baseline" );
+	CHECK_SUBMISSION_BOUNDARY( sirGraphicsValidateSubmission( SIR_GRAPHICS_QUEUE_COUNT, base, 27 ), SIR_GRAPHICS_INVALID_ARGUMENT,
+	                           "invalid queue enum" );
+	CHECK_SUBMISSION_BOUNDARY( sirGraphicsValidateSubmission( SIR_GRAPHICS_QUEUE_DIRECT, base, 0 ), SIR_GRAPHICS_INVALID_ARGUMENT,
+	                           "missing generation" );
+	sirGraphicsSubmission_t test = base;
+	test.nCommandListCount = 0;
+	CHECK_SUBMISSION_BOUNDARY( sirGraphicsValidateSubmission( SIR_GRAPHICS_QUEUE_DIRECT, test, 27 ), SIR_GRAPHICS_INVALID_ARGUMENT,
+	                           "zero command lists" );
+	test = base;
+	test.nCommandListCount = 65;
+	CHECK_SUBMISSION_BOUNDARY( sirGraphicsValidateSubmission( SIR_GRAPHICS_QUEUE_DIRECT, test, 27 ), SIR_GRAPHICS_INVALID_ARGUMENT,
+	                           "overfull command list batch" );
+	test = base;
+	test.ppCommandLists = nullptr;
+	CHECK_SUBMISSION_BOUNDARY( sirGraphicsValidateSubmission( SIR_GRAPHICS_QUEUE_DIRECT, test, 27 ), SIR_GRAPHICS_INVALID_ARGUMENT,
+	                           "null command pointer list" );
+	test = base;
+	test.nWaitCount = 65;
+	CHECK_SUBMISSION_BOUNDARY( sirGraphicsValidateSubmission( SIR_GRAPHICS_QUEUE_DIRECT, test, 27 ), SIR_GRAPHICS_INVALID_ARGUMENT,
+	                           "overfull wait batch" );
+	test = base;
+	test.pWaits = nullptr;
+	CHECK_SUBMISSION_BOUNDARY( sirGraphicsValidateSubmission( SIR_GRAPHICS_QUEUE_DIRECT, test, 27 ), SIR_GRAPHICS_INVALID_ARGUMENT,
+	                           "null waits" );
+	test = base;
+	test.nAcquisitionCount = 9;
+	CHECK_SUBMISSION_BOUNDARY( sirGraphicsValidateSubmission( SIR_GRAPHICS_QUEUE_DIRECT, test, 27 ), SIR_GRAPHICS_INVALID_ARGUMENT,
+	                           "overfull acquisitions" );
+	test = base;
+	test.pAcquisitions = nullptr;
+	CHECK_SUBMISSION_BOUNDARY( sirGraphicsValidateSubmission( SIR_GRAPHICS_QUEUE_DIRECT, test, 27 ), SIR_GRAPHICS_INVALID_ARGUMENT,
+	                           "null acquisitions" );
+	SIRGraphicsCommandList *szNull[] = { nullptr };
+	test = base;
+	test.ppCommandLists = szNull;
+	CHECK_SUBMISSION_BOUNDARY( sirGraphicsValidateSubmission( SIR_GRAPHICS_QUEUE_DIRECT, test, 27 ), SIR_GRAPHICS_INVALID_ARGUMENT,
+	                           "null command" );
+	SIRGraphicsCommandList *szWrong[] = { &compute };
+	test = base;
+	test.ppCommandLists = szWrong;
+	CHECK_SUBMISSION_BOUNDARY( sirGraphicsValidateSubmission( SIR_GRAPHICS_QUEUE_DIRECT, test, 27 ), SIR_GRAPHICS_INVALID_ARGUMENT,
+	                           "wrong command queue" );
+	wait.nDeviceGeneration = 28;
+	CHECK_SUBMISSION_BOUNDARY( sirGraphicsValidateSubmission( SIR_GRAPHICS_QUEUE_DIRECT, base, 27 ), SIR_GRAPHICS_INVALID_ARGUMENT,
+	                           "stale wait token" );
+	wait.nDeviceGeneration = 27;
+	wait.eQueue = SIR_GRAPHICS_QUEUE_COUNT;
+	CHECK_SUBMISSION_BOUNDARY( sirGraphicsValidateSubmission( SIR_GRAPHICS_QUEUE_DIRECT, base, 27 ), SIR_GRAPHICS_INVALID_ARGUMENT,
+	                           "invalid wait queue" );
+	wait.eQueue = SIR_GRAPHICS_QUEUE_DIRECT;
+	wait.nValue = 0;
+	CHECK_SUBMISSION_BOUNDARY( sirGraphicsValidateSubmission( SIR_GRAPHICS_QUEUE_DIRECT, base, 27 ), SIR_GRAPHICS_INVALID_ARGUMENT,
+	                           "zero wait value" );
+	wait.nValue = 1;
+	image.hSurface.eType = SIR_GRAPHICS_HANDLE_TEXTURE;
+	CHECK_SUBMISSION_BOUNDARY( sirGraphicsValidateSubmission( SIR_GRAPHICS_QUEUE_DIRECT, base, 27 ), SIR_GRAPHICS_INVALID_ARGUMENT,
+	                           "wrong surface type" );
+	image.hSurface.eType = SIR_GRAPHICS_HANDLE_SURFACE;
+	image.hSurface.nDeviceGeneration = 28;
+	CHECK_SUBMISSION_BOUNDARY( sirGraphicsValidateSubmission( SIR_GRAPHICS_QUEUE_DIRECT, base, 27 ), SIR_GRAPHICS_INVALID_ARGUMENT,
+	                           "stale surface" );
+	image.hSurface.nDeviceGeneration = 27;
+	image.hImage.eType = SIR_GRAPHICS_HANDLE_BUFFER;
+	CHECK_SUBMISSION_BOUNDARY( sirGraphicsValidateSubmission( SIR_GRAPHICS_QUEUE_DIRECT, base, 27 ), SIR_GRAPHICS_INVALID_ARGUMENT,
+	                           "wrong image type" );
+	image.hImage.eType = SIR_GRAPHICS_HANDLE_TEXTURE;
+	image.hImage.nDeviceGeneration = 28;
+	CHECK_SUBMISSION_BOUNDARY( sirGraphicsValidateSubmission( SIR_GRAPHICS_QUEUE_DIRECT, base, 27 ), SIR_GRAPHICS_INVALID_ARGUMENT,
+	                           "stale image" );
+	image.hImage.nDeviceGeneration = 27;
+	image.nAcquisitionId = 0;
+	CHECK_SUBMISSION_BOUNDARY( sirGraphicsValidateSubmission( SIR_GRAPHICS_QUEUE_DIRECT, base, 27 ), SIR_GRAPHICS_INVALID_ARGUMENT,
+	                           "zero acquisition identity" );
+	image.nAcquisitionId = 1;
+	image.nWindowGeneration = 0;
+	CHECK_SUBMISSION_BOUNDARY( sirGraphicsValidateSubmission( SIR_GRAPHICS_QUEUE_DIRECT, base, 27 ), SIR_GRAPHICS_INVALID_ARGUMENT,
+	                           "zero window generation" );
+	image.nWindowGeneration = 1;
+	CHECK_SUBMISSION_BOUNDARY( sirGraphicsValidateSubmission( SIR_GRAPHICS_QUEUE_DIRECT, base, 27 ), SIR_GRAPHICS_SUCCESS,
+	                           "restored valid multi-queue wait and WSI" );
+#undef CHECK_SUBMISSION_BOUNDARY
+	return true;
+}
+
+static bool testSourceResourceBoundaryMatrix( void ) noexcept
+{
+	sirGraphicsBufferDesc_t buffer = {};
+	buffer.nSizeBytes = 256;
+	buffer.nUsage = SIR_GRAPHICS_USAGE_COPY_SOURCE;
+	buffer.eMemory = SIR_GRAPHICS_MEMORY_GPU_LOCAL;
+#define CHECK_RESOURCE( observed, expected, label )                                                                                        \
+	if ( ( observed ) != ( expected ) ) {                                                                                                  \
+		fputs( "Source resource boundary: " label "\n", stderr );                                                                          \
+		return false;                                                                                                                      \
+	}
+	CHECK_RESOURCE( sirGraphicsValidateBuffer( buffer ), SIR_GRAPHICS_SUCCESS, "valid buffer" );
+	buffer.nSizeBytes = 0;
+	CHECK_RESOURCE( sirGraphicsValidateBuffer( buffer ), SIR_GRAPHICS_INVALID_ARGUMENT, "zero byte buffer" );
+	buffer.nSizeBytes = 256;
+	buffer.nUsage = 0;
+	CHECK_RESOURCE( sirGraphicsValidateBuffer( buffer ), SIR_GRAPHICS_INVALID_ARGUMENT, "buffer without usage" );
+	buffer.nUsage = SIR_GRAPHICS_USAGE_DEPTH_STENCIL;
+	CHECK_RESOURCE( sirGraphicsValidateBuffer( buffer ), SIR_GRAPHICS_INVALID_ARGUMENT, "depth attachment buffer" );
+	buffer.nUsage = SIR_GRAPHICS_USAGE_COPY_SOURCE;
+	buffer.eMemory = ( sirGraphicsMemoryClass_t )( SIR_GRAPHICS_MEMORY_TRANSIENT + 1 );
+	CHECK_RESOURCE( sirGraphicsValidateBuffer( buffer ), SIR_GRAPHICS_INVALID_ARGUMENT, "unrecognized buffer memory" );
+	buffer.eMemory = SIR_GRAPHICS_MEMORY_GPU_LOCAL;
+	buffer.nAlignmentBytes = 17;
+	CHECK_RESOURCE( sirGraphicsValidateBuffer( buffer ), SIR_GRAPHICS_INVALID_ARGUMENT, "non-power-of-two alignment" );
+	buffer.nAlignmentBytes = 16;
+	CHECK_RESOURCE( sirGraphicsValidateBuffer( buffer ), SIR_GRAPHICS_SUCCESS, "valid aligned buffer" );
+	sirGraphicsTextureDesc_t texture = {};
+	texture.nWidth = 64;
+	texture.nHeight = 64;
+	texture.nDepth = 1;
+	texture.nArrayLayers = 1;
+	texture.nMipLevels = 1;
+	texture.nSampleCount = 1;
+	texture.nUsage = SIR_GRAPHICS_USAGE_SAMPLED;
+	texture.eDimension = SIR_GRAPHICS_TEXTURE_2D;
+	texture.eFormat = SIR_GRAPHICS_FORMAT_RGBA8_UNORM;
+	texture.eMemory = SIR_GRAPHICS_MEMORY_GPU_LOCAL;
+	CHECK_RESOURCE( sirGraphicsValidateTexture( texture ), SIR_GRAPHICS_SUCCESS, "valid texture" );
+	texture.nWidth = 0;
+	CHECK_RESOURCE( sirGraphicsValidateTexture( texture ), SIR_GRAPHICS_INVALID_ARGUMENT, "zero width" );
+	texture.nWidth = 64;
+	texture.nArrayLayers = 0;
+	CHECK_RESOURCE( sirGraphicsValidateTexture( texture ), SIR_GRAPHICS_INVALID_ARGUMENT, "zero array layers" );
+	texture.nArrayLayers = 1;
+	texture.nSampleCount = 3;
+	CHECK_RESOURCE( sirGraphicsValidateTexture( texture ), SIR_GRAPHICS_INVALID_ARGUMENT, "invalid sample count" );
+	texture.nSampleCount = 1;
+	texture.nUsage = 0;
+	CHECK_RESOURCE( sirGraphicsValidateTexture( texture ), SIR_GRAPHICS_INVALID_ARGUMENT, "missing texture usage" );
+	texture.nUsage = SIR_GRAPHICS_USAGE_SAMPLED;
+	texture.eDimension = SIR_GRAPHICS_TEXTURE_1D;
+	CHECK_RESOURCE( sirGraphicsValidateTexture( texture ), SIR_GRAPHICS_INVALID_ARGUMENT, "nonunit 1D height" );
+	texture.eDimension = SIR_GRAPHICS_TEXTURE_3D;
+	texture.nArrayLayers = 2;
+	CHECK_RESOURCE( sirGraphicsValidateTexture( texture ), SIR_GRAPHICS_INVALID_ARGUMENT, "3D array disallowed" );
+	texture.nArrayLayers = 1;
+	texture.eDimension = SIR_GRAPHICS_TEXTURE_CUBE;
+	CHECK_RESOURCE( sirGraphicsValidateTexture( texture ), SIR_GRAPHICS_INVALID_ARGUMENT, "incomplete cube array" );
+	texture.nArrayLayers = 6;
+	CHECK_RESOURCE( sirGraphicsValidateTexture( texture ), SIR_GRAPHICS_SUCCESS, "valid cube" );
+	texture.nDepth = 2;
+	CHECK_RESOURCE( sirGraphicsValidateTexture( texture ), SIR_GRAPHICS_INVALID_ARGUMENT, "nonunit cube depth" );
+	sirGraphicsSamplerDesc_t sampler = {};
+	sampler.fMaximumAnisotropy = 1.0f;
+	sampler.fMinimumLod = 0.0f;
+	sampler.fMaximumLod = 8.0f;
+	CHECK_RESOURCE( sirGraphicsValidateSampler( sampler ), SIR_GRAPHICS_SUCCESS, "valid sampler" );
+	sampler.eFilter = ( sirGraphicsSamplerFilter_t )( SIR_GRAPHICS_FILTER_ANISOTROPIC + 1 );
+	CHECK_RESOURCE( sirGraphicsValidateSampler( sampler ), SIR_GRAPHICS_INVALID_ARGUMENT, "unknown filter" );
+	sampler.eFilter = SIR_GRAPHICS_FILTER_LINEAR;
+	sampler.eAddressV = ( sirGraphicsAddressMode_t )( SIR_GRAPHICS_ADDRESS_BORDER + 1 );
+	CHECK_RESOURCE( sirGraphicsValidateSampler( sampler ), SIR_GRAPHICS_INVALID_ARGUMENT, "unknown V addressing" );
+	sampler.eAddressV = SIR_GRAPHICS_ADDRESS_CLAMP;
+	sampler.fMaximumAnisotropy = 17;
+	CHECK_RESOURCE( sirGraphicsValidateSampler( sampler ), SIR_GRAPHICS_INVALID_ARGUMENT, "anisotropy overflow" );
+	sampler.fMaximumAnisotropy = 1;
+	sampler.fMinimumLod = 9;
+	CHECK_RESOURCE( sirGraphicsValidateSampler( sampler ), SIR_GRAPHICS_INVALID_ARGUMENT, "min LOD above max LOD" );
+#undef CHECK_RESOURCE
+	return true;
+}
+
 int main( void )
 {
 	if ( !testRegistry() ) {
 		fputs( "graphics.registry FAILED\n", stderr );
 		return 1;
+	}
+	if ( !testRankedSelection() ) {
+		fputs( "graphics.registry.ranking FAILED\n", stderr );
+		return 5;
+	}
+	if ( !testRegistryBackendFailurePolicy() ) {
+		fputs( "graphics.registry.failure-policy FAILED\n", stderr );
+		return 7;
 	}
 	if ( !testHandlesAndCompletions() ) {
 		fputs( "graphics.handles FAILED\n", stderr );
@@ -480,6 +895,10 @@ int main( void )
 	if ( !testResourcesAndPipelines() ) {
 		fputs( "graphics.descriptors FAILED\n", stderr );
 		return 3;
+	}
+	if ( !testSubmissionBoundaryMatrix() || !testSourceResourceBoundaryMatrix() ) {
+		fputs( "graphics.boundaries FAILED\n", stderr );
+		return 6;
 	}
 	if ( !testSubmissions() ) {
 		fputs( "graphics.submissions FAILED\n", stderr );
