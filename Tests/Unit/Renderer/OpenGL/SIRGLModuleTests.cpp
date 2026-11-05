@@ -186,6 +186,18 @@ int main( void )
 				sirGLTestCheck( device.pRetireResource( device.pDevice, hTexture, nullptr ) == SIR_GRAPHICS_INVALID_HANDLE,
 				                "retired texture handle rejected" );
 			}
+			nativeTexture.eFormat = SIR_GRAPHICS_FORMAT_R8_UNORM;
+			sirGraphicsHandle_t hR8Texture = {};
+			sirGLTestCheck( device.pCreateTexture( device.pDevice, &nativeTexture, &hR8Texture ) == SIR_GRAPHICS_SUCCESS,
+			                "R8 storage gated by live GL format support" );
+			if ( hR8Texture.nGeneration != 0 ) {
+				sirGLTestCheck( device.pRetireResource( device.pDevice, hR8Texture, nullptr ) == SIR_GRAPHICS_SUCCESS,
+				                "R8 live format resource retired" );
+			}
+			nativeTexture.eFormat = SIR_GRAPHICS_FORMAT_BGRA8_UNORM;
+			sirGraphicsHandle_t hUnsupported = {};
+			sirGLTestCheck( device.pCreateTexture( device.pDevice, &nativeTexture, &hUnsupported ) == SIR_GRAPHICS_UNSUPPORTED,
+			                "unsupported storage rejected before GL allocation" );
 			uint32_t nForeignResult = 0;
 			std::thread foreign( [&]() { nForeignResult = device.pShutdown( device.pDevice ); } );
 			foreign.join();

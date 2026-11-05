@@ -228,6 +228,13 @@ static uint32_t sirGLCreateTexture( void *pDevice, const sirGraphicsTextureDesc_
 	if ( nStatus != SIR_GRAPHICS_SUCCESS ) {
 		return nStatus;
 	}
+	sirGraphicsABIFormat_t format = {};
+	format.nSize = sizeof( format );
+	format.nFormat = pDesc->eFormat;
+	nStatus = sirGLQueryNativeFormat( &pState->formats, &format );
+	if ( nStatus != SIR_GRAPHICS_SUCCESS ) {
+		return nStatus;
+	}
 	if ( texture.nRequestedBytes > UINT64_MAX - pState->nCommittedResourceBytes ) {
 		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
 	}

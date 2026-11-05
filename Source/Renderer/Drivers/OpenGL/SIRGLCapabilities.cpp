@@ -104,4 +104,3 @@ sirGraphicsResult_t sirGLBuildCapabilities( const sirGLProbe_t *pProbe, uint32_t
 	*pCapabilities = result;
 	return SIR_GRAPHICS_SUCCESS;
 }
-
