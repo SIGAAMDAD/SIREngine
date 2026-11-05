@@ -6,6 +6,7 @@ set(SIR_CORE_PLATFORM_COMMON
     SIRThread.cpp
     SIRSync.cpp
     SIRAtomic.cpp
+    SIRFileSystem.cpp
 )
 
 if(WIN32)
@@ -17,6 +18,7 @@ if(WIN32)
         Windows/SIRDynamicLibraryWindows.cpp
         Windows/SIRPlatformTimeWindows.cpp
         Windows/SIRPlatformProcessWindows.cpp
+        Windows/SIRFileSystemWindows.cpp
     )
     target_link_libraries(SIRCore PRIVATE psapi)
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
@@ -28,6 +30,7 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         Linux/SIRDynamicLibraryLinux.cpp
         Linux/SIRPlatformTimeLinux.cpp
         Linux/SIRPlatformProcessLinux.cpp
+        Linux/SIRFileSystemLinux.cpp
     )
 else()
     message(FATAL_ERROR "SIRCore platform services currently support Windows and Linux")
