@@ -123,7 +123,6 @@ sirGraphicsResult_t sirD3D11QueryFormatSupport( void *pNativeDevice, sirGraphics
 			}
 		}
 	}
-}
-*pSupport = support;
-return SIR_GRAPHICS_SUCCESS;
+	*pSupport = support;
+	return SIR_GRAPHICS_SUCCESS;
 }
