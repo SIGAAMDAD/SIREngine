@@ -1,0 +1,4 @@
+BasedOnStyle: InheritParentConfig
+IndentPPDirectives: BeforeHash
+PPIndentWidth: 4
+UseTab: Always
