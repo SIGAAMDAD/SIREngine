@@ -210,7 +210,15 @@ static bool testPipelineKeys( void ) noexcept
 	     !sirShaderRecipesEqual( recipe, recipe ) ) {
 		return false;
 	}
+	// Two independently cooked binaries with the same source revision
+	// cannot share a PSO index solely because their authored keys match.
 	sirShaderPipelineRecipe_t changed = recipe;
+	changed.nPackageManifestHash++;
+	if ( sirShaderRecipesEqual( recipe, changed ) || sirShaderBuildPortableKey( changed, &key ) != SIR_GRAPHICS_SUCCESS ||
+	     ( key.nLow == baseline.nLow && key.nHigh == baseline.nHigh ) ) {
+		return false;
+	}
+	changed = recipe;
 	changed.pass.bAlphaMasked = false;
 	if ( sirShaderPassSignaturesEqual( recipe.pass, changed.pass ) || sirShaderRecipesEqual( recipe, changed ) ||
 	     sirShaderBuildPortableKey( changed, &key ) != SIR_GRAPHICS_SUCCESS ||
@@ -1293,6 +1301,48 @@ static bool testRemainingNegativeEdges( void ) noexcept
 	return sirShaderResolveRate( eligibility, &eRate ) == SIR_GRAPHICS_SUCCESS && eRate == SIR_SHADER_RATE_FULL;
 }
 
+static bool testDuplicateStagePassRecords( void ) noexcept
+{
+	uint8_t szPackage[192] = {};
+	sirShaderPackageHeader_t header = {};
+	if ( !testBuildPackage( szPackage, 144, &header ) ) {
+		return false;
+	}
+	// Grow a valid one-stage fixture into two records sharing one binary.
+	memmove( szPackage + 184, szPackage + 136, 8 );
+	memmove( szPackage + 160, szPackage + 112, 24 );
+	header.nStageCount = 2;
+	header.nBindingOffset = 160;
+	header.nPayloadOffset = 184;
+	header.nTotalBytes = 192;
+	sirShaderStageRecord_t stage = {};
+	if ( sirShaderDecodeStage( szPackage + 64, 48, &stage ) != SIR_GRAPHICS_SUCCESS ) {
+		return false;
+	}
+	stage.nPayloadOffset = 184;
+	if ( sirShaderEncodeStage( stage, szPackage + 64, 48 ) != SIR_GRAPHICS_SUCCESS ||
+	     sirShaderEncodeStage( stage, szPackage + 112, 48 ) != SIR_GRAPHICS_SUCCESS || !testResignPackage( szPackage, header ) ) {
+		return false;
+	}
+	if ( sirShaderValidatePackage( szPackage, sizeof( szPackage ), SIR_GRAPHICS_SHADER_SPIRV,
+	                               SIR_GRAPHICS_FEATURE_GRAPHICS ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return false;
+	}
+	// The same vertex stage remains legal for a different material pass.
+	stage.ePass = SIR_SHADER_PASS_SHADOW;
+	if ( sirShaderEncodeStage( stage, szPackage + 112, 48 ) != SIR_GRAPHICS_SUCCESS || !testResignPackage( szPackage, header ) ||
+	     sirShaderValidatePackage( szPackage, sizeof( szPackage ), SIR_GRAPHICS_SHADER_SPIRV,
+	                               SIR_GRAPHICS_FEATURE_GRAPHICS ) != SIR_GRAPHICS_SUCCESS ) {
+		return false;
+	}
+	// A distinct stage of the same pass is also legal.
+	stage.ePass = SIR_SHADER_PASS_COLOR;
+	stage.nStageMask = SIR_GRAPHICS_STAGE_FRAGMENT;
+	return sirShaderEncodeStage( stage, szPackage + 112, 48 ) == SIR_GRAPHICS_SUCCESS && testResignPackage( szPackage, header ) &&
+	       sirShaderValidatePackage( szPackage, sizeof( szPackage ), SIR_GRAPHICS_SHADER_SPIRV,
+	                                 SIR_GRAPHICS_FEATURE_GRAPHICS ) == SIR_GRAPHICS_SUCCESS;
+}
+
 typedef struct sirShaderContractTestCase_s
 {
 	const char *pszName;
@@ -1305,6 +1355,7 @@ int main( void )
 	                                                { "corrupt package", testCorruptPackage },
 	                                                { "record negatives", testInvalidRecordEncodings },
 	                                                { "pipeline keys", testPipelineKeys },
+	                                                { "unique stage/pass records", testDuplicateStagePassRecords },
 	                                                { "visibility and leases", testVisibilityAndLease },
 	                                                { "work and rate", testBudgetsAndRate },
 	                                                { "stage capabilities", testAllStageCapabilities },

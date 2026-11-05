@@ -76,6 +76,8 @@ Bindings are strictly sorted by `(set, space, binding)`; duplicate coordinates a
 
 ` sirShaderPipelineRecipe_t ` includes stage/pass signature, color/depth format identity, MSAA sample count, alpha-mask, double-sided and velocity behavior, binding signature, source asset ID/revision, package schema and manifest, permutation, render state and required features. `sirShaderBuildPortableKey` returns a deterministic two-lane 128-bit *index*. Cache consumers must use `sirShaderRecipesEqual` on candidate hits; hashes are not unique IDs. A native key additionally incorporates backend, PCI/vendor/device, driver version, compiler fingerprint, cache UUID and device generation. Drivers must compare `sirShaderNativeIdentitiesEqual` on candidate native hits; a device generation change invalidates all live native PSOs. Cache binary validation and production eviction are subsequent SHD-06/09/10 work, not implied by the key API.
 
+The portable key includes **all** cooked-package identity fields, including `nPackageManifestHash` and `nPackageSchema`. Two binaries with equal asset ID and source revision but different validated package manifests must produce different cache indices. Package validation also rejects duplicate `(pass, shader stage)` pairs, so runtime stage selection cannot depend on record order.
+
 ` sirShaderPassSignaturesEqual ` is the declared compatibility predicate: alpha-masked and opaque, shadow and color, velocity and color, distinct bindings and distinct sample configurations cannot silently share an uber pipeline. ShaderCooker SHD-07 may introduce explicit compatibility families only after the pass contract is validated and the same pass signature is honored.
 
 ## Visibility, generated geometry and budget ABI

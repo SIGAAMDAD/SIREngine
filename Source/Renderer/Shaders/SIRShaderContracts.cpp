@@ -310,6 +310,7 @@ sirGraphicsResult_t sirShaderValidatePackage( const void *pBytes, uint64_t nLeng
 	// The validated header guarantees a non-null record span and a bounded count.
 	( void )sirShaderBuildBindingSignature( pData + header.nBindingOffset, header.nBindingCount, &nBindingSignature );
 	uint32_t nAvailableStages = 0;
+	uint64_t nStagePassPairs = 0;
 	for ( uint32_t iStage = 0; iStage < header.nStageCount; ++iStage ) {
 		sirShaderStageRecord_t stage = {};
 		const uint8_t *pStage = pData + header.nStageOffset + iStage * SIR_SHADER_PACKAGE_STAGE_BYTES;
@@ -341,6 +342,18 @@ sirGraphicsResult_t sirShaderValidatePackage( const void *pBytes, uint64_t nLeng
 		if ( sirShaderHashBytes( 14695981039346656037ULL, pData + stage.nPayloadOffset, stage.nPayloadBytes ) != stage.nBinaryHash ) {
 			return SIR_GRAPHICS_INVALID_ARGUMENT;
 		}
+		// Every (pass, stage) pair is unambiguous. A duplicate must not
+		// silently select one of two conflicting binaries at runtime.
+		uint32_t nStageBit = 0;
+		for ( uint32_t nMask = stage.nStageMask; nMask > 1; nMask >>= 1 ) {
+			++nStageBit;
+		}
+		const uint32_t nPairIndex = ( ( uint32_t )stage.ePass - ( uint32_t )SIR_SHADER_PASS_COLOR ) * 8 + nStageBit;
+		const uint64_t nPair = 1ULL << nPairIndex;
+		if ( ( nStagePassPairs & nPair ) != 0 ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
+		nStagePassPairs |= nPair;
 		nAvailableStages |= stage.nStageMask;
 	}
 	for ( uint32_t iBinding = 0; iBinding < header.nBindingCount; ++iBinding ) {
@@ -425,6 +438,8 @@ sirGraphicsResult_t sirShaderBuildPortableKey( const sirShaderPipelineRecipe_t& 
 	                             ( uint64_t )recipe.pass.bWritesVelocity,
 	                             recipe.nAssetId,
 	                             recipe.nSourceRevision,
+	                             recipe.nPackageManifestHash,
+	                             recipe.nPackageSchema,
 	                             recipe.nPermutationKey,
 	                             recipe.nRenderStateHash,
 	                             recipe.nRequiredFeatures };
