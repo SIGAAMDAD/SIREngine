@@ -18,10 +18,9 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <limits.h>
 #include <string.h>
 
-SIRResourceKey SIRTerrainResourceBridge::getKey( sirTerrainRegionKey_t region, uint32_t nWorldVariant ) noexcept
+SIRResourceKey SIRTerrainResourceBridge::getKey( const sirTerrainRegionIdentity_t& identity ) noexcept
 {
-	const uint64_t nAsset = ( ( uint64_t )( uint32_t )region.iRegionX << 32u ) | ( uint32_t )region.iRegionZ;
-	return { nAsset, SIR_TERRAIN_HEIGHTFIELD_RESOURCE_TYPE, nWorldVariant };
+	return { identity.nAssetId, SIR_TERRAIN_HEIGHTFIELD_RESOURCE_TYPE, identity.nCookedVariantId };
 }
 
 SIRResourceContentKey SIRTerrainResourceBridge::fingerprint( sirTerrainConstByteSpan_t source ) noexcept
@@ -49,11 +48,17 @@ SIRResourceResult SIRTerrainResourceBridge::publish( SIRResourceGraph& graph, si
 	if ( eCodec != SIR_TERRAIN_CODEC_SUCCESS ) {
 		return SIR_RESOURCE_RESULT_INVALID_FORMAT;
 	}
+	if ( request.identity.nAssetId == 0 ) {
+		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
+	}
+	if ( descriptor.iRegionX != request.identity.iRegionX || descriptor.iRegionZ != request.identity.iRegionZ ) {
+		return SIR_RESOURCE_RESULT_INVALID_FORMAT;
+	}
 	SIRResourceGraphWriter *pWriter = graph.getWriter();
 	if ( !pWriter ) {
 		return SIR_RESOURCE_RESULT_WRITER_VIOLATION;
 	}
-	const SIRResourceKey key = getKey( { descriptor.iRegionX, descriptor.iRegionZ }, request.nWorldVariant );
+	const SIRResourceKey key = getKey( request.identity );
 	if ( request.nExpectedGraphRevision != 0 ) {
 		SIRResourceReadScope scope( graph );
 		if ( !scope.isActive() ) {
@@ -115,11 +120,12 @@ SIRResourceResult SIRTerrainResourceBridge::publish( SIRResourceGraph& graph, si
 }
 
 SIRResourceResult SIRTerrainResourceBridge::open( const SIRResourceGraph& graph, const SIRResourceReadScope& scope,
-                                                  const SIRResourceKey& key, sirTerrainR16View_t& view ) noexcept
+                                                  const sirTerrainRegionIdentity_t& identity, sirTerrainR16View_t& view ) noexcept
 {
-	if ( key.m_nTypeId != SIR_TERRAIN_HEIGHTFIELD_RESOURCE_TYPE ) {
+	if ( !identity.nAssetId ) {
 		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
 	}
+	const SIRResourceKey key = getKey( identity );
 	SIRResourceHandle handle = {};
 	const SIRResourceResult eFind = graph.find( scope, key, &handle );
 	if ( eFind != SIR_RESOURCE_RESULT_SUCCESS ) {
@@ -149,8 +155,7 @@ SIRResourceResult SIRTerrainResourceBridge::open( const SIRResourceGraph& graph,
 	}
 	sirTerrainR16View_t candidate = {};
 	if ( SIRTerrainHeightfieldView::open( { payload.m_pData, ( size_t )payload.m_nSize }, candidate ) != SIR_TERRAIN_CODEC_SUCCESS ||
-	     ( uint32_t )candidate.descriptor.iRegionX != ( uint32_t )( key.m_nAssetId >> 32u ) ||
-	     ( uint32_t )candidate.descriptor.iRegionZ != ( uint32_t )key.m_nAssetId ) {
+	     candidate.descriptor.iRegionX != identity.iRegionX || candidate.descriptor.iRegionZ != identity.iRegionZ ) {
 		return SIR_RESOURCE_RESULT_INVALID_FORMAT;
 	}
 	view = candidate;

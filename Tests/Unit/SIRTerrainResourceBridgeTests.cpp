@@ -92,11 +92,12 @@ int main( void )
 		std::vector<uint8_t> cooked( SIRTerrainHeightfieldCodec::getEncodedByteCount( 2 ) );
 		CHECK( SIRTerrainHeightfieldCodec::encode( descriptor, { szSamples, 4 }, { cooked.data(), cooked.size() } ) ==
 		       SIR_TERRAIN_CODEC_SUCCESS );
-		const SIRResourceKey key = SIRTerrainResourceBridge::getKey( { -8, 9 }, 21 );
-		CHECK( key.m_nAssetId == ( ( uint64_t )UINT32_C( 0xfffffff8 ) << 32u | 9u ) );
-		CHECK( key.m_nVariantId == 21 );
-		CHECK( SIRTerrainResourceBridge::getKey( { -8, 9 }, 22 ).m_nVariantId == 22 );
-		sirTerrainRegionPublishRequest_t request = { 21, 7, 0, 1 };
+		const sirTerrainRegionIdentity_t identity = { UINT64_C( 0x1122334455667788 ), 0, -8, 9 };
+		const SIRResourceKey key = SIRTerrainResourceBridge::getKey( identity );
+		CHECK( key.m_nAssetId == identity.nAssetId && key.m_nVariantId == 0 );
+		const sirTerrainRegionIdentity_t otherWorld = { UINT64_C( 0x8899aabbccddeeff ), 0, -8, 9 };
+		CHECK( SIRTerrainResourceBridge::getKey( otherWorld ).m_nAssetId != key.m_nAssetId );
+		sirTerrainRegionPublishRequest_t request = { identity, 7, 0, 1 };
 		SIRResourceHandle handle = {};
 		CHECK( SIRTerrainResourceBridge::publish( graph, { nullptr, 0 }, request, handle ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
 		std::vector<uint8_t> bad = cooked;
@@ -112,14 +113,14 @@ int main( void )
 			SIRResourceReadScope scope( graph );
 			CHECK( scope.isActive() );
 			sirTerrainR16View_t oldView = {};
-			CHECK( SIRTerrainResourceBridge::open( graph, scope, key, oldView ) == SIR_RESOURCE_RESULT_SUCCESS );
+			CHECK( SIRTerrainResourceBridge::open( graph, scope, identity, oldView ) == SIR_RESOURCE_RESULT_SUCCESS );
+			CHECK( SIRTerrainResourceBridge::open( graph, scope, { identity.nAssetId, 0, -7, 9 }, oldView ) ==
+			       SIR_RESOURCE_RESULT_INVALID_FORMAT );
 			CHECK( oldView.descriptor.nRevision == 1 && oldView.descriptor.iRegionX == -8 );
 			float fHeight = 0;
 			CHECK( SIRTerrainHeightfieldView::read( oldView, 0, 0, fHeight ) == SIR_TERRAIN_SAMPLE_SUCCESS && fHeight == -10.0f );
-			CHECK( SIRTerrainResourceBridge::open( graph, scope, SIRTerrainResourceBridge::getKey( { -8, 9 }, 22 ), oldView ) ==
-			       SIR_RESOURCE_RESULT_INVALID_HANDLE );
-			CHECK( SIRTerrainResourceBridge::open( graph, scope, { key.m_nAssetId, 3, 21 }, oldView ) ==
-			       SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+			CHECK( SIRTerrainResourceBridge::open( graph, scope, otherWorld, oldView ) == SIR_RESOURCE_RESULT_INVALID_HANDLE );
+			CHECK( SIRTerrainResourceBridge::open( graph, scope, { 0, 0, -8, 9 }, oldView ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
 			CHECK( SIRTerrainResourceBridge::publish( graph, { cooked.data(), cooked.size() }, request, handle ) ==
 			       SIR_RESOURCE_RESULT_STALE_REVISION );
 			request.nExpectedGraphRevision = 1;
@@ -137,7 +138,7 @@ int main( void )
 			       SIR_RESOURCE_RESULT_SUCCESS );
 			CHECK( SIRTerrainHeightfieldView::read( oldView, 0, 0, fHeight ) == SIR_TERRAIN_SAMPLE_SUCCESS && fHeight == -10.0f );
 			sirTerrainR16View_t currentView = {};
-			CHECK( SIRTerrainResourceBridge::open( graph, scope, key, currentView ) == SIR_RESOURCE_RESULT_SUCCESS );
+			CHECK( SIRTerrainResourceBridge::open( graph, scope, identity, currentView ) == SIR_RESOURCE_RESULT_SUCCESS );
 			CHECK( currentView.descriptor.nRevision == 2 );
 			CHECK( SIRTerrainHeightfieldView::read( currentView, 0, 0, fHeight ) == SIR_TERRAIN_SAMPLE_SUCCESS && fHeight == 10.0f );
 		}
