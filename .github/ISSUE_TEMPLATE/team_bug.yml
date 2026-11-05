@@ -1,0 +1,37 @@
+name: Defect report
+description: Report a reproducible issue for AI triage or a future human maintainer.
+title: "[Bug] "
+labels: ["marathon:tracked"]
+body:
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      options:
+        - Crash or data corruption
+        - Incorrect behavior
+        - Performance regression
+        - Build or portability failure
+        - Documentation or tooling
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction and expected/actual behavior
+      description: Steps, affected branch/SHA, platform and smallest reproduction
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: Logs, compiler diagnostics, tests or captures without credentials
+    validations:
+      required: false
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Relevant subsystem and blockers
+    validations:
+      required: false
