@@ -47,8 +47,7 @@ SIRResourceResult sirShaderResolveMaterialStage( const sirShaderLibraryContext_t
 	if ( eResult != SIR_RESOURCE_RESULT_SUCCESS ) {
 		return eResult;
 	}
-	if ( dependency.m_eKind != SIR_RESOURCE_EDGE_KIND_REQUIRED ||
-	     dependency.m_Target.m_nTypeId != context.formats.nShaderTypeId ) {
+	if ( dependency.m_eKind != SIR_RESOURCE_EDGE_KIND_REQUIRED || dependency.m_Target.m_nTypeId != context.formats.nShaderTypeId ) {
 		return SIR_RESOURCE_RESULT_TYPE_MISMATCH;
 	}
 	SIRResourceView source;
