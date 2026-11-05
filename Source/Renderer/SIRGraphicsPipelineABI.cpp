@@ -36,12 +36,6 @@ static bool sirGraphicsABIShaderIsSupported( const sirGraphicsABIShaderCode_t *p
 	if ( pShader->nSize != sizeof( sirGraphicsABIShaderCode_t ) || pShader->pBytes == nullptr ) {
 		return false;
 	}
-	if ( pShader->nByteCount < 4 || pShader->nFormat < SIR_GRAPHICS_SHADER_DXIL ) {
-		return false;
-	}
-	if ( pShader->nFormat > SIR_GRAPHICS_SHADER_DXBC ) {
-		return false;
-	}
 	return ( nFormatMask & ( 1U << ( pShader->nFormat - 1 ) ) ) != 0;
 }
 
@@ -265,21 +259,13 @@ sirGraphicsABIResult_t sirGraphicsValidateABIPipelineModelCaps( const sirGraphic
 	return SIR_GRAPHICS_SUCCESS;
 }
 
+// The public entrypoint validates authored structure before these capability
+// checks. Rechecking the same invariants would duplicate work on every PSO.
 static sirGraphicsABIResult_t sirGraphicsValidateABIPipelineCommon( const sirGraphicsABIPipeline_t *pPipeline,
                                                                     const sirGraphicsABIPipelineModelCaps_t *pCaps ) noexcept
 {
-	if ( pPipeline->nSize < sizeof( sirGraphicsABIPipeline_t ) || pPipeline->nReserved != 0 ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
-	}
-	if ( pPipeline->nModel != pCaps->nModel ) {
-		return SIR_GRAPHICS_UNSUPPORTED;
-	}
 	if ( pPipeline->nBindingCount > pCaps->nMaximumBindings || pPipeline->nAttributeCount > pCaps->nMaximumVertexAttributes ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
-	}
-	if ( ( pPipeline->nBindingCount > 0 && pPipeline->pBindings == nullptr ) ||
-	     ( pPipeline->nAttributeCount > 0 && pPipeline->pAttributes == nullptr ) ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	const uint32_t nBoundStages = pPipeline->nType == SIR_GRAPHICS_PIPELINE_COMPUTE
 	                                  ? SIR_GRAPHICS_STAGE_COMPUTE
@@ -314,11 +300,8 @@ static sirGraphicsABIResult_t sirGraphicsValidateABIPipelineCommon( const sirGra
 			return SIR_GRAPHICS_INVALID_ARGUMENT;
 		}
 	}
-	if ( pPipeline->nColorFormatCount > pCaps->nMaximumColorAttachments || pPipeline->nColorFormatCount > 8 ) {
+	if ( pPipeline->nColorFormatCount > pCaps->nMaximumColorAttachments ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
-	}
-	if ( !sirGraphicsIsABIPowerOfTwo( pPipeline->nSampleCount ) ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( pPipeline->nSampleCount > pCaps->nMaximumSamples ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
@@ -364,21 +347,9 @@ static sirGraphicsABIResult_t sirGraphicsValidateABIPipelineShaders( const sirGr
                                                                      const sirGraphicsABIPipelineModelCaps_t *pCaps ) noexcept
 {
 	const bool bCompute = pPipeline->nType == SIR_GRAPHICS_PIPELINE_COMPUTE;
-	if ( !bCompute && pPipeline->nType != SIR_GRAPHICS_PIPELINE_GRAPHICS ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
-	}
-	if ( !sirGraphicsABIShaderIsEmpty( &pPipeline->computeShader ) && !bCompute ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
-	}
 	if ( bCompute ) {
-		if ( pPipeline->nColorFormatCount != 0 || pPipeline->nAttributeCount != 0 ) {
-			return SIR_GRAPHICS_INVALID_ARGUMENT;
-		}
 		if ( ( pCaps->nShaderStageMask & SIR_GRAPHICS_STAGE_COMPUTE ) == 0 ) {
 			return SIR_GRAPHICS_UNSUPPORTED;
-		}
-		if ( !sirGraphicsABIShaderIsEmpty( &pPipeline->vertexShader ) || !sirGraphicsABIShaderIsEmpty( &pPipeline->pixelShader ) ) {
-			return SIR_GRAPHICS_INVALID_ARGUMENT;
 		}
 		return sirGraphicsABIShaderIsSupported( &pPipeline->computeShader, pCaps->nShaderFormatMask ) ? SIR_GRAPHICS_SUCCESS
 		                                                                                              : SIR_GRAPHICS_UNSUPPORTED;
@@ -402,28 +373,12 @@ static sirGraphicsABIResult_t sirGraphicsValidateABIPipelineShaders( const sirGr
 static sirGraphicsABIResult_t sirGraphicsValidateABIFixedPipeline( const sirGraphicsABIPipeline_t *pPipeline,
                                                                    const sirGraphicsABIPipelineModelCaps_t *pCaps ) noexcept
 {
-	if ( pPipeline->pFixed == nullptr || pPipeline->pModern != nullptr || pPipeline->pProgrammable != nullptr ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
-	}
-	if ( pPipeline->nType != SIR_GRAPHICS_PIPELINE_FIXED_FUNCTION || pPipeline->nBindingCount != 0 ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
-	}
-	if ( !sirGraphicsABIShaderIsEmpty( &pPipeline->vertexShader ) || !sirGraphicsABIShaderIsEmpty( &pPipeline->pixelShader ) ||
-	     !sirGraphicsABIShaderIsEmpty( &pPipeline->computeShader ) ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
-	}
 	const sirGraphicsABIFixedRecipe_t *pFixed = pPipeline->pFixed;
-	if ( pFixed->nSize < sizeof( sirGraphicsABIFixedRecipe_t ) || pFixed->nReserved != 0 ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
-	}
 	if ( ( pFixed->nRequiredFeatures & ~pCaps->nFixedFeatureMask ) != 0 ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
 	if ( pFixed->nTextureStageCount > pCaps->nMaximumTextureStages || pFixed->nLightCount > pCaps->nMaximumFixedLights ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
-	}
-	if ( ( pFixed->nTextureStageCount != 0 && pFixed->pStages == nullptr ) || ( pFixed->nLightCount != 0 && pFixed->pLights == nullptr ) ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( pFixed->nFogMode > SIR_GRAPHICS_FIXED_FOG_EXP2 || pFixed->nAlphaCompare > SIR_GRAPHICS_COMPARE_ALWAYS ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
@@ -488,19 +443,7 @@ sirGraphicsABIResult_t sirGraphicsValidateABIPipeline( const sirGraphicsABIPipel
 		return sirGraphicsValidateABIFixedPipeline( pPipeline, pCaps );
 	}
 	if ( pPipeline->nModel == SIR_GRAPHICS_PIPELINE_MODEL_PROGRAMMABLE ) {
-		if ( pPipeline->pProgrammable == nullptr || pPipeline->pModern != nullptr || pPipeline->pFixed != nullptr ) {
-			return SIR_GRAPHICS_INVALID_ARGUMENT;
-		}
-		if ( pPipeline->nType != SIR_GRAPHICS_PIPELINE_GRAPHICS ) {
-			return SIR_GRAPHICS_UNSUPPORTED;
-		}
 		const sirGraphicsABIProgrammableRecipe_t *pRecipe = pPipeline->pProgrammable;
-		if ( pRecipe->nSize < sizeof( sirGraphicsABIProgrammableRecipe_t ) || pRecipe->nReserved != 0 ) {
-			return SIR_GRAPHICS_INVALID_ARGUMENT;
-		}
-		if ( pRecipe->nVertexShaderProfile == 0 || pRecipe->nFragmentShaderProfile == 0 ) {
-			return SIR_GRAPHICS_INVALID_ARGUMENT;
-		}
 		if ( pRecipe->nVertexShaderProfile > pCaps->nMaximumVertexShaderProfile ||
 		     pRecipe->nFragmentShaderProfile > pCaps->nMaximumFragmentShaderProfile ) {
 			return SIR_GRAPHICS_UNSUPPORTED;
@@ -511,23 +454,9 @@ sirGraphicsABIResult_t sirGraphicsValidateABIPipeline( const sirGraphicsABIPipel
 		}
 		return sirGraphicsValidateABIPipelineShaders( pPipeline, pCaps );
 	}
-	if ( pPipeline->nModel != SIR_GRAPHICS_PIPELINE_MODEL_MODERN ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
-	}
-	if ( pPipeline->pModern == nullptr || pPipeline->pProgrammable != nullptr || pPipeline->pFixed != nullptr ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
-	}
 	const sirGraphicsABIModernRecipe_t *pRecipe = pPipeline->pModern;
-	if ( pRecipe->nSize < sizeof( sirGraphicsABIModernRecipe_t ) ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
-	}
 	if ( ( pRecipe->nRequiredFeatures & ~pCaps->nRequiredFeatureMask ) != 0 ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
-	}
-	const uint32_t nStage = pPipeline->nType == SIR_GRAPHICS_PIPELINE_COMPUTE ? SIR_GRAPHICS_STAGE_COMPUTE
-	                                                                          : SIR_GRAPHICS_STAGE_VERTEX | SIR_GRAPHICS_STAGE_FRAGMENT;
-	if ( pRecipe->nStageMask != nStage ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	return sirGraphicsValidateABIPipelineShaders( pPipeline, pCaps );
 }

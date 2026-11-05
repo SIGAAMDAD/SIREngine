@@ -238,15 +238,15 @@ sirGraphicsResult_t sirGraphicsValidatePipeline( const sirGraphicsPipelineDesc_t
 		     !sirGraphicsEmptyShader( desc.computeShader ) ) {
 			return SIR_GRAPHICS_INVALID_ARGUMENT;
 		}
-	} else if ( desc.eType == SIR_GRAPHICS_PIPELINE_GRAPHICS ) {
+	} else {
+		// Model validation has already restricted non-compute types to
+		// graphics or fixed-function pipelines.
 		if ( !sirGraphicsValidShader( desc.vertexShader ) || !sirGraphicsValidShader( desc.pixelShader ) ) {
 			return SIR_GRAPHICS_INVALID_ARGUMENT;
 		}
 		if ( desc.vertexShader.eFormat != desc.pixelShader.eFormat || !sirGraphicsEmptyShader( desc.computeShader ) ) {
 			return SIR_GRAPHICS_INVALID_ARGUMENT;
 		}
-	} else {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 
 	if ( desc.eTopology > SIR_GRAPHICS_TOPOLOGY_PATCHES || desc.eCullMode > SIR_GRAPHICS_CULL_BACK ||

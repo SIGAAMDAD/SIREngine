@@ -123,6 +123,13 @@ add_executable(SIRGraphicsModuleTests SIRGraphicsModuleTests.cpp)
 target_link_libraries(SIRGraphicsModuleTests PRIVATE SIR::Graphics)
 add_dependencies(SIRGraphicsModuleTests SIRGraphicsABIMockModule)
 target_compile_definitions(SIRGraphicsModuleTests PRIVATE SIR_TEST_ABI_MODULE_PATH="$<TARGET_FILE:SIRGraphicsABIMockModule>")
+add_dependencies(SIRGraphicsModuleTests SIRPlatformTestModule)
+target_compile_definitions(SIRGraphicsModuleTests PRIVATE SIR_TEST_NO_ABI_MODULE_PATH="$<TARGET_FILE:SIRPlatformTestModule>")
+# Inject one OS unload error only inside this unit executable, never in the
+# production library or other tests. The injection is Linux linker-local.
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    target_link_options(SIRGraphicsModuleTests PRIVATE "LINKER:--wrap=dlclose")
+endif()
 add_test(NAME renderer.graphics.binary-module COMMAND SIRGraphicsModuleTests)
 sir_configure_owned_target(SIRGraphicsModuleTests)
 

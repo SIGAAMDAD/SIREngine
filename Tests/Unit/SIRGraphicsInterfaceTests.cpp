@@ -34,6 +34,11 @@ public:
 		m_eQueryResult = eQuery;
 	}
 
+	void setFeatures( uint64_t nFeatures ) noexcept
+	{
+		m_Adapter.nFeatureMask = nFeatures;
+	}
+
 	void setMemory( uint64_t nDedicated, uint64_t nShared ) noexcept
 	{
 		m_Adapter.nDedicatedVideoBytes = nDedicated;
@@ -322,6 +327,22 @@ static bool testRankedSelection( void ) noexcept
 	     adapter.bSoftwareAdapter ) {
 		return false;
 	}
+	// Two otherwise identical adapters from one backend select the lower
+	// stable index deterministically, independent of enumeration order.
+	vulkan.setAdapterCount( 2 );
+	if ( registry.selectDriver( selection, &pDriver, &adapter ) != SIR_GRAPHICS_SUCCESS || pDriver != &vulkan ||
+	     adapter.nAdapterIndex != 0 ) {
+		return false;
+	}
+	vulkan.setAdapterCount( 1 );
+	// Ranking must prefer a larger supported feature set before memory.
+	vulkan.setFeatures( GRAPHICS | COMPUTE | SIR_GRAPHICS_FEATURE_HDR_OUTPUT );
+	vulkan.setMemory( 1, 0 );
+	if ( registry.selectDriver( selection, &pDriver, &adapter ) != SIR_GRAPHICS_SUCCESS || pDriver != &vulkan ) {
+		return false;
+	}
+	vulkan.setFeatures( GRAPHICS | COMPUTE );
+	vulkan.setMemory( 4096, 0 );
 	// When dedicated memory differs but the feature set is the same, select
 	// the eligible device with more reported dedicated memory.
 	vulkan.setMemory( 1024, 0 );

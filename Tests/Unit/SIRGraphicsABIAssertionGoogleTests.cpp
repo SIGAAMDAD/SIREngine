@@ -70,6 +70,18 @@ TEST( GraphicsABI, DeviceCapabilities )
 	caps.nEnabledQueues = 1U << SIR_GRAPHICS_QUEUE_DIRECT;
 	caps.nPipelineModelMask = 0;
 	EXPECT_EQ( sirGraphicsValidateABICapabilities( &caps ), SIR_GRAPHICS_INVALID_ARGUMENT );
+	caps.nPipelineModelMask = 1U << ( SIR_GRAPHICS_PIPELINE_MODEL_MODERN - 1 );
+	caps.nEnabledFeatures |= SIR_GRAPHICS_FEATURE_ASYNC_COMPUTE;
+	EXPECT_EQ( sirGraphicsValidateABICapabilities( &caps ), SIR_GRAPHICS_INVALID_ARGUMENT );
+	caps.nEnabledQueues |= 1U << SIR_GRAPHICS_QUEUE_COMPUTE;
+	EXPECT_EQ( sirGraphicsValidateABICapabilities( &caps ), SIR_GRAPHICS_SUCCESS );
+	caps.nEnabledFeatures |= SIR_GRAPHICS_FEATURE_COPY_QUEUE;
+	EXPECT_EQ( sirGraphicsValidateABICapabilities( &caps ), SIR_GRAPHICS_INVALID_ARGUMENT );
+	caps.nEnabledQueues |= 1U << SIR_GRAPHICS_QUEUE_COPY;
+	EXPECT_EQ( sirGraphicsValidateABICapabilities( &caps ), SIR_GRAPHICS_SUCCESS );
+	caps.nEnabledFeatures |= SIR_GRAPHICS_FEATURE_GRAPHICS;
+	caps.nEnabledQueues = 1U << SIR_GRAPHICS_QUEUE_COMPUTE;
+	EXPECT_EQ( sirGraphicsValidateABICapabilities( &caps ), SIR_GRAPHICS_INVALID_ARGUMENT );
 }
 
 TEST( GraphicsABI, StaleGeneration )
@@ -79,6 +91,10 @@ TEST( GraphicsABI, StaleGeneration )
 	EXPECT_FALSE( sirGraphicsIsHandleValid( handle, SIR_GRAPHICS_HANDLE_BUFFER, 7 ) );
 	EXPECT_FALSE( sirGraphicsIsHandleValid( handle, SIR_GRAPHICS_HANDLE_TEXTURE, 8 ) );
 	handle.nGeneration = 0;
+	EXPECT_FALSE( sirGraphicsIsHandleValid( handle, SIR_GRAPHICS_HANDLE_TEXTURE, 7 ) );
+	handle.nGeneration = 1;
+	EXPECT_FALSE( sirGraphicsIsHandleValid( handle, SIR_GRAPHICS_HANDLE_TEXTURE, 0 ) );
+	handle.nDeviceGeneration = 0;
 	EXPECT_FALSE( sirGraphicsIsHandleValid( handle, SIR_GRAPHICS_HANDLE_TEXTURE, 7 ) );
 }
 
@@ -90,6 +106,10 @@ TEST( GraphicsABI, RetirementFenceQueueMask )
 	completion.szQueueValues[SIR_GRAPHICS_QUEUE_DIRECT] = 3;
 	EXPECT_TRUE( sirGraphicsIsCompletionSetValid( completion, 7 ) );
 	completion.nQueueMask = 0;
+	EXPECT_FALSE( sirGraphicsIsCompletionSetValid( completion, 7 ) );
+	completion.nQueueMask = 1U << SIR_GRAPHICS_QUEUE_DIRECT;
+	EXPECT_FALSE( sirGraphicsIsCompletionSetValid( completion, 0 ) );
+	completion.nDeviceGeneration = 0;
 	EXPECT_FALSE( sirGraphicsIsCompletionSetValid( completion, 7 ) );
 }
 
@@ -133,6 +153,23 @@ TEST( GraphicsABI, TextureSamples )
 	EXPECT_EQ( sirGraphicsValidateTexture( desc ), SIR_GRAPHICS_SUCCESS );
 	desc.nSampleCount = 3;
 	EXPECT_EQ( sirGraphicsValidateTexture( desc ), SIR_GRAPHICS_INVALID_ARGUMENT );
+	desc.nSampleCount = 128;
+	EXPECT_EQ( sirGraphicsValidateTexture( desc ), SIR_GRAPHICS_INVALID_ARGUMENT );
+	desc.nSampleCount = 1;
+	desc.nArrayLayers = 0;
+	EXPECT_EQ( sirGraphicsValidateTexture( desc ), SIR_GRAPHICS_INVALID_ARGUMENT );
+	desc.nArrayLayers = 1;
+	desc.nMipLevels = 33;
+	EXPECT_EQ( sirGraphicsValidateTexture( desc ), SIR_GRAPHICS_INVALID_ARGUMENT );
+	desc.nMipLevels = 1;
+	desc.eFormat = ( sirGraphicsFormat_t )( SIR_GRAPHICS_FORMAT_BC7_UNORM + 1 );
+	EXPECT_EQ( sirGraphicsValidateTexture( desc ), SIR_GRAPHICS_INVALID_ARGUMENT );
+	desc.eFormat = SIR_GRAPHICS_FORMAT_RGBA8_UNORM;
+	desc.eDimension = SIR_GRAPHICS_TEXTURE_1D;
+	desc.nHeight = 2;
+	EXPECT_EQ( sirGraphicsValidateTexture( desc ), SIR_GRAPHICS_INVALID_ARGUMENT );
+	desc.nHeight = 1;
+	EXPECT_EQ( sirGraphicsValidateTexture( desc ), SIR_GRAPHICS_SUCCESS );
 }
 
 TEST( GraphicsABI, SamplerNaN )
@@ -158,6 +195,17 @@ TEST( GraphicsABI, ShaderlessFixedFunction )
 	pipeline.pFixed = &fixed;
 	EXPECT_EQ( sirGraphicsValidateABIPipelineStructure( &pipeline ), SIR_GRAPHICS_SUCCESS );
 	pipeline.nType = SIR_GRAPHICS_PIPELINE_COMPUTE;
+	EXPECT_EQ( sirGraphicsValidateABIPipelineStructure( &pipeline ), SIR_GRAPHICS_INVALID_ARGUMENT );
+	pipeline.nType = SIR_GRAPHICS_PIPELINE_FIXED_FUNCTION;
+	pipeline.pFixed = nullptr;
+	EXPECT_EQ( sirGraphicsValidateABIPipelineStructure( &pipeline ), SIR_GRAPHICS_INVALID_ARGUMENT );
+	pipeline.pFixed = &fixed;
+	pipeline.nBindingCount = 1;
+	EXPECT_EQ( sirGraphicsValidateABIPipelineStructure( &pipeline ), SIR_GRAPHICS_INVALID_ARGUMENT );
+	pipeline.nBindingCount = 0;
+	sirGraphicsABIProgrammableRecipe_t programmable = {};
+	programmable.nSize = sizeof( programmable );
+	pipeline.pProgrammable = &programmable;
 	EXPECT_EQ( sirGraphicsValidateABIPipelineStructure( &pipeline ), SIR_GRAPHICS_INVALID_ARGUMENT );
 }
 

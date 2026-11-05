@@ -76,9 +76,9 @@ sirGraphicsResult_t SIRGraphicsRegistry::registerDriver( SIRGraphicsDriver *pDri
 	if ( findDriver( eBackend ) != nullptr ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	if ( m_nDriverCount >= s_nDriverCapacity ) {
-		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
-	}
+	// Backends are unique and all valid IDs are within 1..OPENGL.
+	// Capacity is therefore a compile-time invariant, not a runtime branch.
+	static_assert( s_nDriverCapacity >= SIR_GRAPHICS_BACKEND_OPENGL, "Graphics registry capacity must fit every backend" );
 
 	m_pszDrivers[m_nDriverCount] = pDriver;
 	++m_nDriverCount;

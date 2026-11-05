@@ -815,10 +815,139 @@ static bool testProgrammableLimitsMatrix( void ) noexcept
 	return true;
 }
 
+static bool testPipelineCoverageGaps( void ) noexcept
+{
+	sirGraphicsABIPipelineModelCaps_t caps = makeModernCaps();
+	sirGraphicsABIModernRecipe_t recipe = {};
+	recipe.nSize = sizeof( recipe );
+	recipe.nStageMask = SIR_GRAPHICS_STAGE_VERTEX | SIR_GRAPHICS_STAGE_FRAGMENT;
+	recipe.nRequiredFeatures = SIR_GRAPHICS_FEATURE_GRAPHICS;
+	sirGraphicsABIPipeline_t baseline = makeModernPipeline( &recipe );
+	sirGraphicsABIPipeline_t test = baseline;
+#define CHECK_COVERAGE( expected, reason )                                                                                                 \
+	if ( !checkResult( sirGraphicsValidateABIPipeline( &test, &caps ), expected, reason ) ) {                                              \
+		return false;                                                                                                                      \
+	}
+	CHECK_COVERAGE( SIR_GRAPHICS_SUCCESS, "coverage modern baseline" );
+	if ( !checkResult( sirGraphicsValidateABIPipeline( nullptr, &caps ), SIR_GRAPHICS_INVALID_ARGUMENT, "coverage null pipeline" ) ||
+	     !checkResult( sirGraphicsValidateABIPipeline( &test, nullptr ), SIR_GRAPHICS_INVALID_ARGUMENT, "coverage null capabilities" ) ) {
+		return false;
+	}
+	sirGraphicsABIPipelineModelCaps_t invalidCaps = caps;
+	invalidCaps.nSize = 0;
+	if ( !checkResult( sirGraphicsValidateABIPipeline( &test, &invalidCaps ), SIR_GRAPHICS_INVALID_ARGUMENT,
+	                   "coverage malformed capabilities through public API" ) ) {
+		return false;
+	}
+
+	test.vertexShader.nSize = sizeof( sirGraphicsABIShaderCode_t ) + 8;
+	CHECK_COVERAGE( SIR_GRAPHICS_UNSUPPORTED, "coverage unsupported larger ABI shader tag" );
+	test = baseline;
+	test.vertexShader.nFormat = SIR_GRAPHICS_SHADER_DXIL;
+	caps.nShaderFormatMask |= 1U << ( SIR_GRAPHICS_SHADER_DXIL - 1 );
+	CHECK_COVERAGE( SIR_GRAPHICS_INVALID_ARGUMENT, "coverage mixed supported shader formats" );
+	caps = makeModernCaps();
+	test = baseline;
+	sirGraphicsVertexAttribute_t attribute = {};
+	attribute.eFormat = SIR_GRAPHICS_FORMAT_UNKNOWN;
+	test.pAttributes = &attribute;
+	test.nAttributeCount = 1;
+	CHECK_COVERAGE( SIR_GRAPHICS_INVALID_ARGUMENT, "coverage unknown vertex attribute format" );
+	attribute.eFormat = ( sirGraphicsFormat_t )( SIR_GRAPHICS_FORMAT_BC7_UNORM + 1 );
+	CHECK_COVERAGE( SIR_GRAPHICS_INVALID_ARGUMENT, "coverage vertex attribute format overflow" );
+	test = baseline;
+	test.nDepthFormat = SIR_GRAPHICS_FORMAT_RGBA8_UNORM;
+	CHECK_COVERAGE( SIR_GRAPHICS_INVALID_ARGUMENT, "coverage color format used as depth" );
+	test = baseline;
+	caps.nMaximumColorAttachments = 0;
+	CHECK_COVERAGE( SIR_GRAPHICS_UNSUPPORTED, "coverage attachment count beyond device" );
+	caps = makeModernCaps();
+	test = baseline;
+	caps.nShaderStageMask = SIR_GRAPHICS_STAGE_COMPUTE;
+	caps.nRequiredFeatureMask = SIR_GRAPHICS_FEATURE_COMPUTE;
+	recipe.nRequiredFeatures = 0;
+	CHECK_COVERAGE( SIR_GRAPHICS_UNSUPPORTED, "coverage graphics on compute-only caps" );
+	recipe.nRequiredFeatures = SIR_GRAPHICS_FEATURE_GRAPHICS;
+	caps = makeModernCaps();
+	test = baseline;
+	test.nColorFormatCount = 1;
+	test.szColorFormats[0] = SIR_GRAPHICS_FORMAT_UNKNOWN;
+	CHECK_COVERAGE( SIR_GRAPHICS_INVALID_ARGUMENT, "coverage unknown attachment" );
+	test = baseline;
+	test.nSampleCount = 8;
+	CHECK_COVERAGE( SIR_GRAPHICS_UNSUPPORTED, "coverage samples beyond device" );
+	test = baseline;
+	test.nDepthTest = 2;
+	CHECK_COVERAGE( SIR_GRAPHICS_INVALID_ARGUMENT, "coverage depth test domain" );
+	test = baseline;
+	test.nDepthWrite = 2;
+	CHECK_COVERAGE( SIR_GRAPHICS_INVALID_ARGUMENT, "coverage depth write domain" );
+	test = baseline;
+	sirGraphicsBindingDesc_t binding = {};
+	binding.nArrayCount = 1;
+	binding.nShaderStageMask = SIR_GRAPHICS_STAGE_VERTEX;
+	binding.eType = SIR_GRAPHICS_BINDING_SAMPLED_TEXTURE;
+	test.nBindingCount = 1;
+	test.pBindings = &binding;
+	binding.nArrayCount = 0;
+	CHECK_COVERAGE( SIR_GRAPHICS_INVALID_ARGUMENT, "coverage zero array size" );
+	binding.nArrayCount = 1;
+	binding.nShaderStageMask = 0;
+	CHECK_COVERAGE( SIR_GRAPHICS_INVALID_ARGUMENT, "coverage zero binding stages" );
+	test = baseline;
+	test.vertexShader = {};
+	if ( !checkResult( sirGraphicsValidateABIPipelineStructure( &test ), SIR_GRAPHICS_INVALID_ARGUMENT,
+	                   "coverage modern missing vertex shader" ) ) {
+		return false;
+	}
+	test = baseline;
+	test.computeShader = test.vertexShader;
+	if ( !checkResult( sirGraphicsValidateABIPipelineStructure( &test ), SIR_GRAPHICS_INVALID_ARGUMENT,
+	                   "coverage modern graphics with compute shader" ) ) {
+		return false;
+	}
+	test = baseline;
+	test.nModel = SIR_GRAPHICS_PIPELINE_MODEL_PROGRAMMABLE;
+	sirGraphicsABIProgrammableRecipe_t programmable = {};
+	programmable.nSize = sizeof( programmable );
+	programmable.nVertexShaderProfile = 1;
+	programmable.nFragmentShaderProfile = 1;
+	test.pModern = nullptr;
+	test.pProgrammable = &programmable;
+	if ( !checkResult( sirGraphicsValidateABIPipelineStructure( &test ), SIR_GRAPHICS_SUCCESS, "coverage valid programmable structure" ) ) {
+		return false;
+	}
+	caps.nModel = SIR_GRAPHICS_PIPELINE_MODEL_PROGRAMMABLE;
+	caps.nShaderStageMask = SIR_GRAPHICS_STAGE_VERTEX | SIR_GRAPHICS_STAGE_FRAGMENT;
+	caps.nRequiredFeatureMask = SIR_GRAPHICS_FEATURE_COMPUTE;
+	caps.nMaximumVertexShaderProfile = 1;
+	caps.nMaximumFragmentShaderProfile = 1;
+	if ( !checkResult( sirGraphicsValidateABIPipelineModelCaps( &caps ), SIR_GRAPHICS_INVALID_ARGUMENT,
+	                   "coverage programmable without graphics feature" ) ) {
+		return false;
+	}
+	caps.nRequiredFeatureMask = SIR_GRAPHICS_FEATURE_GRAPHICS;
+	caps.nMaximumTextureUnits = 4;
+	caps.nMaximumVertexAttributes = 4;
+	if ( !checkResult( sirGraphicsValidateABIPipelineModelCaps( &caps ), SIR_GRAPHICS_SUCCESS, "coverage valid programmable caps" ) ) {
+		return false;
+	}
+	test.vertexShader.nFormat = SIR_GRAPHICS_SHADER_SPIRV;
+	caps.nShaderFormatMask = 1U << ( SIR_GRAPHICS_SHADER_SPIRV - 1 );
+	CHECK_COVERAGE( SIR_GRAPHICS_SUCCESS, "coverage programmable matching profile" );
+	test.computeShader = test.vertexShader;
+	if ( !checkResult( sirGraphicsValidateABIPipelineStructure( &test ), SIR_GRAPHICS_INVALID_ARGUMENT,
+	                   "coverage programmable with compute shader" ) ) {
+		return false;
+	}
+#undef CHECK_COVERAGE
+	return true;
+}
+
 int main( void )
 {
 	if ( !testModern() || !testProgrammable() || !testFixed() || !testStructuralMatrix() || !testModernCommonMatrix() ||
-	     !testFixedDetailedMatrix() || !testProgrammableLimitsMatrix() ) {
+	     !testFixedDetailedMatrix() || !testProgrammableLimitsMatrix() || !testPipelineCoverageGaps() ) {
 		fputs( "graphics.abi.pipeline-eras FAILED\n", stderr );
 		return 1;
 	}

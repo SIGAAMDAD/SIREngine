@@ -34,6 +34,19 @@ static void testLog( void *, uint32_t, const char * ) noexcept
 
 typedef void ( *sirMockSetMode_t )( uint32_t );
 
+#if defined( __linux__ )
+static bool s_bRejectNextDLUnload = false;
+extern "C" int __real_dlclose( void *pHandle ) noexcept;
+extern "C" int __wrap_dlclose( void *pHandle ) noexcept
+{
+	if ( s_bRejectNextDLUnload ) {
+		s_bRejectNextDLUnload = false;
+		return -1;
+	}
+	return __real_dlclose( pHandle );
+}
+#endif
+
 static bool testHostBoundaryInputs( const sirGraphicsABIDevice_t *pDevice ) noexcept
 {
 	const sirGraphicsABIDevice_t *pNullDevice = nullptr;
@@ -1042,6 +1055,333 @@ static bool testAdapterRankingBoundaries( const sirGraphicsABIModule_t *pModule 
 	return true;
 }
 
+// Each fault is produced by the loaded DSO, so these checks exercise host
+// translation and atomic output preservation across the actual ABI boundary.
+static bool testProviderFaultCoverage( sirGraphicsABIModule_t *pModule, sirGraphicsABIDevice_t *pDevice, sirMockSetMode_t pMode ) noexcept
+{
+	sirGraphicsABIAdapter_t adapter = {};
+	adapter.nSize = sizeof( adapter );
+	adapter.nStableId = 77;
+	sirGraphicsABICapabilities_t caps = {};
+	caps.nSize = sizeof( caps );
+	sirGraphicsABIPipelineModelCaps_t model = {};
+	model.nSize = sizeof( model );
+	sirGraphicsABIFormat_t format = {};
+	format.nSize = sizeof( format );
+	format.nFormat = SIR_GRAPHICS_FORMAT_RGBA8_UNORM;
+	const sirGraphicsABIModule_t *ppModules[] = { pModule };
+	sirGraphicsABIModuleSelection_t policy = {};
+	policy.nSize = sizeof( policy );
+	policy.nAllowSoftware = 1;
+	sirGraphicsABIAdapterChoice_t choice = {};
+	choice.nSize = sizeof( choice );
+	choice.nModuleIndex = 88;
+	pMode( 41 );
+	sirGraphicsABIModule_t rejectedModule = {};
+	if ( sirGraphicsLoadABIModule( SIR_TEST_ABI_MODULE_PATH, nullptr, &rejectedModule ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return false;
+	}
+	sirGraphicsABIHost_t host = {};
+	host.nSize = sizeof( host );
+	host.nMajor = SIR_GRAPHICS_DRIVER_ABI_MAJOR;
+	host.nMinor = SIR_GRAPHICS_DRIVER_ABI_MINOR;
+	host.pAllocate = testAlloc;
+	host.pFree = testFree;
+	host.pLog = testLog;
+	if ( sirGraphicsLoadABIModule( SIR_TEST_ABI_MODULE_PATH, &host, &rejectedModule ) != SIR_GRAPHICS_ABI_VERSION_MISMATCH ||
+	     rejectedModule.library.pNativeHandle != nullptr ) {
+		return false;
+	}
+	pMode( 42 );
+	if ( sirGraphicsQueryABIAdapter( pModule, 0, &adapter ) != SIR_GRAPHICS_BUSY || adapter.nStableId != 77 ||
+	     sirGraphicsSelectABIModuleAdapter( ppModules, 1, &policy, &choice ) != SIR_GRAPHICS_BUSY || choice.nModuleIndex != 88 ) {
+		return false;
+	}
+	pMode( 43 );
+	if ( sirGraphicsQueryABIAdapter( pModule, 0, &adapter ) != SIR_GRAPHICS_BUSY || adapter.nStableId != 77 ||
+	     sirGraphicsSelectABIModuleAdapter( ppModules, 1, &policy, &choice ) != SIR_GRAPHICS_BUSY || choice.nModuleIndex != 88 ) {
+		return false;
+	}
+	pMode( 44 );
+	if ( sirGraphicsQueryABICapabilities( pDevice, SIR_GRAPHICS_BACKEND_VULKAN, &caps ) != SIR_GRAPHICS_BUSY ||
+	     sirGraphicsQueryABIPipelineModelCaps( pDevice, SIR_GRAPHICS_PIPELINE_MODEL_MODERN, &model ) != SIR_GRAPHICS_BUSY ) {
+		return false;
+	}
+	pMode( 45 );
+	if ( sirGraphicsQueryABICapabilities( pDevice, SIR_GRAPHICS_BACKEND_VULKAN, &caps ) != SIR_GRAPHICS_DRIVER_ERROR ||
+	     sirGraphicsQueryABIPipelineModelCaps( pDevice, SIR_GRAPHICS_PIPELINE_MODEL_MODERN, &model ) != SIR_GRAPHICS_DRIVER_ERROR ) {
+		return false;
+	}
+	pMode( 48 );
+	sirGraphicsABIDeviceRequest_t request = {};
+	request.nSize = sizeof( request );
+	request.nAdapterIndex = 0;
+	request.nAllowSoftware = 1;
+	request.nHeadless = 1;
+	request.nFramesInFlight = 2;
+	request.nRequiredFeatures = SIR_GRAPHICS_FEATURE_COMPUTE;
+	sirGraphicsABIDevice_t duplicate = {};
+	duplicate.nSize = sizeof( duplicate );
+	if ( sirGraphicsCreateABIDevice( pModule, &request, &duplicate ) != SIR_GRAPHICS_DRIVER_ERROR || pModule->nActiveDevices != 1 ||
+	     duplicate.pDevice != nullptr ) {
+		return false;
+	}
+	pMode( 50 );
+	uint32_t nShader = 0x07230203;
+	sirGraphicsABIModernRecipe_t computeRecipe = {};
+	computeRecipe.nSize = sizeof( computeRecipe );
+	computeRecipe.nStageMask = SIR_GRAPHICS_STAGE_COMPUTE;
+	computeRecipe.nRequiredFeatures = SIR_GRAPHICS_FEATURE_COMPUTE;
+	sirGraphicsABIPipeline_t pipeline = {};
+	pipeline.nSize = sizeof( pipeline );
+	pipeline.nModel = SIR_GRAPHICS_PIPELINE_MODEL_MODERN;
+	pipeline.nType = SIR_GRAPHICS_PIPELINE_COMPUTE;
+	pipeline.nSampleCount = 1;
+	pipeline.computeShader = { sizeof( sirGraphicsABIShaderCode_t ), SIR_GRAPHICS_SHADER_SPIRV, &nShader, 4, 1, "main" };
+	pipeline.pModern = &computeRecipe;
+	sirGraphicsHandle_t hPipeline = { 99, 1, 5, SIR_GRAPHICS_HANDLE_PIPELINE };
+	if ( sirGraphicsCreateABIPipeline( pDevice, &pipeline, &hPipeline ) != SIR_GRAPHICS_BUSY || hPipeline.nSlot != 99 ) {
+		return false;
+	}
+	pMode( 51 );
+	if ( sirGraphicsQueryABIFormat( pDevice, SIR_GRAPHICS_FORMAT_RGBA8_UNORM, &format ) != SIR_GRAPHICS_BUSY ) {
+		return false;
+	}
+	pMode( 52 );
+	if ( sirGraphicsQueryABIPipelineModelCaps( pDevice, SIR_GRAPHICS_PIPELINE_MODEL_MODERN, &model ) != SIR_GRAPHICS_BUSY ||
+	     sirGraphicsCreateABIPipeline( pDevice, &pipeline, &hPipeline ) != SIR_GRAPHICS_BUSY ) {
+		return false;
+	}
+	pMode( 53 );
+	sirGraphicsABIModernRecipe_t graphicsRecipe = {};
+	graphicsRecipe.nSize = sizeof( graphicsRecipe );
+	graphicsRecipe.nStageMask = SIR_GRAPHICS_STAGE_VERTEX | SIR_GRAPHICS_STAGE_FRAGMENT;
+	graphicsRecipe.nRequiredFeatures = SIR_GRAPHICS_FEATURE_GRAPHICS;
+	pipeline = {};
+	pipeline.nSize = sizeof( pipeline );
+	pipeline.nModel = SIR_GRAPHICS_PIPELINE_MODEL_MODERN;
+	pipeline.nType = SIR_GRAPHICS_PIPELINE_GRAPHICS;
+	pipeline.nSampleCount = 1;
+	pipeline.nColorFormatCount = 1;
+	pipeline.szColorFormats[0] = SIR_GRAPHICS_FORMAT_RGBA8_UNORM;
+	pipeline.nDepthFormat = SIR_GRAPHICS_FORMAT_D16_UNORM;
+	pipeline.vertexShader = { sizeof( sirGraphicsABIShaderCode_t ), SIR_GRAPHICS_SHADER_SPIRV, &nShader, 4, 2, "main" };
+	pipeline.pixelShader = { sizeof( sirGraphicsABIShaderCode_t ), SIR_GRAPHICS_SHADER_SPIRV, &nShader, 4, 3, "main" };
+	pipeline.pModern = &graphicsRecipe;
+	if ( sirGraphicsCreateABIPipeline( pDevice, &pipeline, &hPipeline ) != SIR_GRAPHICS_UNSUPPORTED ) {
+		return false;
+	}
+	pMode( 61 );
+	if ( sirGraphicsCreateABIPipeline( pDevice, &pipeline, &hPipeline ) != SIR_GRAPHICS_UNSUPPORTED ) {
+		fputs( "Depth attachment without native depth support was admitted\n", stderr );
+		return false;
+	}
+	pMode( 15 );
+	pipeline.nDepthFormat = SIR_GRAPHICS_FORMAT_UNKNOWN;
+	pipeline.nSampleCount = 2;
+	if ( sirGraphicsCreateABIPipeline( pDevice, &pipeline, &hPipeline ) != SIR_GRAPHICS_SUCCESS ) {
+		fputs( "Two-sample pipeline admission was rejected despite declared capabilities\n", stderr );
+		return false;
+	}
+	pMode( 56 );
+	pipeline.nColorFormatCount = 0;
+	pipeline.nSampleCount = 1;
+	if ( sirGraphicsCreateABIPipeline( pDevice, &pipeline, &hPipeline ) != SIR_GRAPHICS_SUCCESS ) {
+		fputs( "Attachment-free graphics pipeline was rejected\n", stderr );
+		return false;
+	}
+	pMode( 10 );
+	pipeline.nColorFormatCount = 0;
+	pipeline.nDepthFormat = SIR_GRAPHICS_FORMAT_UNKNOWN;
+	pipeline.nSampleCount = 1;
+	sirGraphicsBindingDesc_t crossStage = {};
+	crossStage.nArrayCount = 1;
+	crossStage.nShaderStageMask = SIR_GRAPHICS_STAGE_COMPUTE;
+	crossStage.eType = SIR_GRAPHICS_BINDING_SAMPLED_TEXTURE;
+	pipeline.nBindingCount = 1;
+	pipeline.pBindings = &crossStage;
+	uint32_t iSelection = 79;
+	if ( sirGraphicsValidateABIPipelineStructure( &pipeline ) != SIR_GRAPHICS_SUCCESS ||
+	     sirGraphicsSelectABIPipelineVariant( pDevice, &pipeline, 1, &iSelection ) != SIR_GRAPHICS_INVALID_ARGUMENT || iSelection != 79 ) {
+		fputs( "Cross-stage binding was accepted by variant selection\n", stderr );
+		return false;
+	}
+	pMode( 0 );
+	return true;
+}
+
+static bool testDeviceAdmissionFaultCoverage( sirGraphicsABIModule_t *pModule, const sirGraphicsABIDeviceRequest_t& base,
+                                              sirMockSetMode_t pMode ) noexcept
+{
+	sirGraphicsABIDeviceRequest_t request = base;
+	sirGraphicsABIDevice_t rejected = {};
+	rejected.nSize = sizeof( rejected );
+	pMode( 46 );
+	request.nRequiredFeatures = SIR_GRAPHICS_FEATURE_GRAPHICS;
+	if ( sirGraphicsCreateABIDevice( pModule, &request, &rejected ) != SIR_GRAPHICS_ABI_UNSUPPORTED || pModule->nActiveDevices != 0 ) {
+		return false;
+	}
+	pMode( 47 );
+	request.nRequiredFeatures = SIR_GRAPHICS_FEATURE_COMPUTE;
+	request.nFramesInFlight = 3;
+	if ( sirGraphicsCreateABIDevice( pModule, &request, &rejected ) != SIR_GRAPHICS_ABI_UNSUPPORTED || pModule->nActiveDevices != 0 ) {
+		return false;
+	}
+	pMode( 0 );
+	return true;
+}
+
+static bool testDestroyFaultCoverage( sirGraphicsABIModule_t *pModule, sirGraphicsABIDevice_t *pDevice, sirMockSetMode_t pMode ) noexcept
+{
+	pMode( 49 );
+	const void *pIdentity = pDevice->pDevice;
+	if ( sirGraphicsDestroyABIDevice( pModule, pDevice ) != SIR_GRAPHICS_DEVICE_LOST || pModule->nActiveDevices != 1 ||
+	     pDevice->pDevice != pIdentity ) {
+		return false;
+	}
+	pMode( 0 );
+	return true;
+}
+
+// Rejected WSI and resource inputs must never mutate caller-owned outputs.
+static bool testAdditionalAdmissionCoverage( sirGraphicsABIDevice_t *pDevice, sirMockSetMode_t pMode ) noexcept
+{
+	sirGraphicsABINativeSurface_t native = {};
+	native.nSize = sizeof( native );
+	native.nPlatform = SIR_GRAPHICS_SURFACE_X11;
+	native.pWindow = &native;
+	native.nWindowGeneration = 1;
+	sirGraphicsABIPresentDesc_t present = {};
+	present.nSize = sizeof( present );
+	present.nWidth = 16;
+	present.nHeight = 16;
+	present.nBackbufferCount = 2;
+	present.nFormat = SIR_GRAPHICS_FORMAT_RGBA8_UNORM;
+	present.nMode = SIR_GRAPHICS_PRESENT_FIFO;
+	sirGraphicsHandle_t hSurface = { 1, 1, 5, SIR_GRAPHICS_HANDLE_SURFACE };
+	sirGraphicsHandle_t hInvalid = hSurface;
+	hInvalid.nDeviceGeneration = 4;
+	sirGraphicsSurfaceImage_t image = {};
+	image.hSurface = hSurface;
+	image.hImage = { 4, 1, 5, SIR_GRAPHICS_HANDLE_TEXTURE };
+	image.nAcquisitionId = 1;
+	image.nWindowGeneration = 1;
+	sirGraphicsCompletion_t completion = { 5, SIR_GRAPHICS_QUEUE_DIRECT, 1 };
+	pMode( 0 );
+	if ( sirGraphicsResizeABISurface( pDevice, hInvalid, &native, &present ) != SIR_GRAPHICS_INVALID_ARGUMENT ||
+	     sirGraphicsAcquireABISurfaceImage( pDevice, hInvalid, &image ) != SIR_GRAPHICS_INVALID_ARGUMENT ||
+	     sirGraphicsAcquireABISurfaceImage( pDevice, hSurface, &image ) != SIR_GRAPHICS_UNSUPPORTED ||
+	     sirGraphicsPresentABISurfaceImage( pDevice, &image, &completion ) != SIR_GRAPHICS_UNSUPPORTED ) {
+		fputs( "Failed to reject headless WSI requests in the correct admission stage\n", stderr );
+		return false;
+	}
+	pMode( 60 );
+	if ( sirGraphicsCreateABISurface( pDevice, &native, &present, &hSurface ) != SIR_GRAPHICS_BUSY ) {
+		fputs( "WSI provider status was not propagated\n", stderr );
+		return false;
+	}
+	sirGraphicsViewDesc_t view = {};
+	view.hResource = { 2, 1, 5, SIR_GRAPHICS_HANDLE_TEXTURE };
+	view.nMipLevels = 1;
+	view.nLayers = 1;
+	view.nUsage = SIR_GRAPHICS_USAGE_SAMPLED;
+	view.eFormat = SIR_GRAPHICS_FORMAT_RGBA8_UNORM;
+	sirGraphicsHandle_t hView = { 99, 1, 5, SIR_GRAPHICS_HANDLE_VIEW };
+	pMode( 51 );
+	if ( sirGraphicsCreateABIView( pDevice, &view, &hView ) != SIR_GRAPHICS_BUSY || hView.nSlot != 99 ) {
+		fputs( "View provider status was not propagated\n", stderr );
+		return false;
+	}
+	sirGraphicsTextureDesc_t texture = {};
+	texture.nWidth = 16;
+	texture.nHeight = 16;
+	texture.nDepth = 1;
+	texture.nArrayLayers = 1;
+	texture.nMipLevels = 1;
+	texture.nSampleCount = 1;
+	texture.nUsage = SIR_GRAPHICS_USAGE_STORAGE;
+	texture.eFormat = SIR_GRAPHICS_FORMAT_RGBA8_UNORM;
+	texture.eMemory = SIR_GRAPHICS_MEMORY_GPU_LOCAL;
+	texture.eDimension = SIR_GRAPHICS_TEXTURE_2D;
+	sirGraphicsHandle_t hTexture = { 99, 1, 5, SIR_GRAPHICS_HANDLE_TEXTURE };
+	pMode( 54 );
+	if ( sirGraphicsCreateABITexture( pDevice, &texture, &hTexture ) != SIR_GRAPHICS_SUCCESS ||
+	     hTexture.eType != SIR_GRAPHICS_HANDLE_TEXTURE ) {
+		fputs( "Storage texture admission failed\n", stderr );
+		return false;
+	}
+	view.nUsage = SIR_GRAPHICS_USAGE_STORAGE;
+	if ( sirGraphicsCreateABIView( pDevice, &view, &hView ) != SIR_GRAPHICS_SUCCESS || hView.eType != SIR_GRAPHICS_HANDLE_VIEW ) {
+		fputs( "Storage view failed despite enabled device and format bits\n", stderr );
+		return false;
+	}
+	pMode( 0 );
+	return true;
+}
+
+static uint32_t testCrossBackendAdapter( void *, sirGraphicsABIAdapter_t *pAdapter ) noexcept
+{
+	if ( pAdapter == nullptr || pAdapter->nIndex != 0 ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	*pAdapter = {};
+	pAdapter->nSize = sizeof( *pAdapter );
+	pAdapter->nBackend = SIR_GRAPHICS_BACKEND_D3D12;
+	pAdapter->nKind = SIR_GRAPHICS_ABI_ADAPTER_SOFTWARE;
+	pAdapter->nApiMajor = 12;
+	pAdapter->nFeatureMask = SIR_GRAPHICS_FEATURE_COMPUTE;
+	pAdapter->nQueueMask = 1U << SIR_GRAPHICS_QUEUE_DIRECT;
+	return SIR_GRAPHICS_SUCCESS;
+}
+
+static bool testDifferentBackendRanking( const sirGraphicsABIModule_t *pLiveModule ) noexcept
+{
+	sirGraphicsABIModule_t synthetic = *pLiveModule;
+	synthetic.driver.nBackend = SIR_GRAPHICS_BACKEND_D3D12;
+	synthetic.driver.pQueryAdapter = testCrossBackendAdapter;
+	const sirGraphicsABIModule_t *ppModules[] = { &synthetic, pLiveModule };
+	sirGraphicsABIModuleSelection_t policy = {};
+	policy.nSize = sizeof( policy );
+	policy.nAllowSoftware = 1;
+	policy.nRequiredFeatures = SIR_GRAPHICS_FEATURE_COMPUTE;
+	sirGraphicsABIAdapterChoice_t choice = {};
+	choice.nSize = sizeof( choice );
+	return sirGraphicsSelectABIModuleAdapter( ppModules, 2, &policy, &choice ) == SIR_GRAPHICS_SUCCESS && choice.nModuleIndex == 1 &&
+	       choice.adapter.nBackend == SIR_GRAPHICS_BACKEND_VULKAN;
+}
+
+static bool testMultipleDeviceRetirement( sirGraphicsABIModule_t *pModule, sirGraphicsABIDevice_t *pFirst, sirMockSetMode_t pMode ) noexcept
+{
+	sirGraphicsABIDeviceRequest_t request = {};
+	request.nSize = sizeof( request );
+	request.nAdapterIndex = 0;
+	request.nAllowSoftware = 1;
+	request.nHeadless = 1;
+	request.nFramesInFlight = 2;
+	request.nRequiredFeatures = SIR_GRAPHICS_FEATURE_COMPUTE;
+	sirGraphicsABIDevice_t second = {};
+	second.nSize = sizeof( second );
+	pMode( 62 );
+	if ( sirGraphicsCreateABIDevice( pModule, &request, &second ) != SIR_GRAPHICS_SUCCESS || pModule->nActiveDevices != 2 ||
+	     second.pDevice == pFirst->pDevice ) {
+		return false;
+	}
+	if ( sirGraphicsDestroyABIDevice( pModule, &second ) != SIR_GRAPHICS_SUCCESS || pModule->nActiveDevices != 1 ||
+	     second.pDevice != nullptr || pModule->szActiveDevices[0] != pFirst->pDevice ) {
+		return false;
+	}
+	// A structurally valid foreign device must not be destroyed by this
+	// module because it is absent from the ownership ledger.
+	sirGraphicsABIDevice_t foreign = *pFirst;
+	foreign.pDevice = &foreign;
+	if ( sirGraphicsDestroyABIDevice( pModule, &foreign ) != SIR_GRAPHICS_INVALID_ARGUMENT || pModule->nActiveDevices != 1 ||
+	     foreign.pDevice != &foreign ) {
+		return false;
+	}
+	pMode( 0 );
+	return true;
+}
+
 static bool testBinaryModule( void ) noexcept
 {
 	sirGraphicsABIHost_t host = {};
@@ -1053,6 +1393,11 @@ static bool testBinaryModule( void ) noexcept
 	host.pLog = testLog;
 	sirGraphicsABIModule_t module = {};
 	if ( sirGraphicsLoadABIModule( "/not/a/real/graphics-driver", &host, &module ) != SIR_GRAPHICS_ABI_UNSUPPORTED ||
+	     module.library.pNativeHandle != nullptr ) {
+		return false;
+	}
+	// A loadable DSO with no graphics ABI factory must be rejected and unloaded.
+	if ( sirGraphicsLoadABIModule( SIR_TEST_NO_ABI_MODULE_PATH, &host, &module ) != SIR_GRAPHICS_ABI_UNSUPPORTED ||
 	     module.library.pNativeHandle != nullptr ) {
 		return false;
 	}
@@ -1089,6 +1434,9 @@ static bool testBinaryModule( void ) noexcept
 		return false;
 	}
 	if ( !testAdapterRankingBoundaries( &module ) ) {
+		return false;
+	}
+	if ( !testDifferentBackendRanking( &module ) ) {
 		return false;
 	}
 
@@ -1181,6 +1529,9 @@ static bool testBinaryModule( void ) noexcept
 	if ( !testDeviceRequestPreflightMatrix( &module, request ) ) {
 		return false;
 	}
+	if ( !testDeviceAdmissionFaultCoverage( &module, request, pMode ) ) {
+		return false;
+	}
 	pMode( 6 );
 	if ( sirGraphicsCreateABIDevice( &module, &request, &device ) != SIR_GRAPHICS_OUT_OF_MEMORY || module.nActiveDevices != 0 ) {
 		return false;
@@ -1204,6 +1555,12 @@ static bool testBinaryModule( void ) noexcept
 	}
 	pMode( 0 );
 	if ( sirGraphicsCreateABIDevice( &module, &request, &device ) != SIR_GRAPHICS_ABI_SUCCESS || module.nActiveDevices != 1 ) {
+		return false;
+	}
+	if ( !testProviderFaultCoverage( &module, &device, pMode ) ) {
+		return false;
+	}
+	if ( !testAdditionalAdmissionCoverage( &device, pMode ) ) {
 		return false;
 	}
 	if ( !testHostBoundaryInputs( &device ) ) {
@@ -1969,6 +2326,26 @@ static bool testBinaryModule( void ) noexcept
 	}
 	const void *pOriginalCommands = commands.pCommands;
 	sirGraphicsABICommandList_t invalidCommands = commands;
+	invalidCommands.nDeviceGeneration = 0;
+	if ( sirGraphicsValidateABICommandList( &invalidCommands ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return false;
+	}
+	invalidCommands = commands;
+	invalidCommands.nQueue = SIR_GRAPHICS_QUEUE_COUNT;
+	if ( sirGraphicsValidateABICommandList( &invalidCommands ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return false;
+	}
+	invalidCommands = commands;
+	invalidCommands.nReserved = 1;
+	if ( sirGraphicsValidateABICommandList( &invalidCommands ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return false;
+	}
+	invalidCommands = commands;
+	invalidCommands.pCommands = nullptr;
+	if ( sirGraphicsValidateABICommandList( &invalidCommands ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return false;
+	}
+	invalidCommands = commands;
 	invalidCommands.nSize = 1;
 	if ( sirGraphicsAcquireABICommands( &device, SIR_GRAPHICS_QUEUE_DIRECT, &invalidCommands ) != SIR_GRAPHICS_INVALID_ARGUMENT ||
 	     invalidCommands.pCommands != pOriginalCommands ) {
@@ -2439,6 +2816,12 @@ static bool testBinaryModule( void ) noexcept
 		return false;
 	}
 	pMode( 0 );
+	if ( !testMultipleDeviceRetirement( &module, &device, pMode ) ) {
+		return false;
+	}
+	if ( !testDestroyFaultCoverage( &module, &device, pMode ) ) {
+		return false;
+	}
 	if ( sirGraphicsDestroyABIDevice( &module, &device ) != SIR_GRAPHICS_ABI_SUCCESS || device.pDevice != nullptr ||
 	     module.nActiveDevices != 0 ) {
 		return false;
@@ -2449,7 +2832,28 @@ static bool testBinaryModule( void ) noexcept
 	if ( sirGraphicsUnloadABIModule( &module ) != SIR_GRAPHICS_ABI_SUCCESS || module.library.pNativeHandle != nullptr ) {
 		return false;
 	}
-	return sirGraphicsUnloadABIModule( &module ) == SIR_GRAPHICS_ABI_INVALID_ARGUMENT;
+	if ( sirGraphicsUnloadABIModule( &module ) != SIR_GRAPHICS_ABI_INVALID_ARGUMENT ) {
+		return false;
+	}
+#if defined( __linux__ )
+	// The real platform loader normally succeeds, so explicitly exercise the
+	// production error mapping without touching any global linker state.
+	sirGraphicsABIModule_t unloadFailure = {};
+	if ( sirGraphicsLoadABIModule( SIR_TEST_ABI_MODULE_PATH, &host, &unloadFailure ) != SIR_GRAPHICS_ABI_SUCCESS ) {
+		return false;
+	}
+	s_bRejectNextDLUnload = true;
+	if ( sirGraphicsUnloadABIModule( &unloadFailure ) != SIR_GRAPHICS_DRIVER_ERROR || unloadFailure.library.pNativeHandle == nullptr ||
+	     s_bRejectNextDLUnload ) {
+		return false;
+	}
+	// Release has already run. Close the DSO directly, avoiding a second
+	// release callback when verifying the failed unload case.
+	if ( __real_dlclose( unloadFailure.library.pNativeHandle ) != 0 ) {
+		return false;
+	}
+#endif
+	return true;
 }
 
 int main( void )
