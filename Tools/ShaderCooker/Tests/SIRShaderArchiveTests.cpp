@@ -82,6 +82,19 @@ static void testArchiveDedupAndRoundTrip( void ) noexcept
 	REQUIRE( sirShaderArchiveValidate( szRepeat, result.nRequiredBytes ) == SIR_SHADER_COOK_INVALID_ARGUMENT );
 }
 
+static void testArchiveRehash( uint8_t *pBytes, uint64_t nCount ) noexcept
+{
+	uint64_t nHash = 14695981039346656037ULL;
+	for ( uint64_t iByte = 0; iByte < nCount; ++iByte ) {
+		const uint8_t nByte = iByte >= 44 && iByte < 52 ? 0 : pBytes[iByte];
+		nHash ^= nByte;
+		nHash *= 1099511628211ULL;
+	}
+	for ( uint32_t iByte = 0; iByte < 8; ++iByte ) {
+		pBytes[44 + iByte] = ( uint8_t )( nHash >> ( iByte * 8 ) );
+	}
+}
+
 static void testArchiveOrphanedUnique( void ) noexcept
 {
 	const uint8_t szFirst[4] = { 1, 2, 3, 4 };
@@ -99,15 +112,30 @@ static void testArchiveOrphanedUnique( void ) noexcept
 	const uint32_t nSecondEntry = SIR_SHADER_ARCHIVE_HEADER_BYTES + SIR_SHADER_ARCHIVE_ENTRY_BYTES;
 	memset( szArchive + nSecondEntry + 16, 0, 4 );
 	memcpy( szArchive + nSecondEntry + 24, szArchive + SIR_SHADER_ARCHIVE_HEADER_BYTES + 24, 8 );
-	uint64_t nHash = 14695981039346656037ULL;
-	for ( uint64_t iByte = 0; iByte < result.nRequiredBytes; ++iByte ) {
-		const uint8_t nByte = iByte >= 44 && iByte < 52 ? 0 : szArchive[iByte];
-		nHash ^= nByte;
-		nHash *= 1099511628211ULL;
-	}
-	for ( uint32_t iByte = 0; iByte < 8; ++iByte ) {
-		szArchive[44 + iByte] = ( uint8_t )( nHash >> ( iByte * 8 ) );
-	}
+	testArchiveRehash( szArchive, result.nRequiredBytes );
+	REQUIRE( sirShaderArchiveValidate( szArchive, result.nRequiredBytes ) == SIR_SHADER_COOK_INVALID_ARGUMENT );
+}
+
+static void testArchiveDuplicateUnique( void ) noexcept
+{
+	const uint8_t szFirst[4] = { 1, 2, 3, 4 };
+	const uint8_t szSecond[4] = { 5, 6, 7, 8 };
+	const sirShaderArchiveStageInput_t szInputs[2] = {
+	    { SIR_GRAPHICS_SHADER_SPIRV, SIR_GRAPHICS_STAGE_VERTEX, 10, szFirst, sizeof( szFirst ) },
+	    { SIR_GRAPHICS_SHADER_SPIRV, SIR_GRAPHICS_STAGE_FRAGMENT, 11, szSecond, sizeof( szSecond ) } };
+	const sirShaderArchiveBuildDesc_t desc = { 102, SIR_SHADER_ARCHIVE_TARGET_ABI_V1, szInputs, 2 };
+	uint8_t szArchive[256] = {};
+	sirShaderArchiveBuildResult_t result = {};
+	REQUIRE( sirShaderArchiveBuild( desc, szArchive, sizeof( szArchive ), &result ) == SIR_SHADER_COOK_OK );
+	REQUIRE( result.nUniqueCount == 2 );
+	const uint32_t nFirstUnique = SIR_SHADER_ARCHIVE_HEADER_BYTES + 2 * SIR_SHADER_ARCHIVE_ENTRY_BYTES;
+	const uint32_t nSecondUnique = nFirstUnique + SIR_SHADER_ARCHIVE_UNIQUE_BYTES;
+	const uint32_t nPayload = nSecondUnique + SIR_SHADER_ARCHIVE_UNIQUE_BYTES;
+	memcpy( szArchive + nPayload + sizeof( szFirst ), szArchive + nPayload, sizeof( szFirst ) );
+	memcpy( szArchive + nSecondUnique + 16, szArchive + nFirstUnique + 16, 8 );
+	memcpy( szArchive + SIR_SHADER_ARCHIVE_HEADER_BYTES + SIR_SHADER_ARCHIVE_ENTRY_BYTES + 24,
+	        szArchive + SIR_SHADER_ARCHIVE_HEADER_BYTES + 24, 8 );
+	testArchiveRehash( szArchive, result.nRequiredBytes );
 	REQUIRE( sirShaderArchiveValidate( szArchive, result.nRequiredBytes ) == SIR_SHADER_COOK_INVALID_ARGUMENT );
 }
 
@@ -149,6 +177,7 @@ int main( void )
 {
 	testArchiveDedupAndRoundTrip();
 	testArchiveOrphanedUnique();
+	testArchiveDuplicateUnique();
 	testArchiveBadInputs();
 	return 0;
 }
