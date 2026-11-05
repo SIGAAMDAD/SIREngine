@@ -18,6 +18,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Core/Platform/Input/Linux/SIRLinuxX11Backend.h>
 
 #include <X11/Xlib.h>
+#include <limits.h>
 #include <stdio.h>
 
 static bool sirTestNativeWindowLifecycle( void ) noexcept
@@ -133,6 +134,61 @@ static bool sirTestX11NormalizedEvents( void ) noexcept
 	return true;
 }
 
+static bool sirTestX11BackendFailureAndExtremeMotion( void ) noexcept
+{
+	SIRInputService missing;
+	SIRLinuxX11Backend unowned;
+	if ( !missing.begin( 1 ) || unowned.attachWindow( missing, ( Window )777 ) || unowned.attachWindow( missing, ( Window )0 ) ||
+	     SIRLinuxX11Backend::enableDetectableRepeat( nullptr ) || unowned.enableRawPointer( nullptr ) ) {
+		return false;
+	}
+	unowned.stop( missing );
+
+	SIRInputService input;
+	SIRLinuxX11Backend backend;
+	if ( !input.attach( backend ) || !input.begin( 1 ) || backend.attachWindow( input, ( Window )0 ) ||
+	     !backend.attachWindow( input, ( Window )456 ) ) {
+		return false;
+	}
+	XEvent event = {};
+	event.xany.window = ( Window )456;
+	event.type = FocusIn;
+	if ( !backend.processEvent( input, event ) ) {
+		return false;
+	}
+	event.type = MotionNotify;
+	event.xmotion.x_root = INT32_MIN;
+	event.xmotion.y_root = INT32_MAX;
+	if ( !backend.processEvent( input, event ) ) {
+		return false;
+	}
+	event.xmotion.x_root = INT32_MAX;
+	event.xmotion.y_root = INT32_MIN;
+	if ( !backend.processEvent( input, event ) ) {
+		return false;
+	}
+	event.xmotion.x_root = INT32_MIN;
+	event.xmotion.y_root = INT32_MAX;
+	if ( !backend.processEvent( input, event ) ) {
+		return false;
+	}
+	sirInputDeviceId_t hKeyboard = {};
+	if ( !input.findDevice( SIR_INPUT_LINUX_X11, UINT64_C( 456 ) << 1, &hKeyboard ) ||
+	     !input.disconnect( SIR_INPUT_LINUX_X11, hKeyboard ) ) {
+		return false;
+	}
+	event.type = FocusOut;
+	if ( backend.processEvent( input, event ) ) {
+		return false;
+	}
+	backend.stop( input );
+	if ( input.activeDeviceCount() != 0 || !input.publish() || input.frame() == nullptr || input.frame()->nCount < 5 ) {
+		return false;
+	}
+	input.shutdown();
+	return true;
+}
+
 int main( void )
 {
 	if ( !sirTestNativeWindowLifecycle() ) {
@@ -141,6 +197,10 @@ int main( void )
 	}
 	if ( !sirTestX11NormalizedEvents() ) {
 		fputs( "SIRInputX11WindowTests normalized event path FAILED\n", stderr );
+		return 1;
+	}
+	if ( !sirTestX11BackendFailureAndExtremeMotion() ) {
+		fputs( "SIRInputX11WindowTests backend failure and pointer clamp FAILED\n", stderr );
 		return 1;
 	}
 	puts( "SIRInputX11WindowTests PASS" );
