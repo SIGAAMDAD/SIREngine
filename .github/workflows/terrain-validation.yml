@@ -1,0 +1,48 @@
+name: Terrain native sanitizer validation
+
+on:
+  pull_request:
+    branches: [develop, main]
+    paths:
+      - 'Source/Terrain/**'
+      - 'Source/CMakeLists.txt'
+      - 'Tests/Unit/SIRTerrain*'
+      - 'Tests/Unit/CMakeLists.txt'
+      - '.github/workflows/terrain-validation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  terrain-sanitizer:
+    name: Terrain R16 / ASan + UBSan / Linux
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-build-tools
+      - name: Configure sanitized native terrain
+        run: >
+          cmake --preset dev
+          -DSIR_BUILD_TESTS=ON
+          -DSIR_WITH_GOOGLETEST=OFF
+          -DSIR_ENABLE_ASAN=ON
+          -DSIR_ENABLE_UBSAN=ON
+      - name: Build terrain and all terrain regression targets
+        run: >
+          cmake --build --preset dev --target
+          SIRTerrainHeightfieldCodecTests
+          SIRTerrainRegionCatalogTests
+          SIRTerrainHeightfieldViewTests
+          SIRTerrainResourceBridgeTests
+      - name: Run terrain CTests with ASan and UBSan
+        env:
+          ASAN_OPTIONS: detect_leaks=1:halt_on_error=1
+          UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+        run: >
+          ctest --preset dev --output-on-failure --no-tests=error
+          --repeat until-fail:3
+          -R '^terrain[.]'
