@@ -80,6 +80,7 @@ static sirEditorTextResourceResult_t sirEditorReferencePass( const sirEditorReso
 	bool bLineStart = true;
 	uint32_t nLine = 1;
 	uint64_t nOwnerKey = 0;
+	uint32_t iNextResource = 0;
 	uint32_t nReferences = 0;
 	for ( const char *pCursor = pszSource; pCursor < pEnd; ++pCursor ) {
 		const char c = *pCursor;
@@ -113,11 +114,15 @@ static sirEditorTextResourceResult_t sirEditorReferencePass( const sirEditorReso
 			// from a property array or from text inside a quoted multiline value.
 			if ( c == '[' && pCursor + 1 < pEnd && pCursor[1] >= 'a' && pCursor[1] <= 'z' ) {
 				nOwnerKey = 0;
-				for ( uint32_t i = 0; i < context.pIndex->nCount; ++i ) {
-					const sirEditorTextResource_t &item = context.pIndex->pResources[i];
-					if ( item.nSourceLine == nLine && item.eKind == SIR_EDITOR_RESOURCE_EMBEDDED ) {
+				// Resource declarations are validated in ascending source-line order.
+				// Consume each once instead of searching the entire index per section.
+				while ( iNextResource < context.pIndex->nCount && context.pIndex->pResources[iNextResource].nSourceLine < nLine ) {
+					++iNextResource;
+				}
+				if ( iNextResource < context.pIndex->nCount && context.pIndex->pResources[iNextResource].nSourceLine == nLine ) {
+					const sirEditorTextResource_t &item = context.pIndex->pResources[iNextResource++];
+					if ( item.eKind == SIR_EDITOR_RESOURCE_EMBEDDED ) {
 						nOwnerKey = item.nStableKey;
-						break;
 					}
 				}
 			}
@@ -189,8 +194,13 @@ sirEditorTextResourceResult_t sirEditorScanResourceReferences( const sirEditorRe
 	if ( pOutCount == nullptr ) {
 		return SIR_EDITOR_RESOURCE_INVALID_ARGUMENT;
 	}
-	*pOutCount = 0;
+	// Never initialize a count through an alias of the immutable input or index.
+	if ( sirEditorReferenceOverlaps( pOutCount, sizeof( *pOutCount ), context.pszSource, context.nSourceBytes ) ||
+	     sirEditorReferenceOverlaps( pOutCount, sizeof( *pOutCount ), context.pIndex, sizeof( sirEditorTextResourceIndex_t ) ) ) {
+		return SIR_EDITOR_RESOURCE_INVALID_ARGUMENT;
+	}
 	if ( !sirEditorReferenceIndexValid( context ) || ( context.pOutput == nullptr && context.nCapacity != 0 ) ) {
+		*pOutCount = 0;
 		return SIR_EDITOR_RESOURCE_INVALID_ARGUMENT;
 	}
 #if SIZE_MAX == UINT32_MAX
@@ -201,6 +211,14 @@ sirEditorTextResourceResult_t sirEditorScanResourceReferences( const sirEditorRe
 #endif
 	const size_t nOutputBytes = ( size_t )context.nCapacity * sizeof( sirEditorResourceReference_t );
 	const size_t nIndexBytes = ( size_t )context.pIndex->nCount * sizeof( sirEditorTextResource_t );
+	if ( sirEditorReferenceOverlaps( pOutCount, sizeof( *pOutCount ), context.pOutput, nOutputBytes ) ||
+	     sirEditorReferenceOverlaps( pOutCount, sizeof( *pOutCount ), context.pIndex->pResources, nIndexBytes ) ) {
+		return SIR_EDITOR_RESOURCE_INVALID_ARGUMENT;
+	}
+	*pOutCount = 0;
+	if ( context.pOutput != nullptr && ( ( uintptr_t )context.pOutput % alignof( sirEditorResourceReference_t ) ) != 0 ) {
+		return SIR_EDITOR_RESOURCE_INVALID_ARGUMENT;
+	}
 	if ( context.pOutput != nullptr &&
 	     ( sirEditorReferenceOverlaps( context.pOutput, nOutputBytes, context.pszSource, context.nSourceBytes ) ||
 	       sirEditorReferenceOverlaps( context.pOutput, nOutputBytes, context.pIndex->pResources, nIndexBytes ) ||

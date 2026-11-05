@@ -105,6 +105,28 @@ static void sirTestResourceReferences( void )
 	assert( sirEditorScanResourceReferences( request, &nCount ) == SIR_EDITOR_RESOURCE_INVALID_ARGUMENT );
 	request.pOutput = szOut;
 	assert( sirEditorScanResourceReferences( request, nullptr ) == SIR_EDITOR_RESOURCE_INVALID_ARGUMENT );
+
+	// Reject aliased count outputs before they corrupt source, index or results.
+	szOut[0].iTargetResource = 777;
+	assert( sirEditorScanResourceReferences( request, &szOut[0].iTargetResource ) == SIR_EDITOR_RESOURCE_INVALID_ARGUMENT );
+	assert( szOut[0].iTargetResource == 777 );
+	assert( sirEditorScanResourceReferences( request, &index.nCount ) == SIR_EDITOR_RESOURCE_INVALID_ARGUMENT );
+	assert( index.nCount == 3 );
+	const uint32_t nOriginalOffset = szResources[0].nIdOffset;
+	assert( sirEditorScanResourceReferences( request, &szResources[0].nIdOffset ) == SIR_EDITOR_RESOURCE_INVALID_ARGUMENT );
+	assert( szResources[0].nIdOffset == nOriginalOffset );
+	alignas( uint32_t ) char szMutableSource[sizeof( szSource )] = {};
+	memcpy( szMutableSource, szSource, sizeof( szSource ) );
+	request.pszSource = szMutableSource;
+	assert( sirEditorScanResourceReferences( request, ( uint32_t * )szMutableSource ) == SIR_EDITOR_RESOURCE_INVALID_ARGUMENT );
+	assert( memcmp( szMutableSource, szSource, sizeof( szSource ) ) == 0 );
+	request.pszSource = szSource;
+
+	// A misaligned result buffer is invalid even when capacity suffices.
+	alignas( sirEditorResourceReference_t ) unsigned char szUnaligned[sizeof( sirEditorResourceReference_t ) * 4 + 1] = {};
+	request.pOutput = ( sirEditorResourceReference_t * )( szUnaligned + 1 );
+	assert( sirEditorScanResourceReferences( request, &nCount ) == SIR_EDITOR_RESOURCE_INVALID_ARGUMENT );
+	assert( nCount == 0 && szUnaligned[1] == 0 );
 }
 
 #if !defined( SIR_EDITOR_RESOURCE_REFERENCE_STANDALONE )
