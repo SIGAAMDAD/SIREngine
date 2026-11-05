@@ -132,7 +132,8 @@ sirGraphicsResult_t sirShaderDecodeMaterialHeader( const void *pBytes, uint64_t 
 
 sirGraphicsResult_t sirShaderEncodeMaterialPass( const sirShaderMaterialPassRecord_t& pass, void *pBytes, uint64_t nCapacity ) noexcept
 {
-	if ( pBytes == nullptr || nCapacity < SIR_SHADER_MATERIAL_PASS_BYTES || !sirMaterialPassValid( pass, SIR_SHADER_MATERIAL_MAX_DEPENDENCIES ) ) {
+	if ( pBytes == nullptr || nCapacity < SIR_SHADER_MATERIAL_PASS_BYTES ||
+	     !sirMaterialPassValid( pass, SIR_SHADER_MATERIAL_MAX_DEPENDENCIES ) ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	uint8_t *pData = ( uint8_t * )pBytes;
@@ -193,8 +194,8 @@ sirGraphicsResult_t sirShaderValidateMaterial( const void *pBytes, uint64_t nLen
 	}
 	const uint8_t *pData = ( const uint8_t * )pBytes;
 	uint64_t nHash = 0;
-	if ( sirShaderBuildMaterialHash( header, pData + SIR_SHADER_MATERIAL_HEADER_BYTES,
-	                                 nLength - SIR_SHADER_MATERIAL_HEADER_BYTES, &nHash ) != SIR_GRAPHICS_SUCCESS ||
+	if ( sirShaderBuildMaterialHash( header, pData + SIR_SHADER_MATERIAL_HEADER_BYTES, nLength - SIR_SHADER_MATERIAL_HEADER_BYTES,
+	                                 &nHash ) != SIR_GRAPHICS_SUCCESS ||
 	     nHash != header.nManifestHash ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}

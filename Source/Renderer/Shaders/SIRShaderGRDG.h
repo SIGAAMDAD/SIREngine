@@ -102,25 +102,25 @@ typedef struct sirShaderPublicationRequest_s
 
 // Reads never allocate, copy canonical data or retain read scopes.
 SIRResourceResult sirShaderProjectPackage( const SIRResourceView& view, const sirShaderGRDGFormats_t& formats,
-                                            const sirShaderPackageValidation_t& validation, sirShaderPackageProjection_t *pOut ) noexcept;
+                                           const sirShaderPackageValidation_t& validation, sirShaderPackageProjection_t *pOut ) noexcept;
 SIRResourceResult sirShaderProjectStage( const sirShaderPackageProjection_t& package, uint32_t iStage,
-                                          sirShaderStageProjection_t *pOut ) noexcept;
+                                         sirShaderStageProjection_t *pOut ) noexcept;
 SIRResourceResult sirShaderProjectMaterial( const SIRResourceView& view, const sirShaderGRDGFormats_t& formats,
-                                             sirShaderMaterialProjection_t *pOut ) noexcept;
+                                            sirShaderMaterialProjection_t *pOut ) noexcept;
 SIRResourceResult sirShaderProjectMaterialPass( const sirShaderMaterialProjection_t& material, uint32_t nPass,
-                                                 sirShaderMaterialPassRecord_t *pOut ) noexcept;
+                                                sirShaderMaterialPassRecord_t *pOut ) noexcept;
 SIRResourceResult sirShaderSnapshotMaterial( const SIRResourceGraph& graph, const SIRResourceReadScope& scope,
-                                              const sirShaderMaterialProjection_t& material, sirShaderMaterialSnapshot_t *pOut ) noexcept;
+                                             const sirShaderMaterialProjection_t& material, sirShaderMaterialSnapshot_t *pOut ) noexcept;
 // Owner-thread writer sequence catches transitive invalidations even when
 // the material's own publication revision does not change.
 SIRResourceResult sirShaderStampMaterialInvalidation( SIRResourceGraphWriter& writer, const SIRResourceView& view,
-                                                       sirShaderMaterialSnapshot_t *pSnapshot ) noexcept;
+                                                      sirShaderMaterialSnapshot_t *pSnapshot ) noexcept;
 
 // The GRDG writer is the only canonical publisher. All failure paths cancel
 // their own staging; expected-revision rejection cannot clobber newer bytes.
 SIRResourceResult sirShaderPublishPackage( SIRResourceGraphWriter& writer, const sirShaderGRDGFormats_t& formats,
-                                            const sirShaderPublicationRequest_t& request, SIRResourceHandle *pHandle ) noexcept;
+                                           const sirShaderPublicationRequest_t& request, SIRResourceHandle *pHandle ) noexcept;
 SIRResourceResult sirShaderPublishMaterial( SIRResourceGraphWriter& writer, const sirShaderGRDGFormats_t& formats,
-                                             const sirShaderPublicationRequest_t& request, SIRResourceHandle *pHandle ) noexcept;
+                                            const sirShaderPublicationRequest_t& request, SIRResourceHandle *pHandle ) noexcept;
 
 #endif // __SIRENGINE_SIRSHADERGRDG_H__

@@ -170,9 +170,9 @@ static void testSchemas( void ) noexcept
 	szMaterial[78] ^= 1;
 	REQUIRE( sirShaderValidateMaterial( szMaterial, 79 ) == SIR_GRAPHICS_INVALID_ARGUMENT );
 	REQUIRE( sirShaderDecodeMaterialHeader( nullptr, 80, &header ) == SIR_GRAPHICS_INVALID_ARGUMENT );
-	REQUIRE( sirShaderEncodeMaterialPass( { SIR_SHADER_PASS_COMPUTE, SIR_SHADER_MATERIAL_NO_SHADER,
-	                                      SIR_GRAPHICS_FEATURE_FIXED_FUNCTION, 0, 0 }, szMaterial, 32 ) ==
-	         SIR_GRAPHICS_INVALID_ARGUMENT );
+	REQUIRE(
+	    sirShaderEncodeMaterialPass( { SIR_SHADER_PASS_COMPUTE, SIR_SHADER_MATERIAL_NO_SHADER, SIR_GRAPHICS_FEATURE_FIXED_FUNCTION, 0, 0 },
+		                             szMaterial, 32 ) == SIR_GRAPHICS_INVALID_ARGUMENT );
 	REQUIRE( testCookMaterial( szMaterial, sizeof( szMaterial ), 66, SIR_SHADER_MATERIAL_NO_SHADER ) );
 	REQUIRE( sirShaderValidateMaterial( szMaterial, sizeof( szMaterial ) ) == SIR_GRAPHICS_SUCCESS );
 }
@@ -202,7 +202,7 @@ static void testGRDGPublication( void ) noexcept
 		uint8_t szShader[120] = {};
 		uint8_t szMaterial[80] = {};
 		REQUIRE( testCookShader( szShader, sizeof( szShader ), 18, 37 ) );
-		REQUIRE( testCookMaterial( szMaterial, sizeof( szMaterial ), 66, 2, 0 ) );
+		REQUIRE( testCookMaterial( szMaterial, sizeof( szMaterial ), 66, 0 ) );
 		sirShaderPublicationRequest_t shaderRequest = {};
 		shaderRequest.key = shaderKey;
 		shaderRequest.pBytes = szShader;
@@ -246,8 +246,7 @@ static void testGRDGPublication( void ) noexcept
 			sirShaderMaterialPassRecord_t pass = {};
 			REQUIRE( sirShaderProjectMaterialPass( material, SIR_SHADER_PASS_COLOR, &pass ) == SIR_RESOURCE_RESULT_SUCCESS );
 			REQUIRE( pass.iShaderDependency == 0 );
-			REQUIRE( sirShaderProjectMaterialPass( material, SIR_SHADER_PASS_SHADOW, &pass ) ==
-			         SIR_RESOURCE_RESULT_DEPENDENCY_MISSING );
+			REQUIRE( sirShaderProjectMaterialPass( material, SIR_SHADER_PASS_SHADOW, &pass ) == SIR_RESOURCE_RESULT_DEPENDENCY_MISSING );
 
 			sirShaderDependencyRevision_t szRevisions[2] = {};
 			sirShaderMaterialSnapshot_t snapshot = { szRevisions, 1, 0, 0, 0 };
@@ -260,8 +259,7 @@ static void testGRDGPublication( void ) noexcept
 			const uint64_t nBefore = snapshot.nFingerprint;
 			REQUIRE( sirShaderStampMaterialInvalidation( *pWriter, materialView, &snapshot ) == SIR_RESOURCE_RESULT_SUCCESS );
 			REQUIRE( snapshot.nInvalidationSequence == 0 );
-			REQUIRE( sirShaderPublishPackage( *pWriter, formats, shaderRequest, &hShader ) ==
-			         SIR_RESOURCE_RESULT_STALE_REVISION );
+			REQUIRE( sirShaderPublishPackage( *pWriter, formats, shaderRequest, &hShader ) == SIR_RESOURCE_RESULT_STALE_REVISION );
 			shaderRequest.nExpectedRevision = 1;
 			REQUIRE( sirShaderPublishPackage( *pWriter, formats, shaderRequest, &hShader ) == SIR_RESOURCE_RESULT_SUCCESS );
 			REQUIRE( graph.getStats().m_nUniqueChunks == 2 );
@@ -301,12 +299,10 @@ static void testGRDGPublication( void ) noexcept
 			REQUIRE( szRevisions[0].nGraphRevision == 2 && material.nGraphRevision == 1 );
 		}
 		materialRequest.nExpectedRevision = 0;
-		REQUIRE( sirShaderPublishMaterial( *pWriter, formats, materialRequest, &hMaterial ) ==
-		         SIR_RESOURCE_RESULT_STALE_REVISION );
+		REQUIRE( sirShaderPublishMaterial( *pWriter, formats, materialRequest, &hMaterial ) == SIR_RESOURCE_RESULT_STALE_REVISION );
 		szMaterial[79] ^= 0x77;
 		materialRequest.nExpectedRevision = 1;
-		REQUIRE( sirShaderPublishMaterial( *pWriter, formats, materialRequest, &hMaterial ) ==
-		         SIR_RESOURCE_RESULT_INVALID_FORMAT );
+		REQUIRE( sirShaderPublishMaterial( *pWriter, formats, materialRequest, &hMaterial ) == SIR_RESOURCE_RESULT_INVALID_FORMAT );
 		szMaterial[79] ^= 0x77;
 		REQUIRE( sirShaderPublishMaterial( *pWriter, formats, materialRequest, &hMaterial ) == SIR_RESOURCE_RESULT_SUCCESS );
 		REQUIRE( graph.getStats().m_nUniqueChunks == 3 || graph.getStats().m_nUniqueChunks == 2 );
