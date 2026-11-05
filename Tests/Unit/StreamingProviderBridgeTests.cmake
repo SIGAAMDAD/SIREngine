@@ -1,0 +1,4 @@
+add_executable(SIRStreamingProviderBridgeTests SIRStreamingProviderBridgeTests.cpp)
+target_link_libraries(SIRStreamingProviderBridgeTests PRIVATE SIR::World)
+add_test(NAME streaming.provider.bridge COMMAND SIRStreamingProviderBridgeTests)
+sir_configure_owned_target(SIRStreamingProviderBridgeTests)

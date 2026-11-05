@@ -617,3 +617,9 @@ sir_configure_owned_target(SIRVirtualTexturePortTests)
 
 # Native Hi-Z reference and command validation.
 include(${CMAKE_CURRENT_LIST_DIR}/HIZFoundationTests.cmake)
+
+include(${CMAKE_CURRENT_SOURCE_DIR}/WorldHLODTests.cmake)
+include(${CMAKE_CURRENT_SOURCE_DIR}/StreamingTests.cmake)
+include(${CMAKE_CURRENT_SOURCE_DIR}/WorldPartitionTests.cmake)
+include(${CMAKE_CURRENT_SOURCE_DIR}/StreamingReconcileTests.cmake)
+include(${CMAKE_CURRENT_SOURCE_DIR}/StreamingProviderBridgeTests.cmake)
