@@ -3,6 +3,17 @@
 add_library(SIRGraphics STATIC
     Graph/SIRFrameGraph.cpp
     Graph/SIRFrameGraphTransient.cpp
+    SIRShaderPipeline.cpp
+    Shaders/SIRShaderContracts.cpp
+    Shaders/SIRShaderMaterial.cpp
+    Shaders/SIRShaderMaterialManifest.cpp
+    Shaders/SIRShaderGRDG.cpp
+    Shaders/SIRShaderLibrary.cpp
+    Visibility/SIRVisibilityFoundation.cpp
+    Visibility/SIRHiZDispatch.cpp
+    Visibility/SIRHiZHistory.cpp
+    Visibility/SIRHiZCommands.cpp
+    Visibility/SIRHiZBindings.cpp
     SIRGraphicsDriverABI.cpp
     SIRGraphicsModule.cpp
     SIRGraphicsPipelineABI.cpp
@@ -14,8 +25,10 @@ target_include_directories(SIRGraphics PUBLIC
     "${PROJECT_SOURCE_DIR}/Source"
     "${PROJECT_SOURCE_DIR}/Build/CMake")
 target_compile_features(SIRGraphics PUBLIC cxx_std_17)
-target_link_libraries(SIRGraphics PUBLIC SIR::Core)
+target_link_libraries(SIRGraphics PUBLIC SIR::Core SIR::Resources)
 sir_configure_owned_target(SIRGraphics)
+
+add_subdirectory(VirtualTexturing)
 
 # Each native driver implements the same SIRRenderingDevice contract.
 # Their opt-in flags and targets are owned by the driver branches.
