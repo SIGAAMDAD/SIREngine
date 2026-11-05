@@ -59,7 +59,7 @@ static bool sirMaterialIRValidateNode( const sirMaterialIRGraph_t& graph, uint32
 		break;
 	case SIR_MATERIAL_IR_SAMPLE_2D:
 		if ( node.eType != SIR_MATERIAL_IR_FLOAT4 || !sirMaterialIRInput( graph, iNode, node.iA, SIR_MATERIAL_IR_TEXTURE2D ) ||
-		     !sirMaterialIRInput( graph, iNode, node.iB, SIR_MATERIAL_IR_FLOAT2 ) ) {
+		     !sirMaterialIRInput( graph, iNode, node.iB, SIR_MATERIAL_IR_FLOAT2 ) || node.iC != SIR_MATERIAL_IR_NO_INPUT ) {
 			return false;
 		}
 		nUsed = pSwitchMask[node.iA] | pSwitchMask[node.iB];
@@ -74,7 +74,7 @@ static bool sirMaterialIRValidateNode( const sirMaterialIRGraph_t& graph, uint32
 	case SIR_MATERIAL_IR_STATIC_SWITCH:
 		if ( node.nSwitchBit == 0 || ( node.nSwitchBit & nStaticBits ) != node.nSwitchBit ||
 		     ( node.nSwitchBit & ( node.nSwitchBit - 1 ) ) != 0 || !sirMaterialIRInput( graph, iNode, node.iA, node.eType ) ||
-		     !sirMaterialIRInput( graph, iNode, node.iB, node.eType ) ) {
+		     !sirMaterialIRInput( graph, iNode, node.iB, node.eType ) || node.iC != SIR_MATERIAL_IR_NO_INPUT ) {
 			return false;
 		}
 		nUsed = pSwitchMask[node.iA] | pSwitchMask[node.iB] | node.nSwitchBit;
@@ -182,6 +182,9 @@ sirShaderCookResult_t sirMaterialIRCompile( const sirMaterialIRGraph_t& graph, c
 			return SIR_SHADER_COOK_INVALID_ARGUMENT;
 		}
 		if ( ( pass.ePass == SIR_SHADER_PASS_COMPUTE ) != ( pass.nStageMask == SIR_GRAPHICS_STAGE_COMPUTE ) ) {
+			return SIR_SHADER_COOK_INVALID_ARGUMENT;
+		}
+		if ( ( pass.nStageMask & SIR_GRAPHICS_STAGE_COMPUTE ) != 0 && pass.nStageMask != SIR_GRAPHICS_STAGE_COMPUTE ) {
 			return SIR_SHADER_COOK_INVALID_ARGUMENT;
 		}
 		nPreviousPass = pass.ePass;
