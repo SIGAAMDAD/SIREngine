@@ -67,7 +67,8 @@ static bool validateMeshSource( const sirMeshGeometrySource_t *pSource ) noexcep
 }
 
 SIRMeshCache::SIRMeshCache( void ) noexcept
-    : m_pSlots( nullptr ), m_nCapacity( 0 ), m_nResidentCount( 0 ), m_nBorrowCount( 0 ), m_nNextGeneration( 0 ), m_bReady( false )
+    : m_pSlots( nullptr ), m_nCapacity( 0 ), m_nResidentCount( 0 ), m_nBorrowCount( 0 ), m_nNextGeneration( 0 ), m_bReady( false ),
+      m_bShuttingDown( false )
 {
 }
 
@@ -103,7 +104,7 @@ uint32_t SIRMeshCache::requiredAlignment( void ) noexcept
 
 sirMeshResult_t SIRMeshCache::initialize( void *pStorage, uint64_t nStorageBytes, uint32_t nCapacity ) noexcept
 {
-	if ( m_bReady ) {
+	if ( m_bReady || m_bShuttingDown ) {
 		return SIR_MESH_BUSY;
 	}
 	if ( pStorage == nullptr || nCapacity == 0 || nStorageBytes < requiredBytes( nCapacity ) ) {
@@ -281,6 +282,10 @@ sirMeshResult_t SIRMeshCache::shutdown( void ) noexcept
 		return SIR_MESH_BUSY;
 	}
 
+	// Callbacks may re-enter this cache. Block new reads/writes and prevent
+	// reinitialization until all existing source pins have been released.
+	m_bShuttingDown = true;
+	m_bReady = false;
 	for ( uint32_t iSlot = 0; iSlot < m_nCapacity; ++iSlot ) {
 		if ( m_pSlots[iSlot].bOccupied ) {
 			finalizeSlot( iSlot );
@@ -288,6 +293,6 @@ sirMeshResult_t SIRMeshCache::shutdown( void ) noexcept
 	}
 	m_pSlots = nullptr;
 	m_nCapacity = 0;
-	m_bReady = false;
+	m_bShuttingDown = false;
 	return SIR_MESH_OK;
 }

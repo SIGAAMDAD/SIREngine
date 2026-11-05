@@ -111,6 +111,7 @@ private:
 	uint32_t m_nBorrowCount;
 	uint32_t m_nNextGeneration;
 	bool m_bReady;
+	bool m_bShuttingDown;
 };
 
 #endif // __SIRENGINE_SIRMESHCACHE_H__
