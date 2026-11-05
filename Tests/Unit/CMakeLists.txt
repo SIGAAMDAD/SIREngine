@@ -418,3 +418,19 @@ add_executable(SIRVFSDirectorySourceTests SIRVFSDirectorySourceTests.cpp)
 target_link_libraries(SIRVFSDirectorySourceTests PRIVATE SIR::Core)
 add_test(NAME core.vfs.directory-source COMMAND SIRVFSDirectorySourceTests)
 sir_configure_owned_target(SIRVFSDirectorySourceTests)
+
+# Device-independent FrameGraph DAG, hazard and subresource validation.
+add_executable(SIRFrameGraphTests SIRFrameGraphTests.cpp)
+target_link_libraries(SIRFrameGraphTests PRIVATE SIR::Graphics)
+add_test(NAME renderer.framegraph.compiler COMMAND SIRFrameGraphTests)
+set_tests_properties(renderer.framegraph.compiler PROPERTIES LABELS "framegraph;cpu;conformance" TIMEOUT 90)
+sir_configure_owned_target(SIRFrameGraphTests)
+
+# Provider-admitted FrameGraph transient residency planning and negative cases.
+add_executable(SIRFrameGraphTransientTests SIRFrameGraphTransientTests.cpp)
+target_link_libraries(SIRFrameGraphTransientTests PRIVATE SIR::Graphics)
+add_test(NAME renderer.framegraph.transient COMMAND SIRFrameGraphTransientTests)
+set_tests_properties(renderer.framegraph.transient PROPERTIES LABELS "framegraph;cpu;conformance" TIMEOUT 90)
+sir_configure_owned_target(SIRFrameGraphTransientTests)
+
+include(${CMAKE_CURRENT_SOURCE_DIR}/MeshCacheTests.cmake)
