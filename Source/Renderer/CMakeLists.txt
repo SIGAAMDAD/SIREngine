@@ -17,6 +17,7 @@ sir_configure_owned_target(SIRGraphics)
 
 # Each native driver implements the same SIRRenderingDevice contract.
 # Their opt-in flags and targets are owned by the driver branches.
+add_subdirectory(Drivers/D3D10)
 if(SIR_WITH_D3D12)
     add_subdirectory(Drivers/D3D12)
 endif()
