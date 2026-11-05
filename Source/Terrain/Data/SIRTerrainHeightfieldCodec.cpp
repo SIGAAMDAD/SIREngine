@@ -81,7 +81,7 @@ static uint32_t sirTerrainChecksum( const uint8_t *pData, size_t nBytes ) noexce
 	return nHash;
 }
 
-static bool sirTerrainValidDescriptor( const sirTerrainRegionDescriptor_t& descriptor ) noexcept
+bool SIRTerrainHeightfieldCodec::isValidDescriptor( const sirTerrainRegionDescriptor_t& descriptor ) noexcept
 {
 	return descriptor.nRevision != 0 && SIRTerrainHeightfieldCodec::getEncodedByteCount( descriptor.nResolution ) != 0 &&
 	       isfinite( descriptor.fMinHeight ) && isfinite( descriptor.fMaxHeight ) && descriptor.fMinHeight < descriptor.fMaxHeight &&
@@ -100,7 +100,7 @@ sirTerrainCodecResult_t SIRTerrainHeightfieldCodec::encode( const sirTerrainRegi
                                                             sirTerrainConstHeightSpan_t heights,
                                                             sirTerrainMutableByteSpan_t output ) noexcept
 {
-	if ( !sirTerrainValidDescriptor( descriptor ) || !heights.pData || !output.pData ) {
+	if ( !isValidDescriptor( descriptor ) || !heights.pData || !output.pData ) {
 		return SIR_TERRAIN_CODEC_INVALID_ARGUMENT;
 	}
 	const size_t nCount = ( size_t )descriptor.nResolution * descriptor.nResolution;
@@ -168,7 +168,7 @@ sirTerrainCodecResult_t SIRTerrainHeightfieldCodec::inspect( sirTerrainConstByte
 	decoded.fMinHeight = sirTerrainBitsFloat( sirTerrainRead32( input.pData + 20 ) );
 	decoded.fMaxHeight = sirTerrainBitsFloat( sirTerrainRead32( input.pData + 24 ) );
 	decoded.nRevision = sirTerrainRead64( input.pData + 28 );
-	if ( !sirTerrainValidDescriptor( decoded ) ) {
+	if ( !isValidDescriptor( decoded ) ) {
 		return SIR_TERRAIN_CODEC_INVALID_FORMAT;
 	}
 	const size_t nExpected = getEncodedByteCount( decoded.nResolution );

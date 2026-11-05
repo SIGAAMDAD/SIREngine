@@ -83,6 +83,7 @@ public:
 	static constexpr uint32_t MAX_RESOLUTION = 4096;
 
 	static size_t getEncodedByteCount( uint32_t nResolution ) noexcept;
+	static bool isValidDescriptor( const sirTerrainRegionDescriptor_t& descriptor ) noexcept;
 
 	static sirTerrainCodecResult_t encode( const sirTerrainRegionDescriptor_t& descriptor, sirTerrainConstHeightSpan_t heights,
 	                                       sirTerrainMutableByteSpan_t output ) noexcept;
