@@ -74,11 +74,15 @@ sirRegistrationResult_t SIRConsoleConfigAdapter::execute( void *pContext, const 
 		return SIR_REGISTRATION_INVALID_NAME;
 	}
 	pAdapter->m_bExecuting = true;
+	pAdapter->m_LastDiagnostic = {};
 	sirConsoleConfigReadRequest_t request = { pszFileName, nBytes, pAdapter->m_Storage.pFileBytes, pAdapter->m_Storage.nFileCapacity, 0 };
 	const sirConfigResult_t eRead = pAdapter->m_Storage.pfnRead( pAdapter->m_Storage.pContext, &request );
 	sirConfigResult_t eResult = eRead;
 	if ( eRead == SIR_CONFIG_OK ) {
-		if ( request.nRead > request.nCapacity ) {
+		if ( request.pszName != pszFileName || request.nNameBytes != nBytes || request.pBytes != pAdapter->m_Storage.pFileBytes ||
+		     request.nCapacity != pAdapter->m_Storage.nFileCapacity ) {
+			eResult = SIR_CONFIG_INVALID_ARGUMENT;
+		} else if ( request.nRead > request.nCapacity ) {
 			eResult = SIR_CONFIG_LIMIT_EXCEEDED;
 		} else {
 			const sirConfigInput_t input = { request.pBytes, request.nRead, {} };
