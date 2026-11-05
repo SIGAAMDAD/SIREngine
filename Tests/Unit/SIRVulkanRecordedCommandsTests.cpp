@@ -218,6 +218,47 @@ int main( void )
 	     sirVulkanRecordedNeedsBufferBarrier( hazards, SIR_VULKAN_COPY_BATCH_CAPACITY ) ) {
 		return 22;
 	}
+	// Native buffer barriers are needed for overlapping byte ranges only.
+	sirVulkanRecordedCommand_t spans[4] = {};
+	spans[0].eKind = SIR_VULKAN_RECORDED_BUFFER_COPY;
+	spans[0].bufferCopy = { &source, &staging, 0, 0, 128 };
+	spans[1].eKind = SIR_VULKAN_RECORDED_BUFFER_COPY;
+	spans[1].bufferCopy = { &source, &readback, 512, 512, 128 };
+	spans[2].eKind = SIR_VULKAN_RECORDED_BUFFER_COPY;
+	spans[2].bufferCopy = { &staging, &readback, 128, 640, 64 };
+	if ( sirVulkanRecordedNeedsBufferBarrier( spans, 1 ) || sirVulkanRecordedNeedsBufferBarrier( spans, 2 ) ) {
+		return 28;
+	}
+	spans[2].bufferCopy.nSourceOffset = 127;
+	if ( !sirVulkanRecordedNeedsBufferBarrier( spans, 2 ) ) {
+		return 29;
+	}
+	spans[2].bufferCopy.nSourceOffset = 128;
+	spans[2].bufferCopy.nDestinationOffset = 639;
+	if ( !sirVulkanRecordedNeedsBufferBarrier( spans, 2 ) ) {
+		return 30;
+	}
+	spans[2].bufferCopy.nDestinationOffset = 640;
+	spans[3].eKind = SIR_VULKAN_RECORDED_TEXTURE_COPY;
+	spans[3].pBuffer = &staging;
+	spans[3].textureCopy.bBufferToImage = true;
+	spans[3].textureCopy.nBufferOffset = 1024;
+	if ( sirVulkanRecordedNeedsBufferBarrier( spans, 3 ) ) {
+		return 31;
+	}
+	spans[3].textureCopy.nBufferOffset = 127;
+	if ( !sirVulkanRecordedNeedsBufferBarrier( spans, 3 ) ) {
+		return 32;
+	}
+	spans[3].textureCopy.nBufferOffset = UINT64_MAX;
+	if ( !sirVulkanRecordedNeedsBufferBarrier( spans, 3 ) ) {
+		return 33;
+	}
+	spans[2].bufferCopy.nSourceOffset = UINT64_MAX;
+	spans[3].textureCopy.nBufferOffset = 1024;
+	if ( !sirVulkanRecordedNeedsBufferBarrier( spans, 2 ) ) {
+		return 34;
+	}
 	// Partial writes must not authorize readback or a shader-readable layout.
 	sirVulkanImage_t partiallyUploaded = {};
 	partiallyUploaded.eFormat = VK_FORMAT_R8G8B8A8_UNORM;

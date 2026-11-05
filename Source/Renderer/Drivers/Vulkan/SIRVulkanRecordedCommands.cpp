@@ -102,21 +102,61 @@ static sirVulkanResult_t sirVulkanAdvanceRecordedState( sirVulkanImage_t *pShado
 	return SIR_VULKAN_SUCCESS;
 }
 
-static void sirVulkanRecordedBufferAccess( const sirVulkanRecordedCommand_t& command, const sirVulkanBuffer_t **ppRead,
-                                           const sirVulkanBuffer_t **ppWrite ) noexcept
+typedef struct sirVulkanBufferSpan_s
 {
-	*ppRead = nullptr;
-	*ppWrite = nullptr;
+	const sirVulkanBuffer_t *pBuffer;
+	uint64_t nOffset;
+	uint64_t nBytes;
+} sirVulkanBufferSpan_t;
+
+static sirVulkanBufferSpan_t sirVulkanRecordedSpan( const sirVulkanBuffer_t *pBuffer, uint64_t nOffset, uint64_t nBytes ) noexcept
+{
+	if ( pBuffer == nullptr ) {
+		return {};
+	}
+	if ( nBytes == 0 || nOffset > pBuffer->nSize || nBytes > pBuffer->nSize - nOffset ) {
+		return { pBuffer, 0, pBuffer->nSize };
+	}
+	return { pBuffer, nOffset, nBytes };
+}
+
+static void sirVulkanRecordedBufferAccess( const sirVulkanRecordedCommand_t& command, sirVulkanBufferSpan_t *pRead,
+                                           sirVulkanBufferSpan_t *pWrite ) noexcept
+{
+	*pRead = {};
+	*pWrite = {};
 	if ( command.eKind == SIR_VULKAN_RECORDED_BUFFER_COPY ) {
-		*ppRead = command.bufferCopy.pSource;
-		*ppWrite = command.bufferCopy.pDestination;
-	} else if ( command.eKind == SIR_VULKAN_RECORDED_TEXTURE_COPY ) {
+		const sirVulkanBufferCopy_t& copy = command.bufferCopy;
+		*pRead = sirVulkanRecordedSpan( copy.pSource, copy.nSourceOffset, copy.nBytes );
+		*pWrite = sirVulkanRecordedSpan( copy.pDestination, copy.nDestinationOffset, copy.nBytes );
+	} else if ( command.eKind == SIR_VULKAN_RECORDED_TEXTURE_COPY && command.pBuffer != nullptr ) {
+		// Image-copy rows may be strided. Cover from the first copied byte to
+		// the end of the buffer rather than assuming a tightly packed extent.
+		const uint64_t nOffset = command.textureCopy.nBufferOffset;
+		const uint64_t nBytes = nOffset <= command.pBuffer->nSize ? command.pBuffer->nSize - nOffset : 0;
+		const sirVulkanBufferSpan_t span = sirVulkanRecordedSpan( command.pBuffer, nOffset, nBytes );
 		if ( command.textureCopy.bBufferToImage ) {
-			*ppRead = command.pBuffer;
+			*pRead = span;
 		} else {
-			*ppWrite = command.pBuffer;
+			*pWrite = span;
 		}
 	}
+}
+
+static bool sirVulkanSpansOverlap( const sirVulkanBufferSpan_t& a, const sirVulkanBufferSpan_t& b ) noexcept
+{
+	if ( a.pBuffer == nullptr || a.pBuffer != b.pBuffer ) {
+		return false;
+	}
+	if ( a.nBytes == 0 || b.nBytes == 0 ) {
+		return true;
+	}
+	// Subtract before comparing: additions could overflow for malformed
+	// commands, which must remain conservative until validation rejects them.
+	if ( a.nOffset >= b.nOffset ) {
+		return a.nOffset - b.nOffset < b.nBytes;
+	}
+	return b.nOffset - a.nOffset < a.nBytes;
 }
 
 bool sirVulkanRecordedNeedsBufferBarrier( const sirVulkanRecordedCommand_t *pCommands, uint32_t nIndex ) noexcept
@@ -124,18 +164,18 @@ bool sirVulkanRecordedNeedsBufferBarrier( const sirVulkanRecordedCommand_t *pCom
 	if ( pCommands == nullptr || nIndex == 0 || nIndex >= SIR_VULKAN_COPY_BATCH_CAPACITY ) {
 		return false;
 	}
-	const sirVulkanBuffer_t *pRead = nullptr;
-	const sirVulkanBuffer_t *pWrite = nullptr;
-	sirVulkanRecordedBufferAccess( pCommands[nIndex], &pRead, &pWrite );
-	if ( pRead == nullptr && pWrite == nullptr ) {
+	sirVulkanBufferSpan_t read = {};
+	sirVulkanBufferSpan_t write = {};
+	sirVulkanRecordedBufferAccess( pCommands[nIndex], &read, &write );
+	if ( read.pBuffer == nullptr && write.pBuffer == nullptr ) {
 		return false;
 	}
 	for ( uint32_t iEarlier = 0; iEarlier < nIndex; ++iEarlier ) {
-		const sirVulkanBuffer_t *pEarlierRead = nullptr;
-		const sirVulkanBuffer_t *pEarlierWrite = nullptr;
-		sirVulkanRecordedBufferAccess( pCommands[iEarlier], &pEarlierRead, &pEarlierWrite );
-		if ( ( pWrite != nullptr && ( pWrite == pEarlierRead || pWrite == pEarlierWrite ) ) ||
-		     ( pRead != nullptr && pRead == pEarlierWrite ) ) {
+		sirVulkanBufferSpan_t earlierRead = {};
+		sirVulkanBufferSpan_t earlierWrite = {};
+		sirVulkanRecordedBufferAccess( pCommands[iEarlier], &earlierRead, &earlierWrite );
+		if ( sirVulkanSpansOverlap( write, earlierRead ) || sirVulkanSpansOverlap( write, earlierWrite ) ||
+		     sirVulkanSpansOverlap( read, earlierWrite ) ) {
 			return true;
 		}
 	}
