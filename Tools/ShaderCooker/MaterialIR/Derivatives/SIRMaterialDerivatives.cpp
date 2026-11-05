@@ -30,7 +30,6 @@ static bool sirDerivativeFinite( const sirMaterialGradient_t& gradient ) noexcep
 		}
 	}
 
-
 	return true;
 }
 
