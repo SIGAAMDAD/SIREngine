@@ -1,4 +1,4 @@
-add_library(SIRTerrain STATIC Data/SIRTerrainHeightfieldCodec.cpp Data/SIRTerrainRegionCatalog.cpp)
+add_library(SIRTerrain STATIC Data/SIRTerrainHeightfieldCodec.cpp Data/SIRTerrainRegionCatalog.cpp Data/SIRTerrainHeightfieldView.cpp)
 add_library(SIR::Terrain ALIAS SIRTerrain)
 target_link_libraries(SIRTerrain PUBLIC SIR::Core)
 target_include_directories(SIRTerrain PUBLIC "${PROJECT_SOURCE_DIR}/Source")

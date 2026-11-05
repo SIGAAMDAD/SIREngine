@@ -8,6 +8,11 @@ target_link_libraries(SIRTerrainRegionCatalogTests PRIVATE SIR::Terrain)
 add_test(NAME terrain.data.region-catalog COMMAND SIRTerrainRegionCatalogTests)
 sir_configure_owned_target(SIRTerrainRegionCatalogTests)
 
+add_executable(SIRTerrainHeightfieldViewTests SIRTerrainHeightfieldViewTests.cpp)
+target_link_libraries(SIRTerrainHeightfieldViewTests PRIVATE SIR::Terrain)
+add_test(NAME terrain.data.heightfield-view COMMAND SIRTerrainHeightfieldViewTests)
+sir_configure_owned_target(SIRTerrainHeightfieldViewTests)
+
 add_executable(SIREngineLifecycleTests SIREngineLifecycleTests.cpp)
 target_link_libraries(SIREngineLifecycleTests PRIVATE SIR::Core)
 add_test(NAME core.application.system-lifecycle COMMAND SIREngineLifecycleTests)
