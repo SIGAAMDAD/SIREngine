@@ -6,11 +6,13 @@ set(SIR_CORE_PLATFORM_COMMON
     SIRThread.cpp
     SIRSync.cpp
     SIRAtomic.cpp
+    SIRPlatformRootDirectory.cpp
 )
 
 if(WIN32)
     set(SIR_CORE_PLATFORM_OS
         Windows/SIRPlatformFileWindows.cpp
+        Windows/SIRPlatformRootDirectoryWindows.cpp
         Windows/SIRPlatformFileMappingWindows.cpp
         Windows/SIRPlatformPipeWindows.cpp
         Windows/SIRSemaphoreWindows.cpp
@@ -29,6 +31,7 @@ if(WIN32)
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     set(SIR_CORE_PLATFORM_OS
         Linux/SIRPlatformFileLinux.cpp
+        Linux/SIRPlatformRootDirectoryLinux.cpp
         Linux/SIRPlatformFileMappingLinux.cpp
         Linux/SIRPlatformPipeLinux.cpp
         Linux/SIRSemaphoreLinux.cpp
