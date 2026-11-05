@@ -96,9 +96,23 @@ static void sirTestSceneWorkspace( void )
 	assert( workspace.getResourceIndex().nCount == 1 );
 	assert( workspace.getHierarchy().getVisibleCount() == 2 );
 	assert( workspace.getErrorLine() == 0 );
+	assert( workspace.getSourceBytes() > 0 );
+	assert( workspace.getSource()[workspace.getSourceBytes()] == '\0' );
+	assert( workspace.openTextFile( SIR_EDITOR_TEST_UI_SCENE ) == SIR_EDITOR_WORKSPACE_ALREADY_OPEN );
 	workspace.close();
+
+	// Platform reader rejects missing, malformed and nonregular scene sources.
+	assert( workspace.openTextFile( nullptr ) == SIR_EDITOR_WORKSPACE_INVALID_ARGUMENT );
+	assert( workspace.openTextFile( "" ) == SIR_EDITOR_WORKSPACE_INVALID_ARGUMENT );
+	assert( workspace.openTextFile( "." ) == SIR_EDITOR_WORKSPACE_FILE_IO );
+	assert( !workspace.isOpen() );
+	assert( workspace.getSource() == nullptr );
 	assert( workspace.openTextFile( "SIREditor/nonexistent_scene_9802.tscn" ) == SIR_EDITOR_WORKSPACE_FILE_IO );
 	assert( !workspace.isOpen() );
+	assert( workspace.getSourceBytes() == 0 );
+	assert( workspace.getDocument().getRevision() == 0 );
+	assert( workspace.openTextFile( SIR_EDITOR_TEST_UI_SCENE ) == SIR_EDITOR_WORKSPACE_OK );
+	workspace.close();
 
 	assert( workspace.shutdown() );
 	assert( workspace.shutdown() );
