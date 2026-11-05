@@ -133,6 +133,30 @@ static void testPerspectiveFiniteDifference( void ) noexcept
 	                   1e-8 ) );
 }
 
+static void testReciprocalWScaleInvariance( void ) noexcept
+{
+	sirMaterialTriangleSample_t input = testTriangle();
+	input.vertices[0].fReciprocalW = 1.0;
+	input.vertices[1].fReciprocalW = 0.5;
+	input.vertices[2].fReciprocalW = 2.0;
+	sirMaterialGradient_t reference = {};
+	REQUIRE( sirMaterialTriangleUVGradients( input, &reference ) == SIR_SHADER_COOK_OK );
+	const double szBaseReciprocalW[3] = { 1.0, 0.5, 2.0 };
+	const double szScales[2] = { 1e-20, 1e20 };
+	for ( const double fScale : szScales ) {
+		for ( uint32_t iVertex = 0; iVertex < 3; ++iVertex ) {
+			input.vertices[iVertex].fReciprocalW = szBaseReciprocalW[iVertex] * fScale;
+		}
+		sirMaterialGradient_t result = {};
+		REQUIRE( sirMaterialTriangleUVGradients( input, &result ) == SIR_SHADER_COOK_OK );
+		for ( uint32_t iAxis = 0; iAxis < 2; ++iAxis ) {
+			REQUIRE( testNear( result.szValue[iAxis], reference.szValue[iAxis] ) );
+			REQUIRE( testNear( result.szDdx[iAxis], reference.szDdx[iAxis] ) );
+			REQUIRE( testNear( result.szDdy[iAxis], reference.szDdy[iAxis] ) );
+		}
+	}
+}
+
 static void testDegenerateReject( void ) noexcept
 {
 	sirMaterialTriangleSample_t input = testTriangle();
@@ -253,6 +277,7 @@ int main( void )
 {
 	testTriangleGradientAndFootprint();
 	testPerspectiveFiniteDifference();
+	testReciprocalWScaleInvariance();
 	testDegenerateReject();
 	testChainRuleAndBranches();
 	testTriplanarAndSamplingEmission();

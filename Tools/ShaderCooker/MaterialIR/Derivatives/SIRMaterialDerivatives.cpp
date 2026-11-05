@@ -69,6 +69,9 @@ sirShaderCookResult_t sirMaterialTriangleUVGradients( const sirMaterialTriangleS
 	const double szL[3] = { fL0, fL1, fL2 };
 	const double szDx[3] = { ( b.fScreenY - c.fScreenY ) / fArea, fACY / fArea, -fABY / fArea };
 	const double szDy[3] = { ( c.fScreenX - b.fScreenX ) / fArea, -fACX / fArea, fABX / fArea };
+	// Perspective division is homogeneous in reciprocal-W. Normalizing
+	// before accumulation avoids rejecting the same triangle at large W.
+	const double fMaxReciprocalW = std::fmax( a.fReciprocalW, std::fmax( b.fReciprocalW, c.fReciprocalW ) );
 	double fQ = 0.0;
 	double fQx = 0.0;
 	double fQy = 0.0;
@@ -76,7 +79,7 @@ sirShaderCookResult_t sirMaterialTriangleUVGradients( const sirMaterialTriangleS
 	double szNx[2] = {};
 	double szNy[2] = {};
 	for ( uint32_t i = 0; i < 3; ++i ) {
-		const double fW = input.vertices[i].fReciprocalW;
+		const double fW = input.vertices[i].fReciprocalW / fMaxReciprocalW;
 		const double szUV[2] = { input.vertices[i].fU, input.vertices[i].fV };
 		fQ += szL[i] * fW;
 		fQx += szDx[i] * fW;
