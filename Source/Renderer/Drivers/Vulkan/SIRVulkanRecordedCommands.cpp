@@ -67,11 +67,14 @@ static sirVulkanResult_t sirVulkanAdvanceRecordedState( sirVulkanImage_t *pShado
 	const sirVulkanImageBarrier_t& barrier = command.imageBarrier;
 	if ( barrier.nMipCount == 0 || barrier.nLayerCount == 0 || barrier.nMip >= pShadow->nMips || barrier.nLayer >= pShadow->nLayers ||
 	     barrier.nMipCount > pShadow->nMips - barrier.nMip || barrier.nLayerCount > pShadow->nLayers - barrier.nLayer ||
-	     ( barrier.eAfter != VK_IMAGE_LAYOUT_GENERAL && barrier.eAfter != VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ) ||
+	     ( barrier.eAfter != VK_IMAGE_LAYOUT_GENERAL && barrier.eAfter != VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL &&
+	       barrier.eAfter != VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL && barrier.eAfter != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL ) ||
 	     ( barrier.bUav && ( barrier.eBefore != VK_IMAGE_LAYOUT_GENERAL || barrier.eAfter != VK_IMAGE_LAYOUT_GENERAL ||
 	                         ( pShadow->nUsage & VK_IMAGE_USAGE_STORAGE_BIT ) == 0 ) ) ||
 	     ( !barrier.bUav && barrier.eBefore == barrier.eAfter ) ||
-	     ( barrier.eAfter == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL && ( pShadow->nUsage & VK_IMAGE_USAGE_SAMPLED_BIT ) == 0 ) ) {
+	     ( barrier.eAfter == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL && ( pShadow->nUsage & VK_IMAGE_USAGE_SAMPLED_BIT ) == 0 ) ||
+	     ( barrier.eAfter == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL && ( pShadow->nUsage & VK_IMAGE_USAGE_TRANSFER_SRC_BIT ) == 0 ) ||
+	     ( barrier.eAfter == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && ( pShadow->nUsage & VK_IMAGE_USAGE_TRANSFER_DST_BIT ) == 0 ) ) {
 		return SIR_VULKAN_INVALID_ARGUMENT;
 	}
 	if ( pShadow->eFormat == VK_FORMAT_D16_UNORM || pShadow->eFormat == VK_FORMAT_D24_UNORM_S8_UINT ||
@@ -86,7 +89,7 @@ static sirVulkanResult_t sirVulkanAdvanceRecordedState( sirVulkanImage_t *pShado
 			if ( !sirVulkanGetSubresourceLayout( pShadow, nMip, nLayer, &eTracked ) || eTracked != barrier.eBefore ) {
 				return SIR_VULKAN_INVALID_ARGUMENT;
 			}
-			if ( barrier.eAfter == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ) {
+			if ( barrier.eAfter == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL || barrier.eAfter == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL ) {
 				const uint32_t nIndex = nLayer * pShadow->nMips + nMip;
 				if ( ( pShadow->szUploadedSubresources[nIndex / 64] & ( 1ULL << ( nIndex % 64 ) ) ) == 0 ) {
 					return SIR_VULKAN_INVALID_ARGUMENT;

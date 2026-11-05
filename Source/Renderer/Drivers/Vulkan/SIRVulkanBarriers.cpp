@@ -42,6 +42,18 @@ static sirGraphicsResult_t sirVulkanBarrierState( sirGraphicsState_t eState, con
 		}
 		*pLayout = VK_IMAGE_LAYOUT_GENERAL;
 		return SIR_GRAPHICS_SUCCESS;
+	case SIR_GRAPHICS_STATE_COPY_SOURCE:
+		if ( ( pImage->nUsage & VK_IMAGE_USAGE_TRANSFER_SRC_BIT ) == 0 ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
+		*pLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+		return SIR_GRAPHICS_SUCCESS;
+	case SIR_GRAPHICS_STATE_COPY_DESTINATION:
+		if ( ( pImage->nUsage & VK_IMAGE_USAGE_TRANSFER_DST_BIT ) == 0 ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
+		*pLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+		return SIR_GRAPHICS_SUCCESS;
 	default:
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
@@ -94,7 +106,7 @@ sirGraphicsResult_t sirVulkanPlanImageBarrier( const sirGraphicsBarrier_t& barri
 			if ( !sirVulkanGetSubresourceLayout( pImage, nMip, nLayer, &eTracked ) || eTracked != eBefore ) {
 				return SIR_GRAPHICS_INVALID_ARGUMENT;
 			}
-			if ( eAfter == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ) {
+			if ( eAfter == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL || eAfter == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL ) {
 				const uint32_t nIndex = nLayer * pImage->nMips + nMip;
 				if ( ( pImage->szUploadedSubresources[nIndex / 64] & ( 1ULL << ( nIndex % 64 ) ) ) == 0 ) {
 					return SIR_GRAPHICS_INVALID_ARGUMENT;
@@ -199,8 +211,11 @@ sirVulkanResult_t SIRVulkanDevice::submitImageBarrier( sirVulkanImage_t *pImage,
 	     ( barrier.bUav && ( barrier.eBefore != VK_IMAGE_LAYOUT_GENERAL || barrier.eAfter != VK_IMAGE_LAYOUT_GENERAL ||
 	                         ( pImage->nUsage & VK_IMAGE_USAGE_STORAGE_BIT ) == 0 ) ) ||
 	     ( !barrier.bUav && barrier.eBefore == barrier.eAfter ) ||
-	     ( barrier.eAfter != VK_IMAGE_LAYOUT_GENERAL && barrier.eAfter != VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ) ||
-	     ( barrier.eAfter == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL && ( pImage->nUsage & VK_IMAGE_USAGE_SAMPLED_BIT ) == 0 ) ) {
+	     ( barrier.eAfter != VK_IMAGE_LAYOUT_GENERAL && barrier.eAfter != VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL &&
+	       barrier.eAfter != VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL && barrier.eAfter != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL ) ||
+	     ( barrier.eAfter == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL && ( pImage->nUsage & VK_IMAGE_USAGE_SAMPLED_BIT ) == 0 ) ||
+	     ( barrier.eAfter == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL && ( pImage->nUsage & VK_IMAGE_USAGE_TRANSFER_SRC_BIT ) == 0 ) ||
+	     ( barrier.eAfter == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && ( pImage->nUsage & VK_IMAGE_USAGE_TRANSFER_DST_BIT ) == 0 ) ) {
 		return SIR_VULKAN_INVALID_ARGUMENT;
 	}
 	for ( uint32_t iLayer = 0; iLayer < barrier.nLayerCount; ++iLayer ) {
@@ -211,7 +226,7 @@ sirVulkanResult_t SIRVulkanDevice::submitImageBarrier( sirVulkanImage_t *pImage,
 			if ( !sirVulkanGetSubresourceLayout( pImage, nMip, nLayer, &eTracked ) || eTracked != barrier.eBefore ) {
 				return SIR_VULKAN_INVALID_ARGUMENT;
 			}
-			if ( barrier.eAfter == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ) {
+			if ( barrier.eAfter == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL || barrier.eAfter == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL ) {
 				const uint32_t nIndex = nLayer * pImage->nMips + nMip;
 				if ( ( pImage->szUploadedSubresources[nIndex / 64] & ( 1ULL << ( nIndex % 64 ) ) ) == 0 ) {
 					return SIR_VULKAN_INVALID_ARGUMENT;

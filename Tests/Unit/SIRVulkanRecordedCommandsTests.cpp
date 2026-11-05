@@ -241,6 +241,8 @@ int main( void )
 	spans[2].bufferCopy.nDestinationOffset = 640;
 	spans[3].eKind = SIR_VULKAN_RECORDED_TEXTURE_COPY;
 	spans[3].pBuffer = &staging;
+	spans[3].pImage = &image;
+	spans[3].textureCopy.extent = { 8, 8, 1 };
 	spans[3].textureCopy.bBufferToImage = true;
 	spans[3].textureCopy.nBufferOffset = 1024;
 	if ( sirVulkanRecordedNeedsBufferBarrier( spans, 3 ) ) {
@@ -346,6 +348,36 @@ int main( void )
 	if ( sirVulkanValidateRecordedCommands( coverageCommands, 3 ) != SIR_VULKAN_SUCCESS ||
 	     partiallyUploaded.szUploadedSubresources[0] != 0 ) {
 		return 27;
+	}
+	// Ordered native barriers retain transfer-source/destination layout and enforce initialization.
+	sirVulkanImage_t copyLayouts = {};
+	copyLayouts.eType = VK_IMAGE_TYPE_2D;
+	copyLayouts.eFormat = VK_FORMAT_R8G8B8A8_UNORM;
+	copyLayouts.nMips = 1;
+	copyLayouts.nLayers = 1;
+	copyLayouts.nUsage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+	sirVulkanRecordedCommand_t nativeCopyBarriers[2] = {};
+	nativeCopyBarriers[0].eKind = SIR_VULKAN_RECORDED_IMAGE_BARRIER;
+	nativeCopyBarriers[0].pImage = &copyLayouts;
+	nativeCopyBarriers[0].imageBarrier = { VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 0, 0, 1, 1, false };
+	nativeCopyBarriers[1].eKind = SIR_VULKAN_RECORDED_IMAGE_BARRIER;
+	nativeCopyBarriers[1].pImage = &copyLayouts;
+	nativeCopyBarriers[1].imageBarrier = { VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, 0, 0, 1, 1, false };
+	if ( sirVulkanValidateRecordedCommands( nativeCopyBarriers, 2 ) != SIR_VULKAN_INVALID_ARGUMENT ) {
+		return 42;
+	}
+	copyLayouts.szUploadedSubresources[0] = 1;
+	if ( sirVulkanValidateRecordedCommands( nativeCopyBarriers, 2 ) != SIR_VULKAN_SUCCESS ||
+	     !sirVulkanGetSubresourceLayout( &copyLayouts, 0, 0, &layout ) || layout != VK_IMAGE_LAYOUT_UNDEFINED ) {
+		return 43;
+	}
+	copyLayouts.nUsage = VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+	if ( sirVulkanValidateRecordedCommands( nativeCopyBarriers, 2 ) != SIR_VULKAN_INVALID_ARGUMENT ) {
+		return 44;
+	}
+	nativeCopyBarriers[1].imageBarrier.eAfter = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+	if ( sirVulkanValidateRecordedCommands( nativeCopyBarriers, 2 ) != SIR_VULKAN_INVALID_ARGUMENT ) {
+		return 45;
 	}
 	printf( "Vulkan ordered mixed command validation passed\n" );
 	return 0;

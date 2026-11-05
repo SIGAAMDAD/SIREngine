@@ -59,7 +59,7 @@ bool sirVulkanGetFormatBlock( VkFormat eFormat, sirVulkanFormatBlock_t *pBlock )
 	return true;
 }
 
-// Each 2-bit entry addresses one independently tracked mip/layer pair.
+// Each 4-bit entry addresses one independently tracked mip/layer pair.
 // Values are final queued layouts; transient transfer layouts are command-local.
 static bool sirVulkanSubresourceIndex( const sirVulkanImage_t *pImage, uint32_t nMip, uint32_t nLayer, uint32_t *pIndex ) noexcept
 {
@@ -81,8 +81,8 @@ bool sirVulkanGetSubresourceLayout( const sirVulkanImage_t *pImage, uint32_t nMi
 	if ( !sirVulkanSubresourceIndex( pImage, nMip, nLayer, &nIndex ) ) {
 		return false;
 	}
-	const uint32_t nShift = ( nIndex & 3U ) * 2U;
-	const uint8_t nValue = ( pImage->szSubresourceLayouts[nIndex / 4] >> nShift ) & 3U;
+	const uint32_t nShift = ( nIndex & 1U ) * 4U;
+	const uint8_t nValue = ( pImage->szSubresourceLayouts[nIndex / 2] >> nShift ) & 15U;
 	switch ( nValue ) {
 	case 0:
 		return true;
@@ -91,6 +91,12 @@ bool sirVulkanGetSubresourceLayout( const sirVulkanImage_t *pImage, uint32_t nMi
 		return true;
 	case 2:
 		*pLayout = VK_IMAGE_LAYOUT_GENERAL;
+		return true;
+	case 3:
+		*pLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+		return true;
+	case 4:
+		*pLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 		return true;
 	default:
 		return false;
@@ -113,12 +119,18 @@ bool sirVulkanSetSubresourceLayout( sirVulkanImage_t *pImage, uint32_t nMip, uin
 	case VK_IMAGE_LAYOUT_GENERAL:
 		nValue = 2;
 		break;
+	case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
+		nValue = 3;
+		break;
+	case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
+		nValue = 4;
+		break;
 	default:
 		return false;
 	}
-	const uint32_t nShift = ( nIndex & 3U ) * 2U;
-	const uint8_t nMask = ( uint8_t )( 3U << nShift );
-	uint8_t *pEntry = &pImage->szSubresourceLayouts[nIndex / 4];
+	const uint32_t nShift = ( nIndex & 1U ) * 4U;
+	const uint8_t nMask = ( uint8_t )( 15U << nShift );
+	uint8_t *pEntry = &pImage->szSubresourceLayouts[nIndex / 2];
 	*pEntry = ( uint8_t )( ( *pEntry & ~nMask ) | ( nValue << nShift ) );
 	return true;
 }
@@ -126,7 +138,8 @@ bool sirVulkanSetSubresourceLayout( sirVulkanImage_t *pImage, uint32_t nMip, uin
 bool sirVulkanTransferCoversSubresource( const sirVulkanImage_t *pImage, const sirVulkanTextureTransfer_t& transfer ) noexcept
 {
 	if ( pImage == nullptr || !transfer.bBufferToImage || pImage->nMips == 0 || pImage->nMips > 32 || transfer.nMip >= pImage->nMips ||
-	     pImage->nLayers == 0 || transfer.nLayer >= pImage->nLayers || pImage->nWidth == 0 || pImage->nHeight == 0 ||
+	     pImage->nLayers == 0 || pImage->nLayers > SIR_VULKAN_MAX_TRACKED_SUBRESOURCES / pImage->nMips ||
+	     transfer.nLayer >= pImage->nLayers || pImage->nWidth == 0 || pImage->nHeight == 0 ||
 	     ( pImage->eType == VK_IMAGE_TYPE_3D && pImage->nDepth == 0 ) ) {
 		return false;
 	}
@@ -141,7 +154,7 @@ bool sirVulkanTransferCoversSubresource( const sirVulkanImage_t *pImage, const s
 VkImageLayout sirVulkanUploadFinalLayout( const sirVulkanImage_t *pImage, const sirVulkanTextureTransfer_t& transfer ) noexcept
 {
 	if ( pImage == nullptr || transfer.nMip >= pImage->nMips || transfer.nLayer >= pImage->nLayers || pImage->nMips == 0 ||
-	     pImage->nMips > 32 || pImage->nLayers == 0 ) {
+	     pImage->nMips > 32 || pImage->nLayers == 0 || pImage->nLayers > SIR_VULKAN_MAX_TRACKED_SUBRESOURCES / pImage->nMips ) {
 		return VK_IMAGE_LAYOUT_UNDEFINED;
 	}
 	const uint32_t nIndex = transfer.nLayer * pImage->nMips + transfer.nMip;
