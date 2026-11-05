@@ -100,7 +100,8 @@ int main( void )
 	barrier.nBaseMip = 0;
 	barrier.nBaseLayer = 0;
 	image.eFormat = VK_FORMAT_D32_SFLOAT;
-	if ( sirVulkanPlanImageBarrier( barrier, &image, &native ) != SIR_GRAPHICS_UNSUPPORTED ) {
+	barrier.eAfter = SIR_GRAPHICS_STATE_DEPTH_WRITE;
+	if ( sirVulkanPlanImageBarrier( barrier, &image, &native ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
 		return 13;
 	}
 	image.eFormat = VK_FORMAT_R8G8B8A8_UNORM;
@@ -213,6 +214,93 @@ int main( void )
 	copyBarrier.eAfter = SIR_GRAPHICS_STATE_COPY_DESTINATION;
 	if ( sirVulkanPlanImageBarrier( copyBarrier, &copyImage, &native ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
 		return 28;
+	}
+
+	// Depth-only and packed depth/stencil transitions must use format-correct aspects.
+	const VkFormat szDepthFormats[3] = { VK_FORMAT_D16_UNORM, VK_FORMAT_D32_SFLOAT, VK_FORMAT_D24_UNORM_S8_UINT };
+	for ( uint32_t iFormat = 0; iFormat < 3; ++iFormat ) {
+		sirVulkanImage_t depth = {};
+		depth.eFormat = szDepthFormats[iFormat];
+		depth.eType = VK_IMAGE_TYPE_2D;
+		depth.nMips = 2;
+		depth.nLayers = 2;
+		depth.nUsage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+		const bool bStencil = depth.eFormat == VK_FORMAT_D24_UNORM_S8_UINT;
+		const VkImageLayout eWrite = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+		const VkImageLayout eRead = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+		if ( sirVulkanImageAspectMask( depth.eFormat ) !=
+		     ( bStencil ? VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT : VK_IMAGE_ASPECT_DEPTH_BIT ) ) {
+			return 29;
+		}
+		sirGraphicsBarrier_t ds = {};
+		ds.eType = SIR_GRAPHICS_BARRIER_TRANSITION;
+		ds.eBefore = SIR_GRAPHICS_STATE_UNDEFINED;
+		ds.eAfter = SIR_GRAPHICS_STATE_DEPTH_WRITE;
+		ds.nBaseMip = 1;
+		ds.nMipCount = 1;
+		ds.nBaseLayer = 1;
+		ds.nLayerCount = 1;
+		if ( sirVulkanPlanImageBarrier( ds, &depth, &native ) != SIR_GRAPHICS_SUCCESS || native.eAfter != eWrite ||
+		     !sirVulkanSetSubresourceLayout( &depth, 1, 1, eWrite ) ) {
+			return 30;
+		}
+		ds.eBefore = SIR_GRAPHICS_STATE_DEPTH_WRITE;
+		ds.eAfter = SIR_GRAPHICS_STATE_DEPTH_READ;
+		if ( sirVulkanPlanImageBarrier( ds, &depth, &native ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+			return 31;
+		}
+		depth.szUploadedSubresources[0] = 1ULL << 3;
+		if ( sirVulkanPlanImageBarrier( ds, &depth, &native ) != SIR_GRAPHICS_SUCCESS || native.eBefore != eWrite ||
+		     native.eAfter != eRead || !sirVulkanSetSubresourceLayout( &depth, 1, 1, eRead ) ) {
+			return 32;
+		}
+		ds.eBefore = SIR_GRAPHICS_STATE_DEPTH_READ;
+		ds.eAfter = SIR_GRAPHICS_STATE_SHADER_READ;
+		if ( sirVulkanPlanImageBarrier( ds, &depth, &native ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+			return 33;
+		}
+		ds.eAfter = SIR_GRAPHICS_STATE_DEPTH_WRITE;
+		if ( sirVulkanPlanImageBarrier( ds, &depth, &native ) != SIR_GRAPHICS_SUCCESS || native.eAfter != eWrite ) {
+			return 34;
+		}
+		ds.eAfter = SIR_GRAPHICS_STATE_SHADER_WRITE;
+		if ( sirVulkanPlanImageBarrier( ds, &depth, &native ) != SIR_GRAPHICS_INVALID_ARGUMENT ||
+		     native.eAfter != VK_IMAGE_LAYOUT_UNDEFINED ) {
+			return 35;
+		}
+		ds.eAfter = SIR_GRAPHICS_STATE_COPY_DESTINATION;
+		if ( sirVulkanPlanImageBarrier( ds, &depth, &native ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+			return 36;
+		}
+		depth.nUsage = VK_IMAGE_USAGE_SAMPLED_BIT;
+		ds.eAfter = SIR_GRAPHICS_STATE_DEPTH_WRITE;
+		if ( sirVulkanPlanImageBarrier( ds, &depth, &native ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+			return 37;
+		}
+		depth.nUsage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+		ds.eAfter = SIR_GRAPHICS_STATE_COMMON;
+		if ( sirVulkanPlanImageBarrier( ds, &depth, &native ) != SIR_GRAPHICS_SUCCESS || native.eAfter != VK_IMAGE_LAYOUT_GENERAL ) {
+			return 38;
+		}
+	}
+	// An incompatible depth layout cannot be bound to a color image.
+	sirVulkanImage_t onlyColor = {};
+	onlyColor.eFormat = VK_FORMAT_R8G8B8A8_UNORM;
+	onlyColor.nMips = 1;
+	onlyColor.nLayers = 1;
+	onlyColor.nUsage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+	sirVulkanImageBarrier_t impossible = { VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 0, 0, 1, 1, false };
+	if ( sirVulkanValidateNativeImageBarrier( &onlyColor, impossible ) || sirVulkanValidateNativeImageBarrier( nullptr, impossible ) ) {
+		return 39;
+	}
+	sirVulkanImage_t onlyDepth = {};
+	onlyDepth.eFormat = VK_FORMAT_D32_SFLOAT;
+	onlyDepth.nMips = 1;
+	onlyDepth.nLayers = 1;
+	onlyDepth.nUsage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+	impossible.eAfter = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
+	if ( sirVulkanValidateNativeImageBarrier( &onlyDepth, impossible ) ) {
+		return 40;
 	}
 	printf( "Vulkan image barrier contracts passed\n" );
 	return 0;

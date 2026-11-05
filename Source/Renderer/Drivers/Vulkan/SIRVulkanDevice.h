@@ -205,6 +205,7 @@ typedef struct sirVulkanFormatBlock_s
 bool sirVulkanGetFormatBlock( VkFormat eFormat, sirVulkanFormatBlock_t *pBlock ) noexcept;
 bool sirVulkanGetSubresourceLayout( const sirVulkanImage_t *pImage, uint32_t nMip, uint32_t nLayer, VkImageLayout *pLayout ) noexcept;
 bool sirVulkanSetSubresourceLayout( sirVulkanImage_t *pImage, uint32_t nMip, uint32_t nLayer, VkImageLayout eLayout ) noexcept;
+VkImageAspectFlags sirVulkanImageAspectMask( VkFormat eFormat ) noexcept;
 
 typedef struct sirVulkanBufferBarrier_s
 {
@@ -225,6 +226,9 @@ typedef struct sirVulkanImageBarrier_s
 	uint32_t nLayerCount;
 	bool bUav;
 } sirVulkanImageBarrier_t;
+
+// Identical, failure-atomic range/layout/usage admission for standalone and recorded barriers.
+bool sirVulkanValidateNativeImageBarrier( const sirVulkanImage_t *pImage, const sirVulkanImageBarrier_t& barrier ) noexcept;
 
 typedef struct sirVulkanTextureTransfer_s
 {
