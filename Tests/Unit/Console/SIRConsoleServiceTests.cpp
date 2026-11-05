@@ -347,12 +347,60 @@ int main( void )
 	assert( console.readHistory( 2, &history ) == SIR_REGISTRATION_OK );
 	assert( strcmp( szHistoryBuffer, "exec profile.cfg" ) == 0 && history.nRequestId == 15 );
 
+	// Caller input is copied before the producer returns; mutations cannot change execution.
+	char szBorrowed[] = "help";
+	assert( console.submit( szBorrowed, 4, { user.origin, 400 } ) == SIR_REGISTRATION_OK );
+	memcpy( szBorrowed, "nope", 4 );
+	assert( console.pump( 0, &report ) == SIR_REGISTRATION_OK && report.nSucceeded == 1 );
+	assert( sirTestHasOutput( 400, SIR_REGISTRATION_OK, "help list get set reset toggle (exec awaits P5 Config adapter)" ) );
+	assert( console.submit( nullptr, 4, { user.origin, 401 } ) == SIR_REGISTRATION_INVALID_ARGUMENT );
+	assert( console.submit( "", 0, { user.origin, 401 } ) == SIR_REGISTRATION_INVALID_ARGUMENT );
+	char szOversized[130] = {};
+	memset( szOversized, 'x', sizeof( szOversized ) );
+	assert( console.submit( szOversized, 128, { user.origin, 401 } ) == SIR_REGISTRATION_INVALID_ARGUMENT );
+	const char szEmbeddedNul[] = { 'h', 'e', 'l', 'p', '\0', 'x' };
+	assert( console.submit( szEmbeddedNul, sizeof( szEmbeddedNul ), { user.origin, 401 } ) == SIR_REGISTRATION_INVALID_ARGUMENT );
+	const char szBadEscape[] = "help \\q";
+	assert( console.submit( szBadEscape, strlen( szBadEscape ), { user.origin, 402 } ) == SIR_REGISTRATION_OK );
+	assert( console.pump( 0, &report ) == SIR_REGISTRATION_OK && report.nRejected == 1 );
+	assert( sirTestHasOutput( 402, SIR_REGISTRATION_BAD_SCHEMA, "command rejected" ) );
+	assert( console.submit( "bad?name", 8, { user.origin, 403 } ) == SIR_REGISTRATION_OK );
+	assert( console.pump( 0, &report ) == SIR_REGISTRATION_OK && report.nRejected == 1 );
+	assert( sirTestHasOutput( 403, SIR_REGISTRATION_INVALID_NAME, "command rejected" ) );
+	char szTooManyArgs[64] = {};
+	uint32_t nTooManyBytes = 0;
+	for ( uint32_t iArg = 0; iArg < SIR_CONSOLE_MAX_ARGS + 1; ++iArg ) {
+		if ( iArg != 0 ) {
+			szTooManyArgs[nTooManyBytes++] = ' ';
+		}
+		szTooManyArgs[nTooManyBytes++] = 'a';
+	}
+	assert( console.submit( szTooManyArgs, nTooManyBytes, { user.origin, 404 } ) == SIR_REGISTRATION_OK );
+	assert( console.pump( 0, &report ) == SIR_REGISTRATION_OK && report.nRejected == 1 );
+	assert( sirTestHasOutput( 404, SIR_REGISTRATION_CAPACITY_EXCEEDED, "command rejected" ) );
+	const char szEscapedValue[] = "set r.title \"a\\ b\"";
+	assert( console.submit( szEscapedValue, strlen( szEscapedValue ), { user.origin, 405 } ) == SIR_REGISTRATION_OK );
+	assert( console.pump( 0, &report ) == SIR_REGISTRATION_OK && report.nSucceeded == 1 );
+	assert( console.submit( "get r.title", 11, { user.origin, 406 } ) == SIR_REGISTRATION_OK );
+	assert( console.pump( 0, &report ) == SIR_REGISTRATION_OK && report.nSucceeded == 1 );
+	assert( sirTestHasOutput( 406, SIR_REGISTRATION_OK, "a b" ) );
+	const char szOverflow[] = "set r.count 4294967296";
+	assert( console.submit( szOverflow, strlen( szOverflow ), { user.origin, 407 } ) == SIR_REGISTRATION_OK );
+	assert( console.pump( 0, &report ) == SIR_REGISTRATION_OK && report.nRejected == 1 );
+	assert( sirTestHasOutput( 407, SIR_REGISTRATION_TYPE_MISMATCH, "command rejected" ) );
 	assert( console.submit( "mod.ping \"hello world\"", 22, { user.origin, 100 } ) == SIR_REGISTRATION_OK );
 	assert( console.pump( 16, &report ) == SIR_REGISTRATION_OK && report.nProcessed == 1 );
 	assert( s_nCallbackCount == 1 && s_nLeaseAcquire == 1 && s_nLeaseRelease == 1 );
 	assert( sirTestHasOutput( 100, SIR_REGISTRATION_OK, "pong" ) );
 	assert( console.pump( 16, &report ) == SIR_REGISTRATION_OK && report.nProcessed == 1 );
 	assert( sirTestHasOutput( 1100, SIR_REGISTRATION_OK, "help list get set reset toggle (exec awaits P5 Config adapter)" ) );
+	// A failed module-code pin prevents native callback entry.
+	s_bModuleAlive = false;
+	assert( console.submit( "mod.ping", 8, { user.origin, 111 } ) == SIR_REGISTRATION_OK );
+	assert( console.pump( 0, &report ) == SIR_REGISTRATION_OK && report.nRejected == 1 );
+	assert( sirTestHasOutput( 111, SIR_REGISTRATION_DENIED, "command rejected" ) );
+	assert( s_nCallbackCount == 1 && s_nLeaseRelease == 1 );
+	s_bModuleAlive = true;
 	assert( console.submit( "engine.ping spam", 16, { user.origin, 101 } ) == SIR_REGISTRATION_OK );
 	assert( console.pump( 16, &report ) == SIR_REGISTRATION_OK );
 	assert( report.nOutputOverflow == 16 && report.nOutputs == 16 );
