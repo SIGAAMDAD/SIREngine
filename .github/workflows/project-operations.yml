@@ -1,0 +1,140 @@
+name: SIREngine project operations
+
+# Repository metadata only: this workflow NEVER checks out pull-request code.
+# The project access token is an explicitly provisioned secret, not GITHUB_TOKEN.
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: "Project operation"
+        type: choice
+        required: true
+        options:
+          - provision
+          - backfill
+          - hierarchy
+          - sync
+          - report
+          - provision-labels
+      apply:
+        description: "Write changes (false previews)"
+        type: boolean
+        default: false
+      number:
+        description: "Issue/PR number for a single sync, optional"
+        type: string
+        required: false
+      limit:
+        description: "Maximum records; 0 means all"
+        type: string
+        default: "0"
+        required: true
+  schedule:
+    - cron: "23 15 * * 1-5"
+  issues:
+    types: [opened, reopened, closed, edited, labeled, unlabeled, assigned, unassigned]
+  pull_request_target:
+    types: [opened, reopened, closed, edited, synchronize, converted_to_draft, ready_for_review, labeled, unlabeled, review_requested]
+  pull_request_review:
+    types: [submitted, dismissed]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+
+# Serialize project mutations across all SIREngine events, including backfills.
+concurrency:
+  group: sirengine-project-operations
+  cancel-in-progress: false
+
+jobs:
+  synchronize:
+    if: github.repository == 'SIGAAMDAD/SIREngine'
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - name: Read trusted project tooling on the default branch
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+
+      - name: Check project access and execute requested operation
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SIR_PROJECT_TOKEN: ${{ secrets.SIR_PROJECT_TOKEN }}
+          SIR_PROJECT_NUMBER: ${{ vars.SIR_PROJECT_NUMBER }}
+          SIR_PROJECT_OWNER: "SIGAAMDAD"
+          SIR_PROJECT_TITLE: "SIREngine"
+          REQUESTED_OPERATION: ${{ inputs.operation || '' }}
+          REQUESTED_APPLY: ${{ inputs.apply || false }}
+          REQUESTED_LIMIT: ${{ inputs.limit || '0' }}
+          REQUESTED_NUMBER: ${{ inputs.number || '' }}
+          EVENT_ITEM_NUMBER: ${{ github.event.issue.number || github.event.pull_request.number || '' }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          set -euo pipefail
+
+          operation="$REQUESTED_OPERATION"
+          if [[ -z "$operation" ]]; then
+            if [[ "$GITHUB_EVENT_NAME" == "schedule" ]]; then
+              operation="report"
+            else
+              operation="sync"
+            fi
+          fi
+
+          if [[ "$operation" == "report" ]]; then
+            python3 Tools/ProjectManagement/project_ops.py report --report-dir project-reports
+            exit 0
+          fi
+
+          if [[ "$operation" == "provision-labels" ]]; then
+            if [[ "$GITHUB_EVENT_NAME" != "workflow_dispatch" || "$ACTOR" != "SIGAAMDAD" ]]; then
+              echo "::error::Only the owner can provision repository labels."
+              exit 1
+            fi
+            if [[ "$REQUESTED_APPLY" == "true" ]]; then
+              python3 Tools/ProjectManagement/bootstrap_labels.py --apply
+            else
+              python3 Tools/ProjectManagement/bootstrap_labels.py
+            fi
+            exit 0
+          fi
+
+          if [[ -z "$SIR_PROJECT_TOKEN" ]]; then
+            echo "::warning::SIR_PROJECT_TOKEN is not set; no Projects V2 changes were made."
+            echo "GitHub Projects authorization required. See Docs/ProjectManagement/GitHubProjects.md." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          args=()
+          if [[ "$GITHUB_EVENT_NAME" != "workflow_dispatch" || "$REQUESTED_APPLY" == "true" ]]; then
+            args+=(--apply)
+          fi
+          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" && "$REQUESTED_APPLY" == "true" ]]; then
+            if [[ "$operation" == "provision" || "$operation" == "hierarchy" || "$operation" == "backfill" ]]; then
+              if [[ "$ACTOR" != "SIGAAMDAD" ]]; then
+                echo "::error::Initial project migration requires owner dispatch."
+                exit 1
+              fi
+            fi
+          fi
+          if [[ "$operation" == "sync" ]]; then
+            issue_number="${REQUESTED_NUMBER:-$EVENT_ITEM_NUMBER}"
+            if [[ -n "$issue_number" ]]; then
+              args+=(--number "$issue_number")
+            fi
+          fi
+          python3 Tools/ProjectManagement/project_ops.py "$operation" "${args[@]}" --limit "$REQUESTED_LIMIT"
+
+      - name: Upload audit evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sirengine-project-report-${{ github.run_id }}
+          path: project-reports/
+          if-no-files-found: ignore
+          retention-days: 30
