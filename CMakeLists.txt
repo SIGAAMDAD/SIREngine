@@ -26,6 +26,7 @@ include(Build/CMake/SIRDependencies.cmake)
 include(Build/CMake/SIRAudio.cmake)
 include(Build/CMake/SIRMono.cmake)
 add_subdirectory(Source)
+add_subdirectory(Tools/RegistrationCooker)
 
 if(SIR_BUILD_TESTS)
     enable_testing()
