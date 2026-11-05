@@ -1,7 +1,7 @@
 name: Architecture milestone or roadmap
 description: Author or revise a milestone for owner review; creation does not approve implementation.
 title: "[Milestone] "
-labels: ["marathon:tracked"]
+labels: ["marathon:tracked", "kind:milestone"]
 body:
   - type: markdown
     attributes:
