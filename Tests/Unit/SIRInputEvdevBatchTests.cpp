@@ -31,6 +31,7 @@ static int s_nFakeGamepadFd = -1;
 static uint32_t s_nFakeIoctlCalls = 0;
 static uint32_t s_nInjectedReadInterrupts = 0;
 static uint32_t s_nInjectedRequeryFailures = 0;
+static uint32_t s_nInjectedAxisFailureCode = UINT32_MAX;
 
 extern "C" int __real_ioctl( int nFd, unsigned long nRequest, ... );
 extern "C" int __wrap_ioctl( int nFd, unsigned long nRequest, ... )
@@ -94,6 +95,11 @@ extern "C" int __wrap_ioctl( int nFd, unsigned long nRequest, ... )
 		return 0;
 	}
 	if ( nCode >= 0x40 && nCode < 0x40 + ABS_MAX ) {
+		if ( s_nInjectedAxisFailureCode == nCode - 0x40 ) {
+			s_nInjectedAxisFailureCode = UINT32_MAX;
+			errno = EIO;
+			return -1;
+		}
 		input_absinfo *pAxis = ( input_absinfo * )pArgument;
 		*pAxis = {};
 		const uint32_t nAxis = nCode - 0x40;
@@ -165,6 +171,11 @@ public:
 	static bool firstOpen( const SIRLinuxEvdevBackend& backend ) noexcept
 	{
 		return backend.m_Slots[0].bOpen;
+	}
+
+	static int8_t firstHatX( const SIRLinuxEvdevBackend& backend ) noexcept
+	{
+		return backend.m_Slots[0].nHatX;
 	}
 
 	static bool queueBoundary( SIRLinuxEvdevBackend& backend ) noexcept
@@ -721,11 +732,94 @@ static bool testFailedDesyncRequeryRecovery( void ) noexcept
 	return bValid;
 }
 
+static bool testAtomicAnalogResynchronization( void ) noexcept
+{
+	SIRInputService service;
+	SIRLinuxEvdevBackend backend;
+	if ( !service.attach( backend ) || !service.begin( 1 ) ) {
+		return false;
+	}
+	sirInputDeviceId_t id = {};
+	const sirInputControlChange_t held = { SIR_INPUT_BUTTON, SIR_INPUT_PAD_EAST, 1 };
+	if ( !service.connect( { 0, 984, SIR_INPUT_LINUX_EVDEV, SIR_INPUT_CONTROLLER }, &id ) ||
+	     !service.emitControls( SIR_INPUT_LINUX_EVDEV, id, &held, 1 ) || !service.publish() || !service.begin( 2 ) ) {
+		return false;
+	}
+
+	int nReadFd = -1;
+	int nWriteFd = -1;
+	if ( !createPipe( &nReadFd, &nWriteFd ) ) {
+		return false;
+	}
+	if ( !SIRInputEvdevBatchTestPeer::install( backend, nReadFd, id ) ) {
+		close( nReadFd );
+		close( nWriteFd );
+		return false;
+	}
+	SIRInputEvdevBatchTestPeer::configureAxes( backend );
+	s_nFakeGamepadFd = nReadFd;
+	s_bFakeGamepadIoctl = true;
+	s_nInjectedAxisFailureCode = ABS_X;
+
+	input_event szDropped[2] = {};
+	szDropped[0].type = EV_SYN;
+	szDropped[0].code = SYN_DROPPED;
+	szDropped[1].type = EV_SYN;
+	szDropped[1].code = SYN_REPORT;
+	bool bValid = write( nWriteFd, szDropped, sizeof( szDropped ) ) == ( ssize_t )sizeof( szDropped );
+	if ( bValid ) {
+		backend.sample( service );
+		bValid = s_nInjectedAxisFailureCode == UINT32_MAX && SIRInputEvdevBatchTestPeer::desynchronized( backend ) && service.publish() &&
+		         service.frame()->nCount == 0 &&
+		         ( service.frame()->state[id.nSlot].nHeld[0] & ( UINT32_C( 1 ) << SIR_INPUT_PAD_EAST ) ) != 0 && service.begin( 3 );
+	}
+	if ( bValid ) {
+		s_nInjectedAxisFailureCode = ABS_HAT0Y;
+		input_event report = {};
+		report.type = EV_SYN;
+		report.code = SYN_REPORT;
+		bValid = write( nWriteFd, &report, sizeof( report ) ) == sizeof( report );
+		if ( bValid ) {
+			backend.sample( service );
+			bValid = s_nInjectedAxisFailureCode == UINT32_MAX && SIRInputEvdevBatchTestPeer::desynchronized( backend ) &&
+			         SIRInputEvdevBatchTestPeer::firstHatX( backend ) == 0 && service.publish() && service.frame()->nCount == 0 &&
+			         ( service.frame()->state[id.nSlot].nHeld[0] & ( UINT32_C( 1 ) << SIR_INPUT_PAD_EAST ) ) != 0 && service.begin( 4 );
+		}
+	}
+	if ( bValid ) {
+		input_event report = {};
+		report.type = EV_SYN;
+		report.code = SYN_REPORT;
+		bValid = write( nWriteFd, &report, sizeof( report ) ) == sizeof( report );
+		if ( bValid ) {
+			backend.sample( service );
+			bValid = !SIRInputEvdevBatchTestPeer::desynchronized( backend ) && SIRInputEvdevBatchTestPeer::firstHatX( backend ) == -1 &&
+			         service.publish();
+			if ( bValid ) {
+				const sirInputFrame_t *pFrame = service.frame();
+				bValid = pFrame != nullptr && pFrame->nCount == 5 && pFrame->events[0].eSignal == SIR_INPUT_RESYNC &&
+				         ( pFrame->state[id.nSlot].nHeld[0] & ( UINT32_C( 1 ) << SIR_INPUT_PAD_EAST ) ) == 0 &&
+				         ( pFrame->state[id.nSlot].nHeld[0] & ( UINT32_C( 1 ) << SIR_INPUT_PAD_SOUTH ) ) != 0 &&
+				         ( pFrame->state[id.nSlot].nHeld[0] & ( UINT32_C( 1 ) << SIR_INPUT_PAD_DPAD_LEFT ) ) != 0 &&
+				         pFrame->state[id.nSlot].nAxes[SIR_INPUT_AXIS_LX] == 32767 &&
+				         pFrame->state[id.nSlot].nAxes[SIR_INPUT_AXIS_LY] == -32767;
+			}
+		}
+	}
+	s_nInjectedAxisFailureCode = UINT32_MAX;
+	s_nFakeGamepadFd = -1;
+	s_bFakeGamepadIoctl = false;
+	close( nWriteFd );
+	service.shutdown();
+	return bValid;
+}
+
 int main( void )
 {
 	if ( !testBatchedReports() || !testPartialReportAcrossReads() || !testMappingAndQueueBoundaries() || !testDiscoveryAndOpenFailures() ||
 	     !testDesyncAndReadFailureLifecycle() || !testAxisHatAndRumbleErrors() || !testEmulatedControllerOpenAndRumble() ||
-	     !testEmulatedHotplugLifecycle() || !testInterruptBudgetAndRetry() || !testFailedDesyncRequeryRecovery() ) {
+	     !testEmulatedHotplugLifecycle() || !testInterruptBudgetAndRetry() || !testFailedDesyncRequeryRecovery() ||
+	     !testAtomicAnalogResynchronization() ) {
 		fprintf( stderr, "SIRInputEvdevBatchTests FAIL\n" );
 		return 1;
 	}

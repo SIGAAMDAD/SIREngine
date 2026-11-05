@@ -182,6 +182,40 @@ static bool sirFrameReceiptAgeOrdering( void ) noexcept
 	return pFrame->nOldestReceiptAgeNs == 0 && pFrame->nNewestReceiptAgeNs == 0;
 }
 
+static bool sirFrameResyncReservation( void ) noexcept
+{
+	SIRInputFrameState state;
+	SIRInputDeviceRegistry registry;
+	const sirInputDeviceId_t hDevice = { 0, 1 };
+	const sirInputTimestamp_t time = { 1234, 1234, SIR_INPUT_CLOCK_ENGINE_MONOTONIC, 0 };
+	const sirInputControlChange_t restore[] = { { SIR_INPUT_BUTTON, 42, 1 }, { SIR_INPUT_AXIS, SIR_INPUT_AXIS_LX, 100 } };
+	if ( !state.begin( 1 ) || state.postResyncChanges( hDevice, SIR_INPUT_CONTROLLER, restore, SIR_INPUT_EVENT_CAPACITY ) ||
+	     state.postResyncChanges( hDevice, SIR_INPUT_CONTROLLER, nullptr, 1 ) ) {
+		return false;
+	}
+	for ( uint32_t i = 0; i < SIR_INPUT_EVENT_CAPACITY - 1; ++i ) {
+		const sirInputControlChange_t change = { SIR_INPUT_BUTTON, 42, ( i & 1 ) == 0 ? 1 : 0 };
+		if ( !state.postChanges( hDevice, SIR_INPUT_CONTROLLER, &change, 1, time ) ) {
+			return false;
+		}
+	}
+	if ( state.postResyncChanges( hDevice, SIR_INPUT_CONTROLLER, restore, 2 ) || !state.publish( registry ) ) {
+		return false;
+	}
+	const sirInputFrame_t *pFrame = state.frame();
+	if ( pFrame == nullptr || pFrame->nCount != SIR_INPUT_EVENT_CAPACITY - 1 || pFrame->nResyncCount != 0 ||
+	     ( pFrame->state[hDevice.nSlot].nHeld[1] & ( UINT32_C( 1 ) << ( 42 - 32 ) ) ) == 0 ) {
+		return false;
+	}
+	if ( !state.begin( 2 ) || !state.postResyncChanges( hDevice, SIR_INPUT_CONTROLLER, restore, 2 ) || !state.publish( registry ) ) {
+		return false;
+	}
+	pFrame = state.frame();
+	return pFrame != nullptr && pFrame->nCount == 3 && pFrame->nResyncCount == 1 && pFrame->events[0].eSignal == SIR_INPUT_RESYNC &&
+	       pFrame->events[1].eSignal == SIR_INPUT_BUTTON && pFrame->events[2].eSignal == SIR_INPUT_AXIS &&
+	       pFrame->state[hDevice.nSlot].nAxes[SIR_INPUT_AXIS_LX] == 100;
+}
+
 int main( void )
 {
 	if ( !sirFrameNegativeParameters() ) {
@@ -198,6 +232,10 @@ int main( void )
 	}
 	if ( !sirFrameReceiptAgeOrdering() ) {
 		fputs( "input frame negative: receipt ordering FAILED\n", stderr );
+		return 1;
+	}
+	if ( !sirFrameResyncReservation() ) {
+		fputs( "input frame negative: resync reservation FAILED\n", stderr );
 		return 1;
 	}
 	puts( "SIRInputFrameNegativeTests PASS" );

@@ -270,6 +270,32 @@ bool SIRInputFrameState::postChanges( sirInputDeviceId_t id, sirInputDeviceClass
 	return true;
 }
 
+bool SIRInputFrameState::postResyncChanges( sirInputDeviceId_t id, sirInputDeviceClass_t eClass, const sirInputControlChange_t *pChanges,
+                                            uint32_t nCount ) noexcept
+{
+	if ( !m_bCollecting || m_bOverflowed || id.nSlot >= SIR_INPUT_DEVICE_CAPACITY || ( nCount != 0 && pChanges == nullptr ) ||
+	     nCount >= SIR_INPUT_EVENT_CAPACITY || !canPost( nCount + 1 ) ) {
+		return false;
+	}
+
+	// Validate the complete restoration before a RESYNC clears live state.
+	sirInputDeviceState_t scratch = {};
+	for ( uint32_t i = 0; i < nCount; ++i ) {
+		if ( !apply( scratch, pChanges[i] ) ) {
+			return false;
+		}
+	}
+
+	// One owner, prevalidated values, and a reserved worst-case event budget:
+	// neither step can fail once the transaction starts.
+	const uint64_t nNowNs = SIRPlatformTime::getMonotonicNanoseconds();
+	const sirInputTimestamp_t time = { nNowNs, nNowNs, SIR_INPUT_CLOCK_ENGINE_MONOTONIC, 0 };
+	if ( !postDevice( id, eClass, SIR_INPUT_RESYNC, time ) ) {
+		return false;
+	}
+	return postChanges( id, eClass, pChanges, nCount, time );
+}
+
 bool SIRInputFrameState::postDevice( sirInputDeviceId_t id, sirInputDeviceClass_t eClass, sirInputSignal_t eSignal,
                                      const sirInputTimestamp_t& time ) noexcept
 {

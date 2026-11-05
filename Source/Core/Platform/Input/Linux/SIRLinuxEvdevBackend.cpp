@@ -309,6 +309,12 @@ bool SIRLinuxEvdevBackend::openDevice( SIRInputService& service, const char *psz
 			}
 		}
 	}
+	if ( slot.bHatDPad ) {
+		input_absinfo x = {}, y = {};
+		// Some controllers expose neither discrete D-pad keys nor a hat.
+		// Only enable hat recovery when both axes actually exist.
+		slot.bHatDPad = ioctl( nFd, EVIOCGABS( ABS_HAT0X ), &x ) == 0 && ioctl( nFd, EVIOCGABS( ABS_HAT0Y ), &y ) == 0;
+	}
 	slot.bCanRumble =
 	    bWrite && ioctl( nFd, EVIOCGBIT( EV_FF, sizeof( nFF ) ), nFF ) >= 0 &&
 	    ( nFF[FF_RUMBLE / ( sizeof( unsigned long ) * 8 )] & ( 1UL << ( FF_RUMBLE % ( sizeof( unsigned long ) * 8 ) ) ) ) != 0;
@@ -397,44 +403,68 @@ bool SIRLinuxEvdevBackend::requery( SIRInputService& service, sirInputEvdevSlot_
 	if ( ioctl( slot.nFd, EVIOCGKEY( sizeof( nKeys ) ), nKeys ) < 0 ) {
 		return false;
 	}
-	// The authoritative key query must succeed before retiring the old state.
-	if ( bReset && !service.loseState( id(), slot.id ) ) {
+
+	for ( uint16_t nCode = BTN_GAMEPAD; nCode < KEY_MAX; ++nCode ) {
+		const int16_t nLogical = resolveButton( slot, nCode );
+		if ( nLogical < 0 ) {
+			continue;
+		}
+		const bool bPressed =
+		    ( nKeys[nCode / ( sizeof( unsigned long ) * 8 )] & ( 1UL << ( nCode % ( sizeof( unsigned long ) * 8 ) ) ) ) != 0;
+		if ( bPressed ) {
+			if ( nCount == SIR_INPUT_EVDEV_REPORT_CAPACITY ) {
+				return false;
+			}
+			changes[nCount++] = { SIR_INPUT_BUTTON, ( uint16_t )nLogical, 1 };
+		}
+	}
+
+	// A failed read of a previously discovered axis invalidates the entire
+	// recovery. Never publish a neutral/partial analog snapshot as real data.
+	for ( uint16_t i = 0; i < SIR_INPUT_AXIS_COUNT; ++i ) {
+		if ( !slot.axes[i].bValid ) {
+			continue;
+		}
+		if ( nCount == SIR_INPUT_EVDEV_REPORT_CAPACITY ) {
+			return false;
+		}
+		input_absinfo axis = {};
+		if ( ioctl( slot.nFd, EVIOCGABS( slot.axes[i].nCode ), &axis ) != 0 ) {
+			return false;
+		}
+		int32_t nValue = normalize( axis.value, slot.axes[i].nMinimum, slot.axes[i].nMaximum, slot.axes[i].bTrigger );
+		if ( slot.axes[i].bInvert ) {
+			nValue = -nValue;
+		}
+		changes[nCount++] = { SIR_INPUT_AXIS, i, nValue };
+	}
+
+	int8_t nHatX = slot.nHatX;
+	int8_t nHatY = slot.nHatY;
+	if ( slot.bHatDPad ) {
+		if ( nCount + 4 > SIR_INPUT_EVDEV_REPORT_CAPACITY ) {
+			return false;
+		}
+		input_absinfo x = {}, y = {};
+		if ( ioctl( slot.nFd, EVIOCGABS( ABS_HAT0X ), &x ) != 0 || ioctl( slot.nFd, EVIOCGABS( ABS_HAT0Y ), &y ) != 0 ) {
+			return false;
+		}
+		nHatX = ( int8_t )( x.value < 0 ? -1 : x.value > 0 ? 1 : 0 );
+		nHatY = ( int8_t )( y.value < 0 ? -1 : y.value > 0 ? 1 : 0 );
+		changes[nCount++] = { SIR_INPUT_BUTTON, SIR_INPUT_PAD_DPAD_LEFT, nHatX < 0 ? 1 : 0 };
+		changes[nCount++] = { SIR_INPUT_BUTTON, SIR_INPUT_PAD_DPAD_RIGHT, nHatX > 0 ? 1 : 0 };
+		changes[nCount++] = { SIR_INPUT_BUTTON, SIR_INPUT_PAD_DPAD_UP, nHatY < 0 ? 1 : 0 };
+		changes[nCount++] = { SIR_INPUT_BUTTON, SIR_INPUT_PAD_DPAD_DOWN, nHatY > 0 ? 1 : 0 };
+	}
+
+	const bool bCommitted =
+	    bReset ? service.resynchronizeControls( id(), slot.id, changes, nCount ) : service.emitControls( id(), slot.id, changes, nCount );
+	if ( !bCommitted ) {
 		return false;
 	}
-	for ( uint16_t nCode = BTN_GAMEPAD; nCode < KEY_MAX && nCount < SIR_INPUT_EVDEV_REPORT_CAPACITY; ++nCode ) {
-		const int16_t nLogical = resolveButton( slot, nCode );
-		if ( nLogical >= 0 ) {
-			const bool bPressed =
-			    ( nKeys[nCode / ( sizeof( unsigned long ) * 8 )] & ( 1UL << ( nCode % ( sizeof( unsigned long ) * 8 ) ) ) ) != 0;
-			if ( bPressed ) {
-				changes[nCount++] = { SIR_INPUT_BUTTON, ( uint16_t )nLogical, 1 };
-			}
-		}
-	}
-	for ( uint16_t i = 0; i < SIR_INPUT_AXIS_COUNT; ++i ) {
-		if ( slot.axes[i].bValid && nCount < SIR_INPUT_EVDEV_REPORT_CAPACITY ) {
-			input_absinfo axis = {};
-			if ( ioctl( slot.nFd, EVIOCGABS( slot.axes[i].nCode ), &axis ) == 0 ) {
-				int32_t nValue = normalize( axis.value, slot.axes[i].nMinimum, slot.axes[i].nMaximum, slot.axes[i].bTrigger );
-				if ( slot.axes[i].bInvert ) {
-					nValue = -nValue;
-				}
-				changes[nCount++] = { SIR_INPUT_AXIS, i, nValue };
-			}
-		}
-	}
-	if ( slot.bHatDPad && nCount + 4 <= SIR_INPUT_EVDEV_REPORT_CAPACITY ) {
-		input_absinfo x = {}, y = {};
-		if ( ioctl( slot.nFd, EVIOCGABS( ABS_HAT0X ), &x ) == 0 && ioctl( slot.nFd, EVIOCGABS( ABS_HAT0Y ), &y ) == 0 ) {
-			slot.nHatX = ( int8_t )( x.value < 0 ? -1 : x.value > 0 ? 1 : 0 );
-			slot.nHatY = ( int8_t )( y.value < 0 ? -1 : y.value > 0 ? 1 : 0 );
-			changes[nCount++] = { SIR_INPUT_BUTTON, SIR_INPUT_PAD_DPAD_LEFT, slot.nHatX < 0 ? 1 : 0 };
-			changes[nCount++] = { SIR_INPUT_BUTTON, SIR_INPUT_PAD_DPAD_RIGHT, slot.nHatX > 0 ? 1 : 0 };
-			changes[nCount++] = { SIR_INPUT_BUTTON, SIR_INPUT_PAD_DPAD_UP, slot.nHatY < 0 ? 1 : 0 };
-			changes[nCount++] = { SIR_INPUT_BUTTON, SIR_INPUT_PAD_DPAD_DOWN, slot.nHatY > 0 ? 1 : 0 };
-		}
-	}
-	return service.emitControls( id(), slot.id, changes, nCount );
+	slot.nHatX = nHatX;
+	slot.nHatY = nHatY;
+	return true;
 }
 
 void SIRLinuxEvdevBackend::closeDevice( SIRInputService& service, sirInputEvdevSlot_t& slot ) noexcept
