@@ -18,10 +18,16 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <stdio.h>
 #include <stdlib.h>
 
-#define REQUIRE( condition ) do { if ( !( condition ) ) { fprintf( stderr, "%s:%d: %s\n", __FILE__, __LINE__, #condition ); abort(); } } while ( false )
+#define REQUIRE( condition )                                                                                                               \
+	do {                                                                                                                                   \
+		if ( !( condition ) ) {                                                                                                            \
+			fprintf( stderr, "%s:%d: %s\n", __FILE__, __LINE__, #condition );                                                              \
+			abort();                                                                                                                       \
+		}                                                                                                                                  \
+	} while ( false )
 
-static sirMaterialIRNode_t makeNode( sirMaterialIROp_t eOp, sirMaterialIRType_t eType,
-                                     uint16_t iA = SIR_MATERIAL_IR_NO_INPUT, uint16_t iB = SIR_MATERIAL_IR_NO_INPUT ) noexcept
+static sirMaterialIRNode_t makeNode( sirMaterialIROp_t eOp, sirMaterialIRType_t eType, uint16_t iA = SIR_MATERIAL_IR_NO_INPUT,
+                                     uint16_t iB = SIR_MATERIAL_IR_NO_INPUT ) noexcept
 {
 	sirMaterialIRNode_t node = {};
 	node.eOp = eOp;
@@ -46,8 +52,7 @@ static void testDeterministicMaps( void ) noexcept
 	szSwitches[1].nBit = 2;
 	szSwitches[1].nRequires = 1;
 	sirMaterialIRPass_t szPasses[2] = {};
-	szPasses[0] = { SIR_SHADER_PASS_COLOR, 3, SIR_GRAPHICS_STAGE_VERTEX | SIR_GRAPHICS_STAGE_FRAGMENT,
-		              SIR_GRAPHICS_FEATURE_GRAPHICS };
+	szPasses[0] = { SIR_SHADER_PASS_COLOR, 3, SIR_GRAPHICS_STAGE_VERTEX | SIR_GRAPHICS_STAGE_FRAGMENT, SIR_GRAPHICS_FEATURE_GRAPHICS };
 	szPasses[1] = { SIR_SHADER_PASS_DEPTH, 4, SIR_GRAPHICS_STAGE_VERTEX, SIR_GRAPHICS_FEATURE_GRAPHICS };
 	sirMaterialIRGraph_t graph = {};
 	graph.nAssetId = 17;
@@ -73,8 +78,7 @@ static void testDeterministicMaps( void ) noexcept
 	REQUIRE( szEntries[3].bUberFallback && szEntries[3].nPermutationMask == UINT32_MAX );
 	REQUIRE( szEntries[4].ePass == SIR_SHADER_PASS_DEPTH && szEntries[7].bUberFallback );
 	REQUIRE( szEntries[0].nCodeHash != szEntries[1].nCodeHash );
-	REQUIRE( szEntries[4].nCodeHash == szEntries[5].nCodeHash &&
-	         szEntries[4].nCodeHash == szEntries[6].nCodeHash );
+	REQUIRE( szEntries[4].nCodeHash == szEntries[5].nCodeHash && szEntries[4].nCodeHash == szEntries[6].nCodeHash );
 	const uint64_t nFirstHash = szEntries[0].nCodeHash;
 	REQUIRE( sirMaterialIRCompile( graph, options, &output ) == SIR_SHADER_COOK_OK );
 	REQUIRE( szEntries[0].nCodeHash == nFirstHash );
