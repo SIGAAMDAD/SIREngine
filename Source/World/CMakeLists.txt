@@ -1,4 +1,4 @@
-add_library(SIRWorldHLOD STATIC HLOD/SIRWorldHLOD.cpp HLOD/SIRWorldHLODGRDG.cpp HLOD/SIRWorldHLODManifest.cpp HLOD/SIRWorldHLODPins.cpp)
+add_library(SIRWorldHLOD STATIC HLOD/SIRWorldHLOD.cpp HLOD/SIRWorldHLODGRDG.cpp HLOD/SIRWorldHLODManifest.cpp HLOD/SIRWorldHLODPins.cpp HLOD/SIRWorldHLODDemand.cpp)
 add_library(SIR::WorldHLOD ALIAS SIRWorldHLOD)
 target_include_directories(SIRWorldHLOD PUBLIC "${PROJECT_SOURCE_DIR}/Source" "${PROJECT_SOURCE_DIR}/Build/CMake")
 target_compile_features(SIRWorldHLOD PUBLIC cxx_std_17)

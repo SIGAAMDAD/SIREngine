@@ -17,3 +17,8 @@ add_executable(SIRWorldHLODPinTests SIRWorldHLODPinTests.cpp)
 target_link_libraries(SIRWorldHLODPinTests PRIVATE SIR::WorldHLOD)
 add_test(NAME world.hlod.pin-cut COMMAND SIRWorldHLODPinTests)
 sir_configure_owned_target(SIRWorldHLODPinTests)
+
+add_executable(SIRWorldHLODDemandTests SIRWorldHLODDemandTests.cpp)
+target_link_libraries(SIRWorldHLODDemandTests PRIVATE SIR::WorldHLOD)
+add_test(NAME world.hlod.demand-reconcile COMMAND SIRWorldHLODDemandTests)
+sir_configure_owned_target(SIRWorldHLODDemandTests)
