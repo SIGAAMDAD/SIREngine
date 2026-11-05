@@ -352,3 +352,9 @@ endif()
 
 add_subdirectory(Config)
 include(${CMAKE_CURRENT_SOURCE_DIR}/StringPoolTests.cmake)
+
+# Native bounded logical VFS path validation.
+add_executable(SIRVFSPathTests SIRVFSPathTests.cpp)
+target_link_libraries(SIRVFSPathTests PRIVATE SIR::Core)
+add_test(NAME core.vfs.path-normalization COMMAND SIRVFSPathTests)
+sir_configure_owned_target(SIRVFSPathTests)
