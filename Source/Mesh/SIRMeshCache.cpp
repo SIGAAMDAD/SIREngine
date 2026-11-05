@@ -69,7 +69,7 @@ typedef struct sirMeshCacheSlot_s
 
 static bool sameMeshKey( const sirMeshKey_t *pA, const sirMeshKey_t *pB ) noexcept
 {
-	return pA->nAssetId == pB->nAssetId && pA->nRevision == pB->nRevision && pA->nVariant == pB->nVariant;
+	return pA->nAssetId == pB->nAssetId && pA->nRevision == pB->nRevision && pA->nVariant == pB->nVariant && pA->nReserved == pB->nReserved;
 }
 
 static bool validateMeshSource( const sirMeshGeometrySource_t *pSource ) noexcept
