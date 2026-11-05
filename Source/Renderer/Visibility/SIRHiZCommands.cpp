@@ -67,7 +67,8 @@ static sirGraphicsResult_t sirHiZValidateRecording( const sirHiZCommandResources
 	if ( pyramid.nWidth == 0 || pyramid.nHeight == 0 || pyramid.nDepth != 1 || pyramid.nArrayLayers != 1 ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	if ( pyramid.nSampleCount != 1 || pyramid.eFormat != SIR_GRAPHICS_FORMAT_R32_FLOAT || pyramid.eDimension != SIR_GRAPHICS_TEXTURE_2D ) {
+	if ( pyramid.nSampleCount != 1 || pyramid.eFormat != SIR_GRAPHICS_FORMAT_R32_FLOAT || pyramid.eDimension != SIR_GRAPHICS_TEXTURE_2D ||
+	     pyramid.eMemory != SIR_GRAPHICS_MEMORY_GPU_LOCAL ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	constexpr uint32_t REQUIRED_USAGE = SIR_GRAPHICS_USAGE_SAMPLED | SIR_GRAPHICS_USAGE_STORAGE;
