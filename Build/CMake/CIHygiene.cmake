@@ -20,8 +20,6 @@ set(sirRequired
     Source/CMakeLists.txt Source/Core/CMakeLists.txt
     Source/Core/SIRApplication.h Source/Core/SIRApplication.cpp Source/Main.cpp
     .github/workflows/ci.yml .github/workflows/nightly.yml
-    Docs/Milestones/README.md
-    Docs/Milestones/03-Terrain.md
     Source/Terrain/README.md Source/Terrain/Editor/README.md)
 foreach(sirPath IN LISTS sirRequired)
     if(NOT sirPath IN_LIST sirFiles)
