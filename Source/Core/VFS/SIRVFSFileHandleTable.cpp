@@ -48,6 +48,11 @@ SIRVFSFileHandleTable::~SIRVFSFileHandleTable( void ) noexcept
 	}
 }
 
+bool SIRVFSFileHandleTable::usesMountTable( const SIRVFSMountTable& table ) const noexcept
+{
+	return &m_Table == &table;
+}
+
 uint32_t SIRVFSFileHandleTable::findFreeFile( void ) const noexcept
 {
 	for ( uint32_t i = 0; i < m_nFileCapacity; ++i ) {
@@ -140,7 +145,10 @@ sirVFSResult_t SIRVFSFileHandleTable::borrow( sirVFSFileHandle_t handle, sirVFSF
 	ticket.nFileSlot = handle.nSlot - 1;
 	ticket.bActive = true;
 	++slot.nBorrows;
-	*pView = { slot.descriptor, slot.path, { handle.nSlot, handle.nGeneration, ticket.nToken } };
+	*pView = { slot.descriptor,
+	           slot.path,
+	           { handle.nSlot, handle.nGeneration, ticket.nToken },
+	           { slot.mountLease.nSlot, slot.mountLease.nGeneration } };
 	return SIR_VFS_OK;
 }
 
@@ -183,7 +191,10 @@ sirVFSResult_t SIRVFSFileHandleTable::retainBorrow( sirVFSFileBorrow_t borrow, s
 	retained.nFileSlot = borrow.nSlot - 1;
 	retained.bActive = true;
 	++slot.nBorrows;
-	*pView = { slot.descriptor, slot.path, { borrow.nSlot, borrow.nGeneration, retained.nToken } };
+	*pView = { slot.descriptor,
+	           slot.path,
+	           { borrow.nSlot, borrow.nGeneration, retained.nToken },
+	           { slot.mountLease.nSlot, slot.mountLease.nGeneration } };
 	return SIR_VFS_OK;
 }
 
