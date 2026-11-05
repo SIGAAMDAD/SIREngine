@@ -9,6 +9,8 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 This software is provided "as is", without warranty of any kind,
 express or implied, including but not limited to the warranties
+
+
 of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
@@ -34,14 +36,14 @@ template <typename TPayload, uint32_t Capacity = 8>
 class SIRStaticEvent
 {
 public:
-	typedef void ( *callback_t )( void *, const TPayload & ) noexcept;
+	typedef void ( *callback_t )( void *, const TPayload& ) noexcept;
 	static_assert( Capacity > 0, "Static events need at least one listener" );
 
 	SIRStaticEvent( void ) noexcept : m_nCount( 0 ), m_bSealed( false )
 	{
 	}
-	SIRStaticEvent( const SIRStaticEvent & ) = delete;
-	SIRStaticEvent &operator=( const SIRStaticEvent & ) = delete;
+	SIRStaticEvent( const SIRStaticEvent& ) = delete;
+	SIRStaticEvent& operator=( const SIRStaticEvent& ) = delete;
 
 	bool subscribe( void *pContext, callback_t pCallback ) noexcept
 	{
@@ -52,17 +54,17 @@ public:
 		return true;
 	}
 
-	template <typename TObject, void ( TObject::*Method )( const TPayload & ) noexcept>
+	template <typename TObject, void ( TObject::*Method )( const TPayload& ) noexcept>
 	bool subscribe( TObject *pObject ) noexcept
 	{
 		return subscribe( pObject,
-		                  []( void *pContext, const TPayload &payload ) noexcept { ( ( ( TObject * )pContext )->*Method )( payload ); } );
+		                  []( void *pContext, const TPayload& payload ) noexcept { ( ( ( TObject * )pContext )->*Method )( payload ); } );
 	}
 
-	template <typename TObject, void ( TObject::*Method )( const TPayload & ) const noexcept>
+	template <typename TObject, void ( TObject::*Method )( const TPayload& ) const noexcept>
 	bool subscribe( const TObject *pObject ) noexcept
 	{
-		return subscribe( ( void * )pObject, []( void *pContext, const TPayload &payload ) noexcept {
+		return subscribe( ( void * )pObject, []( void *pContext, const TPayload& payload ) noexcept {
 			( ( ( const TObject * )pContext )->*Method )( payload );
 		} );
 	}
@@ -76,7 +78,7 @@ public:
 		return true;
 	}
 
-	bool publish( const TPayload &payload ) const noexcept
+	bool publish( const TPayload& payload ) const noexcept
 	{
 		if ( !m_bSealed ) {
 			return false;

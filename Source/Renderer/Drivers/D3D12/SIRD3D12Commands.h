@@ -69,8 +69,8 @@ private:
 public:
 	SIRD3D12CommandList( void ) noexcept = default;
 	~SIRD3D12CommandList( void ) noexcept override = default;
-	SIRD3D12CommandList( const SIRD3D12CommandList & ) = delete;
-	SIRD3D12CommandList &operator=( const SIRD3D12CommandList & ) = delete;
+	SIRD3D12CommandList( const SIRD3D12CommandList& ) = delete;
+	SIRD3D12CommandList& operator=( const SIRD3D12CommandList& ) = delete;
 
 	bool initialize( SIRD3D12Device *pNative, SIRD3D12Resources *pResources, SIRD3D12Pipelines *pPipelines, SIRD3D12Bindings *pBindings,
 	                 sirGraphicsQueue_t eQueue ) noexcept;
@@ -80,15 +80,15 @@ public:
 	sirGraphicsResult_t barrier( const sirGraphicsBarrier_t *pBarriers, uint32_t nCount ) noexcept override;
 	sirGraphicsResult_t copyBuffer( sirGraphicsHandle_t hDestination, uint64_t nDstOffset, sirGraphicsHandle_t hSource, uint64_t nSrcOffset,
 	                                uint64_t nBytes ) noexcept override;
-	sirGraphicsResult_t copyBufferTexture( const sirGraphicsBufferTextureCopy_t &copy ) noexcept override;
-	sirGraphicsResult_t beginRenderPass( const sirGraphicsRenderPass_t &pass ) noexcept override;
+	sirGraphicsResult_t copyBufferTexture( const sirGraphicsBufferTextureCopy_t& copy ) noexcept override;
+	sirGraphicsResult_t beginRenderPass( const sirGraphicsRenderPass_t& pass ) noexcept override;
 	sirGraphicsResult_t endRenderPass( void ) noexcept override;
 	sirGraphicsResult_t bindPipeline( sirGraphicsHandle_t hPipeline ) noexcept override;
 	sirGraphicsResult_t bindBindingSet( uint32_t nSetIndex, sirGraphicsHandle_t hBindingSet ) noexcept override;
 	sirGraphicsResult_t bindVertexBuffer( uint32_t nSlot, sirGraphicsHandle_t hBuffer, uint64_t nOffsetBytes,
 	                                      uint32_t nStrideBytes ) noexcept override;
 	sirGraphicsResult_t bindIndexBuffer( sirGraphicsHandle_t hBuffer, uint64_t nOffsetBytes, bool bIndex32 ) noexcept override;
-	sirGraphicsResult_t setViewport( const sirGraphicsViewport_t &viewport, const sirGraphicsRect_t &scissor ) noexcept override;
+	sirGraphicsResult_t setViewport( const sirGraphicsViewport_t& viewport, const sirGraphicsRect_t& scissor ) noexcept override;
 	sirGraphicsResult_t draw( uint32_t nVertices, uint32_t nInstances, uint32_t nFirstVertex, uint32_t nFirstInstance ) noexcept override;
 	sirGraphicsResult_t drawIndexed( uint32_t nIndices, uint32_t nInstances, uint32_t nFirstIndex, int32_t nVertexOffset,
 	                                 uint32_t nFirstInstance ) noexcept override;
@@ -106,14 +106,14 @@ private:
 public:
 	SIRD3D12Commands( void ) noexcept = default;
 	~SIRD3D12Commands( void ) noexcept;
-	SIRD3D12Commands( const SIRD3D12Commands & ) = delete;
-	SIRD3D12Commands &operator=( const SIRD3D12Commands & ) = delete;
+	SIRD3D12Commands( const SIRD3D12Commands& ) = delete;
+	SIRD3D12Commands& operator=( const SIRD3D12Commands& ) = delete;
 	bool initialize( SIRD3D12Device *pNative, SIRD3D12Resources *pResources, SIRD3D12Pipelines *pPipelines,
 	                 SIRD3D12Bindings *pBindings ) noexcept;
 	void shutdown( bool bGpuComplete ) noexcept;
 	void collectCompleted( void ) noexcept;
 	sirGraphicsResult_t acquire( sirGraphicsQueue_t eQueue, SIRGraphicsCommandList **ppCommands ) noexcept;
-	sirGraphicsResult_t submit( sirGraphicsQueue_t eQueue, const sirGraphicsSubmission_t &submission,
+	sirGraphicsResult_t submit( sirGraphicsQueue_t eQueue, const sirGraphicsSubmission_t& submission,
 	                            sirGraphicsCompletion_t *pCompletion ) noexcept;
 };
 

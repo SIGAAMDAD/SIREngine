@@ -183,7 +183,7 @@ void SIRD3D12Resources::shutdown( bool bGpuComplete ) noexcept
 sirGraphicsResult_t SIRD3D12Resources::acquireSlot( sirGraphicsHandleType_t eType, uint32_t *pIndex, sirGraphicsHandle_t *pHandle ) noexcept
 {
 	for ( uint32_t iSlot = 0; iSlot < s_nSlotCapacity; ++iSlot ) {
-		sirD3D12ResourceSlot_t &slot = m_szSlots[iSlot];
+		sirD3D12ResourceSlot_t& slot = m_szSlots[iSlot];
 		if ( slot.bLive || slot.bRetiring || slot.nGeneration == UINT32_MAX ) {
 			continue;
 		}
@@ -204,7 +204,7 @@ sirD3D12ResourceSlot_t *SIRD3D12Resources::findSlot( sirGraphicsHandle_t hHandle
 	if ( m_pNative == nullptr || hHandle.nSlot >= s_nSlotCapacity || !sirGraphicsIsHandleValid( hHandle, eType, m_nDeviceGeneration ) ) {
 		return nullptr;
 	}
-	sirD3D12ResourceSlot_t &slot = m_szSlots[hHandle.nSlot];
+	sirD3D12ResourceSlot_t& slot = m_szSlots[hHandle.nSlot];
 	if ( !slot.bLive || slot.nGeneration != hHandle.nGeneration || slot.eType != hHandle.eType ) {
 		return nullptr;
 	}
@@ -232,14 +232,14 @@ sirGraphicsResult_t SIRD3D12Resources::reserveDescriptor( D3D12_DESCRIPTOR_HEAP_
 
 void SIRD3D12Resources::releaseSlot( uint32_t iSlot ) noexcept
 {
-	sirD3D12ResourceSlot_t &slot = m_szSlots[iSlot];
+	sirD3D12ResourceSlot_t& slot = m_szSlots[iSlot];
 	if ( !slot.bLive && !slot.bRetiring ) {
 		return;
 	}
 	if ( slot.eType == SIR_GRAPHICS_HANDLE_VIEW || slot.eType == SIR_GRAPHICS_HANDLE_SAMPLER ) {
 		m_szDescriptorsUsed[slot.eDescriptorHeap][slot.iDescriptor] = 0;
 		if ( slot.eType == SIR_GRAPHICS_HANDLE_VIEW && slot.hParent.nSlot < s_nSlotCapacity ) {
-			sirD3D12ResourceSlot_t &parent = m_szSlots[slot.hParent.nSlot];
+			sirD3D12ResourceSlot_t& parent = m_szSlots[slot.hParent.nSlot];
 			if ( parent.nGeneration == slot.hParent.nGeneration && parent.nDependentViews > 0 ) {
 				--parent.nDependentViews;
 			}
@@ -345,7 +345,7 @@ ID3D12DescriptorHeap *SIRD3D12Resources::getShaderVisibleHeap( D3D12_DESCRIPTOR_
 {
 	return ( eHeap == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV || eHeap == D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER )
 	           ? m_szDescriptorHeaps[eHeap].Get()
-	           : nullptr;
+			   : nullptr;
 }
 
 sirGraphicsResult_t SIRD3D12Resources::retainCommandReference( sirGraphicsHandle_t hHandle ) noexcept
@@ -369,12 +369,12 @@ void SIRD3D12Resources::releaseCommandReference( sirGraphicsHandle_t hHandle ) n
 	}
 }
 
-bool SIRD3D12Resources::validateRange( const sirD3D12ResourceSlot_t &slot, uint64_t nOffset, uint64_t nBytes ) const noexcept
+bool SIRD3D12Resources::validateRange( const sirD3D12ResourceSlot_t& slot, uint64_t nOffset, uint64_t nBytes ) const noexcept
 {
 	return nBytes != 0 && nOffset <= slot.nSizeBytes && nBytes <= slot.nSizeBytes - nOffset;
 }
 
-bool SIRD3D12Resources::pollRetirement( const sirD3D12CompletionSet_t &completion, bool *pCompleted ) noexcept
+bool SIRD3D12Resources::pollRetirement( const sirD3D12CompletionSet_t& completion, bool *pCompleted ) noexcept
 {
 	return m_pNative != nullptr && m_pNative->pollCompletionSet( completion, pCompleted );
 }
@@ -385,7 +385,7 @@ void SIRD3D12Resources::collectRetired( void ) noexcept
 		return;
 	}
 	for ( uint32_t iSlot = 0; iSlot < s_nSlotCapacity; ++iSlot ) {
-		sirD3D12ResourceSlot_t &slot = m_szSlots[iSlot];
+		sirD3D12ResourceSlot_t& slot = m_szSlots[iSlot];
 		if ( !slot.bRetiring ) {
 			continue;
 		}
@@ -433,7 +433,7 @@ sirGraphicsResult_t SIRD3D12Resources::importExternalTexture( ID3D12Resource *pR
 		m_pMemory->releaseExternalBytes( info.SizeInBytes );
 		return eSlot;
 	}
-	sirD3D12ResourceSlot_t &slot = m_szSlots[iSlot];
+	sirD3D12ResourceSlot_t& slot = m_szSlots[iSlot];
 	pResource->AddRef();
 	slot.pExternalResource = pResource;
 	slot.nAllocationBytes = info.SizeInBytes;
@@ -484,7 +484,7 @@ uint64_t SIRD3D12Resources::getMappedUploadBytes( void ) const noexcept
 {
 	uint64_t nBytes = 0;
 	for ( uint32_t iSlot = 0; iSlot < s_nSlotCapacity; ++iSlot ) {
-		const sirD3D12ResourceSlot_t &slot = m_szSlots[iSlot];
+		const sirD3D12ResourceSlot_t& slot = m_szSlots[iSlot];
 		if ( slot.pMappedBytes != nullptr && slot.eMemory != SIR_GRAPHICS_MEMORY_CPU_READBACK ) {
 			nBytes += slot.nSizeBytes;
 		}
@@ -496,7 +496,7 @@ uint64_t SIRD3D12Resources::getMappedReadbackBytes( void ) const noexcept
 {
 	uint64_t nBytes = 0;
 	for ( uint32_t iSlot = 0; iSlot < s_nSlotCapacity; ++iSlot ) {
-		const sirD3D12ResourceSlot_t &slot = m_szSlots[iSlot];
+		const sirD3D12ResourceSlot_t& slot = m_szSlots[iSlot];
 		if ( slot.pMappedBytes != nullptr && slot.eMemory == SIR_GRAPHICS_MEMORY_CPU_READBACK ) {
 			nBytes += slot.nSizeBytes;
 		}
@@ -504,7 +504,7 @@ uint64_t SIRD3D12Resources::getMappedReadbackBytes( void ) const noexcept
 	return nBytes;
 }
 
-sirGraphicsResult_t SIRD3D12Resources::createBuffer( const sirGraphicsBufferDesc_t &desc, sirGraphicsHandle_t *pHandle ) noexcept
+sirGraphicsResult_t SIRD3D12Resources::createBuffer( const sirGraphicsBufferDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept
 {
 	if ( pHandle == nullptr ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
@@ -569,7 +569,7 @@ sirGraphicsResult_t SIRD3D12Resources::createBuffer( const sirGraphicsBufferDesc
 		pAllocation->Release();
 		return eSlot;
 	}
-	sirD3D12ResourceSlot_t &slot = m_szSlots[iSlot];
+	sirD3D12ResourceSlot_t& slot = m_szSlots[iSlot];
 	slot.pAllocation = pAllocation;
 	slot.pMappedBytes = pMapped;
 	slot.nAllocationBytes = nAllocated;
@@ -583,7 +583,7 @@ sirGraphicsResult_t SIRD3D12Resources::createBuffer( const sirGraphicsBufferDesc
 	return SIR_GRAPHICS_SUCCESS;
 }
 
-sirGraphicsResult_t SIRD3D12Resources::createTexture( const sirGraphicsTextureDesc_t &desc, sirGraphicsHandle_t *pHandle ) noexcept
+sirGraphicsResult_t SIRD3D12Resources::createTexture( const sirGraphicsTextureDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept
 {
 	if ( pHandle == nullptr ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
@@ -657,7 +657,7 @@ sirGraphicsResult_t SIRD3D12Resources::createTexture( const sirGraphicsTextureDe
 		pAllocation->Release();
 		return eSlot;
 	}
-	sirD3D12ResourceSlot_t &slot = m_szSlots[iSlot];
+	sirD3D12ResourceSlot_t& slot = m_szSlots[iSlot];
 	slot.pAllocation = pAllocation;
 	slot.nAllocationBytes = nAllocated;
 	slot.nUsage = desc.nUsage;
@@ -677,7 +677,7 @@ sirGraphicsResult_t SIRD3D12Resources::createTexture( const sirGraphicsTextureDe
 	return SIR_GRAPHICS_SUCCESS;
 }
 
-sirGraphicsResult_t SIRD3D12Resources::createView( const sirGraphicsViewDesc_t &desc, sirGraphicsHandle_t *pHandle ) noexcept
+sirGraphicsResult_t SIRD3D12Resources::createView( const sirGraphicsViewDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept
 {
 	if ( pHandle == nullptr ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
@@ -759,7 +759,7 @@ sirGraphicsResult_t SIRD3D12Resources::createView( const sirGraphicsViewDesc_t &
 		m_szDescriptorsUsed[eHeap][iDescriptor] = 0;
 		return eSlot;
 	}
-	sirD3D12ResourceSlot_t &slot = m_szSlots[iSlot];
+	sirD3D12ResourceSlot_t& slot = m_szSlots[iSlot];
 	slot.iDescriptor = iDescriptor;
 	slot.eDescriptorHeap = eHeap;
 	slot.hParent = desc.hResource;
@@ -916,7 +916,7 @@ sirGraphicsResult_t SIRD3D12Resources::createView( const sirGraphicsViewDesc_t &
 	return SIR_GRAPHICS_SUCCESS;
 }
 
-sirGraphicsResult_t SIRD3D12Resources::createSampler( const sirGraphicsSamplerDesc_t &desc, sirGraphicsHandle_t *pHandle ) noexcept
+sirGraphicsResult_t SIRD3D12Resources::createSampler( const sirGraphicsSamplerDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept
 {
 	if ( pHandle == nullptr ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
@@ -943,7 +943,7 @@ sirGraphicsResult_t SIRD3D12Resources::createSampler( const sirGraphicsSamplerDe
 		m_szDescriptorsUsed[D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER][iDescriptor] = 0;
 		return eSlot;
 	}
-	sirD3D12ResourceSlot_t &slot = m_szSlots[iSlot];
+	sirD3D12ResourceSlot_t& slot = m_szSlots[iSlot];
 	slot.eDescriptorHeap = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
 	slot.iDescriptor = iDescriptor;
 	D3D12_SAMPLER_DESC sampler = {};
@@ -1012,7 +1012,7 @@ sirGraphicsResult_t SIRD3D12Resources::invalidateBuffer( sirGraphicsHandle_t hBu
 	return unmapBuffer( hBuffer, nOffset, nBytes );
 }
 
-sirGraphicsResult_t SIRD3D12Resources::retireResource( sirGraphicsHandle_t hHandle, const sirGraphicsCompletionSet_t &completion ) noexcept
+sirGraphicsResult_t SIRD3D12Resources::retireResource( sirGraphicsHandle_t hHandle, const sirGraphicsCompletionSet_t& completion ) noexcept
 {
 	sirD3D12ResourceSlot_t *pSlot = findSlot( hHandle, SIR_GRAPHICS_HANDLE_NONE );
 	if ( pSlot == nullptr ) {

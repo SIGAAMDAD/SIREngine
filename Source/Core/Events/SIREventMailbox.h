@@ -54,8 +54,8 @@ public:
 	SIREventMailbox( void ) noexcept : m_nRegistered( 0 ), m_nCursor( 0 ), m_bSealed( false ), m_bPumping( false ), m_bStopped( false )
 	{
 	}
-	SIREventMailbox( const SIREventMailbox & ) = delete;
-	SIREventMailbox &operator=( const SIREventMailbox & ) = delete;
+	SIREventMailbox( const SIREventMailbox& ) = delete;
+	SIREventMailbox& operator=( const SIREventMailbox& ) = delete;
 
 	sirEventProducerHandle_t registerProducer( void ) noexcept
 	{
@@ -75,7 +75,7 @@ public:
 		return true;
 	}
 
-	sirEventEnqueueStatus_t tryPublish( sirEventProducerHandle_t producer, const TPayload &payload ) noexcept
+	sirEventEnqueueStatus_t tryPublish( sirEventProducerHandle_t producer, const TPayload& payload ) noexcept
 	{
 		if ( !validProducer( producer ) || !m_bSealed ) {
 			return SIR_EVENT_ENQUEUE_STOPPED;

@@ -13,6 +13,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
+#include <Renderer/SIRGraphicsABIOperations.h>
 #include <Renderer/Drivers/D3D12/SIRD3D12Driver.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -51,7 +52,7 @@ static bool sirLoadBindingShader( const char *pszFile, void **ppBytes, size_t *p
 	return true;
 }
 
-static int sirTestNativeBindingSet( SIRRenderingDevice *pDevice, const sirGraphicsShaderCode_t &shader ) noexcept
+static int sirTestNativeBindingSet( SIRRenderingDevice *pDevice, const sirGraphicsShaderCode_t& shader ) noexcept
 {
 	sirGraphicsCompletionSet_t idle = {};
 	idle.nDeviceGeneration = pDevice->getDeviceGeneration();
@@ -88,7 +89,14 @@ static int sirTestNativeBindingSet( SIRRenderingDevice *pDevice, const sirGraphi
 	binding.nShaderStageMask = SIR_GRAPHICS_STAGE_COMPUTE;
 	binding.eType = SIR_GRAPHICS_BINDING_STORAGE_BUFFER;
 	sirGraphicsPipelineDesc_t pipeline = {};
+	sirGraphicsABIModernRecipe_t pipelineRecipe = {};
+	pipelineRecipe.nSize = sizeof( pipelineRecipe );
+	pipelineRecipe.nStageMask = SIR_GRAPHICS_STAGE_COMPUTE;
+	pipelineRecipe.nRequiredFeatures = SIR_GRAPHICS_FEATURE_COMPUTE;
+	pipeline.eModel = SIR_GRAPHICS_PIPELINE_MODEL_MODERN;
+	pipeline.pModern = &pipelineRecipe;
 	pipeline.eType = SIR_GRAPHICS_PIPELINE_COMPUTE;
+	pipeline.nSampleCount = 1;
 	pipeline.computeShader = shader;
 	pipeline.pBindings = &binding;
 	pipeline.nBindingCount = 1;

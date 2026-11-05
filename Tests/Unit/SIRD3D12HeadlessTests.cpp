@@ -19,9 +19,9 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <stdlib.h>
 #include <string.h>
 
-static bool testAsyncCopyQueue( SIRD3D12Device &device )
+static bool testAsyncCopyQueue( SIRD3D12Device& device )
 {
-	SIRD3D12Transfers &transfers = device.getTransfers();
+	SIRD3D12Transfers& transfers = device.getTransfers();
 	const uint32_t nSlots = transfers.getSlotCount();
 	const uint64_t nCompletedAtStart = transfers.getCompletedCopyCount();
 	sirD3D12ResidentTransferView_t arena = {};
@@ -111,10 +111,10 @@ static bool testAsyncCopyQueue( SIRD3D12Device &device )
 	return true;
 }
 
-static bool testComputeAndCompletions( SIRD3D12Device &device, sirD3D12CompletionSet_t *pOldSet )
+static bool testComputeAndCompletions( SIRD3D12Device& device, sirD3D12CompletionSet_t *pOldSet )
 {
-	SIRD3D12ComputeQueue &compute = device.getComputeQueue();
-	SIRD3D12Transfers &transfers = device.getTransfers();
+	SIRD3D12ComputeQueue& compute = device.getComputeQueue();
+	SIRD3D12Transfers& transfers = device.getTransfers();
 	sirD3D12CompletionSet_t initial = {};
 	if ( !compute.isReady() || !device.snapshotCompletionSet( &initial ) || initial.nDeviceGeneration == 0 ) {
 		return false;
@@ -171,10 +171,10 @@ static bool testComputeAndCompletions( SIRD3D12Device &device, sirD3D12Completio
 	return true;
 }
 
-static bool testCopyToComputeGpuWait( SIRD3D12Device &device )
+static bool testCopyToComputeGpuWait( SIRD3D12Device& device )
 {
-	SIRD3D12Transfers &transfers = device.getTransfers();
-	SIRD3D12ComputeQueue &compute = device.getComputeQueue();
+	SIRD3D12Transfers& transfers = device.getTransfers();
+	SIRD3D12ComputeQueue& compute = device.getComputeQueue();
 
 	for ( uint32_t iCycle = 0; iCycle < 48; ++iCycle ) {
 		uint32_t szInput[256] = {};
@@ -220,10 +220,10 @@ static bool testCopyToComputeGpuWait( SIRD3D12Device &device )
 	return true;
 }
 
-static bool testComputeToDirectGpuWait( SIRD3D12Device &device )
+static bool testComputeToDirectGpuWait( SIRD3D12Device& device )
 {
-	SIRD3D12ComputeQueue &compute = device.getComputeQueue();
-	SIRD3D12Transfers &transfers = device.getTransfers();
+	SIRD3D12ComputeQueue& compute = device.getComputeQueue();
+	SIRD3D12Transfers& transfers = device.getTransfers();
 
 	sirD3D12CompletionSet_t invalid = {};
 	sirD3D12CompletionSet_t result = {};
@@ -287,7 +287,7 @@ static bool testComputeToDirectGpuWait( SIRD3D12Device &device )
 	return true;
 }
 
-static bool testRetirementInvalidCompletions( SIRD3D12Device &device, const sirD3D12CompletionSet_t &set )
+static bool testRetirementInvalidCompletions( SIRD3D12Device& device, const sirD3D12CompletionSet_t& set )
 {
 	D3D12MA::Allocation *pInvalid = nullptr;
 	if ( !device.createNativeBuffer( D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_COMMON, 4096, &pInvalid ) ) {
@@ -315,7 +315,7 @@ static bool testRetirementInvalidCompletions( SIRD3D12Device &device, const sirD
 	return bValidRejection;
 }
 
-static bool testRetirementQueueCapacity( SIRD3D12Device &device, const sirD3D12CompletionSet_t &set )
+static bool testRetirementQueueCapacity( SIRD3D12Device& device, const sirD3D12CompletionSet_t& set )
 {
 	const uint32_t nCapacity = device.getRetirementCapacity();
 	for ( uint32_t iEntry = 0; iEntry < nCapacity; ++iEntry ) {
@@ -346,7 +346,7 @@ static bool testRetirementQueueCapacity( SIRD3D12Device &device, const sirD3D12C
 	return bRejectedSafely;
 }
 
-static bool testRetirementCollect( SIRD3D12Device &device, const sirD3D12CompletionSet_t &set )
+static bool testRetirementCollect( SIRD3D12Device& device, const sirD3D12CompletionSet_t& set )
 {
 	const uint32_t nCapacity = device.getRetirementCapacity();
 	const uint32_t nEarlyCollected = device.collectRetiredAllocations();
@@ -365,7 +365,7 @@ static bool testRetirementCollect( SIRD3D12Device &device, const sirD3D12Complet
 	return true;
 }
 
-static bool testDeferredMultiQueueRetirement( SIRD3D12Device &device )
+static bool testDeferredMultiQueueRetirement( SIRD3D12Device& device )
 {
 	if ( device.getRetirementCapacity() != 32 || device.getRetiredAllocationCount() != 0 ) {
 		return false;
@@ -446,7 +446,7 @@ int main( void )
 	for ( uint32_t iWord = 0; iWord < 32; ++iWord ) {
 		szInput[iWord] = 0x12345678U ^ ( iWord * 1337U );
 	}
-	SIRD3D12Transfers &transfers = device.getTransfers();
+	SIRD3D12Transfers& transfers = device.getTransfers();
 	sirD3D12TransferTicket_t invalidTransfer = {};
 	if ( transfers.submit( nullptr, sizeof( szInput ), &invalidTransfer ) || transfers.submit( szInput, 0, &invalidTransfer ) ||
 	     transfers.submit( szInput, sizeof( szInput ), nullptr ) ) {

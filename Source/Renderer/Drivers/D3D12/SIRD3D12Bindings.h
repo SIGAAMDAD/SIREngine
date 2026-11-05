@@ -73,24 +73,24 @@ private:
 
 	sirD3D12BindingSetSlot_t *findSlot( sirGraphicsHandle_t hSet ) noexcept;
 	void releaseSlot( uint32_t iSlot ) noexcept;
-	bool pollRetirement( const sirD3D12CompletionSet_t &completion, bool *pCompleted ) noexcept;
+	bool pollRetirement( const sirD3D12CompletionSet_t& completion, bool *pCompleted ) noexcept;
 
 public:
 	SIRD3D12Bindings( void ) noexcept = default;
 	~SIRD3D12Bindings( void ) noexcept;
-	SIRD3D12Bindings( const SIRD3D12Bindings & ) = delete;
-	SIRD3D12Bindings &operator=( const SIRD3D12Bindings & ) = delete;
+	SIRD3D12Bindings( const SIRD3D12Bindings& ) = delete;
+	SIRD3D12Bindings& operator=( const SIRD3D12Bindings& ) = delete;
 
 	bool initialize( SIRD3D12Device *pNative, SIRD3D12Resources *pResources, SIRD3D12Pipelines *pPipelines, uint32_t nGeneration ) noexcept;
 	void shutdown( bool bGpuComplete ) noexcept;
 	void collectRetired( void ) noexcept;
 	sirGraphicsResult_t createSet( sirGraphicsHandle_t hPipeline, uint32_t nSetIndex, sirGraphicsHandle_t *pHandle ) noexcept;
 	sirGraphicsResult_t updateSet( sirGraphicsHandle_t hSet, const sirGraphicsDescriptorWrite_t *pWrites, uint32_t nWriteCount ) noexcept;
-	sirGraphicsResult_t retireSet( sirGraphicsHandle_t hSet, const sirGraphicsCompletionSet_t &completion ) noexcept;
+	sirGraphicsResult_t retireSet( sirGraphicsHandle_t hSet, const sirGraphicsCompletionSet_t& completion ) noexcept;
 	sirGraphicsResult_t retainCommandReference( sirGraphicsHandle_t hSet ) noexcept;
 	void releaseCommandReference( sirGraphicsHandle_t hSet ) noexcept;
 	const sirD3D12BindingSetSlot_t *querySlot( sirGraphicsHandle_t hSet ) noexcept;
-	bool isComplete( const sirD3D12BindingSetSlot_t &slot ) const noexcept;
+	bool isComplete( const sirD3D12BindingSetSlot_t& slot ) const noexcept;
 	ID3D12DescriptorHeap *getHeap( D3D12_DESCRIPTOR_HEAP_TYPE eHeap ) noexcept;
 };
 

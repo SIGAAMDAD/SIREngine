@@ -277,7 +277,7 @@ void SIRD3D12CommandList::setSubmitted( uint64_t nFence ) noexcept
 sirGraphicsResult_t SIRD3D12CommandList::pin( sirGraphicsHandle_t hHandle ) noexcept
 {
 	for ( uint32_t iRef = 0; iRef < m_nReferenceCount; ++iRef ) {
-		const sirGraphicsHandle_t &ref = m_szReferences[iRef];
+		const sirGraphicsHandle_t& ref = m_szReferences[iRef];
 		if ( ref.eType == hHandle.eType && ref.nSlot == hHandle.nSlot && ref.nGeneration == hHandle.nGeneration &&
 		     ref.nDeviceGeneration == hHandle.nDeviceGeneration ) {
 			return SIR_GRAPHICS_SUCCESS;
@@ -301,7 +301,7 @@ sirGraphicsResult_t SIRD3D12CommandList::pin( sirGraphicsHandle_t hHandle ) noex
 void SIRD3D12CommandList::releaseReferences( void ) noexcept
 {
 	for ( uint32_t iRef = 0; iRef < m_nReferenceCount; ++iRef ) {
-		const sirGraphicsHandle_t &ref = m_szReferences[iRef];
+		const sirGraphicsHandle_t& ref = m_szReferences[iRef];
 		if ( ref.eType == SIR_GRAPHICS_HANDLE_PIPELINE ) {
 			m_pPipelines->releaseCommandReference( ref );
 		} else if ( ref.eType == SIR_GRAPHICS_HANDLE_BINDING_SET ) {
@@ -372,7 +372,7 @@ sirGraphicsResult_t SIRD3D12CommandList::barrier( const sirGraphicsBarrier_t *pB
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	for ( uint32_t iBarrier = 0; iBarrier < nCount; ++iBarrier ) {
-		const sirGraphicsBarrier_t &source = pBarriers[iBarrier];
+		const sirGraphicsBarrier_t& source = pBarriers[iBarrier];
 		const sirD3D12ResourceSlot_t *pSlot = m_pResources->querySlot( source.hResource );
 		if ( pSlot == nullptr || pSlot->getNativeResource() == nullptr ) {
 			return SIR_GRAPHICS_INVALID_HANDLE;
@@ -477,8 +477,8 @@ sirGraphicsResult_t SIRD3D12CommandList::barrier( const sirGraphicsBarrier_t *pB
 				barrier.Subresources.FirstArraySlice = bUav ? 0 : source.nBaseLayer;
 				barrier.Subresources.NumArraySlices =
 				    bUav                      ? ( pSlot->eDimension == SIR_GRAPHICS_TEXTURE_3D ? 1 : pSlot->nLayers )
-				    : source.nLayerCount == 0 ? ( pSlot->eDimension == SIR_GRAPHICS_TEXTURE_3D ? 1 : pSlot->nLayers ) - source.nBaseLayer
-				                              : source.nLayerCount;
+					: source.nLayerCount == 0 ? ( pSlot->eDimension == SIR_GRAPHICS_TEXTURE_3D ? 1 : pSlot->nLayers ) - source.nBaseLayer
+					                          : source.nLayerCount;
 				barrier.Subresources.FirstPlane = 0;
 				barrier.Subresources.NumPlanes = formatInfo.PlaneCount;
 				group.Type = D3D12_BARRIER_TYPE_TEXTURE;
@@ -559,7 +559,7 @@ sirGraphicsResult_t SIRD3D12CommandList::copyBuffer( sirGraphicsHandle_t hDestin
 	return SIR_GRAPHICS_SUCCESS;
 }
 
-sirGraphicsResult_t SIRD3D12CommandList::copyBufferTexture( const sirGraphicsBufferTextureCopy_t &copy ) noexcept
+sirGraphicsResult_t SIRD3D12CommandList::copyBufferTexture( const sirGraphicsBufferTextureCopy_t& copy ) noexcept
 {
 	if ( !validRecording() || m_bRenderPass ) {
 		return SIR_GRAPHICS_BUSY;
@@ -630,7 +630,7 @@ sirGraphicsResult_t SIRD3D12CommandList::copyBufferTexture( const sirGraphicsBuf
 	return SIR_GRAPHICS_SUCCESS;
 }
 
-sirGraphicsResult_t SIRD3D12CommandList::beginRenderPass( const sirGraphicsRenderPass_t &pass ) noexcept
+sirGraphicsResult_t SIRD3D12CommandList::beginRenderPass( const sirGraphicsRenderPass_t& pass ) noexcept
 {
 	if ( !validRecording() || m_bRenderPass ) {
 		return SIR_GRAPHICS_BUSY;
@@ -644,7 +644,7 @@ sirGraphicsResult_t SIRD3D12CommandList::beginRenderPass( const sirGraphicsRende
 	D3D12_CPU_DESCRIPTOR_HANDLE szColors[D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
 	D3D12_CPU_DESCRIPTOR_HANDLE depth = {};
 	for ( uint32_t iColor = 0; iColor < pass.nColorCount; ++iColor ) {
-		const sirGraphicsColorAttachment_t &attachment = pass.pColors[iColor];
+		const sirGraphicsColorAttachment_t& attachment = pass.pColors[iColor];
 		if ( !m_pResources->queryDescriptor( attachment.hView, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, &szColors[iColor] ) ) {
 			return SIR_GRAPHICS_INVALID_HANDLE;
 		}
@@ -668,7 +668,7 @@ sirGraphicsResult_t SIRD3D12CommandList::beginRenderPass( const sirGraphicsRende
 	}
 	m_pCommands->OMSetRenderTargets( pass.nColorCount, pass.nColorCount == 0 ? nullptr : szColors, FALSE, bDepth ? &depth : nullptr );
 	for ( uint32_t iColor = 0; iColor < pass.nColorCount; ++iColor ) {
-		const sirGraphicsColorAttachment_t &attachment = pass.pColors[iColor];
+		const sirGraphicsColorAttachment_t& attachment = pass.pColors[iColor];
 		if ( attachment.bClear ) {
 			m_pCommands->ClearRenderTargetView( szColors[iColor], attachment.szClearColor, 0, nullptr );
 		}
@@ -758,7 +758,7 @@ sirGraphicsResult_t SIRD3D12CommandList::bindBindingSet( uint32_t nSetIndex, sir
 	}
 	m_pCommands->SetDescriptorHeaps( 2, szHeaps );
 	for ( uint32_t iRange = 0; iRange < pSet->nRangeCount; ++iRange ) {
-		const sirD3D12BindingRange_t &range = pSet->szRanges[iRange];
+		const sirD3D12BindingRange_t& range = pSet->szRanges[iRange];
 		if ( m_ePipelineType == SIR_GRAPHICS_PIPELINE_GRAPHICS ) {
 			m_pCommands->SetGraphicsRootDescriptorTable( range.nRootIndex, range.hGpu );
 		} else {
@@ -827,7 +827,7 @@ sirGraphicsResult_t SIRD3D12CommandList::bindIndexBuffer( sirGraphicsHandle_t hB
 	return SIR_GRAPHICS_SUCCESS;
 }
 
-sirGraphicsResult_t SIRD3D12CommandList::setViewport( const sirGraphicsViewport_t &viewport, const sirGraphicsRect_t &scissor ) noexcept
+sirGraphicsResult_t SIRD3D12CommandList::setViewport( const sirGraphicsViewport_t& viewport, const sirGraphicsRect_t& scissor ) noexcept
 {
 	if ( !validRecording() ) {
 		return SIR_GRAPHICS_BUSY;
@@ -978,7 +978,7 @@ sirGraphicsResult_t SIRD3D12Commands::acquire( sirGraphicsQueue_t eQueue, SIRGra
 	}
 	collectCompleted();
 	for ( uint32_t iSlot = 0; iSlot < s_nListsPerQueue; ++iSlot ) {
-		SIRD3D12CommandList &commands = m_szLists[eQueue][iSlot];
+		SIRD3D12CommandList& commands = m_szLists[eQueue][iSlot];
 		// A closed, unsubmitted list still belongs to its recording caller.
 		// Only a completed submission (or explicit reset) releases that claim.
 		if ( commands.m_bRecording || commands.m_bClosed || commands.m_bSubmitted ) {
@@ -994,7 +994,7 @@ sirGraphicsResult_t SIRD3D12Commands::acquire( sirGraphicsQueue_t eQueue, SIRGra
 	return SIR_GRAPHICS_CAPACITY_EXCEEDED;
 }
 
-sirGraphicsResult_t SIRD3D12Commands::submit( sirGraphicsQueue_t eQueue, const sirGraphicsSubmission_t &submission,
+sirGraphicsResult_t SIRD3D12Commands::submit( sirGraphicsQueue_t eQueue, const sirGraphicsSubmission_t& submission,
                                               sirGraphicsCompletion_t *pCompletion ) noexcept
 {
 	if ( pCompletion == nullptr ) {
@@ -1048,7 +1048,7 @@ sirGraphicsResult_t SIRD3D12Commands::submit( sirGraphicsQueue_t eQueue, const s
 			}
 			bool bNamed = false;
 			for ( uint32_t iAcquire = 0; iAcquire < submission.nAcquisitionCount; ++iAcquire ) {
-				const sirGraphicsHandle_t &hImage = submission.pAcquisitions[iAcquire].hImage;
+				const sirGraphicsHandle_t& hImage = submission.pAcquisitions[iAcquire].hImage;
 				if ( hImage.nSlot == hTexture.nSlot && hImage.nGeneration == hTexture.nGeneration &&
 				     hImage.nDeviceGeneration == hTexture.nDeviceGeneration ) {
 					bNamed = true;

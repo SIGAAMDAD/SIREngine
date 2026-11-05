@@ -56,7 +56,7 @@ private:
 	}
 
 	template <typename... Args>
-	sirContainerResult_t growAndEmplace( Args &&...args )
+	sirContainerResult_t growAndEmplace( Args&&...args )
 	{
 		if ( m_nSize == UINT32_MAX ) {
 			return SIR_CONTAINER_SIZE_OVERFLOW;
@@ -115,10 +115,10 @@ public:
 		}
 	}
 
-	SIRInlineVector( const SIRInlineVector & ) = delete;
-	SIRInlineVector &operator=( const SIRInlineVector & ) = delete;
-	SIRInlineVector( SIRInlineVector && ) = delete;
-	SIRInlineVector &operator=( SIRInlineVector && ) = delete;
+	SIRInlineVector( const SIRInlineVector& ) = delete;
+	SIRInlineVector& operator=( const SIRInlineVector& ) = delete;
+	SIRInlineVector( SIRInlineVector&& ) = delete;
+	SIRInlineVector& operator=( SIRInlineVector&& ) = delete;
 
 	uint32_t getSize( void ) const noexcept
 	{
@@ -148,12 +148,12 @@ public:
 	{
 		return iIndex < m_nSize ? m_pData + iIndex : nullptr;
 	}
-	T &operator[]( uint32_t iIndex ) noexcept
+	T& operator[]( uint32_t iIndex ) noexcept
 	{
 		assert( iIndex < m_nSize );
 		return m_pData[iIndex];
 	}
-	const T &operator[]( uint32_t iIndex ) const noexcept
+	const T& operator[]( uint32_t iIndex ) const noexcept
 	{
 		assert( iIndex < m_nSize );
 		return m_pData[iIndex];
@@ -234,7 +234,7 @@ public:
 	}
 
 	template <typename... Args>
-	sirContainerResult_t tryEmplaceBack( Args &&...args )
+	sirContainerResult_t tryEmplaceBack( Args&&...args )
 	{
 		if ( m_nSize < m_nCapacity ) {
 			new ( m_pData + m_nSize ) T( std::forward<Args>( args )... );
@@ -244,7 +244,7 @@ public:
 		return growAndEmplace( std::forward<Args>( args )... );
 	}
 
-	sirContainerResult_t tryPushBack( const T &value )
+	sirContainerResult_t tryPushBack( const T& value )
 	{
 		if ( m_nSize == m_nCapacity ) {
 			uintptr_t nAddress = ( uintptr_t )&value;
@@ -257,7 +257,7 @@ public:
 		return tryEmplaceBack( value );
 	}
 
-	sirContainerResult_t tryPushBack( T &&value )
+	sirContainerResult_t tryPushBack( T&& value )
 	{
 		if ( m_nSize == m_nCapacity && m_pData != nullptr ) {
 			uintptr_t nAddress = ( uintptr_t )&value;

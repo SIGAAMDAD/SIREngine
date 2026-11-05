@@ -114,7 +114,7 @@ bool SIRD3D12Memory::configureResidentBudget( uint64_t nBytes ) noexcept
 	return true;
 }
 
-bool SIRD3D12Memory::configureSealedPools( const sirD3D12SealedPoolConfig_t &config ) noexcept
+bool SIRD3D12Memory::configureSealedPools( const sirD3D12SealedPoolConfig_t& config ) noexcept
 {
 	if ( m_pAllocator == nullptr || m_bSealed ) {
 		m_nLastError = E_INVALIDARG;
@@ -376,7 +376,7 @@ HRESULT SIRD3D12Memory::createTexture2D( uint32_t nWidth, uint32_t nHeight, DXGI
 	return m_nLastError;
 }
 
-HRESULT SIRD3D12Memory::createTexture( const D3D12_RESOURCE_DESC &resource, D3D12_RESOURCE_STATES eInitialState,
+HRESULT SIRD3D12Memory::createTexture( const D3D12_RESOURCE_DESC& resource, D3D12_RESOURCE_STATES eInitialState,
                                        const D3D12_CLEAR_VALUE *pClearValue, D3D12MA::Allocation **ppAllocation ) noexcept
 {
 	if ( ppAllocation == nullptr ) {
@@ -409,7 +409,7 @@ HRESULT SIRD3D12Memory::createTexture( const D3D12_RESOURCE_DESC &resource, D3D1
 	return m_nLastError;
 }
 
-bool SIRD3D12Memory::initializeTransferArena( const sirD3D12TransferPoolConfig_t &config, uint32_t nSlots ) noexcept
+bool SIRD3D12Memory::initializeTransferArena( const sirD3D12TransferPoolConfig_t& config, uint32_t nSlots ) noexcept
 {
 	constexpr uint64_t MAX_SLOT_BYTES = 16ULL * 1024ULL * 1024ULL;
 	if ( !isReady() || m_pTransferWrite != nullptr || m_pTransferReadback != nullptr || config.nSlotBytes == 0 ||

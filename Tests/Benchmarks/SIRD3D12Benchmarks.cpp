@@ -88,7 +88,7 @@ static double sirBenchNanoseconds( LARGE_INTEGER nStart, LARGE_INTEGER nEnd, LAR
 	return ( double )( nEnd.QuadPart - nStart.QuadPart ) * 1000000000.0 / ( double )nFrequency.QuadPart;
 }
 
-static bool sirBenchAdapter( SIRD3D12Driver &driver, bool bHardware, uint32_t *pIndex, sirGraphicsAdapterInfo_t *pInfo ) noexcept
+static bool sirBenchAdapter( SIRD3D12Driver& driver, bool bHardware, uint32_t *pIndex, sirGraphicsAdapterInfo_t *pInfo ) noexcept
 {
 	uint32_t nAdapters = 0;
 	if ( pIndex == nullptr || pInfo == nullptr || driver.getAdapterCount( &nAdapters ) != SIR_GRAPHICS_SUCCESS ) {
@@ -372,7 +372,7 @@ cleanup:
 	return bSuccess;
 }
 
-static void sirBenchWriteStats( FILE *pFile, const char *pszName, const sirD3D12BenchmarkStats_t &s, bool bTrailingComma ) noexcept
+static void sirBenchWriteStats( FILE *pFile, const char *pszName, const sirD3D12BenchmarkStats_t& s, bool bTrailingComma ) noexcept
 {
 	fprintf( pFile,
 	         "    \"%s\": {\"mean_ns\": %.3f, \"p50_ns\": %.3f, \"p95_ns\": %.3f, \"p99_ns\": %.3f, "
@@ -396,8 +396,8 @@ static void sirBenchWriteJsonString( FILE *pFile, const char *pszValue ) noexcep
 	fputc( '"', pFile );
 }
 
-static void sirBenchWriteJson( FILE *pFile, const sirGraphicsAdapterInfo_t &adapter, bool bUma,
-                               const sirD3D12BenchmarkResults_t &results ) noexcept
+static void sirBenchWriteJson( FILE *pFile, const sirGraphicsAdapterInfo_t& adapter, bool bUma,
+                               const sirD3D12BenchmarkResults_t& results ) noexcept
 {
 	fprintf( pFile, "{\n  \"schema_version\": 1,\n  \"backend\": \"d3d12\",\n" );
 	fprintf( pFile, "  \"adapter\": {\"name\": " );

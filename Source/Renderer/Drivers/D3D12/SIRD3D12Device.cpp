@@ -369,8 +369,8 @@ SIRD3D12Device::~SIRD3D12Device( void ) noexcept
 	shutdown();
 }
 
-bool SIRD3D12Device::initialize( uint32_t nAdapterIndex, const sirD3D12TransferPoolConfig_t &transferConfig, SIRGeneralHeap *pCpuHeap,
-                                 const sirD3D12DiagnosticConfig_t &diagnostics ) noexcept
+bool SIRD3D12Device::initialize( uint32_t nAdapterIndex, const sirD3D12TransferPoolConfig_t& transferConfig, SIRGeneralHeap *pCpuHeap,
+                                 const sirD3D12DiagnosticConfig_t& diagnostics ) noexcept
 {
 	if ( isReady() || m_pFactory != nullptr || m_bGraphicsUnsafe ) {
 		m_nLastError = E_FAIL;
@@ -587,7 +587,7 @@ sirGraphicsResult_t SIRD3D12Device::submitRecorded( sirGraphicsQueue_t eQueue, I
 	}
 	ID3D12Fence *szDependencies[64] = {};
 	for ( uint32_t iWait = 0; iWait < nWaitCount; ++iWait ) {
-		const sirGraphicsCompletion_t &wait = pWaits[iWait];
+		const sirGraphicsCompletion_t& wait = pWaits[iWait];
 		if ( wait.nDeviceGeneration != submitted.nDeviceGeneration || wait.eQueue >= SIR_GRAPHICS_QUEUE_COUNT || wait.nValue == 0 ) {
 			return SIR_GRAPHICS_INVALID_ARGUMENT;
 		}
@@ -750,17 +750,17 @@ SIRD3D12Memory *SIRD3D12Device::getMemory( void ) noexcept
 	return isReady() ? &m_Memory : nullptr;
 }
 
-SIRD3D12Transfers &SIRD3D12Device::getTransfers( void ) noexcept
+SIRD3D12Transfers& SIRD3D12Device::getTransfers( void ) noexcept
 {
 	return m_Transfers;
 }
 
-const SIRD3D12Transfers &SIRD3D12Device::getTransfers( void ) const noexcept
+const SIRD3D12Transfers& SIRD3D12Device::getTransfers( void ) const noexcept
 {
 	return m_Transfers;
 }
 
-SIRD3D12ComputeQueue &SIRD3D12Device::getComputeQueue( void ) noexcept
+SIRD3D12ComputeQueue& SIRD3D12Device::getComputeQueue( void ) noexcept
 {
 	return m_ComputeQueue;
 }
@@ -777,7 +777,7 @@ bool SIRD3D12Device::snapshotCompletionSet( sirD3D12CompletionSet_t *pSet ) cons
 	return true;
 }
 
-bool SIRD3D12Device::pollCompletionSet( const sirD3D12CompletionSet_t &set, bool *pCompleted ) noexcept
+bool SIRD3D12Device::pollCompletionSet( const sirD3D12CompletionSet_t& set, bool *pCompleted ) noexcept
 {
 	if ( pCompleted == nullptr ) {
 		m_nLastError = E_POINTER;
@@ -850,7 +850,7 @@ bool SIRD3D12Device::submitComputeAfterCopy( sirD3D12TransferTicket_t ticket, si
 	return true;
 }
 
-bool SIRD3D12Device::submitGraphicsAfterCompute( const sirD3D12CompletionSet_t &computeSet, sirD3D12CompletionSet_t *pSet ) noexcept
+bool SIRD3D12Device::submitGraphicsAfterCompute( const sirD3D12CompletionSet_t& computeSet, sirD3D12CompletionSet_t *pSet ) noexcept
 {
 	if ( pSet == nullptr || !isReady() ) {
 		m_nLastError = E_INVALIDARG;
@@ -931,7 +931,7 @@ bool SIRD3D12Device::createNativeBuffer( D3D12_HEAP_TYPE eHeapType, D3D12_RESOUR
 	return SUCCEEDED( m_nLastError ) && *ppAllocation != nullptr;
 }
 
-bool SIRD3D12Device::retireNativeAllocation( D3D12MA::Allocation **ppAllocation, const sirD3D12CompletionSet_t &completion ) noexcept
+bool SIRD3D12Device::retireNativeAllocation( D3D12MA::Allocation **ppAllocation, const sirD3D12CompletionSet_t& completion ) noexcept
 {
 	if ( ppAllocation == nullptr || *ppAllocation == nullptr || !isReady() ) {
 		m_nLastError = E_INVALIDARG;

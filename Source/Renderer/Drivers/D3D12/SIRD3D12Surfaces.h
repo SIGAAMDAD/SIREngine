@@ -64,30 +64,30 @@ private:
 	bool m_bTearingSupported = false;
 
 	sirD3D12SurfaceSlot_t *findSlot( sirGraphicsHandle_t hSurface ) noexcept;
-	sirGraphicsResult_t validateWindow( const sirGraphicsNativeSurface_t &native, const sirGraphicsPresentDesc_t &present ) const noexcept;
-	sirGraphicsResult_t releaseImages( sirD3D12SurfaceSlot_t &slot ) noexcept;
-	sirGraphicsResult_t importImages( sirD3D12SurfaceSlot_t &slot ) noexcept;
-	sirGraphicsResult_t createSwapchain( sirD3D12SurfaceSlot_t &slot, const sirGraphicsNativeSurface_t &native,
-	                                     const sirGraphicsPresentDesc_t &present ) noexcept;
+	sirGraphicsResult_t validateWindow( const sirGraphicsNativeSurface_t& native, const sirGraphicsPresentDesc_t& present ) const noexcept;
+	sirGraphicsResult_t releaseImages( sirD3D12SurfaceSlot_t& slot ) noexcept;
+	sirGraphicsResult_t importImages( sirD3D12SurfaceSlot_t& slot ) noexcept;
+	sirGraphicsResult_t createSwapchain( sirD3D12SurfaceSlot_t& slot, const sirGraphicsNativeSurface_t& native,
+	                                     const sirGraphicsPresentDesc_t& present ) noexcept;
 	bool isDirectComplete( uint64_t nFence ) noexcept;
-	bool imageMatches( const sirD3D12SurfaceSlot_t &slot, const sirGraphicsSurfaceImage_t &image ) const noexcept;
+	bool imageMatches( const sirD3D12SurfaceSlot_t& slot, const sirGraphicsSurfaceImage_t& image ) const noexcept;
 
 public:
 	SIRD3D12Surfaces( void ) noexcept = default;
 	~SIRD3D12Surfaces( void ) noexcept;
-	SIRD3D12Surfaces( const SIRD3D12Surfaces & ) = delete;
-	SIRD3D12Surfaces &operator=( const SIRD3D12Surfaces & ) = delete;
+	SIRD3D12Surfaces( const SIRD3D12Surfaces& ) = delete;
+	SIRD3D12Surfaces& operator=( const SIRD3D12Surfaces& ) = delete;
 	bool initialize( SIRD3D12Device *pNative, SIRD3D12Resources *pResources, uint32_t nGeneration ) noexcept;
 	void shutdown( bool bGpuComplete ) noexcept;
-	sirGraphicsResult_t createSurface( const sirGraphicsNativeSurface_t &native, const sirGraphicsPresentDesc_t &present,
+	sirGraphicsResult_t createSurface( const sirGraphicsNativeSurface_t& native, const sirGraphicsPresentDesc_t& present,
 	                                   sirGraphicsHandle_t *pSurface ) noexcept;
-	sirGraphicsResult_t resizeSurface( sirGraphicsHandle_t hSurface, const sirGraphicsNativeSurface_t &native,
-	                                   const sirGraphicsPresentDesc_t &present ) noexcept;
+	sirGraphicsResult_t resizeSurface( sirGraphicsHandle_t hSurface, const sirGraphicsNativeSurface_t& native,
+	                                   const sirGraphicsPresentDesc_t& present ) noexcept;
 	sirGraphicsResult_t acquireSurfaceImage( sirGraphicsHandle_t hSurface, sirGraphicsSurfaceImage_t *pImage ) noexcept;
-	sirGraphicsResult_t validateSubmission( sirGraphicsQueue_t eQueue, const sirGraphicsSubmission_t &submission ) noexcept;
-	void completeSubmission( const sirGraphicsSubmission_t &submission, const sirGraphicsCompletion_t &completion ) noexcept;
-	sirGraphicsResult_t present( const sirGraphicsSurfaceImage_t &image, const sirGraphicsCompletion_t &renderComplete ) noexcept;
-	sirGraphicsResult_t retireSurface( sirGraphicsHandle_t hSurface, const sirGraphicsCompletionSet_t &completion ) noexcept;
+	sirGraphicsResult_t validateSubmission( sirGraphicsQueue_t eQueue, const sirGraphicsSubmission_t& submission ) noexcept;
+	void completeSubmission( const sirGraphicsSubmission_t& submission, const sirGraphicsCompletion_t& completion ) noexcept;
+	sirGraphicsResult_t present( const sirGraphicsSurfaceImage_t& image, const sirGraphicsCompletion_t& renderComplete ) noexcept;
+	sirGraphicsResult_t retireSurface( sirGraphicsHandle_t hSurface, const sirGraphicsCompletionSet_t& completion ) noexcept;
 };
 
 #endif // __SIRENGINE_SIRD3D12SURFACES_H__

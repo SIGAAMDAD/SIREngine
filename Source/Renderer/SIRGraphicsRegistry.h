@@ -45,13 +45,13 @@ private:
 
 public:
 	SIRGraphicsRegistry( void ) noexcept = default;
-	SIRGraphicsRegistry( const SIRGraphicsRegistry & ) = delete;
-	SIRGraphicsRegistry &operator=( const SIRGraphicsRegistry & ) = delete;
+	SIRGraphicsRegistry( const SIRGraphicsRegistry& ) = delete;
+	SIRGraphicsRegistry& operator=( const SIRGraphicsRegistry& ) = delete;
 
 	sirGraphicsResult_t registerDriver( SIRGraphicsDriver *pDriver ) noexcept;
 	sirGraphicsResult_t unregisterDriver( sirGraphicsBackend_t eBackend ) noexcept;
 	SIRGraphicsDriver *findDriver( sirGraphicsBackend_t eBackend ) const noexcept;
-	sirGraphicsResult_t selectDriver( const sirGraphicsSelection_t &selection, SIRGraphicsDriver **ppDriver,
+	sirGraphicsResult_t selectDriver( const sirGraphicsSelection_t& selection, SIRGraphicsDriver **ppDriver,
 	                                  sirGraphicsAdapterInfo_t *pAdapter ) const noexcept;
 	uint32_t getCount( void ) const noexcept;
 	uint32_t getCapacity( void ) const noexcept;

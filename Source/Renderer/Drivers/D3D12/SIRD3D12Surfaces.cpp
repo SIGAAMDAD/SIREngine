@@ -56,7 +56,7 @@ bool SIRD3D12Surfaces::initialize( SIRD3D12Device *pNative, SIRD3D12Resources *p
 void SIRD3D12Surfaces::shutdown( bool bGpuComplete ) noexcept
 {
 	for ( uint32_t iSlot = 0; iSlot < s_nSurfaceCapacity; ++iSlot ) {
-		sirD3D12SurfaceSlot_t &slot = m_szSlots[iSlot];
+		sirD3D12SurfaceSlot_t& slot = m_szSlots[iSlot];
 		if ( bGpuComplete ) {
 			// Resource/view ownership is discharged by SIRD3D12Resources after
 			// surfaces stop presenting and before the D3D12MA device shuts down.
@@ -82,12 +82,12 @@ sirD3D12SurfaceSlot_t *SIRD3D12Surfaces::findSlot( sirGraphicsHandle_t hSurface 
 	     hSurface.nSlot >= s_nSurfaceCapacity ) {
 		return nullptr;
 	}
-	sirD3D12SurfaceSlot_t &slot = m_szSlots[hSurface.nSlot];
+	sirD3D12SurfaceSlot_t& slot = m_szSlots[hSurface.nSlot];
 	return slot.bLive && slot.nGeneration == hSurface.nGeneration ? &slot : nullptr;
 }
 
-sirGraphicsResult_t SIRD3D12Surfaces::validateWindow( const sirGraphicsNativeSurface_t &native,
-                                                      const sirGraphicsPresentDesc_t &present ) const noexcept
+sirGraphicsResult_t SIRD3D12Surfaces::validateWindow( const sirGraphicsNativeSurface_t& native,
+                                                      const sirGraphicsPresentDesc_t& present ) const noexcept
 {
 	if ( native.ePlatform != SIR_GRAPHICS_SURFACE_WIN32 ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
@@ -125,7 +125,7 @@ bool SIRD3D12Surfaces::isDirectComplete( uint64_t nFence ) noexcept
 	return m_pNative->pollCompletionSet( requested, &bComplete ) && bComplete;
 }
 
-sirGraphicsResult_t SIRD3D12Surfaces::releaseImages( sirD3D12SurfaceSlot_t &slot ) noexcept
+sirGraphicsResult_t SIRD3D12Surfaces::releaseImages( sirD3D12SurfaceSlot_t& slot ) noexcept
 {
 	for ( uint32_t iImage = 0; iImage < slot.nBufferCount; ++iImage ) {
 		if ( slot.szImages[iImage].nGeneration != 0 && !m_pResources->canReleaseExternalTexture( slot.szImages[iImage] ) ) {
@@ -144,7 +144,7 @@ sirGraphicsResult_t SIRD3D12Surfaces::releaseImages( sirD3D12SurfaceSlot_t &slot
 	return SIR_GRAPHICS_SUCCESS;
 }
 
-sirGraphicsResult_t SIRD3D12Surfaces::importImages( sirD3D12SurfaceSlot_t &slot ) noexcept
+sirGraphicsResult_t SIRD3D12Surfaces::importImages( sirD3D12SurfaceSlot_t& slot ) noexcept
 {
 	for ( uint32_t iImage = 0; iImage < slot.nBufferCount; ++iImage ) {
 		Microsoft::WRL::ComPtr<ID3D12Resource> pBuffer;
@@ -161,8 +161,8 @@ sirGraphicsResult_t SIRD3D12Surfaces::importImages( sirD3D12SurfaceSlot_t &slot 
 	return SIR_GRAPHICS_SUCCESS;
 }
 
-sirGraphicsResult_t SIRD3D12Surfaces::createSwapchain( sirD3D12SurfaceSlot_t &slot, const sirGraphicsNativeSurface_t &native,
-                                                       const sirGraphicsPresentDesc_t &present ) noexcept
+sirGraphicsResult_t SIRD3D12Surfaces::createSwapchain( sirD3D12SurfaceSlot_t& slot, const sirGraphicsNativeSurface_t& native,
+                                                       const sirGraphicsPresentDesc_t& present ) noexcept
 {
 	DXGI_SWAP_CHAIN_DESC1 desc = {};
 	desc.Width = present.nWidth;
@@ -192,7 +192,7 @@ sirGraphicsResult_t SIRD3D12Surfaces::createSwapchain( sirD3D12SurfaceSlot_t &sl
 	return importImages( slot );
 }
 
-sirGraphicsResult_t SIRD3D12Surfaces::createSurface( const sirGraphicsNativeSurface_t &native, const sirGraphicsPresentDesc_t &present,
+sirGraphicsResult_t SIRD3D12Surfaces::createSurface( const sirGraphicsNativeSurface_t& native, const sirGraphicsPresentDesc_t& present,
                                                      sirGraphicsHandle_t *pSurface ) noexcept
 {
 	if ( pSurface == nullptr ) {
@@ -218,7 +218,7 @@ sirGraphicsResult_t SIRD3D12Surfaces::createSurface( const sirGraphicsNativeSurf
 	if ( iFree == s_nSurfaceCapacity ) {
 		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
 	}
-	sirD3D12SurfaceSlot_t &slot = m_szSlots[iFree];
+	sirD3D12SurfaceSlot_t& slot = m_szSlots[iFree];
 	const uint32_t nGeneration = slot.nGeneration + 1;
 	slot = {};
 	slot.nGeneration = nGeneration;
@@ -234,8 +234,8 @@ sirGraphicsResult_t SIRD3D12Surfaces::createSurface( const sirGraphicsNativeSurf
 	return SIR_GRAPHICS_SUCCESS;
 }
 
-sirGraphicsResult_t SIRD3D12Surfaces::resizeSurface( sirGraphicsHandle_t hSurface, const sirGraphicsNativeSurface_t &native,
-                                                     const sirGraphicsPresentDesc_t &present ) noexcept
+sirGraphicsResult_t SIRD3D12Surfaces::resizeSurface( sirGraphicsHandle_t hSurface, const sirGraphicsNativeSurface_t& native,
+                                                     const sirGraphicsPresentDesc_t& present ) noexcept
 {
 	sirD3D12SurfaceSlot_t *pSlot = findSlot( hSurface );
 	if ( pSlot == nullptr ) {
@@ -308,15 +308,15 @@ sirGraphicsResult_t SIRD3D12Surfaces::acquireSurfaceImage( sirGraphicsHandle_t h
 	return SIR_GRAPHICS_SUCCESS;
 }
 
-bool SIRD3D12Surfaces::imageMatches( const sirD3D12SurfaceSlot_t &slot, const sirGraphicsSurfaceImage_t &image ) const noexcept
+bool SIRD3D12Surfaces::imageMatches( const sirD3D12SurfaceSlot_t& slot, const sirGraphicsSurfaceImage_t& image ) const noexcept
 {
-	const sirGraphicsHandle_t &hExpected = slot.szImages[slot.iAcquiredImage];
+	const sirGraphicsHandle_t& hExpected = slot.szImages[slot.iAcquiredImage];
 	return slot.bAcquired && slot.nAcquisitionId == image.nAcquisitionId && slot.nWindowGeneration == image.nWindowGeneration &&
 	       hExpected.nSlot == image.hImage.nSlot && hExpected.nGeneration == image.hImage.nGeneration &&
 	       hExpected.nDeviceGeneration == image.hImage.nDeviceGeneration && hExpected.eType == image.hImage.eType;
 }
 
-sirGraphicsResult_t SIRD3D12Surfaces::validateSubmission( sirGraphicsQueue_t eQueue, const sirGraphicsSubmission_t &submission ) noexcept
+sirGraphicsResult_t SIRD3D12Surfaces::validateSubmission( sirGraphicsQueue_t eQueue, const sirGraphicsSubmission_t& submission ) noexcept
 {
 	if ( submission.nAcquisitionCount == 0 ) {
 		return SIR_GRAPHICS_SUCCESS;
@@ -325,7 +325,7 @@ sirGraphicsResult_t SIRD3D12Surfaces::validateSubmission( sirGraphicsQueue_t eQu
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
 	for ( uint32_t iImage = 0; iImage < submission.nAcquisitionCount; ++iImage ) {
-		const sirGraphicsSurfaceImage_t &image = submission.pAcquisitions[iImage];
+		const sirGraphicsSurfaceImage_t& image = submission.pAcquisitions[iImage];
 		sirD3D12SurfaceSlot_t *pSlot = findSlot( image.hSurface );
 		if ( pSlot == nullptr || pSlot->bSubmitted || !imageMatches( *pSlot, image ) ) {
 			return SIR_GRAPHICS_INVALID_HANDLE;
@@ -339,7 +339,7 @@ sirGraphicsResult_t SIRD3D12Surfaces::validateSubmission( sirGraphicsQueue_t eQu
 	return SIR_GRAPHICS_SUCCESS;
 }
 
-void SIRD3D12Surfaces::completeSubmission( const sirGraphicsSubmission_t &submission, const sirGraphicsCompletion_t &completion ) noexcept
+void SIRD3D12Surfaces::completeSubmission( const sirGraphicsSubmission_t& submission, const sirGraphicsCompletion_t& completion ) noexcept
 {
 	for ( uint32_t iImage = 0; iImage < submission.nAcquisitionCount; ++iImage ) {
 		sirD3D12SurfaceSlot_t *pSlot = findSlot( submission.pAcquisitions[iImage].hSurface );
@@ -351,8 +351,8 @@ void SIRD3D12Surfaces::completeSubmission( const sirGraphicsSubmission_t &submis
 	}
 }
 
-sirGraphicsResult_t SIRD3D12Surfaces::present( const sirGraphicsSurfaceImage_t &image,
-                                               const sirGraphicsCompletion_t &renderComplete ) noexcept
+sirGraphicsResult_t SIRD3D12Surfaces::present( const sirGraphicsSurfaceImage_t& image,
+                                               const sirGraphicsCompletion_t& renderComplete ) noexcept
 {
 	sirD3D12SurfaceSlot_t *pSlot = findSlot( image.hSurface );
 	if ( pSlot == nullptr || !imageMatches( *pSlot, image ) || !pSlot->bSubmitted ) {
@@ -381,7 +381,7 @@ sirGraphicsResult_t SIRD3D12Surfaces::present( const sirGraphicsSurfaceImage_t &
 	return SIR_GRAPHICS_SUCCESS;
 }
 
-sirGraphicsResult_t SIRD3D12Surfaces::retireSurface( sirGraphicsHandle_t hSurface, const sirGraphicsCompletionSet_t &completion ) noexcept
+sirGraphicsResult_t SIRD3D12Surfaces::retireSurface( sirGraphicsHandle_t hSurface, const sirGraphicsCompletionSet_t& completion ) noexcept
 {
 	sirD3D12SurfaceSlot_t *pSlot = findSlot( hSurface );
 	if ( pSlot == nullptr ) {

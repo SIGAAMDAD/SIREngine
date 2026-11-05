@@ -94,8 +94,8 @@ private:
 public:
 	SIRD3D12ComputeQueue( void ) noexcept;
 	~SIRD3D12ComputeQueue( void ) noexcept;
-	SIRD3D12ComputeQueue( const SIRD3D12ComputeQueue & ) = delete;
-	SIRD3D12ComputeQueue &operator=( const SIRD3D12ComputeQueue & ) = delete;
+	SIRD3D12ComputeQueue( const SIRD3D12ComputeQueue& ) = delete;
+	SIRD3D12ComputeQueue& operator=( const SIRD3D12ComputeQueue& ) = delete;
 
 	bool initialize( ID3D12Device *pDevice ) noexcept;
 	bool shutdown( void ) noexcept;
@@ -146,11 +146,11 @@ public:
 	SIRD3D12Device( void ) noexcept;
 	~SIRD3D12Device( void ) noexcept;
 
-	SIRD3D12Device( const SIRD3D12Device & ) = delete;
-	SIRD3D12Device &operator=( const SIRD3D12Device & ) = delete;
+	SIRD3D12Device( const SIRD3D12Device& ) = delete;
+	SIRD3D12Device& operator=( const SIRD3D12Device& ) = delete;
 
-	bool initialize( uint32_t nAdapterIndex, const sirD3D12TransferPoolConfig_t &transferConfig, SIRGeneralHeap *pCpuHeap = nullptr,
-	                 const sirD3D12DiagnosticConfig_t &diagnostics = {} ) noexcept;
+	bool initialize( uint32_t nAdapterIndex, const sirD3D12TransferPoolConfig_t& transferConfig, SIRGeneralHeap *pCpuHeap = nullptr,
+	                 const sirD3D12DiagnosticConfig_t& diagnostics = {} ) noexcept;
 	void shutdown( void ) noexcept;
 	bool isReady( void ) const noexcept;
 	bool queryAdapterInfo( sirD3D12AdapterInfo_t *pInfo ) const noexcept;
@@ -168,21 +168,21 @@ public:
 	sirGraphicsResult_t submitRecorded( sirGraphicsQueue_t eQueue, ID3D12CommandList *const *ppLists, uint32_t nCount,
 	                                    const sirGraphicsCompletion_t *pWaits, uint32_t nWaitCount,
 	                                    sirGraphicsCompletion_t *pCompletion ) noexcept;
-	SIRD3D12Transfers &getTransfers( void ) noexcept;
-	const SIRD3D12Transfers &getTransfers( void ) const noexcept;
-	SIRD3D12ComputeQueue &getComputeQueue( void ) noexcept;
+	SIRD3D12Transfers& getTransfers( void ) noexcept;
+	const SIRD3D12Transfers& getTransfers( void ) const noexcept;
+	SIRD3D12ComputeQueue& getComputeQueue( void ) noexcept;
 	bool snapshotCompletionSet( sirD3D12CompletionSet_t *pSet ) const noexcept;
-	bool pollCompletionSet( const sirD3D12CompletionSet_t &set, bool *pCompleted ) noexcept;
+	bool pollCompletionSet( const sirD3D12CompletionSet_t& set, bool *pCompleted ) noexcept;
 	bool submitComputeMarker( sirD3D12CompletionSet_t *pSet ) noexcept;
 	bool submitComputeAfterCopy( sirD3D12TransferTicket_t ticket, sirD3D12CompletionSet_t *pSet ) noexcept;
-	bool submitGraphicsAfterCompute( const sirD3D12CompletionSet_t &computeSet, sirD3D12CompletionSet_t *pSet ) noexcept;
+	bool submitGraphicsAfterCompute( const sirD3D12CompletionSet_t& computeSet, sirD3D12CompletionSet_t *pSet ) noexcept;
 	bool waitForGraphicsFence( uint64_t nFenceValue, uint32_t nTimeoutMs ) noexcept;
 
 	// Native-only resource ownership; never pass D3D12MA pointers into GRDG.
 	bool createNativeBuffer( D3D12_HEAP_TYPE eHeapType, D3D12_RESOURCE_STATES eInitialState, uint64_t nBytes,
 	                         D3D12MA::Allocation **ppAllocation ) noexcept;
 	// Transfers the allocation's sole owner on success; otherwise the caller retains it.
-	bool retireNativeAllocation( D3D12MA::Allocation **ppAllocation, const sirD3D12CompletionSet_t &completion ) noexcept;
+	bool retireNativeAllocation( D3D12MA::Allocation **ppAllocation, const sirD3D12CompletionSet_t& completion ) noexcept;
 	uint32_t collectRetiredAllocations( void ) noexcept;
 	uint32_t getRetiredAllocationCount( void ) const noexcept;
 	uint32_t getRetirementCapacity( void ) const noexcept;

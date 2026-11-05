@@ -7,6 +7,8 @@ This Source Code Form is subject to the terms of the Mozilla Public
 License, v2. If a copy of the MPL was not distributed with this
 file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+
+
 This software is provided "as is", without warranty of any kind,
 express or implied, including but not limited to the warranties
 of merchantability, fitness for a particular purpose and noninfringement.
@@ -87,14 +89,14 @@ private:
 	sirD3D12ResourceSlot_t *findSlot( sirGraphicsHandle_t hHandle, sirGraphicsHandleType_t eType ) noexcept;
 	sirGraphicsResult_t reserveDescriptor( D3D12_DESCRIPTOR_HEAP_TYPE eHeap, uint32_t *pIndex, D3D12_CPU_DESCRIPTOR_HANDLE *pCpu ) noexcept;
 	void releaseSlot( uint32_t iSlot ) noexcept;
-	bool validateRange( const sirD3D12ResourceSlot_t &slot, uint64_t nOffset, uint64_t nBytes ) const noexcept;
-	bool pollRetirement( const sirD3D12CompletionSet_t &completion, bool *pCompleted ) noexcept;
+	bool validateRange( const sirD3D12ResourceSlot_t& slot, uint64_t nOffset, uint64_t nBytes ) const noexcept;
+	bool pollRetirement( const sirD3D12CompletionSet_t& completion, bool *pCompleted ) noexcept;
 
 public:
 	SIRD3D12Resources( void ) noexcept = default;
 	~SIRD3D12Resources( void ) noexcept;
-	SIRD3D12Resources( const SIRD3D12Resources & ) = delete;
-	SIRD3D12Resources &operator=( const SIRD3D12Resources & ) = delete;
+	SIRD3D12Resources( const SIRD3D12Resources& ) = delete;
+	SIRD3D12Resources& operator=( const SIRD3D12Resources& ) = delete;
 
 	bool initialize( SIRD3D12Device *pNative, uint32_t nGeneration, uint64_t nBudgetBytes ) noexcept;
 	void shutdown( bool bGpuComplete ) noexcept;
@@ -117,16 +119,16 @@ public:
 	uint64_t getMappedUploadBytes( void ) const noexcept;
 	uint64_t getMappedReadbackBytes( void ) const noexcept;
 
-	sirGraphicsResult_t createBuffer( const sirGraphicsBufferDesc_t &desc, sirGraphicsHandle_t *pHandle ) noexcept;
-	sirGraphicsResult_t createTexture( const sirGraphicsTextureDesc_t &desc, sirGraphicsHandle_t *pHandle ) noexcept;
-	sirGraphicsResult_t createView( const sirGraphicsViewDesc_t &desc, sirGraphicsHandle_t *pHandle ) noexcept;
-	sirGraphicsResult_t createSampler( const sirGraphicsSamplerDesc_t &desc, sirGraphicsHandle_t *pHandle ) noexcept;
+	sirGraphicsResult_t createBuffer( const sirGraphicsBufferDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept;
+	sirGraphicsResult_t createTexture( const sirGraphicsTextureDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept;
+	sirGraphicsResult_t createView( const sirGraphicsViewDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept;
+	sirGraphicsResult_t createSampler( const sirGraphicsSamplerDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept;
 	sirGraphicsResult_t mapBuffer( sirGraphicsHandle_t hBuffer, uint64_t nOffset, uint64_t nBytes,
 	                               sirGraphicsMappedBuffer_t *pMapped ) noexcept;
 	sirGraphicsResult_t unmapBuffer( sirGraphicsHandle_t hBuffer, uint64_t nOffset, uint64_t nBytes ) noexcept;
 	sirGraphicsResult_t flushBuffer( sirGraphicsHandle_t hBuffer, uint64_t nOffset, uint64_t nBytes ) noexcept;
 	sirGraphicsResult_t invalidateBuffer( sirGraphicsHandle_t hBuffer, uint64_t nOffset, uint64_t nBytes ) noexcept;
-	sirGraphicsResult_t retireResource( sirGraphicsHandle_t hHandle, const sirGraphicsCompletionSet_t &completion ) noexcept;
+	sirGraphicsResult_t retireResource( sirGraphicsHandle_t hHandle, const sirGraphicsCompletionSet_t& completion ) noexcept;
 };
 
 #endif // __SIRENGINE_SIRD3D12RESOURCES_H__

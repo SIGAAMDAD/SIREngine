@@ -14,6 +14,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Renderer/Drivers/D3D12/SIRD3D12Driver.h>
+#include <Renderer/SIRGraphicsABIOperations.h>
 #include <Renderer/SIRGraphicsRegistry.h>
 #include <stdio.h>
 #include <string.h>
@@ -98,6 +99,18 @@ int main( void )
 	     capabilities.nDeviceGeneration == 0 || ( capabilities.nQueueMask & ( 1U << SIR_GRAPHICS_QUEUE_COPY ) ) == 0 ||
 	     ( capabilities.nFeatureMask & SIR_GRAPHICS_FEATURE_INDIRECT_DRAW ) != 0 ) {
 		return 8;
+	}
+	sirGraphicsABIPipelineModelCaps_t modelCaps = {};
+	if ( pDevice->queryPipelineModelCaps( SIR_GRAPHICS_PIPELINE_MODEL_MODERN, &modelCaps ) != SIR_GRAPHICS_SUCCESS ||
+	     modelCaps.nModel != SIR_GRAPHICS_PIPELINE_MODEL_MODERN || modelCaps.nDeviceGeneration != capabilities.nDeviceGeneration ||
+	     modelCaps.nShaderFormatMask != ( 1U << ( SIR_GRAPHICS_SHADER_DXIL - 1 ) ) ||
+	     ( modelCaps.nShaderStageMask & ( SIR_GRAPHICS_STAGE_VERTEX | SIR_GRAPHICS_STAGE_FRAGMENT | SIR_GRAPHICS_STAGE_COMPUTE ) ) !=
+	         ( SIR_GRAPHICS_STAGE_VERTEX | SIR_GRAPHICS_STAGE_FRAGMENT | SIR_GRAPHICS_STAGE_COMPUTE ) ) {
+		return 29;
+	}
+	if ( pDevice->queryPipelineModelCaps( SIR_GRAPHICS_PIPELINE_MODEL_FIXED_FUNCTION, &modelCaps ) != SIR_GRAPHICS_UNSUPPORTED ||
+	     pDevice->queryPipelineModelCaps( SIR_GRAPHICS_PIPELINE_MODEL_MODERN, nullptr ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return 30;
 	}
 	sirGraphicsCompletionSet_t immediate = {};
 	immediate.nDeviceGeneration = capabilities.nDeviceGeneration;

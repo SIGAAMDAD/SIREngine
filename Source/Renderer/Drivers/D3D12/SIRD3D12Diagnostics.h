@@ -19,6 +19,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <SIRPCH.hpp>
 
 // clang-format off
+
+
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
 	#pragma once
 #endif
@@ -68,11 +70,11 @@ private:
 
 public:
 	SIRD3D12Diagnostics( void ) noexcept = default;
-	SIRD3D12Diagnostics( const SIRD3D12Diagnostics & ) = delete;
-	SIRD3D12Diagnostics &operator=( const SIRD3D12Diagnostics & ) = delete;
+	SIRD3D12Diagnostics( const SIRD3D12Diagnostics& ) = delete;
+	SIRD3D12Diagnostics& operator=( const SIRD3D12Diagnostics& ) = delete;
 	~SIRD3D12Diagnostics( void ) noexcept;
 
-	sirGraphicsResult_t configureBeforeDevice( const sirD3D12DiagnosticConfig_t &config ) noexcept;
+	sirGraphicsResult_t configureBeforeDevice( const sirD3D12DiagnosticConfig_t& config ) noexcept;
 	void attachDevice( ID3D12Device *pDevice ) noexcept;
 	void detachDevice( void ) noexcept;
 	void captureStatus( HRESULT nResult ) noexcept;

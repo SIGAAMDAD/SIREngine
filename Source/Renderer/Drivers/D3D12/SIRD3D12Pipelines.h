@@ -56,17 +56,17 @@ private:
 
 	sirD3D12PipelineSlot_t *findSlot( sirGraphicsHandle_t hPipeline ) noexcept;
 	void releaseSlot( uint32_t iSlot ) noexcept;
-	HRESULT createRootSignature( const sirGraphicsPipelineDesc_t &desc, ID3D12RootSignature **ppRoot ) noexcept;
-	HRESULT createGraphicsState( const sirGraphicsPipelineDesc_t &desc, ID3D12RootSignature *pRoot,
+	HRESULT createRootSignature( const sirGraphicsPipelineDesc_t& desc, ID3D12RootSignature **ppRoot ) noexcept;
+	HRESULT createGraphicsState( const sirGraphicsPipelineDesc_t& desc, ID3D12RootSignature *pRoot,
 	                             ID3D12PipelineState **ppPipeline ) noexcept;
-	HRESULT createComputeState( const sirGraphicsPipelineDesc_t &desc, ID3D12RootSignature *pRoot,
+	HRESULT createComputeState( const sirGraphicsPipelineDesc_t& desc, ID3D12RootSignature *pRoot,
 	                            ID3D12PipelineState **ppPipeline ) noexcept;
 
 public:
 	SIRD3D12Pipelines( void ) noexcept = default;
 	~SIRD3D12Pipelines( void ) noexcept;
-	SIRD3D12Pipelines( const SIRD3D12Pipelines & ) = delete;
-	SIRD3D12Pipelines &operator=( const SIRD3D12Pipelines & ) = delete;
+	SIRD3D12Pipelines( const SIRD3D12Pipelines& ) = delete;
+	SIRD3D12Pipelines& operator=( const SIRD3D12Pipelines& ) = delete;
 
 	bool initialize( SIRD3D12Device *pNative, uint32_t nGeneration ) noexcept;
 	void shutdown( bool bGpuComplete ) noexcept;
@@ -74,8 +74,8 @@ public:
 	const sirD3D12PipelineSlot_t *querySlot( sirGraphicsHandle_t hPipeline ) noexcept;
 	sirGraphicsResult_t retainCommandReference( sirGraphicsHandle_t hPipeline ) noexcept;
 	void releaseCommandReference( sirGraphicsHandle_t hPipeline ) noexcept;
-	sirGraphicsResult_t createPipeline( const sirGraphicsPipelineDesc_t &desc, sirGraphicsHandle_t *pHandle ) noexcept;
-	sirGraphicsResult_t retirePipeline( sirGraphicsHandle_t hPipeline, const sirGraphicsCompletionSet_t &completion ) noexcept;
+	sirGraphicsResult_t createPipeline( const sirGraphicsPipelineDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept;
+	sirGraphicsResult_t retirePipeline( sirGraphicsHandle_t hPipeline, const sirGraphicsCompletionSet_t& completion ) noexcept;
 	bool queryNative( sirGraphicsHandle_t hPipeline, ID3D12PipelineState **ppPipeline, ID3D12RootSignature **ppRoot ) noexcept;
 };
 

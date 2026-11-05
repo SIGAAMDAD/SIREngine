@@ -26,7 +26,7 @@ SIRD3D12Transfers::~SIRD3D12Transfers( void ) noexcept
 	shutdown();
 }
 
-bool SIRD3D12Transfers::initialize( ID3D12Device *pDevice, SIRD3D12Memory *pMemory, const sirD3D12TransferPoolConfig_t &config ) noexcept
+bool SIRD3D12Transfers::initialize( ID3D12Device *pDevice, SIRD3D12Memory *pMemory, const sirD3D12TransferPoolConfig_t& config ) noexcept
 {
 	if ( isReady() || m_pQueue != nullptr || m_bSubmissionUnsafe || pDevice == nullptr || pMemory == nullptr || !pMemory->isReady() ) {
 		m_nLastError = E_INVALIDARG;

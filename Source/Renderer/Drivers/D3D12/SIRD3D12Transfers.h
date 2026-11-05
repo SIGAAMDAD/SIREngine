@@ -73,10 +73,10 @@ private:
 public:
 	SIRD3D12Transfers( void ) noexcept;
 	~SIRD3D12Transfers( void ) noexcept;
-	SIRD3D12Transfers( const SIRD3D12Transfers & ) = delete;
-	SIRD3D12Transfers &operator=( const SIRD3D12Transfers & ) = delete;
+	SIRD3D12Transfers( const SIRD3D12Transfers& ) = delete;
+	SIRD3D12Transfers& operator=( const SIRD3D12Transfers& ) = delete;
 
-	bool initialize( ID3D12Device *pDevice, SIRD3D12Memory *pMemory, const sirD3D12TransferPoolConfig_t &config ) noexcept;
+	bool initialize( ID3D12Device *pDevice, SIRD3D12Memory *pMemory, const sirD3D12TransferPoolConfig_t& config ) noexcept;
 	// Returns false if native completion could not be proved and the caller
 	// must preserve the allocator and device backing until the GPU is quiescent.
 	bool shutdown( void ) noexcept;

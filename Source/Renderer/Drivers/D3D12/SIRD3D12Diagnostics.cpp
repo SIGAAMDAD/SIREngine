@@ -56,7 +56,7 @@ void SIRD3D12Diagnostics::resetDredConfiguration( void ) noexcept
 	m_bDredConfigurationPending = false;
 }
 
-sirGraphicsResult_t SIRD3D12Diagnostics::configureBeforeDevice( const sirD3D12DiagnosticConfig_t &config ) noexcept
+sirGraphicsResult_t SIRD3D12Diagnostics::configureBeforeDevice( const sirD3D12DiagnosticConfig_t& config ) noexcept
 {
 	if ( m_pDevice != nullptr || m_bDredConfigurationPending ) {
 		return SIR_GRAPHICS_BUSY;
