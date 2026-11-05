@@ -1,7 +1,8 @@
 # ShaderCooker is an offline host tool. No native renderer/device linkage.
 add_library(SIRShaderCookFrontend STATIC
     Frontend/SIRShaderFrontend.cpp
-    Targets/SIRShaderTargets.cpp)
+    Targets/SIRShaderTargets.cpp
+    MaterialIR/SIRMaterialIR.cpp)
 add_library(SIR::ShaderCookFrontend ALIAS SIRShaderCookFrontend)
 target_compile_features(SIRShaderCookFrontend PUBLIC cxx_std_17)
 target_include_directories(SIRShaderCookFrontend PUBLIC
@@ -19,6 +20,13 @@ if(SIR_BUILD_TESTS)
     if(COMMAND sir_configure_owned_target)
         sir_configure_owned_target(SIRShaderFrontendTests)
     endif()
+endif()
+
+if(SIR_BUILD_TESTS)
+    add_executable(SIRMaterialIRTests Tests/SIRMaterialIRTests.cpp)
+    target_link_libraries(SIRMaterialIRTests PRIVATE SIR::ShaderCookFrontend)
+    add_test(NAME shader.cooker.material-ir COMMAND SIRMaterialIRTests)
+    sir_configure_owned_target(SIRMaterialIRTests)
 endif()
 
 add_executable(SIRShaderCooker CLI/SIRShaderCookerMain.cpp)
