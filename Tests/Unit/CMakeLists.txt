@@ -228,3 +228,9 @@ add_executable(SIRFileSystemReadTests SIRFileSystemReadTests.cpp)
 target_link_libraries(SIRFileSystemReadTests PRIVATE SIR::Core)
 add_test(NAME core.platform.file-read COMMAND SIRFileSystemReadTests)
 sir_configure_owned_target(SIRFileSystemReadTests)
+
+# Source-backed resource references and embedded-resource dependency ownership.
+add_executable(SIREditorResourceReferencesTests SIREditorResourceReferencesTests.cpp)
+target_link_libraries(SIREditorResourceReferencesTests PRIVATE SIR::EditorAuthoring)
+add_test(NAME editor.scene.resource-reference-index COMMAND SIREditorResourceReferencesTests)
+sir_configure_owned_target(SIREditorResourceReferencesTests)
