@@ -14,6 +14,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Renderer/Drivers/OpenGL/SIRGLContext.h>
+#include <Renderer/Drivers/OpenGL/SIRGLFunctionLoader.h>
 #include <string.h>
 
 #if defined( _WIN32 )
@@ -95,8 +96,29 @@ typedef struct sirGLNativeContext_s
 	sirEGLDestroySurface_t pDestroySurface;
 	sirEGLTerminate_t pTerminate;
 	sirEGLGetCurrentContext_t pGetCurrentContext;
+	sirEGLGetProcAddress_t pGetProcAddress;
 #endif
 } sirGLNativeContext_t;
+
+static void *sirGLResolveNativeProcedure( void *pUserData, const char *pszName ) noexcept
+{
+	sirGLNativeContext_t *pContext = ( sirGLNativeContext_t * )pUserData;
+	if ( pContext == nullptr || pszName == nullptr || !sirGLContextOwnsThread( pContext ) ) {
+		return nullptr;
+	}
+#if defined( _WIN32 )
+	void *pAddress = ( void * )wglGetProcAddress( pszName );
+	if ( !sirGLIsUsableProcedure( pAddress ) ) {
+		pAddress = ( void * )GetProcAddress( pContext->pLibrary, pszName );
+	}
+#else
+	void *pAddress = pContext->pGetProcAddress != nullptr ? pContext->pGetProcAddress( pszName ) : nullptr;
+	if ( !sirGLIsUsableProcedure( pAddress ) && pContext->pLibraryGL != nullptr ) {
+		pAddress = dlsym( pContext->pLibraryGL, pszName );
+	}
+#endif
+	return sirGLIsUsableProcedure( pAddress ) ? pAddress : nullptr;
+}
 
 bool sirGLContextOwnsThread( const sirGLNativeContext_t *pContext ) noexcept
 {
@@ -207,7 +229,7 @@ static bool sirGLInitWindows( sirGLNativeContext_t *pContext ) noexcept
 		return false;
 	}
 	sirWGLCreateContextAttribs_t pCreate = ( sirWGLCreateContextAttribs_t )wglGetProcAddress( "wglCreateContextAttribsARB" );
-	if ( pCreate == nullptr ) {
+	if ( !sirGLIsUsableProcedure( ( void * )pCreate ) ) {
 		wglMakeCurrent( nullptr, nullptr );
 		wglDeleteContext( pLegacy );
 		return false;
@@ -236,6 +258,7 @@ static bool sirGLInitLinux( sirGLNativeContext_t *pContext ) noexcept
 		return false;
 	}
 	const sirEGLGetProcAddress_t pProc = ( sirEGLGetProcAddress_t )dlsym( pContext->pLibraryEGL, "eglGetProcAddress" );
+	pContext->pGetProcAddress = pProc;
 	const sirEGLGetDisplay_t pGetDisplay = ( sirEGLGetDisplay_t )dlsym( pContext->pLibraryEGL, "eglGetDisplay" );
 	const sirEGLQueryString_t pQueryString = ( sirEGLQueryString_t )dlsym( pContext->pLibraryEGL, "eglQueryString" );
 	const sirEGLInitialize_t pInitialize = ( sirEGLInitialize_t )dlsym( pContext->pLibraryEGL, "eglInitialize" );
@@ -327,7 +350,7 @@ sirGraphicsResult_t sirGLCreateNativeContext( const sirGraphicsABIHost_t *pHost,
 	pContext->ownerThread = pthread_self();
 	const bool bReady = sirGLInitLinux( pContext );
 #endif
-	if ( !bReady ) {
+	if ( !bReady || !sirGLValidateRequired46Functions( sirGLResolveNativeProcedure, pContext ) ) {
 		sirGLDestroyNativeContext( pContext );
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}

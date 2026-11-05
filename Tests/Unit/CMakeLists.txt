@@ -351,6 +351,13 @@ if(SIR_WITH_GOOGLETEST)
 endif()
 
 if(SIR_WITH_OPENGL)
+    add_executable(SIRGL46FunctionLoaderTests
+        Renderer/OpenGL/SIRGLFunctionLoaderTests.cpp
+        "${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/OpenGL/SIRGLFunctionLoader.cpp")
+    target_link_libraries(SIRGL46FunctionLoaderTests PRIVATE SIR::Graphics)
+    sir_configure_owned_target(SIRGL46FunctionLoaderTests)
+    add_test(NAME renderer.opengl46.function-loader COMMAND SIRGL46FunctionLoaderTests)
+
     add_executable(SIRGL46FoundationTests
         Renderer/OpenGL/SIRGLFoundationTests.cpp
         "${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/OpenGL/SIRGLCapabilities.cpp")
