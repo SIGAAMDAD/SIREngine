@@ -144,6 +144,14 @@ static int sirTestQueueSubmission( SIRRenderingDevice *pDevice, uint32_t nGenera
 	if ( pDevice->createPipeline( desc, &hPipeline ) != SIR_GRAPHICS_SUCCESS ) {
 		return 30;
 	}
+	sirGraphicsBufferDesc_t probe = {};
+	probe.nSizeBytes = 256;
+	probe.nUsage = SIR_GRAPHICS_USAGE_SAMPLED | SIR_GRAPHICS_USAGE_COPY_SOURCE;
+	probe.eMemory = SIR_GRAPHICS_MEMORY_GPU_LOCAL;
+	sirGraphicsHandle_t hProbe = {};
+	if ( pDevice->createBuffer( probe, &hProbe ) != SIR_GRAPHICS_SUCCESS ) {
+		return 46;
+	}
 	SIRGraphicsCommandList *pCommands = nullptr;
 	if ( pDevice->acquireCommands( SIR_GRAPHICS_QUEUE_COMPUTE, &pCommands ) != SIR_GRAPHICS_SUCCESS || pCommands == nullptr ||
 	     pCommands->bindPipeline( hPipeline ) != SIR_GRAPHICS_SUCCESS || pCommands->dispatch( 1, 1, 1 ) != SIR_GRAPHICS_SUCCESS ) {
@@ -151,6 +159,30 @@ static int sirTestQueueSubmission( SIRRenderingDevice *pDevice, uint32_t nGenera
 	}
 	sirGraphicsCompletionSet_t immediate = {};
 	immediate.nDeviceGeneration = nGeneration;
+	sirGraphicsBarrier_t read = {};
+	read.eType = SIR_GRAPHICS_BARRIER_TRANSITION;
+	read.hResource = hProbe;
+	read.eBefore = SIR_GRAPHICS_STATE_COMMON;
+	read.eAfter = SIR_GRAPHICS_STATE_SHADER_READ;
+	sirGraphicsBarrier_t invalid = read;
+	invalid.eAfter = SIR_GRAPHICS_STATE_VERTEX_INDEX;
+	sirGraphicsBarrier_t szBatch[2] = { read, invalid };
+	if ( pCommands->barrier( szBatch, 2 ) != SIR_GRAPHICS_UNSUPPORTED ||
+	     pDevice->retireResource( hProbe, immediate ) != SIR_GRAPHICS_SUCCESS ) {
+		return 47;
+	}
+	if ( pDevice->createBuffer( probe, &hProbe ) != SIR_GRAPHICS_SUCCESS ) {
+		return 48;
+	}
+	read.hResource = hProbe;
+	if ( pCommands->barrier( &read, 1 ) != SIR_GRAPHICS_SUCCESS ) {
+		return 49;
+	}
+	read.eBefore = SIR_GRAPHICS_STATE_SHADER_READ;
+	read.eAfter = SIR_GRAPHICS_STATE_COMMON;
+	if ( pCommands->barrier( &read, 1 ) != SIR_GRAPHICS_SUCCESS ) {
+		return 50;
+	}
 	if ( pDevice->retireResource( hPipeline, immediate ) != SIR_GRAPHICS_BUSY ) {
 		return 32;
 	}
@@ -181,7 +213,8 @@ static int sirTestQueueSubmission( SIRRenderingDevice *pDevice, uint32_t nGenera
 	     pDevice->wait( directComplete, 10000000000ULL ) != SIR_GRAPHICS_SUCCESS ) {
 		return 38;
 	}
-	if ( pDevice->retireResource( hPipeline, immediate ) != SIR_GRAPHICS_SUCCESS ) {
+	if ( pDevice->retireResource( hPipeline, immediate ) != SIR_GRAPHICS_SUCCESS ||
+	     pDevice->retireResource( hProbe, immediate ) != SIR_GRAPHICS_SUCCESS ) {
 		return 39;
 	}
 

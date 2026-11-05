@@ -28,7 +28,7 @@ static D3D12_COMMAND_LIST_TYPE sirD3D12CommandType( sirGraphicsQueue_t eQueue ) 
 	return D3D12_COMMAND_LIST_TYPE_DIRECT;
 }
 
-static D3D12_RESOURCE_STATES sirD3D12BarrierState( sirGraphicsState_t eState ) noexcept
+static D3D12_RESOURCE_STATES sirD3D12BarrierState( sirGraphicsState_t eState, sirGraphicsQueue_t eQueue ) noexcept
 {
 	switch ( eState ) {
 	case SIR_GRAPHICS_STATE_COMMON:
@@ -38,6 +38,9 @@ static D3D12_RESOURCE_STATES sirD3D12BarrierState( sirGraphicsState_t eState ) n
 	case SIR_GRAPHICS_STATE_CONSTANT:
 		return D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
 	case SIR_GRAPHICS_STATE_SHADER_READ:
+		if ( eQueue == SIR_GRAPHICS_QUEUE_COMPUTE ) {
+			return D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+		}
 		return D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
 	case SIR_GRAPHICS_STATE_SHADER_WRITE:
 		return D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
@@ -138,6 +141,23 @@ static bool sirD3D12ValidResourceState( sirGraphicsHandleType_t eResource, sirGr
 	}
 	if ( eResource == SIR_GRAPHICS_HANDLE_TEXTURE ) {
 		return eState != SIR_GRAPHICS_STATE_VERTEX_INDEX && eState != SIR_GRAPHICS_STATE_CONSTANT;
+	}
+	return false;
+}
+
+static bool sirD3D12ValidQueueState( sirGraphicsQueue_t eQueue, sirGraphicsState_t eState ) noexcept
+{
+	if ( eQueue == SIR_GRAPHICS_QUEUE_DIRECT ) {
+		return true;
+	}
+	if ( eQueue == SIR_GRAPHICS_QUEUE_COPY ) {
+		return eState == SIR_GRAPHICS_STATE_COMMON || eState == SIR_GRAPHICS_STATE_COPY_SOURCE ||
+		       eState == SIR_GRAPHICS_STATE_COPY_DESTINATION;
+	}
+	if ( eQueue == SIR_GRAPHICS_QUEUE_COMPUTE ) {
+		return eState == SIR_GRAPHICS_STATE_COMMON || eState == SIR_GRAPHICS_STATE_SHADER_READ ||
+		       eState == SIR_GRAPHICS_STATE_SHADER_WRITE || eState == SIR_GRAPHICS_STATE_COPY_SOURCE ||
+		       eState == SIR_GRAPHICS_STATE_COPY_DESTINATION;
 	}
 	return false;
 }
@@ -394,11 +414,8 @@ sirGraphicsResult_t SIRD3D12CommandList::barrier( const sirGraphicsBarrier_t *pB
 			     !sirD3D12ValidResourceState( pSlot->eType, source.eAfter ) ) {
 				return SIR_GRAPHICS_INVALID_ARGUMENT;
 			}
-			if ( m_eQueue == SIR_GRAPHICS_QUEUE_COPY &&
-			     ( ( source.eBefore != SIR_GRAPHICS_STATE_COMMON && source.eBefore != SIR_GRAPHICS_STATE_COPY_SOURCE &&
-			         source.eBefore != SIR_GRAPHICS_STATE_COPY_DESTINATION ) ||
-			       ( source.eAfter != SIR_GRAPHICS_STATE_COMMON && source.eAfter != SIR_GRAPHICS_STATE_COPY_SOURCE &&
-			         source.eAfter != SIR_GRAPHICS_STATE_COPY_DESTINATION ) ) ) {
+			if ( !sirD3D12ValidQueueState( m_eQueue, source.eBefore ) ||
+			     !sirD3D12ValidQueueState( m_eQueue, source.eAfter ) ) {
 				return SIR_GRAPHICS_UNSUPPORTED;
 			}
 			const uint32_t nMips = pSlot->eType == SIR_GRAPHICS_HANDLE_TEXTURE ? pSlot->nMips : 1;
@@ -495,11 +512,8 @@ sirGraphicsResult_t SIRD3D12CommandList::barrier( const sirGraphicsBarrier_t *pB
 			     !sirD3D12ValidResourceState( pSlot->eType, source.eAfter ) ) {
 				return SIR_GRAPHICS_INVALID_ARGUMENT;
 			}
-			if ( m_eQueue == SIR_GRAPHICS_QUEUE_COPY &&
-			     ( ( source.eBefore != SIR_GRAPHICS_STATE_COMMON && source.eBefore != SIR_GRAPHICS_STATE_COPY_SOURCE &&
-			         source.eBefore != SIR_GRAPHICS_STATE_COPY_DESTINATION ) ||
-			       ( source.eAfter != SIR_GRAPHICS_STATE_COMMON && source.eAfter != SIR_GRAPHICS_STATE_COPY_SOURCE &&
-			         source.eAfter != SIR_GRAPHICS_STATE_COPY_DESTINATION ) ) ) {
+			if ( !sirD3D12ValidQueueState( m_eQueue, source.eBefore ) ||
+			     !sirD3D12ValidQueueState( m_eQueue, source.eAfter ) ) {
 				return SIR_GRAPHICS_UNSUPPORTED;
 			}
 			const uint32_t nMips = pSlot->eType == SIR_GRAPHICS_HANDLE_TEXTURE ? pSlot->nMips : 1;
@@ -512,8 +526,8 @@ sirGraphicsResult_t SIRD3D12CommandList::barrier( const sirGraphicsBarrier_t *pB
 			}
 			native.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
 			native.Transition.pResource = pSlot->getNativeResource();
-			native.Transition.StateBefore = sirD3D12BarrierState( source.eBefore );
-			native.Transition.StateAfter = sirD3D12BarrierState( source.eAfter );
+			native.Transition.StateBefore = sirD3D12BarrierState( source.eBefore, m_eQueue );
+			native.Transition.StateAfter = sirD3D12BarrierState( source.eAfter, m_eQueue );
 			native.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 		} else if ( source.eType == SIR_GRAPHICS_BARRIER_UAV ) {
 			if ( ( pSlot->nUsage & SIR_GRAPHICS_USAGE_STORAGE ) == 0 ) {
