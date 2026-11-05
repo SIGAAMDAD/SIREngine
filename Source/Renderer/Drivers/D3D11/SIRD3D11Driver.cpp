@@ -275,6 +275,9 @@ sirGraphicsResult_t SIRD3D11Driver::createDevice( const sirGraphicsDeviceCreateD
 	if ( m_pActiveDevice != nullptr ) {
 		return SIR_GRAPHICS_BUSY;
 	}
+	if ( m_nNextDeviceGeneration == 0 ) {
+		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
+	}
 	IDXGIAdapter1 *pSelected = nullptr;
 	uint32_t nHardware = 0;
 	const sirGraphicsResult_t eEnumerate = sirD3D11ResolveHardware( desc.nAdapterIndex, &pSelected, &nHardware );
@@ -315,7 +318,9 @@ sirGraphicsResult_t SIRD3D11Driver::createDevice( const sirGraphicsDeviceCreateD
 	init.nResidentBudgetBytes = desc.nResidentBudgetBytes;
 	init.nFramesInFlight = desc.nFramesInFlight;
 	init.nSoftwareAdapter = bSoftware ? 1U : 0U;
+	init.nDeviceGeneration = m_nNextDeviceGeneration;
 	m_pActiveDevice = new ( m_szDeviceStorage ) SIRD3D11Device( init );
+	++m_nNextDeviceGeneration;
 	*ppDevice = m_pActiveDevice;
 	return SIR_GRAPHICS_SUCCESS;
 }

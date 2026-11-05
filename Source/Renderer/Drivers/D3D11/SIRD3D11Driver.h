@@ -46,6 +46,7 @@ protected:
 private:
 	alignas( SIRD3D11Device ) uint8_t m_szDeviceStorage[sizeof( SIRD3D11Device )] = {};
 	SIRD3D11Device *m_pActiveDevice = nullptr;
+	uint32_t m_nNextDeviceGeneration = 1;
 };
 
 sirGraphicsResult_t sirD3D11RegisterDriver( SIRGraphicsRegistry *pRegistry, SIRD3D11Driver *pDriver ) noexcept;
