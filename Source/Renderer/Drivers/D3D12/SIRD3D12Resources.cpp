@@ -953,14 +953,21 @@ sirGraphicsResult_t SIRD3D12Resources::createView( const sirGraphicsViewDesc_t& 
 		}
 		m_pDevice->CreateDepthStencilView( pNativeResource, &dsv, hCpu );
 	} else if ( desc.nUsage == SIR_GRAPHICS_USAGE_STORAGE ) {
-		if ( pResource->eDimension != SIR_GRAPHICS_TEXTURE_2D || desc.nMipLevels != 1 || pResource->nSamples != 1 ) {
+		if ( ( pResource->eDimension != SIR_GRAPHICS_TEXTURE_2D && pResource->eDimension != SIR_GRAPHICS_TEXTURE_3D ) || desc.nMipLevels != 1 ||
+		     pResource->nSamples != 1 ) {
 			releaseSlot( iSlot );
 			*pHandle = {};
 			return SIR_GRAPHICS_UNSUPPORTED;
 		}
 		D3D12_UNORDERED_ACCESS_VIEW_DESC uav = {};
 		uav.Format = eFormat;
-		if ( pResource->nLayers == 1 ) {
+		if ( pResource->eDimension == SIR_GRAPHICS_TEXTURE_3D ) {
+			uav.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE3D;
+			uav.Texture3D.MipSlice = desc.nBaseMip;
+			uav.Texture3D.FirstWSlice = 0;
+			const uint32_t nMipDepth = pResource->nDepth >> desc.nBaseMip;
+			uav.Texture3D.WSize = nMipDepth != 0 ? nMipDepth : 1;
+		} else if ( pResource->nLayers == 1 ) {
 			uav.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
 			uav.Texture2D.MipSlice = desc.nBaseMip;
 		} else {
