@@ -406,6 +406,18 @@ HRESULT SIRD3D12Pipelines::createComputeState( const sirGraphicsPipelineDesc_t& 
 	return m_pDevice->CreateComputePipelineState( &native, IID_PPV_ARGS( ppPipeline ) );
 }
 
+static bool sirD3D12SupportsPipelineTarget( ID3D12Device *pDevice, DXGI_FORMAT eFormat, uint32_t nSampleCount,
+                                            D3D12_FORMAT_SUPPORT1 eRequired ) noexcept
+{
+	if ( !sirD3D12SupportsSampleCount( pDevice, eFormat, nSampleCount ) ) {
+		return false;
+	}
+	D3D12_FEATURE_DATA_FORMAT_SUPPORT support = {};
+	support.Format = eFormat;
+	return SUCCEEDED( pDevice->CheckFeatureSupport( D3D12_FEATURE_FORMAT_SUPPORT, &support, sizeof( support ) ) ) &&
+	       ( support.Support1 & eRequired ) == eRequired;
+}
+
 HRESULT SIRD3D12Pipelines::createGraphicsState( const sirGraphicsPipelineDesc_t& desc, ID3D12RootSignature *pRoot,
                                                 ID3D12PipelineState **ppPipeline ) noexcept
 {
@@ -504,9 +516,15 @@ sirGraphicsResult_t SIRD3D12Pipelines::createPipeline( const sirGraphicsPipeline
 	}
 	if ( !bCompute ) {
 		for ( uint32_t iColor = 0; iColor < desc.nColorFormatCount; ++iColor ) {
-			if ( sirD3D12PipelineFormat( desc.szColorFormats[iColor] ) == DXGI_FORMAT_UNKNOWN ) {
+			const DXGI_FORMAT eColorFormat = sirD3D12PipelineFormat( desc.szColorFormats[iColor] );
+			if ( !sirD3D12SupportsPipelineTarget( m_pDevice, eColorFormat, desc.nSampleCount, D3D12_FORMAT_SUPPORT1_RENDER_TARGET ) ) {
 				return SIR_GRAPHICS_UNSUPPORTED;
 			}
+		}
+		const DXGI_FORMAT eDepthFormat = sirD3D12PipelineFormat( desc.eDepthFormat );
+		if ( desc.eDepthFormat != SIR_GRAPHICS_FORMAT_UNKNOWN &&
+		     !sirD3D12SupportsPipelineTarget( m_pDevice, eDepthFormat, desc.nSampleCount, D3D12_FORMAT_SUPPORT1_DEPTH_STENCIL ) ) {
+			return SIR_GRAPHICS_UNSUPPORTED;
 		}
 	}
 	collectRetired();
