@@ -3,6 +3,7 @@ add_library(SIRShaderCookFrontend STATIC
     Frontend/SIRShaderFrontend.cpp
     Targets/SIRShaderTargets.cpp
     MaterialIR/SIRMaterialIR.cpp
+    MaterialIR/SIRMaterialIREmitter.cpp
     MaterialIR/Derivatives/SIRMaterialDerivatives.cpp
     Archive/SIRShaderArchive.cpp)
 add_library(SIR::ShaderCookFrontend ALIAS SIRShaderCookFrontend)
@@ -29,6 +30,13 @@ if(SIR_BUILD_TESTS)
     target_link_libraries(SIRMaterialIRTests PRIVATE SIR::ShaderCookFrontend)
     add_test(NAME shader.cooker.material-ir COMMAND SIRMaterialIRTests)
     sir_configure_owned_target(SIRMaterialIRTests)
+endif()
+
+if(SIR_BUILD_TESTS)
+    add_executable(SIRMaterialIREmitterTests Tests/SIRMaterialIREmitterTests.cpp)
+    target_link_libraries(SIRMaterialIREmitterTests PRIVATE SIR::ShaderCookFrontend)
+    add_test(NAME shader.cooker.material-ir-emitter COMMAND SIRMaterialIREmitterTests)
+    sir_configure_owned_target(SIRMaterialIREmitterTests)
 endif()
 
 if(SIR_BUILD_TESTS)
