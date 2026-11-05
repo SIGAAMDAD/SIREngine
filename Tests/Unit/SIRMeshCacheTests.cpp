@@ -17,6 +17,14 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <limits>
 #include <stdio.h>
+#include <type_traits>
+
+// The cache controls nonowning storage and sole source-pin retirement.
+// Neither copying nor moving its lifecycle state is safe.
+static_assert( !std::is_copy_constructible<SIRMeshCache>::value, "Mesh cache must not be copy-constructible" );
+static_assert( !std::is_move_constructible<SIRMeshCache>::value, "Mesh cache must not be move-constructible" );
+static_assert( !std::is_copy_assignable<SIRMeshCache>::value, "Mesh cache must not be copy-assignable" );
+static_assert( !std::is_move_assignable<SIRMeshCache>::value, "Mesh cache must not be move-assignable" );
 
 // Covers the CPU metadata-only contract; source bytes are externally owned.
 typedef struct sirMeshTestOwner_s

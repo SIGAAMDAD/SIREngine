@@ -83,7 +83,12 @@ class SIRMeshCache
 {
 public:
 	SIRMeshCache( void ) noexcept;
+	SIRMeshCache( const SIRMeshCache& other ) = delete;
+	SIRMeshCache( SIRMeshCache&& other ) = delete;
 	~SIRMeshCache( void ) noexcept;
+
+	SIRMeshCache& operator=( const SIRMeshCache& other ) = delete;
+	SIRMeshCache& operator=( SIRMeshCache&& other ) = delete;
 
 	uint32_t getCapacity( void ) const noexcept;
 	uint32_t getResidentCount( void ) const noexcept;
