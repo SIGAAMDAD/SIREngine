@@ -16,6 +16,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Renderer/Graph/SIRFrameGraph.h>
 
 #include <stdio.h>
+#include <new>
 
 static sirGraphicsCapabilities_t makeCaps( void ) noexcept
 {
@@ -429,6 +430,322 @@ static bool testBoundedRegionWork( void ) noexcept
 	       compiled.nPassCount == 0;
 }
 
+static bool testOutputCullingAndOverwrite( void ) noexcept
+{
+	SIRFrameGraph graph;
+	uint32_t nResource = 0;
+	uint32_t nPass = 0;
+	const sirFrameGraphPass_t pass = { SIR_GRAPHICS_QUEUE_DIRECT, 0, false };
+	graph.setCullingEnabled( true );
+	if ( graph.addResource( makeTransient(), &nResource ) != SIR_GRAPHICS_SUCCESS ) {
+		return false;
+	}
+	for ( uint32_t iPass = 0; iPass != 4; ++iPass ) {
+		if ( graph.addPass( pass, &nPass ) != SIR_GRAPHICS_SUCCESS ) {
+			return false;
+		}
+	}
+	if ( graph.addAccess( makeAccess( 0, nResource, SIR_GRAPHICS_STATE_COLOR_ATTACHMENT, true ) ) != SIR_GRAPHICS_SUCCESS ||
+	     graph.addAccess( makeAccess( 1, nResource, SIR_GRAPHICS_STATE_COLOR_ATTACHMENT, true ) ) != SIR_GRAPHICS_SUCCESS ||
+	     graph.addAccess( makeAccess( 2, nResource, SIR_GRAPHICS_STATE_SHADER_READ, false ) ) != SIR_GRAPHICS_SUCCESS ) {
+		return false;
+	}
+	const sirFrameGraphOutput_t output = { nResource, 0, 1, 0, 1 };
+	if ( graph.addOutput( output ) != SIR_GRAPHICS_SUCCESS ) {
+		return false;
+	}
+	sirFrameGraphCompiled_t compiled = {};
+	if ( graph.compile( makeCaps(), &compiled ) != SIR_GRAPHICS_SUCCESS || compiled.nPassCount != 1 || compiled.szPassOrder[0] != 1 ||
+	     compiled.szLivePasses[0] != 0 || compiled.szLivePasses[2] != 0 || compiled.szLivePasses[3] != 0 ||
+	     compiled.nTransitionCount != 1 ) {
+		return false;
+	}
+	return compiled.szFirstUse[nResource] == 0 && compiled.szLastUse[nResource] == 0;
+}
+
+static bool testLiveReadDependencies( void ) noexcept
+{
+	SIRFrameGraph graph;
+	graph.setCullingEnabled( true );
+	uint32_t nFirst = 0;
+	uint32_t nSecond = 0;
+	uint32_t nPass = 0;
+	const sirFrameGraphPass_t pass = { SIR_GRAPHICS_QUEUE_DIRECT, 0, false };
+	const sirFrameGraphPass_t sideEffect = { SIR_GRAPHICS_QUEUE_DIRECT, 0, true };
+	if ( graph.addResource( makeTransient(), &nFirst ) != SIR_GRAPHICS_SUCCESS ||
+	     graph.addResource( makeTransient(), &nSecond ) != SIR_GRAPHICS_SUCCESS ) {
+		return false;
+	}
+	if ( graph.addPass( pass, &nPass ) != SIR_GRAPHICS_SUCCESS || graph.addPass( pass, &nPass ) != SIR_GRAPHICS_SUCCESS ||
+	     graph.addPass( sideEffect, &nPass ) != SIR_GRAPHICS_SUCCESS || graph.addPass( pass, &nPass ) != SIR_GRAPHICS_SUCCESS ) {
+		return false;
+	}
+	if ( graph.addAccess( makeAccess( 0, nFirst, SIR_GRAPHICS_STATE_COLOR_ATTACHMENT, true ) ) != SIR_GRAPHICS_SUCCESS ||
+	     graph.addAccess( makeAccess( 1, nSecond, SIR_GRAPHICS_STATE_COLOR_ATTACHMENT, true ) ) != SIR_GRAPHICS_SUCCESS ||
+	     graph.addAccess( makeAccess( 2, nFirst, SIR_GRAPHICS_STATE_SHADER_READ, false ) ) != SIR_GRAPHICS_SUCCESS ||
+	     graph.addAccess( makeAccess( 3, nSecond, SIR_GRAPHICS_STATE_SHADER_READ, false ) ) != SIR_GRAPHICS_SUCCESS ) {
+		return false;
+	}
+	sirFrameGraphCompiled_t compiled = {};
+	if ( graph.compile( makeCaps(), &compiled ) != SIR_GRAPHICS_SUCCESS || compiled.nPassCount != 2 || compiled.szPassOrder[0] != 0 ||
+	     compiled.szPassOrder[1] != 2 || compiled.nDependencyCount != 1 ) {
+		return false;
+	}
+	return compiled.szFirstUse[nSecond] == SIR_FRAMEGRAPH_INVALID_INDEX && compiled.szLastUse[nSecond] == SIR_FRAMEGRAPH_INVALID_INDEX;
+}
+
+static bool testSubresourceOutputAndExplicitDependency( void ) noexcept
+{
+	SIRFrameGraph graph;
+	graph.setCullingEnabled( true );
+	uint32_t nResource = 0;
+	uint32_t nPass = 0;
+	const sirFrameGraphPass_t pass = { SIR_GRAPHICS_QUEUE_DIRECT, 0, false };
+	if ( graph.addResource( makeTransient( 2 ), &nResource ) != SIR_GRAPHICS_SUCCESS ||
+	     graph.addPass( pass, &nPass ) != SIR_GRAPHICS_SUCCESS || graph.addPass( pass, &nPass ) != SIR_GRAPHICS_SUCCESS ||
+	     graph.addPass( pass, &nPass ) != SIR_GRAPHICS_SUCCESS ) {
+		return false;
+	}
+	sirFrameGraphAccess_t a = makeAccess( 0, nResource, SIR_GRAPHICS_STATE_COLOR_ATTACHMENT, true );
+	sirFrameGraphAccess_t b = makeAccess( 1, nResource, SIR_GRAPHICS_STATE_COLOR_ATTACHMENT, true );
+	b.nBaseMip = 1;
+	if ( graph.addAccess( a ) != SIR_GRAPHICS_SUCCESS || graph.addAccess( b ) != SIR_GRAPHICS_SUCCESS ||
+	     graph.addDependency( 2, 1 ) != SIR_GRAPHICS_SUCCESS ) {
+		return false;
+	}
+	const sirFrameGraphOutput_t output = { nResource, 1, 1, 0, 1 };
+	if ( graph.addOutput( output ) != SIR_GRAPHICS_SUCCESS ) {
+		return false;
+	}
+	sirFrameGraphCompiled_t compiled = {};
+	if ( graph.compile( makeCaps(), &compiled ) != SIR_GRAPHICS_SUCCESS || compiled.nPassCount != 2 || compiled.szPassOrder[0] != 2 ||
+	     compiled.szPassOrder[1] != 1 || compiled.nDependencyCount != 1 ) {
+		return false;
+	}
+	return compiled.szFirstUse[nResource] == 1 && compiled.szLastUse[nResource] == 1;
+}
+
+static bool testZeroRootsAndDeadInputs( void ) noexcept
+{
+	SIRFrameGraph graph;
+	graph.setCullingEnabled( true );
+	uint32_t nResource = 0;
+	uint32_t nPass = 0;
+	const sirFrameGraphPass_t pass = { SIR_GRAPHICS_QUEUE_COPY, SIR_GRAPHICS_FEATURE_COPY_QUEUE, false };
+	if ( graph.addResource( makeTransient(), &nResource ) != SIR_GRAPHICS_SUCCESS ||
+	     graph.addPass( pass, &nPass ) != SIR_GRAPHICS_SUCCESS ) {
+		return false;
+	}
+	if ( graph.addAccess( makeAccess( nPass, nResource, SIR_GRAPHICS_STATE_COPY_SOURCE, false ) ) != SIR_GRAPHICS_SUCCESS ) {
+		return false;
+	}
+	sirFrameGraphCompiled_t compiled = {};
+	if ( graph.compile( makeCaps(), &compiled ) != SIR_GRAPHICS_SUCCESS || compiled.nPassCount != 0 || compiled.nTransitionCount != 0 ||
+	     compiled.nDependencyCount != 0 ) {
+		return false;
+	}
+	const sirFrameGraphOutput_t output = { nResource, 0, 1, 0, 1 };
+	if ( graph.addOutput( output ) != SIR_GRAPHICS_SUCCESS ) {
+		return false;
+	}
+	return graph.compile( makeCaps(), &compiled ) == SIR_GRAPHICS_INVALID_ARGUMENT && compiled.nPassCount == 0;
+}
+
+static bool testOutputValidation( void ) noexcept
+{
+	SIRFrameGraph graph;
+	graph.setCullingEnabled( true );
+	uint32_t nResource = 0;
+	const sirFrameGraphOutput_t invalid = { 5, 0, 1, 0, 1 };
+	if ( graph.addOutput( invalid ) != SIR_GRAPHICS_INVALID_ARGUMENT ||
+	     graph.addResource( makeTransient(), &nResource ) != SIR_GRAPHICS_SUCCESS ) {
+		return false;
+	}
+	sirFrameGraphOutput_t bad = { nResource, 0, 0, 0, 1 };
+	if ( graph.addOutput( bad ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return false;
+	}
+	bad.nMipCount = 1;
+	bad.nBaseLayer = 1;
+	if ( graph.addOutput( bad ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return false;
+	}
+	sirFrameGraphResource_t imported = makeTransient();
+	imported.bImported = true;
+	imported.eInitialState = SIR_GRAPHICS_STATE_SHADER_READ;
+	imported.hImported.eType = SIR_GRAPHICS_HANDLE_TEXTURE;
+	imported.hImported.nGeneration = 1;
+	imported.hImported.nDeviceGeneration = 2;
+	if ( graph.addResource( imported, &nResource ) != SIR_GRAPHICS_SUCCESS ) {
+		return false;
+	}
+	const sirFrameGraphOutput_t importedOutput = { nResource, 0, 1, 0, 1 };
+	if ( graph.addOutput( importedOutput ) != SIR_GRAPHICS_SUCCESS ) {
+		return false;
+	}
+	sirFrameGraphCompiled_t compiled = {};
+	if ( graph.compile( makeCaps(), &compiled ) != SIR_GRAPHICS_SUCCESS || compiled.nPassCount != 0 ) {
+		return false;
+	}
+	sirGraphicsCapabilities_t staleCaps = makeCaps();
+	staleCaps.nDeviceGeneration = 8;
+	return graph.compile( staleCaps, &compiled ) == SIR_GRAPHICS_INVALID_HANDLE && compiled.nPassCount == 0;
+}
+
+typedef struct sirFrameGraphRecordTrace_s
+{
+	uint32_t szRecorded[SIR_FRAMEGRAPH_MAX_PASSES];
+	uint32_t szRolledBack[SIR_FRAMEGRAPH_MAX_PASSES];
+	uint32_t nRecordCount;
+	uint32_t nRollbackCount;
+	uint32_t nFailPass;
+} sirFrameGraphRecordTrace_t;
+
+static sirGraphicsResult_t traceRecord( uint32_t nPass, void *pContext ) noexcept
+{
+	sirFrameGraphRecordTrace_t *pTrace = ( sirFrameGraphRecordTrace_t * )pContext;
+	pTrace->szRecorded[pTrace->nRecordCount++] = nPass;
+	return nPass == pTrace->nFailPass ? SIR_GRAPHICS_UNSUPPORTED : SIR_GRAPHICS_SUCCESS;
+}
+
+static void traceRollback( uint32_t nPass, void *pContext ) noexcept
+{
+	sirFrameGraphRecordTrace_t *pTrace = ( sirFrameGraphRecordTrace_t * )pContext;
+	pTrace->szRolledBack[pTrace->nRollbackCount++] = nPass;
+}
+
+static bool testRecordRollbackAndStalePlan( void ) noexcept
+{
+	SIRFrameGraph graph;
+	graph.setCullingEnabled( true );
+	uint32_t nPass = 0;
+	const sirFrameGraphPass_t sideEffect = { SIR_GRAPHICS_QUEUE_DIRECT, 0, true };
+	for ( uint32_t iPass = 0; iPass != 3; ++iPass ) {
+		if ( graph.addPass( sideEffect, &nPass ) != SIR_GRAPHICS_SUCCESS ) {
+			return false;
+		}
+	}
+	sirFrameGraphCompiled_t compiled = {};
+	if ( graph.compile( makeCaps(), &compiled ) != SIR_GRAPHICS_SUCCESS || compiled.nPassCount != 3 ) {
+		return false;
+	}
+	sirFrameGraphRecordTrace_t trace = {};
+	trace.nFailPass = 1;
+	sirFrameGraphCallbacks_t callbacks = { traceRecord, traceRollback, &trace };
+	if ( graph.record( compiled, callbacks ) != SIR_GRAPHICS_UNSUPPORTED || trace.nRecordCount != 2 || trace.nRollbackCount != 2 ||
+	     trace.szRolledBack[0] != 1 || trace.szRolledBack[1] != 0 ) {
+		return false;
+	}
+	trace = {};
+	trace.nFailPass = SIR_FRAMEGRAPH_INVALID_INDEX;
+	if ( graph.record( compiled, callbacks ) != SIR_GRAPHICS_SUCCESS || trace.nRecordCount != 3 || trace.nRollbackCount != 0 ) {
+		return false;
+	}
+	callbacks.pRollback = nullptr;
+	if ( graph.record( compiled, callbacks ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return false;
+	}
+	callbacks.pRollback = traceRollback;
+	graph.addPass( sideEffect, &nPass );
+	return graph.record( compiled, callbacks ) == SIR_GRAPHICS_INVALID_ARGUMENT && trace.nRecordCount == 3;
+}
+
+static bool testRecordRejectsForgedPlan( void ) noexcept
+{
+	SIRFrameGraph graph;
+	graph.setCullingEnabled( true );
+	uint32_t nPass = 0;
+	const sirFrameGraphPass_t pass = { SIR_GRAPHICS_QUEUE_DIRECT, 0, true };
+	graph.addPass( pass, &nPass );
+	graph.addPass( pass, &nPass );
+	sirFrameGraphCompiled_t compiled = {};
+	if ( graph.compile( makeCaps(), &compiled ) != SIR_GRAPHICS_SUCCESS ) {
+		return false;
+	}
+	sirFrameGraphRecordTrace_t trace = {};
+	sirFrameGraphCallbacks_t callbacks = { traceRecord, traceRollback, &trace };
+	compiled.szPassOrder[1] = compiled.szPassOrder[0];
+	if ( graph.record( compiled, callbacks ) != SIR_GRAPHICS_INVALID_ARGUMENT || trace.nRecordCount != 0 ) {
+		return false;
+	}
+	compiled.szPassOrder[1] = 1;
+	SIRFrameGraph other;
+	return other.record( compiled, callbacks ) == SIR_GRAPHICS_INVALID_ARGUMENT && trace.nRecordCount == 0;
+}
+
+static bool testRecordEnforcesDependencies( void ) noexcept
+{
+	SIRFrameGraph graph;
+	graph.setCullingEnabled( true );
+	uint32_t nPass = 0;
+	const sirFrameGraphPass_t pass = { SIR_GRAPHICS_QUEUE_DIRECT, 0, true };
+	if ( graph.addPass( pass, &nPass ) != SIR_GRAPHICS_SUCCESS || graph.addPass( pass, &nPass ) != SIR_GRAPHICS_SUCCESS ||
+	     graph.addDependency( 0, 1 ) != SIR_GRAPHICS_SUCCESS ) {
+		return false;
+	}
+	sirFrameGraphCompiled_t compiled = {};
+	if ( graph.compile( makeCaps(), &compiled ) != SIR_GRAPHICS_SUCCESS || compiled.nDependencyCount != 1 ) {
+		return false;
+	}
+	sirFrameGraphRecordTrace_t trace = {};
+	trace.nFailPass = SIR_FRAMEGRAPH_INVALID_INDEX;
+	const sirFrameGraphCallbacks_t callbacks = { traceRecord, traceRollback, &trace };
+	compiled.szPassOrder[0] = 1;
+	compiled.szPassOrder[1] = 0;
+	return graph.record( compiled, callbacks ) == SIR_GRAPHICS_INVALID_ARGUMENT && trace.nRecordCount == 0;
+}
+
+static bool testPlacementReuseRejectsStalePlan( void ) noexcept
+{
+	alignas( SIRFrameGraph ) uint8_t szStorage[sizeof( SIRFrameGraph )] = {};
+	SIRFrameGraph *pFirst = new ( szStorage ) SIRFrameGraph();
+	pFirst->setCullingEnabled( true );
+	uint32_t nPass = 0;
+	const sirFrameGraphPass_t pass = { SIR_GRAPHICS_QUEUE_DIRECT, 0, true };
+	if ( pFirst->addPass( pass, &nPass ) != SIR_GRAPHICS_SUCCESS ) {
+		pFirst->~SIRFrameGraph();
+		return false;
+	}
+	sirFrameGraphCompiled_t compiled = {};
+	const bool bCompiled = pFirst->compile( makeCaps(), &compiled ) == SIR_GRAPHICS_SUCCESS;
+	pFirst->~SIRFrameGraph();
+	SIRFrameGraph *pSecond = new ( szStorage ) SIRFrameGraph();
+	pSecond->setCullingEnabled( true );
+	pSecond->addPass( pass, &nPass );
+	sirFrameGraphRecordTrace_t trace = {};
+	const sirFrameGraphCallbacks_t callbacks = { traceRecord, traceRollback, &trace };
+	const bool bRejected = pSecond->record( compiled, callbacks ) == SIR_GRAPHICS_INVALID_ARGUMENT;
+	pSecond->~SIRFrameGraph();
+	return bCompiled && bRejected && trace.nRecordCount == 0;
+}
+
+static bool testLiveSplitWriteUnion( void ) noexcept
+{
+	SIRFrameGraph graph;
+	graph.setCullingEnabled( true );
+	uint32_t nResource = 0;
+	uint32_t nPass = 0;
+	const sirFrameGraphPass_t pass = { SIR_GRAPHICS_QUEUE_DIRECT, 0, false };
+	const sirFrameGraphPass_t consumer = { SIR_GRAPHICS_QUEUE_DIRECT, 0, true };
+	if ( graph.addResource( makeTransient( 2 ), &nResource ) != SIR_GRAPHICS_SUCCESS ||
+	     graph.addPass( pass, &nPass ) != SIR_GRAPHICS_SUCCESS || graph.addPass( pass, &nPass ) != SIR_GRAPHICS_SUCCESS ||
+	     graph.addPass( consumer, &nPass ) != SIR_GRAPHICS_SUCCESS ) {
+		return false;
+	}
+	sirFrameGraphAccess_t first = makeAccess( 0, nResource, SIR_GRAPHICS_STATE_COLOR_ATTACHMENT, true );
+	sirFrameGraphAccess_t second = makeAccess( 1, nResource, SIR_GRAPHICS_STATE_COLOR_ATTACHMENT, true );
+	second.nBaseMip = 1;
+	sirFrameGraphAccess_t read = makeAccess( 2, nResource, SIR_GRAPHICS_STATE_SHADER_READ, false );
+	read.nMipCount = 2;
+	if ( graph.addAccess( first ) != SIR_GRAPHICS_SUCCESS || graph.addAccess( second ) != SIR_GRAPHICS_SUCCESS ||
+	     graph.addAccess( read ) != SIR_GRAPHICS_SUCCESS ) {
+		return false;
+	}
+	sirFrameGraphCompiled_t compiled = {};
+	return graph.compile( makeCaps(), &compiled ) == SIR_GRAPHICS_SUCCESS && compiled.nPassCount == 3 && compiled.nDependencyCount == 2 &&
+	       compiled.nTransitionCount == 4;
+}
+
 typedef struct sirFrameGraphTestCase_s
 {
 	const char *pszName;
@@ -447,7 +764,17 @@ int main( void )
 	                                            { "queue legality/sparse", testQueueLegalityAndSparseRanges },
 	                                            { "same-pass/rollback", testSamePassDisjointAndAtomicFailure },
 	                                            { "layer-write union", testLayerWriteUnion },
-	                                            { "bounded region work", testBoundedRegionWork } };
+	                                            { "bounded region work", testBoundedRegionWork },
+	                                            { "output overwrite culling", testOutputCullingAndOverwrite },
+	                                            { "live read roots", testLiveReadDependencies },
+	                                            { "subresource export", testSubresourceOutputAndExplicitDependency },
+	                                            { "zero roots", testZeroRootsAndDeadInputs },
+	                                            { "output validation", testOutputValidation },
+	                                            { "record rollback", testRecordRollbackAndStalePlan },
+	                                            { "record forged plan", testRecordRejectsForgedPlan },
+	                                            { "record dependency order", testRecordEnforcesDependencies },
+	                                            { "placement reuse", testPlacementReuseRejectsStalePlan },
+	                                            { "live split write union", testLiveSplitWriteUnion } };
 	for ( uint32_t iCase = 0; iCase < sizeof( szCases ) / sizeof( szCases[0] ); ++iCase ) {
 		if ( !szCases[iCase].pTest() ) {
 			fprintf( stderr, "FrameGraph regression failed: %s\n", szCases[iCase].pszName );
