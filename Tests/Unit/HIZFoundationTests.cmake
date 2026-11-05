@@ -30,3 +30,9 @@ add_executable(SIRHiZCommandsTests SIRHiZCommandsTests.cpp)
 target_link_libraries(SIRHiZCommandsTests PRIVATE SIR::Graphics)
 add_test(NAME renderer.visibility.commands COMMAND SIRHiZCommandsTests)
 sir_configure_owned_target(SIRHiZCommandsTests)
+
+# HIZ-03 per-mip sampled/storage descriptors, constant uploads, failure rollback and deferred retirement.
+add_executable(SIRHiZBindingsTests SIRHiZBindingsTests.cpp)
+target_link_libraries(SIRHiZBindingsTests PRIVATE SIR::Graphics)
+add_test(NAME renderer.visibility.bindings COMMAND SIRHiZBindingsTests)
+sir_configure_owned_target(SIRHiZBindingsTests)
