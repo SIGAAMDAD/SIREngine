@@ -325,4 +325,3 @@ SIRResourceResult sirShaderPublishMaterial( SIRResourceGraphWriter& writer, cons
 	}
 	return eResult;
 }
-

@@ -124,4 +124,3 @@ SIRResourceResult sirShaderPublishMaterial( SIRResourceGraphWriter& writer, cons
                                             const sirShaderPublicationRequest_t& request, SIRResourceHandle *pHandle ) noexcept;
 
 #endif // __SIRENGINE_SIRSHADERGRDG_H__
-

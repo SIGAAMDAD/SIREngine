@@ -320,4 +320,3 @@ int main( void )
 	testGRDGPublication();
 	return 0;
 }
-

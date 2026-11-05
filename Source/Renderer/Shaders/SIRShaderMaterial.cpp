@@ -215,4 +215,3 @@ sirGraphicsResult_t sirShaderValidateMaterial( const void *pBytes, uint64_t nLen
 	}
 	return SIR_GRAPHICS_SUCCESS;
 }
-
