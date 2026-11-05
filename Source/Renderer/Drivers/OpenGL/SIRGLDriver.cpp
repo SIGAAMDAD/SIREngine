@@ -17,6 +17,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Renderer/Drivers/OpenGL/SIRGLBuffers.h>
 #include <Renderer/Drivers/OpenGL/SIRGLContext.h>
 #include <Renderer/Drivers/OpenGL/SIRGLHandlePool.h>
+#include <Renderer/Drivers/OpenGL/SIRGLSamplers.h>
 #include <atomic>
 #include <new>
 #include <string.h>
@@ -40,6 +41,7 @@ typedef struct sirGLDevice_s
 	sirGLProbe_t probe;
 	sirGLHandlePool_t handles;
 	sirGLBufferDispatch_t buffers;
+	sirGLSamplerDispatch_t samplers;
 	uint64_t nCommittedBufferBytes;
 	uint64_t nPeakBufferBytes;
 	uint32_t nGeneration;
@@ -208,9 +210,32 @@ static uint32_t sirGLCreateView( void *, const sirGraphicsViewDesc_t *, sirGraph
 	return SIR_GRAPHICS_UNSUPPORTED;
 }
 
-static uint32_t sirGLCreateSampler( void *, const sirGraphicsSamplerDesc_t *, sirGraphicsHandle_t * ) noexcept
+static uint32_t sirGLCreateSampler( void *pDevice, const sirGraphicsSamplerDesc_t *pDesc, sirGraphicsHandle_t *pHandle ) noexcept
 {
-	return SIR_GRAPHICS_UNSUPPORTED;
+	if ( pDevice == nullptr || pDesc == nullptr || pHandle == nullptr ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	sirGLDevice_t *pState = ( sirGLDevice_t * )pDevice;
+	if ( pState->pContext == nullptr ) {
+		return SIR_GRAPHICS_DEVICE_LOST;
+	}
+	if ( !sirGLContextOwnsThread( pState->pContext ) ) {
+		return SIR_GRAPHICS_BUSY;
+	}
+	if ( pState->handles.nFreeHead == UINT32_MAX ) {
+		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
+	}
+	uint32_t nName = 0;
+	uint32_t nStatus = sirGLCreateNativeSampler( &pState->samplers, pDesc, &nName );
+	if ( nStatus != SIR_GRAPHICS_SUCCESS ) {
+		return nStatus;
+	}
+	const sirGLNativeResource_t native = { nName, SIR_GRAPHICS_HANDLE_SAMPLER, 0 };
+	nStatus = sirGLHandlePoolInsert( &pState->handles, &native, pHandle );
+	if ( nStatus != SIR_GRAPHICS_SUCCESS ) {
+		( void )sirGLDeleteNativeSampler( &pState->samplers, nName );
+	}
+	return nStatus;
 }
 
 static uint32_t sirGLCreatePipeline( void *, const sirGraphicsABIPipeline_t *, sirGraphicsHandle_t * ) noexcept
@@ -289,15 +314,18 @@ static uint32_t sirGLRetireResource( void *pDevice, sirGraphicsHandle_t hResourc
 	if ( nStatus != SIR_GRAPHICS_SUCCESS ) {
 		return nStatus;
 	}
-	if ( resource.eType != SIR_GRAPHICS_HANDLE_BUFFER ) {
+	if ( resource.eType == SIR_GRAPHICS_HANDLE_BUFFER ) {
+		nStatus = sirGLDeleteNativeBuffer( &pState->buffers, resource.nName );
+	} else if ( resource.eType == SIR_GRAPHICS_HANDLE_SAMPLER ) {
+		nStatus = sirGLDeleteNativeSampler( &pState->samplers, resource.nName );
+	} else {
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
-	nStatus = sirGLDeleteNativeBuffer( &pState->buffers, resource.nName );
 	if ( nStatus != SIR_GRAPHICS_SUCCESS ) {
 		return nStatus;
 	}
 	nStatus = sirGLHandlePoolTake( &pState->handles, hResource, &resource );
-	if ( nStatus == SIR_GRAPHICS_SUCCESS ) {
+	if ( nStatus == SIR_GRAPHICS_SUCCESS && resource.eType == SIR_GRAPHICS_HANDLE_BUFFER ) {
 		pState->nCommittedBufferBytes -= resource.nRequestedBytes;
 	}
 	return nStatus;
@@ -404,6 +432,9 @@ static uint32_t sirGLCreateDevice( void *pDriver, const sirGraphicsABIDeviceRequ
 		return nStatus;
 	}
 	nStatus = sirGLLoadBufferDispatch( sirGLResolveNativeProcedure, pContext, &pNew->buffers );
+	if ( nStatus == SIR_GRAPHICS_SUCCESS ) {
+		nStatus = sirGLLoadSamplerDispatch( sirGLResolveNativeProcedure, pContext, &pNew->samplers );
+	}
 	if ( nStatus != SIR_GRAPHICS_SUCCESS ) {
 		( void )sirGLHandlePoolShutdown( &pNew->handles );
 		pState->host.pFree( pState->host.pContext, pNew );
