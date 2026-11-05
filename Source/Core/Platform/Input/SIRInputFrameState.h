@@ -35,14 +35,14 @@ public:
 	SIRInputFrameState( void ) noexcept;
 	bool begin( uint64_t nTick ) noexcept;
 	bool postDevice( sirInputDeviceId_t id, sirInputDeviceClass_t eClass, sirInputSignal_t eSignal,
-	                 const sirInputTimestamp_t &time ) noexcept;
+	                 const sirInputTimestamp_t& time ) noexcept;
 	bool postChanges( sirInputDeviceId_t id, sirInputDeviceClass_t eClass, const sirInputControlChange_t *pChanges, uint32_t nCount,
-	                  const sirInputTimestamp_t &time ) noexcept;
+	                  const sirInputTimestamp_t& time ) noexcept;
 	bool postPointer( sirInputDeviceId_t id, sirInputDeviceClass_t eClass, sirInputSignal_t eSignal, uint16_t nControl, int32_t nX,
-	                  int32_t nY, const sirInputTimestamp_t &time ) noexcept;
+	                  int32_t nY, const sirInputTimestamp_t& time ) noexcept;
 	void clearDevice( sirInputDeviceId_t id ) noexcept;
-	bool publish( const SIRInputDeviceRegistry &registry ) noexcept;
-	bool recover( const SIRInputDeviceRegistry &registry ) noexcept;
+	bool publish( const SIRInputDeviceRegistry& registry ) noexcept;
+	bool recover( const SIRInputDeviceRegistry& registry ) noexcept;
 	bool canPost( uint32_t nCount ) const noexcept;
 	void setTimingMetricsEnabled( bool bEnabled ) noexcept;
 	bool overflowed( void ) const noexcept;
@@ -52,8 +52,8 @@ public:
 	void stop( void ) noexcept;
 
 private:
-	bool append( const sirInputEvent_t &event ) noexcept;
-	bool apply( sirInputDeviceState_t &state, const sirInputControlChange_t &event ) const noexcept;
+	bool append( const sirInputEvent_t& event ) noexcept;
+	bool apply( sirInputDeviceState_t& state, const sirInputControlChange_t& event ) const noexcept;
 	void markStateDirty( uint32_t nSlot ) noexcept;
 	sirInputDeviceState_t m_Live[SIR_INPUT_DEVICE_CAPACITY];
 	sirInputFrame_t m_Frames[2];

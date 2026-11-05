@@ -44,10 +44,10 @@ class SIRStackBookmark
 public:
 	~SIRStackBookmark();
 
-	SIRStackBookmark( const SIRStackBookmark & ) = delete;
-	SIRStackBookmark &operator=( const SIRStackBookmark & ) = delete;
-	SIRStackBookmark( SIRStackBookmark && ) = delete;
-	SIRStackBookmark &operator=( SIRStackBookmark && ) = delete;
+	SIRStackBookmark( const SIRStackBookmark& ) = delete;
+	SIRStackBookmark& operator=( const SIRStackBookmark& ) = delete;
+	SIRStackBookmark( SIRStackBookmark&& ) = delete;
+	SIRStackBookmark& operator=( SIRStackBookmark&& ) = delete;
 
 private:
 	friend class SIRVirtualStackAllocator;
@@ -65,10 +65,10 @@ class SIRVirtualStackAllocator
 {
 public:
 	SIRVirtualStackAllocator( void );
-	SIRVirtualStackAllocator( const SIRVirtualStackAllocator & ) = delete;
-	SIRVirtualStackAllocator &operator=( const SIRVirtualStackAllocator & ) = delete;
-	SIRVirtualStackAllocator( SIRVirtualStackAllocator && ) = delete;
-	SIRVirtualStackAllocator &operator=( SIRVirtualStackAllocator && ) = delete;
+	SIRVirtualStackAllocator( const SIRVirtualStackAllocator& ) = delete;
+	SIRVirtualStackAllocator& operator=( const SIRVirtualStackAllocator& ) = delete;
+	SIRVirtualStackAllocator( SIRVirtualStackAllocator&& ) = delete;
+	SIRVirtualStackAllocator& operator=( SIRVirtualStackAllocator&& ) = delete;
 
 	bool init( SIRMemorySegment *pSegment, sirStackDecommitMode_t eMode, uint64_t nCommitIncrementBytes = 0 );
 

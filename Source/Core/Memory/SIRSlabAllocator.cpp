@@ -125,7 +125,7 @@ bool SIRSlabAllocator::init( SIRMemorySegment *pSegment, uint32_t nObjectBytes, 
 
 void SIRSlabAllocator::unlink( uint32_t nIndex )
 {
-	sirSlabDesc_t &desc = m_pDescs[nIndex];
+	sirSlabDesc_t& desc = m_pDescs[nIndex];
 	uint32_t *pHead = desc.nState == SIR_SLAB_PARTIAL ? &m_nPartialHead : desc.nState == SIR_SLAB_EMPTY ? &m_nEmptyHead : &m_nDormantHead;
 	if ( desc.nPrev == SIR_SLAB_NONE ) {
 		*pHead = desc.nNext;
@@ -141,7 +141,7 @@ void SIRSlabAllocator::unlink( uint32_t nIndex )
 
 void SIRSlabAllocator::link( uint32_t nIndex, uint32_t nState )
 {
-	sirSlabDesc_t &desc = m_pDescs[nIndex];
+	sirSlabDesc_t& desc = m_pDescs[nIndex];
 	uint32_t *pHead = nState == SIR_SLAB_PARTIAL ? &m_nPartialHead : nState == SIR_SLAB_EMPTY ? &m_nEmptyHead : &m_nDormantHead;
 	desc.nState = nState;
 	desc.nPrev = SIR_SLAB_NONE;
@@ -154,7 +154,7 @@ void SIRSlabAllocator::link( uint32_t nIndex, uint32_t nState )
 
 bool SIRSlabAllocator::activateSlab( uint32_t nIndex )
 {
-	sirSlabDesc_t &desc = m_pDescs[nIndex];
+	sirSlabDesc_t& desc = m_pDescs[nIndex];
 	if ( desc.nState != SIR_SLAB_DORMANT && desc.nState != SIR_SLAB_DECOMMITTED ) {
 		return false;
 	}
@@ -201,7 +201,7 @@ void *SIRSlabAllocator::alloc( void )
 		m_pDescs[nSlab].nState = SIR_SLAB_ACTIVE;
 		m_nActiveSlab = nSlab;
 	}
-	sirSlabDesc_t &desc = m_pDescs[nSlab];
+	sirSlabDesc_t& desc = m_pDescs[nSlab];
 	uint32_t nSlot = desc.nFreeHead;
 	if ( nSlot != SIR_SLAB_NONE ) {
 		std::memcpy( &desc.nFreeHead, slot( nSlab, nSlot ), sizeof( uint32_t ) );
@@ -251,7 +251,7 @@ bool SIRSlabAllocator::free( void *pMemory )
 	if ( nSlot >= m_pDescs[nSlab].nFresh ) {
 		return false;
 	}
-	sirSlabDesc_t &desc = m_pDescs[nSlab];
+	sirSlabDesc_t& desc = m_pDescs[nSlab];
 	if ( desc.nState != SIR_SLAB_PARTIAL && desc.nState != SIR_SLAB_FULL && desc.nState != SIR_SLAB_ACTIVE ) {
 		return false;
 	}

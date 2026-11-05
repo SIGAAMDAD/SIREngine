@@ -35,8 +35,8 @@ class SIRTLSFAllocator
 {
 public:
 	SIRTLSFAllocator( void );
-	SIRTLSFAllocator( const SIRTLSFAllocator & ) = delete;
-	SIRTLSFAllocator &operator=( const SIRTLSFAllocator & ) = delete;
+	SIRTLSFAllocator( const SIRTLSFAllocator& ) = delete;
+	SIRTLSFAllocator& operator=( const SIRTLSFAllocator& ) = delete;
 
 	bool init( SIRMemorySegment *pSegment, uint32_t nCommitIncrementBytes = 65536 );
 	void *alloc( uint32_t nBytes, uint32_t nAlignment = 16 );

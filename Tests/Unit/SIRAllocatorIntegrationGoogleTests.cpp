@@ -345,7 +345,7 @@ TEST( SIRAllocatorIntegration, ThreadLocalIndependentWorkerSeats )
 			}
 		} );
 	}
-	for ( std::thread &worker : workers ) {
+	for ( std::thread& worker : workers ) {
 		worker.join();
 	}
 	EXPECT_EQ( nSucceeded.load(), 2u );

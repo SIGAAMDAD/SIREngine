@@ -42,11 +42,11 @@ class SIRInputWindow
 public:
 	SIRInputWindow( void ) noexcept;
 	~SIRInputWindow( void );
-	SIRInputWindow( const SIRInputWindow & ) = delete;
-	SIRInputWindow &operator=( const SIRInputWindow & ) = delete;
+	SIRInputWindow( const SIRInputWindow& ) = delete;
+	SIRInputWindow& operator=( const SIRInputWindow& ) = delete;
 
-	bool open( SIRInputService &input, SIRInputBackend &desktop ) noexcept;
-	bool pump( SIRInputService &input ) noexcept;
+	bool open( SIRInputService& input, SIRInputBackend& desktop ) noexcept;
+	bool pump( SIRInputService& input ) noexcept;
 	bool isOpen( void ) const noexcept;
 	bool setCursorMode( sirInputCursorMode_t eMode ) noexcept;
 	sirInputCursorMode_t cursorMode( void ) const noexcept;

@@ -57,7 +57,7 @@ uint64_t SIRWindowsGameInputCodec::timestampNanoseconds( uint64_t nMicroseconds 
 	return nMicroseconds * 1000U;
 }
 
-bool SIRWindowsGameInputCodec::decode( const sirGameInputRawGamepad_t &raw, const sirGameInputDecodedGamepad_t &previous,
+bool SIRWindowsGameInputCodec::decode( const sirGameInputRawGamepad_t& raw, const sirGameInputDecodedGamepad_t& previous,
                                        sirGameInputDecodedGamepad_t *pNext, sirInputControlChange_t *pChanges, uint32_t nCapacity,
                                        uint32_t *pCount ) noexcept
 {

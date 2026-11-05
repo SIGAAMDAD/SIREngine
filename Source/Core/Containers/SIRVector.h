@@ -40,7 +40,7 @@ private:
 	const sirContainerAllocator_t *m_pAllocator;
 
 	template <typename... Args>
-	sirContainerResult_t growAndEmplace( Args &&...args )
+	sirContainerResult_t growAndEmplace( Args&&...args )
 	{
 		if ( m_nSize == UINT32_MAX ) {
 			return SIR_CONTAINER_SIZE_OVERFLOW;
@@ -95,10 +95,10 @@ public:
 		SIRRawStorage::deallocate( m_pAllocator, m_pData, ( size_t )m_nCapacity * sizeof( T ), alignof( T ) );
 	}
 
-	SIRVector( const SIRVector & ) = delete;
-	SIRVector &operator=( const SIRVector & ) = delete;
+	SIRVector( const SIRVector& ) = delete;
+	SIRVector& operator=( const SIRVector& ) = delete;
 
-	SIRVector( SIRVector &&other ) noexcept
+	SIRVector( SIRVector&& other ) noexcept
 	    : m_pData( other.m_pData ), m_nSize( other.m_nSize ), m_nCapacity( other.m_nCapacity ), m_pAllocator( other.m_pAllocator )
 	{
 		other.m_pData = nullptr;
@@ -106,7 +106,7 @@ public:
 		other.m_nCapacity = 0;
 	}
 
-	SIRVector &operator=( SIRVector &&other ) noexcept
+	SIRVector& operator=( SIRVector&& other ) noexcept
 	{
 		if ( this != &other ) {
 			clear();
@@ -166,12 +166,12 @@ public:
 	{
 		return iIndex < m_nSize ? m_pData + iIndex : nullptr;
 	}
-	T &operator[]( uint32_t iIndex ) noexcept
+	T& operator[]( uint32_t iIndex ) noexcept
 	{
 		assert( iIndex < m_nSize );
 		return m_pData[iIndex];
 	}
-	const T &operator[]( uint32_t iIndex ) const noexcept
+	const T& operator[]( uint32_t iIndex ) const noexcept
 	{
 		assert( iIndex < m_nSize );
 		return m_pData[iIndex];
@@ -248,7 +248,7 @@ public:
 	}
 
 	template <typename... Args>
-	sirContainerResult_t tryEmplaceBack( Args &&...args )
+	sirContainerResult_t tryEmplaceBack( Args&&...args )
 	{
 		if ( m_nSize < m_nCapacity ) {
 			new ( m_pData + m_nSize ) T( std::forward<Args>( args )... );
@@ -258,7 +258,7 @@ public:
 		return growAndEmplace( std::forward<Args>( args )... );
 	}
 
-	sirContainerResult_t tryPushBack( const T &value )
+	sirContainerResult_t tryPushBack( const T& value )
 	{
 		if ( m_nSize == m_nCapacity && m_pData != nullptr ) {
 			uintptr_t nAddress = ( uintptr_t )&value;
@@ -271,7 +271,7 @@ public:
 		return tryEmplaceBack( value );
 	}
 
-	sirContainerResult_t tryPushBack( T &&value )
+	sirContainerResult_t tryPushBack( T&& value )
 	{
 		if ( m_nSize == m_nCapacity && m_pData != nullptr ) {
 			uintptr_t nAddress = ( uintptr_t )&value;

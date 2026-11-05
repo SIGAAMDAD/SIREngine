@@ -35,16 +35,16 @@ class SIRWindowsRawBackend final : public SIRInputBackend
 public:
 	SIRWindowsRawBackend( void ) noexcept;
 	sirInputBackendId_t id( void ) const noexcept override;
-	void sample( SIRInputService &service ) noexcept override;
-	void resynchronize( SIRInputService &service ) noexcept override;
+	void sample( SIRInputService& service ) noexcept override;
+	void resynchronize( SIRInputService& service ) noexcept override;
 	bool vibrate( sirInputDeviceId_t hDevice, uint16_t nLeft, uint16_t nRight ) noexcept override;
-	void stop( SIRInputService &service ) noexcept override;
+	void stop( SIRInputService& service ) noexcept override;
 	bool attachWindow( void *pWindow ) noexcept;
-	bool processMessage( SIRInputService &service, uint32_t nMessage, uintptr_t nWParam, intptr_t nLParam ) noexcept;
+	bool processMessage( SIRInputService& service, uint32_t nMessage, uintptr_t nWParam, intptr_t nLParam ) noexcept;
 
 private:
-	bool processRaw( SIRInputService &service, void *pHRawInput ) noexcept;
-	bool drainBuffered( SIRInputService &service ) noexcept;
+	bool processRaw( SIRInputService& service, void *pHRawInput ) noexcept;
+	bool drainBuffered( SIRInputService& service ) noexcept;
 	void *m_pWindow;
 };
 

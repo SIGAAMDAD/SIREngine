@@ -70,10 +70,10 @@ class SIRInputControllerProfiles
 {
 public:
 	SIRInputControllerProfiles( void ) noexcept;
-	bool add( const sirInputControllerProfile_t &profile ) noexcept;
+	bool add( const sirInputControllerProfile_t& profile ) noexcept;
 	const sirInputControllerProfile_t *find( uint16_t nBus, uint16_t nVendor, uint16_t nProduct ) const noexcept;
-	static int16_t button( const sirInputControllerProfile_t &profile, uint16_t nNativeCode ) noexcept;
-	static int16_t axis( const sirInputControllerProfile_t &profile, uint16_t nNativeCode, bool *pInvert ) noexcept;
+	static int16_t button( const sirInputControllerProfile_t& profile, uint16_t nNativeCode ) noexcept;
+	static int16_t axis( const sirInputControllerProfile_t& profile, uint16_t nNativeCode, bool *pInvert ) noexcept;
 	uint32_t count( void ) const noexcept;
 	const sirInputControllerProfile_t *profileAt( uint32_t iProfile ) const noexcept;
 	bool saveCooked( uint8_t *pBytes, uint32_t nCapacity, uint32_t *pWritten ) const noexcept;

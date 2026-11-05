@@ -62,7 +62,7 @@ static bool testHighRateMouseBatch( void )
 
 	RAWINPUT szRecords[128] = {};
 	for ( uint32_t iRecord = 0; iRecord < 128; ++iRecord ) {
-		RAWINPUT &packet = szRecords[iRecord];
+		RAWINPUT& packet = szRecords[iRecord];
 		packet.header.dwType = RIM_TYPEMOUSE;
 		packet.header.dwSize = sizeof( RAWINPUT );
 		packet.header.hDevice = ( HANDLE )( uintptr_t )12;

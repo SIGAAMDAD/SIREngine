@@ -47,10 +47,10 @@ public:
 	{
 		clearAndRelease();
 	}
-	SIRPagedArray( const SIRPagedArray & ) = delete;
-	SIRPagedArray &operator=( const SIRPagedArray & ) = delete;
-	SIRPagedArray( SIRPagedArray && ) = delete;
-	SIRPagedArray &operator=( SIRPagedArray && ) = delete;
+	SIRPagedArray( const SIRPagedArray& ) = delete;
+	SIRPagedArray& operator=( const SIRPagedArray& ) = delete;
+	SIRPagedArray( SIRPagedArray&& ) = delete;
+	SIRPagedArray& operator=( SIRPagedArray&& ) = delete;
 
 	uint32_t getSize( void ) const noexcept
 	{
@@ -76,7 +76,7 @@ public:
 	}
 
 	template <typename... Args>
-	sirContainerResult_t tryEmplaceBack( Args &&...args )
+	sirContainerResult_t tryEmplaceBack( Args&&...args )
 	{
 		if ( m_nSize == UINT32_MAX ) {
 			return SIR_CONTAINER_SIZE_OVERFLOW;

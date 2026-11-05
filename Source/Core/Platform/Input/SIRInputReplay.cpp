@@ -69,7 +69,7 @@ uint32_t SIRInputReplayTape::checksum( const uint8_t *pBytes, uint32_t nLength )
 	return nHash;
 }
 
-bool SIRInputReplayTape::valid( const sirInputActionState_t &state ) noexcept
+bool SIRInputReplayTape::valid( const sirInputActionState_t& state ) noexcept
 {
 	if ( state.nActionId == 0 || state.nUser >= SIR_INPUT_USER_CAPACITY ) {
 		return false;
@@ -92,7 +92,7 @@ bool SIRInputReplayTape::beginRecord( uint8_t *pBuffer, uint32_t nCapacity ) noe
 	return true;
 }
 
-bool SIRInputReplayTape::append( uint64_t nTick, const SIRInputActions &actions, const sirInputReplayKey_t *pKeys,
+bool SIRInputReplayTape::append( uint64_t nTick, const SIRInputActions& actions, const sirInputReplayKey_t *pKeys,
                                  uint32_t nCount ) noexcept
 {
 	if ( m_eMode != SIR_INPUT_REPLAY_RECORD || nTick == 0 || nTick <= m_nLastTick || nCount > SIR_INPUT_ACTION_CAPACITY ||
@@ -178,7 +178,7 @@ bool SIRInputReplayTape::next( sirInputReplayFrame_t *pFrame ) noexcept
 	candidate.nCount = nCount;
 	for ( uint32_t i = 0; i < nCount; ++i ) {
 		const uint8_t *pRecord = pBytes + SIR_INPUT_REPLAY_HEADER_BYTES + i * SIR_INPUT_REPLAY_RECORD_BYTES;
-		sirInputActionState_t &state = candidate.actions[i];
+		sirInputActionState_t& state = candidate.actions[i];
 		state.nActionId = read32( pRecord );
 		state.nUser = read32( pRecord + 4 );
 		state.nValue = ( int32_t )read32( pRecord + 8 );
@@ -252,13 +252,13 @@ sirInputReplayMode_t SIRInputReplayTape::mode( void ) const noexcept
 	return m_eMode;
 }
 
-bool SIRInputReplayTape::validateFrame( const sirInputReplayFrame_t &frame ) noexcept
+bool SIRInputReplayTape::validateFrame( const sirInputReplayFrame_t& frame ) noexcept
 {
 	if ( frame.nTick == 0 || frame.nCount > SIR_INPUT_ACTION_CAPACITY ) {
 		return false;
 	}
 	for ( uint32_t i = 0; i < frame.nCount; ++i ) {
-		const sirInputActionState_t &state = frame.actions[i];
+		const sirInputActionState_t& state = frame.actions[i];
 		if ( !valid( state ) ) {
 			return false;
 		}
@@ -271,7 +271,7 @@ bool SIRInputReplayTape::validateFrame( const sirInputReplayFrame_t &frame ) noe
 	return true;
 }
 
-bool SIRInputReplayTape::query( const sirInputReplayFrame_t &frame, uint32_t nActionId, uint32_t nUser,
+bool SIRInputReplayTape::query( const sirInputReplayFrame_t& frame, uint32_t nActionId, uint32_t nUser,
                                 sirInputActionState_t *pOut ) noexcept
 {
 	if ( pOut == nullptr || frame.nCount > SIR_INPUT_ACTION_CAPACITY ) {

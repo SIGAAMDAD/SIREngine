@@ -115,9 +115,9 @@ extern "C" ssize_t __wrap_read( int nFd, void *pBuf, size_t nBytes )
 class SIRInputEvdevBatchTestPeer
 {
 public:
-	static bool install( SIRLinuxEvdevBackend &backend, int nReadFd, sirInputDeviceId_t device, bool bMonotonic = false ) noexcept
+	static bool install( SIRLinuxEvdevBackend& backend, int nReadFd, sirInputDeviceId_t device, bool bMonotonic = false ) noexcept
 	{
-		sirInputEvdevSlot_t &slot = backend.m_Slots[0];
+		sirInputEvdevSlot_t& slot = backend.m_Slots[0];
 		if ( slot.bOpen ) {
 			return false;
 		}
@@ -130,7 +130,7 @@ public:
 		return true;
 	}
 
-	static int16_t resolve( SIRLinuxEvdevBackend &backend, uint16_t nCode, bool bProfile, bool bReplace ) noexcept
+	static int16_t resolve( SIRLinuxEvdevBackend& backend, uint16_t nCode, bool bProfile, bool bReplace ) noexcept
 	{
 		sirInputEvdevSlot_t slot = {};
 		slot.bHasProfile = bProfile;
@@ -140,22 +140,22 @@ public:
 		return backend.resolveButton( slot, nCode );
 	}
 
-	static void pollHotplug( SIRLinuxEvdevBackend &backend, SIRInputService &service ) noexcept
+	static void pollHotplug( SIRLinuxEvdevBackend& backend, SIRInputService& service ) noexcept
 	{
 		backend.pollHotplug( service );
 	}
 
-	static sirInputDeviceId_t firstDevice( const SIRLinuxEvdevBackend &backend ) noexcept
+	static sirInputDeviceId_t firstDevice( const SIRLinuxEvdevBackend& backend ) noexcept
 	{
 		return backend.m_Slots[0].id;
 	}
 
-	static bool firstOpen( const SIRLinuxEvdevBackend &backend ) noexcept
+	static bool firstOpen( const SIRLinuxEvdevBackend& backend ) noexcept
 	{
 		return backend.m_Slots[0].bOpen;
 	}
 
-	static bool queueBoundary( SIRLinuxEvdevBackend &backend ) noexcept
+	static bool queueBoundary( SIRLinuxEvdevBackend& backend ) noexcept
 	{
 		sirInputEvdevSlot_t slot = {};
 		if ( !backend.queueChange( slot, SIR_INPUT_BUTTON, SIR_INPUT_PAD_SOUTH, 1 ) || slot.nPending != 1 ) {
@@ -165,25 +165,25 @@ public:
 		return !backend.queueChange( slot, SIR_INPUT_BUTTON, SIR_INPUT_PAD_SOUTH, 1 ) && slot.bDesynchronized && slot.nPending == 0;
 	}
 
-	static bool open( SIRLinuxEvdevBackend &backend, SIRInputService &service, const char *pszPath ) noexcept
+	static bool open( SIRLinuxEvdevBackend& backend, SIRInputService& service, const char *pszPath ) noexcept
 	{
 		return backend.openDevice( service, pszPath );
 	}
 
-	static bool desynchronized( const SIRLinuxEvdevBackend &backend ) noexcept
+	static bool desynchronized( const SIRLinuxEvdevBackend& backend ) noexcept
 	{
 		return backend.m_Slots[0].bDesynchronized;
 	}
 
-	static void configureAxes( SIRLinuxEvdevBackend &backend ) noexcept
+	static void configureAxes( SIRLinuxEvdevBackend& backend ) noexcept
 	{
-		sirInputEvdevSlot_t &slot = backend.m_Slots[0];
+		sirInputEvdevSlot_t& slot = backend.m_Slots[0];
 		slot.bHatDPad = true;
 		slot.axes[SIR_INPUT_AXIS_LX] = { -100, 100, ABS_X, false, true, false };
 		slot.axes[SIR_INPUT_AXIS_LY] = { -100, 100, ABS_Y, false, true, true };
 	}
 
-	static void setRumble( SIRLinuxEvdevBackend &backend, bool bCanRumble ) noexcept
+	static void setRumble( SIRLinuxEvdevBackend& backend, bool bCanRumble ) noexcept
 	{
 		backend.m_Slots[0].bCanRumble = bCanRumble;
 	}

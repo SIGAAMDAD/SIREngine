@@ -28,12 +28,12 @@ public:
 		return SIR_INPUT_TEST;
 	}
 
-	void sample( SIRInputService &input ) noexcept override
+	void sample( SIRInputService& input ) noexcept override
 	{
 		( void )input;
 	}
 
-	void resynchronize( SIRInputService &input ) noexcept override
+	void resynchronize( SIRInputService& input ) noexcept override
 	{
 		( void )input;
 		++m_nResyncs;
@@ -53,7 +53,7 @@ public:
 		return SIR_INPUT_HAPTIC_CAP_RUMBLE;
 	}
 
-	void stop( SIRInputService &input ) noexcept override
+	void stop( SIRInputService& input ) noexcept override
 	{
 		( void )input;
 	}
@@ -140,7 +140,7 @@ static bool sirInputGapBackendAndHaptics( void ) noexcept
 	if ( !input.attach( backend ) || !input.begin( 1 ) || input.loseBackendState( SIR_INPUT_LINUX_EVDEV ) ) {
 		return false;
 	}
-	const SIRInputService &reference = input;
+	const SIRInputService& reference = input;
 	if ( reference.actions().contextCount() != 0 ) {
 		return false;
 	}

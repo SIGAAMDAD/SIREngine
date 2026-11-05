@@ -6,7 +6,7 @@ SIRApplication::SIRApplication( void ) noexcept
 {
 }
 
-bool SIRApplication::attachInput( SIRInputService &input, sirAppInputPump_t pPump, void *pContext ) noexcept
+bool SIRApplication::attachInput( SIRInputService& input, sirAppInputPump_t pPump, void *pContext ) noexcept
 {
 	if ( m_eState != SIR_APP_UNINITIALIZED || m_pInput != nullptr ) {
 		return false;
@@ -145,7 +145,7 @@ uint32_t SIRApplication::getSystemCount( void ) const noexcept
 	return m_nSystemCount;
 }
 
-SIREventRegistry &SIRApplication::getEventRegistry( void ) noexcept
+SIREventRegistry& SIRApplication::getEventRegistry( void ) noexcept
 {
 	return m_EventRegistry;
 }

@@ -125,7 +125,7 @@ int16_t SIRLinuxEvdevBackend::mapAxis( uint16_t nNative ) noexcept
 	}
 }
 
-bool SIRLinuxEvdevBackend::addProfile( const sirInputControllerProfile_t &profile ) noexcept
+bool SIRLinuxEvdevBackend::addProfile( const sirInputControllerProfile_t& profile ) noexcept
 {
 	if ( m_bProfilesFrozen ) {
 		return false;
@@ -182,7 +182,7 @@ bool SIRLinuxEvdevBackend::loadCookedProfilesFile( const char *pszPath ) noexcep
 	return importCookedProfiles( szBytes, ( uint32_t )nRead );
 }
 
-int16_t SIRLinuxEvdevBackend::resolveButton( const sirInputEvdevSlot_t &slot, uint16_t nCode ) noexcept
+int16_t SIRLinuxEvdevBackend::resolveButton( const sirInputEvdevSlot_t& slot, uint16_t nCode ) noexcept
 {
 	if ( slot.bHasProfile ) {
 		const int16_t nMapped = SIRInputControllerProfiles::button( slot.profile, nCode );
@@ -213,7 +213,7 @@ int32_t SIRLinuxEvdevBackend::normalize( int32_t nValue, int32_t nMinimum, int32
 	return nOut;
 }
 
-bool SIRLinuxEvdevBackend::queueChange( sirInputEvdevSlot_t &slot, sirInputSignal_t eSignal, uint16_t nCode, int32_t nValue ) noexcept
+bool SIRLinuxEvdevBackend::queueChange( sirInputEvdevSlot_t& slot, sirInputSignal_t eSignal, uint16_t nCode, int32_t nValue ) noexcept
 {
 	if ( slot.nPending >= SIR_INPUT_EVDEV_REPORT_CAPACITY ) {
 		slot.bDesynchronized = true;
@@ -224,7 +224,7 @@ bool SIRLinuxEvdevBackend::queueChange( sirInputEvdevSlot_t &slot, sirInputSigna
 	return true;
 }
 
-bool SIRLinuxEvdevBackend::openDevice( SIRInputService &service, const char *pszPath ) noexcept
+bool SIRLinuxEvdevBackend::openDevice( SIRInputService& service, const char *pszPath ) noexcept
 {
 	if ( pszPath == nullptr || strlen( pszPath ) >= sizeof( m_Slots[0].szPath ) ) {
 		return false;
@@ -278,7 +278,7 @@ bool SIRLinuxEvdevBackend::openDevice( SIRInputService &service, const char *psz
 		close( nFd );
 		return false;
 	}
-	sirInputEvdevSlot_t &slot = m_Slots[nFree];
+	sirInputEvdevSlot_t& slot = m_Slots[nFree];
 	slot = {};
 	slot.nFd = nFd;
 	slot.nRumbleEffect = -1;
@@ -322,7 +322,7 @@ bool SIRLinuxEvdevBackend::openDevice( SIRInputService &service, const char *psz
 			}
 		}
 		for ( uint16_t i = 0; i < slot.profile.nAxisCount; ++i ) {
-			const sirInputControllerAxisBinding_t &binding = slot.profile.axes[i];
+			const sirInputControllerAxisBinding_t& binding = slot.profile.axes[i];
 			nCodes[binding.nLogicalCode] = binding.nNativeCode;
 			bInvert[binding.nLogicalCode] = binding.bInvert;
 			bExplicit[binding.nLogicalCode] = true;
@@ -354,7 +354,7 @@ bool SIRLinuxEvdevBackend::openDevice( SIRInputService &service, const char *psz
 	return true;
 }
 
-bool SIRLinuxEvdevBackend::discover( SIRInputService &service, const char *pszDir ) noexcept
+bool SIRLinuxEvdevBackend::discover( SIRInputService& service, const char *pszDir ) noexcept
 {
 	if ( pszDir == nullptr || strlen( pszDir ) >= sizeof( m_szDirectory ) ) {
 		return false;
@@ -389,7 +389,7 @@ bool SIRLinuxEvdevBackend::discover( SIRInputService &service, const char *pszDi
 	return true;
 }
 
-bool SIRLinuxEvdevBackend::requery( SIRInputService &service, sirInputEvdevSlot_t &slot, bool bReset ) noexcept
+bool SIRLinuxEvdevBackend::requery( SIRInputService& service, sirInputEvdevSlot_t& slot, bool bReset ) noexcept
 {
 	if ( bReset && !service.loseState( id(), slot.id ) ) {
 		return false;
@@ -436,7 +436,7 @@ bool SIRLinuxEvdevBackend::requery( SIRInputService &service, sirInputEvdevSlot_
 	return service.emitControls( id(), slot.id, changes, nCount );
 }
 
-void SIRLinuxEvdevBackend::closeDevice( SIRInputService &service, sirInputEvdevSlot_t &slot ) noexcept
+void SIRLinuxEvdevBackend::closeDevice( SIRInputService& service, sirInputEvdevSlot_t& slot ) noexcept
 {
 	if ( !slot.bOpen ) {
 		return;
@@ -455,7 +455,7 @@ void SIRLinuxEvdevBackend::closeDevice( SIRInputService &service, sirInputEvdevS
 	slot.nRumbleEffect = -1;
 }
 
-void SIRLinuxEvdevBackend::pollHotplug( SIRInputService &service ) noexcept
+void SIRLinuxEvdevBackend::pollHotplug( SIRInputService& service ) noexcept
 {
 	if ( m_nWatchFd < 0 ) {
 		return;
@@ -496,7 +496,7 @@ void SIRLinuxEvdevBackend::pollHotplug( SIRInputService &service ) noexcept
 	}
 }
 
-void SIRLinuxEvdevBackend::resynchronize( SIRInputService &service ) noexcept
+void SIRLinuxEvdevBackend::resynchronize( SIRInputService& service ) noexcept
 {
 	for ( uint32_t i = 0; i < SIR_INPUT_EVDEV_CAPACITY; ++i ) {
 		if ( m_Slots[i].bOpen && !requery( service, m_Slots[i], false ) ) {
@@ -505,11 +505,11 @@ void SIRLinuxEvdevBackend::resynchronize( SIRInputService &service ) noexcept
 	}
 }
 
-void SIRLinuxEvdevBackend::sample( SIRInputService &service ) noexcept
+void SIRLinuxEvdevBackend::sample( SIRInputService& service ) noexcept
 {
 	pollHotplug( service );
 	for ( uint32_t i = 0; i < SIR_INPUT_EVDEV_CAPACITY; ++i ) {
-		sirInputEvdevSlot_t &slot = m_Slots[i];
+		sirInputEvdevSlot_t& slot = m_Slots[i];
 		if ( !slot.bOpen ) {
 			continue;
 		}
@@ -533,7 +533,7 @@ void SIRLinuxEvdevBackend::sample( SIRInputService &service ) noexcept
 			const uint32_t nRecords = ( uint32_t )( ( size_t )nRead / sizeof( szEvents[0] ) );
 			nConsumed += nRecords;
 			for ( uint32_t iEvent = 0; iEvent < nRecords; ++iEvent ) {
-				const input_event &event = szEvents[iEvent];
+				const input_event& event = szEvents[iEvent];
 				if ( event.type == EV_SYN && event.code == SYN_DROPPED ) {
 					slot.bDesynchronized = true;
 					slot.nPending = 0;
@@ -585,7 +585,7 @@ void SIRLinuxEvdevBackend::sample( SIRInputService &service ) noexcept
 						continue;
 					}
 					for ( uint16_t iAxis = 0; iAxis < SIR_INPUT_AXIS_COUNT; ++iAxis ) {
-						const sirInputEvdevAxis_t &axis = slot.axes[iAxis];
+						const sirInputEvdevAxis_t& axis = slot.axes[iAxis];
 						if ( axis.bValid && axis.nCode == event.code ) {
 							int32_t nNormalized = normalize( event.value, axis.nMinimum, axis.nMaximum, axis.bTrigger );
 							if ( axis.bInvert ) {
@@ -604,7 +604,7 @@ void SIRLinuxEvdevBackend::sample( SIRInputService &service ) noexcept
 bool SIRLinuxEvdevBackend::vibrate( sirInputDeviceId_t id, uint16_t nLeft, uint16_t nRight ) noexcept
 {
 	for ( uint32_t i = 0; i < SIR_INPUT_EVDEV_CAPACITY; ++i ) {
-		sirInputEvdevSlot_t &slot = m_Slots[i];
+		sirInputEvdevSlot_t& slot = m_Slots[i];
 		if ( !slot.bOpen || !slot.bCanRumble || slot.id.nSlot != id.nSlot || slot.id.nGeneration != id.nGeneration ) {
 			continue;
 		}
@@ -630,7 +630,7 @@ bool SIRLinuxEvdevBackend::vibrate( sirInputDeviceId_t id, uint16_t nLeft, uint1
 uint32_t SIRLinuxEvdevBackend::hapticCapabilities( sirInputDeviceId_t hDevice ) const noexcept
 {
 	for ( uint32_t i = 0; i < SIR_INPUT_EVDEV_CAPACITY; ++i ) {
-		const sirInputEvdevSlot_t &slot = m_Slots[i];
+		const sirInputEvdevSlot_t& slot = m_Slots[i];
 		if ( slot.bOpen && slot.bCanRumble && slot.id.nSlot == hDevice.nSlot && slot.id.nGeneration == hDevice.nGeneration ) {
 			return SIR_INPUT_HAPTIC_CAP_RUMBLE;
 		}
@@ -638,7 +638,7 @@ uint32_t SIRLinuxEvdevBackend::hapticCapabilities( sirInputDeviceId_t hDevice ) 
 	return SIR_INPUT_HAPTIC_CAP_NONE;
 }
 
-void SIRLinuxEvdevBackend::stop( SIRInputService &service ) noexcept
+void SIRLinuxEvdevBackend::stop( SIRInputService& service ) noexcept
 {
 	for ( uint32_t i = 0; i < SIR_INPUT_EVDEV_CAPACITY; ++i ) {
 		closeDevice( service, m_Slots[i] );

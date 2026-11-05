@@ -110,7 +110,7 @@ bool SIRInputActions::setContextActive( uint32_t nContextId, uint32_t nUser, boo
 	return true;
 }
 
-bool SIRInputActions::bindingValid( const sirInputActionBinding_t &binding, int32_t iExclude ) const noexcept
+bool SIRInputActions::bindingValid( const sirInputActionBinding_t& binding, int32_t iExclude ) const noexcept
 {
 	if ( actionIndex( binding.nActionId, binding.nUser ) < 0 || contextIndex( binding.nContextId, binding.nUser ) < 0 ||
 	     ( binding.eSignal != SIR_INPUT_BUTTON && binding.eSignal != SIR_INPUT_AXIS ) || binding.eClass > SIR_INPUT_CONTROLLER ||
@@ -126,7 +126,7 @@ bool SIRInputActions::bindingValid( const sirInputActionBinding_t &binding, int3
 		if ( ( int32_t )i == iExclude ) {
 			continue;
 		}
-		const sirInputActionBinding_t &other = m_Bindings[i];
+		const sirInputActionBinding_t& other = m_Bindings[i];
 		if ( other.nUser == binding.nUser && other.nContextId == binding.nContextId && other.eClass == binding.eClass &&
 		     other.eSignal == binding.eSignal && other.nControl == binding.nControl && other.nChord == binding.nChord ) {
 			return false;
@@ -135,7 +135,7 @@ bool SIRInputActions::bindingValid( const sirInputActionBinding_t &binding, int3
 	return true;
 }
 
-bool SIRInputActions::addBinding( const sirInputActionBinding_t &binding ) noexcept
+bool SIRInputActions::addBinding( const sirInputActionBinding_t& binding ) noexcept
 {
 	if ( m_nBindings >= SIR_INPUT_BINDING_CAPACITY || !bindingValid( binding, -1 ) ) {
 		return false;
@@ -145,12 +145,12 @@ bool SIRInputActions::addBinding( const sirInputActionBinding_t &binding ) noexc
 	return true;
 }
 
-bool SIRInputActions::rebind( uint32_t iBinding, const sirInputActionBinding_t &binding ) noexcept
+bool SIRInputActions::rebind( uint32_t iBinding, const sirInputActionBinding_t& binding ) noexcept
 {
 	if ( iBinding >= m_nBindings ) {
 		return false;
 	}
-	const sirInputActionBinding_t &current = m_Bindings[iBinding];
+	const sirInputActionBinding_t& current = m_Bindings[iBinding];
 	if ( current.nActionId != binding.nActionId || current.nContextId != binding.nContextId || current.nUser != binding.nUser ||
 	     !bindingValid( binding, ( int32_t )iBinding ) ) {
 		return false;
@@ -213,7 +213,7 @@ bool SIRInputActions::query( uint32_t nActionId, uint32_t nUser, sirInputActionS
 	return true;
 }
 
-bool SIRInputActions::activeBinding( const sirInputActionBinding_t &binding, int32_t *pPriority ) const noexcept
+bool SIRInputActions::activeBinding( const sirInputActionBinding_t& binding, int32_t *pPriority ) const noexcept
 {
 	const int32_t i = contextIndex( binding.nContextId, binding.nUser );
 	if ( i < 0 || !m_Contexts[i].bActive ) {
@@ -225,7 +225,7 @@ bool SIRInputActions::activeBinding( const sirInputActionBinding_t &binding, int
 	return true;
 }
 
-bool SIRInputActions::bindingHeld( const sirInputActionBinding_t &binding, const sirInputFrame_t &frame ) const noexcept
+bool SIRInputActions::bindingHeld( const sirInputActionBinding_t& binding, const sirInputFrame_t& frame ) const noexcept
 {
 	for ( uint32_t i = 0; i < SIR_INPUT_DEVICE_CAPACITY; ++i ) {
 		if ( !frame.nConnected[i] || m_Classes[i] != binding.eClass || m_DeviceIds[i].nGeneration != frame.devices[i].nGeneration ) {
@@ -250,7 +250,7 @@ bool SIRInputActions::bindingHeld( const sirInputActionBinding_t &binding, const
 	return false;
 }
 
-int32_t SIRInputActions::bindingValue( const sirInputActionBinding_t &binding, const sirInputFrame_t &frame ) const noexcept
+int32_t SIRInputActions::bindingValue( const sirInputActionBinding_t& binding, const sirInputFrame_t& frame ) const noexcept
 {
 	if ( binding.eSignal == SIR_INPUT_BUTTON ) {
 		return bindingHeld( binding, frame ) ? 32767 : 0;
@@ -283,14 +283,14 @@ int32_t SIRInputActions::bindingValue( const sirInputActionBinding_t &binding, c
 	return nSelected;
 }
 
-bool SIRInputActions::shadowed( const sirInputActionBinding_t &binding, const sirInputFrame_t &frame ) const noexcept
+bool SIRInputActions::shadowed( const sirInputActionBinding_t& binding, const sirInputFrame_t& frame ) const noexcept
 {
 	int32_t nPriority = 0;
 	if ( !activeBinding( binding, &nPriority ) ) {
 		return false;
 	}
 	for ( uint32_t i = 0; i < m_nBindings; ++i ) {
-		const sirInputActionBinding_t &other = m_Bindings[i];
+		const sirInputActionBinding_t& other = m_Bindings[i];
 		if ( other.nUser != binding.nUser || other.eClass != binding.eClass || other.eSignal != binding.eSignal ||
 		     other.nControl != binding.nControl || ( other.nFlags & SIR_INPUT_BIND_CONSUME ) == 0 ) {
 			continue;
@@ -303,12 +303,12 @@ bool SIRInputActions::shadowed( const sirInputActionBinding_t &binding, const si
 	return false;
 }
 
-void SIRInputActions::refreshAction( uint32_t iAction, const sirInputFrame_t &frame, int32_t nMinimumPriority, bool bEdge ) noexcept
+void SIRInputActions::refreshAction( uint32_t iAction, const sirInputFrame_t& frame, int32_t nMinimumPriority, bool bEdge ) noexcept
 {
-	sirInputActionState_t &state = m_Actions[iAction];
+	sirInputActionState_t& state = m_Actions[iAction];
 	int32_t nNewValue = 0;
 	for ( uint32_t i = 0; i < m_nBindings; ++i ) {
-		const sirInputActionBinding_t &binding = m_Bindings[i];
+		const sirInputActionBinding_t& binding = m_Bindings[i];
 		if ( binding.nActionId != state.nActionId || binding.nUser != state.nUser ) {
 			continue;
 		}
@@ -332,7 +332,7 @@ void SIRInputActions::refreshAction( uint32_t iAction, const sirInputFrame_t &fr
 	state.bHeld = bNewHeld;
 }
 
-void SIRInputActions::processEvent( const sirInputEvent_t &event, const sirInputFrame_t &frame ) noexcept
+void SIRInputActions::processEvent( const sirInputEvent_t& event, const sirInputFrame_t& frame ) noexcept
 {
 	if ( event.hDevice.nSlot >= SIR_INPUT_DEVICE_CAPACITY ) {
 		return;
@@ -378,7 +378,7 @@ void SIRInputActions::processEvent( const sirInputEvent_t &event, const sirInput
 
 	const uint32_t nUser = frame.nUsers[iSlot] == SIR_INPUT_NO_USER ? 0 : frame.nUsers[iSlot];
 	if ( m_eCaptureStatus == SIR_INPUT_CAPTURE_PENDING && m_iCaptureBinding < m_nBindings ) {
-		const sirInputActionBinding_t &old = m_Bindings[m_iCaptureBinding];
+		const sirInputActionBinding_t& old = m_Bindings[m_iCaptureBinding];
 		const bool bButton = event.eSignal == SIR_INPUT_BUTTON && event.nValue != 0;
 		const bool bAxis = event.eSignal == SIR_INPUT_AXIS && ( event.nValue > 16384 || event.nValue < -16384 );
 		if ( old.nUser == nUser && ( bButton || bAxis ) ) {
@@ -395,7 +395,7 @@ void SIRInputActions::processEvent( const sirInputEvent_t &event, const sirInput
 		}
 	}
 	for ( uint32_t i = 0; i < m_nBindings; ++i ) {
-		const sirInputActionBinding_t &binding = m_Bindings[i];
+		const sirInputActionBinding_t& binding = m_Bindings[i];
 		if ( binding.nUser != nUser || binding.eClass != event.eClass ||
 		     ( binding.eSignal != event.eSignal && binding.nChord != event.nControl ) ||
 		     ( binding.nControl != event.nControl && binding.nChord != event.nControl ) ) {
@@ -419,7 +419,7 @@ void SIRInputActions::processEvent( const sirInputEvent_t &event, const sirInput
 	}
 }
 
-void SIRInputActions::evaluate( const sirInputFrame_t &frame ) noexcept
+void SIRInputActions::evaluate( const sirInputFrame_t& frame ) noexcept
 {
 	if ( frame.nTick == 0 || ( m_nLastTick != 0 && frame.nTick <= m_nLastTick ) ) {
 		return;
@@ -482,7 +482,7 @@ bool SIRInputActions::saveProfile( uint8_t *pData, uint32_t nCapacity, uint32_t 
 	sirInputWriteU32( pData + 16, m_nBindings );
 	uint32_t nOffset = SIR_INPUT_PROFILE_HEADER_BYTES;
 	for ( uint32_t i = 0; i < m_nContexts; ++i ) {
-		const sirInputActionContext_t &context = m_Contexts[i];
+		const sirInputActionContext_t& context = m_Contexts[i];
 		sirInputWriteU32( pData + nOffset, context.nContextId );
 		sirInputWriteU32( pData + nOffset + 4, context.nUser );
 		sirInputWriteU32( pData + nOffset + 8, ( uint32_t )context.nPriority );
@@ -495,7 +495,7 @@ bool SIRInputActions::saveProfile( uint8_t *pData, uint32_t nCapacity, uint32_t 
 		nOffset += SIR_INPUT_PROFILE_ACTION_BYTES;
 	}
 	for ( uint32_t i = 0; i < m_nBindings; ++i ) {
-		const sirInputActionBinding_t &binding = m_Bindings[i];
+		const sirInputActionBinding_t& binding = m_Bindings[i];
 		sirInputWriteU32( pData + nOffset, binding.nActionId );
 		sirInputWriteU32( pData + nOffset + 4, binding.nContextId );
 		sirInputWriteU16( pData + nOffset + 8, binding.nControl );

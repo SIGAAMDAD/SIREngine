@@ -28,7 +28,7 @@ typedef struct sirInputNativePumpContext_s
 #endif
 } sirInputNativePumpContext_t;
 
-static bool sirPumpInputWindow( SIRInputService &input, void *pContext )
+static bool sirPumpInputWindow( SIRInputService& input, void *pContext )
 {
 	sirInputNativePumpContext_t *pPump = ( sirInputNativePumpContext_t * )pContext;
 #if defined( SIR_INPUT_X11_AVAILABLE ) && !defined( _WIN32 )

@@ -23,11 +23,11 @@ public:
 	{
 		return SIR_INPUT_TEST;
 	}
-	void sample( SIRInputService &service ) noexcept override
+	void sample( SIRInputService& service ) noexcept override
 	{
 		( void )service;
 	}
-	void resynchronize( SIRInputService &service ) noexcept override
+	void resynchronize( SIRInputService& service ) noexcept override
 	{
 		( void )service;
 	}
@@ -38,13 +38,13 @@ public:
 		( void )nRight;
 		return false;
 	}
-	void stop( SIRInputService &service ) noexcept override
+	void stop( SIRInputService& service ) noexcept override
 	{
 		( void )service;
 	}
 };
 
-static void SIRBenchmarkInputSnapshotDirtyDevices( benchmark::State &state )
+static void SIRBenchmarkInputSnapshotDirtyDevices( benchmark::State& state )
 {
 	SIRInputService input;
 	SIRInputSnapshotBenchmarkBackend backend;
@@ -92,7 +92,7 @@ static void SIRBenchmarkInputSnapshotDirtyDevices( benchmark::State &state )
 
 BENCHMARK( SIRBenchmarkInputSnapshotDirtyDevices )->Arg( 0 )->Arg( 1 )->Arg( 8 )->Arg( 32 );
 
-static void SIRBenchmarkInputTimestampMetrics( benchmark::State &state )
+static void SIRBenchmarkInputTimestampMetrics( benchmark::State& state )
 {
 	SIRInputService input;
 	SIRInputSnapshotBenchmarkBackend backend;

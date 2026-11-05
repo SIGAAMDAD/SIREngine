@@ -25,12 +25,12 @@ public:
 		return SIR_INPUT_TEST;
 	}
 
-	void sample( SIRInputService &service ) noexcept override
+	void sample( SIRInputService& service ) noexcept override
 	{
 		( void )service;
 	}
 
-	void resynchronize( SIRInputService &service ) noexcept override
+	void resynchronize( SIRInputService& service ) noexcept override
 	{
 		( void )service;
 	}
@@ -43,13 +43,13 @@ public:
 		return true;
 	}
 
-	void stop( SIRInputService &service ) noexcept override
+	void stop( SIRInputService& service ) noexcept override
 	{
 		( void )service;
 	}
 };
 
-static bool initializeInputBenchmark( SIRInputService &input, SIRBenchmarkInputBackend &backend, uint32_t nDevices,
+static bool initializeInputBenchmark( SIRInputService& input, SIRBenchmarkInputBackend& backend, uint32_t nDevices,
                                       sirInputDeviceId_t *pDevices ) noexcept
 {
 	if ( !input.attach( backend ) || !input.begin( 1 ) ) {
@@ -64,7 +64,7 @@ static bool initializeInputBenchmark( SIRInputService &input, SIRBenchmarkInputB
 	return input.publish();
 }
 
-static void SIRBenchmarkInputFramePublish( benchmark::State &state )
+static void SIRBenchmarkInputFramePublish( benchmark::State& state )
 {
 	SIRInputService input;
 	SIRBenchmarkInputBackend backend;
@@ -87,7 +87,7 @@ static void SIRBenchmarkInputFramePublish( benchmark::State &state )
 	state.counters["frame_bytes"] = ( double )sizeof( sirInputFrame_t );
 }
 
-static void SIRBenchmarkInputControlBatch( benchmark::State &state )
+static void SIRBenchmarkInputControlBatch( benchmark::State& state )
 {
 	SIRInputService input;
 	SIRBenchmarkInputBackend backend;
@@ -123,7 +123,7 @@ static void SIRBenchmarkInputControlBatch( benchmark::State &state )
 	state.SetItemsProcessed( state.iterations() * ( int64_t )nChanges );
 }
 
-static void SIRBenchmarkInputPointerSamples( benchmark::State &state )
+static void SIRBenchmarkInputPointerSamples( benchmark::State& state )
 {
 	SIRInputService input;
 	SIRBenchmarkInputBackend backend;
@@ -156,7 +156,7 @@ static void SIRBenchmarkInputPointerSamples( benchmark::State &state )
 	state.SetItemsProcessed( state.iterations() * ( int64_t )nSamples );
 }
 
-static void SIRBenchmarkInputResolveDevice( benchmark::State &state )
+static void SIRBenchmarkInputResolveDevice( benchmark::State& state )
 {
 	SIRInputService input;
 	SIRBenchmarkInputBackend backend;
@@ -176,7 +176,7 @@ static void SIRBenchmarkInputResolveDevice( benchmark::State &state )
 	state.counters["active_devices"] = ( double )nDevices;
 }
 
-static void SIRBenchmarkInputControllerProfileLookup( benchmark::State &state )
+static void SIRBenchmarkInputControllerProfileLookup( benchmark::State& state )
 {
 	SIRInputControllerProfiles profiles;
 	const uint32_t nProfiles = ( uint32_t )state.range( 0 );
@@ -197,7 +197,7 @@ static void SIRBenchmarkInputControllerProfileLookup( benchmark::State &state )
 	state.counters["profile_count"] = ( double )nProfiles;
 }
 
-static void SIRBenchmarkInputConnectDisconnect( benchmark::State &state )
+static void SIRBenchmarkInputConnectDisconnect( benchmark::State& state )
 {
 	SIRInputService input;
 	SIRBenchmarkInputBackend backend;

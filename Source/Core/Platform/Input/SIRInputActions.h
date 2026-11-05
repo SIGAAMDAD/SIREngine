@@ -91,15 +91,15 @@ public:
 	bool addAction( uint32_t nActionId, uint32_t nUser ) noexcept;
 	bool addContext( uint32_t nContextId, uint32_t nUser, int32_t nPriority, bool bActive ) noexcept;
 	bool setContextActive( uint32_t nContextId, uint32_t nUser, bool bActive ) noexcept;
-	bool addBinding( const sirInputActionBinding_t &binding ) noexcept;
-	bool rebind( uint32_t iBinding, const sirInputActionBinding_t &binding ) noexcept;
+	bool addBinding( const sirInputActionBinding_t& binding ) noexcept;
+	bool rebind( uint32_t iBinding, const sirInputActionBinding_t& binding ) noexcept;
 	bool removeBinding( uint32_t iBinding ) noexcept;
 	bool beginCapture( uint32_t iBinding ) noexcept;
 	void cancelCapture( void ) noexcept;
 	sirInputCaptureStatus_t captureStatus( void ) const noexcept;
 	bool describeBinding( uint32_t iBinding, sirInputActionBinding_t *pOut ) const noexcept;
 	bool query( uint32_t nActionId, uint32_t nUser, sirInputActionState_t *pOut ) const noexcept;
-	void evaluate( const sirInputFrame_t &frame ) noexcept;
+	void evaluate( const sirInputFrame_t& frame ) noexcept;
 	bool saveProfile( uint8_t *pData, uint32_t nCapacity, uint32_t *pWritten ) const noexcept;
 	bool loadProfile( const uint8_t *pData, uint32_t nBytes ) noexcept;
 	void clear( void ) noexcept;
@@ -109,13 +109,13 @@ public:
 private:
 	int32_t actionIndex( uint32_t nActionId, uint32_t nUser ) const noexcept;
 	int32_t contextIndex( uint32_t nContextId, uint32_t nUser ) const noexcept;
-	bool bindingValid( const sirInputActionBinding_t &binding, int32_t iExclude ) const noexcept;
-	bool activeBinding( const sirInputActionBinding_t &binding, int32_t *pPriority ) const noexcept;
-	bool shadowed( const sirInputActionBinding_t &binding, const sirInputFrame_t &frame ) const noexcept;
-	bool bindingHeld( const sirInputActionBinding_t &binding, const sirInputFrame_t &frame ) const noexcept;
-	int32_t bindingValue( const sirInputActionBinding_t &binding, const sirInputFrame_t &frame ) const noexcept;
-	void refreshAction( uint32_t iAction, const sirInputFrame_t &frame, int32_t nMinimumPriority, bool bEdge ) noexcept;
-	void processEvent( const sirInputEvent_t &event, const sirInputFrame_t &frame ) noexcept;
+	bool bindingValid( const sirInputActionBinding_t& binding, int32_t iExclude ) const noexcept;
+	bool activeBinding( const sirInputActionBinding_t& binding, int32_t *pPriority ) const noexcept;
+	bool shadowed( const sirInputActionBinding_t& binding, const sirInputFrame_t& frame ) const noexcept;
+	bool bindingHeld( const sirInputActionBinding_t& binding, const sirInputFrame_t& frame ) const noexcept;
+	int32_t bindingValue( const sirInputActionBinding_t& binding, const sirInputFrame_t& frame ) const noexcept;
+	void refreshAction( uint32_t iAction, const sirInputFrame_t& frame, int32_t nMinimumPriority, bool bEdge ) noexcept;
+	void processEvent( const sirInputEvent_t& event, const sirInputFrame_t& frame ) noexcept;
 
 	sirInputActionContext_t m_Contexts[SIR_INPUT_CONTEXT_CAPACITY];
 	sirInputActionBinding_t m_Bindings[SIR_INPUT_BINDING_CAPACITY];

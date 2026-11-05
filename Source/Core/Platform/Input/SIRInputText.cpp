@@ -261,7 +261,7 @@ void SIRInputText::clearPreedit( void ) noexcept
 	clearPreeditInternal();
 }
 
-const sirInputTextSnapshot_t &SIRInputText::snapshot( void ) const noexcept
+const sirInputTextSnapshot_t& SIRInputText::snapshot( void ) const noexcept
 {
 	return m_Snapshot;
 }

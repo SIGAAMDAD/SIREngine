@@ -47,17 +47,17 @@ class SIRWindowsGameInputBackend final : public SIRInputBackend
 {
 public:
 	SIRWindowsGameInputBackend( void ) noexcept;
-	SIRWindowsGameInputBackend( const SIRWindowsGameInputBackend & ) = delete;
-	SIRWindowsGameInputBackend &operator=( const SIRWindowsGameInputBackend & ) = delete;
+	SIRWindowsGameInputBackend( const SIRWindowsGameInputBackend& ) = delete;
+	SIRWindowsGameInputBackend& operator=( const SIRWindowsGameInputBackend& ) = delete;
 
 	sirInputBackendId_t id( void ) const noexcept override;
 	bool initialize( void ) noexcept;
-	void sample( SIRInputService &service ) noexcept override;
-	void resynchronize( SIRInputService &service ) noexcept override;
+	void sample( SIRInputService& service ) noexcept override;
+	void resynchronize( SIRInputService& service ) noexcept override;
 	bool vibrate( sirInputDeviceId_t hDevice, uint16_t nLeft, uint16_t nRight ) noexcept override;
 	uint32_t hapticCapabilities( sirInputDeviceId_t hDevice ) const noexcept override;
 	bool vibrateTriggers( sirInputDeviceId_t hDevice, uint16_t nLeft, uint16_t nRight ) noexcept override;
-	void stop( SIRInputService &service ) noexcept override;
+	void stop( SIRInputService& service ) noexcept override;
 	bool initialized( void ) const noexcept;
 
 private:
@@ -69,12 +69,12 @@ private:
 	                                      GameInput::v1::GameInputDeviceStatus eCurrent,
 	                                      GameInput::v1::GameInputDeviceStatus ePrevious ) noexcept;
 	void enqueueDevice( void *pDevice ) noexcept;
-	void consumeDeviceChanges( SIRInputService &service ) noexcept;
+	void consumeDeviceChanges( SIRInputService& service ) noexcept;
 	int32_t findDevice( const void *pDevice ) const noexcept;
-	bool addDevice( SIRInputService &service, void *pDevice ) noexcept;
-	void dropDevice( SIRInputService &service, uint32_t iSlot ) noexcept;
-	bool processReading( SIRInputService &service, void *pReading ) noexcept;
-	void invalidateHistory( SIRInputService &service ) noexcept;
+	bool addDevice( SIRInputService& service, void *pDevice ) noexcept;
+	void dropDevice( SIRInputService& service, uint32_t iSlot ) noexcept;
+	bool processReading( SIRInputService& service, void *pReading ) noexcept;
+	void invalidateHistory( SIRInputService& service ) noexcept;
 	void refreshEnumeration( void ) noexcept;
 
 	void *m_pLibrary;

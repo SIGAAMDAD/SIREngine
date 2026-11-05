@@ -24,11 +24,11 @@ public:
 	{
 		return SIR_INPUT_TEST;
 	}
-	void sample( SIRInputService &input ) noexcept override
+	void sample( SIRInputService& input ) noexcept override
 	{
 		( void )input;
 	}
-	void resynchronize( SIRInputService &input ) noexcept override
+	void resynchronize( SIRInputService& input ) noexcept override
 	{
 		( void )input;
 	}
@@ -39,7 +39,7 @@ public:
 		( void )nRight;
 		return false;
 	}
-	void stop( SIRInputService &input ) noexcept override
+	void stop( SIRInputService& input ) noexcept override
 	{
 		( void )input;
 		++m_nStops;
@@ -53,14 +53,14 @@ static sirInputActionBinding_t sirTestBinding( uint32_t nAction, uint32_t nConte
 	return { nAction, nContext, nKey, nChord, 0, 0, 32767, eClass, eSignal, nFlags };
 }
 
-static bool sirReadAction( SIRInputService &input, uint32_t nAction, bool bHeld, bool bPressed, bool bReleased )
+static bool sirReadAction( SIRInputService& input, uint32_t nAction, bool bHeld, bool bPressed, bool bReleased )
 {
 	sirInputActionState_t state = {};
 	return input.actions().query( nAction, 0, &state ) && state.bHeld == bHeld && state.bPressed == bPressed &&
 	       state.bReleased == bReleased;
 }
 
-static bool sirEmitKey( SIRInputService &input, sirInputDeviceId_t hDevice, uint16_t nCode, bool bDown )
+static bool sirEmitKey( SIRInputService& input, sirInputDeviceId_t hDevice, uint16_t nCode, bool bDown )
 {
 	const sirInputControlChange_t event = { SIR_INPUT_BUTTON, nCode, bDown ? 1 : 0 };
 	return input.emitControls( SIR_INPUT_TEST, hDevice, &event, 1 );
@@ -70,7 +70,7 @@ static bool sirTestContextsAndRebinding( void )
 {
 	SIRInputService input;
 	SIRInputActionTestBackend backend;
-	SIRInputActions &actions = input.actions();
+	SIRInputActions& actions = input.actions();
 	if ( !input.attach( backend ) || !actions.addAction( 1, 0 ) || !actions.addAction( 2, 0 ) || !actions.addContext( 10, 0, 100, true ) ||
 	     !actions.addContext( 20, 0, 0, true ) ) {
 		return false;
@@ -135,7 +135,7 @@ static bool sirTestChordShortTransitionsAndToggle( void )
 {
 	SIRInputService input;
 	SIRInputActionTestBackend backend;
-	SIRInputActions &actions = input.actions();
+	SIRInputActions& actions = input.actions();
 	if ( !input.attach( backend ) || !actions.addContext( 20, 0, 10, true ) || !actions.addAction( 3, 0 ) || !actions.addAction( 4, 0 ) ||
 	     !actions.addAction( 5, 0 ) ) {
 		return false;
@@ -192,7 +192,7 @@ static bool sirTestControllerAxis( void )
 {
 	SIRInputService input;
 	SIRInputActionTestBackend backend;
-	SIRInputActions &actions = input.actions();
+	SIRInputActions& actions = input.actions();
 	if ( !input.attach( backend ) || !actions.addAction( 9, 0 ) || !actions.addContext( 30, 0, 0, true ) ) {
 		return false;
 	}
@@ -275,7 +275,7 @@ static bool sirTestPhysicalRebindCapture( void )
 {
 	SIRInputService input;
 	SIRInputActionTestBackend backend;
-	SIRInputActions &actions = input.actions();
+	SIRInputActions& actions = input.actions();
 	if ( !input.attach( backend ) || !actions.addAction( 10, 0 ) || !actions.addAction( 11, 0 ) ||
 	     !actions.addContext( 77, 0, 20, true ) ) {
 		return false;

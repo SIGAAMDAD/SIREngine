@@ -34,12 +34,12 @@ public:
 	{
 		return SIR_INPUT_TEST;
 	}
-	void sample( SIRInputService &service ) noexcept override
+	void sample( SIRInputService& service ) noexcept override
 	{
 		( void )service;
 		++m_nSamples;
 	}
-	void resynchronize( SIRInputService &service ) noexcept override
+	void resynchronize( SIRInputService& service ) noexcept override
 	{
 		( void )service;
 		++m_nResyncs;
@@ -51,7 +51,7 @@ public:
 		( void )nRight;
 		return true;
 	}
-	void stop( SIRInputService &service ) noexcept override
+	void stop( SIRInputService& service ) noexcept override
 	{
 		( void )service;
 		++m_nStops;

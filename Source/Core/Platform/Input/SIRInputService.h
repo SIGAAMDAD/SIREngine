@@ -39,35 +39,35 @@ class SIRInputService
 {
 public:
 	SIRInputService( void ) noexcept;
-	SIRInputService( const SIRInputService & ) = delete;
-	SIRInputService &operator=( const SIRInputService & ) = delete;
+	SIRInputService( const SIRInputService& ) = delete;
+	SIRInputService& operator=( const SIRInputService& ) = delete;
 
-	bool attach( SIRInputBackend &backend ) noexcept;
+	bool attach( SIRInputBackend& backend ) noexcept;
 	bool begin( uint64_t nTick ) noexcept;
 	void sample( void ) noexcept;
 	bool publish( void ) noexcept;
 	void setTimingMetricsEnabled( bool bEnabled ) noexcept;
 	bool recover( void ) noexcept;
 	const sirInputFrame_t *frame( void ) const noexcept;
-	bool recordReplayTick( SIRInputReplayTape &tape, const sirInputReplayKey_t *pKeys, uint32_t nCount ) const noexcept;
-	bool captureHistoryTick( SIRInputHistory &history, const sirInputReplayKey_t *pKeys, uint32_t nCount ) const noexcept;
+	bool recordReplayTick( SIRInputReplayTape& tape, const sirInputReplayKey_t *pKeys, uint32_t nCount ) const noexcept;
+	bool captureHistoryTick( SIRInputHistory& history, const sirInputReplayKey_t *pKeys, uint32_t nCount ) const noexcept;
 	bool startReplay( void ) noexcept;
-	bool queueReplayTick( const sirInputReplayFrame_t &frame ) noexcept;
-	bool queueHistoryTick( const SIRInputHistory &history, uint64_t nTick ) noexcept;
+	bool queueReplayTick( const sirInputReplayFrame_t& frame ) noexcept;
+	bool queueHistoryTick( const SIRInputHistory& history, uint64_t nTick ) noexcept;
 	void stopReplay( void ) noexcept;
 	bool replayActive( void ) const noexcept;
 	bool queryAction( uint32_t nActionId, uint32_t nUser, sirInputActionState_t *pOut ) const noexcept;
-	SIRInputActions &actions( void ) noexcept;
-	const SIRInputActions &actions( void ) const noexcept;
-	SIRInputText &text( void ) noexcept;
-	const SIRInputText &text( void ) const noexcept;
-	bool scheduleRumble( const sirInputHapticRequest_t &request, sirInputHapticHandle_t *pHandle ) noexcept;
+	SIRInputActions& actions( void ) noexcept;
+	const SIRInputActions& actions( void ) const noexcept;
+	SIRInputText& text( void ) noexcept;
+	const SIRInputText& text( void ) const noexcept;
+	bool scheduleRumble( const sirInputHapticRequest_t& request, sirInputHapticHandle_t *pHandle ) noexcept;
 	bool cancelRumble( sirInputHapticHandle_t hEffect ) noexcept;
 	void setHapticsPaused( bool bPaused ) noexcept;
 	uint32_t hapticCapabilities( sirInputDeviceId_t hDevice ) const noexcept;
 	bool vibrateTriggers( sirInputDeviceId_t hDevice, uint16_t nLeft, uint16_t nRight ) noexcept;
 	uint32_t activeHaptics( void ) const noexcept;
-	bool connect( const sirInputHardwareKey_t &key, sirInputDeviceId_t *pOut ) noexcept;
+	bool connect( const sirInputHardwareKey_t& key, sirInputDeviceId_t *pOut ) noexcept;
 	bool disconnect( sirInputBackendId_t eSource, sirInputDeviceId_t hDevice ) noexcept;
 	bool pairUser( sirInputDeviceId_t hDevice, uint32_t nUser ) noexcept;
 	bool describe( sirInputDeviceId_t hDevice, sirInputDeviceDescriptor_t *pOut ) const noexcept;

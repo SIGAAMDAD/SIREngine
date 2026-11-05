@@ -51,7 +51,7 @@ public:
 
 	static int32_t normalizeAxis( float fValue, bool bTrigger ) noexcept;
 	static uint64_t timestampNanoseconds( uint64_t nMicroseconds ) noexcept;
-	static bool decode( const sirGameInputRawGamepad_t &raw, const sirGameInputDecodedGamepad_t &previous,
+	static bool decode( const sirGameInputRawGamepad_t& raw, const sirGameInputDecodedGamepad_t& previous,
 	                    sirGameInputDecodedGamepad_t *pNext, sirInputControlChange_t *pChanges, uint32_t nCapacity,
 	                    uint32_t *pCount ) noexcept;
 };

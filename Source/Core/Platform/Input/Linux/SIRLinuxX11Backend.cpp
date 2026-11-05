@@ -31,11 +31,11 @@ sirInputBackendId_t SIRLinuxX11Backend::id( void ) const noexcept
 {
 	return SIR_INPUT_LINUX_X11;
 }
-void SIRLinuxX11Backend::sample( SIRInputService &service ) noexcept
+void SIRLinuxX11Backend::sample( SIRInputService& service ) noexcept
 {
 	( void )service;
 }
-void SIRLinuxX11Backend::resynchronize( SIRInputService &service ) noexcept
+void SIRLinuxX11Backend::resynchronize( SIRInputService& service ) noexcept
 {
 	( void )service;
 	m_bHaveMotion = false;
@@ -59,7 +59,7 @@ bool SIRLinuxX11Backend::enableDetectableRepeat( Display *pDisplay ) noexcept
 	return pDisplay != nullptr && XkbSetDetectableAutoRepeat( pDisplay, True, &bSupported ) && bSupported;
 }
 
-bool SIRLinuxX11Backend::attachWindow( SIRInputService &service, Window hWindow ) noexcept
+bool SIRLinuxX11Backend::attachWindow( SIRInputService& service, Window hWindow ) noexcept
 {
 	if ( m_bAttached || hWindow == 0 ) {
 		return false;
@@ -116,7 +116,7 @@ bool SIRLinuxX11Backend::enableRawPointer( Display *pDisplay ) noexcept
 #endif
 }
 
-bool SIRLinuxX11Backend::processEvent( SIRInputService &service, const XEvent &event ) noexcept
+bool SIRLinuxX11Backend::processEvent( SIRInputService& service, const XEvent& event ) noexcept
 {
 #if defined( SIR_INPUT_XINPUT2_AVAILABLE )
 	if ( m_bAttached && m_bRawPointer && event.type == GenericEvent && event.xcookie.extension == m_nXiOpcode &&
@@ -215,7 +215,7 @@ bool SIRLinuxX11Backend::processEvent( SIRInputService &service, const XEvent &e
 	return false;
 }
 
-void SIRLinuxX11Backend::stop( SIRInputService &service ) noexcept
+void SIRLinuxX11Backend::stop( SIRInputService& service ) noexcept
 {
 	if ( m_bAttached ) {
 		service.disconnect( id(), m_hKeyboard );

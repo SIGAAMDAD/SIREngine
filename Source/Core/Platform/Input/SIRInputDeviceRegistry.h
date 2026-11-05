@@ -38,7 +38,7 @@ class SIRInputDeviceRegistry
 {
 public:
 	SIRInputDeviceRegistry( void ) noexcept;
-	bool connect( const sirInputHardwareKey_t &key, sirInputDeviceId_t *pResult ) noexcept;
+	bool connect( const sirInputHardwareKey_t& key, sirInputDeviceId_t *pResult ) noexcept;
 	bool disconnect( sirInputDeviceId_t id ) noexcept;
 	bool resolve( sirInputBackendId_t eBackend, uint64_t nNativeId, sirInputDeviceId_t *pResult ) const noexcept;
 	bool describe( sirInputDeviceId_t id, sirInputDeviceDescriptor_t *pOut ) const noexcept;
@@ -46,7 +46,7 @@ public:
 	bool pairUser( sirInputDeviceId_t id, uint32_t nUser ) noexcept;
 	bool valid( sirInputDeviceId_t id ) const noexcept;
 	bool inspectSlot( uint32_t nSlot, sirInputDeviceDescriptor_t *pOut ) const noexcept;
-	void snapshot( sirInputFrame_t &frame ) const noexcept;
+	void snapshot( sirInputFrame_t& frame ) const noexcept;
 	uint32_t count( void ) const noexcept;
 	void reset( void ) noexcept;
 

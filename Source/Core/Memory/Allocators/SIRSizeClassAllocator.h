@@ -41,8 +41,8 @@ public:
 	static constexpr uint32_t SIR_FINE_SIZE_CLASS_COUNT = 32;
 
 	SIRSizeClassAllocator( void );
-	SIRSizeClassAllocator( const SIRSizeClassAllocator & ) = delete;
-	SIRSizeClassAllocator &operator=( const SIRSizeClassAllocator & ) = delete;
+	SIRSizeClassAllocator( const SIRSizeClassAllocator& ) = delete;
+	SIRSizeClassAllocator& operator=( const SIRSizeClassAllocator& ) = delete;
 
 	bool init( SIRMemorySegment *const *ppSegments );
 	bool initFine( SIRMemorySegment *const *ppSegments );

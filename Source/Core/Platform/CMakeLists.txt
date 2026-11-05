@@ -21,6 +21,10 @@ set(SIR_CORE_PLATFORM_COMMON
 
 if(WIN32)
     set(SIR_CORE_PLATFORM_OS
+        Windows/SIRPlatformFileWindows.cpp
+        Windows/SIRPlatformFileMappingWindows.cpp
+        Windows/SIRPlatformPipeWindows.cpp
+        Windows/SIRSemaphoreWindows.cpp
         Windows/SIRVirtualMemoryWindows.cpp
         Windows/SIRPlatformMemoryWindows.cpp
         Windows/SIRCPUInfoWindows.cpp
@@ -32,6 +36,9 @@ if(WIN32)
         Input/Windows/SIRWindowsRawBackend.cpp
         Input/Windows/SIRWindowsRawDecode.cpp
         Input/Windows/SIRWindowsXInputBackend.cpp
+        Windows/SIRChildProcessWindows.cpp
+        Windows/SIRPlatformFileSystemWindows.cpp
+        Windows/SIRPlatformThreadControlWindows.cpp
     )
     # GameInput is first-party Windows controller I/O. The runtime is loaded
     # from the OS, while its v1 SDK header is an explicitly pinned build input.
@@ -54,6 +61,10 @@ if(WIN32)
     target_link_libraries(SIRCore PRIVATE psapi user32 imm32)
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     set(SIR_CORE_PLATFORM_OS
+        Linux/SIRPlatformFileLinux.cpp
+        Linux/SIRPlatformFileMappingLinux.cpp
+        Linux/SIRPlatformPipeLinux.cpp
+        Linux/SIRSemaphoreLinux.cpp
         Linux/SIRVirtualMemoryLinux.cpp
         Linux/SIRPlatformMemoryLinux.cpp
         Linux/SIRCPUInfoLinux.cpp
@@ -62,6 +73,9 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         Linux/SIRPlatformTimeLinux.cpp
         Linux/SIRPlatformProcessLinux.cpp
         Input/Linux/SIRLinuxEvdevBackend.cpp
+        Linux/SIRChildProcessLinux.cpp
+        Linux/SIRPlatformFileSystemLinux.cpp
+        Linux/SIRPlatformThreadControlLinux.cpp
     )
     option(SIR_WITH_X11_INPUT "Build native X11 input backend when X11 is available" ON)
     if(SIR_WITH_X11_INPUT)

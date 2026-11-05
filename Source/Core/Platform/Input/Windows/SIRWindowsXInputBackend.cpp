@@ -74,7 +74,7 @@ bool SIRWindowsXInputBackend::initialize( void ) noexcept
 	return false;
 }
 
-void SIRWindowsXInputBackend::resynchronize( SIRInputService &service ) noexcept
+void SIRWindowsXInputBackend::resynchronize( SIRInputService& service ) noexcept
 {
 	( void )service;
 	for ( uint32_t i = 0; i < 4; ++i ) {
@@ -82,7 +82,7 @@ void SIRWindowsXInputBackend::resynchronize( SIRInputService &service ) noexcept
 	}
 }
 
-void SIRWindowsXInputBackend::sample( SIRInputService &service ) noexcept
+void SIRWindowsXInputBackend::sample( SIRInputService& service ) noexcept
 {
 	if ( m_pLibrary == nullptr ) {
 		return;
@@ -92,7 +92,7 @@ void SIRWindowsXInputBackend::sample( SIRInputService &service ) noexcept
 	for ( DWORD nUser = 0; nUser < 4; ++nUser ) {
 		XINPUT_STATE state = {};
 		const DWORD nStatus = pGet( nUser, &state );
-		sirXInputNativeSlot_t &slot = m_Slots[nUser];
+		sirXInputNativeSlot_t& slot = m_Slots[nUser];
 		if ( nStatus == ERROR_DEVICE_NOT_CONNECTED ) {
 			if ( slot.bConnected ) {
 				service.disconnect( id(), slot.id );
@@ -159,7 +159,7 @@ uint32_t SIRWindowsXInputBackend::hapticCapabilities( sirInputDeviceId_t hDevice
 		return SIR_INPUT_HAPTIC_CAP_NONE;
 	}
 	for ( uint32_t i = 0; i < 4; ++i ) {
-		const sirXInputNativeSlot_t &slot = m_Slots[i];
+		const sirXInputNativeSlot_t& slot = m_Slots[i];
 		if ( slot.bConnected && slot.id.nSlot == hDevice.nSlot && slot.id.nGeneration == hDevice.nGeneration ) {
 			return SIR_INPUT_HAPTIC_CAP_RUMBLE;
 		}
@@ -167,7 +167,7 @@ uint32_t SIRWindowsXInputBackend::hapticCapabilities( sirInputDeviceId_t hDevice
 	return SIR_INPUT_HAPTIC_CAP_NONE;
 }
 
-void SIRWindowsXInputBackend::stop( SIRInputService &service ) noexcept
+void SIRWindowsXInputBackend::stop( SIRInputService& service ) noexcept
 {
 	for ( uint32_t i = 0; i < 4; ++i ) {
 		if ( m_Slots[i].bConnected ) {
