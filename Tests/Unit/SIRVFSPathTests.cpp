@@ -61,6 +61,12 @@ int main( void )
 	sirVFSTestFailure( "//server/share", ( uint32_t )strlen( "//server/share" ), SIR_VFS_PATH_INVALID_NAMESPACE );
 	sirVFSTestFailure( "game:/CON.txt", ( uint32_t )strlen( "game:/CON.txt" ), SIR_VFS_PATH_INVALID_SEGMENT );
 	sirVFSTestFailure( "game:/COM1", ( uint32_t )strlen( "game:/COM1" ), SIR_VFS_PATH_INVALID_SEGMENT );
+	sirVFSTestFailure( "game:/COM\xc2\xb9", ( uint32_t )strlen( "game:/COM\xc2\xb9" ), SIR_VFS_PATH_INVALID_SEGMENT );
+	sirVFSTestFailure( "game:/com\xc2\xb2.txt", ( uint32_t )strlen( "game:/com\xc2\xb2.txt" ), SIR_VFS_PATH_INVALID_SEGMENT );
+	sirVFSTestFailure( "game:/COM\xc2\xb3", ( uint32_t )strlen( "game:/COM\xc2\xb3" ), SIR_VFS_PATH_INVALID_SEGMENT );
+	sirVFSTestFailure( "game:/LPT\xc2\xb9", ( uint32_t )strlen( "game:/LPT\xc2\xb9" ), SIR_VFS_PATH_INVALID_SEGMENT );
+	sirVFSTestFailure( "game:/lpt\xc2\xb2.txt", ( uint32_t )strlen( "game:/lpt\xc2\xb2.txt" ), SIR_VFS_PATH_INVALID_SEGMENT );
+	sirVFSTestFailure( "game:/LPT\xc2\xb3", ( uint32_t )strlen( "game:/LPT\xc2\xb3" ), SIR_VFS_PATH_INVALID_SEGMENT );
 	sirVFSTestFailure( "game:/foo.", ( uint32_t )strlen( "game:/foo." ), SIR_VFS_PATH_INVALID_SEGMENT );
 	sirVFSTestFailure( "game:/foo ", ( uint32_t )strlen( "game:/foo " ), SIR_VFS_PATH_INVALID_SEGMENT );
 	sirVFSTestFailure( "game:/a:b", ( uint32_t )strlen( "game:/a:b" ), SIR_VFS_PATH_FORBIDDEN );
