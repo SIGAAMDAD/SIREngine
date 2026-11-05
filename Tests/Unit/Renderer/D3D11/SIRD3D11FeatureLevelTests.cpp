@@ -95,6 +95,27 @@ int main( void )
 	probe.nD3D11_1InterfaceAvailable = 1;
 	sirD3D11Check( sirD3D11BuildFeatureProfile( &probe, &profile ) == SIR_GRAPHICS_SUCCESS );
 	sirD3D11Check( profile.nMaximumUavSlots == 64U );
+	probe = {};
+	probe.nSize = sizeof( probe );
+	probe.nFeatureLevel = SIR_D3D11_FEATURE_LEVEL_11_0;
+	profile.nSize = sizeof( profile );
+	probe.nIndirectDrawAvailable = 1;
+	sirD3D11Check( sirD3D11BuildFeatureProfile( &probe, &profile ) == SIR_GRAPHICS_SUCCESS );
+	sirD3D11Check( ( profile.nEnabledFeatures & SIR_GRAPHICS_FEATURE_INDIRECT_DRAW ) != 0 );
+	probe.nIndirectDrawAvailable = 2;
+	sirD3D11Check( sirD3D11BuildFeatureProfile( &probe, &profile ) == SIR_GRAPHICS_INVALID_ARGUMENT );
+	probe.nIndirectDrawAvailable = 0;
+	probe.nD3D11_1InterfaceAvailable = 2;
+	sirD3D11Check( sirD3D11BuildFeatureProfile( &probe, &profile ) == SIR_GRAPHICS_INVALID_ARGUMENT );
+	probe.nD3D11_1InterfaceAvailable = 0;
+	probe.nMultisampleAvailable = 2;
+	sirD3D11Check( sirD3D11BuildFeatureProfile( &probe, &profile ) == SIR_GRAPHICS_INVALID_ARGUMENT );
+	probe.nMultisampleAvailable = 0;
+	probe.nPresentationAvailable = 2;
+	sirD3D11Check( sirD3D11BuildFeatureProfile( &probe, &profile ) == SIR_GRAPHICS_INVALID_ARGUMENT );
+	probe.nPresentationAvailable = 0;
+	profile.nSize = sizeof( profile ) - 1;
+	sirD3D11Check( sirD3D11BuildFeatureProfile( &probe, &profile ) == SIR_GRAPHICS_INVALID_ARGUMENT );
 	printf( "D3D11 capability tests: %u assertions, %u failures\n", s_nAssertions, s_nFailures );
 	return s_nFailures == 0 ? 0 : 1;
 }
