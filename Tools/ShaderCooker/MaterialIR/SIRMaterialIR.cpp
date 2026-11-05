@@ -29,14 +29,13 @@ static bool sirMaterialIRNumeric( sirMaterialIRType_t eType ) noexcept
 	return eType >= SIR_MATERIAL_IR_FLOAT && eType <= SIR_MATERIAL_IR_FLOAT4;
 }
 
-static bool sirMaterialIRInput( const sirMaterialIRGraph_t& graph, uint32_t iNode, uint16_t iInput,
-                                 sirMaterialIRType_t eType ) noexcept
+static bool sirMaterialIRInput( const sirMaterialIRGraph_t& graph, uint32_t iNode, uint16_t iInput, sirMaterialIRType_t eType ) noexcept
 {
 	return iInput != SIR_MATERIAL_IR_NO_INPUT && iInput < iNode && graph.pNodes[iInput].eType == eType;
 }
 
 static bool sirMaterialIRValidateNode( const sirMaterialIRGraph_t& graph, uint32_t iNode, uint32_t nStaticBits,
-                                        uint32_t *pSwitchMask ) noexcept
+                                       uint32_t *pSwitchMask ) noexcept
 {
 	const sirMaterialIRNode_t& node = graph.pNodes[iNode];
 	if ( node.eType < SIR_MATERIAL_IR_FLOAT || node.eType > SIR_MATERIAL_IR_SAMPLER ) {
@@ -46,8 +45,7 @@ static bool sirMaterialIRValidateNode( const sirMaterialIRGraph_t& graph, uint32
 	switch ( node.eOp ) {
 	case SIR_MATERIAL_IR_CONSTANT:
 	case SIR_MATERIAL_IR_PARAMETER:
-		if ( node.iA != SIR_MATERIAL_IR_NO_INPUT || node.iB != SIR_MATERIAL_IR_NO_INPUT ||
-		     node.iC != SIR_MATERIAL_IR_NO_INPUT ) {
+		if ( node.iA != SIR_MATERIAL_IR_NO_INPUT || node.iB != SIR_MATERIAL_IR_NO_INPUT || node.iC != SIR_MATERIAL_IR_NO_INPUT ) {
 			return false;
 		}
 		break;
@@ -68,16 +66,14 @@ static bool sirMaterialIRValidateNode( const sirMaterialIRGraph_t& graph, uint32
 		break;
 	case SIR_MATERIAL_IR_SELECT:
 		if ( !sirMaterialIRInput( graph, iNode, node.iA, SIR_MATERIAL_IR_BOOL ) ||
-		     !sirMaterialIRInput( graph, iNode, node.iB, node.eType ) ||
-		     !sirMaterialIRInput( graph, iNode, node.iC, node.eType ) ) {
+		     !sirMaterialIRInput( graph, iNode, node.iB, node.eType ) || !sirMaterialIRInput( graph, iNode, node.iC, node.eType ) ) {
 			return false;
 		}
 		nUsed = pSwitchMask[node.iA] | pSwitchMask[node.iB] | pSwitchMask[node.iC];
 		break;
 	case SIR_MATERIAL_IR_STATIC_SWITCH:
 		if ( node.nSwitchBit == 0 || ( node.nSwitchBit & nStaticBits ) != node.nSwitchBit ||
-		     ( node.nSwitchBit & ( node.nSwitchBit - 1 ) ) != 0 ||
-		     !sirMaterialIRInput( graph, iNode, node.iA, node.eType ) ||
+		     ( node.nSwitchBit & ( node.nSwitchBit - 1 ) ) != 0 || !sirMaterialIRInput( graph, iNode, node.iA, node.eType ) ||
 		     !sirMaterialIRInput( graph, iNode, node.iB, node.eType ) ) {
 			return false;
 		}
@@ -114,8 +110,7 @@ static uint64_t sirMaterialIRGraphHash( const sirMaterialIRGraph_t& graph ) noex
 	return nHash;
 }
 
-static bool sirMaterialIRPermutationValid( const sirMaterialIRGraph_t& graph, uint32_t nMask,
-                                            uint64_t nFeatures ) noexcept
+static bool sirMaterialIRPermutationValid( const sirMaterialIRGraph_t& graph, uint32_t nMask, uint64_t nFeatures ) noexcept
 {
 	for ( uint32_t iSwitch = 0; iSwitch < graph.nSwitchCount; ++iSwitch ) {
 		const sirMaterialIRSwitch_t& item = graph.pSwitches[iSwitch];
@@ -155,9 +150,8 @@ sirShaderCookResult_t sirMaterialIRCompile( const sirMaterialIRGraph_t& graph, c
 	uint32_t nStaticCount = 0;
 	for ( uint32_t iSwitch = 0; iSwitch < graph.nSwitchCount; ++iSwitch ) {
 		const sirMaterialIRSwitch_t& item = graph.pSwitches[iSwitch];
-		if ( item.nBit == 0 || ( item.nBit & ( item.nBit - 1 ) ) != 0 ||
-		     ( ( nDeclaredBits & item.nBit ) != 0 ) || ( item.nRequires & item.nExcludes ) != 0 ||
-		     item.nBit > ( 1U << 15 ) ) {
+		if ( item.nBit == 0 || ( item.nBit & ( item.nBit - 1 ) ) != 0 || ( ( nDeclaredBits & item.nBit ) != 0 ) ||
+		     ( item.nRequires & item.nExcludes ) != 0 || item.nBit > ( 1U << 15 ) ) {
 			return SIR_SHADER_COOK_INVALID_ARGUMENT;
 		}
 		nDeclaredBits |= item.nBit;
@@ -182,9 +176,9 @@ sirShaderCookResult_t sirMaterialIRCompile( const sirMaterialIRGraph_t& graph, c
 	uint32_t nPreviousPass = 0;
 	for ( uint32_t iPass = 0; iPass < graph.nPassCount; ++iPass ) {
 		const sirMaterialIRPass_t& pass = graph.pPasses[iPass];
-		if ( pass.ePass <= nPreviousPass || pass.ePass > SIR_SHADER_PASS_COMPUTE ||
-		     pass.iOutput >= graph.nNodeCount || graph.pNodes[pass.iOutput].eOp != SIR_MATERIAL_IR_OUTPUT ||
-		     pass.nStageMask == 0 || ( pass.nStageMask & ~(( SIR_GRAPHICS_STAGE_TASK << 1 ) - 1U) ) != 0 ) {
+		if ( pass.ePass <= nPreviousPass || pass.ePass > SIR_SHADER_PASS_COMPUTE || pass.iOutput >= graph.nNodeCount ||
+		     graph.pNodes[pass.iOutput].eOp != SIR_MATERIAL_IR_OUTPUT || pass.nStageMask == 0 ||
+		     ( pass.nStageMask & ~( ( SIR_GRAPHICS_STAGE_TASK << 1 ) - 1U ) ) != 0 ) {
 			return SIR_SHADER_COOK_INVALID_ARGUMENT;
 		}
 		if ( ( pass.ePass == SIR_SHADER_PASS_COMPUTE ) != ( pass.nStageMask == SIR_GRAPHICS_STAGE_COMPUTE ) ) {
@@ -259,12 +253,14 @@ sirShaderCookResult_t sirMaterialIRCompile( const sirMaterialIRGraph_t& graph, c
 					nRequiredFeatures |= item.nRequiredFeatures;
 				}
 			}
-			pOutput->pEntries[iOutput++] = { pass.ePass, pass.nStageMask, nMask, nRequiredFeatures,
-				                              sirMaterialIRHash( nBaseHash, nMask & nRelevantBits ), nReflection, false };
+			pOutput->pEntries[iOutput++] = {
+			    pass.ePass, pass.nStageMask, nMask, nRequiredFeatures, sirMaterialIRHash( nBaseHash, nMask & nRelevantBits ), nReflection,
+			    false };
 		}
 		if ( options.bGenerateUberFallback ) {
-			pOutput->pEntries[iOutput++] = { pass.ePass, pass.nStageMask, UINT32_MAX, pass.nRequiredFeatures,
-				                              sirMaterialIRHash( nBaseHash, UINT32_MAX ), nReflection, true };
+			pOutput->pEntries[iOutput++] = {
+			    pass.ePass, pass.nStageMask, UINT32_MAX, pass.nRequiredFeatures, sirMaterialIRHash( nBaseHash, UINT32_MAX ), nReflection,
+			    true };
 		}
 	}
 	pOutput->nProducedCount = iOutput;
