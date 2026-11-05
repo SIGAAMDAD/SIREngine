@@ -19,7 +19,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <SIRPCH.hpp>
 
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
-	#pragma once
+#pragma once
 #endif
 
 #include <Streaming/SIRStreamingCoordinator.h>
@@ -51,18 +51,18 @@ private:
 	uint32_t m_nLastEpoch;
 	bool m_bInitialized;
 
-	uint32_t findEntry( const sirStreamingUnitKey_t &key ) const noexcept;
+	uint32_t findEntry( const sirStreamingUnitKey_t& key ) const noexcept;
 	void clearEntry( uint32_t iEntry ) noexcept;
 	void pruneReleased( void ) noexcept;
 	sirStreamingResult_t validateSet( const sirStreamingDemand_t *pDemands, uint32_t nDemandCount, uint32_t nRequestEpoch ) const noexcept;
-	void retireMissing( const sirStreamingDemand_t *pDemands, uint32_t nDemandCount, sirStreamingReconcileStats_t &stats ) noexcept;
-	void refreshCurrent( const sirStreamingDemand_t *pDemands, uint32_t nDemandCount, sirStreamingReconcileStats_t &stats ) noexcept;
-	void submitMissing( const sirStreamingDemand_t *pDemands, uint32_t nDemandCount, sirStreamingReconcileStats_t &stats ) noexcept;
+	void retireMissing( const sirStreamingDemand_t *pDemands, uint32_t nDemandCount, sirStreamingReconcileStats_t& stats ) noexcept;
+	void refreshCurrent( const sirStreamingDemand_t *pDemands, uint32_t nDemandCount, sirStreamingReconcileStats_t& stats ) noexcept;
+	void submitMissing( const sirStreamingDemand_t *pDemands, uint32_t nDemandCount, sirStreamingReconcileStats_t& stats ) noexcept;
 
 public:
 	SIRStreamingDemandReconciler( void ) noexcept;
-	SIRStreamingDemandReconciler( const SIRStreamingDemandReconciler & ) = delete;
-	SIRStreamingDemandReconciler &operator=( const SIRStreamingDemandReconciler & ) = delete;
+	SIRStreamingDemandReconciler( const SIRStreamingDemandReconciler& ) = delete;
+	SIRStreamingDemandReconciler& operator=( const SIRStreamingDemandReconciler& ) = delete;
 
 	static uint64_t requiredBytes( uint32_t nCapacity ) noexcept;
 	sirStreamingResult_t initialize( SIRStreamingCoordinator *pCoordinator, void *pStorage, uint64_t nStorageBytes, uint32_t nCapacity,
@@ -79,7 +79,7 @@ public:
 
 	// GRDG resource owners use this to obtain a ticket and query the actual
 	// coordinator stage. No provider completion is inferred by this class.
-	sirStreamingResult_t findTicket( const sirStreamingUnitKey_t &key, sirStreamingTicket_t *pTicket ) const noexcept;
+	sirStreamingResult_t findTicket( const sirStreamingUnitKey_t& key, sirStreamingTicket_t *pTicket ) const noexcept;
 	uint32_t getTrackedCount( void ) const noexcept;
 };
 

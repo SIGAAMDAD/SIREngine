@@ -19,7 +19,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <SIRPCH.hpp>
 
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
-	#pragma once
+#pragma once
 #endif
 
 #include <Streaming/SIRStreamingCoordinator.h>
@@ -63,18 +63,18 @@ private:
 	bool m_bInitialized;
 
 	bool hasValidEntry( sirStreamingTicket_t ticket ) const noexcept;
-	sirStreamingResult_t beginRetirement( sirStreamingTicket_t ticket, sirStreamingBridgeSlot_t &slot,
-	                                      sirStreamingBridgeStats_t &stats ) noexcept;
-	void processSlot( sirStreamingTicket_t ticket, const sirStreamingSnapshot_t &snapshot, sirStreamingBridgeStats_t &stats ) noexcept;
+	sirStreamingResult_t beginRetirement( sirStreamingTicket_t ticket, sirStreamingBridgeSlot_t& slot,
+	                                      sirStreamingBridgeStats_t& stats ) noexcept;
+	void processSlot( sirStreamingTicket_t ticket, const sirStreamingSnapshot_t& snapshot, sirStreamingBridgeStats_t& stats ) noexcept;
 
 public:
 	SIRStreamingProviderBridge( void ) noexcept;
-	SIRStreamingProviderBridge( const SIRStreamingProviderBridge & ) = delete;
-	SIRStreamingProviderBridge &operator=( const SIRStreamingProviderBridge & ) = delete;
+	SIRStreamingProviderBridge( const SIRStreamingProviderBridge& ) = delete;
+	SIRStreamingProviderBridge& operator=( const SIRStreamingProviderBridge& ) = delete;
 
 	static uint64_t requiredBytes( uint32_t nCapacity ) noexcept;
 	sirStreamingResult_t initialize( SIRStreamingCoordinator *pCoordinator, void *pStorage, uint64_t nStorageBytes,
-	                                 const sirStreamingProviderCallbacks_t &callbacks ) noexcept;
+	                                 const sirStreamingProviderCallbacks_t& callbacks ) noexcept;
 	sirStreamingResult_t shutdown( void ) noexcept;
 
 	// Each pump visits at most nMaximumSlots, including vacant slots. Priority

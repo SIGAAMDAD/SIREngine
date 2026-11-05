@@ -19,7 +19,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <SIRPCH.hpp>
 
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
-	#pragma once
+#pragma once
 #endif
 
 #include <Streaming/SIRStreamingTypes.h>
@@ -95,11 +95,11 @@ private:
 
 public:
 	SIRWorldPartition( void ) noexcept;
-	SIRWorldPartition( const SIRWorldPartition & ) = delete;
-	SIRWorldPartition &operator=( const SIRWorldPartition & ) = delete;
+	SIRWorldPartition( const SIRWorldPartition& ) = delete;
+	SIRWorldPartition& operator=( const SIRWorldPartition& ) = delete;
 
 	static uint64_t requiredBytes( uint32_t nCellCount ) noexcept;
-	sirWorldPartitionResult_t initialize( void *pStorage, uint64_t nStorageBytes, const sirWorldPartitionConfig_t &config,
+	sirWorldPartitionResult_t initialize( void *pStorage, uint64_t nStorageBytes, const sirWorldPartitionConfig_t& config,
 	                                      const sirWorldCellDescriptor_t *pCells ) noexcept;
 	void shutdown( void ) noexcept;
 	bool hasCell( uint64_t nCellId ) const noexcept;
