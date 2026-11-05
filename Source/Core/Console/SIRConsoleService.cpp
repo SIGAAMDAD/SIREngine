@@ -14,6 +14,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Core/Console/SIRConsoleService.h>
+#include <Core/CVars/SIRCVarValueCodec.h>
 #include <cmath>
 #include <errno.h>
 #include <inttypes.h>
@@ -56,11 +57,6 @@ static bool sirConsolePrefix( const char *pszName, const char *pszPrefix, uint32
 		}
 	}
 	return true;
-}
-
-static bool sirConsoleDecimalEnd( const char *pszStart, const char *pszEnd ) noexcept
-{
-	return pszEnd != pszStart && *pszEnd == '\0' && errno != ERANGE;
 }
 
 SIRConsoleService::SIRConsoleService( void ) noexcept
@@ -343,62 +339,7 @@ const sirConsoleCVarBinding_t *SIRConsoleService::findBoundCVar( sirRegistration
 sirRegistrationResult_t SIRConsoleService::parseValue( sirCVarType_t eType, const sirConsoleArgument_t& arg,
                                                        sirCVarValue_t *pValue ) const noexcept
 {
-	*pValue = {};
-	if ( eType == SIR_CVAR_UTF8_STRING ) {
-		pValue->pszText = arg.pszText;
-		pValue->nTextBytes = arg.nBytes;
-		return SIR_REGISTRATION_OK;
-	}
-	if ( eType == SIR_CVAR_BOOL ) {
-		if ( sirConsoleCaseEqual( arg.pszText, "true" ) || sirConsoleCaseEqual( arg.pszText, "on" ) || strcmp( arg.pszText, "1" ) == 0 ) {
-			pValue->nBits = 1;
-			return SIR_REGISTRATION_OK;
-		}
-		if ( sirConsoleCaseEqual( arg.pszText, "false" ) || sirConsoleCaseEqual( arg.pszText, "off" ) || strcmp( arg.pszText, "0" ) == 0 ) {
-			return SIR_REGISTRATION_OK;
-		}
-		return SIR_REGISTRATION_TYPE_MISMATCH;
-	}
-	char *pszEnd = nullptr;
-	errno = 0;
-	if ( eType == SIR_CVAR_I32 || eType == SIR_CVAR_I64 ) {
-		const long long nValue = strtoll( arg.pszText, &pszEnd, 0 );
-		if ( !sirConsoleDecimalEnd( arg.pszText, pszEnd ) || ( eType == SIR_CVAR_I32 && ( nValue < INT32_MIN || nValue > INT32_MAX ) ) ) {
-			return SIR_REGISTRATION_TYPE_MISMATCH;
-		}
-		pValue->nBits = eType == SIR_CVAR_I32 ? ( uint32_t )( int32_t )nValue : ( uint64_t )nValue;
-		return SIR_REGISTRATION_OK;
-	}
-	if ( eType == SIR_CVAR_U32 || eType == SIR_CVAR_U64 || eType == SIR_CVAR_ENUM_U32 ) {
-		if ( arg.pszText[0] == '-' ) {
-			return SIR_REGISTRATION_TYPE_MISMATCH;
-		}
-		const unsigned long long nValue = strtoull( arg.pszText, &pszEnd, 0 );
-		if ( !sirConsoleDecimalEnd( arg.pszText, pszEnd ) || ( eType != SIR_CVAR_U64 && nValue > UINT32_MAX ) ) {
-			return SIR_REGISTRATION_TYPE_MISMATCH;
-		}
-		pValue->nBits = ( uint64_t )nValue;
-		return SIR_REGISTRATION_OK;
-	}
-	if ( eType == SIR_CVAR_F32 ) {
-		const float fValue = strtof( arg.pszText, &pszEnd );
-		if ( !sirConsoleDecimalEnd( arg.pszText, pszEnd ) || !std::isfinite( fValue ) ) {
-			return SIR_REGISTRATION_TYPE_MISMATCH;
-		}
-		uint32_t nBits = 0;
-		memcpy( &nBits, &fValue, sizeof( nBits ) );
-		pValue->nBits = nBits;
-		return SIR_REGISTRATION_OK;
-	}
-	if ( eType == SIR_CVAR_F64 ) {
-		const double fValue = strtod( arg.pszText, &pszEnd );
-		if ( !sirConsoleDecimalEnd( arg.pszText, pszEnd ) || !std::isfinite( fValue ) ) {
-			return SIR_REGISTRATION_TYPE_MISMATCH;
-		}
-		memcpy( &pValue->nBits, &fValue, sizeof( pValue->nBits ) );
-		return SIR_REGISTRATION_OK;
-	}
-	return SIR_REGISTRATION_TYPE_MISMATCH;
+	return sirCVarParseText( eType, arg.pszText, arg.nBytes, pValue );
 }
 
 sirRegistrationResult_t SIRConsoleService::printValue( const sirConsoleSubmission_t& submission, sirCVarType_t eType,
@@ -409,28 +350,10 @@ sirRegistrationResult_t SIRConsoleService::printValue( const sirConsoleSubmissio
 		return writeOutput( output );
 	}
 	char szValue[128] = {};
-	if ( eType == SIR_CVAR_BOOL ) {
-		return outputText( submission.nRequestId, SIR_REGISTRATION_OK, value.nBits == 0 ? "false" : "true" );
-	}
-	if ( eType == SIR_CVAR_I32 ) {
-		snprintf( szValue, sizeof( szValue ), "%" PRId32, ( int32_t )( uint32_t )value.nBits );
-	} else if ( eType == SIR_CVAR_U32 || eType == SIR_CVAR_ENUM_U32 ) {
-		snprintf( szValue, sizeof( szValue ), "%" PRIu32, ( uint32_t )value.nBits );
-	} else if ( eType == SIR_CVAR_I64 ) {
-		snprintf( szValue, sizeof( szValue ), "%" PRId64, ( int64_t )value.nBits );
-	} else if ( eType == SIR_CVAR_U64 ) {
-		snprintf( szValue, sizeof( szValue ), "%" PRIu64, value.nBits );
-	} else if ( eType == SIR_CVAR_F32 ) {
-		uint32_t nBits = ( uint32_t )value.nBits;
-		float fValue = 0.0f;
-		memcpy( &fValue, &nBits, sizeof( fValue ) );
-		snprintf( szValue, sizeof( szValue ), "%.9g", ( double )fValue );
-	} else if ( eType == SIR_CVAR_F64 ) {
-		double fValue = 0.0;
-		memcpy( &fValue, &value.nBits, sizeof( fValue ) );
-		snprintf( szValue, sizeof( szValue ), "%.17g", fValue );
-	} else {
-		return SIR_REGISTRATION_TYPE_MISMATCH;
+	uint32_t nLength = 0;
+	const sirRegistrationResult_t eFormat = sirCVarFormatText( eType, value, szValue, sizeof( szValue ), &nLength );
+	if ( eFormat != SIR_REGISTRATION_OK ) {
+		return eFormat;
 	}
 	return outputText( submission.nRequestId, SIR_REGISTRATION_OK, szValue );
 }

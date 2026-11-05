@@ -280,8 +280,16 @@
     {
       "id": "P5",
       "owned_paths": [
+        "Source/Core/Config/Formats/INI/*",
+        "Source/Core/Config/SIRConfigAtomicFile.*",
         "Source/Core/CVars/SIRCVarConfigAdapter.*",
-        "Source/Core/Console/SIRConsoleConfigAdapter.*"
+        "Source/Core/CVars/SIRCVarValueCodec.*",
+        "Source/Core/Console/SIRConsoleConfigAdapter.*",
+        "Source/Core/Console/SIRConsoleService.*",
+        "Source/Core/{Config,CVars,Console}/CMakeLists.txt",
+        "Tests/Unit/{Config,CVars}/*",
+        "Tests/Unit/CMakeLists.txt",
+        "Docs/Plans/ConsoleCVars/*"
       ],
       "tasks": [
         "P5"
@@ -496,15 +504,29 @@
         "Build ARCHIVE_TESTS acceptance and negative cases"
       ],
       "test_ids": [
-        "TEST-DOC"
+        "TEST-DOC",
+        "TEST-P5-INI",
+        "TEST-P5-CVAR"
       ],
       "outputs": [
-        "Source/Core/CVars/SIRCVarConfigAdapter.*",
-        "Source/Core/Console/SIRConsoleConfigAdapter.*"
+        "Source/Core/Config/Formats/INI/SIRIni.h",
+        "Source/Core/Config/Formats/INI/SIRIni.cpp",
+        "Source/Core/Config/SIRConfigAtomicFile.h",
+        "Source/Core/Config/SIRConfigAtomicFile.cpp",
+        "Source/Core/CVars/SIRCVarValueCodec.h",
+        "Source/Core/CVars/SIRCVarValueCodec.cpp",
+        "Source/Core/CVars/SIRCVarConfigAdapter.h",
+        "Source/Core/CVars/SIRCVarConfigAdapter.cpp",
+        "Source/Core/Console/SIRConsoleConfigAdapter.h",
+        "Source/Core/Console/SIRConsoleConfigAdapter.cpp",
+        "Tests/Unit/Config/SIRIniTests.cpp",
+        "Tests/Unit/CVars/SIRCVarConfigTests.cpp",
+        "Docs/Plans/ConsoleCVars/P5_DELIVERY.md"
       ],
       "stop_conditions": [
         "Unratified interface or unmet dependency gate"
-      ]
+      ],
+      "status": "IMPLEMENTED_PENDING_NATIVE_CI_AND_VFS"
     },
     {
       "id": "P6",
@@ -651,6 +673,28 @@
       "evidence_path": "Tests/Unit/Console/SIRConsoleServiceTests.cpp",
       "evidence_sha": "8bc25857357bc2b052b2eee9d9cf8799bff56f22",
       "evidence_url": "https://github.com/SIGAAMDAD/SIREngine/actions/runs/41949529591"
+    },
+    {
+      "id": "TEST-P5-INI",
+      "requirement_ids": [
+        "REQ-001",
+        "REQ-003"
+      ],
+      "tier": "NATIVE_CMAKE_CTEST",
+      "status": "PENDING_EXACT_SHA_CI",
+      "command": "ctest -R core.config.ini --output-on-failure",
+      "evidence_path": "Tests/Unit/Config/SIRIniTests.cpp"
+    },
+    {
+      "id": "TEST-P5-CVAR",
+      "requirement_ids": [
+        "REQ-001",
+        "REQ-003"
+      ],
+      "tier": "NATIVE_CMAKE_CTEST",
+      "status": "PENDING_EXACT_SHA_CI",
+      "command": "ctest -R core.cvars.config --output-on-failure",
+      "evidence_path": "Tests/Unit/CVars/SIRCVarConfigTests.cpp"
     }
   ],
   "probes": [],
