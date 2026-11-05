@@ -405,6 +405,46 @@ static bool testFailureAndCapacity( void )
 	SIR_TEST_CHECK( coordinator.release( hPending ) == SIR_SCRIPT_OK );
 	SIR_TEST_CHECK( coordinator.start() == SIR_SCRIPT_OK );
 
+	// A failed in-flight compile is explicitly reissued with a fresh wire ID.
+	transport.bReturnBackendFailure = true;
+	transport.bDeliver = false;
+	sirScriptOptimizationJobHandle_t hRetry = {};
+	SIR_TEST_CHECK( coordinator.submit( optimizerTestRequest( 74, registry.schemaFingerprint() ), false, &hRetry ) == SIR_SCRIPT_OK );
+	SIR_TEST_CHECK( coordinator.pump( 1, 0, &stats ) == SIR_SCRIPT_OK && stats.nSent == 1 );
+	SIR_TEST_CHECK( coordinator.query( hRetry, &info ) == SIR_SCRIPT_OK && info.eState == SIR_SCRIPT_JOB_IN_FLIGHT );
+	const uint64_t nOldJobId = info.nJobId;
+	SIR_TEST_CHECK( coordinator.retryFailed( hRetry ) == SIR_SCRIPT_WRONG_STATE );
+	SIR_TEST_CHECK( coordinator.workerFailed() == SIR_SCRIPT_OK );
+	SIR_TEST_CHECK( coordinator.query( hRetry, &info ) == SIR_SCRIPT_OK && info.eState == SIR_SCRIPT_JOB_FAILED &&
+	                info.eResult == SIR_SCRIPT_BACKEND_FAILURE && !info.bAwaitingReply );
+	SIR_TEST_CHECK( coordinator.retryFailed( { 0, 0 } ) == SIR_SCRIPT_INVALID_HANDLE );
+	sirScriptResult_t eRetryThread = SIR_SCRIPT_OK;
+	std::thread retryThread( [&]() { eRetryThread = coordinator.retryFailed( hRetry ); } );
+	retryThread.join();
+	SIR_TEST_CHECK( eRetryThread == SIR_SCRIPT_BUSY );
+	SIR_TEST_CHECK( coordinator.retryFailed( hRetry ) == SIR_SCRIPT_OK );
+	SIR_TEST_CHECK( coordinator.query( hRetry, &info ) == SIR_SCRIPT_OK && info.eState == SIR_SCRIPT_JOB_QUEUED &&
+	                info.nJobId > nOldJobId && !info.bAwaitingReply );
+	SIR_TEST_CHECK( coordinator.retryFailed( hRetry ) == SIR_SCRIPT_WRONG_STATE );
+	SIR_TEST_CHECK( coordinator.start() == SIR_SCRIPT_OK );
+	SIR_TEST_CHECK( coordinator.pump( 1, 0, &stats ) == SIR_SCRIPT_OK && stats.nSent == 1 );
+
+	// Even a correctly encoded late reply from the old worker is rejected.
+	sirScriptOptimizationReply_t staleReply = {};
+	staleReply.nJobId = nOldJobId;
+	staleReply.eResult = SIR_SCRIPT_BACKEND_FAILURE;
+	SIR_TEST_CHECK( SIRScriptOptimizationProtocol::encodeReply( staleReply, transport.szPending[transport.nFront] ) == SIR_SCRIPT_OK );
+	transport.bDeliver = true;
+	SIR_TEST_CHECK( coordinator.pump( 0, 1, &stats ) == SIR_SCRIPT_TYPE_MISMATCH );
+	SIR_TEST_CHECK( coordinator.query( hRetry, &info ) == SIR_SCRIPT_OK && info.eState == SIR_SCRIPT_JOB_FAILED );
+	SIR_TEST_CHECK( coordinator.retryFailed( hRetry ) == SIR_SCRIPT_OK );
+	SIR_TEST_CHECK( coordinator.query( hRetry, &info ) == SIR_SCRIPT_OK && info.nJobId > nOldJobId + 1 );
+	SIR_TEST_CHECK( coordinator.start() == SIR_SCRIPT_OK );
+	SIR_TEST_CHECK( coordinator.pump( 1, 1, &stats ) == SIR_SCRIPT_OK && stats.nFailed == 1 );
+	SIR_TEST_CHECK( coordinator.query( hRetry, &info ) == SIR_SCRIPT_OK && info.eState == SIR_SCRIPT_JOB_FAILED &&
+	                info.eResult == SIR_SCRIPT_BACKEND_FAILURE );
+	SIR_TEST_CHECK( coordinator.release( hRetry ) == SIR_SCRIPT_OK );
+
 	sirScriptOptimizationJobHandle_t hThread = {};
 	sirScriptResult_t eWrongThread = SIR_SCRIPT_OK;
 	std::thread thread(

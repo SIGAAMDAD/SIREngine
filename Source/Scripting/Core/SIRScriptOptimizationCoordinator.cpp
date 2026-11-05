@@ -233,6 +233,41 @@ sirScriptResult_t SIRScriptOptimizationCoordinator::workerFailed( void ) noexcep
 	return SIR_SCRIPT_OK;
 }
 
+// Explicit retries must happen after the old transport is stopped. Its
+// previous receive queue is discarded on stop, and wire IDs never repeat.
+sirScriptResult_t SIRScriptOptimizationCoordinator::retryFailed( sirScriptOptimizationJobHandle_t handle ) noexcept
+{
+	if ( !isOwnerThread() || m_bInCallback ) {
+		return SIR_SCRIPT_BUSY;
+	}
+	if ( !m_bConfigured || m_bRunning ) {
+		return SIR_SCRIPT_WRONG_STATE;
+	}
+	const int32_t iSlot = resolve( handle );
+	if ( iSlot < 0 ) {
+		return SIR_SCRIPT_INVALID_HANDLE;
+	}
+	sirScriptOptimizationJobSlot_t& slot = m_szJobs[iSlot];
+	if ( slot.info.eState != SIR_SCRIPT_JOB_FAILED || slot.info.eResult != SIR_SCRIPT_BACKEND_FAILURE || slot.info.bAwaitingReply ) {
+		return SIR_SCRIPT_WRONG_STATE;
+	}
+	if ( m_nNextJobId == UINT64_MAX || m_nNextSequence == UINT64_MAX ) {
+		return SIR_SCRIPT_CAPACITY_EXCEEDED;
+	}
+	sirScriptOptimizationRequest_t prepared = slot.request;
+	prepared.nJobId = m_nNextJobId + 1;
+	uint8_t szWire[SIRScriptOptimizationProtocol::REQUEST_BYTES] = {};
+	const sirScriptResult_t eValid = SIRScriptOptimizationProtocol::encodeRequest( prepared, szWire );
+	if ( eValid != SIR_SCRIPT_OK ) {
+		return eValid;
+	}
+	m_nNextJobId = prepared.nJobId;
+	slot.request = prepared;
+	slot.nSequence = ++m_nNextSequence;
+	slot.info = { prepared.nJobId, SIR_SCRIPT_JOB_QUEUED, SIR_SCRIPT_BUSY, {}, {}, false };
+	return SIR_SCRIPT_OK;
+}
+
 void SIRScriptOptimizationCoordinator::processReply( const sirScriptOptimizationReply_t& reply,
                                                      sirScriptOptimizationPumpStats_t *pStats ) noexcept
 {
