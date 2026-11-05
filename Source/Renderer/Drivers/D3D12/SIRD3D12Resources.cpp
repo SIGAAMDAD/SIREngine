@@ -639,6 +639,10 @@ sirGraphicsResult_t SIRD3D12Resources::createTexture( const sirGraphicsTextureDe
 	if ( resource.Format == DXGI_FORMAT_UNKNOWN ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
+	if ( desc.nSampleCount > 1 && ( ( desc.nUsage & SIR_GRAPHICS_USAGE_STORAGE ) != 0 ||
+	                                !sirD3D12SupportsSampleCount( m_pDevice, resource.Format, desc.nSampleCount ) ) ) {
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
 	D3D12MA::Allocation *pAllocation = nullptr;
 	const HRESULT nResult = m_pMemory->createTexture( resource, D3D12_RESOURCE_STATE_COMMON, nullptr, &pAllocation );
 	if ( FAILED( nResult ) || pAllocation == nullptr ) {

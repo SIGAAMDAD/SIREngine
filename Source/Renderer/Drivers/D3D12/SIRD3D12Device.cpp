@@ -21,6 +21,23 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <string.h>
 #include <atomic>
 
+bool sirD3D12SupportsSampleCount( ID3D12Device *pDevice, DXGI_FORMAT eFormat, uint32_t nSampleCount ) noexcept
+{
+	if ( pDevice == nullptr || eFormat == DXGI_FORMAT_UNKNOWN || nSampleCount == 0 || nSampleCount > 32 ||
+	     ( nSampleCount & ( nSampleCount - 1 ) ) != 0 ) {
+		return false;
+	}
+	if ( nSampleCount == 1 ) {
+		return true;
+	}
+	D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS levels = {};
+	levels.Format = eFormat;
+	levels.SampleCount = nSampleCount;
+	levels.Flags = D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG_NONE;
+	return SUCCEEDED( pDevice->CheckFeatureSupport( D3D12_FEATURE_MULTISAMPLE_QUALITY_LEVELS, &levels, sizeof( levels ) ) ) &&
+	       levels.NumQualityLevels > 0;
+}
+
 static std::atomic<uint64_t> s_nNextD3D12DeviceGeneration{ 1 };
 
 HRESULT sirD3D12EnumerateAdapters( IDXGIFactory6 *pFactory, uint32_t nRequestedIndex, IDXGIAdapter4 **ppSelected,
