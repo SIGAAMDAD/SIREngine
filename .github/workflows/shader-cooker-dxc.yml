@@ -49,7 +49,7 @@ jobs:
       - name: Compile offline shader cooker and tests
         run: >
           cmake --build --preset dev
-          --target SIRShaderCooker SIRShaderFrontendTests SIRMockDxc
+          --target SIRShaderCooker SIRShaderFrontendTests SIRMaterialIRTests SIRShaderArchiveTests SIRMockDxc
       - name: Verify real DXC outputs and shader cooker regressions
         run: >
           ctest --preset dev

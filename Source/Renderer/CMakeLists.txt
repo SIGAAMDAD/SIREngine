@@ -6,7 +6,8 @@ add_library(SIRGraphics STATIC
     SIRShaderPipeline.cpp
     Shaders/SIRShaderContracts.cpp
     Shaders/SIRShaderMaterial.cpp
-    Shaders/SIRShaderGRDG.cpp)
+    Shaders/SIRShaderGRDG.cpp
+    Shaders/SIRShaderLibrary.cpp)
 add_library(SIR::Graphics ALIAS SIRGraphics)
 target_include_directories(SIRGraphics PUBLIC
     "${PROJECT_SOURCE_DIR}/Source"
