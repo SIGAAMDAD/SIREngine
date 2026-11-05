@@ -208,7 +208,7 @@ static bool testRegistry( void ) noexcept
 	SIRGraphicsTestDriver ogl( SIR_GRAPHICS_BACKEND_OPENGL, SIR_GRAPHICS_FEATURE_GRAPHICS, 2, 1, true );
 	SIRGraphicsTestDriver invalid( SIR_GRAPHICS_BACKEND_AUTO, SIR_GRAPHICS_FEATURE_GRAPHICS, 1, 0, false );
 
-	if ( registry.getCount() != 0 || registry.registerDriver( nullptr ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+	if ( registry.getCapacity() == 0 || registry.getCount() != 0 || registry.registerDriver( nullptr ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
 		return false;
 	}
 	if ( registry.registerDriver( &invalid ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
@@ -320,6 +320,19 @@ static bool testRankedSelection( void ) noexcept
 		return false;
 	}
 
+	// Shared system memory provides the next deterministic tie-break when
+	// dedicated memory and capabilities are identical.
+	vulkan.setMemory( 2048, 1024 );
+	d3d12.setMemory( 2048, 512 );
+	if ( registry.selectDriver( selection, &pDriver, &adapter ) != SIR_GRAPHICS_SUCCESS || pDriver != &vulkan ) {
+		return false;
+	}
+	d3d12.setMemory( 2048, 2048 );
+	if ( registry.selectDriver( selection, &pDriver, &adapter ) != SIR_GRAPHICS_SUCCESS || pDriver != &d3d12 ) {
+		return false;
+	}
+	vulkan.setMemory( 2048, 0 );
+	d3d12.setMemory( 2048, 0 );
 	// Software is eligible only when the caller permits it, and only after
 	// feature and version checks have excluded every physical candidate.
 	selection.nRequiredFeatures = GRAPHICS | SIR_GRAPHICS_FEATURE_HDR_OUTPUT;

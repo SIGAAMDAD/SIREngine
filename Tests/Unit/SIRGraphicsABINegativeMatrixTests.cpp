@@ -276,9 +276,355 @@ static bool testSourcePipeline( void ) noexcept
 	return expectStatus( sirGraphicsValidatePipeline( test ), SIR_GRAPHICS_INVALID_ARGUMENT, "source invalid binding type" );
 }
 
+static bool testSourcePipelineEdges( void ) noexcept
+{
+	sirGraphicsABIModernRecipe_t modern = {};
+	modern.nSize = sizeof( modern );
+	modern.nStageMask = SIR_GRAPHICS_STAGE_VERTEX | SIR_GRAPHICS_STAGE_FRAGMENT;
+	sirGraphicsABIProgrammableRecipe_t programmable = {};
+	programmable.nSize = sizeof( programmable );
+	sirGraphicsABIFixedRecipe_t fixed = {};
+	fixed.nSize = sizeof( fixed );
+	sirGraphicsABIFixedStage_t stage = {};
+	sirGraphicsABIFixedLight_t light = {};
+	sirGraphicsPipelineDesc_t base = {};
+	base.eModel = SIR_GRAPHICS_PIPELINE_MODEL_MODERN;
+	base.eType = SIR_GRAPHICS_PIPELINE_GRAPHICS;
+	base.pModern = &modern;
+	base.nSampleCount = 1;
+	base.vertexShader = { SIR_GRAPHICS_SHADER_SPIRV, &s_nShader, 4, 1, "main" };
+	base.pixelShader = { SIR_GRAPHICS_SHADER_SPIRV, &s_nShader, 4, 2, "main" };
+	sirGraphicsPipelineDesc_t test = base;
+#define CHECK_SOURCE( expected, label )                                                                                                    \
+	if ( !expectStatus( sirGraphicsValidatePipeline( test ), expected, label ) )                                                           \
+	return false
+	CHECK_SOURCE( SIR_GRAPHICS_SUCCESS, "modern graphics" );
+	test.pModern = nullptr;
+	CHECK_SOURCE( SIR_GRAPHICS_INVALID_ARGUMENT, "modern recipe missing" );
+	test = base;
+	test.pProgrammable = &programmable;
+	CHECK_SOURCE( SIR_GRAPHICS_INVALID_ARGUMENT, "modern and programmable tags" );
+	test = base;
+	test.pFixed = &fixed;
+	CHECK_SOURCE( SIR_GRAPHICS_INVALID_ARGUMENT, "modern and fixed tags" );
+	test = base;
+	modern.nSize = 1;
+	CHECK_SOURCE( SIR_GRAPHICS_INVALID_ARGUMENT, "modern undersized" );
+	modern.nSize = sizeof( modern );
+	modern.nStageMask = SIR_GRAPHICS_STAGE_COMPUTE;
+	CHECK_SOURCE( SIR_GRAPHICS_INVALID_ARGUMENT, "modern wrong stages" );
+	modern.nStageMask = SIR_GRAPHICS_STAGE_VERTEX | SIR_GRAPHICS_STAGE_FRAGMENT;
+	test.eType = SIR_GRAPHICS_PIPELINE_FIXED_FUNCTION;
+	CHECK_SOURCE( SIR_GRAPHICS_INVALID_ARGUMENT, "modern fixed type" );
+	test = base;
+	test.eType = SIR_GRAPHICS_PIPELINE_COMPUTE;
+	CHECK_SOURCE( SIR_GRAPHICS_INVALID_ARGUMENT, "modern compute wrong recipe" );
+	modern.nStageMask = SIR_GRAPHICS_STAGE_COMPUTE;
+	CHECK_SOURCE( SIR_GRAPHICS_INVALID_ARGUMENT, "modern compute missing shader" );
+	test.vertexShader = {};
+	test.pixelShader = {};
+	test.computeShader = { SIR_GRAPHICS_SHADER_SPIRV, &s_nShader, 4, 3, "main" };
+	CHECK_SOURCE( SIR_GRAPHICS_SUCCESS, "modern compute valid" );
+	test.computeShader.nByteCount = 3;
+	CHECK_SOURCE( SIR_GRAPHICS_INVALID_ARGUMENT, "modern compute short shader" );
+	test.computeShader.nByteCount = 4;
+	test.vertexShader = base.vertexShader;
+	CHECK_SOURCE( SIR_GRAPHICS_INVALID_ARGUMENT, "modern compute has vertex shader" );
+	test.vertexShader = {};
+	test.pixelShader = base.pixelShader;
+	CHECK_SOURCE( SIR_GRAPHICS_INVALID_ARGUMENT, "modern compute has fragment shader" );
+	test.pixelShader = {};
+	test.nColorFormatCount = 1;
+	CHECK_SOURCE( SIR_GRAPHICS_INVALID_ARGUMENT, "modern compute has color attachment" );
+	test.nColorFormatCount = 0;
+	test.nAttributeCount = 1;
+	sirGraphicsVertexAttribute_t attribute = {};
+	test.pAttributes = &attribute;
+	CHECK_SOURCE( SIR_GRAPHICS_INVALID_ARGUMENT, "modern compute has vertex attribute" );
+	test.nAttributeCount = 0;
+	test.nSampleCount = 2;
+	CHECK_SOURCE( SIR_GRAPHICS_INVALID_ARGUMENT, "modern compute uses MSAA" );
+	modern.nStageMask = SIR_GRAPHICS_STAGE_VERTEX | SIR_GRAPHICS_STAGE_FRAGMENT;
+	test = base;
+	test.vertexShader.eFormat = SIR_GRAPHICS_SHADER_FIXED_FUNCTION;
+	CHECK_SOURCE( SIR_GRAPHICS_INVALID_ARGUMENT, "modern invalid vertex shader format" );
+	test = base;
+	test.pixelShader.pBytes = nullptr;
+	CHECK_SOURCE( SIR_GRAPHICS_INVALID_ARGUMENT, "modern missing pixel bytes" );
+	test = base;
+	test.pixelShader.eFormat = SIR_GRAPHICS_SHADER_DXBC;
+	CHECK_SOURCE( SIR_GRAPHICS_INVALID_ARGUMENT, "modern mixed shader formats" );
+	test = base;
+	test.computeShader = { SIR_GRAPHICS_SHADER_SPIRV, &s_nShader, 4, 3, "main" };
+	CHECK_SOURCE( SIR_GRAPHICS_INVALID_ARGUMENT, "modern graphics has compute shader" );
+
+	test = base;
+	test.eModel = SIR_GRAPHICS_PIPELINE_MODEL_PROGRAMMABLE;
+	test.pModern = nullptr;
+	test.pProgrammable = &programmable;
+	CHECK_SOURCE( SIR_GRAPHICS_SUCCESS, "programmable graphics" );
+	test.pModern = &modern;
+	CHECK_SOURCE( SIR_GRAPHICS_INVALID_ARGUMENT, "programmable modern collision" );
+	test.pModern = nullptr;
+	test.pProgrammable = nullptr;
+	CHECK_SOURCE( SIR_GRAPHICS_INVALID_ARGUMENT, "programmable missing recipe" );
+	test.pProgrammable = &programmable;
+	programmable.nSize = 1;
+	CHECK_SOURCE( SIR_GRAPHICS_INVALID_ARGUMENT, "programmable small recipe" );
+	programmable.nSize = sizeof( programmable );
+	programmable.nReserved = 1;
+	CHECK_SOURCE( SIR_GRAPHICS_INVALID_ARGUMENT, "programmable reserved" );
+	programmable.nReserved = 0;
+	test.eType = SIR_GRAPHICS_PIPELINE_COMPUTE;
+	CHECK_SOURCE( SIR_GRAPHICS_INVALID_ARGUMENT, "programmable compute forbidden" );
+	test = base;
+	test.eModel = SIR_GRAPHICS_PIPELINE_MODEL_FIXED_FUNCTION;
+	test.eType = SIR_GRAPHICS_PIPELINE_FIXED_FUNCTION;
+	test.pModern = nullptr;
+	test.pFixed = &fixed;
+	test.vertexShader = {};
+	test.pixelShader = {};
+	CHECK_SOURCE( SIR_GRAPHICS_SUCCESS, "fixed shaderless" );
+	test.pModern = &modern;
+	CHECK_SOURCE( SIR_GRAPHICS_INVALID_ARGUMENT, "fixed modern collision" );
+	test.pModern = nullptr;
+	fixed.nSize = 1;
+	CHECK_SOURCE( SIR_GRAPHICS_INVALID_ARGUMENT, "fixed short recipe" );
+	fixed.nSize = sizeof( fixed );
+	fixed.nReserved = 1;
+	CHECK_SOURCE( SIR_GRAPHICS_INVALID_ARGUMENT, "fixed reserved" );
+	fixed.nReserved = 0;
+	test.vertexShader = base.vertexShader;
+	CHECK_SOURCE( SIR_GRAPHICS_INVALID_ARGUMENT, "fixed vertex shader forbidden" );
+	test.vertexShader = {};
+	test.pixelShader = base.pixelShader;
+	CHECK_SOURCE( SIR_GRAPHICS_INVALID_ARGUMENT, "fixed fragment shader forbidden" );
+	test.pixelShader = {};
+	test.computeShader = base.vertexShader;
+	CHECK_SOURCE( SIR_GRAPHICS_INVALID_ARGUMENT, "fixed compute shader forbidden" );
+	test.computeShader = {};
+	fixed.nTextureStageCount = 1;
+	CHECK_SOURCE( SIR_GRAPHICS_INVALID_ARGUMENT, "fixed missing stages" );
+	fixed.pStages = &stage;
+	CHECK_SOURCE( SIR_GRAPHICS_SUCCESS, "fixed supplied stages" );
+	fixed.nLightCount = 1;
+	CHECK_SOURCE( SIR_GRAPHICS_INVALID_ARGUMENT, "fixed missing lights" );
+	fixed.pLights = &light;
+	CHECK_SOURCE( SIR_GRAPHICS_SUCCESS, "fixed supplied lights" );
+	test.nBindingCount = 1;
+	CHECK_SOURCE( SIR_GRAPHICS_INVALID_ARGUMENT, "fixed binding forbidden" );
+	fixed.nTextureStageCount = 0;
+	fixed.nLightCount = 0;
+	test = base;
+	test.eModel = ( sirGraphicsPipelineModel_t )99;
+	CHECK_SOURCE( SIR_GRAPHICS_INVALID_ARGUMENT, "unknown pipeline era" );
+#undef CHECK_SOURCE
+	return true;
+}
+
+static bool testSourcePipelineBounds( void ) noexcept
+{
+	sirGraphicsABIModernRecipe_t modern = {};
+	modern.nSize = sizeof( modern );
+	modern.nStageMask = SIR_GRAPHICS_STAGE_VERTEX | SIR_GRAPHICS_STAGE_FRAGMENT;
+	sirGraphicsPipelineDesc_t base = {};
+	base.eModel = SIR_GRAPHICS_PIPELINE_MODEL_MODERN;
+	base.eType = SIR_GRAPHICS_PIPELINE_GRAPHICS;
+	base.pModern = &modern;
+	base.nSampleCount = 1;
+	base.vertexShader = { SIR_GRAPHICS_SHADER_SPIRV, &s_nShader, 4, 1, "main" };
+	base.pixelShader = { SIR_GRAPHICS_SHADER_SPIRV, &s_nShader, 4, 2, "main" };
+	sirGraphicsPipelineDesc_t test = base;
+#define CHECK_SOURCE( expected, label )                                                                                                    \
+	if ( !expectStatus( sirGraphicsValidatePipeline( test ), expected, label ) )                                                           \
+	return false
+	test.nColorFormatCount = 9;
+	CHECK_SOURCE( SIR_GRAPHICS_INVALID_ARGUMENT, "color count over eight" );
+	test = base;
+	sirGraphicsBindingDesc_t binding = {};
+	binding.nArrayCount = 1;
+	binding.nShaderStageMask = SIR_GRAPHICS_STAGE_VERTEX;
+	test.pBindings = &binding;
+	test.nBindingCount = 4097;
+	CHECK_SOURCE( SIR_GRAPHICS_INVALID_ARGUMENT, "binding count exceeds fixed boundary" );
+	test.nBindingCount = 1;
+	binding.nShaderStageMask = 0;
+	CHECK_SOURCE( SIR_GRAPHICS_INVALID_ARGUMENT, "binding zero stages" );
+	binding.nShaderStageMask = SIR_GRAPHICS_STAGE_VERTEX;
+	binding.nArrayCount = 0;
+	CHECK_SOURCE( SIR_GRAPHICS_INVALID_ARGUMENT, "binding zero array" );
+	binding.nArrayCount = 1;
+	binding.eType = SIR_GRAPHICS_BINDING_SAMPLED_TEXTURE;
+	CHECK_SOURCE( SIR_GRAPHICS_SUCCESS, "binding admitted" );
+	test = base;
+	sirGraphicsVertexAttribute_t attribute = {};
+	test.pAttributes = &attribute;
+	test.nAttributeCount = 33;
+	CHECK_SOURCE( SIR_GRAPHICS_INVALID_ARGUMENT, "vertex attributes over 32" );
+	test = base;
+	test.nSampleCount = 0;
+	CHECK_SOURCE( SIR_GRAPHICS_INVALID_ARGUMENT, "zero samples" );
+	test.nSampleCount = 3;
+	CHECK_SOURCE( SIR_GRAPHICS_INVALID_ARGUMENT, "non-power sample count" );
+	test.nSampleCount = 4;
+	CHECK_SOURCE( SIR_GRAPHICS_SUCCESS, "power two sample count" );
+	test = base;
+	test.nColorFormatCount = 1;
+	test.szColorFormats[0] = SIR_GRAPHICS_FORMAT_RGBA8_UNORM;
+	test.szBlendStates[0].bEnabled = true;
+	CHECK_SOURCE( SIR_GRAPHICS_SUCCESS, "blending valid" );
+	test.szBlendStates[0].eSourceColor = ( sirGraphicsBlendFactor_t )99;
+	CHECK_SOURCE( SIR_GRAPHICS_INVALID_ARGUMENT, "blend source color" );
+	test.szBlendStates[0].eSourceColor = SIR_GRAPHICS_BLEND_ONE;
+	test.szBlendStates[0].eDestinationColor = ( sirGraphicsBlendFactor_t )99;
+	CHECK_SOURCE( SIR_GRAPHICS_INVALID_ARGUMENT, "blend destination color" );
+	test.szBlendStates[0].eDestinationColor = SIR_GRAPHICS_BLEND_ONE;
+	test.szBlendStates[0].eSourceAlpha = ( sirGraphicsBlendFactor_t )99;
+	CHECK_SOURCE( SIR_GRAPHICS_INVALID_ARGUMENT, "blend source alpha" );
+	test.szBlendStates[0].eSourceAlpha = SIR_GRAPHICS_BLEND_ONE;
+	test.szBlendStates[0].eDestinationAlpha = ( sirGraphicsBlendFactor_t )99;
+	CHECK_SOURCE( SIR_GRAPHICS_INVALID_ARGUMENT, "blend destination alpha" );
+	test.szBlendStates[0].eDestinationAlpha = SIR_GRAPHICS_BLEND_ONE;
+	test.szBlendStates[0].eColorOperation = ( sirGraphicsBlendOp_t )99;
+	CHECK_SOURCE( SIR_GRAPHICS_INVALID_ARGUMENT, "blend color op" );
+	test.szBlendStates[0].eColorOperation = SIR_GRAPHICS_BLEND_ADD;
+	test.szBlendStates[0].eAlphaOperation = ( sirGraphicsBlendOp_t )99;
+	CHECK_SOURCE( SIR_GRAPHICS_INVALID_ARGUMENT, "blend alpha op" );
+	test.szBlendStates[0].eAlphaOperation = SIR_GRAPHICS_BLEND_ADD;
+	test.szBlendStates[0].nColorWriteMask = 16;
+	CHECK_SOURCE( SIR_GRAPHICS_INVALID_ARGUMENT, "blend channel mask" );
+	test.szBlendStates[0].nColorWriteMask = 15;
+	CHECK_SOURCE( SIR_GRAPHICS_SUCCESS, "valid 4-bit blend mask" );
+	test.szBlendStates[0].bEnabled = false;
+	test.szBlendStates[0].eSourceColor = ( sirGraphicsBlendFactor_t )99;
+	CHECK_SOURCE( SIR_GRAPHICS_SUCCESS, "disabled blend does not require active factors" );
+#undef CHECK_SOURCE
+	return true;
+}
+
+static bool testResourceAndCompletionEdges( void ) noexcept
+{
+	sirGraphicsBufferDesc_t buffer = {};
+	buffer.nSizeBytes = 1;
+	buffer.nUsage = SIR_GRAPHICS_USAGE_COPY_SOURCE;
+	buffer.eMemory = SIR_GRAPHICS_MEMORY_GPU_LOCAL;
+	if ( !expectStatus( sirGraphicsValidateBuffer( buffer ), SIR_GRAPHICS_SUCCESS, "buffer base" ) )
+		return false;
+	buffer.nUsage = ( 1U << 31 );
+	if ( !expectStatus( sirGraphicsValidateBuffer( buffer ), SIR_GRAPHICS_INVALID_ARGUMENT, "buffer invalid usage" ) )
+		return false;
+	buffer.nUsage = SIR_GRAPHICS_USAGE_DEPTH_STENCIL;
+	if ( !expectStatus( sirGraphicsValidateBuffer( buffer ), SIR_GRAPHICS_INVALID_ARGUMENT, "buffer depth usage" ) )
+		return false;
+	buffer.nUsage = SIR_GRAPHICS_USAGE_COPY_SOURCE;
+	buffer.eMemory = ( sirGraphicsMemoryClass_t )( SIR_GRAPHICS_MEMORY_TRANSIENT + 1 );
+	if ( !expectStatus( sirGraphicsValidateBuffer( buffer ), SIR_GRAPHICS_INVALID_ARGUMENT, "buffer bad memory" ) )
+		return false;
+	sirGraphicsTextureDesc_t texture = {};
+	texture.nWidth = 16;
+	texture.nHeight = 16;
+	texture.nDepth = 1;
+	texture.nArrayLayers = 1;
+	texture.nMipLevels = 1;
+	texture.nSampleCount = 1;
+	texture.nUsage = SIR_GRAPHICS_USAGE_SAMPLED;
+	texture.eFormat = SIR_GRAPHICS_FORMAT_RGBA8_UNORM;
+	texture.eDimension = SIR_GRAPHICS_TEXTURE_2D;
+	texture.eMemory = SIR_GRAPHICS_MEMORY_GPU_LOCAL;
+	if ( !expectStatus( sirGraphicsValidateTexture( texture ), SIR_GRAPHICS_SUCCESS, "valid texture" ) )
+		return false;
+	texture.nWidth = 0;
+	if ( !expectStatus( sirGraphicsValidateTexture( texture ), SIR_GRAPHICS_INVALID_ARGUMENT, "zero width" ) )
+		return false;
+	texture.nWidth = 16;
+	texture.nHeight = 0;
+	if ( !expectStatus( sirGraphicsValidateTexture( texture ), SIR_GRAPHICS_INVALID_ARGUMENT, "zero height" ) )
+		return false;
+	texture.nHeight = 16;
+	texture.nDepth = 0;
+	if ( !expectStatus( sirGraphicsValidateTexture( texture ), SIR_GRAPHICS_INVALID_ARGUMENT, "zero depth" ) )
+		return false;
+	texture.nDepth = 1;
+	texture.nArrayLayers = 0;
+	if ( !expectStatus( sirGraphicsValidateTexture( texture ), SIR_GRAPHICS_INVALID_ARGUMENT, "zero layers" ) )
+		return false;
+	texture.nArrayLayers = 1;
+	texture.nMipLevels = 0;
+	if ( !expectStatus( sirGraphicsValidateTexture( texture ), SIR_GRAPHICS_INVALID_ARGUMENT, "zero mips" ) )
+		return false;
+	texture.nMipLevels = 1;
+	texture.eDimension = SIR_GRAPHICS_TEXTURE_1D;
+	if ( !expectStatus( sirGraphicsValidateTexture( texture ), SIR_GRAPHICS_INVALID_ARGUMENT, "1D texture non-unit height" ) )
+		return false;
+	texture.nHeight = 1;
+	if ( !expectStatus( sirGraphicsValidateTexture( texture ), SIR_GRAPHICS_SUCCESS, "1D texture valid" ) )
+		return false;
+	texture.eDimension = SIR_GRAPHICS_TEXTURE_3D;
+	texture.nArrayLayers = 2;
+	if ( !expectStatus( sirGraphicsValidateTexture( texture ), SIR_GRAPHICS_INVALID_ARGUMENT, "3D array invalid" ) )
+		return false;
+	texture.nArrayLayers = 1;
+	if ( !expectStatus( sirGraphicsValidateTexture( texture ), SIR_GRAPHICS_SUCCESS, "3D valid" ) )
+		return false;
+	texture.eDimension = ( sirGraphicsTextureDimension_t )0;
+	if ( !expectStatus( sirGraphicsValidateTexture( texture ), SIR_GRAPHICS_INVALID_ARGUMENT, "invalid dimension low" ) )
+		return false;
+	texture.eDimension = ( sirGraphicsTextureDimension_t )99;
+	if ( !expectStatus( sirGraphicsValidateTexture( texture ), SIR_GRAPHICS_INVALID_ARGUMENT, "invalid dimension high" ) )
+		return false;
+	texture.eDimension = SIR_GRAPHICS_TEXTURE_2D;
+	texture.eMemory = ( sirGraphicsMemoryClass_t )( SIR_GRAPHICS_MEMORY_TRANSIENT + 1 );
+	if ( !expectStatus( sirGraphicsValidateTexture( texture ), SIR_GRAPHICS_INVALID_ARGUMENT, "texture invalid memory class" ) )
+		return false;
+	sirGraphicsSamplerDesc_t sampler = {};
+	sampler.fMaximumAnisotropy = 1;
+	sampler.fMaximumLod = 4;
+	if ( !expectStatus( sirGraphicsValidateSampler( sampler ), SIR_GRAPHICS_SUCCESS, "sampler base" ) )
+		return false;
+	sampler.eFilter = ( sirGraphicsSamplerFilter_t )99;
+	if ( !expectStatus( sirGraphicsValidateSampler( sampler ), SIR_GRAPHICS_INVALID_ARGUMENT, "sampler bad filter" ) )
+		return false;
+	sampler.eFilter = SIR_GRAPHICS_FILTER_LINEAR;
+	sampler.eAddressU = ( sirGraphicsAddressMode_t )99;
+	if ( !expectStatus( sirGraphicsValidateSampler( sampler ), SIR_GRAPHICS_INVALID_ARGUMENT, "sampler bad U" ) )
+		return false;
+	sampler.eAddressU = SIR_GRAPHICS_ADDRESS_REPEAT;
+	sampler.eAddressV = ( sirGraphicsAddressMode_t )99;
+	if ( !expectStatus( sirGraphicsValidateSampler( sampler ), SIR_GRAPHICS_INVALID_ARGUMENT, "sampler bad V" ) )
+		return false;
+	sampler.eAddressV = SIR_GRAPHICS_ADDRESS_REPEAT;
+	sampler.eAddressW = ( sirGraphicsAddressMode_t )99;
+	if ( !expectStatus( sirGraphicsValidateSampler( sampler ), SIR_GRAPHICS_INVALID_ARGUMENT, "sampler bad W" ) )
+		return false;
+	sirGraphicsHandle_t handle = { 9, 1, 7, SIR_GRAPHICS_HANDLE_TEXTURE };
+	if ( !expectStatus( sirGraphicsIsHandleValid( handle, SIR_GRAPHICS_HANDLE_TEXTURE, 7 ) ? 1U : 0U, 1, "valid texture handle" ) )
+		return false;
+	handle.eType = SIR_GRAPHICS_HANDLE_NONE;
+	if ( !expectStatus( sirGraphicsIsHandleValid( handle, SIR_GRAPHICS_HANDLE_NONE, 7 ) ? 1U : 0U, 0, "invalid none handle type" ) )
+		return false;
+	handle.eType = ( sirGraphicsHandleType_t )99;
+	if ( !expectStatus( sirGraphicsIsHandleValid( handle, SIR_GRAPHICS_HANDLE_NONE, 7 ) ? 1U : 0U, 0, "invalid high handle type" ) )
+		return false;
+	sirGraphicsCompletionSet_t fences = {};
+	fences.nDeviceGeneration = 7;
+	fences.nQueueMask = 1U << SIR_GRAPHICS_QUEUE_DIRECT;
+	fences.szQueueValues[SIR_GRAPHICS_QUEUE_DIRECT] = 10;
+	if ( !expectStatus( sirGraphicsIsCompletionSetValid( fences, 7 ) ? 1U : 0U, 1, "valid fences" ) )
+		return false;
+	fences.nQueueMask = 1U << 31;
+	if ( !expectStatus( sirGraphicsIsCompletionSetValid( fences, 7 ) ? 1U : 0U, 0, "invalid queue bit" ) )
+		return false;
+	fences.nQueueMask = 0;
+	fences.szQueueValues[SIR_GRAPHICS_QUEUE_DIRECT] = 0;
+	if ( !expectStatus( sirGraphicsIsCompletionSetValid( fences, 7 ) ? 1U : 0U, 1, "valid empty fence set" ) )
+		return false;
+	return true;
+}
+
 int main( void )
 {
-	if ( !testAdapter() || !testCapabilities() || !testFormat() || !testModelCaps() || !testSourcePipeline() ) {
+	if ( !testAdapter() || !testCapabilities() || !testFormat() || !testModelCaps() || !testSourcePipeline() ||
+	     !testSourcePipelineEdges() || !testSourcePipelineBounds() || !testResourceAndCompletionEdges() ) {
 		return 1;
 	}
 	printf( "PASS: %u binary/source ABI negative-matrix assertions\n", s_nAssertions );

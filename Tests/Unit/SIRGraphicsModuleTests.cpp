@@ -34,6 +34,415 @@ static void testLog( void *, uint32_t, const char * ) noexcept
 
 typedef void ( *sirMockSetMode_t )( uint32_t );
 
+static bool testHostBoundaryInputs( const sirGraphicsABIDevice_t *pDevice ) noexcept
+{
+	const sirGraphicsABIDevice_t *pNullDevice = nullptr;
+	sirGraphicsABICapabilities_t caps = {};
+	caps.nSize = sizeof( caps );
+	sirGraphicsABIFormat_t format = {};
+	format.nSize = sizeof( format );
+	sirGraphicsABIPipelineModelCaps_t model = {};
+	model.nSize = sizeof( model );
+	sirGraphicsHandle_t handle = { 19, 1, 5, SIR_GRAPHICS_HANDLE_BUFFER };
+	sirGraphicsSurfaceImage_t image = {};
+	sirGraphicsMemoryBudget_t budget = {};
+	sirGraphicsCompletion_t completion = { 5, SIR_GRAPHICS_QUEUE_DIRECT, 1 };
+	sirGraphicsCompletionSet_t retirement = {};
+	retirement.nDeviceGeneration = 5;
+	uint32_t nDone = 0;
+	uint32_t nIndex = 99;
+	sirGraphicsABIDraw_t draw = { 1, 1, 0, 0 };
+	( void )draw;
+	sirGraphicsABIModernRecipe_t modern = {};
+	modern.nSize = sizeof( modern );
+	modern.nStageMask = SIR_GRAPHICS_STAGE_COMPUTE;
+	sirGraphicsABIPipeline_t pipeline = {};
+	pipeline.nSize = sizeof( pipeline );
+	pipeline.nModel = SIR_GRAPHICS_PIPELINE_MODEL_MODERN;
+	pipeline.nType = SIR_GRAPHICS_PIPELINE_COMPUTE;
+	pipeline.nSampleCount = 1;
+	uint32_t nShader = 0x07230203;
+	pipeline.computeShader = { sizeof( sirGraphicsABIShaderCode_t ), SIR_GRAPHICS_SHADER_SPIRV, &nShader, 4, 1, "main" };
+	pipeline.pModern = &modern;
+	sirGraphicsBufferDesc_t buffer = {};
+	buffer.nSizeBytes = 64;
+	buffer.nUsage = SIR_GRAPHICS_USAGE_COPY_SOURCE;
+	buffer.eMemory = SIR_GRAPHICS_MEMORY_GPU_LOCAL;
+	sirGraphicsTextureDesc_t texture = {};
+	texture.nWidth = 16;
+	texture.nHeight = 16;
+	texture.nDepth = 1;
+	texture.nArrayLayers = 1;
+	texture.nMipLevels = 1;
+	texture.nSampleCount = 1;
+	texture.nUsage = SIR_GRAPHICS_USAGE_SAMPLED;
+	texture.eFormat = SIR_GRAPHICS_FORMAT_RGBA8_UNORM;
+	texture.eMemory = SIR_GRAPHICS_MEMORY_GPU_LOCAL;
+	texture.eDimension = SIR_GRAPHICS_TEXTURE_2D;
+	sirGraphicsViewDesc_t view = {};
+	view.hResource = { 1, 1, 5, SIR_GRAPHICS_HANDLE_TEXTURE };
+	view.nMipLevels = 1;
+	view.nLayers = 1;
+	view.nUsage = SIR_GRAPHICS_USAGE_SAMPLED;
+	view.eFormat = SIR_GRAPHICS_FORMAT_RGBA8_UNORM;
+	sirGraphicsSamplerDesc_t sampler = {};
+	sampler.fMaximumAnisotropy = 1;
+	sampler.fMaximumLod = 4;
+	sirGraphicsABICommandList_t commands = {};
+	commands.nSize = sizeof( commands );
+	const void *ppLists[] = { &commands };
+	sirGraphicsABISubmission_t submission = {};
+	submission.nSize = sizeof( submission );
+	submission.nCommandListCount = 1;
+	submission.ppCommandLists = ppLists;
+	sirGraphicsABINativeSurface_t native = {};
+	native.nSize = sizeof( native );
+	native.nPlatform = SIR_GRAPHICS_SURFACE_X11;
+	native.pWindow = &native;
+	native.nWindowGeneration = 1;
+	sirGraphicsABIPresentDesc_t present = {};
+	present.nSize = sizeof( present );
+	present.nWidth = 64;
+	present.nHeight = 64;
+	present.nBackbufferCount = 2;
+	present.nFormat = SIR_GRAPHICS_FORMAT_RGBA8_UNORM;
+	present.nMode = SIR_GRAPHICS_PRESENT_FIFO;
+#define CHECK_HOST( expression, label )                                                                                                    \
+	if ( ( expression ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {                                                                               \
+		fputs( "Host boundary accepted " label "\n", stderr );                                                                             \
+		return false;                                                                                                                      \
+	}
+	CHECK_HOST( sirGraphicsQueryABICapabilities( pDevice, SIR_GRAPHICS_BACKEND_VULKAN, nullptr ), "null capabilities out" );
+	CHECK_HOST( sirGraphicsQueryABICapabilities( pNullDevice, SIR_GRAPHICS_BACKEND_VULKAN, &caps ), "null capabilities device" );
+	CHECK_HOST( sirGraphicsQueryABIFormat( pDevice, SIR_GRAPHICS_FORMAT_RGBA8_UNORM, nullptr ), "null format out" );
+	CHECK_HOST( sirGraphicsQueryABIFormat( pNullDevice, SIR_GRAPHICS_FORMAT_RGBA8_UNORM, &format ), "null format device" );
+	CHECK_HOST( sirGraphicsQueryABIFormat( pDevice, SIR_GRAPHICS_FORMAT_UNKNOWN, &format ), "unknown format ID" );
+	CHECK_HOST( sirGraphicsQueryABIFormat( pDevice, SIR_GRAPHICS_FORMAT_BC7_UNORM + 1, &format ), "format out of range" );
+	CHECK_HOST( sirGraphicsQueryABIPipelineModelCaps( pDevice, SIR_GRAPHICS_PIPELINE_MODEL_MODERN, nullptr ), "null model caps" );
+	CHECK_HOST( sirGraphicsQueryABIPipelineModelCaps( pNullDevice, SIR_GRAPHICS_PIPELINE_MODEL_MODERN, &model ), "null model device" );
+	CHECK_HOST( sirGraphicsQueryABIPipelineModelCaps( pDevice, 0, &model ), "invalid pipeline model" );
+	CHECK_HOST( sirGraphicsSelectABIPipelineVariant( pDevice, nullptr, 1, &nIndex ), "null candidates" );
+	CHECK_HOST( sirGraphicsSelectABIPipelineVariant( pDevice, &pipeline, 1, nullptr ), "null variant index" );
+	CHECK_HOST( sirGraphicsSelectABIPipelineVariant( pNullDevice, &pipeline, 1, &nIndex ), "null variant device" );
+	CHECK_HOST( sirGraphicsAcquireABICommands( pDevice, SIR_GRAPHICS_QUEUE_DIRECT, nullptr ), "null command table" );
+	CHECK_HOST( sirGraphicsAcquireABICommands( pNullDevice, SIR_GRAPHICS_QUEUE_DIRECT, &commands ), "null command device" );
+	CHECK_HOST( sirGraphicsSubmitABICommands( pDevice, SIR_GRAPHICS_QUEUE_DIRECT, nullptr, &completion ), "null submission" );
+	CHECK_HOST( sirGraphicsSubmitABICommands( pDevice, SIR_GRAPHICS_QUEUE_DIRECT, &submission, nullptr ), "null submit completion" );
+	CHECK_HOST( sirGraphicsSubmitABICommands( pNullDevice, SIR_GRAPHICS_QUEUE_DIRECT, &submission, &completion ), "null submit device" );
+	CHECK_HOST( sirGraphicsPollABICompletion( pDevice, nullptr, &nDone ), "null poll completion" );
+	CHECK_HOST( sirGraphicsPollABICompletion( pDevice, &completion, nullptr ), "null poll output" );
+	CHECK_HOST( sirGraphicsPollABICompletion( pNullDevice, &completion, &nDone ), "null poll device" );
+	CHECK_HOST( sirGraphicsWaitABICompletion( pDevice, nullptr, 0 ), "null wait completion" );
+	CHECK_HOST( sirGraphicsWaitABICompletion( pNullDevice, &completion, 0 ), "null wait device" );
+	CHECK_HOST( sirGraphicsCreateABISurface( pDevice, &native, &present, nullptr ), "null surface output" );
+	CHECK_HOST( sirGraphicsCreateABISurface( pNullDevice, &native, &present, &handle ), "null surface device" );
+	CHECK_HOST( sirGraphicsResizeABISurface( pNullDevice, handle, &native, &present ), "null resize device" );
+	CHECK_HOST( sirGraphicsAcquireABISurfaceImage( pDevice, handle, nullptr ), "null surface image output" );
+	CHECK_HOST( sirGraphicsAcquireABISurfaceImage( pNullDevice, handle, &image ), "null acquire device" );
+	CHECK_HOST( sirGraphicsPresentABISurfaceImage( pDevice, nullptr, &completion ), "null present image" );
+	CHECK_HOST( sirGraphicsPresentABISurfaceImage( pDevice, &image, nullptr ), "null present token" );
+	CHECK_HOST( sirGraphicsPresentABISurfaceImage( pNullDevice, &image, &completion ), "null present device" );
+	CHECK_HOST( sirGraphicsRetireABIResource( pDevice, handle, nullptr ), "null retirement fences" );
+	CHECK_HOST( sirGraphicsRetireABIResource( pNullDevice, handle, &retirement ), "null retirement device" );
+	CHECK_HOST( sirGraphicsQueryABIMemoryBudget( pDevice, nullptr ), "null memory budget" );
+	CHECK_HOST( sirGraphicsQueryABIMemoryBudget( pNullDevice, &budget ), "null memory device" );
+	CHECK_HOST( sirGraphicsCreateABIBuffer( pDevice, nullptr, &handle ), "null buffer desc" );
+	CHECK_HOST( sirGraphicsCreateABIBuffer( pDevice, &buffer, nullptr ), "null buffer output" );
+	CHECK_HOST( sirGraphicsCreateABIBuffer( pNullDevice, &buffer, &handle ), "null buffer device" );
+	CHECK_HOST( sirGraphicsCreateABIView( pDevice, nullptr, &handle ), "null view desc" );
+	CHECK_HOST( sirGraphicsCreateABIView( pDevice, &view, nullptr ), "null view output" );
+	CHECK_HOST( sirGraphicsCreateABIView( pNullDevice, &view, &handle ), "null view device" );
+	CHECK_HOST( sirGraphicsCreateABISampler( pDevice, nullptr, &handle ), "null sampler desc" );
+	CHECK_HOST( sirGraphicsCreateABISampler( pDevice, &sampler, nullptr ), "null sampler output" );
+	CHECK_HOST( sirGraphicsCreateABISampler( pNullDevice, &sampler, &handle ), "null sampler device" );
+	CHECK_HOST( sirGraphicsCreateABITexture( pDevice, nullptr, &handle ), "null texture desc" );
+	CHECK_HOST( sirGraphicsCreateABITexture( pDevice, &texture, nullptr ), "null texture output" );
+	CHECK_HOST( sirGraphicsCreateABITexture( pNullDevice, &texture, &handle ), "null texture device" );
+	CHECK_HOST( sirGraphicsCreateABIPipeline( pDevice, nullptr, &handle ), "null pipeline desc" );
+	CHECK_HOST( sirGraphicsCreateABIPipeline( pDevice, &pipeline, nullptr ), "null pipeline output" );
+	CHECK_HOST( sirGraphicsCreateABIPipeline( pNullDevice, &pipeline, &handle ), "null pipeline device" );
+#undef CHECK_HOST
+	return true;
+}
+
+static uint32_t s_nFaultCapsMode = 0;
+static uint32_t ( *s_pUnderlyingCaps )( void *, sirGraphicsABICapabilities_t * ) = nullptr;
+
+static uint32_t testQueryCapabilitiesFault( void *pNative, sirGraphicsABICapabilities_t *pCaps ) noexcept
+{
+	if ( s_nFaultCapsMode == 1 ) {
+		return SIR_GRAPHICS_DEVICE_LOST;
+	}
+	if ( s_nFaultCapsMode == 2 ) {
+		return 0xFFFFFFFFU;
+	}
+	const uint32_t nResult = s_pUnderlyingCaps( pNative, pCaps );
+	if ( nResult != SIR_GRAPHICS_SUCCESS ) {
+		return nResult;
+	}
+	if ( s_nFaultCapsMode == 3 ) {
+		pCaps->nDeviceGeneration = 0;
+	} else if ( s_nFaultCapsMode == 4 ) {
+		pCaps->nEnabledFeatures = 0;
+	} else if ( s_nFaultCapsMode == 5 ) {
+		pCaps->nMaximumTextureDimension = 1;
+	} else if ( s_nFaultCapsMode == 6 ) {
+		pCaps->nEnabledQueues = 0;
+	}
+	return SIR_GRAPHICS_SUCCESS;
+}
+
+static bool testHostProviderFaults( const sirGraphicsABIDevice_t *pDevice ) noexcept
+{
+	sirGraphicsABIDevice_t test = *pDevice;
+	s_pUnderlyingCaps = pDevice->pQueryCapabilities;
+	test.pQueryCapabilities = testQueryCapabilitiesFault;
+	sirGraphicsABICapabilities_t caps = {};
+	caps.nSize = sizeof( caps );
+	sirGraphicsBufferDesc_t buffer = {};
+	buffer.nSizeBytes = 128;
+	buffer.nUsage = SIR_GRAPHICS_USAGE_COPY_SOURCE;
+	buffer.eMemory = SIR_GRAPHICS_MEMORY_GPU_LOCAL;
+	sirGraphicsTextureDesc_t texture = {};
+	texture.nWidth = 16;
+	texture.nHeight = 16;
+	texture.nDepth = 1;
+	texture.nArrayLayers = 1;
+	texture.nMipLevels = 1;
+	texture.nSampleCount = 1;
+	texture.nUsage = SIR_GRAPHICS_USAGE_SAMPLED;
+	texture.eFormat = SIR_GRAPHICS_FORMAT_RGBA8_UNORM;
+	texture.eMemory = SIR_GRAPHICS_MEMORY_GPU_LOCAL;
+	texture.eDimension = SIR_GRAPHICS_TEXTURE_2D;
+	sirGraphicsViewDesc_t view = {};
+	view.hResource = { 2, 1, 5, SIR_GRAPHICS_HANDLE_TEXTURE };
+	view.eFormat = SIR_GRAPHICS_FORMAT_RGBA8_UNORM;
+	view.nUsage = SIR_GRAPHICS_USAGE_SAMPLED;
+	view.nMipLevels = 1;
+	view.nLayers = 1;
+	sirGraphicsSamplerDesc_t sampler = {};
+	sampler.fMaximumAnisotropy = 1;
+	sampler.fMaximumLod = 16;
+	sirGraphicsHandle_t handle = { 99, 1, 5, SIR_GRAPHICS_HANDLE_BUFFER };
+	sirGraphicsABICommandList_t commands = {};
+	commands.nSize = sizeof( commands );
+	sirGraphicsCompletion_t completion = { 5, SIR_GRAPHICS_QUEUE_DIRECT, 1 };
+	sirGraphicsCompletionSet_t retire = {};
+	retire.nDeviceGeneration = 5;
+	uint32_t nDone = 0;
+	sirGraphicsABINativeSurface_t native = {};
+	native.nSize = sizeof( native );
+	native.nPlatform = SIR_GRAPHICS_SURFACE_X11;
+	native.pWindow = &native;
+	native.nWindowGeneration = 1;
+	sirGraphicsABIPresentDesc_t present = {};
+	present.nSize = sizeof( present );
+	present.nWidth = 16;
+	present.nHeight = 16;
+	present.nFormat = SIR_GRAPHICS_FORMAT_RGBA8_UNORM;
+	present.nBackbufferCount = 2;
+	present.nMode = SIR_GRAPHICS_PRESENT_FIFO;
+	sirGraphicsSurfaceImage_t image = {};
+	const void *pCommands[] = { &commands };
+	sirGraphicsABISubmission_t submission = {};
+	submission.nSize = sizeof( submission );
+	submission.nCommandListCount = 1;
+	submission.ppCommandLists = pCommands;
+#define CHECK_PROVIDER( expression, expected, label )                                                                                      \
+	if ( ( expression ) != ( expected ) ) {                                                                                                \
+		fputs( "Provider fault: " label "\n", stderr );                                                                                    \
+		return false;                                                                                                                      \
+	}
+	for ( uint32_t nMode = 1; nMode <= 3; ++nMode ) {
+		s_nFaultCapsMode = nMode;
+		const sirGraphicsResult_t eExpected = nMode == 1 ? SIR_GRAPHICS_DEVICE_LOST : SIR_GRAPHICS_DRIVER_ERROR;
+		CHECK_PROVIDER( sirGraphicsQueryABICapabilities( &test, SIR_GRAPHICS_BACKEND_VULKAN, &caps ), eExpected, "capability query" );
+		CHECK_PROVIDER( sirGraphicsAcquireABICommands( &test, SIR_GRAPHICS_QUEUE_DIRECT, &commands ), eExpected, "acquire commands" );
+		CHECK_PROVIDER( sirGraphicsSubmitABICommands( &test, SIR_GRAPHICS_QUEUE_DIRECT, &submission, &completion ), eExpected,
+		                "submit commands" );
+		CHECK_PROVIDER( sirGraphicsPollABICompletion( &test, &completion, &nDone ), eExpected, "poll completion" );
+		CHECK_PROVIDER( sirGraphicsWaitABICompletion( &test, &completion, 0 ), eExpected, "wait completion" );
+		CHECK_PROVIDER( sirGraphicsCreateABIBuffer( &test, &buffer, &handle ), eExpected, "create buffer" );
+		CHECK_PROVIDER( sirGraphicsCreateABIView( &test, &view, &handle ), eExpected, "create view" );
+		CHECK_PROVIDER( sirGraphicsCreateABISampler( &test, &sampler, &handle ), eExpected, "create sampler" );
+		CHECK_PROVIDER( sirGraphicsCreateABITexture( &test, &texture, &handle ), eExpected, "create texture" );
+		CHECK_PROVIDER( sirGraphicsCreateABISurface( &test, &native, &present, &handle ), eExpected, "create surface" );
+		CHECK_PROVIDER( sirGraphicsResizeABISurface( &test, handle, &native, &present ), eExpected, "resize surface" );
+		CHECK_PROVIDER( sirGraphicsAcquireABISurfaceImage( &test, handle, &image ), eExpected, "acquire surface image" );
+		CHECK_PROVIDER( sirGraphicsPresentABISurfaceImage( &test, &image, &completion ), eExpected, "present surface" );
+		CHECK_PROVIDER( sirGraphicsRetireABIResource( &test, handle, &retire ), eExpected, "retire resource" );
+		if ( handle.nSlot != 99 ) {
+			fputs( "Faulting native provider mutated caller's handle\n", stderr );
+			return false;
+		}
+	}
+	s_nFaultCapsMode = 4;
+	buffer.nUsage = SIR_GRAPHICS_USAGE_VERTEX;
+	CHECK_PROVIDER( sirGraphicsCreateABIBuffer( &test, &buffer, &handle ), SIR_GRAPHICS_UNSUPPORTED,
+	                "graphics buffer with disabled graphics" );
+	buffer.nUsage = SIR_GRAPHICS_USAGE_STORAGE;
+	CHECK_PROVIDER( sirGraphicsCreateABIBuffer( &test, &buffer, &handle ), SIR_GRAPHICS_UNSUPPORTED,
+	                "storage buffer with disabled storage" );
+	buffer.nUsage = SIR_GRAPHICS_USAGE_INDIRECT;
+	CHECK_PROVIDER( sirGraphicsCreateABIBuffer( &test, &buffer, &handle ), SIR_GRAPHICS_UNSUPPORTED,
+	                "indirect buffer with disabled indirect" );
+	buffer.nUsage = SIR_GRAPHICS_USAGE_COPY_SOURCE;
+	buffer.eMemory = SIR_GRAPHICS_MEMORY_GPU_UPLOAD;
+	CHECK_PROVIDER( sirGraphicsCreateABIBuffer( &test, &buffer, &handle ), SIR_GRAPHICS_UNSUPPORTED, "GPU upload with disabled upload" );
+	texture.nUsage = SIR_GRAPHICS_USAGE_STORAGE;
+	CHECK_PROVIDER( sirGraphicsCreateABITexture( &test, &texture, &handle ), SIR_GRAPHICS_UNSUPPORTED,
+	                "storage texture without shader storage" );
+	CHECK_PROVIDER( sirGraphicsCreateABISurface( &test, &native, &present, &handle ), SIR_GRAPHICS_UNSUPPORTED,
+	                "surface without present feature" );
+	s_nFaultCapsMode = 5;
+	texture.nUsage = SIR_GRAPHICS_USAGE_SAMPLED;
+	CHECK_PROVIDER( sirGraphicsCreateABITexture( &test, &texture, &handle ), SIR_GRAPHICS_UNSUPPORTED, "texture exceeds dimension" );
+	s_nFaultCapsMode = 6;
+	CHECK_PROVIDER( sirGraphicsQueryABICapabilities( &test, SIR_GRAPHICS_BACKEND_VULKAN, &caps ), SIR_GRAPHICS_DRIVER_ERROR,
+	                "invalid zero queue capability" );
+	s_nFaultCapsMode = 0;
+#undef CHECK_PROVIDER
+	return true;
+}
+
+static uint32_t s_nSyntheticAdapterMode = 0;
+
+static uint32_t testCountRankedAdapters( void *, uint32_t *pCount ) noexcept
+{
+	if ( s_nSyntheticAdapterMode == 6 ) {
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
+	if ( s_nSyntheticAdapterMode == 7 ) {
+		return SIR_GRAPHICS_DEVICE_LOST;
+	}
+	*pCount = s_nSyntheticAdapterMode == 4 ? 1 : 4;
+	return SIR_GRAPHICS_SUCCESS;
+}
+
+static uint32_t testDescribeRankedAdapter( void *, sirGraphicsABIAdapter_t *pAdapter ) noexcept
+{
+	if ( s_nSyntheticAdapterMode == 8 ) {
+		return SIR_GRAPHICS_DEVICE_LOST;
+	}
+	const uint32_t nIndex = pAdapter->nIndex;
+	*pAdapter = {};
+	pAdapter->nSize = sizeof( *pAdapter );
+	pAdapter->nIndex = nIndex;
+	pAdapter->nBackend = s_nSyntheticAdapterMode == 4 ? SIR_GRAPHICS_BACKEND_D3D12 : SIR_GRAPHICS_BACKEND_VULKAN;
+	pAdapter->nKind = SIR_GRAPHICS_ABI_ADAPTER_INTEGRATED;
+	pAdapter->nApiMajor = 1;
+	pAdapter->nApiMinor = 4;
+	pAdapter->nQueueMask = 1U << SIR_GRAPHICS_QUEUE_DIRECT;
+	pAdapter->nFeatureMask = SIR_GRAPHICS_FEATURE_GRAPHICS | SIR_GRAPHICS_FEATURE_COMPUTE;
+	pAdapter->nDedicatedBytes = 0;
+	pAdapter->nSharedBytes = nIndex == 0 ? 100 : 200;
+	pAdapter->nStableId = nIndex == 0 ? 300 : ( nIndex == 1 ? 200 : 50 );
+	if ( s_nSyntheticAdapterMode == 1 && nIndex == 3 ) {
+		pAdapter->nFeatureMask |= SIR_GRAPHICS_FEATURE_HDR_OUTPUT;
+	}
+	if ( s_nSyntheticAdapterMode == 2 && nIndex == 3 ) {
+		pAdapter->nDedicatedBytes = 100;
+	}
+	if ( s_nSyntheticAdapterMode == 3 && nIndex == 3 ) {
+		pAdapter->nSharedBytes = 300;
+	}
+	if ( s_nSyntheticAdapterMode == 5 ) {
+		pAdapter->nApiMajor = 0;
+	}
+	return SIR_GRAPHICS_SUCCESS;
+}
+
+static bool testAdapterRankingBoundaries( const sirGraphicsABIModule_t *pModule ) noexcept
+{
+	sirGraphicsABIModule_t synthetic = *pModule;
+	synthetic.driver.pAdapterCount = testCountRankedAdapters;
+	synthetic.driver.pQueryAdapter = testDescribeRankedAdapter;
+	const sirGraphicsABIModule_t *modules[] = { &synthetic };
+	sirGraphicsABIModuleSelection_t policy = {};
+	policy.nSize = sizeof( policy );
+	policy.nBackend = SIR_GRAPHICS_BACKEND_VULKAN;
+	policy.nRequiredFeatures = SIR_GRAPHICS_FEATURE_COMPUTE;
+	sirGraphicsABIAdapterChoice_t choice = {};
+	choice.nSize = sizeof( choice );
+#define CHECK_ADAPTER( expression, expected, label )                                                                                       \
+	if ( ( expression ) != ( expected ) ) {                                                                                                \
+		fputs( "Adapter selection rejected wrong: " label "\n", stderr );                                                                  \
+		return false;                                                                                                                      \
+	}
+	CHECK_ADAPTER( sirGraphicsSelectABIModuleAdapter( nullptr, 1, &policy, &choice ), SIR_GRAPHICS_INVALID_ARGUMENT, "null list" );
+	CHECK_ADAPTER( sirGraphicsSelectABIModuleAdapter( modules, 0, &policy, &choice ), SIR_GRAPHICS_INVALID_ARGUMENT, "empty list" );
+	CHECK_ADAPTER( sirGraphicsSelectABIModuleAdapter( modules, 17, &policy, &choice ), SIR_GRAPHICS_CAPACITY_EXCEEDED,
+	               "module overcapacity" );
+	CHECK_ADAPTER( sirGraphicsSelectABIModuleAdapter( modules, 1, nullptr, &choice ), SIR_GRAPHICS_INVALID_ARGUMENT, "missing policy" );
+	CHECK_ADAPTER( sirGraphicsSelectABIModuleAdapter( modules, 1, &policy, nullptr ), SIR_GRAPHICS_INVALID_ARGUMENT, "missing output" );
+	policy.nSize = 1;
+	CHECK_ADAPTER( sirGraphicsSelectABIModuleAdapter( modules, 1, &policy, &choice ), SIR_GRAPHICS_INVALID_ARGUMENT, "short policy" );
+	policy.nSize = sizeof( policy );
+	choice.nSize = 1;
+	CHECK_ADAPTER( sirGraphicsSelectABIModuleAdapter( modules, 1, &policy, &choice ), SIR_GRAPHICS_INVALID_ARGUMENT, "short output" );
+	choice.nSize = sizeof( choice );
+	policy.nBackend = 99;
+	CHECK_ADAPTER( sirGraphicsSelectABIModuleAdapter( modules, 1, &policy, &choice ), SIR_GRAPHICS_INVALID_ARGUMENT, "bad backend" );
+	policy.nBackend = SIR_GRAPHICS_BACKEND_VULKAN;
+	policy.nAllowSoftware = 2;
+	CHECK_ADAPTER( sirGraphicsSelectABIModuleAdapter( modules, 1, &policy, &choice ), SIR_GRAPHICS_INVALID_ARGUMENT, "bad boolean" );
+	policy.nAllowSoftware = 0;
+	policy.nReserved = 1;
+	CHECK_ADAPTER( sirGraphicsSelectABIModuleAdapter( modules, 1, &policy, &choice ), SIR_GRAPHICS_INVALID_ARGUMENT, "reserved policy" );
+	policy.nReserved = 0;
+	policy.nMinimumApiMinor = 1;
+	CHECK_ADAPTER( sirGraphicsSelectABIModuleAdapter( modules, 1, &policy, &choice ), SIR_GRAPHICS_INVALID_ARGUMENT,
+	               "minor without major" );
+	policy.nMinimumApiMinor = 0;
+	const sirGraphicsABIModule_t *missing[] = { nullptr };
+	CHECK_ADAPTER( sirGraphicsSelectABIModuleAdapter( missing, 1, &policy, &choice ), SIR_GRAPHICS_INVALID_ARGUMENT, "null module record" );
+	sirGraphicsABIModule_t broken = synthetic;
+	broken.driver.pQueryAdapter = nullptr;
+	const sirGraphicsABIModule_t *invalid[] = { &broken };
+	CHECK_ADAPTER( sirGraphicsSelectABIModuleAdapter( invalid, 1, &policy, &choice ), SIR_GRAPHICS_INVALID_ARGUMENT,
+	               "malformed binary driver" );
+	s_nSyntheticAdapterMode = 0;
+	CHECK_ADAPTER( sirGraphicsSelectABIModuleAdapter( modules, 1, &policy, &choice ), SIR_GRAPHICS_SUCCESS, "stable id rank" );
+	if ( choice.adapter.nIndex != 2 ) {
+		fputs( "Stable-id tie-break selected wrong adapter\n", stderr );
+		return false;
+	}
+	for ( uint32_t mode = 1; mode <= 3; ++mode ) {
+		s_nSyntheticAdapterMode = mode;
+		CHECK_ADAPTER( sirGraphicsSelectABIModuleAdapter( modules, 1, &policy, &choice ), SIR_GRAPHICS_SUCCESS, "feature/memory ordering" );
+		if ( choice.adapter.nIndex != 3 ) {
+			fputs( "Capability or memory ranking ignored\n", stderr );
+			return false;
+		}
+	}
+	s_nSyntheticAdapterMode = 5;
+	CHECK_ADAPTER( sirGraphicsSelectABIModuleAdapter( modules, 1, &policy, &choice ), SIR_GRAPHICS_DRIVER_ERROR,
+	               "zero API version from provider" );
+	s_nSyntheticAdapterMode = 6;
+	CHECK_ADAPTER( sirGraphicsSelectABIModuleAdapter( modules, 1, &policy, &choice ), SIR_GRAPHICS_UNSUPPORTED,
+	               "explicit unsupported count" );
+	policy.nBackend = SIR_GRAPHICS_BACKEND_AUTO;
+	CHECK_ADAPTER( sirGraphicsSelectABIModuleAdapter( modules, 1, &policy, &choice ), SIR_GRAPHICS_UNSUPPORTED,
+	               "skip unsupported AUTO module" );
+	s_nSyntheticAdapterMode = 7;
+	CHECK_ADAPTER( sirGraphicsSelectABIModuleAdapter( modules, 1, &policy, &choice ), SIR_GRAPHICS_DEVICE_LOST,
+	               "provider count device loss" );
+	s_nSyntheticAdapterMode = 8;
+	CHECK_ADAPTER( sirGraphicsSelectABIModuleAdapter( modules, 1, &policy, &choice ), SIR_GRAPHICS_DEVICE_LOST,
+	               "provider enumerate device loss" );
+	sirGraphicsABIModule_t d3d12 = synthetic;
+	d3d12.driver.nBackend = SIR_GRAPHICS_BACKEND_D3D12;
+	const sirGraphicsABIModule_t *both[] = { &d3d12, &synthetic };
+	s_nSyntheticAdapterMode = 0;
+	// D3D12 would also return Vulkan-advertised adapters in this shared
+	// callback variant; explicit requests must reject a backend mismatch.
+	CHECK_ADAPTER( sirGraphicsSelectABIModuleAdapter( both, 2, &policy, &choice ), SIR_GRAPHICS_DRIVER_ERROR,
+	               "provider adapter/backend identity mismatch" );
+	s_nSyntheticAdapterMode = 0;
+#undef CHECK_ADAPTER
+	return true;
+}
+
 static bool testBinaryModule( void ) noexcept
 {
 	sirGraphicsABIHost_t host = {};
@@ -75,6 +484,9 @@ static bool testBinaryModule( void ) noexcept
 	}
 	pMode( 0 );
 	if ( sirGraphicsQueryABIAdapter( &module, 1, &adapter ) != SIR_GRAPHICS_ABI_UNSUPPORTED ) {
+		return false;
+	}
+	if ( !testAdapterRankingBoundaries( &module ) ) {
 		return false;
 	}
 
@@ -187,6 +599,12 @@ static bool testBinaryModule( void ) noexcept
 	}
 	pMode( 0 );
 	if ( sirGraphicsCreateABIDevice( &module, &request, &device ) != SIR_GRAPHICS_ABI_SUCCESS || module.nActiveDevices != 1 ) {
+		return false;
+	}
+	if ( !testHostBoundaryInputs( &device ) ) {
+		return false;
+	}
+	if ( !testHostProviderFaults( &device ) ) {
 		return false;
 	}
 	// Validate every mandatory native function-table slot independently.
