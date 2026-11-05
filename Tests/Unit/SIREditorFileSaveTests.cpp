@@ -156,6 +156,30 @@ int main( void )
 #else
 	assert( rmdir( szOther ) == 0 );
 #endif
+#if !defined( _WIN32 )
+	// Scene saves must not silently replace a symlink or a special file.
+	char szLinkedTarget[640] = {};
+	assert( snprintf( szLinkedTarget, sizeof( szLinkedTarget ), "%s/linked-target.tscn", szDirectory ) > 0 );
+	sirEditorTestWriteOriginal( szLinkedTarget, "external owner" );
+	assert( remove( szDestination ) == 0 );
+	assert( symlink( szLinkedTarget, szDestination ) == 0 );
+	assert( sirEditorWriteFileAtomically( request ) == SIR_EDITOR_FILE_SAVE_INVALID_PATH );
+	sirEditorTestReadExact( szLinkedTarget, "external owner", strlen( "external owner" ) );
+	struct stat linkState = {};
+	assert( lstat( szDestination, &linkState ) == 0 );
+	assert( S_ISLNK( linkState.st_mode ) );
+	assert( fopen( szTemporary, "rb" ) == nullptr );
+	assert( unlink( szDestination ) == 0 );
+
+	assert( mkfifo( szDestination, 0600 ) == 0 );
+	assert( sirEditorWriteFileAtomically( request ) == SIR_EDITOR_FILE_SAVE_INVALID_PATH );
+	assert( lstat( szDestination, &linkState ) == 0 );
+	assert( S_ISFIFO( linkState.st_mode ) );
+	assert( fopen( szTemporary, "rb" ) == nullptr );
+	assert( unlink( szDestination ) == 0 );
+	assert( remove( szLinkedTarget ) == 0 );
+	sirEditorTestWriteOriginal( szDestination, pszUpdated );
+#endif
 	assert( remove( szDestination ) == 0 );
 #if defined( _WIN32 )
 	assert( RemoveDirectoryA( szDirectory ) != 0 );
