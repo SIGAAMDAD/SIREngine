@@ -96,6 +96,21 @@ static sirEditorFileSaveResult_t sirEditorFileWritePlatform( const sirEditorFile
 	     !sirEditorFileToWindowsPath( request.pszTemporary, szTemporary, 4096 ) ) {
 		return SIR_EDITOR_FILE_SAVE_INVALID_PATH;
 	}
+	const DWORD nDestinationAttributes = GetFileAttributesW( szDestination );
+	if ( nDestinationAttributes != INVALID_FILE_ATTRIBUTES ) {
+		if ( ( nDestinationAttributes & FILE_ATTRIBUTE_REPARSE_POINT ) != 0 ) {
+			return SIR_EDITOR_FILE_SAVE_INVALID_PATH;
+		}
+		if ( ( nDestinationAttributes & FILE_ATTRIBUTE_DIRECTORY ) != 0 ) {
+			return SIR_EDITOR_FILE_SAVE_REPLACE_FAILED;
+		}
+		if ( ( nDestinationAttributes & FILE_ATTRIBUTE_DEVICE ) != 0 ) {
+			return SIR_EDITOR_FILE_SAVE_INVALID_PATH;
+		}
+	} else if ( GetLastError() != ERROR_FILE_NOT_FOUND ) {
+		return SIR_EDITOR_FILE_SAVE_IO_ERROR;
+	}
+
 	HANDLE hFile = CreateFileW( szTemporary, GENERIC_WRITE, 0, nullptr, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, nullptr );
 	if ( hFile == INVALID_HANDLE_VALUE ) {
 		const DWORD nError = GetLastError();
@@ -133,14 +148,28 @@ static sirEditorFileSaveResult_t sirEditorFileWritePlatform( const sirEditorFile
 #else
 static sirEditorFileSaveResult_t sirEditorFileWritePlatform( const sirEditorFileWriteRequest_t &request ) noexcept
 {
+	// Do not discard symlinks, devices or special files under an authored scene path.
+	// A failed destination probe must not be treated as a new-file save.
+	struct stat previous = {};
+	const int nStat = lstat( request.pszDestination, &previous );
+	if ( nStat == 0 ) {
+		if ( S_ISDIR( previous.st_mode ) ) {
+			return SIR_EDITOR_FILE_SAVE_REPLACE_FAILED;
+		}
+		if ( !S_ISREG( previous.st_mode ) ) {
+			return SIR_EDITOR_FILE_SAVE_INVALID_PATH;
+		}
+	} else if ( errno != ENOENT ) {
+		return SIR_EDITOR_FILE_SAVE_IO_ERROR;
+	}
+
 	const int nFile = open( request.pszTemporary, O_CREAT | O_EXCL | O_WRONLY | O_CLOEXEC, 0600 );
 	if ( nFile < 0 ) {
 		return errno == EEXIST ? SIR_EDITOR_FILE_SAVE_TEMP_EXISTS : SIR_EDITOR_FILE_SAVE_IO_ERROR;
 	}
 	bool bSuccess = true;
 	// Preserve editable scene file permissions when replacing a regular file.
-	struct stat previous = {};
-	if ( lstat( request.pszDestination, &previous ) == 0 && S_ISREG( previous.st_mode ) && fchmod( nFile, previous.st_mode & 0777 ) != 0 ) {
+	if ( nStat == 0 && fchmod( nFile, previous.st_mode & 0777 ) != 0 ) {
 		bSuccess = false;
 	}
 	size_t nWritten = 0;
@@ -205,8 +234,7 @@ sirEditorFileSaveResult_t sirEditorWriteFileAtomically( const sirEditorFileWrite
 
 sirEditorFileSaveResult_t sirEditorSaveBoundScene( const sirEditorSceneSaveRequest_t &request ) noexcept
 {
-	if ( request.pBridge == nullptr || request.pSourceScene == nullptr || request.pszScratch == nullptr ||
-	     request.nScratchCapacity == 0 ) {
+	if ( request.pBridge == nullptr || request.pSourceScene == nullptr || request.pszScratch == nullptr || request.nScratchCapacity == 0 ) {
 		return SIR_EDITOR_FILE_SAVE_INVALID_ARGUMENT;
 	}
 	const sirEditorTextSceneIndex_t &source = *request.pSourceScene;
@@ -226,9 +254,8 @@ sirEditorFileSaveResult_t sirEditorSaveBoundScene( const sirEditorSceneSaveReque
 	for ( uint32_t iNode = 0; iNode < source.nNodeCount; ++iNode ) {
 		const sirEditorNode_t &original = source.storage.pNodes[iNode].node;
 		sirEditorNode_t current = {};
-		if ( request.pBridge->pDocument->findNode( original.nId, &current ) != SIR_EDITOR_OK ||
-		     current.nId != original.nId || current.nTypeId != original.nTypeId ||
-		     current.nParentId != original.nParentId || current.nFlags != original.nFlags ||
+		if ( request.pBridge->pDocument->findNode( original.nId, &current ) != SIR_EDITOR_OK || current.nId != original.nId ||
+		     current.nTypeId != original.nTypeId || current.nParentId != original.nParentId || current.nFlags != original.nFlags ||
 		     original.nGeneration == UINT32_MAX || current.nGeneration != original.nGeneration + 1 ) {
 			return SIR_EDITOR_FILE_SAVE_UNSUPPORTED_EDIT;
 		}
