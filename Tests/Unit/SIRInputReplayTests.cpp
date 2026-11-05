@@ -350,10 +350,63 @@ static bool sirTestReplayMalformedActionRecords( void ) noexcept
 	return !SIRInputReplayTape::validateFrame( { 0, 0, {} } );
 }
 
+static bool sirTestReplayTapeValidationBoundaries( void ) noexcept
+{
+	SIRInputActions actions;
+	const sirInputReplayKey_t key = { 7, 0 };
+	const sirInputReplayKey_t missing = { 9, 0 };
+	if ( !actions.addAction( 7, 0 ) ) {
+		return false;
+	}
+	uint8_t szSmall[64] = {};
+	SIRInputReplayTape writer;
+	if ( !writer.beginRecord( szSmall, sizeof( szSmall ) ) || !writer.append( 1, actions, &key, 1 ) ||
+	     writer.bytesUsed() != SIR_INPUT_REPLAY_HEADER_BYTES + SIR_INPUT_REPLAY_RECORD_BYTES || writer.append( 2, actions, &key, 1 ) ||
+	     writer.bytesUsed() != SIR_INPUT_REPLAY_HEADER_BYTES + SIR_INPUT_REPLAY_RECORD_BYTES ) {
+		return false;
+	}
+	uint8_t szLarge[256] = {};
+	if ( !writer.beginRecord( szLarge, sizeof( szLarge ) ) || writer.append( 1, actions, &missing, 1 ) || writer.bytesUsed() != 0 ||
+	     !writer.append( 1, actions, &key, 1 ) ) {
+		return false;
+	}
+	sirInputReplayFrame_t frame = {};
+	frame.nTick = 1;
+	frame.nCount = 2;
+	frame.actions[0] = { 7, 0, 0, 0, false, false, false };
+	frame.actions[1] = { 7, 0, 0, 0, false, false, false };
+	if ( SIRInputReplayTape::validateFrame( frame ) || SIRInputReplayTape::query( frame, 7, 0, nullptr ) ) {
+		return false;
+	}
+	frame.actions[1].nUser = 1;
+	if ( !SIRInputReplayTape::validateFrame( frame ) ) {
+		return false;
+	}
+	frame.actions[0].nValue = 32768;
+	frame.actions[0].bHeld = true;
+	if ( SIRInputReplayTape::validateFrame( frame ) ) {
+		return false;
+	}
+	frame.actions[0].nValue = -32768;
+	if ( SIRInputReplayTape::validateFrame( frame ) ) {
+		return false;
+	}
+	frame.actions[0].nValue = 0;
+	frame.actions[0].bHeld = false;
+	sirInputActionState_t output = {};
+	if ( !SIRInputReplayTape::validateFrame( frame ) || !SIRInputReplayTape::query( frame, 7, 1, &output ) || output.nUser != 1 ||
+	     SIRInputReplayTape::query( frame, 7, 2, &output ) ) {
+		return false;
+	}
+	frame.nCount = SIR_INPUT_ACTION_CAPACITY + 1;
+	return !SIRInputReplayTape::query( frame, 7, 0, &output ) && !SIRInputReplayTape::validateFrame( frame );
+}
+
 int main( void )
 {
 	if ( !sirTestReplayServiceTick() || !sirTestReplayInvalidRecord() || !sirTestAuthoritativePlayback() ||
-	     !sirTestHistoryServiceCapture() || !sirTestReplayMalformedHeaders() || !sirTestReplayMalformedActionRecords() ) {
+	     !sirTestHistoryServiceCapture() || !sirTestReplayMalformedHeaders() || !sirTestReplayMalformedActionRecords() ||
+	     !sirTestReplayTapeValidationBoundaries() ) {
 		fputs( "SIRInputReplayTests FAILED\n", stderr );
 		return 1;
 	}
