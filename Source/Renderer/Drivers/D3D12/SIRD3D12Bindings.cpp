@@ -277,6 +277,18 @@ sirGraphicsResult_t SIRD3D12Bindings::updateSet( sirGraphicsHandle_t hSet, const
 			}
 		} else if ( pResource->eType != SIR_GRAPHICS_HANDLE_VIEW || pResource->nUsage != nExpectedUsage ) {
 			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		} else {
+			const sirGraphicsHandleType_t eRequiredParent =
+			    pRange->desc.eType == SIR_GRAPHICS_BINDING_SAMPLED_TEXTURE || pRange->desc.eType == SIR_GRAPHICS_BINDING_STORAGE_TEXTURE
+			        ? SIR_GRAPHICS_HANDLE_TEXTURE
+			        : SIR_GRAPHICS_HANDLE_BUFFER;
+			const sirD3D12ResourceSlot_t *pParent = m_pResources->querySlot( pResource->hParent );
+			if ( pParent == nullptr ) {
+				return SIR_GRAPHICS_INVALID_HANDLE;
+			}
+			if ( pParent->eType != eRequiredParent ) {
+				return SIR_GRAPHICS_INVALID_ARGUMENT;
+			}
 		}
 		if ( !m_pResources->queryDescriptor( write.hResource, pRange->eHeap, &szSource[iWrite] ) ) {
 			return SIR_GRAPHICS_INVALID_HANDLE;

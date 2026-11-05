@@ -115,6 +115,39 @@ static int sirTestNativeBindingSet( SIRRenderingDevice *pDevice, const sirGraphi
 	if ( pDevice->retireResource( hPipeline, idle ) != SIR_GRAPHICS_BUSY ) {
 		return 16;
 	}
+	sirGraphicsTextureDesc_t wrongTexture = {};
+	wrongTexture.nWidth = 8;
+	wrongTexture.nHeight = 8;
+	wrongTexture.nDepth = 1;
+	wrongTexture.nArrayLayers = 1;
+	wrongTexture.nMipLevels = 1;
+	wrongTexture.nSampleCount = 1;
+	wrongTexture.nUsage = SIR_GRAPHICS_USAGE_STORAGE;
+	wrongTexture.eDimension = SIR_GRAPHICS_TEXTURE_2D;
+	wrongTexture.eFormat = SIR_GRAPHICS_FORMAT_RGBA8_UNORM;
+	wrongTexture.eMemory = SIR_GRAPHICS_MEMORY_GPU_LOCAL;
+	sirGraphicsHandle_t hWrongTexture = {};
+	if ( pDevice->createTexture( wrongTexture, &hWrongTexture ) != SIR_GRAPHICS_SUCCESS ) {
+		return 36;
+	}
+	sirGraphicsViewDesc_t wrongView = {};
+	wrongView.hResource = hWrongTexture;
+	wrongView.eFormat = wrongTexture.eFormat;
+	wrongView.nMipLevels = 1;
+	wrongView.nLayers = 1;
+	wrongView.nUsage = SIR_GRAPHICS_USAGE_STORAGE;
+	sirGraphicsHandle_t hWrongView = {};
+	if ( pDevice->createView( wrongView, &hWrongView ) != SIR_GRAPHICS_SUCCESS ) {
+		return 37;
+	}
+	sirGraphicsDescriptorWrite_t wrongWrite = {};
+	wrongWrite.hResource = hWrongView;
+	wrongWrite.nBinding = 0;
+	if ( pDevice->updateBindings( hSet, &wrongWrite, 1 ) != SIR_GRAPHICS_INVALID_ARGUMENT ||
+	     pDevice->retireResource( hWrongView, idle ) != SIR_GRAPHICS_SUCCESS ||
+	     pDevice->retireResource( hWrongTexture, idle ) != SIR_GRAPHICS_SUCCESS ) {
+		return 38;
+	}
 	sirGraphicsDescriptorWrite_t write = {};
 	write.hResource = hUav;
 	write.nBinding = 0;
