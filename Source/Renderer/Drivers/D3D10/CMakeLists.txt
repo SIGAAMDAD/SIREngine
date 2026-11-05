@@ -1,13 +1,4 @@
-# This ABI scaffold builds on non-Windows hosts for native CPU conformance tests.
-# Only the explicit Windows option produces a native Direct3D 10 module.
-add_library(SIRD3D10ABIStub STATIC SIRD3D10Driver.cpp)
-target_include_directories(SIRD3D10ABIStub PUBLIC
-    "${PROJECT_SOURCE_DIR}/Source"
-    "${PROJECT_SOURCE_DIR}/Build/CMake")
-target_compile_features(SIRD3D10ABIStub PUBLIC cxx_std_17)
-target_link_libraries(SIRD3D10ABIStub PUBLIC SIR::Graphics)
-sir_configure_owned_target(SIRD3D10ABIStub)
-
+# The native module is opt-in. The CPU ABI stub is built only for tests.
 option(SIR_WITH_D3D10 "Build the native Windows Direct3D 10 backend" OFF)
 if(SIR_WITH_D3D10)
     if(NOT WIN32)
@@ -31,6 +22,14 @@ if(SIR_WITH_D3D10)
 endif()
 
 if(SIR_BUILD_TESTS)
+    add_library(SIRD3D10ABIStub STATIC SIRD3D10Driver.cpp)
+    target_include_directories(SIRD3D10ABIStub PUBLIC
+        "${PROJECT_SOURCE_DIR}/Source"
+        "${PROJECT_SOURCE_DIR}/Build/CMake")
+    target_compile_features(SIRD3D10ABIStub PUBLIC cxx_std_17)
+    target_link_libraries(SIRD3D10ABIStub PUBLIC SIR::Graphics)
+    sir_configure_owned_target(SIRD3D10ABIStub)
+
     add_executable(SIRD3D10ABITests "${PROJECT_SOURCE_DIR}/Tests/Renderer/D3D10/SIRD3D10ABITests.cpp")
     target_link_libraries(SIRD3D10ABITests PRIVATE SIRD3D10ABIStub)
     sir_configure_owned_target(SIRD3D10ABITests)
