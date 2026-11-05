@@ -13,6 +13,7 @@ target_include_directories(SIRGraphics PUBLIC
     "${PROJECT_SOURCE_DIR}/Build/CMake")
 target_compile_features(SIRGraphics PUBLIC cxx_std_17)
 target_link_libraries(SIRGraphics PUBLIC SIR::Core)
+target_link_libraries(SIRGraphics PRIVATE SIR::Resources)
 sir_configure_owned_target(SIRGraphics)
 
 add_subdirectory(VirtualTexturing)
