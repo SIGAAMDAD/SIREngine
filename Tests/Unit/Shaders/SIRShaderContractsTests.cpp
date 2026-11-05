@@ -1324,23 +1324,23 @@ static bool testDuplicateStagePassRecords( void ) noexcept
 	     sirShaderEncodeStage( stage, szPackage + 112, 48 ) != SIR_GRAPHICS_SUCCESS || !testResignPackage( szPackage, header ) ) {
 		return false;
 	}
-	if ( sirShaderValidatePackage( szPackage, sizeof( szPackage ), SIR_GRAPHICS_SHADER_SPIRV,
-	                               SIR_GRAPHICS_FEATURE_GRAPHICS ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+	if ( sirShaderValidatePackage( szPackage, sizeof( szPackage ), SIR_GRAPHICS_SHADER_SPIRV, SIR_GRAPHICS_FEATURE_GRAPHICS ) !=
+	     SIR_GRAPHICS_INVALID_ARGUMENT ) {
 		return false;
 	}
 	// The same vertex stage remains legal for a different material pass.
 	stage.ePass = SIR_SHADER_PASS_SHADOW;
 	if ( sirShaderEncodeStage( stage, szPackage + 112, 48 ) != SIR_GRAPHICS_SUCCESS || !testResignPackage( szPackage, header ) ||
-	     sirShaderValidatePackage( szPackage, sizeof( szPackage ), SIR_GRAPHICS_SHADER_SPIRV,
-	                               SIR_GRAPHICS_FEATURE_GRAPHICS ) != SIR_GRAPHICS_SUCCESS ) {
+	     sirShaderValidatePackage( szPackage, sizeof( szPackage ), SIR_GRAPHICS_SHADER_SPIRV, SIR_GRAPHICS_FEATURE_GRAPHICS ) !=
+	         SIR_GRAPHICS_SUCCESS ) {
 		return false;
 	}
 	// A distinct stage of the same pass is also legal.
 	stage.ePass = SIR_SHADER_PASS_COLOR;
 	stage.nStageMask = SIR_GRAPHICS_STAGE_FRAGMENT;
 	return sirShaderEncodeStage( stage, szPackage + 112, 48 ) == SIR_GRAPHICS_SUCCESS && testResignPackage( szPackage, header ) &&
-	       sirShaderValidatePackage( szPackage, sizeof( szPackage ), SIR_GRAPHICS_SHADER_SPIRV,
-	                                 SIR_GRAPHICS_FEATURE_GRAPHICS ) == SIR_GRAPHICS_SUCCESS;
+	       sirShaderValidatePackage( szPackage, sizeof( szPackage ), SIR_GRAPHICS_SHADER_SPIRV, SIR_GRAPHICS_FEATURE_GRAPHICS ) ==
+	           SIR_GRAPHICS_SUCCESS;
 }
 
 typedef struct sirShaderContractTestCase_s
