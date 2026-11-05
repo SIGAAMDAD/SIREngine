@@ -280,6 +280,11 @@ target_link_libraries(SIRShaderContractsTests PRIVATE SIR::Graphics)
 add_test(NAME renderer.shader.contracts COMMAND SIRShaderContractsTests)
 sir_configure_owned_target(SIRShaderContractsTests)
 
+add_executable(SIRShaderMaterialManifestTests Shaders/SIRShaderMaterialManifestTests.cpp)
+target_link_libraries(SIRShaderMaterialManifestTests PRIVATE SIR::Graphics)
+add_test(NAME renderer.shader.material-manifest COMMAND SIRShaderMaterialManifestTests)
+sir_configure_owned_target(SIRShaderMaterialManifestTests)
+
 add_executable(SIRShaderGRDGTests Shaders/SIRShaderGRDGTests.cpp)
 target_link_libraries(SIRShaderGRDGTests PRIVATE SIR::Graphics)
 add_test(NAME renderer.shader.grdg COMMAND SIRShaderGRDGTests)
