@@ -243,7 +243,10 @@
       "id": "P3",
       "owned_paths": [
         "Source/Core/CVars/*",
-        "Tests/Unit/CVars/*"
+        "Tests/Unit/CVars/*",
+        "Source/Core/CMakeLists.txt",
+        "Tests/Unit/CMakeLists.txt",
+        "Docs/Plans/ConsoleCVars/*"
       ],
       "tasks": [
         "P3"
@@ -424,15 +427,19 @@
         "Build TRANSACTION_TESTS acceptance and negative cases"
       ],
       "test_ids": [
-        "TEST-DOC"
+        "TEST-DOC",
+        "TEST-P3-UNIT"
       ],
       "outputs": [
-        "Source/Core/CVars/*",
-        "Tests/Unit/CVars/*"
+        "Source/Core/CVars/SIRCVarRegistry.h",
+        "Source/Core/CVars/SIRCVarRegistry.cpp",
+        "Tests/Unit/CVars/SIRCVarRegistryIntegrationTests.cpp",
+        "Docs/Plans/ConsoleCVars/P3_DELIVERY.md"
       ],
       "stop_conditions": [
         "Unratified interface or unmet dependency gate"
-      ]
+      ],
+      "status": "IMPLEMENTED_PENDING_NATIVE_CI"
     },
     {
       "id": "P4",
@@ -603,6 +610,17 @@
       "evidence_path": "Tests/Unit/Registration/CookerCLI.cmake",
       "evidence_sha": "82ef00bc7042b8e788c45324fb2df9a5b5dcfc6b",
       "evidence_url": "https://github.com/SIGAAMDAD/SIREngine/actions/runs/41936498553"
+    },
+    {
+      "id": "TEST-P3-UNIT",
+      "requirement_ids": [
+        "REQ-001",
+        "REQ-003"
+      ],
+      "tier": "NATIVE_CMAKE_CTEST",
+      "status": "PENDING_EXACT_SHA_CI",
+      "command": "ctest --output-on-failure -R core.cvars.registry",
+      "evidence_path": "Tests/Unit/CVars/SIRCVarRegistryIntegrationTests.cpp"
     }
   ],
   "probes": [],
