@@ -142,6 +142,13 @@ bool SIRInputWindow::pump( SIRInputService& input ) noexcept
 				}
 			}
 		}
+		if ( event.type == ClientMessage ) {
+			const Atom hProtocols = XInternAtom( pDisplay, "WM_PROTOCOLS", True );
+			const Atom hDelete = XInternAtom( pDisplay, "WM_DELETE_WINDOW", True );
+			if ( event.xclient.format != 32 || event.xclient.message_type != hProtocols || ( Atom )event.xclient.data.l[0] != hDelete ) {
+				continue;
+			}
+		}
 		if ( event.type == DestroyNotify || event.type == ClientMessage ) {
 			m_bOpen = false;
 			if ( event.type == DestroyNotify ) {
