@@ -351,6 +351,14 @@ if(SIR_WITH_GOOGLETEST)
 endif()
 
 if(SIR_WITH_OPENGL)
+    add_executable(SIRGL46SamplersTests
+        Renderer/OpenGL/SIRGLSamplersTests.cpp
+        "${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/OpenGL/SIRGLSamplers.cpp"
+        "${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/OpenGL/SIRGLFunctionLoader.cpp")
+    target_link_libraries(SIRGL46SamplersTests PRIVATE SIR::Graphics)
+    sir_configure_owned_target(SIRGL46SamplersTests)
+    add_test(NAME renderer.opengl46.samplers COMMAND SIRGL46SamplersTests)
+
     add_executable(SIRGL46BuffersTests
         Renderer/OpenGL/SIRGLBuffersTests.cpp
         "${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/OpenGL/SIRGLBuffers.cpp"

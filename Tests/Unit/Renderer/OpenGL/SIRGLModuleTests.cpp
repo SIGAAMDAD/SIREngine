@@ -132,6 +132,24 @@ int main( void )
 			sirGLTestCheck( device.pQueryMemoryBudget( device.pDevice, &budget ) == SIR_GRAPHICS_SUCCESS &&
 			                    budget.nBudgetBytes == request.nResidentBudgetBytes && budget.nCommittedBytes == 0,
 			                "budget request and physical allocation truth" );
+			sirGraphicsSamplerDesc_t sampler = {};
+			sampler.eFilter = SIR_GRAPHICS_FILTER_TRILINEAR;
+			sampler.eAddressU = SIR_GRAPHICS_ADDRESS_REPEAT;
+			sampler.eAddressV = SIR_GRAPHICS_ADDRESS_CLAMP;
+			sampler.eAddressW = SIR_GRAPHICS_ADDRESS_MIRROR;
+			sampler.fMaximumAnisotropy = 1.0f;
+			sampler.fMinimumLod = 0.0f;
+			sampler.fMaximumLod = 12.0f;
+			sirGraphicsHandle_t hSampler = {};
+			sirGLTestCheck( device.pCreateSampler( device.pDevice, &sampler, &hSampler ) == SIR_GRAPHICS_SUCCESS &&
+			                    hSampler.eType == SIR_GRAPHICS_HANDLE_SAMPLER,
+			                "native sampler ABI creation" );
+			if ( hSampler.nGeneration != 0 ) {
+				sirGLTestCheck( device.pRetireResource( device.pDevice, hSampler, nullptr ) == SIR_GRAPHICS_SUCCESS,
+				                "native sampler ABI retirement" );
+				sirGLTestCheck( device.pRetireResource( device.pDevice, hSampler, nullptr ) == SIR_GRAPHICS_INVALID_HANDLE,
+				                "stale sampler rejected" );
+			}
 			uint32_t nForeignResult = 0;
 			std::thread foreign( [&]() { nForeignResult = device.pShutdown( device.pDevice ); } );
 			foreign.join();
