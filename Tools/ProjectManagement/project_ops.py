@@ -456,11 +456,25 @@ def report(api: GitHub, repo: str, directory: Path):
                 closed_7 += 1
                 if is_pr and item["pull_request"].get("merged_at"):
                     merged_7 += 1
+    stale = sorted(
+        (x for x in issues if x["state"] == "open"
+         and datetime.fromisoformat(x["updated_at"].replace("Z", "+00:00")) < now - timedelta(days=14)),
+        key=lambda x: x["updated_at"],
+    )
+    blocked = sorted(
+        (x for x in issues if x["state"] == "open" and "marathon:blocked" in labels_of(x)),
+        key=lambda x: x["number"],
+    )
     metrics = {
         "observed_at": now.isoformat(), "repository": repo, "total": len(issues),
         "states": dict(sorted(states.items())), "work_types": dict(sorted(types.items())),
         "stages": dict(sorted(stages.items())), "subsystems": dict(sorted(subsystems.items())),
         "last_7_days": {"created": created_7, "closed": closed_7, "merged_prs": merged_7},
+        "attention": {
+            "blocked_open": len(blocked), "stale_open_14d": len(stale),
+            "blocked_issue_numbers": [x["number"] for x in blocked[:50]],
+            "stale_issue_numbers": [x["number"] for x in stale[:50]],
+        },
         "limitations": "Classification metadata, not measured engine implementation or QA coverage.",
     }
     directory.mkdir(parents=True, exist_ok=True)
@@ -477,6 +491,17 @@ def report(api: GitHub, repo: str, directory: Path):
                   "", "## Subsystem breakdown", "",
                   "| Subsystem | Items |", "|---|---:|"])
     lines.extend("| %s | %d |" % (name, count) for name, count in sorted(subsystems.items()))
+    lines.extend(["", "## Needs attention", "",
+                  "- Open issues/PRs flagged blocked: %d" % len(blocked),
+                  "- Open issues/PRs with no update in 14 days: %d" % len(stale), ""])
+    for heading, rows in (("Blocked items", blocked[:20]), ("Stale items", stale[:20])):
+        lines.extend(["### " + heading, ""])
+        if not rows:
+            lines.append("None in this snapshot.")
+        for row in rows:
+            lines.append("- [#%d](https://github.com/%s/issues/%d) — %s" %
+                         (row["number"], repo, row["number"], "PR" if "pull_request" in row else "issue"))
+        lines.append("")
     text = "\n".join(lines) + "\n"
     (directory / "summary.md").write_text(text, encoding="utf-8")
     step_summary = os.getenv("GITHUB_STEP_SUMMARY")
