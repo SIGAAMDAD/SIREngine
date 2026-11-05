@@ -20,7 +20,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 SIRD3D11Device::SIRD3D11Device( const sirD3D11NativeDeviceInit_t& init ) noexcept
     : m_pNativeDevice( init.pNativeDevice ), m_pImmediateContext( init.pImmediateContext ), m_profile( init.profile ),
       m_nResidentBudgetBytes( init.nResidentBudgetBytes ), m_nFramesInFlight( init.nFramesInFlight ),
-      m_bSoftwareAdapter( init.nSoftwareAdapter != 0 )
+      m_nDeviceGeneration( init.nDeviceGeneration ), m_bSoftwareAdapter( init.nSoftwareAdapter != 0 )
 {
 }
 
@@ -36,7 +36,7 @@ sirGraphicsBackend_t SIRD3D11Device::getBackend( void ) const noexcept
 
 uint32_t SIRD3D11Device::getDeviceGeneration( void ) const noexcept
 {
-	return m_pNativeDevice != nullptr ? 1U : 0U;
+	return m_pNativeDevice != nullptr ? m_nDeviceGeneration : 0U;
 }
 
 sirGraphicsResult_t SIRD3D11Device::queryCapabilities( sirGraphicsCapabilities_t *pCapabilities ) const noexcept
@@ -59,7 +59,7 @@ sirGraphicsResult_t SIRD3D11Device::queryCapabilities( sirGraphicsCapabilities_t
 	pCapabilities->nMaximumFramesInFlight = m_nFramesInFlight;
 	pCapabilities->nMaximumBindingSlots = m_profile.nMaximumShaderResourceSlots;
 	pCapabilities->nMaximumSampleCount = ( m_profile.nEnabledFeatures & SIR_GRAPHICS_FEATURE_MULTISAMPLE ) != 0 ? 2U : 1U;
-	pCapabilities->nDeviceGeneration = 1;
+	pCapabilities->nDeviceGeneration = m_nDeviceGeneration;
 	pCapabilities->bSoftwareAdapter = m_bSoftwareAdapter;
 	return SIR_GRAPHICS_SUCCESS;
 }
@@ -79,7 +79,7 @@ sirGraphicsResult_t SIRD3D11Device::queryPipelineModelCaps( sirGraphicsPipelineM
 
 	sirGraphicsABIPipelineModelCaps_t caps = {};
 	caps.nSize = sizeof( caps );
-	caps.nDeviceGeneration = 1;
+	caps.nDeviceGeneration = m_nDeviceGeneration;
 	caps.nModel = eModel;
 	caps.nExecutionModel = SIR_GRAPHICS_EXECUTION_STATEFUL_SERIAL;
 	caps.nQueueMask = m_profile.nDirectQueueMask;

@@ -38,6 +38,7 @@ typedef struct sirD3D11NativeDeviceInit_s
 	uint64_t nResidentBudgetBytes;
 	uint32_t nFramesInFlight;
 	uint32_t nSoftwareAdapter;
+	uint32_t nDeviceGeneration;
 } sirD3D11NativeDeviceInit_t;
 
 class SIRD3D11Device final : public SIRRenderingDevice
@@ -88,6 +89,7 @@ private:
 	sirD3D11FeatureProfile_t m_profile = {};
 	uint64_t m_nResidentBudgetBytes = 0;
 	uint32_t m_nFramesInFlight = 0;
+	uint32_t m_nDeviceGeneration = 0;
 	bool m_bSoftwareAdapter = false;
 };
 
