@@ -12,3 +12,8 @@ add_executable(SIRWorldHLODManifestTests SIRWorldHLODManifestTests.cpp)
 target_link_libraries(SIRWorldHLODManifestTests PRIVATE SIR::WorldHLOD)
 add_test(NAME world.hlod.manifest COMMAND SIRWorldHLODManifestTests)
 sir_configure_owned_target(SIRWorldHLODManifestTests)
+
+add_executable(SIRWorldHLODPinTests SIRWorldHLODPinTests.cpp)
+target_link_libraries(SIRWorldHLODPinTests PRIVATE SIR::WorldHLOD)
+add_test(NAME world.hlod.pin-cut COMMAND SIRWorldHLODPinTests)
+sir_configure_owned_target(SIRWorldHLODPinTests)
