@@ -663,7 +663,7 @@ sirGraphicsResult_t SIRD3D12Resources::createTexture( const sirGraphicsTextureDe
 	       ( formatSupport.Support2 & D3D12_FORMAT_SUPPORT2_UAV_TYPED_STORE ) == 0 ) ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
-		D3D12MA::Allocation *pAllocation = nullptr;
+	D3D12MA::Allocation *pAllocation = nullptr;
 	const HRESULT nResult = m_pMemory->createTexture( resource, D3D12_RESOURCE_STATE_COMMON, nullptr, &pAllocation );
 	if ( FAILED( nResult ) || pAllocation == nullptr ) {
 		return nResult == E_OUTOFMEMORY ? SIR_GRAPHICS_OUT_OF_MEMORY : SIR_GRAPHICS_DRIVER_ERROR;
