@@ -362,3 +362,87 @@ sirShaderCookResult_t sirMaterialIRCompile( const sirMaterialIRGraph_t& graph, c
 	pOutput->nProducedCount = iOutput;
 	return SIR_SHADER_COOK_OK;
 }
+
+sirShaderCookResult_t sirMaterialIRBuildPipelineRecipe( const sirMaterialIRGraph_t& graph, const sirMaterialShaderMapEntry_t& entry,
+                                                        const sirMaterialIRPipelineSettings_t& settings,
+                                                        sirShaderPipelineRecipe_t *pRecipe ) noexcept
+{
+	if ( pRecipe == nullptr || settings.nPackageManifestHash == 0 || settings.nSampleCount == 0 ||
+	     ( settings.nSampleCount & ( settings.nSampleCount - 1 ) ) != 0 || entry.nCodeHash == 0 || entry.nReflectionSignature == 0 ) {
+		return SIR_SHADER_COOK_INVALID_ARGUMENT;
+	}
+	const sirMaterialIRCompileOptions_t options = { entry.nRequiredFeatures, false };
+	sirMaterialIRCompileOutput_t check = {};
+	const sirShaderCookResult_t eValidation = sirMaterialIRCompile( graph, options, &check );
+	if ( eValidation != SIR_SHADER_COOK_CAPACITY_EXCEEDED ) {
+		return eValidation == SIR_SHADER_COOK_UNSUPPORTED ? SIR_SHADER_COOK_INVALID_ARGUMENT : eValidation;
+	}
+	const sirMaterialIRPass_t *pPass = nullptr;
+	for ( uint32_t iPass = 0; iPass < graph.nPassCount; ++iPass ) {
+		if ( graph.pPasses[iPass].ePass == entry.ePass ) {
+			pPass = &graph.pPasses[iPass];
+			break;
+		}
+	}
+	if ( pPass == nullptr || pPass->nStageMask != entry.nStageMask ) {
+		return SIR_SHADER_COOK_INVALID_ARGUMENT;
+	}
+	uint32_t nStaticBits = 0;
+	uint64_t nRequiredFeatures = pPass->nRequiredFeatures;
+	for ( uint32_t iSwitch = 0; iSwitch < graph.nSwitchCount; ++iSwitch ) {
+		if ( !graph.pSwitches[iSwitch].bDynamic ) {
+			nStaticBits |= graph.pSwitches[iSwitch].nBit;
+		}
+	}
+	const uint32_t nMask = entry.nPermutationMask;
+	if ( entry.bUberFallback ) {
+		if ( nMask != UINT32_MAX ) {
+			return SIR_SHADER_COOK_INVALID_ARGUMENT;
+		}
+	} else {
+		if ( ( nMask & ~nStaticBits ) != 0 || !sirMaterialIRPermutationValid( graph, nMask, entry.nRequiredFeatures ) ) {
+			return SIR_SHADER_COOK_INVALID_ARGUMENT;
+		}
+		for ( uint32_t iSwitch = 0; iSwitch < graph.nSwitchCount; ++iSwitch ) {
+			const sirMaterialIRSwitch_t& item = graph.pSwitches[iSwitch];
+			if ( !item.bDynamic && ( nMask & item.nBit ) != 0 ) {
+				nRequiredFeatures |= item.nRequiredFeatures;
+			}
+		}
+	}
+	if ( nRequiredFeatures != entry.nRequiredFeatures || ( entry.ePass == SIR_SHADER_PASS_COMPUTE && settings.nSampleCount != 1 ) ) {
+		return SIR_SHADER_COOK_INVALID_ARGUMENT;
+	}
+	uint32_t szNodeMasks[SIR_MATERIAL_IR_MAX_NODES] = {};
+	for ( uint32_t iNode = 0; iNode < graph.nNodeCount; ++iNode ) {
+		if ( !sirMaterialIRValidateNode( graph, iNode, nStaticBits, szNodeMasks ) ) {
+			return SIR_SHADER_COOK_INVALID_ARGUMENT;
+		}
+	}
+	const uint64_t nGraphHash = sirMaterialIRGraphHash( graph );
+	const uint64_t nBaseHash = sirMaterialIRHash( sirMaterialIRHash( nGraphHash, pPass->iOutput ), pPass->nStageMask );
+	const uint32_t nCodeMask = entry.bUberFallback ? UINT32_MAX : nMask & szNodeMasks[pPass->iOutput];
+	if ( entry.nCodeHash != sirMaterialIRHash( nBaseHash, nCodeMask ) ||
+	     entry.nReflectionSignature != sirMaterialIRReflectionHash( graph ) ) {
+		return SIR_SHADER_COOK_INVALID_ARGUMENT;
+	}
+	sirShaderPipelineRecipe_t recipe = {};
+	recipe.pass.ePass = entry.ePass;
+	recipe.pass.eDepthFormat = settings.eDepthFormat;
+	recipe.pass.nColorFormatsHash = settings.nColorFormatsHash;
+	recipe.pass.nBindingSignature = entry.nReflectionSignature;
+	recipe.pass.nStageMask = entry.nStageMask;
+	recipe.pass.nSampleCount = settings.nSampleCount;
+	recipe.pass.bAlphaMasked = settings.bAlphaMasked;
+	recipe.pass.bDoubleSided = settings.bDoubleSided;
+	recipe.pass.bWritesVelocity = settings.bWritesVelocity;
+	recipe.nAssetId = graph.nAssetId;
+	recipe.nSourceRevision = graph.nSourceHash;
+	recipe.nPackageManifestHash = settings.nPackageManifestHash;
+	recipe.nPackageSchema = SIR_SHADER_PACKAGE_SCHEMA;
+	recipe.nPermutationKey = entry.nPermutationMask;
+	recipe.nRenderStateHash = settings.nRenderStateHash;
+	recipe.nRequiredFeatures = entry.nRequiredFeatures;
+	*pRecipe = recipe;
+	return SIR_SHADER_COOK_OK;
+}

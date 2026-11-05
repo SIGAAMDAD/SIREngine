@@ -134,4 +134,22 @@ typedef struct sirMaterialIRCompileOutput_s
 sirShaderCookResult_t sirMaterialIRCompile( const sirMaterialIRGraph_t& graph, const sirMaterialIRCompileOptions_t& options,
                                             sirMaterialIRCompileOutput_t *pOutput ) noexcept;
 
+// Offline bridge from a validated shader-map entry to the portable pipeline
+// recipe consumed by renderer shader caching. No physical device state.
+typedef struct sirMaterialIRPipelineSettings_s
+{
+	uint64_t nPackageManifestHash;
+	uint64_t nRenderStateHash;
+	uint64_t nColorFormatsHash;
+	sirGraphicsFormat_t eDepthFormat;
+	uint32_t nSampleCount;
+	bool bAlphaMasked;
+	bool bDoubleSided;
+	bool bWritesVelocity;
+} sirMaterialIRPipelineSettings_t;
+
+sirShaderCookResult_t sirMaterialIRBuildPipelineRecipe( const sirMaterialIRGraph_t& graph, const sirMaterialShaderMapEntry_t& entry,
+                                                        const sirMaterialIRPipelineSettings_t& settings,
+                                                        sirShaderPipelineRecipe_t *pRecipe ) noexcept;
+
 #endif // __SIRENGINE_SIRMATERIALIR_H__
