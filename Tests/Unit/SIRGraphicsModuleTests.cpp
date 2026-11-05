@@ -502,6 +502,18 @@ static bool testNativeResourceAdmissionMatrix( const sirGraphicsABIDevice_t *pDe
 	CHECK_NATIVE_RESOURCE( sirGraphicsCreateABIView( pDevice, &view, &handle ), SIR_GRAPHICS_INVALID_ARGUMENT,
 	                       "buffer view has mip extent" );
 	view.nBaseMip = 0;
+	view.nMipLevels = 1;
+	CHECK_NATIVE_RESOURCE( sirGraphicsCreateABIView( pDevice, &view, &handle ), SIR_GRAPHICS_INVALID_ARGUMENT,
+	                       "buffer view cannot specify mip levels" );
+	view.nMipLevels = 0;
+	view.nBaseLayer = 1;
+	CHECK_NATIVE_RESOURCE( sirGraphicsCreateABIView( pDevice, &view, &handle ), SIR_GRAPHICS_INVALID_ARGUMENT,
+	                       "buffer view cannot specify base layer" );
+	view.nBaseLayer = 0;
+	view.nLayers = 1;
+	CHECK_NATIVE_RESOURCE( sirGraphicsCreateABIView( pDevice, &view, &handle ), SIR_GRAPHICS_INVALID_ARGUMENT,
+	                       "buffer view cannot specify layer count" );
+	view.nLayers = 0;
 	view.nBufferOffsetBytes = UINT64_MAX;
 	CHECK_NATIVE_RESOURCE( sirGraphicsCreateABIView( pDevice, &view, &handle ), SIR_GRAPHICS_INVALID_ARGUMENT,
 	                       "buffer view extent overflow" );
@@ -514,6 +526,25 @@ static bool testNativeResourceAdmissionMatrix( const sirGraphicsABIDevice_t *pDe
 	pMode( 14 );
 	CHECK_NATIVE_RESOURCE( sirGraphicsCreateABIView( pDevice, &view, &handle ), SIR_GRAPHICS_UNSUPPORTED,
 	                       "view attachment format not supported" );
+	pMode( 10 );
+	sirGraphicsBufferDesc_t buffer = {};
+	buffer.nSizeBytes = 64;
+	buffer.eMemory = SIR_GRAPHICS_MEMORY_GPU_LOCAL;
+	buffer.nUsage = SIR_GRAPHICS_USAGE_STORAGE;
+	CHECK_NATIVE_RESOURCE( sirGraphicsCreateABIBuffer( pDevice, &buffer, &handle ), SIR_GRAPHICS_UNSUPPORTED,
+	                       "storage buffer requires shader storage support" );
+	buffer.nUsage = SIR_GRAPHICS_USAGE_INDIRECT;
+	CHECK_NATIVE_RESOURCE( sirGraphicsCreateABIBuffer( pDevice, &buffer, &handle ), SIR_GRAPHICS_UNSUPPORTED,
+	                       "indirect buffer requires indirect draw support" );
+	buffer.nUsage = SIR_GRAPHICS_USAGE_COPY_SOURCE;
+	buffer.eMemory = SIR_GRAPHICS_MEMORY_GPU_UPLOAD;
+	CHECK_NATIVE_RESOURCE( sirGraphicsCreateABIBuffer( pDevice, &buffer, &handle ), SIR_GRAPHICS_UNSUPPORTED,
+	                       "upload buffer requires GPU upload support" );
+	buffer.eMemory = SIR_GRAPHICS_MEMORY_GPU_LOCAL;
+	pMode( 0 );
+	buffer.nUsage = SIR_GRAPHICS_USAGE_VERTEX;
+	CHECK_NATIVE_RESOURCE( sirGraphicsCreateABIBuffer( pDevice, &buffer, &handle ), SIR_GRAPHICS_UNSUPPORTED,
+	                       "vertex buffer requires graphics support" );
 	pMode( 10 );
 	sirGraphicsTextureDesc_t texture = {};
 	texture.nWidth = 16;
@@ -720,6 +751,13 @@ static bool testModuleLifecyclePreflightMatrix( const sirGraphicsABIHost_t& host
 	invalidHost.pFree = nullptr;
 	CHECK_MODULE_PREFLIGHT( sirGraphicsLoadABIModule( SIR_TEST_ABI_MODULE_PATH, &invalidHost, &empty ), SIR_GRAPHICS_INVALID_ARGUMENT,
 	                        "invalid host callback" );
+	sirGraphicsABIDevice_t unusedDevice = {};
+	unusedDevice.nSize = sizeof( unusedDevice );
+	CHECK_MODULE_PREFLIGHT( sirGraphicsDestroyABIDevice( nullptr, &unusedDevice ), SIR_GRAPHICS_INVALID_ARGUMENT,
+	                        "destroy with null module" );
+	CHECK_MODULE_PREFLIGHT( sirGraphicsDestroyABIDevice( &empty, nullptr ), SIR_GRAPHICS_INVALID_ARGUMENT, "destroy with null device" );
+	CHECK_MODULE_PREFLIGHT( sirGraphicsDestroyABIDevice( &empty, &unusedDevice ), SIR_GRAPHICS_INVALID_ARGUMENT,
+	                        "destroy with invalid driver" );
 	CHECK_MODULE_PREFLIGHT( sirGraphicsUnloadABIModule( nullptr ), SIR_GRAPHICS_INVALID_ARGUMENT, "null module unload" );
 	CHECK_MODULE_PREFLIGHT( sirGraphicsUnloadABIModule( &empty ), SIR_GRAPHICS_INVALID_ARGUMENT, "empty module unload" );
 	empty.library.pNativeHandle = &empty;
@@ -1014,6 +1052,15 @@ static bool testAdapterRankingBoundaries( const sirGraphicsABIModule_t *pModule 
 	CHECK_ADAPTER( sirGraphicsSelectABIModuleAdapter( invalid, 1, &policy, &choice ), SIR_GRAPHICS_INVALID_ARGUMENT,
 	               "malformed binary driver" );
 	s_nSyntheticAdapterMode = 0;
+	policy.nMinimumApiMajor = 1;
+	policy.nMinimumApiMinor = 5;
+	CHECK_ADAPTER( sirGraphicsSelectABIModuleAdapter( modules, 1, &policy, &choice ), SIR_GRAPHICS_UNSUPPORTED,
+	               "adapter below requested minor API version" );
+	policy.nMinimumApiMajor = 2;
+	policy.nMinimumApiMinor = 0;
+	CHECK_ADAPTER( sirGraphicsSelectABIModuleAdapter( modules, 1, &policy, &choice ), SIR_GRAPHICS_UNSUPPORTED,
+	               "adapter below requested major API version" );
+	policy.nMinimumApiMajor = 0;
 	CHECK_ADAPTER( sirGraphicsSelectABIModuleAdapter( modules, 1, &policy, &choice ), SIR_GRAPHICS_SUCCESS, "stable id rank" );
 	if ( choice.adapter.nIndex != 2 ) {
 		fputs( "Stable-id tie-break selected wrong adapter\n", stderr );

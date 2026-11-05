@@ -224,3 +224,315 @@ TEST( GraphicsABI, MutuallyExclusiveRecipeTags )
 	pipeline.pModern = &modern;
 	EXPECT_EQ( sirGraphicsValidateABIPipelineStructure( &pipeline ), SIR_GRAPHICS_INVALID_ARGUMENT );
 }
+
+// Exercise each operand of descriptor conditions independently. The public
+// contract rejects malformed models before querying any native driver.
+TEST( GraphicsABI, PipelineStructureCompoundErrorBranches )
+{
+	uint32_t nShader = 0x07230203;
+	sirGraphicsABIShaderCode_t shader = { sizeof( sirGraphicsABIShaderCode_t ), SIR_GRAPHICS_SHADER_SPIRV, &nShader, 4, 1, "main" };
+	sirGraphicsABIFixedRecipe_t fixed = {};
+	fixed.nSize = sizeof( fixed );
+	sirGraphicsABIModernRecipe_t modern = {};
+	modern.nSize = sizeof( modern );
+	modern.nStageMask = SIR_GRAPHICS_STAGE_VERTEX | SIR_GRAPHICS_STAGE_FRAGMENT;
+	sirGraphicsABIProgrammableRecipe_t programmable = {};
+	programmable.nSize = sizeof( programmable );
+	programmable.nVertexShaderProfile = 1;
+	programmable.nFragmentShaderProfile = 1;
+	sirGraphicsBindingDesc_t binding = {};
+
+	sirGraphicsABIPipeline_t fixedPipeline = {};
+	fixedPipeline.nSize = sizeof( fixedPipeline );
+	fixedPipeline.nModel = SIR_GRAPHICS_PIPELINE_MODEL_FIXED_FUNCTION;
+	fixedPipeline.nType = SIR_GRAPHICS_PIPELINE_FIXED_FUNCTION;
+	fixedPipeline.nSampleCount = 1;
+	fixedPipeline.pFixed = &fixed;
+	ASSERT_EQ( sirGraphicsValidateABIPipelineStructure( &fixedPipeline ), SIR_GRAPHICS_SUCCESS );
+	fixedPipeline.nBindingCount = 1;
+	fixedPipeline.pBindings = &binding;
+	EXPECT_EQ( sirGraphicsValidateABIPipelineStructure( &fixedPipeline ), SIR_GRAPHICS_INVALID_ARGUMENT );
+	fixedPipeline.nBindingCount = 0;
+	fixedPipeline.vertexShader = shader;
+	EXPECT_EQ( sirGraphicsValidateABIPipelineStructure( &fixedPipeline ), SIR_GRAPHICS_INVALID_ARGUMENT );
+	fixedPipeline.vertexShader = {};
+	fixedPipeline.pixelShader = shader;
+	EXPECT_EQ( sirGraphicsValidateABIPipelineStructure( &fixedPipeline ), SIR_GRAPHICS_INVALID_ARGUMENT );
+	fixedPipeline.pixelShader = {};
+	fixedPipeline.computeShader = shader;
+	EXPECT_EQ( sirGraphicsValidateABIPipelineStructure( &fixedPipeline ), SIR_GRAPHICS_INVALID_ARGUMENT );
+	fixedPipeline.computeShader = {};
+	fixedPipeline.pModern = &modern;
+	EXPECT_EQ( sirGraphicsValidateABIPipelineStructure( &fixedPipeline ), SIR_GRAPHICS_INVALID_ARGUMENT );
+	fixedPipeline.pModern = nullptr;
+	fixedPipeline.pProgrammable = &programmable;
+	EXPECT_EQ( sirGraphicsValidateABIPipelineStructure( &fixedPipeline ), SIR_GRAPHICS_INVALID_ARGUMENT );
+
+	sirGraphicsABIPipeline_t legacy = {};
+	legacy.nSize = sizeof( legacy );
+	legacy.nModel = SIR_GRAPHICS_PIPELINE_MODEL_PROGRAMMABLE;
+	legacy.nType = SIR_GRAPHICS_PIPELINE_GRAPHICS;
+	legacy.nSampleCount = 1;
+	legacy.vertexShader = shader;
+	legacy.pixelShader = shader;
+	legacy.pProgrammable = &programmable;
+	ASSERT_EQ( sirGraphicsValidateABIPipelineStructure( &legacy ), SIR_GRAPHICS_SUCCESS );
+	legacy.vertexShader = {};
+	EXPECT_EQ( sirGraphicsValidateABIPipelineStructure( &legacy ), SIR_GRAPHICS_INVALID_ARGUMENT );
+	legacy.vertexShader = shader;
+	legacy.pixelShader = {};
+	EXPECT_EQ( sirGraphicsValidateABIPipelineStructure( &legacy ), SIR_GRAPHICS_INVALID_ARGUMENT );
+	legacy.pixelShader = shader;
+	legacy.computeShader = shader;
+	EXPECT_EQ( sirGraphicsValidateABIPipelineStructure( &legacy ), SIR_GRAPHICS_INVALID_ARGUMENT );
+	legacy.computeShader = {};
+	legacy.pModern = &modern;
+	EXPECT_EQ( sirGraphicsValidateABIPipelineStructure( &legacy ), SIR_GRAPHICS_INVALID_ARGUMENT );
+	legacy.pModern = nullptr;
+	legacy.pFixed = &fixed;
+	EXPECT_EQ( sirGraphicsValidateABIPipelineStructure( &legacy ), SIR_GRAPHICS_INVALID_ARGUMENT );
+	legacy.pFixed = nullptr;
+	legacy.pProgrammable = nullptr;
+	EXPECT_EQ( sirGraphicsValidateABIPipelineStructure( &legacy ), SIR_GRAPHICS_INVALID_ARGUMENT );
+
+	sirGraphicsABIPipeline_t modernPipeline = legacy;
+	modernPipeline.nModel = SIR_GRAPHICS_PIPELINE_MODEL_MODERN;
+	modernPipeline.pModern = &modern;
+	ASSERT_EQ( sirGraphicsValidateABIPipelineStructure( &modernPipeline ), SIR_GRAPHICS_SUCCESS );
+	modernPipeline.pProgrammable = &programmable;
+	EXPECT_EQ( sirGraphicsValidateABIPipelineStructure( &modernPipeline ), SIR_GRAPHICS_INVALID_ARGUMENT );
+	modernPipeline.pProgrammable = nullptr;
+	modernPipeline.pFixed = &fixed;
+	EXPECT_EQ( sirGraphicsValidateABIPipelineStructure( &modernPipeline ), SIR_GRAPHICS_INVALID_ARGUMENT );
+	modernPipeline.pFixed = nullptr;
+	modernPipeline.vertexShader = {};
+	EXPECT_EQ( sirGraphicsValidateABIPipelineStructure( &modernPipeline ), SIR_GRAPHICS_INVALID_ARGUMENT );
+	modernPipeline.vertexShader = shader;
+	modernPipeline.pixelShader = {};
+	EXPECT_EQ( sirGraphicsValidateABIPipelineStructure( &modernPipeline ), SIR_GRAPHICS_INVALID_ARGUMENT );
+	modernPipeline.pixelShader = shader;
+	modernPipeline.computeShader = shader;
+	EXPECT_EQ( sirGraphicsValidateABIPipelineStructure( &modernPipeline ), SIR_GRAPHICS_INVALID_ARGUMENT );
+	modernPipeline.vertexShader = {};
+	modernPipeline.pixelShader = {};
+	modernPipeline.nType = SIR_GRAPHICS_PIPELINE_COMPUTE;
+	modern.nStageMask = SIR_GRAPHICS_STAGE_COMPUTE;
+	ASSERT_EQ( sirGraphicsValidateABIPipelineStructure( &modernPipeline ), SIR_GRAPHICS_SUCCESS );
+	modernPipeline.vertexShader = shader;
+	EXPECT_EQ( sirGraphicsValidateABIPipelineStructure( &modernPipeline ), SIR_GRAPHICS_INVALID_ARGUMENT );
+	modernPipeline.vertexShader = {};
+	modernPipeline.pixelShader = shader;
+	EXPECT_EQ( sirGraphicsValidateABIPipelineStructure( &modernPipeline ), SIR_GRAPHICS_INVALID_ARGUMENT );
+	modernPipeline.pixelShader = {};
+	modernPipeline.computeShader = {};
+	EXPECT_EQ( sirGraphicsValidateABIPipelineStructure( &modernPipeline ), SIR_GRAPHICS_INVALID_ARGUMENT );
+	modernPipeline.computeShader = shader;
+	modern.nStageMask = SIR_GRAPHICS_STAGE_VERTEX;
+	EXPECT_EQ( sirGraphicsValidateABIPipelineStructure( &modernPipeline ), SIR_GRAPHICS_INVALID_ARGUMENT );
+}
+
+TEST( GraphicsABI, SourceTextureAndPipelineCompoundErrorBranches )
+{
+	sirGraphicsTextureDesc_t texture = {};
+	texture.nWidth = 32;
+	texture.nHeight = 1;
+	texture.nDepth = 1;
+	texture.nArrayLayers = 1;
+	texture.nMipLevels = 1;
+	texture.nSampleCount = 1;
+	texture.nUsage = SIR_GRAPHICS_USAGE_SAMPLED;
+	texture.eDimension = SIR_GRAPHICS_TEXTURE_1D;
+	texture.eFormat = SIR_GRAPHICS_FORMAT_RGBA8_UNORM;
+	ASSERT_EQ( sirGraphicsValidateTexture( texture ), SIR_GRAPHICS_SUCCESS );
+	texture.nDepth = 2;
+	EXPECT_EQ( sirGraphicsValidateTexture( texture ), SIR_GRAPHICS_INVALID_ARGUMENT );
+	texture.nDepth = 1;
+	texture.nMipLevels = 0;
+	EXPECT_EQ( sirGraphicsValidateTexture( texture ), SIR_GRAPHICS_INVALID_ARGUMENT );
+	texture.nMipLevels = 1;
+	texture.nSampleCount = 0;
+	EXPECT_EQ( sirGraphicsValidateTexture( texture ), SIR_GRAPHICS_INVALID_ARGUMENT );
+
+	uint32_t nShader = 0x07230203;
+	sirGraphicsABIModernRecipe_t modern = {};
+	modern.nSize = sizeof( modern );
+	modern.nStageMask = SIR_GRAPHICS_STAGE_VERTEX | SIR_GRAPHICS_STAGE_FRAGMENT;
+	sirGraphicsABIProgrammableRecipe_t programmable = {};
+	programmable.nSize = sizeof( programmable );
+	sirGraphicsABIFixedRecipe_t fixed = {};
+	fixed.nSize = sizeof( fixed );
+	sirGraphicsPipelineDesc_t desc = {};
+	desc.eModel = SIR_GRAPHICS_PIPELINE_MODEL_MODERN;
+	desc.eType = SIR_GRAPHICS_PIPELINE_GRAPHICS;
+	desc.nSampleCount = 1;
+	desc.pModern = &modern;
+	desc.vertexShader = { SIR_GRAPHICS_SHADER_SPIRV, &nShader, 4, 1, "main" };
+	desc.pixelShader = desc.vertexShader;
+	ASSERT_EQ( sirGraphicsValidatePipeline( desc ), SIR_GRAPHICS_SUCCESS );
+	desc.eModel = SIR_GRAPHICS_PIPELINE_MODEL_PROGRAMMABLE;
+	desc.pModern = nullptr;
+	desc.pProgrammable = &programmable;
+	ASSERT_EQ( sirGraphicsValidatePipeline( desc ), SIR_GRAPHICS_SUCCESS );
+	desc.pModern = &modern;
+	EXPECT_EQ( sirGraphicsValidatePipeline( desc ), SIR_GRAPHICS_INVALID_ARGUMENT );
+	desc.pModern = nullptr;
+	desc.pFixed = &fixed;
+	EXPECT_EQ( sirGraphicsValidatePipeline( desc ), SIR_GRAPHICS_INVALID_ARGUMENT );
+	desc.pFixed = nullptr;
+	desc.eModel = SIR_GRAPHICS_PIPELINE_MODEL_FIXED_FUNCTION;
+	desc.eType = SIR_GRAPHICS_PIPELINE_FIXED_FUNCTION;
+	desc.vertexShader = {};
+	desc.pixelShader = {};
+	desc.pProgrammable = nullptr;
+	desc.pFixed = &fixed;
+	ASSERT_EQ( sirGraphicsValidatePipeline( desc ), SIR_GRAPHICS_SUCCESS );
+	desc.pModern = &modern;
+	EXPECT_EQ( sirGraphicsValidatePipeline( desc ), SIR_GRAPHICS_INVALID_ARGUMENT );
+	desc.pModern = nullptr;
+	desc.pProgrammable = &programmable;
+	EXPECT_EQ( sirGraphicsValidatePipeline( desc ), SIR_GRAPHICS_INVALID_ARGUMENT );
+	desc.pProgrammable = nullptr;
+	sirGraphicsBindingDesc_t binding = {};
+	desc.nBindingCount = 1;
+	desc.pBindings = &binding;
+	EXPECT_EQ( sirGraphicsValidatePipeline( desc ), SIR_GRAPHICS_INVALID_ARGUMENT );
+}
+
+TEST( GraphicsABI, FixedModelCapsShaderMaskBranches )
+{
+	sirGraphicsABIPipelineModelCaps_t caps = {};
+	caps.nSize = sizeof( caps );
+	caps.nDeviceGeneration = 1;
+	caps.nModel = SIR_GRAPHICS_PIPELINE_MODEL_FIXED_FUNCTION;
+	caps.nExecutionModel = SIR_GRAPHICS_EXECUTION_STATEFUL_SERIAL;
+	caps.nQueueMask = 1U << SIR_GRAPHICS_QUEUE_DIRECT;
+	caps.nRequiredFeatureMask = SIR_GRAPHICS_FEATURE_GRAPHICS | SIR_GRAPHICS_FEATURE_FIXED_FUNCTION;
+	caps.nMaximumSamples = 1;
+	caps.nMaximumTextureDimension = 1024;
+	caps.nMaximumTextureUnits = 1;
+	caps.nMaximumTextureStages = 1;
+	caps.nFixedFeatureMask = SIR_GRAPHICS_FIXED_TRANSFORM;
+	caps.nFixedTextureOperationMask = 1U << SIR_GRAPHICS_FIXED_OP_SELECT;
+	caps.nFixedFogModeMask = 1U << SIR_GRAPHICS_FIXED_FOG_NONE;
+	ASSERT_EQ( sirGraphicsValidateABIPipelineModelCaps( &caps ), SIR_GRAPHICS_SUCCESS );
+	caps.nShaderFormatMask = 1U << ( SIR_GRAPHICS_SHADER_SPIRV - 1 );
+	EXPECT_EQ( sirGraphicsValidateABIPipelineModelCaps( &caps ), SIR_GRAPHICS_INVALID_ARGUMENT );
+}
+
+TEST( GraphicsABI, ShaderModelCapabilityMaskIndependence )
+{
+	sirGraphicsABIPipelineModelCaps_t caps = {};
+	caps.nSize = sizeof( caps );
+	caps.nDeviceGeneration = 1;
+	caps.nModel = SIR_GRAPHICS_PIPELINE_MODEL_MODERN;
+	caps.nExecutionModel = SIR_GRAPHICS_EXECUTION_EXPLICIT;
+	caps.nQueueMask = 1U << SIR_GRAPHICS_QUEUE_DIRECT;
+	caps.nRequiredFeatureMask = SIR_GRAPHICS_FEATURE_GRAPHICS | SIR_GRAPHICS_FEATURE_COMPUTE;
+	caps.nShaderStageMask = SIR_GRAPHICS_STAGE_VERTEX | SIR_GRAPHICS_STAGE_FRAGMENT | SIR_GRAPHICS_STAGE_COMPUTE;
+	caps.nShaderFormatMask = 1U << ( SIR_GRAPHICS_SHADER_SPIRV - 1 );
+	caps.nMaximumSamples = 1;
+	caps.nMaximumTextureDimension = 1024;
+	ASSERT_EQ( sirGraphicsValidateABIPipelineModelCaps( &caps ), SIR_GRAPHICS_SUCCESS );
+	caps.nFixedFeatureMask = SIR_GRAPHICS_FIXED_TRANSFORM;
+	EXPECT_EQ( sirGraphicsValidateABIPipelineModelCaps( &caps ), SIR_GRAPHICS_INVALID_ARGUMENT );
+	caps.nFixedFeatureMask = 0;
+	caps.nFixedTextureOperationMask = 1U << SIR_GRAPHICS_FIXED_OP_SELECT;
+	EXPECT_EQ( sirGraphicsValidateABIPipelineModelCaps( &caps ), SIR_GRAPHICS_INVALID_ARGUMENT );
+	caps.nFixedTextureOperationMask = 0;
+	caps.nFixedFogModeMask = 1U << SIR_GRAPHICS_FIXED_FOG_NONE;
+	EXPECT_EQ( sirGraphicsValidateABIPipelineModelCaps( &caps ), SIR_GRAPHICS_INVALID_ARGUMENT );
+	caps.nFixedFogModeMask = 0;
+	caps.nMaximumFixedLights = 1;
+	EXPECT_EQ( sirGraphicsValidateABIPipelineModelCaps( &caps ), SIR_GRAPHICS_INVALID_ARGUMENT );
+}
+
+TEST( GraphicsABI, SubmissionWaitPreflightBeforeCommandDereference )
+{
+	SIRGraphicsCommandList *pInvalidList = nullptr;
+	sirGraphicsSubmission_t submission = {};
+	submission.nCommandListCount = 1;
+	submission.ppCommandLists = &pInvalidList;
+	submission.nWaitCount = 65;
+	EXPECT_EQ( sirGraphicsValidateSubmission( SIR_GRAPHICS_QUEUE_DIRECT, submission, 1 ), SIR_GRAPHICS_INVALID_ARGUMENT );
+}
+
+TEST( GraphicsABI, SourceShaderNullByteTriples )
+{
+	sirGraphicsABIFixedRecipe_t recipe = {};
+	recipe.nSize = sizeof( recipe );
+	sirGraphicsPipelineDesc_t pipeline = {};
+	pipeline.eType = SIR_GRAPHICS_PIPELINE_FIXED_FUNCTION;
+	pipeline.eModel = SIR_GRAPHICS_PIPELINE_MODEL_FIXED_FUNCTION;
+	pipeline.pFixed = &recipe;
+	pipeline.nSampleCount = 1;
+	ASSERT_EQ( sirGraphicsValidatePipeline( pipeline ), SIR_GRAPHICS_SUCCESS );
+	pipeline.pixelShader.nByteCount = 4;
+	EXPECT_EQ( sirGraphicsValidatePipeline( pipeline ), SIR_GRAPHICS_INVALID_ARGUMENT );
+	pipeline.pixelShader = {};
+	pipeline.computeShader.nContentHash = 1;
+	EXPECT_EQ( sirGraphicsValidatePipeline( pipeline ), SIR_GRAPHICS_INVALID_ARGUMENT );
+	pipeline.computeShader = {};
+	uint32_t nWord = 0;
+	pipeline.vertexShader.pBytes = &nWord;
+	EXPECT_EQ( sirGraphicsValidatePipeline( pipeline ), SIR_GRAPHICS_INVALID_ARGUMENT );
+}
+
+TEST( GraphicsABI, ModernShaderAdmissionIndependentFailures )
+{
+	uint32_t nShader = 0x07230203;
+	sirGraphicsABIPipelineModelCaps_t caps = {};
+	caps.nSize = sizeof( caps );
+	caps.nDeviceGeneration = 1;
+	caps.nModel = SIR_GRAPHICS_PIPELINE_MODEL_MODERN;
+	caps.nExecutionModel = SIR_GRAPHICS_EXECUTION_EXPLICIT;
+	caps.nRequiredFeatureMask = SIR_GRAPHICS_FEATURE_GRAPHICS | SIR_GRAPHICS_FEATURE_COMPUTE;
+	caps.nQueueMask = 1U << SIR_GRAPHICS_QUEUE_DIRECT;
+	caps.nShaderStageMask = SIR_GRAPHICS_STAGE_VERTEX | SIR_GRAPHICS_STAGE_FRAGMENT | SIR_GRAPHICS_STAGE_COMPUTE;
+	caps.nShaderFormatMask = 1U << ( SIR_GRAPHICS_SHADER_SPIRV - 1 );
+	caps.nMaximumSamples = 4;
+	caps.nMaximumColorAttachments = 4;
+	caps.nMaximumTextureDimension = 1024;
+	caps.nMaximumBindings = 4;
+	caps.nMaximumVertexAttributes = 1;
+	caps.nMaximumVertexStreams = 1;
+	sirGraphicsABIModernRecipe_t recipe = {};
+	recipe.nSize = sizeof( recipe );
+	recipe.nStageMask = SIR_GRAPHICS_STAGE_VERTEX | SIR_GRAPHICS_STAGE_FRAGMENT;
+	recipe.nRequiredFeatures = SIR_GRAPHICS_FEATURE_GRAPHICS;
+	sirGraphicsABIPipeline_t pipeline = {};
+	pipeline.nSize = sizeof( pipeline );
+	pipeline.nModel = SIR_GRAPHICS_PIPELINE_MODEL_MODERN;
+	pipeline.nType = SIR_GRAPHICS_PIPELINE_GRAPHICS;
+	pipeline.nSampleCount = 1;
+	pipeline.nColorFormatCount = 1;
+	pipeline.szColorFormats[0] = SIR_GRAPHICS_FORMAT_RGBA8_UNORM;
+	pipeline.vertexShader = { sizeof( sirGraphicsABIShaderCode_t ), SIR_GRAPHICS_SHADER_SPIRV, &nShader, 4, 1, "main" };
+	pipeline.pixelShader = pipeline.vertexShader;
+	pipeline.pModern = &recipe;
+	ASSERT_EQ( sirGraphicsValidateABIPipeline( &pipeline, &caps ), SIR_GRAPHICS_SUCCESS );
+
+	pipeline.vertexShader.nSize += 4;
+	EXPECT_EQ( sirGraphicsValidateABIPipeline( &pipeline, &caps ), SIR_GRAPHICS_UNSUPPORTED );
+	pipeline.vertexShader.nSize -= 4;
+	pipeline.nDepthFormat = SIR_GRAPHICS_FORMAT_BC7_UNORM;
+	EXPECT_EQ( sirGraphicsValidateABIPipeline( &pipeline, &caps ), SIR_GRAPHICS_INVALID_ARGUMENT );
+	pipeline.nDepthFormat = SIR_GRAPHICS_FORMAT_UNKNOWN;
+	sirGraphicsVertexAttribute_t attribute = {};
+	attribute.eFormat = SIR_GRAPHICS_FORMAT_RGBA8_UNORM;
+	pipeline.nAttributeCount = 2;
+	pipeline.pAttributes = &attribute;
+	EXPECT_EQ( sirGraphicsValidateABIPipeline( &pipeline, &caps ), SIR_GRAPHICS_UNSUPPORTED );
+	pipeline.nAttributeCount = 0;
+	pipeline.pAttributes = nullptr;
+
+	pipeline.nType = SIR_GRAPHICS_PIPELINE_COMPUTE;
+	pipeline.nColorFormatCount = 0;
+	pipeline.vertexShader = {};
+	pipeline.pixelShader = {};
+	pipeline.computeShader = { sizeof( sirGraphicsABIShaderCode_t ), SIR_GRAPHICS_SHADER_SPIRV, &nShader, 4, 2, "main" };
+	recipe.nStageMask = SIR_GRAPHICS_STAGE_COMPUTE;
+	recipe.nRequiredFeatures = SIR_GRAPHICS_FEATURE_COMPUTE;
+	ASSERT_EQ( sirGraphicsValidateABIPipeline( &pipeline, &caps ), SIR_GRAPHICS_SUCCESS );
+	caps.nShaderFormatMask = 1U << ( SIR_GRAPHICS_SHADER_DXIL - 1 );
+	EXPECT_EQ( sirGraphicsValidateABIPipeline( &pipeline, &caps ), SIR_GRAPHICS_UNSUPPORTED );
+}
