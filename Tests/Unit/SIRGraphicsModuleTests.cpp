@@ -648,6 +648,160 @@ static bool testBinaryModule( void ) noexcept
 	}
 	pMode( 10 );
 
+	// Table-driven invalid descriptors cover each host admission boundary.
+	{
+		sirGraphicsViewDesc_t invalid = view;
+		invalid.nMipLevels = 0;
+		if ( sirGraphicsCreateABIView( &device, &invalid, &hView ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+			fputs( "Invalid sirGraphicsViewDesc_t.nMipLevels=0 was admitted\n", stderr );
+			return false;
+		}
+	}
+	{
+		sirGraphicsViewDesc_t invalid = view;
+		invalid.nLayers = 0;
+		if ( sirGraphicsCreateABIView( &device, &invalid, &hView ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+			fputs( "Invalid sirGraphicsViewDesc_t.nLayers=0 was admitted\n", stderr );
+			return false;
+		}
+	}
+	{
+		sirGraphicsViewDesc_t invalid = view;
+		invalid.nBufferOffsetBytes = 1;
+		if ( sirGraphicsCreateABIView( &device, &invalid, &hView ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+			fputs( "Invalid sirGraphicsViewDesc_t.nBufferOffsetBytes=1 was admitted\n", stderr );
+			return false;
+		}
+	}
+	{
+		sirGraphicsViewDesc_t invalid = view;
+		invalid.nBufferSizeBytes = 1;
+		if ( sirGraphicsCreateABIView( &device, &invalid, &hView ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+			fputs( "Invalid sirGraphicsViewDesc_t.nBufferSizeBytes=1 was admitted\n", stderr );
+			return false;
+		}
+	}
+	{
+		sirGraphicsViewDesc_t invalid = view;
+		invalid.nUsage = 0;
+		if ( sirGraphicsCreateABIView( &device, &invalid, &hView ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+			fputs( "Invalid sirGraphicsViewDesc_t.nUsage=0 was admitted\n", stderr );
+			return false;
+		}
+	}
+	{
+		sirGraphicsViewDesc_t invalid = view;
+		invalid.nUsage = SIR_GRAPHICS_USAGE_CONSTANT;
+		if ( sirGraphicsCreateABIView( &device, &invalid, &hView ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+			fputs( "Invalid sirGraphicsViewDesc_t.nUsage=SIR_GRAPHICS_USAGE_CONSTANT was admitted\n", stderr );
+			return false;
+		}
+	}
+	{
+		sirGraphicsViewDesc_t invalid = view;
+		invalid.nUsage = SIR_GRAPHICS_USAGE_SAMPLED | SIR_GRAPHICS_USAGE_STORAGE;
+		if ( sirGraphicsCreateABIView( &device, &invalid, &hView ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+			fputs( "Invalid sirGraphicsViewDesc_t.nUsage=SIR_GRAPHICS_USAGE_SAMPLED | SIR_GRAPHICS_USAGE_STORAGE was admitted\n", stderr );
+			return false;
+		}
+	}
+	{
+		sirGraphicsViewDesc_t invalid = view;
+		invalid.nUsage = SIR_GRAPHICS_USAGE_STORAGE;
+		if ( sirGraphicsCreateABIView( &device, &invalid, &hView ) != SIR_GRAPHICS_UNSUPPORTED ) {
+			fputs( "Invalid sirGraphicsViewDesc_t.nUsage=SIR_GRAPHICS_USAGE_STORAGE was admitted\n", stderr );
+			return false;
+		}
+	}
+	{
+		sirGraphicsViewDesc_t invalid = view;
+		invalid.nUsage = SIR_GRAPHICS_USAGE_DEPTH_STENCIL;
+		if ( sirGraphicsCreateABIView( &device, &invalid, &hView ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+			fputs( "Invalid sirGraphicsViewDesc_t.nUsage=SIR_GRAPHICS_USAGE_DEPTH_STENCIL was admitted\n", stderr );
+			return false;
+		}
+	}
+	{
+		sirGraphicsViewDesc_t invalid = view;
+		invalid.eFormat = SIR_GRAPHICS_FORMAT_UNKNOWN;
+		if ( sirGraphicsCreateABIView( &device, &invalid, &hView ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+			fputs( "Invalid sirGraphicsViewDesc_t.eFormat=SIR_GRAPHICS_FORMAT_UNKNOWN was admitted\n", stderr );
+			return false;
+		}
+	}
+	{
+		sirGraphicsViewDesc_t invalid = view;
+		invalid.eFormat = ( sirGraphicsFormat_t )99;
+		if ( sirGraphicsCreateABIView( &device, &invalid, &hView ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+			fputs( "Invalid sirGraphicsViewDesc_t.eFormat=( sirGraphicsFormat_t )99 was admitted\n", stderr );
+			return false;
+		}
+	}
+	// Table-driven invalid descriptors cover each host admission boundary.
+	{
+		sirGraphicsTextureDesc_t invalid = texture;
+		invalid.nHeight = 8192;
+		if ( sirGraphicsCreateABITexture( &device, &invalid, &hTexture ) != SIR_GRAPHICS_UNSUPPORTED ) {
+			fputs( "Invalid sirGraphicsTextureDesc_t.nHeight=8192 was admitted\n", stderr );
+			return false;
+		}
+	}
+	{
+		sirGraphicsTextureDesc_t invalid = texture;
+		invalid.nDepth = 8192;
+		if ( sirGraphicsCreateABITexture( &device, &invalid, &hTexture ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+			fputs( "Invalid sirGraphicsTextureDesc_t.nDepth=8192 was admitted\n", stderr );
+			return false;
+		}
+	}
+	{
+		sirGraphicsTextureDesc_t invalid = texture;
+		invalid.nSampleCount = 4;
+		if ( sirGraphicsCreateABITexture( &device, &invalid, &hTexture ) != SIR_GRAPHICS_UNSUPPORTED ) {
+			fputs( "Invalid sirGraphicsTextureDesc_t.nSampleCount=4 was admitted\n", stderr );
+			return false;
+		}
+	}
+	{
+		sirGraphicsTextureDesc_t invalid = texture;
+		invalid.nSampleCount = 3;
+		if ( sirGraphicsCreateABITexture( &device, &invalid, &hTexture ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+			fputs( "Invalid sirGraphicsTextureDesc_t.nSampleCount=3 was admitted\n", stderr );
+			return false;
+		}
+	}
+	{
+		sirGraphicsTextureDesc_t invalid = texture;
+		invalid.nMipLevels = 2;
+		if ( sirGraphicsCreateABITexture( &device, &invalid, &hTexture ) != SIR_GRAPHICS_SUCCESS ) {
+			fputs( "Invalid sirGraphicsTextureDesc_t.nMipLevels=2 was admitted\n", stderr );
+			return false;
+		}
+	}
+	{
+		sirGraphicsTextureDesc_t invalid = texture;
+		invalid.nUsage = SIR_GRAPHICS_USAGE_STORAGE;
+		if ( sirGraphicsCreateABITexture( &device, &invalid, &hTexture ) != SIR_GRAPHICS_UNSUPPORTED ) {
+			fputs( "Invalid sirGraphicsTextureDesc_t.nUsage=SIR_GRAPHICS_USAGE_STORAGE was admitted\n", stderr );
+			return false;
+		}
+	}
+	{
+		sirGraphicsTextureDesc_t invalid = texture;
+		invalid.eFormat = SIR_GRAPHICS_FORMAT_UNKNOWN;
+		if ( sirGraphicsCreateABITexture( &device, &invalid, &hTexture ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+			fputs( "Invalid sirGraphicsTextureDesc_t.eFormat=SIR_GRAPHICS_FORMAT_UNKNOWN was admitted\n", stderr );
+			return false;
+		}
+	}
+	{
+		sirGraphicsTextureDesc_t invalid = texture;
+		invalid.eMemory = SIR_GRAPHICS_MEMORY_CPU_UPLOAD;
+		if ( sirGraphicsCreateABITexture( &device, &invalid, &hTexture ) != SIR_GRAPHICS_UNSUPPORTED ) {
+			fputs( "Invalid sirGraphicsTextureDesc_t.eMemory=SIR_GRAPHICS_MEMORY_CPU_UPLOAD was admitted\n", stderr );
+			return false;
+		}
+	}
 	texture.nWidth = 8192;
 	if ( sirGraphicsCreateABITexture( &device, &texture, &hTexture ) != SIR_GRAPHICS_UNSUPPORTED ) {
 		return false;
@@ -1043,6 +1197,128 @@ static bool testBinaryModule( void ) noexcept
 	const sirGraphicsCompletion_t presentCompletion = { 5, SIR_GRAPHICS_QUEUE_DIRECT, 1 };
 	if ( sirGraphicsPresentABISurfaceImage( &device, &surfaceImage, &presentCompletion ) != SIR_GRAPHICS_SUCCESS ) {
 		return false;
+	}
+	// Table-driven invalid descriptors cover each host admission boundary.
+	{
+		sirGraphicsABINativeSurface_t invalid = native;
+		invalid.nSize = 1;
+		if ( sirGraphicsCreateABISurface( &device, &invalid, &present, &hSurface ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+			fputs( "Invalid sirGraphicsABINativeSurface_t.nSize=1 was admitted\n", stderr );
+			return false;
+		}
+	}
+	{
+		sirGraphicsABINativeSurface_t invalid = native;
+		invalid.nPlatform = 0;
+		if ( sirGraphicsCreateABISurface( &device, &invalid, &present, &hSurface ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+			fputs( "Invalid sirGraphicsABINativeSurface_t.nPlatform=0 was admitted\n", stderr );
+			return false;
+		}
+	}
+	{
+		sirGraphicsABINativeSurface_t invalid = native;
+		invalid.pWindow = nullptr;
+		if ( sirGraphicsCreateABISurface( &device, &invalid, &present, &hSurface ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+			fputs( "Invalid sirGraphicsABINativeSurface_t.pWindow=nullptr was admitted\n", stderr );
+			return false;
+		}
+	}
+	{
+		sirGraphicsABINativeSurface_t invalid = native;
+		invalid.nWindowGeneration = 0;
+		if ( sirGraphicsCreateABISurface( &device, &invalid, &present, &hSurface ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+			fputs( "Invalid sirGraphicsABINativeSurface_t.nWindowGeneration=0 was admitted\n", stderr );
+			return false;
+		}
+	}
+	// Table-driven invalid descriptors cover each host admission boundary.
+	{
+		sirGraphicsABIPresentDesc_t invalid = present;
+		invalid.nSize = 1;
+		if ( sirGraphicsCreateABISurface( &device, &native, &invalid, &hSurface ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+			fputs( "Invalid sirGraphicsABIPresentDesc_t.nSize=1 was admitted\n", stderr );
+			return false;
+		}
+	}
+	{
+		sirGraphicsABIPresentDesc_t invalid = present;
+		invalid.nWidth = 0;
+		if ( sirGraphicsCreateABISurface( &device, &native, &invalid, &hSurface ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+			fputs( "Invalid sirGraphicsABIPresentDesc_t.nWidth=0 was admitted\n", stderr );
+			return false;
+		}
+	}
+	{
+		sirGraphicsABIPresentDesc_t invalid = present;
+		invalid.nHeight = 0;
+		if ( sirGraphicsCreateABISurface( &device, &native, &invalid, &hSurface ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+			fputs( "Invalid sirGraphicsABIPresentDesc_t.nHeight=0 was admitted\n", stderr );
+			return false;
+		}
+	}
+	{
+		sirGraphicsABIPresentDesc_t invalid = present;
+		invalid.nHeight = 8192;
+		if ( sirGraphicsCreateABISurface( &device, &native, &invalid, &hSurface ) != SIR_GRAPHICS_UNSUPPORTED ) {
+			fputs( "Invalid sirGraphicsABIPresentDesc_t.nHeight=8192 was admitted\n", stderr );
+			return false;
+		}
+	}
+	{
+		sirGraphicsABIPresentDesc_t invalid = present;
+		invalid.nBackbufferCount = 0;
+		if ( sirGraphicsCreateABISurface( &device, &native, &invalid, &hSurface ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+			fputs( "Invalid sirGraphicsABIPresentDesc_t.nBackbufferCount=0 was admitted\n", stderr );
+			return false;
+		}
+	}
+	{
+		sirGraphicsABIPresentDesc_t invalid = present;
+		invalid.nBackbufferCount = 9;
+		if ( sirGraphicsCreateABISurface( &device, &native, &invalid, &hSurface ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+			fputs( "Invalid sirGraphicsABIPresentDesc_t.nBackbufferCount=9 was admitted\n", stderr );
+			return false;
+		}
+	}
+	{
+		sirGraphicsABIPresentDesc_t invalid = present;
+		invalid.nMode = 99;
+		if ( sirGraphicsCreateABISurface( &device, &native, &invalid, &hSurface ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+			fputs( "Invalid sirGraphicsABIPresentDesc_t.nMode=99 was admitted\n", stderr );
+			return false;
+		}
+	}
+	{
+		sirGraphicsABIPresentDesc_t invalid = present;
+		invalid.nAllowTearing = 2;
+		if ( sirGraphicsCreateABISurface( &device, &native, &invalid, &hSurface ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+			fputs( "Invalid sirGraphicsABIPresentDesc_t.nAllowTearing=2 was admitted\n", stderr );
+			return false;
+		}
+	}
+	{
+		sirGraphicsABIPresentDesc_t invalid = present;
+		invalid.nHdr = 2;
+		if ( sirGraphicsCreateABISurface( &device, &native, &invalid, &hSurface ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+			fputs( "Invalid sirGraphicsABIPresentDesc_t.nHdr=2 was admitted\n", stderr );
+			return false;
+		}
+	}
+	{
+		sirGraphicsABIPresentDesc_t invalid = present;
+		invalid.nHdr = 1;
+		if ( sirGraphicsCreateABISurface( &device, &native, &invalid, &hSurface ) != SIR_GRAPHICS_UNSUPPORTED ) {
+			fputs( "Invalid sirGraphicsABIPresentDesc_t.nHdr=1 was admitted\n", stderr );
+			return false;
+		}
+	}
+	{
+		sirGraphicsABIPresentDesc_t invalid = present;
+		invalid.nFormat = SIR_GRAPHICS_FORMAT_D16_UNORM;
+		if ( sirGraphicsCreateABISurface( &device, &native, &invalid, &hSurface ) != SIR_GRAPHICS_UNSUPPORTED ) {
+			fputs( "Invalid sirGraphicsABIPresentDesc_t.nFormat=SIR_GRAPHICS_FORMAT_D16_UNORM was admitted\n", stderr );
+			return false;
+		}
 	}
 	present.nWidth = 0;
 	if ( sirGraphicsResizeABISurface( &device, hSurface, &native, &present ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
