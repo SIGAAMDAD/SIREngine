@@ -104,7 +104,7 @@ static bool sirCVarValidStorage( const sirCVarStorage_t& storage ) noexcept
 		return false;
 	}
 	if ( ( storage.nBank32 != 0 && !storage.pBank32 ) || ( storage.nBank64 != 0 && !storage.pBank64 ) ||
-	     ( storage.nBank32 == 0 && storage.nBank64 == 0 ) || storage.nStagedWrites < storage.nSlots ) {
+	     storage.nStagedWrites < storage.nSlots ) {
 		return false;
 	}
 	const size_t nStride = storage.nStringStride;
@@ -277,25 +277,29 @@ sirRegistrationResult_t SIRCVarRegistry::bind( const sirCVarDefinition_t& defini
 	if ( iFree == m_Storage.nSlots || m_nHandleSeed == UINT32_MAX ) {
 		return SIR_REGISTRATION_CAPACITY_EXCEEDED;
 	}
+	const bool bString = eType == SIR_CVAR_UTF8_STRING;
 	const bool bNarrow = sirCVarNarrow( eType );
-	const uint32_t nCapacity = bNarrow ? m_Storage.nBank32 : m_Storage.nBank64;
-	uint32_t iBank = nCapacity;
-	for ( uint32_t iCandidate = 0; iCandidate < nCapacity; ++iCandidate ) {
-		bool bUsed = false;
-		for ( uint32_t iSlot = 0; iSlot < m_Storage.nSlots; ++iSlot ) {
-			const sirCVarSlot_t& slot = m_Storage.pSlots[iSlot];
-			if ( slot.bActive && sirCVarNarrow( slot.eType ) == bNarrow && slot.nBankIndex == iCandidate ) {
-				bUsed = true;
+	const uint32_t nCapacity = bString ? 0 : ( bNarrow ? m_Storage.nBank32 : m_Storage.nBank64 );
+	uint32_t iBank = UINT32_MAX;
+	if ( !bString ) {
+		for ( uint32_t iCandidate = 0; iCandidate < nCapacity; ++iCandidate ) {
+			bool bUsed = false;
+			for ( uint32_t iSlot = 0; iSlot < m_Storage.nSlots; ++iSlot ) {
+				const sirCVarSlot_t& slot = m_Storage.pSlots[iSlot];
+				if ( slot.bActive && slot.eType != SIR_CVAR_UTF8_STRING && sirCVarNarrow( slot.eType ) == bNarrow &&
+				     slot.nBankIndex == iCandidate ) {
+					bUsed = true;
+					break;
+				}
+			}
+			if ( !bUsed ) {
+				iBank = iCandidate;
 				break;
 			}
 		}
-		if ( !bUsed ) {
-			iBank = iCandidate;
-			break;
+		if ( iBank == UINT32_MAX ) {
+			return SIR_REGISTRATION_CAPACITY_EXCEEDED;
 		}
-	}
-	if ( iBank == nCapacity ) {
-		return SIR_REGISTRATION_CAPACITY_EXCEEDED;
 	}
 	sirCVarSlot_t& slot = m_Storage.pSlots[iFree];
 	slot = {};
@@ -309,7 +313,9 @@ sirRegistrationResult_t SIRCVarRegistry::bind( const sirCVarDefinition_t& defini
 	slot.eType = eType;
 	slot.ePhase = definition.ePhase;
 	slot.bActive = true;
-	if ( bNarrow ) {
+	if ( bString ) {
+		// Strings reside only in the dedicated text arenas.
+	} else if ( bNarrow ) {
 		m_Storage.pBank32[iBank] = ( uint32_t )definition.defaultValue.nBits;
 	} else {
 		m_Storage.pBank64[iBank] = definition.defaultValue.nBits;

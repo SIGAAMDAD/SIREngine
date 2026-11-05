@@ -294,6 +294,24 @@ int main( void )
 	assert( registry.getValue( dynamicHandle, SIR_CONSOLE_CAP_READ, &got ) == SIR_REGISTRATION_STALE_HANDLE );
 	registry.shutdown();
 	assert( !registry.isInitialized() );
+	// Text-only instances do not reserve a scalar bank.
+	sirCVarStorage_t stringsOnly = storage;
+	stringsOnly.pBank32 = nullptr;
+	stringsOnly.nBank32 = 0;
+	stringsOnly.pBank64 = nullptr;
+	stringsOnly.nBank64 = 0;
+	SIRCVarRegistry textRegistry;
+	assert( textRegistry.initialize( registration, stringsOnly ) == SIR_REGISTRATION_OK );
+	sirRegistrationHandle_t textRegistration = {};
+	assert( registration.find( "r.title", 7, &textRegistration ) == SIR_REGISTRATION_OK );
+	sirCVarDefinition_t textDefinition = {};
+	sirCVarCookedSource_t cookedSource = { cookedRegistration.data(), cookedRegistration.size(), 9, SIR_CVAR_APPLY_NEXT_SAFE_POINT };
+	assert( sirCVarDefinitionFromCooked( registration, textRegistration, cookedSource, &textDefinition ) == SIR_REGISTRATION_OK );
+	sirCVarHandle_t textHandle = {};
+	assert( textRegistry.bind( textDefinition, &textHandle ) == SIR_REGISTRATION_OK );
+	assert( textRegistry.getValue( textHandle, SIR_CONSOLE_CAP_READ, &got ) == SIR_REGISTRATION_OK );
+	assert( got.nTextBytes == 4 && memcmp( got.pszText, "base", 4 ) == 0 );
+	textRegistry.shutdown();
 	registration.shutdown();
 	assert( pool.shutdown() );
 	return 0;
