@@ -48,8 +48,10 @@ static bool sirHiZTestPlan( void ) noexcept
 		if ( sirHiZPlanDispatches( layout, depth, &plan ) != SIR_GRAPHICS_SUCCESS || plan.nPassCount != layout.nMipCount ) {
 			return false;
 		}
-		if ( plan.pyramid.eFormat != SIR_GRAPHICS_FORMAT_R32_FLOAT || plan.pyramid.nMipLevels != layout.nMipCount ||
-		     plan.pyramid.nSampleCount != 1 || plan.pyramid.nUsage != ( SIR_GRAPHICS_USAGE_SAMPLED | SIR_GRAPHICS_USAGE_STORAGE ) ) {
+		if ( plan.pyramid.eFormat != SIR_GRAPHICS_FORMAT_R32_FLOAT || plan.pyramid.nMipLevels != layout.nMipCount ) {
+			return false;
+		}
+		if ( plan.pyramid.nSampleCount != 1 || plan.pyramid.nUsage != ( SIR_GRAPHICS_USAGE_SAMPLED | SIR_GRAPHICS_USAGE_STORAGE ) ) {
 			return false;
 		}
 		for ( uint32_t iMip = 0; iMip < plan.nPassCount; ++iMip ) {
@@ -66,10 +68,14 @@ static bool sirHiZTestPlan( void ) noexcept
 			     pPass->nWorkgroupsY != layout.szMips[iMip].nHeight / 8 + ( layout.szMips[iMip].nHeight % 8 != 0 ) ) {
 				return false;
 			}
-			if ( iMip != 0 && ( pPass->parameters.nSourceWidth != layout.szMips[iMip - 1].nWidth ||
-			                    pPass->parameters.nSourceHeight != layout.szMips[iMip - 1].nHeight ||
-			                    pPass->parameters.nSourceOriginX != 0 || pPass->parameters.nSourceOriginY != 0 ) ) {
-				return false;
+			if ( iMip != 0 ) {
+				if ( pPass->parameters.nSourceWidth != layout.szMips[iMip - 1].nWidth ||
+				     pPass->parameters.nSourceHeight != layout.szMips[iMip - 1].nHeight ) {
+					return false;
+				}
+				if ( pPass->parameters.nSourceOriginX != 0 || pPass->parameters.nSourceOriginY != 0 ) {
+					return false;
+				}
 			}
 		}
 	}
@@ -118,6 +124,40 @@ static bool sirHiZTestInvalid( void ) noexcept
 	depth.texture.eFormat = SIR_GRAPHICS_FORMAT_D16_UNORM;
 	depth.viewport.nRight++;
 	if ( sirHiZPlanDispatches( layout, depth, &plan ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return false;
+	}
+	depth.viewport.nRight--;
+	depth.texture.nSampleCount = 0;
+	if ( sirHiZPlanDispatches( layout, depth, &plan ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return false;
+	}
+	depth.texture.nSampleCount = 1;
+	depth.texture.nUsage = SIR_GRAPHICS_USAGE_DEPTH_STENCIL;
+	if ( sirHiZPlanDispatches( layout, depth, &plan ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return false;
+	}
+	depth.texture.nUsage = SIR_GRAPHICS_USAGE_SAMPLED | SIR_GRAPHICS_USAGE_DEPTH_STENCIL;
+	depth.texture.nArrayLayers = 2;
+	if ( sirHiZPlanDispatches( layout, depth, &plan ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return false;
+	}
+	depth.texture.nArrayLayers = 1;
+	depth.texture.nWidth = 39;
+	if ( sirHiZPlanDispatches( layout, depth, &plan ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return false;
+	}
+	depth.texture.nWidth = 128;
+	depth.viewport.nLeft = -1;
+	if ( sirHiZPlanDispatches( layout, depth, &plan ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return false;
+	}
+	depth.viewport.nLeft = 27;
+	depth.viewport.nBottom = 65;
+	if ( sirHiZPlanDispatches( layout, depth, &plan ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return false;
+	}
+	depth.viewport.nBottom = 20;
+	if ( sirHiZPlanDispatches( layout, depth, &plan ) != SIR_GRAPHICS_SUCCESS ) {
 		return false;
 	}
 	if ( memcmp( &plan, &expected, sizeof( plan ) ) != 0 ) {

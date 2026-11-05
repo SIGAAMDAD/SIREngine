@@ -41,8 +41,10 @@ sirGraphicsResult_t sirHiZPlanDispatches( const sirHiZLayout_t& layout, const si
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	const sirGraphicsTextureDesc_t& source = depth.texture;
-	if ( source.nWidth == 0 || source.nHeight == 0 || source.nDepth != 1 || source.nArrayLayers != 1 || source.nMipLevels == 0 ||
-	     source.eDimension != SIR_GRAPHICS_TEXTURE_2D ) {
+	if ( source.nWidth == 0 || source.nHeight == 0 || source.nDepth != 1 ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	if ( source.nArrayLayers != 1 || source.nMipLevels == 0 || source.eDimension != SIR_GRAPHICS_TEXTURE_2D ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( source.eFormat != SIR_GRAPHICS_FORMAT_D16_UNORM && source.eFormat != SIR_GRAPHICS_FORMAT_D24_UNORM_S8_UINT &&
@@ -59,13 +61,18 @@ sirGraphicsResult_t sirHiZPlanDispatches( const sirHiZLayout_t& layout, const si
 		return source.nSampleCount == 0 ? SIR_GRAPHICS_INVALID_ARGUMENT : SIR_GRAPHICS_UNSUPPORTED;
 	}
 	const sirGraphicsRect_t& rect = depth.viewport;
-	if ( rect.nLeft < 0 || rect.nTop < 0 || rect.nLeft >= rect.nRight || rect.nTop >= rect.nBottom ) {
+	if ( rect.nLeft < 0 || rect.nTop < 0 ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	if ( rect.nLeft >= rect.nRight || rect.nTop >= rect.nBottom ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	const uint64_t nRectWidth = ( uint64_t )( ( int64_t )rect.nRight - rect.nLeft );
 	const uint64_t nRectHeight = ( uint64_t )( ( int64_t )rect.nBottom - rect.nTop );
-	if ( ( uint64_t )rect.nRight > source.nWidth || ( uint64_t )rect.nBottom > source.nHeight || nRectWidth != layout.nWidth ||
-	     nRectHeight != layout.nHeight ) {
+	if ( ( uint64_t )rect.nRight > source.nWidth || ( uint64_t )rect.nBottom > source.nHeight ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	if ( nRectWidth != layout.nWidth || nRectHeight != layout.nHeight ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 
