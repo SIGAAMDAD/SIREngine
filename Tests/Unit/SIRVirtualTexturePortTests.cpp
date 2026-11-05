@@ -16,6 +16,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Renderer/VirtualTexturing/SIRVirtualTextureFeedback.h>
 #include <Renderer/VirtualTexturing/SIRVirtualTexturePackage.h>
+#include <Renderer/VirtualTexturing/SIRVirtualTexturePackReader.h>
 
 #include <stdio.h>
 #include <vector>
@@ -112,6 +113,22 @@ static uint64_t align16( uint64_t nValue ) noexcept
 	return ( nValue + 15U ) & ~UINT64_C( 15 );
 }
 
+template <typename T>
+static void putRecord( std::vector<uint8_t>& bytes, uint64_t nOffset, const T& record )
+{
+	memcpy( bytes.data() + nOffset, &record, sizeof( record ) );
+}
+
+static void signPack( std::vector<uint8_t>& bytes )
+{
+	sirVirtualTexturePackHeader_t header = {};
+	memcpy( &header, bytes.data(), sizeof( header ) );
+	header.nContentSignature = sirVTPackHash64( bytes.data() + SIR_VT_PACK_HEADER_BYTES, bytes.size() - SIR_VT_PACK_HEADER_BYTES );
+	header.nHeaderChecksum = 0;
+	header.nHeaderChecksum = sirVTPackChecksum32( &header, sizeof( header ) );
+	memcpy( bytes.data(), &header, sizeof( header ) );
+}
+
 static std::vector<uint8_t> makeValidPack( void )
 {
 	sirVirtualTexturePackHeader_t header = {};
@@ -154,15 +171,97 @@ static std::vector<uint8_t> makeValidPack( void )
 	header.nFormatFamilyOffset = nCursor;
 	nCursor = align16( nCursor + sizeof( sirVirtualTexturePackFamilyRecord_t ) * SIR_VT_PACK_CHANNEL_COUNT );
 	header.nPayloadDataOffset = nCursor;
-	header.nPayloadDataBytes = 32;
-	header.nPackageBytes = nCursor + 32;
+	header.nPayloadDataBytes = sirVTPackPhysicalTileBytes( SIR_VT_PHYSICAL_BC1 );
+	header.nPackageBytes = nCursor + header.nPayloadDataBytes;
+	header.szChannelPageCount[0] = 1;
+	header.szChannelTailCount[0] = 1;
 	std::vector<uint8_t> bytes( ( size_t )header.nPackageBytes, 0 );
-	for ( uint32_t i = 0; i < 32; ++i ) {
+	for ( uint32_t i = 0; i < header.nPayloadDataBytes; ++i ) {
 		bytes[( size_t )header.nPayloadDataOffset + i] = ( uint8_t )( i * 3U );
 	}
-	header.nContentSignature = sirVTPackHash64( bytes.data() + SIR_VT_PACK_HEADER_BYTES, bytes.size() - SIR_VT_PACK_HEADER_BYTES );
-	header.nHeaderChecksum = sirVTPackChecksum32( &header, sizeof( header ) );
-	memcpy( bytes.data(), &header, sizeof( header ) );
+	sirVirtualTexturePackAllocationRecord_t allocation = {};
+	allocation.nGeneration = 7;
+	allocation.nContentId = 19;
+	allocation.nChannelMask = 1;
+	allocation.nHighestProfile = 0;
+	allocation.nAvailableProfiles = 1;
+	allocation.nConsumer = 1; // INSTANCE: albedo is mandatory.
+	putRecord( bytes, header.nAllocationOffset, allocation );
+	sirVirtualTexturePackAllocationKey_t key = { UINT64_C( 0x123456789 ), 0, 19 };
+	putRecord( bytes, header.nAllocationKeyOffset, key );
+	for ( uint32_t i = 0; i < SIR_VT_PACK_CHANNEL_COUNT; ++i ) {
+		sirVirtualTexturePackChannelAllocation_t channel = {};
+		channel.nTailIndex = UINT32_MAX;
+		if ( i == 0 ) {
+			channel.nBasePage = 0;
+			channel.nPageCount = 1;
+			channel.nTailIndex = 0;
+			channel.nMip0WidthPages = 1;
+			channel.nMip0HeightPages = 1;
+			channel.nMipCount = 1;
+		}
+		putRecord( bytes, header.nChannelAllocationOffset + i * sizeof( channel ), channel );
+	}
+	sirVirtualTexturePackPageRecord_t page = {};
+	page.nVirtualPage = 0;
+	page.nParentPage = UINT32_MAX;
+	page.nAllocationId = 0;
+	page.nPayloadId = 0;
+	page.nGeneration = 7;
+	page.nContentId = 19;
+	page.nChannel = 0;
+	putRecord( bytes, header.nPageOffset, page );
+	sirVirtualTexturePackPayloadRecord_t payload = {};
+	payload.nFormat = SIR_VT_PHYSICAL_BC1;
+	payload.nClusterId = 0;
+	payload.nStoredBytes = header.nPayloadDataBytes;
+	payload.nDecodedBytes = header.nPayloadDataBytes;
+	payload.nCodec = 0;
+	payload.nFlags = 1;
+	payload.nChecksum = sirVTPackChecksum32( bytes.data() + header.nPayloadDataOffset, header.nPayloadDataBytes );
+	payload.nContentSignature = sirVTPackHash64( bytes.data() + header.nPayloadDataOffset, header.nPayloadDataBytes );
+	putRecord( bytes, header.nPayloadDirectoryOffset, payload );
+	sirVirtualTexturePackClusterRecord_t cluster = {};
+	cluster.nContentSignature = payload.nContentSignature;
+	cluster.nStoredBytes = header.nPayloadDataBytes;
+	cluster.nDecodedBytes = header.nPayloadDataBytes;
+	cluster.nFirstPayload = 0;
+	cluster.nPayloadCount = 1;
+	cluster.nChecksum = payload.nChecksum;
+	putRecord( bytes, header.nClusterDirectoryOffset, cluster );
+	sirVirtualTexturePackTailRecord_t tail = {};
+	tail.nContentSignature = payload.nContentSignature;
+	tail.nCanonicalAllocationId = 0;
+	tail.nPayloadId = 0;
+	tail.nContentId = 19;
+	tail.nFirstMip = 0;
+	tail.nMipCount = 1;
+	tail.nFirstMipWidth = 128;
+	tail.nFirstMipHeight = 128;
+	tail.nAtlasInteriorWidth = 128;
+	tail.nAtlasInteriorHeight = 128;
+	tail.nChannel = 0;
+	tail.nLayout = SIR_VT_TAIL_LAYOUT_HORIZONTAL;
+	putRecord( bytes, header.nTailMetadataOffset, tail );
+	sirVirtualTexturePackQualityView_t quality = {};
+	quality.nChannelMask = 1;
+	for ( uint32_t i = 0; i < SIR_VT_PACK_CHANNEL_COUNT; ++i ) {
+		quality.szBaseMip[i] = i == 0 ? 0 : UINT8_MAX;
+		quality.szMaxMip[i] = i == 0 ? 0 : UINT8_MAX;
+	}
+	putRecord( bytes, header.nQualityViewOffset, quality );
+	const uint8_t families[6] = { 0, 1, 3, 2, 0, 3 };
+	const uint8_t semantics[6] = { 0, 1, 2, 3, 4, 4 };
+	for ( uint32_t i = 0; i < SIR_VT_PACK_CHANNEL_COUNT; ++i ) {
+		sirVirtualTexturePackFamilyRecord_t family = {};
+		family.nChannel = ( uint8_t )i;
+		family.nFamily = families[i];
+		family.nSemantic = semantics[i];
+		family.nFlags = i == 0 ? 1 : 0;
+		putRecord( bytes, header.nFormatFamilyOffset + i * sizeof( family ), family );
+	}
+	putRecord( bytes, 0, header );
+	signPack( bytes );
 	return bytes;
 }
 
@@ -182,7 +281,7 @@ static bool testPackContract( void )
 	sirVirtualTexturePackInput_t input = { bytes.data(), bytes.size(), bytes.size(), false };
 	SIR_TEST( sirVTPackOpenDirectories( input, &view ) );
 	SIR_TEST( !view.bMetadataOnly && view.szDirectories[SIR_VT_PACK_PAYLOAD_DATA].pData != nullptr );
-	SIR_TEST( view.szDirectories[SIR_VT_PACK_PAYLOAD_DATA].nBytes == 32 );
+	SIR_TEST( view.szDirectories[SIR_VT_PACK_PAYLOAD_DATA].nBytes == sirVTPackPhysicalTileBytes( SIR_VT_PHYSICAL_BC1 ) );
 	sirVirtualTexturePackView_t metadata = {};
 	input.bMetadataOnly = true;
 	input.nAvailableBytes = view.header.nPayloadDataOffset;
@@ -215,6 +314,56 @@ static bool testPackContract( void )
 	return true;
 }
 
+static bool testValidatedPack( void )
+{
+	std::vector<uint8_t> bytes = makeValidPack();
+	sirVirtualTexturePackInput_t input = { bytes.data(), bytes.size(), bytes.size(), false };
+	sirVirtualTexturePackView_t view = {};
+	SIR_TEST( sirVTPackOpenValidated( input, &view ) );
+	SIR_TEST( !view.bMetadataOnly && view.header.nPageCount == 1 );
+	sirVirtualTexturePackPageRecord_t page = {};
+	SIR_TEST( sirVTPackGetPage( view, 0, &page ) && page.nGeneration == 7 && page.nContentId == 19 );
+	SIR_TEST( !sirVTPackGetPage( view, 1, &page ) && !sirVTPackGetPage( view, 0, nullptr ) );
+	input.bMetadataOnly = true;
+	input.nAvailableBytes = view.header.nPayloadDataOffset;
+	SIR_TEST( sirVTPackOpenValidated( input, &view ) && view.bMetadataOnly );
+	SIR_TEST( view.szDirectories[SIR_VT_PACK_PAYLOAD_DATA].pData == nullptr );
+	input.bMetadataOnly = false;
+	input.nAvailableBytes = bytes.size();
+	std::vector<uint8_t> unaligned( bytes.size() + 1 );
+	memcpy( unaligned.data() + 1, bytes.data(), bytes.size() );
+	input.pBytes = unaligned.data() + 1;
+	SIR_TEST( sirVTPackOpenValidated( input, &view ) );
+	input.pBytes = bytes.data();
+	const std::vector<uint8_t> original = bytes;
+	const sirVirtualTexturePackHeader_t *pHeader = ( const sirVirtualTexturePackHeader_t * )original.data();
+	const uint64_t nAllocation = pHeader->nAllocationOffset;
+	const uint64_t nKey = pHeader->nAllocationKeyOffset;
+	const uint64_t nChannel = pHeader->nChannelAllocationOffset;
+	const uint64_t nPage = pHeader->nPageOffset;
+	const uint64_t nPayload = pHeader->nPayloadDirectoryOffset;
+	const uint64_t nCluster = pHeader->nClusterDirectoryOffset;
+	const uint64_t nTail = pHeader->nTailMetadataOffset;
+	const uint64_t nQuality = pHeader->nQualityViewOffset;
+	const uint64_t nFamily = pHeader->nFormatFamilyOffset;
+	const uint64_t badOffsets[] = { nAllocation + 12, nKey + 8,   nChannel + 10, nPage + 4,  nPayload + 12,
+	                                nCluster + 24,    nTail + 32, nQuality + 2,  nFamily + 1 };
+	for ( uint32_t i = 0; i < sizeof( badOffsets ) / sizeof( badOffsets[0] ); ++i ) {
+		bytes = original;
+		bytes[( size_t )badOffsets[i]] ^= 0x40;
+		signPack( bytes );
+		SIR_TEST( !sirVTPackOpenValidated( input, &view ) );
+		SIR_TEST( view.szDirectories[SIR_VT_PACK_ALLOCATIONS].pData == nullptr );
+	}
+	bytes = original;
+	bytes[( size_t )pHeader->nPayloadDataOffset + 37] ^= 0x77;
+	signPack( bytes ); // Package FNV is valid; cluster CRC is now invalid.
+	SIR_TEST( !sirVTPackOpenValidated( input, &view ) );
+	bytes = original;
+	SIR_TEST( sirVTPackOpenValidated( input, &view ) );
+	return true;
+}
+
 static bool testCompactTail( void ) noexcept
 {
 	sirVirtualTextureTailRequest_t request = { 0, 4, 128, 64, true };
@@ -237,7 +386,7 @@ static bool testCompactTail( void ) noexcept
 
 int main( void )
 {
-	if ( !testFeedbackGrid() || !testFeedbackMulti() || !testPackContract() || !testCompactTail() ) {
+	if ( !testFeedbackGrid() || !testFeedbackMulti() || !testPackContract() || !testValidatedPack() || !testCompactTail() ) {
 		return 1;
 	}
 	printf( "Terrain3D VT V1 native port contracts PASS\n" );
