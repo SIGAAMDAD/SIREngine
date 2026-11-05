@@ -26,10 +26,17 @@ typedef struct sirStreamingReconcileEntry_s
 	bool bRetiring;
 } sirStreamingReconcileEntry_t;
 
-static bool streamingReconcileKeyEqual( const sirStreamingUnitKey_t &a, const sirStreamingUnitKey_t &b ) noexcept
+static bool streamingReconcileKeyEqual( const sirStreamingUnitKey_t& a, const sirStreamingUnitKey_t& b ) noexcept
 {
 	return a.nContainerId == b.nContainerId && a.nUnitId == b.nUnitId && a.nManifestGeneration == b.nManifestGeneration &&
 	       a.nVariant == b.nVariant && a.eKind == b.eKind;
+}
+
+// Bounded admission must not allow input order to displace higher-priority demand.
+// Keep ties stable to avoid churn when producers submit equal-priority requests.
+static bool streamingAdmissionPrecedes( const sirStreamingDemand_t& a, uint32_t iA, const sirStreamingDemand_t& b, uint32_t iB ) noexcept
+{
+	return a.nPriority != b.nPriority ? a.nPriority > b.nPriority : iA < iB;
 }
 
 SIRStreamingDemandReconciler::SIRStreamingDemandReconciler( void ) noexcept
@@ -76,10 +83,10 @@ sirStreamingResult_t SIRStreamingDemandReconciler::initialize( SIRStreamingCoord
 	return SIR_STREAMING_OK;
 }
 
-uint32_t SIRStreamingDemandReconciler::findEntry( const sirStreamingUnitKey_t &key ) const noexcept
+uint32_t SIRStreamingDemandReconciler::findEntry( const sirStreamingUnitKey_t& key ) const noexcept
 {
 	for ( uint32_t iEntry = 0; iEntry < m_nCapacity; ++iEntry ) {
-		const sirStreamingReconcileEntry_t &entry = m_pEntries[iEntry];
+		const sirStreamingReconcileEntry_t& entry = m_pEntries[iEntry];
 		if ( entry.bOccupied && streamingReconcileKeyEqual( entry.key, key ) ) {
 			return iEntry;
 		}
@@ -95,7 +102,7 @@ void SIRStreamingDemandReconciler::clearEntry( uint32_t iEntry ) noexcept
 void SIRStreamingDemandReconciler::pruneReleased( void ) noexcept
 {
 	for ( uint32_t iEntry = 0; iEntry < m_nCapacity; ++iEntry ) {
-		sirStreamingReconcileEntry_t &entry = m_pEntries[iEntry];
+		sirStreamingReconcileEntry_t& entry = m_pEntries[iEntry];
 		if ( !entry.bOccupied ) {
 			continue;
 		}
@@ -128,7 +135,7 @@ sirStreamingResult_t SIRStreamingDemandReconciler::shutdown( void ) noexcept
 	return SIR_STREAMING_OK;
 }
 
-sirStreamingResult_t SIRStreamingDemandReconciler::findTicket( const sirStreamingUnitKey_t &key,
+sirStreamingResult_t SIRStreamingDemandReconciler::findTicket( const sirStreamingUnitKey_t& key,
                                                                sirStreamingTicket_t *pTicket ) const noexcept
 {
 	if ( !m_bInitialized ) {
@@ -143,7 +150,7 @@ sirStreamingResult_t SIRStreamingDemandReconciler::findTicket( const sirStreamin
 		return SIR_STREAMING_NOT_READY;
 	}
 
-	const sirStreamingReconcileEntry_t &entry = m_pEntries[iEntry];
+	const sirStreamingReconcileEntry_t& entry = m_pEntries[iEntry];
 	sirStreamingSnapshot_t snapshot = {};
 	if ( m_pCoordinator->query( entry.ticket, &snapshot ) != SIR_STREAMING_OK ) {
 		return SIR_STREAMING_STALE_TICKET;
@@ -180,7 +187,7 @@ sirStreamingResult_t SIRStreamingDemandReconciler::validateSet( const sirStreami
 	}
 
 	for ( uint32_t iDemand = 0; iDemand < nDemandCount; ++iDemand ) {
-		const sirStreamingDemand_t &demand = pDemands[iDemand];
+		const sirStreamingDemand_t& demand = pDemands[iDemand];
 		if ( demand.nConsumerId != m_nConsumerId || demand.nConsumerGeneration != m_nConsumerGeneration ) {
 			return SIR_STREAMING_INVALID_ARGUMENT;
 		}
@@ -202,10 +209,10 @@ sirStreamingResult_t SIRStreamingDemandReconciler::validateSet( const sirStreami
 }
 
 void SIRStreamingDemandReconciler::retireMissing( const sirStreamingDemand_t *pDemands, uint32_t nDemandCount,
-                                                  sirStreamingReconcileStats_t &stats ) noexcept
+                                                  sirStreamingReconcileStats_t& stats ) noexcept
 {
 	for ( uint32_t iEntry = 0; iEntry < m_nCapacity; ++iEntry ) {
-		sirStreamingReconcileEntry_t &entry = m_pEntries[iEntry];
+		sirStreamingReconcileEntry_t& entry = m_pEntries[iEntry];
 		if ( !entry.bOccupied || entry.bRetiring ) {
 			continue;
 		}
@@ -229,16 +236,16 @@ void SIRStreamingDemandReconciler::retireMissing( const sirStreamingDemand_t *pD
 }
 
 void SIRStreamingDemandReconciler::refreshCurrent( const sirStreamingDemand_t *pDemands, uint32_t nDemandCount,
-                                                   sirStreamingReconcileStats_t &stats ) noexcept
+                                                   sirStreamingReconcileStats_t& stats ) noexcept
 {
 	for ( uint32_t iDemand = 0; iDemand < nDemandCount; ++iDemand ) {
-		const sirStreamingDemand_t &demand = pDemands[iDemand];
+		const sirStreamingDemand_t& demand = pDemands[iDemand];
 		const uint32_t iEntry = findEntry( demand.keyUnit );
 		if ( iEntry == m_nCapacity ) {
 			continue;
 		}
 
-		sirStreamingReconcileEntry_t &entry = m_pEntries[iEntry];
+		sirStreamingReconcileEntry_t& entry = m_pEntries[iEntry];
 		if ( entry.bRetiring ) {
 			++stats.nDeferred;
 			continue;
@@ -258,10 +265,25 @@ void SIRStreamingDemandReconciler::refreshCurrent( const sirStreamingDemand_t *p
 }
 
 void SIRStreamingDemandReconciler::submitMissing( const sirStreamingDemand_t *pDemands, uint32_t nDemandCount,
-                                                  sirStreamingReconcileStats_t &stats ) noexcept
+                                                  sirStreamingReconcileStats_t& stats ) noexcept
 {
-	for ( uint32_t iDemand = 0; iDemand < nDemandCount; ++iDemand ) {
-		const sirStreamingDemand_t &demand = pDemands[iDemand];
+	uint32_t iPrevious = nDemandCount;
+	for ( uint32_t iOrder = 0; iOrder < nDemandCount; ++iOrder ) {
+		uint32_t iDemand = nDemandCount;
+		for ( uint32_t iCandidate = 0; iCandidate < nDemandCount; ++iCandidate ) {
+			if ( iPrevious != nDemandCount &&
+			     !streamingAdmissionPrecedes( pDemands[iPrevious], iPrevious, pDemands[iCandidate], iCandidate ) ) {
+				continue;
+			}
+			if ( iDemand == nDemandCount || streamingAdmissionPrecedes( pDemands[iCandidate], iCandidate, pDemands[iDemand], iDemand ) ) {
+				iDemand = iCandidate;
+			}
+		}
+		if ( iDemand == nDemandCount ) {
+			break;
+		}
+		iPrevious = iDemand;
+		const sirStreamingDemand_t& demand = pDemands[iDemand];
 		if ( findEntry( demand.keyUnit ) != m_nCapacity ) {
 			continue;
 		}
@@ -284,7 +306,7 @@ void SIRStreamingDemandReconciler::submitMissing( const sirStreamingDemand_t *pD
 			continue;
 		}
 
-		sirStreamingReconcileEntry_t &entry = m_pEntries[iFree];
+		sirStreamingReconcileEntry_t& entry = m_pEntries[iFree];
 		entry.key = demand.keyUnit;
 		entry.ticket = ticket;
 		entry.bOccupied = true;
