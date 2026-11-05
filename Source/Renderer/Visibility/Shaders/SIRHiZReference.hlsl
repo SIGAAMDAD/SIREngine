@@ -13,17 +13,18 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-// HIZ-03 reference kernels. Dispatch each mip independently.
-// Both views must be single-sample R32_FLOAT. For mip 0, the producer must
-// supply a single-sample resolved depth view with identical pixel extents.
-// The native device owns view creation, barriers and resource generations.
-// No group-shared reductions, subgroup assumptions or inter-mip dispatch
-// synchronization are hidden in these reference kernels.
+// The CPU SIRHiZDispatchPlan selects the source/destination mip views and
+// provides SIRHiZParameters. Each dispatch writes one R32_FLOAT mip.
+// The native device must order storage writes before subsequent mip reads.
+// The mip-0 copy accepts a window into a larger single-sample depth source;
+// reduction passes read only the immediately preceding R32_FLOAT mip.
 
 cbuffer SIRHiZParameters : register(b0)
 {
     uint2 nSourceExtent;
     uint2 nDestinationExtent;
+    uint2 nSourceOrigin;
+    uint2 nReserved;
 };
 
 Texture2D<float> g_Source : register(t0);
@@ -44,15 +45,15 @@ void SIRHiZCopy(uint3 nDispatchId : SV_DispatchThreadID)
     {
         return;
     }
-    // Mip 0 requires source and destination extents to be equal.
-    // Invalid extent bindings are conservatively initialized, never read OOB.
-    if (any(nSourceExtent != nDestinationExtent))
+    // Check the origin before subtracting it to avoid unsigned wrap.
+    if (any(nSourceOrigin >= nSourceExtent) ||
+        any(nDestinationExtent > nSourceExtent - nSourceOrigin))
     {
         g_Destination[nPixel] = 0.0f;
         return;
     }
 
-    g_Destination[nPixel] = sirHiZConservativeDepth(g_Source.Load(int3(nPixel, 0)));
+    g_Destination[nPixel] = sirHiZConservativeDepth(g_Source.Load(int3(nPixel + nSourceOrigin, 0)));
 }
 
 [numthreads(8, 8, 1)]
@@ -67,7 +68,8 @@ void SIRHiZReduce(uint3 nDispatchId : SV_DispatchThreadID)
     // HIZ-00 uses ceil(source / 2), including odd-sized trailing children.
     // A mismatched mip chain is filled with far depth (no false occlusion).
     uint2 nExpectedExtent = (nSourceExtent / 2) + (nSourceExtent % 2);
-    if (any(nSourceExtent == 0) || any(nExpectedExtent != nDestinationExtent))
+    if (any(nSourceExtent == 0) || any(nSourceOrigin != 0) ||
+        any(nExpectedExtent != nDestinationExtent))
     {
         g_Destination[nPixel] = 0.0f;
         return;
