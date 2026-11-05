@@ -17,6 +17,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <linux/input.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <stdarg.h>
+#include <sys/ioctl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -24,6 +26,82 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 static int s_nWatchedFd = -1;
 static uint32_t s_nReadCalls = 0;
+static bool s_bFakeGamepadIoctl = false;
+static int s_nFakeGamepadFd = -1;
+static uint32_t s_nFakeIoctlCalls = 0;
+
+extern "C" int __real_ioctl( int nFd, unsigned long nRequest, ... );
+extern "C" int __wrap_ioctl( int nFd, unsigned long nRequest, ... )
+{
+	va_list args;
+	va_start( args, nRequest );
+	if ( nRequest == EVIOCRMFF ) {
+		const int nEffectId = va_arg( args, int );
+		va_end( args );
+		if ( s_bFakeGamepadIoctl && nFd == s_nFakeGamepadFd ) {
+			return nEffectId == 7 ? 0 : -1;
+		}
+		return __real_ioctl( nFd, nRequest, nEffectId );
+	}
+	void *pArgument = va_arg( args, void * );
+	va_end( args );
+	if ( !s_bFakeGamepadIoctl || _IOC_TYPE( nRequest ) != 'E' ) {
+		return __real_ioctl( nFd, nRequest, pArgument );
+	}
+	const uint32_t nCode = _IOC_NR( nRequest );
+	if ( s_nFakeGamepadFd < 0 && nCode == 0x21 ) {
+		s_nFakeGamepadFd = nFd;
+	}
+	if ( nFd != s_nFakeGamepadFd ) {
+		return __real_ioctl( nFd, nRequest, pArgument );
+	}
+	++s_nFakeIoctlCalls;
+	if ( nCode == 0x21 || nCode == 0x35 ) {
+		memset( pArgument, 0, _IOC_SIZE( nRequest ) );
+		unsigned long *pBits = ( unsigned long * )pArgument;
+		const uint32_t nBit = nCode == 0x21 ? BTN_GAMEPAD : FF_RUMBLE;
+		pBits[nBit / ( sizeof( unsigned long ) * 8 )] |= 1UL << ( nBit % ( sizeof( unsigned long ) * 8 ) );
+		return 0;
+	}
+	if ( nCode == 0x02 ) {
+		input_id *pIdentity = ( input_id * )pArgument;
+		*pIdentity = { BUS_USB, 0x1234, 0x5678, 1 };
+		return 0;
+	}
+	if ( nCode == 0x07 ) {
+		const char pszPhysical[] = "usb-test/input0";
+		const size_t nSize = _IOC_SIZE( nRequest );
+		if ( nSize < sizeof( pszPhysical ) ) {
+			return -1;
+		}
+		memcpy( pArgument, pszPhysical, sizeof( pszPhysical ) );
+		return sizeof( pszPhysical );
+	}
+	if ( nCode == 0xa0 ) {
+		return 0;
+	}
+	if ( nCode == 0x18 ) {
+		memset( pArgument, 0, _IOC_SIZE( nRequest ) );
+		unsigned long *pKeys = ( unsigned long * )pArgument;
+		pKeys[BTN_SOUTH / ( sizeof( unsigned long ) * 8 )] |= 1UL << ( BTN_SOUTH % ( sizeof( unsigned long ) * 8 ) );
+		return 0;
+	}
+	if ( nCode >= 0x40 && nCode < 0x40 + ABS_MAX ) {
+		input_absinfo *pAxis = ( input_absinfo * )pArgument;
+		*pAxis = {};
+		const uint32_t nAxis = nCode - 0x40;
+		pAxis->minimum = nAxis == ABS_Z || nAxis == ABS_RZ ? 0 : -32768;
+		pAxis->maximum = nAxis == ABS_Z || nAxis == ABS_RZ ? 255 : 32767;
+		pAxis->value = nAxis == ABS_HAT0X ? -1 : ( nAxis == ABS_HAT0Y ? 0 : pAxis->maximum / 2 );
+		return 0;
+	}
+	if ( nCode == 0x80 ) {
+		ff_effect *pEffect = ( ff_effect * )pArgument;
+		pEffect->id = 7;
+		return 0;
+	}
+	return __real_ioctl( nFd, nRequest, pArgument );
+}
 
 extern "C" ssize_t __real_read( int nFd, void *pBuf, size_t nBytes );
 extern "C" ssize_t __wrap_read( int nFd, void *pBuf, size_t nBytes )
@@ -60,6 +138,16 @@ public:
 		slot.profile.buttons[0] = { BTN_EAST, SIR_INPUT_PAD_SOUTH };
 		slot.profile.bReplaceButtons = bReplace;
 		return backend.resolveButton( slot, nCode );
+	}
+
+	static sirInputDeviceId_t firstDevice( const SIRLinuxEvdevBackend &backend ) noexcept
+	{
+		return backend.m_Slots[0].id;
+	}
+
+	static bool firstOpen( const SIRLinuxEvdevBackend &backend ) noexcept
+	{
+		return backend.m_Slots[0].bOpen;
 	}
 
 	static bool queueBoundary( SIRLinuxEvdevBackend &backend ) noexcept
@@ -428,10 +516,37 @@ static bool testAxisHatAndRumbleErrors( void ) noexcept
 	return bValid;
 }
 
+static bool testEmulatedControllerOpenAndRumble( void ) noexcept
+{
+	SIRInputService service;
+	SIRLinuxEvdevBackend backend;
+	if ( !service.attach( backend ) || !service.begin( 1 ) ) {
+		return false;
+	}
+	s_nFakeGamepadFd = -1;
+	s_nFakeIoctlCalls = 0;
+	s_bFakeGamepadIoctl = true;
+	const bool bOpened = SIRInputEvdevBatchTestPeer::open( backend, service, "/dev/null" );
+	const sirInputDeviceId_t id = SIRInputEvdevBatchTestPeer::firstDevice( backend );
+	bool bValid = bOpened && SIRInputEvdevBatchTestPeer::firstOpen( backend ) && service.activeDeviceCount() == 1 &&
+	              s_nFakeIoctlCalls >= 10 && backend.hapticCapabilities( id ) == SIR_INPUT_HAPTIC_CAP_RUMBLE;
+	if ( bValid ) {
+		bValid = backend.vibrate( id, 12000, 9000 ) && backend.vibrate( id, 0, 0 ) &&
+		         !SIRInputEvdevBatchTestPeer::open( backend, service, "/dev/null" );
+	}
+	if ( bValid ) {
+		bValid = service.publish() && service.frame() != nullptr && service.frame()->nCount >= 2;
+	}
+	service.shutdown();
+	s_bFakeGamepadIoctl = false;
+	s_nFakeGamepadFd = -1;
+	return bValid && service.activeDeviceCount() == 0;
+}
+
 int main( void )
 {
 	if ( !testBatchedReports() || !testPartialReportAcrossReads() || !testMappingAndQueueBoundaries() || !testDiscoveryAndOpenFailures() ||
-	     !testDesyncAndReadFailureLifecycle() || !testAxisHatAndRumbleErrors() ) {
+	     !testDesyncAndReadFailureLifecycle() || !testAxisHatAndRumbleErrors() || !testEmulatedControllerOpenAndRumble() ) {
 		fprintf( stderr, "SIRInputEvdevBatchTests FAIL\n" );
 		return 1;
 	}
