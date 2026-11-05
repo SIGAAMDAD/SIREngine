@@ -27,6 +27,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Core/Memory/Allocators/SIRLinearAllocator.h>
 #include <Editor/Scene/SIREditorTextScene.h>
 #include <Editor/Scene/SIREditorTextProperties.h>
+#include <Editor/Scene/SIREditorResourceReferences.h>
 #include <Editor/Widgets/SIREditorHierarchyModel.h>
 
 class SIRMemorySegment;
@@ -52,34 +53,12 @@ typedef enum sirEditorWorkspaceResult_e : uint8_t
 // segment; the native view model can later be consumed by Godot Control/Tree.
 class SIREditorSceneWorkspace
 {
-private:
-	SIRLinearAllocator m_Arena;
-	SIREditorSceneDocument m_Document;
-	SIREditorHierarchyModel m_Hierarchy;
-	sirEditorTextSceneIndex_t m_Scene;
-	sirEditorTextResourceIndex_t m_Resources;
-	sirEditorTextPropertyIndex_t m_Properties;
-	const char *m_pszSource;
-	size_t m_nSourceBytes;
-	uint32_t m_nErrorLine;
-	bool m_bInitialized;
-	bool m_bOpen;
-
-	char *allocateSource( size_t nSourceBytes ) noexcept;
-	sirEditorWorkspaceResult_t finishOpen( size_t nSourceBytes ) noexcept;
-	void rollbackOpen( void ) noexcept;
-
 public:
 	SIREditorSceneWorkspace( void ) noexcept;
 	SIREditorSceneWorkspace( const SIREditorSceneWorkspace & ) = delete;
-	SIREditorSceneWorkspace &operator=( const SIREditorSceneWorkspace & ) = delete;
 	~SIREditorSceneWorkspace();
 
-	bool initialize( SIRMemorySegment *pEditorSegment ) noexcept;
-	sirEditorWorkspaceResult_t openTextSource( const char *pszSource, size_t nSourceBytes ) noexcept;
-	sirEditorWorkspaceResult_t openTextFile( const char *pszPath ) noexcept;
-	void close( void ) noexcept;
-	bool shutdown( void ) noexcept;
+	SIREditorSceneWorkspace &operator=( const SIREditorSceneWorkspace & ) = delete;
 
 	bool isOpen( void ) const noexcept;
 	uint32_t getErrorLine( void ) const noexcept;
@@ -87,10 +66,38 @@ public:
 	size_t getSourceBytes( void ) const noexcept;
 	const sirEditorTextSceneIndex_t &getSceneIndex( void ) const noexcept;
 	const sirEditorTextResourceIndex_t &getResourceIndex( void ) const noexcept;
+	const sirEditorResourceReference_t *getResourceReferences( void ) const noexcept;
+	uint32_t getResourceReferenceCount( void ) const noexcept;
 	const sirEditorTextPropertyIndex_t &getPropertyIndex( void ) const noexcept;
 	SIREditorSceneDocument &getDocument( void ) noexcept;
 	const SIREditorSceneDocument &getDocument( void ) const noexcept;
 	SIREditorHierarchyModel &getHierarchy( void ) noexcept;
+
+	bool initialize( SIRMemorySegment *pEditorSegment ) noexcept;
+	sirEditorWorkspaceResult_t openTextSource( const char *pszSource, size_t nSourceBytes ) noexcept;
+	sirEditorWorkspaceResult_t openTextFile( const char *pszPath ) noexcept;
+	void close( void ) noexcept;
+	bool shutdown( void ) noexcept;
+
+protected:
+private:
+	char *allocateSource( size_t nSourceBytes ) noexcept;
+	sirEditorWorkspaceResult_t finishOpen( size_t nSourceBytes ) noexcept;
+	void rollbackOpen( void ) noexcept;
+
+	SIRLinearAllocator m_Arena;
+	SIREditorSceneDocument m_Document;
+	SIREditorHierarchyModel m_Hierarchy;
+	sirEditorTextSceneIndex_t m_Scene;
+	sirEditorTextResourceIndex_t m_Resources;
+	sirEditorTextPropertyIndex_t m_Properties;
+	sirEditorResourceReference_t *m_pResourceReferences = nullptr;
+	uint32_t m_nResourceReferenceCount = 0;
+	const char *m_pszSource;
+	size_t m_nSourceBytes;
+	uint32_t m_nErrorLine;
+	bool m_bInitialized;
+	bool m_bOpen;
 };
 
 #endif // __SIRENGINE_SIREDITORSCENEWORKSPACE_H__
