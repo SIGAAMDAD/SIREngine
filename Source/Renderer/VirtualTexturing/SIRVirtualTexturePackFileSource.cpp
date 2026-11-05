@@ -25,7 +25,8 @@ static bool sirVTReadFull( const SIRPlatformFile& file, uint64_t nOffset, void *
 }
 
 SIRVirtualTexturePackFileSource::SIRVirtualTexturePackFileSource( void ) noexcept
-    : m_File(), m_nFileBytes( 0 ), m_nPayloadOffset( 0 ), m_nPayloadBytes( 0 ), m_nReadCount( 0 ), m_nPackageGeneration( 0 )
+    : m_File(), m_nFileBytes( 0 ), m_nPayloadOffset( 0 ), m_nPayloadBytes( 0 ), m_nReadCount( 0 ), m_nPackageGeneration( 0 ),
+      m_nPackageSignature( 0 )
 {
 }
 
@@ -69,6 +70,7 @@ void SIRVirtualTexturePackFileSource::close( void ) noexcept
 	m_nPayloadBytes = 0;
 	m_nReadCount = 0;
 	m_nPackageGeneration = 0;
+	m_nPackageSignature = 0;
 }
 
 bool SIRVirtualTexturePackFileSource::open( const char *pszPath, const sirVirtualTexturePackMetadataBuffer_t& buffer, bool bStrictHash,
@@ -123,6 +125,7 @@ bool SIRVirtualTexturePackFileSource::open( const char *pszPath, const sirVirtua
 		m_nPayloadOffset = candidate.header.nPayloadDataOffset;
 		m_nPayloadBytes = candidate.header.nPayloadDataBytes;
 		m_nPackageGeneration = candidate.header.nPackageGeneration;
+		m_nPackageSignature = candidate.header.nContentSignature;
 		*pView = candidate;
 		bSuccess = true;
 	} while ( false );
@@ -143,4 +146,24 @@ bool SIRVirtualTexturePackFileSource::readPayload( uint64_t nOffset, void *pDest
 	}
 	++m_nReadCount;
 	return true;
+}
+
+// Read exactly one persisted V1 cluster before decoding, so no unbounded
+// package payload can be mistaken for an individual GPU tile.
+bool SIRVirtualTexturePackFileSource::readCluster( const sirVirtualTexturePackView_t& view, uint32_t nClusterId,
+                                                   const sirVirtualTextureClusterBuffers_t& buffers,
+                                                   const sirVirtualTextureClusterCodec_t *pCodec ) noexcept
+{
+	if ( !isOpen() || !view.bMetadataOnly || view.header.nPackageGeneration != m_nPackageGeneration ||
+	     view.header.nPayloadDataBytes != m_nPayloadBytes || view.header.nContentSignature != m_nPackageSignature ||
+	     nClusterId >= view.header.nClusterCount || view.szDirectories[SIR_VT_PACK_CLUSTERS].pData == nullptr ) {
+		return false;
+	}
+	sirVirtualTexturePackClusterRecord_t cluster = {};
+	memcpy( &cluster, view.szDirectories[SIR_VT_PACK_CLUSTERS].pData + ( uint64_t )nClusterId * sizeof( cluster ), sizeof( cluster ) );
+	if ( cluster.nStoredBytes == 0 || cluster.nStoredBytes > buffers.nStoredCapacity || buffers.pStoredBytes == nullptr ||
+	     !readPayload( cluster.nPayloadDataOffset, buffers.pStoredBytes, cluster.nStoredBytes ) ) {
+		return false;
+	}
+	return sirVTDecodePackCluster( view, nClusterId, buffers, pCodec );
 }
