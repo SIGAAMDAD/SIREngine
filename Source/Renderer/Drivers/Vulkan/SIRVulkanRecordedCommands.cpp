@@ -130,10 +130,13 @@ static void sirVulkanRecordedBufferAccess( const sirVulkanRecordedCommand_t& com
 		*pRead = sirVulkanRecordedSpan( copy.pSource, copy.nSourceOffset, copy.nBytes );
 		*pWrite = sirVulkanRecordedSpan( copy.pDestination, copy.nDestinationOffset, copy.nBytes );
 	} else if ( command.eKind == SIR_VULKAN_RECORDED_TEXTURE_COPY && command.pBuffer != nullptr ) {
-		// Image-copy rows may be strided. Cover from the first copied byte to
-		// the end of the buffer rather than assuming a tightly packed extent.
+		// The transfer footprint includes row/slice padding through the last
+		// copied byte. An invalid image/copy conservatively aliases the whole buffer.
+		uint64_t nBytes = 0;
 		const uint64_t nOffset = command.textureCopy.nBufferOffset;
-		const uint64_t nBytes = nOffset <= command.pBuffer->nSize ? command.pBuffer->nSize - nOffset : 0;
+		if ( !sirVulkanTextureTransferFootprint( command.pImage, command.textureCopy, &nBytes ) ) {
+			nBytes = 0;
+		}
 		const sirVulkanBufferSpan_t span = sirVulkanRecordedSpan( command.pBuffer, nOffset, nBytes );
 		if ( command.textureCopy.bBufferToImage ) {
 			*pRead = span;

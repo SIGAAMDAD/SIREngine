@@ -259,6 +259,53 @@ int main( void )
 	if ( !sirVulkanRecordedNeedsBufferBarrier( spans, 2 ) ) {
 		return 34;
 	}
+	// A texture copy touches its computed footprint, not every byte to the end of staging.
+	sirVulkanImage_t pitchImage = {};
+	pitchImage.eFormat = VK_FORMAT_R8G8B8A8_UNORM;
+	pitchImage.eType = VK_IMAGE_TYPE_2D;
+	pitchImage.nWidth = 8;
+	pitchImage.nHeight = 8;
+	pitchImage.nDepth = 1;
+	pitchImage.nMips = 1;
+	pitchImage.nLayers = 1;
+	sirVulkanRecordedCommand_t footprintHazards[2] = {};
+	footprintHazards[0].eKind = SIR_VULKAN_RECORDED_TEXTURE_COPY;
+	footprintHazards[0].pBuffer = &staging;
+	footprintHazards[0].pImage = &pitchImage;
+	footprintHazards[0].textureCopy.bBufferToImage = true;
+	footprintHazards[0].textureCopy.nBufferOffset = 256;
+	footprintHazards[0].textureCopy.extent = { 8, 8, 1 };
+	footprintHazards[1].eKind = SIR_VULKAN_RECORDED_BUFFER_COPY;
+	footprintHazards[1].bufferCopy = { &source, &staging, 0, 512, 16 };
+	if ( sirVulkanRecordedNeedsBufferBarrier( footprintHazards, 1 ) ) {
+		return 35;
+	}
+	footprintHazards[1].bufferCopy.nDestinationOffset = 511;
+	if ( !sirVulkanRecordedNeedsBufferBarrier( footprintHazards, 1 ) ) {
+		return 36;
+	}
+	footprintHazards[0].textureCopy.nBufferRowLength = 12;
+	footprintHazards[1].bufferCopy.nDestinationOffset = 623;
+	if ( !sirVulkanRecordedNeedsBufferBarrier( footprintHazards, 1 ) ) {
+		return 37;
+	}
+	footprintHazards[1].bufferCopy.nDestinationOffset = 624;
+	if ( sirVulkanRecordedNeedsBufferBarrier( footprintHazards, 1 ) ) {
+		return 38;
+	}
+	footprintHazards[0].textureCopy.bBufferToImage = false;
+	footprintHazards[1].bufferCopy = { &staging, &readback, 623, 0, 16 };
+	if ( !sirVulkanRecordedNeedsBufferBarrier( footprintHazards, 1 ) ) {
+		return 39;
+	}
+	footprintHazards[1].bufferCopy.nSourceOffset = 624;
+	if ( sirVulkanRecordedNeedsBufferBarrier( footprintHazards, 1 ) ) {
+		return 40;
+	}
+	footprintHazards[0].pImage = nullptr;
+	if ( !sirVulkanRecordedNeedsBufferBarrier( footprintHazards, 1 ) ) {
+		return 41;
+	}
 	// Partial writes must not authorize readback or a shader-readable layout.
 	sirVulkanImage_t partiallyUploaded = {};
 	partiallyUploaded.eFormat = VK_FORMAT_R8G8B8A8_UNORM;
