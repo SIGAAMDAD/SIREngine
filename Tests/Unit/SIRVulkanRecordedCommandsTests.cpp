@@ -379,6 +379,39 @@ int main( void )
 	if ( sirVulkanValidateRecordedCommands( nativeCopyBarriers, 2 ) != SIR_VULKAN_INVALID_ARGUMENT ) {
 		return 45;
 	}
+
+	// Ordered barriers must simulate depth/stencil transitions on shadow state only.
+	sirVulkanImage_t depthSequence = {};
+	depthSequence.eType = VK_IMAGE_TYPE_2D;
+	depthSequence.eFormat = VK_FORMAT_D24_UNORM_S8_UINT;
+	depthSequence.nMips = 1;
+	depthSequence.nLayers = 1;
+	depthSequence.nUsage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+	sirVulkanRecordedCommand_t dsCommands[2] = {};
+	dsCommands[0].eKind = SIR_VULKAN_RECORDED_IMAGE_BARRIER;
+	dsCommands[0].pImage = &depthSequence;
+	dsCommands[0].imageBarrier = { VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 0, 0, 1, 1, false };
+	dsCommands[1].eKind = SIR_VULKAN_RECORDED_IMAGE_BARRIER;
+	dsCommands[1].pImage = &depthSequence;
+	dsCommands[1].imageBarrier = {
+	    VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL, 0, 0, 1, 1, false };
+	if ( sirVulkanValidateRecordedCommands( dsCommands, 2 ) != SIR_VULKAN_INVALID_ARGUMENT ) {
+		return 46;
+	}
+	depthSequence.szUploadedSubresources[0] = 1;
+	if ( sirVulkanValidateRecordedCommands( dsCommands, 2 ) != SIR_VULKAN_SUCCESS ||
+	     !sirVulkanGetSubresourceLayout( &depthSequence, 0, 0, &layout ) || layout != VK_IMAGE_LAYOUT_UNDEFINED ) {
+		return 47;
+	}
+	depthSequence.nUsage = VK_IMAGE_USAGE_SAMPLED_BIT;
+	if ( sirVulkanValidateRecordedCommands( dsCommands, 2 ) != SIR_VULKAN_INVALID_ARGUMENT ) {
+		return 48;
+	}
+	depthSequence.nUsage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+	dsCommands[1].imageBarrier.eAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	if ( sirVulkanValidateRecordedCommands( dsCommands, 2 ) != SIR_VULKAN_INVALID_ARGUMENT ) {
+		return 49;
+	}
 	printf( "Vulkan ordered mixed command validation passed\n" );
 	return 0;
 }

@@ -59,6 +59,84 @@ bool sirVulkanGetFormatBlock( VkFormat eFormat, sirVulkanFormatBlock_t *pBlock )
 	return true;
 }
 
+VkImageAspectFlags sirVulkanImageAspectMask( VkFormat eFormat ) noexcept
+{
+	switch ( eFormat ) {
+	case VK_FORMAT_D16_UNORM:
+	case VK_FORMAT_D32_SFLOAT:
+		return VK_IMAGE_ASPECT_DEPTH_BIT;
+	case VK_FORMAT_D24_UNORM_S8_UINT:
+		return VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+	default:
+		return VK_IMAGE_ASPECT_COLOR_BIT;
+	}
+}
+
+// A single mip/layer state is shared between depth and stencil; D24S8 barriers
+// always cover both aspects. Independent stencil layouts require a new tracker.
+static bool sirVulkanImageLayoutAllowed( const sirVulkanImage_t *pImage, VkImageLayout eLayout ) noexcept
+{
+	const VkImageAspectFlags nAspects = sirVulkanImageAspectMask( pImage->eFormat );
+	const bool bDepth = ( nAspects & VK_IMAGE_ASPECT_DEPTH_BIT ) != 0;
+	switch ( eLayout ) {
+	case VK_IMAGE_LAYOUT_UNDEFINED:
+	case VK_IMAGE_LAYOUT_GENERAL:
+		return true;
+	case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+		return !bDepth && ( pImage->nUsage & VK_IMAGE_USAGE_SAMPLED_BIT ) != 0;
+	case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
+		return ( pImage->nUsage & VK_IMAGE_USAGE_TRANSFER_SRC_BIT ) != 0;
+	case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
+		return ( pImage->nUsage & VK_IMAGE_USAGE_TRANSFER_DST_BIT ) != 0;
+	case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
+		return bDepth && ( pImage->nUsage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT ) != 0;
+	case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
+		return bDepth && ( pImage->nUsage & ( VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT ) ) != 0;
+	default:
+		return false;
+	}
+}
+
+bool sirVulkanValidateNativeImageBarrier( const sirVulkanImage_t *pImage, const sirVulkanImageBarrier_t& barrier ) noexcept
+{
+	if ( pImage == nullptr || pImage->nMips == 0 || pImage->nMips > 32 || pImage->nLayers == 0 ||
+	     pImage->nLayers > SIR_VULKAN_MAX_TRACKED_SUBRESOURCES / pImage->nMips || barrier.nMipCount == 0 || barrier.nLayerCount == 0 ||
+	     barrier.nMip >= pImage->nMips || barrier.nLayer >= pImage->nLayers || barrier.nMipCount > pImage->nMips - barrier.nMip ||
+	     barrier.nLayerCount > pImage->nLayers - barrier.nLayer || !sirVulkanImageLayoutAllowed( pImage, barrier.eBefore ) ||
+	     !sirVulkanImageLayoutAllowed( pImage, barrier.eAfter ) || barrier.eAfter == VK_IMAGE_LAYOUT_UNDEFINED ) {
+		return false;
+	}
+	if ( barrier.bUav ) {
+		if ( sirVulkanImageAspectMask( pImage->eFormat ) != VK_IMAGE_ASPECT_COLOR_BIT ||
+		     ( pImage->nUsage & VK_IMAGE_USAGE_STORAGE_BIT ) == 0 || barrier.eBefore != VK_IMAGE_LAYOUT_GENERAL ||
+		     barrier.eAfter != VK_IMAGE_LAYOUT_GENERAL ) {
+			return false;
+		}
+	} else if ( barrier.eBefore == barrier.eAfter ) {
+		return false;
+	}
+	const bool bRead = barrier.eAfter == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ||
+	                   barrier.eAfter == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL ||
+	                   barrier.eAfter == VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+	for ( uint32_t iLayer = 0; iLayer < barrier.nLayerCount; ++iLayer ) {
+		const uint32_t nLayer = barrier.nLayer + iLayer;
+		for ( uint32_t iMip = 0; iMip < barrier.nMipCount; ++iMip ) {
+			const uint32_t nMip = barrier.nMip + iMip;
+			VkImageLayout eTracked = VK_IMAGE_LAYOUT_UNDEFINED;
+			if ( !sirVulkanGetSubresourceLayout( pImage, nMip, nLayer, &eTracked ) || eTracked != barrier.eBefore ) {
+				return false;
+			}
+			if ( bRead ) {
+				const uint32_t nIndex = nLayer * pImage->nMips + nMip;
+				if ( ( pImage->szUploadedSubresources[nIndex / 64] & ( 1ULL << ( nIndex % 64 ) ) ) == 0 ) {
+					return false;
+				}
+			}
+		}
+	}
+	return true;
+}
+
 // Each 4-bit entry addresses one independently tracked mip/layer pair.
 // Values are final queued layouts; transient transfer layouts are command-local.
 static bool sirVulkanSubresourceIndex( const sirVulkanImage_t *pImage, uint32_t nMip, uint32_t nLayer, uint32_t *pIndex ) noexcept
@@ -98,6 +176,12 @@ bool sirVulkanGetSubresourceLayout( const sirVulkanImage_t *pImage, uint32_t nMi
 	case 4:
 		*pLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 		return true;
+	case 5:
+		*pLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+		return true;
+	case 6:
+		*pLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+		return true;
 	default:
 		return false;
 	}
@@ -124,6 +208,12 @@ bool sirVulkanSetSubresourceLayout( sirVulkanImage_t *pImage, uint32_t nMip, uin
 		break;
 	case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
 		nValue = 4;
+		break;
+	case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
+		nValue = 5;
+		break;
+	case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
+		nValue = 6;
 		break;
 	default:
 		return false;

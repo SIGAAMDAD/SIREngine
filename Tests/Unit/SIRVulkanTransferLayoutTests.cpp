@@ -425,6 +425,32 @@ int main( void )
 	     sirVulkanUploadFinalLayout( &tracked, outOfRange ) != VK_IMAGE_LAYOUT_UNDEFINED ) {
 		return 63;
 	}
+
+	// Four-bit entries encode packed depth/stencil state without touching adjacent subresources.
+	sirVulkanImage_t depthLayouts = {};
+	depthLayouts.nMips = 2;
+	depthLayouts.nLayers = 2;
+	const VkImageLayout szDepthLayouts[4] = {
+	    VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL,
+	    VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL };
+	for ( uint32_t i = 0; i < 4; ++i ) {
+		if ( !sirVulkanSetSubresourceLayout( &depthLayouts, i % 2, i / 2, szDepthLayouts[i] ) ) {
+			return 64;
+		}
+	}
+	for ( uint32_t i = 0; i < 4; ++i ) {
+		VkImageLayout eDepth = VK_IMAGE_LAYOUT_UNDEFINED;
+		if ( !sirVulkanGetSubresourceLayout( &depthLayouts, i % 2, i / 2, &eDepth ) || eDepth != szDepthLayouts[i] ) {
+			return 65;
+		}
+	}
+	if ( !sirVulkanSetSubresourceLayout( &depthLayouts, 1, 0, VK_IMAGE_LAYOUT_UNDEFINED ) ||
+	     !sirVulkanGetSubresourceLayout( &depthLayouts, 0, 0, &layout ) || layout != VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL ) {
+		return 66;
+	}
+	if ( sirVulkanSetSubresourceLayout( &depthLayouts, 0, 0, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL ) ) {
+		return 67;
+	}
 	printf( "Vulkan transfer format and subresource contracts passed\n" );
 	return 0;
 }
