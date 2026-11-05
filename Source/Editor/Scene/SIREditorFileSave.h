@@ -37,7 +37,8 @@ typedef enum sirEditorFileSaveResult_e : uint8_t
 	SIR_EDITOR_FILE_SAVE_COMMITTED_NOT_DURABLE = 6,
 	SIR_EDITOR_FILE_SAVE_OUT_OF_CAPACITY = 7,
 	SIR_EDITOR_FILE_SAVE_SERIALIZATION_FAILED = 8,
-	SIR_EDITOR_FILE_SAVE_UNSUPPORTED_EDIT = 9
+	SIR_EDITOR_FILE_SAVE_UNSUPPORTED_EDIT = 9,
+	SIR_EDITOR_FILE_SAVE_CONFLICT = 10
 } sirEditorFileSaveResult_t;
 
 typedef struct sirEditorFileWriteRequest_s
@@ -46,6 +47,10 @@ typedef struct sirEditorFileWriteRequest_s
 	const char *pszTemporary;
 	const char *pBytes;
 	size_t nBytes;
+	// Optional optimistic write guard. Requires an existing destination with
+	// exactly these bytes; a mismatch fails before replacement.
+	const char *pExpectedBytes = nullptr;
+	size_t nExpectedBytes = 0;
 } sirEditorFileWriteRequest_t;
 
 typedef struct sirEditorSceneSaveRequest_s
@@ -56,13 +61,18 @@ typedef struct sirEditorSceneSaveRequest_s
 	const char *pszTemporary;
 	char *pszScratch;
 	size_t nScratchCapacity;
+	// For overwriting an opened source scene, compare its original bytes
+	// against the disk file before replacing it. Leave false for Save As.
+	bool bRejectExternalChanges = false;
 } sirEditorSceneSaveRequest_t;
 
 // Creates an exclusively owned sibling temporary file; writes, flushes and
 // syncs its contents before atomic replacement. On pre-replace failures the
 // destination remains untouched and the temporary file is removed. A
 // durability failure after replacement is reported separately because the
-// destination has already changed.
+// destination has already changed. Optional expected bytes are checked both
+// before staging and immediately before replacement; external writers that
+// race after the final comparison require higher-level file locking.
 sirEditorFileSaveResult_t sirEditorWriteFileAtomically( const sirEditorFileWriteRequest_t &request ) noexcept;
 
 // Exports the canonical scene document to caller-owned scratch and then saves

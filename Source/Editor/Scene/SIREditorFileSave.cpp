@@ -82,6 +82,50 @@ static bool sirEditorFileValidPaths( const char *pszDestination, const char *psz
 }
 
 #if defined( _WIN32 )
+static sirEditorFileSaveResult_t sirEditorFileCheckExpected( const wchar_t *pszDestination,
+                                                             const sirEditorFileWriteRequest_t &request ) noexcept
+{
+	if ( request.pExpectedBytes == nullptr ) {
+		return SIR_EDITOR_FILE_SAVE_OK;
+	}
+	HANDLE hFile = CreateFileW( pszDestination, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr,
+	                            OPEN_EXISTING, FILE_FLAG_OPEN_REPARSE_POINT, nullptr );
+	if ( hFile == INVALID_HANDLE_VALUE ) {
+		return GetLastError() == ERROR_FILE_NOT_FOUND ? SIR_EDITOR_FILE_SAVE_CONFLICT : SIR_EDITOR_FILE_SAVE_IO_ERROR;
+	}
+	BY_HANDLE_FILE_INFORMATION information = {};
+	LARGE_INTEGER nLength = {};
+	if ( !GetFileInformationByHandle( hFile, &information ) || !GetFileSizeEx( hFile, &nLength ) ) {
+		CloseHandle( hFile );
+		return SIR_EDITOR_FILE_SAVE_IO_ERROR;
+	}
+	if ( ( information.dwFileAttributes & ( FILE_ATTRIBUTE_DIRECTORY | FILE_ATTRIBUTE_REPARSE_POINT | FILE_ATTRIBUTE_DEVICE ) ) != 0 ) {
+		CloseHandle( hFile );
+		return SIR_EDITOR_FILE_SAVE_INVALID_PATH;
+	}
+	if ( nLength.QuadPart < 0 || ( uint64_t )nLength.QuadPart != ( uint64_t )request.nExpectedBytes ) {
+		CloseHandle( hFile );
+		return SIR_EDITOR_FILE_SAVE_CONFLICT;
+	}
+	char szChunk[4096] = {};
+	size_t nRead = 0;
+	while ( nRead < request.nExpectedBytes ) {
+		const size_t nRemaining = request.nExpectedBytes - nRead;
+		const DWORD nChunk = nRemaining < sizeof( szChunk ) ? ( DWORD )nRemaining : ( DWORD )sizeof( szChunk );
+		DWORD nActual = 0;
+		if ( !ReadFile( hFile, szChunk, nChunk, &nActual, nullptr ) || nActual == 0 ) {
+			CloseHandle( hFile );
+			return SIR_EDITOR_FILE_SAVE_IO_ERROR;
+		}
+		if ( memcmp( szChunk, request.pExpectedBytes + nRead, nActual ) != 0 ) {
+			CloseHandle( hFile );
+			return SIR_EDITOR_FILE_SAVE_CONFLICT;
+		}
+		nRead += nActual;
+	}
+	return CloseHandle( hFile ) ? SIR_EDITOR_FILE_SAVE_OK : SIR_EDITOR_FILE_SAVE_IO_ERROR;
+}
+
 static bool sirEditorFileToWindowsPath( const char *pszUtf8, wchar_t *pWide, int nCapacity ) noexcept
 {
 	const int nConverted = MultiByteToWideChar( CP_UTF8, MB_ERR_INVALID_CHARS, pszUtf8, -1, pWide, nCapacity );
@@ -111,6 +155,10 @@ static sirEditorFileSaveResult_t sirEditorFileWritePlatform( const sirEditorFile
 		return SIR_EDITOR_FILE_SAVE_IO_ERROR;
 	}
 
+	const sirEditorFileSaveResult_t eExpected = sirEditorFileCheckExpected( szDestination, request );
+	if ( eExpected != SIR_EDITOR_FILE_SAVE_OK ) {
+		return eExpected;
+	}
 	HANDLE hFile = CreateFileW( szTemporary, GENERIC_WRITE, 0, nullptr, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, nullptr );
 	if ( hFile == INVALID_HANDLE_VALUE ) {
 		const DWORD nError = GetLastError();
@@ -139,6 +187,11 @@ static sirEditorFileSaveResult_t sirEditorFileWritePlatform( const sirEditorFile
 		DeleteFileW( szTemporary );
 		return SIR_EDITOR_FILE_SAVE_IO_ERROR;
 	}
+	const sirEditorFileSaveResult_t eRecheck = sirEditorFileCheckExpected( szDestination, request );
+	if ( eRecheck != SIR_EDITOR_FILE_SAVE_OK ) {
+		DeleteFileW( szTemporary );
+		return eRecheck;
+	}
 	if ( !MoveFileExW( szTemporary, szDestination, MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH ) ) {
 		DeleteFileW( szTemporary );
 		return SIR_EDITOR_FILE_SAVE_REPLACE_FAILED;
@@ -146,6 +199,51 @@ static sirEditorFileSaveResult_t sirEditorFileWritePlatform( const sirEditorFile
 	return SIR_EDITOR_FILE_SAVE_OK;
 }
 #else
+static sirEditorFileSaveResult_t sirEditorFileCheckExpected( const char *pszDestination,
+                                                             const sirEditorFileWriteRequest_t &request ) noexcept
+{
+	if ( request.pExpectedBytes == nullptr ) {
+		return SIR_EDITOR_FILE_SAVE_OK;
+	}
+	const int nFile = open( pszDestination, O_RDONLY | O_CLOEXEC | O_NOFOLLOW | O_NONBLOCK );
+	if ( nFile < 0 ) {
+		return errno == ENOENT ? SIR_EDITOR_FILE_SAVE_CONFLICT : SIR_EDITOR_FILE_SAVE_IO_ERROR;
+	}
+	struct stat metadata = {};
+	if ( fstat( nFile, &metadata ) != 0 ) {
+		close( nFile );
+		return SIR_EDITOR_FILE_SAVE_IO_ERROR;
+	}
+	if ( !S_ISREG( metadata.st_mode ) ) {
+		close( nFile );
+		return SIR_EDITOR_FILE_SAVE_INVALID_PATH;
+	}
+	if ( metadata.st_size < 0 || ( uint64_t )metadata.st_size != ( uint64_t )request.nExpectedBytes ) {
+		close( nFile );
+		return SIR_EDITOR_FILE_SAVE_CONFLICT;
+	}
+	char szChunk[4096] = {};
+	size_t nRead = 0;
+	while ( nRead < request.nExpectedBytes ) {
+		const size_t nRemaining = request.nExpectedBytes - nRead;
+		const size_t nChunk = nRemaining < sizeof( szChunk ) ? nRemaining : sizeof( szChunk );
+		const ssize_t nActual = read( nFile, szChunk, nChunk );
+		if ( nActual < 0 && errno == EINTR ) {
+			continue;
+		}
+		if ( nActual <= 0 ) {
+			close( nFile );
+			return SIR_EDITOR_FILE_SAVE_IO_ERROR;
+		}
+		if ( memcmp( szChunk, request.pExpectedBytes + nRead, ( size_t )nActual ) != 0 ) {
+			close( nFile );
+			return SIR_EDITOR_FILE_SAVE_CONFLICT;
+		}
+		nRead += ( size_t )nActual;
+	}
+	return close( nFile ) == 0 ? SIR_EDITOR_FILE_SAVE_OK : SIR_EDITOR_FILE_SAVE_IO_ERROR;
+}
+
 static sirEditorFileSaveResult_t sirEditorFileWritePlatform( const sirEditorFileWriteRequest_t &request ) noexcept
 {
 	// Do not discard symlinks, devices or special files under an authored scene path.
@@ -163,6 +261,10 @@ static sirEditorFileSaveResult_t sirEditorFileWritePlatform( const sirEditorFile
 		return SIR_EDITOR_FILE_SAVE_IO_ERROR;
 	}
 
+	const sirEditorFileSaveResult_t eExpected = sirEditorFileCheckExpected( request.pszDestination, request );
+	if ( eExpected != SIR_EDITOR_FILE_SAVE_OK ) {
+		return eExpected;
+	}
 	const int nFile = open( request.pszTemporary, O_CREAT | O_EXCL | O_WRONLY | O_CLOEXEC, 0600 );
 	if ( nFile < 0 ) {
 		return errno == EEXIST ? SIR_EDITOR_FILE_SAVE_TEMP_EXISTS : SIR_EDITOR_FILE_SAVE_IO_ERROR;
@@ -194,6 +296,11 @@ static sirEditorFileSaveResult_t sirEditorFileWritePlatform( const sirEditorFile
 		unlink( request.pszTemporary );
 		return SIR_EDITOR_FILE_SAVE_IO_ERROR;
 	}
+	const sirEditorFileSaveResult_t eRecheck = sirEditorFileCheckExpected( request.pszDestination, request );
+	if ( eRecheck != SIR_EDITOR_FILE_SAVE_OK ) {
+		unlink( request.pszTemporary );
+		return eRecheck;
+	}
 	if ( rename( request.pszTemporary, request.pszDestination ) != 0 ) {
 		unlink( request.pszTemporary );
 		return SIR_EDITOR_FILE_SAVE_REPLACE_FAILED;
@@ -223,7 +330,8 @@ static sirEditorFileSaveResult_t sirEditorFileWritePlatform( const sirEditorFile
 
 sirEditorFileSaveResult_t sirEditorWriteFileAtomically( const sirEditorFileWriteRequest_t &request ) noexcept
 {
-	if ( request.pBytes == nullptr || request.nBytes == 0 || request.nBytes > SIR_EDITOR_FILE_MAX_BYTES ) {
+	if ( request.pBytes == nullptr || request.nBytes == 0 || request.nBytes > SIR_EDITOR_FILE_MAX_BYTES ||
+	     request.nExpectedBytes > SIR_EDITOR_FILE_MAX_BYTES || ( request.pExpectedBytes == nullptr && request.nExpectedBytes != 0 ) ) {
 		return SIR_EDITOR_FILE_SAVE_INVALID_ARGUMENT;
 	}
 	if ( !sirEditorFileValidPaths( request.pszDestination, request.pszTemporary ) ) {
@@ -281,6 +389,13 @@ sirEditorFileSaveResult_t sirEditorSaveBoundScene( const sirEditorSceneSaveReque
 	     SIR_EDITOR_SCALAR_BRIDGE_OK ) {
 		return SIR_EDITOR_FILE_SAVE_SERIALIZATION_FAILED;
 	}
-	const sirEditorFileWriteRequest_t write = { request.pszDestination, request.pszTemporary, request.pszScratch, nOutputBytes };
+	sirEditorFileWriteRequest_t write = { request.pszDestination, request.pszTemporary, request.pszScratch, nOutputBytes };
+	if ( request.bRejectExternalChanges ) {
+		if ( request.pBridge->pszSource == nullptr || request.pBridge->nSourceBytes == 0 ) {
+			return SIR_EDITOR_FILE_SAVE_INVALID_ARGUMENT;
+		}
+		write.pExpectedBytes = request.pBridge->pszSource;
+		write.nExpectedBytes = request.pBridge->nSourceBytes;
+	}
 	return sirEditorWriteFileAtomically( write );
 }
