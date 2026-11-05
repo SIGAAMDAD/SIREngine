@@ -358,3 +358,9 @@ add_executable(SIRVFSPathTests SIRVFSPathTests.cpp)
 target_link_libraries(SIRVFSPathTests PRIVATE SIR::Core)
 add_test(NAME core.vfs.path-normalization COMMAND SIRVFSPathTests)
 sir_configure_owned_target(SIRVFSPathTests)
+
+# Bounded VFS mount registry, overlay precedence, and lifetime leases.
+add_executable(SIRVFSMountTableTests SIRVFSMountTableTests.cpp)
+target_link_libraries(SIRVFSMountTableTests PRIVATE SIR::Core)
+add_test(NAME core.vfs.mount-registry COMMAND SIRVFSMountTableTests)
+sir_configure_owned_target(SIRVFSMountTableTests)
