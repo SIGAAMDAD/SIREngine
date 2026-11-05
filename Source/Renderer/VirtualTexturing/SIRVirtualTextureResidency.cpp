@@ -16,7 +16,6 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Renderer/VirtualTexturing/SIRVirtualTextureResidency.h>
 
 static constexpr uint32_t SIR_VT_EMPTY_BUCKET = 0;
-static constexpr uint32_t SIR_VT_DELETED_BUCKET = UINT32_MAX;
 
 static bool sirVTKeysEqual( const sirVirtualTexturePageKey_t& lhs, const sirVirtualTexturePageKey_t& rhs ) noexcept
 {
@@ -82,11 +81,12 @@ sirGraphicsResult_t SIRVirtualTextureResidency::initialize( const sirVirtualText
 	m_nActive = 0;
 	m_nResident = 0;
 	m_nRetiring = 0;
-	m_nFreeHint = 0;
+	m_nFreeHead = 0;
 
 	for ( uint32_t iSlot = 0; iSlot < storage.nSlotCapacity; ++iSlot ) {
 		storage.pSlots[iSlot] = {};
 		storage.pSlots[iSlot].nGeneration = 1;
+		storage.pSlots[iSlot].nNextFree = iSlot + 1U < storage.nSlotCapacity ? iSlot + 1U : UINT32_MAX;
 	}
 	for ( uint32_t iBucket = 0; iBucket < storage.nBucketCapacity; ++iBucket ) {
 		storage.pBuckets[iBucket] = SIR_VT_EMPTY_BUCKET;
@@ -107,7 +107,7 @@ uint32_t SIRVirtualTextureResidency::findBucket( const sirVirtualTexturePageKey_
 		if ( nEntry == SIR_VT_EMPTY_BUCKET ) {
 			return UINT32_MAX;
 		}
-		if ( nEntry != SIR_VT_DELETED_BUCKET && sirVTKeysEqual( m_storage.pSlots[nEntry - 1U].key, key ) ) {
+		if ( sirVTKeysEqual( m_storage.pSlots[nEntry - 1U].key, key ) ) {
 			return iBucket;
 		}
 		iBucket = ( iBucket + 1U ) & nMask;
@@ -119,27 +119,11 @@ uint32_t SIRVirtualTextureResidency::findInsertionBucket( const sirVirtualTextur
 {
 	const uint32_t nMask = m_storage.nBucketCapacity - 1U;
 	uint32_t iBucket = sirVTHashKey( key ) & nMask;
-	uint32_t nDeleted = UINT32_MAX;
 	for ( uint32_t nProbe = 0; nProbe < m_storage.nBucketCapacity; ++nProbe ) {
-		const uint32_t nEntry = m_storage.pBuckets[iBucket];
-		if ( nEntry == SIR_VT_EMPTY_BUCKET ) {
-			return nDeleted == UINT32_MAX ? iBucket : nDeleted;
-		}
-		if ( nEntry == SIR_VT_DELETED_BUCKET && nDeleted == UINT32_MAX ) {
-			nDeleted = iBucket;
+		if ( m_storage.pBuckets[iBucket] == SIR_VT_EMPTY_BUCKET ) {
+			return iBucket;
 		}
 		iBucket = ( iBucket + 1U ) & nMask;
-	}
-	return nDeleted;
-}
-
-uint32_t SIRVirtualTextureResidency::findFreeSlot( void ) const noexcept
-{
-	for ( uint32_t nScan = 0; nScan < m_storage.nSlotCapacity; ++nScan ) {
-		const uint32_t iSlot = ( m_nFreeHint + nScan ) % m_storage.nSlotCapacity;
-		if ( m_storage.pSlots[iSlot].eState == SIR_VT_FREE && m_storage.pSlots[iSlot].nGeneration != 0 ) {
-			return iSlot;
-		}
 	}
 	return UINT32_MAX;
 }
@@ -166,7 +150,7 @@ sirGraphicsResult_t SIRVirtualTextureResidency::reserve( const sirVirtualTexture
 		return SIR_GRAPHICS_SUCCESS;
 	}
 
-	const uint32_t iSlot = findFreeSlot();
+	const uint32_t iSlot = m_nFreeHead;
 	if ( iSlot == UINT32_MAX ) {
 		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
 	}
@@ -176,12 +160,13 @@ sirGraphicsResult_t SIRVirtualTextureResidency::reserve( const sirVirtualTexture
 	}
 
 	sirVirtualTextureSlot_t& slot = m_storage.pSlots[iSlot];
+	m_nFreeHead = slot.nNextFree;
+	slot.nNextFree = UINT32_MAX;
 	slot.key = key;
 	slot.eState = SIR_VT_REQUESTED;
 	slot.nLastTouch = 0;
 	slot.completion = {};
 	m_storage.pBuckets[iBucket] = iSlot + 1U;
-	m_nFreeHint = ( iSlot + 1U ) % m_storage.nSlotCapacity;
 	++m_nActive;
 	*pHandle = { iSlot, slot.nGeneration, m_storage.nDeviceGeneration };
 	*pCreated = true;
@@ -269,10 +254,25 @@ sirGraphicsResult_t SIRVirtualTextureResidency::submitUpload( sirVirtualTextureH
 
 void SIRVirtualTextureResidency::removeMapping( const sirVirtualTexturePageKey_t& key ) noexcept
 {
-	const uint32_t iBucket = findBucket( key );
-	if ( iBucket != UINT32_MAX ) {
-		m_storage.pBuckets[iBucket] = SIR_VT_DELETED_BUCKET;
+	uint32_t iHole = findBucket( key );
+	if ( iHole == UINT32_MAX ) {
+		return;
 	}
+
+	const uint32_t nMask = m_storage.nBucketCapacity - 1U;
+	uint32_t iNext = ( iHole + 1U ) & nMask;
+	while ( m_storage.pBuckets[iNext] != SIR_VT_EMPTY_BUCKET ) {
+		const uint32_t nEntry = m_storage.pBuckets[iNext];
+		const uint32_t iHome = sirVTHashKey( m_storage.pSlots[nEntry - 1U].key ) & nMask;
+		const uint32_t nCurrentDistance = ( iNext - iHome ) & nMask;
+		const uint32_t nShiftedDistance = ( iHole - iHome ) & nMask;
+		if ( nCurrentDistance > nShiftedDistance ) {
+			m_storage.pBuckets[iHole] = nEntry;
+			iHole = iNext;
+		}
+		iNext = ( iNext + 1U ) & nMask;
+	}
+	m_storage.pBuckets[iHole] = SIR_VT_EMPTY_BUCKET;
 }
 
 void SIRVirtualTextureResidency::releaseSlot( uint32_t nSlot ) noexcept
@@ -283,7 +283,11 @@ void SIRVirtualTextureResidency::releaseSlot( uint32_t nSlot ) noexcept
 	slot = {};
 	slot.nGeneration = nGeneration;
 	slot.eState = SIR_VT_FREE;
-	m_nFreeHint = nSlot;
+	slot.nNextFree = UINT32_MAX;
+	if ( nGeneration != 0 ) {
+		slot.nNextFree = m_nFreeHead;
+		m_nFreeHead = nSlot;
+	}
 }
 
 sirGraphicsResult_t SIRVirtualTextureResidency::collect( const sirGraphicsCompletionSet_t& completed, uint32_t *pTransitions ) noexcept

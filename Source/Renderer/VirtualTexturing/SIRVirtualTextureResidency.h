@@ -59,6 +59,7 @@ typedef struct sirVirtualTextureSlot_s
 	sirGraphicsCompletionSet_t completion;
 	uint64_t nLastTouch;
 	uint32_t nGeneration;
+	uint32_t nNextFree;
 	sirVirtualTextureState_t eState;
 } sirVirtualTextureSlot_t;
 
@@ -106,7 +107,6 @@ protected:
 private:
 	uint32_t findBucket( const sirVirtualTexturePageKey_t& key ) const noexcept;
 	uint32_t findInsertionBucket( const sirVirtualTexturePageKey_t& key ) const noexcept;
-	uint32_t findFreeSlot( void ) const noexcept;
 	void removeMapping( const sirVirtualTexturePageKey_t& key ) noexcept;
 	void releaseSlot( uint32_t nSlot ) noexcept;
 	bool completionReached( const sirGraphicsCompletionSet_t& required, const sirGraphicsCompletionSet_t& completed ) const noexcept;
@@ -117,7 +117,7 @@ private:
 	uint32_t m_nActive = 0;
 	uint32_t m_nResident = 0;
 	uint32_t m_nRetiring = 0;
-	uint32_t m_nFreeHint = 0;
+	uint32_t m_nFreeHead = UINT32_MAX;
 };
 
 static_assert( sizeof( sirVirtualTextureHandle_t ) == 12, "virtual texture handles must remain compact" );

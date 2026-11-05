@@ -296,9 +296,114 @@ static bool testBucketChurnAndInputFailures( void ) noexcept
 	              "generation exhaustion chooses remaining slot" );
 }
 
+static bool testCollidingHashErase( void ) noexcept
+{
+	sirVirtualTextureSlot_t slots[4] = {};
+	uint32_t buckets[8] = {};
+	SIRVirtualTextureResidency cache;
+	if ( !check( cache.initialize( { slots, buckets, 4, 8, 11 } ) == SIR_GRAPHICS_SUCCESS, "collision setup" ) ) {
+		return false;
+	}
+
+	// For the fixed VT key hash, X coordinates 0, 1, 28 of asset 89 share bucket 0.
+	const sirVirtualTexturePageKey_t a = makeKey( 89, 0 );
+	const sirVirtualTexturePageKey_t b = makeKey( 89, 1 );
+	const sirVirtualTexturePageKey_t c = makeKey( 89, 28 );
+	sirVirtualTextureHandle_t handles[3] = {};
+	bool bCreated = false;
+	if ( !check( cache.reserve( a, &handles[0], &bCreated ) == SIR_GRAPHICS_SUCCESS &&
+	                 cache.reserve( b, &handles[1], &bCreated ) == SIR_GRAPHICS_SUCCESS &&
+	                 cache.reserve( c, &handles[2], &bCreated ) == SIR_GRAPHICS_SUCCESS,
+	             "colliding inserts" ) ) {
+		return false;
+	}
+	if ( !check( cache.cancel( handles[1] ) == SIR_GRAPHICS_SUCCESS, "delete middle of hash chain" ) ) {
+		return false;
+	}
+	if ( !check( cache.cancel( handles[2] ) == SIR_GRAPHICS_SUCCESS && cache.cancel( handles[0] ) == SIR_GRAPHICS_SUCCESS,
+	             "backshift preserves later entries" ) ) {
+		return false;
+	}
+	for ( uint32_t i = 0; i < 8; ++i ) {
+		if ( !check( buckets[i] == 0, "backshift leaves no tombstones" ) ) {
+			return false;
+		}
+	}
+	return check( cache.getActiveCount() == 0, "collision counters" );
+}
+
+static bool testDeterministicRegistryChurn( void ) noexcept
+{
+	sirVirtualTextureSlot_t slots[6] = {};
+	uint32_t buckets[16] = {};
+	SIRVirtualTextureResidency cache;
+	if ( !check( cache.initialize( { slots, buckets, 6, 16, 11 } ) == SIR_GRAPHICS_SUCCESS, "registry property initialize" ) ) {
+		return false;
+	}
+	bool present[32] = {};
+	sirVirtualTextureHandle_t handles[32] = {};
+	uint32_t nSeed = 0x2A6E42U;
+	uint32_t nActive = 0;
+	for ( uint32_t iStep = 0; iStep < 10000; ++iStep ) {
+		nSeed ^= nSeed << 13U;
+		nSeed ^= nSeed >> 17U;
+		nSeed ^= nSeed << 5U;
+		const uint32_t iTile = nSeed & 31U;
+		const sirVirtualTexturePageKey_t key = makeKey( 421, iTile );
+		if ( ( nSeed & 64U ) != 0 ) {
+			if ( present[iTile] ) {
+				if ( !check( cache.cancel( handles[iTile] ) == SIR_GRAPHICS_SUCCESS, "property cancel" ) ) {
+					return false;
+				}
+				present[iTile] = false;
+				--nActive;
+			}
+		} else {
+			sirVirtualTextureHandle_t result = {};
+			bool bCreated = false;
+			const sirGraphicsResult_t eStatus = cache.reserve( key, &result, &bCreated );
+			if ( present[iTile] ) {
+				if ( !check( eStatus == SIR_GRAPHICS_SUCCESS && !bCreated && result.nSlot == handles[iTile].nSlot &&
+				                 result.nGeneration == handles[iTile].nGeneration,
+				             "property dedup" ) ) {
+					return false;
+				}
+			} else if ( nActive == 6 ) {
+				if ( !check( eStatus == SIR_GRAPHICS_CAPACITY_EXCEEDED, "property full" ) ) {
+					return false;
+				}
+			} else {
+				if ( !check( eStatus == SIR_GRAPHICS_SUCCESS && bCreated, "property insert" ) ) {
+					return false;
+				}
+				present[iTile] = true;
+				handles[iTile] = result;
+				++nActive;
+			}
+		}
+		if ( !check( cache.getActiveCount() == nActive, "property count" ) ) {
+			return false;
+		}
+	}
+	for ( uint32_t iTile = 0; iTile < 32; ++iTile ) {
+		if ( present[iTile] ) {
+			if ( !check( cache.cancel( handles[iTile] ) == SIR_GRAPHICS_SUCCESS, "property final cancellation" ) ) {
+				return false;
+			}
+		}
+	}
+	for ( uint32_t iBucket = 0; iBucket < 16; ++iBucket ) {
+		if ( !check( buckets[iBucket] == 0, "property table fully restored" ) ) {
+			return false;
+		}
+	}
+	return check( cache.getActiveCount() == 0, "property all freed" );
+}
+
 int main( void )
 {
-	if ( !testLifecycle() || !testMultiQueueAndGeneration() || !testInputsAndOldest() || !testBucketChurnAndInputFailures() ) {
+	if ( !testLifecycle() || !testMultiQueueAndGeneration() || !testInputsAndOldest() || !testBucketChurnAndInputFailures() ||
+	     !testCollidingHashErase() || !testDeterministicRegistryChurn() ) {
 		return 1;
 	}
 	printf( "SIR Virtual Texture residency tests passed\n" );
