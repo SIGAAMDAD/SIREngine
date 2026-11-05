@@ -27,17 +27,17 @@ sirVGPlanResult_t sirVGValidateFramePlan( const sirVGFramePlan_t& plan ) noexcep
 	if ( plan.nVersion != SIR_VG_FRAME_PLAN_VERSION ) {
 		return SIR_VG_PLAN_UNSUPPORTED_VERSION;
 	}
-	if ( plan.nFrameId == 0 || plan.nPageSnapshotGeneration == 0 || plan.nReserved != 0 ||
-	     ( plan.nGroupCount == 0 ) != ( plan.nRangeCount == 0 ) || ( plan.nGroupCount != 0 && plan.pGroups == nullptr ) ||
-	     ( plan.nRangeCount != 0 && plan.pRanges == nullptr ) || ( plan.nDemandCount != 0 && plan.pDemands == nullptr ) ) {
+	if ( plan.nPageSnapshotGeneration == 0 || plan.nReserved != 0 || ( plan.nGroupCount == 0 ) != ( plan.nRangeCount == 0 ) ||
+	     ( plan.nGroupCount != 0 && plan.pGroups == nullptr ) || ( plan.nRangeCount != 0 && plan.pRanges == nullptr ) ||
+	     ( plan.nDemandCount != 0 && plan.pDemands == nullptr ) ) {
 		return SIR_VG_PLAN_INVALID_ARGUMENT;
 	}
 
 	uint32_t nNextRange = 0;
 	for ( uint32_t iGroup = 0; iGroup < plan.nGroupCount; ++iGroup ) {
 		const sirVGSelectedGroup_t& group = plan.pGroups[iGroup];
-		if ( group.keyMesh.nAssetId == 0 || group.keyMesh.nRevision == 0 || group.keyMesh.nReserved != 0 || group.nInstanceId == 0 ||
-		     group.nGroupId == 0 || group.nPageId == 0 || group.nExpectedClusterCount == 0 ) {
+		if ( group.keyMesh.nAssetId == 0 || group.keyMesh.nRevision == 0 || group.keyMesh.nReserved != 0 || group.nPageId == 0 ||
+		     group.nExpectedClusterCount == 0 ) {
 			return SIR_VG_PLAN_INVALID_ARGUMENT;
 		}
 		if ( group.nPageGeneration != plan.nPageSnapshotGeneration ) {
