@@ -73,6 +73,7 @@ class SIRPlatformFile final
 {
 private:
 	friend class SIRPlatformFileMapping;
+	friend class SIRPlatformRootDirectory;
 	uintptr_t m_nNativeHandle;
 	uint64_t m_nCursor;
 	uint32_t m_nFlags;

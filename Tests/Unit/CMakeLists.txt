@@ -376,3 +376,9 @@ add_executable(SIRVFSFileHandleTableTests SIRVFSFileHandleTableTests.cpp)
 target_link_libraries(SIRVFSFileHandleTableTests PRIVATE SIR::Core)
 add_test(NAME core.vfs.file-handle-lifetime COMMAND SIRVFSFileHandleTableTests)
 sir_configure_owned_target(SIRVFSFileHandleTableTests)
+
+# Root-bound native directory opens: traversal/reparse denial and held handles.
+add_executable(SIRPlatformRootDirectoryTests SIRPlatformRootDirectoryTests.cpp)
+target_link_libraries(SIRPlatformRootDirectoryTests PRIVATE SIR::Core)
+add_test(NAME core.platform.rooted-directory COMMAND SIRPlatformRootDirectoryTests)
+sir_configure_owned_target(SIRPlatformRootDirectoryTests)
