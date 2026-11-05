@@ -1,0 +1,24 @@
+# P4 — Native command dispatch and headless console service
+
+**Branch:** `feature/console-cvars-commands` · [P4 issue #279](https://github.com/SIGAAMDAD/SIREngine/issues/279) · **Status:** source authored, native Windows/Linux CI acceptance pending.
+
+## Runtime implementation
+
+`Source/Core/Console/SIRConsoleService.{h,cpp}` uses the existing P2 `SIRRegistrationCatalog` as the **only normalized command/CVar name index**. The P2 catalog receives two read-only enumeration accessors (`getCapacity`, `getAtIndex`) so list/help/completion inspect active generation-checked entries without duplicating a hash map. The P3 `SIRCVarRegistry` remains the only owner of typed effective values; a caller-supplied, validated handle-pair table binds existing P2 descriptors to P3 CVar handles without storing another name key.
+
+The caller supplies constructed atomic queue slots, input/history slabs with explicit byte budgets, completion scratch, CVar bindings and output/module callbacks. `submit` is a bounded MPSC operation: a producer claims a sequence-numbered slot with atomic CAS and **copies the bytes** before release-publishing it. Full/oversized/malformed submission rejects without borrowing caller memory. The owner-thread `pump` snapshots its ticket fence at entry, limits dispatch count, parses bounded single-command input in-place and retires the slot **after** command callbacks complete; submissions from callbacks or sinks are deferred to the next pump. Process-local history retains original command text in bounded slots. Completion uses sorted candidate scratch, hides sensitive/hidden entries without appropriate capabilities and never interns arguments.
+
+Input grammar: up to 16 whitespace-delimited tokens, bounded by caller's input stride (maximum 4096 bytes), double-quoted segments, `\\` escaping for quote/backslash/space/tab, no multi-statement `;` or unescaped newline, rejection of unterminated quotes/invalid escapes. Native command names use P0's ASCII normalization and the P2 registration catalog.
+
+Built-in operations are `help`, `list`, `get`, `set`, `reset` and `toggle`. Get/set/reset/toggle call P3's checked value and transaction interfaces, including all source, capability, read-only, sensitive and server-replication policy checks. Numeric conversion is strict, with signed/unsigned width, finite float and boolean handling; strings use owned P3 staged snapshots. Built-ins take precedence over optional engine-owned registration entries of the same reserved spelling. `exec` is explicitly reserved and rejects until P5 supplies the actual Core/Config codec and transactional command adapter; P4 creates no new CFG parser.
+
+Cooked and dynamically registered P2 commands use the existing stable binding ID and module owner. Dispatch resolves callback generation **when pumping**, checks EXECUTE and required capabilities, pins non-engine module code through caller-provided acquire/release callbacks and never retains callback argument views. Owner-thread `registerDynamicCommand`, `unregisterDynamicCommand`, and `unloadModule` reject mutation while the pump is active. Queued text targeting an unloaded module resolves as NOT_FOUND at pump time. Module teardown must stop outside callers and quiesce callback leases before unloading its binary. Output sinks run synchronously on the owner thread with bounded messages-per-command; their text pointers remain valid only for the callback duration.
+
+## Acceptance and tests
+
+- **Local PASS:** GCC 14 strict C++17 source/test syntax checks against matching interface stubs (`-Wall -Wextra -Wpedantic -Werror`); exact pinned clang-format 23.1.5 `--dry-run --Werror` on new files.
+- **Native CTest target:** `core.console.service` links real P0/P1/P2/P3/registration cooker and validates quoted parsing, malformed input rejection, CVar built-ins, permissions, public/hidden completion, original-text history, callback output, nested-pump denial, next-pump recursive submit, module lease symmetry and retirement, stale command handles, full/oversized queue, multi-threaded producers and wrong-thread pump.
+- **P4 acceptance pending:** actual native Linux/Windows engine build/link, pinned formatter/source checks, CTest on exact source SHA and integration tests; local interface-stub syntax is not native engine acceptance.
+- **Other stages:** P5 owns real Config/VFS exec/archive adapter, P6 owns application lifecycle/integration and P7 owns complete coverage/fuzz/benchmarks.
+
+All submitters must quiesce before service shutdown. CVar/config callers must authenticate origin capabilities **before** constructing `sirCVarOrigin_t`; the native service consumes the trusted origin descriptor supplied by its caller.

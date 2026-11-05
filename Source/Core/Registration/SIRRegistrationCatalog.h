@@ -110,8 +110,10 @@ public:
 
 	bool isInitialized( void ) const noexcept;
 	uint32_t getCount( void ) const noexcept;
+	uint32_t getCapacity( void ) const noexcept;
 	uint32_t getCookedCount( void ) const noexcept;
 	sirRegistrationResult_t getEntry( sirRegistrationHandle_t handle, const sirRegistrationEntry_t **ppEntry ) const noexcept;
+	sirRegistrationResult_t getAtIndex( uint32_t iEntry, const sirRegistrationEntry_t **ppEntry, sirRegistrationHandle_t *pHandle ) const noexcept;
 
 	sirRegistrationResult_t initialize( SIRStringPool& pool, const sirRegistrationCatalogInit_t& init ) noexcept;
 	sirRegistrationResult_t find( const char *pszName, size_t nNameBytes, sirRegistrationHandle_t *pHandle ) const noexcept;
