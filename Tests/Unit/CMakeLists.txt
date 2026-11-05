@@ -139,6 +139,11 @@ target_link_libraries(SIRGraphicsABIPropertyTests PRIVATE SIR::Graphics)
 add_test(NAME renderer.graphics.properties COMMAND SIRGraphicsABIPropertyTests)
 sir_configure_owned_target(SIRGraphicsABIPropertyTests)
 
+add_executable(SIRGraphicsABINegativeMatrixTests SIRGraphicsABINegativeMatrixTests.cpp)
+target_link_libraries(SIRGraphicsABINegativeMatrixTests PRIVATE SIR::Graphics)
+add_test(NAME renderer.graphics.negative-matrix COMMAND SIRGraphicsABINegativeMatrixTests)
+sir_configure_owned_target(SIRGraphicsABINegativeMatrixTests)
+
 add_executable(SIRGraphicsABIEraMatrixTests SIRGraphicsABIEraMatrixTests.cpp)
 target_link_libraries(SIRGraphicsABIEraMatrixTests PRIVATE SIR::Graphics)
 add_test(NAME renderer.graphics.era-matrix COMMAND SIRGraphicsABIEraMatrixTests)
@@ -153,6 +158,7 @@ set_tests_properties(
     renderer.graphics.contract
     renderer.graphics.properties
     renderer.graphics.era-matrix
+    renderer.graphics.negative-matrix
     PROPERTIES LABELS "graphics-abi;cpu;conformance" TIMEOUT 90)
 
 if(SIR_WITH_GOOGLETEST)

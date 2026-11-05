@@ -15,6 +15,7 @@
 | `renderer.graphics.binary-module` | Dynamically loaded mock DLL/DSO: adapters, resource creation, models, command submission, WSI, retirement and device loss |
 | `renderer.graphics.contract` | ABI 1.0 compile-time layout, version invariants, malformed feature/format records |
 | `renderer.graphics.properties` | 4,096 deterministic descriptor mutation rounds with reproducible seed and fatal assertions |
+| `renderer.graphics.negative-matrix` | Malformed adapter/capability/format/model limits, invalid source pipelines and shader-stage requests |
 | `renderer.graphics.era-matrix` | Cross-era feature and stage/profile/combiner/light restrictions |
 | `renderer.graphics.gtest.*` | Independently discoverable GoogleTest assertion cases for ABI invariants and failure branches |
 

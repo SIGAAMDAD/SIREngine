@@ -117,7 +117,7 @@ jobs:
           SIRGraphicsPipelineABITests SIRGraphicsPipelineBridgeTests
           SIRGraphicsABIMockModule SIRGraphicsModuleTests
           SIRGraphicsABIContractTests SIRGraphicsABIPropertyTests
-          SIRGraphicsABIEraMatrixTests SIRGraphicsABIAssertionGoogleTests
+          SIRGraphicsABIEraMatrixTests SIRGraphicsABINegativeMatrixTests SIRGraphicsABIAssertionGoogleTests
       - name: Run all renderer graphics contracts
         run: >
           ctest --preset dev --output-on-failure --no-tests=error
@@ -147,7 +147,7 @@ jobs:
           SIRGraphicsPipelineABITests SIRGraphicsPipelineBridgeTests
           SIRGraphicsABIMockModule SIRGraphicsModuleTests
           SIRGraphicsABIContractTests SIRGraphicsABIPropertyTests
-          SIRGraphicsABIEraMatrixTests SIRGraphicsABIAssertionGoogleTests
+          SIRGraphicsABIEraMatrixTests SIRGraphicsABINegativeMatrixTests SIRGraphicsABIAssertionGoogleTests
       - name: Run ABI sanitizer tests
         env:
           ASAN_OPTIONS: detect_leaks=1:abort_on_error=1
