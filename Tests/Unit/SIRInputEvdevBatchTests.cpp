@@ -29,6 +29,8 @@ static uint32_t s_nReadCalls = 0;
 static bool s_bFakeGamepadIoctl = false;
 static int s_nFakeGamepadFd = -1;
 static uint32_t s_nFakeIoctlCalls = 0;
+static uint32_t s_nInjectedReadInterrupts = 0;
+static uint32_t s_nInjectedRequeryFailures = 0;
 
 extern "C" int __real_ioctl( int nFd, unsigned long nRequest, ... );
 extern "C" int __wrap_ioctl( int nFd, unsigned long nRequest, ... )
@@ -81,6 +83,11 @@ extern "C" int __wrap_ioctl( int nFd, unsigned long nRequest, ... )
 		return 0;
 	}
 	if ( nCode == 0x18 ) {
+		if ( s_nInjectedRequeryFailures != 0 ) {
+			--s_nInjectedRequeryFailures;
+			errno = EIO;
+			return -1;
+		}
 		memset( pArgument, 0, _IOC_SIZE( nRequest ) );
 		unsigned long *pKeys = ( unsigned long * )pArgument;
 		pKeys[BTN_SOUTH / ( sizeof( unsigned long ) * 8 )] |= 1UL << ( BTN_SOUTH % ( sizeof( unsigned long ) * 8 ) );
@@ -108,6 +115,11 @@ extern "C" ssize_t __wrap_read( int nFd, void *pBuf, size_t nBytes )
 {
 	if ( nFd == s_nWatchedFd ) {
 		++s_nReadCalls;
+		if ( s_nInjectedReadInterrupts != 0 ) {
+			--s_nInjectedReadInterrupts;
+			errno = EINTR;
+			return -1;
+		}
 	}
 	return __real_read( nFd, pBuf, nBytes );
 }
@@ -585,11 +597,135 @@ static bool testEmulatedHotplugLifecycle( void ) noexcept
 	return bValid;
 }
 
+static bool testInterruptBudgetAndRetry( void ) noexcept
+{
+	SIRInputService service;
+	SIRLinuxEvdevBackend backend;
+	if ( !service.attach( backend ) || !service.begin( 1 ) ) {
+		return false;
+	}
+	sirInputDeviceId_t id = {};
+	if ( !service.connect( { 0, 982, SIR_INPUT_LINUX_EVDEV, SIR_INPUT_CONTROLLER }, &id ) || !service.publish() || !service.begin( 2 ) ) {
+		return false;
+	}
+	int nReadFd = -1;
+	int nWriteFd = -1;
+	if ( !createPipe( &nReadFd, &nWriteFd ) ) {
+		return false;
+	}
+	if ( !SIRInputEvdevBatchTestPeer::install( backend, nReadFd, id ) ) {
+		close( nReadFd );
+		close( nWriteFd );
+		return false;
+	}
+	input_event szEvents[2] = {};
+	szEvents[0].type = EV_KEY;
+	szEvents[0].code = BTN_SOUTH;
+	szEvents[0].value = 1;
+	szEvents[1].type = EV_SYN;
+	szEvents[1].code = SYN_REPORT;
+	bool bValid = write( nWriteFd, szEvents, sizeof( szEvents ) ) == ( ssize_t )sizeof( szEvents );
+	if ( bValid ) {
+		s_nWatchedFd = nReadFd;
+		s_nReadCalls = 0;
+		s_nInjectedReadInterrupts = 16;
+		backend.sample( service );
+		bValid = s_nReadCalls == 4 && s_nInjectedReadInterrupts == 12;
+		s_nInjectedReadInterrupts = 0;
+		backend.sample( service );
+		s_nWatchedFd = -1;
+		bValid = bValid && service.publish() && service.frame() != nullptr && service.frame()->nCount == 1 &&
+		         ( service.frame()->state[id.nSlot].nHeld[0] & UINT32_C( 1 ) ) != 0;
+	}
+	s_nInjectedReadInterrupts = 0;
+	s_nWatchedFd = -1;
+	close( nWriteFd );
+	service.shutdown();
+	return bValid;
+}
+
+static bool testFailedDesyncRequeryRecovery( void ) noexcept
+{
+	SIRInputService service;
+	SIRLinuxEvdevBackend backend;
+	if ( !service.attach( backend ) || !service.begin( 1 ) ) {
+		return false;
+	}
+	sirInputDeviceId_t id = {};
+	if ( !service.connect( { 0, 983, SIR_INPUT_LINUX_EVDEV, SIR_INPUT_CONTROLLER }, &id ) || !service.publish() || !service.begin( 2 ) ) {
+		return false;
+	}
+	int nReadFd = -1;
+	int nWriteFd = -1;
+	if ( !createPipe( &nReadFd, &nWriteFd ) ) {
+		return false;
+	}
+	if ( !SIRInputEvdevBatchTestPeer::install( backend, nReadFd, id ) ) {
+		close( nReadFd );
+		close( nWriteFd );
+		return false;
+	}
+	s_nFakeGamepadFd = nReadFd;
+	s_bFakeGamepadIoctl = true;
+	s_nInjectedRequeryFailures = 1;
+	input_event szDropped[3] = {};
+	szDropped[0].type = EV_SYN;
+	szDropped[0].code = SYN_DROPPED;
+	szDropped[1].type = EV_KEY;
+	szDropped[1].code = BTN_EAST;
+	szDropped[1].value = 1;
+	szDropped[2].type = EV_SYN;
+	szDropped[2].code = SYN_REPORT;
+	bool bValid = write( nWriteFd, szDropped, sizeof( szDropped ) ) == ( ssize_t )sizeof( szDropped );
+	if ( bValid ) {
+		backend.sample( service );
+		bValid = SIRInputEvdevBatchTestPeer::desynchronized( backend ) && s_nInjectedRequeryFailures == 0 && service.publish() &&
+		         service.frame() != nullptr && service.frame()->nCount == 0 && service.begin( 3 );
+	}
+	if ( bValid ) {
+		input_event szIgnored[2] = {};
+		szIgnored[0].type = EV_KEY;
+		szIgnored[0].code = BTN_WEST;
+		szIgnored[0].value = 1;
+		szIgnored[1].type = EV_SYN;
+		szIgnored[1].code = SYN_REPORT;
+		bValid = write( nWriteFd, szIgnored, sizeof( szIgnored ) ) == ( ssize_t )sizeof( szIgnored );
+		if ( bValid ) {
+			backend.sample( service );
+			const sirInputFrame_t *pFrame = nullptr;
+			bValid = !SIRInputEvdevBatchTestPeer::desynchronized( backend ) && service.publish() &&
+			         ( pFrame = service.frame() ) != nullptr && pFrame->nCount == 2 && pFrame->events[0].eSignal == SIR_INPUT_RESYNC &&
+			         pFrame->events[1].eSignal == SIR_INPUT_BUTTON && pFrame->events[1].nControl == SIR_INPUT_PAD_SOUTH &&
+			         pFrame->events[1].nValue == 1 && ( pFrame->state[id.nSlot].nHeld[0] & UINT32_C( 1 ) ) != 0;
+		}
+	}
+	if ( bValid ) {
+		input_event szRelease[2] = {};
+		szRelease[0].type = EV_KEY;
+		szRelease[0].code = BTN_SOUTH;
+		szRelease[0].value = 0;
+		szRelease[1].type = EV_SYN;
+		szRelease[1].code = SYN_REPORT;
+		bValid = service.begin( 4 ) && write( nWriteFd, szRelease, sizeof( szRelease ) ) == ( ssize_t )sizeof( szRelease );
+		if ( bValid ) {
+			backend.sample( service );
+			bValid =
+			    service.publish() && service.frame()->nCount == 1 && ( service.frame()->state[id.nSlot].nHeld[0] & UINT32_C( 1 ) ) == 0;
+		}
+	}
+	s_bFakeGamepadIoctl = false;
+	s_nFakeGamepadFd = -1;
+	s_nInjectedRequeryFailures = 0;
+	close( nWriteFd );
+	service.shutdown();
+	return bValid;
+}
+
 int main( void )
 {
 	if ( !testBatchedReports() || !testPartialReportAcrossReads() || !testMappingAndQueueBoundaries() || !testDiscoveryAndOpenFailures() ||
 	     !testDesyncAndReadFailureLifecycle() || !testAxisHatAndRumbleErrors() || !testEmulatedControllerOpenAndRumble() ||
-	     !testEmulatedHotplugLifecycle() ) {
+	     !testEmulatedHotplugLifecycle() || !testInterruptBudgetAndRetry() || !testFailedDesyncRequeryRecovery() ) {
 		fprintf( stderr, "SIRInputEvdevBatchTests FAIL\n" );
 		return 1;
 	}
