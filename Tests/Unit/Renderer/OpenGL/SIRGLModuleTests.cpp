@@ -150,6 +150,31 @@ int main( void )
 				sirGLTestCheck( device.pRetireResource( device.pDevice, hSampler, nullptr ) == SIR_GRAPHICS_INVALID_HANDLE,
 				                "stale sampler rejected" );
 			}
+			sirGraphicsTextureDesc_t nativeTexture = {};
+			nativeTexture.nWidth = 16;
+			nativeTexture.nHeight = 8;
+			nativeTexture.nDepth = 1;
+			nativeTexture.nArrayLayers = 1;
+			nativeTexture.nMipLevels = 3;
+			nativeTexture.nSampleCount = 1;
+			nativeTexture.nUsage = SIR_GRAPHICS_USAGE_SAMPLED | SIR_GRAPHICS_USAGE_COPY_DESTINATION;
+			nativeTexture.eDimension = SIR_GRAPHICS_TEXTURE_2D;
+			nativeTexture.eFormat = SIR_GRAPHICS_FORMAT_RGBA8_UNORM;
+			nativeTexture.eMemory = SIR_GRAPHICS_MEMORY_GPU_LOCAL;
+			sirGraphicsHandle_t hTexture = {};
+			sirGLTestCheck( device.pCreateTexture( device.pDevice, &nativeTexture, &hTexture ) == SIR_GRAPHICS_SUCCESS &&
+			                    hTexture.eType == SIR_GRAPHICS_HANDLE_TEXTURE,
+			                "native 2D texture ABI allocation" );
+			if ( hTexture.nGeneration != 0 ) {
+				sirGraphicsMemoryBudget_t textureBudget = {};
+				sirGLTestCheck( device.pQueryMemoryBudget( device.pDevice, &textureBudget ) == SIR_GRAPHICS_SUCCESS &&
+				                    textureBudget.nCommittedBytes == 672,
+				                "native texture requested bytes accounted" );
+				sirGLTestCheck( device.pRetireResource( device.pDevice, hTexture, nullptr ) == SIR_GRAPHICS_SUCCESS,
+				                "native texture ABI retirement" );
+				sirGLTestCheck( device.pRetireResource( device.pDevice, hTexture, nullptr ) == SIR_GRAPHICS_INVALID_HANDLE,
+				                "retired texture handle rejected" );
+			}
 			uint32_t nForeignResult = 0;
 			std::thread foreign( [&]() { nForeignResult = device.pShutdown( device.pDevice ); } );
 			foreign.join();
