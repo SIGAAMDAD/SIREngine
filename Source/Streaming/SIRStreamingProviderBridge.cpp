@@ -38,7 +38,7 @@ uint64_t SIRStreamingProviderBridge::requiredBytes( uint32_t nCapacity ) noexcep
 }
 
 sirStreamingResult_t SIRStreamingProviderBridge::initialize( SIRStreamingCoordinator *pCoordinator, void *pStorage, uint64_t nStorageBytes,
-                                                             const sirStreamingProviderCallbacks_t &callbacks ) noexcept
+                                                             const sirStreamingProviderCallbacks_t& callbacks ) noexcept
 {
 	if ( m_bInitialized || pCoordinator == nullptr || pStorage == nullptr ) {
 		return SIR_STREAMING_INVALID_ARGUMENT;
@@ -84,7 +84,7 @@ sirStreamingResult_t SIRStreamingProviderBridge::shutdown( void ) noexcept
 		return SIR_STREAMING_BUSY;
 	}
 	for ( uint32_t iSlot = 0; iSlot < m_nCapacity; ++iSlot ) {
-		const sirStreamingBridgeSlot_t &slot = m_pSlots[iSlot];
+		const sirStreamingBridgeSlot_t& slot = m_pSlots[iSlot];
 		if ( slot.bPrepareOutstanding || slot.bActivateOutstanding || slot.bRetireOutstanding ) {
 			return SIR_STREAMING_BUSY;
 		}
@@ -107,8 +107,8 @@ bool SIRStreamingProviderBridge::hasValidEntry( sirStreamingTicket_t ticket ) co
 	return m_pSlots[ticket.nSlot].nTicketGeneration == ticket.nGeneration && ticket.nGeneration != 0;
 }
 
-sirStreamingResult_t SIRStreamingProviderBridge::beginRetirement( sirStreamingTicket_t ticket, sirStreamingBridgeSlot_t &slot,
-                                                                  sirStreamingBridgeStats_t &stats ) noexcept
+sirStreamingResult_t SIRStreamingProviderBridge::beginRetirement( sirStreamingTicket_t ticket, sirStreamingBridgeSlot_t& slot,
+                                                                  sirStreamingBridgeStats_t& stats ) noexcept
 {
 	if ( slot.bActivateOutstanding || slot.bPrepareOutstanding ) {
 		++stats.nDeferred;
@@ -127,10 +127,10 @@ sirStreamingResult_t SIRStreamingProviderBridge::beginRetirement( sirStreamingTi
 	return eResult;
 }
 
-void SIRStreamingProviderBridge::processSlot( sirStreamingTicket_t ticket, const sirStreamingSnapshot_t &snapshot,
-                                              sirStreamingBridgeStats_t &stats ) noexcept
+void SIRStreamingProviderBridge::processSlot( sirStreamingTicket_t ticket, const sirStreamingSnapshot_t& snapshot,
+                                              sirStreamingBridgeStats_t& stats ) noexcept
 {
-	sirStreamingBridgeSlot_t &slot = m_pSlots[ticket.nSlot];
+	sirStreamingBridgeSlot_t& slot = m_pSlots[ticket.nSlot];
 	if ( slot.nTicketGeneration != ticket.nGeneration ) {
 		// A caller that bypasses this bridge cannot erase outstanding provider
 		// ownership merely by recycling a coordinator ticket.
@@ -222,7 +222,7 @@ sirStreamingResult_t SIRStreamingProviderBridge::acknowledgePrepared( sirStreami
 	if ( !hasValidEntry( ticket ) ) {
 		return SIR_STREAMING_STALE_TICKET;
 	}
-	sirStreamingBridgeSlot_t &slot = m_pSlots[ticket.nSlot];
+	sirStreamingBridgeSlot_t& slot = m_pSlots[ticket.nSlot];
 	if ( !slot.bPrepareOutstanding ) {
 		return SIR_STREAMING_INVALID_TRANSITION;
 	}
@@ -248,7 +248,7 @@ sirStreamingResult_t SIRStreamingProviderBridge::acknowledgeActivated( sirStream
 	if ( !hasValidEntry( ticket ) ) {
 		return SIR_STREAMING_STALE_TICKET;
 	}
-	sirStreamingBridgeSlot_t &slot = m_pSlots[ticket.nSlot];
+	sirStreamingBridgeSlot_t& slot = m_pSlots[ticket.nSlot];
 	if ( !slot.bActivateOutstanding ) {
 		return SIR_STREAMING_INVALID_TRANSITION;
 	}
@@ -289,7 +289,7 @@ sirStreamingResult_t SIRStreamingProviderBridge::acknowledgeRetired( sirStreamin
 	if ( !hasValidEntry( ticket ) ) {
 		return SIR_STREAMING_STALE_TICKET;
 	}
-	sirStreamingBridgeSlot_t &slot = m_pSlots[ticket.nSlot];
+	sirStreamingBridgeSlot_t& slot = m_pSlots[ticket.nSlot];
 	if ( !slot.bRetireOutstanding ) {
 		return SIR_STREAMING_INVALID_TRANSITION;
 	}

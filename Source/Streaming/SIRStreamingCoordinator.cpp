@@ -27,13 +27,13 @@ typedef struct sirStreamingSlot_s
 	bool bCancellationRequested;
 } sirStreamingSlot_t;
 
-static bool streamingUnitEquals( const sirStreamingUnitKey_t &a, const sirStreamingUnitKey_t &b ) noexcept
+static bool streamingUnitEquals( const sirStreamingUnitKey_t& a, const sirStreamingUnitKey_t& b ) noexcept
 {
 	return a.nContainerId == b.nContainerId && a.nUnitId == b.nUnitId && a.nManifestGeneration == b.nManifestGeneration &&
 	       a.nVariant == b.nVariant && a.eKind == b.eKind;
 }
 
-static bool streamingDemandValid( const sirStreamingDemand_t &demand ) noexcept
+static bool streamingDemandValid( const sirStreamingDemand_t& demand ) noexcept
 {
 	const bool bUnitValid =
 	    demand.keyUnit.nUnitId != 0 && demand.keyUnit.nManifestGeneration != 0 && demand.keyUnit.eKind < SIR_STREAMING_UNIT_COUNT;
@@ -85,13 +85,13 @@ bool SIRStreamingCoordinator::isValid( sirStreamingTicket_t ticket ) const noexc
 		return false;
 	}
 
-	const sirStreamingSlot_t &slot = m_pSlots[ticket.nSlot];
+	const sirStreamingSlot_t& slot = m_pSlots[ticket.nSlot];
 	return slot.bOccupied && slot.nGeneration == ticket.nGeneration;
 }
 
 void SIRStreamingCoordinator::releaseSlot( uint32_t iSlot ) noexcept
 {
-	sirStreamingSlot_t &slot = m_pSlots[iSlot];
+	sirStreamingSlot_t& slot = m_pSlots[iSlot];
 	slot.demand = {};
 	slot.eStage = SIR_STREAMING_STAGE_EMPTY;
 	slot.bCancellationRequested = false;
@@ -103,7 +103,7 @@ void SIRStreamingCoordinator::releaseSlot( uint32_t iSlot ) noexcept
 	--m_nOccupied;
 }
 
-sirStreamingResult_t SIRStreamingCoordinator::submit( const sirStreamingDemand_t &demand, sirStreamingTicket_t *pTicket ) noexcept
+sirStreamingResult_t SIRStreamingCoordinator::submit( const sirStreamingDemand_t& demand, sirStreamingTicket_t *pTicket ) noexcept
 {
 	if ( !m_bInitialized || m_bStopped ) {
 		return SIR_STREAMING_NOT_READY;
@@ -113,7 +113,7 @@ sirStreamingResult_t SIRStreamingCoordinator::submit( const sirStreamingDemand_t
 	}
 
 	for ( uint32_t iSlot = 0; iSlot < m_nCapacity; ++iSlot ) {
-		const sirStreamingSlot_t &slot = m_pSlots[iSlot];
+		const sirStreamingSlot_t& slot = m_pSlots[iSlot];
 		if ( !slot.bOccupied ) {
 			continue;
 		}
@@ -124,7 +124,7 @@ sirStreamingResult_t SIRStreamingCoordinator::submit( const sirStreamingDemand_t
 	}
 
 	for ( uint32_t iSlot = 0; iSlot < m_nCapacity; ++iSlot ) {
-		sirStreamingSlot_t &slot = m_pSlots[iSlot];
+		sirStreamingSlot_t& slot = m_pSlots[iSlot];
 		if ( slot.bOccupied || slot.nGeneration == UINT32_MAX ) {
 			continue;
 		}
@@ -141,7 +141,7 @@ sirStreamingResult_t SIRStreamingCoordinator::submit( const sirStreamingDemand_t
 	return SIR_STREAMING_OUT_OF_CAPACITY;
 }
 
-sirStreamingResult_t SIRStreamingCoordinator::updateDemand( sirStreamingTicket_t ticket, const sirStreamingDemand_t &demand ) noexcept
+sirStreamingResult_t SIRStreamingCoordinator::updateDemand( sirStreamingTicket_t ticket, const sirStreamingDemand_t& demand ) noexcept
 {
 	if ( !isValid( ticket ) ) {
 		return SIR_STREAMING_STALE_TICKET;
@@ -150,7 +150,7 @@ sirStreamingResult_t SIRStreamingCoordinator::updateDemand( sirStreamingTicket_t
 		return SIR_STREAMING_INVALID_ARGUMENT;
 	}
 
-	sirStreamingSlot_t &slot = m_pSlots[ticket.nSlot];
+	sirStreamingSlot_t& slot = m_pSlots[ticket.nSlot];
 	const bool bSameOwner = slot.demand.nConsumerId == demand.nConsumerId && slot.demand.nConsumerGeneration == demand.nConsumerGeneration;
 	if ( !bSameOwner || !streamingUnitEquals( slot.demand.keyUnit, demand.keyUnit ) ) {
 		return SIR_STREAMING_INVALID_ARGUMENT;
@@ -178,7 +178,7 @@ sirStreamingResult_t SIRStreamingCoordinator::query( sirStreamingTicket_t ticket
 		return SIR_STREAMING_STALE_TICKET;
 	}
 
-	const sirStreamingSlot_t &slot = m_pSlots[ticket.nSlot];
+	const sirStreamingSlot_t& slot = m_pSlots[ticket.nSlot];
 	pSnapshot->demand = slot.demand;
 	pSnapshot->eStage = slot.eStage;
 	pSnapshot->bCancellationRequested = slot.bCancellationRequested;
@@ -195,7 +195,7 @@ sirStreamingResult_t SIRStreamingCoordinator::querySlot( uint32_t iSlot, sirStre
 		return SIR_STREAMING_INVALID_ARGUMENT;
 	}
 
-	const sirStreamingSlot_t &slot = m_pSlots[iSlot];
+	const sirStreamingSlot_t& slot = m_pSlots[iSlot];
 	if ( !slot.bOccupied ) {
 		return SIR_STREAMING_NOT_READY;
 	}
@@ -213,7 +213,7 @@ sirStreamingResult_t SIRStreamingCoordinator::advance( sirStreamingTicket_t tick
 		return SIR_STREAMING_STALE_TICKET;
 	}
 
-	sirStreamingSlot_t &slot = m_pSlots[ticket.nSlot];
+	sirStreamingSlot_t& slot = m_pSlots[ticket.nSlot];
 	const sirStreamingStage_t eCurrent = slot.eStage;
 	if ( eCurrent == SIR_STREAMING_STAGE_QUEUED && eNextStage == SIR_STREAMING_STAGE_PREPARING ) {
 		slot.eStage = eNextStage;
@@ -256,7 +256,7 @@ sirStreamingResult_t SIRStreamingCoordinator::cancel( sirStreamingTicket_t ticke
 		return SIR_STREAMING_STALE_TICKET;
 	}
 
-	sirStreamingSlot_t &slot = m_pSlots[ticket.nSlot];
+	sirStreamingSlot_t& slot = m_pSlots[ticket.nSlot];
 	if ( slot.eStage == SIR_STREAMING_STAGE_QUEUED ) {
 		releaseSlot( ticket.nSlot );
 		return SIR_STREAMING_OK;
@@ -278,7 +278,7 @@ sirStreamingStats_t SIRStreamingCoordinator::getStats( void ) const noexcept
 	result.nCapacity = m_nCapacity;
 	result.nOccupied = m_nOccupied;
 	for ( uint32_t iSlot = 0; iSlot < m_nCapacity; ++iSlot ) {
-		const sirStreamingSlot_t &slot = m_pSlots[iSlot];
+		const sirStreamingSlot_t& slot = m_pSlots[iSlot];
 		if ( !slot.bOccupied ) {
 			continue;
 		}

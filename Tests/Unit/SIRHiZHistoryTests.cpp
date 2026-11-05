@@ -62,6 +62,11 @@ public:
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
 
+	sirGraphicsResult_t queryPipelineModelCaps( sirGraphicsPipelineModel_t, sirGraphicsABIPipelineModelCaps_t * ) const noexcept override
+	{
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
+
 	sirGraphicsResult_t queryMemoryBudget( sirGraphicsMemoryBudget_t * ) const noexcept override
 	{
 		return SIR_GRAPHICS_UNSUPPORTED;

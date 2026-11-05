@@ -79,7 +79,7 @@ static sirStreamingDemand_t makeDemand( uint64_t nUnitId, sirStreamingTarget_t e
 	return demand;
 }
 
-static sirStreamingProviderCallbacks_t makeCallbacks( sirTestProviderState_t &state ) noexcept
+static sirStreamingProviderCallbacks_t makeCallbacks( sirTestProviderState_t& state ) noexcept
 {
 	sirStreamingProviderCallbacks_t callbacks = {};
 	callbacks.pContext = &state;
@@ -90,7 +90,7 @@ static sirStreamingProviderCallbacks_t makeCallbacks( sirTestProviderState_t &st
 	return callbacks;
 }
 
-static bool pump( SIRStreamingProviderBridge &bridge, uint32_t nSlots = 1 ) noexcept
+static bool pump( SIRStreamingProviderBridge& bridge, uint32_t nSlots = 1 ) noexcept
 {
 	sirStreamingBridgeStats_t stats = {};
 	return bridge.pump( nSlots, &stats ) == SIR_STREAMING_OK;
@@ -342,8 +342,8 @@ static bool testDowngradeDuringActivation( void ) noexcept
 	return bridge.shutdown() == SIR_STREAMING_OK && coordinator.shutdown() == SIR_STREAMING_OK;
 }
 
-static bool reconcileWorldSource( SIRWorldPartition &partition, SIRStreamingDemandReconciler &reconciler,
-                                  const sirWorldStreamingSource_t &source, uint32_t nEpoch, uint32_t nExpected, uint32_t nSubmitted,
+static bool reconcileWorldSource( SIRWorldPartition& partition, SIRStreamingDemandReconciler& reconciler,
+                                  const sirWorldStreamingSource_t& source, uint32_t nEpoch, uint32_t nExpected, uint32_t nSubmitted,
                                   uint32_t nCancelled, sirStreamingDemand_t *pDemands ) noexcept
 {
 	uint32_t nRequired = 0;

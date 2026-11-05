@@ -73,7 +73,7 @@ static void sortWorldCellIds( uint64_t *pszIds, uint32_t nCount ) noexcept
 	}
 }
 
-static bool worldCellBefore( const sirWorldCellDescriptor_t &left, const sirWorldCellDescriptor_t &right ) noexcept
+static bool worldCellBefore( const sirWorldCellDescriptor_t& left, const sirWorldCellDescriptor_t& right ) noexcept
 {
 	if ( left.iGridX != right.iGridX ) {
 		return left.iGridX < right.iGridX;
@@ -90,7 +90,7 @@ static uint64_t worldCoordinateDistance( int32_t iLeft, int32_t iRight ) noexcep
 	return ( uint64_t )( nDifference < 0 ? -nDifference : nDifference );
 }
 
-static bool worldCellInSource( const sirWorldCellDescriptor_t &cell, const sirWorldStreamingSource_t &source,
+static bool worldCellInSource( const sirWorldCellDescriptor_t& cell, const sirWorldStreamingSource_t& source,
                                bool bHeightStratified ) noexcept
 {
 	const uint64_t nX = worldCoordinateDistance( cell.iGridX, source.iGridX );
@@ -122,7 +122,7 @@ uint64_t SIRWorldPartition::requiredBytes( uint32_t nCellCount ) noexcept
 	return ( uint64_t )nCellCount * ( sizeof( sirWorldCellEntry_t ) + sizeof( uint64_t ) );
 }
 
-sirWorldPartitionResult_t SIRWorldPartition::initialize( void *pStorage, uint64_t nStorageBytes, const sirWorldPartitionConfig_t &config,
+sirWorldPartitionResult_t SIRWorldPartition::initialize( void *pStorage, uint64_t nStorageBytes, const sirWorldPartitionConfig_t& config,
                                                          const sirWorldCellDescriptor_t *pCells ) noexcept
 {
 	if ( m_bInitialized || pStorage == nullptr || pCells == nullptr || config.nCellCount == 0 ) {
@@ -152,7 +152,7 @@ sirWorldPartitionResult_t SIRWorldPartition::initialize( void *pStorage, uint64_
 	sirWorldCellEntry_t *pEntries = ( sirWorldCellEntry_t * )pStorage;
 	uint64_t *pszIds = ( uint64_t * )( ( uint8_t * )pStorage + ( uint64_t )config.nCellCount * sizeof( sirWorldCellEntry_t ) );
 	for ( uint32_t iCell = 0; iCell < config.nCellCount; ++iCell ) {
-		const sirWorldCellDescriptor_t &descriptor = pCells[iCell];
+		const sirWorldCellDescriptor_t& descriptor = pCells[iCell];
 		if ( descriptor.nCellId == 0 || ( descriptor.nFlags & ~SIR_WORLD_CELL_FLAG_ALWAYS_LOADED ) != 0 ) {
 			return SIR_WORLD_PARTITION_INVALID_DIRECTORY;
 		}
@@ -233,7 +233,7 @@ uint32_t SIRWorldPartition::lowerBoundX( int64_t iGridX ) const noexcept
 
 void SIRWorldPartition::accumulate( uint32_t iCell, sirStreamingTarget_t eTarget, uint8_t nPriority, uint64_t nDeadlineTick ) noexcept
 {
-	sirWorldCellEntry_t &entry = m_pCells[iCell];
+	sirWorldCellEntry_t& entry = m_pCells[iCell];
 	if ( entry.nStamp != m_nEvaluationStamp ) {
 		entry.nStamp = m_nEvaluationStamp;
 		entry.eTarget = eTarget;
@@ -264,7 +264,7 @@ sirWorldPartitionResult_t SIRWorldPartition::gather( const sirWorldStreamingSour
 		return SIR_WORLD_PARTITION_INVALID_ARGUMENT;
 	}
 	for ( uint32_t iSource = 0; iSource < nSourceCount; ++iSource ) {
-		const sirWorldStreamingSource_t &source = pSources[iSource];
+		const sirWorldStreamingSource_t& source = pSources[iSource];
 		if ( source.nSourceId == 0 || source.nGeneration == 0 ) {
 			return SIR_WORLD_PARTITION_INVALID_ARGUMENT;
 		}
@@ -283,7 +283,7 @@ sirWorldPartitionResult_t SIRWorldPartition::gather( const sirWorldStreamingSour
 	}
 
 	for ( uint32_t iCell = 0; iCell < m_Config.nCellCount; ++iCell ) {
-		const sirWorldCellDescriptor_t &cell = m_pCells[iCell].descriptor;
+		const sirWorldCellDescriptor_t& cell = m_pCells[iCell].descriptor;
 		if ( ( cell.nFlags & SIR_WORLD_CELL_FLAG_ALWAYS_LOADED ) == 0 ) {
 			continue;
 		}
@@ -294,11 +294,11 @@ sirWorldPartitionResult_t SIRWorldPartition::gather( const sirWorldStreamingSour
 	}
 
 	for ( uint32_t iSource = 0; iSource < nSourceCount; ++iSource ) {
-		const sirWorldStreamingSource_t &source = pSources[iSource];
+		const sirWorldStreamingSource_t& source = pSources[iSource];
 		const int64_t iMinX = ( int64_t )source.iGridX - ( int64_t )source.nRadiusCells;
 		const int64_t iMaxX = ( int64_t )source.iGridX + ( int64_t )source.nRadiusCells;
 		for ( uint32_t iCell = lowerBoundX( iMinX ); iCell < m_Config.nCellCount; ++iCell ) {
-			const sirWorldCellDescriptor_t &cell = m_pCells[iCell].descriptor;
+			const sirWorldCellDescriptor_t& cell = m_pCells[iCell].descriptor;
 			if ( ( int64_t )cell.iGridX > iMaxX ) {
 				break;
 			}
@@ -325,11 +325,11 @@ sirWorldPartitionResult_t SIRWorldPartition::gather( const sirWorldStreamingSour
 
 	uint32_t iDemand = 0;
 	for ( uint32_t iCell = 0; iCell < m_Config.nCellCount; ++iCell ) {
-		const sirWorldCellEntry_t &entry = m_pCells[iCell];
+		const sirWorldCellEntry_t& entry = m_pCells[iCell];
 		if ( entry.nStamp != m_nEvaluationStamp ) {
 			continue;
 		}
-		sirStreamingDemand_t &demand = pDemands[iDemand++];
+		sirStreamingDemand_t& demand = pDemands[iDemand++];
 		demand = {};
 		demand.keyUnit.nContainerId = m_Config.nWorldId;
 		demand.keyUnit.nUnitId = entry.descriptor.nCellId;
