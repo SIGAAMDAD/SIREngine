@@ -50,3 +50,42 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     target_link_options(SIRMeshCacheAllocationTests PRIVATE "LINKER:--wrap=malloc" "LINKER:--wrap=calloc" "LINKER:--wrap=realloc")
 endif()
 add_test(NAME mesh.cache.allocation-free COMMAND SIRMeshCacheAllocationTests)
+
+# Explicit opt-in source-based coverage admission for the standalone CPU cache.
+# Only this standalone harness is instrumented; production engine targets are not.
+option(SIR_MESH_ENABLE_COVERAGE "Enable LLVM coverage verification for the standalone mesh cache" OFF)
+if(SIR_MESH_ENABLE_COVERAGE)
+    if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+        message(FATAL_ERROR "SIR_MESH_ENABLE_COVERAGE requires Clang's source-based coverage")
+    endif()
+    if(NOT CMAKE_BUILD_TYPE STREQUAL "Release")
+        message(FATAL_ERROR "MeshCache full-coverage admission requires CMAKE_BUILD_TYPE=Release (NDEBUG)")
+    endif()
+
+    find_program(SIR_MESH_LLVM_PROFDATA NAMES llvm-profdata REQUIRED)
+    find_program(SIR_MESH_LLVM_COV NAMES llvm-cov REQUIRED)
+    foreach(sirTarget IN ITEMS SIRMeshCache SIRMeshCacheTests SIRMeshCacheStateTests SIRMeshCacheEdgeTests
+            SIRMeshCacheGenerationTests SIRMeshCacheBorrowLimitTests SIRMeshCacheAllocationTests)
+        target_compile_options(${sirTarget} PRIVATE -fprofile-instr-generate -fcoverage-mapping)
+        if(NOT sirTarget STREQUAL "SIRMeshCache")
+            target_link_options(${sirTarget} PRIVATE -fprofile-instr-generate)
+        endif()
+    endforeach()
+
+    set(SIR_MESH_COVERAGE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/MeshCacheCoverage")
+    add_custom_target(mesh-cache-coverage
+        COMMAND "${CMAKE_COMMAND}" -E rm -rf "${SIR_MESH_COVERAGE_DIRECTORY}"
+        COMMAND "${CMAKE_COMMAND}" -E make_directory "${SIR_MESH_COVERAGE_DIRECTORY}"
+        COMMAND "${CMAKE_COMMAND}" -E env "LLVM_PROFILE_FILE=${SIR_MESH_COVERAGE_DIRECTORY}/mesh-%p.profraw"
+                "${CMAKE_CTEST_COMMAND}" --test-dir "${CMAKE_CURRENT_BINARY_DIR}" --output-on-failure
+        COMMAND "${CMAKE_COMMAND}"
+                "-DSIR_MESH_BUILD_DIR=${CMAKE_CURRENT_BINARY_DIR}"
+                "-DSIR_MESH_COVERAGE_DIR=${SIR_MESH_COVERAGE_DIRECTORY}"
+                "-DSIR_MESH_LLVM_PROFDATA=${SIR_MESH_LLVM_PROFDATA}"
+                "-DSIR_MESH_LLVM_COV=${SIR_MESH_LLVM_COV}"
+                -P "${CMAKE_CURRENT_LIST_DIR}/VerifyCoverage.cmake"
+        DEPENDS SIRMeshCacheTests SIRMeshCacheStateTests SIRMeshCacheEdgeTests
+                SIRMeshCacheGenerationTests SIRMeshCacheBorrowLimitTests SIRMeshCacheAllocationTests
+        USES_TERMINAL
+        COMMENT "Run all real MeshCache tests and require 100% production-source line/branch/function coverage")
+endif()
