@@ -148,6 +148,29 @@ static int sirTestGeneralPipelines( SIRRenderingDevice *pDevice, uint32_t nGener
 		return 14;
 	}
 
+	graphics.nSampleCount = 64;
+	if ( pDevice->createPipeline( graphics, &hRejected ) != SIR_GRAPHICS_UNSUPPORTED || hRejected.nGeneration != 0 ) {
+		return 26;
+	}
+	graphics.nSampleCount = 1;
+	graphics.szColorFormats[0] = SIR_GRAPHICS_FORMAT_D16_UNORM;
+	if ( pDevice->createPipeline( graphics, &hRejected ) != SIR_GRAPHICS_UNSUPPORTED || hRejected.nGeneration != 0 ) {
+		return 27;
+	}
+	graphics.szColorFormats[0] = SIR_GRAPHICS_FORMAT_RGBA8_UNORM;
+	sirGraphicsCapabilities_t capabilities = {};
+	if ( pDevice->queryCapabilities( &capabilities ) != SIR_GRAPHICS_SUCCESS ) {
+		return 28;
+	}
+	if ( capabilities.nMaximumSampleCount > 1 ) {
+		graphics.nSampleCount = capabilities.nMaximumSampleCount;
+		if ( pDevice->createPipeline( graphics, &hRejected ) != SIR_GRAPHICS_SUCCESS ||
+		     pDevice->retireResource( hRejected, completed ) != SIR_GRAPHICS_SUCCESS ) {
+			return 29;
+		}
+		graphics.nSampleCount = 1;
+	}
+
 	szAttributes[1].nStrideBytes = 24;
 	if ( pDevice->createPipeline( graphics, &hRejected ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
 		return 15;
