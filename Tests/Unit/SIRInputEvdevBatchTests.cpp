@@ -140,6 +140,11 @@ public:
 		return backend.resolveButton( slot, nCode );
 	}
 
+	static void pollHotplug( SIRLinuxEvdevBackend &backend, SIRInputService &service ) noexcept
+	{
+		backend.pollHotplug( service );
+	}
+
 	static sirInputDeviceId_t firstDevice( const SIRLinuxEvdevBackend &backend ) noexcept
 	{
 		return backend.m_Slots[0].id;
@@ -543,10 +548,48 @@ static bool testEmulatedControllerOpenAndRumble( void ) noexcept
 	return bValid && service.activeDeviceCount() == 0;
 }
 
+static bool testEmulatedHotplugLifecycle( void ) noexcept
+{
+	SIRInputService service;
+	SIRLinuxEvdevBackend backend;
+	if ( !service.attach( backend ) || !service.begin( 1 ) ) {
+		return false;
+	}
+	char szDirectory[] = "/tmp/sir-evdev-hotplug-XXXXXX";
+	if ( mkdtemp( szDirectory ) == nullptr ) {
+		return false;
+	}
+	bool bValid = backend.discover( service, szDirectory );
+	char szEventPath[512] = {};
+	const int nLen = snprintf( szEventPath, sizeof( szEventPath ), "%s/event5", szDirectory );
+	if ( bValid && nLen > 0 && nLen < ( int )sizeof( szEventPath ) ) {
+		s_nFakeGamepadFd = -1;
+		s_nFakeIoctlCalls = 0;
+		s_bFakeGamepadIoctl = true;
+		bValid = symlink( "/dev/null", szEventPath ) == 0;
+		if ( bValid ) {
+			SIRInputEvdevBatchTestPeer::pollHotplug( backend, service );
+			bValid = SIRInputEvdevBatchTestPeer::firstOpen( backend ) && service.activeDeviceCount() == 1 && s_nFakeIoctlCalls >= 10;
+		}
+		if ( bValid ) {
+			bValid = unlink( szEventPath ) == 0;
+			SIRInputEvdevBatchTestPeer::pollHotplug( backend, service );
+			bValid = bValid && !SIRInputEvdevBatchTestPeer::firstOpen( backend ) && service.activeDeviceCount() == 0;
+		}
+	}
+	unlink( szEventPath );
+	service.shutdown();
+	s_bFakeGamepadIoctl = false;
+	s_nFakeGamepadFd = -1;
+	rmdir( szDirectory );
+	return bValid;
+}
+
 int main( void )
 {
 	if ( !testBatchedReports() || !testPartialReportAcrossReads() || !testMappingAndQueueBoundaries() || !testDiscoveryAndOpenFailures() ||
-	     !testDesyncAndReadFailureLifecycle() || !testAxisHatAndRumbleErrors() || !testEmulatedControllerOpenAndRumble() ) {
+	     !testDesyncAndReadFailureLifecycle() || !testAxisHatAndRumbleErrors() || !testEmulatedControllerOpenAndRumble() ||
+	     !testEmulatedHotplugLifecycle() ) {
 		fprintf( stderr, "SIRInputEvdevBatchTests FAIL\n" );
 		return 1;
 	}
