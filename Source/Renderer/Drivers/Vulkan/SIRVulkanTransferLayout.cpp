@@ -127,7 +127,7 @@ bool sirVulkanTransferCoversSubresource( const sirVulkanImage_t *pImage, const s
 {
 	if ( pImage == nullptr || !transfer.bBufferToImage || pImage->nMips == 0 || pImage->nMips > 32 || transfer.nMip >= pImage->nMips ||
 	     pImage->nLayers == 0 || transfer.nLayer >= pImage->nLayers || pImage->nWidth == 0 || pImage->nHeight == 0 ||
-	     pImage->nDepth == 0 ) {
+	     ( pImage->eType == VK_IMAGE_TYPE_3D && pImage->nDepth == 0 ) ) {
 		return false;
 	}
 	const uint32_t nWidth = pImage->nWidth >> transfer.nMip;

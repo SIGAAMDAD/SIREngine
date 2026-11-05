@@ -334,6 +334,18 @@ int main( void )
 	if ( sirVulkanTransferCoversSubresource( &coverage, uploaded ) ) {
 		return 49;
 	}
+	coverage.nDepth = 0;
+	if ( sirVulkanTransferCoversSubresource( &coverage, uploaded ) ) {
+		return 50;
+	}
+	coverage.eType = VK_IMAGE_TYPE_2D;
+	coverage.nMips = 3;
+	coverage.nLayers = 2;
+	uploaded.nLayer = 1;
+	uploaded.extent = { 8, 4, 1 };
+	if ( !sirVulkanTransferCoversSubresource( &coverage, uploaded ) ) {
+		return 51;
+	}
 	printf( "Vulkan transfer format and subresource contracts passed\n" );
 	return 0;
 }
