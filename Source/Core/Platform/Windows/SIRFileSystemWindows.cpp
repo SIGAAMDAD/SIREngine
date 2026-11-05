@@ -70,6 +70,59 @@ static bool sirFileSystemToWindowsPath( const char *pszUtf8, wchar_t *pWide, int
 	return nConverted != 0;
 }
 
+sirFileSystemResult_t SIRFileSystem::readFilePlatform( const char *pszPath, char *pszOutput, size_t nCapacity, size_t *pOutBytes ) noexcept
+{
+	wchar_t szPath[4096] = {};
+	if ( !sirFileSystemToWindowsPath( pszPath, szPath, 4096 ) ) {
+		return SIR_FILE_SYSTEM_INVALID_PATH;
+	}
+	HANDLE hFile = CreateFileW( szPath, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING,
+	                            FILE_FLAG_OPEN_REPARSE_POINT, nullptr );
+	if ( hFile == INVALID_HANDLE_VALUE ) {
+		return SIR_FILE_SYSTEM_IO_ERROR;
+	}
+	BY_HANDLE_FILE_INFORMATION information = {};
+	LARGE_INTEGER nLength = {};
+	if ( !GetFileInformationByHandle( hFile, &information ) || !GetFileSizeEx( hFile, &nLength ) ) {
+		CloseHandle( hFile );
+		return SIR_FILE_SYSTEM_IO_ERROR;
+	}
+	if ( ( information.dwFileAttributes & ( FILE_ATTRIBUTE_DIRECTORY | FILE_ATTRIBUTE_DEVICE | FILE_ATTRIBUTE_REPARSE_POINT ) ) != 0 ||
+	     nLength.QuadPart < 0 ) {
+		CloseHandle( hFile );
+		return SIR_FILE_SYSTEM_INVALID_PATH;
+	}
+	if ( ( uint64_t )nLength.QuadPart > SIZE_MAX ) {
+		CloseHandle( hFile );
+		return SIR_FILE_SYSTEM_OUT_OF_CAPACITY;
+	}
+	const size_t nFileBytes = ( size_t )nLength.QuadPart;
+	*pOutBytes = nFileBytes;
+	if ( pszOutput == nullptr ) {
+		return CloseHandle( hFile ) ? SIR_FILE_SYSTEM_OK : SIR_FILE_SYSTEM_IO_ERROR;
+	}
+	if ( nCapacity < nFileBytes ) {
+		CloseHandle( hFile );
+		return SIR_FILE_SYSTEM_OUT_OF_CAPACITY;
+	}
+	size_t nRead = 0;
+	while ( nRead < nFileBytes ) {
+		const size_t nRemaining = nFileBytes - nRead;
+		const DWORD nChunk = nRemaining > 1048576 ? 1048576 : ( DWORD )nRemaining;
+		DWORD nActual = 0;
+		if ( !ReadFile( hFile, pszOutput + nRead, nChunk, &nActual, nullptr ) || nActual == 0 ) {
+			CloseHandle( hFile );
+			return SIR_FILE_SYSTEM_IO_ERROR;
+		}
+		nRead += nActual;
+	}
+	char szExtra[1] = {};
+	DWORD nExtra = 0;
+	const bool bComplete = ReadFile( hFile, szExtra, 1, &nExtra, nullptr ) != 0 && nExtra == 0;
+	const bool bClosed = CloseHandle( hFile ) != 0;
+	return bComplete && bClosed ? SIR_FILE_SYSTEM_OK : SIR_FILE_SYSTEM_IO_ERROR;
+}
+
 sirFileSystemResult_t SIRFileSystem::writeAtomicallyPlatform( const sirFileSystemAtomicWriteRequest_t &request ) noexcept
 {
 	wchar_t szDestination[4096] = {};

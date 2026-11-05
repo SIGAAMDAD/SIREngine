@@ -66,6 +66,25 @@ bool SIRFileSystem::validPaths( const char *pszDestination, const char *pszTempo
 	       pszDestinationEnd[1] != '\0' && pszTemporaryEnd[1] != '\0';
 }
 
+sirFileSystemResult_t SIRFileSystem::readFile( const char *pszPath, char *pszOutput, size_t nCapacity, size_t *pOutBytes ) noexcept
+{
+	if ( pOutBytes == nullptr ) {
+		return SIR_FILE_SYSTEM_INVALID_ARGUMENT;
+	}
+	*pOutBytes = 0;
+	if ( ( pszOutput == nullptr ) != ( nCapacity == 0 ) ) {
+		return SIR_FILE_SYSTEM_INVALID_ARGUMENT;
+	}
+	if ( pszPath == nullptr ) {
+		return SIR_FILE_SYSTEM_INVALID_PATH;
+	}
+	const size_t nPathBytes = sirFileSystemBoundedLength( pszPath );
+	if ( nPathBytes == 0 || nPathBytes == SIR_FILE_SYSTEM_MAX_PATH_BYTES ) {
+		return SIR_FILE_SYSTEM_INVALID_PATH;
+	}
+	return readFilePlatform( pszPath, pszOutput, nCapacity, pOutBytes );
+}
+
 sirFileSystemResult_t SIRFileSystem::writeAtomically( const sirFileSystemAtomicWriteRequest_t &request ) noexcept
 {
 	if ( request.pBytes == nullptr || request.nBytes == 0 || ( request.pExpectedBytes == nullptr && request.nExpectedBytes != 0 ) ) {

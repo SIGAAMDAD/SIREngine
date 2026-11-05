@@ -35,7 +35,8 @@ typedef enum sirFileSystemResult_e : uint8_t
 	SIR_FILE_SYSTEM_IO_ERROR = 4,
 	SIR_FILE_SYSTEM_REPLACE_FAILED = 5,
 	SIR_FILE_SYSTEM_COMMITTED_NOT_DURABLE = 6,
-	SIR_FILE_SYSTEM_CONFLICT = 7
+	SIR_FILE_SYSTEM_CONFLICT = 7,
+	SIR_FILE_SYSTEM_OUT_OF_CAPACITY = 8
 } sirFileSystemResult_t;
 
 typedef struct sirFileSystemAtomicWriteRequest_s
@@ -57,12 +58,16 @@ public:
 	SIRFileSystem( void ) = delete;
 	~SIRFileSystem( void ) = delete;
 
+	// Null output with zero capacity measures a regular file's exact byte count.
+	// On capacity failure the required byte count is returned, without writes.
+	static sirFileSystemResult_t readFile( const char *pszPath, char *pszOutput, size_t nCapacity, size_t *pOutBytes ) noexcept;
 	static sirFileSystemResult_t writeAtomically( const sirFileSystemAtomicWriteRequest_t &request ) noexcept;
 
 protected:
 private:
 	static const char *lastSeparator( const char *pszPath ) noexcept;
 	static bool validPaths( const char *pszDestination, const char *pszTemporary ) noexcept;
+	static sirFileSystemResult_t readFilePlatform( const char *pszPath, char *pszOutput, size_t nCapacity, size_t *pOutBytes ) noexcept;
 	static sirFileSystemResult_t writeAtomicallyPlatform( const sirFileSystemAtomicWriteRequest_t &request ) noexcept;
 };
 
