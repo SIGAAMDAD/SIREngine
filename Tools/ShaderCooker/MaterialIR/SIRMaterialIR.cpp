@@ -125,6 +125,21 @@ static bool sirMaterialIRPermutationValid( const sirMaterialIRGraph_t& graph, ui
 	return true;
 }
 
+static bool sirMaterialIRStageFeaturesValid( const sirMaterialIRPass_t& pass ) noexcept
+{
+	uint64_t nStageFeatures = pass.ePass == SIR_SHADER_PASS_COMPUTE ? SIR_GRAPHICS_FEATURE_COMPUTE : SIR_GRAPHICS_FEATURE_GRAPHICS;
+	if ( ( pass.nStageMask & SIR_GRAPHICS_STAGE_GEOMETRY ) != 0 ) {
+		nStageFeatures |= SIR_GRAPHICS_FEATURE_GEOMETRY_SHADER;
+	}
+	if ( ( pass.nStageMask & ( SIR_GRAPHICS_STAGE_TESS_CONTROL | SIR_GRAPHICS_STAGE_TESS_EVALUATION ) ) != 0 ) {
+		nStageFeatures |= SIR_GRAPHICS_FEATURE_TESSELLATION;
+	}
+	if ( ( pass.nStageMask & ( SIR_GRAPHICS_STAGE_MESH | SIR_GRAPHICS_STAGE_TASK ) ) != 0 ) {
+		nStageFeatures |= SIR_GRAPHICS_FEATURE_MESH_SHADER;
+	}
+	return ( pass.nRequiredFeatures & nStageFeatures ) == nStageFeatures;
+}
+
 static uint16_t sirMaterialIRRead16( const uint8_t *pBytes ) noexcept
 {
 	return ( uint16_t )( ( uint16_t )pBytes[0] | ( ( uint16_t )pBytes[1] << 8 ) );
@@ -237,6 +252,9 @@ sirShaderCookResult_t sirMaterialIRCompile( const sirMaterialIRGraph_t& graph, c
 			return SIR_SHADER_COOK_INVALID_ARGUMENT;
 		}
 		if ( ( pass.nStageMask & SIR_GRAPHICS_STAGE_COMPUTE ) != 0 && pass.nStageMask != SIR_GRAPHICS_STAGE_COMPUTE ) {
+			return SIR_SHADER_COOK_INVALID_ARGUMENT;
+		}
+		if ( !sirMaterialIRStageFeaturesValid( pass ) ) {
 			return SIR_SHADER_COOK_INVALID_ARGUMENT;
 		}
 		nPreviousPass = pass.ePass;
