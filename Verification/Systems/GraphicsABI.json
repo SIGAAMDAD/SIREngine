@@ -1,0 +1,84 @@
+{
+  "schema": 1,
+  "system": "GraphicsABI",
+  "source_roots": [
+    "Source/Renderer"
+  ],
+  "build_targets": [
+    "SIRGraphics",
+    "SIRGraphicsInterfaceTests",
+    "SIRGraphicsABITests",
+    "SIRGraphicsPipelineABITests",
+    "SIRGraphicsPipelineBridgeTests",
+    "SIRGraphicsABIMockModule",
+    "SIRGraphicsModuleTests",
+    "SIRGraphicsABIContractTests",
+    "SIRGraphicsABIPropertyTests",
+    "SIRGraphicsABIEraMatrixTests",
+    "SIRGraphicsABINegativeMatrixTests",
+    "SIRGraphicsABIAssertionGoogleTests"
+  ],
+  "test_regex": "^renderer\\.graphics\\.",
+  "cmake_defines": {
+    "SIR_WITH_GOOGLETEST": "ON",
+    "SIR_WITH_VULKAN": "OFF",
+    "SIR_WITH_D3D12": "OFF"
+  },
+  "coverage": {
+    "lines": 100,
+    "branches": 100,
+    "functions": 100,
+    "regions": 100
+  },
+  "contracts": [
+    {
+      "id": "binary-negotiation",
+      "test_regex": "^renderer\\.graphics\\.binary-abi$",
+      "required": true
+    },
+    {
+      "id": "source-registry",
+      "test_regex": "^renderer\\.graphics\\.interface$",
+      "required": true
+    },
+    {
+      "id": "pipeline-era-constraints",
+      "test_regex": "^renderer\\.graphics\\.(pipeline-eras|era-matrix)$",
+      "required": true
+    },
+    {
+      "id": "source-binary-descriptor",
+      "test_regex": "^renderer\\.graphics\\.pipeline-bridge$",
+      "required": true
+    },
+    {
+      "id": "native-module-mock",
+      "test_regex": "^renderer\\.graphics\\.binary-module$",
+      "required": true
+    },
+    {
+      "id": "abi-layout-version",
+      "test_regex": "^renderer\\.graphics\\.contract$",
+      "required": true
+    },
+    {
+      "id": "deterministic-properties",
+      "test_regex": "^renderer\\.graphics\\.properties$",
+      "required": true
+    },
+    {
+      "id": "assertion-isolation",
+      "test_regex": "^renderer\\.graphics\\.gtest\\.",
+      "required": true
+    },
+    {
+      "id": "malformed-capability-matrix",
+      "test_regex": "^renderer\\.graphics\\.negative-matrix$",
+      "required": true
+    }
+  ],
+  "required_gates": [
+    "asan",
+    "ubsan"
+  ]
+}

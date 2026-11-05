@@ -1,35 +1,339 @@
-name: SIREngine Nightly Scheduler
+name: SIREngine nightly native builds
 
-# Scheduled workflows run from the default branch, currently main.
-# Dispatch the complete build matrix from develop instead of building
-# main's legacy source tree.
 on:
   schedule:
     - cron: '17 7 * * *'
-  workflow_dispatch:
   push:
-    branches: [main]
+    branches: [develop]
     paths:
       - '.github/workflows/nightly.yml'
+      - 'Build/Scripts/NightlyBuild.sh'
+      - 'Build/CMake/NightlyMetrics.cmake'
+      - 'Build/CMake/NightlyCompare.cmake'
+      - 'Build/Scripts/RunGoogleBenchmarks.sh'
+      - 'Build/CMake/GoogleBenchmarkCompare.cmake'
+      - 'Tests/Benchmarks/**'
+      - 'Tests/Unit/GoogleApplicationTests.cpp'
+  workflow_dispatch:
+    inputs:
+      macos_preview:
+        description: 'Include experimental macOS build'
+        type: boolean
+        required: false
+        default: false
 
 permissions:
   contents: read
-  actions: write
+  actions: read
 
 concurrency:
-  group: sir-nightly-dispatch
+  group: sir-nightly-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
-  dispatch-develop:
-    name: Dispatch nightly build of develop
-    runs-on: ubuntu-24.04
-    timeout-minutes: 5
+  native-release:
+    name: Native release and package / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            preset: profile
+          - os: windows-2022
+            preset: profile
+          - os: ubuntu-24.04
+            preset: release
+          - os: windows-2022
+            preset: release
+          - os: ubuntu-24.04
+            preset: asan
+          - os: ubuntu-24.04
+            preset: ubsan
     steps:
-      - name: Trigger the CMake/FASTBuild nightly regression matrix
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up MSVC compiler environment
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+      - uses: ./.github/actions/setup-build-tools
+      - uses: actions/cache@v4
+        with:
+          path: .cache/fastbuild
+          key: sir-fbuild-v1.20-${{ runner.os }}-${{ matrix.preset }}-${{ github.sha }}
+          restore-keys: |
+            sir-fbuild-v1.20-${{ runner.os }}-${{ matrix.preset }}-
+      - name: Compile, test, package and record nightly metrics
+        shell: bash
+        env:
+          SIR_CI_LABEL: "${{ matrix.os }}-${{ matrix.preset }}"
+        run: bash Build/Scripts/NightlyBuild.sh "${{ matrix.preset }}"
+      - name: Upload regression metrics
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sir-nightly-metrics-${{ matrix.os }}-${{ matrix.preset }}
+          path: out/Nightly/metrics/
+          if-no-files-found: error
+          retention-days: 30
+      - name: Upload compiler and test evidence
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sir-nightly-evidence-${{ matrix.os }}-${{ matrix.preset }}
+          path: |
+            out/Nightly/logs/
+            out/Nightly/tests/
+          if-no-files-found: warn
+          retention-days: 21
+      - name: Upload release package
+        uses: actions/upload-artifact@v4
+        if: matrix.preset == 'release' && success()
+        with:
+          name: sirengine-${{ matrix.os }}-native
+          path: out/**/SIREngine-*.zip
+          if-no-files-found: error
+          retention-days: 21
+
+  macos-preview:
+    if: github.event_name == 'workflow_dispatch' && inputs.macos_preview
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-build-tools
+      - uses: actions/cache@v4
+        with:
+          path: .cache/fastbuild
+          key: sir-fbuild-v1.20-macos-preview-${{ github.sha }}
+          restore-keys: |
+            sir-fbuild-v1.20-macos-preview-
+      - name: Compile and record macOS preview metrics
+        shell: bash
+        env:
+          SIR_CI_LABEL: macos-15-preview
+        run: bash Build/Scripts/NightlyBuild.sh macos-preview
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sir-nightly-metrics-macos-15-preview
+          path: out/Nightly/metrics/
+          if-no-files-found: error
+          retention-days: 30
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sir-nightly-evidence-macos-15-preview
+          path: |
+            out/Nightly/logs/
+            out/Nightly/tests/
+          retention-days: 21
+
+  source-dependencies:
+    name: OpenAL Soft and meshoptimizer integration / Linux
+    runs-on: ubuntu-24.04
+    timeout-minutes: 65
+    env:
+      SCCACHE_GHA_ENABLED: "true"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Fetch only enabled native source dependencies
+        run: git submodule update --init ThirdParty/OpenALSoft ThirdParty/meshoptimizer
+      - uses: jwlawson/actions-setup-cmake@v2.2.0
+        with:
+          cmake-version: '4.4.5'
+      - uses: mozilla-actions/sccache-action@v0.0.11
+      - name: Compile and track dependency regression metrics
+        shell: bash
+        env:
+          SIR_CI_LABEL: ubuntu-24.04-dependencies
+        run: |
+          bash Build/Scripts/NightlyBuild.sh tooling \
+            -DSIR_WITH_OPENAL_SOFT=ON \
+            -DSIR_WITH_MESHOPTIMIZER=ON \
+            -DCMAKE_C_COMPILER_LAUNCHER=sccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sir-nightly-metrics-ubuntu-24.04-dependencies
+          path: out/Nightly/metrics/
+          if-no-files-found: error
+          retention-days: 30
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sir-nightly-evidence-ubuntu-24.04-dependencies
+          path: |
+            out/Nightly/logs/
+            out/Nightly/tests/
+          retention-days: 21
+      - name: Compiler-cache summary
+        if: always()
+        run: sccache --show-stats
+
+
+  google-profiling:
+    name: GoogleTest and Google Benchmark / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 75
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Fetch pinned Google testing and profiling sources
+        run: git submodule update --init ThirdParty/GoogleTest ThirdParty/GoogleBenchmark
+      - name: Set up MSVC compiler environment
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+      - uses: ./.github/actions/setup-build-tools
+      - uses: actions/cache@v4
+        with:
+          path: .cache/fastbuild
+          key: sir-fbuild-v1.20-${{ runner.os }}-google-profile-${{ github.sha }}
+          restore-keys: |
+            sir-fbuild-v1.20-${{ runner.os }}-google-profile-
+      - name: Configure optimized CPU profiling and GoogleTest
+        run: >
+          cmake --preset profile
+          -DSIR_WITH_GOOGLETEST=ON
+          -DSIR_WITH_GOOGLE_BENCHMARK=ON
+          -DSIR_BUILD_BENCHMARKS=ON
+      - name: Compile GoogleTest and CPU benchmark targets
+        run: cmake --build --preset profile
+      - name: Run CTest including GoogleTest
+        run: ctest --preset profile --output-on-failure
+      - name: Measure native CPU benchmarks
+        shell: bash
+        run: bash Build/Scripts/RunGoogleBenchmarks.sh "${{ matrix.os }}"
+      - name: Upload profiling measurements
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sir-google-benchmark-${{ matrix.os }}
+          path: out/Nightly/Benchmarks/
+          if-no-files-found: error
+          retention-days: 60
+
+  clang-tooling:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: jwlawson/actions-setup-cmake@v2.2.0
+        with:
+          cmake-version: '4.4.5'
+      - name: Compile with Clang and record regression metrics
+        shell: bash
+        env:
+          CC: clang
+          CXX: clang++
+          SIR_CI_LABEL: ubuntu-24.04-clang
+        run: bash Build/Scripts/NightlyBuild.sh tooling
+      - name: Verify compiler database
+        run: test -s out/Linux/tooling/compile_commands.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sir-nightly-metrics-ubuntu-24.04-clang
+          path: out/Nightly/metrics/
+          if-no-files-found: error
+          retention-days: 30
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sir-nightly-evidence-ubuntu-24.04-clang
+          path: |
+            out/Nightly/logs/
+            out/Nightly/tests/
+          retention-days: 21
+
+  regression-summary:
+    name: Compare nightly builds with previous successful run
+    if: always()
+    needs: [native-release, source-dependencies, clang-tooling, google-profiling, macos-preview]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Collect current matrix metrics
+        uses: actions/download-artifact@v4
+        with:
+          pattern: sir-nightly-metrics-*
+          path: out/Nightly/report/current
+          merge-multiple: true
+      - name: Retrieve previous successful nightly baseline
+        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
         run: |
-          gh workflow run nightly.yml --repo "$GH_REPO" \
-            --ref develop --field macos_preview=false
+          mkdir -p out/Nightly/baseline
+          baseline="$(gh run list --workflow nightly.yml --branch develop \
+            --status success --limit 20 --json databaseId \
+            --jq '.[0].databaseId' 2>/dev/null || true)"
+          if [[ -n "$baseline" && "$baseline" != "${{ github.run_id }}" ]]; then
+            if gh run download "$baseline" --name sir-nightly-regression \
+                --dir out/Nightly/baseline; then
+              echo "Previous successful nightly: $baseline"
+            else
+              echo "No compatible baseline artifact on run $baseline"
+            fi
+          else
+            echo "No previous successful nightly run available"
+          fi
+      - name: Collect Google Benchmark measurements
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          pattern: sir-google-benchmark-*
+          path: out/Nightly/report/benchmarks
+          merge-multiple: true
+      - name: Compare CPU benchmark profiles
+        shell: bash
+        run: |
+          cmake \
+            -DSIR_CURRENT_DIR=out/Nightly/report/benchmarks \
+            -DSIR_BASELINE_DIR=out/Nightly/baseline \
+            -DSIR_REPORT=out/Nightly/report/BENCHMARKS.md \
+            -P Build/CMake/GoogleBenchmarkCompare.cmake
+          cat out/Nightly/report/BENCHMARKS.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Generate longitudinal regression report
+        shell: bash
+        run: |
+          cmake \
+            -DSIR_CURRENT_DIR=out/Nightly/report/current \
+            -DSIR_BASELINE_DIR=out/Nightly/baseline \
+            -DSIR_REPORT=out/Nightly/report/REGRESSION.md \
+            -P Build/CMake/NightlyCompare.cmake
+          cat out/Nightly/report/REGRESSION.md >> "$GITHUB_STEP_SUMMARY"
+          {
+            echo
+            echo "## Job outcomes"
+            echo "- Windows/Linux profile, release and sanitizers: ${{ needs.native-release.result }}"
+            echo "- OpenAL Soft and meshoptimizer: ${{ needs.source-dependencies.result }}"
+            echo "- Clang tooling: ${{ needs.clang-tooling.result }}"
+            echo "- GoogleTest and Google Benchmark: ${{ needs.google-profiling.result }}"
+            echo "- Optional macOS preview: ${{ needs.macos-preview.result }}"
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Preserve longitudinal results and baseline
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sir-nightly-regression
+          path: out/Nightly/report/
+          if-no-files-found: error
+          retention-days: 60
