@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: SIREngine project management
+    url: https://github.com/SIGAAMDAD/SIREngine/blob/main/Docs/ProjectManagement/GitHubProjects.md
+    about: Read the issue approval, dependency and team workflow before submission
+  - name: SIREngine documentation index
+    url: https://github.com/SIGAAMDAD/SIREngine/blob/develop/Docs/README.md
+    about: Check subsystem contracts and avoid duplicate roadmap issues
