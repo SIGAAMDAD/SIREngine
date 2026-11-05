@@ -340,6 +340,81 @@ static void testStageTopology( void ) noexcept
 	REQUIRE( sirMaterialIRCompile( graph, options, &output ) == SIR_SHADER_COOK_OK );
 }
 
+static void testPortablePipelineRecipes( void ) noexcept
+{
+	sirMaterialIRNode_t szNodes[4] = {};
+	szNodes[0] = makeNode( SIR_MATERIAL_IR_CONSTANT, SIR_MATERIAL_IR_FLOAT4 );
+	szNodes[1] = makeNode( SIR_MATERIAL_IR_CONSTANT, SIR_MATERIAL_IR_FLOAT4 );
+	szNodes[2] = makeNode( SIR_MATERIAL_IR_STATIC_SWITCH, SIR_MATERIAL_IR_FLOAT4, 0, 1 );
+	szNodes[2].nSwitchBit = 1;
+	szNodes[3] = makeNode( SIR_MATERIAL_IR_OUTPUT, SIR_MATERIAL_IR_FLOAT4, 2 );
+	sirMaterialIRSwitch_t choice = {};
+	choice.nBit = 1;
+	sirMaterialIRPass_t pass = { SIR_SHADER_PASS_COLOR, 3, SIR_GRAPHICS_STAGE_FRAGMENT, SIR_GRAPHICS_FEATURE_GRAPHICS };
+	sirMaterialIRGraph_t graph = {};
+	graph.nAssetId = 811;
+	graph.nSourceHash = 33;
+	graph.pNodes = szNodes;
+	graph.nNodeCount = 4;
+	graph.pSwitches = &choice;
+	graph.nSwitchCount = 1;
+	graph.pPasses = &pass;
+	graph.nPassCount = 1;
+	sirMaterialShaderMapEntry_t szEntries[3] = {};
+	sirMaterialIRCompileOptions_t options = { SIR_GRAPHICS_FEATURE_GRAPHICS, true };
+	sirMaterialIRCompileOutput_t output = { szEntries, 3, 0, 0 };
+	REQUIRE( sirMaterialIRCompile( graph, options, &output ) == SIR_SHADER_COOK_OK );
+	REQUIRE( output.nProducedCount == 3 );
+	sirMaterialIRPipelineSettings_t settings = {};
+	settings.nPackageManifestHash = 0x102;
+	settings.nRenderStateHash = 0x18;
+	settings.nColorFormatsHash = 0x38;
+	settings.nSampleCount = 4;
+	settings.bAlphaMasked = true;
+	sirShaderPipelineRecipe_t recipe = {};
+	for ( uint32_t iEntry = 0; iEntry < output.nProducedCount; ++iEntry ) {
+		REQUIRE( sirMaterialIRBuildPipelineRecipe( graph, szEntries[iEntry], settings, &recipe ) == SIR_SHADER_COOK_OK );
+		REQUIRE( recipe.pass.ePass == SIR_SHADER_PASS_COLOR );
+		REQUIRE( recipe.pass.nBindingSignature == szEntries[iEntry].nReflectionSignature );
+		REQUIRE( recipe.nAssetId == 811 && recipe.nSourceRevision == 33 && recipe.nPackageSchema == SIR_SHADER_PACKAGE_SCHEMA );
+		REQUIRE( recipe.nPermutationKey == szEntries[iEntry].nPermutationMask );
+		REQUIRE( recipe.pass.nSampleCount == 4 && recipe.pass.bAlphaMasked );
+	}
+	sirMaterialShaderMapEntry_t broken = szEntries[0];
+	broken.nCodeHash ^= 1;
+	recipe.nPackageSchema = 93;
+	REQUIRE( sirMaterialIRBuildPipelineRecipe( graph, broken, settings, &recipe ) == SIR_SHADER_COOK_INVALID_ARGUMENT );
+	REQUIRE( recipe.nPackageSchema == 93 );
+	broken = szEntries[0];
+	broken.nStageMask = SIR_GRAPHICS_STAGE_VERTEX;
+	REQUIRE( sirMaterialIRBuildPipelineRecipe( graph, broken, settings, &recipe ) == SIR_SHADER_COOK_INVALID_ARGUMENT );
+	broken = szEntries[0];
+	broken.nReflectionSignature ^= 1;
+	REQUIRE( sirMaterialIRBuildPipelineRecipe( graph, broken, settings, &recipe ) == SIR_SHADER_COOK_INVALID_ARGUMENT );
+	broken = szEntries[0];
+	broken.nPermutationMask = 3;
+	REQUIRE( sirMaterialIRBuildPipelineRecipe( graph, broken, settings, &recipe ) == SIR_SHADER_COOK_INVALID_ARGUMENT );
+	broken = szEntries[2];
+	broken.bUberFallback = false;
+	REQUIRE( sirMaterialIRBuildPipelineRecipe( graph, broken, settings, &recipe ) == SIR_SHADER_COOK_INVALID_ARGUMENT );
+	settings.nSampleCount = 3;
+	REQUIRE( sirMaterialIRBuildPipelineRecipe( graph, szEntries[0], settings, &recipe ) == SIR_SHADER_COOK_INVALID_ARGUMENT );
+	settings.nSampleCount = 1;
+	settings.nPackageManifestHash = 0;
+	REQUIRE( sirMaterialIRBuildPipelineRecipe( graph, szEntries[0], settings, &recipe ) == SIR_SHADER_COOK_INVALID_ARGUMENT );
+	settings.nPackageManifestHash = 0x102;
+	REQUIRE( sirMaterialIRBuildPipelineRecipe( graph, szEntries[0], settings, nullptr ) == SIR_SHADER_COOK_INVALID_ARGUMENT );
+	choice.nRequiredFeatures = SIR_GRAPHICS_FEATURE_GEOMETRY_SHADER;
+	options.nAvailableFeatures |= SIR_GRAPHICS_FEATURE_GEOMETRY_SHADER;
+	REQUIRE( sirMaterialIRCompile( graph, options, &output ) == SIR_SHADER_COOK_OK );
+	REQUIRE( ( szEntries[1].nRequiredFeatures & SIR_GRAPHICS_FEATURE_GEOMETRY_SHADER ) != 0 );
+	REQUIRE( sirMaterialIRBuildPipelineRecipe( graph, szEntries[1], settings, &recipe ) == SIR_SHADER_COOK_OK );
+	broken = szEntries[1];
+	broken.nRequiredFeatures = SIR_GRAPHICS_FEATURE_GRAPHICS;
+	REQUIRE( sirMaterialIRBuildPipelineRecipe( graph, broken, settings, &recipe ) == SIR_SHADER_COOK_INVALID_ARGUMENT );
+}
+
+
 int main( void )
 {
 	testDeterministicMaps();
@@ -348,5 +423,6 @@ int main( void )
 	testSampleOperandValidation();
 	testReflectionBindingValidation();
 	testStageTopology();
+	testPortablePipelineRecipes();
 	return 0;
 }
