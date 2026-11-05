@@ -1,7 +1,7 @@
 name: Independent verification
 description: Request exact-revision CI, compiler, coverage or integration validation.
 title: "[Verification] "
-labels: ["marathon:tracked"]
+labels: ["marathon:tracked", "kind:verification"]
 body:
   - type: input
     id: candidate
