@@ -446,3 +446,30 @@ sirShaderCookResult_t sirMaterialIRBuildPipelineRecipe( const sirMaterialIRGraph
 	*pRecipe = recipe;
 	return SIR_SHADER_COOK_OK;
 }
+
+sirShaderCookResult_t sirMaterialIRBuildCookedPass( const sirMaterialIRGraph_t& graph, const sirMaterialShaderMapEntry_t& entry,
+                                                    const sirMaterialIRCookedPassSettings_t& settings,
+                                                    sirShaderMaterialPassRecord_t *pPass ) noexcept
+{
+	if ( pPass == nullptr || settings.nDependencyCount == 0 || settings.nDependencyCount > SIR_SHADER_MATERIAL_MAX_DEPENDENCIES ||
+	     settings.iShaderDependency >= settings.nDependencyCount ) {
+		return SIR_SHADER_COOK_INVALID_ARGUMENT;
+	}
+	constexpr uint64_t VALID_FEATURES = ( SIR_GRAPHICS_FEATURE_PRESENT << 1 ) - 1ULL;
+	if ( ( entry.nRequiredFeatures & ~VALID_FEATURES ) != 0 || ( entry.nRequiredFeatures & SIR_GRAPHICS_FEATURE_FIXED_FUNCTION ) != 0 ) {
+		return SIR_SHADER_COOK_INVALID_ARGUMENT;
+	}
+	sirShaderPipelineRecipe_t recipe = {};
+	const sirShaderCookResult_t eResult = sirMaterialIRBuildPipelineRecipe( graph, entry, settings.pipeline, &recipe );
+	if ( eResult != SIR_SHADER_COOK_OK ) {
+		return eResult;
+	}
+	sirShaderMaterialPassRecord_t pass = {};
+	pass.nPass = ( uint32_t )recipe.pass.ePass;
+	pass.iShaderDependency = settings.iShaderDependency;
+	pass.nRequiredFeatures = recipe.nRequiredFeatures;
+	pass.nPermutationKey = recipe.nPermutationKey;
+	pass.nRenderStateHash = recipe.nRenderStateHash;
+	*pPass = pass;
+	return SIR_SHADER_COOK_OK;
+}

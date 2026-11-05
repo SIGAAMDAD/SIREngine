@@ -415,6 +415,65 @@ static void testPortablePipelineRecipes( void ) noexcept
 }
 
 
+static void testCookedMaterialPassProjection( void ) noexcept
+{
+	sirMaterialIRNode_t szNodes[2] = {};
+	szNodes[0] = makeNode( SIR_MATERIAL_IR_CONSTANT, SIR_MATERIAL_IR_FLOAT4 );
+	szNodes[1] = makeNode( SIR_MATERIAL_IR_OUTPUT, SIR_MATERIAL_IR_FLOAT4, 0 );
+	sirMaterialIRPass_t pass = { SIR_SHADER_PASS_COLOR, 1, SIR_GRAPHICS_STAGE_FRAGMENT, SIR_GRAPHICS_FEATURE_GRAPHICS };
+	sirMaterialIRGraph_t graph = {};
+	graph.nAssetId = 916;
+	graph.nSourceHash = 213;
+	graph.pNodes = szNodes;
+	graph.nNodeCount = 2;
+	graph.pPasses = &pass;
+	graph.nPassCount = 1;
+	sirMaterialShaderMapEntry_t szEntries[2] = {};
+	sirMaterialIRCompileOutput_t compiled = { szEntries, 2, 0, 0 };
+	const sirMaterialIRCompileOptions_t options = { SIR_GRAPHICS_FEATURE_GRAPHICS, true };
+	REQUIRE( sirMaterialIRCompile( graph, options, &compiled ) == SIR_SHADER_COOK_OK );
+	REQUIRE( compiled.nProducedCount == 2 );
+	sirMaterialIRCookedPassSettings_t settings = {};
+	settings.pipeline.nPackageManifestHash = 0x45;
+	settings.pipeline.nRenderStateHash = 0x1234;
+	settings.pipeline.nSampleCount = 1;
+	settings.nDependencyCount = 4;
+	settings.iShaderDependency = 2;
+	sirShaderMaterialPassRecord_t cooked = {};
+	for ( uint32_t iEntry = 0; iEntry < compiled.nProducedCount; ++iEntry ) {
+		REQUIRE( sirMaterialIRBuildCookedPass( graph, szEntries[iEntry], settings, &cooked ) == SIR_SHADER_COOK_OK );
+		REQUIRE( cooked.nPass == ( uint32_t )SIR_SHADER_PASS_COLOR );
+		REQUIRE( cooked.iShaderDependency == 2 );
+		REQUIRE( cooked.nRequiredFeatures == SIR_GRAPHICS_FEATURE_GRAPHICS );
+		REQUIRE( cooked.nPermutationKey == szEntries[iEntry].nPermutationMask );
+		REQUIRE( cooked.nRenderStateHash == 0x1234 );
+	}
+	cooked.nPass = 0xabcd;
+	settings.iShaderDependency = settings.nDependencyCount;
+	REQUIRE( sirMaterialIRBuildCookedPass( graph, szEntries[0], settings, &cooked ) == SIR_SHADER_COOK_INVALID_ARGUMENT );
+	REQUIRE( cooked.nPass == 0xabcd );
+	settings.iShaderDependency = 1;
+	settings.nDependencyCount = SIR_SHADER_MATERIAL_MAX_DEPENDENCIES + 1;
+	REQUIRE( sirMaterialIRBuildCookedPass( graph, szEntries[0], settings, &cooked ) == SIR_SHADER_COOK_INVALID_ARGUMENT );
+	settings.nDependencyCount = 0;
+	REQUIRE( sirMaterialIRBuildCookedPass( graph, szEntries[0], settings, &cooked ) == SIR_SHADER_COOK_INVALID_ARGUMENT );
+	settings.nDependencyCount = 4;
+	sirMaterialShaderMapEntry_t invalid = szEntries[0];
+	invalid.nRequiredFeatures |= SIR_GRAPHICS_FEATURE_FIXED_FUNCTION;
+	REQUIRE( sirMaterialIRBuildCookedPass( graph, invalid, settings, &cooked ) == SIR_SHADER_COOK_INVALID_ARGUMENT );
+	invalid = szEntries[0];
+	invalid.nRequiredFeatures |= ( SIR_GRAPHICS_FEATURE_PRESENT << 1 );
+	REQUIRE( sirMaterialIRBuildCookedPass( graph, invalid, settings, &cooked ) == SIR_SHADER_COOK_INVALID_ARGUMENT );
+	invalid = szEntries[0];
+	invalid.nCodeHash ^= 1;
+	REQUIRE( sirMaterialIRBuildCookedPass( graph, invalid, settings, &cooked ) == SIR_SHADER_COOK_INVALID_ARGUMENT );
+	settings.pipeline.nPackageManifestHash = 0;
+	REQUIRE( sirMaterialIRBuildCookedPass( graph, szEntries[0], settings, &cooked ) == SIR_SHADER_COOK_INVALID_ARGUMENT );
+	settings.pipeline.nPackageManifestHash = 0x45;
+	REQUIRE( sirMaterialIRBuildCookedPass( graph, szEntries[0], settings, nullptr ) == SIR_SHADER_COOK_INVALID_ARGUMENT );
+	REQUIRE( cooked.nPass == 0xabcd );
+}
+
 int main( void )
 {
 	testDeterministicMaps();
@@ -424,5 +483,6 @@ int main( void )
 	testReflectionBindingValidation();
 	testStageTopology();
 	testPortablePipelineRecipes();
+	testCookedMaterialPassProjection();
 	return 0;
 }
