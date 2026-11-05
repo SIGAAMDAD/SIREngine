@@ -76,3 +76,5 @@ llvm-cov-18 report "${objects[0]}" "${arguments[@]}" \
     -instr-profile="${report}/graphics.profdata" \
     "${root}/Source/Renderer" > "${report}/coverage-report.txt"
 cat "${report}/coverage-summary.json"
+python3 "${root}/Build/Scripts/ReportGraphicsABIGaps.py" \
+    "${report}/llvm-export.json" "${root}" "${report}/uncovered-sites.json"
