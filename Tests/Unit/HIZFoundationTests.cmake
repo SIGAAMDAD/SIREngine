@@ -24,3 +24,9 @@ add_executable(SIRHiZHistoryTests SIRHiZHistoryTests.cpp)
 target_link_libraries(SIRHiZHistoryTests PRIVATE SIR::Graphics)
 add_test(NAME renderer.visibility.history COMMAND SIRHiZHistoryTests)
 sir_configure_owned_target(SIRHiZHistoryTests)
+
+# HIZ-03 backend-neutral compute command recording and per-mip barrier tests.
+add_executable(SIRHiZCommandsTests SIRHiZCommandsTests.cpp)
+target_link_libraries(SIRHiZCommandsTests PRIVATE SIR::Graphics)
+add_test(NAME renderer.visibility.commands COMMAND SIRHiZCommandsTests)
+sir_configure_owned_target(SIRHiZCommandsTests)
