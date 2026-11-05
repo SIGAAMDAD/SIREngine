@@ -162,7 +162,9 @@ sirScriptResult_t SIRScriptOptimizerProcessTransport::send( const uint8_t *pWire
 	}
 	{
 		std::lock_guard<std::mutex> guard( m_Mutex );
-		if ( m_nRequestCount == SIR_SCRIPT_OPT_MAX_QUEUED_FRAMES ) {
+		// Bound work that has been sent but not yet consumed by the owner.
+		// Writer-side queue drainage alone does not free reply capacity.
+		if ( m_nRequestCount == SIR_SCRIPT_OPT_MAX_QUEUED_FRAMES || m_nOutstanding == SIR_SCRIPT_OPT_MAX_QUEUED_FRAMES ) {
 			return SIR_SCRIPT_BUSY;
 		}
 		memcpy( m_szRequests[m_nRequestTail], pWire, nBytes );
