@@ -41,3 +41,12 @@ target_include_directories(SIRMeshCacheBorrowLimitTests PRIVATE "${SIR_MESH_SOUR
 target_compile_definitions(SIRMeshCacheBorrowLimitTests PRIVATE SIR_MESH_TEST_MAX_BORROWS=2U)
 target_compile_options(SIRMeshCacheBorrowLimitTests PRIVATE -Wall -Wextra -Wpedantic -Werror)
 add_test(NAME mesh.cache.borrow-limit COMMAND SIRMeshCacheBorrowLimitTests)
+
+# Allocation-accounting fixture: intercept direct and C++ heap calls.
+add_executable(SIRMeshCacheAllocationTests "${CMAKE_CURRENT_LIST_DIR}/../../Unit/SIRMeshCacheAllocationTests.cpp")
+target_link_libraries(SIRMeshCacheAllocationTests PRIVATE SIRMeshCache)
+target_compile_options(SIRMeshCacheAllocationTests PRIVATE -Wall -Wextra -Wpedantic -Werror)
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    target_link_options(SIRMeshCacheAllocationTests PRIVATE "LINKER:--wrap=malloc" "LINKER:--wrap=calloc" "LINKER:--wrap=realloc")
+endif()
+add_test(NAME mesh.cache.allocation-free COMMAND SIRMeshCacheAllocationTests)

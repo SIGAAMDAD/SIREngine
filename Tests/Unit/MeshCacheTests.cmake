@@ -29,3 +29,11 @@ target_include_directories(SIRMeshCacheBorrowLimitTests PRIVATE "${PROJECT_SOURC
 target_compile_definitions(SIRMeshCacheBorrowLimitTests PRIVATE SIR_MESH_TEST_MAX_BORROWS=2U)
 add_test(NAME mesh.cache.borrow-limit COMMAND SIRMeshCacheBorrowLimitTests)
 sir_configure_owned_target(SIRMeshCacheBorrowLimitTests)
+
+add_executable(SIRMeshCacheAllocationTests SIRMeshCacheAllocationTests.cpp)
+target_link_libraries(SIRMeshCacheAllocationTests PRIVATE SIR::MeshCache)
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    target_link_options(SIRMeshCacheAllocationTests PRIVATE "LINKER:--wrap=malloc" "LINKER:--wrap=calloc" "LINKER:--wrap=realloc")
+endif()
+add_test(NAME mesh.cache.allocation-free COMMAND SIRMeshCacheAllocationTests)
+sir_configure_owned_target(SIRMeshCacheAllocationTests)
