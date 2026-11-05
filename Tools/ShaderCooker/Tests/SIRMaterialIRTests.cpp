@@ -1,0 +1,169 @@
+/*
+===========================================================================
+SIREngine MPLv2 Source Code
+Copyright (C) 2023-2027 Noah Van Til
+
+This Source Code Form is subject to the terms of the Mozilla Public
+License, v2. If a copy of the MPL was not distributed with this
+file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+This software is provided "as is", without warranty of any kind,
+express or implied, including but not limited to the warranties
+of merchantability, fitness for a particular purpose and noninfringement.
+===========================================================================
+*/
+
+#include <Tools/ShaderCooker/MaterialIR/SIRMaterialIR.h>
+
+#include <stdio.h>
+#include <stdlib.h>
+
+#define REQUIRE( condition ) do { if ( !( condition ) ) { fprintf( stderr, "%s:%d: %s\n", __FILE__, __LINE__, #condition ); abort(); } } while ( false )
+
+static sirMaterialIRNode_t makeNode( sirMaterialIROp_t eOp, sirMaterialIRType_t eType,
+                                     uint16_t iA = SIR_MATERIAL_IR_NO_INPUT, uint16_t iB = SIR_MATERIAL_IR_NO_INPUT ) noexcept
+{
+	sirMaterialIRNode_t node = {};
+	node.eOp = eOp;
+	node.eType = eType;
+	node.iA = iA;
+	node.iB = iB;
+	node.iC = SIR_MATERIAL_IR_NO_INPUT;
+	return node;
+}
+
+static void testDeterministicMaps( void ) noexcept
+{
+	sirMaterialIRNode_t szNodes[5] = {};
+	szNodes[0] = makeNode( SIR_MATERIAL_IR_CONSTANT, SIR_MATERIAL_IR_FLOAT4 );
+	szNodes[1] = makeNode( SIR_MATERIAL_IR_CONSTANT, SIR_MATERIAL_IR_FLOAT4 );
+	szNodes[2] = makeNode( SIR_MATERIAL_IR_STATIC_SWITCH, SIR_MATERIAL_IR_FLOAT4, 0, 1 );
+	szNodes[2].nSwitchBit = 1;
+	szNodes[3] = makeNode( SIR_MATERIAL_IR_OUTPUT, SIR_MATERIAL_IR_FLOAT4, 2 );
+	szNodes[4] = makeNode( SIR_MATERIAL_IR_OUTPUT, SIR_MATERIAL_IR_FLOAT4, 0 );
+	sirMaterialIRSwitch_t szSwitches[2] = {};
+	szSwitches[0].nBit = 1;
+	szSwitches[1].nBit = 2;
+	szSwitches[1].nRequires = 1;
+	sirMaterialIRPass_t szPasses[2] = {};
+	szPasses[0] = { SIR_SHADER_PASS_COLOR, 3, SIR_GRAPHICS_STAGE_VERTEX | SIR_GRAPHICS_STAGE_FRAGMENT,
+		              SIR_GRAPHICS_FEATURE_GRAPHICS };
+	szPasses[1] = { SIR_SHADER_PASS_DEPTH, 4, SIR_GRAPHICS_STAGE_VERTEX, SIR_GRAPHICS_FEATURE_GRAPHICS };
+	sirMaterialIRGraph_t graph = {};
+	graph.nAssetId = 17;
+	graph.nSourceHash = 95;
+	graph.pNodes = szNodes;
+	graph.nNodeCount = 5;
+	graph.pSwitches = szSwitches;
+	graph.nSwitchCount = 2;
+	graph.pPasses = szPasses;
+	graph.nPassCount = 2;
+	sirMaterialIRCompileOptions_t options = { SIR_GRAPHICS_FEATURE_GRAPHICS, true };
+	sirMaterialShaderMapEntry_t szEntries[16] = {};
+	sirMaterialIRCompileOutput_t output = { szEntries, 5, 0, 0 };
+	REQUIRE( sirMaterialIRCompile( graph, options, &output ) == SIR_SHADER_COOK_CAPACITY_EXCEEDED );
+	REQUIRE( output.nRequiredCount == 8 );
+	REQUIRE( output.nProducedCount == 0 && szEntries[0].nCodeHash == 0 );
+	output.nCapacity = 16;
+	REQUIRE( sirMaterialIRCompile( graph, options, &output ) == SIR_SHADER_COOK_OK );
+	REQUIRE( output.nProducedCount == 8 );
+	REQUIRE( szEntries[0].nPermutationMask == 0 );
+	REQUIRE( szEntries[1].nPermutationMask == 1 );
+	REQUIRE( szEntries[2].nPermutationMask == 3 );
+	REQUIRE( szEntries[3].bUberFallback && szEntries[3].nPermutationMask == UINT32_MAX );
+	REQUIRE( szEntries[4].ePass == SIR_SHADER_PASS_DEPTH && szEntries[7].bUberFallback );
+	REQUIRE( szEntries[0].nCodeHash != szEntries[1].nCodeHash );
+	REQUIRE( szEntries[4].nCodeHash == szEntries[5].nCodeHash &&
+	         szEntries[4].nCodeHash == szEntries[6].nCodeHash );
+	const uint64_t nFirstHash = szEntries[0].nCodeHash;
+	REQUIRE( sirMaterialIRCompile( graph, options, &output ) == SIR_SHADER_COOK_OK );
+	REQUIRE( szEntries[0].nCodeHash == nFirstHash );
+	// Node orders and pass hashes remain fixed when switch metadata order differs.
+	sirMaterialIRSwitch_t temp = szSwitches[0];
+	szSwitches[0] = szSwitches[1];
+	szSwitches[1] = temp;
+	REQUIRE( sirMaterialIRCompile( graph, options, &output ) == SIR_SHADER_COOK_OK );
+	REQUIRE( szEntries[0].nCodeHash == nFirstHash );
+}
+
+static void testInvalidGraphs( void ) noexcept
+{
+	sirMaterialIRNode_t szNodes[3] = {};
+	szNodes[0] = makeNode( SIR_MATERIAL_IR_CONSTANT, SIR_MATERIAL_IR_FLOAT3 );
+	szNodes[1] = makeNode( SIR_MATERIAL_IR_CONSTANT, SIR_MATERIAL_IR_FLOAT4 );
+	szNodes[2] = makeNode( SIR_MATERIAL_IR_ADD, SIR_MATERIAL_IR_FLOAT4, 0, 1 );
+	sirMaterialIRPass_t pass = { SIR_SHADER_PASS_COLOR, 2, SIR_GRAPHICS_STAGE_FRAGMENT, SIR_GRAPHICS_FEATURE_GRAPHICS };
+	sirMaterialIRGraph_t graph = {};
+	graph.nAssetId = 7;
+	graph.nSourceHash = 11;
+	graph.pNodes = szNodes;
+	graph.nNodeCount = 3;
+	graph.pPasses = &pass;
+	graph.nPassCount = 1;
+	sirMaterialShaderMapEntry_t szEntries[8] = {};
+	sirMaterialIRCompileOutput_t output = { szEntries, 8, 0, 0 };
+	const sirMaterialIRCompileOptions_t options = { SIR_GRAPHICS_FEATURE_GRAPHICS, false };
+	REQUIRE( sirMaterialIRCompile( graph, options, &output ) == SIR_SHADER_COOK_INVALID_ARGUMENT );
+	szNodes[2] = makeNode( SIR_MATERIAL_IR_OUTPUT, SIR_MATERIAL_IR_FLOAT4, 2 );
+	REQUIRE( sirMaterialIRCompile( graph, options, &output ) == SIR_SHADER_COOK_INVALID_ARGUMENT );
+	szNodes[2] = makeNode( SIR_MATERIAL_IR_OUTPUT, SIR_MATERIAL_IR_FLOAT4, 1 );
+	REQUIRE( sirMaterialIRCompile( graph, options, &output ) == SIR_SHADER_COOK_OK );
+	sirMaterialIRPass_t second = pass;
+	second.ePass = SIR_SHADER_PASS_COLOR;
+	sirMaterialIRPass_t szPasses[2] = { pass, second };
+	graph.pPasses = szPasses;
+	graph.nPassCount = 2;
+	REQUIRE( sirMaterialIRCompile( graph, options, &output ) == SIR_SHADER_COOK_INVALID_ARGUMENT );
+	graph.nPassCount = 1;
+	graph.pPasses = &pass;
+	sirMaterialIRCompileOptions_t unsupported = { 0, false };
+	REQUIRE( sirMaterialIRCompile( graph, unsupported, &output ) == SIR_SHADER_COOK_UNSUPPORTED );
+	graph.nNodeCount = SIR_MATERIAL_IR_MAX_NODES + 1;
+	REQUIRE( sirMaterialIRCompile( graph, options, &output ) == SIR_SHADER_COOK_INVALID_ARGUMENT );
+	graph.nNodeCount = 3;
+	graph.pNodes = nullptr;
+	REQUIRE( sirMaterialIRCompile( graph, options, &output ) == SIR_SHADER_COOK_INVALID_ARGUMENT );
+}
+
+static void testStaticDynamicSeparation( void ) noexcept
+{
+	sirMaterialIRNode_t szNodes[3] = {};
+	szNodes[0] = makeNode( SIR_MATERIAL_IR_CONSTANT, SIR_MATERIAL_IR_FLOAT4 );
+	szNodes[1] = makeNode( SIR_MATERIAL_IR_STATIC_SWITCH, SIR_MATERIAL_IR_FLOAT4, 0, 0 );
+	szNodes[1].nSwitchBit = 1;
+	szNodes[2] = makeNode( SIR_MATERIAL_IR_OUTPUT, SIR_MATERIAL_IR_FLOAT4, 1 );
+	sirMaterialIRSwitch_t choice = {};
+	choice.nBit = 1;
+	choice.bDynamic = true;
+	sirMaterialIRPass_t pass = { SIR_SHADER_PASS_COLOR, 2, SIR_GRAPHICS_STAGE_VERTEX, SIR_GRAPHICS_FEATURE_GRAPHICS };
+	sirMaterialIRGraph_t graph = {};
+	graph.nAssetId = 5;
+	graph.nSourceHash = 10;
+	graph.pNodes = szNodes;
+	graph.nNodeCount = 3;
+	graph.pSwitches = &choice;
+	graph.nSwitchCount = 1;
+	graph.pPasses = &pass;
+	graph.nPassCount = 1;
+	sirMaterialShaderMapEntry_t szEntries[2] = {};
+	sirMaterialIRCompileOutput_t output = { szEntries, 2, 0, 0 };
+	sirMaterialIRCompileOptions_t options = { SIR_GRAPHICS_FEATURE_GRAPHICS, false };
+	REQUIRE( sirMaterialIRCompile( graph, options, &output ) == SIR_SHADER_COOK_INVALID_ARGUMENT );
+	choice.bDynamic = false;
+	REQUIRE( sirMaterialIRCompile( graph, options, &output ) == SIR_SHADER_COOK_OK );
+	REQUIRE( output.nProducedCount == 2 );
+	choice.nRequires = 2;
+	REQUIRE( sirMaterialIRCompile( graph, options, &output ) == SIR_SHADER_COOK_INVALID_ARGUMENT );
+	choice.nRequires = 0;
+	choice.nExcludes = 1;
+	REQUIRE( sirMaterialIRCompile( graph, options, &output ) == SIR_SHADER_COOK_OK );
+	REQUIRE( output.nProducedCount == 1 );
+}
+
+int main( void )
+{
+	testDeterministicMaps();
+	testInvalidGraphs();
+	testStaticDynamicSeparation();
+	return 0;
+}
