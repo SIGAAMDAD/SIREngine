@@ -89,8 +89,8 @@ SIRResourceResult sirShaderResolveMaterialStage( const sirShaderLibraryContext_t
 SIRResourceResult sirShaderPinResolvedStage( const sirShaderLibraryContext_t& context, const sirShaderResolvedStage_t& resolved,
                                              uint32_t nProviderId, sirShaderStagePins_t *pOut ) noexcept
 {
-	if ( pOut == nullptr || context.pGraph == nullptr || context.pScope == nullptr || !context.pScope->isActive() ||
-	     nProviderId == 0 || !resolved.materialView.isValid() || resolved.materialView.getRevision() != resolved.nMaterialGraphRevision ) {
+	if ( pOut == nullptr || context.pGraph == nullptr || context.pScope == nullptr || !context.pScope->isActive() || nProviderId == 0 ||
+	     !resolved.materialView.isValid() || resolved.materialView.getRevision() != resolved.nMaterialGraphRevision ) {
 		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
 	}
 	if ( !resolved.bFixedFunction &&
