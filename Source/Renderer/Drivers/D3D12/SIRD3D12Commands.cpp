@@ -371,6 +371,109 @@ sirGraphicsResult_t SIRD3D12CommandList::barrier( const sirGraphicsBarrier_t *pB
 	if ( nCount == 0 || nCount > 64 || pBarriers == nullptr ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
+	// Prevalidate the entire batch before retaining references or encoding GPU work.
+	// A later failure must not leave earlier transitions recorded.
+	sirGraphicsHandle_t szPending[s_nReferenceCapacity] = {};
+	uint32_t nPendingCount = 0;
+	for ( uint32_t iPreflight = 0; iPreflight < nCount; ++iPreflight ) {
+		const sirGraphicsBarrier_t& source = pBarriers[iPreflight];
+		const sirD3D12ResourceSlot_t *pSlot = m_pResources->querySlot( source.hResource );
+		if ( pSlot == nullptr || pSlot->getNativeResource() == nullptr ) {
+			return SIR_GRAPHICS_INVALID_HANDLE;
+		}
+		if ( source.eType > SIR_GRAPHICS_BARRIER_ALIAS ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
+		if ( m_eQueue == SIR_GRAPHICS_QUEUE_COPY && source.eType != SIR_GRAPHICS_BARRIER_TRANSITION ) {
+			return SIR_GRAPHICS_UNSUPPORTED;
+		}
+		if ( source.eType == SIR_GRAPHICS_BARRIER_TRANSITION ) {
+			if ( source.eBefore == SIR_GRAPHICS_STATE_UNDEFINED || source.eAfter == SIR_GRAPHICS_STATE_UNDEFINED ||
+			     source.eBefore > SIR_GRAPHICS_STATE_PRESENT || source.eAfter > SIR_GRAPHICS_STATE_PRESENT ||
+			     !sirD3D12ValidResourceState( pSlot->eType, source.eBefore ) ||
+			     !sirD3D12ValidResourceState( pSlot->eType, source.eAfter ) ) {
+				return SIR_GRAPHICS_INVALID_ARGUMENT;
+			}
+			if ( m_eQueue == SIR_GRAPHICS_QUEUE_COPY &&
+			     ( ( source.eBefore != SIR_GRAPHICS_STATE_COMMON && source.eBefore != SIR_GRAPHICS_STATE_COPY_SOURCE &&
+			         source.eBefore != SIR_GRAPHICS_STATE_COPY_DESTINATION ) ||
+			       ( source.eAfter != SIR_GRAPHICS_STATE_COMMON && source.eAfter != SIR_GRAPHICS_STATE_COPY_SOURCE &&
+			         source.eAfter != SIR_GRAPHICS_STATE_COPY_DESTINATION ) ) ) {
+				return SIR_GRAPHICS_UNSUPPORTED;
+			}
+			const uint32_t nMips = pSlot->eType == SIR_GRAPHICS_HANDLE_TEXTURE ? pSlot->nMips : 1;
+			const uint32_t nLayers =
+			    pSlot->eType == SIR_GRAPHICS_HANDLE_TEXTURE && pSlot->eDimension != SIR_GRAPHICS_TEXTURE_3D ? pSlot->nLayers : 1;
+			if ( nMips == 0 || nLayers == 0 || source.nBaseMip >= nMips || source.nBaseLayer >= nLayers ||
+			     ( source.nMipCount != 0 && source.nMipCount > nMips - source.nBaseMip ) ||
+			     ( source.nLayerCount != 0 && source.nLayerCount > nLayers - source.nBaseLayer ) ) {
+				return SIR_GRAPHICS_INVALID_ARGUMENT;
+			}
+		} else if ( source.eType == SIR_GRAPHICS_BARRIER_UAV ) {
+			if ( ( pSlot->nUsage & SIR_GRAPHICS_USAGE_STORAGE ) == 0 ) {
+				return SIR_GRAPHICS_INVALID_ARGUMENT;
+			}
+		} else {
+			const sirD3D12ResourceSlot_t *pAliased = m_pResources->querySlot( source.hAliasedResource );
+			if ( pAliased == nullptr || pAliased->getNativeResource() == nullptr ) {
+				return SIR_GRAPHICS_INVALID_HANDLE;
+			}
+		}
+		const bool bEnhancedTexture = m_pEnhancedCommands != nullptr && pSlot->eMemory == SIR_GRAPHICS_MEMORY_GPU_LOCAL &&
+		                              ( source.eType == SIR_GRAPHICS_BARRIER_TRANSITION || source.eType == SIR_GRAPHICS_BARRIER_UAV );
+		const bool bPartialLegacyTexture =
+		    source.eType == SIR_GRAPHICS_BARRIER_TRANSITION &&
+		    ( source.nBaseMip != 0 || source.nBaseLayer != 0 || ( source.nMipCount != 0 && source.nMipCount != pSlot->nMips ) ||
+			  ( source.nLayerCount != 0 && source.nLayerCount != pSlot->nLayers ) );
+		if ( pSlot->eType == SIR_GRAPHICS_HANDLE_TEXTURE && ( bEnhancedTexture || bPartialLegacyTexture ) ) {
+			D3D12_FEATURE_DATA_FORMAT_INFO formatInfo = {};
+			formatInfo.Format = pSlot->getNativeResource()->GetDesc().Format;
+			if ( FAILED(
+			         m_pNative->getNativeDevice()->CheckFeatureSupport( D3D12_FEATURE_FORMAT_INFO, &formatInfo, sizeof( formatInfo ) ) ) ||
+			     formatInfo.PlaneCount == 0 ) {
+				return SIR_GRAPHICS_UNSUPPORTED;
+			}
+		}
+		const uint32_t nBarrierReferences = source.eType == SIR_GRAPHICS_BARRIER_ALIAS ? 2 : 1;
+		for ( uint32_t iHandle = 0; iHandle < nBarrierReferences; ++iHandle ) {
+			const sirGraphicsHandle_t hHandle = iHandle == 0 ? source.hResource : source.hAliasedResource;
+			bool bKnown = false;
+			for ( uint32_t iOld = 0; iOld < m_nReferenceCount && !bKnown; ++iOld ) {
+				const sirGraphicsHandle_t& ref = m_szReferences[iOld];
+				bKnown = ref.eType == hHandle.eType && ref.nSlot == hHandle.nSlot && ref.nGeneration == hHandle.nGeneration &&
+				         ref.nDeviceGeneration == hHandle.nDeviceGeneration;
+			}
+			for ( uint32_t iPending = 0; iPending < nPendingCount && !bKnown; ++iPending ) {
+				const sirGraphicsHandle_t& ref = szPending[iPending];
+				bKnown = ref.eType == hHandle.eType && ref.nSlot == hHandle.nSlot && ref.nGeneration == hHandle.nGeneration &&
+				         ref.nDeviceGeneration == hHandle.nDeviceGeneration;
+			}
+			if ( !bKnown ) {
+				if ( m_nReferenceCount + nPendingCount >= s_nReferenceCapacity ) {
+					return SIR_GRAPHICS_CAPACITY_EXCEEDED;
+				}
+				szPending[nPendingCount++] = hHandle;
+			}
+		}
+	}
+	const uint32_t nOriginalReferenceCount = m_nReferenceCount;
+	for ( uint32_t iPending = 0; iPending < nPendingCount; ++iPending ) {
+		const sirGraphicsResult_t ePinned = pin( szPending[iPending] );
+		if ( ePinned != SIR_GRAPHICS_SUCCESS ) {
+			// Retention failed before encoding. Roll back only this batch's pins.
+			while ( m_nReferenceCount > nOriginalReferenceCount ) {
+				const sirGraphicsHandle_t& ref = m_szReferences[--m_nReferenceCount];
+				if ( ref.eType == SIR_GRAPHICS_HANDLE_PIPELINE ) {
+					m_pPipelines->releaseCommandReference( ref );
+				} else if ( ref.eType == SIR_GRAPHICS_HANDLE_BINDING_SET ) {
+					m_pBindings->releaseCommandReference( ref );
+				} else {
+					m_pResources->releaseCommandReference( ref );
+				}
+			}
+			return ePinned;
+		}
+	}
 	for ( uint32_t iBarrier = 0; iBarrier < nCount; ++iBarrier ) {
 		const sirGraphicsBarrier_t& source = pBarriers[iBarrier];
 		const sirD3D12ResourceSlot_t *pSlot = m_pResources->querySlot( source.hResource );
