@@ -120,6 +120,19 @@ int main( void )
 	szNodes[2].keyGeometry.m_nAssetId = 0;
 	SIR_HLOD_CHECK( sirWorldHLODPlan( input, output ) == SIR_WORLD_HLOD_INVALID_HIERARCHY );
 	szNodes[2].keyGeometry.m_nAssetId = 3;
+	// Cooked leaves require a zero child offset, even if the span is empty.
+	szNodes[2].nFirstChild = 1;
+	nSelected = 77;
+	nDemands = 88;
+	szSelected[0] = 99;
+	SIR_HLOD_CHECK( sirWorldHLODPlan( input, output ) == SIR_WORLD_HLOD_INVALID_HIERARCHY );
+	SIR_HLOD_CHECK( nSelected == 77 && nDemands == 88 && szSelected[0] == 99 );
+	szNodes[2].nFirstChild = 5;
+	SIR_HLOD_CHECK( sirWorldHLODPlan( input, output ) == SIR_WORLD_HLOD_INVALID_HIERARCHY );
+	uint8_t szHistory[5] = {};
+	sirWorldHLODHistory_t history = { szHistory, 3, 5.0f };
+	SIR_HLOD_CHECK( sirWorldHLODPlanHysteretic( input, history, output ) == SIR_WORLD_HLOD_INVALID_HIERARCHY );
+	szNodes[2].nFirstChild = 0;
 	output.nScratchCapacity = 4;
 	SIR_HLOD_CHECK( sirWorldHLODPlan( input, output ) == SIR_WORLD_HLOD_INVALID_ARGUMENT );
 	output.nScratchCapacity = 5;
