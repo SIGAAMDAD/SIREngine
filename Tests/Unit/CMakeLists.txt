@@ -359,3 +359,10 @@ target_link_libraries(SIRFrameGraphTests PRIVATE SIR::Graphics)
 add_test(NAME renderer.framegraph.compiler COMMAND SIRFrameGraphTests)
 set_tests_properties(renderer.framegraph.compiler PROPERTIES LABELS "framegraph;cpu;conformance" TIMEOUT 90)
 sir_configure_owned_target(SIRFrameGraphTests)
+
+# Provider-admitted FrameGraph transient residency planning and negative cases.
+add_executable(SIRFrameGraphTransientTests SIRFrameGraphTransientTests.cpp)
+target_link_libraries(SIRFrameGraphTransientTests PRIVATE SIR::Graphics)
+add_test(NAME renderer.framegraph.transient COMMAND SIRFrameGraphTransientTests)
+set_tests_properties(renderer.framegraph.transient PROPERTIES LABELS "framegraph;cpu;conformance" TIMEOUT 90)
+sir_configure_owned_target(SIRFrameGraphTransientTests)

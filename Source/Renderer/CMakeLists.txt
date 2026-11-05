@@ -2,6 +2,7 @@
 # native driver is enabled, so backends cannot silently fork its contracts.
 add_library(SIRGraphics STATIC
     Graph/SIRFrameGraph.cpp
+    Graph/SIRFrameGraphTransient.cpp
     SIRGraphicsDriverABI.cpp
     SIRGraphicsModule.cpp
     SIRGraphicsPipelineABI.cpp
