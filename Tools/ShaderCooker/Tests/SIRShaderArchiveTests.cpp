@@ -19,7 +19,13 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <stdlib.h>
 #include <string.h>
 
-#define REQUIRE( condition ) do { if ( !( condition ) ) { fprintf( stderr, "%s:%d: %s\n", __FILE__, __LINE__, #condition ); abort(); } } while ( false )
+#define REQUIRE( condition )                                                                                                               \
+	do {                                                                                                                                   \
+		if ( !( condition ) ) {                                                                                                            \
+			fprintf( stderr, "%s:%d: %s\n", __FILE__, __LINE__, #condition );                                                              \
+			abort();                                                                                                                       \
+		}                                                                                                                                  \
+	} while ( false )
 
 static void testArchiveDedupAndRoundTrip( void ) noexcept
 {
@@ -38,8 +44,7 @@ static void testArchiveDedupAndRoundTrip( void ) noexcept
 	REQUIRE( result.nRequiredBytes == SIR_SHADER_ARCHIVE_HEADER_BYTES + 4 * 32 + 2 * 24 + 16 );
 	uint8_t szBefore[512] = {};
 	memcpy( szBefore, szArchive, sizeof( szArchive ) );
-	REQUIRE( sirShaderArchiveBuild( desc, szArchive, result.nRequiredBytes - 1, &result ) ==
-	         SIR_SHADER_COOK_CAPACITY_EXCEEDED );
+	REQUIRE( sirShaderArchiveBuild( desc, szArchive, result.nRequiredBytes - 1, &result ) == SIR_SHADER_COOK_CAPACITY_EXCEEDED );
 	REQUIRE( memcmp( szBefore, szArchive, sizeof( szArchive ) ) == 0 );
 	REQUIRE( sirShaderArchiveBuild( desc, szArchive, sizeof( szArchive ), &result ) == SIR_SHADER_COOK_OK );
 	REQUIRE( result.nManifestHash != 0 );
@@ -57,13 +62,11 @@ static void testArchiveDedupAndRoundTrip( void ) noexcept
 	REQUIRE( third.pBytes != first.pBytes );
 	REQUIRE( first.nEntryPointHash == 15 && second.nEntryPointHash == 16 );
 	REQUIRE( third.nByteCount == 8 && memcmp( third.pBytes, szSpirvOther, 8 ) == 0 );
-	REQUIRE( sirShaderArchiveResolve( szArchive, result.nRequiredBytes, 4, &first ) ==
-	         SIR_SHADER_COOK_INVALID_ARGUMENT );
+	REQUIRE( sirShaderArchiveResolve( szArchive, result.nRequiredBytes, 4, &first ) == SIR_SHADER_COOK_INVALID_ARGUMENT );
 	const uint64_t nFirstManifest = result.nManifestHash;
 	uint8_t szRepeat[512] = {};
 	REQUIRE( sirShaderArchiveBuild( desc, szRepeat, sizeof( szRepeat ), &result ) == SIR_SHADER_COOK_OK );
-	REQUIRE( result.nManifestHash == nFirstManifest &&
-	         memcmp( szRepeat, szArchive, ( size_t )result.nRequiredBytes ) == 0 );
+	REQUIRE( result.nManifestHash == nFirstManifest && memcmp( szRepeat, szArchive, ( size_t )result.nRequiredBytes ) == 0 );
 
 	// Both the envelope checksum and per-blob hash are verified.
 	szRepeat[result.nRequiredBytes - 1] ^= 1;

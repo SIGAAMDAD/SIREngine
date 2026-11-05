@@ -104,9 +104,8 @@ static bool sirArchiveHeaderValid( const uint8_t *pBytes, uint64_t nCount ) noex
 	const uint64_t nUniqueEnd = nRefEnd + ( uint64_t )nUnique * SIR_SHADER_ARCHIVE_UNIQUE_BYTES;
 	const uint32_t nPayloadOffset = sirArchiveRead32( pBytes + 28 );
 	const uint32_t nPayloadBytes = sirArchiveRead32( pBytes + 32 );
-	return sirArchiveRead32( pBytes + 20 ) == SIR_SHADER_ARCHIVE_HEADER_BYTES &&
-	       sirArchiveRead32( pBytes + 24 ) == nRefEnd && nPayloadOffset == nUniqueEnd &&
-	       ( uint64_t )nPayloadOffset + nPayloadBytes == nCount;
+	return sirArchiveRead32( pBytes + 20 ) == SIR_SHADER_ARCHIVE_HEADER_BYTES && sirArchiveRead32( pBytes + 24 ) == nRefEnd &&
+	       nPayloadOffset == nUniqueEnd && ( uint64_t )nPayloadOffset + nPayloadBytes == nCount;
 }
 
 sirShaderCookResult_t sirShaderArchiveBuild( const sirShaderArchiveBuildDesc_t& desc, void *pDestination, uint64_t nCapacity,
@@ -124,16 +123,16 @@ sirShaderCookResult_t sirShaderArchiveBuild( const sirShaderArchiveBuildDesc_t& 
 	uint32_t nUnique = 0;
 	for ( uint32_t iStage = 0; iStage < nCount; ++iStage ) {
 		const sirShaderArchiveStageInput_t& stage = desc.pEntries[iStage];
-		if ( !sirArchiveFormatValid( stage.eFormat ) || !sirArchiveStageValid( stage.nStageMask ) ||
-		     stage.nEntryPointHash == 0 || stage.pBytes == nullptr || stage.nByteCount == 0 ) {
+		if ( !sirArchiveFormatValid( stage.eFormat ) || !sirArchiveStageValid( stage.nStageMask ) || stage.nEntryPointHash == 0 ||
+		     stage.pBytes == nullptr || stage.nByteCount == 0 ) {
 			return SIR_SHADER_COOK_INVALID_ARGUMENT;
 		}
 		const uint64_t nHash = sirArchiveHashBytes( stage.pBytes, stage.nByteCount );
 		uint32_t iUnique = 0;
 		for ( ; iUnique < nUnique; ++iUnique ) {
 			const sirShaderArchiveStageInput_t& previous = desc.pEntries[szRepresentatives[iUnique]];
-			if ( stage.eFormat == previous.eFormat && stage.nByteCount == previous.nByteCount &&
-			     nHash == szByteHashes[iUnique] && memcmp( stage.pBytes, previous.pBytes, stage.nByteCount ) == 0 ) {
+			if ( stage.eFormat == previous.eFormat && stage.nByteCount == previous.nByteCount && nHash == szByteHashes[iUnique] &&
+			     memcmp( stage.pBytes, previous.pBytes, stage.nByteCount ) == 0 ) {
 				break;
 			}
 		}
@@ -202,8 +201,7 @@ sirShaderCookResult_t sirShaderArchiveBuild( const sirShaderArchiveBuildDesc_t& 
 sirShaderCookResult_t sirShaderArchiveValidate( const void *pArchive, uint64_t nBytes ) noexcept
 {
 	const uint8_t *pData = ( const uint8_t * )pArchive;
-	if ( !sirArchiveHeaderValid( pData, nBytes ) ||
-	     sirArchiveRead64( pData + 44 ) != sirArchiveManifestHash( pData, nBytes ) ) {
+	if ( !sirArchiveHeaderValid( pData, nBytes ) || sirArchiveRead64( pData + 44 ) != sirArchiveManifestHash( pData, nBytes ) ) {
 		return SIR_SHADER_COOK_INVALID_ARGUMENT;
 	}
 	const uint32_t nEntries = sirArchiveRead32( pData + 12 );
@@ -214,9 +212,8 @@ sirShaderCookResult_t sirShaderArchiveValidate( const void *pArchive, uint64_t n
 		const uint8_t *pRecord = pData + nUniqueStart + iUnique * SIR_SHADER_ARCHIVE_UNIQUE_BYTES;
 		const uint32_t nOffset = sirArchiveRead32( pRecord + 4 );
 		const uint32_t nLength = sirArchiveRead32( pRecord + 8 );
-		if ( !sirArchiveFormatValid( sirArchiveRead32( pRecord ) ) || nLength == 0 ||
-		     sirArchiveRead32( pRecord + 12 ) != 0 || nOffset != nCursor ||
-		     nLength > nBytes - nCursor ) {
+		if ( !sirArchiveFormatValid( sirArchiveRead32( pRecord ) ) || nLength == 0 || sirArchiveRead32( pRecord + 12 ) != 0 ||
+		     nOffset != nCursor || nLength > nBytes - nCursor ) {
 			return SIR_SHADER_COOK_INVALID_ARGUMENT;
 		}
 		if ( sirArchiveRead64( pRecord + 16 ) != sirArchiveHashBytes( pData + nOffset, nLength ) ) {
