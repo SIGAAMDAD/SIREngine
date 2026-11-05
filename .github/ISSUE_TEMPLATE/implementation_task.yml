@@ -1,7 +1,7 @@
 name: Approved implementation work package
 description: Implement one bounded package from a specific owner-approved milestone revision.
 title: "[Work package] "
-labels: ["marathon:tracked"]
+labels: ["marathon:tracked", "kind:implementation"]
 body:
   - type: input
     id: parent
