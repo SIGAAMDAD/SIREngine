@@ -1,0 +1,20 @@
+add_library(SIRCore STATIC SIRApplication.cpp Systems/SIREngineSystem.cpp)
+add_library(SIR::Core ALIAS SIRCore)
+target_include_directories(SIRCore PUBLIC
+    "${PROJECT_SOURCE_DIR}/Source"
+    "${PROJECT_SOURCE_DIR}/Build/CMake")
+target_compile_features(SIRCore PUBLIC cxx_std_17)
+if(MSVC)
+    target_compile_options(SIRCore PRIVATE /W4)
+else()
+    target_compile_options(SIRCore PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+
+add_subdirectory(Platform)
+target_sources(SIRCore PRIVATE Memory/SIRMemoryManager.cpp)
+add_subdirectory(Memory)
+add_subdirectory(Events)
+add_subdirectory(Config)
+add_subdirectory(Strings)
+add_subdirectory(Jobs)
+sir_configure_owned_target(SIRCore)

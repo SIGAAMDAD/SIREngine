@@ -1,0 +1,33 @@
+name: "Bug report"
+description: "Report a reproducible engine or toolchain defect"
+title: "bug: "
+body:
+  - type: input
+    id: commit
+    attributes:
+      label: "Exact source commit"
+      placeholder: "40-character SHA"
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: "Reproduction commands and steps"
+      description: "Include minimal project/asset inputs when possible"
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: "Expected and observed results"
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: "OS, compiler, CMake/SCons and graphics/audio backend"
+  - type: textarea
+    id: logs
+    attributes:
+      label: "First actionable error and logs"
+      render: shell
