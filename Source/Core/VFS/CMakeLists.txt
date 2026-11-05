@@ -1,1 +1,1 @@
-target_sources(SIRCore PRIVATE SIRVFSPath.cpp SIRVFSMountTable.cpp)
+target_sources(SIRCore PRIVATE SIRVFSPath.cpp SIRVFSMountTable.cpp SIRVFSOverlayResolver.cpp)

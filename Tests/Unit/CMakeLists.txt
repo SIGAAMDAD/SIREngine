@@ -364,3 +364,9 @@ add_executable(SIRVFSMountTableTests SIRVFSMountTableTests.cpp)
 target_link_libraries(SIRVFSMountTableTests PRIVATE SIR::Core)
 add_test(NAME core.vfs.mount-registry COMMAND SIRVFSMountTableTests)
 sir_configure_owned_target(SIRVFSMountTableTests)
+
+# VFS metadata-only overlay selection and generation-pinned winner lease.
+add_executable(SIRVFSOverlayResolverTests SIRVFSOverlayResolverTests.cpp)
+target_link_libraries(SIRVFSOverlayResolverTests PRIVATE SIR::Core)
+add_test(NAME core.vfs.overlay-resolver COMMAND SIRVFSOverlayResolverTests)
+sir_configure_owned_target(SIRVFSOverlayResolverTests)
