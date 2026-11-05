@@ -127,6 +127,12 @@ sirShaderCookResult_t sirShaderArchiveBuild( const sirShaderArchiveBuildDesc_t& 
 		     stage.pBytes == nullptr || stage.nByteCount == 0 ) {
 			return SIR_SHADER_COOK_INVALID_ARGUMENT;
 		}
+		// Reject impossible payload lengths before accessing caller-provided bytes.
+		const uint64_t nMinimumOverhead =
+		    SIR_SHADER_ARCHIVE_HEADER_BYTES + ( uint64_t )nCount * SIR_SHADER_ARCHIVE_ENTRY_BYTES + SIR_SHADER_ARCHIVE_UNIQUE_BYTES;
+		if ( stage.nByteCount > SIR_SHADER_ARCHIVE_MAX_BYTES - nMinimumOverhead ) {
+			return SIR_SHADER_COOK_CAPACITY_EXCEEDED;
+		}
 		const uint64_t nHash = sirArchiveHashBytes( stage.pBytes, stage.nByteCount );
 		uint32_t iUnique = 0;
 		for ( ; iUnique < nUnique; ++iUnique ) {
@@ -224,6 +230,7 @@ sirShaderCookResult_t sirShaderArchiveValidate( const void *pArchive, uint64_t n
 	if ( nCursor != nBytes ) {
 		return SIR_SHADER_COOK_INVALID_ARGUMENT;
 	}
+	bool szReferenced[SIR_SHADER_ARCHIVE_MAX_ENTRIES] = {};
 	for ( uint32_t iEntry = 0; iEntry < nEntries; ++iEntry ) {
 		const uint8_t *pEntry = pData + SIR_SHADER_ARCHIVE_HEADER_BYTES + iEntry * SIR_SHADER_ARCHIVE_ENTRY_BYTES;
 		const uint32_t iUnique = sirArchiveRead32( pEntry + 16 );
@@ -234,6 +241,12 @@ sirShaderCookResult_t sirShaderArchiveValidate( const void *pArchive, uint64_t n
 		const uint8_t *pUnique = pData + nUniqueStart + iUnique * SIR_SHADER_ARCHIVE_UNIQUE_BYTES;
 		if ( sirArchiveRead32( pEntry ) != sirArchiveRead32( pUnique ) ||
 		     sirArchiveRead64( pEntry + 24 ) != sirArchiveRead64( pUnique + 16 ) ) {
+			return SIR_SHADER_COOK_INVALID_ARGUMENT;
+		}
+		szReferenced[iUnique] = true;
+	}
+	for ( uint32_t iUnique = 0; iUnique < nUnique; ++iUnique ) {
+		if ( !szReferenced[iUnique] ) {
 			return SIR_SHADER_COOK_INVALID_ARGUMENT;
 		}
 	}

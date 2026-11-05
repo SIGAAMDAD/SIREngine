@@ -82,6 +82,35 @@ static void testArchiveDedupAndRoundTrip( void ) noexcept
 	REQUIRE( sirShaderArchiveValidate( szRepeat, result.nRequiredBytes ) == SIR_SHADER_COOK_INVALID_ARGUMENT );
 }
 
+static void testArchiveOrphanedUnique( void ) noexcept
+{
+	const uint8_t szFirst[4] = { 1, 2, 3, 4 };
+	const uint8_t szSecond[4] = { 5, 6, 7, 8 };
+	const sirShaderArchiveStageInput_t szInputs[2] = {
+	    { SIR_GRAPHICS_SHADER_SPIRV, SIR_GRAPHICS_STAGE_VERTEX, 10, szFirst, sizeof( szFirst ) },
+	    { SIR_GRAPHICS_SHADER_SPIRV, SIR_GRAPHICS_STAGE_FRAGMENT, 11, szSecond, sizeof( szSecond ) } };
+	const sirShaderArchiveBuildDesc_t desc = { 101, SIR_SHADER_ARCHIVE_TARGET_ABI_V1, szInputs, 2 };
+	uint8_t szArchive[256] = {};
+	sirShaderArchiveBuildResult_t result = {};
+	REQUIRE( sirShaderArchiveBuild( desc, szArchive, sizeof( szArchive ), &result ) == SIR_SHADER_COOK_OK );
+	REQUIRE( sirShaderArchiveValidate( szArchive, result.nRequiredBytes ) == SIR_SHADER_COOK_OK );
+
+	// Forge a self-consistent manifest where the second payload is orphaned.
+	const uint32_t nSecondEntry = SIR_SHADER_ARCHIVE_HEADER_BYTES + SIR_SHADER_ARCHIVE_ENTRY_BYTES;
+	memset( szArchive + nSecondEntry + 16, 0, 4 );
+	memcpy( szArchive + nSecondEntry + 24, szArchive + SIR_SHADER_ARCHIVE_HEADER_BYTES + 24, 8 );
+	uint64_t nHash = 14695981039346656037ULL;
+	for ( uint64_t iByte = 0; iByte < result.nRequiredBytes; ++iByte ) {
+		const uint8_t nByte = iByte >= 44 && iByte < 52 ? 0 : szArchive[iByte];
+		nHash ^= nByte;
+		nHash *= 1099511628211ULL;
+	}
+	for ( uint32_t iByte = 0; iByte < 8; ++iByte ) {
+		szArchive[44 + iByte] = ( uint8_t )( nHash >> ( iByte * 8 ) );
+	}
+	REQUIRE( sirShaderArchiveValidate( szArchive, result.nRequiredBytes ) == SIR_SHADER_COOK_INVALID_ARGUMENT );
+}
+
 static void testArchiveBadInputs( void ) noexcept
 {
 	const uint8_t szBytes[4] = { 3, 2, 35, 7 };
@@ -107,6 +136,8 @@ static void testArchiveBadInputs( void ) noexcept
 	stage.pBytes = szBytes;
 	stage.nByteCount = 0;
 	REQUIRE( sirShaderArchiveBuild( desc, szArchive, sizeof( szArchive ), &result ) == SIR_SHADER_COOK_INVALID_ARGUMENT );
+	stage.nByteCount = UINT32_MAX;
+	REQUIRE( sirShaderArchiveBuild( desc, szArchive, sizeof( szArchive ), &result ) == SIR_SHADER_COOK_CAPACITY_EXCEEDED );
 	stage.nByteCount = 4;
 	REQUIRE( sirShaderArchiveValidate( nullptr, 0 ) == SIR_SHADER_COOK_INVALID_ARGUMENT );
 	REQUIRE( sirShaderArchiveResolve( szArchive, 0, 0, nullptr ) == SIR_SHADER_COOK_INVALID_ARGUMENT );
@@ -117,6 +148,7 @@ static void testArchiveBadInputs( void ) noexcept
 int main( void )
 {
 	testArchiveDedupAndRoundTrip();
+	testArchiveOrphanedUnique();
 	testArchiveBadInputs();
 	return 0;
 }
