@@ -18,6 +18,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Renderer/VirtualTexturing/SIRVirtualTexturePackage.h>
 #include <Renderer/VirtualTexturing/SIRVirtualTexturePackReader.h>
 #include <Renderer/VirtualTexturing/SIRVirtualTexturePackFileSource.h>
+#include <Renderer/VirtualTexturing/SIRVirtualTexturePackWriter.h>
 
 #include <stdio.h>
 #include <vector>
@@ -422,10 +423,105 @@ static bool testCompactTail( void ) noexcept
 	return true;
 }
 
+template <typename T>
+static std::vector<T> copyDirectory( const std::vector<uint8_t>& bytes, uint64_t nOffset, uint32_t nCount )
+{
+	std::vector<T> records( nCount );
+	memcpy( records.data(), bytes.data() + nOffset, ( size_t )nCount * sizeof( T ) );
+	return records;
+}
+
+static bool testNativePackWriter( void )
+{
+	const std::vector<uint8_t> bytes = makeValidPack();
+	sirVirtualTexturePackHeader_t header = {};
+	memcpy( &header, bytes.data(), sizeof( header ) );
+	const auto allocations =
+	    copyDirectory<sirVirtualTexturePackAllocationRecord_t>( bytes, header.nAllocationOffset, header.nAllocationCount );
+	const auto keys = copyDirectory<sirVirtualTexturePackAllocationKey_t>( bytes, header.nAllocationKeyOffset, header.nAllocationCount );
+	const auto channels =
+	    copyDirectory<sirVirtualTexturePackChannelAllocation_t>( bytes, header.nChannelAllocationOffset, header.nChannelAllocationCount );
+	const auto pages = copyDirectory<sirVirtualTexturePackPageRecord_t>( bytes, header.nPageOffset, header.nPageCount );
+	const auto payloads =
+	    copyDirectory<sirVirtualTexturePackPayloadRecord_t>( bytes, header.nPayloadDirectoryOffset, header.nPayloadCount );
+	const auto clusters =
+	    copyDirectory<sirVirtualTexturePackClusterRecord_t>( bytes, header.nClusterDirectoryOffset, header.nClusterCount );
+	const auto tails = copyDirectory<sirVirtualTexturePackTailRecord_t>( bytes, header.nTailMetadataOffset, header.nTailCount );
+	const auto quality = copyDirectory<sirVirtualTexturePackQualityView_t>( bytes, header.nQualityViewOffset, header.nQualityViewCount );
+	const auto families =
+	    copyDirectory<sirVirtualTexturePackFamilyRecord_t>( bytes, header.nFormatFamilyOffset, header.nFormatFamilyCount );
+	sirVirtualTexturePackSource_t source = {};
+	source.pAllocations = allocations.data();
+	source.pAllocationKeys = keys.data();
+	source.pChannelAllocations = channels.data();
+	source.pPages = pages.data();
+	source.pPayloads = payloads.data();
+	source.pClusters = clusters.data();
+	source.pTails = tails.data();
+	source.pQualityViews = quality.data();
+	source.pFormatFamilies = families.data();
+	source.pPayloadData = bytes.data() + header.nPayloadDataOffset;
+	source.nPayloadDataBytes = header.nPayloadDataBytes;
+	source.nAllocationCount = header.nAllocationCount;
+	source.nChannelAllocationCount = header.nChannelAllocationCount;
+	source.nPageCount = header.nPageCount;
+	source.nPayloadCount = header.nPayloadCount;
+	source.nClusterCount = header.nClusterCount;
+	source.nTailCount = header.nTailCount;
+	source.nQualityViewCount = header.nQualityViewCount;
+	source.nFormatFamilyCount = header.nFormatFamilyCount;
+	source.nPackageGeneration = header.nPackageGeneration;
+
+	uint64_t nMetadata = 0;
+	uint64_t nTotal = 0;
+	SIR_TEST( sirVTMeasurePack( source, &nMetadata, &nTotal ) );
+	SIR_TEST( nTotal == bytes.size() && nMetadata == header.nPayloadDataOffset );
+	std::vector<uint8_t> written( bytes.size(), 0xCC );
+	uint64_t nWritten = UINT64_MAX;
+	SIR_TEST( sirVTWritePack( source, written.data(), written.size(), &nWritten ) );
+	SIR_TEST( nWritten == bytes.size() && written == bytes );
+
+	// The donor permits the already-cooked payload at its final output offset.
+	std::vector<uint8_t> alias( bytes.size(), 0xCC );
+	memcpy( alias.data() + nMetadata, source.pPayloadData, source.nPayloadDataBytes );
+	sirVirtualTexturePackSource_t aliased = source;
+	aliased.pPayloadData = alias.data() + nMetadata;
+	SIR_TEST( sirVTWritePack( aliased, alias.data(), alias.size(), &nWritten ) && alias == bytes );
+
+	SIR_TEST( !sirVTWritePack( source, written.data(), written.size() - 1U, &nWritten ) && nWritten == 0 );
+	SIR_TEST( !sirVTWritePack( source, written.data(), written.size(), nullptr ) );
+	SIR_TEST( !sirVTMeasurePack( source, nullptr, &nTotal ) );
+	sirVirtualTexturePackSource_t invalid = source;
+	invalid.pPayloadData = nullptr;
+	SIR_TEST( !sirVTWritePack( invalid, written.data(), written.size(), &nWritten ) && nWritten == 0 );
+	invalid = source;
+	invalid.nPayloadDataBytes = UINT64_MAX;
+	SIR_TEST( !sirVTMeasurePack( invalid, &nMetadata, &nTotal ) && nMetadata == 0 && nTotal == 0 );
+	invalid = source;
+	invalid.pAllocations = ( const sirVirtualTexturePackAllocationRecord_t * )written.data();
+	SIR_TEST( !sirVTWritePack( invalid, written.data(), written.size(), &nWritten ) );
+	invalid = source;
+	invalid.nChannelAllocationCount++;
+	SIR_TEST( !sirVTMeasurePack( invalid, &nMetadata, &nTotal ) );
+	invalid = source;
+	sirVirtualTexturePackPageRecord_t badPage = pages[0];
+	badPage.nAllocationId = UINT32_MAX;
+	invalid.pPages = &badPage;
+	SIR_TEST( !sirVTWritePack( invalid, written.data(), written.size(), &nWritten ) && nWritten == 0 );
+	invalid = source;
+	invalid.nPackageGeneration++;
+	SIR_TEST( sirVTWritePack( invalid, written.data(), written.size(), &nWritten ) );
+	SIR_TEST( written != bytes );
+	sirVirtualTexturePackView_t validated = {};
+	const sirVirtualTexturePackInput_t encoded = { written.data(), written.size(), written.size(), false };
+	SIR_TEST( sirVTPackOpenValidated( encoded, &validated ) && validated.header.nPackageGeneration == invalid.nPackageGeneration );
+	return true;
+}
+
 int main( void )
 {
 	if ( !testFeedbackGrid() || !testFeedbackMulti() || !testPackContract() || !testValidatedPack() || !testPackFileSource() ||
-	     !testCompactTail() ) {
+	     !testCompactTail() || !testNativePackWriter() ) {
 		return 1;
 	}
 	printf( "Terrain3D VT V1 native port contracts PASS\n" );
