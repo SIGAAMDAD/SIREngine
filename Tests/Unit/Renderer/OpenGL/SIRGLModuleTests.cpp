@@ -128,6 +128,17 @@ int main( void )
 			sirGLTestCheck( device.pQueryCapabilities( device.pDevice, &caps ) == SIR_GRAPHICS_SUCCESS, "real GL46 capabilities" );
 			sirGLTestCheck( caps.nShaderProfile == 460 && caps.nEnabledQueues == 1 && caps.nEnabledFeatures == 0,
 			                "usable context yet no false draw feature" );
+			sirGraphicsABIFormat_t format = {};
+			format.nSize = sizeof( format );
+			format.nFormat = SIR_GRAPHICS_FORMAT_RGBA8_UNORM;
+			sirGLTestCheck( device.pQueryFormat( device.pDevice, &format ) == SIR_GRAPHICS_SUCCESS &&
+			                    format.nOptimalFeatures == SIR_GRAPHICS_ABI_FORMAT_SAMPLED && format.nSampleCountMask == 1,
+			                "native RGBA8 format admitted without unimplemented capabilities" );
+			format = {};
+			format.nSize = sizeof( format );
+			format.nFormat = SIR_GRAPHICS_FORMAT_BGRA8_UNORM;
+			sirGLTestCheck( device.pQueryFormat( device.pDevice, &format ) == SIR_GRAPHICS_UNSUPPORTED,
+			                "unsupported native texture format rejected" );
 			sirGraphicsMemoryBudget_t budget = {};
 			sirGLTestCheck( device.pQueryMemoryBudget( device.pDevice, &budget ) == SIR_GRAPHICS_SUCCESS &&
 			                    budget.nBudgetBytes == request.nResidentBudgetBytes && budget.nCommittedBytes == 0,

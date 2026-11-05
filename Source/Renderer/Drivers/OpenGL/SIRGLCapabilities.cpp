@@ -105,15 +105,3 @@ sirGraphicsResult_t sirGLBuildCapabilities( const sirGLProbe_t *pProbe, uint32_t
 	return SIR_GRAPHICS_SUCCESS;
 }
 
-sirGraphicsResult_t sirGLQuerySupportedFormat( uint32_t nFormat, sirGraphicsABIFormat_t *pFormat ) noexcept
-{
-	if ( pFormat == nullptr || pFormat->nSize < sizeof( *pFormat ) ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
-	}
-	if ( nFormat <= SIR_GRAPHICS_FORMAT_UNKNOWN || nFormat > SIR_GRAPHICS_FORMAT_BC7_UNORM ) {
-		return SIR_GRAPHICS_UNSUPPORTED;
-	}
-	// Format object support is intentionally reported only after GL storage creation exists.
-	// Returning UNSUPPORTED here prevents the shared API from admitting a nonfunctional format.
-	return SIR_GRAPHICS_UNSUPPORTED;
-}

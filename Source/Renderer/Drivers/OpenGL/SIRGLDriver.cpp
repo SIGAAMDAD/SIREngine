@@ -16,6 +16,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Renderer/Drivers/OpenGL/SIRGLCapabilities.h>
 #include <Renderer/Drivers/OpenGL/SIRGLBuffers.h>
 #include <Renderer/Drivers/OpenGL/SIRGLContext.h>
+#include <Renderer/Drivers/OpenGL/SIRGLFormats.h>
 #include <Renderer/Drivers/OpenGL/SIRGLHandlePool.h>
 #include <Renderer/Drivers/OpenGL/SIRGLSamplers.h>
 #include <Renderer/Drivers/OpenGL/SIRGLTextures.h>
@@ -44,6 +45,7 @@ typedef struct sirGLDevice_s
 	sirGLBufferDispatch_t buffers;
 	sirGLSamplerDispatch_t samplers;
 	sirGLTextureDispatch_t textures;
+	sirGLFormatDispatch_t formats;
 	uint64_t nCommittedResourceBytes;
 	uint64_t nPeakResourceBytes;
 	uint32_t nGeneration;
@@ -121,13 +123,17 @@ static uint32_t sirGLQueryPipelineModelCaps( void *pDevice, uint32_t nModel, sir
 
 static uint32_t sirGLQueryFormat( void *pDevice, sirGraphicsABIFormat_t *pFormat ) noexcept
 {
-	if ( pDevice == nullptr ) {
+	if ( pDevice == nullptr || pFormat == nullptr ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	if ( pFormat == nullptr ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	sirGLDevice_t *pState = ( sirGLDevice_t * )pDevice;
+	if ( pState->pContext == nullptr ) {
+		return SIR_GRAPHICS_DEVICE_LOST;
 	}
-	return sirGLQuerySupportedFormat( pFormat->nFormat, pFormat );
+	if ( !sirGLContextOwnsThread( pState->pContext ) ) {
+		return SIR_GRAPHICS_BUSY;
+	}
+	return sirGLQueryNativeFormat( &pState->formats, pFormat );
 }
 
 static uint32_t sirGLQueryMemoryBudget( void *pDevice, sirGraphicsMemoryBudget_t *pBudget ) noexcept
@@ -481,6 +487,9 @@ static uint32_t sirGLCreateDevice( void *pDriver, const sirGraphicsABIDeviceRequ
 	}
 	if ( nStatus == SIR_GRAPHICS_SUCCESS ) {
 		nStatus = sirGLLoadTextureDispatch( sirGLResolveNativeProcedure, pContext, &pNew->textures );
+	}
+	if ( nStatus == SIR_GRAPHICS_SUCCESS ) {
+		nStatus = sirGLLoadFormatDispatch( sirGLResolveNativeProcedure, pContext, &pNew->formats );
 	}
 	if ( nStatus != SIR_GRAPHICS_SUCCESS ) {
 		( void )sirGLHandlePoolShutdown( &pNew->handles );
