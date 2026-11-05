@@ -63,6 +63,16 @@ typedef struct sirWorldHLODInput_s
 	float fMaxProjectedError;
 } sirWorldHLODInput_t;
 
+// Hysteresis state is owned by the world caller. Each byte is derived from a
+// previously successful cut: bActive && bUseChildren in the returned scratch.
+// Reset history on a new manifest, even if the world generation is unchanged.
+typedef struct sirWorldHLODHistory_s
+{
+	const uint8_t *pPreviouslySplit;
+	uint32_t nWorldGeneration;
+	float fCoarsenProjectedError;
+} sirWorldHLODHistory_t;
+
 // Only a request descriptor: a streaming coordinator performs admission, deduplication
 // and loading. The source revision must still be checked at actual publication.
 typedef struct sirWorldHLODDemand_s
@@ -99,5 +109,9 @@ typedef enum sirWorldHLODResult_e : uint8_t
 // unchanged on failure; scratch may change. All input/output spans must not overlap.
 // Caller must provide immutable residency for the duration of the call.
 sirWorldHLODResult_t sirWorldHLODPlan( const sirWorldHLODInput_t& input, sirWorldHLODOutput_t& output ) noexcept;
+// Historical state only affects desired refinement. Resident-parent fallback
+// and atomic demand/output guarantees are identical to sirWorldHLODPlan.
+sirWorldHLODResult_t sirWorldHLODPlanHysteretic( const sirWorldHLODInput_t& input, const sirWorldHLODHistory_t& history,
+                                                 sirWorldHLODOutput_t& output ) noexcept;
 
 #endif // __SIRENGINE_SIRWORLDHLOD_H__
