@@ -178,11 +178,13 @@ def project_snapshot(api: GitHub, project_id: str):
 def ensure_schema(api: GitHub, project_id: str, snapshot: dict, apply: bool):
     fields = {f["name"]: f for f in snapshot["fields"]}
     views = {v["name"]: v for v in snapshot["views"]}
+    # Validate the entire schema before the first mutation.
+    for name, (kind, _) in FIELD_SPEC.items():
+        if name in fields and fields[name]["dataType"] != kind:
+            raise ProjectError("Existing field has wrong type: " + name)
     actions = []
     for name, (kind, options) in FIELD_SPEC.items():
         if name in fields:
-            if fields[name]["dataType"] != kind:
-                raise ProjectError("Existing field has wrong type: " + name)
             continue
         actions.append("field " + name)
         if apply:
