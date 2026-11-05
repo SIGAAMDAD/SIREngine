@@ -131,6 +131,29 @@ int main( void )
 	if ( sirVulkanValidateRecordedCommands( commands, 1 ) != SIR_VULKAN_INVALID_ARGUMENT ) {
 		return 19;
 	}
+	// A failed translation must never leak a partial stage/access pair.
+	buffer.nUsage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+	barrier.eType = SIR_GRAPHICS_BARRIER_TRANSITION;
+	barrier.eBefore = SIR_GRAPHICS_STATE_COPY_DESTINATION;
+	barrier.eAfter = SIR_GRAPHICS_STATE_SHADER_READ;
+	native.nSourceStages = VK_PIPELINE_STAGE_2_COPY_BIT;
+	native.nSourceAccess = VK_ACCESS_2_TRANSFER_WRITE_BIT;
+	native.nDestinationStages = VK_PIPELINE_STAGE_2_COPY_BIT;
+	native.nDestinationAccess = VK_ACCESS_2_TRANSFER_READ_BIT;
+	native.bUav = true;
+	if ( sirVulkanPlanBufferBarrier( barrier, &buffer, &native ) != SIR_GRAPHICS_INVALID_ARGUMENT || native.nSourceStages != 0 ||
+	     native.nSourceAccess != 0 || native.nDestinationStages != 0 || native.nDestinationAccess != 0 || native.bUav ) {
+		return 20;
+	}
+	native.nSourceStages = VK_PIPELINE_STAGE_2_COPY_BIT;
+	if ( sirVulkanPlanBufferBarrier( barrier, nullptr, &native ) != SIR_GRAPHICS_INVALID_ARGUMENT || native.nSourceStages != 0 ) {
+		return 21;
+	}
+	barrier.eAfter = SIR_GRAPHICS_STATE_COPY_SOURCE;
+	if ( sirVulkanPlanBufferBarrier( barrier, &buffer, &native ) != SIR_GRAPHICS_SUCCESS ||
+	     native.nSourceAccess != VK_ACCESS_2_TRANSFER_WRITE_BIT || native.nDestinationAccess != VK_ACCESS_2_TRANSFER_READ_BIT ) {
+		return 22;
+	}
 	printf( "Vulkan buffer barrier contracts passed\n" );
 	return 0;
 }
