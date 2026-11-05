@@ -227,7 +227,7 @@ int main( void )
 	     pDevice->retireResource( hStorageTexture, immediate ) != SIR_GRAPHICS_SUCCESS ) {
 		return 36;
 	}
-		sirGraphicsSamplerDesc_t sampler = {};
+	sirGraphicsSamplerDesc_t sampler = {};
 	sampler.eFilter = SIR_GRAPHICS_FILTER_LINEAR;
 	sampler.fMaximumAnisotropy = 1.0f;
 	sampler.fMaximumLod = 16.0f;
