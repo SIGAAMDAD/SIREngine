@@ -16,6 +16,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Scripting/Core/SIRScriptArtifactCache.h>
 #include <Scripting/Core/SIRScriptSHA256.h>
 
+#include <atomic>
 #include <chrono>
 #include <filesystem>
 #include <string>
@@ -101,7 +102,9 @@ static bool testCache( void )
 
 	std::filesystem::path file;
 	for ( const auto& entry : std::filesystem::directory_iterator( root ) ) {
-		file = entry.path();
+		if ( entry.path().extension() == ".sirbc" ) {
+			file = entry.path();
+		}
 	}
 	SIR_TEST_CHECK( !file.empty() );
 	FILE *pCorrupt = fopen( file.string().c_str(), "r+b" );
@@ -140,7 +143,7 @@ static bool testCache( void )
 	worker.join();
 	SIR_TEST_CHECK( eOtherThread == SIR_SCRIPT_BUSY );
 	SIR_TEST_CHECK( cache.erase( key ) == SIR_SCRIPT_OK );
-	SIR_TEST_CHECK( std::filesystem::remove( root ) );
+	SIR_TEST_CHECK( std::filesystem::remove_all( root ) >= 1 );
 	return true;
 }
 
@@ -163,13 +166,72 @@ static bool testInvalidRecords( void )
 	SIR_TEST_CHECK( cache.store( artifact, key, szBytes, 16, 32, &record ) == SIR_SCRIPT_OK );
 	SIR_TEST_CHECK( cache.fetch( record, szBytes + 1, 16 ) == SIR_SCRIPT_INVALID_ARGUMENT );
 	SIR_TEST_CHECK( cache.erase( key ) == SIR_SCRIPT_OK );
-	SIR_TEST_CHECK( std::filesystem::remove( root ) );
+	SIR_TEST_CHECK( std::filesystem::remove_all( root ) >= 1 );
+	return true;
+}
+
+// Competing owners in separate threads use distinct OS file handles. A shared
+// cache key can publish one payload only, even when both start simultaneously.
+static bool testCompetingWriters( void )
+{
+	const std::filesystem::path root =
+	    std::filesystem::temp_directory_path() /
+	    ( "sir-script-cache-race-" + std::to_string( std::chrono::steady_clock::now().time_since_epoch().count() ) );
+	SIR_TEST_CHECK( std::filesystem::create_directory( root ) );
+	const std::string szRoot = root.string();
+	const sirScriptCodeArtifact_t artifact = { 7, 91, 3, 77, 0x1234, 87, 33 };
+	const uint8_t szFirst[64] = { 1 };
+	const uint8_t szSecond[64] = { 2 };
+	const char szRecipe[] = "racing-two-writers-same-key";
+	sirScriptCacheKey_t key = {};
+	SIR_TEST_CHECK( SIRScriptArtifactCache::makeKey( szRecipe, sizeof( szRecipe ) - 1, &key ) == SIR_SCRIPT_OK );
+
+	std::atomic<uint32_t> nReady{ 0 };
+	std::atomic<bool> bStart{ false };
+	sirScriptResult_t szResults[2] = { SIR_SCRIPT_BACKEND_FAILURE, SIR_SCRIPT_BACKEND_FAILURE };
+	sirScriptCachedArtifact_t szRecords[2] = {};
+	std::thread szWorkers[2];
+	for ( uint32_t iWorker = 0; iWorker < 2; ++iWorker ) {
+		szWorkers[iWorker] = std::thread( [&, iWorker] {
+			SIRScriptArtifactCache writer;
+			const sirScriptResult_t eConfigured = writer.configure( szRoot.c_str(), 1024 );
+			nReady.fetch_add( 1, std::memory_order_release );
+			while ( !bStart.load( std::memory_order_acquire ) ) {
+				std::this_thread::yield();
+			}
+			if ( eConfigured != SIR_SCRIPT_OK ) {
+				szResults[iWorker] = eConfigured;
+				return;
+			}
+			const uint8_t *pPayload = iWorker == 0 ? szFirst : szSecond;
+			szResults[iWorker] = writer.store( artifact, key, pPayload, sizeof( szFirst ), 1, &szRecords[iWorker] );
+		} );
+	}
+	while ( nReady.load( std::memory_order_acquire ) != 2 ) {
+		std::this_thread::yield();
+	}
+	bStart.store( true, std::memory_order_release );
+	for ( std::thread& worker : szWorkers ) {
+		worker.join();
+	}
+
+	const uint32_t nWinners = ( szResults[0] == SIR_SCRIPT_OK ? 1U : 0U ) + ( szResults[1] == SIR_SCRIPT_OK ? 1U : 0U );
+	SIR_TEST_CHECK( nWinners == 1 );
+	const uint32_t iWinner = szResults[0] == SIR_SCRIPT_OK ? 0U : 1U;
+	SIR_TEST_CHECK( szResults[1 - iWinner] == SIR_SCRIPT_TYPE_MISMATCH );
+	SIRScriptArtifactCache verifier;
+	SIR_TEST_CHECK( verifier.configure( szRoot.c_str(), 1024 ) == SIR_SCRIPT_OK );
+	uint8_t szOutput[64] = {};
+	SIR_TEST_CHECK( verifier.fetch( szRecords[iWinner], szOutput, sizeof( szOutput ) ) == SIR_SCRIPT_OK );
+	SIR_TEST_CHECK( memcmp( szOutput, iWinner == 0 ? szFirst : szSecond, sizeof( szOutput ) ) == 0 );
+	SIR_TEST_CHECK( verifier.erase( key ) == SIR_SCRIPT_OK );
+	SIR_TEST_CHECK( std::filesystem::remove_all( root ) >= 1 );
 	return true;
 }
 
 int main( void )
 {
-	if ( !testHashVectors() || !testCache() || !testInvalidRecords() ) {
+	if ( !testHashVectors() || !testCache() || !testInvalidRecords() || !testCompetingWriters() ) {
 		return 1;
 	}
 	puts( "scripting artifact cache: PASS" );
