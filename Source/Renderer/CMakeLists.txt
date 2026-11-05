@@ -15,6 +15,8 @@ target_compile_features(SIRGraphics PUBLIC cxx_std_17)
 target_link_libraries(SIRGraphics PUBLIC SIR::Core)
 sir_configure_owned_target(SIRGraphics)
 
+add_subdirectory(VirtualTexturing)
+
 # Each native driver implements the same SIRRenderingDevice contract.
 # Their opt-in flags and targets are owned by the driver branches.
 if(SIR_WITH_D3D12)

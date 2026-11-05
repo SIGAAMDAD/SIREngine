@@ -350,5 +350,12 @@ if(SIR_WITH_GOOGLETEST)
         PROPERTIES LABELS "graphics-abi;gtest;conformance" TIMEOUT 90)
 endif()
 
+# Backend-neutral virtual texture residency lifecycle and fence safety.
+add_executable(SIRVirtualTextureResidencyTests SIRVirtualTextureResidencyTests.cpp)
+target_link_libraries(SIRVirtualTextureResidencyTests PRIVATE SIR::Graphics)
+add_test(NAME renderer.virtual-texturing.residency COMMAND SIRVirtualTextureResidencyTests)
+set_tests_properties(renderer.virtual-texturing.residency PROPERTIES LABELS "virtual-texturing;cpu;conformance" TIMEOUT 90)
+sir_configure_owned_target(SIRVirtualTextureResidencyTests)
+
 add_subdirectory(Config)
 include(${CMAKE_CURRENT_SOURCE_DIR}/StringPoolTests.cmake)
