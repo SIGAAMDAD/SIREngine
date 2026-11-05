@@ -7,3 +7,8 @@ add_executable(SIRWorldHLODGRDGTests SIRWorldHLODGRDGTests.cpp)
 target_link_libraries(SIRWorldHLODGRDGTests PRIVATE SIR::WorldHLOD)
 add_test(NAME world.hlod.grdg-residency COMMAND SIRWorldHLODGRDGTests)
 sir_configure_owned_target(SIRWorldHLODGRDGTests)
+
+add_executable(SIRWorldHLODManifestTests SIRWorldHLODManifestTests.cpp)
+target_link_libraries(SIRWorldHLODManifestTests PRIVATE SIR::WorldHLOD)
+add_test(NAME world.hlod.manifest COMMAND SIRWorldHLODManifestTests)
+sir_configure_owned_target(SIRWorldHLODManifestTests)
