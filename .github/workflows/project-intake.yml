@@ -1,0 +1,25 @@
+name: SIREngine project intake
+# Runs on default branch (main). GitHub Projects Auto-add enrolls labeled items.
+on:
+  issues:
+    types: [opened, reopened]
+  pull_request_target:
+    types: [opened, reopened, ready_for_review]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  track:
+    if: github.repository == 'SIGAAMDAD/SIREngine'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mark issue or PR for the SIREngine project
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ITEM_NUMBER: ${{ github.event.issue.number || github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          gh api --method POST "repos/${GITHUB_REPOSITORY}/issues/${ITEM_NUMBER}/labels" -f 'labels[]=marathon:tracked' > /dev/null
