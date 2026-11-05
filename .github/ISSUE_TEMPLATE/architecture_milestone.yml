@@ -1,0 +1,59 @@
+name: Architecture milestone or roadmap
+description: Author or revise a milestone for owner review; creation does not approve implementation.
+title: "[Milestone] "
+labels: ["marathon:tracked"]
+body:
+  - type: markdown
+    attributes:
+      value: "Proposed scope remains non-executable until the owner approves the exact revision and package identifiers."
+  - type: input
+    id: plan_revision
+    attributes:
+      label: Plan revision
+      description: Stable identifier changed for every substantive scope revision
+      placeholder: "renderer-v1-r1"
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Architecture and scope
+      description: Link source files, interfaces and canonical design authority
+    validations:
+      required: true
+  - type: textarea
+    id: work_packages
+    attributes:
+      label: Work packages
+      description: Each bounded work package must have a stable key and acceptance criteria
+      placeholder: "SIR-01 — explicit deliverables..."
+    validations:
+      required: true
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies and ordering
+      description: GitHub issue numbers or explicitly named unimplemented prerequisites
+    validations:
+      required: true
+  - type: textarea
+    id: ownership
+    attributes:
+      label: Source ownership and compatibility contracts
+      description: Exclusive writable source paths and frozen ABI boundaries
+    validations:
+      required: true
+  - type: textarea
+    id: validation
+    attributes:
+      label: Acceptance and negative tests
+      description: Exact build, compiler, coverage and target hardware requirements
+    validations:
+      required: true
+  - type: textarea
+    id: owner_decision
+    attributes:
+      label: Owner decision / approval reference
+      description: Empty for proposal; add exact owner-authored approval evidence only after review
+    validations:
+      required: false
