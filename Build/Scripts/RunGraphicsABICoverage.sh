@@ -14,6 +14,7 @@ command -v llvm-cov-18 >/dev/null
 
 cmake -S "${root}" -B "${build}" -G Ninja \
     -DCMAKE_CXX_COMPILER=clang++-18 \
+    -DCMAKE_C_COMPILER=clang-18 \
     -DCMAKE_BUILD_TYPE=Debug \
     -DCMAKE_CXX_FLAGS="-fprofile-instr-generate -fcoverage-mapping -fno-omit-frame-pointer" \
     -DCMAKE_EXE_LINKER_FLAGS="-fprofile-instr-generate" \
