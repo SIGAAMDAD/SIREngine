@@ -263,8 +263,7 @@ sirShaderCookResult_t sirMaterialPlanTextureSample( const sirMaterialGradient_t&
 	const double fMajorSquared = 0.5 * ( fTrace + fDiscriminant );
 	const double fDeterminant = fUx * fVy - fUy * fVx;
 	const double fMinorSquared = fMajorSquared > 0.0 ? ( fDeterminant * fDeterminant ) / fMajorSquared : 0.0;
-	if ( !std::isfinite( fMajorSquared ) || !std::isfinite( fMinorSquared ) ||
-	     fMajorSquared < 0.0 || fMinorSquared < 0.0 ) {
+	if ( !std::isfinite( fMajorSquared ) || !std::isfinite( fMinorSquared ) || fMajorSquared < 0.0 || fMinorSquared < 0.0 ) {
 		return SIR_SHADER_COOK_UNSUPPORTED;
 	}
 	result.eMode = SIR_MATERIAL_SAMPLE_GRADIENT;
