@@ -101,6 +101,8 @@ void SIREditorSceneWorkspace::rollbackOpen( void ) noexcept
 	m_Scene = {};
 	m_Resources = {};
 	m_Properties = {};
+	m_pResourceReferences = nullptr;
+	m_nResourceReferenceCount = 0;
 	m_pszSource = nullptr;
 	m_nSourceBytes = 0;
 	m_bOpen = false;
@@ -148,6 +150,32 @@ sirEditorWorkspaceResult_t SIREditorSceneWorkspace::finishOpen( size_t nSourceBy
 		rollbackOpen();
 		return SIR_EDITOR_WORKSPACE_INVALID_RESOURCES;
 	}
+
+	// Resolve source references before exposing any authored state. The scanner
+	// measures first, so the editor arena owns precisely the required records.
+	sirEditorResourceReferenceScan_t referenceScan = {};
+	referenceScan.pszSource = m_pszSource;
+	referenceScan.nSourceBytes = nSourceBytes;
+	referenceScan.pIndex = &m_Resources;
+	uint32_t nRequiredReferences = 0;
+	if ( sirEditorScanResourceReferences( referenceScan, &nRequiredReferences ) != SIR_EDITOR_RESOURCE_OK ) {
+		rollbackOpen();
+		return SIR_EDITOR_WORKSPACE_INVALID_RESOURCES;
+	}
+	m_pResourceReferences = sirEditorHostAllocate<sirEditorResourceReference_t>( m_Arena, nRequiredReferences );
+	if ( nRequiredReferences != 0 && m_pResourceReferences == nullptr ) {
+		rollbackOpen();
+		return SIR_EDITOR_WORKSPACE_OUT_OF_MEMORY;
+	}
+	referenceScan.pOutput = m_pResourceReferences;
+	referenceScan.nCapacity = nRequiredReferences;
+	uint32_t nParsedReferences = 0;
+	if ( sirEditorScanResourceReferences( referenceScan, &nParsedReferences ) != SIR_EDITOR_RESOURCE_OK ||
+	     nParsedReferences != nRequiredReferences ) {
+		rollbackOpen();
+		return SIR_EDITOR_WORKSPACE_INVALID_RESOURCES;
+	}
+	m_nResourceReferenceCount = nParsedReferences;
 
 	sirEditorTextPropertyIndex_t measuredProperties = {};
 	const sirEditorTextPropertyResult_t eMeasure =
@@ -342,6 +370,14 @@ const sirEditorTextSceneIndex_t &SIREditorSceneWorkspace::getSceneIndex( void ) 
 const sirEditorTextResourceIndex_t &SIREditorSceneWorkspace::getResourceIndex( void ) const noexcept
 {
 	return m_Resources;
+}
+const sirEditorResourceReference_t *SIREditorSceneWorkspace::getResourceReferences( void ) const noexcept
+{
+	return m_bOpen ? m_pResourceReferences : nullptr;
+}
+uint32_t SIREditorSceneWorkspace::getResourceReferenceCount( void ) const noexcept
+{
+	return m_bOpen ? m_nResourceReferenceCount : 0;
 }
 const sirEditorTextPropertyIndex_t &SIREditorSceneWorkspace::getPropertyIndex( void ) const noexcept
 {

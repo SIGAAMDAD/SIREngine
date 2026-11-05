@@ -46,6 +46,11 @@ static void sirTestSceneWorkspace( void )
 	assert( workspace.getSourceBytes() == sizeof( szValid ) - 1 );
 	assert( workspace.getSceneIndex().nNodeCount == 2 );
 	assert( workspace.getResourceIndex().nCount == 1 );
+	assert( workspace.getResourceReferenceCount() == 1 );
+	assert( workspace.getResourceReferences() != nullptr );
+	assert( workspace.getResourceReferences()[0].nOwnerKey == 0 );
+	assert( workspace.getResourceReferences()[0].iTargetResource == 0 );
+	assert( workspace.getResourceReferences()[0].nTargetKey == workspace.getResourceIndex().pResources[0].nStableKey );
 	assert( workspace.getHierarchy().getVisibleCount() == 2 );
 	assert( workspace.getDocument().getRevision() == 2 );
 	assert( workspace.getSceneIndex().storage.pNodes[1].node.nParentId == workspace.getSceneIndex().storage.pNodes[0].node.nId );
@@ -89,7 +94,37 @@ static void sirTestSceneWorkspace( void )
 	assert( !workspace.isOpen() );
 	assert( workspace.getSource() == nullptr );
 	assert( workspace.getResourceIndex().nCount == 0 );
+	assert( workspace.getResourceReferenceCount() == 0 );
+	assert( workspace.getResourceReferences() == nullptr );
 	assert( workspace.getHierarchy().getVisibleCount() == 0 );
+
+	// Embedded-resource references carry their owning resource identity.
+	const char szDependencies[] = "[gd_scene format=3]\n"
+	                              "[ext_resource type=\"Script\" path=\"res://script.gd\" id=\"external\"]\n"
+	                              "[sub_resource type=\"Resource\" id=\"embedded\"]\n"
+	                              "script = ExtResource(\"external\")\n"
+	                              "[node name=\"Root\" type=\"Node\"]\n"
+	                              "material = SubResource(\"embedded\")\n";
+	assert( workspace.openTextSource( szDependencies, sizeof( szDependencies ) - 1 ) == SIR_EDITOR_WORKSPACE_OK );
+	assert( workspace.getResourceIndex().nCount == 2 );
+	assert( workspace.getResourceReferenceCount() == 2 );
+	const sirEditorResourceReference_t *pRefs = workspace.getResourceReferences();
+	assert( pRefs != nullptr );
+	assert( pRefs[0].nOwnerKey == workspace.getResourceIndex().pResources[1].nStableKey );
+	assert( pRefs[0].nTargetKey == workspace.getResourceIndex().pResources[0].nStableKey );
+	assert( pRefs[1].nOwnerKey == 0 );
+	assert( pRefs[1].nTargetKey == workspace.getResourceIndex().pResources[1].nStableKey );
+	assert( pRefs[0].nCallOffset < pRefs[1].nCallOffset );
+	workspace.close();
+	assert( workspace.getResourceReferenceCount() == 0 );
+	assert( workspace.getResourceReferences() == nullptr );
+
+	// A resource-free scene has no reference-array allocation.
+	const char szWithoutResources[] = "[gd_scene format=3]\n[node name=\"Root\" type=\"Node\"]\n";
+	assert( workspace.openTextSource( szWithoutResources, sizeof( szWithoutResources ) - 1 ) == SIR_EDITOR_WORKSPACE_OK );
+	assert( workspace.getResourceReferenceCount() == 0 );
+	assert( workspace.getResourceReferences() == nullptr );
+	workspace.close();
 
 	assert( workspace.openTextFile( SIR_EDITOR_TEST_UI_SCENE ) == SIR_EDITOR_WORKSPACE_OK );
 	assert( workspace.getSceneIndex().nNodeCount == 5 );
@@ -110,6 +145,8 @@ static void sirTestSceneWorkspace( void )
 	assert( workspace.openTextFile( "SIREditor/nonexistent_scene_9802.tscn" ) == SIR_EDITOR_WORKSPACE_FILE_IO );
 	assert( !workspace.isOpen() );
 	assert( workspace.getSourceBytes() == 0 );
+	assert( workspace.getResourceReferenceCount() == 0 );
+	assert( workspace.getResourceReferences() == nullptr );
 	assert( workspace.getDocument().getRevision() == 0 );
 	assert( workspace.openTextFile( SIR_EDITOR_TEST_UI_SCENE ) == SIR_EDITOR_WORKSPACE_OK );
 	workspace.close();
