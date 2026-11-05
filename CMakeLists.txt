@@ -17,6 +17,8 @@ option(SIR_WITH_OPENAL "Resolve a system OpenAL implementation" OFF)
 option(SIR_WITH_OPENAL_SOFT "Build pinned OpenAL Soft" OFF)
 option(SIR_WITH_MESHOPTIMIZER "Build pinned meshoptimizer" OFF)
 option(SIR_WITH_MONO "Resolve Mono embedding SDK for C# scripting" OFF)
+option(SIR_WITH_VULKAN "Build native Vulkan 1.4 driver" OFF)
+option(SIR_WITH_D3D12 "Build native Direct3D 12 driver (Windows only)" OFF)
 
 include(Build/CMake/SIRBuildOptions.cmake)
 include(Build/CMake/SIRDependencies.cmake)
