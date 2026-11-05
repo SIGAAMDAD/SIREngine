@@ -1,7 +1,7 @@
 # Console / CVar / Command System — implementation packet
 
 **Branch:** `feature/console-cvars-commands` created from `develop@51666fadadf8112b3b2d5bf919ba11dde55d931b` (2026-11-04).
-**State:** P0 and P1 closed; P2 cooked registration implemented, native Linux/Windows tested and closed (#277). P3 typed CVar transactions implemented, native Windows/Linux tested and closed (#278). P4 native command/console backend authored and awaiting exact-source CI (#279); P5-P7 remain.
+**State:** P0 and P1 closed; P2 cooked registration implemented, native Linux/Windows tested and closed (#277). P3 typed CVar transactions implemented, native Windows/Linux tested and closed (#278). P4 native command/console backend implemented, native Linux/Windows tested and closed (#279). P5-P7 remain.
 **Design:** [Architecture](../../Architecture/20-console-cvars-commands.md).
 **Contracts:** [Interfaces](INTERFACES.md).
 **Milestones:** [Roadmap](ROADMAP.md).

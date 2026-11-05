@@ -1,6 +1,6 @@
 # 20 — Console, CVars, Commands and Cooked Registration
 
-**Status:** P0/P1 completed; P2 cooked registration implementation native-verified on Windows/Linux; CVar typed storage and transactions are implemented through P3; console dispatch and archive/persistence remain future P4–P7.
+**Status:** P0/P1 completed; P2 cooked registration implementation native-verified on Windows/Linux; CVar typed storage and transactions are implemented through P3; native headless console dispatch is implemented through P4; archive/persistence and provider integration remain future P5–P7.
 **Baseline:** `SIGAAMDAD/SIREngine develop@51666fadadf8112b3b2d5bf919ba11dde55d931b` (2026-11-04).
 **Branch:** `feature/console-cvars-commands` from that exact commit.
 **Execution packet:** [ConsoleCVars](../Plans/ConsoleCVars/README.md).

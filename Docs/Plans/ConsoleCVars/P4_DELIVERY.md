@@ -1,6 +1,6 @@
 # P4 — Native command dispatch and headless console service
 
-**Branch:** `feature/console-cvars-commands` · [P4 issue #279](https://github.com/SIGAAMDAD/SIREngine/issues/279) · **Status:** source authored, native Windows/Linux CI acceptance pending.
+**Branch:** `feature/console-cvars-commands` · [P4 issue #279](https://github.com/SIGAAMDAD/SIREngine/issues/279) · **Status:** native Linux/Windows acceptance passed; P4 issue #279 closed.
 
 ## Runtime implementation
 
@@ -18,7 +18,9 @@ Cooked and dynamically registered P2 commands use the existing stable binding ID
 
 - **Local PASS:** GCC 14 strict C++17 source/test syntax checks against matching interface stubs (`-Wall -Wextra -Wpedantic -Werror`); exact pinned clang-format 23.1.5 `--dry-run --Werror` on new files.
 - **Native CTest target:** `core.console.service` links real P0/P1/P2/P3/registration cooker and validates quoted parsing, malformed input rejection, CVar built-ins, permissions, public/hidden completion, original-text history, callback output, nested-pump denial, next-pump recursive submit, module lease symmetry and retirement, stale command handles, full/oversized queue, multi-threaded producers and wrong-thread pump.
-- **P4 acceptance pending:** actual native Linux/Windows engine build/link, pinned formatter/source checks, CTest on exact source SHA and integration tests; local interface-stub syntax is not native engine acceptance.
+- **Native acceptance PASS:** exact-source commit `8bc25857357bc2b052b2eee9d9cf8799bff56f22` passed Linux **101/101 CTests** and Windows **96/96 CTests**, including `core.console.service`, in [SIREngine CI run 41949529591](https://github.com/SIGAAMDAD/SIREngine/actions/runs/41949529591). Source hygiene and pinned clang-format 23.1.5 passed; the allocator and scheduler sanitizer workflows and GRDG coverage workflow also completed successfully. Console-specific exhaustive source branch coverage remains P7 work.
 - **Other stages:** P5 owns real Config/VFS exec/archive adapter, P6 owns application lifecycle/integration and P7 owns complete coverage/fuzz/benchmarks.
 
 All submitters must quiesce before service shutdown. CVar/config callers must authenticate origin capabilities **before** constructing `sirCVarOrigin_t`; the native service consumes the trusted origin descriptor supplied by its caller.
+
+Final test expansion in `8bc25857357bc2b052b2eee9d9cf8799bff56f22` adds oversized/mutated caller-input rejection and ownership, embedded NUL, invalid escapes, maximum-argument boundary, malformed names, overflowed typed numeric parsing, escaped quoted string values and denied module code leases. P4 [issue #279](https://github.com/SIGAAMDAD/SIREngine/issues/279) is closed after exact-source native acceptance.
