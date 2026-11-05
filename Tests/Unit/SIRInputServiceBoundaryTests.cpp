@@ -222,6 +222,44 @@ static bool sirTestServiceReplayAndHistory( void ) noexcept
 	return !input.startReplay() && !input.captureHistoryTick( history, nullptr, 0 );
 }
 
+static bool sirTestServiceRecoveryAndCapture( void ) noexcept
+{
+	SIRInputService input;
+	SIRInputServiceBoundaryBackend backend;
+	SIRInputHistory history;
+	sirInputReplayFrame_t frames[2] = {};
+	sirInputReplayKey_t missing = { 100, 0 };
+	if ( !history.initialize( frames, 2 ) || input.recover() || !input.attach( backend ) || !input.begin( 1 ) || input.recover() ||
+	     !input.publish() || input.captureHistoryTick( history, &missing, 1 ) ||
+	     input.captureHistoryTick( history, nullptr, SIR_INPUT_ACTION_CAPACITY + 1 ) || input.captureHistoryTick( history, &missing, 1 ) ) {
+		return false;
+	}
+	SIRInputReplayTape tape;
+	if ( input.recordReplayTick( tape, nullptr, 0 ) || !input.begin( 2 ) || input.captureHistoryTick( history, nullptr, 0 ) ||
+	     !input.publish() || !input.captureHistoryTick( history, nullptr, 0 ) ) {
+		return false;
+	}
+	if ( !input.begin( 3 ) ) {
+		return false;
+	}
+	sirInputDeviceId_t hPointer = {};
+	if ( !input.connect( { 991, 991, SIR_INPUT_TEST, SIR_INPUT_POINTER }, &hPointer ) ) {
+		return false;
+	}
+	for ( uint32_t i = 1; i < SIR_INPUT_EVENT_CAPACITY; ++i ) {
+		if ( !input.emitPointer( SIR_INPUT_TEST, hPointer, SIR_INPUT_MOTION, 0, 1, -1 ) ) {
+			return false;
+		}
+	}
+	if ( input.loseBackendState( SIR_INPUT_TEST ) || input.publish() || !input.recover() || backend.m_nResyncs != 1 || !input.publish() ||
+	     !input.frame() || input.frame()->nResyncCount != 1 || input.frame()->nCount != 1 ||
+	     input.frame()->events[0].eSignal != SIR_INPUT_RESYNC ) {
+		return false;
+	}
+	input.shutdown();
+	return backend.m_nStops == 1;
+}
+
 int main( void )
 {
 	if ( !sirTestServiceBackendOwnership() ) {
@@ -234,6 +272,10 @@ int main( void )
 	}
 	if ( !sirTestServiceReplayAndHistory() ) {
 		fputs( "SIRInputServiceBoundaryTests replay and history FAILED\n", stderr );
+		return 1;
+	}
+	if ( !sirTestServiceRecoveryAndCapture() ) {
+		fputs( "SIRInputServiceBoundaryTests recovery and capture FAILED\n", stderr );
 		return 1;
 	}
 	puts( "SIRInputServiceBoundaryTests PASS" );
