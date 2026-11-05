@@ -643,7 +643,27 @@ sirGraphicsResult_t SIRD3D12Resources::createTexture( const sirGraphicsTextureDe
 	                                !sirD3D12SupportsSampleCount( m_pDevice, resource.Format, desc.nSampleCount ) ) ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
-	D3D12MA::Allocation *pAllocation = nullptr;
+	D3D12_FEATURE_DATA_FORMAT_SUPPORT formatSupport = {};
+	formatSupport.Format = resource.Format;
+	if ( FAILED( m_pDevice->CheckFeatureSupport( D3D12_FEATURE_FORMAT_SUPPORT, &formatSupport, sizeof( formatSupport ) ) ) ) {
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
+	uint32_t nRequiredSupport = 0;
+	if ( ( desc.nUsage & SIR_GRAPHICS_USAGE_COLOR_ATTACHMENT ) != 0 ) {
+		nRequiredSupport |= D3D12_FORMAT_SUPPORT1_RENDER_TARGET;
+	}
+	if ( ( desc.nUsage & SIR_GRAPHICS_USAGE_DEPTH_STENCIL ) != 0 ) {
+		nRequiredSupport |= D3D12_FORMAT_SUPPORT1_DEPTH_STENCIL;
+	}
+	if ( ( desc.nUsage & SIR_GRAPHICS_USAGE_STORAGE ) != 0 ) {
+		nRequiredSupport |= D3D12_FORMAT_SUPPORT1_TYPED_UNORDERED_ACCESS_VIEW;
+	}
+	if ( ( formatSupport.Support1 & nRequiredSupport ) != nRequiredSupport ||
+	     ( ( desc.nUsage & SIR_GRAPHICS_USAGE_STORAGE ) != 0 &&
+	       ( formatSupport.Support2 & D3D12_FORMAT_SUPPORT2_UAV_TYPED_STORE ) == 0 ) ) {
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
+		D3D12MA::Allocation *pAllocation = nullptr;
 	const HRESULT nResult = m_pMemory->createTexture( resource, D3D12_RESOURCE_STATE_COMMON, nullptr, &pAllocation );
 	if ( FAILED( nResult ) || pAllocation == nullptr ) {
 		return nResult == E_OUTOFMEMORY ? SIR_GRAPHICS_OUT_OF_MEMORY : SIR_GRAPHICS_DRIVER_ERROR;

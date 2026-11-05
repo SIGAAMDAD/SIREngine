@@ -215,7 +215,19 @@ int main( void )
 			return 34;
 		}
 	}
-	sirGraphicsSamplerDesc_t sampler = {};
+	texture.nSampleCount = 1;
+	texture.eFormat = SIR_GRAPHICS_FORMAT_RGBA8_SRGB;
+	texture.nUsage = SIR_GRAPHICS_USAGE_STORAGE;
+	if ( pDevice->createTexture( texture, &hUnsupportedMsaa ) != SIR_GRAPHICS_UNSUPPORTED || hUnsupportedMsaa.nGeneration != 0 ) {
+		return 35;
+	}
+	texture.eFormat = SIR_GRAPHICS_FORMAT_RGBA8_UNORM;
+	sirGraphicsHandle_t hStorageTexture = {};
+	if ( pDevice->createTexture( texture, &hStorageTexture ) != SIR_GRAPHICS_SUCCESS ||
+	     pDevice->retireResource( hStorageTexture, immediate ) != SIR_GRAPHICS_SUCCESS ) {
+		return 36;
+	}
+		sirGraphicsSamplerDesc_t sampler = {};
 	sampler.eFilter = SIR_GRAPHICS_FILTER_LINEAR;
 	sampler.fMaximumAnisotropy = 1.0f;
 	sampler.fMaximumLod = 16.0f;
