@@ -48,10 +48,13 @@ typedef struct sirMeshKey_s
 	uint32_t nReserved;
 } sirMeshKey_t;
 
+// Runtime-only capability: never serialize a handle in SIRPack. The owner ID
+// identifies a successful cache initialization epoch, not an authored asset.
 typedef struct sirMeshHandle_s
 {
 	uint32_t nSlot;
 	uint32_t nGeneration;
+	uint64_t nOwnerId;
 } sirMeshHandle_t;
 
 typedef struct sirMeshGeometrySource_s
@@ -115,6 +118,7 @@ private:
 	uint32_t m_nResidentCount;
 	uint32_t m_nBorrowCount;
 	uint32_t m_nNextGeneration;
+	uint64_t m_nOwnerId;
 	bool m_bReady;
 	bool m_bShuttingDown;
 };

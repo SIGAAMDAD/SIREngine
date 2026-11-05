@@ -171,7 +171,7 @@ static void testRandomizedMeshLifecycle( void ) noexcept
 				checkMeshState( read.pPositionsXYZ == nullptr, "retired borrow exposed geometry", nStep );
 			}
 		} else if ( nAction == 5U ) {
-			sirMeshHandle_t stale = { UINT32_MAX, UINT32_MAX };
+			sirMeshHandle_t stale = { UINT32_MAX, UINT32_MAX, UINT64_MAX };
 			if ( szPrevious[nSlot].nGeneration != 0 ) {
 				stale = szPrevious[nSlot];
 			}
