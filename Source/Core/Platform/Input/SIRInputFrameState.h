@@ -38,6 +38,8 @@ public:
 	                 const sirInputTimestamp_t& time ) noexcept;
 	bool postChanges( sirInputDeviceId_t id, sirInputDeviceClass_t eClass, const sirInputControlChange_t *pChanges, uint32_t nCount,
 	                  const sirInputTimestamp_t& time ) noexcept;
+	bool postResyncChanges( sirInputDeviceId_t id, sirInputDeviceClass_t eClass, const sirInputControlChange_t *pChanges,
+	                        uint32_t nCount ) noexcept;
 	bool postPointer( sirInputDeviceId_t id, sirInputDeviceClass_t eClass, sirInputSignal_t eSignal, uint16_t nControl, int32_t nX,
 	                  int32_t nY, const sirInputTimestamp_t& time ) noexcept;
 	void clearDevice( sirInputDeviceId_t id ) noexcept;

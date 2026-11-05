@@ -351,6 +351,14 @@ bool SIRInputService::emitPointer( sirInputBackendId_t eSource, sirInputDeviceId
 	       m_State.postPointer( id, eClass, eSignal, nControl, nX, nY, timestamp( nTime, eClock ) );
 }
 
+bool SIRInputService::resynchronizeControls( sirInputBackendId_t eSource, sirInputDeviceId_t id, const sirInputControlChange_t *pChanges,
+                                             uint32_t nCount ) noexcept
+{
+	sirInputDeviceClass_t eClass = SIR_INPUT_KEYBOARD;
+	return m_Registry.authorize( eSource, id, &eClass ) && hasBackend( eSource ) &&
+	       m_State.postResyncChanges( id, eClass, pChanges, nCount );
+}
+
 bool SIRInputService::loseState( sirInputBackendId_t eSource, sirInputDeviceId_t id ) noexcept
 {
 	sirInputDeviceClass_t eClass = SIR_INPUT_KEYBOARD;
