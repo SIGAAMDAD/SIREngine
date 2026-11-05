@@ -88,10 +88,13 @@ static sirGraphicsResult_t sirVulkanBufferAccess( sirGraphicsState_t eState, VkB
 sirGraphicsResult_t sirVulkanPlanBufferBarrier( const sirGraphicsBarrier_t& barrier, const sirVulkanBuffer_t *pBuffer,
                                                 sirVulkanBufferBarrier_t *pNative ) noexcept
 {
-	if ( pBuffer == nullptr || pNative == nullptr || pBuffer->nSize == 0 ) {
+	if ( pNative == nullptr ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	*pNative = {};
+	if ( pBuffer == nullptr || pBuffer->nSize == 0 ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
 	if ( barrier.eType != SIR_GRAPHICS_BARRIER_TRANSITION && barrier.eType != SIR_GRAPHICS_BARRIER_UAV ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
@@ -108,16 +111,18 @@ sirGraphicsResult_t sirVulkanPlanBufferBarrier( const sirGraphicsBarrier_t& barr
 	} else if ( barrier.eBefore == barrier.eAfter ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
+	sirVulkanBufferBarrier_t planned = {};
 	const sirGraphicsResult_t eBefore =
-	    sirVulkanBufferAccess( barrier.eBefore, pBuffer->nUsage, &pNative->nSourceStages, &pNative->nSourceAccess );
+	    sirVulkanBufferAccess( barrier.eBefore, pBuffer->nUsage, &planned.nSourceStages, &planned.nSourceAccess );
 	if ( eBefore != SIR_GRAPHICS_SUCCESS ) {
 		return eBefore;
 	}
 	const sirGraphicsResult_t eAfter =
-	    sirVulkanBufferAccess( barrier.eAfter, pBuffer->nUsage, &pNative->nDestinationStages, &pNative->nDestinationAccess );
+	    sirVulkanBufferAccess( barrier.eAfter, pBuffer->nUsage, &planned.nDestinationStages, &planned.nDestinationAccess );
 	if ( eAfter != SIR_GRAPHICS_SUCCESS ) {
 		return eAfter;
 	}
-	pNative->bUav = barrier.eType == SIR_GRAPHICS_BARRIER_UAV;
+	planned.bUav = barrier.eType == SIR_GRAPHICS_BARRIER_UAV;
+	*pNative = planned;
 	return SIR_GRAPHICS_SUCCESS;
 }
