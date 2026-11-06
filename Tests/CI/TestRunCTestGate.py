@@ -4,6 +4,7 @@ import importlib.util
 from pathlib import Path
 import tempfile
 import unittest
+import os
 from types import SimpleNamespace
 from unittest import mock
 
@@ -86,6 +87,29 @@ class CTestEvidenceTests(unittest.TestCase):
                 gate.run_gate(["--test-dir", self.dir.name, "--repeat", "3",
                                "--report", str(self.report)])
         self.assertEqual(len(rounds), 2)
+
+    def test_relative_report_is_resolved_before_invoking_ctest(self):
+        observed = []
+
+        def fake_run(command, **_kwargs):
+            if "--show-only=json-v1" in command:
+                return SimpleNamespace(returncode=0, stdout='{"tests":[{"name":"unit.first"}]}',
+                                       stderr="")
+            report = Path(command[command.index("--output-junit") + 1])
+            observed.append(report)
+            self.assertTrue(report.is_absolute())
+            report.write_text('<testsuite><testcase name="unit.first"/></testsuite>')
+            return SimpleNamespace(returncode=0)
+
+        previous = Path.cwd()
+        try:
+            os.chdir(self.dir.name)
+            with mock.patch.object(gate.subprocess, "run", side_effect=fake_run):
+                self.assertEqual(gate.run_gate(["--test-dir", self.dir.name,
+                                               "--report", "relative-ctest.xml"]), 0)
+        finally:
+            os.chdir(previous)
+        self.assertEqual(observed, [Path(self.dir.name) / "relative-ctest.xml"])
 
     def test_duplicate_junit_cases_fail(self):
         self.write_report('<testcase name="unit.first"/><testcase name="unit.first"/>')
