@@ -5,6 +5,8 @@ add_subdirectory(Terrain)
 add_subdirectory(Mesh)
 add_subdirectory(Streaming)
 add_subdirectory(World)
+add_subdirectory(UI)
+add_subdirectory(Editor)
 add_subdirectory(Audio)
 add_subdirectory(Scripting)
 

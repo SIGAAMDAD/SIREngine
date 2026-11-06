@@ -11,7 +11,7 @@ else()
 endif()
 
 add_subdirectory(Platform)
-target_sources(SIRCore PRIVATE Memory/SIRMemoryManager.cpp)
+target_sources(SIRCore PRIVATE Memory/SIRMemoryManager.cpp Objects/SIRObjectRegistry.cpp)
 add_subdirectory(Memory)
 add_subdirectory(Events)
 add_subdirectory(Config)
