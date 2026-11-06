@@ -9,17 +9,12 @@ on:
   merge_group:
     types: [checks_requested]
   workflow_dispatch:
-    inputs:
-      candidate_sha:
-        description: Full commit SHA of the frozen integration candidate
-        required: true
-        type: string
 
 permissions:
   contents: read
 
 concurrency:
-  group: sir-ci-${{ github.event_name == 'workflow_dispatch' && inputs.candidate_sha || github.event_name == 'push' && github.sha || github.event.pull_request.number || github.ref }}
+  group: sir-ci-${{ github.event_name == 'push' && github.sha || github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -30,14 +25,14 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: ${{ inputs.candidate_sha || github.sha }}
+          ref: ${{ github.sha }}
           fetch-depth: 0
           persist-credentials: false
       - name: Verify frozen integration candidate source
         if: github.event_name == 'workflow_dispatch'
         shell: bash
         env:
-          CANDIDATE_SHA: ${{ inputs.candidate_sha }}
+          CANDIDATE_SHA: ${{ github.sha }}
         run: |
           [[ "$CANDIDATE_SHA" =~ ^[a-f0-9]{40}$ ]]
           test "$(git rev-parse HEAD)" = "$CANDIDATE_SHA"
@@ -111,13 +106,13 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: ${{ inputs.candidate_sha || github.sha }}
+          ref: ${{ github.sha }}
           persist-credentials: false
       - name: Verify frozen integration candidate source
         if: github.event_name == 'workflow_dispatch'
         shell: bash
         env:
-          CANDIDATE_SHA: ${{ inputs.candidate_sha }}
+          CANDIDATE_SHA: ${{ github.sha }}
         run: |
           [[ "$CANDIDATE_SHA" =~ ^[a-f0-9]{40}$ ]]
           test "$(git rev-parse HEAD)" = "$CANDIDATE_SHA"
@@ -127,12 +122,6 @@ jobs:
         if: runner.os == 'Windows'
         uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1
       - uses: ./.github/actions/setup-build-tools
-      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
-        with:
-          path: .cache/fastbuild
-          key: sir-fbuild-v1.20-${{ runner.os }}-${{ matrix.compiler }}-dev-${{ inputs.candidate_sha || github.sha }}
-          restore-keys: |
-            sir-fbuild-v1.20-${{ runner.os }}-${{ matrix.compiler }}-dev-
       - name: Install LLVM 23 compiler for PR checks
         if: matrix.compiler == 'clang'
         env:
@@ -195,7 +184,7 @@ jobs:
           if [[ "$SIR_INTEGRATION_CANDIDATE" == true ]]; then
             test "$INTEGRATION" = success
           fi
-          echo "CI checkout SHA: ${{ inputs.candidate_sha || github.sha }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "CI checkout SHA: ${{ github.sha }}" >> "$GITHUB_STEP_SUMMARY"
 
   integration-candidate:
     name: sir/integration-candidate
@@ -207,7 +196,7 @@ jobs:
         env:
           SOURCE_RESULT: ${{ needs.source.result }}
           NATIVE_RESULT: ${{ needs.native.result }}
-          CANDIDATE_SHA: ${{ inputs.candidate_sha || github.sha }}
+          CANDIDATE_SHA: ${{ github.sha }}
         shell: bash
         run: |
           set -euo pipefail
