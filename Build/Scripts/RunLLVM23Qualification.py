@@ -197,7 +197,13 @@ def qualify():
         "-P", ROOT / "Build/CMake/SIRQualificationScopes.cmake")
     source_root = (ROOT / scope_file.read_text().strip()).resolve()
     commands = json.loads((BUILD / "compile_commands.json").read_text())
-    objects = compiled_production_objects(commands, ROOT, BUILD, source_root)
+    if name == "CoreMemoryResources":
+        # This selector is a two-subsystem union, not the entire Source tree.
+        scopes = (ROOT / "Source/Core", ROOT / "Source/Resources")
+        objects = sorted({obj for scope in scopes
+                          for obj in compiled_production_objects(commands, ROOT, BUILD, scope)})
+    else:
+        objects = compiled_production_objects(commands, ROOT, BUILD, source_root)
     if not objects:
         raise RuntimeError("No instrumented binaries")
     out = REPORT / "llvm-export.json"
