@@ -341,6 +341,29 @@ class QualificationGateTests(unittest.TestCase):
             self.assertEqual(diagnostic["Resources"]["status"], "INCOMPLETE")
 
 
+    def test_profile_mismatch_summary_keeps_all_hash_conflicts_visible(self):
+        records = [
+            {"name": "SIRInline", "hash": "0"},
+            {"name": "SIRInline", "hash": "0"},
+            {"name": "main", "hash": "ef545af72c34ffd"},
+            {"name": "driverABI", "hash": "f137fe0d72bd235"},
+        ]
+        summary = qualification.summarize_profile_mismatches(records)
+        self.assertEqual(summary["total_records"], 4)
+        self.assertEqual(summary["zero_hash_records"], 2)
+        self.assertEqual(summary["zero_hash_symbols"], [{"name": "SIRInline", "count": 2}])
+        self.assertEqual(summary["nonzero_hash_records"], 2)
+        self.assertEqual(
+            {item["name"] for item in summary["nonzero_hash_conflicts"]},
+            {"main", "driverABI"})
+        self.assertEqual(sum(item["count"] for item in
+                             summary["nonzero_hash_conflicts"]), 2)
+
+    def test_invalid_profile_mismatch_record_fails_closed(self):
+        with self.assertRaises((RuntimeError, ValueError, KeyError)):
+            qualification.summarize_profile_mismatches(
+                [{"name": "SIRInline", "hash": "invalid hash"}])
+
     def test_profile_hash_parser_distinguishes_misses_from_unexecuted_paths(self):
         warning = ("warning: 2 functions have mismatched data\n"
                    "hash-mismatch: No profile record found for '_ZN7Example3runEv' with hash = 0xAb5\n"
