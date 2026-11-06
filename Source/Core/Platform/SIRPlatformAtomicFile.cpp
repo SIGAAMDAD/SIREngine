@@ -58,6 +58,8 @@ bool SIRPlatformFileSystem::validPaths( const char *pszDestination, const char *
 		return false;
 	}
 	if ( pszDestinationEnd == nullptr ) {
+
+
 		return true;
 	}
 	const size_t nDestinationParent = ( size_t )( pszDestinationEnd - pszDestination );
@@ -85,7 +87,7 @@ sirFileSystemResult_t SIRPlatformFileSystem::readFile( const char *pszPath, char
 	return readFilePlatform( pszPath, pszOutput, nCapacity, pOutBytes );
 }
 
-sirPlatformAtomicResult_t SIRPlatformFileSystem::writeAtomically( const sirFileSystemAtomicWriteRequest_t &request ) noexcept
+sirPlatformAtomicResult_t SIRPlatformFileSystem::writeAtomically( const sirFileSystemAtomicWriteRequest_t& request ) noexcept
 {
 	if ( request.pBytes == nullptr || request.nBytes == 0 || ( request.pExpectedBytes == nullptr && request.nExpectedBytes != 0 ) ) {
 		return SIR_ATOMIC_SAVE_INVALID_ARGUMENT;

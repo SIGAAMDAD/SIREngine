@@ -379,7 +379,7 @@ bool SIRTaskGraph::submit( SIRTaskScheduler *pScheduler ) noexcept
 	for ( uint32_t i = 0; i < m_nEdgeCount; ++i ) {
 		m_pBatchEdges[i] = { m_pReverse[m_pEdges[i].nBefore], m_pReverse[m_pEdges[i].nAfter] };
 	}
-	if ( !pScheduler->submitBatch({ m_pBatchTasks, m_nPassCount, m_pBatchEdges, m_nEdgeCount }, m_pBatchHandles) ) {
+	if ( !pScheduler->submitBatch( { m_pBatchTasks, m_nPassCount, m_pBatchEdges, m_nEdgeCount }, m_pBatchHandles ) ) {
 		return false;
 	}
 	m_pScheduler = pScheduler;

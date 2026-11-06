@@ -29,13 +29,13 @@ static void sirEditorPrintHelp( void ) noexcept
 	puts( "Inspect the native SIREngine scene intake without altering the source file." );
 }
 
-static void sirEditorPrintSceneNodes( const SIREditorSceneWorkspace &workspace ) noexcept
+static void sirEditorPrintSceneNodes( const SIREditorSceneWorkspace& workspace ) noexcept
 {
-	const sirEditorTextSceneIndex_t &index = workspace.getSceneIndex();
+	const sirEditorTextSceneIndex_t& index = workspace.getSceneIndex();
 	const char *pszSource = workspace.getSource();
 	puts( "Hierarchy:" );
 	for ( uint32_t iNode = 0; iNode < index.nNodeCount; ++iNode ) {
-		const sirEditorTextSceneNode_t &entry = index.storage.pNodes[iNode];
+		const sirEditorTextSceneNode_t& entry = index.storage.pNodes[iNode];
 		const char *pszPath = index.storage.pszPaths + entry.nPathOffset;
 		uint32_t nDepth = 0;
 		if ( entry.node.nParentId != 0 ) {
@@ -52,13 +52,13 @@ static void sirEditorPrintSceneNodes( const SIREditorSceneWorkspace &workspace )
 	}
 }
 
-static void sirEditorPrintResources( const SIREditorSceneWorkspace &workspace ) noexcept
+static void sirEditorPrintResources( const SIREditorSceneWorkspace& workspace ) noexcept
 {
-	const sirEditorTextResourceIndex_t &index = workspace.getResourceIndex();
+	const sirEditorTextResourceIndex_t& index = workspace.getResourceIndex();
 	const char *pszSource = workspace.getSource();
 	puts( "Resources:" );
 	for ( uint32_t iResource = 0; iResource < index.nCount; ++iResource ) {
-		const sirEditorTextResource_t &resource = index.pResources[iResource];
+		const sirEditorTextResource_t& resource = index.pResources[iResource];
 		const char *pszKind = resource.eKind == SIR_EDITOR_RESOURCE_EXTERNAL ? "external" : "embedded";
 		printf( "  [%s] %.*s : %.*s", pszKind, ( int )resource.nIdLength, pszSource + resource.nIdOffset, ( int )resource.nTypeLength,
 		        pszSource + resource.nTypeOffset );

@@ -151,14 +151,14 @@ private:
 	size_t m_nControlOffset = 0;
 	size_t m_nDependencyOffset = 0;
 
-	bool findPackageIndex( uint64_t nPackageId, uint32_t &iPackage ) const noexcept;
-	bool findEventIndex( uint64_t nEventId, uint32_t &iEvent ) const noexcept;
+	bool findPackageIndex( uint64_t nPackageId, uint32_t& iPackage ) const noexcept;
+	bool findEventIndex( uint64_t nEventId, uint32_t& iEvent ) const noexcept;
 
 public:
 	SIRAudioResourceStore( void ) noexcept = default;
 	~SIRAudioResourceStore( void ) noexcept;
-	SIRAudioResourceStore( const SIRAudioResourceStore & ) = delete;
-	SIRAudioResourceStore &operator=( const SIRAudioResourceStore & ) = delete;
+	SIRAudioResourceStore( const SIRAudioResourceStore& ) = delete;
+	SIRAudioResourceStore& operator=( const SIRAudioResourceStore& ) = delete;
 
 	static uint64_t hashPayload( const void *pBytes, size_t nBytes ) noexcept;
 	sirAudioManifestResult_t load( const void *pBytes, size_t nBytes, sirAudioProvider_t eExpectedProvider, uint64_t nAvailableCapabilities,
@@ -169,17 +169,17 @@ public:
 	sirAudioProvider_t getProvider( void ) const noexcept;
 	uint64_t getBuildFingerprint( void ) const noexcept;
 	uint32_t getEventCount( void ) const noexcept;
-	bool getEventAt( uint32_t iEvent, sirAudioEventRecord_t &event ) const noexcept;
-	bool findEvent( uint64_t nEventId, sirAudioEventRecord_t &event, sirAudioEventHandle_t *pHandle = nullptr ) const noexcept;
-	bool resolveEvent( sirAudioEventHandle_t hEvent, sirAudioEventRecord_t &event ) const noexcept;
+	bool getEventAt( uint32_t iEvent, sirAudioEventRecord_t& event ) const noexcept;
+	bool findEvent( uint64_t nEventId, sirAudioEventRecord_t& event, sirAudioEventHandle_t *pHandle = nullptr ) const noexcept;
+	bool resolveEvent( sirAudioEventHandle_t hEvent, sirAudioEventRecord_t& event ) const noexcept;
 	uint32_t getPackageCount( void ) const noexcept;
-	bool getPackageAt( uint32_t iPackage, sirAudioPackageRecord_t &package ) const noexcept;
-	bool getPackageDependency( uint64_t nPackageId, uint32_t iDependency, uint64_t &nDependencyId ) const noexcept;
-	bool findPackage( uint64_t nPackageId, sirAudioPackageRecord_t &package, sirAudioPackageHandle_t *pHandle = nullptr ) const noexcept;
-	bool resolvePackage( sirAudioPackageHandle_t hPackage, sirAudioPackageRecord_t &package ) const noexcept;
+	bool getPackageAt( uint32_t iPackage, sirAudioPackageRecord_t& package ) const noexcept;
+	bool getPackageDependency( uint64_t nPackageId, uint32_t iDependency, uint64_t& nDependencyId ) const noexcept;
+	bool findPackage( uint64_t nPackageId, sirAudioPackageRecord_t& package, sirAudioPackageHandle_t *pHandle = nullptr ) const noexcept;
+	bool resolvePackage( sirAudioPackageHandle_t hPackage, sirAudioPackageRecord_t& package ) const noexcept;
 	uint32_t getControlCount( void ) const noexcept;
-	bool getControlAt( uint32_t iControl, sirAudioControlRecord_t &control ) const noexcept;
-	bool findControl( uint64_t nControlId, sirAudioControlRecord_t &control ) const noexcept;
+	bool getControlAt( uint32_t iControl, sirAudioControlRecord_t& control ) const noexcept;
+	bool findControl( uint64_t nControlId, sirAudioControlRecord_t& control ) const noexcept;
 	sirAudioResult_t validateControl( uint64_t nControlId, sirAudioControlScope_t eScope, float fValue ) const noexcept;
 };
 

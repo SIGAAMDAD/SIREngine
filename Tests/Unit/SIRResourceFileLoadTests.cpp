@@ -458,7 +458,7 @@ static void testRejectedRequestsAndTaskAdmission( void )
 		SIR_IO_CHECK( !load.isActive() && load.cancel() == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
 		sirTaskHandle_t occupied[8] = {};
 		for ( uint32_t i = 0; i < 8; ++i ) {
-			SIR_IO_CHECK( scheduler.submit({ sirIOIdleTask, nullptr, SIR_TASK_PRIORITY_BACKGROUND, SIR_TASK_EXEC_CPU }, &occupied[i]) );
+			SIR_IO_CHECK( scheduler.submit( { sirIOIdleTask, nullptr, SIR_TASK_PRIORITY_BACKGROUND, SIR_TASK_EXEC_CPU }, &occupied[i] ) );
 		}
 		SIR_IO_CHECK( load.begin( SIR_IO_PATH, valid ) == SIR_RESOURCE_RESULT_OUT_OF_BUDGET );
 		SIR_IO_CHECK( !load.isActive() );

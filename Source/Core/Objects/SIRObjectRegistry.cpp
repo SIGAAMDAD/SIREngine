@@ -61,7 +61,7 @@ const sirObjectTypeDescriptor_t *SIRObjectRegistry::findType( uint32_t nTypeId )
 	return nullptr;
 }
 
-sirObjectResult_t SIRObjectRegistry::registerType( const sirObjectTypeDescriptor_t &type ) noexcept
+sirObjectResult_t SIRObjectRegistry::registerType( const sirObjectTypeDescriptor_t& type ) noexcept
 {
 	if ( m_pTypes == nullptr ) {
 		return SIR_OBJECT_NOT_INITIALIZED;
@@ -85,7 +85,7 @@ sirObjectResult_t SIRObjectRegistry::registerType( const sirObjectTypeDescriptor
 	return SIR_OBJECT_OK;
 }
 
-sirObjectResult_t SIRObjectRegistry::registerProperty( const sirObjectPropertyDescriptor_t &property ) noexcept
+sirObjectResult_t SIRObjectRegistry::registerProperty( const sirObjectPropertyDescriptor_t& property ) noexcept
 {
 	if ( m_pProperties == nullptr ) {
 		return SIR_OBJECT_NOT_INITIALIZED;
@@ -117,7 +117,7 @@ const sirObjectPropertyDescriptor_t *SIRObjectRegistry::findProperty( uint32_t n
 	const sirObjectTypeDescriptor_t *pType = findType( nTypeId );
 	while ( pType != nullptr ) {
 		for ( uint32_t iProperty = 0; iProperty < m_nPropertyCount; ++iProperty ) {
-			const sirObjectPropertyDescriptor_t &property = m_pProperties[iProperty];
+			const sirObjectPropertyDescriptor_t& property = m_pProperties[iProperty];
 			if ( property.nOwnerTypeId == pType->nTypeId && property.nPropertyId == nPropertyId ) {
 				return &property;
 			}
@@ -136,7 +136,7 @@ const sirObjectPropertyDescriptor_t *SIRObjectRegistry::getPropertyDescriptor( u
 }
 
 sirObjectResult_t SIRObjectRegistry::validateProperty( uint32_t nTypeId, uint32_t nPropertyId,
-                                                       const sirPropertyValue_t &value ) const noexcept
+                                                       const sirPropertyValue_t& value ) const noexcept
 {
 	const sirObjectPropertyDescriptor_t *pProperty = findProperty( nTypeId, nPropertyId );
 	if ( pProperty == nullptr ) {
@@ -229,7 +229,7 @@ sirObjectResult_t SIRObjectStore::create( uint64_t nStableId, uint32_t nTypeId, 
 	if ( iCandidate == UINT32_MAX ) {
 		return SIR_OBJECT_OUT_OF_CAPACITY;
 	}
-	sirObjectSlot_t &slot = m_pSlots[iCandidate];
+	sirObjectSlot_t& slot = m_pSlots[iCandidate];
 	++slot.nGeneration;
 	slot.nStableId = nStableId;
 	slot.nTypeId = nTypeId;
@@ -240,7 +240,7 @@ sirObjectResult_t SIRObjectStore::create( uint64_t nStableId, uint32_t nTypeId, 
 	return SIR_OBJECT_OK;
 }
 
-sirObjectResult_t SIRObjectStore::resolve( const sirObjectHandle_t &handle, sirObjectSlot_t *pOutSlot ) const noexcept
+sirObjectResult_t SIRObjectStore::resolve( const sirObjectHandle_t& handle, sirObjectSlot_t *pOutSlot ) const noexcept
 {
 	if ( m_pSlots == nullptr ) {
 		return SIR_OBJECT_NOT_INITIALIZED;
@@ -248,7 +248,7 @@ sirObjectResult_t SIRObjectStore::resolve( const sirObjectHandle_t &handle, sirO
 	if ( handle.nStableId == 0 || handle.iSlot >= m_nCapacity || pOutSlot == nullptr ) {
 		return SIR_OBJECT_INVALID_ARGUMENT;
 	}
-	const sirObjectSlot_t &slot = m_pSlots[handle.iSlot];
+	const sirObjectSlot_t& slot = m_pSlots[handle.iSlot];
 	if ( slot.nStableId != handle.nStableId || slot.nGeneration != handle.nGeneration ) {
 		return SIR_OBJECT_STALE_HANDLE;
 	}
@@ -256,14 +256,14 @@ sirObjectResult_t SIRObjectStore::resolve( const sirObjectHandle_t &handle, sirO
 	return SIR_OBJECT_OK;
 }
 
-sirObjectResult_t SIRObjectStore::destroy( const sirObjectHandle_t &handle ) noexcept
+sirObjectResult_t SIRObjectStore::destroy( const sirObjectHandle_t& handle ) noexcept
 {
 	sirObjectSlot_t slot = {};
 	const sirObjectResult_t eResult = resolve( handle, &slot );
 	if ( eResult != SIR_OBJECT_OK ) {
 		return eResult;
 	}
-	sirObjectSlot_t &current = m_pSlots[handle.iSlot];
+	sirObjectSlot_t& current = m_pSlots[handle.iSlot];
 	current.nStableId = 0;
 	current.nTypeId = 0;
 	--m_nCount;

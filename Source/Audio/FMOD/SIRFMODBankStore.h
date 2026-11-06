@@ -98,25 +98,25 @@ private:
 	int32_t m_nLastNativeResult = 0;
 	bool m_bInitialized = false;
 
-	bool findBank( uint64_t nPackageId, uint32_t &iBank ) const noexcept;
+	bool findBank( uint64_t nPackageId, uint32_t& iBank ) const noexcept;
 	void eraseBindings( uint64_t nPackageId ) noexcept;
 	void releaseStorage( void ) noexcept;
 
 public:
 	SIRFMODBankStore( void ) noexcept = default;
 	~SIRFMODBankStore( void ) noexcept;
-	SIRFMODBankStore( const SIRFMODBankStore & ) = delete;
-	SIRFMODBankStore &operator=( const SIRFMODBankStore & ) = delete;
+	SIRFMODBankStore( const SIRFMODBankStore& ) = delete;
+	SIRFMODBankStore& operator=( const SIRFMODBankStore& ) = delete;
 
 	sirAudioResult_t initialize( SIRFMODContext *pContext, SIRFMODVoiceBackend *pVoices, const sirContainerAllocator_t *pAllocator,
-	                             const sirFMODBankNativeOps_t &ops, uint32_t nMaxBanks, uint32_t nMaxEventBindings ) noexcept;
+	                             const sirFMODBankNativeOps_t& ops, uint32_t nMaxBanks, uint32_t nMaxEventBindings ) noexcept;
 	sirAudioResult_t loadBank( uint64_t nPackageId, const char *szBankPath ) noexcept;
 	sirAudioResult_t beginLoadBank( uint64_t nPackageId, const char *szBankPath ) noexcept;
 	sirAudioResult_t pollBankLoad( uint64_t nPackageId ) noexcept;
 	sirAudioResult_t bindEvent( uint64_t nPackageId, uint64_t nEventId, const char *szEventPath ) noexcept;
 	sirAudioResult_t unbindEvent( uint64_t nPackageId, uint64_t nEventId ) noexcept;
 	sirAudioResult_t preloadSamples( uint64_t nPackageId ) noexcept;
-	sirAudioResult_t getSampleState( uint64_t nPackageId, sirFMODSampleState_t &eState ) noexcept;
+	sirAudioResult_t getSampleState( uint64_t nPackageId, sirFMODSampleState_t& eState ) noexcept;
 	sirAudioResult_t unloadBank( uint64_t nPackageId ) noexcept;
 	sirAudioResult_t shutdown( void ) noexcept;
 	bool isReady( void ) const noexcept;

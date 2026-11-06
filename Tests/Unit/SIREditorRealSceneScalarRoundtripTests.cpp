@@ -25,9 +25,9 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <string.h>
 
 #if defined( _WIN32 )
-	#include <process.h>
+#include <process.h>
 #else
-	#include <unistd.h>
+#include <unistd.h>
 #endif
 
 static bool sirTestRoundtripAtomName( uint64_t nAtom, const char *pszText, uint32_t nBytes, void *pContext ) noexcept
@@ -35,19 +35,32 @@ static bool sirTestRoundtripAtomName( uint64_t nAtom, const char *pszText, uint3
 	( void )pContext;
 	const char *pszName = nullptr;
 	switch ( nAtom ) {
-		case 101: pszName = "offset_left"; break;
-		case 102: pszName = "offset_top"; break;
-		case 103: pszName = "offset_right"; break;
-		case 104: pszName = "offset_bottom"; break;
-		case 105: pszName = "layout_mode"; break;
-		case 106: pszName = "theme_override_constants/separation"; break;
-		default: return false;
+	case 101:
+		pszName = "offset_left";
+		break;
+	case 102:
+		pszName = "offset_top";
+		break;
+	case 103:
+		pszName = "offset_right";
+		break;
+	case 104:
+		pszName = "offset_bottom";
+		break;
+	case 105:
+		pszName = "layout_mode";
+		break;
+	case 106:
+		pszName = "theme_override_constants/separation";
+		break;
+	default:
+		return false;
 	}
 	return strlen( pszName ) == nBytes && memcmp( pszText, pszName, nBytes ) == 0;
 }
 
 static void sirTestRoundtripImport( SIREditorSceneWorkspace& workspace, const SIRObjectRegistry& registry,
-                                     sirEditorScalarBinding_t *pBindings, uint32_t *pOutCount ) noexcept
+                                    sirEditorScalarBinding_t *pBindings, uint32_t *pOutCount ) noexcept
 {
 	sirEditorScalarDiscovery_t discovery = {};
 	discovery.pDocument = &workspace.getDocument();
@@ -61,6 +74,8 @@ static void sirTestRoundtripImport( SIREditorSceneWorkspace& workspace, const SI
 	discovery.pOutput = pBindings;
 	discovery.nOutputCapacity = 16;
 	assert( sirEditorDiscoverScalarBindings( discovery, pOutCount ) == SIR_EDITOR_SCALAR_BRIDGE_OK );
+
+
 
 	sirEditorProperty_t szScratch[16] = {};
 	sirEditorScalarBridge_t bridge = {};

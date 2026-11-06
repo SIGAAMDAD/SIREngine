@@ -138,13 +138,14 @@ SIRResourceResult SIRResourceDerivedRegistry::registerProvider( uint32_t nProvid
 	return registerProvider( nProviderId, 1, 1, rCallbacks );
 }
 
-SIRResourceResult SIRResourceDerivedRegistry::registerProvider( uint32_t nProviderId, uint32_t nProviderGeneration,
-                                                                uint32_t nLaneCount, const SIRDerivedProviderCallbacks& rCallbacks ) noexcept
+SIRResourceResult SIRResourceDerivedRegistry::registerProvider( uint32_t nProviderId, uint32_t nProviderGeneration, uint32_t nLaneCount,
+                                                                const SIRDerivedProviderCallbacks& rCallbacks ) noexcept
 {
 	if ( !isWriterThread() ) {
 		return SIR_RESOURCE_RESULT_WRITER_VIOLATION;
 	}
-	if ( !m_bReady || !nProviderId || !nProviderGeneration || nLaneCount == 0 || nLaneCount > SIR_PROVIDER_MAX_LANES || !rCallbacks.pfnReleaseNative ) {
+	if ( !m_bReady || !nProviderId || !nProviderGeneration || nLaneCount == 0 || nLaneCount > SIR_PROVIDER_MAX_LANES ||
+	     !rCallbacks.pfnReleaseNative ) {
 		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
 	}
 	if ( findProvider( nProviderId ) >= 0 ) {
@@ -329,8 +330,7 @@ SIRResourceResult SIRResourceDerivedRegistry::updateProviderCompletion( const si
 		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
 	}
 	for ( uint32_t iLane = 0; iLane < completed.nLaneCount; ++iLane ) {
-		if ( ( observed.nLaneMask & ( 1u << iLane ) ) != 0 &&
-		     observed.szCompletedValues[iLane] < completed.szCompletedValues[iLane] ) {
+		if ( ( observed.nLaneMask & ( 1u << iLane ) ) != 0 && observed.szCompletedValues[iLane] < completed.szCompletedValues[iLane] ) {
 			return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
 		}
 	}

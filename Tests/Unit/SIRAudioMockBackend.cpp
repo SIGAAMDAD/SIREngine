@@ -63,7 +63,7 @@ sirAudioResult_t SIRAudioMockBackend::submitCallback( void *pContext, const sirA
 		return SIR_AUDIO_INVALID_ARGUMENT;
 	}
 	for ( uint32_t iCommand = 0; iCommand < nCount; ++iCommand ) {
-		const sirAudioCommand_t &command = pCommands[iCommand];
+		const sirAudioCommand_t& command = pCommands[iCommand];
 		++pBackend->m_nSubmitted;
 		if ( ( command.eType == SIR_AUDIO_COMMAND_RELEASE_EMITTER || command.eType == SIR_AUDIO_COMMAND_RELEASE_LISTENER ) &&
 		     pBackend->m_bFailNextRelease ) {
@@ -168,7 +168,7 @@ void SIRAudioMockBackend::failNextStop( void ) noexcept
 	m_bFailNextStop = true;
 }
 
-bool SIRAudioMockBackend::injectCompletion( const sirAudioCompletion_t &completion ) noexcept
+bool SIRAudioMockBackend::injectCompletion( const sirAudioCompletion_t& completion ) noexcept
 {
 	return m_bInitialized && m_Completions.tryPush( completion );
 }

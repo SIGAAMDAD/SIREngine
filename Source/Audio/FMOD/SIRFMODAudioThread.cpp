@@ -3,6 +3,8 @@
 SIREngine MPLv2 Source Code
 Copyright (C) 2023-2027 Noah Van Til
 
+
+
 This Source Code Form is subject to the terms of the Mozilla Public
 License, v2. If a copy of the MPL was not distributed with this
 file, You can obtain one at https://mozilla.org/MPL/2.0/.
@@ -76,7 +78,7 @@ void SIRFMODAudioThread::releaseStorage( void ) noexcept
 	m_nState.store( SIR_FMOD_THREAD_EMPTY, SIR_MEMORY_ORDER_RELEASE );
 }
 
-sirAudioResult_t SIRFMODAudioThread::start( const sirFMODAudioThreadConfig_t &config ) noexcept
+sirAudioResult_t SIRFMODAudioThread::start( const sirFMODAudioThreadConfig_t& config ) noexcept
 {
 	if ( m_nState.load( SIR_MEMORY_ORDER_ACQUIRE ) != SIR_FMOD_THREAD_EMPTY || m_Thread.isJoinable() ||
 	     !SIRRawStorage::isValidAllocator( config.runtime.pAllocator ) || config.nRequestCapacity < 4 || config.nRequestCapacity > 4096 ||
@@ -162,7 +164,7 @@ sirAudioResult_t SIRFMODAudioThread::shutdown( void ) noexcept
 	return eResult;
 }
 
-sirAudioResult_t SIRFMODAudioThread::submit( const sirFMODThreadRequest_t &request, uint64_t &nTicket ) noexcept
+sirAudioResult_t SIRFMODAudioThread::submit( const sirFMODThreadRequest_t& request, uint64_t& nTicket ) noexcept
 {
 	nTicket = 0;
 	if ( !enterClient() ) {
@@ -175,7 +177,7 @@ sirAudioResult_t SIRFMODAudioThread::submit( const sirFMODThreadRequest_t &reque
 	const uint32_t iFirstSlot = m_nNextSlot.fetchAdd( 1, SIR_MEMORY_ORDER_RELAXED ) & ( m_nCapacity - 1 );
 	for ( uint32_t nAttempt = 0; nAttempt < m_nCapacity; ++nAttempt ) {
 		const uint32_t iSlot = ( iFirstSlot + nAttempt ) & ( m_nCapacity - 1 );
-		sirFMODThreadSlot_t &slot = m_pSlots[iSlot];
+		sirFMODThreadSlot_t& slot = m_pSlots[iSlot];
 		uint32_t nExpected = SIR_FMOD_SLOT_FREE;
 		if ( !slot.nState.compareExchangeStrong( nExpected, SIR_FMOD_SLOT_RESERVED, SIR_MEMORY_ORDER_ACQUIRE_RELEASE ) ) {
 			continue;
@@ -214,14 +216,13 @@ sirAudioResult_t SIRFMODAudioThread::cancel( uint64_t nTicket ) noexcept
 	const uint32_t iSlot = ( uint32_t )( nTicket & 0xFFFFU );
 	sirAudioResult_t eResult = SIR_AUDIO_INVALID_HANDLE;
 	if ( nTicket != 0 && iSlot < m_nCapacity ) {
-		sirFMODThreadSlot_t &slot = m_pSlots[iSlot];
+		sirFMODThreadSlot_t& slot = m_pSlots[iSlot];
 		const uint32_t nState = slot.nState.load( SIR_MEMORY_ORDER_ACQUIRE );
 		if ( slot.nTicket.load( SIR_MEMORY_ORDER_ACQUIRE ) == nTicket &&
 		     ( nState == SIR_FMOD_SLOT_QUEUED || nState == SIR_FMOD_SLOT_EXECUTING ) ) {
 			// Only a running asynchronous bank transaction can still be
 			// cancelled after dispatch. Other native calls are noninterruptible.
-			if ( nState == SIR_FMOD_SLOT_EXECUTING &&
-			     slot.nOperation.load( SIR_MEMORY_ORDER_ACQUIRE ) != SIR_FMOD_THREAD_LOAD_PACKAGE ) {
+			if ( nState == SIR_FMOD_SLOT_EXECUTING && slot.nOperation.load( SIR_MEMORY_ORDER_ACQUIRE ) != SIR_FMOD_THREAD_LOAD_PACKAGE ) {
 				eResult = SIR_AUDIO_BUSY;
 			} else {
 				slot.nCancelTicket.store( nTicket, SIR_MEMORY_ORDER_RELEASE );
@@ -235,7 +236,7 @@ sirAudioResult_t SIRFMODAudioThread::cancel( uint64_t nTicket ) noexcept
 	return eResult;
 }
 
-sirAudioResult_t SIRFMODAudioThread::poll( uint64_t nTicket, sirFMODThreadResult_t &result ) noexcept
+sirAudioResult_t SIRFMODAudioThread::poll( uint64_t nTicket, sirFMODThreadResult_t& result ) noexcept
 {
 	result = {};
 	if ( !enterClient() ) {
@@ -244,7 +245,7 @@ sirAudioResult_t SIRFMODAudioThread::poll( uint64_t nTicket, sirFMODThreadResult
 	const uint32_t iSlot = ( uint32_t )( nTicket & 0xFFFFU );
 	sirAudioResult_t eResult = SIR_AUDIO_INVALID_HANDLE;
 	if ( nTicket != 0 && iSlot < m_nCapacity ) {
-		sirFMODThreadSlot_t &slot = m_pSlots[iSlot];
+		sirFMODThreadSlot_t& slot = m_pSlots[iSlot];
 		if ( slot.nTicket.load( SIR_MEMORY_ORDER_ACQUIRE ) == nTicket ) {
 			uint32_t nExpected = SIR_FMOD_SLOT_DONE;
 			if ( slot.nState.compareExchangeStrong( nExpected, SIR_FMOD_SLOT_CONSUMING, SIR_MEMORY_ORDER_ACQUIRE_RELEASE ) ) {
@@ -260,7 +261,7 @@ sirAudioResult_t SIRFMODAudioThread::poll( uint64_t nTicket, sirFMODThreadResult
 	return eResult;
 }
 
-bool SIRFMODAudioThread::pollLifecycle( sirAudioCompletion_t &completion ) noexcept
+bool SIRFMODAudioThread::pollLifecycle( sirAudioCompletion_t& completion ) noexcept
 {
 	if ( !enterClient() ) {
 		return false;
@@ -318,10 +319,10 @@ void SIRFMODAudioThread::lifecycleCallback( void *pContext, const sirAudioComple
 	}
 }
 
-void SIRFMODAudioThread::complete( uint64_t nTicket, const sirFMODThreadResult_t &result ) noexcept
+void SIRFMODAudioThread::complete( uint64_t nTicket, const sirFMODThreadResult_t& result ) noexcept
 {
 	const uint32_t iSlot = ( uint32_t )( nTicket & 0xFFFFU );
-	sirFMODThreadSlot_t &slot = m_pSlots[iSlot];
+	sirFMODThreadSlot_t& slot = m_pSlots[iSlot];
 	if ( slot.nTicket.load( SIR_MEMORY_ORDER_RELAXED ) != nTicket ) {
 		abort();
 	}
@@ -330,9 +331,9 @@ void SIRFMODAudioThread::complete( uint64_t nTicket, const sirFMODThreadResult_t
 	slot.nState.store( SIR_FMOD_SLOT_DONE, SIR_MEMORY_ORDER_RELEASE );
 }
 
-sirAudioResult_t SIRFMODAudioThread::execute( const sirFMODThreadRequest_t &request, sirFMODThreadResult_t &result ) noexcept
+sirAudioResult_t SIRFMODAudioThread::execute( const sirFMODThreadRequest_t& request, sirFMODThreadResult_t& result ) noexcept
 {
-	SIRAudioSystem &audio = m_Runtime.getAudio();
+	SIRAudioSystem& audio = m_Runtime.getAudio();
 	switch ( request.eOperation ) {
 	case SIR_FMOD_THREAD_LOAD_PACKAGE:
 		return m_Runtime.beginLoadPackage( request.nId, request.bFlag != 0 );
@@ -412,7 +413,7 @@ void SIRFMODAudioThread::threadMain( void ) noexcept
 			nRecoveryBackoff = 0;
 		}
 		if ( nActiveLoadTicket != 0 ) {
-			sirFMODThreadSlot_t &slot = m_pSlots[( uint32_t )( nActiveLoadTicket & 0xFFFFU )];
+			sirFMODThreadSlot_t& slot = m_pSlots[( uint32_t )( nActiveLoadTicket & 0xFFFFU )];
 			const bool bCancelled = slot.nCancelTicket.load( SIR_MEMORY_ORDER_ACQUIRE ) == nActiveLoadTicket;
 			const sirAudioResult_t eProgress = bCancelled ? m_Runtime.cancelLoadPackage() : m_Runtime.pollLoadPackage();
 			if ( m_Runtime.getPendingPackageId() == 0 ) {
@@ -427,7 +428,7 @@ void SIRFMODAudioThread::threadMain( void ) noexcept
 			if ( !m_Critical.tryPop( nTicket ) && !m_Requests.tryPop( nTicket ) ) {
 				break;
 			}
-			sirFMODThreadSlot_t &slot = m_pSlots[( uint32_t )( nTicket & 0xFFFFU )];
+			sirFMODThreadSlot_t& slot = m_pSlots[( uint32_t )( nTicket & 0xFFFFU )];
 			if ( slot.nTicket.load( SIR_MEMORY_ORDER_ACQUIRE ) != nTicket ) {
 				abort();
 			}

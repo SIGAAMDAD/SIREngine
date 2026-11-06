@@ -70,6 +70,8 @@ int main( void )
 
 	value.eKind = SIR_PROPERTY_BOOL;
 	value.nPayload = 2;
+
+
 	assert( sirEditorEncodeScalar( value, szOutput, sizeof( szOutput ), &nBytes ) == SIR_EDITOR_SCALAR_INVALID_ARGUMENT );
 	value.eKind = SIR_PROPERTY_REAL64;
 	const double fNan = std::numeric_limits<double>::quiet_NaN();
@@ -85,8 +87,9 @@ int main( void )
 		nSeed ^= nSeed << 13;
 		nSeed ^= nSeed >> 7;
 		nSeed ^= nSeed << 17;
-		const sirPropertyKind_t eKind = ( iCase % 3 == 0 ) ? SIR_PROPERTY_INT64
-		                                 : ( iCase % 3 == 1 ) ? SIR_PROPERTY_UINT64 : SIR_PROPERTY_REAL64;
+		const sirPropertyKind_t eKind = ( iCase % 3 == 0 )   ? SIR_PROPERTY_INT64
+		                                : ( iCase % 3 == 1 ) ? SIR_PROPERTY_UINT64
+		                                                     : SIR_PROPERTY_REAL64;
 		sirPropertyValue_t original = {};
 		original.eKind = eKind;
 		original.nPayload = nSeed;

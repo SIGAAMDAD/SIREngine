@@ -77,7 +77,7 @@ sirEditorTextSceneResult_t sirEditorScanTextScene( const char *pszSource, size_t
 // Reconcile one scanned scene into the native document as a single transaction.
 // pSnapshot is independent caller-owned scratch with capacity for all current nodes.
 // No-op reconciliation does not consume an undo entry or increment revision.
-sirEditorResult_t sirEditorReconcileTextScene( SIREditorSceneDocument &document, const sirEditorTextSceneIndex_t &index,
+sirEditorResult_t sirEditorReconcileTextScene( SIREditorSceneDocument& document, const sirEditorTextSceneIndex_t& index,
                                                sirEditorNode_t *pSnapshot, uint32_t nSnapshotCapacity ) noexcept;
 
 // Source-backed resource identity/dependency metadata for inspector and cook intake.
@@ -136,7 +136,7 @@ sirEditorTextResourceResult_t sirEditorScanTextResources( const char *pszSource,
 // Lookup a validated local resource ID, using the original source bytes.
 // Resource stable keys only identify declarations within a particular scene;
 // the importing editor must add its canonical source identity.
-sirEditorTextResourceResult_t sirEditorFindTextResource( const char *pszSource, const sirEditorTextResourceIndex_t &index,
+sirEditorTextResourceResult_t sirEditorFindTextResource( const char *pszSource, const sirEditorTextResourceIndex_t& index,
                                                          sirEditorTextResourceKind_t eKind, const char *pszId, uint32_t nIdLength,
                                                          uint32_t *pOutIndex ) noexcept;
 

@@ -27,11 +27,13 @@ SIRFMODMixerBackend::~SIRFMODMixerBackend( void ) noexcept
 
 bool SIRFMODMixerBackend::isReady( void ) const noexcept
 {
+
+
 	return m_bInitialized && m_pContext != nullptr && m_pContext->isReady() && m_pContext->getEpoch() == m_nContextEpoch;
 }
 
 sirAudioResult_t SIRFMODMixerBackend::configure( SIRFMODContext *pContext, const sirContainerAllocator_t *pAllocator,
-                                                 const sirFMODMixerNativeOps_t &ops, uint32_t nMaxControls ) noexcept
+                                                 const sirFMODMixerNativeOps_t& ops, uint32_t nMaxControls ) noexcept
 {
 	if ( m_pContext != nullptr || m_bInitialized || !SIRRawStorage::isValidAllocator( pAllocator ) || pContext == nullptr ||
 	     !pContext->isReady() || nMaxControls == 0 || ops.nAbiVersion != 1 || ops.resolveBus == nullptr || ops.resolveVCA == nullptr ||
@@ -77,7 +79,7 @@ void SIRFMODMixerBackend::shutdown( void ) noexcept
 		abort();
 	}
 	for ( uint32_t iControl = 0; iControl < m_nCount; ++iControl ) {
-		const sirFMODMixerControl_t &control = m_pControls[iControl];
+		const sirFMODMixerControl_t& control = m_pControls[iControl];
 		if ( control.pBankStore != nullptr ) {
 			control.pBankStore->unpinBankObject( control.nPackageId );
 		}
@@ -99,7 +101,7 @@ void SIRFMODMixerBackend::shutdown( void ) noexcept
 	m_bInitialized = false;
 }
 
-bool SIRFMODMixerBackend::findControl( uint64_t nControlId, uint32_t &iIndex ) const noexcept
+bool SIRFMODMixerBackend::findControl( uint64_t nControlId, uint32_t& iIndex ) const noexcept
 {
 	uint32_t iLow = 0;
 	uint32_t iHigh = m_nCount;

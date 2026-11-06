@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <limits.h>
 
-static bool sirEditorNodeLess( const sirEditorNode_t &lhs, const sirEditorNode_t &rhs ) noexcept
+static bool sirEditorNodeLess( const sirEditorNode_t& lhs, const sirEditorNode_t& rhs ) noexcept
 {
 	return lhs.nId < rhs.nId;
 }
@@ -30,7 +30,7 @@ SIREditorSceneDocument::SIREditorSceneDocument( void ) noexcept
 {
 }
 
-sirEditorResult_t SIREditorSceneDocument::initialize( const sirEditorDocumentStorage_t &storage ) noexcept
+sirEditorResult_t SIREditorSceneDocument::initialize( const sirEditorDocumentStorage_t& storage ) noexcept
 {
 	if ( m_bInitialized ) {
 		return SIR_EDITOR_INVALID_ARGUMENT;
@@ -82,8 +82,8 @@ sirEditorResult_t SIREditorSceneDocument::initialize( const sirEditorDocumentSto
 		const size_t szPropertySizes[5] = { sizeof( sirEditorProperty_t ), sizeof( sirEditorProperty_t ),
 		                                    sizeof( sirEditorPropertyMutation_t ), sizeof( sirEditorPropertyDelta_t ),
 		                                    sizeof( sirEditorPropertyDelta_t ) };
-		const uint32_t szPropertyCapacities[5] = { storage.nPropertyCapacity, storage.nPropertyCapacity,
-		                                           storage.nPendingPropertyCapacity, storage.nPropertyCapacity + storage.nPendingPropertyCapacity,
+		const uint32_t szPropertyCapacities[5] = { storage.nPropertyCapacity, storage.nPropertyCapacity, storage.nPendingPropertyCapacity,
+		                                           storage.nPropertyCapacity + storage.nPendingPropertyCapacity,
 		                                           storage.nPropertyDeltaCapacity };
 		if ( storage.nPropertyCapacity > UINT32_MAX - storage.nPendingPropertyCapacity ) {
 			return SIR_EDITOR_INVALID_ARGUMENT;
@@ -94,7 +94,8 @@ sirEditorResult_t SIREditorSceneDocument::initialize( const sirEditorDocumentSto
 			}
 			const size_t nBytes = ( size_t )szPropertyCapacities[iPropertyRange] * szPropertySizes[iPropertyRange];
 			for ( uint32_t iExisting = 0; iExisting < 7; ++iExisting ) {
-				if ( sirEditorRangesOverlap( szPropertyPointers[iPropertyRange], nBytes, szPointers[iExisting], szByteCounts[iExisting] ) ) {
+				if ( sirEditorRangesOverlap( szPropertyPointers[iPropertyRange], nBytes, szPointers[iExisting],
+				                             szByteCounts[iExisting] ) ) {
 					return SIR_EDITOR_INVALID_ARGUMENT;
 				}
 			}
@@ -164,7 +165,7 @@ sirEditorResult_t SIREditorSceneDocument::beginEdit( uint64_t nExpectedRevision 
 	return SIR_EDITOR_OK;
 }
 
-sirEditorResult_t SIREditorSceneDocument::queueUpsert( const sirEditorNode_t &node ) noexcept
+sirEditorResult_t SIREditorSceneDocument::queueUpsert( const sirEditorNode_t& node ) noexcept
 {
 	if ( !m_bEditing ) {
 		return SIR_EDITOR_NO_TRANSACTION;
@@ -176,7 +177,7 @@ sirEditorResult_t SIREditorSceneDocument::queueUpsert( const sirEditorNode_t &no
 		return SIR_EDITOR_OUT_OF_CAPACITY;
 	}
 
-	sirEditorMutation_t &mutation = m_Storage.pPending[m_nPendingCount++];
+	sirEditorMutation_t& mutation = m_Storage.pPending[m_nPendingCount++];
 	mutation.node = node;
 	mutation.eType = SIR_EDITOR_MUTATION_UPSERT;
 	return SIR_EDITOR_OK;
@@ -194,7 +195,7 @@ sirEditorResult_t SIREditorSceneDocument::queueRemove( uint64_t nId ) noexcept
 		return SIR_EDITOR_OUT_OF_CAPACITY;
 	}
 
-	sirEditorMutation_t &mutation = m_Storage.pPending[m_nPendingCount++];
+	sirEditorMutation_t& mutation = m_Storage.pPending[m_nPendingCount++];
 	mutation.node = {};
 	mutation.node.nId = nId;
 	mutation.eType = SIR_EDITOR_MUTATION_REMOVE;
@@ -213,7 +214,7 @@ uint32_t SIREditorSceneDocument::findSlot( const sirEditorNode_t *pNodes, uint64
 
 sirEditorResult_t SIREditorSceneDocument::applyPending( uint32_t iMutation, sirEditorDelta_t *pDelta ) noexcept
 {
-	const sirEditorMutation_t &mutation = m_Storage.pPending[iMutation];
+	const sirEditorMutation_t& mutation = m_Storage.pPending[iMutation];
 	uint32_t iSlot = findSlot( m_Storage.pStaging, mutation.node.nId );
 
 	if ( mutation.eType == SIR_EDITOR_MUTATION_REMOVE ) {
@@ -268,7 +269,7 @@ uint32_t SIREditorSceneDocument::indexedSlot( uint64_t nId ) const noexcept
 	}
 	uint32_t iHash = sirEditorIndexHash( nId, m_Storage.nIndexCapacity );
 	for ( uint32_t nProbes = 0; nProbes < m_Storage.nIndexCapacity; ++nProbes ) {
-		const sirEditorIndexEntry_t &entry = m_Storage.pIndex[iHash];
+		const sirEditorIndexEntry_t& entry = m_Storage.pIndex[iHash];
 		if ( entry.nId == nId ) {
 			return entry.iSlot;
 		}
@@ -284,7 +285,7 @@ sirEditorResult_t SIREditorSceneDocument::buildValidatedIndex( const sirEditorNo
 {
 	memset( m_Storage.pIndex, 0, sizeof( sirEditorIndexEntry_t ) * m_Storage.nIndexCapacity );
 	for ( uint32_t iSlot = 0; iSlot < m_Storage.nNodeCapacity; ++iSlot ) {
-		const sirEditorNode_t &node = pNodes[iSlot];
+		const sirEditorNode_t& node = pNodes[iSlot];
 		if ( node.nId == 0 ) {
 			continue;
 		}
@@ -329,7 +330,7 @@ sirEditorResult_t SIREditorSceneDocument::setPropertyRegistry( const SIRObjectRe
 }
 
 uint32_t SIREditorSceneDocument::findPropertySlot( const sirEditorProperty_t *pProperties, uint64_t nNodeId,
-                                                    uint32_t nPropertyId ) const noexcept
+                                                   uint32_t nPropertyId ) const noexcept
 {
 	for ( uint32_t iSlot = 0; iSlot < m_Storage.nPropertyCapacity; ++iSlot ) {
 		if ( pProperties[iSlot].nNodeId == nNodeId && pProperties[iSlot].nPropertyId == nPropertyId ) {
@@ -388,8 +389,8 @@ sirEditorResult_t SIREditorSceneDocument::applyPendingProperty( uint32_t iMutati
 	if ( mutation.bRemove && iSlot == UINT32_MAX ) {
 		return SIR_EDITOR_NOT_FOUND;
 	}
-	if ( !mutation.bRemove && m_pRegistry->validateProperty( m_Storage.pStaging[iNode].nTypeId,
-	                                                         property.nPropertyId, property.value ) != SIR_OBJECT_OK ) {
+	if ( !mutation.bRemove &&
+	     m_pRegistry->validateProperty( m_Storage.pStaging[iNode].nTypeId, property.nPropertyId, property.value ) != SIR_OBJECT_OK ) {
 		return SIR_EDITOR_INVALID_PROPERTY;
 	}
 	if ( iSlot == UINT32_MAX ) {
@@ -431,8 +432,8 @@ sirEditorResult_t SIREditorSceneDocument::discardOrphanedProperties( void ) noex
 			}
 		}
 		if ( iNode != UINT32_MAX && ( bSameGeneration || bExplicitlyAssigned ) ) {
-			if ( m_pRegistry == nullptr ||
-			     m_pRegistry->validateProperty( m_Storage.pStaging[iNode].nTypeId, property.nPropertyId, property.value ) != SIR_OBJECT_OK ) {
+			if ( m_pRegistry == nullptr || m_pRegistry->validateProperty( m_Storage.pStaging[iNode].nTypeId, property.nPropertyId,
+			                                                              property.value ) != SIR_OBJECT_OK ) {
 				return SIR_EDITOR_INVALID_PROPERTY;
 			}
 			continue;
@@ -503,10 +504,11 @@ sirEditorResult_t SIREditorSceneDocument::commitEdit( void ) noexcept
 	uint32_t nRetainedPropertyDeltas = nRetainedFrames == m_nHistoryCount
 	                                       ? m_nHistoryPropertyDeltaCount
 	                                       : ( nRetainedFrames == 0 ? 0
-	                                                                  : m_Storage.pHistoryFrames[nRetainedFrames - 1].iFirstPropertyDelta +
-	                                                                        m_Storage.pHistoryFrames[nRetainedFrames - 1].nPropertyDeltas );
+	                                                                : m_Storage.pHistoryFrames[nRetainedFrames - 1].iFirstPropertyDelta +
+	                                                                      m_Storage.pHistoryFrames[nRetainedFrames - 1].nPropertyDeltas );
 	if ( nRetainedFrames == m_Storage.nFrameCapacity || m_nPendingCount > m_Storage.nDeltaCapacity - nRetainedDeltas ||
-	     ( m_Storage.nPropertyCapacity != 0 && m_nPendingPropertyDeltaCount > m_Storage.nPropertyDeltaCapacity - nRetainedPropertyDeltas ) ) {
+	     ( m_Storage.nPropertyCapacity != 0 &&
+	       m_nPendingPropertyDeltaCount > m_Storage.nPropertyDeltaCapacity - nRetainedPropertyDeltas ) ) {
 		nRetainedFrames = 0;
 		nRetainedDeltas = 0;
 		nRetainedPropertyDeltas = 0;
@@ -517,8 +519,7 @@ sirEditorResult_t SIREditorSceneDocument::commitEdit( void ) noexcept
 		        sizeof( sirEditorPropertyDelta_t ) * m_nPendingPropertyDeltaCount );
 	}
 	memcpy( m_Storage.pHistoryDeltas + nRetainedDeltas, m_Storage.pPendingDeltas, sizeof( sirEditorDelta_t ) * m_nPendingCount );
-	m_Storage.pHistoryFrames[nRetainedFrames] = { nRetainedDeltas, m_nPendingCount, nRetainedPropertyDeltas,
-	                                               m_nPendingPropertyDeltaCount };
+	m_Storage.pHistoryFrames[nRetainedFrames] = { nRetainedDeltas, m_nPendingCount, nRetainedPropertyDeltas, m_nPendingPropertyDeltaCount };
 	m_nHistoryCount = nRetainedFrames + 1;
 	m_nHistoryCursor = m_nHistoryCount;
 	m_nHistoryDeltaCount = nRetainedDeltas + m_nPendingCount;
@@ -561,14 +562,14 @@ sirEditorResult_t SIREditorSceneDocument::applyHistoryFrame( bool bUndo ) noexce
 	}
 
 	uint32_t iFrame = bUndo ? m_nHistoryCursor - 1 : m_nHistoryCursor;
-	const sirEditorHistoryFrame_t &frame = m_Storage.pHistoryFrames[iFrame];
+	const sirEditorHistoryFrame_t& frame = m_Storage.pHistoryFrames[iFrame];
 	if ( m_Storage.nPropertyCapacity != 0 ) {
 		memcpy( m_Storage.pPropertyStaging, m_Storage.pProperties, sizeof( sirEditorProperty_t ) * m_Storage.nPropertyCapacity );
 	}
 	memcpy( m_Storage.pStaging, m_Storage.pNodes, sizeof( sirEditorNode_t ) * m_Storage.nNodeCapacity );
 	for ( uint32_t iDelta = 0; iDelta < frame.nDeltas; ++iDelta ) {
 		uint32_t iInFrame = bUndo ? frame.nDeltas - iDelta - 1 : iDelta;
-		const sirEditorDelta_t &delta = m_Storage.pHistoryDeltas[frame.iFirstDelta + iInFrame];
+		const sirEditorDelta_t& delta = m_Storage.pHistoryDeltas[frame.iFirstDelta + iInFrame];
 		m_Storage.pStaging[delta.iSlot] = bUndo ? delta.previous : delta.next;
 	}
 	if ( m_Storage.nPropertyCapacity != 0 ) {
@@ -591,7 +592,8 @@ sirEditorResult_t SIREditorSceneDocument::applyHistoryFrame( bool bUndo ) noexce
 			}
 			const uint32_t iNode = findSlot( m_Storage.pStaging, property.nNodeId );
 			if ( iNode == UINT32_MAX || m_pRegistry == nullptr ||
-			     m_pRegistry->validateProperty( m_Storage.pStaging[iNode].nTypeId, property.nPropertyId, property.value ) != SIR_OBJECT_OK ) {
+			     m_pRegistry->validateProperty( m_Storage.pStaging[iNode].nTypeId, property.nPropertyId, property.value ) !=
+			         SIR_OBJECT_OK ) {
 				buildValidatedIndex( m_Storage.pNodes );
 				return SIR_EDITOR_INVALID_PROPERTY;
 			}
@@ -683,7 +685,7 @@ bool SIREditorSceneDocument::canRedo( void ) const noexcept
 }
 
 sirEditorResult_t SIREditorSceneDocument::findProperty( uint64_t nNodeId, uint32_t nPropertyId,
-                                                       sirPropertyValue_t *pOutValue ) const noexcept
+                                                        sirPropertyValue_t *pOutValue ) const noexcept
 {
 	if ( !m_bInitialized ) {
 		return SIR_EDITOR_NOT_INITIALIZED;
@@ -719,7 +721,7 @@ sirEditorResult_t SIREditorSceneDocument::copyPropertySnapshot( sirEditorPropert
 		return SIR_EDITOR_OUT_OF_CAPACITY;
 	}
 	if ( nCount != 0 && sirEditorRangesOverlap( pOut, nCount * sizeof( sirEditorProperty_t ), m_Storage.pProperties,
-	                                           m_Storage.nPropertyCapacity * sizeof( sirEditorProperty_t ) ) ) {
+	                                            m_Storage.nPropertyCapacity * sizeof( sirEditorProperty_t ) ) ) {
 		return SIR_EDITOR_INVALID_ARGUMENT;
 	}
 	uint32_t iWrite = 0;

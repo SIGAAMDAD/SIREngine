@@ -29,7 +29,7 @@ static void benchmarkAudioDeallocate( void *, void *pData, size_t, size_t ) noex
 	free( pData );
 }
 
-static void SIRBenchmarkAudioCommandQueue( benchmark::State &state )
+static void SIRBenchmarkAudioCommandQueue( benchmark::State& state )
 {
 	const sirContainerAllocator_t allocator = { nullptr, benchmarkAudioAllocate, benchmarkAudioDeallocate, 0, 0 };
 	SIRAudioQueue<sirAudioCommand_t> queue;
@@ -53,7 +53,7 @@ static void SIRBenchmarkAudioCommandQueue( benchmark::State &state )
 	state.SetItemsProcessed( state.iterations() );
 }
 
-static void SIRBenchmarkFMODMemoryDomain( benchmark::State &state )
+static void SIRBenchmarkFMODMemoryDomain( benchmark::State& state )
 {
 	const sirContainerAllocator_t allocator = { nullptr, benchmarkAudioAllocate, benchmarkAudioDeallocate, 0, 0 };
 	SIRFMODMemoryBudget budget;

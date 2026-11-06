@@ -50,7 +50,7 @@ typedef struct sirEditorTextEdit_s
 // committing or saving it. No bytes are published on a failed validation.
 // pOutBytes excludes the trailing NUL; output capacity must include it.
 sirEditorTextWriteResult_t sirEditorWriteScalarPatches( const char *pszSource, size_t nSourceBytes,
-                                                        const sirEditorTextPropertyIndex_t &index, const sirEditorTextEdit_t *pEdits,
+                                                        const sirEditorTextPropertyIndex_t& index, const sirEditorTextEdit_t *pEdits,
                                                         uint32_t nEdits, char *pszOutput, size_t nCapacity, size_t *pOutBytes ) noexcept;
 
 #endif // __SIRENGINE_SIREDITORTEXTWRITER_H__

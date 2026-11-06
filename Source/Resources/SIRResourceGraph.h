@@ -372,7 +372,7 @@ public:
 	bool isReady( void ) const noexcept;
 	SIRResourceResult registerProvider( uint32_t nProviderId, const SIRDerivedProviderCallbacks& rCallbacks ) noexcept;
 	SIRResourceResult registerProvider( uint32_t nProviderId, uint32_t nProviderGeneration, uint32_t nLaneCount,
-	                                   const SIRDerivedProviderCallbacks& rCallbacks ) noexcept;
+	                                    const SIRDerivedProviderCallbacks& rCallbacks ) noexcept;
 	SIRResourceResult registerRepresentation( const SIRResourceReadScope& rScope, const SIRResourceView& rSource,
 	                                          const SIRDerivedResourceRegistration& rRegistration,
 	                                          SIRDerivedResourceHandle *pHandle ) noexcept;

@@ -17,11 +17,11 @@ static void sirEditorWriterRealSceneRoundtrip( void )
 	assert( workspace.initialize( pSegment ) );
 	assert( workspace.openTextFile( SIR_EDITOR_TEST_UI_SCENE ) == SIR_EDITOR_WORKSPACE_OK );
 
-	const sirEditorTextPropertyIndex_t &properties = workspace.getPropertyIndex();
+	const sirEditorTextPropertyIndex_t& properties = workspace.getPropertyIndex();
 	assert( properties.nCount == 15 );
 	uint32_t iLayout = UINT32_MAX;
 	for ( uint32_t iProperty = 0; iProperty < properties.nCount; ++iProperty ) {
-		const sirEditorTextProperty_t &property = properties.pProperties[iProperty];
+		const sirEditorTextProperty_t& property = properties.pProperties[iProperty];
 		if ( property.nNameLength == 11 && memcmp( workspace.getSource() + property.nNameOffset, "layout_mode", 11 ) == 0 ) {
 			iLayout = iProperty;
 			break;
@@ -43,7 +43,7 @@ static void sirEditorWriterRealSceneRoundtrip( void )
 	assert( workspace.getSceneIndex().nNodeCount == 5 );
 	assert( workspace.getResourceIndex().nCount == 1 );
 	assert( workspace.getPropertyIndex().nCount == 15 );
-	const sirEditorTextProperty_t &written = workspace.getPropertyIndex().pProperties[iLayout];
+	const sirEditorTextProperty_t& written = workspace.getPropertyIndex().pProperties[iLayout];
 	assert( written.nValueLength == 1 );
 	assert( workspace.getSource()[written.nValueOffset] == '4' );
 	workspace.close();

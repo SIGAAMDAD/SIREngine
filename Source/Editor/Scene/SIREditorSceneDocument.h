@@ -165,7 +165,6 @@ public:
 	sirEditorResult_t copyPropertySnapshot( sirEditorProperty_t *pOut, uint32_t nCapacity, uint32_t *pOutCount ) const noexcept;
 
 protected:
-
 private:
 	sirEditorDocumentStorage_t m_Storage;
 	const SIRObjectRegistry *m_pRegistry;

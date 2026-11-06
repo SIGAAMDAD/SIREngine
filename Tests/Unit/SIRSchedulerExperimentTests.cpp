@@ -85,8 +85,8 @@ static void sirExperimentCheckGranularity( uint32_t nWorkers, uint32_t nChunk )
 			const uint64_t nFirst = ( uint64_t )iTask * nChunk;
 			const uint64_t nEnd = nFirst + nChunk < N_ELEMENTS ? nFirst + nChunk : N_ELEMENTS;
 			ranges[iTask] = { nFirst, nEnd, 0 };
-			SIR_EXPERIMENT_CHECK(
-			    scheduler.submit({ sirExperimentRangeTask, &ranges[iTask], SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU }, &handles[iTask]) );
+			SIR_EXPERIMENT_CHECK( scheduler.submit( { sirExperimentRangeTask, &ranges[iTask], SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU },
+			                                        &handles[iTask] ) );
 		}
 		if ( nWorkers == 0 ) {
 			SIR_EXPERIMENT_CHECK( scheduler.pumpCPU( nTasks ) == nTasks );
@@ -127,7 +127,8 @@ static sirTaskResult_t sirExperimentSpawn( void *pContext, sirTaskHandle_t ) noe
 {
 	sirExperimentSpawn_t *pSpawn = ( sirExperimentSpawn_t * )pContext;
 	for ( uint32_t i = 0; i < pSpawn->nChildren; ++i ) {
-		if ( !pSpawn->pScheduler->submit({ sirExperimentChild, pSpawn->pCompleted, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU }, &pSpawn->pChildren[i]) ) {
+		if ( !pSpawn->pScheduler->submit( { sirExperimentChild, pSpawn->pCompleted, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU },
+﻿2026-11-06T00:14:49.2215582Z 		                                  &pSpawn->pChildren[i] ) ) {
 			pSpawn->bSubmissionOk.store( false, std::memory_order_release );
 			return SIR_TASK_RESULT_FAILURE;
 		}
@@ -147,7 +148,7 @@ static void sirExperimentCheckStealing( void )
 	sirExperimentSpawn_t spawn = { &scheduler, children, &nCompleted, N_CHILDREN, true };
 	for ( uint32_t iRound = 0; iRound < 20; ++iRound ) {
 		sirTaskHandle_t root = {};
-		SIR_EXPERIMENT_CHECK( scheduler.submit({ sirExperimentSpawn, &spawn, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU }, &root) );
+		SIR_EXPERIMENT_CHECK( scheduler.submit( { sirExperimentSpawn, &spawn, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU }, &root ) );
 		SIR_EXPERIMENT_CHECK( scheduler.waitTask( root ) );
 		SIR_EXPERIMENT_CHECK( spawn.bSubmissionOk.load() );
 		SIR_EXPERIMENT_CHECK( scheduler.releaseTask( root ) );
@@ -198,7 +199,7 @@ static void sirExperimentCheckDag( uint32_t nWorkers, bool bFanOut )
 			edges[i - 1] = { bFanOut ? 0U : i - 1, i };
 		}
 	}
-	SIR_EXPERIMENT_CHECK( scheduler.submitBatch({ tasks, N_TASKS, edges, N_TASKS - 1 }, handles) );
+	SIR_EXPERIMENT_CHECK( scheduler.submitBatch( { tasks, N_TASKS, edges, N_TASKS - 1 }, handles ) );
 	if ( nWorkers == 0 ) {
 		SIR_EXPERIMENT_CHECK( scheduler.pumpCPU( N_TASKS ) == N_TASKS );
 	}

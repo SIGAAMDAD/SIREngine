@@ -88,13 +88,13 @@ public:
 	sirObjectResult_t initialize( sirObjectTypeDescriptor_t *pTypes, uint32_t nTypeCapacity, sirObjectPropertyDescriptor_t *pProperties,
 	                              uint32_t nPropertyCapacity ) noexcept;
 	void shutdown( void ) noexcept;
-	sirObjectResult_t registerType( const sirObjectTypeDescriptor_t &type ) noexcept;
-	sirObjectResult_t registerProperty( const sirObjectPropertyDescriptor_t &property ) noexcept;
+	sirObjectResult_t registerType( const sirObjectTypeDescriptor_t& type ) noexcept;
+	sirObjectResult_t registerProperty( const sirObjectPropertyDescriptor_t& property ) noexcept;
 	sirObjectResult_t seal( void ) noexcept;
 	const sirObjectTypeDescriptor_t *findType( uint32_t nTypeId ) const noexcept;
 	const sirObjectPropertyDescriptor_t *findProperty( uint32_t nTypeId, uint32_t nPropertyId ) const noexcept;
 	const sirObjectPropertyDescriptor_t *getPropertyDescriptor( uint32_t iProperty ) const noexcept;
-	sirObjectResult_t validateProperty( uint32_t nTypeId, uint32_t nPropertyId, const sirPropertyValue_t &value ) const noexcept;
+	sirObjectResult_t validateProperty( uint32_t nTypeId, uint32_t nPropertyId, const sirPropertyValue_t& value ) const noexcept;
 	uint32_t getTypeCount( void ) const noexcept;
 	uint32_t getPropertyCount( void ) const noexcept;
 };
@@ -127,8 +127,8 @@ public:
 	sirObjectResult_t initialize( sirObjectSlot_t *pSlots, uint32_t nCapacity, const SIRObjectRegistry *pTypes ) noexcept;
 	void shutdown( void ) noexcept;
 	sirObjectResult_t create( uint64_t nStableId, uint32_t nTypeId, sirObjectHandle_t *pOutHandle ) noexcept;
-	sirObjectResult_t resolve( const sirObjectHandle_t &handle, sirObjectSlot_t *pOutSlot ) const noexcept;
-	sirObjectResult_t destroy( const sirObjectHandle_t &handle ) noexcept;
+	sirObjectResult_t resolve( const sirObjectHandle_t& handle, sirObjectSlot_t *pOutSlot ) const noexcept;
+	sirObjectResult_t destroy( const sirObjectHandle_t& handle ) noexcept;
 	uint32_t getCount( void ) const noexcept;
 };
 

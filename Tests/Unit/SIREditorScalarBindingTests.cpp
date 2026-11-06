@@ -175,8 +175,7 @@ int main( void )
 
 	char szGuard[16] = {};
 	memset( szGuard, 0x66, sizeof( szGuard ) );
-	assert( sirEditorExportBoundScalars( context, szGuard, sizeof( szGuard ), &nWritten ) ==
-	        SIR_EDITOR_SCALAR_BRIDGE_WRITE_ERROR );
+	assert( sirEditorExportBoundScalars( context, szGuard, sizeof( szGuard ), &nWritten ) == SIR_EDITOR_SCALAR_BRIDGE_WRITE_ERROR );
 	assert( szGuard[0] == 0x66 );
 	assert( document.undo() == SIR_EDITOR_OK );
 	assert( document.findProperty( 1, 7, &found ) == SIR_EDITOR_OK && found.nPayload == 12 );
@@ -190,8 +189,7 @@ int main( void )
 	assert( sirEditorImportBoundScalars( context ) == SIR_EDITOR_SCALAR_BRIDGE_INVALID_BINDING );
 	assert( document.getRevision() == nRevision );
 	szBindings[0].iSourceProperty = 0;
-	assert( sirEditorExportBoundScalars( context, szValues, sizeof( szValues ), &nWritten ) ==
-	        SIR_EDITOR_SCALAR_BRIDGE_INVALID_ARGUMENT );
+	assert( sirEditorExportBoundScalars( context, szValues, sizeof( szValues ), &nWritten ) == SIR_EDITOR_SCALAR_BRIDGE_INVALID_ARGUMENT );
 	document.shutdown();
 	registry.shutdown();
 	return 0;

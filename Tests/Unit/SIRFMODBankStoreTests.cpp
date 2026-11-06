@@ -939,7 +939,7 @@ static void testRuntimeComposition( const sirContainerAllocator_t *pAllocator )
 	manifest.shutdown();
 }
 
-static sirFMODThreadResult_t testWaitForTicket( SIRFMODAudioThread &thread, uint64_t nTicket )
+static sirFMODThreadResult_t testWaitForTicket( SIRFMODAudioThread& thread, uint64_t nTicket )
 {
 	sirFMODThreadResult_t result = {};
 	for ( uint32_t iAttempt = 0; iAttempt < 10000; ++iAttempt ) {
@@ -1011,8 +1011,7 @@ static void testAudioOwnerThread( const sirContainerAllocator_t *pAllocator )
 	recovery.bFlag = 1;
 	uint64_t nRecoveryTicket = 0;
 	checkBank( worker.submit( recovery, nRecoveryTicket ) == SIR_AUDIO_PENDING );
-	for ( uint32_t iAttempt = 0; iAttempt < 1000 && s_nDriverEntered.load( std::memory_order_acquire ) == 0;
-	      ++iAttempt ) {
+	for ( uint32_t iAttempt = 0; iAttempt < 1000 && s_nDriverEntered.load( std::memory_order_acquire ) == 0; ++iAttempt ) {
 		std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
 	}
 	const bool bNativeEntered = s_nDriverEntered.load( std::memory_order_acquire ) != 0;
@@ -1060,7 +1059,7 @@ static void testAudioOwnerThread( const sirContainerAllocator_t *pAllocator )
 			}
 		} );
 	}
-	for ( std::thread &producer : producers ) {
+	for ( std::thread& producer : producers ) {
 		producer.join();
 	}
 	checkBank( nCompletedStress.load() == 512 );

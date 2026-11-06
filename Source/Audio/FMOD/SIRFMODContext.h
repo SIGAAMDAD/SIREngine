@@ -56,6 +56,8 @@ typedef struct sirFMODContextConfig_s
 	uint8_t nReserved;
 } sirFMODContextConfig_t;
 
+
+
 // Private FMOD provider bridge. All opaque native objects belong exclusively
 // to the Studio owner. The Core System pointer is borrowed, never released.
 // Callback return values are native FMOD_RESULT codes; 0 means FMOD_OK.
@@ -107,13 +109,13 @@ private:
 public:
 	SIRFMODContext( void ) noexcept = default;
 	~SIRFMODContext( void ) noexcept;
-	SIRFMODContext( const SIRFMODContext & ) = delete;
-	SIRFMODContext &operator=( const SIRFMODContext & ) = delete;
+	SIRFMODContext( const SIRFMODContext& ) = delete;
+	SIRFMODContext& operator=( const SIRFMODContext& ) = delete;
 
-	sirFMODContextResult_t initialize( const sirFMODContextConfig_t &config, const sirFMODNativeOps_t &ops ) noexcept;
+	sirFMODContextResult_t initialize( const sirFMODContextConfig_t& config, const sirFMODNativeOps_t& ops ) noexcept;
 	sirFMODContextResult_t update( void ) noexcept;
 	sirFMODContextResult_t shutdown( void ) noexcept;
-	sirFMODContextResult_t getDriverCount( int32_t &nCount ) noexcept;
+	sirFMODContextResult_t getDriverCount( int32_t& nCount ) noexcept;
 	sirFMODContextResult_t changeDriver( int32_t iDriver ) noexcept;
 	sirFMODContextResult_t recoverOutput( int32_t iPreferredDriver, bool bFallbackToFirst ) noexcept;
 	bool needsDeviceRecovery( void ) const noexcept;

@@ -170,7 +170,7 @@ static int32_t snapshotCreate( void *pData, void *pDescription, void **ppInstanc
 	checkSnapshot( pDescription == &pFixture->nDescription );
 	++pFixture->nCreates;
 	for ( uint32_t iInstance = 0; iInstance < 4; ++iInstance ) {
-		sirFMODSnapshotFixtureInstance_t &instance = pFixture->instances[iInstance];
+		sirFMODSnapshotFixtureInstance_t& instance = pFixture->instances[iInstance];
 		if ( instance.bAllocated != 0 ) {
 			continue;
 		}

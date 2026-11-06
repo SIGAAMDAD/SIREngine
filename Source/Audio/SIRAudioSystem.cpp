@@ -27,8 +27,8 @@ SIRAudioSystem::~SIRAudioSystem( void ) noexcept
 	shutdown();
 }
 
-sirAudioResult_t SIRAudioSystem::initialize( const sirAudioSystemConfig_t &config, const sirContainerAllocator_t *pAllocator,
-                                             const sirAudioBackendOps_t &backend, void *pBackendContext,
+sirAudioResult_t SIRAudioSystem::initialize( const sirAudioSystemConfig_t& config, const sirContainerAllocator_t *pAllocator,
+                                             const sirAudioBackendOps_t& backend, void *pBackendContext,
                                              const SIRAudioResourceStore *pResources ) noexcept
 {
 	if ( ( pResources != nullptr && !pResources->isLoaded() ) || m_bInitialized || m_pPlaying != nullptr || backend.nAbiVersion != 2 ||
@@ -48,6 +48,8 @@ sirAudioResult_t SIRAudioSystem::initialize( const sirAudioSystemConfig_t &confi
 	}
 	m_pPlaying = ( sirAudioPlayingSlot_t * )pMemory;
 	m_pAllocator = pAllocator;
+
+
 	m_nPlayingCapacity = config.nMaxPlaying;
 	m_nNextSlot = 0;
 	memset( m_pPlaying, 0, nBytes );
@@ -162,11 +164,11 @@ bool SIRAudioSystem::isValidListener( sirAudioListenerHandle_t hListener ) const
 	       m_pListeners[hListener.nSlot].eState == SIR_AUDIO_SPATIAL_ACTIVE;
 }
 
-void SIRAudioSystem::markTerminal( sirAudioPlayingSlot_t &slot, sirAudioPlaybackState_t eState ) noexcept
+void SIRAudioSystem::markTerminal( sirAudioPlayingSlot_t& slot, sirAudioPlaybackState_t eState ) noexcept
 {
 	if ( slot.eState != SIR_AUDIO_PLAYBACK_FINISHED && slot.eState != SIR_AUDIO_PLAYBACK_FAILED && slot.hEmitter.nEpoch == m_nEpoch &&
 	     slot.hEmitter.nSlot < m_nEmitterCapacity ) {
-		sirAudioSpatialSlot_t &emitter = m_pEmitters[slot.hEmitter.nSlot];
+		sirAudioSpatialSlot_t& emitter = m_pEmitters[slot.hEmitter.nSlot];
 		if ( emitter.nGeneration == slot.hEmitter.nGeneration && emitter.nActiveVoices != 0 ) {
 			--emitter.nActiveVoices;
 		}
@@ -174,7 +176,7 @@ void SIRAudioSystem::markTerminal( sirAudioPlayingSlot_t &slot, sirAudioPlayback
 	slot.eState = eState;
 }
 
-void SIRAudioSystem::applyReleaseResult( const sirAudioCommand_t &command, sirAudioResult_t eResult ) noexcept
+void SIRAudioSystem::applyReleaseResult( const sirAudioCommand_t& command, sirAudioResult_t eResult ) noexcept
 {
 	if ( command.eType != SIR_AUDIO_COMMAND_RELEASE_EMITTER && command.eType != SIR_AUDIO_COMMAND_RELEASE_LISTENER ) {
 		return;
@@ -185,13 +187,13 @@ void SIRAudioSystem::applyReleaseResult( const sirAudioCommand_t &command, sirAu
 	if ( command.hEmitter.nEpoch != m_nEpoch || command.hEmitter.nSlot >= nCapacity ) {
 		return;
 	}
-	sirAudioSpatialSlot_t &slot = pSlots[command.hEmitter.nSlot];
+	sirAudioSpatialSlot_t& slot = pSlots[command.hEmitter.nSlot];
 	if ( slot.nGeneration == command.hEmitter.nGeneration && slot.eState == SIR_AUDIO_SPATIAL_RELEASING ) {
 		slot.eState = ( eResult == SIR_AUDIO_OK ) ? SIR_AUDIO_SPATIAL_FREE : SIR_AUDIO_SPATIAL_ACTIVE;
 	}
 }
 
-static bool isValidAudioAttributes( const sirAudioAttributes_t &attributes ) noexcept
+static bool isValidAudioAttributes( const sirAudioAttributes_t& attributes ) noexcept
 {
 	const float *pVectors[4] = { attributes.fPosition, attributes.fVelocity, attributes.fForward, attributes.fUp };
 	for ( uint32_t iVector = 0; iVector < 4; ++iVector ) {
@@ -204,7 +206,7 @@ static bool isValidAudioAttributes( const sirAudioAttributes_t &attributes ) noe
 	return true;
 }
 
-sirAudioResult_t SIRAudioSystem::enqueue( sirAudioCommand_t &command, bool bCritical, const sirAudioAttributes_t *pAttributes ) noexcept
+sirAudioResult_t SIRAudioSystem::enqueue( sirAudioCommand_t& command, bool bCritical, const sirAudioAttributes_t *pAttributes ) noexcept
 {
 	if ( !m_bInitialized ) {
 		return SIR_AUDIO_NOT_INITIALIZED;
@@ -222,7 +224,7 @@ sirAudioResult_t SIRAudioSystem::enqueue( sirAudioCommand_t &command, bool bCrit
 }
 
 sirAudioResult_t SIRAudioSystem::playEvent( uint64_t nEventId, sirAudioEmitterHandle_t hEmitter,
-                                            sirAudioPlayingHandle_t &hPlaying ) noexcept
+                                            sirAudioPlayingHandle_t& hPlaying ) noexcept
 {
 	hPlaying = {};
 	if ( !m_bInitialized ) {
@@ -249,7 +251,7 @@ sirAudioResult_t SIRAudioSystem::playEvent( uint64_t nEventId, sirAudioEmitterHa
 	}
 	for ( uint32_t nAttempt = 0; nAttempt < m_nPlayingCapacity; ++nAttempt ) {
 		const uint32_t iSlot = ( m_nNextSlot + nAttempt ) % m_nPlayingCapacity;
-		sirAudioPlayingSlot_t &slot = m_pPlaying[iSlot];
+		sirAudioPlayingSlot_t& slot = m_pPlaying[iSlot];
 		if ( slot.eState != SIR_AUDIO_PLAYBACK_FREE && slot.eState != SIR_AUDIO_PLAYBACK_FINISHED &&
 		     slot.eState != SIR_AUDIO_PLAYBACK_FAILED ) {
 			continue;
@@ -298,7 +300,7 @@ sirAudioResult_t SIRAudioSystem::stopEvent( sirAudioPlayingHandle_t hPlaying, si
 	command.eStopMode = eMode;
 	const sirAudioResult_t eResult = enqueue( command, true );
 	if ( eResult == SIR_AUDIO_PENDING ) {
-		sirAudioPlayingSlot_t &slot = m_pPlaying[hPlaying.nSlot];
+		sirAudioPlayingSlot_t& slot = m_pPlaying[hPlaying.nSlot];
 		slot.nStopSequence = command.nSequence;
 		slot.eStateBeforeStop = slot.eState;
 		slot.eState = SIR_AUDIO_PLAYBACK_STOPPING;
@@ -398,7 +400,7 @@ sirAudioResult_t SIRAudioSystem::seekPlayingTimeline( sirAudioPlayingHandle_t hP
 	return enqueue( command, false );
 }
 
-sirAudioResult_t SIRAudioSystem::registerEmitter( sirAudioEmitterHandle_t &hEmitter ) noexcept
+sirAudioResult_t SIRAudioSystem::registerEmitter( sirAudioEmitterHandle_t& hEmitter ) noexcept
 {
 	hEmitter = {};
 	if ( !m_bInitialized ) {
@@ -406,7 +408,7 @@ sirAudioResult_t SIRAudioSystem::registerEmitter( sirAudioEmitterHandle_t &hEmit
 	}
 	for ( uint32_t nAttempt = 0; nAttempt < m_nEmitterCapacity; ++nAttempt ) {
 		const uint32_t iSlot = ( m_nNextEmitterSlot + nAttempt ) % m_nEmitterCapacity;
-		sirAudioSpatialSlot_t &slot = m_pEmitters[iSlot];
+		sirAudioSpatialSlot_t& slot = m_pEmitters[iSlot];
 		if ( slot.eState != SIR_AUDIO_SPATIAL_FREE || slot.nGeneration == UINT32_MAX ) {
 			continue;
 		}
@@ -425,7 +427,7 @@ sirAudioResult_t SIRAudioSystem::releaseEmitter( sirAudioEmitterHandle_t hEmitte
 	if ( !isValidEmitter( hEmitter ) ) {
 		return SIR_AUDIO_INVALID_HANDLE;
 	}
-	sirAudioSpatialSlot_t &slot = m_pEmitters[hEmitter.nSlot];
+	sirAudioSpatialSlot_t& slot = m_pEmitters[hEmitter.nSlot];
 	if ( slot.nActiveVoices != 0 ) {
 		return SIR_AUDIO_BUSY;
 	}
@@ -439,7 +441,7 @@ sirAudioResult_t SIRAudioSystem::releaseEmitter( sirAudioEmitterHandle_t hEmitte
 	return eResult;
 }
 
-sirAudioResult_t SIRAudioSystem::setEmitterAttributes( sirAudioEmitterHandle_t hEmitter, const sirAudioAttributes_t &attributes ) noexcept
+sirAudioResult_t SIRAudioSystem::setEmitterAttributes( sirAudioEmitterHandle_t hEmitter, const sirAudioAttributes_t& attributes ) noexcept
 {
 	if ( !isValidEmitter( hEmitter ) ) {
 		return SIR_AUDIO_INVALID_HANDLE;
@@ -453,7 +455,7 @@ sirAudioResult_t SIRAudioSystem::setEmitterAttributes( sirAudioEmitterHandle_t h
 	return enqueue( command, false, &attributes );
 }
 
-sirAudioResult_t SIRAudioSystem::registerListener( sirAudioListenerHandle_t &hListener ) noexcept
+sirAudioResult_t SIRAudioSystem::registerListener( sirAudioListenerHandle_t& hListener ) noexcept
 {
 	hListener = {};
 	if ( !m_bInitialized ) {
@@ -461,7 +463,7 @@ sirAudioResult_t SIRAudioSystem::registerListener( sirAudioListenerHandle_t &hLi
 	}
 	for ( uint32_t nAttempt = 0; nAttempt < m_nListenerCapacity; ++nAttempt ) {
 		const uint32_t iSlot = ( m_nNextListenerSlot + nAttempt ) % m_nListenerCapacity;
-		sirAudioSpatialSlot_t &slot = m_pListeners[iSlot];
+		sirAudioSpatialSlot_t& slot = m_pListeners[iSlot];
 		if ( slot.eState != SIR_AUDIO_SPATIAL_FREE || slot.nGeneration == UINT32_MAX ) {
 			continue;
 		}
@@ -490,7 +492,7 @@ sirAudioResult_t SIRAudioSystem::releaseListener( sirAudioListenerHandle_t hList
 }
 
 sirAudioResult_t SIRAudioSystem::setListenerAttributes( sirAudioListenerHandle_t hListener,
-                                                        const sirAudioAttributes_t &attributes ) noexcept
+                                                        const sirAudioAttributes_t& attributes ) noexcept
 {
 	if ( !isValidListener( hListener ) ) {
 		return SIR_AUDIO_INVALID_HANDLE;
@@ -630,7 +632,7 @@ sirAudioResult_t SIRAudioSystem::stopSnapshot( uint64_t nSnapshotId, sirAudioSto
 	return enqueue( command, true );
 }
 
-sirAudioResult_t SIRAudioSystem::getPlaybackState( sirAudioPlayingHandle_t hPlaying, sirAudioPlaybackState_t &eState ) noexcept
+sirAudioResult_t SIRAudioSystem::getPlaybackState( sirAudioPlayingHandle_t hPlaying, sirAudioPlaybackState_t& eState ) noexcept
 {
 	if ( !isValid( hPlaying ) ) {
 		return SIR_AUDIO_INVALID_HANDLE;
@@ -639,12 +641,12 @@ sirAudioResult_t SIRAudioSystem::getPlaybackState( sirAudioPlayingHandle_t hPlay
 	return SIR_AUDIO_OK;
 }
 
-bool SIRAudioSystem::applyCompletion( const sirAudioCompletion_t &completion ) noexcept
+bool SIRAudioSystem::applyCompletion( const sirAudioCompletion_t& completion ) noexcept
 {
 	if ( !isValid( completion.hPlaying ) ) {
 		return false;
 	}
-	sirAudioPlayingSlot_t &slot = m_pPlaying[completion.hPlaying.nSlot];
+	sirAudioPlayingSlot_t& slot = m_pPlaying[completion.hPlaying.nSlot];
 	if ( completion.eType == SIR_AUDIO_COMPLETION_STARTED ) {
 		if ( completion.nSequence == slot.nStartSequence ) {
 			if ( slot.eState == SIR_AUDIO_PLAYBACK_QUEUED ) {
@@ -682,12 +684,12 @@ bool SIRAudioSystem::applyCompletion( const sirAudioCompletion_t &completion ) n
 	return false;
 }
 
-void SIRAudioSystem::failSubmission( const sirAudioCommand_t &command ) noexcept
+void SIRAudioSystem::failSubmission( const sirAudioCommand_t& command ) noexcept
 {
 	if ( !isValid( command.hPlaying ) ) {
 		return;
 	}
-	sirAudioPlayingSlot_t &slot = m_pPlaying[command.hPlaying.nSlot];
+	sirAudioPlayingSlot_t& slot = m_pPlaying[command.hPlaying.nSlot];
 	if ( command.eType == SIR_AUDIO_COMMAND_PLAY && slot.nStartSequence == command.nSequence ) {
 		markTerminal( slot, SIR_AUDIO_PLAYBACK_FAILED );
 	} else if ( command.eType == SIR_AUDIO_COMMAND_STOP && slot.eState == SIR_AUDIO_PLAYBACK_STOPPING &&
@@ -707,7 +709,7 @@ void SIRAudioSystem::drainCompletions( void ) noexcept
 			nCount = 16;
 		}
 		for ( uint32_t iCompletion = 0; iCompletion < nCount; ++iCompletion ) {
-			const sirAudioCompletion_t &completion = completions[iCompletion];
+			const sirAudioCompletion_t& completion = completions[iCompletion];
 			if ( applyCompletion( completion ) && m_LifecycleCallback.pfnNotify != nullptr ) {
 				m_LifecycleCallback.pfnNotify( m_LifecycleCallback.pUserData, &completion );
 			}

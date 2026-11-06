@@ -19,7 +19,7 @@ static void sirEditorTestPropertiesFixture( void )
 	SIREditorSceneWorkspace workspace;
 	assert( workspace.initialize( pSegment ) );
 	assert( workspace.openTextFile( SIR_EDITOR_TEST_UI_SCENE ) == SIR_EDITOR_WORKSPACE_OK );
-	const sirEditorTextPropertyIndex_t &props = workspace.getPropertyIndex();
+	const sirEditorTextPropertyIndex_t& props = workspace.getPropertyIndex();
 	assert( props.nCount == 15 );
 	assert( props.pProperties != nullptr );
 	assert( props.pProperties[0].nNodeId == workspace.getSceneIndex().storage.pNodes[0].node.nId );
@@ -52,7 +52,7 @@ static void sirEditorTestPropertiesFixture( void )
 	assert( workspace.openTextSource( szLongScene, nUsed ) == SIR_EDITOR_WORKSPACE_OK );
 	assert( workspace.getPropertyIndex().nCount == 1 );
 	assert( workspace.getPropertyIndex().pProperties[0].nValueLength == 515 );
-	const sirEditorTextProperty_t &longValue = workspace.getPropertyIndex().pProperties[0];
+	const sirEditorTextProperty_t& longValue = workspace.getPropertyIndex().pProperties[0];
 	assert( memcmp( workspace.getSource() + longValue.nValueOffset + 512, "\xc3\xa9", 2 ) == 0 );
 	workspace.close();
 	assert( workspace.getPropertyIndex().nCount == 0 );

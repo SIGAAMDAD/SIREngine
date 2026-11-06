@@ -134,8 +134,8 @@ sirEditorScalarResult_t sirEditorEncodeScalar( const sirPropertyValue_t& value, 
 		if ( !std::isfinite( fValue ) ) {
 			return SIR_EDITOR_SCALAR_INVALID_ARGUMENT;
 		}
-		const std::to_chars_result result = std::to_chars( szEncoded, szEncoded + sizeof( szEncoded ) - 1,
-		                                                  fValue, std::chars_format::general, std::numeric_limits<double>::max_digits10 );
+		const std::to_chars_result result = std::to_chars( szEncoded, szEncoded + sizeof( szEncoded ) - 1, fValue,
+		                                                   std::chars_format::general, std::numeric_limits<double>::max_digits10 );
 		if ( result.ec != std::errc{} ) {
 			return SIR_EDITOR_SCALAR_OUT_OF_CAPACITY;
 		}

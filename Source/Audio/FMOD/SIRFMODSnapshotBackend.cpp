@@ -33,7 +33,7 @@ bool SIRFMODSnapshotBackend::isReady( void ) const noexcept
 }
 
 sirAudioResult_t SIRFMODSnapshotBackend::configure( SIRFMODContext *pContext, const sirContainerAllocator_t *pAllocator,
-                                                    const sirFMODSnapshotNativeOps_t &ops, uint32_t nMaxSnapshots ) noexcept
+                                                    const sirFMODSnapshotNativeOps_t& ops, uint32_t nMaxSnapshots ) noexcept
 {
 	if ( m_pContext != nullptr || m_bInitialized || pContext == nullptr || !pContext->isReady() ||
 	     !SIRRawStorage::isValidAllocator( pAllocator ) || nMaxSnapshots == 0 || ops.nAbiVersion != 1 || ops.resolveSnapshot == nullptr ||
@@ -90,7 +90,7 @@ void SIRFMODSnapshotBackend::releaseStorage( void ) noexcept
 	m_bInitialized = false;
 }
 
-sirAudioResult_t SIRFMODSnapshotBackend::releaseInstance( sirFMODSnapshotRecord_t &record, bool bStop, sirAudioStopMode_t eMode ) noexcept
+sirAudioResult_t SIRFMODSnapshotBackend::releaseInstance( sirFMODSnapshotRecord_t& record, bool bStop, sirAudioStopMode_t eMode ) noexcept
 {
 	if ( record.pInstance == nullptr ) {
 		return SIR_AUDIO_OK;
@@ -134,7 +134,7 @@ sirAudioResult_t SIRFMODSnapshotBackend::shutdown( void ) noexcept
 		}
 	}
 	for ( uint32_t iSnapshot = 0; iSnapshot < m_nCount; ++iSnapshot ) {
-		const sirFMODSnapshotRecord_t &record = m_pSnapshots[iSnapshot];
+		const sirFMODSnapshotRecord_t& record = m_pSnapshots[iSnapshot];
 		if ( record.pBankStore != nullptr ) {
 			record.pBankStore->unpinBankObject( record.nPackageId );
 		}
@@ -144,7 +144,7 @@ sirAudioResult_t SIRFMODSnapshotBackend::shutdown( void ) noexcept
 	return SIR_AUDIO_OK;
 }
 
-bool SIRFMODSnapshotBackend::findSnapshot( uint64_t nSnapshotId, uint32_t &iIndex ) const noexcept
+bool SIRFMODSnapshotBackend::findSnapshot( uint64_t nSnapshotId, uint32_t& iIndex ) const noexcept
 {
 	uint32_t iLow = 0;
 	uint32_t iHigh = m_nCount;
@@ -258,7 +258,7 @@ sirAudioResult_t SIRFMODSnapshotBackend::startSnapshot( uint64_t nSnapshotId ) n
 	if ( !findSnapshot( nSnapshotId, iIndex ) ) {
 		return SIR_AUDIO_INVALID_ARGUMENT;
 	}
-	sirFMODSnapshotRecord_t &record = m_pSnapshots[iIndex];
+	sirFMODSnapshotRecord_t& record = m_pSnapshots[iIndex];
 	if ( record.pInstance != nullptr ) {
 		return SIR_AUDIO_BUSY;
 	}

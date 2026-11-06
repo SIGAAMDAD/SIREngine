@@ -48,8 +48,10 @@ static bool sirEditorHostCountTags( const char *pSource, size_t nBytes, uint32_t
 	return true;
 }
 
+
+
 template <typename T>
-static T *sirEditorHostAllocate( SIRLinearAllocator &arena, uint32_t nCount ) noexcept
+static T *sirEditorHostAllocate( SIRLinearAllocator& arena, uint32_t nCount ) noexcept
 {
 	if ( nCount == 0 ) {
 		return nullptr;
@@ -363,11 +365,11 @@ size_t SIREditorSceneWorkspace::getSourceBytes( void ) const noexcept
 {
 	return m_bOpen ? m_nSourceBytes : 0;
 }
-const sirEditorTextSceneIndex_t &SIREditorSceneWorkspace::getSceneIndex( void ) const noexcept
+const sirEditorTextSceneIndex_t& SIREditorSceneWorkspace::getSceneIndex( void ) const noexcept
 {
 	return m_Scene;
 }
-const sirEditorTextResourceIndex_t &SIREditorSceneWorkspace::getResourceIndex( void ) const noexcept
+const sirEditorTextResourceIndex_t& SIREditorSceneWorkspace::getResourceIndex( void ) const noexcept
 {
 	return m_Resources;
 }
@@ -379,19 +381,19 @@ uint32_t SIREditorSceneWorkspace::getResourceReferenceCount( void ) const noexce
 {
 	return m_bOpen ? m_nResourceReferenceCount : 0;
 }
-const sirEditorTextPropertyIndex_t &SIREditorSceneWorkspace::getPropertyIndex( void ) const noexcept
+const sirEditorTextPropertyIndex_t& SIREditorSceneWorkspace::getPropertyIndex( void ) const noexcept
 {
 	return m_Properties;
 }
-SIREditorSceneDocument &SIREditorSceneWorkspace::getDocument( void ) noexcept
+SIREditorSceneDocument& SIREditorSceneWorkspace::getDocument( void ) noexcept
 {
 	return m_Document;
 }
-const SIREditorSceneDocument &SIREditorSceneWorkspace::getDocument( void ) const noexcept
+const SIREditorSceneDocument& SIREditorSceneWorkspace::getDocument( void ) const noexcept
 {
 	return m_Document;
 }
-SIREditorHierarchyModel &SIREditorSceneWorkspace::getHierarchy( void ) noexcept
+SIREditorHierarchyModel& SIREditorSceneWorkspace::getHierarchy( void ) noexcept
 {
 	return m_Hierarchy;
 }

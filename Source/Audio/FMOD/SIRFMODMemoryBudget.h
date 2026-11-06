@@ -62,8 +62,8 @@ private:
 public:
 	SIRFMODMemoryBudget( void ) noexcept = default;
 	~SIRFMODMemoryBudget( void ) noexcept;
-	SIRFMODMemoryBudget( const SIRFMODMemoryBudget & ) = delete;
-	SIRFMODMemoryBudget &operator=( const SIRFMODMemoryBudget & ) = delete;
+	SIRFMODMemoryBudget( const SIRFMODMemoryBudget& ) = delete;
+	SIRFMODMemoryBudget& operator=( const SIRFMODMemoryBudget& ) = delete;
 
 	sirAudioResult_t configure( const sirContainerAllocator_t *pUpstream, uint64_t nBudgetBytes ) noexcept;
 	sirAudioResult_t shutdown( void ) noexcept;

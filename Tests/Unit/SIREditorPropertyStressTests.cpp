@@ -137,8 +137,7 @@ int main( void )
 	for ( uint32_t iTrial = 0; iTrial < 2500; ++iTrial ) {
 		const uint32_t iNode = sirEditorStressNext( &nSeed ) % 4;
 		const uint32_t iProperty = sirEditorStressNext( &nSeed ) % 3;
-		const uint64_t nValue = ( ( uint64_t )sirEditorStressNext( &nSeed ) << 32 ) |
-		                        sirEditorStressNext( &nSeed );
+		const uint64_t nValue = ( ( uint64_t )sirEditorStressNext( &nSeed ) << 32 ) | sirEditorStressNext( &nSeed );
 		const bool bFailure = iTrial % 11 == 0 || iTrial % 13 == 0;
 		const bool bRemove = iTrial % 7 == 0 && model.bPresent[iNode][iProperty];
 		const sirEditorStressModel_t previous = model;

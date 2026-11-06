@@ -33,7 +33,7 @@ static void sirHierarchyTestSmallTree( void )
 	const sirEditorNode_t szInitial[] = { sirHierarchyTestNode( 10, 0 ),  sirHierarchyTestNode( 20, 10 ), sirHierarchyTestNode( 21, 20 ),
 	                                      sirHierarchyTestNode( 22, 20 ), sirHierarchyTestNode( 30, 10 ), sirHierarchyTestNode( 31, 30 ),
 	                                      sirHierarchyTestNode( 211, 21 ) };
-	for ( const sirEditorNode_t &node : szInitial ) {
+	for ( const sirEditorNode_t& node : szInitial ) {
 		assert( document.queueUpsert( node ) == SIR_EDITOR_OK );
 	}
 	assert( document.commitEdit() == SIR_EDITOR_OK );
