@@ -250,6 +250,72 @@
       "output": {
         "outputOnFailure": true
       }
+    },
+    {
+      "name": "pr-smoke",
+      "configurePreset": "dev",
+      "description": "Fast deterministic PR-bound tests",
+      "filter": {
+        "include": {
+          "label": "^gate:pr$"
+        }
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "core-unit",
+      "configurePreset": "dev",
+      "description": "Core subsystem unit tests",
+      "filter": {
+        "include": {
+          "name": "^core[.]",
+          "label": "^kind:unit$"
+        }
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "integration",
+      "configurePreset": "dev",
+      "description": "Integrated native tests",
+      "filter": {
+        "include": {
+          "label": "^kind:integration$"
+        }
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "nightly-regression",
+      "configurePreset": "dev",
+      "description": "Nightly repeat-regression selection",
+      "filter": {
+        "include": {
+          "label": "^nightly:repeat$"
+        }
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "qualification",
+      "configurePreset": "dev",
+      "description": "Full qualified native test selection",
+      "filter": {
+        "include": {
+          "label": "^gate:qualification$"
+        }
+      },
+      "output": {
+        "outputOnFailure": true
+      }
     }
   ]
 }
