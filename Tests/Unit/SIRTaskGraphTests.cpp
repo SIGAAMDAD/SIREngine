@@ -207,7 +207,7 @@ static void testFailurePropagationAndBatchValidation( void )
 	                                     { graphCount, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU } };
 	const sirTaskBatchEdge_t invalid = { 1, 0 };
 	sirTaskHandle_t handles[2] = { { 42, 77 }, { 43, 78 } };
-	SIR_GRAPH_CHECK( !scheduler.submitBatch( tasks, 2, &invalid, 1, handles ) );
+	SIR_GRAPH_CHECK( !scheduler.submitBatch({ tasks, 2, &invalid, 1 }, handles) );
 	SIR_GRAPH_CHECK( handles[0].nSlot == 42 && handles[1].nSlot == 43 );
 	SIR_GRAPH_CHECK( scheduler.getActiveCount() == 0 );
 
