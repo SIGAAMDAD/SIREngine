@@ -161,7 +161,7 @@ static void deathPendingProvider( void )
 	SIR_DEATH_CHECK( scheduler.init( &memory, { 8, 0, 8 } ) );
 	SIR_DEATH_CHECK( scheduler.bindProviderOwner( SIR_TASK_EXEC_RENDER ) );
 	sirTaskHandle_t task = {};
-	SIR_DEATH_CHECK( scheduler.submit( deathProviderTask, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_RENDER, &task ) );
+	SIR_DEATH_CHECK( scheduler.submit({ deathProviderTask, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_RENDER }, &task) );
 	SIR_DEATH_CHECK( scheduler.pumpProvider( SIR_TASK_EXEC_RENDER, 1 ) == 1 );
 	// The scheduler refuses destruction while the provider owns a pending task.
 }
@@ -175,7 +175,7 @@ static void deathPendingFence( void )
 	SIRTaskFenceTracker tracker;
 	SIR_DEATH_CHECK( tracker.init( &memory, &scheduler, SIR_TASK_EXEC_RENDER, 2 ) );
 	sirTaskHandle_t task = {};
-	SIR_DEATH_CHECK( scheduler.submit( deathProviderTask, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_RENDER, &task ) );
+	SIR_DEATH_CHECK( scheduler.submit({ deathProviderTask, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_RENDER }, &task) );
 	SIR_DEATH_CHECK( scheduler.pumpProvider( SIR_TASK_EXEC_RENDER, 1 ) == 1 );
 	SIR_DEATH_CHECK( tracker.track( task, 1 ) );
 }
@@ -189,7 +189,7 @@ static void deathPrematureProviderCompletion( void )
 	SIRTaskFenceTracker tracker;
 	SIR_DEATH_CHECK( tracker.init( &memory, &scheduler, SIR_TASK_EXEC_RENDER, 2 ) );
 	sirTaskHandle_t task = {};
-	SIR_DEATH_CHECK( scheduler.submit( deathProviderTask, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_RENDER, &task ) );
+	SIR_DEATH_CHECK( scheduler.submit({ deathProviderTask, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_RENDER }, &task) );
 	SIR_DEATH_CHECK( scheduler.pumpProvider( SIR_TASK_EXEC_RENDER, 1 ) == 1 );
 	sirDeathPrematureCompletion_t context = { &scheduler, task };
 	SIR_DEATH_CHECK( tracker.track( task, 1, deathCompleteProviderEarly, &context ) );

@@ -76,18 +76,16 @@ public:
 	bool init( SIRMemoryManager *pMemory, const sirTaskSchedulerConfig_t& config ) noexcept;
 	// Must be called by the owning initialization thread, outside callbacks.
 	bool shutdown( void ) noexcept;
-	bool submit( sirTaskFunction_t pFunction, void *pContext, sirTaskPriority_t ePriority, sirTaskExecutor_t eExecutor,
-	             sirTaskHandle_t *pHandle ) noexcept;
+	bool submit( const sirTaskBatchTask_t& task, sirTaskHandle_t *pHandle ) noexcept;
 	// Prerequisites must be previously submitted tasks; successful terminal
 	// prerequisites are already satisfied. Failed/cancelled ones cancel the
 	// new task. Registration and publication are atomic under the scheduler lock.
-	bool submitAfter( sirTaskFunction_t pFunction, void *pContext, sirTaskPriority_t ePriority, sirTaskExecutor_t eExecutor,
-	                  const sirTaskHandle_t *pPrerequisites, uint32_t nPrerequisites, sirTaskHandle_t *pHandle ) noexcept;
+	bool submitAfter( const sirTaskBatchTask_t& task, const sirTaskHandle_t *pPrerequisites, uint32_t nPrerequisites,
+	                  sirTaskHandle_t *pHandle ) noexcept;
 	// Registers a complete acyclic batch behind one scheduler lock. No task
 	// starts before every task and dependency is installed. Rejection leaves
 	// capacity and pOutHandles unchanged. Edges must have before < after.
-	bool submitBatch( const sirTaskBatchTask_t *pTasks, uint32_t nTasks, const sirTaskBatchEdge_t *pEdges, uint32_t nEdges,
-	                  sirTaskHandle_t *pOutHandles ) noexcept;
+	bool submitBatch( const sirTaskBatchDesc_t& batch, sirTaskHandle_t *pOutHandles ) noexcept;
 	bool cancel( sirTaskHandle_t task ) noexcept;
 	bool isCancellationRequested( sirTaskHandle_t task ) noexcept;
 	sirTaskState_t getState( sirTaskHandle_t task ) noexcept;
