@@ -14,6 +14,18 @@ target_link_libraries(SIRResourceMemoryIntegrationTests PRIVATE SIR::Resources)
 add_test(NAME resources.memory.domains COMMAND SIRResourceMemoryIntegrationTests)
 sir_configure_owned_target(SIRResourceMemoryIntegrationTests)
 
+# Exercise real catalog argument validation, dependency cycles, corrupted
+# metadata rejection, capacity limits and randomized dependency ordering.
+add_executable(SIRResourceCatalogTests SIRResourceCatalogTests.cpp)
+target_link_libraries(SIRResourceCatalogTests PRIVATE SIR::Resources)
+add_test(NAME resources.catalog.negative-paths COMMAND SIRResourceCatalogTests)
+sir_configure_owned_target(SIRResourceCatalogTests)
+
+add_executable(SIRResourceCatalogDifferentialTests SIRResourceCatalogDifferentialTests.cpp)
+target_link_libraries(SIRResourceCatalogDifferentialTests PRIVATE SIR::Resources)
+add_test(NAME resources.catalog.differential COMMAND SIRResourceCatalogDifferentialTests)
+sir_configure_owned_target(SIRResourceCatalogDifferentialTests)
+
 # Native file/mapped-file loading through Core Jobs and GRDG staging.
 add_executable(SIRResourceFileLoadTests SIRResourceFileLoadTests.cpp)
 target_link_libraries(SIRResourceFileLoadTests PRIVATE SIR::Resources)
