@@ -23,7 +23,7 @@ jobs:
         run: |
           cmake -P Build/CMake/CIHygiene.cmake
           cmake -P Build/CMake/CIStyle.cmake
-          cmake -P Build/CMake/CIFormat.cmake
+          cmake -DSIR_FORMAT_FULL=ON -P Build/CMake/CIFormat.cmake
   native:
     name: Nightly native (${{ matrix.os }} / ${{ matrix.preset }})
     runs-on: ${{ matrix.os }}
