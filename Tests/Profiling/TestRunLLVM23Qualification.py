@@ -264,5 +264,17 @@ class QualificationGateTests(unittest.TestCase):
             diagnostic = qualification.diagnostic_group_totals(mapped[:-1], commands, root)
             self.assertEqual(diagnostic["Resources"]["status"], "INCOMPLETE")
 
+
+    def test_profile_hash_parser_distinguishes_misses_from_unexecuted_paths(self):
+        warning = ("warning: 2 functions have mismatched data\n"
+                   "hash-mismatch: No profile record found for '_ZN7Example3runEv' with hash = 0xAb5\n"
+                   "hash-mismatch: No profile record found for 'main' with hash = 0x0\n"
+                   "warning: arbitrary additional warning\n")
+        self.assertEqual(qualification.parse_profile_hash_mismatches(warning), [
+            {"name": "_ZN7Example3runEv", "hash": "ab5"},
+            {"name": "main", "hash": "0"}])
+        self.assertEqual(qualification.parse_profile_hash_mismatches(
+            "warning: 2 functions have mismatched data\n"), [])
+
 if __name__ == "__main__":
     unittest.main()

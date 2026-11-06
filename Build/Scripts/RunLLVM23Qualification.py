@@ -180,6 +180,19 @@ def diagnostic_group_totals(files, commands, repository_root):
     return output
 
 
+def parse_profile_hash_mismatches(stderr):
+    """Preserve real LLVM profile-record hash failures instead of guessing from zero counts."""
+    prefix = "hash-mismatch: No profile record found for '"
+    result = []
+    for line in stderr.splitlines():
+        if not line.startswith(prefix):
+            continue
+        parts = line[len(prefix):].rsplit("' with hash = 0x", 1)
+        if len(parts) == 2 and parts[1] and all(char in "0123456789abcdefABCDEF" for char in parts[1]):
+            result.append({"name": parts[0], "hash": parts[1].lower()})
+    return result
+
+
 def find_zero_count_functions(coverage, source_root, limit=30):
     """List unexecuted mapped functions in the declared production scope."""
     root = pathlib.Path(source_root).resolve()
@@ -261,8 +274,14 @@ def qualify():
         json.dumps(diagnostic, indent=2) + "\n")
     if any(word in result.stderr.lower() for word in ("mismatch", "out of date", "warning:")):
         candidates = find_zero_count_functions(data["data"][0], source_root)
+        debug_export = subprocess.run(command + ["--dump"], cwd=ROOT, stdout=subprocess.DEVNULL,
+                                      stderr=subprocess.PIPE, text=True, check=False)
+        mismatched = parse_profile_hash_mismatches(debug_export.stderr)
         diagnostics = {"tool": "llvm-cov-23", "source_scope": str(source_root),
+                       "source_sha": diagnostic["source_sha"],
                        "stderr": result.stderr[:8000],
+                       "hash_mismatch_count": len(mismatched),
+                       "hash_mismatches": mismatched,
                        "zero_count_production_functions": candidates}
         (REPORT / "profile-mismatch.json").write_text(json.dumps(diagnostics, indent=2) + "\n")
         raise RuntimeError(
