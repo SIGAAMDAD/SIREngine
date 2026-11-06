@@ -85,6 +85,12 @@ target_link_libraries(SIRCompactBucketBoundaryTests PRIVATE SIR::Core)
 add_test(NAME core.memory.compact-bucket-boundaries COMMAND SIRCompactBucketBoundaryTests)
 sir_configure_owned_target(SIRCompactBucketBoundaryTests)
 
+# AVL extent rotations, stable handle generations, compaction and fragmentation.
+add_executable(SIRHandleHeapBoundaryTests SIRHandleHeapBoundaryTests.cpp)
+target_link_libraries(SIRHandleHeapBoundaryTests PRIVATE SIR::Core)
+add_test(NAME core.memory.handle-heap-fragmentation COMMAND SIRHandleHeapBoundaryTests)
+sir_configure_owned_target(SIRHandleHeapBoundaryTests)
+
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     add_executable(SIRMemoryManagerFaultInjectionTests SIRMemoryManagerFaultInjectionTests.cpp)
     target_link_libraries(SIRMemoryManagerFaultInjectionTests PRIVATE SIR::Core)
