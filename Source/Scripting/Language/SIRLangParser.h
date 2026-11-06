@@ -70,7 +70,10 @@ typedef enum sirLangSyntaxKind_e : uint8_t
 	SIR_LANG_SYNTAX_CALL,
 	SIR_LANG_SYNTAX_INDEX,
 	SIR_LANG_SYNTAX_GROUP,
-	SIR_LANG_SYNTAX_ERROR
+	SIR_LANG_SYNTAX_ERROR,
+	SIR_LANG_SYNTAX_SWITCH,
+	SIR_LANG_SYNTAX_CASE,
+	SIR_LANG_SYNTAX_DEFAULT
 } sirLangSyntaxKind_t;
 
 typedef enum sirLangParseError_e : uint8_t

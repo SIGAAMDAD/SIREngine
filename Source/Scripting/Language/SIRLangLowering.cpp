@@ -110,6 +110,10 @@ typedef struct sirLangLowerState_s
 	uint32_t nDepth;
 	bool bInConditional;
 	bool bTerminated;
+	bool bInSwitch;
+	bool bSwitchBreak;
+	uint32_t nSwitchBreakCount;
+	uint32_t szSwitchBreaks[128];
 } sirLangLowerState_t;
 
 static uint32_t sirLangFirstChild( const sirLangLowerState_t *pState, uint32_t iNode ) noexcept
@@ -722,6 +726,85 @@ static void sirLangLowerStatement( sirLangLowerState_t *pState, uint32_t iNode )
 			return;
 		}
 		pState->szCurrentValues[iDecl] = sirLangLowerExpression( pState, iRhs );
+		return;
+	}
+	case SIR_LANG_SYNTAX_BREAK: {
+		if ( !pState->bInSwitch || pState->nSwitchBreakCount >= sizeof( pState->szSwitchBreaks ) / sizeof( pState->szSwitchBreaks[0] ) ) {
+			sirLangError( pState, SIR_LANG_LOWER_UNSUPPORTED, iNode );
+			return;
+		}
+		const uint32_t iJump = sirLangEmit( pState, { SIR_LANG_OP_JUMP, SIR_LANG_VALUE_VOID, 0, UINT32_MAX, 0, 0, 0, 0, iNode } );
+		if ( iJump == SIR_LANG_INVALID_INDEX ) {
+			return;
+		}
+		pState->szSwitchBreaks[pState->nSwitchBreakCount++] = iJump;
+		pState->bSwitchBreak = true;
+		pState->bTerminated = true;
+		return;
+	}
+	case SIR_LANG_SYNTAX_SWITCH: {
+		const uint32_t iSelector = sirLangFirstChild( pState, iNode );
+		const uint32_t iSelectorValue = sirLangLowerExpression( pState, iSelector );
+		if ( iSelectorValue == SIR_LANG_INVALID_INDEX ) {
+			return;
+		}
+		const sirLangValueKind_t eSelectorType = sirLangRegisterType( pState, iSelectorValue );
+		const bool bPreviousInSwitch = pState->bInSwitch;
+		const uint32_t nPreviousBreakCount = pState->nSwitchBreakCount;
+		bool bHasDefault = false;
+		bool bAllReturn = true;
+		pState->bInSwitch = true;
+		for ( uint32_t iBranch = sirLangNextChild( pState, iSelector ); iBranch != SIR_LANG_INVALID_INDEX;
+		      iBranch = sirLangNextChild( pState, iBranch ) ) {
+			const sirLangSyntaxNode_t& branch = pState->pTree->pNodes[iBranch];
+			const bool bDefault = branch.eKind == SIR_LANG_SYNTAX_DEFAULT;
+			if ( !bDefault && branch.eKind != SIR_LANG_SYNTAX_CASE ) {
+				sirLangError( pState, SIR_LANG_LOWER_UNSUPPORTED, iBranch );
+				break;
+			}
+			const uint32_t iCaseValue = branch.nFirstChild;
+			uint32_t iBlock = iCaseValue;
+			uint32_t iMiss = SIR_LANG_INVALID_INDEX;
+			if ( !bDefault ) {
+				const uint32_t iConstant = sirLangLowerExpression( pState, iCaseValue );
+				if ( iConstant == SIR_LANG_INVALID_INDEX || sirLangRegisterType( pState, iConstant ) != eSelectorType ) {
+					sirLangError( pState, SIR_LANG_LOWER_TYPE, iBranch );
+					break;
+				}
+				const uint32_t iComparison = sirLangNewRegister( pState, iBranch );
+				if ( iComparison == SIR_LANG_INVALID_INDEX ) {
+					break;
+				}
+				sirLangEmit( pState, { SIR_LANG_OP_EQUAL, SIR_LANG_VALUE_BOOL, 0, iComparison, iSelectorValue, iConstant, 0, 0, iBranch } );
+				iMiss =
+				    sirLangEmit( pState, { SIR_LANG_OP_JUMP_FALSE, SIR_LANG_VALUE_VOID, 0, UINT32_MAX, iComparison, 0, 0, 0, iBranch } );
+				iBlock = sirLangNextChild( pState, iCaseValue );
+			} else {
+				bHasDefault = true;
+			}
+			pState->bTerminated = false;
+			pState->bSwitchBreak = false;
+			sirLangLowerBlock( pState, iBlock );
+			bAllReturn = bAllReturn && pState->bTerminated && !pState->bSwitchBreak;
+			if ( !pState->bTerminated ) {
+				// A v1 switch case must terminate with return or break.
+				sirLangError( pState, SIR_LANG_LOWER_UNSUPPORTED, iBranch );
+			}
+			if ( iMiss != SIR_LANG_INVALID_INDEX ) {
+				pState->pOutput->pInstructions[iMiss].nAuxiliary = pState->pOutput->program.nInstructionCount;
+			}
+			if ( pState->pOutput->eError != SIR_LANG_LOWER_OK ) {
+				break;
+			}
+		}
+		const uint32_t nExit = pState->pOutput->program.nInstructionCount;
+		for ( uint32_t i = nPreviousBreakCount; i < pState->nSwitchBreakCount; ++i ) {
+			pState->pOutput->pInstructions[pState->szSwitchBreaks[i]].nAuxiliary = nExit;
+		}
+		pState->nSwitchBreakCount = nPreviousBreakCount;
+		pState->bInSwitch = bPreviousInSwitch;
+		pState->bSwitchBreak = false;
+		pState->bTerminated = bHasDefault && bAllReturn;
 		return;
 	}
 	case SIR_LANG_SYNTAX_WHEN: {

@@ -34,7 +34,7 @@ static void testCompilerSourceDiagnostics( void ) noexcept
 	workspace.cir.nLayoutDigest = 2;
 	workspace.cir.nBindingDigest = 3;
 
-	static constexpr char szBroken[] = "fn broken(a: u16:\n    return a\n";
+	static constexpr char szBroken[] = "function broken(u16 a returns u16 { return a; }";
 	const sirLangSourceView_t source = { ( const uint8_t * )szBroken, sizeof( szBroken ) - 1 };
 	assert( !SIRLangCompileSource( source, &workspace ) );
 	assert( workspace.report.ePhase == SIR_LANG_COMPILE_PARSE );
@@ -71,10 +71,10 @@ static void testRecoveredDiagnostics( void ) noexcept
 	workspace.cir.nLayoutDigest = 2;
 	workspace.cir.nBindingDigest = 3;
 
-	static constexpr char szBroken[] = "fn broken(a: u16:\n"
-	                                   "    let missing: u16 =\n"
-	                                   "fn good(x: i32):\n"
-	                                   "    return x\n";
+	static constexpr char szBroken[] = "function broken(u16 a returns u16 {\n"
+	                                   "    var missing = ;\n"
+	                                   "}\n"
+	                                   "function good(i32 x) returns i32 { return x; }\n";
 	const sirLangSourceView_t source = { ( const uint8_t * )szBroken, sizeof( szBroken ) - 1 };
 	assert( !SIRLangCompileSource( source, &workspace ) );
 	assert( workspace.report.ePhase == SIR_LANG_COMPILE_PARSE );

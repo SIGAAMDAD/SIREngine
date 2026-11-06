@@ -36,10 +36,10 @@ typedef struct sirLangKeywordSyntax_s
 } sirLangKeywordSyntax_t;
 
 static constexpr sirLangKeywordSyntax_t s_szHeaderKeywords[] = {
-    { "schema", SIR_LANG_SYNTAX_SCHEMA },       { "behavior", SIR_LANG_SYNTAX_BEHAVIOR },       { "class", SIR_LANG_SYNTAX_CLASS },
-    { "interface", SIR_LANG_SYNTAX_INTERFACE }, { "record", SIR_LANG_SYNTAX_RECORD },           { "enum", SIR_LANG_SYNTAX_ENUM },
-    { "fn", SIR_LANG_SYNTAX_FUNCTION },         { "function", SIR_LANG_SYNTAX_FUNCTION },       { "on", SIR_LANG_SYNTAX_EVENT },
-    { "state", SIR_LANG_SYNTAX_STATE },         { "condition", SIR_LANG_SYNTAX_CONDITION_BANK } };
+    { "schema", SIR_LANG_SYNTAX_SCHEMA },           { "behavior", SIR_LANG_SYNTAX_BEHAVIOR }, { "class", SIR_LANG_SYNTAX_CLASS },
+    { "interface", SIR_LANG_SYNTAX_INTERFACE },     { "record", SIR_LANG_SYNTAX_RECORD },     { "enum", SIR_LANG_SYNTAX_ENUM },
+    { "function", SIR_LANG_SYNTAX_FUNCTION },       { "on", SIR_LANG_SYNTAX_EVENT },          { "state", SIR_LANG_SYNTAX_STATE },
+    { "condition", SIR_LANG_SYNTAX_CONDITION_BANK } };
 static constexpr sirLangKeywordSyntax_t s_szSimpleKeywords[] = {
     { "return", SIR_LANG_SYNTAX_RETURN }, { "emit", SIR_LANG_SYNTAX_EMIT },        { "after", SIR_LANG_SYNTAX_AFTER },
     { "spawn", SIR_LANG_SYNTAX_SPAWN },   { "destroy", SIR_LANG_SYNTAX_DESTROY },  { "transition", SIR_LANG_SYNTAX_TRANSITION },
@@ -81,15 +81,6 @@ static void sirLangAdvance( sirLangParserState_t *pState ) noexcept
 static bool sirLangTake( sirLangParserState_t *pState, const char *pszText ) noexcept
 {
 	if ( !sirLangTokenText( pState, 0, pszText ) ) {
-		return false;
-	}
-	sirLangAdvance( pState );
-	return true;
-}
-
-static bool sirLangTakeKind( sirLangParserState_t *pState, sirLangTokenKind_t eKind ) noexcept
-{
-	if ( !sirLangAt( pState, eKind ) ) {
 		return false;
 	}
 	sirLangAdvance( pState );
@@ -151,11 +142,25 @@ static void sirLangAppend( sirLangParserState_t *pState, uint32_t iParent, uint3
 
 static void sirLangRecoverLine( sirLangParserState_t *pState ) noexcept
 {
-	while ( !sirLangAt( pState, SIR_LANG_TOKEN_END ) && !sirLangAt( pState, SIR_LANG_TOKEN_DEDENT ) &&
-	        !sirLangAt( pState, SIR_LANG_TOKEN_NEWLINE ) ) {
+	while ( !sirLangAt( pState, SIR_LANG_TOKEN_END ) && !sirLangTokenText( pState, 0, "}" ) && !sirLangTokenText( pState, 0, ";" ) ) {
 		sirLangAdvance( pState );
 	}
-	sirLangTakeKind( pState, SIR_LANG_TOKEN_NEWLINE );
+	sirLangTake( pState, ";" );
+}
+
+static void sirLangRequire( sirLangParserState_t *pState, const char *pszToken ) noexcept
+{
+	if ( !sirLangTake( pState, pszToken ) ) {
+		sirLangReport( pState, SIR_LANG_PARSE_EXPECTED_TOKEN );
+	}
+}
+
+static void sirLangRequireSemicolon( sirLangParserState_t *pState ) noexcept
+{
+	if ( !sirLangTake( pState, ";" ) ) {
+		sirLangReport( pState, SIR_LANG_PARSE_EXPECTED_TOKEN );
+		sirLangRecoverLine( pState );
+	}
 }
 
 static bool sirLangTakeName( sirLangParserState_t *pState ) noexcept
@@ -220,7 +225,7 @@ static uint32_t sirLangParseType( sirLangParserState_t *pState ) noexcept
 		if ( !sirLangTake( pState, "]" ) ) {
 			sirLangReport( pState, SIR_LANG_PARSE_EXPECTED_TOKEN );
 		}
-	} else if ( sirLangAt( pState, SIR_LANG_TOKEN_IDENTIFIER ) || sirLangTokenText( pState, 0, "fn" ) ) {
+	} else if ( sirLangAt( pState, SIR_LANG_TOKEN_IDENTIFIER ) || sirLangTokenText( pState, 0, "void" ) ) {
 		sirLangAdvance( pState );
 		while ( sirLangTake( pState, "." ) ) {
 			sirLangTakeName( pState );
@@ -282,6 +287,11 @@ static uint32_t sirLangParseArguments( sirLangParserState_t *pState, uint32_t iC
 static uint32_t sirLangParseAtom( sirLangParserState_t *pState ) noexcept
 {
 	const uint32_t iStart = pState->iToken;
+	if ( sirLangTokenText( pState, 0, "self" ) || sirLangTokenText( pState, 0, "let" ) || sirLangTokenText( pState, 0, "fn" ) ||
+	     sirLangTokenText( pState, 0, "match" ) || sirLangTokenText( pState, 0, "when" ) || sirLangTokenText( pState, 0, "otherwise" ) ) {
+		sirLangReport( pState, SIR_LANG_PARSE_UNEXPECTED_TOKEN );
+		return SIR_LANG_NO_NODE;
+	}
 	uint32_t iNode = SIR_LANG_NO_NODE;
 	if ( sirLangTake( pState, "(" ) ) {
 		iNode = sirLangNewNode( pState, SIR_LANG_SYNTAX_GROUP, iStart );
@@ -294,7 +304,7 @@ static uint32_t sirLangParseAtom( sirLangParserState_t *pState ) noexcept
 		iNode = sirLangNewNode( pState, SIR_LANG_SYNTAX_UNARY, iStart );
 		sirLangAdvance( pState );
 		sirLangAppend( pState, iNode, sirLangParseExpression( pState, 8 ) );
-	} else if ( sirLangAt( pState, SIR_LANG_TOKEN_IDENTIFIER ) || sirLangTokenText( pState, 0, "self" ) ) {
+	} else if ( sirLangAt( pState, SIR_LANG_TOKEN_IDENTIFIER ) || sirLangTokenText( pState, 0, "this" ) ) {
 		iNode = sirLangNewNode( pState, SIR_LANG_SYNTAX_NAME, iStart );
 		sirLangAdvance( pState );
 	} else if ( sirLangAt( pState, SIR_LANG_TOKEN_NUMBER ) || sirLangAt( pState, SIR_LANG_TOKEN_STRING ) ||
@@ -393,22 +403,15 @@ static uint32_t sirLangParseExpression( sirLangParserState_t *pState, uint32_t n
 static uint32_t sirLangParseParameter( sirLangParserState_t *pState ) noexcept
 {
 	const uint32_t iNode = sirLangNewNode( pState, SIR_LANG_SYNTAX_PARAMETER, pState->iToken );
+	sirLangAppend( pState, iNode, sirLangParseType( pState ) );
 	sirLangTakeName( pState );
-	if ( sirLangTake( pState, ":" ) ) {
-		sirLangAppend( pState, iNode, sirLangParseType( pState ) );
-	} else {
-		sirLangReport( pState, SIR_LANG_PARSE_EXPECTED_COLON );
-	}
 	sirLangFinishNode( pState, iNode );
 	return iNode;
 }
 
 static void sirLangParseParameters( sirLangParserState_t *pState, uint32_t iParent ) noexcept
 {
-	if ( !sirLangTake( pState, "(" ) ) {
-		sirLangReport( pState, SIR_LANG_PARSE_EXPECTED_TOKEN );
-		return;
-	}
+	sirLangRequire( pState, "(" );
 	if ( !sirLangTokenText( pState, 0, ")" ) ) {
 		for ( ;; ) {
 			const uint32_t iBefore = pState->iToken;
@@ -418,47 +421,32 @@ static void sirLangParseParameters( sirLangParserState_t *pState, uint32_t iPare
 			}
 		}
 	}
-	if ( !sirLangTake( pState, ")" ) ) {
-		sirLangReport( pState, SIR_LANG_PARSE_EXPECTED_TOKEN );
-	}
+	sirLangRequire( pState, ")" );
 }
 
 static uint32_t sirLangParseBlock( sirLangParserState_t *pState ) noexcept
 {
 	const uint32_t iBlock = sirLangNewNode( pState, SIR_LANG_SYNTAX_BLOCK, pState->iToken );
-	if ( !sirLangTake( pState, ":" ) ) {
-		sirLangReport( pState, SIR_LANG_PARSE_EXPECTED_COLON );
+	if ( !sirLangTake( pState, "{" ) ) {
+		sirLangReport( pState, SIR_LANG_PARSE_EXPECTED_TOKEN );
 		sirLangRecoverLine( pState );
-		sirLangFinishNode( pState, iBlock );
-		return iBlock;
-	}
-	if ( !sirLangTakeKind( pState, SIR_LANG_TOKEN_NEWLINE ) ) {
-		sirLangReport( pState, SIR_LANG_PARSE_EXPECTED_NEWLINE );
-		sirLangRecoverLine( pState );
-	}
-	if ( !sirLangTakeKind( pState, SIR_LANG_TOKEN_INDENT ) ) {
-		sirLangReport( pState, SIR_LANG_PARSE_EXPECTED_INDENT );
 		sirLangFinishNode( pState, iBlock );
 		return iBlock;
 	}
 	if ( !sirLangEnter( pState ) ) {
 		sirLangRecoverLine( pState );
 	} else {
-		while ( !sirLangAt( pState, SIR_LANG_TOKEN_END ) && !sirLangAt( pState, SIR_LANG_TOKEN_DEDENT ) && !pState->pTree->bTruncated ) {
+		while ( !sirLangAt( pState, SIR_LANG_TOKEN_END ) && !sirLangTokenText( pState, 0, "}" ) && !pState->pTree->bTruncated ) {
 			const uint32_t iBefore = pState->iToken;
-			const uint32_t iStatement = sirLangParseStatement( pState );
-			sirLangAppend( pState, iBlock, iStatement );
-			if ( pState->iToken == iBefore ) {
+			sirLangAppend( pState, iBlock, sirLangParseStatement( pState ) );
+			if ( iBefore == pState->iToken ) {
 				sirLangReport( pState, SIR_LANG_PARSE_UNEXPECTED_TOKEN );
-				sirLangRecoverLine( pState );
-				if ( pState->iToken == iBefore ) {
-					sirLangAdvance( pState );
-				}
+				sirLangAdvance( pState );
 			}
 		}
 		sirLangExit( pState );
 	}
-	sirLangTakeKind( pState, SIR_LANG_TOKEN_DEDENT );
+	sirLangRequire( pState, "}" );
 	sirLangFinishNode( pState, iBlock );
 	return iBlock;
 }
@@ -467,42 +455,36 @@ static uint32_t sirLangParseHeader( sirLangParserState_t *pState, sirLangSyntaxK
 {
 	const uint32_t iNode = sirLangNewNode( pState, eKind, pState->iToken );
 	sirLangAdvance( pState );
-	if ( eKind == SIR_LANG_SYNTAX_CONDITION_BANK ) {
-		if ( !sirLangTake( pState, "bank" ) ) {
-			sirLangReport( pState, SIR_LANG_PARSE_EXPECTED_TOKEN );
-		}
+	if ( eKind == SIR_LANG_SYNTAX_EVENT ) {
+		sirLangRequire( pState, "event" );
+	} else if ( eKind == SIR_LANG_SYNTAX_CONDITION_BANK ) {
+		sirLangRequire( pState, "bank" );
 	}
 	sirLangTakeName( pState );
 	if ( sirLangTake( pState, "uses" ) ) {
 		sirLangAppend( pState, iNode, sirLangParseType( pState ) );
 	}
 	if ( eKind == SIR_LANG_SYNTAX_FUNCTION || eKind == SIR_LANG_SYNTAX_EVENT ) {
-		if ( eKind == SIR_LANG_SYNTAX_FUNCTION || sirLangTokenText( pState, 0, "(" ) ) {
-			sirLangParseParameters( pState, iNode );
-		}
-		if ( sirLangTake( pState, "-" ) ) {
-			if ( !sirLangTake( pState, ">" ) ) {
-				sirLangReport( pState, SIR_LANG_PARSE_EXPECTED_TOKEN );
-			}
-			sirLangAppend( pState, iNode, sirLangParseType( pState ) );
-		}
+		sirLangParseParameters( pState, iNode );
+		sirLangRequire( pState, "returns" );
+		sirLangAppend( pState, iNode, sirLangParseType( pState ) );
 	}
 	if ( eKind == SIR_LANG_SYNTAX_CONDITION_BANK ) {
-		if ( sirLangTake( pState, ":" ) ) {
-			sirLangAppend( pState, iNode, sirLangParseType( pState ) );
-		}
-		// A bank may include nested named condition declarations.
-		if ( sirLangTakeKind( pState, SIR_LANG_TOKEN_NEWLINE ) && sirLangTakeKind( pState, SIR_LANG_TOKEN_INDENT ) ) {
-			while ( !sirLangAt( pState, SIR_LANG_TOKEN_DEDENT ) && !sirLangAt( pState, SIR_LANG_TOKEN_END ) &&
-			        !pState->pTree->bTruncated ) {
-				const uint32_t iFlag = sirLangNewNode( pState, SIR_LANG_SYNTAX_FIELD, pState->iToken );
-				sirLangTakeName( pState );
-				sirLangRecoverLine( pState );
-				sirLangFinishNode( pState, iFlag );
-				sirLangAppend( pState, iNode, iFlag );
+		sirLangRequire( pState, ":" );
+		sirLangAppend( pState, iNode, sirLangParseType( pState ) );
+		sirLangRequire( pState, "{" );
+		while ( !sirLangAt( pState, SIR_LANG_TOKEN_END ) && !sirLangTokenText( pState, 0, "}" ) && !pState->pTree->bTruncated ) {
+			const uint32_t iBefore = pState->iToken;
+			const uint32_t iField = sirLangNewNode( pState, SIR_LANG_SYNTAX_FIELD, pState->iToken );
+			sirLangTakeName( pState );
+			sirLangRequireSemicolon( pState );
+			sirLangFinishNode( pState, iField );
+			sirLangAppend( pState, iNode, iField );
+			if ( pState->iToken == iBefore ) {
+				sirLangAdvance( pState );
 			}
-			sirLangTakeKind( pState, SIR_LANG_TOKEN_DEDENT );
 		}
+		sirLangRequire( pState, "}" );
 	} else {
 		sirLangAppend( pState, iNode, sirLangParseBlock( pState ) );
 	}
@@ -514,32 +496,25 @@ static uint32_t sirLangParseField( sirLangParserState_t *pState ) noexcept
 {
 	const uint32_t iNode = sirLangNewNode( pState, SIR_LANG_SYNTAX_FIELD, pState->iToken );
 	sirLangAdvance( pState );
+	sirLangAppend( pState, iNode, sirLangParseType( pState ) );
 	sirLangTakeName( pState );
-	if ( !sirLangTake( pState, ":" ) ) {
-		sirLangReport( pState, SIR_LANG_PARSE_EXPECTED_COLON );
-	} else {
-		sirLangAppend( pState, iNode, sirLangParseType( pState ) );
-	}
-	sirLangRecoverLine( pState );
+	sirLangRequireSemicolon( pState );
 	sirLangFinishNode( pState, iNode );
 	return iNode;
 }
 
-static uint32_t sirLangParseLet( sirLangParserState_t *pState ) noexcept
+static uint32_t sirLangParseLet( sirLangParserState_t *pState, bool bExplicit ) noexcept
 {
 	const uint32_t iNode = sirLangNewNode( pState, SIR_LANG_SYNTAX_LET, pState->iToken );
-	sirLangAdvance( pState );
-	sirLangTakeName( pState );
-	if ( sirLangTake( pState, ":" ) ) {
+	if ( bExplicit ) {
 		sirLangAppend( pState, iNode, sirLangParseType( pState ) );
+	} else {
+		sirLangAdvance( pState );
 	}
-	if ( sirLangTake( pState, "=" ) ) {
-		sirLangAppend( pState, iNode, sirLangParseExpression( pState, 1 ) );
-	}
-	if ( !sirLangTakeKind( pState, SIR_LANG_TOKEN_NEWLINE ) && !sirLangAt( pState, SIR_LANG_TOKEN_END ) ) {
-		sirLangReport( pState, SIR_LANG_PARSE_EXPECTED_NEWLINE );
-		sirLangRecoverLine( pState );
-	}
+	sirLangTakeName( pState );
+	sirLangRequire( pState, "=" );
+	sirLangAppend( pState, iNode, sirLangParseExpression( pState, 1 ) );
+	sirLangRequireSemicolon( pState );
 	sirLangFinishNode( pState, iNode );
 	return iNode;
 }
@@ -548,7 +523,7 @@ static uint32_t sirLangParseExpressionLine( sirLangParserState_t *pState, sirLan
 {
 	const uint32_t iNode = sirLangNewNode( pState, eKind, pState->iToken );
 	sirLangAdvance( pState );
-	if ( !sirLangAt( pState, SIR_LANG_TOKEN_NEWLINE ) && !sirLangAt( pState, SIR_LANG_TOKEN_END ) ) {
+	if ( !sirLangTokenText( pState, 0, ";" ) && !sirLangAt( pState, SIR_LANG_TOKEN_END ) ) {
 		sirLangAppend( pState, iNode, sirLangParseExpression( pState, 1 ) );
 	}
 	if ( eKind == SIR_LANG_SYNTAX_SPAWN && sirLangTake( pState, "at" ) ) {
@@ -557,10 +532,7 @@ static uint32_t sirLangParseExpressionLine( sirLangParserState_t *pState, sirLan
 	if ( eKind == SIR_LANG_SYNTAX_AFTER && sirLangTake( pState, "emit" ) ) {
 		sirLangAppend( pState, iNode, sirLangParseExpression( pState, 1 ) );
 	}
-	if ( !sirLangTakeKind( pState, SIR_LANG_TOKEN_NEWLINE ) && !sirLangAt( pState, SIR_LANG_TOKEN_END ) ) {
-		sirLangReport( pState, SIR_LANG_PARSE_EXPECTED_NEWLINE );
-		sirLangRecoverLine( pState );
-	}
+	sirLangRequireSemicolon( pState );
 	sirLangFinishNode( pState, iNode );
 	return iNode;
 }
@@ -570,18 +542,68 @@ static uint32_t sirLangParseConditional( sirLangParserState_t *pState, sirLangSy
 	const uint32_t iNode = sirLangNewNode( pState, eKind, pState->iToken );
 	sirLangAdvance( pState );
 	if ( eKind == SIR_LANG_SYNTAX_FOR ) {
+		sirLangRequire( pState, "(" );
 		sirLangTakeName( pState );
-		if ( !sirLangTake( pState, "in" ) ) {
-			sirLangReport( pState, SIR_LANG_PARSE_EXPECTED_TOKEN );
+		sirLangRequire( pState, "in" );
+		sirLangAppend( pState, iNode, sirLangParseExpression( pState, 1 ) );
+		sirLangRequire( pState, ")" );
+	} else if ( eKind != SIR_LANG_SYNTAX_OTHERWISE ) {
+		if ( eKind == SIR_LANG_SYNTAX_WHEN ) {
+			sirLangRequire( pState, "(" );
+		}
+		sirLangAppend( pState, iNode, sirLangParseExpression( pState, 1 ) );
+		if ( eKind == SIR_LANG_SYNTAX_WHEN ) {
+			sirLangRequire( pState, ")" );
 		}
 	}
-	if ( eKind != SIR_LANG_SYNTAX_OTHERWISE ) {
-		sirLangAppend( pState, iNode, sirLangParseExpression( pState, 1 ) );
-	}
 	sirLangAppend( pState, iNode, sirLangParseBlock( pState ) );
-	if ( eKind == SIR_LANG_SYNTAX_WHEN && sirLangTokenText( pState, 0, "otherwise" ) ) {
-		sirLangAppend( pState, iNode, sirLangParseConditional( pState, SIR_LANG_SYNTAX_OTHERWISE ) );
+	if ( eKind == SIR_LANG_SYNTAX_WHEN && sirLangTake( pState, "else" ) ) {
+		if ( sirLangTokenText( pState, 0, "if" ) ) {
+			sirLangAppend( pState, iNode, sirLangParseConditional( pState, SIR_LANG_SYNTAX_WHEN ) );
+		} else {
+			// The else keyword has already been consumed; retain the existing
+			// internal OTHERWISE syntax kind for the semantic analyzer.
+			const uint32_t iOther = sirLangNewNode( pState, SIR_LANG_SYNTAX_OTHERWISE, pState->iToken );
+			sirLangAppend( pState, iOther, sirLangParseBlock( pState ) );
+			sirLangFinishNode( pState, iOther );
+			sirLangAppend( pState, iNode, iOther );
+		}
 	}
+	sirLangFinishNode( pState, iNode );
+	return iNode;
+}
+
+static uint32_t sirLangParseSwitch( sirLangParserState_t *pState ) noexcept
+{
+	const uint32_t iNode = sirLangNewNode( pState, SIR_LANG_SYNTAX_SWITCH, pState->iToken );
+	sirLangAdvance( pState );
+	sirLangRequire( pState, "(" );
+	sirLangAppend( pState, iNode, sirLangParseExpression( pState, 1 ) );
+	sirLangRequire( pState, ")" );
+	sirLangRequire( pState, "{" );
+	while ( !sirLangAt( pState, SIR_LANG_TOKEN_END ) && !sirLangTokenText( pState, 0, "}" ) && !pState->pTree->bTruncated ) {
+		const uint32_t iBefore = pState->iToken;
+		bool bCase = sirLangTokenText( pState, 0, "case" );
+		bool bDefault = sirLangTokenText( pState, 0, "default" );
+		if ( !bCase && !bDefault ) {
+			sirLangReport( pState, SIR_LANG_PARSE_UNEXPECTED_TOKEN );
+			sirLangRecoverLine( pState );
+			if ( iBefore == pState->iToken ) {
+				sirLangAdvance( pState );
+			}
+			continue;
+		}
+		const uint32_t iBranch = sirLangNewNode( pState, bCase ? SIR_LANG_SYNTAX_CASE : SIR_LANG_SYNTAX_DEFAULT, pState->iToken );
+		sirLangAdvance( pState );
+		if ( bCase ) {
+			sirLangAppend( pState, iBranch, sirLangParseExpression( pState, 1 ) );
+		}
+		sirLangRequire( pState, ":" );
+		sirLangAppend( pState, iBranch, sirLangParseBlock( pState ) );
+		sirLangFinishNode( pState, iBranch );
+		sirLangAppend( pState, iNode, iBranch );
+	}
+	sirLangRequire( pState, "}" );
 	sirLangFinishNode( pState, iNode );
 	return iNode;
 }
@@ -590,31 +612,21 @@ static uint32_t sirLangParseGenericLine( sirLangParserState_t *pState ) noexcept
 {
 	const uint32_t iNode = sirLangNewNode( pState, SIR_LANG_SYNTAX_EXPRESSION_STATEMENT, pState->iToken );
 	sirLangAppend( pState, iNode, sirLangParseExpression( pState, 1 ) );
-	if ( sirLangTake( pState, ":" ) ) {
+	const bool bDirectAssign = sirLangTake( pState, "=" );
+	const bool bReducerAssign =
+	    !bDirectAssign && sirLangTokenText( pState, 1, "=" ) &&
+	    ( sirLangTokenText( pState, 0, "sum" ) || sirLangTokenText( pState, 0, "min" ) || sirLangTokenText( pState, 0, "max" ) );
+	if ( bDirectAssign || bReducerAssign ) {
 		if ( iNode != SIR_LANG_NO_NODE ) {
-			pState->pTree->pNodes[iNode].eKind = SIR_LANG_SYNTAX_FIELD;
+			pState->pTree->pNodes[iNode].eKind = SIR_LANG_SYNTAX_ASSIGNMENT;
 		}
-		sirLangAppend( pState, iNode, sirLangParseType( pState ) );
-	} else {
-		const bool bDirectAssign = sirLangTake( pState, "=" );
-		const bool bReducerAssign =
-		    !bDirectAssign && sirLangTokenText( pState, 1, "=" ) &&
-		    ( sirLangTokenText( pState, 0, "sum" ) || sirLangTokenText( pState, 0, "min" ) || sirLangTokenText( pState, 0, "max" ) );
-		if ( bDirectAssign || bReducerAssign ) {
-			if ( iNode != SIR_LANG_NO_NODE ) {
-				pState->pTree->pNodes[iNode].eKind = SIR_LANG_SYNTAX_ASSIGNMENT;
-			}
-			if ( bReducerAssign ) {
-				sirLangAdvance( pState );
-				sirLangTake( pState, "=" );
-			}
-			sirLangAppend( pState, iNode, sirLangParseExpression( pState, 1 ) );
+		if ( bReducerAssign ) {
+			sirLangAdvance( pState );
+			sirLangTake( pState, "=" );
 		}
+		sirLangAppend( pState, iNode, sirLangParseExpression( pState, 1 ) );
 	}
-	if ( !sirLangTakeKind( pState, SIR_LANG_TOKEN_NEWLINE ) && !sirLangAt( pState, SIR_LANG_TOKEN_END ) ) {
-		sirLangReport( pState, SIR_LANG_PARSE_EXPECTED_NEWLINE );
-		sirLangRecoverLine( pState );
-	}
+	sirLangRequireSemicolon( pState );
 	sirLangFinishNode( pState, iNode );
 	return iNode;
 }
@@ -627,16 +639,13 @@ static uint32_t sirLangParseImport( sirLangParserState_t *pState ) noexcept
 	if ( sirLangTake( pState, "as" ) ) {
 		sirLangTakeName( pState );
 	}
-	sirLangRecoverLine( pState );
+	sirLangRequireSemicolon( pState );
 	sirLangFinishNode( pState, iNode );
 	return iNode;
 }
 
 static uint32_t sirLangParseStatement( sirLangParserState_t *pState ) noexcept
 {
-	if ( sirLangTakeKind( pState, SIR_LANG_TOKEN_NEWLINE ) ) {
-		return SIR_LANG_NO_NODE;
-	}
 	if ( sirLangAt( pState, SIR_LANG_TOKEN_ERROR ) ) {
 		const uint32_t iNode = sirLangNewNode( pState, SIR_LANG_SYNTAX_ERROR, pState->iToken );
 		sirLangAdvance( pState );
@@ -654,21 +663,29 @@ static uint32_t sirLangParseStatement( sirLangParserState_t *pState ) noexcept
 	if ( sirLangTokenText( pState, 0, "field" ) ) {
 		return sirLangParseField( pState );
 	}
-	if ( sirLangTokenText( pState, 0, "let" ) ) {
-		return sirLangParseLet( pState );
+	if ( sirLangTokenText( pState, 0, "var" ) ) {
+		return sirLangParseLet( pState, false );
+	}
+	// Retired user-facing forms cannot fall through to expression parsing.
+	if ( sirLangTokenText( pState, 0, "fn" ) || sirLangTokenText( pState, 0, "let" ) || sirLangTokenText( pState, 0, "when" ) ||
+	     sirLangTokenText( pState, 0, "otherwise" ) || sirLangTokenText( pState, 0, "match" ) || sirLangTokenText( pState, 0, "else" ) ) {
+		sirLangReport( pState, SIR_LANG_PARSE_UNEXPECTED_TOKEN );
+		sirLangRecoverLine( pState );
+		return SIR_LANG_NO_NODE;
+	}
+	if ( sirLangAt( pState, SIR_LANG_TOKEN_IDENTIFIER ) && sirLangLookahead( pState, 1 )->eKind == SIR_LANG_TOKEN_IDENTIFIER ) {
+		return sirLangParseLet( pState, true );
 	}
 	for ( uint32_t iKeyword = 0; iKeyword < sizeof( s_szSimpleKeywords ) / sizeof( s_szSimpleKeywords[0] ); ++iKeyword ) {
 		if ( sirLangTokenText( pState, 0, s_szSimpleKeywords[iKeyword].pszText ) ) {
 			return sirLangParseExpressionLine( pState, s_szSimpleKeywords[iKeyword].eKind );
 		}
 	}
-	if ( sirLangTokenText( pState, 0, "when" ) ) {
+	if ( sirLangTokenText( pState, 0, "if" ) ) {
 		return sirLangParseConditional( pState, SIR_LANG_SYNTAX_WHEN );
 	}
-	if ( sirLangTokenText( pState, 0, "otherwise" ) ) {
-		sirLangReport( pState, SIR_LANG_PARSE_UNEXPECTED_TOKEN );
-		sirLangRecoverLine( pState );
-		return SIR_LANG_NO_NODE;
+	if ( sirLangTokenText( pState, 0, "switch" ) ) {
+		return sirLangParseSwitch( pState );
 	}
 	if ( sirLangTokenText( pState, 0, "for" ) ) {
 		return sirLangParseConditional( pState, SIR_LANG_SYNTAX_FOR );
