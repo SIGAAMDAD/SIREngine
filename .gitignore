@@ -35,3 +35,15 @@ __pycache__/
 *.py[cod]
 .DS_Store
 Thumbs.db
+
+# Misplaced generated project/build output (including nested Source/World trees).
+**/CMakeFiles/
+**/CMakeCache.txt
+**/cmake_install.cmake
+**/CTestTestfile.cmake
+**/CPackConfig.cmake
+**/CPackSourceConfig.cmake
+**/*.vcxproj
+**/*.vcxproj.filters
+**/*.sln
+**/*.dir/

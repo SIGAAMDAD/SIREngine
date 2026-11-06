@@ -1,3 +1,4 @@
+include("${CMAKE_CURRENT_LIST_DIR}/../../../Build/CMake/SIRBuildTreeGuard.cmake")
 # Framework allocator implementations are subordinate to the SIR memory page authority.
 # The existing SIRMemoryManager.cpp remains owned by Source/Core/CMakeLists.txt.
 target_sources(SIRCore PRIVATE

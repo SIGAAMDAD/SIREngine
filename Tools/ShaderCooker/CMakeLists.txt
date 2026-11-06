@@ -1,3 +1,4 @@
+include("${CMAKE_CURRENT_LIST_DIR}/../../Build/CMake/SIRBuildTreeGuard.cmake")
 # ShaderCooker is an offline host tool. No native renderer/device linkage.
 add_library(SIRShaderCookFrontend STATIC
     Frontend/SIRShaderFrontend.cpp

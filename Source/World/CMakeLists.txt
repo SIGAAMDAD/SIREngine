@@ -1,3 +1,4 @@
+include("${CMAKE_CURRENT_LIST_DIR}/../../Build/CMake/SIRBuildTreeGuard.cmake")
 add_library(SIRWorldHLOD STATIC HLOD/SIRWorldHLOD.cpp HLOD/SIRWorldHLODGRDG.cpp HLOD/SIRWorldHLODManifest.cpp HLOD/SIRWorldHLODPins.cpp HLOD/SIRWorldHLODDemand.cpp HLOD/SIRWorldHLODProjection.cpp)
 add_library(SIR::WorldHLOD ALIAS SIRWorldHLOD)
 target_include_directories(SIRWorldHLOD PUBLIC "${PROJECT_SOURCE_DIR}/Source" "${PROJECT_SOURCE_DIR}/Build/CMake")

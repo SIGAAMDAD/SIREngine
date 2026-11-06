@@ -1,3 +1,4 @@
+include("${CMAKE_CURRENT_LIST_DIR}/../../Build/CMake/SIRBuildTreeGuard.cmake")
 add_library(SIRScripting STATIC
     Core/SIRScriptArtifactCache.cpp
     Core/SIRScriptCachedProgramSource.cpp
