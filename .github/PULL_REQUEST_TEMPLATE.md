@@ -1,21 +1,32 @@
-## Change contract
+## Approved change contract
 
-What is being implemented, and which engine subsystem owns it?
+GitHub issue and linked child issue(s):
+
+Approved architectural contract or owner decision (when applicable):
+
+Target branch, exact HEAD, base and merge-base:
 
 ## Source and behavior
 
-- [ ] Actual source/interface changes are described; external ABI and serialized behavior checked.
-- [ ] Public docs/ADR updated where ownership, data format or behavior changes.
-- [ ] No build outputs, SDK redistributables or generated cache files committed.
+- [ ] Changed paths belong to the approved scope and owning system.
+- [ ] Shared ABI, lifetime, threading, serialization and build contracts are preserved or have explicit owner approval.
+- [ ] Actual declarations, definitions, consumers, registrations and error-path tests are included.
+- [ ] No generated validation JSON, reports, SDK redistributables, build outputs or provisional architecture documents are committed.
 
 ## Verification
 
-- [ ] Pinned SIR formatter and C++ style checks pass.
-- [ ] Relevant translation units built and linked (list exact config and compiler).
-- [ ] Affected tests and target-platform checks run (record what was not run).
-- [ ] Memory allocations, reclamation and hot-path performance measured if relevant.
-- [ ] Godot-specific formatter/SCons editor checks run for changes under engine source.
+- [ ] Changed eligible C/C++ sources were formatted and checked with clang-format 23.1.5.
+- [ ] Affected C++17 sources compiled and linked through CMake 4.4.5 / FASTBuild 1.20 (Ninja for LLVM tooling).
+- [ ] Relevant CTest/GoogleTest selections ran: nonempty selection, zero skipped/failed, with JUnit evidence.
+- [ ] Linux GCC, Linux Clang and Windows MSVC native tests passed on the proposed candidate.
+- [ ] Stable required status check sir/required is green for the frozen PR candidate SHA.
+- [ ] Required LLVM 23.1.5 line/branch/function/region coverage, ASan/UBSan and enabled native backend checks passed where required.
+- [ ] Performance-sensitive changes have comparable hardware/compiler/workload/source-SHA measurements.
 
-## Evidence
+## Integration
 
-Commit SHA, commands, logs, benchmark comparisons and remaining blockers:
+- [ ] Compared existing branch and target against the real merge base, preserving unfinished work.
+- [ ] Qualified the combined source tree before integrating and checked the new remote SHA.
+- [ ] Linked GitHub Issues contain source-bound evidence, acceptance decisions and unresolved blockers.
+
+Exact SHA, commands, Actions URLs, test totals, coverage counters, benchmark identity and required approvals:

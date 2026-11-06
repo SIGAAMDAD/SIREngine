@@ -82,6 +82,8 @@ static int sirTestDXGISurface( SIRRenderingDevice *pDevice, HWND hWindow ) noexc
 	transition.hResource = image.hImage;
 	transition.eBefore = SIR_GRAPHICS_STATE_PRESENT;
 	transition.eAfter = SIR_GRAPHICS_STATE_COLOR_ATTACHMENT;
+	transition.nMipCount = 1;
+	transition.nLayerCount = 1;
 	if ( pCommands->barrier( &transition, 1 ) != SIR_GRAPHICS_SUCCESS ) {
 		return 17;
 	}

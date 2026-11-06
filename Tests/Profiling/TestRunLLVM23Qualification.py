@@ -1,0 +1,128 @@
+#!/usr/bin/env python3
+"""Negative-path acceptance for the LLVM 23 source qualification gate."""
+import importlib.util
+import json
+from pathlib import Path
+import unittest
+
+script = Path(__file__).resolve().parents[2] / "Build/Scripts/RunLLVM23Qualification.py"
+spec = importlib.util.spec_from_file_location("sir_qualification", script)
+qualification = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(qualification)
+
+class QualificationGateTests(unittest.TestCase):
+    def setUp(self):
+        self.path = str(Path("/tmp/sir-test-production.cpp").resolve())
+        self.fully_covered = {"filename": self.path, "summary": {
+            name: {"count": 10, "covered": 10} for name in
+            ("lines", "branches", "functions", "regions")}}
+
+    def test_compiler_inventory_preset_is_instrumented(self):
+        root = Path(__file__).resolve().parents[2]
+        source = json.loads((root / "CMakePresets.json").read_text())
+        preset = next(p for p in source["configurePresets"] if p["name"] == "coverage-llvm23")
+        options = preset["cacheVariables"]
+        self.assertEqual(preset["generator"], "Ninja")
+        self.assertEqual(options["CMAKE_EXPORT_COMPILE_COMMANDS"], "ON")
+        self.assertIn("-fcoverage-mapping", options["CMAKE_CXX_FLAGS"])
+        self.assertIn("-fprofile-instr-generate", options["CMAKE_EXE_LINKER_FLAGS"])
+        self.assertEqual(preset["binaryDir"], "${sourceDir}/out/${hostSystemName}/llvm23-qualification")
+
+    def test_unprofiled_binary_reports_production_functions(self):
+        root = Path("/tmp/sir-profile-scope").resolve()
+        data = {"functions": [
+            {"name": "out_of_scope", "count": 0, "filenames": ["/vendor/test.cpp"]},
+            {"name": "covered", "count": 3, "filenames": [str(root / "Source/used.cpp")]},
+            {"name": "unprofiled", "count": 0, "filenames": [str(root / "Source/missing.cpp")]}
+        ]}
+        result = qualification.find_zero_count_functions(data, root / "Source")
+        self.assertEqual([item["name"] for item in result], ["unprofiled"])
+
+    def test_no_mismatch_candidates_do_not_pass_coverage(self):
+        root = Path("/tmp/sir-profile-scope").resolve()
+        self.assertEqual(qualification.find_zero_count_functions({"functions": []}, root), [])
+        self.fully_covered["summary"]["lines"]["covered"] = 0
+        with self.assertRaisesRegex(RuntimeError, "lines=0/10"):
+            qualification.verify_production_coverage({self.path}, [self.fully_covered])
+
+    def test_full_coverage_passes(self):
+        totals = qualification.verify_production_coverage({self.path}, [self.fully_covered])
+        self.assertEqual(totals["lines"], (10, 10))
+
+    def test_ninety_percent_passes_and_eighty_nine_percent_fails(self):
+        names = ("lines", "branches", "functions", "regions")
+        for name in names:
+            self.fully_covered["summary"][name]["covered"] = 9
+        totals = qualification.verify_production_coverage({self.path}, [self.fully_covered])
+        self.assertEqual(totals["lines"], (9, 10))
+        for name in names:
+            with self.subTest(metric=name):
+                self.fully_covered["summary"][name] = {"count": 100, "covered": 89}
+                with self.assertRaisesRegex(RuntimeError, f"{name}=89/100"):
+                    qualification.verify_production_coverage({self.path}, [self.fully_covered])
+                self.fully_covered["summary"][name] = {"count": 10, "covered": 9}
+
+    def test_fraction_below_ninety_fails_without_rounding(self):
+        self.fully_covered["summary"]["regions"] = {"count": 101, "covered": 90}
+        with self.assertRaisesRegex(RuntimeError, "regions=90/101"):
+            qualification.verify_production_coverage({self.path}, [self.fully_covered])
+
+    def test_missing_compiled_source_fails(self):
+        with self.assertRaisesRegex(RuntimeError, "Missing compiled"):
+            qualification.verify_production_coverage({self.path, "/tmp/other.cpp"}, [self.fully_covered])
+
+    def test_empty_inventory_fails(self):
+        with self.assertRaisesRegex(RuntimeError, "Empty compiled"):
+            qualification.verify_production_coverage(set(), [self.fully_covered])
+
+    def test_uncovered_branch_fails(self):
+        self.fully_covered["summary"]["branches"]["covered"] = 8
+        with self.assertRaisesRegex(RuntimeError, "branches=8/10"):
+            qualification.verify_production_coverage({self.path}, [self.fully_covered])
+
+    def test_zero_coverage_denominator_fails(self):
+        self.fully_covered["summary"]["regions"] = {"count": 0, "covered": 0}
+        with self.assertRaisesRegex(RuntimeError, "regions=0/0"):
+            qualification.verify_production_coverage({self.path}, [self.fully_covered])
+
+    def test_uncovered_inline_header_fails(self):
+        header = str(Path("/tmp/sir-inline.hpp").resolve())
+        bad = {"filename": header, "summary": {
+            metric: {"count": 1, "covered": 1} for metric in
+            ("lines", "branches", "functions", "regions")}}
+        bad["summary"]["lines"]["count"] = 2
+        bad["summary"]["lines"]["covered"] = 0
+        with self.assertRaisesRegex(RuntimeError, "lines=10/12"):
+            qualification.verify_production_coverage(
+                {self.path}, [self.fully_covered, bad], Path("/tmp"))
+
+    def test_production_header_counted_when_complete(self):
+        header = str(Path("/tmp/sir-inline.hpp").resolve())
+        extra = {"filename": header, "summary": {
+            metric: {"count": 1, "covered": 1} for metric in
+            ("lines", "branches", "functions", "regions")}}
+        totals = qualification.verify_production_coverage(
+            {self.path}, [self.fully_covered, extra], Path("/tmp"))
+        self.assertEqual(totals["lines"], (11, 11))
+
+    def test_vendor_header_is_excluded_from_production(self):
+        vendor = str(Path("/opt/vendor/external.hpp").resolve())
+        extra = {"filename": vendor, "summary": {
+            metric: {"count": 1, "covered": 0} for metric in
+            ("lines", "branches", "functions", "regions")}}
+        totals = qualification.verify_production_coverage(
+            {self.path}, [self.fully_covered, extra], Path("/tmp"))
+        self.assertEqual(totals["lines"], (10, 10))
+
+    def test_duplicate_production_mapping_fails(self):
+        with self.assertRaisesRegex(RuntimeError, "Duplicated production"):
+            qualification.verify_production_coverage(
+                {self.path}, [self.fully_covered, self.fully_covered], Path("/tmp"))
+
+    def test_missing_counter_fails(self):
+        del self.fully_covered["summary"]["functions"]
+        with self.assertRaisesRegex(RuntimeError, "Malformed LLVM functions"):
+            qualification.verify_production_coverage({self.path}, [self.fully_covered])
+
+if __name__ == "__main__":
+    unittest.main()

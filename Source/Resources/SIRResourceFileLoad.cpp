@@ -127,7 +127,7 @@ SIRResourceResult SIRResourceFileLoad::begin( const char *pszUtf8Path, const sir
 	m_bDiscard = false;
 	m_bActive = true;
 	m_Task = { UINT32_MAX, 0 };
-	if ( !m_pScheduler->submit( &SIRResourceFileLoad::readTask, this, SIR_TASK_PRIORITY_BACKGROUND, SIR_TASK_EXEC_CPU, &m_Task ) ) {
+	if ( !m_pScheduler->submit( { &SIRResourceFileLoad::readTask, this, SIR_TASK_PRIORITY_BACKGROUND, SIR_TASK_EXEC_CPU }, &m_Task ) ) {
 		clearStaging();
 		closeTransfer();
 		return SIR_RESOURCE_RESULT_OUT_OF_BUDGET;

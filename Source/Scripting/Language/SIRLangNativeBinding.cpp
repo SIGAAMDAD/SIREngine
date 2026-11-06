@@ -45,7 +45,7 @@ sirLangVMError_t SIRLangInvokeNativeBinding( const sirLangVMCall_t& call, sirLan
 
 	const uint32_t nBytes = call.nArgumentCount * sizeof( sirLangVMValue_t );
 	const sirScriptReadFrame_t arguments = { nBytes != 0 ? call.pArguments : nullptr, nBytes,
-	                                         nBytes != 0 ? alignof( sirLangVMValue_t ) : 1 };
+	                                         nBytes != 0 ? ( uint32_t )alignof( sirLangVMValue_t ) : 1 };
 	const sirScriptWriteFrame_t result = { descriptor.nReturnTypeId != 0 ? pResult : nullptr,
 	                                       descriptor.nReturnTypeId != 0 ? ( uint32_t )sizeof( sirLangVMValue_t ) : 0,
 	                                       descriptor.nReturnTypeId != 0 ? ( uint32_t )alignof( sirLangVMValue_t ) : 1 };

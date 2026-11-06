@@ -225,74 +225,16 @@ static sirLangToken_t sirLangReadString( sirLangLexer_t *pLexer ) noexcept
 	return sirLangToken( start, SIR_LANG_TOKEN_ERROR, pLexer->nOffset - start.nOffset, SIR_LANG_LEX_UNTERMINATED_STRING );
 }
 
-static bool sirLangPrepareLine( sirLangLexer_t *pLexer, sirLangToken_t *pToken ) noexcept
-{
-	const uint8_t *pBytes = pLexer->source.pBytes;
-	while ( pLexer->bLineStart && pLexer->nOffset < pLexer->source.nBytes ) {
-		const sirLangCursor_t start = sirLangCursor( pLexer );
-		while ( pLexer->nOffset < pLexer->source.nBytes && pBytes[pLexer->nOffset] == ' ' ) {
-			sirLangConsumeByte( pLexer );
-		}
-		if ( pLexer->nOffset >= pLexer->source.nBytes ) {
-			return false;
-		}
-		if ( pBytes[pLexer->nOffset] == '\t' ) {
-			sirLangConsumeByte( pLexer );
-			pLexer->bLineStart = false;
-			*pToken = sirLangToken( start, SIR_LANG_TOKEN_ERROR, pLexer->nOffset - start.nOffset, SIR_LANG_LEX_TAB_INDENT );
-			return true;
-		}
-		if ( pBytes[pLexer->nOffset] == '#' ) {
-			while ( pLexer->nOffset < pLexer->source.nBytes && !sirLangIsNewline( pBytes[pLexer->nOffset] ) ) {
-				sirLangConsumeByte( pLexer );
-			}
-		}
-		if ( pLexer->nOffset < pLexer->source.nBytes && sirLangIsNewline( pBytes[pLexer->nOffset] ) ) {
-			sirLangConsumeNewline( pLexer );
-			continue;
-		}
-		if ( pLexer->nOffset >= pLexer->source.nBytes ) {
-			return false;
-		}
-
-		const uint32_t nIndent = pLexer->nColumn - 1;
-		const uint32_t nTop = pLexer->szIndent[pLexer->nIndentDepth - 1];
-		pLexer->bLineStart = false;
-		if ( nIndent > nTop ) {
-			if ( pLexer->nIndentDepth == sizeof( pLexer->szIndent ) / sizeof( pLexer->szIndent[0] ) ) {
-				*pToken = sirLangToken( start, SIR_LANG_TOKEN_ERROR, pLexer->nOffset - start.nOffset, SIR_LANG_LEX_INDENT_OVERFLOW );
-				return true;
-			}
-			pLexer->szIndent[pLexer->nIndentDepth] = nIndent;
-			++pLexer->nIndentDepth;
-			*pToken = sirLangToken( start, SIR_LANG_TOKEN_INDENT, pLexer->nOffset - start.nOffset, SIR_LANG_LEX_OK );
-			return true;
-		}
-		if ( nIndent < nTop ) {
-			while ( pLexer->nIndentDepth > 1 && pLexer->szIndent[pLexer->nIndentDepth - 1] > nIndent ) {
-				--pLexer->nIndentDepth;
-				++pLexer->nPendingDedents;
-			}
-			if ( pLexer->szIndent[pLexer->nIndentDepth - 1] != nIndent ) {
-				pLexer->nPendingDedents = 0;
-				*pToken = sirLangToken( start, SIR_LANG_TOKEN_ERROR, pLexer->nOffset - start.nOffset, SIR_LANG_LEX_INCONSISTENT_INDENT );
-				return true;
-			}
-		}
-	}
-	return false;
-}
-
 bool SIRLangIsKeyword( const uint8_t *pBytes, uint32_t nBytes ) noexcept
 {
 	if ( pBytes == nullptr || nBytes == 0 ) {
 		return false;
 	}
 	static constexpr const char *s_pszKeywords[] = {
-	    "behavior",  "class", "uses",   "fn",    "function", "let", "self",    "on",    "when",  "otherwise",  "return",
-	    "for",       "in",    "mutate", "emit",  "spawn",    "at",  "destroy", "after", "state", "transition", "schema",
-	    "condition", "bank",  "field",  "and",   "or",       "not", "xor",     "match", "case",  "import",     "as",
-	    "interface", "enum",  "record", "break", "continue", "ON",  "OFF",     "true",  "false" };
+	    "behavior", "class", "uses",       "function", "returns",   "var",   "this",     "on",   "event", "if",   "else",
+	    "switch",   "case",  "default",    "return",   "for",       "in",    "mutate",   "emit", "spawn", "at",   "destroy",
+	    "after",    "state", "transition", "schema",   "condition", "bank",  "field",    "and",  "or",    "not",  "xor",
+	    "import",   "as",    "interface",  "enum",     "record",    "break", "continue", "ON",   "OFF",   "true", "false" };
 	for ( uint32_t iWord = 0; iWord < sizeof( s_pszKeywords ) / sizeof( s_pszKeywords[0] ); ++iWord ) {
 		const size_t nKeywordBytes = strlen( s_pszKeywords[iWord] );
 		if ( nBytes == nKeywordBytes && memcmp( pBytes, s_pszKeywords[iWord], nBytes ) == 0 ) {
@@ -331,49 +273,32 @@ sirLangToken_t SIRLangLexerNext( sirLangLexer_t *pLexer ) noexcept
 		return sirLangToken( initial, SIR_LANG_TOKEN_END, 0, SIR_LANG_LEX_OK );
 	}
 
-	if ( pLexer->nPendingDedents > 0 ) {
-		--pLexer->nPendingDedents;
-		return sirLangToken( initial, SIR_LANG_TOKEN_DEDENT, 0, SIR_LANG_LEX_OK );
-	}
-
-	sirLangToken_t lineToken = {};
-	if ( sirLangPrepareLine( pLexer, &lineToken ) ) {
-		return lineToken;
-	}
-	if ( pLexer->nPendingDedents > 0 ) {
-		--pLexer->nPendingDedents;
-		return sirLangToken( sirLangCursor( pLexer ), SIR_LANG_TOKEN_DEDENT, 0, SIR_LANG_LEX_OK );
-	}
-
 	const uint8_t *pBytes = pLexer->source.pBytes;
-	while ( pLexer->nOffset < pLexer->source.nBytes ) {
-		const uint8_t iByte = pBytes[pLexer->nOffset];
-		if ( iByte != ' ' && iByte != '\t' ) {
-			break;
+	for ( ;; ) {
+		if ( pLexer->nOffset == pLexer->source.nBytes ) {
+			const sirLangCursor_t end = sirLangCursor( pLexer );
+			pLexer->bFinished = true;
+			return sirLangToken( end, SIR_LANG_TOKEN_END, 0, SIR_LANG_LEX_OK );
 		}
-		sirLangConsumeByte( pLexer );
+		const uint8_t iByte = pBytes[pLexer->nOffset];
+		if ( sirLangIsNewline( iByte ) ) {
+			sirLangConsumeNewline( pLexer );
+			continue;
+		}
+		if ( iByte == ' ' || iByte == '\t' ) {
+			sirLangConsumeByte( pLexer );
+			continue;
+		}
+		if ( iByte == '#' || ( iByte == '/' && pLexer->nOffset + 1 < pLexer->source.nBytes && pBytes[pLexer->nOffset + 1] == '/' ) ) {
+			while ( pLexer->nOffset < pLexer->source.nBytes && !sirLangIsNewline( pBytes[pLexer->nOffset] ) ) {
+				sirLangConsumeByte( pLexer );
+			}
+			continue;
+		}
+		break;
 	}
 	const sirLangCursor_t start = sirLangCursor( pLexer );
-	if ( pLexer->nOffset == pLexer->source.nBytes ) {
-		if ( pLexer->nIndentDepth > 1 ) {
-			--pLexer->nIndentDepth;
-			return sirLangToken( start, SIR_LANG_TOKEN_DEDENT, 0, SIR_LANG_LEX_OK );
-		}
-		pLexer->bFinished = true;
-		return sirLangToken( start, SIR_LANG_TOKEN_END, 0, SIR_LANG_LEX_OK );
-	}
-
 	const uint8_t iByte = pBytes[pLexer->nOffset];
-	if ( sirLangIsNewline( iByte ) ) {
-		sirLangConsumeNewline( pLexer );
-		return sirLangToken( start, SIR_LANG_TOKEN_NEWLINE, pLexer->nOffset - start.nOffset, SIR_LANG_LEX_OK );
-	}
-	if ( iByte == '#' ) {
-		while ( pLexer->nOffset < pLexer->source.nBytes && !sirLangIsNewline( pBytes[pLexer->nOffset] ) ) {
-			sirLangConsumeByte( pLexer );
-		}
-		return SIRLangLexerNext( pLexer );
-	}
 	if ( sirLangIsAsciiLetter( iByte ) || iByte == '_' || iByte >= 0x80 ) {
 		return sirLangReadIdentifier( pLexer );
 	}

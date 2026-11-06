@@ -1,0 +1,362 @@
+name: SIREngine qualification
+on:
+  pull_request:
+    branches: [main]
+    types: [labeled, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+    inputs:
+      system:
+        description: 'Compiled production scope'
+        required: true
+        type: choice
+        options: [all, Core, Resources, Renderer, Terrain, Editor, Scripting, Audio, Mesh, Streaming, World, UI, GraphicsABI]
+      issue:
+        description: 'Authoritative GitHub issue number'
+        required: true
+        type: string
+      purpose:
+        description: 'Milestone or authorized release acceptance'
+        required: true
+        type: choice
+        options: [milestone, release]
+      baseline_run_id:
+        description: 'Successful comparable nightly benchmark artifact run ID (required for release)'
+        required: false
+        type: string
+permissions:
+  contents: read
+  issues: read
+  actions: read
+concurrency:
+  group: sir-qualification-${{ github.event.pull_request.head.sha || github.sha }}-${{ inputs.system || 'all' }}
+  queue: max
+  cancel-in-progress: false
+jobs:
+  authorize:
+    name: Validate qualification issue and frozen SHA
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && !github.event.pull_request.draft && contains(github.event.pull_request.labels.*.name, 'sir-qualify') && (github.event.action != 'labeled' || github.event.label.name == 'sir-qualify'))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Validate source revision and authoritative GitHub issue
+        shell: bash
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          ISSUE_NUMBER: ${{ github.event.pull_request.number || inputs.issue }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$SOURCE_SHA" =~ ^[a-f0-9]{40}$ ]]
+          [[ "$ISSUE_NUMBER" =~ ^[1-9][0-9]*$ ]]
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          issue="$(gh api "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER")"
+          jq -er --argjson requested "$ISSUE_NUMBER" --arg GITHUB_EVENT_NAME "$GITHUB_EVENT_NAME" \
+            '(.number == $requested) and (.state == "open") and
+             (if $GITHUB_EVENT_NAME == "pull_request" then .pull_request != null else .pull_request == null end)' \
+            <<< "$issue" >/dev/null
+  coverage:
+    name: LLVM 23 full source coverage
+    needs: authorize
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Validate exact requested checkout
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          ISSUE_NUMBER: ${{ github.event.pull_request.number || inputs.issue }}
+        shell: bash
+        run: |
+          [[ "$SOURCE_SHA" =~ ^[a-f0-9]{40}$ ]]
+          [[ "$ISSUE_NUMBER" =~ ^[1-9][0-9]*$ ]]
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+      - uses: ./.github/actions/setup-build-tools
+      - run: git submodule update --init ThirdParty/GoogleTest
+      - name: Install pinned LLVM 23.1.5
+        run: bash Build/CI/InstallLLVM23.sh
+      - name: Verify GRDG collector negative-path tests
+        run: python3 Tests/Profiling/TestSIRGRDGCoverageCollector.py
+      - name: Test LLVM 23 qualification and CTest negative paths
+        run: |
+          python3 Tests/Profiling/TestRunLLVM23Qualification.py
+          python3 -m unittest discover -s Tests/CI -p 'Test*.py'
+      - name: Qualify all compiled production code
+        env:
+          SIR_QUALIFICATION_SCOPE: ${{ inputs.system || 'all' }}
+        run: bash Build/Scripts/RunLLVM23Qualification.sh
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: llvm23-source-coverage
+          path: out/Verification/LLVM23/
+          if-no-files-found: warn
+          retention-days: 30
+  native:
+    name: Native functional acceptance (${{ matrix.os }})
+    needs: authorize
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022]
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Validate exact requested checkout
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          ISSUE_NUMBER: ${{ github.event.pull_request.number || inputs.issue }}
+        shell: bash
+        run: |
+          [[ "$SOURCE_SHA" =~ ^[a-f0-9]{40}$ ]]
+          [[ "$ISSUE_NUMBER" =~ ^[1-9][0-9]*$ ]]
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+      - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1
+        if: runner.os == 'Windows'
+      - uses: ./.github/actions/setup-build-tools
+      - run: git submodule update --init ThirdParty/GoogleTest
+      - name: Full native build and accounted functional tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          cmake --preset dev -DSIR_WITH_GOOGLETEST=ON
+          cmake --build --preset dev
+          python_cmd=python3
+          if [[ "$RUNNER_OS" == Windows ]]; then python_cmd=python; fi
+          "$python_cmd" Build/CI/RunCTestGate.py --preset dev --report "out/Verification/native-${{ matrix.os }}.xml"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: qualification-native-${{ matrix.os }}
+          path: out/Verification/native-*.xml
+          if-no-files-found: warn
+          retention-days: 30
+  sanitizer:
+    name: ASan and UBSan native acceptance
+    needs: authorize
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Validate exact requested checkout
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          ISSUE_NUMBER: ${{ github.event.pull_request.number || inputs.issue }}
+        shell: bash
+        run: |
+          [[ "$SOURCE_SHA" =~ ^[a-f0-9]{40}$ ]]
+          [[ "$ISSUE_NUMBER" =~ ^[1-9][0-9]*$ ]]
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+      - uses: ./.github/actions/setup-build-tools
+      - run: git submodule update --init ThirdParty/GoogleTest
+      - name: Run full sanitized native suite
+        env:
+          ASAN_OPTIONS: detect_leaks=1:halt_on_error=1
+          UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+        run: |
+          cmake --preset asan -DSIR_WITH_GOOGLETEST=ON -DSIR_ENABLE_UBSAN=ON
+          cmake --build --preset asan
+          python3 Build/CI/RunCTestGate.py --preset asan --report out/Verification/asan-ubsan.xml
+  renderer-backends:
+    name: Renderer backend contracts (${{ matrix.backend }})
+    needs: authorize
+    if: inputs.system == '' || inputs.system == 'all' || inputs.system == 'Renderer' || inputs.system == 'GraphicsABI'
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {os: ubuntu-24.04, backend: opengl46, option: SIR_WITH_OPENGL, tests: '^renderer[.]opengl46[.]'}
+          - {os: windows-2022, backend: d3d12, option: SIR_WITH_D3D12, tests: '^renderer[.]d3d12[.]'}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Verify requested backend source SHA
+        env:
+          SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        shell: bash
+        run: |
+          [[ "$SHA" =~ ^[a-f0-9]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$SHA"
+      - uses: ./.github/actions/setup-build-tools
+      - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1
+        if: runner.os == 'Windows'
+      - uses: ./.github/actions/setup-dxc
+        if: matrix.backend == 'd3d12'
+      - name: Install Linux OpenGL headers
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgl-dev
+      - name: Retrieve exact backend dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          git submodule update --init ThirdParty/GoogleTest
+          case "${{ matrix.backend }}" in
+            d3d12) git submodule update --init ThirdParty/D3D12MemoryAllocator ;;
+            opengl46) ;;
+            *) echo "Unsupported backend" >&2; exit 1 ;;
+          esac
+      - name: Compile enabled backend and execute actual driver contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          cmake --preset dev -DSIR_WITH_GOOGLETEST=ON "-D${{ matrix.option }}=ON"
+          cmake --build --preset dev
+          python_cmd=python3
+          if [[ "$RUNNER_OS" == Windows ]]; then python_cmd=python; fi
+          "$python_cmd" Build/CI/RunCTestGate.py --preset dev --name-regex "${{ matrix.tests }}" --report "out/Verification/backend-${{ matrix.backend }}.xml"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: backend-evidence-${{ matrix.backend }}
+          path: out/Verification/backend-*.xml
+          if-no-files-found: warn
+          retention-days: 30
+  acceptance:
+    name: Qualification acceptance
+    if: always() && (github.event_name == 'workflow_dispatch' || needs.authorize.result != 'skipped')
+    runs-on: ubuntu-24.04
+    needs: [authorize, coverage, native, sanitizer, renderer-backends]
+    steps:
+      - name: Refuse incomplete gates
+        env:
+          AUTHORIZE: ${{ needs.authorize.result }}
+          COVERAGE: ${{ needs.coverage.result }}
+          NATIVE: ${{ needs.native.result }}
+          SANITIZER: ${{ needs.sanitizer.result }}
+          RENDERER: ${{ needs.renderer-backends.result }}
+          SYSTEM: ${{ inputs.system || 'all' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$AUTHORIZE" = success
+          test "$COVERAGE" = success
+          test "$NATIVE" = success
+          test "$SANITIZER" = success
+          if [[ "$SYSTEM" == all || "$SYSTEM" == Renderer || "$SYSTEM" == GraphicsABI ]]; then
+            test "$RENDERER" = success
+          fi
+  benchmark-qualification:
+    name: Fixed-host performance baseline qualification
+    if: inputs.purpose == 'release'
+    needs: [acceptance]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: ./.github/actions/setup-build-tools
+      - run: git submodule update --init ThirdParty/GoogleTest ThirdParty/GoogleBenchmark
+      - name: Build and measure source-bound performance workload
+        shell: bash
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          cmake --preset profile -DSIR_BUILD_BENCHMARKS=ON -DSIR_WITH_GOOGLE_BENCHMARK=ON -DSIR_WITH_GOOGLETEST=ON
+          cmake --build --preset profile
+          bash Build/Scripts/RunGoogleBenchmarks.sh qualification-linux
+      - name: Compare approved baseline with identical host and toolchain
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          BASELINE_RUN_ID: ${{ inputs.baseline_run_id }}
+        run: |
+          set -euo pipefail
+          [[ "$BASELINE_RUN_ID" =~ ^[1-9][0-9]*$ ]]
+          mkdir -p out/Verification/Baseline
+          gh run download "$BASELINE_RUN_ID" --name nightly-benchmarks --dir out/Verification/Baseline
+          python3 Build/CI/CompareBenchmarks.py compare --baseline out/Verification/Baseline/nightly-linux.json --candidate out/Nightly/Benchmarks/qualification-linux.json --max-slowdown 0.15
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: qualification-performance
+          path: out/Nightly/Benchmarks/
+          if-no-files-found: warn
+          retention-days: 60
+  release-package:
+    name: Qualified release package (${{ matrix.os }})
+    if: inputs.purpose == 'release' && needs.acceptance.result == 'success' && needs.benchmark-qualification.result == 'success'
+    needs: [acceptance, benchmark-qualification]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1
+        if: runner.os == 'Windows'
+      - uses: ./.github/actions/setup-build-tools
+      - run: git submodule update --init ThirdParty/GoogleTest
+      - name: Build, test and package frozen release candidate
+        shell: bash
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          cmake --preset release -DSIR_WITH_GOOGLETEST=ON
+          cmake --build --preset release
+          python_cmd=python3
+          if [[ "$RUNNER_OS" == Windows ]]; then python_cmd=python; fi
+          "$python_cmd" Build/CI/RunCTestGate.py --preset release --report "out/Verification/release-${{ matrix.os }}.xml"
+          cmake --build --preset release --target package
+          mkdir -p out/Verification/Release
+          packages="$(find "out/$RUNNER_OS/release" -type f -name '*.zip' -print)"
+          test -n "$packages"
+          while IFS= read -r package; do
+            sha256sum "$package" >> out/Verification/Release/checksums.sha256
+            cp "$package" out/Verification/Release/
+          done <<< "$packages"
+          printf '%s\n' "$SOURCE_SHA" > out/Verification/Release/source-sha.txt
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: release-candidate-${{ matrix.os }}
+          path: |
+            out/Verification/Release/
+            out/Verification/release-*.xml
+          if-no-files-found: error
+          retention-days: 60
+  release-summary:
+    name: sir/release-accepted
+    if: always() && inputs.purpose == 'release'
+    needs: [acceptance, benchmark-qualification, release-package]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Reject incomplete acceptance or packaging
+        env:
+          ACCEPTANCE: ${{ needs.acceptance.result }}
+          PACKAGE: ${{ needs.release-package.result }}
+          PERFORMANCE: ${{ needs.benchmark-qualification.result }}
+        run: |
+          test "$ACCEPTANCE" = success
+          test "$PACKAGE" = success
+          test "$PERFORMANCE" = success
