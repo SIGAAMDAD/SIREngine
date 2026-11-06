@@ -58,6 +58,7 @@ if (( config_exit == 0 )); then
 fi
 if (( build_exit == 0 )); then
     timed_step test ctest --preset "$preset" \
+        --output-on-failure --no-tests=error \
         --output-junit "$report/tests/$label.xml"
 fi
 if [[ "$preset" == "release" ]] && (( test_exit == 0 )); then
