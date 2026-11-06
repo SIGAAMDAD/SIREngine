@@ -26,7 +26,7 @@ function(sir_classify_tests sirDirectory)
         else()
             list(APPEND sirLabels "kind:unit")
         endif()
-        if(sirTest MATCHES "^(core[.]jobs[.](stress|experiments|queue-candidates)|core[.]platform[.]io[.]regression|resources[.]integration[.]stress|core[.]platform[.]input[.]stress)$")
+        if(sirTest MATCHES "^(core[.]jobs[.]|core[.]memory[.](allocators|manager)|core[.]platform[.](io[.]regression|filesystem|input[.]stress|decommit-failure)|resources[.](integration[.]stress|streaming[.]native-file-io)|terrain[.])")
             list(APPEND sirLabels "nightly:repeat")
         endif()
         if(NOT sirTest MATCHES "(^|[.])(soak|stress|experiments|queue-candidates|benchmark|profiling)([.]|$)" AND
