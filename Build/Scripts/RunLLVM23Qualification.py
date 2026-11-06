@@ -15,6 +15,31 @@ def run(*args, env=None, stdout=None):
     return subprocess.run([str(a) for a in args], cwd=ROOT, env=env,
                           stdout=stdout, check=True, text=True)
 
+
+def verify_production_coverage(required, files):
+    """Fail closed on omitted compiled production units and incomplete coverage."""
+    if not required:
+        raise RuntimeError("Empty compiled production source inventory")
+    mapped = {str(pathlib.Path(item["filename"]).resolve()): item for item in files}
+    missing = required - mapped.keys()
+    if missing:
+        raise RuntimeError(f"Missing compiled production coverage mappings: {sorted(missing)[:10]}")
+    totals = {}
+    failures = []
+    for metric in ("lines", "branches", "functions", "regions"):
+        try:
+            counts = [mapped[path]["summary"][metric] for path in sorted(required)]
+            total = sum(row["count"] for row in counts)
+            covered = sum(row["covered"] for row in counts)
+        except (KeyError, TypeError) as exc:
+            raise RuntimeError(f"Malformed LLVM {metric} coverage counters") from exc
+        if total <= 0 or covered < 0 or covered > total or covered != total:
+            failures.append(f"{metric}={covered}/{total}")
+        totals[metric] = (covered, total)
+    if failures:
+        raise RuntimeError("100% production coverage unmet: " + ", ".join(failures))
+    return totals
+
 def qualify():
     for name in ("clang++-23", "llvm-cov-23", "llvm-profdata-23", "ninja"):
         if not shutil.which(name):
@@ -77,19 +102,9 @@ def qualify():
                 and source_root in pathlib.Path(row["file"]).resolve().parents}
     if not required:
         raise RuntimeError("Empty compiled production source inventory")
-    mapped = {str(pathlib.Path(item["filename"]).resolve()): item
-              for item in data["data"][0]["files"]}
-    missing = required - mapped.keys()
-    if missing:
-        raise RuntimeError(f"Missing compiled production coverage mappings: {sorted(missing)[:10]}")
-    print(f"Production compiled translation units: {len(required)}")
-    for metric in ("lines", "branches", "functions", "regions"):
-        values = [mapped[path]["summary"][metric] for path in required]
-        count = sum(row["count"] for row in values)
-        covered = sum(row["covered"] for row in values)
-        print(f"LLVM 23 {metric}: {covered}/{count}")
-        if count == 0 or covered != count:
-            raise RuntimeError(f"Unmet 100% {metric} coverage requirement")
+    totals = verify_production_coverage(required, data["data"][0]["files"])
+    for name, (covered, count) in totals.items():
+        print(f"LLVM 23 {name}: {covered}/{count}")
     print("LLVM 23 qualification PASS")
 
 if __name__ == "__main__":
