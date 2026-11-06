@@ -13,6 +13,14 @@ BUILD = ROOT / "out/Linux/llvm23-qualification"
 REPORT = ROOT / "out/Verification/LLVM23"
 MINIMUM_PRODUCTION_COVERAGE_PERCENT = 90
 
+
+def required_production_coverage_percent():
+    """Resolve only owner-approved interim and full-production gates."""
+    value = os.environ.get("SIR_COVERAGE_MINIMUM", str(MINIMUM_PRODUCTION_COVERAGE_PERCENT))
+    if value not in ("90", "100"):
+        raise RuntimeError("SIR_COVERAGE_MINIMUM must be 90 or 100")
+    return int(value)
+
 def run(*args, env=None, stdout=None):
     return subprocess.run([str(a) for a in args], cwd=ROOT, env=env,
                           stdout=stdout, check=True, text=True)
@@ -22,6 +30,7 @@ def verify_production_coverage(required, files, source_root=None):
     """Qualify every mapped production implementation, including inline headers."""
     if not required:
         raise RuntimeError("Empty compiled production source inventory")
+    minimum = required_production_coverage_percent()
     root = pathlib.Path(source_root).resolve() if source_root is not None else None
     mapped = {}
     for item in files:
@@ -48,11 +57,11 @@ def verify_production_coverage(required, files, source_root=None):
             covered = sum(row["covered"] for row in counts)
         except (KeyError, TypeError) as exc:
             raise RuntimeError(f"Malformed LLVM {metric} coverage counters") from exc
-        if total <= 0 or covered < 0 or covered > total or covered * 100 < total * MINIMUM_PRODUCTION_COVERAGE_PERCENT:
+        if total <= 0 or covered < 0 or covered > total or covered * 100 < total * minimum:
             failures.append(f"{metric}={covered}/{total}")
         totals[metric] = (covered, total)
     if failures:
-        raise RuntimeError(f"{MINIMUM_PRODUCTION_COVERAGE_PERCENT}% production coverage unmet: " + ", ".join(failures))
+        raise RuntimeError(f"{minimum}% production coverage unmet: " + ", ".join(failures))
     return totals
 
 
@@ -244,6 +253,43 @@ def summarize_profile_mismatches(records):
             "nonzero_hash_conflicts": conflicts}
 
 
+
+def validate_binary_profile_isolation(binaries, profdata, runner=None):
+    """Verify each linked image independently; refuse actual stale function hashes."""
+    import re
+    if not binaries:
+        raise RuntimeError("No linked binaries to validate")
+    execute = runner if runner is not None else subprocess.run
+    for binary in binaries:
+        command = ["llvm-cov-23", "export", str(binary),
+                   f"-instr-profile={profdata}", "-format=text", "--dump"]
+        result = execute(command, cwd=ROOT, stdout=subprocess.DEVNULL,
+                         stderr=subprocess.PIPE, text=True, check=False)
+        if result.returncode:
+            raise RuntimeError(f"Linked profile export failed for {binary}: {result.stderr[:1000]}")
+        lines = [line.strip() for line in result.stderr.splitlines() if line.strip()]
+        records = parse_profile_hash_mismatches(result.stderr)
+        summaries = [line for line in lines if
+                     re.fullmatch(r"warning: [0-9]+ functions? have mismatched data", line)]
+        details = [line for line in lines if
+                   line.startswith("hash-mismatch: No profile record found for")]
+        if (len(details) != len(records) or
+                any(int(record["hash"], 16) != 0 for record in records) or
+                (summaries and not records) or
+                len(lines) != len(summaries) + len(details)):
+            raise RuntimeError(f"Unresolved binary/profile mapping for {binary}: {result.stderr[:1000]}")
+    return True
+
+
+def validated_aggregate_warning(stderr):
+    """Only the LLVM combined-object hash warning may be attributed to image overlap."""
+    import re
+    lines = [line.strip() for line in stderr.splitlines() if line.strip()]
+    return bool(lines) and all(
+        re.fullmatch(r"warning: [0-9]+ functions? have mismatched data", line)
+        for line in lines)
+
+
 def find_zero_count_functions(coverage, source_root, limit=30):
     """List unexecuted mapped functions in the declared production scope."""
     root = pathlib.Path(source_root).resolve()
@@ -260,7 +306,8 @@ def find_zero_count_functions(coverage, source_root, limit=30):
     return sorted(matches, key=lambda row: (row["file"], row["name"]))[:limit]
 
 
-def export_codecov_lcov(files, commands, source_root, objects, profdata, destination):
+def export_codecov_lcov(files, commands, source_root, objects, profdata, destination,
+                       verified_aggregate=False):
     """Publish only complete, warning-free production LLVM coverage to Codecov."""
     destination = pathlib.Path(destination)
     destination.unlink(missing_ok=True)
@@ -281,8 +328,9 @@ def export_codecov_lcov(files, commands, source_root, objects, profdata, destina
     with destination.open("w") as stream:
         result = subprocess.run(command, cwd=ROOT, stdout=stream,
                                 stderr=subprocess.PIPE, text=True, check=False)
-    if result.returncode or any(s in result.stderr.lower()
-                                for s in ("warning:", "mismatch", "out of date")):
+    if (result.returncode or
+            (result.stderr.strip() and not
+             (verified_aggregate and validated_aggregate_warning(result.stderr)))):
         destination.unlink(missing_ok=True)
         raise RuntimeError(f"Untrustworthy Codecov LLVM export: {result.stderr[:2000]}")
     report = destination.read_text()
@@ -360,6 +408,7 @@ def qualify():
                   "groups": diagnostic_group_totals(data["data"][0]["files"], commands, ROOT)}
     (REPORT / "core-memory-resources-diagnostic.json").write_text(
         json.dumps(diagnostic, indent=2) + "\n")
+    verified_aggregate = False
     if any(word in result.stderr.lower() for word in ("mismatch", "out of date", "warning:")):
         candidates = find_zero_count_functions(data["data"][0], source_root)
         debug_export = subprocess.run(command + ["--dump"], cwd=ROOT, stdout=subprocess.DEVNULL,
@@ -374,15 +423,20 @@ def qualify():
                        "hash_mismatches": mismatched,
                        "zero_count_production_functions": candidates}
         (REPORT / "profile-mismatch.json").write_text(json.dumps(diagnostics, indent=2) + "\n")
-        raise RuntimeError(
-            f"Coverage mapping/profile mismatch: {result.stderr[:2000]}; "
-            f"zero-hash mapping records={summary['zero_hash_records']}, "
-            f"nonzero-hash conflicts={summary['nonzero_hash_conflicts'][:5]}; "
-            f"first zero-count production functions: {candidates[:5]}; "
-            f"see {REPORT / 'profile-mismatch.json'}")
-    if name == "all":
-        export_codecov_lcov(data["data"][0]["files"], commands, source_root,
-                           binaries, profdata, REPORT / "codecov-production.lcov")
+        if not validated_aggregate_warning(result.stderr):
+            raise RuntimeError(f"Unexpected LLVM export diagnostics: {result.stderr[:2000]}")
+        try:
+            validate_binary_profile_isolation(binaries, profdata)
+        except RuntimeError as exc:
+            raise RuntimeError(
+                f"Unresolved LLVM profile hashes: {exc}; "
+                f"zero-hash mappings={summary['zero_hash_records']}, "
+                f"nonzero conflicts={summary['nonzero_hash_conflicts'][:5]}; "
+                f"see {REPORT / 'profile-mismatch.json'}") from exc
+        verified_aggregate = True
+        diagnostics["verified_per_binary"] = True
+        (REPORT / "profile-mismatch.json").write_text(
+            json.dumps(diagnostics, indent=2) + "\n")
     if name == "CoreMemoryResources":
         grouped = verify_group_coverage(commands, data["data"][0]["files"], ROOT)
         for group, counters in grouped.items():
@@ -400,6 +454,10 @@ def qualify():
         totals = verify_production_coverage(required, data["data"][0]["files"], source_root)
         for metric, (covered, count) in totals.items():
             print(f"LLVM 23 {metric}: {covered}/{count}")
+    if name == "all":
+        export_codecov_lcov(data["data"][0]["files"], commands, source_root,
+                           binaries, profdata, REPORT / "codecov-production.lcov",
+                           verified_aggregate=verified_aggregate)
     print("LLVM 23 qualification PASS")
 
 if __name__ == "__main__":

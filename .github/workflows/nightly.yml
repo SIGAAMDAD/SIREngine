@@ -10,13 +10,35 @@ concurrency:
   queue: max
   cancel-in-progress: false
 jobs:
+  freeze:
+    name: Freeze develop source revision
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      sha: ${{ steps.source.outputs.sha }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: develop
+          persist-credentials: false
+      - name: Record immutable source revision
+        id: source
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha="$(git rev-parse HEAD)"
+          [[ "$sha" =~ ^[a-f0-9]{40}$ ]]
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "Frozen develop source: $sha" >> "$GITHUB_STEP_SUMMARY"
   source-audit:
+    needs: freeze
     name: Full owned-source policy audit
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          ref: ${{ needs.freeze.outputs.sha }}
           persist-credentials: false
       - name: Install pinned clang-format 23.1.5
         run: python3 -m pip install --disable-pip-version-check clang-format==23.1.5
@@ -28,6 +50,7 @@ jobs:
           python3 -m unittest discover -s Tests/CI -p 'Test*.py'
           python3 Tests/Profiling/TestRunLLVM23Qualification.py
   native:
+    needs: freeze
     name: Nightly native (${{ matrix.os }} / ${{ matrix.preset }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 90
@@ -42,6 +65,7 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          ref: ${{ needs.freeze.outputs.sha }}
           persist-credentials: false
       - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1
         if: runner.os == 'Windows'
@@ -77,12 +101,14 @@ jobs:
           if-no-files-found: warn
           retention-days: 21
   performance:
+    needs: freeze
     name: Nightly benchmark evidence (diagnostic)
     runs-on: ubuntu-24.04
     timeout-minutes: 75
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          ref: ${{ needs.freeze.outputs.sha }}
           persist-credentials: false
       - uses: ./.github/actions/setup-build-tools
       - run: git submodule update --init ThirdParty/GoogleTest ThirdParty/GoogleBenchmark
@@ -99,12 +125,14 @@ jobs:
           if-no-files-found: error
           retention-days: 60
   source-dependencies:
+    needs: freeze
     name: OpenAL Soft and meshoptimizer integration
     runs-on: ubuntu-24.04
     timeout-minutes: 65
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          ref: ${{ needs.freeze.outputs.sha }}
           persist-credentials: false
       - uses: ./.github/actions/setup-build-tools
       - run: git submodule update --init ThirdParty/OpenALSoft ThirdParty/meshoptimizer
@@ -113,12 +141,14 @@ jobs:
           bash Build/Scripts/NightlyBuild.sh tooling
           -DSIR_WITH_OPENAL_SOFT=ON -DSIR_WITH_MESHOPTIMIZER=ON
   clang-tooling:
+    needs: freeze
     name: Clang compiler and source database
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          ref: ${{ needs.freeze.outputs.sha }}
           persist-credentials: false
       - uses: ./.github/actions/setup-build-tools
       - name: Install LLVM 23 nightly compiler
@@ -136,13 +166,17 @@ jobs:
     name: Nightly acceptance
     if: always()
     runs-on: ubuntu-24.04
-    needs: [source-audit, native, performance, source-dependencies, clang-tooling]
+    needs: [freeze, source-audit, native, performance, source-dependencies, clang-tooling]
     steps:
       - name: Reject missing gates
         env:
+          FROZEN: ${{ needs.freeze.result }}
           POLICY: ${{ needs.source-audit.result }}
           NATIVE: ${{ needs.native.result }}
           PERF: ${{ needs.performance.result }}
           DEPENDENCIES: ${{ needs.source-dependencies.result }}
           CLANG: ${{ needs.clang-tooling.result }}
-        run: test "$POLICY" = success && test "$NATIVE" = success && test "$PERF" = success && test "$DEPENDENCIES" = success && test "$CLANG" = success
+        run: |
+          test "$FROZEN" = success
+          test "$POLICY" = success && test "$NATIVE" = success && test "$PERF" = success && test "$DEPENDENCIES" = success && test "$CLANG" = success
+          echo "Nightly tested develop source: ${{ needs.freeze.outputs.sha }}" >> "$GITHUB_STEP_SUMMARY"
