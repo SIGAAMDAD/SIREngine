@@ -10,7 +10,7 @@ on:
         description: 'Compiled production scope'
         required: true
         type: choice
-        options: [all, Core, Resources, Renderer, Terrain, Editor, Scripting, Audio, GraphicsABI]
+        options: [all, Core, Resources, Renderer, Terrain, Editor, Scripting, Audio, Mesh, Streaming, World, UI, GraphicsABI]
       issue:
         description: 'Authoritative GitHub issue number'
         required: true
@@ -20,8 +20,13 @@ on:
         required: true
         type: choice
         options: [milestone, release]
+      baseline_run_id:
+        description: 'Successful comparable nightly benchmark artifact run ID (required for release)'
+        required: false
+        type: string
 permissions:
   contents: read
+  actions: read
 concurrency:
   group: sir-qualification-${{ inputs.source_sha }}-${{ inputs.system }}
   queue: max
@@ -170,7 +175,17 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libvulkan-dev libgl-dev mesa-vulkan-drivers
-      - run: git submodule update --init ThirdParty/GoogleTest
+      - name: Retrieve exact backend dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          git submodule update --init ThirdParty/GoogleTest
+          case "${{ matrix.backend }}" in
+            vulkan) git submodule update --init ThirdParty/VulkanHeaders ThirdParty/VulkanMemoryAllocator ;;
+            d3d12) git submodule update --init ThirdParty/D3D12MemoryAllocator ;;
+            opengl46) ;;
+            *) echo "Unsupported backend" >&2; exit 1 ;;
+          esac
       - name: Compile enabled backend and execute actual driver contracts
         shell: bash
         run: |
@@ -201,6 +216,8 @@ jobs:
       - run: git submodule update --init ThirdParty/GoogleTest
       - name: Require real licensed FMOD SDK
         shell: bash
+        env:
+          FMOD_SDK_DIR: ${{ vars.SIR_FMOD_SDK_ROOT }}
         run: |
           set -euo pipefail
           if [[ -z "${FMOD_SDK_DIR:-}" || ! -d "$FMOD_SDK_DIR" ]]; then
@@ -209,7 +226,7 @@ jobs:
           fi
       - name: Compile enabled FMOD and execute native contracts
         run: |
-          cmake --preset dev -DSIR_WITH_GOOGLETEST=ON -DSIR_WITH_FMOD=ON
+          cmake --preset dev -DSIR_WITH_GOOGLETEST=ON -DSIR_WITH_FMOD=ON "-DSIR_FMOD_SDK_ROOT=${{ vars.SIR_FMOD_SDK_ROOT }}"
           cmake --build --preset dev
           python3 Build/CI/RunCTestGate.py --preset dev --name-regex '^audio[.]fmod[.]native-' --report out/Verification/fmod.xml
   acceptance:
@@ -238,3 +255,109 @@ jobs:
           if [[ "$SYSTEM" == all || "$SYSTEM" == Audio ]]; then
             test "$AUDIO" = success
           fi
+  benchmark-qualification:
+    name: Fixed-host performance baseline qualification
+    if: inputs.purpose == 'release'
+    needs: [acceptance]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.source_sha }}
+          persist-credentials: false
+      - uses: ./.github/actions/setup-build-tools
+      - run: git submodule update --init ThirdParty/GoogleTest ThirdParty/GoogleBenchmark
+      - name: Build and measure source-bound performance workload
+        shell: bash
+        env:
+          SOURCE_SHA: ${{ inputs.source_sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          cmake --preset profile -DSIR_BUILD_BENCHMARKS=ON -DSIR_WITH_GOOGLE_BENCHMARK=ON -DSIR_WITH_GOOGLETEST=ON
+          cmake --build --preset profile
+          bash Build/Scripts/RunGoogleBenchmarks.sh qualification-linux
+      - name: Compare approved baseline with identical host and toolchain
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          BASELINE_RUN_ID: ${{ inputs.baseline_run_id }}
+        run: |
+          set -euo pipefail
+          [[ "$BASELINE_RUN_ID" =~ ^[1-9][0-9]*$ ]]
+          mkdir -p out/Verification/Baseline
+          gh run download "$BASELINE_RUN_ID" --name nightly-benchmarks --dir out/Verification/Baseline
+          python3 Build/CI/CompareBenchmarks.py compare --baseline out/Verification/Baseline/nightly-linux.json --candidate out/Nightly/Benchmarks/qualification-linux.json --max-slowdown 0.15
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: qualification-performance
+          path: out/Nightly/Benchmarks/
+          if-no-files-found: warn
+          retention-days: 60
+  release-package:
+    name: Qualified release package (${{ matrix.os }})
+    if: inputs.purpose == 'release' && needs.acceptance.result == 'success' && needs.benchmark-qualification.result == 'success'
+    needs: [acceptance, benchmark-qualification]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.source_sha }}
+          persist-credentials: false
+      - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1
+        if: runner.os == 'Windows'
+      - uses: ./.github/actions/setup-build-tools
+      - run: git submodule update --init ThirdParty/GoogleTest
+      - name: Build, test and package frozen release candidate
+        shell: bash
+        env:
+          SOURCE_SHA: ${{ inputs.source_sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          cmake --preset release -DSIR_WITH_GOOGLETEST=ON
+          cmake --build --preset release
+          python_cmd=python3
+          if [[ "$RUNNER_OS" == Windows ]]; then python_cmd=python; fi
+          "$python_cmd" Build/CI/RunCTestGate.py --preset release --report "out/Verification/release-${{ matrix.os }}.xml"
+          cmake --build --preset release --target package
+          mkdir -p out/Verification/Release
+          packages="$(find "out/$RUNNER_OS/release" -type f -name '*.zip' -print)"
+          test -n "$packages"
+          while IFS= read -r package; do
+            sha256sum "$package" >> out/Verification/Release/checksums.sha256
+            cp "$package" out/Verification/Release/
+          done <<< "$packages"
+          printf '%s\n' "$SOURCE_SHA" > out/Verification/Release/source-sha.txt
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: release-candidate-${{ matrix.os }}
+          path: |
+            out/Verification/Release/
+            out/Verification/release-*.xml
+          if-no-files-found: error
+          retention-days: 60
+  release-summary:
+    name: sir/release-accepted
+    if: always() && inputs.purpose == 'release'
+    needs: [acceptance, benchmark-qualification, release-package]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Reject incomplete acceptance or packaging
+        env:
+          ACCEPTANCE: ${{ needs.acceptance.result }}
+          PACKAGE: ${{ needs.release-package.result }}
+          PERFORMANCE: ${{ needs.benchmark-qualification.result }}
+        run: |
+          test "$ACCEPTANCE" = success
+          test "$PACKAGE" = success
+          test "$PERFORMANCE" = success
