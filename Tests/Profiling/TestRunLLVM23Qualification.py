@@ -28,6 +28,23 @@ class QualificationGateTests(unittest.TestCase):
         self.assertIn("-fprofile-instr-generate", options["CMAKE_EXE_LINKER_FLAGS"])
         self.assertEqual(preset["binaryDir"], "${sourceDir}/out/${hostSystemName}/llvm23-qualification")
 
+    def test_unprofiled_binary_reports_production_functions(self):
+        root = Path("/tmp/sir-profile-scope").resolve()
+        data = {"functions": [
+            {"name": "out_of_scope", "count": 0, "filenames": ["/vendor/test.cpp"]},
+            {"name": "covered", "count": 3, "filenames": [str(root / "Source/used.cpp")]},
+            {"name": "unprofiled", "count": 0, "filenames": [str(root / "Source/missing.cpp")]}
+        ]}
+        result = qualification.find_zero_count_functions(data, root / "Source")
+        self.assertEqual([item["name"] for item in result], ["unprofiled"])
+
+    def test_no_mismatch_candidates_do_not_pass_coverage(self):
+        root = Path("/tmp/sir-profile-scope").resolve()
+        self.assertEqual(qualification.find_zero_count_functions({"functions": []}, root), [])
+        self.fully_covered["summary"]["lines"]["covered"] = 0
+        with self.assertRaisesRegex(RuntimeError, "lines=0/10"):
+            qualification.verify_production_coverage({self.path}, [self.fully_covered])
+
     def test_full_coverage_passes(self):
         totals = qualification.verify_production_coverage({self.path}, [self.fully_covered])
         self.assertEqual(totals["lines"], (10, 10))
