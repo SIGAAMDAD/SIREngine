@@ -1,3 +1,4 @@
+include("${CMAKE_CURRENT_LIST_DIR}/../../Build/CMake/SIRBuildTreeGuard.cmake")
 add_library(SIRAudio STATIC SIRAudioSystem.cpp SIRAudioResources.cpp)
 add_library(SIR::Audio ALIAS SIRAudio)
 target_include_directories(SIRAudio PUBLIC "${PROJECT_SOURCE_DIR}/Source" "${PROJECT_SOURCE_DIR}/Build/CMake")

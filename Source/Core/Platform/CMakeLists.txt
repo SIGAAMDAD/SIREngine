@@ -1,3 +1,4 @@
+include("${CMAKE_CURRENT_LIST_DIR}/../../../Build/CMake/SIRBuildTreeGuard.cmake")
 # Native OS services belong to the Core library and share its lifecycle.
 set(SIR_CORE_PLATFORM_COMMON
     SIRPlatformUtils.cpp

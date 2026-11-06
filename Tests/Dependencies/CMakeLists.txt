@@ -1,3 +1,4 @@
+include("${CMAKE_CURRENT_LIST_DIR}/../../Build/CMake/SIRBuildTreeGuard.cmake")
 # Compile and link the actual optional dependency targets when enabled.
 if(SIR_WITH_MESHOPTIMIZER)
     add_executable(sir_meshoptimizer_dependency_smoke MeshOptimizerSmoke.cpp)

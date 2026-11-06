@@ -1,3 +1,4 @@
+include("${CMAKE_CURRENT_LIST_DIR}/../../../../Build/CMake/SIRBuildTreeGuard.cmake")
 if(NOT EXISTS "${PROJECT_SOURCE_DIR}/ThirdParty/VulkanHeaders/include/vulkan/vulkan.h")
     message(FATAL_ERROR "Missing pinned Vulkan-Headers; run git submodule update --init ThirdParty/VulkanHeaders")
 endif()

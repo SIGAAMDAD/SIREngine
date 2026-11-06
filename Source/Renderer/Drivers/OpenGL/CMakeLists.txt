@@ -1,3 +1,4 @@
+include("${CMAKE_CURRENT_LIST_DIR}/../../../../Build/CMake/SIRBuildTreeGuard.cmake")
 # Native OpenGL 4.6 core-profile module; never adds GL types to SIR::Graphics.
 add_library(SIRGL46Driver MODULE
     SIRGLDriver.cpp
