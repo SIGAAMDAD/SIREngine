@@ -437,11 +437,11 @@ sirGraphicsResult_t SIRD3D12CommandList::barrier( const sirGraphicsBarrier_t *pB
 			} else if ( !sirGraphicsTextureBarrierRangeValid( source, nMips, nLayers ) ) {
 				return SIR_GRAPHICS_INVALID_ARGUMENT;
 			}
-			// A discarded first use maps to a newly created COMMON default-heap
-			// texture on legacy D3D12, or UNDEFINED on enhanced barriers.
+			// Discard-first-use of owned default-heap resources maps their
+			// native COMMON creation state in legacy D3D12; enhanced barriers
+			// admit NO_ACCESS/UNDEFINED before their first native use.
 			if ( source.eBefore == SIR_GRAPHICS_STATE_UNDEFINED &&
-			     ( pSlot->eType != SIR_GRAPHICS_HANDLE_TEXTURE || pSlot->eMemory != SIR_GRAPHICS_MEMORY_GPU_LOCAL ||
-			       pSlot->pExternalResource != nullptr ) ) {
+			     ( pSlot->eMemory != SIR_GRAPHICS_MEMORY_GPU_LOCAL || pSlot->pExternalResource != nullptr ) ) {
 				return SIR_GRAPHICS_UNSUPPORTED;
 			}
 		} else if ( source.eType == SIR_GRAPHICS_BARRIER_UAV ) {
@@ -544,11 +544,11 @@ sirGraphicsResult_t SIRD3D12CommandList::barrier( const sirGraphicsBarrier_t *pB
 			} else if ( !sirGraphicsTextureBarrierRangeValid( source, nMips, nLayers ) ) {
 				return SIR_GRAPHICS_INVALID_ARGUMENT;
 			}
-			// A discarded first use maps to a newly created COMMON default-heap
-			// texture on legacy D3D12, or UNDEFINED on enhanced barriers.
+			// Discard-first-use of owned default-heap resources maps their
+			// native COMMON creation state in legacy D3D12; enhanced barriers
+			// admit NO_ACCESS/UNDEFINED before their first native use.
 			if ( source.eBefore == SIR_GRAPHICS_STATE_UNDEFINED &&
-			     ( pSlot->eType != SIR_GRAPHICS_HANDLE_TEXTURE || pSlot->eMemory != SIR_GRAPHICS_MEMORY_GPU_LOCAL ||
-			       pSlot->pExternalResource != nullptr ) ) {
+			     ( pSlot->eMemory != SIR_GRAPHICS_MEMORY_GPU_LOCAL || pSlot->pExternalResource != nullptr ) ) {
 				return SIR_GRAPHICS_UNSUPPORTED;
 			}
 			native.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
