@@ -2,9 +2,9 @@ name: SIREngine CI
 
 on:
   push:
-    branches: [develop]
+    branches: [main]
   pull_request:
-    branches: [develop]
+    branches: [main]
     types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
   merge_group:
     types: [checks_requested]
@@ -131,7 +131,7 @@ jobs:
         shell: bash
         run: |
           label='^gate:pr$'
-          if [[ "${{ github.event_name }}" != pull_request ]]; then label='^gate:develop$'; fi
+          if [[ "${{ github.event_name }}" != pull_request ]]; then label='^gate:main$'; fi
           ctest --preset "${{ matrix.preset }}" --output-on-failure --no-tests=error -L "$label"
 
   required:
