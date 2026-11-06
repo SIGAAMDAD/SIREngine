@@ -117,6 +117,34 @@ def compiled_production_objects(commands, repository_root, build_root, source_ro
     return sorted(objects)
 
 
+def linked_coverage_binaries(build_root):
+    """Use linked instrumented targets, never raw object dummy inline mappings."""
+    build = pathlib.Path(build_root).resolve()
+    binaries = []
+    for candidate in build.rglob("*"):
+        if candidate.is_symlink() or not candidate.is_file():
+            continue
+        relative = candidate.relative_to(build)
+        if any(part in ("CMakeFiles", "_deps", "Testing")
+               for part in relative.parts[:-1]):
+            continue
+        if not (candidate.stat().st_mode & 0o111):
+            continue
+        try:
+            with candidate.open("rb") as handle:
+                header = handle.read(18)
+        except OSError:
+            continue
+        if len(header) < 18 or header[:4] != b"\x7fELF" or header[5] not in (1, 2):
+            continue
+        kind = int.from_bytes(header[16:18], "little" if header[5] == 1 else "big")
+        if kind in (2, 3):  # ET_EXEC or ET_DYN (including PIE and instrumented .so)
+            binaries.append(candidate.resolve())
+    if not binaries:
+        raise RuntimeError("No linked instrumented executables or shared objects in build")
+    return sorted(binaries)
+
+
 def verify_group_coverage(commands, files, repository_root):
     """Qualify independent Core (excluding Memory), Memory, and Resources denominators."""
     root = pathlib.Path(repository_root).resolve()
@@ -286,10 +314,14 @@ def qualify():
     else:
         objects = compiled_production_objects(commands, ROOT, BUILD, source_root)
     if not objects:
-        raise RuntimeError("No instrumented binaries")
+        raise RuntimeError("No instrumented production object files")
+    # Preserve object/compilation inventory for acceptance, but export mappings
+    # from linked targets: unused inline declarations in individual .o files
+    # carry dummy zero-hash records and cause false profile hash mismatches.
+    binaries = linked_coverage_binaries(BUILD)
     out = REPORT / "llvm-export.json"
-    command = ["llvm-cov-23", "export", str(objects[0]),
-               *(f"-object={path}" for path in objects[1:]),
+    command = ["llvm-cov-23", "export", str(binaries[0]),
+               *(f"-object={path}" for path in binaries[1:]),
                f"-instr-profile={profdata}", "-format=text"]
     with out.open("w") as handle:
         result = subprocess.run(command, cwd=ROOT, stdout=handle,
@@ -323,7 +355,7 @@ def qualify():
             f"see {REPORT / 'profile-mismatch.json'}")
     if name == "all":
         export_codecov_lcov(data["data"][0]["files"], commands, source_root,
-                           objects, profdata, REPORT / "codecov-production.lcov")
+                           binaries, profdata, REPORT / "codecov-production.lcov")
     if name == "CoreMemoryResources":
         grouped = verify_group_coverage(commands, data["data"][0]["files"], ROOT)
         for group, counters in grouped.items():

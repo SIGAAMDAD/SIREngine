@@ -28,6 +28,78 @@ class QualificationGateTests(unittest.TestCase):
         self.assertIn("-fprofile-instr-generate", options["CMAKE_EXE_LINKER_FLAGS"])
         self.assertEqual(preset["binaryDir"], "${sourceDir}/out/${hostSystemName}/llvm23-qualification")
 
+    def test_linked_binary_inventory_rejects_relocatable_and_cmake_probe_files(self):
+        from tempfile import TemporaryDirectory
+        with TemporaryDirectory() as temp:
+            build = Path(temp)
+            def elf(path, elf_kind=3, executable=True):
+                path.parent.mkdir(parents=True, exist_ok=True)
+                data = b"\x7fELF" + bytes((2, 1)) + bytes(10) + elf_kind.to_bytes(2, "little")
+                path.write_bytes(data)
+                path.chmod(0o755 if executable else 0o644)
+                return path
+
+            accepted = elf(build / "Tests/Unit/SIRCoreTests")
+            shared = elf(build / "Source/libSIRPlugin.so")
+            elf(build / "Source/SIRSource.cpp.o", elf_kind=1)
+            elf(build / "CMakeFiles/3.23/CompilerIdCXX/a.out")
+            elf(build / "_deps/vendor/fixture")
+            elf(build / "Tests/Unit/denied-executable", executable=False)
+            self.assertEqual(qualification.linked_coverage_binaries(build),
+                             sorted([accepted, shared]))
+
+    def test_linked_binary_inventory_refuses_empty_denominator(self):
+        from tempfile import TemporaryDirectory
+        with TemporaryDirectory() as temp:
+            with self.assertRaisesRegex(RuntimeError, "No linked instrumented"):
+                qualification.linked_coverage_binaries(temp)
+
+    def test_real_llvm23_inline_dummy_object_vs_linked_binary(self):
+        import os
+        import shutil
+        import subprocess
+        from tempfile import TemporaryDirectory
+        names = ("clang++-23", "llvm-cov-23", "llvm-profdata-23")
+        if any(not shutil.which(name) for name in names):
+            self.skipTest("Pinned LLVM 23 compiler and coverage tools unavailable")
+        with TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "inline.h").write_text(
+                "inline int sirInline(int x) { return x + 1; }\n")
+            (root / "unused.cpp").write_text(
+                '#include "inline.h"\nint sirUnused() { return 1; }\n')
+            (root / "used.cpp").write_text(
+                '#include "inline.h"\nint main() { return sirInline(3) == 4 ? 0 : 1; }\n')
+            for stem in ("unused", "used"):
+                subprocess.run(["clang++-23", "-O0", "-fprofile-instr-generate",
+                                "-fcoverage-mapping", "-c", f"{stem}.cpp",
+                                "-o", f"{stem}.o"], cwd=root, check=True,
+                               capture_output=True, text=True)
+            subprocess.run(["clang++-23", "-fprofile-instr-generate",
+                            "-fcoverage-mapping", "unused.o", "used.o",
+                            "-o", "fixture"], cwd=root, check=True,
+                           capture_output=True, text=True)
+            env = dict(os.environ, LLVM_PROFILE_FILE=str(root / "run.profraw"))
+            subprocess.run([str(root / "fixture")], cwd=root, env=env,
+                           check=True, capture_output=True, text=True)
+            subprocess.run(["llvm-profdata-23", "merge", "run.profraw",
+                            "-o", "run.profdata"], cwd=root, check=True,
+                           capture_output=True, text=True)
+            objects = subprocess.run(["llvm-cov-23", "export", "unused.o",
+                                      "-object=used.o", "-instr-profile=run.profdata",
+                                      "-format=text", "--dump"], cwd=root,
+                                     check=True, capture_output=True, text=True)
+            self.assertIn("functions have mismatched data", objects.stderr)
+            self.assertIn("with hash = 0x0", objects.stderr)
+            linked = subprocess.run(["llvm-cov-23", "export", "fixture",
+                                     "-instr-profile=run.profdata", "-format=text"],
+                                    cwd=root, check=True, capture_output=True, text=True)
+            self.assertNotIn("mismatched data", linked.stderr)
+            data = json.loads(linked.stdout)
+            mapped = {Path(item["filename"]).name for item in data["data"][0]["files"]}
+            self.assertIn("unused.cpp", mapped)
+            self.assertIn("used.cpp", mapped)
+
     def test_unprofiled_binary_reports_production_functions(self):
         root = Path("/tmp/sir-profile-scope").resolve()
         data = {"functions": [
