@@ -79,6 +79,12 @@ target_link_libraries(SIRVirtualStackBoundaryTests PRIVATE SIR::Core)
 add_test(NAME core.memory.virtual-stack-boundaries COMMAND SIRVirtualStackBoundaryTests)
 sir_configure_owned_target(SIRVirtualStackBoundaryTests)
 
+# Exercise all compact bucket class profiles and negative admission contracts.
+add_executable(SIRCompactBucketBoundaryTests SIRCompactBucketBoundaryTests.cpp)
+target_link_libraries(SIRCompactBucketBoundaryTests PRIVATE SIR::Core)
+add_test(NAME core.memory.compact-bucket-boundaries COMMAND SIRCompactBucketBoundaryTests)
+sir_configure_owned_target(SIRCompactBucketBoundaryTests)
+
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     add_executable(SIRMemoryManagerFaultInjectionTests SIRMemoryManagerFaultInjectionTests.cpp)
     target_link_libraries(SIRMemoryManagerFaultInjectionTests PRIVATE SIR::Core)
