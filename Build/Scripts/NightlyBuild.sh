@@ -57,11 +57,12 @@ if (( config_exit == 0 )); then
     fi
 fi
 if (( build_exit == 0 )); then
-    timed_step test ctest --preset "$preset" \
-        --output-on-failure --no-tests=error \
-        --output-junit "$report/tests/$label.xml"
+    python_cmd=python3
+    if [[ "${RUNNER_OS:-}" == Windows ]]; then python_cmd=python; fi
+    timed_step test "$python_cmd" Build/CI/RunCTestGate.py --preset "$preset" \
+        --report "$report/tests/$label.xml"
 fi
-if [[ "$preset" == "release" ]] && (( test_exit == 0 )); then
+if [[ "$preset" == "release" && "${SIR_NIGHTLY_PACKAGE:-OFF}" == "ON" ]] && (( test_exit == 0 )); then
     timed_step package cmake --build --preset release --target package
 fi
 
@@ -71,6 +72,7 @@ if ! cmake -DSIR_REPO_ROOT="$root" -DSIR_REPORT_ROOT="$report" \
     -DSIR_TEST_EXIT="$test_exit" -DSIR_PACKAGE_EXIT="$package_exit" \
     -DSIR_CONFIG_SECONDS="$config_seconds" -DSIR_BUILD_SECONDS="$build_seconds" \
     -DSIR_TEST_SECONDS="$test_seconds" -DSIR_PACKAGE_SECONDS="$package_seconds" \
+    -DSIR_PACKAGE_REQUIRED="${SIR_NIGHTLY_PACKAGE:-OFF}" \
     -P "$root/Build/CMake/NightlyMetrics.cmake"; then
     echo "Nightly metrics generation failed" >&2
     exit 1
@@ -92,6 +94,6 @@ fi
 if (( config_exit != 0 || build_exit != 0 || test_exit != 0 )); then
     exit 1
 fi
-if [[ "$preset" == "release" ]] && (( package_exit != 0 )); then
+if [[ "$preset" == "release" && "${SIR_NIGHTLY_PACKAGE:-OFF}" == "ON" ]] && (( package_exit != 0 )); then
     exit 1
 fi

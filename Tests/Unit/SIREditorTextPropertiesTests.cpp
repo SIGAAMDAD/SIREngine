@@ -109,10 +109,36 @@ static void sirEditorTestPropertiesSynthetic( void )
 	        SIR_EDITOR_PROPERTY_INVALID_SOURCE );
 }
 
+static void sirEditorTestPropertiesCRLF( void )
+{
+	const char szSource[] = "[gd_scene format=3]\r\n"
+	                        "[node name=\"Root\" type=\"Node\"]\r\n"
+	                        "value = 1\r\n"
+	                        "[node name=\"Child\" type=\"Node\" parent=\".\"]\r\n"
+	                        "value = 2\r\n";
+	sirEditorTextSceneNode_t szNodes[2] = {};
+	char szPaths[256] = {};
+	sirEditorTextSceneIndex_t scene = {};
+	scene.storage.pNodes = szNodes;
+	scene.storage.pszPaths = szPaths;
+	scene.storage.nNodeCapacity = 2;
+	scene.storage.nPathCapacity = sizeof( szPaths );
+	assert( sirEditorScanTextScene( szSource, sizeof( szSource ) - 1, &scene ) == SIR_EDITOR_TEXT_OK );
+	assert( scene.nNodeCount == 2 );
+	sirEditorTextProperty_t szProperties[2] = {};
+	sirEditorTextPropertyIndex_t index = { szProperties, 2, 0, 0 };
+	assert( sirEditorScanNodeTextProperties( szSource, sizeof( szSource ) - 1, scene, &index ) == SIR_EDITOR_PROPERTY_OK );
+	assert( index.nCount == 2 );
+	assert( szProperties[0].nSourceLine == 3 );
+	assert( szProperties[1].nSourceLine == 5 );
+	assert( szProperties[0].nValueLength == 1 && szProperties[1].nValueLength == 1 );
+}
+
 int main( void )
 {
 	sirEditorTestPropertiesFixture();
 	sirEditorTestPropertiesSynthetic();
+	sirEditorTestPropertiesCRLF();
 	puts( "PASS: native editor source-backed property inspector index" );
 	return 0;
 }

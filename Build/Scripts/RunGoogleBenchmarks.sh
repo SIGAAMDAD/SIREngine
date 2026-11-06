@@ -29,3 +29,5 @@ mkdir -p out/Nightly/Benchmarks
 
 test -s "out/Nightly/Benchmarks/$label.json"
 python3 Tests/Profiling/ValidateSIRGRDGBenchmarks.py "out/Nightly/Benchmarks/$label.json"
+python3 Build/CI/CompareBenchmarks.py stamp --candidate "out/Nightly/Benchmarks/$label.json" \
+    --binary "$benchmark_executable" --build-dir out/Linux/profile

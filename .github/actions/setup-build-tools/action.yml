@@ -14,6 +14,7 @@ runs:
       shell: bash
       run: |
         set -euo pipefail
+        test "${{ inputs.cmake-version }}" = 4.4.5
         root="${RUNNER_TEMP}/sir-cmake"
         mkdir -p "$root"
         case "$RUNNER_OS" in
@@ -36,15 +37,17 @@ runs:
         VERSION: ${{ inputs.fastbuild-version }}
       run: |
         set -euo pipefail
+        test "$VERSION" = 1.20
         case "${RUNNER_OS}" in
-          Linux) package="FASTBuild-Linux-x64-v${VERSION}.zip" ;;
-          Windows) package="FASTBuild-Windows-x64-v${VERSION}.zip" ;;
-          macOS) package="FASTBuild-OSX-x64+ARM-v${VERSION}.zip" ;;
+          Linux) package="FASTBuild-Linux-x64-v${VERSION}.zip"; digest=a5de81c736f9e23900b9aec7dd668a15abeeb39e4345992e66810d6ea95d4a45 ;;
+          Windows) package="FASTBuild-Windows-x64-v${VERSION}.zip"; digest=fa44c85e037aff4b8487237d9907f18a31b62e60423a806e5b2f30bd1b61865f ;;
+          macOS) echo "Unqualified macOS FASTBuild binary; no approved digest" >&2; exit 1 ;;
           *) exit 1 ;;
         esac
         root="${RUNNER_TEMP}/sir-fastbuild"
         mkdir -p "${root}/unpack" "${root}/bin"
         curl -fsSL --retry 3 "https://www.fastbuild.org/downloads/v${VERSION}/${package}" -o "${root}/archive.zip"
+        printf '%s  %s\n' "$digest" "${root}/archive.zip" | sha256sum -c -
         unzip -q "${root}/archive.zip" -d "${root}/unpack"
         binary="$(find "${root}/unpack" -type f \( -name FBuild.exe -o -name fbuild -o -name FBuild \) -print -quit)"
         test -n "${binary}"
@@ -58,5 +61,9 @@ runs:
     - name: Verify installed toolchain
       shell: bash
       run: |
-        cmake --version
-        if [ "${RUNNER_OS}" = Windows ]; then FBuild.exe -version; else fbuild -version; fi
+        cmake --version | grep -F '4.4.5'
+        if [ "${RUNNER_OS}" = Windows ]; then
+          FBuild.exe -version | grep -F '1.20'
+        else
+          fbuild -version | grep -F '1.20'
+        fi
