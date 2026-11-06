@@ -85,13 +85,13 @@ sirFileSystemResult_t SIRPlatformFileSystem::readFile( const char *pszPath, char
 	return readFilePlatform( pszPath, pszOutput, nCapacity, pOutBytes );
 }
 
-sirFileSystemResult_t SIRPlatformFileSystem::writeAtomically( const sirFileSystemAtomicWriteRequest_t &request ) noexcept
+sirPlatformAtomicResult_t SIRPlatformFileSystem::writeAtomically( const sirFileSystemAtomicWriteRequest_t &request ) noexcept
 {
 	if ( request.pBytes == nullptr || request.nBytes == 0 || ( request.pExpectedBytes == nullptr && request.nExpectedBytes != 0 ) ) {
-		return SIR_FILESYSTEM_INVALID_ARGUMENT;
+		return SIR_ATOMIC_SAVE_INVALID_ARGUMENT;
 	}
 	if ( !validPaths( request.pszDestination, request.pszTemporary ) ) {
-		return SIR_FILESYSTEM_INVALID_PATH;
+		return SIR_ATOMIC_SAVE_INVALID_PATH;
 	}
 	return writeAtomicallyPlatform( request );
 }
