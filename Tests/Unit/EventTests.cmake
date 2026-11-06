@@ -5,7 +5,7 @@ if(SIR_WITH_GOOGLETEST)
     sir_configure_owned_target(SIREventGoogleTests)
     include(GoogleTest)
     gtest_discover_tests(SIREventGoogleTests TEST_PREFIX "core.events." DISCOVERY_TIMEOUT 45
-        PROPERTIES LABELS "subsystem:core;kind:unit;gate:pr;gate:develop;gate:nightly;gate:qualification")
+        PROPERTIES LABELS "subsystem:core;kind:unit;gate:pr;gate:main;gate:nightly;gate:qualification")
 endif()
 
 # Independent allocation smoke without the GoogleTest runtime. Counts C++
