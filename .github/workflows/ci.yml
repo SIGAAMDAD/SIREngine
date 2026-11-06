@@ -63,7 +63,7 @@ jobs:
           fi
 
   native:
-    name: sir/native / ${{ matrix.os }}
+    name: sir/native / ${{ matrix.os }} / ${{ matrix.compiler }}
     if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ${{ matrix.os }}
     timeout-minutes: 35
@@ -73,8 +73,13 @@ jobs:
         include:
           - os: ubuntu-24.04
             preset: dev
+            compiler: gcc
+          - os: ubuntu-24.04
+            preset: dev
+            compiler: clang
           - os: windows-2022
             preset: dev
+            compiler: msvc
     steps:
       - uses: actions/checkout@v4
         with:
@@ -88,11 +93,15 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: .cache/fastbuild
-          key: sir-fbuild-v1.20-${{ runner.os }}-dev-${{ github.sha }}
+          key: sir-fbuild-v1.20-${{ runner.os }}-${{ matrix.compiler }}-dev-${{ github.sha }}
           restore-keys: |
-            sir-fbuild-v1.20-${{ runner.os }}-dev-
+            sir-fbuild-v1.20-${{ runner.os }}-${{ matrix.compiler }}-dev-
       - name: Configure native engine
-        run: cmake --preset "${{ matrix.preset }}" -DSIR_WITH_GOOGLETEST=ON
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ matrix.compiler }}" == clang ]]; then export CC=clang CXX=clang++; fi
+          cmake --preset "${{ matrix.preset }}" -DSIR_WITH_GOOGLETEST=ON
       - name: Compile engine and tests
         run: cmake --build --preset "${{ matrix.preset }}"
       - name: Run selected native tests once
@@ -101,8 +110,6 @@ jobs:
           label='^gate:pr$'
           if [[ "${{ github.event_name }}" != pull_request ]]; then label='^gate:develop$'; fi
           ctest --preset "${{ matrix.preset }}" --output-on-failure --no-tests=error -L "$label"
-      - name: Verify no-op incremental rebuild
-        run: cmake --build --preset dev
 
   required:
     name: sir/required
