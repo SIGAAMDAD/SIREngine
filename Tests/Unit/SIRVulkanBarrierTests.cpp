@@ -79,7 +79,7 @@ int main( void )
 		return 8;
 	}
 	barrier.nMipCount = 2;
-	if ( sirVulkanPlanImageBarrier( barrier, &image, &native ) != SIR_GRAPHICS_UNSUPPORTED ) {
+	if ( sirVulkanPlanImageBarrier( barrier, &image, &native ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
 		return 9;
 	}
 	barrier.nMipCount = 1;
@@ -94,7 +94,7 @@ int main( void )
 	}
 	barrier.eType = SIR_GRAPHICS_BARRIER_TRANSITION;
 	barrier.nBaseMip = 2;
-	if ( sirVulkanPlanImageBarrier( barrier, &image, &native ) != SIR_GRAPHICS_UNSUPPORTED ) {
+	if ( sirVulkanPlanImageBarrier( barrier, &image, &native ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
 		return 12;
 	}
 	barrier.nBaseMip = 0;
@@ -137,12 +137,12 @@ int main( void )
 		return 17;
 	}
 	rangeBarrier.nMipCount = 0;
-	if ( sirVulkanPlanImageBarrier( rangeBarrier, &range, &native ) != SIR_GRAPHICS_UNSUPPORTED ) {
+	if ( sirVulkanPlanImageBarrier( rangeBarrier, &range, &native ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
 		return 18;
 	}
 	rangeBarrier.nMipCount = 2;
 	rangeBarrier.nBaseLayer = 1;
-	if ( sirVulkanPlanImageBarrier( rangeBarrier, &range, &native ) != SIR_GRAPHICS_UNSUPPORTED ) {
+	if ( sirVulkanPlanImageBarrier( rangeBarrier, &range, &native ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
 		return 19;
 	}
 	rangeBarrier.nBaseLayer = 0;

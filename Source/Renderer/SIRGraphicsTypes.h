@@ -572,6 +572,19 @@ typedef struct sirGraphicsBarrier_s
 	uint32_t nLayerCount;
 } sirGraphicsBarrier_t;
 
+// Shared explicit texture-subresource grammar. Buffer barriers reserve all
+// mip/layer fields as zero and are validated separately by the backend.
+static inline bool sirGraphicsTextureBarrierRangeValid( const sirGraphicsBarrier_t& barrier, uint32_t nMips,
+                                                        uint32_t nLayers ) noexcept
+{
+	if ( nMips == 0 || nLayers == 0 || barrier.nMipCount == 0 || barrier.nLayerCount == 0 ||
+	     barrier.nBaseMip >= nMips || barrier.nBaseLayer >= nLayers ) {
+		return false;
+	}
+	return barrier.nMipCount <= nMips - barrier.nBaseMip && barrier.nLayerCount <= nLayers - barrier.nBaseLayer;
+}
+
+
 typedef struct sirGraphicsViewport_s
 {
 	float fX;

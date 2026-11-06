@@ -31,6 +31,9 @@ static D3D12_COMMAND_LIST_TYPE sirD3D12CommandType( sirGraphicsQueue_t eQueue ) 
 static D3D12_RESOURCE_STATES sirD3D12BarrierState( sirGraphicsState_t eState, sirGraphicsQueue_t eQueue ) noexcept
 {
 	switch ( eState ) {
+	case SIR_GRAPHICS_STATE_UNDEFINED:
+		// New default-heap resources are created in COMMON before first use.
+		return D3D12_RESOURCE_STATE_COMMON;
 	case SIR_GRAPHICS_STATE_COMMON:
 		return D3D12_RESOURCE_STATE_COMMON;
 	case SIR_GRAPHICS_STATE_VERTEX_INDEX:
@@ -64,6 +67,8 @@ static D3D12_RESOURCE_STATES sirD3D12BarrierState( sirGraphicsState_t eState, si
 static D3D12_BARRIER_SYNC sirD3D12EnhancedSync( sirGraphicsState_t eState ) noexcept
 {
 	switch ( eState ) {
+	case SIR_GRAPHICS_STATE_UNDEFINED:
+		return D3D12_BARRIER_SYNC_NONE;
 	case SIR_GRAPHICS_STATE_VERTEX_INDEX:
 		return D3D12_BARRIER_SYNC_DRAW;
 	case SIR_GRAPHICS_STATE_CONSTANT:
@@ -86,6 +91,8 @@ static D3D12_BARRIER_SYNC sirD3D12EnhancedSync( sirGraphicsState_t eState ) noex
 static D3D12_BARRIER_ACCESS sirD3D12EnhancedAccess( sirGraphicsState_t eState ) noexcept
 {
 	switch ( eState ) {
+	case SIR_GRAPHICS_STATE_UNDEFINED:
+		return D3D12_BARRIER_ACCESS_NO_ACCESS;
 	case SIR_GRAPHICS_STATE_VERTEX_INDEX:
 		return D3D12_BARRIER_ACCESS_VERTEX_BUFFER | D3D12_BARRIER_ACCESS_INDEX_BUFFER;
 	case SIR_GRAPHICS_STATE_CONSTANT:
@@ -112,6 +119,8 @@ static D3D12_BARRIER_ACCESS sirD3D12EnhancedAccess( sirGraphicsState_t eState ) 
 static D3D12_BARRIER_LAYOUT sirD3D12EnhancedLayout( sirGraphicsState_t eState ) noexcept
 {
 	switch ( eState ) {
+	case SIR_GRAPHICS_STATE_UNDEFINED:
+		return D3D12_BARRIER_LAYOUT_UNDEFINED;
 	case SIR_GRAPHICS_STATE_SHADER_READ:
 		return D3D12_BARRIER_LAYOUT_SHADER_RESOURCE;
 	case SIR_GRAPHICS_STATE_SHADER_WRITE:
@@ -408,22 +417,32 @@ sirGraphicsResult_t SIRD3D12CommandList::barrier( const sirGraphicsBarrier_t *pB
 			return SIR_GRAPHICS_UNSUPPORTED;
 		}
 		if ( source.eType == SIR_GRAPHICS_BARRIER_TRANSITION ) {
-			if ( source.eBefore == SIR_GRAPHICS_STATE_UNDEFINED || source.eAfter == SIR_GRAPHICS_STATE_UNDEFINED ||
+			if ( source.eAfter == SIR_GRAPHICS_STATE_UNDEFINED ||
 			     source.eBefore > SIR_GRAPHICS_STATE_PRESENT || source.eAfter > SIR_GRAPHICS_STATE_PRESENT ||
 			     !sirD3D12ValidResourceState( pSlot->eType, source.eBefore ) ||
 			     !sirD3D12ValidResourceState( pSlot->eType, source.eAfter ) ) {
 				return SIR_GRAPHICS_INVALID_ARGUMENT;
 			}
-			if ( !sirD3D12ValidQueueState( m_eQueue, source.eBefore ) || !sirD3D12ValidQueueState( m_eQueue, source.eAfter ) ) {
+			if ( ( source.eBefore != SIR_GRAPHICS_STATE_UNDEFINED && !sirD3D12ValidQueueState( m_eQueue, source.eBefore ) ) ||
+			     !sirD3D12ValidQueueState( m_eQueue, source.eAfter ) ) {
 				return SIR_GRAPHICS_UNSUPPORTED;
 			}
 			const uint32_t nMips = pSlot->eType == SIR_GRAPHICS_HANDLE_TEXTURE ? pSlot->nMips : 1;
 			const uint32_t nLayers =
 			    pSlot->eType == SIR_GRAPHICS_HANDLE_TEXTURE && pSlot->eDimension != SIR_GRAPHICS_TEXTURE_3D ? pSlot->nLayers : 1;
-			if ( nMips == 0 || nLayers == 0 || source.nBaseMip >= nMips || source.nBaseLayer >= nLayers ||
-			     ( source.nMipCount != 0 && source.nMipCount > nMips - source.nBaseMip ) ||
-			     ( source.nLayerCount != 0 && source.nLayerCount > nLayers - source.nBaseLayer ) ) {
+			if ( pSlot->eType == SIR_GRAPHICS_HANDLE_BUFFER ) {
+				if ( source.nBaseMip != 0 || source.nMipCount != 0 || source.nBaseLayer != 0 || source.nLayerCount != 0 ) {
+					return SIR_GRAPHICS_INVALID_ARGUMENT;
+				}
+			} else if ( !sirGraphicsTextureBarrierRangeValid( source, nMips, nLayers ) ) {
 				return SIR_GRAPHICS_INVALID_ARGUMENT;
+			}
+			// A discarded first use maps to a newly created COMMON default-heap
+			// texture on legacy D3D12, or UNDEFINED on enhanced barriers.
+			if ( source.eBefore == SIR_GRAPHICS_STATE_UNDEFINED &&
+			     ( pSlot->eType != SIR_GRAPHICS_HANDLE_TEXTURE || pSlot->eMemory != SIR_GRAPHICS_MEMORY_GPU_LOCAL ||
+			       pSlot->pExternalResource != nullptr ) ) {
+				return SIR_GRAPHICS_UNSUPPORTED;
 			}
 		} else if ( source.eType == SIR_GRAPHICS_BARRIER_UAV ) {
 			if ( ( pSlot->nUsage & SIR_GRAPHICS_USAGE_STORAGE ) == 0 ) {
@@ -505,22 +524,32 @@ sirGraphicsResult_t SIRD3D12CommandList::barrier( const sirGraphicsBarrier_t *pB
 		D3D12_RESOURCE_BARRIER native = {};
 		native.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
 		if ( source.eType == SIR_GRAPHICS_BARRIER_TRANSITION ) {
-			if ( source.eBefore == SIR_GRAPHICS_STATE_UNDEFINED || source.eAfter == SIR_GRAPHICS_STATE_UNDEFINED ||
+			if ( source.eAfter == SIR_GRAPHICS_STATE_UNDEFINED ||
 			     source.eBefore > SIR_GRAPHICS_STATE_PRESENT || source.eAfter > SIR_GRAPHICS_STATE_PRESENT ||
 			     !sirD3D12ValidResourceState( pSlot->eType, source.eBefore ) ||
 			     !sirD3D12ValidResourceState( pSlot->eType, source.eAfter ) ) {
 				return SIR_GRAPHICS_INVALID_ARGUMENT;
 			}
-			if ( !sirD3D12ValidQueueState( m_eQueue, source.eBefore ) || !sirD3D12ValidQueueState( m_eQueue, source.eAfter ) ) {
+			if ( ( source.eBefore != SIR_GRAPHICS_STATE_UNDEFINED && !sirD3D12ValidQueueState( m_eQueue, source.eBefore ) ) ||
+			     !sirD3D12ValidQueueState( m_eQueue, source.eAfter ) ) {
 				return SIR_GRAPHICS_UNSUPPORTED;
 			}
 			const uint32_t nMips = pSlot->eType == SIR_GRAPHICS_HANDLE_TEXTURE ? pSlot->nMips : 1;
 			const uint32_t nLayers =
 			    pSlot->eType == SIR_GRAPHICS_HANDLE_TEXTURE && pSlot->eDimension != SIR_GRAPHICS_TEXTURE_3D ? pSlot->nLayers : 1;
-			if ( nMips == 0 || nLayers == 0 || source.nBaseMip >= nMips || source.nBaseLayer >= nLayers ||
-			     ( source.nMipCount != 0 && source.nMipCount > nMips - source.nBaseMip ) ||
-			     ( source.nLayerCount != 0 && source.nLayerCount > nLayers - source.nBaseLayer ) ) {
+			if ( pSlot->eType == SIR_GRAPHICS_HANDLE_BUFFER ) {
+				if ( source.nBaseMip != 0 || source.nMipCount != 0 || source.nBaseLayer != 0 || source.nLayerCount != 0 ) {
+					return SIR_GRAPHICS_INVALID_ARGUMENT;
+				}
+			} else if ( !sirGraphicsTextureBarrierRangeValid( source, nMips, nLayers ) ) {
 				return SIR_GRAPHICS_INVALID_ARGUMENT;
+			}
+			// A discarded first use maps to a newly created COMMON default-heap
+			// texture on legacy D3D12, or UNDEFINED on enhanced barriers.
+			if ( source.eBefore == SIR_GRAPHICS_STATE_UNDEFINED &&
+			     ( pSlot->eType != SIR_GRAPHICS_HANDLE_TEXTURE || pSlot->eMemory != SIR_GRAPHICS_MEMORY_GPU_LOCAL ||
+			       pSlot->pExternalResource != nullptr ) ) {
+				return SIR_GRAPHICS_UNSUPPORTED;
 			}
 			native.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
 			native.Transition.pResource = pSlot->getNativeResource();
