@@ -1,2 +1,3 @@
-fn echo_signed(value: i16) -> i16:
-    return value
+function echo_signed(i16 value) returns i16 {
+    return value;
+}
