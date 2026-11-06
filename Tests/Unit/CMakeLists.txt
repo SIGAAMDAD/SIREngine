@@ -962,3 +962,9 @@ add_executable(SIREditorResourceReferencesTests SIREditorResourceReferencesTests
 target_link_libraries(SIREditorResourceReferencesTests PRIVATE SIR::EditorAuthoring)
 add_test(NAME editor.scene.resource-reference-index COMMAND SIREditorResourceReferencesTests)
 sir_configure_owned_target(SIREditorResourceReferencesTests)
+
+# Streaming coordinator positive/negative state-transition and validation coverage.
+add_executable(SIRStreamingCoordinatorCoverageTests SIRStreamingCoordinatorCoverageTests.cpp)
+target_link_libraries(SIRStreamingCoordinatorCoverageTests PRIVATE SIR::Streaming)
+add_test(NAME streaming.coordinator.coverage COMMAND SIRStreamingCoordinatorCoverageTests)
+sir_configure_owned_target(SIRStreamingCoordinatorCoverageTests)
