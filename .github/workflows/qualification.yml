@@ -1,6 +1,20 @@
 name: SIREngine qualification
 on:
   workflow_dispatch:
+    inputs:
+      source_sha:
+        description: 'Exact 40-character source commit SHA'
+        required: true
+        type: string
+      system:
+        description: 'Compiled production scope'
+        required: true
+        type: choice
+        options: [all, Core, Resources, Renderer, Terrain, Editor, Scripting, Audio, GraphicsABI]
+      issue:
+        description: 'Authoritative GitHub issue number'
+        required: true
+        type: string
 permissions:
   contents: read
 jobs:
@@ -11,12 +25,36 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ inputs.source_sha }}
           persist-credentials: false
+      - name: Validate exact requested checkout
+        env:
+          SOURCE_SHA: ${{ inputs.source_sha }}
+          ISSUE_NUMBER: ${{ inputs.issue }}
+        shell: bash
+        run: |
+          [[ "$SOURCE_SHA" =~ ^[a-f0-9]{40}$ ]]
+          [[ "$ISSUE_NUMBER" =~ ^[1-9][0-9]*$ ]]
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
       - uses: ./.github/actions/setup-build-tools
       - run: git submodule update --init ThirdParty/GoogleTest
+      - name: Install authenticated LLVM 23 toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL https://apt.llvm.org/llvm-snapshot.gpg.key -o "$RUNNER_TEMP/llvm-key.asc"
+          fingerprint="$(gpg --show-keys --with-colons "$RUNNER_TEMP/llvm-key.asc" | awk -F: '$1 == "fpr" {print $10; exit}')"
+          test "$fingerprint" = 6084F3CF814B57C1CF12EFD515CF4D18AF4F7421
+          gpg --dearmor < "$RUNNER_TEMP/llvm-key.asc" > "$RUNNER_TEMP/llvm-key.gpg"
+          sudo install -D -m 0644 "$RUNNER_TEMP/llvm-key.gpg" /etc/apt/keyrings/sir-llvm-23.gpg
+          echo 'deb [signed-by=/etc/apt/keyrings/sir-llvm-23.gpg] https://apt.llvm.org/noble/ llvm-toolchain-noble-23 main' | sudo tee /etc/apt/sources.list.d/sir-llvm-23.list
+          sudo apt-get update
+          sudo apt-get install -y clang-23 llvm-23 libclang-rt-23-dev ninja-build
+          clang++-23 --version | grep -F 23.1.5
+          llvm-cov-23 --version | grep -F 23.1.5
       - name: Qualify all compiled production code
         env:
-          SIR_QUALIFICATION_SCOPE: all
+          SIR_QUALIFICATION_SCOPE: ${{ inputs.system }}
         run: bash Build/Scripts/RunLLVM23Qualification.sh
       - uses: actions/upload-artifact@v4
         if: always()
@@ -35,6 +73,18 @@ jobs:
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_sha }}
+          persist-credentials: false
+      - name: Validate exact requested checkout
+        env:
+          SOURCE_SHA: ${{ inputs.source_sha }}
+          ISSUE_NUMBER: ${{ inputs.issue }}
+        shell: bash
+        run: |
+          [[ "$SOURCE_SHA" =~ ^[a-f0-9]{40}$ ]]
+          [[ "$ISSUE_NUMBER" =~ ^[1-9][0-9]*$ ]]
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
       - uses: ilammy/msvc-dev-cmd@v1
         if: runner.os == 'Windows'
       - uses: ./.github/actions/setup-build-tools
@@ -49,6 +99,18 @@ jobs:
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_sha }}
+          persist-credentials: false
+      - name: Validate exact requested checkout
+        env:
+          SOURCE_SHA: ${{ inputs.source_sha }}
+          ISSUE_NUMBER: ${{ inputs.issue }}
+        shell: bash
+        run: |
+          [[ "$SOURCE_SHA" =~ ^[a-f0-9]{40}$ ]]
+          [[ "$ISSUE_NUMBER" =~ ^[1-9][0-9]*$ ]]
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
       - uses: ./.github/actions/setup-build-tools
       - run: git submodule update --init ThirdParty/GoogleTest
       - name: Run full sanitized native suite
