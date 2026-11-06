@@ -128,7 +128,7 @@ static sirTaskResult_t sirExperimentSpawn( void *pContext, sirTaskHandle_t ) noe
 	sirExperimentSpawn_t *pSpawn = ( sirExperimentSpawn_t * )pContext;
 	for ( uint32_t i = 0; i < pSpawn->nChildren; ++i ) {
 		if ( !pSpawn->pScheduler->submit( { sirExperimentChild, pSpawn->pCompleted, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU },
-﻿2026 - 11 - 06T00 : 14 : 49.2215582Z & pSpawn->pChildren[i] ) ) {
+		                                  &pSpawn->pChildren[i] ) ) {
 			pSpawn->bSubmissionOk.store( false, std::memory_order_release );
 			return SIR_TASK_RESULT_FAILURE;
 		}

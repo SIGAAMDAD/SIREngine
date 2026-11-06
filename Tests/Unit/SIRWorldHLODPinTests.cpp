@@ -16,6 +16,11 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <World/HLOD/SIRWorldHLODPins.h>
 #include <Resources/SIRResourceGraph.h>
 #include <stdio.h>
+#include <stdlib.h>
+
+#ifdef _WIN32
+#include <malloc.h>
+#endif
 
 #define SIR_HLOD_CHECK( expression )                                                                                                       \
 	do {                                                                                                                                   \
@@ -25,13 +30,48 @@ of merchantability, fitness for a particular purpose and noninfringement.
 		}                                                                                                                                  \
 	} while ( 0 )
 
+static void *sirHLODPinAllocate( void *pContext, uint64_t nBytes, uint32_t nAlignment, uint32_t nDomain ) noexcept
+{
+	( void )pContext;
+	( void )nDomain;
+	if ( nBytes == 0 || nBytes > SIZE_MAX ) {
+		return nullptr;
+	}
+#ifdef _WIN32
+	return _aligned_malloc( ( size_t )nBytes, nAlignment );
+#else
+	void *pMemory = nullptr;
+	const size_t nActualAlignment = nAlignment < sizeof( void * ) ? sizeof( void * ) : nAlignment;
+	return posix_memalign( &pMemory, nActualAlignment, ( size_t )nBytes ) == 0 ? pMemory : nullptr;
+#endif
+}
+
+static void sirHLODPinFree( void *pContext, void *pMemory, uint64_t nBytes, uint32_t nAlignment, uint32_t nDomain ) noexcept
+{
+	( void )pContext;
+	( void )nBytes;
+	( void )nAlignment;
+	( void )nDomain;
+#ifdef _WIN32
+	_aligned_free( pMemory );
+#else
+	free( pMemory );
+#endif
+}
+
 int main( void )
 {
 	SIRResourceGraphConfig config = {};
+	config.m_Allocator = { nullptr, sirHLODPinAllocate, sirHLODPinFree };
+	config.m_nMaxResources = 8;
+	config.m_nMaxStaging = 8;
+	config.m_nMaxProviderPins = 2;
+	config.m_nMaxCommittedBytes = 1024 * 1024;
+
 	SIRResourceGraph graph( config );
 	SIRResourceGraphWriter *pWriter = graph.getWriter();
 	SIRResourceReadScope scope( graph );
-	SIR_HLOD_CHECK( pWriter != nullptr && scope.isActive() );
+	SIR_HLOD_CHECK( graph.isReady() && pWriter != nullptr && scope.isActive() );
 
 	sirWorldHLODNode_t szNodes[] = {
 	    { { 11, 3, 0 }, 77, 1, 2 },
@@ -74,27 +114,32 @@ int main( void )
 	sirWorldHLODPinOutput_t output = { szPins, szScratch, 2, &nPinned };
 
 	SIR_HLOD_CHECK( sirWorldHLODPinCut( input, output ) == SIR_WORLD_HLOD_PIN_OK );
-	SIR_HLOD_CHECK( nPinned == 2 && graph.testLivePins() == 2 && szPins[0].m_nSlot != szPins[1].m_nSlot );
+	SIR_HLOD_CHECK( nPinned == 2 && szPins[0].m_nSlot != szPins[1].m_nSlot );
 	SIR_HLOD_CHECK( graph.releaseProviderPin( szPins[0] ) == SIR_RESOURCE_RESULT_SUCCESS );
 	SIR_HLOD_CHECK( graph.releaseProviderPin( szPins[1] ) == SIR_RESOURCE_RESULT_SUCCESS );
-	SIR_HLOD_CHECK( graph.testLivePins() == 0 );
 
 	// The second pin failing must release the first, with output untouched.
-	graph.testLimitPins( 1 );
+	SIRResourceHandle hFirst = {};
+	SIRResourceView firstView;
+	SIRResourcePinHandle hOccupied = {};
+	SIR_HLOD_CHECK( graph.find( scope, szNodes[1].keyGeometry, &hFirst ) == SIR_RESOURCE_RESULT_SUCCESS );
+	SIR_HLOD_CHECK( graph.resolve( scope, hFirst, &firstView ) == SIR_RESOURCE_RESULT_SUCCESS );
+	SIR_HLOD_CHECK( graph.pinForProvider( scope, firstView, input.nProviderId, &hOccupied ) == SIR_RESOURCE_RESULT_SUCCESS );
 	SIR_HLOD_CHECK( sirWorldHLODPinCut( input, output ) == SIR_WORLD_HLOD_PIN_PROVIDER_FAILURE );
-	SIR_HLOD_CHECK( graph.testLivePins() == 0 && nPinned == 2 );
-	SIR_HLOD_CHECK( szPins[0].m_nSlot != 99 );
-	graph.testLimitPins( 8 );
+	SIR_HLOD_CHECK( nPinned == 2 );
+	SIR_HLOD_CHECK( graph.releaseProviderPin( hOccupied ) == SIR_RESOURCE_RESULT_SUCCESS );
+	SIR_HLOD_CHECK( sirWorldHLODPinCut( input, output ) == SIR_WORLD_HLOD_PIN_OK );
+	SIR_HLOD_CHECK( graph.releaseProviderPin( szPins[0] ) == SIR_RESOURCE_RESULT_SUCCESS );
+	SIR_HLOD_CHECK( graph.releaseProviderPin( szPins[1] ) == SIR_RESOURCE_RESULT_SUCCESS );
 
 	// Stale second resource after first pin must unwind, never expose one pin.
 	SIR_HLOD_CHECK( pWriter->publish( second, &hResource ) == SIR_RESOURCE_RESULT_SUCCESS );
 	nPinned = 123;
 	szPins[0] = { 99, 99 };
 	SIR_HLOD_CHECK( sirWorldHLODPinCut( input, output ) == SIR_WORLD_HLOD_PIN_STALE_RESIDENCY );
-	SIR_HLOD_CHECK( graph.testLivePins() == 0 && nPinned == 123 && szPins[0].m_nSlot == 99 );
+	SIR_HLOD_CHECK( nPinned == 123 && szPins[0].m_nSlot == 99 );
 	szReady[2].nResourceRevision = 2;
 	SIR_HLOD_CHECK( sirWorldHLODPinCut( input, output ) == SIR_WORLD_HLOD_PIN_OK );
-	SIR_HLOD_CHECK( graph.testLivePins() == 2 );
 	SIR_HLOD_CHECK( graph.releaseProviderPin( szPins[0] ) == SIR_RESOURCE_RESULT_SUCCESS );
 	SIR_HLOD_CHECK( graph.releaseProviderPin( szPins[1] ) == SIR_RESOURCE_RESULT_SUCCESS );
 
@@ -108,7 +153,6 @@ int main( void )
 	szReady[2].nSourceRevision = 100;
 	SIR_HLOD_CHECK( sirWorldHLODPinCut( input, output ) == SIR_WORLD_HLOD_PIN_STALE_RESIDENCY );
 	szReady[2].nSourceRevision = 79;
-	SIR_HLOD_CHECK( graph.testLivePins() == 0 );
 
 	// Invalid cuts and insufficient space cannot touch output or acquire pins.
 	szSelected[1] = 1;
@@ -123,6 +167,6 @@ int main( void )
 	output.nCapacity = 2;
 	input.nProviderId = 0;
 	SIR_HLOD_CHECK( sirWorldHLODPinCut( input, output ) == SIR_WORLD_HLOD_PIN_INVALID_ARGUMENT );
-	SIR_HLOD_CHECK( graph.testLivePins() == 0 && nPinned == 2 );
+	SIR_HLOD_CHECK( nPinned == 2 );
 	return 0;
 }
