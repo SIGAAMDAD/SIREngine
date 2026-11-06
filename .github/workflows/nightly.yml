@@ -9,6 +9,21 @@ concurrency:
   group: sir-nightly
   cancel-in-progress: false
 jobs:
+  source-audit:
+    name: Full owned-source policy audit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install pinned clang-format 23.1.5
+        run: python3 -m pip install --disable-pip-version-check clang-format==23.1.5
+      - name: Validate tracked-source policy
+        run: |
+          cmake -P Build/CMake/CIHygiene.cmake
+          cmake -P Build/CMake/CIStyle.cmake
+          cmake -P Build/CMake/CIFormat.cmake
   native:
     name: Nightly native (${{ matrix.os }} / ${{ matrix.preset }})
     runs-on: ${{ matrix.os }}
@@ -126,13 +141,14 @@ jobs:
     name: Nightly acceptance
     if: always()
     runs-on: ubuntu-24.04
-    needs: [native, repeat, performance, source-dependencies, clang-tooling]
+    needs: [source-audit, native, repeat, performance, source-dependencies, clang-tooling]
     steps:
       - name: Reject missing gates
         env:
+          POLICY: ${{ needs.source-audit.result }}
           NATIVE: ${{ needs.native.result }}
           REPEAT: ${{ needs.repeat.result }}
           PERF: ${{ needs.performance.result }}
           DEPENDENCIES: ${{ needs.source-dependencies.result }}
           CLANG: ${{ needs.clang-tooling.result }}
-        run: test "$NATIVE" = success && test "$REPEAT" = success && test "$PERF" = success && test "$DEPENDENCIES" = success && test "$CLANG" = success
+        run: test "$POLICY" = success && test "$NATIVE" = success && test "$REPEAT" = success && test "$PERF" = success && test "$DEPENDENCIES" = success && test "$CLANG" = success

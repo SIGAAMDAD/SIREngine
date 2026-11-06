@@ -52,6 +52,8 @@ jobs:
           sudo apt-get install -y clang-23 llvm-23 libclang-rt-23-dev ninja-build
           clang++-23 --version | grep -F 23.1.5
           llvm-cov-23 --version | grep -F 23.1.5
+      - name: Verify GRDG collector negative-path tests
+        run: python3 Tests/Profiling/TestSIRGRDGCoverageCollector.py
       - name: Qualify all compiled production code
         env:
           SIR_QUALIFICATION_SCOPE: ${{ inputs.system }}
