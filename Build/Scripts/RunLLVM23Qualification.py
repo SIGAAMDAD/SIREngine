@@ -16,19 +16,32 @@ def run(*args, env=None, stdout=None):
                           stdout=stdout, check=True, text=True)
 
 
-def verify_production_coverage(required, files):
-    """Fail closed on omitted compiled production units and incomplete coverage."""
+def verify_production_coverage(required, files, source_root=None):
+    """Qualify every mapped production implementation, including inline headers."""
     if not required:
         raise RuntimeError("Empty compiled production source inventory")
-    mapped = {str(pathlib.Path(item["filename"]).resolve()): item for item in files}
+    root = pathlib.Path(source_root).resolve() if source_root is not None else None
+    mapped = {}
+    for item in files:
+        filename = pathlib.Path(item["filename"]).resolve()
+        if root is not None and root not in filename.parents:
+            continue
+        if filename.suffix not in (".c", ".cc", ".cpp", ".h", ".hpp", ".inl", ".inc"):
+            continue
+        key = str(filename)
+        if key in mapped:
+            raise RuntimeError(f"Duplicated production coverage mapping: {key}")
+        mapped[key] = item
     missing = required - mapped.keys()
     if missing:
         raise RuntimeError(f"Missing compiled production coverage mappings: {sorted(missing)[:10]}")
+    if not mapped:
+        raise RuntimeError("No production coverage mappings")
     totals = {}
     failures = []
     for metric in ("lines", "branches", "functions", "regions"):
         try:
-            counts = [mapped[path]["summary"][metric] for path in sorted(required)]
+            counts = [item["summary"][metric] for item in mapped.values()]
             total = sum(row["count"] for row in counts)
             covered = sum(row["covered"] for row in counts)
         except (KeyError, TypeError) as exc:
@@ -39,6 +52,7 @@ def verify_production_coverage(required, files):
     if failures:
         raise RuntimeError("100% production coverage unmet: " + ", ".join(failures))
     return totals
+
 
 def qualify():
     for name in ("clang++-23", "llvm-cov-23", "llvm-profdata-23", "ninja"):
@@ -60,13 +74,18 @@ def qualify():
         "-DSIR_BUILD_TESTS=ON", "-DSIR_WITH_GOOGLETEST=ON")
     run("cmake", "--build", BUILD, "--parallel", "3")
     env = dict(os.environ, LLVM_PROFILE_FILE=str(raw / "%p-%m.profraw"))
-    run("ctest", "--test-dir", BUILD, "--output-on-failure", "--no-tests=error",
-        "--output-junit", REPORT / "ctest.xml", env=env)
+    run(sys.executable, ROOT / "Build/CI/RunCTestGate.py", "--test-dir", BUILD,
+        "--report", REPORT / "ctest.xml", env=env)
     profiles = sorted(raw.glob("*.profraw"))
     if not profiles:
         raise RuntimeError("No execution profiles generated")
     profdata = REPORT / "merged.profdata"
-    run("llvm-profdata-23", "merge", "-sparse", *profiles, "-o", profdata)
+    profile_merge = subprocess.run(["llvm-profdata-23", "merge", "-sparse",
+                                    *map(str, profiles), "-o", str(profdata)],
+                                   cwd=ROOT, capture_output=True, text=True,
+                                   check=False)
+    if profile_merge.returncode or "warning:" in profile_merge.stderr.lower():
+        raise RuntimeError(f"Invalid LLVM profile merge: {profile_merge.stderr[:2000]}")
     objects = []
     for path in sorted(BUILD.rglob("*")):
         if path.is_file() and (path.stat().st_mode & 0o111):
@@ -85,7 +104,7 @@ def qualify():
     with out.open("w") as handle:
         result = subprocess.run(command, cwd=ROOT, stdout=handle,
                                 stderr=subprocess.PIPE, text=True, check=False)
-    if result.returncode or "mismatch" in result.stderr.lower() or "out of date" in result.stderr.lower():
+    if result.returncode or any(word in result.stderr.lower() for word in ("mismatch", "out of date", "warning:")):
         raise RuntimeError(f"Coverage mapping/profile mismatch: {result.stderr[:2000]}")
     data = json.loads(out.read_text())
     if len(data.get("data", [])) != 1:
@@ -102,7 +121,7 @@ def qualify():
                 and source_root in pathlib.Path(row["file"]).resolve().parents}
     if not required:
         raise RuntimeError("Empty compiled production source inventory")
-    totals = verify_production_coverage(required, data["data"][0]["files"])
+    totals = verify_production_coverage(required, data["data"][0]["files"], source_root)
     for name, (covered, count) in totals.items():
         print(f"LLVM 23 {name}: {covered}/{count}")
     print("LLVM 23 qualification PASS")

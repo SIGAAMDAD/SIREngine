@@ -15,8 +15,17 @@ on:
         description: 'Authoritative GitHub issue number'
         required: true
         type: string
+      purpose:
+        description: 'Milestone or authorized release acceptance'
+        required: true
+        type: choice
+        options: [milestone, release]
 permissions:
   contents: read
+concurrency:
+  group: sir-qualification-${{ inputs.source_sha }}-${{ inputs.system }}
+  queue: max
+  cancel-in-progress: false
 jobs:
   coverage:
     name: LLVM 23 full source coverage
@@ -54,8 +63,10 @@ jobs:
           llvm-cov-23 --version | grep -F 23.1.5
       - name: Verify GRDG collector negative-path tests
         run: python3 Tests/Profiling/TestSIRGRDGCoverageCollector.py
-      - name: Test LLVM 23 qualification negative paths
-        run: python3 Tests/Profiling/TestRunLLVM23Qualification.py
+      - name: Test LLVM 23 qualification and CTest negative paths
+        run: |
+          python3 Tests/Profiling/TestRunLLVM23Qualification.py
+          python3 -m unittest discover -s Tests/CI -p 'Test*.py'
       - name: Qualify all compiled production code
         env:
           SIR_QUALIFICATION_SCOPE: ${{ inputs.system }}
@@ -93,10 +104,22 @@ jobs:
         if: runner.os == 'Windows'
       - uses: ./.github/actions/setup-build-tools
       - run: git submodule update --init ThirdParty/GoogleTest
-      - run: |
+      - name: Full native build and accounted functional tests
+        shell: bash
+        run: |
+          set -euo pipefail
           cmake --preset dev -DSIR_WITH_GOOGLETEST=ON
           cmake --build --preset dev
-          ctest --preset dev --output-on-failure --no-tests=error
+          python_cmd=python3
+          if [[ "$RUNNER_OS" == Windows ]]; then python_cmd=python; fi
+          "$python_cmd" Build/CI/RunCTestGate.py --preset dev --report "out/Verification/native-${{ matrix.os }}.xml"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qualification-native-${{ matrix.os }}
+          path: out/Verification/native-*.xml
+          if-no-files-found: warn
+          retention-days: 30
   sanitizer:
     name: ASan and UBSan native acceptance
     runs-on: ubuntu-24.04
@@ -124,16 +147,106 @@ jobs:
         run: |
           cmake --preset asan -DSIR_WITH_GOOGLETEST=ON -DSIR_ENABLE_UBSAN=ON
           cmake --build --preset asan
-          ctest --preset asan --output-on-failure --no-tests=error
+          python3 Build/CI/RunCTestGate.py --preset asan --report out/Verification/asan-ubsan.xml
+  renderer-backends:
+    name: Renderer backend contracts (${{ matrix.backend }})
+    if: inputs.system == 'all' || inputs.system == 'Renderer' || inputs.system == 'GraphicsABI'
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {os: ubuntu-24.04, backend: vulkan, option: SIR_WITH_VULKAN, tests: '^render[.]vulkan[.]'}
+          - {os: ubuntu-24.04, backend: opengl46, option: SIR_WITH_OPENGL, tests: '^renderer[.]opengl46[.]'}
+          - {os: windows-2022, backend: d3d12, option: SIR_WITH_D3D12, tests: '^renderer[.]d3d12[.]'}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_sha }}
+          persist-credentials: false
+      - name: Verify requested backend source SHA
+        env:
+          SHA: ${{ inputs.source_sha }}
+        shell: bash
+        run: |
+          [[ "$SHA" =~ ^[a-f0-9]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$SHA"
+      - uses: ./.github/actions/setup-build-tools
+      - uses: ilammy/msvc-dev-cmd@v1
+        if: runner.os == 'Windows'
+      - uses: ./.github/actions/setup-dxc
+        if: matrix.backend == 'd3d12'
+      - name: Install Linux graphics headers and software adapters
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libvulkan-dev libgl-dev mesa-vulkan-drivers
+      - run: git submodule update --init ThirdParty/GoogleTest
+      - name: Compile enabled backend and execute actual driver contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          cmake --preset dev -DSIR_WITH_GOOGLETEST=ON "-D${{ matrix.option }}=ON"
+          cmake --build --preset dev
+          python_cmd=python3
+          if [[ "$RUNNER_OS" == Windows ]]; then python_cmd=python; fi
+          "$python_cmd" Build/CI/RunCTestGate.py --preset dev --name-regex "${{ matrix.tests }}" --report "out/Verification/backend-${{ matrix.backend }}.xml"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: backend-evidence-${{ matrix.backend }}
+          path: out/Verification/backend-*.xml
+          if-no-files-found: warn
+          retention-days: 30
+  audio-backend:
+    name: FMOD native backend qualification
+    if: inputs.system == 'all' || inputs.system == 'Audio'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_sha }}
+          persist-credentials: false
+      - uses: ./.github/actions/setup-build-tools
+      - run: git submodule update --init ThirdParty/GoogleTest
+      - name: Require real licensed FMOD SDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "${FMOD_SDK_DIR:-}" || ! -d "$FMOD_SDK_DIR" ]]; then
+            echo "::error::BLOCKED: FMOD SDK unavailable on this qualification runner"
+            exit 1
+          fi
+      - name: Compile enabled FMOD and execute native contracts
+        run: |
+          cmake --preset dev -DSIR_WITH_GOOGLETEST=ON -DSIR_WITH_FMOD=ON
+          cmake --build --preset dev
+          python3 Build/CI/RunCTestGate.py --preset dev --name-regex '^audio[.]fmod[.]native-' --report out/Verification/fmod.xml
   acceptance:
     name: Qualification acceptance
     if: always()
     runs-on: ubuntu-24.04
-    needs: [coverage, native, sanitizer]
+    needs: [coverage, native, sanitizer, renderer-backends, audio-backend]
     steps:
       - name: Refuse incomplete gates
         env:
           COVERAGE: ${{ needs.coverage.result }}
           NATIVE: ${{ needs.native.result }}
           SANITIZER: ${{ needs.sanitizer.result }}
-        run: test "$COVERAGE" = success && test "$NATIVE" = success && test "$SANITIZER" = success
+          RENDERER: ${{ needs.renderer-backends.result }}
+          AUDIO: ${{ needs.audio-backend.result }}
+          SYSTEM: ${{ inputs.system }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$COVERAGE" = success
+          test "$NATIVE" = success
+          test "$SANITIZER" = success
+          if [[ "$SYSTEM" == all || "$SYSTEM" == Renderer || "$SYSTEM" == GraphicsABI ]]; then
+            test "$RENDERER" = success
+          fi
+          if [[ "$SYSTEM" == all || "$SYSTEM" == Audio ]]; then
+            test "$AUDIO" = success
+          fi
