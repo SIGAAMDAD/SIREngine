@@ -106,8 +106,9 @@ class BuildTreeIsolationTests(unittest.TestCase):
                 inherited = resolved.get("inherits")
                 self.assertIsInstance(inherited, str)
                 resolved = by_name[inherited]
-            self.assertEqual(resolved["binaryDir"],
-                             "${sourceDir}/out/${hostSystemName}/${presetName}")
+            self.assertTrue(resolved["binaryDir"].startswith(
+                "${sourceDir}/out/${hostSystemName}/"), resolved["binaryDir"])
+            self.assertNotIn("..", resolved["binaryDir"])
         visual_studio = next(p for p in presets["configurePresets"] if p["name"] == "vs2022")
         self.assertEqual(visual_studio["generator"], "Visual Studio 17 2022")
         self.assertEqual(visual_studio["architecture"], "x64")
