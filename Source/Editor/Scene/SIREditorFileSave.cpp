@@ -16,24 +16,24 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Editor/Scene/SIREditorFileSave.h>
 #include <Core/Platform/SIRPlatformFileSystem.h>
 
-static sirEditorFileSaveResult_t sirEditorMapFileResult( sirFileSystemResult_t eResult ) noexcept
+static sirEditorFileSaveResult_t sirEditorMapFileResult( sirPlatformAtomicResult_t eResult ) noexcept
 {
 	switch ( eResult ) {
-	case SIR_FILESYSTEM_OK:
+	case SIR_ATOMIC_SAVE_OK:
 		return SIR_EDITOR_FILE_SAVE_OK;
-	case SIR_FILESYSTEM_INVALID_ARGUMENT:
+	case SIR_ATOMIC_SAVE_INVALID_ARGUMENT:
 		return SIR_EDITOR_FILE_SAVE_INVALID_ARGUMENT;
-	case SIR_FILESYSTEM_INVALID_PATH:
+	case SIR_ATOMIC_SAVE_INVALID_PATH:
 		return SIR_EDITOR_FILE_SAVE_INVALID_PATH;
-	case SIR_FILESYSTEM_TEMP_EXISTS:
+	case SIR_ATOMIC_SAVE_TEMP_EXISTS:
 		return SIR_EDITOR_FILE_SAVE_TEMP_EXISTS;
-	case SIR_FILESYSTEM_IO_ERROR:
+	case SIR_ATOMIC_SAVE_IO_ERROR:
 		return SIR_EDITOR_FILE_SAVE_IO_ERROR;
-	case SIR_FILESYSTEM_REPLACE_FAILED:
+	case SIR_ATOMIC_SAVE_REPLACE_FAILED:
 		return SIR_EDITOR_FILE_SAVE_REPLACE_FAILED;
-	case SIR_FILESYSTEM_COMMITTED_NOT_DURABLE:
+	case SIR_ATOMIC_SAVE_COMMITTED_NOT_DURABLE:
 		return SIR_EDITOR_FILE_SAVE_COMMITTED_NOT_DURABLE;
-	case SIR_FILESYSTEM_CONFLICT:
+	case SIR_ATOMIC_SAVE_CONFLICT:
 		return SIR_EDITOR_FILE_SAVE_CONFLICT;
 	default:
 		return SIR_EDITOR_FILE_SAVE_IO_ERROR;

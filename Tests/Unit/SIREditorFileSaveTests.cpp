@@ -77,11 +77,11 @@ int main( void )
 	sirFileSystemAtomicWriteRequest_t platform = { szDestination, szTemporary, pszOriginal, strlen( pszOriginal ) };
 	platform.pExpectedBytes = pszOriginal;
 	platform.nExpectedBytes = strlen( pszOriginal );
-	assert( SIRPlatformFileSystem::writeAtomically( platform ) == SIR_FILESYSTEM_OK );
+	assert( SIRPlatformFileSystem::writeAtomically( platform ) == SIR_ATOMIC_SAVE_OK );
 	sirEditorTestReadExact( szDestination, pszOriginal, strlen( pszOriginal ) );
 	platform.pExpectedBytes = "stale revision";
 	platform.nExpectedBytes = strlen( "stale revision" );
-	assert( SIRPlatformFileSystem::writeAtomically( platform ) == SIR_FILESYSTEM_CONFLICT );
+	assert( SIRPlatformFileSystem::writeAtomically( platform ) == SIR_ATOMIC_SAVE_CONFLICT );
 	sirEditorTestReadExact( szDestination, pszOriginal, strlen( pszOriginal ) );
 	assert( fopen( szTemporary, "rb" ) == nullptr );
 	sirEditorFileWriteRequest_t request = { szDestination, szTemporary, pszReplacement, strlen( pszReplacement ) };
