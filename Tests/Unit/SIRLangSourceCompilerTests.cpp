@@ -89,8 +89,8 @@ static void testSourceToVM( void ) noexcept
 {
 	sirLangCompilerFixture_t fixture = {};
 	setupFixture( &fixture );
-	static constexpr char szSource[] = "fn echo(value: u16) -> u16:\n"
-	                                   "    return value\n";
+	static constexpr char szSource[] = "function echo(u16 value) returns u16 {\n"
+	                                   "    return value;\n}";
 	const sirLangSourceView_t source = { ( const uint8_t * )szSource, sizeof( szSource ) - 1 };
 	assert( SIRLangCompileSource( source, &fixture.workspace ) );
 	assert( fixture.workspace.report.ePhase == SIR_LANG_COMPILE_COMPLETE );
@@ -122,8 +122,8 @@ static void testRejectedSource( void ) noexcept
 {
 	sirLangCompilerFixture_t fixture = {};
 	setupFixture( &fixture );
-	static constexpr char szInvalid[] = "fn broken(value: u16:\n"
-	                                    "    return value\n";
+	static constexpr char szInvalid[] = "function broken(u16 value returns u16 {\n"
+	                                    "    return value;\n}";
 	assert( !SIRLangCompileSource( { ( const uint8_t * )szInvalid, sizeof( szInvalid ) - 1 }, &fixture.workspace ) );
 	assert( fixture.workspace.report.ePhase == SIR_LANG_COMPILE_PARSE );
 	assert( fixture.workspace.report.nStageResult != 0 );
@@ -131,8 +131,8 @@ static void testRejectedSource( void ) noexcept
 
 	setupFixture( &fixture );
 	fixture.workspace.cir.nLayoutDigest = 0;
-	static constexpr char szValid[] = "fn pass(value: u16) -> u16:\n"
-	                                  "    return value\n";
+	static constexpr char szValid[] = "function pass(u16 value) returns u16 {\n"
+	                                  "    return value;\n}";
 	assert( !SIRLangCompileSource( { ( const uint8_t * )szValid, sizeof( szValid ) - 1 }, &fixture.workspace ) );
 	assert( fixture.workspace.report.ePhase == SIR_LANG_COMPILE_INPUT );
 }
@@ -141,12 +141,12 @@ static void testBooleanShortCircuit( void ) noexcept
 {
 	sirLangCompilerFixture_t fixture = {};
 	setupFixture( &fixture );
-	static constexpr char szSource[] = "fn lazy_and(flag: bool) -> bool:\n"
-	                                   "    return flag and ((1u16 / 0u16) == 1u16)\n"
-	                                   "fn lazy_or(flag: bool) -> bool:\n"
-	                                   "    return flag or ((1u16 / 0u16) == 1u16)\n"
-	                                   "fn lazy_xor(a: bool, b: bool) -> bool:\n"
-	                                   "    return a xor b\n";
+	static constexpr char szSource[] = "function lazy_and(bool flag) returns bool {\n"
+	                                   "    return flag and ((1u16 / 0u16) == 1u16);\n}\n"
+	                                   "function lazy_or(bool flag) returns bool {\n"
+	                                   "    return flag or ((1u16 / 0u16) == 1u16);\n}\n"
+	                                   "function lazy_xor(bool a, bool b) returns bool {\n"
+	                                   "    return a xor b;\n}";
 
 	const sirLangSourceView_t source = { ( const uint8_t * )szSource, sizeof( szSource ) - 1 };
 	assert( SIRLangCompileSource( source, &fixture.workspace ) );
@@ -188,8 +188,8 @@ static void testBooleanShortCircuit( void ) noexcept
 	assert( result.eError == SIR_LANG_VM_OK && result.result.nBits == 0 );
 
 	setupFixture( &fixture );
-	static constexpr char szInvalid[] = "fn invalid(value: u16) -> bool:\n"
-	                                    "    return value xor 1u16\n";
+	static constexpr char szInvalid[] = "function invalid(u16 value) returns bool {\n"
+	                                    "    return value xor 1u16;\n}";
 	assert( !SIRLangCompileSource( { ( const uint8_t * )szInvalid, sizeof( szInvalid ) - 1 }, &fixture.workspace ) );
 	assert( fixture.workspace.report.ePhase == SIR_LANG_COMPILE_SEMANTIC );
 }
@@ -197,9 +197,9 @@ static void testBooleanShortCircuit( void ) noexcept
 static void testRejectInvalidScalarExpressions( void ) noexcept
 {
 	static constexpr const char *szInvalid[] = {
-	    "fn bad(value: bool) -> bool:\n    return value + value\n", "fn bad(value: u16) -> bool:\n    return value == true\n",
-	    "fn bad(value: u16) -> bool:\n    return not value\n", "fn bad(value: u16) -> bool:\n    return value < true\n",
-	    "fn bad() -> u16:\n    return 1u16 + 2u8\n" };
+	    "function bad(bool value) returns bool { return value + value; }", "function bad(u16 value) returns bool { return value == true; }",
+	    "function bad(u16 value) returns bool { return not value; }", "function bad(u16 value) returns bool { return value < true; }",
+	    "function bad() returns u16 { return 1u16 + 2u8; }" };
 	for ( uint32_t iSource = 0; iSource < sizeof( szInvalid ) / sizeof( szInvalid[0] ); ++iSource ) {
 		sirLangCompilerFixture_t fixture = {};
 		setupFixture( &fixture );
@@ -209,11 +209,69 @@ static void testRejectInvalidScalarExpressions( void ) noexcept
 	}
 }
 
+static sirLangVMRunResult_t executeFixture( const sirLangCompilerFixture_t *pFixture, uint64_t nFunctionId,
+                                            sirLangVMValue_t argument ) noexcept
+{
+	sirLangVMInvocation_t invocation = {};
+	invocation.nFunctionId = nFunctionId;
+	invocation.pArguments = &argument;
+	invocation.nArgumentCount = 1;
+	invocation.nFuel = 128;
+	invocation.nExpectedLayoutDigest = pFixture->workspace.cir.program.nLayoutDigest;
+	invocation.nExpectedBindingDigest = pFixture->workspace.cir.program.nBindingDigest;
+	return SIRLangRunGraphVM( &pFixture->workspace.cir.program, invocation );
+}
+
+static void testModernSwitchAndTypedLocals( void ) noexcept
+{
+	static constexpr char szSource[] = "function Choose(u16 value) returns u16 { u16 original = value; "
+	                                   "switch (original) { case 42u16: { return 7u16; } default: { return original; } } }";
+	sirLangCompilerFixture_t fixture = {};
+	setupFixture( &fixture );
+	assert( SIRLangCompileSource( { ( const uint8_t * )szSource, sizeof( szSource ) - 1 }, &fixture.workspace ) );
+	assert( fixture.workspace.cir.program.nFunctionCount == 1 );
+	const uint64_t nFunction = fixture.workspace.cir.program.pFunctions[0].nFunctionId;
+	sirLangVMRunResult_t result = executeFixture( &fixture, nFunction, { 42, SIR_LANG_VALUE_U16 } );
+	assert( result.eError == SIR_LANG_VM_OK && result.result.nBits == 7 );
+	result = executeFixture( &fixture, nFunction, { 12, SIR_LANG_VALUE_U16 } );
+	assert( result.eError == SIR_LANG_VM_OK && result.result.nBits == 12 );
+}
+
+static void testModernEventAndSwitchBreak( void ) noexcept
+{
+	static constexpr char szSource[] = "on event Pulse(u16 value) returns void { "
+	                                   "switch (value) { case 0u16: { break; } default: { break; } } return; }";
+	sirLangCompilerFixture_t fixture = {};
+	setupFixture( &fixture );
+	assert( SIRLangCompileSource( { ( const uint8_t * )szSource, sizeof( szSource ) - 1 }, &fixture.workspace ) );
+	assert( fixture.workspace.cir.program.nFunctionCount == 1 );
+	const uint64_t nFunction = fixture.workspace.cir.program.pFunctions[0].nFunctionId;
+	assert( executeFixture( &fixture, nFunction, { 0, SIR_LANG_VALUE_U16 } ).eError == SIR_LANG_VM_OK );
+	assert( executeFixture( &fixture, nFunction, { 10, SIR_LANG_VALUE_U16 } ).eError == SIR_LANG_VM_OK );
+}
+
+static void testModernSourceRejections( void ) noexcept
+{
+	static constexpr const char *s_pszInvalid[] = {
+	    "function Legacy(u16 value) -> u16 { return value; }", "function Wrong(u16 value) returns u16 { var copy = value return copy; }",
+	    "on event Wrong(u16 value) { return; }", "function Wrong(u16 value) returns u16 { var copy = value; copy = 2u8; return copy; }",
+	    "function Wrong(u16 value) returns u16 { switch(value) { case 1u16: { return value; } } }" };
+	for ( const char *pszSource : s_pszInvalid ) {
+		sirLangCompilerFixture_t fixture = {};
+		setupFixture( &fixture );
+		assert( !SIRLangCompileSource( { ( const uint8_t * )pszSource, ( uint32_t )strlen( pszSource ) }, &fixture.workspace ) );
+		assert( fixture.workspace.report.ePhase != SIR_LANG_COMPILE_COMPLETE );
+	}
+}
+
 int main( void )
 {
 	testSourceToVM();
 	testBooleanShortCircuit();
 	testRejectInvalidScalarExpressions();
 	testRejectedSource();
+	testModernSwitchAndTypedLocals();
+	testModernEventAndSwitchBreak();
+	testModernSourceRejections();
 	return 0;
 }
