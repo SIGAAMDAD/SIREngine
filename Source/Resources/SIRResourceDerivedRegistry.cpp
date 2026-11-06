@@ -23,7 +23,7 @@ typedef struct sirDerivedProviderSlot_s
 {
 	SIRDerivedProviderCallbacks callbacks;
 	uint32_t nProviderId;
-	uint64_t nCompletedFence;
+	sirProviderCompletionSet_t completed;
 	bool bRegistered;
 } sirDerivedProviderSlot_t;
 
@@ -31,7 +31,7 @@ typedef struct sirDerivedRepresentationSlot_s
 {
 	SIRDerivedResourceRegistration registration;
 	SIRResourcePinHandle pin;
-	uint64_t nRetirementFence;
+	sirProviderCompletionSet_t retirement;
 	uint32_t nGeneration;
 	bool bOccupied;
 	bool bRetiring;
@@ -135,10 +135,17 @@ int32_t SIRResourceDerivedRegistry::findProvider( uint32_t nProviderId ) const n
 SIRResourceResult SIRResourceDerivedRegistry::registerProvider( uint32_t nProviderId,
                                                                 const SIRDerivedProviderCallbacks& rCallbacks ) noexcept
 {
+	return registerProvider( nProviderId, 1, 1, rCallbacks );
+}
+
+SIRResourceResult SIRResourceDerivedRegistry::registerProvider( uint32_t nProviderId, uint32_t nProviderGeneration, uint32_t nLaneCount,
+                                                                const SIRDerivedProviderCallbacks& rCallbacks ) noexcept
+{
 	if ( !isWriterThread() ) {
 		return SIR_RESOURCE_RESULT_WRITER_VIOLATION;
 	}
-	if ( !m_bReady || !nProviderId || !rCallbacks.pfnReleaseNative ) {
+	if ( !m_bReady || !nProviderId || !nProviderGeneration || nLaneCount == 0 || nLaneCount > SIR_PROVIDER_MAX_LANES ||
+	     !rCallbacks.pfnReleaseNative ) {
 		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
 	}
 	if ( findProvider( nProviderId ) >= 0 ) {
@@ -149,7 +156,7 @@ SIRResourceResult SIRResourceDerivedRegistry::registerProvider( uint32_t nProvid
 		if ( !rProvider.bRegistered ) {
 			rProvider.callbacks = rCallbacks;
 			rProvider.nProviderId = nProviderId;
-			rProvider.nCompletedFence = 0;
+			rProvider.completed = { nProviderId, nProviderGeneration, ( 1u << nLaneCount ) - 1u, nLaneCount, {} };
 			rProvider.bRegistered = true;
 			++m_Stats.nRegisteredProviders;
 			return SIR_RESOURCE_RESULT_SUCCESS;
@@ -218,7 +225,7 @@ SIRResourceResult SIRResourceDerivedRegistry::registerRepresentation( const SIRR
 	sirDerivedRepresentationSlot_t& rSlot = m_pRepresentations[iFree];
 	rSlot.registration = rRegistration;
 	rSlot.pin = pin;
-	rSlot.nRetirementFence = 0;
+	rSlot.retirement = {};
 	rSlot.bOccupied = true;
 	rSlot.bRetiring = false;
 	rSlot.bNativeReleased = false;
@@ -240,7 +247,7 @@ SIRResourceResult SIRResourceDerivedRegistry::collectProvider( uint32_t iProvide
 	for ( uint32_t iSlot = 0; iSlot < m_Config.nMaxRepresentations; ++iSlot ) {
 		sirDerivedRepresentationSlot_t& rSlot = m_pRepresentations[iSlot];
 		if ( !rSlot.bOccupied || !rSlot.bRetiring || rSlot.registration.m_Key.m_nProviderId != rProvider.nProviderId ||
-		     rSlot.nRetirementFence > rProvider.nCompletedFence ) {
+		     !sirProviderCompletionSatisfied( rSlot.retirement, rProvider.completed ) ) {
 			continue;
 		}
 		if ( !rSlot.bNativeReleased ) {
@@ -270,7 +277,7 @@ SIRResourceResult SIRResourceDerivedRegistry::collectProvider( uint32_t iProvide
 }
 
 SIRResourceResult SIRResourceDerivedRegistry::retireRepresentation( SIRDerivedResourceHandle hRepresentation,
-                                                                    uint64_t nCompletionFence ) noexcept
+                                                                    const sirProviderCompletionSet_t& required ) noexcept
 {
 	if ( !isWriterThread() ) {
 		return SIR_RESOURCE_RESULT_WRITER_VIOLATION;
@@ -285,18 +292,25 @@ SIRResourceResult SIRResourceDerivedRegistry::retireRepresentation( SIRDerivedRe
 	if ( rSlot.bRetiring ) {
 		return SIR_RESOURCE_RESULT_BUSY;
 	}
-	rSlot.bRetiring = true;
-	rSlot.nRetirementFence = nCompletionFence;
-	++m_Stats.nPendingRetirements;
 	const int32_t iProvider = findProvider( rSlot.registration.m_Key.m_nProviderId );
-	if ( iProvider >= 0 && nCompletionFence <= m_pProviders[iProvider].nCompletedFence ) {
-		// Retirement acceptance is durable even if native release needs retry.
+	if ( iProvider < 0 || !sirProviderCompletionValid( required ) ) {
+		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
+	}
+	const sirProviderCompletionSet_t& completed = m_pProviders[iProvider].completed;
+	if ( required.nProviderId != completed.nProviderId || required.nProviderGeneration != completed.nProviderGeneration ||
+	     required.nLaneCount != completed.nLaneCount ) {
+		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
+	}
+	rSlot.bRetiring = true;
+	rSlot.retirement = required;
+	++m_Stats.nPendingRetirements;
+	if ( sirProviderCompletionSatisfied( required, completed ) ) {
 		( void )collectProvider( ( uint32_t )iProvider );
 	}
 	return SIR_RESOURCE_RESULT_SUCCESS;
 }
 
-SIRResourceResult SIRResourceDerivedRegistry::updateCompletedFence( uint32_t nProviderId, uint64_t nCompletedFence ) noexcept
+SIRResourceResult SIRResourceDerivedRegistry::updateProviderCompletion( const sirProviderCompletionSet_t& observed ) noexcept
 {
 	if ( !isWriterThread() ) {
 		return SIR_RESOURCE_RESULT_WRITER_VIOLATION;
@@ -304,11 +318,27 @@ SIRResourceResult SIRResourceDerivedRegistry::updateCompletedFence( uint32_t nPr
 	if ( !m_bReady ) {
 		return SIR_RESOURCE_RESULT_FAILED;
 	}
-	const int32_t iProvider = findProvider( nProviderId );
-	if ( iProvider < 0 || nCompletedFence < m_pProviders[iProvider].nCompletedFence ) {
+	if ( !sirProviderCompletionValid( observed ) ) {
 		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
 	}
-	m_pProviders[iProvider].nCompletedFence = nCompletedFence;
+	const int32_t iProvider = findProvider( observed.nProviderId );
+	if ( iProvider < 0 ) {
+		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
+	}
+	sirProviderCompletionSet_t& completed = m_pProviders[iProvider].completed;
+	if ( completed.nProviderGeneration != observed.nProviderGeneration || completed.nLaneCount != observed.nLaneCount ) {
+		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
+	}
+	for ( uint32_t iLane = 0; iLane < completed.nLaneCount; ++iLane ) {
+		if ( ( observed.nLaneMask & ( 1u << iLane ) ) != 0 && observed.szCompletedValues[iLane] < completed.szCompletedValues[iLane] ) {
+			return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
+		}
+	}
+	for ( uint32_t iLane = 0; iLane < completed.nLaneCount; ++iLane ) {
+		if ( ( observed.nLaneMask & ( 1u << iLane ) ) != 0 ) {
+			completed.szCompletedValues[iLane] = observed.szCompletedValues[iLane];
+		}
+	}
 	return collectProvider( ( uint32_t )iProvider );
 }
 

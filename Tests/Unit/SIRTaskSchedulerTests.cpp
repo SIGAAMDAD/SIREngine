@@ -69,7 +69,7 @@ static void testScheduler( void )
 	// Owner-affine tasks run only when the initialization thread pumps them.
 	std::atomic<uint32_t> nCounter( 0 );
 	sirTaskHandle_t owner = {};
-	SIR_TEST_CHECK( scheduler.submit( countTask, &nCounter, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_MAIN, &owner ) );
+	SIR_TEST_CHECK( scheduler.submit( { countTask, &nCounter, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_MAIN }, &owner ) );
 	std::thread wrongThread( [&]() { SIR_TEST_CHECK( scheduler.pumpMain( 1 ) == 0 ); } );
 	wrongThread.join();
 	SIR_TEST_CHECK( nCounter.load() == 0 );
@@ -81,12 +81,12 @@ static void testScheduler( void )
 	// Occupy one worker, then cancel a queued task in constant-time slot lookup.
 	sirTestBlock_t block = {};
 	sirTaskHandle_t blocker = {};
-	SIR_TEST_CHECK( scheduler.submit( blockTask, &block, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU, &blocker ) );
+	SIR_TEST_CHECK( scheduler.submit( { blockTask, &block, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU }, &blocker ) );
 	while ( !block.bStarted.load() ) {
 		std::this_thread::yield();
 	}
 	sirTaskHandle_t canceled = {};
-	SIR_TEST_CHECK( scheduler.submit( countTask, &nCounter, SIR_TASK_PRIORITY_BACKGROUND, SIR_TASK_EXEC_CPU, &canceled ) );
+	SIR_TEST_CHECK( scheduler.submit( { countTask, &nCounter, SIR_TASK_PRIORITY_BACKGROUND, SIR_TASK_EXEC_CPU }, &canceled ) );
 	SIR_TEST_CHECK( scheduler.cancel( canceled ) );
 	SIR_TEST_CHECK( scheduler.getState( canceled ) == SIR_TASK_CANCELLED );
 	SIR_TEST_CHECK( scheduler.releaseTask( canceled ) );
@@ -97,7 +97,7 @@ static void testScheduler( void )
 
 	// Recycled slots reject stale generations, and callback failures are terminal.
 	sirTaskHandle_t failed = {};
-	SIR_TEST_CHECK( scheduler.submit( failTask, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU, &failed ) );
+	SIR_TEST_CHECK( scheduler.submit( { failTask, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU }, &failed ) );
 	SIR_TEST_CHECK( scheduler.getState( canceled ) == SIR_TASK_INVALID );
 	SIR_TEST_CHECK( scheduler.waitTask( failed ) );
 	SIR_TEST_CHECK( scheduler.getState( failed ) == SIR_TASK_FAILED );
@@ -112,7 +112,7 @@ static void testScheduler( void )
 		producers[iProducer] = std::thread( [&, iProducer]() {
 			for ( uint32_t iTask = 0; iTask < TASKS_PER_PRODUCER; ++iTask ) {
 				SIR_TEST_CHECK(
-				    scheduler.submit( countTask, &nCounter, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU, &handles[iProducer][iTask] ) );
+				    scheduler.submit( { countTask, &nCounter, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU }, &handles[iProducer][iTask] ) );
 			}
 		} );
 	}
@@ -126,7 +126,7 @@ static void testScheduler( void )
 	SIR_TEST_CHECK( nCounter.load() == 1 + N_PRODUCERS * TASKS_PER_PRODUCER );
 	SIR_TEST_CHECK( scheduler.getActiveCount() == 0 );
 	SIR_TEST_CHECK( scheduler.shutdown() );
-	SIR_TEST_CHECK( !scheduler.submit( countTask, &nCounter, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU, &failed ) );
+	SIR_TEST_CHECK( !scheduler.submit( { countTask, &nCounter, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU }, &failed ) );
 	memory.shutdown();
 }
 
@@ -141,12 +141,12 @@ static void testCapacityAndShutdown( void )
 	sirTaskHandle_t first = {};
 	sirTaskHandle_t second = {};
 	sirTaskHandle_t denied = {};
-	SIR_TEST_CHECK( scheduler.submit( blockTask, &block, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU, &first ) );
+	SIR_TEST_CHECK( scheduler.submit( { blockTask, &block, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU }, &first ) );
 	while ( !block.bStarted.load() ) {
 		std::this_thread::yield();
 	}
-	SIR_TEST_CHECK( scheduler.submit( failTask, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU, &second ) );
-	SIR_TEST_CHECK( !scheduler.submit( failTask, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU, &denied ) );
+	SIR_TEST_CHECK( scheduler.submit( { failTask, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU }, &second ) );
+	SIR_TEST_CHECK( !scheduler.submit( { failTask, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU }, &denied ) );
 	SIR_TEST_CHECK( !scheduler.releaseTask( first ) );
 	SIR_TEST_CHECK( scheduler.cancel( second ) );
 	SIR_TEST_CHECK( scheduler.releaseTask( second ) );
@@ -169,16 +169,16 @@ static void testDependencyExecution( void )
 	std::atomic<uint32_t> nCount( 0 );
 	sirTestBlock_t block = {};
 	sirTaskHandle_t root = {}, parallel = {}, join = {}, tail = {}, main = {};
-	SIR_TEST_CHECK( scheduler.submit( blockTask, &block, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU, &root ) );
+	SIR_TEST_CHECK( scheduler.submit( { blockTask, &block, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU }, &root ) );
 	while ( !block.bStarted.load() ) {
 		std::this_thread::yield();
 	}
-	SIR_TEST_CHECK( scheduler.submit( countTask, &nCount, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU, &parallel ) );
+	SIR_TEST_CHECK( scheduler.submit( { countTask, &nCount, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU }, &parallel ) );
 	const sirTaskHandle_t prerequisites[] = { root, parallel };
-	SIR_TEST_CHECK( scheduler.submitAfter( countTask, &nCount, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU, prerequisites, 2, &join ) );
+	SIR_TEST_CHECK( scheduler.submitAfter( { countTask, &nCount, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU }, prerequisites, 2, &join ) );
 	SIR_TEST_CHECK( scheduler.getState( join ) == SIR_TASK_BLOCKED );
-	SIR_TEST_CHECK( scheduler.submitAfter( countTask, &nCount, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_MAIN, &join, 1, &main ) );
-	SIR_TEST_CHECK( scheduler.submitAfter( countTask, &nCount, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU, &main, 1, &tail ) );
+	SIR_TEST_CHECK( scheduler.submitAfter( { countTask, &nCount, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_MAIN }, &join, 1, &main ) );
+	SIR_TEST_CHECK( scheduler.submitAfter( { countTask, &nCount, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU }, &main, 1, &tail ) );
 	SIR_TEST_CHECK( scheduler.getState( tail ) == SIR_TASK_BLOCKED );
 	SIR_TEST_CHECK( scheduler.waitTask( parallel ) );
 	SIR_TEST_CHECK( nCount.load() == 1 );
@@ -210,15 +210,15 @@ static void testCancellationCascade( void )
 	std::atomic<uint32_t> nCount( 0 );
 	sirTestBlock_t block = {};
 	sirTaskHandle_t root = {}, childA = {}, childB = {}, diamond = {}, leaf = {};
-	SIR_TEST_CHECK( scheduler.submit( blockTask, &block, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU, &root ) );
+	SIR_TEST_CHECK( scheduler.submit( { blockTask, &block, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU }, &root ) );
 	while ( !block.bStarted.load() ) {
 		std::this_thread::yield();
 	}
-	SIR_TEST_CHECK( scheduler.submitAfter( countTask, &nCount, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU, &root, 1, &childA ) );
-	SIR_TEST_CHECK( scheduler.submitAfter( countTask, &nCount, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU, &root, 1, &childB ) );
+	SIR_TEST_CHECK( scheduler.submitAfter( { countTask, &nCount, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU }, &root, 1, &childA ) );
+	SIR_TEST_CHECK( scheduler.submitAfter( { countTask, &nCount, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU }, &root, 1, &childB ) );
 	const sirTaskHandle_t parents[] = { childA, childB };
-	SIR_TEST_CHECK( scheduler.submitAfter( countTask, &nCount, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU, parents, 2, &diamond ) );
-	SIR_TEST_CHECK( scheduler.submitAfter( countTask, &nCount, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU, &diamond, 1, &leaf ) );
+	SIR_TEST_CHECK( scheduler.submitAfter( { countTask, &nCount, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU }, parents, 2, &diamond ) );
+	SIR_TEST_CHECK( scheduler.submitAfter( { countTask, &nCount, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU }, &diamond, 1, &leaf ) );
 	SIR_TEST_CHECK( scheduler.cancel( childA ) );
 	SIR_TEST_CHECK( scheduler.getState( childA ) == SIR_TASK_CANCELLED );
 	SIR_TEST_CHECK( scheduler.getState( diamond ) == SIR_TASK_CANCELLED );
@@ -247,19 +247,20 @@ static void testFailedParentAndEdgeCapacity( void )
 	std::atomic<uint32_t> nCount( 0 );
 	sirTestBlock_t block = {};
 	sirTaskHandle_t root = {}, one = {}, two = {}, rejected = {}, failed = {}, downstream = {};
-	SIR_TEST_CHECK( scheduler.submit( blockTask, &block, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU, &root ) );
+	SIR_TEST_CHECK( scheduler.submit( { blockTask, &block, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU }, &root ) );
 	while ( !block.bStarted.load() ) {
 		std::this_thread::yield();
 	}
-	SIR_TEST_CHECK( scheduler.submitAfter( countTask, &nCount, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU, &root, 1, &one ) );
-	SIR_TEST_CHECK( scheduler.submitAfter( countTask, &nCount, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU, &root, 1, &two ) );
-	SIR_TEST_CHECK( !scheduler.submitAfter( countTask, &nCount, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU, &root, 1, &rejected ) );
+	SIR_TEST_CHECK( scheduler.submitAfter( { countTask, &nCount, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU }, &root, 1, &one ) );
+	SIR_TEST_CHECK( scheduler.submitAfter( { countTask, &nCount, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU }, &root, 1, &two ) );
+	SIR_TEST_CHECK( !scheduler.submitAfter( { countTask, &nCount, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU }, &root, 1, &rejected ) );
 	SIR_TEST_CHECK( scheduler.getActiveCount() == 3 );
 	const sirTaskHandle_t duplicates[] = { one, one };
-	SIR_TEST_CHECK( !scheduler.submitAfter( countTask, &nCount, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU, duplicates, 2, &rejected ) );
+	SIR_TEST_CHECK(
+	    !scheduler.submitAfter( { countTask, &nCount, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU }, duplicates, 2, &rejected ) );
 	SIR_TEST_CHECK( scheduler.cancel( one ) );
 	SIR_TEST_CHECK( scheduler.releaseTask( one ) );
-	SIR_TEST_CHECK( scheduler.submitAfter( countTask, &nCount, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU, &root, 1, &one ) );
+	SIR_TEST_CHECK( scheduler.submitAfter( { countTask, &nCount, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU }, &root, 1, &one ) );
 	block.bRelease.store( true );
 	SIR_TEST_CHECK( scheduler.waitTask( two ) );
 	SIR_TEST_CHECK( scheduler.waitTask( one ) );
@@ -267,9 +268,9 @@ static void testFailedParentAndEdgeCapacity( void )
 	SIR_TEST_CHECK( scheduler.releaseTask( one ) );
 	SIR_TEST_CHECK( scheduler.releaseTask( two ) );
 	SIR_TEST_CHECK( nCount.load() == 2 );
-	SIR_TEST_CHECK( scheduler.submit( failTask, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU, &failed ) );
+	SIR_TEST_CHECK( scheduler.submit( { failTask, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU }, &failed ) );
 	SIR_TEST_CHECK( scheduler.waitTask( failed ) );
-	SIR_TEST_CHECK( scheduler.submitAfter( countTask, &nCount, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU, &failed, 1, &downstream ) );
+	SIR_TEST_CHECK( scheduler.submitAfter( { countTask, &nCount, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU }, &failed, 1, &downstream ) );
 	SIR_TEST_CHECK( scheduler.getState( downstream ) == SIR_TASK_CANCELLED );
 	SIR_TEST_CHECK( !scheduler.cancel( downstream ) );
 	SIR_TEST_CHECK( scheduler.releaseTask( downstream ) );
@@ -287,9 +288,9 @@ static void testWorkerlessFallback( void )
 	SIR_TEST_CHECK( scheduler.init( &memory, { 16, 0, 8 } ) );
 	std::atomic<uint32_t> nCount( 0 );
 	sirTaskHandle_t first = {}, second = {}, third = {};
-	SIR_TEST_CHECK( scheduler.submit( countTask, &nCount, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU, &first ) );
-	SIR_TEST_CHECK( scheduler.submitAfter( countTask, &nCount, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU, &first, 1, &second ) );
-	SIR_TEST_CHECK( scheduler.submitAfter( countTask, &nCount, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_MAIN, &second, 1, &third ) );
+	SIR_TEST_CHECK( scheduler.submit( { countTask, &nCount, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU }, &first ) );
+	SIR_TEST_CHECK( scheduler.submitAfter( { countTask, &nCount, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU }, &first, 1, &second ) );
+	SIR_TEST_CHECK( scheduler.submitAfter( { countTask, &nCount, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_MAIN }, &second, 1, &third ) );
 	SIR_TEST_CHECK( !scheduler.waitTask( first ) );
 	SIR_TEST_CHECK( scheduler.pumpCPU( 8 ) == 2 );
 	SIR_TEST_CHECK( nCount.load() == 2 );
@@ -312,14 +313,15 @@ static void testFailedParentPropagation( void )
 	std::atomic<uint32_t> nExecuted( 0 );
 	sirTestBlock_t block = {};
 	sirTaskHandle_t blocker = {}, failure = {}, dependent = {}, grandchild = {};
-	SIR_TEST_CHECK( scheduler.submit( blockTask, &block, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU, &blocker ) );
+	SIR_TEST_CHECK( scheduler.submit( { blockTask, &block, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU }, &blocker ) );
 	while ( !block.bStarted.load() ) {
 		std::this_thread::yield();
 	}
-	SIR_TEST_CHECK( scheduler.submit( failTask, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU, &failure ) );
-	SIR_TEST_CHECK( scheduler.submitAfter( countTask, &nExecuted, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU, &failure, 1, &dependent ) );
+	SIR_TEST_CHECK( scheduler.submit( { failTask, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU }, &failure ) );
 	SIR_TEST_CHECK(
-	    scheduler.submitAfter( countTask, &nExecuted, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_MAIN, &dependent, 1, &grandchild ) );
+	    scheduler.submitAfter( { countTask, &nExecuted, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU }, &failure, 1, &dependent ) );
+	SIR_TEST_CHECK(
+	    scheduler.submitAfter( { countTask, &nExecuted, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_MAIN }, &dependent, 1, &grandchild ) );
 	SIR_TEST_CHECK( scheduler.getState( dependent ) == SIR_TASK_BLOCKED );
 	block.bRelease.store( true );
 	SIR_TEST_CHECK( scheduler.waitTask( failure ) );
@@ -362,7 +364,7 @@ static sirTaskResult_t fanoutTask( void *pContext, sirTaskHandle_t ) noexcept
 {
 	sirTestFanout_t *pFanout = ( sirTestFanout_t * )pContext;
 	for ( uint32_t iTask = 0; iTask < pFanout->nCount; ++iTask ) {
-		SIR_TEST_CHECK( pFanout->pScheduler->submit( gatedChildTask, pFanout, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU,
+		SIR_TEST_CHECK( pFanout->pScheduler->submit( { gatedChildTask, pFanout, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU },
 		                                             &pFanout->pHandles[iTask] ) );
 	}
 	pFanout->bReady.store( true, std::memory_order_release );
@@ -394,7 +396,7 @@ static void testWorkerStealing( void )
 	fanout.pHandles = children;
 	fanout.nCount = 24;
 	sirTaskHandle_t parent = {};
-	SIR_TEST_CHECK( scheduler.submit( fanoutTask, &fanout, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU, &parent ) );
+	SIR_TEST_CHECK( scheduler.submit( { fanoutTask, &fanout, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU }, &parent ) );
 	SIR_TEST_CHECK( waitForAtLeast( fanout.nStarted, 2 ) );
 	const sirTaskSchedulerStats_t midway = scheduler.getStats();
 	SIR_TEST_CHECK( midway.nStealSucceeded > 0 );
@@ -431,7 +433,8 @@ typedef struct sirTestLocalCancel_s
 static sirTaskResult_t blockedSpawner( void *pContext, sirTaskHandle_t ) noexcept
 {
 	sirTestLocalCancel_t *pTest = ( sirTestLocalCancel_t * )pContext;
-	SIR_TEST_CHECK( pTest->pScheduler->submit( countTask, &pTest->nExecuted, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU, &pTest->child ) );
+	SIR_TEST_CHECK(
+	    pTest->pScheduler->submit( { countTask, &pTest->nExecuted, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU }, &pTest->child ) );
 	pTest->bQueued.store( true, std::memory_order_release );
 	while ( !pTest->bRelease.load( std::memory_order_acquire ) ) {
 		std::this_thread::yield();
@@ -449,7 +452,7 @@ static void testLocalCancellation( void )
 	sirTestLocalCancel_t context = {};
 	context.pScheduler = &scheduler;
 	sirTaskHandle_t parent = {};
-	SIR_TEST_CHECK( scheduler.submit( blockedSpawner, &context, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU, &parent ) );
+	SIR_TEST_CHECK( scheduler.submit( { blockedSpawner, &context, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU }, &parent ) );
 	const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds( 5 );
 	while ( !context.bQueued.load( std::memory_order_acquire ) ) {
 		SIR_TEST_CHECK( std::chrono::steady_clock::now() < deadline );
@@ -485,7 +488,7 @@ static void testInvalidInputAndProviderLifecycle( void )
 	SIR_TEST_CHECK( !cold.init( nullptr, { 8, 0, 8 } ) );
 	SIR_TEST_CHECK( !cold.init( &memory, { 8, 0, 8 } ) );
 	SIR_TEST_CHECK( !cold.bindProviderOwner( SIR_TASK_EXEC_RENDER ) );
-	SIR_TEST_CHECK( !cold.submit( countTask, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU, &handle ) );
+	SIR_TEST_CHECK( !cold.submit( { countTask, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU }, &handle ) );
 	SIR_TEST_CHECK( !cold.cancel( handle ) );
 	SIR_TEST_CHECK( !cold.releaseTask( handle ) );
 	SIR_TEST_CHECK( !cold.queryTask( handle, &state, &executor ) );
@@ -498,11 +501,11 @@ static void testInvalidInputAndProviderLifecycle( void )
 	SIR_TEST_CHECK( !cold.init( &memory, { 8, 0, UINT32_MAX } ) );
 	SIR_TEST_CHECK( cold.init( &memory, { 8, 0, 8 } ) );
 	SIR_TEST_CHECK( !cold.init( &memory, { 8, 0, 8 } ) );
-	SIR_TEST_CHECK( !cold.submit( nullptr, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU, &handle ) );
-	SIR_TEST_CHECK( !cold.submit( countTask, nullptr, ( sirTaskPriority_t )255, SIR_TASK_EXEC_CPU, &handle ) );
-	SIR_TEST_CHECK( !cold.submit( countTask, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_COUNT, &handle ) );
-	SIR_TEST_CHECK( !cold.submit( countTask, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU, nullptr ) );
-	SIR_TEST_CHECK( !cold.submitAfter( countTask, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU, nullptr, 1, &handle ) );
+	SIR_TEST_CHECK( !cold.submit( { nullptr, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU }, &handle ) );
+	SIR_TEST_CHECK( !cold.submit( { countTask, nullptr, ( sirTaskPriority_t )255, SIR_TASK_EXEC_CPU }, &handle ) );
+	SIR_TEST_CHECK( !cold.submit( { countTask, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_COUNT }, &handle ) );
+	SIR_TEST_CHECK( !cold.submit( { countTask, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU }, nullptr ) );
+	SIR_TEST_CHECK( !cold.submitAfter( { countTask, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU }, nullptr, 1, &handle ) );
 	SIR_TEST_CHECK( !cold.queryTask( handle, nullptr, &executor ) );
 	SIR_TEST_CHECK( !cold.queryTask( handle, &state, nullptr ) );
 	SIR_TEST_CHECK( !cold.queryTask( handle, &state, &executor ) );
@@ -516,30 +519,31 @@ static void testInvalidInputAndProviderLifecycle( void )
 	sirTaskBatchTask_t invalidBatch[2] = { batch[0], batch[1] };
 	const sirTaskBatchEdge_t edge = { 0, 1 };
 	sirTaskHandle_t batchHandles[2] = {};
-	SIR_TEST_CHECK( !cold.submitBatch( nullptr, 2, &edge, 1, batchHandles ) );
-	SIR_TEST_CHECK( !cold.submitBatch( batch, 2, &edge, 1, nullptr ) );
-	SIR_TEST_CHECK( !cold.submitBatch( batch, 0, &edge, 1, batchHandles ) );
-	SIR_TEST_CHECK( !cold.submitBatch( batch, 2, nullptr, 1, batchHandles ) );
+	SIR_TEST_CHECK( !cold.submitBatch( { nullptr, 2, &edge, 1 }, batchHandles ) );
+	SIR_TEST_CHECK( !cold.submitBatch( { batch, 2, &edge, 1 }, nullptr ) );
+	SIR_TEST_CHECK( !cold.submitBatch( { batch, 0, &edge, 1 }, batchHandles ) );
+	SIR_TEST_CHECK( !cold.submitBatch( { batch, 2, nullptr, 1 }, batchHandles ) );
 	invalidBatch[0].pFunction = nullptr;
-	SIR_TEST_CHECK( !cold.submitBatch( invalidBatch, 2, &edge, 1, batchHandles ) );
+	SIR_TEST_CHECK( !cold.submitBatch( { invalidBatch, 2, &edge, 1 }, batchHandles ) );
 	invalidBatch[0] = batch[0];
 	invalidBatch[1].ePriority = ( sirTaskPriority_t )255;
-	SIR_TEST_CHECK( !cold.submitBatch( invalidBatch, 2, &edge, 1, batchHandles ) );
+	SIR_TEST_CHECK( !cold.submitBatch( { invalidBatch, 2, &edge, 1 }, batchHandles ) );
 	invalidBatch[1] = batch[1];
 	invalidBatch[1].eExecutor = SIR_TASK_EXEC_COUNT;
-	SIR_TEST_CHECK( !cold.submitBatch( invalidBatch, 2, &edge, 1, batchHandles ) );
+	SIR_TEST_CHECK( !cold.submitBatch( { invalidBatch, 2, &edge, 1 }, batchHandles ) );
 	const sirTaskBatchEdge_t backward = { 1, 0 };
 	const sirTaskBatchEdge_t outOfRange = { 0, 2 };
-	SIR_TEST_CHECK( !cold.submitBatch( batch, 2, &backward, 1, batchHandles ) );
-	SIR_TEST_CHECK( !cold.submitBatch( batch, 2, &outOfRange, 1, batchHandles ) );
+	SIR_TEST_CHECK( !cold.submitBatch( { batch, 2, &backward, 1 }, batchHandles ) );
+	SIR_TEST_CHECK( !cold.submitBatch( { batch, 2, &outOfRange, 1 }, batchHandles ) );
 	SIR_TEST_CHECK( !cold.bindProviderOwner( SIR_TASK_EXEC_CPU ) );
 	SIR_TEST_CHECK( !cold.bindProviderOwner( SIR_TASK_EXEC_COUNT ) );
 	SIR_TEST_CHECK( cold.pumpProvider( SIR_TASK_EXEC_CPU, 1 ) == 0 );
 	SIR_TEST_CHECK( cold.pumpProvider( SIR_TASK_EXEC_COUNT, 1 ) == 0 );
 	SIR_TEST_CHECK( !cold.completeProvider( handle, SIR_TASK_RESULT_PENDING ) );
 	SIR_TEST_CHECK( !cold.completeProvider( handle, SIR_TASK_RESULT_SUCCESS ) );
-	SIR_TEST_CHECK( !cold.submitAfter( countTask, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU, &handle, UINT32_MAX, &handle ) );
-	SIR_TEST_CHECK( cold.submit( pendingProviderTask, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_RENDER, &handle ) );
+	SIR_TEST_CHECK(
+	    !cold.submitAfter( { countTask, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU }, &handle, UINT32_MAX, &handle ) );
+	SIR_TEST_CHECK( cold.submit( { pendingProviderTask, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_RENDER }, &handle ) );
 	SIR_TEST_CHECK( !cold.releaseTask( handle ) );
 	SIR_TEST_CHECK( cold.pumpProvider( SIR_TASK_EXEC_RENDER, 1 ) == 0 );
 	SIR_TEST_CHECK( cold.bindProviderOwner( SIR_TASK_EXEC_RENDER ) );
@@ -563,7 +567,7 @@ static void testInvalidInputAndProviderLifecycle( void )
 	SIR_TEST_CHECK( cold.getState( handle ) == SIR_TASK_CANCELLED );
 	SIR_TEST_CHECK( !cold.cancel( handle ) );
 	SIR_TEST_CHECK( cold.releaseTask( handle ) );
-	SIR_TEST_CHECK( cold.submitBatch( batch, 2, &edge, 1, batchHandles ) );
+	SIR_TEST_CHECK( cold.submitBatch( { batch, 2, &edge, 1 }, batchHandles ) );
 	SIR_TEST_CHECK( cold.pumpMain( 2 ) == 2 && nBatchCount.load() == 2 );
 	SIR_TEST_CHECK( cold.getState( batchHandles[0] ) == SIR_TASK_COMPLETED );
 	SIR_TEST_CHECK( cold.releaseTask( batchHandles[0] ) && cold.releaseTask( batchHandles[1] ) );
@@ -601,7 +605,7 @@ static void testShutdownWithLiveTasksAndProviderWait( void )
 		SIR_TEST_CHECK( !scheduler.waitTask( { UINT32_MAX, 0 } ) );
 		SIR_TEST_CHECK( scheduler.bindProviderOwner( SIR_TASK_EXEC_RENDER ) );
 		sirTaskHandle_t provider = {};
-		SIR_TEST_CHECK( scheduler.submit( pendingProviderTask, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_RENDER, &provider ) );
+		SIR_TEST_CHECK( scheduler.submit( { pendingProviderTask, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_RENDER }, &provider ) );
 		SIR_TEST_CHECK( scheduler.pumpProvider( SIR_TASK_EXEC_RENDER, 1 ) == 1 );
 		SIR_TEST_CHECK( !scheduler.waitTask( provider ) );
 		SIR_TEST_CHECK( scheduler.completeProvider( provider, SIR_TASK_RESULT_SUCCESS ) );
@@ -612,11 +616,11 @@ static void testShutdownWithLiveTasksAndProviderWait( void )
 		sirTaskHandle_t running = {};
 		sirTaskHandle_t queued = {};
 		sirTaskHandle_t blocked = {};
-		SIR_TEST_CHECK( scheduler.submit( taskUntilShutdown, &context, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU, &running ) );
+		SIR_TEST_CHECK( scheduler.submit( { taskUntilShutdown, &context, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU }, &running ) );
 		SIR_TEST_CHECK( waitForAtLeast( context.nStarted, 1 ) );
-		SIR_TEST_CHECK( scheduler.submit( countTask, &nExecuted, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU, &queued ) );
+		SIR_TEST_CHECK( scheduler.submit( { countTask, &nExecuted, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU }, &queued ) );
 		SIR_TEST_CHECK(
-		    scheduler.submitAfter( countTask, &nExecuted, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_MAIN, &queued, 1, &blocked ) );
+		    scheduler.submitAfter( { countTask, &nExecuted, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_MAIN }, &queued, 1, &blocked ) );
 		SIR_TEST_CHECK( scheduler.getState( running ) == SIR_TASK_RUNNING );
 		SIR_TEST_CHECK( scheduler.getState( queued ) == SIR_TASK_QUEUED );
 		SIR_TEST_CHECK( scheduler.getState( blocked ) == SIR_TASK_BLOCKED );
@@ -660,7 +664,7 @@ static void testPrioritySchedulingFairness( void )
 		                                   : i < 24 ? SIR_TASK_PRIORITY_NORMAL
 		                                            : SIR_TASK_PRIORITY_BACKGROUND;
 		records[i] = { &nExecuted, szOrder, ( uint32_t )priority };
-		SIR_TEST_CHECK( scheduler.submit( recordPriorityTask, &records[i], priority, SIR_TASK_EXEC_MAIN, &handles[i] ) );
+		SIR_TEST_CHECK( scheduler.submit( { recordPriorityTask, &records[i], priority, SIR_TASK_EXEC_MAIN }, &handles[i] ) );
 	}
 	SIR_TEST_CHECK( scheduler.pumpMain( 28 ) == 28 );
 	SIR_TEST_CHECK( nExecuted.load() == 28 );
@@ -714,11 +718,11 @@ static void testNestedPumpAndCompletedPrerequisite( void )
 	sirTaskHandle_t first = {};
 	sirTaskHandle_t second = {};
 	sirTaskHandle_t third = {};
-	SIR_TEST_CHECK( scheduler.submit( nestedPumpTask, &context, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_MAIN, &first ) );
-	SIR_TEST_CHECK( scheduler.submit( countTask, &nCount, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_MAIN, &second ) );
+	SIR_TEST_CHECK( scheduler.submit( { nestedPumpTask, &context, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_MAIN }, &first ) );
+	SIR_TEST_CHECK( scheduler.submit( { countTask, &nCount, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_MAIN }, &second ) );
 	SIR_TEST_CHECK( scheduler.pumpMain( 2 ) == 2 );
 	SIR_TEST_CHECK( context.nNestedRuns == 0 && nCount.load() == 1 );
-	SIR_TEST_CHECK( scheduler.submitAfter( countTask, &nCount, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_MAIN, &first, 1, &third ) );
+	SIR_TEST_CHECK( scheduler.submitAfter( { countTask, &nCount, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_MAIN }, &first, 1, &third ) );
 	SIR_TEST_CHECK( scheduler.getState( third ) == SIR_TASK_QUEUED );
 	SIR_TEST_CHECK( scheduler.pumpMain( 1 ) == 1 && nCount.load() == 2 );
 	SIR_TEST_CHECK( scheduler.releaseTask( first ) && scheduler.releaseTask( second ) && scheduler.releaseTask( third ) );
@@ -742,12 +746,13 @@ static void testMetadataExhaustionAndInvalidPredecessors( void )
 	SIR_TEST_CHECK( scheduler.init( &memory, { 8, 0, 8 } ) );
 	sirTaskHandle_t ignored = {};
 	const sirTaskHandle_t stale = { UINT32_MAX, 0 };
-	SIR_TEST_CHECK( !scheduler.submitAfter( countTask, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_MAIN, &stale, 1, &ignored ) );
+	SIR_TEST_CHECK( !scheduler.submitAfter( { countTask, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_MAIN }, &stale, 1, &ignored ) );
 	std::atomic<uint32_t> nCounter( 0 );
 	sirTaskHandle_t parent = {};
-	SIR_TEST_CHECK( scheduler.submit( countTask, &nCounter, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_MAIN, &parent ) );
+	SIR_TEST_CHECK( scheduler.submit( { countTask, &nCounter, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_MAIN }, &parent ) );
 	const sirTaskHandle_t duplicates[2] = { parent, parent };
-	SIR_TEST_CHECK( !scheduler.submitAfter( countTask, &nCounter, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_MAIN, duplicates, 2, &ignored ) );
+	SIR_TEST_CHECK(
+	    !scheduler.submitAfter( { countTask, &nCounter, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_MAIN }, duplicates, 2, &ignored ) );
 	SIR_TEST_CHECK( scheduler.cancel( parent ) );
 	SIR_TEST_CHECK( scheduler.releaseTask( parent ) );
 	SIR_TEST_CHECK( scheduler.shutdown() );
@@ -806,14 +811,14 @@ static void testBatchRejectsExhaustedLiveDependencyEdges( void )
 	std::atomic<uint32_t> nCalls{ 0 };
 	sirTaskHandle_t hParent = {};
 	sirTaskHandle_t hChild = {};
-	SIR_TEST_CHECK( scheduler.submit( countTask, &nCalls, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_MAIN, &hParent ) );
-	SIR_TEST_CHECK( scheduler.submitAfter( countTask, &nCalls, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_MAIN, &hParent, 1, &hChild ) );
+	SIR_TEST_CHECK( scheduler.submit( { countTask, &nCalls, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_MAIN }, &hParent ) );
+	SIR_TEST_CHECK( scheduler.submitAfter( { countTask, &nCalls, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_MAIN }, &hParent, 1, &hChild ) );
 	SIR_TEST_CHECK( scheduler.getState( hChild ) == SIR_TASK_BLOCKED );
 	const sirTaskBatchTask_t tasks[2] = { { countTask, &nCalls, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_MAIN },
 	                                      { countTask, &nCalls, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_MAIN } };
 	const sirTaskBatchEdge_t edge = { 0, 1 };
 	sirTaskHandle_t handles[2] = { { UINT32_MAX, UINT32_MAX }, { UINT32_MAX, UINT32_MAX } };
-	SIR_TEST_CHECK( !scheduler.submitBatch( tasks, 2, &edge, 1, handles ) );
+	SIR_TEST_CHECK( !scheduler.submitBatch( { tasks, 2, &edge, 1 }, handles ) );
 	SIR_TEST_CHECK( handles[0].nSlot == UINT32_MAX && handles[1].nSlot == UINT32_MAX );
 	SIR_TEST_CHECK( scheduler.getActiveCount() == 2 );
 

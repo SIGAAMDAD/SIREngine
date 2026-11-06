@@ -341,15 +341,18 @@ uint32_t SIRTaskScheduler::dequeueLocked( sirTaskExecutor_t eExecutor, uint32_t 
 	return dequeueQueueLocked( m_GlobalQueues[SIR_TASK_EXEC_CPU], false );
 }
 
-bool SIRTaskScheduler::submit( sirTaskFunction_t pFunction, void *pContext, sirTaskPriority_t ePriority, sirTaskExecutor_t eExecutor,
-                               sirTaskHandle_t *pHandle ) noexcept
+bool SIRTaskScheduler::submit( const sirTaskBatchTask_t& task, sirTaskHandle_t *pHandle ) noexcept
 {
-	return submitAfter( pFunction, pContext, ePriority, eExecutor, nullptr, 0, pHandle );
+	return submitAfter( task, nullptr, 0, pHandle );
 }
 
-bool SIRTaskScheduler::submitAfter( sirTaskFunction_t pFunction, void *pContext, sirTaskPriority_t ePriority, sirTaskExecutor_t eExecutor,
-                                    const sirTaskHandle_t *pPrerequisites, uint32_t nPrerequisites, sirTaskHandle_t *pHandle ) noexcept
+bool SIRTaskScheduler::submitAfter( const sirTaskBatchTask_t& task, const sirTaskHandle_t *pPrerequisites, uint32_t nPrerequisites,
+                                    sirTaskHandle_t *pHandle ) noexcept
 {
+	const sirTaskFunction_t pFunction = task.pFunction;
+	void *pContext = task.pContext;
+	const sirTaskPriority_t ePriority = task.ePriority;
+	const sirTaskExecutor_t eExecutor = task.eExecutor;
 	if ( pHandle == nullptr ) {
 		return false;
 	}
@@ -447,9 +450,12 @@ bool SIRTaskScheduler::submitAfter( sirTaskFunction_t pFunction, void *pContext,
 	return true;
 }
 
-bool SIRTaskScheduler::submitBatch( const sirTaskBatchTask_t *pTasks, uint32_t nTasks, const sirTaskBatchEdge_t *pEdges, uint32_t nEdges,
-                                    sirTaskHandle_t *pOutHandles ) noexcept
+bool SIRTaskScheduler::submitBatch( const sirTaskBatchDesc_t& batch, sirTaskHandle_t *pOutHandles ) noexcept
 {
+	const sirTaskBatchTask_t *pTasks = batch.pTasks;
+	const uint32_t nTasks = batch.nTasks;
+	const sirTaskBatchEdge_t *pEdges = batch.pEdges;
+	const uint32_t nEdges = batch.nEdges;
 	if ( pTasks == nullptr || pOutHandles == nullptr || nTasks == 0 || ( nEdges != 0 && pEdges == nullptr ) ) {
 		return false;
 	}
