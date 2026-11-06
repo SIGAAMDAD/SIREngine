@@ -129,9 +129,11 @@ void SIRScriptOptimizerProcessTransport::stop( void ) noexcept
 	}
 	m_bStopping.store( true, std::memory_order_release );
 	m_CV.notify_all();
+	// Terminate the child before cancelling synchronous I/O. Otherwise an I/O
+	// thread may enter ReadFile after the cancellation and block indefinitely.
+	terminateChild();
 #if defined( _WIN32 )
-	// Win32 blocking pipe reads/writes may outlive child termination.
-	// Interrupt both I/O threads before joining so shutdown stays bounded.
+	// Interrupt any remaining Win32 pipe operations before joining threads.
 	if ( m_Writer.joinable() ) {
 		( void )CancelSynchronousIo( ( HANDLE )m_Writer.native_handle() );
 	}
@@ -139,7 +141,6 @@ void SIRScriptOptimizerProcessTransport::stop( void ) noexcept
 		( void )CancelSynchronousIo( ( HANDLE )m_Reader.native_handle() );
 	}
 #endif
-	terminateChild();
 	if ( m_Writer.joinable() ) {
 		m_Writer.join();
 	}
