@@ -124,14 +124,18 @@ jobs:
           key: sir-fbuild-v1.20-${{ runner.os }}-${{ matrix.compiler }}-dev-${{ inputs.candidate_sha || github.sha }}
           restore-keys: |
             sir-fbuild-v1.20-${{ runner.os }}-${{ matrix.compiler }}-dev-
-      - name: Install pinned LLVM 23 compiler
+      - name: Install LLVM 23 compiler for PR checks
         if: matrix.compiler == 'clang'
+        env:
+          SIR_LLVM_MODE: pr
         run: bash Build/CI/InstallLLVM23.sh
       - name: Record compiler identity
         shell: bash
         run: |
           if [[ "$RUNNER_OS" == Windows ]]; then
-            cl.exe /Bv
+            cl.exe /? > /dev/null
+            echo "MSVC toolset: ${VCToolsVersion:-unknown}"
+            echo "Windows SDK: ${WindowsSDKVersion:-unknown}"
           elif [[ "${{ matrix.compiler }}" == clang ]]; then
             clang++-23 --version
           else

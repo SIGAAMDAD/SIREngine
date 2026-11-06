@@ -119,7 +119,9 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup-build-tools
-      - name: Install pinned LLVM 23.1.5
+      - name: Install LLVM 23 nightly compiler
+        env:
+          SIR_LLVM_MODE: pr
         run: bash Build/CI/InstallLLVM23.sh
       - name: Build native tooling with Clang
         env:
