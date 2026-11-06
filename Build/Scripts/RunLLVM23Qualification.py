@@ -54,6 +54,23 @@ def verify_production_coverage(required, files, source_root=None):
     return totals
 
 
+
+def find_zero_count_functions(coverage, source_root, limit=30):
+    """List unexecuted mapped functions in the declared production scope."""
+    root = pathlib.Path(source_root).resolve()
+    matches = []
+    for function in coverage.get("functions", []):
+        if function.get("count") != 0:
+            continue
+        for source in function.get("filenames", []):
+            path = pathlib.Path(source).resolve()
+            if root not in path.parents:
+                continue
+            matches.append({"file": str(path), "name": function.get("name", ""), "count": 0})
+            break
+    return sorted(matches, key=lambda row: (row["file"], row["name"]))[:limit]
+
+
 def qualify():
     for name in ("clang++-23", "llvm-cov-23", "llvm-profdata-23", "ninja"):
         if not shutil.which(name):
@@ -101,8 +118,8 @@ def qualify():
     with out.open("w") as handle:
         result = subprocess.run(command, cwd=ROOT, stdout=handle,
                                 stderr=subprocess.PIPE, text=True, check=False)
-    if result.returncode or any(word in result.stderr.lower() for word in ("mismatch", "out of date", "warning:")):
-        raise RuntimeError(f"Coverage mapping/profile mismatch: {result.stderr[:2000]}")
+    if result.returncode:
+        raise RuntimeError(f"LLVM export failed: {result.stderr[:2000]}")
     data = json.loads(out.read_text())
     if len(data.get("data", [])) != 1:
         raise RuntimeError("Invalid LLVM export")
@@ -112,6 +129,16 @@ def qualify():
         f"-DSIR_QUALIFICATION_WRITE_PATH={scope_file}",
         "-P", ROOT / "Build/CMake/SIRQualificationScopes.cmake")
     source_root = (ROOT / scope_file.read_text().strip()).resolve()
+    if any(word in result.stderr.lower() for word in ("mismatch", "out of date", "warning:")):
+        candidates = find_zero_count_functions(data["data"][0], source_root)
+        diagnostics = {"tool": "llvm-cov-23", "source_scope": str(source_root),
+                       "stderr": result.stderr[:8000],
+                       "zero_count_production_functions": candidates}
+        (REPORT / "profile-mismatch.json").write_text(json.dumps(diagnostics, indent=2) + "\\n")
+        raise RuntimeError(
+            f"Coverage mapping/profile mismatch: {result.stderr[:2000]}; "
+            f"first zero-count production functions: {candidates[:5]}; "
+            f"see {REPORT / 'profile-mismatch.json'}")
     required = {str(pathlib.Path(row["file"]).resolve()) for row in
                 json.loads((BUILD / "compile_commands.json").read_text())
                 if pathlib.Path(row["file"]).suffix in (".cpp", ".cc", ".c")
