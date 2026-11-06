@@ -32,7 +32,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: ${{ inputs.source_sha }}
           persist-credentials: false
@@ -47,20 +47,8 @@ jobs:
           test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
       - uses: ./.github/actions/setup-build-tools
       - run: git submodule update --init ThirdParty/GoogleTest
-      - name: Install authenticated LLVM 23 toolchain
-        shell: bash
-        run: |
-          set -euo pipefail
-          curl -fsSL https://apt.llvm.org/llvm-snapshot.gpg.key -o "$RUNNER_TEMP/llvm-key.asc"
-          fingerprint="$(gpg --show-keys --with-colons "$RUNNER_TEMP/llvm-key.asc" | awk -F: '$1 == "fpr" {print $10; exit}')"
-          test "$fingerprint" = 6084F3CF814B57C1CF12EFD515CF4D18AF4F7421
-          gpg --dearmor < "$RUNNER_TEMP/llvm-key.asc" > "$RUNNER_TEMP/llvm-key.gpg"
-          sudo install -D -m 0644 "$RUNNER_TEMP/llvm-key.gpg" /etc/apt/keyrings/sir-llvm-23.gpg
-          echo 'deb [signed-by=/etc/apt/keyrings/sir-llvm-23.gpg] https://apt.llvm.org/noble/ llvm-toolchain-noble-23 main' | sudo tee /etc/apt/sources.list.d/sir-llvm-23.list
-          sudo apt-get update
-          sudo apt-get install -y clang-23 llvm-23 libclang-rt-23-dev ninja-build
-          clang++-23 --version | grep -F 23.1.5
-          llvm-cov-23 --version | grep -F 23.1.5
+      - name: Install pinned LLVM 23.1.5
+        run: bash Build/CI/InstallLLVM23.sh
       - name: Verify GRDG collector negative-path tests
         run: python3 Tests/Profiling/TestSIRGRDGCoverageCollector.py
       - name: Test LLVM 23 qualification and CTest negative paths
@@ -71,7 +59,7 @@ jobs:
         env:
           SIR_QUALIFICATION_SCOPE: ${{ inputs.system }}
         run: bash Build/Scripts/RunLLVM23Qualification.sh
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
           name: llvm23-source-coverage
@@ -87,7 +75,7 @@ jobs:
         os: [ubuntu-24.04, windows-2022]
     timeout-minutes: 90
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: ${{ inputs.source_sha }}
           persist-credentials: false
@@ -100,7 +88,7 @@ jobs:
           [[ "$SOURCE_SHA" =~ ^[a-f0-9]{40}$ ]]
           [[ "$ISSUE_NUMBER" =~ ^[1-9][0-9]*$ ]]
           test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
-      - uses: ilammy/msvc-dev-cmd@v1
+      - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1
         if: runner.os == 'Windows'
       - uses: ./.github/actions/setup-build-tools
       - run: git submodule update --init ThirdParty/GoogleTest
@@ -113,7 +101,7 @@ jobs:
           python_cmd=python3
           if [[ "$RUNNER_OS" == Windows ]]; then python_cmd=python; fi
           "$python_cmd" Build/CI/RunCTestGate.py --preset dev --report "out/Verification/native-${{ matrix.os }}.xml"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
           name: qualification-native-${{ matrix.os }}
@@ -125,7 +113,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: ${{ inputs.source_sha }}
           persist-credentials: false
@@ -161,7 +149,7 @@ jobs:
           - {os: ubuntu-24.04, backend: opengl46, option: SIR_WITH_OPENGL, tests: '^renderer[.]opengl46[.]'}
           - {os: windows-2022, backend: d3d12, option: SIR_WITH_D3D12, tests: '^renderer[.]d3d12[.]'}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: ${{ inputs.source_sha }}
           persist-credentials: false
@@ -173,7 +161,7 @@ jobs:
           [[ "$SHA" =~ ^[a-f0-9]{40}$ ]]
           test "$(git rev-parse HEAD)" = "$SHA"
       - uses: ./.github/actions/setup-build-tools
-      - uses: ilammy/msvc-dev-cmd@v1
+      - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1
         if: runner.os == 'Windows'
       - uses: ./.github/actions/setup-dxc
         if: matrix.backend == 'd3d12'
@@ -192,7 +180,7 @@ jobs:
           python_cmd=python3
           if [[ "$RUNNER_OS" == Windows ]]; then python_cmd=python; fi
           "$python_cmd" Build/CI/RunCTestGate.py --preset dev --name-regex "${{ matrix.tests }}" --report "out/Verification/backend-${{ matrix.backend }}.xml"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
           name: backend-evidence-${{ matrix.backend }}
@@ -205,7 +193,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: ${{ inputs.source_sha }}
           persist-credentials: false

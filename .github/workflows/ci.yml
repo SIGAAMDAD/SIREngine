@@ -28,7 +28,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: ${{ inputs.candidate_sha || github.sha }}
           fetch-depth: 0
@@ -79,6 +79,7 @@ jobs:
         run: |
           python3 -m unittest discover -s Tests/CI -p 'Test*.py'
           python3 Tests/Profiling/TestRunLLVM23Qualification.py
+          bash -n Build/CI/InstallLLVM23.sh
 
   native:
     name: sir/native / ${{ matrix.os }} / ${{ matrix.compiler }}
@@ -99,7 +100,7 @@ jobs:
             preset: dev
             compiler: msvc
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: ${{ inputs.candidate_sha || github.sha }}
           persist-credentials: false
@@ -115,19 +116,32 @@ jobs:
         run: git submodule update --init ThirdParty/GoogleTest
       - name: Set up MSVC compiler environment
         if: runner.os == 'Windows'
-        uses: ilammy/msvc-dev-cmd@v1
+        uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1
       - uses: ./.github/actions/setup-build-tools
-      - uses: actions/cache@v4
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: .cache/fastbuild
           key: sir-fbuild-v1.20-${{ runner.os }}-${{ matrix.compiler }}-dev-${{ inputs.candidate_sha || github.sha }}
           restore-keys: |
             sir-fbuild-v1.20-${{ runner.os }}-${{ matrix.compiler }}-dev-
+      - name: Install pinned LLVM 23 compiler
+        if: matrix.compiler == 'clang'
+        run: bash Build/CI/InstallLLVM23.sh
+      - name: Record compiler identity
+        shell: bash
+        run: |
+          if [[ "$RUNNER_OS" == Windows ]]; then
+            cl.exe /Bv
+          elif [[ "${{ matrix.compiler }}" == clang ]]; then
+            clang++-23 --version
+          else
+            g++ --version
+          fi
       - name: Configure native engine
         shell: bash
         run: |
           set -euo pipefail
-          if [[ "${{ matrix.compiler }}" == clang ]]; then export CC=clang CXX=clang++; fi
+          if [[ "${{ matrix.compiler }}" == clang ]]; then export CC=clang-23 CXX=clang++-23; fi
           cmake --preset "${{ matrix.preset }}" -DSIR_WITH_GOOGLETEST=ON
       - name: Compile engine and tests
         run: cmake --build --preset "${{ matrix.preset }}"
@@ -140,7 +154,7 @@ jobs:
           python_cmd=python3
           if [[ "$RUNNER_OS" == Windows ]]; then python_cmd=python; fi
           "$python_cmd" Build/CI/RunCTestGate.py --preset "${{ matrix.preset }}" --label "$label" --report "out/Verification/CI/${{ matrix.compiler }}-ctest.xml"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
           name: sir-native-${{ matrix.os }}-${{ matrix.compiler }}-${{ github.run_id }}

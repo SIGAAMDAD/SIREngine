@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
       - name: Install pinned clang-format 23.1.5
@@ -40,7 +40,7 @@ jobs:
           - {os: ubuntu-24.04, preset: asan}
           - {os: ubuntu-24.04, preset: ubsan}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup-build-tools
@@ -67,7 +67,7 @@ jobs:
           python_cmd=python3
           if [[ "$RUNNER_OS" == Windows ]]; then python_cmd=python; fi
           "$python_cmd" Build/CI/RunCTestGate.py --preset "${{ matrix.preset }}" --label '^nightly:repeat$' --repeat 5 --report "out/Nightly/tests/repeat-${{ matrix.os }}-${{ matrix.preset }}.xml"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
           name: native-${{ matrix.os }}-${{ matrix.preset }}
@@ -79,7 +79,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 75
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup-build-tools
@@ -89,7 +89,7 @@ jobs:
           cmake --preset profile -DSIR_BUILD_BENCHMARKS=ON -DSIR_WITH_GOOGLE_BENCHMARK=ON -DSIR_WITH_GOOGLETEST=ON
           cmake --build --preset profile
           bash Build/Scripts/RunGoogleBenchmarks.sh nightly-linux
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
           name: nightly-benchmarks
@@ -101,7 +101,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 65
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup-build-tools
@@ -115,14 +115,16 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup-build-tools
+      - name: Install pinned LLVM 23.1.5
+        run: bash Build/CI/InstallLLVM23.sh
       - name: Build native tooling with Clang
         env:
-          CC: clang
-          CXX: clang++
+          CC: clang-23
+          CXX: clang++-23
         run: bash Build/Scripts/NightlyBuild.sh tooling
       - name: Verify compiler database
         run: test -s out/Linux/tooling/compile_commands.json
