@@ -14,6 +14,12 @@ target_link_libraries(SIRResourceMemoryIntegrationTests PRIVATE SIR::Resources)
 add_test(NAME resources.memory.domains COMMAND SIRResourceMemoryIntegrationTests)
 sir_configure_owned_target(SIRResourceMemoryIntegrationTests)
 
+# Source-derived negative cases for caller-owned catalog metadata.
+add_executable(SIRResourceCatalogBoundaryTests SIRResourceCatalogBoundaryTests.cpp)
+target_link_libraries(SIRResourceCatalogBoundaryTests PRIVATE SIR::Resources)
+add_test(NAME resources.catalog.boundary-negative COMMAND SIRResourceCatalogBoundaryTests)
+sir_configure_owned_target(SIRResourceCatalogBoundaryTests)
+
 # Native file/mapped-file loading through Core Jobs and GRDG staging.
 add_executable(SIRResourceFileLoadTests SIRResourceFileLoadTests.cpp)
 target_link_libraries(SIRResourceFileLoadTests PRIVATE SIR::Resources)
