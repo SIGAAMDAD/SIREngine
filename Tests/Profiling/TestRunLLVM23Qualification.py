@@ -134,6 +134,24 @@ class QualificationGateTests(unittest.TestCase):
                     qualification.verify_production_coverage({self.path}, [self.fully_covered])
                 self.fully_covered["summary"][name] = {"count": 10, "covered": 9}
 
+    def test_full_promotion_requires_one_hundred_percent(self):
+        from unittest import mock
+        import os
+        for metric in ("lines", "branches", "functions", "regions"):
+            with self.subTest(metric=metric):
+                self.fully_covered["summary"][metric]["covered"] = 9
+                with mock.patch.dict(os.environ, {"SIR_COVERAGE_MINIMUM": "100"}):
+                    with self.assertRaisesRegex(RuntimeError, f"{metric}=9/10"):
+                        qualification.verify_production_coverage({self.path}, [self.fully_covered])
+                self.fully_covered["summary"][metric]["covered"] = 10
+        with mock.patch.dict(os.environ, {"SIR_COVERAGE_MINIMUM": "100"}):
+            self.assertEqual(
+                qualification.verify_production_coverage({self.path}, [self.fully_covered])["lines"],
+                (10, 10))
+        with mock.patch.dict(os.environ, {"SIR_COVERAGE_MINIMUM": "89"}):
+            with self.assertRaisesRegex(RuntimeError, "must be 90 or 100"):
+                qualification.verify_production_coverage({self.path}, [self.fully_covered])
+
     def test_fraction_below_ninety_fails_without_rounding(self):
         self.fully_covered["summary"]["regions"] = {"count": 101, "covered": 90}
         with self.assertRaisesRegex(RuntimeError, "regions=90/101"):

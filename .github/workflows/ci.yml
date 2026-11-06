@@ -14,8 +14,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: sir-ci-${{ github.event_name == 'push' && github.sha || github.event.pull_request.number || github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: sir-ci-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/develop') }}
 
 jobs:
   source:
@@ -36,6 +36,12 @@ jobs:
         run: |
           [[ "$CANDIDATE_SHA" =~ ^[a-f0-9]{40}$ ]]
           test "$(git rev-parse HEAD)" = "$CANDIDATE_SHA"
+      - name: Admit pull request change contract
+        if: github.event_name == 'pull_request'
+        env:
+          SIR_PR_TITLE: ${{ github.event.pull_request.title }}
+          SIR_PR_BODY: ${{ github.event.pull_request.body }}
+        run: python3 Build/CI/CheckChangePolicy.py --pr-from-env
       - name: Validate tracked paths and pins
         run: cmake -P Build/CMake/CIHygiene.cmake
       - name: Enforce owned C++ declarations and headers
@@ -86,6 +92,7 @@ jobs:
           bash -n Build/CI/InstallLLVM23.sh
 
   native:
+    needs: source
     name: sir/native / ${{ matrix.os }} / ${{ matrix.compiler }}
     if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ${{ matrix.os }}

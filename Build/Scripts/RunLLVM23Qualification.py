@@ -13,6 +13,14 @@ BUILD = ROOT / "out/Linux/llvm23-qualification"
 REPORT = ROOT / "out/Verification/LLVM23"
 MINIMUM_PRODUCTION_COVERAGE_PERCENT = 90
 
+
+def required_production_coverage_percent():
+    """Resolve only owner-approved interim and full-production gates."""
+    value = os.environ.get("SIR_COVERAGE_MINIMUM", str(MINIMUM_PRODUCTION_COVERAGE_PERCENT))
+    if value not in ("90", "100"):
+        raise RuntimeError("SIR_COVERAGE_MINIMUM must be 90 or 100")
+    return int(value)
+
 def run(*args, env=None, stdout=None):
     return subprocess.run([str(a) for a in args], cwd=ROOT, env=env,
                           stdout=stdout, check=True, text=True)
@@ -22,6 +30,7 @@ def verify_production_coverage(required, files, source_root=None):
     """Qualify every mapped production implementation, including inline headers."""
     if not required:
         raise RuntimeError("Empty compiled production source inventory")
+    minimum = required_production_coverage_percent()
     root = pathlib.Path(source_root).resolve() if source_root is not None else None
     mapped = {}
     for item in files:
@@ -48,11 +57,11 @@ def verify_production_coverage(required, files, source_root=None):
             covered = sum(row["covered"] for row in counts)
         except (KeyError, TypeError) as exc:
             raise RuntimeError(f"Malformed LLVM {metric} coverage counters") from exc
-        if total <= 0 or covered < 0 or covered > total or covered * 100 < total * MINIMUM_PRODUCTION_COVERAGE_PERCENT:
+        if total <= 0 or covered < 0 or covered > total or covered * 100 < total * minimum:
             failures.append(f"{metric}={covered}/{total}")
         totals[metric] = (covered, total)
     if failures:
-        raise RuntimeError(f"{MINIMUM_PRODUCTION_COVERAGE_PERCENT}% production coverage unmet: " + ", ".join(failures))
+        raise RuntimeError(f"{minimum}% production coverage unmet: " + ", ".join(failures))
     return totals
 
 
