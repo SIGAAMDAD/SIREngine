@@ -60,6 +60,13 @@ target_link_libraries(SIRMemoryManagerTests PRIVATE SIR::Core)
 add_test(NAME core.memory.manager COMMAND SIRMemoryManagerTests)
 sir_configure_owned_target(SIRMemoryManagerTests)
 
+# Source-coverage obligations for preflight-only memory reservations, budgets,
+# allocator metadata and rejection without caller-output mutation.
+add_executable(SIRMemoryLayoutCoverageTests SIRMemoryLayoutCoverageTests.cpp)
+target_link_libraries(SIRMemoryLayoutCoverageTests PRIVATE SIR::Core)
+add_test(NAME core.memory.layout-preflight-negative COMMAND SIRMemoryLayoutCoverageTests)
+sir_configure_owned_target(SIRMemoryLayoutCoverageTests)
+
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     add_executable(SIRMemoryManagerFaultInjectionTests SIRMemoryManagerFaultInjectionTests.cpp)
     target_link_libraries(SIRMemoryManagerFaultInjectionTests PRIVATE SIR::Core)
