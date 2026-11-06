@@ -46,10 +46,22 @@ jobs:
         shell: bash
         env:
           SIR_CI_LABEL: ${{ matrix.os }}-${{ matrix.preset }}
-        run: bash Build/Scripts/NightlyBuild.sh "${{ matrix.preset }}" -DSIR_WITH_GOOGLETEST=ON
+        run: |
+          extra=()
+          if [[ "${{ matrix.preset }}" == asan ]]; then extra=(-DSIR_ENABLE_UBSAN=ON); fi
+          bash Build/Scripts/NightlyBuild.sh "${{ matrix.preset }}" -DSIR_WITH_GOOGLETEST=ON "${extra[@]}"
       - name: Verify deterministic no-op rebuild
         if: matrix.preset == 'release'
         run: cmake --build --preset release
+      - name: Repeat designated regressions on existing native build
+        if: matrix.preset == 'asan' || matrix.os == 'windows-2022'
+        shell: bash
+        env:
+          ASAN_OPTIONS: detect_leaks=1:halt_on_error=1
+          UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+        run: >
+          ctest --preset "${{ matrix.preset }}" -L '^nightly:repeat$'
+          --output-on-failure --no-tests=error --repeat until-fail:5
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -57,37 +69,6 @@ jobs:
           path: out/Nightly/
           if-no-files-found: warn
           retention-days: 21
-  repeat:
-    name: Nightly repeated regressions (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 60
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - {os: ubuntu-24.04, preset: asan}
-          - {os: windows-2022, preset: dev}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/setup-build-tools
-      - run: git submodule update --init ThirdParty/GoogleTest
-      - name: Build regression tests
-        shell: bash
-        run: |
-          extra=()
-          if [[ "$RUNNER_OS" == Linux ]]; then extra=(-DSIR_ENABLE_UBSAN=ON); fi
-          cmake --preset "${{ matrix.preset }}" -DSIR_WITH_GOOGLETEST=ON "${extra[@]}"
-          cmake --build --preset "${{ matrix.preset }}"
-      - name: Repeat designated regressions under sanitizers
-        env:
-          ASAN_OPTIONS: detect_leaks=1:halt_on_error=1
-          UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
-        run: >
-          ctest --preset "${{ matrix.preset }}"
-          -L '^nightly:repeat$'
-          --output-on-failure --no-tests=error --repeat until-fail:5
   performance:
     name: Nightly benchmark evidence
     runs-on: ubuntu-24.04
@@ -144,14 +125,13 @@ jobs:
     name: Nightly acceptance
     if: always()
     runs-on: ubuntu-24.04
-    needs: [source-audit, native, repeat, performance, source-dependencies, clang-tooling]
+    needs: [source-audit, native, performance, source-dependencies, clang-tooling]
     steps:
       - name: Reject missing gates
         env:
           POLICY: ${{ needs.source-audit.result }}
           NATIVE: ${{ needs.native.result }}
-          REPEAT: ${{ needs.repeat.result }}
           PERF: ${{ needs.performance.result }}
           DEPENDENCIES: ${{ needs.source-dependencies.result }}
           CLANG: ${{ needs.clang-tooling.result }}
-        run: test "$POLICY" = success && test "$NATIVE" = success && test "$REPEAT" = success && test "$PERF" = success && test "$DEPENDENCIES" = success && test "$CLANG" = success
+        run: test "$POLICY" = success && test "$NATIVE" = success && test "$PERF" = success && test "$DEPENDENCIES" = success && test "$CLANG" = success
