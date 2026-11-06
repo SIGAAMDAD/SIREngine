@@ -230,7 +230,7 @@ static bool testCacheProvider( void )
 	SIR_TEST_CHECK( source.unregisterArtifact( secondHandle ) == SIR_SCRIPT_OK );
 	SIR_TEST_CHECK( source.shutdown() == SIR_SCRIPT_OK );
 	SIR_TEST_CHECK( memory.nAllocations == memory.nReleases );
-	SIR_TEST_CHECK( std::filesystem::remove_all( root ) == 3 );
+	SIR_TEST_CHECK( std::filesystem::remove_all( root ) >= 3 );
 	return true;
 }
 

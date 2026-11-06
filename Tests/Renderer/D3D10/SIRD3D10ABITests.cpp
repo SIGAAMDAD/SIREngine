@@ -15,7 +15,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Renderer/SIRGraphicsDriverABI.h>
 #include <Renderer/SIRGraphicsTypes.h>
-#include <stddef.h>
+#include <cstddef>
 #include <stdint.h>
 #include <stdlib.h>
 
@@ -36,7 +36,7 @@ static bool s_bFailAllocation = false;
 static void *sirD3D10TestAllocate( void *pContext, uint64_t nBytes, uint64_t nAlignment ) noexcept
 {
 	( void )pContext;
-	sirD3D10Require( nAlignment <= alignof( max_align_t ) );
+	sirD3D10Require( nAlignment <= alignof( std::max_align_t ) );
 	if ( s_bFailAllocation ) {
 		return nullptr;
 	}

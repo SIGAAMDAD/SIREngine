@@ -8,6 +8,12 @@ if(SIR_WITH_GOOGLETEST)
         PROPERTIES LABELS "subsystem:core;kind:unit;gate:pr;gate:main;gate:nightly;gate:qualification")
 endif()
 
+# Standalone registration, capacity, invalid-handle and lifecycle coverage.
+add_executable(SIREventRegistryStandaloneTests SIREventRegistryStandaloneTests.cpp)
+target_link_libraries(SIREventRegistryStandaloneTests PRIVATE SIR::Core)
+add_test(NAME core.events.registry-standalone COMMAND SIREventRegistryStandaloneTests)
+sir_configure_owned_target(SIREventRegistryStandaloneTests)
+
 # Independent allocation smoke without the GoogleTest runtime. Counts C++
 # operator new/new[] after initialization across core event hot paths.
 add_executable(SIREventNoAllocationTests SIREventNoAllocationTests.cpp)
