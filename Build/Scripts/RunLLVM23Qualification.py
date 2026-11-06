@@ -56,6 +56,51 @@ def verify_production_coverage(required, files, source_root=None):
 
 
 
+def compiled_production_sources(commands, repository_root):
+    """Resolve each CMake compiler entry relative to its own compilation directory."""
+    root = pathlib.Path(repository_root).resolve()
+    compiled = set()
+    for entry in commands:
+        directory = pathlib.Path(entry["directory"])
+        if not directory.is_absolute():
+            directory = root / directory
+        filename = pathlib.Path(entry["file"])
+        if not filename.is_absolute():
+            filename = directory / filename
+        filename = filename.resolve()
+        if filename.suffix in (".c", ".cc", ".cpp"):
+            compiled.add(str(filename))
+    return compiled
+
+
+def verify_group_coverage(commands, files, repository_root):
+    """Qualify independent Core (excluding Memory), Memory, and Resources denominators."""
+    root = pathlib.Path(repository_root).resolve()
+    inventory = compiled_production_sources(commands, root)
+    groups = {
+        "Core": root / "Source/Core",
+        "Memory": root / "Source/Core/Memory",
+        "Resources": root / "Source/Resources",
+    }
+    totals = {}
+    for name, scope in groups.items():
+        def belongs(path):
+            path = pathlib.Path(path).resolve()
+            if scope not in path.parents:
+                return False
+            return name != "Core" or groups["Memory"] not in path.parents
+
+        required = {path for path in inventory if belongs(path)}
+        if not required:
+            raise RuntimeError(f"{name}: empty compiled production source inventory")
+        selected = [entry for entry in files if belongs(entry["filename"])]
+        try:
+            totals[name] = verify_production_coverage(required, selected)
+        except RuntimeError as exc:
+            raise RuntimeError(f"{name}: {exc}") from exc
+    return totals
+
+
 def find_zero_count_functions(coverage, source_root, limit=30):
     """List unexecuted mapped functions in the declared production scope."""
     root = pathlib.Path(source_root).resolve()
@@ -140,15 +185,24 @@ def qualify():
             f"Coverage mapping/profile mismatch: {result.stderr[:2000]}; "
             f"first zero-count production functions: {candidates[:5]}; "
             f"see {REPORT / 'profile-mismatch.json'}")
-    required = {str(pathlib.Path(row["file"]).resolve()) for row in
-                json.loads((BUILD / "compile_commands.json").read_text())
-                if pathlib.Path(row["file"]).suffix in (".cpp", ".cc", ".c")
-                and source_root in pathlib.Path(row["file"]).resolve().parents}
-    if not required:
-        raise RuntimeError("Empty compiled production source inventory")
-    totals = verify_production_coverage(required, data["data"][0]["files"], source_root)
-    for name, (covered, count) in totals.items():
-        print(f"LLVM 23 {name}: {covered}/{count}")
+    commands = json.loads((BUILD / "compile_commands.json").read_text())
+    if name == "CoreMemoryResources":
+        grouped = verify_group_coverage(commands, data["data"][0]["files"], ROOT)
+        for group, counters in grouped.items():
+            for metric, (covered, count) in counters.items():
+                print(f"LLVM 23 {group} {metric}: {covered}/{count}")
+        (REPORT / "core-memory-resources-totals.json").write_text(
+            json.dumps({group: {metric: {"covered": covered, "count": count}
+                               for metric, (covered, count) in counters.items()}
+                        for group, counters in grouped.items()}, indent=2) + "\n")
+    else:
+        required = {path for path in compiled_production_sources(commands, ROOT)
+                    if source_root in pathlib.Path(path).parents}
+        if not required:
+            raise RuntimeError("Empty compiled production source inventory")
+        totals = verify_production_coverage(required, data["data"][0]["files"], source_root)
+        for metric, (covered, count) in totals.items():
+            print(f"LLVM 23 {metric}: {covered}/{count}")
     print("LLVM 23 qualification PASS")
 
 if __name__ == "__main__":

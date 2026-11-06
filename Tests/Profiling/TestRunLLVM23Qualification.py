@@ -124,5 +124,66 @@ class QualificationGateTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "Malformed LLVM functions"):
             qualification.verify_production_coverage({self.path}, [self.fully_covered])
 
+
+    def test_compiler_inventory_resolves_relative_build_directories(self):
+        from tempfile import TemporaryDirectory
+        with TemporaryDirectory() as temp:
+            root = Path(temp)
+            source = root / "Source/Core/SIRExample.cpp"
+            source.parent.mkdir(parents=True)
+            source.write_text("// source")
+            commands = [{"directory": "out/build", "file": "../../Source/Core/SIRExample.cpp"}]
+            self.assertEqual(qualification.compiled_production_sources(commands, root), {str(source)})
+
+    def test_core_memory_resources_are_qualified_independently(self):
+        from tempfile import TemporaryDirectory
+        with TemporaryDirectory() as temp:
+            root = Path(temp)
+            paths = [root / "Source/Core/SIRCore.cpp",
+                     root / "Source/Core/Memory/SIRMemory.cpp",
+                     root / "Source/Resources/SIRResources.cpp"]
+            commands = [{"directory": str(root), "file": str(path)} for path in paths]
+            files = [{"filename": str(path), "summary": {
+                metric: {"covered": 9, "count": 10}
+                for metric in ("lines", "branches", "functions", "regions")}}
+                for path in paths]
+            totals = qualification.verify_group_coverage(commands, files, root)
+            self.assertEqual(set(totals), {"Core", "Memory", "Resources"})
+            self.assertEqual(totals["Memory"]["branches"], (9, 10))
+            files[1]["summary"]["regions"]["covered"] = 8
+            with self.assertRaisesRegex(RuntimeError, "Memory:.*regions=8/10"):
+                qualification.verify_group_coverage(commands, files, root)
+            files[1]["summary"]["regions"]["covered"] = 9
+            files[0]["summary"]["lines"]["covered"] = 8
+            with self.assertRaisesRegex(RuntimeError, "Core:.*lines=8/10"):
+                qualification.verify_group_coverage(commands, files, root)
+
+    def test_group_qualification_rejects_missing_compiled_scope(self):
+        from tempfile import TemporaryDirectory
+        with TemporaryDirectory() as temp:
+            root = Path(temp)
+            core = root / "Source/Core/SIRCore.cpp"
+            commands = [{"directory": str(root), "file": str(core)}]
+            files = [{"filename": str(core), "summary": {
+                metric: {"covered": 10, "count": 10}
+                for metric in ("lines", "branches", "functions", "regions")}}]
+            with self.assertRaisesRegex(RuntimeError, "Memory: empty compiled"):
+                qualification.verify_group_coverage(commands, files, root)
+
+    def test_group_qualification_rejects_missing_profile_mapping(self):
+        from tempfile import TemporaryDirectory
+        with TemporaryDirectory() as temp:
+            root = Path(temp)
+            paths = [root / "Source/Core/SIRCore.cpp",
+                     root / "Source/Core/Memory/SIRMemory.cpp",
+                     root / "Source/Resources/SIRResources.cpp"]
+            commands = [{"directory": str(root), "file": str(path)} for path in paths]
+            files = [{"filename": str(path), "summary": {
+                metric: {"covered": 10, "count": 10}
+                for metric in ("lines", "branches", "functions", "regions")}}
+                for path in (paths[0], paths[2])]
+            with self.assertRaisesRegex(RuntimeError, "Memory: Missing compiled"):
+                qualification.verify_group_coverage(commands, files, root)
+
 if __name__ == "__main__":
     unittest.main()
