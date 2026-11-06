@@ -28,7 +28,6 @@ SIRFMODMixerBackend::~SIRFMODMixerBackend( void ) noexcept
 bool SIRFMODMixerBackend::isReady( void ) const noexcept
 {
 
-
 	return m_bInitialized && m_pContext != nullptr && m_pContext->isReady() && m_pContext->getEpoch() == m_nContextEpoch;
 }
 

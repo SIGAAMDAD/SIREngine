@@ -51,7 +51,6 @@ static bool graphHasEdge( const SIRTaskGraph& graph, uint32_t nBefore, uint32_t 
 {
 	for ( uint32_t iEdge = 0; iEdge < graph.getEdgeCount(); ++iEdge ) {
 
-
 		sirTaskGraphEdge_t edge = {};
 		SIR_GRAPH_CHECK( graph.getEdge( iEdge, &edge ) );
 		if ( edge.nBefore == nBefore && edge.nAfter == nAfter ) {

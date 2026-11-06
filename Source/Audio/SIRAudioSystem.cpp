@@ -49,7 +49,6 @@ sirAudioResult_t SIRAudioSystem::initialize( const sirAudioSystemConfig_t& confi
 	m_pPlaying = ( sirAudioPlayingSlot_t * )pMemory;
 	m_pAllocator = pAllocator;
 
-
 	m_nPlayingCapacity = config.nMaxPlaying;
 	m_nNextSlot = 0;
 	memset( m_pPlaying, 0, nBytes );

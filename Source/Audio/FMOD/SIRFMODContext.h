@@ -56,8 +56,6 @@ typedef struct sirFMODContextConfig_s
 	uint8_t nReserved;
 } sirFMODContextConfig_t;
 
-
-
 // Private FMOD provider bridge. All opaque native objects belong exclusively
 // to the Studio owner. The Core System pointer is borrowed, never released.
 // Callback return values are native FMOD_RESULT codes; 0 means FMOD_OK.

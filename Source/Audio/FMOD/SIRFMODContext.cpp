@@ -39,8 +39,6 @@ sirFMODContextResult_t SIRFMODContext::rollback( sirFMODContextResult_t eOrigina
 	return eOriginalError;
 }
 
-
-
 sirFMODContextResult_t SIRFMODContext::initialize( const sirFMODContextConfig_t& config, const sirFMODNativeOps_t& ops ) noexcept
 {
 	if ( m_eState != SIR_FMOD_CONTEXT_EMPTY ) {

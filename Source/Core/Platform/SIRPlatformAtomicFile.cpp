@@ -59,7 +59,6 @@ bool SIRPlatformFileSystem::validPaths( const char *pszDestination, const char *
 	}
 	if ( pszDestinationEnd == nullptr ) {
 
-
 		return true;
 	}
 	const size_t nDestinationParent = ( size_t )( pszDestinationEnd - pszDestination );

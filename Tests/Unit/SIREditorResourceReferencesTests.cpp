@@ -56,7 +56,6 @@ static void sirTestResourceReferences( void )
 	szResources[0].nSourceLine = 2;
 	szResources[0].nIdLength = 5;
 
-
 	szResources[0].nIdOffset = ( uint32_t )( strstr( szSource, "id=\"ext_a\"" ) - szSource + 4 );
 	szResources[1].nStableKey = 202;
 	szResources[1].eKind = SIR_EDITOR_RESOURCE_EMBEDDED;

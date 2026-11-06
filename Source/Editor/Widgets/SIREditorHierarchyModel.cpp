@@ -40,7 +40,6 @@ sirEditorHierarchyResult_t sirEditorHierarchyOrderFromTextScene( const sirEditor
 		return SIR_EDITOR_HIERARCHY_INVALID_SOURCE;
 	}
 
-
 	if ( index.nNodeCount > nCapacity ) {
 		return SIR_EDITOR_HIERARCHY_OUT_OF_CAPACITY;
 	}

@@ -75,8 +75,6 @@ static void sirTestRoundtripImport( SIREditorSceneWorkspace& workspace, const SI
 	discovery.nOutputCapacity = 16;
 	assert( sirEditorDiscoverScalarBindings( discovery, pOutCount ) == SIR_EDITOR_SCALAR_BRIDGE_OK );
 
-
-
 	sirEditorProperty_t szScratch[16] = {};
 	sirEditorScalarBridge_t bridge = {};
 	bridge.pDocument = &workspace.getDocument();

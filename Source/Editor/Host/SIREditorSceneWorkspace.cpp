@@ -48,8 +48,6 @@ static bool sirEditorHostCountTags( const char *pSource, size_t nBytes, uint32_t
 	return true;
 }
 
-
-
 template <typename T>
 static T *sirEditorHostAllocate( SIRLinearAllocator& arena, uint32_t nCount ) noexcept
 {

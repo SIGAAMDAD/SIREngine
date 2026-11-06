@@ -71,7 +71,6 @@ int main( void )
 	value.eKind = SIR_PROPERTY_BOOL;
 	value.nPayload = 2;
 
-
 	assert( sirEditorEncodeScalar( value, szOutput, sizeof( szOutput ), &nBytes ) == SIR_EDITOR_SCALAR_INVALID_ARGUMENT );
 	value.eKind = SIR_PROPERTY_REAL64;
 	const double fNan = std::numeric_limits<double>::quiet_NaN();
