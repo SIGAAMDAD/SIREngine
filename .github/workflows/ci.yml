@@ -75,6 +75,15 @@ jobs:
           else
             cmake -P Build/CMake/CIFormat.cmake
           fi
+      - name: Lint every workflow with pinned actionlint
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/actionlint-1.7.12.tar.gz"
+          curl -fsSL --retry 3 https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz -o "$archive"
+          printf '%s  %s\n' 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8 "$archive" | sha256sum -c -
+          tar -xzf "$archive" -C "$RUNNER_TEMP" actionlint
+          "$RUNNER_TEMP/actionlint" -ignore 'unexpected key "queue"' .github/workflows/*.yml
       - name: Verify CI and LLVM gate negative cases
         run: |
           python3 -m unittest discover -s Tests/CI -p 'Test*.py'
