@@ -162,3 +162,179 @@ sirFileSystemResult_t SIRPlatformFileSystem::enumerate( const char *pszDirectory
 	}
 	return eResult;
 }
+
+// Core-owned atomic scene replacement and bounded regular-file reads.
+static sirFileSystemResult_t sirFileSystemCheckExpected( const char *pszDestination,
+                                                         const sirFileSystemAtomicWriteRequest_t &request ) noexcept
+{
+	if ( request.pExpectedBytes == nullptr ) {
+		return SIR_FILESYSTEM_OK;
+	}
+	const int nFile = open( pszDestination, O_RDONLY | O_CLOEXEC | O_NOFOLLOW | O_NONBLOCK );
+	if ( nFile < 0 ) {
+		return errno == ENOENT ? SIR_FILESYSTEM_CONFLICT : SIR_FILESYSTEM_IO_ERROR;
+	}
+	struct stat metadata = {};
+	if ( fstat( nFile, &metadata ) != 0 ) {
+		close( nFile );
+		return SIR_FILESYSTEM_IO_ERROR;
+	}
+	if ( !S_ISREG( metadata.st_mode ) ) {
+		close( nFile );
+		return SIR_FILESYSTEM_INVALID_PATH;
+	}
+	if ( metadata.st_size < 0 || ( uint64_t )metadata.st_size != ( uint64_t )request.nExpectedBytes ) {
+		close( nFile );
+		return SIR_FILESYSTEM_CONFLICT;
+	}
+	char szChunk[4096] = {};
+	size_t nRead = 0;
+	while ( nRead < request.nExpectedBytes ) {
+		const size_t nRemaining = request.nExpectedBytes - nRead;
+		const size_t nChunk = nRemaining < sizeof( szChunk ) ? nRemaining : sizeof( szChunk );
+		const ssize_t nActual = read( nFile, szChunk, nChunk );
+		if ( nActual < 0 && errno == EINTR ) {
+			continue;
+		}
+		if ( nActual <= 0 ) {
+			close( nFile );
+			return SIR_FILESYSTEM_IO_ERROR;
+		}
+		if ( memcmp( szChunk, request.pExpectedBytes + nRead, ( size_t )nActual ) != 0 ) {
+			close( nFile );
+			return SIR_FILESYSTEM_CONFLICT;
+		}
+		nRead += ( size_t )nActual;
+	}
+	return close( nFile ) == 0 ? SIR_FILESYSTEM_OK : SIR_FILESYSTEM_IO_ERROR;
+}
+
+sirFileSystemResult_t SIRPlatformFileSystem::readFilePlatform( const char *pszPath, char *pszOutput, size_t nCapacity, size_t *pOutBytes ) noexcept
+{
+	const int nFile = open( pszPath, O_RDONLY | O_CLOEXEC | O_NOFOLLOW | O_NONBLOCK );
+	if ( nFile < 0 ) {
+		return errno == ELOOP ? SIR_FILESYSTEM_INVALID_PATH : SIR_FILESYSTEM_IO_ERROR;
+	}
+	struct stat metadata = {};
+	if ( fstat( nFile, &metadata ) != 0 ) {
+		close( nFile );
+		return SIR_FILESYSTEM_IO_ERROR;
+	}
+	if ( !S_ISREG( metadata.st_mode ) || metadata.st_size < 0 ) {
+		close( nFile );
+		return SIR_FILESYSTEM_INVALID_PATH;
+	}
+	const uint64_t nFileBytes = ( uint64_t )metadata.st_size;
+	if ( nFileBytes > SIZE_MAX ) {
+		close( nFile );
+		return SIR_FILESYSTEM_OUT_OF_CAPACITY;
+	}
+	*pOutBytes = ( size_t )nFileBytes;
+	if ( pszOutput == nullptr ) {
+		return close( nFile ) == 0 ? SIR_FILESYSTEM_OK : SIR_FILESYSTEM_IO_ERROR;
+	}
+	if ( nCapacity < nFileBytes ) {
+		close( nFile );
+		return SIR_FILESYSTEM_OUT_OF_CAPACITY;
+	}
+	size_t nRead = 0;
+	while ( nRead < nFileBytes ) {
+		const ssize_t nActual = read( nFile, pszOutput + nRead, ( size_t )nFileBytes - nRead );
+		if ( nActual < 0 && errno == EINTR ) {
+			continue;
+		}
+		if ( nActual <= 0 ) {
+			close( nFile );
+			return SIR_FILESYSTEM_IO_ERROR;
+		}
+		nRead += ( size_t )nActual;
+	}
+	char szExtra[1] = {};
+	const ssize_t nExtra = read( nFile, szExtra, sizeof( szExtra ) );
+	const bool bComplete = nExtra == 0;
+	const bool bClosed = close( nFile ) == 0;
+	return bComplete && bClosed ? SIR_FILESYSTEM_OK : SIR_FILESYSTEM_IO_ERROR;
+}
+
+sirFileSystemResult_t SIRPlatformFileSystem::writeAtomicallyPlatform( const sirFileSystemAtomicWriteRequest_t &request ) noexcept
+{
+	// Do not discard symlinks, devices or special files under an authored scene path.
+	// A failed destination probe must not be treated as a new-file save.
+	struct stat previous = {};
+	const int nStat = lstat( request.pszDestination, &previous );
+	if ( nStat == 0 ) {
+		if ( S_ISDIR( previous.st_mode ) ) {
+			return SIR_FILESYSTEM_REPLACE_FAILED;
+		}
+		if ( !S_ISREG( previous.st_mode ) ) {
+			return SIR_FILESYSTEM_INVALID_PATH;
+		}
+	} else if ( errno != ENOENT ) {
+		return SIR_FILESYSTEM_IO_ERROR;
+	}
+
+	const sirFileSystemResult_t eExpected = sirFileSystemCheckExpected( request.pszDestination, request );
+	if ( eExpected != SIR_FILESYSTEM_OK ) {
+		return eExpected;
+	}
+	const int nFile = open( request.pszTemporary, O_CREAT | O_EXCL | O_WRONLY | O_CLOEXEC, 0600 );
+	if ( nFile < 0 ) {
+		return errno == EEXIST ? SIR_FILESYSTEM_TEMP_EXISTS : SIR_FILESYSTEM_IO_ERROR;
+	}
+	bool bSuccess = true;
+	// Preserve editable scene file permissions when replacing a regular file.
+	if ( nStat == 0 && fchmod( nFile, previous.st_mode & 0777 ) != 0 ) {
+		bSuccess = false;
+	}
+	size_t nWritten = 0;
+	while ( bSuccess && nWritten < request.nBytes ) {
+		const ssize_t nActual = write( nFile, request.pBytes + nWritten, request.nBytes - nWritten );
+		if ( nActual < 0 && errno == EINTR ) {
+			continue;
+		}
+		if ( nActual <= 0 ) {
+			bSuccess = false;
+			break;
+		}
+		nWritten += ( size_t )nActual;
+	}
+	if ( bSuccess && fsync( nFile ) != 0 ) {
+		bSuccess = false;
+	}
+	if ( close( nFile ) != 0 ) {
+		bSuccess = false;
+	}
+	if ( !bSuccess ) {
+		unlink( request.pszTemporary );
+		return SIR_FILESYSTEM_IO_ERROR;
+	}
+	const sirFileSystemResult_t eRecheck = sirFileSystemCheckExpected( request.pszDestination, request );
+	if ( eRecheck != SIR_FILESYSTEM_OK ) {
+		unlink( request.pszTemporary );
+		return eRecheck;
+	}
+	if ( rename( request.pszTemporary, request.pszDestination ) != 0 ) {
+		unlink( request.pszTemporary );
+		return SIR_FILESYSTEM_REPLACE_FAILED;
+	}
+	char szDirectory[SIR_FILESYSTEM_MAX_PATH_BYTES] = {};
+	const char *pszSlash = lastSeparator( request.pszDestination );
+	if ( pszSlash == nullptr ) {
+		memcpy( szDirectory, ".", 2 );
+	} else {
+		const size_t nDirectory = ( size_t )( pszSlash - request.pszDestination );
+		if ( nDirectory == 0 ) {
+			memcpy( szDirectory, "/", 2 );
+		} else {
+			memcpy( szDirectory, request.pszDestination, nDirectory );
+			szDirectory[nDirectory] = '\0';
+		}
+	}
+	const int nDirectoryFd = open( szDirectory, O_RDONLY | O_DIRECTORY | O_CLOEXEC );
+	if ( nDirectoryFd < 0 ) {
+		return SIR_FILESYSTEM_COMMITTED_NOT_DURABLE;
+	}
+	const bool bSynced = fsync( nDirectoryFd ) == 0;
+	const bool bClosed = close( nDirectoryFd ) == 0;
+	return bSynced && bClosed ? SIR_FILESYSTEM_OK : SIR_FILESYSTEM_COMMITTED_NOT_DURABLE;
+}
