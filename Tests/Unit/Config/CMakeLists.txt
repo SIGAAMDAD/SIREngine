@@ -1,3 +1,4 @@
+include("${CMAKE_CURRENT_LIST_DIR}/../../../Build/CMake/SIRBuildTreeGuard.cmake")
 add_executable(SIRConfigDelimitedTests SIRDelimitedTests.cpp)
 target_link_libraries(SIRConfigDelimitedTests PRIVATE SIR::Core)
 add_test(NAME core.config.delimited COMMAND SIRConfigDelimitedTests)

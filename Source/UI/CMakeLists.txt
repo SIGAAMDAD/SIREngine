@@ -1,3 +1,4 @@
+include("${CMAKE_CURRENT_LIST_DIR}/../../Build/CMake/SIRBuildTreeGuard.cmake")
 # SIREngine-owned retained UI tree; platform window and draw implementation
 # are connected via the normal platform and rendering ownership contracts.
 add_library(SIRUI STATIC SIRControlTree.cpp)

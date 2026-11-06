@@ -1,3 +1,4 @@
+include("${CMAKE_CURRENT_LIST_DIR}/../../Build/CMake/SIRBuildTreeGuard.cmake")
 include("${CMAKE_CURRENT_LIST_DIR}/Registration/Foundation.cmake")
 include("${CMAKE_CURRENT_LIST_DIR}/Registration/Resources.cmake")
 include("${CMAKE_CURRENT_LIST_DIR}/Registration/Platform.cmake")

@@ -1,3 +1,4 @@
+include("${CMAKE_CURRENT_LIST_DIR}/../../../../Build/CMake/SIRBuildTreeGuard.cmake")
 # The native module is opt-in. The CPU ABI stub is built only for tests.
 option(SIR_WITH_D3D10 "Build the native Windows Direct3D 10 backend" OFF)
 if(SIR_WITH_D3D10)

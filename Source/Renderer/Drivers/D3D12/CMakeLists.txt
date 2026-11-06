@@ -1,3 +1,4 @@
+include("${CMAKE_CURRENT_LIST_DIR}/../../../../Build/CMake/SIRBuildTreeGuard.cmake")
 if(NOT WIN32)
     message(FATAL_ERROR "SIR_WITH_D3D12 requires Windows")
 endif()

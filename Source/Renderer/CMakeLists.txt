@@ -1,3 +1,4 @@
+include("${CMAKE_CURRENT_LIST_DIR}/../../Build/CMake/SIRBuildTreeGuard.cmake")
 # Shared, platform-independent rendering ABI. Always compiled, even when no
 # native driver is enabled, so backends cannot silently fork its contracts.
 add_library(SIRGraphics STATIC

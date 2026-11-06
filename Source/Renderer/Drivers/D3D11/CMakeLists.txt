@@ -1,3 +1,4 @@
+include("${CMAKE_CURRENT_LIST_DIR}/../../../../Build/CMake/SIRBuildTreeGuard.cmake")
 # Portable feature-level admission stays testable without a Windows SDK.
 add_library(SIRD3D11FeatureProfile STATIC EXCLUDE_FROM_ALL SIRD3D11FeatureLevels.cpp SIRD3D11FormatValidation.cpp)
 add_library(SIR::D3D11FeatureProfile ALIAS SIRD3D11FeatureProfile)
