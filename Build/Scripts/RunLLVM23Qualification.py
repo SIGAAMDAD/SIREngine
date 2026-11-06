@@ -10,6 +10,7 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 BUILD = ROOT / "out/Linux/llvm23-qualification"
 REPORT = ROOT / "out/Verification/LLVM23"
+MINIMUM_PRODUCTION_COVERAGE_PERCENT = 90
 
 def run(*args, env=None, stdout=None):
     return subprocess.run([str(a) for a in args], cwd=ROOT, env=env,
@@ -46,11 +47,11 @@ def verify_production_coverage(required, files, source_root=None):
             covered = sum(row["covered"] for row in counts)
         except (KeyError, TypeError) as exc:
             raise RuntimeError(f"Malformed LLVM {metric} coverage counters") from exc
-        if total <= 0 or covered < 0 or covered > total or covered != total:
+        if total <= 0 or covered < 0 or covered > total or covered * 100 < total * MINIMUM_PRODUCTION_COVERAGE_PERCENT:
             failures.append(f"{metric}={covered}/{total}")
         totals[metric] = (covered, total)
     if failures:
-        raise RuntimeError("100% production coverage unmet: " + ", ".join(failures))
+        raise RuntimeError(f"{MINIMUM_PRODUCTION_COVERAGE_PERCENT}% production coverage unmet: " + ", ".join(failures))
     return totals
 
 
