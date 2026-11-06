@@ -91,6 +91,15 @@ jobs:
         env:
           SIR_QUALIFICATION_SCOPE: ${{ inputs.system || 'all' }}
         run: bash Build/Scripts/RunLLVM23Qualification.sh
+      - name: Upload profile-valid production coverage to Codecov
+        if: always() && (inputs.system == '' || inputs.system == 'all') && hashFiles('out/Verification/LLVM23/codecov-production.lcov') != ''
+        uses: codecov/codecov-action@0fb7174895f61a3b6b78fc075e0cd60383518dac # v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: out/Verification/LLVM23/codecov-production.lcov
+          disable_search: true
+          flags: llvm23-production
+          fail_ci_if_error: true
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:

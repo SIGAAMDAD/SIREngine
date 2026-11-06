@@ -209,6 +209,38 @@ def find_zero_count_functions(coverage, source_root, limit=30):
     return sorted(matches, key=lambda row: (row["file"], row["name"]))[:limit]
 
 
+def export_codecov_lcov(files, commands, source_root, objects, profdata, destination):
+    """Publish only complete, warning-free production LLVM coverage to Codecov."""
+    destination = pathlib.Path(destination)
+    destination.unlink(missing_ok=True)
+    source_root = pathlib.Path(source_root).resolve()
+    compiled = {path for path in compiled_production_sources(commands, ROOT)
+                if source_root in pathlib.Path(path).parents}
+    mapped = {str(pathlib.Path(row["filename"]).resolve()) for row in files
+              if source_root in pathlib.Path(row["filename"]).resolve().parents}
+    if not compiled or compiled - mapped or not mapped:
+        raise RuntimeError("Codecov export requires complete nonempty production source mapping")
+    if not objects:
+        raise RuntimeError("Codecov export requires compiled production objects")
+
+    command = ["llvm-cov-23", "export", str(objects[0]),
+               *(f"-object={obj}" for obj in objects[1:]),
+               f"-instr-profile={profdata}", "-format=lcov", "-sources",
+               *sorted(mapped)]
+    with destination.open("w") as stream:
+        result = subprocess.run(command, cwd=ROOT, stdout=stream,
+                                stderr=subprocess.PIPE, text=True, check=False)
+    if result.returncode or any(s in result.stderr.lower()
+                                for s in ("warning:", "mismatch", "out of date")):
+        destination.unlink(missing_ok=True)
+        raise RuntimeError(f"Untrustworthy Codecov LLVM export: {result.stderr[:2000]}")
+    report = destination.read_text()
+    if "SF:" not in report or "\nDA:" not in report:
+        destination.unlink(missing_ok=True)
+        raise RuntimeError("Codecov export contains no executed production line inventory")
+    return destination
+
+
 def qualify():
     for name in ("clang++-23", "llvm-cov-23", "llvm-profdata-23", "ninja"):
         if not shutil.which(name):
@@ -217,6 +249,7 @@ def qualify():
         if "23.1.5" not in subprocess.check_output([name, "--version"], text=True):
             raise RuntimeError(f"Toolchain mismatch: {name} must be 23.1.5")
     REPORT.mkdir(parents=True, exist_ok=True)
+    (REPORT / "codecov-production.lcov").unlink(missing_ok=True)
     raw = REPORT / "raw"
     raw.mkdir(exist_ok=True)
     for path in raw.glob("*.profraw"):
@@ -288,6 +321,9 @@ def qualify():
             f"Coverage mapping/profile mismatch: {result.stderr[:2000]}; "
             f"first zero-count production functions: {candidates[:5]}; "
             f"see {REPORT / 'profile-mismatch.json'}")
+    if name == "all":
+        export_codecov_lcov(data["data"][0]["files"], commands, source_root,
+                           objects, profdata, REPORT / "codecov-production.lcov")
     if name == "CoreMemoryResources":
         grouped = verify_group_coverage(commands, data["data"][0]["files"], ROOT)
         for group, counters in grouped.items():

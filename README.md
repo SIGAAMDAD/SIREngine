@@ -1,5 +1,12 @@
 # SIREngine
 
+[![Native CI (develop)](https://github.com/SIGAAMDAD/SIREngine/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/SIGAAMDAD/SIREngine/actions/workflows/ci.yml?query=branch%3Adevelop)
+[![Native CI (main)](https://github.com/SIGAAMDAD/SIREngine/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/SIGAAMDAD/SIREngine/actions/workflows/ci.yml?query=branch%3Amain)
+[![Nightly (main)](https://github.com/SIGAAMDAD/SIREngine/actions/workflows/nightly.yml/badge.svg?branch=main)](https://github.com/SIGAAMDAD/SIREngine/actions/workflows/nightly.yml?query=branch%3Amain)
+[![Codecov (develop)](https://codecov.io/gh/SIGAAMDAD/SIREngine/branch/develop/graph/badge.svg)](https://app.codecov.io/gh/SIGAAMDAD/SIREngine/tree/develop)
+[![C++17](https://img.shields.io/badge/C%2B%2B-17-00599C.svg)](https://en.cppreference.com/w/cpp/17.html)
+[![License: MPL 2.0](https://img.shields.io/badge/License-MPL%202.0-blue.svg)](LICENSE)
+
 SIREngine is an open-source, general-purpose engine for building 2D and 3D games and interactive applications. Originating from Godot, the project is developing an independent native codebase while retaining a focus on accessible editing, flexible workflows, and cross-platform development.
 
 The engine is designed to support projects of different scales and technical requirements. Its engineering priorities are predictable performance, efficient resource management, well-defined subsystem boundaries, and practical tools for creating, testing, and shipping content. No specific game, genre, or resource budget defines the engine's public architecture.
