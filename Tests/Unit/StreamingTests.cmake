@@ -2,3 +2,9 @@ add_executable(SIRStreamingCoordinatorTests SIRStreamingCoordinatorTests.cpp)
 target_link_libraries(SIRStreamingCoordinatorTests PRIVATE SIR::Streaming)
 add_test(NAME streaming.coordinator.lifecycle COMMAND SIRStreamingCoordinatorTests)
 sir_configure_owned_target(SIRStreamingCoordinatorTests)
+
+# Negative and lifecycle assertions for the actual streaming coordinator.
+add_executable(SIRStreamingCoordinatorCoverageTests SIRStreamingCoordinatorCoverageTests.cpp)
+target_link_libraries(SIRStreamingCoordinatorCoverageTests PRIVATE SIR::Streaming)
+add_test(NAME streaming.coordinator.coverage-boundaries COMMAND SIRStreamingCoordinatorCoverageTests)
+sir_configure_owned_target(SIRStreamingCoordinatorCoverageTests)

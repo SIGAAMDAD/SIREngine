@@ -6,10 +6,12 @@ sir_configure_owned_target(SIRVisibilityFoundationTests)
 
 # Discover each HIZ-00 GoogleTest case as an independent native CTest.
 if(SIR_WITH_GOOGLETEST)
+    string(TOLOWER "${CMAKE_SYSTEM_NAME}" sirGTestHost)
     include(GoogleTest)
     add_executable(SIRVisibilityFoundationGoogleTests SIRVisibilityFoundationGoogleTests.cpp)
     target_link_libraries(SIRVisibilityFoundationGoogleTests PRIVATE SIR::Graphics gtest_main)
-    gtest_discover_tests(SIRVisibilityFoundationGoogleTests TEST_PREFIX "renderer.visibility.gtest.")
+    gtest_discover_tests(SIRVisibilityFoundationGoogleTests TEST_PREFIX "renderer.visibility.gtest."
+        PROPERTIES LABELS "subsystem:renderer;kind:unit;platform:${sirGTestHost};resource:cpu;gate:pr;gate:main;gate:nightly;gate:qualification")
     sir_configure_owned_target(SIRVisibilityFoundationGoogleTests)
 endif()
 

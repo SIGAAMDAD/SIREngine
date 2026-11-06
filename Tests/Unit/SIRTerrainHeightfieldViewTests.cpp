@@ -64,5 +64,8 @@ int main( void )
 	invalid.nSampleBytes = 2;
 	CHECK( SIRTerrainHeightfieldView::read( invalid, 0, 0, fValue ) == SIR_TERRAIN_SAMPLE_INVALID_VIEW );
 	CHECK( SIRTerrainHeightfieldView::sampleBilinear( invalid, 0.0, 0.0, fValue ) == SIR_TERRAIN_SAMPLE_INVALID_VIEW );
+	invalid.pSamples = nullptr;
+	CHECK( SIRTerrainHeightfieldView::read( invalid, 0, 0, fValue ) == SIR_TERRAIN_SAMPLE_INVALID_VIEW );
+	CHECK( SIRTerrainHeightfieldView::sampleBilinear( invalid, 0.0, 0.0, fValue ) == SIR_TERRAIN_SAMPLE_INVALID_VIEW );
 	return 0;
 }

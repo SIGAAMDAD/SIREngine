@@ -271,7 +271,7 @@ sirFileSystemResult_t SIRPlatformFileSystem::readFilePlatform( const char *pszPa
 		return SIR_FILESYSTEM_INVALID_PATH;
 	}
 	HANDLE hFile = CreateFileW( szPath, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING,
-	                            FILE_FLAG_OPEN_REPARSE_POINT, nullptr );
+	                            FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT, nullptr );
 	if ( hFile == INVALID_HANDLE_VALUE ) {
 		return SIR_FILESYSTEM_IO_ERROR;
 	}

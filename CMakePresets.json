@@ -109,6 +109,23 @@
         "SIR_ENABLE_UNITY": "OFF",
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
       }
+    },
+    {
+      "name": "coverage-llvm23",
+      "displayName": "Pinned LLVM 23 source coverage and full compiler inventory",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/out/${hostSystemName}/llvm23-qualification",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_COMPILER": "clang-23",
+        "CMAKE_CXX_COMPILER": "clang++-23",
+        "CMAKE_CXX_FLAGS": "-fprofile-instr-generate -fcoverage-mapping -fno-omit-frame-pointer",
+        "CMAKE_EXE_LINKER_FLAGS": "-fprofile-instr-generate",
+        "CMAKE_SHARED_LINKER_FLAGS": "-fprofile-instr-generate",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "SIR_BUILD_TESTS": "ON",
+        "SIR_WITH_GOOGLETEST": "ON"
+      }
     }
   ],
   "buildPresets": [
@@ -178,6 +195,10 @@
     {
       "name": "tooling",
       "configurePreset": "tooling"
+    },
+    {
+      "name": "coverage-llvm23",
+      "configurePreset": "coverage-llvm23"
     }
   ],
   "testPresets": [
@@ -247,6 +268,237 @@
     {
       "name": "tooling",
       "configurePreset": "tooling",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "pr-smoke",
+      "configurePreset": "dev",
+      "description": "Fast deterministic PR-bound tests",
+      "filter": {
+        "include": {
+          "label": "^gate:pr$"
+        }
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "core-unit",
+      "configurePreset": "dev",
+      "description": "Core subsystem unit tests",
+      "filter": {
+        "include": {
+          "name": "^core[.]",
+          "label": "^kind:unit$"
+        }
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "integration",
+      "configurePreset": "dev",
+      "description": "Integrated native tests",
+      "filter": {
+        "include": {
+          "label": "^kind:integration$"
+        }
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "nightly-regression",
+      "configurePreset": "dev",
+      "description": "Nightly repeat-regression selection",
+      "filter": {
+        "include": {
+          "label": "^nightly:repeat$"
+        }
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "qualification",
+      "configurePreset": "dev",
+      "description": "Full qualified native test selection",
+      "filter": {
+        "include": {
+          "label": "^gate:qualification$"
+        }
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "coverage-llvm23",
+      "configurePreset": "coverage-llvm23",
+      "filter": {
+        "include": {
+          "label": "^gate:qualification$"
+        }
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "resources-unit",
+      "configurePreset": "dev",
+      "description": "resources subsystem unit selection",
+      "filter": {
+        "include": {
+          "name": "^resources[.]",
+          "label": "^kind:unit$"
+        }
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "renderer-unit",
+      "configurePreset": "dev",
+      "description": "renderer subsystem unit selection",
+      "filter": {
+        "include": {
+          "name": "^renderer[.]",
+          "label": "^kind:unit$"
+        }
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "terrain-unit",
+      "configurePreset": "dev",
+      "description": "terrain subsystem unit selection",
+      "filter": {
+        "include": {
+          "name": "^terrain[.]",
+          "label": "^kind:unit$"
+        }
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "editor-unit",
+      "configurePreset": "dev",
+      "description": "editor subsystem unit selection",
+      "filter": {
+        "include": {
+          "name": "^editor[.]",
+          "label": "^kind:unit$"
+        }
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "scripting-unit",
+      "configurePreset": "dev",
+      "description": "scripting subsystem unit selection",
+      "filter": {
+        "include": {
+          "name": "^scripting[.]",
+          "label": "^kind:unit$"
+        }
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "audio-unit",
+      "configurePreset": "dev",
+      "description": "audio subsystem unit selection",
+      "filter": {
+        "include": {
+          "name": "^audio[.]",
+          "label": "^kind:unit$"
+        }
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "mesh-unit",
+      "configurePreset": "dev",
+      "description": "mesh subsystem unit selection",
+      "filter": {
+        "include": {
+          "name": "^mesh[.]",
+          "label": "^kind:unit$"
+        }
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "streaming-unit",
+      "configurePreset": "dev",
+      "description": "streaming subsystem unit selection",
+      "filter": {
+        "include": {
+          "name": "^streaming[.]",
+          "label": "^kind:unit$"
+        }
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "world-unit",
+      "configurePreset": "dev",
+      "description": "world subsystem unit selection",
+      "filter": {
+        "include": {
+          "name": "^world[.]",
+          "label": "^kind:unit$"
+        }
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "ui-unit",
+      "configurePreset": "dev",
+      "description": "ui subsystem unit selection",
+      "filter": {
+        "include": {
+          "name": "^ui[.]",
+          "label": "^kind:unit$"
+        }
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "nightly-stress",
+      "configurePreset": "dev",
+      "description": "Nightly stress, soak and fuzz selection",
+      "filter": {
+        "include": {
+          "label": "^kind:(stress|soak|fuzz)$"
+        }
+      },
       "output": {
         "outputOnFailure": true
       }

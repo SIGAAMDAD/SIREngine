@@ -16,3 +16,4 @@ CMakeLists.txt text eol=lf
 *.jpeg binary
 *.zip binary
 *.glb binary
+Tests/Fixtures/Editor/*.tscn text eol=lf

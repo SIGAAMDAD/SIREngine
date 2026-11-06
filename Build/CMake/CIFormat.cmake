@@ -7,9 +7,26 @@ execute_process(COMMAND "${SIR_CLANG_FORMAT}" --version OUTPUT_VARIABLE sirVersi
 if(NOT sirStatus EQUAL 0 OR NOT sirVersion MATCHES "23\\.1\\.5")
     message(FATAL_ERROR "Expected clang-format 23.1.5; got: ${sirVersion}")
 endif()
-execute_process(COMMAND "${GIT_EXECUTABLE}" -C "${SIR_ROOT}" ls-files --
-    Source Tests Tools
-    OUTPUT_VARIABLE sirPaths RESULT_VARIABLE sirStatus)
+if(DEFINED SIR_FORMAT_FULL AND SIR_FORMAT_FULL)
+    execute_process(COMMAND "${GIT_EXECUTABLE}" -C "${SIR_ROOT}" ls-files -- Source Tests Tools
+        OUTPUT_VARIABLE sirPaths RESULT_VARIABLE sirStatus)
+else()
+    if(NOT DEFINED SIR_FORMAT_BASE OR SIR_FORMAT_BASE STREQUAL "")
+        execute_process(COMMAND "${GIT_EXECUTABLE}" -C "${SIR_ROOT}" rev-parse HEAD^1
+            RESULT_VARIABLE sirStatus OUTPUT_VARIABLE SIR_FORMAT_BASE OUTPUT_STRIP_TRAILING_WHITESPACE)
+        if(NOT sirStatus EQUAL 0 OR SIR_FORMAT_BASE STREQUAL "")
+            message(FATAL_ERROR "A valid formatting base commit is required")
+        endif()
+    endif()
+    execute_process(COMMAND "${GIT_EXECUTABLE}" -C "${SIR_ROOT}" merge-base "${SIR_FORMAT_BASE}" HEAD
+        RESULT_VARIABLE sirStatus OUTPUT_VARIABLE sirMergeBase OUTPUT_STRIP_TRAILING_WHITESPACE)
+    if(NOT sirStatus EQUAL 0 OR sirMergeBase STREQUAL "")
+        message(FATAL_ERROR "Cannot resolve formatting merge-base: ${SIR_FORMAT_BASE}")
+    endif()
+    execute_process(COMMAND "${GIT_EXECUTABLE}" -C "${SIR_ROOT}" diff --name-only --diff-filter=ACMR
+        "${sirMergeBase}" HEAD -- Source Tests Tools
+        OUTPUT_VARIABLE sirPaths RESULT_VARIABLE sirStatus)
+endif()
 if(NOT sirStatus EQUAL 0)
     message(FATAL_ERROR "Cannot discover C++ source")
 endif()
@@ -37,7 +54,4 @@ endforeach()
 if(sirFailures GREATER 0)
     message(FATAL_ERROR "${sirFailures} owned C++ files failed the pinned formatting gate")
 endif()
-if(sirCount EQUAL 0)
-    message(FATAL_ERROR "No SIREngine C++ sources found")
-endif()
-message(STATUS "PASS: ${sirCount} C++ files checked with ${sirVersion}")
+message(STATUS "PASS: ${sirCount} selected C++ files checked with ${sirVersion}")
