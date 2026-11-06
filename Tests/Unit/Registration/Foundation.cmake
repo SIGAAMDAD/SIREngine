@@ -60,6 +60,43 @@ target_link_libraries(SIRMemoryManagerTests PRIVATE SIR::Core)
 add_test(NAME core.memory.manager COMMAND SIRMemoryManagerTests)
 sir_configure_owned_target(SIRMemoryManagerTests)
 
+# Source-coverage obligations for preflight-only memory reservations, budgets,
+# allocator metadata and rejection without caller-output mutation.
+add_executable(SIRMemoryLayoutCoverageTests SIRMemoryLayoutCoverageTests.cpp)
+target_link_libraries(SIRMemoryLayoutCoverageTests PRIVATE SIR::Core)
+add_test(NAME core.memory.layout-preflight-negative COMMAND SIRMemoryLayoutCoverageTests)
+sir_configure_owned_target(SIRMemoryLayoutCoverageTests)
+
+# Real owner-managed pool pressure, pending reclamation and rollback boundaries.
+add_executable(SIRMemoryPressureBoundaryTests SIRMemoryPressureBoundaryTests.cpp)
+target_link_libraries(SIRMemoryPressureBoundaryTests PRIVATE SIR::Core)
+add_test(NAME core.memory.pressure-boundaries COMMAND SIRMemoryPressureBoundaryTests)
+sir_configure_owned_target(SIRMemoryPressureBoundaryTests)
+
+# Guard-page stack bookmarks, reset states and all memory release policies.
+add_executable(SIRVirtualStackBoundaryTests SIRVirtualStackBoundaryTests.cpp)
+target_link_libraries(SIRVirtualStackBoundaryTests PRIVATE SIR::Core)
+add_test(NAME core.memory.virtual-stack-boundaries COMMAND SIRVirtualStackBoundaryTests)
+sir_configure_owned_target(SIRVirtualStackBoundaryTests)
+
+# Exercise all compact bucket class profiles and negative admission contracts.
+add_executable(SIRCompactBucketBoundaryTests SIRCompactBucketBoundaryTests.cpp)
+target_link_libraries(SIRCompactBucketBoundaryTests PRIVATE SIR::Core)
+add_test(NAME core.memory.compact-bucket-boundaries COMMAND SIRCompactBucketBoundaryTests)
+sir_configure_owned_target(SIRCompactBucketBoundaryTests)
+
+# AVL extent rotations, stable handle generations, compaction and fragmentation.
+add_executable(SIRHandleHeapBoundaryTests SIRHandleHeapBoundaryTests.cpp)
+target_link_libraries(SIRHandleHeapBoundaryTests PRIVATE SIR::Core)
+add_test(NAME core.memory.handle-heap-fragmentation COMMAND SIRHandleHeapBoundaryTests)
+sir_configure_owned_target(SIRHandleHeapBoundaryTests)
+
+# Hierarchical free-bitmaps, slot reuse and payload-preserving page trimming.
+add_executable(SIRBitmapBoundaryTests SIRBitmapBoundaryTests.cpp)
+target_link_libraries(SIRBitmapBoundaryTests PRIVATE SIR::Core)
+add_test(NAME core.memory.bitmap-boundaries COMMAND SIRBitmapBoundaryTests)
+sir_configure_owned_target(SIRBitmapBoundaryTests)
+
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     add_executable(SIRMemoryManagerFaultInjectionTests SIRMemoryManagerFaultInjectionTests.cpp)
     target_link_libraries(SIRMemoryManagerFaultInjectionTests PRIVATE SIR::Core)
