@@ -116,7 +116,7 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: .cache/fastbuild
-          key: sir-fbuild-v1.20-${{ runner.os }}-${{ matrix.compiler }}-dev-${{ github.sha }}
+          key: sir-fbuild-v1.20-${{ runner.os }}-${{ matrix.compiler }}-dev-${{ inputs.candidate_sha || github.sha }}
           restore-keys: |
             sir-fbuild-v1.20-${{ runner.os }}-${{ matrix.compiler }}-dev-
       - name: Configure native engine
