@@ -1,10 +1,10 @@
 include_guard(GLOBAL)
 
 # Source-owned qualification contracts and source scopes, not generated JSON.
-set(SIR_QUALIFICATION_SYSTEMS all Core Resources Renderer Terrain Editor Scripting Audio GraphicsABI)
+set(SIR_QUALIFICATION_SYSTEMS all Core Resources Renderer Terrain Editor Scripting Audio Mesh Streaming World UI GraphicsABI)
 set(SIR_QUALIFICATION_SCOPE_all "Source")
 set(SIR_QUALIFICATION_SCOPE_GraphicsABI "Source/Renderer")
-foreach(sirSystem IN ITEMS Core Resources Renderer Terrain Editor Scripting Audio)
+foreach(sirSystem IN ITEMS Core Resources Renderer Terrain Editor Scripting Audio Mesh Streaming World UI)
     set("SIR_QUALIFICATION_SCOPE_${sirSystem}" "Source/${sirSystem}")
 endforeach()
 # Contract-bearing tests must remain registered on every supported native host.
