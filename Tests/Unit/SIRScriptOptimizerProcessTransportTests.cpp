@@ -251,8 +251,34 @@ int main( int nArguments, char **pszArguments )
 		fprintf( stderr, "Expected subprocess fixture executable path\n" );
 		return 2;
 	}
-	if ( !testConfiguration( pszArguments[1] ) || !testFramedTransport( pszArguments[1] ) || !testProcessFailures( pszArguments[1] ) ||
-	     !testWatchdog( pszArguments[1] ) || !testStopCancelsBlockedIO( pszArguments[1] ) || !testCoordinator( pszArguments[1] ) ) {
+	fprintf( stderr, "optimizer process transport: configuration\n" );
+	fflush( stderr );
+	if ( !testConfiguration( pszArguments[1] ) ) {
+		return 1;
+	}
+	fprintf( stderr, "optimizer process transport: framed\n" );
+	fflush( stderr );
+	if ( !testFramedTransport( pszArguments[1] ) ) {
+		return 1;
+	}
+	fprintf( stderr, "optimizer process transport: failures\n" );
+	fflush( stderr );
+	if ( !testProcessFailures( pszArguments[1] ) ) {
+		return 1;
+	}
+	fprintf( stderr, "optimizer process transport: watchdog\n" );
+	fflush( stderr );
+	if ( !testWatchdog( pszArguments[1] ) ) {
+		return 1;
+	}
+	fprintf( stderr, "optimizer process transport: stop-cancels-io\n" );
+	fflush( stderr );
+	if ( !testStopCancelsBlockedIO( pszArguments[1] ) ) {
+		return 1;
+	}
+	fprintf( stderr, "optimizer process transport: coordinator\n" );
+	fflush( stderr );
+	if ( !testCoordinator( pszArguments[1] ) ) {
 		return 1;
 	}
 	fprintf( stdout, "optimizer process transport tests passed\n" );
