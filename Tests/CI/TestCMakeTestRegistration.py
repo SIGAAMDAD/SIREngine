@@ -49,6 +49,27 @@ class CTestTaxonomyTests(unittest.TestCase):
         self.assertIn("resource:gpu", props["renderer.opengl46.smoke"]["LABELS"])
         self.assertEqual(props["renderer.opengl46.smoke"]["RESOURCE_LOCK"], ["sir-gpu"])
 
+    def test_source_owned_ctest_targets_are_reachable(self):
+        root = Path(__file__).resolve().parents[2]
+        source = (root / "CMakeLists.txt").read_text()
+        enable = source.index("enable_testing()")
+        configure_source = source.index("add_subdirectory(Source)")
+        self.assertLess(enable, configure_source)
+        self.assertIn('sir_classify_tests("${PROJECT_SOURCE_DIR}/Source")', source)
+        d3d10 = (root / "Source/Renderer/Drivers/D3D10/CMakeLists.txt").read_text()
+        self.assertIn("add_test(NAME renderer.d3d10.abi-scaffold COMMAND SIRD3D10ABITests)", d3d10)
+
+    def test_source_test_registration_in_nested_directory(self):
+        root, result = self.make_project(
+            "add_subdirectory(Nested)\n",
+            'add_test(NAME renderer.d3d10.abi-scaffold COMMAND ${CMAKE_COMMAND} -E echo ok)\n')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        report = subprocess.run(
+            ["ctest", "--test-dir", str(root / "out"), "--show-only=json-v1"],
+            capture_output=True, text=True, check=True)
+        self.assertIn("renderer.d3d10.abi-scaffold",
+                      {case["name"] for case in json.loads(report.stdout)["tests"]})
+
     def test_duplicate_names_fail(self):
         _, result = self.make_project(
             "add_test(NAME core.duplicate COMMAND ${CMAKE_COMMAND} -E echo ok)\n"

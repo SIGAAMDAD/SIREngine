@@ -90,9 +90,10 @@ jobs:
       - name: Qualify all compiled production code
         env:
           SIR_QUALIFICATION_SCOPE: ${{ inputs.system || 'all' }}
+          SIR_COVERAGE_MINIMUM: ${{ ((github.event_name == 'pull_request' && github.base_ref == 'main') || inputs.purpose == 'release') && '100' || '90' }}
         run: bash Build/Scripts/RunLLVM23Qualification.sh
       - name: Upload profile-valid production coverage to Codecov
-        if: always() && (inputs.system == '' || inputs.system == 'all') && hashFiles('out/Verification/LLVM23/codecov-production.lcov') != ''
+        if: success() && (inputs.system == '' || inputs.system == 'all') && hashFiles('out/Verification/LLVM23/codecov-production.lcov') != ''
         uses: codecov/codecov-action@0fb7174895f61a3b6b78fc075e0cd60383518dac # v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}

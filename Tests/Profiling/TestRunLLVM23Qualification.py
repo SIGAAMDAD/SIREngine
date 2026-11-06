@@ -134,6 +134,24 @@ class QualificationGateTests(unittest.TestCase):
                     qualification.verify_production_coverage({self.path}, [self.fully_covered])
                 self.fully_covered["summary"][name] = {"count": 10, "covered": 9}
 
+    def test_full_promotion_requires_one_hundred_percent(self):
+        from unittest import mock
+        import os
+        for metric in ("lines", "branches", "functions", "regions"):
+            with self.subTest(metric=metric):
+                self.fully_covered["summary"][metric]["covered"] = 9
+                with mock.patch.dict(os.environ, {"SIR_COVERAGE_MINIMUM": "100"}):
+                    with self.assertRaisesRegex(RuntimeError, f"{metric}=9/10"):
+                        qualification.verify_production_coverage({self.path}, [self.fully_covered])
+                self.fully_covered["summary"][metric]["covered"] = 10
+        with mock.patch.dict(os.environ, {"SIR_COVERAGE_MINIMUM": "100"}):
+            self.assertEqual(
+                qualification.verify_production_coverage({self.path}, [self.fully_covered])["lines"],
+                (10, 10))
+        with mock.patch.dict(os.environ, {"SIR_COVERAGE_MINIMUM": "89"}):
+            with self.assertRaisesRegex(RuntimeError, "must be 90 or 100"):
+                qualification.verify_production_coverage({self.path}, [self.fully_covered])
+
     def test_fraction_below_ninety_fails_without_rounding(self):
         self.fully_covered["summary"]["regions"] = {"count": 101, "covered": 90}
         with self.assertRaisesRegex(RuntimeError, "regions=90/101"):
@@ -374,6 +392,46 @@ class QualificationGateTests(unittest.TestCase):
             {"name": "main", "hash": "0"}])
         self.assertEqual(qualification.parse_profile_hash_mismatches(
             "warning: 2 functions have mismatched data\n"), [])
+
+
+    def test_profile_isolation_accepts_only_compiler_dummy_zero_hashes(self):
+        from types import SimpleNamespace
+        def run(command, **kwargs):
+            return SimpleNamespace(returncode=0, stderr=(
+                "hash-mismatch: No profile record found for 'unusedInline' with hash = 0x0\n"
+                "warning: 1 functions have mismatched data\n"))
+        self.assertTrue(qualification.validate_binary_profile_isolation(
+            [Path("/tmp/a"), Path("/tmp/b")], Path("/tmp/all.profdata"), runner=run))
+
+    def test_profile_isolation_rejects_nonzero_stale_main_and_graphics_hashes(self):
+        from types import SimpleNamespace
+        for symbol in ("main", "SIRGetGraphicsDriverABI"):
+            with self.subTest(symbol=symbol):
+                def run(command, **kwargs):
+                    return SimpleNamespace(returncode=0, stderr=(
+                        f"hash-mismatch: No profile record found for '{symbol}' with hash = 0xAc12\n"
+                        "warning: 1 functions have mismatched data\n"))
+                with self.assertRaisesRegex(RuntimeError, "Unresolved binary/profile"):
+                    qualification.validate_binary_profile_isolation(
+                        [Path("/tmp/stale")], Path("/tmp/all.profdata"), runner=run)
+
+    def test_profile_isolation_rejects_unrecognized_warnings_and_empty_input(self):
+        from types import SimpleNamespace
+        def run(command, **kwargs):
+            return SimpleNamespace(returncode=0, stderr="warning: profile out of date\n")
+        with self.assertRaisesRegex(RuntimeError, "Unresolved binary/profile"):
+            qualification.validate_binary_profile_isolation(
+                [Path("/tmp/a")], Path("/tmp/all.profdata"), runner=run)
+        with self.assertRaisesRegex(RuntimeError, "No linked binaries"):
+            qualification.validate_binary_profile_isolation([], Path("/tmp/all.profdata"))
+        self.assertFalse(qualification.validated_aggregate_warning("warning: profile out of date"))
+        self.assertTrue(qualification.validated_aggregate_warning(
+            "warning: 300 functions have mismatched data\n"))
+
+    def test_codecov_publication_occurs_after_production_coverage_acceptance(self):
+        source = script.read_text().split("def qualify():", 1)[1]
+        self.assertLess(source.find("totals = verify_production_coverage("),
+                        source.find("export_codecov_lcov(data["))
 
 if __name__ == "__main__":
     unittest.main()

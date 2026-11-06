@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euo pipefail
+root="$(git rev-parse --show-toplevel)"
+if command -v python3 >/dev/null 2>&1; then
+    interpreter=python3
+elif command -v python >/dev/null 2>&1; then
+    interpreter=python
+else
+    echo 'SIREngine commit-msg hook requires Python 3' >&2
+    exit 1
+fi
+exec "$interpreter" "$root/Build/CI/CheckChangePolicy.py" --commit-file "$1"

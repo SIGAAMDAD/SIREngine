@@ -88,7 +88,9 @@ class CodecovPublishingTests(TestCase):
         script = SCRIPT.read_text()
         self.assertIn('if name == "all":\n        export_codecov_lcov(', script)
         self.assertIn('REPORT / "codecov-production.lcov"', script)
-        self.assertIn('("warning:", "mismatch", "out of date")', script)
+        self.assertIn("validated_aggregate_warning(result.stderr)", script)
+        self.assertIn("validate_binary_profile_isolation(binaries, profdata)", script)
+        self.assertIn("verified_aggregate=verified_aggregate", script)
 
 
 if __name__ == "__main__":
