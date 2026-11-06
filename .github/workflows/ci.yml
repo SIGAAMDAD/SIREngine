@@ -53,7 +53,7 @@ jobs:
           echo "${bindir}" >> "${GITHUB_PATH}"
       - name: Check changed-file formatting
         env:
-          SIR_BASE: ${{ github.event.pull_request.base.sha }}
+          SIR_BASE: ${{ github.event.pull_request.base.sha || github.event.before || github.event.merge_group.base_sha || '' }}
         shell: bash
         run: |
           if [[ -n "$SIR_BASE" ]]; then

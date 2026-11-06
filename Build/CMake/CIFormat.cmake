@@ -7,17 +7,24 @@ execute_process(COMMAND "${SIR_CLANG_FORMAT}" --version OUTPUT_VARIABLE sirVersi
 if(NOT sirStatus EQUAL 0 OR NOT sirVersion MATCHES "23\\.1\\.5")
     message(FATAL_ERROR "Expected clang-format 23.1.5; got: ${sirVersion}")
 endif()
-if(DEFINED SIR_FORMAT_BASE AND NOT SIR_FORMAT_BASE STREQUAL "")
+if(DEFINED SIR_FORMAT_FULL AND SIR_FORMAT_FULL)
+    execute_process(COMMAND "${GIT_EXECUTABLE}" -C "${SIR_ROOT}" ls-files -- Source Tests Tools
+        OUTPUT_VARIABLE sirPaths RESULT_VARIABLE sirStatus)
+else()
+    if(NOT DEFINED SIR_FORMAT_BASE OR SIR_FORMAT_BASE STREQUAL "")
+        execute_process(COMMAND "${GIT_EXECUTABLE}" -C "${SIR_ROOT}" rev-parse HEAD^1
+            RESULT_VARIABLE sirStatus OUTPUT_VARIABLE SIR_FORMAT_BASE OUTPUT_STRIP_TRAILING_WHITESPACE)
+        if(NOT sirStatus EQUAL 0 OR SIR_FORMAT_BASE STREQUAL "")
+            message(FATAL_ERROR "A valid formatting base commit is required")
+        endif()
+    endif()
     execute_process(COMMAND "${GIT_EXECUTABLE}" -C "${SIR_ROOT}" merge-base "${SIR_FORMAT_BASE}" HEAD
         RESULT_VARIABLE sirStatus OUTPUT_VARIABLE sirMergeBase OUTPUT_STRIP_TRAILING_WHITESPACE)
     if(NOT sirStatus EQUAL 0 OR sirMergeBase STREQUAL "")
-        message(FATAL_ERROR "Cannot resolve formatting merge-base")
+        message(FATAL_ERROR "Cannot resolve formatting merge-base: ${SIR_FORMAT_BASE}")
     endif()
     execute_process(COMMAND "${GIT_EXECUTABLE}" -C "${SIR_ROOT}" diff --name-only --diff-filter=ACMR
         "${sirMergeBase}" HEAD -- Source Tests Tools
-        OUTPUT_VARIABLE sirPaths RESULT_VARIABLE sirStatus)
-else()
-    execute_process(COMMAND "${GIT_EXECUTABLE}" -C "${SIR_ROOT}" ls-files -- Source Tests Tools
         OUTPUT_VARIABLE sirPaths RESULT_VARIABLE sirStatus)
 endif()
 if(NOT sirStatus EQUAL 0)
