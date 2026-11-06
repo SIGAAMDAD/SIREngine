@@ -109,6 +109,22 @@
         "SIR_ENABLE_UNITY": "OFF",
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
       }
+    },
+    {
+      "name": "coverage-llvm23",
+      "displayName": "Pinned LLVM 23 source coverage and full compiler inventory",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/out/${hostSystemName}/llvm23-qualification",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_CXX_COMPILER": "clang++-23",
+        "CMAKE_CXX_FLAGS": "-fprofile-instr-generate -fcoverage-mapping -fno-omit-frame-pointer",
+        "CMAKE_EXE_LINKER_FLAGS": "-fprofile-instr-generate",
+        "CMAKE_SHARED_LINKER_FLAGS": "-fprofile-instr-generate",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "SIR_BUILD_TESTS": "ON",
+        "SIR_WITH_GOOGLETEST": "ON"
+      }
     }
   ],
   "buildPresets": [
@@ -178,6 +194,10 @@
     {
       "name": "tooling",
       "configurePreset": "tooling"
+    },
+    {
+      "name": "coverage-llvm23",
+      "configurePreset": "coverage-llvm23"
     }
   ],
   "testPresets": [
@@ -308,6 +328,18 @@
       "name": "qualification",
       "configurePreset": "dev",
       "description": "Full qualified native test selection",
+      "filter": {
+        "include": {
+          "label": "^gate:qualification$"
+        }
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "coverage-llvm23",
+      "configurePreset": "coverage-llvm23",
       "filter": {
         "include": {
           "label": "^gate:qualification$"

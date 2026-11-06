@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Negative-path acceptance for the LLVM 23 source qualification gate."""
 import importlib.util
+import json
 from pathlib import Path
 import unittest
 
@@ -15,6 +16,17 @@ class QualificationGateTests(unittest.TestCase):
         self.fully_covered = {"filename": self.path, "summary": {
             name: {"count": 10, "covered": 10} for name in
             ("lines", "branches", "functions", "regions")}}
+
+    def test_compiler_inventory_preset_is_instrumented(self):
+        root = Path(__file__).resolve().parents[2]
+        source = json.loads((root / "CMakePresets.json").read_text())
+        preset = next(p for p in source["configurePresets"] if p["name"] == "coverage-llvm23")
+        options = preset["cacheVariables"]
+        self.assertEqual(preset["generator"], "Ninja")
+        self.assertEqual(options["CMAKE_EXPORT_COMPILE_COMMANDS"], "ON")
+        self.assertIn("-fcoverage-mapping", options["CMAKE_CXX_FLAGS"])
+        self.assertIn("-fprofile-instr-generate", options["CMAKE_EXE_LINKER_FLAGS"])
+        self.assertEqual(preset["binaryDir"], "${sourceDir}/out/${hostSystemName}/llvm23-qualification")
 
     def test_full_coverage_passes(self):
         totals = qualification.verify_production_coverage({self.path}, [self.fully_covered])

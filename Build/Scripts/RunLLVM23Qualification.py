@@ -66,12 +66,9 @@ def qualify():
     raw.mkdir(exist_ok=True)
     for path in raw.glob("*.profraw"):
         path.unlink()
-    run("cmake", "-S", ROOT, "-B", BUILD, "-G", "Ninja",
-        "-DCMAKE_CXX_COMPILER=clang++-23", "-DCMAKE_BUILD_TYPE=Debug",
-        "-DCMAKE_CXX_FLAGS=-fprofile-instr-generate -fcoverage-mapping -fno-omit-frame-pointer",
-        "-DCMAKE_EXE_LINKER_FLAGS=-fprofile-instr-generate",
-        "-DCMAKE_SHARED_LINKER_FLAGS=-fprofile-instr-generate",
-        "-DSIR_BUILD_TESTS=ON", "-DSIR_WITH_GOOGLETEST=ON")
+    run("cmake", "--preset", "coverage-llvm23")
+    if not (BUILD / "compile_commands.json").is_file():
+        raise RuntimeError("LLVM qualification compiler inventory was not generated")
     run("cmake", "--build", BUILD, "--parallel", "3")
     env = dict(os.environ, LLVM_PROFILE_FILE=str(raw / "%p-%m.profraw"))
     run(sys.executable, ROOT / "Build/CI/RunCTestGate.py", "--test-dir", BUILD,

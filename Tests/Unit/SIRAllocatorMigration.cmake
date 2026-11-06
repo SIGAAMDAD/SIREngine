@@ -7,6 +7,7 @@ sir_configure_owned_target(SIRAllocatorMigrationTests)
 # The exhaustive allocator suite is mandatory in CI's GoogleTest-enabled
 # Windows/Linux presets. Each individual TEST is registered with CTest.
 if(SIR_WITH_GOOGLETEST)
+    string(TOLOWER "${CMAKE_SYSTEM_NAME}" sirGTestHost)
     add_executable(SIRAllocatorExhaustiveTests
         SIRAllocatorCoreGoogleTests.cpp
         SIRAllocatorLifetimeGoogleTests.cpp
@@ -19,5 +20,5 @@ if(SIR_WITH_GOOGLETEST)
     gtest_discover_tests(SIRAllocatorExhaustiveTests
         TEST_PREFIX "core.memory.allocators."
         DISCOVERY_TIMEOUT 45
-        PROPERTIES LABELS "subsystem:core;kind:unit;gate:pr;gate:main;gate:nightly;gate:qualification;nightly:repeat")
+        PROPERTIES LABELS "subsystem:core;kind:unit;platform:${sirGTestHost};resource:cpu;gate:pr;gate:main;gate:nightly;gate:qualification;nightly:repeat")
 endif()
