@@ -40,5 +40,15 @@ class NativePRProtocolTests(unittest.TestCase):
         self.assertNotIn("tar --use-compress-program=zstd -xf", installer)
 
 
+    def test_llvm23_coverage_uses_clang_for_c_and_cpp(self):
+        source = json.loads((ROOT / "CMakePresets.json").read_text())
+        preset = next(item for item in source["configurePresets"]
+                      if item["name"] == "coverage-llvm23")
+        flags = preset["cacheVariables"]
+        self.assertEqual(flags["CMAKE_C_COMPILER"], "clang-23")
+        self.assertEqual(flags["CMAKE_CXX_COMPILER"], "clang++-23")
+        self.assertIn("-fprofile-instr-generate", flags["CMAKE_EXE_LINKER_FLAGS"])
+
+
 if __name__ == "__main__":
     unittest.main()
