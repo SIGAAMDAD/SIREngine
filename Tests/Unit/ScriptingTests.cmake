@@ -61,6 +61,11 @@ sir_configure_owned_target(SIRScriptOptimizerWorkerTests)
 add_test(NAME scripting.optimizer-worker COMMAND SIRScriptOptimizerWorkerTests
     $<TARGET_FILE:SIRScriptOptimizerWorker> $<TARGET_FILE:SIRScriptOptimizerTestBackend>)
 
+add_executable(SIRScriptOptimizerWorkerCoverageTests SIRScriptOptimizerWorkerCoverageTests.cpp)
+target_link_libraries(SIRScriptOptimizerWorkerCoverageTests PRIVATE SIR::Scripting)
+add_test(NAME scripting.optimizer-worker-coverage COMMAND SIRScriptOptimizerWorkerCoverageTests)
+sir_configure_owned_target(SIRScriptOptimizerWorkerCoverageTests)
+
 add_executable(SIRScriptOptimizationRecipeTests SIRScriptOptimizationRecipeTests.cpp)
 target_link_libraries(SIRScriptOptimizationRecipeTests PRIVATE SIR::Scripting)
 sir_configure_owned_target(SIRScriptOptimizationRecipeTests)
