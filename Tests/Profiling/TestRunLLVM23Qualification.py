@@ -185,5 +185,41 @@ class QualificationGateTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "Memory: Missing compiled"):
                 qualification.verify_group_coverage(commands, files, root)
 
+
+    def test_objects_come_from_matching_compiler_outputs(self):
+        from tempfile import TemporaryDirectory
+        with TemporaryDirectory() as temp:
+            root = Path(temp)
+            build = root / "out/llvm"
+            build.mkdir(parents=True)
+            obj = build / "core.o"
+            obj.write_bytes(b"test object")
+            commands = [{"directory": str(build), "file": "../../Source/Core/SIRCore.cpp",
+                         "command": "clang++ -c ../../Source/Core/SIRCore.cpp -o core.o"}]
+            objects = qualification.compiled_production_objects(
+                commands, root, build, root / "Source/Core")
+            self.assertEqual(objects, [obj])
+            with self.assertRaisesRegex(RuntimeError, "No compiled production object"):
+                qualification.compiled_production_objects(
+                    commands, root, build, root / "Source/Resources")
+
+    def test_missing_compiler_object_and_unsafe_paths_fail_closed(self):
+        from tempfile import TemporaryDirectory
+        with TemporaryDirectory() as temp:
+            root = Path(temp)
+            build = root / "out/llvm"
+            build.mkdir(parents=True)
+            entry = {"directory": str(build), "file": "../../Source/Core/SIRCore.cpp",
+                     "arguments": ["clang++", "-c", "SIRCore.cpp", "-o", "missing.o"]}
+            with self.assertRaisesRegex(RuntimeError, "Missing or non-build"):
+                qualification.compiled_production_objects(
+                    [entry], root, build, root / "Source/Core")
+            outside = root / "external.o"
+            outside.write_bytes(b"not in compiler build tree")
+            entry["output"] = str(outside)
+            with self.assertRaisesRegex(RuntimeError, "Missing or non-build"):
+                qualification.compiled_production_objects(
+                    [entry], root, build, root / "Source/Core")
+
 if __name__ == "__main__":
     unittest.main()
