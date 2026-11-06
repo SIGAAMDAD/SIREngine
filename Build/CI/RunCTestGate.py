@@ -71,6 +71,7 @@ def run_gate(argv=None):
         raise RuntimeError("Malformed CTest inventory output") from exc
     if not expected:
         raise RuntimeError("CTest selection matched zero required tests")
+    args.report = args.report.resolve()
     args.report.parent.mkdir(parents=True, exist_ok=True)
     for iteration in range(1, args.repeat + 1):
         report = report_for_iteration(args.report, iteration, args.repeat)
