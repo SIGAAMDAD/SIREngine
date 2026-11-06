@@ -1,2 +1,3 @@
-fn echo(value: u16) -> u16:
-    return value
+function echo(u16 value) returns u16 {
+    return value;
+}
