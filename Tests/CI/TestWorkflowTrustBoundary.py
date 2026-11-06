@@ -13,7 +13,7 @@ class WorkflowTrustBoundaryTests(unittest.TestCase):
         for path in list(WORKFLOWS.glob("*.yml")) + list(WORKFLOWS.glob("*.yaml")):
             with self.subTest(path=path.name):
                 source = path.read_text()
-                self.assertNotRegex(source, r"(?m)^\\s*- uses: actions/cache(?:/[^@]+)?@")
+                self.assertNotRegex(source, r"(?m)^\s*- uses: actions/cache(?:/[^@]+)?@")
                 self.assertNotIn("cache-mode: write", source)
                 self.assertNotIn("cache-mode: write-only", source)
 
@@ -23,9 +23,15 @@ class WorkflowTrustBoundaryTests(unittest.TestCase):
         for workflow in (ci, qualification):
             self.assertNotIn("inputs.candidate_sha", workflow)
             self.assertNotIn("inputs.source_sha", workflow)
-            self.assertNotRegex(workflow, r"(?m)^\\s*ref:\\s*\\$\\{\\{\\s*inputs\\.")
+            self.assertNotRegex(workflow, r"(?m)^\s*ref:\s*\$\{\{\s*inputs\.")
         self.assertIn("ref: ${{ github.sha }}", ci)
         self.assertIn("ref: ${{ github.event.pull_request.head.sha || github.sha }}", qualification)
+
+    def test_negative_patterns_detect_exploitable_examples(self):
+        cache_example = "      - uses: actions/cache@v4"
+        checkout_example = "          ref: ${{ inputs.source_sha }}"
+        self.assertRegex(cache_example, r"(?m)^\s*- uses: actions/cache(?:/[^@]+)?@")
+        self.assertRegex(checkout_example, r"(?m)^\s*ref:\s*\$\{\{\s*inputs\.")
 
     def test_unmerged_qualification_stays_in_pr_security_scope(self):
         qualification = (WORKFLOWS / "qualification.yml").read_text()
