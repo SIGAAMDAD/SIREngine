@@ -17,6 +17,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #define __SIRENGINE_SIRRESOURCEGRAPH_H__
 
 #include <SIRPCH.hpp>
+#include <Resources/SIRProviderCompletion.h>
 
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -304,8 +305,8 @@ typedef struct sirDerivedResourceRegistration_s
 } sirDerivedResourceRegistration_t;
 typedef sirDerivedResourceRegistration_t SIRDerivedResourceRegistration;
 
-// Release is invoked after the provider's completed fence has reached the
-// representation's retirement fence. Return true only once native storage
+// Release is invoked only after every required provider lane completion
+// from the matching provider generation has been observed. Return true only once native storage
 // has actually been released. Callbacks must not re-enter the registry.
 typedef struct sirDerivedProviderCallbacks_s
 {
@@ -370,11 +371,13 @@ public:
 
 	bool isReady( void ) const noexcept;
 	SIRResourceResult registerProvider( uint32_t nProviderId, const SIRDerivedProviderCallbacks& rCallbacks ) noexcept;
+	SIRResourceResult registerProvider( uint32_t nProviderId, uint32_t nProviderGeneration, uint32_t nLaneCount,
+	                                   const SIRDerivedProviderCallbacks& rCallbacks ) noexcept;
 	SIRResourceResult registerRepresentation( const SIRResourceReadScope& rScope, const SIRResourceView& rSource,
 	                                          const SIRDerivedResourceRegistration& rRegistration,
 	                                          SIRDerivedResourceHandle *pHandle ) noexcept;
-	SIRResourceResult retireRepresentation( SIRDerivedResourceHandle hRepresentation, uint64_t nCompletionFence ) noexcept;
-	SIRResourceResult updateCompletedFence( uint32_t nProviderId, uint64_t nCompletedFence ) noexcept;
+	SIRResourceResult retireRepresentation( SIRDerivedResourceHandle hRepresentation, const sirProviderCompletionSet_t& required ) noexcept;
+	SIRResourceResult updateProviderCompletion( const sirProviderCompletionSet_t& observed ) noexcept;
 	SIRResourceResult getAccounting( SIRDerivedResourceHandle hRepresentation, SIRDerivedResourceAccounting *pAccounting ) const noexcept;
 	SIRResourceResult getStats( SIRResourceDerivedStats *pStats ) const noexcept;
 };
