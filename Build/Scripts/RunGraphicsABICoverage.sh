@@ -28,7 +28,7 @@ cmake --build "${build}" --parallel 2 --target \
     SIRGraphicsInterfaceTests SIRGraphicsABITests SIRGraphicsPipelineABITests \
     SIRGraphicsPipelineBridgeTests SIRGraphicsABIMockModule SIRGraphicsModuleTests \
     SIRGraphicsABIContractTests SIRGraphicsABIPropertyTests \
-    SIRGraphicsABIEraMatrixTests SIRGraphicsABINegativeMatrixTests SIRGraphicsABIAssertionGoogleTests
+    SIRGraphicsABIEraMatrixTests SIRGraphicsABINegativeMatrixTests SIRGraphicsABIAssertionGoogleTests SIRGraphicsABISharedBoundaryTests
 
 export LLVM_PROFILE_FILE="${report}/raw/%p-%m.profraw"
 ctest --test-dir "${build}" --output-on-failure --no-tests=error \
@@ -53,6 +53,7 @@ objects=(
     "${build}/Tests/Unit/SIRGraphicsABIEraMatrixTests"
     "${build}/Tests/Unit/SIRGraphicsABINegativeMatrixTests"
     "${build}/Tests/Unit/SIRGraphicsABIAssertionGoogleTests"
+    "${build}/Tests/Unit/SIRGraphicsABISharedBoundaryTests"
     "${build}/Tests/Unit/libSIRGraphicsABIMockModule.so"
 )
 arguments=()
