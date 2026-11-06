@@ -243,5 +243,26 @@ class QualificationGateTests(unittest.TestCase):
             self.assertEqual([obj.name for obj in core + resources],
                              ["candidate0.o", "candidate1.o"])
 
+
+    def test_diagnostic_reports_missed_paths_without_granting_pass(self):
+        from tempfile import TemporaryDirectory
+        with TemporaryDirectory() as temp:
+            root = Path(temp)
+            paths = [root / "Source/Core/Owned.cpp", root / "Source/Core/Memory/Owned.cpp",
+                     root / "Source/Resources/Owned.cpp"]
+            commands = [{"directory": str(root), "file": str(path)} for path in paths]
+            mapped = [{"filename": str(path), "summary": {
+                metric: {"covered": 6, "count": 10}
+                for metric in ("lines", "branches", "functions", "regions")}}
+                for path in paths]
+            diagnostic = qualification.diagnostic_group_totals(mapped, commands, root)
+            self.assertEqual(set(diagnostic), {"Core", "Memory", "Resources"})
+            self.assertEqual(diagnostic["Memory"]["status"], "DIAGNOSTIC_ONLY")
+            self.assertEqual(diagnostic["Memory"]["metrics"]["branches"]["covered"], 6)
+            with self.assertRaisesRegex(RuntimeError, "Memory:.*branches=6/10"):
+                qualification.verify_group_coverage(commands, mapped, root)
+            diagnostic = qualification.diagnostic_group_totals(mapped[:-1], commands, root)
+            self.assertEqual(diagnostic["Resources"]["status"], "INCOMPLETE")
+
 if __name__ == "__main__":
     unittest.main()

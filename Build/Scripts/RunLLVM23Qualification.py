@@ -145,6 +145,41 @@ def verify_group_coverage(commands, files, repository_root):
     return totals
 
 
+def diagnostic_group_totals(files, commands, repository_root):
+    """Report exact mapped counters without granting coverage acceptance."""
+    root = pathlib.Path(repository_root).resolve()
+    compiled = compiled_production_sources(commands, root)
+    groups = {
+        "Core": root / "Source/Core",
+        "Memory": root / "Source/Core/Memory",
+        "Resources": root / "Source/Resources",
+    }
+    output = {}
+    for name, scope in groups.items():
+        def belongs(filename):
+            path = pathlib.Path(filename).resolve()
+            return scope in path.parents and (name != "Core" or groups["Memory"] not in path.parents)
+
+        required = {path for path in compiled if belongs(path)}
+        mapped = [row for row in files if belongs(row["filename"])]
+        if not required or not mapped:
+            output[name] = {"status": "INCOMPLETE", "compiled_sources": len(required),
+                            "mapped_sources": len(mapped)}
+            continue
+        counts = {}
+        for metric in ("lines", "branches", "functions", "regions"):
+            total = sum(int(row["summary"][metric]["count"]) for row in mapped)
+            covered = sum(int(row["summary"][metric]["covered"]) for row in mapped)
+            if total <= 0 or covered < 0 or covered > total:
+                raise RuntimeError(f"{name}: invalid {metric} diagnostic counters")
+            counts[metric] = {"covered": covered, "count": total}
+        mapped_sources = {str(pathlib.Path(row["filename"]).resolve()) for row in mapped}
+        output[name] = {"status": "DIAGNOSTIC_ONLY", "compiled_sources": len(required),
+                        "mapped_sources": len(mapped), "missing_sources": sorted(required - mapped_sources),
+                        "metrics": counts}
+    return output
+
+
 def find_zero_count_functions(coverage, source_root, limit=30):
     """List unexecuted mapped functions in the declared production scope."""
     root = pathlib.Path(source_root).resolve()
@@ -218,6 +253,12 @@ def qualify():
     data = json.loads(out.read_text())
     if len(data.get("data", [])) != 1:
         raise RuntimeError("Invalid LLVM export")
+    diagnostic = {"source_sha": subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip(),
+                  "qualification_scope": name, "status": "DIAGNOSTIC_ONLY",
+                  "profile_warning": result.stderr.strip()[:8000],
+                  "groups": diagnostic_group_totals(data["data"][0]["files"], commands, ROOT)}
+    (REPORT / "core-memory-resources-diagnostic.json").write_text(
+        json.dumps(diagnostic, indent=2) + "\n")
     if any(word in result.stderr.lower() for word in ("mismatch", "out of date", "warning:")):
         candidates = find_zero_count_functions(data["data"][0], source_root)
         diagnostics = {"tool": "llvm-cov-23", "source_scope": str(source_root),
