@@ -152,8 +152,9 @@ static void testRealSourceThroughRuntime( void )
 	assert( nFingerprint != 0 );
 
 	initCompiler( &s_Fixture, nFingerprint );
-	static constexpr char szSource[] = "fn identity(value: u16) -> u16:\n"
-	                                   "    return value\n";
+	static constexpr char szSource[] = "function identity(u16 value) returns u16 {\n"
+	                                   "    return value;\n"
+	                                   "}";
 	assert( SIRLangCompileSource( { ( const uint8_t * )szSource, sizeof( szSource ) - 1 }, &s_Fixture.compiler ) );
 	const uint64_t nMethodId = s_Fixture.compiler.cir.program.pFunctions[0].nFunctionId;
 	uint32_t nEncoded = 0;
