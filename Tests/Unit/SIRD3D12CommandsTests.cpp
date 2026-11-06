@@ -411,6 +411,8 @@ static int sirTestRaster( SIRRenderingDevice *pDevice, uint32_t nGeneration, con
 	transition.hResource = hTexture;
 	transition.eBefore = SIR_GRAPHICS_STATE_COMMON;
 	transition.eAfter = SIR_GRAPHICS_STATE_COLOR_ATTACHMENT;
+	transition.nMipCount = texture.nMipLevels;
+	transition.nLayerCount = texture.nArrayLayers;
 
 	// Exercise a nonzero mip/layer and reject a range beyond the image.
 	sirGraphicsBarrier_t partial = transition;

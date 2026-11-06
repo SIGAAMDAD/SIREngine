@@ -107,6 +107,7 @@ int main( void )
 	                           "nested/file.bin:stream",
 	                           "nested/file.bin.",
 	                           "CON.txt",
+	                           "nul.txt",
 	                           "COM\xc2\xb9",
 	                           "com\xc2\xb2.txt",
 	                           "COM\xc2\xb3",
@@ -122,6 +123,9 @@ int main( void )
 		sirRootRequire( root.openRead( szDenied[i], &rejected ) == SIR_FILE_INVALID_ARGUMENT, "deny malformed relative path" );
 		sirRootRequire( !rejected.isOpen(), "denied leaves destination closed" );
 	}
+	char szTooLong[SIR_PLATFORM_ROOTED_MAX_RELATIVE_BYTES + 1] = {};
+	memset( szTooLong, 'a', SIR_PLATFORM_ROOTED_MAX_RELATIVE_BYTES );
+	sirRootRequire( root.openRead( szTooLong, &rejected ) == SIR_FILE_INVALID_ARGUMENT, "deny overlong relative path" );
 	sirRootRequire( root.openRead( "nested", &rejected ) == SIR_FILE_ACCESS_DENIED, "deny directory target" );
 	sirRootRequire( root.openRead( "missing/file.bin", &rejected ) == SIR_FILE_NOT_FOUND, "missing intermediate" );
 	sirRootRequire( root.openRead( "nested/missing.bin", &rejected ) == SIR_FILE_NOT_FOUND, "missing final" );

@@ -62,6 +62,10 @@ int main( void )
 	std::filesystem::path pathChild = pathRoot / "one" / "two";
 	const std::string szRoot = pathRoot.string();
 	const std::string szChild = pathChild.string();
+	const char szAtomicBytes[] = { 'X' };
+	const sirFileSystemAtomicWriteRequest_t badSibling = { "dest.bin", "folder/stage.bin", szAtomicBytes, sizeof( szAtomicBytes ) };
+	sirCheckFileSystem( SIRPlatformFileSystem::writeAtomically( badSibling ) == SIR_ATOMIC_SAVE_INVALID_PATH,
+	                    "reject incompatible staging parent paths" );
 	sirCheckFileSystem( SIRPlatformFileSystem::createDirectory( nullptr, false ) == SIR_FILESYSTEM_INVALID_ARGUMENT, "null path" );
 	sirCheckFileSystem( SIRPlatformFileSystem::createDirectory( szChild.c_str(), true ) == SIR_FILESYSTEM_OK, "recursive mkdir" );
 	sirFileSystemInfo_t info{};

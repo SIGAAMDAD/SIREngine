@@ -43,10 +43,21 @@ of merchantability, fitness for a particular purpose and noninfringement.
 extern "C" void __gcov_dump( void );
 #endif
 
+#if defined( __clang__ )
+extern "C" int __llvm_profile_write_file( void ) __attribute__( ( weak ) );
+extern "C" void __llvm_profile_set_filename( const char *pszName ) __attribute__( ( weak ) );
+extern "C" void __llvm_profile_reset_counters( void ) __attribute__( ( weak ) );
+#endif
+
 extern "C" [[noreturn]] void __wrap_abort( void )
 {
 #if defined( SIR_GRDG_GCOV_ENABLED )
 	__gcov_dump();
+#endif
+#if defined( __clang__ )
+	if ( __llvm_profile_write_file != nullptr ) {
+		( void )__llvm_profile_write_file();
+	}
 #endif
 	_exit( 81 );
 }
@@ -282,6 +293,20 @@ static void testExpectedAbort( void ( *pfnScenario )( void ) )
 	const pid_t nChild = fork();
 	SIR_DEATH_CHECK( nChild >= 0 );
 	if ( nChild == 0 ) {
+#if defined( __clang__ )
+		const char *pszProfilePattern = getenv( "LLVM_PROFILE_FILE" );
+		if ( pszProfilePattern != nullptr && __llvm_profile_set_filename != nullptr ) {
+			char szChildProfile[1024];
+			const int nLength =
+			    snprintf( szChildProfile, sizeof( szChildProfile ), "%s.child.%ld.profraw", pszProfilePattern, ( long )getpid() );
+			if ( nLength > 0 && ( size_t )nLength < sizeof( szChildProfile ) ) {
+				__llvm_profile_set_filename( szChildProfile );
+				if ( __llvm_profile_reset_counters != nullptr ) {
+					__llvm_profile_reset_counters();
+				}
+			}
+		}
+#endif
 		pfnScenario();
 		_exit( 0 );
 	}
