@@ -518,7 +518,7 @@ static void sirLangVisit( sirLangSignatureState_t *pState, uint32_t iNode, sirLa
 		return;
 	}
 	const sirLangSyntaxNode_t& node = pState->pTree->pNodes[iNode];
-	if ( node.eKind == SIR_LANG_SYNTAX_FUNCTION ) {
+	if ( node.eKind == SIR_LANG_SYNTAX_FUNCTION || node.eKind == SIR_LANG_SYNTAX_EVENT ) {
 		const sirLangFunctionSignature_t *pFunction = sirLangFindFunction( pState, iNode );
 		if ( pFunction != nullptr ) {
 			eReturn = pFunction->result;
@@ -564,7 +564,16 @@ static void sirLangVisit( sirLangSignatureState_t *pState, uint32_t iNode, sirLa
 		--pState->nDepth;
 		return;
 	}
-	if ( node.eKind == SIR_LANG_SYNTAX_WHEN ) {
+	if ( node.eKind == SIR_LANG_SYNTAX_SWITCH || node.eKind == SIR_LANG_SYNTAX_CASE ) {
+		const uint32_t iValue = node.nFirstChild;
+		if ( node.eKind == SIR_LANG_SYNTAX_SWITCH || iValue != SIR_LANG_INVALID_INDEX ) {
+			sirLangInfer( pState, iValue );
+		}
+		for ( uint32_t iChild = sirLangNextNode( pState, iValue ); iChild != SIR_LANG_INVALID_INDEX;
+		      iChild = sirLangNextNode( pState, iChild ) ) {
+			sirLangVisit( pState, iChild, eReturn );
+		}
+	} else if ( node.eKind == SIR_LANG_SYNTAX_WHEN ) {
 		const uint32_t iCondition = node.nFirstChild;
 		const sirLangTypeIdentity_t condition = sirLangInfer( pState, iCondition );
 		if ( condition.eValue != SIR_LANG_VALUE_UNKNOWN && condition.eValue != SIR_LANG_VALUE_BOOL ) {
@@ -605,7 +614,8 @@ sirLangSignatureError_t SIRLangResolveSignatures( const sirLangSyntaxTree_t *pTr
 	sirLangSignatureState_t state = { pTree, pSemantic, pOutput, SIR_LANG_SIGNATURE_OK, 0 };
 	for ( uint32_t iSymbol = 0; iSymbol < pSemantic->nSymbolCount; ++iSymbol ) {
 		const sirLangSemanticSymbol_t& symbol = pSemantic->pSymbols[iSymbol];
-		if ( symbol.eKind == SIR_LANG_SYMBOL_FUNCTION && symbol.iDeclarationNode < pTree->nNodeCount ) {
+		if ( ( symbol.eKind == SIR_LANG_SYMBOL_FUNCTION || symbol.eKind == SIR_LANG_SYMBOL_EVENT ) &&
+		     symbol.iDeclarationNode < pTree->nNodeCount ) {
 			sirLangRegisterSignature( &state, symbol );
 		}
 	}

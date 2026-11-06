@@ -289,7 +289,7 @@ static void testForwardSchemaFlags( void ) noexcept
 	sirLangSemanticFixture_t fixture = {};
 	initializeFixture( &fixture );
 	static constexpr const char *s_pszWords[] = {
-	    "behavior", "Guard", "uses",   "FlagsSchema", ":",           "fn", "run",       "(",    ")",     ":", "when", "self",   ".",
+	    "behavior", "Guard", "uses",   "FlagsSchema", ":",           "fn", "run",       "(",    ")",     ":", "when", "this",   ".",
 	    "Alerted",  ":",     "return", "schema",      "FlagsSchema", ":",  "condition", "bank", "Flags", ":", "u16",  "Alerted" };
 	addTokens( &fixture, s_pszWords, sizeof( s_pszWords ) / sizeof( s_pszWords[0] ) );
 	const uint32_t iRoot = newNode( &fixture, SIR_LANG_SYNTAX_MODULE, 0, 25 );

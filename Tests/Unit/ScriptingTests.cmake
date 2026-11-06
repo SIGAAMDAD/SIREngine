@@ -40,6 +40,7 @@ sir_configure_owned_target(SIRScriptOptimizerOutstandingTests)
 
 add_executable(SIRScriptOptimizerProcessTransportTests SIRScriptOptimizerProcessTransportTests.cpp)
 target_link_libraries(SIRScriptOptimizerProcessTransportTests PRIVATE SIR::Scripting)
+add_dependencies(SIRScriptOptimizerProcessTransportTests SIRScriptOptimizerWorkerFixture)
 sir_configure_owned_target(SIRScriptOptimizerProcessTransportTests)
 add_test(NAME scripting.optimizer-process-transport COMMAND SIRScriptOptimizerProcessTransportTests $<TARGET_FILE:SIRScriptOptimizerWorkerFixture>)
 
@@ -60,6 +61,15 @@ sir_configure_owned_target(SIRScriptOptimizerWorkerTests)
 add_test(NAME scripting.optimizer-worker COMMAND SIRScriptOptimizerWorkerTests
     $<TARGET_FILE:SIRScriptOptimizerWorker> $<TARGET_FILE:SIRScriptOptimizerTestBackend>)
 
+add_executable(SIRScriptOptimizerWorkerCoverageTests SIRScriptOptimizerWorkerCoverageTests.cpp)
+target_link_libraries(SIRScriptOptimizerWorkerCoverageTests PRIVATE SIR::Scripting)
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    target_compile_definitions(SIRScriptOptimizerWorkerCoverageTests PRIVATE SIR_SCRIPT_TEST_MALLOC_FAULT_INJECTION=1)
+    target_link_options(SIRScriptOptimizerWorkerCoverageTests PRIVATE "LINKER:--wrap=malloc")
+endif()
+add_test(NAME scripting.optimizer-worker-coverage COMMAND SIRScriptOptimizerWorkerCoverageTests)
+sir_configure_owned_target(SIRScriptOptimizerWorkerCoverageTests)
+
 add_executable(SIRScriptOptimizationRecipeTests SIRScriptOptimizationRecipeTests.cpp)
 target_link_libraries(SIRScriptOptimizationRecipeTests PRIVATE SIR::Scripting)
 sir_configure_owned_target(SIRScriptOptimizationRecipeTests)
@@ -74,6 +84,11 @@ add_executable(SIRLangParserTests SIRLangParserTests.cpp)
 target_link_libraries(SIRLangParserTests PRIVATE SIR::Scripting)
 add_test(NAME scripting.language.parser COMMAND SIRLangParserTests)
 sir_configure_owned_target(SIRLangParserTests)
+
+add_executable(SIRLangParserAdversarialTests SIRLangParserAdversarialTests.cpp)
+target_link_libraries(SIRLangParserAdversarialTests PRIVATE SIR::Scripting)
+add_test(NAME scripting.language.parser-adversarial COMMAND SIRLangParserAdversarialTests)
+sir_configure_owned_target(SIRLangParserAdversarialTests)
 
 add_executable(SIRLangSemanticTests SIRLangSemanticTests.cpp)
 target_link_libraries(SIRLangSemanticTests PRIVATE SIR::Scripting)
@@ -94,6 +109,16 @@ add_executable(SIRLangGraphVMTests SIRLangGraphVMTests.cpp)
 target_link_libraries(SIRLangGraphVMTests PRIVATE SIR::Scripting)
 add_test(NAME scripting.language.graphvm COMMAND SIRLangGraphVMTests)
 sir_configure_owned_target(SIRLangGraphVMTests)
+
+add_executable(SIRLangGraphVMAdversarialTests SIRLangGraphVMAdversarialTests.cpp)
+target_link_libraries(SIRLangGraphVMAdversarialTests PRIVATE SIR::Scripting)
+add_test(NAME scripting.language.graphvm-adversarial COMMAND SIRLangGraphVMAdversarialTests)
+sir_configure_owned_target(SIRLangGraphVMAdversarialTests)
+
+add_executable(SIRLangGraphVMNumericTests SIRLangGraphVMNumericTests.cpp)
+target_link_libraries(SIRLangGraphVMNumericTests PRIVATE SIR::Scripting)
+add_test(NAME scripting.language.graphvm-numeric COMMAND SIRLangGraphVMNumericTests)
+sir_configure_owned_target(SIRLangGraphVMNumericTests)
 
 add_executable(SIRLangLoweringTests SIRLangLoweringTests.cpp)
 target_link_libraries(SIRLangLoweringTests PRIVATE SIR::Scripting)
