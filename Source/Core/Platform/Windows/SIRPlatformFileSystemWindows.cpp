@@ -211,3 +211,174 @@ sirFileSystemResult_t SIRPlatformFileSystem::enumerate( const char *pszDirectory
 	FindClose( hFind );
 	return eResult;
 }
+
+// Core-owned atomic scene replacement and bounded regular-file reads.
+static sirPlatformAtomicResult_t sirFileSystemCheckExpected( const wchar_t *pszDestination,
+                                                             const sirFileSystemAtomicWriteRequest_t& request ) noexcept
+{
+	if ( request.pExpectedBytes == nullptr ) {
+		return SIR_ATOMIC_SAVE_OK;
+	}
+	HANDLE hFile = CreateFileW( pszDestination, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr,
+	                            OPEN_EXISTING, FILE_FLAG_OPEN_REPARSE_POINT, nullptr );
+	if ( hFile == INVALID_HANDLE_VALUE ) {
+		return GetLastError() == ERROR_FILE_NOT_FOUND ? SIR_ATOMIC_SAVE_CONFLICT : SIR_ATOMIC_SAVE_IO_ERROR;
+	}
+	BY_HANDLE_FILE_INFORMATION information = {};
+	LARGE_INTEGER nLength = {};
+	if ( !GetFileInformationByHandle( hFile, &information ) || !GetFileSizeEx( hFile, &nLength ) ) {
+		CloseHandle( hFile );
+		return SIR_ATOMIC_SAVE_IO_ERROR;
+	}
+	if ( ( information.dwFileAttributes & ( FILE_ATTRIBUTE_DIRECTORY | FILE_ATTRIBUTE_REPARSE_POINT | FILE_ATTRIBUTE_DEVICE ) ) != 0 ) {
+		CloseHandle( hFile );
+		return SIR_ATOMIC_SAVE_INVALID_PATH;
+	}
+	if ( nLength.QuadPart < 0 || ( uint64_t )nLength.QuadPart != ( uint64_t )request.nExpectedBytes ) {
+		CloseHandle( hFile );
+		return SIR_ATOMIC_SAVE_CONFLICT;
+	}
+	char szChunk[4096] = {};
+	size_t nRead = 0;
+	while ( nRead < request.nExpectedBytes ) {
+		const size_t nRemaining = request.nExpectedBytes - nRead;
+		const DWORD nChunk = nRemaining < sizeof( szChunk ) ? ( DWORD )nRemaining : ( DWORD )sizeof( szChunk );
+		DWORD nActual = 0;
+		if ( !ReadFile( hFile, szChunk, nChunk, &nActual, nullptr ) || nActual == 0 ) {
+			CloseHandle( hFile );
+			return SIR_ATOMIC_SAVE_IO_ERROR;
+		}
+		if ( memcmp( szChunk, request.pExpectedBytes + nRead, nActual ) != 0 ) {
+			CloseHandle( hFile );
+			return SIR_ATOMIC_SAVE_CONFLICT;
+		}
+		nRead += nActual;
+	}
+	return CloseHandle( hFile ) ? SIR_ATOMIC_SAVE_OK : SIR_ATOMIC_SAVE_IO_ERROR;
+}
+
+static bool sirFileSystemToWindowsPath( const char *pszUtf8, wchar_t *pWide, int nCapacity ) noexcept
+{
+	const int nConverted = MultiByteToWideChar( CP_UTF8, MB_ERR_INVALID_CHARS, pszUtf8, -1, pWide, nCapacity );
+	return nConverted != 0;
+}
+
+sirFileSystemResult_t SIRPlatformFileSystem::readFilePlatform( const char *pszPath, char *pszOutput, size_t nCapacity,
+                                                               size_t *pOutBytes ) noexcept
+{
+	wchar_t szPath[4096] = {};
+	if ( !sirFileSystemToWindowsPath( pszPath, szPath, 4096 ) ) {
+		return SIR_FILESYSTEM_INVALID_PATH;
+	}
+	HANDLE hFile = CreateFileW( szPath, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING,
+	                            FILE_FLAG_OPEN_REPARSE_POINT, nullptr );
+	if ( hFile == INVALID_HANDLE_VALUE ) {
+		return SIR_FILESYSTEM_IO_ERROR;
+	}
+	BY_HANDLE_FILE_INFORMATION information = {};
+	LARGE_INTEGER nLength = {};
+	if ( !GetFileInformationByHandle( hFile, &information ) || !GetFileSizeEx( hFile, &nLength ) ) {
+		CloseHandle( hFile );
+		return SIR_FILESYSTEM_IO_ERROR;
+	}
+	if ( ( information.dwFileAttributes & ( FILE_ATTRIBUTE_DIRECTORY | FILE_ATTRIBUTE_DEVICE | FILE_ATTRIBUTE_REPARSE_POINT ) ) != 0 ||
+	     nLength.QuadPart < 0 ) {
+		CloseHandle( hFile );
+		return SIR_FILESYSTEM_INVALID_PATH;
+	}
+	if ( ( uint64_t )nLength.QuadPart > SIZE_MAX ) {
+		CloseHandle( hFile );
+		return SIR_FILESYSTEM_OUT_OF_CAPACITY;
+	}
+	const size_t nFileBytes = ( size_t )nLength.QuadPart;
+	*pOutBytes = nFileBytes;
+	if ( pszOutput == nullptr ) {
+		return CloseHandle( hFile ) ? SIR_FILESYSTEM_OK : SIR_FILESYSTEM_IO_ERROR;
+	}
+	if ( nCapacity < nFileBytes ) {
+		CloseHandle( hFile );
+		return SIR_FILESYSTEM_OUT_OF_CAPACITY;
+	}
+	size_t nRead = 0;
+	while ( nRead < nFileBytes ) {
+		const size_t nRemaining = nFileBytes - nRead;
+		const DWORD nChunk = nRemaining > 1048576 ? 1048576 : ( DWORD )nRemaining;
+		DWORD nActual = 0;
+		if ( !ReadFile( hFile, pszOutput + nRead, nChunk, &nActual, nullptr ) || nActual == 0 ) {
+			CloseHandle( hFile );
+			return SIR_FILESYSTEM_IO_ERROR;
+		}
+		nRead += nActual;
+	}
+	char szExtra[1] = {};
+	DWORD nExtra = 0;
+	const bool bComplete = ReadFile( hFile, szExtra, 1, &nExtra, nullptr ) != 0 && nExtra == 0;
+	const bool bClosed = CloseHandle( hFile ) != 0;
+	return bComplete && bClosed ? SIR_FILESYSTEM_OK : SIR_FILESYSTEM_IO_ERROR;
+}
+
+sirPlatformAtomicResult_t SIRPlatformFileSystem::writeAtomicallyPlatform( const sirFileSystemAtomicWriteRequest_t& request ) noexcept
+{
+	wchar_t szDestination[4096] = {};
+	wchar_t szTemporary[4096] = {};
+	if ( !sirFileSystemToWindowsPath( request.pszDestination, szDestination, 4096 ) ||
+	     !sirFileSystemToWindowsPath( request.pszTemporary, szTemporary, 4096 ) ) {
+		return SIR_ATOMIC_SAVE_INVALID_PATH;
+	}
+	const DWORD nDestinationAttributes = GetFileAttributesW( szDestination );
+	if ( nDestinationAttributes != INVALID_FILE_ATTRIBUTES ) {
+		if ( ( nDestinationAttributes & FILE_ATTRIBUTE_REPARSE_POINT ) != 0 ) {
+			return SIR_ATOMIC_SAVE_INVALID_PATH;
+		}
+		if ( ( nDestinationAttributes & FILE_ATTRIBUTE_DIRECTORY ) != 0 ) {
+			return SIR_ATOMIC_SAVE_REPLACE_FAILED;
+		}
+		if ( ( nDestinationAttributes & FILE_ATTRIBUTE_DEVICE ) != 0 ) {
+			return SIR_ATOMIC_SAVE_INVALID_PATH;
+		}
+	} else if ( GetLastError() != ERROR_FILE_NOT_FOUND ) {
+		return SIR_ATOMIC_SAVE_IO_ERROR;
+	}
+
+	const sirPlatformAtomicResult_t eExpected = sirFileSystemCheckExpected( szDestination, request );
+	if ( eExpected != SIR_ATOMIC_SAVE_OK ) {
+		return eExpected;
+	}
+	HANDLE hFile = CreateFileW( szTemporary, GENERIC_WRITE, 0, nullptr, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, nullptr );
+	if ( hFile == INVALID_HANDLE_VALUE ) {
+		const DWORD nError = GetLastError();
+		return ( nError == ERROR_FILE_EXISTS || nError == ERROR_ALREADY_EXISTS ) ? SIR_ATOMIC_SAVE_TEMP_EXISTS : SIR_ATOMIC_SAVE_IO_ERROR;
+	}
+	bool bSuccess = true;
+	size_t nWritten = 0;
+	while ( nWritten < request.nBytes ) {
+		const size_t nRemaining = request.nBytes - nWritten;
+		const DWORD nChunk = nRemaining > 1048576 ? 1048576 : ( DWORD )nRemaining;
+		DWORD nActual = 0;
+		if ( !WriteFile( hFile, request.pBytes + nWritten, nChunk, &nActual, nullptr ) || nActual == 0 ) {
+			bSuccess = false;
+			break;
+		}
+		nWritten += nActual;
+	}
+	if ( bSuccess ) {
+		bSuccess = FlushFileBuffers( hFile ) != 0;
+	}
+	if ( !CloseHandle( hFile ) ) {
+		bSuccess = false;
+	}
+	if ( !bSuccess ) {
+		DeleteFileW( szTemporary );
+		return SIR_ATOMIC_SAVE_IO_ERROR;
+	}
+	const sirPlatformAtomicResult_t eRecheck = sirFileSystemCheckExpected( szDestination, request );
+	if ( eRecheck != SIR_ATOMIC_SAVE_OK ) {
+		DeleteFileW( szTemporary );
+		return eRecheck;
+	}
+	if ( !MoveFileExW( szTemporary, szDestination, MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH ) ) {
+		DeleteFileW( szTemporary );
+		return SIR_ATOMIC_SAVE_REPLACE_FAILED;
+	}
+	return SIR_ATOMIC_SAVE_OK;
+}

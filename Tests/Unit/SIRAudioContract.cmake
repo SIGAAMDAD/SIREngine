@@ -1,0 +1,51 @@
+add_executable(SIRAudioContractTests SIRAudioContractTests.cpp SIRAudioMockBackend.cpp)
+target_link_libraries(SIRAudioContractTests PRIVATE SIR::Audio)
+add_test(NAME audio.contract.wave-a COMMAND SIRAudioContractTests)
+sir_configure_owned_target(SIRAudioContractTests)
+
+add_executable(SIRAudioResourceTests SIRAudioResourcesTests.cpp SIRAudioMockBackend.cpp)
+target_link_libraries(SIRAudioResourceTests PRIVATE SIR::Audio)
+add_test(NAME audio.resources.wave-a COMMAND SIRAudioResourceTests)
+sir_configure_owned_target(SIRAudioResourceTests)
+
+add_executable(SIRFMODMemoryBudgetTests SIRFMODMemoryBudgetTests.cpp)
+target_link_libraries(SIRFMODMemoryBudgetTests PRIVATE SIR::FMODContext)
+add_test(NAME audio.fmod.memory-accounting COMMAND SIRFMODMemoryBudgetTests)
+sir_configure_owned_target(SIRFMODMemoryBudgetTests)
+
+add_executable(SIRFMODContextTests SIRFMODContextTests.cpp)
+target_link_libraries(SIRFMODContextTests PRIVATE SIR::FMODContext)
+add_test(NAME audio.fmod.context-contract COMMAND SIRFMODContextTests)
+sir_configure_owned_target(SIRFMODContextTests)
+
+if(SIR_WITH_FMOD)
+    add_executable(SIRFMODNativeSmokeTests SIRFMODNativeSmokeTests.cpp)
+    target_link_libraries(SIRFMODNativeSmokeTests PRIVATE SIR::FMODContext)
+    add_test(NAME audio.fmod.native-context COMMAND SIRFMODNativeSmokeTests)
+    sir_configure_owned_target(SIRFMODNativeSmokeTests)
+
+    add_executable(SIRFMODRuntimeNativeSmokeTests SIRFMODRuntimeNativeSmokeTests.cpp)
+    target_link_libraries(SIRFMODRuntimeNativeSmokeTests PRIVATE SIR::FMODContext)
+    add_test(NAME audio.fmod.native-runtime COMMAND SIRFMODRuntimeNativeSmokeTests)
+    sir_configure_owned_target(SIRFMODRuntimeNativeSmokeTests)
+endif()
+
+add_executable(SIRFMODVoiceBackendTests SIRFMODVoiceBackendTests.cpp)
+target_link_libraries(SIRFMODVoiceBackendTests PRIVATE SIR::FMODContext)
+add_test(NAME audio.fmod.voice-lifecycle COMMAND SIRFMODVoiceBackendTests)
+sir_configure_owned_target(SIRFMODVoiceBackendTests)
+
+add_executable(SIRFMODBankStoreTests SIRFMODBankStoreTests.cpp)
+target_link_libraries(SIRFMODBankStoreTests PRIVATE SIR::FMODContext)
+add_test(NAME audio.fmod.bank-residency COMMAND SIRFMODBankStoreTests)
+sir_configure_owned_target(SIRFMODBankStoreTests)
+
+add_executable(SIRFMODMixerBackendTests SIRFMODMixerBackendTests.cpp)
+target_link_libraries(SIRFMODMixerBackendTests PRIVATE SIR::FMODContext)
+add_test(NAME audio.fmod.mixer-controls COMMAND SIRFMODMixerBackendTests)
+sir_configure_owned_target(SIRFMODMixerBackendTests)
+
+add_executable(SIRFMODSnapshotBackendTests SIRFMODSnapshotBackendTests.cpp)
+target_link_libraries(SIRFMODSnapshotBackendTests PRIVATE SIR::FMODContext)
+add_test(NAME audio.fmod.snapshot-lifecycle COMMAND SIRFMODSnapshotBackendTests)
+sir_configure_owned_target(SIRFMODSnapshotBackendTests)

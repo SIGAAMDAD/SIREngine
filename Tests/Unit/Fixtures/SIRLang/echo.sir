@@ -1,0 +1,2 @@
+fn echo(value: u16) -> u16:
+    return value

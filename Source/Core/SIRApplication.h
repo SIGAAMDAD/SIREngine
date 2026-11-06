@@ -26,6 +26,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Core/Events/SIREventRegistry.h>
 #include <Core/Systems/SIREngineSystem.h>
+#include <Core/Platform/Input/SIRInputService.h>
+
+// The native window owner dispatches events only between input begin/publish.
+typedef bool ( *sirAppInputPump_t )( SIRInputService& input, void *pContext );
 
 constexpr uint32_t SIR_APPLICATION_MAX_SYSTEMS = 16;
 
@@ -50,7 +54,9 @@ public:
 	uint64_t getTickCount( void ) const noexcept;
 	uint32_t getSystemCount( void ) const noexcept;
 	SIREventRegistry& getEventRegistry( void ) noexcept;
+	const sirInputFrame_t *getInputFrame( void ) const noexcept;
 
+	bool attachInput( SIRInputService& input, sirAppInputPump_t pPump = nullptr, void *pContext = nullptr ) noexcept;
 	bool registerSystem( SIREngineSystem *pSystem ) noexcept;
 	bool initialize( void ) noexcept;
 	bool tick( float fDeltaSeconds = 0.0f ) noexcept;
@@ -65,6 +71,9 @@ private:
 	uint32_t m_nInitializedSystems;
 	SIREngineSystem *m_szSystems[SIR_APPLICATION_MAX_SYSTEMS] = {};
 	SIREventRegistry m_EventRegistry;
+	SIRInputService *m_pInput;
+	sirAppInputPump_t m_pInputPump;
+	void *m_pInputPumpContext;
 };
 
 #endif // __SIRENGINE_SIRAPPLICATION_H__

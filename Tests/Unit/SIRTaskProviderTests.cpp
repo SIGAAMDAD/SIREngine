@@ -62,7 +62,7 @@ static void testDeferredCompletionOnRegisteredThread( void )
 	std::atomic<bool> bAcknowledge( false );
 	std::atomic<bool> bDone( false );
 	sirTaskHandle_t render = {};
-	SIR_PROVIDER_CHECK( scheduler.submit( providerDeferred, &nLaunch, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_RENDER, &render ) );
+	SIR_PROVIDER_CHECK( scheduler.submit( { providerDeferred, &nLaunch, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_RENDER }, &render ) );
 
 	std::thread provider( [&]() {
 		SIR_PROVIDER_CHECK( scheduler.bindProviderOwner( SIR_TASK_EXEC_RENDER ) );
@@ -94,7 +94,7 @@ static void testDeferredCompletionOnRegisteredThread( void )
 	SIR_PROVIDER_CHECK( scheduler.getStats().nAwaitingProvider == 1 );
 	sirTaskHandle_t dependent = {};
 	SIR_PROVIDER_CHECK(
-	    scheduler.submitAfter( providerCount, &nCompleted, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU, &render, 1, &dependent ) );
+	    scheduler.submitAfter( { providerCount, &nCompleted, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU }, &render, 1, &dependent ) );
 	SIR_PROVIDER_CHECK( scheduler.getState( dependent ) == SIR_TASK_BLOCKED );
 	SIR_PROVIDER_CHECK( scheduler.pumpCPU( 10 ) == 0 );
 	SIR_PROVIDER_CHECK( !scheduler.completeProvider( render, SIR_TASK_RESULT_SUCCESS ) );
@@ -126,10 +126,11 @@ static void testCancellationRequiresProviderAcknowledgement( void )
 	SIR_PROVIDER_CHECK( scheduler.bindProviderOwner( SIR_TASK_EXEC_PHYSICS ) );
 	std::atomic<uint32_t> nCalls( 0 );
 	sirTaskHandle_t physics = {};
-	SIR_PROVIDER_CHECK( scheduler.submit( providerDeferred, &nCalls, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_PHYSICS, &physics ) );
+	SIR_PROVIDER_CHECK( scheduler.submit( { providerDeferred, &nCalls, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_PHYSICS }, &physics ) );
 	SIR_PROVIDER_CHECK( scheduler.pumpProvider( SIR_TASK_EXEC_PHYSICS, 1 ) == 1 );
 	sirTaskHandle_t child = {};
-	SIR_PROVIDER_CHECK( scheduler.submitAfter( providerCount, &nCalls, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU, &physics, 1, &child ) );
+	SIR_PROVIDER_CHECK(
+	    scheduler.submitAfter( { providerCount, &nCalls, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU }, &physics, 1, &child ) );
 	SIR_PROVIDER_CHECK( scheduler.cancel( physics ) );
 	SIR_PROVIDER_CHECK( scheduler.isCancellationRequested( physics ) );
 	SIR_PROVIDER_CHECK( scheduler.getState( physics ) == SIR_TASK_AWAITING_PROVIDER );
@@ -217,7 +218,7 @@ static void testShutdownDuringProviderCallback( void )
 	SIR_PROVIDER_CHECK( scheduler.init( &memory, { 4, 0, 8 } ) );
 	sirProviderBlockingContext_t block = {};
 	sirTaskHandle_t task = {};
-	SIR_PROVIDER_CHECK( scheduler.submit( providerBlockingCallback, &block, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_RENDER, &task ) );
+	SIR_PROVIDER_CHECK( scheduler.submit( { providerBlockingCallback, &block, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_RENDER }, &task ) );
 	std::thread render( [&]() {
 		SIR_PROVIDER_CHECK( scheduler.bindProviderOwner( SIR_TASK_EXEC_RENDER ) );
 		SIR_PROVIDER_CHECK( scheduler.pumpProvider( SIR_TASK_EXEC_RENDER, 1 ) == 1 );
@@ -247,10 +248,11 @@ static void testWorkerProviderHandoff( void )
 	sirTaskHandle_t root = {};
 	sirTaskHandle_t render = {};
 	sirTaskHandle_t child = {};
-	SIR_PROVIDER_CHECK( scheduler.submit( providerCount, &nCount, SIR_TASK_PRIORITY_CRITICAL, SIR_TASK_EXEC_CPU, &root ) );
+	SIR_PROVIDER_CHECK( scheduler.submit( { providerCount, &nCount, SIR_TASK_PRIORITY_CRITICAL, SIR_TASK_EXEC_CPU }, &root ) );
 	SIR_PROVIDER_CHECK(
-	    scheduler.submitAfter( providerDeferred, &nCount, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_RENDER, &root, 1, &render ) );
-	SIR_PROVIDER_CHECK( scheduler.submitAfter( providerCount, &nCount, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU, &render, 1, &child ) );
+	    scheduler.submitAfter( { providerDeferred, &nCount, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_RENDER }, &root, 1, &render ) );
+	SIR_PROVIDER_CHECK(
+	    scheduler.submitAfter( { providerCount, &nCount, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU }, &render, 1, &child ) );
 	SIR_PROVIDER_CHECK( scheduler.waitTask( root ) );
 	SIR_PROVIDER_CHECK( scheduler.pumpProvider( SIR_TASK_EXEC_RENDER, 1 ) == 1 );
 	SIR_PROVIDER_CHECK( scheduler.getState( child ) == SIR_TASK_BLOCKED );
@@ -272,7 +274,7 @@ static void testPendingCpuCallbackIsFailure( void )
 	SIR_PROVIDER_CHECK( scheduler.init( &memory, { 4, 0, 4 } ) );
 	std::atomic<uint32_t> nCount( 0 );
 	sirTaskHandle_t cpu = {};
-	SIR_PROVIDER_CHECK( scheduler.submit( providerDeferred, &nCount, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU, &cpu ) );
+	SIR_PROVIDER_CHECK( scheduler.submit( { providerDeferred, &nCount, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU }, &cpu ) );
 	SIR_PROVIDER_CHECK( scheduler.pumpCPU( 1 ) == 1 );
 	SIR_PROVIDER_CHECK( scheduler.getState( cpu ) == SIR_TASK_FAILED );
 	SIR_PROVIDER_CHECK( scheduler.releaseTask( cpu ) );
@@ -292,7 +294,8 @@ static void testBurstAndInvalidCompletions( void )
 	SIR_PROVIDER_CHECK( scheduler.bindProviderOwner( SIR_TASK_EXEC_AUDIO ) );
 	sirTaskHandle_t handles[32] = {};
 	for ( uint32_t i = 0; i < 32; ++i ) {
-		SIR_PROVIDER_CHECK( scheduler.submit( providerDeferred, &nCalls, SIR_TASK_PRIORITY_BACKGROUND, SIR_TASK_EXEC_AUDIO, &handles[i] ) );
+		SIR_PROVIDER_CHECK(
+		    scheduler.submit( { providerDeferred, &nCalls, SIR_TASK_PRIORITY_BACKGROUND, SIR_TASK_EXEC_AUDIO }, &handles[i] ) );
 	}
 	SIR_PROVIDER_CHECK( scheduler.pumpProvider( SIR_TASK_EXEC_AUDIO, 32 ) == 32 );
 	SIR_PROVIDER_CHECK( scheduler.getStats().nAwaitingProvider == 32 );
