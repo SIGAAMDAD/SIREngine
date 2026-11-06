@@ -26,25 +26,48 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
   native:
-    name: Native functional acceptance
-    runs-on: ubuntu-24.04
+    name: Native functional acceptance (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022]
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
+      - uses: ilammy/msvc-dev-cmd@v1
+        if: runner.os == 'Windows'
       - uses: ./.github/actions/setup-build-tools
       - run: git submodule update --init ThirdParty/GoogleTest
       - run: |
           cmake --preset dev -DSIR_WITH_GOOGLETEST=ON
           cmake --build --preset dev
           ctest --preset dev --output-on-failure --no-tests=error
+  sanitizer:
+    name: ASan and UBSan native acceptance
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-build-tools
+      - run: git submodule update --init ThirdParty/GoogleTest
+      - name: Run full sanitized native suite
+        env:
+          ASAN_OPTIONS: detect_leaks=1:halt_on_error=1
+          UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+        run: |
+          cmake --preset asan -DSIR_WITH_GOOGLETEST=ON -DSIR_ENABLE_UBSAN=ON
+          cmake --build --preset asan
+          ctest --preset asan --output-on-failure --no-tests=error
   acceptance:
     name: Qualification acceptance
     if: always()
     runs-on: ubuntu-24.04
-    needs: [coverage, native]
+    needs: [coverage, native, sanitizer]
     steps:
       - name: Refuse incomplete gates
         env:
           COVERAGE: ${{ needs.coverage.result }}
           NATIVE: ${{ needs.native.result }}
-        run: test "$COVERAGE" = success && test "$NATIVE" = success
+          SANITIZER: ${{ needs.sanitizer.result }}
+        run: test "$COVERAGE" = success && test "$NATIVE" = success && test "$SANITIZER" = success
