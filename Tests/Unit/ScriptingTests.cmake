@@ -81,6 +81,11 @@ target_link_libraries(SIRLangParserTests PRIVATE SIR::Scripting)
 add_test(NAME scripting.language.parser COMMAND SIRLangParserTests)
 sir_configure_owned_target(SIRLangParserTests)
 
+add_executable(SIRLangParserAdversarialTests SIRLangParserAdversarialTests.cpp)
+target_link_libraries(SIRLangParserAdversarialTests PRIVATE SIR::Scripting)
+add_test(NAME scripting.language.parser-adversarial COMMAND SIRLangParserAdversarialTests)
+sir_configure_owned_target(SIRLangParserAdversarialTests)
+
 add_executable(SIRLangSemanticTests SIRLangSemanticTests.cpp)
 target_link_libraries(SIRLangSemanticTests PRIVATE SIR::Scripting)
 add_test(NAME scripting.language.semantic COMMAND SIRLangSemanticTests)
