@@ -87,7 +87,7 @@ int main( void )
 		REQUIRE( bucket.alloc( 32, 3 ) == nullptr );
 		REQUIRE( bucket.free( nullptr ) );
 		for ( uint32_t size : sizes ) {
-			void *pMemory = bucket.alloc( size, 16 );
+			void *pMemory = bucket.alloc( size, bucketConfig.nAlignment );
 			REQUIRE( pMemory != nullptr );
 			REQUIRE( bucket.owns( pMemory ) );
 			REQUIRE( bucket.getUsableSize( pMemory ) >= size );
