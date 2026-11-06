@@ -221,6 +221,29 @@ def parse_profile_hash_mismatches(stderr):
     return result
 
 
+def summarize_profile_mismatches(records):
+    """Group compiler dummy zero-hash records separately from nonzero conflicts."""
+    grouped = {}
+    for record in records:
+        name = record["name"]
+        value = int(record["hash"], 16)
+        if not name or value < 0:
+            raise RuntimeError("Malformed LLVM profile hash mismatch record")
+        key = (name, value)
+        grouped[key] = grouped.get(key, 0) + 1
+    dummy = sorted(({"name": name, "count": count}
+                    for (name, value), count in grouped.items() if value == 0),
+                   key=lambda row: (-row["count"], row["name"]))
+    conflicts = sorted(({"name": name, "hash": format(value, "x"), "count": count}
+                        for (name, value), count in grouped.items() if value != 0),
+                       key=lambda row: (row["name"], row["hash"]))
+    return {"total_records": len(records),
+            "zero_hash_records": sum(row["count"] for row in dummy),
+            "zero_hash_symbols": dummy,
+            "nonzero_hash_records": sum(row["count"] for row in conflicts),
+            "nonzero_hash_conflicts": conflicts}
+
+
 def find_zero_count_functions(coverage, source_root, limit=30):
     """List unexecuted mapped functions in the declared production scope."""
     root = pathlib.Path(source_root).resolve()
@@ -342,7 +365,9 @@ def qualify():
         debug_export = subprocess.run(command + ["--dump"], cwd=ROOT, stdout=subprocess.DEVNULL,
                                       stderr=subprocess.PIPE, text=True, check=False)
         mismatched = parse_profile_hash_mismatches(debug_export.stderr)
+        summary = summarize_profile_mismatches(mismatched)
         diagnostics = {"tool": "llvm-cov-23", "source_scope": str(source_root),
+                       "mismatch_summary": summary,
                        "source_sha": diagnostic["source_sha"],
                        "stderr": result.stderr[:8000],
                        "hash_mismatch_count": len(mismatched),
@@ -351,6 +376,8 @@ def qualify():
         (REPORT / "profile-mismatch.json").write_text(json.dumps(diagnostics, indent=2) + "\n")
         raise RuntimeError(
             f"Coverage mapping/profile mismatch: {result.stderr[:2000]}; "
+            f"zero-hash mapping records={summary['zero_hash_records']}, "
+            f"nonzero-hash conflicts={summary['nonzero_hash_conflicts'][:5]}; "
             f"first zero-count production functions: {candidates[:5]}; "
             f"see {REPORT / 'profile-mismatch.json'}")
     if name == "all":
