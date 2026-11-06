@@ -295,6 +295,16 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     sir_configure_owned_target(SIRTaskSchedulerFaultInjectionTests)
 endif()
 
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    add_executable(SIRPlatformClockProcessFaultTests SIRPlatformClockProcessFaultTests.cpp)
+    target_link_libraries(SIRPlatformClockProcessFaultTests PRIVATE SIR::Core)
+    foreach(sirWrappedCall IN ITEMS clock_gettime sysconf nanosleep)
+        target_link_options(SIRPlatformClockProcessFaultTests PRIVATE "LINKER:--wrap=${sirWrappedCall}")
+    endforeach()
+    add_test(NAME core.platform.clock-process-faults COMMAND SIRPlatformClockProcessFaultTests)
+    sir_configure_owned_target(SIRPlatformClockProcessFaultTests)
+endif()
+
 # Shared renderer contract tests run on Windows/Linux without a GPU or native driver.
 add_executable(SIRGraphicsInterfaceTests SIRGraphicsInterfaceTests.cpp)
 target_link_libraries(SIRGraphicsInterfaceTests PRIVATE SIR::Graphics)
