@@ -17,6 +17,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Scripting/Core/SIRScriptOptimizationRecipe.h>
 #include <Scripting/Core/SIRScriptSHA256.h>
 
+#include <atomic>
 #include <chrono>
 #include <filesystem>
 #include <stdio.h>
@@ -30,6 +31,21 @@ of merchantability, fitness for a particular purpose and noninfringement.
 			return false;                                                                                                                  \
 		}                                                                                                                                  \
 	} while ( 0 )
+
+// Linux-only linker fault injection covers the worker's actual malloc
+// failure paths without requiring speculative out-of-budget allocations.
+#if defined( SIR_SCRIPT_TEST_MALLOC_FAULT_INJECTION )
+static std::atomic<size_t> s_nFailMallocBytes{ 0 };
+extern "C" void *__real_malloc( size_t nBytes ) noexcept;
+extern "C" void *__wrap_malloc( size_t nBytes ) noexcept
+{
+	size_t nExpected = nBytes;
+	if ( s_nFailMallocBytes.compare_exchange_strong( nExpected, 0, std::memory_order_acq_rel ) ) {
+		return nullptr;
+	}
+	return __real_malloc( nBytes );
+}
+#endif
 
 typedef struct sirScriptWorkerCoverageState_s
 {
@@ -55,7 +71,7 @@ static sirScriptResult_t coverageCompile( void *pUser, const sirScriptOptimizerW
 		pState->eReentrantResult = pState->pWorker->process( *pState->pRequest, &nested );
 	}
 	for ( uint32_t i = 0; i < pView->nInputBytes; ++i ) {
-		pState->szOutput[i] = ( ( const uint8_t * )pView->pInput )[i] ^ 0x5a;
+		pState->szOutput[i] = ( ( const uint8_t * )pView->pInput )[i] ^ ( pState->nMode == 10 ? 0x55 : 0x5a );
 	}
 	*pOutput = { pState->szOutput, pView->nInputBytes, 64 };
 	if ( pState->nMode == 1 ) {
@@ -166,6 +182,21 @@ static bool testDirectWorker( void )
 	request.nJobId = 2;
 	SIR_TEST_CHECK( worker.process( request, &reply ) == SIR_SCRIPT_OK && reply.eResult == SIR_SCRIPT_OK );
 
+#if defined( SIR_SCRIPT_TEST_MALLOC_FAULT_INJECTION )
+	// Fail each of the two worker-owned allocations in isolation. The
+	// instrumented failure must be consumed, and the next request must recover.
+	request.nJobId = 4;
+	s_nFailMallocBytes.store( SIRScriptOptimizationRecipe::RECIPE_BYTES, std::memory_order_release );
+	SIR_TEST_CHECK( worker.process( request, &reply ) == SIR_SCRIPT_OK && reply.eResult == SIR_SCRIPT_CAPACITY_EXCEEDED );
+	SIR_TEST_CHECK( s_nFailMallocBytes.load() == 0 );
+	request.nJobId = 5;
+	s_nFailMallocBytes.store( sizeof( szInput ), std::memory_order_release );
+	SIR_TEST_CHECK( worker.process( request, &reply ) == SIR_SCRIPT_OK && reply.eResult == SIR_SCRIPT_CAPACITY_EXCEEDED );
+	SIR_TEST_CHECK( s_nFailMallocBytes.load() == 0 );
+	request.nJobId = 6;
+	SIR_TEST_CHECK( worker.process( request, &reply ) == SIR_SCRIPT_OK && reply.eResult == SIR_SCRIPT_OK );
+#endif
+
 	sirScriptOptimizerRecipe_t absentRecipe = {};
 	uint8_t szAbsent[128] = {};
 	memset( szAbsent, 0x33, sizeof( szAbsent ) );
@@ -194,6 +225,35 @@ static bool testDirectWorker( void )
 	request.nJobId = 21;
 	SIR_TEST_CHECK( smallWorker.process( request, &reply ) == SIR_SCRIPT_OK && reply.eResult == SIR_SCRIPT_CAPACITY_EXCEEDED );
 	SIR_TEST_CHECK( state.nReleases == state.nCompiles );
+
+	// The same recipe key must reject a backend output that differs from the
+	// valid cached artifact, without returning an apparently valid descriptor.
+	state.nMode = 10;
+	request.nJobId = 22;
+	SIR_TEST_CHECK( worker.process( request, &reply ) == SIR_SCRIPT_OK && reply.eResult == SIR_SCRIPT_TYPE_MISMATCH );
+	SIR_TEST_CHECK( reply.cached.nBytes == 0 && state.nReleases == state.nCompiles );
+
+	// The input-store header remains valid after a payload mutation. A worker
+	// must reject this later fetch failure without calling the compiler.
+	state.nMode = 0;
+	std::filesystem::path inputFile;
+	for ( const std::filesystem::directory_entry& entry : std::filesystem::directory_iterator( inputRoot ) ) {
+		if ( entry.path().extension() == ".sirinput" ) {
+			inputFile = entry.path();
+			break;
+		}
+	}
+	SIR_TEST_CHECK( !inputFile.empty() );
+	FILE *pCorrupt = fopen( inputFile.string().c_str(), "r+b" );
+	SIR_TEST_CHECK( pCorrupt != nullptr );
+	SIR_TEST_CHECK( fseek( pCorrupt, -1, SEEK_END ) == 0 );
+	SIR_TEST_CHECK( fputc( 0xfe, pCorrupt ) != EOF );
+	SIR_TEST_CHECK( fclose( pCorrupt ) == 0 );
+	const uint32_t nCompilesBeforeCorrupt = state.nCompiles;
+	request.nJobId = 23;
+	SIR_TEST_CHECK( worker.process( request, &reply ) == SIR_SCRIPT_OK && reply.eResult == SIR_SCRIPT_TYPE_MISMATCH );
+	SIR_TEST_CHECK( reply.cached.nBytes == 0 && state.nCompiles == nCompilesBeforeCorrupt );
+
 	SIR_TEST_CHECK( inputs.erase( request.key ) == SIR_SCRIPT_OK );
 	SIR_TEST_CHECK( cache.erase( request.key ) == SIR_SCRIPT_OK );
 	std::filesystem::remove_all( root );

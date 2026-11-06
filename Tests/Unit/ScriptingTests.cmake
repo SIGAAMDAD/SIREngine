@@ -63,6 +63,10 @@ add_test(NAME scripting.optimizer-worker COMMAND SIRScriptOptimizerWorkerTests
 
 add_executable(SIRScriptOptimizerWorkerCoverageTests SIRScriptOptimizerWorkerCoverageTests.cpp)
 target_link_libraries(SIRScriptOptimizerWorkerCoverageTests PRIVATE SIR::Scripting)
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    target_compile_definitions(SIRScriptOptimizerWorkerCoverageTests PRIVATE SIR_SCRIPT_TEST_MALLOC_FAULT_INJECTION=1)
+    target_link_options(SIRScriptOptimizerWorkerCoverageTests PRIVATE "LINKER:--wrap=malloc")
+endif()
 add_test(NAME scripting.optimizer-worker-coverage COMMAND SIRScriptOptimizerWorkerCoverageTests)
 sir_configure_owned_target(SIRScriptOptimizerWorkerCoverageTests)
 
