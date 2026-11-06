@@ -17,6 +17,16 @@ class WorkflowDisciplineTests(unittest.TestCase):
         self.assertIn("python3 Build/CI/CheckChangePolicy.py --pr-from-env", ci)
         self.assertIn("needs: [source, native, integration-candidate]", ci)
 
+    def test_pr_metadata_edits_rerun_admission_gate(self):
+        ci = (WORKFLOWS / "ci.yml").read_text()
+        self.assertIn(
+            "types: [opened, synchronize, edited, reopened, ready_for_review, converted_to_draft]",
+            ci)
+        self.assertIn("if: github.event_name == 'pull_request'", ci)
+        self.assertIn("SIR_PR_TITLE: ${{ github.event.pull_request.title }}", ci)
+        self.assertIn("SIR_PR_BODY: ${{ github.event.pull_request.body }}", ci)
+        self.assertIn("run: python3 Build/CI/CheckChangePolicy.py --pr-from-env", ci)
+
     def test_nightly_freezes_develop_for_all_jobs(self):
         nightly = (WORKFLOWS / "nightly.yml").read_text()
         self.assertIn("  freeze:\n", nightly)
