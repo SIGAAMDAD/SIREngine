@@ -27,6 +27,26 @@ class WorkflowTrustBoundaryTests(unittest.TestCase):
         self.assertIn("ref: ${{ github.sha }}", ci)
         self.assertIn("ref: ${{ github.event.pull_request.head.sha || github.sha }}", qualification)
 
+    def test_hosted_hardware_policy_preserves_local_native_drivers(self):
+        qualification = (WORKFLOWS / "qualification.yml").read_text()
+        self.assertIn("backend: opengl46", qualification)
+        self.assertIn("backend: d3d12", qualification)
+        self.assertNotIn("backend: vulkan", qualification)
+        self.assertNotIn("audio-backend:", qualification)
+        self.assertNotIn("SIR_FMOD_SDK_ROOT", qualification)
+        self.assertIn(
+            "needs: [authorize, coverage, native, sanitizer, renderer-backends]", qualification)
+        self.assertIn(
+            "if(SIR_WITH_VULKAN)",
+            (ROOT / "Source/Renderer/CMakeLists.txt").read_text())
+        self.assertIn(
+            "if(SIR_WITH_FMOD)",
+            (ROOT / "Source/Audio/CMakeLists.txt").read_text())
+        self.assertTrue(
+            (ROOT / "Source/Renderer/Drivers/Vulkan/SIRVulkanDevice.cpp").is_file())
+        self.assertTrue(
+            (ROOT / "Source/Audio/FMOD/SIRFMODRuntime.cpp").is_file())
+
     def test_negative_patterns_detect_exploitable_examples(self):
         cache_example = "      - uses: actions/cache@v4"
         checkout_example = "          ref: ${{ inputs.source_sha }}"

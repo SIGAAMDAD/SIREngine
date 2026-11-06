@@ -245,6 +245,22 @@ static bool testStopCancelsBlockedIO( const char *pszExecutable ) noexcept
 	return true;
 }
 
+static bool testImmediateStop( const char *pszExecutable ) noexcept
+{
+	SIRScriptOptimizerProcessTransport transport;
+	for ( uint32_t nAttempt = 0; nAttempt < 12; ++nAttempt ) {
+		SIR_TEST_CHECK( transport.configure( fixtureConfig( pszExecutable, "stall", 0 ) ) == SIR_SCRIPT_OK );
+		SIR_TEST_CHECK( transport.start() == SIR_SCRIPT_OK );
+		uint8_t szWire[SIRScriptOptimizationProtocol::REQUEST_BYTES] = {};
+		SIR_TEST_CHECK( SIRScriptOptimizationProtocol::encodeRequest( fixtureRequest( 100 + nAttempt ), szWire ) == SIR_SCRIPT_OK );
+		SIR_TEST_CHECK( transport.send( szWire, sizeof( szWire ) ) == SIR_SCRIPT_OK );
+		const auto started = std::chrono::steady_clock::now();
+		transport.stop();
+		SIR_TEST_CHECK( std::chrono::steady_clock::now() - started < std::chrono::seconds( 5 ) );
+	}
+	return true;
+}
+
 int main( int nArguments, char **pszArguments )
 {
 	if ( nArguments < 2 ) {
@@ -274,6 +290,11 @@ int main( int nArguments, char **pszArguments )
 	fprintf( stderr, "optimizer process transport: stop-cancels-io\n" );
 	fflush( stderr );
 	if ( !testStopCancelsBlockedIO( pszArguments[1] ) ) {
+		return 1;
+	}
+	fprintf( stderr, "optimizer process transport: immediate-stop\n" );
+	fflush( stderr );
+	if ( !testImmediateStop( pszArguments[1] ) ) {
 		return 1;
 	}
 	fprintf( stderr, "optimizer process transport: coordinator\n" );

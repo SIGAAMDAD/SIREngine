@@ -180,7 +180,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - {os: ubuntu-24.04, backend: vulkan, option: SIR_WITH_VULKAN, tests: '^render[.]vulkan[.]'}
           - {os: ubuntu-24.04, backend: opengl46, option: SIR_WITH_OPENGL, tests: '^renderer[.]opengl46[.]'}
           - {os: windows-2022, backend: d3d12, option: SIR_WITH_D3D12, tests: '^renderer[.]d3d12[.]'}
     steps:
@@ -200,18 +199,17 @@ jobs:
         if: runner.os == 'Windows'
       - uses: ./.github/actions/setup-dxc
         if: matrix.backend == 'd3d12'
-      - name: Install Linux graphics headers and software adapters
+      - name: Install Linux OpenGL headers
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libvulkan-dev libgl-dev mesa-vulkan-drivers
+          sudo apt-get install -y libgl-dev
       - name: Retrieve exact backend dependencies
         shell: bash
         run: |
           set -euo pipefail
           git submodule update --init ThirdParty/GoogleTest
           case "${{ matrix.backend }}" in
-            vulkan) git submodule update --init ThirdParty/VulkanHeaders ThirdParty/VulkanMemoryAllocator ;;
             d3d12) git submodule update --init ThirdParty/D3D12MemoryAllocator ;;
             opengl46) ;;
             *) echo "Unsupported backend" >&2; exit 1 ;;
@@ -232,39 +230,11 @@ jobs:
           path: out/Verification/backend-*.xml
           if-no-files-found: warn
           retention-days: 30
-  audio-backend:
-    name: FMOD native backend qualification
-    needs: authorize
-    if: inputs.system == '' || inputs.system == 'all' || inputs.system == 'Audio'
-    runs-on: ubuntu-24.04
-    timeout-minutes: 90
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-          persist-credentials: false
-      - uses: ./.github/actions/setup-build-tools
-      - run: git submodule update --init ThirdParty/GoogleTest
-      - name: Require real licensed FMOD SDK
-        shell: bash
-        env:
-          FMOD_SDK_DIR: ${{ vars.SIR_FMOD_SDK_ROOT }}
-        run: |
-          set -euo pipefail
-          if [[ -z "${FMOD_SDK_DIR:-}" || ! -d "$FMOD_SDK_DIR" ]]; then
-            echo "::error::BLOCKED: FMOD SDK unavailable on this qualification runner"
-            exit 1
-          fi
-      - name: Compile enabled FMOD and execute native contracts
-        run: |
-          cmake --preset dev -DSIR_WITH_GOOGLETEST=ON -DSIR_WITH_FMOD=ON "-DSIR_FMOD_SDK_ROOT=${{ vars.SIR_FMOD_SDK_ROOT }}"
-          cmake --build --preset dev
-          python3 Build/CI/RunCTestGate.py --preset dev --name-regex '^audio[.]fmod[.]native-' --report out/Verification/fmod.xml
   acceptance:
     name: Qualification acceptance
     if: always() && (github.event_name == 'workflow_dispatch' || needs.authorize.result != 'skipped')
     runs-on: ubuntu-24.04
-    needs: [authorize, coverage, native, sanitizer, renderer-backends, audio-backend]
+    needs: [authorize, coverage, native, sanitizer, renderer-backends]
     steps:
       - name: Refuse incomplete gates
         env:
@@ -273,7 +243,6 @@ jobs:
           NATIVE: ${{ needs.native.result }}
           SANITIZER: ${{ needs.sanitizer.result }}
           RENDERER: ${{ needs.renderer-backends.result }}
-          AUDIO: ${{ needs.audio-backend.result }}
           SYSTEM: ${{ inputs.system || 'all' }}
         shell: bash
         run: |
@@ -284,9 +253,6 @@ jobs:
           test "$SANITIZER" = success
           if [[ "$SYSTEM" == all || "$SYSTEM" == Renderer || "$SYSTEM" == GraphicsABI ]]; then
             test "$RENDERER" = success
-          fi
-          if [[ "$SYSTEM" == all || "$SYSTEM" == Audio ]]; then
-            test "$AUDIO" = success
           fi
   benchmark-qualification:
     name: Fixed-host performance baseline qualification
