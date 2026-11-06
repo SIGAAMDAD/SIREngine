@@ -116,7 +116,7 @@ static void testMonotonicFenceAndSafePoint( void )
 	SIR_FENCE_CHECK( tracker.init( &memory, &scheduler, SIR_TASK_EXEC_RENDER, 3 ) );
 	sirTaskHandle_t tasks[3] = {};
 	for ( uint32_t i = 0; i < 3; ++i ) {
-		SIR_FENCE_CHECK( scheduler.submit( deferredProvider, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_RENDER, &tasks[i] ) );
+		SIR_FENCE_CHECK( scheduler.submit( { deferredProvider, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_RENDER }, &tasks[i] ) );
 	}
 	SIR_FENCE_CHECK( scheduler.pumpProvider( SIR_TASK_EXEC_RENDER, 3 ) == 3 );
 	sirTaskState_t eState = SIR_TASK_INVALID;
@@ -166,11 +166,12 @@ static void testFinalizerRetryAndCancellation( void )
 	SIRTaskFenceTracker tracker;
 	SIR_FENCE_CHECK( tracker.init( &memory, &scheduler, SIR_TASK_EXEC_PHYSICS, 2 ) );
 	sirTaskHandle_t parent = {};
-	SIR_FENCE_CHECK( scheduler.submit( deferredProvider, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_PHYSICS, &parent ) );
+	SIR_FENCE_CHECK( scheduler.submit( { deferredProvider, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_PHYSICS }, &parent ) );
 	SIR_FENCE_CHECK( scheduler.pumpProvider( SIR_TASK_EXEC_PHYSICS, 1 ) == 1 );
 	std::atomic<uint32_t> nCalls( 0 );
 	sirTaskHandle_t child = {};
-	SIR_FENCE_CHECK( scheduler.submitAfter( incrementCounter, &nCalls, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU, &parent, 1, &child ) );
+	SIR_FENCE_CHECK(
+	    scheduler.submitAfter( { incrementCounter, &nCalls, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU }, &parent, 1, &child ) );
 	sirFenceFinalizerContext_t finalizer = { 0, 0, false };
 	SIR_FENCE_CHECK( tracker.track( parent, 11, releaseFenceResource, &finalizer ) );
 	SIR_FENCE_CHECK( scheduler.cancel( parent ) );
@@ -187,7 +188,7 @@ static void testFinalizerRetryAndCancellation( void )
 	SIR_FENCE_CHECK( scheduler.releaseTask( child ) && scheduler.releaseTask( parent ) );
 
 	sirTaskHandle_t failed = {};
-	SIR_FENCE_CHECK( scheduler.submit( deferredProvider, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_PHYSICS, &failed ) );
+	SIR_FENCE_CHECK( scheduler.submit( { deferredProvider, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_PHYSICS }, &failed ) );
 	SIR_FENCE_CHECK( scheduler.pumpProvider( SIR_TASK_EXEC_PHYSICS, 1 ) == 1 );
 	sirFenceReentryContext_t reentry = { &tracker, 0 };
 	SIR_FENCE_CHECK( tracker.track( failed, 15, rejectNestedAcknowledgement, &reentry ) );
@@ -214,9 +215,9 @@ static void testAdmissionAndRollback( void )
 	sirTaskHandle_t first = {};
 	sirTaskHandle_t second = {};
 	SIR_FENCE_CHECK(
-	    scheduler.submit( registerFenceInsideCallback, &firstContext, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_AUDIO, &first ) );
+	    scheduler.submit( { registerFenceInsideCallback, &firstContext, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_AUDIO }, &first ) );
 	SIR_FENCE_CHECK(
-	    scheduler.submit( registerFenceInsideCallback, &secondContext, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_AUDIO, &second ) );
+	    scheduler.submit( { registerFenceInsideCallback, &secondContext, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_AUDIO }, &second ) );
 	SIR_FENCE_CHECK( scheduler.pumpProvider( SIR_TASK_EXEC_AUDIO, 2 ) == 2 );
 	SIR_FENCE_CHECK( scheduler.getState( first ) == SIR_TASK_AWAITING_PROVIDER );
 	SIR_FENCE_CHECK( scheduler.getState( second ) == SIR_TASK_FAILED );
@@ -228,7 +229,8 @@ static void testAdmissionAndRollback( void )
 
 	sirFenceTrackedContext_t rollback = { &tracker, &f, 8, true };
 	sirTaskHandle_t undone = {};
-	SIR_FENCE_CHECK( scheduler.submit( registerFenceInsideCallback, &rollback, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_AUDIO, &undone ) );
+	SIR_FENCE_CHECK(
+	    scheduler.submit( { registerFenceInsideCallback, &rollback, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_AUDIO }, &undone ) );
 	SIR_FENCE_CHECK( scheduler.pumpProvider( SIR_TASK_EXEC_AUDIO, 1 ) == 1 );
 	SIR_FENCE_CHECK( scheduler.getState( undone ) == SIR_TASK_FAILED );
 	SIR_FENCE_CHECK( tracker.getPendingCount() == 0 );
@@ -330,12 +332,12 @@ static void testRejectedTasksAndFenceOrder( void )
 	sirTaskHandle_t completed = {};
 	sirTaskHandle_t wrongExecutor = {};
 	sirTaskHandle_t deferred = {};
-	SIR_FENCE_CHECK( scheduler.submit( deferredProvider, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_RENDER, &ready ) );
+	SIR_FENCE_CHECK( scheduler.submit( { deferredProvider, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_RENDER }, &ready ) );
 	SIR_FENCE_CHECK( !tracker.track( ready, 5 ) );
-	SIR_FENCE_CHECK( scheduler.submit( completedProvider, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_RENDER, &completed ) );
+	SIR_FENCE_CHECK( scheduler.submit( { completedProvider, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_RENDER }, &completed ) );
 	SIR_FENCE_CHECK( scheduler.pumpProvider( SIR_TASK_EXEC_RENDER, 2 ) == 2 );
 	SIR_FENCE_CHECK( !tracker.track( completed, 5 ) );
-	SIR_FENCE_CHECK( scheduler.submit( deferredProvider, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU, &wrongExecutor ) );
+	SIR_FENCE_CHECK( scheduler.submit( { deferredProvider, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU }, &wrongExecutor ) );
 	SIR_FENCE_CHECK( !tracker.track( wrongExecutor, 5 ) );
 	SIR_FENCE_CHECK( !tracker.track( { UINT32_MAX, 0 }, 5 ) );
 	SIR_FENCE_CHECK( !tracker.untrackLast( ready ) );
@@ -346,7 +348,7 @@ static void testRejectedTasksAndFenceOrder( void )
 	SIR_FENCE_CHECK( !tracker.track( ready, 9 ) );
 	SIR_FENCE_CHECK( !tracker.untrackLast( ready ) );
 	SIR_FENCE_CHECK( !tracker.untrackLast( completed ) );
-	SIR_FENCE_CHECK( scheduler.submit( deferredProvider, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_RENDER, &deferred ) );
+	SIR_FENCE_CHECK( scheduler.submit( { deferredProvider, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_RENDER }, &deferred ) );
 	SIR_FENCE_CHECK( scheduler.pumpProvider( SIR_TASK_EXEC_RENDER, 1 ) == 1 );
 	SIR_FENCE_CHECK( tracker.track( deferred, 9 ) );
 	uint32_t nDone = UINT32_MAX;
@@ -378,9 +380,9 @@ static void testRollbackWithEarlierPendingRecord( void )
 	sirTaskHandle_t first = {};
 	sirTaskHandle_t undone = {};
 	SIR_FENCE_CHECK(
-	    scheduler.submit( registerFenceInsideCallback, &firstContext, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_RENDER, &first ) );
+	    scheduler.submit( { registerFenceInsideCallback, &firstContext, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_RENDER }, &first ) );
 	SIR_FENCE_CHECK(
-	    scheduler.submit( registerFenceInsideCallback, &rollbackContext, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_RENDER, &undone ) );
+	    scheduler.submit( { registerFenceInsideCallback, &rollbackContext, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_RENDER }, &undone ) );
 	SIR_FENCE_CHECK( scheduler.pumpProvider( SIR_TASK_EXEC_RENDER, 2 ) == 2 );
 	SIR_FENCE_CHECK( scheduler.getState( first ) == SIR_TASK_AWAITING_PROVIDER );
 	SIR_FENCE_CHECK( scheduler.getState( undone ) == SIR_TASK_FAILED );

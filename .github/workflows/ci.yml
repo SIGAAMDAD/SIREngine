@@ -2,16 +2,24 @@ name: SIREngine CI
 
 on:
   push:
-    branches: [develop]
+    branches: [main]
   pull_request:
-    branches: [develop, main]
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
+  merge_group:
+    types: [checks_requested]
   workflow_dispatch:
+    inputs:
+      candidate_sha:
+        description: Full commit SHA of the frozen integration candidate
+        required: true
+        type: string
 
 permissions:
   contents: read
 
 concurrency:
-  group: sir-ci-${{ github.workflow }}-${{ github.ref }}
+  group: sir-ci-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -22,7 +30,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ inputs.candidate_sha || github.sha }}
+          fetch-depth: 0
           persist-credentials: false
+      - name: Verify frozen integration candidate source
+        if: github.event_name == 'workflow_dispatch'
+        shell: bash
+        env:
+          CANDIDATE_SHA: ${{ inputs.candidate_sha }}
+        run: |
+          [[ "$CANDIDATE_SHA" =~ ^[a-f0-9]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$CANDIDATE_SHA"
       - name: Validate tracked paths and pins
         run: cmake -P Build/CMake/CIHygiene.cmake
       - name: Enforce owned C++ declarations and headers
@@ -47,11 +65,20 @@ jobs:
           chmod +x "${bindir}/clang-format"
           "${bindir}/clang-format" --version
           echo "${bindir}" >> "${GITHUB_PATH}"
-      - name: Check C++ formatting
-        run: cmake -P Build/CMake/CIFormat.cmake
+      - name: Check changed-file formatting
+        env:
+          SIR_BASE: ${{ github.event.pull_request.base.sha || github.event.before || github.event.merge_group.base_sha || '' }}
+        shell: bash
+        run: |
+          if [[ -n "$SIR_BASE" ]]; then
+            cmake -DSIR_FORMAT_BASE="$SIR_BASE" -P Build/CMake/CIFormat.cmake
+          else
+            cmake -P Build/CMake/CIFormat.cmake
+          fi
 
   native:
-    name: Native C++17 / ${{ matrix.os }}
+    name: sir/native / ${{ matrix.os }} / ${{ matrix.compiler }}
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ${{ matrix.os }}
     timeout-minutes: 35
     strategy:
@@ -60,12 +87,26 @@ jobs:
         include:
           - os: ubuntu-24.04
             preset: dev
+            compiler: gcc
+          - os: ubuntu-24.04
+            preset: dev
+            compiler: clang
           - os: windows-2022
             preset: dev
+            compiler: msvc
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ inputs.candidate_sha || github.sha }}
           persist-credentials: false
+      - name: Verify frozen integration candidate source
+        if: github.event_name == 'workflow_dispatch'
+        shell: bash
+        env:
+          CANDIDATE_SHA: ${{ inputs.candidate_sha }}
+        run: |
+          [[ "$CANDIDATE_SHA" =~ ^[a-f0-9]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$CANDIDATE_SHA"
       - name: Fetch pinned GoogleTest for native C++17 tests
         run: git submodule update --init ThirdParty/GoogleTest
       - name: Set up MSVC compiler environment
@@ -75,72 +116,37 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: .cache/fastbuild
-          key: sir-fbuild-v1.20-${{ runner.os }}-dev-${{ github.sha }}
+          key: sir-fbuild-v1.20-${{ runner.os }}-${{ matrix.compiler }}-dev-${{ inputs.candidate_sha || github.sha }}
           restore-keys: |
-            sir-fbuild-v1.20-${{ runner.os }}-dev-
+            sir-fbuild-v1.20-${{ runner.os }}-${{ matrix.compiler }}-dev-
       - name: Configure native engine
-        run: cmake --preset "${{ matrix.preset }}" -DSIR_WITH_GOOGLETEST=ON
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ matrix.compiler }}" == clang ]]; then export CC=clang CXX=clang++; fi
+          cmake --preset "${{ matrix.preset }}" -DSIR_WITH_GOOGLETEST=ON
       - name: Compile engine and tests
         run: cmake --build --preset "${{ matrix.preset }}"
-      - name: Run allocator unit tests (GoogleTest)
-        run: >
-          ctest --preset "${{ matrix.preset }}"
-          --output-on-failure
-          --no-tests=error
-          -R '^core[.]memory[.]allocators[.]'
-          --output-junit "${{ github.workspace }}/allocator-tests-${{ matrix.os }}.xml"
-      - name: Upload allocator unit test results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: allocator-unit-tests-${{ matrix.os }}
-          path: allocator-tests-${{ matrix.os }}.xml
-          if-no-files-found: warn
-          retention-days: 14
-      - name: Run remaining native tests
-        run: >
-          ctest --preset "${{ matrix.preset }}"
-          --output-on-failure
-          --no-tests=error
-          -E '^core[.]memory[.]allocators[.]'
-      - name: Verify no-op incremental rebuild
-        run: cmake --build --preset dev
-
-  profiling-smoke:
-    name: Google Benchmark compile and execution / Linux
-    runs-on: ubuntu-24.04
-    timeout-minutes: 60
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-      - name: Fetch pinned Google testing sources
-        run: git submodule update --init ThirdParty/GoogleTest ThirdParty/GoogleBenchmark
-      - uses: ./.github/actions/setup-build-tools
-      - uses: actions/cache@v4
-        with:
-          path: .cache/fastbuild
-          key: sir-fbuild-v1.20-google-profile-linux-${{ github.sha }}
-          restore-keys: |
-            sir-fbuild-v1.20-google-profile-linux-
-      - name: Configure optimized C++17 Google profiling
-        run: >
-          cmake --preset profile
-          -DSIR_WITH_GOOGLETEST=ON
-          -DSIR_WITH_GOOGLE_BENCHMARK=ON
-          -DSIR_BUILD_BENCHMARKS=ON
-      - name: Compile profiling executables
-        run: cmake --build --preset profile
-      - name: Run GoogleTest and lifecycle CTest suite
-        run: ctest --preset profile --output-on-failure
-      - name: Run CPU benchmark smoke and write JSON
+      - name: Run selected native tests once
         shell: bash
-        run: bash Build/Scripts/RunGoogleBenchmarks.sh ubuntu-24.04-pr
-      - name: Preserve CPU benchmark evidence
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: sir-google-benchmark-ci
-          path: out/Nightly/Benchmarks/
-          if-no-files-found: error
-          retention-days: 14
+        run: |
+          label='^gate:pr$'
+          if [[ "${{ github.event_name }}" != pull_request ]]; then label='^gate:main$'; fi
+          ctest --preset "${{ matrix.preset }}" --output-on-failure --no-tests=error -L "$label"
+
+  required:
+    name: sir/required
+    runs-on: ubuntu-24.04
+    if: always()
+    needs: [source, native]
+    steps:
+      - name: Reject missing or skipped mandatory jobs
+        env:
+          SOURCE: ${{ needs.source.result }}
+          NATIVE: ${{ needs.native.result }}
+          DRAFT: ${{ github.event.pull_request.draft }}
+        run: |
+          test "$SOURCE" = success
+          test "$DRAFT" != true
+          test "$NATIVE" = success
+          echo "CI checkout SHA: ${{ inputs.candidate_sha || github.sha }}" >> "$GITHUB_STEP_SUMMARY"

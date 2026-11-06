@@ -88,4 +88,12 @@ typedef struct sirTaskBatchEdge_s
 	uint32_t nAfter;
 } sirTaskBatchEdge_t;
 
+typedef struct sirTaskBatchDesc_s
+{
+	const sirTaskBatchTask_t *pTasks;
+	uint32_t nTasks;
+	const sirTaskBatchEdge_t *pEdges;
+	uint32_t nEdges;
+} sirTaskBatchDesc_t;
+
 #endif // __SIRENGINE_SIRTASKTYPES_H__

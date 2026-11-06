@@ -1,0 +1,21 @@
+name: Set up pinned DirectX Shader Compiler
+description: Install the exact offline DXIL test compiler shared by WARP and hardware workflows.
+runs:
+  using: composite
+  steps:
+    - name: Install pinned DXC 1.9.2609.5
+      shell: pwsh
+      run: |
+        $ErrorActionPreference = "Stop"
+        $version = "1.9.2609.5"
+        $root = Join-Path $env:RUNNER_TEMP "sir-dxc"
+        $archive = Join-Path $env:RUNNER_TEMP "sir-dxc.zip"
+        $uri = "https://api.nuget.org/v3-flatcontainer/microsoft.direct3d.dxc/$version/microsoft.direct3d.dxc.$version.nupkg"
+        Invoke-WebRequest -Uri $uri -OutFile $archive
+        Expand-Archive -Path $archive -DestinationPath $root -Force
+        $binary = Get-ChildItem -Path $root -Filter dxc.exe -Recurse |
+          Where-Object { $_.FullName -match '[\\/](x64|amd64)[\\/]' } |
+          Select-Object -First 1
+        if (-not $binary) { throw "DXC $version does not include an x64 compiler" }
+        Add-Content -Path $env:GITHUB_PATH -Value $binary.DirectoryName
+        & $binary.FullName -help | Out-Null

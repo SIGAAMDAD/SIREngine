@@ -35,6 +35,17 @@ typedef struct sirFileTestVisitor_s
 	bool bStop;
 } sirFileTestVisitor_t;
 
+static void sirExpectFileBytes( const std::string& path, const char *pExpected, size_t nExpected )
+{
+	FILE *pFile = std::fopen( path.c_str(), "rb" );
+	sirCheckFileSystem( pFile != nullptr, "read preserved file" );
+	char szBytes[16] = {};
+	sirCheckFileSystem( nExpected <= sizeof( szBytes ) && std::fread( szBytes, 1, nExpected, pFile ) == nExpected,
+	                    "read exact preserved bytes" );
+	sirCheckFileSystem( std::fgetc( pFile ) == EOF && std::memcmp( szBytes, pExpected, nExpected ) == 0, "preserved content matches" );
+	sirCheckFileSystem( std::fclose( pFile ) == 0, "close preserved file" );
+}
+
 static bool sirVisitFile( const char *pszName, const sirFileSystemInfo_t *pInfo, void *pContext ) noexcept
 {
 	sirFileTestVisitor_t *pVisitor = ( sirFileTestVisitor_t * )pContext;
@@ -82,6 +93,31 @@ int main( void )
 	sirCheckFileSystem( SIRPlatformFileSystem::query( szDestination.c_str(), &info ) == SIR_FILESYSTEM_OK && info.nSizeBytes == 4,
 	                    "replacement contents" );
 	sirCheckFileSystem( SIRPlatformFileSystem::query( szSource.c_str(), &info ) == SIR_FILESYSTEM_NOT_FOUND, "source renamed" );
+	// A failed replace must leave a previously committed destination byte-exact.
+	const std::string szMissing = ( pathChild / "missing-stage.bin" ).string();
+	sirCheckFileSystem( SIRPlatformFileSystem::renameReplace( szMissing.c_str(), szDestination.c_str() ) == SIR_FILESYSTEM_NOT_FOUND,
+	                    "reject absent staging file" );
+	sirExpectFileBytes( szDestination, "TEST", 4 );
+	sirCheckFileSystem( SIRPlatformFileSystem::renameReplace( nullptr, szDestination.c_str() ) == SIR_FILESYSTEM_INVALID_ARGUMENT,
+	                    "reject null staging path" );
+	sirCheckFileSystem( SIRPlatformFileSystem::renameReplace( szDestination.c_str(), nullptr ) == SIR_FILESYSTEM_INVALID_ARGUMENT,
+	                    "reject null destination path" );
+	sirExpectFileBytes( szDestination, "TEST", 4 );
+
+	// The platform must reject replacing a directory with a regular file,
+	// keeping both the staged bytes and existing destination unchanged.
+	const std::string szStage = ( pathChild / "incomplete-stage.bin" ).string();
+	{
+		FILE *pFile = std::fopen( szStage.c_str(), "wb" );
+		sirCheckFileSystem( pFile != nullptr, "create interrupted staging file" );
+		sirCheckFileSystem( std::fwrite( "PART", 1, 4, pFile ) == 4, "write interrupted staging bytes" );
+		sirCheckFileSystem( std::fclose( pFile ) == 0, "close interrupted staging file" );
+	}
+	sirCheckFileSystem( SIRPlatformFileSystem::renameReplace( szStage.c_str(), szChild.c_str() ) != SIR_FILESYSTEM_OK,
+	                    "reject replacing directory with file" );
+	sirExpectFileBytes( szStage, "PART", 4 );
+	sirExpectFileBytes( szDestination, "TEST", 4 );
+	std::filesystem::remove( szStage );
 	sirFileTestVisitor_t visitor{};
 	sirCheckFileSystem( SIRPlatformFileSystem::enumerate( szChild.c_str(), &sirVisitFile, &visitor ) == SIR_FILESYSTEM_OK &&
 	                        visitor.nFound == 1,

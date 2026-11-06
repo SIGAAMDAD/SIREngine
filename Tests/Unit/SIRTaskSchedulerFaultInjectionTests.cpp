@@ -74,11 +74,19 @@ int main( void )
 	SIR_THREAD_CHECK( s_nCreateCalls.load( std::memory_order_relaxed ) == taskConfig.nWorkerCount );
 	std::atomic<uint32_t> nCompleted( 0 );
 	sirTaskHandle_t task = {};
-	SIR_THREAD_CHECK( scheduler.submit( runCounter, &nCompleted, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU, &task ) );
+	SIR_THREAD_CHECK( scheduler.submit( { runCounter, &nCompleted, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU }, &task ) );
 	SIR_THREAD_CHECK( scheduler.waitTask( task ) );
 	SIR_THREAD_CHECK( nCompleted.load( std::memory_order_relaxed ) == 1 );
 	SIR_THREAD_CHECK( scheduler.releaseTask( task ) );
 	SIR_THREAD_CHECK( scheduler.shutdown() );
+	// After shutdown, a released handle must never be resurrected and
+	// no late producer or provider acknowledgement may execute a callback.
+	sirTaskHandle_t rejected = { 17, 42 };
+	SIR_THREAD_CHECK( !scheduler.submit( { runCounter, &nCompleted, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU }, &rejected ) );
+	SIR_THREAD_CHECK( rejected.nSlot == UINT32_MAX && rejected.nGeneration == 0 );
+	SIR_THREAD_CHECK( !scheduler.completeProvider( task, SIR_TASK_RESULT_SUCCESS ) );
+	SIR_THREAD_CHECK( scheduler.getState( task ) == SIR_TASK_INVALID );
+	SIR_THREAD_CHECK( nCompleted.load( std::memory_order_relaxed ) == 1 );
 	memory.shutdown();
 	puts( "PASS: task scheduler recovers from first and second native worker creation failures" );
 	return 0;
