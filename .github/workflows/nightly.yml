@@ -46,20 +46,92 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, windows-2022]
+        include:
+          - {os: ubuntu-24.04, preset: asan}
+          - {os: windows-2022, preset: dev}
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup-build-tools
       - run: git submodule update --init ThirdParty/GoogleTest
-      - name: Build regression tests
+      - name: Build regression tests with Linux ASan and UBSan
         run: |
-          cmake --preset dev -DSIR_WITH_GOOGLETEST=ON
-          cmake --build --preset dev
+          cmake --preset "${{ matrix.preset }}" -DSIR_WITH_GOOGLETEST=ON ${{ runner.os == 'Linux' && '-DSIR_ENABLE_UBSAN=ON' || '' }}
+          cmake --build --preset "${{ matrix.preset }}"
       - name: Five repeated runs of designated regressions
+        env:
+          ASAN_OPTIONS: detect_leaks=1:halt_on_error=1
+          UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
         run: >
-          ctest --preset dev -L '^nightly:repeat$'
+          ctest --preset "${{ matrix.preset }}" -L '^nightly:repeat
+  performance:
+    name: Nightly benchmark evidence
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-build-tools
+      - run: git submodule update --init ThirdParty/GoogleTest ThirdParty/GoogleBenchmark
+      - name: Optimized benchmark build and execution
+        run: |
+          cmake --preset profile -DSIR_BUILD_BENCHMARKS=ON -DSIR_WITH_GOOGLE_BENCHMARK=ON -DSIR_WITH_GOOGLETEST=ON
+          cmake --build --preset profile
+          bash Build/Scripts/RunGoogleBenchmarks.sh nightly-linux
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: nightly-benchmarks
+          path: out/Nightly/Benchmarks/
+          if-no-files-found: error
+          retention-days: 60
+  source-dependencies:
+    name: OpenAL Soft and meshoptimizer integration
+    runs-on: ubuntu-24.04
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-build-tools
+      - run: git submodule update --init ThirdParty/OpenALSoft ThirdParty/meshoptimizer
+      - name: Build native dependencies and run integration tests
+        run: >
+          bash Build/Scripts/NightlyBuild.sh tooling
+          -DSIR_WITH_OPENAL_SOFT=ON -DSIR_WITH_MESHOPTIMIZER=ON
+  clang-tooling:
+    name: Clang compiler and source database
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-build-tools
+      - name: Build native tooling with Clang
+        env:
+          CC: clang
+          CXX: clang++
+        run: bash Build/Scripts/NightlyBuild.sh tooling
+      - name: Verify compiler database
+        run: test -s out/Linux/tooling/compile_commands.json
+  summary:
+    name: Nightly acceptance
+    if: always()
+    runs-on: ubuntu-24.04
+    needs: [native, repeat, performance, source-dependencies, clang-tooling]
+    steps:
+      - name: Reject missing gates
+        env:
+          NATIVE: ${{ needs.native.result }}
+          REPEAT: ${{ needs.repeat.result }}
+          PERF: ${{ needs.performance.result }}
+          DEPENDENCIES: ${{ needs.source-dependencies.result }}
+          CLANG: ${{ needs.clang-tooling.result }}
+        run: test "$NATIVE" = success && test "$REPEAT" = success && test "$PERF" = success && test "$DEPENDENCIES" = success && test "$CLANG" = success
+
           --output-on-failure --no-tests=error --repeat until-fail:5
   performance:
     name: Nightly benchmark evidence
