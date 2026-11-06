@@ -1,3 +1,4 @@
+include("${CMAKE_CURRENT_LIST_DIR}/../../../../Build/CMake/SIRBuildTreeGuard.cmake")
 # Capability admission runs on every platform without a Windows SDK.
 add_executable(SIRD3D11FeatureLevelTests SIRD3D11FeatureLevelTests.cpp)
 target_link_libraries(SIRD3D11FeatureLevelTests PRIVATE SIR::D3D11FeatureProfile)

@@ -1,3 +1,4 @@
+include("${CMAKE_CURRENT_LIST_DIR}/../../Build/CMake/SIRBuildTreeGuard.cmake")
 # Demand and lifecycle authority only. Physical payloads remain in GRDG.
 add_library(SIRStreaming STATIC
     SIRStreamingCoordinator.cpp

@@ -1,3 +1,4 @@
+include("${CMAKE_CURRENT_LIST_DIR}/../../Build/CMake/SIRBuildTreeGuard.cmake")
 # Independent CPU-only shared-geometry ownership foundation.
 # No GRDG, Jolt, Terrain3D, or graphics-driver link dependency.
 add_library(SIRMeshCache STATIC SIRMeshCache.cpp)

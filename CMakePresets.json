@@ -100,6 +100,22 @@
       }
     },
     {
+      "name": "vs2022",
+      "displayName": "Visual Studio 2022 x64 (out-of-source)",
+      "generator": "Visual Studio 17 2022",
+      "architecture": "x64",
+      "binaryDir": "${sourceDir}/out/${hostSystemName}/${presetName}",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      },
+      "cacheVariables": {
+        "CMAKE_CXX_STANDARD": "17",
+        "SIR_BUILD_TESTS": "ON"
+      }
+    },
+    {
       "name": "tooling",
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/out/${hostSystemName}/tooling",
@@ -193,6 +209,11 @@
       ]
     },
     {
+      "name": "vs2022",
+      "configurePreset": "vs2022",
+      "configuration": "Debug"
+    },
+    {
       "name": "tooling",
       "configurePreset": "tooling"
     },
@@ -261,6 +282,14 @@
     {
       "name": "macos-preview",
       "configurePreset": "macos-preview",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "vs2022",
+      "configurePreset": "vs2022",
+      "configuration": "Debug",
       "output": {
         "outputOnFailure": true
       }
