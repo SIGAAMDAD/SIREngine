@@ -21,7 +21,7 @@ class RapidIterationBuildTests(unittest.TestCase):
         source = (ROOT / "Build/CMake/SIRBuildOptions.cmake").read_text()
         self.assertIn('option(SIR_WARNINGS_AS_ERRORS "Treat SIREngine-owned warnings as errors" OFF)', source)
         start = source.index("function(sir_configure_owned_target")
-        self.assertNotIn("SIR_WARNINGS_AS_ERRORS", source[source.index("option(SIR_WARNINGS_AS_ERRORS"):start])
+        self.assertEqual(source[:start].count("SIR_WARNINGS_AS_ERRORS"), 1)
         target_scope = source[start:]
         self.assertIn("if(SIR_WARNINGS_AS_ERRORS)", target_scope)
         self.assertIn("target_compile_options(${sirTarget} PRIVATE /WX)", target_scope)
