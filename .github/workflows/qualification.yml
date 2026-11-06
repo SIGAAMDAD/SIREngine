@@ -1,0 +1,50 @@
+name: SIREngine qualification
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  coverage:
+    name: LLVM 23 full source coverage
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-build-tools
+      - run: git submodule update --init ThirdParty/GoogleTest
+      - name: Qualify all compiled production code
+        env:
+          SIR_QUALIFICATION_SCOPE: all
+        run: bash Build/Scripts/RunLLVM23Qualification.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: llvm23-source-coverage
+          path: out/Verification/LLVM23/
+          if-no-files-found: warn
+          retention-days: 30
+  native:
+    name: Native functional acceptance
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-build-tools
+      - run: git submodule update --init ThirdParty/GoogleTest
+      - run: |
+          cmake --preset dev -DSIR_WITH_GOOGLETEST=ON
+          cmake --build --preset dev
+          ctest --preset dev --output-on-failure --no-tests=error
+  acceptance:
+    name: Qualification acceptance
+    if: always()
+    runs-on: ubuntu-24.04
+    needs: [coverage, native]
+    steps:
+      - name: Refuse incomplete gates
+        env:
+          COVERAGE: ${{ needs.coverage.result }}
+          NATIVE: ${{ needs.native.result }}
+        run: test "$COVERAGE" = success && test "$NATIVE" = success
