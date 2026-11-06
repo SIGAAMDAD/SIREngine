@@ -499,6 +499,47 @@ static void testProviderPinCapacityAndReclaim( void )
 	REQUIRE( allocator.nLive.load() == 0 );
 }
 
+static void testProviderMultilaneGenerationRetirement( void )
+{
+	sirDerivedTestAllocator_t allocator = {};
+	{
+		SIRResourceGraph graph( graphConfig( allocator ) );
+		REQUIRE( graph.isReady() );
+		SIRResourceGraphWriter *pWriter = graph.getWriter();
+		REQUIRE( pWriter != nullptr );
+		const SIRResourceHandle hSource = publishSource( *pWriter, 801 );
+		SIRResourceDerivedRegistry registry( graph, derivedConfig( allocator ) );
+		sirDerivedTestProvider_t provider = {};
+		REQUIRE( registry.registerProvider( 7, 3, 2, { &provider, releaseNative } ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( registry.registerProvider( 8, 0, 2, { &provider, releaseNative } ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		REQUIRE( registry.registerProvider( 8, 1, 5, { &provider, releaseNative } ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		SIRDerivedResourceHandle handle = {};
+		{
+			SIRResourceReadScope scope( graph );
+			SIRResourceView view;
+			REQUIRE( graph.resolve( scope, hSource, &view ) == SIR_RESOURCE_RESULT_SUCCESS );
+			const SIRDerivedResourceRegistration registration = derived( hSource, 1, 7, 1, 777, 64 );
+			REQUIRE( registry.registerRepresentation( scope, view, registration, &handle ) == SIR_RESOURCE_RESULT_SUCCESS );
+		}
+		const sirProviderCompletionSet_t required = { 7, 3, 3, 2, { 7, 11, 0, 0 } };
+		REQUIRE( registry.retireRepresentation( handle, { 7, 2, 3, 2, { 7, 11, 0, 0 } } ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		REQUIRE( registry.retireRepresentation( handle, required ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( registry.updateProviderCompletion( { 7, 2, 3, 2, { 7, 11, 0, 0 } } ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		REQUIRE( registry.updateProviderCompletion( { 7, 3, 1, 2, { 7, 0, 0, 0 } } ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( provider.nAttempts == 0 );
+		REQUIRE( registry.updateProviderCompletion( { 7, 3, 2, 2, { 0, 10, 0, 0 } } ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( provider.nAttempts == 0 );
+		REQUIRE( registry.updateProviderCompletion( { 7, 3, 1, 2, { 6, 0, 0, 0 } } ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
+		REQUIRE( registry.updateProviderCompletion( { 7, 3, 2, 2, { 0, 11, 0, 0 } } ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( provider.nReleased == 1 && provider.nLastToken == 777 );
+		SIRDerivedResourceAccounting accounting = {};
+		REQUIRE( registry.getAccounting( handle, &accounting ) == SIR_RESOURCE_RESULT_INVALID_HANDLE );
+		REQUIRE( pWriter->retire( hSource ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( pWriter->collectRetired( 8 ) == 1 );
+	}
+	REQUIRE( allocator.nLive.load() == 0 );
+}
+
 int main( void )
 {
 	testProviderLifetimeAndPhysicalAccounting();
@@ -506,6 +547,7 @@ int main( void )
 	testConstructorOutOfMemory();
 	testInvalidInputsAndCapacity();
 	testProviderPinCapacityAndReclaim();
+	testProviderMultilaneGenerationRetirement();
 	puts( "PASS: derived provider accounting, retirement fences, pins and ABA protection" );
 	return 0;
 }
