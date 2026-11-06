@@ -1,0 +1,2 @@
+command HELP 1001 3 0 0
+command help 1002 3 0 0

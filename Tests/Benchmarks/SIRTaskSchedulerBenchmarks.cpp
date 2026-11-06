@@ -58,7 +58,7 @@ static void SIRBenchmarkTaskSubmitPumpRelease( benchmark::State& state )
 	for ( auto _ : state ) {
 		( void )_;
 		sirTaskHandle_t task = {};
-		if ( !scheduler.submit( sirBenchmarkNoop, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU, &task ) ||
+		if ( !scheduler.submit( { sirBenchmarkNoop, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU }, &task ) ||
 		     scheduler.pumpCPU( 1 ) != 1 || !scheduler.releaseTask( task ) ) {
 			state.SkipWithError( "SIR CPU task completion failed" );
 			break;
@@ -95,7 +95,7 @@ static void SIRBenchmarkTaskBatch( benchmark::State& state )
 	}
 	for ( auto _ : state ) {
 		( void )_;
-		if ( !scheduler.submitBatch( tasks, nTasks, edges, nTasks - 1, handles ) || scheduler.pumpCPU( nTasks ) != nTasks ) {
+		if ( !scheduler.submitBatch( { tasks, nTasks, edges, nTasks - 1 }, handles ) || scheduler.pumpCPU( nTasks ) != nTasks ) {
 			state.SkipWithError( "SIR batch dispatch failed" );
 			break;
 		}
@@ -136,7 +136,7 @@ static void SIRBenchmarkFenceAcknowledgement( benchmark::State& state )
 		sirTaskHandle_t task = {};
 		uint32_t nAcknowledged = 0;
 		++nFence;
-		if ( !scheduler.submit( sirBenchmarkDeferred, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_RENDER, &task ) ||
+		if ( !scheduler.submit( { sirBenchmarkDeferred, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_RENDER }, &task ) ||
 		     scheduler.pumpProvider( SIR_TASK_EXEC_RENDER, 1 ) != 1 || !tracker.track( task, nFence ) ||
 		     !tracker.advanceCompleted( nFence, SIR_TASK_RESULT_SUCCESS, &nAcknowledged ) || nAcknowledged != 1 ||
 		     !scheduler.releaseTask( task ) ) {
@@ -200,7 +200,7 @@ static void SIRBenchmarkWorkerBatch( benchmark::State& state )
 	for ( auto _ : state ) {
 		( void )_;
 		for ( uint32_t iTask = 0; iTask < nTasks; ++iTask ) {
-			if ( !scheduler.submit( sirBenchmarkWorkerJob, &context, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU, &handles[iTask] ) ) {
+			if ( !scheduler.submit( { sirBenchmarkWorkerJob, &context, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU }, &handles[iTask] ) ) {
 				bFailed = true;
 				break;
 			}
@@ -272,7 +272,7 @@ static void SIRBenchmarkConcurrentProducers( benchmark::State& state )
 				nObserved = nEpoch.load( std::memory_order_acquire );
 				lock.unlock();
 				for ( uint32_t iTask = 0; iTask < TASKS_PER_PRODUCER; ++iTask ) {
-					if ( !scheduler.submit( sirBenchmarkWorkerJob, &context, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU,
+					if ( !scheduler.submit( { sirBenchmarkWorkerJob, &context, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU },
 					                        &handles[iProducer * TASKS_PER_PRODUCER + iTask] ) ) {
 						bRejected.store( true, std::memory_order_release );
 						break;
@@ -350,7 +350,7 @@ static void SIRBenchmarkWorkerFanInOut( benchmark::State& state )
 	}
 	for ( auto _ : state ) {
 		( void )_;
-		if ( !scheduler.submitBatch( tasks.data(), nTasks, edges.data(), ( uint32_t )edges.size(), handles.data() ) ||
+		if ( !scheduler.submitBatch( { tasks.data(), nTasks, edges.data(), ( uint32_t )edges.size() }, handles.data() ) ||
 		     !scheduler.waitTask( handles[nTasks - 1] ) ) {
 			state.SkipWithError( "SIR fan-in benchmark dispatch failed" );
 			break;
@@ -401,7 +401,7 @@ static void SIRBenchmarkFenceBurst( benchmark::State& state )
 		++nFence;
 		bool bAccepted = true;
 		for ( uint32_t iTask = 0; iTask < nTasks; ++iTask ) {
-			if ( !scheduler.submit( sirBenchmarkDeferred, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_RENDER, &handles[iTask] ) ) {
+			if ( !scheduler.submit( { sirBenchmarkDeferred, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_RENDER }, &handles[iTask] ) ) {
 				bAccepted = false;
 				break;
 			}
@@ -490,7 +490,7 @@ static void SIRBenchmarkWorkerDispatchLatency( benchmark::State& state )
 		bool bSuccess = true;
 		for ( uint32_t iTask = 0; iTask < N_TASKS; ++iTask ) {
 			contexts[iTask].submitted = std::chrono::steady_clock::now();
-			if ( !scheduler.submit( sirBenchmarkLatencyJob, &contexts[iTask], SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU,
+			if ( !scheduler.submit( { sirBenchmarkLatencyJob, &contexts[iTask], SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU },
 			                        &handles[iTask] ) ) {
 				bSuccess = false;
 				break;

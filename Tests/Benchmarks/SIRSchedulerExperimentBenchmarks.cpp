@@ -95,7 +95,7 @@ static void SIRBenchmarkExperimentContention( benchmark::State& state )
 	for ( auto _ : state ) {
 		( void )_;
 		for ( uint32_t i = 0; i < N_TASKS; ++i ) {
-			if ( !scheduler.submit( sirExperimentCallback, &contexts[i], SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU, &handles[i] ) ) {
+			if ( !scheduler.submit( { sirExperimentCallback, &contexts[i], SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU }, &handles[i] ) ) {
 				bFailed = true;
 				break;
 			}
@@ -162,7 +162,7 @@ static void SIRBenchmarkExperimentGranularity( benchmark::State& state )
 	for ( auto _ : state ) {
 		( void )_;
 		for ( uint32_t i = 0; i < nTasks; ++i ) {
-			if ( !scheduler.submit( sirExperimentCallback, &contexts[i], SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU, &handles[i] ) ) {
+			if ( !scheduler.submit( { sirExperimentCallback, &contexts[i], SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU }, &handles[i] ) ) {
 				bFailed = true;
 				break;
 			}
@@ -218,7 +218,7 @@ static sirTaskResult_t sirExperimentSpawnCallback( void *pContext, sirTaskHandle
 {
 	sirExperimentSpawner_t *pSpawn = ( sirExperimentSpawner_t * )pContext;
 	for ( uint32_t i = 0; i < pSpawn->nChildren; ++i ) {
-		if ( !pSpawn->pScheduler->submit( sirExperimentCallback, &pSpawn->pContexts[i], SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU,
+		if ( !pSpawn->pScheduler->submit( { sirExperimentCallback, &pSpawn->pContexts[i], SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU },
 		                                  &pSpawn->pHandles[i] ) ) {
 			pSpawn->bValid = false;
 			return SIR_TASK_RESULT_FAILURE;
@@ -253,7 +253,7 @@ static void SIRBenchmarkExperimentLocalSteal( benchmark::State& state )
 	for ( auto _ : state ) {
 		( void )_;
 		sirTaskHandle_t root = {};
-		if ( !scheduler.submit( sirExperimentSpawnCallback, &spawn, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU, &root ) ||
+		if ( !scheduler.submit( { sirExperimentSpawnCallback, &spawn, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU }, &root ) ||
 		     !scheduler.waitTask( root ) || !spawn.bValid || !scheduler.releaseTask( root ) ) {
 			bFailed = true;
 		}
@@ -320,7 +320,7 @@ static void SIRBenchmarkExperimentDagShape( benchmark::State& state )
 	bool bFailed = false;
 	for ( auto _ : state ) {
 		( void )_;
-		if ( !scheduler.submitBatch( tasks.data(), nTasks, edges.data(), ( uint32_t )edges.size(), handles.data() ) ) {
+		if ( !scheduler.submitBatch( { tasks.data(), nTasks, edges.data(), ( uint32_t )edges.size() }, handles.data() ) ) {
 			bFailed = true;
 		}
 		if ( !bFailed && nWorkers == 0 && scheduler.pumpCPU( nTasks ) != nTasks ) {

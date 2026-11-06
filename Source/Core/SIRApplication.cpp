@@ -1,8 +1,21 @@
 #include <Core/SIRApplication.h>
 
 SIRApplication::SIRApplication( void ) noexcept
-    : m_eState( SIR_APP_UNINITIALIZED ), m_nTicks( 0 ), m_nSystemCount( 0 ), m_nInitializedSystems( 0 ), m_EventRegistry()
+    : m_eState( SIR_APP_UNINITIALIZED ), m_nTicks( 0 ), m_nSystemCount( 0 ), m_nInitializedSystems( 0 ), m_EventRegistry(),
+      m_pInput( nullptr ), m_pInputPump( nullptr ), m_pInputPumpContext( nullptr )
 {
+}
+
+bool SIRApplication::attachInput( SIRInputService& input, sirAppInputPump_t pPump, void *pContext ) noexcept
+{
+	if ( m_eState != SIR_APP_UNINITIALIZED || m_pInput != nullptr ) {
+		return false;
+	}
+
+	m_pInput = &input;
+	m_pInputPump = pPump;
+	m_pInputPumpContext = pContext;
+	return true;
 }
 
 bool SIRApplication::registerSystem( SIREngineSystem *pSystem ) noexcept
@@ -48,11 +61,29 @@ bool SIRApplication::tick( float fDeltaSeconds ) noexcept
 		return false;
 	}
 
+	const uint64_t nNextTick = m_nTicks + 1;
+	if ( m_pInput != nullptr ) {
+		if ( !m_pInput->begin( nNextTick ) ) {
+			return false;
+		}
+		const bool bPumped = m_pInputPump == nullptr || m_pInputPump( *m_pInput, m_pInputPumpContext );
+		m_pInput->sample();
+		if ( !m_pInput->publish() ) {
+			if ( !m_pInput->recover() || !m_pInput->publish() ) {
+				return false;
+			}
+		}
+		if ( !bPumped ) {
+			m_nTicks = nNextTick;
+			return false;
+		}
+	}
+
 	for ( uint32_t iSystem = 0; iSystem < m_nInitializedSystems; ++iSystem ) {
 		m_szSystems[iSystem]->update( fDeltaSeconds );
 	}
 
-	++m_nTicks;
+	m_nTicks = nNextTick;
 	return true;
 }
 
@@ -88,6 +119,12 @@ sirSystemResult_t SIRApplication::shutdown( void ) noexcept
 		--m_nInitializedSystems;
 	}
 
+	if ( m_pInput != nullptr ) {
+		m_pInput->shutdown();
+		m_pInput = nullptr;
+	}
+	m_pInputPump = nullptr;
+	m_pInputPumpContext = nullptr;
 	m_EventRegistry.clear();
 	m_eState = SIR_APP_STOPPED;
 	return SIR_SYSTEM_OK;
@@ -111,4 +148,9 @@ uint32_t SIRApplication::getSystemCount( void ) const noexcept
 SIREventRegistry& SIRApplication::getEventRegistry( void ) noexcept
 {
 	return m_EventRegistry;
+}
+
+const sirInputFrame_t *SIRApplication::getInputFrame( void ) const noexcept
+{
+	return m_pInput == nullptr ? nullptr : m_pInput->frame();
 }

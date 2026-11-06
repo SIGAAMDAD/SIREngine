@@ -1,0 +1,4 @@
+add_executable(SIRStreamingCoordinatorTests SIRStreamingCoordinatorTests.cpp)
+target_link_libraries(SIRStreamingCoordinatorTests PRIVATE SIR::Streaming)
+add_test(NAME streaming.coordinator.lifecycle COMMAND SIRStreamingCoordinatorTests)
+sir_configure_owned_target(SIRStreamingCoordinatorTests)

@@ -1,3 +1,33 @@
+add_executable(SIRTerrainHeightfieldCodecTests SIRTerrainHeightfieldCodecTests.cpp)
+target_link_libraries(SIRTerrainHeightfieldCodecTests PRIVATE SIR::Terrain)
+add_test(NAME terrain.data.heightfield-codec COMMAND SIRTerrainHeightfieldCodecTests)
+sir_configure_owned_target(SIRTerrainHeightfieldCodecTests)
+
+add_executable(SIRTerrainRegionCatalogTests SIRTerrainRegionCatalogTests.cpp)
+target_link_libraries(SIRTerrainRegionCatalogTests PRIVATE SIR::Terrain)
+add_test(NAME terrain.data.region-catalog COMMAND SIRTerrainRegionCatalogTests)
+sir_configure_owned_target(SIRTerrainRegionCatalogTests)
+
+add_executable(SIRTerrainHeightfieldViewTests SIRTerrainHeightfieldViewTests.cpp)
+target_link_libraries(SIRTerrainHeightfieldViewTests PRIVATE SIR::Terrain)
+add_test(NAME terrain.data.heightfield-view COMMAND SIRTerrainHeightfieldViewTests)
+sir_configure_owned_target(SIRTerrainHeightfieldViewTests)
+
+add_executable(SIRTerrainResourceBridgeTests SIRTerrainResourceBridgeTests.cpp)
+target_link_libraries(SIRTerrainResourceBridgeTests PRIVATE SIR::Terrain)
+add_test(NAME terrain.resources.grdg-bridge COMMAND SIRTerrainResourceBridgeTests)
+sir_configure_owned_target(SIRTerrainResourceBridgeTests)
+
+add_executable(SIRTerrainRegionBundleTests SIRTerrainRegionBundleTests.cpp)
+target_link_libraries(SIRTerrainRegionBundleTests PRIVATE SIR::Terrain)
+add_test(NAME terrain.data.region-bundle COMMAND SIRTerrainRegionBundleTests)
+sir_configure_owned_target(SIRTerrainRegionBundleTests)
+
+add_executable(SIRTerrainRegionPersistenceTests SIRTerrainRegionPersistenceTests.cpp)
+target_link_libraries(SIRTerrainRegionPersistenceTests PRIVATE SIR::Terrain)
+add_test(NAME terrain.data.region-persistence COMMAND SIRTerrainRegionPersistenceTests)
+sir_configure_owned_target(SIRTerrainRegionPersistenceTests)
+
 add_executable(SIREngineLifecycleTests SIREngineLifecycleTests.cpp)
 target_link_libraries(SIREngineLifecycleTests PRIVATE SIR::Core)
 add_test(NAME core.application.system-lifecycle COMMAND SIREngineLifecycleTests)
@@ -350,5 +380,585 @@ if(SIR_WITH_GOOGLETEST)
         PROPERTIES LABELS "graphics-abi;gtest;conformance" TIMEOUT 90)
 endif()
 
+if(SIR_WITH_OPENGL)
+    add_executable(SIRGL46FramebufferCacheTests
+        Renderer/OpenGL/SIRGLFramebufferCacheTests.cpp
+        "${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/OpenGL/SIRGLFramebufferCache.cpp")
+    target_link_libraries(SIRGL46FramebufferCacheTests PRIVATE SIR::Graphics)
+    sir_configure_owned_target(SIRGL46FramebufferCacheTests)
+    add_test(NAME renderer.opengl46.framebuffer-cache COMMAND SIRGL46FramebufferCacheTests)
+
+    add_executable(SIRGL46FramebufferTests
+        Renderer/OpenGL/SIRGLFramebuffersTests.cpp
+        "${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/OpenGL/SIRGLFramebuffers.cpp"
+        "${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/OpenGL/SIRGLFunctionLoader.cpp")
+    target_link_libraries(SIRGL46FramebufferTests PRIVATE SIR::Graphics)
+    sir_configure_owned_target(SIRGL46FramebufferTests)
+    add_test(NAME renderer.opengl46.framebuffers COMMAND SIRGL46FramebufferTests)
+
+    add_executable(SIRGL46FormatsTests
+        Renderer/OpenGL/SIRGLFormatsTests.cpp
+        "${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/OpenGL/SIRGLFormats.cpp"
+        "${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/OpenGL/SIRGLFunctionLoader.cpp")
+    target_link_libraries(SIRGL46FormatsTests PRIVATE SIR::Graphics)
+    sir_configure_owned_target(SIRGL46FormatsTests)
+    add_test(NAME renderer.opengl46.formats COMMAND SIRGL46FormatsTests)
+
+    add_executable(SIRGL46TexturesTests
+        Renderer/OpenGL/SIRGLTexturesTests.cpp
+        "${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/OpenGL/SIRGLTextures.cpp"
+        "${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/OpenGL/SIRGLFunctionLoader.cpp")
+    target_link_libraries(SIRGL46TexturesTests PRIVATE SIR::Graphics)
+    sir_configure_owned_target(SIRGL46TexturesTests)
+    add_test(NAME renderer.opengl46.textures COMMAND SIRGL46TexturesTests)
+
+    add_executable(SIRGL46SamplersTests
+        Renderer/OpenGL/SIRGLSamplersTests.cpp
+        "${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/OpenGL/SIRGLSamplers.cpp"
+        "${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/OpenGL/SIRGLFunctionLoader.cpp")
+    target_link_libraries(SIRGL46SamplersTests PRIVATE SIR::Graphics)
+    sir_configure_owned_target(SIRGL46SamplersTests)
+    add_test(NAME renderer.opengl46.samplers COMMAND SIRGL46SamplersTests)
+
+    add_executable(SIRGL46BuffersTests
+        Renderer/OpenGL/SIRGLBuffersTests.cpp
+        "${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/OpenGL/SIRGLBuffers.cpp"
+        "${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/OpenGL/SIRGLFunctionLoader.cpp")
+    target_link_libraries(SIRGL46BuffersTests PRIVATE SIR::Graphics)
+    sir_configure_owned_target(SIRGL46BuffersTests)
+    add_test(NAME renderer.opengl46.buffers COMMAND SIRGL46BuffersTests)
+
+    add_executable(SIRGL46HandlePoolTests
+        Renderer/OpenGL/SIRGLHandlePoolTests.cpp
+        "${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/OpenGL/SIRGLHandlePool.cpp")
+    target_link_libraries(SIRGL46HandlePoolTests PRIVATE SIR::Graphics)
+    sir_configure_owned_target(SIRGL46HandlePoolTests)
+    add_test(NAME renderer.opengl46.handle-pool COMMAND SIRGL46HandlePoolTests)
+
+    add_executable(SIRGL46FunctionLoaderTests
+        Renderer/OpenGL/SIRGLFunctionLoaderTests.cpp
+        "${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/OpenGL/SIRGLFunctionLoader.cpp")
+    target_link_libraries(SIRGL46FunctionLoaderTests PRIVATE SIR::Graphics)
+    sir_configure_owned_target(SIRGL46FunctionLoaderTests)
+    add_test(NAME renderer.opengl46.function-loader COMMAND SIRGL46FunctionLoaderTests)
+
+    add_executable(SIRGL46FoundationTests
+        Renderer/OpenGL/SIRGLFoundationTests.cpp
+        "${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/OpenGL/SIRGLCapabilities.cpp")
+    target_link_libraries(SIRGL46FoundationTests PRIVATE SIR::Graphics)
+    sir_configure_owned_target(SIRGL46FoundationTests)
+    add_test(NAME renderer.opengl46.foundation COMMAND SIRGL46FoundationTests)
+
+    find_package(Threads REQUIRED)
+    add_executable(SIRGL46ModuleTests Renderer/OpenGL/SIRGLModuleTests.cpp)
+    target_link_libraries(SIRGL46ModuleTests PRIVATE SIR::Graphics Threads::Threads "${CMAKE_DL_LIBS}")
+    target_compile_definitions(SIRGL46ModuleTests PRIVATE SIR_TEST_GL46_MODULE_PATH="$<TARGET_FILE:SIRGL46Driver>")
+    add_dependencies(SIRGL46ModuleTests SIRGL46Driver)
+    sir_configure_owned_target(SIRGL46ModuleTests)
+    add_test(NAME renderer.opengl46.module COMMAND SIRGL46ModuleTests)
+endif()
+
 add_subdirectory(Config)
 include(${CMAKE_CURRENT_SOURCE_DIR}/StringPoolTests.cmake)
+
+# Native bounded logical VFS path validation.
+add_executable(SIRVFSPathTests SIRVFSPathTests.cpp)
+target_link_libraries(SIRVFSPathTests PRIVATE SIR::Core)
+add_test(NAME core.vfs.path-normalization COMMAND SIRVFSPathTests)
+sir_configure_owned_target(SIRVFSPathTests)
+
+# Bounded VFS mount registry, overlay precedence, and lifetime leases.
+add_executable(SIRVFSMountTableTests SIRVFSMountTableTests.cpp)
+target_link_libraries(SIRVFSMountTableTests PRIVATE SIR::Core)
+add_test(NAME core.vfs.mount-registry COMMAND SIRVFSMountTableTests)
+sir_configure_owned_target(SIRVFSMountTableTests)
+
+# VFS metadata-only overlay selection and generation-pinned winner lease.
+add_executable(SIRVFSOverlayResolverTests SIRVFSOverlayResolverTests.cpp)
+target_link_libraries(SIRVFSOverlayResolverTests PRIVATE SIR::Core)
+add_test(NAME core.vfs.overlay-resolver COMMAND SIRVFSOverlayResolverTests)
+sir_configure_owned_target(SIRVFSOverlayResolverTests)
+
+# VFS immutable logical file identity, source pins and deferred close.
+add_executable(SIRVFSFileHandleTableTests SIRVFSFileHandleTableTests.cpp)
+target_link_libraries(SIRVFSFileHandleTableTests PRIVATE SIR::Core)
+add_test(NAME core.vfs.file-handle-lifetime COMMAND SIRVFSFileHandleTableTests)
+sir_configure_owned_target(SIRVFSFileHandleTableTests)
+
+# Root-bound native directory opens: traversal/reparse denial and held handles.
+add_executable(SIRPlatformRootDirectoryTests SIRPlatformRootDirectoryTests.cpp)
+target_link_libraries(SIRPlatformRootDirectoryTests PRIVATE SIR::Core)
+add_test(NAME core.platform.rooted-directory COMMAND SIRPlatformRootDirectoryTests)
+sir_configure_owned_target(SIRPlatformRootDirectoryTests)
+
+# Generation-pinned VFS directory source to native platform read integration.
+add_executable(SIRVFSDirectorySourceTests SIRVFSDirectorySourceTests.cpp)
+target_link_libraries(SIRVFSDirectorySourceTests PRIVATE SIR::Core)
+add_test(NAME core.vfs.directory-source COMMAND SIRVFSDirectorySourceTests)
+sir_configure_owned_target(SIRVFSDirectorySourceTests)
+
+# Device-independent FrameGraph DAG, hazard and subresource validation.
+add_executable(SIRFrameGraphTests SIRFrameGraphTests.cpp)
+target_link_libraries(SIRFrameGraphTests PRIVATE SIR::Graphics)
+add_test(NAME renderer.framegraph.compiler COMMAND SIRFrameGraphTests)
+set_tests_properties(renderer.framegraph.compiler PROPERTIES LABELS "framegraph;cpu;conformance" TIMEOUT 90)
+sir_configure_owned_target(SIRFrameGraphTests)
+
+# Provider-admitted FrameGraph transient residency planning and negative cases.
+add_executable(SIRFrameGraphTransientTests SIRFrameGraphTransientTests.cpp)
+target_link_libraries(SIRFrameGraphTransientTests PRIVATE SIR::Graphics)
+add_test(NAME renderer.framegraph.transient COMMAND SIRFrameGraphTransientTests)
+set_tests_properties(renderer.framegraph.transient PROPERTIES LABELS "framegraph;cpu;conformance" TIMEOUT 90)
+sir_configure_owned_target(SIRFrameGraphTransientTests)
+
+include(${CMAKE_CURRENT_SOURCE_DIR}/MeshCacheTests.cmake)
+
+# Cross-owner provider completion and graphics binary boundary conformance.
+add_executable(SIRProviderCompletionTests SIRProviderCompletionTests.cpp)
+target_link_libraries(SIRProviderCompletionTests PRIVATE SIR::Resources)
+add_test(NAME resources.provider.multilane-contract COMMAND SIRProviderCompletionTests)
+sir_configure_owned_target(SIRProviderCompletionTests)
+
+add_executable(SIRGraphicsABISharedBoundaryTests SIRGraphicsABISharedBoundaryTests.cpp)
+target_link_libraries(SIRGraphicsABISharedBoundaryTests PRIVATE SIR::Graphics)
+add_test(NAME renderer.graphics.shared-boundary COMMAND SIRGraphicsABISharedBoundaryTests)
+sir_configure_owned_target(SIRGraphicsABISharedBoundaryTests)
+
+
+if(SIR_WITH_VULKAN)
+    add_executable(SIRVulkanMemoryPolicyTests SIRVulkanMemoryPolicyTests.cpp)
+    target_link_libraries(SIRVulkanMemoryPolicyTests PRIVATE SIR::Vulkan)
+    add_test(NAME render.vulkan.memory-policy COMMAND SIRVulkanMemoryPolicyTests)
+    sir_configure_owned_target(SIRVulkanMemoryPolicyTests)
+
+    add_executable(SIRVulkanSealedPoolTests SIRVulkanSealedPoolTests.cpp)
+    target_link_libraries(SIRVulkanSealedPoolTests PRIVATE SIR::Vulkan)
+    add_test(NAME render.vulkan.sealed-pools COMMAND SIRVulkanSealedPoolTests)
+    set_tests_properties(render.vulkan.sealed-pools PROPERTIES SKIP_RETURN_CODE 77)
+    sir_configure_owned_target(SIRVulkanSealedPoolTests)
+
+    add_executable(SIRVulkanDeviceTests SIRVulkanDeviceTests.cpp)
+    target_link_libraries(SIRVulkanDeviceTests PRIVATE SIR::Vulkan)
+    add_test(NAME render.vulkan.headless COMMAND SIRVulkanDeviceTests)
+    set_tests_properties(render.vulkan.headless PROPERTIES SKIP_RETURN_CODE 77)
+    sir_configure_owned_target(SIRVulkanDeviceTests)
+
+    add_executable(SIRVulkanContractTests SIRVulkanContractTests.cpp)
+    target_link_libraries(SIRVulkanContractTests PRIVATE SIR::Vulkan)
+    add_test(NAME render.vulkan.contracts COMMAND SIRVulkanContractTests)
+    sir_configure_owned_target(SIRVulkanContractTests)
+
+    add_executable(SIRVulkanSharedContractTests SIRVulkanSharedContractTests.cpp)
+    target_link_libraries(SIRVulkanSharedContractTests PRIVATE SIR::Vulkan)
+    add_test(NAME render.vulkan.shared-contracts COMMAND SIRVulkanSharedContractTests)
+    sir_configure_owned_target(SIRVulkanSharedContractTests)
+
+    add_executable(SIRVulkanShaderTests SIRVulkanShaderTests.cpp)
+    target_link_libraries(SIRVulkanShaderTests PRIVATE SIR::Vulkan)
+    add_test(NAME render.vulkan.shader-envelope COMMAND SIRVulkanShaderTests)
+    sir_configure_owned_target(SIRVulkanShaderTests)
+
+    add_executable(SIRVulkanBufferBarrierTests SIRVulkanBufferBarrierTests.cpp)
+    target_link_libraries(SIRVulkanBufferBarrierTests PRIVATE SIR::Vulkan)
+    add_test(NAME render.vulkan.buffer-barriers COMMAND SIRVulkanBufferBarrierTests)
+    sir_configure_owned_target(SIRVulkanBufferBarrierTests)
+
+    add_executable(SIRVulkanBarrierTests SIRVulkanBarrierTests.cpp)
+    target_link_libraries(SIRVulkanBarrierTests PRIVATE SIR::Vulkan)
+    add_test(NAME render.vulkan.barriers COMMAND SIRVulkanBarrierTests)
+    sir_configure_owned_target(SIRVulkanBarrierTests)
+
+    add_executable(SIRVulkanTransferLayoutTests SIRVulkanTransferLayoutTests.cpp)
+    target_link_libraries(SIRVulkanTransferLayoutTests PRIVATE SIR::Vulkan)
+    add_test(NAME render.vulkan.transfer-layout COMMAND SIRVulkanTransferLayoutTests)
+    sir_configure_owned_target(SIRVulkanTransferLayoutTests)
+
+    add_executable(SIRVulkanRecordedCommandsTests SIRVulkanRecordedCommandsTests.cpp)
+    target_link_libraries(SIRVulkanRecordedCommandsTests PRIVATE SIR::Vulkan)
+    add_test(NAME render.vulkan.recorded-commands COMMAND SIRVulkanRecordedCommandsTests)
+    sir_configure_owned_target(SIRVulkanRecordedCommandsTests)
+
+    add_executable(SIRVulkanCopyBatchTests SIRVulkanCopyBatchTests.cpp)
+    target_link_libraries(SIRVulkanCopyBatchTests PRIVATE SIR::Vulkan)
+    add_test(NAME render.vulkan.copy-batch COMMAND SIRVulkanCopyBatchTests)
+    sir_configure_owned_target(SIRVulkanCopyBatchTests)
+
+    add_executable(SIRVulkanSharedTests SIRVulkanSharedTests.cpp)
+    target_link_libraries(SIRVulkanSharedTests PRIVATE SIR::Vulkan)
+    add_test(NAME render.vulkan.shared-api COMMAND SIRVulkanSharedTests)
+    set_tests_properties(render.vulkan.shared-api PROPERTIES SKIP_RETURN_CODE 77)
+    sir_configure_owned_target(SIRVulkanSharedTests)
+endif()
+
+
+include(${CMAKE_CURRENT_SOURCE_DIR}/SIRD3D12Tests.cmake)
+
+# Native D3D11 registration remains owned by its local CMake fragment.
+add_subdirectory(Renderer/D3D11)
+
+# Native shader contract, material schema, GRDG source and pipeline fixtures.
+add_executable(SIRShaderPipelineTests SIRShaderPipelineTests.cpp)
+target_link_libraries(SIRShaderPipelineTests PRIVATE SIR::Graphics)
+add_test(NAME renderer.shader.pipeline COMMAND SIRShaderPipelineTests)
+sir_configure_owned_target(SIRShaderPipelineTests)
+
+foreach(sirShaderUnit IN ITEMS SIRShaderContractsTests SIRShaderMaterialManifestTests SIRShaderGRDGTests)
+    add_executable(${sirShaderUnit} Shaders/${sirShaderUnit}.cpp)
+    target_link_libraries(${sirShaderUnit} PRIVATE SIR::Graphics)
+    add_test(NAME renderer.shader.${sirShaderUnit} COMMAND ${sirShaderUnit})
+    sir_configure_owned_target(${sirShaderUnit})
+endforeach()
+
+# Terrain3D Sparse VT V1 package contract and reference decoder.
+add_executable(SIRVirtualTexturePortTests SIRVirtualTexturePortTests.cpp)
+target_link_libraries(SIRVirtualTexturePortTests PRIVATE SIR::Graphics)
+add_test(NAME renderer.virtual-texturing.terrain3d-v1 COMMAND SIRVirtualTexturePortTests)
+sir_configure_owned_target(SIRVirtualTexturePortTests)
+
+# Native Hi-Z reference and command validation.
+include(${CMAKE_CURRENT_LIST_DIR}/HIZFoundationTests.cmake)
+
+include(${CMAKE_CURRENT_SOURCE_DIR}/WorldHLODTests.cmake)
+include(${CMAKE_CURRENT_SOURCE_DIR}/StreamingTests.cmake)
+include(${CMAKE_CURRENT_SOURCE_DIR}/WorldPartitionTests.cmake)
+include(${CMAKE_CURRENT_SOURCE_DIR}/StreamingReconcileTests.cmake)
+include(${CMAKE_CURRENT_SOURCE_DIR}/StreamingProviderBridgeTests.cmake)
+
+# Registration, Console and CVar admission and archive fixtures.
+add_executable(SIRRegistrationContractTests SIRRegistrationContractTests.cpp)
+target_link_libraries(SIRRegistrationContractTests PRIVATE SIR::Core)
+add_test(NAME core.registration.contract COMMAND SIRRegistrationContractTests)
+sir_configure_owned_target(SIRRegistrationContractTests)
+
+add_executable(SIRRegistrationStringBridgeTests SIRRegistrationStringBridgeTests.cpp)
+target_link_libraries(SIRRegistrationStringBridgeTests PRIVATE SIR::Core)
+add_test(NAME core.registration.string-bridge COMMAND SIRRegistrationStringBridgeTests)
+sir_configure_owned_target(SIRRegistrationStringBridgeTests)
+
+add_executable(SIRRegistrationCookerTests SIRRegistrationCookerTests.cpp)
+target_link_libraries(SIRRegistrationCookerTests PRIVATE SIRRegistrationCookerLib SIR::Core)
+add_test(NAME core.registration.cooker COMMAND SIRRegistrationCookerTests)
+sir_configure_owned_target(SIRRegistrationCookerTests)
+
+add_test(NAME core.registration.cooker-cli COMMAND "${CMAKE_COMMAND}"
+    "-DSIR_COOKER=$<TARGET_FILE:SIRRegistrationCooker>"
+    "-DSIR_FIXTURES=${PROJECT_SOURCE_DIR}/Tests/Unit/Registration"
+    "-DSIR_OUT=${PROJECT_BINARY_DIR}/RegistrationCookerSmoke"
+    -P "${PROJECT_SOURCE_DIR}/Tests/Unit/Registration/CookerCLI.cmake")
+
+add_executable(SIRCVarRegistryTests CVars/SIRCVarRegistryIntegrationTests.cpp)
+target_link_libraries(SIRCVarRegistryTests PRIVATE SIRRegistrationCookerLib SIR::Core)
+add_test(NAME core.cvars.registry COMMAND SIRCVarRegistryTests)
+sir_configure_owned_target(SIRCVarRegistryTests)
+
+add_executable(SIRConsoleServiceTests Console/SIRConsoleServiceTests.cpp)
+target_link_libraries(SIRConsoleServiceTests PRIVATE SIRRegistrationCookerLib SIR::Core)
+add_test(NAME core.console.service COMMAND SIRConsoleServiceTests)
+sir_configure_owned_target(SIRConsoleServiceTests)
+
+add_executable(SIRIniConfigTests Config/SIRIniTests.cpp)
+target_link_libraries(SIRIniConfigTests PRIVATE SIR::Core)
+add_test(NAME core.config.ini COMMAND SIRIniConfigTests)
+sir_configure_owned_target(SIRIniConfigTests)
+
+add_executable(SIRCVarConfigTests CVars/SIRCVarConfigTests.cpp)
+target_link_libraries(SIRCVarConfigTests PRIVATE SIRRegistrationCookerLib SIR::Core)
+add_test(NAME core.cvars.config COMMAND SIRCVarConfigTests)
+sir_configure_owned_target(SIRCVarConfigTests)
+
+# Audio provider-neutral contracts and FMOD mock backend tests.
+include(${CMAKE_CURRENT_SOURCE_DIR}/SIRAudioContract.cmake)
+
+# Native Input regression and integration tests from the existing input branch.
+add_executable(SIRApplicationInputTests SIRApplicationInputTests.cpp)
+target_link_libraries(SIRApplicationInputTests PRIVATE SIR::Core)
+add_test(NAME core.application.input-lifecycle COMMAND SIRApplicationInputTests)
+set_tests_properties(core.application.input-lifecycle PROPERTIES LABELS "core;input;integration" TIMEOUT 60)
+sir_configure_owned_target(SIRApplicationInputTests)
+
+add_executable(SIRInputActionTests SIRInputActionTests.cpp)
+target_link_libraries(SIRInputActionTests PRIVATE SIR::Core)
+add_test(NAME core.platform.input.actions COMMAND SIRInputActionTests)
+set_tests_properties(core.platform.input.actions PROPERTIES LABELS "core;input;actions" TIMEOUT 60)
+sir_configure_owned_target(SIRInputActionTests)
+
+add_executable(SIRInputHapticNegativeTests SIRInputHapticNegativeTests.cpp)
+target_link_libraries(SIRInputHapticNegativeTests PRIVATE SIR::Core)
+add_test(NAME core.platform.input.haptic-negative COMMAND SIRInputHapticNegativeTests)
+set_tests_properties(core.platform.input.haptic-negative PROPERTIES LABELS "core;input;haptics;regression" TIMEOUT 60)
+sir_configure_owned_target(SIRInputHapticNegativeTests)
+
+add_executable(SIRInputProfileNegativeTests SIRInputProfileNegativeTests.cpp)
+target_link_libraries(SIRInputProfileNegativeTests PRIVATE SIR::Core)
+add_test(NAME core.platform.input.profile-negative COMMAND SIRInputProfileNegativeTests)
+set_tests_properties(core.platform.input.profile-negative PROPERTIES LABELS "core;input;profiles;regression" TIMEOUT 60)
+sir_configure_owned_target(SIRInputProfileNegativeTests)
+
+add_executable(SIRInputFrameNegativeTests SIRInputFrameNegativeTests.cpp)
+target_link_libraries(SIRInputFrameNegativeTests PRIVATE SIR::Core)
+add_test(NAME core.platform.input.frame-negative COMMAND SIRInputFrameNegativeTests)
+set_tests_properties(core.platform.input.frame-negative PROPERTIES LABELS "core;input;regression" TIMEOUT 60)
+sir_configure_owned_target(SIRInputFrameNegativeTests)
+
+add_executable(SIRInputServiceBoundaryTests SIRInputServiceBoundaryTests.cpp)
+target_link_libraries(SIRInputServiceBoundaryTests PRIVATE SIR::Core)
+add_test(NAME core.platform.input.service-boundary COMMAND SIRInputServiceBoundaryTests)
+set_tests_properties(core.platform.input.service-boundary PROPERTIES LABELS "core;input;regression" TIMEOUT 60)
+sir_configure_owned_target(SIRInputServiceBoundaryTests)
+
+add_executable(SIRInputContractGapTests SIRInputContractGapTests.cpp)
+target_link_libraries(SIRInputContractGapTests PRIVATE SIR::Core)
+add_test(NAME core.platform.input.contract-regressions COMMAND SIRInputContractGapTests)
+set_tests_properties(core.platform.input.contract-regressions PROPERTIES LABELS "core;input;regression" TIMEOUT 60)
+sir_configure_owned_target(SIRInputContractGapTests)
+
+add_executable(SIRInputTextValidationTests SIRInputTextValidationTests.cpp)
+target_link_libraries(SIRInputTextValidationTests PRIVATE SIR::Core)
+add_test(NAME core.platform.input.text-validation COMMAND SIRInputTextValidationTests)
+set_tests_properties(core.platform.input.text-validation PROPERTIES LABELS "core;input;text;regression" TIMEOUT 60)
+sir_configure_owned_target(SIRInputTextValidationTests)
+
+add_executable(SIRInputPhase45Tests SIRInputPhase45Tests.cpp)
+target_link_libraries(SIRInputPhase45Tests PRIVATE SIR::Core)
+add_test(NAME core.platform.input.ui-haptics-profiles COMMAND SIRInputPhase45Tests)
+set_tests_properties(core.platform.input.ui-haptics-profiles PROPERTIES LABELS "core;input;ui;haptics;profiles" TIMEOUT 60)
+sir_configure_owned_target(SIRInputPhase45Tests)
+
+add_executable(SIRInputHistoryTests SIRInputHistoryTests.cpp)
+target_link_libraries(SIRInputHistoryTests PRIVATE SIR::Core)
+add_test(NAME core.platform.input.history COMMAND SIRInputHistoryTests)
+set_tests_properties(core.platform.input.history PROPERTIES LABELS "core;input;rollback" TIMEOUT 60)
+sir_configure_owned_target(SIRInputHistoryTests)
+
+add_executable(SIRInputReplayTests SIRInputReplayTests.cpp)
+target_link_libraries(SIRInputReplayTests PRIVATE SIR::Core)
+add_test(NAME core.platform.input.replay COMMAND SIRInputReplayTests)
+set_tests_properties(core.platform.input.replay PROPERTIES LABELS "core;input;replay" TIMEOUT 60)
+sir_configure_owned_target(SIRInputReplayTests)
+
+add_executable(SIRInputTests SIRInputTests.cpp)
+target_link_libraries(SIRInputTests PRIVATE SIR::Core)
+add_test(NAME core.platform.input COMMAND SIRInputTests)
+sir_configure_owned_target(SIRInputTests)
+
+# Deterministic headless stress suite: enabled in every Windows/Linux CTest run.
+add_executable(SIRInputStressTests SIRInputStressTests.cpp)
+target_link_libraries(SIRInputStressTests PRIVATE SIR::Core)
+sir_configure_owned_target(SIRInputStressTests)
+add_test(NAME core.platform.input.stress COMMAND SIRInputStressTests)
+set_tests_properties(core.platform.input.stress PROPERTIES LABELS "core;input;stress" TIMEOUT 60)
+
+# The longer 9.6M-request soak runs in nightly and sanitizer configurations.
+option(SIR_INPUT_SOAK_TESTS "Include extended native input stress soak in CTest" OFF)
+if(SIR_INPUT_SOAK_TESTS)
+    add_test(NAME core.platform.input.soak COMMAND SIRInputStressTests --soak)
+    set_tests_properties(core.platform.input.soak PROPERTIES LABELS "core;input;soak" TIMEOUT 180)
+endif()
+
+# Sparse/dense frame snapshot differential, portable across Windows and Linux.
+add_executable(SIRInputSnapshotDeltaTests SIRInputSnapshotDeltaTests.cpp)
+target_link_libraries(SIRInputSnapshotDeltaTests PRIVATE SIR::Core)
+add_test(NAME core.platform.input.snapshot-delta COMMAND SIRInputSnapshotDeltaTests)
+set_tests_properties(core.platform.input.snapshot-delta PROPERTIES LABELS "core;input;regression" TIMEOUT 60)
+sir_configure_owned_target(SIRInputSnapshotDeltaTests)
+
+# Native evdev report batching under an instrumented pipe; no device permissions needed.
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    add_executable(SIRInputEvdevBatchTests SIRInputEvdevBatchTests.cpp)
+    target_link_libraries(SIRInputEvdevBatchTests PRIVATE SIR::Core)
+    target_link_options(SIRInputEvdevBatchTests PRIVATE "LINKER:--wrap=read" "LINKER:--wrap=ioctl")
+    add_test(NAME core.platform.input.evdev-batch COMMAND SIRInputEvdevBatchTests)
+    set_tests_properties(core.platform.input.evdev-batch PROPERTIES LABELS "core;input;regression" TIMEOUT 60)
+    sir_configure_owned_target(SIRInputEvdevBatchTests)
+endif()
+
+# Linux X11 window/event acceptance with an actual ephemeral Xvfb server.
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND SIR_WITH_X11_INPUT)
+    find_package(X11 QUIET)
+    find_program(SIR_XVFB_RUN NAMES xvfb-run)
+    if(X11_FOUND AND SIR_XVFB_RUN)
+        add_executable(SIRInputX11WindowTests SIRInputX11WindowTests.cpp)
+        target_link_libraries(SIRInputX11WindowTests PRIVATE SIR::Core X11::X11)
+        target_link_options(SIRInputX11WindowTests PRIVATE
+            "LINKER:--wrap=XCreateSimpleWindow"
+            "LINKER:--wrap=XCreateBitmapFromData"
+            "LINKER:--wrap=XCreatePixmapCursor"
+            "LINKER:--wrap=XGrabPointer"
+            "LINKER:--wrap=XFilterEvent"
+            "LINKER:--wrap=XNextEvent")
+        add_test(NAME core.platform.input.x11-window COMMAND "${SIR_XVFB_RUN}" -a "$<TARGET_FILE:SIRInputX11WindowTests>")
+        set_tests_properties(core.platform.input.x11-window PROPERTIES LABELS "core;input;x11;integration" TIMEOUT 60)
+        sir_configure_owned_target(SIRInputX11WindowTests)
+        add_executable(SIRInputX11IMEFallbackTests SIRInputX11IMEFallbackTests.cpp)
+        target_link_libraries(SIRInputX11IMEFallbackTests PRIVATE SIR::Core X11::X11)
+        target_link_options(SIRInputX11IMEFallbackTests PRIVATE "LINKER:--wrap=XCreateIC")
+        add_test(NAME core.platform.input.x11-ime-fallback COMMAND "${SIR_XVFB_RUN}" -a "$<TARGET_FILE:SIRInputX11IMEFallbackTests>")
+        set_tests_properties(core.platform.input.x11-ime-fallback PROPERTIES LABELS "core;input;x11;integration" TIMEOUT 60)
+        sir_configure_owned_target(SIRInputX11IMEFallbackTests)
+    endif()
+endif()
+
+# Win32 packet decoder regression: real MSVC / Windows SDK build, no hardware required.
+if(WIN32)
+    add_executable(SIRWindowsRawBatchTests SIRWindowsRawBatchTests.cpp)
+    target_link_libraries(SIRWindowsRawBatchTests PRIVATE SIR::Core)
+    add_test(NAME core.platform.input.windows-raw-batch COMMAND SIRWindowsRawBatchTests)
+    set_tests_properties(core.platform.input.windows-raw-batch PROPERTIES LABELS "core;input;regression" TIMEOUT 60)
+    sir_configure_owned_target(SIRWindowsRawBatchTests)
+endif()
+
+# Portable deterministic GameInput decoder regression; uses no OS or SDK.
+add_executable(SIRGameInputCodecTests
+    SIRGameInputCodecTests.cpp
+    "${PROJECT_SOURCE_DIR}/Source/Core/Platform/Input/Windows/SIRWindowsGameInputCodec.cpp")
+target_link_libraries(SIRGameInputCodecTests PRIVATE SIR::Core)
+add_test(NAME core.platform.input.gameinput-codec COMMAND SIRGameInputCodecTests)
+set_tests_properties(core.platform.input.gameinput-codec PROPERTIES LABELS "core;input;regression" TIMEOUT 60)
+sir_configure_owned_target(SIRGameInputCodecTests)
+
+
+# Platform file-lock provider and full SIRLang compiler/runtime fixtures.
+add_executable(SIRFileLockTests SIRFileLockTests.cpp)
+target_link_libraries(SIRFileLockTests PRIVATE SIR::Core)
+add_test(NAME core.platform.file-lock COMMAND SIRFileLockTests)
+sir_configure_owned_target(SIRFileLockTests)
+include(${CMAKE_CURRENT_SOURCE_DIR}/ScriptingTests.cmake)
+
+# Native editor authoring and scene intake tests.
+add_executable(SIREditorAuthoringTests SIREditorAuthoringTests.cpp)
+target_link_libraries(SIREditorAuthoringTests PRIVATE SIR::EditorAuthoring)
+add_test(NAME editor.authoring.transactions-and-virtual-list COMMAND SIREditorAuthoringTests)
+sir_configure_owned_target(SIREditorAuthoringTests)
+
+# Native Godot-scene hierarchy intake for the editor-only authoring bridge.
+add_executable(SIREditorTextSceneTests SIREditorTextSceneTests.cpp)
+target_link_libraries(SIREditorTextSceneTests PRIVATE SIR::EditorAuthoring)
+target_compile_definitions(SIREditorTextSceneTests PRIVATE
+    SIR_EDITOR_TEST_SCENE="${PROJECT_SOURCE_DIR}/Tests/Fixtures/Editor/SourceGodotGetNode.tscn"
+    SIR_EDITOR_TEST_UI_SCENE="${PROJECT_SOURCE_DIR}/Tests/Fixtures/Editor/SourceGodotUI.tscn")
+add_test(NAME editor.authoring.godot-text-scene COMMAND SIREditorTextSceneTests)
+sir_configure_owned_target(SIREditorTextSceneTests)
+
+# Read-only external and embedded resource-dependency validation.
+add_executable(SIREditorTextResourcesTests SIREditorTextResourcesTests.cpp)
+target_link_libraries(SIREditorTextResourcesTests PRIVATE SIR::EditorAuthoring)
+target_compile_definitions(SIREditorTextResourcesTests PRIVATE
+    SIR_EDITOR_TEST_UI_SCENE="${PROJECT_SOURCE_DIR}/Tests/Fixtures/Editor/SourceGodotUI.tscn")
+add_test(NAME editor.authoring.godot-text-resources COMMAND SIREditorTextResourcesTests)
+sir_configure_owned_target(SIREditorTextResourcesTests)
+
+# Editor-only scene tree projection, source ordering and virtualized layout.
+add_executable(SIREditorHierarchyModelTests SIREditorHierarchyModelTests.cpp)
+target_link_libraries(SIREditorHierarchyModelTests PRIVATE SIR::EditorAuthoring)
+target_compile_definitions(SIREditorHierarchyModelTests PRIVATE
+    SIR_EDITOR_TEST_UI_SCENE="${PROJECT_SOURCE_DIR}/Tests/Fixtures/Editor/SourceGodotUI.tscn")
+add_test(NAME editor.authoring.hierarchy-view-model COMMAND SIREditorHierarchyModelTests)
+sir_configure_owned_target(SIREditorHierarchyModelTests)
+
+# Native editor workspace and executable bootstrap over the Godot text-scene intake.
+add_executable(SIREditorSceneWorkspaceTests SIREditorSceneWorkspaceTests.cpp)
+target_link_libraries(SIREditorSceneWorkspaceTests PRIVATE SIR::EditorAuthoring)
+target_compile_definitions(SIREditorSceneWorkspaceTests PRIVATE
+    SIR_EDITOR_TEST_UI_SCENE="${PROJECT_SOURCE_DIR}/Tests/Fixtures/Editor/SourceGodotUI.tscn")
+add_test(NAME editor.host.scene-workspace COMMAND SIREditorSceneWorkspaceTests)
+sir_configure_owned_target(SIREditorSceneWorkspaceTests)
+
+add_test(NAME editor.host.version COMMAND SIREditor --version)
+set_tests_properties(editor.host.version PROPERTIES PASS_REGULAR_EXPRESSION "SIREditor native scene host")
+add_test(NAME editor.host.inspect-scene COMMAND SIREditor --inspect-scene
+    "${PROJECT_SOURCE_DIR}/Tests/Fixtures/Editor/SourceGodotUI.tscn")
+set_tests_properties(editor.host.inspect-scene PROPERTIES PASS_REGULAR_EXPRESSION "Nodes: 5")
+add_test(NAME editor.host.missing-scene COMMAND SIREditor --inspect-scene
+    "${PROJECT_SOURCE_DIR}/Tests/Fixtures/Editor/does-not-exist.tscn")
+set_tests_properties(editor.host.missing-scene PROPERTIES WILL_FAIL TRUE)
+
+# Source-backed node-property index feeding the read-only native Details dock.
+add_executable(SIREditorTextPropertiesTests SIREditorTextPropertiesTests.cpp)
+target_link_libraries(SIREditorTextPropertiesTests PRIVATE SIR::EditorAuthoring)
+target_compile_definitions(SIREditorTextPropertiesTests PRIVATE
+    SIR_EDITOR_TEST_UI_SCENE="${PROJECT_SOURCE_DIR}/Tests/Fixtures/Editor/SourceGodotUI.tscn")
+add_test(NAME editor.authoring.source-properties COMMAND SIREditorTextPropertiesTests)
+sir_configure_owned_target(SIREditorTextPropertiesTests)
+
+
+# SIREngine native object/type/property reflection and generation-safe handles.
+add_executable(SIRObjectRegistryTests SIRObjectRegistryTests.cpp)
+target_link_libraries(SIRObjectRegistryTests PRIVATE SIR::Core)
+add_test(NAME core.objects.registry-and-lifetime COMMAND SIRObjectRegistryTests)
+sir_configure_owned_target(SIRObjectRegistryTests)
+
+# Typed authored property changes share the scene document's undo/redo journal.
+add_executable(SIREditorTypedPropertyTests SIREditorTypedPropertyTests.cpp)
+target_link_libraries(SIREditorTypedPropertyTests PRIVATE SIR::EditorAuthoring)
+add_test(NAME editor.authoring.typed-property-transactions COMMAND SIREditorTypedPropertyTests)
+sir_configure_owned_target(SIREditorTypedPropertyTests)
+
+# Deterministic differential property-state machine: 2500 mixed valid/invalid transactions.
+add_executable(SIREditorPropertyStressTests SIREditorPropertyStressTests.cpp)
+target_link_libraries(SIREditorPropertyStressTests PRIVATE SIR::EditorAuthoring)
+add_test(NAME editor.authoring.property-journal-stress COMMAND SIREditorPropertyStressTests)
+sir_configure_owned_target(SIREditorPropertyStressTests)
+
+# Native SIREngine resource identity and dependency DAG without a foreign loader.
+add_executable(SIRResourceCatalogTests SIRResourceCatalogTests.cpp)
+target_link_libraries(SIRResourceCatalogTests PRIVATE SIR::Resources)
+add_test(NAME resources.catalog.dependency-validation COMMAND SIRResourceCatalogTests)
+sir_configure_owned_target(SIRResourceCatalogTests)
+
+# Allocation-free typed text-scene scalar conversion and precision roundtrips.
+add_executable(SIREditorScalarCodecTests SIREditorScalarCodecTests.cpp)
+target_link_libraries(SIREditorScalarCodecTests PRIVATE SIR::EditorAuthoring)
+add_test(NAME editor.scene.typed-scalar-codec COMMAND SIREditorScalarCodecTests)
+sir_configure_owned_target(SIREditorScalarCodecTests)
+
+# Bound native typed-property edit import, undo and lossless text-scene export.
+add_executable(SIREditorScalarBindingTests SIREditorScalarBindingTests.cpp)
+target_link_libraries(SIREditorScalarBindingTests PRIVATE SIR::EditorAuthoring)
+add_test(NAME editor.scene.typed-scalar-binding COMMAND SIREditorScalarBindingTests)
+sir_configure_owned_target(SIREditorScalarBindingTests)
+
+# Independent reference graph validates resource DAG, duplicate, and cycle checks.
+add_executable(SIRResourceCatalogDifferentialTests SIRResourceCatalogDifferentialTests.cpp)
+target_link_libraries(SIRResourceCatalogDifferentialTests PRIVATE SIR::Resources)
+add_test(NAME resources.catalog.differential-dag COMMAND SIRResourceCatalogDifferentialTests)
+sir_configure_owned_target(SIRResourceCatalogDifferentialTests)
+
+# Full source fixture: reflect, import, edit, undo/redo, losslessly serialize and reopen.
+add_executable(SIREditorRealSceneScalarRoundtripTests SIREditorRealSceneScalarRoundtripTests.cpp)
+target_link_libraries(SIREditorRealSceneScalarRoundtripTests PRIVATE SIR::EditorAuthoring)
+target_compile_definitions(SIREditorRealSceneScalarRoundtripTests PRIVATE
+    SIR_EDITOR_TEST_UI_SCENE="${PROJECT_SOURCE_DIR}/Tests/Fixtures/Editor/SourceGodotUI.tscn")
+add_test(NAME editor.scene.real-fixture-scalar-roundtrip COMMAND SIREditorRealSceneScalarRoundtripTests)
+sir_configure_owned_target(SIREditorRealSceneScalarRoundtripTests)
+
+# Real crash-conscious scene file replacement, staging collisions and failed rename.
+add_executable(SIREditorFileSaveTests SIREditorFileSaveTests.cpp)
+target_link_libraries(SIREditorFileSaveTests PRIVATE SIR::EditorAuthoring)
+add_test(NAME editor.scene.atomic-file-save COMMAND SIREditorFileSaveTests)
+sir_configure_owned_target(SIREditorFileSaveTests)
+
+# Source-format scalar edit preservation and fail-closed writer.
+add_executable(SIREditorTextWriterTests SIREditorTextWriterTests.cpp)
+target_link_libraries(SIREditorTextWriterTests PRIVATE SIR::EditorAuthoring)
+target_compile_definitions(SIREditorTextWriterTests PRIVATE
+    SIR_EDITOR_TEST_UI_SCENE="${PROJECT_SOURCE_DIR}/Tests/Fixtures/Editor/SourceGodotUI.tscn")
+add_test(NAME editor.scene.text-scalar-writer COMMAND SIREditorTextWriterTests)
+sir_configure_owned_target(SIREditorTextWriterTests)
+
+# Retained SIREngine-native control hierarchy, focus, layout, clipping and input.
+add_executable(SIRControlTreeTests SIRControlTreeTests.cpp)
+target_link_libraries(SIRControlTreeTests PRIVATE SIR::UI)
+add_test(NAME ui.controls.layout-and-focus COMMAND SIRControlTreeTests)
+sir_configure_owned_target(SIRControlTreeTests)
+
+# Platform-owned bounded binary file reading, regular-file rejection and capacity gates.
+add_executable(SIRFileSystemReadTests SIRFileSystemReadTests.cpp)
+target_link_libraries(SIRFileSystemReadTests PRIVATE SIR::Core)
+add_test(NAME core.platform.file-read COMMAND SIRFileSystemReadTests)
+sir_configure_owned_target(SIRFileSystemReadTests)
+
+# Source-backed resource references and embedded-resource dependency ownership.
+add_executable(SIREditorResourceReferencesTests SIREditorResourceReferencesTests.cpp)
+target_link_libraries(SIREditorResourceReferencesTests PRIVATE SIR::EditorAuthoring)
+add_test(NAME editor.scene.resource-reference-index COMMAND SIREditorResourceReferencesTests)
+sir_configure_owned_target(SIREditorResourceReferencesTests)

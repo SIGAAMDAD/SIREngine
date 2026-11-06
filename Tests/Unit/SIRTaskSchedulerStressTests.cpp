@@ -74,7 +74,7 @@ static void testConcurrentProducersAndMetadata( void )
 		for ( uint32_t iProducer = 0; iProducer < PRODUCERS; ++iProducer ) {
 			producers[iProducer] = std::thread( [&, iProducer]() {
 				for ( uint32_t iTask = 0; iTask < PER_PRODUCER; ++iTask ) {
-					SIR_STRESS_CHECK( scheduler.submit( incrementStress, &nCompleted, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU,
+					SIR_STRESS_CHECK( scheduler.submit( { incrementStress, &nCompleted, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU },
 					                                    &handles[iProducer][iTask] ) );
 				}
 			} );
@@ -134,7 +134,7 @@ static void testPriorityProgressAndFifo( void )
 		const uint32_t iPriority = i < 96 ? 0 : ( i < 128 ? 1 : 2 );
 		contexts[i] = { &nNext[iPriority], iPriority == 0 ? i : ( iPriority == 1 ? i - 96 : i - 128 ), &bViolation };
 		SIR_STRESS_CHECK(
-		    scheduler.submit( recordPriorityStress, &contexts[i], ( sirTaskPriority_t )iPriority, SIR_TASK_EXEC_CPU, &handles[i] ) );
+		    scheduler.submit( { recordPriorityStress, &contexts[i], ( sirTaskPriority_t )iPriority, SIR_TASK_EXEC_CPU }, &handles[i] ) );
 	}
 	SIR_STRESS_CHECK( scheduler.pumpCPU( 48 ) == 48 );
 	SIR_STRESS_CHECK( nNext[0] != 0 && nNext[1] != 0 && nNext[2] != 0 );
@@ -201,7 +201,7 @@ static void testRandomizedDependencyDags( void )
 				}
 			}
 		}
-		SIR_STRESS_CHECK( scheduler.submitBatch( tasks, N, edges, nEdges, handles ) );
+		SIR_STRESS_CHECK( scheduler.submitBatch( { tasks, N, edges, nEdges }, handles ) );
 		for ( uint32_t i = 0; i < N; ++i ) {
 			SIR_STRESS_CHECK( scheduler.waitTask( handles[i] ) );
 			SIR_STRESS_CHECK( scheduler.getState( handles[i] ) == SIR_TASK_COMPLETED );
@@ -234,7 +234,7 @@ static void testCancellationWidthAndGenerations( void )
 		edges[2 * ( i - 1 )] = { 0, i };
 		edges[2 * ( i - 1 ) + 1] = { i, N - 1 };
 	}
-	SIR_STRESS_CHECK( scheduler.submitBatch( tasks, N, edges, ( N - 2 ) * 2, handles ) );
+	SIR_STRESS_CHECK( scheduler.submitBatch( { tasks, N, edges, ( N - 2 ) * 2 }, handles ) );
 	SIR_STRESS_CHECK( scheduler.getState( handles[N - 1] ) == SIR_TASK_BLOCKED );
 	const sirTaskHandle_t stale = handles[0];
 	SIR_STRESS_CHECK( scheduler.cancel( handles[0] ) );
@@ -243,7 +243,7 @@ static void testCancellationWidthAndGenerations( void )
 		SIR_STRESS_CHECK( scheduler.releaseTask( handles[i] ) );
 	}
 	SIR_STRESS_CHECK( nCount.load() == 0 );
-	SIR_STRESS_CHECK( scheduler.submitBatch( tasks, N, nullptr, 0, handles ) );
+	SIR_STRESS_CHECK( scheduler.submitBatch( { tasks, N, nullptr, 0 }, handles ) );
 	SIR_STRESS_CHECK( scheduler.getState( stale ) == SIR_TASK_INVALID );
 	SIR_STRESS_CHECK( scheduler.pumpCPU( N ) == N );
 	for ( uint32_t i = 0; i < N; ++i ) {
@@ -277,7 +277,7 @@ static void testFenceBurstsAndCancellation( void )
 	sirTaskHandle_t handles[64] = {};
 	sirStressFenceContext_t contexts[64] = {};
 	for ( uint32_t i = 0; i < 64; ++i ) {
-		SIR_STRESS_CHECK( scheduler.submit( deferredStress, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_RENDER, &handles[i] ) );
+		SIR_STRESS_CHECK( scheduler.submit( { deferredStress, nullptr, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_RENDER }, &handles[i] ) );
 	}
 	SIR_STRESS_CHECK( scheduler.pumpProvider( SIR_TASK_EXEC_RENDER, 64 ) == 64 );
 	for ( uint32_t i = 0; i < 64; ++i ) {
