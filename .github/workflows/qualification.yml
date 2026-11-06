@@ -1,11 +1,10 @@
 name: SIREngine qualification
 on:
+  pull_request:
+    branches: [main]
+    types: [labeled, synchronize, reopened, ready_for_review]
   workflow_dispatch:
     inputs:
-      source_sha:
-        description: 'Exact 40-character source commit SHA'
-        required: true
-        type: string
       system:
         description: 'Compiled production scope'
         required: true
@@ -29,24 +28,25 @@ permissions:
   issues: read
   actions: read
 concurrency:
-  group: sir-qualification-${{ inputs.source_sha }}-${{ inputs.system }}
+  group: sir-qualification-${{ github.event.pull_request.head.sha || github.sha }}-${{ inputs.system || 'all' }}
   queue: max
   cancel-in-progress: false
 jobs:
   authorize:
     name: Validate qualification issue and frozen SHA
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && !github.event.pull_request.draft && contains(github.event.pull_request.labels.*.name, 'sir-qualify') && (github.event.action != 'labeled' || github.event.label.name == 'sir-qualify'))
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: ${{ inputs.source_sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
       - name: Validate source revision and authoritative GitHub issue
         shell: bash
         env:
-          SOURCE_SHA: ${{ inputs.source_sha }}
-          ISSUE_NUMBER: ${{ inputs.issue }}
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          ISSUE_NUMBER: ${{ github.event.pull_request.number || inputs.issue }}
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
@@ -54,8 +54,9 @@ jobs:
           [[ "$ISSUE_NUMBER" =~ ^[1-9][0-9]*$ ]]
           test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
           issue="$(gh api "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER")"
-          jq -er --argjson requested "$ISSUE_NUMBER" \
-            '(.number == $requested) and (.state == "open") and (.pull_request == null)' \
+          jq -er --argjson requested "$ISSUE_NUMBER" --arg GITHUB_EVENT_NAME "$GITHUB_EVENT_NAME" \
+            '(.number == $requested) and (.state == "open") and
+             (if $GITHUB_EVENT_NAME == "pull_request" then .pull_request != null else .pull_request == null end)' \
             <<< "$issue" >/dev/null
   coverage:
     name: LLVM 23 full source coverage
@@ -65,12 +66,12 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: ${{ inputs.source_sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
       - name: Validate exact requested checkout
         env:
-          SOURCE_SHA: ${{ inputs.source_sha }}
-          ISSUE_NUMBER: ${{ inputs.issue }}
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          ISSUE_NUMBER: ${{ github.event.pull_request.number || inputs.issue }}
         shell: bash
         run: |
           [[ "$SOURCE_SHA" =~ ^[a-f0-9]{40}$ ]]
@@ -88,7 +89,7 @@ jobs:
           python3 -m unittest discover -s Tests/CI -p 'Test*.py'
       - name: Qualify all compiled production code
         env:
-          SIR_QUALIFICATION_SCOPE: ${{ inputs.system }}
+          SIR_QUALIFICATION_SCOPE: ${{ inputs.system || 'all' }}
         run: bash Build/Scripts/RunLLVM23Qualification.sh
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
@@ -109,12 +110,12 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: ${{ inputs.source_sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
       - name: Validate exact requested checkout
         env:
-          SOURCE_SHA: ${{ inputs.source_sha }}
-          ISSUE_NUMBER: ${{ inputs.issue }}
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          ISSUE_NUMBER: ${{ github.event.pull_request.number || inputs.issue }}
         shell: bash
         run: |
           [[ "$SOURCE_SHA" =~ ^[a-f0-9]{40}$ ]]
@@ -148,12 +149,12 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: ${{ inputs.source_sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
       - name: Validate exact requested checkout
         env:
-          SOURCE_SHA: ${{ inputs.source_sha }}
-          ISSUE_NUMBER: ${{ inputs.issue }}
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          ISSUE_NUMBER: ${{ github.event.pull_request.number || inputs.issue }}
         shell: bash
         run: |
           [[ "$SOURCE_SHA" =~ ^[a-f0-9]{40}$ ]]
@@ -172,7 +173,7 @@ jobs:
   renderer-backends:
     name: Renderer backend contracts (${{ matrix.backend }})
     needs: authorize
-    if: inputs.system == 'all' || inputs.system == 'Renderer' || inputs.system == 'GraphicsABI'
+    if: inputs.system == '' || inputs.system == 'all' || inputs.system == 'Renderer' || inputs.system == 'GraphicsABI'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 90
     strategy:
@@ -185,11 +186,11 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: ${{ inputs.source_sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
       - name: Verify requested backend source SHA
         env:
-          SHA: ${{ inputs.source_sha }}
+          SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         shell: bash
         run: |
           [[ "$SHA" =~ ^[a-f0-9]{40}$ ]]
@@ -234,13 +235,13 @@ jobs:
   audio-backend:
     name: FMOD native backend qualification
     needs: authorize
-    if: inputs.system == 'all' || inputs.system == 'Audio'
+    if: inputs.system == '' || inputs.system == 'all' || inputs.system == 'Audio'
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: ${{ inputs.source_sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
       - uses: ./.github/actions/setup-build-tools
       - run: git submodule update --init ThirdParty/GoogleTest
@@ -261,21 +262,23 @@ jobs:
           python3 Build/CI/RunCTestGate.py --preset dev --name-regex '^audio[.]fmod[.]native-' --report out/Verification/fmod.xml
   acceptance:
     name: Qualification acceptance
-    if: always()
+    if: always() && (github.event_name == 'workflow_dispatch' || needs.authorize.result != 'skipped')
     runs-on: ubuntu-24.04
     needs: [authorize, coverage, native, sanitizer, renderer-backends, audio-backend]
     steps:
       - name: Refuse incomplete gates
         env:
+          AUTHORIZE: ${{ needs.authorize.result }}
           COVERAGE: ${{ needs.coverage.result }}
           NATIVE: ${{ needs.native.result }}
           SANITIZER: ${{ needs.sanitizer.result }}
           RENDERER: ${{ needs.renderer-backends.result }}
           AUDIO: ${{ needs.audio-backend.result }}
-          SYSTEM: ${{ inputs.system }}
+          SYSTEM: ${{ inputs.system || 'all' }}
         shell: bash
         run: |
           set -euo pipefail
+          test "$AUTHORIZE" = success
           test "$COVERAGE" = success
           test "$NATIVE" = success
           test "$SANITIZER" = success
@@ -294,14 +297,14 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: ${{ inputs.source_sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
       - uses: ./.github/actions/setup-build-tools
       - run: git submodule update --init ThirdParty/GoogleTest ThirdParty/GoogleBenchmark
       - name: Build and measure source-bound performance workload
         shell: bash
         env:
-          SOURCE_SHA: ${{ inputs.source_sha }}
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
@@ -340,7 +343,7 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: ${{ inputs.source_sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
       - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1
         if: runner.os == 'Windows'
@@ -349,7 +352,7 @@ jobs:
       - name: Build, test and package frozen release candidate
         shell: bash
         env:
-          SOURCE_SHA: ${{ inputs.source_sha }}
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
