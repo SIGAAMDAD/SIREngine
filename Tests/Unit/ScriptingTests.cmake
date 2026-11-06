@@ -111,6 +111,11 @@ target_link_libraries(SIRLangGraphVMAdversarialTests PRIVATE SIR::Scripting)
 add_test(NAME scripting.language.graphvm-adversarial COMMAND SIRLangGraphVMAdversarialTests)
 sir_configure_owned_target(SIRLangGraphVMAdversarialTests)
 
+add_executable(SIRLangGraphVMNumericTests SIRLangGraphVMNumericTests.cpp)
+target_link_libraries(SIRLangGraphVMNumericTests PRIVATE SIR::Scripting)
+add_test(NAME scripting.language.graphvm-numeric COMMAND SIRLangGraphVMNumericTests)
+sir_configure_owned_target(SIRLangGraphVMNumericTests)
+
 add_executable(SIRLangLoweringTests SIRLangLoweringTests.cpp)
 target_link_libraries(SIRLangLoweringTests PRIVATE SIR::Scripting)
 add_test(NAME scripting.language.lowering COMMAND SIRLangLoweringTests)

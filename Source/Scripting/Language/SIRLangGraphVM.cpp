@@ -85,11 +85,6 @@ static bool sirLangValidRuntimeType( sirLangValueKind_t eType ) noexcept
 	return eType == SIR_LANG_VALUE_BOOL || sirLangIsInteger( eType ) || eType == SIR_LANG_VALUE_F32 || eType == SIR_LANG_VALUE_F64;
 }
 
-static bool sirLangIsFloat( sirLangValueKind_t eType ) noexcept
-{
-	return eType == SIR_LANG_VALUE_F32 || eType == SIR_LANG_VALUE_F64;
-}
-
 static bool sirLangValidRuntimeValue( const sirLangVMValue_t& value ) noexcept
 {
 	if ( !sirLangValidRuntimeType( value.eType ) ) {
@@ -153,7 +148,7 @@ static sirLangVMError_t sirLangVerifyInstruction( const sirLangCIRProgram_t *pPr
 	const bool bSecondValid = sirLangUseRegister( iB, SIR_LANG_VALUE_UNKNOWN, registers );
 	switch ( instruction.eOpcode ) {
 	case SIR_LANG_OP_CONST:
-		if ( !sirLangFitsWidth( instruction.nImmediate, eType ) && !sirLangIsFloat( eType ) ) {
+		if ( !sirLangValidRuntimeValue( { instruction.nImmediate, eType } ) ) {
 			return SIR_LANG_VM_INVALID_TYPE;
 		}
 		return SIR_LANG_VM_OK;
