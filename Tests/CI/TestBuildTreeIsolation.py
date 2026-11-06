@@ -99,8 +99,14 @@ class BuildTreeIsolationTests(unittest.TestCase):
 
     def test_presets_are_out_of_source(self):
         presets = json.loads((ROOT / "CMakePresets.json").read_text())
+        by_name = {item["name"]: item for item in presets["configurePresets"]}
         for preset in presets["configurePresets"]:
-            self.assertEqual(preset["binaryDir"],
+            resolved = preset
+            while "binaryDir" not in resolved:
+                inherited = resolved.get("inherits")
+                self.assertIsInstance(inherited, str)
+                resolved = by_name[inherited]
+            self.assertEqual(resolved["binaryDir"],
                              "${sourceDir}/out/${hostSystemName}/${presetName}")
         visual_studio = next(p for p in presets["configurePresets"] if p["name"] == "vs2022")
         self.assertEqual(visual_studio["generator"], "Visual Studio 17 2022")
