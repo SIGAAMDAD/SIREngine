@@ -73,6 +73,7 @@ set_tests_properties(
     PROPERTIES LABELS "graphics-abi;cpu;conformance" TIMEOUT 90)
 
 if(SIR_WITH_GOOGLETEST)
+    string(TOLOWER "${CMAKE_SYSTEM_NAME}" sirGTestHost)
     include(GoogleTest)
     add_executable(SIRGraphicsABIAssertionGoogleTests SIRGraphicsABIAssertionGoogleTests.cpp)
     target_link_libraries(SIRGraphicsABIAssertionGoogleTests PRIVATE SIR::Graphics gtest_main)
@@ -80,7 +81,7 @@ if(SIR_WITH_GOOGLETEST)
     gtest_discover_tests(SIRGraphicsABIAssertionGoogleTests
         TEST_PREFIX "renderer.graphics.gtest."
         DISCOVERY_MODE PRE_TEST
-        PROPERTIES LABELS "graphics-abi;gtest;conformance;gate:pr;gate:main;gate:nightly;gate:qualification" TIMEOUT 90)
+        PROPERTIES LABELS "graphics-abi;gtest;conformance;subsystem:renderer;kind:unit;platform:${sirGTestHost};resource:cpu;gate:pr;gate:main;gate:nightly;gate:qualification" TIMEOUT 90)
 endif()
 
 if(SIR_WITH_OPENGL)

@@ -1,11 +1,12 @@
 if(SIR_WITH_GOOGLETEST)
+    string(TOLOWER "${CMAKE_SYSTEM_NAME}" sirGTestHost)
     add_executable(SIREventGoogleTests SIREventGoogleTests.cpp SIREventOptimizationGoogleTests.cpp SIREventFurtherOptimizationGoogleTests.cpp)
     target_compile_features(SIREventGoogleTests PRIVATE cxx_std_17)
     target_link_libraries(SIREventGoogleTests PRIVATE SIR::Core gtest_main)
     sir_configure_owned_target(SIREventGoogleTests)
     include(GoogleTest)
     gtest_discover_tests(SIREventGoogleTests TEST_PREFIX "core.events." DISCOVERY_TIMEOUT 45
-        PROPERTIES LABELS "subsystem:core;kind:unit;gate:pr;gate:main;gate:nightly;gate:qualification")
+        PROPERTIES LABELS "subsystem:core;kind:unit;platform:${sirGTestHost};resource:cpu;gate:pr;gate:main;gate:nightly;gate:qualification")
 endif()
 
 # Standalone registration, capacity, invalid-handle and lifecycle coverage.
