@@ -348,6 +348,159 @@
       "output": {
         "outputOnFailure": true
       }
+    },
+    {
+      "name": "resources-unit",
+      "configurePreset": "dev",
+      "description": "resources subsystem unit selection",
+      "filter": {
+        "include": {
+          "name": "^resources[.]",
+          "label": "^kind:unit$"
+        }
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "renderer-unit",
+      "configurePreset": "dev",
+      "description": "renderer subsystem unit selection",
+      "filter": {
+        "include": {
+          "name": "^renderer[.]",
+          "label": "^kind:unit$"
+        }
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "terrain-unit",
+      "configurePreset": "dev",
+      "description": "terrain subsystem unit selection",
+      "filter": {
+        "include": {
+          "name": "^terrain[.]",
+          "label": "^kind:unit$"
+        }
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "editor-unit",
+      "configurePreset": "dev",
+      "description": "editor subsystem unit selection",
+      "filter": {
+        "include": {
+          "name": "^editor[.]",
+          "label": "^kind:unit$"
+        }
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "scripting-unit",
+      "configurePreset": "dev",
+      "description": "scripting subsystem unit selection",
+      "filter": {
+        "include": {
+          "name": "^scripting[.]",
+          "label": "^kind:unit$"
+        }
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "audio-unit",
+      "configurePreset": "dev",
+      "description": "audio subsystem unit selection",
+      "filter": {
+        "include": {
+          "name": "^audio[.]",
+          "label": "^kind:unit$"
+        }
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "mesh-unit",
+      "configurePreset": "dev",
+      "description": "mesh subsystem unit selection",
+      "filter": {
+        "include": {
+          "name": "^mesh[.]",
+          "label": "^kind:unit$"
+        }
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "streaming-unit",
+      "configurePreset": "dev",
+      "description": "streaming subsystem unit selection",
+      "filter": {
+        "include": {
+          "name": "^streaming[.]",
+          "label": "^kind:unit$"
+        }
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "world-unit",
+      "configurePreset": "dev",
+      "description": "world subsystem unit selection",
+      "filter": {
+        "include": {
+          "name": "^world[.]",
+          "label": "^kind:unit$"
+        }
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "ui-unit",
+      "configurePreset": "dev",
+      "description": "ui subsystem unit selection",
+      "filter": {
+        "include": {
+          "name": "^ui[.]",
+          "label": "^kind:unit$"
+        }
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "nightly-stress",
+      "configurePreset": "dev",
+      "description": "Nightly stress, soak and fuzz selection",
+      "filter": {
+        "include": {
+          "label": "^kind:(stress|soak|fuzz)$"
+        }
+      },
+      "output": {
+        "outputOnFailure": true
+      }
     }
   ]
 }
