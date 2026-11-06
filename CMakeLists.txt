@@ -26,14 +26,20 @@ include(Build/CMake/SIRBuildOptions.cmake)
 include(Build/CMake/SIRDependencies.cmake)
 include(Build/CMake/SIRAudio.cmake)
 include(Build/CMake/SIRMono.cmake)
+
+# CTest must be enabled before configuring source-owned test targets.
+if(SIR_BUILD_TESTS)
+    enable_testing()
+endif()
+
 add_subdirectory(Source)
 add_subdirectory(Tools/RegistrationCooker)
 
 if(SIR_BUILD_TESTS)
-    enable_testing()
     add_subdirectory(Tests/Unit)
     add_subdirectory(Tests/Dependencies)
     include(Build/CMake/SIRTestRegistration.cmake)
+    sir_classify_tests("${PROJECT_SOURCE_DIR}/Source")
     sir_classify_tests("${PROJECT_SOURCE_DIR}/Tests/Unit")
     get_property(sirDependencyTests DIRECTORY "${PROJECT_SOURCE_DIR}/Tests/Dependencies" PROPERTY TESTS)
     if(sirDependencyTests)
