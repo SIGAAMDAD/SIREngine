@@ -59,6 +59,16 @@ class CTestTaxonomyTests(unittest.TestCase):
         d3d10 = (root / "Source/Renderer/Drivers/D3D10/CMakeLists.txt").read_text()
         self.assertIn("add_test(NAME renderer.d3d10.abi-scaffold COMMAND SIRD3D10ABITests)", d3d10)
 
+    def test_optimizer_worker_usage_profile_registration(self):
+        root = Path(__file__).resolve().parents[2]
+        scripting = (root / "Tests/Unit/ScriptingTests.cmake").read_text()
+        usage = (root / "Tests/Unit/SIRScriptOptimizerWorkerUsage.cmake").read_text()
+        self.assertIn("add_test(NAME scripting.optimizer-worker-usage", scripting)
+        self.assertIn("$<TARGET_FILE:SIRScriptOptimizerWorker>", scripting)
+        self.assertIn('COMMAND "${SIR_WORKER}"', usage)
+        self.assertIn('STREQUAL "2"', usage)
+        self.assertIn("SIRScriptOptimizerWorker: usage", usage)
+
     def test_source_test_registration_in_nested_directory(self):
         root, result = self.make_project(
             "add_subdirectory(Nested)\n",
