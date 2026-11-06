@@ -182,20 +182,39 @@ static bool sirLangMatchExternal( const sirLangSemanticState_t *pState, uint32_t
 static uint32_t sirLangDeclarationName( const sirLangSyntaxTree_t *pTree, uint32_t iNode ) noexcept
 {
 	const sirLangSyntaxNode_t& node = pTree->pNodes[iNode];
-	uint32_t iToken = node.nStartToken;
-	if ( iToken >= node.nEndToken || iToken >= pTree->nTokenCount ) {
+	const uint32_t iStart = node.nStartToken;
+	if ( iStart >= node.nEndToken || iStart >= pTree->nTokenCount ) {
 		return SIR_LANG_INVALID_INDEX;
 	}
-	if ( node.eKind == SIR_LANG_SYNTAX_PARAMETER || node.eKind == SIR_LANG_SYNTAX_FIELD ) {
-		if ( sirLangEqualToken( pTree, iToken, "field" ) ) {
-			++iToken;
-		}
-	} else if ( node.eKind == SIR_LANG_SYNTAX_CONDITION_BANK ) {
+	uint32_t iToken = iStart;
+	if ( node.eKind == SIR_LANG_SYNTAX_CONDITION_BANK ) {
 		iToken += 2;
+	} else if ( node.eKind == SIR_LANG_SYNTAX_EVENT ) {
+		// Legacy hand-authored AST fixtures use "on Name"; the modern parser
+		// requires "on event Name". This does not accept legacy source syntax.
+		iToken += sirLangEqualToken( pTree, iStart + 1, "event" ) ? 2 : 1;
+	} else if ( node.eKind == SIR_LANG_SYNTAX_PARAMETER || node.eKind == SIR_LANG_SYNTAX_FIELD ) {
+		const bool bFieldPrefix = sirLangEqualToken( pTree, iStart, "field" );
+		if ( bFieldPrefix ) {
+			iToken = iStart + 1;
+		}
+		// A typed declaration emitted by the C-style parser carries the type
+		// as its first child and the name after that type. Older AST fixtures
+		// may begin with the name and a colon instead.
+		uint32_t iType = node.nFirstChild;
+		for ( uint32_t n = 0; iType < pTree->nNodeCount && n < pTree->nNodeCount; iType = pTree->pNodes[iType].nNextSibling, ++n ) {
+			const sirLangSyntaxNode_t& child = pTree->pNodes[iType];
+			if ( child.eKind == SIR_LANG_SYNTAX_TYPE && child.nStartToken == iToken ) {
+				iToken = child.nEndToken;
+				break;
+			}
+		}
 	} else {
 		++iToken;
 	}
-	return iToken < node.nEndToken && pTree->pTokens[iToken].eKind == SIR_LANG_TOKEN_IDENTIFIER ? iToken : SIR_LANG_INVALID_INDEX;
+	return iToken < node.nEndToken && iToken < pTree->nTokenCount && pTree->pTokens[iToken].eKind == SIR_LANG_TOKEN_IDENTIFIER
+	           ? iToken
+			   : SIR_LANG_INVALID_INDEX;
 }
 
 static sirLangSemanticSymbol_t *sirLangFindSymbol( sirLangSemanticState_t *pState, uint32_t iToken ) noexcept
@@ -541,7 +560,7 @@ static sirLangValueKind_t sirLangInferExpression( sirLangSemanticState_t *pState
 static sirLangValueKind_t sirLangInferName( sirLangSemanticState_t *pState, uint32_t iNode ) noexcept
 {
 	const uint32_t iToken = pState->pTree->pNodes[iNode].nStartToken;
-	if ( sirLangEqualToken( pState->pTree, iToken, "self" ) && pState->iSchema != SIR_LANG_INVALID_INDEX ) {
+	if ( sirLangEqualToken( pState->pTree, iToken, "this" ) && pState->iSchema != SIR_LANG_INVALID_INDEX ) {
 		return SIR_LANG_VALUE_OTHER;
 	}
 	sirLangSemanticSymbol_t *pSymbol = sirLangFindSymbol( pState, iToken );
@@ -567,7 +586,7 @@ static sirLangValueKind_t sirLangInferMember( sirLangSemanticState_t *pState, ui
 		return SIR_LANG_VALUE_UNKNOWN;
 	}
 	const sirLangSyntaxNode_t& object = pState->pTree->pNodes[iChild];
-	if ( object.eKind == SIR_LANG_SYNTAX_NAME && sirLangEqualToken( pState->pTree, object.nStartToken, "self" ) &&
+	if ( object.eKind == SIR_LANG_SYNTAX_NAME && sirLangEqualToken( pState->pTree, object.nStartToken, "this" ) &&
 	     pState->iSchema != SIR_LANG_INVALID_INDEX ) {
 		const uint32_t iMemberToken = node.nEndToken > 0 ? node.nEndToken - 1 : SIR_LANG_INVALID_INDEX;
 		for ( uint32_t iSymbol = 0; iSymbol < pState->pOutput->nSymbolCount; ++iSymbol ) {
@@ -692,7 +711,7 @@ static void sirLangCheckDeclarationType( sirLangSemanticState_t *pState, uint32_
 }
 
 // Schema field declarations are registered before any behavior body is
-// analyzed, so type ordering in a module does not affect self.Field lookup.
+// analyzed, so type ordering in a module does not affect this.Field lookup.
 static void sirLangPredeclareFields( sirLangSemanticState_t *pState, uint32_t iBlock ) noexcept
 {
 	for ( uint32_t iChild = sirLangFirstChild( pState, iBlock ), nSteps = 0;
@@ -931,6 +950,26 @@ static void sirLangAnalyzeNode( sirLangSemanticState_t *pState, uint32_t iNode )
 	case SIR_LANG_SYNTAX_OTHERWISE:
 		sirLangAnalyzeChildren( pState, iNode );
 		break;
+	case SIR_LANG_SYNTAX_SWITCH: {
+		const uint32_t iSelector = node.nFirstChild;
+		const sirLangValueKind_t eSelector = sirLangInferExpression( pState, iSelector );
+		for ( uint32_t iCase = sirLangNextChild( pState, iSelector ); iCase != SIR_LANG_INVALID_INDEX;
+		      iCase = sirLangNextChild( pState, iCase ) ) {
+			const sirLangSyntaxNode_t& branch = pState->pTree->pNodes[iCase];
+			uint32_t iBlock = branch.nFirstChild;
+			if ( branch.eKind == SIR_LANG_SYNTAX_CASE ) {
+				const sirLangValueKind_t eValue = sirLangInferExpression( pState, iBlock );
+				if ( !sirLangCompatible( eSelector, eValue ) ) {
+					sirLangSemanticReport( pState, SIR_LANG_SEMANTIC_TYPE_MISMATCH, iCase );
+				}
+				iBlock = sirLangNextChild( pState, iBlock );
+			}
+			if ( iBlock != SIR_LANG_INVALID_INDEX ) {
+				sirLangAnalyzeNode( pState, iBlock );
+			}
+		}
+		break;
+	} break;
 	case SIR_LANG_SYNTAX_EXPRESSION_STATEMENT:
 	case SIR_LANG_SYNTAX_EMIT:
 	case SIR_LANG_SYNTAX_AFTER:

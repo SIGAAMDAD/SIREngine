@@ -228,14 +228,78 @@ static bool testCoordinator( const char *pszExecutable ) noexcept
 	return true;
 }
 
+static bool testStopCancelsBlockedIO( const char *pszExecutable ) noexcept
+{
+	SIRScriptOptimizerProcessTransport transport;
+	for ( uint32_t nAttempt = 0; nAttempt < 3; ++nAttempt ) {
+		SIR_TEST_CHECK( transport.configure( fixtureConfig( pszExecutable, "stall", 0 ) ) == SIR_SCRIPT_OK );
+		SIR_TEST_CHECK( transport.start() == SIR_SCRIPT_OK );
+		uint8_t szWire[SIRScriptOptimizationProtocol::REQUEST_BYTES] = {};
+		SIR_TEST_CHECK( SIRScriptOptimizationProtocol::encodeRequest( fixtureRequest( 41 + nAttempt ), szWire ) == SIR_SCRIPT_OK );
+		SIR_TEST_CHECK( transport.send( szWire, sizeof( szWire ) ) == SIR_SCRIPT_OK );
+		std::this_thread::sleep_for( std::chrono::milliseconds( 30 ) );
+		const auto started = std::chrono::steady_clock::now();
+		transport.stop();
+		SIR_TEST_CHECK( std::chrono::steady_clock::now() - started < std::chrono::seconds( 5 ) );
+	}
+	return true;
+}
+
+static bool testImmediateStop( const char *pszExecutable ) noexcept
+{
+	SIRScriptOptimizerProcessTransport transport;
+	for ( uint32_t nAttempt = 0; nAttempt < 12; ++nAttempt ) {
+		SIR_TEST_CHECK( transport.configure( fixtureConfig( pszExecutable, "stall", 0 ) ) == SIR_SCRIPT_OK );
+		SIR_TEST_CHECK( transport.start() == SIR_SCRIPT_OK );
+		uint8_t szWire[SIRScriptOptimizationProtocol::REQUEST_BYTES] = {};
+		SIR_TEST_CHECK( SIRScriptOptimizationProtocol::encodeRequest( fixtureRequest( 100 + nAttempt ), szWire ) == SIR_SCRIPT_OK );
+		SIR_TEST_CHECK( transport.send( szWire, sizeof( szWire ) ) == SIR_SCRIPT_OK );
+		const auto started = std::chrono::steady_clock::now();
+		transport.stop();
+		SIR_TEST_CHECK( std::chrono::steady_clock::now() - started < std::chrono::seconds( 5 ) );
+	}
+	return true;
+}
+
 int main( int nArguments, char **pszArguments )
 {
 	if ( nArguments < 2 ) {
 		fprintf( stderr, "Expected subprocess fixture executable path\n" );
 		return 2;
 	}
-	if ( !testConfiguration( pszArguments[1] ) || !testFramedTransport( pszArguments[1] ) || !testProcessFailures( pszArguments[1] ) ||
-	     !testWatchdog( pszArguments[1] ) || !testCoordinator( pszArguments[1] ) ) {
+	fprintf( stderr, "optimizer process transport: configuration\n" );
+	fflush( stderr );
+	if ( !testConfiguration( pszArguments[1] ) ) {
+		return 1;
+	}
+	fprintf( stderr, "optimizer process transport: framed\n" );
+	fflush( stderr );
+	if ( !testFramedTransport( pszArguments[1] ) ) {
+		return 1;
+	}
+	fprintf( stderr, "optimizer process transport: failures\n" );
+	fflush( stderr );
+	if ( !testProcessFailures( pszArguments[1] ) ) {
+		return 1;
+	}
+	fprintf( stderr, "optimizer process transport: watchdog\n" );
+	fflush( stderr );
+	if ( !testWatchdog( pszArguments[1] ) ) {
+		return 1;
+	}
+	fprintf( stderr, "optimizer process transport: stop-cancels-io\n" );
+	fflush( stderr );
+	if ( !testStopCancelsBlockedIO( pszArguments[1] ) ) {
+		return 1;
+	}
+	fprintf( stderr, "optimizer process transport: immediate-stop\n" );
+	fflush( stderr );
+	if ( !testImmediateStop( pszArguments[1] ) ) {
+		return 1;
+	}
+	fprintf( stderr, "optimizer process transport: coordinator\n" );
+	fflush( stderr );
+	if ( !testCoordinator( pszArguments[1] ) ) {
 		return 1;
 	}
 	fprintf( stdout, "optimizer process transport tests passed\n" );
