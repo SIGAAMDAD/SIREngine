@@ -158,7 +158,7 @@ static bool testDirectWorker( void )
 	SIR_TEST_CHECK( worker.process( request, &reply ) == SIR_SCRIPT_OK );
 	SIR_TEST_CHECK( reply.eResult == SIR_SCRIPT_OK && state.nCompiles == 1 && state.nReleases == 1 );
 	SIR_TEST_CHECK( SIRScriptOptimizationProtocol::validateCompletion( request, reply ) == SIR_SCRIPT_OK );
-	uint8_t szFetched[128] = {};
+	alignas( 64 ) uint8_t szFetched[128] = {};
 	SIR_TEST_CHECK( cache.fetch( reply.cached, szFetched, sizeof( szFetched ) ) == SIR_SCRIPT_OK );
 	for ( uint32_t i = 0; i < sizeof( szFetched ); ++i ) {
 		SIR_TEST_CHECK( szFetched[i] == ( uint8_t )( szInput[i] ^ 0x5a ) );
