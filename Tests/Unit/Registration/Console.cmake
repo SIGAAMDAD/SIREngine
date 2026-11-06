@@ -25,6 +25,12 @@ target_link_libraries(SIRCVarRegistryTests PRIVATE SIRRegistrationCookerLib SIR:
 add_test(NAME core.cvars.registry COMMAND SIRCVarRegistryTests)
 sir_configure_owned_target(SIRCVarRegistryTests)
 
+# Exhaustive strict textual codec admission, overflow and malformed-input checks.
+add_executable(SIRCVarValueCodecBoundaryTests CVars/SIRCVarValueCodecBoundaryTests.cpp)
+target_link_libraries(SIRCVarValueCodecBoundaryTests PRIVATE SIR::Core)
+add_test(NAME core.cvars.codec-boundaries COMMAND SIRCVarValueCodecBoundaryTests)
+sir_configure_owned_target(SIRCVarValueCodecBoundaryTests)
+
 add_executable(SIRConsoleServiceTests Console/SIRConsoleServiceTests.cpp)
 target_link_libraries(SIRConsoleServiceTests PRIVATE SIRRegistrationCookerLib SIR::Core)
 add_test(NAME core.console.service COMMAND SIRConsoleServiceTests)
