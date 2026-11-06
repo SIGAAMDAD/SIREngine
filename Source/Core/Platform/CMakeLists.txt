@@ -7,6 +7,7 @@ set(SIR_CORE_PLATFORM_COMMON
     SIRSync.cpp
     SIRAtomic.cpp
     SIRPlatformRootDirectory.cpp
+    SIRPlatformAtomicFile.cpp
     Input/SIRInputActions.cpp
     Input/SIRInputReplay.cpp
     Input/SIRInputHistory.cpp

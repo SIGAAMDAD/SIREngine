@@ -25,6 +25,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // clang-format on
 
 #include <stdint.h>
+#include <stddef.h>
 
 typedef enum sirFileSystemResult_e : uint8_t
 {
@@ -35,7 +36,13 @@ typedef enum sirFileSystemResult_e : uint8_t
 	SIR_FILESYSTEM_ACCESS_DENIED = 4,
 	SIR_FILESYSTEM_BUFFER_TOO_SMALL = 5,
 	SIR_FILESYSTEM_STOPPED = 6,
-	SIR_FILESYSTEM_IO_ERROR = 7
+	SIR_FILESYSTEM_IO_ERROR = 7,
+	SIR_FILESYSTEM_INVALID_PATH = 8,
+	SIR_FILESYSTEM_TEMP_EXISTS = 9,
+	SIR_FILESYSTEM_REPLACE_FAILED = 10,
+	SIR_FILESYSTEM_COMMITTED_NOT_DURABLE = 11,
+	SIR_FILESYSTEM_CONFLICT = 12,
+	SIR_FILESYSTEM_OUT_OF_CAPACITY = 13
 } sirFileSystemResult_t;
 
 typedef enum sirFileSystemEntryType_e : uint8_t
@@ -53,6 +60,20 @@ typedef struct sirFileSystemInfo_s
 	sirFileSystemEntryType_t eType;
 } sirFileSystemInfo_t;
 
+// A sibling staging file is exclusively created, synced, then atomically
+// published with an optional optimistic comparison of expected prior bytes.
+constexpr size_t SIR_FILESYSTEM_MAX_PATH_BYTES = 4096;
+
+typedef struct sirFileSystemAtomicWriteRequest_s
+{
+	const char *pszDestination;
+	const char *pszTemporary;
+	const char *pBytes;
+	size_t nBytes;
+	const char *pExpectedBytes = nullptr;
+	size_t nExpectedBytes = 0;
+} sirFileSystemAtomicWriteRequest_t;
+
 // Callback runs synchronously. Name points at temporary storage valid only
 // during this invocation. Return false to stop enumeration intentionally.
 typedef bool ( *sirFileSystemVisitor_t )( const char *pszName, const sirFileSystemInfo_t *pInfo, void *pContext ) noexcept;
@@ -68,6 +89,15 @@ public:
 	static sirFileSystemResult_t removeDirectory( const char *pszPath ) noexcept;
 	static sirFileSystemResult_t renameReplace( const char *pszOldPath, const char *pszNewPath ) noexcept;
 	static sirFileSystemResult_t enumerate( const char *pszDirectory, sirFileSystemVisitor_t pVisitor, void *pContext ) noexcept;
+	static sirFileSystemResult_t readFile( const char *pszPath, char *pszOutput, size_t nCapacity, size_t *pOutBytes ) noexcept;
+	static sirFileSystemResult_t writeAtomically( const sirFileSystemAtomicWriteRequest_t& request ) noexcept;
+
+protected:
+private:
+	static const char *lastSeparator( const char *pszPath ) noexcept;
+	static bool validPaths( const char *pszDestination, const char *pszTemporary ) noexcept;
+	static sirFileSystemResult_t readFilePlatform( const char *pszPath, char *pszOutput, size_t nCapacity, size_t *pOutBytes ) noexcept;
+	static sirFileSystemResult_t writeAtomicallyPlatform( const sirFileSystemAtomicWriteRequest_t& request ) noexcept;
 };
 
 #endif // __SIRENGINE_SIRPLATFORMFILESYSTEM_H__
