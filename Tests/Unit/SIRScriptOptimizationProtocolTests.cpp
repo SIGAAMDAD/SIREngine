@@ -77,7 +77,7 @@ static bool testRoundtrip( void )
 	SIR_TEST_CHECK( SIRScriptOptimizationProtocol::validateCompletion( restored, result ) == SIR_SCRIPT_TYPE_MISMATCH );
 
 	SIR_TEST_CHECK( cache.erase( key ) == SIR_SCRIPT_OK );
-	SIR_TEST_CHECK( std::filesystem::remove( root ) );
+	SIR_TEST_CHECK( std::filesystem::remove_all( root ) > 0 );
 	return true;
 }
 
