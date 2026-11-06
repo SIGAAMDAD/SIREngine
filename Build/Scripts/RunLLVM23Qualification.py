@@ -134,7 +134,7 @@ def qualify():
         diagnostics = {"tool": "llvm-cov-23", "source_scope": str(source_root),
                        "stderr": result.stderr[:8000],
                        "zero_count_production_functions": candidates}
-        (REPORT / "profile-mismatch.json").write_text(json.dumps(diagnostics, indent=2) + "\\n")
+        (REPORT / "profile-mismatch.json").write_text(json.dumps(diagnostics, indent=2) + "\n")
         raise RuntimeError(
             f"Coverage mapping/profile mismatch: {result.stderr[:2000]}; "
             f"first zero-count production functions: {candidates[:5]}; "
