@@ -26,14 +26,40 @@ on:
         type: string
 permissions:
   contents: read
+  issues: read
   actions: read
 concurrency:
   group: sir-qualification-${{ inputs.source_sha }}-${{ inputs.system }}
   queue: max
   cancel-in-progress: false
 jobs:
+  authorize:
+    name: Validate qualification issue and frozen SHA
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.source_sha }}
+          persist-credentials: false
+      - name: Validate source revision and authoritative GitHub issue
+        shell: bash
+        env:
+          SOURCE_SHA: ${{ inputs.source_sha }}
+          ISSUE_NUMBER: ${{ inputs.issue }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$SOURCE_SHA" =~ ^[a-f0-9]{40}$ ]]
+          [[ "$ISSUE_NUMBER" =~ ^[1-9][0-9]*$ ]]
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          issue="$(gh api "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER")"
+          jq -er --argjson requested "$ISSUE_NUMBER" \
+            '(.number == $requested) and (.state == "open") and (.pull_request == null)' \
+            <<< "$issue" >/dev/null
   coverage:
     name: LLVM 23 full source coverage
+    needs: authorize
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     steps:
@@ -73,6 +99,7 @@ jobs:
           retention-days: 30
   native:
     name: Native functional acceptance (${{ matrix.os }})
+    needs: authorize
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -115,6 +142,7 @@ jobs:
           retention-days: 30
   sanitizer:
     name: ASan and UBSan native acceptance
+    needs: authorize
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     steps:
@@ -143,6 +171,7 @@ jobs:
           python3 Build/CI/RunCTestGate.py --preset asan --report out/Verification/asan-ubsan.xml
   renderer-backends:
     name: Renderer backend contracts (${{ matrix.backend }})
+    needs: authorize
     if: inputs.system == 'all' || inputs.system == 'Renderer' || inputs.system == 'GraphicsABI'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 90
@@ -204,6 +233,7 @@ jobs:
           retention-days: 30
   audio-backend:
     name: FMOD native backend qualification
+    needs: authorize
     if: inputs.system == 'all' || inputs.system == 'Audio'
     runs-on: ubuntu-24.04
     timeout-minutes: 90
@@ -233,7 +263,7 @@ jobs:
     name: Qualification acceptance
     if: always()
     runs-on: ubuntu-24.04
-    needs: [coverage, native, sanitizer, renderer-backends, audio-backend]
+    needs: [authorize, coverage, native, sanitizer, renderer-backends, audio-backend]
     steps:
       - name: Refuse incomplete gates
         env:
