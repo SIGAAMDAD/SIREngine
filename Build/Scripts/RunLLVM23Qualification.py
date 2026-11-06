@@ -66,12 +66,11 @@ def qualify():
     if len(data.get("data", [])) != 1:
         raise RuntimeError("Invalid LLVM export")
     name = os.environ.get("SIR_QUALIFICATION_SCOPE", "all")
-    roots = {"all": "Source", "GraphicsABI": "Source/Renderer"}
-    roots.update({system: "Source/" + system for system in
-                  ("Core", "Resources", "Renderer", "Terrain", "Editor", "Scripting", "Audio")})
-    if name not in roots:
-        raise RuntimeError("Unknown qualification scope")
-    source_root = (ROOT / roots[name]).resolve()
+    scope_file = REPORT / "source-scope.txt"
+    run("cmake", f"-DSIR_QUALIFICATION_SYSTEM={name}",
+        f"-DSIR_QUALIFICATION_WRITE_PATH={scope_file}",
+        "-P", ROOT / "Build/CMake/SIRQualificationScopes.cmake")
+    source_root = (ROOT / scope_file.read_text().strip()).resolve()
     required = {str(pathlib.Path(row["file"]).resolve()) for row in
                 json.loads((BUILD / "compile_commands.json").read_text())
                 if pathlib.Path(row["file"]).suffix in (".cpp", ".cc", ".c")
