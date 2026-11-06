@@ -346,8 +346,8 @@ bool SIRTaskScheduler::submit( const sirTaskBatchTask_t& task, sirTaskHandle_t *
 	return submitAfter( task, nullptr, 0, pHandle );
 }
 
-bool SIRTaskScheduler::submitAfter( const sirTaskBatchTask_t& task, const sirTaskHandle_t *pPrerequisites,
-                                    uint32_t nPrerequisites, sirTaskHandle_t *pHandle ) noexcept
+bool SIRTaskScheduler::submitAfter( const sirTaskBatchTask_t& task, const sirTaskHandle_t *pPrerequisites, uint32_t nPrerequisites,
+                                    sirTaskHandle_t *pHandle ) noexcept
 {
 	const sirTaskFunction_t pFunction = task.pFunction;
 	void *pContext = task.pContext;

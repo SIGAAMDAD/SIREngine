@@ -81,16 +81,16 @@ private:
 	void clearAsync( void ) noexcept;
 	sirAudioResult_t failAsync( sirAudioResult_t eError ) noexcept;
 
-	bool findIndex( uint64_t nPackageId, uint32_t &iPackage ) const noexcept;
-	sirAudioResult_t buildPlan( uint32_t iRoot, uint32_t &nPlanCount ) noexcept;
+	bool findIndex( uint64_t nPackageId, uint32_t& iPackage ) const noexcept;
+	sirAudioResult_t buildPlan( uint32_t iRoot, uint32_t& nPlanCount ) noexcept;
 	sirAudioResult_t rollbackTo( uint32_t nOldCount ) noexcept;
 	void releaseStorage( void ) noexcept;
 
 public:
 	SIRFMODPackageLoader( void ) noexcept = default;
 	~SIRFMODPackageLoader( void ) noexcept;
-	SIRFMODPackageLoader( const SIRFMODPackageLoader & ) = delete;
-	SIRFMODPackageLoader &operator=( const SIRFMODPackageLoader & ) = delete;
+	SIRFMODPackageLoader( const SIRFMODPackageLoader& ) = delete;
+	SIRFMODPackageLoader& operator=( const SIRFMODPackageLoader& ) = delete;
 
 	sirAudioResult_t initialize( const SIRAudioResourceStore *pManifest, SIRFMODBankStore *pBanks,
 	                             const sirContainerAllocator_t *pAllocator, sirFMODPackagePathResolver_t resolver ) noexcept;
@@ -101,7 +101,7 @@ public:
 	uint64_t getPendingPackageId( void ) const noexcept;
 	sirAudioResult_t releasePackage( uint64_t nPackageId ) noexcept;
 	sirAudioResult_t collectUnused( void ) noexcept;
-	bool getPackageReferences( uint64_t nPackageId, uint32_t &nReferences, uint32_t &nRootReferences ) const noexcept;
+	bool getPackageReferences( uint64_t nPackageId, uint32_t& nReferences, uint32_t& nRootReferences ) const noexcept;
 	sirAudioResult_t unloadAll( void ) noexcept;
 	sirAudioResult_t shutdown( void ) noexcept;
 	bool isReady( void ) const noexcept;

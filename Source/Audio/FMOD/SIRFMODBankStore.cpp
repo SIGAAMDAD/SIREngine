@@ -31,7 +31,7 @@ bool SIRFMODBankStore::isReady( void ) const noexcept
 	return m_bInitialized && m_pContext != nullptr && m_pContext->isReady() && m_pContext->getEpoch() == m_nContextEpoch;
 }
 
-bool SIRFMODBankStore::findBank( uint64_t nPackageId, uint32_t &iBank ) const noexcept
+bool SIRFMODBankStore::findBank( uint64_t nPackageId, uint32_t& iBank ) const noexcept
 {
 	for ( uint32_t iCurrent = 0; iCurrent < m_nBankCount; ++iCurrent ) {
 		if ( m_pBanks[iCurrent].nPackageId == nPackageId ) {
@@ -67,7 +67,7 @@ void SIRFMODBankStore::releaseStorage( void ) noexcept
 }
 
 sirAudioResult_t SIRFMODBankStore::initialize( SIRFMODContext *pContext, SIRFMODVoiceBackend *pVoices,
-                                               const sirContainerAllocator_t *pAllocator, const sirFMODBankNativeOps_t &ops,
+                                               const sirContainerAllocator_t *pAllocator, const sirFMODBankNativeOps_t& ops,
                                                uint32_t nMaxBanks, uint32_t nMaxEventBindings ) noexcept
 {
 	if ( m_bInitialized || m_pBanks != nullptr || pContext == nullptr || !pContext->isReady() || pVoices == nullptr ||
@@ -180,7 +180,7 @@ sirAudioResult_t SIRFMODBankStore::pollBankLoad( uint64_t nPackageId ) noexcept
 	if ( !findBank( nPackageId, iBank ) ) {
 		return SIR_AUDIO_INVALID_HANDLE;
 	}
-	sirFMODBankSlot_t &bank = m_pBanks[iBank];
+	sirFMODBankSlot_t& bank = m_pBanks[iBank];
 	if ( bank.bUsable == 1 ) {
 		return SIR_AUDIO_OK;
 	}
@@ -283,7 +283,7 @@ sirAudioResult_t SIRFMODBankStore::preloadSamples( uint64_t nPackageId ) noexcep
 	return SIR_AUDIO_OK;
 }
 
-sirAudioResult_t SIRFMODBankStore::getSampleState( uint64_t nPackageId, sirFMODSampleState_t &eState ) noexcept
+sirAudioResult_t SIRFMODBankStore::getSampleState( uint64_t nPackageId, sirFMODSampleState_t& eState ) noexcept
 {
 	if ( !isReady() ) {
 		return SIR_AUDIO_NOT_INITIALIZED;

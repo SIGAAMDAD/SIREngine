@@ -97,7 +97,7 @@ static void testConcurrentQueue( const sirContainerAllocator_t *pAllocator )
 		seen[command.nSequence - 1] = 1;
 		++nReceived;
 	}
-	for ( std::thread &producer : producers ) {
+	for ( std::thread& producer : producers ) {
 		producer.join();
 	}
 	queue.shutdown();

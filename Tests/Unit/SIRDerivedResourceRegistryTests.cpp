@@ -236,7 +236,8 @@ static void testRetryStaleGenerationAndWriterBoundary( void )
 		REQUIRE( registry.registerProvider( 7, { &provider, releaseNative } ) == SIR_RESOURCE_RESULT_SUCCESS );
 
 		std::atomic<uint32_t> result{ 0 };
-		std::thread unauthorized( [&registry, &result]() { result.store( ( uint32_t )registry.updateProviderCompletion( derivedCompletion( 7, 10 ) ) ); } );
+		std::thread unauthorized(
+		    [&registry, &result]() { result.store( ( uint32_t )registry.updateProviderCompletion( derivedCompletion( 7, 10 ) ) ); } );
 		unauthorized.join();
 		REQUIRE( result.load() == SIR_RESOURCE_RESULT_WRITER_VIOLATION );
 

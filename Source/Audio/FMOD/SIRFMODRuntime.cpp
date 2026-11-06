@@ -51,7 +51,7 @@ void SIRFMODRuntime::releaseBindingStorage( void ) noexcept
 	}
 }
 
-sirAudioResult_t SIRFMODRuntime::initialize( const sirFMODRuntimeConfig_t &config, const sirFMODRuntimeNativeOps_t &ops ) noexcept
+sirAudioResult_t SIRFMODRuntime::initialize( const sirFMODRuntimeConfig_t& config, const sirFMODRuntimeNativeOps_t& ops ) noexcept
 {
 	if ( m_pManifest != nullptr || m_bInitialized || config.pManifest == nullptr || !config.pManifest->isLoaded() ||
 	     config.pManifest->getProvider() != SIR_AUDIO_PROVIDER_FMOD || !SIRRawStorage::isValidAllocator( config.pAllocator ) ||
@@ -64,7 +64,7 @@ sirAudioResult_t SIRFMODRuntime::initialize( const sirFMODRuntimeConfig_t &confi
 	}
 
 	for ( uint32_t iObject = 0; iObject < config.nObjectCount; ++iObject ) {
-		const sirFMODRuntimeObject_t &object = config.pObjects[iObject];
+		const sirFMODRuntimeObject_t& object = config.pObjects[iObject];
 		sirAudioPackageRecord_t package = {};
 		if ( object.nObjectId == 0 || object.nPackageId == 0 || object.nProviderKey == 0 ||
 		     !config.pManifest->findPackage( object.nPackageId, package ) ||
@@ -229,7 +229,7 @@ sirAudioResult_t SIRFMODRuntime::bindPackageResources( void ) noexcept
 		if ( m_pObjectStates[iObject] != 0 ) {
 			continue;
 		}
-		const sirFMODRuntimeObject_t &object = m_pObjects[iObject];
+		const sirFMODRuntimeObject_t& object = m_pObjects[iObject];
 		if ( !m_Banks.hasLoadedBank( object.nPackageId ) ) {
 			continue;
 		}
@@ -265,7 +265,7 @@ void SIRFMODRuntime::rollbackNewBindings( void ) noexcept
 		if ( m_pObjectStates[iObject] != 2 ) {
 			continue;
 		}
-		const sirFMODRuntimeObject_t &object = m_pObjects[iObject];
+		const sirFMODRuntimeObject_t& object = m_pObjects[iObject];
 		const sirAudioResult_t eResult = object.eKind == SIR_FMOD_RUNTIME_SNAPSHOT ? m_Snapshots.unregisterSnapshot( object.nObjectId )
 		                                                                           : m_Mixer.unregisterControl( object.nObjectId );
 		if ( eResult != SIR_AUDIO_OK ) {
@@ -366,7 +366,7 @@ uint64_t SIRFMODRuntime::getPendingPackageId( void ) const noexcept
 	return isReady() ? m_Packages.getPendingPackageId() : 0;
 }
 
-sirAudioResult_t SIRFMODRuntime::getSampleState( uint64_t nPackageId, sirFMODSampleState_t &eState ) noexcept
+sirAudioResult_t SIRFMODRuntime::getSampleState( uint64_t nPackageId, sirFMODSampleState_t& eState ) noexcept
 {
 	return isReady() ? m_Banks.getSampleState( nPackageId, eState ) : SIR_AUDIO_NOT_INITIALIZED;
 }
@@ -394,7 +394,7 @@ sirAudioResult_t SIRFMODRuntime::collectUnused( void ) noexcept
 		if ( m_pObjectStates[iObject] == 0 ) {
 			continue;
 		}
-		const sirFMODRuntimeObject_t &object = m_pObjects[iObject];
+		const sirFMODRuntimeObject_t& object = m_pObjects[iObject];
 		uint32_t nReferences = 0;
 		uint32_t nRoots = 0;
 		if ( !m_Packages.getPackageReferences( object.nPackageId, nReferences, nRoots ) ) {
@@ -458,7 +458,7 @@ uint32_t SIRFMODRuntime::update( void ) noexcept
 	return isReady() ? m_Audio.update() : 0;
 }
 
-sirAudioResult_t SIRFMODRuntime::getPlayingTimeline( sirAudioPlayingHandle_t hPlaying, uint32_t &nMilliseconds ) noexcept
+sirAudioResult_t SIRFMODRuntime::getPlayingTimeline( sirAudioPlayingHandle_t hPlaying, uint32_t& nMilliseconds ) noexcept
 {
 	nMilliseconds = 0;
 	return isReady() ? m_Voices.getPlayingTimeline( hPlaying, nMilliseconds ) : SIR_AUDIO_NOT_INITIALIZED;
@@ -470,27 +470,27 @@ bool SIRFMODRuntime::isReady( void ) const noexcept
 	       m_pManifest->getEpoch() == m_nManifestEpoch && m_Packages.isReady();
 }
 
-SIRAudioSystem &SIRFMODRuntime::getAudio( void ) noexcept
+SIRAudioSystem& SIRFMODRuntime::getAudio( void ) noexcept
 {
 	return m_Audio;
 }
-SIRFMODContext &SIRFMODRuntime::getContext( void ) noexcept
+SIRFMODContext& SIRFMODRuntime::getContext( void ) noexcept
 {
 	return m_Context;
 }
-SIRFMODMixerBackend &SIRFMODRuntime::getMixer( void ) noexcept
+SIRFMODMixerBackend& SIRFMODRuntime::getMixer( void ) noexcept
 {
 	return m_Mixer;
 }
-SIRFMODSnapshotBackend &SIRFMODRuntime::getSnapshots( void ) noexcept
+SIRFMODSnapshotBackend& SIRFMODRuntime::getSnapshots( void ) noexcept
 {
 	return m_Snapshots;
 }
-SIRFMODBankStore &SIRFMODRuntime::getBanks( void ) noexcept
+SIRFMODBankStore& SIRFMODRuntime::getBanks( void ) noexcept
 {
 	return m_Banks;
 }
-SIRFMODPackageLoader &SIRFMODRuntime::getPackages( void ) noexcept
+SIRFMODPackageLoader& SIRFMODRuntime::getPackages( void ) noexcept
 {
 	return m_Packages;
 }

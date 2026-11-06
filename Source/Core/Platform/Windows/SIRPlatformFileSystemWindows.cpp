@@ -214,7 +214,7 @@ sirFileSystemResult_t SIRPlatformFileSystem::enumerate( const char *pszDirectory
 
 // Core-owned atomic scene replacement and bounded regular-file reads.
 static sirPlatformAtomicResult_t sirFileSystemCheckExpected( const wchar_t *pszDestination,
-                                                         const sirFileSystemAtomicWriteRequest_t &request ) noexcept
+                                                             const sirFileSystemAtomicWriteRequest_t& request ) noexcept
 {
 	if ( request.pExpectedBytes == nullptr ) {
 		return SIR_ATOMIC_SAVE_OK;
@@ -263,7 +263,8 @@ static bool sirFileSystemToWindowsPath( const char *pszUtf8, wchar_t *pWide, int
 	return nConverted != 0;
 }
 
-sirFileSystemResult_t SIRPlatformFileSystem::readFilePlatform( const char *pszPath, char *pszOutput, size_t nCapacity, size_t *pOutBytes ) noexcept
+sirFileSystemResult_t SIRPlatformFileSystem::readFilePlatform( const char *pszPath, char *pszOutput, size_t nCapacity,
+                                                               size_t *pOutBytes ) noexcept
 {
 	wchar_t szPath[4096] = {};
 	if ( !sirFileSystemToWindowsPath( pszPath, szPath, 4096 ) ) {
@@ -316,7 +317,7 @@ sirFileSystemResult_t SIRPlatformFileSystem::readFilePlatform( const char *pszPa
 	return bComplete && bClosed ? SIR_FILESYSTEM_OK : SIR_FILESYSTEM_IO_ERROR;
 }
 
-sirPlatformAtomicResult_t SIRPlatformFileSystem::writeAtomicallyPlatform( const sirFileSystemAtomicWriteRequest_t &request ) noexcept
+sirPlatformAtomicResult_t SIRPlatformFileSystem::writeAtomicallyPlatform( const sirFileSystemAtomicWriteRequest_t& request ) noexcept
 {
 	wchar_t szDestination[4096] = {};
 	wchar_t szTemporary[4096] = {};

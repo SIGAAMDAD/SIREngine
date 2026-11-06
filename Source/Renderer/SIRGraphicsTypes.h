@@ -67,6 +67,7 @@ typedef enum sirGraphicsFeature_e : uint64_t
 	SIR_GRAPHICS_FEATURE_MRT = 1ULL << 7,
 	SIR_GRAPHICS_FEATURE_MULTISAMPLE = 1ULL << 8,
 	SIR_GRAPHICS_FEATURE_TESSELLATION = 1ULL << 9,
+
 	SIR_GRAPHICS_FEATURE_GEOMETRY_SHADER = 1ULL << 10,
 	SIR_GRAPHICS_FEATURE_MESH_SHADER = 1ULL << 11,
 	SIR_GRAPHICS_FEATURE_RAY_TRACING = 1ULL << 12,
@@ -574,16 +575,14 @@ typedef struct sirGraphicsBarrier_s
 
 // Shared explicit texture-subresource grammar. Buffer barriers reserve all
 // mip/layer fields as zero and are validated separately by the backend.
-static inline bool sirGraphicsTextureBarrierRangeValid( const sirGraphicsBarrier_t& barrier, uint32_t nMips,
-                                                        uint32_t nLayers ) noexcept
+static inline bool sirGraphicsTextureBarrierRangeValid( const sirGraphicsBarrier_t& barrier, uint32_t nMips, uint32_t nLayers ) noexcept
 {
-	if ( nMips == 0 || nLayers == 0 || barrier.nMipCount == 0 || barrier.nLayerCount == 0 ||
-	     barrier.nBaseMip >= nMips || barrier.nBaseLayer >= nLayers ) {
+	if ( nMips == 0 || nLayers == 0 || barrier.nMipCount == 0 || barrier.nLayerCount == 0 || barrier.nBaseMip >= nMips ||
+	     barrier.nBaseLayer >= nLayers ) {
 		return false;
 	}
 	return barrier.nMipCount <= nMips - barrier.nBaseMip && barrier.nLayerCount <= nLayers - barrier.nBaseLayer;
 }
-
 
 typedef struct sirGraphicsViewport_s
 {

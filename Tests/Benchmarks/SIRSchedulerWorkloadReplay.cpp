@@ -113,7 +113,7 @@ static void SIRBenchmarkExperimentReplay( benchmark::State& state )
 	for ( auto _ : state ) {
 		( void )_;
 		for ( uint32_t i = 0; i < nTasks; ++i ) {
-			if ( !scheduler.submit({ sirReplayTask, &ranges[i], SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU }, &handles[i]) ) {
+			if ( !scheduler.submit( { sirReplayTask, &ranges[i], SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU }, &handles[i] ) ) {
 				bFailed = true;
 				break;
 			}

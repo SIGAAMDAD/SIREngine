@@ -8,7 +8,7 @@
 #define SIR_EDITOR_TEST_UI_SCENE "Tests/Fixtures/Editor/SourceGodotUI.tscn"
 #endif
 
-static void sirTestExpectedResource( const char *pszSource, const sirEditorTextResource_t &resource, const char *pszId, const char *pszPath,
+static void sirTestExpectedResource( const char *pszSource, const sirEditorTextResource_t& resource, const char *pszId, const char *pszPath,
                                      sirEditorTextResourceKind_t eKind )
 {
 	assert( resource.eKind == eKind );

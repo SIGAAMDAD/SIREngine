@@ -417,9 +417,8 @@ sirGraphicsResult_t SIRD3D12CommandList::barrier( const sirGraphicsBarrier_t *pB
 			return SIR_GRAPHICS_UNSUPPORTED;
 		}
 		if ( source.eType == SIR_GRAPHICS_BARRIER_TRANSITION ) {
-			if ( source.eAfter == SIR_GRAPHICS_STATE_UNDEFINED ||
-			     source.eBefore > SIR_GRAPHICS_STATE_PRESENT || source.eAfter > SIR_GRAPHICS_STATE_PRESENT ||
-			     !sirD3D12ValidResourceState( pSlot->eType, source.eBefore ) ||
+			if ( source.eAfter == SIR_GRAPHICS_STATE_UNDEFINED || source.eBefore > SIR_GRAPHICS_STATE_PRESENT ||
+			     source.eAfter > SIR_GRAPHICS_STATE_PRESENT || !sirD3D12ValidResourceState( pSlot->eType, source.eBefore ) ||
 			     !sirD3D12ValidResourceState( pSlot->eType, source.eAfter ) ) {
 				return SIR_GRAPHICS_INVALID_ARGUMENT;
 			}
@@ -524,9 +523,8 @@ sirGraphicsResult_t SIRD3D12CommandList::barrier( const sirGraphicsBarrier_t *pB
 		D3D12_RESOURCE_BARRIER native = {};
 		native.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
 		if ( source.eType == SIR_GRAPHICS_BARRIER_TRANSITION ) {
-			if ( source.eAfter == SIR_GRAPHICS_STATE_UNDEFINED ||
-			     source.eBefore > SIR_GRAPHICS_STATE_PRESENT || source.eAfter > SIR_GRAPHICS_STATE_PRESENT ||
-			     !sirD3D12ValidResourceState( pSlot->eType, source.eBefore ) ||
+			if ( source.eAfter == SIR_GRAPHICS_STATE_UNDEFINED || source.eBefore > SIR_GRAPHICS_STATE_PRESENT ||
+			     source.eAfter > SIR_GRAPHICS_STATE_PRESENT || !sirD3D12ValidResourceState( pSlot->eType, source.eBefore ) ||
 			     !sirD3D12ValidResourceState( pSlot->eType, source.eAfter ) ) {
 				return SIR_GRAPHICS_INVALID_ARGUMENT;
 			}

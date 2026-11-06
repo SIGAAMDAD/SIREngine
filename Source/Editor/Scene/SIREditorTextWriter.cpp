@@ -102,7 +102,7 @@ static bool sirEditorScalarValid( const char *pszText, uint32_t nLength ) noexce
 }
 
 sirEditorTextWriteResult_t sirEditorWriteScalarPatches( const char *pszSource, size_t nSourceBytes,
-                                                        const sirEditorTextPropertyIndex_t &index, const sirEditorTextEdit_t *pEdits,
+                                                        const sirEditorTextPropertyIndex_t& index, const sirEditorTextEdit_t *pEdits,
                                                         uint32_t nEdits, char *pszOutput, size_t nCapacity, size_t *pOutBytes ) noexcept
 {
 	if ( pOutBytes == nullptr || pszSource == nullptr || ( nEdits != 0 && pEdits == nullptr ) ||
@@ -114,7 +114,7 @@ sirEditorTextWriteResult_t sirEditorWriteScalarPatches( const char *pszSource, s
 		return SIR_EDITOR_WRITE_INVALID_ARGUMENT;
 	}
 	for ( uint32_t iProperty = 0; iProperty < index.nCount; ++iProperty ) {
-		const sirEditorTextProperty_t &property = index.pProperties[iProperty];
+		const sirEditorTextProperty_t& property = index.pProperties[iProperty];
 		if ( property.nValueLength == 0 || property.nValueOffset > nSourceBytes ||
 		     property.nValueLength > nSourceBytes - property.nValueOffset ) {
 			return SIR_EDITOR_WRITE_INVALID_SOURCE;
@@ -122,13 +122,13 @@ sirEditorTextWriteResult_t sirEditorWriteScalarPatches( const char *pszSource, s
 	}
 	size_t nOutputBytes = nSourceBytes;
 	for ( uint32_t iEdit = 0; iEdit < nEdits; ++iEdit ) {
-		const sirEditorTextEdit_t &edit = pEdits[iEdit];
+		const sirEditorTextEdit_t& edit = pEdits[iEdit];
 		if ( edit.iProperty >= index.nCount || !sirEditorScalarValid( edit.pszReplacement, edit.nReplacementBytes ) ) {
 			return SIR_EDITOR_WRITE_INVALID_SCALAR;
 		}
-		const sirEditorTextProperty_t &property = index.pProperties[edit.iProperty];
+		const sirEditorTextProperty_t& property = index.pProperties[edit.iProperty];
 		for ( uint32_t iPrior = 0; iPrior < iEdit; ++iPrior ) {
-			const sirEditorTextProperty_t &prior = index.pProperties[pEdits[iPrior].iProperty];
+			const sirEditorTextProperty_t& prior = index.pProperties[pEdits[iPrior].iProperty];
 			if ( edit.iProperty == pEdits[iPrior].iProperty ||
 			     ( property.nValueOffset < ( uint64_t )prior.nValueOffset + prior.nValueLength &&
 			       prior.nValueOffset < ( uint64_t )property.nValueOffset + property.nValueLength ) ) {
@@ -172,8 +172,8 @@ sirEditorTextWriteResult_t sirEditorWriteScalarPatches( const char *pszSource, s
 		if ( iNext == UINT32_MAX ) {
 			return SIR_EDITOR_WRITE_INVALID_SOURCE;
 		}
-		const sirEditorTextEdit_t &edit = pEdits[iNext];
-		const sirEditorTextProperty_t &property = index.pProperties[edit.iProperty];
+		const sirEditorTextEdit_t& edit = pEdits[iNext];
+		const sirEditorTextProperty_t& property = index.pProperties[edit.iProperty];
 		const size_t nCopyBytes = nNextOffset - nSourceOffset;
 		memcpy( pszOutput + nDestinationOffset, pszSource + nSourceOffset, nCopyBytes );
 		nDestinationOffset += nCopyBytes;

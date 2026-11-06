@@ -165,7 +165,7 @@ static int32_t fakeRegisterDeviceLoss( void *pUserData, void *pCore, void *pOwne
 	return 0;
 }
 
-static sirFMODNativeOps_t fakeOps( sirFMODFixture_t &fixture ) noexcept
+static sirFMODNativeOps_t fakeOps( sirFMODFixture_t& fixture ) noexcept
 {
 	return { 2,
 	         0x00020400,

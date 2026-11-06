@@ -21,7 +21,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 static SIRAtomic<uint64_t> s_nAudioManifestEpoch = SIRAtomic<uint64_t>( 1 );
 
-static bool advanceAudioTable( size_t &nOffset, uint32_t nCount, size_t nRecordBytes, size_t nLimit ) noexcept
+static bool advanceAudioTable( size_t& nOffset, uint32_t nCount, size_t nRecordBytes, size_t nLimit ) noexcept
 {
 	size_t nTableBytes = 0;
 	if ( !SIRRawStorage::checkedMultiply( nCount, nRecordBytes, &nTableBytes ) || nOffset > nLimit || nTableBytes > nLimit - nOffset ) {
@@ -31,17 +31,17 @@ static bool advanceAudioTable( size_t &nOffset, uint32_t nCount, size_t nRecordB
 	return true;
 }
 
-static void readAudioPackage( const uint8_t *pBytes, size_t nOffset, uint32_t iIndex, sirAudioPackageRecord_t &record ) noexcept
+static void readAudioPackage( const uint8_t *pBytes, size_t nOffset, uint32_t iIndex, sirAudioPackageRecord_t& record ) noexcept
 {
 	memcpy( &record, pBytes + nOffset + ( size_t )iIndex * sizeof( record ), sizeof( record ) );
 }
 
-static void readAudioEvent( const uint8_t *pBytes, size_t nOffset, uint32_t iIndex, sirAudioEventRecord_t &record ) noexcept
+static void readAudioEvent( const uint8_t *pBytes, size_t nOffset, uint32_t iIndex, sirAudioEventRecord_t& record ) noexcept
 {
 	memcpy( &record, pBytes + nOffset + ( size_t )iIndex * sizeof( record ), sizeof( record ) );
 }
 
-static void readAudioControl( const uint8_t *pBytes, size_t nOffset, uint32_t iIndex, sirAudioControlRecord_t &record ) noexcept
+static void readAudioControl( const uint8_t *pBytes, size_t nOffset, uint32_t iIndex, sirAudioControlRecord_t& record ) noexcept
 {
 	memcpy( &record, pBytes + nOffset + ( size_t )iIndex * sizeof( record ), sizeof( record ) );
 }
@@ -54,7 +54,7 @@ static uint64_t readAudioDependency( const uint8_t *pBytes, size_t nOffset, uint
 }
 
 static bool findAudioPackageIndex( const uint8_t *pBytes, size_t nPackageOffset, uint32_t nPackageCount, uint64_t nPackageId,
-                                   uint32_t &iFound ) noexcept
+                                   uint32_t& iFound ) noexcept
 {
 	uint32_t iFirst = 0;
 	uint32_t iEnd = nPackageCount;
@@ -80,7 +80,7 @@ static bool findAudioPackageIndex( const uint8_t *pBytes, size_t nPackageOffset,
 	return true;
 }
 
-static sirAudioManifestResult_t validateAudioPackages( const uint8_t *pBytes, const sirAudioManifestHeader_t &header, size_t nPackageOffset,
+static sirAudioManifestResult_t validateAudioPackages( const uint8_t *pBytes, const sirAudioManifestHeader_t& header, size_t nPackageOffset,
                                                        size_t nDependencyOffset, uint64_t nAvailableCapabilities ) noexcept
 {
 	uint64_t nPreviousId = 0;
@@ -129,7 +129,7 @@ typedef struct sirAudioDependencyFrame_s
 	uint32_t iNextDependency;
 } sirAudioDependencyFrame_t;
 
-static sirAudioManifestResult_t validateAudioDependencyGraph( const uint8_t *pBytes, const sirAudioManifestHeader_t &header,
+static sirAudioManifestResult_t validateAudioDependencyGraph( const uint8_t *pBytes, const sirAudioManifestHeader_t& header,
                                                               size_t nPackageOffset, size_t nDependencyOffset,
                                                               const sirContainerAllocator_t *pAllocator ) noexcept
 {
@@ -163,7 +163,7 @@ static sirAudioManifestResult_t validateAudioDependencyGraph( const uint8_t *pBy
 		pFrames[0] = { iRoot, 0 };
 		uint32_t nDepth = 1;
 		while ( nDepth != 0 ) {
-			sirAudioDependencyFrame_t &frame = pFrames[nDepth - 1];
+			sirAudioDependencyFrame_t& frame = pFrames[nDepth - 1];
 			sirAudioPackageRecord_t package = {};
 			readAudioPackage( pBytes, nPackageOffset, frame.iPackage, package );
 			if ( frame.iNextDependency == package.nDependencyCount ) {
@@ -194,7 +194,7 @@ static sirAudioManifestResult_t validateAudioDependencyGraph( const uint8_t *pBy
 	return eResult;
 }
 
-static sirAudioManifestResult_t validateAudioEvents( const uint8_t *pBytes, const sirAudioManifestHeader_t &header, size_t nPackageOffset,
+static sirAudioManifestResult_t validateAudioEvents( const uint8_t *pBytes, const sirAudioManifestHeader_t& header, size_t nPackageOffset,
                                                      size_t nEventOffset, uint64_t nAvailableCapabilities ) noexcept
 {
 	uint64_t nPreviousId = 0;
@@ -219,7 +219,7 @@ static sirAudioManifestResult_t validateAudioEvents( const uint8_t *pBytes, cons
 	return SIR_AUDIO_MANIFEST_OK;
 }
 
-static sirAudioManifestResult_t validateAudioControls( const uint8_t *pBytes, const sirAudioManifestHeader_t &header, size_t nControlOffset,
+static sirAudioManifestResult_t validateAudioControls( const uint8_t *pBytes, const sirAudioManifestHeader_t& header, size_t nControlOffset,
                                                        uint64_t nAvailableCapabilities ) noexcept
 {
 	uint64_t nPreviousId = 0;
@@ -399,7 +399,7 @@ uint32_t SIRAudioResourceStore::getPackageCount( void ) const noexcept
 	return m_pBytes == nullptr ? 0 : m_Header.nPackageCount;
 }
 
-bool SIRAudioResourceStore::getPackageAt( uint32_t iPackage, sirAudioPackageRecord_t &package ) const noexcept
+bool SIRAudioResourceStore::getPackageAt( uint32_t iPackage, sirAudioPackageRecord_t& package ) const noexcept
 {
 	if ( m_pBytes == nullptr || iPackage >= m_Header.nPackageCount ) {
 		return false;
@@ -408,7 +408,7 @@ bool SIRAudioResourceStore::getPackageAt( uint32_t iPackage, sirAudioPackageReco
 	return true;
 }
 
-bool SIRAudioResourceStore::getPackageDependency( uint64_t nPackageId, uint32_t iDependency, uint64_t &nDependencyId ) const noexcept
+bool SIRAudioResourceStore::getPackageDependency( uint64_t nPackageId, uint32_t iDependency, uint64_t& nDependencyId ) const noexcept
 {
 	uint32_t iPackage = 0;
 	if ( !findPackageIndex( nPackageId, iPackage ) ) {
@@ -423,12 +423,12 @@ bool SIRAudioResourceStore::getPackageDependency( uint64_t nPackageId, uint32_t 
 	return true;
 }
 
-bool SIRAudioResourceStore::findPackageIndex( uint64_t nPackageId, uint32_t &iPackage ) const noexcept
+bool SIRAudioResourceStore::findPackageIndex( uint64_t nPackageId, uint32_t& iPackage ) const noexcept
 {
 	return m_pBytes != nullptr && findAudioPackageIndex( m_pBytes, m_nPackageOffset, m_Header.nPackageCount, nPackageId, iPackage );
 }
 
-bool SIRAudioResourceStore::findEventIndex( uint64_t nEventId, uint32_t &iEvent ) const noexcept
+bool SIRAudioResourceStore::findEventIndex( uint64_t nEventId, uint32_t& iEvent ) const noexcept
 {
 	if ( m_pBytes == nullptr ) {
 		return false;
@@ -462,7 +462,7 @@ uint32_t SIRAudioResourceStore::getEventCount( void ) const noexcept
 	return m_pBytes == nullptr ? 0 : m_Header.nEventCount;
 }
 
-bool SIRAudioResourceStore::getEventAt( uint32_t iEvent, sirAudioEventRecord_t &event ) const noexcept
+bool SIRAudioResourceStore::getEventAt( uint32_t iEvent, sirAudioEventRecord_t& event ) const noexcept
 {
 	if ( m_pBytes == nullptr || iEvent >= m_Header.nEventCount ) {
 		return false;
@@ -471,7 +471,7 @@ bool SIRAudioResourceStore::getEventAt( uint32_t iEvent, sirAudioEventRecord_t &
 	return true;
 }
 
-bool SIRAudioResourceStore::findEvent( uint64_t nEventId, sirAudioEventRecord_t &event, sirAudioEventHandle_t *pHandle ) const noexcept
+bool SIRAudioResourceStore::findEvent( uint64_t nEventId, sirAudioEventRecord_t& event, sirAudioEventHandle_t *pHandle ) const noexcept
 {
 	uint32_t iEvent = 0;
 	if ( !findEventIndex( nEventId, iEvent ) ) {
@@ -484,7 +484,7 @@ bool SIRAudioResourceStore::findEvent( uint64_t nEventId, sirAudioEventRecord_t 
 	return true;
 }
 
-bool SIRAudioResourceStore::resolveEvent( sirAudioEventHandle_t hEvent, sirAudioEventRecord_t &event ) const noexcept
+bool SIRAudioResourceStore::resolveEvent( sirAudioEventHandle_t hEvent, sirAudioEventRecord_t& event ) const noexcept
 {
 	if ( m_pBytes == nullptr || hEvent.nEpoch != m_nEpoch || hEvent.nGeneration != 1 || hEvent.nSlot >= m_Header.nEventCount ) {
 		return false;
@@ -493,7 +493,7 @@ bool SIRAudioResourceStore::resolveEvent( sirAudioEventHandle_t hEvent, sirAudio
 	return true;
 }
 
-bool SIRAudioResourceStore::findPackage( uint64_t nPackageId, sirAudioPackageRecord_t &package,
+bool SIRAudioResourceStore::findPackage( uint64_t nPackageId, sirAudioPackageRecord_t& package,
                                          sirAudioPackageHandle_t *pHandle ) const noexcept
 {
 	uint32_t iPackage = 0;
@@ -507,7 +507,7 @@ bool SIRAudioResourceStore::findPackage( uint64_t nPackageId, sirAudioPackageRec
 	return true;
 }
 
-bool SIRAudioResourceStore::resolvePackage( sirAudioPackageHandle_t hPackage, sirAudioPackageRecord_t &package ) const noexcept
+bool SIRAudioResourceStore::resolvePackage( sirAudioPackageHandle_t hPackage, sirAudioPackageRecord_t& package ) const noexcept
 {
 	if ( m_pBytes == nullptr || hPackage.nEpoch != m_nEpoch || hPackage.nGeneration != 1 || hPackage.nSlot >= m_Header.nPackageCount ) {
 		return false;
@@ -521,7 +521,7 @@ uint32_t SIRAudioResourceStore::getControlCount( void ) const noexcept
 	return m_pBytes == nullptr ? 0 : m_Header.nControlCount;
 }
 
-bool SIRAudioResourceStore::getControlAt( uint32_t iControl, sirAudioControlRecord_t &control ) const noexcept
+bool SIRAudioResourceStore::getControlAt( uint32_t iControl, sirAudioControlRecord_t& control ) const noexcept
 {
 	if ( m_pBytes == nullptr || iControl >= m_Header.nControlCount ) {
 		return false;
@@ -530,7 +530,7 @@ bool SIRAudioResourceStore::getControlAt( uint32_t iControl, sirAudioControlReco
 	return true;
 }
 
-bool SIRAudioResourceStore::findControl( uint64_t nControlId, sirAudioControlRecord_t &control ) const noexcept
+bool SIRAudioResourceStore::findControl( uint64_t nControlId, sirAudioControlRecord_t& control ) const noexcept
 {
 	if ( m_pBytes == nullptr ) {
 		return false;

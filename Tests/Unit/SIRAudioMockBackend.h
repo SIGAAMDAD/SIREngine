@@ -56,7 +56,7 @@ public:
 	static sirAudioBackendOps_t getOps( void ) noexcept;
 	void failNextPlay( void ) noexcept;
 	void failNextStop( void ) noexcept;
-	bool injectCompletion( const sirAudioCompletion_t &completion ) noexcept;
+	bool injectCompletion( const sirAudioCompletion_t& completion ) noexcept;
 	uint64_t getSubmittedCount( void ) const noexcept;
 	uint32_t getSpatialUpdateCount( void ) const noexcept;
 	sirAudioCommandType_t getLastSpatialType( void ) const noexcept;

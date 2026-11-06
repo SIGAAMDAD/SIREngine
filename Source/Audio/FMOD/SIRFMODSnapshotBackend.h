@@ -70,8 +70,8 @@ private:
 	bool m_bInitialized = false;
 
 	bool isReady( void ) const noexcept;
-	bool findSnapshot( uint64_t nSnapshotId, uint32_t &iIndex ) const noexcept;
-	sirAudioResult_t releaseInstance( sirFMODSnapshotRecord_t &record, bool bStop, sirAudioStopMode_t eMode ) noexcept;
+	bool findSnapshot( uint64_t nSnapshotId, uint32_t& iIndex ) const noexcept;
+	sirAudioResult_t releaseInstance( sirFMODSnapshotRecord_t& record, bool bStop, sirAudioStopMode_t eMode ) noexcept;
 	void releaseStorage( void ) noexcept;
 	sirAudioResult_t registerSnapshotInternal( uint64_t nSnapshotId, const char *szPath, SIRFMODBankStore *pBankStore,
 	                                           uint64_t nPackageId ) noexcept;
@@ -79,10 +79,10 @@ private:
 public:
 	SIRFMODSnapshotBackend( void ) noexcept = default;
 	~SIRFMODSnapshotBackend( void ) noexcept;
-	SIRFMODSnapshotBackend( const SIRFMODSnapshotBackend & ) = delete;
-	SIRFMODSnapshotBackend &operator=( const SIRFMODSnapshotBackend & ) = delete;
+	SIRFMODSnapshotBackend( const SIRFMODSnapshotBackend& ) = delete;
+	SIRFMODSnapshotBackend& operator=( const SIRFMODSnapshotBackend& ) = delete;
 
-	sirAudioResult_t configure( SIRFMODContext *pContext, const sirContainerAllocator_t *pAllocator, const sirFMODSnapshotNativeOps_t &ops,
+	sirAudioResult_t configure( SIRFMODContext *pContext, const sirContainerAllocator_t *pAllocator, const sirFMODSnapshotNativeOps_t& ops,
 	                            uint32_t nMaxSnapshots ) noexcept;
 	sirAudioResult_t initialize( void ) noexcept;
 	sirAudioResult_t shutdown( void ) noexcept;

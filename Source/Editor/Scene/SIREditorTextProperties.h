@@ -59,7 +59,7 @@ typedef struct sirEditorTextPropertyIndex_s
 // source. A null output/capacity zero first pass measures the exact count.
 // A failed scan publishes zero entries and identifies the offending line.
 sirEditorTextPropertyResult_t sirEditorScanNodeTextProperties( const char *pszSource, size_t nSourceBytes,
-                                                               const sirEditorTextSceneIndex_t &scene,
+                                                               const sirEditorTextSceneIndex_t& scene,
                                                                sirEditorTextPropertyIndex_t *pIndex ) noexcept;
 
 #endif // __SIRENGINE_SIREDITORTEXTPROPERTIES_H__

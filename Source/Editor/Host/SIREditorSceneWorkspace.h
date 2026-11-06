@@ -1,6 +1,8 @@
 /*
 ===========================================================================
 SIREngine MPLv2 Source Code
+
+
 Copyright (C) 2023-2027 Noah Van Til
 
 This Source Code Form is subject to the terms of the Mozilla Public
@@ -55,23 +57,23 @@ class SIREditorSceneWorkspace
 {
 public:
 	SIREditorSceneWorkspace( void ) noexcept;
-	SIREditorSceneWorkspace( const SIREditorSceneWorkspace & ) = delete;
+	SIREditorSceneWorkspace( const SIREditorSceneWorkspace& ) = delete;
 	~SIREditorSceneWorkspace();
 
-	SIREditorSceneWorkspace &operator=( const SIREditorSceneWorkspace & ) = delete;
+	SIREditorSceneWorkspace& operator=( const SIREditorSceneWorkspace& ) = delete;
 
 	bool isOpen( void ) const noexcept;
 	uint32_t getErrorLine( void ) const noexcept;
 	const char *getSource( void ) const noexcept;
 	size_t getSourceBytes( void ) const noexcept;
-	const sirEditorTextSceneIndex_t &getSceneIndex( void ) const noexcept;
-	const sirEditorTextResourceIndex_t &getResourceIndex( void ) const noexcept;
+	const sirEditorTextSceneIndex_t& getSceneIndex( void ) const noexcept;
+	const sirEditorTextResourceIndex_t& getResourceIndex( void ) const noexcept;
 	const sirEditorResourceReference_t *getResourceReferences( void ) const noexcept;
 	uint32_t getResourceReferenceCount( void ) const noexcept;
-	const sirEditorTextPropertyIndex_t &getPropertyIndex( void ) const noexcept;
-	SIREditorSceneDocument &getDocument( void ) noexcept;
-	const SIREditorSceneDocument &getDocument( void ) const noexcept;
-	SIREditorHierarchyModel &getHierarchy( void ) noexcept;
+	const sirEditorTextPropertyIndex_t& getPropertyIndex( void ) const noexcept;
+	SIREditorSceneDocument& getDocument( void ) noexcept;
+	const SIREditorSceneDocument& getDocument( void ) const noexcept;
+	SIREditorHierarchyModel& getHierarchy( void ) noexcept;
 
 	bool initialize( SIRMemorySegment *pEditorSegment ) noexcept;
 	sirEditorWorkspaceResult_t openTextSource( const char *pszSource, size_t nSourceBytes ) noexcept;

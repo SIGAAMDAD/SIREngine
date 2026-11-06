@@ -1,4 +1,6 @@
 /*
+
+
 ===========================================================================
 SIREngine MPLv2 Source Code
 Copyright (C) 2023-2027 Noah Van Til
@@ -101,21 +103,21 @@ private:
 	uint64_t m_nLayoutEpoch = 0;
 	uint64_t m_nPaintEpoch = 0;
 
-	bool isValid( const sirUIHandle_t &handle ) const noexcept;
-	static bool contains( const sirUIRect_t &bounds, int32_t iX, int32_t iY ) noexcept;
-	static sirUIRect_t intersection( const sirUIRect_t &a, const sirUIRect_t &b ) noexcept;
+	bool isValid( const sirUIHandle_t& handle ) const noexcept;
+	static bool contains( const sirUIRect_t& bounds, int32_t iX, int32_t iY ) noexcept;
+	static sirUIRect_t intersection( const sirUIRect_t& a, const sirUIRect_t& b ) noexcept;
 
 public:
 	sirUIResult_t initialize( sirUIControl_t *pControls, uint32_t *pStack, uint32_t nCapacity ) noexcept;
 	void shutdown( void ) noexcept;
-	sirUIResult_t create( const sirUIHandle_t *pParent, const sirUIRect_t &requested, sirUILayout_t eLayout, bool bFocusable,
+	sirUIResult_t create( const sirUIHandle_t *pParent, const sirUIRect_t& requested, sirUILayout_t eLayout, bool bFocusable,
 	                      bool bClipChildren, sirUIHandle_t *pOutHandle ) noexcept;
 	sirUIResult_t remove( sirUIHandle_t handle ) noexcept;
 	sirUIResult_t setVisible( sirUIHandle_t handle, bool bVisible ) noexcept;
-	sirUIResult_t setRequestedRect( sirUIHandle_t handle, const sirUIRect_t &requested ) noexcept;
-	sirUIResult_t layout( const sirUIRect_t &viewport ) noexcept;
+	sirUIResult_t setRequestedRect( sirUIHandle_t handle, const sirUIRect_t& requested ) noexcept;
+	sirUIResult_t layout( const sirUIRect_t& viewport ) noexcept;
 	sirUIResult_t hitTest( int32_t iX, int32_t iY, sirUIHandle_t *pOutHandle ) noexcept;
-	sirUIResult_t dispatch( const sirUIInput_t &input, sirUIHandle_t *pTarget ) noexcept;
+	sirUIResult_t dispatch( const sirUIInput_t& input, sirUIHandle_t *pTarget ) noexcept;
 	sirUIResult_t getBounds( sirUIHandle_t handle, sirUIRect_t *pOutBounds ) const noexcept;
 	sirUIHandle_t getFocus( void ) const noexcept;
 	uint64_t getLayoutEpoch( void ) const noexcept;

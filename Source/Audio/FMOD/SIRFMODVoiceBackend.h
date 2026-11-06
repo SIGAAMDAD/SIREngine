@@ -143,25 +143,25 @@ private:
 	static sirAudioResult_t submitSpatialCallback( void *pContext, const sirAudioCommand_t *pCommand,
 	                                               const sirAudioAttributes_t *pAttributes ) noexcept;
 
-	bool findEvent( uint64_t nEventId, uint32_t &iEvent ) const noexcept;
-	bool findParameter( uint64_t nControlId, uint32_t &iParameter ) const noexcept;
-	bool writeCompletion( const sirAudioCompletion_t &completion ) noexcept;
+	bool findEvent( uint64_t nEventId, uint32_t& iEvent ) const noexcept;
+	bool findParameter( uint64_t nControlId, uint32_t& iParameter ) const noexcept;
+	bool writeCompletion( const sirAudioCompletion_t& completion ) noexcept;
 	void pollVoices( void ) noexcept;
 	void retrySpatial( void ) noexcept;
 	void retryEmitterParameters( void ) noexcept;
 	void clearEmitterParameters( sirAudioEmitterHandle_t hEmitter ) noexcept;
-	sirAudioResult_t updateEmitterParameter( const sirAudioCommand_t &command ) noexcept;
+	sirAudioResult_t updateEmitterParameter( const sirAudioCommand_t& command ) noexcept;
 	sirAudioResult_t applyEmitterParametersToNewInstance( void *pInstance, sirAudioEmitterHandle_t hEmitter ) noexcept;
 	void releaseStorage( void ) noexcept;
-	sirAudioResult_t submitOne( const sirAudioCommand_t &command ) noexcept;
+	sirAudioResult_t submitOne( const sirAudioCommand_t& command ) noexcept;
 
 public:
 	SIRFMODVoiceBackend( void ) noexcept = default;
 	~SIRFMODVoiceBackend( void ) noexcept;
-	SIRFMODVoiceBackend( const SIRFMODVoiceBackend & ) = delete;
-	SIRFMODVoiceBackend &operator=( const SIRFMODVoiceBackend & ) = delete;
+	SIRFMODVoiceBackend( const SIRFMODVoiceBackend& ) = delete;
+	SIRFMODVoiceBackend& operator=( const SIRFMODVoiceBackend& ) = delete;
 
-	sirAudioResult_t configure( SIRFMODContext *pContext, const sirContainerAllocator_t *pAllocator, const sirFMODVoiceNativeOps_t &ops,
+	sirAudioResult_t configure( SIRFMODContext *pContext, const sirContainerAllocator_t *pAllocator, const sirFMODVoiceNativeOps_t& ops,
 	                            uint32_t nMaxRegisteredEvents, uint32_t nMaxRegisteredParameters = 0, uint32_t nMaxEmitters = 0,
 	                            uint32_t nMaxListeners = 0, uint32_t nMaxEmitterParameters = 0 ) noexcept;
 	// Borrowed controllers must remain alive through SIRAudioSystem::shutdown().
@@ -175,7 +175,7 @@ public:
 	bool isEventInUse( uint64_t nEventId ) const noexcept;
 	uint32_t getActiveVoiceCount( void ) const noexcept;
 	int32_t getLastNativeResult( void ) const noexcept;
-	sirAudioResult_t getPlayingTimeline( sirAudioPlayingHandle_t hPlaying, uint32_t &nMilliseconds ) noexcept;
+	sirAudioResult_t getPlayingTimeline( sirAudioPlayingHandle_t hPlaying, uint32_t& nMilliseconds ) noexcept;
 	static sirAudioBackendOps_t getBackendOps( void ) noexcept;
 };
 

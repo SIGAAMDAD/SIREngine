@@ -54,13 +54,13 @@ private:
 public:
 	SIRAudioQueue( void ) noexcept = default;
 	~SIRAudioQueue( void ) noexcept;
-	SIRAudioQueue( const SIRAudioQueue & ) = delete;
-	SIRAudioQueue &operator=( const SIRAudioQueue & ) = delete;
+	SIRAudioQueue( const SIRAudioQueue& ) = delete;
+	SIRAudioQueue& operator=( const SIRAudioQueue& ) = delete;
 
 	bool initialize( const sirContainerAllocator_t *pAllocator, uint32_t nCapacity ) noexcept;
 	void shutdown( void ) noexcept;
-	bool tryPush( const T &value ) noexcept;
-	bool tryPop( T &value ) noexcept;
+	bool tryPush( const T& value ) noexcept;
+	bool tryPop( T& value ) noexcept;
 	uint32_t getCapacity( void ) const noexcept;
 };
 
@@ -112,14 +112,14 @@ void SIRAudioQueue<T>::shutdown( void ) noexcept
 }
 
 template <typename T>
-bool SIRAudioQueue<T>::tryPush( const T &value ) noexcept
+bool SIRAudioQueue<T>::tryPush( const T& value ) noexcept
 {
 	if ( m_pSlots == nullptr ) {
 		return false;
 	}
 	uint64_t nPosition = m_nEnqueue.load( SIR_MEMORY_ORDER_RELAXED );
 	for ( ;; ) {
-		sirSlot_t &slot = m_pSlots[( uint32_t )nPosition & ( m_nCapacity - 1 )];
+		sirSlot_t& slot = m_pSlots[( uint32_t )nPosition & ( m_nCapacity - 1 )];
 		const uint64_t nSequence = slot.nSequence.load( SIR_MEMORY_ORDER_ACQUIRE );
 		const int64_t nDelta = ( int64_t )( nSequence - nPosition );
 		if ( nDelta == 0 ) {
@@ -137,14 +137,14 @@ bool SIRAudioQueue<T>::tryPush( const T &value ) noexcept
 }
 
 template <typename T>
-bool SIRAudioQueue<T>::tryPop( T &value ) noexcept
+bool SIRAudioQueue<T>::tryPop( T& value ) noexcept
 {
 	if ( m_pSlots == nullptr ) {
 		return false;
 	}
 	uint64_t nPosition = m_nDequeue.load( SIR_MEMORY_ORDER_RELAXED );
 	for ( ;; ) {
-		sirSlot_t &slot = m_pSlots[( uint32_t )nPosition & ( m_nCapacity - 1 )];
+		sirSlot_t& slot = m_pSlots[( uint32_t )nPosition & ( m_nCapacity - 1 )];
 		const uint64_t nSequence = slot.nSequence.load( SIR_MEMORY_ORDER_ACQUIRE );
 		const int64_t nDelta = ( int64_t )( nSequence - ( nPosition + 1 ) );
 		if ( nDelta == 0 ) {

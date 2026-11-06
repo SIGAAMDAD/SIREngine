@@ -98,7 +98,7 @@ bool SIRResourceCatalog::canReach( uint32_t iStart, uint32_t iTarget ) noexcept
 			return true;
 		}
 		for ( uint32_t iDependency = 0; iDependency < m_nDependencyCount; ++iDependency ) {
-			const sirResourceDependency_t &edge = m_pDependencies[iDependency];
+			const sirResourceDependency_t& edge = m_pDependencies[iDependency];
 			if ( edge.nOwnerId != m_pEntries[iNode].nId ) {
 				continue;
 			}
@@ -129,7 +129,7 @@ sirResourceCatalogResult_t SIRResourceCatalog::addDependency( uint64_t nOwnerId,
 		return SIR_RESOURCE_CATALOG_CYCLIC;
 	}
 	for ( uint32_t iDependency = 0; iDependency < m_nDependencyCount; ++iDependency ) {
-		const sirResourceDependency_t &edge = m_pDependencies[iDependency];
+		const sirResourceDependency_t& edge = m_pDependencies[iDependency];
 		if ( edge.nOwnerId == nOwnerId && edge.nTargetId == nTargetId ) {
 			return SIR_RESOURCE_CATALOG_DUPLICATE;
 		}
@@ -147,8 +147,7 @@ sirResourceCatalogResult_t SIRResourceCatalog::addDependency( uint64_t nOwnerId,
 // Compute a deterministic dependency-first resource order. All temporary
 // counts use the catalog's existing editor-domain scratch; no loader bytes
 // or additional catalog authority is allocated.
-sirResourceCatalogResult_t SIRResourceCatalog::buildLoadOrder( uint64_t *pOutIds, uint32_t nCapacity,
-                                                               uint32_t *pOutCount ) noexcept
+sirResourceCatalogResult_t SIRResourceCatalog::buildLoadOrder( uint64_t *pOutIds, uint32_t nCapacity, uint32_t *pOutCount ) noexcept
 {
 	if ( m_pEntries == nullptr ) {
 		return SIR_RESOURCE_CATALOG_UNINITIALIZED;

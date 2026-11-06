@@ -39,7 +39,7 @@ sirFMODContextResult_t SIRFMODContext::rollback( sirFMODContextResult_t eOrigina
 	return eOriginalError;
 }
 
-sirFMODContextResult_t SIRFMODContext::initialize( const sirFMODContextConfig_t &config, const sirFMODNativeOps_t &ops ) noexcept
+sirFMODContextResult_t SIRFMODContext::initialize( const sirFMODContextConfig_t& config, const sirFMODNativeOps_t& ops ) noexcept
 {
 	if ( m_eState != SIR_FMOD_CONTEXT_EMPTY ) {
 		return SIR_FMOD_BAD_STATE;
@@ -168,7 +168,7 @@ sirFMODContextResult_t SIRFMODContext::update( void ) noexcept
 	return nResult == 0 ? SIR_FMOD_OK : SIR_FMOD_NATIVE_ERROR;
 }
 
-sirFMODContextResult_t SIRFMODContext::getDriverCount( int32_t &nCount ) noexcept
+sirFMODContextResult_t SIRFMODContext::getDriverCount( int32_t& nCount ) noexcept
 {
 	nCount = 0;
 	if ( m_eState != SIR_FMOD_CONTEXT_READY ) {

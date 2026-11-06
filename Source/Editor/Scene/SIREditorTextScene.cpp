@@ -243,7 +243,7 @@ static sirEditorTextSceneResult_t sirEditorConsumeNode( const char *pszSource, s
 		} else {
 			bool bFound = false;
 			for ( uint32_t iParent = 0; iParent < pIndex->nNodeCount; ++iParent ) {
-				const sirEditorTextSceneNode_t &candidate = pIndex->storage.pNodes[iParent];
+				const sirEditorTextSceneNode_t& candidate = pIndex->storage.pNodes[iParent];
 				if ( candidate.nPathLength == nParentLength && memcmp( pIndex->storage.pszPaths + candidate.nPathOffset,
 				                                                       pIndex->storage.pszPaths + nPathStart, nParentLength ) == 0 ) {
 					nParentId = candidate.node.nId;
@@ -279,7 +279,7 @@ static sirEditorTextSceneResult_t sirEditorConsumeNode( const char *pszSource, s
 		pszDestination[0] = '\0';
 	}
 	for ( uint32_t iPrevious = 0; iPrevious < pIndex->nNodeCount; ++iPrevious ) {
-		const sirEditorTextSceneNode_t &previous = pIndex->storage.pNodes[iPrevious];
+		const sirEditorTextSceneNode_t& previous = pIndex->storage.pNodes[iPrevious];
 		if ( previous.nPathLength == nPathLength &&
 		     memcmp( pszDestination, pIndex->storage.pszPaths + previous.nPathOffset, nPathLength ) == 0 ) {
 			return SIR_EDITOR_TEXT_DUPLICATE_NODE;
@@ -299,7 +299,7 @@ static sirEditorTextSceneResult_t sirEditorConsumeNode( const char *pszSource, s
 			return SIR_EDITOR_TEXT_DUPLICATE_NODE;
 		}
 	}
-	sirEditorTextSceneNode_t &entry = pIndex->storage.pNodes[pIndex->nNodeCount++];
+	sirEditorTextSceneNode_t& entry = pIndex->storage.pNodes[pIndex->nNodeCount++];
 	entry = {};
 	entry.node.nId = nId;
 	entry.node.nParentId = nParentId;
@@ -441,7 +441,7 @@ sirEditorTextSceneResult_t sirEditorScanTextScene( const char *pszSource, size_t
 	return SIR_EDITOR_TEXT_OK;
 }
 
-sirEditorResult_t sirEditorReconcileTextScene( SIREditorSceneDocument &document, const sirEditorTextSceneIndex_t &index,
+sirEditorResult_t sirEditorReconcileTextScene( SIREditorSceneDocument& document, const sirEditorTextSceneIndex_t& index,
                                                sirEditorNode_t *pSnapshot, uint32_t nSnapshotCapacity ) noexcept
 {
 	if ( index.nNodeCount == 0 || index.nNodeCount > index.storage.nNodeCapacity || index.storage.pNodes == nullptr ||
@@ -477,7 +477,7 @@ sirEditorResult_t sirEditorReconcileTextScene( SIREditorSceneDocument &document,
 		}
 	}
 	for ( uint32_t iNew = 0; iNew < index.nNodeCount; ++iNew ) {
-		const sirEditorNode_t &node = index.storage.pNodes[iNew].node;
+		const sirEditorNode_t& node = index.storage.pNodes[iNew].node;
 		bool bMatch = false;
 		for ( uint32_t iOld = 0; iOld < nOldCount; ++iOld ) {
 			if ( pSnapshot[iOld].nId == node.nId ) {
@@ -513,7 +513,7 @@ sirEditorResult_t sirEditorReconcileTextScene( SIREditorSceneDocument &document,
 		}
 	}
 	for ( uint32_t iNew = 0; iNew < index.nNodeCount; ++iNew ) {
-		const sirEditorNode_t &node = index.storage.pNodes[iNew].node;
+		const sirEditorNode_t& node = index.storage.pNodes[iNew].node;
 		bool bMatch = false;
 		for ( uint32_t iOld = 0; iOld < nOldCount; ++iOld ) {
 			if ( pSnapshot[iOld].nId == node.nId ) {
@@ -558,13 +558,13 @@ static bool sirEditorValidResourceId( sirEditorTextField_t field ) noexcept
 	return true;
 }
 
-static bool sirEditorResourceTextEquals( const char *pszSource, const sirEditorTextResource_t &resource, const char *pId,
+static bool sirEditorResourceTextEquals( const char *pszSource, const sirEditorTextResource_t& resource, const char *pId,
                                          uint32_t nIdLength ) noexcept
 {
 	return resource.nIdLength == nIdLength && memcmp( pszSource + resource.nIdOffset, pId, nIdLength ) == 0;
 }
 
-sirEditorTextResourceResult_t sirEditorFindTextResource( const char *pszSource, const sirEditorTextResourceIndex_t &index,
+sirEditorTextResourceResult_t sirEditorFindTextResource( const char *pszSource, const sirEditorTextResourceIndex_t& index,
                                                          sirEditorTextResourceKind_t eKind, const char *pszId, uint32_t nIdLength,
                                                          uint32_t *pOutIndex ) noexcept
 {
@@ -574,7 +574,7 @@ sirEditorTextResourceResult_t sirEditorFindTextResource( const char *pszSource, 
 		return SIR_EDITOR_RESOURCE_INVALID_ARGUMENT;
 	}
 	for ( uint32_t iResource = 0; iResource < index.nCount; ++iResource ) {
-		const sirEditorTextResource_t &resource = index.pResources[iResource];
+		const sirEditorTextResource_t& resource = index.pResources[iResource];
 		if ( resource.eKind == eKind && sirEditorResourceTextEquals( pszSource, resource, pszId, nIdLength ) ) {
 			*pOutIndex = iResource;
 			return SIR_EDITOR_RESOURCE_OK;
@@ -625,7 +625,7 @@ static sirEditorTextResourceResult_t sirEditorConsumeResourceTag( const char *ps
 		return SIR_EDITOR_RESOURCE_DUPLICATE_ID;
 	}
 
-	sirEditorTextResource_t &resource = pIndex->pResources[pIndex->nCount++];
+	sirEditorTextResource_t& resource = pIndex->pResources[pIndex->nCount++];
 	resource = {};
 	resource.eKind = eKind;
 	resource.nSourceLine = nLine;

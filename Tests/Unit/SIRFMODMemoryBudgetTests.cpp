@@ -93,7 +93,7 @@ static void testConcurrentAccounting( const sirContainerAllocator_t *pUpstream )
 			}
 		} );
 	}
-	for ( std::thread &worker : workers ) {
+	for ( std::thread& worker : workers ) {
 		worker.join();
 	}
 	const sirFMODMemoryBudgetStats_t stats = budget.getStats();

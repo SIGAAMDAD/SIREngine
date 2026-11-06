@@ -100,7 +100,7 @@ typedef struct sirEditorHierarchyStorage_s
 // Convert a validated Godot text-scene index into sibling order hints. Output
 // is sorted by ID for binary lookup, while nOrder preserves the source line.
 // Caller owns the output, and it must not alias the scanned node array.
-sirEditorHierarchyResult_t sirEditorHierarchyOrderFromTextScene( const sirEditorTextSceneIndex_t &index, sirEditorHierarchyOrder_t *pOutput,
+sirEditorHierarchyResult_t sirEditorHierarchyOrderFromTextScene( const sirEditorTextSceneIndex_t& index, sirEditorHierarchyOrder_t *pOutput,
                                                                  uint32_t nCapacity, uint32_t *pOutCount ) noexcept;
 
 // Editor-main-thread view model. Godot's Control/Tree adapter will consume rows;
@@ -128,14 +128,14 @@ private:
 
 public:
 	SIREditorHierarchyModel( void ) noexcept;
-	sirEditorHierarchyResult_t initialize( const sirEditorHierarchyStorage_t &storage, uint32_t nDefaultRowHeight ) noexcept;
+	sirEditorHierarchyResult_t initialize( const sirEditorHierarchyStorage_t& storage, uint32_t nDefaultRowHeight ) noexcept;
 	void shutdown( void ) noexcept;
-	sirEditorHierarchyResult_t rebuild( const SIREditorSceneDocument &document, const sirEditorHierarchyOrder_t *pOrder = nullptr,
+	sirEditorHierarchyResult_t rebuild( const SIREditorSceneDocument& document, const sirEditorHierarchyOrder_t *pOrder = nullptr,
 	                                    uint32_t nOrderCount = 0 ) noexcept;
-	bool isCurrent( const SIREditorSceneDocument &document ) const noexcept;
-	sirEditorHierarchyResult_t setExpanded( const SIREditorSceneDocument &document, uint64_t nId, bool bExpanded ) noexcept;
-	sirEditorHierarchyResult_t setSelected( const SIREditorSceneDocument &document, uint64_t nId ) noexcept;
-	sirEditorHierarchyResult_t setRowHeight( const SIREditorSceneDocument &document, uint64_t nId, uint32_t nHeight ) noexcept;
+	bool isCurrent( const SIREditorSceneDocument& document ) const noexcept;
+	sirEditorHierarchyResult_t setExpanded( const SIREditorSceneDocument& document, uint64_t nId, bool bExpanded ) noexcept;
+	sirEditorHierarchyResult_t setSelected( const SIREditorSceneDocument& document, uint64_t nId ) noexcept;
+	sirEditorHierarchyResult_t setRowHeight( const SIREditorSceneDocument& document, uint64_t nId, uint32_t nHeight ) noexcept;
 	sirEditorHierarchyResult_t getVisibleRange( uint64_t nScroll, uint64_t nViewportHeight, uint64_t nOverscan,
 	                                            sirEditorVirtualRange_t *pOutRange ) const noexcept;
 	sirEditorHierarchyResult_t getVisibleRow( uint32_t iRow, sirEditorHierarchyRow_t *pOutRow ) const noexcept;

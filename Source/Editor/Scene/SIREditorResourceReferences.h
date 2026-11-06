@@ -51,7 +51,7 @@ typedef struct sirEditorResourceReferenceScan_s
 // A null output/capacity zero measures the number of references. Insufficient
 // capacity or malformed input never writes a partial output array. References
 // retain source offsets; neither file I/O nor resource allocations occur here.
-sirEditorTextResourceResult_t sirEditorScanResourceReferences( const sirEditorResourceReferenceScan_t &context,
+sirEditorTextResourceResult_t sirEditorScanResourceReferences( const sirEditorResourceReferenceScan_t& context,
                                                                uint32_t *pOutCount ) noexcept;
 
 #endif // __SIRENGINE_SIREDITORRESOURCEREFERENCES_H__

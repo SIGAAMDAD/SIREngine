@@ -129,8 +129,8 @@ private:
 	bool enterClient( void ) noexcept;
 	void leaveClient( void ) noexcept;
 	void releaseStorage( void ) noexcept;
-	void complete( uint64_t nTicket, const sirFMODThreadResult_t &result ) noexcept;
-	sirAudioResult_t execute( const sirFMODThreadRequest_t &request, sirFMODThreadResult_t &result ) noexcept;
+	void complete( uint64_t nTicket, const sirFMODThreadResult_t& result ) noexcept;
+	sirAudioResult_t execute( const sirFMODThreadRequest_t& request, sirFMODThreadResult_t& result ) noexcept;
 	void threadMain( void ) noexcept;
 	static void threadCallback( void *pContext );
 	static void lifecycleCallback( void *pContext, const sirAudioCompletion_t *pCompletion ) noexcept;
@@ -138,15 +138,15 @@ private:
 public:
 	SIRFMODAudioThread( void ) noexcept = default;
 	~SIRFMODAudioThread( void ) noexcept;
-	SIRFMODAudioThread( const SIRFMODAudioThread & ) = delete;
-	SIRFMODAudioThread &operator=( const SIRFMODAudioThread & ) = delete;
+	SIRFMODAudioThread( const SIRFMODAudioThread& ) = delete;
+	SIRFMODAudioThread& operator=( const SIRFMODAudioThread& ) = delete;
 
-	sirAudioResult_t start( const sirFMODAudioThreadConfig_t &config ) noexcept;
+	sirAudioResult_t start( const sirFMODAudioThreadConfig_t& config ) noexcept;
 	sirAudioResult_t shutdown( void ) noexcept;
-	sirAudioResult_t submit( const sirFMODThreadRequest_t &request, uint64_t &nTicket ) noexcept;
+	sirAudioResult_t submit( const sirFMODThreadRequest_t& request, uint64_t& nTicket ) noexcept;
 	sirAudioResult_t cancel( uint64_t nTicket ) noexcept;
-	sirAudioResult_t poll( uint64_t nTicket, sirFMODThreadResult_t &result ) noexcept;
-	bool pollLifecycle( sirAudioCompletion_t &completion ) noexcept;
+	sirAudioResult_t poll( uint64_t nTicket, sirFMODThreadResult_t& result ) noexcept;
+	bool pollLifecycle( sirAudioCompletion_t& completion ) noexcept;
 	bool isReady( void ) const noexcept;
 	uint32_t getDroppedLifecycleCount( void ) const noexcept;
 	uint32_t getAutoRecoveryCount( void ) const noexcept;

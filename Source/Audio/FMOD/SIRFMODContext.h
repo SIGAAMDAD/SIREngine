@@ -107,13 +107,13 @@ private:
 public:
 	SIRFMODContext( void ) noexcept = default;
 	~SIRFMODContext( void ) noexcept;
-	SIRFMODContext( const SIRFMODContext & ) = delete;
-	SIRFMODContext &operator=( const SIRFMODContext & ) = delete;
+	SIRFMODContext( const SIRFMODContext& ) = delete;
+	SIRFMODContext& operator=( const SIRFMODContext& ) = delete;
 
-	sirFMODContextResult_t initialize( const sirFMODContextConfig_t &config, const sirFMODNativeOps_t &ops ) noexcept;
+	sirFMODContextResult_t initialize( const sirFMODContextConfig_t& config, const sirFMODNativeOps_t& ops ) noexcept;
 	sirFMODContextResult_t update( void ) noexcept;
 	sirFMODContextResult_t shutdown( void ) noexcept;
-	sirFMODContextResult_t getDriverCount( int32_t &nCount ) noexcept;
+	sirFMODContextResult_t getDriverCount( int32_t& nCount ) noexcept;
 	sirFMODContextResult_t changeDriver( int32_t iDriver ) noexcept;
 	sirFMODContextResult_t recoverOutput( int32_t iPreferredDriver, bool bFallbackToFirst ) noexcept;
 	bool needsDeviceRecovery( void ) const noexcept;

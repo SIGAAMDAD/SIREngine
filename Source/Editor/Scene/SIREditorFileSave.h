@@ -75,12 +75,12 @@ typedef struct sirEditorSceneSaveRequest_s
 // destination has already changed. Optional expected bytes are checked both
 // before staging and immediately before replacement; external writers that
 // race after the final comparison require higher-level file locking.
-sirEditorFileSaveResult_t sirEditorWriteFileAtomically( const sirEditorFileWriteRequest_t &request ) noexcept;
+sirEditorFileSaveResult_t sirEditorWriteFileAtomically( const sirEditorFileWriteRequest_t& request ) noexcept;
 
 // Exports the canonical scene document to caller-owned scratch and then saves
 // it via the same atomic path; no second authored graph is created. The
 // workspace source remains the original snapshot until caller closes/reopens.
 // Node hierarchy mutations fail closed until a complete node writer is ported.
-sirEditorFileSaveResult_t sirEditorSaveBoundScene( const sirEditorSceneSaveRequest_t &request ) noexcept;
+sirEditorFileSaveResult_t sirEditorSaveBoundScene( const sirEditorSceneSaveRequest_t& request ) noexcept;
 
 #endif // __SIRENGINE_SIREDITORFILESAVE_H__

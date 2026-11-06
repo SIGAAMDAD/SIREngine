@@ -47,8 +47,7 @@ typedef struct sirEditorScalarBinding_s
 
 // The engine's string-atom pool implements this comparison. This API does
 // not create a parallel string table or require Godot Variant objects.
-typedef bool (*sirEditorScalarAtomMatches_t)( uint64_t nAtom, const char *pszSource, uint32_t nBytes,
-                                               void *pContext ) noexcept;
+typedef bool ( *sirEditorScalarAtomMatches_t )( uint64_t nAtom, const char *pszSource, uint32_t nBytes, void *pContext ) noexcept;
 
 typedef struct sirEditorScalarDiscovery_s
 {
@@ -66,8 +65,7 @@ typedef struct sirEditorScalarDiscovery_s
 // Discover supported scalar properties from source names and native type
 // metadata. Null output/capacity zero measures required storage. A failure
 // does not publish a partial binding table.
-sirEditorScalarBridgeResult_t sirEditorDiscoverScalarBindings( const sirEditorScalarDiscovery_t& context,
-                                                               uint32_t *pOutCount ) noexcept;
+sirEditorScalarBridgeResult_t sirEditorDiscoverScalarBindings( const sirEditorScalarDiscovery_t& context, uint32_t *pOutCount ) noexcept;
 
 // Caller-supplied scratch; all borrowed pointers remain valid through the
 // entire operation. The editor document is the only mutable authoring graph.
@@ -92,7 +90,7 @@ sirEditorScalarBridgeResult_t sirEditorImportBoundScalars( const sirEditorScalar
 
 // Writes the current document values into the preserved original source bytes.
 // Supports a measure-only call (null output, zero capacity).
-sirEditorScalarBridgeResult_t sirEditorExportBoundScalars( const sirEditorScalarBridge_t& context, char *pszOutput,
-                                                           size_t nCapacity, size_t *pOutBytes ) noexcept;
+sirEditorScalarBridgeResult_t sirEditorExportBoundScalars( const sirEditorScalarBridge_t& context, char *pszOutput, size_t nCapacity,
+                                                           size_t *pOutBytes ) noexcept;
 
 #endif // __SIRENGINE_SIREDITORSCALARBINDING_H__

@@ -72,11 +72,11 @@ typedef struct sirAudioTestManifest_s
 
 static_assert( sizeof( sirAudioTestManifest_t ) == 64 + 64 + 64 + 80 + 8, "Test manifest has padding" );
 
-static void refreshHash( sirAudioTestManifest_t &manifest ) noexcept
+static void refreshHash( sirAudioTestManifest_t& manifest ) noexcept
 {
 	manifest.header.nContentHash =
 	    SIRAudioResourceStore::hashPayload( ( ( const uint8_t * )&manifest ) + sizeof( manifest.header.nContentHash ),
-	                                        sizeof( manifest ) - sizeof( manifest.header.nContentHash ) );
+		                                    sizeof( manifest ) - sizeof( manifest.header.nContentHash ) );
 }
 
 static sirAudioTestManifest_t makeManifest( void ) noexcept
@@ -107,7 +107,7 @@ static sirAudioTestManifest_t makeManifest( void ) noexcept
 	return manifest;
 }
 
-static void testValidManifestAndHandles( const sirContainerAllocator_t *pAllocator, sirAudioTestAllocationContext_t &state )
+static void testValidManifestAndHandles( const sirContainerAllocator_t *pAllocator, sirAudioTestAllocationContext_t& state )
 {
 	sirAudioTestManifest_t manifest = makeManifest();
 	SIRAudioResourceStore store;
@@ -152,7 +152,7 @@ static void testValidManifestAndHandles( const sirContainerAllocator_t *pAllocat
 	testCheck( state.nAllocations == state.nFrees );
 }
 
-static void testRejectedManifests( const sirContainerAllocator_t *pAllocator, sirAudioTestAllocationContext_t &state )
+static void testRejectedManifests( const sirContainerAllocator_t *pAllocator, sirAudioTestAllocationContext_t& state )
 {
 	SIRAudioResourceStore store;
 	sirAudioTestManifest_t manifest = makeManifest();
@@ -230,7 +230,7 @@ typedef struct sirAudioCycleManifest_s
 	uint64_t nSecondDependency;
 } sirAudioCycleManifest_t;
 
-static void testDependencyCycle( const sirContainerAllocator_t *pAllocator, sirAudioTestAllocationContext_t &state )
+static void testDependencyCycle( const sirContainerAllocator_t *pAllocator, sirAudioTestAllocationContext_t& state )
 {
 	sirAudioCycleManifest_t cycle = {};
 	cycle.base = makeManifest();
@@ -242,13 +242,13 @@ static void testDependencyCycle( const sirContainerAllocator_t *pAllocator, sirA
 	cycle.nSecondDependency = 10;
 	cycle.base.header.nContentHash =
 	    SIRAudioResourceStore::hashPayload( ( ( const uint8_t * )&cycle ) + sizeof( cycle.base.header.nContentHash ),
-	                                        sizeof( cycle ) - sizeof( cycle.base.header.nContentHash ) );
+		                                    sizeof( cycle ) - sizeof( cycle.base.header.nContentHash ) );
 	SIRAudioResourceStore store;
 	testCheck( store.load( &cycle, sizeof( cycle ), SIR_AUDIO_PROVIDER_FMOD, 3, pAllocator ) == SIR_AUDIO_MANIFEST_CYCLIC_DEPENDENCY );
 	testCheck( !store.isLoaded() && state.nAllocations == state.nFrees );
 }
 
-static void testRollbackAndAllocation( const sirContainerAllocator_t *pAllocator, sirAudioTestAllocationContext_t &state )
+static void testRollbackAndAllocation( const sirContainerAllocator_t *pAllocator, sirAudioTestAllocationContext_t& state )
 {
 	SIRAudioResourceStore store;
 	sirAudioTestManifest_t manifest = makeManifest();
@@ -268,7 +268,7 @@ static void testRollbackAndAllocation( const sirContainerAllocator_t *pAllocator
 	testCheck( state.nAllocations == state.nFrees );
 }
 
-static void testSystemResourceBinding( const sirContainerAllocator_t *pAllocator, sirAudioTestAllocationContext_t &state )
+static void testSystemResourceBinding( const sirContainerAllocator_t *pAllocator, sirAudioTestAllocationContext_t& state )
 {
 	sirAudioTestManifest_t manifest = makeManifest();
 	SIRAudioResourceStore resources;

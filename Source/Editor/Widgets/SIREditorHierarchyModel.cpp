@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <limits.h>
 
-static bool sirEditorHierarchyLinkLess( const sirEditorHierarchyLink_t &a, const sirEditorHierarchyLink_t &b ) noexcept
+static bool sirEditorHierarchyLinkLess( const sirEditorHierarchyLink_t& a, const sirEditorHierarchyLink_t& b ) noexcept
 {
 	if ( a.nParentId != b.nParentId ) {
 		return a.nParentId < b.nParentId;
@@ -24,12 +24,12 @@ static bool sirEditorHierarchyOverlap( const void *pA, size_t nA, const void *pB
 	return nLeft < nRight + nB && nRight < nLeft + nA;
 }
 
-static bool sirEditorHierarchyOrderLess( const sirEditorHierarchyOrder_t &a, const sirEditorHierarchyOrder_t &b ) noexcept
+static bool sirEditorHierarchyOrderLess( const sirEditorHierarchyOrder_t& a, const sirEditorHierarchyOrder_t& b ) noexcept
 {
 	return a.nId < b.nId;
 }
 
-sirEditorHierarchyResult_t sirEditorHierarchyOrderFromTextScene( const sirEditorTextSceneIndex_t &index, sirEditorHierarchyOrder_t *pOutput,
+sirEditorHierarchyResult_t sirEditorHierarchyOrderFromTextScene( const sirEditorTextSceneIndex_t& index, sirEditorHierarchyOrder_t *pOutput,
                                                                  uint32_t nCapacity, uint32_t *pOutCount ) noexcept
 {
 	if ( pOutCount == nullptr ) {
@@ -39,6 +39,7 @@ sirEditorHierarchyResult_t sirEditorHierarchyOrderFromTextScene( const sirEditor
 	if ( index.nNodeCount > index.storage.nNodeCapacity ) {
 		return SIR_EDITOR_HIERARCHY_INVALID_SOURCE;
 	}
+
 	if ( index.nNodeCount > nCapacity ) {
 		return SIR_EDITOR_HIERARCHY_OUT_OF_CAPACITY;
 	}
@@ -51,13 +52,13 @@ sirEditorHierarchyResult_t sirEditorHierarchyOrderFromTextScene( const sirEditor
 		return SIR_EDITOR_HIERARCHY_INVALID_ARGUMENT;
 	}
 	for ( uint32_t iNode = 0; iNode < index.nNodeCount; ++iNode ) {
-		const sirEditorTextSceneNode_t &node = index.storage.pNodes[iNode];
+		const sirEditorTextSceneNode_t& node = index.storage.pNodes[iNode];
 		if ( node.node.nId == 0 || node.nSourceLine == 0 ) {
 			return SIR_EDITOR_HIERARCHY_INVALID_SOURCE;
 		}
 	}
 	for ( uint32_t iNode = 0; iNode < index.nNodeCount; ++iNode ) {
-		const sirEditorTextSceneNode_t &node = index.storage.pNodes[iNode];
+		const sirEditorTextSceneNode_t& node = index.storage.pNodes[iNode];
 		pOutput[iNode] = { node.node.nId, node.nSourceLine, 0 };
 	}
 	std::sort( pOutput, pOutput + index.nNodeCount, sirEditorHierarchyOrderLess );
@@ -77,7 +78,7 @@ SIREditorHierarchyModel::SIREditorHierarchyModel( void ) noexcept
 {
 }
 
-sirEditorHierarchyResult_t SIREditorHierarchyModel::initialize( const sirEditorHierarchyStorage_t &storage,
+sirEditorHierarchyResult_t SIREditorHierarchyModel::initialize( const sirEditorHierarchyStorage_t& storage,
                                                                 uint32_t nDefaultRowHeight ) noexcept
 {
 	if ( m_bInitialized || storage.nCapacity == 0 || storage.nCapacity == UINT32_MAX || nDefaultRowHeight == 0 ) {
@@ -195,17 +196,17 @@ sirEditorHierarchyResult_t SIREditorHierarchyModel::buildVisibleRows( void ) noe
 	}
 
 	while ( nStack != 0 ) {
-		sirEditorHierarchyCursor_t &cursor = m_Storage.pStack[nStack - 1];
+		sirEditorHierarchyCursor_t& cursor = m_Storage.pStack[nStack - 1];
 		if ( cursor.iNext == cursor.iEnd ) {
 			--nStack;
 			continue;
 		}
-		const sirEditorHierarchyLink_t &link = m_Storage.pLinks[cursor.iNext++];
+		const sirEditorHierarchyLink_t& link = m_Storage.pLinks[cursor.iNext++];
 		uint32_t iState = findState( link.nId, m_Storage.pState, m_nNodeCount );
 		if ( iState == UINT32_MAX || nVisible >= m_Storage.nCapacity ) {
 			return SIR_EDITOR_HIERARCHY_INVALID_SOURCE;
 		}
-		const sirEditorHierarchyState_t &state = m_Storage.pState[iState];
+		const sirEditorHierarchyState_t& state = m_Storage.pState[iState];
 		bool bChildren = hasChildren( link.nId );
 		m_Storage.pVisible[nVisible] = { link.nId, link.nParentId, cursor.nDepth, bChildren, state.bExpanded, false };
 		m_Storage.pListRows[nVisible] = { link.nId, state.nRowHeight, 0 };
@@ -237,7 +238,7 @@ uint32_t SIREditorHierarchyModel::findVisibleRow( uint64_t nId ) const noexcept
 	return UINT32_MAX;
 }
 
-sirEditorHierarchyResult_t SIREditorHierarchyModel::rebuild( const SIREditorSceneDocument &document,
+sirEditorHierarchyResult_t SIREditorHierarchyModel::rebuild( const SIREditorSceneDocument& document,
                                                              const sirEditorHierarchyOrder_t *pOrder, uint32_t nOrderCount ) noexcept
 {
 	if ( !m_bInitialized ) {
@@ -256,7 +257,7 @@ sirEditorHierarchyResult_t SIREditorHierarchyModel::rebuild( const SIREditorScen
 		return SIR_EDITOR_HIERARCHY_INVALID_ARGUMENT;
 	}
 	for ( uint32_t iNode = 0; iNode < nCount; ++iNode ) {
-		const sirEditorNode_t &node = m_Storage.pSnapshot[iNode];
+		const sirEditorNode_t& node = m_Storage.pSnapshot[iNode];
 		if ( pOrder != nullptr && pOrder[iNode].nId != node.nId ) {
 			return SIR_EDITOR_HIERARCHY_INVALID_ARGUMENT;
 		}
@@ -276,12 +277,12 @@ sirEditorHierarchyResult_t SIREditorHierarchyModel::rebuild( const SIREditorScen
 	return buildVisibleRows();
 }
 
-bool SIREditorHierarchyModel::isCurrent( const SIREditorSceneDocument &document ) const noexcept
+bool SIREditorHierarchyModel::isCurrent( const SIREditorSceneDocument& document ) const noexcept
 {
 	return m_bInitialized && m_nSourceRevision != 0 && m_nSourceRevision == document.getRevision();
 }
 
-sirEditorHierarchyResult_t SIREditorHierarchyModel::setExpanded( const SIREditorSceneDocument &document, uint64_t nId,
+sirEditorHierarchyResult_t SIREditorHierarchyModel::setExpanded( const SIREditorSceneDocument& document, uint64_t nId,
                                                                  bool bExpanded ) noexcept
 {
 	if ( !m_bInitialized ) {
@@ -301,7 +302,7 @@ sirEditorHierarchyResult_t SIREditorHierarchyModel::setExpanded( const SIREditor
 	return buildVisibleRows();
 }
 
-sirEditorHierarchyResult_t SIREditorHierarchyModel::setSelected( const SIREditorSceneDocument &document, uint64_t nId ) noexcept
+sirEditorHierarchyResult_t SIREditorHierarchyModel::setSelected( const SIREditorSceneDocument& document, uint64_t nId ) noexcept
 {
 	if ( !m_bInitialized ) {
 		return SIR_EDITOR_HIERARCHY_NOT_INITIALIZED;
@@ -319,7 +320,7 @@ sirEditorHierarchyResult_t SIREditorHierarchyModel::setSelected( const SIREditor
 	return SIR_EDITOR_HIERARCHY_OK;
 }
 
-sirEditorHierarchyResult_t SIREditorHierarchyModel::setRowHeight( const SIREditorSceneDocument &document, uint64_t nId,
+sirEditorHierarchyResult_t SIREditorHierarchyModel::setRowHeight( const SIREditorSceneDocument& document, uint64_t nId,
                                                                   uint32_t nHeight ) noexcept
 {
 	if ( !m_bInitialized ) {

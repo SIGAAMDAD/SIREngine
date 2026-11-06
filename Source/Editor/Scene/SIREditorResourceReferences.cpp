@@ -41,17 +41,17 @@ static bool sirEditorReferenceOverlaps( const void *pLeft, size_t nLeft, const v
 	return nA < nB + nRight && nB < nA + nLeft;
 }
 
-static bool sirEditorReferenceIndexValid( const sirEditorResourceReferenceScan_t &context ) noexcept
+static bool sirEditorReferenceIndexValid( const sirEditorResourceReferenceScan_t& context ) noexcept
 {
 	if ( context.pIndex == nullptr || context.pszSource == nullptr || context.nSourceBytes > UINT32_MAX ) {
 		return false;
 	}
-	const sirEditorTextResourceIndex_t &index = *context.pIndex;
+	const sirEditorTextResourceIndex_t& index = *context.pIndex;
 	if ( index.nCount > index.nCapacity || ( index.nCount != 0 && index.pResources == nullptr ) ) {
 		return false;
 	}
 	for ( uint32_t i = 0; i < index.nCount; ++i ) {
-		const sirEditorTextResource_t &resource = index.pResources[i];
+		const sirEditorTextResource_t& resource = index.pResources[i];
 		if ( resource.nStableKey == 0 || resource.nSourceLine == 0 || resource.nIdLength == 0 ||
 		     resource.nIdOffset > context.nSourceBytes || resource.nIdLength > context.nSourceBytes - resource.nIdOffset ||
 		     ( resource.eKind != SIR_EDITOR_RESOURCE_EXTERNAL && resource.eKind != SIR_EDITOR_RESOURCE_EMBEDDED ) ) {
@@ -69,7 +69,7 @@ static bool sirEditorReferenceIndexValid( const sirEditorResourceReferenceScan_t
 	return true;
 }
 
-static sirEditorTextResourceResult_t sirEditorReferencePass( const sirEditorResourceReferenceScan_t &context, bool bWrite,
+static sirEditorTextResourceResult_t sirEditorReferencePass( const sirEditorResourceReferenceScan_t& context, bool bWrite,
                                                              uint32_t *pOutCount ) noexcept
 {
 	const char *pszSource = context.pszSource;
@@ -120,7 +120,7 @@ static sirEditorTextResourceResult_t sirEditorReferencePass( const sirEditorReso
 					++iNextResource;
 				}
 				if ( iNextResource < context.pIndex->nCount && context.pIndex->pResources[iNextResource].nSourceLine == nLine ) {
-					const sirEditorTextResource_t &item = context.pIndex->pResources[iNextResource++];
+					const sirEditorTextResource_t& item = context.pIndex->pResources[iNextResource++];
 					if ( item.eKind == SIR_EDITOR_RESOURCE_EMBEDDED ) {
 						nOwnerKey = item.nStableKey;
 					}
@@ -178,7 +178,7 @@ static sirEditorTextResourceResult_t sirEditorReferencePass( const sirEditorReso
 			return SIR_EDITOR_RESOURCE_OUT_OF_CAPACITY;
 		}
 		if ( bWrite ) {
-			const sirEditorTextResource_t &target = context.pIndex->pResources[iTarget];
+			const sirEditorTextResource_t& target = context.pIndex->pResources[iTarget];
 			context.pOutput[nReferences] = { nOwnerKey, target.nStableKey, iTarget, ( uint32_t )( pCursor - pszSource ), nLine };
 		}
 		++nReferences;
@@ -188,7 +188,7 @@ static sirEditorTextResourceResult_t sirEditorReferencePass( const sirEditorReso
 	return SIR_EDITOR_RESOURCE_OK;
 }
 
-sirEditorTextResourceResult_t sirEditorScanResourceReferences( const sirEditorResourceReferenceScan_t &context,
+sirEditorTextResourceResult_t sirEditorScanResourceReferences( const sirEditorResourceReferenceScan_t& context,
                                                                uint32_t *pOutCount ) noexcept
 {
 	if ( pOutCount == nullptr ) {

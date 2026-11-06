@@ -94,7 +94,7 @@ static sirEditorTextPropertyResult_t sirEditorPropertyConsumeValue( const char *
 }
 
 sirEditorTextPropertyResult_t sirEditorScanNodeTextProperties( const char *pszSource, size_t nSourceBytes,
-                                                               const sirEditorTextSceneIndex_t &scene,
+                                                               const sirEditorTextSceneIndex_t& scene,
                                                                sirEditorTextPropertyIndex_t *pIndex ) noexcept
 {
 	if ( pIndex == nullptr ) {
@@ -197,7 +197,7 @@ sirEditorTextPropertyResult_t sirEditorScanNodeTextProperties( const char *pszSo
 				break;
 			}
 			if ( !bMeasure ) {
-				sirEditorTextProperty_t &property = pIndex->pProperties[nProperties];
+				sirEditorTextProperty_t& property = pIndex->pProperties[nProperties];
 				property.nNodeId = scene.storage.pNodes[nCurrentNode].node.nId;
 				property.nSourceLine = nStartLine;
 				property.nNameOffset = ( uint32_t )( pStart - pszSource );

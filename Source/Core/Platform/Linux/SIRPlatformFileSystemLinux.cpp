@@ -165,7 +165,7 @@ sirFileSystemResult_t SIRPlatformFileSystem::enumerate( const char *pszDirectory
 
 // Core-owned atomic scene replacement and bounded regular-file reads.
 static sirPlatformAtomicResult_t sirFileSystemCheckExpected( const char *pszDestination,
-                                                         const sirFileSystemAtomicWriteRequest_t &request ) noexcept
+                                                             const sirFileSystemAtomicWriteRequest_t& request ) noexcept
 {
 	if ( request.pExpectedBytes == nullptr ) {
 		return SIR_ATOMIC_SAVE_OK;
@@ -209,7 +209,8 @@ static sirPlatformAtomicResult_t sirFileSystemCheckExpected( const char *pszDest
 	return close( nFile ) == 0 ? SIR_ATOMIC_SAVE_OK : SIR_ATOMIC_SAVE_IO_ERROR;
 }
 
-sirFileSystemResult_t SIRPlatformFileSystem::readFilePlatform( const char *pszPath, char *pszOutput, size_t nCapacity, size_t *pOutBytes ) noexcept
+sirFileSystemResult_t SIRPlatformFileSystem::readFilePlatform( const char *pszPath, char *pszOutput, size_t nCapacity,
+                                                               size_t *pOutBytes ) noexcept
 {
 	const int nFile = open( pszPath, O_RDONLY | O_CLOEXEC | O_NOFOLLOW | O_NONBLOCK );
 	if ( nFile < 0 ) {
@@ -256,7 +257,7 @@ sirFileSystemResult_t SIRPlatformFileSystem::readFilePlatform( const char *pszPa
 	return bComplete && bClosed ? SIR_FILESYSTEM_OK : SIR_FILESYSTEM_IO_ERROR;
 }
 
-sirPlatformAtomicResult_t SIRPlatformFileSystem::writeAtomicallyPlatform( const sirFileSystemAtomicWriteRequest_t &request ) noexcept
+sirPlatformAtomicResult_t SIRPlatformFileSystem::writeAtomicallyPlatform( const sirFileSystemAtomicWriteRequest_t& request ) noexcept
 {
 	// Do not discard symlinks, devices or special files under an authored scene path.
 	// A failed destination probe must not be treated as a new-file save.

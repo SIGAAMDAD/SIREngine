@@ -21,12 +21,12 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // Standalone focused compilation substitutes only the existing ID lookup.
 // The native CTest target links sirEditorFindTextResource from the real scanner.
 #if defined( SIR_EDITOR_RESOURCE_REFERENCE_STANDALONE )
-sirEditorTextResourceResult_t sirEditorFindTextResource( const char *pszSource, const sirEditorTextResourceIndex_t &index,
+sirEditorTextResourceResult_t sirEditorFindTextResource( const char *pszSource, const sirEditorTextResourceIndex_t& index,
                                                          sirEditorTextResourceKind_t eKind, const char *pszId, uint32_t nIdLength,
                                                          uint32_t *pOutIndex ) noexcept
 {
 	for ( uint32_t i = 0; i < index.nCount; ++i ) {
-		const sirEditorTextResource_t &item = index.pResources[i];
+		const sirEditorTextResource_t& item = index.pResources[i];
 		if ( item.eKind == eKind && item.nIdLength == nIdLength && memcmp( pszSource + item.nIdOffset, pszId, nIdLength ) == 0 ) {
 			*pOutIndex = i;
 			return SIR_EDITOR_RESOURCE_OK;
@@ -55,6 +55,7 @@ static void sirTestResourceReferences( void )
 	szResources[0].eKind = SIR_EDITOR_RESOURCE_EXTERNAL;
 	szResources[0].nSourceLine = 2;
 	szResources[0].nIdLength = 5;
+
 	szResources[0].nIdOffset = ( uint32_t )( strstr( szSource, "id=\"ext_a\"" ) - szSource + 4 );
 	szResources[1].nStableKey = 202;
 	szResources[1].eKind = SIR_EDITOR_RESOURCE_EMBEDDED;

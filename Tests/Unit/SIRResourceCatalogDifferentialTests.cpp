@@ -30,7 +30,7 @@ static uint32_t sirCatalogFuzzNext( uint32_t *pSeed ) noexcept
 
 // Independent bounded reference graph. The production SIRResourceCatalog
 // uses its own caller-supplied traversal scratch and iterative cycle checks.
-static bool sirCatalogReferenceCanReach( const bool (&szEdges)[32][32], uint32_t iSource, uint32_t iTarget ) noexcept
+static bool sirCatalogReferenceCanReach( const bool ( &szEdges )[32][32], uint32_t iSource, uint32_t iTarget ) noexcept
 {
 	uint32_t szStack[32] = {};
 	bool szSeen[32] = {};

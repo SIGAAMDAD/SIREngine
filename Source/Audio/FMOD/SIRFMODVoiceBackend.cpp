@@ -39,7 +39,7 @@ sirAudioBackendOps_t SIRFMODVoiceBackend::getBackendOps( void ) noexcept
 }
 
 sirAudioResult_t SIRFMODVoiceBackend::configure( SIRFMODContext *pContext, const sirContainerAllocator_t *pAllocator,
-                                                 const sirFMODVoiceNativeOps_t &ops, uint32_t nMaxRegisteredEvents,
+                                                 const sirFMODVoiceNativeOps_t& ops, uint32_t nMaxRegisteredEvents,
                                                  uint32_t nMaxRegisteredParameters, uint32_t nMaxEmitters, uint32_t nMaxListeners,
                                                  uint32_t nMaxEmitterParameters ) noexcept
 {
@@ -237,7 +237,7 @@ void SIRFMODVoiceBackend::shutdownCallback( void *pContext ) noexcept
 	}
 	if ( pBackend->m_pVoices != nullptr ) {
 		for ( uint32_t iVoice = 0; iVoice < pBackend->m_nVoiceCapacity; ++iVoice ) {
-			sirFMODVoiceSlot_t &slot = pBackend->m_pVoices[iVoice];
+			sirFMODVoiceSlot_t& slot = pBackend->m_pVoices[iVoice];
 			if ( slot.pInstance == nullptr ) {
 				continue;
 			}
@@ -260,7 +260,7 @@ void SIRFMODVoiceBackend::shutdownCallback( void *pContext ) noexcept
 	pBackend->m_pSnapshotBackend = nullptr;
 }
 
-bool SIRFMODVoiceBackend::findEvent( uint64_t nEventId, uint32_t &iEvent ) const noexcept
+bool SIRFMODVoiceBackend::findEvent( uint64_t nEventId, uint32_t& iEvent ) const noexcept
 {
 	uint32_t iLow = 0;
 	uint32_t iHigh = m_nEventCount;
@@ -276,7 +276,7 @@ bool SIRFMODVoiceBackend::findEvent( uint64_t nEventId, uint32_t &iEvent ) const
 	return iLow < m_nEventCount && m_pEvents[iLow].nEventId == nEventId;
 }
 
-bool SIRFMODVoiceBackend::findParameter( uint64_t nControlId, uint32_t &iParameter ) const noexcept
+bool SIRFMODVoiceBackend::findParameter( uint64_t nControlId, uint32_t& iParameter ) const noexcept
 {
 	uint32_t iLow = 0;
 	uint32_t iHigh = m_nParameterCount;
@@ -397,7 +397,7 @@ sirAudioResult_t SIRFMODVoiceBackend::unregisterEvent( uint64_t nEventId ) noexc
 	return SIR_AUDIO_OK;
 }
 
-bool SIRFMODVoiceBackend::writeCompletion( const sirAudioCompletion_t &completion ) noexcept
+bool SIRFMODVoiceBackend::writeCompletion( const sirAudioCompletion_t& completion ) noexcept
 {
 	if ( m_nCompletions >= m_nCompletionCapacity ) {
 		return false;
@@ -431,7 +431,7 @@ sirAudioResult_t SIRFMODVoiceBackend::applyEmitterParametersToNewInstance( void 
 		return SIR_AUDIO_OK;
 	}
 	for ( uint32_t iParameter = 0; iParameter < m_nEmitterParameterCount; ++iParameter ) {
-		const sirFMODEmitterParameter_t &entry = m_pEmitterParameters[iParameter];
+		const sirFMODEmitterParameter_t& entry = m_pEmitterParameters[iParameter];
 		if ( entry.hEmitter.nSlot != hEmitter.nSlot || entry.hEmitter.nGeneration != hEmitter.nGeneration ||
 		     entry.hEmitter.nEpoch != hEmitter.nEpoch ) {
 			continue;
@@ -448,7 +448,7 @@ sirAudioResult_t SIRFMODVoiceBackend::applyEmitterParametersToNewInstance( void 
 	return SIR_AUDIO_OK;
 }
 
-sirAudioResult_t SIRFMODVoiceBackend::updateEmitterParameter( const sirAudioCommand_t &command ) noexcept
+sirAudioResult_t SIRFMODVoiceBackend::updateEmitterParameter( const sirAudioCommand_t& command ) noexcept
 {
 	const sirAudioEmitterHandle_t hEmitter = command.hEmitter;
 	if ( hEmitter.nEpoch == 0 || hEmitter.nGeneration == 0 || hEmitter.nSlot >= m_nEmitterCapacity ) {
@@ -460,7 +460,7 @@ sirAudioResult_t SIRFMODVoiceBackend::updateEmitterParameter( const sirAudioComm
 	}
 	uint32_t iEntry = 0;
 	for ( ; iEntry < m_nEmitterParameterCount; ++iEntry ) {
-		const sirFMODEmitterParameter_t &entry = m_pEmitterParameters[iEntry];
+		const sirFMODEmitterParameter_t& entry = m_pEmitterParameters[iEntry];
 		if ( entry.nControlId == command.nControlId && entry.hEmitter.nSlot == hEmitter.nSlot &&
 		     entry.hEmitter.nGeneration == hEmitter.nGeneration && entry.hEmitter.nEpoch == hEmitter.nEpoch ) {
 			break;
@@ -472,14 +472,14 @@ sirAudioResult_t SIRFMODVoiceBackend::updateEmitterParameter( const sirAudioComm
 		}
 		++m_nEmitterParameterCount;
 	}
-	sirFMODEmitterParameter_t &entry = m_pEmitterParameters[iEntry];
+	sirFMODEmitterParameter_t& entry = m_pEmitterParameters[iEntry];
 	entry.hEmitter = hEmitter;
 	entry.nControlId = command.nControlId;
 	entry.fValue = command.fValue;
 	entry.bDirty = 0;
 	sirAudioResult_t eResult = SIR_AUDIO_OK;
 	for ( uint32_t iVoice = 0; iVoice < m_nVoiceCapacity; ++iVoice ) {
-		const sirFMODVoiceSlot_t &slot = m_pVoices[iVoice];
+		const sirFMODVoiceSlot_t& slot = m_pVoices[iVoice];
 		if ( slot.pInstance == nullptr || slot.bStartFailed != 0 || slot.hEmitter.nSlot != hEmitter.nSlot ||
 		     slot.hEmitter.nGeneration != hEmitter.nGeneration || slot.hEmitter.nEpoch != hEmitter.nEpoch ) {
 			continue;
@@ -494,7 +494,7 @@ sirAudioResult_t SIRFMODVoiceBackend::updateEmitterParameter( const sirAudioComm
 	return eResult;
 }
 
-sirAudioResult_t SIRFMODVoiceBackend::submitOne( const sirAudioCommand_t &command ) noexcept
+sirAudioResult_t SIRFMODVoiceBackend::submitOne( const sirAudioCommand_t& command ) noexcept
 {
 	if ( command.eType == SIR_AUDIO_COMMAND_SET_BUS_VOLUME || command.eType == SIR_AUDIO_COMMAND_SET_BUS_MUTE ||
 	     command.eType == SIR_AUDIO_COMMAND_SET_VCA_VOLUME ) {
@@ -526,7 +526,7 @@ sirAudioResult_t SIRFMODVoiceBackend::submitOne( const sirAudioCommand_t &comman
 		if ( command.hEmitter.nSlot >= m_nEmitterCapacity || command.hEmitter.nGeneration == 0 || command.hEmitter.nEpoch == 0 ) {
 			return SIR_AUDIO_INVALID_HANDLE;
 		}
-		sirFMODEmitterSpatial_t &emitter = m_pEmitters[command.hEmitter.nSlot];
+		sirFMODEmitterSpatial_t& emitter = m_pEmitters[command.hEmitter.nSlot];
 		if ( emitter.bHasAttributes != 0 && emitter.hEmitter.nEpoch == command.hEmitter.nEpoch &&
 		     emitter.hEmitter.nGeneration == command.hEmitter.nGeneration ) {
 			emitter = {};
@@ -558,7 +558,7 @@ sirAudioResult_t SIRFMODVoiceBackend::submitOne( const sirAudioCommand_t &comman
 		if ( command.hPlaying.nSlot >= m_nVoiceCapacity || command.hPlaying.nGeneration == 0 || command.hPlaying.nEpoch == 0 ) {
 			return SIR_AUDIO_INVALID_HANDLE;
 		}
-		sirFMODVoiceSlot_t &slot = m_pVoices[command.hPlaying.nSlot];
+		sirFMODVoiceSlot_t& slot = m_pVoices[command.hPlaying.nSlot];
 		if ( slot.pInstance != nullptr ) {
 			return SIR_AUDIO_CAPACITY;
 		}
@@ -602,7 +602,7 @@ sirAudioResult_t SIRFMODVoiceBackend::submitOne( const sirAudioCommand_t &comman
 				}
 				return SIR_AUDIO_INVALID_HANDLE;
 			}
-			const sirFMODEmitterSpatial_t &emitter = m_pEmitters[command.hEmitter.nSlot];
+			const sirFMODEmitterSpatial_t& emitter = m_pEmitters[command.hEmitter.nSlot];
 			if ( emitter.bHasAttributes != 0 && emitter.hEmitter.nGeneration == command.hEmitter.nGeneration &&
 			     emitter.hEmitter.nEpoch == command.hEmitter.nEpoch ) {
 				m_nLastNativeResult = m_Ops.setInstanceSpatial( m_Ops.pUserData, pInstance, &emitter.attributes );
@@ -657,7 +657,7 @@ sirAudioResult_t SIRFMODVoiceBackend::submitOne( const sirAudioCommand_t &comman
 		if ( command.hPlaying.nSlot >= m_nVoiceCapacity ) {
 			return SIR_AUDIO_INVALID_HANDLE;
 		}
-		sirFMODVoiceSlot_t &slot = m_pVoices[command.hPlaying.nSlot];
+		sirFMODVoiceSlot_t& slot = m_pVoices[command.hPlaying.nSlot];
 		if ( slot.pInstance == nullptr || slot.bStartFailed != 0 || slot.hPlaying.nGeneration != command.hPlaying.nGeneration ||
 		     slot.hPlaying.nEpoch != command.hPlaying.nEpoch ) {
 			return SIR_AUDIO_INVALID_HANDLE;
@@ -744,7 +744,7 @@ uint32_t SIRFMODVoiceBackend::drainCallback( void *pContext, sirAudioCompletion_
 void SIRFMODVoiceBackend::pollVoices( void ) noexcept
 {
 	for ( uint32_t iVoice = 0; iVoice < m_nVoiceCapacity; ++iVoice ) {
-		sirFMODVoiceSlot_t &slot = m_pVoices[iVoice];
+		sirFMODVoiceSlot_t& slot = m_pVoices[iVoice];
 		if ( slot.pInstance == nullptr ) {
 			continue;
 		}
@@ -780,7 +780,7 @@ void SIRFMODVoiceBackend::pollVoices( void ) noexcept
 void SIRFMODVoiceBackend::retryEmitterParameters( void ) noexcept
 {
 	for ( uint32_t iParameter = 0; iParameter < m_nEmitterParameterCount; ++iParameter ) {
-		sirFMODEmitterParameter_t &entry = m_pEmitterParameters[iParameter];
+		sirFMODEmitterParameter_t& entry = m_pEmitterParameters[iParameter];
 		if ( entry.bDirty == 0 ) {
 			continue;
 		}
@@ -791,7 +791,7 @@ void SIRFMODVoiceBackend::retryEmitterParameters( void ) noexcept
 		}
 		entry.bDirty = 0;
 		for ( uint32_t iVoice = 0; iVoice < m_nVoiceCapacity; ++iVoice ) {
-			const sirFMODVoiceSlot_t &slot = m_pVoices[iVoice];
+			const sirFMODVoiceSlot_t& slot = m_pVoices[iVoice];
 			if ( slot.pInstance == nullptr || slot.bStartFailed != 0 || slot.hEmitter.nSlot != entry.hEmitter.nSlot ||
 			     slot.hEmitter.nGeneration != entry.hEmitter.nGeneration || slot.hEmitter.nEpoch != entry.hEmitter.nEpoch ) {
 				continue;
@@ -808,11 +808,11 @@ void SIRFMODVoiceBackend::retryEmitterParameters( void ) noexcept
 void SIRFMODVoiceBackend::retrySpatial( void ) noexcept
 {
 	for ( uint32_t iVoice = 0; iVoice < m_nVoiceCapacity; ++iVoice ) {
-		sirFMODVoiceSlot_t &slot = m_pVoices[iVoice];
+		sirFMODVoiceSlot_t& slot = m_pVoices[iVoice];
 		if ( slot.pInstance == nullptr || slot.bStartFailed != 0 || slot.bSpatialDirty == 0 || slot.hEmitter.nSlot >= m_nEmitterCapacity ) {
 			continue;
 		}
-		const sirFMODEmitterSpatial_t &emitter = m_pEmitters[slot.hEmitter.nSlot];
+		const sirFMODEmitterSpatial_t& emitter = m_pEmitters[slot.hEmitter.nSlot];
 		if ( emitter.bHasAttributes == 0 || emitter.hEmitter.nGeneration != slot.hEmitter.nGeneration ||
 		     emitter.hEmitter.nEpoch != slot.hEmitter.nEpoch ) {
 			continue;
@@ -884,13 +884,13 @@ sirAudioResult_t SIRFMODVoiceBackend::submitSpatialCallback( void *pContext, con
 	if ( pCommand->eType != SIR_AUDIO_COMMAND_SET_ATTRIBUTES || pCommand->hEmitter.nSlot >= pBackend->m_nEmitterCapacity ) {
 		return SIR_AUDIO_INVALID_HANDLE;
 	}
-	sirFMODEmitterSpatial_t &emitter = pBackend->m_pEmitters[pCommand->hEmitter.nSlot];
+	sirFMODEmitterSpatial_t& emitter = pBackend->m_pEmitters[pCommand->hEmitter.nSlot];
 	emitter.hEmitter = pCommand->hEmitter;
 	emitter.attributes = *pAttributes;
 	emitter.bHasAttributes = 1;
 	sirAudioResult_t eResult = SIR_AUDIO_OK;
 	for ( uint32_t iVoice = 0; iVoice < pBackend->m_nVoiceCapacity; ++iVoice ) {
-		sirFMODVoiceSlot_t &slot = pBackend->m_pVoices[iVoice];
+		sirFMODVoiceSlot_t& slot = pBackend->m_pVoices[iVoice];
 		if ( slot.pInstance == nullptr || slot.bStartFailed != 0 || slot.hEmitter.nSlot != pCommand->hEmitter.nSlot ||
 		     slot.hEmitter.nGeneration != pCommand->hEmitter.nGeneration || slot.hEmitter.nEpoch != pCommand->hEmitter.nEpoch ) {
 			continue;
@@ -930,7 +930,7 @@ uint32_t SIRFMODVoiceBackend::getActiveVoiceCount( void ) const noexcept
 	return nCount;
 }
 
-sirAudioResult_t SIRFMODVoiceBackend::getPlayingTimeline( sirAudioPlayingHandle_t hPlaying, uint32_t &nMilliseconds ) noexcept
+sirAudioResult_t SIRFMODVoiceBackend::getPlayingTimeline( sirAudioPlayingHandle_t hPlaying, uint32_t& nMilliseconds ) noexcept
 {
 	nMilliseconds = 0;
 	if ( !m_bInitialized || m_pContext == nullptr || !m_pContext->isReady() || m_pContext->getEpoch() != m_nContextEpoch ) {
@@ -939,7 +939,7 @@ sirAudioResult_t SIRFMODVoiceBackend::getPlayingTimeline( sirAudioPlayingHandle_
 	if ( hPlaying.nSlot >= m_nVoiceCapacity || m_Ops.getInstanceTimeline == nullptr ) {
 		return SIR_AUDIO_INVALID_HANDLE;
 	}
-	const sirFMODVoiceSlot_t &slot = m_pVoices[hPlaying.nSlot];
+	const sirFMODVoiceSlot_t& slot = m_pVoices[hPlaying.nSlot];
 	if ( slot.pInstance == nullptr || slot.bStartFailed != 0 || slot.hPlaying.nEpoch != hPlaying.nEpoch ||
 	     slot.hPlaying.nGeneration != hPlaying.nGeneration ) {
 		return SIR_AUDIO_INVALID_HANDLE;

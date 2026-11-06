@@ -40,7 +40,7 @@ static sirEditorFileSaveResult_t sirEditorMapFileResult( sirPlatformAtomicResult
 	}
 }
 
-sirEditorFileSaveResult_t sirEditorWriteFileAtomically( const sirEditorFileWriteRequest_t &request ) noexcept
+sirEditorFileSaveResult_t sirEditorWriteFileAtomically( const sirEditorFileWriteRequest_t& request ) noexcept
 {
 	static constexpr size_t MAX_EDITOR_SAVE_BYTES = 32ULL * 1024ULL * 1024ULL;
 	if ( request.nBytes > MAX_EDITOR_SAVE_BYTES || request.nExpectedBytes > MAX_EDITOR_SAVE_BYTES ) {
@@ -56,12 +56,12 @@ sirEditorFileSaveResult_t sirEditorWriteFileAtomically( const sirEditorFileWrite
 	return sirEditorMapFileResult( SIRPlatformFileSystem::writeAtomically( platform ) );
 }
 
-sirEditorFileSaveResult_t sirEditorSaveBoundScene( const sirEditorSceneSaveRequest_t &request ) noexcept
+sirEditorFileSaveResult_t sirEditorSaveBoundScene( const sirEditorSceneSaveRequest_t& request ) noexcept
 {
 	if ( request.pBridge == nullptr || request.pSourceScene == nullptr || request.pszScratch == nullptr || request.nScratchCapacity == 0 ) {
 		return SIR_EDITOR_FILE_SAVE_INVALID_ARGUMENT;
 	}
-	const sirEditorTextSceneIndex_t &source = *request.pSourceScene;
+	const sirEditorTextSceneIndex_t& source = *request.pSourceScene;
 	if ( request.pBridge->pDocument == nullptr || source.storage.pNodes == nullptr || source.nNodeCount == 0 ||
 	     source.nNodeCount > source.storage.nNodeCapacity ) {
 		return SIR_EDITOR_FILE_SAVE_INVALID_ARGUMENT;
@@ -76,7 +76,7 @@ sirEditorFileSaveResult_t sirEditorSaveBoundScene( const sirEditorSceneSaveReque
 		return SIR_EDITOR_FILE_SAVE_UNSUPPORTED_EDIT;
 	}
 	for ( uint32_t iNode = 0; iNode < source.nNodeCount; ++iNode ) {
-		const sirEditorNode_t &original = source.storage.pNodes[iNode].node;
+		const sirEditorNode_t& original = source.storage.pNodes[iNode].node;
 		sirEditorNode_t current = {};
 		if ( request.pBridge->pDocument->findNode( original.nId, &current ) != SIR_EDITOR_OK || current.nId != original.nId ||
 		     current.nTypeId != original.nTypeId || current.nParentId != original.nParentId || current.nFlags != original.nFlags ||

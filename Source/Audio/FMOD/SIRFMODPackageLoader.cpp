@@ -7,6 +7,8 @@ This Source Code Form is subject to the terms of the Mozilla Public
 License, v2. If a copy of the MPL was not distributed with this
 file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+
+
 This software is provided "as is", without warranty of any kind,
 express or implied, including but not limited to the warranties
 of merchantability, fitness for a particular purpose and noninfringement.
@@ -26,7 +28,7 @@ SIRFMODPackageLoader::~SIRFMODPackageLoader( void ) noexcept
 	}
 }
 
-bool SIRFMODPackageLoader::findIndex( uint64_t nPackageId, uint32_t &iPackage ) const noexcept
+bool SIRFMODPackageLoader::findIndex( uint64_t nPackageId, uint32_t& iPackage ) const noexcept
 {
 	uint32_t iFirst = 0;
 	uint32_t iEnd = m_nPackageCount;
@@ -42,7 +44,7 @@ bool SIRFMODPackageLoader::findIndex( uint64_t nPackageId, uint32_t &iPackage ) 
 	return iFirst < m_nPackageCount && m_pEntries[iFirst].nPackageId == nPackageId;
 }
 
-sirAudioResult_t SIRFMODPackageLoader::buildPlan( uint32_t iRoot, uint32_t &nPlanCount ) noexcept
+sirAudioResult_t SIRFMODPackageLoader::buildPlan( uint32_t iRoot, uint32_t& nPlanCount ) noexcept
 {
 	nPlanCount = 0;
 	for ( uint32_t iPackage = 0; iPackage < m_nPackageCount; ++iPackage ) {
@@ -53,7 +55,7 @@ sirAudioResult_t SIRFMODPackageLoader::buildPlan( uint32_t iRoot, uint32_t &nPla
 	uint32_t nDepth = 1;
 
 	while ( nDepth != 0 ) {
-		sirFMODPackageFrame_t &frame = m_pFrames[nDepth - 1];
+		sirFMODPackageFrame_t& frame = m_pFrames[nDepth - 1];
 		sirAudioPackageRecord_t package = {};
 		if ( !m_pManifest->getPackageAt( frame.iPackage, package ) ) {
 			return SIR_AUDIO_INVALID_HANDLE;
@@ -241,7 +243,7 @@ sirAudioResult_t SIRFMODPackageLoader::beginLoadPackage( uint64_t nPackageId, bo
 		return SIR_AUDIO_CAPACITY;
 	}
 	for ( uint32_t iOrder = 0; iOrder < nPlanCount; ++iOrder ) {
-		const sirFMODPackageEntry_t &entry = m_pEntries[m_pPlan[iOrder]];
+		const sirFMODPackageEntry_t& entry = m_pEntries[m_pPlan[iOrder]];
 		if ( entry.eState == 2 || entry.eState == 3 ) {
 			return SIR_AUDIO_BUSY;
 		}
@@ -272,7 +274,7 @@ sirAudioResult_t SIRFMODPackageLoader::pollLoadPackage( void ) noexcept
 	}
 	if ( m_nAsyncStep < m_nAsyncPlanCount ) {
 		const uint32_t iPackage = m_pPlan[m_nAsyncStep];
-		sirFMODPackageEntry_t &entry = m_pEntries[iPackage];
+		sirFMODPackageEntry_t& entry = m_pEntries[iPackage];
 		sirAudioResult_t eResult = SIR_AUDIO_OK;
 		if ( entry.eState == 0 ) {
 			sirAudioPackageRecord_t package = {};
@@ -378,7 +380,7 @@ sirAudioResult_t SIRFMODPackageLoader::loadPackage( uint64_t nPackageId, bool bP
 		return SIR_AUDIO_CAPACITY;
 	}
 	for ( uint32_t iOrder = 0; iOrder < nPlanCount; ++iOrder ) {
-		const sirFMODPackageEntry_t &entry = m_pEntries[m_pPlan[iOrder]];
+		const sirFMODPackageEntry_t& entry = m_pEntries[m_pPlan[iOrder]];
 		if ( entry.eState == 2 ) {
 			return SIR_AUDIO_BUSY;
 		}
@@ -391,7 +393,7 @@ sirAudioResult_t SIRFMODPackageLoader::loadPackage( uint64_t nPackageId, bool bP
 	uint64_t nFailedPackageId = 0;
 	for ( uint32_t iOrder = 0; iOrder < nPlanCount; ++iOrder ) {
 		const uint32_t iPackage = m_pPlan[iOrder];
-		sirFMODPackageEntry_t &entry = m_pEntries[iPackage];
+		sirFMODPackageEntry_t& entry = m_pEntries[iPackage];
 		nFailedPackageId = entry.nPackageId;
 		if ( entry.eState == 0 ) {
 			sirAudioPackageRecord_t package = {};
@@ -437,7 +439,7 @@ sirAudioResult_t SIRFMODPackageLoader::loadPackage( uint64_t nPackageId, bool bP
 	return eRollback == SIR_AUDIO_OK ? eResult : eRollback;
 }
 
-bool SIRFMODPackageLoader::getPackageReferences( uint64_t nPackageId, uint32_t &nReferences, uint32_t &nRootReferences ) const noexcept
+bool SIRFMODPackageLoader::getPackageReferences( uint64_t nPackageId, uint32_t& nReferences, uint32_t& nRootReferences ) const noexcept
 {
 	uint32_t iPackage = 0;
 	if ( m_pEntries == nullptr || !findIndex( nPackageId, iPackage ) ) {
@@ -462,7 +464,7 @@ sirAudioResult_t SIRFMODPackageLoader::collectUnused( void ) noexcept
 	for ( uint32_t iOrder = m_nLoadedCount; iOrder != 0; ) {
 		--iOrder;
 		const uint32_t iPackage = m_pLoadOrder[iOrder];
-		sirFMODPackageEntry_t &entry = m_pEntries[iPackage];
+		sirFMODPackageEntry_t& entry = m_pEntries[iPackage];
 		if ( entry.nReferences != 0 ) {
 			continue;
 		}
