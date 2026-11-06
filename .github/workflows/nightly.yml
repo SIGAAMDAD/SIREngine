@@ -7,6 +7,7 @@ permissions:
   contents: read
 concurrency:
   group: sir-nightly
+  queue: max
   cancel-in-progress: false
 jobs:
   source-audit:
@@ -19,11 +20,13 @@ jobs:
           persist-credentials: false
       - name: Install pinned clang-format 23.1.5
         run: python3 -m pip install --disable-pip-version-check clang-format==23.1.5
-      - name: Validate tracked-source policy
+      - name: Validate tracked-source policy and acceptance tests
         run: |
           cmake -P Build/CMake/CIHygiene.cmake
           cmake -P Build/CMake/CIStyle.cmake
           cmake -DSIR_FORMAT_FULL=ON -P Build/CMake/CIFormat.cmake
+          python3 -m unittest discover -s Tests/CI -p 'Test*.py'
+          python3 Tests/Profiling/TestRunLLVM23Qualification.py
   native:
     name: Nightly native (${{ matrix.os }} / ${{ matrix.preset }})
     runs-on: ${{ matrix.os }}
@@ -53,15 +56,17 @@ jobs:
       - name: Verify deterministic no-op rebuild
         if: matrix.preset == 'release'
         run: cmake --build --preset release
-      - name: Repeat designated regressions on existing native build
+      - name: Repeat and account for nightly regressions
         if: matrix.preset == 'asan' || matrix.os == 'windows-2022'
         shell: bash
         env:
           ASAN_OPTIONS: detect_leaks=1:halt_on_error=1
           UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
-        run: >
-          ctest --preset "${{ matrix.preset }}" -L '^nightly:repeat$'
-          --output-on-failure --no-tests=error --repeat until-fail:5
+        run: |
+          set -euo pipefail
+          python_cmd=python3
+          if [[ "$RUNNER_OS" == Windows ]]; then python_cmd=python; fi
+          "$python_cmd" Build/CI/RunCTestGate.py --preset "${{ matrix.preset }}" --label '^nightly:repeat$' --repeat 5 --report "out/Nightly/tests/repeat-${{ matrix.os }}-${{ matrix.preset }}.xml"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -70,7 +75,7 @@ jobs:
           if-no-files-found: warn
           retention-days: 21
   performance:
-    name: Nightly benchmark evidence
+    name: Nightly benchmark evidence (diagnostic)
     runs-on: ubuntu-24.04
     timeout-minutes: 75
     steps:

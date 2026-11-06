@@ -57,9 +57,10 @@ if (( config_exit == 0 )); then
     fi
 fi
 if (( build_exit == 0 )); then
-    timed_step test ctest --preset "$preset" \
-        --output-on-failure --no-tests=error \
-        --output-junit "$report/tests/$label.xml"
+    python_cmd=python3
+    if [[ "${RUNNER_OS:-}" == Windows ]]; then python_cmd=python; fi
+    timed_step test "$python_cmd" Build/CI/RunCTestGate.py --preset "$preset" \
+        --report "$report/tests/$label.xml"
 fi
 if [[ "$preset" == "release" ]] && (( test_exit == 0 )); then
     timed_step package cmake --build --preset release --target package

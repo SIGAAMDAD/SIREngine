@@ -38,6 +38,39 @@ class QualificationGateTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "regions=0/0"):
             qualification.verify_production_coverage({self.path}, [self.fully_covered])
 
+    def test_uncovered_inline_header_fails(self):
+        header = str(Path("/tmp/sir-inline.hpp").resolve())
+        bad = {"filename": header, "summary": {
+            metric: {"count": 1, "covered": 1} for metric in
+            ("lines", "branches", "functions", "regions")}}
+        bad["summary"]["lines"]["covered"] = 0
+        with self.assertRaisesRegex(RuntimeError, "lines=10/11"):
+            qualification.verify_production_coverage(
+                {self.path}, [self.fully_covered, bad], Path("/tmp"))
+
+    def test_production_header_counted_when_complete(self):
+        header = str(Path("/tmp/sir-inline.hpp").resolve())
+        extra = {"filename": header, "summary": {
+            metric: {"count": 1, "covered": 1} for metric in
+            ("lines", "branches", "functions", "regions")}}
+        totals = qualification.verify_production_coverage(
+            {self.path}, [self.fully_covered, extra], Path("/tmp"))
+        self.assertEqual(totals["lines"], (11, 11))
+
+    def test_vendor_header_is_excluded_from_production(self):
+        vendor = str(Path("/opt/vendor/external.hpp").resolve())
+        extra = {"filename": vendor, "summary": {
+            metric: {"count": 1, "covered": 0} for metric in
+            ("lines", "branches", "functions", "regions")}}
+        totals = qualification.verify_production_coverage(
+            {self.path}, [self.fully_covered, extra], Path("/tmp"))
+        self.assertEqual(totals["lines"], (10, 10))
+
+    def test_duplicate_production_mapping_fails(self):
+        with self.assertRaisesRegex(RuntimeError, "Duplicated production"):
+            qualification.verify_production_coverage(
+                {self.path}, [self.fully_covered, self.fully_covered], Path("/tmp"))
+
     def test_missing_counter_fails(self):
         del self.fully_covered["summary"]["functions"]
         with self.assertRaisesRegex(RuntimeError, "Malformed LLVM functions"):

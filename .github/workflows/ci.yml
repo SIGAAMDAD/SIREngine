@@ -19,7 +19,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: sir-ci-${{ github.event.pull_request.number || github.ref }}
+  group: sir-ci-${{ github.event_name == 'workflow_dispatch' && inputs.candidate_sha || github.event_name == 'push' && github.sha || github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -75,6 +75,10 @@ jobs:
           else
             cmake -P Build/CMake/CIFormat.cmake
           fi
+      - name: Verify CI and LLVM gate negative cases
+        run: |
+          python3 -m unittest discover -s Tests/CI -p 'Test*.py'
+          python3 Tests/Profiling/TestRunLLVM23Qualification.py
 
   native:
     name: sir/native / ${{ matrix.os }} / ${{ matrix.compiler }}
@@ -127,17 +131,27 @@ jobs:
           cmake --preset "${{ matrix.preset }}" -DSIR_WITH_GOOGLETEST=ON
       - name: Compile engine and tests
         run: cmake --build --preset "${{ matrix.preset }}"
-      - name: Run selected native tests once
+      - name: Run and account for every selected native test
         shell: bash
         run: |
+          set -euo pipefail
           label='^gate:pr$'
           if [[ "${{ github.event_name }}" != pull_request ]]; then label='^gate:main$'; fi
-          ctest --preset "${{ matrix.preset }}" --output-on-failure --no-tests=error -L "$label"
+          python_cmd=python3
+          if [[ "$RUNNER_OS" == Windows ]]; then python_cmd=python; fi
+          "$python_cmd" Build/CI/RunCTestGate.py --preset "${{ matrix.preset }}" --label "$label" --report "out/Verification/CI/${{ matrix.compiler }}-ctest.xml"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sir-native-${{ matrix.os }}-${{ matrix.compiler }}-${{ github.run_id }}
+          path: out/Verification/CI/
+          if-no-files-found: warn
+          retention-days: 21
 
   required:
     name: sir/required
     runs-on: ubuntu-24.04
-    if: always()
+    if: always() && github.event_name != 'workflow_dispatch'
     needs: [source, native]
     steps:
       - name: Reject missing or skipped mandatory jobs
@@ -150,3 +164,22 @@ jobs:
           test "$DRAFT" != true
           test "$NATIVE" = success
           echo "CI checkout SHA: ${{ inputs.candidate_sha || github.sha }}" >> "$GITHUB_STEP_SUMMARY"
+
+  integration-candidate:
+    name: sir/integration-candidate
+    if: always() && github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    needs: [source, native]
+    steps:
+      - name: Verify exact-source candidate accepted
+        env:
+          SOURCE_RESULT: ${{ needs.source.result }}
+          NATIVE_RESULT: ${{ needs.native.result }}
+          CANDIDATE_SHA: ${{ inputs.candidate_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$CANDIDATE_SHA" =~ ^[a-f0-9]{40}$ ]]
+          test "$SOURCE_RESULT" = success
+          test "$NATIVE_RESULT" = success
+          printf 'Qualified integration candidate: %s\n' "$CANDIDATE_SHA" >> "$GITHUB_STEP_SUMMARY"
