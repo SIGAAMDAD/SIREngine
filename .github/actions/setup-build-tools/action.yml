@@ -10,9 +10,26 @@ inputs:
 runs:
   using: composite
   steps:
-    - uses: jwlawson/actions-setup-cmake@v2
-      with:
-        cmake-version: ${{ inputs.cmake-version }}
+    - name: Install checksum-verified CMake 4.4.5
+      shell: bash
+      run: |
+        set -euo pipefail
+        root="${RUNNER_TEMP}/sir-cmake"
+        mkdir -p "$root"
+        case "$RUNNER_OS" in
+          Linux) file=cmake-4.4.5-linux-x86_64.tar.gz; digest=ed85135c5a5135b45e50423cb406dea04ca3338da0b8ef3c9ede963559680be0 ;;
+          Windows) file=cmake-4.4.5-windows-x86_64.zip; digest=326c826486d46a23cf9d5a1c9ee3a567d427bdd02c4a34071937a2a675cff004 ;;
+          *) echo "Unsupported host $RUNNER_OS" >&2; exit 1 ;;
+        esac
+        curl -fsSL --retry 3 "https://cmake.org/files/v4.4/$file" -o "$root/$file"
+        printf '%s  %s\n' "$digest" "$root/$file" | sha256sum -c -
+        if [[ "$RUNNER_OS" == Linux ]]; then
+          tar -xzf "$root/$file" -C "$root"
+          echo "$root/cmake-4.4.5-linux-x86_64/bin" >> "$GITHUB_PATH"
+        else
+          unzip -q "$root/$file" -d "$root"
+          echo "$root/cmake-4.4.5-windows-x86_64/bin" >> "$GITHUB_PATH"
+        fi
     - name: Install FASTBuild
       shell: bash
       env:
