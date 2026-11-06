@@ -7,6 +7,12 @@ if(SIR_WITH_GOOGLETEST)
     gtest_discover_tests(SIREventGoogleTests TEST_PREFIX "core.events." DISCOVERY_TIMEOUT 45)
 endif()
 
+# Standalone registration, capacity, invalid-handle and lifecycle coverage.
+add_executable(SIREventRegistryStandaloneTests SIREventRegistryStandaloneTests.cpp)
+target_link_libraries(SIREventRegistryStandaloneTests PRIVATE SIR::Core)
+add_test(NAME core.events.registry-standalone COMMAND SIREventRegistryStandaloneTests)
+sir_configure_owned_target(SIREventRegistryStandaloneTests)
+
 # Independent allocation smoke without the GoogleTest runtime. Counts C++
 # operator new/new[] after initialization across core event hot paths.
 add_executable(SIREventNoAllocationTests SIREventNoAllocationTests.cpp)
