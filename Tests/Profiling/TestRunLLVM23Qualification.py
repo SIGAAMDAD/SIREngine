@@ -221,5 +221,27 @@ class QualificationGateTests(unittest.TestCase):
                 qualification.compiled_production_objects(
                     [entry], root, build, root / "Source/Core")
 
+
+    def test_combined_scope_requires_both_distinct_production_object_sets(self):
+        from tempfile import TemporaryDirectory
+        with TemporaryDirectory() as temp:
+            root = Path(temp)
+            build = root / "out/llvm"
+            build.mkdir(parents=True)
+            names = ["Source/Core/SIRCore.cpp", "Source/Resources/SIRResourceGraph.cpp",
+                     "Source/Audio/SIRAudio.cpp"]
+            commands = []
+            for i, name in enumerate(names):
+                obj = build / f"candidate{i}.o"
+                obj.write_bytes(b"source object")
+                commands.append({"directory": str(build), "file": f"../../{name}",
+                                 "output": obj.name})
+            core = qualification.compiled_production_objects(
+                commands, root, build, root / "Source/Core")
+            resources = qualification.compiled_production_objects(
+                commands, root, build, root / "Source/Resources")
+            self.assertEqual([obj.name for obj in core + resources],
+                             ["candidate0.o", "candidate1.o"])
+
 if __name__ == "__main__":
     unittest.main()
