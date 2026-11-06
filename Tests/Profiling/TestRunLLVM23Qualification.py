@@ -255,6 +255,10 @@ class QualificationGateTests(unittest.TestCase):
                 metric: {"covered": 6, "count": 10}
                 for metric in ("lines", "branches", "functions", "regions")}}
                 for path in paths]
+            # Keep Core and Resources above threshold to isolate Memory's failure.
+            for item in (mapped[0], mapped[2]):
+                for metric in ("lines", "branches", "functions", "regions"):
+                    item["summary"][metric]["covered"] = 10
             diagnostic = qualification.diagnostic_group_totals(mapped, commands, root)
             self.assertEqual(set(diagnostic), {"Core", "Memory", "Resources"})
             self.assertEqual(diagnostic["Memory"]["status"], "DIAGNOSTIC_ONLY")
