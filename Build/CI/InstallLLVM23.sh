@@ -70,7 +70,7 @@ fi
 if ! command -v ninja >/dev/null 2>&1; then
     sudo apt-get install -y ninja-build
 fi
-tar --use-compress-program=zstd -xf "$archive" -C "$root/unpack"
+tar --use-compress-program='zstd --long=30' -xf "$archive" -C "$root/unpack"
 bin="$(find "$root/unpack" -path '*/bin/clang++' -print -quit)"
 test -n "$bin"
 bin="$(dirname "$bin")"

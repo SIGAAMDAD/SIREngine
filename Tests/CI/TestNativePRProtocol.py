@@ -33,5 +33,12 @@ class NativePRProtocolTests(unittest.TestCase):
         self.assertEqual(presets["pr-smoke"]["filter"]["include"]["label"], "^gate:pr$")
 
 
+    def test_llvm_official_archive_large_decoder_window(self):
+        installer = (ROOT / "Build/CI/InstallLLVM23.sh").read_text()
+        # LLVM 23.1.5 official tarball declares a 1 GiB Zstandard window.
+        self.assertIn("tar --use-compress-program='zstd --long=30' -xf", installer)
+        self.assertNotIn("tar --use-compress-program=zstd -xf", installer)
+
+
 if __name__ == "__main__":
     unittest.main()
