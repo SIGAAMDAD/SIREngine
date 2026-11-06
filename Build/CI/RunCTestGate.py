@@ -36,6 +36,12 @@ def verify_results(expected_names, report_path, exit_code):
     return len(actual)
 
 
+def report_for_iteration(report, iteration, repeat):
+    if repeat == 1:
+        return report
+    return report.with_name(f"{report.stem}.round-{iteration:02d}{report.suffix}")
+
+
 def run_gate(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     selector = parser.add_mutually_exclusive_group(required=True)
@@ -66,16 +72,20 @@ def run_gate(argv=None):
     if not expected:
         raise RuntimeError("CTest selection matched zero required tests")
     args.report.parent.mkdir(parents=True, exist_ok=True)
-    args.report.unlink(missing_ok=True)
-    command = base + ["--output-on-failure", "--no-tests=error", "--output-junit",
-                      str(args.report)]
-    if args.repeat > 1:
-        command += ["--repeat", f"until-fail:{args.repeat}"]
-    execution = subprocess.run(command, check=False)
-    if not args.report.is_file():
-        raise RuntimeError("CTest did not produce the required JUnit report")
-    count = verify_results(expected, args.report, execution.returncode)
-    print(f"CTest evidence PASS: {count} executed, zero failed or skipped")
+    for iteration in range(1, args.repeat + 1):
+        report = report_for_iteration(args.report, iteration, args.repeat)
+        report.unlink(missing_ok=True)
+        command = base + ["--output-on-failure", "--no-tests=error", "--output-junit",
+                          str(report)]
+        execution = subprocess.run(command, check=False)
+        if not report.is_file():
+            raise RuntimeError(f"CTest did not produce JUnit for round {iteration}")
+        try:
+            verify_results(expected, report, execution.returncode)
+        except (RuntimeError, ET.ParseError) as exc:
+            raise RuntimeError(f"CTest round {iteration}/{args.repeat}: {exc}") from exc
+    print(f"CTest evidence PASS: {len(expected)} tests x {args.repeat} rounds = "
+          f"{len(expected) * args.repeat} verified executions; zero failed or skipped")
     return 0
 
 
