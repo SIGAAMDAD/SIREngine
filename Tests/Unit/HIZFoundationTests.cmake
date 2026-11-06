@@ -9,7 +9,8 @@ if(SIR_WITH_GOOGLETEST)
     include(GoogleTest)
     add_executable(SIRVisibilityFoundationGoogleTests SIRVisibilityFoundationGoogleTests.cpp)
     target_link_libraries(SIRVisibilityFoundationGoogleTests PRIVATE SIR::Graphics gtest_main)
-    gtest_discover_tests(SIRVisibilityFoundationGoogleTests TEST_PREFIX "renderer.visibility.gtest.")
+    gtest_discover_tests(SIRVisibilityFoundationGoogleTests TEST_PREFIX "renderer.visibility.gtest."
+        PROPERTIES LABELS "subsystem:renderer;kind:unit;gate:pr;gate:develop;gate:nightly;gate:qualification")
     sir_configure_owned_target(SIRVisibilityFoundationGoogleTests)
 endif()
 
