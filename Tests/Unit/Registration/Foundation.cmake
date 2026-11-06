@@ -67,6 +67,12 @@ target_link_libraries(SIRMemoryLayoutCoverageTests PRIVATE SIR::Core)
 add_test(NAME core.memory.layout-preflight-negative COMMAND SIRMemoryLayoutCoverageTests)
 sir_configure_owned_target(SIRMemoryLayoutCoverageTests)
 
+# Real owner-managed pool pressure, pending reclamation and rollback boundaries.
+add_executable(SIRMemoryPressureBoundaryTests SIRMemoryPressureBoundaryTests.cpp)
+target_link_libraries(SIRMemoryPressureBoundaryTests PRIVATE SIR::Core)
+add_test(NAME core.memory.pressure-boundaries COMMAND SIRMemoryPressureBoundaryTests)
+sir_configure_owned_target(SIRMemoryPressureBoundaryTests)
+
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     add_executable(SIRMemoryManagerFaultInjectionTests SIRMemoryManagerFaultInjectionTests.cpp)
     target_link_libraries(SIRMemoryManagerFaultInjectionTests PRIVATE SIR::Core)
