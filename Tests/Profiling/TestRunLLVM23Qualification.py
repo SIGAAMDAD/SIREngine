@@ -49,6 +49,24 @@ class QualificationGateTests(unittest.TestCase):
         totals = qualification.verify_production_coverage({self.path}, [self.fully_covered])
         self.assertEqual(totals["lines"], (10, 10))
 
+    def test_ninety_percent_passes_and_eighty_nine_percent_fails(self):
+        names = ("lines", "branches", "functions", "regions")
+        for name in names:
+            self.fully_covered["summary"][name]["covered"] = 9
+        totals = qualification.verify_production_coverage({self.path}, [self.fully_covered])
+        self.assertEqual(totals["lines"], (9, 10))
+        for name in names:
+            with self.subTest(metric=name):
+                self.fully_covered["summary"][name] = {"count": 100, "covered": 89}
+                with self.assertRaisesRegex(RuntimeError, f"{name}=89/100"):
+                    qualification.verify_production_coverage({self.path}, [self.fully_covered])
+                self.fully_covered["summary"][name] = {"count": 10, "covered": 9}
+
+    def test_fraction_below_ninety_fails_without_rounding(self):
+        self.fully_covered["summary"]["regions"] = {"count": 101, "covered": 90}
+        with self.assertRaisesRegex(RuntimeError, "regions=90/101"):
+            qualification.verify_production_coverage({self.path}, [self.fully_covered])
+
     def test_missing_compiled_source_fails(self):
         with self.assertRaisesRegex(RuntimeError, "Missing compiled"):
             qualification.verify_production_coverage({self.path, "/tmp/other.cpp"}, [self.fully_covered])
@@ -58,8 +76,8 @@ class QualificationGateTests(unittest.TestCase):
             qualification.verify_production_coverage(set(), [self.fully_covered])
 
     def test_uncovered_branch_fails(self):
-        self.fully_covered["summary"]["branches"]["covered"] = 9
-        with self.assertRaisesRegex(RuntimeError, "branches=9/10"):
+        self.fully_covered["summary"]["branches"]["covered"] = 8
+        with self.assertRaisesRegex(RuntimeError, "branches=8/10"):
             qualification.verify_production_coverage({self.path}, [self.fully_covered])
 
     def test_zero_coverage_denominator_fails(self):
@@ -72,8 +90,9 @@ class QualificationGateTests(unittest.TestCase):
         bad = {"filename": header, "summary": {
             metric: {"count": 1, "covered": 1} for metric in
             ("lines", "branches", "functions", "regions")}}
+        bad["summary"]["lines"]["count"] = 2
         bad["summary"]["lines"]["covered"] = 0
-        with self.assertRaisesRegex(RuntimeError, "lines=10/11"):
+        with self.assertRaisesRegex(RuntimeError, "lines=10/12"):
             qualification.verify_production_coverage(
                 {self.path}, [self.fully_covered, bad], Path("/tmp"))
 
