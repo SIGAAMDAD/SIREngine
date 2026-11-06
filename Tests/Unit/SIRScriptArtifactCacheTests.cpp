@@ -46,6 +46,10 @@ static bool sameDigest( const uint8_t *pData, const uint8_t *pHexText ) noexcept
 static bool testHashVectors( void )
 {
 	uint8_t szDigest[32] = {};
+	memset( szDigest, 0xA5, sizeof( szDigest ) );
+	SIRScriptSHA256::digest( nullptr, 1, szDigest );
+	SIR_TEST_CHECK( szDigest[0] == 0xA5 && szDigest[31] == 0xA5 );
+	SIRScriptSHA256::digest( "abc", 3, nullptr );
 	SIRScriptSHA256::digest( nullptr, 0, szDigest );
 	SIR_TEST_CHECK( sameDigest( szDigest, ( const uint8_t * )"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" ) );
 	SIRScriptSHA256::digest( "abc", 3, szDigest );
