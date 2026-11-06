@@ -34,6 +34,8 @@ if(SIR_BUILD_TESTS)
     add_subdirectory(Tests/Dependencies)
     include(Build/CMake/SIRTestRegistration.cmake)
     sir_classify_tests("${PROJECT_SOURCE_DIR}/Tests/Unit")
+    include(Build/CMake/SIRQualificationScopes.cmake)
+    sir_verify_qualification_contracts("${PROJECT_SOURCE_DIR}/Tests/Unit")
 endif()
 
 if(SIR_BUILD_BENCHMARKS)
