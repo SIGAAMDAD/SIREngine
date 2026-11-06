@@ -185,6 +185,7 @@ sirEditorTextPropertyResult_t sirEditorScanNodeTextProperties( const char *pszSo
 			if ( eResult != SIR_EDITOR_PROPERTY_OK ) {
 				break;
 			}
+			const char *pConsumedEnd = pValueEnd;
 			while ( pValueEnd > pValue && ( pValueEnd[-1] == ' ' || pValueEnd[-1] == '\t' || pValueEnd[-1] == '\r' ) ) {
 				--pValueEnd;
 			}
@@ -206,7 +207,7 @@ sirEditorTextPropertyResult_t sirEditorScanNodeTextProperties( const char *pszSo
 				property.nValueLength = ( uint32_t )( pValueEnd - pValue );
 			}
 			++nProperties;
-			pCursor = pValueEnd;
+			pCursor = pConsumedEnd;
 			if ( pCursor < pEnd && *pCursor == '\n' ) {
 				++pCursor;
 			}

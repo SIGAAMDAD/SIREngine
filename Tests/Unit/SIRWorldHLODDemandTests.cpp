@@ -84,6 +84,9 @@ int main( void )
 	szNext[1].nNodeIndex = 1;
 	SIR_DEMAND_CHECK( sirWorldHLODReconcileDemands( input, output ) == SIR_WORLD_HLOD_INVALID_ARGUMENT );
 	szNext[1].nNodeIndex = 2;
+	input.pCurrent = nullptr;
+	SIR_DEMAND_CHECK( sirWorldHLODReconcileDemands( input, output ) == SIR_WORLD_HLOD_INVALID_ARGUMENT );
+	input.pCurrent = szNext;
 	SIR_DEMAND_CHECK( nCount == 77 && szOperations[0].demand.nNodeIndex == 123 );
 
 	// Empty current batch cancels all pending requests, never the loaded resources.

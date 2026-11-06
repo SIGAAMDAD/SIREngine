@@ -210,7 +210,7 @@ static void testRealSourceThroughRuntime( void )
 	assert( source.unregisterArtifact( entry ) == SIR_SCRIPT_OK );
 	assert( source.shutdown() == SIR_SCRIPT_OK );
 	assert( cache.erase( key ) == SIR_SCRIPT_OK );
-	assert( std::filesystem::remove( root ) );
+	assert( std::filesystem::remove_all( root ) > 0 );
 }
 
 int main( void )

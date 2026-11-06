@@ -42,16 +42,19 @@ if (NOT szPublishedHash STREQUAL szRetainedHash)
 endif()
 file(REMOVE "${OUTPUT}.tmp")
 
-# CMake executes the pipeline stages concurrently. Both cooks target the
-# same path; exactly one may publish, and the result must remain intact.
+# Run independent concurrent publishers. A CMake execute_process COMMAND
+# chain is a stdout pipeline and can induce SIGPIPE when one cooker exits.
 file(REMOVE "${OUTPUT}.race")
+find_program(SIR_PYTHON_EXECUTABLE NAMES python3 python REQUIRED)
 execute_process(
-    COMMAND "${COOKER}" "${INPUT}" "${OUTPUT}.race" 101 201 301 401 1 1
-    COMMAND "${COOKER}" "${INPUT}" "${OUTPUT}.race" 101 201 301 401 1 1
-    RESULTS_VARIABLE szRaceResults
+    COMMAND "${SIR_PYTHON_EXECUTABLE}" "${CMAKE_CURRENT_LIST_DIR}/SIRLangCookerRace.py"
+        "${COOKER}" "${INPUT}" "${OUTPUT}.race"
+    RESULT_VARIABLE eRace
+    OUTPUT_VARIABLE szRaceOutput
+    ERROR_VARIABLE szRaceErrors
 )
-if (NOT "${szRaceResults}" MATCHES "^(0;[1-9][0-9]*|[1-9][0-9]*;0)$")
-    message(FATAL_ERROR "Concurrent cooks did not produce exactly one winner: ${szRaceResults}")
+if (NOT eRace EQUAL 0)
+    message(FATAL_ERROR "Concurrent cook did not produce exactly one winner: ${eRace}\n${szRaceOutput}\n${szRaceErrors}")
 endif()
 execute_process(
     COMMAND ${CMAKE_COMMAND} -E compare_files "${OUTPUT}" "${OUTPUT}.race"

@@ -129,7 +129,18 @@ void SIRScriptOptimizerProcessTransport::stop( void ) noexcept
 	}
 	m_bStopping.store( true, std::memory_order_release );
 	m_CV.notify_all();
+	// Terminate the child before cancelling synchronous I/O. Otherwise an I/O
+	// thread may enter ReadFile after the cancellation and block indefinitely.
 	terminateChild();
+#if defined( _WIN32 )
+	// Interrupt any remaining Win32 pipe operations before joining threads.
+	if ( m_Writer.joinable() ) {
+		( void )CancelSynchronousIo( ( HANDLE )m_Writer.native_handle() );
+	}
+	if ( m_Reader.joinable() ) {
+		( void )CancelSynchronousIo( ( HANDLE )m_Reader.native_handle() );
+	}
+#endif
 	if ( m_Writer.joinable() ) {
 		m_Writer.join();
 	}
@@ -257,6 +268,9 @@ void SIRScriptOptimizerProcessTransport::readerMain( void ) noexcept
 {
 	uint8_t szFrame[SIRScriptOptimizationProtocol::REPLY_BYTES] = {};
 	for ( ;; ) {
+		if ( m_bStopping.load( std::memory_order_acquire ) ) {
+			return;
+		}
 		if ( !readFrame( szFrame, sizeof( szFrame ) ) ) {
 			failTransport();
 			return;

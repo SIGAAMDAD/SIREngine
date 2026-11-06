@@ -2,16 +2,19 @@ name: SIREngine CI
 
 on:
   push:
-    branches: [develop]
+    branches: [main]
   pull_request:
-    branches: [develop, main]
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
+  merge_group:
+    types: [checks_requested]
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: sir-ci-${{ github.workflow }}-${{ github.ref }}
+  group: sir-ci-${{ github.event_name == 'push' && github.sha || github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -20,9 +23,19 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
           persist-credentials: false
+      - name: Verify frozen integration candidate source
+        if: github.event_name == 'workflow_dispatch'
+        shell: bash
+        env:
+          CANDIDATE_SHA: ${{ github.sha }}
+        run: |
+          [[ "$CANDIDATE_SHA" =~ ^[a-f0-9]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$CANDIDATE_SHA"
       - name: Validate tracked paths and pins
         run: cmake -P Build/CMake/CIHygiene.cmake
       - name: Enforce owned C++ declarations and headers
@@ -47,11 +60,34 @@ jobs:
           chmod +x "${bindir}/clang-format"
           "${bindir}/clang-format" --version
           echo "${bindir}" >> "${GITHUB_PATH}"
-      - name: Check C++ formatting
-        run: cmake -P Build/CMake/CIFormat.cmake
+      - name: Check changed-file formatting
+        env:
+          SIR_BASE: ${{ github.event.pull_request.base.sha || github.event.before || github.event.merge_group.base_sha || '' }}
+        shell: bash
+        run: |
+          if [[ -n "$SIR_BASE" ]]; then
+            cmake -DSIR_FORMAT_BASE="$SIR_BASE" -P Build/CMake/CIFormat.cmake
+          else
+            cmake -P Build/CMake/CIFormat.cmake
+          fi
+      - name: Lint every workflow with pinned actionlint
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/actionlint-1.7.12.tar.gz"
+          curl -fsSL --retry 3 https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz -o "$archive"
+          printf '%s  %s\n' 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8 "$archive" | sha256sum -c -
+          tar -xzf "$archive" -C "$RUNNER_TEMP" actionlint
+          "$RUNNER_TEMP/actionlint" -ignore 'unexpected key "queue"' .github/workflows/*.yml
+      - name: Verify CI and LLVM gate negative cases
+        run: |
+          python3 -m unittest discover -s Tests/CI -p 'Test*.py'
+          python3 Tests/Profiling/TestRunLLVM23Qualification.py
+          bash -n Build/CI/InstallLLVM23.sh
 
   native:
-    name: Native C++17 / ${{ matrix.os }}
+    name: sir/native / ${{ matrix.os }} / ${{ matrix.compiler }}
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ${{ matrix.os }}
     timeout-minutes: 35
     strategy:
@@ -60,87 +96,111 @@ jobs:
         include:
           - os: ubuntu-24.04
             preset: dev
+            compiler: gcc
+          - os: ubuntu-24.04
+            preset: dev
+            compiler: clang
           - os: windows-2022
             preset: dev
+            compiler: msvc
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          ref: ${{ github.sha }}
           persist-credentials: false
+      - name: Verify frozen integration candidate source
+        if: github.event_name == 'workflow_dispatch'
+        shell: bash
+        env:
+          CANDIDATE_SHA: ${{ github.sha }}
+        run: |
+          [[ "$CANDIDATE_SHA" =~ ^[a-f0-9]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$CANDIDATE_SHA"
       - name: Fetch pinned GoogleTest for native C++17 tests
         run: git submodule update --init ThirdParty/GoogleTest
       - name: Set up MSVC compiler environment
         if: runner.os == 'Windows'
-        uses: ilammy/msvc-dev-cmd@v1
+        uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1
       - uses: ./.github/actions/setup-build-tools
-      - uses: actions/cache@v4
-        with:
-          path: .cache/fastbuild
-          key: sir-fbuild-v1.20-${{ runner.os }}-dev-${{ github.sha }}
-          restore-keys: |
-            sir-fbuild-v1.20-${{ runner.os }}-dev-
+      - name: Install LLVM 23 compiler for PR checks
+        if: matrix.compiler == 'clang'
+        env:
+          SIR_LLVM_MODE: pr
+        run: bash Build/CI/InstallLLVM23.sh
+      - name: Record compiler identity
+        shell: bash
+        run: |
+          if [[ "$RUNNER_OS" == Windows ]]; then
+            cl.exe /? > /dev/null
+            echo "MSVC toolset: ${VCToolsVersion:-unknown}"
+            echo "Windows SDK: ${WindowsSDKVersion:-unknown}"
+          elif [[ "${{ matrix.compiler }}" == clang ]]; then
+            clang++-23 --version
+          else
+            g++ --version
+          fi
       - name: Configure native engine
-        run: cmake --preset "${{ matrix.preset }}" -DSIR_WITH_GOOGLETEST=ON
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ matrix.compiler }}" == clang ]]; then export CC=clang-23 CXX=clang++-23; fi
+          cmake --preset "${{ matrix.preset }}" -DSIR_WITH_GOOGLETEST=ON
       - name: Compile engine and tests
         run: cmake --build --preset "${{ matrix.preset }}"
-      - name: Run allocator unit tests (GoogleTest)
-        run: >
-          ctest --preset "${{ matrix.preset }}"
-          --output-on-failure
-          --no-tests=error
-          -R '^core[.]memory[.]allocators[.]'
-          --output-junit "${{ github.workspace }}/allocator-tests-${{ matrix.os }}.xml"
-      - name: Upload allocator unit test results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: allocator-unit-tests-${{ matrix.os }}
-          path: allocator-tests-${{ matrix.os }}.xml
-          if-no-files-found: warn
-          retention-days: 14
-      - name: Run remaining native tests
-        run: >
-          ctest --preset "${{ matrix.preset }}"
-          --output-on-failure
-          --no-tests=error
-          -E '^core[.]memory[.]allocators[.]'
-      - name: Verify no-op incremental rebuild
-        run: cmake --build --preset dev
-
-  profiling-smoke:
-    name: Google Benchmark compile and execution / Linux
-    runs-on: ubuntu-24.04
-    timeout-minutes: 60
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-      - name: Fetch pinned Google testing sources
-        run: git submodule update --init ThirdParty/GoogleTest ThirdParty/GoogleBenchmark
-      - uses: ./.github/actions/setup-build-tools
-      - uses: actions/cache@v4
-        with:
-          path: .cache/fastbuild
-          key: sir-fbuild-v1.20-google-profile-linux-${{ github.sha }}
-          restore-keys: |
-            sir-fbuild-v1.20-google-profile-linux-
-      - name: Configure optimized C++17 Google profiling
-        run: >
-          cmake --preset profile
-          -DSIR_WITH_GOOGLETEST=ON
-          -DSIR_WITH_GOOGLE_BENCHMARK=ON
-          -DSIR_BUILD_BENCHMARKS=ON
-      - name: Compile profiling executables
-        run: cmake --build --preset profile
-      - name: Run GoogleTest and lifecycle CTest suite
-        run: ctest --preset profile --output-on-failure
-      - name: Run CPU benchmark smoke and write JSON
+      - name: Run and account for every selected native test
         shell: bash
-        run: bash Build/Scripts/RunGoogleBenchmarks.sh ubuntu-24.04-pr
-      - name: Preserve CPU benchmark evidence
-        uses: actions/upload-artifact@v4
+        run: |
+          set -euo pipefail
+          label='^gate:pr$'
+          if [[ "${{ github.event_name }}" != pull_request || "${{ github.event_name == 'pull_request' && startsWith(github.head_ref, 'qualification/') && github.event.pull_request.head.repo.full_name == github.repository }}" == true ]]; then label='^gate:main$'; fi
+          python_cmd=python3
+          if [[ "$RUNNER_OS" == Windows ]]; then python_cmd=python; fi
+          "$python_cmd" Build/CI/RunCTestGate.py --preset "${{ matrix.preset }}" --label "$label" --report "out/Verification/CI/${{ matrix.compiler }}-ctest.xml"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
-          name: sir-google-benchmark-ci
-          path: out/Nightly/Benchmarks/
-          if-no-files-found: error
-          retention-days: 14
+          name: sir-native-${{ matrix.os }}-${{ matrix.compiler }}-${{ github.run_id }}
+          path: out/Verification/CI/
+          if-no-files-found: warn
+          retention-days: 21
+
+  required:
+    name: sir/required
+    runs-on: ubuntu-24.04
+    if: always() && github.event_name != 'workflow_dispatch'
+    needs: [source, native, integration-candidate]
+    steps:
+      - name: Reject missing or skipped mandatory jobs
+        env:
+          SOURCE: ${{ needs.source.result }}
+          NATIVE: ${{ needs.native.result }}
+          INTEGRATION: ${{ needs.integration-candidate.result }}
+          SIR_INTEGRATION_CANDIDATE: ${{ github.event_name == 'pull_request' && startsWith(github.head_ref, 'qualification/') && github.event.pull_request.head.repo.full_name == github.repository }}
+          DRAFT: ${{ github.event.pull_request.draft }}
+        run: |
+          test "$SOURCE" = success
+          test "$DRAFT" != true
+          test "$NATIVE" = success
+          if [[ "$SIR_INTEGRATION_CANDIDATE" == true ]]; then
+            test "$INTEGRATION" = success
+          fi
+          echo "CI checkout SHA: ${{ github.sha }}" >> "$GITHUB_STEP_SUMMARY"
+
+  integration-candidate:
+    name: sir/integration-candidate
+    if: always() && (github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && startsWith(github.head_ref, 'qualification/') && github.event.pull_request.head.repo.full_name == github.repository && !github.event.pull_request.draft))
+    runs-on: ubuntu-24.04
+    needs: [source, native]
+    steps:
+      - name: Verify exact-source candidate accepted
+        env:
+          SOURCE_RESULT: ${{ needs.source.result }}
+          NATIVE_RESULT: ${{ needs.native.result }}
+          CANDIDATE_SHA: ${{ github.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$CANDIDATE_SHA" =~ ^[a-f0-9]{40}$ ]]
+          test "$SOURCE_RESULT" = success
+          test "$NATIVE_RESULT" = success
+          printf 'Qualified integration candidate: %s\n' "$CANDIDATE_SHA" >> "$GITHUB_STEP_SUMMARY"
