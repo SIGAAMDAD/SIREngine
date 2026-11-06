@@ -163,7 +163,7 @@ jobs:
         run: |
           set -euo pipefail
           label='^gate:pr$'
-          if [[ "${{ github.event_name }}" != pull_request ]]; then label='^gate:main$'; fi
+          if [[ "${{ github.event_name }}" != pull_request || "${{ github.event_name == 'pull_request' && startsWith(github.head_ref, 'qualification/') && github.event.pull_request.head.repo.full_name == github.repository }}" == true ]]; then label='^gate:main$'; fi
           python_cmd=python3
           if [[ "$RUNNER_OS" == Windows ]]; then python_cmd=python; fi
           "$python_cmd" Build/CI/RunCTestGate.py --preset "${{ matrix.preset }}" --label "$label" --report "out/Verification/CI/${{ matrix.compiler }}-ctest.xml"
@@ -179,22 +179,27 @@ jobs:
     name: sir/required
     runs-on: ubuntu-24.04
     if: always() && github.event_name != 'workflow_dispatch'
-    needs: [source, native]
+    needs: [source, native, integration-candidate]
     steps:
       - name: Reject missing or skipped mandatory jobs
         env:
           SOURCE: ${{ needs.source.result }}
           NATIVE: ${{ needs.native.result }}
+          INTEGRATION: ${{ needs.integration-candidate.result }}
+          SIR_INTEGRATION_CANDIDATE: ${{ github.event_name == 'pull_request' && startsWith(github.head_ref, 'qualification/') && github.event.pull_request.head.repo.full_name == github.repository }}
           DRAFT: ${{ github.event.pull_request.draft }}
         run: |
           test "$SOURCE" = success
           test "$DRAFT" != true
           test "$NATIVE" = success
+          if [[ "$SIR_INTEGRATION_CANDIDATE" == true ]]; then
+            test "$INTEGRATION" = success
+          fi
           echo "CI checkout SHA: ${{ inputs.candidate_sha || github.sha }}" >> "$GITHUB_STEP_SUMMARY"
 
   integration-candidate:
     name: sir/integration-candidate
-    if: always() && github.event_name == 'workflow_dispatch'
+    if: always() && (github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && startsWith(github.head_ref, 'qualification/') && github.event.pull_request.head.repo.full_name == github.repository && !github.event.pull_request.draft))
     runs-on: ubuntu-24.04
     needs: [source, native]
     steps:
@@ -202,7 +207,7 @@ jobs:
         env:
           SOURCE_RESULT: ${{ needs.source.result }}
           NATIVE_RESULT: ${{ needs.native.result }}
-          CANDIDATE_SHA: ${{ inputs.candidate_sha }}
+          CANDIDATE_SHA: ${{ inputs.candidate_sha || github.sha }}
         shell: bash
         run: |
           set -euo pipefail
