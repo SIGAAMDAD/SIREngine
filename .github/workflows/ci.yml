@@ -5,7 +5,7 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main, develop]
-    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
+    types: [opened, synchronize, edited, reopened, ready_for_review, converted_to_draft]
   merge_group:
     types: [checks_requested]
   workflow_dispatch:
