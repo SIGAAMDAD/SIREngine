@@ -89,9 +89,8 @@ sirGraphicsResult_t sirVulkanPlanImageBarrier( const sirGraphicsBarrier_t& barri
 	if ( barrier.eType != SIR_GRAPHICS_BARRIER_TRANSITION && barrier.eType != SIR_GRAPHICS_BARRIER_UAV ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
-	if ( barrier.nMipCount == 0 || barrier.nLayerCount == 0 || barrier.nBaseMip >= pImage->nMips || barrier.nBaseLayer >= pImage->nLayers ||
-	     barrier.nMipCount > pImage->nMips - barrier.nBaseMip || barrier.nLayerCount > pImage->nLayers - barrier.nBaseLayer ) {
-		return SIR_GRAPHICS_UNSUPPORTED;
+	if ( !sirGraphicsTextureBarrierRangeValid( barrier, pImage->nMips, pImage->nLayers ) ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	VkImageLayout eBefore = VK_IMAGE_LAYOUT_UNDEFINED;
 	VkImageLayout eAfter = VK_IMAGE_LAYOUT_UNDEFINED;
@@ -181,10 +180,8 @@ sirGraphicsResult_t SIRVulkanCommandList::barrier( const sirGraphicsBarrier_t *p
 		if ( !pImage->bActive || pImage->nGeneration != barrier.hResource.nGeneration ) {
 			return SIR_GRAPHICS_INVALID_HANDLE;
 		}
-		if ( barrier.nMipCount == 0 || barrier.nLayerCount == 0 || barrier.nBaseMip >= pImage->native.nMips ||
-		     barrier.nBaseLayer >= pImage->native.nLayers || barrier.nMipCount > pImage->native.nMips - barrier.nBaseMip ||
-		     barrier.nLayerCount > pImage->native.nLayers - barrier.nBaseLayer ) {
-			return SIR_GRAPHICS_UNSUPPORTED;
+		if ( !sirGraphicsTextureBarrierRangeValid( barrier, pImage->native.nMips, pImage->native.nLayers ) ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
 		}
 		if ( m_nOperationCount == 0 && iBarrier == 0 ) {
 			sirVulkanImageBarrier_t planned = {};
