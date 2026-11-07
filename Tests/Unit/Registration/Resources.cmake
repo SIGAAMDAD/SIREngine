@@ -82,16 +82,6 @@ add_test(NAME core.jobs.experiments COMMAND SIRSchedulerExperimentTests)
 set_tests_properties(core.jobs.experiments PROPERTIES TIMEOUT 90)
 sir_configure_owned_target(SIRSchedulerExperimentTests)
 
-find_package(Python3 QUIET COMPONENTS Interpreter)
-if(Python3_Interpreter_FOUND)
-    add_test(NAME profiling.scheduler.experiment-analysis
-        COMMAND "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/Tests/Profiling/TestSIRSchedulerComparison.py")
-    add_test(NAME profiling.grdg.benchmark-validator
-        COMMAND "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/Tests/Profiling/TestSIRGRDGBenchmarkValidator.py")
-    add_test(NAME profiling.grdg.coverage-collector
-        COMMAND "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/Tests/Profiling/TestSIRGRDGCoverageCollector.py")
-endif()
-
 add_executable(SIRSchedulerQueueCandidateTests
     SIRSchedulerQueueCandidateTests.cpp
     ${PROJECT_SOURCE_DIR}/Tests/Benchmarks/SIRSchedulerQueueCandidates.cpp)

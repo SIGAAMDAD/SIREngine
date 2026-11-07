@@ -1,7 +1,7 @@
 # Shared graphics ABI v1 — test and acceptance registry
 
 **Source owner:** `Source/Renderer` on `renderer/shared-driver-api-v1`. **Contract:** major 1, minor 0.
-**Independent verification manifest:** `Verification/Systems/GraphicsABI.json`.
+**Coverage scope:** `GraphicsABI` in `Build/CMake/SIRQualificationScopes.cmake`.
 **CTest scope:** `^renderer[.]graphics[.]`. Native Vulkan/D3D12/GL implementation is outside this branch.
 
 ## Registered CPU tests
@@ -32,16 +32,16 @@ cmake --build --preset dev --target SIRGraphicsInterfaceTests SIRGraphicsABITest
 ctest --preset dev --output-on-failure --no-tests=error -R '^renderer[.]graphics[.]'
 ```
 
-Linux sanitizers: configure/build/test with `--preset asan` and `--preset ubsan`, keeping the instrumented binaries separate. The GitHub workflow `.github/workflows/graphics-abi.yml` runs the same CPU test set under Linux/Windows, separate sanitizers, pinned formatting and an LLVM coverage run whenever the ABI branch is pushed.
+Linux sanitizers: configure/build/test with `--preset asan` and `--preset ubsan`, keeping the instrumented binaries separate. The CI workflow runs native Linux/Windows tests; the qualification workflow handles LLVM source coverage and sanitizer/backend acceptance.
 
 LLVM coverage:
 
 ```sh
 git submodule update --init ThirdParty/GoogleTest
-SIR_GRAPHICS_ABI_MIN_COVERAGE=90 bash Build/Scripts/RunGraphicsABICoverage.sh
+SIR_QUALIFICATION_SCOPE=GraphicsABI SIR_COVERAGE_MINIMUM=90 python3 Build/Scripts/RunLLVM23Qualification.py
 ```
 
-The script uses one Clang/LLVM 18 instrumentation toolchain, a dedicated Ninja build, fresh profraw files, and `llvm-profdata-18`/`llvm-cov-18`. `CheckGraphicsABICoverage.py` requires all six production renderer translation units to appear and reports covered/total for line, branch, function and region metrics. No empty denominator or missing source can pass. The normal project gate remains 90%; independent full qualification requires 100% of each counter. Neither is claimed from unexecuted tests.
+The canonical runner uses LLVM 23.1.5, rejects missing compiled source mappings and reports real line, branch, function and region coverage. Release qualification requires 100% in all four metrics.
 
 ## Native backend obligations — BLOCKED until backend adoption
 
@@ -64,5 +64,5 @@ Native contracts require exact GPU/adapter, OS, driver, compiler, binary/source 
 - Tests must execute and pass on the exact reviewed source SHA. A registered CTest name alone is not evidence.
 - Windows and Linux CI, sanitizer, source-format, ABI layout and full scoped coverage must be checked independently.
 - Mock DLL/DSO tests establish host contract behavior only. They cannot certify native GPU queues, WSI, software rendering, physical hardware, driver loss or visual correctness.
-- The production source inventory is all six `Source/Renderer/*.cpp`; no exclusions, no stale merged coverage profiles and no zero-denominator success.
+- The production scope comes from the real compiler database for `Source/Renderer/`; no omitted compiled source, stale profile or empty denominator qualifies.
 - Outstanding native contracts and benchmarks remain **NOT RUN** until implementing driver branches are integrated with the shared ABI.

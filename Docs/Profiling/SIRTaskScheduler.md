@@ -12,7 +12,7 @@ The native CTest executables are registered in `Tests/Unit/CMakeLists.txt`:
 | `core.jobs.fences` | Fence ordering, rollback, finalizer retry, cancellation, quiesced failure |
 | `core.jobs.stress` | 4 simultaneous producers, repeated 64-pass DAGs, wide cancellation cascades, priority fairness, 64-ticket fence bursts, SIR metadata stability |
 
-`core.jobs.stress` is a separate CTest target with a 90-second timeout. Native CI executes it on Windows and Linux alongside the existing suites. The separate scheduler sanitizer workflow performs five repetitions of all `core.jobs.*` tests under ASan+UBSan on Linux. Concurrency race detection with ThreadSanitizer is a separate local gate; it is **not** implied by a passing ASan/UBSan job.
+`core.jobs.stress` is a separate CTest target with a 90-second timeout. Native CI executes it on Windows and Linux alongside the existing suites. The consolidated qualification workflow runs native ASan+UBSan tests on Linux. Concurrency race detection with ThreadSanitizer is a separate local gate; it is **not** implied by a passing ASan/UBSan job.
 
 ### Targeted local checks
 
@@ -22,7 +22,7 @@ cmake --build --preset dev
 ctest --preset dev -R '^core[.]jobs[.]' --repeat until-fail:20 --output-on-failure
 ```
 
-For sanitizer builds, use fresh build directories rather than mixing sanitized and unsanitized object files. Repository CMake supports `SIR_ENABLE_ASAN` and `SIR_ENABLE_UBSAN`; the workflow `.github/workflows/jobs-sanitizer.yml` provides an executable example.
+For sanitizer builds, use fresh build directories rather than mixing sanitized and unsanitized object files. Repository CMake supports `SIR_ENABLE_ASAN` and `SIR_ENABLE_UBSAN`; the workflow `.github/workflows/qualification.yml` runs the required sanitizer jobs.
 
 ## Profiling workloads
 
