@@ -35,6 +35,12 @@ target_link_libraries(SIRVirtualTextureFeedbackReducerTests PRIVATE SIR::Graphic
 add_test(NAME renderer.virtual-texturing.feedback-reducer COMMAND SIRVirtualTextureFeedbackReducerTests)
 sir_configure_owned_target(SIRVirtualTextureFeedbackReducerTests)
 
+# Terrain3D Sparse V1 fixed quality profiles, authored extents and base-mip selection.
+add_executable(SIRVirtualTextureFixedProfileTests SIRVirtualTextureFixedProfileTests.cpp)
+target_link_libraries(SIRVirtualTextureFixedProfileTests PRIVATE SIR::Graphics)
+add_test(NAME renderer.virtual-texturing.fixed-profile COMMAND SIRVirtualTextureFixedProfileTests)
+sir_configure_owned_target(SIRVirtualTextureFixedProfileTests)
+
 # Native Hi-Z reference and command validation.
 include(${CMAKE_CURRENT_SOURCE_DIR}/HIZFoundationTests.cmake)
 
