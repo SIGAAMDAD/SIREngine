@@ -75,6 +75,7 @@ public:
 	sirGraphicsResult_t createPipeline( const sirGraphicsPipelineDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept;
 	sirGraphicsResult_t retirePipeline( sirGraphicsHandle_t hPipeline, const sirGraphicsCompletionSet_t& completion ) noexcept;
 	bool queryNative( sirGraphicsHandle_t hPipeline, ID3D12PipelineState **ppPipeline, ID3D12RootSignature **ppRoot ) noexcept;
+
 protected:
 private:
 	static constexpr uint32_t s_nPipelineCapacity = 64;
@@ -93,7 +94,7 @@ private:
 	HRESULT createGraphicsState( const sirGraphicsPipelineDesc_t& desc, ID3D12RootSignature *pRoot,
 	                             ID3D12PipelineState **ppPipeline, const wchar_t *pszCacheKey ) noexcept;
 	HRESULT createComputeState( const sirGraphicsPipelineDesc_t& desc, ID3D12RootSignature *pRoot,
-	                            ID3D12PipelineState **ppPipeline ) noexcept;
+	                            ID3D12PipelineState **ppPipeline, const wchar_t *pszCacheKey ) noexcept;
 
 };
 
