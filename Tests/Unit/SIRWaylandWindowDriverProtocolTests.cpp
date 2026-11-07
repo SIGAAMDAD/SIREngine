@@ -16,6 +16,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Core/Platform/Input/Linux/SIRWaylandInputBridge.h>
 #include <wayland-client.h>
 #include <xdg-shell-client-protocol.h>
+#include <fractional-scale-v1-client-protocol.h>
+#include <viewporter-client-protocol.h>
 #include <pointer-constraints-unstable-v1-client-protocol.h>
 #include <relative-pointer-unstable-v1-client-protocol.h>
 #include <xkbcommon/xkbcommon.h>
@@ -39,6 +41,20 @@ struct wl_seat
 };
 struct wl_output
 {
+};
+struct wp_fractional_scale_manager_v1
+{
+};
+struct wp_viewporter
+{
+};
+struct wp_fractional_scale_v1
+{
+	uint32_t id;
+};
+struct wp_viewport
+{
+	uint32_t id;
 };
 struct wl_keyboard
 {
@@ -88,6 +104,17 @@ static wl_registry s_Registry;
 static wl_compositor s_Compositor;
 static wl_seat s_Seat;
 static wl_output s_Output;
+static wp_fractional_scale_manager_v1 s_FractionalManager;
+static wp_viewporter s_Viewporter;
+static wp_fractional_scale_v1 s_FractionalScales[8];
+static wp_viewport s_Viewports[8];
+static const wp_fractional_scale_v1_listener *s_pFractionalListeners[8] = {};
+static void *s_pFractionalContexts[8] = {};
+static int32_t s_nViewportWidth[8] = {};
+static int32_t s_nViewportHeight[8] = {};
+static bool s_bOfferFractional = true;
+static uint32_t s_nFractionalDestroyCount = 0;
+static uint32_t s_nViewportDestroyCount = 0;
 static wl_keyboard s_Keyboard;
 static wl_pointer s_Pointer;
 static zwp_pointer_constraints_v1 s_Constraints;
@@ -152,6 +179,8 @@ extern "C" {
 const wl_interface wl_compositor_interface = { "wl_compositor" };
 const wl_interface wl_seat_interface = { "wl_seat" };
 const wl_interface wl_output_interface = { "wl_output" };
+const wl_interface wp_fractional_scale_manager_v1_interface = { "wp_fractional_scale_manager_v1" };
+const wl_interface wp_viewporter_interface = { "wp_viewporter" };
 const wl_interface xdg_wm_base_interface = { "xdg_wm_base" };
 const wl_interface zwp_pointer_constraints_v1_interface = { "zwp_pointer_constraints_v1" };
 const wl_interface zwp_relative_pointer_manager_v1_interface = { "zwp_relative_pointer_manager_v1" };
@@ -180,6 +209,10 @@ void *wl_registry_bind( wl_registry *, uint32_t, const wl_interface *pInterface,
 		return &s_Seat;
 	if ( strcmp( pInterface->name, "wl_output" ) == 0 )
 		return &s_Output;
+	if ( strcmp( pInterface->name, "wp_fractional_scale_manager_v1" ) == 0 )
+		return &s_FractionalManager;
+	if ( strcmp( pInterface->name, "wp_viewporter" ) == 0 )
+		return &s_Viewporter;
 	if ( strcmp( pInterface->name, "zwp_pointer_constraints_v1" ) == 0 )
 		return &s_Constraints;
 	if ( strcmp( pInterface->name, "zwp_relative_pointer_manager_v1" ) == 0 )
@@ -194,6 +227,10 @@ int wl_display_roundtrip( wl_display * )
 	s_pRegistryListener->global( s_pRegistryContext, &s_Registry, 15, "zwp_pointer_constraints_v1", 1 );
 	s_pRegistryListener->global( s_pRegistryContext, &s_Registry, 16, "zwp_relative_pointer_manager_v1", 1 );
 	s_pRegistryListener->global( s_pRegistryContext, &s_Registry, 17, "wl_output", 2 );
+	if ( s_bOfferFractional ) {
+		s_pRegistryListener->global( s_pRegistryContext, &s_Registry, 18, "wp_fractional_scale_manager_v1", 1 );
+		s_pRegistryListener->global( s_pRegistryContext, &s_Registry, 19, "wp_viewporter", 1 );
+	}
 	return 0;
 }
 int wl_display_prepare_read( wl_display * )
@@ -248,6 +285,42 @@ int wl_output_add_listener( wl_output *, const wl_output_listener *pListener, vo
 }
 void wl_output_destroy( wl_output * )
 {
+}
+wp_fractional_scale_v1 *wp_fractional_scale_manager_v1_get_fractional_scale( wp_fractional_scale_manager_v1 *, wl_surface *pSurface )
+{
+	s_FractionalScales[pSurface->id].id = pSurface->id;
+	return &s_FractionalScales[pSurface->id];
+}
+void wp_fractional_scale_manager_v1_destroy( wp_fractional_scale_manager_v1 * )
+{
+}
+int wp_fractional_scale_v1_add_listener( wp_fractional_scale_v1 *pScale, const wp_fractional_scale_v1_listener *pListener,
+                                          void *pContext )
+{
+	s_pFractionalListeners[pScale->id] = pListener;
+	s_pFractionalContexts[pScale->id] = pContext;
+	return 0;
+}
+void wp_fractional_scale_v1_destroy( wp_fractional_scale_v1 * )
+{
+	++s_nFractionalDestroyCount;
+}
+wp_viewport *wp_viewporter_get_viewport( wp_viewporter *, wl_surface *pSurface )
+{
+	s_Viewports[pSurface->id].id = pSurface->id;
+	return &s_Viewports[pSurface->id];
+}
+void wp_viewporter_destroy( wp_viewporter * )
+{
+}
+void wp_viewport_set_destination( wp_viewport *pViewport, int32_t nWidth, int32_t nHeight )
+{
+	s_nViewportWidth[pViewport->id] = nWidth;
+	s_nViewportHeight[pViewport->id] = nHeight;
+}
+void wp_viewport_destroy( wp_viewport * )
+{
+	++s_nViewportDestroyCount;
 }
 void wl_surface_commit( wl_surface * )
 {
@@ -831,6 +904,7 @@ static bool sirTestOutputScaleChanges( void ) noexcept
 {
 	s_nCreated = 0;
 	s_bOldProtocol = false;
+	s_bOfferFractional = false;
 	SIRWindowDriverWayland driver;
 	if ( driver.initialize() != SIR_WINDOW_OK ) {
 		return false;
@@ -860,7 +934,47 @@ static bool sirTestOutputScaleChanges( void ) noexcept
 		return false;
 	}
 	driver.shutdown();
+	s_bOfferFractional = true;
 	return true;
+}
+
+static bool sirTestFractionalScaleChanges( void ) noexcept
+{
+	s_nCreated = 0;
+	s_bOfferFractional = true;
+	s_bOldProtocol = false;
+	const uint32_t nBeforeFractionalDestroy = s_nFractionalDestroyCount;
+	const uint32_t nBeforeViewportDestroy = s_nViewportDestroyCount;
+	SIRWindowDriverWayland driver;
+	if ( driver.initialize() != SIR_WINDOW_OK ) {
+		return false;
+	}
+	sirWindowNativeView_t view = {};
+	if ( driver.createWindow( { "fractional-scale", 640, 480 }, 0, &view ) != SIR_WINDOW_OK ||
+	     s_pFractionalListeners[0] == nullptr || s_pSurfaceListener[0] == nullptr ) {
+		return false;
+	}
+	// Compositor proposes 1.5x before the initial xdg configure.
+	s_pFractionalListeners[0]->preferred_scale( s_pFractionalContexts[0], &s_FractionalScales[0], 180 );
+	s_pSurfaceListener[0]->configure( s_pSurfaceContext[0], &s_XdgSurfaces[0], 940 );
+	sirWaylandTestEvents_t events = {};
+	if ( driver.pumpEvents( 8, sirCollectWaylandEvent, &events ) != SIR_WINDOW_OK || events.nCount != 1 ||
+	     events.events[0].eKind != SIR_WINDOW_EVENT_READY || events.events[0].nWidth != 960 ||
+	     events.events[0].nHeight != 720 || s_nBufferScale[0] != 1 ||
+	     s_nViewportWidth[0] != 640 || s_nViewportHeight[0] != 480 ) {
+		return false;
+	}
+	// Preferred scale can change without logical xdg size changing.
+	s_pFractionalListeners[0]->preferred_scale( s_pFractionalContexts[0], &s_FractionalScales[0], 150 );
+	if ( driver.pumpEvents( 8, sirCollectWaylandEvent, &events ) != SIR_WINDOW_OK || events.nCount != 3 ||
+	     events.events[1].eKind != SIR_WINDOW_EVENT_DPI_CHANGED || events.events[1].nWidth != 120 ||
+	     events.events[2].eKind != SIR_WINDOW_EVENT_RESIZED || events.events[2].nWidth != 800 ||
+	     events.events[2].nHeight != 600 || driver.destroyWindow( 0 ) != SIR_WINDOW_OK ) {
+		return false;
+	}
+	driver.shutdown();
+	return s_nFractionalDestroyCount == nBeforeFractionalDestroy + 1 &&
+	       s_nViewportDestroyCount == nBeforeViewportDestroy + 1;
 }
 
 int main( void )
@@ -887,6 +1001,10 @@ int main( void )
 	}
 	if ( !sirTestOutputScaleChanges() ) {
 		fputs( "Wayland integer output scaling failed\n", stderr );
+		return 1;
+	}
+	if ( !sirTestFractionalScaleChanges() ) {
+		fputs( "Wayland fractional scale protocol failed\n", stderr );
 		return 1;
 	}
 	return 0;
