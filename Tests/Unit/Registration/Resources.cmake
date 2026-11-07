@@ -85,3 +85,12 @@ add_test(NAME core.jobs.queue-candidates COMMAND SIRSchedulerQueueCandidateTests
 set_tests_properties(core.jobs.queue-candidates PROPERTIES TIMEOUT 90)
 sir_configure_owned_target(SIRSchedulerQueueCandidateTests)
 
+
+# Offline deterministic SIRPack writer and immutable catalog/shard reader.
+add_executable(SIRPackFoundationTests SIRPackFoundationTests.cpp
+    ${PROJECT_SOURCE_DIR}/Tools/SIRPackCooker/SIRPackCooker.cpp)
+target_include_directories(SIRPackFoundationTests PRIVATE "${PROJECT_SOURCE_DIR}")
+target_compile_definitions(SIRPackFoundationTests PRIVATE SIR_PACK_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/Tests/Fixtures/SIRPack")
+target_link_libraries(SIRPackFoundationTests PRIVATE SIR::Resources)
+add_test(NAME resources.sirpack.foundation COMMAND SIRPackFoundationTests)
+sir_configure_owned_target(SIRPackFoundationTests)
