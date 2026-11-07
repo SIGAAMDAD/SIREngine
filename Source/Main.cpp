@@ -1,6 +1,9 @@
 #include <Core/SIRApplication.h>
 #include <Core/Platform/Input/SIRInputService.h>
 #include <Core/Platform/Window/SIRWindowSystem.h>
+#if defined( SIR_WINDOW_WAYLAND_AVAILABLE )
+#include <Core/Platform/Window/Linux/SIRWindowDriverWayland.h>
+#endif
 #if defined( _WIN32 )
 #include <Core/Platform/Window/Windows/SIRWindowDriverWin32.h>
 #include <Core/Platform/Input/Windows/SIRWin32InputBridge.h>
@@ -61,6 +64,75 @@ static void sirDispatchX11Input( const XEvent& event, void *pContext ) noexcept
 	pInput->processEvent( event );
 }
 #endif
+#endif
+
+#if defined( _WIN32 ) || defined( SIR_WINDOW_X11_AVAILABLE ) || defined( SIR_WINDOW_WAYLAND_AVAILABLE )
+static bool sirPumpWindowWithoutInput( void *pContext )
+{
+	SIRWindowSystem *pWindows = ( SIRWindowSystem * )pContext;
+	return pWindows->pumpEvents( 256 ) == SIR_WINDOW_OK;
+}
+
+static int sirRunWindowWithoutInput( SIRWindowDriver& driver )
+{
+	SIRWindowSystem windows( driver );
+	SIRApplication application;
+	if ( !application.registerSystem( &windows ) || !application.attachWindowPump( sirPumpWindowWithoutInput, &windows ) ||
+	     !application.initialize() ) {
+		fputs( "Unable to initialize native window system\n", stderr );
+		return 1;
+	}
+
+	sirWindowHandle_t hWindow = {};
+	const sirWindowCreateDesc_t desc = { "SIREngine native window", 800, 450 };
+	if ( windows.createWindow( desc, &hWindow ) != SIR_WINDOW_OK ) {
+		fputs( "Unable to create native window\n", stderr );
+		( void )application.shutdown();
+		return 1;
+	}
+
+	bool bPumpSucceeded = true;
+	while ( true ) {
+		if ( !application.tick() ) {
+			bPumpSucceeded = false;
+			break;
+		}
+		sirWindowSnapshot_t snapshot = {};
+		if ( windows.querySnapshot( hWindow, &snapshot ) != SIR_WINDOW_OK ) {
+			bPumpSucceeded = false;
+			break;
+		}
+		if ( snapshot.bCloseRequested ) {
+			break;
+		}
+	}
+	const sirWindowResult_t eDestroy = windows.destroyWindow( hWindow );
+	const sirSystemResult_t eShutdown = application.shutdown();
+	return bPumpSucceeded && eDestroy == SIR_WINDOW_OK && eShutdown == SIR_SYSTEM_OK ? 0 : 1;
+}
+
+static int sirRunNativeWindowWithoutInput( void )
+{
+#if defined( SIR_WINDOW_WAYLAND_AVAILABLE )
+	const char *pszWayland = getenv( "WAYLAND_DISPLAY" );
+	if ( pszWayland != nullptr && pszWayland[0] != 0 ) {
+		SIRWindowDriverWayland driver;
+		return sirRunWindowWithoutInput( driver );
+	}
+#endif
+#if defined( _WIN32 )
+	SIRWindowDriverWin32 driver;
+	return sirRunWindowWithoutInput( driver );
+#elif defined( SIR_WINDOW_X11_AVAILABLE )
+	SIRWindowDriverX11 driver;
+	return sirRunWindowWithoutInput( driver );
+#elif defined( SIR_WINDOW_WAYLAND_AVAILABLE )
+	SIRWindowDriverWayland driver;
+	return sirRunWindowWithoutInput( driver );
+#else
+	return 1;
+#endif
+}
 #endif
 
 static int sirRunNativeInputWindow( void )
@@ -190,9 +262,15 @@ int main( int nArgs, char **pszArgs )
 			return 0;
 		}
 		if ( strcmp( pszArgs[1], "--help" ) == 0 ) {
-			puts( "Usage: SIREngine [--version|--help|--input-window]" );
+			puts( "Usage: SIREngine [--version|--help|--input-window|--window-no-input]" );
 			return 0;
 		}
+#if defined( _WIN32 ) || defined( SIR_WINDOW_X11_AVAILABLE ) || defined( SIR_WINDOW_WAYLAND_AVAILABLE )
+		if ( strcmp( pszArgs[1], "--window-no-input" ) == 0 ) {
+			return sirRunNativeWindowWithoutInput();
+		}
+#endif
+
 		if ( strcmp( pszArgs[1], "--input-window" ) == 0 ) {
 			return sirRunNativeInputWindow();
 		}
