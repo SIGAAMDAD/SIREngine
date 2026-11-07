@@ -19,21 +19,14 @@ bool SIRX11InputBridge::bind( SIRInputService& input, SIRLinuxX11Backend& backen
 	m_pBackend = &backend;
 	m_pDisplay = pDisplay;
 	m_hWindow = hWindow;
-	XSelectInput( pDisplay, hWindow, SIRLinuxX11Backend::requiredEventMask() | StructureNotifyMask );
 	( void )SIRLinuxX11Backend::enableDetectableRepeat( pDisplay );
 	if ( XSupportsLocale() ) {
 		( void )XSetLocaleModifiers( "" );
-		XIM hMethod = XOpenIM( pDisplay, nullptr, nullptr, nullptr );
-		if ( hMethod != nullptr ) {
-			XIC hContext = XCreateIC( hMethod, XNInputStyle, XIMPreeditNothing | XIMStatusNothing, XNClientWindow, hWindow, XNFocusWindow,
-			                          hWindow, nullptr );
-			if ( hContext != nullptr ) {
-				m_hInputMethod = hMethod;
-				m_hInputContext = hContext;
-			} else {
-				XCloseIM( hMethod );
-			}
-		}
+		m_hInputMethod = XOpenIM( pDisplay, nullptr, nullptr, nullptr );
+	}
+	if ( !registerWindow( view ) ) {
+		unbind();
+		return false;
 	}
 	XFlush( pDisplay );
 	return true;
@@ -57,6 +50,75 @@ bool SIRX11InputBridge::beginFrame( void ) noexcept
 bool SIRX11InputBridge::isBound( void ) const noexcept
 {
 	return m_pInput != nullptr;
+}
+
+bool SIRX11InputBridge::registerWindow( const sirWindowNativeView_t& view ) noexcept
+{
+	sirLinuxNativeWindow_t native = {};
+	if ( m_pInput == nullptr || !sirPlatformDecodeLinuxWindow( view, &native ) || native.eDisplayType != SIR_LINUX_DISPLAY_X11 ||
+	     native.nDisplay != ( uintptr_t )m_pDisplay || m_nWindowCount >= SIR_WINDOW_MAX_WINDOWS ) {
+		return false;
+	}
+	const Window hWindow = ( Window )native.nSurface;
+	for ( uint32_t i = 0; i < m_nWindowCount; ++i ) {
+		if ( m_hRegisteredWindows[i] == hWindow ) {
+			return false;
+		}
+	}
+	XIC hContext = nullptr;
+	if ( m_hInputMethod != nullptr ) {
+		hContext = XCreateIC( m_hInputMethod, XNInputStyle, XIMPreeditNothing | XIMStatusNothing, XNClientWindow, hWindow, XNFocusWindow,
+		                      hWindow, nullptr );
+	}
+	XSelectInput( m_pDisplay, hWindow, SIRLinuxX11Backend::requiredEventMask() | StructureNotifyMask );
+	m_hRegisteredWindows[m_nWindowCount] = hWindow;
+	m_hRegisteredContexts[m_nWindowCount] = hContext;
+	if ( m_nWindowCount == 0 ) {
+		m_hInputContext = hContext;
+	}
+	++m_nWindowCount;
+	return true;
+}
+
+bool SIRX11InputBridge::unregisterWindow( uintptr_t nNativeWindow ) noexcept
+{
+	if ( m_pInput == nullptr || nNativeWindow == 0 ) {
+		return false;
+	}
+	for ( uint32_t i = 0; i < m_nWindowCount; ++i ) {
+		if ( m_hRegisteredWindows[i] != ( Window )nNativeWindow ) {
+			continue;
+		}
+		if ( m_hRegisteredContexts[i] != nullptr ) {
+			if ( m_hRegisteredContexts[i] == m_hInputContext ) {
+				XUnsetICFocus( m_hInputContext );
+				m_hInputContext = nullptr;
+			}
+			XDestroyIC( m_hRegisteredContexts[i] );
+		}
+		if ( m_hWindow == ( Window )nNativeWindow ) {
+			( void )m_pInput->loseBackendState( SIR_INPUT_LINUX_X11 );
+			m_bFocused = false;
+			m_pInput->text().setFocused( false );
+			m_pInput->setHapticsPaused( true );
+			if ( m_bCursorCaptured ) {
+				XUngrabPointer( m_pDisplay, CurrentTime );
+				m_bCursorCaptured = false;
+			}
+			m_hWindow = 0;
+		}
+		--m_nWindowCount;
+		m_hRegisteredWindows[i] = m_hRegisteredWindows[m_nWindowCount];
+		m_hRegisteredContexts[i] = m_hRegisteredContexts[m_nWindowCount];
+		m_hRegisteredWindows[m_nWindowCount] = 0;
+		m_hRegisteredContexts[m_nWindowCount] = nullptr;
+		if ( m_hWindow == 0 && m_nWindowCount != 0 ) {
+			m_hWindow = m_hRegisteredWindows[0];
+			m_hInputContext = m_hRegisteredContexts[0];
+		}
+		return true;
+	}
+	return false;
 }
 
 bool SIRX11InputBridge::setCursorMode( sirInputCursorMode_t eMode ) noexcept
@@ -136,6 +198,31 @@ void SIRX11InputBridge::processEvent( const XEvent& event ) noexcept
 		( void )pX11->processEvent( input, event );
 		return;
 	}
+	uint32_t nIndex = m_nWindowCount;
+	for ( uint32_t i = 0; i < m_nWindowCount; ++i ) {
+		if ( m_hRegisteredWindows[i] == event.xany.window ) {
+			nIndex = i;
+			break;
+		}
+	}
+	if ( nIndex == m_nWindowCount ) {
+		return;
+	}
+	if ( event.type == DestroyNotify ) {
+		( void )unregisterWindow( ( uintptr_t )event.xany.window );
+		return;
+	}
+	if ( event.type == FocusIn && event.xany.window != m_hWindow ) {
+		if ( m_bAttached && !m_pBackend->focusWindow( input, event.xany.window ) ) {
+			return;
+		}
+		if ( m_hInputContext != nullptr ) {
+			XUnsetICFocus( m_hInputContext );
+		}
+		m_hWindow = event.xany.window;
+		m_hInputContext = m_hRegisteredContexts[nIndex];
+		m_bFocused = false;
+	}
 	if ( event.xany.window != m_hWindow ) {
 		return;
 	}
@@ -186,9 +273,14 @@ void SIRX11InputBridge::unbind( void ) noexcept
 	if ( m_nInvisibleCursor != 0 ) {
 		XFreeCursor( m_pDisplay, ( Cursor )m_nInvisibleCursor );
 	}
-	if ( m_hInputContext != nullptr ) {
-		XDestroyIC( m_hInputContext );
+	for ( uint32_t i = 0; i < m_nWindowCount; ++i ) {
+		if ( m_hRegisteredContexts[i] != nullptr ) {
+			XDestroyIC( m_hRegisteredContexts[i] );
+		}
+		m_hRegisteredContexts[i] = nullptr;
+		m_hRegisteredWindows[i] = 0;
 	}
+	m_nWindowCount = 0;
 	if ( m_hInputMethod != nullptr ) {
 		XCloseIM( m_hInputMethod );
 	}

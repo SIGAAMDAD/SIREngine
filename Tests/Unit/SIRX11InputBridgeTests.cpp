@@ -38,11 +38,23 @@ int main( void )
 	if ( windows.createWindow( desc, &first ) != SIR_WINDOW_OK || windows.createWindow( desc, &second ) != SIR_WINDOW_OK ) {
 		return 2;
 	}
-	sirWindowNativeLease_t lease = {};
-	sirWindowNativeView_t view = {};
-	if ( windows.acquireNativeLease( first, &lease, &view ) != SIR_WINDOW_OK || !bridge.bind( input, backend, view ) ||
-	     bridge.bind( input, backend, view ) || !driver.setEventSink( sirBridgeDispatchEvent, &bridge ) ) {
+	sirWindowNativeLease_t lease = {}, secondLease = {};
+	sirWindowNativeView_t view = {}, secondView = {};
+	if ( windows.acquireNativeLease( first, &lease, &view ) != SIR_WINDOW_OK ||
+	     windows.acquireNativeLease( second, &secondLease, &secondView ) != SIR_WINDOW_OK || !bridge.bind( input, backend, view ) ||
+	     bridge.bind( input, backend, view ) || !bridge.registerWindow( secondView ) || bridge.registerWindow( secondView ) ||
+	     !driver.setEventSink( sirBridgeDispatchEvent, &bridge ) ) {
 		return 3;
+	}
+	sirWindowNativeView_t foreign = secondView;
+	++foreign.nDisplayOrInstance;
+	if ( bridge.registerWindow( foreign ) ) {
+		return 12;
+	}
+	foreign = secondView;
+	foreign.ePlatform = SIR_WINDOW_PLATFORM_WIN32;
+	if ( bridge.registerWindow( foreign ) ) {
+		return 13;
 	}
 	bridge.setTextEnabled( true );
 	if ( !input.text().snapshot().bEnabled || !input.begin( 1 ) || !bridge.beginFrame() ) {
@@ -64,13 +76,48 @@ int main( void )
 	if ( input.activeDeviceCount() != 2 ) {
 		return 6;
 	}
+	// Route the one physical keyboard and pointer seat between two windows.
+	XEvent key = {};
+	key.xkey.type = KeyPress;
+	key.xkey.window = ( Window )view.nNativeWindow;
+	key.xkey.display = pDisplay;
+	key.xkey.keycode = 40;
+	bridge.processEvent( key );
+	XEvent secondFocus = focus;
+	secondFocus.xfocus.window = ( Window )secondView.nNativeWindow;
+	bridge.processEvent( secondFocus );
+	if ( input.activeDeviceCount() != 2 ) {
+		return 9;
+	}
+	key.xkey.window = ( Window )secondView.nNativeWindow;
+	key.xkey.keycode = 41;
+	bridge.processEvent( key );
+	if ( !bridge.unregisterWindow( view.nNativeWindow ) || bridge.unregisterWindow( view.nNativeWindow ) ||
+	     input.activeDeviceCount() != 2 ) {
+		return 10;
+	}
 	input.sample();
 	if ( !input.publish() ) {
 		return 7;
 	}
+	const sirInputFrame_t *pFrame = input.frame();
+	bool bSawSecondKey = false;
+	uint32_t nResyncEvents = 0;
+	for ( uint32_t i = 0; i < pFrame->nCount; ++i ) {
+		if ( pFrame->events[i].eSignal == SIR_INPUT_RESYNC ) {
+			++nResyncEvents;
+		}
+		if ( pFrame->events[i].eSignal == SIR_INPUT_BUTTON && pFrame->events[i].nControl == 41 && pFrame->events[i].nValue == 1 ) {
+			bSawSecondKey = true;
+		}
+	}
+	if ( !bSawSecondKey || nResyncEvents < 2 ) {
+		return 11;
+	}
 	( void )driver.setEventSink( nullptr, nullptr );
 	bridge.unbind();
-	if ( bridge.isBound() || windows.releaseNativeLease( lease ) != SIR_WINDOW_OK || windows.destroyWindow( second ) != SIR_WINDOW_OK ||
+	if ( bridge.isBound() || windows.releaseNativeLease( lease ) != SIR_WINDOW_OK ||
+	     windows.releaseNativeLease( secondLease ) != SIR_WINDOW_OK || windows.destroyWindow( second ) != SIR_WINDOW_OK ||
 	     windows.destroyWindow( first ) != SIR_WINDOW_OK || windows.shutdown() != SIR_SYSTEM_OK ) {
 		return 8;
 	}
