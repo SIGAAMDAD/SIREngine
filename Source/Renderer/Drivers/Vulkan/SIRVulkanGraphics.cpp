@@ -79,7 +79,7 @@ sirGraphicsResult_t sirVulkanDescribeCapabilities( const sirVulkanAdapterInfo_t&
 	pCapabilities->eBackend = SIR_GRAPHICS_BACKEND_VULKAN;
 	pCapabilities->nApiVersion = { VK_API_VERSION_MAJOR( native.nApiVersion ), VK_API_VERSION_MINOR( native.nApiVersion ),
 	                               VK_API_VERSION_PATCH( native.nApiVersion ) };
-	// The current native backend exposes a single direct queue and descriptor-free compute.
+	// The current backend exposes a direct queue with graphics and compute execution.
 	pCapabilities->nFeatureMask = SIR_GRAPHICS_FEATURE_GRAPHICS | SIR_GRAPHICS_FEATURE_SHADER_STORAGE | SIR_GRAPHICS_FEATURE_MRT |
 	                              ( native.bComputeCapable ? SIR_GRAPHICS_FEATURE_COMPUTE : 0 );
 	pCapabilities->nQueueMask = 1U << SIR_GRAPHICS_QUEUE_DIRECT;
@@ -1147,7 +1147,8 @@ sirGraphicsResult_t SIRVulkanDriver::createDevice( const sirGraphicsDeviceCreate
 	if ( desc.nAdapterIndex >= 32 || desc.nFramesInFlight == 0 || desc.nFramesInFlight > SIR_VULKAN_TRANSFER_SLOT_COUNT ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	if ( ( desc.nRequiredFeatures & ~( uint64_t )SIR_GRAPHICS_FEATURE_COMPUTE ) != 0 ) {
+	if ( ( desc.nRequiredFeatures & ~( uint64_t )( SIR_GRAPHICS_FEATURE_GRAPHICS | SIR_GRAPHICS_FEATURE_COMPUTE | SIR_GRAPHICS_FEATURE_MRT |
+	                                                  SIR_GRAPHICS_FEATURE_SHADER_STORAGE ) ) != 0 ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
 	if ( !desc.bHeadless ) {
