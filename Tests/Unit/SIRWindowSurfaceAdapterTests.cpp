@@ -26,7 +26,10 @@ public:
 	}
 	sirWindowResult_t createWindow( const sirWindowCreateDesc_t& desc, uint32_t nSlot, sirWindowNativeView_t *pView ) noexcept override
 	{
-		( void )desc;
+		m_nSlot = nSlot;
+		m_nWidth = desc.nWidth;
+		m_nHeight = desc.nHeight;
+		m_bPendingConfigure = m_ePlatform == SIR_WINDOW_PLATFORM_WAYLAND;
 		*pView = { m_ePlatform, nSlot + 1, 0xAA, 0 };
 		return SIR_WINDOW_OK;
 	}
@@ -44,15 +47,21 @@ public:
 
 	sirWindowResult_t pumpEvents( uint32_t nBudget, sirWindowDriverEventFn_t pCallback, void *pContext ) noexcept override
 	{
-		( void )nBudget;
-		( void )pCallback;
-		( void )pContext;
+		if ( m_bPendingConfigure && nBudget != 0 && pCallback != nullptr ) {
+			m_bPendingConfigure = false;
+			const sirWindowBackendEvent_t event = { m_nSlot, m_nSlot + 1, SIR_WINDOW_EVENT_READY, m_nWidth, m_nHeight };
+			pCallback( pContext, event );
+		}
 		return SIR_WINDOW_OK;
 	}
 	void shutdown( void ) noexcept override
 	{
 	}
 	sirWindowPlatform_t m_ePlatform = SIR_WINDOW_PLATFORM_X11;
+	uint32_t m_nSlot = 0;
+	uint32_t m_nWidth = 0;
+	uint32_t m_nHeight = 0;
+	bool m_bPendingConfigure = false;
 
 protected:
 private:
@@ -71,6 +80,9 @@ static bool sirTestWindowNativeAdapter( sirWindowPlatform_t eBackend, sirGraphic
 	     sirGraphicsAcquireWindowSurface( system, handle, &native, &lease ) != SIR_GRAPHICS_INVALID_HANDLE ||
 	     system.createWindow( desc, &handle ) != SIR_WINDOW_OK ||
 	     sirGraphicsAcquireWindowSurface( system, handle, nullptr, &lease ) != SIR_GRAPHICS_INVALID_ARGUMENT ||
+	     ( eBackend == SIR_WINDOW_PLATFORM_WAYLAND &&
+	       sirGraphicsAcquireWindowSurface( system, handle, &native, &lease ) != SIR_GRAPHICS_SURFACE_CHANGED ) ||
+	     ( eBackend == SIR_WINDOW_PLATFORM_WAYLAND && system.pumpEvents( 1 ) != SIR_WINDOW_OK ) ||
 	     sirGraphicsAcquireWindowSurface( system, handle, &native, &lease ) != SIR_GRAPHICS_SUCCESS || native.ePlatform != eGraphics ||
 	     native.pWindow == nullptr || native.pDisplayOrInstance == nullptr || native.nWindowGeneration == 0 ||
 	     system.destroyWindow( handle ) != SIR_WINDOW_BUSY || system.releaseNativeLease( lease ) != SIR_WINDOW_OK ||
