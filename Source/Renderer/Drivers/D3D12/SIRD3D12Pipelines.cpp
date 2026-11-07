@@ -735,6 +735,7 @@ sirGraphicsResult_t SIRD3D12Pipelines::createPipeline( const sirGraphicsPipeline
 		}
 		if ( bSame ) {
 			pRoot = prior.pRootSignature;
+			++m_CacheStats.nRootReuses;
 		}
 	}
 	if ( pRoot == nullptr ) {
