@@ -105,9 +105,11 @@ bool SIRD3D12Memory::queryAllocationLedger( sirD3D12AllocationLedger_t *pLedger 
 bool SIRD3D12Memory::configureResidentBudget( uint64_t nBytes ) noexcept
 {
 	sirD3D12AllocationLedger_t ledger = {};
-	if ( !queryAllocationLedger( &ledger ) || ( nBytes != 0 && ledger.nCommittedBytes > nBytes ) ) {
+	if ( !queryAllocationLedger( &ledger ) || ( m_bSealed && nBytes == 0 ) || ( nBytes != 0 && ledger.nCommittedBytes > nBytes ) ) {
+		m_nLastError = E_INVALIDARG;
 		return false;
 	}
+	m_nLastError = S_OK;
 	m_nResidentLimitBytes = nBytes;
 	if ( ledger.nCommittedBytes > m_nPeakTrackedBytes ) {
 		m_nPeakTrackedBytes = ledger.nCommittedBytes;
@@ -430,6 +432,12 @@ bool SIRD3D12Memory::initializeTransferArena( const sirD3D12TransferPoolConfig_t
 	}
 
 	m_nLastError = createBuffer( eWriteHeap, D3D12_RESOURCE_STATE_GENERIC_READ, nBytes, &m_pTransferWrite );
+	if ( FAILED( m_nLastError ) && eWriteHeap == D3D12_HEAP_TYPE_GPU_UPLOAD ) {
+		// GPU_UPLOAD is optional and can exhaust its own sealed pool while a
+		// regular UPLOAD allocation remains admissible. Preserve functionality.
+		m_eTransferPath = bUMA ? SIR_D3D12_TRANSFER_DIRECT_UMA : SIR_D3D12_TRANSFER_STAGED;
+		m_nLastError = createBuffer( D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ, nBytes, &m_pTransferWrite );
+	}
 	if ( FAILED( m_nLastError ) ) {
 		releaseTransferArena( true );
 		return false;
