@@ -826,6 +826,9 @@ sirEditorTextResourceResult_t sirEditorScanTextResources( const char *pszSource,
 		pCursor = pLineEnd == pEnd ? pEnd : pLineEnd + 1;
 		++nLine;
 	}
+	if ( bMultilineQuote || bEscape ) {
+		return sirEditorFailResourceIndex( pIndex, nLine, SIR_EDITOR_RESOURCE_INVALID_TAG );
+	}
 	if ( !bHeader ) {
 		return sirEditorFailResourceIndex( pIndex, nLine, SIR_EDITOR_RESOURCE_INVALID_HEADER );
 	}
