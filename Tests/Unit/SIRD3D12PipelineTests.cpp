@@ -232,6 +232,111 @@ static int sirTestGeneralPipelines( SIRRenderingDevice *pDevice, uint32_t nGener
 	return 0;
 }
 
+static int sirTestNativePipelineCache( SIRD3D12Driver& driver, SIRRenderingDevice **ppDevice,
+                                       const sirGraphicsDeviceCreateDesc_t& config,
+                                       const sirGraphicsShaderCode_t& shader ) noexcept
+{
+	if ( ppDevice == nullptr || *ppDevice == nullptr ) {
+		return 30;
+	}
+	SIRD3D12RenderingDevice *pNative = static_cast<SIRD3D12RenderingDevice *>( *ppDevice );
+	sirD3D12PipelineCacheStats_t stats = {};
+	if ( pNative->queryNativePipelineCacheStats( nullptr ) != SIR_GRAPHICS_INVALID_ARGUMENT ||
+	     pNative->queryNativePipelineCacheStats( &stats ) != SIR_GRAPHICS_SUCCESS ) {
+		return 31;
+	}
+	if ( !stats.bAvailable ) {
+		uint64_t nSize = 0;
+		return pNative->serializeNativePipelineCache( nullptr, &nSize ) == SIR_GRAPHICS_UNSUPPORTED ? 0 : 32;
+	}
+	if ( stats.nCacheStores == 0 || stats.nCacheHits == 0 || stats.nCacheMisses == 0 ) {
+		return 33;
+	}
+	uint64_t nSize = 0;
+	if ( pNative->serializeNativePipelineCache( nullptr, nullptr ) != SIR_GRAPHICS_INVALID_ARGUMENT ||
+	     pNative->serializeNativePipelineCache( nullptr, &nSize ) != SIR_GRAPHICS_SUCCESS || nSize == 0 ||
+	     nSize > 16ULL * 1024ULL * 1024ULL ) {
+		return 34;
+	}
+	void *pBlob = malloc( ( size_t )nSize );
+	if ( pBlob == nullptr ) {
+		return 35;
+	}
+	uint64_t nShortSize = nSize - 1;
+	if ( pNative->serializeNativePipelineCache( pBlob, &nShortSize ) != SIR_GRAPHICS_CAPACITY_EXCEEDED ||
+	     nShortSize != nSize || pNative->serializeNativePipelineCache( pBlob, &nSize ) != SIR_GRAPHICS_SUCCESS ||
+	     pNative->loadNativePipelineCache( pBlob, nSize ) != SIR_GRAPHICS_BUSY ) {
+		free( pBlob );
+		return 36;
+	}
+	if ( driver.destroyDevice( *ppDevice ) != SIR_GRAPHICS_SUCCESS ) {
+		free( pBlob );
+		return 37;
+	}
+	*ppDevice = nullptr;
+	if ( driver.createDevice( config, ppDevice ) != SIR_GRAPHICS_SUCCESS || *ppDevice == nullptr ) {
+		free( pBlob );
+		return 38;
+	}
+	pNative = static_cast<SIRD3D12RenderingDevice *>( *ppDevice );
+	if ( pNative->loadNativePipelineCache( nullptr, nSize ) != SIR_GRAPHICS_INVALID_ARGUMENT ||
+	     pNative->loadNativePipelineCache( pBlob, 0 ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		free( pBlob );
+		return 39;
+	}
+	uint8_t *pInvalid = static_cast<uint8_t *>( malloc( ( size_t )nSize ) );
+	if ( pInvalid == nullptr ) {
+		free( pBlob );
+		return 40;
+	}
+	memset( pInvalid, 0, ( size_t )nSize );
+	const sirGraphicsResult_t eCorrupted = pNative->loadNativePipelineCache( pInvalid, nSize );
+	free( pInvalid );
+	if ( eCorrupted == SIR_GRAPHICS_SUCCESS ) {
+		free( pBlob );
+		return 41;
+	}
+	if ( pNative->loadNativePipelineCache( pBlob, nSize ) != SIR_GRAPHICS_SUCCESS ) {
+		free( pBlob );
+		return 42;
+	}
+	free( pBlob );
+	sirGraphicsABIModernRecipe_t recipe = {};
+	recipe.nSize = sizeof( recipe );
+	recipe.nStageMask = SIR_GRAPHICS_STAGE_COMPUTE;
+	recipe.nRequiredFeatures = SIR_GRAPHICS_FEATURE_COMPUTE;
+	sirGraphicsBindingDesc_t bindings[2] = {};
+	bindings[0].nBinding = 0;
+	bindings[0].nSpace = 0;
+	bindings[0].nArrayCount = 1;
+	bindings[0].nShaderStageMask = SIR_GRAPHICS_STAGE_COMPUTE;
+	bindings[0].eType = SIR_GRAPHICS_BINDING_STORAGE_BUFFER;
+	bindings[1].nBinding = 0;
+	bindings[1].nSpace = 0;
+	bindings[1].nArrayCount = 1;
+	bindings[1].nShaderStageMask = SIR_GRAPHICS_STAGE_COMPUTE;
+	bindings[1].eType = SIR_GRAPHICS_BINDING_CONSTANT_BUFFER;
+	sirGraphicsPipelineDesc_t compute = {};
+	compute.eModel = SIR_GRAPHICS_PIPELINE_MODEL_MODERN;
+	compute.pModern = &recipe;
+	compute.eType = SIR_GRAPHICS_PIPELINE_COMPUTE;
+	compute.nSampleCount = 1;
+	compute.computeShader = shader;
+	compute.pBindings = bindings;
+	compute.nBindingCount = 2;
+	sirGraphicsHandle_t hPipeline = {};
+	if ( ( *ppDevice )->createPipeline( compute, &hPipeline ) != SIR_GRAPHICS_SUCCESS ||
+	     pNative->queryNativePipelineCacheStats( &stats ) != SIR_GRAPHICS_SUCCESS || stats.nCacheHits == 0 ) {
+		return 43;
+	}
+	sirGraphicsCompletionSet_t completed = {};
+	completed.nDeviceGeneration = ( *ppDevice )->getDeviceGeneration();
+	if ( ( *ppDevice )->retireResource( hPipeline, completed ) != SIR_GRAPHICS_SUCCESS ) {
+		return 44;
+	}
+	return 0;
+}
+
 int main( void )
 {
 	SIRD3D12Driver driver;
@@ -297,13 +402,18 @@ int main( void )
 
 	const uint32_t nGeneration = pDevice->getDeviceGeneration();
 	const int nResult = sirTestGeneralPipelines( pDevice, nGeneration, computeShader, vertexShader, pixelShader );
-	const sirGraphicsResult_t eShutdown = driver.destroyDevice( pDevice );
+	const int nCacheResult = nResult == 0 ? sirTestNativePipelineCache( driver, &pDevice, config, computeShader ) : 0;
+	const sirGraphicsResult_t eShutdown = pDevice == nullptr ? SIR_GRAPHICS_SUCCESS : driver.destroyDevice( pDevice );
 	free( pCompute );
 	free( pVertex );
 	free( pPixel );
 	if ( nResult != 0 ) {
 		fprintf( stderr, "General D3D12 PSO test failed at stage %d\\n", nResult );
 		return nResult;
+	}
+	if ( nCacheResult != 0 ) {
+		fprintf( stderr, "Native D3D12 pipeline-cache test failed at stage %d\\n", nCacheResult );
+		return nCacheResult;
 	}
 	return eShutdown == SIR_GRAPHICS_SUCCESS ? 0 : 6;
 }
