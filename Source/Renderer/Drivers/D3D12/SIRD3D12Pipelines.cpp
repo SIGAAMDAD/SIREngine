@@ -90,9 +90,7 @@ static uint32_t sirD3D12VertexFormatBytes( sirGraphicsFormat_t eFormat ) noexcep
 
 static bool sirD3D12ValidDxil( const sirGraphicsShaderCode_t& shader ) noexcept
 {
-	constexpr uint64_t MAX_DXIL_BYTES = 16ULL * 1024ULL * 1024ULL;
-	return shader.eFormat == SIR_GRAPHICS_SHADER_DXIL && shader.pBytes != nullptr && shader.nByteCount >= 16 &&
-	       shader.nByteCount <= MAX_DXIL_BYTES && memcmp( shader.pBytes, "DXBC", 4 ) == 0;
+	return shader.eFormat == SIR_GRAPHICS_SHADER_DXIL && sirD3D12ValidateDXILContainer( shader.pBytes, shader.nByteCount );
 }
 
 static D3D12_DESCRIPTOR_RANGE_TYPE sirD3D12RangeType( sirGraphicsBindingType_t eType ) noexcept
