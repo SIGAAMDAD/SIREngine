@@ -23,6 +23,21 @@ static constexpr uint64_t SIR_D3D12_SHARED_FEATURES = SIR_GRAPHICS_FEATURE_GRAPH
                                                       SIR_GRAPHICS_FEATURE_COPY_QUEUE | SIR_GRAPHICS_FEATURE_SHADER_STORAGE |
                                                       SIR_GRAPHICS_FEATURE_MRT | SIR_GRAPHICS_FEATURE_PRESENT;
 
+static uint32_t sirD3D12MaximumRgba8SampleCount( ID3D12Device *pDevice ) noexcept
+{
+	if ( pDevice == nullptr ) {
+		return 1;
+	}
+	static constexpr uint32_t SIR_D3D12_SAMPLE_COUNTS[] = { 2, 4, 8, 16, 32 };
+	uint32_t nMaximumSamples = 1;
+	for ( const uint32_t nSampleCount : SIR_D3D12_SAMPLE_COUNTS ) {
+		if ( sirD3D12SupportsSampleCount( pDevice, DXGI_FORMAT_R8G8B8A8_UNORM, nSampleCount ) ) {
+			nMaximumSamples = nSampleCount;
+		}
+	}
+	return nMaximumSamples;
+}
+
 static sirGraphicsResult_t sirD3D12FindAdapter( uint32_t nAdapterIndex, sirGraphicsAdapterInfo_t *pInfo ) noexcept
 {
 	if ( pInfo == nullptr ) {
@@ -49,6 +64,11 @@ static sirGraphicsResult_t sirD3D12FindAdapter( uint32_t nAdapterIndex, sirGraph
 	pInfo->nDedicatedVideoBytes = desc.DedicatedVideoMemory;
 	pInfo->nSharedSystemBytes = desc.SharedSystemMemory;
 	pInfo->nFeatureMask = SIR_D3D12_SHARED_FEATURES;
+	Microsoft::WRL::ComPtr<ID3D12Device> pProbe;
+	if ( SUCCEEDED( D3D12CreateDevice( pSelected.Get(), D3D_FEATURE_LEVEL_12_0, IID_PPV_ARGS( pProbe.GetAddressOf() ) ) ) &&
+	     sirD3D12MaximumRgba8SampleCount( pProbe.Get() ) > 1 ) {
+		pInfo->nFeatureMask |= SIR_GRAPHICS_FEATURE_MULTISAMPLE;
+	}
 	pInfo->nApiVersion = { 12, 0, 0 };
 	pInfo->bSoftwareAdapter = ( desc.Flags & DXGI_ADAPTER_FLAG3_SOFTWARE ) != 0;
 	if ( WideCharToMultiByte( CP_UTF8, 0, desc.Description, -1, pInfo->szName, ( int )sizeof( pInfo->szName ), nullptr, nullptr ) == 0 ) {
@@ -78,7 +98,7 @@ sirGraphicsResult_t SIRD3D12RenderingDevice::initialize( bool bSoftware, const s
 	if ( desc.nFramesInFlight == 0 || desc.nFramesInFlight > 3 ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	if ( !sirGraphicsHasFeatures( SIR_D3D12_SHARED_FEATURES, desc.nRequiredFeatures ) ) {
+	if ( !sirGraphicsHasFeatures( SIR_D3D12_SHARED_FEATURES | SIR_GRAPHICS_FEATURE_MULTISAMPLE, desc.nRequiredFeatures ) ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
 	if ( pSealedPools != nullptr && !desc.bHeadless ) {
@@ -99,6 +119,14 @@ sirGraphicsResult_t SIRD3D12RenderingDevice::initialize( bool bSoftware, const s
 		return m_Native.getLastError() == E_NOTIMPL ? SIR_GRAPHICS_UNSUPPORTED : SIR_GRAPHICS_DRIVER_ERROR;
 	}
 	m_bSoftware = bSoftware;
+	// Optional features must be admitted against this native device, not the
+	// fixed baseline mask; the advertised maximum and admission must agree.
+	sirGraphicsCapabilities_t nativeCaps = {};
+	const sirGraphicsResult_t eCaps = queryCapabilities( &nativeCaps );
+	if ( eCaps != SIR_GRAPHICS_SUCCESS || !sirGraphicsHasFeatures( nativeCaps.nFeatureMask, desc.nRequiredFeatures ) ) {
+		m_Native.shutdown();
+		return eCaps != SIR_GRAPHICS_SUCCESS ? eCaps : SIR_GRAPHICS_UNSUPPORTED;
+	}
 	if ( !m_Native.getMemory()->configureResidentBudget( desc.nResidentBudgetBytes ) ) {
 		m_Native.shutdown();
 		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
@@ -189,14 +217,11 @@ sirGraphicsResult_t SIRD3D12RenderingDevice::queryCapabilities( sirGraphicsCapab
 	pCapabilities->nMaximumBindingSlots = 128;
 	pCapabilities->nMaximumTextureDimension = D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION;
 	pCapabilities->nMaximumColorAttachments = D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT;
-	uint32_t nMaximumSamples = 1;
-	constexpr uint32_t SAMPLE_COUNTS[] = { 2, 4, 8, 16, 32 };
-	for ( uint32_t nSampleCount : SAMPLE_COUNTS ) {
-		if ( sirD3D12SupportsSampleCount( m_Native.getNativeDevice(), DXGI_FORMAT_R8G8B8A8_UNORM, nSampleCount ) ) {
-			nMaximumSamples = nSampleCount;
-		}
-	}
+	const uint32_t nMaximumSamples = sirD3D12MaximumRgba8SampleCount( m_Native.getNativeDevice() );
 	pCapabilities->nMaximumSampleCount = nMaximumSamples;
+	if ( nMaximumSamples > 1 ) {
+		pCapabilities->nFeatureMask |= SIR_GRAPHICS_FEATURE_MULTISAMPLE;
+	}
 	pCapabilities->nDeviceGeneration = nGeneration;
 	pCapabilities->bSoftwareAdapter = m_bSoftware;
 	bool bUnified = false;

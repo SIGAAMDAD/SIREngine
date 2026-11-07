@@ -104,6 +104,11 @@ int main( void )
 	     ( capabilities.nMaximumSampleCount & ( capabilities.nMaximumSampleCount - 1 ) ) != 0 ) {
 		return 31;
 	}
+	const bool bMultisample = capabilities.nMaximumSampleCount > 1;
+	if ( ( ( capabilities.nFeatureMask & SIR_GRAPHICS_FEATURE_MULTISAMPLE ) != 0 ) != bMultisample ||
+	     ( ( expected.nFeatureMask & SIR_GRAPHICS_FEATURE_MULTISAMPLE ) != 0 ) != bMultisample ) {
+		return 52;
+	}
 	sirGraphicsABIPipelineModelCaps_t modelCaps = {};
 	if ( pDevice->queryPipelineModelCaps( SIR_GRAPHICS_PIPELINE_MODEL_MODERN, &modelCaps ) != SIR_GRAPHICS_SUCCESS ||
 	     modelCaps.nModel != SIR_GRAPHICS_PIPELINE_MODEL_MODERN || modelCaps.nDeviceGeneration != capabilities.nDeviceGeneration ||
@@ -396,6 +401,20 @@ int main( void )
 	     pDevice->getDeviceGeneration() <= capabilities.nDeviceGeneration || driver.destroyDevice( pDevice ) != SIR_GRAPHICS_SUCCESS ) {
 		return 13;
 	}
+	// The optional feature requested at device creation must match the WARP
+	// capability bit, including rejection when native MSAA is unavailable.
+	config.nRequiredFeatures = SIR_GRAPHICS_FEATURE_MULTISAMPLE;
+	pDevice = nullptr;
+	const sirGraphicsResult_t eMsaaAdmission = driver.createDevice( config, &pDevice );
+	if ( bMultisample ) {
+		if ( eMsaaAdmission != SIR_GRAPHICS_SUCCESS || pDevice == nullptr || driver.destroyDevice( pDevice ) != SIR_GRAPHICS_SUCCESS ) {
+			return 53;
+		}
+	} else if ( eMsaaAdmission != SIR_GRAPHICS_UNSUPPORTED || pDevice != nullptr ) {
+		return 54;
+	}
+	pDevice = nullptr;
+	config.nRequiredFeatures = 0;
 	// Physical GPU runners verify that each reported index opens the matching native LUID.
 	config.bAllowSoftware = false;
 	for ( uint32_t iAdapter = 0; iAdapter < nSoftwareIndex; ++iAdapter ) {
