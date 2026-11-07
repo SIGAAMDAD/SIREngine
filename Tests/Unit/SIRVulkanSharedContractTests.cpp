@@ -231,7 +231,7 @@ int main( void )
 	pDevice = nullptr;
 	const sirGraphicsResult_t eGraphicsDevice = driver.createDevice( create, &pDevice );
 	if ( eGraphicsDevice == SIR_GRAPHICS_SUCCESS ) {
-		if ( pDevice == nullptr || driver.destroyDevice( &pDevice ) != SIR_GRAPHICS_SUCCESS )
+		if ( pDevice == nullptr || driver.destroyDevice( pDevice ) != SIR_GRAPHICS_SUCCESS )
 			return 6;
 	} else if ( eGraphicsDevice != SIR_GRAPHICS_UNSUPPORTED || pDevice != nullptr ) {
 		return 6;
