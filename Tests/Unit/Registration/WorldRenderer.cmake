@@ -22,6 +22,13 @@ target_link_libraries(SIRVirtualTextureReferenceEncoderTests PRIVATE SIR::Graphi
 add_test(NAME renderer.virtual-texturing.reference-encoder COMMAND SIRVirtualTextureReferenceEncoderTests)
 sir_configure_owned_target(SIRVirtualTextureReferenceEncoderTests)
 
+if(SIR_WITH_VT_ZSTD)
+    add_executable(SIRVirtualTextureZstdCodecTests SIRVirtualTextureZstdCodecTests.cpp)
+    target_link_libraries(SIRVirtualTextureZstdCodecTests PRIVATE SIR::Graphics libzstd_static)
+    add_test(NAME renderer.virtual-texturing.zstd-cluster COMMAND SIRVirtualTextureZstdCodecTests)
+    sir_configure_owned_target(SIRVirtualTextureZstdCodecTests)
+endif()
+
 # Bounded metadata-only V1 lookup and malformed-directory rejection.
 add_executable(SIRVirtualTexturePackLookupTests SIRVirtualTexturePackLookupTests.cpp)
 target_link_libraries(SIRVirtualTexturePackLookupTests PRIVATE SIR::Graphics)
