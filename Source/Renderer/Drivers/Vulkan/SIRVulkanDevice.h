@@ -49,6 +49,8 @@ typedef struct sirVulkanAdapterInfo_s
 	uint32_t nVendorId;
 	uint32_t nDeviceId;
 	uint32_t nQueueFamilyIndex;
+	uint32_t nComputeQueueFamilyIndex;
+	uint32_t nTransferQueueFamilyIndex;
 	uint32_t nMaximumTextureDimension;
 	uint32_t nMemoryTypeCount;
 	uint32_t nMemoryHeapCount;
@@ -78,6 +80,20 @@ typedef struct sirVulkanMemoryStats_s
 
 // Higher scores appear first in the shared adapter registry.
 uint32_t sirVulkanAdapterPriority( VkPhysicalDeviceType eType ) noexcept;
+
+// Discovery only: current command submission uses the selected graphics family.
+typedef struct sirVulkanQueueFamilySelection_s
+{
+	uint32_t nGraphicsFamilyIndex;
+	uint32_t nComputeFamilyIndex;
+	uint32_t nTransferFamilyIndex;
+	bool bGraphicsSupportsCompute;
+} sirVulkanQueueFamilySelection_t;
+
+bool sirVulkanSelectQueueFamilies( const VkQueueFamilyProperties *pFamilies, uint32_t nCount,
+                                   sirVulkanQueueFamilySelection_t *pSelection ) noexcept;
+bool sirVulkanBuildQueueCreateInfos( const sirVulkanQueueFamilySelection_t& selection, const float *pPriority,
+                                     VkDeviceQueueCreateInfo ( &szInfos )[3], uint32_t *pCount ) noexcept;
 
 // Private Vulkan-driver ownership. No Vk or VMA types enter SIRRenderingDevice.
 typedef struct sirVulkanPoolBudget_s
@@ -229,6 +245,8 @@ typedef struct sirVulkanImageBarrier_s
 
 // Identical, failure-atomic range/layout/usage admission for standalone and recorded barriers.
 bool sirVulkanValidateNativeImageBarrier( const sirVulkanImage_t *pImage, const sirVulkanImageBarrier_t& barrier ) noexcept;
+// CPU-only translation used by native image barriers and copy transitions.
+bool sirVulkanImageAccessScope( VkImageLayout eLayout, VkPipelineStageFlags2 *pStages, VkAccessFlags2 *pAccess ) noexcept;
 
 typedef struct sirVulkanTextureTransfer_s
 {
@@ -324,6 +342,8 @@ private:
 	VkPhysicalDevice m_PhysicalDevice;
 	VkDevice m_Device;
 	VkQueue m_GraphicsQueue;
+	VkQueue m_ComputeQueue;
+	VkQueue m_TransferQueue;
 	VmaAllocator m_Allocator;
 	VmaPool m_szSealedPools[3] = {};
 	uint32_t m_szSealedMemoryTypes[3] = {};

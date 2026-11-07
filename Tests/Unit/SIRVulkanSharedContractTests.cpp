@@ -100,6 +100,85 @@ int main( void )
 		return 13;
 	}
 
+	// CPU-only queue discovery: the active native queue remains the graphics family.
+	VkQueueFamilyProperties szFamilies[4] = {};
+	szFamilies[0].queueCount = 1;
+	szFamilies[0].queueFlags = VK_QUEUE_GRAPHICS_BIT;
+	szFamilies[1].queueCount = 1;
+	szFamilies[1].queueFlags = VK_QUEUE_COMPUTE_BIT | VK_QUEUE_TRANSFER_BIT;
+	szFamilies[2].queueCount = 1;
+	szFamilies[2].queueFlags = VK_QUEUE_TRANSFER_BIT;
+	szFamilies[3].queueCount = 1;
+	szFamilies[3].queueFlags = VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT | VK_QUEUE_TRANSFER_BIT;
+	sirVulkanQueueFamilySelection_t families = {};
+	if ( !sirVulkanSelectQueueFamilies( szFamilies, 4, &families ) || families.nGraphicsFamilyIndex != 3 ||
+	     families.nComputeFamilyIndex != 1 || families.nTransferFamilyIndex != 2 || !families.bGraphicsSupportsCompute ) {
+		return 80;
+	}
+	if ( !sirVulkanSelectQueueFamilies( szFamilies, 1, &families ) || families.nGraphicsFamilyIndex != 0 ||
+	     families.nComputeFamilyIndex != UINT32_MAX || families.nTransferFamilyIndex != 0 || families.bGraphicsSupportsCompute ) {
+		return 81;
+	}
+	if ( sirVulkanSelectQueueFamilies( nullptr, 4, &families ) || sirVulkanSelectQueueFamilies( szFamilies, 65, &families ) ||
+	     families.nGraphicsFamilyIndex != UINT32_MAX ) {
+		return 82;
+	}
+	if ( sirVulkanSelectQueueFamilies( szFamilies, 4, nullptr ) ) {
+		return 83;
+	}
+	szFamilies[0].queueCount = 0;
+	szFamilies[3].queueCount = 0;
+	if ( sirVulkanSelectQueueFamilies( szFamilies, 4, &families ) || families.nComputeFamilyIndex != UINT32_MAX ||
+	     families.nTransferFamilyIndex != UINT32_MAX ) {
+		return 84;
+	}
+	szFamilies[0].queueCount = 1;
+	if ( !sirVulkanSelectQueueFamilies( szFamilies, 4, &families ) || families.nGraphicsFamilyIndex != 0 ||
+	     families.nComputeFamilyIndex != 1 || families.nTransferFamilyIndex != 2 ) {
+		return 85;
+	}
+	szFamilies[2].queueCount = 0;
+	if ( !sirVulkanSelectQueueFamilies( szFamilies, 4, &families ) || families.nTransferFamilyIndex != 1 ) {
+		return 86;
+	}
+	szFamilies[1].queueCount = 0;
+	if ( !sirVulkanSelectQueueFamilies( szFamilies, 4, &families ) || families.nTransferFamilyIndex != 0 ) {
+		return 87;
+	}
+
+	// Native queue plan requests each distinct family once, with graphics first.
+	const float fQueuePriority = 1.0f;
+	VkDeviceQueueCreateInfo szQueueInfos[3] = {};
+	uint32_t nQueueCount = 99;
+	const sirVulkanQueueFamilySelection_t distinct = { 3, 1, 2, true };
+	if ( !sirVulkanBuildQueueCreateInfos( distinct, &fQueuePriority, szQueueInfos, &nQueueCount ) || nQueueCount != 3 ||
+	     szQueueInfos[0].queueFamilyIndex != 3 || szQueueInfos[1].queueFamilyIndex != 1 ||
+	     szQueueInfos[2].queueFamilyIndex != 2 ) {
+		return 88;
+	}
+	for ( uint32_t iQueue = 0; iQueue < nQueueCount; ++iQueue ) {
+		if ( szQueueInfos[iQueue].queueCount != 1 || szQueueInfos[iQueue].pQueuePriorities != &fQueuePriority ||
+		     szQueueInfos[iQueue].sType != VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO ) {
+			return 89;
+		}
+	}
+	const sirVulkanQueueFamilySelection_t shared = { 3, 3, 3, true };
+	if ( !sirVulkanBuildQueueCreateInfos( shared, &fQueuePriority, szQueueInfos, &nQueueCount ) || nQueueCount != 1 ||
+	     szQueueInfos[0].queueFamilyIndex != 3 ) {
+		return 90;
+	}
+	const sirVulkanQueueFamilySelection_t partial = { 3, UINT32_MAX, 1, false };
+	if ( !sirVulkanBuildQueueCreateInfos( partial, &fQueuePriority, szQueueInfos, &nQueueCount ) || nQueueCount != 2 ||
+	     szQueueInfos[1].queueFamilyIndex != 1 ) {
+		return 91;
+	}
+	const sirVulkanQueueFamilySelection_t missingGraphics = { UINT32_MAX, 1, 2, false };
+	if ( sirVulkanBuildQueueCreateInfos( missingGraphics, &fQueuePriority, szQueueInfos, &nQueueCount ) || nQueueCount != 0 ||
+	     sirVulkanBuildQueueCreateInfos( distinct, nullptr, szQueueInfos, &nQueueCount ) || nQueueCount != 0 ||
+	     sirVulkanBuildQueueCreateInfos( distinct, &fQueuePriority, szQueueInfos, nullptr ) ) {
+		return 92;
+	}
+
 	// Physical-device priority is stable and independent of the Vulkan loader.
 	if ( sirVulkanAdapterPriority( VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU ) != 4 ||
 	     sirVulkanAdapterPriority( VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU ) != 3 ||

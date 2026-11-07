@@ -84,6 +84,8 @@ static bool sirVulkanImageLayoutAllowed( const sirVulkanImage_t *pImage, VkImage
 		return true;
 	case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
 		return !bDepth && ( pImage->nUsage & VK_IMAGE_USAGE_SAMPLED_BIT ) != 0;
+	case VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL:
+		return !bDepth && ( pImage->nUsage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT ) != 0;
 	case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
 		return ( pImage->nUsage & VK_IMAGE_USAGE_TRANSFER_SRC_BIT ) != 0;
 	case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
@@ -182,6 +184,9 @@ bool sirVulkanGetSubresourceLayout( const sirVulkanImage_t *pImage, uint32_t nMi
 	case 6:
 		*pLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
 		return true;
+	case 7:
+		*pLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
+		return true;
 	default:
 		return false;
 	}
@@ -214,6 +219,9 @@ bool sirVulkanSetSubresourceLayout( sirVulkanImage_t *pImage, uint32_t nMip, uin
 		break;
 	case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
 		nValue = 6;
+		break;
+	case VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL:
+		nValue = 7;
 		break;
 	default:
 		return false;
