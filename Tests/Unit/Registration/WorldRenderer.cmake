@@ -41,6 +41,12 @@ target_link_libraries(SIRVirtualTextureFixedProfileTests PRIVATE SIR::Graphics)
 add_test(NAME renderer.virtual-texturing.fixed-profile COMMAND SIRVirtualTextureFixedProfileTests)
 sir_configure_owned_target(SIRVirtualTextureFixedProfileTests)
 
+# Decoded V1 per-tile payload bounds, physical bytes and corruption checks.
+add_executable(SIRVirtualTextureDecodedPayloadTests SIRVirtualTextureDecodedPayloadTests.cpp)
+target_link_libraries(SIRVirtualTextureDecodedPayloadTests PRIVATE SIR::Graphics)
+add_test(NAME renderer.virtual-texturing.decoded-payload COMMAND SIRVirtualTextureDecodedPayloadTests)
+sir_configure_owned_target(SIRVirtualTextureDecodedPayloadTests)
+
 # Native Hi-Z reference and command validation.
 include(${CMAKE_CURRENT_SOURCE_DIR}/HIZFoundationTests.cmake)
 
