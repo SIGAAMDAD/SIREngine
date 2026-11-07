@@ -16,7 +16,7 @@ The C++17 foundation and the engine migration have separate acceptance gates.
 | Graphics/audio | Actual backend/device initialization and resource lifetime tests |
 | Memory | Allocation-domain tracing, failure behavior, high-water and reclamation evidence |
 
-`Build/CMake/CIHygiene.cmake` checks the first-party source tree and pinned external library gitlinks. `Build/CMake/CIFormat.cmake` validates owned sources against the pinned formatter. `Build/CMake/CIStyle.cmake` checks the mechanical global-scope and SIREngine header rules; Clang AST audits cover semantic details beyond the mechanical gate. Push/PR jobs compile and test the Windows/Linux native foundation; nightly jobs build Release configurations, run tests and package artifacts. Milestone-specific acceptance expands as systems are implemented.
+Changed C++ source is checked with the pinned clang-format 23.1.5 formatter. CMake and CTest exercise the native targets on Windows and Linux. Full source qualification uses LLVM 23.1.5 and real instrumented production code; deeper architecture/ABI inspection is performed when relevant to the changed subsystem.
 
 Compilation and runtime results must reflect the exact source/configuration under test. The native Core bootstrap is not evidence for a functional editor, Terrain system, or shared resource graph.
 
@@ -26,10 +26,10 @@ For the present integration phase, native C++ subsystem acceptance requires **at
 
 Coverage evidence must come from the **exact candidate commit and compiler configuration**. Missing source mappings, empty metric denominators, skipped required tests, and stale LLVM profiles fail qualification; never count them as 100% coverage. Include both implementation and compiled header scope where applicable.
 
-The repository-owned gate `Build/CMake/SIRCoverageGate.cmake` accepts a source-scoped `llvm-cov export -format=text` JSON snapshot. Example:
+The canonical runner performs an instrumented CMake/Ninja build, executes registered native tests, merges real LLVM profiles and checks all four metrics against the compiled production source inventory:
 
 ```sh
-cmake -DSIR_COVERAGE_JSON=/path/to/coverage.json -DSIR_COVERAGE_REQUIRED_SOURCE=SIRStringPool.cpp -P Build/CMake/SIRCoverageGate.cmake
+SIR_QUALIFICATION_SCOPE=all SIR_COVERAGE_MINIMUM=90 python3 Build/Scripts/RunLLVM23Qualification.py
 ```
 
-The script rejects each metric below 90% and also rejects missing or empty coverage. Actual instrumented compilation and CTest execution are prerequisites for producing valid evidence; the gate does not generate coverage or replace the native build.
+Release promotion uses the separately required 100% threshold. A missing source mapping or a skipped test is an incomplete qualification, not a prerequisite for independent test development.

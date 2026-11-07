@@ -50,7 +50,33 @@ jobs:
           if [[ "${{ matrix.compiler }}" == clang ]]; then export CC=clang CXX=clang++; fi
           cmake --preset dev -DSIR_WITH_GOOGLETEST=ON
           cmake --build --preset dev
-          ctest --preset pr-smoke --no-tests=error --output-on-failure
+          label='^gate:pr
+  required:
+    name: sir/required
+    if: always()
+    needs: [source, native]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Require source and native checks
+        env:
+          SOURCE: ${{ needs.source.result }}
+          NATIVE: ${{ needs.native.result }}
+        run: test "$SOURCE" = success && test "$NATIVE" = success
+
+          if [[ "${{ github.event_name }}" != pull_request ]]; then label='^gate:main
+  required:
+    name: sir/required
+    if: always()
+    needs: [source, native]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Require source and native checks
+        env:
+          SOURCE: ${{ needs.source.result }}
+          NATIVE: ${{ needs.native.result }}
+        run: test "$SOURCE" = success && test "$NATIVE" = success
+; fi
+          ctest --preset dev -L "$label" --no-tests=error --output-on-failure
   required:
     name: sir/required
     if: always()
