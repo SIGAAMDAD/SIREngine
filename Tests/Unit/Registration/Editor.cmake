@@ -136,3 +136,9 @@ add_executable(SIREditorResourceReferencesTests SIREditorResourceReferencesTests
 target_link_libraries(SIREditorResourceReferencesTests PRIVATE SIR::EditorAuthoring)
 add_test(NAME editor.scene.resource-reference-index COMMAND SIREditorResourceReferencesTests)
 sir_configure_owned_target(SIREditorResourceReferencesTests)
+
+# Canonical scene resource identity and dependency import into SIRResourceCatalog.
+add_executable(SIREditorCatalogBridgeTests SIREditorCatalogBridgeTests.cpp)
+target_link_libraries(SIREditorCatalogBridgeTests PRIVATE SIR::EditorAuthoring)
+add_test(NAME editor.scene.resource-catalog-bridge COMMAND SIREditorCatalogBridgeTests)
+sir_configure_owned_target(SIREditorCatalogBridgeTests)

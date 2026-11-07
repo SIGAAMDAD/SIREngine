@@ -326,6 +326,20 @@ sirEditorWorkspaceResult_t SIREditorSceneWorkspace::openTextFile( const char *ps
 	return finishOpen( nReadBytes );
 }
 
+sirEditorCatalogBuildResult_t SIREditorSceneWorkspace::buildResourceCatalog( const sirEditorCatalogBuildRequest_t& request ) const noexcept
+{
+	if ( !m_bOpen ) {
+		return SIR_EDITOR_CATALOG_INVALID_SOURCE;
+	}
+	// Bind the canonical importer to the open workspace's validated indexes.
+	// The catalog owns only caller-supplied storage and immutable identities.
+	sirEditorCatalogBuildRequest_t bound = request;
+	bound.pSourceIndex = &m_Resources;
+	bound.pReferences = m_pResourceReferences;
+	bound.nReferenceCount = m_nResourceReferenceCount;
+	return sirEditorBuildResourceCatalog( bound );
+}
+
 void SIREditorSceneWorkspace::close( void ) noexcept
 {
 	if ( m_bInitialized ) {

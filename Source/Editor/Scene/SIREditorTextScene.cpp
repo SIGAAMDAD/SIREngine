@@ -427,6 +427,8 @@ sirEditorTextSceneResult_t sirEditorScanTextScene( const char *pszSource, size_t
 					bEscape = false;
 				} else if ( bMultilineQuote && *pChar == '\\' ) {
 					bEscape = true;
+				} else if ( !bMultilineQuote && ( *pChar == '#' || *pChar == ';' ) ) {
+					break;
 				} else if ( *pChar == '"' ) {
 					bMultilineQuote = !bMultilineQuote;
 				}
@@ -434,6 +436,9 @@ sirEditorTextSceneResult_t sirEditorScanTextScene( const char *pszSource, size_t
 		}
 		pCursor = pLineEnd == pEnd ? pEnd : pLineEnd + 1;
 		++nLine;
+	}
+	if ( bMultilineQuote || bEscape ) {
+		return sirEditorFailTextScene( pIndex, nLine, SIR_EDITOR_TEXT_INVALID_TAG );
 	}
 	if ( !bHeader || pIndex->nNodeCount == 0 ) {
 		return sirEditorFailTextScene( pIndex, nLine, SIR_EDITOR_TEXT_INVALID_HEADER );
@@ -811,6 +816,8 @@ sirEditorTextResourceResult_t sirEditorScanTextResources( const char *pszSource,
 					bEscape = false;
 				} else if ( bMultilineQuote && *pChar == '\\' ) {
 					bEscape = true;
+				} else if ( !bMultilineQuote && ( *pChar == '#' || *pChar == ';' ) ) {
+					break;
 				} else if ( *pChar == '"' ) {
 					bMultilineQuote = !bMultilineQuote;
 				}
@@ -818,6 +825,9 @@ sirEditorTextResourceResult_t sirEditorScanTextResources( const char *pszSource,
 		}
 		pCursor = pLineEnd == pEnd ? pEnd : pLineEnd + 1;
 		++nLine;
+	}
+	if ( bMultilineQuote || bEscape ) {
+		return sirEditorFailResourceIndex( pIndex, nLine, SIR_EDITOR_RESOURCE_INVALID_TAG );
 	}
 	if ( !bHeader ) {
 		return sirEditorFailResourceIndex( pIndex, nLine, SIR_EDITOR_RESOURCE_INVALID_HEADER );
