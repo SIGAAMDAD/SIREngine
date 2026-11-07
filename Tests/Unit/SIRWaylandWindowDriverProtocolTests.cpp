@@ -37,6 +37,9 @@ struct wl_compositor
 struct wl_seat
 {
 };
+struct wl_output
+{
+};
 struct wl_keyboard
 {
 };
@@ -84,6 +87,7 @@ static wl_display s_Display;
 static wl_registry s_Registry;
 static wl_compositor s_Compositor;
 static wl_seat s_Seat;
+static wl_output s_Output;
 static wl_keyboard s_Keyboard;
 static wl_pointer s_Pointer;
 static zwp_pointer_constraints_v1 s_Constraints;
@@ -101,6 +105,11 @@ static wl_surface s_Surfaces[8];
 static xdg_surface s_XdgSurfaces[8];
 static xdg_toplevel s_Toplevels[8];
 static const wl_registry_listener *s_pRegistryListener = nullptr;
+static const wl_surface_listener *s_pNativeSurfaceListeners[8] = {};
+static void *s_pNativeSurfaceContexts[8] = {};
+static const wl_output_listener *s_pOutputListener = nullptr;
+static void *s_pOutputContext = nullptr;
+static uint32_t s_nBufferScale[8] = {};
 static void *s_pRegistryContext = nullptr;
 static const xdg_surface_listener *s_pSurfaceListener[8] = {};
 static void *s_pSurfaceContext[8] = {};
@@ -140,6 +149,7 @@ static uint32_t s_nRelativeDestroyed = 0;
 extern "C" {
 const wl_interface wl_compositor_interface = { "wl_compositor" };
 const wl_interface wl_seat_interface = { "wl_seat" };
+const wl_interface wl_output_interface = { "wl_output" };
 const wl_interface xdg_wm_base_interface = { "xdg_wm_base" };
 const wl_interface zwp_pointer_constraints_v1_interface = { "zwp_pointer_constraints_v1" };
 const wl_interface zwp_relative_pointer_manager_v1_interface = { "zwp_relative_pointer_manager_v1" };
@@ -166,6 +176,8 @@ void *wl_registry_bind( wl_registry *, uint32_t, const wl_interface *pInterface,
 		return &s_Compositor;
 	if ( strcmp( pInterface->name, "wl_seat" ) == 0 )
 		return &s_Seat;
+	if ( strcmp( pInterface->name, "wl_output" ) == 0 )
+		return &s_Output;
 	if ( strcmp( pInterface->name, "zwp_pointer_constraints_v1" ) == 0 )
 		return &s_Constraints;
 	if ( strcmp( pInterface->name, "zwp_relative_pointer_manager_v1" ) == 0 )
@@ -179,6 +191,7 @@ int wl_display_roundtrip( wl_display * )
 	s_pRegistryListener->global( s_pRegistryContext, &s_Registry, 13, "wl_seat", 7 );
 	s_pRegistryListener->global( s_pRegistryContext, &s_Registry, 15, "zwp_pointer_constraints_v1", 1 );
 	s_pRegistryListener->global( s_pRegistryContext, &s_Registry, 16, "zwp_relative_pointer_manager_v1", 1 );
+	s_pRegistryListener->global( s_pRegistryContext, &s_Registry, 17, "wl_output", 2 );
 	return 0;
 }
 int wl_display_prepare_read( wl_display * )
@@ -213,6 +226,25 @@ void wl_registry_destroy( wl_registry * )
 {
 }
 void wl_compositor_destroy( wl_compositor * )
+{
+}
+int wl_surface_add_listener( wl_surface *pSurface, const wl_surface_listener *pListener, void *pContext )
+{
+	s_pNativeSurfaceListeners[pSurface->id] = pListener;
+	s_pNativeSurfaceContexts[pSurface->id] = pContext;
+	return 0;
+}
+void wl_surface_set_buffer_scale( wl_surface *pSurface, int32_t nScale )
+{
+	s_nBufferScale[pSurface->id] = ( uint32_t )nScale;
+}
+int wl_output_add_listener( wl_output *, const wl_output_listener *pListener, void *pContext )
+{
+	s_pOutputListener = pListener;
+	s_pOutputContext = pContext;
+	return 0;
+}
+void wl_output_destroy( wl_output * )
 {
 }
 void wl_surface_commit( wl_surface * )
@@ -782,6 +814,42 @@ static bool sirTestWaylandInputRouting( void ) noexcept
 	return true;
 }
 
+static bool sirTestOutputScaleChanges( void ) noexcept
+{
+	s_nCreated = 0;
+	s_bOldProtocol = false;
+	SIRWindowDriverWayland driver;
+	if ( driver.initialize() != SIR_WINDOW_OK ) {
+		return false;
+	}
+	sirWindowNativeView_t view = {};
+	if ( driver.createWindow( { "native-scale", 640, 480 }, 0, &view ) != SIR_WINDOW_OK ||
+	     s_pOutputListener == nullptr || s_pNativeSurfaceListeners[0] == nullptr || s_pSurfaceListener[0] == nullptr ) {
+		return false;
+	}
+	s_pOutputListener->scale( s_pOutputContext, &s_Output, 2 );
+	s_pSurfaceListener[0]->configure( s_pSurfaceContext[0], &s_XdgSurfaces[0], 601 );
+	s_pNativeSurfaceListeners[0]->enter( s_pNativeSurfaceContexts[0], &s_Surfaces[0], &s_Output );
+	sirWaylandTestEvents_t events = {};
+	if ( driver.pumpEvents( 16, sirCollectWaylandEvent, &events ) != SIR_WINDOW_OK || events.nCount != 3 ||
+	     events.events[0].eKind != SIR_WINDOW_EVENT_READY || events.events[0].nWidth != 640 || events.events[0].nHeight != 480 ||
+	     events.events[1].eKind != SIR_WINDOW_EVENT_DPI_CHANGED || events.events[1].nWidth != 192 ||
+	     events.events[2].eKind != SIR_WINDOW_EVENT_RESIZED || events.events[2].nWidth != 1280 ||
+	     events.events[2].nHeight != 960 || s_nBufferScale[0] != 2 ) {
+		return false;
+	}
+	s_pNativeSurfaceListeners[0]->leave( s_pNativeSurfaceContexts[0], &s_Surfaces[0], &s_Output );
+	if ( driver.pumpEvents( 16, sirCollectWaylandEvent, &events ) != SIR_WINDOW_OK || events.nCount != 5 ||
+	     events.events[3].eKind != SIR_WINDOW_EVENT_DPI_CHANGED || events.events[3].nWidth != 96 ||
+	     events.events[4].eKind != SIR_WINDOW_EVENT_RESIZED || events.events[4].nWidth != 640 ||
+	     events.events[4].nHeight != 480 || s_nBufferScale[0] != 1 ||
+	     driver.destroyWindow( 0 ) != SIR_WINDOW_OK ) {
+		return false;
+	}
+	driver.shutdown();
+	return true;
+}
+
 int main( void )
 {
 	if ( !sirTestNativeFailureInjection() ) {
@@ -802,6 +870,10 @@ int main( void )
 	}
 	if ( !sirTestWaylandInputRouting() ) {
 		fputs( "Wayland native keyboard/pointer routing failed\n", stderr );
+		return 1;
+	}
+	if ( !sirTestOutputScaleChanges() ) {
+		fputs( "Wayland integer output scaling failed\n", stderr );
 		return 1;
 	}
 	return 0;

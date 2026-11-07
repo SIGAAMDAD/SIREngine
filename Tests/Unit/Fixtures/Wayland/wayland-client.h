@@ -11,6 +11,7 @@ struct wl_compositor;
 struct wl_surface;
 struct wl_proxy;
 struct wl_seat;
+struct wl_output;
 struct wl_keyboard;
 struct wl_pointer;
 struct wl_array
@@ -26,6 +27,7 @@ struct wl_interface
 };
 extern const struct wl_interface wl_compositor_interface;
 extern const struct wl_interface wl_seat_interface;
+extern const struct wl_interface wl_output_interface;
 #define WL_SEAT_CAPABILITY_POINTER 1
 #define WL_SEAT_CAPABILITY_KEYBOARD 2
 #define WL_KEYBOARD_KEY_STATE_RELEASED 0
@@ -35,6 +37,18 @@ extern const struct wl_interface wl_seat_interface;
 #define WL_POINTER_BUTTON_STATE_RELEASED 0
 #define WL_POINTER_AXIS_VERTICAL_SCROLL 0
 #define WL_POINTER_AXIS_HORIZONTAL_SCROLL 1
+struct wl_surface_listener
+{
+	void ( *enter )( void *, struct wl_surface *, struct wl_output * );
+	void ( *leave )( void *, struct wl_surface *, struct wl_output * );
+};
+struct wl_output_listener
+{
+	void ( *geometry )( void *, struct wl_output *, int32_t, int32_t, int32_t, int32_t, int32_t, const char *, const char *, int32_t );
+	void ( *mode )( void *, struct wl_output *, uint32_t, int32_t, int32_t, int32_t );
+	void ( *done )( void *, struct wl_output * );
+	void ( *scale )( void *, struct wl_output *, int32_t );
+};
 struct wl_seat_listener
 {
 	void ( *capabilities )( void *, struct wl_seat *, uint32_t );
@@ -81,6 +95,10 @@ void *wl_registry_bind( struct wl_registry *, uint32_t, const struct wl_interfac
 void wl_registry_destroy( struct wl_registry * );
 struct wl_surface *wl_compositor_create_surface( struct wl_compositor * );
 void wl_compositor_destroy( struct wl_compositor * );
+int wl_output_add_listener( struct wl_output *, const struct wl_output_listener *, void * );
+void wl_output_destroy( struct wl_output * );
+int wl_surface_add_listener( struct wl_surface *, const struct wl_surface_listener *, void * );
+void wl_surface_set_buffer_scale( struct wl_surface *, int32_t );
 void wl_surface_commit( struct wl_surface * );
 void wl_surface_destroy( struct wl_surface * );
 void wl_proxy_destroy( struct wl_proxy * );

@@ -25,6 +25,27 @@ void SIRWindowDriverWayland::registryGlobal( void *pContext, wl_registry *pRegis
 	} else if ( strcmp( pszInterface, xdg_wm_base_interface.name ) == 0 && pDriver->m_pBase == nullptr ) {
 		pDriver->m_pBase = ( xdg_wm_base * )wl_registry_bind( pRegistry, nName, &xdg_wm_base_interface, 1 );
 		pDriver->m_nShellGlobal = nName;
+	} else if ( strcmp( pszInterface, wl_output_interface.name ) == 0 ) {
+		for ( uint32_t i = 0; i < SIR_WAYLAND_MAX_OUTPUTS; ++i ) {
+			sirWaylandOutput_t& output = pDriver->m_Outputs[i];
+			if ( output.pOutput != nullptr ) {
+				continue;
+			}
+			const uint32_t nBindVersion = nVersion < 2 ? nVersion : 2;
+			output.pOutput = ( wl_output * )wl_registry_bind( pRegistry, nName, &wl_output_interface, nBindVersion );
+			if ( output.pOutput == nullptr ) {
+				break;
+			}
+			output.pDriver = pDriver;
+			output.nGlobal = nName;
+			output.nScale = 1;
+			static const wl_output_listener s_OutputListener = { outputGeometry, outputMode, outputDone, outputScale };
+			if ( wl_output_add_listener( output.pOutput, &s_OutputListener, &output ) != 0 ) {
+				wl_output_destroy( output.pOutput );
+				output = {};
+			}
+			break;
+		}
 	} else if ( strcmp( pszInterface, wl_seat_interface.name ) == 0 && pDriver->m_pSeat == nullptr ) {
 		const uint32_t nBindVersion = nVersion < 7 ? nVersion : 7;
 		pDriver->m_pSeat = ( wl_seat * )wl_registry_bind( pRegistry, nName, &wl_seat_interface, nBindVersion );
@@ -77,6 +98,20 @@ void SIRWindowDriverWayland::registryRemove( void *pContext, wl_registry *pRegis
 		}
 	}
 #endif
+	for ( uint32_t i = 0; i < SIR_WAYLAND_MAX_OUTPUTS; ++i ) {
+		sirWaylandOutput_t& output = pDriver->m_Outputs[i];
+		if ( output.pOutput == nullptr || output.nGlobal != nName ) {
+			continue;
+		}
+		for ( uint32_t j = 0; j < SIR_WINDOW_MAX_WINDOWS; ++j ) {
+			sirWaylandWindowSlot_t& slot = pDriver->m_Slots[j];
+			slot.nOutputMask &= ~( UINT32_C( 1 ) << i );
+			pDriver->refreshOutputScale( slot );
+		}
+		wl_output_destroy( output.pOutput );
+		output = {};
+		break;
+	}
 	if ( nName == pDriver->m_nCompositorGlobal || nName == pDriver->m_nShellGlobal ) {
 		pDriver->loseDisplay();
 	}
@@ -122,8 +157,122 @@ void SIRWindowDriverWayland::surfaceConfigure( void *pContext, xdg_surface *pSur
 	pSlot->nHeight = pSlot->nPendingHeight;
 	pSlot->bConfigured = true;
 	if ( ( bFirst || bResized ) && !pSlot->bClosePending ) {
-		pSlot->pDriver->queueEvent( pSlot->nIndex, bFirst ? SIR_WINDOW_EVENT_READY : SIR_WINDOW_EVENT_RESIZED, pSlot->nWidth,
-		                            pSlot->nHeight );
+		const uint32_t nScale = pSlot->nBufferScale == 0 ? 1 : pSlot->nBufferScale;
+		const uint32_t nWidth = pSlot->nWidth <= UINT32_MAX / nScale ? pSlot->nWidth * nScale : 0;
+		const uint32_t nHeight = pSlot->nHeight <= UINT32_MAX / nScale ? pSlot->nHeight * nScale : 0;
+		pSlot->pDriver->queueEvent( pSlot->nIndex, bFirst ? SIR_WINDOW_EVENT_READY : SIR_WINDOW_EVENT_RESIZED, nWidth, nHeight );
+	}
+}
+
+void SIRWindowDriverWayland::outputGeometry( void *pContext, wl_output *pOutput, int32_t nX, int32_t nY, int32_t nWidth,
+                                              int32_t nHeight, int32_t nSubpixel, const char *pszMake,
+                                              const char *pszModel, int32_t nTransform ) noexcept
+{
+	( void )pContext;
+	( void )pOutput;
+	( void )nX;
+	( void )nY;
+	( void )nWidth;
+	( void )nHeight;
+	( void )nSubpixel;
+	( void )pszMake;
+	( void )pszModel;
+	( void )nTransform;
+}
+
+void SIRWindowDriverWayland::outputMode( void *pContext, wl_output *pOutput, uint32_t nFlags, int32_t nWidth, int32_t nHeight,
+                                          int32_t nRefresh ) noexcept
+{
+	( void )pContext;
+	( void )pOutput;
+	( void )nFlags;
+	( void )nWidth;
+	( void )nHeight;
+	( void )nRefresh;
+}
+
+void SIRWindowDriverWayland::outputDone( void *pContext, wl_output *pOutput ) noexcept
+{
+	( void )pContext;
+	( void )pOutput;
+}
+
+void SIRWindowDriverWayland::outputScale( void *pContext, wl_output *pOutput, int32_t nScale ) noexcept
+{
+	sirWaylandOutput_t *pEntry = ( sirWaylandOutput_t * )pContext;
+	if ( pEntry->pOutput != pOutput || pEntry->pDriver == nullptr || pEntry->pDriver->m_bLost || nScale < 1 ) {
+		return;
+	}
+	const uint32_t nAccepted = nScale > 16 ? 16 : ( uint32_t )nScale;
+	if ( nAccepted == pEntry->nScale ) {
+		return;
+	}
+	pEntry->nScale = nAccepted;
+	const uint32_t nIndex = ( uint32_t )( pEntry - pEntry->pDriver->m_Outputs );
+	for ( uint32_t i = 0; i < SIR_WINDOW_MAX_WINDOWS; ++i ) {
+		sirWaylandWindowSlot_t& slot = pEntry->pDriver->m_Slots[i];
+		if ( ( slot.nOutputMask & ( UINT32_C( 1 ) << nIndex ) ) != 0 ) {
+			pEntry->pDriver->refreshOutputScale( slot );
+		}
+	}
+}
+
+void SIRWindowDriverWayland::surfaceEnter( void *pContext, wl_surface *pSurface, wl_output *pOutput ) noexcept
+{
+	sirWaylandWindowSlot_t *pSlot = ( sirWaylandWindowSlot_t * )pContext;
+	if ( pSlot->pDriver == nullptr || pSlot->pSurface != pSurface || pSlot->pDriver->m_bLost ) {
+		return;
+	}
+	for ( uint32_t i = 0; i < SIR_WAYLAND_MAX_OUTPUTS; ++i ) {
+		if ( pSlot->pDriver->m_Outputs[i].pOutput == pOutput ) {
+			pSlot->nOutputMask |= UINT32_C( 1 ) << i;
+			pSlot->pDriver->refreshOutputScale( *pSlot );
+			return;
+		}
+	}
+}
+
+void SIRWindowDriverWayland::surfaceLeave( void *pContext, wl_surface *pSurface, wl_output *pOutput ) noexcept
+{
+	sirWaylandWindowSlot_t *pSlot = ( sirWaylandWindowSlot_t * )pContext;
+	if ( pSlot->pDriver == nullptr || pSlot->pSurface != pSurface || pSlot->pDriver->m_bLost ) {
+		return;
+	}
+	for ( uint32_t i = 0; i < SIR_WAYLAND_MAX_OUTPUTS; ++i ) {
+		if ( pSlot->pDriver->m_Outputs[i].pOutput == pOutput ) {
+			pSlot->nOutputMask &= ~( UINT32_C( 1 ) << i );
+			pSlot->pDriver->refreshOutputScale( *pSlot );
+			return;
+		}
+	}
+}
+
+void SIRWindowDriverWayland::refreshOutputScale( sirWaylandWindowSlot_t& slot ) noexcept
+{
+	if ( slot.pSurface == nullptr || m_bLost ) {
+		return;
+	}
+	uint32_t nScale = 1;
+	if ( wl_proxy_get_version( ( wl_proxy * )slot.pSurface ) >= 3 ) {
+		for ( uint32_t i = 0; i < SIR_WAYLAND_MAX_OUTPUTS; ++i ) {
+			if ( ( slot.nOutputMask & ( UINT32_C( 1 ) << i ) ) != 0 && m_Outputs[i].pOutput != nullptr &&
+			     m_Outputs[i].nScale > nScale ) {
+				nScale = m_Outputs[i].nScale;
+			}
+		}
+	}
+	if ( slot.nBufferScale == nScale ) {
+		return;
+	}
+	slot.nBufferScale = nScale;
+	if ( wl_proxy_get_version( ( wl_proxy * )slot.pSurface ) >= 3 ) {
+		wl_surface_set_buffer_scale( slot.pSurface, ( int32_t )nScale );
+	}
+	if ( slot.bConfigured && !slot.bClosePending ) {
+		queueEvent( slot.nIndex, SIR_WINDOW_EVENT_DPI_CHANGED, 96 * nScale, 0 );
+		const uint32_t nWidth = slot.nWidth <= UINT32_MAX / nScale ? slot.nWidth * nScale : 0;
+		const uint32_t nHeight = slot.nHeight <= UINT32_MAX / nScale ? slot.nHeight * nScale : 0;
+		queueEvent( slot.nIndex, SIR_WINDOW_EVENT_RESIZED, nWidth, nHeight );
 	}
 }
 
@@ -206,6 +355,15 @@ sirWindowResult_t SIRWindowDriverWayland::createWindow( const sirWindowCreateDes
 	static const xdg_toplevel_listener s_ToplevelListener = { topConfigure, topClose, nullptr, nullptr };
 	slot.pSurface = wl_compositor_create_surface( m_pCompositor );
 	if ( slot.pSurface == nullptr ) {
+		return SIR_WINDOW_NATIVE_FAILURE;
+	}
+	slot.pDriver = this;
+	slot.nIndex = nSlot;
+	slot.nBufferScale = 1;
+	static const wl_surface_listener s_SurfaceOutputListener = { surfaceEnter, surfaceLeave };
+	if ( wl_surface_add_listener( slot.pSurface, &s_SurfaceOutputListener, &slot ) != 0 ) {
+		wl_surface_destroy( slot.pSurface );
+		slot = {};
 		return SIR_WINDOW_NATIVE_FAILURE;
 	}
 	slot.pXdgSurface = xdg_wm_base_get_xdg_surface( m_pBase, slot.pSurface );
@@ -384,6 +542,12 @@ void SIRWindowDriverWayland::shutdown( void ) noexcept
 	for ( uint32_t i = 0; i < SIR_WINDOW_MAX_WINDOWS; ++i ) {
 		if ( m_Slots[i].pSurface != nullptr ) {
 			( void )destroyWindow( i );
+		}
+	}
+	for ( uint32_t i = 0; i < SIR_WAYLAND_MAX_OUTPUTS; ++i ) {
+		if ( m_Outputs[i].pOutput != nullptr ) {
+			wl_output_destroy( m_Outputs[i].pOutput );
+			m_Outputs[i] = {};
 		}
 	}
 	if ( m_pSeat != nullptr ) {

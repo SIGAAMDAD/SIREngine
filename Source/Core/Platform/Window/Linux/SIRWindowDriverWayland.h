@@ -27,6 +27,7 @@ struct wl_registry;
 struct wl_compositor;
 struct wl_surface;
 struct wl_seat;
+struct wl_output;
 struct zwp_pointer_constraints_v1;
 struct zwp_relative_pointer_manager_v1;
 struct xdg_wm_base;
@@ -38,6 +39,15 @@ typedef void ( *sirWaylandSeatLostFn_t )( void *pContext ) noexcept;
 typedef void ( *sirWaylandPointerProtocolLostFn_t )( void *pContext ) noexcept;
 
 class SIRWindowDriverWayland;
+
+constexpr uint32_t SIR_WAYLAND_MAX_OUTPUTS = 16;
+typedef struct sirWaylandOutput_s
+{
+	SIRWindowDriverWayland *pDriver;
+	wl_output *pOutput;
+	uint32_t nGlobal;
+	uint32_t nScale;
+} sirWaylandOutput_t;
 
 typedef struct sirWaylandWindowSlot_s
 {
@@ -51,6 +61,8 @@ typedef struct sirWaylandWindowSlot_s
 	uint32_t nPendingWidth;
 	uint32_t nPendingHeight;
 	uint32_t nLastConfigureSerial;
+	uint32_t nOutputMask;
+	uint32_t nBufferScale;
 	bool bConfigured;
 	bool bClosePending;
 	bool bLostPending;
@@ -85,8 +97,17 @@ private:
 	static void surfaceConfigure( void *pContext, xdg_surface *pSurface, uint32_t nSerial ) noexcept;
 	static void topConfigure( void *pContext, xdg_toplevel *pTop, int32_t nWidth, int32_t nHeight, wl_array *pStates ) noexcept;
 	static void topClose( void *pContext, xdg_toplevel *pTop ) noexcept;
+	static void surfaceEnter( void *pContext, wl_surface *pSurface, wl_output *pOutput ) noexcept;
+	static void surfaceLeave( void *pContext, wl_surface *pSurface, wl_output *pOutput ) noexcept;
+	static void outputGeometry( void *pContext, wl_output *pOutput, int32_t nX, int32_t nY, int32_t nWidth, int32_t nHeight,
+	                            int32_t nSubpixel, const char *pszMake, const char *pszModel, int32_t nTransform ) noexcept;
+	static void outputMode( void *pContext, wl_output *pOutput, uint32_t nFlags, int32_t nWidth, int32_t nHeight,
+	                        int32_t nRefresh ) noexcept;
+	static void outputDone( void *pContext, wl_output *pOutput ) noexcept;
+	static void outputScale( void *pContext, wl_output *pOutput, int32_t nScale ) noexcept;
 	void queueEvent( uint32_t nSlot, sirWindowEventKind_t eKind, uint32_t nWidth, uint32_t nHeight ) noexcept;
 	void loseDisplay( void ) noexcept;
+	void refreshOutputScale( sirWaylandWindowSlot_t& slot ) noexcept;
 
 	wl_display *m_pDisplay = nullptr;
 	wl_registry *m_pRegistry = nullptr;
@@ -100,6 +121,7 @@ private:
 	void *m_pSeatLostContext = nullptr;
 	xdg_wm_base *m_pBase = nullptr;
 	sirWaylandWindowSlot_t m_Slots[SIR_WINDOW_MAX_WINDOWS] = {};
+	sirWaylandOutput_t m_Outputs[SIR_WAYLAND_MAX_OUTPUTS] = {};
 	sirWindowBackendEvent_t m_Events[SIR_WINDOW_EVENT_CAPACITY] = {};
 	uint32_t m_nEventRead = 0;
 	uint32_t m_nEventWrite = 0;
