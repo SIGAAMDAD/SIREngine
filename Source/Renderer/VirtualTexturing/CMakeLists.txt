@@ -16,7 +16,9 @@ target_sources(SIRGraphics PRIVATE
     SIRVirtualTextureDemandQueue.cpp
     SIRVirtualTextureDemandMip.cpp
     SIRVirtualTextureDemandBundleCodec.cpp
-    SIRVirtualTextureSpatialDemand.cpp)
+    SIRVirtualTextureSpatialDemand.cpp
+    SIRVirtualTexturePagePool.cpp
+    SIRVirtualTextureResourcePlan.cpp)
 
 # Optional pinned Terrain3D V1 Zstd cluster codec. Production must explicitly
 # enable this target and initialize the approved submodule; no system fallback.

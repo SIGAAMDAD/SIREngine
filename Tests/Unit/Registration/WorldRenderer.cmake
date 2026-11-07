@@ -40,6 +40,18 @@ target_link_libraries(SIRVirtualTextureSpatialDemandTests PRIVATE SIR::Graphics)
 add_test(NAME renderer.virtual-texturing.spatial-demand COMMAND SIRVirtualTextureSpatialDemandTests)
 sir_configure_owned_target(SIRVirtualTextureSpatialDemandTests)
 
+# Frozen Terrain3D format-family GPU resource budget and bank layout.
+add_executable(SIRVirtualTextureResourcePlanTests SIRVirtualTextureResourcePlanTests.cpp)
+target_link_libraries(SIRVirtualTextureResourcePlanTests PRIVATE SIR::Graphics)
+add_test(NAME renderer.virtual-texturing.resource-plan COMMAND SIRVirtualTextureResourcePlanTests)
+sir_configure_owned_target(SIRVirtualTextureResourcePlanTests)
+
+# Single-writer page pool with queue-safe upload/retirement and ancestor fallbacks.
+add_executable(SIRVirtualTexturePagePoolTests SIRVirtualTexturePagePoolTests.cpp)
+target_link_libraries(SIRVirtualTexturePagePoolTests PRIVATE SIR::Graphics)
+add_test(NAME renderer.virtual-texturing.page-pool COMMAND SIRVirtualTexturePagePoolTests)
+sir_configure_owned_target(SIRVirtualTexturePagePoolTests)
+
 # Bounded baked-visibility PackBits/raw bundle decoding, with negative-path tests.
 add_executable(SIRVirtualTextureDemandBundleSmokeTests SIRVirtualTextureDemandBundleSmokeTests.cpp)
 target_link_libraries(SIRVirtualTextureDemandBundleSmokeTests PRIVATE SIR::Graphics)
