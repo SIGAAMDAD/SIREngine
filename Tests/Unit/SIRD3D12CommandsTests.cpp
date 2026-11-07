@@ -16,6 +16,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Renderer/SIRGraphicsABIOperations.h>
 #include <Renderer/Drivers/D3D12/SIRD3D12Driver.h>
 #include <stdio.h>
+#include <math.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -620,6 +621,16 @@ static int sirTestRaster( SIRRenderingDevice *pDevice, uint32_t nGeneration, con
 	viewport.fHeight = 16.0f;
 	viewport.fMaximumDepth = 1.0f;
 	sirGraphicsRect_t rect = { 0, 0, 16, 16 };
+	viewport.fX = HUGE_VALF;
+	if ( pDirect->setViewport( viewport, rect ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return 100;
+	}
+	viewport.fX = 0.0f;
+	viewport.fMinimumDepth = NAN;
+	if ( pDirect->setViewport( viewport, rect ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return 101;
+	}
+	viewport.fMinimumDepth = 0.0f;
 	if ( pDirect->setViewport( viewport, rect ) != SIR_GRAPHICS_SUCCESS || pDirect->drawIndexed( 3, 1, 0, 0, 0 ) != SIR_GRAPHICS_SUCCESS ||
 	     pDirect->endRenderPass() != SIR_GRAPHICS_SUCCESS ) {
 		return 60;
@@ -655,6 +666,11 @@ static int sirTestRaster( SIRRenderingDevice *pDevice, uint32_t nGeneration, con
 	region.nHeight = 16;
 	region.nDepth = 1;
 	region.bBufferToTexture = false;
+	region.nZ = 1;
+	if ( pCopy->copyBufferTexture( region ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return 102;
+	}
+	region.nZ = 0;
 	if ( pCopy->copyBufferTexture( region ) != SIR_GRAPHICS_SUCCESS || pCopy->close() != SIR_GRAPHICS_SUCCESS ) {
 		return 65;
 	}

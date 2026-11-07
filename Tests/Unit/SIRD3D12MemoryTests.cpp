@@ -69,6 +69,18 @@ int main( void )
 	     baseline.nReadbackMappedBytes < 3 * 64 * 1024 ) {
 		return 7;
 	}
+	sirGraphicsBufferDesc_t rejectedHeap = {};
+	rejectedHeap.nSizeBytes = 4096;
+	rejectedHeap.nUsage = SIR_GRAPHICS_USAGE_COPY_DESTINATION | SIR_GRAPHICS_USAGE_COPY_SOURCE;
+	rejectedHeap.eMemory = SIR_GRAPHICS_MEMORY_CPU_READBACK;
+	sirGraphicsHandle_t hRejected = {};
+	if ( pDevice->createBuffer( rejectedHeap, &hRejected ) != SIR_GRAPHICS_UNSUPPORTED || hRejected.nGeneration != 0 ) {
+		return 35;
+	}
+	rejectedHeap.eMemory = SIR_GRAPHICS_MEMORY_CPU_UPLOAD;
+	if ( pDevice->createBuffer( rejectedHeap, &hRejected ) != SIR_GRAPHICS_UNSUPPORTED || hRejected.nGeneration != 0 ) {
+		return 36;
+	}
 	sirGraphicsBufferDesc_t desc = {};
 	desc.nSizeBytes = 4096;
 	desc.nUsage = SIR_GRAPHICS_USAGE_COPY_DESTINATION | SIR_GRAPHICS_USAGE_COPY_SOURCE;

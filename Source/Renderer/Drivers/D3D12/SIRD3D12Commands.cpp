@@ -14,6 +14,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Renderer/Drivers/D3D12/SIRD3D12Commands.h>
+#include <Renderer/Drivers/D3D12/SIRD3D12Validation.h>
 #include <Renderer/SIRGraphicsValidation.h>
 #include <limits.h>
 
@@ -670,16 +671,10 @@ sirGraphicsResult_t SIRD3D12CommandList::copyBufferTexture( const sirGraphicsBuf
 	}
 	const uint32_t nMipWidth = pTexture->nWidth >> copy.nMip ? pTexture->nWidth >> copy.nMip : 1;
 	const uint32_t nMipHeight = pTexture->nHeight >> copy.nMip ? pTexture->nHeight >> copy.nMip : 1;
-	if ( copy.nX > nMipWidth || copy.nY > nMipHeight || copy.nWidth > nMipWidth - copy.nX || copy.nHeight > nMipHeight - copy.nY ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
-	}
-	if ( copy.nBytesPerRow == 0 || copy.nBytesPerRow % D3D12_TEXTURE_DATA_PITCH_ALIGNMENT != 0 || copy.nRowsPerImage != copy.nHeight ||
-	     copy.nBufferOffset % D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT != 0 || ( uint64_t )copy.nWidth * nTexelBytes > copy.nBytesPerRow ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
-	}
-	const uint64_t nNeeded = ( uint64_t )copy.nBytesPerRow * copy.nHeight;
-	if ( copy.nBufferOffset > pBuffer->nSizeBytes || nNeeded > pBuffer->nSizeBytes - copy.nBufferOffset ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	const sirD3D12CopyLimits_t limits = { nMipWidth, nMipHeight, nTexelBytes, pBuffer->nSizeBytes };
+	const sirGraphicsResult_t eLayout = sirD3D12ValidateCopyRegion( copy, limits );
+	if ( eLayout != SIR_GRAPHICS_SUCCESS ) {
+		return eLayout;
 	}
 	if ( copy.bBufferToTexture ) {
 		if ( ( pBuffer->nUsage & SIR_GRAPHICS_USAGE_COPY_SOURCE ) == 0 ||
@@ -958,9 +953,9 @@ sirGraphicsResult_t SIRD3D12CommandList::setViewport( const sirGraphicsViewport_
 	if ( m_eQueue != SIR_GRAPHICS_QUEUE_DIRECT ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
-	if ( !( viewport.fWidth > 0.0f ) || !( viewport.fHeight > 0.0f ) || viewport.fMinimumDepth < 0.0f || viewport.fMaximumDepth > 1.0f ||
-	     viewport.fMinimumDepth > viewport.fMaximumDepth || scissor.nLeft >= scissor.nRight || scissor.nTop >= scissor.nBottom ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	const sirGraphicsResult_t eViewport = sirD3D12ValidateViewport( viewport, scissor );
+	if ( eViewport != SIR_GRAPHICS_SUCCESS ) {
+		return eViewport;
 	}
 	D3D12_VIEWPORT native = {};
 	native.TopLeftX = viewport.fX;
