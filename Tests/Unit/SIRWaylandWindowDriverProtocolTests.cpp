@@ -18,6 +18,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <xdg-shell-client-protocol.h>
 #include <pointer-constraints-unstable-v1-client-protocol.h>
 #include <relative-pointer-unstable-v1-client-protocol.h>
+#include <xkbcommon/xkbcommon.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -53,6 +55,15 @@ struct zwp_locked_pointer_v1
 struct zwp_relative_pointer_v1
 {
 };
+struct xkb_context
+{
+};
+struct xkb_keymap
+{
+};
+struct xkb_state
+{
+};
 struct wl_surface
 {
 	uint32_t id;
@@ -79,6 +90,12 @@ static zwp_pointer_constraints_v1 s_Constraints;
 static zwp_relative_pointer_manager_v1 s_RelativeManager;
 static zwp_locked_pointer_v1 s_Lock;
 static zwp_relative_pointer_v1 s_Relative;
+static xkb_context s_XkbContext;
+static xkb_keymap s_XkbKeymap;
+static xkb_state s_XkbState;
+static uint32_t s_nKeymapsCreated = 0;
+static uint32_t s_nKeymapsReleased = 0;
+static uint32_t s_nXkbMasks = 0;
 static xdg_wm_base s_WmBase;
 static wl_surface s_Surfaces[8];
 static xdg_surface s_XdgSurfaces[8];
@@ -219,6 +236,41 @@ void zwp_pointer_constraints_v1_destroy( zwp_pointer_constraints_v1 * )
 }
 void zwp_relative_pointer_manager_v1_destroy( zwp_relative_pointer_manager_v1 * )
 {
+}
+xkb_context *xkb_context_new( int )
+{
+	return &s_XkbContext;
+}
+void xkb_context_unref( xkb_context * )
+{
+}
+xkb_keymap *xkb_keymap_new_from_string( xkb_context *, const char *pszKeymap, int, int )
+{
+	if ( pszKeymap == nullptr || pszKeymap[0] == 0 ) {
+		return nullptr;
+	}
+	++s_nKeymapsCreated;
+	return &s_XkbKeymap;
+}
+void xkb_keymap_unref( xkb_keymap * )
+{
+	++s_nKeymapsReleased;
+}
+xkb_state *xkb_state_new( xkb_keymap * )
+{
+	return &s_XkbState;
+}
+void xkb_state_unref( xkb_state * )
+{
+}
+uint32_t xkb_state_key_get_utf32( xkb_state *, uint32_t nKey )
+{
+	return nKey == 38 ? uint32_t( 'a' ) : 0;
+}
+uint32_t xkb_state_update_mask( xkb_state *, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t )
+{
+	++s_nXkbMasks;
+	return 0;
 }
 zwp_relative_pointer_v1 *zwp_relative_pointer_manager_v1_get_relative_pointer( zwp_relative_pointer_manager_v1 *, wl_pointer * )
 {
@@ -555,6 +607,27 @@ static bool sirTestCompositorHangup( void ) noexcept
 	       events.events[0].eKind == SIR_WINDOW_EVENT_LOST;
 }
 
+static bool sirFeedFakeXkbKeymap( void ) noexcept
+{
+	FILE *pFile = tmpfile();
+	if ( pFile == nullptr ) {
+		return false;
+	}
+	const char szKeymap[] = "test-keymap";
+	const bool bWritten = fwrite( szKeymap, 1, sizeof( szKeymap ), pFile ) == sizeof( szKeymap ) && fflush( pFile ) == 0;
+	const int nFd = bWritten ? dup( fileno( pFile ) ) : -1;
+	fclose( pFile );
+	if ( nFd < 0 || s_pKeyboardListener == nullptr ) {
+		if ( nFd >= 0 ) {
+			close( nFd );
+		}
+		return false;
+	}
+	s_pKeyboardListener->keymap( s_pKeyboardContext, &s_Keyboard, WL_KEYBOARD_KEYMAP_FORMAT_XKB_V1, nFd,
+	                             sizeof( szKeymap ) );
+	return fcntl( nFd, F_GETFD ) == -1 && errno == EBADF;
+}
+
 static bool sirTestWaylandInputRouting( void ) noexcept
 {
 	s_nCreated = 0;
@@ -578,6 +651,14 @@ static bool sirTestWaylandInputRouting( void ) noexcept
 	s_pSeatListener->capabilities( s_pSeatContext, &s_Seat, WL_SEAT_CAPABILITY_KEYBOARD | WL_SEAT_CAPABILITY_POINTER );
 	if ( !bridge.beginFrame() || input.activeDeviceCount() != 2 || s_pKeyboardListener == nullptr || s_pPointerListener == nullptr )
 		return false;
+	bridge.setTextEnabled( true );
+	if ( !sirFeedFakeXkbKeymap() || !sirFeedFakeXkbKeymap() || s_nKeymapsCreated != 2 || s_nKeymapsReleased != 1 ) {
+		return false;
+	}
+	s_pKeyboardListener->modifiers( s_pKeyboardContext, &s_Keyboard, 5, 1, 0, 0, 0 );
+	if ( s_nXkbMasks != 1 ) {
+		return false;
+	}
 	s_pKeyboardListener->enter( s_pKeyboardContext, &s_Keyboard, 5, &s_Surfaces[0], nullptr );
 	s_pKeyboardListener->key( s_pKeyboardContext, &s_Keyboard, 5, 100, 30, WL_KEYBOARD_KEY_STATE_PRESSED );
 	s_pPointerListener->enter( s_pPointerContext, &s_Pointer, 6, &s_Surfaces[0], 0, 0 );
@@ -587,8 +668,10 @@ static bool sirTestWaylandInputRouting( void ) noexcept
 	if ( !input.publish() )
 		return false;
 	const sirInputFrame_t *pFrame = input.frame();
-	if ( pFrame == nullptr || pFrame->nCount < 3 )
+	if ( pFrame == nullptr || pFrame->nCount < 3 || input.text().snapshot().nCount != 1 ||
+	     input.text().snapshot().szCodepoints[0] != uint32_t( 'a' ) ) {
 		return false;
+	}
 	uint32_t nKey = 0, nMouse = 0, nMove = 0;
 	for ( uint32_t i = 0; i < pFrame->nCount; ++i ) {
 		const sirInputEvent_t& event = pFrame->events[i];
@@ -690,6 +773,9 @@ static bool sirTestWaylandInputRouting( void ) noexcept
 	if ( input.activeDeviceCount() != 2 || !input.publish() )
 		return false;
 	bridge.unbind();
+	if ( s_nKeymapsReleased != s_nKeymapsCreated ) {
+		return false;
+	}
 	input.shutdown();
 	driver.shutdown();
 	return true;

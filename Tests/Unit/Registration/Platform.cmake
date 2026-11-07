@@ -161,7 +161,8 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     target_include_directories(SIRWaylandWindowDriverProtocolTests BEFORE PRIVATE
         "${PROJECT_SOURCE_DIR}/Tests/Unit/Fixtures/Wayland")
     target_link_libraries(SIRWaylandWindowDriverProtocolTests PRIVATE SIR::Core)
-    target_compile_definitions(SIRWaylandWindowDriverProtocolTests PRIVATE SIR_WAYLAND_POINTER_PROTOCOLS_AVAILABLE=1)
+    target_compile_definitions(SIRWaylandWindowDriverProtocolTests PRIVATE
+        SIR_WAYLAND_POINTER_PROTOCOLS_AVAILABLE=1 SIR_WAYLAND_XKB_AVAILABLE=1)
     add_test(NAME core.platform.window.wayland-protocol COMMAND SIRWaylandWindowDriverProtocolTests)
     set_tests_properties(core.platform.window.wayland-protocol PROPERTIES LABELS "core;platform;window;wayland;protocol" TIMEOUT 60)
     sir_configure_owned_target(SIRWaylandWindowDriverProtocolTests)
