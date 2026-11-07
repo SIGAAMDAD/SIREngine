@@ -49,6 +49,7 @@ static sirEditorTextPropertyResult_t sirEditorPropertyConsumeValue( const char *
 	uint32_t nDepth = 0;
 	bool bQuoted = false;
 	bool bEscape = false;
+	bool bComment = false;
 	const char *pCursor = pSource;
 	while ( pCursor < pEnd ) {
 		const char c = *pCursor;
@@ -57,10 +58,26 @@ static sirEditorTextPropertyResult_t sirEditorPropertyConsumeValue( const char *
 		}
 		if ( c == '\n' ) {
 			++*pLine;
+			bComment = false;
 			if ( nDepth == 0 && !bQuoted ) {
 				*ppEnd = pCursor;
 				return SIR_EDITOR_PROPERTY_OK;
 			}
+			++pCursor;
+			continue;
+		}
+		if ( bComment ) {
+			++pCursor;
+			continue;
+		}
+		if ( !bQuoted && ( c == '#' || c == ';' ) ) {
+			if ( nDepth == 0 ) {
+				*ppEnd = pCursor;
+				return SIR_EDITOR_PROPERTY_OK;
+			}
+			bComment = true;
+			++pCursor;
+			continue;
 		}
 		if ( bEscape ) {
 			bEscape = false;
@@ -188,6 +205,10 @@ sirEditorTextPropertyResult_t sirEditorScanNodeTextProperties( const char *pszSo
 			const char *pConsumedEnd = pValueEnd;
 			while ( pValueEnd > pValue && ( pValueEnd[-1] == ' ' || pValueEnd[-1] == '\t' || pValueEnd[-1] == '\r' ) ) {
 				--pValueEnd;
+			}
+			if ( pValueEnd == pValue ) {
+				eResult = SIR_EDITOR_PROPERTY_MALFORMED_VALUE;
+				break;
 			}
 			if ( nProperties == SIR_EDITOR_PROPERTY_MAX_COUNT ) {
 				eResult = SIR_EDITOR_PROPERTY_TOO_MANY;
