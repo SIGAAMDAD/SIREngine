@@ -901,16 +901,16 @@ static uint32_t sirGLPreparePresentationDisplay( sirGLDevice_t *pState,
 #endif
 }
 
-static uint32_t sirGLCreatePresentationImage( sirGLDevice_t *pState, uint32_t nWidth, uint32_t nHeight,
-                                                uint32_t nFormat, sirGraphicsHandle_t *pImage, uint32_t *pFramebuffer ) noexcept
+static uint32_t sirGLCreatePresentationImage( sirGLDevice_t *pState, const sirGraphicsABIPresentDesc_t *pPresent,
+                                                sirGraphicsHandle_t *pImage, uint32_t *pFramebuffer ) noexcept
 {
-	if ( pState == nullptr || pImage == nullptr || pFramebuffer == nullptr ) {
+	if ( pState == nullptr || pPresent == nullptr || pImage == nullptr || pFramebuffer == nullptr ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	const sirGraphicsTextureDesc_t desc = { nWidth, nHeight, 1, 1, 1, 1,
+	const sirGraphicsTextureDesc_t desc = { pPresent->nWidth, pPresent->nHeight, 1, 1, 1, 1,
 	                                        SIR_GRAPHICS_USAGE_COLOR_ATTACHMENT | SIR_GRAPHICS_USAGE_SAMPLED |
 	                                            SIR_GRAPHICS_USAGE_COPY_SOURCE,
-	                                        SIR_GRAPHICS_TEXTURE_2D, ( sirGraphicsFormat_t )nFormat,
+	                                        SIR_GRAPHICS_TEXTURE_2D, ( sirGraphicsFormat_t )pPresent->nFormat,
 	                                        SIR_GRAPHICS_MEMORY_GPU_LOCAL };
 	sirGraphicsHandle_t hImage = {};
 	uint32_t nStatus = sirGLCreateTexture( pState, &desc, &hImage );
@@ -922,7 +922,7 @@ static uint32_t sirGLCreatePresentationImage( sirGLDevice_t *pState, uint32_t nW
 	uint32_t nFramebuffer = 0;
 	if ( nStatus == SIR_GRAPHICS_SUCCESS ) {
 		const sirGLFramebufferDesc_t fboDesc = { image.nName, 0, 0, 0,
-		                                         ( sirGraphicsFormat_t )nFormat, SIR_GRAPHICS_FORMAT_UNKNOWN };
+		                                         ( sirGraphicsFormat_t )pPresent->nFormat, SIR_GRAPHICS_FORMAT_UNKNOWN };
 		nStatus = sirGLCreateNativeFramebuffer( &pState->framebuffers, &fboDesc, &nFramebuffer );
 	}
 	if ( nStatus != SIR_GRAPHICS_SUCCESS ) {
@@ -997,8 +997,7 @@ static uint32_t sirGLCreateSurface( void *pDevice, const sirGraphicsABINativeSur
 	if ( nStatus != SIR_GRAPHICS_SUCCESS ) {
 		return nStatus;
 	}
-	nStatus = sirGLCreatePresentationImage( pState, pPresent->nWidth, pPresent->nHeight, pPresent->nFormat,
-	                                        &pending.hImage, &pending.nFramebuffer );
+	nStatus = sirGLCreatePresentationImage( pState, pPresent, &pending.hImage, &pending.nFramebuffer );
 	if ( nStatus != SIR_GRAPHICS_SUCCESS ) {
 		( void )sirGLDestroyPresentWindow( pState->pContext, &pending.window );
 		return nStatus;
@@ -1061,8 +1060,7 @@ static uint32_t sirGLResizeSurface( void *pDevice, sirGraphicsHandle_t hSurface,
 	}
 	sirGraphicsHandle_t hReplacement = {};
 	uint32_t nReplacementFramebuffer = 0;
-	uint32_t nStatus = sirGLCreatePresentationImage( pState, pPresent->nWidth, pPresent->nHeight, pPresent->nFormat,
-	                                                 &hReplacement, &nReplacementFramebuffer );
+	uint32_t nStatus = sirGLCreatePresentationImage( pState, pPresent, &hReplacement, &nReplacementFramebuffer );
 	if ( nStatus != SIR_GRAPHICS_SUCCESS ) {
 		return nStatus;
 	}
