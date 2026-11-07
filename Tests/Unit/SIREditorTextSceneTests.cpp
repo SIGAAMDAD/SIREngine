@@ -113,6 +113,15 @@ static void sirTestRejectMalformedScenes( void )
 	                       "[node name=\"Real\" type=\"Node\" parent=\".\"]\n";
 	assert( sirEditorScanTextScene( szQuote, sizeof( szQuote ) - 1, &index ) == SIR_EDITOR_TEXT_OK );
 	assert( index.nNodeCount == 2 );
+
+	// An unfinished multiline property must not publish a partial scene index.
+	const char szUnclosed[] = "[gd_scene format=3]\n[node name=\"Root\" type=\"Node\"]\n"
+	                          "text = \"never closed\n[node name=\\\"Fake\\\" type=\\\"Node\\\"]\n";
+	assert( sirEditorScanTextScene( szUnclosed, sizeof( szUnclosed ) - 1, &index ) == SIR_EDITOR_TEXT_INVALID_TAG );
+	assert( index.nNodeCount == 0 && index.nPathBytes == 0 && index.nErrorLine != 0 );
+	// The same index remains reusable after a malformed import.
+	assert( sirEditorScanTextScene( szQuote, sizeof( szQuote ) - 1, &index ) == SIR_EDITOR_TEXT_OK );
+	assert( index.nNodeCount == 2 );
 }
 
 static void sirTestCapacityAtomicity( void )

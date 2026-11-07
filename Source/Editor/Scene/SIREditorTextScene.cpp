@@ -435,6 +435,9 @@ sirEditorTextSceneResult_t sirEditorScanTextScene( const char *pszSource, size_t
 		pCursor = pLineEnd == pEnd ? pEnd : pLineEnd + 1;
 		++nLine;
 	}
+	if ( bMultilineQuote || bEscape ) {
+		return sirEditorFailTextScene( pIndex, nLine, SIR_EDITOR_TEXT_INVALID_TAG );
+	}
 	if ( !bHeader || pIndex->nNodeCount == 0 ) {
 		return sirEditorFailTextScene( pIndex, nLine, SIR_EDITOR_TEXT_INVALID_HEADER );
 	}
