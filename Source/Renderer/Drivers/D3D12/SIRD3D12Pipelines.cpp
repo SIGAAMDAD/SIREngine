@@ -338,7 +338,7 @@ sirGraphicsResult_t SIRD3D12Pipelines::loadPipelineCache( const void *pData, uin
 	if ( m_pNative == nullptr ) {
 		return SIR_GRAPHICS_DEVICE_LOST;
 	}
-	if ( pData == nullptr || nBytes == 0 || nBytes > SIZE_MAX ) {
+	if ( pData == nullptr || nBytes == 0 || nBytes > 16ULL * 1024ULL * 1024ULL || nBytes > SIZE_MAX ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( m_bPipelineCreated ) {
@@ -540,7 +540,8 @@ HRESULT SIRD3D12Pipelines::createComputeState( const sirGraphicsPipelineDesc_t& 
 		++m_CacheStats.nCacheMisses;
 	}
 	const HRESULT nResult = m_pDevice->CreateComputePipelineState( &native, IID_PPV_ARGS( ppPipeline ) );
-	if ( SUCCEEDED( nResult ) && m_pPipelineLibrary != nullptr &&
+	if ( SUCCEEDED( nResult ) && m_pPipelineLibrary != nullptr && m_CacheStats.nCacheStores < 256 &&
+	     m_pPipelineLibrary->GetSerializedSize() < 16ULL * 1024ULL * 1024ULL &&
 	     SUCCEEDED( m_pPipelineLibrary->StorePipeline( pszCacheKey, *ppPipeline ) ) ) {
 		++m_CacheStats.nCacheStores;
 	}
@@ -621,7 +622,8 @@ HRESULT SIRD3D12Pipelines::createGraphicsState( const sirGraphicsPipelineDesc_t&
 		++m_CacheStats.nCacheMisses;
 	}
 	const HRESULT nResult = m_pDevice->CreateGraphicsPipelineState( &native, IID_PPV_ARGS( ppPipeline ) );
-	if ( SUCCEEDED( nResult ) && m_pPipelineLibrary != nullptr &&
+	if ( SUCCEEDED( nResult ) && m_pPipelineLibrary != nullptr && m_CacheStats.nCacheStores < 256 &&
+	     m_pPipelineLibrary->GetSerializedSize() < 16ULL * 1024ULL * 1024ULL &&
 	     SUCCEEDED( m_pPipelineLibrary->StorePipeline( pszCacheKey, *ppPipeline ) ) ) {
 		++m_CacheStats.nCacheStores;
 	}
