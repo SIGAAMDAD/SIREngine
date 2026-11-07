@@ -108,6 +108,43 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         Linux/SIRPlatformFileSystemLinux.cpp
         Linux/SIRPlatformThreadControlLinux.cpp
     )
+    option(SIR_WITH_WAYLAND_WINDOW "Build native Linux Wayland xdg-shell window driver" ON)
+    option(SIR_REQUIRE_WAYLAND_WINDOW "Fail configure when the native Wayland driver cannot be built" OFF)
+    if(SIR_WITH_WAYLAND_WINDOW)
+        find_package(PkgConfig QUIET)
+        if(PkgConfig_FOUND)
+            pkg_check_modules(SIR_WAYLAND_CLIENT QUIET IMPORTED_TARGET wayland-client)
+            pkg_get_variable(SIR_WAYLAND_PROTOCOL_DATA wayland-protocols pkgdatadir)
+        endif()
+        find_program(SIR_WAYLAND_SCANNER NAMES wayland-scanner)
+        set(SIR_XDG_SHELL_PROTOCOL "${SIR_WAYLAND_PROTOCOL_DATA}/stable/xdg-shell/xdg-shell.xml")
+        if(SIR_WAYLAND_CLIENT_FOUND AND SIR_WAYLAND_SCANNER AND EXISTS "${SIR_XDG_SHELL_PROTOCOL}")
+            set(SIR_WAYLAND_GENERATED "${CMAKE_CURRENT_BINARY_DIR}/WaylandGenerated")
+            set(SIR_WAYLAND_PROTOCOL_H "${SIR_WAYLAND_GENERATED}/xdg-shell-client-protocol.h")
+            set(SIR_WAYLAND_PROTOCOL_C "${SIR_WAYLAND_GENERATED}/xdg-shell-protocol.c")
+            file(MAKE_DIRECTORY "${SIR_WAYLAND_GENERATED}")
+            add_custom_command(
+                OUTPUT "${SIR_WAYLAND_PROTOCOL_H}" "${SIR_WAYLAND_PROTOCOL_C}"
+                COMMAND "${SIR_WAYLAND_SCANNER}" client-header "${SIR_XDG_SHELL_PROTOCOL}" "${SIR_WAYLAND_PROTOCOL_H}"
+                COMMAND "${SIR_WAYLAND_SCANNER}" private-code "${SIR_XDG_SHELL_PROTOCOL}" "${SIR_WAYLAND_PROTOCOL_C}"
+                DEPENDS "${SIR_XDG_SHELL_PROTOCOL}"
+                VERBATIM)
+            add_custom_target(SIRWindowWaylandProtocol DEPENDS "${SIR_WAYLAND_PROTOCOL_H}" "${SIR_WAYLAND_PROTOCOL_C}")
+            add_dependencies(SIRCore SIRWindowWaylandProtocol)
+            list(APPEND SIR_CORE_PLATFORM_OS
+                Window/Linux/SIRWindowDriverWayland.cpp
+                "${SIR_WAYLAND_PROTOCOL_C}")
+            target_include_directories(SIRCore PRIVATE "${SIR_WAYLAND_GENERATED}")
+            target_link_libraries(SIRCore PRIVATE PkgConfig::SIR_WAYLAND_CLIENT)
+            target_compile_definitions(SIRCore PUBLIC SIR_WINDOW_WAYLAND_AVAILABLE=1)
+        elseif(SIR_REQUIRE_WAYLAND_WINDOW)
+            message(FATAL_ERROR "Native Wayland requires wayland-client, wayland-scanner and wayland-protocols xdg-shell")
+        else()
+            message(STATUS "Native Wayland window backend unavailable; X11/headless remain separately selectable")
+        endif()
+    elseif(SIR_REQUIRE_WAYLAND_WINDOW)
+        message(FATAL_ERROR "SIR_REQUIRE_WAYLAND_WINDOW requires SIR_WITH_WAYLAND_WINDOW=ON")
+    endif()
     option(SIR_WITH_X11_INPUT "Build native X11 input backend when X11 is available" ON)
     if(SIR_WITH_X11_INPUT)
         find_package(X11 QUIET)
