@@ -47,3 +47,22 @@ target_include_directories(SIRTerrain3DDonorVisibilityAggregationTests PRIVATE "
 target_link_libraries(SIRTerrain3DDonorVisibilityAggregationTests PRIVATE SIR::Graphics)
 add_test(NAME renderer.virtual-texturing.donor.visibility-aggregation COMMAND SIRTerrain3DDonorVisibilityAggregationTests)
 sir_configure_owned_target(SIRTerrain3DDonorVisibilityAggregationTests)
+
+# Unmodified Terrain3D input, feedback-pair and compact-tail contracts.
+foreach(sirVTDonorTest IN ITEMS
+        test_vt_feedback_epoch
+        test_vt_upload_preflight
+        test_vt_feedback_params
+        test_vt_feedback_parity
+        test_vt_feedback_shadow)
+    add_executable(${sirVTDonorTest} "${sirVTDonorRoot}/diagnostics/tests/${sirVTDonorTest}.cpp")
+    target_include_directories(${sirVTDonorTest} PRIVATE "${sirVTDonorRoot}")
+    target_link_libraries(${sirVTDonorTest} PRIVATE SIR::Graphics)
+    add_test(NAME renderer.virtual-texturing.donor.${sirVTDonorTest} COMMAND ${sirVTDonorTest})
+    sir_configure_owned_target(${sirVTDonorTest})
+endforeach()
+add_executable(SIRTerrain3DDonorTailLayoutTests "${sirVTDonorRoot}/diagnostics/tests/superterrain/residency/test_tail_layout.cpp")
+target_include_directories(SIRTerrain3DDonorTailLayoutTests PRIVATE "${sirVTDonorRoot}")
+target_link_libraries(SIRTerrain3DDonorTailLayoutTests PRIVATE SIR::Graphics)
+add_test(NAME renderer.virtual-texturing.donor.compact-tail COMMAND SIRTerrain3DDonorTailLayoutTests)
+sir_configure_owned_target(SIRTerrain3DDonorTailLayoutTests)
