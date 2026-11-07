@@ -108,6 +108,35 @@ int main( void )
 	if ( windows.querySnapshot( second, &hidden ) != SIR_WINDOW_OK || !hidden.bVisible || !hidden.bReady ) {
 		return 13;
 	}
+	// Root display geometry changes invalidate presentation state for all
+	// existing windows without mutating their native client sizes.
+	sirWindowSnapshot_t beforeTopology = {}, afterTopology = {};
+	if ( windows.querySnapshot( second, &beforeTopology ) != SIR_WINDOW_OK ) {
+		return 19;
+	}
+	XWindowAttributes root = {};
+	if ( !XGetWindowAttributes( pDisplay, DefaultRootWindow( pDisplay ), &root ) ) {
+		return 20;
+	}
+	XEvent topology = {};
+	topology.xconfigure.type = ConfigureNotify;
+	topology.xconfigure.display = pDisplay;
+	topology.xconfigure.window = DefaultRootWindow( pDisplay );
+	topology.xconfigure.width = root.width + 1;
+	topology.xconfigure.height = root.height;
+	if ( !XSendEvent( pDisplay, DefaultRootWindow( pDisplay ), False, StructureNotifyMask, &topology ) ) {
+		return 21;
+	}
+	XSync( pDisplay, False );
+	for ( uint32_t i = 0; i < 4; ++i ) {
+		if ( windows.pumpEvents( 32 ) != SIR_WINDOW_OK ) {
+			return 22;
+		}
+	}
+	if ( windows.querySnapshot( second, &afterTopology ) != SIR_WINDOW_OK ||
+	     afterTopology.nMetricsRevision <= beforeTopology.nMetricsRevision ) {
+		return 23;
+	}
 	// A focused window must publish per-window focus without creating a new device.
 	XEvent focused = {};
 	focused.xfocus.type = FocusIn;

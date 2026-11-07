@@ -49,5 +49,9 @@ private:
 	bool m_bLost[SIR_WINDOW_MAX_WINDOWS] = {};
 	uintptr_t m_nProtocols = 0;
 	uintptr_t m_nDeleteWindow = 0;
+	uintptr_t m_nRootWindow = 0;
+	uint32_t m_nDisplayChangePendingMask = 0;
+	uint32_t m_nServerWidth = 0;
+	uint32_t m_nServerHeight = 0;
 };
 #endif // __SIRENGINE_SIRWINDOWDRIVERX11_H__

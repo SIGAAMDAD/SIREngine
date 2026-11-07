@@ -52,6 +52,16 @@ sirWindowResult_t SIRWindowDriverX11::initialize( void ) noexcept
 		XCloseDisplay( pDisplay );
 		return SIR_WINDOW_NATIVE_FAILURE;
 	}
+	m_nRootWindow = ( uintptr_t )DefaultRootWindow( pDisplay );
+	XWindowAttributes attributes = {};
+	if ( !XGetWindowAttributes( pDisplay, ( Window )m_nRootWindow, &attributes ) ) {
+		XCloseDisplay( pDisplay );
+		m_nRootWindow = 0;
+		return SIR_WINDOW_NATIVE_FAILURE;
+	}
+	m_nServerWidth = ( uint32_t )attributes.width;
+	m_nServerHeight = ( uint32_t )attributes.height;
+	XSelectInput( pDisplay, ( Window )m_nRootWindow, StructureNotifyMask );
 	m_pDisplay = pDisplay;
 	return SIR_WINDOW_OK;
 }
@@ -84,6 +94,7 @@ sirWindowResult_t SIRWindowDriverX11::createWindow( const sirWindowCreateDesc_t&
 	( void )XFlush( pDisplay );
 	m_hWindows[nSlot] = ( uintptr_t )hWindow;
 	m_bLost[nSlot] = false;
+	m_nDisplayChangePendingMask &= ~( UINT32_C( 1 ) << nSlot );
 	*pView = { SIR_WINDOW_PLATFORM_X11, ( uintptr_t )hWindow, ( uintptr_t )pDisplay, 0 };
 	return SIR_WINDOW_OK;
 }
@@ -99,6 +110,7 @@ sirWindowResult_t SIRWindowDriverX11::destroyWindow( uint32_t nSlot ) noexcept
 	const Window hWindow = ( Window )m_hWindows[nSlot];
 	m_hWindows[nSlot] = 0;
 	m_bLost[nSlot] = false;
+	m_nDisplayChangePendingMask &= ~( UINT32_C( 1 ) << nSlot );
 	if ( hWindow != 0 ) {
 		( void )XDestroyWindow( ( Display * )m_pDisplay, hWindow );
 	}
@@ -206,11 +218,26 @@ sirWindowResult_t SIRWindowDriverX11::pumpEvents( uint32_t nBudget, sirWindowDri
 	if ( nBudget == 0 || pCallback == nullptr ) {
 		return SIR_WINDOW_INVALID_ARGUMENT;
 	}
+	uint32_t nEmitted = 0;
 	for ( uint32_t i = 0; i < nBudget && XPending( pDisplay ) > 0; ++i ) {
 		XEvent event = {};
 		XNextEvent( pDisplay, &event );
 		if ( m_pSink != nullptr ) {
 			m_pSink( event, m_pSinkContext );
+		}
+		if ( event.type == ConfigureNotify && ( uintptr_t )event.xconfigure.window == m_nRootWindow ) {
+			if ( event.xconfigure.width > 0 && event.xconfigure.height > 0 &&
+			     ( ( uint32_t )event.xconfigure.width != m_nServerWidth ||
+			       ( uint32_t )event.xconfigure.height != m_nServerHeight ) ) {
+				m_nServerWidth = ( uint32_t )event.xconfigure.width;
+				m_nServerHeight = ( uint32_t )event.xconfigure.height;
+				for ( uint32_t j = 0; j < SIR_WINDOW_MAX_WINDOWS; ++j ) {
+					if ( m_hWindows[j] != 0 ) {
+						m_nDisplayChangePendingMask |= UINT32_C( 1 ) << j;
+					}
+				}
+			}
+			continue;
 		}
 		uint32_t nSlot = SIR_WINDOW_MAX_WINDOWS;
 		for ( uint32_t j = 0; j < SIR_WINDOW_MAX_WINDOWS; ++j ) {
@@ -249,6 +276,23 @@ sirWindowResult_t SIRWindowDriverX11::pumpEvents( uint32_t nBudget, sirWindowDri
 			continue;
 		}
 		pCallback( pContext, emitted );
+		++nEmitted;
+	}
+	for ( uint32_t j = 0; j < SIR_WINDOW_MAX_WINDOWS && nEmitted < nBudget; ++j ) {
+		if ( ( m_nDisplayChangePendingMask & ( UINT32_C( 1 ) << j ) ) == 0 ) {
+			continue;
+		}
+		m_nDisplayChangePendingMask &= ~( UINT32_C( 1 ) << j );
+		if ( m_hWindows[j] != 0 ) {
+			XWindowAttributes attrs = {};
+			if ( XGetWindowAttributes( pDisplay, ( Window )m_hWindows[j], &attrs ) && attrs.width > 0 && attrs.height > 0 ) {
+				const sirWindowBackendEvent_t changed = { j, m_hWindows[j], SIR_WINDOW_EVENT_DISPLAY_CHANGED,
+				                                          ( uint32_t )attrs.width, ( uint32_t )attrs.height };
+				pCallback( pContext, changed );
+				++nEmitted;
+			}
+			}
+		}
 	}
 	return SIR_WINDOW_OK;
 }
@@ -272,4 +316,8 @@ void SIRWindowDriverX11::shutdown( void ) noexcept
 	m_pSinkContext = nullptr;
 	m_nDeleteWindow = 0;
 	m_nProtocols = 0;
+	m_nRootWindow = 0;
+	m_nDisplayChangePendingMask = 0;
+	m_nServerWidth = 0;
+	m_nServerHeight = 0;
 }
