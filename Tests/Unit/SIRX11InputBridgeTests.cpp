@@ -92,16 +92,23 @@ int main( void )
 	key.xkey.window = ( Window )secondView.nNativeWindow;
 	key.xkey.keycode = 41;
 	bridge.processEvent( key );
-	if ( !bridge.unregisterWindow( view.nNativeWindow ) || bridge.unregisterWindow( view.nNativeWindow ) ||
+	// Remove the *focused* second window, then verify the backend retargets
+	// the surviving first window without reconnecting physical devices.
+	if ( !bridge.unregisterWindow( secondView.nNativeWindow ) || bridge.unregisterWindow( secondView.nNativeWindow ) ||
 	     input.activeDeviceCount() != 2 ) {
 		return 10;
 	}
+	bridge.processEvent( focus );
+	key.xkey.window = ( Window )view.nNativeWindow;
+	key.xkey.keycode = 43;
+	bridge.processEvent( key );
 	input.sample();
 	if ( !input.publish() ) {
 		return 7;
 	}
 	const sirInputFrame_t *pFrame = input.frame();
 	bool bSawSecondKey = false;
+	bool bSawSurvivingKey = false;
 	uint32_t nResyncEvents = 0;
 	for ( uint32_t i = 0; i < pFrame->nCount; ++i ) {
 		if ( pFrame->events[i].eSignal == SIR_INPUT_RESYNC ) {
@@ -110,8 +117,11 @@ int main( void )
 		if ( pFrame->events[i].eSignal == SIR_INPUT_BUTTON && pFrame->events[i].nControl == 41 && pFrame->events[i].nValue == 1 ) {
 			bSawSecondKey = true;
 		}
+		if ( pFrame->events[i].eSignal == SIR_INPUT_BUTTON && pFrame->events[i].nControl == 43 && pFrame->events[i].nValue == 1 ) {
+			bSawSurvivingKey = true;
+		}
 	}
-	if ( !bSawSecondKey || nResyncEvents < 2 ) {
+	if ( !bSawSecondKey || !bSawSurvivingKey || nResyncEvents < 4 ) {
 		return 11;
 	}
 	( void )driver.setEventSink( nullptr, nullptr );

@@ -115,6 +115,9 @@ bool SIRX11InputBridge::unregisterWindow( uintptr_t nNativeWindow ) noexcept
 		if ( m_hWindow == 0 && m_nWindowCount != 0 ) {
 			m_hWindow = m_hRegisteredWindows[0];
 			m_hInputContext = m_hRegisteredContexts[0];
+			if ( m_bAttached && !m_pBackend->focusWindow( *m_pInput, m_hWindow ) ) {
+				return false;
+			}
 		}
 		return true;
 	}
