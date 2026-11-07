@@ -1,6 +1,10 @@
 #include <Core/Platform/Window/Linux/SIRWindowDriverWayland.h>
 #include <wayland-client.h>
 #include <xdg-shell-client-protocol.h>
+#ifdef SIR_WAYLAND_FRACTIONAL_SCALE_AVAILABLE
+#include <fractional-scale-v1-client-protocol.h>
+#include <viewporter-client-protocol.h>
+#endif
 #ifdef SIR_WAYLAND_POINTER_PROTOCOLS_AVAILABLE
 #include <pointer-constraints-unstable-v1-client-protocol.h>
 #include <relative-pointer-unstable-v1-client-protocol.h>
@@ -46,7 +50,19 @@ void SIRWindowDriverWayland::registryGlobal( void *pContext, wl_registry *pRegis
 			}
 			break;
 		}
-	} else if ( strcmp( pszInterface, wl_seat_interface.name ) == 0 && pDriver->m_pSeat == nullptr ) {
+	} 
+#ifdef SIR_WAYLAND_FRACTIONAL_SCALE_AVAILABLE
+	else if ( strcmp( pszInterface, wp_fractional_scale_manager_v1_interface.name ) == 0 &&
+	            pDriver->m_pFractionalManager == nullptr ) {
+		pDriver->m_pFractionalManager = ( wp_fractional_scale_manager_v1 * )wl_registry_bind(
+		    pRegistry, nName, &wp_fractional_scale_manager_v1_interface, 1 );
+		pDriver->m_nFractionalGlobal = nName;
+	} else if ( strcmp( pszInterface, wp_viewporter_interface.name ) == 0 && pDriver->m_pViewporter == nullptr ) {
+		pDriver->m_pViewporter = ( wp_viewporter * )wl_registry_bind( pRegistry, nName, &wp_viewporter_interface, 1 );
+		pDriver->m_nViewporterGlobal = nName;
+	}
+#endif
+	else if ( strcmp( pszInterface, wl_seat_interface.name ) == 0 && pDriver->m_pSeat == nullptr ) {
 		const uint32_t nBindVersion = nVersion < 7 ? nVersion : 7;
 		pDriver->m_pSeat = ( wl_seat * )wl_registry_bind( pRegistry, nName, &wl_seat_interface, nBindVersion );
 		pDriver->m_nSeatGlobal = nName;
@@ -112,6 +128,22 @@ void SIRWindowDriverWayland::registryRemove( void *pContext, wl_registry *pRegis
 		output = {};
 		break;
 	}
+	#ifdef SIR_WAYLAND_FRACTIONAL_SCALE_AVAILABLE
+	if ( nName == pDriver->m_nFractionalGlobal ) {
+		if ( pDriver->m_pFractionalManager != nullptr ) {
+			wp_fractional_scale_manager_v1_destroy( pDriver->m_pFractionalManager );
+		}
+		pDriver->m_pFractionalManager = nullptr;
+		pDriver->m_nFractionalGlobal = 0;
+	}
+	if ( nName == pDriver->m_nViewporterGlobal ) {
+		if ( pDriver->m_pViewporter != nullptr ) {
+			wp_viewporter_destroy( pDriver->m_pViewporter );
+		}
+		pDriver->m_pViewporter = nullptr;
+		pDriver->m_nViewporterGlobal = 0;
+	}
+#endif
 	if ( nName == pDriver->m_nCompositorGlobal || nName == pDriver->m_nShellGlobal ) {
 		pDriver->loseDisplay();
 	}

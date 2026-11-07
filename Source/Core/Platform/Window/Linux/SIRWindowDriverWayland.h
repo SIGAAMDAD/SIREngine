@@ -28,6 +28,10 @@ struct wl_compositor;
 struct wl_surface;
 struct wl_seat;
 struct wl_output;
+struct wp_fractional_scale_manager_v1;
+struct wp_fractional_scale_v1;
+struct wp_viewporter;
+struct wp_viewport;
 struct zwp_pointer_constraints_v1;
 struct zwp_relative_pointer_manager_v1;
 struct xdg_wm_base;
@@ -63,6 +67,9 @@ typedef struct sirWaylandWindowSlot_s
 	uint32_t nLastConfigureSerial;
 	uint32_t nOutputMask;
 	uint32_t nBufferScale;
+	uint32_t nFractionalScale120;
+	wp_fractional_scale_v1 *pFractionalScale;
+	wp_viewport *pViewport;
 	bool bConfigured;
 	bool bClosePending;
 	bool bLostPending;
@@ -105,13 +112,17 @@ private:
 	                        int32_t nRefresh ) noexcept;
 	static void outputDone( void *pContext, wl_output *pOutput ) noexcept;
 	static void outputScale( void *pContext, wl_output *pOutput, int32_t nScale ) noexcept;
+	static void fractionalPreferredScale( void *pContext, wp_fractional_scale_v1 *pScale, uint32_t nScale120 ) noexcept;
 	void queueEvent( uint32_t nSlot, sirWindowEventKind_t eKind, uint32_t nWidth, uint32_t nHeight ) noexcept;
 	void loseDisplay( void ) noexcept;
 	void refreshOutputScale( sirWaylandWindowSlot_t& slot ) noexcept;
+	void refreshSurfaceExtent( sirWaylandWindowSlot_t& slot, bool bEmit ) noexcept;
 
 	wl_display *m_pDisplay = nullptr;
 	wl_registry *m_pRegistry = nullptr;
 	wl_compositor *m_pCompositor = nullptr;
+	wp_fractional_scale_manager_v1 *m_pFractionalManager = nullptr;
+	wp_viewporter *m_pViewporter = nullptr;
 	wl_seat *m_pSeat = nullptr;
 	zwp_pointer_constraints_v1 *m_pPointerConstraints = nullptr;
 	zwp_relative_pointer_manager_v1 *m_pRelativePointerManager = nullptr;
@@ -131,6 +142,8 @@ private:
 	uint32_t m_nConstraintsGlobal = 0;
 	uint32_t m_nRelativePointerGlobal = 0;
 	uint32_t m_nShellGlobal = 0;
+	uint32_t m_nFractionalGlobal = 0;
+	uint32_t m_nViewporterGlobal = 0;
 	bool m_bLost = false;
 	bool m_bOverflow = false;
 };
