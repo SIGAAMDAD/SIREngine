@@ -143,6 +143,24 @@ static bool sirVTValidatePackAllocations( const sirVirtualTexturePackView_t& vie
 	return true;
 }
 
+// Reject cyclic or inconsistent parent chains even when all package hashes
+// are recomputed. The donor cooker stores coarser (x/2, y/2) parents.
+static bool sirVTValidatePackPageParent( const sirVirtualTexturePackView_t& view, const sirVirtualTexturePackPageRecord_t& page ) noexcept
+{
+	if ( page.nParentPage == SIR_VT_PACK_INVALID_INDEX ) {
+		return true;
+	}
+	const sirVirtualTexturePackPageRecord_t parent =
+	    sirVTReadPackRecord<sirVirtualTexturePackPageRecord_t>( view, SIR_VT_PACK_PAGES, page.nParentPage );
+	if ( parent.nAllocationId != page.nAllocationId || parent.nChannel != page.nChannel || parent.nGeneration != page.nGeneration ) {
+		return false;
+	}
+	if ( parent.nContentId != page.nContentId || parent.nMip != page.nMip + 1U || parent.nPageX != ( page.nPageX >> 1U ) ) {
+		return false;
+	}
+	return parent.nPageY == ( page.nPageY >> 1U );
+}
+
 static bool sirVTValidatePackPages( const sirVirtualTexturePackView_t& view ) noexcept
 {
 	for ( uint32_t iPage = 0; iPage < view.header.nPageCount; ++iPage ) {
@@ -163,6 +181,9 @@ static bool sirVTValidatePackPages( const sirVirtualTexturePackView_t& view ) no
 		if ( iPage < channel.nBasePage || iPage >= ( uint64_t )channel.nBasePage + channel.nPageCount || page.nMip >= channel.nMipCount ||
 		     ( page.nParentPage != SIR_VT_PACK_INVALID_INDEX &&
 		       ( page.nParentPage < channel.nBasePage || page.nParentPage >= ( uint64_t )channel.nBasePage + channel.nPageCount ) ) ) {
+			return false;
+		}
+		if ( !sirVTValidatePackPageParent( view, page ) ) {
 			return false;
 		}
 		const sirVirtualTexturePackPayloadRecord_t payload =

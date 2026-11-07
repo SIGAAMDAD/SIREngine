@@ -465,12 +465,107 @@ static bool testValidatedPack( void )
 		SIR_TEST( !sirVTPackOpenValidated( input, &view ) );
 		SIR_TEST( view.szDirectories[SIR_VT_PACK_ALLOCATIONS].pData == nullptr );
 	}
+	// A forged package can carry valid outer hashes but a cyclic page parent.
+	// Validate parent semantics before allowing metadata-only or full reads.
+	bytes = original;
+	sirVirtualTexturePackPageRecord_t invalidParent = {};
+	memcpy( &invalidParent, bytes.data() + nPage, sizeof( invalidParent ) );
+	invalidParent.nParentPage = invalidParent.nVirtualPage;
+	putRecord( bytes, nPage, invalidParent );
+	signPack( bytes );
+	SIR_TEST( !sirVTPackOpenValidated( input, &view ) );
+	input.bMetadataOnly = true;
+	input.nAvailableBytes = pHeader->nPayloadDataOffset;
+	SIR_TEST( !sirVTPackOpenValidated( input, &view ) );
+	input.bMetadataOnly = false;
+	input.nAvailableBytes = bytes.size();
 	bytes = original;
 	bytes[( size_t )pHeader->nPayloadDataOffset + 37] ^= 0x77;
 	signPack( bytes ); // Package FNV is valid; cluster CRC is now invalid.
 	SIR_TEST( !sirVTPackOpenValidated( input, &view ) );
 	bytes = original;
 	SIR_TEST( sirVTPackOpenValidated( input, &view ) );
+	return true;
+}
+
+// The donor writes parent links to the next coarser mip in channel-local order.
+// This fixture keeps the frozen Sparse V1 disk layout and recomputes the
+// package signature after every semantic corruption.
+static bool testPackParentChain( void )
+{
+	std::vector<uint8_t> bytes = makeValidPack();
+	sirVirtualTexturePackHeader_t header = {};
+	memcpy( &header, bytes.data(), sizeof( header ) );
+	const uint64_t nPageOffset = header.nPageOffset;
+	const uint64_t nOldPayloadDirectoryOffset = header.nPayloadDirectoryOffset;
+	const uint64_t nNewPayloadDirectoryOffset = align16( nPageOffset + 2 * sizeof( sirVirtualTexturePackPageRecord_t ) );
+	SIR_TEST( nNewPayloadDirectoryOffset > nOldPayloadDirectoryOffset );
+	const uint64_t nAdditionalBytes = nNewPayloadDirectoryOffset - nOldPayloadDirectoryOffset;
+	bytes.insert( bytes.begin() + ( ptrdiff_t )nOldPayloadDirectoryOffset, ( size_t )nAdditionalBytes, 0 );
+	header.nPageCount = 2;
+	header.szChannelPageCount[0] = 2;
+	header.nPayloadDirectoryOffset += nAdditionalBytes;
+	header.nClusterDirectoryOffset += nAdditionalBytes;
+	header.nTailMetadataOffset += nAdditionalBytes;
+	header.nQualityViewOffset += nAdditionalBytes;
+	header.nFormatFamilyOffset += nAdditionalBytes;
+	header.nPayloadDataOffset += nAdditionalBytes;
+	header.nPackageBytes += nAdditionalBytes;
+
+	sirVirtualTexturePackChannelAllocation_t channel = {};
+	memcpy( &channel, bytes.data() + header.nChannelAllocationOffset, sizeof( channel ) );
+	channel.nPageCount = 2;
+	channel.nMipCount = 2;
+	putRecord( bytes, header.nChannelAllocationOffset, channel );
+	sirVirtualTexturePackTailRecord_t tail = {};
+	memcpy( &tail, bytes.data() + header.nTailMetadataOffset, sizeof( tail ) );
+	tail.nFirstMip = 1;
+	putRecord( bytes, header.nTailMetadataOffset, tail );
+
+	sirVirtualTexturePackPageRecord_t page = {};
+	memcpy( &page, bytes.data() + nPageOffset, sizeof( page ) );
+	page.nParentPage = 1;
+	putRecord( bytes, nPageOffset, page );
+	sirVirtualTexturePackPageRecord_t root = page;
+	root.nVirtualPage = 1;
+	root.nParentPage = UINT32_MAX;
+	root.nMip = 1;
+	putRecord( bytes, nPageOffset + sizeof( root ), root );
+	putRecord( bytes, 0, header );
+	signPack( bytes );
+	const std::vector<uint8_t> valid = bytes;
+	sirVirtualTexturePackInput_t input = { bytes.data(), bytes.size(), bytes.size(), false };
+	sirVirtualTexturePackView_t view = {};
+	SIR_TEST( sirVTPackOpenValidated( input, &view ) );
+	input.bMetadataOnly = true;
+	input.nAvailableBytes = header.nPayloadDataOffset;
+	SIR_TEST( sirVTPackOpenValidated( input, &view ) );
+
+	const uint16_t szBadParentMips[] = { 0, 2 };
+	for ( uint16_t nMip : szBadParentMips ) {
+		bytes = valid;
+		root.nMip = nMip;
+		putRecord( bytes, nPageOffset + sizeof( root ), root );
+		signPack( bytes );
+		SIR_TEST( !sirVTPackOpenValidated( input, &view ) );
+	}
+	bytes = valid;
+	root.nMip = 1;
+	root.nPageX = 1;
+	putRecord( bytes, nPageOffset + sizeof( root ), root );
+	signPack( bytes );
+	SIR_TEST( !sirVTPackOpenValidated( input, &view ) );
+	bytes = valid;
+	root.nPageX = 0;
+	root.nPageY = 1;
+	putRecord( bytes, nPageOffset + sizeof( root ), root );
+	signPack( bytes );
+	SIR_TEST( !sirVTPackOpenValidated( input, &view ) );
+	bytes = valid;
+	page.nParentPage = 0;
+	putRecord( bytes, nPageOffset, page );
+	signPack( bytes );
+	SIR_TEST( !sirVTPackOpenValidated( input, &view ) );
 	return true;
 }
 
@@ -628,8 +723,8 @@ static bool testNativePackWriter( void )
 
 int main( void )
 {
-	if ( !testFeedbackGrid() || !testFeedbackMulti() || !testPackContract() || !testValidatedPack() || !testPackFileSource() ||
-	     !testCompactTail() || !testNativePackWriter() || !testNativeClusterDecode() ) {
+	if ( !testFeedbackGrid() || !testFeedbackMulti() || !testPackContract() || !testValidatedPack() || !testPackParentChain() ||
+	     !testPackFileSource() || !testCompactTail() || !testNativePackWriter() || !testNativeClusterDecode() ) {
 		return 1;
 	}
 #if defined( SIR_VT_TEST_ZSTD )
