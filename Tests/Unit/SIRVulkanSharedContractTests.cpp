@@ -175,7 +175,6 @@ int main( void )
 	const sirVulkanQueueFamilySelection_t missingGraphics = { UINT32_MAX, 1, 2, false };
 	if ( sirVulkanBuildQueueCreateInfos( missingGraphics, &fQueuePriority, szQueueInfos, &nQueueCount ) || nQueueCount != 0 ||
 	     sirVulkanBuildQueueCreateInfos( distinct, nullptr, szQueueInfos, &nQueueCount ) || nQueueCount != 0 ||
-	     sirVulkanBuildQueueCreateInfos( distinct, &fQueuePriority, nullptr, &nQueueCount ) || nQueueCount != 0 ||
 	     sirVulkanBuildQueueCreateInfos( distinct, &fQueuePriority, szQueueInfos, nullptr ) ) {
 		return 92;
 	}

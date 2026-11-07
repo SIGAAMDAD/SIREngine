@@ -135,13 +135,13 @@ bool sirVulkanSelectQueueFamilies( const VkQueueFamilyProperties *pFamilies, uin
 }
 
 bool sirVulkanBuildQueueCreateInfos( const sirVulkanQueueFamilySelection_t& selection, const float *pPriority,
-                                     VkDeviceQueueCreateInfo *pInfos, uint32_t *pCount ) noexcept
+                                     VkDeviceQueueCreateInfo (&szInfos)[3], uint32_t *pCount ) noexcept
 {
 	if ( pCount == nullptr ) {
 		return false;
 	}
 	*pCount = 0;
-	if ( pPriority == nullptr || pInfos == nullptr || selection.nGraphicsFamilyIndex == UINT32_MAX ) {
+	if ( pPriority == nullptr || selection.nGraphicsFamilyIndex == UINT32_MAX ) {
 		return false;
 	}
 	const uint32_t szFamilies[3] = { selection.nGraphicsFamilyIndex, selection.nComputeFamilyIndex, selection.nTransferFamilyIndex };
@@ -152,7 +152,7 @@ bool sirVulkanBuildQueueCreateInfos( const sirVulkanQueueFamilySelection_t& sele
 		}
 		bool bAlreadyAdded = false;
 		for ( uint32_t iExisting = 0; iExisting < *pCount; ++iExisting ) {
-			if ( pInfos[iExisting].queueFamilyIndex == nFamily ) {
+			if ( szInfos[iExisting].queueFamilyIndex == nFamily ) {
 				bAlreadyAdded = true;
 				break;
 			}
@@ -165,7 +165,7 @@ bool sirVulkanBuildQueueCreateInfos( const sirVulkanQueueFamilySelection_t& sele
 		info.queueFamilyIndex = nFamily;
 		info.queueCount = 1;
 		info.pQueuePriorities = pPriority;
-		pInfos[( *pCount )++] = info;
+		szInfos[( *pCount )++] = info;
 	}
 	return true;
 }
