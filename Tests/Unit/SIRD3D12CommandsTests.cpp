@@ -390,6 +390,27 @@ static int sirTestRaster( SIRRenderingDevice *pDevice, uint32_t nGeneration, con
 	     pDevice->retireResource( hAtomicProbe, noGpuWork ) != SIR_GRAPHICS_SUCCESS ) {
 		return 79;
 	}
+	// Reject an invalid later texture subresource before recording an earlier
+	// partial transition. Retiring its unpinned resource must remain safe.
+	sirGraphicsHandle_t hTextureProbe = {};
+	if ( pDevice->createTexture( texture, &hTextureProbe ) != SIR_GRAPHICS_SUCCESS ) {
+		return 80;
+	}
+	sirGraphicsBarrier_t szTextureBatch[2] = {};
+	szTextureBatch[0].eType = SIR_GRAPHICS_BARRIER_TRANSITION;
+	szTextureBatch[0].hResource = hTextureProbe;
+	szTextureBatch[0].eBefore = SIR_GRAPHICS_STATE_COMMON;
+	szTextureBatch[0].eAfter = SIR_GRAPHICS_STATE_COPY_SOURCE;
+	szTextureBatch[0].nBaseMip = 1;
+	szTextureBatch[0].nMipCount = 1;
+	szTextureBatch[0].nBaseLayer = 1;
+	szTextureBatch[0].nLayerCount = 1;
+	szTextureBatch[1] = szTextureBatch[0];
+	szTextureBatch[1].nBaseMip = texture.nMipLevels;
+	if ( pDirect->barrier( szTextureBatch, 2 ) != SIR_GRAPHICS_INVALID_ARGUMENT ||
+	     pDevice->retireResource( hTextureProbe, noGpuWork ) != SIR_GRAPHICS_SUCCESS ) {
+		return 81;
+	}
 	sirGraphicsBarrier_t storageTransition = {};
 	storageTransition.eType = SIR_GRAPHICS_BARRIER_TRANSITION;
 	storageTransition.hResource = hStorage;
@@ -430,12 +451,16 @@ static int sirTestRaster( SIRRenderingDevice *pDevice, uint32_t nGeneration, con
 		return 73;
 	}
 	partial.nBaseLayer = 1;
-	if ( pDirect->barrier( &partial, 1 ) != SIR_GRAPHICS_SUCCESS ) {
+	sirGraphicsBarrier_t szPartialBatch[2] = { partial, partial };
+	szPartialBatch[1].nBaseMip = 3;
+	if ( pDirect->barrier( szPartialBatch, 2 ) != SIR_GRAPHICS_SUCCESS ) {
 		return 71;
 	}
-	partial.eBefore = SIR_GRAPHICS_STATE_COPY_DESTINATION;
-	partial.eAfter = SIR_GRAPHICS_STATE_COMMON;
-	if ( pDirect->barrier( &partial, 1 ) != SIR_GRAPHICS_SUCCESS || pDirect->barrier( &transition, 1 ) != SIR_GRAPHICS_SUCCESS ) {
+	for ( uint32_t iBarrier = 0; iBarrier < 2; ++iBarrier ) {
+		szPartialBatch[iBarrier].eBefore = SIR_GRAPHICS_STATE_COPY_DESTINATION;
+		szPartialBatch[iBarrier].eAfter = SIR_GRAPHICS_STATE_COMMON;
+	}
+	if ( pDirect->barrier( szPartialBatch, 2 ) != SIR_GRAPHICS_SUCCESS || pDirect->barrier( &transition, 1 ) != SIR_GRAPHICS_SUCCESS ) {
 		return 58;
 	}
 	sirGraphicsColorAttachment_t color = {};

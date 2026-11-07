@@ -403,6 +403,9 @@ sirGraphicsResult_t SIRD3D12CommandList::barrier( const sirGraphicsBarrier_t *pB
 	// Prevalidate the entire batch before retaining references or encoding GPU work.
 	// A later failure must not leave earlier transitions recorded.
 	sirGraphicsHandle_t szPending[s_nReferenceCapacity] = {};
+	const sirD3D12ResourceSlot_t *szSlots[64] = {};
+	const sirD3D12ResourceSlot_t *szAliasedSlots[64] = {};
+	uint32_t szPlaneCounts[64] = {};
 	uint32_t nPendingCount = 0;
 	for ( uint32_t iPreflight = 0; iPreflight < nCount; ++iPreflight ) {
 		const sirGraphicsBarrier_t& source = pBarriers[iPreflight];
@@ -413,6 +416,7 @@ sirGraphicsResult_t SIRD3D12CommandList::barrier( const sirGraphicsBarrier_t *pB
 		if ( source.eType > SIR_GRAPHICS_BARRIER_ALIAS ) {
 			return SIR_GRAPHICS_INVALID_ARGUMENT;
 		}
+		szSlots[iPreflight] = pSlot;
 		if ( m_eQueue == SIR_GRAPHICS_QUEUE_COPY && source.eType != SIR_GRAPHICS_BARRIER_TRANSITION ) {
 			return SIR_GRAPHICS_UNSUPPORTED;
 		}
@@ -452,6 +456,7 @@ sirGraphicsResult_t SIRD3D12CommandList::barrier( const sirGraphicsBarrier_t *pB
 			if ( pAliased == nullptr || pAliased->getNativeResource() == nullptr ) {
 				return SIR_GRAPHICS_INVALID_HANDLE;
 			}
+			szAliasedSlots[iPreflight] = pAliased;
 		}
 		const bool bEnhancedTexture = m_pEnhancedCommands != nullptr && pSlot->eMemory == SIR_GRAPHICS_MEMORY_GPU_LOCAL &&
 		                              ( source.eType == SIR_GRAPHICS_BARRIER_TRANSITION || source.eType == SIR_GRAPHICS_BARRIER_UAV );
@@ -467,6 +472,7 @@ sirGraphicsResult_t SIRD3D12CommandList::barrier( const sirGraphicsBarrier_t *pB
 			     formatInfo.PlaneCount == 0 ) {
 				return SIR_GRAPHICS_UNSUPPORTED;
 			}
+			szPlaneCounts[iPreflight] = formatInfo.PlaneCount;
 		}
 		const uint32_t nBarrierReferences = source.eType == SIR_GRAPHICS_BARRIER_ALIAS ? 2 : 1;
 		for ( uint32_t iHandle = 0; iHandle < nBarrierReferences; ++iHandle ) {
@@ -508,77 +514,26 @@ sirGraphicsResult_t SIRD3D12CommandList::barrier( const sirGraphicsBarrier_t *pB
 			return ePinned;
 		}
 	}
+	// Every native call below is void. The entire batch and its resource lifetimes
+	// have been validated and pinned, so encoding cannot return partial success.
 	for ( uint32_t iBarrier = 0; iBarrier < nCount; ++iBarrier ) {
 		const sirGraphicsBarrier_t& source = pBarriers[iBarrier];
-		const sirD3D12ResourceSlot_t *pSlot = m_pResources->querySlot( source.hResource );
-		if ( pSlot == nullptr || pSlot->getNativeResource() == nullptr ) {
-			return SIR_GRAPHICS_INVALID_HANDLE;
-		}
-		if ( source.eType > SIR_GRAPHICS_BARRIER_ALIAS ) {
-			return SIR_GRAPHICS_INVALID_ARGUMENT;
-		}
-		if ( m_eQueue == SIR_GRAPHICS_QUEUE_COPY && source.eType != SIR_GRAPHICS_BARRIER_TRANSITION ) {
-			return SIR_GRAPHICS_UNSUPPORTED;
-		}
+		const sirD3D12ResourceSlot_t *pSlot = szSlots[iBarrier];
 		D3D12_RESOURCE_BARRIER native = {};
 		native.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
 		if ( source.eType == SIR_GRAPHICS_BARRIER_TRANSITION ) {
-			if ( source.eAfter == SIR_GRAPHICS_STATE_UNDEFINED || source.eBefore > SIR_GRAPHICS_STATE_PRESENT ||
-			     source.eAfter > SIR_GRAPHICS_STATE_PRESENT || !sirD3D12ValidResourceState( pSlot->eType, source.eBefore ) ||
-			     !sirD3D12ValidResourceState( pSlot->eType, source.eAfter ) ) {
-				return SIR_GRAPHICS_INVALID_ARGUMENT;
-			}
-			if ( ( source.eBefore != SIR_GRAPHICS_STATE_UNDEFINED && !sirD3D12ValidQueueState( m_eQueue, source.eBefore ) ) ||
-			     !sirD3D12ValidQueueState( m_eQueue, source.eAfter ) ) {
-				return SIR_GRAPHICS_UNSUPPORTED;
-			}
-			const uint32_t nMips = pSlot->eType == SIR_GRAPHICS_HANDLE_TEXTURE ? pSlot->nMips : 1;
-			const uint32_t nLayers =
-			    pSlot->eType == SIR_GRAPHICS_HANDLE_TEXTURE && pSlot->eDimension != SIR_GRAPHICS_TEXTURE_3D ? pSlot->nLayers : 1;
-			if ( pSlot->eType == SIR_GRAPHICS_HANDLE_BUFFER ) {
-				if ( source.nBaseMip != 0 || source.nMipCount != 0 || source.nBaseLayer != 0 || source.nLayerCount != 0 ) {
-					return SIR_GRAPHICS_INVALID_ARGUMENT;
-				}
-			} else if ( !sirGraphicsTextureBarrierRangeValid( source, nMips, nLayers ) ) {
-				return SIR_GRAPHICS_INVALID_ARGUMENT;
-			}
-			// Discard-first-use of owned default-heap resources maps their
-			// native COMMON creation state in legacy D3D12; enhanced barriers
-			// admit NO_ACCESS/UNDEFINED before their first native use.
-			if ( source.eBefore == SIR_GRAPHICS_STATE_UNDEFINED &&
-			     ( pSlot->eMemory != SIR_GRAPHICS_MEMORY_GPU_LOCAL || pSlot->pExternalResource != nullptr ) ) {
-				return SIR_GRAPHICS_UNSUPPORTED;
-			}
 			native.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
 			native.Transition.pResource = pSlot->getNativeResource();
 			native.Transition.StateBefore = sirD3D12BarrierState( source.eBefore, m_eQueue );
 			native.Transition.StateAfter = sirD3D12BarrierState( source.eAfter, m_eQueue );
 			native.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 		} else if ( source.eType == SIR_GRAPHICS_BARRIER_UAV ) {
-			if ( ( pSlot->nUsage & SIR_GRAPHICS_USAGE_STORAGE ) == 0 ) {
-				return SIR_GRAPHICS_INVALID_ARGUMENT;
-			}
 			native.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
 			native.UAV.pResource = pSlot->getNativeResource();
 		} else {
-			if ( m_eQueue == SIR_GRAPHICS_QUEUE_COPY ) {
-				return SIR_GRAPHICS_UNSUPPORTED;
-			}
-			const sirD3D12ResourceSlot_t *pAliased = m_pResources->querySlot( source.hAliasedResource );
-			if ( pAliased == nullptr || pAliased->getNativeResource() == nullptr ) {
-				return SIR_GRAPHICS_INVALID_HANDLE;
-			}
-			const sirGraphicsResult_t eAliased = pin( source.hAliasedResource );
-			if ( eAliased != SIR_GRAPHICS_SUCCESS ) {
-				return eAliased;
-			}
 			native.Type = D3D12_RESOURCE_BARRIER_TYPE_ALIASING;
 			native.Aliasing.pResourceBefore = pSlot->getNativeResource();
-			native.Aliasing.pResourceAfter = pAliased->getNativeResource();
-		}
-		const sirGraphicsResult_t ePinned = pin( source.hResource );
-		if ( ePinned != SIR_GRAPHICS_SUCCESS ) {
-			return ePinned;
+			native.Aliasing.pResourceAfter = szAliasedSlots[iBarrier]->getNativeResource();
 		}
 		// A resource created in a legacy non-COMMON heap state must continue using
 		// the legacy barrier API. Only DEFAULT GPU memory uses this enhanced path.
@@ -596,13 +551,6 @@ sirGraphicsResult_t SIRD3D12CommandList::barrier( const sirGraphicsBarrier_t *pB
 			D3D12_BARRIER_GROUP group = {};
 			group.NumBarriers = 1;
 			if ( pSlot->eType == SIR_GRAPHICS_HANDLE_TEXTURE ) {
-				D3D12_FEATURE_DATA_FORMAT_INFO formatInfo = {};
-				formatInfo.Format = pSlot->getNativeResource()->GetDesc().Format;
-				if ( FAILED( m_pNative->getNativeDevice()->CheckFeatureSupport( D3D12_FEATURE_FORMAT_INFO, &formatInfo,
-				                                                                sizeof( formatInfo ) ) ) ||
-				     formatInfo.PlaneCount == 0 ) {
-					return SIR_GRAPHICS_UNSUPPORTED;
-				}
 				D3D12_TEXTURE_BARRIER barrier = {};
 				barrier.SyncBefore = eSyncBefore;
 				barrier.SyncAfter = eSyncAfter;
@@ -622,7 +570,7 @@ sirGraphicsResult_t SIRD3D12CommandList::barrier( const sirGraphicsBarrier_t *pB
 					: source.nLayerCount == 0 ? ( pSlot->eDimension == SIR_GRAPHICS_TEXTURE_3D ? 1 : pSlot->nLayers ) - source.nBaseLayer
 					                          : source.nLayerCount;
 				barrier.Subresources.FirstPlane = 0;
-				barrier.Subresources.NumPlanes = formatInfo.PlaneCount;
+				barrier.Subresources.NumPlanes = szPlaneCounts[iBarrier];
 				group.Type = D3D12_BARRIER_TYPE_TEXTURE;
 				group.pTextureBarriers = &barrier;
 				m_pEnhancedCommands->Barrier( 1, &group );
@@ -644,18 +592,11 @@ sirGraphicsResult_t SIRD3D12CommandList::barrier( const sirGraphicsBarrier_t *pB
 		if ( source.eType == SIR_GRAPHICS_BARRIER_TRANSITION && pSlot->eType == SIR_GRAPHICS_HANDLE_TEXTURE &&
 		     ( source.nBaseMip != 0 || source.nBaseLayer != 0 || ( source.nMipCount != 0 && source.nMipCount != pSlot->nMips ) ||
 		       ( source.nLayerCount != 0 && source.nLayerCount != pSlot->nLayers ) ) ) {
-			D3D12_FEATURE_DATA_FORMAT_INFO formatInfo = {};
-			formatInfo.Format = pSlot->getNativeResource()->GetDesc().Format;
-			if ( FAILED(
-			         m_pNative->getNativeDevice()->CheckFeatureSupport( D3D12_FEATURE_FORMAT_INFO, &formatInfo, sizeof( formatInfo ) ) ) ||
-			     formatInfo.PlaneCount == 0 ) {
-				return SIR_GRAPHICS_UNSUPPORTED;
-			}
 			const uint32_t nMips = pSlot->nMips;
 			const uint32_t nLayers = pSlot->eDimension == SIR_GRAPHICS_TEXTURE_3D ? 1 : pSlot->nLayers;
 			const uint32_t nMipCount = source.nMipCount == 0 ? nMips - source.nBaseMip : source.nMipCount;
 			const uint32_t nLayerCount = source.nLayerCount == 0 ? nLayers - source.nBaseLayer : source.nLayerCount;
-			for ( uint32_t iPlane = 0; iPlane < formatInfo.PlaneCount; ++iPlane ) {
+			for ( uint32_t iPlane = 0; iPlane < szPlaneCounts[iBarrier]; ++iPlane ) {
 				for ( uint32_t iLayer = source.nBaseLayer; iLayer < source.nBaseLayer + nLayerCount; ++iLayer ) {
 					for ( uint32_t iMip = source.nBaseMip; iMip < source.nBaseMip + nMipCount; ++iMip ) {
 						native.Transition.Subresource = iMip + iLayer * nMips + iPlane * nMips * nLayers;
