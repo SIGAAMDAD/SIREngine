@@ -27,6 +27,20 @@ static bool sirEditorIsHex( char nCharacter ) noexcept
 	return sirEditorIsDigit( nCharacter ) || ( nCharacter >= 'a' && nCharacter <= 'f' ) || ( nCharacter >= 'A' && nCharacter <= 'F' );
 }
 
+// A serialized destination may not overwrite the metadata still driving the
+// edit transaction. Pointer-range overflow is treated as invalid input.
+static bool sirEditorWriterOutputOverlaps( const void *pInput, size_t nInputBytes, uintptr_t nOutputPtr, size_t nCapacity ) noexcept
+{
+	if ( nInputBytes == 0 ) {
+		return false;
+	}
+	const uintptr_t nInputPtr = ( uintptr_t )pInput;
+	if ( nInputBytes > UINTPTR_MAX - nInputPtr ) {
+		return true;
+	}
+	return nInputPtr < nOutputPtr + nCapacity && nOutputPtr < nInputPtr + nInputBytes;
+}
+
 static bool sirEditorScalarValid( const char *pszText, uint32_t nLength ) noexcept
 {
 	if ( pszText == nullptr || nLength == 0 ) {
@@ -106,7 +120,7 @@ sirEditorTextWriteResult_t sirEditorWriteScalarPatches( const char *pszSource, s
                                                         uint32_t nEdits, char *pszOutput, size_t nCapacity, size_t *pOutBytes ) noexcept
 {
 	if ( pOutBytes == nullptr || pszSource == nullptr || ( nEdits != 0 && pEdits == nullptr ) ||
-	     ( pszOutput == nullptr && nCapacity != 0 ) || ( nEdits != 0 && index.pProperties == nullptr ) ) {
+	     ( pszOutput == nullptr && nCapacity != 0 ) || ( index.nCount != 0 && index.pProperties == nullptr ) ) {
 		return SIR_EDITOR_WRITE_INVALID_ARGUMENT;
 	}
 	*pOutBytes = 0;
@@ -156,13 +170,17 @@ sirEditorTextWriteResult_t sirEditorWriteScalarPatches( const char *pszSource, s
 	if ( nSourcePtr < nOutputPtr + nCapacity && nOutputPtr < nSourcePtr + nSourceBytes ) {
 		return SIR_EDITOR_WRITE_INVALID_ARGUMENT;
 	}
+	if ( nEdits > SIZE_MAX / sizeof( sirEditorTextEdit_t ) || index.nCount > SIZE_MAX / sizeof( sirEditorTextProperty_t ) ||
+	     sirEditorWriterOutputOverlaps( pEdits, ( size_t )nEdits * sizeof( sirEditorTextEdit_t ), nOutputPtr, nCapacity ) ||
+	     sirEditorWriterOutputOverlaps( index.pProperties, ( size_t )index.nCount * sizeof( sirEditorTextProperty_t ), nOutputPtr,
+	                                    nCapacity ) ) {
+		return SIR_EDITOR_WRITE_INVALID_ARGUMENT;
+	}
 	// All replacement spans must stay outside the output destination. A prior
 	// copy could otherwise overwrite a later edit's input before it is read.
 	for ( uint32_t iEdit = 0; iEdit < nEdits; ++iEdit ) {
 		const sirEditorTextEdit_t& edit = pEdits[iEdit];
-		const uintptr_t nReplacementPtr = ( uintptr_t )edit.pszReplacement;
-		if ( edit.nReplacementBytes > UINTPTR_MAX - nReplacementPtr ||
-		     ( nReplacementPtr < nOutputPtr + nCapacity && nOutputPtr < nReplacementPtr + edit.nReplacementBytes ) ) {
+		if ( sirEditorWriterOutputOverlaps( edit.pszReplacement, edit.nReplacementBytes, nOutputPtr, nCapacity ) ) {
 			return SIR_EDITOR_WRITE_INVALID_ARGUMENT;
 		}
 	}

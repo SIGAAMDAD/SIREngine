@@ -145,6 +145,22 @@ static void sirEditorWriterAdversarialTests( void ) noexcept
 	assert( sirEditorWriteScalarPatches( szMutableSource, strlen( szMutableSource ), index, &anyEdit, 1, szMutableSource,
 	                                     sizeof( szMutableSource ), &nBytes ) == SIR_EDITOR_WRITE_INVALID_ARGUMENT );
 
+	// Reject output overlap with both the edit descriptors and the retained
+	// property metadata; a copying writer must not corrupt unread input.
+	sirEditorTextEdit_t szAliasedEdits[4] = {};
+	szAliasedEdits[0] = { 0, "42", 2 };
+	assert( sirEditorWriteScalarPatches( szSource, strlen( szSource ), index, szAliasedEdits, 1, ( char * )szAliasedEdits,
+	                                     sizeof( szAliasedEdits ), &nBytes ) == SIR_EDITOR_WRITE_INVALID_ARGUMENT );
+	assert( szAliasedEdits[0].pszReplacement != nullptr );
+	sirEditorTextProperty_t szAliasedProperties[4] = {};
+	szAliasedProperties[0] = property;
+	sirEditorTextPropertyIndex_t aliasedIndex = { szAliasedProperties, 4, 1, 0 };
+	assert( sirEditorWriteScalarPatches( szSource, strlen( szSource ), aliasedIndex, &anyEdit, 1, ( char * )szAliasedProperties,
+	                                     sizeof( szAliasedProperties ), &nBytes ) == SIR_EDITOR_WRITE_INVALID_ARGUMENT );
+	aliasedIndex.pProperties = nullptr;
+	assert( sirEditorWriteScalarPatches( szSource, strlen( szSource ), aliasedIndex, nullptr, 0, nullptr, 0, &nBytes ) ==
+	        SIR_EDITOR_WRITE_INVALID_ARGUMENT );
+
 	const sirEditorTextEdit_t valid = { 0, "42", 2 };
 	assert( sirEditorWriteScalarPatches( nullptr, 0, index, &valid, 1, szOutput, sizeof( szOutput ), &nBytes ) ==
 	        SIR_EDITOR_WRITE_INVALID_ARGUMENT );
