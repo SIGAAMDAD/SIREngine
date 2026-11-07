@@ -533,10 +533,34 @@ static bool sirTestInitialConfigureAndRetirement( void ) noexcept
 	if ( s_nAckCount != 1 || driver.pumpEvents( 1, sirCollectWaylandEvent, &events ) != SIR_WINDOW_OK || events.nCount != 1 ||
 	     events.events[0].eKind != SIR_WINDOW_EVENT_READY || events.events[0].nWidth != 512 || events.events[0].nHeight != 320 )
 		return false;
-	if ( driver.destroyWindow( 0 ) != SIR_WINDOW_OK )
+	// Duplicate/out-of-order configure serials cannot trigger an outdated resize.
+	s_pToplevelListener[0]->configure( s_pToplevelContext[0], &s_Toplevels[0], 900, 900, nullptr );
+	s_pSurfaceListener[0]->configure( s_pSurfaceContext[0], &s_XdgSurfaces[0], 77 );
+	s_pSurfaceListener[0]->configure( s_pSurfaceContext[0], &s_XdgSurfaces[0], 76 );
+	if ( s_nAckCount != 1 || driver.pumpEvents( 1, sirCollectWaylandEvent, &events ) != SIR_WINDOW_OK || events.nCount != 1 ) {
 		return false;
+	}
+	// One-axis configure sizes preserve the previous width, and retire filters
+	// events that belonged to an already destroyed native slot.
+	s_pToplevelListener[0]->configure( s_pToplevelContext[0], &s_Toplevels[0], 0, 720, nullptr );
 	s_pSurfaceListener[0]->configure( s_pSurfaceContext[0], &s_XdgSurfaces[0], 78 );
-	if ( s_nAckCount != 1 )
+	if ( s_nAckCount != 2 || driver.pumpEvents( 1, sirCollectWaylandEvent, &events ) != SIR_WINDOW_OK ||
+	     events.nCount != 2 || events.events[1].eKind != SIR_WINDOW_EVENT_RESIZED || events.events[1].nWidth != 512 ||
+	     events.events[1].nHeight != 720 ) {
+		return false;
+	}
+	sirWindowNativeView_t retired = {};
+	if ( driver.createWindow( { "retired", 100, 100 }, 1, &retired ) != SIR_WINDOW_OK ) {
+		return false;
+	}
+	s_pToplevelListener[1]->configure( s_pToplevelContext[1], &s_Toplevels[1], 200, 220, nullptr );
+	s_pSurfaceListener[1]->configure( s_pSurfaceContext[1], &s_XdgSurfaces[1], 79 );
+	if ( driver.destroyWindow( 1 ) != SIR_WINDOW_OK || driver.pumpEvents( 4, sirCollectWaylandEvent, &events ) != SIR_WINDOW_OK ||
+	     events.nCount != 2 || driver.destroyWindow( 0 ) != SIR_WINDOW_OK ) {
+		return false;
+	}
+	s_pSurfaceListener[0]->configure( s_pSurfaceContext[0], &s_XdgSurfaces[0], 80 );
+	if ( s_nAckCount != 3 )
 		return false;
 	driver.shutdown();
 	return true;

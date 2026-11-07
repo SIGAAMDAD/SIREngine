@@ -93,8 +93,10 @@ void SIRWindowDriverWayland::topConfigure( void *pContext, xdg_toplevel *pTop, i
 	( void )pTop;
 	( void )pStates;
 	sirWaylandWindowSlot_t *pSlot = ( sirWaylandWindowSlot_t * )pContext;
-	if ( nWidth > 0 && nHeight > 0 ) {
+	if ( nWidth > 0 ) {
 		pSlot->nPendingWidth = ( uint32_t )nWidth;
+	}
+	if ( nHeight > 0 ) {
 		pSlot->nPendingHeight = ( uint32_t )nHeight;
 	}
 }
@@ -102,16 +104,24 @@ void SIRWindowDriverWayland::topConfigure( void *pContext, xdg_toplevel *pTop, i
 void SIRWindowDriverWayland::surfaceConfigure( void *pContext, xdg_surface *pSurface, uint32_t nSerial ) noexcept
 {
 	sirWaylandWindowSlot_t *pSlot = ( sirWaylandWindowSlot_t * )pContext;
-	if ( pSlot->pXdgSurface != pSurface || pSlot->pDriver == nullptr || pSlot->bLostPending ) {
+	if ( pSlot->pXdgSurface != pSurface || pSlot->pDriver == nullptr || pSlot->bLostPending || pSlot->pDriver->m_bLost ) {
+		return;
+	}
+	// Ignore duplicate or older xdg configure notifications. Serial arithmetic
+	// intentionally handles the Wayland protocol's uint32 wraparound.
+	if ( pSlot->bConfigured && ( int32_t )( nSerial - pSlot->nLastConfigureSerial ) <= 0 ) {
+		pSlot->nPendingWidth = pSlot->nWidth;
+		pSlot->nPendingHeight = pSlot->nHeight;
 		return;
 	}
 	xdg_surface_ack_configure( pSurface, nSerial );
+	pSlot->nLastConfigureSerial = nSerial;
 	const bool bFirst = !pSlot->bConfigured;
 	const bool bResized = pSlot->nPendingWidth != pSlot->nWidth || pSlot->nPendingHeight != pSlot->nHeight;
 	pSlot->nWidth = pSlot->nPendingWidth;
 	pSlot->nHeight = pSlot->nPendingHeight;
 	pSlot->bConfigured = true;
-	if ( bFirst || bResized ) {
+	if ( ( bFirst || bResized ) && !pSlot->bClosePending ) {
 		pSlot->pDriver->queueEvent( pSlot->nIndex, bFirst ? SIR_WINDOW_EVENT_READY : SIR_WINDOW_EVENT_RESIZED, pSlot->nWidth,
 		                            pSlot->nHeight );
 	}
@@ -127,6 +137,15 @@ void SIRWindowDriverWayland::topClose( void *pContext, xdg_toplevel *pTop ) noex
 
 void SIRWindowDriverWayland::queueEvent( uint32_t nSlot, sirWindowEventKind_t eKind, uint32_t nWidth, uint32_t nHeight ) noexcept
 {
+	if ( m_nEventCount != 0 && eKind == SIR_WINDOW_EVENT_RESIZED ) {
+		const uint32_t nPrevious = ( m_nEventWrite + SIR_WINDOW_EVENT_CAPACITY - 1 ) % SIR_WINDOW_EVENT_CAPACITY;
+		sirWindowBackendEvent_t& previous = m_Events[nPrevious];
+		if ( previous.nSlot == nSlot && previous.eKind == SIR_WINDOW_EVENT_RESIZED ) {
+			previous.nWidth = nWidth;
+			previous.nHeight = nHeight;
+			return;
+		}
+	}
 	if ( m_nEventCount == SIR_WINDOW_EVENT_CAPACITY ) {
 		m_bOverflow = true;
 		return;
@@ -138,6 +157,9 @@ void SIRWindowDriverWayland::queueEvent( uint32_t nSlot, sirWindowEventKind_t eK
 
 void SIRWindowDriverWayland::loseDisplay( void ) noexcept
 {
+	if ( m_bLost ) {
+		return;
+	}
 	m_bLost = true;
 	for ( uint32_t i = 0; i < SIR_WINDOW_MAX_WINDOWS; ++i ) {
 		if ( m_Slots[i].pSurface != nullptr ) {
@@ -159,7 +181,7 @@ sirWindowResult_t SIRWindowDriverWayland::initialize( void ) noexcept
 	static const wl_registry_listener s_RegistryListener = { registryGlobal, registryRemove };
 	static const xdg_wm_base_listener s_WmListener = { wmBasePing };
 	if ( m_pRegistry == nullptr || wl_registry_add_listener( m_pRegistry, &s_RegistryListener, this ) != 0 ||
-	     wl_display_roundtrip( m_pDisplay ) < 0 || m_pCompositor == nullptr || m_pBase == nullptr ||
+	     wl_display_roundtrip( m_pDisplay ) < 0 || m_bLost || m_pCompositor == nullptr || m_pBase == nullptr ||
 	     xdg_wm_base_add_listener( m_pBase, &s_WmListener, this ) != 0 ) {
 		shutdown();
 		return SIR_WINDOW_NATIVE_FAILURE;
@@ -231,6 +253,19 @@ sirWindowResult_t SIRWindowDriverWayland::destroyWindow( uint32_t nSlot ) noexce
 		wl_proxy_destroy( ( wl_proxy * )slot.pXdgSurface );
 		wl_proxy_destroy( ( wl_proxy * )slot.pSurface );
 	}
+	// Drop all queued events for this retired native surface. A newly created
+	// window in the same slot must not observe stale configure/resize events.
+	const uint32_t nOriginal = m_nEventCount;
+	uint32_t nRetained = 0;
+	for ( uint32_t i = 0; i < nOriginal; ++i ) {
+		const sirWindowBackendEvent_t pending = m_Events[( m_nEventRead + i ) % SIR_WINDOW_EVENT_CAPACITY];
+		if ( pending.nSlot != nSlot ) {
+			m_Events[( m_nEventRead + nRetained ) % SIR_WINDOW_EVENT_CAPACITY] = pending;
+			++nRetained;
+		}
+	}
+	m_nEventCount = nRetained;
+	m_nEventWrite = ( m_nEventRead + nRetained ) % SIR_WINDOW_EVENT_CAPACITY;
 	slot = {};
 	return SIR_WINDOW_OK;
 }

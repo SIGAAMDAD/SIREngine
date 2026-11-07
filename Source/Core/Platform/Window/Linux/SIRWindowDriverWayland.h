@@ -50,6 +50,7 @@ typedef struct sirWaylandWindowSlot_s
 	uint32_t nHeight;
 	uint32_t nPendingWidth;
 	uint32_t nPendingHeight;
+	uint32_t nLastConfigureSerial;
 	bool bConfigured;
 	bool bClosePending;
 	bool bLostPending;
