@@ -17,84 +17,6 @@ target_link_libraries(SIRVirtualTexturePortTests PRIVATE SIR::Graphics)
 add_test(NAME renderer.virtual-texturing.terrain3d-v1 COMMAND SIRVirtualTexturePortTests)
 sir_configure_owned_target(SIRVirtualTexturePortTests)
 
-add_executable(SIRVirtualTextureReferenceEncoderTests SIRVirtualTextureReferenceEncoderTests.cpp)
-target_link_libraries(SIRVirtualTextureReferenceEncoderTests PRIVATE SIR::Graphics)
-add_test(NAME renderer.virtual-texturing.reference-encoder COMMAND SIRVirtualTextureReferenceEncoderTests)
-sir_configure_owned_target(SIRVirtualTextureReferenceEncoderTests)
-
-# Terrain3D four-slot baked visibility bundle scheduling and stale completion protection.
-add_executable(SIRVirtualTextureDemandQueueTests SIRVirtualTextureDemandQueueTests.cpp)
-target_link_libraries(SIRVirtualTextureDemandQueueTests PRIVATE SIR::Graphics)
-add_test(NAME renderer.virtual-texturing.demand-queue COMMAND SIRVirtualTextureDemandQueueTests)
-sir_configure_owned_target(SIRVirtualTextureDemandQueueTests)
-
-# Original Terrain3D baked-visibility percentile and runtime mip projection.
-add_executable(SIRVirtualTextureDemandMipTests SIRVirtualTextureDemandMipTests.cpp)
-target_link_libraries(SIRVirtualTextureDemandMipTests PRIVATE SIR::Graphics)
-add_test(NAME renderer.virtual-texturing.demand-mip COMMAND SIRVirtualTextureDemandMipTests)
-sir_configure_owned_target(SIRVirtualTextureDemandMipTests)
-
-# Donor V2 stable-material spatial demand, externally owned four-cell hot cache.
-add_executable(SIRVirtualTextureSpatialDemandTests SIRVirtualTextureSpatialDemandTests.cpp)
-target_link_libraries(SIRVirtualTextureSpatialDemandTests PRIVATE SIR::Graphics)
-add_test(NAME renderer.virtual-texturing.spatial-demand COMMAND SIRVirtualTextureSpatialDemandTests)
-sir_configure_owned_target(SIRVirtualTextureSpatialDemandTests)
-
-# Frozen Terrain3D format-family GPU resource budget and bank layout.
-add_executable(SIRVirtualTextureResourcePlanTests SIRVirtualTextureResourcePlanTests.cpp)
-target_link_libraries(SIRVirtualTextureResourcePlanTests PRIVATE SIR::Graphics)
-add_test(NAME renderer.virtual-texturing.resource-plan COMMAND SIRVirtualTextureResourcePlanTests)
-sir_configure_owned_target(SIRVirtualTextureResourcePlanTests)
-
-# Single-writer page pool with queue-safe upload/retirement and ancestor fallbacks.
-add_executable(SIRVirtualTexturePagePoolTests SIRVirtualTexturePagePoolTests.cpp)
-target_link_libraries(SIRVirtualTexturePagePoolTests PRIVATE SIR::Graphics)
-add_test(NAME renderer.virtual-texturing.page-pool COMMAND SIRVirtualTexturePagePoolTests)
-sir_configure_owned_target(SIRVirtualTexturePagePoolTests)
-
-# Bounded baked-visibility PackBits/raw bundle decoding, with negative-path tests.
-add_executable(SIRVirtualTextureDemandBundleSmokeTests SIRVirtualTextureDemandBundleSmokeTests.cpp)
-target_link_libraries(SIRVirtualTextureDemandBundleSmokeTests PRIVATE SIR::Graphics)
-add_test(NAME renderer.virtual-texturing.demand-bundle-codec COMMAND SIRVirtualTextureDemandBundleSmokeTests)
-sir_configure_owned_target(SIRVirtualTextureDemandBundleSmokeTests)
-
-if(SIR_WITH_VT_ZSTD)
-    add_executable(SIRVirtualTextureZstdCodecTests SIRVirtualTextureZstdCodecTests.cpp)
-    target_link_libraries(SIRVirtualTextureZstdCodecTests PRIVATE SIR::Graphics libzstd_static)
-    add_test(NAME renderer.virtual-texturing.zstd-cluster COMMAND SIRVirtualTextureZstdCodecTests)
-    sir_configure_owned_target(SIRVirtualTextureZstdCodecTests)
-endif()
-
-# Bounded metadata-only V1 lookup and malformed-directory rejection.
-add_executable(SIRVirtualTexturePackLookupTests SIRVirtualTexturePackLookupTests.cpp)
-target_link_libraries(SIRVirtualTexturePackLookupTests PRIVATE SIR::Graphics)
-add_test(NAME renderer.virtual-texturing.sparse-v1-metadata COMMAND SIRVirtualTexturePackLookupTests)
-sir_configure_owned_target(SIRVirtualTexturePackLookupTests)
-
-# Donor V1 mip-chain and 136x136 physical-tile gutter cooker parity.
-add_executable(SIRVirtualTextureTileCookerTests SIRVirtualTextureTileCookerTests.cpp)
-target_link_libraries(SIRVirtualTextureTileCookerTests PRIVATE SIR::Graphics)
-add_test(NAME renderer.virtual-texturing.sparse-v1-cooker COMMAND SIRVirtualTextureTileCookerTests)
-sir_configure_owned_target(SIRVirtualTextureTileCookerTests)
-
-# Terrain3D V2/V3 atomic feedback reducer and priority/parent promotion tests.
-add_executable(SIRVirtualTextureFeedbackReducerTests SIRVirtualTextureFeedbackReducerTests.cpp)
-target_link_libraries(SIRVirtualTextureFeedbackReducerTests PRIVATE SIR::Graphics)
-add_test(NAME renderer.virtual-texturing.feedback-reducer COMMAND SIRVirtualTextureFeedbackReducerTests)
-sir_configure_owned_target(SIRVirtualTextureFeedbackReducerTests)
-
-# Terrain3D Sparse V1 fixed quality profiles, authored extents and base-mip selection.
-add_executable(SIRVirtualTextureFixedProfileTests SIRVirtualTextureFixedProfileTests.cpp)
-target_link_libraries(SIRVirtualTextureFixedProfileTests PRIVATE SIR::Graphics)
-add_test(NAME renderer.virtual-texturing.fixed-profile COMMAND SIRVirtualTextureFixedProfileTests)
-sir_configure_owned_target(SIRVirtualTextureFixedProfileTests)
-
-# Decoded V1 per-tile payload bounds, physical bytes and corruption checks.
-add_executable(SIRVirtualTextureDecodedPayloadTests SIRVirtualTextureDecodedPayloadTests.cpp)
-target_link_libraries(SIRVirtualTextureDecodedPayloadTests PRIVATE SIR::Graphics)
-add_test(NAME renderer.virtual-texturing.decoded-payload COMMAND SIRVirtualTextureDecodedPayloadTests)
-sir_configure_owned_target(SIRVirtualTextureDecodedPayloadTests)
-
 # Native Hi-Z reference and command validation.
 include(${CMAKE_CURRENT_SOURCE_DIR}/HIZFoundationTests.cmake)
 
@@ -104,3 +26,24 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/WorldPartitionTests.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/StreamingReconcileTests.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/StreamingProviderBridgeTests.cmake)
 
+
+# Direct upstream Terrain3D tests and source, preserved without algorithm rewrites.
+set(sirVTDonorRoot "${PROJECT_SOURCE_DIR}/Source/Renderer/VirtualTexturing/Terrain3D/src")
+foreach(sirVTDonorTest IN ITEMS test_vt_feedback_reducer test_vt_feedback_multi)
+    add_executable(${sirVTDonorTest} "${sirVTDonorRoot}/diagnostics/tests/${sirVTDonorTest}.cpp")
+    target_include_directories(${sirVTDonorTest} PRIVATE "${sirVTDonorRoot}")
+    target_link_libraries(${sirVTDonorTest} PRIVATE SIR::Graphics)
+    add_test(NAME renderer.virtual-texturing.donor.${sirVTDonorTest} COMMAND ${sirVTDonorTest})
+    sir_configure_owned_target(${sirVTDonorTest})
+endforeach()
+add_executable(SIRTerrain3DDonorSpatialDemandTests SIRTerrain3DDonorSpatialDemandTests.cpp)
+target_include_directories(SIRTerrain3DDonorSpatialDemandTests PRIVATE "${sirVTDonorRoot}")
+target_link_libraries(SIRTerrain3DDonorSpatialDemandTests PRIVATE SIR::Graphics)
+add_test(NAME renderer.virtual-texturing.donor.spatial-demand COMMAND SIRTerrain3DDonorSpatialDemandTests)
+sir_configure_owned_target(SIRTerrain3DDonorSpatialDemandTests)
+
+add_executable(SIRTerrain3DDonorVisibilityAggregationTests SIRTerrain3DDonorVisibilityAggregationTests.cpp)
+target_include_directories(SIRTerrain3DDonorVisibilityAggregationTests PRIVATE "${sirVTDonorRoot}")
+target_link_libraries(SIRTerrain3DDonorVisibilityAggregationTests PRIVATE SIR::Graphics)
+add_test(NAME renderer.virtual-texturing.donor.visibility-aggregation COMMAND SIRTerrain3DDonorVisibilityAggregationTests)
+sir_configure_owned_target(SIRTerrain3DDonorVisibilityAggregationTests)
