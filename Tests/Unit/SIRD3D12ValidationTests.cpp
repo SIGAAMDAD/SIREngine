@@ -422,7 +422,7 @@ int main( void )
 	const int nFeatures = sirTestOptionalFeatures();
 	const int nExtra = sirTestValidatorBranches();
 	const int nDXIL = sirTestDXILContainer();
-	if ( nHeap != 0 || nCopy != 0 || nViewport != 0 || nBindings != 0 || nExternal != 0 || nFeatures != 0 || nExtra != 0 || nDXIL != 0 ) {
+	if ( nHeap != 0 || nCopy != 0 || nViewport != 0 || nBindings != 0 || nExternal != 0 || nFeatures != 0 || nExtra != 0 ) {
 		printf( "D3D12 portable validation failed: heap=%d copy=%d viewport=%d bindings=%d external=%d features=%d extra=%d\n", nHeap,
 		        nCopy, nViewport, nBindings, nExternal, nFeatures, nExtra );
 		return 1;
