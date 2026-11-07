@@ -348,12 +348,25 @@ sirGraphicsResult_t SIRD3D12Pipelines::loadPipelineCache( const void *pData, uin
 	if ( FAILED( m_pDevice->QueryInterface( IID_PPV_ARGS( pDevice1.GetAddressOf() ) ) ) ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
+	// The runtime may retain the imported database memory. The driver owns
+	// a bounded copy until the library is released, independently of the caller.
+	void *pOwnedBlob = VirtualAlloc( nullptr, ( SIZE_T )nBytes, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE );
+	if ( pOwnedBlob == nullptr ) {
+		return SIR_GRAPHICS_OUT_OF_MEMORY;
+	}
+	memcpy( pOwnedBlob, pData, ( SIZE_T )nBytes );
 	Microsoft::WRL::ComPtr<ID3D12PipelineLibrary> pImported;
-	const HRESULT nResult = pDevice1->CreatePipelineLibrary( pData, ( SIZE_T )nBytes, IID_PPV_ARGS( pImported.GetAddressOf() ) );
+	const HRESULT nResult =
+	    pDevice1->CreatePipelineLibrary( pOwnedBlob, ( SIZE_T )nBytes, IID_PPV_ARGS( pImported.GetAddressOf() ) );
 	if ( FAILED( nResult ) ) {
+		VirtualFree( pOwnedBlob, 0, MEM_RELEASE );
 		return nResult == E_OUTOFMEMORY ? SIR_GRAPHICS_OUT_OF_MEMORY : SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	m_pPipelineLibrary = pImported;
+	if ( m_pLibraryBlob != nullptr ) {
+		VirtualFree( m_pLibraryBlob, 0, MEM_RELEASE );
+	}
+	m_pLibraryBlob = pOwnedBlob;
 	m_CacheStats = {};
 	m_CacheStats.bAvailable = true;
 	return SIR_GRAPHICS_SUCCESS;
@@ -425,9 +438,14 @@ void SIRD3D12Pipelines::shutdown( bool bGpuComplete ) noexcept
 	}
 	if ( bGpuComplete ) {
 		m_pPipelineLibrary.Reset();
+		if ( m_pLibraryBlob != nullptr ) {
+			VirtualFree( m_pLibraryBlob, 0, MEM_RELEASE );
+		}
 	} else {
+		// Preserve storage if a GPU-dependent library is intentionally detached.
 		( void )m_pPipelineLibrary.Detach();
 	}
+	m_pLibraryBlob = nullptr;
 	m_CacheStats = {};
 	m_bPipelineCreated = false;
 	m_pNative = nullptr;
