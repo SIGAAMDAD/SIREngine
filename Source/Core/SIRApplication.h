@@ -52,6 +52,8 @@ public:
 
 	sirAppState_t getState( void ) const noexcept;
 	uint64_t getTickCount( void ) const noexcept;
+	float getFrameDeltaSeconds( void ) const noexcept;
+	double getElapsedSeconds( void ) const noexcept;
 	uint32_t getSystemCount( void ) const noexcept;
 	SIREventRegistry& getEventRegistry( void ) noexcept;
 	const sirInputFrame_t *getInputFrame( void ) const noexcept;
@@ -60,6 +62,7 @@ public:
 	bool registerSystem( SIREngineSystem *pSystem ) noexcept;
 	bool initialize( void ) noexcept;
 	bool tick( float fDeltaSeconds = 0.0f ) noexcept;
+	bool tickTimed( void ) noexcept;
 	bool fixedTick( float fFixedDeltaSeconds ) noexcept;
 	sirSystemResult_t shutdown( void ) noexcept;
 
@@ -67,6 +70,9 @@ protected:
 private:
 	sirAppState_t m_eState;
 	uint64_t m_nTicks;
+	uint64_t m_nLastFrameTimestampNs;
+	float m_fFrameDeltaSeconds;
+	double m_dElapsedSeconds;
 	uint32_t m_nSystemCount;
 	uint32_t m_nInitializedSystems;
 	SIREngineSystem *m_szSystems[SIR_APPLICATION_MAX_SYSTEMS] = {};
