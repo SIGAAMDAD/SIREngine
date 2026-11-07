@@ -578,8 +578,8 @@ static bool sirTestWaylandInputRouting( void ) noexcept
 		if ( e.eClass == SIR_INPUT_POINTER && e.eSignal == SIR_INPUT_RESYNC )
 			++nPointerResync;
 	}
-	if ( nSecondKey != 1 || nWheel != 1 || nFractionalWheel != -7 || nUnexpected != 0 || nKeyboardResync != 1 ||
-	     nPointerResync != 1 || input.activeDeviceCount() != 2 )
+	if ( nSecondKey != 1 || nWheel != 1 || nFractionalWheel != -7 || nUnexpected != 0 || nKeyboardResync != 1 || nPointerResync != 1 ||
+	     input.activeDeviceCount() != 2 )
 		return false;
 	if ( !input.begin( 3 ) || !bridge.beginFrame() )
 		return false;
