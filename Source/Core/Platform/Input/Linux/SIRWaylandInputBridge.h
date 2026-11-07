@@ -125,5 +125,7 @@ private:
 	bool m_bKeyboardDevice = false;
 	bool m_bPointerDevice = false;
 	bool m_bSeatLost = false;
+	bool m_bKeyboardResyncPending = false;
+	bool m_bPointerResyncPending = false;
 };
 #endif // __SIRENGINE_SIRWAYLANDINPUTBRIDGE_H__

@@ -37,6 +37,12 @@ bool SIRX11InputBridge::beginFrame( void ) noexcept
 	if ( m_pInput == nullptr || m_pBackend == nullptr ) {
 		return false;
 	}
+	if ( m_bDeferredResync ) {
+		if ( !m_pInput->loseBackendState( SIR_INPUT_LINUX_X11 ) ) {
+			return false;
+		}
+		m_bDeferredResync = false;
+	}
 	if ( !m_bAttached ) {
 		if ( !m_pBackend->attachWindow( *m_pInput, m_hWindow ) ) {
 			return false;
@@ -97,7 +103,9 @@ bool SIRX11InputBridge::unregisterWindow( uintptr_t nNativeWindow ) noexcept
 			XDestroyIC( m_hRegisteredContexts[i] );
 		}
 		if ( m_hWindow == ( Window )nNativeWindow ) {
-			( void )m_pInput->loseBackendState( SIR_INPUT_LINUX_X11 );
+			// unregisterWindow may run after publish() in the application
+			// lifecycle. Keep the reset pending until the next beginFrame.
+			m_bDeferredResync = true;
 			m_bFocused = false;
 			m_pInput->text().setFocused( false );
 			m_pInput->setHapticsPaused( true );
@@ -296,6 +304,7 @@ void SIRX11InputBridge::unbind( void ) noexcept
 	m_hInputContext = nullptr;
 	m_hInputMethod = nullptr;
 	m_bFocused = false;
+	m_bDeferredResync = false;
 	m_bCursorCaptured = false;
 	m_eCursorMode = SIR_INPUT_CURSOR_FREE;
 	m_nInvisibleCursor = 0;

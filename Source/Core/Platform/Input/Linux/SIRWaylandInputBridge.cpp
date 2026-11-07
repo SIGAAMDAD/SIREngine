@@ -130,7 +130,7 @@ void SIRWaylandInputBridge::unregisterWindow( uintptr_t nNativeSurface ) noexcep
 				m_pInput->text().setFocused( false );
 				m_pInput->setHapticsPaused( true );
 				if ( m_bKeyboardDevice ) {
-					( void )m_pInput->loseState( id(), m_hKeyboard );
+					m_bKeyboardResyncPending = true;
 				}
 			}
 		}
@@ -141,7 +141,7 @@ void SIRWaylandInputBridge::unregisterWindow( uintptr_t nNativeSurface ) noexcep
 			m_nWheelRemainder[0] = 0;
 			m_nWheelRemainder[1] = 0;
 			if ( m_bPointerDevice && m_pInput != nullptr ) {
-				( void )m_pInput->loseState( id(), m_hPointer );
+				m_bPointerResyncPending = true;
 			}
 		}
 		for ( uint32_t j = i + 1; j < m_nWindowCount; ++j ) {
@@ -156,6 +156,20 @@ bool SIRWaylandInputBridge::beginFrame( void ) noexcept
 {
 	if ( m_pInput == nullptr ) {
 		return false;
+	}
+	// Platform native window teardown can happen after the input frame was
+	// published. Deliver loss events at the next collecting frame boundary.
+	if ( m_bKeyboardResyncPending ) {
+		if ( m_bKeyboardDevice && !m_pInput->loseState( id(), m_hKeyboard ) ) {
+			return false;
+		}
+		m_bKeyboardResyncPending = false;
+	}
+	if ( m_bPointerResyncPending ) {
+		if ( m_bPointerDevice && !m_pInput->loseState( id(), m_hPointer ) ) {
+			return false;
+		}
+		m_bPointerResyncPending = false;
 	}
 	if ( m_bSeatLost && m_pDriver != nullptr ) {
 		wl_seat *pReplacement = m_pDriver->borrowSeat();
@@ -371,6 +385,7 @@ void SIRWaylandInputBridge::clearKeyboard( void ) noexcept
 		( void )m_pInput->disconnect( id(), m_hKeyboard );
 	}
 	m_bKeyboardDevice = false;
+	m_bKeyboardResyncPending = false;
 	m_hKeyboard = {};
 	m_pKeyboardFocus = nullptr;
 	clearKeymap();
@@ -394,6 +409,7 @@ void SIRWaylandInputBridge::clearPointer( void ) noexcept
 		( void )m_pInput->disconnect( id(), m_hPointer );
 	}
 	m_bPointerDevice = false;
+	m_bPointerResyncPending = false;
 	m_hPointer = {};
 	m_pPointerFocus = nullptr;
 	m_bHavePointerPosition = false;
