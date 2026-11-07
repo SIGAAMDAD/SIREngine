@@ -50,6 +50,47 @@ static void sirEditorTestWriteOriginal( const char *pszPath, const char *pszCont
 	assert( fclose( pFile ) == 0 );
 }
 
+static void sirEditorTestCommentedSceneRoundtrip( const char *pszDestination, const char *pszTemporary ) noexcept
+{
+	const char szOriginal[] = "[gd_scene format=3]\n"
+	                          "[node name=\"Root\" type=\"Node\"]\n"
+	                          "health = 12 # preserve this original comment\n"
+	                          "enabled = true ; preserve this comment too\n"
+	                          "metadata = {\"keys\": [1, # ] } ignored comment\n"
+	                          "  2]}\n";
+	sirEditorTextSceneNode_t nodes[1] = {};
+	char szPaths[256] = {};
+	sirEditorTextSceneIndex_t scene = {};
+	scene.storage.pNodes = nodes;
+	scene.storage.pszPaths = szPaths;
+	scene.storage.nNodeCapacity = 1;
+	scene.storage.nPathCapacity = sizeof( szPaths );
+	assert( sirEditorScanTextScene( szOriginal, sizeof( szOriginal ) - 1, &scene ) == SIR_EDITOR_TEXT_OK );
+	sirEditorTextProperty_t properties[3] = {};
+	sirEditorTextPropertyIndex_t index = { properties, 3, 0, 0 };
+	assert( sirEditorScanNodeTextProperties( szOriginal, sizeof( szOriginal ) - 1, scene, &index ) == SIR_EDITOR_PROPERTY_OK );
+	assert( index.nCount == 3 );
+	const sirEditorTextEdit_t changes[] = { { 0, "99", 2 }, { 1, "false", 5 } };
+	char szEdited[512] = {};
+	size_t nOutputBytes = 0;
+	assert( sirEditorWriteScalarPatches( szOriginal, sizeof( szOriginal ) - 1, index, changes, 2, szEdited, sizeof( szEdited ),
+	                                     &nOutputBytes ) == SIR_EDITOR_WRITE_OK );
+	assert( strstr( szEdited, "health = 99 # preserve this original comment\n" ) != nullptr );
+	assert( strstr( szEdited, "enabled = false ; preserve this comment too\n" ) != nullptr );
+	assert( strstr( szEdited, "  2]}\n" ) != nullptr );
+	sirEditorTestWriteOriginal( pszDestination, szOriginal );
+	sirEditorFileWriteRequest_t write = { pszDestination, pszTemporary, szEdited, nOutputBytes };
+	write.pExpectedBytes = szOriginal;
+	write.nExpectedBytes = sizeof( szOriginal ) - 1;
+	assert( sirEditorWriteFileAtomically( write ) == SIR_EDITOR_FILE_SAVE_OK );
+	sirEditorTestReadExact( pszDestination, szEdited, nOutputBytes );
+	assert( fopen( pszTemporary, "rb" ) == nullptr );
+	assert( sirEditorScanNodeTextProperties( szEdited, nOutputBytes, scene, &index ) == SIR_EDITOR_PROPERTY_OK );
+	assert( index.nCount == 3 );
+	assert( memcmp( szEdited + properties[0].nValueOffset, "99", 2 ) == 0 );
+	assert( memcmp( szEdited + properties[1].nValueOffset, "false", 5 ) == 0 );
+}
+
 int main( void )
 {
 	char szDirectory[512] = {};
@@ -70,6 +111,7 @@ int main( void )
 	assert( snprintf( szTemporary, sizeof( szTemporary ), "%s/scene.tscn.tx", szDirectory ) > 0 );
 	assert( snprintf( szOther, sizeof( szOther ), "%s/obstacle", szDirectory ) > 0 );
 
+	sirEditorTestCommentedSceneRoundtrip( szDestination, szTemporary );
 	const char *pszOriginal = "[gd_scene format=3]\n[node name=\"Old\" type=\"Node\"]\n";
 	const char *pszReplacement = "[gd_scene format=3]\n[node name=\"New\" type=\"Node\"]\n";
 	sirEditorTestWriteOriginal( szDestination, pszOriginal );
