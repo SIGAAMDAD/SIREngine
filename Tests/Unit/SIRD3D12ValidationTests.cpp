@@ -421,10 +421,7 @@ static int sirTestQueueDependencies( void ) noexcept
 	submitted.szQueueValues[SIR_GRAPHICS_QUEUE_COMPUTE] = 9;
 	submitted.szQueueValues[SIR_GRAPHICS_QUEUE_COPY] = 21;
 	sirGraphicsCompletion_t waits[3] = {
-	    { 7, SIR_GRAPHICS_QUEUE_COPY, 21 },
-	    { 7, SIR_GRAPHICS_QUEUE_COMPUTE, 9 },
-	    { 7, SIR_GRAPHICS_QUEUE_DIRECT, 12 }
-	};
+	    { 7, SIR_GRAPHICS_QUEUE_COPY, 21 }, { 7, SIR_GRAPHICS_QUEUE_COMPUTE, 9 }, { 7, SIR_GRAPHICS_QUEUE_DIRECT, 12 } };
 	if ( sirD3D12ValidateSubmissionDependencies( SIR_GRAPHICS_QUEUE_DIRECT, waits, 3, submitted ) != SIR_GRAPHICS_SUCCESS ||
 	     sirD3D12ValidateSubmissionDependencies( SIR_GRAPHICS_QUEUE_COMPUTE, waits, 3, submitted ) != SIR_GRAPHICS_SUCCESS ||
 	     sirD3D12ValidateSubmissionDependencies( SIR_GRAPHICS_QUEUE_COPY, waits, 3, submitted ) != SIR_GRAPHICS_SUCCESS ||
