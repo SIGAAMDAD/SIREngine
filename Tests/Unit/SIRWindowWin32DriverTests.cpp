@@ -155,6 +155,23 @@ static bool sirTestFullscreenRoundTrip( void ) noexcept
 	return true;
 }
 
+static bool sirTestWindowClassRetirementOrder( void ) noexcept
+{
+	SIRWindowDriverWin32 first;
+	SIRWindowDriverWin32 second;
+	if ( first.initialize() != SIR_WINDOW_OK || second.initialize() != SIR_WINDOW_OK ) {
+		return false;
+	}
+	first.shutdown();
+	sirWindowNativeView_t view = {};
+	if ( second.createWindow( { "remaining-owner", 320, 240 }, 0, &view ) != SIR_WINDOW_OK ||
+	     view.nNativeWindow == 0 || second.destroyWindow( 0 ) != SIR_WINDOW_OK ) {
+		return false;
+	}
+	second.shutdown();
+	return true;
+}
+
 static bool sirTestConcurrentWin32WindowClassOwners( void ) noexcept
 {
 	SIRWindowDriverWin32 firstDriver;
@@ -216,7 +233,7 @@ static bool sirTestConcurrentWin32WindowClassOwners( void ) noexcept
 int main( void )
 {
 	if ( !sirTestConcurrentWin32WindowClassOwners() || !sirTestWin32BoundedNativeEvents() || !sirTestWin32MultiwindowInputRouting() ||
-	     !sirTestFullscreenRoundTrip() ) {
+	     !sirTestFullscreenRoundTrip() || !sirTestWindowClassRetirementOrder() ) {
 		fputs( "SIRWindowWin32DriverTests FAIL\n", stderr );
 		return 1;
 	}

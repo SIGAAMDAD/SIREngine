@@ -84,7 +84,6 @@ private:
 	sirWindowWin32MessageSink_t m_pSink = nullptr;
 	void *m_pSinkContext = nullptr;
 	bool m_bRegistered = false;
-	bool m_bOwnsClass = false;
 	bool m_bOverflow = false;
 	bool m_bClosePending[SIR_WINDOW_MAX_WINDOWS] = {};
 	bool m_bLostPending[SIR_WINDOW_MAX_WINDOWS] = {};
