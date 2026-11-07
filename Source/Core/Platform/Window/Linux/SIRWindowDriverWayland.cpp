@@ -191,10 +191,15 @@ void SIRWindowDriverWayland::surfaceConfigure( void *pContext, xdg_surface *pSur
 	if ( ( bFirst || bResized ) && !pSlot->bClosePending ) {
 		const uint32_t nScale120 = pSlot->nFractionalScale120 != 0 && pSlot->pViewport != nullptr ? pSlot->nFractionalScale120 :
 		                           ( pSlot->nBufferScale == 0 ? 120 : pSlot->nBufferScale * 120 );
-		const uint32_t nWidth = ( uint32_t )( ( ( uint64_t )pSlot->nWidth * nScale120 + 60 ) / 120 );
-		const uint32_t nHeight = ( uint32_t )( ( ( uint64_t )pSlot->nHeight * nScale120 + 60 ) / 120 );
+		const uint64_t nWidth64 = ( ( uint64_t )pSlot->nWidth * nScale120 + 60 ) / 120;
+		const uint64_t nHeight64 = ( ( uint64_t )pSlot->nHeight * nScale120 + 60 ) / 120;
+		if ( nWidth64 == 0 || nHeight64 == 0 || nWidth64 > UINT32_MAX || nHeight64 > UINT32_MAX ) {
+			pSlot->bLostPending = true;
+			return;
+		}
 		pSlot->pDriver->refreshSurfaceExtent( *pSlot, false );
-		pSlot->pDriver->queueEvent( pSlot->nIndex, bFirst ? SIR_WINDOW_EVENT_READY : SIR_WINDOW_EVENT_RESIZED, nWidth, nHeight );
+		pSlot->pDriver->queueEvent( pSlot->nIndex, bFirst ? SIR_WINDOW_EVENT_READY : SIR_WINDOW_EVENT_RESIZED,
+		                           ( uint32_t )nWidth64, ( uint32_t )nHeight64 );
 	}
 }
 
@@ -665,10 +670,18 @@ void SIRWindowDriverWayland::shutdown( void ) noexcept
 	}
 	#ifdef SIR_WAYLAND_FRACTIONAL_SCALE_AVAILABLE
 	if ( m_pFractionalManager != nullptr ) {
-		wp_fractional_scale_manager_v1_destroy( m_pFractionalManager );
+		if ( m_bLost ) {
+			wl_proxy_destroy( ( wl_proxy * )m_pFractionalManager );
+		} else {
+			wp_fractional_scale_manager_v1_destroy( m_pFractionalManager );
+		}
 	}
 	if ( m_pViewporter != nullptr ) {
-		wp_viewporter_destroy( m_pViewporter );
+		if ( m_bLost ) {
+			wl_proxy_destroy( ( wl_proxy * )m_pViewporter );
+		} else {
+			wp_viewporter_destroy( m_pViewporter );
+		}
 	}
 #endif
 	if ( m_pSeat != nullptr ) {
