@@ -69,7 +69,7 @@ static int sirTestGeneralPipelines( SIRRenderingDevice *pDevice, uint32_t nGener
 	szBindings[0].nArrayCount = 1;
 	szBindings[0].nShaderStageMask = SIR_GRAPHICS_STAGE_COMPUTE;
 	szBindings[0].eType = SIR_GRAPHICS_BINDING_STORAGE_BUFFER;
-	szBindings[1].nBinding = 0;
+	szBindings[1].nBinding = 1;
 	szBindings[1].nSpace = 0;
 	szBindings[1].nArrayCount = 1;
 	szBindings[1].nShaderStageMask = SIR_GRAPHICS_STAGE_COMPUTE;
@@ -94,12 +94,14 @@ static int sirTestGeneralPipelines( SIRRenderingDevice *pDevice, uint32_t nGener
 	}
 
 	// Different UAV binding types collide in register u0/space0.
+	szBindings[1].nBinding = 0;
 	szBindings[1].eType = SIR_GRAPHICS_BINDING_STORAGE_TEXTURE;
 	sirGraphicsHandle_t hRejected = {};
 	if ( pDevice->createPipeline( compute, &hRejected ) != SIR_GRAPHICS_INVALID_ARGUMENT || hRejected.nGeneration != 0 ) {
 		return 11;
 	}
 	szBindings[1].eType = SIR_GRAPHICS_BINDING_CONSTANT_BUFFER;
+	szBindings[1].nBinding = 1;
 	szBindings[1].nArrayCount = 129;
 	if ( pDevice->createPipeline( compute, &hRejected ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
 		return 12;
@@ -314,7 +316,7 @@ static int sirTestNativePipelineCache( SIRD3D12Driver& driver, SIRRenderingDevic
 	bindings[0].nArrayCount = 1;
 	bindings[0].nShaderStageMask = SIR_GRAPHICS_STAGE_COMPUTE;
 	bindings[0].eType = SIR_GRAPHICS_BINDING_STORAGE_BUFFER;
-	bindings[1].nBinding = 0;
+	bindings[1].nBinding = 1;
 	bindings[1].nSpace = 0;
 	bindings[1].nArrayCount = 1;
 	bindings[1].nShaderStageMask = SIR_GRAPHICS_STAGE_COMPUTE;
