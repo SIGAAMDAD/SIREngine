@@ -75,6 +75,10 @@ int main( void )
 	if ( sirVulkanValidateRecordedCommands( ops, 6 ) != SIR_VULKAN_INVALID_ARGUMENT )
 		return 7;
 	ops[0].nColorCount = 1;
+	ops[4].nFirstElement = 100;
+	if ( sirVulkanValidateRecordedCommands( ops, 6 ) != SIR_VULKAN_INVALID_ARGUMENT )
+		return 10;
+	ops[4].nFirstElement = 0;
 	ops[6].eKind = SIR_VULKAN_RECORDED_IMAGE_BARRIER;
 	ops[6].pImage = &color;
 	ops[6].imageBarrier.eBefore = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;

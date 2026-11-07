@@ -231,6 +231,7 @@ sirVulkanResult_t sirVulkanValidateRecordedCommands( const sirVulkanRecordedComm
 	bool bGraphicsBound = false;
 	bool bViewportSet = false;
 	bool bIndexBound = false;
+	uint64_t nIndexCapacity = 0;
 	const sirVulkanComputePipeline_t *pGraphicsPipeline = nullptr;
 	const sirVulkanRecordedCommand_t *pActivePass = nullptr;
 	for ( uint32_t iCommand = 0; iCommand < nCount; ++iCommand ) {
@@ -317,8 +318,15 @@ sirVulkanResult_t sirVulkanValidateRecordedCommands( const sirVulkanRecordedComm
 			         0 ) {
 				return SIR_VULKAN_INVALID_ARGUMENT;
 			}
-			if ( command.eKind == SIR_VULKAN_RECORDED_INDEX_BUFFER )
+			if ( command.eKind == SIR_VULKAN_RECORDED_INDEX_BUFFER ) {
+				if ( command.eIndexType != VK_INDEX_TYPE_UINT16 && command.eIndexType != VK_INDEX_TYPE_UINT32 )
+					return SIR_VULKAN_INVALID_ARGUMENT;
+				const uint64_t nIndexSize = command.eIndexType == VK_INDEX_TYPE_UINT32 ? 4 : 2;
+				if ( command.nBufferOffset % nIndexSize != 0 )
+					return SIR_VULKAN_INVALID_ARGUMENT;
+				nIndexCapacity = ( command.pBuffer->nSize - command.nBufferOffset ) / nIndexSize;
 				bIndexBound = true;
+			}
 			continue;
 		}
 		if ( command.eKind == SIR_VULKAN_RECORDED_VIEWPORT ) {
@@ -331,7 +339,9 @@ sirVulkanResult_t sirVulkanValidateRecordedCommands( const sirVulkanRecordedComm
 		}
 		if ( command.eKind == SIR_VULKAN_RECORDED_DRAW || command.eKind == SIR_VULKAN_RECORDED_DRAW_INDEXED ) {
 			if ( !bRendering || !bGraphicsBound || !bViewportSet || command.nDrawCount == 0 || command.nInstanceCount == 0 ||
-			     ( command.eKind == SIR_VULKAN_RECORDED_DRAW_INDEXED && !bIndexBound ) ) {
+			     ( command.eKind == SIR_VULKAN_RECORDED_DRAW_INDEXED &&
+			       ( !bIndexBound || command.nFirstElement > nIndexCapacity ||
+			         command.nDrawCount > nIndexCapacity - command.nFirstElement ) ) ) {
 				return SIR_VULKAN_INVALID_ARGUMENT;
 			}
 			continue;
@@ -549,7 +559,7 @@ sirVulkanResult_t SIRVulkanDevice::submitRecordedCommands( const sirVulkanRecord
 				VkImageLayout eBefore = VK_IMAGE_LAYOUT_UNDEFINED;
 				( void )sirVulkanGetSubresourceLayout( pShadow, nMip, nLayer, &eBefore );
 				const VkImageLayout eAfter = bDepth ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL : VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
-				if ( eBefore != eAfter ) {
+				{
 					VkImageMemoryBarrier2& transition = transitions[nTransitions++];
 					transition.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
 					( void )sirVulkanImageAccessScope( eBefore, &transition.srcStageMask, &transition.srcAccessMask );

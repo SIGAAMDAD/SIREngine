@@ -164,8 +164,11 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::updateBindings( sirGraphicsHandle_
 			if ( !image.bActive || ( image.native.nUsage & nRequired ) == 0 )
 				return SIR_GRAPHICS_INVALID_ARGUMENT;
 			images[i].imageView = view.native.hView;
-			images[i].imageLayout = pBinding->eType == SIR_GRAPHICS_BINDING_SAMPLED_TEXTURE ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-			                                                                                : VK_IMAGE_LAYOUT_GENERAL;
+			images[i].imageLayout = pBinding->eType == SIR_GRAPHICS_BINDING_SAMPLED_TEXTURE
+			                            ? ( ( sirVulkanImageAspectMask( image.native.eFormat ) & VK_IMAGE_ASPECT_DEPTH_BIT ) != 0
+			                                    ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL
+			                                    : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL )
+			                            : VK_IMAGE_LAYOUT_GENERAL;
 			native.pImageInfo = &images[i];
 		}
 	}
