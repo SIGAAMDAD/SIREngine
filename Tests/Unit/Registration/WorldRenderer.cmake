@@ -29,6 +29,12 @@ target_link_libraries(SIRVirtualTextureTileCookerTests PRIVATE SIR::Graphics)
 add_test(NAME renderer.virtual-texturing.sparse-v1-cooker COMMAND SIRVirtualTextureTileCookerTests)
 sir_configure_owned_target(SIRVirtualTextureTileCookerTests)
 
+# Terrain3D V2/V3 atomic feedback reducer and priority/parent promotion tests.
+add_executable(SIRVirtualTextureFeedbackReducerTests SIRVirtualTextureFeedbackReducerTests.cpp)
+target_link_libraries(SIRVirtualTextureFeedbackReducerTests PRIVATE SIR::Graphics)
+add_test(NAME renderer.virtual-texturing.feedback-reducer COMMAND SIRVirtualTextureFeedbackReducerTests)
+sir_configure_owned_target(SIRVirtualTextureFeedbackReducerTests)
+
 # Native Hi-Z reference and command validation.
 include(${CMAKE_CURRENT_SOURCE_DIR}/HIZFoundationTests.cmake)
 
