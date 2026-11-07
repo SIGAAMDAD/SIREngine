@@ -158,6 +158,20 @@ static void sirTestSceneWorkspace( void )
 	assert( nLoadCount == 2 && szLoadOrder[0] == 101 && szLoadOrder[1] == 202 );
 	catalog.shutdown();
 
+	// Bracketed source inside a multiline property is data, not a node or
+	// resource declaration. The allocation pre-scan must match the parser.
+	const char szQuotedTags[] = "[gd_scene format=3]\n[node name=\"Root\" type=\"Node\"]\n"
+	                            "description = \"first line\n"
+	                            "[node name=\\\"Phantom\\\" type=\\\"Node\\\"]\n"
+	                            "[ext_resource type=\\\"Script\\\" path=\\\"res://phantom.gd\\\" id=\\\"fake\\\"]\n"
+	                            "last line\"\n";
+	assert( workspace.openTextSource( szQuotedTags, sizeof( szQuotedTags ) - 1 ) == SIR_EDITOR_WORKSPACE_OK );
+	assert( workspace.getSceneIndex().nNodeCount == 1 );
+	assert( workspace.getSceneIndex().storage.nNodeCapacity == 1 );
+	assert( workspace.getResourceIndex().nCount == 0 );
+	assert( workspace.getResourceIndex().nCapacity == 1 );
+	workspace.close();
+
 	// A resource-free scene has no reference-array allocation.
 	const char szWithoutResources[] = "[gd_scene format=3]\n[node name=\"Root\" type=\"Node\"]\n";
 	assert( workspace.openTextSource( szWithoutResources, sizeof( szWithoutResources ) - 1 ) == SIR_EDITOR_WORKSPACE_OK );
