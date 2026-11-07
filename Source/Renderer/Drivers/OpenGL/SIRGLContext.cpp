@@ -107,7 +107,7 @@ typedef struct sirGLNativeContext_s
 	sirEGLDestroyContext_t pDestroyContext;
 	sirEGLDestroySurface_t pDestroySurface;
 	sirEGLTerminate_t pTerminate;
-sirEGLGetCurrentContext_t pGetCurrentContext;
+	sirEGLGetCurrentContext_t pGetCurrentContext;
 	sirEGLCreateWindowSurface_t pCreateWindowSurface;
 	sirEGLSwapBuffers_t pSwapBuffers;
 	sirEGLSwapInterval_t pSwapInterval;
@@ -451,4 +451,196 @@ void sirGLDestroyNativeContext( sirGLNativeContext_t *pContext ) noexcept
 	}
 #endif
 	host.pFree( host.pContext, pContext );
+}
+
+sirGraphicsResult_t sirGLRestoreNativeContext( sirGLNativeContext_t *pContext ) noexcept
+{
+	if ( pContext == nullptr || !sirGLContextOwnsThread( pContext ) ) {
+		return SIR_GRAPHICS_BUSY;
+	}
+#if defined( _WIN32 )
+	return wglMakeCurrent( pContext->window.hDC, pContext->pRenderContext ) ? SIR_GRAPHICS_SUCCESS :
+	                                                                   SIR_GRAPHICS_DEVICE_LOST;
+#else
+	return pContext->pDisplay != nullptr && pContext->pMakeCurrent != nullptr &&
+	               pContext->pMakeCurrent( pContext->pDisplay, pContext->pSurface, pContext->pSurface, pContext->pRenderContext ) ?
+	           SIR_GRAPHICS_SUCCESS :
+	           SIR_GRAPHICS_DEVICE_LOST;
+#endif
+}
+
+sirGraphicsResult_t sirGLCreatePresentWindow( sirGLNativeContext_t *pContext, const sirGraphicsABINativeSurface_t *pNative,
+                                              uint32_t nWidth, uint32_t nHeight, sirGLPresentWindow_t *pWindow ) noexcept
+{
+	if ( pContext == nullptr || pNative == nullptr || pWindow == nullptr || pNative->pWindow == nullptr ||
+	     pNative->nWindowGeneration == 0 || nWidth == 0 || nHeight == 0 ||
+	     nWidth > INT32_MAX || nHeight > INT32_MAX ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	if ( !sirGLContextOwnsThread( pContext ) ) {
+		return SIR_GRAPHICS_BUSY;
+	}
+	sirGLPresentWindow_t window = {};
+	window.pNativeWindow = pNative->pWindow;
+	window.pNativeDisplay = pNative->pDisplayOrInstance;
+	window.nPlatform = pNative->nPlatform;
+	window.nWindowGeneration = pNative->nWindowGeneration;
+	window.nWidth = nWidth;
+	window.nHeight = nHeight;
+#if defined( _WIN32 )
+	if ( pNative->nPlatform != SIR_GRAPHICS_SURFACE_WIN32 ) {
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
+	const HWND hWindow = ( HWND )pNative->pWindow;
+	HDC hDC = GetDC( hWindow );
+	if ( hDC == nullptr ) {
+		return SIR_GRAPHICS_DEVICE_LOST;
+	}
+	const int nBootstrapFormat = GetPixelFormat( pContext->window.hDC );
+	if ( nBootstrapFormat == 0 ) {
+		ReleaseDC( hWindow, hDC );
+		return SIR_GRAPHICS_DEVICE_LOST;
+	}
+	int nExistingFormat = GetPixelFormat( hDC );
+	if ( nExistingFormat == 0 ) {
+		PIXELFORMATDESCRIPTOR pixel = {};
+		if ( DescribePixelFormat( hDC, nBootstrapFormat, sizeof( pixel ), &pixel ) == 0 ||
+		     !SetPixelFormat( hDC, nBootstrapFormat, &pixel ) ) {
+			ReleaseDC( hWindow, hDC );
+			return SIR_GRAPHICS_UNSUPPORTED;
+		}
+		nExistingFormat = nBootstrapFormat;
+	}
+	if ( nExistingFormat != nBootstrapFormat || !wglMakeCurrent( hDC, pContext->pRenderContext ) ) {
+		ReleaseDC( hWindow, hDC );
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
+	window.pDrawable = ( void * )hDC;
+#else
+	if ( ( pNative->nPlatform != SIR_GRAPHICS_SURFACE_X11 &&
+	       pNative->nPlatform != SIR_GRAPHICS_SURFACE_WAYLAND ) ||
+	     pNative->pDisplayOrInstance != pContext->pNativeDisplay ||
+	     pNative->nPlatform != pContext->nNativePlatform || pContext->pCreateWindowSurface == nullptr ||
+	     pContext->pSwapBuffers == nullptr ) {
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
+	void *pNativeDrawable = pNative->pWindow;
+	if ( pNative->nPlatform == SIR_GRAPHICS_SURFACE_WAYLAND ) {
+		if ( pContext->pWaylandCreate == nullptr || pContext->pWaylandDestroy == nullptr ) {
+			return SIR_GRAPHICS_UNSUPPORTED;
+		}
+		window.pWaylandWrapper = pContext->pWaylandCreate( pNative->pWindow, ( int32_t )nWidth, ( int32_t )nHeight );
+		if ( window.pWaylandWrapper == nullptr ) {
+			return SIR_GRAPHICS_DEVICE_LOST;
+		}
+		pNativeDrawable = window.pWaylandWrapper;
+	}
+	window.pDrawable = ( void * )pContext->pCreateWindowSurface( pContext->pDisplay, pContext->pConfig, pNativeDrawable, nullptr );
+	if ( window.pDrawable == nullptr ||
+	     !pContext->pMakeCurrent( pContext->pDisplay, ( sirEGLSurface_t )window.pDrawable,
+	                             ( sirEGLSurface_t )window.pDrawable, pContext->pRenderContext ) ) {
+		if ( window.pDrawable != nullptr ) {
+			( void )pContext->pDestroySurface( pContext->pDisplay, ( sirEGLSurface_t )window.pDrawable );
+		}
+		if ( window.pWaylandWrapper != nullptr ) {
+			pContext->pWaylandDestroy( window.pWaylandWrapper );
+		}
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
+#endif
+	const sirGraphicsResult_t eRestore = sirGLRestoreNativeContext( pContext );
+	if ( eRestore != SIR_GRAPHICS_SUCCESS ) {
+#if defined( _WIN32 )
+		ReleaseDC( hWindow, ( HDC )window.pDrawable );
+#else
+		( void )pContext->pDestroySurface( pContext->pDisplay, ( sirEGLSurface_t )window.pDrawable );
+		if ( window.pWaylandWrapper != nullptr ) {
+			pContext->pWaylandDestroy( window.pWaylandWrapper );
+		}
+#endif
+		return eRestore;
+	}
+	*pWindow = window;
+	return SIR_GRAPHICS_SUCCESS;
+}
+
+sirGraphicsResult_t sirGLResizePresentWindow( sirGLNativeContext_t *pContext, sirGLPresentWindow_t *pWindow,
+                                              uint32_t nWidth, uint32_t nHeight ) noexcept
+{
+	if ( pContext == nullptr || pWindow == nullptr || pWindow->pDrawable == nullptr || nWidth == 0 || nHeight == 0 ||
+	     nWidth > INT32_MAX || nHeight > INT32_MAX ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	if ( !sirGLContextOwnsThread( pContext ) ) {
+		return SIR_GRAPHICS_BUSY;
+	}
+#if !defined( _WIN32 )
+	if ( pWindow->pWaylandWrapper != nullptr && pContext->pWaylandResize != nullptr ) {
+		pContext->pWaylandResize( pWindow->pWaylandWrapper, ( int32_t )nWidth, ( int32_t )nHeight, 0, 0 );
+	}
+#endif
+	pWindow->nWidth = nWidth;
+	pWindow->nHeight = nHeight;
+	return SIR_GRAPHICS_SUCCESS;
+}
+
+sirGraphicsResult_t sirGLBeginPresentWindow( sirGLNativeContext_t *pContext, const sirGLPresentWindow_t *pWindow ) noexcept
+{
+	if ( pContext == nullptr || pWindow == nullptr || pWindow->pDrawable == nullptr ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	if ( !sirGLContextOwnsThread( pContext ) ) {
+		return SIR_GRAPHICS_BUSY;
+	}
+#if defined( _WIN32 )
+	return wglMakeCurrent( ( HDC )pWindow->pDrawable, pContext->pRenderContext ) ? SIR_GRAPHICS_SUCCESS :
+	                                                                             SIR_GRAPHICS_DEVICE_LOST;
+#else
+	return pContext->pMakeCurrent( pContext->pDisplay, ( sirEGLSurface_t )pWindow->pDrawable,
+	                              ( sirEGLSurface_t )pWindow->pDrawable, pContext->pRenderContext ) ?
+	           SIR_GRAPHICS_SUCCESS :
+	           SIR_GRAPHICS_DEVICE_LOST;
+#endif
+}
+
+sirGraphicsResult_t sirGLSwapPresentWindow( sirGLNativeContext_t *pContext, const sirGLPresentWindow_t *pWindow ) noexcept
+{
+	if ( pContext == nullptr || pWindow == nullptr || pWindow->pDrawable == nullptr ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	if ( !sirGLContextOwnsThread( pContext ) ) {
+		return SIR_GRAPHICS_BUSY;
+	}
+#if defined( _WIN32 )
+	const bool bSwapped = SwapBuffers( ( HDC )pWindow->pDrawable ) != FALSE;
+#else
+	const bool bSwapped = pContext->pSwapBuffers != nullptr &&
+	                      pContext->pSwapBuffers( pContext->pDisplay, ( sirEGLSurface_t )pWindow->pDrawable ) != 0;
+#endif
+	const sirGraphicsResult_t eRestore = sirGLRestoreNativeContext( pContext );
+	return !bSwapped ? SIR_GRAPHICS_DEVICE_LOST : eRestore;
+}
+
+sirGraphicsResult_t sirGLDestroyPresentWindow( sirGLNativeContext_t *pContext, sirGLPresentWindow_t *pWindow ) noexcept
+{
+	if ( pContext == nullptr || pWindow == nullptr || pWindow->pDrawable == nullptr ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	if ( !sirGLContextOwnsThread( pContext ) ) {
+		return SIR_GRAPHICS_BUSY;
+	}
+	if ( sirGLRestoreNativeContext( pContext ) != SIR_GRAPHICS_SUCCESS ) {
+		return SIR_GRAPHICS_DEVICE_LOST;
+	}
+#if defined( _WIN32 )
+	const bool bReleased = ReleaseDC( ( HWND )pWindow->pNativeWindow, ( HDC )pWindow->pDrawable ) != 0;
+#else
+	const bool bReleased = pContext->pDestroySurface != nullptr &&
+	                       pContext->pDestroySurface( pContext->pDisplay, ( sirEGLSurface_t )pWindow->pDrawable ) != 0;
+	if ( pWindow->pWaylandWrapper != nullptr ) {
+		pContext->pWaylandDestroy( pWindow->pWaylandWrapper );
+	}
+#endif
+	*pWindow = {};
+	return bReleased ? SIR_GRAPHICS_SUCCESS : SIR_GRAPHICS_DEVICE_LOST;
 }
