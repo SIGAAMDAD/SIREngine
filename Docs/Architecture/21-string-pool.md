@@ -63,4 +63,4 @@ The expanded compiled regression suite passes in standard, grouped-index and ada
 
 ## Current acceptance policy
 
-The project-wide interim coverage policy is defined in `Docs/Architecture/11-acceptance-and-validation.md` and enforced against source-scoped LLVM JSON via `Build/CMake/SIRCoverageGate.cmake` (minimum **90% each** for lines, branches, functions and regions). It does not waive native CMake/CTest, sanitizer, compilation or formatting checks. The complete-tree AST gate remains separate.
+The project-wide interim coverage policy is defined in `Docs/Architecture/11-acceptance-and-validation.md` and measured against the compiled production inventory by `Build/Scripts/RunLLVM23Qualification.py` (minimum **90% each** for lines, branches, functions and regions). It does not waive native CMake/CTest, sanitizer, compilation or formatting checks. The complete-tree AST gate remains separate.

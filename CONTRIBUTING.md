@@ -1,19 +1,12 @@
 # Contributing to SIREngine
 
-SIREngine targets a reusable Godot-derived engine, not a one-game mod collection. Read [the architecture](Docs/README.md), [C++ standard](Docs/Standards/cpp.md), and [migration gates](Docs/Architecture/13-migration-plan.md) before proposing changes. Preserve existing Godot editor/workflow behavior unless the change explicitly owns a replacement contract.
+SIREngine is a C++17 engine built with CMake 4.4.5 and FASTBuild 1.20. See [the C++ standard](Docs/Standards/cpp.md) and [architecture](Docs/README.md).
 
 ## Workflow
 
-1. Open an issue or ADR for substantive cross-subsystem changes; identify affected ownership, memory domains, platform targets and acceptance tests.
-2. Continue the existing canonical system branch from its verified remote HEAD, or create a focused branch from `develop` only if none exists. One writer owns each shared source boundary. Keep declarations, implementations, consumers, registrations, tests and formatting in the same semantic commit; do not publish per-file updates or avoidable CI/format fixup commits. Use Conventional Commits (`feat(core): ...`, `fix(rendering): ...`, `build(ci): ...`), <=72-character header; run `git config --local core.hooksPath Build/Hooks` to enable staged-source formatting and commit-message hooks.
-3. Run the `dev` CMake/FASTBuild preset, CTest, pinned clang-format and native repository hygiene checks. Validate changed engine targets with the appropriate CMake compilation profile.
-4. Include actual compiler/link output and platform tests. A source audit or formatted patch without a real build is not a completed implementation.
-5. Open a pull request against `develop` with a Conventional Commit title and an explicit GitHub issue reference in its description. Record the exact source SHA, tests, performance/memory impact and unresolved gaps. Prefer squash integration for ordinary coherent features; preserve meaningful donor ancestry and never rewrite protected/shared history without owner authorization. Only the authorized integrator promotes a qualified combined tree. Do not upload binary build outputs.
+1. Make a focused change on a branch from current `develop`. Obtain owner approval before changing shared APIs, ownership, threading, serialization or architectural contracts.
+2. Format changed C++ with clang-format 23.1.5. Run `cmake --preset dev`, `cmake --build --preset dev` and the relevant `ctest --preset dev -R <pattern>` cases.
+3. Commit a coherent change and open a PR into `develop`. CI builds and tests Linux GCC, Linux Clang and Windows MSVC.
+4. Use full LLVM 23 source coverage, sanitizers, native backend tests and benchmarks at qualification and release boundaries. The PR does not need to reach engine-wide coverage before tests can be written.
 
-## Code review standards
-
-Use C++17, the global namespace, canonical SIREngine header/record forms, and the repository's Hungarian naming rules for owned code. Use EASTL only through validated subsystem allocation policies; third-party code retains its own formatter. Runtime allocations require a registered domain. Publishing changes to GRDG/job/streaming ownership requires concurrency/lifetime tests. Public ABI or cooked-format changes require compatibility and versioning notes.
-
-## Licenses and third-party material
-
-Do not commit proprietary FMOD or Wwise SDK files, private keys, generated application binaries or third-party code without attribution. Preserve the existing repository and dependency license notices.
+Do not commit SDK redistributables, generated binaries, secrets or unattributed third-party code. SIREngine-owned code uses the global namespace and the repository's source formatting conventions.
