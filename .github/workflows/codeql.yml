@@ -1,0 +1,48 @@
+name: CodeQL Advanced
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    - cron: '18 17 * * 0'
+permissions:
+  contents: read
+jobs:
+  analyze:
+    name: CodeQL / ${{ matrix.language }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    permissions:
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {language: c-cpp, build_mode: manual}
+          - {language: python, build_mode: none}
+          - {language: actions, build_mode: none}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-build-tools
+        if: matrix.language == 'c-cpp'
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build_mode }}
+      - name: Build C++ for CodeQL extraction
+        if: matrix.language == 'c-cpp'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          cmake --preset tooling -DSIR_BUILD_TESTS=OFF -DSIR_BUILD_BENCHMARKS=OFF -DSIR_ENABLE_UNITY=OFF -DSIR_ENABLE_PCH=OFF
+          cmake --build --preset tooling --parallel 2
+      - name: Analyze and upload CodeQL results
+        uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        with:
+          category: /language:${{ matrix.language }}
