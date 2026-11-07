@@ -17,6 +17,12 @@ target_link_libraries(SIRVirtualTexturePortTests PRIVATE SIR::Graphics)
 add_test(NAME renderer.virtual-texturing.terrain3d-v1 COMMAND SIRVirtualTexturePortTests)
 sir_configure_owned_target(SIRVirtualTexturePortTests)
 
+# Bounded metadata-only V1 lookup and malformed-directory rejection.
+add_executable(SIRVirtualTexturePackLookupTests SIRVirtualTexturePackLookupTests.cpp)
+target_link_libraries(SIRVirtualTexturePackLookupTests PRIVATE SIR::Graphics)
+add_test(NAME renderer.virtual-texturing.sparse-v1-metadata COMMAND SIRVirtualTexturePackLookupTests)
+sir_configure_owned_target(SIRVirtualTexturePackLookupTests)
+
 # Native Hi-Z reference and command validation.
 include(${CMAKE_CURRENT_SOURCE_DIR}/HIZFoundationTests.cmake)
 
