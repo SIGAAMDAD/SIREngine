@@ -370,6 +370,9 @@ static uint32_t sirGLCreateView( void *pDevice, const sirGraphicsViewDesc_t *pDe
 	sirGLNativeResource_t native = {};
 	native.nName = nName;
 	native.eType = SIR_GRAPHICS_HANDLE_VIEW;
+	native.eFormat = parent.eFormat;
+	native.nInternalFormat = parent.nInternalFormat;
+	native.nUsage = parent.nUsage;
 	native.hParent = pDesc->hResource;
 	nStatus = sirGLHandlePoolInsert( &pState->handles, &native, pHandle );
 	if ( nStatus != SIR_GRAPHICS_SUCCESS ) {
@@ -683,11 +686,16 @@ static uint32_t sirGLRetireResource( void *pDevice, sirGraphicsHandle_t hResourc
 		if ( pCompletion->nDeviceGeneration != pState->nGeneration ) {
 			return SIR_GRAPHICS_INVALID_HANDLE;
 		}
-		if ( pCompletion->nQueueMask != 0 ) {
+		if ( ( pCompletion->nQueueMask & ~( 1U << SIR_GRAPHICS_QUEUE_DIRECT ) ) != 0 ) {
 			return SIR_GRAPHICS_UNSUPPORTED;
 		}
 		for ( uint32_t i = 0; i < SIR_GRAPHICS_QUEUE_COUNT; ++i ) {
-			if ( pCompletion->szQueueValues[i] != 0 ) {
+			const uint64_t nValue = pCompletion->szQueueValues[i];
+			if ( i == SIR_GRAPHICS_QUEUE_DIRECT ) {
+				if ( nValue > pState->nCompletedDirectValue ) {
+					return SIR_GRAPHICS_BUSY;
+				}
+			} else if ( nValue != 0 ) {
 				return SIR_GRAPHICS_INVALID_ARGUMENT;
 			}
 		}
@@ -937,7 +945,7 @@ static uint32_t sirGLCreateSurface( void *pDevice, const sirGraphicsABINativeSur
 	if ( !sirGLContextOwnsThread( pState->pContext ) ) {
 		return SIR_GRAPHICS_BUSY;
 	}
-	if ( !pState->bWindowed || pPresent->nBackbufferCount == 0 || pPresent->nBackbufferCount > 2 ||
+	if ( !pState->bWindowed || pPresent->nBackbufferCount != 1 ||
 	     pPresent->nMode != SIR_GRAPHICS_PRESENT_FIFO || pPresent->nAllowTearing != 0 ||
 	     pPresent->nHdr != 0 ||
 	     ( pPresent->nFormat != SIR_GRAPHICS_FORMAT_RGBA8_UNORM &&
@@ -1014,7 +1022,7 @@ static uint32_t sirGLResizeSurface( void *pDevice, sirGraphicsHandle_t hSurface,
 	     pNative->pDisplayOrInstance != pSlot->window.pNativeDisplay ) {
 		return SIR_GRAPHICS_SURFACE_CHANGED;
 	}
-	if ( pPresent->nBackbufferCount == 0 || pPresent->nBackbufferCount > 2 ||
+	if ( pPresent->nBackbufferCount != 1 ||
 	     pPresent->nMode != SIR_GRAPHICS_PRESENT_FIFO || pPresent->nAllowTearing != 0 ||
 	     pPresent->nHdr != 0 ||
 	     ( pPresent->nFormat != SIR_GRAPHICS_FORMAT_RGBA8_UNORM &&
