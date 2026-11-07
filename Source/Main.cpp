@@ -105,7 +105,7 @@ static bool sirPumpWaylandInputWindows( void *pContext )
 	return pPump->pWindows->pumpEvents( 256 ) == SIR_WINDOW_OK;
 }
 
-static int sirRunWaylandInputWindow( void )
+static int sirRunWaylandInputWindow( bool bMultiwindow )
 {
 	SIRInputService input;
 	SIRWindowDriverWayland driver;
@@ -124,55 +124,94 @@ static int sirRunWaylandInputWindow( void )
 		( void )app.shutdown();
 		return 1;
 	}
-	sirWindowHandle_t hWindow = {};
-	if ( windows.createWindow( { "SIREngine native input", 800, 450 }, &hWindow ) != SIR_WINDOW_OK || !input.attach( nativeControllers ) ) {
-		( void )app.shutdown();
-		return 1;
+	sirWindowHandle_t handles[2] = {};
+	sirWindowNativeLease_t leases[2] = {};
+	uintptr_t surfaces[2] = {};
+	const uint32_t nRequested = bMultiwindow ? 2 : 1;
+	uint32_t nCreated = 0;
+	bool bSucceeded = input.attach( nativeControllers );
+	for ( uint32_t i = 0; bSucceeded && i < nRequested; ++i ) {
+		const sirWindowCreateDesc_t desc = { i == 0 ? "SIREngine native input" : "SIREngine auxiliary input",
+		                                     i == 0 ? 800U : 640U, i == 0 ? 450U : 400U };
+		if ( windows.createWindow( desc, &handles[i] ) != SIR_WINDOW_OK ) {
+			bSucceeded = false;
+			break;
+		}
+		++nCreated;
 	}
-	sirWindowNativeLease_t lease = {};
-	bool bRunning = true;
-	while ( bRunning ) {
+	uint32_t nOpen = nCreated;
+	while ( bSucceeded && nOpen != 0 ) {
 		if ( !app.tick() ) {
-			bRunning = false;
+			bSucceeded = false;
 			break;
 		}
-		sirWindowSnapshot_t snapshot = {};
-		if ( windows.querySnapshot( hWindow, &snapshot ) != SIR_WINDOW_OK ) {
-			bRunning = false;
-			break;
-		}
-		if ( snapshot.bCloseRequested ) {
-			break;
-		}
-		if ( snapshot.bReady && !bridge.isBound() && lease.nToken == 0 && driver.borrowSeat() != nullptr ) {
-			sirWindowNativeView_t view = {};
-			if ( windows.acquireNativeLease( hWindow, &lease, &view ) != SIR_WINDOW_OK || !bridge.bind( input, driver, view ) ) {
-				if ( lease.nToken != 0 ) {
-					( void )windows.releaseNativeLease( lease );
-					lease = {};
-				}
-				bRunning = false;
+		for ( uint32_t i = 0; i < nCreated && bSucceeded; ++i ) {
+			if ( handles[i].nGeneration == 0 ) {
+				continue;
+			}
+			sirWindowSnapshot_t snapshot = {};
+			if ( windows.querySnapshot( handles[i], &snapshot ) != SIR_WINDOW_OK ) {
+				bSucceeded = false;
 				break;
 			}
-			bridge.setTextEnabled( true );
+			if ( snapshot.bCloseRequested ) {
+				if ( leases[i].nToken != 0 ) {
+					bridge.unregisterWindow( surfaces[i] );
+					if ( windows.releaseNativeLease( leases[i] ) != SIR_WINDOW_OK ) {
+						bSucceeded = false;
+					}
+					leases[i] = {};
+				}
+				if ( windows.destroyWindow( handles[i] ) != SIR_WINDOW_OK ) {
+					bSucceeded = false;
+				} else {
+					handles[i] = {};
+					--nOpen;
+				}
+				continue;
+			}
+			if ( snapshot.bReady && leases[i].nToken == 0 && driver.borrowSeat() != nullptr ) {
+				sirWindowNativeView_t view = {};
+				if ( windows.acquireNativeLease( handles[i], &leases[i], &view ) != SIR_WINDOW_OK ) {
+					bSucceeded = false;
+					break;
+				}
+				surfaces[i] = view.nNativeWindow;
+				if ( !bridge.isBound() ) {
+					bSucceeded = bridge.bind( input, driver, view );
+					if ( bSucceeded ) {
+						bridge.setTextEnabled( true );
+					}
+				} else {
+					bSucceeded = bridge.registerWindow( view );
+				}
+				if ( !bSucceeded ) {
+					( void )windows.releaseNativeLease( leases[i] );
+					leases[i] = {};
+				}
+			}
 		}
 	}
 	bridge.unbind();
-	if ( lease.nToken != 0 ) {
-		( void )windows.releaseNativeLease( lease );
+	while ( nCreated != 0 ) {
+		--nCreated;
+		if ( leases[nCreated].nToken != 0 && windows.releaseNativeLease( leases[nCreated] ) != SIR_WINDOW_OK ) {
+			bSucceeded = false;
+		}
+		if ( handles[nCreated].nGeneration != 0 && windows.destroyWindow( handles[nCreated] ) != SIR_WINDOW_OK ) {
+			bSucceeded = false;
+		}
 	}
-	const sirWindowResult_t eDestroy = windows.destroyWindow( hWindow );
-	const sirSystemResult_t eShutdown = app.shutdown();
-	return bRunning && eDestroy == SIR_WINDOW_OK && eShutdown == SIR_SYSTEM_OK ? 0 : 1;
+	return bSucceeded && app.shutdown() == SIR_SYSTEM_OK ? 0 : 1;
 }
 #endif
 
-static int sirRunNativeInputWindow( void )
+static int sirRunNativeInputWindow( bool bMultiwindow )
 {
 #if defined( SIR_INPUT_WAYLAND_AVAILABLE ) && !defined( _WIN32 )
 	const char *pszWaylandDisplay = getenv( "WAYLAND_DISPLAY" );
 	if ( pszWaylandDisplay != nullptr && pszWaylandDisplay[0] != 0 ) {
-		return sirRunWaylandInputWindow();
+		return sirRunWaylandInputWindow( bMultiwindow );
 	}
 #endif
 
@@ -271,14 +310,53 @@ static int sirRunNativeInputWindow( void )
 	}
 #endif
 	bridge.setTextEnabled( true );
-	bool bRunning = true;
-	while ( bRunning ) {
+	sirWindowHandle_t handles[2] = { hWindow, {} };
+	sirWindowNativeLease_t leases[2] = { lease, {} };
+	sirWindowNativeView_t views[2] = { view, {} };
+	uint32_t nCreated = 1;
+	bool bSucceeded = true;
+	if ( bMultiwindow ) {
+		if ( windows.createWindow( { "SIREngine auxiliary input", 640, 400 }, &handles[1] ) != SIR_WINDOW_OK ) {
+			bSucceeded = false;
+		} else {
+			nCreated = 2;
+			if ( windows.acquireNativeLease( handles[1], &leases[1], &views[1] ) != SIR_WINDOW_OK ||
+			     !bridge.registerWindow( views[1] ) ) {
+				bSucceeded = false;
+			}
+		}
+	}
+	uint32_t nOpen = nCreated;
+	while ( bSucceeded && nOpen != 0 ) {
 		if ( !application.tick() ) {
+			bSucceeded = false;
 			break;
 		}
-		sirWindowSnapshot_t snapshot = {};
-		if ( windows.querySnapshot( hWindow, &snapshot ) != SIR_WINDOW_OK || snapshot.bCloseRequested ) {
-			bRunning = false;
+		for ( uint32_t i = 0; i < nCreated && bSucceeded; ++i ) {
+			if ( handles[i].nGeneration == 0 ) {
+				continue;
+			}
+			sirWindowSnapshot_t snapshot = {};
+			if ( windows.querySnapshot( handles[i], &snapshot ) != SIR_WINDOW_OK ) {
+				bSucceeded = false;
+				break;
+			}
+			if ( !snapshot.bCloseRequested ) {
+				continue;
+			}
+			if ( !bridge.unregisterWindow( views[i].nNativeWindow ) ) {
+				bSucceeded = false;
+			}
+			if ( leases[i].nToken != 0 && windows.releaseNativeLease( leases[i] ) != SIR_WINDOW_OK ) {
+				bSucceeded = false;
+			}
+			leases[i] = {};
+			if ( windows.destroyWindow( handles[i] ) != SIR_WINDOW_OK ) {
+				bSucceeded = false;
+			} else {
+				handles[i] = {};
+				--nOpen;
+			}
 		}
 	}
 #if defined( _WIN32 )
@@ -287,10 +365,17 @@ static int sirRunNativeInputWindow( void )
 	( void )driver.setEventSink( nullptr, nullptr );
 #endif
 	bridge.unbind();
-	( void )windows.releaseNativeLease( lease );
-	const sirWindowResult_t eDestroy = windows.destroyWindow( hWindow );
+	while ( nCreated != 0 ) {
+		--nCreated;
+		if ( leases[nCreated].nToken != 0 && windows.releaseNativeLease( leases[nCreated] ) != SIR_WINDOW_OK ) {
+			bSucceeded = false;
+		}
+		if ( handles[nCreated].nGeneration != 0 && windows.destroyWindow( handles[nCreated] ) != SIR_WINDOW_OK ) {
+			bSucceeded = false;
+		}
+	}
 	const sirSystemResult_t eShutdown = application.shutdown();
-	return eDestroy == SIR_WINDOW_OK && eShutdown == SIR_SYSTEM_OK ? 0 : 1;
+	return bSucceeded && eShutdown == SIR_SYSTEM_OK ? 0 : 1;
 #else
 	fputs( "Native input window backend unavailable on this build\n", stderr );
 	return 1;
@@ -305,7 +390,7 @@ int main( int nArgs, char **pszArgs )
 			return 0;
 		}
 		if ( strcmp( pszArgs[1], "--help" ) == 0 ) {
-			puts( "Usage: SIREngine [--version|--help|--input-window|--window-no-input|--window-multi]" );
+			puts( "Usage: SIREngine [--version|--help|--input-window|--input-multi|--window-no-input|--window-multi]" );
 			return 0;
 		}
 #if defined( _WIN32 ) || defined( SIR_WINDOW_X11_AVAILABLE ) || defined( SIR_WINDOW_WAYLAND_AVAILABLE )
@@ -319,7 +404,10 @@ int main( int nArgs, char **pszArgs )
 #endif
 
 		if ( strcmp( pszArgs[1], "--input-window" ) == 0 ) {
-			return sirRunNativeInputWindow();
+			return sirRunNativeInputWindow( false );
+		}
+		if ( strcmp( pszArgs[1], "--input-multi" ) == 0 ) {
+			return sirRunNativeInputWindow( true );
 		}
 		fputs( "Unknown option\n", stderr );
 		return 2;
