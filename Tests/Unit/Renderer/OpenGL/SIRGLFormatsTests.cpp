@@ -88,7 +88,8 @@ int main( void )
 		format.nSize = sizeof( format );
 		format.nFormat = szFormats[i];
 		sirGLTestCheck( sirGLQueryNativeFormat( &api, &format ) == SIR_GRAPHICS_SUCCESS, "storage format supported" );
-		sirGLTestCheck( format.nOptimalFeatures == SIR_GRAPHICS_ABI_FORMAT_SAMPLED && format.nLinearFeatures == 0 &&
+		sirGLTestCheck( format.nOptimalFeatures == ( SIR_GRAPHICS_ABI_FORMAT_SAMPLED |
+		                    ( i < 2 ? SIR_GRAPHICS_ABI_FORMAT_COLOR_ATTACHMENT : 0U ) ) && format.nLinearFeatures == 0 &&
 		                    format.nSampleCountMask == 1 && format.nReserved == 0,
 		                "strict capability mask" );
 		sirGLTestCheck( s_nLastTarget == 0x0DE1 && s_nLastParameter == 0x826F && s_nLastFormat == szGLFormats[i], "GL query arguments" );
