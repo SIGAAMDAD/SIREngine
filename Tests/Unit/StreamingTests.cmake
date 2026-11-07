@@ -8,3 +8,15 @@ add_executable(SIRStreamingCoordinatorCoverageTests SIRStreamingCoordinatorCover
 target_link_libraries(SIRStreamingCoordinatorCoverageTests PRIVATE SIR::Streaming)
 add_test(NAME streaming.coordinator.coverage-boundaries COMMAND SIRStreamingCoordinatorCoverageTests)
 sir_configure_owned_target(SIRStreamingCoordinatorCoverageTests)
+
+# Priority-first admission and pinned-capacity regression coverage.
+add_executable(SIRStreamingAdmissionPriorityTests SIRStreamingAdmissionPriorityTests.cpp)
+target_link_libraries(SIRStreamingAdmissionPriorityTests PRIVATE SIR::Streaming)
+add_test(NAME streaming.admission.priority COMMAND SIRStreamingAdmissionPriorityTests)
+sir_configure_owned_target(SIRStreamingAdmissionPriorityTests)
+
+# Invalid contract and lifecycle precondition regression coverage.
+add_executable(SIRStreamingValidationTests SIRStreamingValidationTests.cpp)
+target_link_libraries(SIRStreamingValidationTests PRIVATE SIR::Streaming)
+add_test(NAME streaming.validation.contracts COMMAND SIRStreamingValidationTests)
+sir_configure_owned_target(SIRStreamingValidationTests)
