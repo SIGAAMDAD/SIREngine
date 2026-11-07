@@ -47,6 +47,7 @@ typedef struct sirD3D12PipelineCacheStats_s
 	uint64_t nCacheHits;
 	uint64_t nCacheMisses;
 	uint64_t nCacheStores;
+	uint64_t nRootReuses;
 	bool bAvailable;
 } sirD3D12PipelineCacheStats_t;
 
