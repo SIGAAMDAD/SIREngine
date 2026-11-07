@@ -146,6 +146,40 @@ int main( void )
 		return 87;
 	}
 
+	// Native queue plan requests each distinct family once, with graphics first.
+	const float fQueuePriority = 1.0f;
+	VkDeviceQueueCreateInfo szQueueInfos[3] = {};
+	uint32_t nQueueCount = 99;
+	const sirVulkanQueueFamilySelection_t distinct = { 3, 1, 2, true };
+	if ( !sirVulkanBuildQueueCreateInfos( distinct, &fQueuePriority, szQueueInfos, &nQueueCount ) || nQueueCount != 3 ||
+	     szQueueInfos[0].queueFamilyIndex != 3 || szQueueInfos[1].queueFamilyIndex != 1 ||
+	     szQueueInfos[2].queueFamilyIndex != 2 ) {
+		return 88;
+	}
+	for ( uint32_t iQueue = 0; iQueue < nQueueCount; ++iQueue ) {
+		if ( szQueueInfos[iQueue].queueCount != 1 || szQueueInfos[iQueue].pQueuePriorities != &fQueuePriority ||
+		     szQueueInfos[iQueue].sType != VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO ) {
+			return 89;
+		}
+	}
+	const sirVulkanQueueFamilySelection_t shared = { 3, 3, 3, true };
+	if ( !sirVulkanBuildQueueCreateInfos( shared, &fQueuePriority, szQueueInfos, &nQueueCount ) || nQueueCount != 1 ||
+	     szQueueInfos[0].queueFamilyIndex != 3 ) {
+		return 90;
+	}
+	const sirVulkanQueueFamilySelection_t partial = { 3, UINT32_MAX, 1, false };
+	if ( !sirVulkanBuildQueueCreateInfos( partial, &fQueuePriority, szQueueInfos, &nQueueCount ) || nQueueCount != 2 ||
+	     szQueueInfos[1].queueFamilyIndex != 1 ) {
+		return 91;
+	}
+	const sirVulkanQueueFamilySelection_t missingGraphics = { UINT32_MAX, 1, 2, false };
+	if ( sirVulkanBuildQueueCreateInfos( missingGraphics, &fQueuePriority, szQueueInfos, &nQueueCount ) || nQueueCount != 0 ||
+	     sirVulkanBuildQueueCreateInfos( distinct, nullptr, szQueueInfos, &nQueueCount ) || nQueueCount != 0 ||
+	     sirVulkanBuildQueueCreateInfos( distinct, &fQueuePriority, nullptr, &nQueueCount ) || nQueueCount != 0 ||
+	     sirVulkanBuildQueueCreateInfos( distinct, &fQueuePriority, szQueueInfos, nullptr ) ) {
+		return 92;
+	}
+
 	// Physical-device priority is stable and independent of the Vulkan loader.
 	if ( sirVulkanAdapterPriority( VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU ) != 4 ||
 	     sirVulkanAdapterPriority( VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU ) != 3 ||

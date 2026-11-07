@@ -92,6 +92,8 @@ typedef struct sirVulkanQueueFamilySelection_s
 
 bool sirVulkanSelectQueueFamilies( const VkQueueFamilyProperties *pFamilies, uint32_t nCount,
                                    sirVulkanQueueFamilySelection_t *pSelection ) noexcept;
+bool sirVulkanBuildQueueCreateInfos( const sirVulkanQueueFamilySelection_t& selection, const float *pPriority,
+                                     VkDeviceQueueCreateInfo *pInfos, uint32_t *pCount ) noexcept;
 
 // Private Vulkan-driver ownership. No Vk or VMA types enter SIRRenderingDevice.
 typedef struct sirVulkanPoolBudget_s
@@ -340,6 +342,8 @@ private:
 	VkPhysicalDevice m_PhysicalDevice;
 	VkDevice m_Device;
 	VkQueue m_GraphicsQueue;
+	VkQueue m_ComputeQueue;
+	VkQueue m_TransferQueue;
 	VmaAllocator m_Allocator;
 	VmaPool m_szSealedPools[3] = {};
 	uint32_t m_szSealedMemoryTypes[3] = {};
