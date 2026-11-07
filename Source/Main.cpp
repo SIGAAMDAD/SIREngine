@@ -1,5 +1,5 @@
 #include <Core/SIRApplication.h>
-#include <Core/Platform/Input/SIRInputWindow.h>
+#include <Core/Platform/Window/SIRInputWindow.h>
 #include <Core/Platform/Input/SIRInputService.h>
 #if defined( _WIN32 )
 #include <Core/Platform/Input/Windows/SIRWindowsRawBackend.h>
@@ -21,6 +21,7 @@
 typedef struct sirInputNativePumpContext_s
 {
 	SIRInputWindow *pWindow;
+	SIRInputService *pInput;
 #if defined( SIR_INPUT_X11_AVAILABLE ) && !defined( _WIN32 )
 	SIRLinuxEvdevBackend *pEvdev;
 	bool bDiscoveryAttempted;
@@ -28,9 +29,10 @@ typedef struct sirInputNativePumpContext_s
 #endif
 } sirInputNativePumpContext_t;
 
-static bool sirPumpInputWindow( SIRInputService& input, void *pContext )
+static bool sirPumpInputWindow( void *pContext )
 {
 	sirInputNativePumpContext_t *pPump = ( sirInputNativePumpContext_t * )pContext;
+	SIRInputService& input = *pPump->pInput;
 #if defined( SIR_INPUT_X11_AVAILABLE ) && !defined( _WIN32 )
 	if ( !pPump->bDiscoveryAttempted ) {
 		pPump->bDiscoveryAttempted = true;
@@ -96,13 +98,14 @@ static int sirRunNativeInputWindow( void )
 
 	sirInputNativePumpContext_t context = {};
 	context.pWindow = &window;
+	context.pInput = &input;
 #if defined( SIR_INPUT_X11_AVAILABLE ) && !defined( _WIN32 )
 	context.pEvdev = &nativeControllers;
 #endif
 
 	window.setTextEnabled( true );
 	SIRApplication application;
-	if ( !application.attachInput( input, sirPumpInputWindow, &context ) || !application.initialize() ) {
+	if ( !application.attachInput( input ) || !application.attachWindowPump( sirPumpInputWindow, &context ) || !application.initialize() ) {
 		window.close();
 		input.shutdown();
 		return 1;

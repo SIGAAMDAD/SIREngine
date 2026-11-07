@@ -14,7 +14,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Core/Platform/Input/SIRInputService.h>
-#include <Core/Platform/Input/SIRInputWindow.h>
+#include <Core/Platform/Window/SIRInputWindow.h>
 #include <Core/Platform/Input/Linux/SIRLinuxX11Backend.h>
 #include <Core/Platform/Input/Linux/SIRLinuxEvdevBackend.h>
 

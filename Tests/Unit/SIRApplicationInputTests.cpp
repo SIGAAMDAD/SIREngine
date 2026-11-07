@@ -60,13 +60,15 @@ public:
 typedef struct sirInputAppTestContext_s
 {
 	SIRApplicationMockInput *pBackend;
+	SIRInputService *pInput;
 	uint32_t nPumps;
 	bool bReject;
 } sirInputAppTestContext_t;
 
-static bool sirApplicationInputPump( SIRInputService& input, void *pContext )
+static bool sirApplicationInputPump( void *pContext )
 {
 	sirInputAppTestContext_t *pTest = ( sirInputAppTestContext_t * )pContext;
+	SIRInputService& input = *pTest->pInput;
 	++pTest->nPumps;
 	if ( pTest->nPumps == 1 ) {
 		return input.connect( { 0, 99, SIR_INPUT_TEST, SIR_INPUT_KEYBOARD }, &pTest->pBackend->m_hDevice );
@@ -84,9 +86,10 @@ static bool sirTestApplicationInputLifecycle( void )
 	SIRInputService input;
 	SIRApplicationMockInput backend;
 	SIRApplication application;
-	sirInputAppTestContext_t context = { &backend, 0, false };
-	if ( !input.attach( backend ) || !application.attachInput( input, sirApplicationInputPump, &context ) ||
-	     application.attachInput( input ) || application.getInputFrame() != nullptr ) {
+	sirInputAppTestContext_t context = { &backend, &input, 0, false };
+	if ( !input.attach( backend ) || !application.attachInput( input ) || application.attachInput( input ) ||
+	     !application.attachWindowPump( sirApplicationInputPump, &context ) ||
+	     application.attachWindowPump( sirApplicationInputPump, &context ) || application.getInputFrame() != nullptr ) {
 		return false;
 	}
 
@@ -136,9 +139,44 @@ static bool sirTestHeadlessApplicationStillWorks( void )
 	return application.getState() == SIR_APP_STOPPED;
 }
 
+typedef struct sirNoInputWindowPumpContext_s
+{
+	uint32_t nPumps;
+	bool bReject;
+} sirNoInputWindowPumpContext_t;
+
+static bool sirApplicationNoInputWindowPump( void *pContext )
+{
+	sirNoInputWindowPumpContext_t *pTest = ( sirNoInputWindowPumpContext_t * )pContext;
+	++pTest->nPumps;
+	return !pTest->bReject;
+}
+
+static bool sirTestWindowPumpWithoutInput( void ) noexcept
+{
+	SIRApplication application;
+	sirNoInputWindowPumpContext_t context = { 0, false };
+	if ( application.attachWindowPump( nullptr, &context ) ||
+	     !application.attachWindowPump( sirApplicationNoInputWindowPump, &context ) ||
+	     application.attachWindowPump( sirApplicationNoInputWindowPump, &context ) ) {
+		return false;
+	}
+	if ( !application.initialize() || application.attachWindowPump( sirApplicationNoInputWindowPump, &context ) ||
+	     !application.tick() || context.nPumps != 1 || application.getTickCount() != 1 ) {
+		return false;
+	}
+	context.bReject = true;
+	if ( application.tick() || context.nPumps != 2 || application.getTickCount() != 2 ) {
+		return false;
+	}
+	( void )application.shutdown();
+	return application.getState() == SIR_APP_STOPPED && !application.tick();
+}
+
 int main( void )
 {
-	if ( !sirTestHeadlessApplicationStillWorks() || !sirTestApplicationInputLifecycle() ) {
+	if ( !sirTestHeadlessApplicationStillWorks() || !sirTestApplicationInputLifecycle() ||
+	     !sirTestWindowPumpWithoutInput() ) {
 		fputs( "SIRApplicationInputTests FAILED\n", stderr );
 		return 1;
 	}

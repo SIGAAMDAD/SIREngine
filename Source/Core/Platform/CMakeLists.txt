@@ -2,6 +2,8 @@ include("${CMAKE_CURRENT_LIST_DIR}/../../../Build/CMake/SIRBuildTreeGuard.cmake"
 # Native OS services belong to the Core library and share its lifecycle.
 set(SIR_CORE_PLATFORM_COMMON
     SIRPlatformUtils.cpp
+    Window/SIRWindowSystem.cpp
+    Window/Headless/SIRWindowDriverHeadless.cpp
     SIRVirtualMemory.cpp
     SIRCPUInfo.cpp
     SIRThread.cpp
@@ -36,7 +38,8 @@ if(WIN32)
         Windows/SIRDynamicLibraryWindows.cpp
         Windows/SIRPlatformTimeWindows.cpp
         Windows/SIRPlatformProcessWindows.cpp
-        Input/Windows/SIRInputWindowWindows.cpp
+        Window/Windows/SIRInputWindowWindows.cpp
+        Window/Windows/SIRWindowDriverWin32.cpp
         Input/Windows/SIRWindowsRawBackend.cpp
         Input/Windows/SIRWindowsRawDecode.cpp
         Input/Windows/SIRWindowsXInputBackend.cpp
@@ -109,7 +112,8 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     if(SIR_WITH_X11_INPUT)
         find_package(X11 QUIET)
         if(X11_FOUND)
-            list(APPEND SIR_CORE_PLATFORM_OS Input/Linux/SIRLinuxX11Backend.cpp Input/Linux/SIRInputWindowX11.cpp)
+            list(APPEND SIR_CORE_PLATFORM_OS Input/Linux/SIRLinuxX11Backend.cpp Window/Linux/SIRInputWindowX11.cpp Window/Linux/SIRWindowDriverX11.cpp)
+            target_compile_definitions(SIRCore PUBLIC SIR_WINDOW_X11_AVAILABLE=1)
             target_link_libraries(SIRCore PRIVATE X11::X11)
             target_compile_definitions(SIRCore PUBLIC SIR_INPUT_X11_AVAILABLE=1)
             if(X11_Xi_FOUND AND TARGET X11::Xi)

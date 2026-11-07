@@ -78,3 +78,21 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     sir_configure_owned_target(SIRPlatformClockProcessFaultTests)
 endif()
 
+
+# Window system registry and headless negative-path acceptance.
+add_executable(SIRWindowSystemTests SIRWindowSystemTests.cpp)
+target_link_libraries(SIRWindowSystemTests PRIVATE SIR::Core)
+add_test(NAME core.platform.window.system COMMAND SIRWindowSystemTests)
+set_tests_properties(core.platform.window.system PROPERTIES LABELS "core;platform;window" TIMEOUT 60)
+sir_configure_owned_target(SIRWindowSystemTests)
+
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND SIR_WITH_X11_INPUT AND X11_FOUND)
+    find_program(SIR_WINDOW_XVFB_RUN NAMES xvfb-run)
+    if(SIR_WINDOW_XVFB_RUN)
+        add_executable(SIRWindowX11DriverTests SIRWindowX11DriverTests.cpp)
+        target_link_libraries(SIRWindowX11DriverTests PRIVATE SIR::Core X11::X11)
+        add_test(NAME core.platform.window.x11-native COMMAND "${SIR_WINDOW_XVFB_RUN}" -a "$<TARGET_FILE:SIRWindowX11DriverTests>")
+        set_tests_properties(core.platform.window.x11-native PROPERTIES LABELS "core;platform;window;x11;integration" TIMEOUT 60)
+        sir_configure_owned_target(SIRWindowX11DriverTests)
+    endif()
+endif()
