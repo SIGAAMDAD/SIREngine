@@ -94,6 +94,11 @@ int main( void )
 	sirVirtualTexturePackFamilyRecord_t actualFamily = {};
 	SIR_TEST( sirVTPackGetAllocation( view, 0, &actualAllocation ) && actualAllocation.nGeneration == 91 );
 	SIR_TEST( sirVTPackGetAllocationKey( view, 0, &actualKey ) && actualKey.nStableKey == 123 );
+	uint32_t nFound = 0;
+	SIR_TEST( sirVTPackFindAllocationByStableKey( view, 123, &nFound ) && nFound == 0 );
+	SIR_TEST( !sirVTPackFindAllocationByStableKey( view, 122, &nFound ) && nFound == UINT32_MAX );
+	SIR_TEST( !sirVTPackFindAllocationByStableKey( view, 0, &nFound ) && nFound == UINT32_MAX );
+	SIR_TEST( !sirVTPackFindAllocationByStableKey( view, 123, nullptr ) );
 	SIR_TEST( sirVTPackGetChannelAllocation( view, 0, 0, &actualChannel ) && actualChannel.nTailIndex == 5 );
 	SIR_TEST( sirVTPackGetPayload( view, 0, &actualPayload ) && actualPayload.nClusterId == 17 );
 	SIR_TEST( sirVTPackGetCluster( view, 0, &actualCluster ) && actualCluster.nDecodedBytes == 4096 );
@@ -112,6 +117,8 @@ int main( void )
 	SIR_TEST( !sirVTPackGetFamily( view, SIR_VT_PACK_CHANNEL_COUNT, &actualFamily ) );
 	view.szDirectories[SIR_VT_PACK_PAYLOADS].nBytes--;
 	SIR_TEST( !sirVTPackGetPayload( view, 0, &actualPayload ) );
+	view.szDirectories[SIR_VT_PACK_ALLOCATION_KEYS].nBytes--;
+	SIR_TEST( !sirVTPackFindAllocationByStableKey( view, 123, &nFound ) && nFound == UINT32_MAX );
 	view.szDirectories[SIR_VT_PACK_CLUSTERS].pData = nullptr;
 	SIR_TEST( !sirVTPackGetCluster( view, 0, &actualCluster ) );
 	SIR_TEST( view.szDirectories[SIR_VT_PACK_PAYLOAD_DATA].pData == nullptr );

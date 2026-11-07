@@ -47,4 +47,7 @@ bool sirVTPackGetQualityView( const sirVirtualTexturePackView_t& view, uint32_t 
 bool sirVTPackGetFamily( const sirVirtualTexturePackView_t& view, uint32_t nChannel,
                          sirVirtualTexturePackFamilyRecord_t *pRecord ) noexcept;
 
+// Source-pinned Terrain3D Sparse V1 stable-key binary search. A miss returns UINT32_MAX.
+bool sirVTPackFindAllocationByStableKey( const sirVirtualTexturePackView_t& view, uint64_t nStableKey, uint32_t *pAllocationId ) noexcept;
+
 #endif // __SIRENGINE_SIRVIRTUALTEXTUREPACKLOOKUP_H__

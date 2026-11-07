@@ -83,3 +83,37 @@ bool sirVTPackGetFamily( const sirVirtualTexturePackView_t& view, uint32_t nChan
 {
 	return sirVTLookupRecord( view.szDirectories[SIR_VT_PACK_FAMILIES], nChannel, view.header.nFormatFamilyCount, pRecord );
 }
+
+// Source: Terrain3D terrain_3d_vt_pack_runtime.cpp stable-key lower_bound.
+// The semantic validator guarantees strictly increasing stable keys.
+bool sirVTPackFindAllocationByStableKey( const sirVirtualTexturePackView_t& view, uint64_t nStableKey, uint32_t *pAllocationId ) noexcept
+{
+	if ( pAllocationId == nullptr ) {
+		return false;
+	}
+	*pAllocationId = UINT32_MAX;
+	if ( nStableKey == 0 || view.header.nAllocationCount == 0 ) {
+		return false;
+	}
+	uint32_t nLow = 0;
+	uint32_t nHigh = view.header.nAllocationCount;
+	while ( nLow < nHigh ) {
+		const uint32_t nMiddle = nLow + ( ( nHigh - nLow ) >> 1U );
+		sirVirtualTexturePackAllocationKey_t key = {};
+		if ( !sirVTPackGetAllocationKey( view, nMiddle, &key ) ) {
+			return false;
+		}
+		if ( key.nStableKey < nStableKey ) {
+			nLow = nMiddle + 1U;
+		} else {
+			nHigh = nMiddle;
+		}
+	}
+	sirVirtualTexturePackAllocationKey_t found = {};
+	if ( nLow == view.header.nAllocationCount || !sirVTPackGetAllocationKey( view, nLow, &found ) || found.nStableKey != nStableKey ||
+	     found.nAllocationId >= view.header.nAllocationCount ) {
+		return false;
+	}
+	*pAllocationId = found.nAllocationId;
+	return true;
+}
