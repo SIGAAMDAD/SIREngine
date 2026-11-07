@@ -221,3 +221,17 @@ foreach(sirScriptingUnitTarget IN LISTS sirScriptingUnitTargets)
         endif()
     endif()
 endforeach()
+
+add_executable(SIRLangContextualLiteralTests SIRLangContextualLiteralTests.cpp)
+target_link_libraries(SIRLangContextualLiteralTests PRIVATE SIR::Scripting)
+add_test(NAME scripting.language.contextual-integer COMMAND SIRLangContextualLiteralTests)
+sir_configure_owned_target(SIRLangContextualLiteralTests)
+
+# The actual offline cook + standalone run path must preserve typed literals,
+# bitwise deterministic artifacts, no-clobber publication and failed-cook safety.
+add_test(NAME scripting.language.contextual-cook-and-run
+    COMMAND "${CMAKE_COMMAND}"
+        "-DCOOKER=$<TARGET_FILE:SIRLangCooker>"
+        "-DRUNNER=$<TARGET_FILE:SIRLangRunner>"
+        "-DSIR_CONTEXTUAL_TEST_ROOT=${CMAKE_CURRENT_BINARY_DIR}"
+        -P "${CMAKE_CURRENT_LIST_DIR}/SIRLangContextualCookAndRun.cmake")

@@ -154,9 +154,14 @@ static void testRealSourceThroughRuntime( void )
 	initCompiler( &s_Fixture, nFingerprint );
 	static constexpr char szSource[] = "function identity(u16 value) returns u16 {\n"
 	                                   "    return value;\n"
-	                                   "}";
+	                                   "}\n"
+	                                   "function gravity() returns f64 { return -7.5; }\n"
+	                                   "function sentinel() returns i8 { return -128; }";
 	assert( SIRLangCompileSource( { ( const uint8_t * )szSource, sizeof( szSource ) - 1 }, &s_Fixture.compiler ) );
+	assert( s_Fixture.compiler.cir.program.nFunctionCount == 3 );
 	const uint64_t nMethodId = s_Fixture.compiler.cir.program.pFunctions[0].nFunctionId;
+	const uint64_t nGravityId = s_Fixture.compiler.cir.program.pFunctions[1].nFunctionId;
+	const uint64_t nSentinelId = s_Fixture.compiler.cir.program.pFunctions[2].nFunctionId;
 	uint32_t nEncoded = 0;
 	assert( SIRLangEncodeGraphVM( &s_Fixture.compiler.cir.program, s_Fixture.szBytecode, sizeof( s_Fixture.szBytecode ), &nEncoded ) ==
 	        SIR_LANG_VM_OK );
@@ -198,6 +203,14 @@ static void testRealSourceThroughRuntime( void )
 	assert( runtime.invoke( instance, nMethodId, { &argument, sizeof( argument ), alignof( sirLangVMValue_t ) },
 	                        { &result, sizeof( result ), alignof( sirLangVMValue_t ) } ) == SIR_SCRIPT_OK );
 	assert( result.nBits == 42 && result.eType == SIR_LANG_VALUE_U16 );
+	result = {};
+	assert( runtime.invoke( instance, nGravityId, { nullptr, 0, alignof( sirLangVMValue_t ) },
+	                        { &result, sizeof( result ), alignof( sirLangVMValue_t ) } ) == SIR_SCRIPT_OK );
+	assert( result.nBits == UINT64_C( 0xc01e000000000000 ) && result.eType == SIR_LANG_VALUE_F64 );
+	result = {};
+	assert( runtime.invoke( instance, nSentinelId, { nullptr, 0, alignof( sirLangVMValue_t ) },
+	                        { &result, sizeof( result ), alignof( sirLangVMValue_t ) } ) == SIR_SCRIPT_OK );
+	assert( result.nBits == UINT64_C( 0xffffffffffffff80 ) && result.eType == SIR_LANG_VALUE_I8 );
 	assert( runtime.unloadProgram( program ) == SIR_SCRIPT_BUSY );
 	assert( source.unregisterArtifact( entry ) == SIR_SCRIPT_BUSY );
 
