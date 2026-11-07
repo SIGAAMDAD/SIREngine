@@ -354,6 +354,22 @@ static int sirTestRaster( SIRRenderingDevice *pDevice, uint32_t nGeneration, con
 	if ( pDevice->acquireCommands( SIR_GRAPHICS_QUEUE_DIRECT, &pDirect ) != SIR_GRAPHICS_SUCCESS ) {
 		return 57;
 	}
+	// An invalid later color attachment may not pin the preceding valid view.
+	sirGraphicsHandle_t hPassProbeView = {};
+	if ( pDevice->createView( view, &hPassProbeView ) != SIR_GRAPHICS_SUCCESS ) {
+		return 82;
+	}
+	sirGraphicsColorAttachment_t szInvalidColors[2] = {};
+	szInvalidColors[0].hView = hPassProbeView;
+	sirGraphicsRenderPass_t invalidPass = {};
+	invalidPass.pColors = szInvalidColors;
+	invalidPass.nColorCount = 2;
+	sirGraphicsCompletionSet_t passNotSubmitted = {};
+	passNotSubmitted.nDeviceGeneration = nGeneration;
+	if ( pDirect->beginRenderPass( invalidPass ) != SIR_GRAPHICS_INVALID_HANDLE ||
+	     pDevice->retireResource( hPassProbeView, passNotSubmitted ) != SIR_GRAPHICS_SUCCESS ) {
+		return 83;
+	}
 	// A buffer cannot transition to an attachment layout.
 	sirGraphicsBarrier_t invalidBuffer = {};
 	invalidBuffer.eType = SIR_GRAPHICS_BARRIER_TRANSITION;

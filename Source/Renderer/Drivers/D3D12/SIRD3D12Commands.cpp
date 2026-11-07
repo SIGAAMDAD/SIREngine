@@ -724,30 +724,40 @@ sirGraphicsResult_t SIRD3D12CommandList::beginRenderPass( const sirGraphicsRende
 	if ( pass.nColorCount > D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT || ( pass.nColorCount != 0 && pass.pColors == nullptr ) ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	D3D12_CPU_DESCRIPTOR_HANDLE szColors[D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
-	D3D12_CPU_DESCRIPTOR_HANDLE depth = {};
-	for ( uint32_t iColor = 0; iColor < pass.nColorCount; ++iColor ) {
-		const sirGraphicsColorAttachment_t& attachment = pass.pColors[iColor];
-		if ( !m_pResources->queryDescriptor( attachment.hView, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, &szColors[iColor] ) ) {
-			return SIR_GRAPHICS_INVALID_HANDLE;
-		}
-		const sirGraphicsResult_t ePinned = pin( attachment.hView );
-		if ( ePinned != SIR_GRAPHICS_SUCCESS ) {
-			return ePinned;
-		}
-	}
 	const bool bDepth = pass.hDepthView.nGeneration != 0;
 	if ( pass.nColorCount == 0 && !bDepth ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	if ( bDepth ) {
-		if ( !m_pResources->queryDescriptor( pass.hDepthView, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, &depth ) ) {
+	// Validate every color and depth descriptor before retaining any view. An
+	// invalid later attachment must not leave an earlier view pinned.
+	D3D12_CPU_DESCRIPTOR_HANDLE szColors[D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
+	D3D12_CPU_DESCRIPTOR_HANDLE depth = {};
+	for ( uint32_t iColor = 0; iColor < pass.nColorCount; ++iColor ) {
+		if ( !m_pResources->queryDescriptor( pass.pColors[iColor].hView, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, &szColors[iColor] ) ) {
 			return SIR_GRAPHICS_INVALID_HANDLE;
 		}
-		const sirGraphicsResult_t ePinned = pin( pass.hDepthView );
+	}
+	if ( bDepth && !m_pResources->queryDescriptor( pass.hDepthView, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, &depth ) ) {
+		return SIR_GRAPHICS_INVALID_HANDLE;
+	}
+	const uint32_t nOriginalReferenceCount = m_nReferenceCount;
+	sirGraphicsResult_t ePinned = SIR_GRAPHICS_SUCCESS;
+	for ( uint32_t iColor = 0; iColor < pass.nColorCount; ++iColor ) {
+		ePinned = pin( pass.pColors[iColor].hView );
 		if ( ePinned != SIR_GRAPHICS_SUCCESS ) {
-			return ePinned;
+			break;
 		}
+	}
+	if ( ePinned == SIR_GRAPHICS_SUCCESS && bDepth ) {
+		ePinned = pin( pass.hDepthView );
+	}
+	if ( ePinned != SIR_GRAPHICS_SUCCESS ) {
+		// All failing retention paths precede native command encoding.
+		while ( m_nReferenceCount > nOriginalReferenceCount ) {
+			const sirGraphicsHandle_t& ref = m_szReferences[--m_nReferenceCount];
+			m_pResources->releaseCommandReference( ref );
+		}
+		return ePinned;
 	}
 	m_pCommands->OMSetRenderTargets( pass.nColorCount, pass.nColorCount == 0 ? nullptr : szColors, FALSE, bDepth ? &depth : nullptr );
 	for ( uint32_t iColor = 0; iColor < pass.nColorCount; ++iColor ) {
