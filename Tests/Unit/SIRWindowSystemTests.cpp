@@ -15,6 +15,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Core/Platform/Window/Headless/SIRWindowDriverHeadless.h>
 #include <Core/Platform/Window/SIRWindowSystem.h>
 #include <stdio.h>
+#include <string.h>
 #include <Core/Platform/SIRThread.h>
 
 class SIRWindowTestDriver final : public SIRWindowDriver
@@ -53,7 +54,15 @@ public:
 	sirWindowResult_t mutateWindow( uint32_t nSlot, const sirWindowMutation_t& mutation ) noexcept override
 	{
 		( void )nSlot;
-		( void )mutation;
+		++m_nMutations;
+		if ( mutation.eKind == SIR_WINDOW_MUTATION_TITLE && mutation.pszTitle != nullptr ) {
+			uint32_t n = 0;
+			while ( n < sizeof( m_szLastTitle ) - 1 && mutation.pszTitle[n] != '\0' ) {
+				m_szLastTitle[n] = mutation.pszTitle[n];
+				++n;
+			}
+			m_szLastTitle[n] = '\0';
+		}
 		return SIR_WINDOW_OK;
 	}
 
@@ -82,6 +91,8 @@ public:
 			m_Pending[m_nPending++] = event;
 		}
 	}
+	uint32_t m_nMutations = 0;
+	char m_szLastTitle[128] = {};
 	bool m_bFailInitialize = false;
 	sirWindowPlatform_t m_ePlatform = SIR_WINDOW_PLATFORM_X11;
 
@@ -130,6 +141,104 @@ static void sirWindowReleaseLeaseWorker( void *pUserData )
 {
 	sirWindowLeaseWorkerContext_t *pContext = ( sirWindowLeaseWorkerContext_t * )pUserData;
 	pContext->eResult = pContext->pSystem->releaseNativeLease( pContext->hLease );
+}
+
+
+typedef struct sirQueuedMutationWorkerContext_s
+{
+	SIRWindowSystem *pSystem;
+	sirWindowHandle_t hWindow;
+	sirWindowMutation_t mutation;
+	uint64_t nTicket;
+	sirWindowResult_t eResult;
+	bool bClose;
+} sirQueuedMutationWorkerContext_t;
+
+static void sirQueueMutationWorker( void *pUserData )
+{
+	sirQueuedMutationWorkerContext_t *pContext = ( sirQueuedMutationWorkerContext_t * )pUserData;
+	pContext->eResult = pContext->bClose ? pContext->pSystem->queueClose( pContext->hWindow, &pContext->nTicket ) :
+	                                      pContext->pSystem->queueMutation( pContext->hWindow, pContext->mutation,
+	                                                                        &pContext->nTicket );
+}
+
+static bool sirTestQueuedOwnerMutations( void ) noexcept
+{
+	SIRWindowTestDriver driver;
+	SIRWindowSystem windows( driver );
+	if ( windows.initialize() != SIR_SYSTEM_OK ) {
+		return false;
+	}
+	sirWindowHandle_t hWindow = {};
+	if ( windows.createWindow( { "queued", 640, 480 }, &hWindow ) != SIR_WINDOW_OK ) {
+		return false;
+	}
+	char szTitle[32] = "owner-owned queued title";
+	const sirWindowMutation_t mutation = { SIR_WINDOW_MUTATION_TITLE, szTitle, 0, 0 };
+	sirQueuedMutationWorkerContext_t context = { &windows, hWindow, mutation, 0, SIR_WINDOW_STOPPED, false };
+	SIRThread worker;
+	if ( !worker.start( sirQueueMutationWorker, &context ) || !worker.join() || context.eResult != SIR_WINDOW_OK ||
+	     context.nTicket == 0 ) {
+		return false;
+	}
+	uint64_t nTicket = context.nTicket;
+	sirWindowResult_t eResult = SIR_WINDOW_STOPPED;
+	bool bComplete = true;
+	if ( windows.queryRequest( nTicket, &eResult, &bComplete ) != SIR_WINDOW_OK || bComplete ) {
+		return false;
+	}
+	szTitle[0] = 'X'; // The platform request must retain its own UTF-8 copy.
+	if ( windows.pumpEvents( 16 ) != SIR_WINDOW_OK || driver.m_nMutations != 1 ||
+	     strcmp( driver.m_szLastTitle, "owner-owned queued title" ) != 0 ||
+	     windows.queryRequest( nTicket, &eResult, &bComplete ) != SIR_WINDOW_OK || !bComplete || eResult != SIR_WINDOW_OK ||
+	     windows.queryRequest( nTicket, &eResult, &bComplete ) != SIR_WINDOW_INVALID_HANDLE ) {
+		return false;
+	}
+	// A pending request against a retired slot must fail after recycling.
+	uint64_t nStale = 0;
+	if ( windows.queueMutation( hWindow, mutation, &nStale ) != SIR_WINDOW_OK ||
+	     windows.destroyWindow( hWindow ) != SIR_WINDOW_OK || windows.pumpEvents( 1 ) != SIR_WINDOW_OK ||
+	     windows.queryRequest( nStale, &eResult, &bComplete ) != SIR_WINDOW_OK || !bComplete ||
+	     eResult != SIR_WINDOW_INVALID_HANDLE ) {
+		return false;
+	}
+	if ( windows.createWindow( { "again", 640, 480 }, &hWindow ) != SIR_WINDOW_OK ) {
+		return false;
+	}
+	uint64_t tickets[SIR_WINDOW_REQUEST_CAPACITY] = {};
+	for ( uint32_t i = 0; i < SIR_WINDOW_REQUEST_CAPACITY; ++i ) {
+		if ( windows.queueMutation( hWindow, { SIR_WINDOW_MUTATION_RESIZE, nullptr, 640 + i, 480 + i }, &tickets[i] ) !=
+		     SIR_WINDOW_OK ) {
+			return false;
+		}
+	}
+	uint64_t extra = 0;
+	if ( windows.queueClose( hWindow, &extra ) != SIR_WINDOW_OUT_OF_CAPACITY || windows.pumpEvents( 32 ) != SIR_WINDOW_OK ) {
+		return false;
+	}
+	for ( uint32_t i = 0; i < SIR_WINDOW_REQUEST_CAPACITY; ++i ) {
+		if ( windows.queryRequest( tickets[i], &eResult, &bComplete ) != SIR_WINDOW_OK || !bComplete ||
+		     eResult != SIR_WINDOW_OK ) {
+			return false;
+		}
+	}
+	context.hWindow = hWindow;
+	context.bClose = true;
+	context.nTicket = 0;
+	SIRThread closer;
+	if ( !closer.start( sirQueueMutationWorker, &context ) || !closer.join() || context.eResult != SIR_WINDOW_OK ||
+	     windows.pumpEvents( 16 ) != SIR_WINDOW_OK ||
+	     windows.queryRequest( context.nTicket, &eResult, &bComplete ) != SIR_WINDOW_OK || !bComplete ||
+	     eResult != SIR_WINDOW_OK ) {
+		return false;
+	}
+	sirWindowSnapshot_t snapshot = {};
+	if ( windows.querySnapshot( hWindow, &snapshot ) != SIR_WINDOW_OK || !snapshot.bCloseRequested || snapshot.bReady ||
+	     windows.queueMutation( hWindow, mutation, &extra ) != SIR_WINDOW_BUSY ||
+	     windows.destroyWindow( hWindow ) != SIR_WINDOW_OK || windows.shutdown() != SIR_SYSTEM_OK ) {
+		return false;
+	}
+	return true;
 }
 
 static bool sirTestHeadless( void ) noexcept
@@ -354,7 +463,8 @@ static bool sirTestWaylandInitialConfigure( void ) noexcept
 
 int main( void )
 {
-	if ( !sirTestHeadless() || !sirTestHandlesLeasesAndEvents() || !sirTestEventOverflow() || !sirTestWaylandInitialConfigure() ) {
+	if ( !sirTestHeadless() || !sirTestHandlesLeasesAndEvents() || !sirTestEventOverflow() || !sirTestWaylandInitialConfigure() ||
+	     !sirTestQueuedOwnerMutations() ) {
 		fputs( "SIRWindowSystemTests FAIL\n", stderr );
 		return 1;
 	}

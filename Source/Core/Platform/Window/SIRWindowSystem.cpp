@@ -1,4 +1,5 @@
 #include <Core/Platform/Window/SIRWindowSystem.h>
+#include <string.h>
 
 SIRWindowSystem::SIRWindowSystem( SIRWindowDriver& driver ) noexcept
     : m_pDriver( &driver ), m_nOwnerThreadId( 0 ), m_nEpoch( 0 ), m_nEventSequence( 0 ), m_nLeaseSerial( 0 ), m_nNativeGeneration( 0 ),
@@ -16,7 +17,11 @@ sirSystemResult_t SIRWindowSystem::initialize( void ) noexcept
 	}
 	m_nOwnerThreadId = SIRPlatformThreadControl::getCurrentThreadId();
 	{
+		SIRScopedLock<SIRMutex> requestGuard( m_RequestMutex );
 		SIRScopedLock<SIRMutex> guard( m_SnapshotMutex );
+		for ( uint32_t i = 0; i < SIR_WINDOW_REQUEST_CAPACITY; ++i ) {
+			m_Requests[i] = {};
+		}
 		++m_nEpoch;
 		m_nEventSequence = 0;
 		m_bInitialized = true;
@@ -40,8 +45,15 @@ sirSystemResult_t SIRWindowSystem::shutdown( void ) noexcept
 	}
 	m_pDriver->shutdown();
 	{
+		SIRScopedLock<SIRMutex> requestGuard( m_RequestMutex );
 		SIRScopedLock<SIRMutex> guard( m_SnapshotMutex );
 		m_bInitialized = false;
+		for ( uint32_t i = 0; i < SIR_WINDOW_REQUEST_CAPACITY; ++i ) {
+			if ( m_Requests[i].nState == 1 ) {
+				m_Requests[i].eResult = SIR_WINDOW_STOPPED;
+				m_Requests[i].nState = 3;
+			}
+		}
 	}
 	return SIR_SYSTEM_OK;
 }
@@ -171,6 +183,146 @@ sirWindowResult_t SIRWindowSystem::mutateWindow( sirWindowHandle_t hWindow, cons
 		return SIR_WINDOW_INVALID_ARGUMENT;
 	}
 	return m_pDriver->mutateWindow( hWindow.nSlot, mutation );
+}
+
+sirWindowResult_t SIRWindowSystem::enqueueRequest( sirWindowHandle_t hWindow, const sirWindowMutation_t *pMutation,
+                                                        uint64_t *pTicket ) noexcept
+{
+	if ( pTicket == nullptr ) {
+		return SIR_WINDOW_INVALID_ARGUMENT;
+	}
+	if ( pMutation != nullptr ) {
+		if ( pMutation->eKind < SIR_WINDOW_MUTATION_TITLE || pMutation->eKind > SIR_WINDOW_MUTATION_MAXIMIZE ||
+		     ( pMutation->eKind == SIR_WINDOW_MUTATION_TITLE && pMutation->pszTitle == nullptr ) ||
+		     ( pMutation->eKind == SIR_WINDOW_MUTATION_RESIZE && ( pMutation->nWidth == 0 || pMutation->nHeight == 0 ) ) ) {
+			return SIR_WINDOW_INVALID_ARGUMENT;
+		}
+	}
+	SIRScopedLock<SIRMutex> requestGuard( m_RequestMutex );
+	SIRScopedLock<SIRMutex> snapshotGuard( m_SnapshotMutex );
+	if ( !m_bInitialized ) {
+		return SIR_WINDOW_STOPPED;
+	}
+	const sirWindowResult_t eValid = validate( hWindow );
+	if ( eValid != SIR_WINDOW_OK ) {
+		return eValid;
+	}
+	if ( m_Slots[hWindow.nSlot].snapshot.bCloseRequested ) {
+		return SIR_WINDOW_BUSY;
+	}
+	if ( m_nRequestSerial == UINT64_MAX ) {
+		return SIR_WINDOW_OUT_OF_CAPACITY;
+	}
+	uint32_t nSlot = SIR_WINDOW_REQUEST_CAPACITY;
+	for ( uint32_t i = 0; i < SIR_WINDOW_REQUEST_CAPACITY; ++i ) {
+		if ( m_Requests[i].nState == 0 ) {
+			nSlot = i;
+			break;
+		}
+	}
+	if ( nSlot == SIR_WINDOW_REQUEST_CAPACITY ) {
+		return SIR_WINDOW_OUT_OF_CAPACITY;
+	}
+	sirWindowRequestEntry_t& request = m_Requests[nSlot];
+	request = {};
+	request.hWindow = hWindow;
+	request.bClose = pMutation == nullptr;
+	if ( pMutation != nullptr ) {
+		request.mutation = *pMutation;
+		if ( pMutation->eKind == SIR_WINDOW_MUTATION_TITLE ) {
+			uint32_t nLength = 0;
+			while ( nLength < SIR_WINDOW_REQUEST_TITLE_CAPACITY && pMutation->pszTitle[nLength] != '\0' ) {
+				++nLength;
+			}
+			if ( nLength == SIR_WINDOW_REQUEST_TITLE_CAPACITY ) {
+				return SIR_WINDOW_INVALID_ARGUMENT;
+			}
+			memcpy( request.szTitle, pMutation->pszTitle, nLength + 1 );
+			request.mutation.pszTitle = request.szTitle;
+		}
+	}
+	request.nTicket = ++m_nRequestSerial;
+	request.nState = 1;
+	*pTicket = request.nTicket;
+	return SIR_WINDOW_OK;
+}
+
+sirWindowResult_t SIRWindowSystem::queueMutation( sirWindowHandle_t hWindow, const sirWindowMutation_t& mutation,
+                                                  uint64_t *pTicket ) noexcept
+{
+	return enqueueRequest( hWindow, &mutation, pTicket );
+}
+
+sirWindowResult_t SIRWindowSystem::queueClose( sirWindowHandle_t hWindow, uint64_t *pTicket ) noexcept
+{
+	return enqueueRequest( hWindow, nullptr, pTicket );
+}
+
+sirWindowResult_t SIRWindowSystem::queryRequest( uint64_t nTicket, sirWindowResult_t *pResult, bool *pCompleted ) noexcept
+{
+	if ( nTicket == 0 || pResult == nullptr || pCompleted == nullptr ) {
+		return SIR_WINDOW_INVALID_ARGUMENT;
+	}
+	SIRScopedLock<SIRMutex> guard( m_RequestMutex );
+	for ( uint32_t i = 0; i < SIR_WINDOW_REQUEST_CAPACITY; ++i ) {
+		sirWindowRequestEntry_t& request = m_Requests[i];
+		if ( request.nState == 0 || request.nTicket != nTicket ) {
+			continue;
+		}
+		*pCompleted = request.nState == 3;
+		if ( request.nState == 3 ) {
+			*pResult = request.eResult;
+			request = {};
+		}
+		return SIR_WINDOW_OK;
+	}
+	return SIR_WINDOW_INVALID_HANDLE;
+}
+
+void SIRWindowSystem::processRequests( void ) noexcept
+{
+	for ( uint32_t nProcessed = 0; nProcessed < SIR_WINDOW_REQUEST_CAPACITY; ++nProcessed ) {
+		uint64_t nTicket = UINT64_MAX;
+		sirWindowHandle_t hWindow = {};
+		sirWindowMutation_t mutation = {};
+		char szTitle[SIR_WINDOW_REQUEST_TITLE_CAPACITY] = {};
+		bool bClose = false;
+		{
+			SIRScopedLock<SIRMutex> guard( m_RequestMutex );
+			uint32_t nCandidate = SIR_WINDOW_REQUEST_CAPACITY;
+			for ( uint32_t i = 0; i < SIR_WINDOW_REQUEST_CAPACITY; ++i ) {
+				const sirWindowRequestEntry_t& request = m_Requests[i];
+				if ( request.nState == 1 && request.nTicket < nTicket ) {
+					nTicket = request.nTicket;
+					nCandidate = i;
+				}
+			}
+			if ( nCandidate == SIR_WINDOW_REQUEST_CAPACITY ) {
+				break;
+			}
+			sirWindowRequestEntry_t& request = m_Requests[nCandidate];
+			request.nState = 2;
+			hWindow = request.hWindow;
+			mutation = request.mutation;
+			bClose = request.bClose;
+			if ( !bClose && mutation.eKind == SIR_WINDOW_MUTATION_TITLE ) {
+				memcpy( szTitle, request.szTitle, SIR_WINDOW_REQUEST_TITLE_CAPACITY );
+				mutation.pszTitle = szTitle;
+			}
+		}
+		const sirWindowResult_t eResult = bClose ? requestClose( hWindow ) : mutateWindow( hWindow, mutation );
+		{
+			SIRScopedLock<SIRMutex> guard( m_RequestMutex );
+			for ( uint32_t i = 0; i < SIR_WINDOW_REQUEST_CAPACITY; ++i ) {
+				sirWindowRequestEntry_t& request = m_Requests[i];
+				if ( request.nTicket == nTicket && request.nState == 2 ) {
+					request.eResult = eResult;
+					request.nState = 3;
+					break;
+				}
+			}
+		}
+	}
 }
 
 void SIRWindowSystem::processReleasedLeases( void ) noexcept
@@ -306,6 +458,7 @@ sirWindowResult_t SIRWindowSystem::pumpEvents( uint32_t nBudget ) noexcept
 		return SIR_WINDOW_INVALID_ARGUMENT;
 	}
 	processReleasedLeases();
+	processRequests();
 	return m_pDriver->pumpEvents( nBudget, onDriverEvent, this );
 }
 

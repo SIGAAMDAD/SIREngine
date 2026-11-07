@@ -45,6 +45,22 @@ typedef struct sirWindowLeaseEntry_s
 	SIRAtomic<uint8_t> nState;
 } sirWindowLeaseEntry_t;
 
+// A caller-owned request is copied before the platform owner applies it.
+// Completed tickets remain queryable until consumed; abandoned tickets
+// explicitly exhaust the bounded table rather than overwriting an outcome.
+constexpr uint32_t SIR_WINDOW_REQUEST_CAPACITY = 32;
+constexpr uint32_t SIR_WINDOW_REQUEST_TITLE_CAPACITY = 128;
+typedef struct sirWindowRequestEntry_s
+{
+	sirWindowHandle_t hWindow;
+	sirWindowMutation_t mutation;
+	uint64_t nTicket;
+	sirWindowResult_t eResult;
+	uint8_t nState;
+	bool bClose;
+	char szTitle[SIR_WINDOW_REQUEST_TITLE_CAPACITY];
+} sirWindowRequestEntry_t;
+
 // Core owns native window identities, event state and render-window leases.
 // Mutating operations and event reads run on the window owner thread.
 // querySnapshot and releaseNativeLease are safe for cross-thread consumers.
@@ -66,6 +82,10 @@ public:
 	sirWindowResult_t createWindow( const sirWindowCreateDesc_t& desc, sirWindowHandle_t *pHandle ) noexcept;
 	sirWindowResult_t requestClose( sirWindowHandle_t hWindow ) noexcept;
 	sirWindowResult_t mutateWindow( sirWindowHandle_t hWindow, const sirWindowMutation_t& mutation ) noexcept;
+	// Thread-safe bounded submission; native OS mutations execute only in pumpEvents.
+	sirWindowResult_t queueMutation( sirWindowHandle_t hWindow, const sirWindowMutation_t& mutation, uint64_t *pTicket ) noexcept;
+	sirWindowResult_t queueClose( sirWindowHandle_t hWindow, uint64_t *pTicket ) noexcept;
+	sirWindowResult_t queryRequest( uint64_t nTicket, sirWindowResult_t *pResult, bool *pCompleted ) noexcept;
 	sirWindowResult_t destroyWindow( sirWindowHandle_t hWindow ) noexcept;
 	sirWindowResult_t pumpEvents( uint32_t nBudget ) noexcept;
 	sirWindowResult_t readEvents( sirWindowEventRead_t *pRead ) noexcept;
@@ -79,14 +99,19 @@ private:
 	sirWindowResult_t validate( sirWindowHandle_t hWindow ) const noexcept;
 	sirWindowResult_t requireOwner( void ) const noexcept;
 	void processReleasedLeases( void ) noexcept;
+	void processRequests( void ) noexcept;
+	sirWindowResult_t enqueueRequest( sirWindowHandle_t hWindow, const sirWindowMutation_t *pMutation, uint64_t *pTicket ) noexcept;
 	void pushEvent( sirWindowHandle_t hWindow, sirWindowEventKind_t eKind, uint32_t nWidth, uint32_t nHeight ) noexcept;
 
 	mutable SIRMutex m_SnapshotMutex;
+	mutable SIRMutex m_RequestMutex;
 	SIRWindowDriver *m_pDriver;
 	uint64_t m_nOwnerThreadId;
 	sirWindowSlot_t m_Slots[SIR_WINDOW_MAX_WINDOWS] = {};
 	sirWindowLeaseEntry_t m_Leases[SIR_WINDOW_MAX_LEASES] = {};
 	sirWindowEvent_t m_Events[SIR_WINDOW_EVENT_CAPACITY] = {};
+	sirWindowRequestEntry_t m_Requests[SIR_WINDOW_REQUEST_CAPACITY] = {};
+	uint64_t m_nRequestSerial = 0;
 	uint64_t m_nEpoch;
 	uint64_t m_nEventSequence;
 	uint64_t m_nLeaseSerial;
