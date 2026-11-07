@@ -152,6 +152,19 @@ static bool testSha256( void ) noexcept
 	sirPackWrite64( szWire, 0x0123456789abcdefULL );
 	CHECK( sirPackRead64( szWire ) == 0x0123456789abcdefULL );
 	CHECK( szWire[0] == 0xef && szWire[7] == 0x01 );
+	static constexpr uint8_t s_szEmptyDigest[32] = { 0xe3, 0xb0, 0xc4, 0x42, 0x98, 0xfc, 0x1c, 0x14, 0x9a, 0xfb, 0xf4,
+	                                                 0xc8, 0x99, 0x6f, 0xb9, 0x24, 0x27, 0xae, 0x41, 0xe4, 0x64, 0x9b,
+	                                                 0x93, 0x4c, 0xa4, 0x95, 0x99, 0x1b, 0x78, 0x52, 0xb8, 0x55 };
+	sirPackSha256( nullptr, 0, szActual );
+	CHECK( memcmp( szActual, s_szEmptyDigest, 32 ) == 0 );
+	sirPackSha256( nullptr, 1, szActual );
+	CHECK( memcmp( szActual, s_szEmptyDigest, 32 ) == 0 );
+	sirPackSha256( s_szABC, 3, nullptr );
+	sirPackCatalogDigest( nullptr, 128, szActual );
+	CHECK( memcmp( szActual, s_szEmptyDigest, 32 ) == 0 );
+	sirPackCatalogDigest( s_szABC, 3, szActual );
+	CHECK( memcmp( szActual, s_szEmptyDigest, 32 ) == 0 );
+	sirPackCatalogDigest( s_szABC, 3, nullptr );
 	return true;
 }
 
@@ -488,6 +501,8 @@ static bool testCookerArgumentBoundaries( void ) noexcept
 	REJECT_COOK( sample.chunks[0].nAlignment = 0 );
 	REJECT_COOK( sample.chunks[0].nAlignment = 8192 );
 	REJECT_COOK( sample.chunks[0].nAlignment = 3 );
+	REJECT_COOK( sample.chunks[0].nAlignment = 4096 );
+	REJECT_COOK( sample.desc.nScratchBytes = UINT64_MAX );
 	REJECT_COOK( sample.chunks[1].nChunkId = 0 );
 	REJECT_COOK( sample.dependencies[0].key.m_nAssetId = 0 );
 	REJECT_COOK( sample.dependencies[0].eKind = ( sirResourceEdgeKind_t )255 );
@@ -499,6 +514,95 @@ static bool testCookerArgumentBoundaries( void ) noexcept
 	REJECT_COOK( sample.chunks[0].pBytes = sample.szCatalog );
 	REJECT_COOK( sample.chunks[0].pBytes = sample.szShard0 );
 #undef REJECT_COOK
+	return true;
+}
+
+static bool testCookerOutputAliasGuards( void ) noexcept
+{
+#define REJECT_OUTPUT( pOutput )                                                                                                           \
+	do {                                                                                                                                   \
+		sirPackTestFixture_t sample = {};                                                                                                  \
+		makeFixture( &sample );                                                                                                            \
+		CHECK( SIRPackCooker::build( sample.desc, ( uint8_t * )( pOutput ), 1024 ) == SIR_PACK_INVALID_ARGUMENT );                         \
+	} while ( 0 )
+	REJECT_OUTPUT( sample.resources );
+	REJECT_OUTPUT( sample.chunks );
+	REJECT_OUTPUT( sample.dependencies );
+	REJECT_OUTPUT( sample.shards );
+	REJECT_OUTPUT( sample.szScratch );
+	REJECT_OUTPUT( sample.szShard0 );
+	REJECT_OUTPUT( sample.szShard1 );
+#undef REJECT_OUTPUT
+#define REJECT_SHARD( pOutput )                                                                                                            \
+	do {                                                                                                                                   \
+		sirPackTestFixture_t sample = {};                                                                                                  \
+		makeFixture( &sample );                                                                                                            \
+		sample.shards[0].pBytes = ( uint8_t * )( pOutput );                                                                                \
+		CHECK( SIRPackCooker::build( sample.desc, sample.szCatalog, sizeof( sample.szCatalog ) ) == SIR_PACK_INVALID_ARGUMENT );           \
+	} while ( 0 )
+	REJECT_SHARD( sample.resources );
+	REJECT_SHARD( sample.chunks );
+	REJECT_SHARD( sample.dependencies );
+	REJECT_SHARD( sample.shards );
+	REJECT_SHARD( sample.szCatalog );
+	REJECT_SHARD( sample.szScratch );
+	REJECT_SHARD( sample.chunks[0].pBytes );
+#undef REJECT_SHARD
+	return true;
+}
+
+static bool testMultipleDependencyRecords( void ) noexcept
+{
+	sirPackTestFixture_t sample = {};
+	makeFixture( &sample );
+	sirPackDependency_t szEdges[2] = {};
+	szEdges[0].key = { 150, 1, 0 };
+	szEdges[0].eKind = SIR_RESOURCE_EDGE_KIND_OPTIONAL;
+	szEdges[1].key = sample.resources[1].key;
+	szEdges[1].eKind = SIR_RESOURCE_EDGE_KIND_REQUIRED;
+	sample.resources[0].nDependencyCount = 2;
+	sample.resources[1].nFirstDependency = 2;
+	sample.desc.pDependencies = szEdges;
+	sample.desc.nDependencyCount = 2;
+	CHECK( SIRPackCooker::build( sample.desc, sample.szCatalog, sizeof( sample.szCatalog ) ) == SIR_PACK_OK );
+	SIRPackCatalog catalog;
+	CHECK( catalog.open( sample.szCatalog, SIRPackCooker::requiredCatalogBytes( sample.desc ), sample.szScratch,
+	                     sizeof( sample.szScratch ) ) == SIR_PACK_OK );
+	CHECK( catalog.getDependencyCount() == 2 );
+	szEdges[1].key = szEdges[0].key;
+	CHECK( SIRPackCooker::build( sample.desc, sample.szCatalog, sizeof( sample.szCatalog ) ) == SIR_PACK_INVALID_FORMAT );
+	szEdges[1].key = { 149, 1, 0 };
+	CHECK( SIRPackCooker::build( sample.desc, sample.szCatalog, sizeof( sample.szCatalog ) ) == SIR_PACK_INVALID_FORMAT );
+	return true;
+}
+
+static bool testSpecialCookerCases( void ) noexcept
+{
+	sirPackTestFixture_t sample = {};
+	makeFixture( &sample );
+	// A dependency-free package is legal and keeps an empty dependency table.
+	sample.resources[0].nDependencyCount = 0;
+	sample.resources[1].nFirstDependency = 0;
+	sample.desc.nDependencyCount = 0;
+	CHECK( SIRPackCooker::build( sample.desc, sample.szCatalog, sizeof( sample.szCatalog ) ) == SIR_PACK_OK );
+	SIRPackCatalog catalog;
+	CHECK( catalog.open( sample.szCatalog, SIRPackCooker::requiredCatalogBytes( sample.desc ), sample.szScratch,
+	                     sizeof( sample.szScratch ) ) == SIR_PACK_OK );
+	CHECK( catalog.getDependencyCount() == 0 );
+	makeFixture( &sample );
+	sample.resources[0].key.m_nAssetId = 100;
+	sample.resources[0].key.m_nTypeId = 3;
+	sample.resources[1].key.m_nAssetId = 100;
+	sample.resources[1].key.m_nTypeId = 2;
+	CHECK( SIRPackCooker::build( sample.desc, sample.szCatalog, sizeof( sample.szCatalog ) ) == SIR_PACK_INVALID_FORMAT );
+	makeFixture( &sample );
+	sample.resources[0].key.m_nAssetId = 100;
+	sample.resources[0].key.m_nVariantId = 2;
+	sample.resources[1].key.m_nAssetId = 100;
+	sample.resources[1].key.m_nVariantId = 1;
+	CHECK( SIRPackCooker::build( sample.desc, sample.szCatalog, sizeof( sample.szCatalog ) ) == SIR_PACK_INVALID_FORMAT );
+	makeFixture( &sample );
+	CHECK( SIRPackCooker::build( sample.desc, nullptr, sizeof( sample.szCatalog ) ) == SIR_PACK_INVALID_ARGUMENT );
 	return true;
 }
 
@@ -523,12 +627,99 @@ static bool testCorruptionMutations( void ) noexcept
 	return true;
 }
 
+static bool testCatalogApiAndShardGuards( void ) noexcept
+{
+	sirPackTestFixture_t sample = {};
+	makeFixture( &sample );
+	SIRPackCatalog catalog;
+	sirPackResource_t resource = {};
+	sirPackChunk_t chunk = {};
+	sirPackShard_t shard = {};
+	sirPackDependency_t dep = {};
+	CHECK( catalog.findResource( sample.resources[0].key, &resource ) == SIR_PACK_INVALID_ARGUMENT );
+	CHECK( catalog.resourceAt( 0, &resource ) == SIR_PACK_INVALID_ARGUMENT );
+	CHECK( catalog.chunkAt( 0, &chunk ) == SIR_PACK_INVALID_ARGUMENT );
+	CHECK( catalog.shardAt( 0, &shard ) == SIR_PACK_INVALID_ARGUMENT );
+	CHECK( catalog.dependencyAt( 0, &dep ) == SIR_PACK_INVALID_ARGUMENT );
+	CHECK( catalog.validateShard( 0, sample.szShard0, 64 ) == SIR_PACK_INVALID_ARGUMENT );
+	CHECK( catalog.verifyDecodedChunk( 0, sample.szShard0, 5 ) == SIR_PACK_INVALID_ARGUMENT );
+	CHECK( SIRPackCooker::build( sample.desc, sample.szCatalog, sizeof( sample.szCatalog ) ) == SIR_PACK_OK );
+	const uint64_t nBytes = SIRPackCooker::requiredCatalogBytes( sample.desc );
+	CHECK( catalog.open( sample.szCatalog, nBytes, sample.szCatalog, nBytes ) == SIR_PACK_INVALID_ARGUMENT );
+	CHECK( catalog.open( sample.szCatalog, nBytes, sample.szScratch, sizeof( sample.szScratch ) ) == SIR_PACK_OK );
+	CHECK( catalog.findResource( sample.resources[0].key, nullptr ) == SIR_PACK_INVALID_ARGUMENT );
+	CHECK( catalog.resourceAt( 0, nullptr ) == SIR_PACK_INVALID_ARGUMENT );
+	CHECK( catalog.chunkAt( 0, nullptr ) == SIR_PACK_INVALID_ARGUMENT );
+	CHECK( catalog.shardAt( 0, nullptr ) == SIR_PACK_INVALID_ARGUMENT );
+	CHECK( catalog.dependencyAt( 0, nullptr ) == SIR_PACK_INVALID_ARGUMENT );
+	CHECK( catalog.shardAt( 2, &shard ) == SIR_PACK_INVALID_ARGUMENT );
+	CHECK( catalog.chunkAt( 3, &chunk ) == SIR_PACK_INVALID_ARGUMENT );
+	CHECK( catalog.findResource( { 101, 1, 0 }, &resource ) == SIR_PACK_NOT_FOUND );
+	CHECK( catalog.findResource( { 99, 1, 0 }, &resource ) == SIR_PACK_NOT_FOUND );
+	CHECK( catalog.validateShard( 0, nullptr, 69 ) == SIR_PACK_INVALID_ARGUMENT );
+	CHECK( catalog.verifyDecodedChunk( 0, nullptr, 5 ) == SIR_PACK_INVALID_ARGUMENT );
+	CHECK( catalog.verifyDecodedChunk( 3, sample.szShard0, 5 ) == SIR_PACK_INVALID_ARGUMENT );
+	CHECK( catalog.verifyDecodedChunk( 0, sample.szShard0, 5 ) == SIR_PACK_BAD_DIGEST );
+	const uint64_t nShardBytes = sirPackRead64( sample.szShard0 + 32 );
+	uint8_t szOriginal[128] = {};
+	memcpy( szOriginal, sample.szShard0, nShardBytes );
+	typedef struct sirPackHeaderPoison_s
+	{
+		uint32_t nOffset;
+		uint32_t nValue;
+		uint8_t nWidth;
+	} sirPackHeaderPoison_t;
+	const sirPackHeaderPoison_t szCases[] = { { 0, 0, 1 },  { 4, 2, 2 },   { 6, 0, 2 },  { 8, 0, 4 },  { 12, 1, 4 },
+	                                          { 16, 0, 4 }, { 24, 99, 4 }, { 32, 0, 4 }, { 40, 1, 1 }, { 63, 1, 1 } };
+	for ( uint32_t i = 0; i < sizeof( szCases ) / sizeof( szCases[0] ); ++i ) {
+		memcpy( sample.szShard0, szOriginal, nShardBytes );
+		if ( szCases[i].nWidth == 4 ) {
+			sirPackWrite32( sample.szShard0 + szCases[i].nOffset, szCases[i].nValue );
+		} else if ( szCases[i].nWidth == 2 ) {
+			sirPackWrite16( sample.szShard0 + szCases[i].nOffset, ( uint16_t )szCases[i].nValue );
+		} else {
+			sample.szShard0[szCases[i].nOffset] = ( uint8_t )szCases[i].nValue;
+		}
+		CHECK( catalog.validateShard( 0, sample.szShard0, nShardBytes ) != SIR_PACK_OK );
+	}
+	memcpy( sample.szShard0, szOriginal, nShardBytes );
+	CHECK( catalog.validateShard( 0, sample.szShard0, nShardBytes ) == SIR_PACK_OK );
+	return true;
+}
+
+static bool testKeyDimensionOrdering( void ) noexcept
+{
+	for ( uint32_t iMode = 0; iMode < 2; ++iMode ) {
+		sirPackTestFixture_t sample = {};
+		makeFixture( &sample );
+		sample.resources[1].key.m_nAssetId = 100;
+		if ( iMode == 0 ) {
+			sample.resources[1].key.m_nTypeId = 2;
+		} else {
+			sample.resources[1].key.m_nVariantId = 1;
+		}
+		sample.dependencies[0].key = sample.resources[1].key;
+		CHECK( SIRPackCooker::build( sample.desc, sample.szCatalog, sizeof( sample.szCatalog ) ) == SIR_PACK_OK );
+		SIRPackCatalog catalog;
+		CHECK( catalog.open( sample.szCatalog, SIRPackCooker::requiredCatalogBytes( sample.desc ), sample.szScratch,
+		                     sizeof( sample.szScratch ) ) == SIR_PACK_OK );
+		sirPackResource_t resource = {};
+		CHECK( catalog.findResource( sample.resources[0].key, &resource ) == SIR_PACK_OK );
+		CHECK( catalog.findResource( sample.resources[1].key, &resource ) == SIR_PACK_OK );
+		CHECK( catalog.findResource( { 100, 0, 0 }, &resource ) == SIR_PACK_NOT_FOUND );
+		CHECK( catalog.findResource( { 100, 3, 0 }, &resource ) == SIR_PACK_NOT_FOUND );
+		CHECK( catalog.findResource( { 100, 1, 2 }, &resource ) == SIR_PACK_NOT_FOUND );
+	}
+	return true;
+}
+
 int main( int nArgs, char **ppszArgs )
 {
 	const bool bWrite = nArgs == 2 && strcmp( ppszArgs[1], "--write-golden" ) == 0;
 	if ( !testSha256() || !testRoundtrip( bWrite ) || !testMalformedCatalog() || !testShardAndChunkIdentity() ||
 	     !testFailedBuildIsAtomic() || !testCycleRejection() || !testCookerArgumentBoundaries() || !testCatalogSemanticValidation() ||
-	     !testCorruptionMutations() ) {
+	     !testCorruptionMutations() || !testCookerOutputAliasGuards() || !testSpecialCookerCases() || !testMultipleDependencyRecords() ||
+	     !testCatalogApiAndShardGuards() || !testKeyDimensionOrdering() ) {
 		return 1;
 	}
 	return 0;
