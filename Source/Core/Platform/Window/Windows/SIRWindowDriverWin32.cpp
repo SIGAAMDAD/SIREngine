@@ -25,7 +25,7 @@ sirWindowResult_t SIRWindowDriverWin32::initialize( void ) noexcept
 	WNDCLASSW definition = {};
 	definition.lpfnWndProc = windowProc;
 	definition.hInstance = GetModuleHandleW( nullptr );
-	definition.hCursor = LoadCursorW( nullptr, MAKEINTRESOURCEW( OCR_NORMAL ) );
+	definition.hCursor = LoadCursorW( nullptr, MAKEINTRESOURCEW( 32512 ) );
 	definition.lpszClassName = s_szWindowClass;
 	if ( RegisterClassW( &definition ) == 0 ) {
 		return SIR_WINDOW_NATIVE_FAILURE;
