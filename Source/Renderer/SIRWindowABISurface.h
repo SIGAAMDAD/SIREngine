@@ -42,6 +42,8 @@ public:
 	sirGraphicsABIResult_t create( SIRWindowSystem& windows, sirWindowHandle_t hWindow, const sirGraphicsABIDevice_t *pDevice,
 	                               const sirGraphicsABIPresentDesc_t *pPresent ) noexcept;
 	sirGraphicsABIResult_t resize( const sirGraphicsABIPresentDesc_t *pPresent ) noexcept;
+	sirGraphicsABIResult_t acquireImage( sirGraphicsSurfaceImage_t *pImage ) noexcept;
+	sirGraphicsABIResult_t presentImage( const sirGraphicsCompletion_t *pCompletion ) noexcept;
 	sirGraphicsABIResult_t retire( const sirGraphicsCompletionSet_t *pComplete ) noexcept;
 
 protected:
@@ -54,5 +56,8 @@ private:
 	sirGraphicsNativeSurface_t m_Native = {};
 	sirGraphicsHandle_t m_hSurface = {};
 	uint64_t m_nMetricsRevision = 0;
+	sirGraphicsABIPresentDesc_t m_Present = {};
+	sirGraphicsSurfaceImage_t m_Acquired = {};
+	bool m_bImageAcquired = false;
 };
 #endif // __SIRENGINE_SIRWINDOWABISURFACE_H__

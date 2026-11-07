@@ -22,6 +22,11 @@ static uint32_t s_nLastWidth = 0;
 static uint32_t s_nLastHeight = 0;
 static uint32_t s_nCreates = 0;
 static uint32_t s_nRetires = 0;
+static uint32_t s_nAcquires = 0;
+static uint32_t s_nPresents = 0;
+static uint32_t s_nResizes = 0;
+static bool s_bBusyPresent = false;
+static uint64_t s_nNativeGeneration = 0;
 
 sirGraphicsABIResult_t sirGraphicsCreateABISurface( const sirGraphicsABIDevice_t *pDevice, const sirGraphicsABINativeSurface_t *pNative,
                                                     const sirGraphicsABIPresentDesc_t *pPresent, sirGraphicsHandle_t *pSurface ) noexcept
@@ -35,6 +40,7 @@ sirGraphicsABIResult_t sirGraphicsCreateABISurface( const sirGraphicsABIDevice_t
 	++s_nCreates;
 	s_nLastWidth = pPresent->nWidth;
 	s_nLastHeight = pPresent->nHeight;
+	s_nNativeGeneration = pNative->nWindowGeneration;
 	*pSurface = { 1, 2, 3, SIR_GRAPHICS_HANDLE_SURFACE };
 	return SIR_GRAPHICS_SUCCESS;
 }
@@ -49,8 +55,34 @@ sirGraphicsABIResult_t sirGraphicsResizeABISurface( const sirGraphicsABIDevice_t
 	if ( s_bFailResize ) {
 		return SIR_GRAPHICS_BUSY;
 	}
+	++s_nResizes;
 	s_nLastWidth = pPresent->nWidth;
 	s_nLastHeight = pPresent->nHeight;
+	return SIR_GRAPHICS_SUCCESS;
+}
+
+sirGraphicsABIResult_t sirGraphicsAcquireABISurfaceImage( const sirGraphicsABIDevice_t *pDevice, sirGraphicsHandle_t hSurface,
+                                                          sirGraphicsSurfaceImage_t *pImage ) noexcept
+{
+	if ( pDevice == nullptr || pImage == nullptr || hSurface.eType != SIR_GRAPHICS_HANDLE_SURFACE ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	++s_nAcquires;
+	*pImage = { hSurface, { 2, 3, 3, SIR_GRAPHICS_HANDLE_TEXTURE }, ( uint64_t )s_nAcquires, s_nNativeGeneration };
+	return SIR_GRAPHICS_SUCCESS;
+}
+
+sirGraphicsABIResult_t sirGraphicsPresentABISurfaceImage( const sirGraphicsABIDevice_t *pDevice,
+                                                          const sirGraphicsSurfaceImage_t *pImage,
+                                                          const sirGraphicsCompletion_t *pCompletion ) noexcept
+{
+	if ( pDevice == nullptr || pImage == nullptr || pCompletion == nullptr || pImage->nAcquisitionId == 0 ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	if ( s_bBusyPresent ) {
+		return SIR_GRAPHICS_BUSY;
+	}
+	++s_nPresents;
 	return SIR_GRAPHICS_SUCCESS;
 }
 
@@ -147,18 +179,51 @@ static bool sirTestGPUWindowLeaseLifetime( void ) noexcept
 	     s_nLastHeight != 480 || windows.destroyWindow( hWindow ) != SIR_WINDOW_BUSY ) {
 		return false;
 	}
+	sirGraphicsSurfaceImage_t acquired = {};
+	sirGraphicsCompletion_t rendered = {};
+	sirGraphicsCompletionSet_t empty = {};
+	if ( surface.presentImage( &rendered ) != SIR_GRAPHICS_INVALID_HANDLE ||
+	     surface.acquireImage( &acquired ) != SIR_GRAPHICS_SUCCESS || acquired.nWindowGeneration != s_nNativeGeneration ||
+	     surface.acquireImage( &acquired ) != SIR_GRAPHICS_BUSY || surface.resize( &present ) != SIR_GRAPHICS_BUSY ||
+	     surface.retire( &empty ) != SIR_GRAPHICS_BUSY ) {
+		return false;
+	}
+	s_bBusyPresent = true;
+	if ( surface.presentImage( &rendered ) != SIR_GRAPHICS_BUSY ) {
+		return false;
+	}
+	s_bBusyPresent = false;
+	if ( surface.presentImage( &rendered ) != SIR_GRAPHICS_SUCCESS || surface.presentImage( &rendered ) != SIR_GRAPHICS_INVALID_HANDLE ||
+	     s_nAcquires != 1 || s_nPresents != 1 ) {
+		return false;
+	}
+	// Same-size present-mode changes are substantive and must call the backend.
+	if ( surface.resize( &present ) != SIR_GRAPHICS_SUCCESS || s_nResizes != 0 ) {
+		return false;
+	}
+	sirGraphicsABIPresentDesc_t changed = present;
+	changed.nMode = 1;
+	if ( surface.resize( &changed ) != SIR_GRAPHICS_SUCCESS || s_nResizes != 1 ||
+	     surface.resize( &changed ) != SIR_GRAPHICS_SUCCESS || s_nResizes != 1 ) {
+		return false;
+	}
+	present = changed;
 	const uint64_t nOldMetrics = surface.getMetricsRevision();
 	driver.queueResize( 1280, 720 );
 	if ( windows.pumpEvents( 1 ) != SIR_WINDOW_OK || surface.getMetricsRevision() != nOldMetrics ) {
 		return false;
 	}
 	s_bFailResize = true;
-	if ( surface.resize( &present ) != SIR_GRAPHICS_BUSY || surface.getMetricsRevision() != nOldMetrics ) {
+	if ( surface.acquireImage( &acquired ) != SIR_GRAPHICS_SURFACE_CHANGED || surface.resize( &present ) != SIR_GRAPHICS_BUSY || surface.getMetricsRevision() != nOldMetrics ) {
 		return false;
 	}
 	s_bFailResize = false;
 	if ( surface.resize( &present ) != SIR_GRAPHICS_SUCCESS || s_nLastWidth != 1280 || s_nLastHeight != 720 ||
 	     surface.getMetricsRevision() <= nOldMetrics ) {
+		return false;
+	}
+	if ( surface.acquireImage( &acquired ) != SIR_GRAPHICS_SUCCESS ||
+	     surface.presentImage( &rendered ) != SIR_GRAPHICS_SUCCESS || s_nAcquires != 2 || s_nPresents != 2 ) {
 		return false;
 	}
 	sirGraphicsCompletionSet_t completed = {};

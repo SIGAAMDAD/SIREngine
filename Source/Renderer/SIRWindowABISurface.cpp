@@ -26,7 +26,7 @@ sirGraphicsABIResult_t SIRWindowABISurface::create( SIRWindowSystem& windows, si
                                                     const sirGraphicsABIDevice_t *pDevice,
                                                     const sirGraphicsABIPresentDesc_t *pPresent ) noexcept
 {
-	if ( isActive() || pDevice == nullptr || pPresent == nullptr ) {
+	if ( isActive() || pDevice == nullptr || pPresent == nullptr || pPresent->nSize != sizeof( sirGraphicsABIPresentDesc_t ) ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	sirWindowSnapshot_t snapshot = {};
@@ -67,7 +67,54 @@ sirGraphicsABIResult_t SIRWindowABISurface::create( SIRWindowSystem& windows, si
 	m_Native = native;
 	m_hSurface = hSurface;
 	m_nMetricsRevision = after.nMetricsRevision;
+	m_Present = present;
 	return SIR_GRAPHICS_SUCCESS;
+}
+
+sirGraphicsABIResult_t SIRWindowABISurface::acquireImage( sirGraphicsSurfaceImage_t *pImage ) noexcept
+{
+	if ( !isActive() ) {
+		return SIR_GRAPHICS_INVALID_HANDLE;
+	}
+	if ( pImage == nullptr ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	if ( m_bImageAcquired ) {
+		return SIR_GRAPHICS_BUSY;
+	}
+	sirWindowSnapshot_t snapshot = {};
+	if ( m_pWindows->querySnapshot( m_hWindow, &snapshot ) != SIR_WINDOW_OK || !snapshot.bReady || snapshot.bCloseRequested ||
+	     snapshot.nWindowGeneration != m_Native.nWindowGeneration || snapshot.nMetricsRevision != m_nMetricsRevision ) {
+		return SIR_GRAPHICS_SURFACE_CHANGED;
+	}
+	sirGraphicsSurfaceImage_t acquired = {};
+	const sirGraphicsABIResult_t eAcquire = sirGraphicsAcquireABISurfaceImage( m_pDevice, m_hSurface, &acquired );
+	if ( eAcquire != SIR_GRAPHICS_SUCCESS ) {
+		return eAcquire;
+	}
+	m_Acquired = acquired;
+	m_bImageAcquired = true;
+	*pImage = acquired;
+	return SIR_GRAPHICS_SUCCESS;
+}
+
+sirGraphicsABIResult_t SIRWindowABISurface::presentImage( const sirGraphicsCompletion_t *pCompletion ) noexcept
+{
+	if ( !isActive() ) {
+		return SIR_GRAPHICS_INVALID_HANDLE;
+	}
+	if ( pCompletion == nullptr ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	if ( !m_bImageAcquired ) {
+		return SIR_GRAPHICS_INVALID_HANDLE;
+	}
+	const sirGraphicsABIResult_t ePresent = sirGraphicsPresentABISurfaceImage( m_pDevice, &m_Acquired, pCompletion );
+	if ( ePresent == SIR_GRAPHICS_SUCCESS ) {
+		m_Acquired = {};
+		m_bImageAcquired = false;
+	}
+	return ePresent;
 }
 
 sirGraphicsABIResult_t SIRWindowABISurface::resize( const sirGraphicsABIPresentDesc_t *pPresent ) noexcept
@@ -75,13 +122,24 @@ sirGraphicsABIResult_t SIRWindowABISurface::resize( const sirGraphicsABIPresentD
 	if ( !isActive() ) {
 		return SIR_GRAPHICS_INVALID_HANDLE;
 	}
-	if ( pPresent == nullptr ) {
+	if ( pPresent == nullptr || pPresent->nSize != sizeof( sirGraphicsABIPresentDesc_t ) ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	if ( m_bImageAcquired ) {
+		return SIR_GRAPHICS_BUSY;
 	}
 	sirWindowSnapshot_t snapshot = {};
 	if ( m_pWindows->querySnapshot( m_hWindow, &snapshot ) != SIR_WINDOW_OK || !snapshot.bReady || snapshot.bCloseRequested ||
 	     snapshot.nWindowGeneration != m_Native.nWindowGeneration || snapshot.nWidth == 0 || snapshot.nHeight == 0 ) {
 		return SIR_GRAPHICS_SURFACE_CHANGED;
+	}
+	// Window geometry alone does not determine swapchain compatibility.
+	// Callers can change present mode, format, tearing or buffer count.
+	if ( snapshot.nMetricsRevision == m_nMetricsRevision && snapshot.nWidth == m_Present.nWidth &&
+	     snapshot.nHeight == m_Present.nHeight && pPresent->nFormat == m_Present.nFormat &&
+	     pPresent->nMode == m_Present.nMode && pPresent->nBackbufferCount == m_Present.nBackbufferCount &&
+	     pPresent->nAllowTearing == m_Present.nAllowTearing && pPresent->nHdr == m_Present.nHdr ) {
+		return SIR_GRAPHICS_SUCCESS;
 	}
 	sirGraphicsABIPresentDesc_t present = *pPresent;
 	present.nWidth = snapshot.nWidth;
@@ -90,6 +148,7 @@ sirGraphicsABIResult_t SIRWindowABISurface::resize( const sirGraphicsABIPresentD
 	const sirGraphicsABIResult_t eResize = sirGraphicsResizeABISurface( m_pDevice, m_hSurface, &native, &present );
 	if ( eResize == SIR_GRAPHICS_SUCCESS ) {
 		m_nMetricsRevision = snapshot.nMetricsRevision;
+		m_Present = present;
 	}
 	return eResize;
 }
@@ -101,6 +160,9 @@ sirGraphicsABIResult_t SIRWindowABISurface::retire( const sirGraphicsCompletionS
 	}
 	if ( pComplete == nullptr ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	if ( m_bImageAcquired ) {
+		return SIR_GRAPHICS_BUSY;
 	}
 	const sirGraphicsABIResult_t eRetire = sirGraphicsRetireABIResource( m_pDevice, m_hSurface, pComplete );
 	if ( eRetire != SIR_GRAPHICS_SUCCESS ) {
@@ -114,5 +176,8 @@ sirGraphicsABIResult_t SIRWindowABISurface::retire( const sirGraphicsCompletionS
 	m_Native = {};
 	m_hSurface = {};
 	m_nMetricsRevision = 0;
+	m_Present = {};
+	m_Acquired = {};
+	m_bImageAcquired = false;
 	return eRelease == SIR_WINDOW_OK ? SIR_GRAPHICS_SUCCESS : SIR_GRAPHICS_DRIVER_ERROR;
 }
