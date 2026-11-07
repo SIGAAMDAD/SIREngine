@@ -3,6 +3,9 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
+#ifdef _WIN32
+#include <malloc.h>
+#endif
 
 static void *sirEditorTestAlloc( void *pContext, uint64_t nBytes, uint32_t nAlignment, uint32_t nDomain ) noexcept
 {
@@ -13,7 +16,11 @@ static void *sirEditorTestAlloc( void *pContext, uint64_t nBytes, uint32_t nAlig
 	}
 	void *pData = nullptr;
 	const size_t nAlign = nAlignment < sizeof( void * ) ? sizeof( void * ) : nAlignment;
+#ifdef _WIN32
+	return _aligned_malloc( ( size_t )nBytes, nAlign );
+#else
 	return posix_memalign( &pData, nAlign, ( size_t )nBytes ) == 0 ? pData : nullptr;
+#endif
 }
 static void sirEditorTestFree( void *pContext, void *pData, uint64_t nBytes, uint32_t nAlignment, uint32_t nDomain ) noexcept
 {
@@ -21,7 +28,11 @@ static void sirEditorTestFree( void *pContext, void *pData, uint64_t nBytes, uin
 	( void )nBytes;
 	( void )nAlignment;
 	( void )nDomain;
+#ifdef _WIN32
+	_aligned_free( pData );
+#else
 	free( pData );
+#endif
 }
 SIRResourceCatalog *sirEditorTestCatalog( void ) noexcept;
 void sirEditorTestCatalogShutdown( SIRResourceCatalog *pCatalog ) noexcept;

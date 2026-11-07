@@ -177,3 +177,10 @@ add_executable(SIREditorComplexWriterTests SIREditorComplexWriterTests.cpp)
 target_link_libraries(SIREditorComplexWriterTests PRIVATE SIR::EditorAuthoring)
 add_test(NAME editor.scene.complex-source-writer COMMAND SIREditorComplexWriterTests)
 sir_configure_owned_target(SIREditorComplexWriterTests)
+
+add_test(NAME editor.host.headless-scene-loop COMMAND SIREditor --headless-scene
+    "${PROJECT_SOURCE_DIR}/Tests/Fixtures/Editor/SourceGodotUI.tscn" 4)
+set_tests_properties(editor.host.headless-scene-loop PROPERTIES PASS_REGULAR_EXPRESSION "SIREditor scene frames: 4, nodes: 5")
+add_test(NAME editor.host.headless-scene-missing COMMAND SIREditor --headless-scene
+    "${PROJECT_SOURCE_DIR}/Tests/Fixtures/Editor/does-not-exist.tscn" 4)
+set_tests_properties(editor.host.headless-scene-missing PROPERTIES WILL_FAIL TRUE)
