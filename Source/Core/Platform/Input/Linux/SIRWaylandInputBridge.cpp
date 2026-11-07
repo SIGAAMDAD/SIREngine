@@ -347,6 +347,9 @@ void SIRWaylandInputBridge::keyboardEnter( void *pContext, wl_keyboard *pKeyboar
 	if ( pBridge->m_pKeyboard != pKeyboard || !pBridge->validSurface( pSurface ) ) {
 		return;
 	}
+	if ( pBridge->m_pKeyboardFocus != nullptr && pBridge->m_pKeyboardFocus != pSurface && pBridge->m_bKeyboardDevice ) {
+		( void )pBridge->m_pInput->loseState( pBridge->id(), pBridge->m_hKeyboard );
+	}
 	pBridge->m_pKeyboardFocus = pSurface;
 	pBridge->ensureDevices();
 	pBridge->m_pInput->text().setFocused( true );
@@ -436,7 +439,12 @@ void SIRWaylandInputBridge::pointerEnter( void *pContext, wl_pointer *pPointer, 
 	if ( pBridge->m_pPointer != pPointer || !pBridge->validSurface( pSurface ) ) {
 		return;
 	}
+	if ( pBridge->m_pPointerFocus != nullptr && pBridge->m_pPointerFocus != pSurface && pBridge->m_bPointerDevice ) {
+		( void )pBridge->m_pInput->loseState( pBridge->id(), pBridge->m_hPointer );
+	}
 	pBridge->m_pPointerFocus = pSurface;
+	pBridge->m_nRemainderX = 0;
+	pBridge->m_nRemainderY = 0;
 	pBridge->m_nLastX = nX;
 	pBridge->m_nLastY = nY;
 	pBridge->m_bHavePointerPosition = true;
@@ -452,6 +460,8 @@ void SIRWaylandInputBridge::pointerLeave( void *pContext, wl_pointer *pPointer, 
 	}
 	pBridge->m_pPointerFocus = nullptr;
 	pBridge->m_bHavePointerPosition = false;
+	pBridge->m_nRemainderX = 0;
+	pBridge->m_nRemainderY = 0;
 	if ( pBridge->m_bPointerDevice ) {
 		( void )pBridge->m_pInput->loseState( pBridge->id(), pBridge->m_hPointer );
 	}

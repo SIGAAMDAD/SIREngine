@@ -558,7 +558,7 @@ static bool sirTestWaylandInputRouting( void ) noexcept
 	if ( !input.publish() )
 		return false;
 	pFrame = input.frame();
-	uint32_t nSecondKey = 0, nWheel = 0, nUnexpected = 0;
+	uint32_t nSecondKey = 0, nWheel = 0, nUnexpected = 0, nKeyboardResync = 0, nPointerResync = 0;
 	for ( uint32_t i = 0; i < pFrame->nCount; ++i ) {
 		const sirInputEvent_t& e = pFrame->events[i];
 		if ( e.eClass == SIR_INPUT_KEYBOARD && e.eSignal == SIR_INPUT_BUTTON && e.nControl == 28 && e.nValue == 1 )
@@ -567,8 +567,13 @@ static bool sirTestWaylandInputRouting( void ) noexcept
 			++nWheel;
 		if ( e.eClass == SIR_INPUT_KEYBOARD && e.eSignal == SIR_INPUT_BUTTON && e.nControl == 7 )
 			++nUnexpected;
+		if ( e.eClass == SIR_INPUT_KEYBOARD && e.eSignal == SIR_INPUT_RESYNC )
+			++nKeyboardResync;
+		if ( e.eClass == SIR_INPUT_POINTER && e.eSignal == SIR_INPUT_RESYNC )
+			++nPointerResync;
 	}
-	if ( nSecondKey != 1 || nWheel != 1 || nUnexpected != 0 || input.activeDeviceCount() != 2 )
+	if ( nSecondKey != 1 || nWheel != 1 || nUnexpected != 0 || nKeyboardResync != 1 || nPointerResync != 1 ||
+	     input.activeDeviceCount() != 2 )
 		return false;
 	if ( !input.begin( 3 ) || !bridge.beginFrame() )
 		return false;
