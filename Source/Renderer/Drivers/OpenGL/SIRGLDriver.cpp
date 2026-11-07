@@ -605,26 +605,253 @@ static uint32_t sirGLPreparePresentationDisplay( sirGLDevice_t *pState,
 #endif
 }
 
-static uint32_t sirGLCreateSurface( void *, const sirGraphicsABINativeSurface_t *, const sirGraphicsABIPresentDesc_t *,
-                                    sirGraphicsHandle_t * ) noexcept
+static uint32_t sirGLCreatePresentationImage( sirGLDevice_t *pState, uint32_t nWidth, uint32_t nHeight,
+                                                uint32_t nFormat, sirGraphicsHandle_t *pImage, uint32_t *pFramebuffer ) noexcept
 {
-	return SIR_GRAPHICS_UNSUPPORTED;
+	if ( pState == nullptr || pImage == nullptr || pFramebuffer == nullptr ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	const sirGraphicsTextureDesc_t desc = { nWidth, nHeight, 1, 1, 1, 1,
+	                                        SIR_GRAPHICS_USAGE_COLOR_ATTACHMENT | SIR_GRAPHICS_USAGE_SAMPLED |
+	                                            SIR_GRAPHICS_USAGE_COPY_SOURCE,
+	                                        SIR_GRAPHICS_TEXTURE_2D, ( sirGraphicsFormat_t )nFormat,
+	                                        SIR_GRAPHICS_MEMORY_GPU_LOCAL };
+	sirGraphicsHandle_t hImage = {};
+	uint32_t nStatus = sirGLCreateTexture( pState, &desc, &hImage );
+	if ( nStatus != SIR_GRAPHICS_SUCCESS ) {
+		return nStatus;
+	}
+	sirGLNativeResource_t image = {};
+	nStatus = sirGLHandlePoolFind( &pState->handles, hImage, &image );
+	uint32_t nFramebuffer = 0;
+	if ( nStatus == SIR_GRAPHICS_SUCCESS ) {
+		const sirGLFramebufferDesc_t fboDesc = { image.nName, 0, 0, 0,
+		                                         ( sirGraphicsFormat_t )nFormat, SIR_GRAPHICS_FORMAT_UNKNOWN };
+		nStatus = sirGLCreateNativeFramebuffer( &pState->framebuffers, &fboDesc, &nFramebuffer );
+	}
+	if ( nStatus != SIR_GRAPHICS_SUCCESS ) {
+		sirGraphicsCompletionSet_t noPending = {};
+		noPending.nDeviceGeneration = pState->nGeneration;
+		( void )sirGLRetireResource( pState, hImage, &noPending );
+		return nStatus;
+	}
+	*pImage = hImage;
+	*pFramebuffer = nFramebuffer;
+	return SIR_GRAPHICS_SUCCESS;
 }
 
-static uint32_t sirGLResizeSurface( void *, sirGraphicsHandle_t, const sirGraphicsABINativeSurface_t *,
-                                    const sirGraphicsABIPresentDesc_t * ) noexcept
+static sirGLPresentSlot_t *sirGLFindPresentSlot( sirGLDevice_t *pState, sirGraphicsHandle_t hSurface ) noexcept
 {
-	return SIR_GRAPHICS_UNSUPPORTED;
+	for ( uint32_t i = 0; i < SIR_GL_PRESENT_SURFACE_COUNT; ++i ) {
+		sirGLPresentSlot_t& slot = pState->present[i];
+		if ( slot.bActive && slot.hSurface.nSlot == hSurface.nSlot &&
+		     slot.hSurface.nGeneration == hSurface.nGeneration &&
+		     slot.hSurface.nDeviceGeneration == hSurface.nDeviceGeneration &&
+		     hSurface.eType == SIR_GRAPHICS_HANDLE_SURFACE ) {
+			return &slot;
+		}
+	}
+	return nullptr;
 }
 
-static uint32_t sirGLAcquireSurfaceImage( void *, sirGraphicsHandle_t, sirGraphicsSurfaceImage_t * ) noexcept
+static uint32_t sirGLCreateSurface( void *pDevice, const sirGraphicsABINativeSurface_t *pNative,
+                                    const sirGraphicsABIPresentDesc_t *pPresent, sirGraphicsHandle_t *pSurface ) noexcept
 {
-	return SIR_GRAPHICS_UNSUPPORTED;
+	if ( pDevice == nullptr || pNative == nullptr || pPresent == nullptr || pSurface == nullptr ||
+	     pNative->nSize < sizeof( *pNative ) || pPresent->nSize < sizeof( *pPresent ) ||
+	     pNative->pWindow == nullptr || pNative->nWindowGeneration == 0 ||
+	     pPresent->nWidth == 0 || pPresent->nHeight == 0 ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	sirGLDevice_t *pState = ( sirGLDevice_t * )pDevice;
+	if ( pState->pContext == nullptr ) {
+		return SIR_GRAPHICS_DEVICE_LOST;
+	}
+	if ( !sirGLContextOwnsThread( pState->pContext ) ) {
+		return SIR_GRAPHICS_BUSY;
+	}
+	if ( !pState->bWindowed || pPresent->nBackbufferCount == 0 || pPresent->nBackbufferCount > 2 ||
+	     pPresent->nMode != SIR_GRAPHICS_PRESENT_FIFO || pPresent->nAllowTearing != 0 ||
+	     pPresent->nHdr != 0 ||
+	     ( pPresent->nFormat != SIR_GRAPHICS_FORMAT_RGBA8_UNORM &&
+	       pPresent->nFormat != SIR_GRAPHICS_FORMAT_RGBA8_SRGB ) ||
+	     pPresent->nWidth > pState->probe.nMaximumTextureSize || pPresent->nHeight > pState->probe.nMaximumTextureSize ) {
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
+	uint32_t nSlot = SIR_GL_PRESENT_SURFACE_COUNT;
+	for ( uint32_t i = 0; i < SIR_GL_PRESENT_SURFACE_COUNT; ++i ) {
+		if ( !pState->present[i].bActive ) {
+			nSlot = i;
+			break;
+		}
+	}
+	if ( nSlot == SIR_GL_PRESENT_SURFACE_COUNT ) {
+		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
+	}
+	uint32_t nStatus = sirGLPreparePresentationDisplay( pState, pNative );
+	if ( nStatus != SIR_GRAPHICS_SUCCESS ) {
+		return nStatus;
+	}
+	sirGLPresentSlot_t pending = {};
+	nStatus = sirGLCreatePresentWindow( pState->pContext, pNative, pPresent->nWidth, pPresent->nHeight, &pending.window );
+	if ( nStatus != SIR_GRAPHICS_SUCCESS ) {
+		return nStatus;
+	}
+	nStatus = sirGLCreatePresentationImage( pState, pPresent->nWidth, pPresent->nHeight, pPresent->nFormat,
+	                                        &pending.hImage, &pending.nFramebuffer );
+	if ( nStatus != SIR_GRAPHICS_SUCCESS ) {
+		( void )sirGLDestroyPresentWindow( pState->pContext, &pending.window );
+		return nStatus;
+	}
+	sirGLNativeResource_t resource = {};
+	resource.nName = nSlot + 1; // Internal slot identifier, never a GLuint.
+	resource.eType = SIR_GRAPHICS_HANDLE_SURFACE;
+	nStatus = sirGLHandlePoolInsert( &pState->handles, &resource, &pending.hSurface );
+	if ( nStatus != SIR_GRAPHICS_SUCCESS ) {
+		( void )sirGLDeleteNativeFramebuffer( &pState->framebuffers, pending.nFramebuffer );
+		sirGraphicsCompletionSet_t noPending = {};
+		noPending.nDeviceGeneration = pState->nGeneration;
+		( void )sirGLRetireResource( pState, pending.hImage, &noPending );
+		( void )sirGLDestroyPresentWindow( pState->pContext, &pending.window );
+		return nStatus;
+	}
+	pending.nFormat = pPresent->nFormat;
+	pending.bActive = true;
+	pState->present[nSlot] = pending;
+	*pSurface = pending.hSurface;
+	return SIR_GRAPHICS_SUCCESS;
 }
 
-static uint32_t sirGLPresent( void *, const sirGraphicsSurfaceImage_t *, const sirGraphicsCompletion_t * ) noexcept
+static uint32_t sirGLResizeSurface( void *pDevice, sirGraphicsHandle_t hSurface,
+                                    const sirGraphicsABINativeSurface_t *pNative,
+                                    const sirGraphicsABIPresentDesc_t *pPresent ) noexcept
 {
-	return SIR_GRAPHICS_UNSUPPORTED;
+	if ( pDevice == nullptr || pNative == nullptr || pPresent == nullptr ||
+	     pNative->nSize < sizeof( *pNative ) || pPresent->nSize < sizeof( *pPresent ) ||
+	     pPresent->nWidth == 0 || pPresent->nHeight == 0 ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	sirGLDevice_t *pState = ( sirGLDevice_t * )pDevice;
+	if ( !sirGLContextOwnsThread( pState->pContext ) ) {
+		return SIR_GRAPHICS_BUSY;
+	}
+	sirGLPresentSlot_t *pSlot = sirGLFindPresentSlot( pState, hSurface );
+	if ( pSlot == nullptr ) {
+		return SIR_GRAPHICS_INVALID_HANDLE;
+	}
+	if ( pSlot->bAcquired || pState->handles.pSlots[pSlot->hImage.nSlot].nChildCount != 0 ) {
+		return SIR_GRAPHICS_BUSY;
+	}
+	if ( pNative->nWindowGeneration != pSlot->window.nWindowGeneration ||
+	     pNative->pWindow != pSlot->window.pNativeWindow ||
+	     pNative->pDisplayOrInstance != pSlot->window.pNativeDisplay ) {
+		return SIR_GRAPHICS_SURFACE_CHANGED;
+	}
+	if ( pPresent->nBackbufferCount == 0 || pPresent->nBackbufferCount > 2 ||
+	     pPresent->nMode != SIR_GRAPHICS_PRESENT_FIFO || pPresent->nAllowTearing != 0 ||
+	     pPresent->nHdr != 0 ||
+	     ( pPresent->nFormat != SIR_GRAPHICS_FORMAT_RGBA8_UNORM &&
+	       pPresent->nFormat != SIR_GRAPHICS_FORMAT_RGBA8_SRGB ) ||
+	     pPresent->nWidth > pState->probe.nMaximumTextureSize || pPresent->nHeight > pState->probe.nMaximumTextureSize ) {
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
+	if ( pSlot->window.nWidth == pPresent->nWidth && pSlot->window.nHeight == pPresent->nHeight &&
+	     pSlot->nFormat == pPresent->nFormat ) {
+		return SIR_GRAPHICS_SUCCESS;
+	}
+	sirGraphicsHandle_t hReplacement = {};
+	uint32_t nReplacementFramebuffer = 0;
+	uint32_t nStatus = sirGLCreatePresentationImage( pState, pPresent->nWidth, pPresent->nHeight, pPresent->nFormat,
+	                                                 &hReplacement, &nReplacementFramebuffer );
+	if ( nStatus != SIR_GRAPHICS_SUCCESS ) {
+		return nStatus;
+	}
+	nStatus = sirGLResizePresentWindow( pState->pContext, &pSlot->window, pPresent->nWidth, pPresent->nHeight );
+	if ( nStatus != SIR_GRAPHICS_SUCCESS ) {
+		( void )sirGLDeleteNativeFramebuffer( &pState->framebuffers, nReplacementFramebuffer );
+		sirGraphicsCompletionSet_t noPending = {};
+		noPending.nDeviceGeneration = pState->nGeneration;
+		( void )sirGLRetireResource( pState, hReplacement, &noPending );
+		return nStatus;
+	}
+	const sirGraphicsHandle_t hOldImage = pSlot->hImage;
+	const uint32_t nOldFramebuffer = pSlot->nFramebuffer;
+	pSlot->hImage = hReplacement;
+	pSlot->nFramebuffer = nReplacementFramebuffer;
+	pSlot->nFormat = pPresent->nFormat;
+	( void )sirGLDeleteNativeFramebuffer( &pState->framebuffers, nOldFramebuffer );
+	sirGraphicsCompletionSet_t noPending = {};
+	noPending.nDeviceGeneration = pState->nGeneration;
+	return sirGLRetireResource( pState, hOldImage, &noPending );
+}
+
+static uint32_t sirGLAcquireSurfaceImage( void *pDevice, sirGraphicsHandle_t hSurface,
+                                          sirGraphicsSurfaceImage_t *pImage ) noexcept
+{
+	if ( pDevice == nullptr || pImage == nullptr ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	sirGLDevice_t *pState = ( sirGLDevice_t * )pDevice;
+	if ( pState->pContext == nullptr ) {
+		return SIR_GRAPHICS_DEVICE_LOST;
+	}
+	if ( !sirGLContextOwnsThread( pState->pContext ) ) {
+		return SIR_GRAPHICS_BUSY;
+	}
+	sirGLPresentSlot_t *pSlot = sirGLFindPresentSlot( pState, hSurface );
+	if ( pSlot == nullptr ) {
+		return SIR_GRAPHICS_INVALID_HANDLE;
+	}
+	if ( pSlot->bAcquired || pSlot->nAcquisitionSerial == UINT64_MAX ) {
+		return SIR_GRAPHICS_BUSY;
+	}
+	pSlot->nAcquisitionId = ++pSlot->nAcquisitionSerial;
+	pSlot->bAcquired = true;
+	*pImage = { pSlot->hSurface, pSlot->hImage, pSlot->nAcquisitionId, pSlot->window.nWindowGeneration };
+	return SIR_GRAPHICS_SUCCESS;
+}
+
+static uint32_t sirGLPresent( void *pDevice, const sirGraphicsSurfaceImage_t *pImage,
+                              const sirGraphicsCompletion_t *pComplete ) noexcept
+{
+	if ( pDevice == nullptr || pImage == nullptr || pComplete == nullptr ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	sirGLDevice_t *pState = ( sirGLDevice_t * )pDevice;
+	if ( pState->pContext == nullptr ) {
+		return SIR_GRAPHICS_DEVICE_LOST;
+	}
+	if ( !sirGLContextOwnsThread( pState->pContext ) ) {
+		return SIR_GRAPHICS_BUSY;
+	}
+	sirGLPresentSlot_t *pSlot = sirGLFindPresentSlot( pState, pImage->hSurface );
+	if ( pSlot == nullptr || !pSlot->bAcquired || pSlot->nAcquisitionId != pImage->nAcquisitionId ||
+	     pSlot->hImage.nSlot != pImage->hImage.nSlot ||
+	     pSlot->hImage.nGeneration != pImage->hImage.nGeneration ||
+	     pSlot->window.nWindowGeneration != pImage->nWindowGeneration ) {
+		return SIR_GRAPHICS_INVALID_HANDLE;
+	}
+	if ( pComplete->nDeviceGeneration != pState->nGeneration || pComplete->eQueue != SIR_GRAPHICS_QUEUE_DIRECT ||
+	     pComplete->nValue == 0 || pComplete->nValue > pState->nCompletedDirectValue ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	uint32_t nStatus = sirGLBeginPresentWindow( pState->pContext, &pSlot->window );
+	if ( nStatus != SIR_GRAPHICS_SUCCESS ) {
+		return nStatus;
+	}
+	pState->pBlitNamedFramebuffer( pSlot->nFramebuffer, 0, 0, 0, ( int32_t )pSlot->window.nWidth,
+	                              ( int32_t )pSlot->window.nHeight, 0, 0, ( int32_t )pSlot->window.nWidth,
+	                              ( int32_t )pSlot->window.nHeight, 0x00004000, 0x2600 );
+	const uint32_t nError = pState->pGetNativeError();
+	if ( nError != 0 ) {
+		( void )sirGLRestoreNativeContext( pState->pContext );
+		return SIR_GRAPHICS_DRIVER_ERROR;
+	}
+	nStatus = sirGLSwapPresentWindow( pState->pContext, &pSlot->window );
+	if ( nStatus == SIR_GRAPHICS_SUCCESS ) {
+		pSlot->bAcquired = false;
+	}
+	return nStatus;
 }
 
 static uint32_t sirGLShutdown( void *pDevice ) noexcept
