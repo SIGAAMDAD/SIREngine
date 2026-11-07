@@ -83,6 +83,9 @@ sirGraphicsABIResult_t SIRWindowABISurface::resize( const sirGraphicsABIPresentD
 	     snapshot.nWindowGeneration != m_Native.nWindowGeneration || snapshot.nWidth == 0 || snapshot.nHeight == 0 ) {
 		return SIR_GRAPHICS_SURFACE_CHANGED;
 	}
+	if ( snapshot.nMetricsRevision == m_nMetricsRevision ) {
+		return SIR_GRAPHICS_SUCCESS;
+	}
 	sirGraphicsABIPresentDesc_t present = *pPresent;
 	present.nWidth = snapshot.nWidth;
 	present.nHeight = snapshot.nHeight;
