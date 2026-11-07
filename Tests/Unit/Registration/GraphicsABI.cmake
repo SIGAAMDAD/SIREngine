@@ -72,6 +72,17 @@ set_tests_properties(
     renderer.graphics.negative-matrix
     PROPERTIES LABELS "graphics-abi;cpu;conformance" TIMEOUT 90)
 
+# GPU surface owns the native window lease until backend retirement succeeds.
+# Compile the real production adapter/surface against a fault-injected ABI shim.
+add_executable(SIRWindowABISurfaceTests
+    SIRWindowABISurfaceTests.cpp
+    "${PROJECT_SOURCE_DIR}/Source/Renderer/SIRWindowABISurface.cpp"
+    "${PROJECT_SOURCE_DIR}/Source/Renderer/SIRWindowSurfaceAdapter.cpp")
+target_link_libraries(SIRWindowABISurfaceTests PRIVATE SIR::Core)
+add_test(NAME renderer.window.abi-lease COMMAND SIRWindowABISurfaceTests)
+set_tests_properties(renderer.window.abi-lease PROPERTIES LABELS "graphics-abi;window;cpu;integration" TIMEOUT 60)
+sir_configure_owned_target(SIRWindowABISurfaceTests)
+
 if(SIR_WITH_GOOGLETEST)
     string(TOLOWER "${CMAKE_SYSTEM_NAME}" sirGTestHost)
     include(GoogleTest)
