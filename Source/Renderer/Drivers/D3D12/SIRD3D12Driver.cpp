@@ -193,6 +193,21 @@ sirGraphicsResult_t SIRD3D12RenderingDevice::initialize( bool bSoftware, const s
 	return SIR_GRAPHICS_SUCCESS;
 }
 
+sirGraphicsResult_t SIRD3D12RenderingDevice::loadNativePipelineCache( const void *pData, uint64_t nBytes ) noexcept
+{
+	return m_Pipelines.loadPipelineCache( pData, nBytes );
+}
+
+sirGraphicsResult_t SIRD3D12RenderingDevice::serializeNativePipelineCache( void *pData, uint64_t *pBytes ) const noexcept
+{
+	return m_Pipelines.serializePipelineCache( pData, pBytes );
+}
+
+sirGraphicsResult_t SIRD3D12RenderingDevice::queryNativePipelineCacheStats( sirD3D12PipelineCacheStats_t *pStats ) const noexcept
+{
+	return m_Pipelines.queryPipelineCacheStats( pStats );
+}
+
 sirGraphicsResult_t SIRD3D12RenderingDevice::queryNativeDiagnostics( sirD3D12DiagnosticSnapshot_t *pSnapshot ) noexcept
 {
 	return pSnapshot == nullptr                     ? SIR_GRAPHICS_INVALID_ARGUMENT
