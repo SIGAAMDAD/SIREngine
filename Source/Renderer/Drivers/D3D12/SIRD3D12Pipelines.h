@@ -42,6 +42,14 @@ typedef struct sirD3D12PipelineSlot_s
 	bool bRetiring;
 } sirD3D12PipelineSlot_t;
 
+typedef struct sirD3D12PipelineCacheStats_s
+{
+	uint64_t nCacheHits;
+	uint64_t nCacheMisses;
+	uint64_t nCacheStores;
+	bool bAvailable;
+} sirD3D12PipelineCacheStats_t;
+
 // Backend-owned, bounded PSO and root-signature table. Shader bytes are
 // supplied by the offline cooker and consumed synchronously by D3D12;
 // no HLSL compilation, runtime shader allocations or GRDG dependency.
@@ -52,13 +60,16 @@ private:
 	sirD3D12PipelineSlot_t m_szSlots[s_nPipelineCapacity] = {};
 	SIRD3D12Device *m_pNative = nullptr;
 	ID3D12Device *m_pDevice = nullptr;
+	Microsoft::WRL::ComPtr<ID3D12PipelineLibrary> m_pPipelineLibrary;
+	sirD3D12PipelineCacheStats_t m_CacheStats = {};
+	bool m_bPipelineCreated = false;
 	uint32_t m_nDeviceGeneration = 0;
 
 	sirD3D12PipelineSlot_t *findSlot( sirGraphicsHandle_t hPipeline ) noexcept;
 	void releaseSlot( uint32_t iSlot ) noexcept;
 	HRESULT createRootSignature( const sirGraphicsPipelineDesc_t& desc, ID3D12RootSignature **ppRoot ) noexcept;
 	HRESULT createGraphicsState( const sirGraphicsPipelineDesc_t& desc, ID3D12RootSignature *pRoot,
-	                             ID3D12PipelineState **ppPipeline ) noexcept;
+	                             ID3D12PipelineState **ppPipeline, const wchar_t *pszCacheKey ) noexcept;
 	HRESULT createComputeState( const sirGraphicsPipelineDesc_t& desc, ID3D12RootSignature *pRoot,
 	                            ID3D12PipelineState **ppPipeline ) noexcept;
 
@@ -69,6 +80,9 @@ public:
 	SIRD3D12Pipelines& operator=( const SIRD3D12Pipelines& ) = delete;
 
 	bool initialize( SIRD3D12Device *pNative, uint32_t nGeneration ) noexcept;
+	sirGraphicsResult_t loadPipelineCache( const void *pData, uint64_t nBytes ) noexcept;
+	sirGraphicsResult_t serializePipelineCache( void *pData, uint64_t *pBytes ) const noexcept;
+	sirGraphicsResult_t queryPipelineCacheStats( sirD3D12PipelineCacheStats_t *pStats ) const noexcept;
 	void shutdown( bool bGpuComplete ) noexcept;
 	void collectRetired( void ) noexcept;
 	const sirD3D12PipelineSlot_t *querySlot( sirGraphicsHandle_t hPipeline ) noexcept;
