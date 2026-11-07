@@ -15,11 +15,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Core/Platform/SIRPlatformThreadControl.h>
 
-#include <atomic>
+#include <Core/Platform/SIRThread.h>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <thread>
 
 static void sirCheckThreadControl( bool bCondition, const char *pszMessage )
 {
@@ -27,6 +26,19 @@ static void sirCheckThreadControl( bool bCondition, const char *pszMessage )
 		std::fprintf( stderr, "Thread-control test failed: %s\n", pszMessage );
 		std::abort();
 	}
+}
+
+typedef struct sirPlatformThreadWorkerContext_s
+{
+	uint64_t nThreadId;
+	sirThreadControlResult_t ePriority;
+} sirPlatformThreadWorkerContext_t;
+
+static void sirPlatformThreadWorker( void *pUserData )
+{
+	sirPlatformThreadWorkerContext_t *pContext = ( sirPlatformThreadWorkerContext_t * )pUserData;
+	pContext->nThreadId = SIRPlatformThreadControl::getCurrentThreadId();
+	pContext->ePriority = SIRPlatformThreadControl::setCurrentPriority( SIR_THREAD_PRIORITY_BACKGROUND );
 }
 
 int main( void )
@@ -51,12 +63,13 @@ int main( void )
 	sirCheckThreadControl( SIRPlatformThreadControl::setCurrentPriority( ( sirThreadPriority_t )255 ) ==
 	                           SIR_THREAD_CONTROL_INVALID_ARGUMENT,
 	                       "reject invalid priority" );
-	std::atomic<int> nBackgroundResult( -1 );
-	std::thread worker( [&nBackgroundResult]() {
-		const sirThreadControlResult_t eResult = SIRPlatformThreadControl::setCurrentPriority( SIR_THREAD_PRIORITY_BACKGROUND );
-		nBackgroundResult.store( ( int )eResult, std::memory_order_release );
-	} );
-	worker.join();
-	sirCheckThreadControl( nBackgroundResult.load( std::memory_order_acquire ) == SIR_THREAD_CONTROL_OK, "set background worker priority" );
+	const uint64_t nMainThreadId = SIRPlatformThreadControl::getCurrentThreadId();
+	sirCheckThreadControl( nMainThreadId != 0 && nMainThreadId == SIRPlatformThreadControl::getCurrentThreadId(),
+	                       "stable nonzero thread identity" );
+	sirPlatformThreadWorkerContext_t workerContext = {};
+	SIRThread worker;
+	sirCheckThreadControl( worker.start( sirPlatformThreadWorker, &workerContext ) && worker.join(), "start/join engine thread" );
+	sirCheckThreadControl( workerContext.ePriority == SIR_THREAD_CONTROL_OK, "set background worker priority" );
+	sirCheckThreadControl( workerContext.nThreadId != 0 && workerContext.nThreadId != nMainThreadId, "distinct worker thread identity" );
 	return 0;
 }

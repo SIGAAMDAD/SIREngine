@@ -22,9 +22,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // clang-format on
 #include <Core/Platform/Window/SIRWindowDriver.h>
 #include <Core/Systems/SIREngineSystem.h>
-#include <atomic>
-#include <thread>
-#include <mutex>
+#include <Core/Platform/SIRAtomic.h>
+#include <Core/Platform/SIRSync.h>
+#include <Core/Platform/SIRScopedLock.h>
+#include <Core/Platform/SIRPlatformThreadControl.h>
 
 typedef struct sirWindowSlot_s
 {
@@ -37,11 +38,11 @@ typedef struct sirWindowSlot_s
 
 typedef struct sirWindowLeaseEntry_s
 {
-	std::atomic<uint64_t> nToken;
-	std::atomic<uint64_t> nEpoch;
-	std::atomic<uint32_t> nSlot;
-	std::atomic<uint32_t> nGeneration;
-	std::atomic<uint8_t> nState;
+	SIRAtomic<uint64_t> nToken;
+	SIRAtomic<uint64_t> nEpoch;
+	SIRAtomic<uint32_t> nSlot;
+	SIRAtomic<uint32_t> nGeneration;
+	SIRAtomic<uint8_t> nState;
 } sirWindowLeaseEntry_t;
 
 // Core owns native window identities, event state and render-window leases.
@@ -80,9 +81,9 @@ private:
 	void processReleasedLeases( void ) noexcept;
 	void pushEvent( sirWindowHandle_t hWindow, sirWindowEventKind_t eKind, uint32_t nWidth, uint32_t nHeight ) noexcept;
 
-	mutable std::mutex m_SnapshotMutex;
+	mutable SIRMutex m_SnapshotMutex;
 	SIRWindowDriver *m_pDriver;
-	std::thread::id m_OwnerThread;
+	uint64_t m_nOwnerThreadId;
 	sirWindowSlot_t m_Slots[SIR_WINDOW_MAX_WINDOWS] = {};
 	sirWindowLeaseEntry_t m_Leases[SIR_WINDOW_MAX_LEASES] = {};
 	sirWindowEvent_t m_Events[SIR_WINDOW_EVENT_CAPACITY] = {};

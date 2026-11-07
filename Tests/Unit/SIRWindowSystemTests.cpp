@@ -15,7 +15,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Core/Platform/Window/Headless/SIRWindowDriverHeadless.h>
 #include <Core/Platform/Window/SIRWindowSystem.h>
 #include <stdio.h>
-#include <thread>
+#include <Core/Platform/SIRThread.h>
 
 class SIRWindowTestDriver final : public SIRWindowDriver
 {
@@ -93,6 +93,45 @@ private:
 	uint32_t m_nPending = 0;
 };
 
+typedef struct sirWindowReadWorkerContext_s
+{
+	SIRWindowSystem *pSystem;
+	sirWindowHandle_t hWindow;
+	uint32_t nFailures;
+} sirWindowReadWorkerContext_t;
+
+static void sirWindowReadWorker( void *pUserData )
+{
+	sirWindowReadWorkerContext_t *pContext = ( sirWindowReadWorkerContext_t * )pUserData;
+	for ( uint32_t i = 0; i < 10000; ++i ) {
+		sirWindowSnapshot_t state = {};
+		if ( pContext->pSystem->querySnapshot( pContext->hWindow, &state ) != SIR_WINDOW_OK || state.nWindowGeneration == 0 ||
+		     state.hWindow.nGeneration != pContext->hWindow.nGeneration ) {
+			++pContext->nFailures;
+		}
+	}
+}
+
+typedef struct sirWindowLeaseWorkerContext_s
+{
+	SIRWindowSystem *pSystem;
+	sirWindowHandle_t hWindow;
+	sirWindowNativeLease_t hLease;
+	sirWindowResult_t eResult;
+} sirWindowLeaseWorkerContext_t;
+
+static void sirWindowRequestCloseWorker( void *pUserData )
+{
+	sirWindowLeaseWorkerContext_t *pContext = ( sirWindowLeaseWorkerContext_t * )pUserData;
+	pContext->eResult = pContext->pSystem->requestClose( pContext->hWindow );
+}
+
+static void sirWindowReleaseLeaseWorker( void *pUserData )
+{
+	sirWindowLeaseWorkerContext_t *pContext = ( sirWindowLeaseWorkerContext_t * )pUserData;
+	pContext->eResult = pContext->pSystem->releaseNativeLease( pContext->hLease );
+}
+
 static bool sirTestHeadless( void ) noexcept
 {
 	SIRWindowDriverHeadless driver;
@@ -162,25 +201,19 @@ static bool sirTestHandlesLeasesAndEvents( void ) noexcept
 		return false;
 	}
 	// Renderer-style readers may query while the platform owner changes metrics.
-	uint32_t nReadFailures = 0;
-	std::thread reader( [&]() {
-		for ( uint32_t i = 0; i < 10000; ++i ) {
-			sirWindowSnapshot_t state = {};
-			if ( system.querySnapshot( handles[1], &state ) != SIR_WINDOW_OK || state.nWindowGeneration == 0 ||
-			     state.hWindow.nGeneration != handles[1].nGeneration ) {
-				++nReadFailures;
-			}
-		}
-	} );
+	sirWindowReadWorkerContext_t readContext = { &system, handles[1], 0 };
+	SIRThread reader;
+	if ( !reader.start( sirWindowReadWorker, &readContext ) ) {
+		return false;
+	}
 	for ( uint32_t i = 0; i < 12; ++i ) {
 		driver.queueEvent( { handles[1].nSlot, handles[1].nSlot + 1, SIR_WINDOW_EVENT_RESIZED, 100 + i, 200 + i } );
 		if ( system.pumpEvents( 1 ) != SIR_WINDOW_OK ) {
-			reader.join();
+			( void )reader.join();
 			return false;
 		}
 	}
-	reader.join();
-	if ( nReadFailures != 0 ) {
+	if ( !reader.join() || readContext.nFailures != 0 ) {
 		return false;
 	}
 	sirWindowNativeLease_t lease = {};
@@ -189,15 +222,17 @@ static bool sirTestHandlesLeasesAndEvents( void ) noexcept
 	     system.destroyWindow( handles[0] ) != SIR_WINDOW_BUSY ) {
 		return false;
 	}
-	sirWindowResult_t eThreadResult = SIR_WINDOW_OK;
-	std::thread worker( [&]() { eThreadResult = system.requestClose( handles[0] ); } );
-	worker.join();
-	if ( eThreadResult != SIR_WINDOW_WRONG_THREAD ) {
+	sirWindowLeaseWorkerContext_t threadContext = { &system, handles[0], lease, SIR_WINDOW_OK };
+	SIRThread worker;
+	if ( !worker.start( sirWindowRequestCloseWorker, &threadContext ) || !worker.join() ||
+	     threadContext.eResult != SIR_WINDOW_WRONG_THREAD ) {
 		return false;
 	}
-	std::thread render( [&]() { eThreadResult = system.releaseNativeLease( lease ); } );
-	render.join();
-	if ( eThreadResult != SIR_WINDOW_OK || system.releaseNativeLease( lease ) != SIR_WINDOW_INVALID_HANDLE ||
+	SIRThread render;
+	if ( !render.start( sirWindowReleaseLeaseWorker, &threadContext ) || !render.join() ) {
+		return false;
+	}
+	if ( threadContext.eResult != SIR_WINDOW_OK || system.releaseNativeLease( lease ) != SIR_WINDOW_INVALID_HANDLE ||
 	     system.destroyWindow( handles[0] ) != SIR_WINDOW_OK ||
 	     system.querySnapshot( handles[0], nullptr ) != SIR_WINDOW_INVALID_ARGUMENT ) {
 		return false;

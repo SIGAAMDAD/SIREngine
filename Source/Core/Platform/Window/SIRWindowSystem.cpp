@@ -1,7 +1,7 @@
 #include <Core/Platform/Window/SIRWindowSystem.h>
 
 SIRWindowSystem::SIRWindowSystem( SIRWindowDriver& driver ) noexcept
-    : m_pDriver( &driver ), m_OwnerThread(), m_nEpoch( 0 ), m_nEventSequence( 0 ), m_nLeaseSerial( 0 ), m_nNativeGeneration( 0 ),
+    : m_pDriver( &driver ), m_nOwnerThreadId( 0 ), m_nEpoch( 0 ), m_nEventSequence( 0 ), m_nLeaseSerial( 0 ), m_nNativeGeneration( 0 ),
       m_bInitialized( false )
 {
 	for ( uint32_t i = 0; i < SIR_WINDOW_MAX_WINDOWS; ++i ) {
@@ -14,9 +14,9 @@ sirSystemResult_t SIRWindowSystem::initialize( void ) noexcept
 	if ( m_bInitialized || m_nEpoch == UINT64_MAX || m_pDriver->initialize() != SIR_WINDOW_OK ) {
 		return SIR_SYSTEM_ERROR;
 	}
-	m_OwnerThread = std::this_thread::get_id();
+	m_nOwnerThreadId = SIRPlatformThreadControl::getCurrentThreadId();
 	{
-		std::lock_guard<std::mutex> guard( m_SnapshotMutex );
+		SIRScopedLock<SIRMutex> guard( m_SnapshotMutex );
 		++m_nEpoch;
 		m_nEventSequence = 0;
 		m_bInitialized = true;
@@ -40,7 +40,7 @@ sirSystemResult_t SIRWindowSystem::shutdown( void ) noexcept
 	}
 	m_pDriver->shutdown();
 	{
-		std::lock_guard<std::mutex> guard( m_SnapshotMutex );
+		SIRScopedLock<SIRMutex> guard( m_SnapshotMutex );
 		m_bInitialized = false;
 	}
 	return SIR_SYSTEM_OK;
@@ -51,7 +51,7 @@ sirWindowResult_t SIRWindowSystem::requireOwner( void ) const noexcept
 	if ( !m_bInitialized ) {
 		return SIR_WINDOW_STOPPED;
 	}
-	return m_OwnerThread == std::this_thread::get_id() ? SIR_WINDOW_OK : SIR_WINDOW_WRONG_THREAD;
+	return m_nOwnerThreadId == SIRPlatformThreadControl::getCurrentThreadId() ? SIR_WINDOW_OK : SIR_WINDOW_WRONG_THREAD;
 }
 
 sirWindowResult_t SIRWindowSystem::validate( sirWindowHandle_t hWindow ) const noexcept
@@ -105,7 +105,7 @@ sirWindowResult_t SIRWindowSystem::createWindow( const sirWindowCreateDesc_t& de
 			return SIR_WINDOW_OUT_OF_CAPACITY;
 		}
 		{
-			std::lock_guard<std::mutex> guard( m_SnapshotMutex );
+			SIRScopedLock<SIRMutex> guard( m_SnapshotMutex );
 			view.nWindowGeneration = ++m_nNativeGeneration;
 			slot.native = view;
 			slot.snapshot = {};
@@ -140,7 +140,7 @@ sirWindowResult_t SIRWindowSystem::requestClose( sirWindowHandle_t hWindow ) noe
 	if ( eValid != SIR_WINDOW_OK ) {
 		return eValid;
 	}
-	std::lock_guard<std::mutex> guard( m_SnapshotMutex );
+	SIRScopedLock<SIRMutex> guard( m_SnapshotMutex );
 	sirWindowSlot_t& slot = m_Slots[hWindow.nSlot];
 	if ( !slot.snapshot.bCloseRequested ) {
 		slot.snapshot.bCloseRequested = true;
@@ -173,17 +173,17 @@ void SIRWindowSystem::processReleasedLeases( void ) noexcept
 {
 	for ( uint32_t i = 0; i < SIR_WINDOW_MAX_LEASES; ++i ) {
 		sirWindowLeaseEntry_t& lease = m_Leases[i];
-		if ( lease.nState.load( std::memory_order_acquire ) != 2 ) {
+		if ( lease.nState.load( SIR_MEMORY_ORDER_ACQUIRE ) != 2 ) {
 			continue;
 		}
-		const uint32_t nSlot = lease.nSlot.load( std::memory_order_relaxed );
-		const uint32_t nGeneration = lease.nGeneration.load( std::memory_order_relaxed );
-		const uint64_t nEpoch = lease.nEpoch.load( std::memory_order_relaxed );
+		const uint32_t nSlot = lease.nSlot.load( SIR_MEMORY_ORDER_RELAXED );
+		const uint32_t nGeneration = lease.nGeneration.load( SIR_MEMORY_ORDER_RELAXED );
+		const uint64_t nEpoch = lease.nEpoch.load( SIR_MEMORY_ORDER_RELAXED );
 		if ( nSlot < SIR_WINDOW_MAX_WINDOWS && m_nEpoch == nEpoch && m_Slots[nSlot].nGeneration == nGeneration &&
 		     m_Slots[nSlot].nLeaseCount != 0 ) {
 			--m_Slots[nSlot].nLeaseCount;
 		}
-		lease.nState.store( 0, std::memory_order_release );
+		lease.nState.store( 0, SIR_MEMORY_ORDER_RELEASE );
 	}
 }
 
@@ -210,7 +210,7 @@ sirWindowResult_t SIRWindowSystem::destroyWindow( sirWindowHandle_t hWindow ) no
 		return eResult;
 	}
 	{
-		std::lock_guard<std::mutex> guard( m_SnapshotMutex );
+		SIRScopedLock<SIRMutex> guard( m_SnapshotMutex );
 		pushEvent( hWindow, SIR_WINDOW_EVENT_DESTROYED, 0, 0 );
 		slot.bOccupied = false;
 		++slot.nGeneration;
@@ -232,7 +232,7 @@ void SIRWindowSystem::onDriverEvent( void *pContext, const sirWindowBackendEvent
 		( void )pSystem->requestClose( slot.snapshot.hWindow );
 		return;
 	}
-	std::lock_guard<std::mutex> guard( pSystem->m_SnapshotMutex );
+	SIRScopedLock<SIRMutex> guard( pSystem->m_SnapshotMutex );
 	if ( event.eKind == SIR_WINDOW_EVENT_READY ) {
 		if ( event.nWidth == 0 || event.nHeight == 0 || slot.snapshot.bCloseRequested ) {
 			return;
@@ -317,7 +317,7 @@ sirWindowResult_t SIRWindowSystem::readEvents( sirWindowEventRead_t *pRead ) noe
 
 sirWindowResult_t SIRWindowSystem::querySnapshot( sirWindowHandle_t hWindow, sirWindowSnapshot_t *pSnapshot ) const noexcept
 {
-	std::lock_guard<std::mutex> guard( m_SnapshotMutex );
+	SIRScopedLock<SIRMutex> guard( m_SnapshotMutex );
 	if ( !m_bInitialized ) {
 		return SIR_WINDOW_STOPPED;
 	}
@@ -353,18 +353,18 @@ sirWindowResult_t SIRWindowSystem::acquireNativeLease( sirWindowHandle_t hWindow
 	processReleasedLeases();
 	for ( uint32_t i = 0; i < SIR_WINDOW_MAX_LEASES; ++i ) {
 		sirWindowLeaseEntry_t& lease = m_Leases[i];
-		if ( lease.nState.load( std::memory_order_acquire ) != 0 ) {
+		if ( lease.nState.load( SIR_MEMORY_ORDER_ACQUIRE ) != 0 ) {
 			continue;
 		}
 		if ( m_nLeaseSerial == UINT64_MAX ) {
 			return SIR_WINDOW_OUT_OF_CAPACITY;
 		}
 		const uint64_t nToken = ++m_nLeaseSerial;
-		lease.nToken.store( nToken, std::memory_order_relaxed );
-		lease.nEpoch.store( m_nEpoch, std::memory_order_relaxed );
-		lease.nSlot.store( hWindow.nSlot, std::memory_order_relaxed );
-		lease.nGeneration.store( hWindow.nGeneration, std::memory_order_relaxed );
-		lease.nState.store( 1, std::memory_order_release );
+		lease.nToken.store( nToken, SIR_MEMORY_ORDER_RELAXED );
+		lease.nEpoch.store( m_nEpoch, SIR_MEMORY_ORDER_RELAXED );
+		lease.nSlot.store( hWindow.nSlot, SIR_MEMORY_ORDER_RELAXED );
+		lease.nGeneration.store( hWindow.nGeneration, SIR_MEMORY_ORDER_RELAXED );
+		lease.nState.store( 1, SIR_MEMORY_ORDER_RELEASE );
 		++slot.nLeaseCount;
 		*pLease = { nToken, m_nEpoch, hWindow.nSlot, hWindow.nGeneration };
 		*pView = slot.native;
@@ -380,14 +380,14 @@ sirWindowResult_t SIRWindowSystem::releaseNativeLease( sirWindowNativeLease_t hL
 	}
 	for ( uint32_t i = 0; i < SIR_WINDOW_MAX_LEASES; ++i ) {
 		sirWindowLeaseEntry_t& lease = m_Leases[i];
-		if ( lease.nState.load( std::memory_order_acquire ) != 1 || lease.nToken.load( std::memory_order_relaxed ) != hLease.nToken ||
-		     lease.nEpoch.load( std::memory_order_relaxed ) != hLease.nSystemEpoch ||
-		     lease.nSlot.load( std::memory_order_relaxed ) != hLease.nSlot ||
-		     lease.nGeneration.load( std::memory_order_relaxed ) != hLease.nGeneration ) {
+		if ( lease.nState.load( SIR_MEMORY_ORDER_ACQUIRE ) != 1 || lease.nToken.load( SIR_MEMORY_ORDER_RELAXED ) != hLease.nToken ||
+		     lease.nEpoch.load( SIR_MEMORY_ORDER_RELAXED ) != hLease.nSystemEpoch ||
+		     lease.nSlot.load( SIR_MEMORY_ORDER_RELAXED ) != hLease.nSlot ||
+		     lease.nGeneration.load( SIR_MEMORY_ORDER_RELAXED ) != hLease.nGeneration ) {
 			continue;
 		}
 		uint8_t nExpected = 1;
-		return lease.nState.compare_exchange_strong( nExpected, 2, std::memory_order_release, std::memory_order_relaxed )
+		return lease.nState.compareExchangeStrong( nExpected, 2, SIR_MEMORY_ORDER_RELEASE, SIR_MEMORY_ORDER_RELAXED )
 		           ? SIR_WINDOW_OK
 				   : SIR_WINDOW_INVALID_HANDLE;
 	}
