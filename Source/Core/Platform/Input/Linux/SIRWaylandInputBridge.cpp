@@ -223,8 +223,8 @@ bool SIRWaylandInputBridge::beginPointerCapture( void ) noexcept
 		zwp_relative_pointer_v1_destroy( pRelative );
 		return false;
 	}
-	zwp_locked_pointer_v1 *pLock = zwp_pointer_constraints_v1_lock_pointer(
-	    pConstraints, m_pPointerFocus, m_pPointer, nullptr, ZWP_POINTER_CONSTRAINTS_V1_LIFETIME_PERSISTENT );
+	zwp_locked_pointer_v1 *pLock = zwp_pointer_constraints_v1_lock_pointer( pConstraints, m_pPointerFocus, m_pPointer, nullptr,
+	                                                                        ZWP_POINTER_CONSTRAINTS_V1_LIFETIME_PERSISTENT );
 	if ( pLock == nullptr ) {
 		zwp_relative_pointer_v1_destroy( pRelative );
 		return false;
@@ -267,9 +267,8 @@ void SIRWaylandInputBridge::pointerProtocolsLost( void *pContext ) noexcept
 	( ( SIRWaylandInputBridge * )pContext )->endPointerCapture();
 }
 
-void SIRWaylandInputBridge::relativeMotion( void *pContext, zwp_relative_pointer_v1 *pRelative, uint32_t nTimeHi,
-                                            uint32_t nTimeLo, wl_fixed_t nDx, wl_fixed_t nDy, wl_fixed_t nDxUnaccel,
-                                            wl_fixed_t nDyUnaccel ) noexcept
+void SIRWaylandInputBridge::relativeMotion( void *pContext, zwp_relative_pointer_v1 *pRelative, uint32_t nTimeHi, uint32_t nTimeLo,
+                                            wl_fixed_t nDx, wl_fixed_t nDy, wl_fixed_t nDxUnaccel, wl_fixed_t nDyUnaccel ) noexcept
 {
 	( void )nTimeHi;
 	( void )nTimeLo;
