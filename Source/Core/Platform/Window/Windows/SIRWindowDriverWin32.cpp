@@ -2,6 +2,27 @@
 
 static constexpr wchar_t s_szWindowClass[] = L"SIREnginePlatformWindow";
 
+// Per-monitor DPI adjustments are dynamically resolved to retain Win7 support.
+static BOOL sirAdjustWindowFrame( RECT *pFrame, DWORD nStyle, DWORD nExStyle, HWND hWindow ) noexcept
+{
+	const HMODULE hUser32 = GetModuleHandleW( L"user32.dll" );
+	typedef UINT( WINAPI *sirGetDpiFn_t )( HWND );
+	typedef UINT( WINAPI *sirGetSystemDpiFn_t )( void );
+	typedef BOOL( WINAPI *sirAdjustForDpiFn_t )( LPRECT, DWORD, BOOL, DWORD, UINT );
+	if ( hUser32 != nullptr ) {
+		const sirGetDpiFn_t pGetDpi = ( sirGetDpiFn_t )GetProcAddress( hUser32, "GetDpiForWindow" );
+		const sirGetSystemDpiFn_t pGetSystemDpi = ( sirGetSystemDpiFn_t )GetProcAddress( hUser32, "GetDpiForSystem" );
+		const sirAdjustForDpiFn_t pAdjust = ( sirAdjustForDpiFn_t )GetProcAddress( hUser32, "AdjustWindowRectExForDpi" );
+		const UINT nDpi = hWindow != nullptr && pGetDpi != nullptr ? pGetDpi( hWindow ) :
+		                  pGetSystemDpi != nullptr                         ? pGetSystemDpi() :
+		                                                                  96;
+		if ( pAdjust != nullptr && nDpi != 0 ) {
+			return pAdjust( pFrame, nStyle, FALSE, nExStyle, nDpi );
+		}
+	}
+	return AdjustWindowRectEx( pFrame, nStyle, FALSE, nExStyle );
+}
+
 bool SIRWindowDriverWin32::setMessageSink( sirWindowWin32MessageSink_t pSink, void *pContext ) noexcept
 {
 	if ( pSink != nullptr && pContext == nullptr ) {
@@ -64,7 +85,7 @@ sirWindowResult_t SIRWindowDriverWin32::createWindow( const sirWindowCreateDesc_
 	m_bLostPending[nSlot] = false;
 	m_nLostNativeWindow[nSlot] = 0;
 	RECT frame = { 0, 0, ( LONG )desc.nWidth, ( LONG )desc.nHeight };
-	if ( !AdjustWindowRectEx( &frame, WS_OVERLAPPEDWINDOW, FALSE, 0 ) ) {
+	if ( !sirAdjustWindowFrame( &frame, WS_OVERLAPPEDWINDOW, 0, nullptr ) ) {
 		slot = {};
 		return SIR_WINDOW_NATIVE_FAILURE;
 	}
@@ -137,7 +158,7 @@ sirWindowResult_t SIRWindowDriverWin32::mutateWindow( uint32_t nSlot, const sirW
 		RECT frame = { 0, 0, ( LONG )mutation.nWidth, ( LONG )mutation.nHeight };
 		const DWORD nStyle = ( DWORD )GetWindowLongPtrW( hWindow, GWL_STYLE );
 		const DWORD nExStyle = ( DWORD )GetWindowLongPtrW( hWindow, GWL_EXSTYLE );
-		if ( !AdjustWindowRectEx( &frame, nStyle, FALSE, nExStyle ) ) {
+		if ( !sirAdjustWindowFrame( &frame, nStyle, nExStyle, hWindow ) ) {
 			return SIR_WINDOW_NATIVE_FAILURE;
 		}
 		if ( !SetWindowPos( hWindow, nullptr, 0, 0, frame.right - frame.left, frame.bottom - frame.top,
@@ -169,6 +190,15 @@ sirWindowResult_t SIRWindowDriverWin32::mutateWindow( uint32_t nSlot, const sirW
 
 void SIRWindowDriverWin32::queueEvent( uint32_t nSlot, sirWindowEventKind_t eKind, uint32_t nWidth, uint32_t nHeight ) noexcept
 {
+	if ( m_nEventCount != 0 && ( eKind == SIR_WINDOW_EVENT_RESIZED || eKind == SIR_WINDOW_EVENT_DPI_CHANGED ) ) {
+		const uint32_t nPrevious = ( m_nEventWrite + SIR_WINDOW_EVENT_CAPACITY - 1 ) % SIR_WINDOW_EVENT_CAPACITY;
+		sirWindowBackendEvent_t& previous = m_Events[nPrevious];
+		if ( previous.nSlot == nSlot && previous.eKind == eKind ) {
+			previous.nWidth = nWidth;
+			previous.nHeight = nHeight;
+			return;
+		}
+	}
 	if ( m_nEventCount == SIR_WINDOW_EVENT_CAPACITY ) {
 		m_bOverflow = true;
 		return;
@@ -189,16 +219,26 @@ LRESULT CALLBACK SIRWindowDriverWin32::windowProc( HWND hWindow, UINT nMessage, 
 	sirWin32Slot_t *pSlot = ( sirWin32Slot_t * )GetWindowLongPtrW( hWindow, GWLP_USERDATA );
 	if ( pSlot != nullptr && pSlot->pDriver != nullptr ) {
 		SIRWindowDriverWin32 *pDriver = pSlot->pDriver;
+		// Native lifecycle always precedes the optional input message sink.
+		if ( nMessage == WM_CLOSE || nMessage == WM_QUERYENDSESSION ) {
+			pDriver->m_bClosePending[pSlot->nIndex] = true;
+			return nMessage == WM_QUERYENDSESSION ? TRUE : 0;
+		}
+		if ( nMessage == WM_DESTROY && !pSlot->bDestroying ) {
+			pDriver->m_nLostNativeWindow[pSlot->nIndex] = ( uintptr_t )hWindow;
+			pDriver->m_bLostPending[pSlot->nIndex] = true;
+			pSlot->bLost = true;
+			pSlot->hWindow = nullptr;
+		}
+		if ( nMessage == WM_NCDESTROY ) {
+			SetWindowLongPtrW( hWindow, GWLP_USERDATA, 0 );
+		}
 		if ( pDriver->m_pSink != nullptr ) {
 			const sirWindowWin32Message_t message = { ( uintptr_t )hWindow, nMessage, ( uintptr_t )nWParam, ( intptr_t )nLParam };
 			const sirWindowWin32Dispatch_t result = pDriver->m_pSink( message, pDriver->m_pSinkContext );
 			if ( result.bHandled ) {
 				return ( LRESULT )result.nResult;
 			}
-		}
-		if ( nMessage == WM_CLOSE ) {
-			pDriver->m_bClosePending[pSlot->nIndex] = true;
-			return 0;
 		}
 		if ( nMessage == WM_SHOWWINDOW ) {
 			pDriver->queueEvent( pSlot->nIndex, nWParam ? SIR_WINDOW_EVENT_SHOWN : SIR_WINDOW_EVENT_HIDDEN, 0, 0 );
@@ -220,13 +260,6 @@ LRESULT CALLBACK SIRWindowDriverWin32::windowProc( HWND hWindow, UINT nMessage, 
 			pDriver->queueEvent( pSlot->nIndex, SIR_WINDOW_EVENT_FOCUS_GAINED, 0, 0 );
 		} else if ( nMessage == WM_KILLFOCUS ) {
 			pDriver->queueEvent( pSlot->nIndex, SIR_WINDOW_EVENT_FOCUS_LOST, 0, 0 );
-		} else if ( nMessage == WM_DESTROY && !pSlot->bDestroying ) {
-			pDriver->m_nLostNativeWindow[pSlot->nIndex] = ( uintptr_t )hWindow;
-			pDriver->m_bLostPending[pSlot->nIndex] = true;
-			pSlot->bLost = true;
-			pSlot->hWindow = nullptr;
-		} else if ( nMessage == WM_NCDESTROY ) {
-			SetWindowLongPtrW( hWindow, GWLP_USERDATA, 0 );
 		}
 	}
 	return DefWindowProcW( hWindow, nMessage, nWParam, nLParam );
@@ -255,22 +288,28 @@ sirWindowResult_t SIRWindowDriverWin32::pumpEvents( uint32_t nBudget, sirWindowD
 		}
 		++nProcessed;
 	}
-	while ( m_nEventCount != 0 ) {
-		pCallback( pContext, m_Events[m_nEventRead] );
-		m_nEventRead = ( m_nEventRead + 1 ) % SIR_WINDOW_EVENT_CAPACITY;
-		--m_nEventCount;
-	}
-	for ( uint32_t i = 0; i < SIR_WINDOW_MAX_WINDOWS; ++i ) {
+	uint32_t nDelivered = 0;
+	// Close and loss notifications occupy reserved slots, even if resize
+	// traffic fills the general event queue.
+	for ( uint32_t i = 0; i < SIR_WINDOW_MAX_WINDOWS && nDelivered < nBudget; ++i ) {
 		if ( m_bLostPending[i] ) {
 			m_bLostPending[i] = false;
 			const sirWindowBackendEvent_t event = { i, m_nLostNativeWindow[i], SIR_WINDOW_EVENT_LOST, 0, 0 };
 			pCallback( pContext, event );
+			++nDelivered;
 		}
-		if ( m_bClosePending[i] ) {
+		if ( m_bClosePending[i] && nDelivered < nBudget ) {
 			m_bClosePending[i] = false;
 			const sirWindowBackendEvent_t event = { i, ( uintptr_t )m_Slots[i].hWindow, SIR_WINDOW_EVENT_CLOSE_REQUESTED, 0, 0 };
 			pCallback( pContext, event );
+			++nDelivered;
 		}
+	}
+	while ( m_nEventCount != 0 && nDelivered < nBudget ) {
+		pCallback( pContext, m_Events[m_nEventRead] );
+		m_nEventRead = ( m_nEventRead + 1 ) % SIR_WINDOW_EVENT_CAPACITY;
+		--m_nEventCount;
+		++nDelivered;
 	}
 	const bool bLost = m_bOverflow;
 	m_bOverflow = false;
