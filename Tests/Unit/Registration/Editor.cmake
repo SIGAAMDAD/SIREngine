@@ -142,3 +142,38 @@ add_executable(SIREditorCatalogBridgeTests SIREditorCatalogBridgeTests.cpp)
 target_link_libraries(SIREditorCatalogBridgeTests PRIVATE SIR::EditorAuthoring)
 add_test(NAME editor.scene.resource-catalog-bridge COMMAND SIREditorCatalogBridgeTests)
 sir_configure_owned_target(SIREditorCatalogBridgeTests)
+
+add_executable(SIREditorApplicationTests SIREditorApplicationTests.cpp)
+target_link_libraries(SIREditorApplicationTests PRIVATE SIR::EditorAuthoring)
+add_test(NAME editor.host.application-loop COMMAND SIREditorApplicationTests)
+sir_configure_owned_target(SIREditorApplicationTests)
+
+add_test(NAME editor.host.headless-loop COMMAND SIREditor --headless-frames 3)
+set_tests_properties(editor.host.headless-loop PROPERTIES PASS_REGULAR_EXPRESSION "SIREditor frames: 3")
+add_test(NAME editor.host.reject-unbounded-loop COMMAND SIREditor --headless-frames 0)
+set_tests_properties(editor.host.reject-unbounded-loop PROPERTIES WILL_FAIL TRUE)
+
+add_executable(SIREditorDockLayoutTests SIREditorDockLayoutTests.cpp)
+target_link_libraries(SIREditorDockLayoutTests PRIVATE SIR::EditorAuthoring SIR::UI)
+add_test(NAME editor.ui.dock-layout COMMAND SIREditorDockLayoutTests)
+sir_configure_owned_target(SIREditorDockLayoutTests)
+
+add_executable(SIREditorWorkflowTests SIREditorWorkflowTests.cpp)
+target_link_libraries(SIREditorWorkflowTests PRIVATE SIR::EditorAuthoring)
+add_test(NAME editor.workflow.standard-actions COMMAND SIREditorWorkflowTests)
+sir_configure_owned_target(SIREditorWorkflowTests)
+
+add_executable(SIREditorResourceGraphBridgeTests SIREditorResourceGraphBridgeTests.cpp SIREditorResourceGraphCatalogFixture.cpp)
+target_link_libraries(SIREditorResourceGraphBridgeTests PRIVATE SIR::EditorAuthoring SIR::Resources)
+add_test(NAME editor.resources.grdg-bridge COMMAND SIREditorResourceGraphBridgeTests)
+sir_configure_owned_target(SIREditorResourceGraphBridgeTests)
+
+add_executable(SIREditorObjectInspectorTests SIREditorObjectInspectorTests.cpp)
+target_link_libraries(SIREditorObjectInspectorTests PRIVATE SIR::EditorAuthoring)
+add_test(NAME editor.objects.inherited-inspector COMMAND SIREditorObjectInspectorTests)
+sir_configure_owned_target(SIREditorObjectInspectorTests)
+
+add_executable(SIREditorComplexWriterTests SIREditorComplexWriterTests.cpp)
+target_link_libraries(SIREditorComplexWriterTests PRIVATE SIR::EditorAuthoring)
+add_test(NAME editor.scene.complex-source-writer COMMAND SIREditorComplexWriterTests)
+sir_configure_owned_target(SIREditorComplexWriterTests)

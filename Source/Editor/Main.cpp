@@ -14,6 +14,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Editor/Host/SIREditorSceneWorkspace.h>
+#include <Editor/Host/SIREditorApplication.h>
 
 #include <Core/Memory/SIRMemoryManager.h>
 #include <Core/Memory/SIRMemorySegment.h>
@@ -25,6 +26,7 @@ static void sirEditorPrintHelp( void ) noexcept
 {
 	puts( "Usage: SIREditor --inspect-scene <path.tscn>" );
 	puts( "       SIREditor --version" );
+	puts( "       SIREditor --headless-frames <positive count>" );
 	puts( "       SIREditor --help" );
 	puts( "Inspect the native SIREngine scene intake without altering the source file." );
 }
@@ -105,6 +107,42 @@ static int sirEditorInspectScene( const char *pszPath ) noexcept
 	return 0;
 }
 
+static bool sirEditorHeadlessFrame( uint64_t nFrame, void *pContext ) noexcept
+{
+	( void )nFrame;
+	( void )pContext;
+	return true;
+}
+
+static int sirEditorRunHeadless( const char *pszCount ) noexcept
+{
+	if ( pszCount == nullptr || *pszCount == '\0' ) {
+		return 2;
+	}
+	uint64_t nFrames = 0;
+	for ( const char *pChar = pszCount; *pChar != '\0'; ++pChar ) {
+		if ( *pChar < '0' || *pChar > '9' || nFrames > ( UINT64_MAX - ( uint64_t )( *pChar - '0' ) ) / 10 ) {
+			return 2;
+		}
+		nFrames = nFrames * 10 + ( uint64_t )( *pChar - '0' );
+	}
+	if ( nFrames == 0 ) {
+		return 2;
+	}
+	SIREditorApplication app;
+	if ( app.initialize( sirEditorHeadlessFrame, nullptr ) != SIR_EDITOR_APP_OK ) {
+		return 3;
+	}
+	const sirEditorApplicationResult_t eResult = app.run( nFrames );
+	if ( eResult != SIR_EDITOR_APP_OK ) {
+		app.shutdown();
+		return 3;
+	}
+	printf( "SIREditor frames: %llu\n", ( unsigned long long )app.getFrameCount() );
+	app.shutdown();
+	return 0;
+}
+
 int main( int nArgs, char **pszArgs )
 {
 	if ( nArgs == 2 && strcmp( pszArgs[1], "--help" ) == 0 ) {
@@ -114,6 +152,9 @@ int main( int nArgs, char **pszArgs )
 	if ( nArgs == 2 && strcmp( pszArgs[1], "--version" ) == 0 ) {
 		puts( "SIREditor native scene host " SIR_VERSION );
 		return 0;
+	}
+	if ( nArgs == 3 && strcmp( pszArgs[1], "--headless-frames" ) == 0 ) {
+		return sirEditorRunHeadless( pszArgs[2] );
 	}
 	if ( nArgs == 3 && strcmp( pszArgs[1], "--inspect-scene" ) == 0 ) {
 		return sirEditorInspectScene( pszArgs[2] );
