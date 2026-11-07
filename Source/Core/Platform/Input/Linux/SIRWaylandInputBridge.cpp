@@ -355,7 +355,7 @@ void SIRWaylandInputBridge::keyboardEnter( void *pContext, wl_keyboard *pKeyboar
 		const uint32_t nCount = pKeys->size / sizeof( uint32_t );
 		const uint32_t *pScanCodes = ( const uint32_t * )pKeys->data;
 		for ( uint32_t i = 0; i < nCount && i < SIR_INPUT_BUTTON_CAPACITY; ++i ) {
-			if ( pScanCodes[i] + 8 < SIR_INPUT_BUTTON_CAPACITY ) {
+			if ( pScanCodes[i] < SIR_INPUT_BUTTON_CAPACITY - 8 ) {
 				const sirInputControlChange_t change = { SIR_INPUT_BUTTON, ( uint16_t )( pScanCodes[i] + 8 ), 1 };
 				( void )pBridge->m_pInput->emitControls( pBridge->id(), pBridge->m_hKeyboard, &change, 1 );
 			}
@@ -385,7 +385,7 @@ void SIRWaylandInputBridge::keyboardKey( void *pContext, wl_keyboard *pKeyboard,
 	( void )nTime;
 	SIRWaylandInputBridge *pBridge = ( SIRWaylandInputBridge * )pContext;
 	if ( pBridge->m_pKeyboard != pKeyboard || pBridge->m_pKeyboardFocus == nullptr || !pBridge->m_bKeyboardDevice ||
-	     nKey + 8 >= SIR_INPUT_BUTTON_CAPACITY ) {
+	     nKey >= SIR_INPUT_BUTTON_CAPACITY - 8 ) {
 		return;
 	}
 	const bool bPressed = nState == WL_KEYBOARD_KEY_STATE_PRESSED;
