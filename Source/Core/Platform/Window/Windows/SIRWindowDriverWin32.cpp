@@ -1,6 +1,9 @@
 #include <Core/Platform/Window/Windows/SIRWindowDriverWin32.h>
 
 static constexpr wchar_t s_szWindowClass[] = L"SIREnginePlatformWindow";
+static SRWLOCK s_WindowClassLock = SRWLOCK_INIT;
+static uint32_t s_nWindowClassUsers = 0;
+static bool s_bWindowClassOwned = false;
 
 static UINT sirCurrentWindowDpi( HWND hWindow ) noexcept
 {
@@ -59,18 +62,27 @@ sirWindowResult_t SIRWindowDriverWin32::initialize( void ) noexcept
 	if ( m_bRegistered ) {
 		return SIR_WINDOW_BUSY;
 	}
-	WNDCLASSW definition = {};
-	definition.lpfnWndProc = windowProc;
-	definition.hInstance = GetModuleHandleW( nullptr );
-	definition.hCursor = LoadCursorW( nullptr, MAKEINTRESOURCEW( 32512 ) );
-	definition.lpszClassName = s_szWindowClass;
-	// Preserve the original native input window's existing-class behavior.
-	const ATOM nClass = RegisterClassW( &definition );
-	if ( nClass == 0 && GetLastError() != ERROR_CLASS_ALREADY_EXISTS ) {
-		return SIR_WINDOW_NATIVE_FAILURE;
+	AcquireSRWLockExclusive( &s_WindowClassLock );
+	if ( s_nWindowClassUsers == UINT32_MAX ) {
+		ReleaseSRWLockExclusive( &s_WindowClassLock );
+		return SIR_WINDOW_OUT_OF_CAPACITY;
 	}
-	m_bOwnsClass = nClass != 0;
+	if ( s_nWindowClassUsers == 0 ) {
+		WNDCLASSW definition = {};
+		definition.lpfnWndProc = windowProc;
+		definition.hInstance = GetModuleHandleW( nullptr );
+		definition.hCursor = LoadCursorW( nullptr, MAKEINTRESOURCEW( 32512 ) );
+		definition.lpszClassName = s_szWindowClass;
+		const ATOM nClass = RegisterClassW( &definition );
+		if ( nClass == 0 && GetLastError() != ERROR_CLASS_ALREADY_EXISTS ) {
+			ReleaseSRWLockExclusive( &s_WindowClassLock );
+			return SIR_WINDOW_NATIVE_FAILURE;
+		}
+		s_bWindowClassOwned = nClass != 0;
+	}
+	++s_nWindowClassUsers;
 	m_bRegistered = true;
+	ReleaseSRWLockExclusive( &s_WindowClassLock );
 	return SIR_WINDOW_OK;
 }
 
@@ -403,11 +415,16 @@ void SIRWindowDriverWin32::shutdown( void ) noexcept
 		}
 		m_Slots[i] = {};
 	}
-	if ( m_bOwnsClass ) {
-		( void )UnregisterClassW( s_szWindowClass, GetModuleHandleW( nullptr ) );
+	AcquireSRWLockExclusive( &s_WindowClassLock );
+	if ( s_nWindowClassUsers != 0 ) {
+		--s_nWindowClassUsers;
+		if ( s_nWindowClassUsers == 0 && s_bWindowClassOwned ) {
+			( void )UnregisterClassW( s_szWindowClass, GetModuleHandleW( nullptr ) );
+			s_bWindowClassOwned = false;
+		}
 	}
-	m_bOwnsClass = false;
 	m_bRegistered = false;
+	ReleaseSRWLockExclusive( &s_WindowClassLock );
 	m_pSink = nullptr;
 	m_pSinkContext = nullptr;
 	m_nEventRead = 0;
