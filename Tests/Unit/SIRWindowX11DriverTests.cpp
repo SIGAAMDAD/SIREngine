@@ -67,6 +67,28 @@ int main( void )
 		return 9;
 	}
 	Display *pDisplay = ( Display * )view.nDisplayOrInstance;
+	// The platform owner must publish native mapping state to all consumers.
+	XUnmapWindow( pDisplay, ( Window )view.nNativeWindow );
+	XSync( pDisplay, False );
+	for ( uint32_t i = 0; i < 8; ++i ) {
+		if ( windows.pumpEvents( 128 ) != SIR_WINDOW_OK ) {
+			return 10;
+		}
+	}
+	sirWindowSnapshot_t hidden = {};
+	if ( windows.querySnapshot( second, &hidden ) != SIR_WINDOW_OK || hidden.bVisible || hidden.bReady ) {
+		return 11;
+	}
+	XMapWindow( pDisplay, ( Window )view.nNativeWindow );
+	XSync( pDisplay, False );
+	for ( uint32_t i = 0; i < 8; ++i ) {
+		if ( windows.pumpEvents( 128 ) != SIR_WINDOW_OK ) {
+			return 12;
+		}
+	}
+	if ( windows.querySnapshot( second, &hidden ) != SIR_WINDOW_OK || !hidden.bVisible || !hidden.bReady ) {
+		return 13;
+	}
 	XResizeWindow( pDisplay, ( Window )view.nNativeWindow, 320, 240 );
 	XSelectInput( pDisplay, ( Window )view.nNativeWindow, KeyPressMask | StructureNotifyMask | FocusChangeMask );
 	XEvent key = {};

@@ -158,6 +158,10 @@ sirWindowResult_t SIRWindowDriverX11::pumpEvents( uint32_t nBudget, sirWindowDri
 			emitted.eKind = SIR_WINDOW_EVENT_RESIZED;
 			emitted.nWidth = ( uint32_t )event.xconfigure.width;
 			emitted.nHeight = ( uint32_t )event.xconfigure.height;
+		} else if ( event.type == MapNotify ) {
+			emitted.eKind = SIR_WINDOW_EVENT_SHOWN;
+		} else if ( event.type == UnmapNotify ) {
+			emitted.eKind = SIR_WINDOW_EVENT_HIDDEN;
 		} else if ( event.type == FocusIn ) {
 			emitted.eKind = SIR_WINDOW_EVENT_FOCUS_GAINED;
 		} else if ( event.type == FocusOut ) {
