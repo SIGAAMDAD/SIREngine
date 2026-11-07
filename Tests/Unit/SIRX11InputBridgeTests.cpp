@@ -45,7 +45,7 @@ int main( void )
 		return 3;
 	}
 	bridge.setTextEnabled( true );
-	if ( !input.text().snapshot().bEnabled || !input.begin( 1 ) ) {
+	if ( !input.text().snapshot().bEnabled || !input.begin( 1 ) || !bridge.beginFrame() ) {
 		return 4;
 	}
 	Display *pDisplay = ( Display * )view.nDisplayOrInstance;

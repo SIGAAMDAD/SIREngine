@@ -14,7 +14,9 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Core/Platform/Input/SIRInputService.h>
-#include <Core/Platform/Window/SIRInputWindow.h>
+#include <Core/Platform/Window/SIRWindowSystem.h>
+#include <Core/Platform/Window/Linux/SIRWindowDriverX11.h>
+#include <Core/Platform/Input/Linux/SIRX11InputBridge.h>
 #include <Core/Platform/Input/Linux/SIRLinuxX11Backend.h>
 
 #include <X11/Xlib.h>
@@ -37,28 +39,39 @@ int main( void )
 {
 	SIRInputService input;
 	SIRLinuxX11Backend backend;
-	SIRInputWindow window;
-	bool bOpened = false;
-	for ( uint32_t iAttempt = 0; iAttempt < 16 && !bOpened; ++iAttempt ) {
-		bOpened = window.open( input, backend );
-		if ( !bOpened ) {
-			( void )usleep( 1000 );
-		}
-	}
-	if ( !bOpened || !window.isOpen() || !s_bRejectedNativeIME ) {
-		fputs( "SIRInputX11IMEFallbackTests failed to exercise unavailable XIM context\n", stderr );
+	SIRWindowDriverX11 driver;
+	SIRWindowSystem windows( driver );
+	SIRX11InputBridge bridge;
+	if ( windows.initialize() != SIR_SYSTEM_OK ) {
+		fputs( "SIRInputX11IMEFallbackTests cannot initialize native driver\n", stderr );
 		return 1;
 	}
-	if ( !input.begin( 1 ) || !window.pump( input ) || input.activeDeviceCount() != 2 ) {
+	const sirWindowCreateDesc_t desc = { "X11 IME fallback", 800, 450 };
+	sirWindowHandle_t hWindow = {};
+	if ( windows.createWindow( desc, &hWindow ) != SIR_WINDOW_OK ) {
+		return 1;
+	}
+	sirWindowNativeLease_t lease = {};
+	sirWindowNativeView_t view = {};
+	if ( windows.acquireNativeLease( hWindow, &lease, &view ) != SIR_WINDOW_OK || !bridge.bind( input, backend, view ) ||
+	     !s_bRejectedNativeIME ) {
+		fputs( "SIRInputX11IMEFallbackTests did not exercise unavailable XIM context\n", stderr );
+		return 1;
+	}
+	if ( !input.begin( 1 ) || !bridge.beginFrame() || windows.pumpEvents( 128 ) != SIR_WINDOW_OK || input.activeDeviceCount() != 2 ) {
 		fputs( "SIRInputX11IMEFallbackTests failed native input without XIM context\n", stderr );
 		return 1;
 	}
-	window.setTextEnabled( true );
+	bridge.setTextEnabled( true );
 	if ( !input.text().snapshot().bEnabled ) {
 		fputs( "SIRInputX11IMEFallbackTests failed text-mode fallback\n", stderr );
 		return 1;
 	}
-	window.close();
+	bridge.unbind();
+	if ( windows.releaseNativeLease( lease ) != SIR_WINDOW_OK || windows.destroyWindow( hWindow ) != SIR_WINDOW_OK ||
+	     windows.shutdown() != SIR_SYSTEM_OK ) {
+		return 1;
+	}
 	input.shutdown();
 	puts( "SIRInputX11IMEFallbackTests PASS" );
 	return 0;

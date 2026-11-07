@@ -27,8 +27,12 @@
 typedef struct sirNativeWindowPumpContext_s
 {
 	SIRWindowSystem *pWindows;
+#if defined( _WIN32 )
+	SIRWin32InputBridge *pWinInput;
+#endif
 #if defined( SIR_WINDOW_X11_AVAILABLE ) && !defined( _WIN32 )
 	SIRLinuxEvdevBackend *pEvdev;
+	SIRX11InputBridge *pBridge;
 	SIRInputService *pInput;
 	bool bDiscoveryAttempted;
 #endif
@@ -38,12 +42,21 @@ static bool sirPumpNativeWindows( void *pContext )
 {
 	sirNativeWindowPumpContext_t *pPump = ( sirNativeWindowPumpContext_t * )pContext;
 #if defined( SIR_WINDOW_X11_AVAILABLE ) && !defined( _WIN32 )
+	if ( pPump->pBridge != nullptr && !pPump->pBridge->beginFrame() ) {
+		return false;
+	}
 	if ( pPump->pInput != nullptr && !pPump->bDiscoveryAttempted ) {
 		pPump->bDiscoveryAttempted = true;
 		( void )pPump->pEvdev->discover( *pPump->pInput );
 	}
 #endif
-	return pPump->pWindows->pumpEvents( 256 ) == SIR_WINDOW_OK;
+	const sirWindowResult_t ePump = pPump->pWindows->pumpEvents( 256 );
+#if defined( _WIN32 )
+	if ( pPump->pWinInput != nullptr ) {
+		pPump->pWinInput->finishPump();
+	}
+#endif
+	return ePump == SIR_WINDOW_OK;
 }
 
 #if defined( _WIN32 )
@@ -162,9 +175,13 @@ static int sirRunNativeInputWindow( void )
 	SIRWindowSystem windows( driver );
 	sirNativeWindowPumpContext_t context = {};
 	context.pWindows = &windows;
+#if defined( _WIN32 )
+	context.pWinInput = &bridge;
+#endif
 #if defined( SIR_WINDOW_X11_AVAILABLE ) && !defined( _WIN32 )
 	context.pInput = &input;
 	context.pEvdev = &nativeControllers;
+	context.pBridge = &bridge;
 #endif
 	SIRApplication application;
 	if ( !application.attachInput( input ) || !application.registerSystem( &windows ) ||

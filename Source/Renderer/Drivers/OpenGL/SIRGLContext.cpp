@@ -18,6 +18,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <string.h>
 
 #if defined( _WIN32 )
+#include <Core/Platform/Window/Windows/SIRWGLBootstrapWindow.h>
 #include <windows.h>
 #else
 #include <dlfcn.h>
@@ -81,8 +82,7 @@ typedef struct sirGLNativeContext_s
 #if defined( _WIN32 )
 	DWORD nOwnerThread;
 	HMODULE pLibrary;
-	HWND pWindow;
-	HDC pDC;
+	sirWGLBootstrapWindow_t window;
 	HGLRC pRenderContext;
 #else
 	pthread_t ownerThread;
@@ -193,20 +193,7 @@ static bool sirGLInitWindows( sirGLNativeContext_t *pContext ) noexcept
 	if ( pContext->pLibrary == nullptr ) {
 		return false;
 	}
-	const HINSTANCE hInstance = GetModuleHandleA( nullptr );
-	WNDCLASSA windowClass = {};
-	windowClass.lpfnWndProc = DefWindowProcA;
-	windowClass.hInstance = hInstance;
-	windowClass.lpszClassName = "SIREngineGL46Context";
-	if ( RegisterClassA( &windowClass ) == 0 && GetLastError() != ERROR_CLASS_ALREADY_EXISTS ) {
-		return false;
-	}
-	pContext->pWindow = CreateWindowExA( 0, windowClass.lpszClassName, "", WS_POPUP, 0, 0, 1, 1, nullptr, nullptr, hInstance, nullptr );
-	if ( pContext->pWindow == nullptr ) {
-		return false;
-	}
-	pContext->pDC = GetDC( pContext->pWindow );
-	if ( pContext->pDC == nullptr ) {
+	if ( !sirCreateWGLBootstrapWindow( &pContext->window ) ) {
 		return false;
 	}
 	PIXELFORMATDESCRIPTOR pixel = {};
@@ -216,15 +203,15 @@ static bool sirGLInitWindows( sirGLNativeContext_t *pContext ) noexcept
 	pixel.iPixelType = PFD_TYPE_RGBA;
 	pixel.cColorBits = 32;
 	pixel.cDepthBits = 24;
-	const int nFormat = ChoosePixelFormat( pContext->pDC, &pixel );
-	if ( nFormat == 0 || !SetPixelFormat( pContext->pDC, nFormat, &pixel ) ) {
+	const int nFormat = ChoosePixelFormat( pContext->window.hDC, &pixel );
+	if ( nFormat == 0 || !SetPixelFormat( pContext->window.hDC, nFormat, &pixel ) ) {
 		return false;
 	}
-	HGLRC pLegacy = wglCreateContext( pContext->pDC );
+	HGLRC pLegacy = wglCreateContext( pContext->window.hDC );
 	if ( pLegacy == nullptr ) {
 		return false;
 	}
-	if ( !wglMakeCurrent( pContext->pDC, pLegacy ) ) {
+	if ( !wglMakeCurrent( pContext->window.hDC, pLegacy ) ) {
 		wglDeleteContext( pLegacy );
 		return false;
 	}
@@ -235,10 +222,10 @@ static bool sirGLInitWindows( sirGLNativeContext_t *pContext ) noexcept
 		return false;
 	}
 	const int szAttrs[] = { 0x2091, 4, 0x2092, 6, 0x9126, 1, 0 }; // WGL 4.6 core
-	HGLRC pCore = pCreate( pContext->pDC, nullptr, szAttrs );
+	HGLRC pCore = pCreate( pContext->window.hDC, nullptr, szAttrs );
 	wglMakeCurrent( nullptr, nullptr );
 	wglDeleteContext( pLegacy );
-	if ( pCore == nullptr || !wglMakeCurrent( pContext->pDC, pCore ) ) {
+	if ( pCore == nullptr || !wglMakeCurrent( pContext->window.hDC, pCore ) ) {
 		if ( pCore != nullptr ) {
 			wglDeleteContext( pCore );
 		}
@@ -373,12 +360,7 @@ void sirGLDestroyNativeContext( sirGLNativeContext_t *pContext ) noexcept
 		wglMakeCurrent( nullptr, nullptr );
 		wglDeleteContext( pContext->pRenderContext );
 	}
-	if ( pContext->pDC != nullptr && pContext->pWindow != nullptr ) {
-		ReleaseDC( pContext->pWindow, pContext->pDC );
-	}
-	if ( pContext->pWindow != nullptr ) {
-		DestroyWindow( pContext->pWindow );
-	}
+	sirDestroyWGLBootstrapWindow( &pContext->window );
 	if ( pContext->pLibrary != nullptr ) {
 		FreeLibrary( pContext->pLibrary );
 	}

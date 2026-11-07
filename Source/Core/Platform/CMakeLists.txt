@@ -39,6 +39,7 @@ if(WIN32)
         Windows/SIRPlatformTimeWindows.cpp
         Windows/SIRPlatformProcessWindows.cpp
         Window/Windows/SIRWindowDriverWin32.cpp
+        Window/Windows/SIRWGLBootstrapWindow.cpp
         Input/Windows/SIRWin32InputBridge.cpp
         Input/Windows/SIRWindowsRawBackend.cpp
         Input/Windows/SIRWindowsRawDecode.cpp

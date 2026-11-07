@@ -35,6 +35,7 @@ public:
 
 	bool bind( SIRInputService& input, SIRLinuxX11Backend& backend, const sirWindowNativeView_t& view ) noexcept;
 	bool isBound( void ) const noexcept;
+	bool beginFrame( void ) noexcept;
 	bool setCursorMode( sirInputCursorMode_t eMode ) noexcept;
 	sirInputCursorMode_t cursorMode( void ) const noexcept;
 	void setTextEnabled( bool bEnabled ) noexcept;
@@ -49,6 +50,7 @@ private:
 	Window m_hWindow = 0;
 	XIM m_hInputMethod = nullptr;
 	XIC m_hInputContext = nullptr;
+	bool m_bAttached = false;
 	bool m_bFocused = false;
 	bool m_bCursorCaptured = false;
 	sirInputCursorMode_t m_eCursorMode = SIR_INPUT_CURSOR_FREE;

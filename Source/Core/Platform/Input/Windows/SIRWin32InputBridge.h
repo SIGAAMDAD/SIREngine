@@ -37,6 +37,7 @@ public:
 	bool setCursorMode( sirInputCursorMode_t eMode ) noexcept;
 	sirInputCursorMode_t cursorMode( void ) const noexcept;
 	void setTextEnabled( bool bEnabled ) noexcept;
+	void finishPump( void ) noexcept;
 	intptr_t processMessage( uint32_t nMessage, uintptr_t nWParam, intptr_t nLParam, bool *pHandled ) noexcept;
 	void unbind( void ) noexcept;
 
@@ -46,6 +47,7 @@ private:
 	SIRWindowsRawBackend *m_pBackend = nullptr;
 	uintptr_t m_nWindow = 0;
 	bool m_bFocused = false;
+	bool m_bFocusLost = false;
 	bool m_bCursorCaptured = false;
 	sirInputCursorMode_t m_eCursorMode = SIR_INPUT_CURSOR_FREE;
 };

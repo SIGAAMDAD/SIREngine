@@ -79,6 +79,15 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 endif()
 
 
+# The original OpenGL/WGL hidden native HWND lifecycle now belongs to Core/Platform.
+if(WIN32)
+    add_executable(SIRWGLBootstrapWindowTests SIRWGLBootstrapWindowTests.cpp)
+    target_link_libraries(SIRWGLBootstrapWindowTests PRIVATE SIR::Core)
+    add_test(NAME core.platform.window.wgl-bootstrap COMMAND SIRWGLBootstrapWindowTests)
+    set_tests_properties(core.platform.window.wgl-bootstrap PROPERTIES LABELS "core;platform;window;wgl;integration" TIMEOUT 60)
+    sir_configure_owned_target(SIRWGLBootstrapWindowTests)
+endif()
+
 # Window system registry and headless negative-path acceptance.
 add_executable(SIRWindowSystemTests SIRWindowSystemTests.cpp)
 target_link_libraries(SIRWindowSystemTests PRIVATE SIR::Core)
@@ -86,6 +95,9 @@ add_test(NAME core.platform.window.system COMMAND SIRWindowSystemTests)
 set_tests_properties(core.platform.window.system PROPERTIES LABELS "core;platform;window" TIMEOUT 60)
 sir_configure_owned_target(SIRWindowSystemTests)
 
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND SIR_WITH_X11_INPUT)
+    find_package(X11 QUIET)
+endif()
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND SIR_WITH_X11_INPUT AND X11_FOUND)
     find_program(SIR_WINDOW_XVFB_RUN NAMES xvfb-run)
     if(SIR_WINDOW_XVFB_RUN)

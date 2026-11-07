@@ -12,10 +12,6 @@ bool SIRX11InputBridge::bind( SIRInputService& input, SIRLinuxX11Backend& backen
 		return false;
 	}
 	const Window hWindow = ( Window )view.nNativeWindow;
-	if ( !backend.attachWindow( input, hWindow ) ) {
-		backend.stop( input );
-		return false;
-	}
 	Display *pDisplay = ( Display * )view.nDisplayOrInstance;
 	m_pInput = &input;
 	m_pBackend = &backend;
@@ -23,7 +19,6 @@ bool SIRX11InputBridge::bind( SIRInputService& input, SIRLinuxX11Backend& backen
 	m_hWindow = hWindow;
 	XSelectInput( pDisplay, hWindow, SIRLinuxX11Backend::requiredEventMask() | StructureNotifyMask );
 	( void )SIRLinuxX11Backend::enableDetectableRepeat( pDisplay );
-	( void )backend.enableRawPointer( pDisplay );
 	if ( XSupportsLocale() ) {
 		( void )XSetLocaleModifiers( "" );
 		XIM hMethod = XOpenIM( pDisplay, nullptr, nullptr, nullptr );
@@ -42,6 +37,21 @@ bool SIRX11InputBridge::bind( SIRInputService& input, SIRLinuxX11Backend& backen
 	return true;
 }
 
+bool SIRX11InputBridge::beginFrame( void ) noexcept
+{
+	if ( m_pInput == nullptr || m_pBackend == nullptr ) {
+		return false;
+	}
+	if ( !m_bAttached ) {
+		if ( !m_pBackend->attachWindow( *m_pInput, m_hWindow ) ) {
+			return false;
+		}
+		m_bAttached = true;
+		( void )m_pBackend->enableRawPointer( m_pDisplay );
+	}
+	return true;
+}
+
 bool SIRX11InputBridge::isBound( void ) const noexcept
 {
 	return m_pInput != nullptr;
@@ -49,42 +59,47 @@ bool SIRX11InputBridge::isBound( void ) const noexcept
 
 bool SIRX11InputBridge::setCursorMode( sirInputCursorMode_t eMode ) noexcept
 {
-	if ( m_pDisplay == nullptr || m_hWindow == 0 || eMode > SIR_INPUT_CURSOR_CAPTURED ) {
+	if ( eMode > SIR_INPUT_CURSOR_CAPTURED || m_pInput == nullptr || m_pDisplay == nullptr ) {
+		return false;
+	}
+	Display *pDisplay = m_pDisplay;
+	const Window hWindow = ( Window )m_hWindow;
+	if ( hWindow == 0 ) {
 		return false;
 	}
 	if ( m_bCursorCaptured ) {
-		XUngrabPointer( m_pDisplay, CurrentTime );
+		XUngrabPointer( pDisplay, CurrentTime );
 		m_bCursorCaptured = false;
 	}
 	if ( eMode != SIR_INPUT_CURSOR_FREE && m_nInvisibleCursor == 0 ) {
 		const char szBlank[1] = { 0 };
-		const Pixmap hBlank = XCreateBitmapFromData( m_pDisplay, m_hWindow, szBlank, 1, 1 );
-		if ( hBlank == 0 ) {
+		const Pixmap nBlank = XCreateBitmapFromData( pDisplay, hWindow, szBlank, 1, 1 );
+		if ( nBlank == 0 ) {
 			return false;
 		}
 		XColor black = {};
-		m_nInvisibleCursor = ( uintptr_t )XCreatePixmapCursor( m_pDisplay, hBlank, hBlank, &black, &black, 0, 0 );
-		XFreePixmap( m_pDisplay, hBlank );
+		m_nInvisibleCursor = ( uintptr_t )XCreatePixmapCursor( pDisplay, nBlank, nBlank, &black, &black, 0, 0 );
+		XFreePixmap( pDisplay, nBlank );
 		if ( m_nInvisibleCursor == 0 ) {
 			return false;
 		}
 	}
 	if ( eMode == SIR_INPUT_CURSOR_FREE ) {
-		XUndefineCursor( m_pDisplay, m_hWindow );
+		XUndefineCursor( pDisplay, hWindow );
 	} else {
-		XDefineCursor( m_pDisplay, m_hWindow, ( Cursor )m_nInvisibleCursor );
+		XDefineCursor( pDisplay, hWindow, ( Cursor )m_nInvisibleCursor );
 	}
 	if ( eMode == SIR_INPUT_CURSOR_CAPTURED && m_bFocused ) {
-		const int nResult = XGrabPointer( m_pDisplay, m_hWindow, True, ButtonPressMask | ButtonReleaseMask | PointerMotionMask,
-		                                  GrabModeAsync, GrabModeAsync, m_hWindow, ( Cursor )m_nInvisibleCursor, CurrentTime );
+		const int nResult = XGrabPointer( pDisplay, hWindow, True, ButtonPressMask | ButtonReleaseMask | PointerMotionMask, GrabModeAsync,
+		                                  GrabModeAsync, hWindow, ( Cursor )m_nInvisibleCursor, CurrentTime );
 		if ( nResult != GrabSuccess ) {
-			XFlush( m_pDisplay );
+			XFlush( pDisplay );
 			return false;
 		}
 		m_bCursorCaptured = true;
 	}
 	m_eCursorMode = eMode;
-	XFlush( m_pDisplay );
+	XFlush( pDisplay );
 	return true;
 }
 
@@ -101,9 +116,9 @@ void SIRX11InputBridge::setTextEnabled( bool bEnabled ) noexcept
 	m_pInput->text().setEnabled( bEnabled );
 	if ( m_hInputContext != nullptr && m_bFocused ) {
 		if ( bEnabled ) {
-			XSetICFocus( m_hInputContext );
+			XSetICFocus( ( XIC )m_hInputContext );
 		} else {
-			XUnsetICFocus( m_hInputContext );
+			XUnsetICFocus( ( XIC )m_hInputContext );
 		}
 	}
 }
@@ -113,45 +128,47 @@ void SIRX11InputBridge::processEvent( const XEvent& event ) noexcept
 	if ( m_pInput == nullptr || m_pBackend == nullptr ) {
 		return;
 	}
+	SIRInputService& input = *m_pInput;
+	SIRLinuxX11Backend *pX11 = m_pBackend;
 	if ( event.type == GenericEvent ) {
-		( void )m_pBackend->processEvent( *m_pInput, event );
+		( void )pX11->processEvent( input, event );
 		return;
 	}
 	if ( event.xany.window != m_hWindow ) {
 		return;
 	}
+	XEvent nativeEvent = event;
 	if ( event.type == FocusIn || event.type == FocusOut ) {
 		m_bFocused = event.type == FocusIn;
-		m_pInput->text().setFocused( m_bFocused );
-		m_pInput->setHapticsPaused( !m_bFocused );
+		input.text().setFocused( m_bFocused );
+		input.setHapticsPaused( !m_bFocused );
+		if ( m_hInputContext != nullptr ) {
+			if ( m_bFocused && input.text().snapshot().bEnabled ) {
+				XSetICFocus( ( XIC )m_hInputContext );
+			} else {
+				XUnsetICFocus( ( XIC )m_hInputContext );
+			}
+		}
 		if ( m_eCursorMode == SIR_INPUT_CURSOR_CAPTURED ) {
 			( void )setCursorMode( m_eCursorMode );
 		}
-		if ( m_hInputContext != nullptr ) {
-			if ( m_bFocused && m_pInput->text().snapshot().bEnabled ) {
-				XSetICFocus( m_hInputContext );
-			} else {
-				XUnsetICFocus( m_hInputContext );
-			}
-		}
 	}
-	if ( m_bFocused && m_pInput->text().snapshot().bEnabled && m_hInputContext != nullptr &&
+	if ( m_bFocused && input.text().snapshot().bEnabled && m_hInputContext != nullptr &&
 	     ( event.type == KeyPress || event.type == KeyRelease ) ) {
-		XEvent filtered = event;
-		if ( XFilterEvent( &filtered, m_hWindow ) ) {
+		if ( XFilterEvent( &nativeEvent, ( Window )m_hWindow ) ) {
 			return;
 		}
 		if ( event.type == KeyPress ) {
 			char szUtf8[1024] = {};
 			KeySym eKey = NoSymbol;
 			Status eStatus = XLookupNone;
-			const int nLength = Xutf8LookupString( m_hInputContext, &filtered.xkey, szUtf8, sizeof( szUtf8 ), &eKey, &eStatus );
+			const int nLength = Xutf8LookupString( ( XIC )m_hInputContext, &nativeEvent.xkey, szUtf8, sizeof( szUtf8 ), &eKey, &eStatus );
 			if ( nLength > 0 && nLength <= ( int )sizeof( szUtf8 ) && ( eStatus == XLookupChars || eStatus == XLookupBoth ) ) {
-				( void )m_pInput->text().appendUtf8( szUtf8, ( uint32_t )nLength );
+				( void )input.text().appendUtf8( szUtf8, ( uint32_t )nLength );
 			}
 		}
 	}
-	( void )m_pBackend->processEvent( *m_pInput, event );
+	( void )pX11->processEvent( input, event );
 }
 
 void SIRX11InputBridge::unbind( void ) noexcept
@@ -176,6 +193,7 @@ void SIRX11InputBridge::unbind( void ) noexcept
 	m_pBackend->stop( *m_pInput );
 	m_pInput = nullptr;
 	m_pBackend = nullptr;
+	m_bAttached = false;
 	m_pDisplay = nullptr;
 	m_hWindow = 0;
 	m_hInputContext = nullptr;

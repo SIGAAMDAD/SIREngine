@@ -51,8 +51,8 @@ sirWindowResult_t SIRWindowDriverX11::createWindow( const sirWindowCreateDesc_t&
 	if ( m_hWindows[nSlot] != 0 ) {
 		return SIR_WINDOW_BUSY;
 	}
-	const Window hRoot = DefaultRootWindow( pDisplay );
-	const Window hWindow = XCreateSimpleWindow( pDisplay, hRoot, 0, 0, desc.nWidth, desc.nHeight, 0, 0, 0 );
+	const int nScreen = DefaultScreen( pDisplay );
+	Window hWindow = XCreateSimpleWindow( pDisplay, RootWindow( pDisplay, nScreen ), 0, 0, desc.nWidth, desc.nHeight, 0, 0, 0 );
 	if ( hWindow == 0 ) {
 		return SIR_WINDOW_NATIVE_FAILURE;
 	}
