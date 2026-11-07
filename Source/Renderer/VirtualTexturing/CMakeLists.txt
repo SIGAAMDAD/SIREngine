@@ -11,4 +11,5 @@ target_sources(SIRGraphics PRIVATE
     SIRVirtualTextureTileCooker.cpp
     SIRVirtualTextureFeedbackReducer.cpp
     SIRVirtualTextureFixedProfile.cpp
-    SIRVirtualTextureDecodedPayload.cpp)
+    SIRVirtualTextureDecodedPayload.cpp
+    SIRVirtualTextureReferenceEncoder.cpp)

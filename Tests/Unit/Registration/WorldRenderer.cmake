@@ -17,6 +17,11 @@ target_link_libraries(SIRVirtualTexturePortTests PRIVATE SIR::Graphics)
 add_test(NAME renderer.virtual-texturing.terrain3d-v1 COMMAND SIRVirtualTexturePortTests)
 sir_configure_owned_target(SIRVirtualTexturePortTests)
 
+add_executable(SIRVirtualTextureReferenceEncoderTests SIRVirtualTextureReferenceEncoderTests.cpp)
+target_link_libraries(SIRVirtualTextureReferenceEncoderTests PRIVATE SIR::Graphics)
+add_test(NAME renderer.virtual-texturing.reference-encoder COMMAND SIRVirtualTextureReferenceEncoderTests)
+sir_configure_owned_target(SIRVirtualTextureReferenceEncoderTests)
+
 # Bounded metadata-only V1 lookup and malformed-directory rejection.
 add_executable(SIRVirtualTexturePackLookupTests SIRVirtualTexturePackLookupTests.cpp)
 target_link_libraries(SIRVirtualTexturePackLookupTests PRIVATE SIR::Graphics)
