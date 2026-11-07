@@ -190,7 +190,8 @@ jobs:
           set -euo pipefail
           cmake --preset dev -DSIR_WITH_GOOGLETEST=ON "-D${{ matrix.option }}=ON"
           cmake --build --preset dev
-          ctest --preset dev -R "${{ matrix.tests }}" --no-tests=error --output-on-failure
+          mkdir -p out/Verification
+          ctest --preset dev -R "${{ matrix.tests }}" --no-tests=error --output-on-failure --output-junit "out/Verification/backend-${{ matrix.backend }}.xml"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
@@ -292,7 +293,8 @@ jobs:
           test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
           cmake --preset release -DSIR_WITH_GOOGLETEST=ON
           cmake --build --preset release
-          ctest --preset release --no-tests=error --output-on-failure
+          mkdir -p out/Verification
+          ctest --preset release --no-tests=error --output-on-failure --output-junit "out/Verification/release-${{ matrix.os }}.xml"
           cmake --build --preset release --target package
           mkdir -p out/Verification/Release
           packages="$(find "out/$RUNNER_OS/release" -type f -name '*.zip' -print)"
@@ -370,6 +372,9 @@ jobs:
           cmake --preset "${{ matrix.preset }}" -DSIR_WITH_GOOGLETEST=ON
           cmake --build --preset "${{ matrix.preset }}"
           ctest --preset "${{ matrix.preset }}" --no-tests=error --output-on-failure
+          if [[ "${{ matrix.preset }}" == release && "$RUNNER_OS" == Linux ]]; then
+            ctest --preset release -L '^nightly:repeat$' --no-tests=error --repeat until-fail:2 --output-on-failure
+          fi
 
   nightly-benchmark:
     name: Nightly benchmark

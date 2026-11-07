@@ -10,7 +10,7 @@ permissions:
   contents: read
 concurrency:
   group: sir-ci-${{ github.event_name }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 jobs:
   source:
     name: Source format
@@ -23,7 +23,7 @@ jobs:
       - name: Check changed C++ formatting
         run: |
           python3 -m pip install --disable-pip-version-check clang-format==23.1.5
-          cmake -P Build/CMake/CIFormat.cmake
+          bash Build/Scripts/FormatAll.sh --ci
   native:
     name: sir/native / ${{ matrix.os }} / ${{ matrix.compiler }}
     needs: source
@@ -55,7 +55,7 @@ jobs:
           if [[ "${{ matrix.compiler }}" == clang ]]; then export CC=clang-23 CXX=clang++-23; fi
           cmake --preset dev -DSIR_WITH_GOOGLETEST=ON
           cmake --build --preset dev
-          ctest --preset dev --no-tests=error --output-on-failure
+          ctest --preset pr-smoke --no-tests=error --output-on-failure
   required:
     name: sir/required
     if: always()

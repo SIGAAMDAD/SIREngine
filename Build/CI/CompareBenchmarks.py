@@ -3,6 +3,7 @@
 import argparse
 import hashlib
 import json
+import math
 import pathlib
 import platform
 import subprocess
@@ -44,22 +45,34 @@ def stamp(data, cache, executable, source_sha):
     return data
 
 
-def median_samples(data):
-    samples = {}
-    for case in data.get("benchmarks", []):
-        if case.get("aggregate_name") != "median":
+def median_records(data, metric="real_time"):
+    """Read nonempty validated Google Benchmark medians in nanoseconds."""
+    if not isinstance(data, dict) or not isinstance(data.get("benchmarks"), list):
+        raise RuntimeError("Google Benchmark JSON must contain a benchmarks array")
+    records = {}
+    units = {"ns": 1, "us": 1000, "ms": 1000000, "s": 1000000000}
+    for item in data["benchmarks"]:
+        if not isinstance(item, dict):
+            raise RuntimeError("Malformed Google Benchmark record")
+        if item.get("aggregate_name") != "median":
             continue
-        name = case.get("name")
-        unit = case.get("time_unit")
-        value = case.get("real_time")
-        if not name or unit not in ("ns", "us", "ms", "s") or not isinstance(value, (int, float)) or value <= 0:
-            raise RuntimeError("Invalid benchmark median record")
-        if name in samples:
+        name = item.get("run_name") or item.get("name")
+        value = item.get(metric)
+        unit = item.get("time_unit")
+        if (item.get("error_occurred") or not isinstance(name, str) or not name
+                or unit not in units or not isinstance(value, (int, float))
+                or not math.isfinite(value) or value <= 0):
+            raise RuntimeError(f"Invalid Google Benchmark median record: {name}")
+        if name in records:
             raise RuntimeError(f"Duplicate benchmark median: {name}")
-        samples[name] = value * {"ns": 1, "us": 1000, "ms": 1000000, "s": 1000000000}[unit]
-    if not samples:
+        records[name] = (value * units[unit], item)
+    if not records:
         raise RuntimeError("No benchmark medians found")
-    return samples
+    return records
+
+
+def median_samples(data, metric="real_time"):
+    return {name: record[0] for name, record in median_records(data, metric).items()}
 
 
 def compare(baseline, current, threshold=0.15):

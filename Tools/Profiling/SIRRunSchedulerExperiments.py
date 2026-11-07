@@ -9,6 +9,9 @@ import platform
 import subprocess
 import sys
 
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2] / "Build" / "CI"))
+from CompareBenchmarks import median_samples
+
 # Source-defined benchmark catalog; execution results remain ignored CI artifacts.
 DEFAULT_MANIFEST = {
     "schema": "sir.scheduler.experiments.v1",
@@ -124,19 +127,18 @@ def sha256_file(path):
 
 
 def validate_benchmark_json(path):
-    """Reject skipped/error cases or an empty filtered benchmark collection."""
+    """Reject skipped, malformed or empty benchmark experiments."""
     try:
         with open(path, "r", encoding="utf-8") as stream:
             data = json.load(stream)
-        entries = data.get("benchmarks")
-        if not isinstance(entries, list) or not entries:
+        if not isinstance(data, dict) or not isinstance(data.get("benchmarks"), list):
             return False
-        if any(not isinstance(entry, dict) or entry.get("error_occurred") for entry in entries):
+        if any(not isinstance(row, dict) or row.get("error_occurred")
+               for row in data["benchmarks"]):
             return False
-        return any(entry.get("aggregate_name") == "median" for entry in entries)
-    except (OSError, ValueError, json.JSONDecodeError):
+        return bool(median_samples(data))
+    except (OSError, ValueError, RuntimeError, json.JSONDecodeError, TypeError):
         return False
-
 
 def run(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)

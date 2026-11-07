@@ -1,10 +1,5 @@
 # GRDG resource graph regression coverage.
-add_executable(SIRResourceInterfaceTests SIRResourceInterfaceTests.cpp)
-target_link_libraries(SIRResourceInterfaceTests PRIVATE SIR::Resources)
-add_test(NAME resources.interfaces.headers COMMAND SIRResourceInterfaceTests)
-sir_configure_owned_target(SIRResourceInterfaceTests)
-
-add_executable(SIRResourceGraphTests SIRResourceGraphTests.cpp)
+add_executable(SIRResourceGraphTests SIRResourceGraphTests.cpp SIRResourceInterfaceTests.cpp)
 target_link_libraries(SIRResourceGraphTests PRIVATE SIR::Resources)
 add_test(NAME resources.graph.lifecycle COMMAND SIRResourceGraphTests)
 sir_configure_owned_target(SIRResourceGraphTests)

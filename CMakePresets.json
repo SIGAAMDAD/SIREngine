@@ -342,39 +342,8 @@
       }
     },
     {
-      "name": "nightly-regression",
-      "configurePreset": "dev",
-      "description": "Nightly repeat-regression selection",
-      "filter": {
-        "include": {
-          "label": "^nightly:repeat$"
-        }
-      },
-      "output": {
-        "outputOnFailure": true
-      }
-    },
-    {
-      "name": "qualification",
-      "configurePreset": "dev",
-      "description": "Full qualified native test selection",
-      "filter": {
-        "include": {
-          "label": "^gate:qualification$"
-        }
-      },
-      "output": {
-        "outputOnFailure": true
-      }
-    },
-    {
       "name": "coverage-llvm23",
       "configurePreset": "coverage-llvm23",
-      "filter": {
-        "include": {
-          "label": "^gate:qualification$"
-        }
-      },
       "output": {
         "outputOnFailure": true
       }
@@ -513,19 +482,6 @@
         "include": {
           "name": "^ui[.]",
           "label": "^kind:unit$"
-        }
-      },
-      "output": {
-        "outputOnFailure": true
-      }
-    },
-    {
-      "name": "nightly-stress",
-      "configurePreset": "dev",
-      "description": "Nightly stress, soak and fuzz selection",
-      "filter": {
-        "include": {
-          "label": "^kind:(stress|soak|fuzz)$"
         }
       },
       "output": {
