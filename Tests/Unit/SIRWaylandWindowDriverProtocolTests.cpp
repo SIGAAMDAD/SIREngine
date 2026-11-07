@@ -623,8 +623,7 @@ static bool sirFeedFakeXkbKeymap( void ) noexcept
 		}
 		return false;
 	}
-	s_pKeyboardListener->keymap( s_pKeyboardContext, &s_Keyboard, WL_KEYBOARD_KEYMAP_FORMAT_XKB_V1, nFd,
-	                             sizeof( szKeymap ) );
+	s_pKeyboardListener->keymap( s_pKeyboardContext, &s_Keyboard, WL_KEYBOARD_KEYMAP_FORMAT_XKB_V1, nFd, sizeof( szKeymap ) );
 	return fcntl( nFd, F_GETFD ) == -1 && errno == EBADF;
 }
 
