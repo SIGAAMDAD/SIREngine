@@ -145,7 +145,7 @@ static uint32_t sirGLQueryCapabilities( void *pDevice, sirGraphicsABICapabilitie
 	}
 	const uint32_t nStatus = sirGLBuildCapabilities( &pState->probe, pState->nGeneration, pCapabilities );
 	if ( nStatus == SIR_GRAPHICS_SUCCESS && pState->bWindowed ) {
-		pCapabilities->nEnabledFeatures |= SIR_GRAPHICS_FEATURE_PRESENT;
+		pCapabilities->nEnabledFeatures |= SIR_GRAPHICS_FEATURE_GRAPHICS | SIR_GRAPHICS_FEATURE_PRESENT;
 	}
 	return nStatus;
 }
@@ -1192,9 +1192,10 @@ static uint32_t sirGLCreateDevice( void *pDriver, const sirGraphicsABIDeviceRequ
 	     pRequest->nAllowSoftware > 1 || pRequest->nHeadless > 1 ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
+	const uint64_t nAvailable = pRequest->nHeadless != 0 ?
+	                                0ULL : SIR_GRAPHICS_FEATURE_GRAPHICS | SIR_GRAPHICS_FEATURE_PRESENT;
 	if ( pRequest->nAdapterIndex != 0 || pRequest->nFramesInFlight != 1 ||
-	     ( pRequest->nRequiredFeatures & ~( uint64_t )SIR_GRAPHICS_FEATURE_PRESENT ) != 0 ||
-	     ( pRequest->nHeadless != 0 && pRequest->nRequiredFeatures != 0 ) ) {
+	     ( pRequest->nRequiredFeatures & ~nAvailable ) != 0 ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
 	sirGLDriverState_t *pState = ( sirGLDriverState_t * )pDriver;
