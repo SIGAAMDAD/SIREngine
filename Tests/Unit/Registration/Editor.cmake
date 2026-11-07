@@ -4,6 +4,15 @@ target_link_libraries(SIREditorAuthoringTests PRIVATE SIR::EditorAuthoring)
 add_test(NAME editor.authoring.transactions-and-virtual-list COMMAND SIREditorAuthoringTests)
 sir_configure_owned_target(SIREditorAuthoringTests)
 
+# Platform-owned editor native host: close, failure and shutdown sequencing.
+add_executable(SIREditorWindowHostTests
+    SIREditorWindowHostTests.cpp
+    "${PROJECT_SOURCE_DIR}/Source/Editor/Host/SIREditorWindowHost.cpp")
+target_link_libraries(SIREditorWindowHostTests PRIVATE SIR::Core)
+add_test(NAME editor.host.native-window-lifecycle COMMAND SIREditorWindowHostTests)
+set_tests_properties(editor.host.native-window-lifecycle PROPERTIES LABELS "editor;window;core;integration" TIMEOUT 60)
+sir_configure_owned_target(SIREditorWindowHostTests)
+
 # Native Godot-scene hierarchy intake for the editor-only authoring bridge.
 add_executable(SIREditorTextSceneTests SIREditorTextSceneTests.cpp)
 target_link_libraries(SIREditorTextSceneTests PRIVATE SIR::EditorAuthoring)

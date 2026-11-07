@@ -14,19 +14,32 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Editor/Host/SIREditorSceneWorkspace.h>
+#include <Editor/Host/SIREditorWindowHost.h>
 
 #include <Core/Memory/SIRMemoryManager.h>
 #include <Core/Memory/SIRMemorySegment.h>
 
+#if defined( SIR_WINDOW_WAYLAND_AVAILABLE )
+#include <Core/Platform/Window/Linux/SIRWindowDriverWayland.h>
+#endif
+#if defined( _WIN32 )
+#include <Core/Platform/Window/Windows/SIRWindowDriverWin32.h>
+#elif defined( SIR_WINDOW_X11_AVAILABLE )
+#include <Core/Platform/Window/Linux/SIRWindowDriverX11.h>
+#endif
+
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 static void sirEditorPrintHelp( void ) noexcept
 {
 	puts( "Usage: SIREditor --inspect-scene <path.tscn>" );
+	puts( "       SIREditor --native-window" );
 	puts( "       SIREditor --version" );
 	puts( "       SIREditor --help" );
 	puts( "Inspect the native SIREngine scene intake without altering the source file." );
+	puts( "--native-window starts a native window host; graphical editor widgets are not yet connected." );
 }
 
 static void sirEditorPrintSceneNodes( const SIREditorSceneWorkspace& workspace ) noexcept
@@ -105,6 +118,30 @@ static int sirEditorInspectScene( const char *pszPath ) noexcept
 	return 0;
 }
 
+static int sirEditorRunNativeWindow( void ) noexcept
+{
+#if defined( SIR_WINDOW_WAYLAND_AVAILABLE )
+	const char *pszWaylandDisplay = getenv( "WAYLAND_DISPLAY" );
+	if ( pszWaylandDisplay != nullptr && pszWaylandDisplay[0] != 0 ) {
+		SIRWindowDriverWayland driver;
+		return sirEditorRunWindowHost( driver );
+	}
+#endif
+#if defined( _WIN32 )
+	SIRWindowDriverWin32 driver;
+	return sirEditorRunWindowHost( driver );
+#elif defined( SIR_WINDOW_X11_AVAILABLE )
+	SIRWindowDriverX11 driver;
+	return sirEditorRunWindowHost( driver );
+#elif defined( SIR_WINDOW_WAYLAND_AVAILABLE )
+	SIRWindowDriverWayland driver;
+	return sirEditorRunWindowHost( driver );
+#else
+	fputs( "SIREditor: no native window driver is available in this build\n", stderr );
+	return 1;
+#endif
+}
+
 int main( int nArgs, char **pszArgs )
 {
 	if ( nArgs == 2 && strcmp( pszArgs[1], "--help" ) == 0 ) {
@@ -117,6 +154,9 @@ int main( int nArgs, char **pszArgs )
 	}
 	if ( nArgs == 3 && strcmp( pszArgs[1], "--inspect-scene" ) == 0 ) {
 		return sirEditorInspectScene( pszArgs[2] );
+	}
+	if ( nArgs == 2 && strcmp( pszArgs[1], "--native-window" ) == 0 ) {
+		return sirEditorRunNativeWindow();
 	}
 	sirEditorPrintHelp();
 	return 2;
