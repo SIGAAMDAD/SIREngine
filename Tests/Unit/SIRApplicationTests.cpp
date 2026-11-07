@@ -4,7 +4,8 @@ int main( void )
 {
 	SIRApplication application;
 
-	if ( application.getState() != SIR_APP_UNINITIALIZED || application.getTickCount() != 0 || application.tick() ) {
+	if ( application.getState() != SIR_APP_UNINITIALIZED || application.getTickCount() != 0 || application.getFrameDeltaSeconds() != 0.0f ||
+	     application.getElapsedSeconds() != 0.0 || application.tick() ) {
 		return 1;
 	}
 
@@ -22,6 +23,14 @@ int main( void )
 		}
 	}
 
+	if ( !application.tick( 0.125f ) || application.getFrameDeltaSeconds() != 0.125f || application.getElapsedSeconds() != 0.125 ) {
+		return 8;
+	}
+	const double dElapsedBeforeTimedTick = application.getElapsedSeconds();
+	if ( !application.tickTimed() || application.getFrameDeltaSeconds() < 0.0f ||
+	     application.getElapsedSeconds() < dElapsedBeforeTimedTick || application.getTickCount() != 34 ) {
+		return 9;
+	}
 	application.shutdown();
 	if ( application.getState() != SIR_APP_STOPPED || application.tick() ) {
 		return 5;
@@ -32,5 +41,5 @@ int main( void )
 	}
 
 	application.shutdown();
-	return application.getTickCount() == 32 ? 0 : 7;
+	return application.getTickCount() == 34 && !application.tickTimed() ? 0 : 7;
 }
