@@ -716,7 +716,6 @@ static int sirTestRaster( SIRRenderingDevice *pDevice, uint32_t nGeneration, con
 	return 0;
 }
 
-
 static int sirTestQueueDependencyMatrix( SIRRenderingDevice *pDevice, uint32_t nGeneration ) noexcept
 {
 	for ( uint32_t iProducer = 0; iProducer < SIR_GRAPHICS_QUEUE_COUNT; ++iProducer ) {
