@@ -451,6 +451,21 @@ int main( void )
 	if ( sirVulkanSetSubresourceLayout( &depthLayouts, 0, 0, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL ) ) {
 		return 67;
 	}
+	// Color attachments occupy a distinct four-bit value without altering neighbors.
+	sirVulkanImage_t colorLayouts = {};
+	colorLayouts.nMips = 32;
+	colorLayouts.nLayers = 128;
+	if ( !sirVulkanSetSubresourceLayout( &colorLayouts, 31, 127, VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL ) ||
+	     !sirVulkanGetSubresourceLayout( &colorLayouts, 31, 127, &layout ) || layout != VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL ||
+	     !sirVulkanGetSubresourceLayout( &colorLayouts, 30, 127, &layout ) || layout != VK_IMAGE_LAYOUT_UNDEFINED ) {
+		return 68;
+	}
+	if ( !sirVulkanSetSubresourceLayout( &colorLayouts, 30, 127, VK_IMAGE_LAYOUT_GENERAL ) ||
+	     !sirVulkanGetSubresourceLayout( &colorLayouts, 31, 127, &layout ) || layout != VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL ||
+	     !sirVulkanSetSubresourceLayout( &colorLayouts, 31, 127, VK_IMAGE_LAYOUT_UNDEFINED ) ||
+	     !sirVulkanGetSubresourceLayout( &colorLayouts, 30, 127, &layout ) || layout != VK_IMAGE_LAYOUT_GENERAL ) {
+		return 69;
+	}
 	printf( "Vulkan transfer format and subresource contracts passed\n" );
 	return 0;
 }

@@ -45,6 +45,13 @@ static sirGraphicsResult_t sirVulkanBarrierState( sirGraphicsState_t eState, con
 		}
 		*pLayout = VK_IMAGE_LAYOUT_GENERAL;
 		return SIR_GRAPHICS_SUCCESS;
+	case SIR_GRAPHICS_STATE_COLOR_ATTACHMENT:
+		if ( sirVulkanImageAspectMask( pImage->eFormat ) != VK_IMAGE_ASPECT_COLOR_BIT ||
+		     ( pImage->nUsage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT ) == 0 ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
+		*pLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
+		return SIR_GRAPHICS_SUCCESS;
 	case SIR_GRAPHICS_STATE_DEPTH_WRITE:
 		if ( sirVulkanImageAspectMask( pImage->eFormat ) == VK_IMAGE_ASPECT_COLOR_BIT ||
 		     ( pImage->nUsage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT ) == 0 ) {
