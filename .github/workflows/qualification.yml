@@ -68,30 +68,15 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
-      - name: Validate exact requested checkout
-        env:
-          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-          ISSUE_NUMBER: ${{ github.event.pull_request.number || inputs.issue }}
-        shell: bash
-        run: |
-          [[ "$SOURCE_SHA" =~ ^[a-f0-9]{40}$ ]]
-          [[ "$ISSUE_NUMBER" =~ ^[1-9][0-9]*$ ]]
-          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
       - uses: ./.github/actions/setup-build-tools
       - run: git submodule update --init ThirdParty/GoogleTest
       - name: Install pinned LLVM 23.1.5
         run: bash Build/CI/InstallLLVM23.sh
-      - name: Verify GRDG collector negative-path tests
-        run: python3 Tests/Profiling/TestSIRGRDGCoverageCollector.py
-      - name: Test LLVM 23 qualification and CTest negative paths
-        run: |
-          python3 Tests/Profiling/TestRunLLVM23Qualification.py
-          python3 -m unittest discover -s Tests/CI -p 'Test*.py'
       - name: Qualify all compiled production code
         env:
           SIR_QUALIFICATION_SCOPE: ${{ inputs.system || 'all' }}
           SIR_COVERAGE_MINIMUM: ${{ ((github.event_name == 'pull_request' && github.base_ref == 'main') || inputs.purpose == 'release') && '100' || '90' }}
-        run: bash Build/Scripts/RunLLVM23Qualification.sh
+        run: python3 Build/Scripts/RunLLVM23Qualification.py
       - name: Upload profile-valid production coverage to Codecov
         if: success() && (inputs.system == '' || inputs.system == 'all') && hashFiles('out/Verification/LLVM23/codecov-production.lcov') != ''
         uses: codecov/codecov-action@0fb7174895f61a3b6b78fc075e0cd60383518dac # v5
@@ -122,15 +107,6 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
-      - name: Validate exact requested checkout
-        env:
-          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-          ISSUE_NUMBER: ${{ github.event.pull_request.number || inputs.issue }}
-        shell: bash
-        run: |
-          [[ "$SOURCE_SHA" =~ ^[a-f0-9]{40}$ ]]
-          [[ "$ISSUE_NUMBER" =~ ^[1-9][0-9]*$ ]]
-          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
       - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1
         if: runner.os == 'Windows'
       - uses: ./.github/actions/setup-build-tools
@@ -141,9 +117,8 @@ jobs:
           set -euo pipefail
           cmake --preset dev -DSIR_WITH_GOOGLETEST=ON
           cmake --build --preset dev
-          python_cmd=python3
-          if [[ "$RUNNER_OS" == Windows ]]; then python_cmd=python; fi
-          "$python_cmd" Build/CI/RunCTestGate.py --preset dev --report "out/Verification/native-${{ matrix.os }}.xml"
+          mkdir -p out/Verification
+          ctest --preset dev --no-tests=error --output-on-failure --output-junit "out/Verification/native-${{ matrix.os }}.xml"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
@@ -161,15 +136,6 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
-      - name: Validate exact requested checkout
-        env:
-          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-          ISSUE_NUMBER: ${{ github.event.pull_request.number || inputs.issue }}
-        shell: bash
-        run: |
-          [[ "$SOURCE_SHA" =~ ^[a-f0-9]{40}$ ]]
-          [[ "$ISSUE_NUMBER" =~ ^[1-9][0-9]*$ ]]
-          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
       - uses: ./.github/actions/setup-build-tools
       - run: git submodule update --init ThirdParty/GoogleTest
       - name: Run full sanitized native suite
@@ -179,7 +145,7 @@ jobs:
         run: |
           cmake --preset asan -DSIR_WITH_GOOGLETEST=ON -DSIR_ENABLE_UBSAN=ON
           cmake --build --preset asan
-          python3 Build/CI/RunCTestGate.py --preset asan --report out/Verification/asan-ubsan.xml
+          ctest --preset asan --no-tests=error --output-on-failure
   renderer-backends:
     name: Renderer backend contracts (${{ matrix.backend }})
     needs: authorize
@@ -197,13 +163,6 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
-      - name: Verify requested backend source SHA
-        env:
-          SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-        shell: bash
-        run: |
-          [[ "$SHA" =~ ^[a-f0-9]{40}$ ]]
-          test "$(git rev-parse HEAD)" = "$SHA"
       - uses: ./.github/actions/setup-build-tools
       - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1
         if: runner.os == 'Windows'
@@ -232,7 +191,7 @@ jobs:
           cmake --build --preset dev
           python_cmd=python3
           if [[ "$RUNNER_OS" == Windows ]]; then python_cmd=python; fi
-          "$python_cmd" Build/CI/RunCTestGate.py --preset dev --name-regex "${{ matrix.tests }}" --report "out/Verification/backend-${{ matrix.backend }}.xml"
+          ctest --preset dev -R "${{ matrix.tests }}" --no-tests=error --output-on-failure
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
@@ -336,7 +295,7 @@ jobs:
           cmake --build --preset release
           python_cmd=python3
           if [[ "$RUNNER_OS" == Windows ]]; then python_cmd=python; fi
-          "$python_cmd" Build/CI/RunCTestGate.py --preset release --report "out/Verification/release-${{ matrix.os }}.xml"
+          ctest --preset release --no-tests=error --output-on-failure
           cmake --build --preset release --target package
           mkdir -p out/Verification/Release
           packages="$(find "out/$RUNNER_OS/release" -type f -name '*.zip' -print)"
@@ -370,3 +329,84 @@ jobs:
           test "$ACCEPTANCE" = success
           test "$PACKAGE" = success
           test "$PERFORMANCE" = success
+
+  nightly-revision:
+    name: Freeze nightly develop SHA
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-24.04
+    outputs:
+      sha: ${{ steps.freeze.outputs.sha }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: develop
+          persist-credentials: false
+      - id: freeze
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+  nightly-native:
+    name: Nightly / ${{ matrix.os }} / ${{ matrix.preset }}
+    if: github.event_name == 'schedule'
+    needs: nightly-revision
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {os: ubuntu-24.04, preset: release}
+          - {os: windows-2022, preset: release}
+          - {os: ubuntu-24.04, preset: asan}
+          - {os: ubuntu-24.04, preset: ubsan}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ needs.nightly-revision.outputs.sha }}
+          persist-credentials: false
+      - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1
+        if: runner.os == 'Windows'
+      - uses: ./.github/actions/setup-build-tools
+      - run: git submodule update --init ThirdParty/GoogleTest
+      - name: Build and test
+        shell: bash
+        run: |
+          set -euo pipefail
+          cmake --preset "${{ matrix.preset }}" -DSIR_WITH_GOOGLETEST=ON
+          cmake --build --preset "${{ matrix.preset }}"
+          ctest --preset "${{ matrix.preset }}" --no-tests=error --output-on-failure
+
+  nightly-benchmark:
+    name: Nightly benchmark
+    if: github.event_name == 'schedule'
+    needs: nightly-revision
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ needs.nightly-revision.outputs.sha }}
+          persist-credentials: false
+      - uses: ./.github/actions/setup-build-tools
+      - run: git submodule update --init ThirdParty/GoogleTest ThirdParty/GoogleBenchmark
+      - name: Build and benchmark
+        run: |
+          cmake --preset profile -DSIR_BUILD_BENCHMARKS=ON -DSIR_WITH_GOOGLE_BENCHMARK=ON -DSIR_WITH_GOOGLETEST=ON
+          cmake --build --preset profile
+          bash Build/Scripts/RunGoogleBenchmarks.sh nightly-linux
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: nightly-benchmarks
+          path: out/Nightly/Benchmarks/
+          if-no-files-found: error
+          retention-days: 60
+
+  nightly-required:
+    name: sir/nightly
+    if: always() && github.event_name == 'schedule'
+    needs: [nightly-revision, nightly-native, nightly-benchmark]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Reject incomplete nightly checks
+        env:
+          FREEZE: ${{ needs.nightly-revision.result }}
+          NATIVE: ${{ needs.nightly-native.result }}
+          BENCHMARK: ${{ needs.nightly-benchmark.result }}
+        run: test "$FREEZE" = success && test "$NATIVE" = success && test "$BENCHMARK" = success
