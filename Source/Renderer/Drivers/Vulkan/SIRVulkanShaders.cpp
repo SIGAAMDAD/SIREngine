@@ -71,15 +71,19 @@ sirVulkanResult_t SIRVulkanDevice::createComputePipeline( const void *pCode, uin
 	shaderInfo.codeSize = ( size_t )nCodeBytes;
 	shaderInfo.pCode = ( const uint32_t * )pCode;
 	VkShaderModule hModule = VK_NULL_HANDLE;
-	if ( pfnCreateShaderModule( m_Device, &shaderInfo, nullptr, &hModule ) != VK_SUCCESS ) {
+	const VkResult eModule = pfnCreateShaderModule( m_Device, &shaderInfo, nullptr, &hModule );
+	if ( eModule != VK_SUCCESS ) {
+		m_bDeviceLost = eModule == VK_ERROR_DEVICE_LOST;
 		return SIR_VULKAN_NATIVE_FAILURE;
 	}
 
 	VkPipelineLayoutCreateInfo layoutInfo = {};
 	layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 	VkPipelineLayout hLayout = VK_NULL_HANDLE;
-	if ( pfnCreatePipelineLayout( m_Device, &layoutInfo, nullptr, &hLayout ) != VK_SUCCESS ) {
+	const VkResult eLayout = pfnCreatePipelineLayout( m_Device, &layoutInfo, nullptr, &hLayout );
+	if ( eLayout != VK_SUCCESS ) {
 		pfnDestroyShaderModule( m_Device, hModule, nullptr );
+		m_bDeviceLost = eLayout == VK_ERROR_DEVICE_LOST;
 		return SIR_VULKAN_NATIVE_FAILURE;
 	}
 
