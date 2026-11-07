@@ -1,0 +1,21 @@
+// P04 shadow-only GPU page directory. NOT enabled by shipping variants.
+// Compatible with t3dGpuChannelDirectoryEntry_t (16-byte std430).
+// Future raster activation requires descriptor binding and snapshot pairing.
+#ifdef T3D_GPU_CHANNEL_DIRECTORY_SHADOW
+struct TerrainGpuChannelEntry
+{
+	uint physical_layer;
+	uint slot_generation;
+	uint source_generation;
+	uint edit_generation;
+};
+layout(set = 0, binding = 41, std430) readonly buffer TerrainGpuChannelDirectory
+{
+	TerrainGpuChannelEntry channel_pages[];
+};
+#define T3D_GPU_CHANNEL_COUNT 6u
+TerrainGpuChannelEntry t3d_channel_page(uint region_index, uint channel)
+{
+	return channel_pages[region_index * T3D_GPU_CHANNEL_COUNT + channel];
+}
+#endif

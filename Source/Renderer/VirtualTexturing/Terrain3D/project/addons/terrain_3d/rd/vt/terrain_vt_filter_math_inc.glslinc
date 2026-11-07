@@ -1,0 +1,150 @@
+#ifndef TERRAIN3D_VT_FILTER_MATH_INC_GLSL
+#define TERRAIN3D_VT_FILTER_MATH_INC_GLSL
+
+#ifndef TERRAIN3D_VT_COMMON_INC_GLSL
+#error "terrain_vt_filter_math_inc.glslinc requires terrain_vt_common_inc.glslinc"
+#endif
+
+// Descriptor-free Sparse VT filtering math. Every shipping sampling/feedback
+// path must use this authority for Jacobian -> ellipse -> continuous virtual LOD.
+struct T3DVTFilterFootprintAxes
+{
+	float major;
+	float minor;
+	vec2 major_dir;
+};
+
+struct T3DVTContinuousLod
+{
+	float lod;
+	uint mip0;
+	uint mip1;
+	float fraction;
+};
+
+// Frame policy packs three independent filter overrides into its reserved W lane.
+// Zero inherits the material, and 1..6 map to the six VT filter modes.
+uint t3d_vt_instance_filter_mode(uint material_filter, float packed_overrides, uint category)
+{
+	uint choice = (uint(packed_overrides) >> (min(category, 2u) * 4u)) & 15u;
+	return choice > 0u && choice <= T3D_VT_FILTER_LINEAR_MIPMAP_ANISOTROPIC + 1u ? choice - 1u : material_filter;
+}
+
+bool t3d_vt_filter_mode_uses_mipmaps(uint filter_mode)
+{
+	return filter_mode >= T3D_VT_FILTER_NEAREST_MIPMAP && filter_mode <= T3D_VT_FILTER_LINEAR_MIPMAP_ANISOTROPIC;
+}
+
+bool t3d_vt_filter_mode_is_nearest(uint filter_mode)
+{
+	return filter_mode == T3D_VT_FILTER_NEAREST || filter_mode == T3D_VT_FILTER_NEAREST_MIPMAP
+	|| filter_mode == T3D_VT_FILTER_NEAREST_MIPMAP_ANISOTROPIC;
+}
+
+bool t3d_vt_filter_mode_is_anisotropic(uint filter_mode)
+{
+	return filter_mode == T3D_VT_FILTER_NEAREST_MIPMAP_ANISOTROPIC
+	|| filter_mode == T3D_VT_FILTER_LINEAR_MIPMAP_ANISOTROPIC;
+}
+
+bool t3d_vt_filter_mode_is_trilinear(uint filter_mode)
+{
+	return filter_mode == T3D_VT_FILTER_LINEAR_MIPMAP
+	|| filter_mode == T3D_VT_FILTER_LINEAR_MIPMAP_ANISOTROPIC;
+}
+
+T3DVTFilterFootprintAxes t3d_vt_filter_footprint_axes(vec2 ddx_uv, vec2 ddy_uv, vec2 virtual_texels)
+{
+	vec2 dx = ddx_uv * virtual_texels;
+	vec2 dy = ddy_uv * virtual_texels;
+
+	// Singular values come from the eigenvalues of J^T J. The lengths of
+	// ddx/dy are Jacobian column lengths, not the ellipse axes.
+	float A = dot(dx, dx);
+	float B = dot(dx, dy);
+	float C = dot(dy, dy);
+	float trace = A + C;
+	float discriminant = sqrt(max((A - C) * (A - C) + 4.0 * B * B, 0.0));
+	float lambda_major = max(0.5 * (trace + discriminant), 0.0);
+	float lambda_minor = max(0.5 * (trace - discriminant), 0.0);
+
+	T3DVTFilterFootprintAxes axes;
+	axes.major = sqrt(lambda_major);
+	axes.minor = sqrt(lambda_minor);
+
+	// Tail filtering needs the major direction in texture space (the left
+	// singular vector). Derive it from J J^T and use deterministic axes for
+	// degenerate/isotropic footprints.
+	float M00 = dx.x * dx.x + dy.x * dy.x;
+	float M01 = dx.x * dx.y + dy.x * dy.y;
+	float M11 = dx.y * dx.y + dy.y * dy.y;
+	const float epsilon = 1.0e-12;
+	vec2 major_dir = vec2(1.0, 0.0);
+	if (lambda_major > epsilon)
+	{
+		if (abs(M01) > epsilon)
+		{
+			major_dir = vec2(lambda_major - M11, M01);
+			float dir_len_sq = dot(major_dir, major_dir);
+			major_dir = dir_len_sq > epsilon ? major_dir * inversesqrt(dir_len_sq)
+			: (M00 >= M11 ? vec2(1.0, 0.0) : vec2(0.0, 1.0));
+		}
+		else
+		{
+			major_dir = M00 >= M11 ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
+		}
+	}
+	axes.major_dir = major_dir;
+	return axes;
+}
+
+vec2 t3d_vt_filter_base_texels(T3DVTAllocation allocation, uint base_mip)
+{
+	// Page grids round up to one page; they are not the source mip's texel extent.
+	return max(vec2(float(t3d_vt_allocation_mip0_width(allocation)),
+	float(t3d_vt_allocation_mip0_height(allocation))) * float(T3D_VT_PAGE_INTERIOR)
+	* exp2(-float(base_mip)), vec2(1.0));
+}
+
+T3DVTContinuousLod t3d_vt_filter_continuous_lod(vec2 ddx_uv,
+vec2 ddy_uv,
+vec2 virtual_texels,
+uint base_mip,
+uint mip_count,
+float lod_bias,
+bool anisotropic,
+bool trilinear)
+{
+	T3DVTContinuousLod result;
+	uint safe_mip_count = max(mip_count, 1u);
+	uint last_mip = safe_mip_count - 1u;
+	uint clamped_base = min(base_mip, last_mip);
+	float max_offset = float(last_mip - clamped_base);
+
+	float rho;
+	if (anisotropic)
+	{
+		T3DVTFilterFootprintAxes axes = t3d_vt_filter_footprint_axes(ddx_uv, ddy_uv, virtual_texels);
+		rho = max(axes.minor, axes.major / float(T3D_VT_MAX_ANISOTROPY));
+	}
+	else
+	{
+		vec2 dx = ddx_uv * virtual_texels;
+		vec2 dy = ddy_uv * virtual_texels;
+		float A = dot(dx, dx), B = dot(dx, dy), C = dot(dy, dy);
+		float discriminant = sqrt(max((A - C) * (A - C) + 4.0 * B * B, 0.0));
+		rho = sqrt(max(0.5 * (A + C + discriminant), 0.0));
+	}
+	float lod_offset = clamp(log2(max(rho, 1.0e-8)) + lod_bias, 0.0, max_offset);
+	float floored_lod = floor(lod_offset);
+
+	result.lod = float(clamped_base) + lod_offset;
+	result.mip0 = clamped_base + uint(floored_lod);
+	result.mip1 = min(result.mip0 + 1u, last_mip);
+	result.fraction = (trilinear && result.mip1 != result.mip0)
+	? clamp(lod_offset - floored_lod, 0.0, 1.0)
+	: 0.0;
+	return result;
+}
+
+#endif // TERRAIN3D_VT_FILTER_MATH_INC_GLSL
