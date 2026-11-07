@@ -219,7 +219,9 @@ static bool sirTestHandlesLeasesAndEvents( void ) noexcept
 	sirWindowNativeLease_t lease = {};
 	sirWindowNativeView_t native = {};
 	if ( system.acquireNativeLease( handles[0], &lease, &native ) != SIR_WINDOW_OK || native.nWindowGeneration == 0 ||
-	     system.destroyWindow( handles[0] ) != SIR_WINDOW_BUSY ) {
+	     system.destroyWindow( handles[0] ) != SIR_WINDOW_BUSY || system.requestClose( handles[0] ) != SIR_WINDOW_OK ||
+	     system.acquireNativeLease( handles[0], &lease, &native ) != SIR_WINDOW_NOT_READY ||
+	     system.mutateWindow( handles[0], resize ) != SIR_WINDOW_BUSY ) {
 		return false;
 	}
 	sirWindowLeaseWorkerContext_t threadContext = { &system, handles[0], lease, SIR_WINDOW_OK };
@@ -273,7 +275,17 @@ static bool sirTestHandlesLeasesAndEvents( void ) noexcept
 		return false;
 	}
 	if ( system.createWindow( desc, &recycled ) != SIR_WINDOW_OK || system.requestClose( recycled ) != SIR_WINDOW_OK ||
-	     system.requestClose( recycled ) != SIR_WINDOW_OK || system.destroyWindow( recycled ) != SIR_WINDOW_OK ||
+	     system.requestClose( recycled ) != SIR_WINDOW_OK || system.acquireNativeLease( recycled, &lease, &native ) != SIR_WINDOW_NOT_READY ||
+	     system.mutateWindow( recycled, resize ) != SIR_WINDOW_BUSY ) {
+		return false;
+	}
+	// Stale backend geometry/show events must never resurrect a closing window.
+	driver.queueEvent( { recycled.nSlot, recycled.nSlot + 1, SIR_WINDOW_EVENT_RESIZED, 800, 600 } );
+	driver.queueEvent( { recycled.nSlot, recycled.nSlot + 1, SIR_WINDOW_EVENT_SHOWN, 0, 0 } );
+	driver.queueEvent( { recycled.nSlot, recycled.nSlot + 1, SIR_WINDOW_EVENT_RESTORED, 0, 0 } );
+	if ( system.pumpEvents( 3 ) != SIR_WINDOW_OK || system.querySnapshot( recycled, &snapshot ) != SIR_WINDOW_OK ||
+	     snapshot.bReady || !snapshot.bCloseRequested || system.acquireNativeLease( recycled, &lease, &native ) != SIR_WINDOW_NOT_READY ||
+	     system.destroyWindow( recycled ) != SIR_WINDOW_OK ||
 	     system.shutdown() != SIR_SYSTEM_OK ) {
 		return false;
 	}
@@ -297,6 +309,7 @@ static bool sirTestEventOverflow( void ) noexcept
 	sirWindowEvent_t events[2] = {};
 	sirWindowEventRead_t read = { 0, events, 2, 0, false };
 	if ( system.readEvents( &read ) != SIR_WINDOW_EVENTS_LOST || !read.bLost || read.nCount != 2 || events[0].nSequence <= 1 ||
+	     read.nAfterSequence != events[1].nSequence ||
 	     system.shutdown() != SIR_SYSTEM_OK ) {
 		return false;
 	}

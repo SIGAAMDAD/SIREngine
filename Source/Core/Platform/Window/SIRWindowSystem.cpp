@@ -96,7 +96,7 @@ sirWindowResult_t SIRWindowSystem::createWindow( const sirWindowCreateDesc_t& de
 		if ( eResult != SIR_WINDOW_OK ) {
 			return eResult;
 		}
-		if ( view.nNativeWindow == 0 || view.ePlatform == SIR_WINDOW_PLATFORM_HEADLESS ) {
+		if ( view.nNativeWindow == 0 || view.nDisplayOrInstance == 0 || view.ePlatform == SIR_WINDOW_PLATFORM_HEADLESS ) {
 			( void )m_pDriver->destroyWindow( i );
 			return SIR_WINDOW_NATIVE_FAILURE;
 		}
@@ -144,6 +144,7 @@ sirWindowResult_t SIRWindowSystem::requestClose( sirWindowHandle_t hWindow ) noe
 	sirWindowSlot_t& slot = m_Slots[hWindow.nSlot];
 	if ( !slot.snapshot.bCloseRequested ) {
 		slot.snapshot.bCloseRequested = true;
+		slot.snapshot.bReady = false;
 		pushEvent( hWindow, SIR_WINDOW_EVENT_CLOSE_REQUESTED, slot.snapshot.nWidth, slot.snapshot.nHeight );
 	}
 	return SIR_WINDOW_OK;
@@ -158,6 +159,9 @@ sirWindowResult_t SIRWindowSystem::mutateWindow( sirWindowHandle_t hWindow, cons
 	const sirWindowResult_t eValid = validate( hWindow );
 	if ( eValid != SIR_WINDOW_OK ) {
 		return eValid;
+	}
+	if ( m_Slots[hWindow.nSlot].snapshot.bCloseRequested ) {
+		return SIR_WINDOW_BUSY;
 	}
 	if ( mutation.eKind < SIR_WINDOW_MUTATION_TITLE || mutation.eKind > SIR_WINDOW_MUTATION_MAXIMIZE ) {
 		return SIR_WINDOW_INVALID_ARGUMENT;
@@ -233,8 +237,12 @@ void SIRWindowSystem::onDriverEvent( void *pContext, const sirWindowBackendEvent
 		return;
 	}
 	SIRScopedLock<SIRMutex> guard( pSystem->m_SnapshotMutex );
+	if ( slot.snapshot.bCloseRequested && ( event.eKind == SIR_WINDOW_EVENT_READY || event.eKind == SIR_WINDOW_EVENT_SHOWN ||
+	                                      event.eKind == SIR_WINDOW_EVENT_RESTORED ) ) {
+		return;
+	}
 	if ( event.eKind == SIR_WINDOW_EVENT_READY ) {
-		if ( event.nWidth == 0 || event.nHeight == 0 || slot.snapshot.bCloseRequested ) {
+		if ( event.nWidth == 0 || event.nHeight == 0 ) {
 			return;
 		}
 		if ( slot.snapshot.nWidth != event.nWidth || slot.snapshot.nHeight != event.nHeight ) {
@@ -250,7 +258,8 @@ void SIRWindowSystem::onDriverEvent( void *pContext, const sirWindowBackendEvent
 		}
 		slot.snapshot.nWidth = event.nWidth;
 		slot.snapshot.nHeight = event.nHeight;
-		slot.snapshot.bReady = event.nWidth != 0 && event.nHeight != 0 && slot.snapshot.bVisible && !slot.snapshot.bMinimized;
+		slot.snapshot.bReady = event.nWidth != 0 && event.nHeight != 0 && slot.snapshot.bVisible && !slot.snapshot.bMinimized &&
+		                       !slot.snapshot.bCloseRequested;
 		++slot.snapshot.nMetricsRevision;
 	} else if ( event.eKind == SIR_WINDOW_EVENT_FOCUS_GAINED ) {
 		slot.snapshot.bFocused = true;
@@ -264,7 +273,8 @@ void SIRWindowSystem::onDriverEvent( void *pContext, const sirWindowBackendEvent
 		++slot.snapshot.nMetricsRevision;
 	} else if ( event.eKind == SIR_WINDOW_EVENT_SHOWN ) {
 		slot.snapshot.bVisible = true;
-		slot.snapshot.bReady = !slot.snapshot.bMinimized && slot.snapshot.nWidth != 0 && slot.snapshot.nHeight != 0;
+		slot.snapshot.bReady = !slot.snapshot.bMinimized && !slot.snapshot.bCloseRequested && slot.snapshot.nWidth != 0 &&
+		                       slot.snapshot.nHeight != 0;
 	} else if ( event.eKind == SIR_WINDOW_EVENT_HIDDEN ) {
 		slot.snapshot.bVisible = false;
 		slot.snapshot.bReady = false;
@@ -273,9 +283,12 @@ void SIRWindowSystem::onDriverEvent( void *pContext, const sirWindowBackendEvent
 		slot.snapshot.bReady = false;
 	} else if ( event.eKind == SIR_WINDOW_EVENT_RESTORED ) {
 		slot.snapshot.bMinimized = false;
-		slot.snapshot.bReady = slot.snapshot.bVisible && slot.snapshot.nWidth != 0 && slot.snapshot.nHeight != 0;
+		slot.snapshot.bReady = slot.snapshot.bVisible && !slot.snapshot.bCloseRequested && slot.snapshot.nWidth != 0 &&
+		                       slot.snapshot.nHeight != 0;
 	} else if ( event.eKind == SIR_WINDOW_EVENT_LOST ) {
 		slot.snapshot.bReady = false;
+		slot.snapshot.bVisible = false;
+		slot.snapshot.bFocused = false;
 		slot.snapshot.bCloseRequested = true;
 	} else {
 		return;
@@ -312,6 +325,9 @@ sirWindowResult_t SIRWindowSystem::readEvents( sirWindowEventRead_t *pRead ) noe
 	for ( uint64_t nSequence = nFirst; nSequence <= m_nEventSequence && pRead->nCount < pRead->nCapacity; ++nSequence ) {
 		pRead->pEvents[pRead->nCount++] = m_Events[( nSequence - 1 ) % SIR_WINDOW_EVENT_CAPACITY];
 	}
+	if ( pRead->nCount != 0 ) {
+		pRead->nAfterSequence = pRead->pEvents[pRead->nCount - 1].nSequence;
+	}
 	return pRead->bLost ? SIR_WINDOW_EVENTS_LOST : SIR_WINDOW_OK;
 }
 
@@ -347,7 +363,7 @@ sirWindowResult_t SIRWindowSystem::acquireNativeLease( sirWindowHandle_t hWindow
 		return eValid;
 	}
 	sirWindowSlot_t& slot = m_Slots[hWindow.nSlot];
-	if ( !slot.snapshot.bReady ) {
+	if ( !slot.snapshot.bReady || slot.snapshot.bCloseRequested ) {
 		return SIR_WINDOW_NOT_READY;
 	}
 	processReleasedLeases();
