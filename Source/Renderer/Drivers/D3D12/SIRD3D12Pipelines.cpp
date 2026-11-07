@@ -696,9 +696,32 @@ sirGraphicsResult_t SIRD3D12Pipelines::createPipeline( const sirGraphicsPipeline
 	wchar_t szCacheKey[33] = {};
 	sirD3D12PipelineCacheName( desc, szCacheKey );
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> pRoot;
-	const HRESULT nRoot = createRootSignature( desc, pRoot.GetAddressOf() );
-	if ( FAILED( nRoot ) ) {
-		return nRoot == E_OUTOFMEMORY ? SIR_GRAPHICS_OUT_OF_MEMORY : SIR_GRAPHICS_DRIVER_ERROR;
+	// Identical live binding layouts use one root signature even when the
+	// shaders or fixed-function pipeline state differ.
+	for ( uint32_t iSlot = 0; iSlot < s_nPipelineCapacity && pRoot == nullptr; ++iSlot ) {
+		const sirD3D12PipelineSlot_t& prior = m_szSlots[iSlot];
+		if ( !prior.bLive || prior.eType != desc.eType || prior.nBindingCount != desc.nBindingCount ) {
+			continue;
+		}
+		bool bSame = true;
+		for ( uint32_t iBinding = 0; iBinding < desc.nBindingCount; ++iBinding ) {
+			const sirGraphicsBindingDesc_t& a = prior.szBindings[iBinding];
+			const sirGraphicsBindingDesc_t& b = desc.pBindings[iBinding];
+			if ( a.nBinding != b.nBinding || a.nSpace != b.nSpace || a.nArrayCount != b.nArrayCount ||
+			     a.nShaderStageMask != b.nShaderStageMask || a.eType != b.eType ) {
+				bSame = false;
+				break;
+			}
+		}
+		if ( bSame ) {
+			pRoot = prior.pRootSignature;
+		}
+	}
+	if ( pRoot == nullptr ) {
+		const HRESULT nRoot = createRootSignature( desc, pRoot.GetAddressOf() );
+		if ( FAILED( nRoot ) ) {
+			return nRoot == E_OUTOFMEMORY ? SIR_GRAPHICS_OUT_OF_MEMORY : SIR_GRAPHICS_DRIVER_ERROR;
+		}
 	}
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> pPipeline;
 	const HRESULT nPipeline = bCompute ? createComputeState( desc, pRoot.Get(), pPipeline.GetAddressOf(), szCacheKey )
