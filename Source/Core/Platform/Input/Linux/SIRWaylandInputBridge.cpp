@@ -15,6 +15,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Core/Platform/Input/Linux/SIRWaylandInputBridge.h>
 #include <Core/Platform/SIRPlatformNativeWindow.h>
 #include <sys/mman.h>
+#include <sys/stat.h>
 #include <unistd.h>
 #include <limits.h>
 #ifdef SIR_WAYLAND_POINTER_PROTOCOLS_AVAILABLE
@@ -42,12 +43,23 @@ void SIRWaylandInputBridge::sample( SIRInputService& service ) noexcept
 
 void SIRWaylandInputBridge::resynchronize( SIRInputService& service ) noexcept
 {
-	( void )service;
+	if ( m_bKeyboardDevice ) {
+		( void )service.loseState( id(), m_hKeyboard );
+	}
+	if ( m_bPointerDevice ) {
+		( void )service.loseState( id(), m_hPointer );
+	}
+	service.text().clearPreedit();
+	service.text().setFocused( m_pKeyboardFocus != nullptr );
+	service.setHapticsPaused( m_pKeyboardFocus == nullptr );
+	endPointerCapture();
 	m_bHavePointerPosition = false;
 	m_nRemainderX = 0;
 	m_nRemainderY = 0;
 	m_nWheelRemainder[0] = 0;
 	m_nWheelRemainder[1] = 0;
+	m_nRelativeRemainderX = 0;
+	m_nRelativeRemainderY = 0;
 }
 
 bool SIRWaylandInputBridge::vibrate( sirInputDeviceId_t hDevice, uint16_t nLeft, uint16_t nRight ) noexcept
@@ -461,14 +473,22 @@ void SIRWaylandInputBridge::keyboardKeymap( void *pContext, wl_keyboard *pKeyboa
 	pBridge->clearKeymap();
 #ifdef SIR_WAYLAND_XKB_AVAILABLE
 	if ( nFormat == WL_KEYBOARD_KEYMAP_FORMAT_XKB_V1 && nFd >= 0 && nSize > 0 && nSize <= UINT32_C( 1 ) << 20 ) {
-		const void *pData = mmap( nullptr, nSize, PROT_READ, MAP_PRIVATE, nFd, 0 );
+		struct stat info = {};
+		const bool bSized = fstat( nFd, &info ) == 0 && info.st_size >= ( int64_t )nSize;
+		const void *pData = bSized ? mmap( nullptr, nSize, PROT_READ, MAP_PRIVATE, nFd, 0 ) : MAP_FAILED;
 		if ( pData != MAP_FAILED ) {
-			pBridge->m_pXkbContext = xkb_context_new( XKB_CONTEXT_NO_FLAGS );
-			if ( pBridge->m_pXkbContext != nullptr ) {
-				pBridge->m_pKeymap = xkb_keymap_new_from_string( pBridge->m_pXkbContext, ( const char * )pData, XKB_KEYMAP_FORMAT_TEXT_V1,
-				                                                 XKB_KEYMAP_COMPILE_NO_FLAGS );
-				if ( pBridge->m_pKeymap != nullptr ) {
-					pBridge->m_pKeyState = xkb_state_new( pBridge->m_pKeymap );
+			const char *pszKeymap = ( const char * )pData;
+			// The protocol specifies a NUL-terminated keymap, but a malicious
+			// compositor can provide an unterminated or truncated fd mapping.
+			if ( pszKeymap[nSize - 1] == '\0' ) {
+				pBridge->m_pXkbContext = xkb_context_new( XKB_CONTEXT_NO_FLAGS );
+				if ( pBridge->m_pXkbContext != nullptr ) {
+					pBridge->m_pKeymap =
+					    xkb_keymap_new_from_string( pBridge->m_pXkbContext, pszKeymap, XKB_KEYMAP_FORMAT_TEXT_V1,
+					                                XKB_KEYMAP_COMPILE_NO_FLAGS );
+					if ( pBridge->m_pKeymap != nullptr ) {
+						pBridge->m_pKeyState = xkb_state_new( pBridge->m_pKeymap );
+					}
 				}
 			}
 			munmap( ( void * )pData, nSize );
@@ -535,7 +555,8 @@ void SIRWaylandInputBridge::keyboardKey( void *pContext, wl_keyboard *pKeyboard,
 	( void )nTime;
 	SIRWaylandInputBridge *pBridge = ( SIRWaylandInputBridge * )pContext;
 	if ( pBridge->m_pKeyboard != pKeyboard || pBridge->m_pKeyboardFocus == nullptr || !pBridge->m_bKeyboardDevice ||
-	     nKey >= SIR_INPUT_BUTTON_CAPACITY - 8 ) {
+	     nKey >= SIR_INPUT_BUTTON_CAPACITY - 8 ||
+	     ( nState != WL_KEYBOARD_KEY_STATE_PRESSED && nState != WL_KEYBOARD_KEY_STATE_RELEASED ) ) {
 		return;
 	}
 	const bool bPressed = nState == WL_KEYBOARD_KEY_STATE_PRESSED;
@@ -557,7 +578,7 @@ void SIRWaylandInputBridge::keyboardModifiers( void *pContext, wl_keyboard *pKey
 	( void )nSerial;
 	SIRWaylandInputBridge *pBridge = ( SIRWaylandInputBridge * )pContext;
 #ifdef SIR_WAYLAND_XKB_AVAILABLE
-	if ( pBridge->m_pKeyboard == pKeyboard && pBridge->m_pKeyState != nullptr ) {
+	if ( pBridge->m_pKeyboard == pKeyboard && pBridge->m_pKeyState != nullptr && pBridge->m_pKeyboardFocus != nullptr ) {
 		( void )xkb_state_update_mask( pBridge->m_pKeyState, nDepressed, nLatched, nLocked, 0, 0, nGroup );
 	}
 #else
