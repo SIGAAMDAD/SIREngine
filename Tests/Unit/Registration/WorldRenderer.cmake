@@ -23,6 +23,12 @@ target_link_libraries(SIRVirtualTexturePackLookupTests PRIVATE SIR::Graphics)
 add_test(NAME renderer.virtual-texturing.sparse-v1-metadata COMMAND SIRVirtualTexturePackLookupTests)
 sir_configure_owned_target(SIRVirtualTexturePackLookupTests)
 
+# Donor V1 mip-chain and 136x136 physical-tile gutter cooker parity.
+add_executable(SIRVirtualTextureTileCookerTests SIRVirtualTextureTileCookerTests.cpp)
+target_link_libraries(SIRVirtualTextureTileCookerTests PRIVATE SIR::Graphics)
+add_test(NAME renderer.virtual-texturing.sparse-v1-cooker COMMAND SIRVirtualTextureTileCookerTests)
+sir_configure_owned_target(SIRVirtualTextureTileCookerTests)
+
 # Native Hi-Z reference and command validation.
 include(${CMAKE_CURRENT_SOURCE_DIR}/HIZFoundationTests.cmake)
 
