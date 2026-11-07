@@ -122,6 +122,15 @@ static void sirTestRejectMalformedScenes( void )
 	// The same index remains reusable after a malformed import.
 	assert( sirEditorScanTextScene( szQuote, sizeof( szQuote ) - 1, &index ) == SIR_EDITOR_TEXT_OK );
 	assert( index.nNodeCount == 2 );
+
+	// Comment text may contain unmatched quote characters without starting
+	// a multiline property or hiding the next source section.
+	const char szComments[] = "[gd_scene format=3]\n[node name=\"Root\" type=\"Node\"]\n"
+	                          "number = 42 # unpaired \" comment\n"
+	                          "another = 1 ; unmatched \" comment\n"
+	                          "[node name=\"Child\" type=\"Node\" parent=\".\"]\n";
+	assert( sirEditorScanTextScene( szComments, sizeof( szComments ) - 1, &index ) == SIR_EDITOR_TEXT_OK );
+	assert( index.nNodeCount == 2 );
 }
 
 static void sirTestCapacityAtomicity( void )

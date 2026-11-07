@@ -74,6 +74,12 @@ static void sirTestExternalEmbeddedAndForwardResourceReferences( void )
 	                         "[sub_resource type=\"Shape3D\" id=\"new_shape\"]\n";
 	assert( sirEditorScanTextResources( szForward, sizeof( szForward ) - 1, &index ) == SIR_EDITOR_RESOURCE_OK );
 	assert( index.nCount == 1 );
+	const char szComments[] = "[gd_scene]\n# quote \" inside ignored comment\n"
+	                          "[ext_resource type=\"Script\" path=\"res://main.gd\" id=\"1_a\"]\n"
+	                          "[node name=\"Root\" type=\"Node\"]\n"
+	                          "script = ExtResource(\"1_a\") ; trailing \" comment\n";
+	assert( sirEditorScanTextResources( szComments, sizeof( szComments ) - 1, &index ) == SIR_EDITOR_RESOURCE_OK );
+	assert( index.nCount == 1 );
 }
 
 static void sirTestMalformedAndMissingResources( void )

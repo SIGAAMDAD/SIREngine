@@ -427,6 +427,8 @@ sirEditorTextSceneResult_t sirEditorScanTextScene( const char *pszSource, size_t
 					bEscape = false;
 				} else if ( bMultilineQuote && *pChar == '\\' ) {
 					bEscape = true;
+				} else if ( !bMultilineQuote && ( *pChar == '#' || *pChar == ';' ) ) {
+					break;
 				} else if ( *pChar == '"' ) {
 					bMultilineQuote = !bMultilineQuote;
 				}
@@ -814,6 +816,8 @@ sirEditorTextResourceResult_t sirEditorScanTextResources( const char *pszSource,
 					bEscape = false;
 				} else if ( bMultilineQuote && *pChar == '\\' ) {
 					bEscape = true;
+				} else if ( !bMultilineQuote && ( *pChar == '#' || *pChar == ';' ) ) {
+					break;
 				} else if ( *pChar == '"' ) {
 					bMultilineQuote = !bMultilineQuote;
 				}
