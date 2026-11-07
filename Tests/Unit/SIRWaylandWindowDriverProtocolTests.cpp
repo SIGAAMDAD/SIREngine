@@ -555,16 +555,22 @@ static bool sirTestWaylandInputRouting( void ) noexcept
 	s_pKeyboardListener->key( s_pKeyboardContext, &s_Keyboard, 8, 100, 20, WL_KEYBOARD_KEY_STATE_PRESSED );
 	s_pPointerListener->enter( s_pPointerContext, &s_Pointer, 9, &s_Surfaces[1], 0, 0 );
 	s_pPointerListener->axis( s_pPointerContext, &s_Pointer, 100, WL_POINTER_AXIS_VERTICAL_SCROLL, 256 );
+	for ( uint32_t n = 0; n < 8; ++n ) {
+		s_pPointerListener->axis( s_pPointerContext, &s_Pointer, 100, WL_POINTER_AXIS_VERTICAL_SCROLL, 20 );
+	}
 	if ( !input.publish() )
 		return false;
 	pFrame = input.frame();
 	uint32_t nSecondKey = 0, nWheel = 0, nUnexpected = 0, nKeyboardResync = 0, nPointerResync = 0;
+	int32_t nFractionalWheel = 0;
 	for ( uint32_t i = 0; i < pFrame->nCount; ++i ) {
 		const sirInputEvent_t& e = pFrame->events[i];
 		if ( e.eClass == SIR_INPUT_KEYBOARD && e.eSignal == SIR_INPUT_BUTTON && e.nControl == 28 && e.nValue == 1 )
 			++nSecondKey;
 		if ( e.eClass == SIR_INPUT_POINTER && e.eSignal == SIR_INPUT_WHEEL && e.nValue == -12 )
 			++nWheel;
+		if ( e.eClass == SIR_INPUT_POINTER && e.eSignal == SIR_INPUT_WHEEL && e.nValue != -12 )
+			nFractionalWheel += e.nValue;
 		if ( e.eClass == SIR_INPUT_KEYBOARD && e.eSignal == SIR_INPUT_BUTTON && e.nControl == 7 )
 			++nUnexpected;
 		if ( e.eClass == SIR_INPUT_KEYBOARD && e.eSignal == SIR_INPUT_RESYNC )
@@ -572,8 +578,8 @@ static bool sirTestWaylandInputRouting( void ) noexcept
 		if ( e.eClass == SIR_INPUT_POINTER && e.eSignal == SIR_INPUT_RESYNC )
 			++nPointerResync;
 	}
-	if ( nSecondKey != 1 || nWheel != 1 || nUnexpected != 0 || nKeyboardResync != 1 || nPointerResync != 1 ||
-	     input.activeDeviceCount() != 2 )
+	if ( nSecondKey != 1 || nWheel != 1 || nFractionalWheel != -7 || nUnexpected != 0 || nKeyboardResync != 1 ||
+	     nPointerResync != 1 || input.activeDeviceCount() != 2 )
 		return false;
 	if ( !input.begin( 3 ) || !bridge.beginFrame() )
 		return false;

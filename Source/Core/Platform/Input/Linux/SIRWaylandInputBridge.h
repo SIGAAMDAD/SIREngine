@@ -103,6 +103,7 @@ private:
 	int32_t m_nLastY = 0;
 	int32_t m_nRemainderX = 0;
 	int32_t m_nRemainderY = 0;
+	int32_t m_nWheelRemainder[2] = {};
 	bool m_bHavePointerPosition = false;
 	bool m_bKeyboardDevice = false;
 	bool m_bPointerDevice = false;

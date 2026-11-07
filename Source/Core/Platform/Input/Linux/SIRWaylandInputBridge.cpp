@@ -42,6 +42,8 @@ void SIRWaylandInputBridge::resynchronize( SIRInputService& service ) noexcept
 	m_bHavePointerPosition = false;
 	m_nRemainderX = 0;
 	m_nRemainderY = 0;
+	m_nWheelRemainder[0] = 0;
+	m_nWheelRemainder[1] = 0;
 }
 
 bool SIRWaylandInputBridge::vibrate( sirInputDeviceId_t hDevice, uint16_t nLeft, uint16_t nRight ) noexcept
@@ -118,6 +120,8 @@ void SIRWaylandInputBridge::unregisterWindow( uintptr_t nNativeSurface ) noexcep
 		if ( m_pPointerFocus == pSurface ) {
 			m_pPointerFocus = nullptr;
 			m_bHavePointerPosition = false;
+			m_nWheelRemainder[0] = 0;
+			m_nWheelRemainder[1] = 0;
 			if ( m_bPointerDevice && m_pInput != nullptr ) {
 				( void )m_pInput->loseState( id(), m_hPointer );
 			}
@@ -241,6 +245,8 @@ void SIRWaylandInputBridge::clearPointer( void ) noexcept
 	m_hPointer = {};
 	m_pPointerFocus = nullptr;
 	m_bHavePointerPosition = false;
+	m_nWheelRemainder[0] = 0;
+	m_nWheelRemainder[1] = 0;
 	if ( m_pPointer != nullptr ) {
 		if ( wl_proxy_get_version( ( wl_proxy * )m_pPointer ) >= 3 ) {
 			wl_pointer_release( m_pPointer );
@@ -445,6 +451,8 @@ void SIRWaylandInputBridge::pointerEnter( void *pContext, wl_pointer *pPointer, 
 	pBridge->m_pPointerFocus = pSurface;
 	pBridge->m_nRemainderX = 0;
 	pBridge->m_nRemainderY = 0;
+	pBridge->m_nWheelRemainder[0] = 0;
+	pBridge->m_nWheelRemainder[1] = 0;
 	pBridge->m_nLastX = nX;
 	pBridge->m_nLastY = nY;
 	pBridge->m_bHavePointerPosition = true;
@@ -462,6 +470,8 @@ void SIRWaylandInputBridge::pointerLeave( void *pContext, wl_pointer *pPointer, 
 	pBridge->m_bHavePointerPosition = false;
 	pBridge->m_nRemainderX = 0;
 	pBridge->m_nRemainderY = 0;
+	pBridge->m_nWheelRemainder[0] = 0;
+	pBridge->m_nWheelRemainder[1] = 0;
 	if ( pBridge->m_bPointerDevice ) {
 		( void )pBridge->m_pInput->loseState( pBridge->id(), pBridge->m_hPointer );
 	}
@@ -516,11 +526,12 @@ void SIRWaylandInputBridge::pointerAxis( void *pContext, wl_pointer *pPointer, u
 	     nAxis > WL_POINTER_AXIS_HORIZONTAL_SCROLL ) {
 		return;
 	}
-	const int64_t nScaled = -( int64_t )nValue * 12;
+	const uint32_t nIndex = nAxis == WL_POINTER_AXIS_VERTICAL_SCROLL ? 0 : 1;
+	const int64_t nScaled = -( int64_t )nValue * 12 + pBridge->m_nWheelRemainder[nIndex];
 	const int32_t nDelta = ( int32_t )( nScaled / 256 );
+	pBridge->m_nWheelRemainder[nIndex] = ( int32_t )( nScaled % 256 );
 	if ( nDelta != 0 ) {
-		( void )pBridge->m_pInput->emitPointer( pBridge->id(), pBridge->m_hPointer, SIR_INPUT_WHEEL,
-		                                        nAxis == WL_POINTER_AXIS_VERTICAL_SCROLL ? 0 : 1, nDelta, 0 );
+		( void )pBridge->m_pInput->emitPointer( pBridge->id(), pBridge->m_hPointer, SIR_INPUT_WHEEL, nIndex, nDelta, 0 );
 	}
 }
 
