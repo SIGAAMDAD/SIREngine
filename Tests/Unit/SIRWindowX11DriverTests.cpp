@@ -17,6 +17,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <X11/Xatom.h>
 #include <X11/Xlib.h>
 #include <stdio.h>
+#include <string.h>
 
 typedef struct sirX11SinkCount_s
 {
@@ -62,11 +63,29 @@ int main( void )
 	const sirWindowMutation_t maximize = { SIR_WINDOW_MUTATION_MAXIMIZE, nullptr, 0, 0 };
 	const sirWindowResult_t eMinimize = windows.mutateWindow( second, minimize );
 	if ( windows.mutateWindow( second, title ) != SIR_WINDOW_OK || windows.mutateWindow( second, resize ) != SIR_WINDOW_OK ||
-	     windows.mutateWindow( second, maximize ) != SIR_WINDOW_UNSUPPORTED ||
+	     windows.mutateWindow( second, maximize ) != SIR_WINDOW_OK ||
 	     ( eMinimize != SIR_WINDOW_OK && eMinimize != SIR_WINDOW_UNSUPPORTED ) ) {
 		return 9;
 	}
 	Display *pDisplay = ( Display * )view.nDisplayOrInstance;
+	// The UTF-8 EWMH title must follow title mutations, not only creation.
+	const Atom hName = XInternAtom( pDisplay, "_NET_WM_NAME", True );
+	const Atom hUtf8 = XInternAtom( pDisplay, "UTF8_STRING", True );
+	Atom hType = None;
+	int nFormat = 0;
+	unsigned long nItems = 0, nRemaining = 0;
+	unsigned char *pTitle = nullptr;
+	if ( hName == None || hUtf8 == None ||
+	     XGetWindowProperty( pDisplay, ( Window )view.nNativeWindow, hName, 0, 128, False, hUtf8, &hType, &nFormat, &nItems,
+	                         &nRemaining, &pTitle ) != Success ||
+	     pTitle == nullptr || hType != hUtf8 || nFormat != 8 || nItems != sizeof( "Renamed window" ) - 1 ||
+	     memcmp( pTitle, "Renamed window", nItems ) != 0 ) {
+		if ( pTitle != nullptr ) {
+			XFree( pTitle );
+		}
+		return 14;
+	}
+	XFree( pTitle );
 	// The platform owner must publish native mapping state to all consumers.
 	XUnmapWindow( pDisplay, ( Window )view.nNativeWindow );
 	XSync( pDisplay, False );
@@ -88,6 +107,35 @@ int main( void )
 	}
 	if ( windows.querySnapshot( second, &hidden ) != SIR_WINDOW_OK || !hidden.bVisible || !hidden.bReady ) {
 		return 13;
+	}
+	// A focused window must publish per-window focus without creating a new device.
+	XEvent focused = {};
+	focused.xfocus.type = FocusIn;
+	focused.xfocus.display = pDisplay;
+	focused.xfocus.window = ( Window )view.nNativeWindow;
+	focused.xfocus.mode = NotifyNormal;
+	focused.xfocus.detail = NotifyNonlinear;
+	XSendEvent( pDisplay, ( Window )view.nNativeWindow, False, FocusChangeMask, &focused );
+	XSync( pDisplay, False );
+	for ( uint32_t i = 0; i < 4; ++i ) {
+		if ( windows.pumpEvents( 128 ) != SIR_WINDOW_OK ) {
+			return 15;
+		}
+	}
+	sirWindowSnapshot_t focusSnapshot = {};
+	if ( windows.querySnapshot( second, &focusSnapshot ) != SIR_WINDOW_OK || !focusSnapshot.bFocused ) {
+		return 16;
+	}
+	focused.xfocus.type = FocusOut;
+	XSendEvent( pDisplay, ( Window )view.nNativeWindow, False, FocusChangeMask, &focused );
+	XSync( pDisplay, False );
+	for ( uint32_t i = 0; i < 4; ++i ) {
+		if ( windows.pumpEvents( 128 ) != SIR_WINDOW_OK ) {
+			return 17;
+		}
+	}
+	if ( windows.querySnapshot( second, &focusSnapshot ) != SIR_WINDOW_OK || focusSnapshot.bFocused ) {
+		return 18;
 	}
 	XResizeWindow( pDisplay, ( Window )view.nNativeWindow, 320, 240 );
 	XSelectInput( pDisplay, ( Window )view.nNativeWindow, KeyPressMask | StructureNotifyMask | FocusChangeMask );

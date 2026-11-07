@@ -4,6 +4,24 @@
 #include <stdio.h>
 #include <string.h>
 
+// Set the ICCCM name and UTF-8 EWMH name for window managers and IME users.
+static sirWindowResult_t sirSetX11Title( Display *pDisplay, Window hWindow, const char *pszTitle ) noexcept
+{
+	if ( pszTitle == nullptr || strlen( pszTitle ) > 0x7fffffffU ) {
+		return SIR_WINDOW_INVALID_ARGUMENT;
+	}
+	if ( XStoreName( pDisplay, hWindow, pszTitle ) == 0 ) {
+		return SIR_WINDOW_NATIVE_FAILURE;
+	}
+	const Atom hName = XInternAtom( pDisplay, "_NET_WM_NAME", False );
+	const Atom hUtf8 = XInternAtom( pDisplay, "UTF8_STRING", False );
+	if ( hName != None && hUtf8 != None ) {
+		XChangeProperty( pDisplay, hWindow, hName, hUtf8, 8, PropModeReplace, ( const unsigned char * )pszTitle,
+		                 ( int )strlen( pszTitle ) );
+	}
+	return SIR_WINDOW_OK;
+}
+
 bool SIRWindowDriverX11::setEventSink( sirWindowX11EventSink_t pSink, void *pContext ) noexcept
 {
 	if ( pSink != nullptr && pContext == nullptr ) {
@@ -58,8 +76,10 @@ sirWindowResult_t SIRWindowDriverX11::createWindow( const sirWindowCreateDesc_t&
 	}
 	XSelectInput( pDisplay, hWindow, StructureNotifyMask | FocusChangeMask );
 	Atom hDelete = ( Atom )m_nDeleteWindow;
-	( void )XSetWMProtocols( pDisplay, hWindow, &hDelete, 1 );
-	( void )XStoreName( pDisplay, hWindow, desc.pszTitle );
+	if ( !XSetWMProtocols( pDisplay, hWindow, &hDelete, 1 ) || sirSetX11Title( pDisplay, hWindow, desc.pszTitle ) != SIR_WINDOW_OK ) {
+		( void )XDestroyWindow( pDisplay, hWindow );
+		return SIR_WINDOW_NATIVE_FAILURE;
+	}
 	( void )XMapWindow( pDisplay, hWindow );
 	( void )XFlush( pDisplay );
 	m_hWindows[nSlot] = ( uintptr_t )hWindow;
@@ -97,12 +117,16 @@ sirWindowResult_t SIRWindowDriverX11::mutateWindow( uint32_t nSlot, const sirWin
 	}
 	const Window hWindow = ( Window )m_hWindows[nSlot];
 	switch ( mutation.eKind ) {
-	case SIR_WINDOW_MUTATION_TITLE:
+	case SIR_WINDOW_MUTATION_TITLE: {
 		if ( mutation.pszTitle == nullptr ) {
 			return SIR_WINDOW_INVALID_ARGUMENT;
 		}
-		( void )XStoreName( pDisplay, hWindow, mutation.pszTitle );
+		const sirWindowResult_t eTitle = sirSetX11Title( pDisplay, hWindow, mutation.pszTitle );
+		if ( eTitle != SIR_WINDOW_OK ) {
+			return eTitle;
+		}
 		break;
+	}
 	case SIR_WINDOW_MUTATION_RESIZE:
 		if ( mutation.nWidth == 0 || mutation.nHeight == 0 ) {
 			return SIR_WINDOW_INVALID_ARGUMENT;
@@ -121,6 +145,29 @@ sirWindowResult_t SIRWindowDriverX11::mutateWindow( uint32_t nSlot, const sirWin
 			return SIR_WINDOW_UNSUPPORTED;
 		}
 		break;
+	case SIR_WINDOW_MUTATION_MAXIMIZE: {
+		const Atom hState = XInternAtom( pDisplay, "_NET_WM_STATE", False );
+		const Atom hVertical = XInternAtom( pDisplay, "_NET_WM_STATE_MAXIMIZED_VERT", False );
+		const Atom hHorizontal = XInternAtom( pDisplay, "_NET_WM_STATE_MAXIMIZED_HORZ", False );
+		if ( hState == None || hVertical == None || hHorizontal == None ) {
+			return SIR_WINDOW_NATIVE_FAILURE;
+		}
+		XEvent message = {};
+		message.xclient.type = ClientMessage;
+		message.xclient.display = pDisplay;
+		message.xclient.window = hWindow;
+		message.xclient.message_type = hState;
+		message.xclient.format = 32;
+		message.xclient.data.l[0] = 1; // _NET_WM_STATE_ADD
+		message.xclient.data.l[1] = ( long )hVertical;
+		message.xclient.data.l[2] = ( long )hHorizontal;
+		message.xclient.data.l[3] = 1; // Client application initiated
+		if ( !XSendEvent( pDisplay, DefaultRootWindow( pDisplay ), False, SubstructureNotifyMask | SubstructureRedirectMask,
+		                  &message ) ) {
+			return SIR_WINDOW_NATIVE_FAILURE;
+		}
+		break;
+	}
 	default:
 		return SIR_WINDOW_UNSUPPORTED;
 	}
