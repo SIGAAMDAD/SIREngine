@@ -127,6 +127,57 @@ static int sirTestCopies( SIRRenderingDevice *pDevice, uint32_t nGeneration, sir
 	return 0;
 }
 
+static int sirTestCopyPinRollback( SIRRenderingDevice *pDevice, uint32_t nGeneration ) noexcept
+{
+	SIRGraphicsCommandList *pCommands = nullptr;
+	if ( pDevice->acquireCommands( SIR_GRAPHICS_QUEUE_COPY, &pCommands ) != SIR_GRAPHICS_SUCCESS || pCommands == nullptr ) {
+		return 84;
+	}
+	sirGraphicsBufferDesc_t resident = {};
+	resident.nSizeBytes = 256;
+	resident.nUsage = SIR_GRAPHICS_USAGE_COPY_SOURCE | SIR_GRAPHICS_USAGE_COPY_DESTINATION;
+	resident.eMemory = SIR_GRAPHICS_MEMORY_GPU_LOCAL;
+	sirGraphicsHandle_t szPinned[127] = {};
+	for ( uint32_t i = 0; i < 127; ++i ) {
+		if ( pDevice->createBuffer( resident, &szPinned[i] ) != SIR_GRAPHICS_SUCCESS ) {
+			return 85;
+		}
+		sirGraphicsBarrier_t barrier = {};
+		barrier.eType = SIR_GRAPHICS_BARRIER_TRANSITION;
+		barrier.hResource = szPinned[i];
+		barrier.eBefore = SIR_GRAPHICS_STATE_COMMON;
+		barrier.eAfter = SIR_GRAPHICS_STATE_COPY_SOURCE;
+		if ( pCommands->barrier( &barrier, 1 ) != SIR_GRAPHICS_SUCCESS ) {
+			return 86;
+		}
+	}
+	sirGraphicsHandle_t hDestination = {};
+	sirGraphicsHandle_t hSource = {};
+	if ( pDevice->createBuffer( resident, &hDestination ) != SIR_GRAPHICS_SUCCESS ||
+	     pDevice->createBuffer( resident, &hSource ) != SIR_GRAPHICS_SUCCESS ) {
+		return 87;
+	}
+	sirGraphicsCompletionSet_t immediate = {};
+	immediate.nDeviceGeneration = nGeneration;
+	if ( pCommands->copyBuffer( hDestination, 0, hSource, 0, 256 ) != SIR_GRAPHICS_CAPACITY_EXCEEDED ||
+	     pDevice->retireResource( hDestination, immediate ) != SIR_GRAPHICS_SUCCESS ||
+	     pDevice->retireResource( hSource, immediate ) != SIR_GRAPHICS_SUCCESS ) {
+		return 88;
+	}
+	sirGraphicsCompletion_t completed = {};
+	if ( pCommands->close() != SIR_GRAPHICS_SUCCESS ||
+	     sirTestSubmit( pDevice, SIR_GRAPHICS_QUEUE_COPY, pCommands, nullptr, 0, &completed ) != SIR_GRAPHICS_SUCCESS ||
+	     pDevice->wait( completed, 10000000000ULL ) != SIR_GRAPHICS_SUCCESS ) {
+		return 89;
+	}
+	for ( uint32_t i = 0; i < 127; ++i ) {
+		if ( pDevice->retireResource( szPinned[i], immediate ) != SIR_GRAPHICS_SUCCESS ) {
+			return 90;
+		}
+	}
+	return 0;
+}
+
 static int sirTestQueueSubmission( SIRRenderingDevice *pDevice, uint32_t nGeneration, const sirGraphicsShaderCode_t& computeCode,
                                    const sirGraphicsCompletion_t& copyCompletion ) noexcept
 {
@@ -621,6 +672,9 @@ int main( void )
 	const uint32_t nGeneration = pDevice->getDeviceGeneration();
 	sirGraphicsCompletion_t copied = {};
 	int nFailure = sirTestCopies( pDevice, nGeneration, &copied );
+	if ( nFailure == 0 ) {
+		nFailure = sirTestCopyPinRollback( pDevice, nGeneration );
+	}
 	if ( nFailure == 0 ) {
 		nFailure = sirTestQueueSubmission( pDevice, nGeneration, compute, copied );
 	}

@@ -630,12 +630,19 @@ sirGraphicsResult_t SIRD3D12CommandList::copyBuffer( sirGraphicsHandle_t hDestin
 	     hDestination.nSlot == hSource.nSlot ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
+	const uint32_t nOriginalReferenceCount = m_nReferenceCount;
 	sirGraphicsResult_t ePinned = pin( hDestination );
 	if ( ePinned != SIR_GRAPHICS_SUCCESS ) {
 		return ePinned;
 	}
 	ePinned = pin( hSource );
 	if ( ePinned != SIR_GRAPHICS_SUCCESS ) {
+		// Retaining the source may fail at the bounded command-reference capacity.
+		// Do not keep a newly pinned destination if no copy was recorded.
+		while ( m_nReferenceCount > nOriginalReferenceCount ) {
+			const sirGraphicsHandle_t& ref = m_szReferences[--m_nReferenceCount];
+			m_pResources->releaseCommandReference( ref );
+		}
 		return ePinned;
 	}
 	m_pCommands->CopyBufferRegion( pDst->getNativeResource(), nDstOffset, pSrc->getNativeResource(), nSrcOffset, nBytes );
@@ -683,12 +690,18 @@ sirGraphicsResult_t SIRD3D12CommandList::copyBufferTexture( const sirGraphicsBuf
 	            ( pBuffer->nUsage & SIR_GRAPHICS_USAGE_COPY_DESTINATION ) == 0 ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
+	const uint32_t nOriginalReferenceCount = m_nReferenceCount;
 	sirGraphicsResult_t ePinned = pin( copy.hBuffer );
 	if ( ePinned != SIR_GRAPHICS_SUCCESS ) {
 		return ePinned;
 	}
 	ePinned = pin( copy.hTexture );
 	if ( ePinned != SIR_GRAPHICS_SUCCESS ) {
+		// A failed texture pin leaves no buffer-to-texture copy encoded.
+		while ( m_nReferenceCount > nOriginalReferenceCount ) {
+			const sirGraphicsHandle_t& ref = m_szReferences[--m_nReferenceCount];
+			m_pResources->releaseCommandReference( ref );
+		}
 		return ePinned;
 	}
 	D3D12_TEXTURE_COPY_LOCATION placed = {};
