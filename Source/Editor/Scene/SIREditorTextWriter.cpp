@@ -156,6 +156,16 @@ sirEditorTextWriteResult_t sirEditorWriteScalarPatches( const char *pszSource, s
 	if ( nSourcePtr < nOutputPtr + nCapacity && nOutputPtr < nSourcePtr + nSourceBytes ) {
 		return SIR_EDITOR_WRITE_INVALID_ARGUMENT;
 	}
+	// All replacement spans must stay outside the output destination. A prior
+	// copy could otherwise overwrite a later edit's input before it is read.
+	for ( uint32_t iEdit = 0; iEdit < nEdits; ++iEdit ) {
+		const sirEditorTextEdit_t& edit = pEdits[iEdit];
+		const uintptr_t nReplacementPtr = ( uintptr_t )edit.pszReplacement;
+		if ( edit.nReplacementBytes > UINTPTR_MAX - nReplacementPtr ||
+		     ( nReplacementPtr < nOutputPtr + nCapacity && nOutputPtr < nReplacementPtr + edit.nReplacementBytes ) ) {
+			return SIR_EDITOR_WRITE_INVALID_ARGUMENT;
+		}
+	}
 	size_t nSourceOffset = 0;
 	size_t nDestinationOffset = 0;
 	uint32_t nWritten = 0;

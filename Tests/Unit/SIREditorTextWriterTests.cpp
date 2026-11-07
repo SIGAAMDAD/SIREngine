@@ -78,6 +78,18 @@ int main( void )
 	assert( sirEditorWriteScalarPatches( pszSource, strlen( pszSource ), index, szEdits, 2, szGuard, nWritten, &nWritten ) ==
 	        SIR_EDITOR_WRITE_OUT_OF_CAPACITY );
 	assert( szGuard[0] == 0x6e );
+	// Reject replacement text stored inside the output buffer before writing
+	// any bytes; a prior copy must not overwrite a later edit's input.
+	memcpy( szGuard + 64, "true", 4 );
+	const sirEditorTextEdit_t overlappingReplacement = { 0, szGuard + 64, 4 };
+	assert( sirEditorWriteScalarPatches( pszSource, strlen( pszSource ), index, &overlappingReplacement, 1, szGuard, sizeof( szGuard ),
+	                                     &nWritten ) == SIR_EDITOR_WRITE_INVALID_ARGUMENT );
+	assert( szGuard[0] == 0x6e && memcmp( szGuard + 64, "true", 4 ) == 0 );
+	// Replacement slices borrowed from the immutable input remain supported.
+	const sirEditorTextEdit_t sourceReplacement = { 0, pszBoolean, 5 };
+	assert( sirEditorWriteScalarPatches( pszSource, strlen( pszSource ), index, &sourceReplacement, 1, szOutput, sizeof( szOutput ),
+	                                     &nWritten ) == SIR_EDITOR_WRITE_OK );
+	assert( strcmp( szOutput, pszSource ) == 0 );
 	sirEditorTextEdit_t malformed = { 0, "true\n[node]", 11 };
 	assert( sirEditorWriteScalarPatches( pszSource, strlen( pszSource ), index, &malformed, 1, szGuard, sizeof( szGuard ), &nWritten ) ==
 	        SIR_EDITOR_WRITE_INVALID_SCALAR );
