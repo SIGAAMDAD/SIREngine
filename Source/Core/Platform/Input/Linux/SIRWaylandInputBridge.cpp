@@ -42,7 +42,12 @@ void SIRWaylandInputBridge::sample( SIRInputService& service ) noexcept
 
 void SIRWaylandInputBridge::resynchronize( SIRInputService& service ) noexcept
 {
-	( void )service;
+	if ( m_bKeyboardDevice ) {
+		( void )service.loseState( id(), m_hKeyboard );
+	}
+	if ( m_bPointerDevice ) {
+		( void )service.loseState( id(), m_hPointer );
+	}
 	m_bHavePointerPosition = false;
 	m_nRemainderX = 0;
 	m_nRemainderY = 0;
