@@ -362,6 +362,56 @@ static int sirTestValidatorBranches( void ) noexcept
 	return 0;
 }
 
+static int sirTestDXILContainer( void ) noexcept
+{
+	uint8_t szDXIL[72] = {};
+	szDXIL[0] = 'D';
+	szDXIL[1] = 'X';
+	szDXIL[2] = 'B';
+	szDXIL[3] = 'C';
+	szDXIL[20] = 1;
+	szDXIL[24] = sizeof( szDXIL );
+	szDXIL[28] = 1;
+	szDXIL[32] = 36;
+	szDXIL[36] = 'D';
+	szDXIL[37] = 'X';
+	szDXIL[38] = 'I';
+	szDXIL[39] = 'L';
+	szDXIL[40] = 28;
+	if ( !sirD3D12ValidateDXILContainer( szDXIL, sizeof( szDXIL ) ) ) {
+		return 60;
+	}
+	if ( sirD3D12ValidateDXILContainer( nullptr, sizeof( szDXIL ) ) ||
+	     sirD3D12ValidateDXILContainer( szDXIL, 39 ) ) {
+		return 61;
+	}
+	szDXIL[24] = 71;
+	if ( sirD3D12ValidateDXILContainer( szDXIL, sizeof( szDXIL ) ) ) {
+		return 62;
+	}
+	szDXIL[24] = sizeof( szDXIL );
+	szDXIL[28] = 16;
+	if ( sirD3D12ValidateDXILContainer( szDXIL, sizeof( szDXIL ) ) ) {
+		return 63;
+	}
+	szDXIL[28] = 1;
+	szDXIL[32] = 71;
+	if ( sirD3D12ValidateDXILContainer( szDXIL, sizeof( szDXIL ) ) ) {
+		return 64;
+	}
+	szDXIL[32] = 36;
+	szDXIL[40] = 40;
+	if ( sirD3D12ValidateDXILContainer( szDXIL, sizeof( szDXIL ) ) ) {
+		return 65;
+	}
+	szDXIL[40] = 28;
+	szDXIL[36] = 'A';
+	if ( sirD3D12ValidateDXILContainer( szDXIL, sizeof( szDXIL ) ) ) {
+		return 66;
+	}
+	return 0;
+}
+
 int main( void )
 {
 	const int nHeap = sirTestHeapUsage();
@@ -371,9 +421,14 @@ int main( void )
 	const int nExternal = sirTestExternalAdmission();
 	const int nFeatures = sirTestOptionalFeatures();
 	const int nExtra = sirTestValidatorBranches();
-	if ( nHeap != 0 || nCopy != 0 || nViewport != 0 || nBindings != 0 || nExternal != 0 || nFeatures != 0 || nExtra != 0 ) {
+	const int nDXIL = sirTestDXILContainer();
+	if ( nHeap != 0 || nCopy != 0 || nViewport != 0 || nBindings != 0 || nExternal != 0 || nFeatures != 0 || nExtra != 0 || nDXIL != 0 ) {
 		printf( "D3D12 portable validation failed: heap=%d copy=%d viewport=%d bindings=%d external=%d features=%d extra=%d\n", nHeap,
 		        nCopy, nViewport, nBindings, nExternal, nFeatures, nExtra );
+		return 1;
+	}
+	if ( nDXIL != 0 ) {
+		printf( "D3D12 DXIL container validation failed: %d\n", nDXIL );
 		return 1;
 	}
 	printf( "D3D12 portable validation suites PASS\n" );
