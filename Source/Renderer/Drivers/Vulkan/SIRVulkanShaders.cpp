@@ -144,6 +144,15 @@ sirVulkanResult_t SIRVulkanDevice::destroyComputePipeline( sirVulkanComputePipel
 	}
 	pfnDestroyPipeline( m_Device, pPipeline->hPipeline, nullptr );
 	pfnDestroyPipelineLayout( m_Device, pPipeline->hLayout, nullptr );
+	if ( pPipeline->nSetLayoutCount != 0 ) {
+		const PFN_vkDestroyDescriptorSetLayout pfnDestroySetLayout =
+		    ( PFN_vkDestroyDescriptorSetLayout )m_pfnGetDeviceProcAddr( m_Device, "vkDestroyDescriptorSetLayout" );
+		if ( pfnDestroySetLayout != nullptr ) {
+			for ( uint32_t i = 0; i < pPipeline->nSetLayoutCount; ++i ) {
+				pfnDestroySetLayout( m_Device, pPipeline->szSetLayouts[i], nullptr );
+			}
+		}
+	}
 	*pPipeline = {};
 	--m_nLivePipelines;
 	return SIR_VULKAN_SUCCESS;

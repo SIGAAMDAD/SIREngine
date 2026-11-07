@@ -17,6 +17,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <string.h>
 
+static constexpr uint32_t SIR_VULKAN_RECORDED_SHADOW_CAPACITY = SIR_VULKAN_COPY_BATCH_CAPACITY * 9;
+
 static sirVulkanImage_t *sirVulkanRecordedShadow( sirVulkanImage_t *pImage, sirVulkanImage_t **ppOriginals, sirVulkanImage_t *pShadows,
                                                   uint32_t *pCount ) noexcept
 {
@@ -28,7 +30,7 @@ static sirVulkanImage_t *sirVulkanRecordedShadow( sirVulkanImage_t *pImage, sirV
 			return &pShadows[iImage];
 		}
 	}
-	if ( *pCount >= SIR_VULKAN_COPY_BATCH_CAPACITY ) {
+	if ( *pCount >= SIR_VULKAN_RECORDED_SHADOW_CAPACITY ) {
 		return nullptr;
 	}
 	ppOriginals[*pCount] = pImage;
@@ -197,11 +199,120 @@ sirVulkanResult_t sirVulkanValidateRecordedCommands( const sirVulkanRecordedComm
 	if ( pCommands == nullptr || nCount == 0 || nCount > SIR_VULKAN_COPY_BATCH_CAPACITY ) {
 		return SIR_VULKAN_INVALID_ARGUMENT;
 	}
-	sirVulkanImage_t *szOriginals[SIR_VULKAN_COPY_BATCH_CAPACITY] = {};
-	sirVulkanImage_t szShadows[SIR_VULKAN_COPY_BATCH_CAPACITY] = {};
+	sirVulkanImage_t *szOriginals[SIR_VULKAN_RECORDED_SHADOW_CAPACITY] = {};
+	sirVulkanImage_t szShadows[SIR_VULKAN_RECORDED_SHADOW_CAPACITY] = {};
 	uint32_t nImages = 0;
+	bool bRendering = false;
+	bool bGraphicsBound = false;
+	bool bViewportSet = false;
+	bool bIndexBound = false;
+	const sirVulkanComputePipeline_t *pGraphicsPipeline = nullptr;
+	const sirVulkanRecordedCommand_t *pActivePass = nullptr;
 	for ( uint32_t iCommand = 0; iCommand < nCount; ++iCommand ) {
 		const sirVulkanRecordedCommand_t& command = pCommands[iCommand];
+		if ( command.eKind == SIR_VULKAN_RECORDED_RENDER_BEGIN ) {
+			if ( bRendering || command.nColorCount > 8 || command.extent.width == 0 || command.extent.height == 0 ||
+			     ( command.nColorCount == 0 && command.pDepthImage == nullptr ) ) {
+				return SIR_VULKAN_INVALID_ARGUMENT;
+			}
+			for ( uint32_t i = 0; i < command.nColorCount; ++i ) {
+				if ( command.szColorViews[i] == VK_NULL_HANDLE || command.szColorImages[i] == nullptr ||
+				     ( command.szColorImages[i]->nUsage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT ) == 0 ||
+				     command.szColorImages[i]->eFormat == VK_FORMAT_UNDEFINED ) {
+					return SIR_VULKAN_INVALID_ARGUMENT;
+				}
+			}
+			if ( command.pDepthImage != nullptr &&
+			     ( command.hDepthView == VK_NULL_HANDLE ||
+			       ( command.pDepthImage->nUsage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT ) == 0 ) ) {
+				return SIR_VULKAN_INVALID_ARGUMENT;
+			}
+			for ( uint32_t i = 0; i <= command.nColorCount; ++i ) {
+				const bool bDepth = i == command.nColorCount;
+				sirVulkanImage_t *pImage = bDepth ? command.pDepthImage : command.szColorImages[i];
+				if ( pImage == nullptr )
+					continue;
+				const uint32_t nMip = bDepth ? command.nDepthMip : command.szColorMips[i];
+				const uint32_t nLayer = bDepth ? command.nDepthLayer : command.szColorLayers[i];
+				sirVulkanImage_t *pShadow = sirVulkanRecordedShadow( pImage, szOriginals, szShadows, &nImages );
+				VkImageLayout eBefore = VK_IMAGE_LAYOUT_UNDEFINED;
+				if ( pShadow == nullptr || !sirVulkanGetSubresourceLayout( pShadow, nMip, nLayer, &eBefore ) ||
+				     ( eBefore == VK_IMAGE_LAYOUT_UNDEFINED && !( bDepth ? command.bClearDepth : command.szColorClear[i] ) ) ||
+				     !sirVulkanSetSubresourceLayout( pShadow, nMip, nLayer,
+				                                     bDepth ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+				                                            : VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL ) ) {
+					return SIR_VULKAN_INVALID_ARGUMENT;
+				}
+			}
+			bRendering = true;
+			bGraphicsBound = false;
+			pGraphicsPipeline = nullptr;
+			bViewportSet = false;
+			bIndexBound = false;
+			pActivePass = &command;
+			continue;
+		}
+		if ( command.eKind == SIR_VULKAN_RECORDED_RENDER_END ) {
+			if ( !bRendering )
+				return SIR_VULKAN_INVALID_ARGUMENT;
+			bRendering = false;
+			pActivePass = nullptr;
+			continue;
+		}
+		if ( command.eKind == SIR_VULKAN_RECORDED_GRAPHICS_PIPELINE ) {
+			if ( !bRendering || command.pPipeline == nullptr || !command.pPipeline->bGraphics ||
+			     command.pPipeline->hPipeline == VK_NULL_HANDLE || command.pPipeline->nColorFormatCount != pActivePass->nColorCount ) {
+				return SIR_VULKAN_INVALID_ARGUMENT;
+			}
+			for ( uint32_t i = 0; i < pActivePass->nColorCount; ++i ) {
+				if ( command.pPipeline->szColorFormats[i] != pActivePass->szColorImages[i]->eFormat ) {
+					return SIR_VULKAN_INVALID_ARGUMENT;
+				}
+			}
+			if ( ( pActivePass->pDepthImage != nullptr ? pActivePass->pDepthImage->eFormat : VK_FORMAT_UNDEFINED ) !=
+			     command.pPipeline->eDepthFormat ) {
+				return SIR_VULKAN_INVALID_ARGUMENT;
+			}
+			bGraphicsBound = true;
+			pGraphicsPipeline = command.pPipeline;
+			continue;
+		}
+		if ( command.eKind == SIR_VULKAN_RECORDED_BIND_DESCRIPTOR_SET ) {
+			if ( !bRendering || !bGraphicsBound || command.pDescriptorSet == nullptr || command.pDescriptorSet->hSet == VK_NULL_HANDLE ||
+			     command.pDescriptorSet->hPipelineLayout != pGraphicsPipeline->hLayout ||
+			     command.pDescriptorSet->nSetIndex >= pGraphicsPipeline->nSetLayoutCount || command.pPipeline != pGraphicsPipeline )
+				return SIR_VULKAN_INVALID_ARGUMENT;
+			continue;
+		}
+		if ( command.eKind == SIR_VULKAN_RECORDED_VERTEX_BUFFER || command.eKind == SIR_VULKAN_RECORDED_INDEX_BUFFER ) {
+			if ( !bRendering || command.pBuffer == nullptr || command.pBuffer->hBuffer == VK_NULL_HANDLE ||
+			     command.nBufferOffset >= command.pBuffer->nSize ||
+			     ( command.pBuffer->nUsage & ( command.eKind == SIR_VULKAN_RECORDED_VERTEX_BUFFER ? VK_BUFFER_USAGE_VERTEX_BUFFER_BIT
+			                                                                                      : VK_BUFFER_USAGE_INDEX_BUFFER_BIT ) ) ==
+			         0 ) {
+				return SIR_VULKAN_INVALID_ARGUMENT;
+			}
+			if ( command.eKind == SIR_VULKAN_RECORDED_INDEX_BUFFER )
+				bIndexBound = true;
+			continue;
+		}
+		if ( command.eKind == SIR_VULKAN_RECORDED_VIEWPORT ) {
+			if ( !bRendering || command.viewport.width <= 0 || command.viewport.height <= 0 || command.scissor.extent.width == 0 ||
+			     command.scissor.extent.height == 0 ) {
+				return SIR_VULKAN_INVALID_ARGUMENT;
+			}
+			bViewportSet = true;
+			continue;
+		}
+		if ( command.eKind == SIR_VULKAN_RECORDED_DRAW || command.eKind == SIR_VULKAN_RECORDED_DRAW_INDEXED ) {
+			if ( !bRendering || !bGraphicsBound || !bViewportSet || command.nDrawCount == 0 || command.nInstanceCount == 0 ||
+			     ( command.eKind == SIR_VULKAN_RECORDED_DRAW_INDEXED && !bIndexBound ) ) {
+				return SIR_VULKAN_INVALID_ARGUMENT;
+			}
+			continue;
+		}
+		if ( bRendering )
+			return SIR_VULKAN_INVALID_ARGUMENT;
 		if ( command.eKind == SIR_VULKAN_RECORDED_BUFFER_COPY ) {
 			if ( sirVulkanValidateBufferCopies( &command.bufferCopy, 1 ) != SIR_VULKAN_SUCCESS ) {
 				return SIR_VULKAN_INVALID_ARGUMENT;
@@ -235,6 +346,8 @@ sirVulkanResult_t sirVulkanValidateRecordedCommands( const sirVulkanRecordedComm
 			return eCheck;
 		}
 	}
+	if ( bRendering )
+		return SIR_VULKAN_INVALID_ARGUMENT;
 	return SIR_VULKAN_SUCCESS;
 }
 
@@ -270,6 +383,29 @@ sirVulkanResult_t SIRVulkanDevice::submitRecordedCommands( const sirVulkanRecord
 			     command.pBuffer->nDeviceSerial != m_nDeviceSerial ) {
 				return SIR_VULKAN_INVALID_ARGUMENT;
 			}
+		} else if ( command.eKind == SIR_VULKAN_RECORDED_RENDER_BEGIN ) {
+			for ( uint32_t iColor = 0; iColor < command.nColorCount; ++iColor ) {
+				const sirVulkanImage_t *pImage = command.szColorImages[iColor];
+				if ( pImage == nullptr || pImage->hImage == VK_NULL_HANDLE || pImage->pOwnerAllocator != m_Allocator ||
+				     pImage->nDeviceSerial != m_nDeviceSerial )
+					return SIR_VULKAN_INVALID_ARGUMENT;
+			}
+			if ( command.pDepthImage != nullptr &&
+			     ( command.pDepthImage->hImage == VK_NULL_HANDLE || command.pDepthImage->pOwnerAllocator != m_Allocator ||
+			       command.pDepthImage->nDeviceSerial != m_nDeviceSerial ) )
+				return SIR_VULKAN_INVALID_ARGUMENT;
+		} else if ( command.eKind == SIR_VULKAN_RECORDED_GRAPHICS_PIPELINE ) {
+			if ( command.pPipeline->nDeviceSerial != m_nDeviceSerial )
+				return SIR_VULKAN_INVALID_ARGUMENT;
+		} else if ( command.eKind == SIR_VULKAN_RECORDED_BIND_DESCRIPTOR_SET ) {
+			if ( command.pDescriptorSet->nDeviceSerial != m_nDeviceSerial || command.pPipeline->nDeviceSerial != m_nDeviceSerial )
+				return SIR_VULKAN_INVALID_ARGUMENT;
+		} else if ( command.eKind == SIR_VULKAN_RECORDED_VERTEX_BUFFER || command.eKind == SIR_VULKAN_RECORDED_INDEX_BUFFER ) {
+			if ( command.pBuffer->pOwnerAllocator != m_Allocator || command.pBuffer->nDeviceSerial != m_nDeviceSerial )
+				return SIR_VULKAN_INVALID_ARGUMENT;
+		} else if ( command.eKind == SIR_VULKAN_RECORDED_RENDER_END || command.eKind == SIR_VULKAN_RECORDED_VIEWPORT ||
+		            command.eKind == SIR_VULKAN_RECORDED_DRAW || command.eKind == SIR_VULKAN_RECORDED_DRAW_INDEXED ) {
+			continue;
 		} else if ( command.eKind == SIR_VULKAN_RECORDED_COMPUTE_DISPATCH ) {
 			if ( !m_Adapter.bComputeCapable ) {
 				return SIR_VULKAN_API_UNSUPPORTED;
@@ -290,6 +426,24 @@ sirVulkanResult_t SIRVulkanDevice::submitRecordedCommands( const sirVulkanRecord
 		}
 	}
 
+	const PFN_vkCmdBindDescriptorSets pfnBindDescriptorSets =
+	    ( PFN_vkCmdBindDescriptorSets )m_pfnGetDeviceProcAddr( m_Device, "vkCmdBindDescriptorSets" );
+	const PFN_vkCmdBeginRendering pfnBeginRendering = ( PFN_vkCmdBeginRendering )m_pfnGetDeviceProcAddr( m_Device, "vkCmdBeginRendering" );
+	const PFN_vkCmdEndRendering pfnEndRendering = ( PFN_vkCmdEndRendering )m_pfnGetDeviceProcAddr( m_Device, "vkCmdEndRendering" );
+	const PFN_vkCmdBindVertexBuffers pfnBindVertex =
+	    ( PFN_vkCmdBindVertexBuffers )m_pfnGetDeviceProcAddr( m_Device, "vkCmdBindVertexBuffers" );
+	const PFN_vkCmdBindIndexBuffer pfnBindIndex = ( PFN_vkCmdBindIndexBuffer )m_pfnGetDeviceProcAddr( m_Device, "vkCmdBindIndexBuffer" );
+	const PFN_vkCmdSetViewport pfnViewport = ( PFN_vkCmdSetViewport )m_pfnGetDeviceProcAddr( m_Device, "vkCmdSetViewport" );
+	const PFN_vkCmdSetScissor pfnScissor = ( PFN_vkCmdSetScissor )m_pfnGetDeviceProcAddr( m_Device, "vkCmdSetScissor" );
+	const PFN_vkCmdDraw pfnDraw = ( PFN_vkCmdDraw )m_pfnGetDeviceProcAddr( m_Device, "vkCmdDraw" );
+	const PFN_vkCmdDrawIndexed pfnDrawIndexed = ( PFN_vkCmdDrawIndexed )m_pfnGetDeviceProcAddr( m_Device, "vkCmdDrawIndexed" );
+	for ( uint32_t i = 0; i < nCount; ++i ) {
+		if ( pCommands[i].eKind >= SIR_VULKAN_RECORDED_RENDER_BEGIN &&
+		     ( pfnBeginRendering == nullptr || pfnEndRendering == nullptr || pfnBindVertex == nullptr || pfnBindIndex == nullptr ||
+		       pfnViewport == nullptr || pfnScissor == nullptr || pfnDraw == nullptr || pfnDrawIndexed == nullptr ||
+		       pfnBindDescriptorSets == nullptr ) )
+			return SIR_VULKAN_API_UNSUPPORTED;
+	}
 	uint64_t nCompleted = 0;
 	const VkResult ePoll = m_pfnGetSemaphoreCounterValue( m_Device, m_TransferTimeline, &nCompleted );
 	if ( ePoll != VK_SUCCESS ) {
@@ -322,8 +476,8 @@ sirVulkanResult_t SIRVulkanDevice::submitRecordedCommands( const sirVulkanRecord
 		return SIR_VULKAN_NATIVE_FAILURE;
 	}
 
-	sirVulkanImage_t *szOriginals[SIR_VULKAN_COPY_BATCH_CAPACITY] = {};
-	sirVulkanImage_t szShadows[SIR_VULKAN_COPY_BATCH_CAPACITY] = {};
+	sirVulkanImage_t *szOriginals[SIR_VULKAN_RECORDED_SHADOW_CAPACITY] = {};
+	sirVulkanImage_t szShadows[SIR_VULKAN_RECORDED_SHADOW_CAPACITY] = {};
 	uint32_t nImages = 0;
 	VkMemoryBarrier2 memory = {};
 	memory.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2;
@@ -352,6 +506,114 @@ sirVulkanResult_t SIRVulkanDevice::submitRecordedCommands( const sirVulkanRecord
 		const sirVulkanRecordedCommand_t& command = pCommands[iCommand];
 		if ( sirVulkanRecordedNeedsBufferBarrier( pCommands, iCommand ) ) {
 			m_pfnCmdPipelineBarrier2( pSlot->hCommandBuffer, &transferDependency );
+		}
+		if ( command.eKind == SIR_VULKAN_RECORDED_RENDER_BEGIN ) {
+			VkImageMemoryBarrier2 transitions[9] = {};
+			uint32_t nTransitions = 0;
+			for ( uint32_t i = 0; i <= command.nColorCount; ++i ) {
+				const bool bDepth = i == command.nColorCount;
+				sirVulkanImage_t *pImage = bDepth ? command.pDepthImage : command.szColorImages[i];
+				if ( pImage == nullptr )
+					continue;
+				const uint32_t nMip = bDepth ? command.nDepthMip : command.szColorMips[i];
+				const uint32_t nLayer = bDepth ? command.nDepthLayer : command.szColorLayers[i];
+				sirVulkanImage_t *pShadow = sirVulkanRecordedShadow( pImage, szOriginals, szShadows, &nImages );
+				if ( pShadow == nullptr )
+					return SIR_VULKAN_NATIVE_FAILURE;
+				VkImageLayout eBefore = VK_IMAGE_LAYOUT_UNDEFINED;
+				( void )sirVulkanGetSubresourceLayout( pShadow, nMip, nLayer, &eBefore );
+				const VkImageLayout eAfter = bDepth ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL : VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
+				if ( eBefore != eAfter ) {
+					VkImageMemoryBarrier2& transition = transitions[nTransitions++];
+					transition.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
+					( void )sirVulkanImageAccessScope( eBefore, &transition.srcStageMask, &transition.srcAccessMask );
+					( void )sirVulkanImageAccessScope( eAfter, &transition.dstStageMask, &transition.dstAccessMask );
+					transition.oldLayout = eBefore;
+					transition.newLayout = eAfter;
+					transition.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+					transition.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+					transition.image = pImage->hImage;
+					transition.subresourceRange.aspectMask = sirVulkanImageAspectMask( pImage->eFormat );
+					transition.subresourceRange.baseMipLevel = nMip;
+					transition.subresourceRange.levelCount = 1;
+					transition.subresourceRange.baseArrayLayer = nLayer;
+					transition.subresourceRange.layerCount = 1;
+				}
+				( void )sirVulkanSetSubresourceLayout( pShadow, nMip, nLayer, eAfter );
+			}
+			if ( nTransitions != 0 ) {
+				VkDependencyInfo attachmentDependency = {};
+				attachmentDependency.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+				attachmentDependency.imageMemoryBarrierCount = nTransitions;
+				attachmentDependency.pImageMemoryBarriers = transitions;
+				m_pfnCmdPipelineBarrier2( pSlot->hCommandBuffer, &attachmentDependency );
+			}
+			VkRenderingAttachmentInfo colors[8] = {};
+			for ( uint32_t iColor = 0; iColor < command.nColorCount; ++iColor ) {
+				colors[iColor].sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+				colors[iColor].imageView = command.szColorViews[iColor];
+				colors[iColor].imageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
+				colors[iColor].loadOp = command.szColorClear[iColor] ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
+				colors[iColor].storeOp = command.szColorStore[iColor] ? VK_ATTACHMENT_STORE_OP_STORE : VK_ATTACHMENT_STORE_OP_DONT_CARE;
+				colors[iColor].clearValue = command.szClearColors[iColor];
+			}
+			VkRenderingAttachmentInfo depth = {};
+			if ( command.pDepthImage != nullptr ) {
+				depth.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+				depth.imageView = command.hDepthView;
+				depth.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+				depth.loadOp = command.bClearDepth ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
+				depth.storeOp = command.bStoreDepth ? VK_ATTACHMENT_STORE_OP_STORE : VK_ATTACHMENT_STORE_OP_DONT_CARE;
+				depth.clearValue = command.depthClear;
+			}
+			VkRenderingInfo rendering = {};
+			rendering.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
+			rendering.renderArea.extent = command.extent;
+			rendering.layerCount = 1;
+			rendering.colorAttachmentCount = command.nColorCount;
+			rendering.pColorAttachments = colors;
+			rendering.pDepthAttachment = command.pDepthImage != nullptr ? &depth : nullptr;
+			rendering.pStencilAttachment = command.pDepthImage != nullptr && ( sirVulkanImageAspectMask( command.pDepthImage->eFormat ) &
+			                                                                   VK_IMAGE_ASPECT_STENCIL_BIT ) != 0
+			                                   ? &depth
+			                                   : nullptr;
+			pfnBeginRendering( pSlot->hCommandBuffer, &rendering );
+			continue;
+		}
+		if ( command.eKind == SIR_VULKAN_RECORDED_RENDER_END ) {
+			pfnEndRendering( pSlot->hCommandBuffer );
+			continue;
+		}
+		if ( command.eKind == SIR_VULKAN_RECORDED_GRAPHICS_PIPELINE ) {
+			m_pfnCmdBindPipeline( pSlot->hCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, command.pPipeline->hPipeline );
+			continue;
+		}
+		if ( command.eKind == SIR_VULKAN_RECORDED_BIND_DESCRIPTOR_SET ) {
+			pfnBindDescriptorSets( pSlot->hCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, command.pPipeline->hLayout,
+			                       command.pDescriptorSet->nSetIndex, 1, &command.pDescriptorSet->hSet, 0, nullptr );
+			continue;
+		}
+		if ( command.eKind == SIR_VULKAN_RECORDED_VERTEX_BUFFER ) {
+			pfnBindVertex( pSlot->hCommandBuffer, command.nBufferSlot, 1, &command.pBuffer->hBuffer, &command.nBufferOffset );
+			continue;
+		}
+		if ( command.eKind == SIR_VULKAN_RECORDED_INDEX_BUFFER ) {
+			pfnBindIndex( pSlot->hCommandBuffer, command.pBuffer->hBuffer, command.nBufferOffset, command.eIndexType );
+			continue;
+		}
+		if ( command.eKind == SIR_VULKAN_RECORDED_VIEWPORT ) {
+			pfnViewport( pSlot->hCommandBuffer, 0, 1, &command.viewport );
+			pfnScissor( pSlot->hCommandBuffer, 0, 1, &command.scissor );
+			continue;
+		}
+		if ( command.eKind == SIR_VULKAN_RECORDED_DRAW ) {
+			pfnDraw( pSlot->hCommandBuffer, command.nDrawCount, command.nInstanceCount, command.nFirstElement, command.nFirstInstance );
+			continue;
+		}
+		if ( command.eKind == SIR_VULKAN_RECORDED_DRAW_INDEXED ) {
+			pfnDrawIndexed( pSlot->hCommandBuffer, command.nDrawCount, command.nInstanceCount, command.nFirstElement, command.nVertexOffset,
+			                command.nFirstInstance );
+			continue;
 		}
 		if ( command.eKind == SIR_VULKAN_RECORDED_BUFFER_COPY ) {
 			VkBufferCopy2 region = {};
@@ -521,6 +783,21 @@ sirVulkanResult_t SIRVulkanDevice::submitRecordedCommands( const sirVulkanRecord
 			command.pBuffer->nLastGpuUse = nNext;
 		} else if ( command.eKind == SIR_VULKAN_RECORDED_COMPUTE_DISPATCH ) {
 			command.pPipeline->nLastGpuUse = nNext;
+		} else if ( command.eKind == SIR_VULKAN_RECORDED_RENDER_BEGIN ) {
+			for ( uint32_t i = 0; i < command.nColorCount; ++i ) {
+				command.szColorImages[i]->nLastGpuUse = nNext;
+			}
+			if ( command.pDepthImage != nullptr )
+				command.pDepthImage->nLastGpuUse = nNext;
+		} else if ( command.eKind == SIR_VULKAN_RECORDED_GRAPHICS_PIPELINE ) {
+			command.pPipeline->nLastGpuUse = nNext;
+		} else if ( command.eKind == SIR_VULKAN_RECORDED_BIND_DESCRIPTOR_SET ) {
+			command.pDescriptorSet->nLastGpuUse = nNext;
+		} else if ( command.eKind == SIR_VULKAN_RECORDED_VERTEX_BUFFER || command.eKind == SIR_VULKAN_RECORDED_INDEX_BUFFER ) {
+			command.pBuffer->nLastGpuUse = nNext;
+		} else if ( command.eKind == SIR_VULKAN_RECORDED_RENDER_END || command.eKind == SIR_VULKAN_RECORDED_VIEWPORT ||
+		            command.eKind == SIR_VULKAN_RECORDED_DRAW || command.eKind == SIR_VULKAN_RECORDED_DRAW_INDEXED ) {
+			continue;
 		} else if ( command.eKind == SIR_VULKAN_RECORDED_TEXTURE_COPY ) {
 			command.pBuffer->nLastGpuUse = nNext;
 			command.pImage->nLastGpuUse = nNext;

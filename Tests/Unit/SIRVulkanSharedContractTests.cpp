@@ -38,16 +38,17 @@ int main( void )
 	memcpy( nativeAdapter.szDeviceName, "Synthetic Vulkan", sizeof( "Synthetic Vulkan" ) );
 	sirGraphicsAdapterInfo_t reported = {};
 	if ( sirVulkanDescribeAdapter( 3, nativeAdapter, &reported ) != SIR_GRAPHICS_SUCCESS || reported.nAdapterIndex != 3 ||
-	     reported.nVendorId != 0x1234 || reported.nFeatureMask != SIR_GRAPHICS_FEATURE_COMPUTE || !reported.bSoftwareAdapter ||
-	     sirVulkanDescribeAdapter( 0, nativeAdapter, nullptr ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+	     reported.nVendorId != 0x1234 || reported.nFeatureMask != ( SIR_GRAPHICS_FEATURE_COMPUTE | SIR_GRAPHICS_FEATURE_GRAPHICS ) ||
+	     !reported.bSoftwareAdapter || sirVulkanDescribeAdapter( 0, nativeAdapter, nullptr ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
 		return 8;
 	}
 	sirGraphicsCapabilities_t synthetic = {};
 	if ( sirVulkanDescribeCapabilities( nativeAdapter, 41, &synthetic ) != SIR_GRAPHICS_SUCCESS ||
 	     synthetic.eBackend != SIR_GRAPHICS_BACKEND_VULKAN || synthetic.nDeviceGeneration != 41 ||
 	     synthetic.nMaximumTextureDimension != 8192 || synthetic.nMaximumSampleCount != 1 ||
-	     synthetic.nFeatureMask != SIR_GRAPHICS_FEATURE_COMPUTE || !synthetic.bSoftwareAdapter || synthetic.nMaximumColorAttachments != 0 ||
-	     synthetic.nMaximumBindingSlots != 0 ) {
+	     synthetic.nFeatureMask != ( SIR_GRAPHICS_FEATURE_GRAPHICS | SIR_GRAPHICS_FEATURE_COMPUTE | SIR_GRAPHICS_FEATURE_SHADER_STORAGE |
+	                                 SIR_GRAPHICS_FEATURE_MRT ) ||
+	     !synthetic.bSoftwareAdapter || synthetic.nMaximumColorAttachments != 8 || synthetic.nMaximumBindingSlots != 32 ) {
 		return 17;
 	}
 	sirGraphicsDeviceCreateDesc_t admission = {};
@@ -60,7 +61,7 @@ int main( void )
 		return 19;
 	}
 	admission.nRequiredFeatures = SIR_GRAPHICS_FEATURE_GRAPHICS;
-	if ( sirVulkanValidateDeviceAdmission( admission, synthetic ) != SIR_GRAPHICS_UNSUPPORTED ) {
+	if ( sirVulkanValidateDeviceAdmission( admission, synthetic ) != SIR_GRAPHICS_SUCCESS ) {
 		return 20;
 	}
 	memset( nativeAdapter.szDeviceName, 'x', sizeof( nativeAdapter.szDeviceName ) );
@@ -74,8 +75,8 @@ int main( void )
 	}
 	nativeAdapter.bComputeCapable = false;
 	nativeAdapter.bSoftwareAdapter = false;
-	if ( sirVulkanDescribeAdapter( 0, nativeAdapter, &reported ) != SIR_GRAPHICS_SUCCESS || reported.nFeatureMask != 0 ||
-	     reported.bSoftwareAdapter ) {
+	if ( sirVulkanDescribeAdapter( 0, nativeAdapter, &reported ) != SIR_GRAPHICS_SUCCESS ||
+	     reported.nFeatureMask != SIR_GRAPHICS_FEATURE_GRAPHICS || reported.bSoftwareAdapter ) {
 		return 9;
 	}
 
@@ -152,8 +153,7 @@ int main( void )
 	uint32_t nQueueCount = 99;
 	const sirVulkanQueueFamilySelection_t distinct = { 3, 1, 2, true };
 	if ( !sirVulkanBuildQueueCreateInfos( distinct, &fQueuePriority, szQueueInfos, &nQueueCount ) || nQueueCount != 3 ||
-	     szQueueInfos[0].queueFamilyIndex != 3 || szQueueInfos[1].queueFamilyIndex != 1 ||
-	     szQueueInfos[2].queueFamilyIndex != 2 ) {
+	     szQueueInfos[0].queueFamilyIndex != 3 || szQueueInfos[1].queueFamilyIndex != 1 || szQueueInfos[2].queueFamilyIndex != 2 ) {
 		return 88;
 	}
 	for ( uint32_t iQueue = 0; iQueue < nQueueCount; ++iQueue ) {
@@ -228,8 +228,12 @@ int main( void )
 	}
 	create.bHeadless = true;
 	create.nRequiredFeatures = SIR_GRAPHICS_FEATURE_GRAPHICS;
-	pDevice = reinterpret_cast<SIRRenderingDevice *>( &inert );
-	if ( driver.createDevice( create, &pDevice ) != SIR_GRAPHICS_UNSUPPORTED || pDevice != nullptr ) {
+	pDevice = nullptr;
+	const sirGraphicsResult_t eGraphicsDevice = driver.createDevice( create, &pDevice );
+	if ( eGraphicsDevice == SIR_GRAPHICS_SUCCESS ) {
+		if ( pDevice == nullptr || driver.destroyDevice( &pDevice ) != SIR_GRAPHICS_SUCCESS )
+			return 6;
+	} else if ( eGraphicsDevice != SIR_GRAPHICS_UNSUPPORTED || pDevice != nullptr ) {
 		return 6;
 	}
 	create.nRequiredFeatures = 0;

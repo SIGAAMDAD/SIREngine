@@ -57,7 +57,7 @@ sirGraphicsResult_t sirVulkanDescribeAdapter( uint32_t nAdapterIndex, const sirV
 	pInfo->nVendorId = native.nVendorId;
 	pInfo->nDeviceId = native.nDeviceId;
 	pInfo->nDedicatedVideoBytes = native.nDeviceLocalHeapBytes;
-	pInfo->nFeatureMask = native.bComputeCapable ? SIR_GRAPHICS_FEATURE_COMPUTE : 0;
+	pInfo->nFeatureMask = SIR_GRAPHICS_FEATURE_GRAPHICS | ( native.bComputeCapable ? SIR_GRAPHICS_FEATURE_COMPUTE : 0 );
 	pInfo->bSoftwareAdapter = native.bSoftwareAdapter;
 	pInfo->nApiVersion = { VK_API_VERSION_MAJOR( native.nApiVersion ), VK_API_VERSION_MINOR( native.nApiVersion ),
 	                       VK_API_VERSION_PATCH( native.nApiVersion ) };
@@ -80,9 +80,12 @@ sirGraphicsResult_t sirVulkanDescribeCapabilities( const sirVulkanAdapterInfo_t&
 	pCapabilities->nApiVersion = { VK_API_VERSION_MAJOR( native.nApiVersion ), VK_API_VERSION_MINOR( native.nApiVersion ),
 	                               VK_API_VERSION_PATCH( native.nApiVersion ) };
 	// The current native backend exposes a single direct queue and descriptor-free compute.
-	pCapabilities->nFeatureMask = native.bComputeCapable ? SIR_GRAPHICS_FEATURE_COMPUTE : 0;
+	pCapabilities->nFeatureMask = SIR_GRAPHICS_FEATURE_GRAPHICS | SIR_GRAPHICS_FEATURE_SHADER_STORAGE | SIR_GRAPHICS_FEATURE_MRT |
+	                              ( native.bComputeCapable ? SIR_GRAPHICS_FEATURE_COMPUTE : 0 );
 	pCapabilities->nQueueMask = 1U << SIR_GRAPHICS_QUEUE_DIRECT;
-	pCapabilities->nPipelineModelMask = native.bComputeCapable ? ( 1U << ( SIR_GRAPHICS_PIPELINE_MODEL_MODERN - 1 ) ) : 0;
+	pCapabilities->nPipelineModelMask = 1U << ( SIR_GRAPHICS_PIPELINE_MODEL_MODERN - 1 );
+	pCapabilities->nMaximumColorAttachments = 8;
+	pCapabilities->nMaximumBindingSlots = 32;
 	pCapabilities->nMaximumTextureDimension = native.nMaximumTextureDimension;
 	pCapabilities->nMaximumFramesInFlight = SIR_VULKAN_TRANSFER_SLOT_COUNT;
 	pCapabilities->nMaximumSampleCount = 1;
@@ -136,6 +139,7 @@ void SIRVulkanCommandList::prepare( SIRVulkanRenderingDevice *pOwner ) noexcept
 	m_nOperationCount = 0;
 	m_nLastCompletion = 0;
 	m_hBoundPipeline = {};
+	m_bInRenderPass = false;
 }
 
 sirGraphicsResult_t SIRVulkanCommandList::reset( void ) noexcept
@@ -146,13 +150,14 @@ sirGraphicsResult_t SIRVulkanCommandList::reset( void ) noexcept
 	m_eState = SIR_VULKAN_COMMAND_RECORDING;
 	m_nOperationCount = 0;
 	m_hBoundPipeline = {};
+	m_bInRenderPass = false;
 	return SIR_GRAPHICS_SUCCESS;
 }
 
 sirGraphicsResult_t SIRVulkanCommandList::copyBuffer( sirGraphicsHandle_t hDestination, uint64_t nDstOffset, sirGraphicsHandle_t hSource,
                                                       uint64_t nSrcOffset, uint64_t nBytes ) noexcept
 {
-	if ( m_eState != SIR_VULKAN_COMMAND_RECORDING ) {
+	if ( m_eState != SIR_VULKAN_COMMAND_RECORDING || m_bInRenderPass ) {
 		return SIR_GRAPHICS_BUSY;
 	}
 	if ( m_nOperationCount >= SIR_VULKAN_COPY_BATCH_CAPACITY ) {
@@ -190,7 +195,7 @@ sirGraphicsResult_t SIRVulkanCommandList::copyBuffer( sirGraphicsHandle_t hDesti
 
 sirGraphicsResult_t SIRVulkanCommandList::close( void ) noexcept
 {
-	if ( m_eState != SIR_VULKAN_COMMAND_RECORDING ) {
+	if ( m_eState != SIR_VULKAN_COMMAND_RECORDING || m_bInRenderPass ) {
 		return SIR_GRAPHICS_BUSY;
 	}
 	// Closing an empty list cancels the borrow instead of exhausting the pool.
@@ -214,6 +219,9 @@ SIRVulkanRenderingDevice::SIRVulkanRenderingDevice( void ) noexcept
 	}
 	for ( uint32_t iSlot = 0; iSlot < SIR_VULKAN_PIPELINE_CAPACITY; ++iSlot ) {
 		m_szPipelines[iSlot].nGeneration = 1;
+	}
+	for ( uint32_t iSlot = 0; iSlot < SIR_VULKAN_BINDING_SET_CAPACITY; ++iSlot ) {
+		m_szBindingSets[iSlot].nGeneration = 1;
 	}
 }
 
@@ -266,12 +274,38 @@ void SIRVulkanRenderingDevice::collectRetired( void ) noexcept
 	if ( !m_bReady ) {
 		return;
 	}
+	for ( uint32_t iSlot = 0; iSlot < SIR_VULKAN_BINDING_SET_CAPACITY; ++iSlot ) {
+		sirVulkanGraphicsBindingSlot_t& set = m_szBindingSets[iSlot];
+		if ( !set.bRetiring )
+			continue;
+		if ( set.nRetireValue != 0 ) {
+			const sirVulkanCompletion_t completion = { m_nNativeSerial, set.nRetireValue };
+			bool bCompleted = false;
+			if ( m_Native.queryCompletion( &completion, &bCompleted ) != SIR_VULKAN_SUCCESS || !bCompleted )
+				continue;
+		}
+		if ( m_Native.destroyDescriptorSet( &set.native ) == SIR_VULKAN_SUCCESS ) {
+			set.bRetiring = false;
+			set.nRetireValue = 0;
+			set.nReferenceCount = 0;
+		}
+	}
 	collectImageResources();
 	for ( uint32_t iSlot = 0; iSlot < SIR_VULKAN_PIPELINE_CAPACITY; ++iSlot ) {
 		sirVulkanGraphicsPipelineSlot_t *pSlot = &m_szPipelines[iSlot];
 		if ( !pSlot->bRetiring ) {
 			continue;
 		}
+		bool bSetsLive = false;
+		for ( uint32_t iSet = 0; iSet < SIR_VULKAN_BINDING_SET_CAPACITY; ++iSet ) {
+			const sirVulkanGraphicsBindingSlot_t& set = m_szBindingSets[iSet];
+			if ( ( set.bActive || set.bRetiring ) && set.hPipeline.nSlot == iSlot &&
+			     set.hPipeline.nDeviceGeneration == m_nDeviceGeneration &&
+			     set.hPipeline.nGeneration == pSlot->nGeneration - uint32_t( pSlot->bRetiring ) )
+				bSetsLive = true;
+		}
+		if ( bSetsLive )
+			continue;
 		if ( pSlot->nRetireValue != 0 ) {
 			const sirVulkanCompletion_t completion = { m_nNativeSerial, pSlot->nRetireValue };
 			bool bCompleted = false;
@@ -334,7 +368,7 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::queryPipelineModelCaps( sirGraphic
 	if ( eResult != SIR_GRAPHICS_SUCCESS ) {
 		return eResult;
 	}
-	if ( ( available.nFeatureMask & SIR_GRAPHICS_FEATURE_COMPUTE ) == 0 ) {
+	if ( ( available.nFeatureMask & SIR_GRAPHICS_FEATURE_GRAPHICS ) == 0 ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
 
@@ -343,9 +377,10 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::queryPipelineModelCaps( sirGraphic
 	caps.nDeviceGeneration = available.nDeviceGeneration;
 	caps.nModel = SIR_GRAPHICS_PIPELINE_MODEL_MODERN;
 	caps.nExecutionModel = SIR_GRAPHICS_EXECUTION_EXPLICIT;
-	caps.nShaderStageMask = SIR_GRAPHICS_STAGE_COMPUTE;
+	caps.nShaderStageMask = SIR_GRAPHICS_STAGE_VERTEX | SIR_GRAPHICS_STAGE_FRAGMENT |
+	                        ( ( available.nFeatureMask & SIR_GRAPHICS_FEATURE_COMPUTE ) != 0 ? SIR_GRAPHICS_STAGE_COMPUTE : 0 );
 	caps.nQueueMask = available.nQueueMask;
-	caps.nRequiredFeatureMask = SIR_GRAPHICS_FEATURE_COMPUTE;
+	caps.nRequiredFeatureMask = SIR_GRAPHICS_FEATURE_GRAPHICS;
 	caps.nShaderFormatMask = 1U << ( SIR_GRAPHICS_SHADER_SPIRV - 1 );
 	caps.nMaximumSamples = available.nMaximumSampleCount;
 	caps.nMaximumTextureDimension = available.nMaximumTextureDimension;
@@ -641,6 +676,145 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::submit( sirGraphicsQueue_t eQueue,
 				nativeOp.nGroupCountZ = op.nGroupCountZ;
 				continue;
 			}
+			if ( op.eKind == SIR_VULKAN_GRAPHICS_RENDER_BEGIN ) {
+				nativeOp.eKind = SIR_VULKAN_RECORDED_RENDER_BEGIN;
+				nativeOp.nColorCount = op.nColorCount;
+				for ( uint32_t iColor = 0; iColor < op.nColorCount; ++iColor ) {
+					const sirGraphicsHandle_t hView = op.szColors[iColor].hView;
+					if ( !sirGraphicsIsHandleValid( hView, SIR_GRAPHICS_HANDLE_VIEW, m_nDeviceGeneration ) ||
+					     hView.nSlot >= SIR_VULKAN_VIEW_CAPACITY ) {
+						return SIR_GRAPHICS_INVALID_HANDLE;
+					}
+					const sirVulkanGraphicsViewSlot_t& view = m_szViews[hView.nSlot];
+					if ( !view.bActive || view.nGeneration != hView.nGeneration ) {
+						return SIR_GRAPHICS_INVALID_HANDLE;
+					}
+					sirVulkanGraphicsImageSlot_t& image = m_szImages[view.nImageSlot];
+					nativeOp.szColorViews[iColor] = view.native.hView;
+					nativeOp.szColorImages[iColor] = &image.native;
+					nativeOp.szColorMips[iColor] = view.nBaseMip;
+					nativeOp.szColorLayers[iColor] = view.nBaseLayer;
+					for ( uint32_t iChannel = 0; iChannel < 4; ++iChannel ) {
+						nativeOp.szClearColors[iColor].color.float32[iChannel] = op.szColors[iColor].szClearColor[iChannel];
+					}
+					nativeOp.szColorClear[iColor] = op.szColors[iColor].bClear;
+					nativeOp.szColorStore[iColor] = op.szColors[iColor].bStore;
+					nativeOp.extent = { image.nWidth >> view.nBaseMip, image.nHeight >> view.nBaseMip };
+					if ( nativeOp.extent.width == 0 )
+						nativeOp.extent.width = 1;
+					if ( nativeOp.extent.height == 0 )
+						nativeOp.extent.height = 1;
+				}
+				if ( op.hDepthView.nGeneration != 0 ) {
+					const sirGraphicsHandle_t hView = op.hDepthView;
+					if ( !sirGraphicsIsHandleValid( hView, SIR_GRAPHICS_HANDLE_VIEW, m_nDeviceGeneration ) ||
+					     hView.nSlot >= SIR_VULKAN_VIEW_CAPACITY ) {
+						return SIR_GRAPHICS_INVALID_HANDLE;
+					}
+					const sirVulkanGraphicsViewSlot_t& view = m_szViews[hView.nSlot];
+					if ( !view.bActive || view.nGeneration != hView.nGeneration ) {
+						return SIR_GRAPHICS_INVALID_HANDLE;
+					}
+					sirVulkanGraphicsImageSlot_t& image = m_szImages[view.nImageSlot];
+					nativeOp.hDepthView = view.native.hView;
+					nativeOp.pDepthImage = &image.native;
+					nativeOp.nDepthMip = view.nBaseMip;
+					nativeOp.nDepthLayer = view.nBaseLayer;
+					nativeOp.extent = { image.nWidth >> view.nBaseMip, image.nHeight >> view.nBaseMip };
+					if ( nativeOp.extent.width == 0 )
+						nativeOp.extent.width = 1;
+					if ( nativeOp.extent.height == 0 )
+						nativeOp.extent.height = 1;
+				}
+				nativeOp.depthClear.depthStencil = { op.fClearDepth, op.nClearStencil };
+				nativeOp.bClearDepth = op.bClearDepth;
+				nativeOp.bStoreDepth = op.bStoreDepth;
+				continue;
+			}
+			if ( op.eKind == SIR_VULKAN_GRAPHICS_RENDER_END ) {
+				nativeOp.eKind = SIR_VULKAN_RECORDED_RENDER_END;
+				continue;
+			}
+			if ( op.eKind == SIR_VULKAN_GRAPHICS_BIND_PIPELINE ) {
+				if ( !sirGraphicsIsHandleValid( op.hPipeline, SIR_GRAPHICS_HANDLE_PIPELINE, m_nDeviceGeneration ) ||
+				     op.hPipeline.nSlot >= SIR_VULKAN_PIPELINE_CAPACITY ) {
+					return SIR_GRAPHICS_INVALID_HANDLE;
+				}
+				sirVulkanGraphicsPipelineSlot_t& pipeline = m_szPipelines[op.hPipeline.nSlot];
+				if ( !pipeline.bActive || !pipeline.bGraphics || pipeline.nGeneration != op.hPipeline.nGeneration ) {
+					return SIR_GRAPHICS_INVALID_HANDLE;
+				}
+				nativeOp.eKind = SIR_VULKAN_RECORDED_GRAPHICS_PIPELINE;
+				nativeOp.pPipeline = &pipeline.native;
+				continue;
+			}
+			if ( op.eKind == SIR_VULKAN_GRAPHICS_VERTEX_BUFFER || op.eKind == SIR_VULKAN_GRAPHICS_INDEX_BUFFER ) {
+				sirVulkanGraphicsBufferSlot_t *pBuffer = resolveBuffer( op.hSource );
+				if ( pBuffer == nullptr || pBuffer->pMapped != nullptr ) {
+					return SIR_GRAPHICS_INVALID_HANDLE;
+				}
+				nativeOp.eKind =
+				    op.eKind == SIR_VULKAN_GRAPHICS_VERTEX_BUFFER ? SIR_VULKAN_RECORDED_VERTEX_BUFFER : SIR_VULKAN_RECORDED_INDEX_BUFFER;
+				nativeOp.pBuffer = &pBuffer->native;
+				nativeOp.nBufferOffset = op.nSourceOffset;
+				nativeOp.nBufferSlot = op.nBufferSlot;
+				nativeOp.eIndexType = op.bIndex32 ? VK_INDEX_TYPE_UINT32 : VK_INDEX_TYPE_UINT16;
+				continue;
+			}
+			if ( op.eKind == SIR_VULKAN_GRAPHICS_VIEWPORT ) {
+				nativeOp.eKind = SIR_VULKAN_RECORDED_VIEWPORT;
+				nativeOp.viewport = {
+				    op.viewport.fX,           op.viewport.fY, op.viewport.fWidth, op.viewport.fHeight, op.viewport.fMinimumDepth,
+				    op.viewport.fMaximumDepth };
+				nativeOp.scissor = {
+				    { op.scissor.nLeft, op.scissor.nTop },
+				    { uint32_t( op.scissor.nRight - op.scissor.nLeft ), uint32_t( op.scissor.nBottom - op.scissor.nTop ) } };
+				continue;
+			}
+			if ( op.eKind == SIR_VULKAN_GRAPHICS_DRAW || op.eKind == SIR_VULKAN_GRAPHICS_DRAW_INDEXED ) {
+				nativeOp.eKind = op.eKind == SIR_VULKAN_GRAPHICS_DRAW ? SIR_VULKAN_RECORDED_DRAW : SIR_VULKAN_RECORDED_DRAW_INDEXED;
+				nativeOp.nDrawCount = op.nDrawCount;
+				nativeOp.nInstanceCount = op.nInstanceCount;
+				nativeOp.nFirstElement = op.nFirstElement;
+				nativeOp.nFirstInstance = op.nFirstInstance;
+				nativeOp.nVertexOffset = op.nVertexOffset;
+				continue;
+			}
+			if ( op.eKind == SIR_VULKAN_GRAPHICS_BIND_DESCRIPTOR_SET ) {
+				const sirGraphicsHandle_t hSet = op.hBindingSet;
+				if ( !sirGraphicsIsHandleValid( hSet, SIR_GRAPHICS_HANDLE_BINDING_SET, m_nDeviceGeneration ) ||
+				     hSet.nSlot >= SIR_VULKAN_BINDING_SET_CAPACITY )
+					return SIR_GRAPHICS_INVALID_HANDLE;
+				sirVulkanGraphicsBindingSlot_t& set = m_szBindingSets[hSet.nSlot];
+				if ( !set.bActive || set.nGeneration != hSet.nGeneration || set.nSetIndex != op.nSetIndex ||
+				     set.hPipeline.nSlot != op.hPipeline.nSlot || set.hPipeline.nGeneration != op.hPipeline.nGeneration )
+					return SIR_GRAPHICS_INVALID_HANDLE;
+				if ( op.hPipeline.nSlot >= SIR_VULKAN_PIPELINE_CAPACITY )
+					return SIR_GRAPHICS_INVALID_HANDLE;
+				sirVulkanGraphicsPipelineSlot_t& pipeline = m_szPipelines[op.hPipeline.nSlot];
+				if ( !pipeline.bActive || pipeline.nGeneration != op.hPipeline.nGeneration )
+					return SIR_GRAPHICS_INVALID_HANDLE;
+				for ( uint32_t iRef = 0; iRef < set.nReferenceCount; ++iRef ) {
+					const sirGraphicsHandle_t hResource = set.szReferences[iRef];
+					if ( hResource.eType == SIR_GRAPHICS_HANDLE_BUFFER ) {
+						if ( resolveBuffer( hResource ) == nullptr )
+							return SIR_GRAPHICS_INVALID_HANDLE;
+					} else if ( hResource.eType == SIR_GRAPHICS_HANDLE_VIEW ) {
+						if ( hResource.nSlot >= SIR_VULKAN_VIEW_CAPACITY || !m_szViews[hResource.nSlot].bActive ||
+						     m_szViews[hResource.nSlot].nGeneration != hResource.nGeneration )
+							return SIR_GRAPHICS_INVALID_HANDLE;
+					} else if ( hResource.eType == SIR_GRAPHICS_HANDLE_SAMPLER ) {
+						if ( hResource.nSlot >= SIR_VULKAN_SAMPLER_CAPACITY || !m_szSamplers[hResource.nSlot].bActive ||
+						     m_szSamplers[hResource.nSlot].nGeneration != hResource.nGeneration )
+							return SIR_GRAPHICS_INVALID_HANDLE;
+					} else
+						return SIR_GRAPHICS_INVALID_HANDLE;
+				}
+				nativeOp.eKind = SIR_VULKAN_RECORDED_BIND_DESCRIPTOR_SET;
+				nativeOp.pDescriptorSet = &set.native;
+				nativeOp.pPipeline = &pipeline.native;
+				continue;
+			}
 			if ( op.eKind == SIR_VULKAN_GRAPHICS_BUFFER_BARRIER ) {
 				sirVulkanGraphicsBufferSlot_t *pBuffer = resolveBuffer( op.barrier.hResource );
 				if ( pBuffer == nullptr ) {
@@ -744,6 +918,27 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::submit( sirGraphicsQueue_t eQueue,
 		return sirVulkanToGraphicsResult( eSubmit );
 	}
 	m_nLastCompletion = native.nValue;
+	for ( uint32_t i = 0; i < nNativeCount; ++i ) {
+		if ( commands[i].eKind != SIR_VULKAN_RECORDED_BIND_DESCRIPTOR_SET )
+			continue;
+		for ( uint32_t j = 0; j < SIR_VULKAN_BINDING_SET_CAPACITY; ++j ) {
+			sirVulkanGraphicsBindingSlot_t& set = m_szBindingSets[j];
+			if ( &set.native != commands[i].pDescriptorSet )
+				continue;
+			for ( uint32_t iRef = 0; iRef < set.nReferenceCount; ++iRef ) {
+				const sirGraphicsHandle_t hResource = set.szReferences[iRef];
+				if ( hResource.eType == SIR_GRAPHICS_HANDLE_BUFFER ) {
+					sirVulkanGraphicsBufferSlot_t *pBuffer = resolveBuffer( hResource );
+					if ( pBuffer != nullptr )
+						pBuffer->native.nLastGpuUse = native.nValue;
+				} else if ( hResource.eType == SIR_GRAPHICS_HANDLE_VIEW ) {
+					sirVulkanGraphicsViewSlot_t& view = m_szViews[hResource.nSlot];
+					m_szImages[view.nImageSlot].native.nLastGpuUse = native.nValue;
+				}
+			}
+			break;
+		}
+	}
 	for ( uint32_t iList = 0; iList < submission.nCommandListCount; ++iList ) {
 		SIRVulkanCommandList *pList = szLists[iList];
 		pList->m_eState = SIR_VULKAN_COMMAND_SUBMITTED;
@@ -788,6 +983,26 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::wait( const sirGraphicsCompletion_
 sirGraphicsResult_t SIRVulkanRenderingDevice::retireResource( sirGraphicsHandle_t hResource,
                                                               const sirGraphicsCompletionSet_t& completion ) noexcept
 {
+	if ( hResource.eType == SIR_GRAPHICS_HANDLE_BINDING_SET ) {
+		if ( !m_bReady || !sirGraphicsIsCompletionSetValid( completion, m_nDeviceGeneration ) ||
+		     ( completion.nQueueMask & ~( 1U << SIR_GRAPHICS_QUEUE_DIRECT ) ) != 0 ||
+		     completion.szQueueValues[SIR_GRAPHICS_QUEUE_DIRECT] > m_nLastCompletion )
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		if ( !sirGraphicsIsHandleValid( hResource, SIR_GRAPHICS_HANDLE_BINDING_SET, m_nDeviceGeneration ) ||
+		     hResource.nSlot >= SIR_VULKAN_BINDING_SET_CAPACITY )
+			return SIR_GRAPHICS_INVALID_HANDLE;
+		sirVulkanGraphicsBindingSlot_t& set = m_szBindingSets[hResource.nSlot];
+		if ( !set.bActive || set.nGeneration != hResource.nGeneration )
+			return SIR_GRAPHICS_INVALID_HANDLE;
+		if ( completion.szQueueValues[SIR_GRAPHICS_QUEUE_DIRECT] < set.native.nLastGpuUse )
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		set.bActive = false;
+		set.bRetiring = true;
+		set.nRetireValue = completion.szQueueValues[SIR_GRAPHICS_QUEUE_DIRECT];
+		++set.nGeneration;
+		collectRetired();
+		return SIR_GRAPHICS_SUCCESS;
+	}
 	if ( hResource.eType == SIR_GRAPHICS_HANDLE_PIPELINE ) {
 		if ( !m_bReady || !sirGraphicsIsCompletionSetValid( completion, m_nDeviceGeneration ) ||
 		     ( completion.nQueueMask & ~( 1U << SIR_GRAPHICS_QUEUE_DIRECT ) ) != 0 ||
@@ -877,6 +1092,10 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::shutdown( void ) noexcept
 		if ( m_szSamplers[iSlot].bActive || m_szSamplers[iSlot].bRetiring ) {
 			return SIR_GRAPHICS_BUSY;
 		}
+	}
+	for ( uint32_t iSlot = 0; iSlot < SIR_VULKAN_BINDING_SET_CAPACITY; ++iSlot ) {
+		if ( m_szBindingSets[iSlot].bActive || m_szBindingSets[iSlot].bRetiring )
+			return SIR_GRAPHICS_BUSY;
 	}
 	for ( uint32_t iSlot = 0; iSlot < SIR_VULKAN_PIPELINE_CAPACITY; ++iSlot ) {
 		if ( m_szPipelines[iSlot].bActive || m_szPipelines[iSlot].bRetiring ) {

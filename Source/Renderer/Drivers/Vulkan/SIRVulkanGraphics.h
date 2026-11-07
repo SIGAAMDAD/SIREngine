@@ -67,6 +67,10 @@ typedef struct sirVulkanGraphicsViewSlot_s
 	sirVulkanImageView_t native;
 	uint32_t nGeneration;
 	uint32_t nImageSlot;
+	uint32_t nBaseMip;
+	uint32_t nBaseLayer;
+	uint32_t nMipLevels;
+	uint32_t nLayers;
 	uint64_t nRetireValue;
 	bool bActive;
 	bool bRetiring;
@@ -75,11 +79,27 @@ typedef struct sirVulkanGraphicsViewSlot_s
 typedef struct sirVulkanGraphicsPipelineSlot_s
 {
 	sirVulkanComputePipeline_t native;
+	bool bGraphics;
 	uint32_t nGeneration;
 	uint64_t nRetireValue;
 	bool bActive;
 	bool bRetiring;
 } sirVulkanGraphicsPipelineSlot_t;
+
+typedef struct sirVulkanGraphicsBindingSlot_s
+{
+	sirVulkanDescriptorSet_t native;
+	sirGraphicsHandle_t hPipeline;
+	uint32_t nGeneration;
+	uint32_t nSetIndex;
+	uint32_t nReferenceCount;
+	sirGraphicsHandle_t szReferences[64];
+	uint32_t szReferenceBindings[64];
+	uint32_t szReferenceIndices[64];
+	uint64_t nRetireValue;
+	bool bActive;
+	bool bRetiring;
+} sirVulkanGraphicsBindingSlot_t;
 
 typedef struct sirVulkanGraphicsSamplerSlot_s
 {
@@ -114,7 +134,16 @@ typedef enum sirVulkanGraphicsOpKind_e : uint8_t
 	SIR_VULKAN_GRAPHICS_TEXTURE_COPY,
 	SIR_VULKAN_GRAPHICS_IMAGE_BARRIER,
 	SIR_VULKAN_GRAPHICS_BUFFER_BARRIER,
-	SIR_VULKAN_GRAPHICS_COMPUTE_DISPATCH
+	SIR_VULKAN_GRAPHICS_COMPUTE_DISPATCH,
+	SIR_VULKAN_GRAPHICS_RENDER_BEGIN,
+	SIR_VULKAN_GRAPHICS_RENDER_END,
+	SIR_VULKAN_GRAPHICS_BIND_PIPELINE,
+	SIR_VULKAN_GRAPHICS_VERTEX_BUFFER,
+	SIR_VULKAN_GRAPHICS_INDEX_BUFFER,
+	SIR_VULKAN_GRAPHICS_VIEWPORT,
+	SIR_VULKAN_GRAPHICS_DRAW,
+	SIR_VULKAN_GRAPHICS_DRAW_INDEXED,
+	SIR_VULKAN_GRAPHICS_BIND_DESCRIPTOR_SET
 } sirVulkanGraphicsOpKind_t;
 
 typedef struct sirVulkanGraphicsOperation_s
@@ -128,9 +157,28 @@ typedef struct sirVulkanGraphicsOperation_s
 	sirGraphicsBufferTextureCopy_t textureCopy;
 	sirGraphicsBarrier_t barrier;
 	sirGraphicsHandle_t hPipeline;
+	sirGraphicsHandle_t hBindingSet;
+	uint32_t nSetIndex;
 	uint32_t nGroupCountX;
 	uint32_t nGroupCountY;
 	uint32_t nGroupCountZ;
+	uint32_t nColorCount;
+	sirGraphicsColorAttachment_t szColors[8];
+	sirGraphicsHandle_t hDepthView;
+	float fClearDepth;
+	uint32_t nClearStencil;
+	bool bClearDepth;
+	bool bStoreDepth;
+	sirGraphicsViewport_t viewport;
+	sirGraphicsRect_t scissor;
+	uint32_t nBufferSlot;
+	uint32_t nBufferStride;
+	bool bIndex32;
+	uint32_t nDrawCount;
+	uint32_t nInstanceCount;
+	uint32_t nFirstElement;
+	int32_t nVertexOffset;
+	uint32_t nFirstInstance;
 } sirVulkanGraphicsOperation_t;
 
 class SIRVulkanCommandList final : public SIRGraphicsCommandList
@@ -144,6 +192,7 @@ private:
 	uint32_t m_nOperationCount = 0;
 	uint64_t m_nLastCompletion = 0;
 	sirGraphicsHandle_t m_hBoundPipeline = {};
+	bool m_bInRenderPass = false;
 
 	void prepare( SIRVulkanRenderingDevice *pOwner ) noexcept;
 
@@ -159,39 +208,17 @@ public:
 
 	sirGraphicsResult_t barrier( const sirGraphicsBarrier_t *pBarriers, uint32_t nCount ) noexcept override;
 	sirGraphicsResult_t copyBufferTexture( const sirGraphicsBufferTextureCopy_t& copy ) noexcept override;
-	sirGraphicsResult_t beginRenderPass( const sirGraphicsRenderPass_t& ) noexcept override
-	{
-		return SIR_GRAPHICS_UNSUPPORTED;
-	}
-	sirGraphicsResult_t endRenderPass( void ) noexcept override
-	{
-		return SIR_GRAPHICS_UNSUPPORTED;
-	}
+	sirGraphicsResult_t beginRenderPass( const sirGraphicsRenderPass_t& pass ) noexcept override;
+	sirGraphicsResult_t endRenderPass( void ) noexcept override;
 	sirGraphicsResult_t bindPipeline( sirGraphicsHandle_t hPipeline ) noexcept override;
-	sirGraphicsResult_t bindBindingSet( uint32_t, sirGraphicsHandle_t ) noexcept override
-	{
-		return SIR_GRAPHICS_UNSUPPORTED;
-	}
-	sirGraphicsResult_t bindVertexBuffer( uint32_t, sirGraphicsHandle_t, uint64_t, uint32_t ) noexcept override
-	{
-		return SIR_GRAPHICS_UNSUPPORTED;
-	}
-	sirGraphicsResult_t bindIndexBuffer( sirGraphicsHandle_t, uint64_t, bool ) noexcept override
-	{
-		return SIR_GRAPHICS_UNSUPPORTED;
-	}
-	sirGraphicsResult_t setViewport( const sirGraphicsViewport_t&, const sirGraphicsRect_t& ) noexcept override
-	{
-		return SIR_GRAPHICS_UNSUPPORTED;
-	}
-	sirGraphicsResult_t draw( uint32_t, uint32_t, uint32_t, uint32_t ) noexcept override
-	{
-		return SIR_GRAPHICS_UNSUPPORTED;
-	}
-	sirGraphicsResult_t drawIndexed( uint32_t, uint32_t, uint32_t, int32_t, uint32_t ) noexcept override
-	{
-		return SIR_GRAPHICS_UNSUPPORTED;
-	}
+	sirGraphicsResult_t bindBindingSet( uint32_t nSetIndex, sirGraphicsHandle_t hBindingSet ) noexcept override;
+	sirGraphicsResult_t bindVertexBuffer( uint32_t nSlot, sirGraphicsHandle_t hBuffer, uint64_t nOffset,
+	                                      uint32_t nStride ) noexcept override;
+	sirGraphicsResult_t bindIndexBuffer( sirGraphicsHandle_t hBuffer, uint64_t nOffset, bool bIndex32 ) noexcept override;
+	sirGraphicsResult_t setViewport( const sirGraphicsViewport_t& viewport, const sirGraphicsRect_t& scissor ) noexcept override;
+	sirGraphicsResult_t draw( uint32_t nVertices, uint32_t nInstances, uint32_t nFirstVertex, uint32_t nFirstInstance ) noexcept override;
+	sirGraphicsResult_t drawIndexed( uint32_t nIndices, uint32_t nInstances, uint32_t nFirstIndex, int32_t nVertexOffset,
+	                                 uint32_t nFirstInstance ) noexcept override;
 	sirGraphicsResult_t dispatch( uint32_t nGroupCountX, uint32_t nGroupCountY, uint32_t nGroupCountZ ) noexcept override;
 };
 
@@ -205,12 +232,14 @@ private:
 	static constexpr uint32_t SIR_VULKAN_VIEW_CAPACITY = 128;
 	static constexpr uint32_t SIR_VULKAN_SAMPLER_CAPACITY = 64;
 	static constexpr uint32_t SIR_VULKAN_PIPELINE_CAPACITY = 16;
+	static constexpr uint32_t SIR_VULKAN_BINDING_SET_CAPACITY = 64;
 	SIRVulkanDevice m_Native;
 	sirVulkanGraphicsBufferSlot_t m_szBuffers[SIR_VULKAN_BUFFER_CAPACITY] = {};
 	sirVulkanGraphicsImageSlot_t m_szImages[SIR_VULKAN_TEXTURE_CAPACITY] = {};
 	sirVulkanGraphicsViewSlot_t m_szViews[SIR_VULKAN_VIEW_CAPACITY] = {};
 	sirVulkanGraphicsSamplerSlot_t m_szSamplers[SIR_VULKAN_SAMPLER_CAPACITY] = {};
 	sirVulkanGraphicsPipelineSlot_t m_szPipelines[SIR_VULKAN_PIPELINE_CAPACITY] = {};
+	sirVulkanGraphicsBindingSlot_t m_szBindingSets[SIR_VULKAN_BINDING_SET_CAPACITY] = {};
 	SIRVulkanCommandList m_szCommands[SIR_VULKAN_TRANSFER_SLOT_COUNT];
 	uint64_t m_nNativeSerial = 0;
 	uint64_t m_nLastCompletion = 0;
@@ -264,17 +293,10 @@ public:
 	sirGraphicsResult_t createView( const sirGraphicsViewDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept override;
 	sirGraphicsResult_t createSampler( const sirGraphicsSamplerDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept override;
 	sirGraphicsResult_t createPipeline( const sirGraphicsPipelineDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept override;
-	sirGraphicsResult_t createBindingSet( sirGraphicsHandle_t, uint32_t, sirGraphicsHandle_t *pHandle ) noexcept override
-	{
-		if ( pHandle != nullptr ) {
-			*pHandle = {};
-		}
-		return SIR_GRAPHICS_UNSUPPORTED;
-	}
-	sirGraphicsResult_t updateBindings( sirGraphicsHandle_t, const sirGraphicsDescriptorWrite_t *, uint32_t ) noexcept override
-	{
-		return SIR_GRAPHICS_UNSUPPORTED;
-	}
+	sirGraphicsResult_t createBindingSet( sirGraphicsHandle_t hPipeline, uint32_t nSetIndex,
+	                                      sirGraphicsHandle_t *pHandle ) noexcept override;
+	sirGraphicsResult_t updateBindings( sirGraphicsHandle_t hSet, const sirGraphicsDescriptorWrite_t *pWrites,
+	                                    uint32_t nCount ) noexcept override;
 	sirGraphicsResult_t createSurface( const sirGraphicsNativeSurface_t&, const sirGraphicsPresentDesc_t&,
 	                                   sirGraphicsHandle_t *pHandle ) noexcept override
 	{
