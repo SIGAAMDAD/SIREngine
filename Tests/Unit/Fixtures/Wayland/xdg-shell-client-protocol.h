@@ -35,6 +35,8 @@ int xdg_toplevel_add_listener( struct xdg_toplevel *, const struct xdg_toplevel_
 void xdg_toplevel_set_title( struct xdg_toplevel *, const char * );
 void xdg_toplevel_set_minimized( struct xdg_toplevel * );
 void xdg_toplevel_set_maximized( struct xdg_toplevel * );
+void xdg_toplevel_set_fullscreen( struct xdg_toplevel *, struct wl_output * );
+void xdg_toplevel_unset_fullscreen( struct xdg_toplevel * );
 void xdg_toplevel_destroy( struct xdg_toplevel * );
 #ifdef __cplusplus
 }

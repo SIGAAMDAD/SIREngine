@@ -175,7 +175,7 @@ sirWindowResult_t SIRWindowSystem::mutateWindow( sirWindowHandle_t hWindow, cons
 	if ( m_Slots[hWindow.nSlot].snapshot.bCloseRequested ) {
 		return SIR_WINDOW_BUSY;
 	}
-	if ( mutation.eKind < SIR_WINDOW_MUTATION_TITLE || mutation.eKind > SIR_WINDOW_MUTATION_MAXIMIZE ) {
+	if ( mutation.eKind < SIR_WINDOW_MUTATION_TITLE || mutation.eKind > SIR_WINDOW_MUTATION_FULLSCREEN_EXIT ) {
 		return SIR_WINDOW_INVALID_ARGUMENT;
 	}
 	if ( ( mutation.eKind == SIR_WINDOW_MUTATION_TITLE && mutation.pszTitle == nullptr ) ||
@@ -192,7 +192,7 @@ sirWindowResult_t SIRWindowSystem::enqueueRequest( sirWindowHandle_t hWindow, co
 		return SIR_WINDOW_INVALID_ARGUMENT;
 	}
 	if ( pMutation != nullptr ) {
-		if ( pMutation->eKind < SIR_WINDOW_MUTATION_TITLE || pMutation->eKind > SIR_WINDOW_MUTATION_MAXIMIZE ||
+		if ( pMutation->eKind < SIR_WINDOW_MUTATION_TITLE || pMutation->eKind > SIR_WINDOW_MUTATION_FULLSCREEN_EXIT ||
 		     ( pMutation->eKind == SIR_WINDOW_MUTATION_TITLE && pMutation->pszTitle == nullptr ) ||
 		     ( pMutation->eKind == SIR_WINDOW_MUTATION_RESIZE && ( pMutation->nWidth == 0 || pMutation->nHeight == 0 ) ) ) {
 			return SIR_WINDOW_INVALID_ARGUMENT;

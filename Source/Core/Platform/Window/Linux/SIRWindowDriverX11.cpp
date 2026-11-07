@@ -145,6 +145,28 @@ sirWindowResult_t SIRWindowDriverX11::mutateWindow( uint32_t nSlot, const sirWin
 			return SIR_WINDOW_UNSUPPORTED;
 		}
 		break;
+	case SIR_WINDOW_MUTATION_FULLSCREEN_ENTER:
+	case SIR_WINDOW_MUTATION_FULLSCREEN_EXIT: {
+		const Atom hState = XInternAtom( pDisplay, "_NET_WM_STATE", False );
+		const Atom hFullscreen = XInternAtom( pDisplay, "_NET_WM_STATE_FULLSCREEN", False );
+		if ( hState == None || hFullscreen == None ) {
+			return SIR_WINDOW_NATIVE_FAILURE;
+		}
+		XEvent event = {};
+		event.xclient.type = ClientMessage;
+		event.xclient.display = pDisplay;
+		event.xclient.window = hWindow;
+		event.xclient.message_type = hState;
+		event.xclient.format = 32;
+		event.xclient.data.l[0] = mutation.eKind == SIR_WINDOW_MUTATION_FULLSCREEN_ENTER ? 1 : 0;
+		event.xclient.data.l[1] = ( long )hFullscreen;
+		event.xclient.data.l[3] = 1;
+		if ( !XSendEvent( pDisplay, DefaultRootWindow( pDisplay ), False,
+		                  SubstructureNotifyMask | SubstructureRedirectMask, &event ) ) {
+			return SIR_WINDOW_NATIVE_FAILURE;
+		}
+		break;
+	}
 	case SIR_WINDOW_MUTATION_MAXIMIZE: {
 		const Atom hState = XInternAtom( pDisplay, "_NET_WM_STATE", False );
 		const Atom hVertical = XInternAtom( pDisplay, "_NET_WM_STATE_MAXIMIZED_VERT", False );

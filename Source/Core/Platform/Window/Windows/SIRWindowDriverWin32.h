@@ -51,6 +51,10 @@ typedef struct sirWin32Slot_s
 	uint32_t nIndex;
 	bool bDestroying;
 	bool bLost;
+	bool bFullscreen;
+	DWORD nWindowedStyle;
+	DWORD nWindowedExStyle;
+	WINDOWPLACEMENT windowedPlacement;
 } sirWin32Slot_t;
 
 class SIRWindowDriverWin32 final : public SIRWindowDriver

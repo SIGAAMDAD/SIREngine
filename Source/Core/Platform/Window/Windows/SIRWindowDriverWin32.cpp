@@ -198,6 +198,57 @@ sirWindowResult_t SIRWindowDriverWin32::mutateWindow( uint32_t nSlot, const sirW
 	case SIR_WINDOW_MUTATION_MAXIMIZE:
 		ShowWindow( hWindow, SW_MAXIMIZE );
 		break;
+	case SIR_WINDOW_MUTATION_FULLSCREEN_ENTER: {
+		sirWin32Slot_t& slot = m_Slots[nSlot];
+		if ( slot.bFullscreen ) {
+			break;
+		}
+		MONITORINFO info = {};
+		info.cbSize = sizeof( info );
+		if ( !GetMonitorInfoW( MonitorFromWindow( hWindow, MONITOR_DEFAULTTONEAREST ), &info ) ) {
+			return SIR_WINDOW_NATIVE_FAILURE;
+		}
+		WINDOWPLACEMENT placement = {};
+		placement.length = sizeof( placement );
+		if ( !GetWindowPlacement( hWindow, &placement ) ) {
+			return SIR_WINDOW_NATIVE_FAILURE;
+		}
+		const DWORD nStyle = ( DWORD )GetWindowLongPtrW( hWindow, GWL_STYLE );
+		const DWORD nExStyle = ( DWORD )GetWindowLongPtrW( hWindow, GWL_EXSTYLE );
+		SetLastError( 0 );
+		if ( SetWindowLongPtrW( hWindow, GWL_STYLE, ( LONG_PTR )( nStyle & ~WS_OVERLAPPEDWINDOW ) ) == 0 &&
+		     GetLastError() != 0 ) {
+			return SIR_WINDOW_NATIVE_FAILURE;
+		}
+		if ( !SetWindowPos( hWindow, HWND_TOP, info.rcMonitor.left, info.rcMonitor.top,
+		                    info.rcMonitor.right - info.rcMonitor.left, info.rcMonitor.bottom - info.rcMonitor.top,
+		                    SWP_FRAMECHANGED | SWP_NOOWNERZORDER ) ) {
+			( void )SetWindowLongPtrW( hWindow, GWL_STYLE, ( LONG_PTR )nStyle );
+			( void )SetWindowPos( hWindow, nullptr, 0, 0, 0, 0,
+			                         SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE );
+			return SIR_WINDOW_NATIVE_FAILURE;
+		}
+		slot.nWindowedStyle = nStyle;
+		slot.nWindowedExStyle = nExStyle;
+		slot.windowedPlacement = placement;
+		slot.bFullscreen = true;
+		break;
+	}
+	case SIR_WINDOW_MUTATION_FULLSCREEN_EXIT: {
+		sirWin32Slot_t& slot = m_Slots[nSlot];
+		if ( !slot.bFullscreen ) {
+			break;
+		}
+		( void )SetWindowLongPtrW( hWindow, GWL_STYLE, ( LONG_PTR )slot.nWindowedStyle );
+		( void )SetWindowLongPtrW( hWindow, GWL_EXSTYLE, ( LONG_PTR )slot.nWindowedExStyle );
+		if ( !SetWindowPlacement( hWindow, &slot.windowedPlacement ) ||
+		     !SetWindowPos( hWindow, nullptr, 0, 0, 0, 0,
+		                     SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE ) ) {
+			return SIR_WINDOW_NATIVE_FAILURE;
+		}
+		slot.bFullscreen = false;
+		break;
+	}
 	default:
 		return SIR_WINDOW_UNSUPPORTED;
 	}

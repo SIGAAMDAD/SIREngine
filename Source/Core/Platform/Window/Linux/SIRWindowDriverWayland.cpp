@@ -450,6 +450,12 @@ sirWindowResult_t SIRWindowDriverWayland::mutateWindow( uint32_t nSlot, const si
 	case SIR_WINDOW_MUTATION_MAXIMIZE:
 		xdg_toplevel_set_maximized( pTop );
 		return SIR_WINDOW_OK;
+	case SIR_WINDOW_MUTATION_FULLSCREEN_ENTER:
+		xdg_toplevel_set_fullscreen( pTop, nullptr );
+		return SIR_WINDOW_OK;
+	case SIR_WINDOW_MUTATION_FULLSCREEN_EXIT:
+		xdg_toplevel_unset_fullscreen( pTop );
+		return SIR_WINDOW_OK;
 	default:
 		return SIR_WINDOW_UNSUPPORTED;
 	}

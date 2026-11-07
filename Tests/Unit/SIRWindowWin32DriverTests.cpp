@@ -121,6 +121,40 @@ static bool sirTestWin32MultiwindowInputRouting( void ) noexcept
 	return true;
 }
 
+static bool sirTestFullscreenRoundTrip( void ) noexcept
+{
+	SIRWindowDriverWin32 driver;
+	SIRWindowSystem windows( driver );
+	if ( windows.initialize() != SIR_SYSTEM_OK ) {
+		return false;
+	}
+	sirWindowHandle_t handle = {};
+	if ( windows.createWindow( { "fullscreen-roundtrip", 640, 480 }, &handle ) != SIR_WINDOW_OK ) {
+		return false;
+	}
+	sirWindowNativeLease_t lease = {};
+	sirWindowNativeView_t view = {};
+	if ( windows.acquireNativeLease( handle, &lease, &view ) != SIR_WINDOW_OK ) {
+		return false;
+	}
+	const HWND hWindow = ( HWND )view.nNativeWindow;
+	WINDOWPLACEMENT original = {};
+	original.length = sizeof( original );
+	const DWORD nOriginalStyle = ( DWORD )GetWindowLongPtrW( hWindow, GWL_STYLE );
+	if ( !GetWindowPlacement( hWindow, &original ) ||
+	     windows.mutateWindow( handle, { SIR_WINDOW_MUTATION_FULLSCREEN_ENTER, nullptr, 0, 0 } ) != SIR_WINDOW_OK ||
+	     ( ( DWORD )GetWindowLongPtrW( hWindow, GWL_STYLE ) & WS_OVERLAPPEDWINDOW ) != 0 ||
+	     windows.mutateWindow( handle, { SIR_WINDOW_MUTATION_FULLSCREEN_ENTER, nullptr, 0, 0 } ) != SIR_WINDOW_OK ||
+	     windows.mutateWindow( handle, { SIR_WINDOW_MUTATION_FULLSCREEN_EXIT, nullptr, 0, 0 } ) != SIR_WINDOW_OK ||
+	     ( DWORD )GetWindowLongPtrW( hWindow, GWL_STYLE ) != nOriginalStyle ||
+	     windows.mutateWindow( handle, { SIR_WINDOW_MUTATION_FULLSCREEN_EXIT, nullptr, 0, 0 } ) != SIR_WINDOW_OK ||
+	     windows.releaseNativeLease( lease ) != SIR_WINDOW_OK || windows.destroyWindow( handle ) != SIR_WINDOW_OK ||
+	     windows.shutdown() != SIR_SYSTEM_OK ) {
+		return false;
+	}
+	return true;
+}
+
 static bool sirTestConcurrentWin32WindowClassOwners( void ) noexcept
 {
 	SIRWindowDriverWin32 firstDriver;
@@ -181,7 +215,8 @@ static bool sirTestConcurrentWin32WindowClassOwners( void ) noexcept
 
 int main( void )
 {
-	if ( !sirTestConcurrentWin32WindowClassOwners() || !sirTestWin32BoundedNativeEvents() || !sirTestWin32MultiwindowInputRouting() ) {
+	if ( !sirTestConcurrentWin32WindowClassOwners() || !sirTestWin32BoundedNativeEvents() || !sirTestWin32MultiwindowInputRouting() ||
+	     !sirTestFullscreenRoundTrip() ) {
 		fputs( "SIRWindowWin32DriverTests FAIL\n", stderr );
 		return 1;
 	}

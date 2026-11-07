@@ -130,6 +130,8 @@ static bool s_bFlushFailure = false;
 static bool s_bReadFailure = false;
 static bool s_bOldProtocol = false;
 static uint32_t s_nWmPings = 0;
+static uint32_t s_nFullscreenEnters = 0;
+static uint32_t s_nFullscreenExits = 0;
 static const xdg_wm_base_listener *s_pWmListener = nullptr;
 static void *s_pWmContext = nullptr;
 static const wl_seat_listener *s_pSeatListener = nullptr;
@@ -446,6 +448,14 @@ void xdg_toplevel_set_minimized( xdg_toplevel * )
 void xdg_toplevel_set_maximized( xdg_toplevel * )
 {
 }
+void xdg_toplevel_set_fullscreen( xdg_toplevel *, wl_output * )
+{
+	++s_nFullscreenEnters;
+}
+void xdg_toplevel_unset_fullscreen( xdg_toplevel * )
+{
+	++s_nFullscreenExits;
+}
 void xdg_toplevel_destroy( xdg_toplevel * )
 {
 }
@@ -527,6 +537,9 @@ static bool sirTestNativeFailureInjection( void ) noexcept
 	     driver.mutateWindow( 0, { SIR_WINDOW_MUTATION_TITLE, "new", 0, 0 } ) != SIR_WINDOW_OK ||
 	     driver.mutateWindow( 0, { SIR_WINDOW_MUTATION_MINIMIZE, nullptr, 0, 0 } ) != SIR_WINDOW_OK ||
 	     driver.mutateWindow( 0, { SIR_WINDOW_MUTATION_MAXIMIZE, nullptr, 0, 0 } ) != SIR_WINDOW_OK ||
+	     driver.mutateWindow( 0, { SIR_WINDOW_MUTATION_FULLSCREEN_ENTER, nullptr, 0, 0 } ) != SIR_WINDOW_OK ||
+	     driver.mutateWindow( 0, { SIR_WINDOW_MUTATION_FULLSCREEN_EXIT, nullptr, 0, 0 } ) != SIR_WINDOW_OK ||
+	     s_nFullscreenEnters == 0 || s_nFullscreenExits == 0 ||
 	     driver.mutateWindow( 0, { SIR_WINDOW_MUTATION_RESIZE, nullptr, 120, 100 } ) != SIR_WINDOW_UNSUPPORTED ||
 	     driver.mutateWindow( 1, { SIR_WINDOW_MUTATION_TITLE, "missing", 0, 0 } ) != SIR_WINDOW_INVALID_HANDLE )
 		return false;
