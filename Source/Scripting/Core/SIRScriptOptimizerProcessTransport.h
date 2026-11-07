@@ -25,10 +25,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // clang-format on
 
 #include <Scripting/Core/SIRScriptOptimizationCoordinator.h>
-#include <atomic>
+#include <Core/Platform/SIRAtomic.h>
 #include <chrono>
-#include <condition_variable>
-#include <mutex>
+#include <Core/Platform/SIRSync.h>
+
 #include <thread>
 
 // Paths and arguments are copied at configuration time. The host owns
@@ -88,10 +88,10 @@ private:
 	const std::thread::id m_OwnerThread;
 	std::thread m_Writer;
 	std::thread m_Reader;
-	std::mutex m_Mutex;
-	std::condition_variable m_CV;
-	std::atomic<bool> m_bStopping;
-	std::atomic<bool> m_bFailed;
+	SIRMutex m_Mutex;
+	SIRConditionVariable m_CV;
+	SIRAtomic<bool> m_bStopping;
+	SIRAtomic<bool> m_bFailed;
 	std::chrono::steady_clock::time_point m_LastActivity;
 	uint8_t m_szRequests[SIR_SCRIPT_OPT_MAX_QUEUED_FRAMES][SIRScriptOptimizationProtocol::REQUEST_BYTES];
 	uint8_t m_szReplies[SIR_SCRIPT_OPT_MAX_QUEUED_FRAMES][SIRScriptOptimizationProtocol::REPLY_BYTES];

@@ -67,6 +67,7 @@ bool SIRLangCompileSource( const sirLangSourceView_t& source, sirLangCompileWork
 	if ( eCIR != SIR_LANG_LOWER_OK ) {
 		pWorkspace->report.nStageResult = ( uint32_t )eCIR;
 		pWorkspace->report.iErrorNode = pWorkspace->cir.iErrorNode;
+		pWorkspace->cir.program = {};
 		return false;
 	}
 

@@ -307,6 +307,166 @@ static sirLangTypeIdentity_t sirLangLiteral( const sirLangSignatureState_t *pSta
 	return sirLangScalarType( SIR_LANG_VALUE_I32 );
 }
 
+// A literal without a width suffix is a compile-time value. Retyping is
+// limited to the locally expected integral type; never perform implicit casts
+// on named values or explicitly suffixed literals.
+static bool sirLangRetypeIntegralLiteral( sirLangSignatureState_t *pState, uint32_t iNode, sirLangTypeIdentity_t expected,
+                                          bool bApply = true ) noexcept
+{
+	if ( iNode >= pState->pTree->nNodeCount || expected.eValue < SIR_LANG_VALUE_I8 || expected.eValue > SIR_LANG_VALUE_U64 ) {
+		return false;
+	}
+	const sirLangSyntaxNode_t& node = pState->pTree->pNodes[iNode];
+	bool bNegative = false;
+	uint32_t iLiteral = iNode;
+	if ( node.eKind == SIR_LANG_SYNTAX_UNARY && node.nStartToken < pState->pTree->nTokenCount ) {
+		const sirLangToken_t& sign = pState->pTree->pTokens[node.nStartToken];
+		const uint8_t *pSign = pState->pTree->source.pBytes + sign.nOffset;
+		if ( sign.nLength != 1 || ( pSign[0] != '-' && pSign[0] != '+' ) ) {
+			return false;
+		}
+		bNegative = pSign[0] == '-';
+		if ( bNegative && expected.eValue != SIR_LANG_VALUE_I8 && expected.eValue != SIR_LANG_VALUE_I16 &&
+		     expected.eValue != SIR_LANG_VALUE_I32 && expected.eValue != SIR_LANG_VALUE_I64 ) {
+			return false;
+		}
+		iLiteral = node.nFirstChild;
+		while ( iLiteral < pState->pTree->nNodeCount && pState->pTree->pNodes[iLiteral].eKind == SIR_LANG_SYNTAX_GROUP ) {
+			iLiteral = pState->pTree->pNodes[iLiteral].nFirstChild;
+		}
+		if ( iLiteral >= pState->pTree->nNodeCount ) {
+			return false;
+		}
+	}
+	if ( node.eKind == SIR_LANG_SYNTAX_GROUP ) {
+		if ( sirLangRetypeIntegralLiteral( pState, node.nFirstChild, expected, bApply ) ) {
+			if ( bApply ) {
+				pState->pOutput->pNodeTypes[iNode] = expected;
+			}
+			return true;
+		}
+		return false;
+	}
+	const sirLangSyntaxNode_t& literal = pState->pTree->pNodes[iLiteral];
+	if ( literal.eKind != SIR_LANG_SYNTAX_LITERAL || literal.nStartToken >= pState->pTree->nTokenCount ) {
+		return false;
+	}
+	const sirLangToken_t& token = pState->pTree->pTokens[literal.nStartToken];
+	if ( token.eKind != SIR_LANG_TOKEN_NUMBER || token.nLength == 0 ) {
+		return false;
+	}
+	const uint8_t *pData = pState->pTree->source.pBytes + token.nOffset;
+	const bool bPrefixed = token.nLength > 2 && pData[0] == '0' && ( pData[1] == 'x' || pData[1] == 'b' );
+	const uint32_t nBase = bPrefixed ? ( pData[1] == 'x' ? 16U : 2U ) : 10U;
+	uint32_t iDigit = bPrefixed ? 2 : 0;
+	uint64_t nValue = 0;
+	if ( iDigit == token.nLength ) {
+		return false;
+	}
+	for ( ; iDigit < token.nLength; ++iDigit ) {
+		const uint8_t nByte = pData[iDigit];
+		uint32_t nDigit = UINT32_MAX;
+		if ( nByte >= '0' && nByte <= '9' ) {
+			nDigit = nByte - '0';
+		} else if ( nByte >= 'a' && nByte <= 'f' ) {
+			nDigit = nByte - 'a' + 10;
+		} else if ( nByte >= 'A' && nByte <= 'F' ) {
+			nDigit = nByte - 'A' + 10;
+		}
+		if ( nDigit >= nBase || nValue > ( UINT64_MAX - nDigit ) / nBase ) {
+			return false;
+		}
+		nValue = nValue * nBase + nDigit;
+	}
+	uint64_t nMaximum = UINT64_MAX;
+	switch ( expected.eValue ) {
+	case SIR_LANG_VALUE_I8:
+		nMaximum = INT8_MAX;
+		break;
+	case SIR_LANG_VALUE_U8:
+		nMaximum = UINT8_MAX;
+		break;
+	case SIR_LANG_VALUE_I16:
+		nMaximum = INT16_MAX;
+		break;
+	case SIR_LANG_VALUE_U16:
+		nMaximum = UINT16_MAX;
+		break;
+	case SIR_LANG_VALUE_I32:
+		nMaximum = INT32_MAX;
+		break;
+	case SIR_LANG_VALUE_U32:
+		nMaximum = UINT32_MAX;
+		break;
+	case SIR_LANG_VALUE_I64:
+		nMaximum = INT64_MAX;
+		break;
+	case SIR_LANG_VALUE_U64:
+		break;
+	default:
+		return false;
+	}
+	if ( bNegative ) {
+		++nMaximum;
+	}
+	if ( nValue > nMaximum ) {
+		return false;
+	}
+	if ( bApply ) {
+		pState->pOutput->pNodeTypes[iNode] = expected;
+		pState->pOutput->pNodeTypes[iLiteral] = expected;
+	}
+	return true;
+}
+
+static bool sirLangRetypeFraction( sirLangSignatureState_t *pState, uint32_t iNode, sirLangTypeIdentity_t expected ) noexcept
+{
+	if ( iNode >= pState->pTree->nNodeCount || ( expected.eValue != SIR_LANG_VALUE_F32 && expected.eValue != SIR_LANG_VALUE_F64 ) ) {
+		return false;
+	}
+	const sirLangSyntaxNode_t& node = pState->pTree->pNodes[iNode];
+	if ( node.eKind == SIR_LANG_SYNTAX_UNARY && node.nStartToken < pState->pTree->nTokenCount ) {
+		const sirLangToken_t& sign = pState->pTree->pTokens[node.nStartToken];
+		const uint8_t *pSign = pState->pTree->source.pBytes + sign.nOffset;
+		if ( sign.nLength == 1 && ( pSign[0] == '-' || pSign[0] == '+' ) ) {
+			if ( sirLangRetypeFraction( pState, node.nFirstChild, expected ) ) {
+				pState->pOutput->pNodeTypes[iNode] = expected;
+				return true;
+			}
+			return false;
+		}
+	}
+	if ( node.eKind == SIR_LANG_SYNTAX_GROUP ) {
+		if ( sirLangRetypeFraction( pState, node.nFirstChild, expected ) ) {
+			pState->pOutput->pNodeTypes[iNode] = expected;
+			return true;
+		}
+		return false;
+	}
+	if ( node.eKind != SIR_LANG_SYNTAX_LITERAL || node.nStartToken >= pState->pTree->nTokenCount ) {
+		return false;
+	}
+	const sirLangToken_t& token = pState->pTree->pTokens[node.nStartToken];
+	if ( token.eKind != SIR_LANG_TOKEN_NUMBER || token.nLength == 0 || token.nLength > 96 ) {
+		return false;
+	}
+	const uint8_t *pData = pState->pTree->source.pBytes + token.nOffset;
+	bool bFraction = false;
+	for ( uint32_t i = 0; i < token.nLength; ++i ) {
+		const uint8_t c = pData[i];
+		if ( c == '.' || c == 'e' || c == 'E' ) {
+			bFraction = true;
+		} else if ( ( c < '0' || c > '9' ) && c != '+' && c != '-' ) {
+			return false;
+		}
+	}
+	if ( !bFraction ) {
+		return false;
+	}
+	pState->pOutput->pNodeTypes[iNode] = expected;
+	return true;
+}
+
 static const sirLangFunctionSignature_t *sirLangFindFunction( const sirLangSignatureState_t *pState, uint32_t iDeclaration ) noexcept
 {
 	for ( uint32_t iFunction = 0; iFunction < pState->pOutput->nFunctionCount; ++iFunction ) {
@@ -399,7 +559,10 @@ static sirLangTypeIdentity_t sirLangInferCall( sirLangSignatureState_t *pState, 
 			const sirLangTypeIdentity_t expected = pFunction != nullptr
 			                                           ? pState->pOutput->pParameters[pFunction->iFirstParameter + iParam].type
 			                                           : sirLangScalarType( pExternal->pParameterTypes[iParam] );
-			if ( !sirLangTypeEqual( pState, actual, expected ) ) {
+			const bool bBare = sirLangRetypeIntegralLiteral( pState, iExpression, sirLangScalarType( SIR_LANG_VALUE_U64 ), false );
+			const bool bRetyped =
+			    sirLangRetypeIntegralLiteral( pState, iExpression, expected ) || sirLangRetypeFraction( pState, iExpression, expected );
+			if ( ( bBare && !bRetyped ) || ( !bRetyped && !sirLangTypeEqual( pState, actual, expected ) ) ) {
 				sirLangSignatureReport( pState, SIR_LANG_SIGNATURE_ARGUMENT_TYPE, iArg );
 			}
 		}
@@ -476,7 +639,16 @@ static sirLangTypeIdentity_t sirLangInfer( sirLangSignatureState_t *pState, uint
 		const sirLangTypeIdentity_t left = sirLangInfer( pState, iLeft );
 		const uint32_t iRight = sirLangNextNode( pState, iLeft );
 		const sirLangTypeIdentity_t right = sirLangInfer( pState, iRight );
-		result = left;
+		if ( !sirLangTypeEqual( pState, left, right ) ) {
+			if ( sirLangRetypeIntegralLiteral( pState, iRight, left ) ) {
+				result = left;
+			} else if ( sirLangRetypeIntegralLiteral( pState, iLeft, right ) ) {
+				result = right;
+			}
+		}
+		const sirLangTypeIdentity_t resolvedLeft = pState->pOutput->pNodeTypes[iLeft];
+		const sirLangTypeIdentity_t resolvedRight = pState->pOutput->pNodeTypes[iRight];
+		result = resolvedLeft;
 		const uint32_t iOperator = pState->pTree->pNodes[iLeft].nEndToken;
 		const bool bLogical = sirLangTextIs( pState, iOperator, "and" ) || sirLangTextIs( pState, iOperator, "or" ) ||
 		                      sirLangTextIs( pState, iOperator, "xor" );
@@ -484,18 +656,20 @@ static sirLangTypeIdentity_t sirLangInfer( sirLangSignatureState_t *pState, uint
 		                         sirLangTextIs( pState, iOperator, "*" ) || sirLangTextIs( pState, iOperator, "/" );
 		const bool bOrdered = sirLangTextIs( pState, iOperator, "<" ) || sirLangTextIs( pState, iOperator, ">" );
 		const bool bEquality = sirLangTextIs( pState, iOperator, "!" ) || sirLangTextIs( pState, iOperator, "=" );
-		const bool bBothKnown = left.eValue != SIR_LANG_VALUE_UNKNOWN && right.eValue != SIR_LANG_VALUE_UNKNOWN;
-		const bool bIntegerOperands = left.eValue >= SIR_LANG_VALUE_I8 && left.eValue <= SIR_LANG_VALUE_U64 &&
-		                              right.eValue >= SIR_LANG_VALUE_I8 && right.eValue <= SIR_LANG_VALUE_U64;
-		if ( bLogical && bBothKnown && ( left.eValue != SIR_LANG_VALUE_BOOL || right.eValue != SIR_LANG_VALUE_BOOL ) ) {
+		const bool bBothKnown = resolvedLeft.eValue != SIR_LANG_VALUE_UNKNOWN && resolvedRight.eValue != SIR_LANG_VALUE_UNKNOWN;
+		const bool bIntegerOperands = resolvedLeft.eValue >= SIR_LANG_VALUE_I8 && resolvedLeft.eValue <= SIR_LANG_VALUE_U64 &&
+		                              resolvedRight.eValue >= SIR_LANG_VALUE_I8 && resolvedRight.eValue <= SIR_LANG_VALUE_U64;
+		if ( bLogical && bBothKnown && ( resolvedLeft.eValue != SIR_LANG_VALUE_BOOL || resolvedRight.eValue != SIR_LANG_VALUE_BOOL ) ) {
 			sirLangSignatureReport( pState, SIR_LANG_SIGNATURE_ARGUMENT_TYPE, iNode );
 		}
-		if ( bBothKnown && ( bArithmetic || bOrdered ) && ( !bIntegerOperands || !sirLangTypeEqual( pState, left, right ) ) ) {
+		if ( bBothKnown && ( bArithmetic || bOrdered ) &&
+		     ( !bIntegerOperands || !sirLangTypeEqual( pState, resolvedLeft, resolvedRight ) ) ) {
 			sirLangSignatureReport( pState, SIR_LANG_SIGNATURE_ARGUMENT_TYPE, iNode );
 		}
 		if ( bBothKnown && bEquality ) {
-			const bool bComparable = bIntegerOperands || ( left.eValue == SIR_LANG_VALUE_BOOL && right.eValue == SIR_LANG_VALUE_BOOL );
-			if ( !bComparable || !sirLangTypeEqual( pState, left, right ) ) {
+			const bool bComparable =
+			    bIntegerOperands || ( resolvedLeft.eValue == SIR_LANG_VALUE_BOOL && resolvedRight.eValue == SIR_LANG_VALUE_BOOL );
+			if ( !bComparable || !sirLangTypeEqual( pState, resolvedLeft, resolvedRight ) ) {
 				sirLangSignatureReport( pState, SIR_LANG_SIGNATURE_ARGUMENT_TYPE, iNode );
 			}
 		}
@@ -555,8 +729,13 @@ static void sirLangVisit( sirLangSignatureState_t *pState, uint32_t iNode, sirLa
 		                                                                                  : sirLangUnknownType();
 		const sirLangTypeIdentity_t actual =
 		    iExpression != SIR_LANG_INVALID_INDEX ? sirLangInfer( pState, iExpression ) : sirLangScalarType( SIR_LANG_VALUE_VOID );
-		if ( expected.eValue != SIR_LANG_VALUE_UNKNOWN && actual.eValue != SIR_LANG_VALUE_UNKNOWN &&
-		     !sirLangTypeEqual( pState, expected, actual ) ) {
+		const bool bBare = iExpression != SIR_LANG_INVALID_INDEX &&
+		                   sirLangRetypeIntegralLiteral( pState, iExpression, sirLangScalarType( SIR_LANG_VALUE_U64 ), false );
+		const bool bRetyped = iExpression != SIR_LANG_INVALID_INDEX && ( sirLangRetypeIntegralLiteral( pState, iExpression, expected ) ||
+		                                                                 sirLangRetypeFraction( pState, iExpression, expected ) );
+		if ( expected.eValue != SIR_LANG_VALUE_UNKNOWN &&
+		     ( ( bBare && !bRetyped ) ||
+		       ( !bRetyped && actual.eValue != SIR_LANG_VALUE_UNKNOWN && !sirLangTypeEqual( pState, expected, actual ) ) ) ) {
 			sirLangSignatureReport(
 			    pState, node.eKind == SIR_LANG_SYNTAX_RETURN ? SIR_LANG_SIGNATURE_RETURN_TYPE : SIR_LANG_SIGNATURE_ARGUMENT_TYPE, iNode );
 		}
@@ -564,9 +743,27 @@ static void sirLangVisit( sirLangSignatureState_t *pState, uint32_t iNode, sirLa
 		--pState->nDepth;
 		return;
 	}
-	if ( node.eKind == SIR_LANG_SYNTAX_SWITCH || node.eKind == SIR_LANG_SYNTAX_CASE ) {
+	if ( node.eKind == SIR_LANG_SYNTAX_SWITCH ) {
+		const uint32_t iSelector = node.nFirstChild;
+		const sirLangTypeIdentity_t selector = sirLangInfer( pState, iSelector );
+		for ( uint32_t iBranch = sirLangNextNode( pState, iSelector ); iBranch != SIR_LANG_INVALID_INDEX;
+		      iBranch = sirLangNextNode( pState, iBranch ) ) {
+			sirLangVisit( pState, iBranch, eReturn );
+			const sirLangSyntaxNode_t& branch = pState->pTree->pNodes[iBranch];
+			if ( branch.eKind == SIR_LANG_SYNTAX_CASE && branch.nFirstChild != SIR_LANG_INVALID_INDEX ) {
+				const uint32_t iCaseValue = branch.nFirstChild;
+				const sirLangTypeIdentity_t actual = pState->pOutput->pNodeTypes[iCaseValue];
+				const bool bBare = sirLangRetypeIntegralLiteral( pState, iCaseValue, sirLangScalarType( SIR_LANG_VALUE_U64 ), false );
+				const bool bFits = sirLangRetypeIntegralLiteral( pState, iCaseValue, selector );
+				if ( ( bBare && !bFits ) ||
+				     ( !bFits && actual.eValue != SIR_LANG_VALUE_UNKNOWN && !sirLangTypeEqual( pState, actual, selector ) ) ) {
+					sirLangSignatureReport( pState, SIR_LANG_SIGNATURE_ARGUMENT_TYPE, iCaseValue );
+				}
+			}
+		}
+	} else if ( node.eKind == SIR_LANG_SYNTAX_CASE ) {
 		const uint32_t iValue = node.nFirstChild;
-		if ( node.eKind == SIR_LANG_SYNTAX_SWITCH || iValue != SIR_LANG_INVALID_INDEX ) {
+		if ( iValue != SIR_LANG_INVALID_INDEX ) {
 			sirLangInfer( pState, iValue );
 		}
 		for ( uint32_t iChild = sirLangNextNode( pState, iValue ); iChild != SIR_LANG_INVALID_INDEX;

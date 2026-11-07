@@ -1,7 +1,25 @@
+# Verify the production CMake duplicate-source guard against path aliases.
+add_test(NAME scripting.build.source-uniqueness
+    COMMAND "${CMAKE_COMMAND}"
+        "-DSIR_SCRIPT_SOURCE_GUARD=${PROJECT_SOURCE_DIR}/Source/Scripting/SIRCheckUniqueSources.cmake"
+        "-DSIR_SCRIPT_TEST_BINARY_ROOT=${CMAKE_CURRENT_BINARY_DIR}"
+        "-DSIR_SCRIPT_TEST_GENERATOR=${CMAKE_GENERATOR}"
+        -P "${CMAKE_CURRENT_LIST_DIR}/SIRScriptSourceGraphGuardTests.cmake")
+
+# Exercise the engine executable's actual scripting link and registry lifecycle.
+add_test(NAME scripting.launcher.native-smoke COMMAND SIREngine --scripting-smoke)
+set_tests_properties(scripting.launcher.native-smoke PROPERTIES
+    PASS_REGULAR_EXPRESSION "Sir Scroll native scripting ready")
+
 add_executable(SIRScriptFoundationTests SIRScriptFoundationTests.cpp)
 target_link_libraries(SIRScriptFoundationTests PRIVATE SIR::Scripting)
 add_test(NAME scripting.foundation COMMAND SIRScriptFoundationTests)
 sir_configure_owned_target(SIRScriptFoundationTests)
+
+add_executable(SIRScriptMemoryRouterTests SIRScriptMemoryRouterTests.cpp)
+target_link_libraries(SIRScriptMemoryRouterTests PRIVATE SIR::Scripting)
+add_test(NAME scripting.memory-router COMMAND SIRScriptMemoryRouterTests)
+sir_configure_owned_target(SIRScriptMemoryRouterTests)
 
 add_executable(SIRScriptCodeManagerTests SIRScriptCodeManagerTests.cpp)
 target_link_libraries(SIRScriptCodeManagerTests PRIVATE SIR::Scripting)
@@ -203,3 +221,17 @@ foreach(sirScriptingUnitTarget IN LISTS sirScriptingUnitTargets)
         endif()
     endif()
 endforeach()
+
+add_executable(SIRLangContextualLiteralTests SIRLangContextualLiteralTests.cpp)
+target_link_libraries(SIRLangContextualLiteralTests PRIVATE SIR::Scripting)
+add_test(NAME scripting.language.contextual-integer COMMAND SIRLangContextualLiteralTests)
+sir_configure_owned_target(SIRLangContextualLiteralTests)
+
+# The actual offline cook + standalone run path must preserve typed literals,
+# bitwise deterministic artifacts, no-clobber publication and failed-cook safety.
+add_test(NAME scripting.language.contextual-cook-and-run
+    COMMAND "${CMAKE_COMMAND}"
+        "-DCOOKER=$<TARGET_FILE:SIRLangCooker>"
+        "-DRUNNER=$<TARGET_FILE:SIRLangRunner>"
+        "-DSIR_CONTEXTUAL_TEST_ROOT=${CMAKE_CURRENT_BINARY_DIR}"
+        -P "${CMAKE_CURRENT_LIST_DIR}/SIRLangContextualCookAndRun.cmake")

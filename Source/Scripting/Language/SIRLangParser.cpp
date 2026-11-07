@@ -766,13 +766,16 @@ bool SIRLangSyntaxSpan( const sirLangSyntaxTree_t *pTree, uint32_t iNode, sirLan
 		return false;
 	}
 	const uint32_t nStart = pTree->pTokens[node.nStartToken].nOffset;
+	if ( nStart > pTree->source.nBytes ) {
+		return false;
+	}
 	uint32_t nEnd = nStart;
 	if ( node.nEndToken > node.nStartToken ) {
 		const sirLangToken_t& last = pTree->pTokens[node.nEndToken - 1];
+		if ( last.nOffset < nStart || last.nOffset > pTree->source.nBytes || last.nLength > pTree->source.nBytes - last.nOffset ) {
+			return false;
+		}
 		nEnd = last.nOffset + last.nLength;
-	}
-	if ( nEnd < nStart || nEnd > pTree->source.nBytes ) {
-		return false;
 	}
 	*pSpan = { nStart, nEnd - nStart };
 	return true;
