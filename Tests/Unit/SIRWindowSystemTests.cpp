@@ -136,6 +136,30 @@ static bool sirTestHandlesLeasesAndEvents( void ) noexcept
 	     system.mutateWindow( handles[0], badTitle ) != SIR_WINDOW_INVALID_ARGUMENT ) {
 		return false;
 	}
+	driver.queueEvent( { handles[1].nSlot, handles[1].nSlot + 1, SIR_WINDOW_EVENT_DPI_CHANGED, 144, 0 } );
+	if ( system.pumpEvents( 1 ) != SIR_WINDOW_OK ) {
+		return false;
+	}
+	sirWindowSnapshot_t dpiSnapshot = {};
+	if ( system.querySnapshot( handles[1], &dpiSnapshot ) != SIR_WINDOW_OK || dpiSnapshot.nDpi != 144 ) {
+		return false;
+	}
+	driver.queueEvent( { handles[1].nSlot, handles[1].nSlot + 1, SIR_WINDOW_EVENT_HIDDEN, 0, 0 } );
+	if ( system.pumpEvents( 1 ) != SIR_WINDOW_OK ) {
+		return false;
+	}
+	sirWindowSnapshot_t hidden = {};
+	sirWindowNativeLease_t hiddenLease = {};
+	sirWindowNativeView_t hiddenView = {};
+	if ( system.querySnapshot( handles[1], &hidden ) != SIR_WINDOW_OK || hidden.bVisible || hidden.bReady ||
+	     system.acquireNativeLease( handles[1], &hiddenLease, &hiddenView ) != SIR_WINDOW_NOT_READY ) {
+		return false;
+	}
+	driver.queueEvent( { handles[1].nSlot, handles[1].nSlot + 1, SIR_WINDOW_EVENT_SHOWN, 0, 0 } );
+	if ( system.pumpEvents( 1 ) != SIR_WINDOW_OK || system.querySnapshot( handles[1], &hidden ) != SIR_WINDOW_OK || !hidden.bVisible ||
+	     !hidden.bReady ) {
+		return false;
+	}
 	// Renderer-style readers may query while the platform owner changes metrics.
 	uint32_t nReadFailures = 0;
 	std::thread reader( [&]() {
@@ -206,6 +230,10 @@ static bool sirTestHandlesLeasesAndEvents( void ) noexcept
 	sirWindowEventRead_t read = { 0, events, SIR_WINDOW_EVENT_CAPACITY, 0, false };
 	if ( system.readEvents( &read ) != SIR_WINDOW_OK || read.nCount == 0 || read.bLost || system.shutdown() != SIR_SYSTEM_OK ||
 	     system.initialize() != SIR_SYSTEM_OK || system.requestClose( recycled ) != SIR_WINDOW_INVALID_HANDLE ) {
+		return false;
+	}
+	read.nAfterSequence = 0;
+	if ( system.readEvents( &read ) != SIR_WINDOW_OK || read.nCount != 0 ) {
 		return false;
 	}
 	if ( system.createWindow( desc, &recycled ) != SIR_WINDOW_OK || system.requestClose( recycled ) != SIR_WINDOW_OK ||

@@ -18,6 +18,7 @@ sirSystemResult_t SIRWindowSystem::initialize( void ) noexcept
 	{
 		std::lock_guard<std::mutex> guard( m_SnapshotMutex );
 		++m_nEpoch;
+		m_nEventSequence = 0;
 		m_bInitialized = true;
 	}
 	return SIR_SYSTEM_OK;
@@ -111,9 +112,12 @@ sirWindowResult_t SIRWindowSystem::createWindow( const sirWindowCreateDesc_t& de
 			slot.snapshot.hWindow = { i, slot.nGeneration, m_nEpoch };
 			slot.snapshot.nWindowGeneration = view.nWindowGeneration;
 			slot.snapshot.nMetricsRevision = 1;
+			slot.snapshot.nDpi = 96;
 			slot.snapshot.nWidth = desc.nWidth;
 			slot.snapshot.nHeight = desc.nHeight;
 			slot.snapshot.bReady = true;
+			slot.snapshot.bVisible = false;
+			slot.snapshot.bMinimized = false;
 			slot.bOccupied = true;
 			*pHandle = slot.snapshot.hWindow;
 		}
@@ -233,12 +237,30 @@ void SIRWindowSystem::onDriverEvent( void *pContext, const sirWindowBackendEvent
 		}
 		slot.snapshot.nWidth = event.nWidth;
 		slot.snapshot.nHeight = event.nHeight;
-		slot.snapshot.bReady = event.nWidth != 0 && event.nHeight != 0;
+		slot.snapshot.bReady = event.nWidth != 0 && event.nHeight != 0 && !slot.snapshot.bMinimized;
 		++slot.snapshot.nMetricsRevision;
 	} else if ( event.eKind == SIR_WINDOW_EVENT_FOCUS_GAINED ) {
 		slot.snapshot.bFocused = true;
 	} else if ( event.eKind == SIR_WINDOW_EVENT_FOCUS_LOST ) {
 		slot.snapshot.bFocused = false;
+	} else if ( event.eKind == SIR_WINDOW_EVENT_DPI_CHANGED ) {
+		if ( event.nWidth == 0 || slot.snapshot.nDpi == event.nWidth ) {
+			return;
+		}
+		slot.snapshot.nDpi = event.nWidth;
+		++slot.snapshot.nMetricsRevision;
+	} else if ( event.eKind == SIR_WINDOW_EVENT_SHOWN ) {
+		slot.snapshot.bVisible = true;
+		slot.snapshot.bReady = !slot.snapshot.bMinimized && slot.snapshot.nWidth != 0 && slot.snapshot.nHeight != 0;
+	} else if ( event.eKind == SIR_WINDOW_EVENT_HIDDEN ) {
+		slot.snapshot.bVisible = false;
+		slot.snapshot.bReady = false;
+	} else if ( event.eKind == SIR_WINDOW_EVENT_MINIMIZED ) {
+		slot.snapshot.bMinimized = true;
+		slot.snapshot.bReady = false;
+	} else if ( event.eKind == SIR_WINDOW_EVENT_RESTORED ) {
+		slot.snapshot.bMinimized = false;
+		slot.snapshot.bReady = slot.snapshot.bVisible && slot.snapshot.nWidth != 0 && slot.snapshot.nHeight != 0;
 	} else if ( event.eKind == SIR_WINDOW_EVENT_LOST ) {
 		slot.snapshot.bReady = false;
 		slot.snapshot.bCloseRequested = true;

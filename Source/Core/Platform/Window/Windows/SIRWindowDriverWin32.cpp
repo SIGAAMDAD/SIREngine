@@ -60,8 +60,14 @@ sirWindowResult_t SIRWindowDriverWin32::createWindow( const sirWindowCreateDesc_
 	m_bClosePending[nSlot] = false;
 	m_bLostPending[nSlot] = false;
 	m_nLostNativeWindow[nSlot] = 0;
-	const HWND hWindow = CreateWindowExW( 0, s_szWindowClass, szTitle, WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT,
-	                                      ( int )desc.nWidth, ( int )desc.nHeight, nullptr, nullptr, GetModuleHandleW( nullptr ), &slot );
+	RECT frame = { 0, 0, ( LONG )desc.nWidth, ( LONG )desc.nHeight };
+	if ( !AdjustWindowRectEx( &frame, WS_OVERLAPPEDWINDOW, FALSE, 0 ) ) {
+		slot = {};
+		return SIR_WINDOW_NATIVE_FAILURE;
+	}
+	const HWND hWindow =
+	    CreateWindowExW( 0, s_szWindowClass, szTitle, WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, frame.right - frame.left,
+		                 frame.bottom - frame.top, nullptr, nullptr, GetModuleHandleW( nullptr ), &slot );
 	if ( hWindow == nullptr ) {
 		slot = {};
 		return SIR_WINDOW_NATIVE_FAILURE;
@@ -125,7 +131,13 @@ sirWindowResult_t SIRWindowDriverWin32::mutateWindow( uint32_t nSlot, const sirW
 		if ( mutation.nWidth == 0 || mutation.nHeight == 0 || mutation.nWidth > 0x7fffffffU || mutation.nHeight > 0x7fffffffU ) {
 			return SIR_WINDOW_INVALID_ARGUMENT;
 		}
-		if ( !SetWindowPos( hWindow, nullptr, 0, 0, ( int )mutation.nWidth, ( int )mutation.nHeight,
+		RECT frame = { 0, 0, ( LONG )mutation.nWidth, ( LONG )mutation.nHeight };
+		const DWORD nStyle = ( DWORD )GetWindowLongPtrW( hWindow, GWL_STYLE );
+		const DWORD nExStyle = ( DWORD )GetWindowLongPtrW( hWindow, GWL_EXSTYLE );
+		if ( !AdjustWindowRectEx( &frame, nStyle, FALSE, nExStyle ) ) {
+			return SIR_WINDOW_NATIVE_FAILURE;
+		}
+		if ( !SetWindowPos( hWindow, nullptr, 0, 0, frame.right - frame.left, frame.bottom - frame.top,
 		                    SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE ) ) {
 			return SIR_WINDOW_NATIVE_FAILURE;
 		}
@@ -184,8 +196,22 @@ LRESULT CALLBACK SIRWindowDriverWin32::windowProc( HWND hWindow, UINT nMessage, 
 			pDriver->m_bClosePending[pSlot->nIndex] = true;
 			return 0;
 		}
-		if ( nMessage == WM_SIZE ) {
-			pDriver->queueEvent( pSlot->nIndex, SIR_WINDOW_EVENT_RESIZED, LOWORD( nLParam ), HIWORD( nLParam ) );
+		if ( nMessage == WM_SHOWWINDOW ) {
+			pDriver->queueEvent( pSlot->nIndex, nWParam ? SIR_WINDOW_EVENT_SHOWN : SIR_WINDOW_EVENT_HIDDEN, 0, 0 );
+		} else if ( nMessage == WM_SIZE ) {
+			if ( nWParam == SIZE_MINIMIZED ) {
+				pDriver->queueEvent( pSlot->nIndex, SIR_WINDOW_EVENT_MINIMIZED, 0, 0 );
+			} else {
+				pDriver->queueEvent( pSlot->nIndex, SIR_WINDOW_EVENT_RESIZED, LOWORD( nLParam ), HIWORD( nLParam ) );
+				pDriver->queueEvent( pSlot->nIndex, SIR_WINDOW_EVENT_RESTORED, 0, 0 );
+			}
+		} else if ( nMessage == WM_DPICHANGED ) {
+			const RECT *pSuggested = ( const RECT * )nLParam;
+			if ( pSuggested != nullptr ) {
+				( void )SetWindowPos( hWindow, nullptr, pSuggested->left, pSuggested->top, pSuggested->right - pSuggested->left,
+				                      pSuggested->bottom - pSuggested->top, SWP_NOZORDER | SWP_NOACTIVATE );
+			}
+			pDriver->queueEvent( pSlot->nIndex, SIR_WINDOW_EVENT_DPI_CHANGED, LOWORD( nWParam ), 0 );
 		} else if ( nMessage == WM_SETFOCUS ) {
 			pDriver->queueEvent( pSlot->nIndex, SIR_WINDOW_EVENT_FOCUS_GAINED, 0, 0 );
 		} else if ( nMessage == WM_KILLFOCUS ) {

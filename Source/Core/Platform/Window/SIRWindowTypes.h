@@ -53,6 +53,11 @@ typedef enum sirWindowEventKind_e : uint8_t
 	SIR_WINDOW_EVENT_RESIZED,
 	SIR_WINDOW_EVENT_FOCUS_GAINED,
 	SIR_WINDOW_EVENT_FOCUS_LOST,
+	SIR_WINDOW_EVENT_DPI_CHANGED,
+	SIR_WINDOW_EVENT_SHOWN,
+	SIR_WINDOW_EVENT_HIDDEN,
+	SIR_WINDOW_EVENT_MINIMIZED,
+	SIR_WINDOW_EVENT_RESTORED,
 	SIR_WINDOW_EVENT_LOST
 } sirWindowEventKind_t;
 
@@ -104,7 +109,10 @@ typedef struct sirWindowSnapshot_s
 	uint32_t nHeight;
 	uint64_t nMetricsRevision;
 	uint64_t nWindowGeneration;
+	uint32_t nDpi;
 	bool bReady;
+	bool bVisible;
+	bool bMinimized;
 	bool bCloseRequested;
 	bool bFocused;
 } sirWindowSnapshot_t;
