@@ -49,6 +49,8 @@ typedef struct sirVulkanAdapterInfo_s
 	uint32_t nVendorId;
 	uint32_t nDeviceId;
 	uint32_t nQueueFamilyIndex;
+	uint32_t nComputeQueueFamilyIndex;
+	uint32_t nTransferQueueFamilyIndex;
 	uint32_t nMaximumTextureDimension;
 	uint32_t nMemoryTypeCount;
 	uint32_t nMemoryHeapCount;
@@ -78,6 +80,18 @@ typedef struct sirVulkanMemoryStats_s
 
 // Higher scores appear first in the shared adapter registry.
 uint32_t sirVulkanAdapterPriority( VkPhysicalDeviceType eType ) noexcept;
+
+// Discovery only: current command submission uses the selected graphics family.
+typedef struct sirVulkanQueueFamilySelection_s
+{
+	uint32_t nGraphicsFamilyIndex;
+	uint32_t nComputeFamilyIndex;
+	uint32_t nTransferFamilyIndex;
+	bool bGraphicsSupportsCompute;
+} sirVulkanQueueFamilySelection_t;
+
+bool sirVulkanSelectQueueFamilies( const VkQueueFamilyProperties *pFamilies, uint32_t nCount,
+                                   sirVulkanQueueFamilySelection_t *pSelection ) noexcept;
 
 // Private Vulkan-driver ownership. No Vk or VMA types enter SIRRenderingDevice.
 typedef struct sirVulkanPoolBudget_s

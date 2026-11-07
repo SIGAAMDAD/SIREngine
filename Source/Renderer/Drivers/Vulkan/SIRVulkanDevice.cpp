@@ -79,6 +79,61 @@ uint32_t sirVulkanAdapterPriority( VkPhysicalDeviceType eType ) noexcept
 	}
 }
 
+bool sirVulkanSelectQueueFamilies( const VkQueueFamilyProperties *pFamilies, uint32_t nCount,
+                                   sirVulkanQueueFamilySelection_t *pSelection ) noexcept
+{
+	if ( pSelection == nullptr ) {
+		return false;
+	}
+	*pSelection = { UINT32_MAX, UINT32_MAX, UINT32_MAX, false };
+	if ( pFamilies == nullptr || nCount == 0 || nCount > 64 ) {
+		return false;
+	}
+	uint32_t nDedicatedCompute = UINT32_MAX;
+	uint32_t nDedicatedTransfer = UINT32_MAX;
+	uint32_t nTransferFallback = UINT32_MAX;
+	for ( uint32_t iFamily = 0; iFamily < nCount; ++iFamily ) {
+		const VkQueueFamilyProperties& family = pFamilies[iFamily];
+		if ( family.queueCount == 0 ) {
+			continue;
+		}
+		const VkQueueFlags nFlags = family.queueFlags;
+		const bool bGraphics = ( nFlags & VK_QUEUE_GRAPHICS_BIT ) != 0;
+		const bool bCompute = ( nFlags & VK_QUEUE_COMPUTE_BIT ) != 0;
+		const bool bTransfer = ( nFlags & VK_QUEUE_TRANSFER_BIT ) != 0;
+		if ( bGraphics && ( pSelection->nGraphicsFamilyIndex == UINT32_MAX || ( bCompute && !pSelection->bGraphicsSupportsCompute ) ) ) {
+			pSelection->nGraphicsFamilyIndex = iFamily;
+			pSelection->bGraphicsSupportsCompute = bCompute;
+		}
+		if ( bCompute && pSelection->nComputeFamilyIndex == UINT32_MAX ) {
+			pSelection->nComputeFamilyIndex = iFamily;
+		}
+		if ( bCompute && !bGraphics && nDedicatedCompute == UINT32_MAX ) {
+			nDedicatedCompute = iFamily;
+		}
+		if ( bTransfer && !bGraphics && !bCompute && nDedicatedTransfer == UINT32_MAX ) {
+			nDedicatedTransfer = iFamily;
+		}
+		if ( ( bTransfer || bCompute || bGraphics ) && !bGraphics && nTransferFallback == UINT32_MAX ) {
+			nTransferFallback = iFamily;
+		}
+	}
+	if ( pSelection->nGraphicsFamilyIndex == UINT32_MAX ) {
+		*pSelection = { UINT32_MAX, UINT32_MAX, UINT32_MAX, false };
+		return false;
+	}
+	if ( nDedicatedCompute != UINT32_MAX ) {
+		pSelection->nComputeFamilyIndex = nDedicatedCompute;
+	}
+	if ( pSelection->nComputeFamilyIndex == UINT32_MAX && pSelection->bGraphicsSupportsCompute ) {
+		pSelection->nComputeFamilyIndex = pSelection->nGraphicsFamilyIndex;
+	}
+	pSelection->nTransferFamilyIndex = nDedicatedTransfer != UINT32_MAX
+	                                       ? nDedicatedTransfer
+	                                       : ( nTransferFallback != UINT32_MAX ? nTransferFallback : pSelection->nGraphicsFamilyIndex );
+	return true;
+}
+
 bool SIRVulkanDevice::chooseAdapter( uint32_t nAdapterIndex ) noexcept
 {
 	uint32_t nDeviceCount = 0;
@@ -91,9 +146,8 @@ bool SIRVulkanDevice::chooseAdapter( uint32_t nAdapterIndex ) noexcept
 	}
 
 	VkPhysicalDevice szEligible[32] = {};
-	uint32_t szFamilies[32] = {};
+	sirVulkanQueueFamilySelection_t szSelections[32] = {};
 	uint32_t szPriorities[32] = {};
-	bool szCompute[32] = {};
 	uint32_t nEligibleCount = 0;
 	for ( uint32_t iDevice = 0; iDevice < nDeviceCount; ++iDevice ) {
 		VkPhysicalDeviceProperties properties = {};
@@ -120,22 +174,8 @@ bool SIRVulkanDevice::chooseAdapter( uint32_t nAdapterIndex ) noexcept
 		}
 		VkQueueFamilyProperties szFamiliesInfo[64] = {};
 		m_pfnGetPhysicalDeviceQueueFamilyProperties( szDevices[iDevice], &nFamilyCount, szFamiliesInfo );
-		uint32_t nSelectedFamily = UINT32_MAX;
-		bool bCompute = false;
-		for ( uint32_t iFamily = 0; iFamily < nFamilyCount; ++iFamily ) {
-			if ( szFamiliesInfo[iFamily].queueCount == 0 || ( szFamiliesInfo[iFamily].queueFlags & VK_QUEUE_GRAPHICS_BIT ) == 0 ) {
-				continue;
-			}
-			const bool bFamilyCompute = ( szFamiliesInfo[iFamily].queueFlags & VK_QUEUE_COMPUTE_BIT ) != 0;
-			if ( nSelectedFamily == UINT32_MAX || ( bFamilyCompute && !bCompute ) ) {
-				nSelectedFamily = iFamily;
-				bCompute = bFamilyCompute;
-			}
-			if ( bCompute ) {
-				break;
-			}
-		}
-		if ( nSelectedFamily == UINT32_MAX ) {
+		sirVulkanQueueFamilySelection_t selection = {};
+		if ( !sirVulkanSelectQueueFamilies( szFamiliesInfo, nFamilyCount, &selection ) ) {
 			continue;
 		}
 
@@ -143,14 +183,14 @@ bool SIRVulkanDevice::chooseAdapter( uint32_t nAdapterIndex ) noexcept
 		uint32_t iInsert = nEligibleCount;
 		while ( iInsert > 0 && szPriorities[iInsert - 1] < nPriority ) {
 			szEligible[iInsert] = szEligible[iInsert - 1];
-			szFamilies[iInsert] = szFamilies[iInsert - 1];
-			szCompute[iInsert] = szCompute[iInsert - 1];
+			szSelections[iInsert] = szSelections[iInsert - 1];
+
 			szPriorities[iInsert] = szPriorities[iInsert - 1];
 			--iInsert;
 		}
 		szEligible[iInsert] = szDevices[iDevice];
-		szFamilies[iInsert] = nSelectedFamily;
-		szCompute[iInsert] = bCompute;
+		szSelections[iInsert] = selection;
+
 		szPriorities[iInsert] = nPriority;
 		++nEligibleCount;
 	}
@@ -166,9 +206,11 @@ bool SIRVulkanDevice::chooseAdapter( uint32_t nAdapterIndex ) noexcept
 	m_Adapter.nDriverVersion = selectedProperties.driverVersion;
 	m_Adapter.nVendorId = selectedProperties.vendorID;
 	m_Adapter.nDeviceId = selectedProperties.deviceID;
-	m_Adapter.nQueueFamilyIndex = szFamilies[nAdapterIndex];
+	m_Adapter.nQueueFamilyIndex = szSelections[nAdapterIndex].nGraphicsFamilyIndex;
+	m_Adapter.nComputeQueueFamilyIndex = szSelections[nAdapterIndex].nComputeFamilyIndex;
+	m_Adapter.nTransferQueueFamilyIndex = szSelections[nAdapterIndex].nTransferFamilyIndex;
 	m_Adapter.nMaximumTextureDimension = selectedProperties.limits.maxImageDimension2D;
-	m_Adapter.bComputeCapable = szCompute[nAdapterIndex];
+	m_Adapter.bComputeCapable = szSelections[nAdapterIndex].bGraphicsSupportsCompute;
 	m_Adapter.bSoftwareAdapter = selectedProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_CPU;
 	memcpy( m_Adapter.szMaximumComputeGroupCount, selectedProperties.limits.maxComputeWorkGroupCount,
 	        sizeof( m_Adapter.szMaximumComputeGroupCount ) );

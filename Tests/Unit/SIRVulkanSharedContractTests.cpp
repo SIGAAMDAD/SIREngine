@@ -100,6 +100,52 @@ int main( void )
 		return 13;
 	}
 
+	// CPU-only queue discovery: the active native queue remains the graphics family.
+	VkQueueFamilyProperties szFamilies[4] = {};
+	szFamilies[0].queueCount = 1;
+	szFamilies[0].queueFlags = VK_QUEUE_GRAPHICS_BIT;
+	szFamilies[1].queueCount = 1;
+	szFamilies[1].queueFlags = VK_QUEUE_COMPUTE_BIT | VK_QUEUE_TRANSFER_BIT;
+	szFamilies[2].queueCount = 1;
+	szFamilies[2].queueFlags = VK_QUEUE_TRANSFER_BIT;
+	szFamilies[3].queueCount = 1;
+	szFamilies[3].queueFlags = VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT | VK_QUEUE_TRANSFER_BIT;
+	sirVulkanQueueFamilySelection_t families = {};
+	if ( !sirVulkanSelectQueueFamilies( szFamilies, 4, &families ) || families.nGraphicsFamilyIndex != 3 ||
+	     families.nComputeFamilyIndex != 1 || families.nTransferFamilyIndex != 2 || !families.bGraphicsSupportsCompute ) {
+		return 80;
+	}
+	if ( !sirVulkanSelectQueueFamilies( szFamilies, 1, &families ) || families.nGraphicsFamilyIndex != 0 ||
+	     families.nComputeFamilyIndex != UINT32_MAX || families.nTransferFamilyIndex != 0 || families.bGraphicsSupportsCompute ) {
+		return 81;
+	}
+	if ( sirVulkanSelectQueueFamilies( nullptr, 4, &families ) || sirVulkanSelectQueueFamilies( szFamilies, 65, &families ) ||
+	     families.nGraphicsFamilyIndex != UINT32_MAX ) {
+		return 82;
+	}
+	if ( sirVulkanSelectQueueFamilies( szFamilies, 4, nullptr ) ) {
+		return 83;
+	}
+	szFamilies[0].queueCount = 0;
+	szFamilies[3].queueCount = 0;
+	if ( sirVulkanSelectQueueFamilies( szFamilies, 4, &families ) || families.nComputeFamilyIndex != UINT32_MAX ||
+	     families.nTransferFamilyIndex != UINT32_MAX ) {
+		return 84;
+	}
+	szFamilies[0].queueCount = 1;
+	if ( !sirVulkanSelectQueueFamilies( szFamilies, 4, &families ) || families.nGraphicsFamilyIndex != 0 ||
+	     families.nComputeFamilyIndex != 1 || families.nTransferFamilyIndex != 2 ) {
+		return 85;
+	}
+	szFamilies[2].queueCount = 0;
+	if ( !sirVulkanSelectQueueFamilies( szFamilies, 4, &families ) || families.nTransferFamilyIndex != 1 ) {
+		return 86;
+	}
+	szFamilies[1].queueCount = 0;
+	if ( !sirVulkanSelectQueueFamilies( szFamilies, 4, &families ) || families.nTransferFamilyIndex != 0 ) {
+		return 87;
+	}
+
 	// Physical-device priority is stable and independent of the Vulkan loader.
 	if ( sirVulkanAdapterPriority( VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU ) != 4 ||
 	     sirVulkanAdapterPriority( VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU ) != 3 ||
