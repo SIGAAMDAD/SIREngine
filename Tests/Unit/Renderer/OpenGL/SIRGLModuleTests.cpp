@@ -66,23 +66,12 @@ static void sirGLTestCheck( bool bGood, const char *pszCase )
 }
 
 
-#ifdef SIR_GL_TEST_X11_AVAILABLE
-static void sirGLTestX11Presentation( sirGraphicsABIDriver_t *pDriver )
+static void sirGLTestWindowPresentation( sirGraphicsABIDriver_t *pDriver,
+                                             const sirGraphicsABINativeSurface_t& native )
 {
 	if ( pDriver == nullptr ) {
 		return;
 	}
-	Display *pDisplay = XOpenDisplay( nullptr );
-	if ( pDisplay == nullptr ) {
-		return;
-	}
-	Window hWindow = XCreateSimpleWindow( pDisplay, DefaultRootWindow( pDisplay ), 0, 0, 320, 200, 0, 0, 0 );
-	if ( hWindow == 0 ) {
-		XCloseDisplay( pDisplay );
-		return;
-	}
-	XMapWindow( pDisplay, hWindow );
-	XSync( pDisplay, False );
 	sirGraphicsABIDeviceRequest_t request = {};
 	request.nSize = sizeof( request );
 	request.nHeadless = 0;
@@ -95,8 +84,7 @@ static void sirGLTestX11Presentation( sirGraphicsABIDriver_t *pDriver )
 	const uint32_t nCreate = pDriver->pCreateDevice( pDriver->pDriver, &request, &device );
 	sirGLTestCheck( nCreate == SIR_GRAPHICS_SUCCESS, "windowed GL46 device admission" );
 	if ( nCreate == SIR_GRAPHICS_SUCCESS ) {
-		const sirGraphicsABINativeSurface_t native = { sizeof( native ), SIR_GRAPHICS_SURFACE_X11,
-		                                               ( void * )( uintptr_t )hWindow, pDisplay, 1 };
+		
 		const sirGraphicsABIPresentDesc_t present = { sizeof( present ), 320, 200, 1,
 		                                             SIR_GRAPHICS_FORMAT_RGBA8_UNORM, SIR_GRAPHICS_PRESENT_FIFO, 0, 0 };
 		sirGraphicsHandle_t hSurface = {};
@@ -154,10 +142,63 @@ static void sirGLTestX11Presentation( sirGraphicsABIDriver_t *pDriver )
 		sirGLTestCheck( pDriver->pDestroyDevice( pDriver->pDriver, &device ) == SIR_GRAPHICS_SUCCESS,
 		                "GL device destroyed after native present" );
 	}
+}
+
+#ifdef SIR_GL_TEST_X11_AVAILABLE
+static void sirGLTestX11Presentation( sirGraphicsABIDriver_t *pDriver )
+{
+	if ( pDriver == nullptr ) {
+		return;
+	}
+	Display *pDisplay = XOpenDisplay( nullptr );
+	if ( pDisplay == nullptr ) {
+		return;
+	}
+	const Window hWindow = XCreateSimpleWindow( pDisplay, DefaultRootWindow( pDisplay ), 0, 0, 320, 200, 0, 0, 0 );
+	if ( hWindow == 0 ) {
+		XCloseDisplay( pDisplay );
+		return;
+	}
+	XMapWindow( pDisplay, hWindow );
+	XSync( pDisplay, False );
+	const sirGraphicsABINativeSurface_t native = { sizeof( native ), SIR_GRAPHICS_SURFACE_X11,
+	                                               ( void * )( uintptr_t )hWindow, pDisplay, 1 };
+	sirGLTestWindowPresentation( pDriver, native );
 	XDestroyWindow( pDisplay, hWindow );
 	XCloseDisplay( pDisplay );
 }
 #endif
+
+#if defined( _WIN32 )
+static void sirGLTestWin32Presentation( sirGraphicsABIDriver_t *pDriver )
+{
+	const HINSTANCE hInstance = GetModuleHandleW( nullptr );
+	const wchar_t *pszClassName = L"SIREngineGL46PresentTest";
+	WNDCLASSW cls = {};
+	cls.style = CS_OWNDC;
+	cls.lpfnWndProc = DefWindowProcW;
+	cls.hInstance = hInstance;
+	cls.lpszClassName = pszClassName;
+	if ( RegisterClassW( &cls ) == 0 ) {
+		sirGLTestCheck( false, "register Win32 native GL presentation window" );
+		return;
+	}
+	const HWND hWindow = CreateWindowExW( 0, pszClassName, L"SIR GL presentation", WS_OVERLAPPEDWINDOW,
+	                                     CW_USEDEFAULT, CW_USEDEFAULT, 320, 200, nullptr, nullptr, hInstance, nullptr );
+	if ( hWindow == nullptr ) {
+		sirGLTestCheck( false, "create Win32 native GL presentation window" );
+		( void )UnregisterClassW( pszClassName, hInstance );
+		return;
+	}
+	ShowWindow( hWindow, SW_SHOW );
+	const sirGraphicsABINativeSurface_t native = { sizeof( native ), SIR_GRAPHICS_SURFACE_WIN32,
+	                                               ( void * )hWindow, ( void * )hInstance, 1 };
+	sirGLTestWindowPresentation( pDriver, native );
+	( void )DestroyWindow( hWindow );
+	( void )UnregisterClassW( pszClassName, hInstance );
+}
+#endif
+
 
 int main( void )
 {
@@ -332,6 +373,11 @@ int main( void )
 #ifdef SIR_GL_TEST_X11_AVAILABLE
 	if ( nAdapters == 1 ) {
 		sirGLTestX11Presentation( &driver );
+	}
+#endif
+#if defined( _WIN32 )
+	if ( nAdapters == 1 ) {
+		sirGLTestWin32Presentation( &driver );
 	}
 #endif
 	driver.pReleaseDriver( driver.pDriver );
