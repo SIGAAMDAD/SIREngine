@@ -58,7 +58,10 @@ sirWindowResult_t SIRWindowDriverX11::createWindow( const sirWindowCreateDesc_t&
 	}
 	XSelectInput( pDisplay, hWindow, StructureNotifyMask | FocusChangeMask );
 	Atom hDelete = ( Atom )m_nDeleteWindow;
-	( void )XSetWMProtocols( pDisplay, hWindow, &hDelete, 1 );
+	if ( !XSetWMProtocols( pDisplay, hWindow, &hDelete, 1 ) ) {
+		( void )XDestroyWindow( pDisplay, hWindow );
+		return SIR_WINDOW_NATIVE_FAILURE;
+	}
 	( void )XStoreName( pDisplay, hWindow, desc.pszTitle );
 	( void )XMapWindow( pDisplay, hWindow );
 	( void )XFlush( pDisplay );
