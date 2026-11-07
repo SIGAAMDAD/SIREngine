@@ -61,6 +61,7 @@ private:
 	SIRD3D12Device *m_pNative = nullptr;
 	ID3D12Device *m_pDevice = nullptr;
 	Microsoft::WRL::ComPtr<ID3D12PipelineLibrary> m_pPipelineLibrary;
+	void *m_pLibraryBlob = nullptr;
 	sirD3D12PipelineCacheStats_t m_CacheStats = {};
 	bool m_bPipelineCreated = false;
 	uint32_t m_nDeviceGeneration = 0;
