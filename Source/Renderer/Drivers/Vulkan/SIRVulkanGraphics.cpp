@@ -1148,7 +1148,7 @@ sirGraphicsResult_t SIRVulkanDriver::createDevice( const sirGraphicsDeviceCreate
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( ( desc.nRequiredFeatures & ~( uint64_t )( SIR_GRAPHICS_FEATURE_GRAPHICS | SIR_GRAPHICS_FEATURE_COMPUTE | SIR_GRAPHICS_FEATURE_MRT |
-	                                                  SIR_GRAPHICS_FEATURE_SHADER_STORAGE ) ) != 0 ) {
+	                                               SIR_GRAPHICS_FEATURE_SHADER_STORAGE ) ) != 0 ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
 	if ( !desc.bHeadless ) {
