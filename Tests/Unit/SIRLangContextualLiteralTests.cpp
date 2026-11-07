@@ -169,6 +169,12 @@ int main( void )
 		uint64_t nResult;
 	} szCases[] = {
 	    { "function f() returns u16 { return 100; }", true, 100 },
+	    { "function f() returns u16 { u16 x = 42; switch (x) { case 42: { return 7; } default: { return 0; } } }", true, 7 },
+	    { "function f() returns u16 { u16 x = 9; switch (x) { case 42: { return 7; } default: { return 0; } } }", true, 0 },
+	    { "function f() returns u8 { u8 x = 255; switch (x) { case 255: { return 1; } default: { return 0; } } }", true, 1 },
+	    { "function f() returns u8 { u8 x = 255; switch (x) { case 256: { return 1; } default: { return 0; } } }", false, 0 },
+	    { "function f() returns u8 { u8 x = 255; switch (x) { case 1u16: { return 1; } default: { return 0; } } }", false, 0 },
+
 	    { "function f() returns i8 { return -1; }", true, UINT64_MAX },
 	    { "function f() returns i8 { return -128; }", true, UINT64_C( 0xffffffffffffff80 ) },
 	    { "function f() returns i8 { return -(128); }", true, UINT64_C( 0xffffffffffffff80 ) },

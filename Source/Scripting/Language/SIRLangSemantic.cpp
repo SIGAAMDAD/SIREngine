@@ -1092,7 +1092,11 @@ static void sirLangAnalyzeNode( sirLangSemanticState_t *pState, uint32_t iNode )
 			uint32_t iBlock = branch.nFirstChild;
 			if ( branch.eKind == SIR_LANG_SYNTAX_CASE ) {
 				const sirLangValueKind_t eValue = sirLangInferExpression( pState, iBlock );
-				if ( !sirLangCompatible( eSelector, eValue ) ) {
+				const bool bBareInteger = sirLangContextualInteger( pState, iBlock, SIR_LANG_VALUE_U64 );
+				const bool bFits = sirLangContextualInteger( pState, iBlock, eSelector );
+				if ( bBareInteger && !bFits ) {
+					sirLangSemanticReport( pState, SIR_LANG_SEMANTIC_INVALID_LITERAL, iBlock );
+				} else if ( !sirLangCompatible( eSelector, eValue ) && !bFits ) {
 					sirLangSemanticReport( pState, SIR_LANG_SEMANTIC_TYPE_MISMATCH, iCase );
 				}
 				iBlock = sirLangNextChild( pState, iBlock );
