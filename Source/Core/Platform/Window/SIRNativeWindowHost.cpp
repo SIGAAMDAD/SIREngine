@@ -30,7 +30,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 static bool sirNativeWindowHostPump( void *pContext )
 {
 	SIRWindowSystem *pWindows = ( SIRWindowSystem * )pContext;
-	return pWindows->pumpEvents( 256 ) == SIR_WINDOW_OK;
+	const sirWindowResult_t eResult = pWindows->pumpEvents( 256 );
+	return eResult == SIR_WINDOW_OK || eResult == SIR_WINDOW_EVENTS_LOST;
 }
 
 int sirRunWindowHostWithDriver( SIRWindowDriver& driver, const sirWindowCreateDesc_t& desc ) noexcept
