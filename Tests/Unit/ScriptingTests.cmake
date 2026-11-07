@@ -1,3 +1,11 @@
+# Verify the production CMake duplicate-source guard against path aliases.
+add_test(NAME scripting.build.source-uniqueness
+    COMMAND "${CMAKE_COMMAND}"
+        "-DSIR_SCRIPT_SOURCE_GUARD=${PROJECT_SOURCE_DIR}/Source/Scripting/SIRCheckUniqueSources.cmake"
+        "-DSIR_SCRIPT_TEST_BINARY_ROOT=${CMAKE_CURRENT_BINARY_DIR}"
+        "-DSIR_SCRIPT_TEST_GENERATOR=${CMAKE_GENERATOR}"
+        -P "${CMAKE_CURRENT_LIST_DIR}/SIRScriptSourceGraphGuardTests.cmake")
+
 add_executable(SIRScriptFoundationTests SIRScriptFoundationTests.cpp)
 target_link_libraries(SIRScriptFoundationTests PRIVATE SIR::Scripting)
 add_test(NAME scripting.foundation COMMAND SIRScriptFoundationTests)
