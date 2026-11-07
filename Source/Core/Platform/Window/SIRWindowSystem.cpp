@@ -347,7 +347,7 @@ sirWindowResult_t SIRWindowSystem::acquireNativeLease( sirWindowHandle_t hWindow
 		return eValid;
 	}
 	sirWindowSlot_t& slot = m_Slots[hWindow.nSlot];
-	if ( !slot.snapshot.bReady ) {
+	if ( !slot.snapshot.bReady || slot.snapshot.bCloseRequested ) {
 		return SIR_WINDOW_NOT_READY;
 	}
 	processReleasedLeases();
