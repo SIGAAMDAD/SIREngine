@@ -49,8 +49,7 @@ function(sir_classify_tests sirDirectory)
             set(sirResource gpu)
         endif()
         list(APPEND sirLabels "subsystem:${sirSubsystem}" "kind:${sirKind}"
-            "platform:${sirPlatform}" "resource:${sirResource}"
-            "gate:main" "gate:nightly" "gate:qualification")
+            "platform:${sirPlatform}" "resource:${sirResource}")
         if(sirTest MATCHES "^(core[.]jobs[.]|core[.]memory[.](allocators|manager)|core[.]platform[.](io[.]regression|filesystem|input[.]stress|decommit-failure)|resources[.](integration[.]stress|streaming[.]native-file-io)|terrain[.])")
             list(APPEND sirLabels "nightly:repeat")
         endif()

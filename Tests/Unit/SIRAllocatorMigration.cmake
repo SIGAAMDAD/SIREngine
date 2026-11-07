@@ -20,5 +20,5 @@ if(SIR_WITH_GOOGLETEST)
     gtest_discover_tests(SIRAllocatorExhaustiveTests
         TEST_PREFIX "core.memory.allocators."
         DISCOVERY_TIMEOUT 45
-        PROPERTIES LABELS "subsystem:core;kind:unit;platform:${sirGTestHost};resource:cpu;gate:pr;gate:main;gate:nightly;gate:qualification;nightly:repeat")
+        PROPERTIES LABELS "subsystem:core;kind:unit;platform:${sirGTestHost};resource:cpu;gate:pr;nightly:repeat")
 endif()

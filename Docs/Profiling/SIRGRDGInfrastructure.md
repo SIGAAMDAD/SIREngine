@@ -46,13 +46,13 @@ All I/O microbenchmarks use deterministic identical bytes and hot files for comp
 For a genuinely matched historical baseline, compare with:
 
 ```sh
-python3 Tests/Profiling/ValidateSIRGRDGBenchmarks.py \
-  out/Nightly/Benchmarks/ubuntu-24.04-pr.json \
+python3 Build/CI/CompareBenchmarks.py compare \
+  --candidate out/Nightly/Benchmarks/ubuntu-24.04-pr.json \
   --baseline path/to/verified-same-machine.json \
-  --max-regression-percent 20
+  --max-slowdown 0.20
 ```
 
-The comparison rejects incompatible host/CPU/build metadata. A >20% higher median triggers a failure **only when the caller supplies a comparable baseline**. There is no invented fixed nanosecond cutoff and no benchmark performance verdict until the current CI run produces results.
+The canonical comparison rejects incompatible host/CPU/build metadata. A >20% higher median triggers a failure **only when the caller supplies a comparable baseline**. There is no invented fixed nanosecond cutoff and no benchmark performance verdict until the current CI run produces results.
 
 ## Instrumented compiler coverage
 

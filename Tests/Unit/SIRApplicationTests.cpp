@@ -4,7 +4,7 @@ int main( void )
 {
 	SIRApplication application;
 
-	if ( application.getState() != SIR_APP_UNINITIALIZED || application.tick() ) {
+	if ( application.getState() != SIR_APP_UNINITIALIZED || application.getTickCount() != 0 || application.tick() ) {
 		return 1;
 	}
 
@@ -12,12 +12,14 @@ int main( void )
 		return 2;
 	}
 
-	if ( application.initialize() || !application.tick() ) {
+	if ( application.initialize() ) {
 		return 3;
 	}
 
-	if ( application.getTickCount() != 1 ) {
-		return 4;
+	for ( uint32_t iTick = 1; iTick <= 32; ++iTick ) {
+		if ( !application.tick() || application.getTickCount() != iTick ) {
+			return 4;
+		}
 	}
 
 	application.shutdown();
@@ -30,5 +32,5 @@ int main( void )
 	}
 
 	application.shutdown();
-	return application.getTickCount() == 1 ? 0 : 7;
+	return application.getTickCount() == 32 ? 0 : 7;
 }
