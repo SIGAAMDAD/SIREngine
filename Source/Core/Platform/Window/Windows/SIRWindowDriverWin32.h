@@ -26,6 +26,22 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #endif
 #include <Windows.h>
 
+typedef struct sirWindowWin32Message_s
+{
+	uintptr_t nWindow;
+	uint32_t nMessage;
+	uintptr_t nWParam;
+	intptr_t nLParam;
+} sirWindowWin32Message_t;
+
+typedef struct sirWindowWin32Dispatch_s
+{
+	intptr_t nResult;
+	bool bHandled;
+} sirWindowWin32Dispatch_t;
+
+typedef sirWindowWin32Dispatch_t ( *sirWindowWin32MessageSink_t )( const sirWindowWin32Message_t& message, void *pContext ) noexcept;
+
 class SIRWindowDriverWin32;
 
 typedef struct sirWin32Slot_s
@@ -48,6 +64,7 @@ public:
 	sirWindowResult_t destroyWindow( uint32_t nSlot ) noexcept override;
 	sirWindowResult_t pumpEvents( uint32_t nBudget, sirWindowDriverEventFn_t pCallback, void *pContext ) noexcept override;
 	void shutdown( void ) noexcept override;
+	bool setMessageSink( sirWindowWin32MessageSink_t pSink, void *pContext ) noexcept;
 
 protected:
 private:
@@ -59,6 +76,8 @@ private:
 	uint32_t m_nEventRead = 0;
 	uint32_t m_nEventWrite = 0;
 	uint32_t m_nEventCount = 0;
+	sirWindowWin32MessageSink_t m_pSink = nullptr;
+	void *m_pSinkContext = nullptr;
 	bool m_bRegistered = false;
 	bool m_bOverflow = false;
 	bool m_bClosePending[SIR_WINDOW_MAX_WINDOWS] = {};

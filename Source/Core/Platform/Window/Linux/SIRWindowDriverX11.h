@@ -21,6 +21,9 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #endif
 // clang-format on
 #include <Core/Platform/Window/SIRWindowDriver.h>
+#include <X11/Xlib.h>
+
+typedef void ( *sirWindowX11EventSink_t )( const XEvent& event, void *pContext ) noexcept;
 
 // The sole XOpenDisplay/XNextEvent owner for windows created by this driver.
 class SIRWindowDriverX11 final : public SIRWindowDriver
@@ -34,10 +37,13 @@ public:
 	sirWindowResult_t destroyWindow( uint32_t nSlot ) noexcept override;
 	sirWindowResult_t pumpEvents( uint32_t nBudget, sirWindowDriverEventFn_t pCallback, void *pContext ) noexcept override;
 	void shutdown( void ) noexcept override;
+	bool setEventSink( sirWindowX11EventSink_t pSink, void *pContext ) noexcept;
 
 protected:
 private:
 	void *m_pDisplay = nullptr;
+	sirWindowX11EventSink_t m_pSink = nullptr;
+	void *m_pSinkContext = nullptr;
 	uintptr_t m_hWindows[SIR_WINDOW_MAX_WINDOWS] = {};
 	bool m_bLost[SIR_WINDOW_MAX_WINDOWS] = {};
 	uintptr_t m_nProtocols = 0;

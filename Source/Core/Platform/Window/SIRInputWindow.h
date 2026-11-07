@@ -25,18 +25,12 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // clang-format on
 
 #include <Core/Platform/Input/SIRInputBackend.h>
+#include <Core/Platform/Input/SIRInputCursorMode.h>
 
 class SIRInputService;
 
-typedef enum sirInputCursorMode_e : uint8_t
-{
-	SIR_INPUT_CURSOR_FREE = 0,
-	SIR_INPUT_CURSOR_HIDDEN = 1,
-	SIR_INPUT_CURSOR_CAPTURED = 2
-} sirInputCursorMode_t;
-
-// First-party native window message owner. Native window types stay in the
-// platform translation units; input is sampled within SIRApplication::tick.
+// Retained for X11 input regression fixtures. Production startup uses
+// SIRWindowSystem and the native input event bridges.
 class SIRInputWindow
 {
 public:

@@ -4,6 +4,16 @@
 #include <stdio.h>
 #include <string.h>
 
+bool SIRWindowDriverX11::setEventSink( sirWindowX11EventSink_t pSink, void *pContext ) noexcept
+{
+	if ( pSink != nullptr && pContext == nullptr ) {
+		return false;
+	}
+	m_pSink = pSink;
+	m_pSinkContext = pContext;
+	return true;
+}
+
 SIRWindowDriverX11::~SIRWindowDriverX11( void ) noexcept
 {
 	shutdown();
@@ -88,6 +98,9 @@ sirWindowResult_t SIRWindowDriverX11::pumpEvents( uint32_t nBudget, sirWindowDri
 	for ( uint32_t i = 0; i < nBudget && XPending( pDisplay ) > 0; ++i ) {
 		XEvent event = {};
 		XNextEvent( pDisplay, &event );
+		if ( m_pSink != nullptr ) {
+			m_pSink( event, m_pSinkContext );
+		}
 		uint32_t nSlot = SIR_WINDOW_MAX_WINDOWS;
 		for ( uint32_t j = 0; j < SIR_WINDOW_MAX_WINDOWS; ++j ) {
 			if ( m_hWindows[j] != 0 && m_hWindows[j] == ( uintptr_t )event.xany.window ) {
@@ -140,6 +153,8 @@ void SIRWindowDriverX11::shutdown( void ) noexcept
 	}
 	XCloseDisplay( pDisplay );
 	m_pDisplay = nullptr;
+	m_pSink = nullptr;
+	m_pSinkContext = nullptr;
 	m_nDeleteWindow = 0;
 	m_nProtocols = 0;
 }

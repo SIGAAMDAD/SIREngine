@@ -18,10 +18,29 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <X11/Xlib.h>
 #include <stdio.h>
 
+typedef struct sirX11SinkCount_s
+{
+	uint32_t nEvents;
+	uint32_t nKeyPress;
+} sirX11SinkCount_t;
+
+static void sirCountX11Event( const XEvent& event, void *pContext ) noexcept
+{
+	sirX11SinkCount_t *pCount = ( sirX11SinkCount_t * )pContext;
+	++pCount->nEvents;
+	if ( event.type == KeyPress ) {
+		++pCount->nKeyPress;
+	}
+}
+
 int main( void )
 {
 	SIRWindowDriverX11 driver;
 	SIRWindowSystem windows( driver );
+	sirX11SinkCount_t counts = {};
+	if ( !driver.setEventSink( sirCountX11Event, &counts ) ) {
+		return 7;
+	}
 	if ( windows.initialize() != SIR_SYSTEM_OK ) {
 		fputs( "X11 driver initialization FAIL\n", stderr );
 		return 1;
@@ -39,6 +58,15 @@ int main( void )
 	}
 	Display *pDisplay = ( Display * )view.nDisplayOrInstance;
 	XResizeWindow( pDisplay, ( Window )view.nNativeWindow, 320, 240 );
+	XSelectInput( pDisplay, ( Window )view.nNativeWindow, KeyPressMask | StructureNotifyMask | FocusChangeMask );
+	XEvent key = {};
+	key.xkey.type = KeyPress;
+	key.xkey.display = pDisplay;
+	key.xkey.window = ( Window )view.nNativeWindow;
+	key.xkey.root = DefaultRootWindow( pDisplay );
+	key.xkey.keycode = 38;
+	key.xkey.same_screen = True;
+	XSendEvent( pDisplay, ( Window )view.nNativeWindow, False, KeyPressMask, &key );
 	XEvent event = {};
 	event.xclient.type = ClientMessage;
 	event.xclient.window = ( Window )view.nNativeWindow;
@@ -53,6 +81,9 @@ int main( void )
 		}
 	}
 	sirWindowSnapshot_t snapshot = {};
+	if ( counts.nEvents == 0 || counts.nKeyPress != 1 ) {
+		return 8;
+	}
 	if ( windows.querySnapshot( second, &snapshot ) != SIR_WINDOW_OK || snapshot.nWidth != 320 || snapshot.nHeight != 240 ||
 	     !snapshot.bCloseRequested || windows.destroyWindow( second ) != SIR_WINDOW_BUSY ) {
 		return 5;

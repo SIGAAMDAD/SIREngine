@@ -2,6 +2,16 @@
 
 static constexpr wchar_t s_szWindowClass[] = L"SIREnginePlatformWindow";
 
+bool SIRWindowDriverWin32::setMessageSink( sirWindowWin32MessageSink_t pSink, void *pContext ) noexcept
+{
+	if ( pSink != nullptr && pContext == nullptr ) {
+		return false;
+	}
+	m_pSink = pSink;
+	m_pSinkContext = pContext;
+	return true;
+}
+
 SIRWindowDriverWin32::~SIRWindowDriverWin32( void ) noexcept
 {
 	shutdown();
@@ -109,6 +119,13 @@ LRESULT CALLBACK SIRWindowDriverWin32::windowProc( HWND hWindow, UINT nMessage, 
 	sirWin32Slot_t *pSlot = ( sirWin32Slot_t * )GetWindowLongPtrW( hWindow, GWLP_USERDATA );
 	if ( pSlot != nullptr && pSlot->pDriver != nullptr ) {
 		SIRWindowDriverWin32 *pDriver = pSlot->pDriver;
+		if ( pDriver->m_pSink != nullptr ) {
+			const sirWindowWin32Message_t message = { ( uintptr_t )hWindow, nMessage, ( uintptr_t )nWParam, ( intptr_t )nLParam };
+			const sirWindowWin32Dispatch_t result = pDriver->m_pSink( message, pDriver->m_pSinkContext );
+			if ( result.bHandled ) {
+				return ( LRESULT )result.nResult;
+			}
+		}
 		if ( nMessage == WM_CLOSE ) {
 			pDriver->m_bClosePending[pSlot->nIndex] = true;
 			return 0;
@@ -190,6 +207,8 @@ void SIRWindowDriverWin32::shutdown( void ) noexcept
 	}
 	UnregisterClassW( s_szWindowClass, GetModuleHandleW( nullptr ) );
 	m_bRegistered = false;
+	m_pSink = nullptr;
+	m_pSinkContext = nullptr;
 	m_nEventRead = 0;
 	m_nEventWrite = 0;
 	m_nEventCount = 0;
