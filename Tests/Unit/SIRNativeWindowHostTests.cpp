@@ -13,14 +13,14 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#include <Editor/Host/SIREditorWindowHost.h>
+#include <Core/Platform/Window/SIRNativeWindowHost.h>
 #include <stdio.h>
 
-class SIREditorWindowTestDriver final : public SIRWindowDriver
+class SIRNativeWindowHostTestDriver final : public SIRWindowDriver
 {
 public:
-	SIREditorWindowTestDriver( void ) noexcept = default;
-	~SIREditorWindowTestDriver( void ) noexcept override = default;
+	SIRNativeWindowHostTestDriver( void ) noexcept = default;
+	~SIRNativeWindowHostTestDriver( void ) noexcept override = default;
 
 	sirWindowResult_t initialize( void ) noexcept override
 	{
@@ -87,34 +87,36 @@ private:
 
 int main( void )
 {
-	SIREditorWindowTestDriver successful;
-	if ( sirEditorRunWindowHost( successful ) != 0 || successful.m_nInitializes != 1 || successful.m_nCreates != 1 ||
-	     successful.m_nDestroys != 1 || successful.m_nPumps != 2 || successful.m_nShutdowns != 1 ) {
+	SIRNativeWindowHostTestDriver successful;
+	if ( sirRunWindowHostWithDriver( successful, { "SIREngine Editor", 1280, 720 } ) != 0 || successful.m_nInitializes != 1 ||
+	     successful.m_nCreates != 1 || successful.m_nDestroys != 1 || successful.m_nPumps != 2 || successful.m_nShutdowns != 1 ) {
 		fputs( "Editor native window: graceful close FAIL\n", stderr );
 		return 1;
 	}
 
-	SIREditorWindowTestDriver initFailure;
+	SIRNativeWindowHostTestDriver initFailure;
 	initFailure.m_bFailInit = true;
-	if ( sirEditorRunWindowHost( initFailure ) == 0 || initFailure.m_nCreates != 0 || initFailure.m_nDestroys != 0 ) {
+	if ( sirRunWindowHostWithDriver( initFailure, { "SIREngine Editor", 1280, 720 } ) == 0 || initFailure.m_nCreates != 0 ||
+	     initFailure.m_nDestroys != 0 ) {
 		fputs( "Editor native window: init failure FAIL\n", stderr );
 		return 1;
 	}
 
-	SIREditorWindowTestDriver createFailure;
+	SIRNativeWindowHostTestDriver createFailure;
 	createFailure.m_bFailCreate = true;
-	if ( sirEditorRunWindowHost( createFailure ) == 0 || createFailure.m_nShutdowns != 1 || createFailure.m_nDestroys != 0 ) {
+	if ( sirRunWindowHostWithDriver( createFailure, { "SIREngine Editor", 1280, 720 } ) == 0 || createFailure.m_nShutdowns != 1 ||
+	     createFailure.m_nDestroys != 0 ) {
 		fputs( "Editor native window: create failure FAIL\n", stderr );
 		return 1;
 	}
 
-	SIREditorWindowTestDriver pumpFailure;
+	SIRNativeWindowHostTestDriver pumpFailure;
 	pumpFailure.m_bFailPump = true;
-	if ( sirEditorRunWindowHost( pumpFailure ) == 0 || pumpFailure.m_nPumps != 1 || pumpFailure.m_nDestroys != 1 ||
-	     pumpFailure.m_nShutdowns != 1 ) {
+	if ( sirRunWindowHostWithDriver( pumpFailure, { "SIREngine Editor", 1280, 720 } ) == 0 || pumpFailure.m_nPumps != 1 ||
+	     pumpFailure.m_nDestroys != 1 || pumpFailure.m_nShutdowns != 1 ) {
 		fputs( "Editor native window: pump failure FAIL\n", stderr );
 		return 1;
 	}
-	puts( "SIREditorWindowHostTests PASS" );
+	puts( "SIRNativeWindowHostTests PASS" );
 	return 0;
 }

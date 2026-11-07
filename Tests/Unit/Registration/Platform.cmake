@@ -88,6 +88,13 @@ if(WIN32)
     sir_configure_owned_target(SIRWGLBootstrapWindowTests)
 endif()
 
+# Moved editor host lifecycle test: the shared native host is owned by Core.
+add_executable(SIRNativeWindowHostTests SIRNativeWindowHostTests.cpp)
+target_link_libraries(SIRNativeWindowHostTests PRIVATE SIR::Core)
+add_test(NAME core.platform.window.native-host COMMAND SIRNativeWindowHostTests)
+set_tests_properties(core.platform.window.native-host PROPERTIES LABELS "core;platform;window;integration" TIMEOUT 60)
+sir_configure_owned_target(SIRNativeWindowHostTests)
+
 # Window system registry and headless negative-path acceptance.
 add_executable(SIRWindowSystemTests SIRWindowSystemTests.cpp)
 target_link_libraries(SIRWindowSystemTests PRIVATE SIR::Core)

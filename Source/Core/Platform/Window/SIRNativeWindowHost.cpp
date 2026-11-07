@@ -13,27 +13,36 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#include <Editor/Host/SIREditorWindowHost.h>
+#include <Core/Platform/Window/SIRNativeWindowHost.h>
 #include <Core/SIRApplication.h>
 #include <Core/Platform/Window/SIRWindowSystem.h>
+#if defined( SIR_WINDOW_WAYLAND_AVAILABLE )
+#include <Core/Platform/Window/Linux/SIRWindowDriverWayland.h>
+#endif
+#if defined( _WIN32 )
+#include <Core/Platform/Window/Windows/SIRWindowDriverWin32.h>
+#elif defined( SIR_WINDOW_X11_AVAILABLE )
+#include <Core/Platform/Window/Linux/SIRWindowDriverX11.h>
+#endif
+#include <stdlib.h>
+#include <stdio.h>
 
-static bool sirEditorPumpWindows( void *pContext )
+static bool sirNativeWindowHostPump( void *pContext )
 {
 	SIRWindowSystem *pWindows = ( SIRWindowSystem * )pContext;
 	return pWindows->pumpEvents( 256 ) == SIR_WINDOW_OK;
 }
 
-int sirEditorRunWindowHost( SIRWindowDriver& driver ) noexcept
+int sirRunWindowHostWithDriver( SIRWindowDriver& driver, const sirWindowCreateDesc_t& desc ) noexcept
 {
 	SIRWindowSystem windows( driver );
 	SIRApplication app;
-	if ( !app.registerSystem( &windows ) || !app.attachWindowPump( sirEditorPumpWindows, &windows ) || !app.initialize() ) {
+	if ( !app.registerSystem( &windows ) || !app.attachWindowPump( sirNativeWindowHostPump, &windows ) || !app.initialize() ) {
 		( void )app.shutdown();
 		return 1;
 	}
 
 	sirWindowHandle_t hWindow = {};
-	const sirWindowCreateDesc_t desc = { "SIREngine Editor", 1280, 720 };
 	if ( windows.createWindow( desc, &hWindow ) != SIR_WINDOW_OK ) {
 		( void )app.shutdown();
 		return 1;
@@ -58,4 +67,28 @@ int sirEditorRunWindowHost( SIRWindowDriver& driver ) noexcept
 	const sirWindowResult_t eDestroy = windows.destroyWindow( hWindow );
 	const sirSystemResult_t eShutdown = app.shutdown();
 	return bSucceeded && eDestroy == SIR_WINDOW_OK && eShutdown == SIR_SYSTEM_OK ? 0 : 1;
+}
+
+int sirRunNativeWindowHost( const sirWindowCreateDesc_t& desc ) noexcept
+{
+#if defined( SIR_WINDOW_WAYLAND_AVAILABLE )
+	const char *pszWaylandDisplay = getenv( "WAYLAND_DISPLAY" );
+	if ( pszWaylandDisplay != nullptr && pszWaylandDisplay[0] != 0 ) {
+		SIRWindowDriverWayland driver;
+		return sirRunWindowHostWithDriver( driver, desc );
+	}
+#endif
+#if defined( _WIN32 )
+	SIRWindowDriverWin32 driver;
+	return sirRunWindowHostWithDriver( driver, desc );
+#elif defined( SIR_WINDOW_X11_AVAILABLE )
+	SIRWindowDriverX11 driver;
+	return sirRunWindowHostWithDriver( driver, desc );
+#elif defined( SIR_WINDOW_WAYLAND_AVAILABLE )
+	SIRWindowDriverWayland driver;
+	return sirRunWindowHostWithDriver( driver, desc );
+#else
+	fputs( "SIREngine: no native window driver is available in this build\n", stderr );
+	return 1;
+#endif
 }

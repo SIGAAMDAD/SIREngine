@@ -19,7 +19,7 @@ target_link_libraries(SIREditorAuthoring PUBLIC SIR::Core)
 sir_configure_owned_target(SIREditorAuthoring)
 
 # Native SIREditor process; the graphical UI subsystem will be linked here.
-add_executable(SIREditor Main.cpp Host/SIREditorWindowHost.cpp)
+add_executable(SIREditor Main.cpp)
 target_link_libraries(SIREditor PRIVATE SIR::EditorAuthoring SIR::UI)
 target_compile_definitions(SIREditor PRIVATE SIR_VERSION="${PROJECT_VERSION}")
 sir_configure_owned_target(SIREditor)

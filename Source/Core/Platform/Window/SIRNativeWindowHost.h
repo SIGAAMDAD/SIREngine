@@ -12,8 +12,8 @@ express or implied, including but not limited to the warranties
 of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
-#ifndef __SIRENGINE_SIREDITORWINDOWHOST_H__
-#define __SIRENGINE_SIREDITORWINDOWHOST_H__
+#ifndef __SIRENGINE_SIRNATIVEWINDOWHOST_H__
+#define __SIRENGINE_SIRNATIVEWINDOWHOST_H__
 
 #include <SIRPCH.hpp>
 
@@ -25,9 +25,9 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Core/Platform/Window/SIRWindowDriver.h>
 
-// Creates one native editor host window and pumps native messages until an OS
-// close request is observed. Editor widgets and rendering are separate.
-// The borrowed native driver must outlive the call.
-int sirEditorRunWindowHost( SIRWindowDriver& driver ) noexcept;
+// Ported from the original editor native host. The driver is borrowed for
+// one visible window lifecycle and is destroyed by its caller after return.
+int sirRunWindowHostWithDriver( SIRWindowDriver& driver, const sirWindowCreateDesc_t& desc ) noexcept;
+int sirRunNativeWindowHost( const sirWindowCreateDesc_t& desc ) noexcept;
 
-#endif // __SIRENGINE_SIREDITORWINDOWHOST_H__
+#endif // __SIRENGINE_SIRNATIVEWINDOWHOST_H__
