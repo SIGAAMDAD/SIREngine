@@ -53,7 +53,8 @@ sirGraphicsResult_t SIRGraphicsEraRHI::admitBatch( const sirGraphicsEraBatch_t& 
 	     ( batch.nDrawCount != 0 && batch.pDraws == nullptr ) ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	if ( batch.pPass->nColorCount > caps.nMaximumColorAttachments ||
+	if ( ( batch.pPass->nColorCount == 0 && batch.pPass->hDepthView.eType == SIR_GRAPHICS_HANDLE_NONE ) ||
+	     batch.pPass->nColorCount > caps.nMaximumColorAttachments ||
 	     ( batch.pPass->nColorCount != 0 && batch.pPass->pColors == nullptr ) ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
@@ -69,7 +70,8 @@ sirGraphicsResult_t SIRGraphicsEraRHI::admitBatch( const sirGraphicsEraBatch_t& 
 	}
 	for ( uint32_t i = 0; i < batch.nDrawCount; ++i ) {
 		const sirGraphicsEraDraw_t& draw = batch.pDraws[i];
-		if ( draw.nElementCount == 0 || draw.nIndexed > 1 || draw.nIndex32 > 1 || ( draw.nStreamCount != 0 && draw.pStreams == nullptr ) ||
+		if ( draw.nElementCount == 0 || draw.nStreamCount == 0 || draw.nIndexed > 1 || draw.nIndex32 > 1 ||
+		     draw.nFirstElement > UINT32_MAX - draw.nElementCount || ( draw.nStreamCount != 0 && draw.pStreams == nullptr ) ||
 		     ( draw.nBindingCount != 0 && draw.pBindings == nullptr ) ) {
 			return SIR_GRAPHICS_INVALID_ARGUMENT;
 		}
@@ -112,6 +114,12 @@ sirGraphicsResult_t SIRGraphicsEraRHI::admitBatch( const sirGraphicsEraBatch_t& 
 			}
 		}
 		if ( draw.nIndexed != 0 ) {
+			if ( draw.nVertexOffset != 0 ) {
+				return SIR_GRAPHICS_UNSUPPORTED;
+			}
+			if ( draw.nIndexOffsetBytes % ( draw.nIndex32 ? 4U : 2U ) != 0 ) {
+				return SIR_GRAPHICS_INVALID_ARGUMENT;
+			}
 			if ( sirEraCheckHandle( draw.hIndexBuffer, SIR_GRAPHICS_HANDLE_BUFFER, batch.nDeviceGeneration ) != SIR_GRAPHICS_SUCCESS ) {
 				return SIR_GRAPHICS_INVALID_HANDLE;
 			}
@@ -233,8 +241,13 @@ sirGraphicsResult_t SIRGraphicsProgrammableRHI::admitPipeline( const sirGraphics
 sirGraphicsResult_t SIRGraphicsProgrammableRHI::execute( const sirGraphicsEraBatch_t& batch, SIRRenderingDevice& device,
                                                          sirGraphicsCompletion_t *pCompletion ) noexcept
 {
-	return batch.eModel == SIR_GRAPHICS_PIPELINE_MODEL_PROGRAMMABLE ? SIRGraphicsEraRHI::execute( batch, device, pCompletion )
-	                                                                : SIR_GRAPHICS_UNSUPPORTED;
+	if ( batch.eModel != SIR_GRAPHICS_PIPELINE_MODEL_PROGRAMMABLE ) {
+		if ( pCompletion != nullptr ) {
+			*pCompletion = {};
+		}
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
+	return SIRGraphicsEraRHI::execute( batch, device, pCompletion );
 }
 
 sirGraphicsResult_t SIRGraphicsFixedFunctionRHI::admitPipeline( const sirGraphicsABIPipeline_t& pipeline,
@@ -249,6 +262,11 @@ sirGraphicsResult_t SIRGraphicsFixedFunctionRHI::admitPipeline( const sirGraphic
 sirGraphicsResult_t SIRGraphicsFixedFunctionRHI::execute( const sirGraphicsEraBatch_t& batch, SIRRenderingDevice& device,
                                                           sirGraphicsCompletion_t *pCompletion ) noexcept
 {
-	return batch.eModel == SIR_GRAPHICS_PIPELINE_MODEL_FIXED_FUNCTION ? SIRGraphicsEraRHI::execute( batch, device, pCompletion )
-	                                                                  : SIR_GRAPHICS_UNSUPPORTED;
+	if ( batch.eModel != SIR_GRAPHICS_PIPELINE_MODEL_FIXED_FUNCTION ) {
+		if ( pCompletion != nullptr ) {
+			*pCompletion = {};
+		}
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
+	return SIRGraphicsEraRHI::execute( batch, device, pCompletion );
 }

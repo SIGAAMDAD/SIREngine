@@ -173,6 +173,12 @@ int main()
 	ok = expect( SIRGraphicsEraRHI::record( batch, commands, caps ), SIR_GRAPHICS_INVALID_HANDLE, "reject stale without recording" ) && ok;
 	ok = ( nRecorded == s_nCommands ) && ok;
 	stream.hBuffer.nDeviceGeneration = 7;
+	draw.nStreamCount = 0;
+	ok = expect( SIRGraphicsEraRHI::admitBatch( batch, caps ), SIR_GRAPHICS_INVALID_ARGUMENT, "missing vertex input" ) && ok;
+	draw.nStreamCount = 1;
+	draw.nFirstElement = UINT32_MAX;
+	ok = expect( SIRGraphicsEraRHI::admitBatch( batch, caps ), SIR_GRAPHICS_INVALID_ARGUMENT, "draw range overflow" ) && ok;
+	draw.nFirstElement = 0;
 	sirGraphicsEraBinding_t b0 = { 0, handle( SIR_GRAPHICS_HANDLE_BINDING_SET ) };
 	sirGraphicsEraBinding_t b1 = { 0, handle( SIR_GRAPHICS_HANDLE_BINDING_SET ) };
 	sirGraphicsEraBinding_t bindings[] = { b0, b1 };
@@ -191,6 +197,12 @@ int main()
 	draw.nIndexed = 1;
 	draw.hIndexBuffer = handle( SIR_GRAPHICS_HANDLE_BUFFER );
 	ok = expect( SIRGraphicsEraRHI::record( batch, commands, caps ), SIR_GRAPHICS_SUCCESS, "indexed fixed" ) && ok;
+	draw.nIndexOffsetBytes = 1;
+	ok = expect( SIRGraphicsEraRHI::admitBatch( batch, caps ), SIR_GRAPHICS_INVALID_ARGUMENT, "index alignment" ) && ok;
+	draw.nIndexOffsetBytes = 0;
+	draw.nVertexOffset = 1;
+	ok = expect( SIRGraphicsEraRHI::admitBatch( batch, caps ), SIR_GRAPHICS_UNSUPPORTED, "unqualified base vertex" ) && ok;
+	draw.nVertexOffset = 0;
 	draw.hIndexBuffer.eType = SIR_GRAPHICS_HANDLE_TEXTURE;
 	ok = expect( SIRGraphicsEraRHI::admitBatch( batch, caps ), SIR_GRAPHICS_INVALID_HANDLE, "invalid index" ) && ok;
 	draw.hIndexBuffer.eType = SIR_GRAPHICS_HANDLE_BUFFER;
