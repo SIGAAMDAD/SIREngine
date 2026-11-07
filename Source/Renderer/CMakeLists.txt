@@ -17,6 +17,7 @@ add_library(SIRGraphics STATIC
     Visibility/SIRHiZBindings.cpp
     SIRGraphicsDriverABI.cpp
     SIRGraphicsModernRHI.cpp
+    SIRGraphicsEraRHI.cpp
     SIRModernFrameGraphExecution.cpp
     SIRGraphicsModule.cpp
     SIRGraphicsPipelineABI.cpp

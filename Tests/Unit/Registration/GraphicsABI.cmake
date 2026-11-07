@@ -14,6 +14,11 @@ target_link_libraries(SIRGraphicsPipelineABITests PRIVATE SIR::Graphics)
 add_test(NAME renderer.graphics.pipeline-eras COMMAND SIRGraphicsPipelineABITests)
 sir_configure_owned_target(SIRGraphicsPipelineABITests)
 
+add_executable(SIRGraphicsEraRHITests SIRGraphicsEraRHITests.cpp)
+target_link_libraries(SIRGraphicsEraRHITests PRIVATE SIR::Graphics)
+add_test(NAME renderer.graphics.era-rhi COMMAND SIRGraphicsEraRHITests)
+sir_configure_owned_target(SIRGraphicsEraRHITests)
+
 add_executable(SIRGraphicsModernRHITests SIRGraphicsModernRHITests.cpp)
 target_link_libraries(SIRGraphicsModernRHITests PRIVATE SIR::Graphics)
 add_test(NAME renderer.graphics.modern-rhi COMMAND SIRGraphicsModernRHITests)
@@ -76,6 +81,7 @@ set_tests_properties(
     renderer.graphics.pipeline-eras
     renderer.graphics.pipeline-bridge
     renderer.graphics.modern-rhi
+    renderer.graphics.era-rhi
     renderer.graphics.modern-framegraph
     renderer.graphics.binary-module
     renderer.graphics.contract
