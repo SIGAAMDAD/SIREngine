@@ -53,5 +53,6 @@ private:
 	uint32_t m_nDisplayChangePendingMask = 0;
 	uint32_t m_nServerWidth = 0;
 	uint32_t m_nServerHeight = 0;
+	int32_t m_nRandrEventBase = -1;
 };
 #endif // __SIRENGINE_SIRWINDOWDRIVERX11_H__

@@ -3,6 +3,9 @@
 #include <X11/Xlib.h>
 #include <stdio.h>
 #include <string.h>
+#ifdef SIR_WINDOW_XRANDR_AVAILABLE
+#include <X11/extensions/Xrandr.h>
+#endif
 
 // Set the ICCCM name and UTF-8 EWMH name for window managers and IME users.
 static sirWindowResult_t sirSetX11Title( Display *pDisplay, Window hWindow, const char *pszTitle ) noexcept
@@ -62,6 +65,20 @@ sirWindowResult_t SIRWindowDriverX11::initialize( void ) noexcept
 	m_nServerWidth = ( uint32_t )attributes.width;
 	m_nServerHeight = ( uint32_t )attributes.height;
 	XSelectInput( pDisplay, ( Window )m_nRootWindow, StructureNotifyMask );
+#ifdef SIR_WINDOW_XRANDR_AVAILABLE
+	int nRandrEvent = 0, nRandrError = 0;
+	if ( XRRQueryExtension( pDisplay, &nRandrEvent, &nRandrError ) ) {
+		int nMajor = 1, nMinor = 0;
+		if ( XRRQueryVersion( pDisplay, &nMajor, &nMinor ) ) {
+			const int nMask = RRScreenChangeNotifyMask |
+			                  ( nMajor > 1 || ( nMajor == 1 && nMinor >= 2 ) ?
+			                       RROutputChangeNotifyMask | RRCrtcChangeNotifyMask :
+			                       0 );
+			XRRSelectInput( pDisplay, ( Window )m_nRootWindow, nMask );
+			m_nRandrEventBase = nRandrEvent;
+		}
+	}
+#endif
 	m_pDisplay = pDisplay;
 	return SIR_WINDOW_OK;
 }
@@ -225,6 +242,21 @@ sirWindowResult_t SIRWindowDriverX11::pumpEvents( uint32_t nBudget, sirWindowDri
 		if ( m_pSink != nullptr ) {
 			m_pSink( event, m_pSinkContext );
 		}
+#ifdef SIR_WINDOW_XRANDR_AVAILABLE
+		if ( m_nRandrEventBase >= 0 &&
+		     ( event.type == m_nRandrEventBase + RRScreenChangeNotify ||
+		       event.type == m_nRandrEventBase + RRNotify ) ) {
+			if ( event.type == m_nRandrEventBase + RRScreenChangeNotify ) {
+				( void )XRRUpdateConfiguration( &event );
+			}
+			for ( uint32_t j = 0; j < SIR_WINDOW_MAX_WINDOWS; ++j ) {
+				if ( m_hWindows[j] != 0 ) {
+					m_nDisplayChangePendingMask |= UINT32_C( 1 ) << j;
+				}
+			}
+			continue;
+		}
+#endif
 		if ( event.type == ConfigureNotify && ( uintptr_t )event.xconfigure.window == m_nRootWindow ) {
 			if ( event.xconfigure.width > 0 && event.xconfigure.height > 0 &&
 			     ( ( uint32_t )event.xconfigure.width != m_nServerWidth ||
@@ -320,4 +352,5 @@ void SIRWindowDriverX11::shutdown( void ) noexcept
 	m_nDisplayChangePendingMask = 0;
 	m_nServerWidth = 0;
 	m_nServerHeight = 0;
+	m_nRandrEventBase = -1;
 }
