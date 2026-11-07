@@ -38,6 +38,31 @@ typedef struct sirGLDriverState_s
 	std::atomic<uint32_t> nLiveDevices;
 } sirGLDriverState_t;
 
+typedef struct sirGLDevice_s sirGLDevice_t;
+
+typedef struct sirGLCommandState_s
+{
+	sirGLDevice_t *pDevice;
+	uint32_t nPassFramebuffer;
+	bool bRecording;
+	bool bInRenderPass;
+	bool bClosed;
+} sirGLCommandState_t;
+
+constexpr uint32_t SIR_GL_PRESENT_SURFACE_COUNT = 8;
+typedef struct sirGLPresentSlot_s
+{
+	sirGLPresentWindow_t window;
+	sirGraphicsHandle_t hSurface;
+	sirGraphicsHandle_t hImage;
+	uint32_t nFramebuffer;
+	uint32_t nFormat;
+	uint64_t nAcquisitionSerial;
+	uint64_t nAcquisitionId;
+	bool bActive;
+	bool bAcquired;
+} sirGLPresentSlot_t;
+
 typedef struct sirGLDevice_s
 {
 	sirGLDriverState_t *pDriver;
@@ -54,6 +79,17 @@ typedef struct sirGLDevice_s
 	uint64_t nPeakResourceBytes;
 	uint32_t nGeneration;
 	uint64_t nResidentBudgetBytes;
+	uint64_t nCompletedDirectValue;
+	sirGLCommandState_t commands;
+	sirGLPresentSlot_t present[SIR_GL_PRESENT_SURFACE_COUNT];
+	void ( *pFinish )( void );
+	void ( *pBlitNamedFramebuffer )( uint32_t, uint32_t, int32_t, int32_t, int32_t, int32_t,
+	                                 int32_t, int32_t, int32_t, int32_t, uint32_t, uint32_t );
+	void ( *pClearNamedFramebuffer )( uint32_t, uint32_t, int32_t, const float * );
+	uint32_t ( *pGetNativeError )( void );
+	bool bWindowed;
+	bool bDisplayBound;
+	bool bAllowSoftware;
 } sirGLDevice_t;
 
 static std::atomic<uint32_t> s_nGLDeviceGeneration( 1 );
@@ -107,7 +143,11 @@ static uint32_t sirGLQueryCapabilities( void *pDevice, sirGraphicsABICapabilitie
 	if ( pState == nullptr || pState->pContext == nullptr ) {
 		return SIR_GRAPHICS_DEVICE_LOST;
 	}
-	return sirGLBuildCapabilities( &pState->probe, pState->nGeneration, pCapabilities );
+	const uint32_t nStatus = sirGLBuildCapabilities( &pState->probe, pState->nGeneration, pCapabilities );
+	if ( nStatus == SIR_GRAPHICS_SUCCESS && pState->bWindowed ) {
+		pCapabilities->nEnabledFeatures |= SIR_GRAPHICS_FEATURE_PRESENT;
+	}
+	return nStatus;
 }
 
 static uint32_t sirGLQueryPipelineModelCaps( void *pDevice, uint32_t nModel, sirGraphicsABIPipelineModelCaps_t *pCaps ) noexcept
@@ -515,7 +555,9 @@ static uint32_t sirGLCreateDevice( void *pDriver, const sirGraphicsABIDeviceRequ
 	     pRequest->nAllowSoftware > 1 || pRequest->nHeadless > 1 ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	if ( pRequest->nAdapterIndex != 0 || pRequest->nFramesInFlight != 1 || pRequest->nHeadless != 1 || pRequest->nRequiredFeatures != 0 ) {
+	if ( pRequest->nAdapterIndex != 0 || pRequest->nFramesInFlight != 1 ||
+	     ( pRequest->nRequiredFeatures & ~( uint64_t )SIR_GRAPHICS_FEATURE_PRESENT ) != 0 ||
+	     ( pRequest->nHeadless != 0 && pRequest->nRequiredFeatures != 0 ) ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
 	sirGLDriverState_t *pState = ( sirGLDriverState_t * )pDriver;
@@ -558,6 +600,9 @@ static uint32_t sirGLCreateDevice( void *pDriver, const sirGraphicsABIDeviceRequ
 	pNew->probe = probe;
 	pNew->nGeneration = nGeneration;
 	pNew->nResidentBudgetBytes = pRequest->nResidentBudgetBytes;
+	pNew->bWindowed = pRequest->nHeadless == 0;
+	pNew->bAllowSoftware = pRequest->nAllowSoftware != 0;
+	pNew->commands.pDevice = pNew;
 	// Native GL objects will be stored here without per-object CPU allocations.
 	nStatus = sirGLHandlePoolInit( &pNew->handles, &pState->host, nGeneration, 1024 );
 	if ( nStatus != SIR_GRAPHICS_SUCCESS ) {
