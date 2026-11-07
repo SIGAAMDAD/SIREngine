@@ -67,14 +67,18 @@ sirVulkanResult_t SIRVulkanDevice::submitBufferImageCopy( sirVulkanBuffer_t *pBu
 	if ( pSlot == nullptr ) {
 		return SIR_VULKAN_BUSY;
 	}
-	if ( m_pfnResetCommandBuffer( pSlot->hCommandBuffer, 0 ) != VK_SUCCESS ) {
+	const VkResult eReset = m_pfnResetCommandBuffer( pSlot->hCommandBuffer, 0 );
+	if ( eReset != VK_SUCCESS ) {
+		m_bDeviceLost = eReset == VK_ERROR_DEVICE_LOST;
 		return SIR_VULKAN_NATIVE_FAILURE;
 	}
 
 	VkCommandBufferBeginInfo begin = {};
 	begin.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 	begin.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-	if ( m_pfnBeginCommandBuffer( pSlot->hCommandBuffer, &begin ) != VK_SUCCESS ) {
+	const VkResult eBegin = m_pfnBeginCommandBuffer( pSlot->hCommandBuffer, &begin );
+	if ( eBegin != VK_SUCCESS ) {
+		m_bDeviceLost = eBegin == VK_ERROR_DEVICE_LOST;
 		return SIR_VULKAN_NATIVE_FAILURE;
 	}
 
@@ -156,7 +160,9 @@ sirVulkanResult_t SIRVulkanDevice::submitBufferImageCopy( sirVulkanBuffer_t *pBu
 	dependency.pMemoryBarriers = nullptr;
 	dependency.pImageMemoryBarriers = &after;
 	m_pfnCmdPipelineBarrier2( pSlot->hCommandBuffer, &dependency );
-	if ( m_pfnEndCommandBuffer( pSlot->hCommandBuffer ) != VK_SUCCESS ) {
+	const VkResult eEnd = m_pfnEndCommandBuffer( pSlot->hCommandBuffer );
+	if ( eEnd != VK_SUCCESS ) {
+		m_bDeviceLost = eEnd == VK_ERROR_DEVICE_LOST;
 		return SIR_VULKAN_NATIVE_FAILURE;
 	}
 
