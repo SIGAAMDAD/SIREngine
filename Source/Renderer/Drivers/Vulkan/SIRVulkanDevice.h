@@ -93,7 +93,7 @@ typedef struct sirVulkanQueueFamilySelection_s
 bool sirVulkanSelectQueueFamilies( const VkQueueFamilyProperties *pFamilies, uint32_t nCount,
                                    sirVulkanQueueFamilySelection_t *pSelection ) noexcept;
 bool sirVulkanBuildQueueCreateInfos( const sirVulkanQueueFamilySelection_t& selection, const float *pPriority,
-                                     VkDeviceQueueCreateInfo (&szInfos)[3], uint32_t *pCount ) noexcept;
+                                     VkDeviceQueueCreateInfo ( &szInfos )[3], uint32_t *pCount ) noexcept;
 
 // Private Vulkan-driver ownership. No Vk or VMA types enter SIRRenderingDevice.
 typedef struct sirVulkanPoolBudget_s
