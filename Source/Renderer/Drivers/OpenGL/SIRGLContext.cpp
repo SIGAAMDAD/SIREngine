@@ -50,9 +50,18 @@ typedef sirEGLBoolean_t ( *sirEGLDestroyContext_t )( sirEGLDisplay_t pDisplay, s
 typedef sirEGLBoolean_t ( *sirEGLDestroySurface_t )( sirEGLDisplay_t pDisplay, sirEGLSurface_t pSurface );
 typedef sirEGLBoolean_t ( *sirEGLTerminate_t )( sirEGLDisplay_t pDisplay );
 typedef sirEGLContext_t ( *sirEGLGetCurrentContext_t )( void );
+typedef sirEGLSurface_t ( *sirEGLCreateWindowSurface_t )( sirEGLDisplay_t, sirEGLConfig_t, void *, const sirEGLInt_t * );
+typedef sirEGLBoolean_t ( *sirEGLSwapBuffers_t )( sirEGLDisplay_t, sirEGLSurface_t );
+typedef sirEGLBoolean_t ( *sirEGLSwapInterval_t )( sirEGLDisplay_t, sirEGLInt_t );
+typedef void *( *sirWaylandEGLWindowCreate_t )( void *, int32_t, int32_t );
+typedef void ( *sirWaylandEGLWindowResize_t )( void *, int32_t, int32_t, int32_t, int32_t );
+typedef void ( *sirWaylandEGLWindowDestroy_t )( void * );
 
 static constexpr uint32_t SIR_EGL_OPENGL_API = 0x30A2;
 static constexpr uint32_t SIR_EGL_PLATFORM_SURFACELESS = 0x31DD;
+static constexpr uint32_t SIR_EGL_PLATFORM_X11 = 0x31D5;
+static constexpr uint32_t SIR_EGL_PLATFORM_WAYLAND = 0x31D8;
+static constexpr sirEGLInt_t SIR_EGL_WINDOW_BIT = 4;
 static constexpr sirEGLInt_t SIR_EGL_NONE = 0x3038;
 static constexpr sirEGLInt_t SIR_EGL_SURFACE_TYPE = 0x3033;
 static constexpr sirEGLInt_t SIR_EGL_PBUFFER_BIT = 1;
@@ -90,13 +99,23 @@ typedef struct sirGLNativeContext_s
 	void *pLibraryGL;
 	sirEGLDisplay_t pDisplay;
 	sirEGLSurface_t pSurface;
+	sirEGLConfig_t pConfig;
+	void *pNativeDisplay;
+	uint32_t nNativePlatform;
 	sirEGLContext_t pRenderContext;
 	sirEGLMakeCurrent_t pMakeCurrent;
 	sirEGLDestroyContext_t pDestroyContext;
 	sirEGLDestroySurface_t pDestroySurface;
 	sirEGLTerminate_t pTerminate;
-	sirEGLGetCurrentContext_t pGetCurrentContext;
+sirEGLGetCurrentContext_t pGetCurrentContext;
+	sirEGLCreateWindowSurface_t pCreateWindowSurface;
+	sirEGLSwapBuffers_t pSwapBuffers;
+	sirEGLSwapInterval_t pSwapInterval;
 	sirEGLGetProcAddress_t pGetProcAddress;
+	void *pWaylandEGLLibrary;
+	sirWaylandEGLWindowCreate_t pWaylandCreate;
+	sirWaylandEGLWindowResize_t pWaylandResize;
+	sirWaylandEGLWindowDestroy_t pWaylandDestroy;
 #endif
 } sirGLNativeContext_t;
 
@@ -237,7 +256,7 @@ static bool sirGLInitWindows( sirGLNativeContext_t *pContext ) noexcept
 	return pContext->pGetString != nullptr && pContext->pGetInteger != nullptr;
 }
 #else
-static bool sirGLInitLinux( sirGLNativeContext_t *pContext ) noexcept
+static bool sirGLInitLinux( sirGLNativeContext_t *pContext, const sirGraphicsABINativeSurface_t *pNative ) noexcept
 {
 	pContext->pLibraryEGL = dlopen( "libEGL.so.1", RTLD_NOW | RTLD_LOCAL );
 	pContext->pLibraryGL = dlopen( "libGL.so.1", RTLD_NOW | RTLD_LOCAL );
@@ -258,6 +277,9 @@ static bool sirGLInitLinux( sirGLNativeContext_t *pContext ) noexcept
 	pContext->pDestroySurface = ( sirEGLDestroySurface_t )dlsym( pContext->pLibraryEGL, "eglDestroySurface" );
 	pContext->pTerminate = ( sirEGLTerminate_t )dlsym( pContext->pLibraryEGL, "eglTerminate" );
 	pContext->pGetCurrentContext = ( sirEGLGetCurrentContext_t )dlsym( pContext->pLibraryEGL, "eglGetCurrentContext" );
+	pContext->pCreateWindowSurface = ( sirEGLCreateWindowSurface_t )dlsym( pContext->pLibraryEGL, "eglCreateWindowSurface" );
+	pContext->pSwapBuffers = ( sirEGLSwapBuffers_t )dlsym( pContext->pLibraryEGL, "eglSwapBuffers" );
+	pContext->pSwapInterval = ( sirEGLSwapInterval_t )dlsym( pContext->pLibraryEGL, "eglSwapInterval" );
 	if ( pProc == nullptr || pGetDisplay == nullptr || pQueryString == nullptr || pInitialize == nullptr || pChoose == nullptr ||
 	     pBind == nullptr || pPbuffer == nullptr || pCreate == nullptr || pContext->pMakeCurrent == nullptr ||
 	     pContext->pDestroyContext == nullptr || pContext->pDestroySurface == nullptr || pContext->pTerminate == nullptr ||
@@ -266,11 +288,29 @@ static bool sirGLInitLinux( sirGLNativeContext_t *pContext ) noexcept
 	}
 	const char *pszExtensions = pQueryString( nullptr, SIR_EGL_EXTENSIONS );
 	const sirEGLGetPlatformDisplay_t pGetPlatform = ( sirEGLGetPlatformDisplay_t )pProc( "eglGetPlatformDisplayEXT" );
-	if ( pGetPlatform != nullptr && pszExtensions != nullptr && strstr( pszExtensions, "EGL_MESA_platform_surfaceless" ) != nullptr ) {
-		pContext->pDisplay = pGetPlatform( SIR_EGL_PLATFORM_SURFACELESS, nullptr, nullptr );
-	}
-	if ( pContext->pDisplay == nullptr ) {
-		pContext->pDisplay = pGetDisplay( nullptr );
+	if ( pNative != nullptr ) {
+		if ( pNative->pDisplayOrInstance == nullptr ||
+		     ( pNative->nPlatform != SIR_GRAPHICS_SURFACE_X11 && pNative->nPlatform != SIR_GRAPHICS_SURFACE_WAYLAND ) ) {
+			return false;
+		}
+		const uint32_t nPlatform = pNative->nPlatform == SIR_GRAPHICS_SURFACE_X11 ?
+		                           SIR_EGL_PLATFORM_X11 : SIR_EGL_PLATFORM_WAYLAND;
+		if ( pGetPlatform != nullptr ) {
+			pContext->pDisplay = pGetPlatform( nPlatform, pNative->pDisplayOrInstance, nullptr );
+		}
+		if ( pContext->pDisplay == nullptr ) {
+			pContext->pDisplay = pGetDisplay( pNative->pDisplayOrInstance );
+		}
+		pContext->pNativeDisplay = pNative->pDisplayOrInstance;
+		pContext->nNativePlatform = pNative->nPlatform;
+	} else {
+		if ( pGetPlatform != nullptr && pszExtensions != nullptr &&
+		     strstr( pszExtensions, "EGL_MESA_platform_surfaceless" ) != nullptr ) {
+			pContext->pDisplay = pGetPlatform( SIR_EGL_PLATFORM_SURFACELESS, nullptr, nullptr );
+		}
+		if ( pContext->pDisplay == nullptr ) {
+			pContext->pDisplay = pGetDisplay( nullptr );
+		}
 	}
 	sirEGLInt_t nMajor = 0;
 	sirEGLInt_t nMinor = 0;
@@ -278,7 +318,7 @@ static bool sirGLInitLinux( sirGLNativeContext_t *pContext ) noexcept
 		return false;
 	}
 	const sirEGLInt_t szConfig[] = { SIR_EGL_SURFACE_TYPE,
-	                                 SIR_EGL_PBUFFER_BIT,
+	                                 pNative == nullptr ? SIR_EGL_PBUFFER_BIT : SIR_EGL_PBUFFER_BIT | SIR_EGL_WINDOW_BIT,
 	                                 SIR_EGL_RENDERABLE_TYPE,
 	                                 SIR_EGL_OPENGL_BIT,
 	                                 SIR_EGL_RED_SIZE,
@@ -294,6 +334,23 @@ static bool sirGLInitLinux( sirGLNativeContext_t *pContext ) noexcept
 	sirEGLInt_t nFound = 0;
 	if ( !pChoose( pContext->pDisplay, szConfig, &pConfig, 1, &nFound ) || nFound != 1 || pConfig == nullptr ) {
 		return false;
+	}
+	pContext->pConfig = pConfig;
+	if ( pNative != nullptr && ( pContext->pCreateWindowSurface == nullptr || pContext->pSwapBuffers == nullptr ) ) {
+		return false;
+	}
+	if ( pNative != nullptr && pNative->nPlatform == SIR_GRAPHICS_SURFACE_WAYLAND ) {
+		pContext->pWaylandEGLLibrary = dlopen( "libwayland-egl.so.1", RTLD_NOW | RTLD_LOCAL );
+		if ( pContext->pWaylandEGLLibrary == nullptr ) {
+			return false;
+		}
+		pContext->pWaylandCreate = ( sirWaylandEGLWindowCreate_t )dlsym( pContext->pWaylandEGLLibrary, "wl_egl_window_create" );
+		pContext->pWaylandResize = ( sirWaylandEGLWindowResize_t )dlsym( pContext->pWaylandEGLLibrary, "wl_egl_window_resize" );
+		pContext->pWaylandDestroy = ( sirWaylandEGLWindowDestroy_t )dlsym( pContext->pWaylandEGLLibrary, "wl_egl_window_destroy" );
+		if ( pContext->pWaylandCreate == nullptr || pContext->pWaylandResize == nullptr ||
+		     pContext->pWaylandDestroy == nullptr ) {
+			return false;
+		}
 	}
 	const sirEGLInt_t szPbuffer[] = { SIR_EGL_WIDTH, 1, SIR_EGL_HEIGHT, 1, SIR_EGL_NONE };
 	pContext->pSurface = pPbuffer( pContext->pDisplay, pConfig, szPbuffer );
@@ -316,7 +373,8 @@ static bool sirGLInitLinux( sirGLNativeContext_t *pContext ) noexcept
 }
 #endif
 
-sirGraphicsResult_t sirGLCreateNativeContext( const sirGraphicsABIHost_t *pHost, sirGLNativeContext_t **ppContext ) noexcept
+sirGraphicsResult_t sirGLCreateNativeContextForWindow( const sirGraphicsABIHost_t *pHost, const sirGraphicsABINativeSurface_t *pNative,
+                                                      sirGLNativeContext_t **ppContext ) noexcept
 {
 	if ( pHost == nullptr || ppContext == nullptr || pHost->pAllocate == nullptr || pHost->pFree == nullptr ||
 	     pHost->nSize < sizeof( *pHost ) ) {
@@ -335,7 +393,7 @@ sirGraphicsResult_t sirGLCreateNativeContext( const sirGraphicsABIHost_t *pHost,
 	const bool bReady = sirGLInitWindows( pContext );
 #else
 	pContext->ownerThread = pthread_self();
-	const bool bReady = sirGLInitLinux( pContext );
+	const bool bReady = sirGLInitLinux( pContext, pNative );
 #endif
 	if ( !bReady || !sirGLValidateRequired46Functions( sirGLResolveNativeProcedure, pContext ) ) {
 		sirGLDestroyNativeContext( pContext );
@@ -343,6 +401,11 @@ sirGraphicsResult_t sirGLCreateNativeContext( const sirGraphicsABIHost_t *pHost,
 	}
 	*ppContext = pContext;
 	return SIR_GRAPHICS_SUCCESS;
+}
+
+sirGraphicsResult_t sirGLCreateNativeContext( const sirGraphicsABIHost_t *pHost, sirGLNativeContext_t **ppContext ) noexcept
+{
+	return sirGLCreateNativeContextForWindow( pHost, nullptr, ppContext );
 }
 
 void sirGLDestroyNativeContext( sirGLNativeContext_t *pContext ) noexcept
@@ -379,6 +442,9 @@ void sirGLDestroyNativeContext( sirGLNativeContext_t *pContext ) noexcept
 	}
 	if ( pContext->pLibraryGL != nullptr ) {
 		dlclose( pContext->pLibraryGL );
+	}
+	if ( pContext->pWaylandEGLLibrary != nullptr ) {
+		dlclose( pContext->pWaylandEGLLibrary );
 	}
 	if ( pContext->pLibraryEGL != nullptr ) {
 		dlclose( pContext->pLibraryEGL );
