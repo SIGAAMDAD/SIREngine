@@ -202,4 +202,35 @@ static inline uint64_t sirD3D12NegotiatedOptionalFeatures( bool bEnhancedBarrier
 	return nMask;
 }
 
+
+/**
+ * Validate all queue dependencies before calling ID3D12CommandQueue::Wait.
+ * The submitted values must come from one device-generation snapshot.
+ * The destination queue must have room for the next fence signal, so a
+ * rejected submission cannot enqueue waits without a matching signal.
+ */
+static inline sirGraphicsResult_t sirD3D12ValidateSubmissionDependencies( sirGraphicsQueue_t eQueue,
+                                                                            const sirGraphicsCompletion_t *pWaits,
+                                                                            uint32_t nWaitCount,
+                                                                            const sirGraphicsCompletionSet_t& submitted ) noexcept
+{
+	if ( eQueue >= SIR_GRAPHICS_QUEUE_COUNT || nWaitCount > 64 || ( nWaitCount != 0 && pWaits == nullptr ) ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	if ( submitted.nDeviceGeneration == 0 ) {
+		return SIR_GRAPHICS_DEVICE_LOST;
+	}
+	if ( submitted.szQueueValues[eQueue] >= UINT64_MAX - 1 ) {
+		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
+	}
+	for ( uint32_t iWait = 0; iWait < nWaitCount; ++iWait ) {
+		const sirGraphicsCompletion_t& wait = pWaits[iWait];
+		if ( wait.nDeviceGeneration != submitted.nDeviceGeneration || wait.eQueue >= SIR_GRAPHICS_QUEUE_COUNT ||
+		     wait.nValue == 0 || wait.nValue > submitted.szQueueValues[wait.eQueue] ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
+	}
+	return SIR_GRAPHICS_SUCCESS;
+}
+
 #endif // __SIRENGINE_SIRD3D12VALIDATION_H__
