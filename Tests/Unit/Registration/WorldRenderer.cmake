@@ -34,6 +34,12 @@ target_link_libraries(SIRVirtualTextureDemandMipTests PRIVATE SIR::Graphics)
 add_test(NAME renderer.virtual-texturing.demand-mip COMMAND SIRVirtualTextureDemandMipTests)
 sir_configure_owned_target(SIRVirtualTextureDemandMipTests)
 
+# Bounded baked-visibility PackBits/raw bundle decoding, with negative-path tests.
+add_executable(SIRVirtualTextureDemandBundleSmokeTests SIRVirtualTextureDemandBundleSmokeTests.cpp)
+target_link_libraries(SIRVirtualTextureDemandBundleSmokeTests PRIVATE SIR::Graphics)
+add_test(NAME renderer.virtual-texturing.demand-bundle-codec COMMAND SIRVirtualTextureDemandBundleSmokeTests)
+sir_configure_owned_target(SIRVirtualTextureDemandBundleSmokeTests)
+
 if(SIR_WITH_VT_ZSTD)
     add_executable(SIRVirtualTextureZstdCodecTests SIRVirtualTextureZstdCodecTests.cpp)
     target_link_libraries(SIRVirtualTextureZstdCodecTests PRIVATE SIR::Graphics libzstd_static)
