@@ -1,5 +1,7 @@
 name: SIREngine qualification
 on:
+  schedule:
+    - cron: '17 7 * * *'
   pull_request:
     branches: [main]
     types: [labeled, synchronize, reopened, ready_for_review]
@@ -29,7 +31,6 @@ permissions:
   actions: read
 concurrency:
   group: sir-qualification-${{ github.event.pull_request.head.sha || github.sha }}-${{ inputs.system || 'all' }}
-  queue: max
   cancel-in-progress: false
 jobs:
   authorize:
@@ -189,8 +190,6 @@ jobs:
           set -euo pipefail
           cmake --preset dev -DSIR_WITH_GOOGLETEST=ON "-D${{ matrix.option }}=ON"
           cmake --build --preset dev
-          python_cmd=python3
-          if [[ "$RUNNER_OS" == Windows ]]; then python_cmd=python; fi
           ctest --preset dev -R "${{ matrix.tests }}" --no-tests=error --output-on-failure
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
@@ -293,8 +292,6 @@ jobs:
           test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
           cmake --preset release -DSIR_WITH_GOOGLETEST=ON
           cmake --build --preset release
-          python_cmd=python3
-          if [[ "$RUNNER_OS" == Windows ]]; then python_cmd=python; fi
           ctest --preset release --no-tests=error --output-on-failure
           cmake --build --preset release --target package
           mkdir -p out/Verification/Release
