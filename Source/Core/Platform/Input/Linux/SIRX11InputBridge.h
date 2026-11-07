@@ -58,6 +58,7 @@ private:
 	bool m_bAttached = false;
 	bool m_bFocused = false;
 	bool m_bDeferredResync = false;
+	bool m_bDeferredRetarget = false;
 	bool m_bCursorCaptured = false;
 	sirInputCursorMode_t m_eCursorMode = SIR_INPUT_CURSOR_FREE;
 	uintptr_t m_nInvisibleCursor = 0;

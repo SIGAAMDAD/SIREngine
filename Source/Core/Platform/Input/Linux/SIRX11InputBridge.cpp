@@ -37,6 +37,13 @@ bool SIRX11InputBridge::beginFrame( void ) noexcept
 	if ( m_pInput == nullptr || m_pBackend == nullptr ) {
 		return false;
 	}
+	if ( m_bDeferredRetarget && m_bAttached ) {
+		if ( !m_pBackend->focusWindow( *m_pInput, m_hWindow ) ) {
+			return false;
+		}
+		m_bDeferredRetarget = false;
+		m_bDeferredResync = false; // focusWindow already publishes the state loss.
+	}
 	if ( m_bDeferredResync ) {
 		if ( !m_pInput->loseBackendState( SIR_INPUT_LINUX_X11 ) ) {
 			return false;
@@ -123,9 +130,10 @@ bool SIRX11InputBridge::unregisterWindow( uintptr_t nNativeWindow ) noexcept
 		if ( m_hWindow == 0 && m_nWindowCount != 0 ) {
 			m_hWindow = m_hRegisteredWindows[0];
 			m_hInputContext = m_hRegisteredContexts[0];
-			if ( m_bAttached && !m_pBackend->focusWindow( *m_pInput, m_hWindow ) ) {
-				return false;
-			}
+			// A native window can be retired after application publish().
+			// Retarget the physical keyboard/pointer once beginFrame() opens
+			// the next collecting frame; never reject a valid OS teardown.
+			m_bDeferredRetarget = m_bAttached;
 		}
 		return true;
 	}
@@ -305,6 +313,7 @@ void SIRX11InputBridge::unbind( void ) noexcept
 	m_hInputMethod = nullptr;
 	m_bFocused = false;
 	m_bDeferredResync = false;
+	m_bDeferredRetarget = false;
 	m_bCursorCaptured = false;
 	m_eCursorMode = SIR_INPUT_CURSOR_FREE;
 	m_nInvisibleCursor = 0;
