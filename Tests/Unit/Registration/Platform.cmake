@@ -150,3 +150,18 @@ target_link_libraries(SIRPlatformContextTests PRIVATE SIR::Core)
 add_test(NAME core.platform.native-context COMMAND SIRPlatformContextTests)
 set_tests_properties(core.platform.native-context PROPERTIES LABELS "core;platform;input;audio;renderer;abi" TIMEOUT 60)
 sir_configure_owned_target(SIRPlatformContextTests)
+
+# Compile the actual Wayland driver against a deterministic fake compositor.
+# This test does not require the optional Wayland development packages.
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    add_executable(SIRWaylandWindowDriverProtocolTests
+        SIRWaylandWindowDriverProtocolTests.cpp
+        "${PROJECT_SOURCE_DIR}/Source/Core/Platform/Window/Linux/SIRWindowDriverWayland.cpp"
+        "${PROJECT_SOURCE_DIR}/Source/Core/Platform/Input/Linux/SIRWaylandInputBridge.cpp")
+    target_include_directories(SIRWaylandWindowDriverProtocolTests BEFORE PRIVATE
+        "${PROJECT_SOURCE_DIR}/Tests/Unit/Fixtures/Wayland")
+    target_link_libraries(SIRWaylandWindowDriverProtocolTests PRIVATE SIR::Core)
+    add_test(NAME core.platform.window.wayland-protocol COMMAND SIRWaylandWindowDriverProtocolTests)
+    set_tests_properties(core.platform.window.wayland-protocol PROPERTIES LABELS "core;platform;window;wayland;protocol" TIMEOUT 60)
+    sir_configure_owned_target(SIRWaylandWindowDriverProtocolTests)
+endif()

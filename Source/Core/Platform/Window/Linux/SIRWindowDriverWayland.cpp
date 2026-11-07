@@ -21,6 +21,10 @@ void SIRWindowDriverWayland::registryGlobal( void *pContext, wl_registry *pRegis
 	} else if ( strcmp( pszInterface, xdg_wm_base_interface.name ) == 0 && pDriver->m_pBase == nullptr ) {
 		pDriver->m_pBase = ( xdg_wm_base * )wl_registry_bind( pRegistry, nName, &xdg_wm_base_interface, 1 );
 		pDriver->m_nShellGlobal = nName;
+	} else if ( strcmp( pszInterface, wl_seat_interface.name ) == 0 && pDriver->m_pSeat == nullptr ) {
+		const uint32_t nBindVersion = nVersion < 7 ? nVersion : 7;
+		pDriver->m_pSeat = ( wl_seat * )wl_registry_bind( pRegistry, nName, &wl_seat_interface, nBindVersion );
+		pDriver->m_nSeatGlobal = nName;
 	}
 }
 
@@ -28,6 +32,18 @@ void SIRWindowDriverWayland::registryRemove( void *pContext, wl_registry *pRegis
 {
 	( void )pRegistry;
 	SIRWindowDriverWayland *pDriver = ( SIRWindowDriverWayland * )pContext;
+	if ( nName == pDriver->m_nSeatGlobal && pDriver->m_pSeat != nullptr ) {
+		if ( pDriver->m_pSeatLostSink != nullptr ) {
+			pDriver->m_pSeatLostSink( pDriver->m_pSeatLostContext );
+		}
+		if ( wl_proxy_get_version( ( wl_proxy * )pDriver->m_pSeat ) >= 5 ) {
+			wl_seat_release( pDriver->m_pSeat );
+		} else {
+			wl_seat_destroy( pDriver->m_pSeat );
+		}
+		pDriver->m_pSeat = nullptr;
+		pDriver->m_nSeatGlobal = 0;
+	}
 	if ( nName == pDriver->m_nCompositorGlobal || nName == pDriver->m_nShellGlobal ) {
 		pDriver->loseDisplay();
 	}
@@ -236,7 +252,10 @@ sirWindowResult_t SIRWindowDriverWayland::pumpEvents( uint32_t nBudget, sirWindo
 			} else {
 				pollfd fd = { wl_display_get_fd( m_pDisplay ), POLLIN, 0 };
 				const int nReadable = poll( &fd, 1, 0 );
-				if ( nReadable > 0 && ( fd.revents & POLLIN ) != 0 ) {
+				if ( nReadable > 0 && ( fd.revents & ( POLLERR | POLLHUP | POLLNVAL ) ) != 0 ) {
+					wl_display_cancel_read( m_pDisplay );
+					loseDisplay();
+				} else if ( nReadable > 0 && ( fd.revents & POLLIN ) != 0 ) {
 					if ( wl_display_read_events( m_pDisplay ) < 0 ) {
 						loseDisplay();
 					}
@@ -261,15 +280,17 @@ sirWindowResult_t SIRWindowDriverWayland::pumpEvents( uint32_t nBudget, sirWindo
 	}
 	for ( uint32_t i = 0; i < SIR_WINDOW_MAX_WINDOWS; ++i ) {
 		sirWaylandWindowSlot_t& slot = m_Slots[i];
-		if ( slot.bLostPending ) {
+		if ( slot.bLostPending && nDelivered < nBudget ) {
 			slot.bLostPending = false;
 			const sirWindowBackendEvent_t event = { i, ( uintptr_t )slot.pSurface, SIR_WINDOW_EVENT_LOST, 0, 0 };
 			pCallback( pContext, event );
+			++nDelivered;
 		}
-		if ( slot.bClosePending ) {
+		if ( slot.bClosePending && nDelivered < nBudget ) {
 			slot.bClosePending = false;
 			const sirWindowBackendEvent_t event = { i, ( uintptr_t )slot.pSurface, SIR_WINDOW_EVENT_CLOSE_REQUESTED, 0, 0 };
 			pCallback( pContext, event );
+			++nDelivered;
 		}
 	}
 	const bool bOverflow = m_bOverflow;
@@ -285,6 +306,18 @@ void SIRWindowDriverWayland::shutdown( void ) noexcept
 	for ( uint32_t i = 0; i < SIR_WINDOW_MAX_WINDOWS; ++i ) {
 		if ( m_Slots[i].pSurface != nullptr ) {
 			( void )destroyWindow( i );
+		}
+	}
+	if ( m_pSeatLostSink != nullptr ) {
+		m_pSeatLostSink( m_pSeatLostContext );
+	}
+	m_pSeatLostSink = nullptr;
+	m_pSeatLostContext = nullptr;
+	if ( m_pSeat != nullptr ) {
+		if ( !m_bLost && wl_proxy_get_version( ( wl_proxy * )m_pSeat ) >= 5 ) {
+			wl_seat_release( m_pSeat );
+		} else {
+			wl_seat_destroy( m_pSeat );
 		}
 	}
 	if ( m_pBase != nullptr ) {
@@ -304,7 +337,9 @@ void SIRWindowDriverWayland::shutdown( void ) noexcept
 	m_pDisplay = nullptr;
 	m_pRegistry = nullptr;
 	m_pCompositor = nullptr;
+	m_pSeat = nullptr;
 	m_pBase = nullptr;
+	m_nSeatGlobal = 0;
 	m_nEventRead = 0;
 	m_nEventWrite = 0;
 	m_nEventCount = 0;
@@ -312,4 +347,19 @@ void SIRWindowDriverWayland::shutdown( void ) noexcept
 	m_nShellGlobal = 0;
 	m_bLost = false;
 	m_bOverflow = false;
+}
+
+wl_seat *SIRWindowDriverWayland::borrowSeat( void ) const noexcept
+{
+	return m_bLost ? nullptr : m_pSeat;
+}
+
+bool SIRWindowDriverWayland::setSeatLostSink( sirWaylandSeatLostFn_t pSink, void *pContext ) noexcept
+{
+	if ( pSink != nullptr && ( pContext == nullptr || m_pSeatLostSink != nullptr ) ) {
+		return false;
+	}
+	m_pSeatLostSink = pSink;
+	m_pSeatLostContext = pContext;
+	return true;
 }

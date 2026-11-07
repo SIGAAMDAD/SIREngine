@@ -26,10 +26,13 @@ struct wl_display;
 struct wl_registry;
 struct wl_compositor;
 struct wl_surface;
+struct wl_seat;
 struct xdg_wm_base;
 struct xdg_surface;
 struct xdg_toplevel;
 struct wl_array;
+
+typedef void ( *sirWaylandSeatLostFn_t )( void *pContext ) noexcept;
 
 class SIRWindowDriverWayland;
 
@@ -63,6 +66,8 @@ public:
 	sirWindowResult_t mutateWindow( uint32_t nSlot, const sirWindowMutation_t& mutation ) noexcept override;
 	sirWindowResult_t pumpEvents( uint32_t nBudget, sirWindowDriverEventFn_t pCallback, void *pContext ) noexcept override;
 	void shutdown( void ) noexcept override;
+	wl_seat *borrowSeat( void ) const noexcept;
+	bool setSeatLostSink( sirWaylandSeatLostFn_t pSink, void *pContext ) noexcept;
 
 protected:
 private:
@@ -79,6 +84,9 @@ private:
 	wl_display *m_pDisplay = nullptr;
 	wl_registry *m_pRegistry = nullptr;
 	wl_compositor *m_pCompositor = nullptr;
+	wl_seat *m_pSeat = nullptr;
+	sirWaylandSeatLostFn_t m_pSeatLostSink = nullptr;
+	void *m_pSeatLostContext = nullptr;
 	xdg_wm_base *m_pBase = nullptr;
 	sirWaylandWindowSlot_t m_Slots[SIR_WINDOW_MAX_WINDOWS] = {};
 	sirWindowBackendEvent_t m_Events[SIR_WINDOW_EVENT_CAPACITY] = {};
@@ -86,6 +94,7 @@ private:
 	uint32_t m_nEventWrite = 0;
 	uint32_t m_nEventCount = 0;
 	uint32_t m_nCompositorGlobal = 0;
+	uint32_t m_nSeatGlobal = 0;
 	uint32_t m_nShellGlobal = 0;
 	bool m_bLost = false;
 	bool m_bOverflow = false;

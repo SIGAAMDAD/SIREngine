@@ -2,6 +2,11 @@
 #include <Core/Platform/Input/SIRInputService.h>
 #include <Core/Platform/Window/SIRWindowSystem.h>
 #include <Core/Platform/Window/SIRNativeWindowHost.h>
+#if defined( SIR_INPUT_WAYLAND_AVAILABLE )
+#include <Core/Platform/Window/Linux/SIRWindowDriverWayland.h>
+#include <Core/Platform/Input/Linux/SIRWaylandInputBridge.h>
+#include <Core/Platform/Input/Linux/SIRLinuxEvdevBackend.h>
+#endif
 #if defined( _WIN32 )
 #include <Core/Platform/Window/Windows/SIRWindowDriverWin32.h>
 #include <Core/Platform/Input/Windows/SIRWin32InputBridge.h>
@@ -77,8 +82,100 @@ static void sirDispatchX11Input( const XEvent& event, void *pContext ) noexcept
 #endif
 #endif
 
+#if defined( SIR_INPUT_WAYLAND_AVAILABLE ) && !defined( _WIN32 )
+typedef struct sirWaylandInputPumpContext_s
+{
+	SIRWindowSystem *pWindows;
+	SIRWaylandInputBridge *pBridge;
+	SIRInputService *pInput;
+	SIRLinuxEvdevBackend *pEvdev;
+	bool bDiscoveryAttempted;
+} sirWaylandInputPumpContext_t;
+
+static bool sirPumpWaylandInputWindows( void *pContext )
+{
+	sirWaylandInputPumpContext_t *pPump = ( sirWaylandInputPumpContext_t * )pContext;
+	if ( pPump->pBridge->isBound() && !pPump->pBridge->beginFrame() ) {
+		return false;
+	}
+	if ( !pPump->bDiscoveryAttempted ) {
+		pPump->bDiscoveryAttempted = true;
+		( void )pPump->pEvdev->discover( *pPump->pInput );
+	}
+	return pPump->pWindows->pumpEvents( 256 ) == SIR_WINDOW_OK;
+}
+
+static int sirRunWaylandInputWindow( void )
+{
+	SIRInputService input;
+	SIRWindowDriverWayland driver;
+	SIRWaylandInputBridge bridge;
+	SIRLinuxEvdevBackend nativeControllers;
+	SIRWindowSystem windows( driver );
+	sirWaylandInputPumpContext_t context = { &windows, &bridge, &input, &nativeControllers, false };
+	const char *pszCookedProfiles = getenv( "SIR_INPUT_CONTROLLER_PROFILE_DB" );
+	if ( pszCookedProfiles != nullptr && pszCookedProfiles[0] != 0 && !nativeControllers.loadCookedProfilesFile( pszCookedProfiles ) ) {
+		fputs( "Unable to load cooked controller profiles\n", stderr );
+		return 1;
+	}
+	SIRApplication app;
+	if ( !app.attachInput( input ) || !app.registerSystem( &windows ) || !app.attachWindowPump( sirPumpWaylandInputWindows, &context ) ||
+	     !app.initialize() ) {
+		( void )app.shutdown();
+		return 1;
+	}
+	sirWindowHandle_t hWindow = {};
+	if ( windows.createWindow( { "SIREngine native input", 800, 450 }, &hWindow ) != SIR_WINDOW_OK || !input.attach( nativeControllers ) ) {
+		( void )app.shutdown();
+		return 1;
+	}
+	sirWindowNativeLease_t lease = {};
+	bool bRunning = true;
+	while ( bRunning ) {
+		if ( !app.tick() ) {
+			bRunning = false;
+			break;
+		}
+		sirWindowSnapshot_t snapshot = {};
+		if ( windows.querySnapshot( hWindow, &snapshot ) != SIR_WINDOW_OK ) {
+			bRunning = false;
+			break;
+		}
+		if ( snapshot.bCloseRequested ) {
+			break;
+		}
+		if ( snapshot.bReady && !bridge.isBound() && lease.nToken == 0 && driver.borrowSeat() != nullptr ) {
+			sirWindowNativeView_t view = {};
+			if ( windows.acquireNativeLease( hWindow, &lease, &view ) != SIR_WINDOW_OK || !bridge.bind( input, driver, view ) ) {
+				if ( lease.nToken != 0 ) {
+					( void )windows.releaseNativeLease( lease );
+					lease = {};
+				}
+				bRunning = false;
+				break;
+			}
+			bridge.setTextEnabled( true );
+		}
+	}
+	bridge.unbind();
+	if ( lease.nToken != 0 ) {
+		( void )windows.releaseNativeLease( lease );
+	}
+	const sirWindowResult_t eDestroy = windows.destroyWindow( hWindow );
+	const sirSystemResult_t eShutdown = app.shutdown();
+	return bRunning && eDestroy == SIR_WINDOW_OK && eShutdown == SIR_SYSTEM_OK ? 0 : 1;
+}
+#endif
+
 static int sirRunNativeInputWindow( void )
 {
+#if defined( SIR_INPUT_WAYLAND_AVAILABLE ) && !defined( _WIN32 )
+	const char *pszWaylandDisplay = getenv( "WAYLAND_DISPLAY" );
+	if ( pszWaylandDisplay != nullptr && pszWaylandDisplay[0] != 0 ) {
+		return sirRunWaylandInputWindow();
+	}
+#endif
+
 #if defined( _WIN32 ) || defined( SIR_WINDOW_X11_AVAILABLE )
 	SIRInputService input;
 #if defined( _WIN32 )
