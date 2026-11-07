@@ -161,6 +161,14 @@ static void sirEditorWriterAdversarialTests( void ) noexcept
 	assert( sirEditorWriteScalarPatches( szSource, strlen( szSource ), aliasedIndex, nullptr, 0, nullptr, 0, &nBytes ) ==
 	        SIR_EDITOR_WRITE_INVALID_ARGUMENT );
 
+	// Out-length storage inside the output buffer would be clobbered by a
+	// successful copy and must also be rejected before any writes.
+	size_t szAliasedOutputWords[32] = {};
+	szAliasedOutputWords[0] = 0x1234;
+	assert( sirEditorWriteScalarPatches( szSource, strlen( szSource ), index, &anyEdit, 1, ( char * )szAliasedOutputWords,
+	                                     sizeof( szAliasedOutputWords ), &szAliasedOutputWords[0] ) == SIR_EDITOR_WRITE_INVALID_ARGUMENT );
+	assert( szAliasedOutputWords[0] == 0x1234 );
+
 	const sirEditorTextEdit_t valid = { 0, "42", 2 };
 	assert( sirEditorWriteScalarPatches( nullptr, 0, index, &valid, 1, szOutput, sizeof( szOutput ), &nBytes ) ==
 	        SIR_EDITOR_WRITE_INVALID_ARGUMENT );

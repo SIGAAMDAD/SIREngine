@@ -123,6 +123,13 @@ sirEditorTextWriteResult_t sirEditorWriteScalarPatches( const char *pszSource, s
 	     ( pszOutput == nullptr && nCapacity != 0 ) || ( index.nCount != 0 && index.pProperties == nullptr ) ) {
 		return SIR_EDITOR_WRITE_INVALID_ARGUMENT;
 	}
+	if ( pszOutput != nullptr ) {
+		const uintptr_t nOutputPtr = ( uintptr_t )pszOutput;
+		if ( nCapacity > UINTPTR_MAX - nOutputPtr ||
+		     sirEditorWriterOutputOverlaps( pOutBytes, sizeof( *pOutBytes ), nOutputPtr, nCapacity ) ) {
+			return SIR_EDITOR_WRITE_INVALID_ARGUMENT;
+		}
+	}
 	*pOutBytes = 0;
 	if ( index.nCount > index.nCapacity || nEdits > index.nCount || nSourceBytes == SIZE_MAX ) {
 		return SIR_EDITOR_WRITE_INVALID_ARGUMENT;
@@ -170,7 +177,8 @@ sirEditorTextWriteResult_t sirEditorWriteScalarPatches( const char *pszSource, s
 	if ( nSourcePtr < nOutputPtr + nCapacity && nOutputPtr < nSourcePtr + nSourceBytes ) {
 		return SIR_EDITOR_WRITE_INVALID_ARGUMENT;
 	}
-	if ( nEdits > SIZE_MAX / sizeof( sirEditorTextEdit_t ) || index.nCount > SIZE_MAX / sizeof( sirEditorTextProperty_t ) ||
+	if ( ( nEdits != 0 && SIZE_MAX / nEdits < sizeof( sirEditorTextEdit_t ) ) ||
+	     ( index.nCount != 0 && SIZE_MAX / index.nCount < sizeof( sirEditorTextProperty_t ) ) ||
 	     sirEditorWriterOutputOverlaps( pEdits, ( size_t )nEdits * sizeof( sirEditorTextEdit_t ), nOutputPtr, nCapacity ) ||
 	     sirEditorWriterOutputOverlaps( index.pProperties, ( size_t )index.nCount * sizeof( sirEditorTextProperty_t ), nOutputPtr,
 	                                    nCapacity ) ) {
