@@ -325,8 +325,12 @@ bool SIRD3D12Pipelines::initialize( SIRD3D12Device *pNative, uint32_t nGeneratio
 	}
 	m_pNative = pNative;
 	m_nDeviceGeneration = nGeneration;
+	D3D12_FEATURE_DATA_SHADER_CACHE cacheCaps = {};
+	const bool bLibrarySupported =
+	    SUCCEEDED( m_pDevice->CheckFeatureSupport( D3D12_FEATURE_SHADER_CACHE, &cacheCaps, sizeof( cacheCaps ) ) ) &&
+	    ( cacheCaps.SupportFlags & D3D12_SHADER_CACHE_SUPPORT_LIBRARY ) != 0;
 	Microsoft::WRL::ComPtr<ID3D12Device1> pDevice1;
-	if ( SUCCEEDED( m_pDevice->QueryInterface( IID_PPV_ARGS( pDevice1.GetAddressOf() ) ) ) ) {
+	if ( bLibrarySupported && SUCCEEDED( m_pDevice->QueryInterface( IID_PPV_ARGS( pDevice1.GetAddressOf() ) ) ) ) {
 		( void )pDevice1->CreatePipelineLibrary( nullptr, 0, IID_PPV_ARGS( m_pPipelineLibrary.GetAddressOf() ) );
 	}
 	m_CacheStats.bAvailable = m_pPipelineLibrary != nullptr;
