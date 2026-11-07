@@ -170,7 +170,7 @@ int main( void )
 		return 42;
 	}
 	sealed.releaseTransferArena( true );
-	if ( sealed.reserveExternalBytes( 4096 ) ) {
+	if ( sealed.reserveExternalBytes( 4096 ) || sealed.getLastError() != E_OUTOFMEMORY ) {
 		return 34;
 	}
 	// Only an explicitly budgeted sealed device can admit external backbuffers.
@@ -183,7 +183,16 @@ int main( void )
 	     external.nCommittedBytes != reserved.nCommittedBytes + 1024 * 1024 ) {
 		return 38;
 	}
+	sealed.releaseExternalBytes( 1024 * 1024 + 1 );
+	sirD3D12AllocationLedger_t unchanged = {};
+	if ( sealed.getLastError() != E_INVALIDARG || !sealed.queryAllocationLedger( &unchanged ) ||
+	     unchanged.nExternalBytes != 1024 * 1024 ) {
+		return 40;
+	}
 	sealed.releaseExternalBytes( 1024 * 1024 );
+	if ( sealed.getLastError() != S_OK ) {
+		return 41;
+	}
 	sirD3D12AllocationLedger_t restored = {};
 	if ( !sealed.queryAllocationLedger( &restored ) || restored.nExternalBytes != 0 ||
 	     restored.nCommittedBytes != reserved.nCommittedBytes ) {
