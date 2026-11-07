@@ -34,6 +34,12 @@ target_link_libraries(SIRVirtualTextureDemandMipTests PRIVATE SIR::Graphics)
 add_test(NAME renderer.virtual-texturing.demand-mip COMMAND SIRVirtualTextureDemandMipTests)
 sir_configure_owned_target(SIRVirtualTextureDemandMipTests)
 
+# Donor V2 stable-material spatial demand, externally owned four-cell hot cache.
+add_executable(SIRVirtualTextureSpatialDemandTests SIRVirtualTextureSpatialDemandTests.cpp)
+target_link_libraries(SIRVirtualTextureSpatialDemandTests PRIVATE SIR::Graphics)
+add_test(NAME renderer.virtual-texturing.spatial-demand COMMAND SIRVirtualTextureSpatialDemandTests)
+sir_configure_owned_target(SIRVirtualTextureSpatialDemandTests)
+
 # Bounded baked-visibility PackBits/raw bundle decoding, with negative-path tests.
 add_executable(SIRVirtualTextureDemandBundleSmokeTests SIRVirtualTextureDemandBundleSmokeTests.cpp)
 target_link_libraries(SIRVirtualTextureDemandBundleSmokeTests PRIVATE SIR::Graphics)
