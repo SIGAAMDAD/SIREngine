@@ -74,6 +74,12 @@ static bool testOwnershipAndGeneration( void )
 	     input.pairUser( first, 8 ) ) {
 		return false;
 	}
+	sirPlatformDeviceIdentity_t native = {};
+	if ( input.platformContext().nAbiVersion != SIR_PLATFORM_CONTEXT_ABI_VERSION || !input.describePlatformDevice( first, &native ) ||
+	     native.nNativeId != 15 || native.nPhysicalId != 777 || native.nBackendId != ( SIR_PLATFORM_DEVICE_INPUT_BASE | SIR_INPUT_TEST ) ||
+	     native.nGeneration != first.nGeneration || input.describePlatformDevice( first, nullptr ) ) {
+		return false;
+	}
 	sirInputDeviceDescriptor_t d = {};
 	if ( !input.describe( first, &d ) || d.nUserId != 3 || d.key.nPhysicalId != 777 || !input.findDevice( SIR_INPUT_TEST, 15, &d.id ) ) {
 		return false;
@@ -81,7 +87,8 @@ static bool testOwnershipAndGeneration( void )
 	sirInputDeviceId_t other = {};
 	if ( input.connect( { 777, 99, SIR_INPUT_TEST, SIR_INPUT_CONTROLLER }, &other ) || !input.disconnect( SIR_INPUT_TEST, first ) ||
 	     input.describe( first, &d ) || !input.connect( key, &other ) || other.nSlot != first.nSlot ||
-	     other.nGeneration == first.nGeneration ) {
+	     other.nGeneration == first.nGeneration || input.describePlatformDevice( first, &native ) ||
+	     !input.describePlatformDevice( other, &native ) || native.nGeneration != other.nGeneration ) {
 		return false;
 	}
 	input.sample();

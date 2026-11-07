@@ -125,9 +125,17 @@ static int32_t mixerRegisterDeviceLoss( void *, void *, void *, void ( * )( void
 	return 0;
 }
 
+static int32_t fakeQueryOutputDevice( void *pUserData, void *, int32_t *pDriver, uint64_t *pPhysicalId ) noexcept
+{
+	( void )pUserData;
+	*pDriver = 0;
+	*pPhysicalId = UINT64_C( 0xAA55 );
+	return 0;
+}
+
 static sirFMODNativeOps_t makeMixerStudioOps( sirFMODMixerFixture_t *pFixture ) noexcept
 {
-	return { 2,
+	return { 3,
 	         0x00020400,
 	         pFixture,
 	         mixerStudioCreate,
@@ -135,6 +143,7 @@ static sirFMODNativeOps_t makeMixerStudioOps( sirFMODMixerFixture_t *pFixture ) 
 	         mixerGetVersion,
 	         mixerGetDriverCount,
 	         mixerSetDriver,
+	         fakeQueryOutputDevice,
 	         mixerSetNoSound,
 	         mixerStudioInitialize,
 	         mixerStudioUpdate,

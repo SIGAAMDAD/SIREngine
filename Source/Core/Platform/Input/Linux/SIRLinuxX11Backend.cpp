@@ -78,6 +78,27 @@ bool SIRLinuxX11Backend::attachWindow( SIRInputService& service, Window hWindow 
 	return true;
 }
 
+bool SIRLinuxX11Backend::focusWindow( SIRInputService& service, Window hWindow ) noexcept
+{
+	if ( !m_bAttached || hWindow == 0 ) {
+		return false;
+	}
+	if ( m_hWindow == hWindow ) {
+		return true;
+	}
+	// One native X11 seat serves all windows. Retarget the existing keyboard
+	// and pointer identities instead of registering duplicate devices.
+	if ( !service.loseBackendState( id() ) ) {
+		return false;
+	}
+	m_hWindow = hWindow;
+	m_bFocused = false;
+	m_bHaveMotion = false;
+	m_fMotionRemainderX = 0.0;
+	m_fMotionRemainderY = 0.0;
+	return true;
+}
+
 bool SIRLinuxX11Backend::enableRawPointer( Display *pDisplay ) noexcept
 {
 #if defined( SIR_INPUT_XINPUT2_AVAILABLE )

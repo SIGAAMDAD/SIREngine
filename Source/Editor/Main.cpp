@@ -14,19 +14,23 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Editor/Host/SIREditorSceneWorkspace.h>
+#include <Core/Platform/Window/SIRNativeWindowHost.h>
 
 #include <Core/Memory/SIRMemoryManager.h>
 #include <Core/Memory/SIRMemorySegment.h>
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 static void sirEditorPrintHelp( void ) noexcept
 {
 	puts( "Usage: SIREditor --inspect-scene <path.tscn>" );
+	puts( "       SIREditor --native-window" );
 	puts( "       SIREditor --version" );
 	puts( "       SIREditor --help" );
 	puts( "Inspect the native SIREngine scene intake without altering the source file." );
+	puts( "--native-window starts a native window host; graphical editor widgets are not yet connected." );
 }
 
 static void sirEditorPrintSceneNodes( const SIREditorSceneWorkspace& workspace ) noexcept
@@ -117,6 +121,9 @@ int main( int nArgs, char **pszArgs )
 	}
 	if ( nArgs == 3 && strcmp( pszArgs[1], "--inspect-scene" ) == 0 ) {
 		return sirEditorInspectScene( pszArgs[2] );
+	}
+	if ( nArgs == 2 && strcmp( pszArgs[1], "--native-window" ) == 0 ) {
+		return sirRunNativeWindowHost( { "SIREngine Editor", 1280, 720 } );
 	}
 	sirEditorPrintHelp();
 	return 2;

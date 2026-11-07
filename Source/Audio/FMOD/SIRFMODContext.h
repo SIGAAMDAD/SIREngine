@@ -25,6 +25,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // clang-format on
 
 #include <Audio/SIRAudioTypes.h>
+#include <Core/Platform/SIRPlatformContext.h>
 #include <Core/Platform/SIRAtomic.h>
 
 typedef enum sirFMODContextState_e : uint8_t
@@ -69,6 +70,7 @@ typedef struct sirFMODNativeOps_s
 	int32_t ( *getVersion )( void *pUserData, void *pCore, uint32_t *pVersion ) noexcept;
 	int32_t ( *getDriverCount )( void *pUserData, void *pCore, int32_t *pCount ) noexcept;
 	int32_t ( *setDriver )( void *pUserData, void *pCore, int32_t iDriver ) noexcept;
+	int32_t ( *queryOutputDevice )( void *pUserData, void *pCore, int32_t *pDriver, uint64_t *pPhysicalId ) noexcept;
 	int32_t ( *setNoSound )( void *pUserData, void *pCore ) noexcept;
 	int32_t ( *initializeStudio )( void *pUserData, void *pStudio, const sirFMODContextConfig_t *pConfig ) noexcept;
 	int32_t ( *updateStudio )( void *pUserData, void *pStudio ) noexcept;
@@ -90,6 +92,9 @@ private:
 	void *m_pCoreBorrowed = nullptr;
 	uint32_t m_nRuntimeVersion = 0;
 	uint64_t m_nEpoch = 0;
+	uint64_t m_nOutputGeneration = 0;
+	int32_t m_iOutputDriver = -1;
+	uint64_t m_nOutputPhysicalId = 0;
 	int32_t m_nLastNativeResult = 0;
 	uint32_t m_nBorrowedBankObjects = 0;
 	uint32_t m_nUnscopedBankObjects = 0;
@@ -125,6 +130,7 @@ public:
 	int32_t getLastNativeResult( void ) const noexcept;
 	uint32_t getRuntimeVersion( void ) const noexcept;
 	uint64_t getEpoch( void ) const noexcept;
+	sirPlatformDeviceIdentity_t getOutputDeviceIdentity( void ) const noexcept;
 	uint32_t getBorrowedBankObjectCount( void ) const noexcept;
 	uint32_t getUnscopedBankObjectCount( void ) const noexcept;
 };

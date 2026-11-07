@@ -25,6 +25,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // clang-format on
 
 #include <Audio/FMOD/SIRFMODContext.h>
+#include <Core/Platform/SIRPlatformContext.h>
 #include <Audio/SIRAudioBackend.h>
 #include <Core/Containers/SIRContainerResult.h>
 
@@ -132,6 +133,7 @@ private:
 	uint32_t m_nCompletions = 0;
 	uint32_t m_nReservedCompletions = 0;
 	int32_t m_nLastNativeResult = 0;
+	sirPlatformContext_t m_Platform = {};
 	bool m_bInitialized = false;
 
 	static sirAudioResult_t initializeCallback( void *pContext, const sirAudioBackendConfig_t *pConfig ) noexcept;
@@ -176,6 +178,7 @@ public:
 	uint32_t getActiveVoiceCount( void ) const noexcept;
 	int32_t getLastNativeResult( void ) const noexcept;
 	sirAudioResult_t getPlayingTimeline( sirAudioPlayingHandle_t hPlaying, uint32_t& nMilliseconds ) noexcept;
+	const sirPlatformContext_t& platformContext( void ) const noexcept;
 	static sirAudioBackendOps_t getBackendOps( void ) noexcept;
 };
 

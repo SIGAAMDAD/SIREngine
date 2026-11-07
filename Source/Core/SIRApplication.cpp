@@ -2,19 +2,28 @@
 
 SIRApplication::SIRApplication( void ) noexcept
     : m_eState( SIR_APP_UNINITIALIZED ), m_nTicks( 0 ), m_nSystemCount( 0 ), m_nInitializedSystems( 0 ), m_EventRegistry(),
-      m_pInput( nullptr ), m_pInputPump( nullptr ), m_pInputPumpContext( nullptr )
+      m_pInput( nullptr ), m_pWindowPump( nullptr ), m_pWindowPumpContext( nullptr )
 {
 }
 
-bool SIRApplication::attachInput( SIRInputService& input, sirAppInputPump_t pPump, void *pContext ) noexcept
+bool SIRApplication::attachInput( SIRInputService& input ) noexcept
 {
 	if ( m_eState != SIR_APP_UNINITIALIZED || m_pInput != nullptr ) {
 		return false;
 	}
 
 	m_pInput = &input;
-	m_pInputPump = pPump;
-	m_pInputPumpContext = pContext;
+	return true;
+}
+
+bool SIRApplication::attachWindowPump( sirAppWindowPump_t pPump, void *pContext ) noexcept
+{
+	if ( m_eState != SIR_APP_UNINITIALIZED || m_pWindowPump != nullptr || pPump == nullptr ) {
+		return false;
+	}
+
+	m_pWindowPump = pPump;
+	m_pWindowPumpContext = pContext;
 	return true;
 }
 
@@ -62,21 +71,22 @@ bool SIRApplication::tick( float fDeltaSeconds ) noexcept
 	}
 
 	const uint64_t nNextTick = m_nTicks + 1;
+	if ( m_pInput != nullptr && !m_pInput->begin( nNextTick ) ) {
+		return false;
+	}
+
+	const bool bPumped = m_pWindowPump == nullptr || m_pWindowPump( m_pWindowPumpContext );
 	if ( m_pInput != nullptr ) {
-		if ( !m_pInput->begin( nNextTick ) ) {
-			return false;
-		}
-		const bool bPumped = m_pInputPump == nullptr || m_pInputPump( *m_pInput, m_pInputPumpContext );
 		m_pInput->sample();
 		if ( !m_pInput->publish() ) {
 			if ( !m_pInput->recover() || !m_pInput->publish() ) {
 				return false;
 			}
 		}
-		if ( !bPumped ) {
-			m_nTicks = nNextTick;
-			return false;
-		}
+	}
+	if ( !bPumped ) {
+		m_nTicks = nNextTick;
+		return false;
 	}
 
 	for ( uint32_t iSystem = 0; iSystem < m_nInitializedSystems; ++iSystem ) {
@@ -123,8 +133,8 @@ sirSystemResult_t SIRApplication::shutdown( void ) noexcept
 		m_pInput->shutdown();
 		m_pInput = nullptr;
 	}
-	m_pInputPump = nullptr;
-	m_pInputPumpContext = nullptr;
+	m_pWindowPump = nullptr;
+	m_pWindowPumpContext = nullptr;
 	m_EventRegistry.clear();
 	m_eState = SIR_APP_STOPPED;
 	return SIR_SYSTEM_OK;

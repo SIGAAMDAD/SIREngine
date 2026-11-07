@@ -17,7 +17,7 @@ target_include_directories(SIRGL46Driver PRIVATE
     "${PROJECT_SOURCE_DIR}/Build/CMake")
 target_compile_features(SIRGL46Driver PRIVATE cxx_std_17)
 if(WIN32)
-    target_link_libraries(SIRGL46Driver PRIVATE opengl32 gdi32 user32)
+    target_link_libraries(SIRGL46Driver PRIVATE SIR::Core opengl32 gdi32 user32)
 elseif(UNIX AND NOT APPLE)
     target_link_libraries(SIRGL46Driver PRIVATE "${CMAKE_DL_LIBS}")
 else()
