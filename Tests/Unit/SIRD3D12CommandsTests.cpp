@@ -16,6 +16,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Renderer/SIRGraphicsABIOperations.h>
 #include <Renderer/Drivers/D3D12/SIRD3D12Driver.h>
 #include <stdio.h>
+#include <math.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -123,6 +124,57 @@ static int sirTestCopies( SIRRenderingDevice *pDevice, uint32_t nGeneration, sir
 	if ( pDevice->retireResource( hReadback, immediate ) != SIR_GRAPHICS_SUCCESS ||
 	     pDevice->retireResource( hUpload, immediate ) != SIR_GRAPHICS_SUCCESS ) {
 		return 20;
+	}
+	return 0;
+}
+
+static int sirTestCopyPinRollback( SIRRenderingDevice *pDevice, uint32_t nGeneration ) noexcept
+{
+	SIRGraphicsCommandList *pCommands = nullptr;
+	if ( pDevice->acquireCommands( SIR_GRAPHICS_QUEUE_COPY, &pCommands ) != SIR_GRAPHICS_SUCCESS || pCommands == nullptr ) {
+		return 84;
+	}
+	sirGraphicsBufferDesc_t resident = {};
+	resident.nSizeBytes = 256;
+	resident.nUsage = SIR_GRAPHICS_USAGE_COPY_SOURCE | SIR_GRAPHICS_USAGE_COPY_DESTINATION;
+	resident.eMemory = SIR_GRAPHICS_MEMORY_GPU_LOCAL;
+	sirGraphicsHandle_t szPinned[127] = {};
+	for ( uint32_t i = 0; i < 127; ++i ) {
+		if ( pDevice->createBuffer( resident, &szPinned[i] ) != SIR_GRAPHICS_SUCCESS ) {
+			return 85;
+		}
+		sirGraphicsBarrier_t barrier = {};
+		barrier.eType = SIR_GRAPHICS_BARRIER_TRANSITION;
+		barrier.hResource = szPinned[i];
+		barrier.eBefore = SIR_GRAPHICS_STATE_COMMON;
+		barrier.eAfter = SIR_GRAPHICS_STATE_COPY_SOURCE;
+		if ( pCommands->barrier( &barrier, 1 ) != SIR_GRAPHICS_SUCCESS ) {
+			return 86;
+		}
+	}
+	sirGraphicsHandle_t hDestination = {};
+	sirGraphicsHandle_t hSource = {};
+	if ( pDevice->createBuffer( resident, &hDestination ) != SIR_GRAPHICS_SUCCESS ||
+	     pDevice->createBuffer( resident, &hSource ) != SIR_GRAPHICS_SUCCESS ) {
+		return 87;
+	}
+	sirGraphicsCompletionSet_t immediate = {};
+	immediate.nDeviceGeneration = nGeneration;
+	if ( pCommands->copyBuffer( hDestination, 0, hSource, 0, 256 ) != SIR_GRAPHICS_CAPACITY_EXCEEDED ||
+	     pDevice->retireResource( hDestination, immediate ) != SIR_GRAPHICS_SUCCESS ||
+	     pDevice->retireResource( hSource, immediate ) != SIR_GRAPHICS_SUCCESS ) {
+		return 88;
+	}
+	sirGraphicsCompletion_t completed = {};
+	if ( pCommands->close() != SIR_GRAPHICS_SUCCESS ||
+	     sirTestSubmit( pDevice, SIR_GRAPHICS_QUEUE_COPY, pCommands, nullptr, 0, &completed ) != SIR_GRAPHICS_SUCCESS ||
+	     pDevice->wait( completed, 10000000000ULL ) != SIR_GRAPHICS_SUCCESS ) {
+		return 89;
+	}
+	for ( uint32_t i = 0; i < 127; ++i ) {
+		if ( pDevice->retireResource( szPinned[i], immediate ) != SIR_GRAPHICS_SUCCESS ) {
+			return 90;
+		}
 	}
 	return 0;
 }
@@ -354,6 +406,94 @@ static int sirTestRaster( SIRRenderingDevice *pDevice, uint32_t nGeneration, con
 	if ( pDevice->acquireCommands( SIR_GRAPHICS_QUEUE_DIRECT, &pDirect ) != SIR_GRAPHICS_SUCCESS ) {
 		return 57;
 	}
+	// An invalid later color attachment may not pin the preceding valid view.
+	sirGraphicsHandle_t hPassProbeView = {};
+	if ( pDevice->createView( view, &hPassProbeView ) != SIR_GRAPHICS_SUCCESS ) {
+		return 82;
+	}
+	sirGraphicsColorAttachment_t szInvalidColors[2] = {};
+	szInvalidColors[0].hView = hPassProbeView;
+	sirGraphicsRenderPass_t invalidPass = {};
+	invalidPass.pColors = szInvalidColors;
+	invalidPass.nColorCount = 2;
+	sirGraphicsCompletionSet_t passNotSubmitted = {};
+	passNotSubmitted.nDeviceGeneration = nGeneration;
+	if ( pDirect->beginRenderPass( invalidPass ) != SIR_GRAPHICS_INVALID_HANDLE ||
+	     pDevice->retireResource( hPassProbeView, passNotSubmitted ) != SIR_GRAPHICS_SUCCESS ) {
+		return 83;
+	}
+	// A color-only pass must reject a requested depth clear before pinning.
+	sirGraphicsColorAttachment_t colorProbe = {};
+	colorProbe.hView = hRtv;
+	sirGraphicsRenderPass_t missingDepth = {};
+	missingDepth.pColors = &colorProbe;
+	missingDepth.nColorCount = 1;
+	missingDepth.bClearDepth = true;
+	missingDepth.fClearDepth = 0.5f;
+	if ( pDirect->beginRenderPass( missingDepth ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return 91;
+	}
+	// Exercise a real depth/stencil target and reject invalid clear values
+	// before resource retention or any GPU command is recorded.
+	sirGraphicsTextureDesc_t depthTexture = {};
+	depthTexture.nWidth = 16;
+	depthTexture.nHeight = 16;
+	depthTexture.nDepth = 1;
+	depthTexture.nArrayLayers = 1;
+	depthTexture.nMipLevels = 1;
+	depthTexture.nSampleCount = 1;
+	depthTexture.nUsage = SIR_GRAPHICS_USAGE_DEPTH_STENCIL;
+	depthTexture.eDimension = SIR_GRAPHICS_TEXTURE_2D;
+	depthTexture.eFormat = SIR_GRAPHICS_FORMAT_D24_UNORM_S8_UINT;
+	depthTexture.eMemory = SIR_GRAPHICS_MEMORY_GPU_LOCAL;
+	sirGraphicsHandle_t hDepthTexture = {};
+	if ( pDevice->createTexture( depthTexture, &hDepthTexture ) != SIR_GRAPHICS_SUCCESS ) {
+		return 92;
+	}
+	sirGraphicsViewDesc_t depthView = {};
+	depthView.hResource = hDepthTexture;
+	depthView.eFormat = depthTexture.eFormat;
+	depthView.nMipLevels = 1;
+	depthView.nLayers = 1;
+	depthView.nUsage = SIR_GRAPHICS_USAGE_DEPTH_STENCIL;
+	sirGraphicsHandle_t hInvalidDepthView = {};
+	if ( pDevice->createView( depthView, &hInvalidDepthView ) != SIR_GRAPHICS_SUCCESS ) {
+		return 93;
+	}
+	sirGraphicsRenderPass_t depthPass = {};
+	depthPass.hDepthView = hInvalidDepthView;
+	depthPass.bClearDepth = true;
+	depthPass.fClearDepth = 2.0f;
+	if ( pDirect->beginRenderPass( depthPass ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return 94;
+	}
+	depthPass.fClearDepth = 0.5f;
+	depthPass.nClearStencil = 256;
+	if ( pDirect->beginRenderPass( depthPass ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return 95;
+	}
+	sirGraphicsCompletionSet_t noDepthWork = {};
+	noDepthWork.nDeviceGeneration = nGeneration;
+	if ( pDevice->retireResource( hInvalidDepthView, noDepthWork ) != SIR_GRAPHICS_SUCCESS ) {
+		return 96;
+	}
+	sirGraphicsHandle_t hDepthView = {};
+	if ( pDevice->createView( depthView, &hDepthView ) != SIR_GRAPHICS_SUCCESS ) {
+		return 97;
+	}
+	sirGraphicsBarrier_t depthTransition = {};
+	depthTransition.eType = SIR_GRAPHICS_BARRIER_TRANSITION;
+	depthTransition.hResource = hDepthTexture;
+	depthTransition.eBefore = SIR_GRAPHICS_STATE_COMMON;
+	depthTransition.eAfter = SIR_GRAPHICS_STATE_DEPTH_WRITE;
+	if ( pDirect->barrier( &depthTransition, 1 ) != SIR_GRAPHICS_SUCCESS ) {
+		return 98;
+	}
+	depthPass.hDepthView = hDepthView;
+	depthPass.nClearStencil = 42;
+	if ( pDirect->beginRenderPass( depthPass ) != SIR_GRAPHICS_SUCCESS || pDirect->endRenderPass() != SIR_GRAPHICS_SUCCESS ) {
+		return 99;
+	}
 	// A buffer cannot transition to an attachment layout.
 	sirGraphicsBarrier_t invalidBuffer = {};
 	invalidBuffer.eType = SIR_GRAPHICS_BARRIER_TRANSITION;
@@ -389,6 +529,27 @@ static int sirTestRaster( SIRRenderingDevice *pDevice, uint32_t nGeneration, con
 	if ( pDirect->barrier( szAtomicBatch, 2 ) != SIR_GRAPHICS_INVALID_ARGUMENT ||
 	     pDevice->retireResource( hAtomicProbe, noGpuWork ) != SIR_GRAPHICS_SUCCESS ) {
 		return 79;
+	}
+	// Reject an invalid later texture subresource before recording an earlier
+	// partial transition. Retiring its unpinned resource must remain safe.
+	sirGraphicsHandle_t hTextureProbe = {};
+	if ( pDevice->createTexture( texture, &hTextureProbe ) != SIR_GRAPHICS_SUCCESS ) {
+		return 80;
+	}
+	sirGraphicsBarrier_t szTextureBatch[2] = {};
+	szTextureBatch[0].eType = SIR_GRAPHICS_BARRIER_TRANSITION;
+	szTextureBatch[0].hResource = hTextureProbe;
+	szTextureBatch[0].eBefore = SIR_GRAPHICS_STATE_COMMON;
+	szTextureBatch[0].eAfter = SIR_GRAPHICS_STATE_COPY_SOURCE;
+	szTextureBatch[0].nBaseMip = 1;
+	szTextureBatch[0].nMipCount = 1;
+	szTextureBatch[0].nBaseLayer = 1;
+	szTextureBatch[0].nLayerCount = 1;
+	szTextureBatch[1] = szTextureBatch[0];
+	szTextureBatch[1].nBaseMip = texture.nMipLevels;
+	if ( pDirect->barrier( szTextureBatch, 2 ) != SIR_GRAPHICS_INVALID_ARGUMENT ||
+	     pDevice->retireResource( hTextureProbe, noGpuWork ) != SIR_GRAPHICS_SUCCESS ) {
+		return 81;
 	}
 	sirGraphicsBarrier_t storageTransition = {};
 	storageTransition.eType = SIR_GRAPHICS_BARRIER_TRANSITION;
@@ -430,12 +591,16 @@ static int sirTestRaster( SIRRenderingDevice *pDevice, uint32_t nGeneration, con
 		return 73;
 	}
 	partial.nBaseLayer = 1;
-	if ( pDirect->barrier( &partial, 1 ) != SIR_GRAPHICS_SUCCESS ) {
+	sirGraphicsBarrier_t szPartialBatch[2] = { partial, partial };
+	szPartialBatch[1].nBaseMip = 3;
+	if ( pDirect->barrier( szPartialBatch, 2 ) != SIR_GRAPHICS_SUCCESS ) {
 		return 71;
 	}
-	partial.eBefore = SIR_GRAPHICS_STATE_COPY_DESTINATION;
-	partial.eAfter = SIR_GRAPHICS_STATE_COMMON;
-	if ( pDirect->barrier( &partial, 1 ) != SIR_GRAPHICS_SUCCESS || pDirect->barrier( &transition, 1 ) != SIR_GRAPHICS_SUCCESS ) {
+	for ( uint32_t iBarrier = 0; iBarrier < 2; ++iBarrier ) {
+		szPartialBatch[iBarrier].eBefore = SIR_GRAPHICS_STATE_COPY_DESTINATION;
+		szPartialBatch[iBarrier].eAfter = SIR_GRAPHICS_STATE_COMMON;
+	}
+	if ( pDirect->barrier( szPartialBatch, 2 ) != SIR_GRAPHICS_SUCCESS || pDirect->barrier( &transition, 1 ) != SIR_GRAPHICS_SUCCESS ) {
 		return 58;
 	}
 	sirGraphicsColorAttachment_t color = {};
@@ -456,6 +621,16 @@ static int sirTestRaster( SIRRenderingDevice *pDevice, uint32_t nGeneration, con
 	viewport.fHeight = 16.0f;
 	viewport.fMaximumDepth = 1.0f;
 	sirGraphicsRect_t rect = { 0, 0, 16, 16 };
+	viewport.fX = HUGE_VALF;
+	if ( pDirect->setViewport( viewport, rect ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return 100;
+	}
+	viewport.fX = 0.0f;
+	viewport.fMinimumDepth = NAN;
+	if ( pDirect->setViewport( viewport, rect ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return 101;
+	}
+	viewport.fMinimumDepth = 0.0f;
 	if ( pDirect->setViewport( viewport, rect ) != SIR_GRAPHICS_SUCCESS || pDirect->drawIndexed( 3, 1, 0, 0, 0 ) != SIR_GRAPHICS_SUCCESS ||
 	     pDirect->endRenderPass() != SIR_GRAPHICS_SUCCESS ) {
 		return 60;
@@ -491,6 +666,11 @@ static int sirTestRaster( SIRRenderingDevice *pDevice, uint32_t nGeneration, con
 	region.nHeight = 16;
 	region.nDepth = 1;
 	region.bBufferToTexture = false;
+	region.nZ = 1;
+	if ( pCopy->copyBufferTexture( region ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return 102;
+	}
+	region.nZ = 0;
 	if ( pCopy->copyBufferTexture( region ) != SIR_GRAPHICS_SUCCESS || pCopy->close() != SIR_GRAPHICS_SUCCESS ) {
 		return 65;
 	}
@@ -508,7 +688,9 @@ static int sirTestRaster( SIRRenderingDevice *pDevice, uint32_t nGeneration, con
 	}
 	sirGraphicsCompletionSet_t immediate = {};
 	immediate.nDeviceGeneration = nGeneration;
-	if ( pDevice->retireResource( hRtv, immediate ) != SIR_GRAPHICS_SUCCESS ||
+	if ( pDevice->retireResource( hDepthView, immediate ) != SIR_GRAPHICS_SUCCESS ||
+	     pDevice->retireResource( hDepthTexture, immediate ) != SIR_GRAPHICS_SUCCESS ||
+	     pDevice->retireResource( hRtv, immediate ) != SIR_GRAPHICS_SUCCESS ||
 	     pDevice->retireResource( hTexture, immediate ) != SIR_GRAPHICS_SUCCESS ||
 	     pDevice->retireResource( hReadback, immediate ) != SIR_GRAPHICS_SUCCESS ||
 	     pDevice->retireResource( hVertices, immediate ) != SIR_GRAPHICS_SUCCESS ||
@@ -580,6 +762,9 @@ int main( void )
 	const uint32_t nGeneration = pDevice->getDeviceGeneration();
 	sirGraphicsCompletion_t copied = {};
 	int nFailure = sirTestCopies( pDevice, nGeneration, &copied );
+	if ( nFailure == 0 ) {
+		nFailure = sirTestCopyPinRollback( pDevice, nGeneration );
+	}
 	if ( nFailure == 0 ) {
 		nFailure = sirTestQueueSubmission( pDevice, nGeneration, compute, copied );
 	}

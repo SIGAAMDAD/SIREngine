@@ -69,6 +69,18 @@ int main( void )
 	     baseline.nReadbackMappedBytes < 3 * 64 * 1024 ) {
 		return 7;
 	}
+	sirGraphicsBufferDesc_t rejectedHeap = {};
+	rejectedHeap.nSizeBytes = 4096;
+	rejectedHeap.nUsage = SIR_GRAPHICS_USAGE_COPY_DESTINATION | SIR_GRAPHICS_USAGE_COPY_SOURCE;
+	rejectedHeap.eMemory = SIR_GRAPHICS_MEMORY_CPU_READBACK;
+	sirGraphicsHandle_t hRejected = {};
+	if ( pDevice->createBuffer( rejectedHeap, &hRejected ) != SIR_GRAPHICS_UNSUPPORTED || hRejected.nGeneration != 0 ) {
+		return 35;
+	}
+	rejectedHeap.eMemory = SIR_GRAPHICS_MEMORY_CPU_UPLOAD;
+	if ( pDevice->createBuffer( rejectedHeap, &hRejected ) != SIR_GRAPHICS_UNSUPPORTED || hRejected.nGeneration != 0 ) {
+		return 36;
+	}
 	sirGraphicsBufferDesc_t desc = {};
 	desc.nSizeBytes = 4096;
 	desc.nUsage = SIR_GRAPHICS_USAGE_COPY_DESTINATION | SIR_GRAPHICS_USAGE_COPY_SOURCE;
@@ -143,6 +155,22 @@ int main( void )
 	if ( sealed.reserveExternalBytes( 4096 ) ) {
 		return 34;
 	}
+	// Only an explicitly budgeted sealed device can admit external backbuffers.
+	if ( !sealed.configureResidentBudget( reserved.nCommittedBytes + 1024 * 1024 ) || !sealed.reserveExternalBytes( 1024 * 1024 ) ||
+	     sealed.reserveExternalBytes( 1 ) ) {
+		return 37;
+	}
+	sirD3D12AllocationLedger_t external = {};
+	if ( !sealed.queryAllocationLedger( &external ) || external.nExternalBytes != 1024 * 1024 ||
+	     external.nCommittedBytes != reserved.nCommittedBytes + 1024 * 1024 ) {
+		return 38;
+	}
+	sealed.releaseExternalBytes( 1024 * 1024 );
+	sirD3D12AllocationLedger_t restored = {};
+	if ( !sealed.queryAllocationLedger( &restored ) || restored.nExternalBytes != 0 ||
+	     restored.nCommittedBytes != reserved.nCommittedBytes ) {
+		return 39;
+	}
 	D3D12MA::Allocation *szAllocations[5] = {};
 	const bool bCreated =
 	    SUCCEEDED( sealed.createBuffer( D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_COMMON, 4096, &szAllocations[0] ) ) &&
@@ -190,9 +218,11 @@ int main( void )
 		return 21;
 	}
 	config.bHeadless = false;
-	if ( driver.createSealedDevice( config, sealedProfile, &pSealedDevice ) != SIR_GRAPHICS_UNSUPPORTED || pSealedDevice != nullptr ) {
+	if ( driver.createSealedDevice( config, sealedProfile, &pSealedDevice ) != SIR_GRAPHICS_SUCCESS || pSealedDevice == nullptr ||
+	     driver.destroyDevice( pSealedDevice ) != SIR_GRAPHICS_SUCCESS ) {
 		return 22;
 	}
+	pSealedDevice = nullptr;
 	config.bHeadless = true;
 	config.nResidentBudgetBytes = 1;
 	if ( driver.createSealedDevice( config, sealedProfile, &pSealedDevice ) != SIR_GRAPHICS_CAPACITY_EXCEEDED ||

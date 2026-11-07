@@ -14,6 +14,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Renderer/Drivers/D3D12/SIRD3D12Pipelines.h>
+#include <Renderer/Drivers/D3D12/SIRD3D12Validation.h>
 #include <Renderer/SIRGraphicsValidation.h>
 #include <d3dcompiler.h>
 #include <limits.h>
@@ -199,40 +200,6 @@ static D3D12_BLEND_OP sirD3D12BlendOperation( sirGraphicsBlendOp_t eOperation ) 
 	default:
 		return D3D12_BLEND_OP_ADD;
 	}
-}
-
-static bool sirD3D12ValidateBindings( const sirGraphicsPipelineDesc_t& desc ) noexcept
-{
-	constexpr uint32_t MAX_BINDINGS = 32;
-	constexpr uint32_t MAX_DESCRIPTOR_ARRAY = 128;
-	if ( desc.nBindingCount > MAX_BINDINGS ) {
-		return false;
-	}
-	for ( uint32_t iBinding = 0; iBinding < desc.nBindingCount; ++iBinding ) {
-		const sirGraphicsBindingDesc_t& binding = desc.pBindings[iBinding];
-		if ( binding.nArrayCount > MAX_DESCRIPTOR_ARRAY || binding.nBinding > UINT32_MAX - binding.nArrayCount ) {
-			return false;
-		}
-		if ( desc.eType == SIR_GRAPHICS_PIPELINE_COMPUTE ) {
-			if ( binding.nShaderStageMask != SIR_GRAPHICS_STAGE_COMPUTE ) {
-				return false;
-			}
-		} else if ( ( binding.nShaderStageMask & ~( SIR_GRAPHICS_STAGE_VERTEX | SIR_GRAPHICS_STAGE_FRAGMENT ) ) != 0 ) {
-			return false;
-		}
-		for ( uint32_t iPrior = 0; iPrior < iBinding; ++iPrior ) {
-			const sirGraphicsBindingDesc_t& prior = desc.pBindings[iPrior];
-			if ( binding.nSpace != prior.nSpace || sirD3D12RangeType( binding.eType ) != sirD3D12RangeType( prior.eType ) ) {
-				continue;
-			}
-			const uint64_t nEnd = ( uint64_t )binding.nBinding + binding.nArrayCount;
-			const uint64_t nPriorEnd = ( uint64_t )prior.nBinding + prior.nArrayCount;
-			if ( binding.nBinding < nPriorEnd && prior.nBinding < nEnd ) {
-				return false;
-			}
-		}
-	}
-	return true;
 }
 
 static bool sirD3D12ValidateAttributes( const sirGraphicsPipelineDesc_t& desc ) noexcept
@@ -496,8 +463,9 @@ sirGraphicsResult_t SIRD3D12Pipelines::createPipeline( const sirGraphicsPipeline
 	     ( !bCompute && !sirD3D12ValidDxil( desc.pixelShader ) ) ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	if ( !sirD3D12ValidateBindings( desc ) ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	const sirGraphicsResult_t eBindings = sirD3D12ValidateBindingLayout( desc.pBindings, desc.nBindingCount, desc.eType );
+	if ( eBindings != SIR_GRAPHICS_SUCCESS ) {
+		return eBindings;
 	}
 	if ( !bCompute && !sirD3D12ValidateAttributes( desc ) ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;

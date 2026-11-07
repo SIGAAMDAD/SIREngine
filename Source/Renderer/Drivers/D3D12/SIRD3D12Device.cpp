@@ -19,7 +19,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Renderer/Drivers/D3D12/SIRD3D12Device.h>
 
 #include <string.h>
-#include <atomic>
+#include <Core/Platform/SIRAtomic.h>
 
 bool sirD3D12SupportsSampleCount( ID3D12Device *pDevice, DXGI_FORMAT eFormat, uint32_t nSampleCount ) noexcept
 {
@@ -38,7 +38,7 @@ bool sirD3D12SupportsSampleCount( ID3D12Device *pDevice, DXGI_FORMAT eFormat, ui
 	       levels.NumQualityLevels > 0;
 }
 
-static std::atomic<uint64_t> s_nNextD3D12DeviceGeneration{ 1 };
+static SIRAtomic<uint64_t> s_nNextD3D12DeviceGeneration( 1 );
 
 HRESULT sirD3D12EnumerateAdapters( IDXGIFactory6 *pFactory, uint32_t nRequestedIndex, IDXGIAdapter4 **ppSelected,
                                    uint32_t *pCount ) noexcept
@@ -460,7 +460,7 @@ bool SIRD3D12Device::initialize( uint32_t nAdapterIndex, const sirD3D12TransferP
 		shutdown();
 		return false;
 	}
-	m_nDeviceGeneration = s_nNextD3D12DeviceGeneration.fetch_add( 1, std::memory_order_relaxed );
+	m_nDeviceGeneration = s_nNextD3D12DeviceGeneration.fetchAdd( 1, SIR_MEMORY_ORDER_RELAXED );
 	m_nNextFenceValue = 1;
 	m_nLastError = S_OK;
 	return true;

@@ -14,6 +14,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Renderer/Drivers/D3D12/SIRD3D12Resources.h>
+#include <Renderer/Drivers/D3D12/SIRD3D12Validation.h>
 #include <Renderer/SIRGraphicsValidation.h>
 #include <limits.h>
 #include <string.h>
@@ -516,6 +517,10 @@ sirGraphicsResult_t SIRD3D12Resources::createBuffer( const sirGraphicsBufferDesc
 	}
 	if ( m_pNative == nullptr ) {
 		return SIR_GRAPHICS_DEVICE_LOST;
+	}
+	const sirGraphicsResult_t eHeapUsage = sirD3D12ValidateBufferHeapUsage( desc );
+	if ( eHeapUsage != SIR_GRAPHICS_SUCCESS ) {
+		return eHeapUsage;
 	}
 	collectRetired();
 	if ( desc.eMemory == SIR_GRAPHICS_MEMORY_TRANSIENT || desc.nAlignmentBytes > D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT ) {
