@@ -45,10 +45,10 @@ sirFMODContextResult_t SIRFMODContext::initialize( const sirFMODContextConfig_t&
 		return SIR_FMOD_BAD_STATE;
 	}
 	if ( config.nMaxChannels <= 0 || config.nMaxChannels > 4095 || config.iOutputDriver < -1 ||
-	     ( config.bNoSound != 0 && config.iOutputDriver >= 0 ) || config.nReserved != 0 || ops.nAbiVersion != 2 || ops.nSDKVersion == 0 ||
+	     ( config.bNoSound != 0 && config.iOutputDriver >= 0 ) || config.nReserved != 0 || ops.nAbiVersion != 3 || ops.nSDKVersion == 0 ||
 	     ops.createStudio == nullptr || ops.getCore == nullptr || ops.getVersion == nullptr || ops.getDriverCount == nullptr ||
-	     ops.setDriver == nullptr || ops.setNoSound == nullptr || ops.initializeStudio == nullptr || ops.updateStudio == nullptr ||
-	     ops.releaseStudio == nullptr || ops.registerDeviceLoss == nullptr ) {
+	     ops.setDriver == nullptr || ops.queryOutputDevice == nullptr || ops.setNoSound == nullptr || ops.initializeStudio == nullptr ||
+	     ops.updateStudio == nullptr || ops.releaseStudio == nullptr || ops.registerDeviceLoss == nullptr ) {
 		return SIR_FMOD_INVALID_ARGUMENT;
 	}
 
@@ -121,6 +121,17 @@ sirFMODContextResult_t SIRFMODContext::initialize( const sirFMODContextConfig_t&
 	m_nEpoch = s_nFMODEpoch.fetchAdd( 1, SIR_MEMORY_ORDER_RELAXED );
 	m_nOutputGeneration = m_nEpoch;
 	m_iOutputDriver = config.iOutputDriver;
+	m_nOutputPhysicalId = 0;
+	if ( !m_bNoSound ) {
+		int32_t iSelected = -1;
+		uint64_t nPhysical = 0;
+		const int32_t nQueryResult = m_Ops.queryOutputDevice( m_Ops.pUserData, m_pCoreBorrowed, &iSelected, &nPhysical );
+		if ( nQueryResult != 0 || iSelected < 0 ) {
+			return rollback( SIR_FMOD_NATIVE_ERROR, nQueryResult == 0 ? -1 : nQueryResult );
+		}
+		m_iOutputDriver = iSelected;
+		m_nOutputPhysicalId = nPhysical;
+	}
 	return SIR_FMOD_OK;
 }
 
@@ -139,6 +150,7 @@ sirFMODContextResult_t SIRFMODContext::shutdown( void ) noexcept
 		m_nEpoch = 0;
 		m_nOutputGeneration = 0;
 		m_iOutputDriver = -1;
+		m_nOutputPhysicalId = 0;
 		return SIR_FMOD_OK;
 	}
 	const int32_t nResult = m_Ops.releaseStudio( m_Ops.pUserData, m_pStudio );
@@ -156,6 +168,7 @@ sirFMODContextResult_t SIRFMODContext::shutdown( void ) noexcept
 	m_nEpoch = 0;
 	m_nOutputGeneration = 0;
 	m_iOutputDriver = -1;
+	m_nOutputPhysicalId = 0;
 	m_nBorrowedBankObjects = 0;
 	m_nUnscopedBankObjects = 0;
 	m_nDeviceLossSignals.store( 0, SIR_MEMORY_ORDER_RELAXED );
@@ -200,14 +213,27 @@ sirFMODContextResult_t SIRFMODContext::changeDriver( int32_t iDriver ) noexcept
 	}
 	const int32_t nResult = m_Ops.setDriver( m_Ops.pUserData, m_pCoreBorrowed, iDriver );
 	m_nLastNativeResult = nResult;
-	if ( nResult == 0 ) {
-		m_iOutputDriver = iDriver;
-		++m_nOutputGeneration;
-		if ( m_nOutputGeneration == 0 ) {
-			m_nOutputGeneration = 1;
-		}
+	if ( nResult != 0 ) {
+		return SIR_FMOD_NATIVE_ERROR;
 	}
-	return nResult == 0 ? SIR_FMOD_OK : SIR_FMOD_NATIVE_ERROR;
+	// The native change has already happened. Invalidate the prior identity
+	// even if querying the new physical endpoint fails.
+	++m_nOutputGeneration;
+	if ( m_nOutputGeneration == 0 ) {
+		m_nOutputGeneration = 1;
+	}
+	m_iOutputDriver = iDriver;
+	m_nOutputPhysicalId = 0;
+	int32_t iSelected = -1;
+	uint64_t nPhysical = 0;
+	const int32_t nQueryResult = m_Ops.queryOutputDevice( m_Ops.pUserData, m_pCoreBorrowed, &iSelected, &nPhysical );
+	m_nLastNativeResult = nQueryResult;
+	if ( nQueryResult != 0 || iSelected < 0 ) {
+		return SIR_FMOD_NATIVE_ERROR;
+	}
+	m_iOutputDriver = iSelected;
+	m_nOutputPhysicalId = nPhysical;
+	return SIR_FMOD_OK;
 }
 
 void SIRFMODContext::notifyDeviceLoss( void *pOwner ) noexcept
@@ -335,5 +361,5 @@ sirPlatformDeviceIdentity_t SIRFMODContext::getOutputDeviceIdentity( void ) cons
 		return {};
 	}
 	const uint64_t nNative = m_iOutputDriver < 0 ? 0 : ( uint64_t )m_iOutputDriver + 1;
-	return { nNative, 0, m_nOutputGeneration, SIR_PLATFORM_DEVICE_FMOD, 0 };
+	return { nNative, m_nOutputPhysicalId, m_nOutputGeneration, SIR_PLATFORM_DEVICE_FMOD, 0 };
 }

@@ -42,6 +42,8 @@ typedef struct sirFMODFixture_s
 	int32_t nInitializeCalls = 0;
 	int32_t nNoSoundCalls = 0;
 	bool bStudioAlive = false;
+	bool bNoPhysicalGuid = false;
+	bool bQueryFails = false;
 	bool bFireDeviceLoss = false;
 	void *pDeviceOwner = nullptr;
 	void ( *pfnDeviceSignal )( void * ) noexcept = nullptr;
@@ -165,9 +167,20 @@ static int32_t fakeRegisterDeviceLoss( void *pUserData, void *pCore, void *pOwne
 	return 0;
 }
 
+static int32_t fakeQueryOutputDevice( void *pUserData, void *, int32_t *pDriver, uint64_t *pPhysicalId ) noexcept
+{
+	sirFMODFixture_t *pFixture = ( sirFMODFixture_t * )pUserData;
+	if ( pFixture->bQueryFails ) {
+		return -45;
+	}
+	*pDriver = pFixture->iSelectedDriver < 0 ? 0 : pFixture->iSelectedDriver;
+	*pPhysicalId = pFixture->bNoPhysicalGuid ? 0 : UINT64_C( 0xA000 ) + ( uint64_t )*pDriver;
+	return 0;
+}
+
 static sirFMODNativeOps_t fakeOps( sirFMODFixture_t& fixture ) noexcept
 {
-	return { 2,
+	return { 3,
 	         0x00020400,
 	         &fixture,
 	         fakeCreate,
@@ -175,6 +188,7 @@ static sirFMODNativeOps_t fakeOps( sirFMODFixture_t& fixture ) noexcept
 	         fakeGetVersion,
 	         fakeGetDriverCount,
 	         fakeSetDriver,
+	         fakeQueryOutputDevice,
 	         fakeSetNoSound,
 	         fakeInitialize,
 	         fakeUpdate,
@@ -191,7 +205,8 @@ static void testContextLifecycle( void )
 	checkFMOD( context.update() == SIR_FMOD_BAD_STATE );
 	checkFMOD( context.initialize( config, fakeOps( fixture ) ) == SIR_FMOD_OK );
 	const sirPlatformDeviceIdentity_t defaultDevice = context.getOutputDeviceIdentity();
-	checkFMOD( defaultDevice.nBackendId == SIR_PLATFORM_DEVICE_FMOD && defaultDevice.nNativeId == 0 && defaultDevice.nGeneration != 0 );
+	checkFMOD( defaultDevice.nBackendId == SIR_PLATFORM_DEVICE_FMOD && defaultDevice.nNativeId == 1 && defaultDevice.nGeneration != 0 &&
+	           defaultDevice.nPhysicalId == UINT64_C( 0xA000 ) );
 	const uint64_t nFirstEpoch = context.getEpoch();
 	checkFMOD( nFirstEpoch != 0 && context.isReady() );
 	checkFMOD( fixture.nCreateCalls == 1 && fixture.nCoreCalls == 1 );
@@ -206,7 +221,7 @@ static void testContextLifecycle( void )
 	checkFMOD( context.changeDriver( 2 ) == SIR_FMOD_OK && fixture.iSelectedDriver == 2 );
 	const sirPlatformDeviceIdentity_t selected = context.getOutputDeviceIdentity();
 	checkFMOD( selected.nBackendId == SIR_PLATFORM_DEVICE_FMOD && selected.nNativeId == 3 &&
-	           selected.nGeneration != defaultDevice.nGeneration );
+	           selected.nGeneration != defaultDevice.nGeneration && selected.nPhysicalId == UINT64_C( 0xA002 ) );
 	checkFMOD( context.shutdown() == SIR_FMOD_OK );
 	checkFMOD( context.getOutputDeviceIdentity().nBackendId == SIR_PLATFORM_DEVICE_NONE );
 	checkFMOD( !fixture.bStudioAlive && !fixture.bCoreAlive );
@@ -296,7 +311,7 @@ static void testDeviceRecovery( void )
 	checkFMOD( context.getDeviceLossSignalCount() == 1 );
 	checkFMOD( context.recoverOutput( 2, false ) == SIR_FMOD_OK );
 	checkFMOD( fixture.iSelectedDriver == 2 && context.getSuccessfulRecoveryCount() == 1 );
-	checkFMOD( context.getOutputDeviceIdentity().nNativeId == 3 );
+	checkFMOD( context.getOutputDeviceIdentity().nNativeId == 3 && context.getOutputDeviceIdentity().nPhysicalId == UINT64_C( 0xA002 ) );
 	checkFMOD( !context.needsDeviceRecovery() );
 	fixture.bFireDeviceLoss = true;
 	checkFMOD( context.update() == SIR_FMOD_OK && context.needsDeviceRecovery() );
@@ -312,6 +327,32 @@ static void testDeviceRecovery( void )
 	const sirFMODContextConfig_t noSound = { 64, -1, 1, 1, 0, 0 };
 	checkFMOD( context.initialize( noSound, fakeOps( fixture ) ) == SIR_FMOD_OK );
 	checkFMOD( context.recoverOutput( 0, true ) == SIR_FMOD_BAD_STATE );
+	checkFMOD( context.shutdown() == SIR_FMOD_OK );
+}
+
+static void testPhysicalDeviceIdentityFailures( void )
+{
+	sirFMODFixture_t fixture = {};
+	SIRFMODContext context;
+	const sirFMODContextConfig_t config = { 64, -1, 0, 0, 0, 0 };
+	fixture.bQueryFails = true;
+	checkFMOD( context.initialize( config, fakeOps( fixture ) ) == SIR_FMOD_NATIVE_ERROR );
+	checkFMOD( context.getState() == SIR_FMOD_CONTEXT_EMPTY && fixture.nReleaseCalls == 1 );
+	fixture.bQueryFails = false;
+	fixture.bNoPhysicalGuid = true;
+	checkFMOD( context.initialize( config, fakeOps( fixture ) ) == SIR_FMOD_OK );
+	checkFMOD( context.getOutputDeviceIdentity().nPhysicalId == 0 );
+	fixture.bNoPhysicalGuid = false;
+	checkFMOD( context.changeDriver( 1 ) == SIR_FMOD_OK );
+	const sirPlatformDeviceIdentity_t identified = context.getOutputDeviceIdentity();
+	checkFMOD( identified.nPhysicalId == UINT64_C( 0xA001 ) && identified.nNativeId == 2 );
+	fixture.bQueryFails = true;
+	checkFMOD( context.changeDriver( 2 ) == SIR_FMOD_NATIVE_ERROR );
+	checkFMOD( context.getOutputDeviceIdentity().nPhysicalId == 0 );
+	checkFMOD( context.getOutputDeviceIdentity().nGeneration != identified.nGeneration );
+	fixture.bQueryFails = false;
+	checkFMOD( context.changeDriver( 2 ) == SIR_FMOD_OK );
+	checkFMOD( context.getOutputDeviceIdentity().nPhysicalId == UINT64_C( 0xA002 ) );
 	checkFMOD( context.shutdown() == SIR_FMOD_OK );
 }
 
@@ -335,6 +376,8 @@ static void testInvalidConfiguration( void )
 	checkFMOD( fixture.nReleaseCalls == 1 );
 	config.iOutputDriver = -1;
 	sirFMODNativeOps_t ops = fakeOps( fixture );
+	ops.nAbiVersion = 2;
+	checkFMOD( context.initialize( config, ops ) == SIR_FMOD_INVALID_ARGUMENT );
 	ops.nAbiVersion = 99;
 	checkFMOD( context.initialize( config, ops ) == SIR_FMOD_INVALID_ARGUMENT );
 	ops = fakeOps( fixture );
@@ -346,6 +389,7 @@ static void testInvalidConfiguration( void )
 int main( void )
 {
 	testContextLifecycle();
+	testPhysicalDeviceIdentityFailures();
 	testFailedCreationAndRollback();
 	testMismatchAndNoSound();
 	testReleaseFailure();

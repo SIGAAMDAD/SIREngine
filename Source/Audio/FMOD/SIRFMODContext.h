@@ -70,6 +70,7 @@ typedef struct sirFMODNativeOps_s
 	int32_t ( *getVersion )( void *pUserData, void *pCore, uint32_t *pVersion ) noexcept;
 	int32_t ( *getDriverCount )( void *pUserData, void *pCore, int32_t *pCount ) noexcept;
 	int32_t ( *setDriver )( void *pUserData, void *pCore, int32_t iDriver ) noexcept;
+	int32_t ( *queryOutputDevice )( void *pUserData, void *pCore, int32_t *pDriver, uint64_t *pPhysicalId ) noexcept;
 	int32_t ( *setNoSound )( void *pUserData, void *pCore ) noexcept;
 	int32_t ( *initializeStudio )( void *pUserData, void *pStudio, const sirFMODContextConfig_t *pConfig ) noexcept;
 	int32_t ( *updateStudio )( void *pUserData, void *pStudio ) noexcept;
@@ -93,6 +94,7 @@ private:
 	uint64_t m_nEpoch = 0;
 	uint64_t m_nOutputGeneration = 0;
 	int32_t m_iOutputDriver = -1;
+	uint64_t m_nOutputPhysicalId = 0;
 	int32_t m_nLastNativeResult = 0;
 	uint32_t m_nBorrowedBankObjects = 0;
 	uint32_t m_nUnscopedBankObjects = 0;
