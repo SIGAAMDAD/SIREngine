@@ -33,6 +33,7 @@ public:
 
 	bool bind( SIRInputService& input, SIRWindowsRawBackend& backend, const sirWindowNativeView_t& view ) noexcept;
 	bool isBound( void ) const noexcept;
+	bool acceptsWindow( uintptr_t nWindow ) const noexcept;
 	bool setCursorMode( sirInputCursorMode_t eMode ) noexcept;
 	sirInputCursorMode_t cursorMode( void ) const noexcept;
 	void setTextEnabled( bool bEnabled ) noexcept;

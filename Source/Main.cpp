@@ -48,6 +48,9 @@ static sirWindowWin32Dispatch_t sirDispatchWin32Input( const sirWindowWin32Messa
 {
 	SIRWin32InputBridge *pInput = ( SIRWin32InputBridge * )pContext;
 	sirWindowWin32Dispatch_t result = {};
+	if ( !pInput->acceptsWindow( message.nWindow ) ) {
+		return result;
+	}
 	result.nResult = pInput->processMessage( message.nMessage, message.nWParam, message.nLParam, &result.bHandled );
 	return result;
 }

@@ -56,6 +56,11 @@ bool SIRWin32InputBridge::isBound( void ) const noexcept
 	return m_pInput != nullptr;
 }
 
+bool SIRWin32InputBridge::acceptsWindow( uintptr_t nWindow ) const noexcept
+{
+	return m_pInput != nullptr && m_nWindow != 0 && m_nWindow == nWindow;
+}
+
 bool SIRWin32InputBridge::setCursorMode( sirInputCursorMode_t eMode ) noexcept
 {
 	if ( m_pInput == nullptr || eMode > SIR_INPUT_CURSOR_CAPTURED ) {
