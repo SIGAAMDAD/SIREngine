@@ -156,13 +156,12 @@ static bool sirTestWindowPumpWithoutInput( void ) noexcept
 {
 	SIRApplication application;
 	sirNoInputWindowPumpContext_t context = { 0, false };
-	if ( application.attachWindowPump( nullptr, &context ) ||
-	     !application.attachWindowPump( sirApplicationNoInputWindowPump, &context ) ||
+	if ( application.attachWindowPump( nullptr, &context ) || !application.attachWindowPump( sirApplicationNoInputWindowPump, &context ) ||
 	     application.attachWindowPump( sirApplicationNoInputWindowPump, &context ) ) {
 		return false;
 	}
-	if ( !application.initialize() || application.attachWindowPump( sirApplicationNoInputWindowPump, &context ) ||
-	     !application.tick() || context.nPumps != 1 || application.getTickCount() != 1 ) {
+	if ( !application.initialize() || application.attachWindowPump( sirApplicationNoInputWindowPump, &context ) || !application.tick() ||
+	     context.nPumps != 1 || application.getTickCount() != 1 ) {
 		return false;
 	}
 	context.bReject = true;
@@ -175,8 +174,7 @@ static bool sirTestWindowPumpWithoutInput( void ) noexcept
 
 int main( void )
 {
-	if ( !sirTestHeadlessApplicationStillWorks() || !sirTestApplicationInputLifecycle() ||
-	     !sirTestWindowPumpWithoutInput() ) {
+	if ( !sirTestHeadlessApplicationStillWorks() || !sirTestApplicationInputLifecycle() || !sirTestWindowPumpWithoutInput() ) {
 		fputs( "SIRApplicationInputTests FAILED\n", stderr );
 		return 1;
 	}
