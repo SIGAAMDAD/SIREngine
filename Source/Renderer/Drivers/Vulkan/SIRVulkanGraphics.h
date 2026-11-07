@@ -71,6 +71,7 @@ typedef struct sirVulkanGraphicsViewSlot_s
 	uint32_t nBaseLayer;
 	uint32_t nMipLevels;
 	uint32_t nLayers;
+	uint64_t nLastGpuUse;
 	uint64_t nRetireValue;
 	bool bActive;
 	bool bRetiring;
@@ -105,6 +106,7 @@ typedef struct sirVulkanGraphicsSamplerSlot_s
 {
 	sirVulkanSampler_t native;
 	uint32_t nGeneration;
+	uint64_t nLastGpuUse;
 	uint64_t nRetireValue;
 	bool bActive;
 	bool bRetiring;

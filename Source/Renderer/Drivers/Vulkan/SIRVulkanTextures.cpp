@@ -334,6 +334,7 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::createView( const sirGraphicsViewD
 			return eNative == SIR_VULKAN_ALLOCATION_FAILED ? SIR_GRAPHICS_OUT_OF_MEMORY : SIR_GRAPHICS_DRIVER_ERROR;
 		}
 		pSlot->nImageSlot = desc.hResource.nSlot;
+		pSlot->nLastGpuUse = 0;
 		pSlot->nBaseMip = desc.nBaseMip;
 		pSlot->nBaseLayer = desc.nBaseLayer;
 		pSlot->nMipLevels = desc.nMipLevels;
@@ -390,6 +391,7 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::createSampler( const sirGraphicsSa
 			return eNative == SIR_VULKAN_ALLOCATION_FAILED ? SIR_GRAPHICS_OUT_OF_MEMORY : SIR_GRAPHICS_DRIVER_ERROR;
 		}
 		pSlot->bActive = true;
+		pSlot->nLastGpuUse = 0;
 		pSlot->nRetireValue = 0;
 		*pHandle = { iSlot, pSlot->nGeneration, m_nDeviceGeneration, SIR_GRAPHICS_HANDLE_SAMPLER };
 		return SIR_GRAPHICS_SUCCESS;
@@ -507,6 +509,8 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::retireImageResource( sirGraphicsHa
 		if ( !pSlot->bActive || pSlot->nGeneration != hResource.nGeneration ) {
 			return SIR_GRAPHICS_INVALID_HANDLE;
 		}
+		if ( nFence < pSlot->nLastGpuUse )
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
 		pSlot->bActive = false;
 		pSlot->bRetiring = true;
 		pSlot->nRetireValue = nFence;
@@ -521,6 +525,8 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::retireImageResource( sirGraphicsHa
 		if ( !pSlot->bActive || pSlot->nGeneration != hResource.nGeneration ) {
 			return SIR_GRAPHICS_INVALID_HANDLE;
 		}
+		if ( nFence < pSlot->nLastGpuUse )
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
 		pSlot->bActive = false;
 		pSlot->bRetiring = true;
 		pSlot->nRetireValue = nFence;

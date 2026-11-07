@@ -38,6 +38,31 @@ static sirVulkanImage_t *sirVulkanRecordedShadow( sirVulkanImage_t *pImage, sirV
 	return &pShadows[( *pCount )++];
 }
 
+static bool sirVulkanRecordedFinalizePass( const sirVulkanRecordedCommand_t& pass, sirVulkanImage_t **ppOriginals,
+                                           sirVulkanImage_t *pShadows, uint32_t *pCount ) noexcept
+{
+	for ( uint32_t i = 0; i <= pass.nColorCount; ++i ) {
+		const bool bDepth = i == pass.nColorCount;
+		sirVulkanImage_t *pImage = bDepth ? pass.pDepthImage : pass.szColorImages[i];
+		if ( pImage == nullptr )
+			continue;
+		const uint32_t nMip = bDepth ? pass.nDepthMip : pass.szColorMips[i];
+		const uint32_t nLayer = bDepth ? pass.nDepthLayer : pass.szColorLayers[i];
+		sirVulkanImage_t *pShadow = sirVulkanRecordedShadow( pImage, ppOriginals, pShadows, pCount );
+		if ( pShadow == nullptr || nMip >= pShadow->nMips || nLayer >= pShadow->nLayers )
+			return false;
+		const uint32_t nIndex = nLayer * pShadow->nMips + nMip;
+		const bool bStore = bDepth ? pass.bStoreDepth : pass.szColorStore[i];
+		const bool bClear = bDepth ? pass.bClearDepth : pass.szColorClear[i];
+		const uint64_t nBit = 1ULL << ( nIndex % 64 );
+		if ( !bStore )
+			pShadow->szUploadedSubresources[nIndex / 64] &= ~nBit;
+		else if ( bClear )
+			pShadow->szUploadedSubresources[nIndex / 64] |= nBit;
+	}
+	return true;
+}
+
 static sirVulkanResult_t sirVulkanAdvanceRecordedState( sirVulkanImage_t *pShadow, const sirVulkanRecordedCommand_t& command ) noexcept
 {
 	if ( pShadow == nullptr ) {
@@ -253,7 +278,7 @@ sirVulkanResult_t sirVulkanValidateRecordedCommands( const sirVulkanRecordedComm
 			continue;
 		}
 		if ( command.eKind == SIR_VULKAN_RECORDED_RENDER_END ) {
-			if ( !bRendering )
+			if ( !bRendering || !sirVulkanRecordedFinalizePass( *pActivePass, szOriginals, szShadows, &nImages ) )
 				return SIR_VULKAN_INVALID_ARGUMENT;
 			bRendering = false;
 			pActivePass = nullptr;
@@ -502,6 +527,7 @@ sirVulkanResult_t SIRVulkanDevice::submitRecordedCommands( const sirVulkanRecord
 	transferDependency.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
 	transferDependency.memoryBarrierCount = 1;
 	transferDependency.pMemoryBarriers = &transferMemory;
+	const sirVulkanRecordedCommand_t *pNativePass = nullptr;
 	for ( uint32_t iCommand = 0; iCommand < nCount; ++iCommand ) {
 		const sirVulkanRecordedCommand_t& command = pCommands[iCommand];
 		if ( sirVulkanRecordedNeedsBufferBarrier( pCommands, iCommand ) ) {
@@ -578,10 +604,14 @@ sirVulkanResult_t SIRVulkanDevice::submitRecordedCommands( const sirVulkanRecord
 			                                   ? &depth
 			                                   : nullptr;
 			pfnBeginRendering( pSlot->hCommandBuffer, &rendering );
+			pNativePass = &command;
 			continue;
 		}
 		if ( command.eKind == SIR_VULKAN_RECORDED_RENDER_END ) {
 			pfnEndRendering( pSlot->hCommandBuffer );
+			if ( pNativePass == nullptr || !sirVulkanRecordedFinalizePass( *pNativePass, szOriginals, szShadows, &nImages ) )
+				return SIR_VULKAN_NATIVE_FAILURE;
+			pNativePass = nullptr;
 			continue;
 		}
 		if ( command.eKind == SIR_VULKAN_RECORDED_GRAPHICS_PIPELINE ) {

@@ -18,7 +18,7 @@ int main( void )
 {
 	sirVulkanImage_t color = {};
 	color.eFormat = VK_FORMAT_R8G8B8A8_UNORM;
-	color.nUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+	color.nUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 	color.nWidth = color.nHeight = 16;
 	color.nMips = color.nLayers = 1;
 	sirVulkanComputePipeline_t pipeline = {};
@@ -26,12 +26,13 @@ int main( void )
 	pipeline.bGraphics = true;
 	pipeline.nColorFormatCount = 1;
 	pipeline.szColorFormats[0] = color.eFormat;
-	sirVulkanRecordedCommand_t ops[6] = {};
+	sirVulkanRecordedCommand_t ops[7] = {};
 	ops[0].eKind = SIR_VULKAN_RECORDED_RENDER_BEGIN;
 	ops[0].nColorCount = 1;
 	ops[0].szColorImages[0] = &color;
 	ops[0].szColorViews[0] = ( VkImageView )1;
 	ops[0].szColorClear[0] = true;
+	ops[0].szColorStore[0] = true;
 	ops[0].extent = { 16, 16 };
 	ops[1].eKind = SIR_VULKAN_RECORDED_GRAPHICS_PIPELINE;
 	ops[1].pPipeline = &pipeline;
@@ -73,5 +74,17 @@ int main( void )
 	ops[0].nColorCount = 9;
 	if ( sirVulkanValidateRecordedCommands( ops, 6 ) != SIR_VULKAN_INVALID_ARGUMENT )
 		return 7;
+	ops[0].nColorCount = 1;
+	ops[6].eKind = SIR_VULKAN_RECORDED_IMAGE_BARRIER;
+	ops[6].pImage = &color;
+	ops[6].imageBarrier.eBefore = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
+	ops[6].imageBarrier.eAfter = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	ops[6].imageBarrier.nMipCount = 1;
+	ops[6].imageBarrier.nLayerCount = 1;
+	if ( sirVulkanValidateRecordedCommands( ops, 7 ) != SIR_VULKAN_SUCCESS )
+		return 8;
+	ops[0].szColorStore[0] = false;
+	if ( sirVulkanValidateRecordedCommands( ops, 7 ) != SIR_VULKAN_INVALID_ARGUMENT )
+		return 9;
 	return 0;
 }

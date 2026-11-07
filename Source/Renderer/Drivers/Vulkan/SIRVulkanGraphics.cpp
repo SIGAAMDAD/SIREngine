@@ -918,25 +918,33 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::submit( sirGraphicsQueue_t eQueue,
 		return sirVulkanToGraphicsResult( eSubmit );
 	}
 	m_nLastCompletion = native.nValue;
-	for ( uint32_t i = 0; i < nNativeCount; ++i ) {
-		if ( commands[i].eKind != SIR_VULKAN_RECORDED_BIND_DESCRIPTOR_SET )
-			continue;
-		for ( uint32_t j = 0; j < SIR_VULKAN_BINDING_SET_CAPACITY; ++j ) {
-			sirVulkanGraphicsBindingSlot_t& set = m_szBindingSets[j];
-			if ( &set.native != commands[i].pDescriptorSet )
-				continue;
-			for ( uint32_t iRef = 0; iRef < set.nReferenceCount; ++iRef ) {
-				const sirGraphicsHandle_t hResource = set.szReferences[iRef];
-				if ( hResource.eType == SIR_GRAPHICS_HANDLE_BUFFER ) {
-					sirVulkanGraphicsBufferSlot_t *pBuffer = resolveBuffer( hResource );
-					if ( pBuffer != nullptr )
-						pBuffer->native.nLastGpuUse = native.nValue;
-				} else if ( hResource.eType == SIR_GRAPHICS_HANDLE_VIEW ) {
-					sirVulkanGraphicsViewSlot_t& view = m_szViews[hResource.nSlot];
-					m_szImages[view.nImageSlot].native.nLastGpuUse = native.nValue;
+	for ( uint32_t iList = 0; iList < submission.nCommandListCount; ++iList ) {
+		const SIRVulkanCommandList& list = *szLists[iList];
+		for ( uint32_t iOp = 0; iOp < list.m_nOperationCount; ++iOp ) {
+			const sirVulkanGraphicsOperation_t& op = list.m_szOperations[iOp];
+			if ( op.eKind == SIR_VULKAN_GRAPHICS_RENDER_BEGIN ) {
+				for ( uint32_t iColor = 0; iColor < op.nColorCount; ++iColor ) {
+					m_szViews[op.szColors[iColor].hView.nSlot].nLastGpuUse = native.nValue;
+				}
+				if ( op.hDepthView.nGeneration != 0 )
+					m_szViews[op.hDepthView.nSlot].nLastGpuUse = native.nValue;
+			} else if ( op.eKind == SIR_VULKAN_GRAPHICS_BIND_DESCRIPTOR_SET ) {
+				const sirVulkanGraphicsBindingSlot_t& set = m_szBindingSets[op.hBindingSet.nSlot];
+				for ( uint32_t iRef = 0; iRef < set.nReferenceCount; ++iRef ) {
+					const sirGraphicsHandle_t hResource = set.szReferences[iRef];
+					if ( hResource.eType == SIR_GRAPHICS_HANDLE_BUFFER ) {
+						sirVulkanGraphicsBufferSlot_t *pBuffer = resolveBuffer( hResource );
+						if ( pBuffer != nullptr )
+							pBuffer->native.nLastGpuUse = native.nValue;
+					} else if ( hResource.eType == SIR_GRAPHICS_HANDLE_VIEW ) {
+						sirVulkanGraphicsViewSlot_t& view = m_szViews[hResource.nSlot];
+						view.nLastGpuUse = native.nValue;
+						m_szImages[view.nImageSlot].native.nLastGpuUse = native.nValue;
+					} else if ( hResource.eType == SIR_GRAPHICS_HANDLE_SAMPLER ) {
+						m_szSamplers[hResource.nSlot].nLastGpuUse = native.nValue;
+					}
 				}
 			}
-			break;
 		}
 	}
 	for ( uint32_t iList = 0; iList < submission.nCommandListCount; ++iList ) {
