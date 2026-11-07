@@ -96,3 +96,10 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND SIR_WITH_X11_INPUT AND X11_FOUND)
         sir_configure_owned_target(SIRWindowX11DriverTests)
     endif()
 endif()
+
+# Renderer-side pinned native window lease adapter.
+add_executable(SIRWindowSurfaceAdapterTests SIRWindowSurfaceAdapterTests.cpp)
+target_link_libraries(SIRWindowSurfaceAdapterTests PRIVATE SIR::Graphics)
+add_test(NAME core.platform.window.surface-bridge COMMAND SIRWindowSurfaceAdapterTests)
+set_tests_properties(core.platform.window.surface-bridge PROPERTIES LABELS "core;platform;window;renderer" TIMEOUT 60)
+sir_configure_owned_target(SIRWindowSurfaceAdapterTests)
