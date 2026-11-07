@@ -15,9 +15,9 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Renderer/Graph/SIRFrameGraphCompletion.h>
 
-sirGraphicsResult_t sirFrameGraphProviderCompletion( const sirFrameGraphNativeOutput_t& output,
-													 const sirFrameGraphProviderLaneMap_t& mapping,
-													 sirProviderCompletionSet_t *pCompletion ) noexcept
+sirGraphicsResult_t sirFrameGraphProviderRequiredCompletion( const sirFrameGraphNativeOutput_t& output,
+															 const sirFrameGraphProviderLaneMap_t& mapping,
+															 sirProviderCompletionSet_t *pCompletion ) noexcept
 {
 	if ( pCompletion == nullptr ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
@@ -55,5 +55,40 @@ sirGraphicsResult_t sirFrameGraphProviderCompletion( const sirFrameGraphNativeOu
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	*pCompletion = staged;
+	return SIR_GRAPHICS_SUCCESS;
+}
+
+sirGraphicsResult_t sirFrameGraphProviderObservedCompletion( SIRRenderingDevice *pDevice, const sirFrameGraphNativeOutput_t& output,
+															 const sirFrameGraphProviderLaneMap_t& mapping,
+															 sirProviderCompletionSet_t *pCompletion ) noexcept
+{
+	if ( pCompletion == nullptr ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	*pCompletion = {};
+	if ( pDevice == nullptr || pDevice->getDeviceGeneration() != mapping.nDeviceGeneration ) {
+		return SIR_GRAPHICS_INVALID_HANDLE;
+	}
+	sirProviderCompletionSet_t required = {};
+	const sirGraphicsResult_t eRequired = sirFrameGraphProviderRequiredCompletion( output, mapping, &required );
+	if ( eRequired != SIR_GRAPHICS_SUCCESS ) {
+		return eRequired;
+	}
+	const sirGraphicsCompletionSet_t& graphics = output.completion;
+	for ( uint32_t iQueue = 0; iQueue < SIR_GRAPHICS_QUEUE_COUNT; ++iQueue ) {
+		if ( ( graphics.nQueueMask & ( 1U << iQueue ) ) == 0 ) {
+			continue;
+		}
+		const sirGraphicsCompletion_t token = { graphics.nDeviceGeneration, ( sirGraphicsQueue_t )iQueue, graphics.szQueueValues[iQueue] };
+		bool bCompleted = false;
+		const sirGraphicsResult_t ePoll = pDevice->poll( token, &bCompleted );
+		if ( ePoll != SIR_GRAPHICS_SUCCESS ) {
+			return ePoll;
+		}
+		if ( !bCompleted ) {
+			return SIR_GRAPHICS_BUSY;
+		}
+	}
+	*pCompletion = required;
 	return SIR_GRAPHICS_SUCCESS;
 }

@@ -36,10 +36,17 @@ typedef struct sirFrameGraphProviderLaneMap_s
 	uint32_t szQueueToLane[SIR_GRAPHICS_QUEUE_COUNT];
 } sirFrameGraphProviderLaneMap_t;
 
-// Pure translation of an already-submitted graphics completion set. Unknown
-// submission outcomes must never produce an apparently complete retirement.
-sirGraphicsResult_t sirFrameGraphProviderCompletion( const sirFrameGraphNativeOutput_t& output,
-													 const sirFrameGraphProviderLaneMap_t& mapping,
-													 sirProviderCompletionSet_t *pCompletion ) noexcept;
+// Build retirement REQUIREMENTS from submitted fence values. This result
+// must never be supplied to GRDG as an OBSERVED completion until every
+// named graphics fence has actually completed.
+sirGraphicsResult_t sirFrameGraphProviderRequiredCompletion( const sirFrameGraphNativeOutput_t& output,
+															 const sirFrameGraphProviderLaneMap_t& mapping,
+															 sirProviderCompletionSet_t *pCompletion ) noexcept;
+
+// Poll every submitted queue fence. Only a fully completed set may be used
+// with SIRResourceDerivedRegistry::updateProviderCompletion().
+sirGraphicsResult_t sirFrameGraphProviderObservedCompletion( SIRRenderingDevice *pDevice, const sirFrameGraphNativeOutput_t& output,
+															 const sirFrameGraphProviderLaneMap_t& mapping,
+															 sirProviderCompletionSet_t *pCompletion ) noexcept;
 
 #endif // __SIRENGINE_SIRFRAMEGRAPHCOMPLETION_H__

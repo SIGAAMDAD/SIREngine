@@ -32,39 +32,41 @@ static bool testProviderMapping( void ) noexcept
 	mapping.szQueueToLane[SIR_GRAPHICS_QUEUE_DIRECT] = 2;
 	mapping.szQueueToLane[SIR_GRAPHICS_QUEUE_COPY] = 0;
 	sirProviderCompletionSet_t completion = {};
-	if ( sirFrameGraphProviderCompletion( output, mapping, &completion ) != SIR_GRAPHICS_SUCCESS || completion.nProviderId != 17 ||
+	if ( sirFrameGraphProviderRequiredCompletion( output, mapping, &completion ) != SIR_GRAPHICS_SUCCESS || completion.nProviderId != 17 ||
 	     completion.nProviderGeneration != 4 || completion.nLaneMask != 5 || completion.szCompletedValues[2] != 42 ||
 	     completion.szCompletedValues[0] != 11 || !sirProviderCompletionValid( completion ) ) {
 		return false;
 	}
 	const sirProviderCompletionSet_t reference = completion;
 	mapping.szQueueToLane[SIR_GRAPHICS_QUEUE_COPY] = 2;
-	if ( sirFrameGraphProviderCompletion( output, mapping, &completion ) != SIR_GRAPHICS_INVALID_ARGUMENT || completion.nLaneMask != 0 ) {
+	if ( sirFrameGraphProviderRequiredCompletion( output, mapping, &completion ) != SIR_GRAPHICS_INVALID_ARGUMENT ||
+	     completion.nLaneMask != 0 ) {
 		return false;
 	}
 	mapping.szQueueToLane[SIR_GRAPHICS_QUEUE_COPY] = 0;
 	mapping.nDeviceGeneration++;
-	if ( sirFrameGraphProviderCompletion( output, mapping, &completion ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+	if ( sirFrameGraphProviderRequiredCompletion( output, mapping, &completion ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
 		return false;
 	}
 	mapping.nDeviceGeneration--;
 	output.bUnknownCompletion = true;
-	if ( sirFrameGraphProviderCompletion( output, mapping, &completion ) != SIR_GRAPHICS_BUSY || completion.nProviderId != 0 ) {
+	if ( sirFrameGraphProviderRequiredCompletion( output, mapping, &completion ) != SIR_GRAPHICS_BUSY || completion.nProviderId != 0 ) {
 		return false;
 	}
 	output.bUnknownCompletion = false;
 	output.completion.szQueueValues[SIR_GRAPHICS_QUEUE_COPY] = 0;
-	if ( sirFrameGraphProviderCompletion( output, mapping, &completion ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+	if ( sirFrameGraphProviderRequiredCompletion( output, mapping, &completion ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
 		return false;
 	}
 	output.completion.szQueueValues[SIR_GRAPHICS_QUEUE_COPY] = 11;
 	output.completion.nQueueMask = 1U << SIR_GRAPHICS_QUEUE_DIRECT;
-	if ( sirFrameGraphProviderCompletion( output, mapping, &completion ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+	if ( sirFrameGraphProviderRequiredCompletion( output, mapping, &completion ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
 		return false;
 	}
 	output.completion.szQueueValues[SIR_GRAPHICS_QUEUE_COPY] = 0;
-	if ( sirFrameGraphProviderCompletion( output, mapping, &completion ) != SIR_GRAPHICS_SUCCESS || completion.nLaneMask != ( 1U << 2 ) ||
-	     !sirProviderCompletionSatisfied( completion, reference ) || sirProviderCompletionSatisfied( reference, completion ) ) {
+	if ( sirFrameGraphProviderRequiredCompletion( output, mapping, &completion ) != SIR_GRAPHICS_SUCCESS ||
+	     completion.nLaneMask != ( 1U << 2 ) || !sirProviderCompletionSatisfied( completion, reference ) ||
+	     sirProviderCompletionSatisfied( reference, completion ) ) {
 		return false;
 	}
 	return true;

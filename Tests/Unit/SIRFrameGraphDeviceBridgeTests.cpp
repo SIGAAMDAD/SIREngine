@@ -13,7 +13,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#include <Renderer/Graph/SIRFrameGraphNative.h>
+#include <Renderer/Graph/SIRFrameGraphCompletion.h>
 #include <stdio.h>
 
 class SIRFrameGraphTestCommands final : public SIRGraphicsCommandList
@@ -218,9 +218,15 @@ public:
 	{
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
-	sirGraphicsResult_t poll( const sirGraphicsCompletion_t&, bool * ) noexcept override
+	sirGraphicsResult_t poll( const sirGraphicsCompletion_t& token, bool *pCompleted ) noexcept override
 	{
-		return SIR_GRAPHICS_UNSUPPORTED;
+		if ( pCompleted == nullptr || token.nDeviceGeneration != 7 || token.nValue != 1 ||
+		     ( token.eQueue != SIR_GRAPHICS_QUEUE_DIRECT && token.eQueue != SIR_GRAPHICS_QUEUE_COPY ) ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
+		++m_nPollCount;
+		*pCompleted = m_bFenceCompleted;
+		return SIR_GRAPHICS_SUCCESS;
 	}
 	sirGraphicsResult_t wait( const sirGraphicsCompletion_t&, uint64_t ) noexcept override
 	{
@@ -256,6 +262,8 @@ public:
 	SIRFrameGraphTestCommands m_Direct;
 	SIRFrameGraphTestCommands m_Copy;
 	uint32_t m_nSubmissions = 0;
+	uint32_t m_nPollCount = 0;
+	bool m_bFenceCompleted = false;
 
 protected:
 private:
@@ -318,11 +326,36 @@ static bool testDeviceBridge( void ) noexcept
 	const sirGraphicsHandle_t handles[] = { { 8, 1, 7, SIR_GRAPHICS_HANDLE_BUFFER } };
 	sirFrameGraphDeviceInput_t input = { &device, handles, 1, mockDeviceRecord, &device };
 	sirFrameGraphNativeOutput_t output = {};
-	return graph.submitDevice( compiled, input, &output ) == SIR_GRAPHICS_SUCCESS && output.nSubmittedPassCount == 2 &&
-	       output.completion.nQueueMask == caps.nQueueMask && output.completion.szQueueValues[SIR_GRAPHICS_QUEUE_DIRECT] == 1 &&
-	       output.completion.szQueueValues[SIR_GRAPHICS_QUEUE_COPY] == 1 && device.m_nSubmissions == 2 && device.m_Copy.m_nResets == 1 &&
-	       device.m_Direct.m_nResets == 1 && device.m_Copy.m_nCloses == 1 && device.m_Direct.m_nCloses == 1 &&
-	       device.m_Copy.m_nBarriers == 1 && device.m_Direct.m_nBarriers == 1;
+	if ( graph.submitDevice( compiled, input, &output ) != SIR_GRAPHICS_SUCCESS || output.nSubmittedPassCount != 2 ||
+	     output.completion.nQueueMask != caps.nQueueMask || output.completion.szQueueValues[SIR_GRAPHICS_QUEUE_DIRECT] != 1 ||
+	     output.completion.szQueueValues[SIR_GRAPHICS_QUEUE_COPY] != 1 || device.m_nSubmissions != 2 || device.m_Copy.m_nResets != 1 ||
+	     device.m_Direct.m_nResets != 1 || device.m_Copy.m_nCloses != 1 || device.m_Direct.m_nCloses != 1 ||
+	     device.m_Copy.m_nBarriers != 1 || device.m_Direct.m_nBarriers != 1 ) {
+		return false;
+	}
+	sirFrameGraphProviderLaneMap_t mapping = {};
+	mapping.nProviderId = 9;
+	mapping.nProviderGeneration = 2;
+	mapping.nDeviceGeneration = 7;
+	mapping.nLaneCount = 3;
+	mapping.szQueueToLane[SIR_GRAPHICS_QUEUE_DIRECT] = 0;
+	mapping.szQueueToLane[SIR_GRAPHICS_QUEUE_COPY] = 2;
+	sirProviderCompletionSet_t required = {};
+	if ( sirFrameGraphProviderRequiredCompletion( output, mapping, &required ) != SIR_GRAPHICS_SUCCESS || required.nLaneMask != 5 ) {
+		return false;
+	}
+	sirProviderCompletionSet_t observed = {};
+	if ( sirFrameGraphProviderObservedCompletion( &device, output, mapping, &observed ) != SIR_GRAPHICS_BUSY || observed.nLaneMask != 0 ||
+	     device.m_nPollCount == 0 ) {
+		return false;
+	}
+	device.m_bFenceCompleted = true;
+	if ( sirFrameGraphProviderObservedCompletion( &device, output, mapping, &observed ) != SIR_GRAPHICS_SUCCESS ||
+	     !sirProviderCompletionSatisfied( required, observed ) || observed.nLaneMask != 5 ) {
+		return false;
+	}
+	output.bUnknownCompletion = true;
+	return sirFrameGraphProviderObservedCompletion( &device, output, mapping, &observed ) == SIR_GRAPHICS_BUSY && observed.nLaneMask == 0;
 }
 
 int main( void )
