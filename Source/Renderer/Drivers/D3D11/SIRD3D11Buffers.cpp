@@ -225,7 +225,8 @@ sirGraphicsResult_t SIRD3D11Device::retireResource( sirGraphicsHandle_t hResourc
 	if ( eLookup != SIR_GRAPHICS_SUCCESS ) {
 		return eLookup;
 	}
-	if ( hResource.eType != SIR_GRAPHICS_HANDLE_BUFFER ) {
+	if ( hResource.eType != SIR_GRAPHICS_HANDLE_BUFFER && hResource.eType != SIR_GRAPHICS_HANDLE_TEXTURE &&
+	     hResource.eType != SIR_GRAPHICS_HANDLE_VIEW && hResource.eType != SIR_GRAPHICS_HANDLE_SAMPLER ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
 	void *pNative = nullptr;
@@ -233,6 +234,6 @@ sirGraphicsResult_t SIRD3D11Device::retireResource( sirGraphicsHandle_t hResourc
 	if ( eRelease != SIR_GRAPHICS_SUCCESS ) {
 		return eRelease;
 	}
-	( ( ID3D11Buffer * )pNative )->Release();
+	( ( IUnknown * )pNative )->Release();
 	return SIR_GRAPHICS_SUCCESS;
 }

@@ -145,29 +145,6 @@ sirGraphicsResult_t SIRD3D11Device::queryMemoryBudget( sirGraphicsMemoryBudget_t
 	return SIR_GRAPHICS_SUCCESS;
 }
 
-// D11-05 owns native buffers. Textures, draw submission and presentation
-// remain explicitly unsupported until their native paths are implemented.
-sirGraphicsResult_t SIRD3D11Device::createTexture( const sirGraphicsTextureDesc_t&, sirGraphicsHandle_t *pHandle ) noexcept
-{
-	if ( pHandle != nullptr ) {
-		*pHandle = {};
-	}
-	return SIR_GRAPHICS_UNSUPPORTED;
-}
-sirGraphicsResult_t SIRD3D11Device::createView( const sirGraphicsViewDesc_t&, sirGraphicsHandle_t *pHandle ) noexcept
-{
-	if ( pHandle != nullptr ) {
-		*pHandle = {};
-	}
-	return SIR_GRAPHICS_UNSUPPORTED;
-}
-sirGraphicsResult_t SIRD3D11Device::createSampler( const sirGraphicsSamplerDesc_t&, sirGraphicsHandle_t *pHandle ) noexcept
-{
-	if ( pHandle != nullptr ) {
-		*pHandle = {};
-	}
-	return SIR_GRAPHICS_UNSUPPORTED;
-}
 sirGraphicsResult_t SIRD3D11Device::createPipeline( const sirGraphicsPipelineDesc_t&, sirGraphicsHandle_t *pHandle ) noexcept
 {
 	if ( pHandle != nullptr ) {

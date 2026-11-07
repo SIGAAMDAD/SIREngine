@@ -1,6 +1,6 @@
 include("${CMAKE_CURRENT_LIST_DIR}/../../../../Build/CMake/SIRBuildTreeGuard.cmake")
 # Portable feature-level admission stays testable without a Windows SDK.
-add_library(SIRD3D11FeatureProfile STATIC EXCLUDE_FROM_ALL SIRD3D11FeatureLevels.cpp SIRD3D11FormatValidation.cpp SIRD3D11Handles.cpp SIRD3D11BufferValidation.cpp)
+add_library(SIRD3D11FeatureProfile STATIC EXCLUDE_FROM_ALL SIRD3D11FeatureLevels.cpp SIRD3D11FormatValidation.cpp SIRD3D11Handles.cpp SIRD3D11BufferValidation.cpp SIRD3D11TextureValidation.cpp)
 add_library(SIR::D3D11FeatureProfile ALIAS SIRD3D11FeatureProfile)
 target_include_directories(SIRD3D11FeatureProfile PUBLIC
     "${PROJECT_SOURCE_DIR}/Source"
@@ -21,7 +21,7 @@ if(SIR_WITH_D3D11)
         message(FATAL_ERROR "SIR_WITH_D3D11 requires Windows SDK d3d11.h and dxgi.h")
     endif()
 
-    add_library(SIRD3D11 STATIC SIRD3D11Driver.cpp SIRD3D11Device.cpp SIRD3D11Buffers.cpp SIRD3D11Formats.cpp)
+    add_library(SIRD3D11 STATIC SIRD3D11Driver.cpp SIRD3D11Device.cpp SIRD3D11Buffers.cpp SIRD3D11Formats.cpp SIRD3D11Textures.cpp)
     add_library(SIR::D3D11 ALIAS SIRD3D11)
     target_include_directories(SIRD3D11 PUBLIC
         "${PROJECT_SOURCE_DIR}/Source"

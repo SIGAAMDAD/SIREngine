@@ -17,7 +17,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <d3d11.h>
 
-static DXGI_FORMAT sirD3D11NativeFormat( sirGraphicsFormat_t eFormat ) noexcept
+uint32_t sirD3D11GetNativeFormatCode( sirGraphicsFormat_t eFormat ) noexcept
 {
 	switch ( eFormat ) {
 	case SIR_GRAPHICS_FORMAT_RGBA8_UNORM:
@@ -67,7 +67,7 @@ sirGraphicsResult_t sirD3D11QueryFormatSupport( void *pNativeDevice, sirGraphics
 	if ( pNativeDevice == nullptr || pSupport == nullptr || pSupport->nSize < sizeof( *pSupport ) ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	const DXGI_FORMAT eNativeFormat = sirD3D11NativeFormat( eFormat );
+	const DXGI_FORMAT eNativeFormat = ( DXGI_FORMAT )sirD3D11GetNativeFormatCode( eFormat );
 	if ( eNativeFormat == DXGI_FORMAT_UNKNOWN ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}

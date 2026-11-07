@@ -37,3 +37,9 @@ target_link_libraries(SIRD3D11BufferValidationTests PRIVATE SIR::D3D11FeaturePro
 add_test(NAME renderer.d3d11.buffer-validation COMMAND SIRD3D11BufferValidationTests)
 set_tests_properties(renderer.d3d11.buffer-validation PROPERTIES LABELS "d3d11;cpu;conformance" TIMEOUT 30)
 sir_configure_owned_target(SIRD3D11BufferValidationTests)
+
+add_executable(SIRD3D11TextureValidationTests SIRD3D11TextureValidationTests.cpp)
+target_link_libraries(SIRD3D11TextureValidationTests PRIVATE SIR::D3D11FeatureProfile)
+add_test(NAME renderer.d3d11.texture-validation COMMAND SIRD3D11TextureValidationTests)
+set_tests_properties(renderer.d3d11.texture-validation PROPERTIES LABELS "d3d11;cpu;conformance" TIMEOUT 30)
+sir_configure_owned_target(SIRD3D11TextureValidationTests)
