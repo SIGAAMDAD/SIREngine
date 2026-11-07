@@ -198,14 +198,29 @@ static uint32_t sirGLQueryMemoryBudget( void *pDevice, sirGraphicsMemoryBudget_t
 	return SIR_GRAPHICS_SUCCESS;
 }
 
-static uint32_t sirGLPoll( void *, const sirGraphicsCompletion_t *, uint32_t * ) noexcept
+static uint32_t sirGLPoll( void *pDevice, const sirGraphicsCompletion_t *pCompletion, uint32_t *pDone ) noexcept
 {
-	return SIR_GRAPHICS_UNSUPPORTED;
+	if ( pDevice == nullptr || pCompletion == nullptr || pDone == nullptr ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	sirGLDevice_t *pState = ( sirGLDevice_t * )pDevice;
+	if ( pState->pContext == nullptr ) {
+		return SIR_GRAPHICS_DEVICE_LOST;
+	}
+	if ( pCompletion->nDeviceGeneration != pState->nGeneration ||
+	     pCompletion->eQueue != SIR_GRAPHICS_QUEUE_DIRECT || pCompletion->nValue == 0 ||
+	     pCompletion->nValue > pState->nCompletedDirectValue ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	*pDone = 1; // Every admitted submission synchronizes through native glFinish.
+	return SIR_GRAPHICS_SUCCESS;
 }
 
-static uint32_t sirGLWait( void *, const sirGraphicsCompletion_t *, uint64_t ) noexcept
+static uint32_t sirGLWait( void *pDevice, const sirGraphicsCompletion_t *pCompletion, uint64_t nTimeoutNs ) noexcept
 {
-	return SIR_GRAPHICS_UNSUPPORTED;
+	uint32_t nDone = 0;
+	( void )nTimeoutNs;
+	return sirGLPoll( pDevice, pCompletion, &nDone );
 }
 
 static uint32_t sirGLCreateBuffer( void *pDevice, const sirGraphicsBufferDesc_t *pDesc, sirGraphicsHandle_t *pHandle ) noexcept
@@ -428,14 +443,227 @@ static uint32_t sirGLInvalidateBuffer( void *, const sirGraphicsABIBufferRange_t
 	return SIR_GRAPHICS_UNSUPPORTED;
 }
 
-static uint32_t sirGLAcquireCommands( void *, uint32_t, sirGraphicsABICommandList_t * ) noexcept
+static uint32_t sirGLCommandReset( void *pCommands ) noexcept
+{
+	sirGLCommandState_t *pState = ( sirGLCommandState_t * )pCommands;
+	if ( pState == nullptr || pState->pDevice == nullptr || pState->pDevice->pContext == nullptr ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	if ( !sirGLContextOwnsThread( pState->pDevice->pContext ) || pState->bInRenderPass ) {
+		return SIR_GRAPHICS_BUSY;
+	}
+	pState->bRecording = true;
+	pState->bClosed = false;
+	return SIR_GRAPHICS_SUCCESS;
+}
+
+static uint32_t sirGLCommandUnsupportedBarrier( void *, const sirGraphicsBarrier_t *, uint32_t ) noexcept
+{
+	return SIR_GRAPHICS_UNSUPPORTED;
+}
+static uint32_t sirGLCommandUnsupportedCopyBuffer( void *, const sirGraphicsABICopyBuffer_t * ) noexcept
+{
+	return SIR_GRAPHICS_UNSUPPORTED;
+}
+static uint32_t sirGLCommandUnsupportedCopyTexture( void *, const sirGraphicsABIBufferTextureCopy_t * ) noexcept
 {
 	return SIR_GRAPHICS_UNSUPPORTED;
 }
 
-static uint32_t sirGLSubmit( void *, uint32_t, const sirGraphicsABISubmission_t *, sirGraphicsCompletion_t * ) noexcept
+static uint32_t sirGLCommandBeginPass( void *pCommands, const sirGraphicsABIRenderPass_t *pPass ) noexcept
+{
+	sirGLCommandState_t *pCommand = ( sirGLCommandState_t * )pCommands;
+	if ( pCommand == nullptr || pCommand->pDevice == nullptr || pPass == nullptr ||
+	     pPass->nSize < sizeof( *pPass ) || pPass->pColors == nullptr || pPass->nColorCount != 1 ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	sirGLDevice_t *pDevice = pCommand->pDevice;
+	if ( !sirGLContextOwnsThread( pDevice->pContext ) || !pCommand->bRecording || pCommand->bInRenderPass ) {
+		return SIR_GRAPHICS_BUSY;
+	}
+	if ( pPass->nClearDepth != 0 || pPass->hDepthView.nGeneration != 0 ) {
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
+	const sirGraphicsABIColorAttachment_t& color = pPass->pColors[0];
+	sirGLNativeResource_t resource = {};
+	const uint32_t nFind = sirGLHandlePoolFind( &pDevice->handles, color.hView, &resource );
+	if ( nFind != SIR_GRAPHICS_SUCCESS ) {
+		return nFind;
+	}
+	if ( resource.eType != SIR_GRAPHICS_HANDLE_VIEW && resource.eType != SIR_GRAPHICS_HANDLE_TEXTURE ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	const sirGLFramebufferDesc_t desc = { resource.nName, 0, 0, 0, resource.eFormat, SIR_GRAPHICS_FORMAT_UNKNOWN };
+	uint32_t nFramebuffer = 0;
+	const uint32_t nResult = sirGLCreateNativeFramebuffer( &pDevice->framebuffers, &desc, &nFramebuffer );
+	if ( nResult != SIR_GRAPHICS_SUCCESS ) {
+		return nResult;
+	}
+	if ( color.nClear != 0 ) {
+		pDevice->pClearNamedFramebuffer( nFramebuffer, 0x1800, 0, color.szClearColor );
+		if ( pDevice->pGetNativeError() != 0 ) {
+			( void )sirGLDeleteNativeFramebuffer( &pDevice->framebuffers, nFramebuffer );
+			return SIR_GRAPHICS_DRIVER_ERROR;
+		}
+	}
+	pCommand->nPassFramebuffer = nFramebuffer;
+	pCommand->bInRenderPass = true;
+	return SIR_GRAPHICS_SUCCESS;
+}
+
+static uint32_t sirGLCommandEndPass( void *pCommands ) noexcept
+{
+	sirGLCommandState_t *pCommand = ( sirGLCommandState_t * )pCommands;
+	if ( pCommand == nullptr || pCommand->pDevice == nullptr || !pCommand->bInRenderPass ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	if ( !sirGLContextOwnsThread( pCommand->pDevice->pContext ) ) {
+		return SIR_GRAPHICS_BUSY;
+	}
+	const uint32_t nResult = sirGLDeleteNativeFramebuffer( &pCommand->pDevice->framebuffers, pCommand->nPassFramebuffer );
+	if ( nResult == SIR_GRAPHICS_SUCCESS ) {
+		pCommand->nPassFramebuffer = 0;
+		pCommand->bInRenderPass = false;
+	}
+	return nResult;
+}
+
+static uint32_t sirGLCommandUnsupportedHandle( void *, sirGraphicsHandle_t ) noexcept
 {
 	return SIR_GRAPHICS_UNSUPPORTED;
+}
+static uint32_t sirGLCommandUnsupportedSet( void *, uint32_t, sirGraphicsHandle_t ) noexcept
+{
+	return SIR_GRAPHICS_UNSUPPORTED;
+}
+static uint32_t sirGLCommandUnsupportedVertex( void *, const sirGraphicsABIVertexBuffer_t * ) noexcept
+{
+	return SIR_GRAPHICS_UNSUPPORTED;
+}
+static uint32_t sirGLCommandUnsupportedIndex( void *, const sirGraphicsABIIndexBuffer_t * ) noexcept
+{
+	return SIR_GRAPHICS_UNSUPPORTED;
+}
+static uint32_t sirGLCommandUnsupportedViewport( void *, const sirGraphicsViewport_t *, const sirGraphicsRect_t * ) noexcept
+{
+	return SIR_GRAPHICS_UNSUPPORTED;
+}
+static uint32_t sirGLCommandUnsupportedDraw( void *, const sirGraphicsABIDraw_t * ) noexcept
+{
+	return SIR_GRAPHICS_UNSUPPORTED;
+}
+static uint32_t sirGLCommandUnsupportedDrawIndexed( void *, const sirGraphicsABIDrawIndexed_t * ) noexcept
+{
+	return SIR_GRAPHICS_UNSUPPORTED;
+}
+static uint32_t sirGLCommandUnsupportedDispatch( void *, uint32_t, uint32_t, uint32_t ) noexcept
+{
+	return SIR_GRAPHICS_UNSUPPORTED;
+}
+
+static uint32_t sirGLCommandClose( void *pCommands ) noexcept
+{
+	sirGLCommandState_t *pCommand = ( sirGLCommandState_t * )pCommands;
+	if ( pCommand == nullptr || !pCommand->bRecording || pCommand->bInRenderPass ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	pCommand->bRecording = false;
+	pCommand->bClosed = true;
+	return SIR_GRAPHICS_SUCCESS;
+}
+
+static uint32_t sirGLAcquireCommands( void *pDevice, uint32_t nQueue, sirGraphicsABICommandList_t *pCommands ) noexcept
+{
+	if ( pDevice == nullptr || pCommands == nullptr || pCommands->nSize < sizeof( *pCommands ) ||
+	     nQueue != SIR_GRAPHICS_QUEUE_DIRECT ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	sirGLDevice_t *pState = ( sirGLDevice_t * )pDevice;
+	if ( !sirGLContextOwnsThread( pState->pContext ) || pState->commands.bRecording ||
+	     pState->commands.bInRenderPass ) {
+		return SIR_GRAPHICS_BUSY;
+	}
+	sirGraphicsABICommandList_t commands = {};
+	commands.nSize = sizeof( commands );
+	commands.nDeviceGeneration = pState->nGeneration;
+	commands.nQueue = SIR_GRAPHICS_QUEUE_DIRECT;
+	commands.pCommands = &pState->commands;
+	commands.pReset = sirGLCommandReset;
+	commands.pBarrier = sirGLCommandUnsupportedBarrier;
+	commands.pCopyBuffer = sirGLCommandUnsupportedCopyBuffer;
+	commands.pCopyBufferTexture = sirGLCommandUnsupportedCopyTexture;
+	commands.pBeginRenderPass = sirGLCommandBeginPass;
+	commands.pEndRenderPass = sirGLCommandEndPass;
+	commands.pBindPipeline = sirGLCommandUnsupportedHandle;
+	commands.pBindBindingSet = sirGLCommandUnsupportedSet;
+	commands.pBindVertexBuffer = sirGLCommandUnsupportedVertex;
+	commands.pBindIndexBuffer = sirGLCommandUnsupportedIndex;
+	commands.pSetViewport = sirGLCommandUnsupportedViewport;
+	commands.pDraw = sirGLCommandUnsupportedDraw;
+	commands.pDrawIndexed = sirGLCommandUnsupportedDrawIndexed;
+	commands.pDispatch = sirGLCommandUnsupportedDispatch;
+	commands.pClose = sirGLCommandClose;
+	*pCommands = commands;
+	return SIR_GRAPHICS_SUCCESS;
+}
+
+static uint32_t sirGLSubmit( void *pDevice, uint32_t nQueue, const sirGraphicsABISubmission_t *pBatch,
+                             sirGraphicsCompletion_t *pCompletion ) noexcept
+{
+	if ( pDevice == nullptr || pBatch == nullptr || pCompletion == nullptr ||
+	     nQueue != SIR_GRAPHICS_QUEUE_DIRECT || pBatch->nSize < sizeof( *pBatch ) ||
+	     pBatch->nReserved != 0 || pBatch->nCommandListCount != 1 || pBatch->ppCommandLists == nullptr ||
+	     pBatch->ppCommandLists[0] == nullptr ||
+	     pBatch->ppCommandLists[0] != ( const void * )&( ( sirGLDevice_t * )pDevice )->commands ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	sirGLDevice_t *pState = ( sirGLDevice_t * )pDevice;
+	if ( !sirGLContextOwnsThread( pState->pContext ) || pState->commands.bInRenderPass ||
+	     !pState->commands.bClosed ) {
+		return SIR_GRAPHICS_BUSY;
+	}
+	for ( uint32_t i = 0; i < pBatch->nWaitCount; ++i ) {
+		if ( pBatch->pWaits == nullptr || pBatch->pWaits[i].nDeviceGeneration != pState->nGeneration ||
+		     pBatch->pWaits[i].eQueue != SIR_GRAPHICS_QUEUE_DIRECT ||
+		     pBatch->pWaits[i].nValue == 0 || pBatch->pWaits[i].nValue > pState->nCompletedDirectValue ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
+	}
+	for ( uint32_t i = 0; i < pBatch->nAcquisitionCount; ++i ) {
+		if ( pBatch->pAcquisitions == nullptr ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
+		const sirGraphicsSurfaceImage_t& image = pBatch->pAcquisitions[i];
+		bool bFound = false;
+		for ( uint32_t j = 0; j < SIR_GL_PRESENT_SURFACE_COUNT; ++j ) {
+			const sirGLPresentSlot_t& slot = pState->present[j];
+			if ( slot.bActive && slot.bAcquired && slot.hSurface.nSlot == image.hSurface.nSlot &&
+			     slot.hSurface.nGeneration == image.hSurface.nGeneration &&
+			     slot.hImage.nSlot == image.hImage.nSlot && slot.hImage.nGeneration == image.hImage.nGeneration &&
+			     slot.nAcquisitionId == image.nAcquisitionId &&
+			     slot.window.nWindowGeneration == image.nWindowGeneration ) {
+				bFound = true;
+				break;
+			}
+		}
+		if ( !bFound ) {
+			return SIR_GRAPHICS_INVALID_HANDLE;
+		}
+	}
+	if ( pState->nCompletedDirectValue == UINT64_MAX || pState->pFinish == nullptr ||
+	     pState->pGetNativeError == nullptr ) {
+		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
+	}
+	// OpenGL's single owning thread is the DIRECT queue. Finish is a real GPU
+	// synchronization point; the returned token is immediately complete.
+	pState->pFinish();
+	if ( pState->pGetNativeError() != 0 ) {
+		return SIR_GRAPHICS_DRIVER_ERROR;
+	}
+	pState->commands.bClosed = false;
+	++pState->nCompletedDirectValue;
+	*pCompletion = { pState->nGeneration, SIR_GRAPHICS_QUEUE_DIRECT, pState->nCompletedDirectValue };
+	return SIR_GRAPHICS_SUCCESS;
 }
 
 static uint32_t sirGLRetireResource( void *pDevice, sirGraphicsHandle_t hResource, const sirGraphicsCompletionSet_t *pCompletion ) noexcept
