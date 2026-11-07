@@ -27,6 +27,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 // Ported from the original editor native host. The driver is borrowed for
 // one visible window lifecycle and is destroyed by its caller after return.
+int sirRunWindowHostsWithDriver( SIRWindowDriver& driver, const sirWindowCreateDesc_t *pDescs, uint32_t nWindows ) noexcept;
+int sirRunNativeWindowHosts( const sirWindowCreateDesc_t *pDescs, uint32_t nWindows ) noexcept;
 int sirRunWindowHostWithDriver( SIRWindowDriver& driver, const sirWindowCreateDesc_t& desc ) noexcept;
 int sirRunNativeWindowHost( const sirWindowCreateDesc_t& desc ) noexcept;
 

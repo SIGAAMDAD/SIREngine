@@ -30,65 +30,96 @@ of merchantability, fitness for a particular purpose and noninfringement.
 static bool sirNativeWindowHostPump( void *pContext )
 {
 	SIRWindowSystem *pWindows = ( SIRWindowSystem * )pContext;
-	return pWindows->pumpEvents( 256 ) == SIR_WINDOW_OK;
+	const sirWindowResult_t eResult = pWindows->pumpEvents( 256 );
+	return eResult == SIR_WINDOW_OK || eResult == SIR_WINDOW_EVENTS_LOST;
 }
 
-int sirRunWindowHostWithDriver( SIRWindowDriver& driver, const sirWindowCreateDesc_t& desc ) noexcept
+int sirRunWindowHostsWithDriver( SIRWindowDriver& driver, const sirWindowCreateDesc_t *pDescs, uint32_t nWindows ) noexcept
 {
+	if ( nWindows > SIR_WINDOW_MAX_WINDOWS || ( nWindows != 0 && pDescs == nullptr ) ) {
+		return 1;
+	}
 	SIRWindowSystem windows( driver );
 	SIRApplication app;
 	if ( !app.registerSystem( &windows ) || !app.attachWindowPump( sirNativeWindowHostPump, &windows ) || !app.initialize() ) {
 		( void )app.shutdown();
 		return 1;
 	}
-
-	sirWindowHandle_t hWindow = {};
-	if ( windows.createWindow( desc, &hWindow ) != SIR_WINDOW_OK ) {
-		( void )app.shutdown();
-		return 1;
-	}
-
+	sirWindowHandle_t handles[SIR_WINDOW_MAX_WINDOWS] = {};
+	uint32_t nCreated = 0;
 	bool bSucceeded = true;
-	while ( true ) {
+	for ( uint32_t i = 0; i < nWindows; ++i ) {
+		if ( windows.createWindow( pDescs[i], &handles[i] ) != SIR_WINDOW_OK ) {
+			bSucceeded = false;
+			break;
+		}
+		++nCreated;
+	}
+	uint32_t nOpen = nCreated;
+	while ( bSucceeded && nOpen != 0 ) {
 		if ( !app.tick() ) {
 			bSucceeded = false;
 			break;
 		}
-		sirWindowSnapshot_t snapshot = {};
-		if ( windows.querySnapshot( hWindow, &snapshot ) != SIR_WINDOW_OK ) {
-			bSucceeded = false;
-			break;
-		}
-		if ( snapshot.bCloseRequested ) {
-			break;
+		for ( uint32_t i = 0; i < nCreated; ++i ) {
+			if ( handles[i].nGeneration == 0 ) {
+				continue;
+			}
+			sirWindowSnapshot_t snapshot = {};
+			if ( windows.querySnapshot( handles[i], &snapshot ) != SIR_WINDOW_OK ) {
+				bSucceeded = false;
+				break;
+			}
+			if ( snapshot.bCloseRequested ) {
+				if ( windows.destroyWindow( handles[i] ) != SIR_WINDOW_OK ) {
+					bSucceeded = false;
+					break;
+				}
+				handles[i] = {};
+				--nOpen;
+			}
 		}
 	}
-
-	const sirWindowResult_t eDestroy = windows.destroyWindow( hWindow );
+	while ( nCreated != 0 ) {
+		--nCreated;
+		if ( handles[nCreated].nGeneration != 0 && windows.destroyWindow( handles[nCreated] ) != SIR_WINDOW_OK ) {
+			bSucceeded = false;
+		}
+	}
 	const sirSystemResult_t eShutdown = app.shutdown();
-	return bSucceeded && eDestroy == SIR_WINDOW_OK && eShutdown == SIR_SYSTEM_OK ? 0 : 1;
+	return bSucceeded && eShutdown == SIR_SYSTEM_OK ? 0 : 1;
 }
 
-int sirRunNativeWindowHost( const sirWindowCreateDesc_t& desc ) noexcept
+int sirRunWindowHostWithDriver( SIRWindowDriver& driver, const sirWindowCreateDesc_t& desc ) noexcept
+{
+	return sirRunWindowHostsWithDriver( driver, &desc, 1 );
+}
+
+int sirRunNativeWindowHosts( const sirWindowCreateDesc_t *pDescs, uint32_t nWindows ) noexcept
 {
 #if defined( SIR_WINDOW_WAYLAND_AVAILABLE )
 	const char *pszWaylandDisplay = getenv( "WAYLAND_DISPLAY" );
 	if ( pszWaylandDisplay != nullptr && pszWaylandDisplay[0] != 0 ) {
 		SIRWindowDriverWayland driver;
-		return sirRunWindowHostWithDriver( driver, desc );
+		return sirRunWindowHostsWithDriver( driver, pDescs, nWindows );
 	}
 #endif
 #if defined( _WIN32 )
 	SIRWindowDriverWin32 driver;
-	return sirRunWindowHostWithDriver( driver, desc );
+	return sirRunWindowHostsWithDriver( driver, pDescs, nWindows );
 #elif defined( SIR_WINDOW_X11_AVAILABLE )
 	SIRWindowDriverX11 driver;
-	return sirRunWindowHostWithDriver( driver, desc );
+	return sirRunWindowHostsWithDriver( driver, pDescs, nWindows );
 #elif defined( SIR_WINDOW_WAYLAND_AVAILABLE )
 	SIRWindowDriverWayland driver;
-	return sirRunWindowHostWithDriver( driver, desc );
+	return sirRunWindowHostsWithDriver( driver, pDescs, nWindows );
 #else
 	fputs( "SIREngine: no native window driver is available in this build\n", stderr );
 	return 1;
 #endif
+}
+
+int sirRunNativeWindowHost( const sirWindowCreateDesc_t& desc ) noexcept
+{
+	return sirRunNativeWindowHosts( &desc, 1 );
 }

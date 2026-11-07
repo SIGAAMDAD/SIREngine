@@ -305,12 +305,16 @@ int main( int nArgs, char **pszArgs )
 			return 0;
 		}
 		if ( strcmp( pszArgs[1], "--help" ) == 0 ) {
-			puts( "Usage: SIREngine [--version|--help|--input-window|--window-no-input]" );
+			puts( "Usage: SIREngine [--version|--help|--input-window|--window-no-input|--window-multi]" );
 			return 0;
 		}
 #if defined( _WIN32 ) || defined( SIR_WINDOW_X11_AVAILABLE ) || defined( SIR_WINDOW_WAYLAND_AVAILABLE )
 		if ( strcmp( pszArgs[1], "--window-no-input" ) == 0 ) {
 			return sirRunNativeWindowHost( { "SIREngine native window", 800, 450 } );
+		}
+		if ( strcmp( pszArgs[1], "--window-multi" ) == 0 ) {
+			const sirWindowCreateDesc_t windows[] = { { "SIREngine primary", 800, 450 }, { "SIREngine auxiliary", 640, 400 } };
+			return sirRunNativeWindowHosts( windows, 2 );
 		}
 #endif
 
