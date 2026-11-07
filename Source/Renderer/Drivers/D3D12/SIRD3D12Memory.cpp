@@ -443,7 +443,7 @@ bool SIRD3D12Memory::initializeTransferArena( const sirD3D12TransferPoolConfig_t
 	}
 
 	m_nLastError = createBuffer( eWriteHeap, D3D12_RESOURCE_STATE_GENERIC_READ, nBytes, &m_pTransferWrite );
-	if ( FAILED( m_nLastError ) && eWriteHeap == D3D12_HEAP_TYPE_GPU_UPLOAD ) {
+	if ( ( m_nLastError == E_OUTOFMEMORY || m_nLastError == E_NOTIMPL ) && eWriteHeap == D3D12_HEAP_TYPE_GPU_UPLOAD ) {
 		// GPU_UPLOAD is optional and can exhaust its own sealed pool while a
 		// regular UPLOAD allocation remains admissible. Preserve functionality.
 		m_eTransferPath = bUMA ? SIR_D3D12_TRANSFER_DIRECT_UMA : SIR_D3D12_TRANSFER_STAGED;
@@ -470,6 +470,9 @@ bool SIRD3D12Memory::initializeTransferArena( const sirD3D12TransferPoolConfig_t
 	void *pWrite = nullptr;
 	m_nLastError = m_pTransferWrite->GetResource()->Map( 0, &noRead, &pWrite );
 	if ( FAILED( m_nLastError ) || pWrite == nullptr ) {
+		if ( SUCCEEDED( m_nLastError ) ) {
+			m_nLastError = E_FAIL;
+		}
 		releaseTransferArena( true );
 		return false;
 	}
@@ -478,6 +481,9 @@ bool SIRD3D12Memory::initializeTransferArena( const sirD3D12TransferPoolConfig_t
 	void *pReadback = nullptr;
 	m_nLastError = m_pTransferReadback->GetResource()->Map( 0, nullptr, &pReadback );
 	if ( FAILED( m_nLastError ) || pReadback == nullptr ) {
+		if ( SUCCEEDED( m_nLastError ) ) {
+			m_nLastError = E_FAIL;
+		}
 		releaseTransferArena( true );
 		return false;
 	}

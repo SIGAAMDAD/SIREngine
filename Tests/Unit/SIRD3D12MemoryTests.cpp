@@ -185,8 +185,7 @@ int main( void )
 	}
 	sealed.releaseExternalBytes( 1024 * 1024 + 1 );
 	sirD3D12AllocationLedger_t unchanged = {};
-	if ( sealed.getLastError() != E_INVALIDARG || !sealed.queryAllocationLedger( &unchanged ) ||
-	     unchanged.nExternalBytes != 1024 * 1024 ) {
+	if ( sealed.getLastError() != E_INVALIDARG || !sealed.queryAllocationLedger( &unchanged ) || unchanged.nExternalBytes != 1024 * 1024 ) {
 		return 40;
 	}
 	sealed.releaseExternalBytes( 1024 * 1024 );
