@@ -74,11 +74,20 @@ sirWindowResult_t SIRWindowDriverWin32::initialize( void ) noexcept
 		definition.hCursor = LoadCursorW( nullptr, MAKEINTRESOURCEW( 32512 ) );
 		definition.lpszClassName = s_szWindowClass;
 		const ATOM nClass = RegisterClassW( &definition );
-		if ( nClass == 0 && GetLastError() != ERROR_CLASS_ALREADY_EXISTS ) {
-			ReleaseSRWLockExclusive( &s_WindowClassLock );
-			return SIR_WINDOW_NATIVE_FAILURE;
+		if ( nClass == 0 ) {
+			if ( GetLastError() != ERROR_CLASS_ALREADY_EXISTS ) {
+				ReleaseSRWLockExclusive( &s_WindowClassLock );
+				return SIR_WINDOW_NATIVE_FAILURE;
+			}
+			WNDCLASSW existing = {};
+			if ( !GetClassInfoW( definition.hInstance, s_szWindowClass, &existing ) ||
+			     existing.lpfnWndProc != windowProc ) {
+				ReleaseSRWLockExclusive( &s_WindowClassLock );
+				return SIR_WINDOW_NATIVE_FAILURE;
+			}
+		} else {
+			s_bWindowClassOwned = true;
 		}
-		s_bWindowClassOwned = nClass != 0;
 	}
 	++s_nWindowClassUsers;
 	m_bRegistered = true;
@@ -419,8 +428,9 @@ void SIRWindowDriverWin32::shutdown( void ) noexcept
 	if ( s_nWindowClassUsers != 0 ) {
 		--s_nWindowClassUsers;
 		if ( s_nWindowClassUsers == 0 && s_bWindowClassOwned ) {
-			( void )UnregisterClassW( s_szWindowClass, GetModuleHandleW( nullptr ) );
-			s_bWindowClassOwned = false;
+			if ( UnregisterClassW( s_szWindowClass, GetModuleHandleW( nullptr ) ) ) {
+				s_bWindowClassOwned = false;
+			}
 		}
 	}
 	m_bRegistered = false;
