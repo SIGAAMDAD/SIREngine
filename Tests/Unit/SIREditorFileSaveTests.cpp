@@ -85,10 +85,19 @@ static void sirEditorTestCommentedSceneRoundtrip( const char *pszDestination, co
 	assert( sirEditorWriteFileAtomically( write ) == SIR_EDITOR_FILE_SAVE_OK );
 	sirEditorTestReadExact( pszDestination, szEdited, nOutputBytes );
 	assert( fopen( pszTemporary, "rb" ) == nullptr );
-	assert( sirEditorScanNodeTextProperties( szEdited, nOutputBytes, scene, &index ) == SIR_EDITOR_PROPERTY_OK );
+	// Close and reopen the actual saved file before validating its native
+	// scene/index state; an in-memory copy is not a disk roundtrip.
+	char szReopened[512] = {};
+	FILE *pReopened = fopen( pszDestination, "rb" );
+	assert( pReopened != nullptr );
+	assert( fread( szReopened, 1, nOutputBytes, pReopened ) == nOutputBytes );
+	assert( fgetc( pReopened ) == EOF );
+	assert( fclose( pReopened ) == 0 );
+	assert( sirEditorScanTextScene( szReopened, nOutputBytes, &scene ) == SIR_EDITOR_TEXT_OK );
+	assert( sirEditorScanNodeTextProperties( szReopened, nOutputBytes, scene, &index ) == SIR_EDITOR_PROPERTY_OK );
 	assert( index.nCount == 3 );
-	assert( memcmp( szEdited + properties[0].nValueOffset, "99", 2 ) == 0 );
-	assert( memcmp( szEdited + properties[1].nValueOffset, "false", 5 ) == 0 );
+	assert( memcmp( szReopened + properties[0].nValueOffset, "99", 2 ) == 0 );
+	assert( memcmp( szReopened + properties[1].nValueOffset, "false", 5 ) == 0 );
 }
 
 int main( void )
