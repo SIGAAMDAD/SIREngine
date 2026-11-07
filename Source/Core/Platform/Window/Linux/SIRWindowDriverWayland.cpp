@@ -319,7 +319,7 @@ void SIRWindowDriverWayland::refreshOutputScale( sirWaylandWindowSlot_t& slot ) 
 			}
 		}
 	}
-	if ( slot.pFractionalScale != nullptr && slot.nFractionalScale120 != 0 ) {
+	if ( slot.pFractionalScale != nullptr ) {
 		return;
 	}
 	if ( slot.nBufferScale == nScale ) {
@@ -462,6 +462,27 @@ sirWindowResult_t SIRWindowDriverWayland::createWindow( const sirWindowCreateDes
 		( void )destroyWindow( nSlot );
 		return SIR_WINDOW_NATIVE_FAILURE;
 	}
+	#ifdef SIR_WAYLAND_FRACTIONAL_SCALE_AVAILABLE
+	if ( m_pFractionalManager != nullptr && m_pViewporter != nullptr ) {
+		slot.pViewport = wp_viewporter_get_viewport( m_pViewporter, slot.pSurface );
+		if ( slot.pViewport != nullptr ) {
+			slot.pFractionalScale = wp_fractional_scale_manager_v1_get_fractional_scale( m_pFractionalManager, slot.pSurface );
+			if ( slot.pFractionalScale != nullptr ) {
+				static const wp_fractional_scale_v1_listener s_FractionalListener = { fractionalPreferredScale };
+				if ( wp_fractional_scale_v1_add_listener( slot.pFractionalScale, &s_FractionalListener, &slot ) != 0 ) {
+					wp_fractional_scale_v1_destroy( slot.pFractionalScale );
+					slot.pFractionalScale = nullptr;
+				}
+			}
+			if ( slot.pFractionalScale == nullptr ) {
+				wp_viewport_destroy( slot.pViewport );
+				slot.pViewport = nullptr;
+			} else {
+				wl_surface_set_buffer_scale( slot.pSurface, 1 );
+			}
+		}
+	}
+#endif
 	xdg_toplevel_set_title( slot.pToplevel, desc.pszTitle );
 	wl_surface_commit( slot.pSurface ); // Empty initial commit: renderer may not attach a buffer yet.
 	*pView = { SIR_WINDOW_PLATFORM_WAYLAND, ( uintptr_t )slot.pSurface, ( uintptr_t )m_pDisplay, 0 };
@@ -475,10 +496,24 @@ sirWindowResult_t SIRWindowDriverWayland::destroyWindow( uint32_t nSlot ) noexce
 	}
 	sirWaylandWindowSlot_t& slot = m_Slots[nSlot];
 	if ( !m_bLost ) {
+#ifdef SIR_WAYLAND_FRACTIONAL_SCALE_AVAILABLE
+		if ( slot.pFractionalScale != nullptr ) {
+			wp_fractional_scale_v1_destroy( slot.pFractionalScale );
+		}
+		if ( slot.pViewport != nullptr ) {
+			wp_viewport_destroy( slot.pViewport );
+		}
+#endif
 		xdg_toplevel_destroy( slot.pToplevel );
 		xdg_surface_destroy( slot.pXdgSurface );
 		wl_surface_destroy( slot.pSurface );
 	} else {
+		if ( slot.pFractionalScale != nullptr ) {
+			wl_proxy_destroy( ( wl_proxy * )slot.pFractionalScale );
+		}
+		if ( slot.pViewport != nullptr ) {
+			wl_proxy_destroy( ( wl_proxy * )slot.pViewport );
+		}
 		wl_proxy_destroy( ( wl_proxy * )slot.pToplevel );
 		wl_proxy_destroy( ( wl_proxy * )slot.pXdgSurface );
 		wl_proxy_destroy( ( wl_proxy * )slot.pSurface );
@@ -628,6 +663,14 @@ void SIRWindowDriverWayland::shutdown( void ) noexcept
 			m_Outputs[i] = {};
 		}
 	}
+	#ifdef SIR_WAYLAND_FRACTIONAL_SCALE_AVAILABLE
+	if ( m_pFractionalManager != nullptr ) {
+		wp_fractional_scale_manager_v1_destroy( m_pFractionalManager );
+	}
+	if ( m_pViewporter != nullptr ) {
+		wp_viewporter_destroy( m_pViewporter );
+	}
+#endif
 	if ( m_pSeat != nullptr ) {
 		if ( !m_bLost && wl_proxy_get_version( ( wl_proxy * )m_pSeat ) >= 5 ) {
 			wl_seat_release( m_pSeat );
@@ -660,6 +703,10 @@ void SIRWindowDriverWayland::shutdown( void ) noexcept
 	m_pDisplay = nullptr;
 	m_pRegistry = nullptr;
 	m_pCompositor = nullptr;
+	m_pFractionalManager = nullptr;
+	m_pViewporter = nullptr;
+	m_nFractionalGlobal = 0;
+	m_nViewporterGlobal = 0;
 	m_pSeat = nullptr;
 	m_pBase = nullptr;
 	m_nSeatGlobal = 0;
