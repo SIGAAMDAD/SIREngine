@@ -15,13 +15,13 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Renderer/Graph/SIRFrameGraph.h>
 
-#include <atomic>
+#include <Core/Platform/SIRAtomic.h>
 
-static std::atomic<uint64_t> s_nNextGraphIdentity{ 1 };
+static SIRAtomic<uint64_t> s_nNextGraphIdentity{ 1 };
 
 SIRFrameGraph::SIRFrameGraph( void ) noexcept
 {
-	m_nIdentity = s_nNextGraphIdentity.fetch_add( 1, std::memory_order_relaxed );
+	m_nIdentity = s_nNextGraphIdentity.fetchAdd( 1, SIR_MEMORY_ORDER_RELAXED );
 }
 
 uint32_t SIRFrameGraph::getPassCount( void ) const noexcept
