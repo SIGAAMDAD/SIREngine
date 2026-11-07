@@ -61,3 +61,8 @@ add_executable(SIRMeshCacheIdentityTests SIRMeshCacheIdentityTests.cpp)
 target_link_libraries(SIRMeshCacheIdentityTests PRIVATE SIR::MeshCache)
 add_test(NAME mesh.cache.identity-revision COMMAND SIRMeshCacheIdentityTests)
 sir_configure_owned_target(SIRMeshCacheIdentityTests)
+
+add_executable(SIRVGContractsTests SIRVGContractsTests.cpp)
+target_link_libraries(SIRVGContractsTests PRIVATE SIR::VGContracts)
+add_test(NAME mesh.vg.contracts COMMAND SIRVGContractsTests)
+sir_configure_owned_target(SIRVGContractsTests)

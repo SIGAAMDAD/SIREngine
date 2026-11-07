@@ -127,3 +127,12 @@ if(SIR_MESH_ENABLE_COVERAGE)
     target_compile_options(SIRVGFramePlanTests PRIVATE -fprofile-instr-generate -fcoverage-mapping)
     target_link_options(SIRVGFramePlanTests PRIVATE -fprofile-instr-generate)
 endif()
+
+# Direct cross-system contract verification without GRDG/driver implementations.
+add_library(SIRVGContracts STATIC "${SIR_MESH_SOURCE_ROOT}/Mesh/SIRVGContracts.cpp")
+target_include_directories(SIRVGContracts PUBLIC "${SIR_MESH_SOURCE_ROOT}" "${SIR_MESH_BUILD_ROOT}")
+target_compile_options(SIRVGContracts PRIVATE -Wall -Wextra -Wpedantic -Werror)
+add_executable(SIRVGContractsTests "${CMAKE_CURRENT_LIST_DIR}/../../Unit/SIRVGContractsTests.cpp")
+target_link_libraries(SIRVGContractsTests PRIVATE SIRVGContracts)
+target_compile_options(SIRVGContractsTests PRIVATE -Wall -Wextra -Wpedantic -Werror)
+add_test(NAME mesh.vg.contracts COMMAND SIRVGContractsTests)

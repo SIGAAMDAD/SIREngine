@@ -17,3 +17,12 @@ target_include_directories(SIRVGFramePlan PUBLIC
     "${PROJECT_SOURCE_DIR}/Build/CMake")
 target_compile_features(SIRVGFramePlan PUBLIC cxx_std_17)
 sir_configure_owned_target(SIRVGFramePlan)
+
+# Versioned mesh-owned GRDG/provider/graphics boundary checks; no native device ownership.
+add_library(SIRVGContracts STATIC SIRVGContracts.cpp)
+add_library(SIR::VGContracts ALIAS SIRVGContracts)
+target_include_directories(SIRVGContracts PUBLIC
+    "${PROJECT_SOURCE_DIR}/Source"
+    "${PROJECT_SOURCE_DIR}/Build/CMake")
+target_compile_features(SIRVGContracts PUBLIC cxx_std_17)
+sir_configure_owned_target(SIRVGContracts)
