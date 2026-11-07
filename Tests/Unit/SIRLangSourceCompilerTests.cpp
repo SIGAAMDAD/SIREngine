@@ -118,6 +118,25 @@ static void testSourceToVM( void ) noexcept
 	assert( SIRLangDecodeGraphVM( szBytecode, nBytes, &fixture.workspace.cir ) == SIR_LANG_VM_INVALID_FORMAT );
 }
 
+static void testFailedLoweringDiscardsProgram( void ) noexcept
+{
+	sirLangCompilerFixture_t fixture = {};
+	setupFixture( &fixture );
+	static constexpr char szSource[] = "function echo(u16 value) returns u16 { return value; }";
+	const sirLangSourceView_t source = { ( const uint8_t * )szSource, sizeof( szSource ) - 1 };
+	fixture.workspace.cir.nInstructionCapacity = 1;
+	assert( !SIRLangCompileSource( source, &fixture.workspace ) );
+	assert( fixture.workspace.report.ePhase == SIR_LANG_COMPILE_CIR );
+	assert( fixture.workspace.report.nStageResult == SIR_LANG_LOWER_CAPACITY );
+	assert( fixture.workspace.cir.program.nFunctionCount == 0 );
+	assert( fixture.workspace.cir.program.nInstructionCount == 0 );
+	assert( fixture.workspace.cir.program.pFunctions == nullptr );
+	assert( fixture.workspace.cir.program.pInstructions == nullptr );
+	fixture.workspace.cir.nInstructionCapacity = 512;
+	assert( SIRLangCompileSource( source, &fixture.workspace ) );
+	assert( fixture.workspace.cir.program.nFunctionCount == 1 );
+}
+
 static void testRejectedSource( void ) noexcept
 {
 	sirLangCompilerFixture_t fixture = {};
@@ -267,6 +286,7 @@ static void testModernSourceRejections( void ) noexcept
 int main( void )
 {
 	testSourceToVM();
+	testFailedLoweringDiscardsProgram();
 	testBooleanShortCircuit();
 	testRejectInvalidScalarExpressions();
 	testRejectedSource();
