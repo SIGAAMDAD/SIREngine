@@ -498,6 +498,113 @@ static uint32_t sirGLRetireResource( void *pDevice, sirGraphicsHandle_t hResourc
 	return nStatus;
 }
 
+
+static uint32_t sirGLLoadPresentationDispatch( sirGLDevice_t *pState, sirGLNativeContext_t *pContext ) noexcept
+{
+	pState->pFinish = ( void ( * )( void ) )sirGLResolveNativeProcedure( pContext, "glFinish" );
+	pState->pBlitNamedFramebuffer =
+	    ( void ( * )( uint32_t, uint32_t, int32_t, int32_t, int32_t, int32_t, int32_t, int32_t, int32_t, int32_t,
+	                   uint32_t, uint32_t ) )sirGLResolveNativeProcedure( pContext, "glBlitNamedFramebuffer" );
+	pState->pClearNamedFramebuffer =
+	    ( void ( * )( uint32_t, uint32_t, int32_t, const float * ) )sirGLResolveNativeProcedure(
+	        pContext, "glClearNamedFramebufferfv" );
+	pState->pGetNativeError = ( uint32_t ( * )( void ) )sirGLResolveNativeProcedure( pContext, "glGetError" );
+	return pState->pFinish != nullptr && pState->pBlitNamedFramebuffer != nullptr &&
+	               pState->pClearNamedFramebuffer != nullptr && pState->pGetNativeError != nullptr ?
+	           SIR_GRAPHICS_SUCCESS :
+	           SIR_GRAPHICS_UNSUPPORTED;
+}
+
+static uint32_t sirGLPreparePresentationDisplay( sirGLDevice_t *pState,
+                                                 const sirGraphicsABINativeSurface_t *pNative ) noexcept
+{
+	if ( pState == nullptr || pNative == nullptr || !pState->bWindowed ) {
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
+	if ( pState->bDisplayBound ) {
+		return SIR_GRAPHICS_SUCCESS;
+	}
+	if ( pState->handles.nActive != 0 || pState->framebufferCache.nCount != 0 ) {
+		return SIR_GRAPHICS_BUSY;
+	}
+#if defined( _WIN32 )
+	if ( pNative->nPlatform != SIR_GRAPHICS_SURFACE_WIN32 ) {
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
+	pState->bDisplayBound = true;
+	return sirGLLoadPresentationDispatch( pState, pState->pContext );
+#else
+	if ( pNative->nPlatform != SIR_GRAPHICS_SURFACE_X11 && pNative->nPlatform != SIR_GRAPHICS_SURFACE_WAYLAND ) {
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
+	sirGLNativeContext_t *pWindowContext = nullptr;
+	uint32_t nStatus = sirGLCreateNativeContextForWindow( &pState->pDriver->host, pNative, &pWindowContext );
+	if ( nStatus != SIR_GRAPHICS_SUCCESS ) {
+		( void )sirGLRestoreNativeContext( pState->pContext );
+		return nStatus;
+	}
+	sirGLProbe_t probe = {};
+	nStatus = sirGLReadNativeProbe( pWindowContext, &probe );
+	if ( nStatus == SIR_GRAPHICS_SUCCESS ) {
+		nStatus = sirGLValidateCore46( &probe );
+	}
+	if ( nStatus == SIR_GRAPHICS_SUCCESS && !pState->bAllowSoftware ) {
+		sirGraphicsABIAdapter_t adapter = {};
+		adapter.nSize = sizeof( adapter );
+		if ( sirGLBuildAdapter( &probe, &adapter ) != SIR_GRAPHICS_SUCCESS ||
+		     adapter.nKind == SIR_GRAPHICS_ABI_ADAPTER_SOFTWARE ) {
+			nStatus = SIR_GRAPHICS_UNSUPPORTED;
+		}
+	}
+	sirGLBufferDispatch_t buffers = {};
+	sirGLSamplerDispatch_t samplers = {};
+	sirGLTextureDispatch_t textures = {};
+	sirGLFormatDispatch_t formats = {};
+	sirGLFramebufferDispatch_t framebuffers = {};
+	if ( nStatus == SIR_GRAPHICS_SUCCESS ) {
+		nStatus = sirGLLoadBufferDispatch( sirGLResolveNativeProcedure, pWindowContext, &buffers );
+	}
+	if ( nStatus == SIR_GRAPHICS_SUCCESS ) {
+		nStatus = sirGLLoadSamplerDispatch( sirGLResolveNativeProcedure, pWindowContext, &samplers );
+	}
+	if ( nStatus == SIR_GRAPHICS_SUCCESS ) {
+		nStatus = sirGLLoadTextureDispatch( sirGLResolveNativeProcedure, pWindowContext, &textures );
+	}
+	if ( nStatus == SIR_GRAPHICS_SUCCESS ) {
+		nStatus = sirGLLoadFormatDispatch( sirGLResolveNativeProcedure, pWindowContext, &formats );
+	}
+	if ( nStatus == SIR_GRAPHICS_SUCCESS ) {
+		nStatus = sirGLLoadFramebufferDispatch( sirGLResolveNativeProcedure, pWindowContext, &framebuffers );
+	}
+	if ( nStatus != SIR_GRAPHICS_SUCCESS ) {
+		sirGLDestroyNativeContext( pWindowContext );
+		( void )sirGLRestoreNativeContext( pState->pContext );
+		return nStatus;
+	}
+	sirGLNativeContext_t *pOldContext = pState->pContext;
+	pState->pContext = pWindowContext;
+	pState->probe = probe;
+	pState->buffers = buffers;
+	pState->samplers = samplers;
+	pState->textures = textures;
+	pState->formats = formats;
+	pState->framebuffers = framebuffers;
+	nStatus = sirGLLoadPresentationDispatch( pState, pWindowContext );
+	if ( nStatus != SIR_GRAPHICS_SUCCESS ) {
+		pState->pContext = pOldContext;
+		sirGLDestroyNativeContext( pWindowContext );
+		( void )sirGLRestoreNativeContext( pOldContext );
+		return nStatus;
+	}
+	sirGLDestroyNativeContext( pOldContext );
+	if ( sirGLRestoreNativeContext( pWindowContext ) != SIR_GRAPHICS_SUCCESS ) {
+		return SIR_GRAPHICS_DEVICE_LOST;
+	}
+	pState->bDisplayBound = true;
+	return SIR_GRAPHICS_SUCCESS;
+#endif
+}
+
 static uint32_t sirGLCreateSurface( void *, const sirGraphicsABINativeSurface_t *, const sirGraphicsABIPresentDesc_t *,
                                     sirGraphicsHandle_t * ) noexcept
 {
