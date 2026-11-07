@@ -37,6 +37,7 @@ public:
 	bool vibrate( sirInputDeviceId_t hDevice, uint16_t nLeft, uint16_t nRight ) noexcept override;
 	void stop( SIRInputService& service ) noexcept override;
 	bool attachWindow( SIRInputService& service, Window hWindow ) noexcept;
+	bool focusWindow( SIRInputService& service, Window hWindow ) noexcept;
 	bool enableRawPointer( Display *pDisplay ) noexcept;
 	bool processEvent( SIRInputService& service, const XEvent& event ) noexcept;
 	static long requiredEventMask( void ) noexcept;

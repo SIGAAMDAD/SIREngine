@@ -56,6 +56,56 @@ static int32_t fmodSetDriver( void *, void *pCore, int32_t iDriver ) noexcept
 	return ( int32_t )( ( FMOD::System * )pCore )->setDriver( ( int )iDriver );
 }
 
+// Hash a native FMOD_GUID without hashing ABI padding or platform pointers.
+// A zero GUID does not establish a physical identity.
+static uint64_t fmodPhysicalGuidId( const FMOD_GUID& id ) noexcept
+{
+	const uint8_t szGuid[16] = { ( uint8_t )id.Data1,
+	                             ( uint8_t )( id.Data1 >> 8 ),
+	                             ( uint8_t )( id.Data1 >> 16 ),
+	                             ( uint8_t )( id.Data1 >> 24 ),
+	                             ( uint8_t )id.Data2,
+	                             ( uint8_t )( id.Data2 >> 8 ),
+	                             ( uint8_t )id.Data3,
+	                             ( uint8_t )( id.Data3 >> 8 ),
+	                             id.Data4[0],
+	                             id.Data4[1],
+	                             id.Data4[2],
+	                             id.Data4[3],
+	                             id.Data4[4],
+	                             id.Data4[5],
+	                             id.Data4[6],
+	                             id.Data4[7] };
+	uint64_t nHash = UINT64_C( 14695981039346656037 );
+	uint8_t nNonzero = 0;
+	for ( uint32_t i = 0; i < 16; ++i ) {
+		nNonzero |= szGuid[i];
+		nHash = ( nHash ^ szGuid[i] ) * UINT64_C( 1099511628211 );
+	}
+	return nNonzero == 0 ? 0 : nHash == 0 ? 1 : nHash;
+}
+
+static int32_t fmodQueryOutputDevice( void *, void *pCore, int32_t *pDriver, uint64_t *pPhysicalId ) noexcept
+{
+	if ( pCore == nullptr || pDriver == nullptr || pPhysicalId == nullptr ) {
+		return -1;
+	}
+	FMOD::System *pSystem = ( FMOD::System * )pCore;
+	int iDriver = -1;
+	const FMOD_RESULT eCurrent = pSystem->getDriver( &iDriver );
+	if ( eCurrent != FMOD_OK ) {
+		return ( int32_t )eCurrent;
+	}
+	FMOD_GUID guid = {};
+	const FMOD_RESULT eIdentity = pSystem->getDriverInfo( iDriver, nullptr, 0, &guid, nullptr, nullptr, nullptr );
+	if ( eIdentity != FMOD_OK ) {
+		return ( int32_t )eIdentity;
+	}
+	*pDriver = ( int32_t )iDriver;
+	*pPhysicalId = fmodPhysicalGuidId( guid );
+	return 0;
+}
+
 static int32_t fmodSetNoSound( void *, void *pCore ) noexcept
 {
 	return ( int32_t )( ( FMOD::System * )pCore )->setOutput( FMOD_OUTPUTTYPE_NOSOUND );
@@ -114,7 +164,7 @@ static int32_t fmodRegisterDeviceLoss( void *, void *pCore, void *pOwner, void (
 
 sirFMODNativeOps_t sirGetFMODNativeOps( void ) noexcept
 {
-	return { 2,
+	return { 3,
 	         FMOD_VERSION,
 	         nullptr,
 	         fmodCreateStudio,
@@ -122,6 +172,7 @@ sirFMODNativeOps_t sirGetFMODNativeOps( void ) noexcept
 	         fmodGetVersion,
 	         fmodGetDriverCount,
 	         fmodSetDriver,
+	         fmodQueryOutputDevice,
 	         fmodSetNoSound,
 	         fmodInitializeStudio,
 	         fmodUpdateStudio,

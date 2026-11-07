@@ -131,9 +131,17 @@ static int32_t snapshotRegisterDeviceLoss( void *, void *, void *, void ( * )( v
 	return 0;
 }
 
+static int32_t fakeQueryOutputDevice( void *pUserData, void *, int32_t *pDriver, uint64_t *pPhysicalId ) noexcept
+{
+	( void )pUserData;
+	*pDriver = 0;
+	*pPhysicalId = UINT64_C( 0xAA55 );
+	return 0;
+}
+
 static sirFMODNativeOps_t makeSnapshotContextOps( sirFMODSnapshotFixture_t *pFixture ) noexcept
 {
-	return { 2,
+	return { 3,
 	         0x00020400,
 	         pFixture,
 	         snapshotStudioCreate,
@@ -141,6 +149,7 @@ static sirFMODNativeOps_t makeSnapshotContextOps( sirFMODSnapshotFixture_t *pFix
 	         snapshotGetVersion,
 	         snapshotGetDriverCount,
 	         snapshotSetDriver,
+	         fakeQueryOutputDevice,
 	         snapshotSetNoSound,
 	         snapshotStudioInitialize,
 	         snapshotStudioUpdate,

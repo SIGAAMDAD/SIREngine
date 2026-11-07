@@ -2,6 +2,10 @@ include("${CMAKE_CURRENT_LIST_DIR}/../../../Build/CMake/SIRBuildTreeGuard.cmake"
 # Native OS services belong to the Core library and share its lifecycle.
 set(SIR_CORE_PLATFORM_COMMON
     SIRPlatformUtils.cpp
+    SIRPlatformNativeWindow.cpp
+    Window/SIRWindowSystem.cpp
+    Window/SIRNativeWindowHost.cpp
+    Window/Headless/SIRWindowDriverHeadless.cpp
     SIRVirtualMemory.cpp
     SIRCPUInfo.cpp
     SIRThread.cpp
@@ -25,6 +29,7 @@ set(SIR_CORE_PLATFORM_COMMON
 if(WIN32)
     set(SIR_CORE_PLATFORM_OS
         Windows/SIRPlatformFileWindows.cpp
+        Windows/SIRPlatformContextWindows.cpp
         Windows/SIRPlatformRootDirectoryWindows.cpp
         Windows/SIRPlatformFileMappingWindows.cpp
         Windows/SIRPlatformPipeWindows.cpp
@@ -36,7 +41,9 @@ if(WIN32)
         Windows/SIRDynamicLibraryWindows.cpp
         Windows/SIRPlatformTimeWindows.cpp
         Windows/SIRPlatformProcessWindows.cpp
-        Input/Windows/SIRInputWindowWindows.cpp
+        Window/Windows/SIRWindowDriverWin32.cpp
+        Window/Windows/SIRWGLBootstrapWindow.cpp
+        Input/Windows/SIRWin32InputBridge.cpp
         Input/Windows/SIRWindowsRawBackend.cpp
         Input/Windows/SIRWindowsRawDecode.cpp
         Input/Windows/SIRWindowsXInputBackend.cpp
@@ -88,6 +95,7 @@ if(WIN32)
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     set(SIR_CORE_PLATFORM_OS
         Linux/SIRPlatformFileLinux.cpp
+        Linux/SIRPlatformContextLinux.cpp
         Linux/SIRPlatformRootDirectoryLinux.cpp
         Linux/SIRPlatformFileMappingLinux.cpp
         Linux/SIRPlatformPipeLinux.cpp
@@ -105,11 +113,91 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         Linux/SIRPlatformFileSystemLinux.cpp
         Linux/SIRPlatformThreadControlLinux.cpp
     )
+    option(SIR_WITH_WAYLAND_WINDOW "Build native Linux Wayland xdg-shell window driver" ON)
+    option(SIR_WITH_WAYLAND_INPUT "Build first-party Wayland seat input bridge" ON)
+    option(SIR_REQUIRE_WAYLAND_INPUT "Require native Wayland keyboard/pointer input at configure" OFF)
+    option(SIR_REQUIRE_WAYLAND_WINDOW "Fail configure when the native Wayland driver cannot be built" OFF)
+    if(SIR_WITH_WAYLAND_WINDOW)
+        find_package(PkgConfig QUIET)
+        if(PkgConfig_FOUND)
+            pkg_check_modules(SIR_WAYLAND_CLIENT QUIET IMPORTED_TARGET wayland-client)
+            pkg_get_variable(SIR_WAYLAND_PROTOCOL_DATA wayland-protocols pkgdatadir)
+        endif()
+        find_program(SIR_WAYLAND_SCANNER NAMES wayland-scanner)
+        set(SIR_XDG_SHELL_PROTOCOL "${SIR_WAYLAND_PROTOCOL_DATA}/stable/xdg-shell/xdg-shell.xml")
+        set(SIR_POINTER_CONSTRAINTS_PROTOCOL "${SIR_WAYLAND_PROTOCOL_DATA}/unstable/pointer-constraints/pointer-constraints-unstable-v1.xml")
+        set(SIR_RELATIVE_POINTER_PROTOCOL "${SIR_WAYLAND_PROTOCOL_DATA}/unstable/relative-pointer/relative-pointer-unstable-v1.xml")
+        if(SIR_WAYLAND_CLIENT_FOUND AND SIR_WAYLAND_SCANNER AND EXISTS "${SIR_XDG_SHELL_PROTOCOL}")
+            set(SIR_WAYLAND_GENERATED "${CMAKE_CURRENT_BINARY_DIR}/WaylandGenerated")
+            set(SIR_WAYLAND_PROTOCOL_H "${SIR_WAYLAND_GENERATED}/xdg-shell-client-protocol.h")
+            set(SIR_WAYLAND_PROTOCOL_C "${SIR_WAYLAND_GENERATED}/xdg-shell-protocol.c")
+            file(MAKE_DIRECTORY "${SIR_WAYLAND_GENERATED}")
+            add_custom_command(
+                OUTPUT "${SIR_WAYLAND_PROTOCOL_H}" "${SIR_WAYLAND_PROTOCOL_C}"
+                COMMAND "${SIR_WAYLAND_SCANNER}" client-header "${SIR_XDG_SHELL_PROTOCOL}" "${SIR_WAYLAND_PROTOCOL_H}"
+                COMMAND "${SIR_WAYLAND_SCANNER}" private-code "${SIR_XDG_SHELL_PROTOCOL}" "${SIR_WAYLAND_PROTOCOL_C}"
+                DEPENDS "${SIR_XDG_SHELL_PROTOCOL}"
+                VERBATIM)
+            set(SIR_WAYLAND_POINTER_GENERATED)
+            if(EXISTS "${SIR_POINTER_CONSTRAINTS_PROTOCOL}" AND EXISTS "${SIR_RELATIVE_POINTER_PROTOCOL}")
+                set(SIR_POINTER_CONSTRAINTS_H "${SIR_WAYLAND_GENERATED}/pointer-constraints-unstable-v1-client-protocol.h")
+                set(SIR_POINTER_CONSTRAINTS_C "${SIR_WAYLAND_GENERATED}/pointer-constraints-unstable-v1-protocol.c")
+                set(SIR_RELATIVE_POINTER_H "${SIR_WAYLAND_GENERATED}/relative-pointer-unstable-v1-client-protocol.h")
+                set(SIR_RELATIVE_POINTER_C "${SIR_WAYLAND_GENERATED}/relative-pointer-unstable-v1-protocol.c")
+                add_custom_command(
+                    OUTPUT "${SIR_POINTER_CONSTRAINTS_H}" "${SIR_POINTER_CONSTRAINTS_C}"
+                           "${SIR_RELATIVE_POINTER_H}" "${SIR_RELATIVE_POINTER_C}"
+                    COMMAND "${SIR_WAYLAND_SCANNER}" client-header "${SIR_POINTER_CONSTRAINTS_PROTOCOL}" "${SIR_POINTER_CONSTRAINTS_H}"
+                    COMMAND "${SIR_WAYLAND_SCANNER}" private-code "${SIR_POINTER_CONSTRAINTS_PROTOCOL}" "${SIR_POINTER_CONSTRAINTS_C}"
+                    COMMAND "${SIR_WAYLAND_SCANNER}" client-header "${SIR_RELATIVE_POINTER_PROTOCOL}" "${SIR_RELATIVE_POINTER_H}"
+                    COMMAND "${SIR_WAYLAND_SCANNER}" private-code "${SIR_RELATIVE_POINTER_PROTOCOL}" "${SIR_RELATIVE_POINTER_C}"
+                    DEPENDS "${SIR_POINTER_CONSTRAINTS_PROTOCOL}" "${SIR_RELATIVE_POINTER_PROTOCOL}"
+                    VERBATIM)
+                set(SIR_WAYLAND_POINTER_GENERATED "${SIR_POINTER_CONSTRAINTS_H}" "${SIR_POINTER_CONSTRAINTS_C}"
+                    "${SIR_RELATIVE_POINTER_H}" "${SIR_RELATIVE_POINTER_C}")
+                target_compile_definitions(SIRCore PRIVATE SIR_WAYLAND_POINTER_PROTOCOLS_AVAILABLE=1)
+            endif()
+            add_custom_target(SIRWindowWaylandProtocol DEPENDS "${SIR_WAYLAND_PROTOCOL_H}" "${SIR_WAYLAND_PROTOCOL_C}"
+                ${SIR_WAYLAND_POINTER_GENERATED})
+            add_dependencies(SIRCore SIRWindowWaylandProtocol)
+            list(APPEND SIR_CORE_PLATFORM_OS
+                Window/Linux/SIRWindowDriverWayland.cpp
+                "${SIR_WAYLAND_PROTOCOL_C}"
+                ${SIR_WAYLAND_POINTER_GENERATED})
+            target_include_directories(SIRCore PRIVATE "${SIR_WAYLAND_GENERATED}")
+            target_link_libraries(SIRCore PRIVATE PkgConfig::SIR_WAYLAND_CLIENT)
+            target_compile_definitions(SIRCore PUBLIC SIR_WINDOW_WAYLAND_AVAILABLE=1)
+            if(SIR_WITH_WAYLAND_INPUT)
+                pkg_check_modules(SIR_WAYLAND_XKB QUIET IMPORTED_TARGET xkbcommon)
+                if(SIR_WAYLAND_XKB_FOUND)
+                    list(APPEND SIR_CORE_PLATFORM_OS Input/Linux/SIRWaylandInputBridge.cpp)
+                    target_link_libraries(SIRCore PRIVATE PkgConfig::SIR_WAYLAND_XKB)
+                    target_compile_definitions(SIRCore PUBLIC SIR_INPUT_WAYLAND_AVAILABLE=1)
+                    target_compile_definitions(SIRCore PRIVATE SIR_WAYLAND_XKB_AVAILABLE=1)
+                elseif(SIR_REQUIRE_WAYLAND_INPUT)
+                    message(FATAL_ERROR "Native Wayland input requires xkbcommon and Wayland client development packages")
+                else()
+                    message(STATUS "Wayland seat input unavailable: missing xkbcommon development package")
+                endif()
+            elseif(SIR_REQUIRE_WAYLAND_INPUT)
+                message(FATAL_ERROR "SIR_REQUIRE_WAYLAND_INPUT requires SIR_WITH_WAYLAND_INPUT=ON")
+            endif()
+        elseif(SIR_REQUIRE_WAYLAND_WINDOW OR SIR_REQUIRE_WAYLAND_INPUT)
+            message(FATAL_ERROR "Native Wayland input/window requires wayland-client, wayland-scanner and wayland-protocols xdg-shell")
+        else()
+            message(STATUS "Native Wayland window backend unavailable; X11/headless remain separately selectable")
+        endif()
+    elseif(SIR_REQUIRE_WAYLAND_WINDOW)
+        message(FATAL_ERROR "SIR_REQUIRE_WAYLAND_WINDOW requires SIR_WITH_WAYLAND_WINDOW=ON")
+    elseif(SIR_REQUIRE_WAYLAND_INPUT)
+        message(FATAL_ERROR "SIR_REQUIRE_WAYLAND_INPUT requires SIR_WITH_WAYLAND_WINDOW=ON")
+    endif()
     option(SIR_WITH_X11_INPUT "Build native X11 input backend when X11 is available" ON)
     if(SIR_WITH_X11_INPUT)
         find_package(X11 QUIET)
         if(X11_FOUND)
-            list(APPEND SIR_CORE_PLATFORM_OS Input/Linux/SIRLinuxX11Backend.cpp Input/Linux/SIRInputWindowX11.cpp)
+            list(APPEND SIR_CORE_PLATFORM_OS Input/Linux/SIRLinuxX11Backend.cpp Window/Linux/SIRWindowDriverX11.cpp Input/Linux/SIRX11InputBridge.cpp)
+            target_compile_definitions(SIRCore PUBLIC SIR_WINDOW_X11_AVAILABLE=1)
             target_link_libraries(SIRCore PRIVATE X11::X11)
             target_compile_definitions(SIRCore PUBLIC SIR_INPUT_X11_AVAILABLE=1)
             if(X11_Xi_FOUND AND TARGET X11::Xi)

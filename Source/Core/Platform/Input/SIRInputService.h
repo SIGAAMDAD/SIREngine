@@ -24,6 +24,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #endif
 // clang-format on
 
+#include <Core/Platform/SIRPlatformContext.h>
 #include <Core/Platform/Input/SIRInputActions.h>
 #include <Core/Platform/Input/SIRInputBackend.h>
 #include <Core/Platform/Input/SIRInputDeviceRegistry.h>
@@ -42,6 +43,7 @@ public:
 	SIRInputService( const SIRInputService& ) = delete;
 	SIRInputService& operator=( const SIRInputService& ) = delete;
 
+	const sirPlatformContext_t& platformContext( void ) const noexcept;
 	bool attach( SIRInputBackend& backend ) noexcept;
 	bool begin( uint64_t nTick ) noexcept;
 	void sample( void ) noexcept;
@@ -71,6 +73,7 @@ public:
 	bool disconnect( sirInputBackendId_t eSource, sirInputDeviceId_t hDevice ) noexcept;
 	bool pairUser( sirInputDeviceId_t hDevice, uint32_t nUser ) noexcept;
 	bool describe( sirInputDeviceId_t hDevice, sirInputDeviceDescriptor_t *pOut ) const noexcept;
+	bool describePlatformDevice( sirInputDeviceId_t hDevice, sirPlatformDeviceIdentity_t *pOut ) const noexcept;
 	bool findDevice( sirInputBackendId_t eSource, uint64_t nNative, sirInputDeviceId_t *pOut ) const noexcept;
 	bool emitControls( sirInputBackendId_t eSource, sirInputDeviceId_t hDevice, const sirInputControlChange_t *pChanges, uint32_t nCount,
 	                   uint64_t nTime = 0, sirInputClockSource_t eClock = SIR_INPUT_CLOCK_ENGINE_MONOTONIC ) noexcept;
@@ -88,6 +91,7 @@ private:
 	bool verifyOwner( sirInputBackendId_t eSource, sirInputDeviceId_t id, sirInputDeviceDescriptor_t *pOut ) const noexcept;
 	bool hasBackend( sirInputBackendId_t eSource ) const noexcept;
 	sirInputTimestamp_t timestamp( uint64_t nNative, sirInputClockSource_t eClock ) const noexcept;
+	sirPlatformContext_t m_Platform = {};
 	SIRInputActions m_Actions;
 	SIRInputText m_Text;
 	SIRInputHaptics m_Haptics;

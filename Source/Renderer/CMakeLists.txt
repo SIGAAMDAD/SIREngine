@@ -16,6 +16,8 @@ add_library(SIRGraphics STATIC
     Visibility/SIRHiZCommands.cpp
     Visibility/SIRHiZBindings.cpp
     SIRGraphicsDriverABI.cpp
+    SIRWindowSurfaceAdapter.cpp
+    SIRWindowABISurface.cpp
     SIRGraphicsModule.cpp
     SIRGraphicsPipelineABI.cpp
     SIRGraphicsPipelineBridge.cpp
