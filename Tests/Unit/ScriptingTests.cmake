@@ -6,6 +6,11 @@ add_test(NAME scripting.build.source-uniqueness
         "-DSIR_SCRIPT_TEST_GENERATOR=${CMAKE_GENERATOR}"
         -P "${CMAKE_CURRENT_LIST_DIR}/SIRScriptSourceGraphGuardTests.cmake")
 
+# Exercise the engine executable's actual scripting link and registry lifecycle.
+add_test(NAME scripting.launcher.native-smoke COMMAND SIREngine --scripting-smoke)
+set_tests_properties(scripting.launcher.native-smoke PROPERTIES
+    PASS_REGULAR_EXPRESSION "Sir Scroll native scripting ready")
+
 add_executable(SIRScriptFoundationTests SIRScriptFoundationTests.cpp)
 target_link_libraries(SIRScriptFoundationTests PRIVATE SIR::Scripting)
 add_test(NAME scripting.foundation COMMAND SIRScriptFoundationTests)
