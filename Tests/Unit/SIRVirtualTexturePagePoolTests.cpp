@@ -91,6 +91,16 @@ static int testQueueSafeLifecycle( void )
 	SIR_TEST( pool.serviceCompletions( copy2 ) == 0 );
 	SIR_TEST( pool.serviceCompletions( copy4 ) == 1 );
 	SIR_TEST( pool.reserve( 6, SIR_VT_PHYSICAL_BC1, 13, &a ) );
+	const sirGraphicsCompletionSet_t submitted = makeCompleted( 3, 0, 4 );
+	SIR_TEST( pool.commitUpload( a, submitted ) );
+	SIR_TEST( !pool.abortUpload( a, nullptr ) );
+	SIR_TEST( !pool.abortUpload( a, &copy2 ) );
+	SIR_TEST( !pool.abortUpload( a, &copy4 ) );
+	SIR_TEST( pool.abortUpload( a, &submitted ) );
+	SIR_TEST( !pool.reserve( 7, SIR_VT_PHYSICAL_BC1, 13, &a ) );
+	SIR_TEST( pool.serviceCompletions( makeCompleted( 3, 0, 3 ) ) == 0 );
+	SIR_TEST( pool.serviceCompletions( submitted ) == 1 );
+	SIR_TEST( pool.reserve( 7, SIR_VT_PHYSICAL_BC1, 13, &a ) );
 	SIR_TEST( pool.abortUpload( a, nullptr ) );
 	SIR_TEST( pool.abortUpload( b, nullptr ) );
 	SIR_TEST( pool.resetCold() );

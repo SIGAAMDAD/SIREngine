@@ -172,14 +172,25 @@ bool SIRVirtualTexturePagePool::commitUpload( const sirVirtualTexturePagePoolRes
 bool SIRVirtualTexturePagePool::abortUpload( const sirVirtualTexturePagePoolReservation_t& reservation,
                                              const sirGraphicsCompletionSet_t *pCompletion ) noexcept
 {
-	if ( !checkReservation( reservation ) ||
-	     ( pCompletion != nullptr && ( !checkCompletion( *pCompletion ) || pCompletion->nQueueMask == 0 ) ) ) {
+	if ( m_pSlots == nullptr || reservation.nSlot >= m_nSlotCount || reservation.nVirtualPage >= m_nVirtualPages ) {
+		return false;
+	}
+	sirVirtualTexturePagePoolSlot_t& slot = m_pSlots[reservation.nSlot];
+	if ( ( slot.eState != SIR_VT_POOL_RESERVED && slot.eState != SIR_VT_POOL_UPLOADING ) || slot.nVirtualPage != reservation.nVirtualPage ||
+	     slot.nGeneration != reservation.nGeneration || slot.nTicket != reservation.nTicket ) {
+		return false;
+	}
+	if ( pCompletion != nullptr && ( !checkCompletion( *pCompletion ) || pCompletion->nQueueMask == 0 ) ) {
+		return false;
+	}
+	// Cancellation after a copy has been submitted still owns the physical
+	// layer until every submitted queue fence is covered by retirement.
+	if ( slot.eState == SIR_VT_POOL_UPLOADING && ( pCompletion == nullptr || !isComplete( slot.completion, *pCompletion ) ) ) {
 		return false;
 	}
 	if ( pCompletion == nullptr ) {
 		releaseSlot( reservation.nSlot );
 	} else {
-		sirVirtualTexturePagePoolSlot_t& slot = m_pSlots[reservation.nSlot];
 		slot.completion = *pCompletion;
 		slot.eState = SIR_VT_POOL_RETIRING;
 	}
