@@ -253,12 +253,14 @@ sirGraphicsResult_t SIRGraphicsModernRHI::admit(
        batch.pPass != nullptr)) {
     return SIR_GRAPHICS_INVALID_ARGUMENT;
   }
-  if (batch.nDrawCount != 0) {
-    if (batch.pPass == nullptr || batch.pViewport == nullptr ||
-        batch.pScissor == nullptr ||
-        batch.eQueue != SIR_GRAPHICS_QUEUE_DIRECT ||
+  if (batch.pPass != nullptr || batch.nDrawCount != 0) {
+    if (batch.pPass == nullptr || batch.eQueue != SIR_GRAPHICS_QUEUE_DIRECT ||
         (caps.nRequiredFeatureMask & SIR_GRAPHICS_FEATURE_GRAPHICS) == 0) {
       return SIR_GRAPHICS_UNSUPPORTED;
+    }
+    if (batch.nDrawCount != 0 &&
+        (batch.pViewport == nullptr || batch.pScissor == nullptr)) {
+      return SIR_GRAPHICS_INVALID_ARGUMENT;
     }
     if (batch.pPass->nColorCount > caps.nMaximumColorAttachments ||
         (batch.pPass->nColorCount != 0 && batch.pPass->pColors == nullptr)) {
@@ -271,10 +273,11 @@ sirGraphicsResult_t SIRGraphicsModernRHI::admit(
         return SIR_GRAPHICS_INVALID_HANDLE;
       }
     }
-    if (!(batch.pViewport->fWidth > 0.0f && batch.pViewport->fHeight > 0.0f) ||
-        !(batch.pViewport->fMinimumDepth <= batch.pViewport->fMaximumDepth) ||
-        batch.pScissor->nRight <= batch.pScissor->nLeft ||
-        batch.pScissor->nBottom <= batch.pScissor->nTop) {
+    if (batch.nDrawCount != 0 &&
+        (!(batch.pViewport->fWidth > 0.0f && batch.pViewport->fHeight > 0.0f) ||
+         !(batch.pViewport->fMinimumDepth <= batch.pViewport->fMaximumDepth) ||
+         batch.pScissor->nRight <= batch.pScissor->nLeft ||
+         batch.pScissor->nBottom <= batch.pScissor->nTop)) {
       return SIR_GRAPHICS_INVALID_ARGUMENT;
     }
     if (batch.pPass->hDepthView.eType != SIR_GRAPHICS_HANDLE_NONE &&
@@ -376,14 +379,16 @@ sirGraphicsResult_t SIRGraphicsModernRHI::record(
       return eResult;
     }
   }
-  if (batch.nDrawCount != 0) {
+  if (batch.pPass != nullptr) {
     eResult = commands.beginRenderPass(*batch.pPass);
     if (eResult != SIR_GRAPHICS_SUCCESS) {
       return eResult;
     }
-    eResult = commands.setViewport(*batch.pViewport, *batch.pScissor);
-    if (eResult != SIR_GRAPHICS_SUCCESS) {
-      return eResult;
+    if (batch.nDrawCount != 0) {
+      eResult = commands.setViewport(*batch.pViewport, *batch.pScissor);
+      if (eResult != SIR_GRAPHICS_SUCCESS) {
+        return eResult;
+      }
     }
     for (uint32_t i = 0; i < batch.nDrawCount; ++i) {
       const sirModernDraw_t &draw = batch.pDraws[i];

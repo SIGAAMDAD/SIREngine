@@ -112,5 +112,34 @@ int main(void) {
   ok = expectResult(SIRModernFrameGraphExecutor::validate(frame, caps),
                     SIR_GRAPHICS_INVALID_ARGUMENT, "stale framegraph") &&
        ok;
+
+  SIRFrameGraph crossQueueGraph;
+  sirFrameGraphResource_t imported = resource;
+  imported.eInitialQueue = SIR_GRAPHICS_QUEUE_COMPUTE;
+  uint32_t nCrossResource = UINT32_MAX;
+  uint32_t nCrossPass = UINT32_MAX;
+  if (crossQueueGraph.addResource(imported, &nCrossResource) !=
+          SIR_GRAPHICS_SUCCESS ||
+      crossQueueGraph.addPass(pass, &nCrossPass) != SIR_GRAPHICS_SUCCESS ||
+      crossQueueGraph.addAccess(access) != SIR_GRAPHICS_SUCCESS) {
+    return 1;
+  }
+  sirFrameGraphCompiled_t crossCompiled = {};
+  if (crossQueueGraph.compile(graphCaps, &crossCompiled) !=
+          SIR_GRAPHICS_SUCCESS ||
+      crossCompiled.nTransitionCount != 1 ||
+      crossCompiled.szTransitions[0].eFromQueue != SIR_GRAPHICS_QUEUE_COMPUTE) {
+    fprintf(stderr, "cross queue graph compile failed\n");
+    return 1;
+  }
+  sirModernBatch_t crossBatch = batch;
+  crossBatch.pBarriers = &barrier;
+  crossBatch.nBarrierCount = 1;
+  sirModernFramePlan_t crossFrame = {
+      &crossQueueGraph, &crossCompiled, &crossBatch, 1, &handle, 1};
+  ok = expectResult(SIRModernFrameGraphExecutor::validate(crossFrame, caps),
+                    SIR_GRAPHICS_UNSUPPORTED,
+                    "queue-family transfer requires ABI") &&
+       ok;
   return ok ? 0 : 1;
 }

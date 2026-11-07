@@ -28,6 +28,12 @@ sirGraphicsResult_t SIRModernCompletionObserver::observe(
     return SIR_GRAPHICS_INVALID_ARGUMENT;
   }
   sirProviderCompletionSet_t staged = {};
+  // Provider completion lanes have independent monotonic value domains.
+  // Never coalesce values from different native queues into one lane.
+  uint32_t szLaneOwner[SIR_PROVIDER_MAX_LANES] = {};
+  for (uint32_t i = 0; i < SIR_PROVIDER_MAX_LANES; ++i) {
+    szLaneOwner[i] = SIR_GRAPHICS_QUEUE_COUNT;
+  }
   staged.nProviderId = query.nProviderId;
   staged.nProviderGeneration = query.nProviderGeneration;
   staged.nLaneCount = query.nLaneCount;
@@ -39,6 +45,12 @@ sirGraphicsResult_t SIRModernCompletionObserver::observe(
         query.szQueueToProviderLane[token.eQueue] >= query.nLaneCount) {
       return SIR_GRAPHICS_INVALID_HANDLE;
     }
+    const uint32_t nLane = query.szQueueToProviderLane[token.eQueue];
+    if (szLaneOwner[nLane] != SIR_GRAPHICS_QUEUE_COUNT &&
+        szLaneOwner[nLane] != token.eQueue) {
+      return SIR_GRAPHICS_INVALID_ARGUMENT;
+    }
+    szLaneOwner[nLane] = token.eQueue;
     bool bCompleted = false;
     const sirGraphicsResult_t ePoll = device.poll(token, &bCompleted);
     if (ePoll != SIR_GRAPHICS_SUCCESS) {
@@ -47,7 +59,6 @@ sirGraphicsResult_t SIRModernCompletionObserver::observe(
     if (!bCompleted) {
       return SIR_GRAPHICS_BUSY;
     }
-    const uint32_t nLane = query.szQueueToProviderLane[token.eQueue];
     staged.nLaneMask |= 1U << nLane;
     if (staged.szCompletedValues[nLane] < token.nValue) {
       staged.szCompletedValues[nLane] = token.nValue;
@@ -102,6 +113,13 @@ static sirGraphicsResult_t sirModernValidateGraphPass(uint32_t nPass,
     }
     if (transition.nResource >= plan.nResourceCount) {
       return SIR_GRAPHICS_INVALID_ARGUMENT;
+    }
+    // The current binary barrier record does not carry source/destination
+    // queue family ownership. A wait alone cannot safely implement a Vulkan
+    // resource queue-family transfer. Reject instead of submitting unsafe GPU
+    // work; an owner-approved ABI contract is required to enable this path.
+    if (transition.eFromQueue != transition.eToQueue) {
+      return SIR_GRAPHICS_UNSUPPORTED;
     }
     const sirGraphicsHandle_t hResource =
         plan.pResourceHandles[transition.nResource];

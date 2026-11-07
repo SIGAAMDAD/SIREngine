@@ -158,6 +158,19 @@ int main() {
                 SIR_GRAPHICS_SUCCESS, "record draw");
     ok = ok && s_nCommands == 9;
   }
+  sirModernBatch_t clearBatch = batch;
+  clearBatch.pDraws = nullptr;
+  clearBatch.nDrawCount = 0;
+  clearBatch.pViewport = nullptr;
+  clearBatch.pScissor = nullptr;
+  const uint32_t nBeforeClear = s_nCommands;
+  ok = expect(SIRGraphicsModernRHI::admit(clearBatch, caps),
+              SIR_GRAPHICS_SUCCESS, "clear-only admission") &&
+       ok;
+  ok = expect(SIRGraphicsModernRHI::record(clearBatch, commands, caps),
+              SIR_GRAPHICS_SUCCESS, "clear-only record") &&
+       ok;
+  ok = (s_nCommands == nBeforeClear + 4) && ok;
   draw.nIndexed = 1;
   draw.hIndexBuffer = handle(SIR_GRAPHICS_HANDLE_BUFFER);
   ok = expect(SIRGraphicsModernRHI::admit(batch, caps), SIR_GRAPHICS_SUCCESS,
