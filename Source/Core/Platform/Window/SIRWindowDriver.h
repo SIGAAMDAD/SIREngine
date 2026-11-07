@@ -35,6 +35,7 @@ public:
 	virtual sirWindowResult_t initialize( void ) noexcept = 0;
 	virtual sirWindowResult_t createWindow( const sirWindowCreateDesc_t& desc, uint32_t nSlot, sirWindowNativeView_t *pView ) noexcept = 0;
 	virtual sirWindowResult_t destroyWindow( uint32_t nSlot ) noexcept = 0;
+	virtual sirWindowResult_t mutateWindow( uint32_t nSlot, const sirWindowMutation_t& mutation ) noexcept = 0;
 	virtual sirWindowResult_t pumpEvents( uint32_t nBudget, sirWindowDriverEventFn_t pCallback, void *pContext ) noexcept = 0;
 	virtual void shutdown( void ) noexcept = 0;
 

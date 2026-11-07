@@ -37,7 +37,8 @@ sirWindowResult_t SIRWindowDriverWin32::initialize( void ) noexcept
 sirWindowResult_t SIRWindowDriverWin32::createWindow( const sirWindowCreateDesc_t& desc, uint32_t nSlot,
                                                       sirWindowNativeView_t *pView ) noexcept
 {
-	if ( nSlot >= SIR_WINDOW_MAX_WINDOWS || pView == nullptr || desc.pszTitle == nullptr || desc.nWidth == 0 || desc.nHeight == 0 ) {
+	if ( nSlot >= SIR_WINDOW_MAX_WINDOWS || pView == nullptr || desc.pszTitle == nullptr || desc.nWidth == 0 || desc.nHeight == 0 ||
+	     desc.nWidth > 0x7fffffffU || desc.nHeight > 0x7fffffffU ) {
 		return SIR_WINDOW_INVALID_ARGUMENT;
 	}
 	if ( !m_bRegistered ) {
@@ -94,6 +95,59 @@ sirWindowResult_t SIRWindowDriverWin32::destroyWindow( uint32_t nSlot ) noexcept
 	m_bClosePending[nSlot] = false;
 	m_bLostPending[nSlot] = false;
 	m_nLostNativeWindow[nSlot] = 0;
+	return SIR_WINDOW_OK;
+}
+
+sirWindowResult_t SIRWindowDriverWin32::mutateWindow( uint32_t nSlot, const sirWindowMutation_t& mutation ) noexcept
+{
+	if ( !m_bRegistered ) {
+		return SIR_WINDOW_STOPPED;
+	}
+	if ( nSlot >= SIR_WINDOW_MAX_WINDOWS || m_Slots[nSlot].hWindow == nullptr ) {
+		return SIR_WINDOW_INVALID_HANDLE;
+	}
+	const HWND hWindow = m_Slots[nSlot].hWindow;
+	switch ( mutation.eKind ) {
+	case SIR_WINDOW_MUTATION_TITLE: {
+		if ( mutation.pszTitle == nullptr ) {
+			return SIR_WINDOW_INVALID_ARGUMENT;
+		}
+		wchar_t szTitle[128] = {};
+		if ( MultiByteToWideChar( CP_UTF8, MB_ERR_INVALID_CHARS, mutation.pszTitle, -1, szTitle, 128 ) == 0 ) {
+			return SIR_WINDOW_INVALID_ARGUMENT;
+		}
+		if ( !SetWindowTextW( hWindow, szTitle ) ) {
+			return SIR_WINDOW_NATIVE_FAILURE;
+		}
+		break;
+	}
+	case SIR_WINDOW_MUTATION_RESIZE:
+		if ( mutation.nWidth == 0 || mutation.nHeight == 0 || mutation.nWidth > 0x7fffffffU || mutation.nHeight > 0x7fffffffU ) {
+			return SIR_WINDOW_INVALID_ARGUMENT;
+		}
+		if ( !SetWindowPos( hWindow, nullptr, 0, 0, ( int )mutation.nWidth, ( int )mutation.nHeight,
+		                    SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE ) ) {
+			return SIR_WINDOW_NATIVE_FAILURE;
+		}
+		break;
+	case SIR_WINDOW_MUTATION_SHOW:
+		ShowWindow( hWindow, SW_SHOW );
+		break;
+	case SIR_WINDOW_MUTATION_HIDE:
+		ShowWindow( hWindow, SW_HIDE );
+		break;
+	case SIR_WINDOW_MUTATION_MINIMIZE:
+		ShowWindow( hWindow, SW_MINIMIZE );
+		break;
+	case SIR_WINDOW_MUTATION_RESTORE:
+		ShowWindow( hWindow, SW_RESTORE );
+		break;
+	case SIR_WINDOW_MUTATION_MAXIMIZE:
+		ShowWindow( hWindow, SW_MAXIMIZE );
+		break;
+	default:
+		return SIR_WINDOW_UNSUPPORTED;
+	}
 	return SIR_WINDOW_OK;
 }
 

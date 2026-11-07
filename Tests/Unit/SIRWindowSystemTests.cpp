@@ -50,6 +50,13 @@ public:
 		m_bAlive[nSlot] = false;
 		return SIR_WINDOW_OK;
 	}
+	sirWindowResult_t mutateWindow( uint32_t nSlot, const sirWindowMutation_t& mutation ) noexcept override
+	{
+		( void )nSlot;
+		( void )mutation;
+		return SIR_WINDOW_OK;
+	}
+
 	sirWindowResult_t pumpEvents( uint32_t nBudget, sirWindowDriverEventFn_t pCallback, void *pContext ) noexcept override
 	{
 		if ( !m_bRunning ) {
@@ -119,6 +126,36 @@ static bool sirTestHandlesLeasesAndEvents( void ) noexcept
 	sirWindowHandle_t invalid = {};
 	if ( system.createWindow( desc, &invalid ) != SIR_WINDOW_OUT_OF_CAPACITY || system.shutdown() != SIR_SYSTEM_BUSY ||
 	     system.pumpEvents( 0 ) != SIR_WINDOW_INVALID_ARGUMENT ) {
+		return false;
+	}
+	const sirWindowMutation_t resize = { SIR_WINDOW_MUTATION_RESIZE, nullptr, 1024, 768 };
+	const sirWindowMutation_t badResize = { SIR_WINDOW_MUTATION_RESIZE, nullptr, 0, 768 };
+	const sirWindowMutation_t badTitle = { SIR_WINDOW_MUTATION_TITLE, nullptr, 0, 0 };
+	if ( system.mutateWindow( handles[0], resize ) != SIR_WINDOW_OK ||
+	     system.mutateWindow( handles[0], badResize ) != SIR_WINDOW_INVALID_ARGUMENT ||
+	     system.mutateWindow( handles[0], badTitle ) != SIR_WINDOW_INVALID_ARGUMENT ) {
+		return false;
+	}
+	// Renderer-style readers may query while the platform owner changes metrics.
+	uint32_t nReadFailures = 0;
+	std::thread reader( [&]() {
+		for ( uint32_t i = 0; i < 10000; ++i ) {
+			sirWindowSnapshot_t state = {};
+			if ( system.querySnapshot( handles[1], &state ) != SIR_WINDOW_OK || state.nWindowGeneration == 0 ||
+			     state.hWindow.nGeneration != handles[1].nGeneration ) {
+				++nReadFailures;
+			}
+		}
+	} );
+	for ( uint32_t i = 0; i < 12; ++i ) {
+		driver.queueEvent( { handles[1].nSlot, handles[1].nSlot + 1, SIR_WINDOW_EVENT_RESIZED, 100 + i, 200 + i } );
+		if ( system.pumpEvents( 1 ) != SIR_WINDOW_OK ) {
+			reader.join();
+			return false;
+		}
+	}
+	reader.join();
+	if ( nReadFailures != 0 ) {
 		return false;
 	}
 	sirWindowNativeLease_t lease = {};

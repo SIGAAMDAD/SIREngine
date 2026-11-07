@@ -86,6 +86,48 @@ sirWindowResult_t SIRWindowDriverX11::destroyWindow( uint32_t nSlot ) noexcept
 	return SIR_WINDOW_OK;
 }
 
+sirWindowResult_t SIRWindowDriverX11::mutateWindow( uint32_t nSlot, const sirWindowMutation_t& mutation ) noexcept
+{
+	Display *pDisplay = ( Display * )m_pDisplay;
+	if ( pDisplay == nullptr ) {
+		return SIR_WINDOW_STOPPED;
+	}
+	if ( nSlot >= SIR_WINDOW_MAX_WINDOWS || m_hWindows[nSlot] == 0 ) {
+		return SIR_WINDOW_INVALID_HANDLE;
+	}
+	const Window hWindow = ( Window )m_hWindows[nSlot];
+	switch ( mutation.eKind ) {
+	case SIR_WINDOW_MUTATION_TITLE:
+		if ( mutation.pszTitle == nullptr ) {
+			return SIR_WINDOW_INVALID_ARGUMENT;
+		}
+		( void )XStoreName( pDisplay, hWindow, mutation.pszTitle );
+		break;
+	case SIR_WINDOW_MUTATION_RESIZE:
+		if ( mutation.nWidth == 0 || mutation.nHeight == 0 ) {
+			return SIR_WINDOW_INVALID_ARGUMENT;
+		}
+		( void )XResizeWindow( pDisplay, hWindow, mutation.nWidth, mutation.nHeight );
+		break;
+	case SIR_WINDOW_MUTATION_SHOW:
+	case SIR_WINDOW_MUTATION_RESTORE:
+		( void )XMapRaised( pDisplay, hWindow );
+		break;
+	case SIR_WINDOW_MUTATION_HIDE:
+		( void )XUnmapWindow( pDisplay, hWindow );
+		break;
+	case SIR_WINDOW_MUTATION_MINIMIZE:
+		if ( !XIconifyWindow( pDisplay, hWindow, DefaultScreen( pDisplay ) ) ) {
+			return SIR_WINDOW_UNSUPPORTED;
+		}
+		break;
+	default:
+		return SIR_WINDOW_UNSUPPORTED;
+	}
+	XFlush( pDisplay );
+	return SIR_WINDOW_OK;
+}
+
 sirWindowResult_t SIRWindowDriverX11::pumpEvents( uint32_t nBudget, sirWindowDriverEventFn_t pCallback, void *pContext ) noexcept
 {
 	Display *pDisplay = ( Display * )m_pDisplay;

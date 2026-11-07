@@ -56,6 +56,16 @@ int main( void )
 	     view.nDisplayOrInstance == 0 || view.nNativeWindow == 0 ) {
 		return 3;
 	}
+	const sirWindowMutation_t title = { SIR_WINDOW_MUTATION_TITLE, "Renamed window", 0, 0 };
+	const sirWindowMutation_t resize = { SIR_WINDOW_MUTATION_RESIZE, nullptr, 320, 240 };
+	const sirWindowMutation_t minimize = { SIR_WINDOW_MUTATION_MINIMIZE, nullptr, 0, 0 };
+	const sirWindowMutation_t maximize = { SIR_WINDOW_MUTATION_MAXIMIZE, nullptr, 0, 0 };
+	const sirWindowResult_t eMinimize = windows.mutateWindow( second, minimize );
+	if ( windows.mutateWindow( second, title ) != SIR_WINDOW_OK || windows.mutateWindow( second, resize ) != SIR_WINDOW_OK ||
+	     windows.mutateWindow( second, maximize ) != SIR_WINDOW_UNSUPPORTED ||
+	     ( eMinimize != SIR_WINDOW_OK && eMinimize != SIR_WINDOW_UNSUPPORTED ) ) {
+		return 9;
+	}
 	Display *pDisplay = ( Display * )view.nDisplayOrInstance;
 	XResizeWindow( pDisplay, ( Window )view.nNativeWindow, 320, 240 );
 	XSelectInput( pDisplay, ( Window )view.nNativeWindow, KeyPressMask | StructureNotifyMask | FocusChangeMask );

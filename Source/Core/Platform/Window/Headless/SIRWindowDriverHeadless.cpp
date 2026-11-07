@@ -24,6 +24,13 @@ sirWindowResult_t SIRWindowDriverHeadless::destroyWindow( uint32_t nSlot ) noexc
 	return m_bInitialized ? SIR_WINDOW_INVALID_HANDLE : SIR_WINDOW_STOPPED;
 }
 
+sirWindowResult_t SIRWindowDriverHeadless::mutateWindow( uint32_t nSlot, const sirWindowMutation_t& mutation ) noexcept
+{
+	( void )nSlot;
+	( void )mutation;
+	return m_bInitialized ? SIR_WINDOW_UNSUPPORTED : SIR_WINDOW_STOPPED;
+}
+
 sirWindowResult_t SIRWindowDriverHeadless::pumpEvents( uint32_t nBudget, sirWindowDriverEventFn_t pCallback, void *pContext ) noexcept
 {
 	( void )nBudget;

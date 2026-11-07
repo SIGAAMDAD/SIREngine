@@ -14,9 +14,12 @@ sirSystemResult_t SIRWindowSystem::initialize( void ) noexcept
 	if ( m_bInitialized || m_nEpoch == UINT64_MAX || m_pDriver->initialize() != SIR_WINDOW_OK ) {
 		return SIR_SYSTEM_ERROR;
 	}
-	++m_nEpoch;
 	m_OwnerThread = std::this_thread::get_id();
-	m_bInitialized = true;
+	{
+		std::lock_guard<std::mutex> guard( m_SnapshotMutex );
+		++m_nEpoch;
+		m_bInitialized = true;
+	}
 	return SIR_SYSTEM_OK;
 }
 
@@ -35,7 +38,10 @@ sirSystemResult_t SIRWindowSystem::shutdown( void ) noexcept
 		}
 	}
 	m_pDriver->shutdown();
-	m_bInitialized = false;
+	{
+		std::lock_guard<std::mutex> guard( m_SnapshotMutex );
+		m_bInitialized = false;
+	}
 	return SIR_SYSTEM_OK;
 }
 
@@ -97,17 +103,20 @@ sirWindowResult_t SIRWindowSystem::createWindow( const sirWindowCreateDesc_t& de
 			( void )m_pDriver->destroyWindow( i );
 			return SIR_WINDOW_OUT_OF_CAPACITY;
 		}
-		view.nWindowGeneration = ++m_nNativeGeneration;
-		slot.native = view;
-		slot.snapshot = {};
-		slot.snapshot.hWindow = { i, slot.nGeneration, m_nEpoch };
-		slot.snapshot.nWindowGeneration = view.nWindowGeneration;
-		slot.snapshot.nMetricsRevision = 1;
-		slot.snapshot.nWidth = desc.nWidth;
-		slot.snapshot.nHeight = desc.nHeight;
-		slot.snapshot.bReady = true;
-		slot.bOccupied = true;
-		*pHandle = slot.snapshot.hWindow;
+		{
+			std::lock_guard<std::mutex> guard( m_SnapshotMutex );
+			view.nWindowGeneration = ++m_nNativeGeneration;
+			slot.native = view;
+			slot.snapshot = {};
+			slot.snapshot.hWindow = { i, slot.nGeneration, m_nEpoch };
+			slot.snapshot.nWindowGeneration = view.nWindowGeneration;
+			slot.snapshot.nMetricsRevision = 1;
+			slot.snapshot.nWidth = desc.nWidth;
+			slot.snapshot.nHeight = desc.nHeight;
+			slot.snapshot.bReady = true;
+			slot.bOccupied = true;
+			*pHandle = slot.snapshot.hWindow;
+		}
 		pushEvent( *pHandle, SIR_WINDOW_EVENT_CREATED, desc.nWidth, desc.nHeight );
 		pushEvent( *pHandle, SIR_WINDOW_EVENT_READY, desc.nWidth, desc.nHeight );
 		return SIR_WINDOW_OK;
@@ -125,12 +134,33 @@ sirWindowResult_t SIRWindowSystem::requestClose( sirWindowHandle_t hWindow ) noe
 	if ( eValid != SIR_WINDOW_OK ) {
 		return eValid;
 	}
+	std::lock_guard<std::mutex> guard( m_SnapshotMutex );
 	sirWindowSlot_t& slot = m_Slots[hWindow.nSlot];
 	if ( !slot.snapshot.bCloseRequested ) {
 		slot.snapshot.bCloseRequested = true;
 		pushEvent( hWindow, SIR_WINDOW_EVENT_CLOSE_REQUESTED, slot.snapshot.nWidth, slot.snapshot.nHeight );
 	}
 	return SIR_WINDOW_OK;
+}
+
+sirWindowResult_t SIRWindowSystem::mutateWindow( sirWindowHandle_t hWindow, const sirWindowMutation_t& mutation ) noexcept
+{
+	const sirWindowResult_t eOwner = requireOwner();
+	if ( eOwner != SIR_WINDOW_OK ) {
+		return eOwner;
+	}
+	const sirWindowResult_t eValid = validate( hWindow );
+	if ( eValid != SIR_WINDOW_OK ) {
+		return eValid;
+	}
+	if ( mutation.eKind < SIR_WINDOW_MUTATION_TITLE || mutation.eKind > SIR_WINDOW_MUTATION_MAXIMIZE ) {
+		return SIR_WINDOW_INVALID_ARGUMENT;
+	}
+	if ( ( mutation.eKind == SIR_WINDOW_MUTATION_TITLE && mutation.pszTitle == nullptr ) ||
+	     ( mutation.eKind == SIR_WINDOW_MUTATION_RESIZE && ( mutation.nWidth == 0 || mutation.nHeight == 0 ) ) ) {
+		return SIR_WINDOW_INVALID_ARGUMENT;
+	}
+	return m_pDriver->mutateWindow( hWindow.nSlot, mutation );
 }
 
 void SIRWindowSystem::processReleasedLeases( void ) noexcept
@@ -173,11 +203,14 @@ sirWindowResult_t SIRWindowSystem::destroyWindow( sirWindowHandle_t hWindow ) no
 	if ( eResult != SIR_WINDOW_OK ) {
 		return eResult;
 	}
-	pushEvent( hWindow, SIR_WINDOW_EVENT_DESTROYED, 0, 0 );
-	slot.bOccupied = false;
-	++slot.nGeneration;
-	slot.snapshot = {};
-	slot.native = {};
+	{
+		std::lock_guard<std::mutex> guard( m_SnapshotMutex );
+		pushEvent( hWindow, SIR_WINDOW_EVENT_DESTROYED, 0, 0 );
+		slot.bOccupied = false;
+		++slot.nGeneration;
+		slot.snapshot = {};
+		slot.native = {};
+	}
 	return SIR_WINDOW_OK;
 }
 
@@ -193,6 +226,7 @@ void SIRWindowSystem::onDriverEvent( void *pContext, const sirWindowBackendEvent
 		( void )pSystem->requestClose( slot.snapshot.hWindow );
 		return;
 	}
+	std::lock_guard<std::mutex> guard( pSystem->m_SnapshotMutex );
 	if ( event.eKind == SIR_WINDOW_EVENT_RESIZED ) {
 		if ( slot.snapshot.nWidth == event.nWidth && slot.snapshot.nHeight == event.nHeight ) {
 			return;
@@ -248,9 +282,9 @@ sirWindowResult_t SIRWindowSystem::readEvents( sirWindowEventRead_t *pRead ) noe
 
 sirWindowResult_t SIRWindowSystem::querySnapshot( sirWindowHandle_t hWindow, sirWindowSnapshot_t *pSnapshot ) const noexcept
 {
-	const sirWindowResult_t eOwner = requireOwner();
-	if ( eOwner != SIR_WINDOW_OK ) {
-		return eOwner;
+	std::lock_guard<std::mutex> guard( m_SnapshotMutex );
+	if ( !m_bInitialized ) {
+		return SIR_WINDOW_STOPPED;
 	}
 	if ( pSnapshot == nullptr ) {
 		return SIR_WINDOW_INVALID_ARGUMENT;

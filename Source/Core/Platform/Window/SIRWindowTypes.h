@@ -71,6 +71,25 @@ typedef struct sirWindowNativeView_s
 	uint64_t nWindowGeneration;
 } sirWindowNativeView_t;
 
+typedef enum sirWindowMutationKind_e : uint8_t
+{
+	SIR_WINDOW_MUTATION_TITLE = 1,
+	SIR_WINDOW_MUTATION_RESIZE,
+	SIR_WINDOW_MUTATION_SHOW,
+	SIR_WINDOW_MUTATION_HIDE,
+	SIR_WINDOW_MUTATION_MINIMIZE,
+	SIR_WINDOW_MUTATION_RESTORE,
+	SIR_WINDOW_MUTATION_MAXIMIZE
+} sirWindowMutationKind_t;
+
+typedef struct sirWindowMutation_s
+{
+	sirWindowMutationKind_t eKind;
+	const char *pszTitle;
+	uint32_t nWidth;
+	uint32_t nHeight;
+} sirWindowMutation_t;
+
 typedef struct sirWindowCreateDesc_s
 {
 	const char *pszTitle;

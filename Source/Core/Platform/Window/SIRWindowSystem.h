@@ -24,6 +24,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Core/Systems/SIREngineSystem.h>
 #include <atomic>
 #include <thread>
+#include <mutex>
 
 typedef struct sirWindowSlot_s
 {
@@ -44,7 +45,8 @@ typedef struct sirWindowLeaseEntry_s
 } sirWindowLeaseEntry_t;
 
 // Core owns native window identities, event state and render-window leases.
-// All operations except releaseNativeLease run on the initialize thread.
+// Mutating operations and event reads run on the window owner thread.
+// querySnapshot and releaseNativeLease are safe for cross-thread consumers.
 // A renderer must retire its GPU surface/fences BEFORE releasing its lease.
 class SIRWindowSystem final : public SIREngineSystem
 {
@@ -62,6 +64,7 @@ public:
 
 	sirWindowResult_t createWindow( const sirWindowCreateDesc_t& desc, sirWindowHandle_t *pHandle ) noexcept;
 	sirWindowResult_t requestClose( sirWindowHandle_t hWindow ) noexcept;
+	sirWindowResult_t mutateWindow( sirWindowHandle_t hWindow, const sirWindowMutation_t& mutation ) noexcept;
 	sirWindowResult_t destroyWindow( sirWindowHandle_t hWindow ) noexcept;
 	sirWindowResult_t pumpEvents( uint32_t nBudget ) noexcept;
 	sirWindowResult_t readEvents( sirWindowEventRead_t *pRead ) noexcept;
@@ -77,6 +80,7 @@ private:
 	void processReleasedLeases( void ) noexcept;
 	void pushEvent( sirWindowHandle_t hWindow, sirWindowEventKind_t eKind, uint32_t nWidth, uint32_t nHeight ) noexcept;
 
+	mutable std::mutex m_SnapshotMutex;
 	SIRWindowDriver *m_pDriver;
 	std::thread::id m_OwnerThread;
 	sirWindowSlot_t m_Slots[SIR_WINDOW_MAX_WINDOWS] = {};

@@ -35,6 +35,13 @@ public:
 		( void )nSlot;
 		return SIR_WINDOW_OK;
 	}
+	sirWindowResult_t mutateWindow( uint32_t nSlot, const sirWindowMutation_t& mutation ) noexcept override
+	{
+		( void )nSlot;
+		( void )mutation;
+		return SIR_WINDOW_OK;
+	}
+
 	sirWindowResult_t pumpEvents( uint32_t nBudget, sirWindowDriverEventFn_t pCallback, void *pContext ) noexcept override
 	{
 		( void )nBudget;
