@@ -426,8 +426,7 @@ sirVulkanResult_t SIRVulkanDevice::initialize( const sirVulkanPoolBudget_t *pBud
 	if ( m_Adapter.nTransferQueueFamilyIndex != UINT32_MAX ) {
 		m_pfnGetDeviceQueue( m_Device, m_Adapter.nTransferQueueFamilyIndex, 0, &m_TransferQueue );
 	}
-	if ( m_GraphicsQueue == VK_NULL_HANDLE ||
-	     ( m_Adapter.nComputeQueueFamilyIndex != UINT32_MAX && m_ComputeQueue == VK_NULL_HANDLE ) ||
+	if ( m_GraphicsQueue == VK_NULL_HANDLE || ( m_Adapter.nComputeQueueFamilyIndex != UINT32_MAX && m_ComputeQueue == VK_NULL_HANDLE ) ||
 	     ( m_Adapter.nTransferQueueFamilyIndex != UINT32_MAX && m_TransferQueue == VK_NULL_HANDLE ) ) {
 		shutdown();
 		return SIR_VULKAN_NATIVE_FAILURE;
