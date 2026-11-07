@@ -245,6 +245,9 @@ static int sirTestNativePipelineCache( SIRD3D12Driver& driver, SIRRenderingDevic
 	     pNative->queryNativePipelineCacheStats( &stats ) != SIR_GRAPHICS_SUCCESS ) {
 		return 31;
 	}
+	if ( stats.nRootReuses == 0 ) {
+		return 45;
+	}
 	if ( !stats.bAvailable ) {
 		uint64_t nSize = 0;
 		return pNative->serializeNativePipelineCache( nullptr, &nSize ) == SIR_GRAPHICS_UNSUPPORTED ? 0 : 32;
