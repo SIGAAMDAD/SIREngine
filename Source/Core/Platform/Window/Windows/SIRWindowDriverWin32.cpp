@@ -189,6 +189,10 @@ LRESULT CALLBACK SIRWindowDriverWin32::windowProc( HWND hWindow, UINT nMessage, 
 	sirWin32Slot_t *pSlot = ( sirWin32Slot_t * )GetWindowLongPtrW( hWindow, GWLP_USERDATA );
 	if ( pSlot != nullptr && pSlot->pDriver != nullptr ) {
 		SIRWindowDriverWin32 *pDriver = pSlot->pDriver;
+		if ( nMessage == WM_CLOSE ) {
+			pDriver->m_bClosePending[pSlot->nIndex] = true;
+			return 0;
+		}
 		if ( pDriver->m_pSink != nullptr ) {
 			const sirWindowWin32Message_t message = { ( uintptr_t )hWindow, nMessage, ( uintptr_t )nWParam, ( intptr_t )nLParam };
 			const sirWindowWin32Dispatch_t result = pDriver->m_pSink( message, pDriver->m_pSinkContext );
