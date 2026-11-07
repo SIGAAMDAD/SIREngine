@@ -80,6 +80,9 @@ sirGraphicsResult_t sirGLQueryNativeFormat( const sirGLFormatDispatch_t *pAPI, s
 	result.nSize = sizeof( result );
 	result.nFormat = pFormat->nFormat;
 	result.nOptimalFeatures = SIR_GRAPHICS_ABI_FORMAT_SAMPLED;
+	if ( pFormat->nFormat == SIR_GRAPHICS_FORMAT_RGBA8_UNORM || pFormat->nFormat == SIR_GRAPHICS_FORMAT_RGBA8_SRGB ) {
+		result.nOptimalFeatures |= SIR_GRAPHICS_ABI_FORMAT_COLOR_ATTACHMENT;
+	}
 	result.nSampleCountMask = 1;
 	*pFormat = result;
 	return SIR_GRAPHICS_SUCCESS;

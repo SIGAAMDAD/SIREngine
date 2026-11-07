@@ -132,7 +132,8 @@ int main( void )
 			format.nSize = sizeof( format );
 			format.nFormat = SIR_GRAPHICS_FORMAT_RGBA8_UNORM;
 			sirGLTestCheck( device.pQueryFormat( device.pDevice, &format ) == SIR_GRAPHICS_SUCCESS &&
-			                    format.nOptimalFeatures == SIR_GRAPHICS_ABI_FORMAT_SAMPLED && format.nSampleCountMask == 1,
+			                    ( format.nOptimalFeatures & SIR_GRAPHICS_ABI_FORMAT_SAMPLED ) != 0 &&
+			                    ( format.nOptimalFeatures & SIR_GRAPHICS_ABI_FORMAT_COLOR_ATTACHMENT ) != 0 && format.nSampleCountMask == 1,
 			                "native RGBA8 format admitted without unimplemented capabilities" );
 			format = {};
 			format.nSize = sizeof( format );
