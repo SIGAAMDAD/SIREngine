@@ -152,6 +152,24 @@ int main( void )
 	if ( !sealed.queryAllocationLedger( &reserved ) || reserved.nBlockBytes < 20ULL * 1024 * 1024 ) {
 		return 19;
 	}
+	// Sealed mode cannot disable its physical residency ceiling after admission.
+	if ( sealed.configureResidentBudget( 0 ) || sealed.getLastError() != E_INVALIDARG ) {
+		return 40;
+	}
+	// The optional GPU_UPLOAD preference must fall back to ordinary UPLOAD
+	// when its sealed pool is absent, without losing persistent transfer access.
+	sirD3D12TransferPoolConfig_t transferConfig = {};
+	transferConfig.nSlotBytes = 4096;
+	transferConfig.bPreferDirectMapped = true;
+	if ( !sealed.initializeTransferArena( transferConfig, 2 ) ) {
+		return 41;
+	}
+	sirD3D12ResidentTransferView_t transferView = {};
+	if ( !sealed.queryTransferArena( &transferView ) || transferView.ePath == SIR_D3D12_TRANSFER_DIRECT_GPU_UPLOAD ||
+	     transferView.pWriteBytes == nullptr || transferView.pReadbackBytes == nullptr || transferView.nPersistentMappedBytes != 16384 ) {
+		return 42;
+	}
+	sealed.releaseTransferArena( true );
 	if ( sealed.reserveExternalBytes( 4096 ) ) {
 		return 34;
 	}
