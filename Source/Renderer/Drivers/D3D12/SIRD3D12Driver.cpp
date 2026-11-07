@@ -15,6 +15,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Renderer/Drivers/D3D12/SIRD3D12Driver.h>
+#include <Renderer/Drivers/D3D12/SIRD3D12Validation.h>
 #include <Renderer/SIRGraphicsABIOperations.h>
 #include <Renderer/SIRGraphicsValidation.h>
 #include <limits.h>
@@ -36,6 +37,16 @@ static uint32_t sirD3D12MaximumRgba8SampleCount( ID3D12Device *pDevice ) noexcep
 		}
 	}
 	return nMaximumSamples;
+}
+
+static bool sirD3D12HasEnhancedBarriers( ID3D12Device *pDevice ) noexcept
+{
+	if ( pDevice == nullptr ) {
+		return false;
+	}
+	D3D12_FEATURE_DATA_D3D12_OPTIONS12 options = {};
+	return SUCCEEDED( pDevice->CheckFeatureSupport( D3D12_FEATURE_D3D12_OPTIONS12, &options, sizeof( options ) ) ) &&
+	       options.EnhancedBarriersSupported != FALSE;
 }
 
 static sirGraphicsResult_t sirD3D12FindAdapter( uint32_t nAdapterIndex, sirGraphicsAdapterInfo_t *pInfo ) noexcept
@@ -65,9 +76,9 @@ static sirGraphicsResult_t sirD3D12FindAdapter( uint32_t nAdapterIndex, sirGraph
 	pInfo->nSharedSystemBytes = desc.SharedSystemMemory;
 	pInfo->nFeatureMask = SIR_D3D12_SHARED_FEATURES;
 	Microsoft::WRL::ComPtr<ID3D12Device> pProbe;
-	if ( SUCCEEDED( D3D12CreateDevice( pSelected.Get(), D3D_FEATURE_LEVEL_12_0, IID_PPV_ARGS( pProbe.GetAddressOf() ) ) ) &&
-	     sirD3D12MaximumRgba8SampleCount( pProbe.Get() ) > 1 ) {
-		pInfo->nFeatureMask |= SIR_GRAPHICS_FEATURE_MULTISAMPLE;
+	if ( SUCCEEDED( D3D12CreateDevice( pSelected.Get(), D3D_FEATURE_LEVEL_12_0, IID_PPV_ARGS( pProbe.GetAddressOf() ) ) ) ) {
+		pInfo->nFeatureMask |= sirD3D12NegotiatedOptionalFeatures( sirD3D12HasEnhancedBarriers( pProbe.Get() ),
+		                                                           sirD3D12MaximumRgba8SampleCount( pProbe.Get() ) > 1 );
 	}
 	pInfo->nApiVersion = { 12, 0, 0 };
 	pInfo->bSoftwareAdapter = ( desc.Flags & DXGI_ADAPTER_FLAG3_SOFTWARE ) != 0;
@@ -98,10 +109,8 @@ sirGraphicsResult_t SIRD3D12RenderingDevice::initialize( bool bSoftware, const s
 	if ( desc.nFramesInFlight == 0 || desc.nFramesInFlight > 3 ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	if ( !sirGraphicsHasFeatures( SIR_D3D12_SHARED_FEATURES | SIR_GRAPHICS_FEATURE_MULTISAMPLE, desc.nRequiredFeatures ) ) {
-		return SIR_GRAPHICS_UNSUPPORTED;
-	}
-	if ( pSealedPools != nullptr && !desc.bHeadless ) {
+	if ( !sirGraphicsHasFeatures( SIR_D3D12_SHARED_FEATURES | SIR_GRAPHICS_FEATURE_MULTISAMPLE | SIR_GRAPHICS_FEATURE_ENHANCED_BARRIERS,
+	                              desc.nRequiredFeatures ) ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
 	if ( nativeConfig.diagnostics.bEnableGpuValidation && !nativeConfig.diagnostics.bEnableDebugLayer ) {
@@ -219,9 +228,8 @@ sirGraphicsResult_t SIRD3D12RenderingDevice::queryCapabilities( sirGraphicsCapab
 	pCapabilities->nMaximumColorAttachments = D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT;
 	const uint32_t nMaximumSamples = sirD3D12MaximumRgba8SampleCount( m_Native.getNativeDevice() );
 	pCapabilities->nMaximumSampleCount = nMaximumSamples;
-	if ( nMaximumSamples > 1 ) {
-		pCapabilities->nFeatureMask |= SIR_GRAPHICS_FEATURE_MULTISAMPLE;
-	}
+	pCapabilities->nFeatureMask |=
+	    sirD3D12NegotiatedOptionalFeatures( sirD3D12HasEnhancedBarriers( m_Native.getNativeDevice() ), nMaximumSamples > 1 );
 	pCapabilities->nDeviceGeneration = nGeneration;
 	pCapabilities->bSoftwareAdapter = m_bSoftware;
 	bool bUnified = false;
@@ -452,12 +460,6 @@ sirGraphicsResult_t SIRD3D12RenderingDevice::createSurface( const sirGraphicsNat
                                                             const sirGraphicsPresentDesc_t& present,
                                                             sirGraphicsHandle_t *pSurface ) noexcept
 {
-	if ( m_bSealedPoolsActive ) {
-		if ( pSurface != nullptr ) {
-			*pSurface = {};
-		}
-		return SIR_GRAPHICS_UNSUPPORTED;
-	}
 	return m_Surfaces.createSurface( native, present, pSurface );
 }
 

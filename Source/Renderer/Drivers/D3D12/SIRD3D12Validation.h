@@ -87,4 +87,77 @@ static inline sirGraphicsResult_t sirD3D12ValidateViewport( const sirGraphicsVie
 	return SIR_GRAPHICS_SUCCESS;
 }
 
+// The public descriptor update address is (register, array index), without a
+// descriptor-type discriminator. Overlap inside one register space is ambiguous.
+// Each descriptor table consumes one root DWORD; the native root is capped at
+// 32 tables and each set at 128 shader-visible descriptors.
+static inline sirGraphicsResult_t sirD3D12ValidateBindingLayout( const sirGraphicsBindingDesc_t *pBindings, uint32_t nCount,
+                                                                 sirGraphicsPipelineType_t ePipeline ) noexcept
+{
+	if ( nCount > 32 || ( nCount != 0 && pBindings == nullptr ) ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	for ( uint32_t i = 0; i < nCount; ++i ) {
+		const sirGraphicsBindingDesc_t& binding = pBindings[i];
+		if ( binding.nArrayCount == 0 || binding.nArrayCount > 128 || binding.nBinding > UINT32_MAX - ( binding.nArrayCount - 1 ) ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
+		if ( binding.eType > SIR_GRAPHICS_BINDING_SAMPLER ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
+		const uint32_t nStages = binding.nShaderStageMask;
+		if ( ePipeline == SIR_GRAPHICS_PIPELINE_COMPUTE ) {
+			if ( nStages != SIR_GRAPHICS_STAGE_COMPUTE ) {
+				return SIR_GRAPHICS_INVALID_ARGUMENT;
+			}
+		} else if ( ePipeline != SIR_GRAPHICS_PIPELINE_GRAPHICS || nStages == 0 ||
+		            ( nStages & ~( SIR_GRAPHICS_STAGE_VERTEX | SIR_GRAPHICS_STAGE_FRAGMENT ) ) != 0 ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
+		uint32_t nSetDescriptors = binding.nArrayCount;
+		for ( uint32_t j = 0; j < i; ++j ) {
+			const sirGraphicsBindingDesc_t& prior = pBindings[j];
+			if ( binding.nSpace != prior.nSpace ) {
+				continue;
+			}
+			const uint64_t nEnd = ( uint64_t )binding.nBinding + binding.nArrayCount;
+			const uint64_t nPriorEnd = ( uint64_t )prior.nBinding + prior.nArrayCount;
+			if ( binding.nBinding < nPriorEnd && prior.nBinding < nEnd ) {
+				return SIR_GRAPHICS_INVALID_ARGUMENT;
+			}
+			if ( nSetDescriptors > 128 - prior.nArrayCount ) {
+				return SIR_GRAPHICS_CAPACITY_EXCEEDED;
+			}
+			nSetDescriptors += prior.nArrayCount;
+		}
+	}
+	return SIR_GRAPHICS_SUCCESS;
+}
+
+// An external DXGI buffer is distinct from the preallocated D3D12MA pools.
+// Sealed windowed operation therefore requires an explicit *total* resident
+// budget: fixed blocks plus all external backbuffers, without double billing.
+static inline bool sirD3D12CanReserveExternal( uint64_t nCommitted, uint64_t nBudget, uint64_t nBytes, bool bSealed ) noexcept
+{
+	if ( nBytes == 0 || nCommitted > UINT64_MAX - nBytes || ( bSealed && nBudget == 0 ) ) {
+		return false;
+	}
+	return nBudget == 0 || ( nCommitted <= nBudget && nBytes <= nBudget - nCommitted );
+}
+
+// Hardware probes are recorded only for operations the native backend
+// actually implements. The bit set must be identical at adapter and device
+// admission when given the same physical device.
+static inline uint64_t sirD3D12NegotiatedOptionalFeatures( bool bEnhancedBarriers, bool bMultisample ) noexcept
+{
+	uint64_t nMask = 0;
+	if ( bEnhancedBarriers ) {
+		nMask |= SIR_GRAPHICS_FEATURE_ENHANCED_BARRIERS;
+	}
+	if ( bMultisample ) {
+		nMask |= SIR_GRAPHICS_FEATURE_MULTISAMPLE;
+	}
+	return nMask;
+}
+
 #endif // __SIRENGINE_SIRD3D12VALIDATION_H__

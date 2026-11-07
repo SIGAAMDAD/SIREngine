@@ -154,15 +154,228 @@ static int sirTestViewport( void ) noexcept
 	return 0;
 }
 
+static int sirTestBindingLayouts( void ) noexcept
+{
+	if ( sirD3D12ValidateBindingLayout( nullptr, 0, SIR_GRAPHICS_PIPELINE_COMPUTE ) != SIR_GRAPHICS_SUCCESS ||
+	     sirD3D12ValidateBindingLayout( nullptr, 1, SIR_GRAPHICS_PIPELINE_COMPUTE ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return 24;
+	}
+	sirGraphicsBindingDesc_t bindings[33] = {};
+	bindings[0].nBinding = 0;
+	bindings[0].nArrayCount = 4;
+	bindings[0].nShaderStageMask = SIR_GRAPHICS_STAGE_COMPUTE;
+	bindings[0].eType = SIR_GRAPHICS_BINDING_STORAGE_BUFFER;
+	if ( sirD3D12ValidateBindingLayout( bindings, 1, SIR_GRAPHICS_PIPELINE_COMPUTE ) != SIR_GRAPHICS_SUCCESS ) {
+		return 25;
+	}
+	bindings[0].nArrayCount = 0;
+	if ( sirD3D12ValidateBindingLayout( bindings, 1, SIR_GRAPHICS_PIPELINE_COMPUTE ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return 26;
+	}
+	bindings[0].nArrayCount = 129;
+	if ( sirD3D12ValidateBindingLayout( bindings, 1, SIR_GRAPHICS_PIPELINE_COMPUTE ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return 27;
+	}
+	bindings[0].nArrayCount = 4;
+	bindings[0].nBinding = UINT32_MAX - 2;
+	if ( sirD3D12ValidateBindingLayout( bindings, 1, SIR_GRAPHICS_PIPELINE_COMPUTE ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return 28;
+	}
+	bindings[0].nBinding = 2;
+	bindings[1] = bindings[0];
+	bindings[1].nBinding = 4;
+	bindings[1].eType = SIR_GRAPHICS_BINDING_CONSTANT_BUFFER;
+	if ( sirD3D12ValidateBindingLayout( bindings, 2, SIR_GRAPHICS_PIPELINE_COMPUTE ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return 29;
+	}
+	bindings[1].nBinding = 6;
+	if ( sirD3D12ValidateBindingLayout( bindings, 2, SIR_GRAPHICS_PIPELINE_COMPUTE ) != SIR_GRAPHICS_SUCCESS ) {
+		return 30;
+	}
+	bindings[1].nSpace = 1;
+	bindings[1].nBinding = 2;
+	if ( sirD3D12ValidateBindingLayout( bindings, 2, SIR_GRAPHICS_PIPELINE_COMPUTE ) != SIR_GRAPHICS_SUCCESS ) {
+		return 31;
+	}
+	bindings[1].nSpace = 0;
+	bindings[1].nBinding = 6;
+	bindings[0].nArrayCount = 120;
+	bindings[1].nArrayCount = 16;
+	bindings[1].nBinding = 122;
+	if ( sirD3D12ValidateBindingLayout( bindings, 2, SIR_GRAPHICS_PIPELINE_COMPUTE ) != SIR_GRAPHICS_CAPACITY_EXCEEDED ) {
+		return 32;
+	}
+	bindings[0].nArrayCount = 4;
+	bindings[1].nArrayCount = 4;
+	if ( sirD3D12ValidateBindingLayout( bindings, 33, SIR_GRAPHICS_PIPELINE_COMPUTE ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return 33;
+	}
+	bindings[0].eType = ( sirGraphicsBindingType_t )99;
+	if ( sirD3D12ValidateBindingLayout( bindings, 1, SIR_GRAPHICS_PIPELINE_COMPUTE ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return 34;
+	}
+	bindings[0].eType = SIR_GRAPHICS_BINDING_STORAGE_BUFFER;
+	bindings[0].nShaderStageMask = 0;
+	if ( sirD3D12ValidateBindingLayout( bindings, 1, SIR_GRAPHICS_PIPELINE_GRAPHICS ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return 35;
+	}
+	bindings[0].nShaderStageMask = SIR_GRAPHICS_STAGE_COMPUTE;
+	if ( sirD3D12ValidateBindingLayout( bindings, 1, SIR_GRAPHICS_PIPELINE_GRAPHICS ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return 36;
+	}
+	bindings[0].nShaderStageMask = SIR_GRAPHICS_STAGE_VERTEX | SIR_GRAPHICS_STAGE_FRAGMENT;
+	if ( sirD3D12ValidateBindingLayout( bindings, 1, SIR_GRAPHICS_PIPELINE_GRAPHICS ) != SIR_GRAPHICS_SUCCESS ) {
+		return 37;
+	}
+	if ( sirD3D12ValidateBindingLayout( bindings, 1, SIR_GRAPHICS_PIPELINE_FIXED_FUNCTION ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return 38;
+	}
+	return 0;
+}
+
+static int sirTestExternalAdmission( void ) noexcept
+{
+	if ( sirD3D12CanReserveExternal( 0, 0, 4096, true ) || !sirD3D12CanReserveExternal( 0, 0, 4096, false ) ||
+	     sirD3D12CanReserveExternal( 0, 4096, 0, false ) ) {
+		return 39;
+	}
+	if ( !sirD3D12CanReserveExternal( 20, 30, 10, true ) || sirD3D12CanReserveExternal( 21, 30, 10, true ) ||
+	     sirD3D12CanReserveExternal( 31, 30, 1, true ) ) {
+		return 40;
+	}
+	if ( sirD3D12CanReserveExternal( UINT64_MAX - 1, 0, 3, false ) || !sirD3D12CanReserveExternal( UINT64_MAX - 4, 0, 4, false ) ) {
+		return 41;
+	}
+	return 0;
+}
+
+static int sirTestOptionalFeatures( void ) noexcept
+{
+	if ( sirD3D12NegotiatedOptionalFeatures( false, false ) != 0 ||
+	     sirD3D12NegotiatedOptionalFeatures( true, false ) != SIR_GRAPHICS_FEATURE_ENHANCED_BARRIERS ||
+	     sirD3D12NegotiatedOptionalFeatures( false, true ) != SIR_GRAPHICS_FEATURE_MULTISAMPLE ||
+	     sirD3D12NegotiatedOptionalFeatures( true, true ) !=
+	         ( SIR_GRAPHICS_FEATURE_ENHANCED_BARRIERS | SIR_GRAPHICS_FEATURE_MULTISAMPLE ) ) {
+		return 42;
+	}
+	return 0;
+}
+
+static int sirTestValidatorBranches( void ) noexcept
+{
+	sirGraphicsBufferTextureCopy_t copy = {};
+	copy.nWidth = 16;
+	copy.nHeight = 16;
+	copy.nDepth = 1;
+	copy.nRowsPerImage = 16;
+	copy.nBytesPerRow = 256;
+	sirD3D12CopyLimits_t limits = { 16, 16, 4, 4096 };
+	if ( sirD3D12ValidateCopyRegion( copy, limits ) != SIR_GRAPHICS_SUCCESS ) {
+		return 43;
+	}
+	copy.nHeight = 0;
+	if ( sirD3D12ValidateCopyRegion( copy, limits ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return 44;
+	}
+	copy.nHeight = 16;
+	copy.nX = 17;
+	if ( sirD3D12ValidateCopyRegion( copy, limits ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return 45;
+	}
+	copy.nX = 0;
+	copy.nY = 17;
+	if ( sirD3D12ValidateCopyRegion( copy, limits ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return 46;
+	}
+	copy.nY = 0;
+	copy.nWidth = 17;
+	if ( sirD3D12ValidateCopyRegion( copy, limits ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return 47;
+	}
+	copy.nWidth = 16;
+	copy.nHeight = 17;
+	if ( sirD3D12ValidateCopyRegion( copy, limits ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return 48;
+	}
+	copy.nHeight = 16;
+	limits.nTexelBytes = 0;
+	if ( sirD3D12ValidateCopyRegion( copy, limits ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return 49;
+	}
+	limits.nTexelBytes = 4;
+	copy.nBytesPerRow = 0;
+	if ( sirD3D12ValidateCopyRegion( copy, limits ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return 50;
+	}
+	copy.nBytesPerRow = 256;
+	copy.nWidth = 16;
+	limits.nTexelBytes = 17;
+	if ( sirD3D12ValidateCopyRegion( copy, limits ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return 51;
+	}
+	limits.nTexelBytes = 4;
+	copy.nBufferOffset = 4608;
+	if ( sirD3D12ValidateCopyRegion( copy, limits ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return 52;
+	}
+	copy.nBufferOffset = 512;
+	if ( sirD3D12ValidateCopyRegion( copy, limits ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return 53;
+	}
+	copy.nBufferOffset = 0;
+	sirGraphicsViewport_t viewport = {};
+	viewport.fWidth = 16.0f;
+	viewport.fHeight = 16.0f;
+	viewport.fMaximumDepth = 1.0f;
+	sirGraphicsRect_t scissor = { 0, 0, 16, 16 };
+	viewport.fY = HUGE_VALF;
+	if ( sirD3D12ValidateViewport( viewport, scissor ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return 54;
+	}
+	viewport.fY = 0.0f;
+	viewport.fWidth = 0.0f;
+	if ( sirD3D12ValidateViewport( viewport, scissor ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return 55;
+	}
+	viewport.fWidth = 16.0f;
+	viewport.fHeight = NAN;
+	if ( sirD3D12ValidateViewport( viewport, scissor ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return 56;
+	}
+	viewport.fHeight = 16.0f;
+	viewport.fMaximumDepth = 2.0f;
+	if ( sirD3D12ValidateViewport( viewport, scissor ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return 57;
+	}
+	viewport.fMaximumDepth = 1.0f;
+	viewport.fMinimumDepth = 1.0f;
+	viewport.fMaximumDepth = 0.0f;
+	if ( sirD3D12ValidateViewport( viewport, scissor ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return 58;
+	}
+	viewport.fMinimumDepth = 0.0f;
+	viewport.fMaximumDepth = 1.0f;
+	scissor.nBottom = scissor.nTop;
+	if ( sirD3D12ValidateViewport( viewport, scissor ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return 59;
+	}
+	return 0;
+}
+
 int main( void )
 {
 	const int nHeap = sirTestHeapUsage();
 	const int nCopy = sirTestTextureCopy();
 	const int nViewport = sirTestViewport();
-	if ( nHeap != 0 || nCopy != 0 || nViewport != 0 ) {
-		printf( "D3D12 portable validation failed: heap=%d copy=%d viewport=%d\n", nHeap, nCopy, nViewport );
+	const int nBindings = sirTestBindingLayouts();
+	const int nExternal = sirTestExternalAdmission();
+	const int nFeatures = sirTestOptionalFeatures();
+	const int nExtra = sirTestValidatorBranches();
+	if ( nHeap != 0 || nCopy != 0 || nViewport != 0 || nBindings != 0 || nExternal != 0 || nFeatures != 0 || nExtra != 0 ) {
+		printf( "D3D12 portable validation failed: heap=%d copy=%d viewport=%d bindings=%d external=%d features=%d extra=%d\n", nHeap,
+		        nCopy, nViewport, nBindings, nExternal, nFeatures, nExtra );
 		return 1;
 	}
-	printf( "D3D12 portable validation: 23 assertions PASS\n" );
+	printf( "D3D12 portable validation suites PASS\n" );
 	return 0;
 }

@@ -14,6 +14,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Renderer/Drivers/D3D12/SIRD3D12Memory.h>
+#include <Renderer/Drivers/D3D12/SIRD3D12Validation.h>
 #include <Core/Memory/SIRGeneralHeap.h>
 #include <limits.h>
 
@@ -196,14 +197,11 @@ bool SIRD3D12Memory::configureSealedPools( const sirD3D12SealedPoolConfig_t& con
 
 bool SIRD3D12Memory::reserveExternalBytes( uint64_t nBytes ) noexcept
 {
-	// External backing is not covered by the fixed D3D12MA pools.
-	if ( m_bSealed ) {
-		return false;
-	}
+	// External swapchain allocations are accounted independently of the fixed
+	// D3D12MA sealed pools, under the same total resident budget.
 	sirD3D12AllocationLedger_t ledger = {};
-	if ( nBytes == 0 || !queryAllocationLedger( &ledger ) || ledger.nCommittedBytes > UINT64_MAX - nBytes ||
-	     ( m_nResidentLimitBytes != 0 &&
-	       ( ledger.nCommittedBytes > m_nResidentLimitBytes || nBytes > m_nResidentLimitBytes - ledger.nCommittedBytes ) ) ) {
+	if ( !queryAllocationLedger( &ledger ) ||
+	     !sirD3D12CanReserveExternal( ledger.nCommittedBytes, m_nResidentLimitBytes, nBytes, m_bSealed ) ) {
 		return false;
 	}
 	m_nExternalBytes += nBytes;
