@@ -582,6 +582,9 @@ static uint32_t sirGLAcquireCommands( void *pDevice, uint32_t nQueue, sirGraphic
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	sirGLDevice_t *pState = ( sirGLDevice_t * )pDevice;
+	if ( !pState->bWindowed || !pState->bDisplayBound ) {
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
 	if ( !sirGLContextOwnsThread( pState->pContext ) || pState->commands.bRecording ||
 	     pState->commands.bInRenderPass ) {
 		return SIR_GRAPHICS_BUSY;
@@ -621,6 +624,9 @@ static uint32_t sirGLSubmit( void *pDevice, uint32_t nQueue, const sirGraphicsAB
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	sirGLDevice_t *pState = ( sirGLDevice_t * )pDevice;
+	if ( !pState->bWindowed || !pState->bDisplayBound ) {
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
 	if ( !sirGLContextOwnsThread( pState->pContext ) || pState->commands.bInRenderPass ||
 	     !pState->commands.bClosed ) {
 		return SIR_GRAPHICS_BUSY;
@@ -806,8 +812,11 @@ static uint32_t sirGLPreparePresentationDisplay( sirGLDevice_t *pState,
 	if ( pNative->nPlatform != SIR_GRAPHICS_SURFACE_WIN32 ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
-	pState->bDisplayBound = true;
-	return sirGLLoadPresentationDispatch( pState, pState->pContext );
+	const uint32_t nStatus = sirGLLoadPresentationDispatch( pState, pState->pContext );
+	if ( nStatus == SIR_GRAPHICS_SUCCESS ) {
+		pState->bDisplayBound = true;
+	}
+	return nStatus;
 #else
 	if ( pNative->nPlatform != SIR_GRAPHICS_SURFACE_X11 && pNative->nPlatform != SIR_GRAPHICS_SURFACE_WAYLAND ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
@@ -857,6 +866,12 @@ static uint32_t sirGLPreparePresentationDisplay( sirGLDevice_t *pState,
 		return nStatus;
 	}
 	sirGLNativeContext_t *pOldContext = pState->pContext;
+	const sirGLProbe_t oldProbe = pState->probe;
+	const sirGLBufferDispatch_t oldBuffers = pState->buffers;
+	const sirGLSamplerDispatch_t oldSamplers = pState->samplers;
+	const sirGLTextureDispatch_t oldTextures = pState->textures;
+	const sirGLFormatDispatch_t oldFormats = pState->formats;
+	const sirGLFramebufferDispatch_t oldFramebuffers = pState->framebuffers;
 	pState->pContext = pWindowContext;
 	pState->probe = probe;
 	pState->buffers = buffers;
@@ -867,6 +882,12 @@ static uint32_t sirGLPreparePresentationDisplay( sirGLDevice_t *pState,
 	nStatus = sirGLLoadPresentationDispatch( pState, pWindowContext );
 	if ( nStatus != SIR_GRAPHICS_SUCCESS ) {
 		pState->pContext = pOldContext;
+		pState->probe = oldProbe;
+		pState->buffers = oldBuffers;
+		pState->samplers = oldSamplers;
+		pState->textures = oldTextures;
+		pState->formats = oldFormats;
+		pState->framebuffers = oldFramebuffers;
 		sirGLDestroyNativeContext( pWindowContext );
 		( void )sirGLRestoreNativeContext( pOldContext );
 		return nStatus;
@@ -966,6 +987,10 @@ static uint32_t sirGLCreateSurface( void *pDevice, const sirGraphicsABINativeSur
 	uint32_t nStatus = sirGLPreparePresentationDisplay( pState, pNative );
 	if ( nStatus != SIR_GRAPHICS_SUCCESS ) {
 		return nStatus;
+	}
+	if ( pPresent->nWidth > pState->probe.nMaximumTextureSize ||
+	     pPresent->nHeight > pState->probe.nMaximumTextureSize ) {
+		return SIR_GRAPHICS_UNSUPPORTED;
 	}
 	sirGLPresentSlot_t pending = {};
 	nStatus = sirGLCreatePresentWindow( pState->pContext, pNative, pPresent->nWidth, pPresent->nHeight, &pending.window );
