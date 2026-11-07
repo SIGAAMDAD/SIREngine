@@ -125,6 +125,9 @@ typedef struct sirFrameGraphCompiled_s
 } sirFrameGraphCompiled_t;
 
 typedef struct sirFrameGraphSubmissionPlan_s sirFrameGraphSubmissionPlan_t;
+typedef struct sirFrameGraphNativeInput_s sirFrameGraphNativeInput_t;
+typedef struct sirFrameGraphNativeOutput_s sirFrameGraphNativeOutput_t;
+typedef struct sirFrameGraphDeviceInput_s sirFrameGraphDeviceInput_t;
 typedef struct sirFrameGraphTransientInput_s sirFrameGraphTransientInput_t;
 typedef struct sirFrameGraphTransientPlan_s sirFrameGraphTransientPlan_t;
 
@@ -147,6 +150,10 @@ public:
 	sirGraphicsResult_t addOutput( const sirFrameGraphOutput_t& output ) noexcept;
 	sirGraphicsResult_t compile( const sirGraphicsCapabilities_t& caps, sirFrameGraphCompiled_t *pCompiled ) const noexcept;
 	sirGraphicsResult_t buildSubmissionPlan( const sirFrameGraphCompiled_t& compiled, sirFrameGraphSubmissionPlan_t *pPlan ) const noexcept;
+	sirGraphicsResult_t submitNative( const sirFrameGraphCompiled_t& compiled, const sirFrameGraphNativeInput_t& input,
+									  sirFrameGraphNativeOutput_t *pOutput ) const noexcept;
+	sirGraphicsResult_t submitDevice( const sirFrameGraphCompiled_t& compiled, const sirFrameGraphDeviceInput_t& input,
+									  sirFrameGraphNativeOutput_t *pOutput ) const noexcept;
 	sirGraphicsResult_t planTransients( const sirFrameGraphCompiled_t& compiled, const sirFrameGraphTransientInput_t& input,
 										sirFrameGraphTransientPlan_t *pPlan ) const noexcept;
 	sirGraphicsResult_t record( const sirFrameGraphCompiled_t& compiled, const sirFrameGraphCallbacks_t& callbacks ) const noexcept;

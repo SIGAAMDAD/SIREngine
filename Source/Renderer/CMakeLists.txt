@@ -5,6 +5,9 @@ add_library(SIRGraphics STATIC
     Graph/SIRFrameGraph.cpp
     Graph/SIRFrameGraphTransient.cpp
     Graph/SIRFrameGraphSubmission.cpp
+    Graph/SIRFrameGraphCompletion.cpp
+    Graph/SIRFrameGraphNative.cpp
+    Graph/SIRFrameGraphDeviceBridge.cpp
     SIRShaderPipeline.cpp
     Shaders/SIRShaderContracts.cpp
     Shaders/SIRShaderMaterial.cpp

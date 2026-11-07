@@ -68,6 +68,16 @@ static bool testQueueSchedule( void ) noexcept
 	     plan.szPasses[1].eQueue != SIR_GRAPHICS_QUEUE_DIRECT ) {
 		return false;
 	}
+	// Multiple hazards from the same producer require only one native fence wait.
+	if ( compiled.nDependencyCount == 0 || compiled.nDependencyCount >= SIR_FRAMEGRAPH_MAX_DEPENDENCIES ) {
+		return false;
+	}
+	compiled.szDependencies[compiled.nDependencyCount] = compiled.szDependencies[0];
+	++compiled.nDependencyCount;
+	if ( graph.buildSubmissionPlan( compiled, &plan ) != SIR_GRAPHICS_SUCCESS || plan.nWaitCount != 1 ||
+	     plan.szPasses[1].nWaitCount != 1 ) {
+		return false;
+	}
 	compiled.szDependencies[0].nBeforePass = 1;
 	if ( graph.buildSubmissionPlan( compiled, &plan ) != SIR_GRAPHICS_INVALID_ARGUMENT || plan.nPassCount != 0 ) {
 		return false;

@@ -80,12 +80,21 @@ sirGraphicsResult_t SIRFrameGraph::buildSubmissionPlan( const sirFrameGraphCompi
 				return SIR_GRAPHICS_INVALID_ARGUMENT;
 			}
 			if ( dependency.nAfterPass == iPass && dependency.bCrossQueue ) {
-				sirFrameGraphSubmissionWait_t& wait = staged.szWaits[staged.nWaitCount++];
-				wait.nProducerPass = dependency.nBeforePass;
-				wait.nConsumerPass = dependency.nAfterPass;
-				wait.eProducerQueue = m_szPasses[dependency.nBeforePass].eQueue;
-				wait.eConsumerQueue = m_szPasses[dependency.nAfterPass].eQueue;
-				++pass.nWaitCount;
+				bool bAlreadyWaited = false;
+				for ( uint32_t iWait = pass.nWaitBegin; iWait < staged.nWaitCount; ++iWait ) {
+					if ( staged.szWaits[iWait].nProducerPass == dependency.nBeforePass ) {
+						bAlreadyWaited = true;
+						break;
+					}
+				}
+				if ( !bAlreadyWaited ) {
+					sirFrameGraphSubmissionWait_t& wait = staged.szWaits[staged.nWaitCount++];
+					wait.nProducerPass = dependency.nBeforePass;
+					wait.nConsumerPass = dependency.nAfterPass;
+					wait.eProducerQueue = m_szPasses[dependency.nBeforePass].eQueue;
+					wait.eConsumerQueue = m_szPasses[dependency.nAfterPass].eQueue;
+					++pass.nWaitCount;
+				}
 			}
 		}
 	}

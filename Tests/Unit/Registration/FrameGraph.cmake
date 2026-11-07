@@ -104,3 +104,24 @@ target_link_libraries(SIRFrameGraphSubmissionTests PRIVATE SIR::Graphics)
 add_test(NAME renderer.framegraph.submission COMMAND SIRFrameGraphSubmissionTests)
 set_tests_properties(renderer.framegraph.submission PROPERTIES LABELS "framegraph;cpu;conformance" TIMEOUT 90)
 sir_configure_owned_target(SIRFrameGraphSubmissionTests)
+
+# Native-ABI mock execution: barriers, submission waits, partial completions.
+add_executable(SIRFrameGraphNativeTests SIRFrameGraphNativeTests.cpp)
+target_link_libraries(SIRFrameGraphNativeTests PRIVATE SIR::Graphics)
+add_test(NAME renderer.framegraph.native COMMAND SIRFrameGraphNativeTests)
+set_tests_properties(renderer.framegraph.native PROPERTIES LABELS "framegraph;cpu;conformance" TIMEOUT 90)
+sir_configure_owned_target(SIRFrameGraphNativeTests)
+
+# Direct C++ native rendering-device bridge; same lowerer as binary ABI.
+add_executable(SIRFrameGraphDeviceBridgeTests SIRFrameGraphDeviceBridgeTests.cpp)
+target_link_libraries(SIRFrameGraphDeviceBridgeTests PRIVATE SIR::Graphics)
+add_test(NAME renderer.framegraph.device-bridge COMMAND SIRFrameGraphDeviceBridgeTests)
+set_tests_properties(renderer.framegraph.device-bridge PROPERTIES LABELS "framegraph;cpu;conformance" TIMEOUT 90)
+sir_configure_owned_target(SIRFrameGraphDeviceBridgeTests)
+
+# Translates device queue fences to explicit GRDG provider lanes.
+add_executable(SIRFrameGraphCompletionTests SIRFrameGraphCompletionTests.cpp)
+target_link_libraries(SIRFrameGraphCompletionTests PRIVATE SIR::Graphics)
+add_test(NAME renderer.framegraph.completion COMMAND SIRFrameGraphCompletionTests)
+set_tests_properties(renderer.framegraph.completion PROPERTIES LABELS "framegraph;cpu;conformance" TIMEOUT 90)
+sir_configure_owned_target(SIRFrameGraphCompletionTests)
