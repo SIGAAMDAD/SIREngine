@@ -469,6 +469,45 @@ static uint32_t sirGLRetireResource( void *pDevice, sirGraphicsHandle_t hResourc
 	if ( nStatus != SIR_GRAPHICS_SUCCESS ) {
 		return nStatus;
 	}
+	if ( resource.eType == SIR_GRAPHICS_HANDLE_SURFACE ) {
+		for ( uint32_t i = 0; i < SIR_GL_PRESENT_SURFACE_COUNT; ++i ) {
+			sirGLPresentSlot_t& present = pState->present[i];
+			if ( !present.bActive || present.hSurface.nSlot != hResource.nSlot ||
+			     present.hSurface.nGeneration != hResource.nGeneration ) {
+				continue;
+			}
+			if ( present.bAcquired || ( present.hImage.nGeneration != 0 &&
+			                            pState->handles.pSlots[present.hImage.nSlot].nChildCount != 0 ) ) {
+				return SIR_GRAPHICS_BUSY;
+			}
+			if ( present.window.pDrawable != nullptr ) {
+				nStatus = sirGLDestroyPresentWindow( pState->pContext, &present.window );
+				if ( nStatus != SIR_GRAPHICS_SUCCESS ) {
+					return nStatus;
+				}
+			}
+			if ( present.nFramebuffer != 0 ) {
+				nStatus = sirGLDeleteNativeFramebuffer( &pState->framebuffers, present.nFramebuffer );
+				if ( nStatus != SIR_GRAPHICS_SUCCESS ) {
+					return nStatus;
+				}
+				present.nFramebuffer = 0;
+			}
+			if ( present.hImage.nGeneration != 0 ) {
+				nStatus = sirGLRetireResource( pState, present.hImage, pCompletion );
+				if ( nStatus != SIR_GRAPHICS_SUCCESS ) {
+					return nStatus;
+				}
+				present.hImage = {};
+			}
+			nStatus = sirGLHandlePoolTake( &pState->handles, hResource, &resource );
+			if ( nStatus == SIR_GRAPHICS_SUCCESS ) {
+				present = {};
+			}
+			return nStatus;
+		}
+		return SIR_GRAPHICS_INVALID_HANDLE;
+	}
 	if ( resource.eType == SIR_GRAPHICS_HANDLE_TEXTURE && pState->handles.pSlots[hResource.nSlot].nChildCount != 0 ) {
 		return SIR_GRAPHICS_BUSY;
 	}
@@ -868,6 +907,11 @@ static uint32_t sirGLShutdown( void *pDevice ) noexcept
 	}
 	if ( pState->handles.nActive != 0 ) {
 		return SIR_GRAPHICS_BUSY;
+	}
+	for ( uint32_t i = 0; i < SIR_GL_PRESENT_SURFACE_COUNT; ++i ) {
+		if ( pState->present[i].bActive ) {
+			return SIR_GRAPHICS_BUSY;
+		}
 	}
 	sirGraphicsResult_t eStatus = sirGLFramebufferCacheShutdown( &pState->framebufferCache );
 	if ( eStatus != SIR_GRAPHICS_SUCCESS ) {
