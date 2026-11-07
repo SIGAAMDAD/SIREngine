@@ -27,12 +27,15 @@ struct wl_registry;
 struct wl_compositor;
 struct wl_surface;
 struct wl_seat;
+struct zwp_pointer_constraints_v1;
+struct zwp_relative_pointer_manager_v1;
 struct xdg_wm_base;
 struct xdg_surface;
 struct xdg_toplevel;
 struct wl_array;
 
 typedef void ( *sirWaylandSeatLostFn_t )( void *pContext ) noexcept;
+typedef void ( *sirWaylandPointerProtocolLostFn_t )( void *pContext ) noexcept;
 
 class SIRWindowDriverWayland;
 
@@ -68,6 +71,9 @@ public:
 	void shutdown( void ) noexcept override;
 	wl_seat *borrowSeat( void ) const noexcept;
 	bool setSeatLostSink( sirWaylandSeatLostFn_t pSink, void *pContext ) noexcept;
+	zwp_pointer_constraints_v1 *borrowPointerConstraints( void ) const noexcept;
+	zwp_relative_pointer_manager_v1 *borrowRelativePointerManager( void ) const noexcept;
+	bool setPointerProtocolLostSink( sirWaylandPointerProtocolLostFn_t pSink, void *pContext ) noexcept;
 
 protected:
 private:
@@ -85,6 +91,10 @@ private:
 	wl_registry *m_pRegistry = nullptr;
 	wl_compositor *m_pCompositor = nullptr;
 	wl_seat *m_pSeat = nullptr;
+	zwp_pointer_constraints_v1 *m_pPointerConstraints = nullptr;
+	zwp_relative_pointer_manager_v1 *m_pRelativePointerManager = nullptr;
+	sirWaylandPointerProtocolLostFn_t m_pPointerProtocolLostSink = nullptr;
+	void *m_pPointerProtocolLostContext = nullptr;
 	sirWaylandSeatLostFn_t m_pSeatLostSink = nullptr;
 	void *m_pSeatLostContext = nullptr;
 	xdg_wm_base *m_pBase = nullptr;
@@ -95,6 +105,8 @@ private:
 	uint32_t m_nEventCount = 0;
 	uint32_t m_nCompositorGlobal = 0;
 	uint32_t m_nSeatGlobal = 0;
+	uint32_t m_nConstraintsGlobal = 0;
+	uint32_t m_nRelativePointerGlobal = 0;
 	uint32_t m_nShellGlobal = 0;
 	bool m_bLost = false;
 	bool m_bOverflow = false;

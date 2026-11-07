@@ -1,6 +1,10 @@
 #include <Core/Platform/Window/Linux/SIRWindowDriverWayland.h>
 #include <wayland-client.h>
 #include <xdg-shell-client-protocol.h>
+#ifdef SIR_WAYLAND_POINTER_PROTOCOLS_AVAILABLE
+#include <pointer-constraints-unstable-v1-client-protocol.h>
+#include <relative-pointer-unstable-v1-client-protocol.h>
+#endif
 #include <errno.h>
 #include <poll.h>
 #include <string.h>
@@ -26,6 +30,18 @@ void SIRWindowDriverWayland::registryGlobal( void *pContext, wl_registry *pRegis
 		pDriver->m_pSeat = ( wl_seat * )wl_registry_bind( pRegistry, nName, &wl_seat_interface, nBindVersion );
 		pDriver->m_nSeatGlobal = nName;
 	}
+#ifdef SIR_WAYLAND_POINTER_PROTOCOLS_AVAILABLE
+	else if ( strcmp( pszInterface, zwp_pointer_constraints_v1_interface.name ) == 0 && pDriver->m_pPointerConstraints == nullptr ) {
+		pDriver->m_pPointerConstraints =
+		    ( zwp_pointer_constraints_v1 * )wl_registry_bind( pRegistry, nName, &zwp_pointer_constraints_v1_interface, 1 );
+		pDriver->m_nConstraintsGlobal = nName;
+	} else if ( strcmp( pszInterface, zwp_relative_pointer_manager_v1_interface.name ) == 0 &&
+	            pDriver->m_pRelativePointerManager == nullptr ) {
+		pDriver->m_pRelativePointerManager =
+		    ( zwp_relative_pointer_manager_v1 * )wl_registry_bind( pRegistry, nName, &zwp_relative_pointer_manager_v1_interface, 1 );
+		pDriver->m_nRelativePointerGlobal = nName;
+	}
+#endif
 }
 
 void SIRWindowDriverWayland::registryRemove( void *pContext, wl_registry *pRegistry, uint32_t nName ) noexcept
@@ -44,6 +60,23 @@ void SIRWindowDriverWayland::registryRemove( void *pContext, wl_registry *pRegis
 		pDriver->m_pSeat = nullptr;
 		pDriver->m_nSeatGlobal = 0;
 	}
+#ifdef SIR_WAYLAND_POINTER_PROTOCOLS_AVAILABLE
+	if ( nName == pDriver->m_nConstraintsGlobal || nName == pDriver->m_nRelativePointerGlobal ) {
+		if ( pDriver->m_pPointerProtocolLostSink != nullptr ) {
+			pDriver->m_pPointerProtocolLostSink( pDriver->m_pPointerProtocolLostContext );
+		}
+		if ( nName == pDriver->m_nConstraintsGlobal && pDriver->m_pPointerConstraints != nullptr ) {
+			zwp_pointer_constraints_v1_destroy( pDriver->m_pPointerConstraints );
+			pDriver->m_pPointerConstraints = nullptr;
+			pDriver->m_nConstraintsGlobal = 0;
+		}
+		if ( nName == pDriver->m_nRelativePointerGlobal && pDriver->m_pRelativePointerManager != nullptr ) {
+			zwp_relative_pointer_manager_v1_destroy( pDriver->m_pRelativePointerManager );
+			pDriver->m_pRelativePointerManager = nullptr;
+			pDriver->m_nRelativePointerGlobal = 0;
+		}
+	}
+#endif
 	if ( nName == pDriver->m_nCompositorGlobal || nName == pDriver->m_nShellGlobal ) {
 		pDriver->loseDisplay();
 	}
@@ -303,16 +336,21 @@ void SIRWindowDriverWayland::shutdown( void ) noexcept
 	if ( m_pDisplay == nullptr ) {
 		return;
 	}
+	if ( m_pPointerProtocolLostSink != nullptr ) {
+		m_pPointerProtocolLostSink( m_pPointerProtocolLostContext );
+	}
+	if ( m_pSeatLostSink != nullptr ) {
+		m_pSeatLostSink( m_pSeatLostContext );
+	}
+	m_pPointerProtocolLostSink = nullptr;
+	m_pPointerProtocolLostContext = nullptr;
+	m_pSeatLostSink = nullptr;
+	m_pSeatLostContext = nullptr;
 	for ( uint32_t i = 0; i < SIR_WINDOW_MAX_WINDOWS; ++i ) {
 		if ( m_Slots[i].pSurface != nullptr ) {
 			( void )destroyWindow( i );
 		}
 	}
-	if ( m_pSeatLostSink != nullptr ) {
-		m_pSeatLostSink( m_pSeatLostContext );
-	}
-	m_pSeatLostSink = nullptr;
-	m_pSeatLostContext = nullptr;
 	if ( m_pSeat != nullptr ) {
 		if ( !m_bLost && wl_proxy_get_version( ( wl_proxy * )m_pSeat ) >= 5 ) {
 			wl_seat_release( m_pSeat );
@@ -320,6 +358,14 @@ void SIRWindowDriverWayland::shutdown( void ) noexcept
 			wl_seat_destroy( m_pSeat );
 		}
 	}
+#ifdef SIR_WAYLAND_POINTER_PROTOCOLS_AVAILABLE
+	if ( m_pPointerConstraints != nullptr ) {
+		zwp_pointer_constraints_v1_destroy( m_pPointerConstraints );
+	}
+	if ( m_pRelativePointerManager != nullptr ) {
+		zwp_relative_pointer_manager_v1_destroy( m_pRelativePointerManager );
+	}
+#endif
 	if ( m_pBase != nullptr ) {
 		if ( !m_bLost ) {
 			xdg_wm_base_destroy( m_pBase );
@@ -340,6 +386,10 @@ void SIRWindowDriverWayland::shutdown( void ) noexcept
 	m_pSeat = nullptr;
 	m_pBase = nullptr;
 	m_nSeatGlobal = 0;
+	m_nConstraintsGlobal = 0;
+	m_nRelativePointerGlobal = 0;
+	m_pPointerConstraints = nullptr;
+	m_pRelativePointerManager = nullptr;
 	m_nEventRead = 0;
 	m_nEventWrite = 0;
 	m_nEventCount = 0;
@@ -361,5 +411,25 @@ bool SIRWindowDriverWayland::setSeatLostSink( sirWaylandSeatLostFn_t pSink, void
 	}
 	m_pSeatLostSink = pSink;
 	m_pSeatLostContext = pContext;
+	return true;
+}
+
+zwp_pointer_constraints_v1 *SIRWindowDriverWayland::borrowPointerConstraints( void ) const noexcept
+{
+	return m_bLost ? nullptr : m_pPointerConstraints;
+}
+
+zwp_relative_pointer_manager_v1 *SIRWindowDriverWayland::borrowRelativePointerManager( void ) const noexcept
+{
+	return m_bLost ? nullptr : m_pRelativePointerManager;
+}
+
+bool SIRWindowDriverWayland::setPointerProtocolLostSink( sirWaylandPointerProtocolLostFn_t pSink, void *pContext ) noexcept
+{
+	if ( pSink != nullptr && ( pContext == nullptr || m_pPointerProtocolLostSink != nullptr ) ) {
+		return false;
+	}
+	m_pPointerProtocolLostSink = pSink;
+	m_pPointerProtocolLostContext = pContext;
 	return true;
 }

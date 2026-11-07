@@ -29,6 +29,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 struct xkb_context;
 struct xkb_keymap;
 struct xkb_state;
+struct zwp_relative_pointer_v1;
+struct zwp_locked_pointer_v1;
 
 // Borrows one compositor seat/display and registers one keyboard and pointer
 // device, independent of how many windows receive seat focus.
@@ -50,11 +52,14 @@ public:
 	bool beginFrame( void ) noexcept;
 	bool isBound( void ) const noexcept;
 	void setTextEnabled( bool bEnabled ) noexcept;
+	bool setCursorMode( sirInputCursorMode_t eMode ) noexcept;
+	sirInputCursorMode_t cursorMode( void ) const noexcept;
 	void unbind( void ) noexcept;
 
 protected:
 private:
 	static void seatLost( void *pContext ) noexcept;
+	static void pointerProtocolsLost( void *pContext ) noexcept;
 	static void seatCapabilities( void *pContext, wl_seat *pSeat, uint32_t nCapabilities ) noexcept;
 	static void seatName( void *pContext, wl_seat *pSeat, const char *pszName ) noexcept;
 	static void keyboardKeymap( void *pContext, wl_keyboard *pKeyboard, uint32_t nFormat, int32_t nFd, uint32_t nSize ) noexcept;
@@ -77,6 +82,12 @@ private:
 	static void pointerAxisStop( void *pContext, wl_pointer *pPointer, uint32_t nTime, uint32_t nAxis ) noexcept;
 	static void pointerAxisDiscrete( void *pContext, wl_pointer *pPointer, uint32_t nAxis, int32_t nDiscrete ) noexcept;
 
+	static void relativeMotion( void *pContext, zwp_relative_pointer_v1 *pRelative, uint32_t nTimeHi, uint32_t nTimeLo,
+	                            wl_fixed_t nDx, wl_fixed_t nDy, wl_fixed_t nDxUnaccel, wl_fixed_t nDyUnaccel ) noexcept;
+	static void pointerLocked( void *pContext, zwp_locked_pointer_v1 *pLock ) noexcept;
+	static void pointerUnlocked( void *pContext, zwp_locked_pointer_v1 *pLock ) noexcept;
+	bool beginPointerCapture( void ) noexcept;
+	void endPointerCapture( void ) noexcept;
 	bool validSurface( wl_surface *pSurface ) const noexcept;
 	void ensureDevices( void ) noexcept;
 	void clearKeyboard( void ) noexcept;
@@ -90,6 +101,8 @@ private:
 	wl_seat *m_pSeat = nullptr;
 	wl_keyboard *m_pKeyboard = nullptr;
 	wl_pointer *m_pPointer = nullptr;
+	zwp_relative_pointer_v1 *m_pRelativePointer = nullptr;
+	zwp_locked_pointer_v1 *m_pLockedPointer = nullptr;
 	wl_surface *m_Surfaces[SIR_WINDOW_MAX_WINDOWS] = {};
 	wl_surface *m_pKeyboardFocus = nullptr;
 	wl_surface *m_pPointerFocus = nullptr;
@@ -104,6 +117,10 @@ private:
 	int32_t m_nRemainderX = 0;
 	int32_t m_nRemainderY = 0;
 	int32_t m_nWheelRemainder[2] = {};
+	int32_t m_nRelativeRemainderX = 0;
+	int32_t m_nRelativeRemainderY = 0;
+	sirInputCursorMode_t m_eCursorMode = SIR_INPUT_CURSOR_FREE;
+	bool m_bPointerLocked = false;
 	bool m_bHavePointerPosition = false;
 	bool m_bKeyboardDevice = false;
 	bool m_bPointerDevice = false;

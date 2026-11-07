@@ -16,6 +16,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Core/Platform/Input/Linux/SIRWaylandInputBridge.h>
 #include <wayland-client.h>
 #include <xdg-shell-client-protocol.h>
+#include <pointer-constraints-unstable-v1-client-protocol.h>
+#include <relative-pointer-unstable-v1-client-protocol.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -37,6 +39,18 @@ struct wl_keyboard
 {
 };
 struct wl_pointer
+{
+};
+struct zwp_pointer_constraints_v1
+{
+};
+struct zwp_relative_pointer_manager_v1
+{
+};
+struct zwp_locked_pointer_v1
+{
+};
+struct zwp_relative_pointer_v1
 {
 };
 struct wl_surface
@@ -61,6 +75,10 @@ static wl_compositor s_Compositor;
 static wl_seat s_Seat;
 static wl_keyboard s_Keyboard;
 static wl_pointer s_Pointer;
+static zwp_pointer_constraints_v1 s_Constraints;
+static zwp_relative_pointer_manager_v1 s_RelativeManager;
+static zwp_locked_pointer_v1 s_Lock;
+static zwp_relative_pointer_v1 s_Relative;
 static xdg_wm_base s_WmBase;
 static wl_surface s_Surfaces[8];
 static xdg_surface s_XdgSurfaces[8];
@@ -94,11 +112,20 @@ static const wl_keyboard_listener *s_pKeyboardListener = nullptr;
 static void *s_pKeyboardContext = nullptr;
 static const wl_pointer_listener *s_pPointerListener = nullptr;
 static void *s_pPointerContext = nullptr;
+static const zwp_locked_pointer_v1_listener *s_pLockListener = nullptr;
+static void *s_pLockContext = nullptr;
+static const zwp_relative_pointer_v1_listener *s_pRelativeListener = nullptr;
+static void *s_pRelativeContext = nullptr;
+static uint32_t s_nLocksCreated = 0;
+static uint32_t s_nLocksDestroyed = 0;
+static uint32_t s_nRelativeDestroyed = 0;
 
 extern "C" {
 const wl_interface wl_compositor_interface = { "wl_compositor" };
 const wl_interface wl_seat_interface = { "wl_seat" };
 const wl_interface xdg_wm_base_interface = { "xdg_wm_base" };
+const wl_interface zwp_pointer_constraints_v1_interface = { "zwp_pointer_constraints_v1" };
+const wl_interface zwp_relative_pointer_manager_v1_interface = { "zwp_relative_pointer_manager_v1" };
 wl_display *wl_display_connect( const char * )
 {
 	return s_bConnectFailure ? nullptr : &s_Display;
@@ -122,6 +149,10 @@ void *wl_registry_bind( wl_registry *, uint32_t, const wl_interface *pInterface,
 		return &s_Compositor;
 	if ( strcmp( pInterface->name, "wl_seat" ) == 0 )
 		return &s_Seat;
+	if ( strcmp( pInterface->name, "zwp_pointer_constraints_v1" ) == 0 )
+		return &s_Constraints;
+	if ( strcmp( pInterface->name, "zwp_relative_pointer_manager_v1" ) == 0 )
+		return &s_RelativeManager;
 	return &s_WmBase;
 }
 int wl_display_roundtrip( wl_display * )
@@ -129,6 +160,8 @@ int wl_display_roundtrip( wl_display * )
 	s_pRegistryListener->global( s_pRegistryContext, &s_Registry, 11, "wl_compositor", 4 );
 	s_pRegistryListener->global( s_pRegistryContext, &s_Registry, 12, "xdg_wm_base", 1 );
 	s_pRegistryListener->global( s_pRegistryContext, &s_Registry, 13, "wl_seat", 7 );
+	s_pRegistryListener->global( s_pRegistryContext, &s_Registry, 15, "zwp_pointer_constraints_v1", 1 );
+	s_pRegistryListener->global( s_pRegistryContext, &s_Registry, 16, "zwp_relative_pointer_manager_v1", 1 );
 	return 0;
 }
 int wl_display_prepare_read( wl_display * )
@@ -181,6 +214,43 @@ uint32_t wl_proxy_get_version( wl_proxy * )
 void wl_seat_destroy( wl_seat * )
 {
 }
+void zwp_pointer_constraints_v1_destroy( zwp_pointer_constraints_v1 * )
+{
+}
+void zwp_relative_pointer_manager_v1_destroy( zwp_relative_pointer_manager_v1 * )
+{
+}
+zwp_relative_pointer_v1 *zwp_relative_pointer_manager_v1_get_relative_pointer( zwp_relative_pointer_manager_v1 *, wl_pointer * )
+{
+	return &s_Relative;
+}
+int zwp_relative_pointer_v1_add_listener( zwp_relative_pointer_v1 *, const zwp_relative_pointer_v1_listener *pListener, void *pContext )
+{
+	s_pRelativeListener = pListener;
+	s_pRelativeContext = pContext;
+	return 0;
+}
+void zwp_relative_pointer_v1_destroy( zwp_relative_pointer_v1 * )
+{
+	++s_nRelativeDestroyed;
+}
+zwp_locked_pointer_v1 *zwp_pointer_constraints_v1_lock_pointer( zwp_pointer_constraints_v1 *, wl_surface *, wl_pointer *,
+                                                                 void *, uint32_t )
+{
+	++s_nLocksCreated;
+	return &s_Lock;
+}
+int zwp_locked_pointer_v1_add_listener( zwp_locked_pointer_v1 *, const zwp_locked_pointer_v1_listener *pListener, void *pContext )
+{
+	s_pLockListener = pListener;
+	s_pLockContext = pContext;
+	return 0;
+}
+void zwp_locked_pointer_v1_destroy( zwp_locked_pointer_v1 * )
+{
+	++s_nLocksDestroyed;
+}
+
 void wl_seat_release( wl_seat * )
 {
 }
@@ -554,6 +624,18 @@ static bool sirTestWaylandInputRouting( void ) noexcept
 	s_pKeyboardListener->key( s_pKeyboardContext, &s_Keyboard, 8, 100, UINT32_MAX, WL_KEYBOARD_KEY_STATE_PRESSED );
 	s_pKeyboardListener->key( s_pKeyboardContext, &s_Keyboard, 8, 100, 20, WL_KEYBOARD_KEY_STATE_PRESSED );
 	s_pPointerListener->enter( s_pPointerContext, &s_Pointer, 9, &s_Surfaces[1], 0, 0 );
+	if ( !bridge.setCursorMode( SIR_INPUT_CURSOR_CAPTURED ) || bridge.cursorMode() != SIR_INPUT_CURSOR_CAPTURED ||
+	     s_pLockListener == nullptr || s_pRelativeListener == nullptr ) {
+		return false;
+	}
+	const uint32_t nLocksBeforeRelease = s_nLocksCreated;
+	s_pLockListener->locked( s_pLockContext, &s_Lock );
+	s_pRelativeListener->relative_motion( s_pRelativeContext, &s_Relative, 0, 10, 512, 256, 512, 256 );
+	s_pPointerListener->motion( s_pPointerContext, &s_Pointer, 100, 1024, 768 );
+	if ( !bridge.setCursorMode( SIR_INPUT_CURSOR_FREE ) || s_nLocksDestroyed != nLocksBeforeRelease ||
+	     s_nRelativeDestroyed != nLocksBeforeRelease ) {
+		return false;
+	}
 	s_pPointerListener->axis( s_pPointerContext, &s_Pointer, 100, WL_POINTER_AXIS_VERTICAL_SCROLL, 256 );
 	for ( uint32_t n = 0; n < 8; ++n ) {
 		s_pPointerListener->axis( s_pPointerContext, &s_Pointer, 100, WL_POINTER_AXIS_VERTICAL_SCROLL, 20 );
@@ -562,6 +644,7 @@ static bool sirTestWaylandInputRouting( void ) noexcept
 		return false;
 	pFrame = input.frame();
 	uint32_t nSecondKey = 0, nWheel = 0, nUnexpected = 0, nKeyboardResync = 0, nPointerResync = 0;
+	uint32_t nRelativeMotion = 0;
 	int32_t nFractionalWheel = 0;
 	for ( uint32_t i = 0; i < pFrame->nCount; ++i ) {
 		const sirInputEvent_t& e = pFrame->events[i];
@@ -577,9 +660,11 @@ static bool sirTestWaylandInputRouting( void ) noexcept
 			++nKeyboardResync;
 		if ( e.eClass == SIR_INPUT_POINTER && e.eSignal == SIR_INPUT_RESYNC )
 			++nPointerResync;
+		if ( e.eClass == SIR_INPUT_POINTER && e.eSignal == SIR_INPUT_MOTION && e.nValue == 2 && e.nValueY == 1 )
+			++nRelativeMotion;
 	}
-	if ( nSecondKey != 1 || nWheel != 1 || nFractionalWheel != -7 || nUnexpected != 0 || nKeyboardResync != 1 || nPointerResync != 1 ||
-	     input.activeDeviceCount() != 2 )
+	if ( nSecondKey != 1 || nWheel != 1 || nFractionalWheel != -7 || nUnexpected != 0 || nKeyboardResync != 1 ||
+	     nPointerResync != 1 || nRelativeMotion != 1 || input.activeDeviceCount() != 2 )
 		return false;
 	if ( !input.begin( 3 ) || !bridge.beginFrame() )
 		return false;

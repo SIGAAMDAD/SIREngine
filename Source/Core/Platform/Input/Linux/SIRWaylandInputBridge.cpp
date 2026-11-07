@@ -17,6 +17,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <sys/mman.h>
 #include <unistd.h>
 #include <limits.h>
+#ifdef SIR_WAYLAND_POINTER_PROTOCOLS_AVAILABLE
+#include <pointer-constraints-unstable-v1-client-protocol.h>
+#include <relative-pointer-unstable-v1-client-protocol.h>
+#endif
 #ifdef SIR_WAYLAND_XKB_AVAILABLE
 #include <xkbcommon/xkbcommon.h>
 #endif
@@ -69,7 +73,8 @@ bool SIRWaylandInputBridge::bind( SIRInputService& input, SIRWindowDriverWayland
 	m_Surfaces[0] = ( wl_surface * )native.nSurface;
 	m_nWindowCount = 1;
 	static const wl_seat_listener s_SeatListener = { seatCapabilities, seatName };
-	if ( !driver.setSeatLostSink( seatLost, this ) || wl_seat_add_listener( pSeat, &s_SeatListener, this ) != 0 ) {
+	if ( !driver.setSeatLostSink( seatLost, this ) || !driver.setPointerProtocolLostSink( pointerProtocolsLost, this ) ||
+	     wl_seat_add_listener( pSeat, &s_SeatListener, this ) != 0 ) {
 		unbind();
 		return false;
 	}
@@ -118,6 +123,7 @@ void SIRWaylandInputBridge::unregisterWindow( uintptr_t nNativeSurface ) noexcep
 			}
 		}
 		if ( m_pPointerFocus == pSurface ) {
+			endPointerCapture();
 			m_pPointerFocus = nullptr;
 			m_bHavePointerPosition = false;
 			m_nWheelRemainder[0] = 0;
@@ -152,6 +158,9 @@ bool SIRWaylandInputBridge::beginFrame( void ) noexcept
 	}
 	if ( !m_bSeatLost ) {
 		ensureDevices();
+		if ( m_eCursorMode == SIR_INPUT_CURSOR_CAPTURED && m_pLockedPointer == nullptr ) {
+			( void )beginPointerCapture();
+		}
 	}
 	return true;
 }
@@ -165,6 +174,138 @@ void SIRWaylandInputBridge::setTextEnabled( bool bEnabled ) noexcept
 {
 	if ( m_pInput != nullptr ) {
 		m_pInput->text().setEnabled( bEnabled );
+	}
+}
+
+bool SIRWaylandInputBridge::setCursorMode( sirInputCursorMode_t eMode ) noexcept
+{
+	if ( m_pInput == nullptr || eMode == SIR_INPUT_CURSOR_HIDDEN || eMode > SIR_INPUT_CURSOR_CAPTURED ) {
+		return false;
+	}
+	if ( eMode == SIR_INPUT_CURSOR_FREE ) {
+		endPointerCapture();
+		m_eCursorMode = SIR_INPUT_CURSOR_FREE;
+		return true;
+	}
+	if ( !beginPointerCapture() ) {
+		return false;
+	}
+	m_eCursorMode = SIR_INPUT_CURSOR_CAPTURED;
+	return true;
+}
+
+sirInputCursorMode_t SIRWaylandInputBridge::cursorMode( void ) const noexcept
+{
+	return m_eCursorMode;
+}
+
+bool SIRWaylandInputBridge::beginPointerCapture( void ) noexcept
+{
+#ifdef SIR_WAYLAND_POINTER_PROTOCOLS_AVAILABLE
+	if ( m_pLockedPointer != nullptr ) {
+		return true;
+	}
+	if ( m_pDriver == nullptr || m_pPointer == nullptr || m_pPointerFocus == nullptr || !m_bPointerDevice || m_bSeatLost ) {
+		return false;
+	}
+	zwp_pointer_constraints_v1 *pConstraints = m_pDriver->borrowPointerConstraints();
+	zwp_relative_pointer_manager_v1 *pRelativeManager = m_pDriver->borrowRelativePointerManager();
+	if ( pConstraints == nullptr || pRelativeManager == nullptr ) {
+		return false;
+	}
+	static const zwp_relative_pointer_v1_listener s_RelativeListener = { relativeMotion };
+	static const zwp_locked_pointer_v1_listener s_LockListener = { pointerLocked, pointerUnlocked };
+	zwp_relative_pointer_v1 *pRelative = zwp_relative_pointer_manager_v1_get_relative_pointer( pRelativeManager, m_pPointer );
+	if ( pRelative == nullptr ) {
+		return false;
+	}
+	if ( zwp_relative_pointer_v1_add_listener( pRelative, &s_RelativeListener, this ) != 0 ) {
+		zwp_relative_pointer_v1_destroy( pRelative );
+		return false;
+	}
+	zwp_locked_pointer_v1 *pLock = zwp_pointer_constraints_v1_lock_pointer(
+	    pConstraints, m_pPointerFocus, m_pPointer, nullptr, ZWP_POINTER_CONSTRAINTS_V1_LIFETIME_PERSISTENT );
+	if ( pLock == nullptr ) {
+		zwp_relative_pointer_v1_destroy( pRelative );
+		return false;
+	}
+	if ( zwp_locked_pointer_v1_add_listener( pLock, &s_LockListener, this ) != 0 ) {
+		zwp_locked_pointer_v1_destroy( pLock );
+		zwp_relative_pointer_v1_destroy( pRelative );
+		return false;
+	}
+	m_pRelativePointer = pRelative;
+	m_pLockedPointer = pLock;
+	m_bPointerLocked = false;
+	m_nRelativeRemainderX = 0;
+	m_nRelativeRemainderY = 0;
+	return true;
+#else
+	return false;
+#endif
+}
+
+void SIRWaylandInputBridge::endPointerCapture( void ) noexcept
+{
+#ifdef SIR_WAYLAND_POINTER_PROTOCOLS_AVAILABLE
+	if ( m_pLockedPointer != nullptr ) {
+		zwp_locked_pointer_v1_destroy( m_pLockedPointer );
+		m_pLockedPointer = nullptr;
+	}
+	if ( m_pRelativePointer != nullptr ) {
+		zwp_relative_pointer_v1_destroy( m_pRelativePointer );
+		m_pRelativePointer = nullptr;
+	}
+#endif
+	m_bPointerLocked = false;
+	m_nRelativeRemainderX = 0;
+	m_nRelativeRemainderY = 0;
+}
+
+void SIRWaylandInputBridge::pointerProtocolsLost( void *pContext ) noexcept
+{
+	( ( SIRWaylandInputBridge * )pContext )->endPointerCapture();
+}
+
+void SIRWaylandInputBridge::relativeMotion( void *pContext, zwp_relative_pointer_v1 *pRelative, uint32_t nTimeHi,
+                                            uint32_t nTimeLo, wl_fixed_t nDx, wl_fixed_t nDy, wl_fixed_t nDxUnaccel,
+                                            wl_fixed_t nDyUnaccel ) noexcept
+{
+	( void )nTimeHi;
+	( void )nTimeLo;
+	( void )nDx;
+	( void )nDy;
+	SIRWaylandInputBridge *pBridge = ( SIRWaylandInputBridge * )pContext;
+	if ( pBridge->m_pRelativePointer != pRelative || !pBridge->m_bPointerLocked || pBridge->m_pPointerFocus == nullptr ||
+	     !pBridge->m_bPointerDevice ) {
+		return;
+	}
+	const int64_t nX = ( int64_t )nDxUnaccel + pBridge->m_nRelativeRemainderX;
+	const int64_t nY = ( int64_t )nDyUnaccel + pBridge->m_nRelativeRemainderY;
+	const int32_t nMoveX = ( int32_t )( nX / 256 );
+	const int32_t nMoveY = ( int32_t )( nY / 256 );
+	pBridge->m_nRelativeRemainderX = ( int32_t )( nX % 256 );
+	pBridge->m_nRelativeRemainderY = ( int32_t )( nY % 256 );
+	if ( nMoveX != 0 || nMoveY != 0 ) {
+		( void )pBridge->m_pInput->emitPointer( pBridge->id(), pBridge->m_hPointer, SIR_INPUT_MOTION, 0, nMoveX, nMoveY );
+	}
+}
+
+void SIRWaylandInputBridge::pointerLocked( void *pContext, zwp_locked_pointer_v1 *pLock ) noexcept
+{
+	SIRWaylandInputBridge *pBridge = ( SIRWaylandInputBridge * )pContext;
+	if ( pBridge->m_pLockedPointer == pLock ) {
+		pBridge->m_bPointerLocked = true;
+		pBridge->m_bHavePointerPosition = false;
+	}
+}
+
+void SIRWaylandInputBridge::pointerUnlocked( void *pContext, zwp_locked_pointer_v1 *pLock ) noexcept
+{
+	SIRWaylandInputBridge *pBridge = ( SIRWaylandInputBridge * )pContext;
+	if ( pBridge->m_pLockedPointer == pLock ) {
+		pBridge->m_bPointerLocked = false;
+		pBridge->m_bHavePointerPosition = false;
 	}
 }
 
@@ -247,6 +388,7 @@ void SIRWaylandInputBridge::clearPointer( void ) noexcept
 	m_bHavePointerPosition = false;
 	m_nWheelRemainder[0] = 0;
 	m_nWheelRemainder[1] = 0;
+	endPointerCapture();
 	if ( m_pPointer != nullptr ) {
 		if ( wl_proxy_get_version( ( wl_proxy * )m_pPointer ) >= 3 ) {
 			wl_pointer_release( m_pPointer );
@@ -445,8 +587,11 @@ void SIRWaylandInputBridge::pointerEnter( void *pContext, wl_pointer *pPointer, 
 	if ( pBridge->m_pPointer != pPointer || !pBridge->validSurface( pSurface ) ) {
 		return;
 	}
-	if ( pBridge->m_pPointerFocus != nullptr && pBridge->m_pPointerFocus != pSurface && pBridge->m_bPointerDevice ) {
-		( void )pBridge->m_pInput->loseState( pBridge->id(), pBridge->m_hPointer );
+	if ( pBridge->m_pPointerFocus != nullptr && pBridge->m_pPointerFocus != pSurface ) {
+		pBridge->endPointerCapture();
+		if ( pBridge->m_bPointerDevice ) {
+			( void )pBridge->m_pInput->loseState( pBridge->id(), pBridge->m_hPointer );
+		}
 	}
 	pBridge->m_pPointerFocus = pSurface;
 	pBridge->m_nRemainderX = 0;
@@ -457,6 +602,9 @@ void SIRWaylandInputBridge::pointerEnter( void *pContext, wl_pointer *pPointer, 
 	pBridge->m_nLastY = nY;
 	pBridge->m_bHavePointerPosition = true;
 	pBridge->ensureDevices();
+	if ( pBridge->m_eCursorMode == SIR_INPUT_CURSOR_CAPTURED ) {
+		( void )pBridge->beginPointerCapture();
+	}
 }
 
 void SIRWaylandInputBridge::pointerLeave( void *pContext, wl_pointer *pPointer, uint32_t nSerial, wl_surface *pSurface ) noexcept
@@ -466,6 +614,7 @@ void SIRWaylandInputBridge::pointerLeave( void *pContext, wl_pointer *pPointer, 
 	if ( pBridge->m_pPointer != pPointer || pBridge->m_pPointerFocus != pSurface ) {
 		return;
 	}
+	pBridge->endPointerCapture();
 	pBridge->m_pPointerFocus = nullptr;
 	pBridge->m_bHavePointerPosition = false;
 	pBridge->m_nRemainderX = 0;
@@ -481,7 +630,8 @@ void SIRWaylandInputBridge::pointerMotion( void *pContext, wl_pointer *pPointer,
 {
 	( void )nTime;
 	SIRWaylandInputBridge *pBridge = ( SIRWaylandInputBridge * )pContext;
-	if ( pBridge->m_pPointer != pPointer || pBridge->m_pPointerFocus == nullptr || !pBridge->m_bPointerDevice ) {
+	if ( pBridge->m_pPointer != pPointer || pBridge->m_pPointerFocus == nullptr || !pBridge->m_bPointerDevice ||
+	     pBridge->m_bPointerLocked ) {
 		return;
 	}
 	if ( !pBridge->m_bHavePointerPosition ) {
@@ -577,6 +727,7 @@ void SIRWaylandInputBridge::unbind( void ) noexcept
 	}
 	if ( m_pDriver != nullptr ) {
 		( void )m_pDriver->setSeatLostSink( nullptr, nullptr );
+		( void )m_pDriver->setPointerProtocolLostSink( nullptr, nullptr );
 	}
 	releaseSeatObjects();
 	m_pInput = nullptr;
@@ -588,4 +739,5 @@ void SIRWaylandInputBridge::unbind( void ) noexcept
 		m_Surfaces[i] = nullptr;
 	}
 	m_bSeatLost = false;
+	m_eCursorMode = SIR_INPUT_CURSOR_FREE;
 }
