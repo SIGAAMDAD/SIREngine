@@ -155,6 +155,21 @@ static bool sirTestConcurrentWin32WindowClassOwners( void ) noexcept
 	     second.shutdown() != SIR_SYSTEM_OK ) {
 		return false;
 	}
+	sirWindowNativeLease_t firstLease = {};
+	sirWindowNativeView_t firstView = {};
+	if ( first.acquireNativeLease( firstWindow, &firstLease, &firstView ) != SIR_WINDOW_OK ) {
+		return false;
+	}
+	sirWindowSnapshot_t beforeTopology = {}, afterTopology = {};
+	if ( first.querySnapshot( firstWindow, &beforeTopology ) != SIR_WINDOW_OK ) {
+		return false;
+	}
+	( void )SendMessageW( ( HWND )firstView.nNativeWindow, WM_DISPLAYCHANGE, 32, MAKELPARAM( 1920, 1080 ) );
+	if ( first.pumpEvents( 32 ) != SIR_WINDOW_OK || first.querySnapshot( firstWindow, &afterTopology ) != SIR_WINDOW_OK ||
+	     afterTopology.nMetricsRevision <= beforeTopology.nMetricsRevision || afterTopology.nWidth == 0 ||
+	     afterTopology.nHeight == 0 || first.releaseNativeLease( firstLease ) != SIR_WINDOW_OK ) {
+		return false;
+	}
 	// Shutting down the second user must not unregister the first user's class.
 	const sirWindowMutation_t title = { SIR_WINDOW_MUTATION_TITLE, "still-registered", 0, 0 };
 	if ( first.mutateWindow( firstWindow, title ) != SIR_WINDOW_OK || first.pumpEvents( 32 ) != SIR_WINDOW_OK ||

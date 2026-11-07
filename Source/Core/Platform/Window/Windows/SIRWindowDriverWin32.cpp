@@ -2,6 +2,22 @@
 
 static constexpr wchar_t s_szWindowClass[] = L"SIREnginePlatformWindow";
 
+static UINT sirCurrentWindowDpi( HWND hWindow ) noexcept
+{
+	const HMODULE hUser32 = GetModuleHandleW( L"user32.dll" );
+	if ( hUser32 != nullptr ) {
+		typedef UINT( WINAPI *sirGetDpiFn_t )( HWND );
+		const sirGetDpiFn_t pGetDpi = ( sirGetDpiFn_t )GetProcAddress( hUser32, "GetDpiForWindow" );
+		if ( pGetDpi != nullptr ) {
+			const UINT nDpi = pGetDpi( hWindow );
+			if ( nDpi != 0 ) {
+				return nDpi;
+			}
+		}
+	}
+	return 96;
+}
+
 // Per-monitor DPI adjustments are dynamically resolved to retain Win7 support.
 static BOOL sirAdjustWindowFrame( RECT *pFrame, DWORD nStyle, DWORD nExStyle, HWND hWindow ) noexcept
 {
@@ -248,6 +264,14 @@ LRESULT CALLBACK SIRWindowDriverWin32::windowProc( HWND hWindow, UINT nMessage, 
 			} else {
 				pDriver->queueEvent( pSlot->nIndex, SIR_WINDOW_EVENT_RESIZED, LOWORD( nLParam ), HIWORD( nLParam ) );
 				pDriver->queueEvent( pSlot->nIndex, SIR_WINDOW_EVENT_RESTORED, 0, 0 );
+			}
+		} else if ( nMessage == WM_MOVE ) {
+			pDriver->queueEvent( pSlot->nIndex, SIR_WINDOW_EVENT_DPI_CHANGED, sirCurrentWindowDpi( hWindow ), 0 );
+		} else if ( nMessage == WM_DISPLAYCHANGE ) {
+			RECT client = {};
+			if ( GetClientRect( hWindow, &client ) ) {
+				pDriver->queueEvent( pSlot->nIndex, SIR_WINDOW_EVENT_DISPLAY_CHANGED,
+				                     ( uint32_t )( client.right - client.left ), ( uint32_t )( client.bottom - client.top ) );
 			}
 		} else if ( nMessage == WM_DPICHANGED ) {
 			const RECT *pSuggested = ( const RECT * )nLParam;

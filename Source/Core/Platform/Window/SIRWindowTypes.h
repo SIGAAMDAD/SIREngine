@@ -58,7 +58,8 @@ typedef enum sirWindowEventKind_e : uint8_t
 	SIR_WINDOW_EVENT_HIDDEN,
 	SIR_WINDOW_EVENT_MINIMIZED,
 	SIR_WINDOW_EVENT_RESTORED,
-	SIR_WINDOW_EVENT_LOST
+	SIR_WINDOW_EVENT_LOST,
+	SIR_WINDOW_EVENT_DISPLAY_CHANGED
 } sirWindowEventKind_t;
 
 typedef struct sirWindowHandle_s

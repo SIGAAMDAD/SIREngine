@@ -437,6 +437,14 @@ void SIRWindowSystem::onDriverEvent( void *pContext, const sirWindowBackendEvent
 		slot.snapshot.bMinimized = false;
 		slot.snapshot.bReady = slot.snapshot.bVisible && !slot.snapshot.bCloseRequested && slot.snapshot.nWidth != 0 &&
 		                       slot.snapshot.nHeight != 0;
+	} else if ( event.eKind == SIR_WINDOW_EVENT_DISPLAY_CHANGED ) {
+		// Native display topology changes invalidate presentation constraints,
+		// including present modes and color formats with unchanged dimensions.
+		if ( event.nWidth != 0 && event.nHeight != 0 ) {
+			slot.snapshot.nWidth = event.nWidth;
+			slot.snapshot.nHeight = event.nHeight;
+		}
+		++slot.snapshot.nMetricsRevision;
 	} else if ( event.eKind == SIR_WINDOW_EVENT_LOST ) {
 		slot.snapshot.bReady = false;
 		slot.snapshot.bVisible = false;
