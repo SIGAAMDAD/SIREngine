@@ -21,6 +21,8 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - name: Check changed C++ formatting
+        env:
+          SIR_FORMAT_BASE: ${{ github.event.before }}
         run: |
           python3 -m pip install --disable-pip-version-check clang-format==23.1.5
           bash Build/Scripts/FormatAll.sh --ci

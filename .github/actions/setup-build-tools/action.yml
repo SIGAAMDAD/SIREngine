@@ -7,6 +7,9 @@ inputs:
   fastbuild-version:
     description: Required FASTBuild
     default: '1.20'
+  install-fastbuild:
+    description: Install FASTBuild (disable for Ninja-only tooling jobs)
+    default: 'true'
 runs:
   using: composite
   steps:
@@ -32,6 +35,7 @@ runs:
           echo "$root/cmake-4.4.5-windows-x86_64/bin" >> "$GITHUB_PATH"
         fi
     - name: Install FASTBuild
+      if: inputs.install-fastbuild == 'true'
       shell: bash
       env:
         VERSION: ${{ inputs.fastbuild-version }}
@@ -62,8 +66,10 @@ runs:
       shell: bash
       run: |
         cmake --version | grep -F '4.4.5'
-        if [ "${RUNNER_OS}" = Windows ]; then
-          FBuild.exe -version | grep -F '1.20'
-        else
-          fbuild -version | grep -F '1.20'
+        if [ "${{ inputs.install-fastbuild }}" = true ]; then
+          if [ "${RUNNER_OS}" = Windows ]; then
+            FBuild.exe -version | grep -F '1.20'
+          else
+            fbuild -version | grep -F '1.20'
+          fi
         fi

@@ -28,10 +28,21 @@ fi
 files=()
 if [[ "$mode" == "--ci" ]]; then
     base="${SIR_FORMAT_BASE:-}"
-    if [[ -z "$base" && -n "${GITHUB_BASE_REF:-}" ]]; then base="origin/$GITHUB_BASE_REF"; fi
-    if [[ -z "$base" ]]; then base="HEAD^1"; fi
-    merge_base="$(git merge-base "$base" HEAD)" || { echo "Cannot resolve format base: $base" >&2; exit 1; }
-    while IFS= read -r -d '' path; do files+=( "$path" ); done < <(git diff --name-only --diff-filter=ACMR -z "$merge_base" HEAD -- Source Tests Tools)
+    if [[ -n "${GITHUB_BASE_REF:-}" ]]; then
+        if [[ -z "$base" ]]; then base="origin/$GITHUB_BASE_REF"; fi
+        diff_base="$(git merge-base "$base" HEAD)" || { echo "Cannot resolve PR format base: $base" >&2; exit 1; }
+    elif [[ -n "$base" ]]; then
+        if [[ "$base" =~ ^0{40}$ ]]; then
+            diff_base="$(git hash-object -t tree /dev/null)"
+        else
+            git cat-file -e "${base}^{commit}" 2>/dev/null || { echo "Cannot resolve push format base: $base" >&2; exit 1; }
+            diff_base="$base"
+        fi
+    else
+        echo "CI format comparison requires SIR_FORMAT_BASE on pushes or GITHUB_BASE_REF on pull requests" >&2
+        exit 1
+    fi
+    while IFS= read -r -d '' path; do files+=( "$path" ); done < <(git diff --name-only --diff-filter=ACMR -z "$diff_base" HEAD -- Source Tests Tools)
 elif [[ "$mode" == "--full" ]]; then
     while IFS= read -r -d '' path; do files+=( "$path" ); done < <(git ls-files -z -- Source Tests Tools)
 else

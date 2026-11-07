@@ -49,10 +49,10 @@ The same `dev` preset works on Windows and Linux. `debug`, `profile` and `releas
 | --- | --- |
 | `Source/Core/` | Portable foundation and common engine services |
 | `Source/Renderer/`, `Source/Terrain/`, `Source/Resources/` | Built-in graphics, terrain and resource ownership |
-| `Source/World/`, `Source/Scene/`, `Source/Physics/` | World, scene and simulation systems |
-| `Source/Audio/`, `Source/Scripting/`, `Source/Networking/` | Media, C# scripting and network integration |
+| `Source/World/`, `Source/Streaming/`, `Source/Mesh/` | World partition, streaming and geometry systems |
+| `Source/Audio/`, `Source/Scripting/` | Audio and script-runtime integration |
 | `Source/Editor/`, `Source/Terrain/Editor/` | Shared editor and terrain-specific authoring |
-| `Source/System/` | Operating-system services and platform integration |
+| `Source/Core/Platform/` | Operating-system services and platform integration |
 | `Source/Main.cpp` | Native application entrypoint |
 | `Build/` | CMake, toolchain and automation infrastructure |
 | `ThirdParty/` | Pinned dependencies |

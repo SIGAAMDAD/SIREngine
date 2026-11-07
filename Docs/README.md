@@ -2,14 +2,13 @@
 
 Architecture documents distinguish the native C++17 foundation from systems still under development. `Source/` is the authority for first-party engine code, organized directly by subsystem. External engine references are consulted during planned source ports without being tracked as nested source repositories.
 
-## Implementation milestones
+## Development milestones
 
-1. [NomadFramework C++ services](Milestones/01-NomadFramework.md)
-2. [Godot-derived startup and editor](Milestones/02-Godot-Startup-Editor.md)
-3. [SIREngine Terrain](Milestones/03-Terrain.md)
-4. [Global Resource Dependency Graph](Milestones/04-GRDG.md)
+Current milestones, acceptance criteria and progress are tracked in [GitHub Issues](https://github.com/SIGAAMDAD/SIREngine/issues) and [GitHub milestones](https://github.com/SIGAAMDAD/SIREngine/milestones), rather than duplicated in repository documents.
 
 ## Architectural specifications
+
+The [complete architecture index](Architecture/README.md) links all current system references.
 
 | System | Specification |
 | --- | --- |
@@ -28,6 +27,6 @@ Architecture documents distinguish the native C++17 foundation from systems stil
 | Game integration | [12 - Integration](Architecture/12-game-integration.md) |
 | Migration sequence | [13 - Migration](Architecture/13-migration-plan.md) |
 
-See [dependency setup](Dependencies.md), [managed scripting architecture](Architecture/14-managed-scripting.md), and [engineering standards](Standards/cpp.md), [architectural decisions](Decisions/0001-source-strategy.md), and [the milestone index](Milestones/README.md).
+See [dependency setup](Dependencies.md), [managed scripting architecture](Architecture/14-managed-scripting.md), and [engineering standards](Standards/cpp.md), [architectural decisions](Decisions/0001-source-strategy.md).
 
 The [source-tree decision](Decisions/0003-flat-source-tree.md) documents the adopted uppercase, subsystem-oriented hierarchy and the preserved CMake/FASTBuild boundaries.

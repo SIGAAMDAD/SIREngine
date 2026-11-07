@@ -23,6 +23,6 @@ First-party C++17 systems are organized by direct subsystem ownership. Source he
 | `Editor/` | Shared editor, inspector, import and authoring infrastructure |
 | `Main.cpp` | Native executable entrypoint |
 
-Subsystem directories are created when they receive source or concrete editor integration work. Empty README-only subsystem placeholders have been removed. The native bootstrap currently compiles `Core/SIRApplication.h`, `Core/SIRApplication.cpp` and `Main.cpp`; the other systems remain implementation milestones. `SIRCore` is a static library until further engine systems are migrated.
+Subsystem directories are created when they receive source or concrete editor integration work. Empty README-only subsystem placeholders have been removed. The build registers the existing Core, Resources, Renderer, Terrain, Mesh, Streaming, World, UI, Editor, Audio and Scripting targets through `Source/CMakeLists.txt`. Several backend and test targets are optional. These targets contain implementation at different maturity levels; their presence does not establish production acceptance. `SIRCore` is a static library linked into the native `SIREngine` executable.
 
 Compile and test using the root CMake presets. The source tree uses PascalCase naming for first-party directories and filenames.
