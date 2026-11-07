@@ -17,7 +17,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Scripting/Core/SIRScriptSHA256.h>
 #include <Scripting/Core/SIRScriptOptimizationRecipe.h>
 
-#include <atomic>
+#include <Core/Platform/SIRAtomic.h>
 #include <stdio.h>
 #include <string.h>
 #if defined( _WIN32 )
@@ -32,7 +32,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #endif
 
 static constexpr uint8_t s_szInputMagic[8] = { 'S', 'I', 'R', 'I', 'N', 'P', '0', '1' };
-static std::atomic<uint64_t> s_nInputSerial{ 1 };
+static SIRAtomic<uint64_t> s_nInputSerial( 1 );
 
 static void inputWrite32( uint8_t *pData, uint32_t nValue ) noexcept
 {
@@ -400,7 +400,7 @@ sirScriptResult_t SIRScriptOptimizerInputStore::stage( const sirScriptOptimizati
 #else
 	const uint64_t nPID = ( uint64_t )getpid();
 #endif
-	const uint64_t nSerial = s_nInputSerial.fetch_add( 1, std::memory_order_relaxed );
+	const uint64_t nSerial = s_nInputSerial.fetchAdd( 1, SIR_MEMORY_ORDER_RELAXED );
 	if ( snprintf( szTemporary, sizeof( szTemporary ), "%s.tmp.%llu.%llu", szFinal, ( unsigned long long )nPID,
 	               ( unsigned long long )nSerial ) >= ( int )sizeof( szTemporary ) ) {
 		return SIR_SCRIPT_INVALID_ARGUMENT;
