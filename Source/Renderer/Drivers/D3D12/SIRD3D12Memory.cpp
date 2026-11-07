@@ -202,11 +202,16 @@ bool SIRD3D12Memory::reserveExternalBytes( uint64_t nBytes ) noexcept
 	// External swapchain allocations are accounted independently of the fixed
 	// D3D12MA sealed pools, under the same total resident budget.
 	sirD3D12AllocationLedger_t ledger = {};
-	if ( !queryAllocationLedger( &ledger ) ||
-	     !sirD3D12CanReserveExternal( ledger.nCommittedBytes, m_nResidentLimitBytes, nBytes, m_bSealed ) ) {
+	if ( !queryAllocationLedger( &ledger ) ) {
+		m_nLastError = E_INVALIDARG;
+		return false;
+	}
+	if ( !sirD3D12CanReserveExternal( ledger.nCommittedBytes, m_nResidentLimitBytes, nBytes, m_bSealed ) ) {
+		m_nLastError = E_OUTOFMEMORY;
 		return false;
 	}
 	m_nExternalBytes += nBytes;
+	m_nLastError = S_OK;
 	const uint64_t nTotal = ledger.nCommittedBytes + nBytes;
 	if ( nTotal > m_nPeakTrackedBytes ) {
 		m_nPeakTrackedBytes = nTotal;
@@ -216,9 +221,12 @@ bool SIRD3D12Memory::reserveExternalBytes( uint64_t nBytes ) noexcept
 
 void SIRD3D12Memory::releaseExternalBytes( uint64_t nBytes ) noexcept
 {
-	if ( nBytes <= m_nExternalBytes ) {
-		m_nExternalBytes -= nBytes;
+	if ( nBytes > m_nExternalBytes ) {
+		m_nLastError = E_INVALIDARG;
+		return;
 	}
+	m_nExternalBytes -= nBytes;
+	m_nLastError = S_OK;
 }
 
 bool SIRD3D12Memory::enforceResidentLimit( D3D12MA::Allocation **ppAllocation ) noexcept
@@ -321,6 +329,7 @@ HRESULT SIRD3D12Memory::createBuffer( D3D12_HEAP_TYPE eHeapType, D3D12_RESOURCE_
 			return m_nLastError;
 		}
 		allocation.CustomPool = m_szSealedPools[iPool];
+		allocation.Flags |= D3D12MA::ALLOCATION_FLAG_NEVER_ALLOCATE;
 	}
 
 	m_nLastError = m_pAllocator->CreateResource( &allocation, &resource, eInitialState, nullptr, ppAllocation, IID_NULL, nullptr );
@@ -368,6 +377,7 @@ HRESULT SIRD3D12Memory::createTexture2D( uint32_t nWidth, uint32_t nHeight, DXGI
 			return m_nLastError;
 		}
 		allocation.CustomPool = m_szSealedPools[iPool];
+		allocation.Flags |= D3D12MA::ALLOCATION_FLAG_NEVER_ALLOCATE;
 	}
 	m_nLastError = m_pAllocator->CreateResource( &allocation, &resource, eInitialState, pClearValue, ppAllocation, IID_NULL, nullptr );
 	if ( SUCCEEDED( m_nLastError ) && !enforceResidentLimit( ppAllocation ) ) {
@@ -401,6 +411,7 @@ HRESULT SIRD3D12Memory::createTexture( const D3D12_RESOURCE_DESC& resource, D3D1
 			return m_nLastError;
 		}
 		allocation.CustomPool = m_szSealedPools[iPool];
+		allocation.Flags |= D3D12MA::ALLOCATION_FLAG_NEVER_ALLOCATE;
 	}
 	m_nLastError = m_pAllocator->CreateResource( &allocation, &resource, eInitialState, pClearValue, ppAllocation, IID_NULL, nullptr );
 	if ( SUCCEEDED( m_nLastError ) && !enforceResidentLimit( ppAllocation ) ) {
