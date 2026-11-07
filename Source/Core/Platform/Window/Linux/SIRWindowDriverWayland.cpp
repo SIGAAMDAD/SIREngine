@@ -159,7 +159,7 @@ sirWindowResult_t SIRWindowDriverWayland::initialize( void ) noexcept
 	static const wl_registry_listener s_RegistryListener = { registryGlobal, registryRemove };
 	static const xdg_wm_base_listener s_WmListener = { wmBasePing };
 	if ( m_pRegistry == nullptr || wl_registry_add_listener( m_pRegistry, &s_RegistryListener, this ) != 0 ||
-	     wl_display_roundtrip( m_pDisplay ) < 0 || m_pCompositor == nullptr || m_pBase == nullptr ||
+	     wl_display_roundtrip( m_pDisplay ) < 0 || m_bLost || m_pCompositor == nullptr || m_pBase == nullptr ||
 	     xdg_wm_base_add_listener( m_pBase, &s_WmListener, this ) != 0 ) {
 		shutdown();
 		return SIR_WINDOW_NATIVE_FAILURE;
