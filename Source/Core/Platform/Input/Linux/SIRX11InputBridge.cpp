@@ -1,4 +1,5 @@
 #include <Core/Platform/Input/Linux/SIRX11InputBridge.h>
+#include <Core/Platform/SIRPlatformNativeWindow.h>
 
 SIRX11InputBridge::~SIRX11InputBridge( void ) noexcept
 {
@@ -7,12 +8,13 @@ SIRX11InputBridge::~SIRX11InputBridge( void ) noexcept
 
 bool SIRX11InputBridge::bind( SIRInputService& input, SIRLinuxX11Backend& backend, const sirWindowNativeView_t& view ) noexcept
 {
-	if ( m_pInput != nullptr || view.ePlatform != SIR_WINDOW_PLATFORM_X11 || view.nNativeWindow == 0 || view.nDisplayOrInstance == 0 ||
+	sirLinuxNativeWindow_t native = {};
+	if ( m_pInput != nullptr || !sirPlatformDecodeLinuxWindow( view, &native ) || native.eDisplayType != SIR_LINUX_DISPLAY_X11 ||
 	     !input.attach( backend ) ) {
 		return false;
 	}
-	const Window hWindow = ( Window )view.nNativeWindow;
-	Display *pDisplay = ( Display * )view.nDisplayOrInstance;
+	const Window hWindow = ( Window )native.nSurface;
+	Display *pDisplay = ( Display * )native.nDisplay;
 	m_pInput = &input;
 	m_pBackend = &backend;
 	m_pDisplay = pDisplay;

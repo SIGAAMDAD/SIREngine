@@ -1,4 +1,5 @@
 #include <Core/Platform/Input/Windows/SIRWin32InputBridge.h>
+#include <Core/Platform/SIRPlatformNativeWindow.h>
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
@@ -37,8 +38,9 @@ SIRWin32InputBridge::~SIRWin32InputBridge( void ) noexcept
 
 bool SIRWin32InputBridge::bind( SIRInputService& input, SIRWindowsRawBackend& backend, const sirWindowNativeView_t& view ) noexcept
 {
-	if ( m_pInput != nullptr || view.ePlatform != SIR_WINDOW_PLATFORM_WIN32 || view.nNativeWindow == 0 ||
-	     !backend.attachWindow( ( void * )view.nNativeWindow ) ) {
+	sirWindowsNativeWindow_t native = {};
+	if ( m_pInput != nullptr || !sirPlatformDecodeWindowsWindow( view, &native ) ||
+	     !backend.attachWindow( ( void * )native.nHWND ) ) {
 		return false;
 	}
 	if ( !input.attach( backend ) ) {
@@ -47,7 +49,7 @@ bool SIRWin32InputBridge::bind( SIRInputService& input, SIRWindowsRawBackend& ba
 	}
 	m_pInput = &input;
 	m_pBackend = &backend;
-	m_nWindow = view.nNativeWindow;
+	m_nWindow = native.nHWND;
 	m_bFocused = GetFocus() == ( HWND )m_nWindow;
 	input.text().setFocused( m_bFocused );
 	input.setHapticsPaused( !m_bFocused );

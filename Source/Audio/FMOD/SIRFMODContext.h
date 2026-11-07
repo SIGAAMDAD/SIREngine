@@ -25,6 +25,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // clang-format on
 
 #include <Audio/SIRAudioTypes.h>
+#include <Core/Platform/SIRPlatformContext.h>
 #include <Core/Platform/SIRAtomic.h>
 
 typedef enum sirFMODContextState_e : uint8_t
@@ -90,6 +91,8 @@ private:
 	void *m_pCoreBorrowed = nullptr;
 	uint32_t m_nRuntimeVersion = 0;
 	uint64_t m_nEpoch = 0;
+	uint64_t m_nOutputGeneration = 0;
+	int32_t m_iOutputDriver = -1;
 	int32_t m_nLastNativeResult = 0;
 	uint32_t m_nBorrowedBankObjects = 0;
 	uint32_t m_nUnscopedBankObjects = 0;
@@ -125,6 +128,7 @@ public:
 	int32_t getLastNativeResult( void ) const noexcept;
 	uint32_t getRuntimeVersion( void ) const noexcept;
 	uint64_t getEpoch( void ) const noexcept;
+	sirPlatformDeviceIdentity_t getOutputDeviceIdentity( void ) const noexcept;
 	uint32_t getBorrowedBankObjectCount( void ) const noexcept;
 	uint32_t getUnscopedBankObjectCount( void ) const noexcept;
 };

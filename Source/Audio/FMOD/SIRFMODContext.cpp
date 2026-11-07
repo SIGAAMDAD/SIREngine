@@ -119,6 +119,8 @@ sirFMODContextResult_t SIRFMODContext::initialize( const sirFMODContextConfig_t&
 	m_eState = SIR_FMOD_CONTEXT_READY;
 	m_nRuntimeVersion = nRuntimeVersion;
 	m_nEpoch = s_nFMODEpoch.fetchAdd( 1, SIR_MEMORY_ORDER_RELAXED );
+	m_nOutputGeneration = m_nEpoch;
+	m_iOutputDriver = config.iOutputDriver;
 	return SIR_FMOD_OK;
 }
 
@@ -135,6 +137,8 @@ sirFMODContextResult_t SIRFMODContext::shutdown( void ) noexcept
 		m_pCoreBorrowed = nullptr;
 		m_nRuntimeVersion = 0;
 		m_nEpoch = 0;
+		m_nOutputGeneration = 0;
+		m_iOutputDriver = -1;
 		return SIR_FMOD_OK;
 	}
 	const int32_t nResult = m_Ops.releaseStudio( m_Ops.pUserData, m_pStudio );
@@ -150,6 +154,8 @@ sirFMODContextResult_t SIRFMODContext::shutdown( void ) noexcept
 	m_nLastNativeResult = 0;
 	m_nRuntimeVersion = 0;
 	m_nEpoch = 0;
+	m_nOutputGeneration = 0;
+	m_iOutputDriver = -1;
 	m_nBorrowedBankObjects = 0;
 	m_nUnscopedBankObjects = 0;
 	m_nDeviceLossSignals.store( 0, SIR_MEMORY_ORDER_RELAXED );
@@ -194,6 +200,13 @@ sirFMODContextResult_t SIRFMODContext::changeDriver( int32_t iDriver ) noexcept
 	}
 	const int32_t nResult = m_Ops.setDriver( m_Ops.pUserData, m_pCoreBorrowed, iDriver );
 	m_nLastNativeResult = nResult;
+	if ( nResult == 0 ) {
+		m_iOutputDriver = iDriver;
+		++m_nOutputGeneration;
+		if ( m_nOutputGeneration == 0 ) {
+			m_nOutputGeneration = 1;
+		}
+	}
 	return nResult == 0 ? SIR_FMOD_OK : SIR_FMOD_NATIVE_ERROR;
 }
 
@@ -314,4 +327,13 @@ uint32_t SIRFMODContext::getUnscopedBankObjectCount( void ) const noexcept
 uint64_t SIRFMODContext::getEpoch( void ) const noexcept
 {
 	return m_nEpoch;
+}
+
+sirPlatformDeviceIdentity_t SIRFMODContext::getOutputDeviceIdentity( void ) const noexcept
+{
+	if ( !isReady() || m_bNoSound || needsDeviceRecovery() ) {
+		return {};
+	}
+	const uint64_t nNative = m_iOutputDriver < 0 ? 0 : ( uint64_t )m_iOutputDriver + 1;
+	return { nNative, 0, m_nOutputGeneration, SIR_PLATFORM_DEVICE_FMOD, 0 };
 }

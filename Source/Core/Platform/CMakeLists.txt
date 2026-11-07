@@ -2,6 +2,7 @@ include("${CMAKE_CURRENT_LIST_DIR}/../../../Build/CMake/SIRBuildTreeGuard.cmake"
 # Native OS services belong to the Core library and share its lifecycle.
 set(SIR_CORE_PLATFORM_COMMON
     SIRPlatformUtils.cpp
+    SIRPlatformNativeWindow.cpp
     Window/SIRWindowSystem.cpp
     Window/SIRNativeWindowHost.cpp
     Window/Headless/SIRWindowDriverHeadless.cpp
@@ -28,6 +29,7 @@ set(SIR_CORE_PLATFORM_COMMON
 if(WIN32)
     set(SIR_CORE_PLATFORM_OS
         Windows/SIRPlatformFileWindows.cpp
+        Windows/SIRPlatformContextWindows.cpp
         Windows/SIRPlatformRootDirectoryWindows.cpp
         Windows/SIRPlatformFileMappingWindows.cpp
         Windows/SIRPlatformPipeWindows.cpp
@@ -93,6 +95,7 @@ if(WIN32)
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     set(SIR_CORE_PLATFORM_OS
         Linux/SIRPlatformFileLinux.cpp
+        Linux/SIRPlatformContextLinux.cpp
         Linux/SIRPlatformRootDirectoryLinux.cpp
         Linux/SIRPlatformFileMappingLinux.cpp
         Linux/SIRPlatformPipeLinux.cpp

@@ -38,6 +38,11 @@ sirAudioBackendOps_t SIRFMODVoiceBackend::getBackendOps( void ) noexcept
 	         submitSpatialCallback };
 }
 
+const sirPlatformContext_t& SIRFMODVoiceBackend::platformContext( void ) const noexcept
+{
+	return m_Platform;
+}
+
 sirAudioResult_t SIRFMODVoiceBackend::configure( SIRFMODContext *pContext, const sirContainerAllocator_t *pAllocator,
                                                  const sirFMODVoiceNativeOps_t& ops, uint32_t nMaxRegisteredEvents,
                                                  uint32_t nMaxRegisteredParameters, uint32_t nMaxEmitters, uint32_t nMaxListeners,
@@ -53,6 +58,9 @@ sirAudioResult_t SIRFMODVoiceBackend::configure( SIRFMODContext *pContext, const
 	     ( nMaxListeners != 0 &&
 	       ( ops.setListenerSpatial == nullptr || ops.setListenerCount == nullptr || ops.setListenerWeight == nullptr ) ) ) {
 		return SIR_AUDIO_INVALID_ARGUMENT;
+	}
+	if ( !sirPlatformCaptureContext( &m_Platform ) ) {
+		return SIR_AUDIO_BACKEND_ERROR;
 	}
 	m_pContext = pContext;
 	m_pAllocator = pAllocator;

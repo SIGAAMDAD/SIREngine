@@ -330,7 +330,9 @@ static void testInitializationRollback( const sirContainerAllocator_t *pAllocato
 	testCheck( audio.initialize( invalidMock, pAllocator, SIRAudioMockBackend::getOps(), &backend ) == SIR_AUDIO_CAPACITY );
 	testCheck( s_nLiveAllocations.load() == nBefore );
 	testCheck( audio.initialize( valid, pAllocator, SIRAudioMockBackend::getOps(), &backend ) == SIR_AUDIO_OK );
+	testCheck( audio.platformContext().nAbiVersion == SIR_PLATFORM_CONTEXT_ABI_VERSION );
 	audio.shutdown();
+	testCheck( audio.platformContext().nAbiVersion == 0 );
 }
 
 static void testStopReservedQueue( const sirContainerAllocator_t *pAllocator )

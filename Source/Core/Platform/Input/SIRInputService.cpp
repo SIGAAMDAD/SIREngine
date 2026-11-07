@@ -26,6 +26,12 @@ SIRInputService::SIRInputService( void ) noexcept
     : m_Actions(), m_Text(), m_Haptics(), m_ReplayFrame{}, m_Registry(), m_State(), m_pBackends{}, m_nBackendCount( 0 ),
       m_bStopping( false ), m_bHapticsPaused( false ), m_bReplayActive( false ), m_bReplayQueued( false ), m_nCollectingTick( 0 )
 {
+	( void )sirPlatformCaptureContext( &m_Platform );
+}
+
+const sirPlatformContext_t& SIRInputService::platformContext( void ) const noexcept
+{
+	return m_Platform;
 }
 
 bool SIRInputService::hasBackend( sirInputBackendId_t eSource ) const noexcept
@@ -331,6 +337,22 @@ bool SIRInputService::describe( sirInputDeviceId_t id, sirInputDeviceDescriptor_
 {
 	return m_Registry.describe( id, pOut );
 }
+
+bool SIRInputService::describePlatformDevice( sirInputDeviceId_t hDevice, sirPlatformDeviceIdentity_t *pOut ) const noexcept
+{
+	if ( pOut == nullptr ) {
+		return false;
+	}
+	*pOut = {};
+	sirInputDeviceDescriptor_t descriptor = {};
+	if ( !m_Registry.describe( hDevice, &descriptor ) ) {
+		return false;
+	}
+	*pOut = { descriptor.key.nNativeId, descriptor.key.nPhysicalId, descriptor.id.nGeneration,
+	          SIR_PLATFORM_DEVICE_INPUT_BASE | ( uint32_t )descriptor.key.eBackend, ( uint32_t )descriptor.key.eClass };
+	return true;
+}
+
 bool SIRInputService::findDevice( sirInputBackendId_t eSource, uint64_t nNative, sirInputDeviceId_t *pOut ) const noexcept
 {
 	return m_Registry.resolve( eSource, nNative, pOut );

@@ -190,6 +190,8 @@ static void testContextLifecycle( void )
 	checkFMOD( context.getState() == SIR_FMOD_CONTEXT_EMPTY );
 	checkFMOD( context.update() == SIR_FMOD_BAD_STATE );
 	checkFMOD( context.initialize( config, fakeOps( fixture ) ) == SIR_FMOD_OK );
+	const sirPlatformDeviceIdentity_t defaultDevice = context.getOutputDeviceIdentity();
+	checkFMOD( defaultDevice.nBackendId == SIR_PLATFORM_DEVICE_FMOD && defaultDevice.nNativeId == 0 && defaultDevice.nGeneration != 0 );
 	const uint64_t nFirstEpoch = context.getEpoch();
 	checkFMOD( nFirstEpoch != 0 && context.isReady() );
 	checkFMOD( fixture.nCreateCalls == 1 && fixture.nCoreCalls == 1 );
@@ -202,7 +204,11 @@ static void testContextLifecycle( void )
 	checkFMOD( context.changeDriver( 4 ) == SIR_FMOD_INVALID_DRIVER );
 	checkFMOD( context.changeDriver( -1 ) == SIR_FMOD_INVALID_DRIVER );
 	checkFMOD( context.changeDriver( 2 ) == SIR_FMOD_OK && fixture.iSelectedDriver == 2 );
+	const sirPlatformDeviceIdentity_t selected = context.getOutputDeviceIdentity();
+	checkFMOD( selected.nBackendId == SIR_PLATFORM_DEVICE_FMOD && selected.nNativeId == 3 &&
+	           selected.nGeneration != defaultDevice.nGeneration );
 	checkFMOD( context.shutdown() == SIR_FMOD_OK );
+	checkFMOD( context.getOutputDeviceIdentity().nBackendId == SIR_PLATFORM_DEVICE_NONE );
 	checkFMOD( !fixture.bStudioAlive && !fixture.bCoreAlive );
 	checkFMOD( context.shutdown() == SIR_FMOD_OK && fixture.nReleaseCalls == 1 );
 	checkFMOD( context.initialize( config, fakeOps( fixture ) ) == SIR_FMOD_OK );
@@ -286,9 +292,11 @@ static void testDeviceRecovery( void )
 	checkFMOD( context.initialize( config, fakeOps( fixture ) ) == SIR_FMOD_OK );
 	fixture.bFireDeviceLoss = true;
 	checkFMOD( context.update() == SIR_FMOD_OK && context.needsDeviceRecovery() );
+	checkFMOD( context.getOutputDeviceIdentity().nBackendId == SIR_PLATFORM_DEVICE_NONE );
 	checkFMOD( context.getDeviceLossSignalCount() == 1 );
 	checkFMOD( context.recoverOutput( 2, false ) == SIR_FMOD_OK );
 	checkFMOD( fixture.iSelectedDriver == 2 && context.getSuccessfulRecoveryCount() == 1 );
+	checkFMOD( context.getOutputDeviceIdentity().nNativeId == 3 );
 	checkFMOD( !context.needsDeviceRecovery() );
 	fixture.bFireDeviceLoss = true;
 	checkFMOD( context.update() == SIR_FMOD_OK && context.needsDeviceRecovery() );
@@ -296,6 +304,7 @@ static void testDeviceRecovery( void )
 	fixture.eFailure = SIR_FMOD_FIXTURE_DRIVER;
 	checkFMOD( context.recoverOutput( 2, true ) == SIR_FMOD_OK );
 	checkFMOD( fixture.iSelectedDriver == 0 && !context.needsDeviceRecovery() );
+	checkFMOD( context.getOutputDeviceIdentity().nNativeId == 1 );
 	checkFMOD( context.getSuccessfulRecoveryCount() == 2 );
 	fixture.nDriverCount = 0;
 	checkFMOD( context.recoverOutput( 0, true ) == SIR_FMOD_INVALID_DRIVER );

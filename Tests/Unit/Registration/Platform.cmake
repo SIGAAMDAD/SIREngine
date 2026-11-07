@@ -143,3 +143,10 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND SIR_WITH_X11_INPUT AND X11_FOUND)
         sir_configure_owned_target(SIRX11InputBridgeTests)
     endif()
 endif()
+
+# Shared platform PODs and native-window borrowed view contracts.
+add_executable(SIRPlatformContextTests SIRPlatformContextTests.cpp)
+target_link_libraries(SIRPlatformContextTests PRIVATE SIR::Core)
+add_test(NAME core.platform.native-context COMMAND SIRPlatformContextTests)
+set_tests_properties(core.platform.native-context PROPERTIES LABELS "core;platform;input;audio;renderer;abi" TIMEOUT 60)
+sir_configure_owned_target(SIRPlatformContextTests)
