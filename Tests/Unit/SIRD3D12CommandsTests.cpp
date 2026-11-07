@@ -261,7 +261,21 @@ static int sirTestQueueSubmission( SIRRenderingDevice *pDevice, uint32_t nGenera
 		return 37;
 	}
 	sirGraphicsCompletion_t directComplete = {};
-	if ( sirTestSubmit( pDevice, SIR_GRAPHICS_QUEUE_DIRECT, pDirect, &computeComplete, 1, &directComplete ) != SIR_GRAPHICS_SUCCESS ||
+	sirGraphicsCompletion_t szWaits[2] = { copyCompletion, computeComplete };
+	sirGraphicsCompletion_t rejectedDirect = {};
+	szWaits[1].nValue = computeComplete.nValue + 1;
+	if ( sirTestSubmit( pDevice, SIR_GRAPHICS_QUEUE_DIRECT, pDirect, szWaits, 2, &rejectedDirect ) != SIR_GRAPHICS_INVALID_ARGUMENT ||
+	     rejectedDirect.nValue != 0 ) {
+		return 91;
+	}
+	szWaits[1] = computeComplete;
+	++szWaits[0].nDeviceGeneration;
+	if ( sirTestSubmit( pDevice, SIR_GRAPHICS_QUEUE_DIRECT, pDirect, szWaits, 2, &rejectedDirect ) != SIR_GRAPHICS_INVALID_ARGUMENT ||
+	     rejectedDirect.nValue != 0 ) {
+		return 92;
+	}
+	szWaits[0] = copyCompletion;
+	if ( sirTestSubmit( pDevice, SIR_GRAPHICS_QUEUE_DIRECT, pDirect, szWaits, 2, &directComplete ) != SIR_GRAPHICS_SUCCESS ||
 	     pDevice->wait( directComplete, 10000000000ULL ) != SIR_GRAPHICS_SUCCESS ) {
 		return 38;
 	}
