@@ -470,11 +470,12 @@ sirGraphicsResult_t sirGLRestoreNativeContext( sirGLNativeContext_t *pContext ) 
 }
 
 sirGraphicsResult_t sirGLCreatePresentWindow( sirGLNativeContext_t *pContext, const sirGraphicsABINativeSurface_t *pNative,
-                                              uint32_t nWidth, uint32_t nHeight, sirGLPresentWindow_t *pWindow ) noexcept
+                                              const sirGraphicsABIPresentDesc_t *pPresent, sirGLPresentWindow_t *pWindow ) noexcept
 {
-	if ( pContext == nullptr || pNative == nullptr || pWindow == nullptr || pNative->pWindow == nullptr ||
-	     pNative->nWindowGeneration == 0 || nWidth == 0 || nHeight == 0 ||
-	     nWidth > INT32_MAX || nHeight > INT32_MAX ) {
+	if ( pContext == nullptr || pNative == nullptr || pPresent == nullptr || pWindow == nullptr ||
+	     pNative->pWindow == nullptr || pNative->nWindowGeneration == 0 ||
+	     pPresent->nWidth == 0 || pPresent->nHeight == 0 ||
+	     pPresent->nWidth > INT32_MAX || pPresent->nHeight > INT32_MAX ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( !sirGLContextOwnsThread( pContext ) ) {
@@ -485,8 +486,8 @@ sirGraphicsResult_t sirGLCreatePresentWindow( sirGLNativeContext_t *pContext, co
 	window.pNativeDisplay = pNative->pDisplayOrInstance;
 	window.nPlatform = pNative->nPlatform;
 	window.nWindowGeneration = pNative->nWindowGeneration;
-	window.nWidth = nWidth;
-	window.nHeight = nHeight;
+	window.nWidth = pPresent->nWidth;
+	window.nHeight = pPresent->nHeight;
 #if defined( _WIN32 )
 	if ( pNative->nPlatform != SIR_GRAPHICS_SURFACE_WIN32 ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
@@ -529,7 +530,7 @@ sirGraphicsResult_t sirGLCreatePresentWindow( sirGLNativeContext_t *pContext, co
 		if ( pContext->pWaylandCreate == nullptr || pContext->pWaylandDestroy == nullptr ) {
 			return SIR_GRAPHICS_UNSUPPORTED;
 		}
-		window.pWaylandWrapper = pContext->pWaylandCreate( pNative->pWindow, ( int32_t )nWidth, ( int32_t )nHeight );
+		window.pWaylandWrapper = pContext->pWaylandCreate( pNative->pWindow, ( int32_t )pPresent->nWidth, ( int32_t )pPresent->nHeight );
 		if ( window.pWaylandWrapper == nullptr ) {
 			return SIR_GRAPHICS_DEVICE_LOST;
 		}

@@ -59,7 +59,7 @@ sirGraphicsResult_t sirGLCreateNativeContextForWindow( const sirGraphicsABIHost_
                                                       sirGLNativeContext_t **ppContext ) noexcept;
 sirGraphicsResult_t sirGLRestoreNativeContext( sirGLNativeContext_t *pContext ) noexcept;
 sirGraphicsResult_t sirGLCreatePresentWindow( sirGLNativeContext_t *pContext, const sirGraphicsABINativeSurface_t *pNative,
-                                              uint32_t nWidth, uint32_t nHeight, sirGLPresentWindow_t *pWindow ) noexcept;
+                                              const sirGraphicsABIPresentDesc_t *pPresent, sirGLPresentWindow_t *pWindow ) noexcept;
 sirGraphicsResult_t sirGLResizePresentWindow( sirGLNativeContext_t *pContext, sirGLPresentWindow_t *pWindow,
                                               uint32_t nWidth, uint32_t nHeight ) noexcept;
 sirGraphicsResult_t sirGLBeginPresentWindow( sirGLNativeContext_t *pContext, const sirGLPresentWindow_t *pWindow ) noexcept;

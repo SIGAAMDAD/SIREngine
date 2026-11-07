@@ -993,7 +993,7 @@ static uint32_t sirGLCreateSurface( void *pDevice, const sirGraphicsABINativeSur
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
 	sirGLPresentSlot_t pending = {};
-	nStatus = sirGLCreatePresentWindow( pState->pContext, pNative, pPresent->nWidth, pPresent->nHeight, &pending.window );
+	nStatus = sirGLCreatePresentWindow( pState->pContext, pNative, pPresent, &pending.window );
 	if ( nStatus != SIR_GRAPHICS_SUCCESS ) {
 		return nStatus;
 	}
