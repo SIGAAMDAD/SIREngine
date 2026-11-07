@@ -209,10 +209,9 @@ static inline uint64_t sirD3D12NegotiatedOptionalFeatures( bool bEnhancedBarrier
  * The destination queue must have room for the next fence signal, so a
  * rejected submission cannot enqueue waits without a matching signal.
  */
-static inline sirGraphicsResult_t sirD3D12ValidateSubmissionDependencies( sirGraphicsQueue_t eQueue,
-                                                                            const sirGraphicsCompletion_t *pWaits,
-                                                                            uint32_t nWaitCount,
-                                                                            const sirGraphicsCompletionSet_t& submitted ) noexcept
+static inline sirGraphicsResult_t sirD3D12ValidateSubmissionDependencies( sirGraphicsQueue_t eQueue, const sirGraphicsCompletion_t *pWaits,
+                                                                          uint32_t nWaitCount,
+                                                                          const sirGraphicsCompletionSet_t& submitted ) noexcept
 {
 	if ( eQueue >= SIR_GRAPHICS_QUEUE_COUNT || nWaitCount > 64 || ( nWaitCount != 0 && pWaits == nullptr ) ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
@@ -225,8 +224,8 @@ static inline sirGraphicsResult_t sirD3D12ValidateSubmissionDependencies( sirGra
 	}
 	for ( uint32_t iWait = 0; iWait < nWaitCount; ++iWait ) {
 		const sirGraphicsCompletion_t& wait = pWaits[iWait];
-		if ( wait.nDeviceGeneration != submitted.nDeviceGeneration || wait.eQueue >= SIR_GRAPHICS_QUEUE_COUNT ||
-		     wait.nValue == 0 || wait.nValue > submitted.szQueueValues[wait.eQueue] ) {
+		if ( wait.nDeviceGeneration != submitted.nDeviceGeneration || wait.eQueue >= SIR_GRAPHICS_QUEUE_COUNT || wait.nValue == 0 ||
+		     wait.nValue > submitted.szQueueValues[wait.eQueue] ) {
 			return SIR_GRAPHICS_INVALID_ARGUMENT;
 		}
 	}
