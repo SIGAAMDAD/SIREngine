@@ -393,7 +393,7 @@ int main( void )
 	}
 	pDevice = nullptr;
 	if ( driver.createDevice( config, &pDevice ) != SIR_GRAPHICS_SUCCESS || pDevice == nullptr ||
-	     pDevice->getDeviceGeneration() == capabilities.nDeviceGeneration || driver.destroyDevice( pDevice ) != SIR_GRAPHICS_SUCCESS ) {
+	     pDevice->getDeviceGeneration() <= capabilities.nDeviceGeneration || driver.destroyDevice( pDevice ) != SIR_GRAPHICS_SUCCESS ) {
 		return 13;
 	}
 	// Physical GPU runners verify that each reported index opens the matching native LUID.
