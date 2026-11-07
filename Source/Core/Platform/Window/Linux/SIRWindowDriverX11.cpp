@@ -3,9 +3,38 @@
 #include <X11/Xlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <poll.h>
+#include <sys/socket.h>
+#include <setjmp.h>
+#include <errno.h>
+#include <Core/Platform/SIRSync.h>
+#include <Core/Platform/SIRScopedLock.h>
 #ifdef SIR_WINDOW_XRANDR_AVAILABLE
 #include <X11/extensions/Xrandr.h>
 #endif
+
+
+static SIRMutex s_X11IOHandlerMutex;
+static uint32_t s_nX11HandlerUsers = 0;
+static XIOErrorHandler s_pPreviousX11IOHandler = nullptr;
+static thread_local sigjmp_buf *s_pX11RecoveryPoint = nullptr;
+static thread_local Display *s_pX11RecoveryDisplay = nullptr;
+
+// Xlib's default behavior is process termination. The recovery point is
+// restricted to native driver calls; never re-enter the failed Display.
+static int sirX11IOErrorRecovery( Display *pDisplay )
+{
+	if ( pDisplay == s_pX11RecoveryDisplay && s_pX11RecoveryPoint != nullptr ) {
+		siglongjmp( *s_pX11RecoveryPoint, 1 );
+	}
+	return s_pPreviousX11IOHandler != nullptr ? s_pPreviousX11IOHandler( pDisplay ) : 0;
+}
+
+static void sirX11ClearRecovery( void ) noexcept
+{
+	s_pX11RecoveryPoint = nullptr;
+	s_pX11RecoveryDisplay = nullptr;
+}
 
 // Set the ICCCM name and UTF-8 EWMH name for window managers and IME users.
 static sirWindowResult_t sirSetX11Title( Display *pDisplay, Window hWindow, const char *pszTitle ) noexcept
@@ -49,17 +78,37 @@ sirWindowResult_t SIRWindowDriverX11::initialize( void ) noexcept
 	if ( pDisplay == nullptr ) {
 		return SIR_WINDOW_NOT_READY;
 	}
+	m_pDisplay = pDisplay;
+	m_bServerLost = false;
+	m_nLossPendingMask = 0;
+	{
+		SIRScopedLock<SIRMutex> lock( s_X11IOHandlerMutex );
+		if ( s_nX11HandlerUsers == 0 ) {
+			s_pPreviousX11IOHandler = XSetIOErrorHandler( sirX11IOErrorRecovery );
+		}
+		++s_nX11HandlerUsers;
+		m_bHandlerRegistered = true;
+	}
+	sigjmp_buf recovery;
+	if ( sigsetjmp( recovery, 1 ) != 0 ) {
+		sirX11ClearRecovery();
+		markServerLost();
+		return SIR_WINDOW_NATIVE_FAILURE;
+	}
+	s_pX11RecoveryDisplay = pDisplay;
+	s_pX11RecoveryPoint = &recovery;
 	m_nDeleteWindow = ( uintptr_t )XInternAtom( pDisplay, "WM_DELETE_WINDOW", False );
 	m_nProtocols = ( uintptr_t )XInternAtom( pDisplay, "WM_PROTOCOLS", False );
 	if ( m_nDeleteWindow == 0 || m_nProtocols == 0 ) {
-		XCloseDisplay( pDisplay );
+		sirX11ClearRecovery();
+		shutdown();
 		return SIR_WINDOW_NATIVE_FAILURE;
 	}
 	m_nRootWindow = ( uintptr_t )DefaultRootWindow( pDisplay );
 	XWindowAttributes attributes = {};
 	if ( !XGetWindowAttributes( pDisplay, ( Window )m_nRootWindow, &attributes ) ) {
-		XCloseDisplay( pDisplay );
-		m_nRootWindow = 0;
+		sirX11ClearRecovery();
+		shutdown();
 		return SIR_WINDOW_NATIVE_FAILURE;
 	}
 	m_nServerWidth = ( uint32_t )attributes.width;
@@ -79,11 +128,97 @@ sirWindowResult_t SIRWindowDriverX11::initialize( void ) noexcept
 		}
 	}
 #endif
-	m_pDisplay = pDisplay;
+	sirX11ClearRecovery();
 	return SIR_WINDOW_OK;
 }
 
+void SIRWindowDriverX11::markServerLost( void ) noexcept
+{
+	if ( m_bServerLost ) {
+		return;
+	}
+	m_bServerLost = true;
+	for ( uint32_t i = 0; i < SIR_WINDOW_MAX_WINDOWS; ++i ) {
+		if ( m_hWindows[i] != 0 ) {
+			m_nLostNative[i] = m_hWindows[i];
+			m_nLossPendingMask |= UINT32_C( 1 ) << i;
+			m_hWindows[i] = 0;
+			m_bLost[i] = true;
+		}
+	}
+	m_nDisplayChangePendingMask = 0;
+}
+
+bool SIRWindowDriverX11::transportAlive( void ) noexcept
+{
+	if ( m_bServerLost || m_pDisplay == nullptr ) {
+		return false;
+	}
+	const int nSocket = ConnectionNumber( ( Display * )m_pDisplay );
+	if ( nSocket < 0 ) {
+		markServerLost();
+		return false;
+	}
+	pollfd descriptor = {};
+	descriptor.fd = nSocket;
+	descriptor.events = POLLIN;
+	const int nPoll = poll( &descriptor, 1, 0 );
+	if ( ( nPoll < 0 && errno != EINTR ) || ( nPoll > 0 && ( descriptor.revents & ( POLLHUP | POLLERR | POLLNVAL ) ) != 0 ) ) {
+		markServerLost();
+		return false;
+	}
+	if ( nPoll > 0 && ( descriptor.revents & POLLIN ) != 0 ) {
+		char byte = 0;
+		const ssize_t nPeek = recv( nSocket, &byte, 1, MSG_PEEK | MSG_DONTWAIT );
+		if ( nPeek == 0 || ( nPeek < 0 && errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR ) ) {
+			markServerLost();
+			return false;
+		}
+	}
+	return true;
+}
+
+sirWindowResult_t SIRWindowDriverX11::emitServerLoss( uint32_t nBudget, sirWindowDriverEventFn_t pCallback,
+                                                      void *pContext ) noexcept
+{
+	if ( nBudget == 0 || pCallback == nullptr ) {
+		return SIR_WINDOW_INVALID_ARGUMENT;
+	}
+	for ( uint32_t i = 0; i < SIR_WINDOW_MAX_WINDOWS && nBudget != 0; ++i ) {
+		if ( ( m_nLossPendingMask & ( UINT32_C( 1 ) << i ) ) == 0 ) {
+			continue;
+		}
+		m_nLossPendingMask &= ~( UINT32_C( 1 ) << i );
+		const sirWindowBackendEvent_t lost = { i, m_nLostNative[i], SIR_WINDOW_EVENT_LOST, 0, 0 };
+		pCallback( pContext, lost );
+		--nBudget;
+	}
+	return SIR_WINDOW_NATIVE_FAILURE;
+}
+
 sirWindowResult_t SIRWindowDriverX11::createWindow( const sirWindowCreateDesc_t& desc, uint32_t nSlot,
+                                                    sirWindowNativeView_t *pView ) noexcept
+{
+	if ( m_bServerLost ) {
+		return SIR_WINDOW_STOPPED;
+	}
+	if ( !transportAlive() ) {
+		return SIR_WINDOW_NATIVE_FAILURE;
+	}
+	sigjmp_buf recovery;
+	if ( sigsetjmp( recovery, 1 ) != 0 ) {
+		sirX11ClearRecovery();
+		markServerLost();
+		return SIR_WINDOW_NATIVE_FAILURE;
+	}
+	s_pX11RecoveryDisplay = ( Display * )m_pDisplay;
+	s_pX11RecoveryPoint = &recovery;
+	const sirWindowResult_t eResult = createWindowNative( desc, nSlot, pView );
+	sirX11ClearRecovery();
+	return eResult;
+}
+
+sirWindowResult_t SIRWindowDriverX11::createWindowNative( const sirWindowCreateDesc_t& desc, uint32_t nSlot,
                                                     sirWindowNativeView_t *pView ) noexcept
 {
 	if ( nSlot >= SIR_WINDOW_MAX_WINDOWS || pView == nullptr || desc.pszTitle == nullptr || desc.nWidth == 0 || desc.nHeight == 0 ) {
@@ -118,6 +253,33 @@ sirWindowResult_t SIRWindowDriverX11::createWindow( const sirWindowCreateDesc_t&
 
 sirWindowResult_t SIRWindowDriverX11::destroyWindow( uint32_t nSlot ) noexcept
 {
+	if ( m_bServerLost ) {
+		if ( nSlot >= SIR_WINDOW_MAX_WINDOWS || !m_bLost[nSlot] ) {
+			return SIR_WINDOW_INVALID_HANDLE;
+		}
+		m_bLost[nSlot] = false;
+		m_nLossPendingMask &= ~( UINT32_C( 1 ) << nSlot );
+		m_nLostNative[nSlot] = 0;
+		return SIR_WINDOW_OK;
+	}
+	if ( !transportAlive() ) {
+		return SIR_WINDOW_NATIVE_FAILURE;
+	}
+	sigjmp_buf recovery;
+	if ( sigsetjmp( recovery, 1 ) != 0 ) {
+		sirX11ClearRecovery();
+		markServerLost();
+		return SIR_WINDOW_NATIVE_FAILURE;
+	}
+	s_pX11RecoveryDisplay = ( Display * )m_pDisplay;
+	s_pX11RecoveryPoint = &recovery;
+	const sirWindowResult_t eResult = destroyWindowNative( nSlot );
+	sirX11ClearRecovery();
+	return eResult;
+}
+
+sirWindowResult_t SIRWindowDriverX11::destroyWindowNative( uint32_t nSlot ) noexcept
+{
 	if ( m_pDisplay == nullptr ) {
 		return SIR_WINDOW_STOPPED;
 	}
@@ -136,6 +298,27 @@ sirWindowResult_t SIRWindowDriverX11::destroyWindow( uint32_t nSlot ) noexcept
 }
 
 sirWindowResult_t SIRWindowDriverX11::mutateWindow( uint32_t nSlot, const sirWindowMutation_t& mutation ) noexcept
+{
+	if ( m_bServerLost ) {
+		return SIR_WINDOW_STOPPED;
+	}
+	if ( !transportAlive() ) {
+		return SIR_WINDOW_NATIVE_FAILURE;
+	}
+	sigjmp_buf recovery;
+	if ( sigsetjmp( recovery, 1 ) != 0 ) {
+		sirX11ClearRecovery();
+		markServerLost();
+		return SIR_WINDOW_NATIVE_FAILURE;
+	}
+	s_pX11RecoveryDisplay = ( Display * )m_pDisplay;
+	s_pX11RecoveryPoint = &recovery;
+	const sirWindowResult_t eResult = mutateWindowNative( nSlot, mutation );
+	sirX11ClearRecovery();
+	return eResult;
+}
+
+sirWindowResult_t SIRWindowDriverX11::mutateWindowNative( uint32_t nSlot, const sirWindowMutation_t& mutation ) noexcept
 {
 	Display *pDisplay = ( Display * )m_pDisplay;
 	if ( pDisplay == nullptr ) {
@@ -227,6 +410,27 @@ sirWindowResult_t SIRWindowDriverX11::mutateWindow( uint32_t nSlot, const sirWin
 }
 
 sirWindowResult_t SIRWindowDriverX11::pumpEvents( uint32_t nBudget, sirWindowDriverEventFn_t pCallback, void *pContext ) noexcept
+{
+	if ( m_bServerLost ) {
+		return emitServerLoss( nBudget, pCallback, pContext );
+	}
+	if ( !transportAlive() ) {
+		return emitServerLoss( nBudget, pCallback, pContext );
+	}
+	sigjmp_buf recovery;
+	if ( sigsetjmp( recovery, 1 ) != 0 ) {
+		sirX11ClearRecovery();
+		markServerLost();
+		return emitServerLoss( nBudget, pCallback, pContext );
+	}
+	s_pX11RecoveryDisplay = ( Display * )m_pDisplay;
+	s_pX11RecoveryPoint = &recovery;
+	const sirWindowResult_t eResult = pumpEventsNative( nBudget, pCallback, pContext );
+	sirX11ClearRecovery();
+	return eResult;
+}
+
+sirWindowResult_t SIRWindowDriverX11::pumpEventsNative( uint32_t nBudget, sirWindowDriverEventFn_t pCallback, void *pContext ) noexcept
 {
 	Display *pDisplay = ( Display * )m_pDisplay;
 	if ( pDisplay == nullptr ) {
@@ -330,6 +534,48 @@ sirWindowResult_t SIRWindowDriverX11::pumpEvents( uint32_t nBudget, sirWindowDri
 }
 
 void SIRWindowDriverX11::shutdown( void ) noexcept
+{
+	if ( m_pDisplay == nullptr ) {
+		return;
+	}
+	if ( !m_bServerLost && transportAlive() ) {
+		sigjmp_buf recovery;
+		if ( sigsetjmp( recovery, 1 ) == 0 ) {
+			s_pX11RecoveryDisplay = ( Display * )m_pDisplay;
+			s_pX11RecoveryPoint = &recovery;
+			shutdownNative();
+		} else {
+			markServerLost();
+		}
+		sirX11ClearRecovery();
+	}
+	// Once Xlib enters its fatal I/O path it cannot safely be asked to
+	// synchronize or close the dead Display. Drop the connection and all
+	// public window identities; no further Xlib call may use the old pointer.
+	m_pDisplay = nullptr;
+	for ( uint32_t i = 0; i < SIR_WINDOW_MAX_WINDOWS; ++i ) {
+		m_hWindows[i] = 0;
+		m_bLost[i] = false;
+		m_nLostNative[i] = 0;
+	}
+	m_nLossPendingMask = 0;
+	m_nDisplayChangePendingMask = 0;
+	m_nDeleteWindow = 0;
+	m_nProtocols = 0;
+	m_nRootWindow = 0;
+	m_nRandrEventBase = -1;
+	m_bServerLost = false;
+	if ( m_bHandlerRegistered ) {
+		SIRScopedLock<SIRMutex> lock( s_X11IOHandlerMutex );
+		if ( s_nX11HandlerUsers != 0 && --s_nX11HandlerUsers == 0 ) {
+			( void )XSetIOErrorHandler( s_pPreviousX11IOHandler );
+			s_pPreviousX11IOHandler = nullptr;
+		}
+		m_bHandlerRegistered = false;
+	}
+}
+
+void SIRWindowDriverX11::shutdownNative( void ) noexcept
 {
 	Display *pDisplay = ( Display * )m_pDisplay;
 	if ( pDisplay == nullptr ) {

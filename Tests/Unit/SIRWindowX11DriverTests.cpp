@@ -18,6 +18,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <X11/Xlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/socket.h>
 
 typedef struct sirX11SinkCount_s
 {
@@ -32,6 +33,48 @@ static void sirCountX11Event( const XEvent& event, void *pContext ) noexcept
 	if ( event.type == KeyPress ) {
 		++pCount->nKeyPress;
 	}
+}
+
+static bool sirTestX11ServerSocketLoss( void ) noexcept
+{
+	SIRWindowDriverX11 driver;
+	SIRWindowSystem windows( driver );
+	if ( windows.initialize() != SIR_SYSTEM_OK ) {
+		return false;
+	}
+	sirWindowHandle_t hWindow = {};
+	if ( windows.createWindow( { "server-transport-loss", 320, 200 }, &hWindow ) != SIR_WINDOW_OK ) {
+		return false;
+	}
+	sirWindowNativeLease_t lease = {};
+	sirWindowNativeView_t native = {};
+	if ( windows.acquireNativeLease( hWindow, &lease, &native ) != SIR_WINDOW_OK ) {
+		return false;
+	}
+	// Close only this client's socket. Xvfb continues to service other
+	// clients, so a replacement display must still be reopenable.
+	Display *pDisplay = ( Display * )native.nDisplayOrInstance;
+	if ( pDisplay == nullptr || shutdown( ConnectionNumber( pDisplay ), SHUT_RDWR ) != 0 ) {
+		return false;
+	}
+	const sirWindowResult_t ePump = windows.pumpEvents( 32 );
+	sirWindowSnapshot_t snapshot = {};
+	if ( ePump != SIR_WINDOW_NATIVE_FAILURE || windows.querySnapshot( hWindow, &snapshot ) != SIR_WINDOW_OK ||
+	     !snapshot.bCloseRequested || snapshot.bReady || windows.releaseNativeLease( lease ) != SIR_WINDOW_OK ||
+	     windows.destroyWindow( hWindow ) != SIR_WINDOW_OK || windows.shutdown() != SIR_SYSTEM_OK ) {
+		return false;
+	}
+	SIRWindowDriverX11 replacement;
+	SIRWindowSystem newWindows( replacement );
+	if ( newWindows.initialize() != SIR_SYSTEM_OK ) {
+		return false;
+	}
+	sirWindowHandle_t fresh = {};
+	if ( newWindows.createWindow( { "new-client", 320, 200 }, &fresh ) != SIR_WINDOW_OK ||
+	     newWindows.destroyWindow( fresh ) != SIR_WINDOW_OK || newWindows.shutdown() != SIR_SYSTEM_OK ) {
+		return false;
+	}
+	return true;
 }
 
 int main( void )
@@ -200,6 +243,10 @@ int main( void )
 	if ( windows.releaseNativeLease( lease ) != SIR_WINDOW_OK || windows.destroyWindow( second ) != SIR_WINDOW_OK ||
 	     windows.destroyWindow( first ) != SIR_WINDOW_OK || windows.shutdown() != SIR_SYSTEM_OK ) {
 		return 6;
+	}
+	if ( !sirTestX11ServerSocketLoss() ) {
+		fputs( "X11 server transport-loss recovery FAIL\n", stderr );
+		return 24;
 	}
 	puts( "SIRWindowX11DriverTests PASS" );
 	return 0;

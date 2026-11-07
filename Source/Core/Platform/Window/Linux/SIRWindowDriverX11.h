@@ -22,6 +22,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // clang-format on
 #include <Core/Platform/Window/SIRWindowDriver.h>
 #include <X11/Xlib.h>
+#include <Core/Platform/SIRSync.h>
 
 typedef void ( *sirWindowX11EventSink_t )( const XEvent& event, void *pContext ) noexcept;
 
@@ -42,6 +43,14 @@ public:
 
 protected:
 private:
+	sirWindowResult_t createWindowNative( const sirWindowCreateDesc_t& desc, uint32_t nSlot, sirWindowNativeView_t *pView ) noexcept;
+	sirWindowResult_t destroyWindowNative( uint32_t nSlot ) noexcept;
+	sirWindowResult_t mutateWindowNative( uint32_t nSlot, const sirWindowMutation_t& mutation ) noexcept;
+	sirWindowResult_t pumpEventsNative( uint32_t nBudget, sirWindowDriverEventFn_t pCallback, void *pContext ) noexcept;
+	void shutdownNative( void ) noexcept;
+	void markServerLost( void ) noexcept;
+	bool transportAlive( void ) noexcept;
+	sirWindowResult_t emitServerLoss( uint32_t nBudget, sirWindowDriverEventFn_t pCallback, void *pContext ) noexcept;
 	void *m_pDisplay = nullptr;
 	sirWindowX11EventSink_t m_pSink = nullptr;
 	void *m_pSinkContext = nullptr;
@@ -49,6 +58,10 @@ private:
 	bool m_bLost[SIR_WINDOW_MAX_WINDOWS] = {};
 	uintptr_t m_nProtocols = 0;
 	uintptr_t m_nDeleteWindow = 0;
+	uintptr_t m_nLostNative[SIR_WINDOW_MAX_WINDOWS] = {};
+	uint32_t m_nLossPendingMask = 0;
+	bool m_bServerLost = false;
+	bool m_bHandlerRegistered = false;
 	uintptr_t m_nRootWindow = 0;
 	uint32_t m_nDisplayChangePendingMask = 0;
 	uint32_t m_nServerWidth = 0;
