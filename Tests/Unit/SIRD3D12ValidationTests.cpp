@@ -412,6 +412,67 @@ static int sirTestDXILContainer( void ) noexcept
 	return 0;
 }
 
+
+static int sirTestQueueDependencies( void ) noexcept
+{
+	sirGraphicsCompletionSet_t submitted = {};
+	submitted.nDeviceGeneration = 7;
+	submitted.szQueueValues[SIR_GRAPHICS_QUEUE_DIRECT] = 12;
+	submitted.szQueueValues[SIR_GRAPHICS_QUEUE_COMPUTE] = 9;
+	submitted.szQueueValues[SIR_GRAPHICS_QUEUE_COPY] = 21;
+	sirGraphicsCompletion_t waits[3] = {
+	    { 7, SIR_GRAPHICS_QUEUE_COPY, 21 },
+	    { 7, SIR_GRAPHICS_QUEUE_COMPUTE, 9 },
+	    { 7, SIR_GRAPHICS_QUEUE_DIRECT, 12 }
+	};
+	if ( sirD3D12ValidateSubmissionDependencies( SIR_GRAPHICS_QUEUE_DIRECT, waits, 3, submitted ) != SIR_GRAPHICS_SUCCESS ||
+	     sirD3D12ValidateSubmissionDependencies( SIR_GRAPHICS_QUEUE_COMPUTE, waits, 3, submitted ) != SIR_GRAPHICS_SUCCESS ||
+	     sirD3D12ValidateSubmissionDependencies( SIR_GRAPHICS_QUEUE_COPY, waits, 3, submitted ) != SIR_GRAPHICS_SUCCESS ||
+	     sirD3D12ValidateSubmissionDependencies( SIR_GRAPHICS_QUEUE_COPY, nullptr, 0, submitted ) != SIR_GRAPHICS_SUCCESS ) {
+		return 70;
+	}
+	if ( sirD3D12ValidateSubmissionDependencies( SIR_GRAPHICS_QUEUE_COUNT, waits, 3, submitted ) != SIR_GRAPHICS_INVALID_ARGUMENT ||
+	     sirD3D12ValidateSubmissionDependencies( SIR_GRAPHICS_QUEUE_DIRECT, nullptr, 1, submitted ) != SIR_GRAPHICS_INVALID_ARGUMENT ||
+	     sirD3D12ValidateSubmissionDependencies( SIR_GRAPHICS_QUEUE_DIRECT, waits, 65, submitted ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return 71;
+	}
+	waits[2].nValue = 13;
+	if ( sirD3D12ValidateSubmissionDependencies( SIR_GRAPHICS_QUEUE_DIRECT, waits, 3, submitted ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return 72;
+	}
+	waits[2].nValue = 12;
+	waits[1].nDeviceGeneration = 8;
+	if ( sirD3D12ValidateSubmissionDependencies( SIR_GRAPHICS_QUEUE_DIRECT, waits, 3, submitted ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return 73;
+	}
+	waits[1].nDeviceGeneration = 7;
+	waits[1].eQueue = SIR_GRAPHICS_QUEUE_COUNT;
+	if ( sirD3D12ValidateSubmissionDependencies( SIR_GRAPHICS_QUEUE_DIRECT, waits, 3, submitted ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return 74;
+	}
+	waits[1].eQueue = SIR_GRAPHICS_QUEUE_COMPUTE;
+	waits[1].nValue = 0;
+	if ( sirD3D12ValidateSubmissionDependencies( SIR_GRAPHICS_QUEUE_DIRECT, waits, 3, submitted ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return 75;
+	}
+	waits[1].nValue = 9;
+	submitted.szQueueValues[SIR_GRAPHICS_QUEUE_DIRECT] = UINT64_MAX - 1;
+	if ( sirD3D12ValidateSubmissionDependencies( SIR_GRAPHICS_QUEUE_DIRECT, nullptr, 0, submitted ) != SIR_GRAPHICS_CAPACITY_EXCEEDED ) {
+		return 76;
+	}
+	submitted.szQueueValues[SIR_GRAPHICS_QUEUE_DIRECT] = 12;
+	submitted.szQueueValues[SIR_GRAPHICS_QUEUE_COMPUTE] = UINT64_MAX;
+	if ( sirD3D12ValidateSubmissionDependencies( SIR_GRAPHICS_QUEUE_COMPUTE, waits, 3, submitted ) != SIR_GRAPHICS_CAPACITY_EXCEEDED ) {
+		return 77;
+	}
+	submitted.szQueueValues[SIR_GRAPHICS_QUEUE_COMPUTE] = 9;
+	submitted.nDeviceGeneration = 0;
+	if ( sirD3D12ValidateSubmissionDependencies( SIR_GRAPHICS_QUEUE_COPY, nullptr, 0, submitted ) != SIR_GRAPHICS_DEVICE_LOST ) {
+		return 78;
+	}
+	return 0;
+}
+
 int main( void )
 {
 	const int nHeap = sirTestHeapUsage();
@@ -422,9 +483,14 @@ int main( void )
 	const int nFeatures = sirTestOptionalFeatures();
 	const int nExtra = sirTestValidatorBranches();
 	const int nDXIL = sirTestDXILContainer();
+	const int nQueues = sirTestQueueDependencies();
 	if ( nHeap != 0 || nCopy != 0 || nViewport != 0 || nBindings != 0 || nExternal != 0 || nFeatures != 0 || nExtra != 0 ) {
 		printf( "D3D12 portable validation failed: heap=%d copy=%d viewport=%d bindings=%d external=%d features=%d extra=%d\n", nHeap,
 		        nCopy, nViewport, nBindings, nExternal, nFeatures, nExtra );
+		return 1;
+	}
+	if ( nQueues != 0 ) {
+		printf( "D3D12 queue dependency validation failed: %d\n", nQueues );
 		return 1;
 	}
 	if ( nDXIL != 0 ) {
