@@ -25,7 +25,7 @@ sirWindowResult_t SIRWindowDriverWin32::initialize( void ) noexcept
 	WNDCLASSW definition = {};
 	definition.lpfnWndProc = windowProc;
 	definition.hInstance = GetModuleHandleW( nullptr );
-	definition.hCursor = LoadCursorW( nullptr, IDC_ARROW );
+	definition.hCursor = LoadCursorW( nullptr, MAKEINTRESOURCEW( OCR_NORMAL ) );
 	definition.lpszClassName = s_szWindowClass;
 	if ( RegisterClassW( &definition ) == 0 ) {
 		return SIR_WINDOW_NATIVE_FAILURE;
@@ -127,7 +127,7 @@ sirWindowResult_t SIRWindowDriverWin32::mutateWindow( uint32_t nSlot, const sirW
 		}
 		break;
 	}
-	case SIR_WINDOW_MUTATION_RESIZE:
+	case SIR_WINDOW_MUTATION_RESIZE: {
 		if ( mutation.nWidth == 0 || mutation.nHeight == 0 || mutation.nWidth > 0x7fffffffU || mutation.nHeight > 0x7fffffffU ) {
 			return SIR_WINDOW_INVALID_ARGUMENT;
 		}
@@ -142,6 +142,7 @@ sirWindowResult_t SIRWindowDriverWin32::mutateWindow( uint32_t nSlot, const sirW
 			return SIR_WINDOW_NATIVE_FAILURE;
 		}
 		break;
+	}
 	case SIR_WINDOW_MUTATION_SHOW:
 		ShowWindow( hWindow, SW_SHOW );
 		break;
