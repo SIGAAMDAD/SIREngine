@@ -195,6 +195,36 @@ int main( void )
 	     sirVulkanValidateRecordedCommands( commands, 1 ) != SIR_VULKAN_SUCCESS ) {
 		return 29;
 	}
+	// Multi-stage synchronization scopes may combine compatible accesses.
+	buffer.nUsage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
+	                VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+	commands[0].bufferBarrier = native;
+	commands[0].bufferBarrier.nSourceStages = VK_PIPELINE_STAGE_2_COPY_BIT | VK_PIPELINE_STAGE_2_VERTEX_INPUT_BIT;
+	commands[0].bufferBarrier.nSourceAccess = VK_ACCESS_2_TRANSFER_WRITE_BIT | VK_ACCESS_2_INDEX_READ_BIT;
+	if ( sirVulkanValidateRecordedCommands( commands, 1 ) != SIR_VULKAN_SUCCESS ) {
+		return 30;
+	}
+	commands[0].bufferBarrier.nSourceStages = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+	commands[0].bufferBarrier.nSourceAccess = VK_ACCESS_2_TRANSFER_READ_BIT | VK_ACCESS_2_INDEX_READ_BIT;
+	if ( sirVulkanValidateRecordedCommands( commands, 1 ) != SIR_VULKAN_SUCCESS ) {
+		return 31;
+	}
+	commands[0].bufferBarrier.nSourceStages = VK_PIPELINE_STAGE_2_COPY_BIT | VK_PIPELINE_STAGE_2_VERTEX_INPUT_BIT;
+	commands[0].bufferBarrier.nSourceAccess = VK_ACCESS_2_UNIFORM_READ_BIT;
+	if ( sirVulkanValidateRecordedCommands( commands, 1 ) != SIR_VULKAN_INVALID_ARGUMENT ) {
+		return 32;
+	}
+	commands[0].bufferBarrier.nSourceStages = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+	commands[0].bufferBarrier.nSourceAccess = VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT;
+	buffer.nUsage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+	if ( sirVulkanValidateRecordedCommands( commands, 1 ) != SIR_VULKAN_INVALID_ARGUMENT ) {
+		return 33;
+	}
+	buffer.nUsage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+	commands[0].bufferBarrier.nSourceStages = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
+	if ( sirVulkanValidateRecordedCommands( commands, 1 ) != SIR_VULKAN_INVALID_ARGUMENT ) {
+		return 34;
+	}
 	printf( "Vulkan buffer barrier contracts passed\n" );
 	return 0;
 }

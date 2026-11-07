@@ -167,26 +167,29 @@ static bool sirVulkanRecordedValidBufferScope( VkPipelineStageFlags2 nStages, Vk
 	if ( nAccess == VK_ACCESS_2_NONE ) {
 		return false;
 	}
-	if ( nStages == VK_PIPELINE_STAGE_2_COPY_BIT ) {
-		const VkAccessFlags2 nAllowed = ( ( nUsage & VK_BUFFER_USAGE_TRANSFER_SRC_BIT ) != 0 ? VK_ACCESS_2_TRANSFER_READ_BIT : 0 ) |
-		                                ( ( nUsage & VK_BUFFER_USAGE_TRANSFER_DST_BIT ) != 0 ? VK_ACCESS_2_TRANSFER_WRITE_BIT : 0 );
-		return ( nAccess & ~nAllowed ) == 0;
+	const VkPipelineStageFlags2 nSupportedStages =
+	    VK_PIPELINE_STAGE_2_COPY_BIT | VK_PIPELINE_STAGE_2_VERTEX_INPUT_BIT | VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+	if ( ( nStages & ~nSupportedStages ) != 0 ) {
+		return false;
 	}
-	if ( nStages == VK_PIPELINE_STAGE_2_VERTEX_INPUT_BIT ) {
-		const VkAccessFlags2 nAllowed =
-		    ( ( nUsage & VK_BUFFER_USAGE_VERTEX_BUFFER_BIT ) != 0 ? VK_ACCESS_2_VERTEX_ATTRIBUTE_READ_BIT : 0 ) |
-		    ( ( nUsage & VK_BUFFER_USAGE_INDEX_BUFFER_BIT ) != 0 ? VK_ACCESS_2_INDEX_READ_BIT : 0 );
-		return ( nAccess & ~nAllowed ) == 0;
+	const bool bAllCommands = ( nStages & VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT ) != 0;
+	VkAccessFlags2 nAllowed = VK_ACCESS_2_NONE;
+	if ( bAllCommands || ( nStages & VK_PIPELINE_STAGE_2_COPY_BIT ) != 0 ) {
+		nAllowed |= ( ( nUsage & VK_BUFFER_USAGE_TRANSFER_SRC_BIT ) != 0 ? VK_ACCESS_2_TRANSFER_READ_BIT : 0 ) |
+		            ( ( nUsage & VK_BUFFER_USAGE_TRANSFER_DST_BIT ) != 0 ? VK_ACCESS_2_TRANSFER_WRITE_BIT : 0 );
 	}
-	if ( nStages == VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT ) {
-		const VkAccessFlags2 nAllowed = VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT |
-		                                ( ( nUsage & VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT ) != 0 ? VK_ACCESS_2_UNIFORM_READ_BIT : 0 ) |
-		                                ( ( nUsage & VK_BUFFER_USAGE_STORAGE_BUFFER_BIT ) != 0
-		                                      ? VK_ACCESS_2_SHADER_STORAGE_READ_BIT | VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT
-		                                      : 0 );
-		return ( nAccess & ~nAllowed ) == 0;
+	if ( bAllCommands || ( nStages & VK_PIPELINE_STAGE_2_VERTEX_INPUT_BIT ) != 0 ) {
+		nAllowed |= ( ( nUsage & VK_BUFFER_USAGE_VERTEX_BUFFER_BIT ) != 0 ? VK_ACCESS_2_VERTEX_ATTRIBUTE_READ_BIT : 0 ) |
+		            ( ( nUsage & VK_BUFFER_USAGE_INDEX_BUFFER_BIT ) != 0 ? VK_ACCESS_2_INDEX_READ_BIT : 0 );
 	}
-	return false;
+	if ( bAllCommands ) {
+		nAllowed |= VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT |
+		            ( ( nUsage & VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT ) != 0 ? VK_ACCESS_2_UNIFORM_READ_BIT : 0 ) |
+		            ( ( nUsage & VK_BUFFER_USAGE_STORAGE_BUFFER_BIT ) != 0
+		                  ? VK_ACCESS_2_SHADER_STORAGE_READ_BIT | VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT
+						  : 0 );
+	}
+	return ( nAccess & ~nAllowed ) == 0;
 }
 
 sirVulkanResult_t sirVulkanValidateRecordedCommands( const sirVulkanRecordedCommand_t *pCommands, uint32_t nCount ) noexcept
