@@ -124,6 +124,7 @@ typedef struct sirFrameGraphCompiled_s
 	sirFrameGraphDependency_t szDependencies[SIR_FRAMEGRAPH_MAX_DEPENDENCIES];
 } sirFrameGraphCompiled_t;
 
+typedef struct sirFrameGraphSubmissionPlan_s sirFrameGraphSubmissionPlan_t;
 typedef struct sirFrameGraphTransientInput_s sirFrameGraphTransientInput_t;
 typedef struct sirFrameGraphTransientPlan_s sirFrameGraphTransientPlan_t;
 
@@ -145,6 +146,7 @@ public:
 	sirGraphicsResult_t addDependency( uint32_t nBefore, uint32_t nAfter ) noexcept;
 	sirGraphicsResult_t addOutput( const sirFrameGraphOutput_t& output ) noexcept;
 	sirGraphicsResult_t compile( const sirGraphicsCapabilities_t& caps, sirFrameGraphCompiled_t *pCompiled ) const noexcept;
+	sirGraphicsResult_t buildSubmissionPlan( const sirFrameGraphCompiled_t& compiled, sirFrameGraphSubmissionPlan_t *pPlan ) const noexcept;
 	sirGraphicsResult_t planTransients( const sirFrameGraphCompiled_t& compiled, const sirFrameGraphTransientInput_t& input,
 										sirFrameGraphTransientPlan_t *pPlan ) const noexcept;
 	sirGraphicsResult_t record( const sirFrameGraphCompiled_t& compiled, const sirFrameGraphCallbacks_t& callbacks ) const noexcept;

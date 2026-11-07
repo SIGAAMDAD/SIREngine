@@ -4,6 +4,7 @@ include("${CMAKE_CURRENT_LIST_DIR}/../../Build/CMake/SIRBuildTreeGuard.cmake")
 add_library(SIRGraphics STATIC
     Graph/SIRFrameGraph.cpp
     Graph/SIRFrameGraphTransient.cpp
+    Graph/SIRFrameGraphSubmission.cpp
     SIRShaderPipeline.cpp
     Shaders/SIRShaderContracts.cpp
     Shaders/SIRShaderMaterial.cpp

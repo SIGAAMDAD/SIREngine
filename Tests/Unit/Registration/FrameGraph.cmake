@@ -97,3 +97,10 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/SIRD3D12Tests.cmake)
 # Native D3D11 registration remains owned by its local CMake fragment.
 add_subdirectory(Renderer/D3D11)
 
+
+# Driver-neutral per-pass barriers and cross-queue dependency lowering.
+add_executable(SIRFrameGraphSubmissionTests SIRFrameGraphSubmissionTests.cpp)
+target_link_libraries(SIRFrameGraphSubmissionTests PRIVATE SIR::Graphics)
+add_test(NAME renderer.framegraph.submission COMMAND SIRFrameGraphSubmissionTests)
+set_tests_properties(renderer.framegraph.submission PROPERTIES LABELS "framegraph;cpu;conformance" TIMEOUT 90)
+sir_configure_owned_target(SIRFrameGraphSubmissionTests)
