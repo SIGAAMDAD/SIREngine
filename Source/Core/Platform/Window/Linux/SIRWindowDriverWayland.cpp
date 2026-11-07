@@ -189,9 +189,11 @@ void SIRWindowDriverWayland::surfaceConfigure( void *pContext, xdg_surface *pSur
 	pSlot->nHeight = pSlot->nPendingHeight;
 	pSlot->bConfigured = true;
 	if ( ( bFirst || bResized ) && !pSlot->bClosePending ) {
-		const uint32_t nScale = pSlot->nBufferScale == 0 ? 1 : pSlot->nBufferScale;
-		const uint32_t nWidth = pSlot->nWidth <= UINT32_MAX / nScale ? pSlot->nWidth * nScale : 0;
-		const uint32_t nHeight = pSlot->nHeight <= UINT32_MAX / nScale ? pSlot->nHeight * nScale : 0;
+		const uint32_t nScale120 = pSlot->nFractionalScale120 != 0 && pSlot->pViewport != nullptr ? pSlot->nFractionalScale120 :
+		                           ( pSlot->nBufferScale == 0 ? 120 : pSlot->nBufferScale * 120 );
+		const uint32_t nWidth = ( uint32_t )( ( ( uint64_t )pSlot->nWidth * nScale120 + 60 ) / 120 );
+		const uint32_t nHeight = ( uint32_t )( ( ( uint64_t )pSlot->nHeight * nScale120 + 60 ) / 120 );
+		pSlot->pDriver->refreshSurfaceExtent( *pSlot, false );
 		pSlot->pDriver->queueEvent( pSlot->nIndex, bFirst ? SIR_WINDOW_EVENT_READY : SIR_WINDOW_EVENT_RESIZED, nWidth, nHeight );
 	}
 }
@@ -279,6 +281,30 @@ void SIRWindowDriverWayland::surfaceLeave( void *pContext, wl_surface *pSurface,
 	}
 }
 
+void SIRWindowDriverWayland::refreshSurfaceExtent( sirWaylandWindowSlot_t& slot, bool bEmit ) noexcept
+{
+	if ( !slot.bConfigured || slot.bClosePending || m_bLost ) {
+		return;
+	}
+	const uint32_t nScale120 = slot.nFractionalScale120 != 0 && slot.pViewport != nullptr ? slot.nFractionalScale120 :
+	                            ( slot.nBufferScale == 0 ? 120 : slot.nBufferScale * 120 );
+#ifdef SIR_WAYLAND_FRACTIONAL_SCALE_AVAILABLE
+	if ( slot.pViewport != nullptr && slot.nWidth <= INT32_MAX && slot.nHeight <= INT32_MAX ) {
+		wp_viewport_set_destination( slot.pViewport, ( int32_t )slot.nWidth, ( int32_t )slot.nHeight );
+	}
+#endif
+	if ( bEmit ) {
+		const uint32_t nDpi = ( 96 * nScale120 + 60 ) / 120;
+		const uint64_t nPixelsX = ( ( uint64_t )slot.nWidth * nScale120 + 60 ) / 120;
+		const uint64_t nPixelsY = ( ( uint64_t )slot.nHeight * nScale120 + 60 ) / 120;
+		if ( nPixelsX == 0 || nPixelsY == 0 || nPixelsX > UINT32_MAX || nPixelsY > UINT32_MAX ) {
+			return;
+		}
+		queueEvent( slot.nIndex, SIR_WINDOW_EVENT_DPI_CHANGED, nDpi, 0 );
+		queueEvent( slot.nIndex, SIR_WINDOW_EVENT_RESIZED, ( uint32_t )nPixelsX, ( uint32_t )nPixelsY );
+	}
+}
+
 void SIRWindowDriverWayland::refreshOutputScale( sirWaylandWindowSlot_t& slot ) noexcept
 {
 	if ( slot.pSurface == nullptr || m_bLost ) {
@@ -293,6 +319,9 @@ void SIRWindowDriverWayland::refreshOutputScale( sirWaylandWindowSlot_t& slot ) 
 			}
 		}
 	}
+	if ( slot.pFractionalScale != nullptr && slot.nFractionalScale120 != 0 ) {
+		return;
+	}
 	if ( slot.nBufferScale == nScale ) {
 		return;
 	}
@@ -301,12 +330,23 @@ void SIRWindowDriverWayland::refreshOutputScale( sirWaylandWindowSlot_t& slot ) 
 		wl_surface_set_buffer_scale( slot.pSurface, ( int32_t )nScale );
 	}
 	if ( slot.bConfigured && !slot.bClosePending ) {
-		queueEvent( slot.nIndex, SIR_WINDOW_EVENT_DPI_CHANGED, 96 * nScale, 0 );
-		const uint32_t nWidth = slot.nWidth <= UINT32_MAX / nScale ? slot.nWidth * nScale : 0;
-		const uint32_t nHeight = slot.nHeight <= UINT32_MAX / nScale ? slot.nHeight * nScale : 0;
-		queueEvent( slot.nIndex, SIR_WINDOW_EVENT_RESIZED, nWidth, nHeight );
+		refreshSurfaceExtent( slot, true );
 	}
 }
+
+#ifdef SIR_WAYLAND_FRACTIONAL_SCALE_AVAILABLE
+void SIRWindowDriverWayland::fractionalPreferredScale( void *pContext, wp_fractional_scale_v1 *pScale,
+                                                         uint32_t nScale120 ) noexcept
+{
+	sirWaylandWindowSlot_t *pSlot = ( sirWaylandWindowSlot_t * )pContext;
+	if ( pSlot->pDriver == nullptr || pSlot->pFractionalScale != pScale || pSlot->pViewport == nullptr ||
+	     pSlot->pDriver->m_bLost || nScale120 == 0 || nScale120 > 1920 || pSlot->nFractionalScale120 == nScale120 ) {
+		return;
+	}
+	pSlot->nFractionalScale120 = nScale120;
+	pSlot->pDriver->refreshSurfaceExtent( *pSlot, true );
+}
+#endif
 
 void SIRWindowDriverWayland::topClose( void *pContext, xdg_toplevel *pTop ) noexcept
 {
