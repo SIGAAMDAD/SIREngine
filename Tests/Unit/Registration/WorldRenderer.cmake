@@ -22,6 +22,12 @@ target_link_libraries(SIRVirtualTextureReferenceEncoderTests PRIVATE SIR::Graphi
 add_test(NAME renderer.virtual-texturing.reference-encoder COMMAND SIRVirtualTextureReferenceEncoderTests)
 sir_configure_owned_target(SIRVirtualTextureReferenceEncoderTests)
 
+# Terrain3D four-slot baked visibility bundle scheduling and stale completion protection.
+add_executable(SIRVirtualTextureDemandQueueTests SIRVirtualTextureDemandQueueTests.cpp)
+target_link_libraries(SIRVirtualTextureDemandQueueTests PRIVATE SIR::Graphics)
+add_test(NAME renderer.virtual-texturing.demand-queue COMMAND SIRVirtualTextureDemandQueueTests)
+sir_configure_owned_target(SIRVirtualTextureDemandQueueTests)
+
 if(SIR_WITH_VT_ZSTD)
     add_executable(SIRVirtualTextureZstdCodecTests SIRVirtualTextureZstdCodecTests.cpp)
     target_link_libraries(SIRVirtualTextureZstdCodecTests PRIVATE SIR::Graphics libzstd_static)
