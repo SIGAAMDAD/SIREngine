@@ -716,6 +716,57 @@ static int sirTestRaster( SIRRenderingDevice *pDevice, uint32_t nGeneration, con
 	return 0;
 }
 
+
+static int sirTestQueueDependencyMatrix( SIRRenderingDevice *pDevice, uint32_t nGeneration ) noexcept
+{
+	for ( uint32_t iProducer = 0; iProducer < SIR_GRAPHICS_QUEUE_COUNT; ++iProducer ) {
+		const sirGraphicsQueue_t eProducer = ( sirGraphicsQueue_t )iProducer;
+		SIRGraphicsCommandList *pProducer = nullptr;
+		if ( pDevice->acquireCommands( eProducer, &pProducer ) != SIR_GRAPHICS_SUCCESS || pProducer == nullptr ||
+		     pProducer->close() != SIR_GRAPHICS_SUCCESS ) {
+			return 94;
+		}
+		sirGraphicsCompletion_t producer = {};
+		if ( sirTestSubmit( pDevice, eProducer, pProducer, nullptr, 0, &producer ) != SIR_GRAPHICS_SUCCESS ||
+		     producer.nDeviceGeneration != nGeneration || producer.eQueue != eProducer || producer.nValue == 0 ) {
+			return 95;
+		}
+		for ( uint32_t iConsumer = 0; iConsumer < SIR_GRAPHICS_QUEUE_COUNT; ++iConsumer ) {
+			const sirGraphicsQueue_t eConsumer = ( sirGraphicsQueue_t )iConsumer;
+			SIRGraphicsCommandList *pConsumer = nullptr;
+			if ( pDevice->acquireCommands( eConsumer, &pConsumer ) != SIR_GRAPHICS_SUCCESS || pConsumer == nullptr ||
+			     pConsumer->close() != SIR_GRAPHICS_SUCCESS ) {
+				return 96;
+			}
+			sirGraphicsCompletion_t stale = producer;
+			++stale.nDeviceGeneration;
+			sirGraphicsCompletion_t rejected = {};
+			if ( sirTestSubmit( pDevice, eConsumer, pConsumer, &stale, 1, &rejected ) != SIR_GRAPHICS_INVALID_ARGUMENT ||
+			     rejected.nValue != 0 ) {
+				return 97;
+			}
+			stale = producer;
+			stale.nValue = UINT64_MAX;
+			if ( sirTestSubmit( pDevice, eConsumer, pConsumer, &stale, 1, &rejected ) != SIR_GRAPHICS_INVALID_ARGUMENT ||
+			     rejected.nValue != 0 ) {
+				return 98;
+			}
+			sirGraphicsCompletion_t consumer = {};
+			if ( sirTestSubmit( pDevice, eConsumer, pConsumer, &producer, 1, &consumer ) != SIR_GRAPHICS_SUCCESS ||
+			     consumer.nDeviceGeneration != nGeneration || consumer.eQueue != eConsumer || consumer.nValue == 0 ||
+			     pDevice->wait( consumer, 10000000000ULL ) != SIR_GRAPHICS_SUCCESS ) {
+				return 99;
+			}
+			bool bDone = false;
+			if ( pDevice->poll( producer, &bDone ) != SIR_GRAPHICS_SUCCESS || !bDone ||
+			     pDevice->poll( consumer, &bDone ) != SIR_GRAPHICS_SUCCESS || !bDone ) {
+				return 100;
+			}
+		}
+	}
+	return 0;
+}
+
 int main( void )
 {
 	SIRD3D12Driver driver;
@@ -781,6 +832,9 @@ int main( void )
 	}
 	if ( nFailure == 0 ) {
 		nFailure = sirTestQueueSubmission( pDevice, nGeneration, compute, copied );
+	}
+	if ( nFailure == 0 ) {
+		nFailure = sirTestQueueDependencyMatrix( pDevice, nGeneration );
 	}
 	if ( nFailure == 0 ) {
 		nFailure = sirTestRaster( pDevice, nGeneration, vertex, pixel );
