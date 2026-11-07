@@ -741,6 +741,9 @@ sirGraphicsResult_t SIRD3D12CommandList::beginRenderPass( const sirGraphicsRende
 	if ( pass.nColorCount == 0 && !bDepth ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
+	if ( pass.bClearDepth && ( !bDepth || !( pass.fClearDepth >= 0.0f && pass.fClearDepth <= 1.0f ) || pass.nClearStencil > UINT8_MAX ) ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
 	// Validate every color and depth descriptor before retaining any view. An
 	// invalid later attachment must not leave an earlier view pinned.
 	D3D12_CPU_DESCRIPTOR_HANDLE szColors[D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
@@ -752,6 +755,18 @@ sirGraphicsResult_t SIRD3D12CommandList::beginRenderPass( const sirGraphicsRende
 	}
 	if ( bDepth && !m_pResources->queryDescriptor( pass.hDepthView, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, &depth ) ) {
 		return SIR_GRAPHICS_INVALID_HANDLE;
+	}
+	bool bStencil = false;
+	if ( bDepth ) {
+		const sirD3D12ResourceSlot_t *pDepthView = m_pResources->querySlot( pass.hDepthView );
+		const sirD3D12ResourceSlot_t *pDepthResource = pDepthView != nullptr ? m_pResources->querySlot( pDepthView->hParent ) : nullptr;
+		if ( pDepthResource == nullptr ) {
+			return SIR_GRAPHICS_INVALID_HANDLE;
+		}
+		bStencil = pDepthResource->eFormat == SIR_GRAPHICS_FORMAT_D24_UNORM_S8_UINT;
+		if ( pass.bClearDepth && !bStencil && pass.nClearStencil != 0 ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
 	}
 	const uint32_t nOriginalReferenceCount = m_nReferenceCount;
 	sirGraphicsResult_t ePinned = SIR_GRAPHICS_SUCCESS;
@@ -780,7 +795,9 @@ sirGraphicsResult_t SIRD3D12CommandList::beginRenderPass( const sirGraphicsRende
 		}
 	}
 	if ( bDepth && pass.bClearDepth ) {
-		m_pCommands->ClearDepthStencilView( depth, D3D12_CLEAR_FLAG_DEPTH, pass.fClearDepth, ( UINT8 )pass.nClearStencil, 0, nullptr );
+		const D3D12_CLEAR_FLAGS eClearFlags =
+		    bStencil ? ( D3D12_CLEAR_FLAGS )( D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL ) : D3D12_CLEAR_FLAG_DEPTH;
+		m_pCommands->ClearDepthStencilView( depth, eClearFlags, pass.fClearDepth, ( UINT8 )pass.nClearStencil, 0, nullptr );
 	}
 	m_bRenderPass = true;
 	return SIR_GRAPHICS_SUCCESS;

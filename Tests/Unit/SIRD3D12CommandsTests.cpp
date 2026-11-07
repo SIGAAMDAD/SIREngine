@@ -421,6 +421,78 @@ static int sirTestRaster( SIRRenderingDevice *pDevice, uint32_t nGeneration, con
 	     pDevice->retireResource( hPassProbeView, passNotSubmitted ) != SIR_GRAPHICS_SUCCESS ) {
 		return 83;
 	}
+	// A color-only pass must reject a requested depth clear before pinning.
+	sirGraphicsColorAttachment_t colorProbe = {};
+	colorProbe.hView = hRtv;
+	sirGraphicsRenderPass_t missingDepth = {};
+	missingDepth.pColors = &colorProbe;
+	missingDepth.nColorCount = 1;
+	missingDepth.bClearDepth = true;
+	missingDepth.fClearDepth = 0.5f;
+	if ( pDirect->beginRenderPass( missingDepth ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return 91;
+	}
+	// Exercise a real depth/stencil target and reject invalid clear values
+	// before resource retention or any GPU command is recorded.
+	sirGraphicsTextureDesc_t depthTexture = {};
+	depthTexture.nWidth = 16;
+	depthTexture.nHeight = 16;
+	depthTexture.nDepth = 1;
+	depthTexture.nArrayLayers = 1;
+	depthTexture.nMipLevels = 1;
+	depthTexture.nSampleCount = 1;
+	depthTexture.nUsage = SIR_GRAPHICS_USAGE_DEPTH_STENCIL;
+	depthTexture.eDimension = SIR_GRAPHICS_TEXTURE_2D;
+	depthTexture.eFormat = SIR_GRAPHICS_FORMAT_D24_UNORM_S8_UINT;
+	depthTexture.eMemory = SIR_GRAPHICS_MEMORY_GPU_LOCAL;
+	sirGraphicsHandle_t hDepthTexture = {};
+	if ( pDevice->createTexture( depthTexture, &hDepthTexture ) != SIR_GRAPHICS_SUCCESS ) {
+		return 92;
+	}
+	sirGraphicsViewDesc_t depthView = {};
+	depthView.hResource = hDepthTexture;
+	depthView.eFormat = depthTexture.eFormat;
+	depthView.nMipLevels = 1;
+	depthView.nLayers = 1;
+	depthView.nUsage = SIR_GRAPHICS_USAGE_DEPTH_STENCIL;
+	sirGraphicsHandle_t hInvalidDepthView = {};
+	if ( pDevice->createView( depthView, &hInvalidDepthView ) != SIR_GRAPHICS_SUCCESS ) {
+		return 93;
+	}
+	sirGraphicsRenderPass_t depthPass = {};
+	depthPass.hDepthView = hInvalidDepthView;
+	depthPass.bClearDepth = true;
+	depthPass.fClearDepth = 2.0f;
+	if ( pDirect->beginRenderPass( depthPass ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return 94;
+	}
+	depthPass.fClearDepth = 0.5f;
+	depthPass.nClearStencil = 256;
+	if ( pDirect->beginRenderPass( depthPass ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return 95;
+	}
+	sirGraphicsCompletionSet_t noDepthWork = {};
+	noDepthWork.nDeviceGeneration = nGeneration;
+	if ( pDevice->retireResource( hInvalidDepthView, noDepthWork ) != SIR_GRAPHICS_SUCCESS ) {
+		return 96;
+	}
+	sirGraphicsHandle_t hDepthView = {};
+	if ( pDevice->createView( depthView, &hDepthView ) != SIR_GRAPHICS_SUCCESS ) {
+		return 97;
+	}
+	sirGraphicsBarrier_t depthTransition = {};
+	depthTransition.eType = SIR_GRAPHICS_BARRIER_TRANSITION;
+	depthTransition.hResource = hDepthTexture;
+	depthTransition.eBefore = SIR_GRAPHICS_STATE_COMMON;
+	depthTransition.eAfter = SIR_GRAPHICS_STATE_DEPTH_WRITE;
+	if ( pDirect->barrier( &depthTransition, 1 ) != SIR_GRAPHICS_SUCCESS ) {
+		return 98;
+	}
+	depthPass.hDepthView = hDepthView;
+	depthPass.nClearStencil = 42;
+	if ( pDirect->beginRenderPass( depthPass ) != SIR_GRAPHICS_SUCCESS || pDirect->endRenderPass() != SIR_GRAPHICS_SUCCESS ) {
+		return 99;
+	}
 	// A buffer cannot transition to an attachment layout.
 	sirGraphicsBarrier_t invalidBuffer = {};
 	invalidBuffer.eType = SIR_GRAPHICS_BARRIER_TRANSITION;
@@ -600,7 +672,9 @@ static int sirTestRaster( SIRRenderingDevice *pDevice, uint32_t nGeneration, con
 	}
 	sirGraphicsCompletionSet_t immediate = {};
 	immediate.nDeviceGeneration = nGeneration;
-	if ( pDevice->retireResource( hRtv, immediate ) != SIR_GRAPHICS_SUCCESS ||
+	if ( pDevice->retireResource( hDepthView, immediate ) != SIR_GRAPHICS_SUCCESS ||
+	     pDevice->retireResource( hDepthTexture, immediate ) != SIR_GRAPHICS_SUCCESS ||
+	     pDevice->retireResource( hRtv, immediate ) != SIR_GRAPHICS_SUCCESS ||
 	     pDevice->retireResource( hTexture, immediate ) != SIR_GRAPHICS_SUCCESS ||
 	     pDevice->retireResource( hReadback, immediate ) != SIR_GRAPHICS_SUCCESS ||
 	     pDevice->retireResource( hVertices, immediate ) != SIR_GRAPHICS_SUCCESS ||
