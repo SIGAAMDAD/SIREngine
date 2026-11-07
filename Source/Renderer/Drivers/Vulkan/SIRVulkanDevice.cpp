@@ -200,7 +200,8 @@ bool SIRVulkanDevice::chooseAdapter( uint32_t nAdapterIndex ) noexcept
 		features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
 		features.pNext = &features12;
 		m_pfnGetPhysicalDeviceFeatures2( szDevices[iDevice], &features );
-		if ( features12.timelineSemaphore == VK_FALSE || features13.synchronization2 == VK_FALSE ) {
+		if ( features12.timelineSemaphore == VK_FALSE || features13.synchronization2 == VK_FALSE ||
+		     features13.dynamicRendering == VK_FALSE ) {
 			continue;
 		}
 		uint32_t nFamilyCount = 0;
@@ -380,7 +381,8 @@ sirVulkanResult_t SIRVulkanDevice::initialize( const sirVulkanPoolBudget_t *pBud
 	queriedFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
 	queriedFeatures.pNext = &supported12;
 	m_pfnGetPhysicalDeviceFeatures2( m_PhysicalDevice, &queriedFeatures );
-	if ( supported12.timelineSemaphore == VK_FALSE || supported13.synchronization2 == VK_FALSE ) {
+	if ( supported12.timelineSemaphore == VK_FALSE || supported13.synchronization2 == VK_FALSE ||
+	     supported13.dynamicRendering == VK_FALSE ) {
 		shutdown();
 		return SIR_VULKAN_API_UNSUPPORTED;
 	}
@@ -388,6 +390,7 @@ sirVulkanResult_t SIRVulkanDevice::initialize( const sirVulkanPoolBudget_t *pBud
 	VkPhysicalDeviceVulkan13Features enabled13 = {};
 	enabled13.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
 	enabled13.synchronization2 = VK_TRUE;
+	enabled13.dynamicRendering = VK_TRUE;
 	VkPhysicalDeviceVulkan12Features enabled12 = {};
 	enabled12.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
 	enabled12.timelineSemaphore = VK_TRUE;
@@ -403,8 +406,11 @@ sirVulkanResult_t SIRVulkanDevice::initialize( const sirVulkanPoolBudget_t *pBud
 		return SIR_VULKAN_DEVICE_UNAVAILABLE;
 	}
 
+	VkPhysicalDeviceFeatures coreFeatures = {};
+	coreFeatures.independentBlend = queriedFeatures.features.independentBlend;
 	VkDeviceCreateInfo deviceInfo = {};
 	deviceInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+	deviceInfo.pEnabledFeatures = &coreFeatures;
 	deviceInfo.queueCreateInfoCount = nQueueCount;
 	deviceInfo.pQueueCreateInfos = szQueueInfos;
 	deviceInfo.pNext = &enabled12;
