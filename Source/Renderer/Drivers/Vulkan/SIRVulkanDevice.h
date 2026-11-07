@@ -243,6 +243,8 @@ typedef struct sirVulkanImageBarrier_s
 
 // Identical, failure-atomic range/layout/usage admission for standalone and recorded barriers.
 bool sirVulkanValidateNativeImageBarrier( const sirVulkanImage_t *pImage, const sirVulkanImageBarrier_t& barrier ) noexcept;
+// CPU-only translation used by native image barriers and copy transitions.
+bool sirVulkanImageAccessScope( VkImageLayout eLayout, VkPipelineStageFlags2 *pStages, VkAccessFlags2 *pAccess ) noexcept;
 
 typedef struct sirVulkanTextureTransfer_s
 {

@@ -345,6 +345,48 @@ int main( void )
 	if ( sirVulkanValidateNativeImageBarrier( &color, invalidAttachment ) ) {
 		return 46;
 	}
+	// Native sync2 stage/access scopes must follow the actual image layout.
+	VkPipelineStageFlags2 nStages = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+	VkAccessFlags2 nAccess = VK_ACCESS_2_MEMORY_WRITE_BIT;
+	if ( !sirVulkanImageAccessScope( VK_IMAGE_LAYOUT_UNDEFINED, &nStages, &nAccess ) ||
+	     nStages != VK_PIPELINE_STAGE_2_NONE || nAccess != VK_ACCESS_2_NONE ) {
+		return 70;
+	}
+	if ( !sirVulkanImageAccessScope( VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, &nStages, &nAccess ) ||
+	     nStages != VK_PIPELINE_STAGE_2_COPY_BIT || nAccess != VK_ACCESS_2_TRANSFER_READ_BIT ) {
+		return 71;
+	}
+	if ( !sirVulkanImageAccessScope( VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &nStages, &nAccess ) ||
+	     nStages != VK_PIPELINE_STAGE_2_COPY_BIT || nAccess != VK_ACCESS_2_TRANSFER_WRITE_BIT ) {
+		return 72;
+	}
+	if ( !sirVulkanImageAccessScope( VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, &nStages, &nAccess ) ||
+	     nStages != VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT || nAccess != VK_ACCESS_2_MEMORY_READ_BIT ) {
+		return 73;
+	}
+	if ( !sirVulkanImageAccessScope( VK_IMAGE_LAYOUT_GENERAL, &nStages, &nAccess ) ||
+	     nAccess != ( VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT ) ) {
+		return 74;
+	}
+	if ( !sirVulkanImageAccessScope( VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL, &nStages, &nAccess ) ||
+	     nStages != VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT ||
+	     nAccess != ( VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT ) ) {
+		return 75;
+	}
+	if ( !sirVulkanImageAccessScope( VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, &nStages, &nAccess ) ||
+	     nStages != ( VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT ) ||
+	     nAccess != ( VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT ) ) {
+		return 76;
+	}
+	if ( !sirVulkanImageAccessScope( VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, &nStages, &nAccess ) ||
+	     nStages != VK_PIPELINE_STAGE_2_NONE || nAccess != VK_ACCESS_2_NONE ) {
+		return 77;
+	}
+	if ( sirVulkanImageAccessScope( VK_IMAGE_LAYOUT_MAX_ENUM, &nStages, &nAccess ) || nStages != VK_PIPELINE_STAGE_2_NONE ||
+	     nAccess != VK_ACCESS_2_NONE || sirVulkanImageAccessScope( VK_IMAGE_LAYOUT_UNDEFINED, nullptr, &nAccess ) ||
+	     sirVulkanImageAccessScope( VK_IMAGE_LAYOUT_UNDEFINED, &nStages, nullptr ) ) {
+		return 78;
+	}
 	printf( "Vulkan image barrier contracts passed\n" );
 	return 0;
 }

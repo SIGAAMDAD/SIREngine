@@ -85,11 +85,8 @@ sirVulkanResult_t SIRVulkanDevice::submitBufferImageCopy( sirVulkanBuffer_t *pBu
 	const VkImageLayout eTransfer = bUpload ? VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL : VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
 	VkImageMemoryBarrier2 before = {};
 	before.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
-	before.srcStageMask = eOld == VK_IMAGE_LAYOUT_UNDEFINED ? VK_PIPELINE_STAGE_2_NONE : VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
-	before.srcAccessMask =
-	    eOld == VK_IMAGE_LAYOUT_UNDEFINED ? VK_ACCESS_2_NONE : VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT;
-	before.dstStageMask = VK_PIPELINE_STAGE_2_COPY_BIT;
-	before.dstAccessMask = bUpload ? VK_ACCESS_2_TRANSFER_WRITE_BIT : VK_ACCESS_2_TRANSFER_READ_BIT;
+	( void )sirVulkanImageAccessScope( eOld, &before.srcStageMask, &before.srcAccessMask );
+	( void )sirVulkanImageAccessScope( eTransfer, &before.dstStageMask, &before.dstAccessMask );
 	before.oldLayout = eOld;
 	before.newLayout = eTransfer;
 	before.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
@@ -150,10 +147,8 @@ sirVulkanResult_t SIRVulkanDevice::submitBufferImageCopy( sirVulkanBuffer_t *pBu
 
 	const VkImageLayout eFinal = bUpload ? sirVulkanUploadFinalLayout( pImage, transfer ) : eOld;
 	VkImageMemoryBarrier2 after = before;
-	after.srcStageMask = VK_PIPELINE_STAGE_2_COPY_BIT;
-	after.srcAccessMask = bUpload ? VK_ACCESS_2_TRANSFER_WRITE_BIT : VK_ACCESS_2_TRANSFER_READ_BIT;
-	after.dstStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
-	after.dstAccessMask = VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT;
+	( void )sirVulkanImageAccessScope( eTransfer, &after.srcStageMask, &after.srcAccessMask );
+	( void )sirVulkanImageAccessScope( eFinal, &after.dstStageMask, &after.dstAccessMask );
 	after.oldLayout = eTransfer;
 	after.newLayout = eFinal;
 	dependency.memoryBarrierCount = 0;

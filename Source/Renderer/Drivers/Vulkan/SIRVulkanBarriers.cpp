@@ -17,6 +17,48 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Renderer/Drivers/Vulkan/SIRVulkanGraphics.h>
 
+bool sirVulkanImageAccessScope( VkImageLayout eLayout, VkPipelineStageFlags2 *pStages, VkAccessFlags2 *pAccess ) noexcept
+{
+	if ( pStages == nullptr || pAccess == nullptr ) {
+		return false;
+	}
+	*pStages = VK_PIPELINE_STAGE_2_NONE;
+	*pAccess = VK_ACCESS_2_NONE;
+	switch ( eLayout ) {
+	case VK_IMAGE_LAYOUT_UNDEFINED:
+	case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
+		return true;
+	case VK_IMAGE_LAYOUT_GENERAL:
+		*pStages = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+		*pAccess = VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT;
+		return true;
+	case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+	case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
+	case VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL:
+		*pStages = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+		*pAccess = VK_ACCESS_2_MEMORY_READ_BIT;
+		return true;
+	case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
+		*pStages = VK_PIPELINE_STAGE_2_COPY_BIT;
+		*pAccess = VK_ACCESS_2_TRANSFER_READ_BIT;
+		return true;
+	case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
+		*pStages = VK_PIPELINE_STAGE_2_COPY_BIT;
+		*pAccess = VK_ACCESS_2_TRANSFER_WRITE_BIT;
+		return true;
+	case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
+		*pStages = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT;
+		*pAccess = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+		return true;
+	case VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL:
+		*pStages = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
+		*pAccess = VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
+		return true;
+	default:
+		return false;
+	}
+}
+
 static sirGraphicsResult_t sirVulkanBarrierState( sirGraphicsState_t eState, const sirVulkanImage_t *pImage,
                                                   VkImageLayout *pLayout ) noexcept
 {
@@ -258,12 +300,8 @@ sirVulkanResult_t SIRVulkanDevice::submitImageBarrier( sirVulkanImage_t *pImage,
 	}
 	VkImageMemoryBarrier2 transition = {};
 	transition.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
-	transition.srcStageMask =
-	    barrier.eBefore == VK_IMAGE_LAYOUT_UNDEFINED ? VK_PIPELINE_STAGE_2_NONE : VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
-	transition.srcAccessMask =
-	    barrier.eBefore == VK_IMAGE_LAYOUT_UNDEFINED ? VK_ACCESS_2_NONE : VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT;
-	transition.dstStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
-	transition.dstAccessMask = VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT;
+	( void )sirVulkanImageAccessScope( barrier.eBefore, &transition.srcStageMask, &transition.srcAccessMask );
+	( void )sirVulkanImageAccessScope( barrier.eAfter, &transition.dstStageMask, &transition.dstAccessMask );
 	transition.oldLayout = barrier.eBefore;
 	transition.newLayout = barrier.eAfter;
 	transition.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
