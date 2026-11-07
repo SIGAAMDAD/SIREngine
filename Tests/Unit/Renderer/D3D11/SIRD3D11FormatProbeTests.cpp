@@ -113,6 +113,76 @@ int main( void )
 	sirD3D11Check( pNative->queryNativeFormatSupport( SIR_GRAPHICS_FORMAT_D24_UNORM_S8_UINT, &support ) == SIR_GRAPHICS_SUCCESS,
 	               "D24 depth format probe" );
 	sirD3D11Check( ( support.nSupportedUsages & SIR_GRAPHICS_USAGE_DEPTH_STENCIL ) != 0, "D24 DSV admission" );
+
+	// Native WARP ownership and resource creation. These assertions run only
+	// under a real Windows D3D11 runtime; portable tests cannot replace them.
+	sirGraphicsMemoryBudget_t budgetBefore = {};
+	sirD3D11Check( pDevice->queryMemoryBudget( &budgetBefore ) == SIR_GRAPHICS_SUCCESS, "pre-texture native budget" );
+	sirGraphicsTextureDesc_t nativeTexture = {};
+	nativeTexture.nWidth = 32;
+	nativeTexture.nHeight = 32;
+	nativeTexture.nDepth = 1;
+	nativeTexture.nArrayLayers = 1;
+	nativeTexture.nMipLevels = 1;
+	nativeTexture.nSampleCount = 1;
+	nativeTexture.nUsage = SIR_GRAPHICS_USAGE_SAMPLED | SIR_GRAPHICS_USAGE_COLOR_ATTACHMENT;
+	nativeTexture.eDimension = SIR_GRAPHICS_TEXTURE_2D;
+	nativeTexture.eFormat = SIR_GRAPHICS_FORMAT_RGBA8_UNORM;
+	nativeTexture.eMemory = SIR_GRAPHICS_MEMORY_GPU_LOCAL;
+	sirGraphicsHandle_t hTexture = {};
+	sirD3D11Check( pDevice->createTexture( nativeTexture, &hTexture ) == SIR_GRAPHICS_SUCCESS, "native RGBA8 texture" );
+	if ( hTexture.nGeneration != 0 ) {
+		sirGraphicsMemoryBudget_t budgetDuring = {};
+		sirD3D11Check( pDevice->queryMemoryBudget( &budgetDuring ) == SIR_GRAPHICS_SUCCESS, "native texture budget" );
+		sirD3D11Check( budgetDuring.nCommittedBytes == budgetBefore.nCommittedBytes + 4096, "texture logical accounting" );
+		sirGraphicsViewDesc_t view = {};
+		view.hResource = hTexture;
+		view.eFormat = nativeTexture.eFormat;
+		view.nMipLevels = 1;
+		view.nLayers = 1;
+		view.nUsage = SIR_GRAPHICS_USAGE_SAMPLED;
+		sirGraphicsHandle_t hSampled = {};
+		sirD3D11Check( pDevice->createView( view, &hSampled ) == SIR_GRAPHICS_SUCCESS, "native sampled view" );
+		view.nUsage = SIR_GRAPHICS_USAGE_COLOR_ATTACHMENT;
+		sirGraphicsHandle_t hRenderTarget = {};
+		sirD3D11Check( pDevice->createView( view, &hRenderTarget ) == SIR_GRAPHICS_SUCCESS, "native RTV" );
+		view.nBaseMip = 1;
+		sirGraphicsHandle_t hInvalid = {};
+		sirD3D11Check( pDevice->createView( view, &hInvalid ) == SIR_GRAPHICS_INVALID_ARGUMENT && hInvalid.nGeneration == 0,
+		               "invalid RTV subresource cannot allocate" );
+		sirGraphicsCompletionSet_t empty = {};
+		empty.nDeviceGeneration = pDevice->getDeviceGeneration();
+		if ( hRenderTarget.nGeneration != 0 ) {
+			sirD3D11Check( pDevice->retireResource( hRenderTarget, empty ) == SIR_GRAPHICS_SUCCESS, "release native RTV" );
+		}
+		if ( hSampled.nGeneration != 0 ) {
+			sirD3D11Check( pDevice->retireResource( hSampled, empty ) == SIR_GRAPHICS_SUCCESS, "release native SRV" );
+		}
+		sirD3D11Check( pDevice->retireResource( hTexture, empty ) == SIR_GRAPHICS_SUCCESS, "release native texture" );
+		sirD3D11Check( pDevice->retireResource( hTexture, empty ) == SIR_GRAPHICS_INVALID_HANDLE, "double retire denied" );
+		sirGraphicsMemoryBudget_t budgetAfter = {};
+		sirD3D11Check( pDevice->queryMemoryBudget( &budgetAfter ) == SIR_GRAPHICS_SUCCESS, "post-texture native budget" );
+		sirD3D11Check( budgetAfter.nCommittedBytes == budgetBefore.nCommittedBytes, "native texture accounting restored" );
+	}
+	sirGraphicsSamplerDesc_t sampler = {};
+	sampler.eFilter = SIR_GRAPHICS_FILTER_LINEAR;
+	sampler.eAddressU = SIR_GRAPHICS_ADDRESS_REPEAT;
+	sampler.eAddressV = SIR_GRAPHICS_ADDRESS_CLAMP;
+	sampler.eAddressW = SIR_GRAPHICS_ADDRESS_REPEAT;
+	sampler.fMaximumAnisotropy = 1.0f;
+	sampler.fMinimumLod = 0.0f;
+	sampler.fMaximumLod = 16.0f;
+	sirGraphicsHandle_t hSampler = {};
+	sirD3D11Check( pDevice->createSampler( sampler, &hSampler ) == SIR_GRAPHICS_SUCCESS, "native sampler state" );
+	if ( hSampler.nGeneration != 0 ) {
+		sirGraphicsCompletionSet_t empty = {};
+		empty.nDeviceGeneration = pDevice->getDeviceGeneration();
+		sirD3D11Check( pDevice->retireResource( hSampler, empty ) == SIR_GRAPHICS_SUCCESS, "release native sampler" );
+	}
+	sampler.fMaximumAnisotropy = 0.0f;
+	hSampler = {};
+	sirD3D11Check( pDevice->createSampler( sampler, &hSampler ) == SIR_GRAPHICS_INVALID_ARGUMENT && hSampler.nGeneration == 0,
+	               "invalid sampler rejected before COM create" );
 	sirD3D11Check( driver.destroyDevice( pDevice ) == SIR_GRAPHICS_SUCCESS, "destroy WARP" );
 	printf( "D3D11 WARP format probe: %u assertions, %u failures, max RGBA8 samples=%u\n", s_nChecks, s_nFailures,
 	        capabilities.nMaximumSampleCount );
