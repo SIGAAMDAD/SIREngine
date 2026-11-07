@@ -27,6 +27,48 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Renderer/SIRGraphicsTypes.h>
 #include <float.h>
 
+// DXC emits DXIL inside a DXBC container. Validate offsets before handing the
+// untrusted cooked byte stream to the native PSO compiler.
+static inline uint32_t sirD3D12ReadDXILU32( const uint8_t *pBytes ) noexcept
+{
+	return ( uint32_t )pBytes[0] | ( ( uint32_t )pBytes[1] << 8 ) | ( ( uint32_t )pBytes[2] << 16 ) |
+	       ( ( uint32_t )pBytes[3] << 24 );
+}
+
+static inline bool sirD3D12ValidateDXILContainer( const void *pData, uint64_t nBytes ) noexcept
+{
+	if ( pData == nullptr || nBytes < 40 || nBytes > 16ULL * 1024ULL * 1024ULL ) {
+		return false;
+	}
+	const uint8_t *pBytes = static_cast<const uint8_t *>( pData );
+	if ( pBytes[0] != 'D' || pBytes[1] != 'X' || pBytes[2] != 'B' || pBytes[3] != 'C' ||
+	     sirD3D12ReadDXILU32( pBytes + 20 ) != 1 || sirD3D12ReadDXILU32( pBytes + 24 ) != nBytes ) {
+		return false;
+	}
+	const uint32_t nPartCount = sirD3D12ReadDXILU32( pBytes + 28 );
+	if ( nPartCount == 0 || nPartCount > ( nBytes - 32 ) / 4 ) {
+		return false;
+	}
+	uint32_t nDXILParts = 0;
+	for ( uint32_t iPart = 0; iPart < nPartCount; ++iPart ) {
+		const uint32_t nOffset = sirD3D12ReadDXILU32( pBytes + 32 + iPart * 4 );
+		if ( nOffset < 32ULL + 4ULL * nPartCount || nOffset > nBytes || nBytes - nOffset < 8 ) {
+			return false;
+		}
+		const uint32_t nPayload = sirD3D12ReadDXILU32( pBytes + nOffset + 4 );
+		if ( nPayload > nBytes - nOffset - 8 ) {
+			return false;
+		}
+		if ( pBytes[nOffset] == 'D' && pBytes[nOffset + 1] == 'X' && pBytes[nOffset + 2] == 'I' &&
+		     pBytes[nOffset + 3] == 'L' ) {
+			if ( nPayload < 24 || ++nDXILParts > 1 ) {
+				return false;
+			}
+		}
+	}
+	return nDXILParts == 1;
+}
+
 // D3D12 UPLOAD/GPU_UPLOAD and READBACK resources have immutable native
 // states (GENERIC_READ and COPY_DEST, respectively). Reject usage declarations
 // that would require an illegal transition before allocating any GPU memory.
