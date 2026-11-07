@@ -28,6 +28,12 @@ target_link_libraries(SIRVirtualTextureDemandQueueTests PRIVATE SIR::Graphics)
 add_test(NAME renderer.virtual-texturing.demand-queue COMMAND SIRVirtualTextureDemandQueueTests)
 sir_configure_owned_target(SIRVirtualTextureDemandQueueTests)
 
+# Original Terrain3D baked-visibility percentile and runtime mip projection.
+add_executable(SIRVirtualTextureDemandMipTests SIRVirtualTextureDemandMipTests.cpp)
+target_link_libraries(SIRVirtualTextureDemandMipTests PRIVATE SIR::Graphics)
+add_test(NAME renderer.virtual-texturing.demand-mip COMMAND SIRVirtualTextureDemandMipTests)
+sir_configure_owned_target(SIRVirtualTextureDemandMipTests)
+
 if(SIR_WITH_VT_ZSTD)
     add_executable(SIRVirtualTextureZstdCodecTests SIRVirtualTextureZstdCodecTests.cpp)
     target_link_libraries(SIRVirtualTextureZstdCodecTests PRIVATE SIR::Graphics libzstd_static)
