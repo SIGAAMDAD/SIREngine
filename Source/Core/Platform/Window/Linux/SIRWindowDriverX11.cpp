@@ -527,7 +527,6 @@ sirWindowResult_t SIRWindowDriverX11::pumpEventsNative( uint32_t nBudget, sirWin
 				pCallback( pContext, changed );
 				++nEmitted;
 			}
-			}
 		}
 	}
 	return SIR_WINDOW_OK;
