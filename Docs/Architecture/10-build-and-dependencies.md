@@ -33,7 +33,7 @@ Windows and Linux use the same developer presets. Other configurations include `
 
 ## CI/CD
 
-`.github/workflows/ci.yml` validates tracked paths, native C++ formatting and Windows/Linux Debug builds with CTest. A native setup action installs CMake and FASTBuild without Python. `.github/workflows/nightly.yml` runs Release builds, tests, package artifacts, profiling and relevant sanitizers. FASTBuild uses platform/configuration-scoped compilation caches, and Ninja tooling jobs export `compile_commands.json`.
+`.github/workflows/ci.yml` runs changed-file formatting and Linux GCC, Linux Clang and Windows MSVC CMake/CTest checks. `.github/workflows/qualification.yml` runs on-demand LLVM 23 source qualification, sanitizers, backend tests and release packaging. Its scheduled nightly jobs build and test Release plus sanitizer configurations and publish native benchmark results. Nightly jobs freeze one `develop` source SHA.
 
 GoogleTest and Google Benchmark are pinned as independent optional development dependencies. Native CI enables GoogleTest for CTest on Windows/Linux; nightly profiling builds and runs Google Benchmark and retains per-platform JSON measurements and median comparisons. Neither vendor library is linked into the shipping Core or Launcher.
 
@@ -41,14 +41,6 @@ Dependency-enabled configurations resolve `SIR::MeshOptimizer`, `SIR::OpenAL`, `
 
 See [Dependency acquisition](../Dependencies.md). The source tree stores no nested engine checkout. Engine migration inputs are reviewed separately and ported into first-party build targets.
 
-### Nightly regression history
+### Nightly execution
 
-The `.github/workflows/nightly.yml` schedule runs at **07:17 UTC** on `develop`. It compiles and tests Windows/Linux `profile` and `release` targets, runs Linux ASan/UBSan configurations, and checks the OpenAL Soft/meshoptimizer integration and Clang tooling. macOS is available by manual dispatch only.
-
-The Bash-driven `Build/Scripts/NightlyBuild.sh` uses CMake/FASTBuild (or Ninja for tooling). Each configuration records configure/build/test/package exit codes and wall time, CTest JUnit results, compiler warning counts, and executable size in a JSON artifact. Compiler/test logs and Release ZIPs are retained separately; artifacts contain the exact Git commit ID. Build failures remain failing GitHub jobs while their diagnostic artifacts are still uploaded.
-
-The aggregate `Build/CMake/NightlyCompare.cmake` report compares matching configurations to the last successful nightly whose results remain available. It reports compilation-time and executable-size changes, lost tests, and new warnings in the GitHub step summary. Compilation timings are observational because GitHub runner variance and cache hits can dominate small builds. Artifacts are retained for 30 days (raw metrics), 21 days (logs and packages), or 60 days (consolidated regression reports). There is no Python dependency in the nightly workflow.
-
-The full nightly workflow also runs automatically when its own source/scripts are modified on `develop`, providing a one-time regression check of workflow changes.
-
-CI outcomes are recorded from real workflow runs; a successful native bootstrap does not imply editor, graphics or terrain functionality.
+Nightly builds use the same CMake presets and CTest commands as developer builds. The workflow reports actual native build/test failures and benchmark artifacts. No extra validation scripts, generated gate files or custom CTest accounting wrappers are required.
