@@ -70,7 +70,7 @@ static sirWindowWin32Dispatch_t sirDispatchWin32Input( const sirWindowWin32Messa
 	if ( !pInput->acceptsWindow( message.nWindow ) ) {
 		return result;
 	}
-	result.nResult = pInput->processMessage( message.nMessage, message.nWParam, message.nLParam, &result.bHandled );
+	result.nResult = pInput->processWindowMessage( message, &result.bHandled );
 	return result;
 }
 #else

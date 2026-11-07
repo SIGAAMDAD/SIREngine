@@ -59,6 +59,23 @@ bool SIRWindowsRawBackend::attachWindow( void *pWindow ) noexcept
 	return true;
 }
 
+bool SIRWindowsRawBackend::retargetWindow( void *pWindow ) noexcept
+{
+	if ( m_pWindow == nullptr || pWindow == nullptr ) {
+		return false;
+	}
+	if ( m_pWindow == pWindow ) {
+		return true;
+	}
+	RAWINPUTDEVICE devices[2] = { { HID_USAGE_PAGE_GENERIC, HID_USAGE_GENERIC_KEYBOARD, RIDEV_DEVNOTIFY, ( HWND )pWindow },
+	                              { HID_USAGE_PAGE_GENERIC, HID_USAGE_GENERIC_MOUSE, RIDEV_DEVNOTIFY, ( HWND )pWindow } };
+	if ( !RegisterRawInputDevices( devices, 2, sizeof( devices[0] ) ) ) {
+		return false;
+	}
+	m_pWindow = pWindow;
+	return true;
+}
+
 bool SIRWindowsRawBackend::processRaw( SIRInputService& service, void *pHRawInput ) noexcept
 {
 	UINT nBytes = 0;

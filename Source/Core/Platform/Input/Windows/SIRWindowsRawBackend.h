@@ -40,6 +40,7 @@ public:
 	bool vibrate( sirInputDeviceId_t hDevice, uint16_t nLeft, uint16_t nRight ) noexcept override;
 	void stop( SIRInputService& service ) noexcept override;
 	bool attachWindow( void *pWindow ) noexcept;
+	bool retargetWindow( void *pWindow ) noexcept;
 	bool processMessage( SIRInputService& service, uint32_t nMessage, uintptr_t nWParam, intptr_t nLParam ) noexcept;
 
 private:

@@ -49,6 +49,9 @@ bool SIRWin32InputBridge::bind( SIRInputService& input, SIRWindowsRawBackend& ba
 	m_pInput = &input;
 	m_pBackend = &backend;
 	m_nWindow = native.nHWND;
+	m_nInstance = native.nHInstance;
+	m_hRegisteredWindows[0] = native.nHWND;
+	m_nWindowCount = 1;
 	m_bFocused = GetFocus() == ( HWND )m_nWindow;
 	input.text().setFocused( m_bFocused );
 	input.setHapticsPaused( !m_bFocused );
@@ -60,9 +63,97 @@ bool SIRWin32InputBridge::isBound( void ) const noexcept
 	return m_pInput != nullptr;
 }
 
+bool SIRWin32InputBridge::registerWindow( const sirWindowNativeView_t& view ) noexcept
+{
+	sirWindowsNativeWindow_t native = {};
+	if ( m_pInput == nullptr || m_nWindowCount >= SIR_WINDOW_MAX_WINDOWS ||
+	     !sirPlatformDecodeWindowsWindow( view, &native ) || native.nHInstance != m_nInstance ) {
+		return false;
+	}
+	for ( uint32_t i = 0; i < m_nWindowCount; ++i ) {
+		if ( m_hRegisteredWindows[i] == native.nHWND ) {
+			return false;
+		}
+	}
+	m_hRegisteredWindows[m_nWindowCount++] = native.nHWND;
+	return true;
+}
+
+bool SIRWin32InputBridge::unregisterWindow( uintptr_t nNativeWindow ) noexcept
+{
+	if ( m_pInput == nullptr || nNativeWindow == 0 ) {
+		return false;
+	}
+	for ( uint32_t i = 0; i < m_nWindowCount; ++i ) {
+		if ( m_hRegisteredWindows[i] != nNativeWindow ) {
+			continue;
+		}
+		const bool bCurrent = m_nWindow == nNativeWindow;
+		if ( bCurrent ) {
+			( void )sirWin32UpdateCursorCapture( ( HWND )m_nWindow, false, &m_bCursorCaptured );
+			m_pInput->text().setFocused( false );
+			m_pInput->text().clearPreedit();
+			m_pInput->setHapticsPaused( true );
+			m_bFocused = false;
+			m_bFocusLost = true;
+		}
+		--m_nWindowCount;
+		for ( uint32_t j = i; j < m_nWindowCount; ++j ) {
+			m_hRegisteredWindows[j] = m_hRegisteredWindows[j + 1];
+		}
+		m_hRegisteredWindows[m_nWindowCount] = 0;
+		if ( bCurrent ) {
+			const uintptr_t nReplacement = m_nWindowCount != 0 ? m_hRegisteredWindows[0] : 0;
+			if ( nReplacement != 0 && !m_pBackend->retargetWindow( ( void * )nReplacement ) ) {
+				m_nWindow = 0;
+				return false;
+			}
+			m_nWindow = nReplacement;
+		}
+		return true;
+	}
+	return false;
+}
+
 bool SIRWin32InputBridge::acceptsWindow( uintptr_t nWindow ) const noexcept
 {
-	return m_pInput != nullptr && m_nWindow != 0 && m_nWindow == nWindow;
+	if ( m_pInput == nullptr || nWindow == 0 ) {
+		return false;
+	}
+	for ( uint32_t i = 0; i < m_nWindowCount; ++i ) {
+		if ( m_hRegisteredWindows[i] == nWindow ) {
+			return true;
+		}
+	}
+	return false;
+}
+
+intptr_t SIRWin32InputBridge::processWindowMessage( const sirWindowWin32Message_t& message, bool *pHandled ) noexcept
+{
+	if ( pHandled == nullptr ) {
+		return 0;
+	}
+	*pHandled = false;
+	if ( !acceptsWindow( message.nWindow ) ) {
+		return 0;
+	}
+	if ( message.nMessage == WM_SETFOCUS ) {
+		if ( m_bFocusLost ) {
+			finishPump();
+		}
+		if ( m_nWindow != message.nWindow ) {
+			( void )sirWin32UpdateCursorCapture( ( HWND )m_nWindow, false, &m_bCursorCaptured );
+			if ( m_pBackend == nullptr || !m_pBackend->retargetWindow( ( void * )message.nWindow ) ) {
+				return 0;
+			}
+			m_pInput->text().clearPreedit();
+			m_nWindow = message.nWindow;
+		}
+	} else if ( message.nWindow != m_nWindow ) {
+		// Old HWND messages must not change the new focus owner's devices.
+		return 0;
+	}
+	return processMessage( message.nMessage, message.nWParam, message.nLParam, pHandled );
 }
 
 bool SIRWin32InputBridge::setCursorMode( sirInputCursorMode_t eMode ) noexcept
@@ -200,6 +291,11 @@ void SIRWin32InputBridge::unbind( void ) noexcept
 	m_pInput = nullptr;
 	m_pBackend = nullptr;
 	m_nWindow = 0;
+	m_nInstance = 0;
+	m_nWindowCount = 0;
+	for ( uint32_t i = 0; i < SIR_WINDOW_MAX_WINDOWS; ++i ) {
+		m_hRegisteredWindows[i] = 0;
+	}
 	m_bFocused = false;
 	m_bFocusLost = false;
 	m_bCursorCaptured = false;

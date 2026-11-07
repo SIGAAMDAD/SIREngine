@@ -15,6 +15,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Core/Platform/Window/SIRWindowSystem.h>
 #include <Core/Platform/Window/Windows/SIRWindowDriverWin32.h>
+#include <Core/Platform/Input/Windows/SIRWin32InputBridge.h>
+#include <Core/Platform/Input/Windows/SIRWindowsRawBackend.h>
 #include <stdio.h>
 
 static sirWindowWin32Dispatch_t sirConsumeNativeClose( const sirWindowWin32Message_t& message, void *pContext ) noexcept
@@ -66,6 +68,59 @@ static bool sirTestWin32BoundedNativeEvents( void ) noexcept
 	return bFirst && bClosed && bDestroyed;
 }
 
+static sirWindowWin32Dispatch_t sirRouteWin32Input( const sirWindowWin32Message_t& message, void *pContext ) noexcept
+{
+	SIRWin32InputBridge *pBridge = ( SIRWin32InputBridge * )pContext;
+	sirWindowWin32Dispatch_t result = {};
+	result.nResult = pBridge->processWindowMessage( message, &result.bHandled );
+	return result;
+}
+
+static bool sirTestWin32MultiwindowInputRouting( void ) noexcept
+{
+	SIRWindowDriverWin32 driver;
+	SIRWindowSystem windows( driver );
+	SIRInputService input;
+	SIRWindowsRawBackend native;
+	SIRWin32InputBridge bridge;
+	if ( windows.initialize() != SIR_SYSTEM_OK ) {
+		return false;
+	}
+	sirWindowHandle_t first = {}, second = {};
+	if ( windows.createWindow( { "first-input", 640, 480 }, &first ) != SIR_WINDOW_OK ||
+	     windows.createWindow( { "second-input", 640, 480 }, &second ) != SIR_WINDOW_OK ) {
+		return false;
+	}
+	sirWindowNativeLease_t firstLease = {}, secondLease = {};
+	sirWindowNativeView_t firstView = {}, secondView = {};
+	if ( windows.acquireNativeLease( first, &firstLease, &firstView ) != SIR_WINDOW_OK ||
+	     windows.acquireNativeLease( second, &secondLease, &secondView ) != SIR_WINDOW_OK ||
+	     !bridge.bind( input, native, firstView ) || !bridge.registerWindow( secondView ) ||
+	     bridge.registerWindow( secondView ) || !bridge.acceptsWindow( firstView.nNativeWindow ) ||
+	     !bridge.acceptsWindow( secondView.nNativeWindow ) || !driver.setMessageSink( sirRouteWin32Input, &bridge ) ) {
+		return false;
+	}
+	if ( !input.begin( 1 ) ) {
+		return false;
+	}
+	( void )SendMessageW( ( HWND )secondView.nNativeWindow, WM_SETFOCUS, 0, 0 );
+	bridge.finishPump();
+	if ( !input.publish() || !bridge.unregisterWindow( secondView.nNativeWindow ) ||
+	     bridge.acceptsWindow( secondView.nNativeWindow ) || !bridge.acceptsWindow( firstView.nNativeWindow ) ||
+	     bridge.unregisterWindow( secondView.nNativeWindow ) ) {
+		return false;
+	}
+	( void )driver.setMessageSink( nullptr, nullptr );
+	bridge.unbind();
+	if ( windows.releaseNativeLease( secondLease ) != SIR_WINDOW_OK || windows.releaseNativeLease( firstLease ) != SIR_WINDOW_OK ||
+	     windows.destroyWindow( second ) != SIR_WINDOW_OK || windows.destroyWindow( first ) != SIR_WINDOW_OK ||
+	     windows.shutdown() != SIR_SYSTEM_OK ) {
+		return false;
+	}
+	input.shutdown();
+	return true;
+}
+
 static bool sirTestConcurrentWin32WindowClassOwners( void ) noexcept
 {
 	SIRWindowDriverWin32 firstDriver;
@@ -111,7 +166,7 @@ static bool sirTestConcurrentWin32WindowClassOwners( void ) noexcept
 
 int main( void )
 {
-	if ( !sirTestConcurrentWin32WindowClassOwners() || !sirTestWin32BoundedNativeEvents() ) {
+	if ( !sirTestConcurrentWin32WindowClassOwners() || !sirTestWin32BoundedNativeEvents() || !sirTestWin32MultiwindowInputRouting() ) {
 		fputs( "SIRWindowWin32DriverTests FAIL\n", stderr );
 		return 1;
 	}

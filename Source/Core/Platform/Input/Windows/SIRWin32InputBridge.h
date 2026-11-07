@@ -22,7 +22,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // clang-format on
 #include <Core/Platform/Input/Windows/SIRWindowsRawBackend.h>
 #include <Core/Platform/Input/SIRInputCursorMode.h>
-#include <Core/Platform/Window/SIRWindowTypes.h>
+#include <Core/Platform/Window/Windows/SIRWindowDriverWin32.h>
 
 // Win32 message decoder only; the native window and message pump belong to WindowSystem.
 class SIRWin32InputBridge final
@@ -33,19 +33,25 @@ public:
 
 	bool bind( SIRInputService& input, SIRWindowsRawBackend& backend, const sirWindowNativeView_t& view ) noexcept;
 	bool isBound( void ) const noexcept;
+	bool registerWindow( const sirWindowNativeView_t& view ) noexcept;
+	bool unregisterWindow( uintptr_t nNativeWindow ) noexcept;
 	bool acceptsWindow( uintptr_t nWindow ) const noexcept;
 	bool setCursorMode( sirInputCursorMode_t eMode ) noexcept;
 	sirInputCursorMode_t cursorMode( void ) const noexcept;
 	void setTextEnabled( bool bEnabled ) noexcept;
 	void finishPump( void ) noexcept;
-	intptr_t processMessage( uint32_t nMessage, uintptr_t nWParam, intptr_t nLParam, bool *pHandled ) noexcept;
+	intptr_t processWindowMessage( const sirWindowWin32Message_t& message, bool *pHandled ) noexcept;
 	void unbind( void ) noexcept;
 
 protected:
 private:
+	intptr_t processMessage( uint32_t nMessage, uintptr_t nWParam, intptr_t nLParam, bool *pHandled ) noexcept;
 	SIRInputService *m_pInput = nullptr;
 	SIRWindowsRawBackend *m_pBackend = nullptr;
 	uintptr_t m_nWindow = 0;
+	uintptr_t m_nInstance = 0;
+	uintptr_t m_hRegisteredWindows[SIR_WINDOW_MAX_WINDOWS] = {};
+	uint32_t m_nWindowCount = 0;
 	bool m_bFocused = false;
 	bool m_bFocusLost = false;
 	bool m_bCursorCaptured = false;
