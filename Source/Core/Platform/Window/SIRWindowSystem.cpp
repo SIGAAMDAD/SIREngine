@@ -115,14 +115,16 @@ sirWindowResult_t SIRWindowSystem::createWindow( const sirWindowCreateDesc_t& de
 			slot.snapshot.nDpi = 96;
 			slot.snapshot.nWidth = desc.nWidth;
 			slot.snapshot.nHeight = desc.nHeight;
-			slot.snapshot.bReady = true;
-			slot.snapshot.bVisible = false;
+			slot.snapshot.bReady = view.ePlatform != SIR_WINDOW_PLATFORM_WAYLAND;
+			slot.snapshot.bVisible = view.ePlatform != SIR_WINDOW_PLATFORM_WAYLAND;
 			slot.snapshot.bMinimized = false;
 			slot.bOccupied = true;
 			*pHandle = slot.snapshot.hWindow;
 		}
 		pushEvent( *pHandle, SIR_WINDOW_EVENT_CREATED, desc.nWidth, desc.nHeight );
-		pushEvent( *pHandle, SIR_WINDOW_EVENT_READY, desc.nWidth, desc.nHeight );
+		if ( view.ePlatform != SIR_WINDOW_PLATFORM_WAYLAND ) {
+			pushEvent( *pHandle, SIR_WINDOW_EVENT_READY, desc.nWidth, desc.nHeight );
+		}
 		return SIR_WINDOW_OK;
 	}
 	return SIR_WINDOW_OUT_OF_CAPACITY;
@@ -231,13 +233,24 @@ void SIRWindowSystem::onDriverEvent( void *pContext, const sirWindowBackendEvent
 		return;
 	}
 	std::lock_guard<std::mutex> guard( pSystem->m_SnapshotMutex );
-	if ( event.eKind == SIR_WINDOW_EVENT_RESIZED ) {
+	if ( event.eKind == SIR_WINDOW_EVENT_READY ) {
+		if ( event.nWidth == 0 || event.nHeight == 0 || slot.snapshot.bCloseRequested ) {
+			return;
+		}
+		if ( slot.snapshot.nWidth != event.nWidth || slot.snapshot.nHeight != event.nHeight ) {
+			++slot.snapshot.nMetricsRevision;
+		}
+		slot.snapshot.nWidth = event.nWidth;
+		slot.snapshot.nHeight = event.nHeight;
+		slot.snapshot.bVisible = true;
+		slot.snapshot.bReady = true;
+	} else if ( event.eKind == SIR_WINDOW_EVENT_RESIZED ) {
 		if ( slot.snapshot.nWidth == event.nWidth && slot.snapshot.nHeight == event.nHeight ) {
 			return;
 		}
 		slot.snapshot.nWidth = event.nWidth;
 		slot.snapshot.nHeight = event.nHeight;
-		slot.snapshot.bReady = event.nWidth != 0 && event.nHeight != 0 && !slot.snapshot.bMinimized;
+		slot.snapshot.bReady = event.nWidth != 0 && event.nHeight != 0 && slot.snapshot.bVisible && !slot.snapshot.bMinimized;
 		++slot.snapshot.nMetricsRevision;
 	} else if ( event.eKind == SIR_WINDOW_EVENT_FOCUS_GAINED ) {
 		slot.snapshot.bFocused = true;

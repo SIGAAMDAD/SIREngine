@@ -39,7 +39,7 @@ public:
 			return SIR_WINDOW_NATIVE_FAILURE;
 		}
 		m_bAlive[nSlot] = true;
-		*pView = { SIR_WINDOW_PLATFORM_X11, nSlot + 1, 0x1234, 0 };
+		*pView = { m_ePlatform, nSlot + 1, 0x1234, 0 };
 		return SIR_WINDOW_OK;
 	}
 	sirWindowResult_t destroyWindow( uint32_t nSlot ) noexcept override
@@ -83,6 +83,7 @@ public:
 		}
 	}
 	bool m_bFailInitialize = false;
+	sirWindowPlatform_t m_ePlatform = SIR_WINDOW_PLATFORM_X11;
 
 protected:
 private:
@@ -267,9 +268,45 @@ static bool sirTestEventOverflow( void ) noexcept
 	return true;
 }
 
+static bool sirTestWaylandInitialConfigure( void ) noexcept
+{
+	SIRWindowTestDriver driver;
+	driver.m_ePlatform = SIR_WINDOW_PLATFORM_WAYLAND;
+	SIRWindowSystem system( driver );
+	if ( system.initialize() != SIR_SYSTEM_OK ) {
+		return false;
+	}
+	const sirWindowCreateDesc_t desc = { "pending configure", 640, 480 };
+	sirWindowHandle_t handle = {};
+	sirWindowNativeLease_t lease = {};
+	sirWindowNativeView_t native = {};
+	sirWindowSnapshot_t state = {};
+	if ( system.createWindow( desc, &handle ) != SIR_WINDOW_OK || system.querySnapshot( handle, &state ) != SIR_WINDOW_OK || state.bReady ||
+	     state.bVisible || system.acquireNativeLease( handle, &lease, &native ) != SIR_WINDOW_NOT_READY ) {
+		return false;
+	}
+	driver.queueEvent( { handle.nSlot, handle.nSlot + 1, SIR_WINDOW_EVENT_READY, 800, 600 } );
+	if ( system.pumpEvents( 1 ) != SIR_WINDOW_OK || system.querySnapshot( handle, &state ) != SIR_WINDOW_OK || !state.bReady ||
+	     !state.bVisible || state.nWidth != 800 || state.nHeight != 600 || state.nMetricsRevision != 2 ||
+	     system.acquireNativeLease( handle, &lease, &native ) != SIR_WINDOW_OK ) {
+		return false;
+	}
+	driver.queueEvent( { handle.nSlot, handle.nSlot + 1, SIR_WINDOW_EVENT_HIDDEN, 0, 0 } );
+	driver.queueEvent( { handle.nSlot, handle.nSlot + 1, SIR_WINDOW_EVENT_RESIZED, 1024, 768 } );
+	if ( system.pumpEvents( 2 ) != SIR_WINDOW_OK || system.querySnapshot( handle, &state ) != SIR_WINDOW_OK || state.bReady ||
+	     state.bVisible || system.acquireNativeLease( handle, &lease, &native ) != SIR_WINDOW_NOT_READY || state.nMetricsRevision != 3 ) {
+		return false;
+	}
+	if ( system.destroyWindow( handle ) != SIR_WINDOW_BUSY || system.releaseNativeLease( lease ) != SIR_WINDOW_OK ||
+	     system.destroyWindow( handle ) != SIR_WINDOW_OK || system.shutdown() != SIR_SYSTEM_OK ) {
+		return false;
+	}
+	return true;
+}
+
 int main( void )
 {
-	if ( !sirTestHeadless() || !sirTestHandlesLeasesAndEvents() || !sirTestEventOverflow() ) {
+	if ( !sirTestHeadless() || !sirTestHandlesLeasesAndEvents() || !sirTestEventOverflow() || !sirTestWaylandInitialConfigure() ) {
 		fputs( "SIRWindowSystemTests FAIL\n", stderr );
 		return 1;
 	}
