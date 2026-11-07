@@ -61,6 +61,13 @@ sir_configure_owned_target(SIRScriptOptimizerWorkerTests)
 add_test(NAME scripting.optimizer-worker COMMAND SIRScriptOptimizerWorkerTests
     $<TARGET_FILE:SIRScriptOptimizerWorker> $<TARGET_FILE:SIRScriptOptimizerTestBackend>)
 
+# Exercise the real worker entry point with a documented usage error. A normal
+# process exit also records its LLVM profile, unlike transport-driven SIGKILL.
+add_test(NAME scripting.optimizer-worker-usage
+    COMMAND "${CMAKE_COMMAND}"
+        "-DSIR_WORKER=$<TARGET_FILE:SIRScriptOptimizerWorker>"
+        -P "${CMAKE_CURRENT_LIST_DIR}/SIRScriptOptimizerWorkerUsage.cmake")
+
 add_executable(SIRScriptOptimizerWorkerCoverageTests SIRScriptOptimizerWorkerCoverageTests.cpp)
 target_link_libraries(SIRScriptOptimizerWorkerCoverageTests PRIVATE SIR::Scripting)
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")

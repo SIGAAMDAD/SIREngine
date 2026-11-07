@@ -21,7 +21,7 @@ Canonical PR: [#23](https://github.com/SIGAAMDAD/SIREngine/pull/23). The head of
 
 Existing CTest suites in the same CI matrix additionally cover resource graph correctness, derived-provider fences and retirement, task DAG, scheduler stress, native platform APIs, memory page-backing and OS failure injection.
 
-`jobs-sanitizer.yml` repeats native Core Jobs and GRDG I/O integration targets under ASan/UBSan **5 times**. `allocator-sanitizer.yml` repeats allocator, backing, staging and GRDG integration targets under sanitizers **3 times**.
+The consolidated qualification workflow runs the registered native suites under ASan/UBSan. Local focused stress and repeated CTests use ordinary CTest commands.
 
 ## New optimized Google Benchmark cases
 
@@ -46,35 +46,20 @@ All I/O microbenchmarks use deterministic identical bytes and hot files for comp
 For a genuinely matched historical baseline, compare with:
 
 ```sh
-python3 Tests/Profiling/ValidateSIRGRDGBenchmarks.py \
-  out/Nightly/Benchmarks/ubuntu-24.04-pr.json \
+python3 Build/CI/CompareBenchmarks.py compare \
+  --candidate out/Nightly/Benchmarks/ubuntu-24.04-pr.json \
   --baseline path/to/verified-same-machine.json \
-  --max-regression-percent 20
+  --max-slowdown 0.20
 ```
 
-The comparison rejects incompatible host/CPU/build metadata. A >20% higher median triggers a failure **only when the caller supplies a comparable baseline**. There is no invented fixed nanosecond cutoff and no benchmark performance verdict until the current CI run produces results.
+The canonical comparison rejects incompatible host/CPU/build metadata. A >20% higher median triggers a failure **only when the caller supplies a comparable baseline**. There is no invented fixed nanosecond cutoff and no benchmark performance verdict until the current CI run produces results.
 
 ## Instrumented compiler coverage
 
-`.github/workflows/grdg-coverage.yml` builds the same native source through the
-Ninja tooling preset with GCC `--coverage`, runs all relevant GRDG/Core Jobs/
-Platform/memory CTests, and gathers per-translation-unit line and branch
-coverage using `gcov --json-format --branch-probabilities --branch-counts`.
+Production source coverage is measured by the canonical LLVM 23.1.5 qualification runner, `Build/Scripts/RunLLVM23Qualification.py`. It runs instrumented native CTests, validates all compiled source mappings and checks line, branch, function and region counters. Select `SIR_QUALIFICATION_SCOPE=Resources` for resources coverage or `all` for the full engine; the interim threshold remains 90%, and release qualification requires 100%.
 
-`Tests/Profiling/CollectSIRGRDGCoverage.py` verifies that nine required
-production translation units actually produced instrumented object data and
-writes machine-readable `grdg-coverage.json` plus an accompanying Markdown
-report as an Actions artifact. The job rejects missing objects, incomplete
-collections and zero executed statements. The initial instrumented run measured **3,081 of 3,460 executable lines
-(89.05%)** and **1,880 of 2,748 branches (68.41%)** across nine production
-translation units. CI now requires **at least 80% executable-line coverage
-and 60% branch coverage separately for each of the nine translation units**.
-This rejects low-coverage changes even when the aggregate remains high.
-
-`profiling.grdg.benchmark-validator` exercises seven positive/negative
-regression checks on the benchmark JSON validator, including missing cases,
-invalid observations, host mismatch and a measured >20% time regression.
+`Tests/Profiling/ValidateSIRGRDGBenchmarks.py` validates that all declared benchmark scenarios are present with valid timing observations. Benchmarks and source coverage remain independent measurements.
 
 ## Remaining measurement work
 
-Line/branch coverage is recorded from instrumented GCC objects in the dedicated coverage job. Test count and instrumentation percentage are reported separately. Multi-worker contention, cold disk I/O, memory pressure, actual GPU/physics/audio provider timings and long-running stress under real asset streams require dedicated, controlled experiments. These are separate acceptance findings, not implied PASS by unit-test success.
+Line/branch/function/region coverage comes from instrumented LLVM 23 C++ targets in the canonical qualification run. Test count and instrumentation percentage are reported separately. Multi-worker contention, cold disk I/O, memory pressure, actual GPU/physics/audio provider timings and long-running stress under real asset streams require dedicated, controlled experiments. These are separate acceptance findings, not implied PASS by unit-test success.

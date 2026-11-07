@@ -74,7 +74,7 @@ class CodecovPublishingTests(TestCase):
         readme = (ROOT / "README.md").read_text()
         self.assertIn("actions/workflows/ci.yml/badge.svg?branch=main", readme)
         self.assertIn("actions/workflows/ci.yml/badge.svg?branch=develop", readme)
-        self.assertIn("actions/workflows/nightly.yml/badge.svg?branch=main", readme)
+        self.assertIn("actions/workflows/qualification.yml/badge.svg?branch=develop", readme)
         self.assertIn("codecov.io/gh/SIGAAMDAD/SIREngine/branch/develop/graph/badge.svg", readme)
         self.assertIn("License-MPL%202.0", readme)
 

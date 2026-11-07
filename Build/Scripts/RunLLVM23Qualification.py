@@ -358,8 +358,8 @@ def qualify():
         raise RuntimeError("LLVM qualification compiler inventory was not generated")
     run("cmake", "--build", BUILD, "--parallel", "3")
     env = dict(os.environ, LLVM_PROFILE_FILE=str(raw / "%p-%m.profraw"))
-    run(sys.executable, ROOT / "Build/CI/RunCTestGate.py", "--test-dir", BUILD,
-        "--report", REPORT / "ctest.xml", env=env)
+    run("ctest", "--test-dir", BUILD, "--output-on-failure", "--no-tests=error",
+        "--output-junit", REPORT / "ctest.xml", env=env)
     profiles = sorted(raw.glob("*.profraw"))
     if not profiles:
         raise RuntimeError("No execution profiles generated")

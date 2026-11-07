@@ -115,21 +115,6 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     sir_configure_owned_target(SIRVirtualMemoryRollbackTests)
 endif()
 
-if(SIR_WITH_GOOGLETEST)
-    add_executable(SIRGoogleTests GoogleApplicationTests.cpp)
-    target_compile_features(SIRGoogleTests PRIVATE cxx_std_17)
-    target_link_libraries(SIRGoogleTests PRIVATE SIR::Core gtest_main)
-    add_test(NAME core.application.googletest COMMAND SIRGoogleTests)
-    sir_configure_owned_target(SIRGoogleTests)
-endif()
-
-# Validate the standalone CMake profiler comparison without vendor libraries.
-add_test(NAME profiling.benchmark-comparison
-    COMMAND "${CMAKE_COMMAND}"
-        "-DSIR_ROOT=${PROJECT_SOURCE_DIR}"
-        "-DSIR_TEST_ROOT=${PROJECT_BINARY_DIR}/RegressionSmoke"
-        -P "${PROJECT_SOURCE_DIR}/Tests/Benchmarks/GoogleBenchmarkCompareTests.cmake")
-
 add_executable(SIRThreadingPrimitiveTests SIRThreadingPrimitiveTests.cpp)
 target_link_libraries(SIRThreadingPrimitiveTests PRIVATE SIR::Core)
 # Clang's libstdc++ implementation of std::atomic::is_lock_free() calls

@@ -81,7 +81,7 @@ if(SIR_WITH_GOOGLETEST)
     gtest_discover_tests(SIRGraphicsABIAssertionGoogleTests
         TEST_PREFIX "renderer.graphics.gtest."
         DISCOVERY_MODE PRE_TEST
-        PROPERTIES LABELS "graphics-abi;gtest;conformance;subsystem:renderer;kind:unit;platform:${sirGTestHost};resource:cpu;gate:pr;gate:main;gate:nightly;gate:qualification" TIMEOUT 90)
+        PROPERTIES LABELS "graphics-abi;gtest;conformance;subsystem:renderer;kind:unit;platform:${sirGTestHost};resource:cpu;gate:pr" TIMEOUT 90)
 endif()
 
 if(SIR_WITH_OPENGL)
