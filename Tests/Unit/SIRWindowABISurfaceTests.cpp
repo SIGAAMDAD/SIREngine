@@ -35,7 +35,7 @@ sirGraphicsABIResult_t sirGraphicsCreateABISurface( const sirGraphicsABIDevice_t
 	++s_nCreates;
 	s_nLastWidth = pPresent->nWidth;
 	s_nLastHeight = pPresent->nHeight;
-	*pSurface = { 1, 2, 3, 4 };
+	*pSurface = { 1, 2, 3, SIR_GRAPHICS_HANDLE_SURFACE };
 	return SIR_GRAPHICS_SUCCESS;
 }
 
