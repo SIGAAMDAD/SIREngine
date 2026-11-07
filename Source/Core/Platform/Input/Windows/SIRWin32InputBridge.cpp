@@ -39,8 +39,7 @@ SIRWin32InputBridge::~SIRWin32InputBridge( void ) noexcept
 bool SIRWin32InputBridge::bind( SIRInputService& input, SIRWindowsRawBackend& backend, const sirWindowNativeView_t& view ) noexcept
 {
 	sirWindowsNativeWindow_t native = {};
-	if ( m_pInput != nullptr || !sirPlatformDecodeWindowsWindow( view, &native ) ||
-	     !backend.attachWindow( ( void * )native.nHWND ) ) {
+	if ( m_pInput != nullptr || !sirPlatformDecodeWindowsWindow( view, &native ) || !backend.attachWindow( ( void * )native.nHWND ) ) {
 		return false;
 	}
 	if ( !input.attach( backend ) ) {
