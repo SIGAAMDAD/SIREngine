@@ -116,6 +116,15 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND SIR_WITH_X11_INPUT AND X11_FOUND)
     endif()
 endif()
 
+# Native Win32 class ownership and two-driver lifecycle regression.
+if(WIN32)
+    add_executable(SIRWindowWin32DriverTests SIRWindowWin32DriverTests.cpp)
+    target_link_libraries(SIRWindowWin32DriverTests PRIVATE SIR::Core)
+    add_test(NAME core.platform.window.win32-native COMMAND SIRWindowWin32DriverTests)
+    set_tests_properties(core.platform.window.win32-native PROPERTIES LABELS "core;platform;window;win32;integration" TIMEOUT 60)
+    sir_configure_owned_target(SIRWindowWin32DriverTests)
+endif()
+
 # Renderer-side pinned native window lease adapter.
 add_executable(SIRWindowSurfaceAdapterTests SIRWindowSurfaceAdapterTests.cpp)
 target_link_libraries(SIRWindowSurfaceAdapterTests PRIVATE SIR::Graphics)

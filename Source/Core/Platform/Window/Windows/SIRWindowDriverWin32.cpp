@@ -27,9 +27,12 @@ sirWindowResult_t SIRWindowDriverWin32::initialize( void ) noexcept
 	definition.hInstance = GetModuleHandleW( nullptr );
 	definition.hCursor = LoadCursorW( nullptr, MAKEINTRESOURCEW( 32512 ) );
 	definition.lpszClassName = s_szWindowClass;
-	if ( RegisterClassW( &definition ) == 0 ) {
+	// Preserve the original native input window's existing-class behavior.
+	const ATOM nClass = RegisterClassW( &definition );
+	if ( nClass == 0 && GetLastError() != ERROR_CLASS_ALREADY_EXISTS ) {
 		return SIR_WINDOW_NATIVE_FAILURE;
 	}
+	m_bOwnsClass = nClass != 0;
 	m_bRegistered = true;
 	return SIR_WINDOW_OK;
 }
@@ -286,7 +289,10 @@ void SIRWindowDriverWin32::shutdown( void ) noexcept
 		}
 		m_Slots[i] = {};
 	}
-	UnregisterClassW( s_szWindowClass, GetModuleHandleW( nullptr ) );
+	if ( m_bOwnsClass ) {
+		( void )UnregisterClassW( s_szWindowClass, GetModuleHandleW( nullptr ) );
+	}
+	m_bOwnsClass = false;
 	m_bRegistered = false;
 	m_pSink = nullptr;
 	m_pSinkContext = nullptr;
