@@ -480,11 +480,29 @@ sirPackResult_t SIRGeometryCooker::cook( const sirGeometryCookInput_t& in, sirGe
 			pages.push_back( page );
 			nLeafGroupCursor += g.nChildCount;
 		}
+		// Pack sequential meshlets of the same material and parent into
+		// bounded pages. A page is a residency unit; each leaf remains a
+		// separately addressable complete group in the universal frame plan.
+		static constexpr uint64_t SIR_GEOMETRY_LEAF_PAGE_TARGET_BYTES = 64ULL * 1024;
 		for ( uint32_t material = 0; material < leaves.size(); ++material ) {
 			const sirGeometryMeshletData_t& data = leaves[material];
+			uint32_t nPage = SIR_MESH_PACK_NO_PARENT;
 			for ( uint32_t m = 0; m < data.meshlets.size(); ++m ) {
+				const meshopt_Meshlet& meshlet = data.meshlets[m];
+				const uint64_t nClusterBytes = 32ULL + 24ULL * meshlet.vertex_count + 3ULL * meshlet.triangle_count;
+				if ( nPage == SIR_MESH_PACK_NO_PARENT || payloads[nPage].size() + nClusterBytes > SIR_GEOMETRY_LEAF_PAGE_TARGET_BYTES ) {
+					if ( pages.size() >= SIR_MESH_PACK_MAX_RECORDS )
+						return SIR_PACK_OUT_OF_CAPACITY;
+					nPage = ( uint32_t )pages.size();
+					payloads.emplace_back();
+					sirGeometryWrite32( payloads.back(), 0 );
+					sirMeshPackPage_t page = {};
+					page.nParent = material + 1;
+					page.nFirstCluster = ( uint32_t )clusters.size();
+					page.nChunkId = nPage + 1;
+					pages.push_back( page );
+				}
 				const uint32_t nGroup = ( uint32_t )groups.size();
-				const uint32_t nPage = ( uint32_t )pages.size();
 				sirMeshPackGroup_t g = {};
 				g.nParent = material + 1;
 				g.nFirstCluster = ( uint32_t )clusters.size();
@@ -493,17 +511,11 @@ sirPackResult_t SIRGeometryCooker::cook( const sirGeometryCookInput_t& in, sirGe
 				g.nPage = nPage;
 				g.fError = 0;
 				groups.push_back( g );
-				payloads.emplace_back();
-				sirGeometryWrite32( payloads.back(), 1 );
-				if ( !sirGeometryAppendCluster( ctx, data, { m, nGroup, nPage }, { payloads.back(), clusters } ) )
+				if ( !sirGeometryAppendCluster( ctx, data, { m, nGroup, nPage }, { payloads[nPage], clusters } ) )
 					return SIR_PACK_INVALID_FORMAT;
-				sirMeshPackPage_t page = {};
-				page.nParent = material + 1;
-				page.nFirstCluster = g.nFirstCluster;
-				page.nClusterCount = 1;
-				page.nChunkId = nPage + 1;
-				page.nByteCount = payloads.back().size();
-				pages.push_back( page );
+				++pages[nPage].nClusterCount;
+				pages[nPage].nByteCount = payloads[nPage].size();
+				sirPackWrite32( payloads[nPage].data(), pages[nPage].nClusterCount );
 			}
 		}
 		if ( pages.size() > SIR_MESH_PACK_MAX_RECORDS || clusters.size() > SIR_MESH_PACK_MAX_RECORDS )

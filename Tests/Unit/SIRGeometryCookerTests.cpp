@@ -109,8 +109,8 @@ static bool testGrid( void )
 	input.nIndexCount = ( uint32_t )indices.size();
 	input.pMaterials = materials;
 	input.nMaterialCount = 2;
-	input.nMaxVerticesPerMeshlet = 64;
-	input.nMaxTrianglesPerMeshlet = 124;
+	input.nMaxVerticesPerMeshlet = 32;
+	input.nMaxTrianglesPerMeshlet = 16;
 	input.nTargetRootTriangles = 24;
 	input.fMaxSimplificationError = 0.5f;
 	input.bCookCollision = true;
@@ -122,18 +122,24 @@ static bool testGrid( void )
 	CHECK( mesh.open( cooked.manifest.data(), cooked.manifest.size() ) == SIR_MESH_PACK_OK );
 	CHECK( mesh.getKey().nAssetId == input.key.nAssetId );
 	CHECK( mesh.getPageCount() == cooked.pages.size() );
-	CHECK( mesh.getGroupCount() == cooked.pages.size() );
+	CHECK( mesh.getGroupCount() > cooked.pages.size() );
 	sirMeshPackGroup_t root = {};
 	CHECK( mesh.groupAt( 0, &root ) == SIR_MESH_PACK_OK );
 	CHECK( root.nParent == SIR_MESH_PACK_NO_PARENT && root.nPage == 0 );
 	CHECK( root.nChildCount == 2 && root.nLevel == 2 );
 	CHECK( root.fError >= 0 );
+	bool hasPackedLeafPage = false;
 	for ( uint32_t i = 0; i < cooked.pages.size(); ++i ) {
 		sirMeshPackPage_t page = {};
 		CHECK( mesh.pageAt( i, &page ) == SIR_MESH_PACK_OK );
 		CHECK( i == 0 ? page.nParent == SIR_MESH_PACK_NO_PARENT : page.nParent < i );
 		CHECK( mesh.verifyPage( i, cooked.pages[i].data(), cooked.pages[i].size() ) == SIR_MESH_PACK_OK );
+		if ( i > input.nMaterialCount ) {
+			CHECK( page.nByteCount <= 64ULL * 1024 );
+			hasPackedLeafPage |= page.nClusterCount > 1;
+		}
 	}
+	CHECK( hasPackedLeafPage );
 	CHECK( testMaterialSeam( mesh, cooked ) );
 	const uint64_t nScratch = SIRPackCatalog::requiredScratch( 1, 1 );
 	std::vector<uint8_t> scratch( ( size_t )nScratch );
@@ -171,7 +177,7 @@ static bool testGrid( void )
 	input.nIndexCount += 1;
 	input.nMaxVerticesPerMeshlet = 17;
 	CHECK( SIRGeometryCooker::cook( input, &cooked ) == SIR_PACK_INVALID_ARGUMENT );
-	input.nMaxVerticesPerMeshlet = 64;
+	input.nMaxVerticesPerMeshlet = 32;
 	xyz[0] = std::numeric_limits<float>::quiet_NaN();
 	CHECK( SIRGeometryCooker::cook( input, &cooked ) == SIR_PACK_INVALID_ARGUMENT );
 	xyz[0] = 0;
