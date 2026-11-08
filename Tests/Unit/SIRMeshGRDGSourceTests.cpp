@@ -13,6 +13,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 #include <Mesh/SIRMeshGRDGSource.h>
+#include <Mesh/SIRMeshCollisionSource.h>
 
 #include <Resources/SIRResourceGraph.h>
 
@@ -172,10 +173,28 @@ int main( void )
 		CHECK( !lease.bActive && lease.eLastRelease == SIR_RESOURCE_RESULT_SUCCESS );
 		CHECK( writer->collectRetired( 8 ) == 1 );
 		CHECK( graph.getStats().m_nUniqueChunks == 2 );
+		SIRMeshCollisionSource collision;
+		const sirMeshCollisionProfile_t profile = { 1, 7, 0, 0 };
+		CHECK( collision.initialize( cache, currentHandle, profile ) == SIR_MESH_OK );
+		const uint32_t beforeShapeInstances = allocations.nAllocations;
+		for ( uint32_t i = 0; i < 1000; ++i )
+			CHECK( collision.acquireInstance() == SIR_MESH_OK );
+		CHECK( allocations.nAllocations == beforeShapeInstances );
+		CHECK( collision.getInstanceCount() == 1000 );
+		const sirMeshCollisionRay_t ray = { { 0.2f, 0.2f, 9.0f }, { 0.0f, 0.0f, -1.0f }, 20.0f };
+		sirMeshCollisionHit_t hit = {};
+		CHECK( collision.raycast( ray, &hit ) == SIR_MESH_OK );
+		CHECK( hit.nTriangle == 0 && hit.fDistance == 7.0f && hit.nMaterialId == 7 );
 		CHECK( cache.acquire( currentHandle, &read ) == SIR_MESH_OK );
 		CHECK( read.key.nRevision == 2 && read.pPositionsXYZ[2] == 2 && read.pTriangleIndices[2] == 2 );
 		CHECK( cache.release( currentHandle ) == SIR_MESH_OK );
 		CHECK( cache.retire( currentHandle ) == SIR_MESH_OK );
+		CHECK( currentLease.bActive );
+		CHECK( writer->collectRetired( 8 ) == 0 );
+		CHECK( collision.shutdown() == SIR_MESH_BUSY );
+		for ( uint32_t i = 0; i < 1000; ++i )
+			CHECK( collision.releaseInstance() == SIR_MESH_OK );
+		CHECK( collision.shutdown() == SIR_MESH_OK );
 		CHECK( !currentLease.bActive && currentLease.eLastRelease == SIR_RESOURCE_RESULT_SUCCESS );
 		CHECK( writer->collectRetired( 8 ) == 1 );
 		CHECK( graph.getStats().m_nUniqueChunks == 0 );

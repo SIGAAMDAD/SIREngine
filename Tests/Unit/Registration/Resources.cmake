@@ -100,7 +100,7 @@ add_test(NAME resources.sirpack.shipping-source-guard COMMAND SIRPackShippingGua
 sir_configure_owned_target(SIRPackShippingGuardTests)
 
 add_executable(SIRMeshGRDGSourceTests SIRMeshGRDGSourceTests.cpp)
-target_link_libraries(SIRMeshGRDGSourceTests PRIVATE SIR::MeshGRDGSource)
+target_link_libraries(SIRMeshGRDGSourceTests PRIVATE SIR::MeshGRDGSource SIR::MeshCollisionSource)
 add_test(NAME mesh.grdg.canonical-source-lifetime COMMAND SIRMeshGRDGSourceTests)
 sir_configure_owned_target(SIRMeshGRDGSourceTests)
 
@@ -140,3 +140,8 @@ if(TARGET sir-geometry-cooker)
                 -P "${PROJECT_SOURCE_DIR}/Tests/Unit/VerifyGeometryCookCLI.cmake")
     endforeach()
 endif()
+
+add_executable(SIRMeshCollisionSourceTests SIRMeshCollisionSourceTests.cpp)
+target_link_libraries(SIRMeshCollisionSourceTests PRIVATE SIR::MeshCollisionSource)
+add_test(NAME mesh.collision.shared-geometry-raycast COMMAND SIRMeshCollisionSourceTests)
+sir_configure_owned_target(SIRMeshCollisionSourceTests)

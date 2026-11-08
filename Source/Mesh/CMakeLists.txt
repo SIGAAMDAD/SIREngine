@@ -47,3 +47,14 @@ target_include_directories(SIRMeshGRDGSource PUBLIC
 target_compile_features(SIRMeshGRDGSource PUBLIC cxx_std_17)
 target_link_libraries(SIRMeshGRDGSource PUBLIC SIR::MeshCache SIR::Resources)
 sir_configure_owned_target(SIRMeshGRDGSource)
+
+# Immutable shared CPU collision source: backend-owned bodies reuse one pinned
+# canonical MeshCache triangle allocation; physics retains acceleration ownership.
+add_library(SIRMeshCollisionSource STATIC SIRMeshCollisionSource.cpp)
+add_library(SIR::MeshCollisionSource ALIAS SIRMeshCollisionSource)
+target_include_directories(SIRMeshCollisionSource PUBLIC
+    "${PROJECT_SOURCE_DIR}/Source"
+    "${PROJECT_SOURCE_DIR}/Build/CMake")
+target_compile_features(SIRMeshCollisionSource PUBLIC cxx_std_17)
+target_link_libraries(SIRMeshCollisionSource PUBLIC SIR::MeshCache)
+sir_configure_owned_target(SIRMeshCollisionSource)
