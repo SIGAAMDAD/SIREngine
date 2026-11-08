@@ -15,6 +15,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Renderer/Drivers/D3D9/SIRD3D9FixedPipelines.h>
 #include <Renderer/Drivers/D3D9/SIRD3D9Mapping.h>
 #include <Renderer/Drivers/D3D9/SIRD3D9Barriers.h>
+#include <Renderer/Drivers/D3D9/SIRD3D9Attachments.h>
 #ifdef _WIN32
 #include <Renderer/Drivers/D3D9/SIRD3D9Native.h>
 #include <Renderer/Drivers/D3D9/SIRD3D9Formats.h>
@@ -24,6 +25,7 @@ typedef struct sirD3D9ABIRecord_s
 {
 	uint32_t nKind;
 	sirGraphicsHandle_t hPipeline;
+	sirGraphicsHandle_t hColorView;
 	sirGraphicsABIVertexBuffer_t vertex;
 	sirGraphicsABIIndexBuffer_t index;
 	sirGraphicsABIDraw_t draw;
@@ -42,6 +44,7 @@ typedef struct sirD3D9ABIObject_s
 	uint32_t nGeneration;
 	bool bLive;
 	sirGraphicsHandle_t hResource;
+	uint32_t nViewUsage;
 	sirGraphicsHandle_t hPipeline;
 	sirGraphicsHandle_t szViews[8];
 	sirGraphicsHandle_t szSamplers[8];
@@ -54,6 +57,7 @@ typedef struct sirD3D9ABIDeviceState_s
 	sirD3D9Native_t native;
 	sirD3D9FixedPipelines_t fixed;
 	IDirect3DVertexDeclaration9 *pFixedDeclarations[SIR_D3D9_MAX_FIXED_PIPELINES];
+	IDirect3DSurface9 *pBackbuffer;
 	D3DCAPS9 availableCaps;
 	HMODULE hProbeLibrary;
 	IDirect3D9 *pProbeRuntime;
@@ -408,14 +412,21 @@ static uint32_t sirD3D9ABIView( void *pState, const sirGraphicsViewDesc_t *pDesc
 		if ( nLookup != SIR_GRAPHICS_SUCCESS ) {
 			return nLookup;
 		}
-		if ( pDesc->nUsage != SIR_GRAPHICS_USAGE_SAMPLED || pDesc->eFormat != p->aTextureDescs[pDesc->hResource.nSlot].eFormat ||
-		     pDesc->nMipLevels != p->aTextureDescs[pDesc->hResource.nSlot].nMipLevels ) {
+		if ( pDesc->nUsage == SIR_GRAPHICS_USAGE_COLOR_ATTACHMENT ) {
+			const uint32_t nValid = sirD3D9ValidateColorAttachmentView( &p->aTextureDescs[pDesc->hResource.nSlot], pDesc );
+			if ( nValid != SIR_GRAPHICS_SUCCESS ) {
+				return nValid;
+			}
+		} else if ( pDesc->nUsage != SIR_GRAPHICS_USAGE_SAMPLED ||
+		            pDesc->eFormat != p->aTextureDescs[pDesc->hResource.nSlot].eFormat ||
+		            pDesc->nMipLevels != p->aTextureDescs[pDesc->hResource.nSlot].nMipLevels ) {
 			return SIR_GRAPHICS_UNSUPPORTED;
 		}
 	}
 	const uint32_t nResult = sirD3D9ABIObjectInsert( p->views, 16, p->nGeneration, SIR_GRAPHICS_HANDLE_VIEW, pHandle );
 	if ( nResult == SIR_GRAPHICS_SUCCESS ) {
 		p->views[pHandle->nSlot].hResource = pDesc->hResource;
+		p->views[pHandle->nSlot].nViewUsage = pDesc->nUsage;
 	}
 	return nResult;
 }
@@ -474,7 +485,8 @@ static uint32_t sirD3D9ABIBindings( void *pState, sirGraphicsHandle_t hSet, cons
 		}
 		if ( pWrite->hResource.eType == SIR_GRAPHICS_HANDLE_VIEW ) {
 			sirD3D9ABIObject_t *pView = sirD3D9ABIObjectLookup( p->views, 16, pWrite->hResource, p->nGeneration, SIR_GRAPHICS_HANDLE_VIEW );
-			if ( pView == nullptr || pView->hResource.nSlot == UINT32_MAX ) {
+			if ( pView == nullptr || pView->hResource.nSlot == UINT32_MAX ||
+			     pView->nViewUsage != SIR_GRAPHICS_USAGE_SAMPLED ) {
 				return SIR_GRAPHICS_INVALID_HANDLE;
 			}
 			copy.szViews[pWrite->nBinding] = pWrite->hResource;
@@ -673,6 +685,10 @@ static uint32_t sirD3D9ABISurface( void *pState, const sirGraphicsABINativeSurfa
 		sirD3D9NativeShutdown( &p->native );
 		return SIR_GRAPHICS_SURFACE_CHANGED;
 	}
+	if ( FAILED( p->native.pDevice->GetRenderTarget( 0, &p->pBackbuffer ) ) || p->pBackbuffer == nullptr ) {
+		sirD3D9NativeShutdown( &p->native );
+		return SIR_GRAPHICS_DRIVER_ERROR;
+	}
 	// Initial device creation uses the window's actual client-area extent.
 	// Avoid an unnecessary Reset here, which would invalidate the initial
 	// shared device generation before the host receives its surface handle.
@@ -707,6 +723,10 @@ static uint32_t sirD3D9ABIResize( void *pState, sirGraphicsHandle_t hSurface, co
 	// an explicit recreation, preserving stale-handle rejection.
 	sirD3D9ABIReleaseMappedBuffers( p );
 	sirD3D9ABIReleaseFixedDeclarations( p );
+	if ( p->pBackbuffer != nullptr ) {
+		p->pBackbuffer->Release();
+		p->pBackbuffer = nullptr;
+	}
 	sirD3D9NativeShutdown( &p->native );
 	p->bSurface = false;
 	p->bRecording = false;
@@ -962,12 +982,15 @@ static uint32_t sirD3D9ABICommandBeginPass( void *pCommands, const sirGraphicsAB
 	if ( pPass->nColorCount == 1 ) {
 		sirD3D9ABIObject_t *pView =
 		    sirD3D9ABIObjectLookup( p->views, 16, pPass->pColors[0].hView, p->nGeneration, SIR_GRAPHICS_HANDLE_VIEW );
-		if ( pView == nullptr || pView->hResource.nSlot != UINT32_MAX ) {
-			return SIR_GRAPHICS_UNSUPPORTED;
+		if ( pView == nullptr || pView->nViewUsage != SIR_GRAPHICS_USAGE_COLOR_ATTACHMENT ) {
+			return SIR_GRAPHICS_INVALID_HANDLE;
 		}
 	}
 	sirD3D9ABIRecord_t *pRecord = nullptr;
 	const uint32_t nResult = sirD3D9ABIPush( p, SIR_D3D9_ABI_BEGIN, &pRecord );
+	if ( nResult == SIR_GRAPHICS_SUCCESS && pPass->nColorCount == 1 ) {
+		pRecord->hColorView = pPass->pColors[0].hView;
+	}
 	if ( nResult == SIR_GRAPHICS_SUCCESS && pPass->nColorCount == 1 && pPass->pColors[0].nClear != 0 ) {
 		const float *pColor = pPass->pColors[0].szClearColor;
 		DWORD rgba[4] = {};
@@ -1264,6 +1287,35 @@ static uint32_t sirD3D9ABIReplay( sirD3D9ABIDeviceState_t *p ) noexcept
 			if ( bInPass ) {
 				return SIR_GRAPHICS_INVALID_ARGUMENT;
 			}
+			if ( pRecord->hColorView.eType == SIR_GRAPHICS_HANDLE_VIEW ) {
+				sirD3D9ABIObject_t *pView = sirD3D9ABIObjectLookup( p->views, 16, pRecord->hColorView,
+				                                                       p->nGeneration, SIR_GRAPHICS_HANDLE_VIEW );
+				if ( pView == nullptr || pView->nViewUsage != SIR_GRAPHICS_USAGE_COLOR_ATTACHMENT ) {
+					return SIR_GRAPHICS_INVALID_HANDLE;
+				}
+				IDirect3DSurface9 *pTarget = p->pBackbuffer;
+				bool bRelease = false;
+				if ( pView->hResource.nSlot != UINT32_MAX ) {
+					void *pResource = nullptr;
+					const uint32_t nLookup = sirD3D9NativeLookupResource( &p->native, pView->hResource, &pResource );
+					if ( nLookup != SIR_GRAPHICS_SUCCESS ) {
+						return nLookup;
+					}
+					IDirect3DBaseTexture9 *pTexture = ( IDirect3DBaseTexture9 * )pResource;
+					if ( pTexture->GetType() != D3DRTYPE_TEXTURE ||
+					     FAILED( ( ( IDirect3DTexture9 * )pTexture )->GetSurfaceLevel( 0, &pTarget ) ) ) {
+						return SIR_GRAPHICS_DRIVER_ERROR;
+					}
+					bRelease = true;
+				}
+				const HRESULT hSet = p->native.pDevice->SetRenderTarget( 0, pTarget );
+				if ( bRelease ) {
+					pTarget->Release();
+				}
+				if ( FAILED( hSet ) ) {
+					return SIR_GRAPHICS_DRIVER_ERROR;
+				}
+			}
 			if ( pRecord->bClear ) {
 				const uint32_t nClear = sirD3D9NativeClear( &p->native, pRecord->nClearColor );
 				if ( nClear != SIR_GRAPHICS_SUCCESS ) {
@@ -1284,6 +1336,11 @@ static uint32_t sirD3D9ABIReplay( sirD3D9ABIDeviceState_t *p ) noexcept
 				return nResult;
 			}
 			bInPass = false;
+			// Rebind the retained swapchain surface after every pass so a later
+			// present cannot accidentally reference a transient color target.
+			if ( p->pBackbuffer != nullptr && FAILED( p->native.pDevice->SetRenderTarget( 0, p->pBackbuffer ) ) ) {
+				return SIR_GRAPHICS_DRIVER_ERROR;
+			}
 		} else if ( pRecord->nKind == SIR_D3D9_ABI_BARRIER ) {
 			if ( bInPass && pRecord->bUnbindBarrier ) {
 				return SIR_GRAPHICS_INVALID_ARGUMENT;
@@ -1509,6 +1566,10 @@ static uint32_t sirD3D9ABIShutdown( void *pState ) noexcept
 	if ( p->bSurface ) {
 		sirD3D9ABIReleaseMappedBuffers( p );
 		sirD3D9ABIReleaseFixedDeclarations( p );
+		if ( p->pBackbuffer != nullptr ) {
+			p->pBackbuffer->Release();
+			p->pBackbuffer = nullptr;
+		}
 		sirD3D9NativeShutdown( &p->native );
 		p->bSurface = false;
 	}
