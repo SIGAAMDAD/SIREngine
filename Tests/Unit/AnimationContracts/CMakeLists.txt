@@ -1,0 +1,32 @@
+cmake_minimum_required(VERSION 3.20)
+project(SIRAnimationContractsQualification LANGUAGES CXX)
+include(CTest)
+add_library(SIRAnimationContracts STATIC
+    ../../../Source/Animation/Contracts/SIRAnimationContractValidation.cpp
+    ../../../Source/Animation/Contracts/SIRAnimationContractLeasePool.cpp)
+target_compile_features(SIRAnimationContracts PUBLIC cxx_std_17)
+target_include_directories(SIRAnimationContracts PUBLIC ../../../Source ../../../Build/CMake)
+add_executable(SIRAnimationContractTests SIRAnimationContractTests.cpp)
+target_link_libraries(SIRAnimationContractTests PRIVATE SIRAnimationContracts)
+add_test(NAME ANM00_Contracts COMMAND SIRAnimationContractTests)
+if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    target_link_libraries(SIRAnimationContractTests PRIVATE stdc++)
+endif()
+
+# GoogleTest is the repository-pinned optional submodule. The standalone
+# CTest binary remains usable on hosts without the GoogleTest checkout.
+if(TARGET gtest_main)
+    set(SIR_ANM00_GTEST_TARGET gtest_main)
+else()
+    find_package(GTest QUIET)
+    if(TARGET GTest::gtest_main)
+        set(SIR_ANM00_GTEST_TARGET GTest::gtest_main)
+    endif()
+endif()
+if(SIR_ANM00_GTEST_TARGET)
+    add_executable(SIRAnimationContractGoogleTests SIRAnimationContractGoogleTests.cpp)
+    target_link_libraries(SIRAnimationContractGoogleTests PRIVATE SIRAnimationContracts ${SIR_ANM00_GTEST_TARGET})
+    target_include_directories(SIRAnimationContractGoogleTests PRIVATE ../../../Source ../../../Build/CMake)
+    include(GoogleTest)
+    gtest_discover_tests(SIRAnimationContractGoogleTests TEST_PREFIX "animation.contracts.")
+endif()
