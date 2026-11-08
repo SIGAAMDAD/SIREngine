@@ -54,8 +54,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [[ "${{ matrix.compiler }}" == clang ]]; then export CC=clang-23 CXX=clang++-23; fi
-          cmake --preset dev -DSIR_WITH_GOOGLETEST=ON
+          if [[ "${{ matrix.compiler }}" == clang ]]; then
+            export CC=clang-23 CXX=clang++-23
+            git submodule update --init ThirdParty/meshoptimizer
+            cmake --preset dev -DSIR_WITH_GOOGLETEST=ON -DSIR_WITH_MESHOPTIMIZER=ON
+          else
+            cmake --preset dev -DSIR_WITH_GOOGLETEST=ON
+          fi
           cmake --build --preset dev
           ctest --preset pr-smoke --no-tests=error --output-on-failure
   required:

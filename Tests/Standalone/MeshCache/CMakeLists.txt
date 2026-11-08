@@ -136,3 +136,13 @@ add_executable(SIRVGContractsTests "${CMAKE_CURRENT_LIST_DIR}/../../Unit/SIRVGCo
 target_link_libraries(SIRVGContractsTests PRIVATE SIRVGContracts)
 target_compile_options(SIRVGContractsTests PRIVATE -Wall -Wextra -Wpedantic -Werror)
 add_test(NAME mesh.vg.contracts COMMAND SIRVGContractsTests)
+
+add_library(SIRMeshPackSchema STATIC
+    "${SIR_MESH_SOURCE_ROOT}/Mesh/SIRMeshPackSchema.cpp"
+    "${SIR_MESH_SOURCE_ROOT}/Resources/SIRPackFormat.cpp")
+target_include_directories(SIRMeshPackSchema PUBLIC "${SIR_MESH_SOURCE_ROOT}" "${SIR_MESH_BUILD_ROOT}")
+target_compile_options(SIRMeshPackSchema PRIVATE -Wall -Wextra -Wpedantic -Werror)
+add_executable(SIRMeshPackSchemaTests "${CMAKE_CURRENT_LIST_DIR}/../../Unit/SIRMeshPackSchemaTests.cpp")
+target_link_libraries(SIRMeshPackSchemaTests PRIVATE SIRMeshPackSchema)
+target_compile_options(SIRMeshPackSchemaTests PRIVATE -Wall -Wextra -Wpedantic -Werror)
+add_test(NAME mesh.sirpack.schema COMMAND SIRMeshPackSchemaTests)

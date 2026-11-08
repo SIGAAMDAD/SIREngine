@@ -93,3 +93,28 @@ target_compile_definitions(SIRPackFoundationTests PRIVATE SIR_PACK_FIXTURE_DIR="
 target_link_libraries(SIRPackFoundationTests PRIVATE SIR::PackCooker)
 add_test(NAME resources.sirpack.foundation COMMAND SIRPackFoundationTests)
 sir_configure_owned_target(SIRPackFoundationTests)
+
+add_executable(SIRMeshPackSchemaTests SIRMeshPackSchemaTests.cpp)
+target_link_libraries(SIRMeshPackSchemaTests PRIVATE SIR::MeshPackSchema)
+add_test(NAME mesh.sirpack.schema COMMAND SIRMeshPackSchemaTests)
+sir_configure_owned_target(SIRMeshPackSchemaTests)
+
+if(TARGET SIRGeometryCooker)
+    add_executable(SIRGeometryCookerTests SIRGeometryCookerTests.cpp)
+    target_include_directories(SIRGeometryCookerTests PRIVATE "${PROJECT_SOURCE_DIR}")
+    target_link_libraries(SIRGeometryCookerTests PRIVATE SIR::GeometryCooker)
+    add_test(NAME mesh.geometry.cooker COMMAND SIRGeometryCookerTests)
+    sir_configure_owned_target(SIRGeometryCookerTests)
+endif()
+
+if(TARGET sir-geometry-cooker)
+    foreach(sirGeometryFixture IN ITEMS rock building terrain degenerate)
+        add_test(NAME "mesh.geometry.cli.${sirGeometryFixture}"
+            COMMAND "${CMAKE_COMMAND}"
+                "-DSIR_GEOMETRY_COOKER=$<TARGET_FILE:sir-geometry-cooker>"
+                "-DSIR_GEOMETRY_INPUT=${PROJECT_SOURCE_DIR}/Tests/Fixtures/Geometry/${sirGeometryFixture}.obj"
+                "-DSIR_GEOMETRY_OUTPUT=${CMAKE_CURRENT_BINARY_DIR}/geometry-${sirGeometryFixture}"
+                "-DSIR_GEOMETRY_EXPECT_FAILURE=$<STREQUAL:${sirGeometryFixture},degenerate>"
+                -P "${PROJECT_SOURCE_DIR}/Tests/Unit/VerifyGeometryCookCLI.cmake")
+    endforeach()
+endif()

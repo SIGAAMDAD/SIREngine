@@ -35,6 +35,7 @@ endif()
 add_subdirectory(Source)
 add_subdirectory(Tools/RegistrationCooker)
 add_subdirectory(Tools/SIRPackCooker)
+add_subdirectory(Tools/GeometryCooker)
 
 if(SIR_BUILD_TESTS)
     add_subdirectory(Tests/Unit)
