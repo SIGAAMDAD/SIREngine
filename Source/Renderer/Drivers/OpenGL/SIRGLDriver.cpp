@@ -94,6 +94,8 @@ typedef struct sirGLDevice_s
 	bool bAllowSoftware;
 } sirGLDevice_t;
 
+static sirGLPresentSlot_t *sirGLFindPresentSlot( sirGLDevice_t *pState, sirGraphicsHandle_t hSurface ) noexcept;
+
 static std::atomic<uint32_t> s_nGLDeviceGeneration( 1 );
 
 static uint32_t sirGLAdapterCount( void *pDriver, uint32_t *pCount ) noexcept
