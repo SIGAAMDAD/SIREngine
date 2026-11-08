@@ -91,6 +91,9 @@ int main()
 	resource.key.m_nAssetId = 124;
 	TEST( reader.validateResource( resource ) == SIR_MESH_PACK_INVALID_FORMAT );
 	resource.key.m_nAssetId = 123;
+	resource.key.m_nTypeId = 0;
+	TEST( reader.validateResource( resource ) == SIR_MESH_PACK_INVALID_FORMAT );
+	resource.key.m_nTypeId = 103;
 	resource.nFormatId = 0;
 	TEST( reader.validateResource( resource ) == SIR_MESH_PACK_INVALID_FORMAT );
 	resource.nFormatId = SIR_MESH_PACK_FORMAT_ID;
@@ -109,6 +112,9 @@ int main()
 	packedChunk.nDecodedBytes = sizeof( rootPayload );
 	sirPackSha256( rootPayload, sizeof( rootPayload ), packedChunk.szDigest );
 	TEST( reader.validateChunk( 1, packedChunk ) == SIR_MESH_PACK_OK );
+	packedChunk.nChunkId = 3;
+	TEST( reader.validateChunk( 1, packedChunk ) == SIR_MESH_PACK_INVALID_FORMAT );
+	packedChunk.nChunkId = 1;
 	packedChunk.szDigest[0] ^= 0x40;
 	TEST( reader.validateChunk( 1, packedChunk ) == SIR_MESH_PACK_BAD_DIGEST );
 	packedChunk.szDigest[0] ^= 0x40;
@@ -123,6 +129,17 @@ int main()
 	sirMeshPackGroup_t recovered = {};
 	TEST( reader.groupAt( 1, &recovered ) == SIR_MESH_PACK_OK && recovered.nParent == 0 );
 	TEST( reader.verifyPage( 0, rootPayload, sizeof( rootPayload ) ) == SIR_MESH_PACK_OK );
+	rootPayload[109] = 0;
+	sirPackSha256( rootPayload, sizeof( rootPayload ), digest );
+	memcpy( pages[0].szDigest, digest, 16 );
+	TEST( SIRMeshPackSchema::write( desc, buffer, bytes ) == SIR_MESH_PACK_OK );
+	TEST( reader.open( buffer, bytes ) == SIR_MESH_PACK_OK );
+	TEST( reader.verifyPage( 0, rootPayload, sizeof( rootPayload ) ) == SIR_MESH_PACK_INVALID_FORMAT );
+	rootPayload[109] = 1;
+	sirPackSha256( rootPayload, sizeof( rootPayload ), digest );
+	memcpy( pages[0].szDigest, digest, 16 );
+	TEST( SIRMeshPackSchema::write( desc, buffer, bytes ) == SIR_MESH_PACK_OK );
+	TEST( reader.open( buffer, bytes ) == SIR_MESH_PACK_OK );
 	TEST( reader.verifyPage( 1, leafPayload, sizeof( leafPayload ) ) == SIR_MESH_PACK_OK );
 	leafPayload[110] = 3;
 	TEST( reader.verifyPage( 1, leafPayload, sizeof( leafPayload ) ) == SIR_MESH_PACK_BAD_DIGEST );
@@ -157,6 +174,9 @@ int main()
 	sirPackWrite32( collisionBytes + 60, 2 );
 	sirPackWrite32( collisionBytes + 64, 18 );
 	TEST( reader.verifyCollision( 0, collisionBytes, sizeof( collisionBytes ) ) == SIR_MESH_PACK_OK );
+	sirPackWrite32( collisionBytes + 56, 0 );
+	TEST( reader.verifyCollision( 0, collisionBytes, sizeof( collisionBytes ) ) == SIR_MESH_PACK_INVALID_FORMAT );
+	sirPackWrite32( collisionBytes + 56, 1 );
 	collisionBytes[56] = 5;
 	TEST( reader.verifyCollision( 0, collisionBytes, sizeof( collisionBytes ) ) == SIR_MESH_PACK_INVALID_FORMAT );
 	collisionBytes[56] = 1;

@@ -425,7 +425,8 @@ sirMeshPackResult_t SIRMeshPackSchema::validateResource( const sirPackResource_t
 {
 	if ( !isOpen() )
 		return SIR_MESH_PACK_INVALID_ARGUMENT;
-	if ( resource.key.m_nAssetId != m_Key.nAssetId || resource.key.m_nVariantId != m_Key.nVariant || resource.nRevision != m_Key.nRevision )
+	if ( resource.key.m_nTypeId == 0 || resource.key.m_nAssetId != m_Key.nAssetId || resource.key.m_nVariantId != m_Key.nVariant ||
+	     resource.nRevision != m_Key.nRevision )
 		return SIR_MESH_PACK_INVALID_FORMAT;
 	if ( resource.nFormatId != SIR_MESH_PACK_FORMAT_ID || resource.nSchemaVersion != SIR_MESH_PACK_VERSION ||
 	     resource.nKind != SIR_RESOURCE_KIND_GEOMETRY || resource.nChunkCount != 1ULL + m_nPages + m_nCollisions )
@@ -503,8 +504,11 @@ sirMeshPackResult_t SIRMeshPackSchema::verifyPage( uint32_t i, const void *pByte
 				return SIR_MESH_PACK_INVALID_FORMAT;
 		}
 		const uint64_t nTrianglesStart = nCursor + 32ULL + 24ULL * c.nVertexCount;
-		for ( uint32_t k = 0; k < c.nTriangleCount * 3; ++k ) {
-			if ( p[nTrianglesStart + k] >= c.nVertexCount )
+		for ( uint32_t k = 0; k < c.nTriangleCount * 3; k += 3 ) {
+			const uint8_t a = p[nTrianglesStart + k];
+			const uint8_t b = p[nTrianglesStart + k + 1];
+			const uint8_t cVertex = p[nTrianglesStart + k + 2];
+			if ( a >= c.nVertexCount || b >= c.nVertexCount || cVertex >= c.nVertexCount || a == b || b == cVertex || a == cVertex )
 				return SIR_MESH_PACK_INVALID_FORMAT;
 		}
 		nCursor += c.nByteCount;
@@ -531,8 +535,11 @@ sirMeshPackResult_t SIRMeshPackSchema::verifyCollision( uint32_t iCollision, con
 			return SIR_MESH_PACK_INVALID_FORMAT;
 	}
 	const uint64_t nIndexOffset = 16ULL + 12ULL * c.nVertexCount;
-	for ( uint32_t i = 0; i < c.nIndexCount; ++i ) {
-		if ( sirPackRead32( p + nIndexOffset + 4ULL * i ) >= c.nVertexCount )
+	for ( uint32_t i = 0; i < c.nIndexCount; i += 3 ) {
+		const uint32_t a = sirPackRead32( p + nIndexOffset + 4ULL * i );
+		const uint32_t b = sirPackRead32( p + nIndexOffset + 4ULL * ( i + 1 ) );
+		const uint32_t cVertex = sirPackRead32( p + nIndexOffset + 4ULL * ( i + 2 ) );
+		if ( a >= c.nVertexCount || b >= c.nVertexCount || cVertex >= c.nVertexCount || a == b || b == cVertex || a == cVertex )
 			return SIR_MESH_PACK_INVALID_FORMAT;
 	}
 	return SIR_MESH_PACK_OK;
