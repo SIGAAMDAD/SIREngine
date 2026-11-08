@@ -134,7 +134,10 @@ int main( void )
 		return 17;
 	}
 	image.eFormat = VK_FORMAT_D32_SFLOAT;
-	if ( sirVulkanValidateTextureTransfer( &buffer, &image, copy ) != SIR_VULKAN_API_UNSUPPORTED ) {
+	image.nUsage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+	buffer.nSize = 240;
+	if ( sirVulkanValidateTextureTransfer( &buffer, &image, copy ) != SIR_VULKAN_SUCCESS ||
+	     sirVulkanUploadFinalLayout( &image, copy ) != VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL ) {
 		return 18;
 	}
 	image.eFormat = VK_FORMAT_R8_UNORM;
@@ -465,6 +468,45 @@ int main( void )
 	     !sirVulkanSetSubresourceLayout( &colorLayouts, 31, 127, VK_IMAGE_LAYOUT_UNDEFINED ) ||
 	     !sirVulkanGetSubresourceLayout( &colorLayouts, 30, 127, &layout ) || layout != VK_IMAGE_LAYOUT_GENERAL ) {
 		return 69;
+	}
+	// Single-aspect depth transfer support: 16/32-bit footprints, typed layout
+	// admission and destination buffer bounds. Packed D24S8 is still unsupported.
+	sirVulkanImage_t depthCopyImage = {};
+	depthCopyImage.eType = VK_IMAGE_TYPE_2D;
+	depthCopyImage.eFormat = VK_FORMAT_D16_UNORM;
+	depthCopyImage.nWidth = 8;
+	depthCopyImage.nHeight = 8;
+	depthCopyImage.nDepth = 1;
+	depthCopyImage.nMips = 1;
+	depthCopyImage.nLayers = 1;
+	depthCopyImage.nUsage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
+	                        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+	sirVulkanBuffer_t depthCopyBuffer = {};
+	depthCopyBuffer.nSize = 128;
+	depthCopyBuffer.nUsage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+	sirVulkanTextureTransfer_t depthCopy = {};
+	depthCopy.extent = { 8, 8, 1 };
+	depthCopy.bBufferToImage = true;
+	if ( sirVulkanValidateTextureTransfer( &depthCopyBuffer, &depthCopyImage, depthCopy ) != SIR_VULKAN_SUCCESS ||
+	     sirVulkanUploadFinalLayout( &depthCopyImage, depthCopy ) != VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL ) {
+		return 70;
+	}
+	depthCopyBuffer.nSize = 127;
+	if ( sirVulkanValidateTextureTransfer( &depthCopyBuffer, &depthCopyImage, depthCopy ) != SIR_VULKAN_INVALID_ARGUMENT ) {
+		return 71;
+	}
+	depthCopyBuffer.nSize = 128;
+	depthCopy.bBufferToImage = false;
+	if ( sirVulkanValidateTextureTransfer( &depthCopyBuffer, &depthCopyImage, depthCopy ) != SIR_VULKAN_INVALID_ARGUMENT ) {
+		return 72;
+	}
+	depthCopyImage.szUploadedSubresources[0] = 1;
+	if ( sirVulkanValidateTextureTransfer( &depthCopyBuffer, &depthCopyImage, depthCopy ) != SIR_VULKAN_SUCCESS ) {
+		return 73;
+	}
+	depthCopyImage.eFormat = VK_FORMAT_D24_UNORM_S8_UINT;
+	if ( sirVulkanValidateTextureTransfer( &depthCopyBuffer, &depthCopyImage, depthCopy ) != SIR_VULKAN_API_UNSUPPORTED ) {
+		return 74;
 	}
 	printf( "Vulkan transfer format and subresource contracts passed\n" );
 	return 0;

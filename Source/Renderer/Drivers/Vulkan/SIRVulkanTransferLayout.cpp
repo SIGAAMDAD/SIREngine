@@ -29,6 +29,7 @@ bool sirVulkanGetFormatBlock( VkFormat eFormat, sirVulkanFormatBlock_t *pBlock )
 		break;
 	case VK_FORMAT_R8G8_UNORM:
 	case VK_FORMAT_R16_SFLOAT:
+	case VK_FORMAT_D16_UNORM:
 		*pBlock = { 1, 1, 2 };
 		break;
 	case VK_FORMAT_R8G8B8A8_UNORM:
@@ -36,6 +37,7 @@ bool sirVulkanGetFormatBlock( VkFormat eFormat, sirVulkanFormatBlock_t *pBlock )
 	case VK_FORMAT_R8G8B8A8_SRGB:
 	case VK_FORMAT_R32_SFLOAT:
 	case VK_FORMAT_R32_UINT:
+	case VK_FORMAT_D32_SFLOAT:
 		*pBlock = { 1, 1, 4 };
 		break;
 	case VK_FORMAT_R16G16B16A16_SFLOAT:
@@ -258,8 +260,12 @@ VkImageLayout sirVulkanUploadFinalLayout( const sirVulkanImage_t *pImage, const 
 	const uint32_t nIndex = transfer.nLayer * pImage->nMips + transfer.nMip;
 	const bool bInitialized = sirVulkanTransferCoversSubresource( pImage, transfer ) ||
 	                          ( pImage->szUploadedSubresources[nIndex / 64] & ( 1ULL << ( nIndex % 64 ) ) ) != 0;
+	const bool bDepth = ( sirVulkanImageAspectMask( pImage->eFormat ) & VK_IMAGE_ASPECT_DEPTH_BIT ) != 0;
 	if ( bInitialized && ( pImage->nUsage & VK_IMAGE_USAGE_SAMPLED_BIT ) != 0 && ( pImage->nUsage & VK_IMAGE_USAGE_STORAGE_BIT ) == 0 ) {
-		return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		return bDepth ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	}
+	if ( bDepth && ( pImage->nUsage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT ) != 0 ) {
+		return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 	}
 	return VK_IMAGE_LAYOUT_GENERAL;
 }

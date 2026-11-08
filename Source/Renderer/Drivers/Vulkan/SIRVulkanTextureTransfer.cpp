@@ -31,6 +31,12 @@ sirVulkanResult_t SIRVulkanDevice::submitBufferImageCopy( sirVulkanBuffer_t *pBu
 		return SIR_VULKAN_INVALID_ARGUMENT;
 	}
 	const bool bUpload = transfer.bBufferToImage;
+	const VkImageAspectFlags nAspect = sirVulkanImageAspectMask( pImage->eFormat );
+	// Depth/stencil formats with two aspects require independent plane copies.
+	// The current transfer contract describes one tightly packed plane only.
+	if ( nAspect != VK_IMAGE_ASPECT_COLOR_BIT && nAspect != VK_IMAGE_ASPECT_DEPTH_BIT ) {
+		return SIR_VULKAN_API_UNSUPPORTED;
+	}
 	if ( bUpload &&
 	     ( ( pBuffer->nUsage & VK_BUFFER_USAGE_TRANSFER_SRC_BIT ) == 0 || ( pImage->nUsage & VK_IMAGE_USAGE_TRANSFER_DST_BIT ) == 0 ) ) {
 		return SIR_VULKAN_INVALID_ARGUMENT;
@@ -92,7 +98,7 @@ sirVulkanResult_t SIRVulkanDevice::submitBufferImageCopy( sirVulkanBuffer_t *pBu
 	before.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 	before.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 	before.image = pImage->hImage;
-	before.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	before.subresourceRange.aspectMask = nAspect;
 	before.subresourceRange.baseMipLevel = transfer.nMip;
 	before.subresourceRange.levelCount = 1;
 	before.subresourceRange.baseArrayLayer = transfer.nLayer;
@@ -119,7 +125,7 @@ sirVulkanResult_t SIRVulkanDevice::submitBufferImageCopy( sirVulkanBuffer_t *pBu
 	region.bufferOffset = transfer.nBufferOffset;
 	region.bufferRowLength = transfer.nBufferRowLength;
 	region.bufferImageHeight = transfer.nBufferImageHeight;
-	region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	region.imageSubresource.aspectMask = nAspect;
 	region.imageSubresource.mipLevel = transfer.nMip;
 	region.imageSubresource.baseArrayLayer = transfer.nLayer;
 	region.imageSubresource.layerCount = 1;
