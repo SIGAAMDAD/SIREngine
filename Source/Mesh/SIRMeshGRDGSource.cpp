@@ -54,8 +54,9 @@ sirMeshResult_t SIRMeshGRDGSource::insert( SIRMeshCache& cache, const sirMeshGRD
 	     ( ( uintptr_t )vertices.m_pData % alignof( float ) ) != 0 || ( ( uintptr_t )indices.m_pData % alignof( uint32_t ) ) != 0 )
 		return SIR_MESH_INVALID_ARGUMENT;
 	SIRResourcePinHandle pin = {};
-	if ( request.pGraph->pinForProvider( *request.pScope, *request.pView, request.nProviderId, &pin ) != SIR_RESOURCE_RESULT_SUCCESS )
-		return SIR_MESH_OUT_OF_CAPACITY;
+	const SIRResourceResult pinResult = request.pGraph->pinForProvider( *request.pScope, *request.pView, request.nProviderId, &pin );
+	if ( pinResult != SIR_RESOURCE_RESULT_SUCCESS )
+		return pinResult == SIR_RESOURCE_RESULT_OUT_OF_BUDGET ? SIR_MESH_OUT_OF_CAPACITY : SIR_MESH_INVALID_ARGUMENT;
 	pLease->pGraph = request.pGraph;
 	pLease->hPin = pin;
 	pLease->eLastRelease = SIR_RESOURCE_RESULT_NOT_RESIDENT;

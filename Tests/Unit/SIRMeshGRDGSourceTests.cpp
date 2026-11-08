@@ -131,6 +131,11 @@ int main( void )
 			request.indicesChunk = { 20 };
 			CHECK( SIRMeshGRDGSource::insert( cache, request, &badLease, &unused ) == SIR_MESH_DUPLICATE );
 			CHECK( !badLease.bActive && badLease.eLastRelease == SIR_RESOURCE_RESULT_SUCCESS );
+			// A view from a different read-scope lifetime cannot mint a pin.
+			SIRResourceReadScope otherScope( graph );
+			request.pScope = &otherScope;
+			CHECK( SIRMeshGRDGSource::insert( cache, request, &badLease, &unused ) == SIR_MESH_INVALID_ARGUMENT );
+			CHECK( !badLease.bActive );
 			CHECK( allocations.nAllocations == afterInsert );
 		}
 		// Hot reload replaces the GRDG publication without replacing the old

@@ -499,7 +499,7 @@ int main( int argc, char **argv )
 			if ( !source )
 				return 1;
 			imageBytes.assign( std::istreambuf_iterator<char>( source ), std::istreambuf_iterator<char>() );
-			if ( !source.eof() || imageBytes.empty() )
+			if ( source.bad() || imageBytes.empty() )
 				return 1;
 			sourcePatterns.push_back( { imageBytes.data(), imageBytes.size() } );
 			sourcePatterns.push_back( { ( const uint8_t * )imagePath.data(), imagePath.size() } );
