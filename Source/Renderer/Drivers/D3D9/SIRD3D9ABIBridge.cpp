@@ -13,6 +13,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 #include <Renderer/Drivers/D3D9/SIRD3D9FixedPipelines.h>
+#include <Renderer/Drivers/D3D9/SIRD3D9Mapping.h>
 #ifdef _WIN32
 #include <Renderer/Drivers/D3D9/SIRD3D9Native.h>
 #include <Renderer/Drivers/D3D9/SIRD3D9Formats.h>
@@ -54,6 +55,12 @@ typedef struct sirD3D9ABIDeviceState_s
 	HMODULE hProbeLibrary;
 	IDirect3D9 *pProbeRuntime;
 	uint32_t aBufferUsage[128];
+	sirGraphicsMemoryClass_t aBufferMemory[128];
+	uint64_t aBufferSizes[128];
+	sirGraphicsHandle_t aMappedHandles[128];
+	uint64_t aMappedOffsets[128];
+	uint64_t aMappedSizes[128];
+	bool aMapped[128];
 	sirGraphicsTextureDesc_t aTextureDescs[128];
 	sirD3D9ABIObject_t views[16];
 	sirD3D9ABIObject_t samplers[16];
@@ -317,6 +324,11 @@ static uint32_t sirD3D9ABIMemory( void *pState, sirGraphicsMemoryBudget_t *pBudg
 		pBudget->nCommittedBytes = p->native.resources.nUsedBytes;
 		pBudget->nPeakCommittedBytes = p->native.resources.nPeakBytes;
 	}
+	for ( uint32_t i = 0; i < 128; ++i ) {
+		if ( p->aMapped[i] ) {
+			pBudget->nUploadMappedBytes += p->aMappedSizes[i];
+		}
+	}
 	// D3D9 has no exact physical residency telemetry.
 	return SIR_GRAPHICS_SUCCESS;
 }
@@ -333,6 +345,9 @@ static uint32_t sirD3D9ABIBuffer( void *pState, const sirGraphicsBufferDesc_t *p
 	const uint32_t nResult = sirD3D9NativeCreateTrackedBufferDesc( &p->native, pDesc, false, pHandle );
 	if ( nResult == SIR_GRAPHICS_SUCCESS ) {
 		p->aBufferUsage[pHandle->nSlot] = pDesc->nUsage;
+		p->aBufferMemory[pHandle->nSlot] = pDesc->eMemory;
+		p->aBufferSizes[pHandle->nSlot] = pDesc->nSizeBytes;
+		p->aMapped[pHandle->nSlot] = false;
 	}
 	return nResult;
 }
@@ -472,14 +487,155 @@ static uint32_t sirD3D9ABIBindings( void *pState, sirGraphicsHandle_t hSet, cons
 	return SIR_GRAPHICS_SUCCESS;
 }
 
-static uint32_t sirD3D9ABIUnsupportedMap( void *pState, const sirGraphicsABIBufferRange_t *pRange,
-                                          sirGraphicsMappedBuffer_t *pMapped ) noexcept
-{
-	return pState == nullptr || pRange == nullptr || pMapped == nullptr ? SIR_GRAPHICS_INVALID_ARGUMENT : SIR_GRAPHICS_UNSUPPORTED;
+static uint32_t
+sirD3D9ABIMapBuffer(void *pState, const sirGraphicsABIBufferRange_t *pRange,
+                    sirGraphicsMappedBuffer_t *pMapped) noexcept {
+  sirD3D9ABIDeviceState_t *p = sirD3D9ABIState(pState);
+  if (p == nullptr || pRange == nullptr || pMapped == nullptr) {
+    return SIR_GRAPHICS_INVALID_ARGUMENT;
+  }
+  *pMapped = {};
+  if (!p->bSurface || p->bRecording || p->bSubmitted ||
+      p->native.bCompletionPending) {
+    return SIR_GRAPHICS_BUSY;
+  }
+  if (pRange->hBuffer.nSlot >= 128) {
+    return SIR_GRAPHICS_INVALID_HANDLE;
+  }
+  const uint32_t nSlot = pRange->hBuffer.nSlot;
+  const sirGraphicsResult_t eValid =
+      sirD3D9ValidateBufferMap(pRange, p->aBufferSizes[nSlot],
+                               p->aBufferMemory[nSlot], p->aMapped[nSlot]);
+  if (eValid != SIR_GRAPHICS_SUCCESS) {
+    return eValid;
+  }
+  void *pResource = nullptr;
+  const uint32_t nLookup =
+      sirD3D9NativeLookupResource(&p->native, pRange->hBuffer, &pResource);
+  if (nLookup != SIR_GRAPHICS_SUCCESS) {
+    return nLookup;
+  }
+  if (pResource == nullptr) {
+    return SIR_GRAPHICS_INVALID_HANDLE;
+  }
+  IDirect3DResource9 *pBuffer = (IDirect3DResource9 *)pResource;
+  void *pBytes = nullptr;
+  HRESULT hResult = D3DERR_INVALIDCALL;
+  if (pBuffer->GetType() == D3DRTYPE_VERTEXBUFFER) {
+    hResult = ((IDirect3DVertexBuffer9 *)pBuffer)
+                  ->Lock((UINT)pRange->nOffsetBytes, (UINT)pRange->nBytes,
+                         &pBytes, D3DLOCK_NOSYSLOCK);
+  } else if (pBuffer->GetType() == D3DRTYPE_INDEXBUFFER) {
+    hResult = ((IDirect3DIndexBuffer9 *)pBuffer)
+                  ->Lock((UINT)pRange->nOffsetBytes, (UINT)pRange->nBytes,
+                         &pBytes, D3DLOCK_NOSYSLOCK);
+  } else {
+    return SIR_GRAPHICS_INVALID_HANDLE;
+  }
+  if (FAILED(hResult)) {
+    return hResult == D3DERR_DEVICELOST ? SIR_GRAPHICS_DEVICE_LOST
+                                        : SIR_GRAPHICS_DRIVER_ERROR;
+  }
+  p->aMapped[nSlot] = true;
+  p->aMappedHandles[nSlot] = pRange->hBuffer;
+  p->aMappedOffsets[nSlot] = pRange->nOffsetBytes;
+  p->aMappedSizes[nSlot] = pRange->nBytes;
+  pMapped->pData = pBytes;
+  pMapped->nOffset = pRange->nOffsetBytes;
+  pMapped->nBytes = pRange->nBytes;
+  return SIR_GRAPHICS_SUCCESS;
 }
-static uint32_t sirD3D9ABIUnsupportedRange( void *pState, const sirGraphicsABIBufferRange_t *pRange ) noexcept
-{
-	return pState == nullptr || pRange == nullptr ? SIR_GRAPHICS_INVALID_ARGUMENT : SIR_GRAPHICS_UNSUPPORTED;
+
+static uint32_t
+sirD3D9ABIUnmapBuffer(void *pState,
+                      const sirGraphicsABIBufferRange_t *pRange) noexcept {
+  sirD3D9ABIDeviceState_t *p = sirD3D9ABIState(pState);
+  if (p == nullptr || pRange == nullptr || pRange->nSize < sizeof(*pRange) ||
+      pRange->nReserved != 0) {
+    return SIR_GRAPHICS_INVALID_ARGUMENT;
+  }
+  if (pRange->hBuffer.eType != SIR_GRAPHICS_HANDLE_BUFFER ||
+      pRange->hBuffer.nSlot >= 128) {
+    return SIR_GRAPHICS_INVALID_HANDLE;
+  }
+  const uint32_t nSlot = pRange->hBuffer.nSlot;
+  const sirGraphicsHandle_t hMapped = p->aMappedHandles[nSlot];
+  if (!p->aMapped[nSlot] ||
+      hMapped.nGeneration != pRange->hBuffer.nGeneration ||
+      hMapped.nDeviceGeneration != pRange->hBuffer.nDeviceGeneration ||
+      p->aMappedOffsets[nSlot] != pRange->nOffsetBytes ||
+      p->aMappedSizes[nSlot] != pRange->nBytes) {
+    return SIR_GRAPHICS_INVALID_HANDLE;
+  }
+  void *pResource = nullptr;
+  const uint32_t nLookup =
+      sirD3D9NativeLookupResource(&p->native, pRange->hBuffer, &pResource);
+  if (nLookup != SIR_GRAPHICS_SUCCESS) {
+    return nLookup;
+  }
+  IDirect3DResource9 *pBuffer = (IDirect3DResource9 *)pResource;
+  HRESULT hResult = D3DERR_INVALIDCALL;
+  if (pBuffer->GetType() == D3DRTYPE_VERTEXBUFFER) {
+    hResult = ((IDirect3DVertexBuffer9 *)pBuffer)->Unlock();
+  } else if (pBuffer->GetType() == D3DRTYPE_INDEXBUFFER) {
+    hResult = ((IDirect3DIndexBuffer9 *)pBuffer)->Unlock();
+  }
+  p->aMapped[nSlot] = false;
+  p->aMappedOffsets[nSlot] = 0;
+  p->aMappedSizes[nSlot] = 0;
+  return SUCCEEDED(hResult) ? SIR_GRAPHICS_SUCCESS : SIR_GRAPHICS_DRIVER_ERROR;
+}
+
+static uint32_t
+sirD3D9ABIFlushBuffer(void *pState,
+                      const sirGraphicsABIBufferRange_t *pRange) noexcept {
+  sirD3D9ABIDeviceState_t *p = sirD3D9ABIState(pState);
+  if (p == nullptr || pRange == nullptr || pRange->nSize < sizeof(*pRange) ||
+      pRange->nReserved != 0 || pRange->hBuffer.nSlot >= 128) {
+    return SIR_GRAPHICS_INVALID_ARGUMENT;
+  }
+  const uint32_t nSlot = pRange->hBuffer.nSlot;
+  const uint32_t nValid =
+      sirD3D9ValidateBufferMap(pRange, p->aBufferSizes[nSlot],
+                               p->aBufferMemory[nSlot], p->aMapped[nSlot]);
+  if (nValid != SIR_GRAPHICS_SUCCESS) {
+    return nValid;
+  }
+  void *pNative = nullptr;
+  // D3D9 makes CPU writes visible at Unlock; no separate flush exists.
+  return sirD3D9NativeLookupResource(&p->native, pRange->hBuffer, &pNative);
+}
+
+static uint32_t
+sirD3D9ABIUnsupportedRange(void *pState,
+                           const sirGraphicsABIBufferRange_t *pRange) noexcept {
+  return pState == nullptr || pRange == nullptr ? SIR_GRAPHICS_INVALID_ARGUMENT
+                                                : SIR_GRAPHICS_UNSUPPORTED;
+}
+
+static void
+sirD3D9ABIReleaseMappedBuffers(sirD3D9ABIDeviceState_t *p) noexcept {
+  if (p == nullptr || !p->bSurface) {
+    return;
+  }
+  for (uint32_t i = 0; i < 128; ++i) {
+    if (!p->aMapped[i]) {
+      continue;
+    }
+    void *pResource = nullptr;
+    if (sirD3D9NativeLookupResource(&p->native, p->aMappedHandles[i],
+                                    &pResource) == SIR_GRAPHICS_SUCCESS) {
+      IDirect3DResource9 *pBuffer = (IDirect3DResource9 *)pResource;
+      if (pBuffer->GetType() == D3DRTYPE_VERTEXBUFFER) {
+        (void)((IDirect3DVertexBuffer9 *)pBuffer)->Unlock();
+      } else if (pBuffer->GetType() == D3DRTYPE_INDEXBUFFER) {
+        (void)((IDirect3DIndexBuffer9 *)pBuffer)->Unlock();
+      }
+    }
+    p->aMapped[i] = false;
+    p->aMappedOffsets[i] = 0;
+    p->aMappedSizes[i] = 0;
+  }
 }
 
 static uint32_t sirD3D9ABISurface( void *pState, const sirGraphicsABINativeSurface_t *pSurface, const sirGraphicsABIPresentDesc_t *pPresent,
@@ -545,6 +701,7 @@ static uint32_t sirD3D9ABIResize( void *pState, sirGraphicsHandle_t hSurface, co
 	// A Reset destroys DEFAULT-pool resources and advances the native generation.
 	// The v1 resize callback cannot replace the caller's surface handle; require
 	// an explicit recreation, preserving stale-handle rejection.
+	sirD3D9ABIReleaseMappedBuffers( p );
 	sirD3D9ABIReleaseFixedDeclarations( p );
 	sirD3D9NativeShutdown( &p->native );
 	p->bSurface = false;
@@ -661,6 +818,9 @@ static uint32_t sirD3D9ABIRetire( void *pState, sirGraphicsHandle_t hResource, c
 	}
 	if ( !p->bSurface ) {
 		return SIR_GRAPHICS_INVALID_HANDLE;
+	}
+	if ( hResource.eType == SIR_GRAPHICS_HANDLE_BUFFER && hResource.nSlot < 128 && p->aMapped[hResource.nSlot] ) {
+		return SIR_GRAPHICS_BUSY;
 	}
 	return sirD3D9NativeRetireResource( &p->native, hResource, pCompletion->szQueueValues[SIR_GRAPHICS_QUEUE_DIRECT] );
 }
@@ -1251,6 +1411,7 @@ static uint32_t sirD3D9ABIShutdown( void *pState ) noexcept
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( p->bSurface ) {
+		sirD3D9ABIReleaseMappedBuffers( p );
 		sirD3D9ABIReleaseFixedDeclarations( p );
 		sirD3D9NativeShutdown( &p->native );
 		p->bSurface = false;
@@ -1321,9 +1482,9 @@ uint32_t sirD3D9ABICreateDeviceWindows( const sirGraphicsABIHost_t *pHost, const
 	result.pCreatePipeline = sirD3D9ABIPipeline;
 	result.pCreateBindingSet = sirD3D9ABIBindingSet;
 	result.pUpdateBindings = sirD3D9ABIBindings;
-	result.pMapBuffer = sirD3D9ABIUnsupportedMap;
-	result.pUnmapBuffer = sirD3D9ABIUnsupportedRange;
-	result.pFlushBuffer = sirD3D9ABIUnsupportedRange;
+	result.pMapBuffer = sirD3D9ABIMapBuffer;
+	result.pUnmapBuffer = sirD3D9ABIUnmapBuffer;
+	result.pFlushBuffer = sirD3D9ABIFlushBuffer;
 	result.pInvalidateBuffer = sirD3D9ABIUnsupportedRange;
 	result.pAcquireCommands = sirD3D9ABIAcquireCommands;
 	result.pSubmit = sirD3D9ABISubmit;
