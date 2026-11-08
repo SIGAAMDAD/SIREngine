@@ -96,6 +96,12 @@ static void sirGLTestWindowPresentation( sirGraphicsABIDriver_t *pDriver,
 			                    acquired.hImage.eType == SIR_GRAPHICS_HANDLE_TEXTURE && acquired.nAcquisitionId != 0,
 			                "native GL texture acquired" );
 			if ( acquired.nAcquisitionId != 0 ) {
+				sirGLTestCheck( device.pRetireResource( device.pDevice, acquired.hImage, nullptr ) == SIR_GRAPHICS_BUSY,
+				                "surface retains ownership of acquired GPU image" );
+				const sirGraphicsCompletion_t unsubmitted = { acquired.hImage.nDeviceGeneration,
+				                                               SIR_GRAPHICS_QUEUE_DIRECT, 1 };
+				sirGLTestCheck( device.pPresent( device.pDevice, &acquired, &unsubmitted ) == SIR_GRAPHICS_INVALID_ARGUMENT,
+				                "unsubmitted acquired image cannot present" );
 				sirGraphicsABICommandList_t commands = {};
 				commands.nSize = sizeof( commands );
 				sirGLTestCheck( device.pAcquireCommands( device.pDevice, SIR_GRAPHICS_QUEUE_DIRECT, &commands ) ==
