@@ -14,6 +14,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 #include <Renderer/Drivers/D3D9/SIRD3D9FixedPipelines.h>
 #include <Renderer/Drivers/D3D9/SIRD3D9Mapping.h>
+#include <Renderer/Drivers/D3D9/SIRD3D9Barriers.h>
 #ifdef _WIN32
 #include <Renderer/Drivers/D3D9/SIRD3D9Native.h>
 #include <Renderer/Drivers/D3D9/SIRD3D9Formats.h>
@@ -31,6 +32,8 @@ typedef struct sirD3D9ABIRecord_s
 	bool bClear;
 	sirGraphicsViewport_t viewport;
 	sirGraphicsRect_t scissor;
+	sirGraphicsBarrier_t barrier;
+	bool bUnbindBarrier;
 	bool bHasScissor;
 } sirD3D9ABIRecord_t;
 
@@ -89,7 +92,8 @@ enum : uint32_t
 	SIR_D3D9_ABI_DRAW = 6,
 	SIR_D3D9_ABI_DRAW_INDEXED = 7,
 	SIR_D3D9_ABI_BINDING_SET = 8,
-	SIR_D3D9_ABI_VIEWPORT = 9
+	SIR_D3D9_ABI_VIEWPORT = 9,
+	SIR_D3D9_ABI_BARRIER = 10
 };
 
 static void sirD3D9ABIReleaseFixedDeclarations( sirD3D9ABIDeviceState_t *p ) noexcept
@@ -846,20 +850,95 @@ static uint32_t sirD3D9ABICommandReset( void *pCommands ) noexcept
 	if ( p == nullptr || !p->bSurface || p->bSubmitted ) {
 		return SIR_GRAPHICS_BUSY;
 	}
+	for ( uint32_t i = 0; i < 128; ++i ) {
+		if ( p->aMapped[i] ) {
+			return SIR_GRAPHICS_BUSY;
+		}
+	}
 	p->nRecordCount = 0;
 	p->bRecording = true;
 	p->bClosed = false;
 	return SIR_GRAPHICS_SUCCESS;
 }
 
-static uint32_t sirD3D9ABICommandBarrier( void *pCommands, const sirGraphicsBarrier_t *pBarriers, uint32_t nCount ) noexcept
-{
-	if ( pCommands == nullptr || ( nCount != 0 && pBarriers == nullptr ) ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
-	}
-	// D3D9 is serial, but an explicit transition may still express a hazard
-	// requiring a resource unbind or CPU-visible completion. Do not elide it.
-	return nCount == 0 ? SIR_GRAPHICS_SUCCESS : SIR_GRAPHICS_UNSUPPORTED;
+static uint32_t sirD3D9ABICommandBarrier(void *pCommands,
+                                         const sirGraphicsBarrier_t *pBarriers,
+                                         uint32_t nCount) noexcept {
+  sirD3D9ABIDeviceState_t *p = sirD3D9ABIState(pCommands);
+  if (p == nullptr || (nCount != 0 && pBarriers == nullptr) || !p->bRecording ||
+      p->bClosed) {
+    return SIR_GRAPHICS_INVALID_ARGUMENT;
+  }
+  if (nCount > 256 - p->nRecordCount) {
+    return SIR_GRAPHICS_CAPACITY_EXCEEDED;
+  }
+  // Validate the entire batch before appending a single command. A failed
+  // transition must never leave a partially recorded FrameGraph barrier.
+  for (uint32_t i = 0; i < nCount; ++i) {
+    const sirGraphicsBarrier_t *pBarrier = &pBarriers[i];
+    uint32_t nMips = 0;
+    uint32_t nLayers = 0;
+    const sirGraphicsHandle_t h = pBarrier->hResource;
+    if (h.eType == SIR_GRAPHICS_HANDLE_TEXTURE && h.nSlot != UINT32_MAX &&
+        (pBarrier->eAfter == SIR_GRAPHICS_STATE_PRESENT ||
+         pBarrier->eBefore == SIR_GRAPHICS_STATE_PRESENT)) {
+      return SIR_GRAPHICS_UNSUPPORTED;
+    }
+    if (h.eType == SIR_GRAPHICS_HANDLE_TEXTURE && h.nSlot == UINT32_MAX &&
+        pBarrier->eBefore != SIR_GRAPHICS_STATE_PRESENT &&
+        pBarrier->eBefore != SIR_GRAPHICS_STATE_COLOR_ATTACHMENT &&
+        pBarrier->eBefore != SIR_GRAPHICS_STATE_UNDEFINED &&
+        pBarrier->eBefore != SIR_GRAPHICS_STATE_COMMON) {
+      return SIR_GRAPHICS_UNSUPPORTED;
+    }
+    if (h.eType == SIR_GRAPHICS_HANDLE_TEXTURE && h.nSlot == UINT32_MAX) {
+      if (!p->bSurface || h.nDeviceGeneration != p->nGeneration ||
+          h.nGeneration != p->nSurfaceGeneration) {
+        return SIR_GRAPHICS_INVALID_HANDLE;
+      }
+      nMips = 1;
+      nLayers = 1;
+    } else {
+      void *pResource = nullptr;
+      const uint32_t nLookup =
+          sirD3D9NativeLookupResource(&p->native, h, &pResource);
+      if (nLookup != SIR_GRAPHICS_SUCCESS) {
+        return nLookup;
+      }
+      if (h.eType == SIR_GRAPHICS_HANDLE_TEXTURE && h.nSlot < 128) {
+        nMips = p->aTextureDescs[h.nSlot].nMipLevels;
+        nLayers = p->aTextureDescs[h.nSlot].nArrayLayers;
+      }
+    }
+    bool bUnbind = false;
+    const uint32_t nValid =
+        sirD3D9ValidateSerialBarrier(pBarrier, nMips, nLayers, &bUnbind);
+    if (nValid != SIR_GRAPHICS_SUCCESS) {
+      return nValid;
+    }
+  }
+  for (uint32_t i = 0; i < nCount; ++i) {
+    sirD3D9ABIRecord_t *pRecord = nullptr;
+    const uint32_t nPush = sirD3D9ABIPush(p, SIR_D3D9_ABI_BARRIER, &pRecord);
+    if (nPush != SIR_GRAPHICS_SUCCESS) {
+      return nPush;
+    }
+    pRecord->barrier = pBarriers[i];
+    bool bUnbind = false;
+    const sirGraphicsHandle_t h = pBarriers[i].hResource;
+    const uint32_t nMips =
+        h.eType == SIR_GRAPHICS_HANDLE_TEXTURE && h.nSlot != UINT32_MAX
+            ? p->aTextureDescs[h.nSlot].nMipLevels
+            : 1;
+    const uint32_t nLayers =
+        h.eType == SIR_GRAPHICS_HANDLE_TEXTURE && h.nSlot != UINT32_MAX
+            ? p->aTextureDescs[h.nSlot].nArrayLayers
+            : 1;
+    (void)sirD3D9ValidateSerialBarrier(&pRecord->barrier, nMips, nLayers,
+                                       &bUnbind);
+    pRecord->bUnbindBarrier = bUnbind;
+  }
+  return SIR_GRAPHICS_SUCCESS;
 }
 
 static uint32_t sirD3D9ABICommandCopyBuffer( void *pCommands, const sirGraphicsABICopyBuffer_t *pCopy ) noexcept
@@ -1205,6 +1284,23 @@ static uint32_t sirD3D9ABIReplay( sirD3D9ABIDeviceState_t *p ) noexcept
 				return nResult;
 			}
 			bInPass = false;
+		} else if ( pRecord->nKind == SIR_D3D9_ABI_BARRIER ) {
+			if ( bInPass && pRecord->bUnbindBarrier ) {
+				return SIR_GRAPHICS_INVALID_ARGUMENT;
+			}
+			if ( pRecord->bUnbindBarrier ) {
+				// D3D9 orders direct commands implicitly, but a resource changing
+				// to a writable use must not remain bound as a shader input.
+				for ( uint32_t slot = 0; slot < 8; ++slot ) {
+					if ( FAILED( p->native.pDevice->SetTexture( slot, nullptr ) ) ) {
+						return SIR_GRAPHICS_DRIVER_ERROR;
+					}
+				}
+				if ( FAILED( p->native.pDevice->SetStreamSource( 0, nullptr, 0, 0 ) ) ||
+				     FAILED( p->native.pDevice->SetIndices( nullptr ) ) ) {
+					return SIR_GRAPHICS_DRIVER_ERROR;
+				}
+			}
 		} else if ( pRecord->nKind == SIR_D3D9_ABI_VIEWPORT ) {
 			D3DVIEWPORT9 viewport = {};
 			viewport.X = ( DWORD )pRecord->viewport.fX;
