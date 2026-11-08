@@ -11,11 +11,15 @@ int main( void )
 	int nResourceA = 3;
 	int nResourceB = 4;
 	assert( sirD3D9ResourcesInitialize( &table, slots, 2, 128 ) == SIR_GRAPHICS_SUCCESS );
+	assert( sirD3D9ResourcesCanAllocate( &table, 0 ) == SIR_GRAPHICS_INVALID_ARGUMENT );
+	assert( sirD3D9ResourcesCanAllocate( &table, 129 ) == SIR_GRAPHICS_CAPACITY_EXCEEDED );
+	assert( sirD3D9ResourcesCanAllocate( &table, 128 ) == SIR_GRAPHICS_SUCCESS );
 	assert( sirD3D9ResourcesInsert( &table, SIR_GRAPHICS_HANDLE_BUFFER, 64, &nResourceA, &a ) == SIR_GRAPHICS_SUCCESS );
 	assert( sirD3D9ResourcesLookup( &table, a, &pNative ) == SIR_GRAPHICS_SUCCESS && pNative == &nResourceA );
 	assert( sirD3D9ResourcesInsert( &table, SIR_GRAPHICS_HANDLE_TEXTURE, 80, &nResourceB, &b ) == SIR_GRAPHICS_CAPACITY_EXCEEDED );
 	assert( sirD3D9ResourcesInsert( &table, SIR_GRAPHICS_HANDLE_TEXTURE, 64, &nResourceB, &b ) == SIR_GRAPHICS_SUCCESS );
 	assert( sirD3D9ResourcesInsert( &table, SIR_GRAPHICS_HANDLE_TEXTURE, 1, &nResourceB, &b ) == SIR_GRAPHICS_CAPACITY_EXCEEDED );
+	assert( sirD3D9ResourcesCanAllocate( &table, 1 ) == SIR_GRAPHICS_CAPACITY_EXCEEDED );
 	assert( sirD3D9ResourcesRetire( &table, a, 4 ) == SIR_GRAPHICS_SUCCESS );
 	assert( sirD3D9ResourcesLookup( &table, a, &pNative ) == SIR_GRAPHICS_INVALID_HANDLE );
 	assert( sirD3D9ResourcesCollect( &table, 3 ) == nullptr );
@@ -25,6 +29,7 @@ int main( void )
 	assert( sirD3D9ResourcesInsert( &table, SIR_GRAPHICS_HANDLE_BUFFER, 32, &nResourceA, &c ) == SIR_GRAPHICS_SUCCESS );
 	assert( c.nSlot == a.nSlot && c.nGeneration != a.nGeneration );
 	assert( sirD3D9ResourcesLookup( &table, c, &pNative ) == SIR_GRAPHICS_SUCCESS );
+	assert( sirD3D9ResourcesCanAllocate( &table, 1 ) == SIR_GRAPHICS_CAPACITY_EXCEEDED );
 	sirD3D9ResourcesInvalidate( &table );
 	assert( table.nUsedBytes == 0 && table.nDeviceGeneration == 2 );
 	assert( sirD3D9ResourcesLookup( &table, c, &pNative ) == SIR_GRAPHICS_INVALID_HANDLE );

@@ -33,6 +33,23 @@ sirGraphicsResult_t sirD3D9ResourcesInitialize( sirD3D9ResourceTable_t *pTable, 
 	return SIR_GRAPHICS_SUCCESS;
 }
 
+sirGraphicsResult_t sirD3D9ResourcesCanAllocate( const sirD3D9ResourceTable_t *pTable, uint64_t nBytes ) noexcept
+{
+	if ( pTable == nullptr || pTable->pSlots == nullptr || pTable->nCapacity == 0 || pTable->nDeviceGeneration == 0 || nBytes == 0 ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	if ( pTable->nUsedBytes > pTable->nBudgetBytes || nBytes > pTable->nBudgetBytes - pTable->nUsedBytes ) {
+		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
+	}
+	for ( uint32_t i = 0; i < pTable->nCapacity; ++i ) {
+		const sirD3D9ResourceSlot_t *pSlot = &pTable->pSlots[i];
+		if ( !pSlot->bLive && !pSlot->bRetiring && pSlot->nGeneration != UINT32_MAX ) {
+			return SIR_GRAPHICS_SUCCESS;
+		}
+	}
+	return SIR_GRAPHICS_CAPACITY_EXCEEDED;
+}
+
 sirGraphicsResult_t sirD3D9ResourcesInsert( sirD3D9ResourceTable_t *pTable, sirGraphicsHandleType_t eType, uint64_t nBytes, void *pNative,
                                             sirGraphicsHandle_t *pHandle ) noexcept
 {
@@ -40,8 +57,9 @@ sirGraphicsResult_t sirD3D9ResourcesInsert( sirD3D9ResourceTable_t *pTable, sirG
 	     eType == SIR_GRAPHICS_HANDLE_NONE ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	if ( nBytes > pTable->nBudgetBytes - pTable->nUsedBytes ) {
-		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
+	const sirGraphicsResult_t eBudget = sirD3D9ResourcesCanAllocate( pTable, nBytes );
+	if ( eBudget != SIR_GRAPHICS_SUCCESS ) {
+		return eBudget;
 	}
 	for ( uint32_t i = 0; i < pTable->nCapacity; ++i ) {
 		sirD3D9ResourceSlot_t *pSlot = &pTable->pSlots[i];

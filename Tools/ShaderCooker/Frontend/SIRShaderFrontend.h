@@ -54,6 +54,7 @@ typedef struct sirShaderCookRequest_s
 	std::string sEntryPoint;
 	sirGraphicsBackend_t eBackend = SIR_GRAPHICS_BACKEND_AUTO;
 	uint32_t nStage = 0;
+	uint32_t nShaderMajor = 0; // D3D9 SM2/SM3 selection; 0 uses the backend default.
 	std::vector<sirShaderCookDefine_t> szDefines;
 } sirShaderCookRequest_t;
 

@@ -22,6 +22,16 @@ sirShaderCookResult_t sirShaderCookResolveTarget( sirGraphicsBackend_t eBackend,
 	}
 	pProfile->clear();
 	*pSpirv = false;
+	if ( eBackend == SIR_GRAPHICS_BACKEND_D3D9 ) {
+		if ( nStage == SIR_GRAPHICS_STAGE_VERTEX ) {
+			*pProfile = "vs_3_0";
+		} else if ( nStage == SIR_GRAPHICS_STAGE_FRAGMENT ) {
+			*pProfile = "ps_3_0";
+		} else {
+			return SIR_SHADER_COOK_UNSUPPORTED;
+		}
+		return SIR_SHADER_COOK_OK;
+	}
 	if ( eBackend != SIR_GRAPHICS_BACKEND_VULKAN && eBackend != SIR_GRAPHICS_BACKEND_D3D12 ) {
 		return SIR_SHADER_COOK_UNSUPPORTED;
 	}

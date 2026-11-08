@@ -28,6 +28,18 @@ if(SIR_WITH_D3D9)
         sir_configure_owned_target(SIRD3D9NativeSmoke)
         add_test(NAME renderer.d3d9.native-smoke COMMAND SIRD3D9NativeSmoke)
         add_test(NAME renderer.d3d9ex.native-smoke COMMAND SIRD3D9NativeSmoke --ex)
+        if(SIR_SHADER_FXC_EXECUTABLE AND EXISTS "${SIR_SHADER_FXC_EXECUTABLE}")
+            set(SIR_D3D9_SHADER_FIXTURE "${PROJECT_SOURCE_DIR}/Tools/ShaderCooker/Tests/Fixtures/d3d9.hlsl")
+            set(SIR_D3D9_TEST_VS "${CMAKE_CURRENT_BINARY_DIR}/D3D9NativeSmoke.vso")
+            set(SIR_D3D9_TEST_PS "${CMAKE_CURRENT_BINARY_DIR}/D3D9NativeSmoke.pso")
+            add_custom_command(OUTPUT "${SIR_D3D9_TEST_VS}" "${SIR_D3D9_TEST_PS}"
+                COMMAND "${SIR_SHADER_FXC_EXECUTABLE}" /nologo /T vs_2_0 /E VSMain /Fo "${SIR_D3D9_TEST_VS}" "${SIR_D3D9_SHADER_FIXTURE}"
+                COMMAND "${SIR_SHADER_FXC_EXECUTABLE}" /nologo /T ps_2_0 /E PSMain /Fo "${SIR_D3D9_TEST_PS}" "${SIR_D3D9_SHADER_FIXTURE}"
+                DEPENDS "${SIR_D3D9_SHADER_FIXTURE}" VERBATIM)
+            add_custom_target(SIRD3D9NativeShaderFixtures DEPENDS "${SIR_D3D9_TEST_VS}" "${SIR_D3D9_TEST_PS}")
+            add_dependencies(SIRD3D9NativeSmoke SIRD3D9NativeShaderFixtures)
+            add_test(NAME renderer.d3d9.native-shaders COMMAND SIRD3D9NativeSmoke --shaders "${SIR_D3D9_TEST_VS}" "${SIR_D3D9_TEST_PS}")
+        endif()
     endif()
 endif()
 if(SIR_BUILD_TESTS)

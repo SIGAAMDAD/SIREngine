@@ -43,6 +43,7 @@ typedef struct sirD3D9ResourceTable_s
 
 sirGraphicsResult_t sirD3D9ResourcesInitialize( sirD3D9ResourceTable_t *pTable, sirD3D9ResourceSlot_t *pSlots, uint32_t nCapacity,
                                                 uint64_t nBudgetBytes ) noexcept;
+sirGraphicsResult_t sirD3D9ResourcesCanAllocate( const sirD3D9ResourceTable_t *pTable, uint64_t nBytes ) noexcept;
 sirGraphicsResult_t sirD3D9ResourcesInsert( sirD3D9ResourceTable_t *pTable, sirGraphicsHandleType_t eType, uint64_t nBytes, void *pNative,
                                             sirGraphicsHandle_t *pHandle ) noexcept;
 sirGraphicsResult_t sirD3D9ResourcesLookup( const sirD3D9ResourceTable_t *pTable, sirGraphicsHandle_t hHandle, void **ppNative ) noexcept;

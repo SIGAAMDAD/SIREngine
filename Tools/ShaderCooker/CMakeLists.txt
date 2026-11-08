@@ -61,6 +61,18 @@ if(COMMAND sir_configure_owned_target)
 endif()
 
 if(SIR_BUILD_TESTS)
+    add_executable(SIRMockFxc Tests/SIRMockFxc.cpp)
+    sir_configure_owned_target(SIRMockFxc)
+    add_test(NAME shader.cooker.d3d9
+        COMMAND "${CMAKE_COMMAND}"
+            "-DSIR_COOKER=$<TARGET_FILE:SIRShaderCooker>"
+            "-DSIR_MOCK_COMPILER=$<TARGET_FILE:SIRMockFxc>"
+            "-DSIR_FIXTURES=${CMAKE_CURRENT_SOURCE_DIR}/Tests/Fixtures"
+            "-DSIR_OUTPUT_DIR=${CMAKE_CURRENT_BINARY_DIR}/D3D9CLITest"
+            -P "${CMAKE_CURRENT_SOURCE_DIR}/Tests/SIRShaderCookerD3D9Tests.cmake")
+endif()
+
+if(SIR_BUILD_TESTS)
     add_executable(SIRMockDxc Tests/SIRMockDxc.cpp)
     add_test(NAME shader.cooker.cli
         COMMAND "${CMAKE_COMMAND}"
@@ -103,4 +115,20 @@ if(SIR_BUILD_TESTS AND NOT SIR_SHADER_DXC_EXECUTABLE STREQUAL "")
             "-DSIR_OUTPUT_DIR=${CMAKE_CURRENT_BINARY_DIR}/MaterialIRNativeDXCTest"
             -P "${CMAKE_CURRENT_SOURCE_DIR}/Tests/SIRMaterialIREmitterNativeDXCTests.cmake")
 
+endif()
+
+# Native FXC verification runs only when a separately provisioned, legally usable
+# Windows compiler is explicitly configured. It never masquerades as mock QA.
+set(SIR_SHADER_FXC_EXECUTABLE "" CACHE FILEPATH "Pinned offline FXC executable for D3D9 shader acceptance")
+if(WIN32 AND SIR_BUILD_TESTS AND NOT SIR_SHADER_FXC_EXECUTABLE STREQUAL "")
+    if(NOT EXISTS "${SIR_SHADER_FXC_EXECUTABLE}")
+        message(FATAL_ERROR "SIR_SHADER_FXC_EXECUTABLE does not exist")
+    endif()
+    add_test(NAME shader.cooker.native-fxc-d3d9
+        COMMAND "${CMAKE_COMMAND}"
+            "-DSIR_COOKER=$<TARGET_FILE:SIRShaderCooker>"
+            "-DSIR_FXC=${SIR_SHADER_FXC_EXECUTABLE}"
+            "-DSIR_FIXTURES=${CMAKE_CURRENT_SOURCE_DIR}/Tests/Fixtures"
+            "-DSIR_OUTPUT_DIR=${CMAKE_CURRENT_BINARY_DIR}/NativeFXCD3D9Test"
+            -P "${CMAKE_CURRENT_SOURCE_DIR}/Tests/SIRShaderCookerNativeFXCTests.cmake")
 endif()

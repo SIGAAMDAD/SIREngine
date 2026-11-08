@@ -14,7 +14,9 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 #include <Renderer/Drivers/D3D9/SIRD3D9Native.h>
 #include <Renderer/Drivers/D3D9/SIRD3D9Validation.h>
+#include <Renderer/Drivers/D3D9/SIRD3D9Formats.h>
 #ifdef _WIN32
+#include <stdlib.h>
 #include <string.h>
 
 static sirGraphicsResult_t sirD3D9Error( HRESULT hResult ) noexcept
@@ -32,6 +34,32 @@ static sirGraphicsResult_t sirD3D9Error( HRESULT hResult ) noexcept
 		return SIR_GRAPHICS_OUT_OF_MEMORY;
 	}
 	return SIR_GRAPHICS_DRIVER_ERROR;
+}
+
+static void sirD3D9NativeUnbindForReset( sirD3D9Native_t *pNative ) noexcept
+{
+	if ( pNative == nullptr || pNative->pDevice == nullptr ) {
+		return;
+	}
+	// The D3D9 state machine retains references to bound DEFAULT-pool objects.
+	// Detach them before releasing the owner's references and calling Reset/ResetEx.
+	for ( uint32_t i = 0; i < pNative->caps.MaxSimultaneousTextures && i < 16; ++i ) {
+		( void )pNative->pDevice->SetTexture( i, nullptr );
+	}
+	( void )pNative->pDevice->SetStreamSource( 0, nullptr, 0, 0 );
+	( void )pNative->pDevice->SetIndices( nullptr );
+	( void )pNative->pDevice->SetVertexShader( nullptr );
+	( void )pNative->pDevice->SetPixelShader( nullptr );
+	( void )pNative->pDevice->SetVertexDeclaration( nullptr );
+	for ( uint32_t i = 1; i < pNative->caps.NumSimultaneousRTs && i < 4; ++i ) {
+		( void )pNative->pDevice->SetRenderTarget( i, nullptr );
+	}
+	IDirect3DSurface9 *pBackBuffer = nullptr;
+	if ( SUCCEEDED( pNative->pDevice->GetBackBuffer( 0, 0, D3DBACKBUFFER_TYPE_MONO, &pBackBuffer ) ) ) {
+		( void )pNative->pDevice->SetRenderTarget( 0, pBackBuffer );
+		pBackBuffer->Release();
+	}
+	( void )pNative->pDevice->SetDepthStencilSurface( nullptr );
 }
 
 static void sirD3D9NativeReleaseTrackedResources( sirD3D9Native_t *pNative ) noexcept
@@ -131,7 +159,7 @@ sirGraphicsResult_t sirD3D9NativeInitialize( sirD3D9Native_t *pNative, HWND hFoc
 		return eError;
 	}
 	pNative->nDeviceGeneration = 1;
-	if ( sirD3D9ResourcesInitialize( &pNative->resources, pNative->szResourceSlots, 128, 256ULL * 1024 * 1024 ) != SIR_GRAPHICS_SUCCESS ) {
+	if ( sirD3D9ResourcesInitialize( &pNative->resources, pNative->aResourceSlots, 128, 256ULL * 1024 * 1024 ) != SIR_GRAPHICS_SUCCESS ) {
 		sirD3D9NativeShutdown( pNative );
 		return SIR_GRAPHICS_DRIVER_ERROR;
 	}
@@ -148,9 +176,32 @@ sirGraphicsResult_t sirD3D9NativeClear( sirD3D9Native_t *pNative, uint32_t nColo
 	return sirD3D9Error( pNative->pDevice->Clear( 0, nullptr, D3DCLEAR_TARGET, nColor, 1.0f, 0 ) );
 }
 
+sirGraphicsResult_t sirD3D9NativeBeginPass( sirD3D9Native_t *pNative ) noexcept
+{
+	if ( pNative == nullptr || pNative->pDevice == nullptr || pNative->bSceneActive ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	const HRESULT hResult = pNative->pDevice->BeginScene();
+	if ( FAILED( hResult ) ) {
+		return sirD3D9Error( hResult );
+	}
+	pNative->bSceneActive = true;
+	return SIR_GRAPHICS_SUCCESS;
+}
+
+sirGraphicsResult_t sirD3D9NativeEndPass( sirD3D9Native_t *pNative ) noexcept
+{
+	if ( pNative == nullptr || pNative->pDevice == nullptr || !pNative->bSceneActive ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	const HRESULT hResult = pNative->pDevice->EndScene();
+	pNative->bSceneActive = false;
+	return sirD3D9Error( hResult );
+}
+
 sirGraphicsResult_t sirD3D9NativeDrawTriangle( sirD3D9Native_t *pNative ) noexcept
 {
-	if ( pNative == nullptr || pNative->pDevice == nullptr ) {
+	if ( pNative == nullptr || pNative->pDevice == nullptr || pNative->bSceneActive ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	struct sirD3D9TestVertex_s
@@ -179,24 +230,37 @@ sirGraphicsResult_t sirD3D9NativePresent( sirD3D9Native_t *pNative ) noexcept
 	if ( pNative == nullptr || pNative->pDevice == nullptr || pNative->bSceneActive ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	if ( pNative->vertexRing.nPendingWrites != 0 || pNative->indexRing.nPendingWrites != 0 ) {
-		if ( pNative->pCompletionQuery == nullptr || pNative->nLastSubmittedSerial == UINT64_MAX ) {
-			return SIR_GRAPHICS_UNSUPPORTED;
+	// One event query cannot independently track more than one outstanding serial.
+	// Do not overwrite its fence until the previous issue has completed.
+	if ( pNative->bCompletionPending ) {
+		bool bComplete = false;
+		const sirGraphicsResult_t ePoll = sirD3D9NativePoll( pNative, &bComplete );
+		if ( ePoll != SIR_GRAPHICS_SUCCESS ) {
+			return ePoll;
 		}
-		const uint64_t nSerial = pNative->nLastSubmittedSerial + 1;
-		if ( pNative->vertexRing.nPendingWrites != 0 ) {
-			sirD3D9RingSubmit( &pNative->vertexRing, nSerial );
+		if ( !bComplete ) {
+			return SIR_GRAPHICS_BUSY;
 		}
-		if ( pNative->indexRing.nPendingWrites != 0 ) {
-			sirD3D9RingSubmit( &pNative->indexRing, nSerial );
-		}
-		pNative->nLastSubmittedSerial = nSerial;
+	}
+	const bool bVertexPending = pNative->vertexRing.nPendingWrites != 0;
+	const bool bIndexPending = pNative->indexRing.nPendingWrites != 0;
+	if ( pNative->nLastSubmittedSerial == UINT64_MAX || ( ( bVertexPending || bIndexPending ) && pNative->pCompletionQuery == nullptr ) ) {
+		return SIR_GRAPHICS_UNSUPPORTED;
 	}
 	if ( pNative->pCompletionQuery != nullptr ) {
 		const HRESULT hIssued = pNative->pCompletionQuery->Issue( D3DISSUE_END );
 		if ( FAILED( hIssued ) ) {
 			return sirD3D9Error( hIssued );
 		}
+		pNative->bCompletionPending = true;
+		const uint64_t nSerial = pNative->nLastSubmittedSerial + 1;
+		if ( bVertexPending ) {
+			sirD3D9RingSubmit( &pNative->vertexRing, nSerial );
+		}
+		if ( bIndexPending ) {
+			sirD3D9RingSubmit( &pNative->indexRing, nSerial );
+		}
+		pNative->nLastSubmittedSerial = nSerial;
 	}
 	return sirD3D9Error( pNative->pDevice->Present( nullptr, nullptr, nullptr, nullptr ) );
 }
@@ -210,21 +274,28 @@ sirGraphicsResult_t sirD3D9NativePoll( sirD3D9Native_t *pNative, bool *pComplete
 	if ( pNative->pCompletionQuery == nullptr ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
+	if ( !pNative->bCompletionPending ) {
+		*pComplete = true;
+		return SIR_GRAPHICS_SUCCESS;
+	}
 	const HRESULT hResult = pNative->pCompletionQuery->GetData( nullptr, 0, D3DGETDATA_FLUSH );
 	if ( hResult == S_FALSE ) {
 		return SIR_GRAPHICS_SUCCESS;
 	}
-	*pComplete = hResult == S_OK;
-	if ( *pComplete ) {
-		pNative->nLastCompletedSerial = pNative->nLastSubmittedSerial;
-		if ( pNative->vertexRing.nCapacity != 0 ) {
-			sirD3D9RingComplete( &pNative->vertexRing, pNative->vertexRing.nLatestSubmission );
-		}
-		if ( pNative->indexRing.nCapacity != 0 ) {
-			sirD3D9RingComplete( &pNative->indexRing, pNative->indexRing.nLatestSubmission );
-		}
+	if ( FAILED( hResult ) ) {
+		return sirD3D9Error( hResult );
 	}
-	return sirD3D9Error( hResult );
+	pNative->bCompletionPending = false;
+	*pComplete = true;
+	pNative->nLastCompletedSerial = pNative->nLastSubmittedSerial;
+	if ( pNative->vertexRing.nCapacity != 0 ) {
+		sirD3D9RingComplete( &pNative->vertexRing, pNative->vertexRing.nLatestSubmission );
+	}
+	if ( pNative->indexRing.nCapacity != 0 ) {
+		sirD3D9RingComplete( &pNative->indexRing, pNative->indexRing.nLatestSubmission );
+	}
+	sirD3D9NativeCollectResources( pNative, pNative->nLastCompletedSerial );
+	return SIR_GRAPHICS_SUCCESS;
 }
 
 sirGraphicsResult_t sirD3D9NativeResize( sirD3D9Native_t *pNative, uint32_t nWidth, uint32_t nHeight ) noexcept
@@ -233,11 +304,27 @@ sirGraphicsResult_t sirD3D9NativeResize( sirD3D9Native_t *pNative, uint32_t nWid
 	     pNative->nDeviceGeneration == UINT32_MAX ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
+	if ( pNative->bCompletionPending ) {
+		const sirGraphicsResult_t eStatus = sirD3D9NativeDeviceStatus( pNative );
+		if ( eStatus == SIR_GRAPHICS_SUCCESS ) {
+			bool bComplete = false;
+			const sirGraphicsResult_t ePoll = sirD3D9NativePoll( pNative, &bComplete );
+			if ( ePoll != SIR_GRAPHICS_SUCCESS ) {
+				return ePoll;
+			}
+			if ( !bComplete ) {
+				return SIR_GRAPHICS_BUSY;
+			}
+		} else if ( eStatus != SIR_GRAPHICS_DEVICE_LOST && eStatus != SIR_GRAPHICS_SURFACE_CHANGED ) {
+			return eStatus;
+		}
+	}
 	if ( pNative->pCompletionQuery != nullptr ) {
 		pNative->pCompletionQuery->Release();
 		pNative->pCompletionQuery = nullptr;
 	}
 	// All DEFAULT-pool resources must be retired before standard D3D9 Reset.
+	sirD3D9NativeUnbindForReset( pNative );
 	sirD3D9NativeReleaseTrackedResources( pNative );
 	pNative->hUploadVertex = {};
 	pNative->hUploadIndex = {};
@@ -245,6 +332,10 @@ sirGraphicsResult_t sirD3D9NativeResize( sirD3D9Native_t *pNative, uint32_t nWid
 	sirD3D9RingReset( &pNative->indexRing );
 	pNative->nLastSubmittedSerial = 0;
 	pNative->nLastCompletedSerial = 0;
+	pNative->bCompletionPending = false;
+	pNative->nActiveFixedLights = 0;
+	pNative->nActiveFixedStages = 0;
+	pNative->nActiveTextureBindings = 0;
 	pNative->present.BackBufferWidth = nWidth;
 	pNative->present.BackBufferHeight = nHeight;
 	const HRESULT hResult =
@@ -257,38 +348,239 @@ sirGraphicsResult_t sirD3D9NativeResize( sirD3D9Native_t *pNative, uint32_t nWid
 	return SIR_GRAPHICS_SUCCESS;
 }
 
-sirGraphicsResult_t sirD3D9NativeCreateBuffer( sirD3D9Native_t *pNative, uint32_t nBytes, bool bIndex,
-                                               IDirect3DResource9 **ppResource ) noexcept
+sirGraphicsResult_t sirD3D9NativeCreateBufferDesc( sirD3D9Native_t *pNative, const sirGraphicsBufferDesc_t *pDesc, bool bIndex32,
+                                                   IDirect3DResource9 **ppResource ) noexcept
 {
-	if ( pNative == nullptr || pNative->pDevice == nullptr || ppResource == nullptr || nBytes == 0 ) {
+	if ( pNative == nullptr || pNative->pDevice == nullptr || ppResource == nullptr ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	*ppResource = nullptr;
+	const sirGraphicsResult_t eValidation = sirD3D9ValidateBuffer( pDesc );
+	if ( eValidation != SIR_GRAPHICS_SUCCESS ) {
+		return eValidation;
+	}
+	const bool bIndex = pDesc->nUsage == SIR_GRAPHICS_USAGE_INDEX;
+	if ( bIndex32 && !bIndex ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	if ( bIndex32 && pNative->caps.MaxVertexIndex <= UINT16_MAX ) {
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
+	const DWORD nUsage = pDesc->eMemory == SIR_GRAPHICS_MEMORY_CPU_UPLOAD ? D3DUSAGE_DYNAMIC | D3DUSAGE_WRITEONLY : D3DUSAGE_WRITEONLY;
 	HRESULT hResult = E_FAIL;
 	if ( bIndex ) {
 		IDirect3DIndexBuffer9 *pBuffer = nullptr;
-		hResult = pNative->pDevice->CreateIndexBuffer( nBytes, D3DUSAGE_DYNAMIC | D3DUSAGE_WRITEONLY, D3DFMT_INDEX16, D3DPOOL_DEFAULT,
-		                                               &pBuffer, nullptr );
+		hResult = pNative->pDevice->CreateIndexBuffer( ( UINT )pDesc->nSizeBytes, nUsage, bIndex32 ? D3DFMT_INDEX32 : D3DFMT_INDEX16,
+		                                               D3DPOOL_DEFAULT, &pBuffer, nullptr );
 		*ppResource = pBuffer;
 	} else {
 		IDirect3DVertexBuffer9 *pBuffer = nullptr;
-		hResult =
-		    pNative->pDevice->CreateVertexBuffer( nBytes, D3DUSAGE_DYNAMIC | D3DUSAGE_WRITEONLY, 0, D3DPOOL_DEFAULT, &pBuffer, nullptr );
+		hResult = pNative->pDevice->CreateVertexBuffer( ( UINT )pDesc->nSizeBytes, nUsage, 0, D3DPOOL_DEFAULT, &pBuffer, nullptr );
 		*ppResource = pBuffer;
 	}
+	return sirD3D9Error( hResult );
+}
+
+sirGraphicsResult_t sirD3D9NativeCreateBuffer( sirD3D9Native_t *pNative, uint32_t nBytes, bool bIndex,
+                                               IDirect3DResource9 **ppResource ) noexcept
+{
+	sirGraphicsBufferDesc_t desc = {};
+	desc.nSizeBytes = nBytes;
+	desc.nAlignmentBytes = bIndex ? 2 : 4;
+	desc.nUsage = bIndex ? SIR_GRAPHICS_USAGE_INDEX : SIR_GRAPHICS_USAGE_VERTEX;
+	desc.eMemory = SIR_GRAPHICS_MEMORY_CPU_UPLOAD;
+	return sirD3D9NativeCreateBufferDesc( pNative, &desc, false, ppResource );
+}
+
+sirGraphicsResult_t sirD3D9NativeCreateTextureResourceDesc( sirD3D9Native_t *pNative, const sirGraphicsTextureDesc_t *pDesc,
+                                                            IDirect3DBaseTexture9 **ppTexture ) noexcept
+{
+	if ( pNative == nullptr || pNative->pDevice == nullptr || pNative->pRuntime == nullptr || ppTexture == nullptr ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	*ppTexture = nullptr;
+	const sirGraphicsResult_t eValidation = sirD3D9ValidateTexture(
+	    pDesc,
+	    pNative->caps.MaxTextureWidth > pNative->caps.MaxTextureHeight ? pNative->caps.MaxTextureWidth : pNative->caps.MaxTextureHeight,
+	    1 );
+	if ( eValidation != SIR_GRAPHICS_SUCCESS ) {
+		return eValidation;
+	}
+	if ( pDesc->nWidth > pNative->caps.MaxTextureWidth || pDesc->nHeight > pNative->caps.MaxTextureHeight ||
+	     ( pDesc->eDimension == SIR_GRAPHICS_TEXTURE_3D && pDesc->nDepth > pNative->caps.MaxVolumeExtent ) ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	if ( pDesc->eDimension == SIR_GRAPHICS_TEXTURE_CUBE && ( pNative->caps.TextureCaps & D3DPTEXTURECAPS_CUBEMAP ) == 0 ) {
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
+	if ( pDesc->eDimension == SIR_GRAPHICS_TEXTURE_3D && ( pNative->caps.TextureCaps & D3DPTEXTURECAPS_VOLUMEMAP ) == 0 ) {
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
+	if ( pDesc->nMipLevels > 1 ) {
+		const DWORD nMipCapability = pDesc->eDimension == SIR_GRAPHICS_TEXTURE_CUBE ? D3DPTEXTURECAPS_MIPCUBEMAP
+		                             : pDesc->eDimension == SIR_GRAPHICS_TEXTURE_3D ? D3DPTEXTURECAPS_MIPVOLUMEMAP
+		                                                                            : D3DPTEXTURECAPS_MIPMAP;
+		if ( ( pNative->caps.TextureCaps & nMipCapability ) == 0 ) {
+			return SIR_GRAPHICS_UNSUPPORTED;
+		}
+	}
+	if ( pDesc->eDimension == SIR_GRAPHICS_TEXTURE_3D && ( pDesc->nUsage & SIR_GRAPHICS_USAGE_COLOR_ATTACHMENT ) != 0 ) {
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
+	D3DFORMAT eFormat = D3DFMT_UNKNOWN;
+	const sirGraphicsResult_t eFormatResult = sirD3D9NativeMapFormat( pDesc->eFormat, &eFormat );
+	if ( eFormatResult != SIR_GRAPHICS_SUCCESS ) {
+		return eFormatResult;
+	}
+	D3DDISPLAYMODE mode = {};
+	if ( FAILED( pNative->pRuntime->GetAdapterDisplayMode( pNative->nAdapterIndex, &mode ) ) ) {
+		return SIR_GRAPHICS_DRIVER_ERROR;
+	}
+	const DWORD nUsage = ( pDesc->nUsage & SIR_GRAPHICS_USAGE_COLOR_ATTACHMENT ) != 0 ? D3DUSAGE_RENDERTARGET : 0;
+	const D3DRESOURCETYPE eResourceType = pDesc->eDimension == SIR_GRAPHICS_TEXTURE_CUBE ? D3DRTYPE_CUBETEXTURE
+	                                      : pDesc->eDimension == SIR_GRAPHICS_TEXTURE_3D ? D3DRTYPE_VOLUMETEXTURE
+	                                                                                     : D3DRTYPE_TEXTURE;
+	if ( FAILED( pNative->pRuntime->CheckDeviceFormat( pNative->nAdapterIndex, D3DDEVTYPE_HAL, mode.Format, nUsage, eResourceType,
+	                                                   eFormat ) ) ) {
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
+	HRESULT hResult = E_FAIL;
+	if ( eResourceType == D3DRTYPE_CUBETEXTURE ) {
+		IDirect3DCubeTexture9 *pCube = nullptr;
+		hResult =
+		    pNative->pDevice->CreateCubeTexture( pDesc->nWidth, pDesc->nMipLevels, nUsage, eFormat, D3DPOOL_DEFAULT, &pCube, nullptr );
+		*ppTexture = pCube;
+	} else if ( eResourceType == D3DRTYPE_VOLUMETEXTURE ) {
+		IDirect3DVolumeTexture9 *pVolume = nullptr;
+		hResult = pNative->pDevice->CreateVolumeTexture( pDesc->nWidth, pDesc->nHeight, pDesc->nDepth, pDesc->nMipLevels, nUsage, eFormat,
+		                                                 D3DPOOL_DEFAULT, &pVolume, nullptr );
+		*ppTexture = pVolume;
+	} else {
+		IDirect3DTexture9 *pTexture = nullptr;
+		hResult = pNative->pDevice->CreateTexture( pDesc->nWidth, pDesc->nHeight, pDesc->nMipLevels, nUsage, eFormat, D3DPOOL_DEFAULT,
+		                                           &pTexture, nullptr );
+		*ppTexture = pTexture;
+	}
+	return sirD3D9Error( hResult );
+}
+
+sirGraphicsResult_t sirD3D9NativeCreateTextureDesc( sirD3D9Native_t *pNative, const sirGraphicsTextureDesc_t *pDesc,
+                                                    IDirect3DTexture9 **ppTexture ) noexcept
+{
+	if ( ppTexture == nullptr || pDesc == nullptr ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	*ppTexture = nullptr;
+	if ( pDesc->eDimension != SIR_GRAPHICS_TEXTURE_2D ) {
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
+	IDirect3DBaseTexture9 *pBase = nullptr;
+	const sirGraphicsResult_t eResult = sirD3D9NativeCreateTextureResourceDesc( pNative, pDesc, &pBase );
+	if ( eResult == SIR_GRAPHICS_SUCCESS ) {
+		*ppTexture = static_cast<IDirect3DTexture9 *>( pBase );
+	}
+	return eResult;
+}
+
+sirGraphicsResult_t sirD3D9NativeUploadTexture( sirD3D9Native_t *pNative, const sirD3D9TextureUpload_t *pUpload ) noexcept
+{
+	if ( pNative == nullptr || pNative->pDevice == nullptr || pUpload == nullptr || pUpload->pTexture == nullptr ||
+	     pUpload->pData == nullptr || pUpload->nMipLevel >= pUpload->pTexture->GetLevelCount() ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	D3DSURFACE_DESC nativeDesc = {};
+	const HRESULT hDesc = pUpload->pTexture->GetLevelDesc( pUpload->nMipLevel, &nativeDesc );
+	if ( FAILED( hDesc ) ) {
+		return sirD3D9Error( hDesc );
+	}
+	sirD3D9TextureUploadLayout_t layout = {};
+	layout.nWidth = nativeDesc.Width;
+	layout.nHeight = nativeDesc.Height;
+	layout.nRowPitch = pUpload->nRowPitch;
+	layout.nBytes = pUpload->nBytes;
+	switch ( nativeDesc.Format ) {
+	case D3DFMT_A8R8G8B8:
+		layout.eFormat = SIR_GRAPHICS_FORMAT_BGRA8_UNORM;
+		break;
+	case D3DFMT_A8B8G8R8:
+		layout.eFormat = SIR_GRAPHICS_FORMAT_RGBA8_UNORM;
+		break;
+	case D3DFMT_DXT1:
+		layout.eFormat = SIR_GRAPHICS_FORMAT_BC1_UNORM;
+		break;
+	case D3DFMT_DXT5:
+		layout.eFormat = SIR_GRAPHICS_FORMAT_BC3_UNORM;
+		break;
+	default:
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
+	uint32_t nRowBytes = 0;
+	uint32_t nRows = 0;
+	const sirGraphicsResult_t eLayout = sirD3D9ValidateTextureUploadLayout( &layout, &nRowBytes, &nRows );
+	if ( eLayout != SIR_GRAPHICS_SUCCESS ) {
+		return eLayout;
+	}
+	if ( nativeDesc.Pool != D3DPOOL_DEFAULT ) {
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
+	IDirect3DTexture9 *pStaging = nullptr;
+	HRESULT hResult = pNative->pDevice->CreateTexture( nativeDesc.Width, nativeDesc.Height, 1, 0, nativeDesc.Format, D3DPOOL_SYSTEMMEM,
+	                                                   &pStaging, nullptr );
+	if ( FAILED( hResult ) ) {
+		return sirD3D9Error( hResult );
+	}
+	D3DLOCKED_RECT locked = {};
+	hResult = pStaging->LockRect( 0, &locked, nullptr, 0 );
+	if ( SUCCEEDED( hResult ) ) {
+		if ( locked.Pitch < 0 || ( uint32_t )locked.Pitch < nRowBytes ) {
+			hResult = D3DERR_INVALIDCALL;
+		} else {
+			for ( uint32_t i = 0; i < nRows; ++i ) {
+				memcpy( ( uint8_t * )locked.pBits + ( size_t )i * locked.Pitch,
+				        ( const uint8_t * )pUpload->pData + ( size_t )i * pUpload->nRowPitch, nRowBytes );
+			}
+		}
+		const HRESULT hUnlock = pStaging->UnlockRect( 0 );
+		if ( SUCCEEDED( hResult ) ) {
+			hResult = hUnlock;
+		}
+	}
+	if ( SUCCEEDED( hResult ) ) {
+		IDirect3DSurface9 *pSourceSurface = nullptr;
+		IDirect3DSurface9 *pTargetSurface = nullptr;
+		hResult = pStaging->GetSurfaceLevel( 0, &pSourceSurface );
+		if ( SUCCEEDED( hResult ) ) {
+			hResult = pUpload->pTexture->GetSurfaceLevel( pUpload->nMipLevel, &pTargetSurface );
+		}
+		if ( SUCCEEDED( hResult ) ) {
+			hResult = pNative->pDevice->UpdateSurface( pSourceSurface, nullptr, pTargetSurface, nullptr );
+		}
+		if ( pTargetSurface != nullptr ) {
+			pTargetSurface->Release();
+		}
+		if ( pSourceSurface != nullptr ) {
+			pSourceSurface->Release();
+		}
+	}
+	pStaging->Release();
 	return sirD3D9Error( hResult );
 }
 
 sirGraphicsResult_t sirD3D9NativeCreateTexture( sirD3D9Native_t *pNative, uint32_t nWidth, uint32_t nHeight,
                                                 IDirect3DTexture9 **ppTexture ) noexcept
 {
-	if ( pNative == nullptr || pNative->pDevice == nullptr || ppTexture == nullptr || nWidth == 0 || nHeight == 0 ||
-	     nWidth > pNative->caps.MaxTextureWidth || nHeight > pNative->caps.MaxTextureHeight ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
-	}
-	*ppTexture = nullptr;
-	const HRESULT hResult = pNative->pDevice->CreateTexture( nWidth, nHeight, 1, 0, D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, ppTexture, nullptr );
-	return sirD3D9Error( hResult );
+	sirGraphicsTextureDesc_t desc = {};
+	desc.nWidth = nWidth;
+	desc.nHeight = nHeight;
+	desc.nDepth = 1;
+	desc.nArrayLayers = 1;
+	desc.nMipLevels = 1;
+	desc.nSampleCount = 1;
+	desc.nUsage = SIR_GRAPHICS_USAGE_SAMPLED;
+	desc.eDimension = SIR_GRAPHICS_TEXTURE_2D;
+	desc.eFormat = SIR_GRAPHICS_FORMAT_BGRA8_UNORM;
+	desc.eMemory = SIR_GRAPHICS_MEMORY_GPU_LOCAL;
+	return sirD3D9NativeCreateTextureDesc( pNative, &desc, ppTexture );
 }
 #endif
 
@@ -297,10 +589,16 @@ sirGraphicsResult_t sirD3D9NativeUploadBuffer( sirD3D9Native_t *pNative, const s
 {
 	if ( pNative == nullptr || pNative->pDevice == nullptr || pUpdate == nullptr || pUpdate->pBuffer == nullptr ||
 	     pUpdate->pData == nullptr || pUpdate->nBytes == 0 ||
-	     ( pUpdate->nLockFlags != SIR_D3D9_RING_DISCARD && pUpdate->nLockFlags != SIR_D3D9_RING_NOOVERWRITE ) ) {
+	     ( pUpdate->nLockFlags != 0 && pUpdate->nLockFlags != SIR_D3D9_RING_DISCARD &&
+	       pUpdate->nLockFlags != SIR_D3D9_RING_NOOVERWRITE ) ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	const DWORD nNativeFlags = pUpdate->nLockFlags == SIR_D3D9_RING_DISCARD ? D3DLOCK_DISCARD : D3DLOCK_NOOVERWRITE;
+	if ( pUpdate->nLockFlags == 0 && ( pNative->bCompletionPending || pNative->bSceneActive ) ) {
+		return SIR_GRAPHICS_BUSY;
+	}
+	const DWORD nNativeFlags = pUpdate->nLockFlags == SIR_D3D9_RING_DISCARD       ? D3DLOCK_DISCARD
+	                           : pUpdate->nLockFlags == SIR_D3D9_RING_NOOVERWRITE ? D3DLOCK_NOOVERWRITE
+	                                                                              : 0;
 	void *pDestination = nullptr;
 	HRESULT hResult = E_FAIL;
 	if ( pUpdate->pBuffer->GetType() == D3DRTYPE_VERTEXBUFFER ) {
@@ -310,7 +608,9 @@ sirGraphicsResult_t sirD3D9NativeUploadBuffer( sirD3D9Native_t *pNative, const s
 		}
 		D3DVERTEXBUFFER_DESC desc = {};
 		hResult = pBuffer->GetDesc( &desc );
-		if ( SUCCEEDED( hResult ) && pUpdate->nOffset <= desc.Size && pUpdate->nBytes <= desc.Size - pUpdate->nOffset ) {
+		if ( SUCCEEDED( hResult ) &&
+		     sirD3D9ValidateBufferWrite( desc.Size, pUpdate->nOffset, pUpdate->nBytes, 1 ) == SIR_GRAPHICS_SUCCESS &&
+		     ( pUpdate->nLockFlags == 0 || ( desc.Usage & D3DUSAGE_DYNAMIC ) != 0 ) ) {
 			hResult = pBuffer->Lock( pUpdate->nOffset, pUpdate->nBytes, &pDestination, nNativeFlags );
 			if ( SUCCEEDED( hResult ) ) {
 				memcpy( pDestination, pUpdate->pData, pUpdate->nBytes );
@@ -327,7 +627,10 @@ sirGraphicsResult_t sirD3D9NativeUploadBuffer( sirD3D9Native_t *pNative, const s
 		}
 		D3DINDEXBUFFER_DESC desc = {};
 		hResult = pBuffer->GetDesc( &desc );
-		if ( SUCCEEDED( hResult ) && pUpdate->nOffset <= desc.Size && pUpdate->nBytes <= desc.Size - pUpdate->nOffset ) {
+		const uint32_t nElementBytes = desc.Format == D3DFMT_INDEX32 ? 4 : desc.Format == D3DFMT_INDEX16 ? 2 : 0;
+		if ( SUCCEEDED( hResult ) && nElementBytes != 0 &&
+		     sirD3D9ValidateBufferWrite( desc.Size, pUpdate->nOffset, pUpdate->nBytes, nElementBytes ) == SIR_GRAPHICS_SUCCESS &&
+		     ( pUpdate->nLockFlags == 0 || ( desc.Usage & D3DUSAGE_DYNAMIC ) != 0 ) ) {
 			hResult = pBuffer->Lock( pUpdate->nOffset, pUpdate->nBytes, &pDestination, nNativeFlags );
 			if ( SUCCEEDED( hResult ) ) {
 				memcpy( pDestination, pUpdate->pData, pUpdate->nBytes );
@@ -343,37 +646,110 @@ sirGraphicsResult_t sirD3D9NativeUploadBuffer( sirD3D9Native_t *pNative, const s
 	return sirD3D9Error( hResult );
 }
 
-sirGraphicsResult_t sirD3D9NativeCreateShader( sirD3D9Native_t *pNative, const sirGraphicsABIShaderCode_t *pShader, uint32_t nStage,
-                                               IUnknown **ppShader ) noexcept
+sirGraphicsResult_t sirD3D9NativeUpdateTrackedBuffer( sirD3D9Native_t *pNative, const sirD3D9TrackedBufferWrite_t *pWrite ) noexcept
 {
-	if ( pNative == nullptr || pNative->pDevice == nullptr || pShader == nullptr || ppShader == nullptr ||
-	     pShader->nSize < sizeof( sirGraphicsABIShaderCode_t ) ) {
+	if ( pNative == nullptr || pWrite == nullptr || pWrite->pData == nullptr || pWrite->hBuffer.eType != SIR_GRAPHICS_HANDLE_BUFFER ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	void *pResource = nullptr;
+	const sirGraphicsResult_t eLookup = sirD3D9NativeLookupResource( pNative, pWrite->hBuffer, &pResource );
+	if ( eLookup != SIR_GRAPHICS_SUCCESS ) {
+		return eLookup;
+	}
+	sirD3D9BufferUpdate_t update = {};
+	update.pBuffer = ( IDirect3DResource9 * )pResource;
+	update.pData = pWrite->pData;
+	update.nOffset = pWrite->nOffset;
+	update.nBytes = pWrite->nBytes;
+	return sirD3D9NativeUploadBuffer( pNative, &update );
+}
+
+sirGraphicsResult_t sirD3D9NativeCreateShaderTokens( sirD3D9Native_t *pNative, const void *pTokens, uint64_t nBytes, uint32_t nStage,
+                                                     IUnknown **ppShader ) noexcept
+{
+	if ( ppShader == nullptr ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	*ppShader = nullptr;
-	if ( pShader->nFormat != SIR_GRAPHICS_SHADER_DXBC ) {
-		return SIR_GRAPHICS_UNSUPPORTED;
+	if ( pNative == nullptr || pNative->pDevice == nullptr ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	const uint32_t nProfile = nStage == SIR_GRAPHICS_STAGE_VERTEX     ? pNative->caps.VertexShaderVersion & 0xffffU
 	                          : nStage == SIR_GRAPHICS_STAGE_FRAGMENT ? pNative->caps.PixelShaderVersion & 0xffffU
 	                                                                  : 0;
-	const sirGraphicsResult_t eValidation = sirD3D9ValidateShaderTokens( pShader->pBytes, pShader->nByteCount, nStage, nProfile );
-	if ( eValidation != SIR_GRAPHICS_SUCCESS ) {
-		return eValidation;
+	const sirGraphicsResult_t eCheck = sirD3D9ValidateShaderTokens( pTokens, nBytes, nStage, nProfile );
+	if ( eCheck != SIR_GRAPHICS_SUCCESS ) {
+		return eCheck;
 	}
-	// D3D9 token streams are DWORD-aligned; do not reinterpret arbitrary borrowed byte buffers.
-	if ( ( ( uintptr_t )pShader->pBytes & 3 ) != 0 ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	// Never cast an unaligned borrowed shader blob to DWORD. Copy to aligned
+	// storage before the native device parses the token stream.
+	DWORD *pAligned = ( DWORD * )malloc( ( size_t )nBytes );
+	if ( pAligned == nullptr ) {
+		return SIR_GRAPHICS_OUT_OF_MEMORY;
 	}
+	memcpy( pAligned, pTokens, ( size_t )nBytes );
 	HRESULT hResult = E_FAIL;
 	if ( nStage == SIR_GRAPHICS_STAGE_VERTEX ) {
-		IDirect3DVertexShader9 *pNativeShader = nullptr;
-		hResult = pNative->pDevice->CreateVertexShader( ( const DWORD * )pShader->pBytes, &pNativeShader );
-		*ppShader = pNativeShader;
+		IDirect3DVertexShader9 *pShader = nullptr;
+		hResult = pNative->pDevice->CreateVertexShader( pAligned, &pShader );
+		if ( SUCCEEDED( hResult ) ) {
+			*ppShader = pShader;
+		} else if ( pShader != nullptr ) {
+			pShader->Release();
+		}
 	} else {
-		IDirect3DPixelShader9 *pNativeShader = nullptr;
-		hResult = pNative->pDevice->CreatePixelShader( ( const DWORD * )pShader->pBytes, &pNativeShader );
-		*ppShader = pNativeShader;
+		IDirect3DPixelShader9 *pShader = nullptr;
+		hResult = pNative->pDevice->CreatePixelShader( pAligned, &pShader );
+		if ( SUCCEEDED( hResult ) ) {
+			*ppShader = pShader;
+		} else if ( pShader != nullptr ) {
+			pShader->Release();
+		}
+	}
+	free( pAligned );
+	return sirD3D9Error( hResult );
+}
+
+sirGraphicsResult_t sirD3D9NativeCreateShader( sirD3D9Native_t *pNative, const sirGraphicsABIShaderCode_t *pShader, uint32_t nStage,
+                                               IUnknown **ppShader ) noexcept
+{
+	if ( ppShader == nullptr ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	*ppShader = nullptr;
+	if ( pNative == nullptr || pShader == nullptr || pShader->nSize < sizeof( sirGraphicsABIShaderCode_t ) ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	// D3D9's SM2/SM3 token streams are not DXBC containers. The common ABI
+	// currently exposes no distinct D3D9 token format, so fail closed.
+	return SIR_GRAPHICS_UNSUPPORTED;
+}
+
+sirGraphicsResult_t sirD3D9NativeSetShaderConstants( sirD3D9Native_t *pNative, const sirD3D9ShaderConstants_t *pConstants ) noexcept
+{
+	if ( pNative == nullptr || pNative->pDevice == nullptr || pConstants == nullptr ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	const uint32_t nProfile = pConstants->nStage == SIR_GRAPHICS_STAGE_VERTEX     ? pNative->caps.VertexShaderVersion & 0xffffU
+	                          : pConstants->nStage == SIR_GRAPHICS_STAGE_FRAGMENT ? pNative->caps.PixelShaderVersion & 0xffffU
+	                                                                              : 0;
+	const sirGraphicsResult_t eCheck = sirD3D9ValidateShaderConstants( pConstants, nProfile, pNative->caps.MaxVertexShaderConst );
+	if ( eCheck != SIR_GRAPHICS_SUCCESS ) {
+		return eCheck;
+	}
+	const uint32_t nRegister = pConstants->nFirstRegister;
+	const uint32_t nCount = pConstants->nRegisterCount;
+	HRESULT hResult = E_FAIL;
+	if ( pConstants->nStage == SIR_GRAPHICS_STAGE_VERTEX ) {
+		hResult = pConstants->pFloat4 != nullptr ? pNative->pDevice->SetVertexShaderConstantF( nRegister, pConstants->pFloat4, nCount )
+		          : pConstants->pInt4 != nullptr
+		              ? pNative->pDevice->SetVertexShaderConstantI( nRegister, pConstants->pInt4, nCount )
+		              : pNative->pDevice->SetVertexShaderConstantB( nRegister, ( const BOOL * )pConstants->pBool, nCount );
+	} else {
+		hResult = pConstants->pFloat4 != nullptr ? pNative->pDevice->SetPixelShaderConstantF( nRegister, pConstants->pFloat4, nCount )
+		          : pConstants->pInt4 != nullptr
+		              ? pNative->pDevice->SetPixelShaderConstantI( nRegister, pConstants->pInt4, nCount )
+		              : pNative->pDevice->SetPixelShaderConstantB( nRegister, ( const BOOL * )pConstants->pBool, nCount );
 	}
 	return sirD3D9Error( hResult );
 }
@@ -445,6 +821,69 @@ sirGraphicsResult_t sirD3D9NativeDeviceStatus( sirD3D9Native_t *pNative ) noexce
 	return sirD3D9Error( hResult );
 }
 
+sirGraphicsResult_t sirD3D9NativeApplySampler( sirD3D9Native_t *pNative, uint32_t nStage,
+                                               const sirGraphicsSamplerDesc_t *pSampler ) noexcept
+{
+	if ( pNative == nullptr || pNative->pDevice == nullptr || nStage >= pNative->caps.MaxSimultaneousTextures ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	const sirGraphicsResult_t eValid =
+	    sirD3D9ValidateSampler( pSampler, pNative->caps.MaxAnisotropy == 0 ? 1U : pNative->caps.MaxAnisotropy );
+	if ( eValid != SIR_GRAPHICS_SUCCESS ) {
+		return eValid;
+	}
+	if ( pSampler->eFilter == SIR_GRAPHICS_FILTER_ANISOTROPIC &&
+	     ( pNative->caps.TextureFilterCaps & ( D3DPTFILTERCAPS_MINFANISOTROPIC | D3DPTFILTERCAPS_MAGFANISOTROPIC ) ) !=
+	         ( D3DPTFILTERCAPS_MINFANISOTROPIC | D3DPTFILTERCAPS_MAGFANISOTROPIC ) ) {
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
+	const DWORD aAddress[] = { D3DTADDRESS_WRAP, D3DTADDRESS_MIRROR, D3DTADDRESS_CLAMP, D3DTADDRESS_BORDER };
+	DWORD nMinMag = D3DTEXF_POINT;
+	DWORD nMip = D3DTEXF_POINT;
+	switch ( pSampler->eFilter ) {
+	case SIR_GRAPHICS_FILTER_NEAREST:
+		break;
+	case SIR_GRAPHICS_FILTER_LINEAR:
+		nMinMag = D3DTEXF_LINEAR;
+		break;
+	case SIR_GRAPHICS_FILTER_TRILINEAR:
+		nMinMag = D3DTEXF_LINEAR;
+		nMip = D3DTEXF_LINEAR;
+		break;
+	case SIR_GRAPHICS_FILTER_ANISOTROPIC:
+		nMinMag = D3DTEXF_ANISOTROPIC;
+		nMip = D3DTEXF_LINEAR;
+		break;
+	default:
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
+	// Check the actual enabled device filter modes before changing state.
+	const DWORD nMinCap = nMinMag == D3DTEXF_ANISOTROPIC ? D3DPTFILTERCAPS_MINFANISOTROPIC
+	                      : nMinMag == D3DTEXF_LINEAR    ? D3DPTFILTERCAPS_MINFLINEAR
+	                                                     : D3DPTFILTERCAPS_MINFPOINT;
+	const DWORD nMagCap = nMinMag == D3DTEXF_ANISOTROPIC ? D3DPTFILTERCAPS_MAGFANISOTROPIC
+	                      : nMinMag == D3DTEXF_LINEAR    ? D3DPTFILTERCAPS_MAGFLINEAR
+	                                                     : D3DPTFILTERCAPS_MAGFPOINT;
+	const DWORD nMipCap = nMip == D3DTEXF_LINEAR ? D3DPTFILTERCAPS_MIPFLINEAR : D3DPTFILTERCAPS_MIPFPOINT;
+	if ( ( pNative->caps.TextureFilterCaps & ( nMinCap | nMagCap | nMipCap ) ) != ( nMinCap | nMagCap | nMipCap ) ) {
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
+	HRESULT hResult = pNative->pDevice->SetSamplerState( nStage, D3DSAMP_ADDRESSU, aAddress[pSampler->eAddressU] );
+	if ( SUCCEEDED( hResult ) )
+		hResult = pNative->pDevice->SetSamplerState( nStage, D3DSAMP_ADDRESSV, aAddress[pSampler->eAddressV] );
+	if ( SUCCEEDED( hResult ) )
+		hResult = pNative->pDevice->SetSamplerState( nStage, D3DSAMP_ADDRESSW, aAddress[pSampler->eAddressW] );
+	if ( SUCCEEDED( hResult ) )
+		hResult = pNative->pDevice->SetSamplerState( nStage, D3DSAMP_MINFILTER, nMinMag );
+	if ( SUCCEEDED( hResult ) )
+		hResult = pNative->pDevice->SetSamplerState( nStage, D3DSAMP_MAGFILTER, nMinMag );
+	if ( SUCCEEDED( hResult ) )
+		hResult = pNative->pDevice->SetSamplerState( nStage, D3DSAMP_MIPFILTER, nMip );
+	if ( SUCCEEDED( hResult ) )
+		hResult = pNative->pDevice->SetSamplerState( nStage, D3DSAMP_MAXANISOTROPY, ( DWORD )pSampler->fMaximumAnisotropy );
+	return sirD3D9Error( hResult );
+}
+
 sirGraphicsResult_t sirD3D9NativeDraw( sirD3D9Native_t *pNative, const sirD3D9DrawPacket_t *pPacket ) noexcept
 {
 	if ( pNative == nullptr || pNative->pDevice == nullptr || pPacket == nullptr || pPacket->pVertexBuffer == nullptr ||
@@ -474,6 +913,81 @@ sirGraphicsResult_t sirD3D9NativeDraw( sirD3D9Native_t *pNative, const sirD3D9Dr
 	default:
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
+	if ( pPacket->nPrimitiveCount > pNative->caps.MaxPrimitiveCount || ( pPacket->nVertexOffset % pPacket->nVertexStride ) != 0 ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	D3DVERTEXBUFFER_DESC vertexDesc = {};
+	if ( FAILED( pPacket->pVertexBuffer->GetDesc( &vertexDesc ) ) || pPacket->nVertexOffset > vertexDesc.Size ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	const uint32_t nVertexCapacity = ( vertexDesc.Size - pPacket->nVertexOffset ) / pPacket->nVertexStride;
+	if ( pPacket->pIndexBuffer != nullptr ) {
+		D3DINDEXBUFFER_DESC indexDesc = {};
+		if ( FAILED( pPacket->pIndexBuffer->GetDesc( &indexDesc ) ) ||
+		     ( indexDesc.Format != D3DFMT_INDEX16 && indexDesc.Format != D3DFMT_INDEX32 ) ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
+		const uint32_t nIndexCapacity = indexDesc.Size / ( indexDesc.Format == D3DFMT_INDEX32 ? 4U : 2U );
+		const int64_t iFirstVertex = ( int64_t )pPacket->iBaseVertex + pPacket->nFirstVertex;
+		if ( iFirstVertex < 0 || ( uint64_t )iFirstVertex + pPacket->nVertexCount > nVertexCapacity ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
+		const sirGraphicsResult_t eIndexRange =
+		    sirD3D9ValidateDrawRange( pPacket->nTopology, pPacket->nPrimitiveCount, pPacket->nFirstIndex, nIndexCapacity );
+		if ( eIndexRange != SIR_GRAPHICS_SUCCESS ) {
+			return eIndexRange;
+		}
+	} else {
+		const sirGraphicsResult_t eVertexRange =
+		    sirD3D9ValidateDrawRange( pPacket->nTopology, pPacket->nPrimitiveCount, pPacket->nFirstVertex, nVertexCapacity );
+		if ( eVertexRange != SIR_GRAPHICS_SUCCESS ) {
+			return eVertexRange;
+		}
+	}
+	if ( pPacket->nSamplerCount >
+	         ( pPacket->ppTextures != nullptr ? pPacket->nTextureCount : ( pPacket->pTexture != nullptr ? 1U : 0U ) ) ||
+	     ( pPacket->nSamplerCount != 0 && pPacket->pSamplers == nullptr ) ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	for ( uint32_t i = 0; i < pPacket->nSamplerCount; ++i ) {
+		const sirGraphicsResult_t eSampler =
+		    sirD3D9ValidateSampler( &pPacket->pSamplers[i], pNative->caps.MaxAnisotropy == 0 ? 1U : pNative->caps.MaxAnisotropy );
+		if ( eSampler != SIR_GRAPHICS_SUCCESS ) {
+			return eSampler;
+		}
+	}
+	if ( pPacket->nTextureCount > pNative->caps.MaxSimultaneousTextures ||
+	     ( pPacket->nTextureCount != 0 && pPacket->ppTextures == nullptr ) ||
+	     ( pPacket->ppTextures == nullptr && pPacket->pTexture != nullptr && pNative->caps.MaxSimultaneousTextures == 0 ) ) {
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
+	if ( pPacket->nShaderConstantBatchCount != 0 && pPacket->pShaderConstants == nullptr ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	if ( ( pPacket->pVertexShader != nullptr && pPacket->pVertexDeclaration == nullptr ) ||
+	     ( pPacket->pVertexShader == nullptr && pPacket->nFVF == 0 ) ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	for ( uint32_t i = 0; i < pPacket->nShaderConstantBatchCount; ++i ) {
+		const sirD3D9ShaderConstants_t *pBatch = &pPacket->pShaderConstants[i];
+		const uint32_t nProfile = pBatch->nStage == SIR_GRAPHICS_STAGE_VERTEX     ? pNative->caps.VertexShaderVersion & 0xffffU
+		                          : pBatch->nStage == SIR_GRAPHICS_STAGE_FRAGMENT ? pNative->caps.PixelShaderVersion & 0xffffU
+		                                                                          : 0;
+		if ( ( pBatch->nStage == SIR_GRAPHICS_STAGE_VERTEX && pPacket->pVertexShader == nullptr ) ||
+		     ( pBatch->nStage == SIR_GRAPHICS_STAGE_FRAGMENT && pPacket->pPixelShader == nullptr ) ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
+		const sirGraphicsResult_t eBatch = sirD3D9ValidateShaderConstants( pBatch, nProfile, pNative->caps.MaxVertexShaderConst );
+		if ( eBatch != SIR_GRAPHICS_SUCCESS ) {
+			return eBatch;
+		}
+	}
+	for ( uint32_t i = 0; i < pPacket->nShaderConstantBatchCount; ++i ) {
+		const sirGraphicsResult_t eBatch = sirD3D9NativeSetShaderConstants( pNative, &pPacket->pShaderConstants[i] );
+		if ( eBatch != SIR_GRAPHICS_SUCCESS ) {
+			return eBatch;
+		}
+	}
 	HRESULT hResult = pNative->pDevice->SetStreamSource( 0, pPacket->pVertexBuffer, pPacket->nVertexOffset, pPacket->nVertexStride );
 	if ( SUCCEEDED( hResult ) ) {
 		hResult = pPacket->pVertexShader == nullptr ? pNative->pDevice->SetFVF( pPacket->nFVF )
@@ -485,8 +999,18 @@ sirGraphicsResult_t sirD3D9NativeDraw( sirD3D9Native_t *pNative, const sirD3D9Dr
 	if ( SUCCEEDED( hResult ) ) {
 		hResult = pNative->pDevice->SetPixelShader( pPacket->pPixelShader );
 	}
-	if ( SUCCEEDED( hResult ) ) {
-		hResult = pNative->pDevice->SetTexture( 0, pPacket->pTexture );
+	const uint32_t nTextures = pPacket->ppTextures != nullptr ? pPacket->nTextureCount : ( pPacket->pTexture != nullptr ? 1U : 0U );
+	for ( uint32_t i = 0; i < pPacket->nSamplerCount && SUCCEEDED( hResult ); ++i ) {
+		const sirGraphicsResult_t eSampler = sirD3D9NativeApplySampler( pNative, i, &pPacket->pSamplers[i] );
+		if ( eSampler != SIR_GRAPHICS_SUCCESS ) {
+			return eSampler;
+		}
+	}
+	for ( uint32_t i = 0; i < nTextures && SUCCEEDED( hResult ); ++i ) {
+		hResult = pNative->pDevice->SetTexture( i, pPacket->ppTextures != nullptr ? pPacket->ppTextures[i] : pPacket->pTexture );
+	}
+	for ( uint32_t i = nTextures; i < pNative->nActiveTextureBindings && SUCCEEDED( hResult ); ++i ) {
+		hResult = pNative->pDevice->SetTexture( i, nullptr );
 	}
 	if ( SUCCEEDED( hResult ) && pPacket->pIndexBuffer != nullptr ) {
 		hResult = pNative->pDevice->SetIndices( pPacket->pIndexBuffer );
@@ -494,7 +1018,13 @@ sirGraphicsResult_t sirD3D9NativeDraw( sirD3D9Native_t *pNative, const sirD3D9Dr
 	if ( FAILED( hResult ) ) {
 		return sirD3D9Error( hResult );
 	}
-	hResult = pNative->pDevice->BeginScene();
+	pNative->nActiveTextureBindings = nTextures;
+	const bool bOpenedHere = !pNative->bSceneActive;
+	if ( bOpenedHere ) {
+		hResult = pNative->pDevice->BeginScene();
+	} else {
+		hResult = S_OK;
+	}
 	if ( FAILED( hResult ) ) {
 		return sirD3D9Error( hResult );
 	}
@@ -504,6 +1034,9 @@ sirGraphicsResult_t sirD3D9NativeDraw( sirD3D9Native_t *pNative, const sirD3D9Dr
 		                                                  pPacket->nFirstIndex, pPacket->nPrimitiveCount );
 	} else {
 		hResult = pNative->pDevice->DrawPrimitive( eType, pPacket->nFirstVertex, pPacket->nPrimitiveCount );
+	}
+	if ( !bOpenedHere ) {
+		return sirD3D9Error( hResult );
 	}
 	const HRESULT hEnd = pNative->pDevice->EndScene();
 	pNative->bSceneActive = false;
@@ -521,21 +1054,68 @@ sirGraphicsResult_t sirD3D9NativeConfigureResidentBudget( sirD3D9Native_t *pNati
 	return SIR_GRAPHICS_SUCCESS;
 }
 
-sirGraphicsResult_t sirD3D9NativeCreateTrackedBuffer( sirD3D9Native_t *pNative, uint32_t nBytes, bool bIndex,
-                                                      sirGraphicsHandle_t *pHandle ) noexcept
+sirGraphicsResult_t sirD3D9NativeCreateTrackedBufferDesc( sirD3D9Native_t *pNative, const sirGraphicsBufferDesc_t *pDesc, bool bIndex32,
+                                                          sirGraphicsHandle_t *pHandle ) noexcept
 {
 	if ( pNative == nullptr || pHandle == nullptr || pNative->pDevice == nullptr ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
+	const sirGraphicsResult_t eValidation = sirD3D9ValidateBuffer( pDesc );
+	if ( eValidation != SIR_GRAPHICS_SUCCESS ) {
+		return eValidation;
+	}
+	const sirGraphicsResult_t eBudget = sirD3D9ResourcesCanAllocate( &pNative->resources, pDesc->nSizeBytes );
+	if ( eBudget != SIR_GRAPHICS_SUCCESS ) {
+		return eBudget;
+	}
 	IDirect3DResource9 *pResource = nullptr;
-	const sirGraphicsResult_t eCreate = sirD3D9NativeCreateBuffer( pNative, nBytes, bIndex, &pResource );
+	const sirGraphicsResult_t eCreate = sirD3D9NativeCreateBufferDesc( pNative, pDesc, bIndex32, &pResource );
 	if ( eCreate != SIR_GRAPHICS_SUCCESS ) {
 		return eCreate;
 	}
 	const sirGraphicsResult_t eInsert =
-	    sirD3D9ResourcesInsert( &pNative->resources, SIR_GRAPHICS_HANDLE_BUFFER, nBytes, pResource, pHandle );
+	    sirD3D9ResourcesInsert( &pNative->resources, SIR_GRAPHICS_HANDLE_BUFFER, pDesc->nSizeBytes, pResource, pHandle );
 	if ( eInsert != SIR_GRAPHICS_SUCCESS ) {
 		pResource->Release();
+	}
+	return eInsert;
+}
+
+sirGraphicsResult_t sirD3D9NativeCreateTrackedBuffer( sirD3D9Native_t *pNative, uint32_t nBytes, bool bIndex,
+                                                      sirGraphicsHandle_t *pHandle ) noexcept
+{
+	sirGraphicsBufferDesc_t desc = {};
+	desc.nSizeBytes = nBytes;
+	desc.nAlignmentBytes = bIndex ? 2 : 4;
+	desc.nUsage = bIndex ? SIR_GRAPHICS_USAGE_INDEX : SIR_GRAPHICS_USAGE_VERTEX;
+	desc.eMemory = SIR_GRAPHICS_MEMORY_CPU_UPLOAD;
+	return sirD3D9NativeCreateTrackedBufferDesc( pNative, &desc, false, pHandle );
+}
+
+sirGraphicsResult_t sirD3D9NativeCreateTrackedTextureDesc( sirD3D9Native_t *pNative, const sirGraphicsTextureDesc_t *pDesc,
+                                                           sirGraphicsHandle_t *pHandle ) noexcept
+{
+	if ( pNative == nullptr || pHandle == nullptr || pNative->pDevice == nullptr ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	uint64_t nEstimatedBytes = 0;
+	const sirGraphicsResult_t eSize = sirD3D9EstimateTextureBytes( pDesc, &nEstimatedBytes );
+	if ( eSize != SIR_GRAPHICS_SUCCESS ) {
+		return eSize;
+	}
+	const sirGraphicsResult_t eBudget = sirD3D9ResourcesCanAllocate( &pNative->resources, nEstimatedBytes );
+	if ( eBudget != SIR_GRAPHICS_SUCCESS ) {
+		return eBudget;
+	}
+	IDirect3DBaseTexture9 *pTexture = nullptr;
+	const sirGraphicsResult_t eCreate = sirD3D9NativeCreateTextureResourceDesc( pNative, pDesc, &pTexture );
+	if ( eCreate != SIR_GRAPHICS_SUCCESS ) {
+		return eCreate;
+	}
+	const sirGraphicsResult_t eInsert =
+	    sirD3D9ResourcesInsert( &pNative->resources, SIR_GRAPHICS_HANDLE_TEXTURE, nEstimatedBytes, pTexture, pHandle );
+	if ( eInsert != SIR_GRAPHICS_SUCCESS ) {
+		pTexture->Release();
 	}
 	return eInsert;
 }
@@ -543,21 +1123,18 @@ sirGraphicsResult_t sirD3D9NativeCreateTrackedBuffer( sirD3D9Native_t *pNative, 
 sirGraphicsResult_t sirD3D9NativeCreateTrackedTexture( sirD3D9Native_t *pNative, uint32_t nWidth, uint32_t nHeight,
                                                        sirGraphicsHandle_t *pHandle ) noexcept
 {
-	if ( pNative == nullptr || pHandle == nullptr || pNative->pDevice == nullptr || nWidth == 0 ||
-	     ( uint64_t )nWidth * nHeight > UINT64_MAX / 4 ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
-	}
-	IDirect3DTexture9 *pTexture = nullptr;
-	const sirGraphicsResult_t eCreate = sirD3D9NativeCreateTexture( pNative, nWidth, nHeight, &pTexture );
-	if ( eCreate != SIR_GRAPHICS_SUCCESS ) {
-		return eCreate;
-	}
-	const sirGraphicsResult_t eInsert =
-	    sirD3D9ResourcesInsert( &pNative->resources, SIR_GRAPHICS_HANDLE_TEXTURE, ( uint64_t )nWidth * nHeight * 4, pTexture, pHandle );
-	if ( eInsert != SIR_GRAPHICS_SUCCESS ) {
-		pTexture->Release();
-	}
-	return eInsert;
+	sirGraphicsTextureDesc_t desc = {};
+	desc.nWidth = nWidth;
+	desc.nHeight = nHeight;
+	desc.nDepth = 1;
+	desc.nArrayLayers = 1;
+	desc.nMipLevels = 1;
+	desc.nSampleCount = 1;
+	desc.nUsage = SIR_GRAPHICS_USAGE_SAMPLED;
+	desc.eDimension = SIR_GRAPHICS_TEXTURE_2D;
+	desc.eFormat = SIR_GRAPHICS_FORMAT_BGRA8_UNORM;
+	desc.eMemory = SIR_GRAPHICS_MEMORY_GPU_LOCAL;
+	return sirD3D9NativeCreateTrackedTextureDesc( pNative, &desc, pHandle );
 }
 
 sirGraphicsResult_t sirD3D9NativeLookupResource( sirD3D9Native_t *pNative, sirGraphicsHandle_t hHandle, void **ppNative ) noexcept
@@ -572,6 +1149,18 @@ sirGraphicsResult_t sirD3D9NativeRetireResource( sirD3D9Native_t *pNative, sirGr
 {
 	if ( pNative == nullptr ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	if ( pNative->bSceneActive || pNative->vertexRing.nPendingWrites != 0 || pNative->indexRing.nPendingWrites != 0 ) {
+		return SIR_GRAPHICS_BUSY;
+	}
+	if ( nCompletionValue < pNative->nLastSubmittedSerial ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	if ( nCompletionValue > pNative->nLastSubmittedSerial ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	if ( pNative->pCompletionQuery == nullptr && nCompletionValue > pNative->nLastCompletedSerial ) {
+		return SIR_GRAPHICS_BUSY;
 	}
 	return sirD3D9ResourcesRetire( &pNative->resources, hHandle, nCompletionValue );
 }
@@ -676,6 +1265,11 @@ sirGraphicsResult_t sirD3D9NativeApplyFixedRecipe( sirD3D9Native_t *pNative, con
 	     ( pRecipe->nRequiredFeatures & ~( SIR_GRAPHICS_FEATURE_GRAPHICS | SIR_GRAPHICS_FEATURE_FIXED_FUNCTION ) ) != 0 ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
+	const sirGraphicsResult_t ePreflight = sirD3D9ValidateFixedRecipe(
+	    pRecipe, pNative->caps.MaxTextureBlendStages, pNative->caps.MaxSimultaneousTextures, pNative->caps.MaxActiveLights );
+	if ( ePreflight != SIR_GRAPHICS_SUCCESS ) {
+		return ePreflight;
+	}
 	for ( uint32_t i = 0; i < pRecipe->nTextureStageCount; ++i ) {
 		const sirGraphicsABIFixedStage_t *pStage = &pRecipe->pStages[i];
 		if ( pStage->nTextureUnit >= pNative->caps.MaxSimultaneousTextures ||
@@ -686,6 +1280,39 @@ sirGraphicsResult_t sirD3D9NativeApplyFixedRecipe( sirD3D9Native_t *pNative, con
 		     sirD3D9NativeTextureArg( pStage->nAlphaArgument0 ) == UINT32_MAX ||
 		     sirD3D9NativeTextureArg( pStage->nAlphaArgument1 ) == UINT32_MAX ) {
 			return SIR_GRAPHICS_UNSUPPORTED;
+		}
+	}
+	// Validate hardware texture combiner support before touching any device state.
+	for ( uint32_t i = 0; i < pRecipe->nTextureStageCount; ++i ) {
+		const sirGraphicsABIFixedStage_t *pStage = &pRecipe->pStages[i];
+		const uint32_t aOps[] = { pStage->nColorOperation, pStage->nAlphaOperation };
+		for ( uint32_t j = 0; j < 2; ++j ) {
+			DWORD nCapability = 0;
+			switch ( aOps[j] ) {
+			case SIR_GRAPHICS_FIXED_OP_DISABLE:
+				nCapability = D3DTEXOPCAPS_DISABLE;
+				break;
+			case SIR_GRAPHICS_FIXED_OP_SELECT:
+				nCapability = D3DTEXOPCAPS_SELECTARG1;
+				break;
+			case SIR_GRAPHICS_FIXED_OP_MODULATE:
+				nCapability = D3DTEXOPCAPS_MODULATE;
+				break;
+			case SIR_GRAPHICS_FIXED_OP_ADD:
+				nCapability = D3DTEXOPCAPS_ADD;
+				break;
+			case SIR_GRAPHICS_FIXED_OP_SUBTRACT:
+				nCapability = D3DTEXOPCAPS_SUBTRACT;
+				break;
+			case SIR_GRAPHICS_FIXED_OP_DOT3:
+				nCapability = D3DTEXOPCAPS_DOTPRODUCT3;
+				break;
+			default:
+				return SIR_GRAPHICS_UNSUPPORTED;
+			}
+			if ( ( pNative->caps.TextureOpCaps & nCapability ) == 0 ) {
+				return SIR_GRAPHICS_UNSUPPORTED;
+			}
 		}
 	}
 	const uint32_t nAlphaCompare = sirD3D9NativeCompare( pRecipe->nAlphaCompare );
@@ -709,6 +1336,16 @@ sirGraphicsResult_t sirD3D9NativeApplyFixedRecipe( sirD3D9Native_t *pNative, con
 	default:
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
+	if ( nFogMode != D3DFOG_NONE && ( pNative->caps.RasterCaps & ( D3DPRASTERCAPS_FOGTABLE | D3DPRASTERCAPS_FOGVERTEX ) ) == 0 ) {
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
+	const bool bTableFog = ( pNative->caps.RasterCaps & D3DPRASTERCAPS_FOGTABLE ) != 0;
+	DWORD nFogStartBits = 0;
+	DWORD nFogEndBits = 0;
+	DWORD nFogDensityBits = 0;
+	memcpy( &nFogStartBits, &pRecipe->fFogStart, sizeof( nFogStartBits ) );
+	memcpy( &nFogEndBits, &pRecipe->fFogEnd, sizeof( nFogEndBits ) );
+	memcpy( &nFogDensityBits, &pRecipe->fFogDensity, sizeof( nFogDensityBits ) );
 	HRESULT hResult = pNative->pDevice->SetVertexShader( nullptr );
 	if ( SUCCEEDED( hResult ) )
 		hResult = pNative->pDevice->SetPixelShader( nullptr );
@@ -738,7 +1375,15 @@ sirGraphicsResult_t sirD3D9NativeApplyFixedRecipe( sirD3D9Native_t *pNative, con
 	if ( SUCCEEDED( hResult ) )
 		hResult = pNative->pDevice->SetRenderState( D3DRS_FOGENABLE, nFogMode != D3DFOG_NONE );
 	if ( SUCCEEDED( hResult ) )
-		hResult = pNative->pDevice->SetRenderState( D3DRS_FOGTABLEMODE, nFogMode );
+		hResult = pNative->pDevice->SetRenderState( D3DRS_FOGTABLEMODE, bTableFog ? nFogMode : D3DFOG_NONE );
+	if ( SUCCEEDED( hResult ) )
+		hResult = pNative->pDevice->SetRenderState( D3DRS_FOGVERTEXMODE, bTableFog ? D3DFOG_NONE : nFogMode );
+	if ( SUCCEEDED( hResult ) )
+		hResult = pNative->pDevice->SetRenderState( D3DRS_FOGSTART, nFogStartBits );
+	if ( SUCCEEDED( hResult ) )
+		hResult = pNative->pDevice->SetRenderState( D3DRS_FOGEND, nFogEndBits );
+	if ( SUCCEEDED( hResult ) )
+		hResult = pNative->pDevice->SetRenderState( D3DRS_FOGDENSITY, nFogDensityBits );
 	if ( SUCCEEDED( hResult ) )
 		hResult = pNative->pDevice->SetRenderState( D3DRS_FOGCOLOR, sirD3D9NativeColor( pRecipe->szFogColor ) );
 	if ( FAILED( hResult ) )
@@ -751,16 +1396,16 @@ sirGraphicsResult_t sirD3D9NativeApplyFixedRecipe( sirD3D9Native_t *pNative, con
 			hResult = pNative->pDevice->SetTextureStageState( nStage, D3DTSS_ALPHAOP, sirD3D9NativeTextureOp( pStage->nAlphaOperation ) );
 		if ( SUCCEEDED( hResult ) )
 			hResult =
-			    pNative->pDevice->SetTextureStageState( nStage, D3DTSS_COLORARG1, sirD3D9NativeTextureArg( pStage->nColorArgument1 ) );
+			    pNative->pDevice->SetTextureStageState( nStage, D3DTSS_COLORARG2, sirD3D9NativeTextureArg( pStage->nColorArgument1 ) );
 		if ( SUCCEEDED( hResult ) )
 			hResult =
-			    pNative->pDevice->SetTextureStageState( nStage, D3DTSS_COLORARG0, sirD3D9NativeTextureArg( pStage->nColorArgument0 ) );
+			    pNative->pDevice->SetTextureStageState( nStage, D3DTSS_COLORARG1, sirD3D9NativeTextureArg( pStage->nColorArgument0 ) );
 		if ( SUCCEEDED( hResult ) )
 			hResult =
-			    pNative->pDevice->SetTextureStageState( nStage, D3DTSS_ALPHAARG1, sirD3D9NativeTextureArg( pStage->nAlphaArgument1 ) );
+			    pNative->pDevice->SetTextureStageState( nStage, D3DTSS_ALPHAARG2, sirD3D9NativeTextureArg( pStage->nAlphaArgument1 ) );
 		if ( SUCCEEDED( hResult ) )
 			hResult =
-			    pNative->pDevice->SetTextureStageState( nStage, D3DTSS_ALPHAARG0, sirD3D9NativeTextureArg( pStage->nAlphaArgument0 ) );
+			    pNative->pDevice->SetTextureStageState( nStage, D3DTSS_ALPHAARG1, sirD3D9NativeTextureArg( pStage->nAlphaArgument0 ) );
 		if ( SUCCEEDED( hResult ) )
 			hResult = pNative->pDevice->SetTextureStageState( nStage, D3DTSS_CONSTANT, sirD3D9NativeColor( pStage->szConstantColor ) );
 		if ( SUCCEEDED( hResult ) )
@@ -786,6 +1431,21 @@ sirGraphicsResult_t sirD3D9NativeApplyFixedRecipe( sirD3D9Native_t *pNative, con
 		if ( FAILED( hResult ) )
 			return sirD3D9Error( hResult );
 	}
+	// Explicitly terminate the fixed-function texture combiner chain.
+	if ( pRecipe->nTextureStageCount == 0 || pRecipe->nTextureStageCount < pNative->nActiveFixedStages ) {
+		const HRESULT hDisable = pNative->pDevice->SetTextureStageState( pRecipe->nTextureStageCount, D3DTSS_COLOROP, D3DTOP_DISABLE );
+		if ( FAILED( hDisable ) ) {
+			return sirD3D9Error( hDisable );
+		}
+	}
+	for ( uint32_t i = pRecipe->nLightCount; i < pNative->nActiveFixedLights; ++i ) {
+		const HRESULT hDisable = pNative->pDevice->LightEnable( i, FALSE );
+		if ( FAILED( hDisable ) ) {
+			return sirD3D9Error( hDisable );
+		}
+	}
+	pNative->nActiveFixedStages = pRecipe->nTextureStageCount;
+	pNative->nActiveFixedLights = pRecipe->nLightCount;
 	return SIR_GRAPHICS_SUCCESS;
 }
 #endif

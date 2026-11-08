@@ -23,6 +23,90 @@ static LRESULT CALLBACK sirD3D9TestWindowProc( HWND hWindow, UINT nMessage, WPAR
 	return DefWindowProcW( hWindow, nMessage, nWParam, nLParam );
 }
 
+static sirGraphicsResult_t sirD3D9TestCookedShaders( sirD3D9Native_t *pNative, const char *pszVertexFile, const char *pszPixelFile )
+{
+	if ( pNative == nullptr || pszVertexFile == nullptr || pszPixelFile == nullptr ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	const char *aFiles[] = { pszVertexFile, pszPixelFile };
+	IUnknown *aShaders[2] = {};
+	sirGraphicsResult_t eResult = SIR_GRAPHICS_SUCCESS;
+	for ( uint32_t i = 0; i < 2; ++i ) {
+		FILE *pFile = fopen( aFiles[i], "rb" );
+		if ( pFile == nullptr || fseek( pFile, 0, SEEK_END ) != 0 ) {
+			if ( pFile != nullptr ) {
+				fclose( pFile );
+			}
+			eResult = SIR_GRAPHICS_INVALID_ARGUMENT;
+			break;
+		}
+		const long nLength = ftell( pFile );
+		if ( nLength <= 0 || nLength > 1024 * 1024 || fseek( pFile, 0, SEEK_SET ) != 0 ) {
+			fclose( pFile );
+			eResult = SIR_GRAPHICS_INVALID_ARGUMENT;
+			break;
+		}
+		void *pBytes = malloc( ( size_t )nLength );
+		if ( pBytes == nullptr ) {
+			fclose( pFile );
+			eResult = SIR_GRAPHICS_OUT_OF_MEMORY;
+			break;
+		}
+		const bool bRead = fread( pBytes, 1, ( size_t )nLength, pFile ) == ( size_t )nLength;
+		fclose( pFile );
+		eResult = bRead ? sirD3D9NativeCreateShaderTokens( pNative, pBytes, ( uint64_t )nLength,
+		                                                   i == 0 ? SIR_GRAPHICS_STAGE_VERTEX : SIR_GRAPHICS_STAGE_FRAGMENT, &aShaders[i] )
+		                : SIR_GRAPHICS_INVALID_ARGUMENT;
+		free( pBytes );
+		if ( eResult != SIR_GRAPHICS_SUCCESS ) {
+			break;
+		}
+	}
+	IDirect3DVertexDeclaration9 *pDeclaration = nullptr;
+	if ( eResult == SIR_GRAPHICS_SUCCESS ) {
+		const D3DVERTEXELEMENT9 elements[] = { { 0, 0, D3DDECLTYPE_FLOAT4, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_POSITION, 0 },
+		                                       D3DDECL_END() };
+		if ( FAILED( pNative->pDevice->CreateVertexDeclaration( elements, &pDeclaration ) ) ) {
+			eResult = SIR_GRAPHICS_DRIVER_ERROR;
+		}
+	}
+	if ( eResult == SIR_GRAPHICS_SUCCESS ) {
+		const float aPosition[] = { -0.75f, -0.75f, 0.5f, 1.0f, 0.75f, -0.75f, 0.5f, 1.0f, 0.0f, 0.75f, 0.5f, 1.0f };
+		const float aConstant[4] = { 1.0f, 0.0f, 0.0f, 0.0f };
+		sirD3D9ShaderConstants_t constants = {};
+		constants.nStage = SIR_GRAPHICS_STAGE_VERTEX;
+		constants.nRegisterCount = 1;
+		constants.pFloat4 = aConstant;
+		eResult = sirD3D9NativeSetShaderConstants( pNative, &constants );
+		if ( eResult == SIR_GRAPHICS_SUCCESS && ( FAILED( pNative->pDevice->SetVertexDeclaration( pDeclaration ) ) ||
+		                                          FAILED( pNative->pDevice->SetVertexShader( ( IDirect3DVertexShader9 * )aShaders[0] ) ) ||
+		                                          FAILED( pNative->pDevice->SetPixelShader( ( IDirect3DPixelShader9 * )aShaders[1] ) ) ||
+		                                          FAILED( pNative->pDevice->BeginScene() ) ) ) {
+			eResult = SIR_GRAPHICS_DRIVER_ERROR;
+		} else if ( eResult == SIR_GRAPHICS_SUCCESS ) {
+			const HRESULT hDraw = pNative->pDevice->DrawPrimitiveUP( D3DPT_TRIANGLELIST, 1, aPosition, 4 * sizeof( float ) );
+			const HRESULT hEnd = pNative->pDevice->EndScene();
+			if ( FAILED( hDraw ) || FAILED( hEnd ) ) {
+				eResult = SIR_GRAPHICS_DRIVER_ERROR;
+			}
+		}
+	}
+	if ( pNative->pDevice != nullptr ) {
+		( void )pNative->pDevice->SetVertexShader( nullptr );
+		( void )pNative->pDevice->SetPixelShader( nullptr );
+		( void )pNative->pDevice->SetVertexDeclaration( nullptr );
+	}
+	if ( pDeclaration != nullptr ) {
+		pDeclaration->Release();
+	}
+	for ( IUnknown *pShader : aShaders ) {
+		if ( pShader != nullptr ) {
+			pShader->Release();
+		}
+	}
+	return eResult;
+}
+
 int main( int argc, char **argv )
 {
 	HINSTANCE hInstance = GetModuleHandleW( nullptr );
@@ -50,8 +134,25 @@ int main( int argc, char **argv )
 	if ( eResult == SIR_GRAPHICS_SUCCESS ) {
 		eResult = sirD3D9NativeClear( &native, 0xff203040U );
 	}
+	if ( eResult == SIR_GRAPHICS_SUCCESS && argc == 4 && strcmp( argv[1], "--shaders" ) == 0 ) {
+		eResult = sirD3D9TestCookedShaders( &native, argv[2], argv[3] );
+	}
 	if ( eResult == SIR_GRAPHICS_SUCCESS ) {
 		eResult = sirD3D9NativeDrawTriangle( &native );
+	}
+	if ( eResult == SIR_GRAPHICS_SUCCESS ) {
+		eResult = sirD3D9NativeBeginPass( &native );
+	}
+	if ( eResult == SIR_GRAPHICS_SUCCESS ) {
+		if ( sirD3D9NativeBeginPass( &native ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+			eResult = SIR_GRAPHICS_DRIVER_ERROR;
+		}
+	}
+	if ( native.bSceneActive ) {
+		const sirGraphicsResult_t eEnd = sirD3D9NativeEndPass( &native );
+		if ( eResult == SIR_GRAPHICS_SUCCESS ) {
+			eResult = eEnd;
+		}
 	}
 	if ( eResult == SIR_GRAPHICS_SUCCESS ) {
 		uint8_t *pPixels = ( uint8_t * )malloc( 320 * 240 * 4 );
@@ -87,6 +188,21 @@ int main( int argc, char **argv )
 		}
 	}
 	if ( eResult == SIR_GRAPHICS_SUCCESS ) {
+		bool bComplete = false;
+		for ( uint32_t iPoll = 0; iPoll < 1000 && !bComplete; ++iPoll ) {
+			eResult = sirD3D9NativePoll( &native, &bComplete );
+			if ( eResult != SIR_GRAPHICS_SUCCESS ) {
+				break;
+			}
+			if ( !bComplete ) {
+				Sleep( 1 );
+			}
+		}
+		if ( !bComplete && eResult == SIR_GRAPHICS_SUCCESS ) {
+			eResult = SIR_GRAPHICS_BUSY;
+		}
+	}
+	if ( eResult == SIR_GRAPHICS_SUCCESS ) {
 		eResult = sirD3D9NativeResize( &native, 256, 192 );
 	}
 	if ( eResult == SIR_GRAPHICS_SUCCESS ) {
@@ -97,7 +213,41 @@ int main( int argc, char **argv )
 	}
 	sirGraphicsHandle_t hTexture = {};
 	if ( eResult == SIR_GRAPHICS_SUCCESS ) {
-		eResult = sirD3D9NativeCreateTrackedTexture( &native, 64, 64, &hTexture );
+		sirGraphicsTextureDesc_t desc = {};
+		desc.nWidth = 64;
+		desc.nHeight = 64;
+		desc.nDepth = 1;
+		desc.nArrayLayers = 1;
+		desc.nMipLevels = 2;
+		desc.nSampleCount = 1;
+		desc.nUsage = SIR_GRAPHICS_USAGE_SAMPLED;
+		desc.eDimension = SIR_GRAPHICS_TEXTURE_2D;
+		desc.eFormat = SIR_GRAPHICS_FORMAT_BGRA8_UNORM;
+		desc.eMemory = SIR_GRAPHICS_MEMORY_GPU_LOCAL;
+		eResult = sirD3D9NativeCreateTrackedTextureDesc( &native, &desc, &hTexture );
+	}
+	if ( eResult == SIR_GRAPHICS_SUCCESS ) {
+		void *pResource = nullptr;
+		eResult = sirD3D9NativeLookupResource( &native, hTexture, &pResource );
+		if ( eResult == SIR_GRAPHICS_SUCCESS ) {
+			uint32_t szPixels[64 * 64] = {};
+			for ( uint32_t& color : szPixels ) {
+				color = 0xff306090U;
+			}
+			sirD3D9TextureUpload_t upload = {};
+			upload.pTexture = ( IDirect3DTexture9 * )pResource;
+			upload.pData = szPixels;
+			upload.nBytes = sizeof( szPixels );
+			upload.nMipLevel = 0;
+			upload.nRowPitch = 64 * sizeof( uint32_t );
+			eResult = sirD3D9NativeUploadTexture( &native, &upload );
+			if ( eResult == SIR_GRAPHICS_SUCCESS ) {
+				upload.nRowPitch = 1;
+				if ( sirD3D9NativeUploadTexture( &native, &upload ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+					eResult = SIR_GRAPHICS_DRIVER_ERROR;
+				}
+			}
+		}
 	}
 	if ( eResult == SIR_GRAPHICS_SUCCESS ) {
 		eResult = sirD3D9NativeRetireResource( &native, hTexture, 0 );
