@@ -99,6 +99,11 @@ target_link_libraries(SIRPackShippingGuardTests PRIVATE SIR::PackCooker)
 add_test(NAME resources.sirpack.shipping-source-guard COMMAND SIRPackShippingGuardTests)
 sir_configure_owned_target(SIRPackShippingGuardTests)
 
+add_executable(SIRMeshGRDGSourceTests SIRMeshGRDGSourceTests.cpp)
+target_link_libraries(SIRMeshGRDGSourceTests PRIVATE SIR::MeshGRDGSource)
+add_test(NAME mesh.grdg.canonical-source-lifetime COMMAND SIRMeshGRDGSourceTests)
+sir_configure_owned_target(SIRMeshGRDGSourceTests)
+
 add_executable(SIRMeshPackSchemaTests SIRMeshPackSchemaTests.cpp)
 target_link_libraries(SIRMeshPackSchemaTests PRIVATE SIR::MeshPackSchema)
 add_test(NAME mesh.sirpack.schema COMMAND SIRMeshPackSchemaTests)

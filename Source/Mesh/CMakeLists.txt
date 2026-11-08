@@ -36,3 +36,14 @@ target_include_directories(SIRMeshPackSchema PUBLIC
 target_compile_features(SIRMeshPackSchema PUBLIC cxx_std_17)
 target_link_libraries(SIRMeshPackSchema PUBLIC SIR::Resources)
 sir_configure_owned_target(SIRMeshPackSchema)
+
+# Bind immutable MeshCache leases directly to GRDG source epochs and provider pins.
+# GRDG owns every physical payload allocation; this consumer owns no backing.
+add_library(SIRMeshGRDGSource STATIC SIRMeshGRDGSource.cpp)
+add_library(SIR::MeshGRDGSource ALIAS SIRMeshGRDGSource)
+target_include_directories(SIRMeshGRDGSource PUBLIC
+    "${PROJECT_SOURCE_DIR}/Source"
+    "${PROJECT_SOURCE_DIR}/Build/CMake")
+target_compile_features(SIRMeshGRDGSource PUBLIC cxx_std_17)
+target_link_libraries(SIRMeshGRDGSource PUBLIC SIR::MeshCache SIR::Resources)
+sir_configure_owned_target(SIRMeshGRDGSource)
