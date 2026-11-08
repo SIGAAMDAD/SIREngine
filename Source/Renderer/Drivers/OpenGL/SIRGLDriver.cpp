@@ -63,6 +63,7 @@ typedef struct sirGLPresentSlot_s
 	bool bActive;
 	bool bAcquired;
 	bool bRetiring;
+	bool bLost;
 } sirGLPresentSlot_t;
 
 typedef struct sirGLDevice_s
@@ -1081,6 +1082,9 @@ static uint32_t sirGLResizeSurface( void *pDevice, sirGraphicsHandle_t hSurface,
 	if ( pSlot == nullptr ) {
 		return SIR_GRAPHICS_INVALID_HANDLE;
 	}
+	if ( pSlot->bLost ) {
+		return SIR_GRAPHICS_SURFACE_CHANGED;
+	}
 	if ( pSlot->bAcquired || pState->handles.pSlots[pSlot->hImage.nSlot].nChildCount != 0 ) {
 		return SIR_GRAPHICS_BUSY;
 	}
@@ -1143,6 +1147,9 @@ static uint32_t sirGLAcquireSurfaceImage( void *pDevice, sirGraphicsHandle_t hSu
 	if ( pSlot == nullptr ) {
 		return SIR_GRAPHICS_INVALID_HANDLE;
 	}
+	if ( pSlot->bLost ) {
+		return SIR_GRAPHICS_SURFACE_CHANGED;
+	}
 	if ( pSlot->bAcquired || pSlot->nAcquisitionSerial == UINT64_MAX ) {
 		return SIR_GRAPHICS_BUSY;
 	}
@@ -1178,8 +1185,15 @@ static uint32_t sirGLPresent( void *pDevice, const sirGraphicsSurfaceImage_t *pI
 	     pComplete->nValue != pSlot->nSubmittedValue ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
+	if ( pSlot->bLost ) {
+		return SIR_GRAPHICS_SURFACE_CHANGED;
+	}
 	uint32_t nStatus = sirGLBeginPresentWindow( pState->pContext, &pSlot->window );
 	if ( nStatus != SIR_GRAPHICS_SUCCESS ) {
+		if ( nStatus == SIR_GRAPHICS_DEVICE_LOST ) {
+			pSlot->bLost = true;
+			pSlot->bAcquired = false;
+		}
 		return nStatus;
 	}
 	pState->pBlitNamedFramebuffer( pSlot->nFramebuffer, 0, 0, 0, ( int32_t )pSlot->window.nWidth,
@@ -1192,6 +1206,9 @@ static uint32_t sirGLPresent( void *pDevice, const sirGraphicsSurfaceImage_t *pI
 	}
 	nStatus = sirGLSwapPresentWindow( pState->pContext, &pSlot->window );
 	if ( nStatus == SIR_GRAPHICS_SUCCESS ) {
+		pSlot->bAcquired = false;
+	} else if ( nStatus == SIR_GRAPHICS_DEVICE_LOST ) {
+		pSlot->bLost = true;
 		pSlot->bAcquired = false;
 	}
 	return nStatus;
