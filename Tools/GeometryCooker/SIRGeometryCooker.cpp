@@ -13,6 +13,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 #include <Tools/GeometryCooker/SIRGeometryCooker.h>
+#include <Tools/GeometryCooker/SIRDisplacementCooker.h>
 #include <Tools/SIRPackCooker/SIRPackCooker.h>
 
 #include <meshoptimizer.h>
@@ -618,4 +619,28 @@ sirPackResult_t SIRGeometryCooker::cook( const sirGeometryCookInput_t& in, sirGe
 	} catch ( ... ) {
 		return SIR_PACK_INVALID_FORMAT;
 	}
+}
+
+sirPackResult_t SIRGeometryCooker::cookDisplaced( const sirGeometryCookInput_t& input, const sirDisplacementImage_s& image,
+                                                  const sirDisplacementRecipe_s& recipe, sirGeometryCookOutput_t *pOutput ) noexcept
+{
+	if ( pOutput == nullptr )
+		return SIR_PACK_INVALID_ARGUMENT;
+	sirDisplacementBakeResult_t baked = {};
+	const sirPackResult_t result = SIRDisplacementCooker::bake( input, image, recipe, &baked );
+	if ( result != SIR_PACK_OK )
+		return result;
+	sirGeometryCookInput_t finalInput = input;
+	finalInput.key.nRevision = baked.nRevision;
+	finalInput.pPositionsXYZ = baked.positionsXYZ.data();
+	finalInput.nVertexCount = ( uint32_t )( baked.positionsXYZ.size() / 3 );
+	finalInput.pTexcoordsUV = baked.texcoordsUV.data();
+	finalInput.pNormalsXYZ = nullptr;
+	finalInput.pIndices = baked.indices.data();
+	finalInput.nIndexCount = ( uint32_t )baked.indices.size();
+	finalInput.pMaterials = baked.materials.data();
+	finalInput.nMaterialCount = ( uint32_t )baked.materials.size();
+	// Both visual clusters and portable collision are built from the same
+	// final vertices; the authoring image and recipe never enter SIRPack.
+	return cook( finalInput, pOutput );
 }

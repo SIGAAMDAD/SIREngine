@@ -1,5 +1,12 @@
 include("${CMAKE_CURRENT_LIST_DIR}/../../Build/CMake/SIRBuildTreeGuard.cmake")
 
+add_library(SIRDisplacementCooker STATIC SIRDisplacementCooker.cpp)
+add_library(SIR::DisplacementCooker ALIAS SIRDisplacementCooker)
+target_include_directories(SIRDisplacementCooker PUBLIC "${PROJECT_SOURCE_DIR}" "${PROJECT_SOURCE_DIR}/Source")
+target_compile_features(SIRDisplacementCooker PUBLIC cxx_std_17)
+target_link_libraries(SIRDisplacementCooker PUBLIC SIR::Resources)
+sir_configure_owned_target(SIRDisplacementCooker)
+
 if(NOT SIR_WITH_MESHOPTIMIZER)
     message(STATUS "SIRGeometryCooker disabled: enable SIR_WITH_MESHOPTIMIZER with pinned submodule")
     return()
@@ -9,7 +16,7 @@ add_library(SIRGeometryCooker STATIC SIRGeometryCooker.cpp)
 add_library(SIR::GeometryCooker ALIAS SIRGeometryCooker)
 target_include_directories(SIRGeometryCooker PUBLIC "${PROJECT_SOURCE_DIR}" "${PROJECT_SOURCE_DIR}/Source")
 target_compile_features(SIRGeometryCooker PUBLIC cxx_std_17)
-target_link_libraries(SIRGeometryCooker PUBLIC SIR::MeshPackSchema SIR::PackCooker SIR::MeshOptimizer)
+target_link_libraries(SIRGeometryCooker PUBLIC SIR::MeshPackSchema SIR::PackCooker SIR::MeshOptimizer SIR::DisplacementCooker)
 sir_configure_owned_target(SIRGeometryCooker)
 
 add_executable(sir-geometry-cooker SIRGeometryCookerCLI.cpp)

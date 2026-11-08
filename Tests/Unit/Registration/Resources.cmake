@@ -99,6 +99,12 @@ target_link_libraries(SIRMeshPackSchemaTests PRIVATE SIR::MeshPackSchema)
 add_test(NAME mesh.sirpack.schema COMMAND SIRMeshPackSchemaTests)
 sir_configure_owned_target(SIRMeshPackSchemaTests)
 
+add_executable(SIRDisplacementCookerTests SIRDisplacementCookerTests.cpp)
+target_include_directories(SIRDisplacementCookerTests PRIVATE "${PROJECT_SOURCE_DIR}")
+target_link_libraries(SIRDisplacementCookerTests PRIVATE SIR::DisplacementCooker)
+add_test(NAME mesh.geometry.displacement-bake COMMAND SIRDisplacementCookerTests)
+sir_configure_owned_target(SIRDisplacementCookerTests)
+
 if(TARGET SIRGeometryCooker)
     add_executable(SIRGeometryCookerTests SIRGeometryCookerTests.cpp)
     target_include_directories(SIRGeometryCookerTests PRIVATE "${PROJECT_SOURCE_DIR}")
@@ -108,6 +114,12 @@ if(TARGET SIRGeometryCooker)
 endif()
 
 if(TARGET sir-geometry-cooker)
+    add_test(NAME mesh.geometry.cli.displacement
+        COMMAND "${CMAKE_COMMAND}"
+            "-DSIR_GEOMETRY_COOKER=$<TARGET_FILE:sir-geometry-cooker>"
+            "-DSIR_DISPLACEMENT_OBJ=${PROJECT_SOURCE_DIR}/Tests/Fixtures/Geometry/displacement.obj"
+            "-DSIR_DISPLACEMENT_IMAGE=${PROJECT_SOURCE_DIR}/Tests/Fixtures/Geometry/displacement.pgm"
+            -P "${PROJECT_SOURCE_DIR}/Tests/Unit/VerifyDisplacementCookCLI.cmake")
     foreach(sirGeometryFixture IN ITEMS rock building terrain degenerate)
         add_test(NAME "mesh.geometry.cli.${sirGeometryFixture}"
             COMMAND "${CMAKE_COMMAND}"

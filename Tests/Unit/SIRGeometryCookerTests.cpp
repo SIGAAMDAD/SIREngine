@@ -13,6 +13,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 #include <Tools/GeometryCooker/SIRGeometryCooker.h>
+#include <Tools/GeometryCooker/SIRDisplacementCooker.h>
 #include <Resources/SIRPackCatalog.h>
 
 #include <cmath>
@@ -196,6 +197,52 @@ static bool testGrid( void )
 	CHECK( collisionCatalog.open( noCollision.catalog.data(), noCollision.catalog.size(), scratch.data(), scratch.size() ) == SIR_PACK_OK );
 	CHECK( collisionCatalog.findResource( { input.key.nAssetId, input.nResourceTypeId, input.key.nVariant }, &resource ) == SIR_PACK_OK );
 	CHECK( resource.nChunkCount == noCollision.pages.size() + 1 );
+
+	// Exercise the production offline displacement -> meshoptimizer -> SIRPack
+	// pipeline, with the authoring heightmap absent during runtime readback.
+	std::vector<float> uv;
+	for ( uint32_t y = 0; y < nGrid; ++y ) {
+		for ( uint32_t x = 0; x < nGrid; ++x ) {
+			uv.push_back( ( float )x / ( nGrid - 1 ) );
+			uv.push_back( ( float )y / ( nGrid - 1 ) );
+		}
+	}
+	std::vector<float> heights = { 0, 0, 0, 0, 1, 0, 0, 0, 0 };
+	input.pTexcoordsUV = uv.data();
+	input.bCookCollision = true;
+	sirDisplacementImage_t image = { heights.data(), 3, 3 };
+	sirDisplacementRecipe_t recipe = { 0.05f, 0, 0.15f, 3, 10000, 10000, SIR_DISPLACEMENT_CLAMP };
+	sirGeometryCookOutput_t displaced = {};
+	CHECK( SIRGeometryCooker::cookDisplaced( input, image, recipe, &displaced ) == SIR_PACK_OK );
+	SIRMeshPackSchema displacedSchema;
+	CHECK( displacedSchema.open( displaced.manifest.data(), displaced.manifest.size() ) == SIR_MESH_PACK_OK );
+	CHECK( displacedSchema.getKey().nRevision != input.key.nRevision );
+	sirGeometryCookOutput_t duplicate = {};
+	CHECK( SIRGeometryCooker::cookDisplaced( input, image, recipe, &duplicate ) == SIR_PACK_OK );
+	CHECK( displaced.manifest == duplicate.manifest && displaced.catalog == duplicate.catalog && displaced.shard == duplicate.shard );
+	const std::vector<uint8_t> originalDisplacedManifest = displaced.manifest;
+	heights[4] = 0.75f;
+	CHECK( SIRGeometryCooker::cookDisplaced( input, image, recipe, &duplicate ) == SIR_PACK_OK );
+	CHECK( duplicate.manifest != originalDisplacedManifest );
+	// Authoring pixels are discarded; runtime validation consumes only the
+	// immutable cooked catalog/shard and the portable collision source.
+	heights.clear();
+	heights.shrink_to_fit();
+	image.pHeights = nullptr;
+	SIRPackCatalog displacedCatalog;
+	CHECK( displacedCatalog.open( displaced.catalog.data(), displaced.catalog.size(), scratch.data(), scratch.size() ) == SIR_PACK_OK );
+	CHECK( displacedCatalog.validateShard( 0, displaced.shard.data(), displaced.shard.size() ) == SIR_PACK_OK );
+	sirPackResource_t displacedResource = {};
+	CHECK( displacedCatalog.findResource( { input.key.nAssetId, input.nResourceTypeId, input.key.nVariant }, &displacedResource ) ==
+	       SIR_PACK_OK );
+	CHECK( displacedSchema.validateResource( displacedResource ) == SIR_MESH_PACK_OK );
+	sirMeshPackCollision_t displacedCollision = {};
+	CHECK( displacedSchema.collisionAt( 0, &displacedCollision ) == SIR_MESH_PACK_OK );
+	CHECK( displacedCollision.nRevision == displacedSchema.getKey().nRevision );
+	sirPackChunk_t displacedChunk = {};
+	CHECK( displacedCatalog.chunkAt( displacedCollision.nChunkId, &displacedChunk ) == SIR_PACK_OK );
+	CHECK( displacedSchema.verifyCollision( 0, displaced.shard.data() + displacedChunk.nOffset, displacedChunk.nEncodedBytes ) ==
+	       SIR_MESH_PACK_OK );
 	return true;
 }
 

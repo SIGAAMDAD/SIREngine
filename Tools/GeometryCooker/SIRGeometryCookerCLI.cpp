@@ -13,9 +13,14 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 #include <Tools/GeometryCooker/SIRGeometryCooker.h>
+#include <Tools/GeometryCooker/SIRDisplacementCooker.h>
 
 #include <algorithm>
+#include <array>
 #include <cerrno>
+#include <cmath>
+#include <cstring>
+#include <limits>
 #include <cstdio>
 #include <cstdlib>
 #include <fstream>
@@ -215,10 +220,176 @@ static bool sirGeometryWriteBinary( const std::string& path, const std::vector<u
 	return true;
 }
 
+// Prepare every output before touching any previously published package.
+// Restore previous catalog/shard/sidecar on filesystem operation failures.
+static bool sirGeometryFileExists( const std::string& path )
+{
+	std::ifstream stream( path, std::ios::binary );
+	return ( bool )stream;
+}
+
+static bool sirGeometryPublishPackage( const std::string& prefix, const sirGeometryCookOutput_t& cooked,
+                                       const std::vector<uint8_t>& sidecar )
+{
+	const std::array<std::string, 3> paths = { prefix + ".sirp", prefix + ".sirm", prefix + ".meshrecipe" };
+	const std::array<const std::vector<uint8_t> *, 3> payloads = { &cooked.shard, &cooked.catalog, &sidecar };
+	std::array<bool, 3> staged = {};
+	std::array<bool, 3> backedUp = {};
+	std::array<bool, 3> installed = {};
+	bool success = true;
+	for ( const std::string& path : paths ) {
+		if ( sirGeometryFileExists( path + ".bak" ) )
+			return false;
+	}
+	for ( size_t i = 0; i < paths.size(); ++i ) {
+		if ( !payloads[i]->empty() ) {
+			if ( !sirGeometryWriteBinary( paths[i] + ".stage", *payloads[i] ) ) {
+				success = false;
+				break;
+			}
+			staged[i] = true;
+		}
+	}
+	if ( success ) {
+		for ( size_t i = 0; i < paths.size(); ++i ) {
+			if ( sirGeometryFileExists( paths[i] ) ) {
+				if ( std::rename( paths[i].c_str(), ( paths[i] + ".bak" ).c_str() ) != 0 ) {
+					success = false;
+					break;
+				}
+				backedUp[i] = true;
+			}
+		}
+	}
+	if ( success ) {
+		for ( size_t i = 0; i < paths.size(); ++i ) {
+			if ( staged[i] ) {
+				if ( std::rename( ( paths[i] + ".stage" ).c_str(), paths[i].c_str() ) != 0 ) {
+					success = false;
+					break;
+				}
+				installed[i] = true;
+			}
+		}
+	}
+	if ( !success ) {
+		for ( size_t i = 0; i < paths.size(); ++i ) {
+			if ( installed[i] )
+				std::remove( paths[i].c_str() );
+		}
+		for ( size_t i = 0; i < paths.size(); ++i ) {
+			if ( backedUp[i] && std::rename( ( paths[i] + ".bak" ).c_str(), paths[i].c_str() ) != 0 )
+				fprintf( stderr, "geometry cooker: rollback failed for %s\n", paths[i].c_str() );
+		}
+	} else {
+		for ( size_t i = 0; i < paths.size(); ++i ) {
+			if ( backedUp[i] )
+				std::remove( ( paths[i] + ".bak" ).c_str() );
+		}
+	}
+	for ( size_t i = 0; i < paths.size(); ++i ) {
+		if ( staged[i] )
+			std::remove( ( paths[i] + ".stage" ).c_str() );
+	}
+	return success;
+}
+
+static bool sirGeometryReadPGMToken( std::istream& stream, std::string *pToken )
+{
+	while ( stream >> *pToken ) {
+		if ( !pToken->empty() && ( *pToken )[0] == '#' ) {
+			std::string rest;
+			std::getline( stream, rest );
+			continue;
+		}
+		return true;
+	}
+	return false;
+}
+
+static bool sirGeometryParseUnsigned( const std::string& token, uint32_t *pResult ) noexcept
+{
+	if ( token.empty() || pResult == nullptr || token[0] == '-' )
+		return false;
+	errno = 0;
+	char *pEnd = nullptr;
+	const unsigned long n = strtoul( token.c_str(), &pEnd, 10 );
+	if ( errno || pEnd == token.c_str() || *pEnd || n > UINT32_MAX )
+		return false;
+	*pResult = ( uint32_t )n;
+	return true;
+}
+
+static bool sirGeometryReadPGM( const char *pszPath, std::vector<float> *pHeights, uint32_t *pWidth, uint32_t *pHeight )
+{
+	std::ifstream stream( pszPath );
+	if ( !stream )
+		return false;
+	std::string token;
+	if ( !sirGeometryReadPGMToken( stream, &token ) || token != "P2" )
+		return false;
+	uint32_t width = 0, height = 0, maximum = 0;
+	if ( !sirGeometryReadPGMToken( stream, &token ) || !sirGeometryParseUnsigned( token, &width ) ||
+	     !sirGeometryReadPGMToken( stream, &token ) || !sirGeometryParseUnsigned( token, &height ) ||
+	     !sirGeometryReadPGMToken( stream, &token ) || !sirGeometryParseUnsigned( token, &maximum ) || width < 2 || height < 2 ||
+	     width > 8192 || height > 8192 || maximum == 0 || maximum > 65535 )
+		return false;
+	std::vector<float> values;
+	values.reserve( ( size_t )width * height );
+	for ( uint64_t i = 0; i < ( uint64_t )width * height; ++i ) {
+		uint32_t sample = 0;
+		if ( !sirGeometryReadPGMToken( stream, &token ) || !sirGeometryParseUnsigned( token, &sample ) || sample > maximum )
+			return false;
+		values.push_back( ( float )sample / ( float )maximum );
+	}
+	if ( sirGeometryReadPGMToken( stream, &token ) )
+		return false;
+	pHeights->swap( values );
+	*pWidth = width;
+	*pHeight = height;
+	return true;
+}
+
+static bool sirGeometryParseFinite( const char *pszText, float *pResult ) noexcept
+{
+	if ( pszText == nullptr || pResult == nullptr )
+		return false;
+	errno = 0;
+	char *pEnd = nullptr;
+	const float f = strtof( pszText, &pEnd );
+	if ( errno || pEnd == pszText || *pEnd || !std::isfinite( f ) )
+		return false;
+	*pResult = f;
+	return true;
+}
+
+static std::vector<uint8_t> sirGeometryRecipeSidecar( const char *pszImagePath, const sirDisplacementRecipe_t& recipe,
+                                                      const sirDisplacementBakeResult_t& baked )
+{
+	// Editor-only sidecar: this file is never registered in SIRPack.
+	std::ostringstream stream;
+	stream << "SIR-DISPLACEMENT-RECIPE-V1\n";
+	stream << "source=" << pszImagePath << "\n";
+	stream << "amplitude=" << recipe.fAmplitude << "\n";
+	stream << "midpoint=" << recipe.fMidpoint << "\n";
+	stream << "max-error=" << recipe.fMaxGeometricError << "\n";
+	stream << "depth=" << recipe.nMaxDepth << "\n";
+	stream << "sampler=" << ( recipe.sampler == SIR_DISPLACEMENT_REPEAT ? "repeat" : "clamp" ) << "\n";
+	stream << "revision=" << baked.nRevision << "\n";
+	stream << "sha256=";
+	static const char digits[] = "0123456789abcdef";
+	for ( uint8_t b : baked.szAuthoringDigest )
+		stream << digits[b >> 4] << digits[b & 15];
+	stream << "\n";
+	const std::string source = stream.str();
+	return std::vector<uint8_t>( source.begin(), source.end() );
+}
+
 int main( int argc, char **argv )
 {
-	if ( argc != 6 && argc != 7 ) {
-		fprintf( stderr, "usage: sir-geometry-cooker input.obj output-prefix asset-id revision resource-type-id [variant]\n" );
+	if ( argc < 6 ) {
+		fprintf( stderr, "usage: sir-geometry-cooker input.obj output-prefix asset-id revision resource-type-id [variant] "
+		                 "[--heightmap height.pgm --amplitude N --midpoint N --error N --depth N --sampler clamp|repeat]\n" );
 		return 2;
 	}
 	try {
@@ -230,7 +401,9 @@ int main( int argc, char **argv )
 		sirGeometryCookInput_t input = {};
 		input.key.nAssetId = std::stoull( argv[3] );
 		input.key.nRevision = std::stoull( argv[4] );
-		input.key.nVariant = argc == 7 ? ( uint32_t )std::stoul( argv[6] ) : 0;
+		uint32_t nextArg = 6;
+		if ( nextArg < ( uint32_t )argc && argv[nextArg][0] != '-' )
+			input.key.nVariant = ( uint32_t )std::stoul( argv[nextArg++] );
 		input.nResourceTypeId = ( uint32_t )std::stoul( argv[5] );
 		input.nPackageId = input.key.nAssetId;
 		input.nGeneration = input.key.nRevision;
@@ -247,6 +420,73 @@ int main( int argc, char **argv )
 		input.bCookCollision = true;
 		input.pTexcoordsUV = obj.bAnyUV ? obj.uv.data() : nullptr;
 		input.pNormalsXYZ = obj.bAllNormals ? obj.normals.data() : nullptr;
+
+		std::string imagePath;
+		sirDisplacementRecipe_t recipe = { 1.0f, 0.5f, 0.05f, 6, 1048576, 1048576, SIR_DISPLACEMENT_CLAMP };
+		for ( ; nextArg < ( uint32_t )argc; nextArg += 2 ) {
+			if ( nextArg + 1 >= ( uint32_t )argc ) {
+				fprintf( stderr, "geometry cooker: option requires a value\n" );
+				return 2;
+			}
+			const std::string option = argv[nextArg];
+			const char *pszValue = argv[nextArg + 1];
+			if ( option == "--heightmap" )
+				imagePath = pszValue;
+			else if ( option == "--amplitude" ) {
+				if ( !sirGeometryParseFinite( pszValue, &recipe.fAmplitude ) )
+					return 2;
+			} else if ( option == "--midpoint" ) {
+				if ( !sirGeometryParseFinite( pszValue, &recipe.fMidpoint ) )
+					return 2;
+			} else if ( option == "--error" ) {
+				if ( !sirGeometryParseFinite( pszValue, &recipe.fMaxGeometricError ) || recipe.fMaxGeometricError <= 0 )
+					return 2;
+			} else if ( option == "--depth" ) {
+				if ( !sirGeometryParseUnsigned( pszValue, &recipe.nMaxDepth ) || recipe.nMaxDepth > 8 )
+					return 2;
+			} else if ( option == "--sampler" ) {
+				if ( strcmp( pszValue, "repeat" ) == 0 )
+					recipe.sampler = SIR_DISPLACEMENT_REPEAT;
+				else if ( strcmp( pszValue, "clamp" ) == 0 )
+					recipe.sampler = SIR_DISPLACEMENT_CLAMP;
+				else
+					return 2;
+			} else {
+				fprintf( stderr, "geometry cooker: unknown option %s\n", argv[nextArg] );
+				return 2;
+			}
+		}
+		std::vector<float> heights;
+		sirDisplacementBakeResult_t baked = {};
+		std::vector<uint8_t> recipeSidecar;
+		if ( !imagePath.empty() ) {
+			if ( input.pTexcoordsUV == nullptr ) {
+				fprintf( stderr, "geometry cooker: displacement requires valid source UVs\n" );
+				return 1;
+			}
+			uint32_t width = 0, height = 0;
+			if ( !sirGeometryReadPGM( imagePath.c_str(), &heights, &width, &height ) ) {
+				fprintf( stderr, "geometry cooker: malformed or missing ASCII PGM heightmap\n" );
+				return 1;
+			}
+			const sirDisplacementImage_t image = { heights.data(), width, height };
+			const sirPackResult_t bakeResult = SIRDisplacementCooker::bake( input, image, recipe, &baked );
+			if ( bakeResult != SIR_PACK_OK ) {
+				fprintf( stderr, "geometry cooker: displacement bake failed with code %u\n", ( unsigned )bakeResult );
+				return 1;
+			}
+			recipeSidecar = sirGeometryRecipeSidecar( imagePath.c_str(), recipe, baked );
+			input.key.nRevision = baked.nRevision;
+			input.nGeneration = baked.nRevision;
+			input.pPositionsXYZ = baked.positionsXYZ.data();
+			input.nVertexCount = ( uint32_t )( baked.positionsXYZ.size() / 3 );
+			input.pTexcoordsUV = baked.texcoordsUV.data();
+			input.pNormalsXYZ = nullptr;
+			input.pIndices = baked.indices.data();
+			input.nIndexCount = ( uint32_t )baked.indices.size();
+			input.pMaterials = baked.materials.data();
+			input.nMaterialCount = ( uint32_t )baked.materials.size();
+		}
 		sirGeometryCookOutput_t cooked;
 		const sirPackResult_t result = SIRGeometryCooker::cook( input, &cooked );
 		if ( result != SIR_PACK_OK ) {
@@ -254,9 +494,7 @@ int main( int argc, char **argv )
 			return 1;
 		}
 		const std::string prefix = argv[2];
-		// Publish the immutable shard first and catalog last. The .sirm
-		// reader can only discover a complete matching .sirp generation.
-		if ( !sirGeometryWriteBinary( prefix + ".sirp", cooked.shard ) || !sirGeometryWriteBinary( prefix + ".sirm", cooked.catalog ) ) {
+		if ( !sirGeometryPublishPackage( prefix, cooked, recipeSidecar ) ) {
 			fprintf( stderr, "geometry cooker: failed to write outputs\n" );
 			return 1;
 		}

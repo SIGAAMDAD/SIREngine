@@ -146,3 +146,13 @@ add_executable(SIRMeshPackSchemaTests "${CMAKE_CURRENT_LIST_DIR}/../../Unit/SIRM
 target_link_libraries(SIRMeshPackSchemaTests PRIVATE SIRMeshPackSchema)
 target_compile_options(SIRMeshPackSchemaTests PRIVATE -Wall -Wextra -Wpedantic -Werror)
 add_test(NAME mesh.sirpack.schema COMMAND SIRMeshPackSchemaTests)
+
+# Authoring-only adaptive displacement is independently linkable without
+# meshoptimizer, a graphics device or engine runtime state.
+add_executable(SIRDisplacementCookerTests
+    "${CMAKE_CURRENT_LIST_DIR}/../../../Tools/GeometryCooker/SIRDisplacementCooker.cpp"
+    "${SIR_MESH_SOURCE_ROOT}/Resources/SIRPackFormat.cpp"
+    "${CMAKE_CURRENT_LIST_DIR}/../../Unit/SIRDisplacementCookerTests.cpp")
+target_include_directories(SIRDisplacementCookerTests PRIVATE "${SIR_MESH_SOURCE_ROOT}" "${SIR_MESH_BUILD_ROOT}" "${CMAKE_CURRENT_LIST_DIR}/../../..")
+target_compile_options(SIRDisplacementCookerTests PRIVATE -Wall -Wextra -Wpedantic -Werror)
+add_test(NAME mesh.geometry.displacement-bake COMMAND SIRDisplacementCookerTests)

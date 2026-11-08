@@ -63,6 +63,9 @@ typedef struct sirGeometryCookOutput_s
 	std::vector<std::vector<uint8_t>> pages;
 } sirGeometryCookOutput_t;
 
+struct sirDisplacementImage_s;
+struct sirDisplacementRecipe_s;
+
 // Offline-only, deterministic and independent of runtime page/GRDG ownership.
 // Requires the repository's pinned meshoptimizer revision; no alternate
 // meshlet builder is linked or substituted.
@@ -70,6 +73,8 @@ class SIRGeometryCooker
 {
 public:
 	static sirPackResult_t cook( const sirGeometryCookInput_t& input, sirGeometryCookOutput_t *pOutput ) noexcept;
+	static sirPackResult_t cookDisplaced( const sirGeometryCookInput_t& input, const sirDisplacementImage_s& image,
+	                                      const sirDisplacementRecipe_s& recipe, sirGeometryCookOutput_t *pOutput ) noexcept;
 
 protected:
 private:
