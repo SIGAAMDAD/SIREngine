@@ -46,6 +46,11 @@ target_compile_definitions(SIRMeshCacheOwnerLimitTests PRIVATE SIR_MESH_TEST_OWN
 add_test(NAME mesh.cache.owner-id-limit COMMAND SIRMeshCacheOwnerLimitTests)
 sir_configure_owned_target(SIRMeshCacheOwnerLimitTests)
 
+add_executable(SIRMeshCacheOwnerConcurrencyTests SIRMeshCacheOwnerConcurrencyTests.cpp)
+target_link_libraries(SIRMeshCacheOwnerConcurrencyTests PRIVATE SIR::MeshCache SIR::Core)
+add_test(NAME mesh.cache.owner-concurrency COMMAND SIRMeshCacheOwnerConcurrencyTests)
+sir_configure_owned_target(SIRMeshCacheOwnerConcurrencyTests)
+
 add_executable(SIRVGFramePlanTests SIRVGFramePlanTests.cpp)
 target_link_libraries(SIRVGFramePlanTests PRIVATE SIR::VGFramePlan)
 add_test(NAME mesh.vg.frame-plan COMMAND SIRVGFramePlanTests)
@@ -56,3 +61,8 @@ add_executable(SIRMeshCacheIdentityTests SIRMeshCacheIdentityTests.cpp)
 target_link_libraries(SIRMeshCacheIdentityTests PRIVATE SIR::MeshCache)
 add_test(NAME mesh.cache.identity-revision COMMAND SIRMeshCacheIdentityTests)
 sir_configure_owned_target(SIRMeshCacheIdentityTests)
+
+add_executable(SIRVGContractsTests SIRVGContractsTests.cpp)
+target_link_libraries(SIRVGContractsTests PRIVATE SIR::VGContracts)
+add_test(NAME mesh.vg.contracts COMMAND SIRVGContractsTests)
+sir_configure_owned_target(SIRVGContractsTests)

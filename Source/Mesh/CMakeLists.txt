@@ -17,3 +17,55 @@ target_include_directories(SIRVGFramePlan PUBLIC
     "${PROJECT_SOURCE_DIR}/Build/CMake")
 target_compile_features(SIRVGFramePlan PUBLIC cxx_std_17)
 sir_configure_owned_target(SIRVGFramePlan)
+
+# Versioned mesh-owned GRDG/provider/graphics boundary checks; no native device ownership.
+add_library(SIRVGContracts STATIC SIRVGContracts.cpp)
+add_library(SIR::VGContracts ALIAS SIRVGContracts)
+target_include_directories(SIRVGContracts PUBLIC
+    "${PROJECT_SOURCE_DIR}/Source"
+    "${PROJECT_SOURCE_DIR}/Build/CMake")
+target_compile_features(SIRVGContracts PUBLIC cxx_std_17)
+sir_configure_owned_target(SIRVGContracts)
+
+# Immutable, versioned SIRG geometry manifest. Runtime-only reader/validator.
+add_library(SIRMeshPackSchema STATIC SIRMeshPackSchema.cpp)
+add_library(SIR::MeshPackSchema ALIAS SIRMeshPackSchema)
+target_include_directories(SIRMeshPackSchema PUBLIC
+    "${PROJECT_SOURCE_DIR}/Source"
+    "${PROJECT_SOURCE_DIR}/Build/CMake")
+target_compile_features(SIRMeshPackSchema PUBLIC cxx_std_17)
+target_link_libraries(SIRMeshPackSchema PUBLIC SIR::Resources)
+sir_configure_owned_target(SIRMeshPackSchema)
+
+# Bind immutable MeshCache leases directly to GRDG source epochs and provider pins.
+# GRDG owns every physical payload allocation; this consumer owns no backing.
+add_library(SIRMeshGRDGSource STATIC SIRMeshGRDGSource.cpp)
+add_library(SIR::MeshGRDGSource ALIAS SIRMeshGRDGSource)
+target_include_directories(SIRMeshGRDGSource PUBLIC
+    "${PROJECT_SOURCE_DIR}/Source"
+    "${PROJECT_SOURCE_DIR}/Build/CMake")
+target_compile_features(SIRMeshGRDGSource PUBLIC cxx_std_17)
+target_link_libraries(SIRMeshGRDGSource PUBLIC SIR::MeshCache SIR::Resources)
+sir_configure_owned_target(SIRMeshGRDGSource)
+
+# Immutable shared CPU collision source: backend-owned bodies reuse one pinned
+# canonical MeshCache triangle allocation; physics retains acceleration ownership.
+add_library(SIRMeshCollisionSource STATIC SIRMeshCollisionSource.cpp)
+add_library(SIR::MeshCollisionSource ALIAS SIRMeshCollisionSource)
+target_include_directories(SIRMeshCollisionSource PUBLIC
+    "${PROJECT_SOURCE_DIR}/Source"
+    "${PROJECT_SOURCE_DIR}/Build/CMake")
+target_compile_features(SIRMeshCollisionSource PUBLIC cxx_std_17)
+target_link_libraries(SIRMeshCollisionSource PUBLIC SIR::MeshCache)
+sir_configure_owned_target(SIRMeshCollisionSource)
+
+# Caller-owned BVH metadata is a derived CPU query structure over shared pinned
+# source triangle geometry; no duplicate vertex or index allocation.
+add_library(SIRMeshCollisionBVH STATIC SIRMeshCollisionBVH.cpp)
+add_library(SIR::MeshCollisionBVH ALIAS SIRMeshCollisionBVH)
+target_include_directories(SIRMeshCollisionBVH PUBLIC
+    "${PROJECT_SOURCE_DIR}/Source"
+    "${PROJECT_SOURCE_DIR}/Build/CMake")
+target_compile_features(SIRMeshCollisionBVH PUBLIC cxx_std_17)
+target_link_libraries(SIRMeshCollisionBVH PUBLIC SIR::MeshCollisionSource)
+sir_configure_owned_target(SIRMeshCollisionBVH)
