@@ -282,17 +282,22 @@ static void sirTestMalformedArchiveFields( void )
 		uint32_t nValue;
 	};
 	const Edit edits[] = {
-	    { 7, 1 },             // unsupported flags
-	    { 16, 0 },            // zero revision
-	    { 24, 0 },            // empty skeleton
-	    { 24, 4097 },         // excessive bone count
-	    { 28, 1 },            // bogus LOD count
-	    { 36, 1 },            // skeleton events forbidden
-	    { 60, 0 },            // section must begin at header
-	    { 64, 0xffffffffU },  // enormous section offset
-	    { 116, 0x7fc00000U }, // NaN bounds
-	    { 144, 7 },           // cyclic/forward parent index
-	    { 148, 0x7fc00000U }  // NaN transform
+	    { 7, 1 },                  // unsupported flags
+	    { 16, 0 },                 // zero revision
+	    { 24, 0 },                 // empty skeleton
+	    { 24, 4097 },              // excessive bone count
+	    { 28, 1 },                 // bogus LOD count
+	    { 36, 1 },                 // skeleton events forbidden
+	    { 60, 0 },                 // section must begin at header
+	    { 64, 0xffffffffU },       // enormous section offset
+	    { 116, 0x7fc00000U },      // NaN bounds
+	    { 116, 0x7f7fffffU },      // minimum bound larger than maximum
+	    { 144, 7 },                // cyclic/forward parent index
+	    { 148, 0x7fc00000U },      // NaN transform
+	    { 144 + 88, 0 },           // missing stable bone identity
+	    { 144 + 84, 0xbf800000U }, // negative conservative radius
+	    { 144 + 4 + 7 * 4, 0 },    // zero bind scale
+	    { 144 + 4 + 17 * 4, 0 }    // zero inverse bind scale
 	};
 	for ( const Edit& edit : edits ) {
 		memcpy( modified, good, output.nWritten );
@@ -329,16 +334,17 @@ static void sirTestMalformedTrackFields( void )
 	const uint32_t nTrack = 144;
 	const uint32_t nPayload = sirTestRead32( good + nTrack + 16 );
 	const uint32_t offsets[][2] = {
-	    { nTrack + 4, 0 },            // zero key count
-	    { nTrack + 4, 65537 },        // sample count bomb
-	    { nTrack + 8, 3 },            // coarse flag invalid
-	    { nTrack + 12, 4 },           // encoding not recognized
-	    { nTrack + 16, 0 },           // overlap with descriptors
-	    { nTrack + 24, 1 },           // truncated payload
-	    { nTrack + 32, 0x7fc00000U }, // NaN range
-	    { nTrack + 72, 0xff800000U }, // invalid range
-	    { nTrack + 112, 0 },          // wrong per-track CRC
-	    { nPayload + 4, 0 },          // duplicate timestamps
+	    { nTrack, SIR_ANIM_COOK_MAX_BONES }, // invalid bone index despite valid CRC
+	    { nTrack + 4, 0 },                   // zero key count
+	    { nTrack + 4, 65537 },               // sample count bomb
+	    { nTrack + 8, 3 },                   // coarse flag invalid
+	    { nTrack + 12, 4 },                  // encoding not recognized
+	    { nTrack + 16, 0 },                  // overlap with descriptors
+	    { nTrack + 24, 1 },                  // truncated payload
+	    { nTrack + 32, 0x7fc00000U },        // NaN range
+	    { nTrack + 72, 0xff800000U },        // invalid range
+	    { nTrack + 112, 0 },                 // wrong per-track CRC
+	    { nPayload + 4, 0 },                 // duplicate timestamps
 	};
 	for ( const auto& edit : offsets ) {
 		memcpy( modified, good, output.nWritten );

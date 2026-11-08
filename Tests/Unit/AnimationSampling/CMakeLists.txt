@@ -1,0 +1,10 @@
+add_executable(SIRAnimationSamplingSmokeTests SIRAnimationSamplingSmoke.cpp)
+target_link_libraries(SIRAnimationSamplingSmokeTests PRIVATE SIR::AnimationCook SIR::Animation)
+add_test(NAME ANM02_SamplingSmoke COMMAND SIRAnimationSamplingSmokeTests)
+sir_configure_owned_target(SIRAnimationSamplingSmokeTests)
+
+add_executable(SIRAnimationSamplingTests SIRAnimationSamplingTests.cpp)
+target_link_libraries(SIRAnimationSamplingTests PRIVATE SIR::AnimationCook SIR::Animation)
+target_compile_definitions(SIRAnimationSamplingTests PRIVATE SIR_ANIM_WITH_JOBS=1)
+add_test(NAME ANM02_Sampling COMMAND SIRAnimationSamplingTests)
+sir_configure_owned_target(SIRAnimationSamplingTests)

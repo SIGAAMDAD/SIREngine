@@ -13,6 +13,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 #include "SIRAnimationCooked.h"
+#include "SIRAnimationCookedClipReader.h"
 
 #include <cmath>
 #include <cstring>
@@ -143,6 +144,11 @@ static sirAnimationCookResult_t sirAnimationCookHeaderData_tRead( sirAnimationCo
 			return SIR_ANIM_COOK_CORRUPT;
 		}
 	}
+	for ( uint32_t i = 0; i < 3; ++i ) {
+		if ( pHeader->fBounds[i] > pHeader->fBounds[i + 3] ) {
+			return SIR_ANIM_COOK_CORRUPT;
+		}
+	}
 	if ( sirCookRead32( p + SIR_COOK_CHECKSUM_OFFSET ) != sirCookCrc( p, source.nBytes, true ) ) {
 		return SIR_ANIM_COOK_CORRUPT;
 	}
@@ -246,7 +252,18 @@ static sirAnimationCookResult_t sirCookValidate( sirAnimationCookSpan_t source, 
 				return SIR_ANIM_COOK_CORRUPT;
 			}
 			for ( uint32_t f = 0; f < 21; ++f ) {
-				if ( !std::isfinite( sirCookReadFloat( pBone + 4 + 4 * f ) ) ) {
+				const float fValue = sirCookReadFloat( pBone + 4 + 4 * f );
+				if ( !std::isfinite( fValue ) || ( ( f >= 7 && f <= 9 ) || ( f >= 17 && f <= 19 ) ) && fValue == 0.0f ||
+				     ( f == 20 && fValue < 0.0f ) ) {
+					return SIR_ANIM_COOK_CORRUPT;
+				}
+			}
+			const uint32_t nStableId = sirCookRead32( pBone + 88 );
+			if ( !nStableId ) {
+				return SIR_ANIM_COOK_CORRUPT;
+			}
+			for ( uint32_t j = 0; j < i; ++j ) {
+				if ( sirCookRead32( source.pBytes + h.nOffsets[0] + j * SIR_COOK_BONE_BYTES + 88 ) == nStableId ) {
 					return SIR_ANIM_COOK_CORRUPT;
 				}
 			}
@@ -270,7 +287,8 @@ static sirAnimationCookResult_t sirCookValidate( sirAnimationCookSpan_t source, 
 		for ( uint32_t i = 0; i < h.nCount[0]; ++i ) {
 			const sirAnimationCookEncodedTrack_t track =
 			    sirAnimationCookEncodedTrack_tRead( source.pBytes + h.nOffsets[0] + i * SIR_COOK_TRACK_BYTES );
-			if ( track.nOffset != nExpectedPayload || !sirAnimationCookEncodedTrack_tValid( source, track, nPayloadStart ) ) {
+			if ( track.nBone >= SIR_ANIM_COOK_MAX_BONES || track.nOffset != nExpectedPayload ||
+			     !sirAnimationCookEncodedTrack_tValid( source, track, nPayloadStart ) ) {
 				return SIR_ANIM_COOK_CORRUPT;
 			}
 			nExpectedPayload += track.nBytes;
@@ -428,24 +446,27 @@ typedef struct sirAnimationCookFoundTrack_s
 	bool bCoarse;
 } sirAnimationCookFoundTrack_t;
 
-static sirAnimationCookResult_t sirCookFindTrack( sirAnimationCookSpan_t source, uint32_t nBoneIndex, bool bFine,
-                                                  sirAnimationCookFoundTrack_t *pFound ) noexcept
+typedef struct sirAnimationCookTrackLookup_s
 {
-	sirAnimationCookHeaderData_t h = {};
-	const sirAnimationCookResult_t eResult = sirCookValidate( source, &h );
-	if ( eResult != SIR_ANIM_COOK_OK || h.nKind != SIR_ANIM_COOK_CLIP ) {
-		return eResult != SIR_ANIM_COOK_OK ? eResult : SIR_ANIM_COOK_INVALID;
-	}
+	uint32_t nTrackCount;
+	uint64_t nTrackOffset;
+	uint32_t nBoneIndex;
+	bool bPreferFine;
+} sirAnimationCookTrackLookup_t;
+
+static sirAnimationCookResult_t sirCookFindTrackPrepared( sirAnimationCookSpan_t source, const sirAnimationCookTrackLookup_t& request,
+                                                          sirAnimationCookFoundTrack_t *pFound ) noexcept
+{
 	bool bFoundCoarse = false;
 	sirAnimationCookEncodedTrack_t coarse = {};
-	for ( uint32_t i = 0; i < h.nCount[0]; ++i ) {
+	for ( uint32_t i = 0; i < request.nTrackCount; ++i ) {
 		const sirAnimationCookEncodedTrack_t candidate =
-		    sirAnimationCookEncodedTrack_tRead( source.pBytes + h.nOffsets[0] + i * SIR_COOK_TRACK_BYTES );
-		if ( candidate.nBone != nBoneIndex ) {
+		    sirAnimationCookEncodedTrack_tRead( source.pBytes + request.nTrackOffset + i * SIR_COOK_TRACK_BYTES );
+		if ( candidate.nBone != request.nBoneIndex ) {
 			continue;
 		}
 		if ( !candidate.nCoarse ) {
-			if ( bFine ) {
+			if ( request.bPreferFine ) {
 				pFound->track = candidate;
 				pFound->bCoarse = false;
 				return SIR_ANIM_COOK_OK;
@@ -457,7 +478,7 @@ static sirAnimationCookResult_t sirCookFindTrack( sirAnimationCookSpan_t source,
 		} else {
 			coarse = candidate;
 			bFoundCoarse = true;
-			if ( !bFine ) {
+			if ( !request.bPreferFine ) {
 				pFound->track = candidate;
 				pFound->bCoarse = true;
 				return SIR_ANIM_COOK_OK;
@@ -470,6 +491,17 @@ static sirAnimationCookResult_t sirCookFindTrack( sirAnimationCookSpan_t source,
 		return SIR_ANIM_COOK_OK;
 	}
 	return SIR_ANIM_COOK_MISSING;
+}
+
+static sirAnimationCookResult_t sirCookFindTrack( sirAnimationCookSpan_t source, uint32_t nBoneIndex, bool bFine,
+                                                  sirAnimationCookFoundTrack_t *pFound ) noexcept
+{
+	sirAnimationCookHeaderData_t h = {};
+	const sirAnimationCookResult_t eResult = sirCookValidate( source, &h );
+	if ( eResult != SIR_ANIM_COOK_OK || h.nKind != SIR_ANIM_COOK_CLIP ) {
+		return eResult != SIR_ANIM_COOK_OK ? eResult : SIR_ANIM_COOK_INVALID;
+	}
+	return sirCookFindTrackPrepared( source, { h.nCount[0], h.nOffsets[0], nBoneIndex, bFine }, pFound );
 }
 
 sirAnimationCookResult_t SIRAnimationCooked::getTrackCount( sirAnimationCookSpan_t source, uint32_t nBoneIndex, bool bPreferFine,
@@ -486,18 +518,9 @@ sirAnimationCookResult_t SIRAnimationCooked::getTrackCount( sirAnimationCookSpan
 	return eResult;
 }
 
-sirAnimationCookResult_t SIRAnimationCooked::readTrack( sirAnimationCookSpan_t source, uint32_t nBoneIndex, bool bPreferFine,
-                                                        sirAnimationCookTrackOutput_t *pOutput ) noexcept
+static sirAnimationCookResult_t sirCookDecodeTrack( sirAnimationCookSpan_t source, const sirAnimationCookFoundTrack_t& found,
+                                                    sirAnimationCookTrackOutput_t *pOutput ) noexcept
 {
-	if ( !pOutput ) {
-		return SIR_ANIM_COOK_INVALID;
-	}
-	pOutput->nWritten = 0;
-	sirAnimationCookFoundTrack_t found = {};
-	const sirAnimationCookResult_t eResult = sirCookFindTrack( source, nBoneIndex, bPreferFine, &found );
-	if ( eResult != SIR_ANIM_COOK_OK ) {
-		return eResult;
-	}
 	if ( !pOutput->pKeys || pOutput->nCapacity < found.track.nCount ) {
 		return SIR_ANIM_COOK_CAPACITY;
 	}
@@ -525,6 +548,68 @@ sirAnimationCookResult_t SIRAnimationCooked::readTrack( sirAnimationCookSpan_t s
 	pOutput->bUsedCoarse = found.bCoarse;
 	pOutput->nExecutionMask = ( uint8_t )found.track.nExecutionMask;
 	return SIR_ANIM_COOK_OK;
+}
+
+sirAnimationCookResult_t SIRAnimationCooked::readTrack( sirAnimationCookSpan_t source, uint32_t nBoneIndex, bool bPreferFine,
+                                                        sirAnimationCookTrackOutput_t *pOutput ) noexcept
+{
+	if ( !pOutput ) {
+		return SIR_ANIM_COOK_INVALID;
+	}
+	pOutput->nWritten = 0;
+	sirAnimationCookFoundTrack_t found = {};
+	const sirAnimationCookResult_t eResult = sirCookFindTrack( source, nBoneIndex, bPreferFine, &found );
+	return eResult == SIR_ANIM_COOK_OK ? sirCookDecodeTrack( source, found, pOutput ) : eResult;
+}
+
+sirAnimationCookResult_t SIRAnimationCookedClipReader::initialize( sirAnimationCookSpan_t source,
+                                                                   sirAnimationCookAssetInfo_t *pInfo ) noexcept
+{
+	m_Source = {};
+	m_nTrackCount = 0;
+	m_nTrackOffset = 0;
+	if ( !pInfo ) {
+		return SIR_ANIM_COOK_INVALID;
+	}
+	const sirAnimationCookResult_t eResult = SIRAnimationCooked::inspect( source, pInfo );
+	if ( eResult != SIR_ANIM_COOK_OK ) {
+		return eResult;
+	}
+	if ( pInfo->eKind != SIR_ANIM_COOK_CLIP ) {
+		return SIR_ANIM_COOK_INVALID;
+	}
+	m_Source = source;
+	m_nTrackCount = pInfo->nItemCount;
+	m_nTrackOffset = sirCookRead64( source.pBytes + 60 );
+	return SIR_ANIM_COOK_OK;
+}
+
+sirAnimationCookResult_t SIRAnimationCookedClipReader::getTrackCount( uint32_t nBoneIndex, bool bPreferFine,
+                                                                      uint32_t *pCount ) const noexcept
+{
+	if ( !m_Source.pBytes || !pCount ) {
+		return SIR_ANIM_COOK_INVALID;
+	}
+	sirAnimationCookFoundTrack_t found = {};
+	const sirAnimationCookResult_t eResult =
+	    sirCookFindTrackPrepared( m_Source, { m_nTrackCount, m_nTrackOffset, nBoneIndex, bPreferFine }, &found );
+	if ( eResult == SIR_ANIM_COOK_OK ) {
+		*pCount = found.track.nCount;
+	}
+	return eResult;
+}
+
+sirAnimationCookResult_t SIRAnimationCookedClipReader::readTrack( uint32_t nBoneIndex, bool bPreferFine,
+                                                                  sirAnimationCookTrackOutput_t *pOutput ) const noexcept
+{
+	if ( !m_Source.pBytes || !pOutput ) {
+		return SIR_ANIM_COOK_INVALID;
+	}
+	pOutput->nWritten = 0;
+	sirAnimationCookFoundTrack_t found = {};
+	const sirAnimationCookResult_t eResult =
+	    sirCookFindTrackPrepared( m_Source, { m_nTrackCount, m_nTrackOffset, nBoneIndex, bPreferFine }, &found );
+	return eResult == SIR_ANIM_COOK_OK ? sirCookDecodeTrack( m_Source, found, pOutput ) : eResult;
 }
 
 static sirAnimationCookResult_t sirCookReadMetadata( sirAnimationCookSpan_t source, uint32_t nIndex, uint32_t nSection,

@@ -63,7 +63,7 @@ static void sirCookWriteFloat( uint8_t *p, float fValue ) noexcept
 
 static bool sirCookAdd( uint64_t *pLength, uint64_t nAdditional ) noexcept
 {
-	if ( *pLength > UINT32_MAX - nAdditional ) {
+	if ( nAdditional > UINT32_MAX || *pLength > UINT32_MAX - nAdditional ) {
 		return false;
 	}
 	*pLength += nAdditional;
