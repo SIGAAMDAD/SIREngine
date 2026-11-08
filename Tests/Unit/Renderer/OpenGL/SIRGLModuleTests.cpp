@@ -84,7 +84,14 @@ static void sirGLTestWindowPresentation( sirGraphicsABIDriver_t *pDriver,
 	const uint32_t nCreate = pDriver->pCreateDevice( pDriver->pDriver, &request, &device );
 	sirGLTestCheck( nCreate == SIR_GRAPHICS_SUCCESS, "windowed GL46 device admission" );
 	if ( nCreate == SIR_GRAPHICS_SUCCESS ) {
-		
+		sirGraphicsABICapabilities_t caps = {};
+		caps.nSize = sizeof( caps );
+		const uint32_t nCaps = device.pQueryCapabilities( device.pDevice, &caps );
+		sirGLTestCheck( nCaps == SIR_GRAPHICS_SUCCESS &&
+		                    ( caps.nEnabledFeatures & ( SIR_GRAPHICS_FEATURE_GRAPHICS | SIR_GRAPHICS_FEATURE_PRESENT ) ) ==
+		                        ( SIR_GRAPHICS_FEATURE_GRAPHICS | SIR_GRAPHICS_FEATURE_PRESENT ) &&
+		                    sirGraphicsValidateABICapabilities( &caps ) == SIR_GRAPHICS_ABI_SUCCESS,
+		                "windowed GL capabilities accepted by canonical graphics ABI" );
 		const sirGraphicsABIPresentDesc_t present = { sizeof( present ), 320, 200, 1,
 		                                             SIR_GRAPHICS_FORMAT_RGBA8_UNORM, SIR_GRAPHICS_PRESENT_FIFO, 0, 0 };
 		sirGraphicsHandle_t hSurface = {};
