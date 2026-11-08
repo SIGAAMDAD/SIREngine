@@ -13,17 +13,6 @@ set(SIR_CORE_PLATFORM_COMMON
     SIRAtomic.cpp
     SIRPlatformRootDirectory.cpp
     SIRPlatformAtomicFile.cpp
-    Input/SIRInputActions.cpp
-    Input/SIRInputReplay.cpp
-    Input/SIRInputHistory.cpp
-    Input/SIRInputBackend.cpp
-    Input/SIRInputText.cpp
-    Input/SIRInputUIDispatch.cpp
-    Input/SIRInputHaptics.cpp
-    Input/SIRInputDeviceRegistry.cpp
-    Input/SIRInputControllerProfiles.cpp
-    Input/SIRInputFrameState.cpp
-    Input/SIRInputService.cpp
 )
 
 if(WIN32)
@@ -43,10 +32,10 @@ if(WIN32)
         Windows/SIRPlatformProcessWindows.cpp
         Window/Windows/SIRWindowDriverWin32.cpp
         Window/Windows/SIRWGLBootstrapWindow.cpp
-        Input/Windows/SIRWin32InputBridge.cpp
-        Input/Windows/SIRWindowsRawBackend.cpp
-        Input/Windows/SIRWindowsRawDecode.cpp
-        Input/Windows/SIRWindowsXInputBackend.cpp
+        Windows/SIRWin32InputBridge.cpp
+        Windows/SIRWindowsRawBackend.cpp
+        Windows/SIRWindowsRawDecode.cpp
+        Windows/SIRWindowsXInputBackend.cpp
         Windows/SIRChildProcessWindows.cpp
         Windows/SIRFileLockWindows.cpp
         Windows/SIRPlatformFileSystemWindows.cpp
@@ -79,8 +68,8 @@ if(WIN32)
         endif()
         if(SIR_GAMEINPUT_INCLUDE_DIR AND SIR_GAMEINPUT_SDK_IS_V1)
             list(APPEND SIR_CORE_PLATFORM_OS
-                Input/Windows/SIRWindowsGameInputBackend.cpp
-                Input/Windows/SIRWindowsGameInputCodec.cpp)
+                Windows/SIRWindowsGameInputBackend.cpp
+                Windows/SIRWindowsGameInputCodec.cpp)
             target_include_directories(SIRCore PRIVATE "${SIR_GAMEINPUT_INCLUDE_DIR}")
             target_compile_definitions(SIRCore PUBLIC SIR_INPUT_GAMEINPUT_AVAILABLE=1)
         elseif(SIR_REQUIRE_GAMEINPUT_SDK)
@@ -107,7 +96,7 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         Linux/SIRDynamicLibraryLinux.cpp
         Linux/SIRPlatformTimeLinux.cpp
         Linux/SIRPlatformProcessLinux.cpp
-        Input/Linux/SIRLinuxEvdevBackend.cpp
+        Linux/SIRLinuxEvdevBackend.cpp
         Linux/SIRChildProcessLinux.cpp
         Linux/SIRFileLockLinux.cpp
         Linux/SIRPlatformFileSystemLinux.cpp
@@ -191,7 +180,7 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
             if(SIR_WITH_WAYLAND_INPUT)
                 pkg_check_modules(SIR_WAYLAND_XKB QUIET IMPORTED_TARGET xkbcommon)
                 if(SIR_WAYLAND_XKB_FOUND)
-                    list(APPEND SIR_CORE_PLATFORM_OS Input/Linux/SIRWaylandInputBridge.cpp)
+                    list(APPEND SIR_CORE_PLATFORM_OS Linux/SIRWaylandInputBridge.cpp)
                     target_link_libraries(SIRCore PRIVATE PkgConfig::SIR_WAYLAND_XKB)
                     target_compile_definitions(SIRCore PUBLIC SIR_INPUT_WAYLAND_AVAILABLE=1)
                     target_compile_definitions(SIRCore PRIVATE SIR_WAYLAND_XKB_AVAILABLE=1)
@@ -217,7 +206,7 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     if(SIR_WITH_X11_INPUT)
         find_package(X11 QUIET)
         if(X11_FOUND)
-            list(APPEND SIR_CORE_PLATFORM_OS Input/Linux/SIRLinuxX11Backend.cpp Window/Linux/SIRWindowDriverX11.cpp Input/Linux/SIRX11InputBridge.cpp)
+            list(APPEND SIR_CORE_PLATFORM_OS Linux/SIRLinuxX11Backend.cpp Window/Linux/SIRWindowDriverX11.cpp Linux/SIRX11InputBridge.cpp)
             target_compile_definitions(SIRCore PUBLIC SIR_WINDOW_X11_AVAILABLE=1)
             target_link_libraries(SIRCore PRIVATE X11::X11)
             target_compile_definitions(SIRCore PUBLIC SIR_INPUT_X11_AVAILABLE=1)

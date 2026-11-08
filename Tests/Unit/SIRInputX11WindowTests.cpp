@@ -13,12 +13,12 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#include <Core/Platform/Input/SIRInputService.h>
+#include <Core/Input/SIRInputService.h>
 #include <Core/Platform/Window/SIRWindowSystem.h>
 #include <Core/Platform/Window/Linux/SIRWindowDriverX11.h>
-#include <Core/Platform/Input/Linux/SIRX11InputBridge.h>
-#include <Core/Platform/Input/Linux/SIRLinuxX11Backend.h>
-#include <Core/Platform/Input/Linux/SIRLinuxEvdevBackend.h>
+#include <Core/Platform/Linux/SIRX11InputBridge.h>
+#include <Core/Platform/Linux/SIRLinuxX11Backend.h>
+#include <Core/Platform/Linux/SIRLinuxEvdevBackend.h>
 
 #include <X11/Xlib.h>
 #include <X11/Xatom.h>

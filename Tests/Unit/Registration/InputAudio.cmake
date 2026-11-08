@@ -142,7 +142,7 @@ endif()
 # Portable deterministic GameInput decoder regression; uses no OS or SDK.
 add_executable(SIRGameInputCodecTests
     SIRGameInputCodecTests.cpp
-    "${PROJECT_SOURCE_DIR}/Source/Core/Platform/Input/Windows/SIRWindowsGameInputCodec.cpp")
+    "${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/SIRWindowsGameInputCodec.cpp")
 target_link_libraries(SIRGameInputCodecTests PRIVATE SIR::Core)
 add_test(NAME core.platform.input.gameinput-codec COMMAND SIRGameInputCodecTests)
 set_tests_properties(core.platform.input.gameinput-codec PROPERTIES LABELS "core;input;regression" TIMEOUT 60)

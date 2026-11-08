@@ -26,7 +26,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Core/Events/SIREventRegistry.h>
 #include <Core/Systems/SIREngineSystem.h>
-#include <Core/Platform/Input/SIRInputService.h>
+#include <Core/Input/SIRInputService.h>
 
 // Pump native window events after optional input begin and before sample/publish.
 // Window events continue to dispatch when no input service is attached.

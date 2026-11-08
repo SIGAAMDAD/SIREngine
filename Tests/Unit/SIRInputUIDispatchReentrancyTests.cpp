@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#include <Core/Platform/Input/SIRInputService.h>
-#include <Core/Platform/Input/SIRInputUIDispatch.h>
+#include <Core/Input/SIRInputService.h>
+#include <Core/Input/SIRInputUIDispatch.h>
 #include <stdio.h>
 
 typedef struct sirInputUIReentrantProbe_s

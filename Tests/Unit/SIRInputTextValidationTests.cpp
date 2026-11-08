@@ -13,7 +13,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#include <Core/Platform/Input/SIRInputText.h>
+#include <Core/Input/SIRInputText.h>
 #include <stdio.h>
 
 static bool sirTestUtf8DecoderBoundaries( void ) noexcept

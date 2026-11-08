@@ -14,7 +14,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 #include <Core/Platform/Window/Linux/SIRWindowDriverX11.h>
 #include <Core/Platform/Window/SIRWindowSystem.h>
-#include <Core/Platform/Input/Linux/SIRX11InputBridge.h>
+#include <Core/Platform/Linux/SIRX11InputBridge.h>
 #include <X11/Xlib.h>
 #include <stdio.h>
 

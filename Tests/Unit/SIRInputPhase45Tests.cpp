@@ -13,11 +13,11 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#include <Core/Platform/Input/SIRInputService.h>
-#include <Core/Platform/Input/SIRInputUIDispatch.h>
-#include <Core/Platform/Input/SIRInputControllerProfiles.h>
+#include <Core/Input/SIRInputService.h>
+#include <Core/Input/SIRInputUIDispatch.h>
+#include <Core/Input/SIRInputControllerProfiles.h>
 #if defined( __linux__ )
-#include <Core/Platform/Input/Linux/SIRLinuxEvdevBackend.h>
+#include <Core/Platform/Linux/SIRLinuxEvdevBackend.h>
 #endif
 #include <stdio.h>
 #include <string.h>

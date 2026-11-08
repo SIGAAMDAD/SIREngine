@@ -1,24 +1,24 @@
 #include <Core/SIRApplication.h>
-#include <Core/Platform/Input/SIRInputService.h>
+#include <Core/Input/SIRInputService.h>
 #include <Core/Platform/Window/SIRWindowSystem.h>
 #include <Core/Platform/Window/SIRNativeWindowHost.h>
 #if defined( SIR_INPUT_WAYLAND_AVAILABLE )
 #include <Core/Platform/Window/Linux/SIRWindowDriverWayland.h>
-#include <Core/Platform/Input/Linux/SIRWaylandInputBridge.h>
-#include <Core/Platform/Input/Linux/SIRLinuxEvdevBackend.h>
+#include <Core/Platform/Linux/SIRWaylandInputBridge.h>
+#include <Core/Platform/Linux/SIRLinuxEvdevBackend.h>
 #endif
 #if defined( _WIN32 )
 #include <Core/Platform/Window/Windows/SIRWindowDriverWin32.h>
-#include <Core/Platform/Input/Windows/SIRWin32InputBridge.h>
-#include <Core/Platform/Input/Windows/SIRWindowsRawBackend.h>
-#include <Core/Platform/Input/Windows/SIRWindowsXInputBackend.h>
+#include <Core/Platform/Windows/SIRWin32InputBridge.h>
+#include <Core/Platform/Windows/SIRWindowsRawBackend.h>
+#include <Core/Platform/Windows/SIRWindowsXInputBackend.h>
 #if defined( SIR_INPUT_GAMEINPUT_AVAILABLE )
-#include <Core/Platform/Input/Windows/SIRWindowsGameInputBackend.h>
+#include <Core/Platform/Windows/SIRWindowsGameInputBackend.h>
 #endif
 #elif defined( SIR_WINDOW_X11_AVAILABLE )
 #include <Core/Platform/Window/Linux/SIRWindowDriverX11.h>
-#include <Core/Platform/Input/Linux/SIRX11InputBridge.h>
-#include <Core/Platform/Input/Linux/SIRLinuxEvdevBackend.h>
+#include <Core/Platform/Linux/SIRX11InputBridge.h>
+#include <Core/Platform/Linux/SIRLinuxEvdevBackend.h>
 #endif
 
 #include <stdio.h>
@@ -131,8 +131,8 @@ static int sirRunWaylandInputWindow( bool bMultiwindow )
 	uint32_t nCreated = 0;
 	bool bSucceeded = input.attach( nativeControllers );
 	for ( uint32_t i = 0; bSucceeded && i < nRequested; ++i ) {
-		const sirWindowCreateDesc_t desc = { i == 0 ? "SIREngine native input" : "SIREngine auxiliary input",
-		                                     i == 0 ? 800U : 640U, i == 0 ? 450U : 400U };
+		const sirWindowCreateDesc_t desc = { i == 0 ? "SIREngine native input" : "SIREngine auxiliary input", i == 0 ? 800U : 640U,
+		                                     i == 0 ? 450U : 400U };
 		if ( windows.createWindow( desc, &handles[i] ) != SIR_WINDOW_OK ) {
 			bSucceeded = false;
 			break;
@@ -320,8 +320,7 @@ static int sirRunNativeInputWindow( bool bMultiwindow )
 			bSucceeded = false;
 		} else {
 			nCreated = 2;
-			if ( windows.acquireNativeLease( handles[1], &leases[1], &views[1] ) != SIR_WINDOW_OK ||
-			     !bridge.registerWindow( views[1] ) ) {
+			if ( windows.acquireNativeLease( handles[1], &leases[1], &views[1] ) != SIR_WINDOW_OK || !bridge.registerWindow( views[1] ) ) {
 				bSucceeded = false;
 			}
 		}

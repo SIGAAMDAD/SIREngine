@@ -15,8 +15,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Core/Platform/Window/SIRWindowSystem.h>
 #include <Core/Platform/Window/Windows/SIRWindowDriverWin32.h>
-#include <Core/Platform/Input/Windows/SIRWin32InputBridge.h>
-#include <Core/Platform/Input/Windows/SIRWindowsRawBackend.h>
+#include <Core/Platform/Windows/SIRWin32InputBridge.h>
+#include <Core/Platform/Windows/SIRWindowsRawBackend.h>
 #include <stdio.h>
 
 static sirWindowWin32Dispatch_t sirConsumeNativeClose( const sirWindowWin32Message_t& message, void *pContext ) noexcept
@@ -57,8 +57,7 @@ static bool sirTestWin32BoundedNativeEvents( void ) noexcept
 	}
 	( void )SendMessageW( ( HWND )view.nNativeWindow, WM_CLOSE, 0, 0 );
 	sirWin32NativePumpCount_t count = {};
-	const bool bFirst = driver.pumpEvents( 1, sirCountNativeWin32, &count ) == SIR_WINDOW_OK && count.nDelivered == 1 &&
-	                    count.nClose == 1;
+	const bool bFirst = driver.pumpEvents( 1, sirCountNativeWin32, &count ) == SIR_WINDOW_OK && count.nDelivered == 1 && count.nClose == 1;
 	for ( uint32_t i = 0; i < 32; ++i ) {
 		( void )driver.pumpEvents( 2, sirCountNativeWin32, &count );
 	}
@@ -94,9 +93,8 @@ static bool sirTestWin32MultiwindowInputRouting( void ) noexcept
 	sirWindowNativeLease_t firstLease = {}, secondLease = {};
 	sirWindowNativeView_t firstView = {}, secondView = {};
 	if ( windows.acquireNativeLease( first, &firstLease, &firstView ) != SIR_WINDOW_OK ||
-	     windows.acquireNativeLease( second, &secondLease, &secondView ) != SIR_WINDOW_OK ||
-	     !bridge.bind( input, native, firstView ) || !bridge.registerWindow( secondView ) ||
-	     bridge.registerWindow( secondView ) || !bridge.acceptsWindow( firstView.nNativeWindow ) ||
+	     windows.acquireNativeLease( second, &secondLease, &secondView ) != SIR_WINDOW_OK || !bridge.bind( input, native, firstView ) ||
+	     !bridge.registerWindow( secondView ) || bridge.registerWindow( secondView ) || !bridge.acceptsWindow( firstView.nNativeWindow ) ||
 	     !bridge.acceptsWindow( secondView.nNativeWindow ) || !driver.setMessageSink( sirRouteWin32Input, &bridge ) ) {
 		return false;
 	}
@@ -105,9 +103,8 @@ static bool sirTestWin32MultiwindowInputRouting( void ) noexcept
 	}
 	( void )SendMessageW( ( HWND )secondView.nNativeWindow, WM_SETFOCUS, 0, 0 );
 	bridge.finishPump();
-	if ( !input.publish() || !bridge.unregisterWindow( secondView.nNativeWindow ) ||
-	     bridge.acceptsWindow( secondView.nNativeWindow ) || !bridge.acceptsWindow( firstView.nNativeWindow ) ||
-	     bridge.unregisterWindow( secondView.nNativeWindow ) ) {
+	if ( !input.publish() || !bridge.unregisterWindow( secondView.nNativeWindow ) || bridge.acceptsWindow( secondView.nNativeWindow ) ||
+	     !bridge.acceptsWindow( firstView.nNativeWindow ) || bridge.unregisterWindow( secondView.nNativeWindow ) ) {
 		return false;
 	}
 	( void )driver.setMessageSink( nullptr, nullptr );
@@ -164,8 +161,8 @@ static bool sirTestWindowClassRetirementOrder( void ) noexcept
 	}
 	first.shutdown();
 	sirWindowNativeView_t view = {};
-	if ( second.createWindow( { "remaining-owner", 320, 240 }, 0, &view ) != SIR_WINDOW_OK ||
-	     view.nNativeWindow == 0 || second.destroyWindow( 0 ) != SIR_WINDOW_OK ) {
+	if ( second.createWindow( { "remaining-owner", 320, 240 }, 0, &view ) != SIR_WINDOW_OK || view.nNativeWindow == 0 ||
+	     second.destroyWindow( 0 ) != SIR_WINDOW_OK ) {
 		return false;
 	}
 	second.shutdown();
@@ -217,8 +214,8 @@ static bool sirTestConcurrentWin32WindowClassOwners( void ) noexcept
 	}
 	( void )SendMessageW( ( HWND )firstView.nNativeWindow, WM_DISPLAYCHANGE, 32, MAKELPARAM( 1920, 1080 ) );
 	if ( first.pumpEvents( 32 ) != SIR_WINDOW_OK || first.querySnapshot( firstWindow, &afterTopology ) != SIR_WINDOW_OK ||
-	     afterTopology.nMetricsRevision <= beforeTopology.nMetricsRevision || afterTopology.nWidth == 0 ||
-	     afterTopology.nHeight == 0 || first.releaseNativeLease( firstLease ) != SIR_WINDOW_OK ) {
+	     afterTopology.nMetricsRevision <= beforeTopology.nMetricsRevision || afterTopology.nWidth == 0 || afterTopology.nHeight == 0 ||
+	     first.releaseNativeLease( firstLease ) != SIR_WINDOW_OK ) {
 		return false;
 	}
 	// Shutting down the second user must not unregister the first user's class.

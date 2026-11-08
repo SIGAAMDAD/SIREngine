@@ -13,7 +13,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 #include <Core/Platform/Window/Linux/SIRWindowDriverWayland.h>
-#include <Core/Platform/Input/Linux/SIRWaylandInputBridge.h>
+#include <Core/Platform/Linux/SIRWaylandInputBridge.h>
 #include <wayland-client.h>
 #include <xdg-shell-client-protocol.h>
 #include <fractional-scale-v1-client-protocol.h>
@@ -294,8 +294,7 @@ wp_fractional_scale_v1 *wp_fractional_scale_manager_v1_get_fractional_scale( wp_
 void wp_fractional_scale_manager_v1_destroy( wp_fractional_scale_manager_v1 * )
 {
 }
-int wp_fractional_scale_v1_add_listener( wp_fractional_scale_v1 *pScale, const wp_fractional_scale_v1_listener *pListener,
-                                          void *pContext )
+int wp_fractional_scale_v1_add_listener( wp_fractional_scale_v1 *pScale, const wp_fractional_scale_v1_listener *pListener, void *pContext )
 {
 	s_pFractionalListeners[pScale->id] = pListener;
 	s_pFractionalContexts[pScale->id] = pContext;
@@ -393,8 +392,7 @@ void zwp_relative_pointer_v1_destroy( zwp_relative_pointer_v1 * )
 {
 	++s_nRelativeDestroyed;
 }
-zwp_locked_pointer_v1 *zwp_pointer_constraints_v1_lock_pointer( zwp_pointer_constraints_v1 *, wl_surface *, wl_pointer *,
-                                                                 void *, uint32_t )
+zwp_locked_pointer_v1 *zwp_pointer_constraints_v1_lock_pointer( zwp_pointer_constraints_v1 *, wl_surface *, wl_pointer *, void *, uint32_t )
 {
 	++s_nLocksCreated;
 	return &s_Lock;
@@ -611,9 +609,8 @@ static bool sirTestNativeFailureInjection( void ) noexcept
 	     driver.mutateWindow( 0, { SIR_WINDOW_MUTATION_MINIMIZE, nullptr, 0, 0 } ) != SIR_WINDOW_OK ||
 	     driver.mutateWindow( 0, { SIR_WINDOW_MUTATION_MAXIMIZE, nullptr, 0, 0 } ) != SIR_WINDOW_OK ||
 	     driver.mutateWindow( 0, { SIR_WINDOW_MUTATION_FULLSCREEN_ENTER, nullptr, 0, 0 } ) != SIR_WINDOW_OK ||
-	     driver.mutateWindow( 0, { SIR_WINDOW_MUTATION_FULLSCREEN_EXIT, nullptr, 0, 0 } ) != SIR_WINDOW_OK ||
-	     s_nFullscreenEnters == 0 || s_nFullscreenExits == 0 ||
-	     driver.mutateWindow( 0, { SIR_WINDOW_MUTATION_RESIZE, nullptr, 120, 100 } ) != SIR_WINDOW_UNSUPPORTED ||
+	     driver.mutateWindow( 0, { SIR_WINDOW_MUTATION_FULLSCREEN_EXIT, nullptr, 0, 0 } ) != SIR_WINDOW_OK || s_nFullscreenEnters == 0 ||
+	     s_nFullscreenExits == 0 || driver.mutateWindow( 0, { SIR_WINDOW_MUTATION_RESIZE, nullptr, 120, 100 } ) != SIR_WINDOW_UNSUPPORTED ||
 	     driver.mutateWindow( 1, { SIR_WINDOW_MUTATION_TITLE, "missing", 0, 0 } ) != SIR_WINDOW_INVALID_HANDLE )
 		return false;
 	sirWaylandTestEvents_t events = {};
@@ -770,8 +767,8 @@ static bool sirTestWaylandInputRouting( void ) noexcept
 	if ( !bridge.beginFrame() || input.activeDeviceCount() != 2 || s_pKeyboardListener == nullptr || s_pPointerListener == nullptr )
 		return false;
 	bridge.setTextEnabled( true );
-	if ( !sirFeedFakeXkbKeymap( false ) || s_nKeymapsCreated != 0 || !sirFeedFakeXkbKeymap( true ) ||
-	     !sirFeedFakeXkbKeymap( true ) || s_nKeymapsCreated != 2 || s_nKeymapsReleased != 1 ) {
+	if ( !sirFeedFakeXkbKeymap( false ) || s_nKeymapsCreated != 0 || !sirFeedFakeXkbKeymap( true ) || !sirFeedFakeXkbKeymap( true ) ||
+	     s_nKeymapsCreated != 2 || s_nKeymapsReleased != 1 ) {
 		return false;
 	}
 	s_pKeyboardListener->modifiers( s_pKeyboardContext, &s_Keyboard, 5, 1, 0, 0, 0 );
@@ -865,8 +862,8 @@ static bool sirTestWaylandInputRouting( void ) noexcept
 		if ( e.eClass == SIR_INPUT_POINTER && e.eSignal == SIR_INPUT_MOTION && e.nValue == 2 && e.nValueY == 1 )
 			++nRelativeMotion;
 	}
-	if ( nSecondKey != 1 || nWheel != 1 || nFractionalWheel != -7 || nUnexpected != 0 || nKeyboardResync != 1 ||
-	     nPointerResync != 1 || nRelativeMotion != 1 || input.activeDeviceCount() != 2 )
+	if ( nSecondKey != 1 || nWheel != 1 || nFractionalWheel != -7 || nUnexpected != 0 || nKeyboardResync != 1 || nPointerResync != 1 ||
+	     nRelativeMotion != 1 || input.activeDeviceCount() != 2 )
 		return false;
 	if ( !input.begin( 3 ) || !bridge.beginFrame() )
 		return false;
@@ -910,8 +907,8 @@ static bool sirTestOutputScaleChanges( void ) noexcept
 		return false;
 	}
 	sirWindowNativeView_t view = {};
-	if ( driver.createWindow( { "native-scale", 640, 480 }, 0, &view ) != SIR_WINDOW_OK ||
-	     s_pOutputListener == nullptr || s_pNativeSurfaceListeners[0] == nullptr || s_pSurfaceListener[0] == nullptr ) {
+	if ( driver.createWindow( { "native-scale", 640, 480 }, 0, &view ) != SIR_WINDOW_OK || s_pOutputListener == nullptr ||
+	     s_pNativeSurfaceListeners[0] == nullptr || s_pSurfaceListener[0] == nullptr ) {
 		return false;
 	}
 	s_pOutputListener->scale( s_pOutputContext, &s_Output, 2 );
@@ -921,16 +918,15 @@ static bool sirTestOutputScaleChanges( void ) noexcept
 	if ( driver.pumpEvents( 16, sirCollectWaylandEvent, &events ) != SIR_WINDOW_OK || events.nCount != 3 ||
 	     events.events[0].eKind != SIR_WINDOW_EVENT_READY || events.events[0].nWidth != 640 || events.events[0].nHeight != 480 ||
 	     events.events[1].eKind != SIR_WINDOW_EVENT_DPI_CHANGED || events.events[1].nWidth != 192 ||
-	     events.events[2].eKind != SIR_WINDOW_EVENT_RESIZED || events.events[2].nWidth != 1280 ||
-	     events.events[2].nHeight != 960 || s_nBufferScale[0] != 2 ) {
+	     events.events[2].eKind != SIR_WINDOW_EVENT_RESIZED || events.events[2].nWidth != 1280 || events.events[2].nHeight != 960 ||
+	     s_nBufferScale[0] != 2 ) {
 		return false;
 	}
 	s_pNativeSurfaceListeners[0]->leave( s_pNativeSurfaceContexts[0], &s_Surfaces[0], &s_Output );
 	if ( driver.pumpEvents( 16, sirCollectWaylandEvent, &events ) != SIR_WINDOW_OK || events.nCount != 5 ||
 	     events.events[3].eKind != SIR_WINDOW_EVENT_DPI_CHANGED || events.events[3].nWidth != 96 ||
-	     events.events[4].eKind != SIR_WINDOW_EVENT_RESIZED || events.events[4].nWidth != 640 ||
-	     events.events[4].nHeight != 480 || s_nBufferScale[0] != 1 ||
-	     driver.destroyWindow( 0 ) != SIR_WINDOW_OK ) {
+	     events.events[4].eKind != SIR_WINDOW_EVENT_RESIZED || events.events[4].nWidth != 640 || events.events[4].nHeight != 480 ||
+	     s_nBufferScale[0] != 1 || driver.destroyWindow( 0 ) != SIR_WINDOW_OK ) {
 		return false;
 	}
 	driver.shutdown();
@@ -950,8 +946,8 @@ static bool sirTestFractionalScaleChanges( void ) noexcept
 		return false;
 	}
 	sirWindowNativeView_t view = {};
-	if ( driver.createWindow( { "fractional-scale", 640, 480 }, 0, &view ) != SIR_WINDOW_OK ||
-	     s_pFractionalListeners[0] == nullptr || s_pSurfaceListener[0] == nullptr ) {
+	if ( driver.createWindow( { "fractional-scale", 640, 480 }, 0, &view ) != SIR_WINDOW_OK || s_pFractionalListeners[0] == nullptr ||
+	     s_pSurfaceListener[0] == nullptr ) {
 		return false;
 	}
 	// Compositor proposes 1.5x before the initial xdg configure.
@@ -959,22 +955,20 @@ static bool sirTestFractionalScaleChanges( void ) noexcept
 	s_pSurfaceListener[0]->configure( s_pSurfaceContext[0], &s_XdgSurfaces[0], 940 );
 	sirWaylandTestEvents_t events = {};
 	if ( driver.pumpEvents( 8, sirCollectWaylandEvent, &events ) != SIR_WINDOW_OK || events.nCount != 1 ||
-	     events.events[0].eKind != SIR_WINDOW_EVENT_READY || events.events[0].nWidth != 960 ||
-	     events.events[0].nHeight != 720 || s_nBufferScale[0] != 1 ||
-	     s_nViewportWidth[0] != 640 || s_nViewportHeight[0] != 480 ) {
+	     events.events[0].eKind != SIR_WINDOW_EVENT_READY || events.events[0].nWidth != 960 || events.events[0].nHeight != 720 ||
+	     s_nBufferScale[0] != 1 || s_nViewportWidth[0] != 640 || s_nViewportHeight[0] != 480 ) {
 		return false;
 	}
 	// Preferred scale can change without logical xdg size changing.
 	s_pFractionalListeners[0]->preferred_scale( s_pFractionalContexts[0], &s_FractionalScales[0], 150 );
 	if ( driver.pumpEvents( 8, sirCollectWaylandEvent, &events ) != SIR_WINDOW_OK || events.nCount != 3 ||
 	     events.events[1].eKind != SIR_WINDOW_EVENT_DPI_CHANGED || events.events[1].nWidth != 120 ||
-	     events.events[2].eKind != SIR_WINDOW_EVENT_RESIZED || events.events[2].nWidth != 800 ||
-	     events.events[2].nHeight != 600 || driver.destroyWindow( 0 ) != SIR_WINDOW_OK ) {
+	     events.events[2].eKind != SIR_WINDOW_EVENT_RESIZED || events.events[2].nWidth != 800 || events.events[2].nHeight != 600 ||
+	     driver.destroyWindow( 0 ) != SIR_WINDOW_OK ) {
 		return false;
 	}
 	driver.shutdown();
-	return s_nFractionalDestroyCount == nBeforeFractionalDestroy + 1 &&
-	       s_nViewportDestroyCount == nBeforeViewportDestroy + 1;
+	return s_nFractionalDestroyCount == nBeforeFractionalDestroy + 1 && s_nViewportDestroyCount == nBeforeViewportDestroy + 1;
 }
 
 int main( void )
