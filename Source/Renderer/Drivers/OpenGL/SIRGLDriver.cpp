@@ -236,6 +236,11 @@ static uint32_t sirGLCreateBuffer( void *pDevice, const sirGraphicsBufferDesc_t 
 	if ( pState->pContext == nullptr ) {
 		return SIR_GRAPHICS_DEVICE_LOST;
 	}
+	// The X11/Wayland EGL display is bound by the first native surface.
+	// Creating objects in the provisional headless context would strand them.
+	if ( pState->bWindowed && !pState->bDisplayBound ) {
+		return SIR_GRAPHICS_BUSY;
+	}
 	if ( !sirGLContextOwnsThread( pState->pContext ) ) {
 		return SIR_GRAPHICS_BUSY;
 	}
@@ -282,6 +287,11 @@ static uint32_t sirGLCreateTexture( void *pDevice, const sirGraphicsTextureDesc_
 	sirGLDevice_t *pState = ( sirGLDevice_t * )pDevice;
 	if ( pState->pContext == nullptr ) {
 		return SIR_GRAPHICS_DEVICE_LOST;
+	}
+	// The X11/Wayland EGL display is bound by the first native surface.
+	// Creating objects in the provisional headless context would strand them.
+	if ( pState->bWindowed && !pState->bDisplayBound ) {
+		return SIR_GRAPHICS_BUSY;
 	}
 	if ( !sirGLContextOwnsThread( pState->pContext ) ) {
 		return SIR_GRAPHICS_BUSY;
@@ -342,6 +352,11 @@ static uint32_t sirGLCreateView( void *pDevice, const sirGraphicsViewDesc_t *pDe
 	if ( pState->pContext == nullptr ) {
 		return SIR_GRAPHICS_DEVICE_LOST;
 	}
+	// The X11/Wayland EGL display is bound by the first native surface.
+	// Creating objects in the provisional headless context would strand them.
+	if ( pState->bWindowed && !pState->bDisplayBound ) {
+		return SIR_GRAPHICS_BUSY;
+	}
 	if ( !sirGLContextOwnsThread( pState->pContext ) ) {
 		return SIR_GRAPHICS_BUSY;
 	}
@@ -393,6 +408,11 @@ static uint32_t sirGLCreateSampler( void *pDevice, const sirGraphicsSamplerDesc_
 	sirGLDevice_t *pState = ( sirGLDevice_t * )pDevice;
 	if ( pState->pContext == nullptr ) {
 		return SIR_GRAPHICS_DEVICE_LOST;
+	}
+	// The X11/Wayland EGL display is bound by the first native surface.
+	// Creating objects in the provisional headless context would strand them.
+	if ( pState->bWindowed && !pState->bDisplayBound ) {
+		return SIR_GRAPHICS_BUSY;
 	}
 	if ( !sirGLContextOwnsThread( pState->pContext ) ) {
 		return SIR_GRAPHICS_BUSY;
