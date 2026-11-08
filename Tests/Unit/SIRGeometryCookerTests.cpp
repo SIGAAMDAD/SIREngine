@@ -29,6 +29,48 @@ of merchantability, fitness for a particular purpose and noninfringement.
 		}                                                                                                                                  \
 	} while ( 0 )
 
+// Every material-region boundary vertex must survive both coarse LOD cuts.
+// The quantized position decode is used, rather than trusting raw source indices.
+static bool testMaterialSeam( const SIRMeshPackSchema& mesh, const sirGeometryCookOutput_t& cooked )
+{
+	bool rootSeam[2][9] = {};
+	bool middleSeam[2][9] = {};
+	for ( uint32_t iPage = 0; iPage < 3; ++iPage ) {
+		sirMeshPackPage_t page = {};
+		CHECK( mesh.pageAt( iPage, &page ) == SIR_MESH_PACK_OK );
+		const std::vector<uint8_t>& bytes = cooked.pages[iPage];
+		for ( uint32_t i = 0; i < page.nClusterCount; ++i ) {
+			const uint32_t iCluster = page.nFirstCluster + i;
+			sirMeshPackCluster_t cluster = {};
+			CHECK( mesh.clusterAt( iCluster, &cluster ) == SIR_MESH_PACK_OK );
+			CHECK( cluster.nByteOffset + 8 <= bytes.size() );
+			const uint32_t material = sirPackRead32( bytes.data() + cluster.nByteOffset + 4 );
+			CHECK( material == 100 || material == 101 );
+			for ( uint32_t v = 0; v < cluster.nVertexCount; ++v ) {
+				sirMeshPackVertex_t decoded = {};
+				const sirMeshPackVertexQuery_t query = { bytes.data(), bytes.size(), iPage, iCluster, v };
+				CHECK( mesh.decodeVertex( query, &decoded ) == SIR_MESH_PACK_OK );
+				const float y = decoded.szPosition[1];
+				const int row = ( int )std::round( y );
+				if ( row < 0 || row > 8 || std::abs( y - ( float )row ) > 0.001f || std::abs( decoded.szPosition[0] - 4.0f ) > 0.001f ||
+				     std::abs( decoded.szPosition[2] - ( float )( ( 4 * row ) % 7 ) * 0.13f ) > 0.001f )
+					continue;
+				if ( iPage == 0 )
+					rootSeam[material - 100][row] = true;
+				else
+					middleSeam[material - 100][row] = true;
+			}
+		}
+	}
+	for ( uint32_t m = 0; m < 2; ++m ) {
+		for ( uint32_t row = 0; row < 9; ++row ) {
+			CHECK( rootSeam[m][row] );
+			CHECK( middleSeam[m][row] );
+		}
+	}
+	return true;
+}
+
 static bool testGrid( void )
 {
 	std::vector<float> xyz;
@@ -92,6 +134,7 @@ static bool testGrid( void )
 		CHECK( i == 0 ? page.nParent == SIR_MESH_PACK_NO_PARENT : page.nParent < i );
 		CHECK( mesh.verifyPage( i, cooked.pages[i].data(), cooked.pages[i].size() ) == SIR_MESH_PACK_OK );
 	}
+	CHECK( testMaterialSeam( mesh, cooked ) );
 	const uint64_t nScratch = SIRPackCatalog::requiredScratch( 1, 1 );
 	std::vector<uint8_t> scratch( ( size_t )nScratch );
 	SIRPackCatalog catalog;
@@ -101,6 +144,7 @@ static bool testGrid( void )
 	sirPackResource_t resource = {};
 	CHECK( catalog.findResource( { input.key.nAssetId, input.nResourceTypeId, input.key.nVariant }, &resource ) == SIR_PACK_OK );
 	CHECK( resource.nRevision == input.key.nRevision && resource.nFormatId == SIR_MESH_PACK_FORMAT_ID );
+	CHECK( mesh.validateResource( resource ) == SIR_MESH_PACK_OK );
 	CHECK( resource.nSchemaVersion == SIR_MESH_PACK_VERSION && resource.nKind == SIR_RESOURCE_KIND_GEOMETRY );
 	CHECK( resource.nChunkCount == cooked.pages.size() + 2 );
 	sirMeshPackCollision_t collision = {};
@@ -109,6 +153,7 @@ static bool testGrid( void )
 	for ( uint32_t i = 0; i < resource.nChunkCount; ++i ) {
 		sirPackChunk_t chunk = {};
 		CHECK( catalog.chunkAt( i, &chunk ) == SIR_PACK_OK );
+		CHECK( mesh.validateChunk( i, chunk ) == SIR_MESH_PACK_OK );
 		CHECK( chunk.nShardIndex == 0 && chunk.nOffset <= cooked.shard.size() );
 		CHECK( chunk.nEncodedBytes <= cooked.shard.size() - chunk.nOffset );
 		CHECK( catalog.verifyDecodedChunk( i, cooked.shard.data() + chunk.nOffset, chunk.nEncodedBytes ) == SIR_PACK_OK );

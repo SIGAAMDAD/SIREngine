@@ -152,6 +152,10 @@ public:
 	sirMeshPackResult_t clusterAt( uint32_t iCluster, sirMeshPackCluster_t *pCluster ) const noexcept;
 	sirMeshPackResult_t pageAt( uint32_t iPage, sirMeshPackPage_t *pPage ) const noexcept;
 	sirMeshPackResult_t collisionAt( uint32_t iCollision, sirMeshPackCollision_t *pCollision ) const noexcept;
+	// Bind an opened immutable manifest to its canonical SIRPack resource
+	// and check each logical chunk without allocating or publishing state.
+	sirMeshPackResult_t validateResource( const sirPackResource_t& resource ) const noexcept;
+	sirMeshPackResult_t validateChunk( uint32_t iLogicalChunk, const sirPackChunk_t& chunk ) const noexcept;
 	sirMeshPackResult_t verifyPage( uint32_t iPage, const void *pBytes, uint64_t nBytes ) const noexcept;
 	sirMeshPackResult_t verifyCollision( uint32_t iCollision, const void *pBytes, uint64_t nBytes ) const noexcept;
 	sirMeshPackResult_t decodeVertex( const sirMeshPackVertexQuery_t& query, sirMeshPackVertex_t *pVertex ) const noexcept;

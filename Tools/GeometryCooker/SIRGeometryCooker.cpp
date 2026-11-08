@@ -384,9 +384,9 @@ sirPackResult_t SIRGeometryCooker::cook( const sirGeometryCookInput_t& in, sirGe
 			const uint32_t nTarget = std::max(
 			    3U, ( uint32_t )std::min( ( uint64_t )mat.nIndexCount, ( uint64_t )in.nTargetRootTriangles * 3 / in.nMaterialCount ) );
 			float fError = 0;
-			size_t nSimplified =
-			    meshopt_simplify( simplified.data(), pMaterialIndices, mat.nIndexCount, in.pPositionsXYZ, in.nVertexCount,
-				                  sizeof( float ) * 3, std::max( 3U, ( nTarget / 3 ) * 3 ), in.fMaxSimplificationError, 0, &fError );
+			size_t nSimplified = meshopt_simplify( simplified.data(), pMaterialIndices, mat.nIndexCount, in.pPositionsXYZ, in.nVertexCount,
+			                                       sizeof( float ) * 3, std::max( 3U, ( nTarget / 3 ) * 3 ), in.fMaxSimplificationError,
+			                                       meshopt_SimplifyLockBorder, &fError );
 			if ( nSimplified == 0 || nSimplified % 3 ) {
 				nSimplified = mat.nIndexCount;
 				memcpy( simplified.data(), pMaterialIndices, nSimplified * sizeof( uint32_t ) );
@@ -403,7 +403,7 @@ sirPackResult_t SIRGeometryCooker::cook( const sirGeometryCookInput_t& in, sirGe
 			float fMidError = 0;
 			size_t nMid = meshopt_simplify( simplified.data(), pMaterialIndices, mat.nIndexCount, in.pPositionsXYZ, in.nVertexCount,
 			                                sizeof( float ) * 3, std::max( 3U, ( nMidTarget / 3 ) * 3 ), in.fMaxSimplificationError * 0.5f,
-			                                0, &fMidError );
+			                                meshopt_SimplifyLockBorder, &fMidError );
 			if ( nMid == 0 || nMid % 3 ) {
 				nMid = mat.nIndexCount;
 				memcpy( simplified.data(), pMaterialIndices, nMid * sizeof( uint32_t ) );

@@ -421,6 +421,46 @@ sirMeshPackResult_t SIRMeshPackSchema::collisionAt( uint32_t i, sirMeshPackColli
 	                               ( uint64_t )i * SIR_MESH_PACK_COLLISION_BYTES );
 	return SIR_MESH_PACK_OK;
 }
+sirMeshPackResult_t SIRMeshPackSchema::validateResource( const sirPackResource_t& resource ) const noexcept
+{
+	if ( !isOpen() )
+		return SIR_MESH_PACK_INVALID_ARGUMENT;
+	if ( resource.key.m_nAssetId != m_Key.nAssetId || resource.key.m_nVariantId != m_Key.nVariant || resource.nRevision != m_Key.nRevision )
+		return SIR_MESH_PACK_INVALID_FORMAT;
+	if ( resource.nFormatId != SIR_MESH_PACK_FORMAT_ID || resource.nSchemaVersion != SIR_MESH_PACK_VERSION ||
+	     resource.nKind != SIR_RESOURCE_KIND_GEOMETRY || resource.nChunkCount != 1ULL + m_nPages + m_nCollisions )
+		return SIR_MESH_PACK_INVALID_FORMAT;
+	return SIR_MESH_PACK_OK;
+}
+
+sirMeshPackResult_t SIRMeshPackSchema::validateChunk( uint32_t iLogicalChunk, const sirPackChunk_t& chunk ) const noexcept
+{
+	if ( !isOpen() || iLogicalChunk >= 1ULL + m_nPages + m_nCollisions )
+		return SIR_MESH_PACK_INVALID_ARGUMENT;
+	if ( chunk.nChunkId != iLogicalChunk || chunk.nDecodedBytes == 0 )
+		return SIR_MESH_PACK_INVALID_FORMAT;
+	if ( iLogicalChunk == 0 ) {
+		uint8_t digest[32] = {};
+		sirPackSha256( m_pBytes, m_nBytes, digest );
+		if ( chunk.nDecodedBytes != m_nBytes || memcmp( chunk.szDigest, digest, sizeof( digest ) ) != 0 )
+			return SIR_MESH_PACK_BAD_DIGEST;
+	} else if ( iLogicalChunk <= m_nPages ) {
+		sirMeshPackPage_t page = {};
+		if ( pageAt( iLogicalChunk - 1, &page ) != SIR_MESH_PACK_OK || chunk.nDecodedBytes != page.nByteCount ||
+		     memcmp( chunk.szDigest, page.szDigest, sizeof( page.szDigest ) ) != 0 )
+			return SIR_MESH_PACK_BAD_DIGEST;
+	} else {
+		sirMeshPackCollision_t collision = {};
+		if ( collisionAt( iLogicalChunk - m_nPages - 1, &collision ) != SIR_MESH_PACK_OK )
+			return SIR_MESH_PACK_INVALID_FORMAT;
+		const uint64_t nExpected =
+		    16ULL + 12ULL * collision.nVertexCount + 4ULL * collision.nIndexCount + 4ULL * ( collision.nIndexCount / 3 );
+		if ( chunk.nDecodedBytes != nExpected )
+			return SIR_MESH_PACK_INVALID_FORMAT;
+	}
+	return SIR_MESH_PACK_OK;
+}
+
 sirMeshPackResult_t SIRMeshPackSchema::verifyPage( uint32_t i, const void *pBytes, uint64_t nBytes ) const noexcept
 {
 	sirMeshPackPage_t page = {};
