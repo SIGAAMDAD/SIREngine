@@ -889,7 +889,7 @@ sirGraphicsResult_t sirD3D9NativeDraw( sirD3D9Native_t *pNative, const sirD3D9Dr
 	if ( pNative == nullptr || pNative->pDevice == nullptr || pPacket == nullptr || pPacket->pVertexBuffer == nullptr ||
 	     pPacket->nVertexStride == 0 || pPacket->nVertexCount == 0 || pPacket->nPrimitiveCount == 0 ||
 	     ( pPacket->pVertexShader != nullptr && pPacket->pVertexDeclaration == nullptr ) ||
-	     ( pPacket->pVertexShader == nullptr && pPacket->nFVF == 0 ) ||
+	     ( pPacket->pVertexShader == nullptr && pPacket->nFVF == 0 && pPacket->pVertexDeclaration == nullptr ) ||
 	     ( pPacket->pIndexBuffer != nullptr && pPacket->nVertexCount > INT_MAX ) ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
@@ -965,7 +965,7 @@ sirGraphicsResult_t sirD3D9NativeDraw( sirD3D9Native_t *pNative, const sirD3D9Dr
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( ( pPacket->pVertexShader != nullptr && pPacket->pVertexDeclaration == nullptr ) ||
-	     ( pPacket->pVertexShader == nullptr && pPacket->nFVF == 0 ) ) {
+	     ( pPacket->pVertexShader == nullptr && pPacket->nFVF == 0 && pPacket->pVertexDeclaration == nullptr ) ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	for ( uint32_t i = 0; i < pPacket->nShaderConstantBatchCount; ++i ) {
@@ -990,8 +990,8 @@ sirGraphicsResult_t sirD3D9NativeDraw( sirD3D9Native_t *pNative, const sirD3D9Dr
 	}
 	HRESULT hResult = pNative->pDevice->SetStreamSource( 0, pPacket->pVertexBuffer, pPacket->nVertexOffset, pPacket->nVertexStride );
 	if ( SUCCEEDED( hResult ) ) {
-		hResult = pPacket->pVertexShader == nullptr ? pNative->pDevice->SetFVF( pPacket->nFVF )
-		                                            : pNative->pDevice->SetVertexDeclaration( pPacket->pVertexDeclaration );
+		hResult = pPacket->pVertexDeclaration != nullptr ? pNative->pDevice->SetVertexDeclaration( pPacket->pVertexDeclaration )
+		                                                 : pNative->pDevice->SetFVF( pPacket->nFVF );
 	}
 	if ( SUCCEEDED( hResult ) ) {
 		hResult = pNative->pDevice->SetVertexShader( pPacket->pVertexShader );
@@ -1262,7 +1262,9 @@ sirGraphicsResult_t sirD3D9NativeApplyFixedRecipe( sirD3D9Native_t *pNative, con
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( pRecipe->nTextureStageCount > pNative->caps.MaxTextureBlendStages || pRecipe->nLightCount > pNative->caps.MaxActiveLights ||
-	     ( pRecipe->nRequiredFeatures & ~( SIR_GRAPHICS_FEATURE_GRAPHICS | SIR_GRAPHICS_FEATURE_FIXED_FUNCTION ) ) != 0 ) {
+	     ( pRecipe->nRequiredFeatures &
+	       ~( SIR_GRAPHICS_FIXED_TRANSFORM | SIR_GRAPHICS_FIXED_LIGHTING | SIR_GRAPHICS_FIXED_FOG | SIR_GRAPHICS_FIXED_ALPHA_TEST |
+	          SIR_GRAPHICS_FIXED_CPU_TRANSFORM | SIR_GRAPHICS_FIXED_TEXCOORD_GEN ) ) != 0 ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
 	const sirGraphicsResult_t ePreflight = sirD3D9ValidateFixedRecipe(
@@ -1304,6 +1306,9 @@ sirGraphicsResult_t sirD3D9NativeApplyFixedRecipe( sirD3D9Native_t *pNative, con
 			case SIR_GRAPHICS_FIXED_OP_SUBTRACT:
 				nCapability = D3DTEXOPCAPS_SUBTRACT;
 				break;
+			case SIR_GRAPHICS_FIXED_OP_INTERPOLATE:
+				nCapability = D3DTEXOPCAPS_LERP;
+				break;
 			case SIR_GRAPHICS_FIXED_OP_DOT3:
 				nCapability = D3DTEXOPCAPS_DOTPRODUCT3;
 				break;
@@ -1339,6 +1344,12 @@ sirGraphicsResult_t sirD3D9NativeApplyFixedRecipe( sirD3D9Native_t *pNative, con
 	if ( nFogMode != D3DFOG_NONE && ( pNative->caps.RasterCaps & ( D3DPRASTERCAPS_FOGTABLE | D3DPRASTERCAPS_FOGVERTEX ) ) == 0 ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
+	const bool bSpecular =
+	    pRecipe->nLightCount != 0 && pRecipe->material.fPower > 0.0f &&
+	    ( pRecipe->material.szSpecular[0] > 0.0f || pRecipe->material.szSpecular[1] > 0.0f || pRecipe->material.szSpecular[2] > 0.0f );
+	if ( bSpecular && ( pNative->caps.ShadeCaps & D3DPSHADECAPS_SPECULARGOURAUD ) == 0 ) {
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
 	const bool bTableFog = ( pNative->caps.RasterCaps & D3DPRASTERCAPS_FOGTABLE ) != 0;
 	DWORD nFogStartBits = 0;
 	DWORD nFogEndBits = 0;
@@ -1365,7 +1376,12 @@ sirGraphicsResult_t sirD3D9NativeApplyFixedRecipe( sirD3D9Native_t *pNative, con
 	material.Power = pRecipe->material.fPower;
 	hResult = pNative->pDevice->SetMaterial( &material );
 	if ( SUCCEEDED( hResult ) )
-		hResult = pNative->pDevice->SetRenderState( D3DRS_LIGHTING, pRecipe->nLightCount == 0 ? FALSE : TRUE );
+		hResult = pNative->pDevice->SetRenderState(
+		    D3DRS_LIGHTING, ( pRecipe->nRequiredFeatures & SIR_GRAPHICS_FIXED_LIGHTING ) != 0 || pRecipe->nLightCount != 0 ? TRUE : FALSE );
+	if ( SUCCEEDED( hResult ) )
+		hResult = pNative->pDevice->SetRenderState( D3DRS_NORMALIZENORMALS, pRecipe->nLightCount == 0 ? FALSE : TRUE );
+	if ( SUCCEEDED( hResult ) )
+		hResult = pNative->pDevice->SetRenderState( D3DRS_SPECULARENABLE, bSpecular ? TRUE : FALSE );
 	if ( SUCCEEDED( hResult ) )
 		hResult = pNative->pDevice->SetRenderState( D3DRS_ALPHATESTENABLE, pRecipe->nAlphaCompare != SIR_GRAPHICS_COMPARE_ALWAYS );
 	if ( SUCCEEDED( hResult ) )
@@ -1408,6 +1424,10 @@ sirGraphicsResult_t sirD3D9NativeApplyFixedRecipe( sirD3D9Native_t *pNative, con
 			    pNative->pDevice->SetTextureStageState( nStage, D3DTSS_ALPHAARG1, sirD3D9NativeTextureArg( pStage->nAlphaArgument0 ) );
 		if ( SUCCEEDED( hResult ) )
 			hResult = pNative->pDevice->SetTextureStageState( nStage, D3DTSS_CONSTANT, sirD3D9NativeColor( pStage->szConstantColor ) );
+		if ( SUCCEEDED( hResult ) )
+			hResult = pNative->pDevice->SetTextureStageState( nStage, D3DTSS_COLORARG0, D3DTA_CONSTANT );
+		if ( SUCCEEDED( hResult ) )
+			hResult = pNative->pDevice->SetTextureStageState( nStage, D3DTSS_ALPHAARG0, D3DTA_CONSTANT );
 		if ( SUCCEEDED( hResult ) )
 			hResult = pNative->pDevice->SetTextureStageState( nStage, D3DTSS_TEXCOORDINDEX, pStage->nCoordinateSet );
 		if ( FAILED( hResult ) )

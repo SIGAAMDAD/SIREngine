@@ -105,6 +105,12 @@ static uint32_t sirD3D9QueryAdapter( void *pDriver, sirGraphicsABIAdapter_t *pAd
 #endif
 }
 
+#ifdef _WIN32
+uint32_t sirD3D9ABICreateDeviceWindows( const sirGraphicsABIHost_t *pHost, const sirGraphicsABIDeviceRequest_t *pRequest,
+                                        sirGraphicsABIDevice_t *pDevice ) noexcept;
+uint32_t sirD3D9ABIDestroyDeviceWindows( sirGraphicsABIDevice_t *pDevice ) noexcept;
+#endif
+
 static uint32_t sirD3D9CreateDevice( void *pDriver, const sirGraphicsABIDeviceRequest_t *pRequest,
                                      sirGraphicsABIDevice_t *pDevice ) noexcept
 {
@@ -113,10 +119,11 @@ static uint32_t sirD3D9CreateDevice( void *pDriver, const sirGraphicsABIDeviceRe
 	     pRequest->nHeadless > 1 || pRequest->nAllowSoftware > 1 ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	// Native device creation requires the platform's borrowed HWND. The current
-	// shared ABI request has no window lease, so no device can be returned safely.
-	// SIRD3D9Native accepts the HWND explicitly once the ABI owner supplies it.
+#ifdef _WIN32
+	return sirD3D9ABICreateDeviceWindows( &( ( sirD3D9DriverState_t * )pDriver )->host, pRequest, pDevice );
+#else
 	return SIR_GRAPHICS_UNSUPPORTED;
+#endif
 }
 
 static uint32_t sirD3D9DestroyDevice( void *pDriver, sirGraphicsABIDevice_t *pDevice ) noexcept
@@ -124,7 +131,11 @@ static uint32_t sirD3D9DestroyDevice( void *pDriver, sirGraphicsABIDevice_t *pDe
 	if ( pDriver == nullptr || pDevice == nullptr ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
+#ifdef _WIN32
+	return sirD3D9ABIDestroyDeviceWindows( pDevice );
+#else
 	return SIR_GRAPHICS_UNSUPPORTED;
+#endif
 }
 
 static void sirD3D9ReleaseDriver( void *pDriver ) noexcept

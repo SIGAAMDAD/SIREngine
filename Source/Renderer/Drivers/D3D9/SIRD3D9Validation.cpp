@@ -231,7 +231,9 @@ sirGraphicsResult_t sirD3D9ValidateFixedRecipe( const sirGraphicsABIFixedRecipe_
 	}
 	if ( pRecipe->nTextureStageCount > nMaximumStages || pRecipe->nTextureStageCount > nMaximumTextures ||
 	     pRecipe->nLightCount > nMaximumLights ||
-	     ( pRecipe->nRequiredFeatures & ~( SIR_GRAPHICS_FEATURE_GRAPHICS | SIR_GRAPHICS_FEATURE_FIXED_FUNCTION ) ) != 0 ||
+	     ( pRecipe->nRequiredFeatures &
+	       ~( SIR_GRAPHICS_FIXED_TRANSFORM | SIR_GRAPHICS_FIXED_LIGHTING | SIR_GRAPHICS_FIXED_FOG | SIR_GRAPHICS_FIXED_ALPHA_TEST |
+	          SIR_GRAPHICS_FIXED_CPU_TRANSFORM | SIR_GRAPHICS_FIXED_TEXCOORD_GEN ) ) != 0 ||
 	     pRecipe->nFogMode > SIR_GRAPHICS_FIXED_FOG_EXP2 || pRecipe->nAlphaCompare > SIR_GRAPHICS_COMPARE_ALWAYS ||
 	     !( pRecipe->fAlphaReference >= 0.0f && pRecipe->fAlphaReference <= 1.0f ) ||
 	     ( pRecipe->nFogMode != SIR_GRAPHICS_FIXED_FOG_NONE &&
@@ -240,13 +242,56 @@ sirGraphicsResult_t sirD3D9ValidateFixedRecipe( const sirGraphicsABIFixedRecipe_
 	}
 	for ( uint32_t i = 0; i < pRecipe->nTextureStageCount; ++i ) {
 		const sirGraphicsABIFixedStage_t *pStage = &pRecipe->pStages[i];
-		if ( pStage->nTextureUnit != i || !sirD3D9IsFixedOperation( pStage->nColorOperation ) ||
+		if ( ( i > 0 && pRecipe->pStages[i - 1].nColorOperation == SIR_GRAPHICS_FIXED_OP_DISABLE &&
+		       pStage->nColorOperation != SIR_GRAPHICS_FIXED_OP_DISABLE ) ||
+		     pStage->nTextureUnit != i || !sirD3D9IsFixedOperation( pStage->nColorOperation ) ||
 		     !sirD3D9IsFixedOperation( pStage->nAlphaOperation ) || !sirD3D9IsFixedArgument( pStage->nColorArgument0 ) ||
 		     !sirD3D9IsFixedArgument( pStage->nColorArgument1 ) || !sirD3D9IsFixedArgument( pStage->nAlphaArgument0 ) ||
 		     !sirD3D9IsFixedArgument( pStage->nAlphaArgument1 ) ) {
 			return SIR_GRAPHICS_UNSUPPORTED;
 		}
 	}
+	return SIR_GRAPHICS_SUCCESS;
+}
+
+sirGraphicsResult_t sirD3D9PrimitiveCount( uint32_t nTopology, uint32_t nElementCount, uint32_t *pPrimitiveCount ) noexcept
+{
+	if ( pPrimitiveCount == nullptr || nElementCount == 0 ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	uint32_t nCount = 0;
+	switch ( nTopology ) {
+	case SIR_GRAPHICS_TOPOLOGY_POINTS:
+		nCount = nElementCount;
+		break;
+	case SIR_GRAPHICS_TOPOLOGY_LINES:
+		if ( nElementCount % 2 != 0 ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
+		nCount = nElementCount / 2;
+		break;
+	case SIR_GRAPHICS_TOPOLOGY_LINE_STRIP:
+		if ( nElementCount < 2 ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
+		nCount = nElementCount - 1;
+		break;
+	case SIR_GRAPHICS_TOPOLOGY_TRIANGLES:
+		if ( nElementCount % 3 != 0 ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
+		nCount = nElementCount / 3;
+		break;
+	case SIR_GRAPHICS_TOPOLOGY_TRIANGLE_STRIP:
+		if ( nElementCount < 3 ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
+		nCount = nElementCount - 2;
+		break;
+	default:
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
+	*pPrimitiveCount = nCount;
 	return SIR_GRAPHICS_SUCCESS;
 }
 

@@ -113,6 +113,10 @@ int main( void )
 	recipe.pStages = stages;
 	recipe.nAlphaCompare = SIR_GRAPHICS_COMPARE_ALWAYS;
 	assert( sirD3D9ValidateFixedRecipe( &recipe, 2, 2, 8 ) == SIR_GRAPHICS_SUCCESS );
+	stages[1].nColorOperation = SIR_GRAPHICS_FIXED_OP_MODULATE;
+	assert( sirD3D9ValidateFixedRecipe( &recipe, 2, 2, 8 ) == SIR_GRAPHICS_UNSUPPORTED );
+	stages[1].nColorOperation = SIR_GRAPHICS_FIXED_OP_DISABLE;
+
 	assert( sirD3D9ValidateFixedRecipe( &recipe, 1, 2, 8 ) == SIR_GRAPHICS_UNSUPPORTED );
 	stages[1].nTextureUnit = 0;
 	assert( sirD3D9ValidateFixedRecipe( &recipe, 2, 2, 8 ) == SIR_GRAPHICS_UNSUPPORTED );
@@ -221,5 +225,19 @@ int main( void )
 	assert( sirD3D9ValidateSampler( &sampler, 8 ) == SIR_GRAPHICS_UNSUPPORTED );
 	assert( sirD3D9ValidateSampler( nullptr, 8 ) == SIR_GRAPHICS_INVALID_ARGUMENT );
 	assert( sirD3D9ValidateSampler( &sampler, 0 ) == SIR_GRAPHICS_INVALID_ARGUMENT );
+	uint32_t nPrimitiveCount = 0;
+	assert( sirD3D9PrimitiveCount( SIR_GRAPHICS_TOPOLOGY_POINTS, 7, &nPrimitiveCount ) == SIR_GRAPHICS_SUCCESS && nPrimitiveCount == 7 );
+	assert( sirD3D9PrimitiveCount( SIR_GRAPHICS_TOPOLOGY_LINES, 6, &nPrimitiveCount ) == SIR_GRAPHICS_SUCCESS && nPrimitiveCount == 3 );
+	assert( sirD3D9PrimitiveCount( SIR_GRAPHICS_TOPOLOGY_LINE_STRIP, 6, &nPrimitiveCount ) == SIR_GRAPHICS_SUCCESS &&
+	        nPrimitiveCount == 5 );
+	assert( sirD3D9PrimitiveCount( SIR_GRAPHICS_TOPOLOGY_TRIANGLES, 9, &nPrimitiveCount ) == SIR_GRAPHICS_SUCCESS && nPrimitiveCount == 3 );
+	assert( sirD3D9PrimitiveCount( SIR_GRAPHICS_TOPOLOGY_TRIANGLE_STRIP, 6, &nPrimitiveCount ) == SIR_GRAPHICS_SUCCESS &&
+	        nPrimitiveCount == 4 );
+	assert( sirD3D9PrimitiveCount( SIR_GRAPHICS_TOPOLOGY_LINES, 3, &nPrimitiveCount ) == SIR_GRAPHICS_INVALID_ARGUMENT );
+	assert( sirD3D9PrimitiveCount( SIR_GRAPHICS_TOPOLOGY_TRIANGLES, 4, &nPrimitiveCount ) == SIR_GRAPHICS_INVALID_ARGUMENT );
+	assert( sirD3D9PrimitiveCount( SIR_GRAPHICS_TOPOLOGY_LINE_STRIP, 1, &nPrimitiveCount ) == SIR_GRAPHICS_INVALID_ARGUMENT );
+	assert( sirD3D9PrimitiveCount( SIR_GRAPHICS_TOPOLOGY_TRIANGLE_STRIP, 2, &nPrimitiveCount ) == SIR_GRAPHICS_INVALID_ARGUMENT );
+	assert( sirD3D9PrimitiveCount( SIR_GRAPHICS_TOPOLOGY_PATCHES, 3, &nPrimitiveCount ) == SIR_GRAPHICS_UNSUPPORTED );
+	assert( sirD3D9PrimitiveCount( SIR_GRAPHICS_TOPOLOGY_POINTS, 1, nullptr ) == SIR_GRAPHICS_INVALID_ARGUMENT );
 	return 0;
 }

@@ -65,6 +65,7 @@ typedef struct sirD3D9TextureUploadLayout_s
 sirGraphicsResult_t sirD3D9ValidateTextureUploadLayout( const sirD3D9TextureUploadLayout_t *pLayout, uint32_t *pRowBytes,
                                                         uint32_t *pRows ) noexcept;
 sirGraphicsResult_t sirD3D9EstimateTextureBytes( const sirGraphicsTextureDesc_t *pTexture, uint64_t *pBytes ) noexcept;
+sirGraphicsResult_t sirD3D9PrimitiveCount( uint32_t nTopology, uint32_t nElementCount, uint32_t *pPrimitiveCount ) noexcept;
 sirGraphicsResult_t sirD3D9ValidateDrawRange( uint32_t nTopology, uint32_t nPrimitiveCount, uint32_t nFirstElement,
                                               uint32_t nAvailableElements ) noexcept;
 sirGraphicsResult_t sirD3D9ValidateFixedRecipe( const sirGraphicsABIFixedRecipe_t *pRecipe, uint32_t nMaximumStages,
