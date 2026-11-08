@@ -71,6 +71,7 @@ public:
 	SIRMeshCollisionSource& operator=( SIRMeshCollisionSource&& other ) = delete;
 
 	uint32_t getInstanceCount( void ) const noexcept;
+	uint32_t getTriangleCount( void ) const noexcept;
 	const sirMeshKey_t& getSourceKey( void ) const noexcept;
 
 	sirMeshResult_t initialize( SIRMeshCache& cache, sirMeshHandle_t handle, const sirMeshCollisionProfile_t& profile ) noexcept;
@@ -78,10 +79,14 @@ public:
 	sirMeshResult_t releaseInstance( void ) noexcept;
 	sirMeshResult_t getTriangle( uint32_t nTriangle, sirMeshCollisionTriangle_t *pOut ) const noexcept;
 	sirMeshResult_t raycast( const sirMeshCollisionRay_t& ray, sirMeshCollisionHit_t *pHit ) const noexcept;
+	sirMeshResult_t raycastTriangle( const sirMeshCollisionRay_t& ray, uint32_t nTriangle, sirMeshCollisionHit_t *pHit ) const noexcept;
 	sirMeshResult_t shutdown( void ) noexcept;
 
 protected:
 private:
+	sirMeshResult_t raycastRange( const sirMeshCollisionRay_t& ray, uint32_t nStart, uint32_t nCount,
+	                              sirMeshCollisionHit_t *pHit ) const noexcept;
+
 	SIRMeshCache *m_pCache;
 	sirMeshHandle_t m_Handle;
 	sirMeshGeometryRead_t m_Geometry;

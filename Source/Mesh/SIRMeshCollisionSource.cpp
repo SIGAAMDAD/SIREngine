@@ -34,6 +34,11 @@ uint32_t SIRMeshCollisionSource::getInstanceCount( void ) const noexcept
 	return m_nInstances;
 }
 
+uint32_t SIRMeshCollisionSource::getTriangleCount( void ) const noexcept
+{
+	return m_bReady ? m_Geometry.nIndexCount / 3 : 0;
+}
+
 const sirMeshKey_t& SIRMeshCollisionSource::getSourceKey( void ) const noexcept
 {
 	return m_Geometry.key;
@@ -97,6 +102,22 @@ sirMeshResult_t SIRMeshCollisionSource::getTriangle( uint32_t nTriangle, sirMesh
 
 sirMeshResult_t SIRMeshCollisionSource::raycast( const sirMeshCollisionRay_t& ray, sirMeshCollisionHit_t *pHit ) const noexcept
 {
+	return raycastRange( ray, 0, getTriangleCount(), pHit );
+}
+
+sirMeshResult_t SIRMeshCollisionSource::raycastTriangle( const sirMeshCollisionRay_t& ray, uint32_t nTriangle,
+                                                         sirMeshCollisionHit_t *pHit ) const noexcept
+{
+	if ( !m_bReady )
+		return SIR_MESH_NOT_READY;
+	if ( nTriangle >= getTriangleCount() )
+		return SIR_MESH_INVALID_ARGUMENT;
+	return raycastRange( ray, nTriangle, 1, pHit );
+}
+
+sirMeshResult_t SIRMeshCollisionSource::raycastRange( const sirMeshCollisionRay_t& ray, uint32_t nStart, uint32_t nCount,
+                                                      sirMeshCollisionHit_t *pHit ) const noexcept
+{
 	if ( !m_bReady )
 		return SIR_MESH_NOT_READY;
 	if ( pHit == nullptr || !std::isfinite( ray.fMaxDistance ) || ray.fMaxDistance <= 0.0f )
@@ -115,7 +136,7 @@ sirMeshResult_t SIRMeshCollisionSource::raycast( const sirMeshCollisionRay_t& ra
 	float closest = ray.fMaxDistance;
 	bool found = false;
 	sirMeshCollisionHit_t best = {};
-	for ( uint32_t tri = 0; tri < m_Geometry.nIndexCount / 3; ++tri ) {
+	for ( uint32_t tri = nStart; tri < nStart + nCount; ++tri ) {
 		const float *v[3] = {};
 		for ( uint32_t i = 0; i < 3; ++i )
 			v[i] = m_Geometry.pPositionsXYZ + 3U * m_Geometry.pTriangleIndices[3U * tri + i];
@@ -137,7 +158,7 @@ sirMeshResult_t SIRMeshCollisionSource::raycast( const sirMeshCollisionRay_t& ra
 		if ( vCoord < 0.0f || u + vCoord > 1.0f )
 			continue;
 		const float time = ( e2[0] * q[0] + e2[1] * q[1] + e2[2] * q[2] ) * inv;
-		if ( time < 0.0f || time > closest || !std::isfinite( time ) )
+		if ( time < 0.0f || time > closest || !std::isfinite( time ) || ( found && time == closest && tri >= best.nTriangle ) )
 			continue;
 		const float normal[3] = { e1[1] * e2[2] - e1[2] * e2[1], e1[2] * e2[0] - e1[0] * e2[2], e1[0] * e2[1] - e1[1] * e2[0] };
 		const float normalLength = std::sqrt( normal[0] * normal[0] + normal[1] * normal[1] + normal[2] * normal[2] );

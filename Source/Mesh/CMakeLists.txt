@@ -58,3 +58,14 @@ target_include_directories(SIRMeshCollisionSource PUBLIC
 target_compile_features(SIRMeshCollisionSource PUBLIC cxx_std_17)
 target_link_libraries(SIRMeshCollisionSource PUBLIC SIR::MeshCache)
 sir_configure_owned_target(SIRMeshCollisionSource)
+
+# Caller-owned BVH metadata is a derived CPU query structure over shared pinned
+# source triangle geometry; no duplicate vertex or index allocation.
+add_library(SIRMeshCollisionBVH STATIC SIRMeshCollisionBVH.cpp)
+add_library(SIR::MeshCollisionBVH ALIAS SIRMeshCollisionBVH)
+target_include_directories(SIRMeshCollisionBVH PUBLIC
+    "${PROJECT_SOURCE_DIR}/Source"
+    "${PROJECT_SOURCE_DIR}/Build/CMake")
+target_compile_features(SIRMeshCollisionBVH PUBLIC cxx_std_17)
+target_link_libraries(SIRMeshCollisionBVH PUBLIC SIR::MeshCollisionSource)
+sir_configure_owned_target(SIRMeshCollisionBVH)
