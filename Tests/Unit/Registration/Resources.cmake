@@ -150,3 +150,8 @@ add_executable(SIRMeshCollisionBVHTests SIRMeshCollisionBVHTests.cpp)
 target_link_libraries(SIRMeshCollisionBVHTests PRIVATE SIR::MeshCollisionBVH)
 add_test(NAME mesh.collision.bvh-ray-parity COMMAND SIRMeshCollisionBVHTests)
 sir_configure_owned_target(SIRMeshCollisionBVHTests)
+
+add_executable(SIRWorldMeshQueryTests SIRWorldMeshQueryTests.cpp)
+target_link_libraries(SIRWorldMeshQueryTests PRIVATE SIR::WorldMeshQuery)
+add_test(NAME world.mesh.instances-and-queries COMMAND SIRWorldMeshQueryTests)
+sir_configure_owned_target(SIRWorldMeshQueryTests)

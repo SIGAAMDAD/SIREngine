@@ -20,7 +20,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <cstring>
 
 SIRMeshCollisionBVH::SIRMeshCollisionBVH( void ) noexcept
-    : m_pSource( nullptr ), m_pNodes( nullptr ), m_pTriangleOrder( nullptr ), m_nNodeCount( 0 ), m_nTriangleCount( 0 ), m_bReady( false )
+    : m_pSource( nullptr ), m_pNodes( nullptr ), m_pTriangleOrder( nullptr ), m_nNodeCount( 0 ), m_nTriangleCount( 0 ), m_nReaders( 0 ),
+      m_bReady( false )
 {
 }
 
@@ -37,6 +38,47 @@ uint32_t SIRMeshCollisionBVH::getNodeCount( void ) const noexcept
 uint32_t SIRMeshCollisionBVH::getTriangleCount( void ) const noexcept
 {
 	return m_nTriangleCount;
+}
+
+uint32_t SIRMeshCollisionBVH::getReaderCount( void ) const noexcept
+{
+	return m_nReaders;
+}
+
+sirMeshResult_t SIRMeshCollisionBVH::acquireReader( void ) noexcept
+{
+	if ( !m_bReady )
+		return SIR_MESH_NOT_READY;
+	if ( m_nReaders == UINT32_MAX )
+		return SIR_MESH_OUT_OF_CAPACITY;
+	++m_nReaders;
+	return SIR_MESH_OK;
+}
+
+sirMeshResult_t SIRMeshCollisionBVH::releaseReader( void ) noexcept
+{
+	if ( !m_bReady )
+		return SIR_MESH_NOT_READY;
+	if ( m_nReaders == 0 )
+		return SIR_MESH_INVALID_ARGUMENT;
+	--m_nReaders;
+	return SIR_MESH_OK;
+}
+
+bool SIRMeshCollisionBVH::matchesSource( const SIRMeshCollisionSource& source ) const noexcept
+{
+	return m_bReady && m_pSource == &source;
+}
+
+sirMeshResult_t SIRMeshCollisionBVH::getBounds( float *pMinXYZ, float *pMaxXYZ ) const noexcept
+{
+	if ( !m_bReady )
+		return SIR_MESH_NOT_READY;
+	if ( pMinXYZ == nullptr || pMaxXYZ == nullptr )
+		return SIR_MESH_INVALID_ARGUMENT;
+	memcpy( pMinXYZ, m_pNodes[0].boundsMin, sizeof( m_pNodes[0].boundsMin ) );
+	memcpy( pMaxXYZ, m_pNodes[0].boundsMax, sizeof( m_pNodes[0].boundsMax ) );
+	return SIR_MESH_OK;
 }
 
 uint64_t SIRMeshCollisionBVH::requiredBytes( uint32_t nTriangles ) noexcept
@@ -67,6 +109,7 @@ sirMeshResult_t SIRMeshCollisionBVH::initialize( SIRMeshCollisionSource& source,
 	m_pTriangleOrder = ( uint32_t * )( m_pNodes + 2ULL * nTriangles );
 	m_nTriangleCount = nTriangles;
 	m_nNodeCount = 0;
+	m_nReaders = 0;
 	for ( uint32_t i = 0; i < nTriangles; ++i )
 		m_pTriangleOrder[i] = i;
 	buildNode( 0, nTriangles, 0 );
@@ -234,6 +277,8 @@ sirMeshResult_t SIRMeshCollisionBVH::shutdown( void ) noexcept
 {
 	if ( !m_bReady )
 		return SIR_MESH_NOT_READY;
+	if ( m_nReaders != 0 )
+		return SIR_MESH_BUSY;
 	const sirMeshResult_t result = m_pSource->releaseInstance();
 	if ( result != SIR_MESH_OK )
 		return result;
@@ -242,6 +287,7 @@ sirMeshResult_t SIRMeshCollisionBVH::shutdown( void ) noexcept
 	m_pTriangleOrder = nullptr;
 	m_nNodeCount = 0;
 	m_nTriangleCount = 0;
+	m_nReaders = 0;
 	m_bReady = false;
 	return SIR_MESH_OK;
 }

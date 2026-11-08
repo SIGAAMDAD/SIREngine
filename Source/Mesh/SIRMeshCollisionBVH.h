@@ -50,6 +50,11 @@ public:
 
 	uint32_t getNodeCount( void ) const noexcept;
 	uint32_t getTriangleCount( void ) const noexcept;
+	uint32_t getReaderCount( void ) const noexcept;
+	bool matchesSource( const SIRMeshCollisionSource& source ) const noexcept;
+	sirMeshResult_t getBounds( float *pMinXYZ, float *pMaxXYZ ) const noexcept;
+	sirMeshResult_t acquireReader( void ) noexcept;
+	sirMeshResult_t releaseReader( void ) noexcept;
 
 	static uint64_t requiredBytes( uint32_t nTriangles ) noexcept;
 	static uint32_t requiredAlignment( void ) noexcept;
@@ -70,6 +75,7 @@ private:
 	uint32_t *m_pTriangleOrder;
 	uint32_t m_nNodeCount;
 	uint32_t m_nTriangleCount;
+	uint32_t m_nReaders;
 	bool m_bReady;
 };
 
