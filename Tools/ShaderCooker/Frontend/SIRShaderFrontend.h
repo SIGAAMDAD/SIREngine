@@ -75,6 +75,9 @@ typedef struct sirShaderCookManifest_s
 	uint64_t nClosureHash = 0;
 	uint64_t nDefinesHash = 0;
 	uint32_t nRecipeVersion = 0;
+	sirGraphicsPipelineModel_t eModel = SIR_GRAPHICS_PIPELINE_MODEL_MODERN;
+	sirGraphicsShaderFormat_t eFormat = SIR_GRAPHICS_SHADER_DXIL;
+	uint32_t nCompilerKind = 0;
 	bool bSpirv = false;
 } sirShaderCookManifest_t;
 

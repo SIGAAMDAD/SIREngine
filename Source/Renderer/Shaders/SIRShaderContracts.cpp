@@ -105,7 +105,8 @@ static bool sirShaderHeaderValid( const sirShaderPackageHeader_t& header ) noexc
 static bool sirShaderStageRecordValid( const sirShaderStageRecord_t& stage ) noexcept
 {
 	if ( !sirShaderStageMaskValid( stage.nStageMask ) || stage.ePass < SIR_SHADER_PASS_COLOR || stage.ePass > SIR_SHADER_PASS_COMPUTE ||
-	     stage.eFormat < SIR_GRAPHICS_SHADER_DXIL || stage.eFormat > SIR_GRAPHICS_SHADER_DXBC ) {
+	     stage.eFormat < SIR_GRAPHICS_SHADER_DXIL ||
+	     ( stage.eFormat > SIR_GRAPHICS_SHADER_D3D_LEGACY_TOKENS || stage.eFormat == SIR_GRAPHICS_SHADER_FIXED_FUNCTION ) ) {
 		return false;
 	}
 	if ( stage.nBinaryHash == 0 || stage.nEntryPointHash == 0 || stage.nBindingSignature == 0 || stage.nPayloadBytes < 4 ) {
@@ -296,7 +297,8 @@ sirGraphicsResult_t sirShaderValidatePackage( const void *pBytes, uint64_t nLeng
 	if ( sirShaderDecodePackageHeader( pBytes, nLength, &header ) != SIR_GRAPHICS_SUCCESS || nLength != header.nTotalBytes ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	if ( eFormat < SIR_GRAPHICS_SHADER_DXIL || eFormat > SIR_GRAPHICS_SHADER_DXBC ) {
+	if ( eFormat < SIR_GRAPHICS_SHADER_DXIL ||
+	     ( eFormat > SIR_GRAPHICS_SHADER_D3D_LEGACY_TOKENS || eFormat == SIR_GRAPHICS_SHADER_FIXED_FUNCTION ) ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
 	const uint8_t *pData = ( const uint8_t * )pBytes;
@@ -341,6 +343,17 @@ sirGraphicsResult_t sirShaderValidatePackage( const void *pBytes, uint64_t nLeng
 		}
 		if ( sirShaderHashBytes( 14695981039346656037ULL, pData + stage.nPayloadOffset, stage.nPayloadBytes ) != stage.nBinaryHash ) {
 			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
+		if ( stage.eFormat == SIR_GRAPHICS_SHADER_D3D_LEGACY_TOKENS ) {
+			const uint8_t *pTokens = pData + stage.nPayloadOffset;
+			const uint32_t nKind = ( uint32_t )pTokens[2] | ( ( uint32_t )pTokens[3] << 8 );
+			const uint32_t nExpected = stage.nStageMask == SIR_GRAPHICS_STAGE_VERTEX ? 0xfffe : 0xffff;
+			if ( ( stage.nStageMask != SIR_GRAPHICS_STAGE_VERTEX && stage.nStageMask != SIR_GRAPHICS_STAGE_FRAGMENT ) ||
+			     stage.nPayloadBytes < 8 || stage.nPayloadBytes % 4 != 0 || nKind != nExpected || pTokens[1] == 0 || pTokens[1] > 3 ||
+			     pTokens[stage.nPayloadBytes - 4] != 0xff || pTokens[stage.nPayloadBytes - 3] != 0xff ||
+			     pTokens[stage.nPayloadBytes - 2] != 0 || pTokens[stage.nPayloadBytes - 1] != 0 ) {
+				return SIR_GRAPHICS_INVALID_ARGUMENT;
+			}
 		}
 		// Every (pass, stage) pair is unambiguous. A duplicate must not
 		// silently select one of two conflicting binaries at runtime.

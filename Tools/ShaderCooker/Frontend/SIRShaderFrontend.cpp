@@ -463,13 +463,17 @@ sirShaderCookResult_t sirShaderCookPreprocess( const sirShaderCookRequest_t& req
 		*pDiagnostic = "invalid entry path, entry point or define count";
 		return SIR_SHADER_COOK_INVALID_ARGUMENT;
 	}
-	bool bSpirv = false;
-	const sirShaderCookResult_t eTarget = sirShaderCookResolveTarget( request.eBackend, request.nStage, &pManifest->sProfile, &bSpirv );
+	sirShaderCookTarget_t target = {};
+	const sirShaderCookResult_t eTarget = sirShaderCookResolveTargetInfo( request.eBackend, request.nStage, &target );
 	if ( eTarget != SIR_SHADER_COOK_OK ) {
 		*pDiagnostic = "shader target or stage is unsupported";
 		return eTarget;
 	}
-	pManifest->bSpirv = bSpirv;
+	pManifest->bSpirv = target.bSpirv;
+	pManifest->sProfile = target.sProfile;
+	pManifest->eModel = target.eModel;
+	pManifest->eFormat = target.eFormat;
+	pManifest->nCompilerKind = target.eCompiler;
 	pManifest->nRecipeVersion = SIR_COOK_RECIPE_VERSION;
 	pManifest->sEntryPoint = request.sEntryPoint;
 	pManifest->szDefines = request.szDefines;

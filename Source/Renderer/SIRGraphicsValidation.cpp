@@ -137,8 +137,8 @@ sirGraphicsResult_t sirGraphicsValidateSampler( const sirGraphicsSamplerDesc_t& 
 
 static bool sirGraphicsValidShader( const sirGraphicsShaderCode_t& shader ) noexcept
 {
-	return shader.eFormat >= SIR_GRAPHICS_SHADER_DXIL && shader.eFormat <= SIR_GRAPHICS_SHADER_DXBC && shader.pBytes != nullptr &&
-	       shader.nByteCount >= 4;
+	return shader.eFormat >= SIR_GRAPHICS_SHADER_DXIL && shader.eFormat <= SIR_GRAPHICS_SHADER_D3D_LEGACY_TOKENS &&
+	       shader.eFormat != SIR_GRAPHICS_SHADER_FIXED_FUNCTION && shader.pBytes != nullptr && shader.nByteCount >= 4;
 }
 
 static bool sirGraphicsEmptyShader( const sirGraphicsShaderCode_t& shader ) noexcept

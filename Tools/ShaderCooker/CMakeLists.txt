@@ -6,7 +6,8 @@ add_library(SIRShaderCookFrontend STATIC
     MaterialIR/SIRMaterialIR.cpp
     MaterialIR/SIRMaterialIREmitter.cpp
     MaterialIR/Derivatives/SIRMaterialDerivatives.cpp
-    Archive/SIRShaderArchive.cpp)
+    Archive/SIRShaderArchive.cpp
+    Recipes/SIRFixedRecipeCooker.cpp)
 add_library(SIR::ShaderCookFrontend ALIAS SIRShaderCookFrontend)
 target_compile_features(SIRShaderCookFrontend PUBLIC cxx_std_17)
 target_include_directories(SIRShaderCookFrontend PUBLIC
@@ -38,6 +39,20 @@ if(SIR_BUILD_TESTS)
     target_link_libraries(SIRMaterialIREmitterTests PRIVATE SIR::ShaderCookFrontend)
     add_test(NAME shader.cooker.material-ir-emitter COMMAND SIRMaterialIREmitterTests)
     sir_configure_owned_target(SIRMaterialIREmitterTests)
+endif()
+
+if(SIR_BUILD_TESTS)
+    add_executable(SIRGraphicsCookIntegrationTests Tests/SIRGraphicsCookIntegrationTests.cpp)
+    target_link_libraries(SIRGraphicsCookIntegrationTests PRIVATE SIR::ShaderCookFrontend SIR::Graphics)
+    add_test(NAME shader.cooker.graphics-integration COMMAND SIRGraphicsCookIntegrationTests)
+    sir_configure_owned_target(SIRGraphicsCookIntegrationTests)
+endif()
+
+if(SIR_BUILD_TESTS)
+    add_executable(SIRFixedRecipeCookerTests Tests/SIRFixedRecipeCookerTests.cpp)
+    target_link_libraries(SIRFixedRecipeCookerTests PRIVATE SIR::ShaderCookFrontend)
+    add_test(NAME shader.cooker.fixed-recipe COMMAND SIRFixedRecipeCookerTests)
+    sir_configure_owned_target(SIRFixedRecipeCookerTests)
 endif()
 
 if(SIR_BUILD_TESTS)

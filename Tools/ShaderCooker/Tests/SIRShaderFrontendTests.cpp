@@ -203,7 +203,8 @@ static bool sirCookRun( const std::filesystem::path& sRoot )
 		return false;
 	}
 	return sirCookCheck( sirShaderCookResolveTarget( SIR_GRAPHICS_BACKEND_D3D11, SIR_GRAPHICS_STAGE_VERTEX, &sProfile, &bSpirv ) ==
-	                             SIR_SHADER_COOK_UNSUPPORTED &&
+	                             SIR_SHADER_COOK_OK &&
+	                         sProfile == "vs_5_0" && !bSpirv &&
 	                         sirShaderCookResolveTarget( SIR_GRAPHICS_BACKEND_VULKAN, SIR_GRAPHICS_STAGE_VERTEX, nullptr, &bSpirv ) ==
 	                             SIR_SHADER_COOK_INVALID_ARGUMENT,
 	                     "legacy recipe and null guards" );
@@ -477,6 +478,37 @@ static bool sirCookTargetMatrix( void )
 	const char *szProfiles[] = { "vs_6_6", "ps_6_6", "cs_6_6", "gs_6_6", "hs_6_6", "ds_6_6", "ms_6_6", "as_6_6" };
 	for ( const sirGraphicsBackend_t eBackend : { SIR_GRAPHICS_BACKEND_VULKAN, SIR_GRAPHICS_BACKEND_D3D12 } ) {
 		for ( uint32_t iStage = 0; iStage < 8; ++iStage ) {
+			const struct
+			{
+				sirGraphicsBackend_t eBackend;
+				uint32_t nStage;
+				const char *pszProfile;
+				sirGraphicsShaderFormat_t eFormat;
+			} szLegacy[] = { { SIR_GRAPHICS_BACKEND_D3D11, SIR_GRAPHICS_STAGE_VERTEX, "vs_5_0", SIR_GRAPHICS_SHADER_DXBC },
+			                 { SIR_GRAPHICS_BACKEND_D3D11, SIR_GRAPHICS_STAGE_COMPUTE, "cs_5_0", SIR_GRAPHICS_SHADER_DXBC },
+			                 { SIR_GRAPHICS_BACKEND_D3D10, SIR_GRAPHICS_STAGE_GEOMETRY, "gs_4_0", SIR_GRAPHICS_SHADER_DXBC },
+			                 { SIR_GRAPHICS_BACKEND_D3D9, SIR_GRAPHICS_STAGE_FRAGMENT, "ps_3_0", SIR_GRAPHICS_SHADER_D3D_LEGACY_TOKENS },
+			                 { SIR_GRAPHICS_BACKEND_D3D8, SIR_GRAPHICS_STAGE_VERTEX, "vs_1_1", SIR_GRAPHICS_SHADER_D3D_LEGACY_TOKENS } };
+			for ( const auto& item : szLegacy ) {
+				sirShaderCookTarget_t target = {};
+				if ( !sirCookCheck( sirShaderCookResolveTargetInfo( item.eBackend, item.nStage, &target ) == SIR_SHADER_COOK_OK &&
+				                        target.sProfile == item.pszProfile && target.eFormat == item.eFormat &&
+				                        target.eModel == SIR_GRAPHICS_PIPELINE_MODEL_PROGRAMMABLE &&
+				                        target.eCompiler == SIR_SHADER_COMPILER_FXC && !target.bSpirv,
+				                    "legacy target profile+binary identity" ) ) {
+					return false;
+				}
+			}
+			sirShaderCookTarget_t forbidden = {};
+			if ( !sirCookCheck( sirShaderCookResolveTargetInfo( SIR_GRAPHICS_BACKEND_D3D7, SIR_GRAPHICS_STAGE_VERTEX, &forbidden ) ==
+			                            SIR_SHADER_COOK_UNSUPPORTED &&
+			                        sirShaderCookResolveTargetInfo( SIR_GRAPHICS_BACKEND_D3D10, SIR_GRAPHICS_STAGE_COMPUTE, &forbidden ) ==
+			                            SIR_SHADER_COOK_UNSUPPORTED &&
+			                        sirShaderCookResolveTargetInfo( SIR_GRAPHICS_BACKEND_D3D9, SIR_GRAPHICS_STAGE_GEOMETRY, &forbidden ) ==
+			                            SIR_SHADER_COOK_UNSUPPORTED,
+			                    "unsupported generation stages" ) ) {
+				return false;
+			}
 			std::string sProfile = "stale";
 			bool bSpirv = false;
 			const sirShaderCookResult_t eResult = sirShaderCookResolveTarget( eBackend, szStages[iStage], &sProfile, &bSpirv );

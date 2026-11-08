@@ -183,7 +183,8 @@ typedef enum sirGraphicsShaderFormat_e : uint32_t
 	SIR_GRAPHICS_SHADER_SPIRV = 2,
 	SIR_GRAPHICS_SHADER_GLSL = 3,
 	SIR_GRAPHICS_SHADER_DXBC = 4,
-	SIR_GRAPHICS_SHADER_FIXED_FUNCTION = 5
+	SIR_GRAPHICS_SHADER_FIXED_FUNCTION = 5,
+	SIR_GRAPHICS_SHADER_D3D_LEGACY_TOKENS = 6
 } sirGraphicsShaderFormat_t;
 
 // Pipeline era and API execution style are independent capability axes.
