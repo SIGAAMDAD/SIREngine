@@ -59,8 +59,10 @@ typedef struct sirGLPresentSlot_s
 	uint32_t nFormat;
 	uint64_t nAcquisitionSerial;
 	uint64_t nAcquisitionId;
+	uint64_t nSubmittedValue;
 	bool bActive;
 	bool bAcquired;
+	bool bRetiring;
 } sirGLPresentSlot_t;
 
 typedef struct sirGLDevice_s
@@ -671,6 +673,13 @@ static uint32_t sirGLSubmit( void *pDevice, uint32_t nQueue, const sirGraphicsAB
 	}
 	pState->commands.bClosed = false;
 	++pState->nCompletedDirectValue;
+	for ( uint32_t i = 0; i < pBatch->nAcquisitionCount; ++i ) {
+		const sirGraphicsSurfaceImage_t& image = pBatch->pAcquisitions[i];
+		sirGLPresentSlot_t *pSlot = sirGLFindPresentSlot( pState, image.hSurface );
+		if ( pSlot != nullptr ) {
+			pSlot->nSubmittedValue = pState->nCompletedDirectValue;
+		}
+	}
 	*pCompletion = { pState->nGeneration, SIR_GRAPHICS_QUEUE_DIRECT, pState->nCompletedDirectValue };
 	return SIR_GRAPHICS_SUCCESS;
 }
@@ -711,6 +720,16 @@ static uint32_t sirGLRetireResource( void *pDevice, sirGraphicsHandle_t hResourc
 	if ( nStatus != SIR_GRAPHICS_SUCCESS ) {
 		return nStatus;
 	}
+	if ( resource.eType == SIR_GRAPHICS_HANDLE_TEXTURE ) {
+		for ( uint32_t i = 0; i < SIR_GL_PRESENT_SURFACE_COUNT; ++i ) {
+			const sirGLPresentSlot_t& owner = pState->present[i];
+			if ( owner.bActive && !owner.bRetiring && owner.hImage.nSlot == hResource.nSlot &&
+			     owner.hImage.nGeneration == hResource.nGeneration &&
+			     owner.hImage.nDeviceGeneration == hResource.nDeviceGeneration ) {
+				return SIR_GRAPHICS_BUSY;
+			}
+		}
+	}
 	if ( resource.eType == SIR_GRAPHICS_HANDLE_SURFACE ) {
 		for ( uint32_t i = 0; i < SIR_GL_PRESENT_SURFACE_COUNT; ++i ) {
 			sirGLPresentSlot_t& present = pState->present[i];
@@ -736,7 +755,9 @@ static uint32_t sirGLRetireResource( void *pDevice, sirGraphicsHandle_t hResourc
 				present.nFramebuffer = 0;
 			}
 			if ( present.hImage.nGeneration != 0 ) {
+				present.bRetiring = true;
 				nStatus = sirGLRetireResource( pState, present.hImage, pCompletion );
+				present.bRetiring = false;
 				if ( nStatus != SIR_GRAPHICS_SUCCESS ) {
 					return nStatus;
 				}
@@ -1104,6 +1125,7 @@ static uint32_t sirGLAcquireSurfaceImage( void *pDevice, sirGraphicsHandle_t hSu
 		return SIR_GRAPHICS_BUSY;
 	}
 	pSlot->nAcquisitionId = ++pSlot->nAcquisitionSerial;
+	pSlot->nSubmittedValue = 0;
 	pSlot->bAcquired = true;
 	*pImage = { pSlot->hSurface, pSlot->hImage, pSlot->nAcquisitionId, pSlot->window.nWindowGeneration };
 	return SIR_GRAPHICS_SUCCESS;
@@ -1130,7 +1152,8 @@ static uint32_t sirGLPresent( void *pDevice, const sirGraphicsSurfaceImage_t *pI
 		return SIR_GRAPHICS_INVALID_HANDLE;
 	}
 	if ( pComplete->nDeviceGeneration != pState->nGeneration || pComplete->eQueue != SIR_GRAPHICS_QUEUE_DIRECT ||
-	     pComplete->nValue == 0 || pComplete->nValue > pState->nCompletedDirectValue ) {
+	     pComplete->nValue == 0 || pComplete->nValue > pState->nCompletedDirectValue ||
+	     pComplete->nValue != pSlot->nSubmittedValue ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	uint32_t nStatus = sirGLBeginPresentWindow( pState->pContext, &pSlot->window );
