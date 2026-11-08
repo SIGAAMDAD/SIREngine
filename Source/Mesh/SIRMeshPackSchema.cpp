@@ -294,6 +294,8 @@ sirMeshPackResult_t SIRMeshPackSchema::open( const void *pData, uint64_t nBytes 
 		     ( !g.nChildCount && g.nFirstChild != 0 ) )
 			return SIR_MESH_PACK_INVALID_FORMAT;
 		if ( i != 0 ) {
+			if ( g.nMaterialId == 0xffffffffU )
+				return SIR_MESH_PACK_INVALID_FORMAT;
 			const sirMeshPackGroup_t parent = sirMeshPackReadGroup( p + sirMeshPackTableOffset( d.nGroups, d.nClusters, d.nPages, 0 ) +
 			                                                        ( uint64_t )g.nParent * SIR_MESH_PACK_GROUP_BYTES );
 			if ( g.nLevel >= parent.nLevel || g.fError > parent.fError || i < parent.nFirstChild ||
@@ -540,6 +542,28 @@ sirMeshPackResult_t SIRMeshPackSchema::verifyCollision( uint32_t iCollision, con
 		const uint32_t b = sirPackRead32( p + nIndexOffset + 4ULL * ( i + 1 ) );
 		const uint32_t cVertex = sirPackRead32( p + nIndexOffset + 4ULL * ( i + 2 ) );
 		if ( a >= c.nVertexCount || b >= c.nVertexCount || cVertex >= c.nVertexCount || a == b || b == cVertex || a == cVertex )
+			return SIR_MESH_PACK_INVALID_FORMAT;
+		// A repeated-position triangle is unusable as portable collision
+		// source even when its index triplet is distinct and its bytes are
+		// structurally valid. Match the cooker's geometric-area rejection.
+		const uint32_t indices[3] = { a, b, cVertex };
+		double position[3][3] = {};
+		for ( uint32_t vertex = 0; vertex < 3; ++vertex ) {
+			for ( uint32_t axis = 0; axis < 3; ++axis ) {
+				const uint64_t nOffset = 16ULL + 12ULL * indices[vertex] + 4ULL * axis;
+				position[vertex][axis] = sirMeshPackBitsFloat( sirPackRead32( p + nOffset ) );
+			}
+		}
+		const double ex = position[1][0] - position[0][0];
+		const double ey = position[1][1] - position[0][1];
+		const double ez = position[1][2] - position[0][2];
+		const double fx = position[2][0] - position[0][0];
+		const double fy = position[2][1] - position[0][1];
+		const double fz = position[2][2] - position[0][2];
+		const double nx = ey * fz - ez * fy;
+		const double ny = ez * fx - ex * fz;
+		const double nz = ex * fy - ey * fx;
+		if ( nx * nx + ny * ny + nz * nz < 1.0e-20 )
 			return SIR_MESH_PACK_INVALID_FORMAT;
 	}
 	return SIR_MESH_PACK_OK;

@@ -185,6 +185,10 @@ static bool testGrid( void )
 	indices[0] = input.nVertexCount + 1;
 	CHECK( SIRGeometryCooker::cook( input, &cooked ) == SIR_PACK_INVALID_ARGUMENT );
 	indices[0] = nPrior;
+	const uint32_t nOldMaterial = materials[0].nMaterialId;
+	materials[0].nMaterialId = 0xffffffffU;
+	CHECK( SIRGeometryCooker::cook( input, &cooked ) == SIR_PACK_INVALID_ARGUMENT );
+	materials[0].nMaterialId = nOldMaterial;
 	input.bCookCollision = false;
 	sirGeometryCookOutput_t noCollision;
 	CHECK( SIRGeometryCooker::cook( input, &noCollision ) == SIR_PACK_OK );

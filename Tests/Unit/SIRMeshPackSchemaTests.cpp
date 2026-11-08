@@ -40,6 +40,36 @@ static void makePage( uint8_t *p )
 	p[110] = 2;
 }
 
+typedef struct sirMeshPackMutation_s
+{
+	uint64_t nOffset;
+	uint64_t nValue;
+	uint32_t nWidth;
+} sirMeshPackMutation_t;
+
+// Rehash a structurally forged manifest to force the semantic parser to
+// inspect the altered field, rather than merely failing its digest check.
+static bool expectRejectedManifest( uint8_t *pBytes, uint64_t nBytes, const sirMeshPackMutation_t& mutation )
+{
+	if ( mutation.nOffset + mutation.nWidth > nBytes || ( mutation.nWidth != 4 && mutation.nWidth != 8 ) )
+		return false;
+	uint8_t previous[8] = {};
+	memcpy( previous, pBytes + mutation.nOffset, mutation.nWidth );
+	if ( mutation.nWidth == 4 )
+		sirPackWrite32( pBytes + mutation.nOffset, ( uint32_t )mutation.nValue );
+	else
+		sirPackWrite64( pBytes + mutation.nOffset, mutation.nValue );
+	uint8_t digest[32] = {};
+	sirPackCatalogDigest( pBytes, nBytes, digest );
+	memcpy( pBytes + 88, digest, sizeof( digest ) );
+	SIRMeshPackSchema parser;
+	const bool bRejected = parser.open( pBytes, nBytes ) != SIR_MESH_PACK_OK && !parser.isOpen();
+	memcpy( pBytes + mutation.nOffset, previous, mutation.nWidth );
+	sirPackCatalogDigest( pBytes, nBytes, digest );
+	memcpy( pBytes + 88, digest, sizeof( digest ) );
+	return bRejected;
+}
+
 int main()
 {
 	uint8_t rootPayload[111] = {};
@@ -75,6 +105,22 @@ int main()
 	TEST( bytes == 128 + 2 * 48 + 2 * 48 + 2 * 48 + 48 );
 	TEST( SIRMeshPackSchema::write( desc, buffer, bytes ) == SIR_MESH_PACK_OK );
 	SIRMeshPackSchema reader;
+	TEST( reader.open( buffer, bytes ) == SIR_MESH_PACK_OK );
+	// Parent cycles, cross-table offsets and mismatched chunk IDs must fail
+	// even when an attacker recomputes the valid SIRG digest.
+	static constexpr sirMeshPackMutation_t mutations[] = {
+	    { 176, 1, 4 },          // group 1 -> itself
+	    { 368, 1, 4 },          // page 1 -> itself
+	    { 288, 1000, 8 },       // cluster 1 exceeds decoded page
+	    { 380, 1, 4 },          // page 1 repeats page 0 SIRPack chunk identity
+	    { 440, 10, 8 },         // collision revision disagrees with mesh
+	    { 64, 0, 8 },           // group table offset is corrupt
+	    { 120, 1, 4 },          // reserved header bits
+	    { 40, 0xffffffffU, 4 }, // overflowing/truncated record table
+	};
+	for ( const sirMeshPackMutation_t& mutation : mutations ) {
+		TEST( expectRejectedManifest( buffer, bytes, mutation ) );
+	}
 	TEST( reader.open( buffer, bytes ) == SIR_MESH_PACK_OK );
 	TEST( reader.getKey().nRevision == 9 );
 	sirPackResource_t resource = {};
@@ -169,11 +215,16 @@ int main()
 	sirPackWrite32( collisionBytes + 4, 3 );
 	sirPackWrite32( collisionBytes + 8, 3 );
 	sirPackWrite32( collisionBytes + 12, 1 );
+	sirPackWrite32( collisionBytes + 28, 0x3f800000U ); // v1.x = 1
+	sirPackWrite32( collisionBytes + 44, 0x3f800000U ); // v2.y = 1
 	sirPackWrite32( collisionBytes + 52, 0 );
 	sirPackWrite32( collisionBytes + 56, 1 );
 	sirPackWrite32( collisionBytes + 60, 2 );
 	sirPackWrite32( collisionBytes + 64, 18 );
 	TEST( reader.verifyCollision( 0, collisionBytes, sizeof( collisionBytes ) ) == SIR_MESH_PACK_OK );
+	sirPackWrite32( collisionBytes + 44, 0 );
+	TEST( reader.verifyCollision( 0, collisionBytes, sizeof( collisionBytes ) ) == SIR_MESH_PACK_INVALID_FORMAT );
+	sirPackWrite32( collisionBytes + 44, 0x3f800000U );
 	sirPackWrite32( collisionBytes + 56, 0 );
 	TEST( reader.verifyCollision( 0, collisionBytes, sizeof( collisionBytes ) ) == SIR_MESH_PACK_INVALID_FORMAT );
 	sirPackWrite32( collisionBytes + 56, 1 );
@@ -187,6 +238,9 @@ int main()
 	groups[1].nParent = 1;
 	TEST( SIRMeshPackSchema::write( desc, buffer, bytes ) == SIR_MESH_PACK_INVALID_FORMAT );
 	groups[1].nParent = 0;
+	groups[1].nMaterialId = 0xffffffffU;
+	TEST( SIRMeshPackSchema::write( desc, buffer, bytes ) == SIR_MESH_PACK_INVALID_FORMAT );
+	groups[1].nMaterialId = 0;
 	clusters[1].nByteOffset = 1000;
 	TEST( SIRMeshPackSchema::write( desc, buffer, bytes ) == SIR_MESH_PACK_INVALID_FORMAT );
 	clusters[1].nByteOffset = 4;

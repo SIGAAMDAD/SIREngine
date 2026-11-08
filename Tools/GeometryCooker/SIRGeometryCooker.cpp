@@ -309,8 +309,8 @@ static bool sirGeometryValidateInput( const sirGeometryCookInput_t& in ) noexcep
 	uint32_t nPriorMaterial = 0;
 	for ( uint32_t i = 0; i < in.nMaterialCount; ++i ) {
 		const sirGeometryCookMaterial_t& mat = in.pMaterials[i];
-		if ( mat.nFirstIndex != nEnd || mat.nIndexCount == 0 || mat.nIndexCount % 3 || mat.nIndexCount > in.nIndexCount - nEnd ||
-		     ( i && mat.nMaterialId <= nPriorMaterial ) )
+		if ( mat.nMaterialId == 0xffffffffU || mat.nFirstIndex != nEnd || mat.nIndexCount == 0 || mat.nIndexCount % 3 ||
+		     mat.nIndexCount > in.nIndexCount - nEnd || ( i && mat.nMaterialId <= nPriorMaterial ) )
 			return false;
 		nEnd += mat.nIndexCount;
 		nPriorMaterial = mat.nMaterialId;
