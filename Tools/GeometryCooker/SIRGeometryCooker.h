@@ -65,6 +65,7 @@ typedef struct sirGeometryCookOutput_s
 
 struct sirDisplacementImage_s;
 struct sirDisplacementRecipe_s;
+struct sirPackShippingPolicy_s;
 
 // Offline-only, deterministic and independent of runtime page/GRDG ownership.
 // Requires the repository's pinned meshoptimizer revision; no alternate
@@ -73,6 +74,8 @@ class SIRGeometryCooker
 {
 public:
 	static sirPackResult_t cook( const sirGeometryCookInput_t& input, sirGeometryCookOutput_t *pOutput ) noexcept;
+	static sirPackResult_t cookShipping( const sirGeometryCookInput_t& input, const sirPackShippingPolicy_s& policy,
+	                                     sirGeometryCookOutput_t *pOutput ) noexcept;
 	static sirPackResult_t cookDisplaced( const sirGeometryCookInput_t& input, const sirDisplacementImage_s& image,
 	                                      const sirDisplacementRecipe_s& recipe, sirGeometryCookOutput_t *pOutput ) noexcept;
 

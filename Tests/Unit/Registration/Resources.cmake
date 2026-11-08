@@ -94,6 +94,11 @@ target_link_libraries(SIRPackFoundationTests PRIVATE SIR::PackCooker)
 add_test(NAME resources.sirpack.foundation COMMAND SIRPackFoundationTests)
 sir_configure_owned_target(SIRPackFoundationTests)
 
+add_executable(SIRPackShippingGuardTests SIRPackShippingGuardTests.cpp)
+target_link_libraries(SIRPackShippingGuardTests PRIVATE SIR::PackCooker)
+add_test(NAME resources.sirpack.shipping-source-guard COMMAND SIRPackShippingGuardTests)
+sir_configure_owned_target(SIRPackShippingGuardTests)
+
 add_executable(SIRMeshPackSchemaTests SIRMeshPackSchemaTests.cpp)
 target_link_libraries(SIRMeshPackSchemaTests PRIVATE SIR::MeshPackSchema)
 add_test(NAME mesh.sirpack.schema COMMAND SIRMeshPackSchemaTests)

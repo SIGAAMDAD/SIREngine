@@ -14,6 +14,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 #include <Tools/GeometryCooker/SIRGeometryCooker.h>
 #include <Tools/GeometryCooker/SIRDisplacementCooker.h>
+#include <Tools/SIRPackCooker/SIRPackShippingGuard.h>
 
 #include <algorithm>
 #include <array>
@@ -24,6 +25,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <cstdio>
 #include <cstdlib>
 #include <fstream>
+#include <iterator>
 #include <map>
 #include <sstream>
 #include <string>
@@ -487,8 +489,25 @@ int main( int argc, char **argv )
 			input.pMaterials = baked.materials.data();
 			input.nMaterialCount = ( uint32_t )baked.materials.size();
 		}
+		// The output is screened against authoring-only source bytes and the
+		// original source path before any catalog or shard becomes visible.
+		std::vector<uint8_t> imageBytes;
+		std::vector<sirPackShippingPattern_t> sourcePatterns;
+		static const char pszRecipeMarker[] = "SIR-DISPLACEMENT-RECIPE-V1";
+		if ( !imagePath.empty() ) {
+			std::ifstream source( imagePath, std::ios::binary );
+			if ( !source )
+				return 1;
+			imageBytes.assign( std::istreambuf_iterator<char>( source ), std::istreambuf_iterator<char>() );
+			if ( !source.eof() || imageBytes.empty() )
+				return 1;
+			sourcePatterns.push_back( { imageBytes.data(), imageBytes.size() } );
+			sourcePatterns.push_back( { ( const uint8_t * )imagePath.data(), imagePath.size() } );
+			sourcePatterns.push_back( { ( const uint8_t * )pszRecipeMarker, sizeof( pszRecipeMarker ) - 1 } );
+		}
+		const sirPackShippingPolicy_t policy = { nullptr, 0, nullptr, 0, sourcePatterns.data(), ( uint32_t )sourcePatterns.size() };
 		sirGeometryCookOutput_t cooked;
-		const sirPackResult_t result = SIRGeometryCooker::cook( input, &cooked );
+		const sirPackResult_t result = SIRGeometryCooker::cookShipping( input, policy, &cooked );
 		if ( result != SIR_PACK_OK ) {
 			fprintf( stderr, "geometry cooker: failed with code %u\n", ( unsigned )result );
 			return 1;

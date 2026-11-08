@@ -15,6 +15,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Tools/GeometryCooker/SIRGeometryCooker.h>
 #include <Tools/GeometryCooker/SIRDisplacementCooker.h>
 #include <Tools/SIRPackCooker/SIRPackCooker.h>
+#include <Tools/SIRPackCooker/SIRPackShippingGuard.h>
 
 #include <meshoptimizer.h>
 
@@ -343,6 +344,13 @@ static bool sirGeometryAppendCluster( const sirGeometryCookContext_t& ctx, const
 // quantization range preserves shared vertex positions across page boundaries.
 sirPackResult_t SIRGeometryCooker::cook( const sirGeometryCookInput_t& in, sirGeometryCookOutput_t *pOutput ) noexcept
 {
+	const sirPackShippingPolicy_t policy = {};
+	return cookShipping( in, policy, pOutput );
+}
+
+sirPackResult_t SIRGeometryCooker::cookShipping( const sirGeometryCookInput_t& in, const sirPackShippingPolicy_s& policy,
+                                                 sirGeometryCookOutput_t *pOutput ) noexcept
+{
 	if ( pOutput == nullptr || !sirGeometryValidateInput( in ) )
 		return SIR_PACK_INVALID_ARGUMENT;
 	try {
@@ -606,7 +614,7 @@ sirPackResult_t SIRGeometryCooker::cook( const sirGeometryCookInput_t& in, sirGe
 		std::vector<uint8_t> scratch( ( size_t )SIRPackCooker::requiredScratch( pack ) );
 		pack.pScratch = scratch.data();
 		pack.nScratchBytes = scratch.size();
-		const sirPackResult_t result = SIRPackCooker::build( pack, catalog.data(), catalog.size() );
+		const sirPackResult_t result = SIRPackShippingGuard::build( pack, policy, catalog.data(), catalog.size() );
 		if ( result != SIR_PACK_OK )
 			return result;
 		pOutput->catalog.swap( catalog );
