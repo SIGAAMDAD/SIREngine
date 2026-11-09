@@ -145,16 +145,20 @@ typedef struct sirAudioManifestLoadOptions_s
 	const sirContainerAllocator_t *pAllocator;
 	uint64_t nAvailableCapabilities;
 	sirAudioProvider_t eExpectedProvider;
+	uint32_t nSourceProviderId;
 } sirAudioManifestLoadOptions_t;
 
 // The store pins one exact GRDG revision for the lifetime of all its lookups.
+// An audio provider pin is independent of an active read scope: the audio
+// playback lifetime does not stall reclamation of unrelated resource versions.
 // The immutable manifest is never copied into audio-owned source storage.
 // Load/reload/shutdown and all lookups are serialized by the audio owner.
 class SIRAudioResourceStore
 {
 private:
 	const uint8_t *m_pBytes = nullptr;
-	SIRResourceReadScope *m_pSourceScope = nullptr;
+	SIRResourceGraph *m_pSourceGraph = nullptr;
+	SIRResourcePinHandle m_SourcePin = {};
 	SIRResourceHandle m_SourceHandle = {};
 	uint64_t m_nSourceRevision = 0;
 	const sirContainerAllocator_t *m_pAllocator = nullptr;

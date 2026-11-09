@@ -83,7 +83,7 @@ struct sirTestAudioManifestSource_t
 		if ( pWriter->publish( publication, &hManifest ) != SIR_RESOURCE_RESULT_SUCCESS ) {
 			return SIR_AUDIO_MANIFEST_INVALID_ARGUMENT;
 		}
-		const sirAudioManifestLoadOptions_t options = { pAllocator, 0, SIR_AUDIO_PROVIDER_FMOD };
+		const sirAudioManifestLoadOptions_t options = { pAllocator, 0, SIR_AUDIO_PROVIDER_FMOD, 0x41554449 };
 		return rStore.load( graph, hManifest, { 1 }, options );
 	}
 };

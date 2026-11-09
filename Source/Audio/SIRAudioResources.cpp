@@ -359,31 +359,28 @@ static sirAudioManifestResult_t validateAudioManifestBytes( const void *pBytes, 
 sirAudioManifestResult_t SIRAudioResourceStore::load( SIRResourceGraph& rGraph, SIRResourceHandle hManifest, SIRResourceChunkId chunkId,
                                                       const sirAudioManifestLoadOptions_t& rOptions ) noexcept
 {
-	if ( rOptions.pAllocator == nullptr || rOptions.pAllocator->pfnAllocate == nullptr || rOptions.pAllocator->pfnDeallocate == nullptr ) {
+	if ( rOptions.pAllocator == nullptr || rOptions.pAllocator->pfnAllocate == nullptr || rOptions.pAllocator->pfnDeallocate == nullptr ||
+	     rOptions.nSourceProviderId == 0 ) {
 		return SIR_AUDIO_MANIFEST_INVALID_ARGUMENT;
 	}
-	void *pStorage = nullptr;
-	if ( SIRRawStorage::tryAllocate( rOptions.pAllocator, sizeof( SIRResourceReadScope ), alignof( SIRResourceReadScope ), &pStorage ) !=
-	     SIR_CONTAINER_OK ) {
-		return SIR_AUDIO_MANIFEST_OUT_OF_MEMORY;
-	}
-	SIRResourceReadScope *pScope = new ( pStorage ) SIRResourceReadScope( rGraph );
+	SIRResourceReadScope scope( rGraph );
 	SIRResourceView view;
 	SIRResourceConstBytes manifest = {};
 	SIRResourceInfo resource = {};
-	if ( !pScope->isActive() || rGraph.resolve( *pScope, hManifest, &view ) != SIR_RESOURCE_RESULT_SUCCESS ||
-	     view.getInfo( &resource ) != SIR_RESOURCE_RESULT_SUCCESS || resource.m_eState != SIR_RESOURCE_STATE_RESIDENT ||
-	     view.getChunk( chunkId, &manifest ) != SIR_RESOURCE_RESULT_SUCCESS || manifest.m_nSize > SIZE_MAX ) {
-		pScope->~SIRResourceReadScope();
-		SIRRawStorage::deallocate( rOptions.pAllocator, pStorage, sizeof( SIRResourceReadScope ), alignof( SIRResourceReadScope ) );
+	if ( !scope.isActive() || rGraph.resolve( scope, hManifest, &view ) != SIR_RESOURCE_RESULT_SUCCESS ||
+	     view.getInfo( &resource ) != SIR_RESOURCE_RESULT_SUCCESS || resource.m_eKind != SIR_RESOURCE_KIND_BLOB ||
+	     resource.m_eState != SIR_RESOURCE_STATE_RESIDENT || view.getChunk( chunkId, &manifest ) != SIR_RESOURCE_RESULT_SUCCESS ||
+	     manifest.m_nSize > SIZE_MAX ) {
 		return SIR_AUDIO_MANIFEST_INVALID_ARGUMENT;
 	}
 	sirAudioManifestParsedLayout_t parsed = {};
 	const sirAudioManifestResult_t eValid = validateAudioManifestBytes( manifest.m_pData, ( size_t )manifest.m_nSize, rOptions, &parsed );
 	if ( eValid != SIR_AUDIO_MANIFEST_OK ) {
-		pScope->~SIRResourceReadScope();
-		SIRRawStorage::deallocate( rOptions.pAllocator, pStorage, sizeof( SIRResourceReadScope ), alignof( SIRResourceReadScope ) );
 		return eValid;
+	}
+	SIRResourcePinHandle pin = {};
+	if ( rGraph.pinForProvider( scope, view, rOptions.nSourceProviderId, &pin ) != SIR_RESOURCE_RESULT_SUCCESS ) {
+		return SIR_AUDIO_MANIFEST_OUT_OF_MEMORY;
 	}
 	uint64_t nNewEpoch = s_nAudioManifestEpoch.load( SIR_MEMORY_ORDER_RELAXED );
 	while ( nNewEpoch != 0 && nNewEpoch != UINT64_MAX ) {
@@ -392,13 +389,13 @@ sirAudioManifestResult_t SIRAudioResourceStore::load( SIRResourceGraph& rGraph, 
 		}
 	}
 	if ( nNewEpoch == 0 || nNewEpoch == UINT64_MAX ) {
-		pScope->~SIRResourceReadScope();
-		SIRRawStorage::deallocate( rOptions.pAllocator, pStorage, sizeof( SIRResourceReadScope ), alignof( SIRResourceReadScope ) );
+		( void )rGraph.releaseProviderPin( pin );
 		return SIR_AUDIO_MANIFEST_EPOCH_EXHAUSTED;
 	}
 	shutdown();
 	m_pBytes = manifest.m_pData;
-	m_pSourceScope = pScope;
+	m_pSourceGraph = &rGraph;
+	m_SourcePin = pin;
 	m_pAllocator = rOptions.pAllocator;
 	m_SourceHandle = hManifest;
 	m_nSourceRevision = resource.m_nRevision;
@@ -423,11 +420,13 @@ uint64_t SIRAudioResourceStore::getSourceRevision( void ) const noexcept
 
 void SIRAudioResourceStore::shutdown( void ) noexcept
 {
-	if ( m_pSourceScope != nullptr ) {
-		m_pSourceScope->~SIRResourceReadScope();
-		SIRRawStorage::deallocate( m_pAllocator, m_pSourceScope, sizeof( SIRResourceReadScope ), alignof( SIRResourceReadScope ) );
+	if ( m_pSourceGraph != nullptr ) {
+		if ( m_pSourceGraph->releaseProviderPin( m_SourcePin ) != SIR_RESOURCE_RESULT_SUCCESS ) {
+			abort();
+		}
 	}
-	m_pSourceScope = nullptr;
+	m_pSourceGraph = nullptr;
+	m_SourcePin = {};
 	m_SourceHandle = {};
 	m_nSourceRevision = 0;
 	m_pBytes = nullptr;

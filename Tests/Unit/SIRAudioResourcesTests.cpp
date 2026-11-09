@@ -31,6 +31,7 @@ static void testCheckAt( bool bCondition, uint32_t nLine ) noexcept
 }
 
 #define testCheck( condition ) testCheckAt( ( condition ), __LINE__ )
+#define CHECK( condition ) testCheckAt( ( condition ), __LINE__ )
 
 typedef struct sirAudioTestAllocationContext_s
 {
@@ -180,7 +181,7 @@ static sirAudioManifestResult_t loadTest( SIRAudioResourceStore& rStore, SIRReso
 	const SIRResourcePublication publication = { { 750, 11, 0 }, SIR_RESOURCE_KIND_BLOB, 1, 1, &chunk, 1, nullptr, 0 };
 	SIRResourceHandle hManifest = {};
 	testCheck( pWriter->publish( publication, &hManifest ) == SIR_RESOURCE_RESULT_SUCCESS );
-	const sirAudioManifestLoadOptions_t options = { rLoad.pAllocator, rLoad.nCapabilities, rLoad.eProvider };
+	const sirAudioManifestLoadOptions_t options = { rLoad.pAllocator, rLoad.nCapabilities, rLoad.eProvider, 0x41554449 };
 	const sirAudioManifestResult_t eResult = rStore.load( rGraph, hManifest, { 1 }, options );
 	( void )pWriter->collectRetired( 16 );
 	return eResult;
@@ -195,7 +196,7 @@ static void testValidManifestAndHandles( const sirContainerAllocator_t *pAllocat
 	testCheck( loadTest( store, graph, { &manifest, sizeof( manifest ), SIR_AUDIO_PROVIDER_FMOD, 3, pAllocator } ) ==
 	           SIR_AUDIO_MANIFEST_OK );
 	testCheck( store.isLoaded() && store.getProvider() == SIR_AUDIO_PROVIDER_FMOD );
-	testCheck( store.getSourceRevision() == 1 && graph.getStats().m_nActiveReaders == 1 );
+	testCheck( store.getSourceRevision() == 1 && graph.getStats().m_nActiveReaders == 0 );
 	{
 		SIRResourceReadScope scope( graph );
 		SIRResourceHandle h = {};
@@ -231,14 +232,20 @@ static void testValidManifestAndHandles( const sirContainerAllocator_t *pAllocat
 	}
 	testCheck( state.nAllocations == nBeforeLookups );
 
-	// Runtime lookup owns a copy, independent of caller-side temporary bytes.
+	// A persistent provider pin, rather than an open read scope, holds the
+	// exact canonical bytes across recooks without blocking other readers.
+	CHECK( graph.getStats().m_nActiveReaders == 0 );
+	// The caller's temporary input is not retained; GRDG owns the manifest.
+
 	manifest.events[0].nEventId = 999;
 	testCheck( store.findEvent( 100, event ) && event.nEventId == 100 );
 	manifest = makeManifest();
+	const uint8_t *pFirstCanonical = store.getBorrowedManifestBytes();
 	const uint64_t nFirstEpoch = store.getEpoch();
 	testCheck( loadTest( store, graph, { &manifest, sizeof( manifest ), SIR_AUDIO_PROVIDER_FMOD, 3, pAllocator } ) ==
 	           SIR_AUDIO_MANIFEST_OK );
 	testCheck( store.getEpoch() != nFirstEpoch );
+	CHECK( store.getBorrowedManifestBytes() == pFirstCanonical && graph.getStats().m_nActiveReaders == 0 );
 	testCheck( !store.resolveEvent( hEvent, event ) && !store.resolvePackage( hPackage, package ) );
 	testCheck( store.findEvent( 200, event ) && event.nEventId == 200 );
 	store.shutdown();
