@@ -203,6 +203,33 @@ static void testSharedBackingLeases( void )
 			CHECK( allocator.nAllocationAttempts == nAllocationsBeforeSealing );
 			allocator.bSealed = false;
 		}
+		// A forged/modified borrowed view must not release somebody else's
+		// canonical source pin, even if the borrow-slot generation is valid.
+		const sirProviderCompletionSet_t releaseFence = { 7, 3, 3, 2, { 4, 9, 0, 0 } };
+		sirSharedDeviceView_t forged = views[0];
+		forged.nNativeResourceToken = 12345;
+		CHECK( registry.releaseSharedDeviceView( forged, releaseFence ) == SIR_RESOURCE_RESULT_INVALID_HANDLE );
+		forged = views[0];
+		forged.nOffset = 16;
+		CHECK( registry.releaseSharedDeviceView( forged, releaseFence ) == SIR_RESOURCE_RESULT_INVALID_HANDLE );
+		forged = views[0];
+		forged.nBytes = 8;
+		CHECK( registry.releaseSharedDeviceView( forged, releaseFence ) == SIR_RESOURCE_RESULT_INVALID_HANDLE );
+		forged = views[0];
+		forged.nSourceRevision = 999;
+		CHECK( registry.releaseSharedDeviceView( forged, releaseFence ) == SIR_RESOURCE_RESULT_INVALID_HANDLE );
+		forged = views[0];
+		forged.nDeviceGeneration = 9;
+		CHECK( registry.releaseSharedDeviceView( forged, releaseFence ) == SIR_RESOURCE_RESULT_INVALID_HANDLE );
+		forged = views[0];
+		forged.nApprovedUsageMask = 0xF;
+		CHECK( registry.releaseSharedDeviceView( forged, releaseFence ) == SIR_RESOURCE_RESULT_INVALID_HANDLE );
+		forged = views[0];
+		forged.bReadOnly = false;
+		CHECK( registry.releaseSharedDeviceView( forged, releaseFence ) == SIR_RESOURCE_RESULT_INVALID_HANDLE );
+		SIRResourceDerivedStats beforeValidRelease = {};
+		CHECK( registry.getStats( &beforeValidRelease ) == SIR_RESOURCE_RESULT_SUCCESS );
+		CHECK( beforeValidRelease.nLiveSharedBorrows == 4 && driver.nReleases == 0 );
 		CHECK( registry.retireRepresentation( hBacking, { 7, 3, 3, 2, { 4, 9, 0, 0 } } ) == SIR_RESOURCE_RESULT_SUCCESS );
 		CHECK( registry.releaseSharedDeviceView( views[0], { 7, 3, 3, 2, { 4, 9, 0, 0 } } ) == SIR_RESOURCE_RESULT_SUCCESS );
 		CHECK( registry.releaseSharedDeviceView( views[1], { 8, 3, 1, 2, { 5, 0, 0, 0 } } ) == SIR_RESOURCE_RESULT_SUCCESS );

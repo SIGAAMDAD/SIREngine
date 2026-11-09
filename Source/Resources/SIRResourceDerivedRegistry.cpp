@@ -48,6 +48,7 @@ typedef struct sirSharedDeviceBorrowSlot_s
 {
 	SIRResourcePinHandle sourcePin;
 	sirProviderCompletionSet_t required;
+	sirSharedDeviceView_t issuedView;
 	uint32_t nBackingSlot;
 	uint32_t nBackingGeneration;
 	uint32_t nConsumerId;
@@ -778,6 +779,7 @@ SIRResourceResult SIRResourceDerivedRegistry::acquireSharedDeviceView( const SIR
 			           iBorrow,
 			           rBorrow.nGeneration,
 			           true };
+			rBorrow.issuedView = *pView;
 			return SIR_RESOURCE_RESULT_SUCCESS;
 		}
 		return SIR_RESOURCE_RESULT_OUT_OF_BUDGET;
@@ -795,10 +797,18 @@ SIRResourceResult SIRResourceDerivedRegistry::releaseSharedDeviceView( const sir
 		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
 	}
 	sirSharedDeviceBorrowSlot_t& rBorrow = m_pSharedBorrows[rView.nBorrowSlot];
+	// The returned lease is an immutable capability, not just a generation and
+	// consumer label. Releasing a modified offset, native token or revision must
+	// never retire the actual canonical pin held by this slot.
+	const sirSharedDeviceView_t& issued = rBorrow.issuedView;
 	if ( !rBorrow.bOccupied || rBorrow.bReleased || rBorrow.nGeneration != rView.nBorrowGeneration ||
 	     rBorrow.nConsumerId != rView.nConsumerId ||
 	     ( ( uint64_t )rBorrow.nBackingGeneration << 32 ) + rBorrow.nBackingSlot + 1 != rView.nPhysicalBackingId ||
-	     rBorrow.nCompletionProviderId != required.nProviderId ) {
+	     rBorrow.nCompletionProviderId != required.nProviderId || issued.nPhysicalBackingId != rView.nPhysicalBackingId ||
+	     issued.nNativeResourceToken != rView.nNativeResourceToken || issued.nOffset != rView.nOffset || issued.nBytes != rView.nBytes ||
+	     issued.nSourceRevision != rView.nSourceRevision || issued.nDeviceGeneration != rView.nDeviceGeneration ||
+	     issued.nApprovedUsageMask != rView.nApprovedUsageMask || issued.nBorrowSlot != rView.nBorrowSlot ||
+	     issued.nBorrowGeneration != rView.nBorrowGeneration || issued.bReadOnly != rView.bReadOnly ) {
 		return SIR_RESOURCE_RESULT_INVALID_HANDLE;
 	}
 	const int32_t iProvider = findProvider( rBorrow.nCompletionProviderId );
