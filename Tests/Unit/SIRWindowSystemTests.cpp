@@ -14,6 +14,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 #include <Core/Platform/Window/Headless/SIRWindowDriverHeadless.h>
 #include <Core/Platform/Window/SIRWindowSystem.h>
+#include <assert.h>
 #include <stdio.h>
 #include <string.h>
 #include <Core/Platform/SIRThread.h>
@@ -26,11 +27,15 @@ public:
 
 	sirWindowResult_t initialize( void ) noexcept override
 	{
+		if ( m_bRunning ) {
+			return SIR_WINDOW_BUSY;
+		}
+		// Simulate a backend that acquires its OS session before setup fails.
+		m_bRunning = true;
 		if ( m_bFailInitialize ) {
 			m_bFailInitialize = false;
 			return SIR_WINDOW_NATIVE_FAILURE;
 		}
-		m_bRunning = true;
 		return SIR_WINDOW_OK;
 	}
 	sirWindowResult_t createWindow( const sirWindowCreateDesc_t& desc, uint32_t nSlot, sirWindowNativeView_t *pView ) noexcept override
@@ -83,6 +88,7 @@ public:
 	}
 	void shutdown( void ) noexcept override
 	{
+		++m_nShutdowns;
 		m_bRunning = false;
 	}
 	void queueEvent( sirWindowBackendEvent_t event ) noexcept
@@ -92,6 +98,7 @@ public:
 		}
 	}
 	uint32_t m_nMutations = 0;
+	uint32_t m_nShutdowns = 0;
 	char m_szLastTitle[128] = {};
 	bool m_bFailInitialize = false;
 	sirWindowPlatform_t m_ePlatform = SIR_WINDOW_PLATFORM_X11;
@@ -143,7 +150,6 @@ static void sirWindowReleaseLeaseWorker( void *pUserData )
 	pContext->eResult = pContext->pSystem->releaseNativeLease( pContext->hLease );
 }
 
-
 typedef struct sirQueuedMutationWorkerContext_s
 {
 	SIRWindowSystem *pSystem;
@@ -157,9 +163,8 @@ typedef struct sirQueuedMutationWorkerContext_s
 static void sirQueueMutationWorker( void *pUserData )
 {
 	sirQueuedMutationWorkerContext_t *pContext = ( sirQueuedMutationWorkerContext_t * )pUserData;
-	pContext->eResult = pContext->bClose ? pContext->pSystem->queueClose( pContext->hWindow, &pContext->nTicket ) :
-	                                      pContext->pSystem->queueMutation( pContext->hWindow, pContext->mutation,
-	                                                                        &pContext->nTicket );
+	pContext->eResult = pContext->bClose ? pContext->pSystem->queueClose( pContext->hWindow, &pContext->nTicket )
+	                                     : pContext->pSystem->queueMutation( pContext->hWindow, pContext->mutation, &pContext->nTicket );
 }
 
 static bool sirTestQueuedOwnerMutations( void ) noexcept
@@ -177,8 +182,7 @@ static bool sirTestQueuedOwnerMutations( void ) noexcept
 	const sirWindowMutation_t mutation = { SIR_WINDOW_MUTATION_TITLE, szTitle, 0, 0 };
 	sirQueuedMutationWorkerContext_t context = { &windows, hWindow, mutation, 0, SIR_WINDOW_STOPPED, false };
 	SIRThread worker;
-	if ( !worker.start( sirQueueMutationWorker, &context ) || !worker.join() || context.eResult != SIR_WINDOW_OK ||
-	     context.nTicket == 0 ) {
+	if ( !worker.start( sirQueueMutationWorker, &context ) || !worker.join() || context.eResult != SIR_WINDOW_OK || context.nTicket == 0 ) {
 		return false;
 	}
 	uint64_t nTicket = context.nTicket;
@@ -196,9 +200,8 @@ static bool sirTestQueuedOwnerMutations( void ) noexcept
 	}
 	// A pending request against a retired slot must fail after recycling.
 	uint64_t nStale = 0;
-	if ( windows.queueMutation( hWindow, mutation, &nStale ) != SIR_WINDOW_OK ||
-	     windows.destroyWindow( hWindow ) != SIR_WINDOW_OK || windows.pumpEvents( 1 ) != SIR_WINDOW_OK ||
-	     windows.queryRequest( nStale, &eResult, &bComplete ) != SIR_WINDOW_OK || !bComplete ||
+	if ( windows.queueMutation( hWindow, mutation, &nStale ) != SIR_WINDOW_OK || windows.destroyWindow( hWindow ) != SIR_WINDOW_OK ||
+	     windows.pumpEvents( 1 ) != SIR_WINDOW_OK || windows.queryRequest( nStale, &eResult, &bComplete ) != SIR_WINDOW_OK || !bComplete ||
 	     eResult != SIR_WINDOW_INVALID_HANDLE ) {
 		return false;
 	}
@@ -207,8 +210,7 @@ static bool sirTestQueuedOwnerMutations( void ) noexcept
 	}
 	uint64_t tickets[SIR_WINDOW_REQUEST_CAPACITY] = {};
 	for ( uint32_t i = 0; i < SIR_WINDOW_REQUEST_CAPACITY; ++i ) {
-		if ( windows.queueMutation( hWindow, { SIR_WINDOW_MUTATION_RESIZE, nullptr, 640 + i, 480 + i }, &tickets[i] ) !=
-		     SIR_WINDOW_OK ) {
+		if ( windows.queueMutation( hWindow, { SIR_WINDOW_MUTATION_RESIZE, nullptr, 640 + i, 480 + i }, &tickets[i] ) != SIR_WINDOW_OK ) {
 			return false;
 		}
 	}
@@ -217,8 +219,7 @@ static bool sirTestQueuedOwnerMutations( void ) noexcept
 		return false;
 	}
 	for ( uint32_t i = 0; i < SIR_WINDOW_REQUEST_CAPACITY; ++i ) {
-		if ( windows.queryRequest( tickets[i], &eResult, &bComplete ) != SIR_WINDOW_OK || !bComplete ||
-		     eResult != SIR_WINDOW_OK ) {
+		if ( windows.queryRequest( tickets[i], &eResult, &bComplete ) != SIR_WINDOW_OK || !bComplete || eResult != SIR_WINDOW_OK ) {
 			return false;
 		}
 	}
@@ -227,15 +228,14 @@ static bool sirTestQueuedOwnerMutations( void ) noexcept
 	context.nTicket = 0;
 	SIRThread closer;
 	if ( !closer.start( sirQueueMutationWorker, &context ) || !closer.join() || context.eResult != SIR_WINDOW_OK ||
-	     windows.pumpEvents( 16 ) != SIR_WINDOW_OK ||
-	     windows.queryRequest( context.nTicket, &eResult, &bComplete ) != SIR_WINDOW_OK || !bComplete ||
-	     eResult != SIR_WINDOW_OK ) {
+	     windows.pumpEvents( 16 ) != SIR_WINDOW_OK || windows.queryRequest( context.nTicket, &eResult, &bComplete ) != SIR_WINDOW_OK ||
+	     !bComplete || eResult != SIR_WINDOW_OK ) {
 		return false;
 	}
 	sirWindowSnapshot_t snapshot = {};
 	if ( windows.querySnapshot( hWindow, &snapshot ) != SIR_WINDOW_OK || !snapshot.bCloseRequested || snapshot.bReady ||
-	     windows.queueMutation( hWindow, mutation, &extra ) != SIR_WINDOW_BUSY ||
-	     windows.destroyWindow( hWindow ) != SIR_WINDOW_OK || windows.shutdown() != SIR_SYSTEM_OK ) {
+	     windows.queueMutation( hWindow, mutation, &extra ) != SIR_WINDOW_BUSY || windows.destroyWindow( hWindow ) != SIR_WINDOW_OK ||
+	     windows.shutdown() != SIR_SYSTEM_OK ) {
 		return false;
 	}
 	return true;
@@ -262,7 +262,11 @@ static bool sirTestHandlesLeasesAndEvents( void ) noexcept
 	SIRWindowTestDriver driver;
 	driver.m_bFailInitialize = true;
 	SIRWindowSystem system( driver );
-	if ( system.initialize() != SIR_SYSTEM_ERROR || system.initialize() != SIR_SYSTEM_OK ) {
+	if ( system.initialize() != SIR_SYSTEM_ERROR ) {
+		return false;
+	}
+	assert( driver.m_nShutdowns == 1 ); // Partial native initialization must be rolled back.
+	if ( system.initialize() != SIR_SYSTEM_OK ) {
 		return false;
 	}
 	const sirWindowCreateDesc_t desc = { "window", 800, 450 };
@@ -384,7 +388,8 @@ static bool sirTestHandlesLeasesAndEvents( void ) noexcept
 		return false;
 	}
 	if ( system.createWindow( desc, &recycled ) != SIR_WINDOW_OK || system.requestClose( recycled ) != SIR_WINDOW_OK ||
-	     system.requestClose( recycled ) != SIR_WINDOW_OK || system.acquireNativeLease( recycled, &lease, &native ) != SIR_WINDOW_NOT_READY ||
+	     system.requestClose( recycled ) != SIR_WINDOW_OK ||
+	     system.acquireNativeLease( recycled, &lease, &native ) != SIR_WINDOW_NOT_READY ||
 	     system.mutateWindow( recycled, resize ) != SIR_WINDOW_BUSY ) {
 		return false;
 	}
@@ -392,10 +397,9 @@ static bool sirTestHandlesLeasesAndEvents( void ) noexcept
 	driver.queueEvent( { recycled.nSlot, recycled.nSlot + 1, SIR_WINDOW_EVENT_RESIZED, 800, 600 } );
 	driver.queueEvent( { recycled.nSlot, recycled.nSlot + 1, SIR_WINDOW_EVENT_SHOWN, 0, 0 } );
 	driver.queueEvent( { recycled.nSlot, recycled.nSlot + 1, SIR_WINDOW_EVENT_RESTORED, 0, 0 } );
-	if ( system.pumpEvents( 3 ) != SIR_WINDOW_OK || system.querySnapshot( recycled, &snapshot ) != SIR_WINDOW_OK ||
-	     snapshot.bReady || !snapshot.bCloseRequested || system.acquireNativeLease( recycled, &lease, &native ) != SIR_WINDOW_NOT_READY ||
-	     system.destroyWindow( recycled ) != SIR_WINDOW_OK ||
-	     system.shutdown() != SIR_SYSTEM_OK ) {
+	if ( system.pumpEvents( 3 ) != SIR_WINDOW_OK || system.querySnapshot( recycled, &snapshot ) != SIR_WINDOW_OK || snapshot.bReady ||
+	     !snapshot.bCloseRequested || system.acquireNativeLease( recycled, &lease, &native ) != SIR_WINDOW_NOT_READY ||
+	     system.destroyWindow( recycled ) != SIR_WINDOW_OK || system.shutdown() != SIR_SYSTEM_OK ) {
 		return false;
 	}
 	return true;
@@ -418,8 +422,7 @@ static bool sirTestEventOverflow( void ) noexcept
 	sirWindowEvent_t events[2] = {};
 	sirWindowEventRead_t read = { 0, events, 2, 0, false };
 	if ( system.readEvents( &read ) != SIR_WINDOW_EVENTS_LOST || !read.bLost || read.nCount != 2 || events[0].nSequence <= 1 ||
-	     read.nAfterSequence != events[1].nSequence ||
-	     system.shutdown() != SIR_SYSTEM_OK ) {
+	     read.nAfterSequence != events[1].nSequence || system.shutdown() != SIR_SYSTEM_OK ) {
 		return false;
 	}
 	return true;

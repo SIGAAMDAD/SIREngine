@@ -12,7 +12,13 @@ SIRWindowSystem::SIRWindowSystem( SIRWindowDriver& driver ) noexcept
 
 sirSystemResult_t SIRWindowSystem::initialize( void ) noexcept
 {
-	if ( m_bInitialized || m_nEpoch == UINT64_MAX || m_pDriver->initialize() != SIR_WINDOW_OK ) {
+	if ( m_bInitialized || m_nEpoch == UINT64_MAX ) {
+		return SIR_SYSTEM_ERROR;
+	}
+	if ( m_pDriver->initialize() != SIR_WINDOW_OK ) {
+		// A native backend can acquire part of its process/display state
+		// before reporting failure. Roll that state back before retrying.
+		m_pDriver->shutdown();
 		return SIR_SYSTEM_ERROR;
 	}
 	m_nOwnerThreadId = SIRPlatformThreadControl::getCurrentThreadId();
@@ -186,7 +192,7 @@ sirWindowResult_t SIRWindowSystem::mutateWindow( sirWindowHandle_t hWindow, cons
 }
 
 sirWindowResult_t SIRWindowSystem::enqueueRequest( sirWindowHandle_t hWindow, const sirWindowMutation_t *pMutation,
-                                                        uint64_t *pTicket ) noexcept
+                                                   uint64_t *pTicket ) noexcept
 {
 	if ( pTicket == nullptr ) {
 		return SIR_WINDOW_INVALID_ARGUMENT;
@@ -389,8 +395,8 @@ void SIRWindowSystem::onDriverEvent( void *pContext, const sirWindowBackendEvent
 		return;
 	}
 	SIRScopedLock<SIRMutex> guard( pSystem->m_SnapshotMutex );
-	if ( slot.snapshot.bCloseRequested && ( event.eKind == SIR_WINDOW_EVENT_READY || event.eKind == SIR_WINDOW_EVENT_SHOWN ||
-	                                      event.eKind == SIR_WINDOW_EVENT_RESTORED ) ) {
+	if ( slot.snapshot.bCloseRequested &&
+	     ( event.eKind == SIR_WINDOW_EVENT_READY || event.eKind == SIR_WINDOW_EVENT_SHOWN || event.eKind == SIR_WINDOW_EVENT_RESTORED ) ) {
 		return;
 	}
 	if ( event.eKind == SIR_WINDOW_EVENT_READY ) {
@@ -425,8 +431,8 @@ void SIRWindowSystem::onDriverEvent( void *pContext, const sirWindowBackendEvent
 		++slot.snapshot.nMetricsRevision;
 	} else if ( event.eKind == SIR_WINDOW_EVENT_SHOWN ) {
 		slot.snapshot.bVisible = true;
-		slot.snapshot.bReady = !slot.snapshot.bMinimized && !slot.snapshot.bCloseRequested && slot.snapshot.nWidth != 0 &&
-		                       slot.snapshot.nHeight != 0;
+		slot.snapshot.bReady =
+		    !slot.snapshot.bMinimized && !slot.snapshot.bCloseRequested && slot.snapshot.nWidth != 0 && slot.snapshot.nHeight != 0;
 	} else if ( event.eKind == SIR_WINDOW_EVENT_HIDDEN ) {
 		slot.snapshot.bVisible = false;
 		slot.snapshot.bReady = false;
@@ -435,8 +441,8 @@ void SIRWindowSystem::onDriverEvent( void *pContext, const sirWindowBackendEvent
 		slot.snapshot.bReady = false;
 	} else if ( event.eKind == SIR_WINDOW_EVENT_RESTORED ) {
 		slot.snapshot.bMinimized = false;
-		slot.snapshot.bReady = slot.snapshot.bVisible && !slot.snapshot.bCloseRequested && slot.snapshot.nWidth != 0 &&
-		                       slot.snapshot.nHeight != 0;
+		slot.snapshot.bReady =
+		    slot.snapshot.bVisible && !slot.snapshot.bCloseRequested && slot.snapshot.nWidth != 0 && slot.snapshot.nHeight != 0;
 	} else if ( event.eKind == SIR_WINDOW_EVENT_DISPLAY_CHANGED ) {
 		// Native display topology changes invalidate presentation constraints,
 		// including present modes and color formats with unchanged dimensions.
