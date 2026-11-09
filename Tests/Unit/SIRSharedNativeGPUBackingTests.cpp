@@ -174,6 +174,16 @@ public:
 	}
 };
 
+static sirGraphicsResult_t recordSharedGPURead( uint32_t, void *pContext ) noexcept
+{
+	++*( uint32_t * )pContext;
+	return SIR_GRAPHICS_SUCCESS;
+}
+
+static void rollbackSharedGPURead( uint32_t, void * ) noexcept
+{
+}
+
 static bool noNativeRepresentationRelease( void *, uint64_t ) noexcept
 {
 	return true;
@@ -307,6 +317,9 @@ int main( void )
 			       compiled.szSharedReads[0].nOffsetBytes == 0 && compiled.szSharedReads[0].nBytes == 64 &&
 			       compiled.szSharedReads[1].nOffsetBytes == 64 && compiled.szSharedReads[1].nBytes == 64 );
 			CHECK( gpu.view.nNativeResourceToken == physics.view.nNativeResourceToken && device.nBuffersCreated == 1 );
+			uint32_t nRecorded = 0;
+			const sirFrameGraphCallbacks_t callbacks = { recordSharedGPURead, rollbackSharedGPURead, &nRecorded };
+			CHECK( frameGraph.record( compiled, callbacks ) == SIR_GRAPHICS_SUCCESS && nRecorded == 1 );
 			// A different but generation-valid native resource handle cannot release
 			// a canonical buffer lease or retire its physical allocation.
 			sirNativeGPUBufferLease_t forgedLease = gpu;
@@ -321,6 +334,8 @@ int main( void )
 			CHECK( device.nBuffersCreated == 1 && device.nBuffersRetired == 0 );
 			CHECK( owner.retireBuffer( backing, { 11, 4, 1, 3, { 5, 0, 0, 0 } } ) == SIR_RESOURCE_RESULT_SUCCESS );
 			CHECK( owner.releaseBuffer( gpu, { 11, 4, 1, 3, { 5, 0, 0, 0 } } ) == SIR_RESOURCE_RESULT_SUCCESS );
+			// Compilation is not an authority to record after the source pin was released.
+			CHECK( frameGraph.record( compiled, callbacks ) == SIR_GRAPHICS_INVALID_HANDLE && nRecorded == 1 );
 			CHECK( frameGraph.addSharedBufferRead( passId, firstImport, gpu, 0, 64, SIR_GRAPHICS_STATE_SHADER_READ ) ==
 			       SIR_GRAPHICS_INVALID_HANDLE );
 

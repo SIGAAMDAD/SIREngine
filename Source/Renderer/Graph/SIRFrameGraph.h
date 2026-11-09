@@ -215,6 +215,7 @@ private:
 	sirFrameGraphPass_t m_szPasses[SIR_FRAMEGRAPH_MAX_PASSES] = {};
 	sirFrameGraphAccess_t m_szAccesses[SIR_FRAMEGRAPH_MAX_ACCESSES] = {};
 	sirFrameGraphSharedRead_t m_szSharedByteAccesses[SIR_FRAMEGRAPH_MAX_ACCESSES] = {};
+	sirNativeGPUBufferLease_t m_szSharedReadLeases[SIR_FRAMEGRAPH_MAX_ACCESSES] = {};
 	uint32_t m_nSharedByteAccessCount = 0;
 	uint8_t m_szExplicitEdges[SIR_FRAMEGRAPH_MAX_PASSES * SIR_FRAMEGRAPH_MAX_PASSES] = {};
 	sirFrameGraphOutput_t m_szOutputs[SIR_FRAMEGRAPH_MAX_OUTPUTS] = {};

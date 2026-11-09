@@ -283,6 +283,7 @@ sirGraphicsResult_t SIRFrameGraph::addSharedBufferRead( uint32_t nPass, uint32_t
 	if ( eAdded != SIR_GRAPHICS_SUCCESS ) {
 		return eAdded;
 	}
+	m_szSharedReadLeases[m_nSharedByteAccessCount] = rLease;
 	m_szSharedByteAccesses[m_nSharedByteAccessCount++] = { nPass,
 														   nResource,
 														   rLease.view.nConsumerId,
@@ -874,6 +875,17 @@ sirGraphicsResult_t SIRFrameGraph::record( const sirFrameGraphCompiled_t& compil
 		}
 		if ( !szSeen[edge.nBeforePass] || !szSeen[edge.nAfterPass] || szOrder[edge.nBeforePass] >= szOrder[edge.nAfterPass] ) {
 			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
+	}
+
+	// A compiled plan contains metadata, not ownership. Confirm every live
+	// GRDG borrow is still issued before executing any recording callback.
+	for ( uint32_t iRead = 0; iRead < m_nSharedByteAccessCount; ++iRead ) {
+		if ( !compiled.szLivePasses[m_szSharedByteAccesses[iRead].nPass] ) {
+			continue;
+		}
+		if ( !m_pSharedOwner || m_pSharedOwner->validateBufferLease( m_szSharedReadLeases[iRead] ) != SIR_RESOURCE_RESULT_SUCCESS ) {
+			return SIR_GRAPHICS_INVALID_HANDLE;
 		}
 	}
 
