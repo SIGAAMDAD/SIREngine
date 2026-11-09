@@ -20,6 +20,7 @@ add_library(SIRGraphics STATIC
     SIRGraphicsPipelineABI.cpp
     SIRGraphicsPipelineBridge.cpp
     SIRGraphicsRegistry.cpp
+    SIRSharedGPUBackingOwner.cpp
     SIRGraphicsValidation.cpp)
 add_library(SIR::Graphics ALIAS SIRGraphics)
 target_include_directories(SIRGraphics PUBLIC

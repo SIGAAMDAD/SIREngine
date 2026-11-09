@@ -165,3 +165,16 @@ endif()
 add_subdirectory(Config)
 include(${CMAKE_CURRENT_SOURCE_DIR}/StringPoolTests.cmake)
 
+
+add_executable(SIRSharedNativeGPUBackingTests SIRSharedNativeGPUBackingTests.cpp)
+target_link_libraries(SIRSharedNativeGPUBackingTests PRIVATE SIR::Graphics SIR::Resources)
+add_test(NAME renderer.grdg.native-backing-ownership COMMAND SIRSharedNativeGPUBackingTests)
+sir_configure_owned_target(SIRSharedNativeGPUBackingTests)
+
+if(SIR_WITH_VULKAN)
+    add_executable(SIRSharedNativeGPUVulkanTests SIRSharedNativeGPUVulkanTests.cpp)
+    target_link_libraries(SIRSharedNativeGPUVulkanTests PRIVATE SIR::Vulkan SIR::Graphics SIR::Resources)
+    sir_configure_owned_target(SIRSharedNativeGPUVulkanTests)
+    add_test(NAME renderer.grdg.vulkan-native-single-backing COMMAND SIRSharedNativeGPUVulkanTests)
+    set_tests_properties(renderer.grdg.vulkan-native-single-backing PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 60)
+endif()
