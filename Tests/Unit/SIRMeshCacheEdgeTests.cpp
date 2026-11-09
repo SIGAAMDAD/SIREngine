@@ -25,7 +25,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 static_assert( sizeof( sirMeshHandle_t ) == 16, "Mesh handle ABI requires 128 bits" );
 static_assert( offsetof( sirMeshHandle_t, nOwnerId ) == 8, "Mesh handle owner ID offset must be stable" );
 static_assert( std::is_trivially_copyable<sirMeshHandle_t>::value, "Mesh handle must remain POD" );
-static_assert( sizeof( sirMeshKey_t ) == 24, "Serialized mesh key must remain independent of runtime handle" );
+static_assert( sizeof( sirMeshKey_t ) == 32, "Serialized mesh key must remain independent of runtime handle" );
 
 typedef struct sirMeshEdgePin_s
 {

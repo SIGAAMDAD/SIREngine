@@ -46,6 +46,8 @@ typedef struct sirMeshKey_s
 	uint64_t nRevision;
 	uint32_t nVariant;
 	uint32_t nReserved;
+	uint32_t nResourceTypeId;
+	uint32_t nCookedSchemaVersion;
 } sirMeshKey_t;
 
 // Runtime-only capability: never serialize a handle in SIRPack. The owner ID
@@ -66,6 +68,14 @@ typedef struct sirMeshGeometrySource_s
 	uint32_t nIndexCount;
 	void *pSourcePin;
 	void ( *pfnReleaseSourcePin )( void *pSourcePin ) noexcept;
+	// Optional canonical geometry-family payloads: never allocated or copied by
+	// this cache. All four systems borrow these same pinned GRDG chunk spans.
+	const void *pStaticBVH;
+	uint64_t nStaticBVHBytes;
+	const void *pSurfaceMaterials;
+	uint64_t nSurfaceMaterialBytes;
+	const void *pLodHierarchy;
+	uint64_t nLodHierarchyBytes;
 } sirMeshGeometrySource_t;
 
 typedef struct sirMeshGeometryRead_s
@@ -75,6 +85,12 @@ typedef struct sirMeshGeometryRead_s
 	uint32_t nVertexCount;
 	uint32_t nIndexCount;
 	sirMeshKey_t key;
+	const void *pStaticBVH;
+	uint64_t nStaticBVHBytes;
+	const void *pSurfaceMaterials;
+	uint64_t nSurfaceMaterialBytes;
+	const void *pLodHierarchy;
+	uint64_t nLodHierarchyBytes;
 } sirMeshGeometryRead_t;
 
 typedef struct sirMeshCacheSlot_s sirMeshCacheSlot_t;

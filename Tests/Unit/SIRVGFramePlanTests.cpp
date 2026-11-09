@@ -25,7 +25,7 @@ static_assert( std::is_trivially_copyable<sirVGFramePlan_t>::value, "frame plan 
 static_assert( std::is_standard_layout<sirVGDrawRange_t>::value, "draw range must be standard layout" );
 static_assert( std::is_trivially_copyable<sirVGSelectedGroup_t>::value, "selected group must be trivially copyable" );
 static_assert( sizeof( sirVGPageDemand_t ) == 32, "page demands require a fixed 32-byte ABI" );
-static_assert( sizeof( sirMeshKey_t ) == 24, "mesh key must stay separate from runtime handles" );
+static_assert( sizeof( sirMeshKey_t ) == 32, "mesh key must stay separate from runtime handles" );
 static_assert( offsetof( sirVGDrawRange_t, nBaseVertex ) < offsetof( sirVGDrawRange_t, nFirstInstance ),
                "baseVertex/firstInstance draw arguments must remain distinct" );
 
@@ -158,6 +158,12 @@ int main( void )
 	ranges[0].keyMesh.nReserved = 1;
 	expectVG( plan, SIR_VG_PLAN_INCOMPLETE_GROUP, "foreign key reserved bits" );
 	ranges[0].keyMesh.nReserved = 0;
+	ranges[0].keyMesh.nResourceTypeId = 19;
+	expectVG( plan, SIR_VG_PLAN_INCOMPLETE_GROUP, "foreign resource type" );
+	ranges[0].keyMesh.nResourceTypeId = 0;
+	ranges[0].keyMesh.nCookedSchemaVersion = 2;
+	expectVG( plan, SIR_VG_PLAN_INCOMPLETE_GROUP, "foreign cooked schema" );
+	ranges[0].keyMesh.nCookedSchemaVersion = 0;
 	ranges[0].nInstanceId = 55;
 	expectVG( plan, SIR_VG_PLAN_INCOMPLETE_GROUP, "foreign instance" );
 	ranges[0].nInstanceId = 1001;

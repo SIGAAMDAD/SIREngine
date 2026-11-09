@@ -14,9 +14,9 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Mesh/SIRMeshCache.h>
+#include <Core/Platform/SIRAtomic.h>
 
 #include <assert.h>
-#include <mutex>
 #include <math.h>
 #include <new>
 #include <stdint.h>
@@ -44,18 +44,19 @@ static constexpr uint64_t SIR_MESH_INITIAL_OWNER_ID = SIR_MESH_TEST_OWNER_ID_SEE
 #else
 static constexpr uint64_t SIR_MESH_INITIAL_OWNER_ID = 1;
 #endif
-static std::mutex s_MeshCacheOwnerIdMutex;
-static uint64_t s_nNextMeshCacheOwnerId = SIR_MESH_INITIAL_OWNER_ID;
+static SIRAtomic<uint64_t> s_nNextMeshCacheOwnerId( SIR_MESH_INITIAL_OWNER_ID );
 
 static uint64_t allocateMeshCacheOwnerId( void ) noexcept
 {
-	// This lock is only acquired on cache initialization, never during
-	// insert, lookup, acquire, retire, release or shutdown.
-	std::lock_guard<std::mutex> guard( s_MeshCacheOwnerIdMutex );
-	if ( s_nNextMeshCacheOwnerId == UINT64_MAX ) {
-		return 0;
+	// Allocate the per-initialization identity through the engine atomic,
+	// with no STL synchronization or hot-path locks. Never recycle identifiers.
+	uint64_t nCandidate = s_nNextMeshCacheOwnerId.load( SIR_MEMORY_ORDER_RELAXED );
+	while ( nCandidate != UINT64_MAX ) {
+		if ( s_nNextMeshCacheOwnerId.compareExchangeWeak( nCandidate, nCandidate + 1, SIR_MEMORY_ORDER_ACQUIRE_RELEASE ) ) {
+			return nCandidate;
+		}
 	}
-	return s_nNextMeshCacheOwnerId++;
+	return 0;
 }
 
 typedef struct sirMeshCacheSlot_s
@@ -69,7 +70,9 @@ typedef struct sirMeshCacheSlot_s
 
 static bool sameMeshKey( const sirMeshKey_t *pA, const sirMeshKey_t *pB ) noexcept
 {
-	return pA->nAssetId == pB->nAssetId && pA->nRevision == pB->nRevision && pA->nVariant == pB->nVariant && pA->nReserved == pB->nReserved;
+	return pA->nAssetId == pB->nAssetId && pA->nRevision == pB->nRevision && pA->nVariant == pB->nVariant &&
+	       pA->nReserved == pB->nReserved && pA->nResourceTypeId == pB->nResourceTypeId &&
+	       pA->nCookedSchemaVersion == pB->nCookedSchemaVersion;
 }
 
 static bool validateMeshSource( const sirMeshGeometrySource_t *pSource ) noexcept
@@ -85,6 +88,11 @@ static bool validateMeshSource( const sirMeshGeometrySource_t *pSource ) noexcep
 		return false;
 	}
 	if ( pSource->nVertexCount > UINT32_MAX / 3U ) {
+		return false;
+	}
+	if ( ( pSource->pStaticBVH == nullptr ) != ( pSource->nStaticBVHBytes == 0 ) ||
+	     ( pSource->pSurfaceMaterials == nullptr ) != ( pSource->nSurfaceMaterialBytes == 0 ) ||
+	     ( pSource->pLodHierarchy == nullptr ) != ( pSource->nLodHierarchyBytes == 0 ) ) {
 		return false;
 	}
 
@@ -260,8 +268,17 @@ sirMeshResult_t SIRMeshCache::acquire( sirMeshHandle_t handle, sirMeshGeometryRe
 
 	++pSlot->nBorrows;
 	++m_nBorrowCount;
-	*pRead = { pSlot->source.pPositionsXYZ, pSlot->source.pTriangleIndices, pSlot->source.nVertexCount, pSlot->source.nIndexCount,
-	           pSlot->source.key };
+	*pRead = { pSlot->source.pPositionsXYZ,
+	           pSlot->source.pTriangleIndices,
+	           pSlot->source.nVertexCount,
+	           pSlot->source.nIndexCount,
+	           pSlot->source.key,
+	           pSlot->source.pStaticBVH,
+	           pSlot->source.nStaticBVHBytes,
+	           pSlot->source.pSurfaceMaterials,
+	           pSlot->source.nSurfaceMaterialBytes,
+	           pSlot->source.pLodHierarchy,
+	           pSlot->source.nLodHierarchyBytes };
 	return SIR_MESH_OK;
 }
 

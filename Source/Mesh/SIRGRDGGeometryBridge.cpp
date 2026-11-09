@@ -25,6 +25,15 @@ static bool wellFormedMeshPayload( const SIRResourceConstBytes& rPositions, cons
 	return true;
 }
 
+static bool optionalGeometryChunk( const SIRResourceView& rSource, SIRResourceChunkId id, SIRResourceConstBytes& rBytes ) noexcept
+{
+	if ( id.m_nValue == 0 ) {
+		rBytes = {};
+		return true;
+	}
+	return rSource.getChunk( id, &rBytes ) == SIR_RESOURCE_RESULT_SUCCESS && rBytes.m_pData != nullptr && rBytes.m_nSize > 0;
+}
+
 void SIRGRDGGeometryBridge::releaseSourcePin( void *pContext ) noexcept
 {
 	sirGRDGMeshPin_t *pState = ( sirGRDGMeshPin_t * )pContext;
@@ -57,7 +66,22 @@ SIRResourceResult SIRGRDGGeometryBridge::attach( SIRResourceGraph& rGraph, SIRMe
 	if ( !wellFormedMeshPayload( positions, indices ) ) {
 		return SIR_RESOURCE_RESULT_INVALID_FORMAT;
 	}
-	sirMeshKey_t meshKey = { info.m_Key.m_nAssetId, info.m_nRevision, rChunks.nVariant, 0 };
+	const uint64_t ids[] = { rChunks.positionChunk.m_nValue, rChunks.indexChunk.m_nValue, rChunks.staticBVHChunk.m_nValue,
+	                         rChunks.surfaceMaterialChunk.m_nValue, rChunks.lodHierarchyChunk.m_nValue };
+	for ( uint32_t a = 0; a < 5; ++a ) {
+		for ( uint32_t b = a + 1; b < 5; ++b ) {
+			if ( ids[a] && ids[a] == ids[b] ) {
+				return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
+			}
+		}
+	}
+	SIRResourceConstBytes bvh = {}, materials = {}, hierarchy = {};
+	if ( !optionalGeometryChunk( rSource, rChunks.staticBVHChunk, bvh ) ||
+	     !optionalGeometryChunk( rSource, rChunks.surfaceMaterialChunk, materials ) ||
+	     !optionalGeometryChunk( rSource, rChunks.lodHierarchyChunk, hierarchy ) ) {
+		return SIR_RESOURCE_RESULT_MISSING_CHUNK;
+	}
+	sirMeshKey_t meshKey = { info.m_Key.m_nAssetId, info.m_nRevision, rChunks.nVariant, 0, info.m_Key.m_nTypeId, info.m_nSchemaVersion };
 	sirMeshHandle_t existing = {};
 	if ( rCache.find( &meshKey, &existing ) == SIR_MESH_OK ) {
 		sirMeshGeometryRead_t current = {};
@@ -67,7 +91,10 @@ SIRResourceResult SIRGRDGGeometryBridge::attach( SIRResourceGraph& rGraph, SIRMe
 		const bool bSame = ( const void * )current.pPositionsXYZ == positions.m_pData &&
 		                   ( const void * )current.pTriangleIndices == indices.m_pData &&
 		                   ( uint64_t )current.nVertexCount * 3 * sizeof( float ) == positions.m_nSize &&
-		                   ( uint64_t )current.nIndexCount * sizeof( uint32_t ) == indices.m_nSize;
+		                   ( uint64_t )current.nIndexCount * sizeof( uint32_t ) == indices.m_nSize && current.pStaticBVH == bvh.m_pData &&
+		                   current.nStaticBVHBytes == bvh.m_nSize && current.pSurfaceMaterials == materials.m_pData &&
+		                   current.nSurfaceMaterialBytes == materials.m_nSize && current.pLodHierarchy == hierarchy.m_pData &&
+		                   current.nLodHierarchyBytes == hierarchy.m_nSize;
 		if ( rCache.release( existing ) != SIR_MESH_OK ) {
 			return SIR_RESOURCE_RESULT_FAILED;
 		}
@@ -89,7 +116,13 @@ SIRResourceResult SIRGRDGGeometryBridge::attach( SIRResourceGraph& rGraph, SIRMe
 	                                        ( uint32_t )( positions.m_nSize / ( 3 * sizeof( float ) ) ),
 	                                        ( uint32_t )( indices.m_nSize / sizeof( uint32_t ) ),
 	                                        pPin,
-	                                        &SIRGRDGGeometryBridge::releaseSourcePin };
+	                                        &SIRGRDGGeometryBridge::releaseSourcePin,
+	                                        bvh.m_pData,
+	                                        bvh.m_nSize,
+	                                        materials.m_pData,
+	                                        materials.m_nSize,
+	                                        hierarchy.m_pData,
+	                                        hierarchy.m_nSize };
 	const sirMeshResult_t eInsert = rCache.insert( &input, pHandle );
 	if ( eInsert != SIR_MESH_OK ) {
 		releaseSourcePin( pPin );

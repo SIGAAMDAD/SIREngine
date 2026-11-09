@@ -19,7 +19,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 static bool sameVGMeshKey( const sirMeshKey_t& a, const sirMeshKey_t& b ) noexcept
 {
-	return a.nAssetId == b.nAssetId && a.nRevision == b.nRevision && a.nVariant == b.nVariant && a.nReserved == b.nReserved;
+	return a.nAssetId == b.nAssetId && a.nRevision == b.nRevision && a.nVariant == b.nVariant && a.nReserved == b.nReserved &&
+	       a.nResourceTypeId == b.nResourceTypeId && a.nCookedSchemaVersion == b.nCookedSchemaVersion;
 }
 
 sirVGPlanResult_t sirVGValidateFramePlan( const sirVGFramePlan_t& plan ) noexcept

@@ -30,6 +30,10 @@ typedef struct sirGRDGMeshChunkSelection_s
 	SIRResourceChunkId indexChunk;
 	uint32_t nVariant;
 	uint32_t nProviderId;
+	// Zero chunk ID means that this optional canonical payload is absent.
+	SIRResourceChunkId staticBVHChunk;
+	SIRResourceChunkId surfaceMaterialChunk;
+	SIRResourceChunkId lodHierarchyChunk;
 } sirGRDGMeshChunkSelection_t;
 
 class SIRGRDGGeometryBridge
