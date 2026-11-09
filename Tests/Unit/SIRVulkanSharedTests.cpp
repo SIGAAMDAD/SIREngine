@@ -55,7 +55,7 @@ int main( void )
 		return 3;
 	}
 	if ( pDevice->getDeviceGeneration() == 0 || pDevice->queryCapabilities( &capabilities ) != SIR_GRAPHICS_SUCCESS ||
-	     capabilities.eBackend != SIR_GRAPHICS_BACKEND_VULKAN || ( capabilities.nFeatureMask & SIR_GRAPHICS_FEATURE_GRAPHICS ) != 0 ||
+	     capabilities.eBackend != SIR_GRAPHICS_BACKEND_VULKAN || ( capabilities.nFeatureMask & SIR_GRAPHICS_FEATURE_GRAPHICS ) == 0 ||
 	     ( capabilities.nQueueMask & ( 1U << SIR_GRAPHICS_QUEUE_DIRECT ) ) == 0 ) {
 		return 4;
 	}
@@ -63,7 +63,7 @@ int main( void )
 	sirGraphicsABIPipelineModelCaps_t modelCaps = {};
 	if ( pDevice->queryPipelineModelCaps( SIR_GRAPHICS_PIPELINE_MODEL_MODERN, &modelCaps ) != SIR_GRAPHICS_SUCCESS ||
 	     modelCaps.nModel != SIR_GRAPHICS_PIPELINE_MODEL_MODERN || modelCaps.nDeviceGeneration != capabilities.nDeviceGeneration ||
-	     modelCaps.nShaderStageMask != SIR_GRAPHICS_STAGE_COMPUTE ||
+	     modelCaps.nShaderStageMask != ( SIR_GRAPHICS_STAGE_VERTEX | SIR_GRAPHICS_STAGE_FRAGMENT | SIR_GRAPHICS_STAGE_COMPUTE ) ||
 	     modelCaps.nShaderFormatMask != ( 1U << ( SIR_GRAPHICS_SHADER_SPIRV - 1 ) ) ) {
 		return 70;
 	}
