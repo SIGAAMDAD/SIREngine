@@ -357,6 +357,8 @@ typedef struct sirSharedDeviceView_s
 	uint32_t nBorrowSlot;
 	uint32_t nBorrowGeneration;
 	bool bReadOnly;
+	// The completion provider is part of this immutable borrow capability.
+	uint32_t nCompletionProviderId;
 } sirSharedDeviceView_t;
 
 typedef struct sirSharedDeviceBorrowSlot_s sirSharedDeviceBorrowSlot_t;

@@ -778,7 +778,8 @@ SIRResourceResult SIRResourceDerivedRegistry::acquireSharedDeviceView( const SIR
 			           rRequest.nConsumerId,
 			           iBorrow,
 			           rBorrow.nGeneration,
-			           true };
+			           true,
+			           rRequest.nCompletionProviderId };
 			rBorrow.issuedView = *pView;
 			return SIR_RESOURCE_RESULT_SUCCESS;
 		}
@@ -808,7 +809,8 @@ SIRResourceResult SIRResourceDerivedRegistry::releaseSharedDeviceView( const sir
 	     issued.nNativeResourceToken != rView.nNativeResourceToken || issued.nOffset != rView.nOffset || issued.nBytes != rView.nBytes ||
 	     issued.nSourceRevision != rView.nSourceRevision || issued.nDeviceGeneration != rView.nDeviceGeneration ||
 	     issued.nApprovedUsageMask != rView.nApprovedUsageMask || issued.nBorrowSlot != rView.nBorrowSlot ||
-	     issued.nBorrowGeneration != rView.nBorrowGeneration || issued.bReadOnly != rView.bReadOnly ) {
+	     issued.nBorrowGeneration != rView.nBorrowGeneration || issued.bReadOnly != rView.bReadOnly ||
+	     issued.nCompletionProviderId != rView.nCompletionProviderId ) {
 		return SIR_RESOURCE_RESULT_INVALID_HANDLE;
 	}
 	const int32_t iProvider = findProvider( rBorrow.nCompletionProviderId );

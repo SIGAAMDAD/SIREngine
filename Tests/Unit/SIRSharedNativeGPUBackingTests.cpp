@@ -236,6 +236,16 @@ int main( void )
 			CHECK( frameGraph.importSharedBuffer( physics, SIR_GRAPHICS_STATE_SHADER_READ, SIR_GRAPHICS_QUEUE_DIRECT, &secondImport ) ==
 			       SIR_GRAPHICS_SUCCESS );
 			CHECK( firstImport == secondImport && frameGraph.getResourceCount() == 1 );
+			// Raw graph access would evade the GRDG borrow's source pin and byte
+			// bounds. Only importSharedBuffer/addSharedBufferRead may admit it.
+			CHECK( frameGraph.addAccess( { 0, firstImport, 0, 1, 0, 1, SIR_GRAPHICS_STATE_SHADER_READ, false } ) ==
+			       SIR_GRAPHICS_INVALID_ARGUMENT );
+			const sirFrameGraphResource_t forgedImport = {
+			    gpu.hNative, SIR_GRAPHICS_HANDLE_BUFFER,      SIR_GRAPHICS_STATE_SHADER_READ, SIR_GRAPHICS_QUEUE_DIRECT, 1, 1,
+			    true,        gpu.view.nPhysicalBackingId + 1, gpu.view.nNativeResourceToken };
+			uint32_t forgedId = UINT32_MAX;
+			CHECK( frameGraph.addResource( forgedImport, &forgedId ) == SIR_GRAPHICS_INVALID_ARGUMENT );
+			CHECK( frameGraph.getResourceCount() == 1 );
 			sirNativeGPUBufferLease_t mismatched = physics;
 			++mismatched.view.nNativeResourceToken;
 			CHECK( frameGraph.importSharedBuffer( mismatched, SIR_GRAPHICS_STATE_SHADER_READ, SIR_GRAPHICS_QUEUE_DIRECT, &secondImport ) ==
@@ -247,6 +257,8 @@ int main( void )
 			CHECK( frameGraph.addPass( { SIR_GRAPHICS_QUEUE_DIRECT, 0, true }, &passId ) == SIR_GRAPHICS_SUCCESS );
 			CHECK( frameGraph.addSharedBufferRead( passId, firstImport, gpu, gpu.view.nOffset, 64, SIR_GRAPHICS_STATE_SHADER_READ ) ==
 			       SIR_GRAPHICS_SUCCESS );
+			CHECK( frameGraph.addSharedBufferRead( passId, firstImport, physics, physics.view.nOffset + 64, 64,
+			                                       SIR_GRAPHICS_STATE_SHADER_READ ) == SIR_GRAPHICS_SUCCESS );
 			CHECK( frameGraph.addSharedBufferRead( passId, firstImport, gpu, 0, 0, SIR_GRAPHICS_STATE_SHADER_READ ) ==
 			       SIR_GRAPHICS_INVALID_ARGUMENT );
 			CHECK( frameGraph.addSharedBufferRead( passId, firstImport, gpu, 200, 64, SIR_GRAPHICS_STATE_SHADER_READ ) ==
@@ -259,6 +271,11 @@ int main( void )
 			sirFrameGraphCompiled_t compiled = {};
 			CHECK( frameGraph.compile( caps, &compiled ) == SIR_GRAPHICS_SUCCESS );
 			CHECK( compiled.nPassCount == 1 );
+			CHECK( compiled.nSharedReadCount == 2 && gpu.view.nCompletionProviderId == 11 && physics.view.nCompletionProviderId == 12 );
+			CHECK( compiled.szSharedReads[0].nPhysicalBackingId == compiled.szSharedReads[1].nPhysicalBackingId &&
+			       compiled.szSharedReads[0].nCompletionProviderId == 11 && compiled.szSharedReads[1].nCompletionProviderId == 12 &&
+			       compiled.szSharedReads[0].nOffsetBytes == 0 && compiled.szSharedReads[0].nBytes == 64 &&
+			       compiled.szSharedReads[1].nOffsetBytes == 64 && compiled.szSharedReads[1].nBytes == 64 );
 			CHECK( gpu.view.nNativeResourceToken == physics.view.nNativeResourceToken && device.nBuffersCreated == 1 );
 			// A different but generation-valid native resource handle cannot release
 			// a canonical buffer lease or retire its physical allocation.

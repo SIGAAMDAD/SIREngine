@@ -115,6 +115,22 @@ typedef struct sirFrameGraphDependency_s
 	bool bCrossQueue;
 } sirFrameGraphDependency_t;
 
+// Source-pinned GPU reads are tracked through compile as independent consumer /
+// provider dependencies, without copying the canonical physical storage.
+typedef struct sirFrameGraphSharedRead_s
+{
+	uint32_t nPass;
+	uint32_t nResource;
+	uint32_t nConsumerId;
+	uint32_t nCompletionProviderId;
+	uint32_t nBorrowSlot;
+	uint32_t nBorrowGeneration;
+	uint64_t nPhysicalBackingId;
+	uint64_t nNativeResourceToken;
+	uint64_t nOffsetBytes;
+	uint64_t nBytes;
+} sirFrameGraphSharedRead_t;
+
 // Shared per-frame graph hard limits; no runtime allocation in graph compilation.
 constexpr uint32_t SIR_FRAMEGRAPH_MAX_PASSES = 64;
 constexpr uint32_t SIR_FRAMEGRAPH_MAX_OUTPUTS = 64;
@@ -134,6 +150,8 @@ typedef struct sirFrameGraphCompiled_s
 	uint8_t szLivePasses[SIR_FRAMEGRAPH_MAX_PASSES];
 	uint32_t nTransitionCount;
 	uint32_t nDependencyCount;
+	uint32_t nSharedReadCount;
+	sirFrameGraphSharedRead_t szSharedReads[SIR_FRAMEGRAPH_MAX_ACCESSES];
 	uint32_t szPassOrder[SIR_FRAMEGRAPH_MAX_PASSES];
 	uint32_t szFirstUse[SIR_FRAMEGRAPH_MAX_RESOURCES];
 	uint32_t szLastUse[SIR_FRAMEGRAPH_MAX_RESOURCES];
@@ -176,6 +194,10 @@ public:
 
 protected:
 private:
+	// The public graph API cannot invent physical GRDG imports or bypass the
+	// lease-backed subrange path by registering an unpinned raw access.
+	sirGraphicsResult_t addResourceImpl( const sirFrameGraphResource_t& resource, uint32_t *pIndex, bool bSharedLease ) noexcept;
+	sirGraphicsResult_t addAccessImpl( const sirFrameGraphAccess_t& access, bool bSharedLease ) noexcept;
 	static bool overlaps( const sirFrameGraphAccess_t& a, const sirFrameGraphAccess_t& b ) noexcept;
 	static bool covers( const sirFrameGraphAccess_t& a, const sirFrameGraphAccess_t& b ) noexcept;
 	static bool isWritableState( sirGraphicsState_t eState ) noexcept;
@@ -192,14 +214,7 @@ private:
 	sirFrameGraphResource_t m_szResources[SIR_FRAMEGRAPH_MAX_RESOURCES] = {};
 	sirFrameGraphPass_t m_szPasses[SIR_FRAMEGRAPH_MAX_PASSES] = {};
 	sirFrameGraphAccess_t m_szAccesses[SIR_FRAMEGRAPH_MAX_ACCESSES] = {};
-	struct SharedByteAccess
-	{
-		uint32_t nPass;
-		uint32_t nResource;
-		uint64_t nOffsetBytes;
-		uint64_t nBytes;
-	};
-	SharedByteAccess m_szSharedByteAccesses[SIR_FRAMEGRAPH_MAX_ACCESSES] = {};
+	sirFrameGraphSharedRead_t m_szSharedByteAccesses[SIR_FRAMEGRAPH_MAX_ACCESSES] = {};
 	uint32_t m_nSharedByteAccessCount = 0;
 	uint8_t m_szExplicitEdges[SIR_FRAMEGRAPH_MAX_PASSES * SIR_FRAMEGRAPH_MAX_PASSES] = {};
 	sirFrameGraphOutput_t m_szOutputs[SIR_FRAMEGRAPH_MAX_OUTPUTS] = {};

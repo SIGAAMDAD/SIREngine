@@ -227,6 +227,9 @@ static void testSharedBackingLeases( void )
 		forged = views[0];
 		forged.bReadOnly = false;
 		CHECK( registry.releaseSharedDeviceView( forged, releaseFence ) == SIR_RESOURCE_RESULT_INVALID_HANDLE );
+		forged = views[0];
+		forged.nCompletionProviderId = 999;
+		CHECK( registry.releaseSharedDeviceView( forged, releaseFence ) == SIR_RESOURCE_RESULT_INVALID_HANDLE );
 		SIRResourceDerivedStats beforeValidRelease = {};
 		CHECK( registry.getStats( &beforeValidRelease ) == SIR_RESOURCE_RESULT_SUCCESS );
 		CHECK( beforeValidRelease.nLiveSharedBorrows == 4 && driver.nReleases == 0 );
