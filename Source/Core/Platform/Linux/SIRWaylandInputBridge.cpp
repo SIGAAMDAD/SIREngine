@@ -593,7 +593,9 @@ void SIRWaylandInputBridge::keyboardModifiers( void *pContext, wl_keyboard *pKey
 	( void )nSerial;
 	SIRWaylandInputBridge *pBridge = ( SIRWaylandInputBridge * )pContext;
 #ifdef SIR_WAYLAND_XKB_AVAILABLE
-	if ( pBridge->m_pKeyboard == pKeyboard && pBridge->m_pKeyState != nullptr && pBridge->m_pKeyboardFocus != nullptr ) {
+	// Modifier events belong to the compositor seat and can precede enter.
+	// Keep the XKB state synchronized even without a focused surface.
+	if ( pBridge->m_pKeyboard == pKeyboard && pBridge->m_pKeyState != nullptr ) {
 		( void )xkb_state_update_mask( pBridge->m_pKeyState, nDepressed, nLatched, nLocked, 0, 0, nGroup );
 	}
 #else
