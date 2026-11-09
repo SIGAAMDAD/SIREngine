@@ -329,6 +329,22 @@ static void testRevisionAndNativeToken( void )
 			CHECK( registry.acquireSharedDeviceView( scope, updated, request, &newer ) == SIR_RESOURCE_RESULT_SUCCESS );
 			CHECK( older.nPhysicalBackingId != newer.nPhysicalBackingId );
 			CHECK( older.nNativeResourceToken == 501 && newer.nNativeResourceToken == 502 );
+			// Another physical device may independently allocate the same numeric
+			// native handle. It is a separate device-local object, not an alias.
+			sirSharedDeviceBackingDesc_t independentDevice = desc;
+			independentDevice.nPhysicalDeviceId = 91;
+			independentDevice.nDeviceGeneration = 5;
+			independentDevice.nProviderId = 12;
+			CHECK( registry.reserveSharedDeviceBacking( scope, updated, independentDevice, &reservation ) == SIR_RESOURCE_RESULT_SUCCESS );
+			CHECK( reservation.bNeedsNativeCreation );
+			const SIRDerivedResourceHandle hIndependent = reservation.hBacking;
+			CHECK( registry.publishSharedDeviceBacking( hIndependent, 501 ) == SIR_RESOURCE_RESULT_SUCCESS );
+			SIRResourceDerivedStats independentStats = {};
+			CHECK( registry.getStats( &independentStats ) == SIR_RESOURCE_RESULT_SUCCESS );
+			CHECK( independentStats.nCommittedBytes[SIR_MEMORY_SPACE_DEVICE] == 384 );
+			CHECK( registry.retireRepresentation( hIndependent, { 12, 5, 1, 2, { 1, 0, 0, 0 } } ) == SIR_RESOURCE_RESULT_SUCCESS );
+			CHECK( registry.updateProviderCompletion( { 12, 5, 1, 2, { 1, 0, 0, 0 } } ) == SIR_RESOURCE_RESULT_SUCCESS );
+			CHECK( replacementDevice.nReleases == 1 && replacementDevice.nLastToken == 501 );
 		}
 		SIRResourceDerivedStats stats = {};
 		CHECK( registry.getStats( &stats ) == SIR_RESOURCE_RESULT_SUCCESS );
@@ -358,7 +374,7 @@ static void testRevisionAndNativeToken( void )
 			CHECK( registry.publishSharedDeviceBacking( reservation.hBacking, 503 ) == SIR_RESOURCE_RESULT_SUCCESS );
 			CHECK( registry.retireRepresentation( reservation.hBacking, { 12, 5, 1, 2, { 1, 0, 0, 0 } } ) == SIR_RESOURCE_RESULT_SUCCESS );
 			CHECK( registry.updateProviderCompletion( { 12, 5, 1, 2, { 1, 0, 0, 0 } } ) == SIR_RESOURCE_RESULT_SUCCESS );
-			CHECK( replacementDevice.nReleases == 1 && replacementDevice.nLastToken == 503 );
+			CHECK( replacementDevice.nReleases == 2 && replacementDevice.nLastToken == 503 );
 		}
 		CHECK( pWriter->retire( hNew ) == SIR_RESOURCE_RESULT_SUCCESS );
 		( void )pWriter->collectRetired( 8 );

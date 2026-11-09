@@ -654,8 +654,12 @@ SIRResourceResult SIRResourceDerivedRegistry::publishSharedDeviceBacking( SIRDer
 		return SIR_RESOURCE_RESULT_INVALID_HANDLE;
 	}
 	for ( uint32_t iSlot = 0; iSlot < m_Config.nMaxRepresentations; ++iSlot ) {
-		if ( iSlot != hBacking.m_nSlot && m_pRepresentations[iSlot].bOccupied && !m_pRepresentations[iSlot].bPendingNativeCreate &&
-		     m_pRepresentations[iSlot].registration.m_nNativeToken == nNativeToken ) {
+		const sirDerivedRepresentationSlot_t& rOther = m_pRepresentations[iSlot];
+		// Native handles are device-local. Identical handle bits on independent
+		// physical devices are not a second allocation of the same backing.
+		if ( iSlot != hBacking.m_nSlot && rOther.bOccupied && !rOther.bPendingNativeCreate && rOther.bSharedDeviceBacking &&
+		     rOther.physical.nPhysicalDeviceId == rSlot.physical.nPhysicalDeviceId &&
+		     rOther.physical.nDeviceGeneration == rSlot.physical.nDeviceGeneration && rOther.registration.m_nNativeToken == nNativeToken ) {
 			return SIR_RESOURCE_RESULT_BUSY;
 		}
 	}
