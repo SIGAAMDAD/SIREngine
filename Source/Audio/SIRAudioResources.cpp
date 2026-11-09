@@ -14,10 +14,12 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Audio/SIRAudioResources.h>
+#include <Resources/SIRResourceGraph.h>
 
 #include <Core/Containers/SIRRawStorage.h>
 #include <Core/Platform/SIRAtomic.h>
 #include <cmath>
+#include <new>
 
 static SIRAtomic<uint64_t> s_nAudioManifestEpoch = SIRAtomic<uint64_t>( 1 );
 
@@ -273,9 +275,22 @@ uint64_t SIRAudioResourceStore::hashPayload( const void *pBytes, size_t nBytes )
 	return nHash;
 }
 
-sirAudioManifestResult_t SIRAudioResourceStore::load( const void *pBytes, size_t nBytes, sirAudioProvider_t eExpectedProvider,
-                                                      uint64_t nAvailableCapabilities, const sirContainerAllocator_t *pAllocator ) noexcept
+typedef struct sirAudioManifestParsedLayout_s
 {
+	sirAudioManifestHeader_t header;
+	size_t nPackageOffset;
+	size_t nEventOffset;
+	size_t nControlOffset;
+	size_t nDependencyOffset;
+} sirAudioManifestParsedLayout_t;
+
+static sirAudioManifestResult_t validateAudioManifestBytes( const void *pBytes, size_t nBytes,
+                                                            const sirAudioManifestLoadOptions_t& rOptions,
+                                                            sirAudioManifestParsedLayout_t *pLayout ) noexcept
+{
+	const sirAudioProvider_t eExpectedProvider = rOptions.eExpectedProvider;
+	const uint64_t nAvailableCapabilities = rOptions.nAvailableCapabilities;
+	const sirContainerAllocator_t *pAllocator = rOptions.pAllocator;
 	if ( pBytes == nullptr || ( pAllocator == nullptr || pAllocator->pfnAllocate == nullptr || pAllocator->pfnDeallocate == nullptr ) ||
 	     nBytes < sizeof( sirAudioManifestHeader_t ) || nBytes > UINT32_MAX || eExpectedProvider <= SIR_AUDIO_PROVIDER_NONE ||
 	     eExpectedProvider > SIR_AUDIO_PROVIDER_OPENAL ) {
@@ -314,7 +329,8 @@ sirAudioManifestResult_t SIRAudioResourceStore::load( const void *pBytes, size_t
 	if ( !advanceAudioTable( nOffset, header.nDependencyCount, sizeof( uint64_t ), nBytes ) || nOffset != nBytes ) {
 		return SIR_AUDIO_MANIFEST_BAD_SCHEMA;
 	}
-	if ( hashPayload( pSource + sizeof( header.nContentHash ), nBytes - sizeof( header.nContentHash ) ) != header.nContentHash ) {
+	if ( SIRAudioResourceStore::hashPayload( pSource + sizeof( header.nContentHash ), nBytes - sizeof( header.nContentHash ) ) !=
+	     header.nContentHash ) {
 		return SIR_AUDIO_MANIFEST_HASH_MISMATCH;
 	}
 	sirAudioManifestResult_t eResult = validateAudioPackages( pSource, header, nPackageOffset, nDependencyOffset, nAvailableCapabilities );
@@ -333,6 +349,42 @@ sirAudioManifestResult_t SIRAudioResourceStore::load( const void *pBytes, size_t
 	if ( eResult != SIR_AUDIO_MANIFEST_OK ) {
 		return eResult;
 	}
+
+	if ( pLayout != nullptr ) {
+		*pLayout = { header, nPackageOffset, nEventOffset, nControlOffset, nDependencyOffset };
+	}
+	return SIR_AUDIO_MANIFEST_OK;
+}
+
+sirAudioManifestResult_t SIRAudioResourceStore::load( SIRResourceGraph& rGraph, SIRResourceHandle hManifest, SIRResourceChunkId chunkId,
+                                                      const sirAudioManifestLoadOptions_t& rOptions ) noexcept
+{
+	if ( rOptions.pAllocator == nullptr || rOptions.pAllocator->pfnAllocate == nullptr || rOptions.pAllocator->pfnDeallocate == nullptr ) {
+		return SIR_AUDIO_MANIFEST_INVALID_ARGUMENT;
+	}
+	void *pStorage = nullptr;
+	if ( SIRRawStorage::tryAllocate( rOptions.pAllocator, sizeof( SIRResourceReadScope ), alignof( SIRResourceReadScope ), &pStorage ) !=
+	     SIR_CONTAINER_OK ) {
+		return SIR_AUDIO_MANIFEST_OUT_OF_MEMORY;
+	}
+	SIRResourceReadScope *pScope = new ( pStorage ) SIRResourceReadScope( rGraph );
+	SIRResourceView view;
+	SIRResourceConstBytes manifest = {};
+	SIRResourceInfo resource = {};
+	if ( !pScope->isActive() || rGraph.resolve( *pScope, hManifest, &view ) != SIR_RESOURCE_RESULT_SUCCESS ||
+	     view.getInfo( &resource ) != SIR_RESOURCE_RESULT_SUCCESS || resource.m_eState != SIR_RESOURCE_STATE_RESIDENT ||
+	     view.getChunk( chunkId, &manifest ) != SIR_RESOURCE_RESULT_SUCCESS || manifest.m_nSize > SIZE_MAX ) {
+		pScope->~SIRResourceReadScope();
+		SIRRawStorage::deallocate( rOptions.pAllocator, pStorage, sizeof( SIRResourceReadScope ), alignof( SIRResourceReadScope ) );
+		return SIR_AUDIO_MANIFEST_INVALID_ARGUMENT;
+	}
+	sirAudioManifestParsedLayout_t parsed = {};
+	const sirAudioManifestResult_t eValid = validateAudioManifestBytes( manifest.m_pData, ( size_t )manifest.m_nSize, rOptions, &parsed );
+	if ( eValid != SIR_AUDIO_MANIFEST_OK ) {
+		pScope->~SIRResourceReadScope();
+		SIRRawStorage::deallocate( rOptions.pAllocator, pStorage, sizeof( SIRResourceReadScope ), alignof( SIRResourceReadScope ) );
+		return eValid;
+	}
 	uint64_t nNewEpoch = s_nAudioManifestEpoch.load( SIR_MEMORY_ORDER_RELAXED );
 	while ( nNewEpoch != 0 && nNewEpoch != UINT64_MAX ) {
 		if ( s_nAudioManifestEpoch.compareExchangeWeak( nNewEpoch, nNewEpoch + 1, SIR_MEMORY_ORDER_RELAXED ) ) {
@@ -340,30 +392,44 @@ sirAudioManifestResult_t SIRAudioResourceStore::load( const void *pBytes, size_t
 		}
 	}
 	if ( nNewEpoch == 0 || nNewEpoch == UINT64_MAX ) {
+		pScope->~SIRResourceReadScope();
+		SIRRawStorage::deallocate( rOptions.pAllocator, pStorage, sizeof( SIRResourceReadScope ), alignof( SIRResourceReadScope ) );
 		return SIR_AUDIO_MANIFEST_EPOCH_EXHAUSTED;
 	}
-	void *pOwned = nullptr;
-	if ( SIRRawStorage::tryAllocate( pAllocator, nBytes, alignof( sirAudioManifestHeader_t ), &pOwned ) != SIR_CONTAINER_OK ) {
-		return SIR_AUDIO_MANIFEST_OUT_OF_MEMORY;
-	}
-	memcpy( pOwned, pBytes, nBytes );
 	shutdown();
-	m_pBytes = ( uint8_t * )pOwned;
-	m_pAllocator = pAllocator;
-	m_Header = header;
-	m_nPackageOffset = nPackageOffset;
-	m_nEventOffset = nEventOffset;
-	m_nControlOffset = nControlOffset;
-	m_nDependencyOffset = nDependencyOffset;
+	m_pBytes = manifest.m_pData;
+	m_pSourceScope = pScope;
+	m_pAllocator = rOptions.pAllocator;
+	m_SourceHandle = hManifest;
+	m_nSourceRevision = resource.m_nRevision;
+	m_Header = parsed.header;
+	m_nPackageOffset = parsed.nPackageOffset;
+	m_nEventOffset = parsed.nEventOffset;
+	m_nControlOffset = parsed.nControlOffset;
+	m_nDependencyOffset = parsed.nDependencyOffset;
 	m_nEpoch = nNewEpoch;
 	return SIR_AUDIO_MANIFEST_OK;
 }
 
+const uint8_t *SIRAudioResourceStore::getBorrowedManifestBytes( void ) const noexcept
+{
+	return m_pBytes;
+}
+
+uint64_t SIRAudioResourceStore::getSourceRevision( void ) const noexcept
+{
+	return m_nSourceRevision;
+}
+
 void SIRAudioResourceStore::shutdown( void ) noexcept
 {
-	if ( m_pBytes != nullptr ) {
-		SIRRawStorage::deallocate( m_pAllocator, m_pBytes, m_Header.nTotalBytes, alignof( sirAudioManifestHeader_t ) );
+	if ( m_pSourceScope != nullptr ) {
+		m_pSourceScope->~SIRResourceReadScope();
+		SIRRawStorage::deallocate( m_pAllocator, m_pSourceScope, sizeof( SIRResourceReadScope ), alignof( SIRResourceReadScope ) );
 	}
+	m_pSourceScope = nullptr;
+	m_SourceHandle = {};
+	m_nSourceRevision = 0;
 	m_pBytes = nullptr;
 	m_pAllocator = nullptr;
 	m_Header = {};

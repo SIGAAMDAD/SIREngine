@@ -305,6 +305,62 @@ typedef struct sirDerivedResourceRegistration_s
 } sirDerivedResourceRegistration_t;
 typedef sirDerivedResourceRegistration_t SIRDerivedResourceRegistration;
 
+// Physical device identity is independent of consumer, representation and provider names.
+// The format/layout and source chunk fingerprints are checked before native creation.
+typedef struct sirSharedDeviceBackingDesc_s
+{
+	uint64_t nPhysicalDeviceId;
+	uint32_t nDeviceGeneration;
+	uint32_t nStorageLayoutId;
+	uint32_t nStorageFormatId;
+	uint32_t nSupportedUsageMask;
+	uint32_t nAlignment;
+	uint32_t nDomainId;
+	uint32_t nProviderId;
+	uint64_t nCommittedBytes;
+	uint64_t nResidentBytes;
+} sirSharedDeviceBackingDesc_t;
+
+typedef struct sirSharedDeviceBackingReservation_s
+{
+	SIRDerivedResourceHandle hBacking;
+	uint64_t nPhysicalBackingId;
+	bool bNeedsNativeCreation;
+} sirSharedDeviceBackingReservation_t;
+
+typedef struct sirSharedDeviceViewRequest_s
+{
+	uint64_t nPhysicalDeviceId;
+	uint64_t nExpectedSourceRevision;
+	uint64_t nExpectedPublicationEpoch;
+	uint64_t nOffset;
+	uint64_t nBytes;
+	uint32_t nDeviceGeneration;
+	uint32_t nStorageLayoutId;
+	uint32_t nStorageFormatId;
+	uint32_t nRequiredUsageMask;
+	uint32_t nRequiredAlignment;
+	uint32_t nConsumerId;
+	uint32_t nCompletionProviderId;
+} sirSharedDeviceViewRequest_t;
+
+typedef struct sirSharedDeviceView_s
+{
+	uint64_t nPhysicalBackingId;
+	uint64_t nNativeResourceToken;
+	uint64_t nOffset;
+	uint64_t nBytes;
+	uint64_t nSourceRevision;
+	uint32_t nDeviceGeneration;
+	uint32_t nApprovedUsageMask;
+	uint32_t nConsumerId;
+	uint32_t nBorrowSlot;
+	uint32_t nBorrowGeneration;
+	bool bReadOnly;
+} sirSharedDeviceView_t;
+
+typedef struct sirSharedDeviceBorrowSlot_s sirSharedDeviceBorrowSlot_t;
+
 // Release is invoked only after every required provider lane completion
 // from the matching provider generation has been observed. Return true only once native storage
 // has actually been released. Callbacks must not re-enter the registry.
@@ -322,6 +378,7 @@ typedef struct sirResourceDerivedConfig_s
 	uint32_t nMaxRepresentations;
 	uint32_t nMaxProviders;
 	uint64_t nMaxTrackedBytes;
+	uint32_t nMaxSharedBorrows;
 } sirResourceDerivedConfig_t;
 typedef sirResourceDerivedConfig_t SIRResourceDerivedConfig;
 
@@ -335,6 +392,7 @@ typedef struct sirResourceDerivedStats_s
 	uint32_t nLiveRepresentations;
 	uint32_t nPendingRetirements;
 	uint32_t nRegisteredProviders;
+	uint32_t nLiveSharedBorrows;
 } sirResourceDerivedStats_t;
 typedef sirResourceDerivedStats_t SIRResourceDerivedStats;
 
@@ -353,6 +411,10 @@ private:
 	std::thread::id m_OwnerThread;
 	sirDerivedProviderSlot_t *m_pProviders;
 	sirDerivedRepresentationSlot_t *m_pRepresentations;
+	sirSharedDeviceBorrowSlot_t *m_pSharedBorrows;
+	uint32_t m_nSharedBorrowCapacity;
+	uint64_t m_nRepresentationMetadataBytes;
+	uint32_t m_nRepresentationMetadataAlignment;
 	SIRResourceDerivedStats m_Stats;
 	uint64_t m_nTrackedBytes;
 	bool m_bReady;
@@ -360,6 +422,7 @@ private:
 	bool isWriterThread( void ) const noexcept;
 	int32_t findProvider( uint32_t nProviderId ) const noexcept;
 	SIRResourceResult collectProvider( uint32_t iProvider ) noexcept;
+	SIRResourceResult checkCurrentSource( const SIRResourceReadScope& rScope, const SIRResourceView& rSource ) const noexcept;
 	void releaseMetadata( void ) noexcept;
 
 public:
@@ -373,9 +436,21 @@ public:
 	SIRResourceResult registerProvider( uint32_t nProviderId, const SIRDerivedProviderCallbacks& rCallbacks ) noexcept;
 	SIRResourceResult registerProvider( uint32_t nProviderId, uint32_t nProviderGeneration, uint32_t nLaneCount,
 	                                    const SIRDerivedProviderCallbacks& rCallbacks ) noexcept;
+	// CPU/external algorithmic derivatives only. Device storage must use the
+	// reserve/publish shared-backing path before any native allocation.
 	SIRResourceResult registerRepresentation( const SIRResourceReadScope& rScope, const SIRResourceView& rSource,
 	                                          const SIRDerivedResourceRegistration& rRegistration,
 	                                          SIRDerivedResourceHandle *pHandle ) noexcept;
+	// Native allocation is permitted only after an owner-side reservation. A second
+	// identical request returns the existing backing and must not call the GPU API.
+	SIRResourceResult reserveSharedDeviceBacking( const SIRResourceReadScope& rScope, const SIRResourceView& rSource,
+	                                              const sirSharedDeviceBackingDesc_t& rDesc,
+	                                              sirSharedDeviceBackingReservation_t *pReservation ) noexcept;
+	SIRResourceResult publishSharedDeviceBacking( SIRDerivedResourceHandle hBacking, uint64_t nNativeToken ) noexcept;
+	SIRResourceResult cancelSharedDeviceBacking( SIRDerivedResourceHandle hBacking ) noexcept;
+	SIRResourceResult acquireSharedDeviceView( const SIRResourceReadScope& rScope, const SIRResourceView& rSource,
+	                                           const sirSharedDeviceViewRequest_t& rRequest, sirSharedDeviceView_t *pView ) noexcept;
+	SIRResourceResult releaseSharedDeviceView( const sirSharedDeviceView_t& rView, const sirProviderCompletionSet_t& required ) noexcept;
 	SIRResourceResult retireRepresentation( SIRDerivedResourceHandle hRepresentation, const sirProviderCompletionSet_t& required ) noexcept;
 	SIRResourceResult updateProviderCompletion( const sirProviderCompletionSet_t& observed ) noexcept;
 	SIRResourceResult getAccounting( SIRDerivedResourceHandle hRepresentation, SIRDerivedResourceAccounting *pAccounting ) const noexcept;

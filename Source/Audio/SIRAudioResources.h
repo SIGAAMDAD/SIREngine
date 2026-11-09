@@ -26,6 +26,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Audio/SIRAudioTypes.h>
 #include <Core/Containers/SIRContainerResult.h>
+#include <Resources/SIRResourceTypes.h>
+
+class SIRResourceGraph;
+class SIRResourceReadScope;
 
 constexpr uint32_t SIR_AUDIO_MANIFEST_MAGIC = 0x41524953U; // "SIRA" on little-endian hosts.
 constexpr uint16_t SIR_AUDIO_MANIFEST_VERSION = 1;
@@ -136,13 +140,23 @@ static_assert( sizeof( sirAudioControlRecord_t ) == 40, "Audio control record AB
 static_assert( sizeof( sirAudioEventHandle_t ) == 16, "Audio event handle ABI changed" );
 static_assert( sizeof( sirAudioPackageHandle_t ) == 16, "Audio package handle ABI changed" );
 
-// SIRAudioResourceStore owns a complete immutable copy of one cooked mapping.
+typedef struct sirAudioManifestLoadOptions_s
+{
+	const sirContainerAllocator_t *pAllocator;
+	uint64_t nAvailableCapabilities;
+	sirAudioProvider_t eExpectedProvider;
+} sirAudioManifestLoadOptions_t;
+
+// The store pins one exact GRDG revision for the lifetime of all its lookups.
+// The immutable manifest is never copied into audio-owned source storage.
 // Load/reload/shutdown and all lookups are serialized by the audio owner.
-// Returned records are copies, so callers never borrow store-owned pointers.
 class SIRAudioResourceStore
 {
 private:
-	uint8_t *m_pBytes = nullptr;
+	const uint8_t *m_pBytes = nullptr;
+	SIRResourceReadScope *m_pSourceScope = nullptr;
+	SIRResourceHandle m_SourceHandle = {};
+	uint64_t m_nSourceRevision = 0;
 	const sirContainerAllocator_t *m_pAllocator = nullptr;
 	sirAudioManifestHeader_t m_Header = {};
 	uint64_t m_nEpoch = 0;
@@ -161,8 +175,10 @@ public:
 	SIRAudioResourceStore& operator=( const SIRAudioResourceStore& ) = delete;
 
 	static uint64_t hashPayload( const void *pBytes, size_t nBytes ) noexcept;
-	sirAudioManifestResult_t load( const void *pBytes, size_t nBytes, sirAudioProvider_t eExpectedProvider, uint64_t nAvailableCapabilities,
-	                               const sirContainerAllocator_t *pAllocator ) noexcept;
+	sirAudioManifestResult_t load( SIRResourceGraph& rGraph, SIRResourceHandle hManifest, SIRResourceChunkId chunkId,
+	                               const sirAudioManifestLoadOptions_t& rOptions ) noexcept;
+	const uint8_t *getBorrowedManifestBytes( void ) const noexcept;
+	uint64_t getSourceRevision( void ) const noexcept;
 	void shutdown( void ) noexcept;
 	bool isLoaded( void ) const noexcept;
 	uint64_t getEpoch( void ) const noexcept;

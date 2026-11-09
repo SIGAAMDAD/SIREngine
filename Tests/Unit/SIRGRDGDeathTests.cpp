@@ -157,7 +157,7 @@ static void deathLiveDerivedRegistry( void )
 		SIR_DEATH_CHECK( graph.resolve( scope, resource, &view ) == SIR_RESOURCE_RESULT_SUCCESS );
 		SIRDerivedResourceRegistration registration = {};
 		registration.m_Key = { resource, 1, 7, 1, 0, 0 };
-		registration.m_Accounting = { SIR_MEMORY_SPACE_DEVICE, 1, 32, 16, 1 };
+		registration.m_Accounting = { SIR_MEMORY_SPACE_EXTERNAL, 1, 32, 16, 1 };
 		registration.m_nNativeToken = 42;
 		SIRDerivedResourceHandle representation = {};
 		SIR_DEATH_CHECK( registry.registerRepresentation( scope, view, registration, &representation ) == SIR_RESOURCE_RESULT_SUCCESS );

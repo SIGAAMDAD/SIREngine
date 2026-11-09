@@ -26,6 +26,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Audio/FMOD/SIRFMODSnapshotBackend.h>
 #include <Audio/FMOD/SIRFMODPackageLoader.h>
 #include <Audio/SIRAudioResources.h>
+#include "SIRAudioManifestSourceFixture.h"
 #include <Audio/SIRAudioSystem.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -691,9 +692,10 @@ static void testManifestPackageLoading( const sirContainerAllocator_t *pAllocato
 	checkBank( audio.initialize( audioConfig, pAllocator, SIRFMODVoiceBackend::getBackendOps(), &voices ) == SIR_AUDIO_OK );
 	SIRFMODBankStore banks;
 	checkBank( banks.initialize( &context, &voices, pAllocator, makeBankOps( &fixture ), 2, 1 ) == SIR_AUDIO_OK );
+	sirTestAudioManifestSource_t canonicalSource;
 	SIRAudioResourceStore manifest;
 	sirFMODPackageTestManifest_t image = makePackageManifest();
-	checkBank( manifest.load( &image, sizeof( image ), SIR_AUDIO_PROVIDER_FMOD, 0, pAllocator ) == SIR_AUDIO_MANIFEST_OK );
+	checkBank( canonicalSource.load( manifest, &image, sizeof( image ), pAllocator ) == SIR_AUDIO_MANIFEST_OK );
 	checkBank( manifest.getPackageCount() == 2 );
 	sirAudioPackageRecord_t package = {};
 	uint64_t nDependency = 0;
@@ -748,7 +750,7 @@ static void testManifestPackageLoading( const sirContainerAllocator_t *pAllocato
 	checkBank( loader.getLoadedCount() == 0 );
 	checkBank( loader.loadPackage( 2, false ) == SIR_AUDIO_OK );
 	image = makePackageManifest();
-	checkBank( manifest.load( &image, sizeof( image ), SIR_AUDIO_PROVIDER_FMOD, 0, pAllocator ) == SIR_AUDIO_MANIFEST_OK );
+	checkBank( canonicalSource.load( manifest, &image, sizeof( image ), pAllocator ) == SIR_AUDIO_MANIFEST_OK );
 	checkBank( loader.loadPackage( 2, false ) == SIR_AUDIO_NOT_INITIALIZED );
 	checkBank( loader.shutdown() == SIR_AUDIO_OK );
 	checkBank( banks.shutdown() == SIR_AUDIO_OK );
@@ -844,9 +846,10 @@ static sirFMODMemoryBudgetStats_t testNativeMemoryStats( void ) noexcept
 static void testRuntimeComposition( const sirContainerAllocator_t *pAllocator )
 {
 	sirFMODBankFixture_t fixture = {};
+	sirTestAudioManifestSource_t canonicalSource;
 	SIRAudioResourceStore manifest;
 	sirFMODRuntimeTestManifest_t image = makeRuntimeManifest();
-	checkBank( manifest.load( &image, sizeof( image ), SIR_AUDIO_PROVIDER_FMOD, 0, pAllocator ) == SIR_AUDIO_MANIFEST_OK );
+	checkBank( canonicalSource.load( manifest, &image, sizeof( image ), pAllocator ) == SIR_AUDIO_MANIFEST_OK );
 	checkBank( manifest.getEventCount() == 1 && manifest.getControlCount() == 1 );
 	sirAudioEventRecord_t event = {};
 	sirAudioControlRecord_t control = {};
@@ -957,9 +960,10 @@ static sirFMODThreadResult_t testWaitForTicket( SIRFMODAudioThread& thread, uint
 static void testAudioOwnerThread( const sirContainerAllocator_t *pAllocator )
 {
 	sirFMODBankFixture_t fixture = {};
+	sirTestAudioManifestSource_t canonicalSource;
 	SIRAudioResourceStore manifest;
 	sirFMODRuntimeTestManifest_t image = makeRuntimeManifest();
-	checkBank( manifest.load( &image, sizeof( image ), SIR_AUDIO_PROVIDER_FMOD, 0, pAllocator ) == SIR_AUDIO_MANIFEST_OK );
+	checkBank( canonicalSource.load( manifest, &image, sizeof( image ), pAllocator ) == SIR_AUDIO_MANIFEST_OK );
 	sirFMODAudioThreadConfig_t config = {};
 	config.runtime.context = { 16, -1, 0, 1, 0, 0 };
 	config.runtime.audio = { 4, 0, 64, 16, 16, 0 };

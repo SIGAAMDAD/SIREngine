@@ -14,6 +14,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Audio/FMOD/SIRFMODRuntime.h>
+#include "SIRAudioManifestSourceFixture.h"
 #include <stdlib.h>
 
 typedef struct sirFMODRuntimeSmokeManifest_s
@@ -56,8 +57,9 @@ int main( void )
 	image.package = { 1, 101, 0, 0, 0 };
 	image.header.nContentHash = SIRAudioResourceStore::hashPayload( ( const uint8_t * )&image + sizeof( image.header.nContentHash ),
 	                                                                sizeof( image ) - sizeof( image.header.nContentHash ) );
+	sirTestAudioManifestSource_t canonicalSource;
 	SIRAudioResourceStore manifest;
-	if ( manifest.load( &image, sizeof( image ), SIR_AUDIO_PROVIDER_FMOD, 0, &allocator ) != SIR_AUDIO_MANIFEST_OK ) {
+	if ( canonicalSource.load( manifest, &image, sizeof( image ), &allocator ) != SIR_AUDIO_MANIFEST_OK ) {
 		return 1;
 	}
 	sirFMODRuntimeConfig_t config = {};

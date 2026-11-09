@@ -144,7 +144,7 @@ static SIRDerivedResourceRegistration derived( SIRResourceHandle hSource, uint64
 {
 	SIRDerivedResourceRegistration registration = {};
 	registration.m_Key = { hSource, nRevision, nProvider, nRepresentation, 0, 0 };
-	registration.m_Accounting = { SIR_MEMORY_SPACE_DEVICE, 5, nCommitted, nCommitted - 8, nRevision };
+	registration.m_Accounting = { SIR_MEMORY_SPACE_EXTERNAL, 5, nCommitted, nCommitted - 8, nRevision };
 	registration.m_nNativeToken = nToken;
 	return registration;
 }
@@ -191,8 +191,8 @@ static void testProviderLifetimeAndPhysicalAccounting( void )
 		}
 		SIRResourceDerivedStats stats = {};
 		REQUIRE( registry.getStats( &stats ) == SIR_RESOURCE_RESULT_SUCCESS );
-		REQUIRE( stats.nCommittedBytes[SIR_MEMORY_SPACE_DEVICE] == 256 );
-		REQUIRE( stats.nResidentBytes[SIR_MEMORY_SPACE_DEVICE] == 240 );
+		REQUIRE( stats.nCommittedBytes[SIR_MEMORY_SPACE_EXTERNAL] == 256 );
+		REQUIRE( stats.nResidentBytes[SIR_MEMORY_SPACE_EXTERNAL] == 240 );
 		REQUIRE( stats.nLiveRepresentations == 2 && stats.nRegisteredProviders == 2 );
 		REQUIRE( registry.retireRepresentation( hA, derivedCompletion( 7, 10 ) ) == SIR_RESOURCE_RESULT_SUCCESS );
 		REQUIRE( registry.retireRepresentation( hA, derivedCompletion( 7, 10 ) ) == SIR_RESOURCE_RESULT_BUSY );
@@ -207,14 +207,14 @@ static void testProviderLifetimeAndPhysicalAccounting( void )
 		SIRDerivedResourceAccounting accounting = {};
 		REQUIRE( registry.getAccounting( hB, &accounting ) == SIR_RESOURCE_RESULT_INVALID_HANDLE );
 		REQUIRE( registry.getStats( &stats ) == SIR_RESOURCE_RESULT_SUCCESS );
-		REQUIRE( stats.nPendingRetirements == 1 && stats.nCommittedBytes[SIR_MEMORY_SPACE_DEVICE] == 128 );
+		REQUIRE( stats.nPendingRetirements == 1 && stats.nCommittedBytes[SIR_MEMORY_SPACE_EXTERNAL] == 128 );
 		REQUIRE( registry.updateProviderCompletion( derivedCompletion( 7, 10 ) ) == SIR_RESOURCE_RESULT_SUCCESS );
 		REQUIRE( gpu.nReleased == 1 && gpu.nAttempts == 1 );
 		REQUIRE( registry.updateProviderCompletion( derivedCompletion( 7, 9 ) ) == SIR_RESOURCE_RESULT_INVALID_ARGUMENT );
 		REQUIRE( registry.getStats( &stats ) == SIR_RESOURCE_RESULT_SUCCESS );
-		REQUIRE( stats.nCommittedBytes[SIR_MEMORY_SPACE_DEVICE] == 0 );
-		REQUIRE( stats.nResidentBytes[SIR_MEMORY_SPACE_DEVICE] == 0 );
-		REQUIRE( stats.nPeakCommittedBytes[SIR_MEMORY_SPACE_DEVICE] == 256 );
+		REQUIRE( stats.nCommittedBytes[SIR_MEMORY_SPACE_EXTERNAL] == 0 );
+		REQUIRE( stats.nResidentBytes[SIR_MEMORY_SPACE_EXTERNAL] == 0 );
+		REQUIRE( stats.nPeakCommittedBytes[SIR_MEMORY_SPACE_EXTERNAL] == 256 );
 		REQUIRE( stats.nLiveRepresentations == 0 && stats.nPendingRetirements == 0 );
 		REQUIRE( pWriter->collectRetired( 8 ) == 1 );
 		REQUIRE( pWriter->collectRetired( 8 ) == 0 );

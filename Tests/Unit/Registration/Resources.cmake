@@ -85,3 +85,9 @@ add_test(NAME core.jobs.queue-candidates COMMAND SIRSchedulerQueueCandidateTests
 set_tests_properties(core.jobs.queue-candidates PROPERTIES TIMEOUT 90)
 sir_configure_owned_target(SIRSchedulerQueueCandidateTests)
 
+
+# Shared physical GPU backing interning and provider-completion regression.
+add_executable(SIRSharedDeviceBackingTests SIRSharedDeviceBackingTests.cpp)
+target_link_libraries(SIRSharedDeviceBackingTests PRIVATE SIR::Resources)
+add_test(NAME resources.shared-device.backing-lifetimes COMMAND SIRSharedDeviceBackingTests)
+sir_configure_owned_target(SIRSharedDeviceBackingTests)
