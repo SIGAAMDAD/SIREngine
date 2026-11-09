@@ -82,8 +82,16 @@ static bool findAudioPackageIndex( const uint8_t *pBytes, size_t nPackageOffset,
 	return true;
 }
 
+static int compareAudioProviderKeys( const void *pA, const void *pB ) noexcept
+{
+	const uint64_t a = *( const uint64_t * )pA;
+	const uint64_t b = *( const uint64_t * )pB;
+	return a < b ? -1 : ( a > b ? 1 : 0 );
+}
+
 static sirAudioManifestResult_t validateAudioPackages( const uint8_t *pBytes, const sirAudioManifestHeader_t& header, size_t nPackageOffset,
-                                                       size_t nDependencyOffset, uint64_t nAvailableCapabilities ) noexcept
+                                                       size_t nDependencyOffset, uint64_t nAvailableCapabilities,
+                                                       const sirContainerAllocator_t *pAllocator ) noexcept
 {
 	uint64_t nPreviousId = 0;
 	uint32_t nConsumedDependencies = 0;
@@ -105,6 +113,34 @@ static sirAudioManifestResult_t validateAudioPackages( const uint8_t *pBytes, co
 	}
 	if ( nConsumedDependencies != header.nDependencyCount ) {
 		return SIR_AUDIO_MANIFEST_INVALID_RECORD;
+	}
+	// Two logical package IDs may not cause the native audio provider to load the
+	// same cooked bank twice. Build a bounded, temporary key index without copying
+	// the source manifest or retaining any second authoritative payload.
+	if ( header.nPackageCount > 1 ) {
+		size_t nIndexBytes = 0;
+		if ( !SIRRawStorage::checkedMultiply( header.nPackageCount, sizeof( uint64_t ), &nIndexBytes ) ) {
+			return SIR_AUDIO_MANIFEST_BAD_SCHEMA;
+		}
+		void *pIndex = nullptr;
+		if ( SIRRawStorage::tryAllocate( pAllocator, nIndexBytes, alignof( uint64_t ), &pIndex ) != SIR_CONTAINER_OK ) {
+			return SIR_AUDIO_MANIFEST_OUT_OF_MEMORY;
+		}
+		uint64_t *pKeys = ( uint64_t * )pIndex;
+		for ( uint32_t iPackage = 0; iPackage < header.nPackageCount; ++iPackage ) {
+			sirAudioPackageRecord_t package = {};
+			readAudioPackage( pBytes, nPackageOffset, iPackage, package );
+			pKeys[iPackage] = package.nProviderPackageKey;
+		}
+		qsort( pKeys, header.nPackageCount, sizeof( uint64_t ), compareAudioProviderKeys );
+		bool bDuplicate = false;
+		for ( uint32_t iPackage = 1; iPackage < header.nPackageCount; ++iPackage ) {
+			bDuplicate |= pKeys[iPackage - 1] == pKeys[iPackage];
+		}
+		SIRRawStorage::deallocate( pAllocator, pIndex, nIndexBytes, alignof( uint64_t ) );
+		if ( bDuplicate ) {
+			return SIR_AUDIO_MANIFEST_DUPLICATE_ID;
+		}
 	}
 	for ( uint32_t iPackage = 0; iPackage < header.nPackageCount; ++iPackage ) {
 		sirAudioPackageRecord_t package = {};
@@ -333,7 +369,8 @@ static sirAudioManifestResult_t validateAudioManifestBytes( const void *pBytes, 
 	     header.nContentHash ) {
 		return SIR_AUDIO_MANIFEST_HASH_MISMATCH;
 	}
-	sirAudioManifestResult_t eResult = validateAudioPackages( pSource, header, nPackageOffset, nDependencyOffset, nAvailableCapabilities );
+	sirAudioManifestResult_t eResult =
+	    validateAudioPackages( pSource, header, nPackageOffset, nDependencyOffset, nAvailableCapabilities, pAllocator );
 	if ( eResult != SIR_AUDIO_MANIFEST_OK ) {
 		return eResult;
 	}

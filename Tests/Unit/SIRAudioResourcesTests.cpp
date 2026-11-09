@@ -293,6 +293,14 @@ static void testRejectedManifests( const sirContainerAllocator_t *pAllocator, si
 	refreshHash( manifest );
 	testCheck( loadTest( store, graph, { &manifest, sizeof( manifest ), SIR_AUDIO_PROVIDER_FMOD, 3, pAllocator } ) ==
 	           SIR_AUDIO_MANIFEST_DUPLICATE_ID );
+	// A second logical package may not cause another native FMOD bank load for
+	// one provider-bank identity. This is rejected before any native allocation.
+	manifest = makeManifest();
+	manifest.packages[1].nProviderPackageKey = manifest.packages[0].nProviderPackageKey;
+	refreshHash( manifest );
+	CHECK( loadTest( store, graph, { &manifest, sizeof( manifest ), SIR_AUDIO_PROVIDER_FMOD, 3, pAllocator } ) ==
+	       SIR_AUDIO_MANIFEST_DUPLICATE_ID );
+	CHECK( !store.isLoaded() );
 	manifest = makeManifest();
 	manifest.controls[1].nControlId = manifest.controls[0].nControlId;
 	refreshHash( manifest );
