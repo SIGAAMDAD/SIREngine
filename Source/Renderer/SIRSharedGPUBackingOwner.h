@@ -48,6 +48,8 @@ public:
 	                                       sirNativeGPUBufferBacking_t *pBacking ) noexcept;
 	SIRResourceResult acquireBuffer( const SIRResourceReadScope& rScope, const SIRResourceView& rSource,
 	                                 const sirSharedDeviceViewRequest_t& rRequest, sirNativeGPUBufferLease_t *pLease ) noexcept;
+	// Validate an active issued borrow and the exact live native allocation identity.
+	SIRResourceResult validateBufferLease( const sirNativeGPUBufferLease_t& rLease ) const noexcept;
 	SIRResourceResult releaseBuffer( const sirNativeGPUBufferLease_t& rLease, const sirProviderCompletionSet_t& rRequired ) noexcept;
 	SIRResourceResult retireBuffer( const sirNativeGPUBufferBacking_t& rBacking, const sirProviderCompletionSet_t& rRequired ) noexcept;
 	// Drive completion changes with actual native queue polls, never fabricated fence values.

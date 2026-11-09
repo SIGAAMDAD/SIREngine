@@ -452,6 +452,8 @@ public:
 	SIRResourceResult cancelSharedDeviceBacking( SIRDerivedResourceHandle hBacking ) noexcept;
 	SIRResourceResult acquireSharedDeviceView( const SIRResourceReadScope& rScope, const SIRResourceView& rSource,
 	                                           const sirSharedDeviceViewRequest_t& rRequest, sirSharedDeviceView_t *pView ) noexcept;
+	// Validate the exact currently issued immutable view before a consumer records GPU work.
+	SIRResourceResult validateSharedDeviceView( const sirSharedDeviceView_t& rView ) const noexcept;
 	SIRResourceResult releaseSharedDeviceView( const sirSharedDeviceView_t& rView, const sirProviderCompletionSet_t& required ) noexcept;
 	SIRResourceResult retireRepresentation( SIRDerivedResourceHandle hRepresentation, const sirProviderCompletionSet_t& required ) noexcept;
 	SIRResourceResult updateProviderCompletion( const sirProviderCompletionSet_t& observed ) noexcept;

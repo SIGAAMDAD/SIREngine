@@ -229,13 +229,39 @@ int main( void )
 			physicsReq.nCompletionProviderId = 12;
 			CHECK( owner.acquireBuffer( scope, source, physicsReq, &physics ) == SIR_RESOURCE_RESULT_SUCCESS );
 			CHECK( gpu.hNative.nSlot == physics.hNative.nSlot && gpu.view.nPhysicalBackingId == physics.view.nPhysicalBackingId );
-			SIRFrameGraph frameGraph;
+			SIRFrameGraph frameGraph( &owner );
+			SIRFrameGraph unboundGraph;
+			uint32_t rejectedIndex = UINT32_MAX;
+			CHECK( unboundGraph.importSharedBuffer( gpu, SIR_GRAPHICS_STATE_SHADER_READ, SIR_GRAPHICS_QUEUE_DIRECT, &rejectedIndex ) ==
+			       SIR_GRAPHICS_INVALID_HANDLE );
 			uint32_t firstImport = UINT32_MAX, secondImport = UINT32_MAX, passId = UINT32_MAX;
 			CHECK( frameGraph.importSharedBuffer( gpu, SIR_GRAPHICS_STATE_SHADER_READ, SIR_GRAPHICS_QUEUE_DIRECT, &firstImport ) ==
 			       SIR_GRAPHICS_SUCCESS );
 			CHECK( frameGraph.importSharedBuffer( physics, SIR_GRAPHICS_STATE_SHADER_READ, SIR_GRAPHICS_QUEUE_DIRECT, &secondImport ) ==
 			       SIR_GRAPHICS_SUCCESS );
 			CHECK( firstImport == secondImport && frameGraph.getResourceCount() == 1 );
+			// The recording boundary checks the issued capability, not just copied IDs.
+			sirNativeGPUBufferLease_t forgedView = gpu;
+			++forgedView.view.nConsumerId;
+			CHECK( frameGraph.importSharedBuffer( forgedView, SIR_GRAPHICS_STATE_SHADER_READ, SIR_GRAPHICS_QUEUE_DIRECT, &rejectedIndex ) ==
+			       SIR_GRAPHICS_INVALID_HANDLE );
+			forgedView = gpu;
+			++forgedView.view.nBorrowGeneration;
+			CHECK( frameGraph.importSharedBuffer( forgedView, SIR_GRAPHICS_STATE_SHADER_READ, SIR_GRAPHICS_QUEUE_DIRECT, &rejectedIndex ) ==
+			       SIR_GRAPHICS_INVALID_HANDLE );
+			forgedView = gpu;
+			forgedView.view.nOffset = 16;
+			CHECK( frameGraph.importSharedBuffer( forgedView, SIR_GRAPHICS_STATE_SHADER_READ, SIR_GRAPHICS_QUEUE_DIRECT, &rejectedIndex ) ==
+			       SIR_GRAPHICS_INVALID_HANDLE );
+			forgedView = gpu;
+			++forgedView.view.nCompletionProviderId;
+			CHECK( frameGraph.importSharedBuffer( forgedView, SIR_GRAPHICS_STATE_SHADER_READ, SIR_GRAPHICS_QUEUE_DIRECT, &rejectedIndex ) ==
+			       SIR_GRAPHICS_INVALID_HANDLE );
+			forgedView = gpu;
+			++forgedView.hNative.nSlot;
+			CHECK( frameGraph.importSharedBuffer( forgedView, SIR_GRAPHICS_STATE_SHADER_READ, SIR_GRAPHICS_QUEUE_DIRECT, &rejectedIndex ) ==
+			       SIR_GRAPHICS_INVALID_HANDLE );
+
 			// Raw graph access would evade the GRDG borrow's source pin and byte
 			// bounds. Only importSharedBuffer/addSharedBufferRead may admit it.
 			CHECK( frameGraph.addAccess( { 0, firstImport, 0, 1, 0, 1, SIR_GRAPHICS_STATE_SHADER_READ, false } ) ==
@@ -255,6 +281,10 @@ int main( void )
 			CHECK( frameGraph.importSharedBuffer( mismatched, SIR_GRAPHICS_STATE_SHADER_READ, SIR_GRAPHICS_QUEUE_DIRECT, &secondImport ) ==
 			       SIR_GRAPHICS_INVALID_ARGUMENT );
 			CHECK( frameGraph.addPass( { SIR_GRAPHICS_QUEUE_DIRECT, 0, true }, &passId ) == SIR_GRAPHICS_SUCCESS );
+			forgedView = gpu;
+			++forgedView.view.nConsumerId;
+			CHECK( frameGraph.addSharedBufferRead( passId, firstImport, forgedView, 0, 64, SIR_GRAPHICS_STATE_SHADER_READ ) ==
+			       SIR_GRAPHICS_INVALID_HANDLE );
 			CHECK( frameGraph.addSharedBufferRead( passId, firstImport, gpu, gpu.view.nOffset, 64, SIR_GRAPHICS_STATE_SHADER_READ ) ==
 			       SIR_GRAPHICS_SUCCESS );
 			CHECK( frameGraph.addSharedBufferRead( passId, firstImport, physics, physics.view.nOffset + 64, 64,
@@ -291,6 +321,9 @@ int main( void )
 			CHECK( device.nBuffersCreated == 1 && device.nBuffersRetired == 0 );
 			CHECK( owner.retireBuffer( backing, { 11, 4, 1, 3, { 5, 0, 0, 0 } } ) == SIR_RESOURCE_RESULT_SUCCESS );
 			CHECK( owner.releaseBuffer( gpu, { 11, 4, 1, 3, { 5, 0, 0, 0 } } ) == SIR_RESOURCE_RESULT_SUCCESS );
+			CHECK( frameGraph.addSharedBufferRead( passId, firstImport, gpu, 0, 64, SIR_GRAPHICS_STATE_SHADER_READ ) ==
+			       SIR_GRAPHICS_INVALID_HANDLE );
+
 			CHECK( owner.releaseBuffer( physics, { 12, 4, 1, 3, { 3, 0, 0, 0 } } ) == SIR_RESOURCE_RESULT_SUCCESS );
 			CHECK( owner.releaseBuffer( physics, { 12, 4, 1, 3, { 3, 0, 0, 0 } } ) == SIR_RESOURCE_RESULT_INVALID_HANDLE );
 		}

@@ -792,29 +792,64 @@ SIRResourceResult SIRResourceDerivedRegistry::acquireSharedDeviceView( const SIR
 	return SIR_RESOURCE_RESULT_NOT_RESIDENT;
 }
 
-SIRResourceResult SIRResourceDerivedRegistry::releaseSharedDeviceView( const sirSharedDeviceView_t& rView,
-                                                                       const sirProviderCompletionSet_t& required ) noexcept
+SIRResourceResult SIRResourceDerivedRegistry::validateSharedDeviceView( const sirSharedDeviceView_t& rView ) const noexcept
 {
 	if ( !isWriterThread() ) {
 		return SIR_RESOURCE_RESULT_WRITER_VIOLATION;
 	}
-	if ( !m_bReady || rView.nBorrowSlot >= m_nSharedBorrowCapacity || !sirProviderCompletionValid( required ) ) {
+	if ( !m_bReady || rView.nBorrowSlot >= m_nSharedBorrowCapacity ) {
+		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
+	}
+	const sirSharedDeviceBorrowSlot_t& rBorrow = m_pSharedBorrows[rView.nBorrowSlot];
+	if ( !rBorrow.bOccupied || rBorrow.bReleased || rBorrow.nGeneration != rView.nBorrowGeneration ) {
+		return SIR_RESOURCE_RESULT_INVALID_HANDLE;
+	}
+	if ( rBorrow.nConsumerId != rView.nConsumerId || rBorrow.nCompletionProviderId != rView.nCompletionProviderId ) {
+		return SIR_RESOURCE_RESULT_INVALID_HANDLE;
+	}
+	if ( rBorrow.nBackingSlot >= m_Config.nMaxRepresentations ) {
+		return SIR_RESOURCE_RESULT_INVALID_HANDLE;
+	}
+	const sirDerivedRepresentationSlot_t& rBacking = m_pRepresentations[rBorrow.nBackingSlot];
+	if ( !rBacking.bOccupied || !rBacking.bSharedDeviceBacking || rBacking.nGeneration != rBorrow.nBackingGeneration ) {
+		return SIR_RESOURCE_RESULT_INVALID_HANDLE;
+	}
+	const sirSharedDeviceView_t& issued = rBorrow.issuedView;
+	if ( issued.nPhysicalBackingId != rView.nPhysicalBackingId || issued.nNativeResourceToken != rView.nNativeResourceToken ||
+	     issued.nOffset != rView.nOffset ) {
+		return SIR_RESOURCE_RESULT_INVALID_HANDLE;
+	}
+	if ( issued.nBytes != rView.nBytes || issued.nSourceRevision != rView.nSourceRevision ||
+	     issued.nDeviceGeneration != rView.nDeviceGeneration ) {
+		return SIR_RESOURCE_RESULT_INVALID_HANDLE;
+	}
+	if ( issued.nApprovedUsageMask != rView.nApprovedUsageMask || issued.nConsumerId != rView.nConsumerId ||
+	     issued.nBorrowSlot != rView.nBorrowSlot ) {
+		return SIR_RESOURCE_RESULT_INVALID_HANDLE;
+	}
+	if ( issued.nBorrowGeneration != rView.nBorrowGeneration || issued.bReadOnly != rView.bReadOnly ||
+	     issued.nCompletionProviderId != rView.nCompletionProviderId ) {
+		return SIR_RESOURCE_RESULT_INVALID_HANDLE;
+	}
+	const uint64_t nExpectedBackingId = ( ( uint64_t )rBorrow.nBackingGeneration << 32 ) | ( rBorrow.nBackingSlot + 1 );
+	if ( nExpectedBackingId != rView.nPhysicalBackingId || rBacking.registration.m_nNativeToken != rView.nNativeResourceToken ) {
+		return SIR_RESOURCE_RESULT_INVALID_HANDLE;
+	}
+	return SIR_RESOURCE_RESULT_SUCCESS;
+}
+
+SIRResourceResult SIRResourceDerivedRegistry::releaseSharedDeviceView( const sirSharedDeviceView_t& rView,
+                                                                       const sirProviderCompletionSet_t& required ) noexcept
+{
+	const SIRResourceResult eValidity = validateSharedDeviceView( rView );
+	if ( eValidity != SIR_RESOURCE_RESULT_SUCCESS ) {
+		return eValidity;
+	}
+	if ( !sirProviderCompletionValid( required ) ) {
 		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
 	}
 	sirSharedDeviceBorrowSlot_t& rBorrow = m_pSharedBorrows[rView.nBorrowSlot];
-	// The returned lease is an immutable capability, not just a generation and
-	// consumer label. Releasing a modified offset, native token or revision must
-	// never retire the actual canonical pin held by this slot.
-	const sirSharedDeviceView_t& issued = rBorrow.issuedView;
-	if ( !rBorrow.bOccupied || rBorrow.bReleased || rBorrow.nGeneration != rView.nBorrowGeneration ||
-	     rBorrow.nConsumerId != rView.nConsumerId ||
-	     ( ( uint64_t )rBorrow.nBackingGeneration << 32 ) + rBorrow.nBackingSlot + 1 != rView.nPhysicalBackingId ||
-	     rBorrow.nCompletionProviderId != required.nProviderId || issued.nPhysicalBackingId != rView.nPhysicalBackingId ||
-	     issued.nNativeResourceToken != rView.nNativeResourceToken || issued.nOffset != rView.nOffset || issued.nBytes != rView.nBytes ||
-	     issued.nSourceRevision != rView.nSourceRevision || issued.nDeviceGeneration != rView.nDeviceGeneration ||
-	     issued.nApprovedUsageMask != rView.nApprovedUsageMask || issued.nBorrowSlot != rView.nBorrowSlot ||
-	     issued.nBorrowGeneration != rView.nBorrowGeneration || issued.bReadOnly != rView.bReadOnly ||
-	     issued.nCompletionProviderId != rView.nCompletionProviderId ) {
+	if ( rBorrow.nCompletionProviderId != required.nProviderId ) {
 		return SIR_RESOURCE_RESULT_INVALID_HANDLE;
 	}
 	const int32_t iProvider = findProvider( rBorrow.nCompletionProviderId );

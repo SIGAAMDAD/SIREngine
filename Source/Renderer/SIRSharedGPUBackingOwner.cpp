@@ -178,15 +178,32 @@ SIRResourceResult SIRSharedGPUBackingOwner::acquireBuffer( const SIRResourceRead
 	return SIR_RESOURCE_RESULT_SUCCESS;
 }
 
+SIRResourceResult SIRSharedGPUBackingOwner::validateBufferLease( const sirNativeGPUBufferLease_t& rLease ) const noexcept
+{
+	if ( !m_pRegistry || !m_pDevice || m_pDevice->getDeviceGeneration() != m_nDeviceGeneration ) {
+		return SIR_RESOURCE_RESULT_INVALID_HANDLE;
+	}
+	if ( !sirGraphicsIsHandleValid( rLease.hNative, SIR_GRAPHICS_HANDLE_BUFFER, m_nDeviceGeneration ) ) {
+		return SIR_RESOURCE_RESULT_INVALID_HANDLE;
+	}
+	for ( const NativeBacking& rBacking : m_szBackings ) {
+		if ( !rBacking.bActive || rBacking.nToken != rLease.view.nNativeResourceToken ) {
+			continue;
+		}
+		if ( !sameSharedNativeHandle( rBacking.hNative, rLease.hNative ) ) {
+			return SIR_RESOURCE_RESULT_INVALID_HANDLE;
+		}
+		return m_pRegistry->validateSharedDeviceView( rLease.view );
+	}
+	return SIR_RESOURCE_RESULT_INVALID_HANDLE;
+}
+
 SIRResourceResult SIRSharedGPUBackingOwner::releaseBuffer( const sirNativeGPUBufferLease_t& rLease,
                                                            const sirProviderCompletionSet_t& rRequired ) noexcept
 {
-	NativeBacking *pNative = findNative( rLease.view.nNativeResourceToken );
-	// A valid GPU handle belonging to another allocation must not be accepted as
-	// the native object of this GRDG lease. Compare the complete live identity.
-	if ( !m_pRegistry || !pNative || !sirGraphicsIsHandleValid( rLease.hNative, SIR_GRAPHICS_HANDLE_BUFFER, m_nDeviceGeneration ) ||
-	     !sameSharedNativeHandle( pNative->hNative, rLease.hNative ) ) {
-		return SIR_RESOURCE_RESULT_INVALID_HANDLE;
+	const SIRResourceResult eValid = validateBufferLease( rLease );
+	if ( eValid != SIR_RESOURCE_RESULT_SUCCESS ) {
+		return eValid;
 	}
 	return m_pRegistry->releaseSharedDeviceView( rLease.view, rRequired );
 }

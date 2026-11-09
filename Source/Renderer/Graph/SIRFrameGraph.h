@@ -165,7 +165,7 @@ typedef struct sirFrameGraphTransientPlan_s sirFrameGraphTransientPlan_t;
 class SIRFrameGraph
 {
 public:
-	SIRFrameGraph( void ) noexcept;
+	explicit SIRFrameGraph( const SIRSharedGPUBackingOwner *pSharedOwner = nullptr ) noexcept;
 	~SIRFrameGraph( void ) noexcept = default;
 
 	uint32_t getPassCount( void ) const noexcept;
@@ -220,6 +220,7 @@ private:
 	sirFrameGraphOutput_t m_szOutputs[SIR_FRAMEGRAPH_MAX_OUTPUTS] = {};
 	uint64_t m_nRevision = 1;
 	uint64_t m_nIdentity = 0;
+	const SIRSharedGPUBackingOwner *m_pSharedOwner = nullptr;
 	uint32_t m_nOutputCount = 0;
 	bool m_bCullingEnabled = false;
 	uint32_t m_nResourceCount = 0;

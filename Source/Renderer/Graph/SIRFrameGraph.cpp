@@ -19,7 +19,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 static std::atomic<uint64_t> s_nNextGraphIdentity{ 1 };
 
-SIRFrameGraph::SIRFrameGraph( void ) noexcept
+SIRFrameGraph::SIRFrameGraph( const SIRSharedGPUBackingOwner *pSharedOwner ) noexcept : m_pSharedOwner( pSharedOwner )
 {
 	m_nIdentity = s_nNextGraphIdentity.fetch_add( 1, std::memory_order_relaxed );
 }
@@ -228,6 +228,11 @@ sirGraphicsResult_t SIRFrameGraph::importSharedBuffer( const sirNativeGPUBufferL
 		 !isReadableState( eInitialState ) ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
+	// A typed lease alone is not authority: its backing owner must prove it
+	// remains issued and bound to the actual live native allocation.
+	if ( !m_pSharedOwner || m_pSharedOwner->validateBufferLease( rLease ) != SIR_RESOURCE_RESULT_SUCCESS ) {
+		return SIR_GRAPHICS_INVALID_HANDLE;
+	}
 	for ( uint32_t iResource = 0; iResource < m_nResourceCount; ++iResource ) {
 		const sirFrameGraphResource_t& rExisting = m_szResources[iResource];
 		if ( rExisting.nCanonicalBackingId != rLease.view.nPhysicalBackingId ) {
@@ -262,6 +267,9 @@ sirGraphicsResult_t SIRFrameGraph::addSharedBufferRead( uint32_t nPass, uint32_t
 		 m_nSharedByteAccessCount >= SIR_FRAMEGRAPH_MAX_ACCESSES || nOffsetBytes < rLease.view.nOffset || nBytes > rLease.view.nBytes ||
 		 nOffsetBytes - rLease.view.nOffset > rLease.view.nBytes - nBytes ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	if ( !m_pSharedOwner || m_pSharedOwner->validateBufferLease( rLease ) != SIR_RESOURCE_RESULT_SUCCESS ) {
+		return SIR_GRAPHICS_INVALID_HANDLE;
 	}
 	const sirFrameGraphResource_t& imported = m_szResources[nResource];
 	if ( !imported.bImported || imported.eType != SIR_GRAPHICS_HANDLE_BUFFER ||
