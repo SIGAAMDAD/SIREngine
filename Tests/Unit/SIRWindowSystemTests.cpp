@@ -58,6 +58,9 @@ public:
 			return SIR_WINDOW_NATIVE_FAILURE;
 		}
 		m_bAlive[nSlot] = true;
+		if ( desc.pszTitle != nullptr ) {
+			( void )snprintf( m_szCreatedTitle, sizeof( m_szCreatedTitle ), "%s", desc.pszTitle );
+		}
 		*pView = { m_ePlatform, nSlot + 1, 0x1234, 0 };
 		return SIR_WINDOW_OK;
 	}
@@ -121,6 +124,7 @@ public:
 	uint32_t m_nMutations = 0;
 	uint32_t m_nShutdowns = 0;
 	char m_szLastTitle[128] = {};
+	char m_szCreatedTitle[SIR_WINDOW_TITLE_CAPACITY] = {};
 	bool m_bFailInitialize = false;
 	bool m_bDispatchOnForeignThread = false;
 	sirWindowPlatform_t m_ePlatform = SIR_WINDOW_PLATFORM_X11;
@@ -299,6 +303,53 @@ static bool sirTestForeignDriverCallbacksCannotPublish( void ) noexcept
 		return false;
 	}
 	return true;
+}
+
+static bool sirTestBoundedUtf8WindowTitles( void ) noexcept
+{
+	SIRWindowTestDriver driver;
+	SIRWindowSystem windows( driver );
+	if ( windows.initialize() != SIR_SYSTEM_OK ) {
+		return false;
+	}
+	char szNoNul[SIR_WINDOW_TITLE_CAPACITY];
+	memset( szNoNul, 'X', sizeof( szNoNul ) );
+	sirWindowHandle_t hWindow = {};
+	if ( windows.createWindow( { szNoNul, 640, 480, 0 }, &hWindow ) != SIR_WINDOW_INVALID_ARGUMENT ||
+	     windows.createWindow( { szNoNul, 640, 480, SIR_WINDOW_TITLE_CAPACITY }, &hWindow ) != SIR_WINDOW_INVALID_ARGUMENT ) {
+		return false;
+	}
+	// Explicit byte lengths must accept a valid UTF-8 buffer with no NUL.
+	const char szJapanese[] = { 'E', ( char )0xE6, ( char )0x97, ( char )0xA5 };
+	if ( windows.createWindow( { szJapanese, 640, 480, sizeof( szJapanese ) }, &hWindow ) != SIR_WINDOW_OK ||
+	     strcmp( driver.m_szCreatedTitle, "E\xE6\x97\xA5" ) != 0 || windows.destroyWindow( hWindow ) != SIR_WINDOW_OK ) {
+		return false;
+	}
+	const char szOverlong[] = { ( char )0xC0, ( char )0xAF, 0 };
+	const char szSurrogate[] = { ( char )0xED, ( char )0xA0, ( char )0x80, 0 };
+	const char szTruncated[] = { ( char )0xF0, ( char )0x9F, 0 };
+	const char szTooLarge[] = { ( char )0xF4, ( char )0x90, ( char )0x80, ( char )0x80, 0 };
+	if ( windows.createWindow( { szOverlong, 100, 100 }, &hWindow ) != SIR_WINDOW_INVALID_ARGUMENT ||
+	     windows.createWindow( { szSurrogate, 100, 100 }, &hWindow ) != SIR_WINDOW_INVALID_ARGUMENT ||
+	     windows.createWindow( { szTruncated, 100, 100 }, &hWindow ) != SIR_WINDOW_INVALID_ARGUMENT ||
+	     windows.createWindow( { szTooLarge, 100, 100 }, &hWindow ) != SIR_WINDOW_INVALID_ARGUMENT ) {
+		return false;
+	}
+	if ( windows.createWindow( { "valid", 100, 100 }, &hWindow ) != SIR_WINDOW_OK ) {
+		return false;
+	}
+	const sirWindowMutation_t invalid = { SIR_WINDOW_MUTATION_TITLE, szOverlong, 0, 0 };
+	const sirWindowMutation_t valid = { SIR_WINDOW_MUTATION_TITLE, "A\xC3\xA9", 0, 0 };
+	uint64_t nTicket = 0;
+	if ( windows.mutateWindow( hWindow, invalid ) != SIR_WINDOW_INVALID_ARGUMENT ||
+	     windows.queueMutation( hWindow, invalid, &nTicket ) != SIR_WINDOW_INVALID_ARGUMENT ||
+	     windows.mutateWindow( hWindow, valid ) != SIR_WINDOW_OK || strcmp( driver.m_szLastTitle, "A\xC3\xA9" ) != 0 ||
+	     windows.queueMutation( hWindow, valid, &nTicket ) != SIR_WINDOW_OK || windows.pumpEvents( 1 ) != SIR_WINDOW_OK ||
+	     strcmp( driver.m_szLastTitle, "A\xC3\xA9" ) != 0 ) {
+		return false;
+	}
+	assert( strcmp( driver.m_szLastTitle, "A\xC3\xA9" ) == 0 );
+	return windows.destroyWindow( hWindow ) == SIR_WINDOW_OK && windows.shutdown() == SIR_SYSTEM_OK;
 }
 
 static bool sirTestHeadless( void ) noexcept
@@ -572,7 +623,8 @@ static bool sirTestWaylandInitialConfigure( void ) noexcept
 int main( void )
 {
 	if ( !sirTestHeadless() || !sirTestHandlesLeasesAndEvents() || !sirTestEventOverflow() || !sirTestWaylandInitialConfigure() ||
-	     !sirTestQueuedOwnerMutations() || !sirTestTerminalNativeLoss() || !sirTestForeignDriverCallbacksCannotPublish() ) {
+	     !sirTestQueuedOwnerMutations() || !sirTestTerminalNativeLoss() || !sirTestForeignDriverCallbacksCannotPublish() ||
+	     !sirTestBoundedUtf8WindowTitles() ) {
 		fputs( "SIRWindowSystemTests FAIL\n", stderr );
 		return 1;
 	}

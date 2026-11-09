@@ -1,6 +1,71 @@
 #include <Core/Platform/Window/SIRWindowSystem.h>
 #include <string.h>
 
+// Reject malformed UTF-8, including overlong sequences, lone continuation
+// bytes, surrogate scalars and Unicode code points above U+10FFFF.
+// This runs only on cold window creation/title mutations, not the event path.
+static bool sirWindowCopyTitle( const char *pszSource, uint32_t nDeclaredBytes, char *pszTarget ) noexcept
+{
+	if ( pszSource == nullptr || pszTarget == nullptr || nDeclaredBytes >= SIR_WINDOW_TITLE_CAPACITY ) {
+		return false;
+	}
+	uint32_t nBytes = nDeclaredBytes;
+	if ( nBytes == 0 ) {
+		while ( nBytes < SIR_WINDOW_TITLE_CAPACITY && pszSource[nBytes] != '\0' ) {
+			++nBytes;
+		}
+		if ( nBytes == SIR_WINDOW_TITLE_CAPACITY ) {
+			return false;
+		}
+	}
+	uint32_t i = 0;
+	while ( i < nBytes ) {
+		const uint8_t nFirst = ( uint8_t )pszSource[i];
+		if ( nFirst == 0 ) {
+			return false;
+		}
+		if ( nFirst < 0x80 ) {
+			++i;
+			continue;
+		}
+		uint32_t nWidth = 0;
+		uint32_t nCodepoint = 0;
+		uint32_t nMinimum = 0;
+		if ( nFirst >= 0xC2 && nFirst <= 0xDF ) {
+			nWidth = 2;
+			nCodepoint = nFirst & 0x1F;
+			nMinimum = 0x80;
+		} else if ( nFirst >= 0xE0 && nFirst <= 0xEF ) {
+			nWidth = 3;
+			nCodepoint = nFirst & 0x0F;
+			nMinimum = 0x800;
+		} else if ( nFirst >= 0xF0 && nFirst <= 0xF4 ) {
+			nWidth = 4;
+			nCodepoint = nFirst & 0x07;
+			nMinimum = 0x10000;
+		} else {
+			return false;
+		}
+		if ( nWidth > nBytes - i ) {
+			return false;
+		}
+		for ( uint32_t k = 1; k < nWidth; ++k ) {
+			const uint8_t nNext = ( uint8_t )pszSource[i + k];
+			if ( ( nNext & 0xC0 ) != 0x80 ) {
+				return false;
+			}
+			nCodepoint = ( nCodepoint << 6 ) | ( nNext & 0x3F );
+		}
+		if ( nCodepoint < nMinimum || nCodepoint > 0x10FFFF || ( nCodepoint >= 0xD800 && nCodepoint <= 0xDFFF ) ) {
+			return false;
+		}
+		i += nWidth;
+	}
+	memcpy( pszTarget, pszSource, nBytes );
+	pszTarget[nBytes] = '\0';
+	return true;
+}
+
 SIRWindowSystem::SIRWindowSystem( SIRWindowDriver& driver ) noexcept
     : m_pDriver( &driver ), m_nOwnerThreadId( 0 ), m_nEpoch( 0 ), m_nEventSequence( 0 ), m_nLeaseSerial( 0 ), m_nNativeGeneration( 0 ),
       m_bForeignThreadEvent( false ), m_bInitialized( false )
@@ -102,16 +167,22 @@ sirWindowResult_t SIRWindowSystem::createWindow( const sirWindowCreateDesc_t& de
 	if ( eOwner != SIR_WINDOW_OK ) {
 		return eOwner;
 	}
-	if ( pHandle == nullptr || desc.pszTitle == nullptr || desc.nWidth == 0 || desc.nHeight == 0 ) {
+	if ( pHandle == nullptr || desc.nWidth == 0 || desc.nHeight == 0 ) {
 		return SIR_WINDOW_INVALID_ARGUMENT;
 	}
+	char szTitle[SIR_WINDOW_TITLE_CAPACITY] = {};
+	if ( !sirWindowCopyTitle( desc.pszTitle, desc.nTitleBytes, szTitle ) ) {
+		return SIR_WINDOW_INVALID_ARGUMENT;
+	}
+	sirWindowCreateDesc_t nativeDesc = desc;
+	nativeDesc.pszTitle = szTitle;
 	for ( uint32_t i = 0; i < SIR_WINDOW_MAX_WINDOWS; ++i ) {
 		sirWindowSlot_t& slot = m_Slots[i];
 		if ( slot.bOccupied ) {
 			continue;
 		}
 		sirWindowNativeView_t view = {};
-		const sirWindowResult_t eResult = m_pDriver->createWindow( desc, i, &view );
+		const sirWindowResult_t eResult = m_pDriver->createWindow( nativeDesc, i, &view );
 		if ( eResult != SIR_WINDOW_OK ) {
 			return eResult;
 		}
@@ -189,6 +260,15 @@ sirWindowResult_t SIRWindowSystem::mutateWindow( sirWindowHandle_t hWindow, cons
 	     ( mutation.eKind == SIR_WINDOW_MUTATION_RESIZE && ( mutation.nWidth == 0 || mutation.nHeight == 0 ) ) ) {
 		return SIR_WINDOW_INVALID_ARGUMENT;
 	}
+	if ( mutation.eKind == SIR_WINDOW_MUTATION_TITLE ) {
+		char szTitle[SIR_WINDOW_TITLE_CAPACITY] = {};
+		if ( !sirWindowCopyTitle( mutation.pszTitle, 0, szTitle ) ) {
+			return SIR_WINDOW_INVALID_ARGUMENT;
+		}
+		sirWindowMutation_t nativeMutation = mutation;
+		nativeMutation.pszTitle = szTitle;
+		return m_pDriver->mutateWindow( hWindow.nSlot, nativeMutation );
+	}
 	return m_pDriver->mutateWindow( hWindow.nSlot, mutation );
 }
 
@@ -237,14 +317,9 @@ sirWindowResult_t SIRWindowSystem::enqueueRequest( sirWindowHandle_t hWindow, co
 	if ( pMutation != nullptr ) {
 		request.mutation = *pMutation;
 		if ( pMutation->eKind == SIR_WINDOW_MUTATION_TITLE ) {
-			uint32_t nLength = 0;
-			while ( nLength < SIR_WINDOW_REQUEST_TITLE_CAPACITY && pMutation->pszTitle[nLength] != '\0' ) {
-				++nLength;
-			}
-			if ( nLength == SIR_WINDOW_REQUEST_TITLE_CAPACITY ) {
+			if ( !sirWindowCopyTitle( pMutation->pszTitle, 0, request.szTitle ) ) {
 				return SIR_WINDOW_INVALID_ARGUMENT;
 			}
-			memcpy( request.szTitle, pMutation->pszTitle, nLength + 1 );
 			request.mutation.pszTitle = request.szTitle;
 		}
 	}

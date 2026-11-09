@@ -98,11 +98,17 @@ typedef struct sirWindowMutation_s
 	uint32_t nHeight;
 } sirWindowMutation_t;
 
+// No native window driver may inspect an unbounded caller-owned title.
+// nTitleBytes = 0 accepts a bounded NUL-terminated UTF-8 title. An explicit
+// byte count permits a nonterminated caller buffer; WindowSystem copies and
+// terminates it before crossing the internal native driver boundary.
+constexpr uint32_t SIR_WINDOW_TITLE_CAPACITY = 128;
 typedef struct sirWindowCreateDesc_s
 {
 	const char *pszTitle;
 	uint32_t nWidth;
 	uint32_t nHeight;
+	uint32_t nTitleBytes;
 } sirWindowCreateDesc_t;
 
 typedef struct sirWindowSnapshot_s
