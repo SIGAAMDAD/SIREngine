@@ -17,6 +17,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Core/Platform/Window/Windows/SIRWindowDriverWin32.h>
 #include <Core/Platform/Windows/SIRWin32InputBridge.h>
 #include <Core/Platform/Windows/SIRWindowsRawBackend.h>
+#include <assert.h>
 #include <stdio.h>
 
 static sirWindowWin32Dispatch_t sirConsumeNativeClose( const sirWindowWin32Message_t& message, void *pContext ) noexcept
@@ -116,6 +117,59 @@ static bool sirTestWin32MultiwindowInputRouting( void ) noexcept
 	}
 	input.shutdown();
 	return true;
+}
+
+// A consumer that marks ordinary focus/size messages handled must not
+// prevent the platform owner from recording native state transitions.
+static sirWindowWin32Dispatch_t sirConsumeNativeState( const sirWindowWin32Message_t& message, void *pContext ) noexcept
+{
+	( void )pContext;
+	const bool bHandled = message.nMessage == WM_SIZE || message.nMessage == WM_SETFOCUS || message.nMessage == WM_KILLFOCUS;
+	return { 0, bHandled };
+}
+
+static sirWindowWin32Dispatch_t sirTryToConsumeForegroundRawInput( const sirWindowWin32Message_t& message, void *pContext ) noexcept
+{
+	( void )pContext;
+	return { 0x7342, message.nMessage == WM_INPUT };
+}
+
+static bool sirTestWindowStateCannotBeSwallowedByInput( void ) noexcept
+{
+	SIRWindowDriverWin32 driver;
+	SIRWindowSystem windows( driver );
+	if ( windows.initialize() != SIR_SYSTEM_OK ) {
+		return false;
+	}
+	sirWindowHandle_t hWindow = {};
+	if ( windows.createWindow( { "native-state-owner", 640, 480 }, &hWindow ) != SIR_WINDOW_OK ||
+	     !driver.setMessageSink( sirConsumeNativeState, &windows ) ) {
+		return false;
+	}
+	sirWindowNativeLease_t lease = {};
+	sirWindowNativeView_t view = {};
+	if ( windows.acquireNativeLease( hWindow, &lease, &view ) != SIR_WINDOW_OK ) {
+		return false;
+	}
+	const HWND hNative = ( HWND )view.nNativeWindow;
+	( void )SendMessageW( hNative, WM_SIZE, SIZE_RESTORED, MAKELPARAM( 853, 491 ) );
+	( void )SendMessageW( hNative, WM_KILLFOCUS, 0, 0 );
+	( void )SendMessageW( hNative, WM_SETFOCUS, 0, 0 );
+	sirWindowSnapshot_t snapshot = {};
+	if ( windows.pumpEvents( 256 ) != SIR_WINDOW_OK || windows.querySnapshot( hWindow, &snapshot ) != SIR_WINDOW_OK ||
+	     snapshot.nWidth != 853 || snapshot.nHeight != 491 || !snapshot.bFocused ) {
+		return false;
+	}
+	assert( snapshot.nWidth == 853 );
+	// Raw foreground input uses DefWindowProcW to release system-owned
+	// HRAWINPUT state even when the consumer attempts to swallow it.
+	if ( !driver.setMessageSink( sirTryToConsumeForegroundRawInput, &windows ) ||
+	     SendMessageW( hNative, WM_INPUT, RIM_INPUT, 0 ) == ( LRESULT )0x7342 ) {
+		return false;
+	}
+	( void )driver.setMessageSink( nullptr, nullptr );
+	return windows.releaseNativeLease( lease ) == SIR_WINDOW_OK && windows.destroyWindow( hWindow ) == SIR_WINDOW_OK &&
+	       windows.shutdown() == SIR_SYSTEM_OK;
 }
 
 static bool sirTestFullscreenRoundTrip( void ) noexcept
@@ -230,7 +284,7 @@ static bool sirTestConcurrentWin32WindowClassOwners( void ) noexcept
 int main( void )
 {
 	if ( !sirTestConcurrentWin32WindowClassOwners() || !sirTestWin32BoundedNativeEvents() || !sirTestWin32MultiwindowInputRouting() ||
-	     !sirTestFullscreenRoundTrip() || !sirTestWindowClassRetirementOrder() ) {
+	     !sirTestFullscreenRoundTrip() || !sirTestWindowClassRetirementOrder() || !sirTestWindowStateCannotBeSwallowedByInput() ) {
 		fputs( "SIRWindowWin32DriverTests FAIL\n", stderr );
 		return 1;
 	}

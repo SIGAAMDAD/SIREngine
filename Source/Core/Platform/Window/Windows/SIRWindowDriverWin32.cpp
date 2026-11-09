@@ -9,7 +9,7 @@ static UINT sirCurrentWindowDpi( HWND hWindow ) noexcept
 {
 	const HMODULE hUser32 = GetModuleHandleW( L"user32.dll" );
 	if ( hUser32 != nullptr ) {
-		typedef UINT( WINAPI *sirGetDpiFn_t )( HWND );
+		typedef UINT( WINAPI * sirGetDpiFn_t )( HWND );
 		const sirGetDpiFn_t pGetDpi = ( sirGetDpiFn_t )GetProcAddress( hUser32, "GetDpiForWindow" );
 		if ( pGetDpi != nullptr ) {
 			const UINT nDpi = pGetDpi( hWindow );
@@ -25,16 +25,14 @@ static UINT sirCurrentWindowDpi( HWND hWindow ) noexcept
 static BOOL sirAdjustWindowFrame( RECT *pFrame, DWORD nStyle, DWORD nExStyle, HWND hWindow ) noexcept
 {
 	const HMODULE hUser32 = GetModuleHandleW( L"user32.dll" );
-	typedef UINT( WINAPI *sirGetDpiFn_t )( HWND );
-	typedef UINT( WINAPI *sirGetSystemDpiFn_t )( void );
-	typedef BOOL( WINAPI *sirAdjustForDpiFn_t )( LPRECT, DWORD, BOOL, DWORD, UINT );
+	typedef UINT( WINAPI * sirGetDpiFn_t )( HWND );
+	typedef UINT( WINAPI * sirGetSystemDpiFn_t )( void );
+	typedef BOOL( WINAPI * sirAdjustForDpiFn_t )( LPRECT, DWORD, BOOL, DWORD, UINT );
 	if ( hUser32 != nullptr ) {
 		const sirGetDpiFn_t pGetDpi = ( sirGetDpiFn_t )GetProcAddress( hUser32, "GetDpiForWindow" );
 		const sirGetSystemDpiFn_t pGetSystemDpi = ( sirGetSystemDpiFn_t )GetProcAddress( hUser32, "GetDpiForSystem" );
 		const sirAdjustForDpiFn_t pAdjust = ( sirAdjustForDpiFn_t )GetProcAddress( hUser32, "AdjustWindowRectExForDpi" );
-		const UINT nDpi = hWindow != nullptr && pGetDpi != nullptr ? pGetDpi( hWindow ) :
-		                  pGetSystemDpi != nullptr                         ? pGetSystemDpi() :
-		                                                                  96;
+		const UINT nDpi = hWindow != nullptr && pGetDpi != nullptr ? pGetDpi( hWindow ) : pGetSystemDpi != nullptr ? pGetSystemDpi() : 96;
 		if ( pAdjust != nullptr && nDpi != 0 ) {
 			return pAdjust( pFrame, nStyle, FALSE, nExStyle, nDpi );
 		}
@@ -80,8 +78,7 @@ sirWindowResult_t SIRWindowDriverWin32::initialize( void ) noexcept
 				return SIR_WINDOW_NATIVE_FAILURE;
 			}
 			WNDCLASSW existing = {};
-			if ( !GetClassInfoW( definition.hInstance, s_szWindowClass, &existing ) ||
-			     existing.lpfnWndProc != windowProc ) {
+			if ( !GetClassInfoW( definition.hInstance, s_szWindowClass, &existing ) || existing.lpfnWndProc != windowProc ) {
 				ReleaseSRWLockExclusive( &s_WindowClassLock );
 				return SIR_WINDOW_NATIVE_FAILURE;
 			}
@@ -237,16 +234,14 @@ sirWindowResult_t SIRWindowDriverWin32::mutateWindow( uint32_t nSlot, const sirW
 		const DWORD nStyle = ( DWORD )GetWindowLongPtrW( hWindow, GWL_STYLE );
 		const DWORD nExStyle = ( DWORD )GetWindowLongPtrW( hWindow, GWL_EXSTYLE );
 		SetLastError( 0 );
-		if ( SetWindowLongPtrW( hWindow, GWL_STYLE, ( LONG_PTR )( nStyle & ~WS_OVERLAPPEDWINDOW ) ) == 0 &&
-		     GetLastError() != 0 ) {
+		if ( SetWindowLongPtrW( hWindow, GWL_STYLE, ( LONG_PTR )( nStyle & ~WS_OVERLAPPEDWINDOW ) ) == 0 && GetLastError() != 0 ) {
 			return SIR_WINDOW_NATIVE_FAILURE;
 		}
-		if ( !SetWindowPos( hWindow, HWND_TOP, info.rcMonitor.left, info.rcMonitor.top,
-		                    info.rcMonitor.right - info.rcMonitor.left, info.rcMonitor.bottom - info.rcMonitor.top,
-		                    SWP_FRAMECHANGED | SWP_NOOWNERZORDER ) ) {
+		if ( !SetWindowPos( hWindow, HWND_TOP, info.rcMonitor.left, info.rcMonitor.top, info.rcMonitor.right - info.rcMonitor.left,
+		                    info.rcMonitor.bottom - info.rcMonitor.top, SWP_FRAMECHANGED | SWP_NOOWNERZORDER ) ) {
 			( void )SetWindowLongPtrW( hWindow, GWL_STYLE, ( LONG_PTR )nStyle );
 			( void )SetWindowPos( hWindow, nullptr, 0, 0, 0, 0,
-			                         SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE );
+			                      SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE );
 			return SIR_WINDOW_NATIVE_FAILURE;
 		}
 		slot.nWindowedStyle = nStyle;
@@ -263,8 +258,7 @@ sirWindowResult_t SIRWindowDriverWin32::mutateWindow( uint32_t nSlot, const sirW
 		( void )SetWindowLongPtrW( hWindow, GWL_STYLE, ( LONG_PTR )slot.nWindowedStyle );
 		( void )SetWindowLongPtrW( hWindow, GWL_EXSTYLE, ( LONG_PTR )slot.nWindowedExStyle );
 		if ( !SetWindowPlacement( hWindow, &slot.windowedPlacement ) ||
-		     !SetWindowPos( hWindow, nullptr, 0, 0, 0, 0,
-		                     SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE ) ) {
+		     !SetWindowPos( hWindow, nullptr, 0, 0, 0, 0, SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE ) ) {
 			return SIR_WINDOW_NATIVE_FAILURE;
 		}
 		slot.bFullscreen = false;
@@ -321,13 +315,6 @@ LRESULT CALLBACK SIRWindowDriverWin32::windowProc( HWND hWindow, UINT nMessage, 
 		if ( nMessage == WM_NCDESTROY ) {
 			SetWindowLongPtrW( hWindow, GWLP_USERDATA, 0 );
 		}
-		if ( pDriver->m_pSink != nullptr ) {
-			const sirWindowWin32Message_t message = { ( uintptr_t )hWindow, nMessage, ( uintptr_t )nWParam, ( intptr_t )nLParam };
-			const sirWindowWin32Dispatch_t result = pDriver->m_pSink( message, pDriver->m_pSinkContext );
-			if ( result.bHandled ) {
-				return ( LRESULT )result.nResult;
-			}
-		}
 		if ( nMessage == WM_SHOWWINDOW ) {
 			pDriver->queueEvent( pSlot->nIndex, nWParam ? SIR_WINDOW_EVENT_SHOWN : SIR_WINDOW_EVENT_HIDDEN, 0, 0 );
 		} else if ( nMessage == WM_SIZE ) {
@@ -342,8 +329,8 @@ LRESULT CALLBACK SIRWindowDriverWin32::windowProc( HWND hWindow, UINT nMessage, 
 		} else if ( nMessage == WM_DISPLAYCHANGE ) {
 			RECT client = {};
 			if ( GetClientRect( hWindow, &client ) ) {
-				pDriver->queueEvent( pSlot->nIndex, SIR_WINDOW_EVENT_DISPLAY_CHANGED,
-				                     ( uint32_t )( client.right - client.left ), ( uint32_t )( client.bottom - client.top ) );
+				pDriver->queueEvent( pSlot->nIndex, SIR_WINDOW_EVENT_DISPLAY_CHANGED, ( uint32_t )( client.right - client.left ),
+				                     ( uint32_t )( client.bottom - client.top ) );
 			}
 		} else if ( nMessage == WM_DPICHANGED ) {
 			const RECT *pSuggested = ( const RECT * )nLParam;
@@ -356,6 +343,17 @@ LRESULT CALLBACK SIRWindowDriverWin32::windowProc( HWND hWindow, UINT nMessage, 
 			pDriver->queueEvent( pSlot->nIndex, SIR_WINDOW_EVENT_FOCUS_GAINED, 0, 0 );
 		} else if ( nMessage == WM_KILLFOCUS ) {
 			pDriver->queueEvent( pSlot->nIndex, SIR_WINDOW_EVENT_FOCUS_LOST, 0, 0 );
+		}
+		if ( pDriver->m_pSink != nullptr ) {
+			const sirWindowWin32Message_t message = { ( uintptr_t )hWindow, nMessage, ( uintptr_t )nWParam, ( intptr_t )nLParam };
+			const sirWindowWin32Dispatch_t result = pDriver->m_pSink( message, pDriver->m_pSinkContext );
+			// Input may consume text and pointer decisions, never the native
+			// window state above. Foreground raw input and native teardown
+			// must still reach DefWindowProcW for OS-owned cleanup.
+			if ( result.bHandled && nMessage != WM_NCDESTROY &&
+			     !( nMessage == WM_INPUT && GET_RAWINPUT_CODE_WPARAM( nWParam ) == RIM_INPUT ) ) {
+				return ( LRESULT )result.nResult;
+			}
 		}
 	}
 	return DefWindowProcW( hWindow, nMessage, nWParam, nLParam );
