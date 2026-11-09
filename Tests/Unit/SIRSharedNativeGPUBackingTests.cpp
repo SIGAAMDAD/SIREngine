@@ -260,6 +260,18 @@ int main( void )
 			CHECK( frameGraph.compile( caps, &compiled ) == SIR_GRAPHICS_SUCCESS );
 			CHECK( compiled.nPassCount == 1 );
 			CHECK( gpu.view.nNativeResourceToken == physics.view.nNativeResourceToken && device.nBuffersCreated == 1 );
+			// A different but generation-valid native resource handle cannot release
+			// a canonical buffer lease or retire its physical allocation.
+			sirNativeGPUBufferLease_t forgedLease = gpu;
+			forgedLease.hNative.nSlot = gpu.hNative.nSlot + 1;
+			CHECK( owner.releaseBuffer( forgedLease, { 11, 4, 1, 3, { 5, 0, 0, 0 } } ) == SIR_RESOURCE_RESULT_INVALID_HANDLE );
+			forgedLease = gpu;
+			forgedLease.hNative.nGeneration = gpu.hNative.nGeneration + 1;
+			CHECK( owner.releaseBuffer( forgedLease, { 11, 4, 1, 3, { 5, 0, 0, 0 } } ) == SIR_RESOURCE_RESULT_INVALID_HANDLE );
+			sirNativeGPUBufferBacking_t forgedBacking = backing;
+			forgedBacking.hNative.nSlot = backing.hNative.nSlot + 1;
+			CHECK( owner.retireBuffer( forgedBacking, { 11, 4, 1, 3, { 5, 0, 0, 0 } } ) == SIR_RESOURCE_RESULT_INVALID_HANDLE );
+			CHECK( device.nBuffersCreated == 1 && device.nBuffersRetired == 0 );
 			CHECK( owner.retireBuffer( backing, { 11, 4, 1, 3, { 5, 0, 0, 0 } } ) == SIR_RESOURCE_RESULT_SUCCESS );
 			CHECK( owner.releaseBuffer( gpu, { 11, 4, 1, 3, { 5, 0, 0, 0 } } ) == SIR_RESOURCE_RESULT_SUCCESS );
 			CHECK( owner.releaseBuffer( physics, { 12, 4, 1, 3, { 3, 0, 0, 0 } } ) == SIR_RESOURCE_RESULT_SUCCESS );

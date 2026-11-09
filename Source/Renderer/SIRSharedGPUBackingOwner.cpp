@@ -55,6 +55,11 @@ SIRSharedGPUBackingOwner::NativeBacking *SIRSharedGPUBackingOwner::findNative( u
 	return nullptr;
 }
 
+static bool sameSharedNativeHandle( const sirGraphicsHandle_t& a, const sirGraphicsHandle_t& b ) noexcept
+{
+	return a.nSlot == b.nSlot && a.nGeneration == b.nGeneration && a.nDeviceGeneration == b.nDeviceGeneration && a.eType == b.eType;
+}
+
 bool SIRSharedGPUBackingOwner::releaseNative( void *pContext, uint64_t nNativeToken ) noexcept
 {
 	return pContext && ( ( SIRSharedGPUBackingOwner * )pContext )->retireNative( nNativeToken );
@@ -176,8 +181,11 @@ SIRResourceResult SIRSharedGPUBackingOwner::acquireBuffer( const SIRResourceRead
 SIRResourceResult SIRSharedGPUBackingOwner::releaseBuffer( const sirNativeGPUBufferLease_t& rLease,
                                                            const sirProviderCompletionSet_t& rRequired ) noexcept
 {
-	if ( !m_pRegistry || !findNative( rLease.view.nNativeResourceToken ) ||
-	     !sirGraphicsIsHandleValid( rLease.hNative, SIR_GRAPHICS_HANDLE_BUFFER, m_nDeviceGeneration ) ) {
+	NativeBacking *pNative = findNative( rLease.view.nNativeResourceToken );
+	// A valid GPU handle belonging to another allocation must not be accepted as
+	// the native object of this GRDG lease. Compare the complete live identity.
+	if ( !m_pRegistry || !pNative || !sirGraphicsIsHandleValid( rLease.hNative, SIR_GRAPHICS_HANDLE_BUFFER, m_nDeviceGeneration ) ||
+	     !sameSharedNativeHandle( pNative->hNative, rLease.hNative ) ) {
 		return SIR_RESOURCE_RESULT_INVALID_HANDLE;
 	}
 	return m_pRegistry->releaseSharedDeviceView( rLease.view, rRequired );
@@ -189,7 +197,7 @@ SIRResourceResult SIRSharedGPUBackingOwner::retireBuffer( const sirNativeGPUBuff
 	NativeBacking *pNative = findNative( rBacking.nNativeToken );
 	if ( !m_pRegistry || !pNative || pNative->hBacking.m_nSlot != rBacking.hBacking.m_nSlot ||
 	     pNative->hBacking.m_nGeneration != rBacking.hBacking.m_nGeneration ||
-	     pNative->hNative.nGeneration != rBacking.hNative.nGeneration ) {
+	     !sameSharedNativeHandle( pNative->hNative, rBacking.hNative ) ) {
 		return SIR_RESOURCE_RESULT_INVALID_HANDLE;
 	}
 	return m_pRegistry->retireRepresentation( rBacking.hBacking, rRequired );
