@@ -23,6 +23,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #endif
 
 #include <Renderer/SIRGraphicsTypes.h>
+#include <Renderer/SIRSharedGPUBackingOwner.h>
 
 typedef struct sirFrameGraphResource_s
 {
@@ -33,6 +34,10 @@ typedef struct sirFrameGraphResource_s
 	uint32_t nMipLevels;
 	uint32_t nArrayLayers;
 	bool bImported;
+	// Nonzero only for a GRDG-backed immutable buffer import. These are IDs,
+	// not second storage handles; the caller retains the provider borrow.
+	uint64_t nCanonicalBackingId;
+	uint64_t nCanonicalNativeToken;
 } sirFrameGraphResource_t;
 
 typedef struct sirFrameGraphPass_s
@@ -140,6 +145,14 @@ public:
 
 	void reset( void ) noexcept;
 	sirGraphicsResult_t addResource( const sirFrameGraphResource_t& resource, uint32_t *pIndex ) noexcept;
+	// Imports a verified GRDG-native buffer lease. Repeated subrange imports
+	// from one physical backing always return the same FrameGraph resource.
+	sirGraphicsResult_t importSharedBuffer( const sirNativeGPUBufferLease_t& rLease, sirGraphicsState_t eInitialState,
+											sirGraphicsQueue_t eInitialQueue, uint32_t *pIndex ) noexcept;
+	// Subrange declarations must remain within the caller's pinned read-only
+	// GRDG view. The FrameGraph only stores metadata and does not own/clone bytes.
+	sirGraphicsResult_t addSharedBufferRead( uint32_t nPass, uint32_t nResource, const sirNativeGPUBufferLease_t& rLease,
+											 uint64_t nOffsetBytes, uint64_t nBytes, sirGraphicsState_t eState ) noexcept;
 	sirGraphicsResult_t addPass( const sirFrameGraphPass_t& pass, uint32_t *pIndex ) noexcept;
 	sirGraphicsResult_t addAccess( const sirFrameGraphAccess_t& access ) noexcept;
 	sirGraphicsResult_t addDependency( uint32_t nBefore, uint32_t nAfter ) noexcept;
@@ -167,6 +180,15 @@ private:
 	sirFrameGraphResource_t m_szResources[SIR_FRAMEGRAPH_MAX_RESOURCES] = {};
 	sirFrameGraphPass_t m_szPasses[SIR_FRAMEGRAPH_MAX_PASSES] = {};
 	sirFrameGraphAccess_t m_szAccesses[SIR_FRAMEGRAPH_MAX_ACCESSES] = {};
+	struct SharedByteAccess
+	{
+		uint32_t nPass;
+		uint32_t nResource;
+		uint64_t nOffsetBytes;
+		uint64_t nBytes;
+	};
+	SharedByteAccess m_szSharedByteAccesses[SIR_FRAMEGRAPH_MAX_ACCESSES] = {};
+	uint32_t m_nSharedByteAccessCount = 0;
 	uint8_t m_szExplicitEdges[SIR_FRAMEGRAPH_MAX_PASSES * SIR_FRAMEGRAPH_MAX_PASSES] = {};
 	sirFrameGraphOutput_t m_szOutputs[SIR_FRAMEGRAPH_MAX_OUTPUTS] = {};
 	uint64_t m_nRevision = 1;

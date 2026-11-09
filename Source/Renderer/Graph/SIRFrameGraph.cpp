@@ -52,6 +52,7 @@ void SIRFrameGraph::reset( void ) noexcept
 	m_nPassCount = 0;
 	m_nResourceCount = 0;
 	m_nAccessCount = 0;
+	m_nSharedByteAccessCount = 0;
 	m_nOutputCount = 0;
 	++m_nRevision;
 	memset( m_szExplicitEdges, 0, sizeof( m_szExplicitEdges ) );
@@ -189,6 +190,66 @@ sirGraphicsResult_t SIRFrameGraph::addResource( const sirFrameGraphResource_t& r
 	return SIR_GRAPHICS_SUCCESS;
 }
 
+sirGraphicsResult_t SIRFrameGraph::importSharedBuffer( const sirNativeGPUBufferLease_t& rLease, sirGraphicsState_t eInitialState,
+													   sirGraphicsQueue_t eInitialQueue, uint32_t *pIndex ) noexcept
+{
+	if ( !pIndex || !rLease.view.bReadOnly || !rLease.view.nPhysicalBackingId || !rLease.view.nNativeResourceToken || !rLease.view.nBytes ||
+		 rLease.view.nOffset > UINT64_MAX - rLease.view.nBytes || !rLease.view.nBorrowGeneration || !rLease.view.nConsumerId ||
+		 !rLease.view.nDeviceGeneration || rLease.hNative.eType != SIR_GRAPHICS_HANDLE_BUFFER || !rLease.hNative.nGeneration ||
+		 rLease.hNative.nDeviceGeneration != rLease.view.nDeviceGeneration || eInitialQueue >= SIR_GRAPHICS_QUEUE_COUNT ||
+		 !isReadableState( eInitialState ) ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	for ( uint32_t iResource = 0; iResource < m_nResourceCount; ++iResource ) {
+		const sirFrameGraphResource_t& rExisting = m_szResources[iResource];
+		if ( rExisting.nCanonicalBackingId != rLease.view.nPhysicalBackingId ) {
+			continue;
+		}
+		if ( rExisting.nCanonicalNativeToken != rLease.view.nNativeResourceToken || rExisting.hImported.nSlot != rLease.hNative.nSlot ||
+			 rExisting.hImported.nGeneration != rLease.hNative.nGeneration ||
+			 rExisting.hImported.nDeviceGeneration != rLease.hNative.nDeviceGeneration || rExisting.eInitialQueue != eInitialQueue ||
+			 rExisting.eInitialState != eInitialState ) {
+			return SIR_GRAPHICS_INVALID_HANDLE;
+		}
+		*pIndex = iResource;
+		return SIR_GRAPHICS_SUCCESS;
+	}
+	const sirFrameGraphResource_t imported = { rLease.hNative,
+											   SIR_GRAPHICS_HANDLE_BUFFER,
+											   eInitialState,
+											   eInitialQueue,
+											   1,
+											   1,
+											   true,
+											   rLease.view.nPhysicalBackingId,
+											   rLease.view.nNativeResourceToken };
+	return addResource( imported, pIndex );
+}
+
+sirGraphicsResult_t SIRFrameGraph::addSharedBufferRead( uint32_t nPass, uint32_t nResource, const sirNativeGPUBufferLease_t& rLease,
+														uint64_t nOffsetBytes, uint64_t nBytes, sirGraphicsState_t eState ) noexcept
+{
+	if ( nPass >= m_nPassCount || nResource >= m_nResourceCount || !nBytes || !rLease.view.bReadOnly || !isReadableState( eState ) ||
+		 m_nSharedByteAccessCount >= SIR_FRAMEGRAPH_MAX_ACCESSES || nOffsetBytes < rLease.view.nOffset || nBytes > rLease.view.nBytes ||
+		 nOffsetBytes - rLease.view.nOffset > rLease.view.nBytes - nBytes ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	const sirFrameGraphResource_t& imported = m_szResources[nResource];
+	if ( !imported.bImported || imported.eType != SIR_GRAPHICS_HANDLE_BUFFER ||
+		 imported.nCanonicalBackingId != rLease.view.nPhysicalBackingId ||
+		 imported.nCanonicalNativeToken != rLease.view.nNativeResourceToken || imported.hImported.nSlot != rLease.hNative.nSlot ||
+		 imported.hImported.nGeneration != rLease.hNative.nGeneration ||
+		 imported.hImported.nDeviceGeneration != rLease.hNative.nDeviceGeneration ) {
+		return SIR_GRAPHICS_INVALID_HANDLE;
+	}
+	const sirGraphicsResult_t eAdded = addAccess( { nPass, nResource, 0, 1, 0, 1, eState, false } );
+	if ( eAdded != SIR_GRAPHICS_SUCCESS ) {
+		return eAdded;
+	}
+	m_szSharedByteAccesses[m_nSharedByteAccessCount++] = { nPass, nResource, nOffsetBytes, nBytes };
+	return SIR_GRAPHICS_SUCCESS;
+}
+
 sirGraphicsResult_t SIRFrameGraph::addPass( const sirFrameGraphPass_t& pass, uint32_t *pIndex ) noexcept
 {
 	if ( pIndex == nullptr || pass.eQueue >= SIR_GRAPHICS_QUEUE_COUNT ) {
@@ -217,6 +278,11 @@ sirGraphicsResult_t SIRFrameGraph::addAccess( const sirFrameGraphAccess_t& acces
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( access.nBaseLayer >= resource.nArrayLayers || access.nLayerCount > resource.nArrayLayers - access.nBaseLayer ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	// Canonical GRDG source imports are immutable throughout this graph's
+	// lifetime. Mutable frame products require separately versioned backing.
+	if ( access.bWrite && resource.nCanonicalBackingId != 0 ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( access.bWrite ? !isWritableState( access.eState ) : !isReadableState( access.eState ) ) {

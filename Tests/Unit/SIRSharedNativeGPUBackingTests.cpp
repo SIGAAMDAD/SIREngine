@@ -10,6 +10,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 */
 
 #include <Renderer/SIRSharedGPUBackingOwner.h>
+#include <Renderer/Graph/SIRFrameGraph.h>
 #include <Renderer/SIRGraphicsValidation.h>
 
 #include <cstdio>
@@ -228,6 +229,36 @@ int main( void )
 			physicsReq.nCompletionProviderId = 12;
 			CHECK( owner.acquireBuffer( scope, source, physicsReq, &physics ) == SIR_RESOURCE_RESULT_SUCCESS );
 			CHECK( gpu.hNative.nSlot == physics.hNative.nSlot && gpu.view.nPhysicalBackingId == physics.view.nPhysicalBackingId );
+			SIRFrameGraph frameGraph;
+			uint32_t firstImport = UINT32_MAX, secondImport = UINT32_MAX, passId = UINT32_MAX;
+			CHECK( frameGraph.importSharedBuffer( gpu, SIR_GRAPHICS_STATE_SHADER_READ, SIR_GRAPHICS_QUEUE_DIRECT, &firstImport ) ==
+			       SIR_GRAPHICS_SUCCESS );
+			CHECK( frameGraph.importSharedBuffer( physics, SIR_GRAPHICS_STATE_SHADER_READ, SIR_GRAPHICS_QUEUE_DIRECT, &secondImport ) ==
+			       SIR_GRAPHICS_SUCCESS );
+			CHECK( firstImport == secondImport && frameGraph.getResourceCount() == 1 );
+			sirNativeGPUBufferLease_t mismatched = physics;
+			++mismatched.view.nNativeResourceToken;
+			CHECK( frameGraph.importSharedBuffer( mismatched, SIR_GRAPHICS_STATE_SHADER_READ, SIR_GRAPHICS_QUEUE_DIRECT, &secondImport ) ==
+			       SIR_GRAPHICS_INVALID_HANDLE );
+			mismatched = physics;
+			mismatched.view.nOffset = UINT64_MAX;
+			CHECK( frameGraph.importSharedBuffer( mismatched, SIR_GRAPHICS_STATE_SHADER_READ, SIR_GRAPHICS_QUEUE_DIRECT, &secondImport ) ==
+			       SIR_GRAPHICS_INVALID_ARGUMENT );
+			CHECK( frameGraph.addPass( { SIR_GRAPHICS_QUEUE_DIRECT, 0, true }, &passId ) == SIR_GRAPHICS_SUCCESS );
+			CHECK( frameGraph.addSharedBufferRead( passId, firstImport, gpu, gpu.view.nOffset, 64, SIR_GRAPHICS_STATE_SHADER_READ ) ==
+			       SIR_GRAPHICS_SUCCESS );
+			CHECK( frameGraph.addSharedBufferRead( passId, firstImport, gpu, 0, 0, SIR_GRAPHICS_STATE_SHADER_READ ) ==
+			       SIR_GRAPHICS_INVALID_ARGUMENT );
+			CHECK( frameGraph.addSharedBufferRead( passId, firstImport, gpu, 200, 64, SIR_GRAPHICS_STATE_SHADER_READ ) ==
+			       SIR_GRAPHICS_INVALID_ARGUMENT );
+			CHECK( frameGraph.addAccess( { passId, firstImport, 0, 1, 0, 1, SIR_GRAPHICS_STATE_SHADER_WRITE, true } ) ==
+			       SIR_GRAPHICS_INVALID_ARGUMENT );
+			sirGraphicsCapabilities_t caps = {};
+			caps.nDeviceGeneration = 4;
+			caps.nQueueMask = 1u << SIR_GRAPHICS_QUEUE_DIRECT;
+			sirFrameGraphCompiled_t compiled = {};
+			CHECK( frameGraph.compile( caps, &compiled ) == SIR_GRAPHICS_SUCCESS );
+			CHECK( compiled.nPassCount == 1 );
 			CHECK( gpu.view.nNativeResourceToken == physics.view.nNativeResourceToken && device.nBuffersCreated == 1 );
 			CHECK( owner.retireBuffer( backing, { 11, 4, 1, 3, { 5, 0, 0, 0 } } ) == SIR_RESOURCE_RESULT_SUCCESS );
 			CHECK( owner.releaseBuffer( gpu, { 11, 4, 1, 3, { 5, 0, 0, 0 } } ) == SIR_RESOURCE_RESULT_SUCCESS );
