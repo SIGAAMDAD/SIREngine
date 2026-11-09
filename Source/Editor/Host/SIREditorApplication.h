@@ -20,6 +20,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
     #pragma once
 #endif
 // clang-format on
+#include <Core/SIRApplication.h>
 
 typedef enum sirEditorApplicationResult_e : uint8_t
 {
@@ -28,20 +29,26 @@ typedef enum sirEditorApplicationResult_e : uint8_t
 	SIR_EDITOR_APP_NOT_INITIALIZED = 2,
 	SIR_EDITOR_APP_ALREADY_INITIALIZED = 3,
 	SIR_EDITOR_APP_CALLBACK_FAILED = 4,
-	SIR_EDITOR_APP_FRAME_EXHAUSTED = 5
+	SIR_EDITOR_APP_FRAME_EXHAUSTED = 5,
+	SIR_EDITOR_APP_HOST_FAILED = 6
 } sirEditorApplicationResult_t;
 
 typedef bool ( *sirEditorFrameCallback_t )( uint64_t nFrame, void *pContext ) noexcept;
 
-// Main-thread, frame-bounded editor application pump. Window/input/render backends
-// can supply one callback later without changing lifecycle or frame ownership.
+// The editor is a system registered with the canonical SIRApplication.
+// Window/input dispatch and core system ordering remain engine-owned.
 class SIREditorApplication
 {
 public:
 	SIREditorApplication( void ) noexcept;
+	SIREditorApplication( const SIREditorApplication& ) = delete;
+	~SIREditorApplication( void ) noexcept;
+
+	SIREditorApplication& operator=( const SIREditorApplication& ) = delete;
 
 	uint64_t getFrameCount( void ) const noexcept;
 	bool isRunning( void ) const noexcept;
+	sirAppState_t getCoreState( void ) const noexcept;
 
 	sirEditorApplicationResult_t initialize( sirEditorFrameCallback_t pfnFrame, void *pContext ) noexcept;
 	sirEditorApplicationResult_t tick( void ) noexcept;
@@ -51,10 +58,27 @@ public:
 
 protected:
 private:
+	class FrameSystem final : public SIREngineSystem
+	{
+	public:
+		explicit FrameSystem( SIREditorApplication& owner ) noexcept;
+
+		sirSystemResult_t initialize( void ) noexcept override;
+		void update( float fDeltaSeconds ) noexcept override;
+		sirSystemResult_t shutdown( void ) noexcept override;
+
+	protected:
+	private:
+		SIREditorApplication& m_Owner;
+	};
+
+	void updateFrame( void ) noexcept;
+
+	SIRApplication m_Application;
+	FrameSystem m_FrameSystem;
 	sirEditorFrameCallback_t m_pfnFrame;
 	void *m_pContext;
-	uint64_t m_nFrameCount;
-	bool m_bInitialized;
 	bool m_bRunning;
+	bool m_bFrameFailed;
 };
 #endif // __SIRENGINE_SIREDITORAPPLICATION_H__
