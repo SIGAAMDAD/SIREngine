@@ -1,0 +1,1309 @@
+#ifndef TERRAIN3D_VT_CONSUMER_SAMPLE_INC_GLSL
+#define TERRAIN3D_VT_CONSUMER_SAMPLE_INC_GLSL
+
+#ifndef TERRAIN3D_VT_COMMON_INC_GLSL
+#error "terrain_vt_consumer_sample_inc.glslinc requires terrain_vt_common_inc.glslinc"
+#endif
+#ifndef T3D_VT_CONSUMER_ALLOCATION
+#error "T3D_VT_CONSUMER_ALLOCATION(index) must be defined"
+#endif
+#ifndef T3D_VT_CONSUMER_MIP_LAYOUT
+#error "T3D_VT_CONSUMER_MIP_LAYOUT(index) must be defined"
+#endif
+#ifndef T3D_VT_CONSUMER_TAIL
+#error "T3D_VT_CONSUMER_TAIL(index) must be defined"
+#endif
+#ifndef T3D_VT_CONSUMER_ALBEDO_BANK_GRAD
+#error "T3D_VT_CONSUMER_ALBEDO_BANK_GRAD(layer, uv, grad_x, grad_y) must be defined"
+#endif
+#ifndef T3D_VT_CONSUMER_NORMAL_BANK_GRAD
+#error "T3D_VT_CONSUMER_NORMAL_BANK_GRAD(layer, uv, grad_x, grad_y) must be defined"
+#endif
+#ifndef T3D_VT_CONSUMER_SURFACE_BANK_GRAD
+#error "T3D_VT_CONSUMER_SURFACE_BANK_GRAD(layer, uv, grad_x, grad_y) must be defined"
+#endif
+#ifndef T3D_VT_CONSUMER_ALBEDO_TAIL_LOD0
+#error "T3D_VT_CONSUMER_ALBEDO_TAIL_LOD0(uv) must be defined"
+#endif
+#ifndef T3D_VT_CONSUMER_NORMAL_TAIL_LOD0
+#error "T3D_VT_CONSUMER_NORMAL_TAIL_LOD0(uv) must be defined"
+#endif
+#ifndef T3D_VT_CONSUMER_SURFACE_TAIL_LOD0
+#error "T3D_VT_CONSUMER_SURFACE_TAIL_LOD0(uv) must be defined"
+#endif
+#ifndef T3D_VT_CONSUMER_ALBEDO_TAIL_SIZE
+#error "T3D_VT_CONSUMER_ALBEDO_TAIL_SIZE() must be defined"
+#endif
+#ifndef T3D_VT_CONSUMER_NORMAL_TAIL_SIZE
+#error "T3D_VT_CONSUMER_NORMAL_TAIL_SIZE() must be defined"
+#endif
+#ifndef T3D_VT_CONSUMER_SURFACE_TAIL_SIZE
+#error "T3D_VT_CONSUMER_SURFACE_TAIL_SIZE() must be defined"
+#endif
+
+struct T3DVTConsumerFootprint
+{
+	vec2 wrapped_uv;
+	vec2 ddx_uv;
+	vec2 ddy_uv;
+	float mip_bias;
+	uint repeat_uv;
+	uint filter_mode;
+	uint nearest;
+	uint anisotropic;
+	uint trilinear;
+	uint allocation_count;
+	uint page_count;
+};
+
+struct T3DVTConsumerAddressPlan
+{
+	uint valid;
+	uint allocation_id;
+	uint base_mip;
+	uint requested_mip;
+	uint requested_mip1;
+	float mip_fraction;
+	uint base_packed_extent;
+	uint requested_packed_extent;
+	uint requested_page_offset;
+	uint requested_page;
+	T3DVTAllocation allocation;
+};
+
+struct T3DVTConsumerAddress
+{
+	uint valid;
+	uint allocation_id;
+	uint generation;
+	uint content_id;
+	uint allocation_count;
+	uint page_count;
+	uint layer;
+	uint physical_family;
+	uint tail_index;
+	uint tail_channel_mask;
+	uint resolved_mip;
+	uint resolved_packed_extent;
+	uint requested_mip;
+	uint requested_mip1;
+	uint filter_mode;
+	uint nearest;
+	uint anisotropic;
+	uint trilinear;
+	float mip_fraction;
+	vec2 wrapped_uv;
+	vec2 tile_uv;
+	vec2 ddx_uv;
+	vec2 ddy_uv;
+};
+
+struct T3DVTConsumerPageSet3
+{
+	T3DVTConsumerAddress channel0;
+	T3DVTConsumerAddress channel1;
+	T3DVTConsumerAddress channel2;
+};
+
+T3DVTConsumerAddress t3d_vt_consumer_invalid_address()
+{
+	T3DVTConsumerAddress address;
+	address.valid = 0u;
+	address.allocation_id = T3D_VT_INVALID_ALLOCATION;
+	address.generation = 0u;
+	address.content_id = 0u;
+	address.allocation_count = 0u;
+	address.page_count = 0u;
+	address.layer = 0u;
+	address.physical_family = T3D_VT_PHYSICAL_FORMAT_BC1_UNORM;
+	address.tail_index = T3D_VT_INVALID_TAIL;
+	address.tail_channel_mask = 0u;
+	address.resolved_mip = 0xffffffffu;
+	address.resolved_packed_extent = 0u;
+	address.requested_mip = 0u;
+	address.requested_mip1 = 0u;
+	address.filter_mode = T3D_VT_FILTER_LINEAR_MIPMAP;
+	address.nearest = 0u;
+	address.anisotropic = 0u;
+	address.trilinear = 0u;
+	address.mip_fraction = 0.0;
+	address.wrapped_uv = vec2(0.0);
+	address.tile_uv = vec2(0.0);
+	address.ddx_uv = vec2(0.0);
+	address.ddy_uv = vec2(0.0);
+	return address;
+}
+
+T3DVTConsumerAddressPlan t3d_vt_consumer_invalid_plan()
+{
+	T3DVTConsumerAddressPlan plan;
+	plan.valid = 0u;
+	plan.allocation_id = T3D_VT_INVALID_ALLOCATION;
+	plan.base_mip = 0u;
+	plan.requested_mip = 0u;
+	plan.requested_mip1 = 0u;
+	plan.mip_fraction = 0.0;
+	plan.base_packed_extent = 0u;
+	plan.requested_packed_extent = 0u;
+	plan.requested_page_offset = 0u;
+	plan.requested_page = T3D_VT_INVALID_PAGE;
+	plan.allocation = T3DVTAllocation(0u, 0u, 0u, 0u, T3D_VT_INVALID_TAIL, 0u, 0u, 0u);
+	return plan;
+}
+
+bool t3d_vt_consumer_filter_nearest(uint filter_mode)
+{
+	return t3d_vt_filter_mode_is_nearest(filter_mode);
+}
+
+bool t3d_vt_consumer_filter_anisotropic(uint filter_mode)
+{
+	return t3d_vt_filter_mode_is_anisotropic(filter_mode);
+}
+
+bool t3d_vt_consumer_filter_trilinear(uint filter_mode)
+{
+	return t3d_vt_filter_mode_is_trilinear(filter_mode);
+}
+
+uint t3d_vt_consumer_filter_sanitize(uint filter_mode)
+{
+	return filter_mode <= T3D_VT_FILTER_LINEAR_MIPMAP_ANISOTROPIC ? filter_mode : T3D_VT_FILTER_LINEAR_MIPMAP;
+}
+
+T3DVTConsumerFootprint t3d_vt_consumer_prepare_footprint(vec2 uv,
+vec2 ddx_uv,
+vec2 ddy_uv,
+float mip_bias,
+bool repeat_uv,
+uint filter_mode,
+uint allocation_count,
+uint page_count)
+{
+	T3DVTConsumerFootprint footprint;
+	uint resolved_filter_mode = t3d_vt_consumer_filter_sanitize(filter_mode);
+	footprint.wrapped_uv = repeat_uv ? fract(uv) : clamp(uv, vec2(0.0), vec2(0.999999));
+	footprint.ddx_uv = ddx_uv;
+	footprint.ddy_uv = ddy_uv;
+	footprint.mip_bias = mip_bias;
+	footprint.repeat_uv = repeat_uv ? 1u : 0u;
+	footprint.filter_mode = resolved_filter_mode;
+	footprint.nearest = t3d_vt_consumer_filter_nearest(resolved_filter_mode) ? 1u : 0u;
+	footprint.anisotropic = t3d_vt_consumer_filter_anisotropic(resolved_filter_mode) ? 1u : 0u;
+	footprint.trilinear = t3d_vt_consumer_filter_trilinear(resolved_filter_mode) ? 1u : 0u;
+	footprint.allocation_count = allocation_count;
+	footprint.page_count = page_count;
+	return footprint;
+}
+
+bool t3d_vt_consumer_load_allocation(uint allocation_id,
+T3DVTConsumerFootprint footprint,
+out T3DVTAllocation allocation,
+out uint mip_count,
+out uint base_mip)
+{
+	allocation = T3DVTAllocation(0u, 0u, 0u, 0u, T3D_VT_INVALID_TAIL, 0u, 0u, 0u);
+	mip_count = 0u;
+	base_mip = 0u;
+	if (allocation_id == T3D_VT_INVALID_ALLOCATION || allocation_id >= footprint.allocation_count)
+		return false;
+	allocation = T3D_VT_CONSUMER_ALLOCATION(allocation_id);
+	if (allocation.baseVirtualPage >= footprint.page_count
+	|| allocation.pageCount > footprint.page_count - allocation.baseVirtualPage
+	|| allocation.pageCount == 0u || !t3d_vt_allocation_quality_enabled(allocation)) return false;
+	mip_count = min(t3d_vt_allocation_mip_count(allocation), T3D_VT_MAX_MIPS);
+	if (mip_count == 0u || t3d_vt_allocation_mip0_width(allocation) == 0u || t3d_vt_allocation_mip0_height(allocation) == 0u)
+		return false;
+	base_mip = min(t3d_vt_allocation_quality_base_mip(allocation), mip_count - 1u);
+	return true;
+}
+
+bool t3d_vt_consumer_prepare_address_plan(uint allocation_id,
+T3DVTConsumerFootprint footprint,
+out T3DVTConsumerAddressPlan plan)
+{
+	plan = t3d_vt_consumer_invalid_plan();
+	T3DVTAllocation allocation;
+	uint mip_count;
+	uint base_mip;
+	if (!t3d_vt_consumer_load_allocation(allocation_id, footprint, allocation, mip_count, base_mip))
+		return false;
+
+	T3DVTMipLayout base_layout = T3D_VT_CONSUMER_MIP_LAYOUT(t3d_vt_mip_layout_index(allocation_id, base_mip));
+	uint base_width = t3d_vt_mip_layout_width(base_layout);
+	uint base_height = t3d_vt_mip_layout_height(base_layout);
+	if (base_layout.baseVirtualPage == T3D_VT_INVALID_PAGE || base_width == 0u || base_height == 0u)
+		return false;
+	vec2 virtual_texels = t3d_vt_filter_base_texels(allocation, base_mip);
+	bool mipmapped = t3d_vt_filter_mode_uses_mipmaps(footprint.filter_mode);
+	T3DVTContinuousLod filter_lod = t3d_vt_filter_continuous_lod(
+	mipmapped ? footprint.ddx_uv : vec2(0.0),
+	mipmapped ? footprint.ddy_uv : vec2(0.0),
+	virtual_texels,
+	base_mip,
+	mip_count,
+	mipmapped ? footprint.mip_bias : 0.0,
+	footprint.anisotropic != 0u,
+	footprint.trilinear != 0u);
+	uint requested_mip = filter_lod.mip0;
+	T3DVTMipLayout requested_layout = T3D_VT_CONSUMER_MIP_LAYOUT(t3d_vt_mip_layout_index(allocation_id, requested_mip));
+	uint width = t3d_vt_mip_layout_width(requested_layout);
+	uint height = t3d_vt_mip_layout_height(requested_layout);
+	if (requested_layout.baseVirtualPage == T3D_VT_INVALID_PAGE || width == 0u || height == 0u)
+		return false;
+	uvec2 page_coord = uvec2(min(uint(floor(footprint.wrapped_uv.x * float(width))), width - 1u),
+	min(uint(floor(footprint.wrapped_uv.y * float(height))), height - 1u));
+
+	plan.valid = 1u;
+	plan.allocation_id = allocation_id;
+	plan.base_mip = base_mip;
+	plan.requested_mip = requested_mip;
+	plan.requested_mip1 = filter_lod.mip1;
+	plan.mip_fraction = filter_lod.fraction;
+	plan.base_packed_extent = base_layout.packedExtent;
+	plan.requested_packed_extent = requested_layout.packedExtent;
+	plan.requested_page_offset = page_coord.y * width + page_coord.x;
+	plan.requested_page = requested_layout.baseVirtualPage + plan.requested_page_offset;
+	plan.allocation = allocation;
+	return true;
+}
+
+T3DVTConsumerAddress t3d_vt_consumer_finalize_address(uint allocation_id,
+T3DVTConsumerAddressPlan plan,
+T3DVTConsumerFootprint footprint,
+T3DVTResolveResult result,
+T3DVTConsumerAddress reuse)
+{
+	T3DVTConsumerAddress address = t3d_vt_consumer_invalid_address();
+	address.allocation_id = allocation_id;
+	address.generation = plan.allocation.generation;
+	address.content_id = plan.allocation.contentId;
+	address.allocation_count = footprint.allocation_count;
+	address.page_count = footprint.page_count;
+	address.requested_mip = plan.requested_mip;
+	address.requested_mip1 = plan.requested_mip1;
+	address.filter_mode = footprint.filter_mode;
+	address.nearest = footprint.nearest;
+	address.anisotropic = footprint.anisotropic;
+	address.trilinear = footprint.trilinear;
+	address.mip_fraction = plan.mip_fraction;
+	address.wrapped_uv = footprint.wrapped_uv;
+	// Preserve the current continuous source-space footprint independently of
+	// any reusable page-local coordinate. Never reconstruct these from fract().
+	address.ddx_uv = footprint.ddx_uv;
+	address.ddy_uv = footprint.ddy_uv;
+	uint flags = t3d_vt_resolve_flags(result);
+	if ((flags & T3D_VT_RESOLVE_PHYSICAL) != 0u)
+	{
+		uint resolved_mip = t3d_vt_resolve_resolved_mip(result);
+		T3DVTMipLayout resolved_layout = T3D_VT_CONSUMER_MIP_LAYOUT(t3d_vt_mip_layout_index(allocation_id, resolved_mip));
+		if (reuse.valid == 1u && reuse.resolved_mip == resolved_mip
+		&& reuse.resolved_packed_extent == resolved_layout.packedExtent && reuse.nearest == footprint.nearest)
+		{
+			address.tile_uv = reuse.tile_uv;
+		}
+		else
+		{
+			uint width = max(t3d_vt_mip_layout_width(resolved_layout), 1u);
+			uint height = max(t3d_vt_mip_layout_height(resolved_layout), 1u);
+			vec2 local = fract(footprint.wrapped_uv * vec2(float(width), float(height)));
+			address.tile_uv = (vec2(float(T3D_VT_PAGE_GUTTER)) + local * float(T3D_VT_PAGE_INTERIOR))
+			/ float(T3D_VT_PHYSICAL_TILE);
+			if (footprint.nearest != 0u)
+			{
+				address.tile_uv = (floor(address.tile_uv * float(T3D_VT_PHYSICAL_TILE)) + vec2(0.5)) / float(T3D_VT_PHYSICAL_TILE);
+			}
+		}
+		address.layer = t3d_vt_v1_physical_slot(result.physicalSlot);
+		address.physical_family = t3d_vt_v1_physical_family(result.physicalSlot);
+		address.resolved_mip = resolved_mip;
+		address.resolved_packed_extent = resolved_layout.packedExtent;
+		address.valid = 1u;
+		return address;
+	}
+	if ((flags & T3D_VT_RESOLVE_TAIL) != 0u && result.tailIndex != T3D_VT_INVALID_TAIL)
+	{
+		T3DVTTailMetadata tail = T3D_VT_CONSUMER_TAIL(result.tailIndex);
+		address.tail_index = result.tailIndex;
+		address.tail_channel_mask = tail.channelMask;
+		address.physical_family = (tail.channelMask & (1u << T3D_VT_PHYSICAL_FORMAT_BC7_UNORM)) != 0u
+		? T3D_VT_PHYSICAL_FORMAT_BC7_UNORM : T3D_VT_PHYSICAL_FORMAT_BC1_UNORM;
+		address.resolved_mip = t3d_vt_resolve_resolved_mip(result);
+		address.valid = 2u;
+	}
+	return address;
+}
+
+T3DVTConsumerAddress t3d_vt_consumer_resolve_plan(T3DVTConsumerAddressPlan plan,
+T3DVTConsumerFootprint footprint,
+T3DVTConsumerAddress reuse)
+{
+	if (plan.valid == 0u)
+		return t3d_vt_consumer_invalid_address();
+	T3DVTResolveResult result;
+	if (!t3d_vt_resolve_page_core_loaded(plan.allocation_id,
+	plan.requested_page,
+	plan.requested_mip,
+	footprint.allocation_count,
+	footprint.page_count,
+	plan.allocation,
+	result)) return t3d_vt_consumer_invalid_address();
+	return t3d_vt_consumer_finalize_address(plan.allocation_id, plan, footprint, result, reuse);
+}
+
+T3DVTConsumerAddress t3d_vt_consumer_resolve_address(uint allocation_id, T3DVTConsumerFootprint footprint)
+{
+	T3DVTConsumerAddressPlan plan;
+	if (!t3d_vt_consumer_prepare_address_plan(allocation_id, footprint, plan))
+		return t3d_vt_consumer_invalid_address();
+	return t3d_vt_consumer_resolve_plan(plan, footprint, t3d_vt_consumer_invalid_address());
+}
+
+T3DVTConsumerAddress t3d_vt_consumer_resolve_sibling(uint allocation_id,
+T3DVTConsumerFootprint footprint,
+T3DVTConsumerAddressPlan shared_plan,
+T3DVTConsumerAddress reuse)
+{
+	if (shared_plan.valid == 0u)
+		return t3d_vt_consumer_resolve_address(allocation_id, footprint);
+	T3DVTAllocation allocation;
+	uint mip_count;
+	uint base_mip;
+	if (!t3d_vt_consumer_load_allocation(allocation_id, footprint, allocation, mip_count, base_mip))
+	{
+		return t3d_vt_consumer_invalid_address();
+	}
+	if (!t3d_vt_prediction_page_set_sibling(shared_plan.allocation_id, shared_plan.allocation, allocation_id, allocation)
+	|| base_mip != shared_plan.base_mip || shared_plan.requested_mip >= mip_count)
+	{
+		return t3d_vt_consumer_resolve_address(allocation_id, footprint);
+	}
+	T3DVTMipLayout base_layout = T3D_VT_CONSUMER_MIP_LAYOUT(t3d_vt_mip_layout_index(allocation_id, base_mip));
+	T3DVTMipLayout requested_layout = T3D_VT_CONSUMER_MIP_LAYOUT(t3d_vt_mip_layout_index(allocation_id, shared_plan.requested_mip));
+	if (base_layout.packedExtent != shared_plan.base_packed_extent
+	|| requested_layout.baseVirtualPage == T3D_VT_INVALID_PAGE
+	|| requested_layout.packedExtent != shared_plan.requested_packed_extent)
+	{
+		return t3d_vt_consumer_resolve_address(allocation_id, footprint);
+	}
+	T3DVTConsumerAddressPlan plan = shared_plan;
+	plan.allocation_id = allocation_id;
+	plan.allocation = allocation;
+	plan.requested_page = requested_layout.baseVirtualPage + shared_plan.requested_page_offset;
+	return t3d_vt_consumer_resolve_plan(plan, footprint, reuse);
+}
+
+// Lazy channel resolution lets opacity reject a fragment before any other V1
+// channel walks the page table. Guard the base before adding sibling offsets.
+bool t3d_vt_consumer_material_page_set_valid(uint base_allocation, T3DVTConsumerFootprint footprint)
+{
+	return base_allocation != T3D_VT_INVALID_ALLOCATION && base_allocation < footprint.allocation_count
+	&& footprint.allocation_count - base_allocation >= T3D_VT_V1_RUNTIME_CHANNELS_PER_ALLOCATION;
+}
+
+T3DVTConsumerAddress t3d_vt_consumer_resolve_material_channel_v1(
+uint base_allocation, uint channel, T3DVTConsumerFootprint footprint)
+{
+	if (channel >= T3D_VT_V1_RUNTIME_CHANNELS_PER_ALLOCATION
+	|| !t3d_vt_consumer_material_page_set_valid(base_allocation, footprint))
+	{
+		return t3d_vt_consumer_invalid_address();
+	}
+	return t3d_vt_consumer_resolve_address(base_allocation + channel, footprint);
+}
+
+// Preserve opacity-first material ordering: callers resolve channel zero,
+// reject alpha, and only then reuse its plan for sibling channels. A sibling
+// with different extent/base MIP falls back to the complete resolver.
+T3DVTConsumerAddress t3d_vt_consumer_resolve_material_sibling_v1(uint base_allocation,
+uint channel, T3DVTConsumerFootprint footprint, T3DVTConsumerAddressPlan base_plan,
+T3DVTConsumerAddress albedo_address)
+{
+	if (channel >= T3D_VT_V1_RUNTIME_CHANNELS_PER_ALLOCATION
+	|| !t3d_vt_consumer_material_page_set_valid(base_allocation, footprint))
+	{
+		return t3d_vt_consumer_invalid_address();
+	}
+	return t3d_vt_consumer_resolve_sibling(base_allocation + channel, footprint, base_plan, albedo_address);
+}
+
+T3DVTConsumerPageSet3 t3d_vt_consumer_resolve_page_set3_v1(uint base_allocation, T3DVTConsumerFootprint footprint)
+{
+	T3DVTConsumerPageSet3 page_set;
+	if (base_allocation == T3D_VT_INVALID_ALLOCATION || base_allocation >= footprint.allocation_count
+	|| footprint.allocation_count - base_allocation < T3D_VT_V1_RUNTIME_CHANNELS_PER_ALLOCATION)
+	{
+		page_set.channel0 = t3d_vt_consumer_invalid_address();
+		page_set.channel1 = t3d_vt_consumer_invalid_address();
+		page_set.channel2 = t3d_vt_consumer_invalid_address();
+		return page_set;
+	}
+	T3DVTConsumerAddressPlan plan;
+	if (!t3d_vt_consumer_prepare_address_plan(base_allocation, footprint, plan))
+	{
+		page_set.channel0 = t3d_vt_consumer_invalid_address();
+		page_set.channel1 = t3d_vt_consumer_resolve_address(base_allocation + 1u, footprint);
+		page_set.channel2 = t3d_vt_consumer_resolve_address(base_allocation + 2u, footprint);
+		return page_set;
+	}
+	page_set.channel0 = t3d_vt_consumer_resolve_plan(plan, footprint, t3d_vt_consumer_invalid_address());
+	page_set.channel1 = t3d_vt_consumer_resolve_sibling(base_allocation + 1u, footprint, plan, page_set.channel0);
+	page_set.channel2 = t3d_vt_consumer_resolve_sibling(base_allocation + 2u, footprint, plan, page_set.channel0);
+	return page_set;
+}
+
+T3DVTBoundedFilterPlan t3d_vt_consumer_tail_plan(T3DVTConsumerAddress address, ivec2 atlas_size)
+{
+	T3DVTTailMetadata tail = T3D_VT_CONSUMER_TAIL(address.tail_index);
+	return t3d_vt_tail_filter_plan(tail, address.resolved_mip, address.wrapped_uv, address.ddx_uv, address.ddy_uv,
+	atlas_size, address.nearest != 0u, address.anisotropic != 0u);
+}
+
+// Gather alpha or reuse collapsed edge texels in depth/DNR.
+// These variants are independent experiments; both retain the original
+// four-fetch filter as the default. Physical bank/tail samplers use clamp-to-
+// edge with their base mip fixed at level zero by the RD sampler owner.
+#ifndef T3D_VT_ALPHA_GATHER
+#define T3D_VT_ALPHA_GATHER 0
+#endif
+#ifndef T3D_VT_ALPHA_EDGE_REUSE
+#define T3D_VT_ALPHA_EDGE_REUSE 0
+#endif
+#ifndef T3D_VT_INSTANCE_ALBEDO_SAMPLE_REUSE
+#define T3D_VT_INSTANCE_ALBEDO_SAMPLE_REUSE 0
+#endif
+
+// P37: optionally specialize the physical format family outside the tap loop.
+// Retains exact sample coordinates, format and summation order. Default-off:
+// compare instruction size, divergence, registers and frame timing first.
+#ifndef T3D_VT_ALBEDO_FAMILY_BRANCH_HOIST
+#define T3D_VT_ALBEDO_FAMILY_BRANCH_HOIST 0
+#endif
+
+// Physical UNORM VT albedo is stored in sRGB. Fetch four encoded texels
+// explicitly and blend after decoding to linear light (including the alpha).
+// P04: share the exact decode -> premultiply -> bilinear -> unpremultiply
+// arithmetic. Dimensions are constant across anisotropic taps and are queried
+// once by the caller, rather than inside every texture fetch helper.
+vec4 t3d_vt_consumer_linear_bilinear(vec4 v00, vec4 v10, vec4 v01, vec4 v11, vec2 fraction)
+{
+	v00.rgb *= v00.a; v10.rgb *= v10.a; v01.rgb *= v01.a; v11.rgb *= v11.a;
+	vec4 result = mix(mix(v00, v10, fraction.x), mix(v01, v11, fraction.x), fraction.y);
+	result.rgb = result.a > 0.00001 ? result.rgb / result.a : vec3(0.0);
+	return result;
+}
+
+vec4 t3d_vt_consumer_linear_bank_sample(sampler2DArray bank, ivec2 dims, vec2 uv, uint layer, uint nearest)
+{
+	ivec2 upper = max(dims - ivec2(1), ivec2(0));
+	int z = int(layer);
+	if (nearest != 0u)
+	{
+		ivec2 point = clamp(ivec2(floor(uv * vec2(dims))), ivec2(0), upper);
+		return t3d_vt_decode_srgb_albedo(texelFetch(bank, ivec3(point, z), 0));
+	}
+	vec2 pixel = uv * vec2(dims) - vec2(0.5);
+	ivec2 base = ivec2(floor(pixel));
+	vec2 fraction = fract(pixel);
+	ivec2 x0 = clamp(base, ivec2(0), upper);
+	ivec2 x1 = clamp(base + ivec2(1, 0), ivec2(0), upper);
+	ivec2 y1 = clamp(base + ivec2(0, 1), ivec2(0), upper);
+	ivec2 xy1 = clamp(base + ivec2(1, 1), ivec2(0), upper);
+	vec4 v00 = t3d_vt_decode_srgb_albedo(texelFetch(bank, ivec3(x0, z), 0));
+	vec4 v10 = t3d_vt_decode_srgb_albedo(texelFetch(bank, ivec3(x1, z), 0));
+	vec4 v01 = t3d_vt_decode_srgb_albedo(texelFetch(bank, ivec3(y1, z), 0));
+	vec4 v11 = t3d_vt_decode_srgb_albedo(texelFetch(bank, ivec3(xy1, z), 0));
+	return t3d_vt_consumer_linear_bilinear(v00, v10, v01, v11, fraction);
+}
+
+vec4 t3d_vt_consumer_linear_tail_sample(sampler2D tail, ivec2 dims, vec2 uv, uint nearest)
+{
+	ivec2 upper = max(dims - ivec2(1), ivec2(0));
+	if (nearest != 0u)
+	{
+		return t3d_vt_decode_srgb_albedo(texelFetch(tail, clamp(ivec2(floor(uv * vec2(dims))), ivec2(0), upper), 0));
+	}
+	vec2 pixel = uv * vec2(dims) - vec2(0.5);
+	ivec2 base = ivec2(floor(pixel));
+	vec2 fraction = fract(pixel);
+	vec4 a = t3d_vt_decode_srgb_albedo(texelFetch(tail, clamp(base, ivec2(0), upper), 0));
+	vec4 b = t3d_vt_decode_srgb_albedo(texelFetch(tail, clamp(base + ivec2(1, 0), ivec2(0), upper), 0));
+	vec4 c = t3d_vt_decode_srgb_albedo(texelFetch(tail, clamp(base + ivec2(0, 1), ivec2(0), upper), 0));
+	vec4 d = t3d_vt_decode_srgb_albedo(texelFetch(tail, clamp(base + ivec2(1, 1), ivec2(0), upper), 0));
+	return t3d_vt_consumer_linear_bilinear(a, b, c, d, fraction);
+}
+
+// Depth-only variants require the same filtered alpha but not the three
+// sRGB decode/premultiply/unpremultiply channels. Alpha is linear in the
+// source UNORM texture and mixes in the exact order of the original vec4.
+#if defined(T3D_FORWARD_DEPTH)
+float t3d_vt_consumer_alpha_bank_sample(sampler2DArray bank, ivec2 dims, vec2 uv, uint layer, uint nearest)
+{
+	ivec2 upper = max(dims - ivec2(1), ivec2(0));
+	int z = int(layer);
+	if (nearest != 0u)
+	{
+		ivec2 point = clamp(ivec2(floor(uv * vec2(dims))), ivec2(0), upper);
+		return texelFetch(bank, ivec3(point, z), 0).a;
+	}
+	vec2 pixel = uv * vec2(dims) - vec2(0.5);
+	ivec2 base = ivec2(floor(pixel));
+	vec2 fraction = fract(pixel);
+#if T3D_VT_ALPHA_GATHER
+	// GLSL gather order: (x0,y1), (x1,y1), (x1,y0), (x0,y0).
+	// Gather selects the base mip and uses the owning clamp-to-edge sampler.
+	vec4 gathered = textureGather(bank, vec3(uv, float(layer)), 3);
+	return mix(mix(gathered.w, gathered.z, fraction.x),
+	mix(gathered.x, gathered.y, fraction.x), fraction.y);
+#else
+	ivec2 p00 = clamp(base, ivec2(0), upper);
+	ivec2 p10 = clamp(base + ivec2(1, 0), ivec2(0), upper);
+	ivec2 p01 = clamp(base + ivec2(0, 1), ivec2(0), upper);
+	ivec2 p11 = clamp(base + ivec2(1, 1), ivec2(0), upper);
+	float a = texelFetch(bank, ivec3(p00, z), 0).a;
+#if T3D_VT_ALPHA_EDGE_REUSE
+	float b = all(equal(p10, p00)) ? a : texelFetch(bank, ivec3(p10, z), 0).a;
+	float c = all(equal(p01, p00)) ? a : texelFetch(bank, ivec3(p01, z), 0).a;
+	float d = all(equal(p11, p10)) ? b
+	: (all(equal(p11, p01)) ? c : texelFetch(bank, ivec3(p11, z), 0).a);
+#else
+	float b = texelFetch(bank, ivec3(p10, z), 0).a;
+	float c = texelFetch(bank, ivec3(p01, z), 0).a;
+	float d = texelFetch(bank, ivec3(p11, z), 0).a;
+#endif
+	return mix(mix(a, b, fraction.x), mix(c, d, fraction.x), fraction.y);
+#endif
+}
+
+float t3d_vt_consumer_alpha_tail_sample(sampler2D tail, ivec2 dims, vec2 uv, uint nearest)
+{
+	ivec2 upper = max(dims - ivec2(1), ivec2(0));
+	if (nearest != 0u)
+	{
+		return texelFetch(tail, clamp(ivec2(floor(uv * vec2(dims))), ivec2(0), upper), 0).a;
+	}
+	vec2 pixel = uv * vec2(dims) - vec2(0.5);
+	ivec2 base = ivec2(floor(pixel));
+	vec2 fraction = fract(pixel);
+#if T3D_VT_ALPHA_GATHER
+	vec4 gathered = textureGather(tail, uv, 3);
+	return mix(mix(gathered.w, gathered.z, fraction.x),
+	mix(gathered.x, gathered.y, fraction.x), fraction.y);
+#else
+	ivec2 p00 = clamp(base, ivec2(0), upper);
+	ivec2 p10 = clamp(base + ivec2(1, 0), ivec2(0), upper);
+	ivec2 p01 = clamp(base + ivec2(0, 1), ivec2(0), upper);
+	ivec2 p11 = clamp(base + ivec2(1, 1), ivec2(0), upper);
+	float a = texelFetch(tail, p00, 0).a;
+#if T3D_VT_ALPHA_EDGE_REUSE
+	float b = all(equal(p10, p00)) ? a : texelFetch(tail, p10, 0).a;
+	float c = all(equal(p01, p00)) ? a : texelFetch(tail, p01, 0).a;
+	float d = all(equal(p11, p10)) ? b
+	: (all(equal(p11, p01)) ? c : texelFetch(tail, p11, 0).a);
+#else
+	float b = texelFetch(tail, p10, 0).a;
+	float c = texelFetch(tail, p01, 0).a;
+	float d = texelFetch(tail, p11, 0).a;
+#endif
+	return mix(mix(a, b, fraction.x), mix(c, d, fraction.x), fraction.y);
+#endif
+}
+#endif
+
+vec4 t3d_vt_consumer_sample_albedo_single(T3DVTConsumerAddress address)
+{
+	if (address.valid == 0u)
+		return vec4(1.0);
+	if (address.valid == 1u)
+	{
+		T3DVTBoundedFilterPlan plan = t3d_vt_physical_filter_plan(address.tile_uv, address.ddx_uv, address.ddy_uv,
+		address.resolved_packed_extent, address.nearest != 0u, address.anisotropic != 0u);
+		// Both format populations share a fixed bank size for every tap.
+		ivec2 bank_dims = address.physical_family == T3D_VT_PHYSICAL_FORMAT_BC7_UNORM
+		? T3D_VT_CONSUMER_SURFACE_BANK_DIMENSIONS() : T3D_VT_CONSUMER_ALBEDO_BANK_DIMENSIONS();
+		vec4 sum = vec4(0.0);
+#if T3D_VT_ALBEDO_FAMILY_BRANCH_HOIST
+		if (address.physical_family == T3D_VT_PHYSICAL_FORMAT_BC7_UNORM)
+		{
+#if T3D_VT_FIXED_FILTER_TAPS
+			sum += T3D_VT_CONSUMER_SURFACE_BANK_LINEAR(bank_dims, address.layer, t3d_vt_bounded_filter_tap_uv(plan, 0u), address.nearest);
+			if (plan.tap_count > 1u)
+			{
+				sum += T3D_VT_CONSUMER_SURFACE_BANK_LINEAR(bank_dims, address.layer, t3d_vt_bounded_filter_tap_uv(plan, 1u), address.nearest);
+				if (plan.tap_count > 2u)
+				{
+					sum += T3D_VT_CONSUMER_SURFACE_BANK_LINEAR(bank_dims, address.layer, t3d_vt_bounded_filter_tap_uv(plan, 2u), address.nearest);
+					sum += T3D_VT_CONSUMER_SURFACE_BANK_LINEAR(bank_dims, address.layer, t3d_vt_bounded_filter_tap_uv(plan, 3u), address.nearest);
+				}
+			}
+#else
+			for (uint i = 0u; i < T3D_VT_MAX_ANISOTROPY; ++i)
+			{
+				if (i >= plan.tap_count)
+					break;
+				sum += T3D_VT_CONSUMER_SURFACE_BANK_LINEAR(bank_dims, address.layer, t3d_vt_bounded_filter_tap_uv(plan, i), address.nearest);
+			}
+#endif
+		}
+		else
+		{
+#if T3D_VT_FIXED_FILTER_TAPS
+			sum += T3D_VT_CONSUMER_ALBEDO_BANK_LINEAR(bank_dims, address.layer, t3d_vt_bounded_filter_tap_uv(plan, 0u), address.nearest);
+			if (plan.tap_count > 1u)
+			{
+				sum += T3D_VT_CONSUMER_ALBEDO_BANK_LINEAR(bank_dims, address.layer, t3d_vt_bounded_filter_tap_uv(plan, 1u), address.nearest);
+				if (plan.tap_count > 2u)
+				{
+					sum += T3D_VT_CONSUMER_ALBEDO_BANK_LINEAR(bank_dims, address.layer, t3d_vt_bounded_filter_tap_uv(plan, 2u), address.nearest);
+					sum += T3D_VT_CONSUMER_ALBEDO_BANK_LINEAR(bank_dims, address.layer, t3d_vt_bounded_filter_tap_uv(plan, 3u), address.nearest);
+				}
+			}
+#else
+			for (uint i = 0u; i < T3D_VT_MAX_ANISOTROPY; ++i)
+			{
+				if (i >= plan.tap_count)
+					break;
+				sum += T3D_VT_CONSUMER_ALBEDO_BANK_LINEAR(bank_dims, address.layer, t3d_vt_bounded_filter_tap_uv(plan, i), address.nearest);
+			}
+#endif
+		}
+#else
+#if T3D_VT_FIXED_FILTER_TAPS
+		sum += address.physical_family == T3D_VT_PHYSICAL_FORMAT_BC7_UNORM
+		? T3D_VT_CONSUMER_SURFACE_BANK_LINEAR(bank_dims, address.layer, t3d_vt_bounded_filter_tap_uv(plan, 0u), address.nearest)
+		: T3D_VT_CONSUMER_ALBEDO_BANK_LINEAR(bank_dims, address.layer, t3d_vt_bounded_filter_tap_uv(plan, 0u), address.nearest);
+		if (plan.tap_count > 1u)
+		{
+			sum += address.physical_family == T3D_VT_PHYSICAL_FORMAT_BC7_UNORM
+			? T3D_VT_CONSUMER_SURFACE_BANK_LINEAR(bank_dims, address.layer, t3d_vt_bounded_filter_tap_uv(plan, 1u), address.nearest)
+			: T3D_VT_CONSUMER_ALBEDO_BANK_LINEAR(bank_dims, address.layer, t3d_vt_bounded_filter_tap_uv(plan, 1u), address.nearest);
+			if (plan.tap_count > 2u)
+			{
+				sum += address.physical_family == T3D_VT_PHYSICAL_FORMAT_BC7_UNORM
+				? T3D_VT_CONSUMER_SURFACE_BANK_LINEAR(bank_dims, address.layer, t3d_vt_bounded_filter_tap_uv(plan, 2u), address.nearest)
+				: T3D_VT_CONSUMER_ALBEDO_BANK_LINEAR(bank_dims, address.layer, t3d_vt_bounded_filter_tap_uv(plan, 2u), address.nearest);
+				sum += address.physical_family == T3D_VT_PHYSICAL_FORMAT_BC7_UNORM
+				? T3D_VT_CONSUMER_SURFACE_BANK_LINEAR(bank_dims, address.layer, t3d_vt_bounded_filter_tap_uv(plan, 3u), address.nearest)
+				: T3D_VT_CONSUMER_ALBEDO_BANK_LINEAR(bank_dims, address.layer, t3d_vt_bounded_filter_tap_uv(plan, 3u), address.nearest);
+			}
+		}
+#else
+		for (uint i = 0u; i < T3D_VT_MAX_ANISOTROPY; ++i)
+		{
+			if (i >= plan.tap_count)
+				break;
+			sum += address.physical_family == T3D_VT_PHYSICAL_FORMAT_BC7_UNORM
+			? T3D_VT_CONSUMER_SURFACE_BANK_LINEAR(bank_dims, address.layer, t3d_vt_bounded_filter_tap_uv(plan, i), address.nearest)
+			: T3D_VT_CONSUMER_ALBEDO_BANK_LINEAR(bank_dims, address.layer, t3d_vt_bounded_filter_tap_uv(plan, i), address.nearest);
+		}
+#endif
+#endif
+		return sum / float(max(plan.tap_count, 1u));
+	}
+	if ((address.tail_channel_mask & (1u << address.physical_family)) == 0u)
+		return vec4(1.0);
+	ivec2 atlas_size = address.physical_family == T3D_VT_PHYSICAL_FORMAT_BC7_UNORM
+	? T3D_VT_CONSUMER_SURFACE_TAIL_SIZE() : T3D_VT_CONSUMER_ALBEDO_TAIL_SIZE();
+	T3DVTBoundedFilterPlan plan = t3d_vt_consumer_tail_plan(address, atlas_size);
+	vec4 sum = vec4(0.0);
+#if T3D_VT_ALBEDO_FAMILY_BRANCH_HOIST
+	if (address.physical_family == T3D_VT_PHYSICAL_FORMAT_BC7_UNORM)
+	{
+#if T3D_VT_FIXED_FILTER_TAPS
+		sum += T3D_VT_CONSUMER_SURFACE_TAIL_LINEAR(atlas_size, t3d_vt_bounded_filter_tap_uv(plan, 0u), address.nearest);
+		if (plan.tap_count > 1u)
+		{
+			sum += T3D_VT_CONSUMER_SURFACE_TAIL_LINEAR(atlas_size, t3d_vt_bounded_filter_tap_uv(plan, 1u), address.nearest);
+			if (plan.tap_count > 2u)
+			{
+				sum += T3D_VT_CONSUMER_SURFACE_TAIL_LINEAR(atlas_size, t3d_vt_bounded_filter_tap_uv(plan, 2u), address.nearest);
+				sum += T3D_VT_CONSUMER_SURFACE_TAIL_LINEAR(atlas_size, t3d_vt_bounded_filter_tap_uv(plan, 3u), address.nearest);
+			}
+		}
+#else
+		for (uint i = 0u; i < T3D_VT_MAX_ANISOTROPY; ++i)
+		{
+			if (i >= plan.tap_count)
+				break;
+			sum += T3D_VT_CONSUMER_SURFACE_TAIL_LINEAR(atlas_size, t3d_vt_bounded_filter_tap_uv(plan, i), address.nearest);
+		}
+#endif
+	}
+	else
+	{
+#if T3D_VT_FIXED_FILTER_TAPS
+		sum += T3D_VT_CONSUMER_ALBEDO_TAIL_LINEAR(atlas_size, t3d_vt_bounded_filter_tap_uv(plan, 0u), address.nearest);
+		if (plan.tap_count > 1u)
+		{
+			sum += T3D_VT_CONSUMER_ALBEDO_TAIL_LINEAR(atlas_size, t3d_vt_bounded_filter_tap_uv(plan, 1u), address.nearest);
+			if (plan.tap_count > 2u)
+			{
+				sum += T3D_VT_CONSUMER_ALBEDO_TAIL_LINEAR(atlas_size, t3d_vt_bounded_filter_tap_uv(plan, 2u), address.nearest);
+				sum += T3D_VT_CONSUMER_ALBEDO_TAIL_LINEAR(atlas_size, t3d_vt_bounded_filter_tap_uv(plan, 3u), address.nearest);
+			}
+		}
+#else
+		for (uint i = 0u; i < T3D_VT_MAX_ANISOTROPY; ++i)
+		{
+			if (i >= plan.tap_count)
+				break;
+			sum += T3D_VT_CONSUMER_ALBEDO_TAIL_LINEAR(atlas_size, t3d_vt_bounded_filter_tap_uv(plan, i), address.nearest);
+		}
+#endif
+	}
+#else
+#if T3D_VT_FIXED_FILTER_TAPS
+	sum += address.physical_family == T3D_VT_PHYSICAL_FORMAT_BC7_UNORM
+	? T3D_VT_CONSUMER_SURFACE_TAIL_LINEAR(atlas_size, t3d_vt_bounded_filter_tap_uv(plan, 0u), address.nearest)
+	: T3D_VT_CONSUMER_ALBEDO_TAIL_LINEAR(atlas_size, t3d_vt_bounded_filter_tap_uv(plan, 0u), address.nearest);
+	if (plan.tap_count > 1u)
+	{
+		sum += address.physical_family == T3D_VT_PHYSICAL_FORMAT_BC7_UNORM
+		? T3D_VT_CONSUMER_SURFACE_TAIL_LINEAR(atlas_size, t3d_vt_bounded_filter_tap_uv(plan, 1u), address.nearest)
+		: T3D_VT_CONSUMER_ALBEDO_TAIL_LINEAR(atlas_size, t3d_vt_bounded_filter_tap_uv(plan, 1u), address.nearest);
+		if (plan.tap_count > 2u)
+		{
+			sum += address.physical_family == T3D_VT_PHYSICAL_FORMAT_BC7_UNORM
+			? T3D_VT_CONSUMER_SURFACE_TAIL_LINEAR(atlas_size, t3d_vt_bounded_filter_tap_uv(plan, 2u), address.nearest)
+			: T3D_VT_CONSUMER_ALBEDO_TAIL_LINEAR(atlas_size, t3d_vt_bounded_filter_tap_uv(plan, 2u), address.nearest);
+			sum += address.physical_family == T3D_VT_PHYSICAL_FORMAT_BC7_UNORM
+			? T3D_VT_CONSUMER_SURFACE_TAIL_LINEAR(atlas_size, t3d_vt_bounded_filter_tap_uv(plan, 3u), address.nearest)
+			: T3D_VT_CONSUMER_ALBEDO_TAIL_LINEAR(atlas_size, t3d_vt_bounded_filter_tap_uv(plan, 3u), address.nearest);
+		}
+	}
+#else
+	for (uint i = 0u; i < T3D_VT_MAX_ANISOTROPY; ++i)
+	{
+		if (i >= plan.tap_count)
+			break;
+		sum += address.physical_family == T3D_VT_PHYSICAL_FORMAT_BC7_UNORM
+		? T3D_VT_CONSUMER_SURFACE_TAIL_LINEAR(atlas_size, t3d_vt_bounded_filter_tap_uv(plan, i), address.nearest)
+		: T3D_VT_CONSUMER_ALBEDO_TAIL_LINEAR(atlas_size, t3d_vt_bounded_filter_tap_uv(plan, i), address.nearest);
+	}
+#endif
+#endif
+	return sum / float(max(plan.tap_count, 1u));
+}
+
+vec4 t3d_vt_consumer_sample_normal_v1_single(T3DVTConsumerAddress address)
+{
+	if (address.valid == 0u)
+		return vec4(0.5, 0.5, 1.0, 1.0);
+	if (address.valid == 1u)
+	{
+		T3DVTBoundedFilterPlan plan = t3d_vt_physical_filter_plan(address.tile_uv, address.ddx_uv, address.ddy_uv,
+		address.resolved_packed_extent, address.nearest != 0u, address.anisotropic != 0u);
+		vec4 sum = vec4(0.0);
+#if T3D_VT_FIXED_FILTER_TAPS
+		// Virtual LOD and anisotropy are handled above; zero gradients keep the hardware sampler from filtering twice.
+		sum += T3D_VT_CONSUMER_NORMAL_BANK_GRAD(address.layer, t3d_vt_bounded_filter_tap_uv(plan, 0u), vec2(0.0), vec2(0.0));
+		if (plan.tap_count > 1u)
+		{
+			// Virtual LOD and anisotropy are handled above; zero gradients keep the hardware sampler from filtering twice.
+			sum += T3D_VT_CONSUMER_NORMAL_BANK_GRAD(address.layer, t3d_vt_bounded_filter_tap_uv(plan, 1u), vec2(0.0), vec2(0.0));
+			if (plan.tap_count > 2u)
+			{
+				// Virtual LOD and anisotropy are handled above; zero gradients keep the hardware sampler from filtering twice.
+				sum += T3D_VT_CONSUMER_NORMAL_BANK_GRAD(address.layer, t3d_vt_bounded_filter_tap_uv(plan, 2u), vec2(0.0), vec2(0.0));
+				// Virtual LOD and anisotropy are handled above; zero gradients keep the hardware sampler from filtering twice.
+				sum += T3D_VT_CONSUMER_NORMAL_BANK_GRAD(address.layer, t3d_vt_bounded_filter_tap_uv(plan, 3u), vec2(0.0), vec2(0.0));
+			}
+		}
+#else
+		for (uint i = 0u; i < T3D_VT_MAX_ANISOTROPY; ++i)
+		{
+			if (i >= plan.tap_count)
+				break;
+			// Virtual LOD and anisotropy are handled above; zero gradients keep the hardware sampler from filtering twice.
+			sum += T3D_VT_CONSUMER_NORMAL_BANK_GRAD(address.layer, t3d_vt_bounded_filter_tap_uv(plan, i), vec2(0.0), vec2(0.0));
+		}
+#endif
+		return sum / float(max(plan.tap_count, 1u));
+	}
+	if ((address.tail_channel_mask & (1u << T3D_VT_PHYSICAL_FORMAT_BC5_UNORM)) == 0u)
+		return vec4(0.5, 0.5, 1.0, 1.0);
+	ivec2 atlas_size = T3D_VT_CONSUMER_NORMAL_TAIL_SIZE();
+	T3DVTBoundedFilterPlan plan = t3d_vt_consumer_tail_plan(address, atlas_size);
+	vec4 sum = vec4(0.0);
+#if T3D_VT_FIXED_FILTER_TAPS
+	sum += T3D_VT_CONSUMER_NORMAL_TAIL_LOD0(t3d_vt_bounded_filter_tap_uv(plan, 0u));
+	if (plan.tap_count > 1u)
+	{
+		sum += T3D_VT_CONSUMER_NORMAL_TAIL_LOD0(t3d_vt_bounded_filter_tap_uv(plan, 1u));
+		if (plan.tap_count > 2u)
+		{
+			sum += T3D_VT_CONSUMER_NORMAL_TAIL_LOD0(t3d_vt_bounded_filter_tap_uv(plan, 2u));
+			sum += T3D_VT_CONSUMER_NORMAL_TAIL_LOD0(t3d_vt_bounded_filter_tap_uv(plan, 3u));
+		}
+	}
+#else
+	for (uint i = 0u; i < T3D_VT_MAX_ANISOTROPY; ++i)
+	{
+		if (i >= plan.tap_count)
+			break;
+		sum += T3D_VT_CONSUMER_NORMAL_TAIL_LOD0(t3d_vt_bounded_filter_tap_uv(plan, i));
+	}
+#endif
+	return sum / float(max(plan.tap_count, 1u));
+}
+
+vec4 t3d_vt_consumer_sample_surface_v1_single(T3DVTConsumerAddress address)
+{
+	if (address.valid == 0u)
+		return vec4(1.0);
+	if (address.valid == 1u)
+	{
+		T3DVTBoundedFilterPlan plan = t3d_vt_physical_filter_plan(address.tile_uv, address.ddx_uv, address.ddy_uv,
+		address.resolved_packed_extent, address.nearest != 0u, address.anisotropic != 0u);
+		vec4 sum = vec4(0.0);
+#if T3D_VT_FIXED_FILTER_TAPS
+		// Virtual LOD and anisotropy are handled above; zero gradients keep the hardware sampler from filtering twice.
+		sum += T3D_VT_CONSUMER_SURFACE_BANK_GRAD(address.layer, t3d_vt_bounded_filter_tap_uv(plan, 0u), vec2(0.0), vec2(0.0));
+		if (plan.tap_count > 1u)
+		{
+			// Virtual LOD and anisotropy are handled above; zero gradients keep the hardware sampler from filtering twice.
+			sum += T3D_VT_CONSUMER_SURFACE_BANK_GRAD(address.layer, t3d_vt_bounded_filter_tap_uv(plan, 1u), vec2(0.0), vec2(0.0));
+			if (plan.tap_count > 2u)
+			{
+				// Virtual LOD and anisotropy are handled above; zero gradients keep the hardware sampler from filtering twice.
+				sum += T3D_VT_CONSUMER_SURFACE_BANK_GRAD(address.layer, t3d_vt_bounded_filter_tap_uv(plan, 2u), vec2(0.0), vec2(0.0));
+				// Virtual LOD and anisotropy are handled above; zero gradients keep the hardware sampler from filtering twice.
+				sum += T3D_VT_CONSUMER_SURFACE_BANK_GRAD(address.layer, t3d_vt_bounded_filter_tap_uv(plan, 3u), vec2(0.0), vec2(0.0));
+			}
+		}
+#else
+		for (uint i = 0u; i < T3D_VT_MAX_ANISOTROPY; ++i)
+		{
+			if (i >= plan.tap_count)
+				break;
+			// Virtual LOD and anisotropy are handled above; zero gradients keep the hardware sampler from filtering twice.
+			sum += T3D_VT_CONSUMER_SURFACE_BANK_GRAD(address.layer, t3d_vt_bounded_filter_tap_uv(plan, i), vec2(0.0), vec2(0.0));
+		}
+#endif
+		return sum / float(max(plan.tap_count, 1u));
+	}
+	if ((address.tail_channel_mask & (1u << T3D_VT_PHYSICAL_FORMAT_BC7_UNORM)) == 0u)
+		return vec4(1.0);
+	ivec2 atlas_size = T3D_VT_CONSUMER_SURFACE_TAIL_SIZE();
+	T3DVTBoundedFilterPlan plan = t3d_vt_consumer_tail_plan(address, atlas_size);
+	vec4 sum = vec4(0.0);
+#if T3D_VT_FIXED_FILTER_TAPS
+	sum += T3D_VT_CONSUMER_SURFACE_TAIL_LOD0(t3d_vt_bounded_filter_tap_uv(plan, 0u));
+	if (plan.tap_count > 1u)
+	{
+		sum += T3D_VT_CONSUMER_SURFACE_TAIL_LOD0(t3d_vt_bounded_filter_tap_uv(plan, 1u));
+		if (plan.tap_count > 2u)
+		{
+			sum += T3D_VT_CONSUMER_SURFACE_TAIL_LOD0(t3d_vt_bounded_filter_tap_uv(plan, 2u));
+			sum += T3D_VT_CONSUMER_SURFACE_TAIL_LOD0(t3d_vt_bounded_filter_tap_uv(plan, 3u));
+		}
+	}
+#else
+	for (uint i = 0u; i < T3D_VT_MAX_ANISOTROPY; ++i)
+	{
+		if (i >= plan.tap_count)
+			break;
+		sum += T3D_VT_CONSUMER_SURFACE_TAIL_LOD0(t3d_vt_bounded_filter_tap_uv(plan, i));
+	}
+#endif
+	return sum / float(max(plan.tap_count, 1u));
+}
+
+vec4 t3d_vt_consumer_sample_orm_v1_single(T3DVTConsumerAddress address)
+{
+	if (address.valid == 0u)
+		return vec4(1.0);
+	if (address.valid == 1u)
+	{
+		T3DVTBoundedFilterPlan plan = t3d_vt_physical_filter_plan(address.tile_uv, address.ddx_uv, address.ddy_uv,
+		address.resolved_packed_extent, address.nearest != 0u, address.anisotropic != 0u);
+		vec4 sum = vec4(0.0);
+#if T3D_VT_FIXED_FILTER_TAPS
+		// Virtual LOD and anisotropy are handled above; zero gradients keep the hardware sampler from filtering twice.
+		sum += T3D_VT_CONSUMER_ALBEDO_BANK_GRAD(address.layer, t3d_vt_bounded_filter_tap_uv(plan, 0u), vec2(0.0), vec2(0.0));
+		if (plan.tap_count > 1u)
+		{
+			// Virtual LOD and anisotropy are handled above; zero gradients keep the hardware sampler from filtering twice.
+			sum += T3D_VT_CONSUMER_ALBEDO_BANK_GRAD(address.layer, t3d_vt_bounded_filter_tap_uv(plan, 1u), vec2(0.0), vec2(0.0));
+			if (plan.tap_count > 2u)
+			{
+				// Virtual LOD and anisotropy are handled above; zero gradients keep the hardware sampler from filtering twice.
+				sum += T3D_VT_CONSUMER_ALBEDO_BANK_GRAD(address.layer, t3d_vt_bounded_filter_tap_uv(plan, 2u), vec2(0.0), vec2(0.0));
+				// Virtual LOD and anisotropy are handled above; zero gradients keep the hardware sampler from filtering twice.
+				sum += T3D_VT_CONSUMER_ALBEDO_BANK_GRAD(address.layer, t3d_vt_bounded_filter_tap_uv(plan, 3u), vec2(0.0), vec2(0.0));
+			}
+		}
+#else
+		for (uint i = 0u; i < T3D_VT_MAX_ANISOTROPY; ++i)
+		{
+			if (i >= plan.tap_count)
+				break;
+			// Virtual LOD and anisotropy are handled above; zero gradients keep the hardware sampler from filtering twice.
+			sum += T3D_VT_CONSUMER_ALBEDO_BANK_GRAD(address.layer, t3d_vt_bounded_filter_tap_uv(plan, i), vec2(0.0), vec2(0.0));
+		}
+#endif
+		return sum / float(max(plan.tap_count, 1u));
+	}
+	if ((address.tail_channel_mask & (1u << T3D_VT_PHYSICAL_FORMAT_BC1_UNORM)) == 0u)
+		return vec4(1.0);
+	ivec2 atlas_size = T3D_VT_CONSUMER_ALBEDO_TAIL_SIZE();
+	T3DVTBoundedFilterPlan plan = t3d_vt_consumer_tail_plan(address, atlas_size);
+	vec4 sum = vec4(0.0);
+#if T3D_VT_FIXED_FILTER_TAPS
+	sum += T3D_VT_CONSUMER_ALBEDO_TAIL_LOD0(t3d_vt_bounded_filter_tap_uv(plan, 0u));
+	if (plan.tap_count > 1u)
+	{
+		sum += T3D_VT_CONSUMER_ALBEDO_TAIL_LOD0(t3d_vt_bounded_filter_tap_uv(plan, 1u));
+		if (plan.tap_count > 2u)
+		{
+			sum += T3D_VT_CONSUMER_ALBEDO_TAIL_LOD0(t3d_vt_bounded_filter_tap_uv(plan, 2u));
+			sum += T3D_VT_CONSUMER_ALBEDO_TAIL_LOD0(t3d_vt_bounded_filter_tap_uv(plan, 3u));
+		}
+	}
+#else
+	for (uint i = 0u; i < T3D_VT_MAX_ANISOTROPY; ++i)
+	{
+		if (i >= plan.tap_count)
+			break;
+		sum += T3D_VT_CONSUMER_ALBEDO_TAIL_LOD0(t3d_vt_bounded_filter_tap_uv(plan, i));
+	}
+#endif
+	return sum / float(max(plan.tap_count, 1u));
+}
+
+// A base and overlay can sample one albedo texture result
+// when their fully resolved sampling inputs and allocation identity match.
+// Keep the separate material/feedback evaluation; only the physical sample
+// of the second consumer is reused.
+#if T3D_VT_INSTANCE_ALBEDO_SAMPLE_REUSE
+bool t3d_vt_consumer_equal_sampling_address(T3DVTConsumerAddress a, T3DVTConsumerAddress b)
+{
+	return a.valid == b.valid && a.allocation_id == b.allocation_id
+	&& a.generation == b.generation && a.content_id == b.content_id
+	&& a.allocation_count == b.allocation_count && a.page_count == b.page_count
+	&& a.layer == b.layer && a.physical_family == b.physical_family
+	&& a.tail_index == b.tail_index && a.tail_channel_mask == b.tail_channel_mask
+	&& a.resolved_mip == b.resolved_mip && a.resolved_packed_extent == b.resolved_packed_extent
+	&& a.requested_mip == b.requested_mip && a.requested_mip1 == b.requested_mip1
+	&& a.filter_mode == b.filter_mode && a.nearest == b.nearest
+	&& a.anisotropic == b.anisotropic && a.trilinear == b.trilinear
+	&& a.mip_fraction == b.mip_fraction
+	&& all(equal(a.wrapped_uv, b.wrapped_uv)) && all(equal(a.tile_uv, b.tile_uv))
+	&& all(equal(a.ddx_uv, b.ddx_uv)) && all(equal(a.ddy_uv, b.ddy_uv));
+}
+#endif
+
+struct T3DVTConsumerTrilinearPair
+{
+	uint blend;
+	float other_weight;
+	T3DVTConsumerAddress other;
+};
+
+T3DVTConsumerTrilinearPair t3d_vt_consumer_invalid_trilinear_pair()
+{
+	T3DVTConsumerTrilinearPair pair;
+	pair.blend = 0u;
+	pair.other_weight = 0.0;
+	pair.other = t3d_vt_consumer_invalid_address();
+	return pair;
+}
+
+T3DVTConsumerTrilinearPair t3d_vt_consumer_resolve_trilinear_pair(T3DVTConsumerAddress base_address)
+{
+	T3DVTConsumerTrilinearPair pair = t3d_vt_consumer_invalid_trilinear_pair();
+	if (base_address.valid == 0u || base_address.trilinear == 0u || base_address.mip_fraction <= 0.0001
+	|| base_address.allocation_id == T3D_VT_INVALID_ALLOCATION
+	|| base_address.requested_mip1 == base_address.requested_mip) return pair;
+	if (base_address.allocation_id >= base_address.allocation_count)
+		return pair;
+
+	T3DVTAllocation allocation = T3D_VT_CONSUMER_ALLOCATION(base_address.allocation_id);
+	if (allocation.generation != base_address.generation || allocation.contentId != base_address.content_id)
+		return pair;
+	uint other_requested_mip = base_address.requested_mip1;
+	uint mip_count = min(t3d_vt_allocation_mip_count(allocation), T3D_VT_MAX_MIPS);
+	if (other_requested_mip >= mip_count)
+		return pair;
+	T3DVTMipLayout other_layout = T3D_VT_CONSUMER_MIP_LAYOUT(t3d_vt_mip_layout_index(base_address.allocation_id, other_requested_mip));
+	uint width = t3d_vt_mip_layout_width(other_layout);
+	uint height = t3d_vt_mip_layout_height(other_layout);
+	if (other_layout.baseVirtualPage == T3D_VT_INVALID_PAGE || width == 0u || height == 0u)
+		return pair;
+	uvec2 page_coord = uvec2(min(uint(floor(base_address.wrapped_uv.x * float(width))), width - 1u),
+	min(uint(floor(base_address.wrapped_uv.y * float(height))), height - 1u));
+	uint requested_page = other_layout.baseVirtualPage + page_coord.y * width + page_coord.x;
+	T3DVTResolveResult result;
+	if (!t3d_vt_resolve_page_core_loaded(base_address.allocation_id, requested_page, other_requested_mip,
+	base_address.allocation_count, base_address.page_count, allocation, result)) return pair;
+
+	T3DVTConsumerFootprint footprint;
+	footprint.wrapped_uv = base_address.wrapped_uv;
+	footprint.ddx_uv = base_address.ddx_uv;
+	footprint.ddy_uv = base_address.ddy_uv;
+	footprint.mip_bias = 0.0;
+	footprint.repeat_uv = 0u;
+	footprint.filter_mode = base_address.filter_mode;
+	footprint.nearest = base_address.nearest;
+	footprint.anisotropic = base_address.anisotropic;
+	footprint.trilinear = 0u;
+	footprint.allocation_count = base_address.allocation_count;
+	footprint.page_count = base_address.page_count;
+	T3DVTConsumerAddressPlan other_plan = t3d_vt_consumer_invalid_plan();
+	other_plan.valid = 1u;
+	other_plan.allocation_id = base_address.allocation_id;
+	other_plan.requested_mip = other_requested_mip;
+	other_plan.requested_mip1 = other_requested_mip;
+	other_plan.mip_fraction = 0.0;
+	other_plan.allocation = allocation;
+	T3DVTConsumerAddress other = t3d_vt_consumer_finalize_address(
+	base_address.allocation_id, other_plan, footprint, result, t3d_vt_consumer_invalid_address());
+	if (other.valid == 0u || other.allocation_id != base_address.allocation_id
+	|| other.generation != base_address.generation || other.content_id != base_address.content_id) return pair;
+	if (other.resolved_mip == base_address.resolved_mip)
+		return pair;
+
+	float desired_lod = float(base_address.requested_mip) + base_address.mip_fraction;
+	float base_lod = float(base_address.resolved_mip);
+	float other_lod = float(other.resolved_mip);
+	float fine_lod = min(base_lod, other_lod);
+	float coarse_lod = max(base_lod, other_lod);
+	float coarse_weight = clamp((desired_lod - fine_lod) / max(coarse_lod - fine_lod, 1.0), 0.0, 1.0);
+	float other_weight = other_lod > base_lod ? coarse_weight : 1.0 - coarse_weight;
+	if (other_weight <= 0.0001)
+		return pair;
+	pair.blend = 1u;
+	pair.other_weight = clamp(other_weight, 0.0, 1.0);
+	pair.other = other;
+	return pair;
+}
+
+vec4 t3d_vt_consumer_sample_albedo(T3DVTConsumerAddress address)
+{
+	vec4 base_sample = t3d_vt_consumer_sample_albedo_single(address);
+	T3DVTConsumerTrilinearPair pair = t3d_vt_consumer_resolve_trilinear_pair(address);
+	// Avoid a possible speculative second physical-bank/tail
+	// sample when the resolved trilinear pair has already collapsed.
+	if (pair.blend == 0u)
+		return base_sample;
+	vec4 other_sample = t3d_vt_consumer_sample_albedo_single(pair.other);
+	return mix(base_sample, other_sample, pair.other_weight);
+}
+
+#if defined(T3D_FORWARD_DEPTH)
+float t3d_vt_consumer_sample_alpha_single(T3DVTConsumerAddress address)
+{
+	if (address.valid == 0u)
+		return 1.0;
+	if (address.valid == 1u)
+	{
+		T3DVTBoundedFilterPlan plan = t3d_vt_physical_filter_plan(address.tile_uv, address.ddx_uv, address.ddy_uv,
+		address.resolved_packed_extent, address.nearest != 0u, address.anisotropic != 0u);
+		ivec2 bank_dims = address.physical_family == T3D_VT_PHYSICAL_FORMAT_BC7_UNORM
+		? T3D_VT_CONSUMER_SURFACE_BANK_DIMENSIONS() : T3D_VT_CONSUMER_ALBEDO_BANK_DIMENSIONS();
+		float sum = 0.0;
+#if T3D_VT_ALBEDO_FAMILY_BRANCH_HOIST
+		if (address.physical_family == T3D_VT_PHYSICAL_FORMAT_BC7_UNORM)
+		{
+#if T3D_VT_FIXED_FILTER_TAPS
+			sum += T3D_VT_CONSUMER_SURFACE_BANK_ALPHA(bank_dims, address.layer, t3d_vt_bounded_filter_tap_uv(plan, 0u), address.nearest);
+			if (plan.tap_count > 1u)
+			{
+				sum += T3D_VT_CONSUMER_SURFACE_BANK_ALPHA(bank_dims, address.layer, t3d_vt_bounded_filter_tap_uv(plan, 1u), address.nearest);
+				if (plan.tap_count > 2u)
+				{
+					sum += T3D_VT_CONSUMER_SURFACE_BANK_ALPHA(bank_dims, address.layer, t3d_vt_bounded_filter_tap_uv(plan, 2u), address.nearest);
+					sum += T3D_VT_CONSUMER_SURFACE_BANK_ALPHA(bank_dims, address.layer, t3d_vt_bounded_filter_tap_uv(plan, 3u), address.nearest);
+				}
+			}
+#else
+			for (uint i = 0u; i < T3D_VT_MAX_ANISOTROPY; ++i)
+			{
+				if (i >= plan.tap_count)
+					break;
+				sum += T3D_VT_CONSUMER_SURFACE_BANK_ALPHA(bank_dims, address.layer, t3d_vt_bounded_filter_tap_uv(plan, i), address.nearest);
+			}
+#endif
+		}
+		else
+		{
+#if T3D_VT_FIXED_FILTER_TAPS
+			sum += T3D_VT_CONSUMER_ALBEDO_BANK_ALPHA(bank_dims, address.layer, t3d_vt_bounded_filter_tap_uv(plan, 0u), address.nearest);
+			if (plan.tap_count > 1u)
+			{
+				sum += T3D_VT_CONSUMER_ALBEDO_BANK_ALPHA(bank_dims, address.layer, t3d_vt_bounded_filter_tap_uv(plan, 1u), address.nearest);
+				if (plan.tap_count > 2u)
+				{
+					sum += T3D_VT_CONSUMER_ALBEDO_BANK_ALPHA(bank_dims, address.layer, t3d_vt_bounded_filter_tap_uv(plan, 2u), address.nearest);
+					sum += T3D_VT_CONSUMER_ALBEDO_BANK_ALPHA(bank_dims, address.layer, t3d_vt_bounded_filter_tap_uv(plan, 3u), address.nearest);
+				}
+			}
+#else
+			for (uint i = 0u; i < T3D_VT_MAX_ANISOTROPY; ++i)
+			{
+				if (i >= plan.tap_count)
+					break;
+				sum += T3D_VT_CONSUMER_ALBEDO_BANK_ALPHA(bank_dims, address.layer, t3d_vt_bounded_filter_tap_uv(plan, i), address.nearest);
+			}
+#endif
+		}
+#else
+#if T3D_VT_FIXED_FILTER_TAPS
+		sum += address.physical_family == T3D_VT_PHYSICAL_FORMAT_BC7_UNORM
+		? T3D_VT_CONSUMER_SURFACE_BANK_ALPHA(bank_dims, address.layer, t3d_vt_bounded_filter_tap_uv(plan, 0u), address.nearest)
+		: T3D_VT_CONSUMER_ALBEDO_BANK_ALPHA(bank_dims, address.layer, t3d_vt_bounded_filter_tap_uv(plan, 0u), address.nearest);
+		if (plan.tap_count > 1u)
+		{
+			sum += address.physical_family == T3D_VT_PHYSICAL_FORMAT_BC7_UNORM
+			? T3D_VT_CONSUMER_SURFACE_BANK_ALPHA(bank_dims, address.layer, t3d_vt_bounded_filter_tap_uv(plan, 1u), address.nearest)
+			: T3D_VT_CONSUMER_ALBEDO_BANK_ALPHA(bank_dims, address.layer, t3d_vt_bounded_filter_tap_uv(plan, 1u), address.nearest);
+			if (plan.tap_count > 2u)
+			{
+				sum += address.physical_family == T3D_VT_PHYSICAL_FORMAT_BC7_UNORM
+				? T3D_VT_CONSUMER_SURFACE_BANK_ALPHA(bank_dims, address.layer, t3d_vt_bounded_filter_tap_uv(plan, 2u), address.nearest)
+				: T3D_VT_CONSUMER_ALBEDO_BANK_ALPHA(bank_dims, address.layer, t3d_vt_bounded_filter_tap_uv(plan, 2u), address.nearest);
+				sum += address.physical_family == T3D_VT_PHYSICAL_FORMAT_BC7_UNORM
+				? T3D_VT_CONSUMER_SURFACE_BANK_ALPHA(bank_dims, address.layer, t3d_vt_bounded_filter_tap_uv(plan, 3u), address.nearest)
+				: T3D_VT_CONSUMER_ALBEDO_BANK_ALPHA(bank_dims, address.layer, t3d_vt_bounded_filter_tap_uv(plan, 3u), address.nearest);
+			}
+		}
+#else
+		for (uint i = 0u; i < T3D_VT_MAX_ANISOTROPY; ++i)
+		{
+			if (i >= plan.tap_count)
+				break;
+			sum += address.physical_family == T3D_VT_PHYSICAL_FORMAT_BC7_UNORM
+			? T3D_VT_CONSUMER_SURFACE_BANK_ALPHA(bank_dims, address.layer, t3d_vt_bounded_filter_tap_uv(plan, i), address.nearest)
+			: T3D_VT_CONSUMER_ALBEDO_BANK_ALPHA(bank_dims, address.layer, t3d_vt_bounded_filter_tap_uv(plan, i), address.nearest);
+		}
+#endif
+#endif
+		return sum / float(max(plan.tap_count, 1u));
+	}
+	if ((address.tail_channel_mask & (1u << address.physical_family)) == 0u)
+		return 1.0;
+	ivec2 atlas_size = address.physical_family == T3D_VT_PHYSICAL_FORMAT_BC7_UNORM
+	? T3D_VT_CONSUMER_SURFACE_TAIL_SIZE() : T3D_VT_CONSUMER_ALBEDO_TAIL_SIZE();
+	T3DVTBoundedFilterPlan plan = t3d_vt_consumer_tail_plan(address, atlas_size);
+	float sum = 0.0;
+#if T3D_VT_ALBEDO_FAMILY_BRANCH_HOIST
+	if (address.physical_family == T3D_VT_PHYSICAL_FORMAT_BC7_UNORM)
+	{
+#if T3D_VT_FIXED_FILTER_TAPS
+		sum += T3D_VT_CONSUMER_SURFACE_TAIL_ALPHA(atlas_size, t3d_vt_bounded_filter_tap_uv(plan, 0u), address.nearest);
+		if (plan.tap_count > 1u)
+		{
+			sum += T3D_VT_CONSUMER_SURFACE_TAIL_ALPHA(atlas_size, t3d_vt_bounded_filter_tap_uv(plan, 1u), address.nearest);
+			if (plan.tap_count > 2u)
+			{
+				sum += T3D_VT_CONSUMER_SURFACE_TAIL_ALPHA(atlas_size, t3d_vt_bounded_filter_tap_uv(plan, 2u), address.nearest);
+				sum += T3D_VT_CONSUMER_SURFACE_TAIL_ALPHA(atlas_size, t3d_vt_bounded_filter_tap_uv(plan, 3u), address.nearest);
+			}
+		}
+#else
+		for (uint i = 0u; i < T3D_VT_MAX_ANISOTROPY; ++i)
+		{
+			if (i >= plan.tap_count)
+				break;
+			sum += T3D_VT_CONSUMER_SURFACE_TAIL_ALPHA(atlas_size, t3d_vt_bounded_filter_tap_uv(plan, i), address.nearest);
+		}
+#endif
+	}
+	else
+	{
+#if T3D_VT_FIXED_FILTER_TAPS
+		sum += T3D_VT_CONSUMER_ALBEDO_TAIL_ALPHA(atlas_size, t3d_vt_bounded_filter_tap_uv(plan, 0u), address.nearest);
+		if (plan.tap_count > 1u)
+		{
+			sum += T3D_VT_CONSUMER_ALBEDO_TAIL_ALPHA(atlas_size, t3d_vt_bounded_filter_tap_uv(plan, 1u), address.nearest);
+			if (plan.tap_count > 2u)
+			{
+				sum += T3D_VT_CONSUMER_ALBEDO_TAIL_ALPHA(atlas_size, t3d_vt_bounded_filter_tap_uv(plan, 2u), address.nearest);
+				sum += T3D_VT_CONSUMER_ALBEDO_TAIL_ALPHA(atlas_size, t3d_vt_bounded_filter_tap_uv(plan, 3u), address.nearest);
+			}
+		}
+#else
+		for (uint i = 0u; i < T3D_VT_MAX_ANISOTROPY; ++i)
+		{
+			if (i >= plan.tap_count)
+				break;
+			sum += T3D_VT_CONSUMER_ALBEDO_TAIL_ALPHA(atlas_size, t3d_vt_bounded_filter_tap_uv(plan, i), address.nearest);
+		}
+#endif
+	}
+#else
+#if T3D_VT_FIXED_FILTER_TAPS
+	sum += address.physical_family == T3D_VT_PHYSICAL_FORMAT_BC7_UNORM
+	? T3D_VT_CONSUMER_SURFACE_TAIL_ALPHA(atlas_size, t3d_vt_bounded_filter_tap_uv(plan, 0u), address.nearest)
+	: T3D_VT_CONSUMER_ALBEDO_TAIL_ALPHA(atlas_size, t3d_vt_bounded_filter_tap_uv(plan, 0u), address.nearest);
+	if (plan.tap_count > 1u)
+	{
+		sum += address.physical_family == T3D_VT_PHYSICAL_FORMAT_BC7_UNORM
+		? T3D_VT_CONSUMER_SURFACE_TAIL_ALPHA(atlas_size, t3d_vt_bounded_filter_tap_uv(plan, 1u), address.nearest)
+		: T3D_VT_CONSUMER_ALBEDO_TAIL_ALPHA(atlas_size, t3d_vt_bounded_filter_tap_uv(plan, 1u), address.nearest);
+		if (plan.tap_count > 2u)
+		{
+			sum += address.physical_family == T3D_VT_PHYSICAL_FORMAT_BC7_UNORM
+			? T3D_VT_CONSUMER_SURFACE_TAIL_ALPHA(atlas_size, t3d_vt_bounded_filter_tap_uv(plan, 2u), address.nearest)
+			: T3D_VT_CONSUMER_ALBEDO_TAIL_ALPHA(atlas_size, t3d_vt_bounded_filter_tap_uv(plan, 2u), address.nearest);
+			sum += address.physical_family == T3D_VT_PHYSICAL_FORMAT_BC7_UNORM
+			? T3D_VT_CONSUMER_SURFACE_TAIL_ALPHA(atlas_size, t3d_vt_bounded_filter_tap_uv(plan, 3u), address.nearest)
+			: T3D_VT_CONSUMER_ALBEDO_TAIL_ALPHA(atlas_size, t3d_vt_bounded_filter_tap_uv(plan, 3u), address.nearest);
+		}
+	}
+#else
+	for (uint i = 0u; i < T3D_VT_MAX_ANISOTROPY; ++i)
+	{
+		if (i >= plan.tap_count)
+			break;
+		sum += address.physical_family == T3D_VT_PHYSICAL_FORMAT_BC7_UNORM
+		? T3D_VT_CONSUMER_SURFACE_TAIL_ALPHA(atlas_size, t3d_vt_bounded_filter_tap_uv(plan, i), address.nearest)
+		: T3D_VT_CONSUMER_ALBEDO_TAIL_ALPHA(atlas_size, t3d_vt_bounded_filter_tap_uv(plan, i), address.nearest);
+	}
+#endif
+#endif
+	return sum / float(max(plan.tap_count, 1u));
+}
+
+float t3d_vt_consumer_sample_albedo_alpha(T3DVTConsumerAddress address)
+{
+	float alpha = t3d_vt_consumer_sample_alpha_single(address);
+	T3DVTConsumerTrilinearPair pair = t3d_vt_consumer_resolve_trilinear_pair(address);
+	if (pair.blend == 0u)
+		return alpha;
+	float other_alpha = t3d_vt_consumer_sample_alpha_single(pair.other);
+	return mix(alpha, other_alpha, pair.other_weight);
+}
+#endif
+
+vec4 t3d_vt_consumer_sample_normal_v1(T3DVTConsumerAddress address)
+{
+	vec4 base_sample = t3d_vt_consumer_sample_normal_v1_single(address);
+	T3DVTConsumerTrilinearPair pair = t3d_vt_consumer_resolve_trilinear_pair(address);
+	if (pair.blend == 0u)
+		return base_sample;
+	vec4 other_sample = t3d_vt_consumer_sample_normal_v1_single(pair.other);
+	return mix(base_sample, other_sample, pair.other_weight);
+}
+
+vec4 t3d_vt_consumer_sample_surface_v1(T3DVTConsumerAddress address)
+{
+	vec4 base_sample = t3d_vt_consumer_sample_surface_v1_single(address);
+	T3DVTConsumerTrilinearPair pair = t3d_vt_consumer_resolve_trilinear_pair(address);
+	if (pair.blend == 0u)
+		return base_sample;
+	vec4 other_sample = t3d_vt_consumer_sample_surface_v1_single(pair.other);
+	return mix(base_sample, other_sample, pair.other_weight);
+}
+
+vec4 t3d_vt_consumer_sample_orm_v1(T3DVTConsumerAddress address)
+{
+	vec4 base_sample = t3d_vt_consumer_sample_orm_v1_single(address);
+	T3DVTConsumerTrilinearPair pair = t3d_vt_consumer_resolve_trilinear_pair(address);
+	if (pair.blend == 0u)
+		return base_sample;
+	vec4 other_sample = t3d_vt_consumer_sample_orm_v1_single(pair.other);
+	return mix(base_sample, other_sample, pair.other_weight);
+}
+
+#endif // TERRAIN3D_VT_CONSUMER_SAMPLE_INC_GLSL
