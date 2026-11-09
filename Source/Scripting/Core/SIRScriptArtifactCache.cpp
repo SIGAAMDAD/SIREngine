@@ -17,7 +17,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Core/Platform/SIRFileLock.h>
 #include <Scripting/Core/SIRScriptSHA256.h>
 
-#include <atomic>
+#include <Core/Platform/SIRAtomic.h>
 #include <stdio.h>
 #include <string.h>
 #if defined( _WIN32 )
@@ -33,7 +33,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 static constexpr char s_szCacheMagic[8] = { 'S', 'I', 'R', 'C', 'A', 'S', '0', '1' };
 static constexpr uint32_t s_nCacheVersion = 1;
-static std::atomic<uint64_t> s_nCacheTempSerial{ 1 };
+static SIRAtomic<uint64_t> s_nCacheTempSerial( 1 );
 
 static void scriptWriteLE32( uint8_t *pData, uint32_t nValue ) noexcept
 {
@@ -330,7 +330,7 @@ sirScriptResult_t SIRScriptArtifactCache::store( const sirScriptCodeArtifact_t& 
 #else
 	const uint64_t nPID = ( uint64_t )getpid();
 #endif
-	const uint64_t nSerial = s_nCacheTempSerial.fetch_add( 1, std::memory_order_relaxed );
+	const uint64_t nSerial = s_nCacheTempSerial.fetchAdd( 1, SIR_MEMORY_ORDER_RELAXED );
 	if ( snprintf( szTemp, sizeof( szTemp ), "%s.tmp.%llu.%llu", szFinal, ( unsigned long long )nPID, ( unsigned long long )nSerial ) >=
 	     ( int )sizeof( szTemp ) ) {
 		return SIR_SCRIPT_INVALID_ARGUMENT;

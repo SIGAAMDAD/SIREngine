@@ -16,10 +16,13 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Scripting/Language/SIRLangLowering.h>
 #include <limits.h>
 #include <string.h>
+#include <charconv>
+#include <cmath>
 
 static bool sirLangIsExecutableValue( sirLangValueKind_t eType ) noexcept
 {
-	return eType == SIR_LANG_VALUE_BOOL || ( eType >= SIR_LANG_VALUE_I8 && eType <= SIR_LANG_VALUE_U64 );
+	return eType == SIR_LANG_VALUE_BOOL || ( eType >= SIR_LANG_VALUE_I8 && eType <= SIR_LANG_VALUE_U64 ) || eType == SIR_LANG_VALUE_F32 ||
+	       eType == SIR_LANG_VALUE_F64;
 }
 
 static bool sirLangHIRReference( const sirLangSemanticOutput_t *pSemantic, uint32_t iNode, uint32_t *pDeclaration ) noexcept
@@ -215,6 +218,46 @@ static bool sirLangParseUnsigned( const uint8_t *pData, uint32_t nBytes, uint64_
 	return true;
 }
 
+// Cook decimal float constants into the same IEEE payload used by GraphVM.
+// Requiring a fully consumed bounded token rejects trailing garbage and
+// platform NaN/infinity syntax before it can enter an executable revision.
+static bool sirLangParseFloatBits( const uint8_t *pData, uint32_t nBytes, sirLangValueKind_t eType, uint64_t *pBits ) noexcept
+{
+	if ( pData == nullptr || pBits == nullptr || nBytes == 0 || nBytes > 96 ||
+	     ( eType != SIR_LANG_VALUE_F32 && eType != SIR_LANG_VALUE_F64 ) ) {
+		return false;
+	}
+	uint32_t nDigits = nBytes;
+	if ( nBytes >= 3 && pData[nBytes - 3] == 'f' &&
+	     ( ( eType == SIR_LANG_VALUE_F32 && pData[nBytes - 2] == '3' && pData[nBytes - 1] == '2' ) ||
+	       ( eType == SIR_LANG_VALUE_F64 && pData[nBytes - 2] == '6' && pData[nBytes - 1] == '4' ) ) ) {
+		nDigits -= 3;
+	}
+	if ( nDigits == 0 ) {
+		return false;
+	}
+	const char *pszBegin = ( const char * )pData;
+	const char *pszEnd = pszBegin + nDigits;
+	if ( eType == SIR_LANG_VALUE_F32 ) {
+		float fValue = 0;
+		const std::from_chars_result parsed = std::from_chars( pszBegin, pszEnd, fValue, std::chars_format::general );
+		if ( parsed.ec != std::errc{} || parsed.ptr != pszEnd || !std::isfinite( fValue ) ) {
+			return false;
+		}
+		uint32_t nRaw = 0;
+		memcpy( &nRaw, &fValue, sizeof( nRaw ) );
+		*pBits = nRaw;
+	} else {
+		double fValue = 0;
+		const std::from_chars_result parsed = std::from_chars( pszBegin, pszEnd, fValue, std::chars_format::general );
+		if ( parsed.ec != std::errc{} || parsed.ptr != pszEnd || !std::isfinite( fValue ) ) {
+			return false;
+		}
+		memcpy( pBits, &fValue, sizeof( *pBits ) );
+	}
+	return true;
+}
+
 static bool sirLangEqualNodeToken( const sirLangLowerState_t *pState, uint32_t iNode, const char *pszText ) noexcept
 {
 	return iNode < pState->pTree->nNodeCount && sirLangNodeText( pState, pState->pTree->pNodes[iNode].nStartToken, pszText );
@@ -260,6 +303,11 @@ static uint32_t sirLangLowerLiteral( sirLangLowerState_t *pState, uint32_t iNode
 		if ( sirLangEqualNodeToken( pState, iNode, "true" ) || sirLangEqualNodeToken( pState, iNode, "ON" ) ) {
 			nValue = 1;
 		} else if ( !sirLangEqualNodeToken( pState, iNode, "false" ) && !sirLangEqualNodeToken( pState, iNode, "OFF" ) ) {
+			sirLangError( pState, SIR_LANG_LOWER_INVALID_LITERAL, iNode );
+			return SIR_LANG_INVALID_INDEX;
+		}
+	} else if ( eType == SIR_LANG_VALUE_F32 || eType == SIR_LANG_VALUE_F64 ) {
+		if ( !sirLangParseFloatBits( pState->pTree->source.pBytes + token.nOffset, token.nLength, eType, &nValue ) ) {
 			sirLangError( pState, SIR_LANG_LOWER_INVALID_LITERAL, iNode );
 			return SIR_LANG_INVALID_INDEX;
 		}
@@ -571,11 +619,46 @@ static uint32_t sirLangLowerExpression( sirLangLowerState_t *pState, uint32_t iN
 		iValue = sirLangLowerExpression( pState, sirLangFirstChild( pState, iNode ) );
 		break;
 	case SIR_LANG_SYNTAX_UNARY: {
+		const sirLangValueKind_t eSignedType = pState->pHIR->pNodes[iNode].eType;
+		if ( sirLangEqualNodeToken( pState, iNode, "-" ) && ( eSignedType == SIR_LANG_VALUE_I8 || eSignedType == SIR_LANG_VALUE_I16 ||
+		                                                      eSignedType == SIR_LANG_VALUE_I32 || eSignedType == SIR_LANG_VALUE_I64 ) ) {
+			uint32_t iLiteral = sirLangFirstChild( pState, iNode );
+			while ( iLiteral < pState->pTree->nNodeCount && pState->pTree->pNodes[iLiteral].eKind == SIR_LANG_SYNTAX_GROUP ) {
+				iLiteral = sirLangFirstChild( pState, iLiteral );
+			}
+			if ( iLiteral < pState->pTree->nNodeCount && pState->pTree->pNodes[iLiteral].eKind == SIR_LANG_SYNTAX_LITERAL ) {
+				const sirLangToken_t& token = pState->pTree->pTokens[pState->pTree->pNodes[iLiteral].nStartToken];
+				uint64_t nMagnitude = 0;
+				if ( sirLangParseUnsigned( pState->pTree->source.pBytes + token.nOffset, token.nLength, &nMagnitude ) ) {
+					iValue = sirLangNewRegister( pState, iNode );
+					if ( iValue != SIR_LANG_INVALID_INDEX ) {
+						sirLangEmit( pState, { SIR_LANG_OP_CONST, eSignedType, 0, iValue, 0, 0, 0, ( ~nMagnitude ) + 1, iNode } );
+					}
+					break;
+				}
+			}
+		}
 		const uint32_t iOperand = sirLangLowerExpression( pState, sirLangFirstChild( pState, iNode ) );
 		if ( iOperand == SIR_LANG_INVALID_INDEX ) {
 			break;
 		}
 		const sirLangValueKind_t eType = pState->pHIR->pNodes[iNode].eType;
+		if ( sirLangEqualNodeToken( pState, iNode, "-" ) && ( eType == SIR_LANG_VALUE_F32 || eType == SIR_LANG_VALUE_F64 ) ) {
+			// Float arithmetic is not yet a GraphVM opcode. A unary sign on a
+			// constant can be represented exactly by flipping its IEEE sign bit.
+			if ( pState->pOutput->program.nInstructionCount == 0 ) {
+				sirLangError( pState, SIR_LANG_LOWER_UNSUPPORTED, iNode );
+				break;
+			}
+			sirLangCIRInstruction_t& constant = pState->pOutput->pInstructions[pState->pOutput->program.nInstructionCount - 1];
+			if ( constant.eOpcode != SIR_LANG_OP_CONST || constant.iDestination != iOperand || constant.eType != eType ) {
+				sirLangError( pState, SIR_LANG_LOWER_UNSUPPORTED, iNode );
+				break;
+			}
+			constant.nImmediate ^= eType == SIR_LANG_VALUE_F32 ? UINT64_C( 0x80000000 ) : UINT64_C( 0x8000000000000000 );
+			iValue = iOperand;
+			break;
+		}
 		if ( sirLangEqualNodeToken( pState, iNode, "+" ) ) {
 			iValue = iOperand;
 			break;

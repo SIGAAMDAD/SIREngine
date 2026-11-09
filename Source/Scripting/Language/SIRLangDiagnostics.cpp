@@ -28,9 +28,6 @@ static bool sirLangDiagnosticForNode( const sirLangSyntaxTree_t *pTree, uint32_t
 	pDiagnostic->nOffset = span.nOffset;
 	pDiagnostic->nLength = span.nLength;
 	pDiagnostic->bHasSourceLocation = true;
-	if ( pTree->pNodes == nullptr || pTree->pTokens == nullptr ) {
-		return true;
-	}
 	const uint32_t iFirstToken = pTree->pNodes[iNode].nStartToken;
 	if ( iFirstToken < pTree->nTokenCount ) {
 		const sirLangToken_t& token = pTree->pTokens[iFirstToken];

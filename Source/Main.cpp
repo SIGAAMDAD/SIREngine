@@ -1,4 +1,5 @@
 #include <Core/SIRApplication.h>
+#include <Scripting/Core/SIRScriptServer.h>
 #include <Core/Platform/Input/SIRInputWindow.h>
 #include <Core/Platform/Input/SIRInputService.h>
 #if defined( _WIN32 )
@@ -122,6 +123,18 @@ static int sirRunNativeInputWindow( void )
 #endif
 }
 
+// Verify that the native engine executable links and initializes scripting.
+static int sirRunNativeScriptingSmoke( void )
+{
+	SIRScriptServer scripting;
+	if ( scripting.bindings().publish() != SIR_SCRIPT_OK ) {
+		fputs( "Scripting binding publication failed\n", stderr );
+		return 1;
+	}
+	puts( "Sir Scroll native scripting ready" );
+	return 0;
+}
+
 int main( int nArgs, char **pszArgs )
 {
 	if ( nArgs > 1 ) {
@@ -131,8 +144,12 @@ int main( int nArgs, char **pszArgs )
 		}
 
 		if ( strcmp( pszArgs[1], "--help" ) == 0 ) {
-			puts( "Usage: SIREngine [--version|--help|--input-window]" );
+			puts( "Usage: SIREngine [--version|--help|--input-window|--scripting-smoke]" );
 			return 0;
+		}
+
+		if ( strcmp( pszArgs[1], "--scripting-smoke" ) == 0 ) {
+			return sirRunNativeScriptingSmoke();
 		}
 
 		if ( strcmp( pszArgs[1], "--input-window" ) == 0 ) {
