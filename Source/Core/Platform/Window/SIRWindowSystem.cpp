@@ -3,7 +3,7 @@
 
 SIRWindowSystem::SIRWindowSystem( SIRWindowDriver& driver ) noexcept
     : m_pDriver( &driver ), m_nOwnerThreadId( 0 ), m_nEpoch( 0 ), m_nEventSequence( 0 ), m_nLeaseSerial( 0 ), m_nNativeGeneration( 0 ),
-      m_bInitialized( false )
+      m_bForeignThreadEvent( false ), m_bInitialized( false )
 {
 	for ( uint32_t i = 0; i < SIR_WINDOW_MAX_WINDOWS; ++i ) {
 		m_Slots[i].nGeneration = 1;
@@ -22,6 +22,7 @@ sirSystemResult_t SIRWindowSystem::initialize( void ) noexcept
 		return SIR_SYSTEM_ERROR;
 	}
 	m_nOwnerThreadId = SIRPlatformThreadControl::getCurrentThreadId();
+	m_bForeignThreadEvent.store( false, SIR_MEMORY_ORDER_RELEASE );
 	{
 		SIRScopedLock<SIRMutex> requestGuard( m_RequestMutex );
 		SIRScopedLock<SIRMutex> guard( m_SnapshotMutex );
@@ -385,6 +386,13 @@ sirWindowResult_t SIRWindowSystem::destroyWindow( sirWindowHandle_t hWindow ) no
 void SIRWindowSystem::onDriverEvent( void *pContext, const sirWindowBackendEvent_t& event ) noexcept
 {
 	SIRWindowSystem *pSystem = ( SIRWindowSystem * )pContext;
+	if ( pSystem->requireOwner() != SIR_WINDOW_OK ) {
+		// Native display callbacks cannot publish state from a foreign lane.
+		// Report the broken backend contract to the owner pump without racing
+		// against its snapshot and event-sequence fields.
+		pSystem->m_bForeignThreadEvent.store( true, SIR_MEMORY_ORDER_RELEASE );
+		return;
+	}
 	if ( event.nSlot >= SIR_WINDOW_MAX_WINDOWS || !pSystem->m_Slots[event.nSlot].bOccupied ||
 	     event.nNativeWindow != pSystem->m_Slots[event.nSlot].native.nNativeWindow ) {
 		return;
@@ -479,7 +487,11 @@ sirWindowResult_t SIRWindowSystem::pumpEvents( uint32_t nBudget ) noexcept
 	}
 	processReleasedLeases();
 	processRequests();
-	return m_pDriver->pumpEvents( nBudget, onDriverEvent, this );
+	const sirWindowResult_t eResult = m_pDriver->pumpEvents( nBudget, onDriverEvent, this );
+	if ( m_bForeignThreadEvent.exchange( false, SIR_MEMORY_ORDER_ACQUIRE_RELEASE ) ) {
+		return SIR_WINDOW_WRONG_THREAD;
+	}
+	return eResult;
 }
 
 sirWindowResult_t SIRWindowSystem::readEvents( sirWindowEventRead_t *pRead ) noexcept

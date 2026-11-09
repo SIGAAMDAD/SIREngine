@@ -116,6 +116,7 @@ private:
 	uint64_t m_nEventSequence;
 	uint64_t m_nLeaseSerial;
 	uint64_t m_nNativeGeneration;
+	SIRAtomic<bool> m_bForeignThreadEvent;
 	bool m_bInitialized;
 };
 #endif // __SIRENGINE_SIRWINDOWSYSTEM_H__

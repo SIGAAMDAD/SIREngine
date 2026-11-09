@@ -19,6 +19,19 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <string.h>
 #include <Core/Platform/SIRThread.h>
 
+typedef struct sirWindowWrongLaneCallbackContext_s
+{
+	sirWindowDriverEventFn_t pCallback;
+	void *pUserData;
+	sirWindowBackendEvent_t event;
+} sirWindowWrongLaneCallbackContext_t;
+
+static void sirWindowInvokeForeignCallback( void *pUserData )
+{
+	sirWindowWrongLaneCallbackContext_t *pInvocation = ( sirWindowWrongLaneCallbackContext_t * )pUserData;
+	pInvocation->pCallback( pInvocation->pUserData, pInvocation->event );
+}
+
 class SIRWindowTestDriver final : public SIRWindowDriver
 {
 public:
@@ -78,7 +91,15 @@ public:
 		}
 		const uint32_t nCount = m_nPending < nBudget ? m_nPending : nBudget;
 		for ( uint32_t i = 0; i < nCount; ++i ) {
-			pCallback( pContext, m_Pending[i] );
+			if ( m_bDispatchOnForeignThread ) {
+				sirWindowWrongLaneCallbackContext_t callback = { pCallback, pContext, m_Pending[i] };
+				SIRThread worker;
+				if ( !worker.start( sirWindowInvokeForeignCallback, &callback ) || !worker.join() ) {
+					return SIR_WINDOW_NATIVE_FAILURE;
+				}
+			} else {
+				pCallback( pContext, m_Pending[i] );
+			}
 		}
 		m_nPending -= nCount;
 		for ( uint32_t i = 0; i < m_nPending; ++i ) {
@@ -101,6 +122,7 @@ public:
 	uint32_t m_nShutdowns = 0;
 	char m_szLastTitle[128] = {};
 	bool m_bFailInitialize = false;
+	bool m_bDispatchOnForeignThread = false;
 	sirWindowPlatform_t m_ePlatform = SIR_WINDOW_PLATFORM_X11;
 
 protected:
@@ -236,6 +258,44 @@ static bool sirTestQueuedOwnerMutations( void ) noexcept
 	if ( windows.querySnapshot( hWindow, &snapshot ) != SIR_WINDOW_OK || !snapshot.bCloseRequested || snapshot.bReady ||
 	     windows.queueMutation( hWindow, mutation, &extra ) != SIR_WINDOW_BUSY || windows.destroyWindow( hWindow ) != SIR_WINDOW_OK ||
 	     windows.shutdown() != SIR_SYSTEM_OK ) {
+		return false;
+	}
+	return true;
+}
+
+static bool sirTestForeignDriverCallbacksCannotPublish( void ) noexcept
+{
+	SIRWindowTestDriver driver;
+	SIRWindowSystem system( driver );
+	if ( system.initialize() != SIR_SYSTEM_OK ) {
+		return false;
+	}
+	sirWindowHandle_t hWindow = {};
+	if ( system.createWindow( { "driver-owner", 640, 480 }, &hWindow ) != SIR_WINDOW_OK ) {
+		return false;
+	}
+	sirWindowEvent_t events[4] = {};
+	sirWindowEventRead_t read = { 0, events, 4, 0, false };
+	if ( system.readEvents( &read ) != SIR_WINDOW_OK || read.nCount != 2 ) {
+		return false;
+	}
+	const uint64_t nCursor = read.nAfterSequence;
+	driver.m_bDispatchOnForeignThread = true;
+	driver.queueEvent( { hWindow.nSlot, hWindow.nSlot + 1, SIR_WINDOW_EVENT_RESIZED, 777, 555 } );
+	if ( system.pumpEvents( 1 ) != SIR_WINDOW_WRONG_THREAD ) {
+		return false;
+	}
+	sirWindowSnapshot_t snapshot = {};
+	read.nCount = 0;
+	if ( system.querySnapshot( hWindow, &snapshot ) != SIR_WINDOW_OK || snapshot.nWidth != 640 || snapshot.nHeight != 480 ||
+	     system.readEvents( &read ) != SIR_WINDOW_OK || read.nCount != 0 || read.nAfterSequence != nCursor ) {
+		return false;
+	}
+	assert( snapshot.nWidth == 640 ); // Foreign OS dispatch cannot mutate native window state.
+	driver.m_bDispatchOnForeignThread = false;
+	driver.queueEvent( { hWindow.nSlot, hWindow.nSlot + 1, SIR_WINDOW_EVENT_RESIZED, 777, 555 } );
+	if ( system.pumpEvents( 1 ) != SIR_WINDOW_OK || system.querySnapshot( hWindow, &snapshot ) != SIR_WINDOW_OK || snapshot.nWidth != 777 ||
+	     snapshot.nHeight != 555 || system.destroyWindow( hWindow ) != SIR_WINDOW_OK || system.shutdown() != SIR_SYSTEM_OK ) {
 		return false;
 	}
 	return true;
@@ -512,7 +572,7 @@ static bool sirTestWaylandInitialConfigure( void ) noexcept
 int main( void )
 {
 	if ( !sirTestHeadless() || !sirTestHandlesLeasesAndEvents() || !sirTestEventOverflow() || !sirTestWaylandInitialConfigure() ||
-	     !sirTestQueuedOwnerMutations() || !sirTestTerminalNativeLoss() ) {
+	     !sirTestQueuedOwnerMutations() || !sirTestTerminalNativeLoss() || !sirTestForeignDriverCallbacksCannotPublish() ) {
 		fputs( "SIRWindowSystemTests FAIL\n", stderr );
 		return 1;
 	}
