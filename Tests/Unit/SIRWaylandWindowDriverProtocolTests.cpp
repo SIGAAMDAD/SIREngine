@@ -21,6 +21,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <pointer-constraints-unstable-v1-client-protocol.h>
 #include <relative-pointer-unstable-v1-client-protocol.h>
 #include <xkbcommon/xkbcommon.h>
+#include <assert.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <string.h>
@@ -691,6 +692,36 @@ static bool sirTestBoundedCloseAndLoss( void ) noexcept
 	return true;
 }
 
+static bool sirTestDisplayLossDiscardsQueuedReady( void ) noexcept
+{
+	s_nCreated = 0;
+	s_nDisplayFd = -1;
+	SIRWindowDriverWayland driver;
+	if ( driver.initialize() != SIR_WINDOW_OK ) {
+		return false;
+	}
+	sirWindowNativeView_t first = {}, second = {};
+	if ( driver.createWindow( { "ready-before-loss-0", 640, 480 }, 0, &first ) != SIR_WINDOW_OK ||
+	     driver.createWindow( { "ready-before-loss-1", 320, 240 }, 1, &second ) != SIR_WINDOW_OK ) {
+		return false;
+	}
+	// Both configure callbacks queue READY, but the compositor then dies
+	// before the platform owner dispatches the pending event ring.
+	s_pSurfaceListener[0]->configure( s_pSurfaceContext[0], &s_XdgSurfaces[0], 1001 );
+	s_pSurfaceListener[1]->configure( s_pSurfaceContext[1], &s_XdgSurfaces[1], 1002 );
+	s_pRegistryListener->global_remove( s_pRegistryContext, &s_Registry, 11 );
+	sirWaylandTestEvents_t events = {};
+	const sirWindowResult_t a = driver.pumpEvents( 1, sirCollectWaylandEvent, &events );
+	const sirWindowResult_t b = driver.pumpEvents( 1, sirCollectWaylandEvent, &events );
+	const sirWindowResult_t c = driver.pumpEvents( 1, sirCollectWaylandEvent, &events );
+	const bool bValid = a == SIR_WINDOW_NATIVE_FAILURE && b == SIR_WINDOW_NATIVE_FAILURE && c == SIR_WINDOW_NATIVE_FAILURE &&
+	                    events.nCount == 2 && events.events[0].eKind == SIR_WINDOW_EVENT_LOST && events.events[0].nSlot == 0 &&
+	                    events.events[1].eKind == SIR_WINDOW_EVENT_LOST && events.events[1].nSlot == 1;
+	assert( events.nCount == 2 ); // Buffered READY must never escape after compositor loss.
+	driver.shutdown();
+	return bValid;
+}
+
 static bool sirTestCompositorHangup( void ) noexcept
 {
 	s_nCreated = 0;
@@ -983,6 +1014,10 @@ int main( void )
 	}
 	if ( !sirTestBoundedCloseAndLoss() ) {
 		fputs( "Wayland bounded close/loss event budget failed\n", stderr );
+		return 1;
+	}
+	if ( !sirTestDisplayLossDiscardsQueuedReady() ) {
+		fputs( "Wayland queued native readiness escaped compositor-loss terminal state\n", stderr );
 		return 1;
 	}
 	if ( !sirTestCompositorHangup() ) {

@@ -50,12 +50,11 @@ void SIRWindowDriverWayland::registryGlobal( void *pContext, wl_registry *pRegis
 			}
 			break;
 		}
-	} 
+	}
 #ifdef SIR_WAYLAND_FRACTIONAL_SCALE_AVAILABLE
-	else if ( strcmp( pszInterface, wp_fractional_scale_manager_v1_interface.name ) == 0 &&
-	            pDriver->m_pFractionalManager == nullptr ) {
-		pDriver->m_pFractionalManager = ( wp_fractional_scale_manager_v1 * )wl_registry_bind(
-		    pRegistry, nName, &wp_fractional_scale_manager_v1_interface, 1 );
+	else if ( strcmp( pszInterface, wp_fractional_scale_manager_v1_interface.name ) == 0 && pDriver->m_pFractionalManager == nullptr ) {
+		pDriver->m_pFractionalManager =
+		    ( wp_fractional_scale_manager_v1 * )wl_registry_bind( pRegistry, nName, &wp_fractional_scale_manager_v1_interface, 1 );
 		pDriver->m_nFractionalGlobal = nName;
 	} else if ( strcmp( pszInterface, wp_viewporter_interface.name ) == 0 && pDriver->m_pViewporter == nullptr ) {
 		pDriver->m_pViewporter = ( wp_viewporter * )wl_registry_bind( pRegistry, nName, &wp_viewporter_interface, 1 );
@@ -128,7 +127,7 @@ void SIRWindowDriverWayland::registryRemove( void *pContext, wl_registry *pRegis
 		output = {};
 		break;
 	}
-	#ifdef SIR_WAYLAND_FRACTIONAL_SCALE_AVAILABLE
+#ifdef SIR_WAYLAND_FRACTIONAL_SCALE_AVAILABLE
 	if ( nName == pDriver->m_nFractionalGlobal ) {
 		if ( pDriver->m_pFractionalManager != nullptr ) {
 			wp_fractional_scale_manager_v1_destroy( pDriver->m_pFractionalManager );
@@ -189,8 +188,9 @@ void SIRWindowDriverWayland::surfaceConfigure( void *pContext, xdg_surface *pSur
 	pSlot->nHeight = pSlot->nPendingHeight;
 	pSlot->bConfigured = true;
 	if ( ( bFirst || bResized ) && !pSlot->bClosePending ) {
-		const uint32_t nScale120 = pSlot->nFractionalScale120 != 0 && pSlot->pViewport != nullptr ? pSlot->nFractionalScale120 :
-		                           ( pSlot->nBufferScale == 0 ? 120 : pSlot->nBufferScale * 120 );
+		const uint32_t nScale120 = pSlot->nFractionalScale120 != 0 && pSlot->pViewport != nullptr
+		                               ? pSlot->nFractionalScale120
+		                               : ( pSlot->nBufferScale == 0 ? 120 : pSlot->nBufferScale * 120 );
 		const uint64_t nWidth64 = ( ( uint64_t )pSlot->nWidth * nScale120 + 60 ) / 120;
 		const uint64_t nHeight64 = ( ( uint64_t )pSlot->nHeight * nScale120 + 60 ) / 120;
 		if ( nWidth64 == 0 || nHeight64 == 0 || nWidth64 > UINT32_MAX || nHeight64 > UINT32_MAX ) {
@@ -198,14 +198,13 @@ void SIRWindowDriverWayland::surfaceConfigure( void *pContext, xdg_surface *pSur
 			return;
 		}
 		pSlot->pDriver->refreshSurfaceExtent( *pSlot, false );
-		pSlot->pDriver->queueEvent( pSlot->nIndex, bFirst ? SIR_WINDOW_EVENT_READY : SIR_WINDOW_EVENT_RESIZED,
-		                           ( uint32_t )nWidth64, ( uint32_t )nHeight64 );
+		pSlot->pDriver->queueEvent( pSlot->nIndex, bFirst ? SIR_WINDOW_EVENT_READY : SIR_WINDOW_EVENT_RESIZED, ( uint32_t )nWidth64,
+		                            ( uint32_t )nHeight64 );
 	}
 }
 
-void SIRWindowDriverWayland::outputGeometry( void *pContext, wl_output *pOutput, int32_t nX, int32_t nY, int32_t nWidth,
-                                              int32_t nHeight, int32_t nSubpixel, const char *pszMake,
-                                              const char *pszModel, int32_t nTransform ) noexcept
+void SIRWindowDriverWayland::outputGeometry( void *pContext, wl_output *pOutput, int32_t nX, int32_t nY, int32_t nWidth, int32_t nHeight,
+                                             int32_t nSubpixel, const char *pszMake, const char *pszModel, int32_t nTransform ) noexcept
 {
 	( void )pContext;
 	( void )pOutput;
@@ -220,7 +219,7 @@ void SIRWindowDriverWayland::outputGeometry( void *pContext, wl_output *pOutput,
 }
 
 void SIRWindowDriverWayland::outputMode( void *pContext, wl_output *pOutput, uint32_t nFlags, int32_t nWidth, int32_t nHeight,
-                                          int32_t nRefresh ) noexcept
+                                         int32_t nRefresh ) noexcept
 {
 	( void )pContext;
 	( void )pOutput;
@@ -291,8 +290,9 @@ void SIRWindowDriverWayland::refreshSurfaceExtent( sirWaylandWindowSlot_t& slot,
 	if ( !slot.bConfigured || slot.bClosePending || m_bLost ) {
 		return;
 	}
-	const uint32_t nScale120 = slot.nFractionalScale120 != 0 && slot.pViewport != nullptr ? slot.nFractionalScale120 :
-	                            ( slot.nBufferScale == 0 ? 120 : slot.nBufferScale * 120 );
+	const uint32_t nScale120 = slot.nFractionalScale120 != 0 && slot.pViewport != nullptr
+	                               ? slot.nFractionalScale120
+	                               : ( slot.nBufferScale == 0 ? 120 : slot.nBufferScale * 120 );
 #ifdef SIR_WAYLAND_FRACTIONAL_SCALE_AVAILABLE
 	if ( slot.pViewport != nullptr && slot.nWidth <= INT32_MAX && slot.nHeight <= INT32_MAX ) {
 		wp_viewport_set_destination( slot.pViewport, ( int32_t )slot.nWidth, ( int32_t )slot.nHeight );
@@ -318,8 +318,7 @@ void SIRWindowDriverWayland::refreshOutputScale( sirWaylandWindowSlot_t& slot ) 
 	uint32_t nScale = 1;
 	if ( wl_proxy_get_version( ( wl_proxy * )slot.pSurface ) >= 3 ) {
 		for ( uint32_t i = 0; i < SIR_WAYLAND_MAX_OUTPUTS; ++i ) {
-			if ( ( slot.nOutputMask & ( UINT32_C( 1 ) << i ) ) != 0 && m_Outputs[i].pOutput != nullptr &&
-			     m_Outputs[i].nScale > nScale ) {
+			if ( ( slot.nOutputMask & ( UINT32_C( 1 ) << i ) ) != 0 && m_Outputs[i].pOutput != nullptr && m_Outputs[i].nScale > nScale ) {
 				nScale = m_Outputs[i].nScale;
 			}
 		}
@@ -340,12 +339,11 @@ void SIRWindowDriverWayland::refreshOutputScale( sirWaylandWindowSlot_t& slot ) 
 }
 
 #ifdef SIR_WAYLAND_FRACTIONAL_SCALE_AVAILABLE
-void SIRWindowDriverWayland::fractionalPreferredScale( void *pContext, wp_fractional_scale_v1 *pScale,
-                                                         uint32_t nScale120 ) noexcept
+void SIRWindowDriverWayland::fractionalPreferredScale( void *pContext, wp_fractional_scale_v1 *pScale, uint32_t nScale120 ) noexcept
 {
 	sirWaylandWindowSlot_t *pSlot = ( sirWaylandWindowSlot_t * )pContext;
-	if ( pSlot->pDriver == nullptr || pSlot->pFractionalScale != pScale || pSlot->pViewport == nullptr ||
-	     pSlot->pDriver->m_bLost || nScale120 == 0 || nScale120 > 1920 || pSlot->nFractionalScale120 == nScale120 ) {
+	if ( pSlot->pDriver == nullptr || pSlot->pFractionalScale != pScale || pSlot->pViewport == nullptr || pSlot->pDriver->m_bLost ||
+	     nScale120 == 0 || nScale120 > 1920 || pSlot->nFractionalScale120 == nScale120 ) {
 		return;
 	}
 	pSlot->nFractionalScale120 = nScale120;
@@ -387,9 +385,17 @@ void SIRWindowDriverWayland::loseDisplay( void ) noexcept
 		return;
 	}
 	m_bLost = true;
+	// The display connection is terminal. Buffered READY/RESIZED/DPI events
+	// refer to native surfaces that can no longer be presented. Publish only
+	// the reserved per-slot LOST notifications, even if the ring was full.
+	m_nEventRead = 0;
+	m_nEventWrite = 0;
+	m_nEventCount = 0;
+	m_bOverflow = false;
 	for ( uint32_t i = 0; i < SIR_WINDOW_MAX_WINDOWS; ++i ) {
 		if ( m_Slots[i].pSurface != nullptr ) {
 			m_Slots[i].bLostPending = true;
+			m_Slots[i].bClosePending = false;
 		}
 	}
 }
@@ -467,7 +473,7 @@ sirWindowResult_t SIRWindowDriverWayland::createWindow( const sirWindowCreateDes
 		( void )destroyWindow( nSlot );
 		return SIR_WINDOW_NATIVE_FAILURE;
 	}
-	#ifdef SIR_WAYLAND_FRACTIONAL_SCALE_AVAILABLE
+#ifdef SIR_WAYLAND_FRACTIONAL_SCALE_AVAILABLE
 	if ( m_pFractionalManager != nullptr && m_pViewporter != nullptr ) {
 		slot.pViewport = wp_viewporter_get_viewport( m_pViewporter, slot.pSurface );
 		if ( slot.pViewport != nullptr ) {
@@ -668,7 +674,7 @@ void SIRWindowDriverWayland::shutdown( void ) noexcept
 			m_Outputs[i] = {};
 		}
 	}
-	#ifdef SIR_WAYLAND_FRACTIONAL_SCALE_AVAILABLE
+#ifdef SIR_WAYLAND_FRACTIONAL_SCALE_AVAILABLE
 	if ( m_pFractionalManager != nullptr ) {
 		if ( m_bLost ) {
 			wl_proxy_destroy( ( wl_proxy * )m_pFractionalManager );
