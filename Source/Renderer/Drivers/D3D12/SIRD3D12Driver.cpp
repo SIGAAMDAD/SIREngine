@@ -15,6 +15,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Renderer/Drivers/D3D12/SIRD3D12Driver.h>
+#include <Renderer/Drivers/D3D12/SIRD3D12Validation.h>
 #include <Renderer/SIRGraphicsABIOperations.h>
 #include <Renderer/SIRGraphicsValidation.h>
 #include <limits.h>
@@ -22,6 +23,31 @@ of merchantability, fitness for a particular purpose and noninfringement.
 static constexpr uint64_t SIR_D3D12_SHARED_FEATURES = SIR_GRAPHICS_FEATURE_GRAPHICS | SIR_GRAPHICS_FEATURE_COMPUTE |
                                                       SIR_GRAPHICS_FEATURE_COPY_QUEUE | SIR_GRAPHICS_FEATURE_SHADER_STORAGE |
                                                       SIR_GRAPHICS_FEATURE_MRT | SIR_GRAPHICS_FEATURE_PRESENT;
+
+static uint32_t sirD3D12MaximumRgba8SampleCount( ID3D12Device *pDevice ) noexcept
+{
+	if ( pDevice == nullptr ) {
+		return 1;
+	}
+	static constexpr uint32_t SIR_D3D12_SAMPLE_COUNTS[] = { 2, 4, 8, 16, 32 };
+	uint32_t nMaximumSamples = 1;
+	for ( const uint32_t nSampleCount : SIR_D3D12_SAMPLE_COUNTS ) {
+		if ( sirD3D12SupportsSampleCount( pDevice, DXGI_FORMAT_R8G8B8A8_UNORM, nSampleCount ) ) {
+			nMaximumSamples = nSampleCount;
+		}
+	}
+	return nMaximumSamples;
+}
+
+static bool sirD3D12HasEnhancedBarriers( ID3D12Device *pDevice ) noexcept
+{
+	if ( pDevice == nullptr ) {
+		return false;
+	}
+	D3D12_FEATURE_DATA_D3D12_OPTIONS12 options = {};
+	return SUCCEEDED( pDevice->CheckFeatureSupport( D3D12_FEATURE_D3D12_OPTIONS12, &options, sizeof( options ) ) ) &&
+	       options.EnhancedBarriersSupported != FALSE;
+}
 
 static sirGraphicsResult_t sirD3D12FindAdapter( uint32_t nAdapterIndex, sirGraphicsAdapterInfo_t *pInfo ) noexcept
 {
@@ -49,6 +75,11 @@ static sirGraphicsResult_t sirD3D12FindAdapter( uint32_t nAdapterIndex, sirGraph
 	pInfo->nDedicatedVideoBytes = desc.DedicatedVideoMemory;
 	pInfo->nSharedSystemBytes = desc.SharedSystemMemory;
 	pInfo->nFeatureMask = SIR_D3D12_SHARED_FEATURES;
+	Microsoft::WRL::ComPtr<ID3D12Device> pProbe;
+	if ( SUCCEEDED( D3D12CreateDevice( pSelected.Get(), D3D_FEATURE_LEVEL_12_0, IID_PPV_ARGS( pProbe.GetAddressOf() ) ) ) ) {
+		pInfo->nFeatureMask |= sirD3D12NegotiatedOptionalFeatures( sirD3D12HasEnhancedBarriers( pProbe.Get() ),
+		                                                           sirD3D12MaximumRgba8SampleCount( pProbe.Get() ) > 1 );
+	}
 	pInfo->nApiVersion = { 12, 0, 0 };
 	pInfo->bSoftwareAdapter = ( desc.Flags & DXGI_ADAPTER_FLAG3_SOFTWARE ) != 0;
 	if ( WideCharToMultiByte( CP_UTF8, 0, desc.Description, -1, pInfo->szName, ( int )sizeof( pInfo->szName ), nullptr, nullptr ) == 0 ) {
@@ -78,10 +109,8 @@ sirGraphicsResult_t SIRD3D12RenderingDevice::initialize( bool bSoftware, const s
 	if ( desc.nFramesInFlight == 0 || desc.nFramesInFlight > 3 ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	if ( !sirGraphicsHasFeatures( SIR_D3D12_SHARED_FEATURES, desc.nRequiredFeatures ) ) {
-		return SIR_GRAPHICS_UNSUPPORTED;
-	}
-	if ( pSealedPools != nullptr && !desc.bHeadless ) {
+	if ( !sirGraphicsHasFeatures( SIR_D3D12_SHARED_FEATURES | SIR_GRAPHICS_FEATURE_MULTISAMPLE | SIR_GRAPHICS_FEATURE_ENHANCED_BARRIERS,
+	                              desc.nRequiredFeatures ) ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
 	if ( nativeConfig.diagnostics.bEnableGpuValidation && !nativeConfig.diagnostics.bEnableDebugLayer ) {
@@ -99,6 +128,14 @@ sirGraphicsResult_t SIRD3D12RenderingDevice::initialize( bool bSoftware, const s
 		return m_Native.getLastError() == E_NOTIMPL ? SIR_GRAPHICS_UNSUPPORTED : SIR_GRAPHICS_DRIVER_ERROR;
 	}
 	m_bSoftware = bSoftware;
+	// Optional features must be admitted against this native device, not the
+	// fixed baseline mask; the advertised maximum and admission must agree.
+	sirGraphicsCapabilities_t nativeCaps = {};
+	const sirGraphicsResult_t eCaps = queryCapabilities( &nativeCaps );
+	if ( eCaps != SIR_GRAPHICS_SUCCESS || !sirGraphicsHasFeatures( nativeCaps.nFeatureMask, desc.nRequiredFeatures ) ) {
+		m_Native.shutdown();
+		return eCaps != SIR_GRAPHICS_SUCCESS ? eCaps : SIR_GRAPHICS_UNSUPPORTED;
+	}
 	if ( !m_Native.getMemory()->configureResidentBudget( desc.nResidentBudgetBytes ) ) {
 		m_Native.shutdown();
 		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
@@ -156,6 +193,21 @@ sirGraphicsResult_t SIRD3D12RenderingDevice::initialize( bool bSoftware, const s
 	return SIR_GRAPHICS_SUCCESS;
 }
 
+sirGraphicsResult_t SIRD3D12RenderingDevice::loadNativePipelineCache( const void *pData, uint64_t nBytes ) noexcept
+{
+	return m_Pipelines.loadPipelineCache( pData, nBytes );
+}
+
+sirGraphicsResult_t SIRD3D12RenderingDevice::serializeNativePipelineCache( void *pData, uint64_t *pBytes ) const noexcept
+{
+	return m_Pipelines.serializePipelineCache( pData, pBytes );
+}
+
+sirGraphicsResult_t SIRD3D12RenderingDevice::queryNativePipelineCacheStats( sirD3D12PipelineCacheStats_t *pStats ) const noexcept
+{
+	return m_Pipelines.queryPipelineCacheStats( pStats );
+}
+
 sirGraphicsResult_t SIRD3D12RenderingDevice::queryNativeDiagnostics( sirD3D12DiagnosticSnapshot_t *pSnapshot ) noexcept
 {
 	return pSnapshot == nullptr                     ? SIR_GRAPHICS_INVALID_ARGUMENT
@@ -189,14 +241,10 @@ sirGraphicsResult_t SIRD3D12RenderingDevice::queryCapabilities( sirGraphicsCapab
 	pCapabilities->nMaximumBindingSlots = 128;
 	pCapabilities->nMaximumTextureDimension = D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION;
 	pCapabilities->nMaximumColorAttachments = D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT;
-	uint32_t nMaximumSamples = 1;
-	constexpr uint32_t SAMPLE_COUNTS[] = { 2, 4, 8, 16, 32 };
-	for ( uint32_t nSampleCount : SAMPLE_COUNTS ) {
-		if ( sirD3D12SupportsSampleCount( m_Native.getNativeDevice(), DXGI_FORMAT_R8G8B8A8_UNORM, nSampleCount ) ) {
-			nMaximumSamples = nSampleCount;
-		}
-	}
+	const uint32_t nMaximumSamples = sirD3D12MaximumRgba8SampleCount( m_Native.getNativeDevice() );
 	pCapabilities->nMaximumSampleCount = nMaximumSamples;
+	pCapabilities->nFeatureMask |=
+	    sirD3D12NegotiatedOptionalFeatures( sirD3D12HasEnhancedBarriers( m_Native.getNativeDevice() ), nMaximumSamples > 1 );
 	pCapabilities->nDeviceGeneration = nGeneration;
 	pCapabilities->bSoftwareAdapter = m_bSoftware;
 	bool bUnified = false;
@@ -427,12 +475,6 @@ sirGraphicsResult_t SIRD3D12RenderingDevice::createSurface( const sirGraphicsNat
                                                             const sirGraphicsPresentDesc_t& present,
                                                             sirGraphicsHandle_t *pSurface ) noexcept
 {
-	if ( m_bSealedPoolsActive ) {
-		if ( pSurface != nullptr ) {
-			*pSurface = {};
-		}
-		return SIR_GRAPHICS_UNSUPPORTED;
-	}
 	return m_Surfaces.createSurface( native, present, pSurface );
 }
 

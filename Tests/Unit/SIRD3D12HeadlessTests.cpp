@@ -544,7 +544,7 @@ int main( void )
 
 	sirD3D12CompletionSet_t fresh = {};
 	bool bCompleted = false;
-	if ( !device.snapshotCompletionSet( &fresh ) || fresh.nDeviceGeneration == oldSet.nDeviceGeneration ||
+	if ( !device.snapshotCompletionSet( &fresh ) || fresh.nDeviceGeneration <= oldSet.nDeviceGeneration ||
 	     device.pollCompletionSet( oldSet, &bCompleted ) || !device.submitComputeMarker( &fresh ) ||
 	     !device.getComputeQueue().waitForFence( fresh.nComputeFence, 15000 ) || !device.pollCompletionSet( fresh, &bCompleted ) ||
 	     !bCompleted ) {

@@ -17,9 +17,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Renderer/Drivers/D3D12/SIRD3D12Device.h>
+#include <Renderer/Drivers/D3D12/SIRD3D12Validation.h>
 
 #include <string.h>
-#include <atomic>
+#include <Core/Platform/SIRAtomic.h>
 
 bool sirD3D12SupportsSampleCount( ID3D12Device *pDevice, DXGI_FORMAT eFormat, uint32_t nSampleCount ) noexcept
 {
@@ -38,7 +39,7 @@ bool sirD3D12SupportsSampleCount( ID3D12Device *pDevice, DXGI_FORMAT eFormat, ui
 	       levels.NumQualityLevels > 0;
 }
 
-static std::atomic<uint64_t> s_nNextD3D12DeviceGeneration{ 1 };
+static SIRAtomic<uint64_t> s_nNextD3D12DeviceGeneration( 1 );
 
 HRESULT sirD3D12EnumerateAdapters( IDXGIFactory6 *pFactory, uint32_t nRequestedIndex, IDXGIAdapter4 **ppSelected,
                                    uint32_t *pCount ) noexcept
@@ -460,7 +461,7 @@ bool SIRD3D12Device::initialize( uint32_t nAdapterIndex, const sirD3D12TransferP
 		shutdown();
 		return false;
 	}
-	m_nDeviceGeneration = s_nNextD3D12DeviceGeneration.fetch_add( 1, std::memory_order_relaxed );
+	m_nDeviceGeneration = s_nNextD3D12DeviceGeneration.fetchAdd( 1, SIR_MEMORY_ORDER_RELAXED );
 	m_nNextFenceValue = 1;
 	m_nLastError = S_OK;
 	return true;
@@ -602,18 +603,26 @@ sirGraphicsResult_t SIRD3D12Device::submitRecorded( sirGraphicsQueue_t eQueue, I
 	if ( pQueue == nullptr ) {
 		return SIR_GRAPHICS_DEVICE_LOST;
 	}
+	for ( uint32_t iList = 0; iList < nCount; ++iList ) {
+		if ( ppLists[iList] == nullptr ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
+	}
+	sirGraphicsCompletionSet_t timeline = {};
+	timeline.nDeviceGeneration = ( uint32_t )submitted.nDeviceGeneration;
+	timeline.szQueueValues[SIR_GRAPHICS_QUEUE_DIRECT] = submitted.nGraphicsFence;
+	timeline.szQueueValues[SIR_GRAPHICS_QUEUE_COMPUTE] = submitted.nComputeFence;
+	timeline.szQueueValues[SIR_GRAPHICS_QUEUE_COPY] = submitted.nCopyFence;
+	if ( submitted.nDeviceGeneration > UINT32_MAX ) {
+		return SIR_GRAPHICS_DEVICE_LOST;
+	}
+	const sirGraphicsResult_t ePreflight = sirD3D12ValidateSubmissionDependencies( eQueue, pWaits, nWaitCount, timeline );
+	if ( ePreflight != SIR_GRAPHICS_SUCCESS ) {
+		return ePreflight;
+	}
 	ID3D12Fence *szDependencies[64] = {};
 	for ( uint32_t iWait = 0; iWait < nWaitCount; ++iWait ) {
 		const sirGraphicsCompletion_t& wait = pWaits[iWait];
-		if ( wait.nDeviceGeneration != submitted.nDeviceGeneration || wait.eQueue >= SIR_GRAPHICS_QUEUE_COUNT || wait.nValue == 0 ) {
-			return SIR_GRAPHICS_INVALID_ARGUMENT;
-		}
-		const uint64_t nLast = wait.eQueue == SIR_GRAPHICS_QUEUE_DIRECT    ? submitted.nGraphicsFence
-		                       : wait.eQueue == SIR_GRAPHICS_QUEUE_COMPUTE ? submitted.nComputeFence
-		                                                                   : submitted.nCopyFence;
-		if ( wait.nValue > nLast ) {
-			return SIR_GRAPHICS_INVALID_ARGUMENT;
-		}
 		szDependencies[iWait] = wait.eQueue == SIR_GRAPHICS_QUEUE_DIRECT    ? m_pGraphicsFence.Get()
 		                        : wait.eQueue == SIR_GRAPHICS_QUEUE_COMPUTE ? m_ComputeQueue.getSubmissionFence()
 		                                                                    : m_Transfers.getSubmissionFence();
@@ -637,10 +646,6 @@ sirGraphicsResult_t SIRD3D12Device::submitRecorded( sirGraphicsQueue_t eQueue, I
 	}
 	uint64_t nFence = 0;
 	if ( eQueue == SIR_GRAPHICS_QUEUE_DIRECT ) {
-		if ( m_nNextFenceValue == UINT64_MAX ) {
-			m_bGraphicsUnsafe = nWaitCount != 0;
-			return SIR_GRAPHICS_CAPACITY_EXCEEDED;
-		}
 		m_pGraphicsQueue->ExecuteCommandLists( nCount, ppLists );
 		m_nLastError = m_pGraphicsQueue->Signal( m_pGraphicsFence.Get(), m_nNextFenceValue );
 		if ( FAILED( m_nLastError ) ) {

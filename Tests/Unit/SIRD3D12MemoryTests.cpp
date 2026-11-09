@@ -69,6 +69,18 @@ int main( void )
 	     baseline.nReadbackMappedBytes < 3 * 64 * 1024 ) {
 		return 7;
 	}
+	sirGraphicsBufferDesc_t rejectedHeap = {};
+	rejectedHeap.nSizeBytes = 4096;
+	rejectedHeap.nUsage = SIR_GRAPHICS_USAGE_COPY_DESTINATION | SIR_GRAPHICS_USAGE_COPY_SOURCE;
+	rejectedHeap.eMemory = SIR_GRAPHICS_MEMORY_CPU_READBACK;
+	sirGraphicsHandle_t hRejected = {};
+	if ( pDevice->createBuffer( rejectedHeap, &hRejected ) != SIR_GRAPHICS_UNSUPPORTED || hRejected.nGeneration != 0 ) {
+		return 35;
+	}
+	rejectedHeap.eMemory = SIR_GRAPHICS_MEMORY_CPU_UPLOAD;
+	if ( pDevice->createBuffer( rejectedHeap, &hRejected ) != SIR_GRAPHICS_UNSUPPORTED || hRejected.nGeneration != 0 ) {
+		return 36;
+	}
 	sirGraphicsBufferDesc_t desc = {};
 	desc.nSizeBytes = 4096;
 	desc.nUsage = SIR_GRAPHICS_USAGE_COPY_DESTINATION | SIR_GRAPHICS_USAGE_COPY_SOURCE;
@@ -140,8 +152,50 @@ int main( void )
 	if ( !sealed.queryAllocationLedger( &reserved ) || reserved.nBlockBytes < 20ULL * 1024 * 1024 ) {
 		return 19;
 	}
-	if ( sealed.reserveExternalBytes( 4096 ) ) {
+	// Sealed mode cannot disable its physical residency ceiling after admission.
+	if ( sealed.configureResidentBudget( 0 ) || sealed.getLastError() != E_INVALIDARG ) {
+		return 40;
+	}
+	// The optional GPU_UPLOAD preference must fall back to ordinary UPLOAD
+	// when its sealed pool is absent, without losing persistent transfer access.
+	sirD3D12TransferPoolConfig_t transferConfig = {};
+	transferConfig.nSlotBytes = 4096;
+	transferConfig.bPreferDirectMapped = true;
+	if ( !sealed.initializeTransferArena( transferConfig, 2 ) ) {
+		return 41;
+	}
+	sirD3D12ResidentTransferView_t transferView = {};
+	if ( !sealed.queryTransferArena( &transferView ) || transferView.ePath == SIR_D3D12_TRANSFER_DIRECT_GPU_UPLOAD ||
+	     transferView.pWriteBytes == nullptr || transferView.pReadbackBytes == nullptr || transferView.nPersistentMappedBytes != 16384 ) {
+		return 42;
+	}
+	sealed.releaseTransferArena( true );
+	if ( sealed.reserveExternalBytes( 4096 ) || sealed.getLastError() != E_OUTOFMEMORY ) {
 		return 34;
+	}
+	// Only an explicitly budgeted sealed device can admit external backbuffers.
+	if ( !sealed.configureResidentBudget( reserved.nCommittedBytes + 1024 * 1024 ) || !sealed.reserveExternalBytes( 1024 * 1024 ) ||
+	     sealed.reserveExternalBytes( 1 ) ) {
+		return 37;
+	}
+	sirD3D12AllocationLedger_t external = {};
+	if ( !sealed.queryAllocationLedger( &external ) || external.nExternalBytes != 1024 * 1024 ||
+	     external.nCommittedBytes != reserved.nCommittedBytes + 1024 * 1024 ) {
+		return 38;
+	}
+	sealed.releaseExternalBytes( 1024 * 1024 + 1 );
+	sirD3D12AllocationLedger_t unchanged = {};
+	if ( sealed.getLastError() != E_INVALIDARG || !sealed.queryAllocationLedger( &unchanged ) || unchanged.nExternalBytes != 1024 * 1024 ) {
+		return 40;
+	}
+	sealed.releaseExternalBytes( 1024 * 1024 );
+	if ( sealed.getLastError() != S_OK ) {
+		return 41;
+	}
+	sirD3D12AllocationLedger_t restored = {};
+	if ( !sealed.queryAllocationLedger( &restored ) || restored.nExternalBytes != 0 ||
+	     restored.nCommittedBytes != reserved.nCommittedBytes ) {
+		return 39;
 	}
 	D3D12MA::Allocation *szAllocations[5] = {};
 	const bool bCreated =
@@ -190,9 +244,11 @@ int main( void )
 		return 21;
 	}
 	config.bHeadless = false;
-	if ( driver.createSealedDevice( config, sealedProfile, &pSealedDevice ) != SIR_GRAPHICS_UNSUPPORTED || pSealedDevice != nullptr ) {
+	if ( driver.createSealedDevice( config, sealedProfile, &pSealedDevice ) != SIR_GRAPHICS_SUCCESS || pSealedDevice == nullptr ||
+	     driver.destroyDevice( pSealedDevice ) != SIR_GRAPHICS_SUCCESS ) {
 		return 22;
 	}
+	pSealedDevice = nullptr;
 	config.bHeadless = true;
 	config.nResidentBudgetBytes = 1;
 	if ( driver.createSealedDevice( config, sealedProfile, &pSealedDevice ) != SIR_GRAPHICS_CAPACITY_EXCEEDED ||
