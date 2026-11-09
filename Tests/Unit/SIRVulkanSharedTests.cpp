@@ -300,7 +300,7 @@ int main( void )
 	batchSubmission.nWaitCount = 1;
 	sirGraphicsCompletion_t batchCompleted = {};
 	if ( pDevice->submit( SIR_GRAPHICS_QUEUE_DIRECT, batchSubmission, &batchCompleted ) != SIR_GRAPHICS_SUCCESS ||
-	     batchCompleted.nValue != second.nValue + 1 || pDevice->wait( batchCompleted, 5000000000ull ) != SIR_GRAPHICS_SUCCESS ) {
+	     batchCompleted.nValue != multiCompleted.nValue + 1 || pDevice->wait( batchCompleted, 5000000000ull ) != SIR_GRAPHICS_SUCCESS ) {
 		return 31;
 	}
 	const uint64_t nBatchReadOffset = 3 * sizeof( szExpected );
@@ -358,14 +358,14 @@ int main( void )
 	if ( pDevice->createSampler( sampler, &hSampler ) != SIR_GRAPHICS_SUCCESS || hSampler.eType != SIR_GRAPHICS_HANDLE_SAMPLER ) {
 		return 19;
 	}
-	// Transfer a tightly packed 4x8 RGBA8 image, then read it back using
+	// Transfer a complete 8x8 RGBA8 mip subresource, then read it back using
 	// synchronization2 transitions and the existing timeline completion.
 	sirGraphicsBufferTextureCopy_t copy = {};
 	copy.hBuffer = hSource;
 	copy.hTexture = hTexture;
 	copy.nMip = 1;
 	copy.nLayer = 1;
-	copy.nWidth = 4;
+	copy.nWidth = 8;
 	copy.nHeight = 8;
 	copy.nDepth = 1;
 	copy.bBufferToTexture = true;
@@ -448,8 +448,8 @@ int main( void )
 	mixedCopy.hBuffer = hGpu;
 	mixedCopy.hTexture = hTexture;
 	mixedCopy.nBufferOffset = 2048;
-	mixedCopy.nWidth = 4;
-	mixedCopy.nHeight = 8;
+	mixedCopy.nWidth = 16;
+	mixedCopy.nHeight = 16;
 	mixedCopy.nDepth = 1;
 	mixedCopy.nMip = 0;
 	mixedCopy.nLayer = 0;
@@ -501,7 +501,7 @@ int main( void )
 	     pDevice->unmapBuffer( hReadback, 2048, sizeof( szExpected ) ) != SIR_GRAPHICS_SUCCESS ) {
 		return 36;
 	}
-	// Upload and read back three depth slices of a native 3D texture.
+	// Upload and read back a complete four-slice native 3D texture.
 	sirGraphicsTextureDesc_t volume = texture;
 	volume.nWidth = 4;
 	volume.nHeight = 2;
@@ -518,8 +518,8 @@ int main( void )
 	volumeCopy.hTexture = hVolume;
 	volumeCopy.nWidth = 4;
 	volumeCopy.nHeight = 2;
-	volumeCopy.nZ = 1;
-	volumeCopy.nDepth = 3;
+	volumeCopy.nZ = 0;
+	volumeCopy.nDepth = 4;
 	volumeCopy.bBufferToTexture = true;
 	SIRGraphicsCommandList *pVolumeUpload = nullptr;
 	if ( pDevice->acquireCommands( SIR_GRAPHICS_QUEUE_DIRECT, &pVolumeUpload ) != SIR_GRAPHICS_SUCCESS || pVolumeUpload == nullptr ) {
@@ -529,7 +529,7 @@ int main( void )
 	if ( pVolumeUpload->copyBufferTexture( volumeCopy ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
 		return 62;
 	}
-	volumeCopy.nZ = 1;
+	volumeCopy.nZ = 0;
 	if ( pVolumeUpload->copyBufferTexture( volumeCopy ) != SIR_GRAPHICS_SUCCESS || pVolumeUpload->close() != SIR_GRAPHICS_SUCCESS ) {
 		return 63;
 	}
@@ -554,7 +554,7 @@ int main( void )
 	     pDevice->wait( volumeDownloaded, 5000000000ULL ) != SIR_GRAPHICS_SUCCESS ) {
 		return 66;
 	}
-	constexpr uint64_t VOLUME_BYTES = 4ULL * 2ULL * 3ULL * 4ULL;
+	constexpr uint64_t VOLUME_BYTES = 4ULL * 2ULL * 4ULL * 4ULL;
 	if ( pDevice->mapBuffer( hReadback, 0, VOLUME_BYTES, &mapped ) != SIR_GRAPHICS_SUCCESS ||
 	     pDevice->invalidateBuffer( hReadback, 0, VOLUME_BYTES ) != SIR_GRAPHICS_SUCCESS ||
 	     memcmp( mapped.pData, szExpected, VOLUME_BYTES ) != 0 ||

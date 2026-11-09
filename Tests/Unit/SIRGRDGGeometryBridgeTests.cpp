@@ -10,6 +10,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 */
 
 #include <Mesh/SIRGRDGGeometryBridge.h>
+#include <Mesh/SIRCommonGeometryQueries.h>
 
 #include <cstdio>
 #include <cstdlib>
@@ -65,7 +66,7 @@ static SIRResourceHandle publish( SIRResourceGraphWriter& rWriter, uint8_t nPatt
 {
 	const float positions[] = { ( float )nPattern, 0, 0, 1, 0, 0, 0, 1, 0 };
 	const uint32_t indices[] = { 0, 1, 2 };
-	const uint32_t bvh[] = { ( uint32_t )nPattern, 0, 1, 2 };
+	const sirCommonBVHNode_t bvh[] = { { { 0.0f, -0.1f, -0.1f }, { ( float )nPattern + 1.0f, 1.0f, 0.1f }, 0, 0, 0, 1 } };
 	const uint32_t surfaceMaterials[] = { 77u, 88u };
 	const float lodErrors[] = { 0.0f, ( float )nPattern };
 	SIRResourceStagingHandle staging[5] = {};
@@ -157,6 +158,31 @@ int main( void )
 				       readers[i].key.nCookedSchemaVersion == 1 );
 			}
 			CHECK( allocator.nAllocations == beforeReaders && cache.getBorrowCount() == 4 && cache.getResidentCount() == 1 );
+			// Four independent subsystem callers execute the exact same cooked BVH,
+			// triangle and SurfaceMaterialID bytes without allocating a second copy.
+			const sirCommonGeometryRay_t query = { { 1.0f, 0.25f, 2.0f }, { 0.0f, 0.0f, -1.0f }, 5.0f, true };
+			for ( uint32_t i = 0; i < 4; ++i ) {
+				sirCommonGeometryHit_t hit = {};
+				CHECK( sirCommonGeometryTraceRay( readers[i], query, &hit ) == SIR_COMMON_GEOMETRY_HIT );
+				CHECK( hit.nTriangle == 0 && hit.nSurfaceMaterialId == 77 && hit.sourceKey.nRevision == 1 );
+				CHECK( hit.fDistance == 2.0f && hit.szPosition[2] == 0.0f );
+			}
+			CHECK( allocator.nAllocations == beforeReaders );
+			const sirCommonGeometryRay_t miss = { { 50.0f, 50.0f, 2.0f }, { 0.0f, 0.0f, -1.0f }, 5.0f, true };
+			sirCommonGeometryHit_t notTouched = {};
+			notTouched.nTriangle = 1234;
+			CHECK( sirCommonGeometryTraceRay( readers[0], miss, &notTouched ) == SIR_COMMON_GEOMETRY_MISS );
+			CHECK( notTouched.nTriangle == 1234 );
+			sirMeshGeometryRead_t malformedRead = readers[0];
+			malformedRead.nStaticBVHBytes--;
+			CHECK( sirCommonGeometryTraceRay( malformedRead, query, &notTouched ) == SIR_COMMON_GEOMETRY_INVALID_BVH );
+			malformedRead = readers[0];
+			sirCommonBVHNode_t malformedNode = {};
+			malformedNode.nTriangleCount = 2;
+			malformedRead.pStaticBVH = &malformedNode;
+			CHECK( sirCommonGeometryTraceRay( malformedRead, query, &notTouched ) == SIR_COMMON_GEOMETRY_INVALID_BVH );
+			const sirCommonGeometryRay_t zeroDirection = { { 1, 0, 1 }, { 0, 0, 0 }, 5, true };
+			CHECK( sirCommonGeometryTraceRay( readers[0], zeroDirection, &notTouched ) == SIR_COMMON_GEOMETRY_INVALID_ARGUMENT );
 		}
 		const SIRResourceHandle updatedSource = publish( *pWriter, 4 );
 		{

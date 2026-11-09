@@ -28,3 +28,12 @@ target_include_directories(SIRGRDGGeometryBridge PUBLIC
 target_link_libraries(SIRGRDGGeometryBridge PUBLIC SIR::MeshCache SIR::Resources)
 target_compile_features(SIRGRDGGeometryBridge PUBLIC cxx_std_17)
 sir_configure_owned_target(SIRGRDGGeometryBridge)
+
+# Shared traversal of the one canonical source BVH/material arrays for
+# renderer, physics, acoustic and navigation queries. No derived payload.
+add_library(SIRCommonGeometryQueries STATIC SIRCommonGeometryQueries.cpp)
+add_library(SIR::CommonGeometryQueries ALIAS SIRCommonGeometryQueries)
+target_include_directories(SIRCommonGeometryQueries PUBLIC
+    "${PROJECT_SOURCE_DIR}/Source" "${PROJECT_SOURCE_DIR}/Build/CMake")
+target_compile_features(SIRCommonGeometryQueries PUBLIC cxx_std_17)
+sir_configure_owned_target(SIRCommonGeometryQueries)
