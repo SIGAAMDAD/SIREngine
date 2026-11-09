@@ -74,11 +74,14 @@ bool SIRApplication::tick( float fDeltaSeconds ) noexcept
 	}
 
 	const uint64_t nNextTick = m_nTicks + 1;
-	if ( m_pInput != nullptr && !m_pInput->begin( nNextTick ) ) {
+	// The OS event owner must remain live even when the optional input
+	// collector cannot start a frame. This permits close/resize/loss handling
+	// while the input service is recovering or has been stopped.
+	const bool bInputReady = m_pInput == nullptr || m_pInput->begin( nNextTick );
+	const bool bPumped = m_pWindowPump == nullptr || m_pWindowPump( m_pWindowPumpContext );
+	if ( !bInputReady ) {
 		return false;
 	}
-
-	const bool bPumped = m_pWindowPump == nullptr || m_pWindowPump( m_pWindowPumpContext );
 	if ( m_pInput != nullptr ) {
 		m_pInput->sample();
 		if ( !m_pInput->publish() ) {

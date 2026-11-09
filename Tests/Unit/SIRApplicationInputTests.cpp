@@ -16,6 +16,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Core/SIRApplication.h>
 #include <Core/Input/SIRInputBackend.h>
 #include <Core/Input/SIRInputService.h>
+#include <assert.h>
 #include <stdio.h>
 
 class SIRApplicationMockInput final : public SIRInputBackend
@@ -172,9 +173,35 @@ static bool sirTestWindowPumpWithoutInput( void ) noexcept
 	return application.getState() == SIR_APP_STOPPED && !application.tick();
 }
 
+// Native OS dispatch cannot be gated by the optional input collector's
+// readiness: a failed input begin still leaves the window owner pump alive.
+static bool sirTestWindowPumpAfterInputFailure( void ) noexcept
+{
+	SIRInputService input;
+	SIRApplicationMockInput backend;
+	SIRApplication app;
+	sirNoInputWindowPumpContext_t context = { 0, false };
+	if ( !input.attach( backend ) || !app.attachInput( input ) || !app.attachWindowPump( sirApplicationNoInputWindowPump, &context ) ||
+	     !app.initialize() ) {
+		return false;
+	}
+	// A stopped input service must not prevent native close/resize events.
+	input.shutdown();
+	if ( app.tick() || context.nPumps != 1 || app.getTickCount() != 0 || backend.m_nSamples != 0 ) {
+		return false;
+	}
+	assert( context.nPumps == 1 ); // The native pump survives failed input begin.
+	context.bReject = true;
+	if ( app.tick() || context.nPumps != 2 || app.getTickCount() != 0 ) {
+		return false;
+	}
+	return app.shutdown() == SIR_SYSTEM_OK && app.getState() == SIR_APP_STOPPED;
+}
+
 int main( void )
 {
-	if ( !sirTestHeadlessApplicationStillWorks() || !sirTestApplicationInputLifecycle() || !sirTestWindowPumpWithoutInput() ) {
+	if ( !sirTestHeadlessApplicationStillWorks() || !sirTestApplicationInputLifecycle() || !sirTestWindowPumpWithoutInput() ||
+	     !sirTestWindowPumpAfterInputFailure() ) {
 		fputs( "SIRApplicationInputTests FAILED\n", stderr );
 		return 1;
 	}
