@@ -468,8 +468,11 @@ void SIRWindowSystem::onDriverEvent( void *pContext, const sirWindowBackendEvent
 		pSystem->m_bForeignThreadEvent.store( true, SIR_MEMORY_ORDER_RELEASE );
 		return;
 	}
-	if ( event.nSlot >= SIR_WINDOW_MAX_WINDOWS || !pSystem->m_Slots[event.nSlot].bOccupied ||
+	if ( event.nSlot >= SIR_WINDOW_MAX_WINDOWS || !pSystem->m_Slots[event.nSlot].bOccupied || event.nNativeWindow == 0 ||
+	     pSystem->m_Slots[event.nSlot].native.nNativeWindow == 0 ||
 	     event.nNativeWindow != pSystem->m_Slots[event.nSlot].native.nNativeWindow ) {
+		// A retired native identity must reject even malformed zero-handle
+		// callbacks. Otherwise a late event can mutate a LOST snapshot.
 		return;
 	}
 	sirWindowSlot_t& slot = pSystem->m_Slots[event.nSlot];

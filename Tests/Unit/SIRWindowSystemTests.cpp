@@ -576,7 +576,18 @@ static bool sirTestTerminalNativeLoss( void ) noexcept
 	     after.nWindowGeneration != 0 || after.bReady ) {
 		return false;
 	}
-	assert( after.nWindowGeneration == 0 ); // Terminal native loss invalidates the renderer-facing identity.
+	// A malformed zero native handle would match the invalidated slot's
+	// cleared native view unless the terminal identity is explicitly rejected.
+	driver.queueEvent( { hWindow.nSlot, 0, SIR_WINDOW_EVENT_RESIZED, 1536, 864 } );
+	driver.queueEvent( { hWindow.nSlot, 0, SIR_WINDOW_EVENT_FOCUS_GAINED, 0, 0 } );
+	driver.queueEvent( { hWindow.nSlot, 0, SIR_WINDOW_EVENT_LOST, 0, 0 } );
+	if ( system.pumpEvents( 3 ) != SIR_WINDOW_OK || system.querySnapshot( hWindow, &after ) != SIR_WINDOW_OK ||
+	     after.nWidth != before.nWidth || after.nHeight != before.nHeight || after.bFocused ||
+	     after.nMetricsRevision != before.nMetricsRevision + 1 ) {
+		return false;
+	}
+	assert( after.nMetricsRevision == before.nMetricsRevision + 1 ); // No stale terminal-state mutation.
+	assert( after.nWindowGeneration == 0 );                          // Terminal native loss invalidates the renderer-facing identity.
 	if ( system.releaseNativeLease( lease ) != SIR_WINDOW_OK || system.destroyWindow( hWindow ) != SIR_WINDOW_OK ||
 	     system.shutdown() != SIR_SYSTEM_OK ) {
 		return false;
