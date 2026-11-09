@@ -167,6 +167,23 @@ sirGraphicsResult_t SIRFrameGraph::addResource( const sirFrameGraphResource_t& r
 	if ( m_nResourceCount == SIR_FRAMEGRAPH_MAX_RESOURCES ) {
 		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
 	}
+	// A semantic frame product has one producer/storage identity for its entire
+	// view/eye/quality/epoch. Duplicate descriptors cannot escape through a
+	// second resource name, native handle or pass-local allocation.
+	const sirFrameGraphProductKey_t& key = resource.product;
+	const bool bNamedProduct = key.nViewId || key.nFrameEpoch || key.nSemanticId || key.nEyeId || key.nQualityId;
+	if ( bNamedProduct ) {
+		if ( !key.nViewId || !key.nFrameEpoch || !key.nSemanticId || resource.nCanonicalBackingId ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
+		for ( uint32_t iResource = 0; iResource < m_nResourceCount; ++iResource ) {
+			const sirFrameGraphProductKey_t& existing = m_szResources[iResource].product;
+			if ( existing.nViewId == key.nViewId && existing.nFrameEpoch == key.nFrameEpoch && existing.nSemanticId == key.nSemanticId &&
+				 existing.nEyeId == key.nEyeId && existing.nQualityId == key.nQualityId ) {
+				return SIR_GRAPHICS_INVALID_ARGUMENT;
+			}
+		}
+	}
 	// A physical imported resource must have one graph identity so no alias
 	// can evade declared access hazards by registering the same handle twice.
 	if ( resource.bImported ) {

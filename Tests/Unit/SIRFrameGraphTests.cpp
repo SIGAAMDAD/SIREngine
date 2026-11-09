@@ -746,6 +746,74 @@ static bool testLiveSplitWriteUnion( void ) noexcept
 	       compiled.nTransitionCount == 4;
 }
 
+static bool testUniqueFrameProducts( void ) noexcept
+{
+	SIRFrameGraph graph;
+	uint32_t nResource = UINT32_MAX;
+	sirFrameGraphResource_t depth = makeTransient();
+	depth.product = { 11, 23, 1, 0, 2 };
+	if ( graph.addResource( depth, &nResource ) != SIR_GRAPHICS_SUCCESS || nResource != 0 ) {
+		return false;
+	}
+	// A second pass or subsystem cannot allocate the same scene depth product.
+	if ( graph.addResource( depth, &nResource ) != SIR_GRAPHICS_INVALID_ARGUMENT || graph.getResourceCount() != 1 ) {
+		return false;
+	}
+	sirFrameGraphResource_t different = depth;
+	different.product.nSemanticId = 2;
+	if ( graph.addResource( different, &nResource ) != SIR_GRAPHICS_SUCCESS ) {
+		return false;
+	}
+	different = depth;
+	different.product.nEyeId = 1;
+	if ( graph.addResource( different, &nResource ) != SIR_GRAPHICS_SUCCESS ) {
+		return false;
+	}
+	different = depth;
+	different.product.nQualityId = 3;
+	if ( graph.addResource( different, &nResource ) != SIR_GRAPHICS_SUCCESS ) {
+		return false;
+	}
+	different = depth;
+	different.product.nViewId = 12;
+	if ( graph.addResource( different, &nResource ) != SIR_GRAPHICS_SUCCESS ) {
+		return false;
+	}
+	different = depth;
+	different.product.nFrameEpoch = 24;
+	if ( graph.addResource( different, &nResource ) != SIR_GRAPHICS_SUCCESS ) {
+		return false;
+	}
+	different = depth;
+	different.product.nViewId = 0;
+	if ( graph.addResource( different, &nResource ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return false;
+	}
+	different = depth;
+	different.product.nFrameEpoch = 0;
+	if ( graph.addResource( different, &nResource ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return false;
+	}
+	different = depth;
+	different.product.nSemanticId = 0;
+	if ( graph.addResource( different, &nResource ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return false;
+	}
+	// Canonical immutable sources are not new mutable per-frame producers.
+	different = depth;
+	different.nCanonicalBackingId = 9;
+	if ( graph.addResource( different, &nResource ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return false;
+	}
+	// Unkeyed transient scratch retains independent allocation semantics.
+	different = makeTransient();
+	if ( graph.addResource( different, &nResource ) != SIR_GRAPHICS_SUCCESS ) {
+		return false;
+	}
+	graph.reset();
+	return graph.addResource( depth, &nResource ) == SIR_GRAPHICS_SUCCESS && nResource == 0;
+}
+
 typedef struct sirFrameGraphTestCase_s
 {
 	const char *pszName;
@@ -774,7 +842,8 @@ int main( void )
 	                                            { "record forged plan", testRecordRejectsForgedPlan },
 	                                            { "record dependency order", testRecordEnforcesDependencies },
 	                                            { "placement reuse", testPlacementReuseRejectsStalePlan },
-	                                            { "live split write union", testLiveSplitWriteUnion } };
+	                                            { "live split write union", testLiveSplitWriteUnion },
+	                                            { "unique frame products", testUniqueFrameProducts } };
 	for ( uint32_t iCase = 0; iCase < sizeof( szCases ) / sizeof( szCases[0] ); ++iCase ) {
 		if ( !szCases[iCase].pTest() ) {
 			fprintf( stderr, "FrameGraph regression failed: %s\n", szCases[iCase].pszName );

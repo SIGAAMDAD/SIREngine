@@ -25,6 +25,17 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Renderer/SIRGraphicsTypes.h>
 #include <Renderer/SIRSharedGPUBackingOwner.h>
 
+// One semantic frame product per view/eye/quality/epoch; zero means unkeyed
+// transient scratch, not an authoritative scene product.
+typedef struct sirFrameGraphProductKey_s
+{
+	uint64_t nViewId;
+	uint64_t nFrameEpoch;
+	uint32_t nSemanticId;
+	uint32_t nEyeId;
+	uint32_t nQualityId;
+} sirFrameGraphProductKey_t;
+
 typedef struct sirFrameGraphResource_s
 {
 	sirGraphicsHandle_t hImported;
@@ -38,6 +49,7 @@ typedef struct sirFrameGraphResource_s
 	// not second storage handles; the caller retains the provider borrow.
 	uint64_t nCanonicalBackingId;
 	uint64_t nCanonicalNativeToken;
+	sirFrameGraphProductKey_t product;
 } sirFrameGraphResource_t;
 
 typedef struct sirFrameGraphPass_s
