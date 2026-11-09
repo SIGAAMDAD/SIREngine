@@ -14,6 +14,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Editor/Host/SIREditorSceneWorkspace.h>
+#include <Editor/Host/SIREditorApplication.h>
+#include <Editor/Host/SIREditorWorkflow.h>
 
 #include <Core/Memory/SIRMemoryManager.h>
 #include <Core/Memory/SIRMemorySegment.h>
@@ -25,6 +27,8 @@ static void sirEditorPrintHelp( void ) noexcept
 {
 	puts( "Usage: SIREditor --inspect-scene <path.tscn>" );
 	puts( "       SIREditor --version" );
+	puts( "       SIREditor --headless-frames <positive count>" );
+	puts( "       SIREditor --headless-scene <path.tscn> <positive count>" );
 	puts( "       SIREditor --help" );
 	puts( "Inspect the native SIREngine scene intake without altering the source file." );
 }
@@ -105,6 +109,125 @@ static int sirEditorInspectScene( const char *pszPath ) noexcept
 	return 0;
 }
 
+static bool sirEditorHeadlessFrame( uint64_t nFrame, void *pContext ) noexcept
+{
+	( void )nFrame;
+	( void )pContext;
+	return true;
+}
+
+static bool sirEditorParseFrameCount( const char *pszCount, uint64_t *pOutFrames ) noexcept
+{
+	if ( pszCount == nullptr || pOutFrames == nullptr || *pszCount == '\0' ) {
+		return false;
+	}
+	uint64_t nFrames = 0;
+	for ( const char *pChar = pszCount; *pChar != '\0'; ++pChar ) {
+		if ( *pChar < '0' || *pChar > '9' || nFrames > ( UINT64_MAX - ( uint64_t )( *pChar - '0' ) ) / 10 ) {
+			return false;
+		}
+		nFrames = nFrames * 10 + ( uint64_t )( *pChar - '0' );
+	}
+	if ( nFrames == 0 ) {
+		return false;
+	}
+	*pOutFrames = nFrames;
+	return true;
+}
+
+static int sirEditorRunHeadless( const char *pszCount ) noexcept
+{
+	uint64_t nFrames = 0;
+	if ( !sirEditorParseFrameCount( pszCount, &nFrames ) ) {
+		return 2;
+	}
+	SIREditorApplication app;
+	if ( app.initialize( sirEditorHeadlessFrame, nullptr ) != SIR_EDITOR_APP_OK ) {
+		return 3;
+	}
+	const sirEditorApplicationResult_t eResult = app.run( nFrames );
+	if ( eResult != SIR_EDITOR_APP_OK ) {
+		app.shutdown();
+		return 3;
+	}
+	printf( "SIREditor frames: %llu\n", ( unsigned long long )app.getFrameCount() );
+	app.shutdown();
+	return 0;
+}
+
+typedef struct sirEditorSceneRunContext_s
+{
+	SIREditorSceneWorkspace *pWorkspace;
+	SIREditorWorkflow *pWorkflow;
+} sirEditorSceneRunContext_t;
+
+static bool sirEditorSceneFrame( uint64_t nFrame, void *pContext ) noexcept
+{
+	( void )nFrame;
+	sirEditorSceneRunContext_t *pState = ( sirEditorSceneRunContext_t * )pContext;
+	if ( !pState->pWorkspace->isOpen() ) {
+		return false;
+	}
+	const SIREditorSceneDocument& document = pState->pWorkspace->getDocument();
+	if ( pState->pWorkflow->getLastKnownRevision() != document.getRevision() ) {
+		return pState->pWorkflow->synchronize() == SIR_EDITOR_OK;
+	}
+	return pState->pWorkspace->getHierarchy().isCurrent( document );
+}
+
+static int sirEditorRunHeadlessScene( const char *pszPath, const char *pszCount ) noexcept
+{
+	uint64_t nFrames = 0;
+	if ( pszPath == nullptr || !sirEditorParseFrameCount( pszCount, &nFrames ) ) {
+		return 2;
+	}
+	constexpr uint64_t N_MIB = UINT64_C( 1024 ) * 1024;
+	SIRMemoryManager memory;
+	const sirMemoryConfig_t config = { 512 * N_MIB, 256 * N_MIB, 4 * N_MIB, 2 };
+	if ( !memory.init( config ) ) {
+		return 3;
+	}
+	SIRMemorySegment *pSegment = memory.createSegment( "EditorScene", 384 * N_MIB, 240 * N_MIB, SIR_MEMORY_DOMAIN_EDITOR );
+	if ( pSegment == nullptr ) {
+		memory.shutdown();
+		return 3;
+	}
+	SIREditorSceneWorkspace workspace;
+	if ( !workspace.initialize( pSegment ) ) {
+		memory.shutdown();
+		return 3;
+	}
+	if ( workspace.openTextFile( pszPath ) != SIR_EDITOR_WORKSPACE_OK ) {
+		workspace.shutdown();
+		memory.shutdown();
+		return 2;
+	}
+	SIREditorWorkflow workflow;
+	if ( workflow.initialize( &workspace.getDocument(), &workspace.getHierarchy() ) != SIR_EDITOR_OK ) {
+		workspace.shutdown();
+		memory.shutdown();
+		return 3;
+	}
+	SIREditorApplication app;
+	sirEditorSceneRunContext_t context = { &workspace, &workflow };
+	if ( app.initialize( sirEditorSceneFrame, &context ) != SIR_EDITOR_APP_OK ) {
+		workflow.shutdown();
+		workspace.shutdown();
+		memory.shutdown();
+		return 3;
+	}
+	const sirEditorApplicationResult_t eResult = app.run( nFrames );
+	if ( eResult == SIR_EDITOR_APP_OK ) {
+		printf( "SIREditor scene frames: %llu, nodes: %u, resources: %u\n", ( unsigned long long )app.getFrameCount(),
+		        workspace.getSceneIndex().nNodeCount, workspace.getResourceIndex().nCount );
+	}
+	app.shutdown();
+	workflow.shutdown();
+	workspace.shutdown();
+	memory.shutdown();
+	return eResult == SIR_EDITOR_APP_OK ? 0 : 3;
+}
+
 int main( int nArgs, char **pszArgs )
 {
 	if ( nArgs == 2 && strcmp( pszArgs[1], "--help" ) == 0 ) {
@@ -114,6 +237,12 @@ int main( int nArgs, char **pszArgs )
 	if ( nArgs == 2 && strcmp( pszArgs[1], "--version" ) == 0 ) {
 		puts( "SIREditor native scene host " SIR_VERSION );
 		return 0;
+	}
+	if ( nArgs == 4 && strcmp( pszArgs[1], "--headless-scene" ) == 0 ) {
+		return sirEditorRunHeadlessScene( pszArgs[2], pszArgs[3] );
+	}
+	if ( nArgs == 3 && strcmp( pszArgs[1], "--headless-frames" ) == 0 ) {
+		return sirEditorRunHeadless( pszArgs[2] );
 	}
 	if ( nArgs == 3 && strcmp( pszArgs[1], "--inspect-scene" ) == 0 ) {
 		return sirEditorInspectScene( pszArgs[2] );

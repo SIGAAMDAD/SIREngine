@@ -114,10 +114,63 @@ static void sirTestSceneWorkspace( void )
 	assert( pRefs[0].nTargetKey == workspace.getResourceIndex().pResources[0].nStableKey );
 	assert( pRefs[1].nOwnerKey == 0 );
 	assert( pRefs[1].nTargetKey == workspace.getResourceIndex().pResources[1].nStableKey );
+	// Import the workspace's real source records through the sole resource
+	// catalog. Caller identities remain authoritative and survive scene close.
+	sirEditorCatalogIdentity_t szIdentities[2] = { { 101, 501, 7 }, { 202, 0, 8 } };
+	sirResourceEntry_t szEntries[2] = {};
+	sirResourceDependency_t szCatalogDependencies[2] = {};
+	uint32_t szCatalogScratch[2] = {};
+	uint8_t szCatalogSeen[2] = {};
+	SIRResourceCatalog catalog;
+	sirEditorCatalogBuildRequest_t importRequest = {};
+	importRequest.pIdentities = szIdentities;
+	importRequest.nIdentityCount = 2;
+	importRequest.pCatalog = &catalog;
+	importRequest.pEntries = szEntries;
+	importRequest.pDependencies = szCatalogDependencies;
+	importRequest.pScratch = szCatalogScratch;
+	importRequest.pSeen = szCatalogSeen;
+	importRequest.nEntryCapacity = 2;
+	importRequest.nDependencyCapacity = 2;
+
+	importRequest.nIdentityCount = 1;
+	assert( workspace.buildResourceCatalog( importRequest ) == SIR_EDITOR_CATALOG_INVALID_SOURCE );
+	importRequest.nIdentityCount = 2;
+	szIdentities[1].nCanonicalId = 101;
+	assert( workspace.buildResourceCatalog( importRequest ) == SIR_EDITOR_CATALOG_INVALID_IDENTITY );
+	szIdentities[1].nCanonicalId = 202;
+	importRequest.nDependencyCapacity = 0;
+	assert( workspace.buildResourceCatalog( importRequest ) == SIR_EDITOR_CATALOG_OUT_OF_CAPACITY );
+	importRequest.nDependencyCapacity = 2;
+	assert( workspace.buildResourceCatalog( importRequest ) == SIR_EDITOR_CATALOG_OK );
+	assert( catalog.getResourceCount() == 2 );
+	assert( catalog.getDependencyCount() == 1 );
+	uint64_t szLoadOrder[2] = {};
+	uint32_t nLoadCount = 0;
+	assert( catalog.buildLoadOrder( szLoadOrder, 2, &nLoadCount ) == SIR_RESOURCE_CATALOG_OK );
+	assert( nLoadCount == 2 && szLoadOrder[0] == 101 && szLoadOrder[1] == 202 );
 	assert( pRefs[0].nCallOffset < pRefs[1].nCallOffset );
 	workspace.close();
 	assert( workspace.getResourceReferenceCount() == 0 );
 	assert( workspace.getResourceReferences() == nullptr );
+	assert( workspace.buildResourceCatalog( importRequest ) == SIR_EDITOR_CATALOG_INVALID_SOURCE );
+	assert( catalog.buildLoadOrder( szLoadOrder, 2, &nLoadCount ) == SIR_RESOURCE_CATALOG_OK );
+	assert( nLoadCount == 2 && szLoadOrder[0] == 101 && szLoadOrder[1] == 202 );
+	catalog.shutdown();
+
+	// Bracketed source inside a multiline property is data, not a node or
+	// resource declaration. The allocation pre-scan must match the parser.
+	const char szQuotedTags[] = "[gd_scene format=3]\n[node name=\"Root\" type=\"Node\"]\n"
+	                            "description = \"first line\n"
+	                            "[node name=\\\"Phantom\\\" type=\\\"Node\\\"]\n"
+	                            "[ext_resource type=\\\"Script\\\" path=\\\"res://phantom.gd\\\" id=\\\"fake\\\"]\n"
+	                            "last line\"\n";
+	assert( workspace.openTextSource( szQuotedTags, sizeof( szQuotedTags ) - 1 ) == SIR_EDITOR_WORKSPACE_OK );
+	assert( workspace.getSceneIndex().nNodeCount == 1 );
+	assert( workspace.getSceneIndex().storage.nNodeCapacity == 1 );
+	assert( workspace.getResourceIndex().nCount == 0 );
+	assert( workspace.getResourceIndex().nCapacity == 1 );
+	workspace.close();
 
 	// A resource-free scene has no reference-array allocation.
 	const char szWithoutResources[] = "[gd_scene format=3]\n[node name=\"Root\" type=\"Node\"]\n";
