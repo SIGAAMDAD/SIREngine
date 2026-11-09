@@ -56,3 +56,8 @@ add_executable(SIRMeshCacheIdentityTests SIRMeshCacheIdentityTests.cpp)
 target_link_libraries(SIRMeshCacheIdentityTests PRIVATE SIR::MeshCache)
 add_test(NAME mesh.cache.identity-revision COMMAND SIRMeshCacheIdentityTests)
 sir_configure_owned_target(SIRMeshCacheIdentityTests)
+
+add_executable(SIRGRDGGeometryBridgeTests SIRGRDGGeometryBridgeTests.cpp)
+target_link_libraries(SIRGRDGGeometryBridgeTests PRIVATE SIR::GRDGGeometryBridge)
+add_test(NAME mesh.grdg.canonical-sharing COMMAND SIRGRDGGeometryBridgeTests)
+sir_configure_owned_target(SIRGRDGGeometryBridgeTests)

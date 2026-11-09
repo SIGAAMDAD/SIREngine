@@ -17,3 +17,14 @@ target_include_directories(SIRVGFramePlan PUBLIC
     "${PROJECT_SOURCE_DIR}/Build/CMake")
 target_compile_features(SIRVGFramePlan PUBLIC cxx_std_17)
 sir_configure_owned_target(SIRVGFramePlan)
+
+# Connect the existing zero-copy CPU mesh cache to the authoritative GRDG
+# canonical chunk and provider-pin lifecycle (no geometry payload allocation).
+add_library(SIRGRDGGeometryBridge STATIC SIRGRDGGeometryBridge.cpp)
+add_library(SIR::GRDGGeometryBridge ALIAS SIRGRDGGeometryBridge)
+target_include_directories(SIRGRDGGeometryBridge PUBLIC
+    "${PROJECT_SOURCE_DIR}/Source"
+    "${PROJECT_SOURCE_DIR}/Build/CMake")
+target_link_libraries(SIRGRDGGeometryBridge PUBLIC SIR::MeshCache SIR::Resources)
+target_compile_features(SIRGRDGGeometryBridge PUBLIC cxx_std_17)
+sir_configure_owned_target(SIRGRDGGeometryBridge)
