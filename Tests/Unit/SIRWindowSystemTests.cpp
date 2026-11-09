@@ -428,6 +428,51 @@ static bool sirTestEventOverflow( void ) noexcept
 	return true;
 }
 
+static bool sirTestTerminalNativeLoss( void ) noexcept
+{
+	SIRWindowTestDriver driver;
+	SIRWindowSystem system( driver );
+	if ( system.initialize() != SIR_SYSTEM_OK ) {
+		return false;
+	}
+	sirWindowHandle_t hWindow = {};
+	if ( system.createWindow( { "lost-native", 640, 480 }, &hWindow ) != SIR_WINDOW_OK ) {
+		return false;
+	}
+	sirWindowSnapshot_t before = {};
+	sirWindowNativeView_t view = {};
+	sirWindowNativeLease_t lease = {};
+	if ( system.querySnapshot( hWindow, &before ) != SIR_WINDOW_OK || before.nWindowGeneration == 0 ||
+	     system.acquireNativeLease( hWindow, &lease, &view ) != SIR_WINDOW_OK ) {
+		return false;
+	}
+	// Native destruction can arrive before the renderer retires the GPU
+	// surface. Previously the published snapshot retained a stale identity.
+	driver.queueEvent( { hWindow.nSlot, view.nNativeWindow, SIR_WINDOW_EVENT_LOST, 0, 0 } );
+	if ( system.pumpEvents( 1 ) != SIR_WINDOW_OK ) {
+		return false;
+	}
+	sirWindowSnapshot_t after = {};
+	if ( system.querySnapshot( hWindow, &after ) != SIR_WINDOW_OK || after.nWindowGeneration != 0 || after.bReady || after.bVisible ||
+	     !after.bCloseRequested || after.nMetricsRevision != before.nMetricsRevision + 1 ||
+	     system.acquireNativeLease( hWindow, &lease, &view ) != SIR_WINDOW_NOT_READY ||
+	     system.destroyWindow( hWindow ) != SIR_WINDOW_BUSY ) {
+		return false;
+	}
+	// A delayed event from the lost OS handle must not restore readiness.
+	driver.queueEvent( { hWindow.nSlot, view.nNativeWindow, SIR_WINDOW_EVENT_READY, 640, 480 } );
+	if ( system.pumpEvents( 1 ) != SIR_WINDOW_OK || system.querySnapshot( hWindow, &after ) != SIR_WINDOW_OK ||
+	     after.nWindowGeneration != 0 || after.bReady ) {
+		return false;
+	}
+	assert( after.nWindowGeneration == 0 ); // Terminal native loss invalidates the renderer-facing identity.
+	if ( system.releaseNativeLease( lease ) != SIR_WINDOW_OK || system.destroyWindow( hWindow ) != SIR_WINDOW_OK ||
+	     system.shutdown() != SIR_SYSTEM_OK ) {
+		return false;
+	}
+	return true;
+}
+
 static bool sirTestWaylandInitialConfigure( void ) noexcept
 {
 	SIRWindowTestDriver driver;
@@ -467,7 +512,7 @@ static bool sirTestWaylandInitialConfigure( void ) noexcept
 int main( void )
 {
 	if ( !sirTestHeadless() || !sirTestHandlesLeasesAndEvents() || !sirTestEventOverflow() || !sirTestWaylandInitialConfigure() ||
-	     !sirTestQueuedOwnerMutations() ) {
+	     !sirTestQueuedOwnerMutations() || !sirTestTerminalNativeLoss() ) {
 		fputs( "SIRWindowSystemTests FAIL\n", stderr );
 		return 1;
 	}

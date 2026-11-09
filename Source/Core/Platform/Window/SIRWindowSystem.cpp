@@ -452,6 +452,12 @@ void SIRWindowSystem::onDriverEvent( void *pContext, const sirWindowBackendEvent
 		}
 		++slot.snapshot.nMetricsRevision;
 	} else if ( event.eKind == SIR_WINDOW_EVENT_LOST ) {
+		// The OS handle is no longer borrowable even while a GPU lease
+		// continues to pin its retirement bookkeeping. Invalidate the
+		// published native identity and presentation revision immediately.
+		slot.native = {};
+		slot.snapshot.nWindowGeneration = 0;
+		++slot.snapshot.nMetricsRevision;
 		slot.snapshot.bReady = false;
 		slot.snapshot.bVisible = false;
 		slot.snapshot.bFocused = false;
