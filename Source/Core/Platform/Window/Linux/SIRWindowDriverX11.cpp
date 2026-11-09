@@ -13,7 +13,6 @@
 #include <X11/extensions/Xrandr.h>
 #endif
 
-
 static SIRMutex s_X11IOHandlerMutex;
 static uint32_t s_nX11HandlerUsers = 0;
 static XIOErrorHandler s_pPreviousX11IOHandler = nullptr;
@@ -74,7 +73,18 @@ sirWindowResult_t SIRWindowDriverX11::initialize( void ) noexcept
 	if ( m_pDisplay != nullptr ) {
 		return SIR_WINDOW_BUSY;
 	}
-	Display *pDisplay = XOpenDisplay( nullptr );
+	Display *pDisplay = nullptr;
+	for ( uint32_t nAttempt = 0; nAttempt < 10; ++nAttempt ) {
+		pDisplay = XOpenDisplay( nullptr );
+		// Some X servers reset new connections while reaping a recently
+		// disconnected client. Only transient ECONNRESET is retried.
+		if ( pDisplay != nullptr || errno != ECONNRESET ) {
+			break;
+		}
+		if ( nAttempt != 9 ) {
+			( void )poll( nullptr, 0, 5 );
+		}
+	}
 	if ( pDisplay == nullptr ) {
 		return SIR_WINDOW_NOT_READY;
 	}
@@ -120,9 +130,7 @@ sirWindowResult_t SIRWindowDriverX11::initialize( void ) noexcept
 		int nMajor = 1, nMinor = 0;
 		if ( XRRQueryVersion( pDisplay, &nMajor, &nMinor ) ) {
 			const int nMask = RRScreenChangeNotifyMask |
-			                  ( nMajor > 1 || ( nMajor == 1 && nMinor >= 2 ) ?
-			                       RROutputChangeNotifyMask | RRCrtcChangeNotifyMask :
-			                       0 );
+			                  ( nMajor > 1 || ( nMajor == 1 && nMinor >= 2 ) ? RROutputChangeNotifyMask | RRCrtcChangeNotifyMask : 0 );
 			XRRSelectInput( pDisplay, ( Window )m_nRootWindow, nMask );
 			m_nRandrEventBase = nRandrEvent;
 		}
@@ -178,8 +186,7 @@ bool SIRWindowDriverX11::transportAlive( void ) noexcept
 	return true;
 }
 
-sirWindowResult_t SIRWindowDriverX11::emitServerLoss( uint32_t nBudget, sirWindowDriverEventFn_t pCallback,
-                                                      void *pContext ) noexcept
+sirWindowResult_t SIRWindowDriverX11::emitServerLoss( uint32_t nBudget, sirWindowDriverEventFn_t pCallback, void *pContext ) noexcept
 {
 	if ( nBudget == 0 || pCallback == nullptr ) {
 		return SIR_WINDOW_INVALID_ARGUMENT;
@@ -219,7 +226,7 @@ sirWindowResult_t SIRWindowDriverX11::createWindow( const sirWindowCreateDesc_t&
 }
 
 sirWindowResult_t SIRWindowDriverX11::createWindowNative( const sirWindowCreateDesc_t& desc, uint32_t nSlot,
-                                                    sirWindowNativeView_t *pView ) noexcept
+                                                          sirWindowNativeView_t *pView ) noexcept
 {
 	if ( nSlot >= SIR_WINDOW_MAX_WINDOWS || pView == nullptr || desc.pszTitle == nullptr || desc.nWidth == 0 || desc.nHeight == 0 ) {
 		return SIR_WINDOW_INVALID_ARGUMENT;
@@ -373,8 +380,7 @@ sirWindowResult_t SIRWindowDriverX11::mutateWindowNative( uint32_t nSlot, const 
 		event.xclient.data.l[0] = mutation.eKind == SIR_WINDOW_MUTATION_FULLSCREEN_ENTER ? 1 : 0;
 		event.xclient.data.l[1] = ( long )hFullscreen;
 		event.xclient.data.l[3] = 1;
-		if ( !XSendEvent( pDisplay, DefaultRootWindow( pDisplay ), False,
-		                  SubstructureNotifyMask | SubstructureRedirectMask, &event ) ) {
+		if ( !XSendEvent( pDisplay, DefaultRootWindow( pDisplay ), False, SubstructureNotifyMask | SubstructureRedirectMask, &event ) ) {
 			return SIR_WINDOW_NATIVE_FAILURE;
 		}
 		break;
@@ -396,8 +402,7 @@ sirWindowResult_t SIRWindowDriverX11::mutateWindowNative( uint32_t nSlot, const 
 		message.xclient.data.l[1] = ( long )hVertical;
 		message.xclient.data.l[2] = ( long )hHorizontal;
 		message.xclient.data.l[3] = 1; // Client application initiated
-		if ( !XSendEvent( pDisplay, DefaultRootWindow( pDisplay ), False, SubstructureNotifyMask | SubstructureRedirectMask,
-		                  &message ) ) {
+		if ( !XSendEvent( pDisplay, DefaultRootWindow( pDisplay ), False, SubstructureNotifyMask | SubstructureRedirectMask, &message ) ) {
 			return SIR_WINDOW_NATIVE_FAILURE;
 		}
 		break;
@@ -448,8 +453,7 @@ sirWindowResult_t SIRWindowDriverX11::pumpEventsNative( uint32_t nBudget, sirWin
 		}
 #ifdef SIR_WINDOW_XRANDR_AVAILABLE
 		if ( m_nRandrEventBase >= 0 &&
-		     ( event.type == m_nRandrEventBase + RRScreenChangeNotify ||
-		       event.type == m_nRandrEventBase + RRNotify ) ) {
+		     ( event.type == m_nRandrEventBase + RRScreenChangeNotify || event.type == m_nRandrEventBase + RRNotify ) ) {
 			if ( event.type == m_nRandrEventBase + RRScreenChangeNotify ) {
 				( void )XRRUpdateConfiguration( &event );
 			}
@@ -463,8 +467,7 @@ sirWindowResult_t SIRWindowDriverX11::pumpEventsNative( uint32_t nBudget, sirWin
 #endif
 		if ( event.type == ConfigureNotify && ( uintptr_t )event.xconfigure.window == m_nRootWindow ) {
 			if ( event.xconfigure.width > 0 && event.xconfigure.height > 0 &&
-			     ( ( uint32_t )event.xconfigure.width != m_nServerWidth ||
-			       ( uint32_t )event.xconfigure.height != m_nServerHeight ) ) {
+			     ( ( uint32_t )event.xconfigure.width != m_nServerWidth || ( uint32_t )event.xconfigure.height != m_nServerHeight ) ) {
 				m_nServerWidth = ( uint32_t )event.xconfigure.width;
 				m_nServerHeight = ( uint32_t )event.xconfigure.height;
 				for ( uint32_t j = 0; j < SIR_WINDOW_MAX_WINDOWS; ++j ) {
@@ -522,8 +525,8 @@ sirWindowResult_t SIRWindowDriverX11::pumpEventsNative( uint32_t nBudget, sirWin
 		if ( m_hWindows[j] != 0 ) {
 			XWindowAttributes attrs = {};
 			if ( XGetWindowAttributes( pDisplay, ( Window )m_hWindows[j], &attrs ) && attrs.width > 0 && attrs.height > 0 ) {
-				const sirWindowBackendEvent_t changed = { j, m_hWindows[j], SIR_WINDOW_EVENT_DISPLAY_CHANGED,
-				                                          ( uint32_t )attrs.width, ( uint32_t )attrs.height };
+				const sirWindowBackendEvent_t changed = { j, m_hWindows[j], SIR_WINDOW_EVENT_DISPLAY_CHANGED, ( uint32_t )attrs.width,
+				                                          ( uint32_t )attrs.height };
 				pCallback( pContext, changed );
 				++nEmitted;
 			}

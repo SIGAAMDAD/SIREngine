@@ -16,6 +16,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Core/Platform/Window/SIRWindowSystem.h>
 #include <X11/Xatom.h>
 #include <X11/Xlib.h>
+#include <assert.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/socket.h>
@@ -59,9 +60,9 @@ static bool sirTestX11ServerSocketLoss( void ) noexcept
 	}
 	const sirWindowResult_t ePump = windows.pumpEvents( 32 );
 	sirWindowSnapshot_t snapshot = {};
-	if ( ePump != SIR_WINDOW_NATIVE_FAILURE || windows.querySnapshot( hWindow, &snapshot ) != SIR_WINDOW_OK ||
-	     !snapshot.bCloseRequested || snapshot.bReady || windows.releaseNativeLease( lease ) != SIR_WINDOW_OK ||
-	     windows.destroyWindow( hWindow ) != SIR_WINDOW_OK || windows.shutdown() != SIR_SYSTEM_OK ) {
+	if ( ePump != SIR_WINDOW_NATIVE_FAILURE || windows.querySnapshot( hWindow, &snapshot ) != SIR_WINDOW_OK || !snapshot.bCloseRequested ||
+	     snapshot.bReady || windows.releaseNativeLease( lease ) != SIR_WINDOW_OK || windows.destroyWindow( hWindow ) != SIR_WINDOW_OK ||
+	     windows.shutdown() != SIR_SYSTEM_OK ) {
 		return false;
 	}
 	SIRWindowDriverX11 replacement;
@@ -119,8 +120,8 @@ int main( void )
 	unsigned long nItems = 0, nRemaining = 0;
 	unsigned char *pTitle = nullptr;
 	if ( hName == None || hUtf8 == None ||
-	     XGetWindowProperty( pDisplay, ( Window )view.nNativeWindow, hName, 0, 128, False, hUtf8, &hType, &nFormat, &nItems,
-	                         &nRemaining, &pTitle ) != Success ||
+	     XGetWindowProperty( pDisplay, ( Window )view.nNativeWindow, hName, 0, 128, False, hUtf8, &hType, &nFormat, &nItems, &nRemaining,
+	                         &pTitle ) != Success ||
 	     pTitle == nullptr || hType != hUtf8 || nFormat != 8 || nItems != sizeof( "Renamed window" ) - 1 ||
 	     memcmp( pTitle, "Renamed window", nItems ) != 0 ) {
 		if ( pTitle != nullptr ) {
@@ -248,6 +249,14 @@ int main( void )
 		fputs( "X11 server transport-loss recovery FAIL\n", stderr );
 		return 24;
 	}
+	// Repeated server-loss and new-session cycles must re-establish the
+	// process X11 display owner even after a transient connection reset.
+	const bool bRecoveredAgain = sirTestX11ServerSocketLoss();
+	if ( !bRecoveredAgain ) {
+		fputs( "X11 repeated server transport-loss recovery FAIL\n", stderr );
+		return 25;
+	}
+	assert( bRecoveredAgain );
 	puts( "SIRWindowX11DriverTests PASS" );
 	return 0;
 }
