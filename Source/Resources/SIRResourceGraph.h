@@ -325,6 +325,81 @@ typedef struct sirResourceDerivedConfig_s
 } sirResourceDerivedConfig_t;
 typedef sirResourceDerivedConfig_t SIRResourceDerivedConfig;
 
+// Physical backing descriptor for a single canonical GPU allocation.
+// One backing per device+generation+layout identity; shared across all consumers.
+typedef struct sirSharedDeviceBackingDesc_s
+{
+	uint32_t nPhysicalDeviceId;
+	uint32_t nDeviceGeneration;
+	uint32_t nStorageLayoutId;
+	uint32_t nSupportedUsageMask;
+	uint32_t nFormatId;
+	uint32_t nAlignment;
+	uint64_t nOffset;
+	uint64_t nCommittedBytes;
+	uint32_t nProviderId;
+	uint32_t nReserved;
+} sirSharedDeviceBackingDesc_t;
+static_assert( sizeof( sirSharedDeviceBackingDesc_t ) == 48, "Shared device backing descriptor ABI changed" );
+
+// Reservation returns the backing handle and whether native creation is required.
+typedef struct sirSharedDeviceBackingReservation_s
+{
+	SIRDerivedResourceHandle hBacking;
+	uint64_t nPhysicalBackingId;
+	bool bNeedsNativeCreation;
+	uint8_t m_szReserved[7];
+} sirSharedDeviceBackingReservation_t;
+static_assert( sizeof( sirSharedDeviceBackingReservation_t ) == 24, "Shared device backing reservation ABI changed" );
+
+// Acquired borrowed view of a shared physical backing.
+// Lifetime is bounded by an explicit release with provider completion.
+typedef struct sirSharedDeviceView_s
+{
+	uint64_t nPhysicalBackingId;
+	uint64_t nNativeResourceToken;
+	uint64_t nOffset;
+	uint64_t nBytes;
+	uint64_t nSourceRevision;
+	uint32_t nDeviceGeneration;
+	uint32_t nApprovedUsageMask;
+	uint32_t nCompletionProviderId;
+	uint32_t nCompletionLaneMask;
+	bool bReadOnly;
+	uint8_t m_szReserved[3];
+} sirSharedDeviceView_t;
+static_assert( sizeof( sirSharedDeviceView_t ) == 64, "Shared device view ABI changed" );
+
+// Request to acquire a read or write subrange of a shared backing.
+typedef struct sirSharedDeviceViewRequest_s
+{
+	uint32_t nPhysicalDeviceId;
+	uint32_t nExpectedSourceRevision;
+	uint64_t nExpectedPublicationEpoch;
+	uint64_t nOffset;
+	uint64_t nBytes;
+	uint32_t nDeviceGeneration;
+	uint32_t nStorageLayoutId;
+	uint32_t nSupportedUsageMask;
+	uint32_t nFormatId;
+	uint32_t nApprovedUsageMask;
+	uint32_t nCompletionProviderId;
+	uint32_t nCompletionLaneMask;
+} sirSharedDeviceViewRequest_t;
+static_assert( sizeof( sirSharedDeviceViewRequest_t ) == 64, "Shared device view request ABI changed" );
+
+// Extended config for shared device backing interning.
+typedef struct sirResourceDerivedConfig_s
+{
+	SIRResourceAllocator allocator;
+	uint32_t nMetadataDomain;
+	uint32_t nMaxRepresentations;
+	uint32_t nMaxProviders;
+	uint32_t nMaxSharedBorrows;
+	uint64_t nMaxTrackedBytes;
+} sirResourceDerivedConfig_t;
+typedef sirResourceDerivedConfig_t SIRResourceDerivedConfig;
+
 // Byte totals represent independently allocated physical provider backing,
 // including pending retirements. Canonical GRDG bytes remain in graph stats.
 typedef struct sirResourceDerivedStats_s
@@ -335,11 +410,14 @@ typedef struct sirResourceDerivedStats_s
 	uint32_t nLiveRepresentations;
 	uint32_t nPendingRetirements;
 	uint32_t nRegisteredProviders;
+	uint32_t nLiveSharedBorrows;
+	uint32_t nMaxSharedBorrows;
 } sirResourceDerivedStats_t;
 typedef sirResourceDerivedStats_t SIRResourceDerivedStats;
 
 typedef struct sirDerivedProviderSlot_s sirDerivedProviderSlot_t;
-typedef struct sirDerivedRepresentationSlot_s sirDerivedRepresentationSlot_t;
+typedef struct sirUnifiedSlot_s sirUnifiedSlot_t;
+typedef struct sirSharedDeviceBorrowSlot_s sirSharedDeviceBorrowSlot_t;
 
 // One writer thread, bounded metadata and generation-checked handles.
 // Graph and allocator callback context must outlive the registry. Each
@@ -352,7 +430,8 @@ private:
 	SIRResourceDerivedConfig m_Config;
 	std::thread::id m_OwnerThread;
 	sirDerivedProviderSlot_t *m_pProviders;
-	sirDerivedRepresentationSlot_t *m_pRepresentations;
+	sirUnifiedSlot_t *m_pUnifiedSlots;
+	sirSharedDeviceBorrowSlot_t *m_pSharedBorrows;
 	SIRResourceDerivedStats m_Stats;
 	uint64_t m_nTrackedBytes;
 	bool m_bReady;
@@ -361,6 +440,10 @@ private:
 	int32_t findProvider( uint32_t nProviderId ) const noexcept;
 	SIRResourceResult collectProvider( uint32_t iProvider ) noexcept;
 	void releaseMetadata( void ) noexcept;
+	int32_t findSharedBacking( const SIRResourceView& rSource, const sirSharedDeviceBackingDesc_t& rDesc ) const noexcept;
+	int32_t findFreeUnifiedSlot( sirUnifiedSlotKind_t eKind ) const noexcept;
+	int32_t findFreeSharedBorrow( void ) const noexcept;
+	SIRResourceResult retireSharedBacking( uint32_t iBacking, const sirProviderCompletionSet_t& required ) noexcept;
 
 public:
 	SIRResourceDerivedRegistry( SIRResourceGraph& rGraph, const SIRResourceDerivedConfig& rConfig ) noexcept;
@@ -380,6 +463,17 @@ public:
 	SIRResourceResult updateProviderCompletion( const sirProviderCompletionSet_t& observed ) noexcept;
 	SIRResourceResult getAccounting( SIRDerivedResourceHandle hRepresentation, SIRDerivedResourceAccounting *pAccounting ) const noexcept;
 	SIRResourceResult getStats( SIRResourceDerivedStats *pStats ) const noexcept;
+
+	// Shared device backing interning and borrowing.
+	SIRResourceResult reserveSharedDeviceBacking( const SIRResourceReadScope& rScope, const SIRResourceView& rSource,
+	                                              const sirSharedDeviceBackingDesc_t& rDesc,
+	                                              sirSharedDeviceBackingReservation_t *pReservation ) noexcept;
+	SIRResourceResult publishSharedDeviceBacking( SIRDerivedResourceHandle hBacking, uint64_t nNativeToken ) noexcept;
+	SIRResourceResult acquireSharedDeviceView( const SIRResourceReadScope& rScope, const SIRResourceView& rSource,
+	                                           const sirSharedDeviceViewRequest_t& rRequest,
+	                                           sirSharedDeviceView_t *pView ) noexcept;
+	SIRResourceResult releaseSharedDeviceView( const sirSharedDeviceView_t& rView, const sirProviderCompletionSet_t& required ) noexcept;
+	SIRResourceResult cancelSharedDeviceBacking( SIRDerivedResourceHandle hBacking ) noexcept;
 };
 
 #endif // __SIRENGINE_SIRRESOURCEGRAPH_H__

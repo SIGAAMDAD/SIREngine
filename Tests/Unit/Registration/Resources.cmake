@@ -45,6 +45,12 @@ target_link_libraries(SIRDerivedResourceRegistryTests PRIVATE SIR::Resources)
 add_test(NAME resources.derived.retirement COMMAND SIRDerivedResourceRegistryTests)
 sir_configure_owned_target(SIRDerivedResourceRegistryTests)
 
+# Shared physical GPU backing interning and provider-completion regression.
+add_executable(SIRSharedDeviceBackingTests SIRSharedDeviceBackingTests.cpp)
+target_link_libraries(SIRSharedDeviceBackingTests PRIVATE SIR::Resources)
+add_test(NAME resources.shared-device.backing-lifetimes COMMAND SIRSharedDeviceBackingTests)
+sir_configure_owned_target(SIRSharedDeviceBackingTests)
+
 add_executable(SIRTaskSchedulerTests SIRTaskSchedulerTests.cpp)
 target_link_libraries(SIRTaskSchedulerTests PRIVATE SIR::Core)
 add_test(NAME core.jobs.scheduler COMMAND SIRTaskSchedulerTests)
