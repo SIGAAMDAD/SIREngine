@@ -657,8 +657,7 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::submit( sirGraphicsQueue_t eQueue,
 				}
 				continue;
 			}
-			const sirGraphicsHandle_t hTexture =
-			    op.eKind == SIR_VULKAN_GRAPHICS_TEXTURE_COPY ? op.textureCopy.hTexture : op.barrier.hResource;
+			const sirGraphicsHandle_t hTexture = op.eKind == SIR_VULKAN_GRAPHICS_TEXTURE_COPY ? op.textureCopy.hTexture : op.barrier.hResource;
 			if ( hTexture.eType != SIR_GRAPHICS_HANDLE_TEXTURE || hTexture.nDeviceGeneration != m_nDeviceGeneration ||
 			     hTexture.nSlot >= SIR_VULKAN_TEXTURE_CAPACITY ) {
 				return SIR_GRAPHICS_INVALID_HANDLE;

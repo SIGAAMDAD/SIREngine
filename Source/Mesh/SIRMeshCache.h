@@ -82,6 +82,34 @@ typedef struct sirMeshCacheSlot_s sirMeshCacheSlot_t;
 // Sole writer of logical slot/generation/borrow metadata. A source pin is
 // transferred on successful insertion, and released exactly once after all
 // leases retire. This class never owns or copies the underlying vertex bytes.
+// Shared device backing integration types.
+// These allow mesh geometry to be backed by a shared physical GPU allocation
+// that can be borrowed by multiple subsystems (render, physics, audio, nav).
+typedef struct sirMeshDeviceBackingDesc_s
+{
+	uint32_t nPhysicalDeviceId;
+	uint32_t nDeviceGeneration;
+	uint32_t nStorageLayoutId;
+	uint32_t nSupportedUsageMask;
+	uint32_t nFormatId;
+	uint32_t nAlignment;
+	uint64_t nVertexCount;
+	uint64_t nIndexCount;
+	uint32_t nProviderId;
+	uint32_t nReserved;
+} sirMeshDeviceBackingDesc_t;
+
+typedef struct sirMeshDeviceBackingReservation_s
+{
+	SIRDerivedResourceHandle hBacking;
+	uint64_t nPhysicalBackingId;
+	bool bNeedsNativeCreation;
+	uint8_t m_szReserved[7];
+} sirMeshDeviceBackingReservation_t;
+
+class SIRResourceDerivedRegistry;
+class SIRResourceGraph;
+
 class SIRMeshCache
 {
 public:
@@ -107,6 +135,16 @@ public:
 	sirMeshResult_t release( sirMeshHandle_t handle ) noexcept;
 	sirMeshResult_t retire( sirMeshHandle_t handle ) noexcept;
 	sirMeshResult_t shutdown( void ) noexcept;
+
+	// Shared device backing integration.
+	// These methods integrate with SIRResourceDerivedRegistry for
+	// one-canonical-asset and one-physical-GPU-backing across all systems.
+	sirMeshResult_t reserveSharedDeviceBacking(
+	    SIRResourceDerivedRegistry& registry,
+	    SIRResourceGraph& graph,
+	    const sirMeshKey_t* pKey,
+	    const sirMeshDeviceBackingDesc_t& desc,
+	    sirMeshDeviceBackingReservation_t* pReservation ) noexcept;
 
 protected:
 private:

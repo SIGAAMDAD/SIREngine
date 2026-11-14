@@ -1,7 +1,7 @@
 # SIREngine-owned source only. The pinned Godot fork retains its own style.
 BasedOnStyle: LLVM
 Language: Cpp
-Standard: c++17
+Standard: c++23
 ColumnLimit: 140
 UseTab: ForIndentation
 IndentWidth: 4

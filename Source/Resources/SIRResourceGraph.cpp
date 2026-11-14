@@ -11,7 +11,6 @@ This software is provided "as is", without warranty of any kind,
 express or implied, including but not limited to the warranties
 of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
-
 */
 
 #include <Resources/SIRResourceGraph.h>
@@ -190,8 +189,7 @@ SIRResourceGraph::SIRResourceGraph( const SIRResourceGraphConfig& rConfig ) noex
 	m_pReadKeyIndex = ( sirReadKeyIndexCell_t * )allocate( nReadCells, alignof( sirReadKeyIndexCell_t ), m_Config.m_nMetadataDomain );
 	m_pReaderEpochs = ( std::atomic<uint64_t> * )allocate( nReaderBytes, alignof( std::atomic<uint64_t> ), m_Config.m_nMetadataDomain );
 	m_pReverseBuckets = ( uint32_t * )allocate( nBuckets, alignof( uint32_t ), m_Config.m_nMetadataDomain );
-	m_pInvalidations =
-	    ( SIRResourceInvalidationEvent * )allocate( nEvents, alignof( SIRResourceInvalidationEvent ), m_Config.m_nMetadataDomain );
+	m_pInvalidations = ( SIRResourceInvalidationEvent * )allocate( nEvents, alignof( SIRResourceInvalidationEvent ), m_Config.m_nMetadataDomain );
 	m_pTraversalQueue = ( uint32_t * )allocate( ( uint64_t )m_Config.m_nMaxResources * sizeof( uint32_t ), alignof( uint32_t ),
 	                                            m_Config.m_nMetadataDomain );
 	m_pPlanNextEdges = ( uint32_t * )allocate( ( uint64_t )m_Config.m_nMaxResources * sizeof( uint32_t ), alignof( uint32_t ),
