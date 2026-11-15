@@ -18,6 +18,13 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <sys/stat.h>
 #include <unistd.h>
 #include <limits.h>
+#include <string.h>
+#ifdef SIR_WAYLAND_CURSOR_AVAILABLE
+#include <wayland-cursor.h>
+#endif
+#ifdef SIR_WAYLAND_TEXT_INPUT_AVAILABLE
+#include <text-input-unstable-v3-client-protocol.h>
+#endif
 #ifdef SIR_WAYLAND_POINTER_PROTOCOLS_AVAILABLE
 #include <pointer-constraints-unstable-v1-client-protocol.h>
 #include <relative-pointer-unstable-v1-client-protocol.h>
@@ -25,6 +32,190 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #ifdef SIR_WAYLAND_XKB_AVAILABLE
 #include <xkbcommon/xkbcommon.h>
 #endif
+
+void SIRWaylandInputBridge::resetPendingText( void ) noexcept
+{
+	m_szPendingPreedit[0] = '\0';
+	m_szPendingCommit[0] = '\0';
+	m_nPendingCursorBegin = 0;
+	m_nPendingCursorEnd = 0;
+	m_bPendingPreedit = false;
+	m_bPendingCommit = false;
+}
+
+void SIRWaylandInputBridge::clearTextInput( void ) noexcept
+{
+#ifdef SIR_WAYLAND_TEXT_INPUT_AVAILABLE
+	if ( m_pTextInput != nullptr ) {
+		if ( m_pDriver != nullptr && m_pDriver->isDisplayLost() ) {
+			wl_proxy_destroy( ( wl_proxy * )m_pTextInput );
+		} else {
+			zwp_text_input_v3_destroy( m_pTextInput );
+		}
+	}
+#endif
+	m_pTextInput = nullptr;
+	m_pTextInputFocus = nullptr;
+	m_bTextInputActive = false;
+	resetPendingText();
+	if ( m_pInput != nullptr ) {
+		m_pInput->text().clearPreedit();
+	}
+}
+
+void SIRWaylandInputBridge::textInputProtocolLost( void *pContext ) noexcept
+{
+	( ( SIRWaylandInputBridge * )pContext )->clearTextInput();
+}
+
+void SIRWaylandInputBridge::ensureTextInput( void ) noexcept
+{
+#ifdef SIR_WAYLAND_TEXT_INPUT_AVAILABLE
+	if ( m_pTextInput != nullptr || m_pDriver == nullptr || m_pSeat == nullptr || m_bSeatLost ) {
+		return;
+	}
+	zwp_text_input_manager_v3 *pManager = m_pDriver->borrowTextInputManager();
+	if ( pManager == nullptr ) {
+		return;
+	}
+	m_pTextInput = zwp_text_input_manager_v3_get_text_input( pManager, m_pSeat );
+	if ( m_pTextInput == nullptr ) {
+		return;
+	}
+	static const zwp_text_input_v3_listener s_Listener = { textInputEnter,  textInputLeave,  textInputPreedit,
+	                                                       textInputCommit, textInputDelete, textInputDone };
+	if ( zwp_text_input_v3_add_listener( m_pTextInput, &s_Listener, this ) != 0 ) {
+		clearTextInput();
+	}
+#endif
+}
+
+void SIRWaylandInputBridge::updateTextInputActivation( void ) noexcept
+{
+#ifdef SIR_WAYLAND_TEXT_INPUT_AVAILABLE
+	const bool bEnable = m_pTextInput != nullptr && m_pTextInputFocus != nullptr && m_pTextInputFocus == m_pKeyboardFocus &&
+	                     m_pInput != nullptr && m_pInput->text().snapshot().bEnabled;
+	if ( m_pTextInput == nullptr || bEnable == m_bTextInputActive ) {
+		return;
+	}
+	if ( bEnable ) {
+		zwp_text_input_v3_enable( m_pTextInput );
+	} else {
+		zwp_text_input_v3_disable( m_pTextInput );
+		resetPendingText();
+		m_pInput->text().clearPreedit();
+	}
+	zwp_text_input_v3_commit( m_pTextInput );
+	m_bTextInputActive = bEnable;
+#endif
+}
+
+void SIRWaylandInputBridge::textInputEnter( void *pContext, zwp_text_input_v3 *pText, wl_surface *pSurface ) noexcept
+{
+	SIRWaylandInputBridge *pBridge = ( SIRWaylandInputBridge * )pContext;
+	if ( pBridge->m_pTextInput != pText || !pBridge->validSurface( pSurface ) ) {
+		return;
+	}
+	pBridge->m_pTextInputFocus = pSurface;
+	pBridge->updateTextInputActivation();
+}
+
+void SIRWaylandInputBridge::textInputLeave( void *pContext, zwp_text_input_v3 *pText, wl_surface *pSurface ) noexcept
+{
+	SIRWaylandInputBridge *pBridge = ( SIRWaylandInputBridge * )pContext;
+	if ( pBridge->m_pTextInput != pText || pBridge->m_pTextInputFocus != pSurface ) {
+		return;
+	}
+	pBridge->m_pTextInputFocus = nullptr;
+	pBridge->updateTextInputActivation();
+}
+
+void SIRWaylandInputBridge::textInputPreedit( void *pContext, zwp_text_input_v3 *pText, const char *pszText, int32_t nBegin,
+                                              int32_t nEnd ) noexcept
+{
+	SIRWaylandInputBridge *pBridge = ( SIRWaylandInputBridge * )pContext;
+	if ( pBridge->m_pTextInput != pText || !pBridge->m_bTextInputActive ) {
+		return;
+	}
+	const char *pszValue = pszText == nullptr ? "" : pszText;
+	const size_t nBytes = strlen( pszValue );
+	if ( nBytes >= sizeof( pBridge->m_szPendingPreedit ) ) {
+		pBridge->m_bPendingPreedit = false;
+		return;
+	}
+	memcpy( pBridge->m_szPendingPreedit, pszValue, nBytes + 1 );
+	pBridge->m_nPendingCursorBegin = nBegin;
+	pBridge->m_nPendingCursorEnd = nEnd;
+	pBridge->m_bPendingPreedit = true;
+}
+
+void SIRWaylandInputBridge::textInputCommit( void *pContext, zwp_text_input_v3 *pText, const char *pszText ) noexcept
+{
+	SIRWaylandInputBridge *pBridge = ( SIRWaylandInputBridge * )pContext;
+	if ( pBridge->m_pTextInput != pText || !pBridge->m_bTextInputActive ) {
+		return;
+	}
+	const char *pszValue = pszText == nullptr ? "" : pszText;
+	const size_t nBytes = strlen( pszValue );
+	if ( nBytes >= sizeof( pBridge->m_szPendingCommit ) ) {
+		pBridge->m_bPendingCommit = false;
+		return;
+	}
+	memcpy( pBridge->m_szPendingCommit, pszValue, nBytes + 1 );
+	pBridge->m_bPendingCommit = true;
+}
+
+void SIRWaylandInputBridge::textInputDelete( void *pContext, zwp_text_input_v3 *pText, uint32_t nBefore, uint32_t nAfter ) noexcept
+{
+	// No surrounding-text snapshot is supplied by SIRInputText. The compositor
+	// is not given surrounding text, so deletion requests cannot target data.
+	( void )pContext;
+	( void )pText;
+	( void )nBefore;
+	( void )nAfter;
+}
+
+void SIRWaylandInputBridge::textInputDone( void *pContext, zwp_text_input_v3 *pText, uint32_t nSerial ) noexcept
+{
+	( void )nSerial;
+	SIRWaylandInputBridge *pBridge = ( SIRWaylandInputBridge * )pContext;
+	if ( pBridge->m_pTextInput != pText || !pBridge->m_bTextInputActive || pBridge->m_pInput == nullptr ) {
+		pBridge->resetPendingText();
+		return;
+	}
+	SIRInputText& text = pBridge->m_pInput->text();
+	if ( pBridge->m_bPendingCommit ) {
+		( void )text.appendUtf8( pBridge->m_szPendingCommit, ( uint32_t )strlen( pBridge->m_szPendingCommit ) );
+		if ( !pBridge->m_bPendingPreedit ) {
+			text.clearPreedit();
+		}
+	}
+	if ( pBridge->m_bPendingPreedit ) {
+		const uint32_t nBytes = ( uint32_t )strlen( pBridge->m_szPendingPreedit );
+		uint32_t szDecoded[SIR_INPUT_PREEDIT_CAPACITY] = {};
+		uint32_t nCount = 0;
+		if ( SIRInputText::decodeUtf8( pBridge->m_szPendingPreedit, nBytes, szDecoded, SIR_INPUT_PREEDIT_CAPACITY, &nCount ) ) {
+			uint32_t nCaret = 0;
+			uint32_t nSelection = 0;
+			const int32_t nBegin = pBridge->m_nPendingCursorBegin;
+			const int32_t nEnd = pBridge->m_nPendingCursorEnd;
+			if ( nBegin >= 0 && nEnd >= 0 && ( uint32_t )nBegin <= nBytes && ( uint32_t )nEnd <= nBytes ) {
+				uint32_t nFirst = 0;
+				uint32_t nLast = 0;
+				uint32_t szDiscard[SIR_INPUT_PREEDIT_CAPACITY] = {};
+				if ( SIRInputText::decodeUtf8( pBridge->m_szPendingPreedit, ( uint32_t )nBegin, szDiscard, SIR_INPUT_PREEDIT_CAPACITY,
+				                               &nFirst ) &&
+				     SIRInputText::decodeUtf8( pBridge->m_szPendingPreedit, ( uint32_t )nEnd, szDiscard, SIR_INPUT_PREEDIT_CAPACITY,
+				                               &nLast ) ) {
+					nCaret = nFirst < nLast ? nFirst : nLast;
+					nSelection = nFirst < nLast ? nLast - nFirst : nFirst - nLast;
+				}
+			}
+			( void )text.setPreeditCodepoints( szDecoded, nCount, nCaret, nSelection );
+		}
+	}
+	pBridge->resetPendingText();
+}
 
 SIRWaylandInputBridge::~SIRWaylandInputBridge( void ) noexcept
 {
@@ -94,6 +285,11 @@ bool SIRWaylandInputBridge::bind( SIRInputService& input, SIRWindowDriverWayland
 		unbind();
 		return false;
 	}
+	if ( !driver.setTextInputProtocolLostSink( textInputProtocolLost, this ) ) {
+		unbind();
+		return false;
+	}
+	ensureTextInput();
 	return true;
 }
 
@@ -126,6 +322,13 @@ void SIRWaylandInputBridge::unregisterWindow( uintptr_t nNativeSurface ) noexcep
 		}
 		if ( m_pKeyboardFocus == pSurface ) {
 			m_pKeyboardFocus = nullptr;
+			if ( m_pDriver != nullptr ) {
+				m_pDriver->notifyKeyboardFocus( pSurface, false );
+			}
+			if ( m_pTextInputFocus == pSurface ) {
+				m_pTextInputFocus = nullptr;
+			}
+			updateTextInputActivation();
 			if ( m_pInput != nullptr ) {
 				m_pInput->text().setFocused( false );
 				m_pInput->setHapticsPaused( true );
@@ -183,6 +386,7 @@ bool SIRWaylandInputBridge::beginFrame( void ) noexcept
 		}
 	}
 	if ( !m_bSeatLost ) {
+		ensureTextInput();
 		ensureDevices();
 		if ( m_eCursorMode == SIR_INPUT_CURSOR_CAPTURED && m_pLockedPointer == nullptr ) {
 			( void )beginPointerCapture();
@@ -200,23 +404,103 @@ void SIRWaylandInputBridge::setTextEnabled( bool bEnabled ) noexcept
 {
 	if ( m_pInput != nullptr ) {
 		m_pInput->text().setEnabled( bEnabled );
+		updateTextInputActivation();
 	}
+}
+
+bool SIRWaylandInputBridge::ensureCursorImage( void ) noexcept
+{
+#ifdef SIR_WAYLAND_CURSOR_AVAILABLE
+	if ( m_pCursorSurface != nullptr && m_pCursor != nullptr ) {
+		return true;
+	}
+	if ( m_pDriver == nullptr || m_pDisplay == nullptr || m_pDriver->borrowCompositor() == nullptr ) {
+		return false;
+	}
+	if ( m_pCursorTheme == nullptr ) {
+		m_pCursorTheme = wl_cursor_theme_load( nullptr, 24, m_pDisplay );
+	}
+	if ( m_pCursorTheme == nullptr ) {
+		return false;
+	}
+	m_pCursor = wl_cursor_theme_get_cursor( m_pCursorTheme, "left_ptr" );
+	if ( m_pCursor == nullptr || m_pCursor->image_count == 0 ) {
+		return false;
+	}
+	m_pCursorSurface = wl_compositor_create_surface( m_pDriver->borrowCompositor() );
+	return m_pCursorSurface != nullptr;
+#else
+	return false;
+#endif
+}
+
+void SIRWaylandInputBridge::updateCursorVisibility( void ) noexcept
+{
+	if ( m_pPointer == nullptr || m_pPointerFocus == nullptr || m_nPointerSerial == 0 ) {
+		return;
+	}
+	if ( m_eCursorMode == SIR_INPUT_CURSOR_FREE && m_pCursorSurface == nullptr ) {
+		return;
+	}
+	if ( m_eCursorMode != SIR_INPUT_CURSOR_FREE ) {
+		wl_pointer_set_cursor( m_pPointer, m_nPointerSerial, nullptr, 0, 0 );
+		return;
+	}
+#ifdef SIR_WAYLAND_CURSOR_AVAILABLE
+	if ( !ensureCursorImage() ) {
+		return;
+	}
+	wl_cursor_image *pImage = m_pCursor->images[0];
+	wl_buffer *pBuffer = wl_cursor_image_get_buffer( pImage );
+	if ( pBuffer == nullptr ) {
+		return;
+	}
+	wl_surface_attach( m_pCursorSurface, pBuffer, 0, 0 );
+	wl_surface_damage( m_pCursorSurface, 0, 0, ( int32_t )pImage->width, ( int32_t )pImage->height );
+	wl_surface_commit( m_pCursorSurface );
+	wl_pointer_set_cursor( m_pPointer, m_nPointerSerial, m_pCursorSurface, ( int32_t )pImage->hotspot_x, ( int32_t )pImage->hotspot_y );
+#endif
+}
+
+void SIRWaylandInputBridge::clearCursorImage( void ) noexcept
+{
+#ifdef SIR_WAYLAND_CURSOR_AVAILABLE
+	if ( m_pCursorSurface != nullptr ) {
+		if ( m_pDriver != nullptr && m_pDriver->isDisplayLost() ) {
+			wl_proxy_destroy( ( wl_proxy * )m_pCursorSurface );
+		} else {
+			wl_surface_destroy( m_pCursorSurface );
+		}
+	}
+	if ( m_pCursorTheme != nullptr ) {
+		wl_cursor_theme_destroy( m_pCursorTheme );
+	}
+#endif
+	m_pCursorSurface = nullptr;
+	m_pCursorTheme = nullptr;
+	m_pCursor = nullptr;
+	m_nPointerSerial = 0;
 }
 
 bool SIRWaylandInputBridge::setCursorMode( sirInputCursorMode_t eMode ) noexcept
 {
-	if ( m_pInput == nullptr || eMode == SIR_INPUT_CURSOR_HIDDEN || eMode > SIR_INPUT_CURSOR_CAPTURED ) {
+	if ( m_pInput == nullptr || eMode > SIR_INPUT_CURSOR_CAPTURED ) {
 		return false;
 	}
-	if ( eMode == SIR_INPUT_CURSOR_FREE ) {
+	// A hidden cursor must be restorable. Reject requests when the native
+	// cursor theme cannot be created instead of permanently hiding the pointer.
+	if ( eMode != SIR_INPUT_CURSOR_FREE && !ensureCursorImage() ) {
+		return false;
+	}
+	if ( eMode == SIR_INPUT_CURSOR_CAPTURED ) {
+		if ( !beginPointerCapture() ) {
+			return false;
+		}
+	} else {
 		endPointerCapture();
-		m_eCursorMode = SIR_INPUT_CURSOR_FREE;
-		return true;
 	}
-	if ( !beginPointerCapture() ) {
-		return false;
-	}
-	m_eCursorMode = SIR_INPUT_CURSOR_CAPTURED;
+	m_eCursorMode = eMode;
+	updateCursorVisibility();
 	return true;
 }
 
@@ -275,11 +559,19 @@ void SIRWaylandInputBridge::endPointerCapture( void ) noexcept
 {
 #ifdef SIR_WAYLAND_POINTER_PROTOCOLS_AVAILABLE
 	if ( m_pLockedPointer != nullptr ) {
-		zwp_locked_pointer_v1_destroy( m_pLockedPointer );
+		if ( m_pDriver != nullptr && m_pDriver->isDisplayLost() ) {
+			wl_proxy_destroy( ( wl_proxy * )m_pLockedPointer );
+		} else {
+			zwp_locked_pointer_v1_destroy( m_pLockedPointer );
+		}
 		m_pLockedPointer = nullptr;
 	}
 	if ( m_pRelativePointer != nullptr ) {
-		zwp_relative_pointer_v1_destroy( m_pRelativePointer );
+		if ( m_pDriver != nullptr && m_pDriver->isDisplayLost() ) {
+			wl_proxy_destroy( ( wl_proxy * )m_pRelativePointer );
+		} else {
+			zwp_relative_pointer_v1_destroy( m_pRelativePointer );
+		}
 		m_pRelativePointer = nullptr;
 	}
 #endif
@@ -329,7 +621,9 @@ void SIRWaylandInputBridge::pointerUnlocked( void *pContext, zwp_locked_pointer_
 {
 	SIRWaylandInputBridge *pBridge = ( SIRWaylandInputBridge * )pContext;
 	if ( pBridge->m_pLockedPointer == pLock ) {
-		pBridge->m_bPointerLocked = false;
+		// A compositor can revoke a persistent lock without the surface
+		// losing pointer focus. Retire both proxies and retry at the next frame.
+		pBridge->endPointerCapture();
 		pBridge->m_bHavePointerPosition = false;
 	}
 }
@@ -387,10 +681,16 @@ void SIRWaylandInputBridge::clearKeyboard( void ) noexcept
 	m_bKeyboardDevice = false;
 	m_bKeyboardResyncPending = false;
 	m_hKeyboard = {};
+	if ( m_pDriver != nullptr && m_pKeyboardFocus != nullptr ) {
+		m_pDriver->notifyKeyboardFocus( m_pKeyboardFocus, false );
+	}
 	m_pKeyboardFocus = nullptr;
+	updateTextInputActivation();
 	clearKeymap();
 	if ( m_pKeyboard != nullptr ) {
-		if ( wl_proxy_get_version( ( wl_proxy * )m_pKeyboard ) >= 3 ) {
+		if ( m_pDriver != nullptr && m_pDriver->isDisplayLost() ) {
+			wl_proxy_destroy( ( wl_proxy * )m_pKeyboard );
+		} else if ( wl_proxy_get_version( ( wl_proxy * )m_pKeyboard ) >= 3 ) {
 			wl_keyboard_release( m_pKeyboard );
 		} else {
 			wl_keyboard_destroy( m_pKeyboard );
@@ -412,12 +712,15 @@ void SIRWaylandInputBridge::clearPointer( void ) noexcept
 	m_bPointerResyncPending = false;
 	m_hPointer = {};
 	m_pPointerFocus = nullptr;
+	m_nPointerSerial = 0;
 	m_bHavePointerPosition = false;
 	m_nWheelRemainder[0] = 0;
 	m_nWheelRemainder[1] = 0;
 	endPointerCapture();
 	if ( m_pPointer != nullptr ) {
-		if ( wl_proxy_get_version( ( wl_proxy * )m_pPointer ) >= 3 ) {
+		if ( m_pDriver != nullptr && m_pDriver->isDisplayLost() ) {
+			wl_proxy_destroy( ( wl_proxy * )m_pPointer );
+		} else if ( wl_proxy_get_version( ( wl_proxy * )m_pPointer ) >= 3 ) {
 			wl_pointer_release( m_pPointer );
 		} else {
 			wl_pointer_destroy( m_pPointer );
@@ -435,6 +738,7 @@ void SIRWaylandInputBridge::releaseSeatObjects( void ) noexcept
 void SIRWaylandInputBridge::seatLost( void *pContext ) noexcept
 {
 	SIRWaylandInputBridge *pBridge = ( SIRWaylandInputBridge * )pContext;
+	pBridge->clearTextInput();
 	pBridge->releaseSeatObjects();
 	pBridge->m_bSeatLost = true;
 	pBridge->m_pSeat = nullptr;
@@ -533,6 +837,10 @@ void SIRWaylandInputBridge::keyboardEnter( void *pContext, wl_keyboard *pKeyboar
 		( void )pBridge->m_pInput->loseState( pBridge->id(), pBridge->m_hKeyboard );
 	}
 	pBridge->m_pKeyboardFocus = pSurface;
+	if ( pBridge->m_pDriver != nullptr ) {
+		pBridge->m_pDriver->notifyKeyboardFocus( pSurface, true );
+	}
+	pBridge->updateTextInputActivation();
 	pBridge->ensureDevices();
 	pBridge->m_pInput->text().setFocused( true );
 	pBridge->m_pInput->setHapticsPaused( false );
@@ -556,6 +864,10 @@ void SIRWaylandInputBridge::keyboardLeave( void *pContext, wl_keyboard *pKeyboar
 		return;
 	}
 	pBridge->m_pKeyboardFocus = nullptr;
+	if ( pBridge->m_pDriver != nullptr ) {
+		pBridge->m_pDriver->notifyKeyboardFocus( pSurface, false );
+	}
+	pBridge->updateTextInputActivation();
 	pBridge->m_pInput->text().setFocused( false );
 	pBridge->m_pInput->setHapticsPaused( true );
 	if ( pBridge->m_bKeyboardDevice ) {
@@ -578,7 +890,7 @@ void SIRWaylandInputBridge::keyboardKey( void *pContext, wl_keyboard *pKeyboard,
 	const sirInputControlChange_t change = { SIR_INPUT_BUTTON, ( uint16_t )( nKey + 8 ), bPressed ? 1 : 0 };
 	( void )pBridge->m_pInput->emitControls( pBridge->id(), pBridge->m_hKeyboard, &change, 1 );
 #ifdef SIR_WAYLAND_XKB_AVAILABLE
-	if ( pBridge->m_pKeyState != nullptr && bPressed && pBridge->m_pInput->text().snapshot().bEnabled ) {
+	if ( pBridge->m_pKeyState != nullptr && bPressed && !pBridge->m_bTextInputActive && pBridge->m_pInput->text().snapshot().bEnabled ) {
 		const uint32_t nCodepoint = xkb_state_key_get_utf32( pBridge->m_pKeyState, nKey + 8 );
 		if ( nCodepoint >= 32 ) {
 			( void )pBridge->m_pInput->text().appendCodepoint( nCodepoint );
@@ -631,6 +943,8 @@ void SIRWaylandInputBridge::pointerEnter( void *pContext, wl_pointer *pPointer, 
 		}
 	}
 	pBridge->m_pPointerFocus = pSurface;
+	pBridge->m_nPointerSerial = nSerial;
+	pBridge->updateCursorVisibility();
 	pBridge->m_nRemainderX = 0;
 	pBridge->m_nRemainderY = 0;
 	pBridge->m_nWheelRemainder[0] = 0;
@@ -653,6 +967,7 @@ void SIRWaylandInputBridge::pointerLeave( void *pContext, wl_pointer *pPointer, 
 	}
 	pBridge->endPointerCapture();
 	pBridge->m_pPointerFocus = nullptr;
+	pBridge->m_nPointerSerial = 0;
 	pBridge->m_bHavePointerPosition = false;
 	pBridge->m_nRemainderX = 0;
 	pBridge->m_nRemainderY = 0;
@@ -697,10 +1012,10 @@ void SIRWaylandInputBridge::pointerButton( void *pContext, wl_pointer *pPointer,
 	( void )nTime;
 	SIRWaylandInputBridge *pBridge = ( SIRWaylandInputBridge * )pContext;
 	if ( pBridge->m_pPointer != pPointer || pBridge->m_pPointerFocus == nullptr || !pBridge->m_bPointerDevice || nButton < 0x110 ||
-	     nButton > 0x112 ) {
+	     nButton > 0x114 || ( nState != WL_POINTER_BUTTON_STATE_PRESSED && nState != WL_POINTER_BUTTON_STATE_RELEASED ) ) {
 		return;
 	}
-	const uint16_t nCode = nButton == 0x110 ? 0 : ( nButton == 0x111 ? 1 : 2 );
+	const uint16_t nCode = ( uint16_t )( nButton - 0x110 );
 	const sirInputControlChange_t change = { SIR_INPUT_BUTTON, nCode, nState == WL_POINTER_BUTTON_STATE_PRESSED ? 1 : 0 };
 	( void )pBridge->m_pInput->emitControls( pBridge->id(), pBridge->m_hPointer, &change, 1 );
 }
@@ -763,10 +1078,13 @@ void SIRWaylandInputBridge::unbind( void ) noexcept
 		return;
 	}
 	if ( m_pDriver != nullptr ) {
+		( void )m_pDriver->setTextInputProtocolLostSink( nullptr, nullptr );
 		( void )m_pDriver->setSeatLostSink( nullptr, nullptr );
 		( void )m_pDriver->setPointerProtocolLostSink( nullptr, nullptr );
 	}
+	clearTextInput();
 	releaseSeatObjects();
+	clearCursorImage();
 	m_pInput = nullptr;
 	m_pDriver = nullptr;
 	m_pDisplay = nullptr;

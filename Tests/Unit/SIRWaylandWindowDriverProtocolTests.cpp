@@ -20,6 +20,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <viewporter-client-protocol.h>
 #include <pointer-constraints-unstable-v1-client-protocol.h>
 #include <relative-pointer-unstable-v1-client-protocol.h>
+#include <text-input-unstable-v3-client-protocol.h>
+#include <wayland-cursor.h>
 #include <xkbcommon/xkbcommon.h>
 #include <assert.h>
 #include <fcntl.h>
@@ -64,6 +66,18 @@ struct wl_pointer
 {
 };
 struct zwp_pointer_constraints_v1
+{
+};
+struct zwp_text_input_manager_v3
+{
+};
+struct zwp_text_input_v3
+{
+};
+struct wl_cursor_theme
+{
+};
+struct wl_buffer
 {
 };
 struct zwp_relative_pointer_manager_v1
@@ -119,6 +133,13 @@ static uint32_t s_nViewportDestroyCount = 0;
 static wl_keyboard s_Keyboard;
 static wl_pointer s_Pointer;
 static zwp_pointer_constraints_v1 s_Constraints;
+static zwp_text_input_manager_v3 s_TextManager;
+static zwp_text_input_v3 s_TextInput;
+static wl_cursor_theme s_CursorTheme;
+static wl_buffer s_CursorBuffer;
+static wl_cursor_image s_CursorImage = { 24, 24, 0, 0 };
+static wl_cursor_image *s_pCursorImages[] = { &s_CursorImage };
+static wl_cursor s_Cursor = { 1, s_pCursorImages };
 static zwp_relative_pointer_manager_v1 s_RelativeManager;
 static zwp_locked_pointer_v1 s_Lock;
 static zwp_relative_pointer_v1 s_Relative;
@@ -172,6 +193,13 @@ static const zwp_locked_pointer_v1_listener *s_pLockListener = nullptr;
 static void *s_pLockContext = nullptr;
 static const zwp_relative_pointer_v1_listener *s_pRelativeListener = nullptr;
 static void *s_pRelativeContext = nullptr;
+static const zwp_text_input_v3_listener *s_pTextListener = nullptr;
+static void *s_pTextContext = nullptr;
+static uint32_t s_nTextEnables = 0;
+static uint32_t s_nTextDisables = 0;
+static uint32_t s_nTextCommits = 0;
+static uint32_t s_nCursorChanges = 0;
+static bool s_bCursorVisible = true;
 static uint32_t s_nLocksCreated = 0;
 static uint32_t s_nLocksDestroyed = 0;
 static uint32_t s_nRelativeDestroyed = 0;
@@ -184,6 +212,7 @@ const wl_interface wp_fractional_scale_manager_v1_interface = { "wp_fractional_s
 const wl_interface wp_viewporter_interface = { "wp_viewporter" };
 const wl_interface xdg_wm_base_interface = { "xdg_wm_base" };
 const wl_interface zwp_pointer_constraints_v1_interface = { "zwp_pointer_constraints_v1" };
+const wl_interface zwp_text_input_manager_v3_interface = { "zwp_text_input_manager_v3" };
 const wl_interface zwp_relative_pointer_manager_v1_interface = { "zwp_relative_pointer_manager_v1" };
 wl_display *wl_display_connect( const char * )
 {
@@ -214,6 +243,8 @@ void *wl_registry_bind( wl_registry *, uint32_t, const wl_interface *pInterface,
 		return &s_FractionalManager;
 	if ( strcmp( pInterface->name, "wp_viewporter" ) == 0 )
 		return &s_Viewporter;
+	if ( strcmp( pInterface->name, "zwp_text_input_manager_v3" ) == 0 )
+		return &s_TextManager;
 	if ( strcmp( pInterface->name, "zwp_pointer_constraints_v1" ) == 0 )
 		return &s_Constraints;
 	if ( strcmp( pInterface->name, "zwp_relative_pointer_manager_v1" ) == 0 )
@@ -228,6 +259,7 @@ int wl_display_roundtrip( wl_display * )
 	s_pRegistryListener->global( s_pRegistryContext, &s_Registry, 15, "zwp_pointer_constraints_v1", 1 );
 	s_pRegistryListener->global( s_pRegistryContext, &s_Registry, 16, "zwp_relative_pointer_manager_v1", 1 );
 	s_pRegistryListener->global( s_pRegistryContext, &s_Registry, 17, "wl_output", 2 );
+	s_pRegistryListener->global( s_pRegistryContext, &s_Registry, 20, "zwp_text_input_manager_v3", 1 );
 	if ( s_bOfferFractional ) {
 		s_pRegistryListener->global( s_pRegistryContext, &s_Registry, 18, "wp_fractional_scale_manager_v1", 1 );
 		s_pRegistryListener->global( s_pRegistryContext, &s_Registry, 19, "wp_viewporter", 1 );
@@ -266,6 +298,60 @@ void wl_registry_destroy( wl_registry * )
 {
 }
 void wl_compositor_destroy( wl_compositor * )
+{
+}
+void wl_surface_attach( wl_surface *, wl_buffer *, int32_t, int32_t )
+{
+}
+void wl_surface_damage( wl_surface *, int32_t, int32_t, int32_t, int32_t )
+{
+}
+void wl_pointer_set_cursor( wl_pointer *, uint32_t, wl_surface *pSurface, int32_t, int32_t )
+{
+	++s_nCursorChanges;
+	s_bCursorVisible = pSurface != nullptr;
+}
+wl_cursor_theme *wl_cursor_theme_load( const char *, int32_t, wl_display * )
+{
+	return &s_CursorTheme;
+}
+wl_cursor *wl_cursor_theme_get_cursor( wl_cursor_theme *, const char * )
+{
+	return &s_Cursor;
+}
+void wl_cursor_theme_destroy( wl_cursor_theme * )
+{
+}
+wl_buffer *wl_cursor_image_get_buffer( wl_cursor_image * )
+{
+	return &s_CursorBuffer;
+}
+zwp_text_input_v3 *zwp_text_input_manager_v3_get_text_input( zwp_text_input_manager_v3 *, wl_seat * )
+{
+	return &s_TextInput;
+}
+int zwp_text_input_v3_add_listener( zwp_text_input_v3 *, const zwp_text_input_v3_listener *pListener, void *pContext )
+{
+	s_pTextListener = pListener;
+	s_pTextContext = pContext;
+	return 0;
+}
+void zwp_text_input_v3_enable( zwp_text_input_v3 * )
+{
+	++s_nTextEnables;
+}
+void zwp_text_input_v3_disable( zwp_text_input_v3 * )
+{
+	++s_nTextDisables;
+}
+void zwp_text_input_v3_commit( zwp_text_input_v3 * )
+{
+	++s_nTextCommits;
+}
+void zwp_text_input_v3_destroy( zwp_text_input_v3 * )
+{
+}
+void zwp_text_input_manager_v3_destroy( zwp_text_input_manager_v3 * )
 {
 }
 int wl_surface_add_listener( wl_surface *pSurface, const wl_surface_listener *pListener, void *pContext )
@@ -765,11 +851,18 @@ static bool sirTestOverflowRetainsInitialConfigureAndLatestSize( void ) noexcept
 	s_pSurfaceListener[1]->configure( s_pSurfaceContext[1], &s_XdgSurfaces[1], 201 );
 	s_pToplevelListener[0]->configure( s_pToplevelContext[0], &s_Toplevels[0], 733, 511, nullptr );
 	s_pSurfaceListener[0]->configure( s_pSurfaceContext[0], &s_XdgSurfaces[0], 202 );
+	// Focus transitions can race with a saturated event ring; only the last
+	// authoritative focus state for each window must survive deferred delivery.
+	driver.notifyKeyboardFocus( &s_Surfaces[0], true );
+	driver.notifyKeyboardFocus( &s_Surfaces[1], true );
+	driver.notifyKeyboardFocus( &s_Surfaces[0], true );
 	sirWaylandOverflowEvents_t events = {};
 	const sirWindowResult_t eResult = driver.pumpEvents( SIR_WINDOW_EVENT_CAPACITY + 16, sirCollectWaylandOverflowEvent, &events );
 	uint32_t nSecondReady = 0;
 	uint32_t nLastWidth = 0;
 	uint32_t nLastHeight = 0;
+	uint32_t nPrimaryGained = 0;
+	uint32_t nAuxiliaryLost = 0;
 	for ( uint32_t i = 0; i < events.nCount; ++i ) {
 		if ( events.events[i].nSlot == 1 && events.events[i].eKind == SIR_WINDOW_EVENT_READY ) {
 			++nSecondReady;
@@ -778,8 +871,15 @@ static bool sirTestOverflowRetainsInitialConfigureAndLatestSize( void ) noexcept
 			nLastWidth = events.events[i].nWidth;
 			nLastHeight = events.events[i].nHeight;
 		}
+		if ( events.events[i].nSlot == 0 && events.events[i].eKind == SIR_WINDOW_EVENT_FOCUS_GAINED ) {
+			++nPrimaryGained;
+		}
+		if ( events.events[i].nSlot == 1 && events.events[i].eKind == SIR_WINDOW_EVENT_FOCUS_LOST ) {
+			++nAuxiliaryLost;
+		}
 	}
-	const bool bValid = eResult == SIR_WINDOW_EVENTS_LOST && nSecondReady == 1 && nLastWidth == 733 && nLastHeight == 511;
+	const bool bValid = eResult == SIR_WINDOW_EVENTS_LOST && nSecondReady == 1 && nLastWidth == 733 && nLastHeight == 511 &&
+	                    nPrimaryGained == 1 && nAuxiliaryLost == 1;
 	( void )driver.destroyWindow( 1 );
 	( void )driver.destroyWindow( 0 );
 	driver.shutdown();
@@ -872,6 +972,24 @@ static bool sirTestWaylandInputRouting( void ) noexcept
 		return false;
 	}
 	s_pKeyboardListener->enter( s_pKeyboardContext, &s_Keyboard, 5, &s_Surfaces[0], nullptr );
+	if ( s_pTextListener == nullptr ) {
+		return false;
+	}
+	// The compositor owns IME composition while the input text service is enabled.
+	// Byte-based Wayland cursor ranges must become codepoint-based editor offsets.
+	s_pTextListener->enter( s_pTextContext, &s_TextInput, &s_Surfaces[0] );
+	if ( s_nTextEnables == 0 || s_nTextCommits == 0 ) {
+		return false;
+	}
+	s_pTextListener->preedit_string( s_pTextContext, &s_TextInput, "caf\xC3\xA9", 2, 5 );
+	s_pTextListener->done( s_pTextContext, &s_TextInput, 1 );
+	const sirInputTextSnapshot_t& composition = input.text().snapshot();
+	if ( composition.nPreeditCount != 4 || composition.szPreedit[3] != 0xE9 || composition.nCaret != 2 || composition.nSelection != 2 ) {
+		return false;
+	}
+	s_pTextListener->commit_string( s_pTextContext, &s_TextInput, "\xCE\xBB" );
+	s_pTextListener->preedit_string( s_pTextContext, &s_TextInput, "", 0, 0 );
+	s_pTextListener->done( s_pTextContext, &s_TextInput, 2 );
 	s_pKeyboardListener->key( s_pKeyboardContext, &s_Keyboard, 5, 100, 30, WL_KEYBOARD_KEY_STATE_PRESSED );
 	s_pPointerListener->enter( s_pPointerContext, &s_Pointer, 6, &s_Surfaces[0], 0, 0 );
 	s_pPointerListener->button( s_pPointerContext, &s_Pointer, 6, 100, 0x110, WL_POINTER_BUTTON_STATE_PRESSED );
@@ -881,7 +999,7 @@ static bool sirTestWaylandInputRouting( void ) noexcept
 		return false;
 	const sirInputFrame_t *pFrame = input.frame();
 	if ( pFrame == nullptr || pFrame->nCount < 3 || input.text().snapshot().nCount != 1 ||
-	     input.text().snapshot().szCodepoints[0] != uint32_t( 'a' ) ) {
+	     input.text().snapshot().szCodepoints[0] != uint32_t( 0x03BB ) || input.text().snapshot().nPreeditCount != 0 ) {
 		return false;
 	}
 	uint32_t nKey = 0, nMouse = 0, nMove = 0;
@@ -915,19 +1033,45 @@ static bool sirTestWaylandInputRouting( void ) noexcept
 		return false;
 	uint32_t nInvalidKeys[1] = { UINT32_MAX };
 	wl_array invalidKeys = { sizeof( nInvalidKeys ), sizeof( nInvalidKeys ), nInvalidKeys };
+	s_pTextListener->leave( s_pTextContext, &s_TextInput, &s_Surfaces[0] );
 	s_pKeyboardListener->enter( s_pKeyboardContext, &s_Keyboard, 8, &s_Surfaces[1], &invalidKeys );
+	s_pTextListener->enter( s_pTextContext, &s_TextInput, &s_Surfaces[1] );
+	if ( s_nTextDisables == 0 || s_nTextEnables < 2 ) {
+		return false;
+	}
+	// The window driver must publish the corresponding focus transitions exactly once.
+	sirWaylandTestEvents_t focusEvents = {};
+	if ( driver.pumpEvents( 16, sirCollectWaylandEvent, &focusEvents ) != SIR_WINDOW_OK || focusEvents.nCount != 3 ||
+	     focusEvents.events[0].eKind != SIR_WINDOW_EVENT_FOCUS_GAINED || focusEvents.events[0].nSlot != 0 ||
+	     focusEvents.events[1].eKind != SIR_WINDOW_EVENT_FOCUS_LOST || focusEvents.events[1].nSlot != 0 ||
+	     focusEvents.events[2].eKind != SIR_WINDOW_EVENT_FOCUS_GAINED || focusEvents.events[2].nSlot != 1 ) {
+		return false;
+	}
 	s_pKeyboardListener->key( s_pKeyboardContext, &s_Keyboard, 8, 100, UINT32_MAX, WL_KEYBOARD_KEY_STATE_PRESSED );
 	s_pKeyboardListener->key( s_pKeyboardContext, &s_Keyboard, 8, 100, 20, WL_KEYBOARD_KEY_STATE_PRESSED );
 	s_pPointerListener->enter( s_pPointerContext, &s_Pointer, 9, &s_Surfaces[1], 0, 0 );
+	const uint32_t nCursorStart = s_nCursorChanges;
+	if ( !bridge.setCursorMode( SIR_INPUT_CURSOR_HIDDEN ) || s_bCursorVisible || s_nCursorChanges <= nCursorStart ||
+	     !bridge.setCursorMode( SIR_INPUT_CURSOR_FREE ) || !s_bCursorVisible ) {
+		return false;
+	}
 	if ( !bridge.setCursorMode( SIR_INPUT_CURSOR_CAPTURED ) || bridge.cursorMode() != SIR_INPUT_CURSOR_CAPTURED ||
 	     s_pLockListener == nullptr || s_pRelativeListener == nullptr ) {
 		return false;
 	}
-	const uint32_t nLocksBeforeRelease = s_nLocksCreated;
+	const uint32_t nLocksBeforeRevocation = s_nLocksCreated;
 	s_pLockListener->locked( s_pLockContext, &s_Lock );
 	s_pRelativeListener->relative_motion( s_pRelativeContext, &s_Relative, 0, 10, 512, 256, 512, 256 );
 	s_pPointerListener->motion( s_pPointerContext, &s_Pointer, 100, 1024, 768 );
-	if ( !bridge.setCursorMode( SIR_INPUT_CURSOR_FREE ) || s_nLocksDestroyed != nLocksBeforeRelease ||
+	// A compositor can revoke a persistent lock without moving pointer focus.
+	// The next input frame must restore capture using fresh protocol objects.
+	s_pLockListener->unlocked( s_pLockContext, &s_Lock );
+	if ( s_nLocksDestroyed != nLocksBeforeRevocation || s_nRelativeDestroyed != nLocksBeforeRevocation || !bridge.beginFrame() ||
+	     s_nLocksCreated != nLocksBeforeRevocation + 1 ) {
+		return false;
+	}
+	const uint32_t nLocksBeforeRelease = s_nLocksCreated;
+	if ( !bridge.setCursorMode( SIR_INPUT_CURSOR_FREE ) || !s_bCursorVisible || s_nLocksDestroyed != nLocksBeforeRelease ||
 	     s_nRelativeDestroyed != nLocksBeforeRelease ) {
 		return false;
 	}
@@ -961,7 +1105,11 @@ static bool sirTestWaylandInputRouting( void ) noexcept
 	if ( nSecondKey != 1 || nWheel != 1 || nFractionalWheel != -7 || nUnexpected != 0 || nKeyboardResync != 1 || nPointerResync != 1 ||
 	     nRelativeMotion != 1 || input.activeDeviceCount() != 2 )
 		return false;
-	if ( !input.begin( 3 ) || !bridge.beginFrame() )
+	// A text-input-manager hot unplug must invalidate the old IME without
+	// tearing down the seat, and a replacement manager is rebound next frame.
+	s_pRegistryListener->global_remove( s_pRegistryContext, &s_Registry, 20 );
+	s_pRegistryListener->global( s_pRegistryContext, &s_Registry, 21, "zwp_text_input_manager_v3", 1 );
+	if ( !input.begin( 3 ) || !bridge.beginFrame() || s_pTextListener == nullptr )
 		return false;
 	bridge.unregisterWindow( secondView.nNativeWindow );
 	if ( !input.publish() )

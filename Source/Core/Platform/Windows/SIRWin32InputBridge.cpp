@@ -149,8 +149,10 @@ intptr_t SIRWin32InputBridge::processWindowMessage( const sirWindowWin32Message_
 			m_pInput->text().clearPreedit();
 			m_nWindow = message.nWindow;
 		}
-	} else if ( message.nWindow != m_nWindow ) {
-		// Old HWND messages must not change the new focus owner's devices.
+	} else if ( message.nWindow != m_nWindow && message.nMessage != WM_INPUT_DEVICE_CHANGE ) {
+		// Focus-bound keyboard, pointer and IME messages belong to the active
+		// HWND. Physical device hotplug notifications can arrive at an older
+		// registered HWND during a focus/registration handover.
 		return 0;
 	}
 	return processMessage( message.nMessage, message.nWParam, message.nLParam, pHandled );

@@ -59,7 +59,7 @@ static bool sirPumpNativeWindows( void *pContext )
 		pPump->pWinInput->finishPump();
 	}
 #endif
-	return ePump == SIR_WINDOW_OK;
+	return ePump == SIR_WINDOW_OK || ePump == SIR_WINDOW_EVENTS_LOST;
 }
 
 #if defined( _WIN32 )
@@ -111,7 +111,8 @@ static bool sirPumpWaylandInputWindows( void *pContext )
 		pPump->bDiscoveryAttempted = true;
 		( void )pPump->pEvdev->discover( *pPump->pInput );
 	}
-	return pPump->pWindows->pumpEvents( 256 ) == SIR_WINDOW_OK;
+	const sirWindowResult_t ePump = pPump->pWindows->pumpEvents( 256 );
+	return ePump == SIR_WINDOW_OK || ePump == SIR_WINDOW_EVENTS_LOST;
 }
 
 static int sirRunWaylandInputWindow( bool bMultiwindow )

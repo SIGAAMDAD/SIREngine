@@ -34,6 +34,7 @@ struct wp_viewporter;
 struct wp_viewport;
 struct zwp_pointer_constraints_v1;
 struct zwp_relative_pointer_manager_v1;
+struct zwp_text_input_manager_v3;
 struct xdg_wm_base;
 struct xdg_surface;
 struct xdg_toplevel;
@@ -41,6 +42,7 @@ struct wl_array;
 
 typedef void ( *sirWaylandSeatLostFn_t )( void *pContext ) noexcept;
 typedef void ( *sirWaylandPointerProtocolLostFn_t )( void *pContext ) noexcept;
+typedef void ( *sirWaylandTextInputProtocolLostFn_t )( void *pContext ) noexcept;
 
 class SIRWindowDriverWayland;
 
@@ -90,6 +92,11 @@ public:
 	sirWindowResult_t pumpEvents( uint32_t nBudget, sirWindowDriverEventFn_t pCallback, void *pContext ) noexcept override;
 	void shutdown( void ) noexcept override;
 	wl_seat *borrowSeat( void ) const noexcept;
+	wl_compositor *borrowCompositor( void ) const noexcept;
+	void notifyKeyboardFocus( wl_surface *pSurface, bool bFocused ) noexcept;
+	zwp_text_input_manager_v3 *borrowTextInputManager( void ) const noexcept;
+	bool setTextInputProtocolLostSink( sirWaylandTextInputProtocolLostFn_t pSink, void *pContext ) noexcept;
+	bool isDisplayLost( void ) const noexcept;
 	bool setSeatLostSink( sirWaylandSeatLostFn_t pSink, void *pContext ) noexcept;
 	zwp_pointer_constraints_v1 *borrowPointerConstraints( void ) const noexcept;
 	zwp_relative_pointer_manager_v1 *borrowRelativePointerManager( void ) const noexcept;
@@ -124,8 +131,12 @@ private:
 	wp_fractional_scale_manager_v1 *m_pFractionalManager = nullptr;
 	wp_viewporter *m_pViewporter = nullptr;
 	wl_seat *m_pSeat = nullptr;
+	wl_surface *m_pKeyboardFocus = nullptr;
 	zwp_pointer_constraints_v1 *m_pPointerConstraints = nullptr;
 	zwp_relative_pointer_manager_v1 *m_pRelativePointerManager = nullptr;
+	zwp_text_input_manager_v3 *m_pTextInputManager = nullptr;
+	sirWaylandTextInputProtocolLostFn_t m_pTextInputLostSink = nullptr;
+	void *m_pTextInputLostContext = nullptr;
 	sirWaylandPointerProtocolLostFn_t m_pPointerProtocolLostSink = nullptr;
 	void *m_pPointerProtocolLostContext = nullptr;
 	sirWaylandSeatLostFn_t m_pSeatLostSink = nullptr;
@@ -138,6 +149,7 @@ private:
 	sirWindowBackendEvent_t m_DeferredReady[SIR_WINDOW_MAX_WINDOWS] = {};
 	sirWindowBackendEvent_t m_DeferredDpi[SIR_WINDOW_MAX_WINDOWS] = {};
 	sirWindowBackendEvent_t m_DeferredResize[SIR_WINDOW_MAX_WINDOWS] = {};
+	sirWindowBackendEvent_t m_DeferredFocus[SIR_WINDOW_MAX_WINDOWS] = {};
 	uint32_t m_nEventRead = 0;
 	uint32_t m_nEventWrite = 0;
 	uint32_t m_nEventCount = 0;
@@ -145,6 +157,7 @@ private:
 	uint32_t m_nSeatGlobal = 0;
 	uint32_t m_nConstraintsGlobal = 0;
 	uint32_t m_nRelativePointerGlobal = 0;
+	uint32_t m_nTextInputGlobal = 0;
 	uint32_t m_nShellGlobal = 0;
 	uint32_t m_nFractionalGlobal = 0;
 	uint32_t m_nViewporterGlobal = 0;

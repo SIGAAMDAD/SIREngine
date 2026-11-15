@@ -1,6 +1,9 @@
 #include <Core/Platform/Window/Linux/SIRWindowDriverWayland.h>
 #include <wayland-client.h>
 #include <xdg-shell-client-protocol.h>
+#ifdef SIR_WAYLAND_TEXT_INPUT_AVAILABLE
+#include <text-input-unstable-v3-client-protocol.h>
+#endif
 #ifdef SIR_WAYLAND_FRACTIONAL_SCALE_AVAILABLE
 #include <fractional-scale-v1-client-protocol.h>
 #include <viewporter-client-protocol.h>
@@ -12,6 +15,58 @@
 #include <errno.h>
 #include <poll.h>
 #include <string.h>
+
+wl_compositor *SIRWindowDriverWayland::borrowCompositor( void ) const noexcept
+{
+	return m_bLost ? nullptr : m_pCompositor;
+}
+
+void SIRWindowDriverWayland::notifyKeyboardFocus( wl_surface *pSurface, bool bFocused ) noexcept
+{
+	if ( m_bLost || pSurface == nullptr ) {
+		return;
+	}
+	if ( bFocused ) {
+		if ( m_pKeyboardFocus == pSurface ) {
+			return;
+		}
+		wl_surface *pPrevious = m_pKeyboardFocus;
+		if ( pPrevious != nullptr ) {
+			notifyKeyboardFocus( pPrevious, false );
+		}
+		m_pKeyboardFocus = pSurface;
+	} else if ( m_pKeyboardFocus != pSurface ) {
+		return;
+	} else {
+		m_pKeyboardFocus = nullptr;
+	}
+	for ( uint32_t i = 0; i < SIR_WINDOW_MAX_WINDOWS; ++i ) {
+		if ( m_Slots[i].pSurface == pSurface && !m_Slots[i].bLostPending ) {
+			queueEvent( i, bFocused ? SIR_WINDOW_EVENT_FOCUS_GAINED : SIR_WINDOW_EVENT_FOCUS_LOST, 0, 0 );
+			return;
+		}
+	}
+}
+
+zwp_text_input_manager_v3 *SIRWindowDriverWayland::borrowTextInputManager( void ) const noexcept
+{
+	return m_bLost ? nullptr : m_pTextInputManager;
+}
+
+bool SIRWindowDriverWayland::setTextInputProtocolLostSink( sirWaylandTextInputProtocolLostFn_t pSink, void *pContext ) noexcept
+{
+	if ( m_pDisplay == nullptr || m_bLost || ( pSink != nullptr && m_pTextInputLostSink != nullptr ) ) {
+		return false;
+	}
+	m_pTextInputLostSink = pSink;
+	m_pTextInputLostContext = pContext;
+	return true;
+}
+
+bool SIRWindowDriverWayland::isDisplayLost( void ) const noexcept
+{
+	return m_bLost;
+}
 
 SIRWindowDriverWayland::~SIRWindowDriverWayland( void ) noexcept
 {
@@ -78,6 +133,13 @@ void SIRWindowDriverWayland::registryGlobal( void *pContext, wl_registry *pRegis
 		pDriver->m_nRelativePointerGlobal = nName;
 	}
 #endif
+#ifdef SIR_WAYLAND_TEXT_INPUT_AVAILABLE
+	else if ( strcmp( pszInterface, zwp_text_input_manager_v3_interface.name ) == 0 && pDriver->m_pTextInputManager == nullptr ) {
+		pDriver->m_pTextInputManager =
+		    ( zwp_text_input_manager_v3 * )wl_registry_bind( pRegistry, nName, &zwp_text_input_manager_v3_interface, 1 );
+		pDriver->m_nTextInputGlobal = pDriver->m_pTextInputManager != nullptr ? nName : 0;
+	}
+#endif
 }
 
 void SIRWindowDriverWayland::registryRemove( void *pContext, wl_registry *pRegistry, uint32_t nName ) noexcept
@@ -94,6 +156,7 @@ void SIRWindowDriverWayland::registryRemove( void *pContext, wl_registry *pRegis
 			wl_seat_destroy( pDriver->m_pSeat );
 		}
 		pDriver->m_pSeat = nullptr;
+		pDriver->m_pKeyboardFocus = nullptr;
 		pDriver->m_nSeatGlobal = 0;
 	}
 #ifdef SIR_WAYLAND_POINTER_PROTOCOLS_AVAILABLE
@@ -111,6 +174,18 @@ void SIRWindowDriverWayland::registryRemove( void *pContext, wl_registry *pRegis
 			pDriver->m_pRelativePointerManager = nullptr;
 			pDriver->m_nRelativePointerGlobal = 0;
 		}
+	}
+#endif
+#ifdef SIR_WAYLAND_TEXT_INPUT_AVAILABLE
+	if ( nName == pDriver->m_nTextInputGlobal ) {
+		if ( pDriver->m_pTextInputLostSink != nullptr ) {
+			pDriver->m_pTextInputLostSink( pDriver->m_pTextInputLostContext );
+		}
+		if ( pDriver->m_pTextInputManager != nullptr ) {
+			zwp_text_input_manager_v3_destroy( pDriver->m_pTextInputManager );
+		}
+		pDriver->m_pTextInputManager = nullptr;
+		pDriver->m_nTextInputGlobal = 0;
 	}
 #endif
 	for ( uint32_t i = 0; i < SIR_WAYLAND_MAX_OUTPUTS; ++i ) {
@@ -375,7 +450,9 @@ void SIRWindowDriverWayland::queueEvent( uint32_t nSlot, sirWindowEventKind_t eK
 		// configure readiness and framebuffer dimensions cannot be lost
 		// behind a burst of output-scale or resize notifications.
 		sirWindowBackendEvent_t *pDeferred = nullptr;
-		if ( eKind == SIR_WINDOW_EVENT_READY ) {
+		if ( eKind == SIR_WINDOW_EVENT_FOCUS_GAINED || eKind == SIR_WINDOW_EVENT_FOCUS_LOST ) {
+			pDeferred = &m_DeferredFocus[nSlot];
+		} else if ( eKind == SIR_WINDOW_EVENT_READY ) {
 			pDeferred = &m_DeferredReady[nSlot];
 		} else if ( eKind == SIR_WINDOW_EVENT_DPI_CHANGED ) {
 			pDeferred = &m_DeferredDpi[nSlot];
@@ -399,6 +476,14 @@ void SIRWindowDriverWayland::loseDisplay( void ) noexcept
 		return;
 	}
 	m_bLost = true;
+	m_pKeyboardFocus = nullptr;
+
+	// Notify text input before the associated compositor seat and manager are retired.
+	if ( m_pTextInputLostSink != nullptr ) {
+		m_pTextInputLostSink( m_pTextInputLostContext );
+	}
+	m_pTextInputLostSink = nullptr;
+	m_pTextInputLostContext = nullptr;
 
 	// Input's borrowed seat and pointer objects are invalid immediately on
 	// compositor loss. Notify once, before the next input sampling window.
@@ -428,6 +513,7 @@ void SIRWindowDriverWayland::loseDisplay( void ) noexcept
 		m_DeferredReady[i] = {};
 		m_DeferredDpi[i] = {};
 		m_DeferredResize[i] = {};
+		m_DeferredFocus[i] = {};
 		if ( m_Slots[i].pSurface != nullptr ) {
 			m_Slots[i].bLostPending = true;
 			m_Slots[i].bClosePending = false;
@@ -580,6 +666,10 @@ sirWindowResult_t SIRWindowDriverWayland::destroyWindow( uint32_t nSlot ) noexce
 	m_DeferredReady[nSlot] = {};
 	m_DeferredDpi[nSlot] = {};
 	m_DeferredResize[nSlot] = {};
+	m_DeferredFocus[nSlot] = {};
+	if ( m_pKeyboardFocus == slot.pSurface ) {
+		m_pKeyboardFocus = nullptr;
+	}
 	slot = {};
 	return SIR_WINDOW_OK;
 }
@@ -690,6 +780,12 @@ sirWindowResult_t SIRWindowDriverWayland::pumpEvents( uint32_t nBudget, sirWindo
 			pCallback( pContext, resized );
 			++nDelivered;
 		}
+		if ( m_DeferredFocus[i].eKind != 0 && nDelivered < nBudget ) {
+			const sirWindowBackendEvent_t focus = m_DeferredFocus[i];
+			m_DeferredFocus[i] = {};
+			pCallback( pContext, focus );
+			++nDelivered;
+		}
 	}
 	for ( uint32_t i = 0; i < SIR_WINDOW_MAX_WINDOWS; ++i ) {
 		sirWaylandWindowSlot_t& slot = m_Slots[i];
@@ -716,12 +812,17 @@ void SIRWindowDriverWayland::shutdown( void ) noexcept
 	if ( m_pDisplay == nullptr ) {
 		return;
 	}
+	if ( m_pTextInputLostSink != nullptr ) {
+		m_pTextInputLostSink( m_pTextInputLostContext );
+	}
 	if ( m_pPointerProtocolLostSink != nullptr ) {
 		m_pPointerProtocolLostSink( m_pPointerProtocolLostContext );
 	}
 	if ( m_pSeatLostSink != nullptr ) {
 		m_pSeatLostSink( m_pSeatLostContext );
 	}
+	m_pTextInputLostSink = nullptr;
+	m_pTextInputLostContext = nullptr;
 	m_pPointerProtocolLostSink = nullptr;
 	m_pPointerProtocolLostContext = nullptr;
 	m_pSeatLostSink = nullptr;
@@ -782,6 +883,15 @@ void SIRWindowDriverWayland::shutdown( void ) noexcept
 		}
 	}
 #endif
+#ifdef SIR_WAYLAND_TEXT_INPUT_AVAILABLE
+	if ( m_pTextInputManager != nullptr ) {
+		if ( m_bLost ) {
+			wl_proxy_destroy( ( wl_proxy * )m_pTextInputManager );
+		} else {
+			zwp_text_input_manager_v3_destroy( m_pTextInputManager );
+		}
+	}
+#endif
 	if ( m_pBase != nullptr ) {
 		if ( !m_bLost ) {
 			xdg_wm_base_destroy( m_pBase );
@@ -804,12 +914,15 @@ void SIRWindowDriverWayland::shutdown( void ) noexcept
 	m_nFractionalGlobal = 0;
 	m_nViewporterGlobal = 0;
 	m_pSeat = nullptr;
+	m_pKeyboardFocus = nullptr;
 	m_pBase = nullptr;
 	m_nSeatGlobal = 0;
 	m_nConstraintsGlobal = 0;
 	m_nRelativePointerGlobal = 0;
 	m_pPointerConstraints = nullptr;
 	m_pRelativePointerManager = nullptr;
+	m_pTextInputManager = nullptr;
+	m_nTextInputGlobal = 0;
 	m_nEventRead = 0;
 	m_nEventWrite = 0;
 	m_nEventCount = 0;
@@ -817,6 +930,7 @@ void SIRWindowDriverWayland::shutdown( void ) noexcept
 		m_DeferredReady[i] = {};
 		m_DeferredDpi[i] = {};
 		m_DeferredResize[i] = {};
+		m_DeferredFocus[i] = {};
 	}
 	m_nCompositorGlobal = 0;
 	m_nShellGlobal = 0;

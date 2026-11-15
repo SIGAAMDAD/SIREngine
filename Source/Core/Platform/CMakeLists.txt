@@ -118,6 +118,7 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         set(SIR_RELATIVE_POINTER_PROTOCOL "${SIR_WAYLAND_PROTOCOL_DATA}/unstable/relative-pointer/relative-pointer-unstable-v1.xml")
         set(SIR_FRACTIONAL_SCALE_PROTOCOL "${SIR_WAYLAND_PROTOCOL_DATA}/staging/fractional-scale/fractional-scale-v1.xml")
         set(SIR_VIEWPORTER_PROTOCOL "${SIR_WAYLAND_PROTOCOL_DATA}/stable/viewporter/viewporter.xml")
+        set(SIR_TEXT_INPUT_PROTOCOL "${SIR_WAYLAND_PROTOCOL_DATA}/unstable/text-input/text-input-unstable-v3.xml")
         if(SIR_WAYLAND_CLIENT_FOUND AND SIR_WAYLAND_SCANNER AND EXISTS "${SIR_XDG_SHELL_PROTOCOL}")
             set(SIR_WAYLAND_GENERATED "${CMAKE_CURRENT_BINARY_DIR}/WaylandGenerated")
             set(SIR_WAYLAND_PROTOCOL_H "${SIR_WAYLAND_GENERATED}/xdg-shell-client-protocol.h")
@@ -148,6 +149,19 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
                     "${SIR_RELATIVE_POINTER_H}" "${SIR_RELATIVE_POINTER_C}")
                 target_compile_definitions(SIRCore PRIVATE SIR_WAYLAND_POINTER_PROTOCOLS_AVAILABLE=1)
             endif()
+            set(SIR_WAYLAND_TEXT_GENERATED)
+            if(EXISTS "${SIR_TEXT_INPUT_PROTOCOL}")
+                set(SIR_TEXT_INPUT_H "${SIR_WAYLAND_GENERATED}/text-input-unstable-v3-client-protocol.h")
+                set(SIR_TEXT_INPUT_C "${SIR_WAYLAND_GENERATED}/text-input-unstable-v3-protocol.c")
+                add_custom_command(
+                    OUTPUT "${SIR_TEXT_INPUT_H}" "${SIR_TEXT_INPUT_C}"
+                    COMMAND "${SIR_WAYLAND_SCANNER}" client-header "${SIR_TEXT_INPUT_PROTOCOL}" "${SIR_TEXT_INPUT_H}"
+                    COMMAND "${SIR_WAYLAND_SCANNER}" private-code "${SIR_TEXT_INPUT_PROTOCOL}" "${SIR_TEXT_INPUT_C}"
+                    DEPENDS "${SIR_TEXT_INPUT_PROTOCOL}"
+                    VERBATIM)
+                set(SIR_WAYLAND_TEXT_GENERATED "${SIR_TEXT_INPUT_H}" "${SIR_TEXT_INPUT_C}")
+                target_compile_definitions(SIRCore PRIVATE SIR_WAYLAND_TEXT_INPUT_AVAILABLE=1)
+            endif()
             set(SIR_WAYLAND_FRACTIONAL_GENERATED)
             if(EXISTS "${SIR_FRACTIONAL_SCALE_PROTOCOL}" AND EXISTS "${SIR_VIEWPORTER_PROTOCOL}")
                 set(SIR_FRACTIONAL_H "${SIR_WAYLAND_GENERATED}/fractional-scale-v1-client-protocol.h")
@@ -167,16 +181,22 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
                 target_compile_definitions(SIRCore PRIVATE SIR_WAYLAND_FRACTIONAL_SCALE_AVAILABLE=1)
             endif()
             add_custom_target(SIRWindowWaylandProtocol DEPENDS "${SIR_WAYLAND_PROTOCOL_H}" "${SIR_WAYLAND_PROTOCOL_C}"
-                ${SIR_WAYLAND_POINTER_GENERATED} ${SIR_WAYLAND_FRACTIONAL_GENERATED})
+                ${SIR_WAYLAND_POINTER_GENERATED} ${SIR_WAYLAND_FRACTIONAL_GENERATED} ${SIR_WAYLAND_TEXT_GENERATED})
             add_dependencies(SIRCore SIRWindowWaylandProtocol)
             list(APPEND SIR_CORE_PLATFORM_OS
                 Window/Linux/SIRWindowDriverWayland.cpp
                 "${SIR_WAYLAND_PROTOCOL_C}"
                 ${SIR_WAYLAND_POINTER_GENERATED}
-                ${SIR_WAYLAND_FRACTIONAL_GENERATED})
+                ${SIR_WAYLAND_FRACTIONAL_GENERATED}
+                ${SIR_WAYLAND_TEXT_GENERATED})
             target_include_directories(SIRCore PRIVATE "${SIR_WAYLAND_GENERATED}")
             target_link_libraries(SIRCore PRIVATE PkgConfig::SIR_WAYLAND_CLIENT)
             target_compile_definitions(SIRCore PUBLIC SIR_WINDOW_WAYLAND_AVAILABLE=1)
+            pkg_check_modules(SIR_WAYLAND_CURSOR QUIET IMPORTED_TARGET wayland-cursor)
+            if(SIR_WAYLAND_CURSOR_FOUND)
+                target_link_libraries(SIRCore PRIVATE PkgConfig::SIR_WAYLAND_CURSOR)
+                target_compile_definitions(SIRCore PRIVATE SIR_WAYLAND_CURSOR_AVAILABLE=1)
+            endif()
             if(SIR_WITH_WAYLAND_INPUT)
                 pkg_check_modules(SIR_WAYLAND_XKB QUIET IMPORTED_TARGET xkbcommon)
                 if(SIR_WAYLAND_XKB_FOUND)

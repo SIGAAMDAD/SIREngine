@@ -31,6 +31,9 @@ struct xkb_keymap;
 struct xkb_state;
 struct zwp_relative_pointer_v1;
 struct zwp_locked_pointer_v1;
+struct zwp_text_input_v3;
+struct wl_cursor_theme;
+struct wl_cursor;
 
 // Borrows one compositor seat/display and registers one keyboard and pointer
 // device, independent of how many windows receive seat focus.
@@ -59,6 +62,17 @@ public:
 protected:
 private:
 	static void seatLost( void *pContext ) noexcept;
+	static void textInputProtocolLost( void *pContext ) noexcept;
+	static void textInputEnter( void *pContext, zwp_text_input_v3 *pText, wl_surface *pSurface ) noexcept;
+	static void textInputLeave( void *pContext, zwp_text_input_v3 *pText, wl_surface *pSurface ) noexcept;
+	static void textInputPreedit( void *pContext, zwp_text_input_v3 *pText, const char *pszText, int32_t nBegin, int32_t nEnd ) noexcept;
+	static void textInputCommit( void *pContext, zwp_text_input_v3 *pText, const char *pszText ) noexcept;
+	static void textInputDelete( void *pContext, zwp_text_input_v3 *pText, uint32_t nBefore, uint32_t nAfter ) noexcept;
+	static void textInputDone( void *pContext, zwp_text_input_v3 *pText, uint32_t nSerial ) noexcept;
+	void ensureTextInput( void ) noexcept;
+	void updateTextInputActivation( void ) noexcept;
+	void clearTextInput( void ) noexcept;
+	void resetPendingText( void ) noexcept;
 	static void pointerProtocolsLost( void *pContext ) noexcept;
 	static void seatCapabilities( void *pContext, wl_seat *pSeat, uint32_t nCapabilities ) noexcept;
 	static void seatName( void *pContext, wl_seat *pSeat, const char *pszName ) noexcept;
@@ -87,6 +101,9 @@ private:
 	static void pointerLocked( void *pContext, zwp_locked_pointer_v1 *pLock ) noexcept;
 	static void pointerUnlocked( void *pContext, zwp_locked_pointer_v1 *pLock ) noexcept;
 	bool beginPointerCapture( void ) noexcept;
+	bool ensureCursorImage( void ) noexcept;
+	void updateCursorVisibility( void ) noexcept;
+	void clearCursorImage( void ) noexcept;
 	void endPointerCapture( void ) noexcept;
 	bool validSurface( wl_surface *pSurface ) const noexcept;
 	void ensureDevices( void ) noexcept;
@@ -103,6 +120,19 @@ private:
 	wl_pointer *m_pPointer = nullptr;
 	zwp_relative_pointer_v1 *m_pRelativePointer = nullptr;
 	zwp_locked_pointer_v1 *m_pLockedPointer = nullptr;
+	zwp_text_input_v3 *m_pTextInput = nullptr;
+	wl_surface *m_pTextInputFocus = nullptr;
+	wl_cursor_theme *m_pCursorTheme = nullptr;
+	wl_cursor *m_pCursor = nullptr;
+	wl_surface *m_pCursorSurface = nullptr;
+	uint32_t m_nPointerSerial = 0;
+	char m_szPendingPreedit[SIR_INPUT_PREEDIT_CAPACITY * 4 + 1] = {};
+	char m_szPendingCommit[SIR_INPUT_TEXT_CAPACITY * 4 + 1] = {};
+	int32_t m_nPendingCursorBegin = 0;
+	int32_t m_nPendingCursorEnd = 0;
+	bool m_bTextInputActive = false;
+	bool m_bPendingPreedit = false;
+	bool m_bPendingCommit = false;
 	wl_surface *m_Surfaces[SIR_WINDOW_MAX_WINDOWS] = {};
 	wl_surface *m_pKeyboardFocus = nullptr;
 	wl_surface *m_pPointerFocus = nullptr;

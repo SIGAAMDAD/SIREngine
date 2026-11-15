@@ -104,8 +104,14 @@ static bool sirTestWin32MultiwindowInputRouting( void ) noexcept
 	}
 	( void )SendMessageW( ( HWND )secondView.nNativeWindow, WM_SETFOCUS, 0, 0 );
 	bridge.finishPump();
-	if ( !input.publish() || !bridge.unregisterWindow( secondView.nNativeWindow ) || bridge.acceptsWindow( secondView.nNativeWindow ) ||
-	     !bridge.acceptsWindow( firstView.nNativeWindow ) || bridge.unregisterWindow( secondView.nNativeWindow ) ) {
+	// A device-removal notice queued for the previous registered HWND must
+	// still reach the single raw-input backend after the focus handover.
+	bool bHotplugHandled = false;
+	const sirWindowWin32Message_t hotplug = { firstView.nNativeWindow, WM_INPUT_DEVICE_CHANGE, GIDC_REMOVAL, 0 };
+	( void )bridge.processWindowMessage( hotplug, &bHotplugHandled );
+	if ( !bHotplugHandled || !input.publish() || !bridge.unregisterWindow( secondView.nNativeWindow ) ||
+	     bridge.acceptsWindow( secondView.nNativeWindow ) || !bridge.acceptsWindow( firstView.nNativeWindow ) ||
+	     bridge.unregisterWindow( secondView.nNativeWindow ) ) {
 		return false;
 	}
 	( void )driver.setMessageSink( nullptr, nullptr );

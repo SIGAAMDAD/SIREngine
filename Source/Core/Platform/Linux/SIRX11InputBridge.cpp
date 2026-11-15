@@ -285,6 +285,9 @@ void SIRX11InputBridge::processEvent( const XEvent& event ) noexcept
 	}
 	if ( m_bFocused && input.text().snapshot().bEnabled && m_hInputContext != nullptr &&
 	     ( event.type == KeyPress || event.type == KeyRelease ) ) {
+		// Filtering belongs to IME text composition. It must not suppress the
+		// physical keyboard event that gameplay and action mapping receive.
+		( void )pX11->processEvent( input, event );
 		if ( XFilterEvent( &nativeEvent, ( Window )m_hWindow ) ) {
 			return;
 		}
@@ -297,6 +300,7 @@ void SIRX11InputBridge::processEvent( const XEvent& event ) noexcept
 				( void )input.text().appendUtf8( szUtf8, ( uint32_t )nLength );
 			}
 		}
+		return;
 	}
 	( void )pX11->processEvent( input, event );
 }
