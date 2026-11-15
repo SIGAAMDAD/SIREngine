@@ -14,6 +14,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Renderer/Drivers/D3D11/SIRD3D11Driver.h>
+#include <Renderer/Drivers/D3D11/SIRD3D11ComOwner.h>
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -23,18 +24,6 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 static constexpr uint32_t SIR_D3D11_MAX_ADAPTERS = 256;
 static constexpr uint32_t SIR_D3D11_MAX_FRAMES_IN_FLIGHT = 8;
-
-static void sirD3D11ReleaseNative( ID3D11Device **ppDevice, ID3D11DeviceContext **ppContext ) noexcept
-{
-	if ( *ppContext != nullptr ) {
-		( *ppContext )->Release();
-		*ppContext = nullptr;
-	}
-	if ( *ppDevice != nullptr ) {
-		( *ppDevice )->Release();
-		*ppDevice = nullptr;
-	}
-}
 
 // A requested FL11_1 may be rejected by an older D3D11 runtime with
 // E_INVALIDARG. Retry with the identical list minus 11_1, not an arbitrary
@@ -47,13 +36,19 @@ static HRESULT sirD3D11CreateNative( IDXGIAdapter *pAdapter, bool bSoftware, ID3
 	const D3D_FEATURE_LEVEL szLevels[] = { D3D_FEATURE_LEVEL_11_1, D3D_FEATURE_LEVEL_11_0, D3D_FEATURE_LEVEL_10_1, D3D_FEATURE_LEVEL_10_0,
 	                                       D3D_FEATURE_LEVEL_9_3,  D3D_FEATURE_LEVEL_9_2,  D3D_FEATURE_LEVEL_9_1 };
 	const D3D_DRIVER_TYPE eType = bSoftware ? D3D_DRIVER_TYPE_WARP : D3D_DRIVER_TYPE_UNKNOWN;
-	HRESULT hResult = D3D11CreateDevice( pAdapter, eType, nullptr, 0, szLevels, 7, D3D11_SDK_VERSION, ppDevice, pLevel, ppContext );
+	SIRD3D11ComOwner<ID3D11Device> nativeDevice;
+	SIRD3D11ComOwner<ID3D11DeviceContext> nativeContext;
+	HRESULT hResult =
+	    D3D11CreateDevice( pAdapter, eType, nullptr, 0, szLevels, 7, D3D11_SDK_VERSION, nativeDevice.put(), pLevel, nativeContext.put() );
 	if ( hResult == E_INVALIDARG ) {
-		sirD3D11ReleaseNative( ppDevice, ppContext );
-		hResult = D3D11CreateDevice( pAdapter, eType, nullptr, 0, szLevels + 1, 6, D3D11_SDK_VERSION, ppDevice, pLevel, ppContext );
+		nativeContext.reset();
+		nativeDevice.reset();
+		hResult = D3D11CreateDevice( pAdapter, eType, nullptr, 0, szLevels + 1, 6, D3D11_SDK_VERSION, nativeDevice.put(), pLevel,
+		                             nativeContext.put() );
 	}
-	if ( FAILED( hResult ) ) {
-		sirD3D11ReleaseNative( ppDevice, ppContext );
+	if ( SUCCEEDED( hResult ) ) {
+		*ppDevice = nativeDevice.release();
+		*ppContext = nativeContext.release();
 	}
 	return hResult;
 }
@@ -74,54 +69,41 @@ static sirGraphicsResult_t sirD3D11MapHRESULT( HRESULT hResult ) noexcept
 
 // Enumerate only native DXGI hardware adapters. Software selection is a
 // single explicit WARP index immediately after the hardware adapter range.
+// Adapter and DXGI factory references remain stack-owned until handed to
+// the caller; enumeration failures cannot strand an earlier selected adapter.
 static sirGraphicsResult_t sirD3D11ResolveHardware( uint32_t nRequestedIndex, IDXGIAdapter1 **ppAdapter, uint32_t *pHardwareCount ) noexcept
 {
 	*ppAdapter = nullptr;
 	*pHardwareCount = 0;
-	IDXGIFactory1 *pFactory = nullptr;
-	const HRESULT hFactory = CreateDXGIFactory1( __uuidof( IDXGIFactory1 ), ( void ** )&pFactory );
-	if ( FAILED( hFactory ) || pFactory == nullptr ) {
+	SIRD3D11ComOwner<IDXGIFactory1> nativeFactory;
+	const HRESULT hFactory = CreateDXGIFactory1( __uuidof( IDXGIFactory1 ), ( void ** )nativeFactory.put() );
+	if ( FAILED( hFactory ) || nativeFactory.get() == nullptr ) {
 		return SIR_GRAPHICS_DRIVER_ERROR;
 	}
 
+	SIRD3D11ComOwner<IDXGIAdapter1> selectedAdapter;
 	for ( UINT iDxgi = 0; iDxgi < SIR_D3D11_MAX_ADAPTERS; ++iDxgi ) {
-		IDXGIAdapter1 *pCurrent = nullptr;
-		const HRESULT hEnum = pFactory->EnumAdapters1( iDxgi, &pCurrent );
+		SIRD3D11ComOwner<IDXGIAdapter1> currentAdapter;
+		const HRESULT hEnum = nativeFactory->EnumAdapters1( iDxgi, currentAdapter.put() );
 		if ( hEnum == DXGI_ERROR_NOT_FOUND ) {
 			break;
 		}
-		if ( FAILED( hEnum ) || pCurrent == nullptr ) {
-			if ( *ppAdapter != nullptr ) {
-				( *ppAdapter )->Release();
-				*ppAdapter = nullptr;
-			}
-			pFactory->Release();
+		if ( FAILED( hEnum ) || currentAdapter.get() == nullptr ) {
 			return SIR_GRAPHICS_DRIVER_ERROR;
 		}
 		DXGI_ADAPTER_DESC1 desc = {};
-		const HRESULT hDesc = pCurrent->GetDesc1( &desc );
-		if ( FAILED( hDesc ) ) {
-			pCurrent->Release();
-			if ( *ppAdapter != nullptr ) {
-				( *ppAdapter )->Release();
-				*ppAdapter = nullptr;
-			}
-			pFactory->Release();
+		if ( FAILED( currentAdapter->GetDesc1( &desc ) ) ) {
 			return SIR_GRAPHICS_DRIVER_ERROR;
 		}
 		const bool bBasicRenderDriver = desc.VendorId == 0x1414 && desc.DeviceId == 0x008C;
 		if ( ( desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE ) == 0 && !bBasicRenderDriver ) {
 			if ( *pHardwareCount == nRequestedIndex ) {
-				*ppAdapter = pCurrent;
-			} else {
-				pCurrent->Release();
+				selectedAdapter.reset( currentAdapter.release() );
 			}
 			++*pHardwareCount;
-		} else {
-			pCurrent->Release();
 		}
 	}
-	pFactory->Release();
+	*ppAdapter = selectedAdapter.release();
 	return SIR_GRAPHICS_SUCCESS;
 }
 
@@ -132,10 +114,10 @@ static sirGraphicsResult_t sirD3D11GetProfile( ID3D11Device *pDevice, D3D_FEATUR
 	probe.nSize = sizeof( probe );
 	probe.nFeatureLevel = ( uint32_t )eLevel;
 
-	ID3D11Device1 *pDevice1 = nullptr;
-	if ( SUCCEEDED( pDevice->QueryInterface( __uuidof( ID3D11Device1 ), ( void ** )&pDevice1 ) ) && pDevice1 != nullptr ) {
+	SIRD3D11ComOwner<ID3D11Device1> nativeDevice1;
+	if ( SUCCEEDED( pDevice->QueryInterface( __uuidof( ID3D11Device1 ), ( void ** )nativeDevice1.put() ) ) &&
+	     nativeDevice1.get() != nullptr ) {
 		probe.nD3D11_1InterfaceAvailable = 1;
-		pDevice1->Release();
 	}
 	if ( eLevel == D3D_FEATURE_LEVEL_10_0 || eLevel == D3D_FEATURE_LEVEL_10_1 ) {
 		D3D11_FEATURE_DATA_D3D10_X_HARDWARE_OPTIONS options = {};
@@ -159,19 +141,16 @@ static sirGraphicsResult_t sirD3D11GetAdapterDesc( IDXGIAdapter1 *pSelected, ID3
 	if ( pSelected != nullptr ) {
 		return SUCCEEDED( pSelected->GetDesc( pDesc ) ) ? SIR_GRAPHICS_SUCCESS : SIR_GRAPHICS_DRIVER_ERROR;
 	}
-	IDXGIDevice *pDxgiDevice = nullptr;
-	if ( FAILED( pDevice->QueryInterface( __uuidof( IDXGIDevice ), ( void ** )&pDxgiDevice ) ) || pDxgiDevice == nullptr ) {
+	SIRD3D11ComOwner<IDXGIDevice> nativeDxgi;
+	if ( FAILED( pDevice->QueryInterface( __uuidof( IDXGIDevice ), ( void ** )nativeDxgi.put() ) ) || nativeDxgi.get() == nullptr ) {
 		return SIR_GRAPHICS_DRIVER_ERROR;
 	}
-	IDXGIAdapter *pWarp = nullptr;
-	const HRESULT hAdapter = pDxgiDevice->GetAdapter( &pWarp );
-	pDxgiDevice->Release();
-	if ( FAILED( hAdapter ) || pWarp == nullptr ) {
+	SIRD3D11ComOwner<IDXGIAdapter> nativeWarp;
+	const HRESULT hAdapter = nativeDxgi->GetAdapter( nativeWarp.put() );
+	if ( FAILED( hAdapter ) || nativeWarp.get() == nullptr ) {
 		return SIR_GRAPHICS_DRIVER_ERROR;
 	}
-	const HRESULT hDesc = pWarp->GetDesc( pDesc );
-	pWarp->Release();
-	return SUCCEEDED( hDesc ) ? SIR_GRAPHICS_SUCCESS : SIR_GRAPHICS_DRIVER_ERROR;
+	return SUCCEEDED( nativeWarp->GetDesc( pDesc ) ) ? SIR_GRAPHICS_SUCCESS : SIR_GRAPHICS_DRIVER_ERROR;
 }
 
 SIRD3D11Driver::~SIRD3D11Driver( void ) noexcept
@@ -202,7 +181,8 @@ sirGraphicsResult_t SIRD3D11Driver::getAdapterCount( uint32_t *pCount ) const no
 	ID3D11DeviceContext *pContext = nullptr;
 	D3D_FEATURE_LEVEL eLevel = D3D_FEATURE_LEVEL_9_1;
 	const HRESULT hWarp = sirD3D11CreateNative( nullptr, true, &pNative, &pContext, &eLevel );
-	sirD3D11ReleaseNative( &pNative, &pContext );
+	SIRD3D11ComOwner<ID3D11Device> nativeDevice( pNative );
+	SIRD3D11ComOwner<ID3D11DeviceContext> nativeContext( pContext );
 	*pCount = nHardware + ( nHardware < SIR_D3D11_MAX_ADAPTERS && SUCCEEDED( hWarp ) ? 1U : 0U );
 	return SIR_GRAPHICS_SUCCESS;
 }
@@ -216,6 +196,7 @@ sirGraphicsResult_t SIRD3D11Driver::queryAdapter( uint32_t nAdapterIndex, sirGra
 	IDXGIAdapter1 *pSelected = nullptr;
 	uint32_t nHardware = 0;
 	const sirGraphicsResult_t eEnumerate = sirD3D11ResolveHardware( nAdapterIndex, &pSelected, &nHardware );
+	SIRD3D11ComOwner<IDXGIAdapter1> selectedAdapter( pSelected );
 	if ( eEnumerate != SIR_GRAPHICS_SUCCESS ) {
 		return eEnumerate;
 	}
@@ -226,23 +207,17 @@ sirGraphicsResult_t SIRD3D11Driver::queryAdapter( uint32_t nAdapterIndex, sirGra
 	ID3D11Device *pNative = nullptr;
 	ID3D11DeviceContext *pContext = nullptr;
 	D3D_FEATURE_LEVEL eLevel = D3D_FEATURE_LEVEL_9_1;
-	const HRESULT hDevice = sirD3D11CreateNative( pSelected, bSoftware, &pNative, &pContext, &eLevel );
-	if ( FAILED( hDevice ) || pNative == nullptr || pContext == nullptr ) {
-		sirD3D11ReleaseNative( &pNative, &pContext );
-		if ( pSelected != nullptr ) {
-			pSelected->Release();
-		}
+	const HRESULT hDevice = sirD3D11CreateNative( selectedAdapter.get(), bSoftware, &pNative, &pContext, &eLevel );
+	SIRD3D11ComOwner<ID3D11Device> nativeDevice( pNative );
+	SIRD3D11ComOwner<ID3D11DeviceContext> nativeContext( pContext );
+	if ( FAILED( hDevice ) || nativeDevice.get() == nullptr || nativeContext.get() == nullptr ) {
 		return sirD3D11MapHRESULT( hDevice );
 	}
 
 	DXGI_ADAPTER_DESC nativeDesc = {};
-	const sirGraphicsResult_t eDesc = sirD3D11GetAdapterDesc( pSelected, pNative, &nativeDesc );
+	const sirGraphicsResult_t eDesc = sirD3D11GetAdapterDesc( selectedAdapter.get(), nativeDevice.get(), &nativeDesc );
 	sirD3D11FeatureProfile_t profile = {};
-	const sirGraphicsResult_t eProfile = sirD3D11GetProfile( pNative, eLevel, &profile );
-	sirD3D11ReleaseNative( &pNative, &pContext );
-	if ( pSelected != nullptr ) {
-		pSelected->Release();
-	}
+	const sirGraphicsResult_t eProfile = sirD3D11GetProfile( nativeDevice.get(), eLevel, &profile );
 	if ( eDesc != SIR_GRAPHICS_SUCCESS || eProfile != SIR_GRAPHICS_SUCCESS ) {
 		return SIR_GRAPHICS_DRIVER_ERROR;
 	}
@@ -281,6 +256,7 @@ sirGraphicsResult_t SIRD3D11Driver::createDevice( const sirGraphicsDeviceCreateD
 	IDXGIAdapter1 *pSelected = nullptr;
 	uint32_t nHardware = 0;
 	const sirGraphicsResult_t eEnumerate = sirD3D11ResolveHardware( desc.nAdapterIndex, &pSelected, &nHardware );
+	SIRD3D11ComOwner<IDXGIAdapter1> selectedAdapter( pSelected );
 	if ( eEnumerate != SIR_GRAPHICS_SUCCESS ) {
 		return eEnumerate;
 	}
@@ -295,31 +271,30 @@ sirGraphicsResult_t SIRD3D11Driver::createDevice( const sirGraphicsDeviceCreateD
 	ID3D11Device *pNative = nullptr;
 	ID3D11DeviceContext *pContext = nullptr;
 	D3D_FEATURE_LEVEL eLevel = D3D_FEATURE_LEVEL_9_1;
-	const HRESULT hDevice = sirD3D11CreateNative( pSelected, bSoftware, &pNative, &pContext, &eLevel );
-	if ( pSelected != nullptr ) {
-		pSelected->Release();
-	}
-	if ( FAILED( hDevice ) || pNative == nullptr || pContext == nullptr ) {
-		sirD3D11ReleaseNative( &pNative, &pContext );
+	const HRESULT hDevice = sirD3D11CreateNative( selectedAdapter.get(), bSoftware, &pNative, &pContext, &eLevel );
+	SIRD3D11ComOwner<ID3D11Device> nativeDevice( pNative );
+	SIRD3D11ComOwner<ID3D11DeviceContext> nativeContext( pContext );
+	if ( FAILED( hDevice ) || nativeDevice.get() == nullptr || nativeContext.get() == nullptr ) {
 		return FAILED( hDevice ) ? sirD3D11MapHRESULT( hDevice ) : SIR_GRAPHICS_DRIVER_ERROR;
 	}
 
 	sirD3D11FeatureProfile_t profile = {};
-	const sirGraphicsResult_t eProfile = sirD3D11GetProfile( pNative, eLevel, &profile );
+	const sirGraphicsResult_t eProfile = sirD3D11GetProfile( nativeDevice.get(), eLevel, &profile );
 	if ( eProfile != SIR_GRAPHICS_SUCCESS || ( profile.nEnabledFeatures & desc.nRequiredFeatures ) != desc.nRequiredFeatures ) {
-		sirD3D11ReleaseNative( &pNative, &pContext );
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
 
 	sirD3D11NativeDeviceInit_t init = {};
-	init.pNativeDevice = pNative;
-	init.pImmediateContext = pContext;
+	init.pNativeDevice = nativeDevice.get();
+	init.pImmediateContext = nativeContext.get();
 	init.profile = profile;
 	init.nResidentBudgetBytes = desc.nResidentBudgetBytes;
 	init.nFramesInFlight = desc.nFramesInFlight;
 	init.nSoftwareAdapter = bSoftware ? 1U : 0U;
 	init.nDeviceGeneration = m_nNextDeviceGeneration;
 	m_pActiveDevice = new ( m_szDeviceStorage ) SIRD3D11Device( init );
+	( void )nativeDevice.release();
+	( void )nativeContext.release();
 	++m_nNextDeviceGeneration;
 	*ppDevice = m_pActiveDevice;
 	return SIR_GRAPHICS_SUCCESS;

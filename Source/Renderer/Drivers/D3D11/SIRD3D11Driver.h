@@ -34,6 +34,10 @@ class SIRD3D11Driver final : public SIRGraphicsDriver
 public:
 	SIRD3D11Driver( void ) noexcept = default;
 	~SIRD3D11Driver( void ) noexcept override;
+	SIRD3D11Driver( const SIRD3D11Driver& ) = delete;
+	SIRD3D11Driver& operator=( const SIRD3D11Driver& ) = delete;
+	SIRD3D11Driver( SIRD3D11Driver&& ) = delete;
+	SIRD3D11Driver& operator=( SIRD3D11Driver&& ) = delete;
 
 	sirGraphicsBackend_t getBackend( void ) const noexcept override;
 	sirGraphicsResult_t getAdapterCount( uint32_t *pCount ) const noexcept override;

@@ -14,12 +14,13 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Renderer/Drivers/D3D11/SIRD3D11Device.h>
+#include <Renderer/Drivers/D3D11/SIRD3D11ComOwner.h>
 
 #include <d3d11.h>
 
 SIRD3D11Device::SIRD3D11Device( const sirD3D11NativeDeviceInit_t& init ) noexcept
     : m_pNativeDevice( init.pNativeDevice ), m_pImmediateContext( init.pImmediateContext ), m_profile( init.profile ),
-      m_nResidentBudgetBytes( init.nResidentBudgetBytes ), m_nFramesInFlight( init.nFramesInFlight ),
+      m_handles( init.nDeviceGeneration ), m_nResidentBudgetBytes( init.nResidentBudgetBytes ), m_nFramesInFlight( init.nFramesInFlight ),
       m_nDeviceGeneration( init.nDeviceGeneration ), m_bSoftwareAdapter( init.nSoftwareAdapter != 0 )
 {
 }
@@ -136,39 +137,15 @@ sirGraphicsResult_t SIRD3D11Device::queryMemoryBudget( sirGraphicsMemoryBudget_t
 		return SIR_GRAPHICS_DEVICE_LOST;
 	}
 	pBudget->nBudgetBytes = m_nResidentBudgetBytes;
+	pBudget->nCommittedBytes = m_handles.getAllocatedBytes();
+	// D3D11 does not expose physical residency for these opaque allocations.
+	pBudget->nResidentBytes = 0;
+	pBudget->nPeakCommittedBytes = m_nPeakCommittedBytes;
+	pBudget->nUploadMappedBytes = m_nUploadMappedBytes;
+	pBudget->nReadbackMappedBytes = m_nReadbackMappedBytes;
 	return SIR_GRAPHICS_SUCCESS;
 }
 
-// D11-02 only owns native device creation and destruction. Resource and
-// submission callbacks are deliberately unsupported until D11-04 through 14.
-sirGraphicsResult_t SIRD3D11Device::createBuffer( const sirGraphicsBufferDesc_t&, sirGraphicsHandle_t *pHandle ) noexcept
-{
-	if ( pHandle != nullptr ) {
-		*pHandle = {};
-	}
-	return SIR_GRAPHICS_UNSUPPORTED;
-}
-sirGraphicsResult_t SIRD3D11Device::createTexture( const sirGraphicsTextureDesc_t&, sirGraphicsHandle_t *pHandle ) noexcept
-{
-	if ( pHandle != nullptr ) {
-		*pHandle = {};
-	}
-	return SIR_GRAPHICS_UNSUPPORTED;
-}
-sirGraphicsResult_t SIRD3D11Device::createView( const sirGraphicsViewDesc_t&, sirGraphicsHandle_t *pHandle ) noexcept
-{
-	if ( pHandle != nullptr ) {
-		*pHandle = {};
-	}
-	return SIR_GRAPHICS_UNSUPPORTED;
-}
-sirGraphicsResult_t SIRD3D11Device::createSampler( const sirGraphicsSamplerDesc_t&, sirGraphicsHandle_t *pHandle ) noexcept
-{
-	if ( pHandle != nullptr ) {
-		*pHandle = {};
-	}
-	return SIR_GRAPHICS_UNSUPPORTED;
-}
 sirGraphicsResult_t SIRD3D11Device::createPipeline( const sirGraphicsPipelineDesc_t&, sirGraphicsHandle_t *pHandle ) noexcept
 {
 	if ( pHandle != nullptr ) {
@@ -184,25 +161,6 @@ sirGraphicsResult_t SIRD3D11Device::createBindingSet( sirGraphicsHandle_t, uint3
 	return SIR_GRAPHICS_UNSUPPORTED;
 }
 sirGraphicsResult_t SIRD3D11Device::updateBindings( sirGraphicsHandle_t, const sirGraphicsDescriptorWrite_t *, uint32_t ) noexcept
-{
-	return SIR_GRAPHICS_UNSUPPORTED;
-}
-sirGraphicsResult_t SIRD3D11Device::mapBuffer( sirGraphicsHandle_t, uint64_t, uint64_t, sirGraphicsMappedBuffer_t *pMapped ) noexcept
-{
-	if ( pMapped != nullptr ) {
-		*pMapped = {};
-	}
-	return SIR_GRAPHICS_UNSUPPORTED;
-}
-sirGraphicsResult_t SIRD3D11Device::unmapBuffer( sirGraphicsHandle_t, uint64_t, uint64_t ) noexcept
-{
-	return SIR_GRAPHICS_UNSUPPORTED;
-}
-sirGraphicsResult_t SIRD3D11Device::flushBuffer( sirGraphicsHandle_t, uint64_t, uint64_t ) noexcept
-{
-	return SIR_GRAPHICS_UNSUPPORTED;
-}
-sirGraphicsResult_t SIRD3D11Device::invalidateBuffer( sirGraphicsHandle_t, uint64_t, uint64_t ) noexcept
 {
 	return SIR_GRAPHICS_UNSUPPORTED;
 }
@@ -229,10 +187,6 @@ sirGraphicsResult_t SIRD3D11Device::poll( const sirGraphicsCompletion_t&, bool *
 	return SIR_GRAPHICS_UNSUPPORTED;
 }
 sirGraphicsResult_t SIRD3D11Device::wait( const sirGraphicsCompletion_t&, uint64_t ) noexcept
-{
-	return SIR_GRAPHICS_UNSUPPORTED;
-}
-sirGraphicsResult_t SIRD3D11Device::retireResource( sirGraphicsHandle_t, const sirGraphicsCompletionSet_t& ) noexcept
 {
 	return SIR_GRAPHICS_UNSUPPORTED;
 }
@@ -263,16 +217,32 @@ sirGraphicsResult_t SIRD3D11Device::present( const sirGraphicsSurfaceImage_t&, c
 
 sirGraphicsResult_t SIRD3D11Device::shutdown( void ) noexcept
 {
-	if ( m_pImmediateContext != nullptr ) {
-		ID3D11DeviceContext *pContext = ( ID3D11DeviceContext * )m_pImmediateContext;
-		pContext->ClearState();
-		pContext->Flush();
-		pContext->Release();
-		m_pImmediateContext = nullptr;
+	SIRD3D11ComOwner<ID3D11DeviceContext> nativeContext( ( ID3D11DeviceContext * )m_pImmediateContext );
+	m_pImmediateContext = nullptr;
+	if ( nativeContext.get() != nullptr ) {
+		nativeContext->ClearState();
 	}
-	if ( m_pNativeDevice != nullptr ) {
-		( ( ID3D11Device * )m_pNativeDevice )->Release();
-		m_pNativeDevice = nullptr;
+
+	for ( uint32_t iSlot = 0; iSlot < SIRD3D11Handles::CAPACITY; ++iSlot ) {
+		sirD3D11ObjectSlot_t *pSlot = m_handles.getSlot( iSlot );
+		if ( nativeContext.get() != nullptr && pSlot->object.pNativeObject != nullptr && pSlot->nMapped != 0 ) {
+			nativeContext->Unmap( ( ID3D11Resource * )pSlot->object.pNativeObject, 0 );
+		}
 	}
+	if ( nativeContext.get() != nullptr ) {
+		nativeContext->Flush();
+	}
+
+	for ( uint32_t iSlot = 0; iSlot < SIRD3D11Handles::CAPACITY; ++iSlot ) {
+		sirD3D11ObjectSlot_t *pSlot = m_handles.getSlot( iSlot );
+		SIRD3D11ComOwner<IUnknown> nativeObject( ( IUnknown * )pSlot->object.pNativeObject );
+		pSlot->object.pNativeObject = nullptr;
+	}
+	m_handles.clear();
+	m_nUploadMappedBytes = 0;
+	m_nReadbackMappedBytes = 0;
+
+	SIRD3D11ComOwner<ID3D11Device> nativeDevice( ( ID3D11Device * )m_pNativeDevice );
+	m_pNativeDevice = nullptr;
 	return SIR_GRAPHICS_SUCCESS;
 }
