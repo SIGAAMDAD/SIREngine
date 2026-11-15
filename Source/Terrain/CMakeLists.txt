@@ -1,5 +1,5 @@
 include("${CMAKE_CURRENT_LIST_DIR}/../../Build/CMake/SIRBuildTreeGuard.cmake")
-add_library(SIRTerrain STATIC Data/SIRTerrainHeightfieldCodec.cpp Data/SIRTerrainRegionBundle.cpp Data/SIRTerrainRegionCatalog.cpp Data/SIRTerrainHeightfieldView.cpp Integration/SIRTerrainResourceBridge.cpp Integration/SIRTerrainRegionPersistence.cpp Editor/SIRTerrainVirtualTextureCookBridge.cpp Editor/SIRTerrainComposedSurfaceRecookBridge.cpp)
+add_library(SIRTerrain STATIC Data/SIRTerrainHeightfieldCodec.cpp Data/SIRTerrainRegionBundle.cpp Data/SIRTerrainRegionCatalog.cpp Data/SIRTerrainHeightfieldView.cpp Integration/SIRTerrainResourceBridge.cpp Integration/SIRTerrainRegionPersistence.cpp Editor/SIRTerrainVirtualTextureCookBridge.cpp Editor/SIRTerrainVirtualTextureIncrementalCooker.cpp Editor/SIRTerrainComposedSurfaceRecookBridge.cpp)
 add_library(SIR::Terrain ALIAS SIRTerrain)
 target_link_libraries(SIRTerrain PUBLIC SIR::Resources PRIVATE SIR::Graphics)
 target_include_directories(SIRTerrain PUBLIC "${PROJECT_SOURCE_DIR}/Source")

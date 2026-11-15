@@ -35,6 +35,19 @@ sirTerrainVTCookResult_t SIRTerrainVirtualTextureCookBridge::cookAndPublish( con
 	if ( !SIRVirtualTextureRegionCooker::cookBatch( request.batch, *pPackage ) ) {
 		return SIR_TERRAIN_VT_COOK_FAILED;
 	}
+	return publishPrepared( request );
+}
+
+sirTerrainVTCookResult_t SIRTerrainVirtualTextureCookBridge::publishPrepared( const sirTerrainVTCookPublication_t& request ) noexcept
+{
+	sirVirtualTextureCookOutput_t *const pPackage = request.pPackage;
+	if ( pPackage == nullptr || pPackage->pBytes == nullptr || pPackage->nWritten == 0u || pPackage->nWritten > pPackage->nCapacity ||
+	     request.batch.pRegions == nullptr || request.batch.pfnIsCurrent == nullptr || request.batch.nRegionCount == 0u ||
+	     request.batch.nRegionCount > 32u || request.pszDestination == nullptr || request.pszStaging == nullptr ||
+	     request.pszDestination[0] == '\0' || request.pszStaging[0] == '\0' || strcmp( request.pszDestination, request.pszStaging ) == 0 ||
+	     ( ( request.pfnBeginCommit == nullptr ) != ( request.pfnEndCommit == nullptr ) ) ) {
+		return SIR_TERRAIN_VT_COOK_INVALID_INPUT;
+	}
 	for ( uint32_t i = 0u; i < request.batch.nRegionCount; ++i ) {
 		const sirVirtualTextureRegionCookRequest_t& region = request.batch.pRegions[i];
 		if ( !request.batch.pfnIsCurrent( request.batch.pCurrentUser, region.nRegionIndex, region.nGeneration ) ) {

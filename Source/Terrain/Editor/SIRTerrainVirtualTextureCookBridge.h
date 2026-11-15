@@ -49,6 +49,9 @@ class SIRTerrainVirtualTextureCookBridge final
 {
 public:
 	static sirTerrainVTCookResult_t cookAndPublish( const sirTerrainVTCookPublication_t& request ) noexcept;
+	// Owner-thread publication for a package cooked on a SIREngine CPU worker.
+	// Rechecks authored generations under the same short editor commit lock.
+	static sirTerrainVTCookResult_t publishPrepared( const sirTerrainVTCookPublication_t& request ) noexcept;
 
 protected:
 private:
