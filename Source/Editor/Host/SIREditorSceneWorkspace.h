@@ -30,6 +30,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Editor/Scene/SIREditorTextScene.h>
 #include <Editor/Scene/SIREditorTextProperties.h>
 #include <Editor/Scene/SIREditorResourceReferences.h>
+#include <Editor/Scene/SIREditorCatalogBridge.h>
 #include <Editor/Widgets/SIREditorHierarchyModel.h>
 
 class SIRMemorySegment;
@@ -78,6 +79,7 @@ public:
 	bool initialize( SIRMemorySegment *pEditorSegment ) noexcept;
 	sirEditorWorkspaceResult_t openTextSource( const char *pszSource, size_t nSourceBytes ) noexcept;
 	sirEditorWorkspaceResult_t openTextFile( const char *pszPath ) noexcept;
+	sirEditorCatalogBuildResult_t buildResourceCatalog( const sirEditorCatalogBuildRequest_t& request ) const noexcept;
 	void close( void ) noexcept;
 	bool shutdown( void ) noexcept;
 
