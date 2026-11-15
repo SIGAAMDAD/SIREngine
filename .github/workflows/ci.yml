@@ -1,7 +1,7 @@
 name: SIREngine CI
 on:
   push:
-    branches: [main, develop]
+    branches: [main, develop, system/d3d12-driver]
   pull_request:
     branches: [main, develop]
   merge_group:
@@ -58,14 +58,40 @@ jobs:
           cmake --preset dev -DSIR_WITH_GOOGLETEST=ON
           cmake --build --preset dev
           ctest --preset pr-smoke --no-tests=error --output-on-failure
+  d3d12:
+    name: sir/d3d12 / Windows WARP pipelines
+    if: github.event_name == 'push' && github.ref == 'refs/heads/system/d3d12-driver'
+    needs: source
+    runs-on: windows-2022
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1
+      - uses: ./.github/actions/setup-build-tools
+      - uses: ./.github/actions/setup-dxc
+      - name: Fetch pinned D3D12 test dependencies
+        shell: bash
+        run: |
+          git submodule update --init ThirdParty/GoogleTest ThirdParty/D3D12MemoryAllocator
+      - name: Compile native D3D12 and execute WARP unit tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          cmake --preset dev -DSIR_WITH_GOOGLETEST=ON -DSIR_WITH_D3D12=ON
+          cmake --build --preset dev
+          ctest --preset dev -R '^renderer[.]d3d12[.]' --no-tests=error --output-on-failure
+
   required:
     name: sir/required
     if: always()
-    needs: [source, native]
+    needs: [source, native, d3d12]
     runs-on: ubuntu-24.04
     steps:
       - name: Require source and native checks
         env:
           SOURCE: ${{ needs.source.result }}
           NATIVE: ${{ needs.native.result }}
-        run: test "$SOURCE" = success && test "$NATIVE" = success
+          D3D12: ${{ needs.d3d12.result }}
+        run: test "$SOURCE" = success && test "$NATIVE" = success && { test "$D3D12" = success || test "$D3D12" = skipped; }

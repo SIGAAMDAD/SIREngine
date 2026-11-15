@@ -226,6 +226,47 @@ int main( void )
 	}
 	const int nTest = sirTestDXGISurface( pDevice, hWindow );
 	const sirGraphicsResult_t eShutdown = driver.destroyDevice( pDevice );
+	if ( nTest == 0 && eShutdown == SIR_GRAPHICS_SUCCESS ) {
+		// The five D3D12MA pools remain fixed; DXGI images are separately
+		// admitted against the total resident budget and released on retirement.
+		sirD3D12SealedPoolConfig_t sealedPools = {};
+		sealedPools.nDeviceBufferBytes = 4 * 1024 * 1024;
+		sealedPools.nSampledTextureBytes = 4 * 1024 * 1024;
+		sealedPools.nAttachmentTextureBytes = 4 * 1024 * 1024;
+		sealedPools.nUploadBufferBytes = 4 * 1024 * 1024;
+		sealedPools.nReadbackBufferBytes = 4 * 1024 * 1024;
+		config.nResidentBudgetBytes = 48ULL * 1024 * 1024;
+		SIRRenderingDevice *pSealed = nullptr;
+		if ( driver.createSealedDevice( config, sealedPools, &pSealed ) != SIR_GRAPHICS_SUCCESS || pSealed == nullptr ) {
+			return 40;
+		}
+		sirGraphicsMemoryBudget_t baseline = {};
+		sirGraphicsMemoryBudget_t admitted = {};
+		sirGraphicsMemoryBudget_t released = {};
+		sirGraphicsNativeSurface_t native = {};
+		native.ePlatform = SIR_GRAPHICS_SURFACE_WIN32;
+		native.pWindow = hWindow;
+		native.nWindowGeneration = 1;
+		sirGraphicsPresentDesc_t present = {};
+		present.nWidth = 64;
+		present.nHeight = 64;
+		present.nBackbufferCount = 2;
+		present.eFormat = SIR_GRAPHICS_FORMAT_RGBA8_UNORM;
+		present.eMode = SIR_GRAPHICS_PRESENT_FIFO;
+		sirGraphicsHandle_t hSealedSurface = {};
+		if ( pSealed->queryMemoryBudget( &baseline ) != SIR_GRAPHICS_SUCCESS ||
+		     pSealed->createSurface( native, present, &hSealedSurface ) != SIR_GRAPHICS_SUCCESS ||
+		     pSealed->queryMemoryBudget( &admitted ) != SIR_GRAPHICS_SUCCESS || admitted.nCommittedBytes <= baseline.nCommittedBytes ) {
+			return 41;
+		}
+		sirGraphicsCompletionSet_t immediate = {};
+		immediate.nDeviceGeneration = pSealed->getDeviceGeneration();
+		if ( pSealed->retireResource( hSealedSurface, immediate ) != SIR_GRAPHICS_SUCCESS ||
+		     pSealed->queryMemoryBudget( &released ) != SIR_GRAPHICS_SUCCESS || released.nCommittedBytes != baseline.nCommittedBytes ||
+		     driver.destroyDevice( pSealed ) != SIR_GRAPHICS_SUCCESS ) {
+			return 42;
+		}
+	}
 	DestroyWindow( hWindow );
 	UnregisterClassW( wndClass.lpszClassName, hInstance );
 	if ( nTest != 0 ) {

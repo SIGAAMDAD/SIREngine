@@ -1,8 +1,8 @@
 // Headless D3D12 DXIL compute-path contract fixture.
-// The root signature exposes a UAV table at u0 and two 32-bit constants at b0.
+// The PSO binding tables expose a UAV at u0 and a constant buffer at b1.
 RWStructuredBuffer<uint> g_Values : register(u0);
 
-cbuffer SirComputeParameters : register(b0)
+cbuffer SirComputeParameters : register(b1)
 {
     uint nCount;
     uint nSeed;

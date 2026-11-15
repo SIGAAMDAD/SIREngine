@@ -14,6 +14,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Renderer/Drivers/D3D12/SIRD3D12Pipelines.h>
+#include <Renderer/Drivers/D3D12/SIRD3D12Validation.h>
 #include <Renderer/SIRGraphicsValidation.h>
 #include <d3dcompiler.h>
 #include <limits.h>
@@ -89,9 +90,96 @@ static uint32_t sirD3D12VertexFormatBytes( sirGraphicsFormat_t eFormat ) noexcep
 
 static bool sirD3D12ValidDxil( const sirGraphicsShaderCode_t& shader ) noexcept
 {
-	constexpr uint64_t MAX_DXIL_BYTES = 16ULL * 1024ULL * 1024ULL;
-	return shader.eFormat == SIR_GRAPHICS_SHADER_DXIL && shader.pBytes != nullptr && shader.nByteCount >= 16 &&
-	       shader.nByteCount <= MAX_DXIL_BYTES && memcmp( shader.pBytes, "DXBC", 4 ) == 0;
+	return shader.eFormat == SIR_GRAPHICS_SHADER_DXIL && sirD3D12ValidateDXILContainer( shader.pBytes, shader.nByteCount );
+}
+
+
+static void sirD3D12HashValue( uint64_t *pFirst, uint64_t *pSecond, uint64_t nValue ) noexcept
+{
+	for ( uint32_t iByte = 0; iByte < 8; ++iByte ) {
+		const uint64_t nByte = ( nValue >> ( iByte * 8 ) ) & 0xffU;
+		*pFirst = ( *pFirst ^ nByte ) * 1099511628211ULL;
+		*pSecond = ( *pSecond ^ nByte ) * 14029467366897019727ULL;
+	}
+}
+
+static void sirD3D12HashBytes( uint64_t *pFirst, uint64_t *pSecond, const void *pData, uint64_t nBytes ) noexcept
+{
+	const uint8_t *pBytes = static_cast<const uint8_t *>( pData );
+	sirD3D12HashValue( pFirst, pSecond, nBytes );
+	for ( uint64_t iByte = 0; iByte < nBytes; ++iByte ) {
+		*pFirst = ( *pFirst ^ pBytes[iByte] ) * 1099511628211ULL;
+		*pSecond = ( *pSecond ^ pBytes[iByte] ) * 14029467366897019727ULL;
+	}
+}
+
+static void sirD3D12HashShader( uint64_t *pFirst, uint64_t *pSecond, const sirGraphicsShaderCode_t& shader ) noexcept
+{
+	sirD3D12HashValue( pFirst, pSecond, shader.eFormat );
+	if ( shader.pBytes == nullptr || shader.nByteCount == 0 ) {
+		sirD3D12HashValue( pFirst, pSecond, 0 );
+		return;
+	}
+	sirD3D12HashBytes( pFirst, pSecond, shader.pBytes, shader.nByteCount );
+}
+
+static void sirD3D12PipelineCacheName( const sirGraphicsPipelineDesc_t& desc, wchar_t *pszName ) noexcept
+{
+	uint64_t nFirst = 14695981039346656037ULL;
+	uint64_t nSecond = 7809847782465536322ULL;
+	sirD3D12HashValue( &nFirst, &nSecond, 1 );
+	sirD3D12HashValue( &nFirst, &nSecond, desc.eType );
+	sirD3D12HashValue( &nFirst, &nSecond, desc.eModel );
+	sirD3D12HashValue( &nFirst, &nSecond, desc.nBindingCount );
+	for ( uint32_t i = 0; i < desc.nBindingCount; ++i ) {
+		const sirGraphicsBindingDesc_t& binding = desc.pBindings[i];
+		sirD3D12HashValue( &nFirst, &nSecond, binding.nBinding );
+		sirD3D12HashValue( &nFirst, &nSecond, binding.nSpace );
+		sirD3D12HashValue( &nFirst, &nSecond, binding.nArrayCount );
+		sirD3D12HashValue( &nFirst, &nSecond, binding.nShaderStageMask );
+		sirD3D12HashValue( &nFirst, &nSecond, binding.eType );
+	}
+	if ( desc.eType == SIR_GRAPHICS_PIPELINE_COMPUTE ) {
+		sirD3D12HashShader( &nFirst, &nSecond, desc.computeShader );
+	} else {
+		sirD3D12HashShader( &nFirst, &nSecond, desc.vertexShader );
+		sirD3D12HashShader( &nFirst, &nSecond, desc.pixelShader );
+		sirD3D12HashValue( &nFirst, &nSecond, desc.nAttributeCount );
+		for ( uint32_t i = 0; i < desc.nAttributeCount; ++i ) {
+			const sirGraphicsVertexAttribute_t& attribute = desc.pAttributes[i];
+			sirD3D12HashValue( &nFirst, &nSecond, attribute.nLocation );
+			sirD3D12HashValue( &nFirst, &nSecond, attribute.nBufferSlot );
+			sirD3D12HashValue( &nFirst, &nSecond, attribute.nOffsetBytes );
+			sirD3D12HashValue( &nFirst, &nSecond, attribute.nStrideBytes );
+			sirD3D12HashValue( &nFirst, &nSecond, attribute.eFormat );
+		}
+		sirD3D12HashValue( &nFirst, &nSecond, desc.nColorFormatCount );
+		for ( uint32_t i = 0; i < desc.nColorFormatCount; ++i ) {
+			sirD3D12HashValue( &nFirst, &nSecond, desc.szColorFormats[i] );
+			const sirGraphicsBlendState_t& blend = desc.szBlendStates[i];
+			sirD3D12HashValue( &nFirst, &nSecond, blend.eSourceColor );
+			sirD3D12HashValue( &nFirst, &nSecond, blend.eDestinationColor );
+			sirD3D12HashValue( &nFirst, &nSecond, blend.eColorOperation );
+			sirD3D12HashValue( &nFirst, &nSecond, blend.eSourceAlpha );
+			sirD3D12HashValue( &nFirst, &nSecond, blend.eDestinationAlpha );
+			sirD3D12HashValue( &nFirst, &nSecond, blend.eAlphaOperation );
+			sirD3D12HashValue( &nFirst, &nSecond, blend.nColorWriteMask );
+			sirD3D12HashValue( &nFirst, &nSecond, blend.bEnabled );
+		}
+		sirD3D12HashValue( &nFirst, &nSecond, desc.eDepthFormat );
+		sirD3D12HashValue( &nFirst, &nSecond, desc.nSampleCount );
+		sirD3D12HashValue( &nFirst, &nSecond, desc.eTopology );
+		sirD3D12HashValue( &nFirst, &nSecond, desc.eCullMode );
+		sirD3D12HashValue( &nFirst, &nSecond, desc.eDepthCompare );
+		sirD3D12HashValue( &nFirst, &nSecond, desc.bDepthTest );
+		sirD3D12HashValue( &nFirst, &nSecond, desc.bDepthWrite );
+	}
+	const wchar_t *pszHex = L"0123456789abcdef";
+	for ( uint32_t i = 0; i < 16; ++i ) {
+		pszName[i] = pszHex[( nFirst >> ( ( 15 - i ) * 4 ) ) & 15U];
+		pszName[16 + i] = pszHex[( nSecond >> ( ( 15 - i ) * 4 ) ) & 15U];
+	}
+	pszName[32] = 0;
 }
 
 static D3D12_DESCRIPTOR_RANGE_TYPE sirD3D12RangeType( sirGraphicsBindingType_t eType ) noexcept
@@ -201,40 +289,6 @@ static D3D12_BLEND_OP sirD3D12BlendOperation( sirGraphicsBlendOp_t eOperation ) 
 	}
 }
 
-static bool sirD3D12ValidateBindings( const sirGraphicsPipelineDesc_t& desc ) noexcept
-{
-	constexpr uint32_t MAX_BINDINGS = 32;
-	constexpr uint32_t MAX_DESCRIPTOR_ARRAY = 128;
-	if ( desc.nBindingCount > MAX_BINDINGS ) {
-		return false;
-	}
-	for ( uint32_t iBinding = 0; iBinding < desc.nBindingCount; ++iBinding ) {
-		const sirGraphicsBindingDesc_t& binding = desc.pBindings[iBinding];
-		if ( binding.nArrayCount > MAX_DESCRIPTOR_ARRAY || binding.nBinding > UINT32_MAX - binding.nArrayCount ) {
-			return false;
-		}
-		if ( desc.eType == SIR_GRAPHICS_PIPELINE_COMPUTE ) {
-			if ( binding.nShaderStageMask != SIR_GRAPHICS_STAGE_COMPUTE ) {
-				return false;
-			}
-		} else if ( ( binding.nShaderStageMask & ~( SIR_GRAPHICS_STAGE_VERTEX | SIR_GRAPHICS_STAGE_FRAGMENT ) ) != 0 ) {
-			return false;
-		}
-		for ( uint32_t iPrior = 0; iPrior < iBinding; ++iPrior ) {
-			const sirGraphicsBindingDesc_t& prior = desc.pBindings[iPrior];
-			if ( binding.nSpace != prior.nSpace || sirD3D12RangeType( binding.eType ) != sirD3D12RangeType( prior.eType ) ) {
-				continue;
-			}
-			const uint64_t nEnd = ( uint64_t )binding.nBinding + binding.nArrayCount;
-			const uint64_t nPriorEnd = ( uint64_t )prior.nBinding + prior.nArrayCount;
-			if ( binding.nBinding < nPriorEnd && prior.nBinding < nEnd ) {
-				return false;
-			}
-		}
-	}
-	return true;
-}
-
 static bool sirD3D12ValidateAttributes( const sirGraphicsPipelineDesc_t& desc ) noexcept
 {
 	for ( uint32_t iAttribute = 0; iAttribute < desc.nAttributeCount; ++iAttribute ) {
@@ -271,7 +325,92 @@ bool SIRD3D12Pipelines::initialize( SIRD3D12Device *pNative, uint32_t nGeneratio
 	}
 	m_pNative = pNative;
 	m_nDeviceGeneration = nGeneration;
+	D3D12_FEATURE_DATA_SHADER_CACHE cacheCaps = {};
+	const bool bLibrarySupported =
+	    SUCCEEDED( m_pDevice->CheckFeatureSupport( D3D12_FEATURE_SHADER_CACHE, &cacheCaps, sizeof( cacheCaps ) ) ) &&
+	    ( cacheCaps.SupportFlags & D3D12_SHADER_CACHE_SUPPORT_LIBRARY ) != 0;
+	Microsoft::WRL::ComPtr<ID3D12Device1> pDevice1;
+	if ( bLibrarySupported && SUCCEEDED( m_pDevice->QueryInterface( IID_PPV_ARGS( pDevice1.GetAddressOf() ) ) ) ) {
+		( void )pDevice1->CreatePipelineLibrary( nullptr, 0, IID_PPV_ARGS( m_pPipelineLibrary.GetAddressOf() ) );
+	}
+	m_CacheStats.bAvailable = m_pPipelineLibrary != nullptr;
 	return true;
+}
+
+sirGraphicsResult_t SIRD3D12Pipelines::loadPipelineCache( const void *pData, uint64_t nBytes ) noexcept
+{
+	if ( m_pNative == nullptr ) {
+		return SIR_GRAPHICS_DEVICE_LOST;
+	}
+	if ( pData == nullptr || nBytes == 0 || nBytes > 16ULL * 1024ULL * 1024ULL || nBytes > SIZE_MAX ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	if ( m_bPipelineCreated ) {
+		return SIR_GRAPHICS_BUSY;
+	}
+	Microsoft::WRL::ComPtr<ID3D12Device1> pDevice1;
+	if ( FAILED( m_pDevice->QueryInterface( IID_PPV_ARGS( pDevice1.GetAddressOf() ) ) ) ) {
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
+	// The runtime may retain the imported database memory. The driver owns
+	// a bounded copy until the library is released, independently of the caller.
+	void *pOwnedBlob = VirtualAlloc( nullptr, ( SIZE_T )nBytes, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE );
+	if ( pOwnedBlob == nullptr ) {
+		return SIR_GRAPHICS_OUT_OF_MEMORY;
+	}
+	memcpy( pOwnedBlob, pData, ( SIZE_T )nBytes );
+	Microsoft::WRL::ComPtr<ID3D12PipelineLibrary> pImported;
+	const HRESULT nResult =
+	    pDevice1->CreatePipelineLibrary( pOwnedBlob, ( SIZE_T )nBytes, IID_PPV_ARGS( pImported.GetAddressOf() ) );
+	if ( FAILED( nResult ) ) {
+		VirtualFree( pOwnedBlob, 0, MEM_RELEASE );
+		return nResult == E_OUTOFMEMORY ? SIR_GRAPHICS_OUT_OF_MEMORY : SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	m_pPipelineLibrary = pImported;
+	if ( m_pLibraryBlob != nullptr ) {
+		VirtualFree( m_pLibraryBlob, 0, MEM_RELEASE );
+	}
+	m_pLibraryBlob = pOwnedBlob;
+	m_CacheStats = {};
+	m_CacheStats.bAvailable = true;
+	return SIR_GRAPHICS_SUCCESS;
+}
+
+sirGraphicsResult_t SIRD3D12Pipelines::serializePipelineCache( void *pData, uint64_t *pBytes ) const noexcept
+{
+	if ( pBytes == nullptr ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	if ( m_pNative == nullptr ) {
+		return SIR_GRAPHICS_DEVICE_LOST;
+	}
+	if ( m_pPipelineLibrary == nullptr ) {
+		return SIR_GRAPHICS_UNSUPPORTED;
+	}
+	const SIZE_T nRequired = m_pPipelineLibrary->GetSerializedSize();
+	const uint64_t nCapacity = *pBytes;
+	*pBytes = nRequired;
+	if ( pData == nullptr ) {
+		return SIR_GRAPHICS_SUCCESS;
+	}
+	if ( nCapacity < nRequired ) {
+		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
+	}
+	const HRESULT nResult = m_pPipelineLibrary->Serialize( pData, nRequired );
+	return SUCCEEDED( nResult ) ? SIR_GRAPHICS_SUCCESS : SIR_GRAPHICS_DRIVER_ERROR;
+}
+
+sirGraphicsResult_t SIRD3D12Pipelines::queryPipelineCacheStats( sirD3D12PipelineCacheStats_t *pStats ) const noexcept
+{
+	if ( pStats == nullptr ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	*pStats = {};
+	if ( m_pNative == nullptr ) {
+		return SIR_GRAPHICS_DEVICE_LOST;
+	}
+	*pStats = m_CacheStats;
+	return SIR_GRAPHICS_SUCCESS;
 }
 
 void SIRD3D12Pipelines::releaseSlot( uint32_t iSlot ) noexcept
@@ -301,6 +440,18 @@ void SIRD3D12Pipelines::shutdown( bool bGpuComplete ) noexcept
 			m_szSlots[iSlot].nGeneration = nGeneration;
 		}
 	}
+	if ( bGpuComplete ) {
+		m_pPipelineLibrary.Reset();
+		if ( m_pLibraryBlob != nullptr ) {
+			VirtualFree( m_pLibraryBlob, 0, MEM_RELEASE );
+		}
+	} else {
+		// Preserve storage if a GPU-dependent library is intentionally detached.
+		( void )m_pPipelineLibrary.Detach();
+	}
+	m_pLibraryBlob = nullptr;
+	m_CacheStats = {};
+	m_bPipelineCreated = false;
 	m_pNative = nullptr;
 	m_pDevice = nullptr;
 	m_nDeviceGeneration = 0;
@@ -397,13 +548,26 @@ HRESULT SIRD3D12Pipelines::createRootSignature( const sirGraphicsPipelineDesc_t&
 }
 
 HRESULT SIRD3D12Pipelines::createComputeState( const sirGraphicsPipelineDesc_t& desc, ID3D12RootSignature *pRoot,
-                                               ID3D12PipelineState **ppPipeline ) noexcept
+                                               ID3D12PipelineState **ppPipeline, const wchar_t *pszCacheKey ) noexcept
 {
 	D3D12_COMPUTE_PIPELINE_STATE_DESC native = {};
 	native.pRootSignature = pRoot;
 	native.CS.pShaderBytecode = desc.computeShader.pBytes;
 	native.CS.BytecodeLength = ( SIZE_T )desc.computeShader.nByteCount;
-	return m_pDevice->CreateComputePipelineState( &native, IID_PPV_ARGS( ppPipeline ) );
+	if ( m_pPipelineLibrary != nullptr ) {
+		if ( SUCCEEDED( m_pPipelineLibrary->LoadComputePipeline( pszCacheKey, &native, IID_PPV_ARGS( ppPipeline ) ) ) ) {
+			++m_CacheStats.nCacheHits;
+			return S_OK;
+		}
+		++m_CacheStats.nCacheMisses;
+	}
+	const HRESULT nResult = m_pDevice->CreateComputePipelineState( &native, IID_PPV_ARGS( ppPipeline ) );
+	if ( SUCCEEDED( nResult ) && m_pPipelineLibrary != nullptr && m_CacheStats.nCacheStores < 256 &&
+	     m_pPipelineLibrary->GetSerializedSize() < 16ULL * 1024ULL * 1024ULL &&
+	     SUCCEEDED( m_pPipelineLibrary->StorePipeline( pszCacheKey, *ppPipeline ) ) ) {
+		++m_CacheStats.nCacheStores;
+	}
+	return nResult;
 }
 
 static bool sirD3D12SupportsPipelineTarget( ID3D12Device *pDevice, DXGI_FORMAT eFormat, uint32_t nSampleCount,
@@ -419,7 +583,7 @@ static bool sirD3D12SupportsPipelineTarget( ID3D12Device *pDevice, DXGI_FORMAT e
 }
 
 HRESULT SIRD3D12Pipelines::createGraphicsState( const sirGraphicsPipelineDesc_t& desc, ID3D12RootSignature *pRoot,
-                                                ID3D12PipelineState **ppPipeline ) noexcept
+                                                ID3D12PipelineState **ppPipeline, const wchar_t *pszCacheKey ) noexcept
 {
 	D3D12_INPUT_ELEMENT_DESC szAttributes[32] = {};
 	for ( uint32_t iAttribute = 0; iAttribute < desc.nAttributeCount; ++iAttribute ) {
@@ -472,7 +636,20 @@ HRESULT SIRD3D12Pipelines::createGraphicsState( const sirGraphicsPipelineDesc_t&
 		nativeBlend.BlendOpAlpha = sirD3D12BlendOperation( blend.eAlphaOperation );
 		nativeBlend.RenderTargetWriteMask = ( UINT8 )blend.nColorWriteMask;
 	}
-	return m_pDevice->CreateGraphicsPipelineState( &native, IID_PPV_ARGS( ppPipeline ) );
+	if ( m_pPipelineLibrary != nullptr ) {
+		if ( SUCCEEDED( m_pPipelineLibrary->LoadGraphicsPipeline( pszCacheKey, &native, IID_PPV_ARGS( ppPipeline ) ) ) ) {
+			++m_CacheStats.nCacheHits;
+			return S_OK;
+		}
+		++m_CacheStats.nCacheMisses;
+	}
+	const HRESULT nResult = m_pDevice->CreateGraphicsPipelineState( &native, IID_PPV_ARGS( ppPipeline ) );
+	if ( SUCCEEDED( nResult ) && m_pPipelineLibrary != nullptr && m_CacheStats.nCacheStores < 256 &&
+	     m_pPipelineLibrary->GetSerializedSize() < 16ULL * 1024ULL * 1024ULL &&
+	     SUCCEEDED( m_pPipelineLibrary->StorePipeline( pszCacheKey, *ppPipeline ) ) ) {
+		++m_CacheStats.nCacheStores;
+	}
+	return nResult;
 }
 
 sirGraphicsResult_t SIRD3D12Pipelines::createPipeline( const sirGraphicsPipelineDesc_t& desc, sirGraphicsHandle_t *pHandle ) noexcept
@@ -496,8 +673,9 @@ sirGraphicsResult_t SIRD3D12Pipelines::createPipeline( const sirGraphicsPipeline
 	     ( !bCompute && !sirD3D12ValidDxil( desc.pixelShader ) ) ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	if ( !sirD3D12ValidateBindings( desc ) ) {
-		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	const sirGraphicsResult_t eBindings = sirD3D12ValidateBindingLayout( desc.pBindings, desc.nBindingCount, desc.eType );
+	if ( eBindings != SIR_GRAPHICS_SUCCESS ) {
+		return eBindings;
 	}
 	if ( !bCompute && !sirD3D12ValidateAttributes( desc ) ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
@@ -539,14 +717,40 @@ sirGraphicsResult_t SIRD3D12Pipelines::createPipeline( const sirGraphicsPipeline
 		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
 	}
 
+	wchar_t szCacheKey[33] = {};
+	sirD3D12PipelineCacheName( desc, szCacheKey );
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> pRoot;
-	const HRESULT nRoot = createRootSignature( desc, pRoot.GetAddressOf() );
-	if ( FAILED( nRoot ) ) {
-		return nRoot == E_OUTOFMEMORY ? SIR_GRAPHICS_OUT_OF_MEMORY : SIR_GRAPHICS_DRIVER_ERROR;
+	// Identical live binding layouts use one root signature even when the
+	// shaders or fixed-function pipeline state differ.
+	for ( uint32_t iSlot = 0; iSlot < s_nPipelineCapacity && pRoot == nullptr; ++iSlot ) {
+		const sirD3D12PipelineSlot_t& prior = m_szSlots[iSlot];
+		if ( !prior.bLive || prior.eType != desc.eType || prior.nBindingCount != desc.nBindingCount ) {
+			continue;
+		}
+		bool bSame = true;
+		for ( uint32_t iBinding = 0; iBinding < desc.nBindingCount; ++iBinding ) {
+			const sirGraphicsBindingDesc_t& a = prior.szBindings[iBinding];
+			const sirGraphicsBindingDesc_t& b = desc.pBindings[iBinding];
+			if ( a.nBinding != b.nBinding || a.nSpace != b.nSpace || a.nArrayCount != b.nArrayCount ||
+			     a.nShaderStageMask != b.nShaderStageMask || a.eType != b.eType ) {
+				bSame = false;
+				break;
+			}
+		}
+		if ( bSame ) {
+			pRoot = prior.pRootSignature;
+			++m_CacheStats.nRootReuses;
+		}
+	}
+	if ( pRoot == nullptr ) {
+		const HRESULT nRoot = createRootSignature( desc, pRoot.GetAddressOf() );
+		if ( FAILED( nRoot ) ) {
+			return nRoot == E_OUTOFMEMORY ? SIR_GRAPHICS_OUT_OF_MEMORY : SIR_GRAPHICS_DRIVER_ERROR;
+		}
 	}
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> pPipeline;
-	const HRESULT nPipeline = bCompute ? createComputeState( desc, pRoot.Get(), pPipeline.GetAddressOf() )
-	                                   : createGraphicsState( desc, pRoot.Get(), pPipeline.GetAddressOf() );
+	const HRESULT nPipeline = bCompute ? createComputeState( desc, pRoot.Get(), pPipeline.GetAddressOf(), szCacheKey )
+	                                   : createGraphicsState( desc, pRoot.Get(), pPipeline.GetAddressOf(), szCacheKey );
 	if ( FAILED( nPipeline ) ) {
 		return nPipeline == E_OUTOFMEMORY ? SIR_GRAPHICS_OUT_OF_MEMORY : SIR_GRAPHICS_DRIVER_ERROR;
 	}
@@ -563,6 +767,7 @@ sirGraphicsResult_t SIRD3D12Pipelines::createPipeline( const sirGraphicsPipeline
 	}
 	slot.pRootSignature = pRoot;
 	slot.pPipelineState = pPipeline;
+	m_bPipelineCreated = true;
 	slot.bLive = true;
 	*pHandle = { iFree, nGeneration, m_nDeviceGeneration, SIR_GRAPHICS_HANDLE_PIPELINE };
 	return SIR_GRAPHICS_SUCCESS;
