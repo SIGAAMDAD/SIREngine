@@ -183,6 +183,15 @@ typedef struct sirResourceStagingHandle_s
 } sirResourceStagingHandle_t;
 typedef sirResourceStagingHandle_t SIRResourceStagingHandle;
 
+// A writer-owned transfer pin protects staging bytes lent to OS I/O or a
+// decoder. A logical cancellation cannot free them until completion ACK.
+typedef struct sirResourceStagingLease_s
+{
+	uint32_t nSlot;
+	uint32_t nGeneration;
+	uint32_t nTransferGeneration;
+} sirResourceStagingLease_t;
+
 typedef struct sirResourceChunkPublication_s
 {
 	SIRResourceChunkId m_Id;

@@ -56,6 +56,8 @@ bool SIRTaskFenceTracker::init( SIRMemoryManager *pMemory, SIRTaskScheduler *pSc
 		eDomain = SIR_MEMORY_DOMAIN_PHYSICS;
 	} else if ( eProvider == SIR_TASK_EXEC_AUDIO ) {
 		eDomain = SIR_MEMORY_DOMAIN_AUDIO;
+	} else if ( eProvider == SIR_TASK_EXEC_IO ) {
+		eDomain = SIR_MEMORY_DOMAIN_STREAMING;
 	}
 	void *pRecords =
 	    pMemory->allocateMetadata( ( uint64_t )nCapacity * sizeof( sirTaskFenceRecord_t ), alignof( sirTaskFenceRecord_t ), eDomain );

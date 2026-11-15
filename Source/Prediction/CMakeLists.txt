@@ -1,0 +1,7 @@
+include("${CMAKE_CURRENT_LIST_DIR}/../../Build/CMake/SIRBuildTreeGuard.cmake")
+add_library(SIRWorldPrediction STATIC World/SIRWorldTrajectoryPredictor.cpp World/SIRWorldStreamingPlanner.cpp Budget/SIRAdaptiveWorkBudgeter.cpp)
+add_library(SIR::WorldPrediction ALIAS SIRWorldPrediction)
+target_include_directories(SIRWorldPrediction PUBLIC "${PROJECT_SOURCE_DIR}/Source")
+target_compile_features(SIRWorldPrediction PUBLIC cxx_std_17)
+target_link_libraries(SIRWorldPrediction PUBLIC SIR::World)
+sir_configure_owned_target(SIRWorldPrediction)

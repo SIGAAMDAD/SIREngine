@@ -17,3 +17,20 @@ target_include_directories(SIRVGFramePlan PUBLIC
     "${PROJECT_SOURCE_DIR}/Build/CMake")
 target_compile_features(SIRVGFramePlan PUBLIC cxx_std_17)
 sir_configure_owned_target(SIRVGFramePlan)
+
+# Portable mesh/source ABI validation and cooked SIRG schema.
+add_library(SIRVGContracts STATIC SIRVGContracts.cpp)
+add_library(SIR::VGContracts ALIAS SIRVGContracts)
+target_include_directories(SIRVGContracts PUBLIC "${PROJECT_SOURCE_DIR}/Source" "${PROJECT_SOURCE_DIR}/Build/CMake")
+target_compile_features(SIRVGContracts PUBLIC cxx_std_17)
+sir_configure_owned_target(SIRVGContracts)
+
+add_library(SIRMeshPackSchema STATIC SIRMeshPackSchema.cpp)
+add_library(SIR::MeshPackSchema ALIAS SIRMeshPackSchema)
+target_include_directories(SIRMeshPackSchema PUBLIC "${PROJECT_SOURCE_DIR}/Source" "${PROJECT_SOURCE_DIR}/Build/CMake")
+target_compile_features(SIRMeshPackSchema PUBLIC cxx_std_17)
+target_link_libraries(SIRMeshPackSchema PUBLIC SIR::Resources)
+sir_configure_owned_target(SIRMeshPackSchema)
+
+# Shared canonical static BVH and four-domain surface-material wire schema.
+target_sources(SIRMeshPackSchema PRIVATE SIRSharedGeometryBVH.cpp)

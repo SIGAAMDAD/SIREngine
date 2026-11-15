@@ -85,3 +85,60 @@ add_test(NAME core.jobs.queue-candidates COMMAND SIRSchedulerQueueCandidateTests
 set_tests_properties(core.jobs.queue-candidates PROPERTIES TIMEOUT 90)
 sir_configure_owned_target(SIRSchedulerQueueCandidateTests)
 
+
+# Deterministic SIRPack foundation and immutable geometry manifest.
+add_executable(SIRPackFoundationTests SIRPackFoundationTests.cpp)
+target_include_directories(SIRPackFoundationTests PRIVATE "${PROJECT_SOURCE_DIR}")
+target_compile_definitions(SIRPackFoundationTests PRIVATE SIR_PACK_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/Tests/Fixtures/SIRPack")
+target_link_libraries(SIRPackFoundationTests PRIVATE SIR::PackCooker)
+add_test(NAME resources.sirpack.foundation COMMAND SIRPackFoundationTests)
+sir_configure_owned_target(SIRPackFoundationTests)
+
+add_executable(SIRMeshPackSchemaTests SIRMeshPackSchemaTests.cpp)
+target_link_libraries(SIRMeshPackSchemaTests PRIVATE SIR::MeshPackSchema)
+add_test(NAME mesh.sirpack.schema COMMAND SIRMeshPackSchemaTests)
+sir_configure_owned_target(SIRMeshPackSchemaTests)
+
+if(TARGET SIRGeometryCooker)
+    add_executable(SIRGeometryCookerTests SIRGeometryCookerTests.cpp)
+    target_include_directories(SIRGeometryCookerTests PRIVATE "${PROJECT_SOURCE_DIR}")
+    target_link_libraries(SIRGeometryCookerTests PRIVATE SIR::GeometryCooker)
+    add_test(NAME mesh.geometry.cooker COMMAND SIRGeometryCookerTests)
+    sir_configure_owned_target(SIRGeometryCookerTests)
+endif()
+
+add_executable(SIRAsyncIOServiceTests SIRAsyncIOServiceTests.cpp)
+target_link_libraries(SIRAsyncIOServiceTests PRIVATE SIR::Core)
+add_test(NAME core.io.native-worker-lifetime COMMAND SIRAsyncIOServiceTests)
+sir_configure_owned_target(SIRAsyncIOServiceTests)
+
+add_executable(SIRPackAsyncResourceLoadTests SIRPackAsyncResourceLoadTests.cpp)
+target_include_directories(SIRPackAsyncResourceLoadTests PRIVATE "${PROJECT_SOURCE_DIR}")
+target_link_libraries(SIRPackAsyncResourceLoadTests PRIVATE SIR::PackCooker SIR::Streaming SIR::WorldPrediction)
+add_test(NAME resources.streaming.pack-to-grdg COMMAND SIRPackAsyncResourceLoadTests)
+sir_configure_owned_target(SIRPackAsyncResourceLoadTests)
+
+add_executable(SIRSharedGeometryBVHTests SIRSharedGeometryBVHTests.cpp)
+target_link_libraries(SIRSharedGeometryBVHTests PRIVATE SIR::MeshPackSchema)
+add_test(NAME mesh.sirpack.shared-bvh-material COMMAND SIRSharedGeometryBVHTests)
+sir_configure_owned_target(SIRSharedGeometryBVHTests)
+
+add_executable(SIRWorldPredictionTests SIRWorldPredictionTests.cpp)
+target_link_libraries(SIRWorldPredictionTests PRIVATE SIR::WorldPrediction)
+add_test(NAME prediction.world.trajectory-coaccess COMMAND SIRWorldPredictionTests)
+sir_configure_owned_target(SIRWorldPredictionTests)
+
+add_executable(SIRAdaptiveWorkBudgeterTests SIRAdaptiveWorkBudgeterTests.cpp)
+target_link_libraries(SIRAdaptiveWorkBudgeterTests PRIVATE SIR::WorldPrediction)
+add_test(NAME prediction.budget.shared-physical-admission COMMAND SIRAdaptiveWorkBudgeterTests)
+sir_configure_owned_target(SIRAdaptiveWorkBudgeterTests)
+
+add_executable(SIRWorldStreamingPlannerTests SIRWorldStreamingPlannerTests.cpp)
+target_link_libraries(SIRWorldStreamingPlannerTests PRIVATE SIR::WorldPrediction SIR::Streaming)
+add_test(NAME prediction.world.streaming-pipeline COMMAND SIRWorldStreamingPlannerTests)
+sir_configure_owned_target(SIRWorldStreamingPlannerTests)
+
+add_executable(SIRSharedBvhCookerTests SIRSharedBvhCookerTests.cpp)
+target_link_libraries(SIRSharedBvhCookerTests PRIVATE SIR::SharedBvhCooker)
+add_test(NAME mesh.shared-bvh.offline-cooker COMMAND SIRSharedBvhCookerTests)
+sir_configure_owned_target(SIRSharedBvhCookerTests)

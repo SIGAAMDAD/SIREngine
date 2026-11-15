@@ -76,6 +76,8 @@ struct SIRStagingSlot
 	uint32_t m_nAlignment;
 	uint32_t m_nDomain;
 	uint32_t m_nGeneration;
+	uint32_t m_nTransferGeneration;
+	uint32_t m_nActiveTransfers;
 };
 
 struct SIRProviderPinSlot
@@ -946,6 +948,7 @@ SIRResourceResult SIRResourceGraphWriter::allocateStaging( uint64_t nSize, uint3
 			return SIR_RESOURCE_RESULT_OUT_OF_BUDGET;
 		}
 		pSlot->m_nGeneration = nextGeneration( pSlot->m_nGeneration );
+		pSlot->m_nActiveTransfers = 0;
 		pSlot->m_pData = pMemory;
 		pSlot->m_nSize = nSize;
 		pSlot->m_nAlignment = nAlignment;
@@ -960,6 +963,9 @@ SIRResourceResult SIRResourceGraphWriter::allocateStaging( uint64_t nSize, uint3
 void SIRResourceGraph::releaseStagingSlot( uint32_t iSlot ) noexcept
 {
 	SIRStagingSlot *pSlot = &m_pStaging[iSlot];
+	if ( pSlot->m_nActiveTransfers != 0 ) {
+		abort();
+	}
 	release( pSlot->m_pData, pSlot->m_nSize, pSlot->m_nAlignment, pSlot->m_nDomain );
 	pSlot->m_pData = nullptr;
 	pSlot->m_nSize = 0;
@@ -978,7 +984,54 @@ SIRResourceResult SIRResourceGraphWriter::cancelStaging( SIRResourceStagingHandl
 	if ( !rSlot.m_pData || rSlot.m_nGeneration != hStaging.m_nGeneration ) {
 		return SIR_RESOURCE_RESULT_INVALID_HANDLE;
 	}
+	if ( rSlot.m_nActiveTransfers != 0 ) {
+		return SIR_RESOURCE_RESULT_BUSY;
+	}
 	m_pGraph->releaseStagingSlot( hStaging.m_nSlot );
+	return SIR_RESOURCE_RESULT_SUCCESS;
+}
+
+SIRResourceResult SIRResourceGraphWriter::beginTransfer( SIRResourceStagingHandle hStaging, uint64_t nOffset, uint64_t nBytes,
+                                                         sirResourceStagingLease_t *pLease, SIRResourceMutableBytes *pSpan ) noexcept
+{
+	if ( !m_pGraph->isWriterThread() ) {
+		return SIR_RESOURCE_RESULT_WRITER_VIOLATION;
+	}
+	if ( pLease == nullptr || pSpan == nullptr || nBytes == 0 || hStaging.m_nSlot >= m_pGraph->m_Config.m_nMaxStaging ) {
+		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
+	}
+	SIRStagingSlot& slot = m_pGraph->m_pStaging[hStaging.m_nSlot];
+	if ( slot.m_pData == nullptr || slot.m_nGeneration != hStaging.m_nGeneration ) {
+		return SIR_RESOURCE_RESULT_INVALID_HANDLE;
+	}
+	if ( slot.m_nActiveTransfers != 0 ) {
+		return SIR_RESOURCE_RESULT_BUSY;
+	}
+	if ( nOffset > slot.m_nSize || nBytes > slot.m_nSize - nOffset ) {
+		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
+	}
+
+	slot.m_nTransferGeneration = nextGeneration( slot.m_nTransferGeneration );
+	slot.m_nActiveTransfers = 1;
+	*pLease = { hStaging.m_nSlot, slot.m_nGeneration, slot.m_nTransferGeneration };
+	*pSpan = { slot.m_pData + nOffset, nBytes };
+	return SIR_RESOURCE_RESULT_SUCCESS;
+}
+
+SIRResourceResult SIRResourceGraphWriter::completeTransfer( sirResourceStagingLease_t hLease ) noexcept
+{
+	if ( !m_pGraph->isWriterThread() ) {
+		return SIR_RESOURCE_RESULT_WRITER_VIOLATION;
+	}
+	if ( hLease.nSlot >= m_pGraph->m_Config.m_nMaxStaging ) {
+		return SIR_RESOURCE_RESULT_INVALID_HANDLE;
+	}
+	SIRStagingSlot& slot = m_pGraph->m_pStaging[hLease.nSlot];
+	if ( slot.m_pData == nullptr || slot.m_nGeneration != hLease.nGeneration || slot.m_nTransferGeneration != hLease.nTransferGeneration ||
+	     slot.m_nActiveTransfers != 1 ) {
+		return SIR_RESOURCE_RESULT_INVALID_HANDLE;
+	}
+	slot.m_nActiveTransfers = 0;
 	return SIR_RESOURCE_RESULT_SUCCESS;
 }
 
@@ -1093,6 +1146,9 @@ SIRResourceResult SIRResourceGraph::prepareChunk( SIRPublishedResourceRecord *pR
 		SIRStagingSlot& rStaging = m_pStaging[rInput.m_Staging.m_nSlot];
 		if ( !rStaging.m_pData || rStaging.m_nGeneration != rInput.m_Staging.m_nGeneration ) {
 			return SIR_RESOURCE_RESULT_INVALID_HANDLE;
+		}
+		if ( rStaging.m_nActiveTransfers != 0 ) {
+			return SIR_RESOURCE_RESULT_BUSY;
 		}
 		for ( uint32_t iEarlier = 0; iEarlier < iChunk; ++iEarlier ) {
 			if ( pRecord->m_pChunks[iEarlier].m_iStagingSlot == rInput.m_Staging.m_nSlot ) {

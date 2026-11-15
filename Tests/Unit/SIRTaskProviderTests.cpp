@@ -311,6 +311,34 @@ static void testBurstAndInvalidCompletions( void )
 	memory.shutdown();
 }
 
+static void testNativeIOExecutorAcknowledgement( void )
+{
+	SIRMemoryManager memory;
+	initProviderMemory( memory );
+	SIRTaskScheduler scheduler;
+	SIR_PROVIDER_CHECK( scheduler.init( &memory, { 8, 0, 16 } ) );
+	SIR_PROVIDER_CHECK( scheduler.bindProviderOwner( SIR_TASK_EXEC_IO ) );
+	std::atomic<uint32_t> nCalls( 0 );
+	sirTaskHandle_t io = {};
+	sirTaskHandle_t decoded = {};
+	SIR_PROVIDER_CHECK( scheduler.submit( { providerDeferred, &nCalls, SIR_TASK_PRIORITY_CRITICAL, SIR_TASK_EXEC_IO }, &io ) );
+	SIR_PROVIDER_CHECK(
+	    scheduler.submitAfter( { providerCount, &nCalls, SIR_TASK_PRIORITY_NORMAL, SIR_TASK_EXEC_CPU }, &io, 1, &decoded ) );
+	SIR_PROVIDER_CHECK( scheduler.pumpCPU( 1 ) == 0 );
+	SIR_PROVIDER_CHECK( scheduler.pumpProvider( SIR_TASK_EXEC_IO, 1 ) == 1 );
+	SIR_PROVIDER_CHECK( scheduler.getState( io ) == SIR_TASK_AWAITING_PROVIDER );
+	SIR_PROVIDER_CHECK( scheduler.cancel( io ) );
+	SIR_PROVIDER_CHECK( scheduler.getState( decoded ) == SIR_TASK_BLOCKED );
+	SIR_PROVIDER_CHECK( scheduler.completeProvider( io, SIR_TASK_RESULT_SUCCESS ) );
+	SIR_PROVIDER_CHECK( scheduler.getState( io ) == SIR_TASK_CANCELLED );
+	SIR_PROVIDER_CHECK( scheduler.getState( decoded ) == SIR_TASK_CANCELLED );
+	SIR_PROVIDER_CHECK( !scheduler.completeProvider( io, SIR_TASK_RESULT_SUCCESS ) );
+	SIR_PROVIDER_CHECK( scheduler.releaseTask( io ) );
+	SIR_PROVIDER_CHECK( scheduler.releaseTask( decoded ) );
+	SIR_PROVIDER_CHECK( scheduler.shutdown() );
+	memory.shutdown();
+}
+
 int main( void )
 {
 	testDeferredCompletionOnRegisteredThread();
@@ -320,5 +348,6 @@ int main( void )
 	testPendingCpuCallbackIsFailure();
 	testShutdownDuringProviderCallback();
 	testBurstAndInvalidCompletions();
+	testNativeIOExecutorAcknowledgement();
 	return 0;
 }

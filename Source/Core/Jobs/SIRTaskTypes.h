@@ -37,7 +37,8 @@ typedef enum sirTaskExecutor_e : uint8_t
 	SIR_TASK_EXEC_RENDER = 2,
 	SIR_TASK_EXEC_PHYSICS = 3,
 	SIR_TASK_EXEC_AUDIO = 4,
-	SIR_TASK_EXEC_COUNT = 5
+	SIR_TASK_EXEC_IO = 5,
+	SIR_TASK_EXEC_COUNT = 6
 } sirTaskExecutor_t;
 
 typedef enum sirTaskPriority_e : uint8_t

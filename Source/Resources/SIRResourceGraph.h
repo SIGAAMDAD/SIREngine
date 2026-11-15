@@ -151,6 +151,11 @@ public:
 	SIRResourceResult allocateStaging( uint64_t nSize, uint32_t nAlignment, uint32_t nDomainId, SIRResourceStagingHandle *pHandle,
 	                                   SIRResourceMutableBytes *pBytes ) noexcept;
 	SIRResourceResult cancelStaging( SIRResourceStagingHandle hStaging ) noexcept;
+	// Must be called on the graph writer thread. The returned span is stable
+	// until completeTransfer(); no cancel or publish is allowed while pinned.
+	SIRResourceResult beginTransfer( SIRResourceStagingHandle hStaging, uint64_t nOffset, uint64_t nBytes,
+	                                 sirResourceStagingLease_t *pLease, SIRResourceMutableBytes *pSpan ) noexcept;
+	SIRResourceResult completeTransfer( sirResourceStagingLease_t hLease ) noexcept;
 	SIRResourceResult request( const SIRResourceKey& rKey, SIRResourceHandle *pHandle ) noexcept;
 	SIRResourceResult publish( const SIRResourcePublication& rPublication, SIRResourceHandle *pHandle ) noexcept;
 	// Require the exact currently published revision (0 when absent or requested).

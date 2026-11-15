@@ -12,3 +12,22 @@ else()
 endif()
 target_sources(SIRResources PRIVATE SIRResourceCatalog.cpp)
 sir_configure_owned_target(SIRResources)
+
+# Versioned immutable SIRM/SIRP catalog and physical-frame reader.
+target_sources(SIRResources PRIVATE SIRPackFormat.cpp SIRPackCatalog.cpp SIRPackCodec.cpp SIRPackAsyncResourceLoad.cpp SIRPackSourceMount.cpp)
+
+# Codec backends are explicitly optional; codec IDs remain stable on all builds.
+find_path(SIR_PACK_ZSTD_INCLUDE_DIR zstd.h)
+find_library(SIR_PACK_ZSTD_LIBRARY NAMES zstd)
+if(SIR_PACK_ZSTD_INCLUDE_DIR AND SIR_PACK_ZSTD_LIBRARY)
+    target_compile_definitions(SIRResources PRIVATE SIR_PACK_WITH_ZSTD=1)
+    target_include_directories(SIRResources PRIVATE "${SIR_PACK_ZSTD_INCLUDE_DIR}")
+    target_link_libraries(SIRResources PUBLIC "${SIR_PACK_ZSTD_LIBRARY}")
+endif()
+find_path(SIR_PACK_LZ4_INCLUDE_DIR lz4.h)
+find_library(SIR_PACK_LZ4_LIBRARY NAMES lz4)
+if(SIR_PACK_LZ4_INCLUDE_DIR AND SIR_PACK_LZ4_LIBRARY)
+    target_compile_definitions(SIRResources PRIVATE SIR_PACK_WITH_LZ4=1)
+    target_include_directories(SIRResources PRIVATE "${SIR_PACK_LZ4_INCLUDE_DIR}")
+    target_link_libraries(SIRResources PUBLIC "${SIR_PACK_LZ4_LIBRARY}")
+endif()

@@ -99,7 +99,7 @@ public:
 	// Owner-thread CPU fallback for configurations with zero workers.
 	uint32_t pumpCPU( uint32_t nMaximumTasks ) noexcept;
 	// Each provider registers exactly one callback owner. The caller is the
-	// render/physics/audio safe-point thread, never the realtime audio callback.
+	// render/physics/audio/IO safe-point thread, never the realtime audio callback.
 	bool bindProviderOwner( sirTaskExecutor_t eExecutor ) noexcept;
 	uint32_t pumpProvider( sirTaskExecutor_t eExecutor, uint32_t nMaximumTasks ) noexcept;
 	// Only the registered provider owner may signal a deferred task. Cancellation
@@ -134,8 +134,8 @@ private:
 	sirTaskWorkerContext_t *m_pWorkerContexts;
 	SIRThread *m_pWorkers;
 	std::thread::id m_OwnerThread;
-	std::thread::id m_ProviderOwners[3];
-	bool m_bProviderBound[3];
+	std::thread::id m_ProviderOwners[SIR_TASK_EXEC_COUNT - SIR_TASK_EXEC_RENDER];
+	bool m_bProviderBound[SIR_TASK_EXEC_COUNT - SIR_TASK_EXEC_RENDER];
 	sirTaskQueue_t m_GlobalQueues[SIR_TASK_EXEC_COUNT];
 	uint32_t m_nFreeHead;
 	uint32_t m_nFreeEdgeHead;
