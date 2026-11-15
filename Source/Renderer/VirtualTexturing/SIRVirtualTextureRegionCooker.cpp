@@ -145,13 +145,16 @@ void cookPixel( const sirVirtualTextureRegionCookRequest_t& request, uint8_t *pP
 	}
 }
 
-void cookSurface( const sirVirtualTextureRegionCookRequest_t& request, const sirVirtualTextureRegionSurfaces_t& surfaces, uint32_t channel )
+bool cookSurface( const sirVirtualTextureRegionCookRequest_t& request, const sirVirtualTextureRegionSurfaces_t& surfaces, uint32_t channel )
 {
 	const uint32_t side = channel == 0u ? request.nExtent : request.nExtent / 2u;
 	const uint32_t pages = request.nExtent / T3D_VT_PAGE_INTERIOR;
 	const uint32_t dirty = request.bReuseSurfaces ? request.nDirtyMip0Mask : ( 1u << ( pages * pages ) ) - 1u;
 	uint8_t *pPixels = channel == 0u ? surfaces.pAlbedo : surfaces.pPbr;
 	for ( uint32_t z = 0u; z < side; ++z ) {
+		if ( request.pfnShouldCancel != nullptr && request.pfnShouldCancel( request.pCancelUser ) ) {
+			return false;
+		}
 		for ( uint32_t x = 0u; x < side; ++x ) {
 			const uint32_t page =
 			    ( z * request.nExtent / side / T3D_VT_PAGE_INTERIOR ) * pages + x * request.nExtent / side / T3D_VT_PAGE_INTERIOR;
@@ -160,6 +163,7 @@ void cookSurface( const sirVirtualTextureRegionCookRequest_t& request, const sir
 			}
 		}
 	}
+	return request.pfnShouldCancel == nullptr || !request.pfnShouldCancel( request.pCancelUser );
 }
 } // namespace
 
@@ -169,9 +173,7 @@ bool SIRVirtualTextureRegionCooker::compose( const sirVirtualTextureRegionCookRe
 	if ( !validateRegion( request, surfaces ) ) {
 		return false;
 	}
-	cookSurface( request, surfaces, 0u );
-	cookSurface( request, surfaces, 1u );
-	return true;
+	return cookSurface( request, surfaces, 0u ) && cookSurface( request, surfaces, 1u );
 }
 
 // Transform exactly the donor's native t3dMegaVTCookPixels channel contract;

@@ -107,6 +107,31 @@ bool zstdEncode( void *, uint32_t codec, const uint8_t *pSource, uint32_t source
 }
 #endif
 
+// Native port of Terrain3D's cold published-artifact byte comparison.
+// Avoid rewriting an unchanged cooked V1 package or touching its staged path.
+bool publishedPackageIdentical( const char *pszPath, const sirVirtualTextureCookOutput_t& output )
+{
+	SIRPlatformFile existing;
+	if ( existing.open( pszPath, SIR_FILE_OPEN_READ ) != SIR_FILE_OK ) {
+		return false;
+	}
+	uint64_t nFileBytes = 0u;
+	if ( existing.getSize( &nFileBytes ) != SIR_FILE_OK || nFileBytes != output.nWritten ) {
+		return false;
+	}
+	uint8_t scratch[16384u];
+	for ( uint64_t offset = 0u; offset < nFileBytes; ) {
+		const uint64_t count = nFileBytes - offset < sizeof( scratch ) ? nFileBytes - offset : sizeof( scratch );
+		uint64_t nRead = 0u;
+		if ( existing.readAt( offset, scratch, count, &nRead ) != SIR_FILE_OK || nRead != count ||
+		     memcmp( scratch, output.pBytes + offset, ( size_t )count ) != 0 ) {
+			return false;
+		}
+		offset += count;
+	}
+	return existing.close() == SIR_FILE_OK;
+}
+
 bool serializeCooked( const t3dVTCookedSparsePackage_t& package, sirVirtualTextureCookOutput_t& output )
 {
 	t3dVTSerializedPackSource_t source{};
@@ -177,6 +202,15 @@ bool SIRVirtualTextureCooker::publishAtomic( const char *pszDestination, const c
 	t3dVTPackBaselineView_t validated{};
 	if ( !t3d_vt_pack_open_baseline_view( output.pBytes, output.nWritten, validated ) ) {
 		return false;
+	}
+	// Preserve exclusive staging ownership even for byte-identical cooks.
+	// A permission failure must never be mistaken for an absent staged file.
+	sirFileInfo_t stagingInfo{};
+	if ( SIRPlatformFile::getInfo( pszStaging, &stagingInfo ) != SIR_FILE_NOT_FOUND ) {
+		return false;
+	}
+	if ( publishedPackageIdentical( pszDestination, output ) ) {
+		return true;
 	}
 	SIRPlatformFile file;
 	if ( file.open( pszStaging, SIR_FILE_OPEN_CREATE | SIR_FILE_OPEN_WRITE | SIR_FILE_OPEN_EXCLUSIVE ) != SIR_FILE_OK ) {

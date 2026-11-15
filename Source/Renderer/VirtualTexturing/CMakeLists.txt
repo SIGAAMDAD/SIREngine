@@ -24,6 +24,9 @@ target_sources(SIRGraphics PRIVATE
     Terrain3D/src/authoring/vt/build/terrain_3d_composed_surface_reference_decode.cpp
     Terrain3D/src/authoring/vt/build/terrain_3d_composed_surface_cold_pipeline.cpp
     Terrain3D/src/authoring/vt/io/terrain_3d_composed_surface_sidecar_writer.cpp
+    Terrain3D/src/authoring/vt/integration/terrain_3d_composed_surface_edit_journal.cpp
+    Terrain3D/src/authoring/vt/integration/terrain_3d_composed_surface_recook_bridge.cpp
+    Terrain3D/src/authoring/vt/integration/terrain_3d_composed_surface_editor_cook.cpp
     Terrain3D/src/rendering/rd/vt/runtime/terrain_3d_vt_fixed_profile.cpp
     Terrain3D/src/rendering/rd/vt/streaming/terrain_3d_vt_spatial_demand.cpp
     Terrain3D/src/authoring/vt/visibility/terrain_3d_vt_visibility_aggregator.cpp)

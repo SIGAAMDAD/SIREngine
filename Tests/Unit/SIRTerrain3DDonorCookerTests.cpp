@@ -16,6 +16,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 #include <Renderer/VirtualTexturing/SIRVirtualTextureZstdCodec.h>
 #include <Core/Platform/SIRPlatformFile.h>
 #include <Terrain/Editor/SIRTerrainVirtualTextureCookBridge.h>
+#include <Terrain/Editor/SIRTerrainComposedSurfaceRecookBridge.h>
 
 #include "authoring/vt/build/terrain_3d_composed_surface_cooker.h"
 #include "authoring/vt/io/terrain_3d_composed_surface_sidecar_writer.h"
@@ -746,6 +747,18 @@ static bool testNativeIncrementalMegaVTRegion( void )
 	return true;
 }
 
+struct NativeRegionCancelState
+{
+	uint32_t nChecks = 0u;
+	uint32_t nCancelAt = UINT32_MAX;
+};
+
+static bool nativeRegionShouldCancel( void *pUser )
+{
+	NativeRegionCancelState& state = *static_cast<NativeRegionCancelState *>( pUser );
+	return ++state.nChecks >= state.nCancelAt;
+}
+
 static bool testNativeMegaVTRegion512( void )
 {
 	std::vector<uint8_t> authored( 64u * 64u * 4u, 90u );
@@ -770,6 +783,17 @@ static bool testNativeMegaVTRegion512( void )
 	CHECK( SIRVirtualTextureRegionCooker::compose( region, surfaces ) );
 	CHECK( albedo[0] == topLeft );
 	CHECK( albedo[( ( uint64_t )511u * 512u + 511u ) * 4u] > bottomRight );
+	NativeRegionCancelState cancel{ 0u, 3u };
+	region.pfnShouldCancel = &nativeRegionShouldCancel;
+	region.pCancelUser = &cancel;
+	CHECK( !SIRVirtualTextureRegionCooker::compose( region, surfaces ) );
+	CHECK( cancel.nChecks == cancel.nCancelAt );
+	cancel = { 0u, 1u };
+	const sirVirtualTextureCookAllocator_t allocator{ nullptr, &cookAllocate, &cookFree };
+	std::vector<uint8_t> bytes( 16u * 1024u * 1024u );
+	sirVirtualTextureCookOutput_t output{ bytes.data(), bytes.size(), 999u };
+	CHECK( !SIRVirtualTextureRegionCooker::cook( { region, surfaces, allocator, false }, output ) );
+	CHECK( output.nWritten == 0u );
 	return true;
 }
 
@@ -783,6 +807,29 @@ static bool nativeRegionCurrent( void *pUser, uint32_t nRegionIndex, uint32_t nG
 {
 	NativeRegionRevisionState& state = *static_cast<NativeRegionRevisionState *>( pUser );
 	return state.nCalls++ != state.nFailOnCall && nRegionIndex < 1024u && nGeneration == 17u;
+}
+
+struct NativeRegionCommitState
+{
+	uint32_t nBegins = 0u;
+	uint32_t nEnds = 0u;
+	bool bAllow = false;
+	bool bHeld = false;
+};
+
+static bool nativeRegionBeginCommit( void *pUser )
+{
+	NativeRegionCommitState& state = *static_cast<NativeRegionCommitState *>( pUser );
+	++state.nBegins;
+	state.bHeld = state.bAllow;
+	return state.bAllow;
+}
+
+static void nativeRegionEndCommit( void *pUser )
+{
+	NativeRegionCommitState& state = *static_cast<NativeRegionCommitState *>( pUser );
+	++state.nEnds;
+	state.bHeld = false;
 }
 
 static bool testNativeMegaVTMultiRegionBatch( void )
@@ -852,10 +899,45 @@ static bool testNativeMegaVTMultiRegionBatch( void )
 	static const char pszStaged[] = "sir_terrain_p1_native_editor.tmp";
 	SIRPlatformFile::remove( pszPublished );
 	SIRPlatformFile::remove( pszStaged );
-	const sirTerrainVTCookPublication_t publication{ batch, &output, pszPublished, pszStaged };
+	NativeRegionCommitState commit{};
+	sirTerrainVTCookPublication_t publication{ batch, &output, pszPublished, pszStaged };
+	publication.pfnBeginCommit = &nativeRegionBeginCommit;
+	publication.pfnEndCommit = &nativeRegionEndCommit;
+	publication.pCommitUser = &commit;
+	CHECK( SIRTerrainVirtualTextureCookBridge::cookAndPublish( publication ) == SIR_TERRAIN_VT_COOK_PUBLISH_FAILED );
+	CHECK( commit.nBegins == 1u && commit.nEnds == 0u && output.nWritten == 0u );
+	sirFileInfo_t fileInfo{};
+	CHECK( SIRPlatformFile::getInfo( pszPublished, &fileInfo ) == SIR_FILE_NOT_FOUND );
+	commit.bAllow = true;
+	revision.nCalls = 0u;
+	revision.nFailOnCall = 8u; // Claim changes after cook, during locked commit.
+	CHECK( SIRTerrainVirtualTextureCookBridge::cookAndPublish( publication ) == SIR_TERRAIN_VT_COOK_STALE_REVISION );
+	CHECK( commit.nBegins == 2u && commit.nEnds == 1u && !commit.bHeld );
+	CHECK( SIRPlatformFile::getInfo( pszPublished, &fileInfo ) == SIR_FILE_NOT_FOUND );
+	revision.nCalls = 0u;
+	revision.nFailOnCall = UINT32_MAX;
 	CHECK( SIRTerrainVirtualTextureCookBridge::cookAndPublish( publication ) == SIR_TERRAIN_VT_COOK_SUCCESS );
+	CHECK( commit.nBegins == 3u && commit.nEnds == 2u && !commit.bHeld );
 	CHECK( output.nWritten > T3D_VT_PACK_HEADER_BYTES );
-	CHECK( revision.nCalls == 8u );
+	// A byte-identical package is a no-op even if a staged writer path is
+	// occupied. Native Terrain3D publication must not rewrite the destination.
+	SIRPlatformFile busyStaging;
+	CHECK( busyStaging.open( pszStaged, SIR_FILE_OPEN_WRITE | SIR_FILE_OPEN_CREATE | SIR_FILE_OPEN_EXCLUSIVE ) == SIR_FILE_OK );
+	const uint8_t marker[3] = { 2u, 4u, 6u };
+	uint64_t stagedBytes = 0u;
+	CHECK( busyStaging.writeAt( 0u, marker, sizeof( marker ), &stagedBytes ) == SIR_FILE_OK && stagedBytes == sizeof( marker ) );
+	CHECK( busyStaging.flush() == SIR_FILE_OK && busyStaging.close() == SIR_FILE_OK );
+	CHECK( !SIRVirtualTextureCooker::publishAtomic( pszPublished, pszStaged, output ) );
+	SIRPlatformFile retained;
+	CHECK( retained.open( pszStaged, SIR_FILE_OPEN_READ ) == SIR_FILE_OK );
+	uint8_t retainedMarker[3] = {};
+	CHECK( retained.readAt( 0u, retainedMarker, sizeof( retainedMarker ), &stagedBytes ) == SIR_FILE_OK &&
+	       stagedBytes == sizeof( retainedMarker ) && memcmp( retainedMarker, marker, sizeof( marker ) ) == 0 );
+	CHECK( retained.close() == SIR_FILE_OK && SIRPlatformFile::remove( pszStaged ) == SIR_FILE_OK );
+	// Without a competing staged writer, byte-identical publication bypasses
+	// even an inaccessible staging destination while preserving the V1 package.
+	CHECK( SIRVirtualTextureCooker::publishAtomic( pszPublished, "sir_vt_p1_missing_stage_dir/stage.tmp", output ) );
+	CHECK( revision.nCalls == 10u );
 	// Native SIREngine Terrain owns cooked publication; runtime no longer
 	// needs its editable source image buffers after successful publication.
 	sourceA.clear();
@@ -882,12 +964,237 @@ static bool testNativeMegaVTMultiRegionBatch( void )
 	return true;
 }
 
+static bool testNativeComposedEditJournalPublication( void )
+{
+	static const char pszPublished[] = "sir_vt_p1_native_composed_journal.t3sc";
+	static const char pszMissingDirectory[] = "sir_vt_p1_nonexistent_dir/invalid.t3sc";
+	SIRPlatformFile::remove( pszPublished );
+	SIRTerrainComposedSurfaceRecookBridge bridge;
+	const t3dComposedSurfaceEditRegion_t region{ 15u, 0, 0, 1u, 1u, 1u, true };
+	const uint64_t sourceHash = UINT64_C( 0xFEBE1042 );
+	CHECK( bridge.invalidateRegion( region, sourceHash, 12u ) );
+	CHECK( bridge.stats().m_nDirtyRegions == 1u );
+	t3dComposedSurfaceEditTicket_t ticket{};
+	CHECK( bridge.claim( region.m_nIndex, ticket ) );
+	CHECK( !bridge.claim( region.m_nIndex, ticket ) );
+	CHECK( ticket.m_nDirtyMip0Mask == 1u && ticket.m_nDirtyClosure == 1u );
+	ComposedCookCounter counter{};
+	t3dComposedSurfaceCookSource_t source{};
+	source.m_pUser = &counter;
+	source.m_pEvaluate = &evaluateComposedPage;
+	source.m_pEncode = &encodeComposedPage;
+	source.m_nSourceFingerprint = sourceHash;
+	source.m_bCanonicalMaterialParityAccepted = true;
+	const t3dComposedSurfaceCookPage_t page{ 765u, 18u, 0u, 0u, 0u, 8u };
+	uint64_t required = 0u;
+	CHECK( t3d_comp_surf_cook_total_bytes( 1u, required ) );
+	std::vector<uint8_t> output( ( size_t )required );
+	std::vector<uint8_t> scratch( T3D_COMP_SURF_COOK_SCRATCH_BYTES );
+	uint8_t dirtyFlags[1] = {};
+	sirTerrainComposedRecookRequest_t request{};
+	request.pTicket = &ticket;
+	request.pages = { &page, 1u, page.m_nRegionKey, 1u, 1u };
+	request.buffers = { nullptr, 0u, dirtyFlags, 1u, scratch.data(), ( uint32_t )scratch.size(), output.data(), output.size() };
+	request.source = source;
+	request.pszDestination = pszMissingDirectory;
+	CHECK( bridge.recookAndPublish( request ) == SIR_TERRAIN_COMPOSED_RECOOK_PUBLISH_FAILED );
+	CHECK( bridge.stats().m_nDirtyRegions == 1u );
+	CHECK( bridge.region( region.m_nIndex )->m_bInFlight );
+	request.pszDestination = pszPublished;
+	CHECK( bridge.recookAndPublish( request ) == SIR_TERRAIN_COMPOSED_RECOOK_SUCCESS );
+	CHECK( counter.encoded == 6u );
+	CHECK( dirtyFlags[0] == 1u );
+	CHECK( bridge.stats().m_nAcceptedCompletions == 1u && bridge.stats().m_nDirtyRegions == 0u );
+	CHECK( !bridge.claim( region.m_nIndex, ticket ) );
+	SIRPlatformFile file;
+	CHECK( file.open( pszPublished, SIR_FILE_OPEN_READ ) == SIR_FILE_OK );
+	uint64_t nFileSize = 0u;
+	CHECK( file.getSize( &nFileSize ) == SIR_FILE_OK && nFileSize == required );
+	std::vector<uint8_t> observed( ( size_t )nFileSize );
+	uint64_t nTransferred = 0u;
+	CHECK( file.readAt( 0u, observed.data(), nFileSize, &nTransferred ) == SIR_FILE_OK && nTransferred == nFileSize );
+	CHECK( file.close() == SIR_FILE_OK );
+	CHECK( t3d_comp_surf_validate_sidecar_bytes( observed.data(), observed.size(), true ) );
+	std::vector<uint8_t> restored( observed.size() );
+	uint64_t loaded = 0u;
+	CHECK( SIRTerrainComposedSurfaceRecookBridge::loadPreviousSidecar( { pszPublished, restored.data(), restored.size() }, loaded ) );
+	CHECK( loaded == observed.size() && restored == observed );
+	loaded = 77u;
+	CHECK( !SIRTerrainComposedSurfaceRecookBridge::loadPreviousSidecar( { pszPublished, restored.data(), 8u }, loaded ) );
+	CHECK( loaded == 0u );
+	std::vector<uint8_t> reused( observed.size() );
+	uint64_t reusedWritten = 0u;
+	const uint8_t cleanFlag = 0u;
+	const uint32_t encodedBefore = counter.encoded;
+	CHECK( t3d_comp_surf_recook_incremental_cold( &page, 1u, source, restored.data(), restored.size(), &cleanFlag, scratch.data(),
+	                                              ( uint32_t )scratch.size(), reused.data(), reused.size(), reusedWritten ) );
+	CHECK( reusedWritten == reused.size() && reused == restored && counter.encoded == encodedBefore );
+	CHECK( SIRPlatformFile::remove( pszPublished ) == SIR_FILE_OK );
+	loaded = 77u;
+	CHECK( !SIRTerrainComposedSurfaceRecookBridge::loadPreviousSidecar( { pszPublished, restored.data(), restored.size() }, loaded ) );
+	CHECK( loaded == 0u );
+
+	// A newer edit invalidates the old cook claim without clearing its dirty page.
+	CHECK( bridge.invalidateRegion( region, sourceHash, 12u ) );
+	t3dComposedSurfaceEditTicket_t stale{};
+	CHECK( bridge.claim( region.m_nIndex, stale ) );
+	CHECK( bridge.invalidateRegion( region, sourceHash + 1u, 12u ) );
+	request.pTicket = &stale;
+	CHECK( bridge.recookAndPublish( request ) == SIR_TERRAIN_COMPOSED_RECOOK_STALE );
+	bridge.cancel( stale );
+	CHECK( bridge.stats().m_nDirtyRegions == 1u );
+	t3dComposedSurfaceEditTicket_t current{};
+	CHECK( bridge.claim( region.m_nIndex, current ) );
+	source.m_nSourceFingerprint = sourceHash + 1u;
+	request.pTicket = &current;
+	request.source = source;
+	CHECK( bridge.recookAndPublish( request ) == SIR_TERRAIN_COMPOSED_RECOOK_SUCCESS );
+	CHECK( bridge.stats().m_nDirtyRegions == 0u && bridge.stats().m_nAcceptedCompletions == 2u );
+	CHECK( SIRPlatformFile::remove( pszPublished ) == SIR_FILE_OK );
+	CHECK( bridge.forgetRegion( region.m_nIndex, 13u ) );
+	CHECK( bridge.stats().m_nRemovedRegions == 1u );
+	return true;
+}
+
+struct NativeEditorCommit
+{
+	bool bAccept = false;
+	bool bLocked = false;
+	uint32_t nBegins = 0u;
+	uint32_t nEnds = 0u;
+};
+
+static bool beginNativeEditorCommit( void *pUser )
+{
+	NativeEditorCommit& commit = *static_cast<NativeEditorCommit *>( pUser );
+	++commit.nBegins;
+	commit.bLocked = commit.bAccept;
+	return commit.bAccept;
+}
+
+static void endNativeEditorCommit( void *pUser )
+{
+	NativeEditorCommit& commit = *static_cast<NativeEditorCommit *>( pUser );
+	++commit.nEnds;
+	commit.bLocked = false;
+}
+
+static bool testNativeDonorEditorCommitTransaction( void )
+{
+	static const char pszDestination[] = "sir_vt_p1_native_editor_composed.t3sc";
+	SIRPlatformFile::remove( pszDestination );
+	std::vector<uint8_t> albedo( 256u * 256u * 4u, 189u );
+	std::vector<uint8_t> pbr( 128u * 128u * 4u, 83u );
+	sirVirtualTextureCookSource_t authoredSource{};
+	authoredSource.nStableKey = t3d_vt_terrain_material_stable_key( 0u );
+	authoredSource.nConsumer = T3D_VT_CONSUMER_CLIPMAP;
+	authoredSource.nAuthoredChannelMask =
+	    T3D_VT_LOGICAL_CHANNEL_BIT( T3D_VT_LOGICAL_CHANNEL_ALBEDO ) | T3D_VT_LOGICAL_CHANNEL_BIT( T3D_VT_LOGICAL_CHANNEL_PBR );
+	authoredSource.nWrapMode = T3D_VT_COOK_WRAP_CLAMP;
+	authoredSource.images[T3D_VT_LOGICAL_CHANNEL_ALBEDO] = { albedo.data(), 256u, 256u, 4u, 1024u, albedo.size() };
+	authoredSource.images[T3D_VT_LOGICAL_CHANNEL_PBR] = { pbr.data(), 128u, 128u, 4u, 512u, pbr.size() };
+	const sirVirtualTextureCookAllocator_t allocator{ nullptr, &cookAllocate, &cookFree };
+	std::vector<uint8_t> package( 8u * 1024u * 1024u );
+	sirVirtualTextureCookOutput_t packageOutput{ package.data(), package.size(), 0u };
+	CHECK( SIRVirtualTextureCooker::cook( { &authoredSource, 1u, allocator, false }, packageOutput ) );
+	albedo.clear();
+	pbr.clear();
+
+	t3dComposedStaticLayer_t authored{};
+	authored.m_nAllocation = UINT32_MAX;
+	for ( uint32_t i = 0u; i < 3u; ++i ) {
+		authored.m_fColor[i] = 1.0f;
+	}
+	authored.m_fPbr0[0] = authored.m_fPbr0[1] = 1.0f;
+	authored.m_fPbr1[0] = authored.m_fPbr1[1] = 1.0f;
+	t3dComposedStaticLayer_t resolved{};
+	const t3dComposedSurfaceCookPage_t page{ 120u, 1u, 0u, 0u, 0u, 1u };
+	uint64_t sidecarBytes = 0u;
+	CHECK( t3d_comp_surf_cook_total_bytes( 1u, sidecarBytes ) );
+	std::vector<uint8_t> decodedCache( 6u * T3D_COMPOSED_SURFACE_PACK_DECODED_TILE_BYTES );
+	std::vector<uint8_t> scratch( T3D_COMP_SURF_COOK_SCRATCH_BYTES );
+	std::vector<uint8_t> output( ( size_t )sidecarBytes );
+	NativeColdCookState state{};
+	NativeEditorCommit commit{};
+	ComposedCookCounter encoder{};
+	uint8_t dirty[1]{};
+	t3dComposedSurfaceEditorCookRequest_t request{};
+	auto& cook = request.m_cook;
+	cook.m_pSourcePackage = packageOutput.pBytes;
+	cook.m_nSourcePackageBytes = packageOutput.nWritten;
+	cook.m_pPages = &page;
+	cook.m_nPageCount = 1u;
+	cook.m_pAuthoredLayers = &authored;
+	cook.m_nLayerCount = 1u;
+	cook.m_pResolvedLayers = &resolved;
+	cook.m_nResolvedLayerCapacity = 1u;
+	cook.m_source.m_pUser = &state;
+	cook.m_source.m_pResolvePage = &nativeColdResolvePage;
+	cook.m_source.m_pReadControl = &nativeColdReadControl;
+	cook.m_source.m_nSamplingMode = T3D_COMP_SURF_STATIC_SAMPLE_NEAREST;
+	cook.m_source.m_nVtFiltering = 3u;
+	cook.m_source.m_fBlendSharpness = 0.5f;
+	cook.m_source.m_bCanonicalMaterialParityAccepted = true;
+	cook.m_pEncode = &encodeComposedPage;
+	cook.m_pEncoderUser = &encoder;
+	cook.m_pDecode = &nativeColdDecodeTile;
+	cook.m_pDecodedCache = decodedCache.data();
+	cook.m_nCacheSlots = 6u;
+	cook.m_pCookScratch = scratch.data();
+	cook.m_nCookScratchBytes = ( uint32_t )scratch.size();
+	cook.m_pOutput = output.data();
+	cook.m_nOutputCapacity = output.size();
+	cook.m_nTerrainRevision = 17u;
+	cook.m_nMaterialRevision = 23u;
+	cook.m_nTopologyGeneration = 31u;
+	cook.m_pCurrent = &nativeColdIsCurrent;
+	cook.m_pCurrentUser = &state;
+	cook.m_pDestination = pszDestination;
+	const uint64_t fingerprint = t3d_composed_surface_source_fingerprint_cold( cook );
+	CHECK( fingerprint != 0u );
+	SIRTerrainComposedSurfaceRecookBridge bridge;
+	const t3dComposedSurfaceEditRegion_t region{ 8u, 0, 0, 1u, 1u, 1u, true };
+	CHECK( bridge.invalidateRegion( region, fingerprint, 31u ) );
+	request.m_nRegionIndex = region.m_nIndex;
+	request.m_nJournalFingerprint = fingerprint;
+	request.m_nJournalTopologyGeneration = 31u;
+	request.m_nRegionKey = page.m_nRegionKey;
+	request.m_nMip0Width = request.m_nMip0Height = 1u;
+	request.m_pDirtyFlags = dirty;
+	request.m_nDirtyCapacity = 1u;
+	request.m_pBeginCommit = &beginNativeEditorCommit;
+	request.m_pEndCommit = &endNativeEditorCommit;
+	request.m_pCommitUser = &commit;
+	t3dComposedSurfaceEditorCookResult_t result{};
+	CHECK( !bridge.cookEditorAndPublish( request, result ) );
+	CHECK( result.m_status == T3D_COMPOSED_SURFACE_EDITOR_COOK_COMMIT_FAILED );
+	CHECK( bridge.stats().m_nDirtyRegions == 1u && commit.nBegins == 1u && commit.nEnds == 0u );
+	commit.bAccept = true;
+	CHECK( bridge.cookEditorAndPublish( request, result ) );
+	CHECK( result.m_status == T3D_COMPOSED_SURFACE_EDITOR_COOK_SUCCESS );
+	CHECK( bridge.stats().m_nDirtyRegions == 0u && bridge.stats().m_nAcceptedCompletions == 1u );
+	CHECK( commit.nBegins == 2u && commit.nEnds == 1u && !commit.bLocked );
+	SIRPlatformFile file;
+	CHECK( file.open( pszDestination, SIR_FILE_OPEN_READ ) == SIR_FILE_OK );
+	std::vector<uint8_t> observed( output.size() );
+	uint64_t read = 0u;
+	CHECK( file.readAt( 0u, observed.data(), observed.size(), &read ) == SIR_FILE_OK && read == observed.size() );
+	CHECK( file.close() == SIR_FILE_OK );
+	CHECK( t3d_comp_surf_validate_sidecar_bytes( observed.data(), observed.size(), true ) );
+	CHECK( SIRPlatformFile::remove( pszDestination ) == SIR_FILE_OK );
+	CHECK( bridge.invalidateRegion( region, fingerprint, 31u ) );
+	state.revision = 18u;
+	CHECK( !bridge.cookEditorAndPublish( request, result ) );
+	CHECK( bridge.stats().m_nDirtyRegions == 1u && commit.nBegins == 2u );
+	return true;
+}
+
 int main( void )
 {
 	if ( !testOriginalCookerRoundtrip() || !testOriginalCookerRejectsInvalidSources() || !testNativeZstdCookPublication() ||
 	     !testDonorIncrementalComposedSidecar() || !testNativeMultiConsumerChannelAndFormatContracts() ||
 	     !testComposedColdPipelineFromActualV1() || !testNativeIncrementalMegaVTRegion() || !testNativeMegaVTMultiRegionBatch() ||
-	     !testNativeMegaVTRegion512() ) {
+	     !testNativeMegaVTRegion512() || !testNativeComposedEditJournalPublication() || !testNativeDonorEditorCommitTransaction() ) {
 		return 1;
 	}
 	puts( "donor native Sparse V1 cooker roundtrip and negative tests passed" );

@@ -15,6 +15,11 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 #include <Renderer/VirtualTexturing/SIRVirtualTextureCooker.h>
 
+// Preserves Terrain3D's per-row worker cancellation boundary while the
+// scheduler and job tokens remain owned by SIREngine. A cancelled cook must
+// discard its partially written surfaces and never publish their package.
+typedef bool ( *sirVirtualTextureRegionCancelFn )( void *pUser );
+
 // Source order is row-major: northwest, north, northeast, west, center,
 // east, southwest, south, southeast. Missing neighbor data clamps at center.
 // Source memory, output surfaces and package bytes remain caller-owned.
@@ -28,6 +33,8 @@ typedef struct sirVirtualTextureRegionCookRequest_s
 	uint32_t nPreviousRegionIndex;
 	uint32_t nPreviousExtent;
 	bool bReuseSurfaces;
+	sirVirtualTextureRegionCancelFn pfnShouldCancel;
+	void *pCancelUser;
 } sirVirtualTextureRegionCookRequest_t;
 
 typedef struct sirVirtualTextureRegionSurfaces_s
