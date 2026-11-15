@@ -18,6 +18,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Core/Containers/SIRRawStorage.h>
 #include <cmath>
+#include <stdlib.h>
 #include <string.h>
 
 SIRFMODMixerBackend::~SIRFMODMixerBackend( void ) noexcept

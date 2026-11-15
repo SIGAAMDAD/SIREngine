@@ -103,7 +103,9 @@ void SIRWaylandInputBridge::updateTextInputActivation( void ) noexcept
 	} else {
 		zwp_text_input_v3_disable( m_pTextInput );
 		resetPendingText();
-		m_pInput->text().clearPreedit();
+		if ( m_pInput != nullptr ) {
+			m_pInput->text().clearPreedit();
+		}
 	}
 	zwp_text_input_v3_commit( m_pTextInput );
 	m_bTextInputActive = bEnable;

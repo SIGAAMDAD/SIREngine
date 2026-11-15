@@ -28,7 +28,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <stdlib.h>
 #include <string.h>
 #include <utility>
-#if defined( _MSC_VER )
+#if defined( _WIN32 )
 #include <malloc.h>
 #endif
 
@@ -58,7 +58,7 @@ static void *sirOptimizationAllocate( void *pContext, size_t nBytes, size_t nAli
 		nAlignment = sizeof( void * );
 	}
 	void *pResult = nullptr;
-#if defined( _MSC_VER )
+#if defined( _WIN32 )
 	pResult = _aligned_malloc( nBytes, nAlignment );
 #else
 	if ( posix_memalign( &pResult, nAlignment, nBytes ) != 0 ) {
@@ -76,7 +76,7 @@ static void sirOptimizationDeallocate( void *pContext, void *pMemory, size_t nBy
 	sirOptimizationTestMemory_t *pState = ( sirOptimizationTestMemory_t * )pContext;
 	SIR_CHECK( pState->nLive >= nBytes );
 	pState->nLive -= nBytes;
-#if defined( _MSC_VER )
+#if defined( _WIN32 )
 	_aligned_free( pMemory );
 #else
 	free( pMemory );

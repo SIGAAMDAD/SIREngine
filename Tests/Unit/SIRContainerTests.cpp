@@ -29,7 +29,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Core/Containers/SIRVector.h>
 #include <stdio.h>
 #include <stdlib.h>
-#if defined( _MSC_VER )
+#if defined( _WIN32 )
 #include <malloc.h>
 #endif
 #include <limits>
@@ -67,7 +67,7 @@ static void *testAllocate( void *pContext, size_t nBytes, size_t nAlignment )
 		nAlignment = sizeof( void * );
 	}
 	void *pMemory = nullptr;
-#if defined( _MSC_VER )
+#if defined( _WIN32 )
 	pMemory = _aligned_malloc( nBytes, nAlignment );
 	if ( pMemory == nullptr ) {
 		return nullptr;
@@ -90,7 +90,7 @@ static void testDeallocate( void *pContext, void *pMemory, size_t nBytes, size_t
 	++pState->nDeallocations;
 	SIR_TEST_CHECK( nBytes <= pState->nLiveBytes );
 	pState->nLiveBytes -= nBytes;
-#if defined( _MSC_VER )
+#if defined( _WIN32 )
 	_aligned_free( pMemory );
 #else
 	free( pMemory );

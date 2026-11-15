@@ -23,7 +23,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
-#if defined( _MSC_VER )
+#if defined( _WIN32 )
 #include <malloc.h>
 #endif
 
@@ -49,7 +49,7 @@ static void *diffAllocate( void *pContext, size_t nBytes, size_t nAlignment )
 		nAlignment = sizeof( void * );
 	}
 	void *pMemory = nullptr;
-#if defined( _MSC_VER )
+#if defined( _WIN32 )
 	pMemory = _aligned_malloc( nBytes, nAlignment );
 #else
 	if ( posix_memalign( &pMemory, nAlignment, nBytes ) != 0 ) {
@@ -70,7 +70,7 @@ static void diffFree( void *pContext, void *pMemory, size_t nBytes, size_t )
 	SIR_TEST_CHECK( pMemoryInfo->nLiveBytes >= nBytes && pMemoryInfo->nActive > 0 );
 	pMemoryInfo->nLiveBytes -= nBytes;
 	--pMemoryInfo->nActive;
-#if defined( _MSC_VER )
+#if defined( _WIN32 )
 	_aligned_free( pMemory );
 #else
 	free( pMemory );

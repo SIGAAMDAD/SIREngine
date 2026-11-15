@@ -22,7 +22,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <vector>
 #include <queue>
 #include <random>
-#if defined( _MSC_VER )
+#if defined( _WIN32 )
 #include <malloc.h>
 #endif
 
@@ -54,7 +54,7 @@ static void *extendedAllocate( void *pContext, size_t nBytes, size_t nAlignment 
 		nAlignment = sizeof( void * );
 	}
 	void *pMemory = nullptr;
-#if defined( _MSC_VER )
+#if defined( _WIN32 )
 	pMemory = _aligned_malloc( nBytes, nAlignment );
 #else
 	if ( posix_memalign( &pMemory, nAlignment, nBytes ) != 0 ) {
@@ -72,7 +72,7 @@ static void extendedDeallocate( void *pContext, void *pMemory, size_t nBytes, si
 	sirExtendedAllocator_t *pState = ( sirExtendedAllocator_t * )pContext;
 	CHECK( pState->nLiveBytes >= nBytes );
 	pState->nLiveBytes -= nBytes;
-#if defined( _MSC_VER )
+#if defined( _WIN32 )
 	_aligned_free( pMemory );
 #else
 	free( pMemory );
