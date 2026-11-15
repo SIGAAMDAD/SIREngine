@@ -29,11 +29,15 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::createPipeline( const sirGraphicsP
 	if ( eValidation != SIR_GRAPHICS_SUCCESS ) {
 		return eValidation;
 	}
-	if ( desc.eType != SIR_GRAPHICS_PIPELINE_COMPUTE || desc.nBindingCount != 0 ||
-	     desc.computeShader.eFormat != SIR_GRAPHICS_SHADER_SPIRV ) {
+	if ( ( desc.eType != SIR_GRAPHICS_PIPELINE_COMPUTE && desc.eType != SIR_GRAPHICS_PIPELINE_GRAPHICS ) ||
+	     ( desc.eType == SIR_GRAPHICS_PIPELINE_COMPUTE && desc.nBindingCount != 0 ) ||
+	     ( desc.eType == SIR_GRAPHICS_PIPELINE_COMPUTE
+	           ? desc.computeShader.eFormat != SIR_GRAPHICS_SHADER_SPIRV
+			   : desc.vertexShader.eFormat != SIR_GRAPHICS_SHADER_SPIRV || desc.pixelShader.eFormat != SIR_GRAPHICS_SHADER_SPIRV ) ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
-	if ( !sirVulkanValidateSpirv( desc.computeShader.pBytes, desc.computeShader.nByteCount, desc.computeShader.pszEntryPoint ) ) {
+	if ( desc.eType == SIR_GRAPHICS_PIPELINE_COMPUTE &&
+	     !sirVulkanValidateSpirv( desc.computeShader.pBytes, desc.computeShader.nByteCount, desc.computeShader.pszEntryPoint ) ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	for ( uint32_t iSlot = 0; iSlot < SIR_VULKAN_PIPELINE_CAPACITY; ++iSlot ) {
@@ -41,8 +45,10 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::createPipeline( const sirGraphicsP
 		if ( pSlot->bActive || pSlot->bRetiring || pSlot->nGeneration == 0 ) {
 			continue;
 		}
-		const sirVulkanResult_t eCreate = m_Native.createComputePipeline( desc.computeShader.pBytes, desc.computeShader.nByteCount,
-		                                                                  desc.computeShader.pszEntryPoint, &pSlot->native );
+		const sirVulkanResult_t eCreate = desc.eType == SIR_GRAPHICS_PIPELINE_COMPUTE
+		                                      ? m_Native.createComputePipeline( desc.computeShader.pBytes, desc.computeShader.nByteCount,
+		                                                                        desc.computeShader.pszEntryPoint, &pSlot->native )
+		                                      : m_Native.createRasterPipeline( desc, &pSlot->native );
 		switch ( eCreate ) {
 		case SIR_VULKAN_SUCCESS:
 			break;
@@ -55,6 +61,7 @@ sirGraphicsResult_t SIRVulkanRenderingDevice::createPipeline( const sirGraphicsP
 		default:
 			return SIR_GRAPHICS_DRIVER_ERROR;
 		}
+		pSlot->bGraphics = desc.eType == SIR_GRAPHICS_PIPELINE_GRAPHICS;
 		m_nNativeSerial = pSlot->native.nDeviceSerial;
 		pSlot->bActive = true;
 		*pHandle = { iSlot, pSlot->nGeneration, m_nDeviceGeneration, SIR_GRAPHICS_HANDLE_PIPELINE };
@@ -76,7 +83,19 @@ sirGraphicsResult_t SIRVulkanCommandList::bindPipeline( sirGraphicsHandle_t hPip
 	if ( !pSlot->bActive || pSlot->nGeneration != hPipeline.nGeneration ) {
 		return SIR_GRAPHICS_INVALID_HANDLE;
 	}
+	if ( pSlot->bGraphics != m_bInRenderPass ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
+	if ( m_bInRenderPass && m_nOperationCount >= SIR_VULKAN_COPY_BATCH_CAPACITY ) {
+		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
+	}
 	m_hBoundPipeline = hPipeline;
+	if ( m_bInRenderPass ) {
+		sirVulkanGraphicsOperation_t& operation = m_szOperations[m_nOperationCount++];
+		operation = {};
+		operation.eKind = SIR_VULKAN_GRAPHICS_BIND_PIPELINE;
+		operation.hPipeline = hPipeline;
+	}
 	return SIR_GRAPHICS_SUCCESS;
 }
 
@@ -97,7 +116,7 @@ sirGraphicsResult_t SIRVulkanCommandList::dispatch( uint32_t nGroupCountX, uint3
 		return SIR_GRAPHICS_INVALID_HANDLE;
 	}
 	const sirVulkanGraphicsPipelineSlot_t *pSlot = &m_pOwner->m_szPipelines[hPipeline.nSlot];
-	if ( !pSlot->bActive || pSlot->nGeneration != hPipeline.nGeneration ) {
+	if ( !pSlot->bActive || pSlot->nGeneration != hPipeline.nGeneration || pSlot->bGraphics || m_bInRenderPass ) {
 		return SIR_GRAPHICS_INVALID_HANDLE;
 	}
 	sirVulkanAdapterInfo_t adapter = {};
