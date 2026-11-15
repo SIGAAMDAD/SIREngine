@@ -14,9 +14,52 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Renderer/Drivers/D3D12/SIRD3D12Resources.h>
+#include <Renderer/Drivers/D3D12/SIRD3D12Validation.h>
+#include <Renderer/Drivers/D3D12/SIRD3D12NativeAccess.h>
 #include <Renderer/SIRGraphicsValidation.h>
 #include <limits.h>
 #include <string.h>
+
+// Only an unpublished D3D12MA allocation is owned by this stack guard.
+// On publication, ownership moves into the existing generation-checked slot.
+class SIRD3D12PendingAllocation
+{
+private:
+	D3D12MA::Allocation *m_pAllocation = nullptr;
+	void *m_pMappedBytes = nullptr;
+	bool m_bReadback = false;
+
+public:
+	explicit SIRD3D12PendingAllocation( D3D12MA::Allocation *pAllocation ) noexcept : m_pAllocation( pAllocation )
+	{
+	}
+	~SIRD3D12PendingAllocation( void ) noexcept
+	{
+		if ( m_pAllocation == nullptr ) {
+			return;
+		}
+		if ( m_pMappedBytes != nullptr ) {
+			D3D12_RANGE empty = { 0, 0 };
+			m_pAllocation->GetResource()->Unmap( 0, m_bReadback ? &empty : nullptr );
+		}
+		m_pAllocation->Release();
+	}
+	SIRD3D12PendingAllocation( const SIRD3D12PendingAllocation& ) = delete;
+	SIRD3D12PendingAllocation& operator=( const SIRD3D12PendingAllocation& ) = delete;
+
+	void setMapped( void *pBytes, bool bReadback ) noexcept
+	{
+		m_pMappedBytes = pBytes;
+		m_bReadback = bReadback;
+	}
+	D3D12MA::Allocation *release( void ) noexcept
+	{
+		D3D12MA::Allocation *pResult = m_pAllocation;
+		m_pAllocation = nullptr;
+		m_pMappedBytes = nullptr;
+		return pResult;
+	}
+};
 
 static DXGI_FORMAT sirD3D12Format( sirGraphicsFormat_t eFormat ) noexcept
 {
@@ -223,7 +266,7 @@ sirGraphicsResult_t SIRD3D12Resources::reserveDescriptor( D3D12_DESCRIPTOR_HEAP_
 		}
 		m_szDescriptorsUsed[eHeap][iDescriptor] = 1;
 		*pIndex = iDescriptor;
-		*pCpu = m_szDescriptorHeaps[eHeap]->GetCPUDescriptorHandleForHeapStart();
+		*pCpu = sirD3D12GetCPUDescriptorStart( m_szDescriptorHeaps[eHeap].Get() );
 		pCpu->ptr += ( SIZE_T )iDescriptor * m_szDescriptorSizes[eHeap];
 		return SIR_GRAPHICS_SUCCESS;
 	}
@@ -285,7 +328,7 @@ bool SIRD3D12Resources::queryDescriptor( sirGraphicsHandle_t hView, D3D12_DESCRI
 	     pSlot->eDescriptorHeap != eHeap || m_szDescriptorHeaps[eHeap] == nullptr ) {
 		return false;
 	}
-	*pDescriptor = m_szDescriptorHeaps[eHeap]->GetCPUDescriptorHandleForHeapStart();
+	*pDescriptor = sirD3D12GetCPUDescriptorStart( m_szDescriptorHeaps[eHeap].Get() );
 	pDescriptor->ptr += ( SIZE_T )pSlot->iDescriptor * m_szDescriptorSizes[eHeap];
 	return true;
 }
@@ -321,9 +364,9 @@ sirGraphicsResult_t SIRD3D12Resources::reserveDescriptorSpan( D3D12_DESCRIPTOR_H
 			m_szDescriptorsUsed[eHeap][iStart + i] = 1;
 		}
 		*pIndex = iStart;
-		*pCpu = m_szDescriptorHeaps[eHeap]->GetCPUDescriptorHandleForHeapStart();
+		*pCpu = sirD3D12GetCPUDescriptorStart( m_szDescriptorHeaps[eHeap].Get() );
 		pCpu->ptr += ( SIZE_T )iStart * m_szDescriptorSizes[eHeap];
-		*pGpu = m_szDescriptorHeaps[eHeap]->GetGPUDescriptorHandleForHeapStart();
+		*pGpu = sirD3D12GetGPUDescriptorStart( m_szDescriptorHeaps[eHeap].Get() );
 		pGpu->ptr += ( UINT64 )iStart * m_szDescriptorSizes[eHeap];
 		return SIR_GRAPHICS_SUCCESS;
 	}
@@ -414,12 +457,12 @@ sirGraphicsResult_t SIRD3D12Resources::importExternalTexture( ID3D12Resource *pR
 	if ( m_pDevice == nullptr || pResource == nullptr ) {
 		return SIR_GRAPHICS_DEVICE_LOST;
 	}
-	const D3D12_RESOURCE_DESC desc = pResource->GetDesc();
+	const D3D12_RESOURCE_DESC desc = sirD3D12GetResourceDesc( pResource );
 	if ( desc.Dimension != D3D12_RESOURCE_DIMENSION_TEXTURE2D || desc.DepthOrArraySize != 1 || desc.MipLevels != 1 ||
 	     desc.SampleDesc.Count != 1 || desc.Width > UINT32_MAX || desc.Format != sirD3D12Format( eFormat ) ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
-	const D3D12_RESOURCE_ALLOCATION_INFO info = m_pDevice->GetResourceAllocationInfo( 0, 1, &desc );
+	const D3D12_RESOURCE_ALLOCATION_INFO info = sirD3D12GetResourceAllocationInfo( m_pDevice, desc );
 	if ( info.SizeInBytes == UINT64_MAX || info.SizeInBytes == 0 || m_nAllocatedBytes > UINT64_MAX - info.SizeInBytes ||
 	     ( m_nBudgetBytes != 0 && ( m_nAllocatedBytes > m_nBudgetBytes || info.SizeInBytes > m_nBudgetBytes - m_nAllocatedBytes ) ) ) {
 		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
@@ -517,6 +560,10 @@ sirGraphicsResult_t SIRD3D12Resources::createBuffer( const sirGraphicsBufferDesc
 	if ( m_pNative == nullptr ) {
 		return SIR_GRAPHICS_DEVICE_LOST;
 	}
+	const sirGraphicsResult_t eHeapUsage = sirD3D12ValidateBufferHeapUsage( desc );
+	if ( eHeapUsage != SIR_GRAPHICS_SUCCESS ) {
+		return eHeapUsage;
+	}
 	collectRetired();
 	if ( desc.eMemory == SIR_GRAPHICS_MEMORY_TRANSIENT || desc.nAlignmentBytes > D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
@@ -544,9 +591,9 @@ sirGraphicsResult_t SIRD3D12Resources::createBuffer( const sirGraphicsBufferDesc
 	if ( FAILED( nResult ) || pAllocation == nullptr ) {
 		return nResult == E_OUTOFMEMORY ? SIR_GRAPHICS_OUT_OF_MEMORY : SIR_GRAPHICS_DRIVER_ERROR;
 	}
+	SIRD3D12PendingAllocation pending( pAllocation );
 	const uint64_t nAllocated = pAllocation->GetSize();
 	if ( nAllocated > UINT64_MAX - m_nAllocatedBytes || ( m_nBudgetBytes != 0 && nAllocated > m_nBudgetBytes - m_nAllocatedBytes ) ) {
-		pAllocation->Release();
 		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
 	}
 	void *pMapped = nullptr;
@@ -554,23 +601,18 @@ sirGraphicsResult_t SIRD3D12Resources::createBuffer( const sirGraphicsBufferDesc
 		D3D12_RANGE noRead = { 0, 0 };
 		const HRESULT nMap = pAllocation->GetResource()->Map( 0, eHeap == D3D12_HEAP_TYPE_READBACK ? nullptr : &noRead, &pMapped );
 		if ( FAILED( nMap ) || pMapped == nullptr ) {
-			pAllocation->Release();
 			return SIR_GRAPHICS_DRIVER_ERROR;
 		}
+		pending.setMapped( pMapped, eHeap == D3D12_HEAP_TYPE_READBACK );
 	}
 	collectRetired();
 	uint32_t iSlot = 0;
 	const sirGraphicsResult_t eSlot = acquireSlot( SIR_GRAPHICS_HANDLE_BUFFER, &iSlot, pHandle );
 	if ( eSlot != SIR_GRAPHICS_SUCCESS ) {
-		if ( pMapped != nullptr ) {
-			D3D12_RANGE empty = { 0, 0 };
-			pAllocation->GetResource()->Unmap( 0, eHeap == D3D12_HEAP_TYPE_READBACK ? &empty : nullptr );
-		}
-		pAllocation->Release();
 		return eSlot;
 	}
 	sirD3D12ResourceSlot_t& slot = m_szSlots[iSlot];
-	slot.pAllocation = pAllocation;
+	slot.pAllocation = pending.release();
 	slot.pMappedBytes = pMapped;
 	slot.nAllocationBytes = nAllocated;
 	slot.nSizeBytes = desc.nSizeBytes;
@@ -682,21 +724,20 @@ sirGraphicsResult_t SIRD3D12Resources::createTexture( const sirGraphicsTextureDe
 	if ( FAILED( nResult ) || pAllocation == nullptr ) {
 		return nResult == E_OUTOFMEMORY ? SIR_GRAPHICS_OUT_OF_MEMORY : SIR_GRAPHICS_DRIVER_ERROR;
 	}
+	SIRD3D12PendingAllocation pending( pAllocation );
 	const uint64_t nAllocated = pAllocation->GetSize();
 	if ( nAllocated > UINT64_MAX - m_nAllocatedBytes ||
 	     ( m_nBudgetBytes != 0 && ( m_nAllocatedBytes > m_nBudgetBytes || nAllocated > m_nBudgetBytes - m_nAllocatedBytes ) ) ) {
-		pAllocation->Release();
 		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
 	}
 	collectRetired();
 	uint32_t iSlot = 0;
 	const sirGraphicsResult_t eSlot = acquireSlot( SIR_GRAPHICS_HANDLE_TEXTURE, &iSlot, pHandle );
 	if ( eSlot != SIR_GRAPHICS_SUCCESS ) {
-		pAllocation->Release();
 		return eSlot;
 	}
 	sirD3D12ResourceSlot_t& slot = m_szSlots[iSlot];
-	slot.pAllocation = pAllocation;
+	slot.pAllocation = pending.release();
 	slot.nAllocationBytes = nAllocated;
 	slot.nUsage = desc.nUsage;
 	slot.nWidth = desc.nWidth;

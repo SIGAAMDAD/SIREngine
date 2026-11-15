@@ -1,4 +1,16 @@
+# D3D12-only CPU validators compile on Windows and Linux without native APIs.
+add_executable(SIRD3D12ValidationTests SIRD3D12ValidationTests.cpp)
+target_link_libraries(SIRD3D12ValidationTests PRIVATE SIR::Graphics)
+add_test(NAME renderer.d3d12.validation COMMAND SIRD3D12ValidationTests)
+set_tests_properties(renderer.d3d12.validation PROPERTIES LABELS "renderer;d3d12;cpu;kind:unit;gate:pr" TIMEOUT 30)
+sir_configure_owned_target(SIRD3D12ValidationTests)
+
 if(SIR_WITH_D3D12)
+    add_executable(SIRD3D12NativeOwnerTests SIRD3D12NativeOwnerTests.cpp)
+    target_link_libraries(SIRD3D12NativeOwnerTests PRIVATE SIR::D3D12)
+    add_test(NAME renderer.d3d12.native-owners COMMAND SIRD3D12NativeOwnerTests)
+    set_tests_properties(renderer.d3d12.native-owners PROPERTIES LABELS "renderer;d3d12;cpu;raii;gate:pr" TIMEOUT 30)
+    sir_configure_owned_target(SIRD3D12NativeOwnerTests)
     # DXIL is cooked offline; the runtime driver never invokes DXC.
     find_program(SIR_D3D12_DXC_EXECUTABLE NAMES dxc.exe dxc REQUIRED)
     set(SIR_D3D12_SMOKE_SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/Shaders/SIRD3D12ComputeSmoke.hlsl")
