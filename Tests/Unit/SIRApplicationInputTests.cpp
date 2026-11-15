@@ -136,9 +136,39 @@ static bool sirTestHeadlessApplicationStillWorks( void )
 	return application.getState() == SIR_APP_STOPPED;
 }
 
+typedef struct sirInputReentrantPumpContext_s
+{
+	SIRApplication *pApplication;
+	sirSystemResult_t eShutdownResult;
+} sirInputReentrantPumpContext_t;
+
+static bool sirInputReentrantPump( SIRInputService& input, void *pContext )
+{
+	( void )input;
+	sirInputReentrantPumpContext_t *pPump = ( sirInputReentrantPumpContext_t * )pContext;
+	pPump->eShutdownResult = pPump->pApplication->shutdown();
+	return true;
+}
+
+static bool sirTestShutdownDuringInputPump( void )
+{
+	SIRInputService input;
+	SIRApplicationMockInput backend;
+	SIRApplication application;
+	sirInputReentrantPumpContext_t context = { &application, SIR_SYSTEM_ERROR };
+	if ( !input.attach( backend ) || !application.attachInput( input, sirInputReentrantPump, &context ) || !application.initialize() ||
+	     !application.tick() ) {
+		return false;
+	}
+	if ( context.eShutdownResult != SIR_SYSTEM_BUSY || application.getState() != SIR_APP_READY ) {
+		return false;
+	}
+	return application.shutdown() == SIR_SYSTEM_OK && backend.m_nStops == 1;
+}
+
 int main( void )
 {
-	if ( !sirTestHeadlessApplicationStillWorks() || !sirTestApplicationInputLifecycle() ) {
+	if ( !sirTestHeadlessApplicationStillWorks() || !sirTestApplicationInputLifecycle() || !sirTestShutdownDuringInputPump() ) {
 		fputs( "SIRApplicationInputTests FAILED\n", stderr );
 		return 1;
 	}

@@ -43,14 +43,17 @@ typedef enum sirAppState_e : uint8_t
 } sirAppState_t;
 
 // Registered systems are borrowed and must outlive application shutdown.
-// Registration order determines initialization and frame-update order;
-// successfully initialized systems shut down in reverse order.
+// Dependencies are declared after registration, without allocating memory.
+// Independent systems retain registration order. Dependencies initialize
+// before their consumers, and initialized systems shut down in reverse order.
 class SIRApplication
 {
 public:
 	SIRApplication( void ) noexcept;
 
 	sirAppState_t getState( void ) const noexcept;
+	sirSystemResult_t getInitializationResult( void ) const noexcept;
+	const SIREngineSystem *getFailedSystem( void ) const noexcept;
 	uint64_t getTickCount( void ) const noexcept;
 	float getFrameDeltaSeconds( void ) const noexcept;
 	double getElapsedSeconds( void ) const noexcept;
@@ -60,6 +63,9 @@ public:
 
 	bool attachInput( SIRInputService& input, sirAppInputPump_t pPump = nullptr, void *pContext = nullptr ) noexcept;
 	bool registerSystem( SIREngineSystem *pSystem ) noexcept;
+	// Both systems must already be registered. Duplicate/self dependencies are rejected;
+	// cycles are rejected before any system is initialized.
+	bool addDependency( SIREngineSystem& consumer, SIREngineSystem& provider ) noexcept;
 	bool initialize( void ) noexcept;
 	bool tick( float fDeltaSeconds = 0.0f ) noexcept;
 	bool tickTimed( void ) noexcept;
@@ -76,10 +82,20 @@ private:
 	uint32_t m_nSystemCount;
 	uint32_t m_nInitializedSystems;
 	SIREngineSystem *m_szSystems[SIR_APPLICATION_MAX_SYSTEMS] = {};
+	uint32_t m_szDependencyMasks[SIR_APPLICATION_MAX_SYSTEMS] = {};
+	uint32_t m_szInitializationOrder[SIR_APPLICATION_MAX_SYSTEMS] = {};
+	sirSystemResult_t m_eInitializationResult;
+	const SIREngineSystem *m_pFailedSystem;
+	bool m_bShutdownInProgress;
+	bool m_bFrameDispatchInProgress;
 	SIREventRegistry m_EventRegistry;
 	SIRInputService *m_pInput;
 	sirAppInputPump_t m_pInputPump;
 	void *m_pInputPumpContext;
+
+	uint32_t findSystemIndex( const SIREngineSystem *pSystem ) const noexcept;
+	bool resolveInitializationOrder( void ) noexcept;
+	bool tickFrame( float fDeltaSeconds ) noexcept;
 };
 
 #endif // __SIRENGINE_SIRAPPLICATION_H__

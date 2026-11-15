@@ -220,6 +220,217 @@ static int testCapacity( void ) noexcept
 	return 0;
 }
 
+static int testDependencyOrdering( void ) noexcept
+{
+	sirLifecycleTrace_t trace = {};
+	SIRLifecycleTestSystem consumer( 3, &trace );
+	SIRLifecycleTestSystem provider( 2, &trace );
+	SIRLifecycleTestSystem foundation( 1, &trace );
+	SIRApplication application;
+
+	if ( !application.registerSystem( &consumer ) || !application.registerSystem( &provider ) ||
+	     !application.registerSystem( &foundation ) ) {
+		return 50;
+	}
+	if ( !application.addDependency( consumer, provider ) || !application.addDependency( provider, foundation ) ) {
+		return 51;
+	}
+	if ( application.addDependency( consumer, provider ) || application.addDependency( foundation, foundation ) ) {
+		return 51;
+	}
+	if ( !application.initialize() || application.getInitializationResult() != SIR_SYSTEM_OK || application.getFailedSystem() != nullptr ) {
+		return 52;
+	}
+	if ( !application.tick( 0.01f ) || !application.fixedTick( 0.02f ) || application.shutdown() != SIR_SYSTEM_OK ) {
+		return 52;
+	}
+
+	const uint32_t szExpected[] = { 11, 21, 31, 12, 22, 32, 13, 23, 33, 34, 24, 14 };
+	return matches( trace, szExpected, 12 ) ? 0 : 53;
+}
+
+static int testIndependentDependencyOrdering( void ) noexcept
+{
+	sirLifecycleTrace_t trace = {};
+	SIRLifecycleTestSystem consumer( 1, &trace );
+	SIRLifecycleTestSystem independent( 2, &trace );
+	SIRLifecycleTestSystem provider( 3, &trace );
+	SIRApplication application;
+
+	if ( !application.registerSystem( &consumer ) || !application.registerSystem( &independent ) ||
+	     !application.registerSystem( &provider ) ) {
+		return 60;
+	}
+	if ( !application.addDependency( consumer, provider ) ) {
+		return 60;
+	}
+	if ( !application.initialize() || application.shutdown() != SIR_SYSTEM_OK ) {
+		return 61;
+	}
+
+	const uint32_t szExpected[] = { 21, 31, 11, 14, 34, 24 };
+	return matches( trace, szExpected, 6 ) ? 0 : 62;
+}
+
+static int testDependencyCycleAndUnknownSystem( void ) noexcept
+{
+	sirLifecycleTrace_t trace = {};
+	SIRLifecycleTestSystem first( 1, &trace );
+	SIRLifecycleTestSystem second( 2, &trace );
+	SIRLifecycleTestSystem unregistered( 3, &trace );
+	SIRApplication application;
+
+	if ( !application.registerSystem( &first ) || !application.registerSystem( &second ) ) {
+		return 70;
+	}
+	if ( application.addDependency( first, unregistered ) || application.addDependency( unregistered, first ) ) {
+		return 70;
+	}
+	if ( !application.addDependency( first, second ) || !application.addDependency( second, first ) ) {
+		return 70;
+	}
+	if ( application.initialize() || application.getState() != SIR_APP_STOPPED ||
+	     application.getInitializationResult() != SIR_SYSTEM_ERROR ) {
+		return 71;
+	}
+	if ( application.getFailedSystem() != nullptr || trace.nCount != 0 || application.shutdown() != SIR_SYSTEM_OK ) {
+		return 71;
+	}
+	return 0;
+}
+
+static int testDependencyFailureRollback( void ) noexcept
+{
+	sirLifecycleTrace_t trace = {};
+	SIRLifecycleTestSystem consumer( 3, &trace );
+	SIRLifecycleTestSystem failing( 2, &trace );
+	SIRLifecycleTestSystem provider( 1, &trace );
+	failing.setInitializeResult( SIR_SYSTEM_BUSY );
+	SIRApplication application;
+
+	if ( !application.registerSystem( &consumer ) || !application.registerSystem( &failing ) || !application.registerSystem( &provider ) ) {
+		return 80;
+	}
+	if ( !application.addDependency( consumer, failing ) || !application.addDependency( failing, provider ) || application.initialize() ) {
+		return 80;
+	}
+	if ( application.getState() != SIR_APP_STOPPED || application.getInitializationResult() != SIR_SYSTEM_BUSY ||
+	     application.getFailedSystem() != &failing ) {
+		return 81;
+	}
+
+	const uint32_t szExpected[] = { 11, 21, 14 };
+	return matches( trace, szExpected, 3 ) ? 0 : 82;
+}
+
+class SIRLifecycleReentrantSystem final : public SIREngineSystem
+{
+public:
+	explicit SIRLifecycleReentrantSystem( SIRApplication& application ) noexcept;
+	sirSystemResult_t initialize( void ) noexcept override;
+	sirSystemResult_t shutdown( void ) noexcept override;
+
+	sirSystemResult_t m_eRecursiveResult = SIR_SYSTEM_OK;
+	uint32_t m_nShutdownCalls = 0;
+
+private:
+	SIRApplication *m_pApplication = nullptr;
+};
+
+SIRLifecycleReentrantSystem::SIRLifecycleReentrantSystem( SIRApplication& application ) noexcept : m_pApplication( &application )
+{
+}
+
+sirSystemResult_t SIRLifecycleReentrantSystem::initialize( void ) noexcept
+{
+	return SIR_SYSTEM_OK;
+}
+
+sirSystemResult_t SIRLifecycleReentrantSystem::shutdown( void ) noexcept
+{
+	++m_nShutdownCalls;
+	m_eRecursiveResult = m_pApplication->shutdown();
+	return SIR_SYSTEM_OK;
+}
+
+static int testReentrantShutdown( void ) noexcept
+{
+	SIRApplication application;
+	SIRLifecycleReentrantSystem system( application );
+	if ( !application.registerSystem( &system ) || !application.initialize() || application.shutdown() != SIR_SYSTEM_OK ) {
+		return 90;
+	}
+	if ( system.m_nShutdownCalls != 1 || system.m_eRecursiveResult != SIR_SYSTEM_BUSY || application.getState() != SIR_APP_STOPPED ) {
+		return 91;
+	}
+	return 0;
+}
+
+class SIRLifecycleFrameCallbackSystem final : public SIREngineSystem
+{
+public:
+	explicit SIRLifecycleFrameCallbackSystem( SIRApplication& application ) noexcept;
+	sirSystemResult_t initialize( void ) noexcept override;
+	void update( float fDeltaSeconds ) noexcept override;
+	void fixedUpdate( float fDeltaSeconds ) noexcept override;
+	sirSystemResult_t shutdown( void ) noexcept override;
+
+	bool m_bNestedTickAccepted = false;
+	bool m_bNestedFixedAccepted = false;
+	sirSystemResult_t m_eShutdownDuringTick = SIR_SYSTEM_OK;
+	sirSystemResult_t m_eShutdownDuringFixed = SIR_SYSTEM_OK;
+	uint32_t m_nShutdownCalls = 0;
+
+private:
+	SIRApplication *m_pApplication = nullptr;
+};
+
+SIRLifecycleFrameCallbackSystem::SIRLifecycleFrameCallbackSystem( SIRApplication& application ) noexcept : m_pApplication( &application )
+{
+}
+
+sirSystemResult_t SIRLifecycleFrameCallbackSystem::initialize( void ) noexcept
+{
+	return SIR_SYSTEM_OK;
+}
+
+void SIRLifecycleFrameCallbackSystem::update( float fDeltaSeconds ) noexcept
+{
+	m_bNestedTickAccepted = m_pApplication->tick( fDeltaSeconds );
+	m_eShutdownDuringTick = m_pApplication->shutdown();
+}
+
+void SIRLifecycleFrameCallbackSystem::fixedUpdate( float fDeltaSeconds ) noexcept
+{
+	m_bNestedFixedAccepted = m_pApplication->fixedTick( fDeltaSeconds );
+	m_eShutdownDuringFixed = m_pApplication->shutdown();
+}
+
+sirSystemResult_t SIRLifecycleFrameCallbackSystem::shutdown( void ) noexcept
+{
+	++m_nShutdownCalls;
+	return SIR_SYSTEM_OK;
+}
+
+static int testFrameReentrancy( void ) noexcept
+{
+	SIRApplication application;
+	SIRLifecycleFrameCallbackSystem system( application );
+	if ( !application.registerSystem( &system ) || !application.initialize() || !application.tick( 0.01f ) ) {
+		return 92;
+	}
+	if ( !application.fixedTick( 0.02f ) ) {
+		return 92;
+	}
+	if ( system.m_bNestedTickAccepted || system.m_bNestedFixedAccepted || system.m_eShutdownDuringTick != SIR_SYSTEM_BUSY ) {
+		return 93;
+	}
+	if ( system.m_eShutdownDuringFixed != SIR_SYSTEM_BUSY || application.getTickCount() != 1 || application.getState() != SIR_APP_READY ) {
+		return 93;
+	}
+	return application.shutdown() == SIR_SYSTEM_OK && system.m_nShutdownCalls == 1 ? 0 : 94;
+}
+
 int main( void )
 {
 	const int iSuccessful = testSuccessfulLifecycle();
@@ -238,5 +449,29 @@ int main( void )
 	if ( iRollbackRetry != 0 ) {
 		return iRollbackRetry;
 	}
-	return testCapacity();
+	const int iCapacity = testCapacity();
+	if ( iCapacity != 0 ) {
+		return iCapacity;
+	}
+	const int iDependencyOrder = testDependencyOrdering();
+	if ( iDependencyOrder != 0 ) {
+		return iDependencyOrder;
+	}
+	const int iIndependent = testIndependentDependencyOrdering();
+	if ( iIndependent != 0 ) {
+		return iIndependent;
+	}
+	const int iCycle = testDependencyCycleAndUnknownSystem();
+	if ( iCycle != 0 ) {
+		return iCycle;
+	}
+	const int iFailure = testDependencyFailureRollback();
+	if ( iFailure != 0 ) {
+		return iFailure;
+	}
+	const int iShutdown = testReentrantShutdown();
+	if ( iShutdown != 0 ) {
+		return iShutdown;
+	}
+	return testFrameReentrancy();
 }
