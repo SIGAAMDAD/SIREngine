@@ -14,6 +14,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Renderer/Drivers/Vulkan/SIRVulkanDevice.h>
+#include <Renderer/Drivers/Vulkan/SIRVulkanCreationGuard.h>
 
 #include <stdint.h>
 #include <string.h>
@@ -51,18 +52,18 @@ sirVulkanResult_t SIRVulkanDevice::createComputePipeline( const void *pCode, uin
 	     !sirVulkanValidateSpirv( pCode, nCodeBytes, pszEntryPoint ) ) {
 		return SIR_VULKAN_INVALID_ARGUMENT;
 	}
-	const PFN_vkCreateShaderModule pfnCreateShaderModule =
-	    ( PFN_vkCreateShaderModule )m_pfnGetDeviceProcAddr( m_Device, "vkCreateShaderModule" );
-	const PFN_vkDestroyShaderModule pfnDestroyShaderModule =
-	    ( PFN_vkDestroyShaderModule )m_pfnGetDeviceProcAddr( m_Device, "vkDestroyShaderModule" );
-	const PFN_vkCreatePipelineLayout pfnCreatePipelineLayout =
-	    ( PFN_vkCreatePipelineLayout )m_pfnGetDeviceProcAddr( m_Device, "vkCreatePipelineLayout" );
-	const PFN_vkDestroyPipelineLayout pfnDestroyPipelineLayout =
-	    ( PFN_vkDestroyPipelineLayout )m_pfnGetDeviceProcAddr( m_Device, "vkDestroyPipelineLayout" );
-	const PFN_vkCreateComputePipelines pfnCreateComputePipelines =
-	    ( PFN_vkCreateComputePipelines )m_pfnGetDeviceProcAddr( m_Device, "vkCreateComputePipelines" );
-	if ( pfnCreateShaderModule == nullptr || pfnDestroyShaderModule == nullptr || pfnCreatePipelineLayout == nullptr ||
-	     pfnDestroyPipelineLayout == nullptr || pfnCreateComputePipelines == nullptr ) {
+	const PFN_vkCreateShaderModule vkCreateShaderModule =
+	    ( PFN_vkCreateShaderModule )vkGetDeviceProcAddr( m_Device, "vkCreateShaderModule" );
+	const PFN_vkDestroyShaderModule vkDestroyShaderModule =
+	    ( PFN_vkDestroyShaderModule )vkGetDeviceProcAddr( m_Device, "vkDestroyShaderModule" );
+	const PFN_vkCreatePipelineLayout vkCreatePipelineLayout =
+	    ( PFN_vkCreatePipelineLayout )vkGetDeviceProcAddr( m_Device, "vkCreatePipelineLayout" );
+	const PFN_vkDestroyPipelineLayout vkDestroyPipelineLayout =
+	    ( PFN_vkDestroyPipelineLayout )vkGetDeviceProcAddr( m_Device, "vkDestroyPipelineLayout" );
+	const PFN_vkCreateComputePipelines vkCreateComputePipelines =
+	    ( PFN_vkCreateComputePipelines )vkGetDeviceProcAddr( m_Device, "vkCreateComputePipelines" );
+	if ( vkCreateShaderModule == nullptr || vkDestroyShaderModule == nullptr || vkCreatePipelineLayout == nullptr ||
+	     vkDestroyPipelineLayout == nullptr || vkCreateComputePipelines == nullptr ) {
 		return SIR_VULKAN_API_UNSUPPORTED;
 	}
 
@@ -71,15 +72,20 @@ sirVulkanResult_t SIRVulkanDevice::createComputePipeline( const void *pCode, uin
 	shaderInfo.codeSize = ( size_t )nCodeBytes;
 	shaderInfo.pCode = ( const uint32_t * )pCode;
 	VkShaderModule hModule = VK_NULL_HANDLE;
-	if ( pfnCreateShaderModule( m_Device, &shaderInfo, nullptr, &hModule ) != VK_SUCCESS ) {
+	SIRVulkanCreationGuard<VkShaderModule, PFN_vkDestroyShaderModule> shaderGuard( m_Device, &hModule, vkDestroyShaderModule );
+	const VkResult eModule = vkCreateShaderModule( m_Device, &shaderInfo, nullptr, &hModule );
+	if ( eModule != VK_SUCCESS ) {
+		m_bDeviceLost = eModule == VK_ERROR_DEVICE_LOST;
 		return SIR_VULKAN_NATIVE_FAILURE;
 	}
 
 	VkPipelineLayoutCreateInfo layoutInfo = {};
 	layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 	VkPipelineLayout hLayout = VK_NULL_HANDLE;
-	if ( pfnCreatePipelineLayout( m_Device, &layoutInfo, nullptr, &hLayout ) != VK_SUCCESS ) {
-		pfnDestroyShaderModule( m_Device, hModule, nullptr );
+	SIRVulkanCreationGuard<VkPipelineLayout, PFN_vkDestroyPipelineLayout> layoutGuard( m_Device, &hLayout, vkDestroyPipelineLayout );
+	const VkResult eLayout = vkCreatePipelineLayout( m_Device, &layoutInfo, nullptr, &hLayout );
+	if ( eLayout != VK_SUCCESS ) {
+		m_bDeviceLost = eLayout == VK_ERROR_DEVICE_LOST;
 		return SIR_VULKAN_NATIVE_FAILURE;
 	}
 
@@ -92,15 +98,15 @@ sirVulkanResult_t SIRVulkanDevice::createComputePipeline( const void *pCode, uin
 	computeInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
 	computeInfo.stage = stage;
 	computeInfo.layout = hLayout;
+	const PFN_vkDestroyPipeline vkDestroyPipeline = ( PFN_vkDestroyPipeline )vkGetDeviceProcAddr( m_Device, "vkDestroyPipeline" );
+	if ( vkDestroyPipeline == nullptr ) {
+		return SIR_VULKAN_API_UNSUPPORTED;
+	}
 	VkPipeline hPipeline = VK_NULL_HANDLE;
-	const VkResult eCreate = pfnCreateComputePipelines( m_Device, VK_NULL_HANDLE, 1, &computeInfo, nullptr, &hPipeline );
-	pfnDestroyShaderModule( m_Device, hModule, nullptr );
+	SIRVulkanCreationGuard<VkPipeline, PFN_vkDestroyPipeline> pipelineGuard( m_Device, &hPipeline, vkDestroyPipeline );
+	const VkResult eCreate = vkCreateComputePipelines( m_Device, VK_NULL_HANDLE, 1, &computeInfo, nullptr, &hPipeline );
+	shaderGuard.reset();
 	if ( eCreate != VK_SUCCESS || hPipeline == VK_NULL_HANDLE ) {
-		const PFN_vkDestroyPipeline pfnDestroyPipeline = ( PFN_vkDestroyPipeline )m_pfnGetDeviceProcAddr( m_Device, "vkDestroyPipeline" );
-		if ( hPipeline != VK_NULL_HANDLE && pfnDestroyPipeline != nullptr ) {
-			pfnDestroyPipeline( m_Device, hPipeline, nullptr );
-		}
-		pfnDestroyPipelineLayout( m_Device, hLayout, nullptr );
 		m_bDeviceLost = eCreate == VK_ERROR_DEVICE_LOST;
 		return SIR_VULKAN_NATIVE_FAILURE;
 	}
@@ -108,6 +114,8 @@ sirVulkanResult_t SIRVulkanDevice::createComputePipeline( const void *pCode, uin
 	pPipeline->hPipeline = hPipeline;
 	pPipeline->hLayout = hLayout;
 	pPipeline->nDeviceSerial = m_nDeviceSerial;
+	pipelineGuard.release();
+	layoutGuard.release();
 	++m_nLivePipelines;
 	return SIR_VULKAN_SUCCESS;
 }
@@ -132,14 +140,23 @@ sirVulkanResult_t SIRVulkanDevice::destroyComputePipeline( sirVulkanComputePipel
 			return SIR_VULKAN_BUSY;
 		}
 	}
-	const PFN_vkDestroyPipeline pfnDestroyPipeline = ( PFN_vkDestroyPipeline )m_pfnGetDeviceProcAddr( m_Device, "vkDestroyPipeline" );
-	const PFN_vkDestroyPipelineLayout pfnDestroyPipelineLayout =
-	    ( PFN_vkDestroyPipelineLayout )m_pfnGetDeviceProcAddr( m_Device, "vkDestroyPipelineLayout" );
-	if ( pfnDestroyPipeline == nullptr || pfnDestroyPipelineLayout == nullptr ) {
+	const PFN_vkDestroyPipeline vkDestroyPipeline = ( PFN_vkDestroyPipeline )vkGetDeviceProcAddr( m_Device, "vkDestroyPipeline" );
+	const PFN_vkDestroyPipelineLayout vkDestroyPipelineLayout =
+	    ( PFN_vkDestroyPipelineLayout )vkGetDeviceProcAddr( m_Device, "vkDestroyPipelineLayout" );
+	if ( vkDestroyPipeline == nullptr || vkDestroyPipelineLayout == nullptr ) {
 		return SIR_VULKAN_API_UNSUPPORTED;
 	}
-	pfnDestroyPipeline( m_Device, pPipeline->hPipeline, nullptr );
-	pfnDestroyPipelineLayout( m_Device, pPipeline->hLayout, nullptr );
+	vkDestroyPipeline( m_Device, pPipeline->hPipeline, nullptr );
+	vkDestroyPipelineLayout( m_Device, pPipeline->hLayout, nullptr );
+	if ( pPipeline->nSetLayoutCount != 0 ) {
+		const PFN_vkDestroyDescriptorSetLayout vkDestroyDescriptorSetLayout =
+		    ( PFN_vkDestroyDescriptorSetLayout )vkGetDeviceProcAddr( m_Device, "vkDestroyDescriptorSetLayout" );
+		if ( vkDestroyDescriptorSetLayout != nullptr ) {
+			for ( uint32_t i = 0; i < pPipeline->nSetLayoutCount; ++i ) {
+				vkDestroyDescriptorSetLayout( m_Device, pPipeline->szSetLayouts[i], nullptr );
+			}
+		}
+	}
 	*pPipeline = {};
 	--m_nLivePipelines;
 	return SIR_VULKAN_SUCCESS;

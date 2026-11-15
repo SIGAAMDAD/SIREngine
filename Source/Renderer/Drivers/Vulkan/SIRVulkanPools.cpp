@@ -67,16 +67,16 @@ sirVulkanResult_t SIRVulkanDevice::chooseResidentMemoryType( uint32_t *pMemoryTy
 		return SIR_VULKAN_INVALID_ARGUMENT;
 	}
 	*pMemoryType = UINT32_MAX;
-	const PFN_vkCreateBuffer pfnCreateBuffer = ( PFN_vkCreateBuffer )m_pfnGetDeviceProcAddr( m_Device, "vkCreateBuffer" );
-	const PFN_vkDestroyBuffer pfnDestroyBuffer = ( PFN_vkDestroyBuffer )m_pfnGetDeviceProcAddr( m_Device, "vkDestroyBuffer" );
-	const PFN_vkGetBufferMemoryRequirements pfnGetBufferRequirements =
-	    ( PFN_vkGetBufferMemoryRequirements )m_pfnGetDeviceProcAddr( m_Device, "vkGetBufferMemoryRequirements" );
-	const PFN_vkCreateImage pfnCreateImage = ( PFN_vkCreateImage )m_pfnGetDeviceProcAddr( m_Device, "vkCreateImage" );
-	const PFN_vkDestroyImage pfnDestroyImage = ( PFN_vkDestroyImage )m_pfnGetDeviceProcAddr( m_Device, "vkDestroyImage" );
-	const PFN_vkGetImageMemoryRequirements pfnGetImageRequirements =
-	    ( PFN_vkGetImageMemoryRequirements )m_pfnGetDeviceProcAddr( m_Device, "vkGetImageMemoryRequirements" );
-	if ( pfnCreateBuffer == nullptr || pfnDestroyBuffer == nullptr || pfnGetBufferRequirements == nullptr || pfnCreateImage == nullptr ||
-	     pfnDestroyImage == nullptr || pfnGetImageRequirements == nullptr ) {
+	const PFN_vkCreateBuffer vkCreateBuffer = ( PFN_vkCreateBuffer )vkGetDeviceProcAddr( m_Device, "vkCreateBuffer" );
+	const PFN_vkDestroyBuffer vkDestroyBuffer = ( PFN_vkDestroyBuffer )vkGetDeviceProcAddr( m_Device, "vkDestroyBuffer" );
+	const PFN_vkGetBufferMemoryRequirements vkGetBufferMemoryRequirements =
+	    ( PFN_vkGetBufferMemoryRequirements )vkGetDeviceProcAddr( m_Device, "vkGetBufferMemoryRequirements" );
+	const PFN_vkCreateImage vkCreateImage = ( PFN_vkCreateImage )vkGetDeviceProcAddr( m_Device, "vkCreateImage" );
+	const PFN_vkDestroyImage vkDestroyImage = ( PFN_vkDestroyImage )vkGetDeviceProcAddr( m_Device, "vkDestroyImage" );
+	const PFN_vkGetImageMemoryRequirements vkGetImageMemoryRequirements =
+	    ( PFN_vkGetImageMemoryRequirements )vkGetDeviceProcAddr( m_Device, "vkGetImageMemoryRequirements" );
+	if ( vkCreateBuffer == nullptr || vkDestroyBuffer == nullptr || vkGetBufferMemoryRequirements == nullptr || vkCreateImage == nullptr ||
+	     vkDestroyImage == nullptr || vkGetImageMemoryRequirements == nullptr ) {
 		return SIR_VULKAN_API_UNSUPPORTED;
 	}
 	VkBufferCreateInfo probeBuffer = {};
@@ -85,12 +85,12 @@ sirVulkanResult_t SIRVulkanDevice::chooseResidentMemoryType( uint32_t *pMemoryTy
 	probeBuffer.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 	probeBuffer.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 	VkBuffer hBuffer = VK_NULL_HANDLE;
-	if ( pfnCreateBuffer( m_Device, &probeBuffer, nullptr, &hBuffer ) != VK_SUCCESS ) {
+	if ( vkCreateBuffer( m_Device, &probeBuffer, nullptr, &hBuffer ) != VK_SUCCESS ) {
 		return SIR_VULKAN_API_UNSUPPORTED;
 	}
 	VkMemoryRequirements bufferRequirements = {};
-	pfnGetBufferRequirements( m_Device, hBuffer, &bufferRequirements );
-	pfnDestroyBuffer( m_Device, hBuffer, nullptr );
+	vkGetBufferMemoryRequirements( m_Device, hBuffer, &bufferRequirements );
+	vkDestroyBuffer( m_Device, hBuffer, nullptr );
 
 	VkImageCreateInfo probeImage = {};
 	probeImage.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -105,12 +105,12 @@ sirVulkanResult_t SIRVulkanDevice::chooseResidentMemoryType( uint32_t *pMemoryTy
 	probeImage.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 	probeImage.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 	VkImage hImage = VK_NULL_HANDLE;
-	if ( pfnCreateImage( m_Device, &probeImage, nullptr, &hImage ) != VK_SUCCESS ) {
+	if ( vkCreateImage( m_Device, &probeImage, nullptr, &hImage ) != VK_SUCCESS ) {
 		return SIR_VULKAN_API_UNSUPPORTED;
 	}
 	VkMemoryRequirements imageRequirements = {};
-	pfnGetImageRequirements( m_Device, hImage, &imageRequirements );
-	pfnDestroyImage( m_Device, hImage, nullptr );
+	vkGetImageMemoryRequirements( m_Device, hImage, &imageRequirements );
+	vkDestroyImage( m_Device, hImage, nullptr );
 
 	const uint32_t nSharedTypes = bufferRequirements.memoryTypeBits & imageRequirements.memoryTypeBits;
 	if ( nSharedTypes == 0 ) {
@@ -211,20 +211,20 @@ bool SIRVulkanDevice::isSealedMemoryType( const VkImageCreateInfo& info ) const 
 	if ( !m_bSealedPools ) {
 		return true;
 	}
-	const PFN_vkCreateImage pfnCreateImage = ( PFN_vkCreateImage )m_pfnGetDeviceProcAddr( m_Device, "vkCreateImage" );
-	const PFN_vkGetImageMemoryRequirements pfnGetRequirements =
-	    ( PFN_vkGetImageMemoryRequirements )m_pfnGetDeviceProcAddr( m_Device, "vkGetImageMemoryRequirements" );
-	const PFN_vkDestroyImage pfnDestroyImage = ( PFN_vkDestroyImage )m_pfnGetDeviceProcAddr( m_Device, "vkDestroyImage" );
-	if ( pfnCreateImage == nullptr || pfnGetRequirements == nullptr || pfnDestroyImage == nullptr ) {
+	const PFN_vkCreateImage vkCreateImage = ( PFN_vkCreateImage )vkGetDeviceProcAddr( m_Device, "vkCreateImage" );
+	const PFN_vkGetImageMemoryRequirements vkGetImageMemoryRequirements =
+	    ( PFN_vkGetImageMemoryRequirements )vkGetDeviceProcAddr( m_Device, "vkGetImageMemoryRequirements" );
+	const PFN_vkDestroyImage vkDestroyImage = ( PFN_vkDestroyImage )vkGetDeviceProcAddr( m_Device, "vkDestroyImage" );
+	if ( vkCreateImage == nullptr || vkGetImageMemoryRequirements == nullptr || vkDestroyImage == nullptr ) {
 		return false;
 	}
 	VkImage hProbe = VK_NULL_HANDLE;
-	if ( pfnCreateImage( m_Device, &info, nullptr, &hProbe ) != VK_SUCCESS ) {
+	if ( vkCreateImage( m_Device, &info, nullptr, &hProbe ) != VK_SUCCESS ) {
 		return false;
 	}
 	VkMemoryRequirements requirements = {};
-	pfnGetRequirements( m_Device, hProbe, &requirements );
-	pfnDestroyImage( m_Device, hProbe, nullptr );
+	vkGetImageMemoryRequirements( m_Device, hProbe, &requirements );
+	vkDestroyImage( m_Device, hProbe, nullptr );
 	const uint32_t nType = m_szSealedMemoryTypes[0];
 	return sirVulkanMemoryTypeCompatible( nType, requirements.memoryTypeBits );
 }
@@ -237,19 +237,19 @@ bool SIRVulkanDevice::isSealedBufferMemoryType( const VkBufferCreateInfo& info, 
 	if ( iPool >= 3 ) {
 		return false;
 	}
-	const PFN_vkCreateBuffer pfnCreateBuffer = ( PFN_vkCreateBuffer )m_pfnGetDeviceProcAddr( m_Device, "vkCreateBuffer" );
-	const PFN_vkGetBufferMemoryRequirements pfnGetRequirements =
-	    ( PFN_vkGetBufferMemoryRequirements )m_pfnGetDeviceProcAddr( m_Device, "vkGetBufferMemoryRequirements" );
-	const PFN_vkDestroyBuffer pfnDestroyBuffer = ( PFN_vkDestroyBuffer )m_pfnGetDeviceProcAddr( m_Device, "vkDestroyBuffer" );
-	if ( pfnCreateBuffer == nullptr || pfnGetRequirements == nullptr || pfnDestroyBuffer == nullptr ) {
+	const PFN_vkCreateBuffer vkCreateBuffer = ( PFN_vkCreateBuffer )vkGetDeviceProcAddr( m_Device, "vkCreateBuffer" );
+	const PFN_vkGetBufferMemoryRequirements vkGetBufferMemoryRequirements =
+	    ( PFN_vkGetBufferMemoryRequirements )vkGetDeviceProcAddr( m_Device, "vkGetBufferMemoryRequirements" );
+	const PFN_vkDestroyBuffer vkDestroyBuffer = ( PFN_vkDestroyBuffer )vkGetDeviceProcAddr( m_Device, "vkDestroyBuffer" );
+	if ( vkCreateBuffer == nullptr || vkGetBufferMemoryRequirements == nullptr || vkDestroyBuffer == nullptr ) {
 		return false;
 	}
 	VkBuffer hProbe = VK_NULL_HANDLE;
-	if ( pfnCreateBuffer( m_Device, &info, nullptr, &hProbe ) != VK_SUCCESS ) {
+	if ( vkCreateBuffer( m_Device, &info, nullptr, &hProbe ) != VK_SUCCESS ) {
 		return false;
 	}
 	VkMemoryRequirements requirements = {};
-	pfnGetRequirements( m_Device, hProbe, &requirements );
-	pfnDestroyBuffer( m_Device, hProbe, nullptr );
+	vkGetBufferMemoryRequirements( m_Device, hProbe, &requirements );
+	vkDestroyBuffer( m_Device, hProbe, nullptr );
 	return sirVulkanMemoryTypeCompatible( m_szSealedMemoryTypes[iPool], requirements.memoryTypeBits );
 }

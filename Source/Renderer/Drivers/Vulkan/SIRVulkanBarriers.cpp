@@ -17,6 +17,48 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Renderer/Drivers/Vulkan/SIRVulkanGraphics.h>
 
+bool sirVulkanImageAccessScope( VkImageLayout eLayout, VkPipelineStageFlags2 *pStages, VkAccessFlags2 *pAccess ) noexcept
+{
+	if ( pStages == nullptr || pAccess == nullptr ) {
+		return false;
+	}
+	*pStages = VK_PIPELINE_STAGE_2_NONE;
+	*pAccess = VK_ACCESS_2_NONE;
+	switch ( eLayout ) {
+	case VK_IMAGE_LAYOUT_UNDEFINED:
+	case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
+		return true;
+	case VK_IMAGE_LAYOUT_GENERAL:
+		*pStages = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+		*pAccess = VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT;
+		return true;
+	case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+	case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
+	case VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL:
+		*pStages = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+		*pAccess = VK_ACCESS_2_MEMORY_READ_BIT;
+		return true;
+	case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
+		*pStages = VK_PIPELINE_STAGE_2_COPY_BIT;
+		*pAccess = VK_ACCESS_2_TRANSFER_READ_BIT;
+		return true;
+	case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
+		*pStages = VK_PIPELINE_STAGE_2_COPY_BIT;
+		*pAccess = VK_ACCESS_2_TRANSFER_WRITE_BIT;
+		return true;
+	case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
+		*pStages = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT;
+		*pAccess = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+		return true;
+	case VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL:
+		*pStages = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
+		*pAccess = VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
+		return true;
+	default:
+		return false;
+	}
+}
+
 static sirGraphicsResult_t sirVulkanBarrierState( sirGraphicsState_t eState, const sirVulkanImage_t *pImage,
                                                   VkImageLayout *pLayout ) noexcept
 {
@@ -44,6 +86,13 @@ static sirGraphicsResult_t sirVulkanBarrierState( sirGraphicsState_t eState, con
 			return SIR_GRAPHICS_INVALID_ARGUMENT;
 		}
 		*pLayout = VK_IMAGE_LAYOUT_GENERAL;
+		return SIR_GRAPHICS_SUCCESS;
+	case SIR_GRAPHICS_STATE_COLOR_ATTACHMENT:
+		if ( sirVulkanImageAspectMask( pImage->eFormat ) != VK_IMAGE_ASPECT_COLOR_BIT ||
+		     ( pImage->nUsage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT ) == 0 ) {
+			return SIR_GRAPHICS_INVALID_ARGUMENT;
+		}
+		*pLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
 		return SIR_GRAPHICS_SUCCESS;
 	case SIR_GRAPHICS_STATE_DEPTH_WRITE:
 		if ( sirVulkanImageAspectMask( pImage->eFormat ) == VK_IMAGE_ASPECT_COLOR_BIT ||
@@ -219,7 +268,7 @@ sirVulkanResult_t SIRVulkanDevice::submitImageBarrier( sirVulkanImage_t *pImage,
 	}
 
 	uint64_t nCompleted = 0;
-	const VkResult ePoll = m_pfnGetSemaphoreCounterValue( m_Device, m_TransferTimeline, &nCompleted );
+	const VkResult ePoll = vkGetSemaphoreCounterValue( m_Device, m_TransferTimeline, &nCompleted );
 	if ( ePoll != VK_SUCCESS ) {
 		m_bDeviceLost = ePoll == VK_ERROR_DEVICE_LOST;
 		return SIR_VULKAN_NATIVE_FAILURE;
@@ -236,23 +285,23 @@ sirVulkanResult_t SIRVulkanDevice::submitImageBarrier( sirVulkanImage_t *pImage,
 	if ( pSlot == nullptr ) {
 		return SIR_VULKAN_BUSY;
 	}
-	if ( m_pfnResetCommandBuffer( pSlot->hCommandBuffer, 0 ) != VK_SUCCESS ) {
+	const VkResult eReset = vkResetCommandBuffer( pSlot->hCommandBuffer, 0 );
+	if ( eReset != VK_SUCCESS ) {
+		m_bDeviceLost = eReset == VK_ERROR_DEVICE_LOST;
 		return SIR_VULKAN_NATIVE_FAILURE;
 	}
 	VkCommandBufferBeginInfo begin = {};
 	begin.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 	begin.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-	if ( m_pfnBeginCommandBuffer( pSlot->hCommandBuffer, &begin ) != VK_SUCCESS ) {
+	const VkResult eBegin = vkBeginCommandBuffer( pSlot->hCommandBuffer, &begin );
+	if ( eBegin != VK_SUCCESS ) {
+		m_bDeviceLost = eBegin == VK_ERROR_DEVICE_LOST;
 		return SIR_VULKAN_NATIVE_FAILURE;
 	}
 	VkImageMemoryBarrier2 transition = {};
 	transition.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
-	transition.srcStageMask =
-	    barrier.eBefore == VK_IMAGE_LAYOUT_UNDEFINED ? VK_PIPELINE_STAGE_2_NONE : VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
-	transition.srcAccessMask =
-	    barrier.eBefore == VK_IMAGE_LAYOUT_UNDEFINED ? VK_ACCESS_2_NONE : VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT;
-	transition.dstStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
-	transition.dstAccessMask = VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT;
+	( void )sirVulkanImageAccessScope( barrier.eBefore, &transition.srcStageMask, &transition.srcAccessMask );
+	( void )sirVulkanImageAccessScope( barrier.eAfter, &transition.dstStageMask, &transition.dstAccessMask );
 	transition.oldLayout = barrier.eBefore;
 	transition.newLayout = barrier.eAfter;
 	transition.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
@@ -267,8 +316,10 @@ sirVulkanResult_t SIRVulkanDevice::submitImageBarrier( sirVulkanImage_t *pImage,
 	dependency.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
 	dependency.imageMemoryBarrierCount = 1;
 	dependency.pImageMemoryBarriers = &transition;
-	m_pfnCmdPipelineBarrier2( pSlot->hCommandBuffer, &dependency );
-	if ( m_pfnEndCommandBuffer( pSlot->hCommandBuffer ) != VK_SUCCESS ) {
+	vkCmdPipelineBarrier2( pSlot->hCommandBuffer, &dependency );
+	const VkResult eEnd = vkEndCommandBuffer( pSlot->hCommandBuffer );
+	if ( eEnd != VK_SUCCESS ) {
+		m_bDeviceLost = eEnd == VK_ERROR_DEVICE_LOST;
 		return SIR_VULKAN_NATIVE_FAILURE;
 	}
 	const uint64_t nNext = m_nLastTransferValue + 1;
@@ -286,7 +337,7 @@ sirVulkanResult_t SIRVulkanDevice::submitImageBarrier( sirVulkanImage_t *pImage,
 	submission.pCommandBufferInfos = &command;
 	submission.signalSemaphoreInfoCount = 1;
 	submission.pSignalSemaphoreInfos = &signal;
-	const VkResult eSubmit = m_pfnQueueSubmit2( m_GraphicsQueue, 1, &submission, VK_NULL_HANDLE );
+	const VkResult eSubmit = vkQueueSubmit2( m_GraphicsQueue, 1, &submission, VK_NULL_HANDLE );
 	if ( eSubmit != VK_SUCCESS ) {
 		m_bDeviceLost = eSubmit == VK_ERROR_DEVICE_LOST;
 		return SIR_VULKAN_NATIVE_FAILURE;

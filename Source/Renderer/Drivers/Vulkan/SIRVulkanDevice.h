@@ -17,6 +17,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #define __SIRENGINE_SIRVULKANDEVICE_H__
 
 #include <SIRPCH.hpp>
+#include <Renderer/SIRGraphicsTypes.h>
 
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -49,6 +50,8 @@ typedef struct sirVulkanAdapterInfo_s
 	uint32_t nVendorId;
 	uint32_t nDeviceId;
 	uint32_t nQueueFamilyIndex;
+	uint32_t nComputeQueueFamilyIndex;
+	uint32_t nTransferQueueFamilyIndex;
 	uint32_t nMaximumTextureDimension;
 	uint32_t nMemoryTypeCount;
 	uint32_t nMemoryHeapCount;
@@ -78,6 +81,20 @@ typedef struct sirVulkanMemoryStats_s
 
 // Higher scores appear first in the shared adapter registry.
 uint32_t sirVulkanAdapterPriority( VkPhysicalDeviceType eType ) noexcept;
+
+// Discovery only: current command submission uses the selected graphics family.
+typedef struct sirVulkanQueueFamilySelection_s
+{
+	uint32_t nGraphicsFamilyIndex;
+	uint32_t nComputeFamilyIndex;
+	uint32_t nTransferFamilyIndex;
+	bool bGraphicsSupportsCompute;
+} sirVulkanQueueFamilySelection_t;
+
+bool sirVulkanSelectQueueFamilies( const VkQueueFamilyProperties *pFamilies, uint32_t nCount,
+                                   sirVulkanQueueFamilySelection_t *pSelection ) noexcept;
+bool sirVulkanBuildQueueCreateInfos( const sirVulkanQueueFamilySelection_t& selection, const float *pPriority,
+                                     VkDeviceQueueCreateInfo ( &szInfos )[3], uint32_t *pCount ) noexcept;
 
 // Private Vulkan-driver ownership. No Vk or VMA types enter SIRRenderingDevice.
 typedef struct sirVulkanPoolBudget_s
@@ -112,7 +129,25 @@ typedef struct sirVulkanComputePipeline_s
 	VkPipelineLayout hLayout;
 	uint64_t nDeviceSerial;
 	uint64_t nLastGpuUse;
+	bool bGraphics;
+	uint32_t nColorFormatCount;
+	VkFormat szColorFormats[8];
+	VkFormat eDepthFormat;
+	uint32_t nSetLayoutCount;
+	VkDescriptorSetLayout szSetLayouts[4];
+	uint32_t nBindingCount;
+	sirGraphicsBindingDesc_t szBindings[32];
 } sirVulkanComputePipeline_t;
+
+typedef struct sirVulkanDescriptorSet_s
+{
+	VkDescriptorSet hSet;
+	VkDescriptorPool hPool;
+	VkPipelineLayout hPipelineLayout;
+	uint32_t nSetIndex;
+	uint64_t nDeviceSerial;
+	uint64_t nLastGpuUse;
+} sirVulkanDescriptorSet_t;
 
 // Validates the Vulkan/SPIR-V binary envelope before handing bytecode to
 // the driver. Full semantic validation remains the shader cooker's job.
@@ -229,6 +264,8 @@ typedef struct sirVulkanImageBarrier_s
 
 // Identical, failure-atomic range/layout/usage admission for standalone and recorded barriers.
 bool sirVulkanValidateNativeImageBarrier( const sirVulkanImage_t *pImage, const sirVulkanImageBarrier_t& barrier ) noexcept;
+// CPU-only translation used by native image barriers and copy transitions.
+bool sirVulkanImageAccessScope( VkImageLayout eLayout, VkPipelineStageFlags2 *pStages, VkAccessFlags2 *pAccess ) noexcept;
 
 typedef struct sirVulkanTextureTransfer_s
 {
@@ -248,7 +285,16 @@ typedef enum sirVulkanRecordedKind_e : uint8_t
 	SIR_VULKAN_RECORDED_TEXTURE_COPY,
 	SIR_VULKAN_RECORDED_IMAGE_BARRIER,
 	SIR_VULKAN_RECORDED_BUFFER_BARRIER,
-	SIR_VULKAN_RECORDED_COMPUTE_DISPATCH
+	SIR_VULKAN_RECORDED_COMPUTE_DISPATCH,
+	SIR_VULKAN_RECORDED_RENDER_BEGIN,
+	SIR_VULKAN_RECORDED_RENDER_END,
+	SIR_VULKAN_RECORDED_GRAPHICS_PIPELINE,
+	SIR_VULKAN_RECORDED_VERTEX_BUFFER,
+	SIR_VULKAN_RECORDED_INDEX_BUFFER,
+	SIR_VULKAN_RECORDED_VIEWPORT,
+	SIR_VULKAN_RECORDED_DRAW,
+	SIR_VULKAN_RECORDED_DRAW_INDEXED,
+	SIR_VULKAN_RECORDED_BIND_DESCRIPTOR_SET
 } sirVulkanRecordedKind_t;
 
 typedef struct sirVulkanRecordedCommand_s
@@ -261,9 +307,37 @@ typedef struct sirVulkanRecordedCommand_s
 	sirVulkanTextureTransfer_t textureCopy;
 	sirVulkanImageBarrier_t imageBarrier;
 	sirVulkanComputePipeline_t *pPipeline;
+	sirVulkanDescriptorSet_t *pDescriptorSet;
 	uint32_t nGroupCountX;
 	uint32_t nGroupCountY;
 	uint32_t nGroupCountZ;
+	uint32_t nColorCount;
+	VkImageView szColorViews[8];
+	sirVulkanImage_t *szColorImages[8];
+	uint32_t szColorMips[8];
+	uint32_t szColorLayers[8];
+	VkClearValue szClearColors[8];
+	bool szColorClear[8];
+	bool szColorStore[8];
+	VkImageView hDepthView;
+	sirVulkanImage_t *pDepthImage;
+	uint32_t nDepthMip;
+	uint32_t nDepthLayer;
+	VkClearValue depthClear;
+	bool bClearDepth;
+	bool bStoreDepth;
+	VkExtent2D extent;
+	VkViewport viewport;
+	VkRect2D scissor;
+	VkBuffer hVertexBuffer;
+	VkDeviceSize nBufferOffset;
+	uint32_t nBufferSlot;
+	VkIndexType eIndexType;
+	uint32_t nDrawCount;
+	uint32_t nInstanceCount;
+	uint32_t nFirstElement;
+	int32_t nVertexOffset;
+	uint32_t nFirstInstance;
 } sirVulkanRecordedCommand_t;
 
 // Pure ordered preflight: never mutates caller-owned VkImage state.
@@ -287,43 +361,45 @@ class SIRVulkanDevice
 {
 private:
 	sirDynamicLibrary_t m_Library;
-	PFN_vkGetInstanceProcAddr m_pfnGetInstanceProcAddr;
-	PFN_vkGetDeviceProcAddr m_pfnGetDeviceProcAddr;
-	PFN_vkDestroyInstance m_pfnDestroyInstance;
-	PFN_vkEnumeratePhysicalDevices m_pfnEnumeratePhysicalDevices;
-	PFN_vkGetPhysicalDeviceProperties m_pfnGetPhysicalDeviceProperties;
-	PFN_vkGetPhysicalDeviceQueueFamilyProperties m_pfnGetPhysicalDeviceQueueFamilyProperties;
-	PFN_vkGetPhysicalDeviceMemoryProperties m_pfnGetPhysicalDeviceMemoryProperties;
-	PFN_vkGetPhysicalDeviceFeatures2 m_pfnGetPhysicalDeviceFeatures2;
-	PFN_vkCreateDevice m_pfnCreateDevice;
-	PFN_vkDestroyDevice m_pfnDestroyDevice;
-	PFN_vkGetDeviceQueue m_pfnGetDeviceQueue;
-	PFN_vkDeviceWaitIdle m_pfnDeviceWaitIdle;
-	PFN_vkCreateCommandPool m_pfnCreateCommandPool;
-	PFN_vkDestroyCommandPool m_pfnDestroyCommandPool;
-	PFN_vkAllocateCommandBuffers m_pfnAllocateCommandBuffers;
-	PFN_vkResetCommandBuffer m_pfnResetCommandBuffer;
-	PFN_vkBeginCommandBuffer m_pfnBeginCommandBuffer;
-	PFN_vkEndCommandBuffer m_pfnEndCommandBuffer;
-	PFN_vkCmdPipelineBarrier2 m_pfnCmdPipelineBarrier2;
-	PFN_vkCmdCopyBuffer2 m_pfnCmdCopyBuffer2;
-	PFN_vkCmdBindPipeline m_pfnCmdBindPipeline = nullptr;
-	PFN_vkCmdDispatch m_pfnCmdDispatch = nullptr;
-	PFN_vkCmdCopyBufferToImage2 m_pfnCmdCopyBufferToImage2 = nullptr;
-	PFN_vkCmdCopyImageToBuffer2 m_pfnCmdCopyImageToBuffer2 = nullptr;
-	PFN_vkQueueSubmit2 m_pfnQueueSubmit2;
-	PFN_vkCreateSemaphore m_pfnCreateSemaphore;
-	PFN_vkDestroySemaphore m_pfnDestroySemaphore;
-	PFN_vkGetSemaphoreCounterValue m_pfnGetSemaphoreCounterValue;
-	PFN_vkWaitSemaphores m_pfnWaitSemaphores;
-	PFN_vkCreateImageView m_pfnCreateImageView = nullptr;
-	PFN_vkDestroyImageView m_pfnDestroyImageView = nullptr;
-	PFN_vkCreateSampler m_pfnCreateSampler = nullptr;
-	PFN_vkDestroySampler m_pfnDestroySampler = nullptr;
+	PFN_vkGetInstanceProcAddr vkGetInstanceProcAddr;
+	PFN_vkGetDeviceProcAddr vkGetDeviceProcAddr;
+	PFN_vkDestroyInstance vkDestroyInstance;
+	PFN_vkEnumeratePhysicalDevices vkEnumeratePhysicalDevices;
+	PFN_vkGetPhysicalDeviceProperties vkGetPhysicalDeviceProperties;
+	PFN_vkGetPhysicalDeviceQueueFamilyProperties vkGetPhysicalDeviceQueueFamilyProperties;
+	PFN_vkGetPhysicalDeviceMemoryProperties vkGetPhysicalDeviceMemoryProperties;
+	PFN_vkGetPhysicalDeviceFeatures2 vkGetPhysicalDeviceFeatures2;
+	PFN_vkCreateDevice vkCreateDevice;
+	PFN_vkDestroyDevice vkDestroyDevice;
+	PFN_vkGetDeviceQueue vkGetDeviceQueue;
+	PFN_vkDeviceWaitIdle vkDeviceWaitIdle;
+	PFN_vkCreateCommandPool vkCreateCommandPool;
+	PFN_vkDestroyCommandPool vkDestroyCommandPool;
+	PFN_vkAllocateCommandBuffers vkAllocateCommandBuffers;
+	PFN_vkResetCommandBuffer vkResetCommandBuffer;
+	PFN_vkBeginCommandBuffer vkBeginCommandBuffer;
+	PFN_vkEndCommandBuffer vkEndCommandBuffer;
+	PFN_vkCmdPipelineBarrier2 vkCmdPipelineBarrier2;
+	PFN_vkCmdCopyBuffer2 vkCmdCopyBuffer2;
+	PFN_vkCmdBindPipeline vkCmdBindPipeline = nullptr;
+	PFN_vkCmdDispatch vkCmdDispatch = nullptr;
+	PFN_vkCmdCopyBufferToImage2 vkCmdCopyBufferToImage2 = nullptr;
+	PFN_vkCmdCopyImageToBuffer2 vkCmdCopyImageToBuffer2 = nullptr;
+	PFN_vkQueueSubmit2 vkQueueSubmit2;
+	PFN_vkCreateSemaphore vkCreateSemaphore;
+	PFN_vkDestroySemaphore vkDestroySemaphore;
+	PFN_vkGetSemaphoreCounterValue vkGetSemaphoreCounterValue;
+	PFN_vkWaitSemaphores vkWaitSemaphores;
+	PFN_vkCreateImageView vkCreateImageView = nullptr;
+	PFN_vkDestroyImageView vkDestroyImageView = nullptr;
+	PFN_vkCreateSampler vkCreateSampler = nullptr;
+	PFN_vkDestroySampler vkDestroySampler = nullptr;
 	VkInstance m_Instance;
 	VkPhysicalDevice m_PhysicalDevice;
 	VkDevice m_Device;
 	VkQueue m_GraphicsQueue;
+	VkQueue m_ComputeQueue;
+	VkQueue m_TransferQueue;
 	VmaAllocator m_Allocator;
 	VmaPool m_szSealedPools[3] = {};
 	uint32_t m_szSealedMemoryTypes[3] = {};
@@ -347,6 +423,7 @@ private:
 	uint32_t m_nLiveImageViews = 0;
 	uint32_t m_nLiveSamplers = 0;
 	uint32_t m_nLivePipelines = 0;
+	uint32_t m_nLiveDescriptorSets = 0;
 	bool m_bReady;
 
 	sirVulkanResult_t initializeInstance( void ) noexcept;
@@ -373,11 +450,20 @@ public:
 	sirVulkanResult_t initialize( const sirVulkanPoolBudget_t *pBudget = nullptr, uint32_t nAdapterIndex = 0 ) noexcept;
 	sirVulkanResult_t probeAdapters( uint32_t nAdapterIndex, uint32_t *pCount, sirVulkanAdapterInfo_t *pAdapter ) noexcept;
 	bool shutdown( void ) noexcept;
+	// Used only by the owning C++ destructor before reclaiming still-published
+	// slot resources. Normal explicit shutdown retains its BUSY semantics.
+	bool drainForDestruction( void ) noexcept;
 	bool isReady( void ) const noexcept;
 	uint32_t getAdapterCount( void ) const noexcept;
 	bool queryAdapter( sirVulkanAdapterInfo_t *pAdapter ) const noexcept;
 	bool queryMemoryStats( sirVulkanMemoryStats_t *pStats ) const noexcept;
 
+	sirVulkanResult_t createRasterPipeline( const sirGraphicsPipelineDesc_t& desc, sirVulkanComputePipeline_t *pPipeline ) noexcept;
+	sirVulkanResult_t createDescriptorSet( const sirVulkanComputePipeline_t *pPipeline, uint32_t nSetIndex,
+	                                       sirVulkanDescriptorSet_t *pSet ) noexcept;
+	sirVulkanResult_t updateDescriptorSet( const sirVulkanDescriptorSet_t *pSet, const VkWriteDescriptorSet *pWrites,
+	                                       uint32_t nCount ) noexcept;
+	sirVulkanResult_t destroyDescriptorSet( sirVulkanDescriptorSet_t *pSet ) noexcept;
 	sirVulkanResult_t createComputePipeline( const void *pCode, uint64_t nCodeBytes, const char *pszEntryPoint,
 	                                         sirVulkanComputePipeline_t *pPipeline ) noexcept;
 	sirVulkanResult_t destroyComputePipeline( sirVulkanComputePipeline_t *pPipeline ) noexcept;

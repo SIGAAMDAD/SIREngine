@@ -19,12 +19,11 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 bool SIRVulkanDevice::loadImageDispatch( void ) noexcept
 {
-	m_pfnCreateImageView = ( PFN_vkCreateImageView )m_pfnGetDeviceProcAddr( m_Device, "vkCreateImageView" );
-	m_pfnDestroyImageView = ( PFN_vkDestroyImageView )m_pfnGetDeviceProcAddr( m_Device, "vkDestroyImageView" );
-	m_pfnCreateSampler = ( PFN_vkCreateSampler )m_pfnGetDeviceProcAddr( m_Device, "vkCreateSampler" );
-	m_pfnDestroySampler = ( PFN_vkDestroySampler )m_pfnGetDeviceProcAddr( m_Device, "vkDestroySampler" );
-	return m_pfnCreateImageView != nullptr && m_pfnDestroyImageView != nullptr && m_pfnCreateSampler != nullptr &&
-	       m_pfnDestroySampler != nullptr;
+	vkCreateImageView = ( PFN_vkCreateImageView )vkGetDeviceProcAddr( m_Device, "vkCreateImageView" );
+	vkDestroyImageView = ( PFN_vkDestroyImageView )vkGetDeviceProcAddr( m_Device, "vkDestroyImageView" );
+	vkCreateSampler = ( PFN_vkCreateSampler )vkGetDeviceProcAddr( m_Device, "vkCreateSampler" );
+	vkDestroySampler = ( PFN_vkDestroySampler )vkGetDeviceProcAddr( m_Device, "vkDestroySampler" );
+	return vkCreateImageView != nullptr && vkDestroyImageView != nullptr && vkCreateSampler != nullptr && vkDestroySampler != nullptr;
 }
 
 sirVulkanResult_t SIRVulkanDevice::createImage( const VkImageCreateInfo& info, sirVulkanImage_t *pImage ) noexcept
@@ -114,7 +113,7 @@ sirVulkanResult_t SIRVulkanDevice::createImageView( const sirVulkanImage_t *pIma
 	     info.subresourceRange.layerCount > pImage->nLayers - info.subresourceRange.baseArrayLayer ) {
 		return SIR_VULKAN_INVALID_ARGUMENT;
 	}
-	const VkResult eCreate = m_pfnCreateImageView( m_Device, &info, nullptr, &pView->hView );
+	const VkResult eCreate = vkCreateImageView( m_Device, &info, nullptr, &pView->hView );
 	if ( eCreate != VK_SUCCESS ) {
 		return eCreate == VK_ERROR_OUT_OF_DEVICE_MEMORY || eCreate == VK_ERROR_OUT_OF_HOST_MEMORY ? SIR_VULKAN_ALLOCATION_FAILED
 		                                                                                          : SIR_VULKAN_NATIVE_FAILURE;
@@ -133,7 +132,7 @@ sirVulkanResult_t SIRVulkanDevice::destroyImageView( sirVulkanImageView_t *pView
 	if ( pView == nullptr || pView->hView == VK_NULL_HANDLE || pView->nDeviceSerial != m_nDeviceSerial || m_nLiveImageViews == 0 ) {
 		return SIR_VULKAN_INVALID_ARGUMENT;
 	}
-	m_pfnDestroyImageView( m_Device, pView->hView, nullptr );
+	vkDestroyImageView( m_Device, pView->hView, nullptr );
 	memset( pView, 0, sizeof( *pView ) );
 	--m_nLiveImageViews;
 	return SIR_VULKAN_SUCCESS;
@@ -148,7 +147,7 @@ sirVulkanResult_t SIRVulkanDevice::createSampler( const VkSamplerCreateInfo& inf
 	     info.anisotropyEnable != VK_FALSE ) {
 		return SIR_VULKAN_INVALID_ARGUMENT;
 	}
-	const VkResult eCreate = m_pfnCreateSampler( m_Device, &info, nullptr, &pSampler->hSampler );
+	const VkResult eCreate = vkCreateSampler( m_Device, &info, nullptr, &pSampler->hSampler );
 	if ( eCreate != VK_SUCCESS ) {
 		return eCreate == VK_ERROR_OUT_OF_DEVICE_MEMORY || eCreate == VK_ERROR_OUT_OF_HOST_MEMORY ? SIR_VULKAN_ALLOCATION_FAILED
 		                                                                                          : SIR_VULKAN_NATIVE_FAILURE;
@@ -167,7 +166,7 @@ sirVulkanResult_t SIRVulkanDevice::destroySampler( sirVulkanSampler_t *pSampler 
 	     m_nLiveSamplers == 0 ) {
 		return SIR_VULKAN_INVALID_ARGUMENT;
 	}
-	m_pfnDestroySampler( m_Device, pSampler->hSampler, nullptr );
+	vkDestroySampler( m_Device, pSampler->hSampler, nullptr );
 	memset( pSampler, 0, sizeof( *pSampler ) );
 	--m_nLiveSamplers;
 	return SIR_VULKAN_SUCCESS;

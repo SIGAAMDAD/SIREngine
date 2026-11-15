@@ -302,6 +302,91 @@ int main( void )
 	if ( sirVulkanValidateNativeImageBarrier( &onlyDepth, impossible ) ) {
 		return 40;
 	}
+	// Color-attachment layout transitions use the portable graphics state and color usage.
+	sirVulkanImage_t color = {};
+	color.eFormat = VK_FORMAT_R8G8B8A8_UNORM;
+	color.eType = VK_IMAGE_TYPE_2D;
+	color.nMips = 1;
+	color.nLayers = 1;
+	color.nUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+	sirGraphicsBarrier_t attachment = {};
+	attachment.eType = SIR_GRAPHICS_BARRIER_TRANSITION;
+	attachment.eBefore = SIR_GRAPHICS_STATE_UNDEFINED;
+	attachment.eAfter = SIR_GRAPHICS_STATE_COLOR_ATTACHMENT;
+	attachment.nMipCount = 1;
+	attachment.nLayerCount = 1;
+	if ( sirVulkanPlanImageBarrier( attachment, &color, &native ) != SIR_GRAPHICS_SUCCESS ||
+	     native.eAfter != VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL || !sirVulkanSetSubresourceLayout( &color, 0, 0, native.eAfter ) ) {
+		return 41;
+	}
+	VkImageLayout eColor = VK_IMAGE_LAYOUT_UNDEFINED;
+	if ( !sirVulkanGetSubresourceLayout( &color, 0, 0, &eColor ) || eColor != VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL ) {
+		return 42;
+	}
+	attachment.eBefore = SIR_GRAPHICS_STATE_COLOR_ATTACHMENT;
+	attachment.eAfter = SIR_GRAPHICS_STATE_COMMON;
+	if ( sirVulkanPlanImageBarrier( attachment, &color, &native ) != SIR_GRAPHICS_SUCCESS ||
+	     native.eBefore != VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL || native.eAfter != VK_IMAGE_LAYOUT_GENERAL ) {
+		return 43;
+	}
+	color.nUsage = VK_IMAGE_USAGE_SAMPLED_BIT;
+	attachment.eBefore = SIR_GRAPHICS_STATE_UNDEFINED;
+	attachment.eAfter = SIR_GRAPHICS_STATE_COLOR_ATTACHMENT;
+	if ( !sirVulkanSetSubresourceLayout( &color, 0, 0, VK_IMAGE_LAYOUT_UNDEFINED ) ||
+	     sirVulkanPlanImageBarrier( attachment, &color, &native ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return 44;
+	}
+	color.nUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+	color.eFormat = VK_FORMAT_D32_SFLOAT;
+	if ( sirVulkanPlanImageBarrier( attachment, &color, &native ) != SIR_GRAPHICS_INVALID_ARGUMENT ) {
+		return 45;
+	}
+	sirVulkanImageBarrier_t invalidAttachment = { VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL, 0, 0, 1, 1, false };
+	if ( sirVulkanValidateNativeImageBarrier( &color, invalidAttachment ) ) {
+		return 46;
+	}
+	// Native sync2 stage/access scopes must follow the actual image layout.
+	VkPipelineStageFlags2 nStages = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+	VkAccessFlags2 nAccess = VK_ACCESS_2_MEMORY_WRITE_BIT;
+	if ( !sirVulkanImageAccessScope( VK_IMAGE_LAYOUT_UNDEFINED, &nStages, &nAccess ) ||
+	     nStages != VK_PIPELINE_STAGE_2_NONE || nAccess != VK_ACCESS_2_NONE ) {
+		return 70;
+	}
+	if ( !sirVulkanImageAccessScope( VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, &nStages, &nAccess ) ||
+	     nStages != VK_PIPELINE_STAGE_2_COPY_BIT || nAccess != VK_ACCESS_2_TRANSFER_READ_BIT ) {
+		return 71;
+	}
+	if ( !sirVulkanImageAccessScope( VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &nStages, &nAccess ) ||
+	     nStages != VK_PIPELINE_STAGE_2_COPY_BIT || nAccess != VK_ACCESS_2_TRANSFER_WRITE_BIT ) {
+		return 72;
+	}
+	if ( !sirVulkanImageAccessScope( VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, &nStages, &nAccess ) ||
+	     nStages != VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT || nAccess != VK_ACCESS_2_MEMORY_READ_BIT ) {
+		return 73;
+	}
+	if ( !sirVulkanImageAccessScope( VK_IMAGE_LAYOUT_GENERAL, &nStages, &nAccess ) ||
+	     nAccess != ( VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT ) ) {
+		return 74;
+	}
+	if ( !sirVulkanImageAccessScope( VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL, &nStages, &nAccess ) ||
+	     nStages != VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT ||
+	     nAccess != ( VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT ) ) {
+		return 75;
+	}
+	if ( !sirVulkanImageAccessScope( VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, &nStages, &nAccess ) ||
+	     nStages != ( VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT ) ||
+	     nAccess != ( VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT ) ) {
+		return 76;
+	}
+	if ( !sirVulkanImageAccessScope( VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, &nStages, &nAccess ) ||
+	     nStages != VK_PIPELINE_STAGE_2_NONE || nAccess != VK_ACCESS_2_NONE ) {
+		return 77;
+	}
+	if ( sirVulkanImageAccessScope( VK_IMAGE_LAYOUT_MAX_ENUM, &nStages, &nAccess ) || nStages != VK_PIPELINE_STAGE_2_NONE ||
+	     nAccess != VK_ACCESS_2_NONE || sirVulkanImageAccessScope( VK_IMAGE_LAYOUT_UNDEFINED, nullptr, &nAccess ) ||
+	     sirVulkanImageAccessScope( VK_IMAGE_LAYOUT_UNDEFINED, &nStages, nullptr ) ) {
+		return 78;
+	}
 	printf( "Vulkan image barrier contracts passed\n" );
 	return 0;
 }

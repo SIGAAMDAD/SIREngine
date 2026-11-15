@@ -79,6 +79,17 @@ if(SIR_WITH_VULKAN)
     add_test(NAME render.vulkan.recorded-commands COMMAND SIRVulkanRecordedCommandsTests)
     sir_configure_owned_target(SIRVulkanRecordedCommandsTests)
 
+    # Driver-local RAII rollback and fixed-capacity handle guard contracts.
+    add_executable(SIRVulkanRAIIGuardTests SIRVulkanRAIIGuardTests.cpp)
+    target_link_libraries(SIRVulkanRAIIGuardTests PRIVATE SIR::Vulkan)
+    add_test(NAME render.vulkan.raii-guards COMMAND SIRVulkanRAIIGuardTests)
+    sir_configure_owned_target(SIRVulkanRAIIGuardTests)
+
+    add_executable(SIRVulkanDrawRecordingTests SIRVulkanDrawRecordingTests.cpp)
+    target_link_libraries(SIRVulkanDrawRecordingTests PRIVATE SIR::Vulkan)
+    add_test(NAME render.vulkan.draw-recording COMMAND SIRVulkanDrawRecordingTests)
+    sir_configure_owned_target(SIRVulkanDrawRecordingTests)
+
     add_executable(SIRVulkanCopyBatchTests SIRVulkanCopyBatchTests.cpp)
     target_link_libraries(SIRVulkanCopyBatchTests PRIVATE SIR::Vulkan)
     add_test(NAME render.vulkan.copy-batch COMMAND SIRVulkanCopyBatchTests)
