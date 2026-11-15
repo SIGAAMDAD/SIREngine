@@ -14,6 +14,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Renderer/Drivers/OpenGL/SIRGLFramebufferCache.h>
+#include <Renderer/Drivers/OpenGL/SIRGLScopedOwnership.h>
 #include <limits.h>
 #include <string.h>
 
@@ -129,6 +130,8 @@ sirGraphicsResult_t sirGLFramebufferCacheAcquire( sirGLFramebufferCache_t *pCach
 	if ( eResult != SIR_GRAPHICS_SUCCESS ) {
 		return eResult;
 	}
+	SIRGLScopedName<sirGLFramebufferDispatch_t, sirGLDeleteNativeFramebuffer> pendingFramebuffer( pCache->pDispatch );
+	pendingFramebuffer.adopt( nNewName );
 	uint32_t nSlotIndex = pCache->nCapacity;
 	for ( uint32_t i = 0; i < pCache->nCapacity; ++i ) {
 		if ( pCache->pSlots[i].nName == 0 ) {
@@ -140,7 +143,6 @@ sirGraphicsResult_t sirGLFramebufferCacheAcquire( sirGLFramebufferCache_t *pCach
 		nSlotIndex = pCache->nNextVictim;
 		eResult = sirGLDeleteNativeFramebuffer( pCache->pDispatch, pCache->pSlots[nSlotIndex].nName );
 		if ( eResult != SIR_GRAPHICS_SUCCESS ) {
-			( void )sirGLDeleteNativeFramebuffer( pCache->pDispatch, nNewName );
 			return eResult;
 		}
 		pCache->nNextVictim = nSlotIndex + 1 == pCache->nCapacity ? 0 : nSlotIndex + 1;
@@ -148,7 +150,7 @@ sirGraphicsResult_t sirGLFramebufferCacheAcquire( sirGLFramebufferCache_t *pCach
 		++pCache->nCount;
 	}
 	pCache->pSlots[nSlotIndex].key = *pKey;
-	pCache->pSlots[nSlotIndex].nName = nNewName;
+	pCache->pSlots[nSlotIndex].nName = pendingFramebuffer.release();
 	*pName = nNewName;
 	return SIR_GRAPHICS_SUCCESS;
 }

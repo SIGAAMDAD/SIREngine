@@ -14,6 +14,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Renderer/Drivers/OpenGL/SIRGLSamplers.h>
+#include <Renderer/Drivers/OpenGL/SIRGLScopedOwnership.h>
 #include <cmath>
 
 static constexpr uint32_t SIR_GL_SAMPLER_NO_ERROR = 0;
@@ -59,11 +60,11 @@ sirGraphicsResult_t sirGLLoadSamplerDispatch( sirGLProcedureLookup_t pLookup, vo
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
 	sirGLSamplerDispatch_t result = {};
-	result.pCreateSamplers = ( decltype( result.pCreateSamplers ) )pCreate;
-	result.pDeleteSamplers = ( decltype( result.pDeleteSamplers ) )pDelete;
-	result.pSamplerParameteri = ( decltype( result.pSamplerParameteri ) )pSetInt;
-	result.pSamplerParameterf = ( decltype( result.pSamplerParameterf ) )pSetFloat;
-	result.pGetError = ( decltype( result.pGetError ) )pError;
+	result.glCreateSamplers = ( decltype( result.glCreateSamplers ) )pCreate;
+	result.glDeleteSamplers = ( decltype( result.glDeleteSamplers ) )pDelete;
+	result.glSamplerParameteri = ( decltype( result.glSamplerParameteri ) )pSetInt;
+	result.glSamplerParameterf = ( decltype( result.glSamplerParameterf ) )pSetFloat;
+	result.glGetError = ( decltype( result.glGetError ) )pError;
 	*pAPI = result;
 	return SIR_GRAPHICS_SUCCESS;
 }
@@ -71,59 +72,58 @@ sirGraphicsResult_t sirGLLoadSamplerDispatch( sirGLProcedureLookup_t pLookup, vo
 sirGraphicsResult_t sirGLCreateNativeSampler( const sirGLSamplerDispatch_t *pAPI, const sirGraphicsSamplerDesc_t *pDesc,
                                               uint32_t *pName ) noexcept
 {
-	if ( pAPI == nullptr || pDesc == nullptr || pName == nullptr || pAPI->pCreateSamplers == nullptr || pAPI->pDeleteSamplers == nullptr ||
-	     pAPI->pSamplerParameteri == nullptr || pAPI->pSamplerParameterf == nullptr || pAPI->pGetError == nullptr ||
-	     pDesc->eFilter > SIR_GRAPHICS_FILTER_ANISOTROPIC || pDesc->eAddressU > SIR_GRAPHICS_ADDRESS_BORDER ||
-	     pDesc->eAddressV > SIR_GRAPHICS_ADDRESS_BORDER || pDesc->eAddressW > SIR_GRAPHICS_ADDRESS_BORDER ||
-	     !( pDesc->fMaximumAnisotropy >= 1.0f ) || !( pDesc->fMaximumAnisotropy <= 16.0f ) || !std::isfinite( pDesc->fMinimumLod ) ||
-	     !std::isfinite( pDesc->fMaximumLod ) || pDesc->fMinimumLod > pDesc->fMaximumLod ) {
+	if ( pAPI == nullptr || pDesc == nullptr || pName == nullptr || pAPI->glCreateSamplers == nullptr ||
+	     pAPI->glDeleteSamplers == nullptr || pAPI->glSamplerParameteri == nullptr || pAPI->glSamplerParameterf == nullptr ||
+	     pAPI->glGetError == nullptr || pDesc->eFilter > SIR_GRAPHICS_FILTER_ANISOTROPIC ||
+	     pDesc->eAddressU > SIR_GRAPHICS_ADDRESS_BORDER || pDesc->eAddressV > SIR_GRAPHICS_ADDRESS_BORDER ||
+	     pDesc->eAddressW > SIR_GRAPHICS_ADDRESS_BORDER || !( pDesc->fMaximumAnisotropy >= 1.0f ) ||
+	     !( pDesc->fMaximumAnisotropy <= 16.0f ) || !std::isfinite( pDesc->fMinimumLod ) || !std::isfinite( pDesc->fMaximumLod ) ||
+	     pDesc->fMinimumLod > pDesc->fMaximumLod ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	// GL_EXT_texture_filter_anisotropic is not part of mandatory OpenGL 4.6 core.
 	if ( pDesc->eFilter == SIR_GRAPHICS_FILTER_ANISOTROPIC || pDesc->fMaximumAnisotropy != 1.0f ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
-	if ( pAPI->pGetError() != SIR_GL_SAMPLER_NO_ERROR ) {
+	if ( pAPI->glGetError() != SIR_GL_SAMPLER_NO_ERROR ) {
 		return SIR_GRAPHICS_DRIVER_ERROR;
 	}
 	uint32_t nName = 0;
-	pAPI->pCreateSamplers( 1, &nName );
-	const uint32_t nCreateError = pAPI->pGetError();
+	pAPI->glCreateSamplers( 1, &nName );
+	const uint32_t nCreateError = pAPI->glGetError();
+	SIRGLScopedName<sirGLSamplerDispatch_t, sirGLDeleteNativeSampler> nameGuard( pAPI );
+	nameGuard.adopt( nName );
 	if ( nCreateError != SIR_GL_SAMPLER_NO_ERROR || nName == 0 ) {
-		if ( nName != 0 ) {
-			pAPI->pDeleteSamplers( 1, &nName );
-		}
 		return sirGLSamplerError( nCreateError );
 	}
 	const int32_t nMinFilter = pDesc->eFilter == SIR_GRAPHICS_FILTER_TRILINEAR ? SIR_GL_LINEAR_MIPMAP_LINEAR
 	                           : pDesc->eFilter == SIR_GRAPHICS_FILTER_NEAREST ? SIR_GL_NEAREST
 	                                                                           : SIR_GL_LINEAR;
 	const int32_t nMagFilter = pDesc->eFilter == SIR_GRAPHICS_FILTER_NEAREST ? SIR_GL_NEAREST : SIR_GL_LINEAR;
-	pAPI->pSamplerParameteri( nName, SIR_GL_TEXTURE_MIN_FILTER, nMinFilter );
-	pAPI->pSamplerParameteri( nName, SIR_GL_TEXTURE_MAG_FILTER, nMagFilter );
-	pAPI->pSamplerParameteri( nName, SIR_GL_TEXTURE_WRAP_S, sirGLSamplerAddress( pDesc->eAddressU ) );
-	pAPI->pSamplerParameteri( nName, SIR_GL_TEXTURE_WRAP_T, sirGLSamplerAddress( pDesc->eAddressV ) );
-	pAPI->pSamplerParameteri( nName, SIR_GL_TEXTURE_WRAP_R, sirGLSamplerAddress( pDesc->eAddressW ) );
-	pAPI->pSamplerParameterf( nName, SIR_GL_TEXTURE_MIN_LOD, pDesc->fMinimumLod );
-	pAPI->pSamplerParameterf( nName, SIR_GL_TEXTURE_MAX_LOD, pDesc->fMaximumLod );
-	const uint32_t nConfigError = pAPI->pGetError();
+	pAPI->glSamplerParameteri( nName, SIR_GL_TEXTURE_MIN_FILTER, nMinFilter );
+	pAPI->glSamplerParameteri( nName, SIR_GL_TEXTURE_MAG_FILTER, nMagFilter );
+	pAPI->glSamplerParameteri( nName, SIR_GL_TEXTURE_WRAP_S, sirGLSamplerAddress( pDesc->eAddressU ) );
+	pAPI->glSamplerParameteri( nName, SIR_GL_TEXTURE_WRAP_T, sirGLSamplerAddress( pDesc->eAddressV ) );
+	pAPI->glSamplerParameteri( nName, SIR_GL_TEXTURE_WRAP_R, sirGLSamplerAddress( pDesc->eAddressW ) );
+	pAPI->glSamplerParameterf( nName, SIR_GL_TEXTURE_MIN_LOD, pDesc->fMinimumLod );
+	pAPI->glSamplerParameterf( nName, SIR_GL_TEXTURE_MAX_LOD, pDesc->fMaximumLod );
+	const uint32_t nConfigError = pAPI->glGetError();
 	if ( nConfigError != SIR_GL_SAMPLER_NO_ERROR ) {
-		pAPI->pDeleteSamplers( 1, &nName );
 		return sirGLSamplerError( nConfigError );
 	}
-	*pName = nName;
+	*pName = nameGuard.release();
 	return SIR_GRAPHICS_SUCCESS;
 }
 
 sirGraphicsResult_t sirGLDeleteNativeSampler( const sirGLSamplerDispatch_t *pAPI, uint32_t nName ) noexcept
 {
-	if ( pAPI == nullptr || pAPI->pDeleteSamplers == nullptr || pAPI->pGetError == nullptr || nName == 0 ) {
+	if ( pAPI == nullptr || pAPI->glDeleteSamplers == nullptr || pAPI->glGetError == nullptr || nName == 0 ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	if ( pAPI->pGetError() != SIR_GL_SAMPLER_NO_ERROR ) {
+	if ( pAPI->glGetError() != SIR_GL_SAMPLER_NO_ERROR ) {
 		return SIR_GRAPHICS_DRIVER_ERROR;
 	}
-	pAPI->pDeleteSamplers( 1, &nName );
-	const uint32_t nError = pAPI->pGetError();
+	pAPI->glDeleteSamplers( 1, &nName );
+	const uint32_t nError = pAPI->glGetError();
 	return nError == SIR_GL_SAMPLER_NO_ERROR ? SIR_GRAPHICS_SUCCESS : sirGLSamplerError( nError );
 }

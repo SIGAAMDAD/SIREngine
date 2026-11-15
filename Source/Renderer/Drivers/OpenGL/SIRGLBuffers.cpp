@@ -14,6 +14,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Renderer/Drivers/OpenGL/SIRGLBuffers.h>
+#include <Renderer/Drivers/OpenGL/SIRGLScopedOwnership.h>
 #include <stdint.h>
 
 static constexpr uint32_t SIR_GL_NO_ERROR = 0;
@@ -41,10 +42,10 @@ sirGraphicsResult_t sirGLLoadBufferDispatch( sirGLProcedureLookup_t pLookup, voi
 	     !sirGLIsUsableProcedure( pError ) ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
-	result.pCreateBuffers = ( decltype( result.pCreateBuffers ) )pCreate;
-	result.pNamedBufferStorage = ( decltype( result.pNamedBufferStorage ) )pStorage;
-	result.pDeleteBuffers = ( decltype( result.pDeleteBuffers ) )pDelete;
-	result.pGetError = ( decltype( result.pGetError ) )pError;
+	result.glCreateBuffers = ( decltype( result.glCreateBuffers ) )pCreate;
+	result.glNamedBufferStorage = ( decltype( result.glNamedBufferStorage ) )pStorage;
+	result.glDeleteBuffers = ( decltype( result.glDeleteBuffers ) )pDelete;
+	result.glGetError = ( decltype( result.glGetError ) )pError;
 	*pAPI = result;
 	return SIR_GRAPHICS_SUCCESS;
 }
@@ -52,9 +53,10 @@ sirGraphicsResult_t sirGLLoadBufferDispatch( sirGLProcedureLookup_t pLookup, voi
 sirGraphicsResult_t sirGLCreateNativeBuffer( const sirGLBufferDispatch_t *pAPI, const sirGraphicsBufferDesc_t *pDesc,
                                              uint32_t *pName ) noexcept
 {
-	if ( pAPI == nullptr || pDesc == nullptr || pName == nullptr || pAPI->pCreateBuffers == nullptr ||
-	     pAPI->pNamedBufferStorage == nullptr || pAPI->pDeleteBuffers == nullptr || pAPI->pGetError == nullptr || pDesc->nSizeBytes == 0 ||
-	     pDesc->nSizeBytes > ( uint64_t )INTPTR_MAX || pDesc->nUsage == 0 || ( pDesc->nUsage & ~SIR_GL_BUFFER_USES ) != 0 ||
+	if ( pAPI == nullptr || pDesc == nullptr || pName == nullptr || pAPI->glCreateBuffers == nullptr ||
+	     pAPI->glNamedBufferStorage == nullptr || pAPI->glDeleteBuffers == nullptr || pAPI->glGetError == nullptr ||
+	     pDesc->nSizeBytes == 0 || pDesc->nSizeBytes > ( uint64_t )INTPTR_MAX || pDesc->nUsage == 0 ||
+	     ( pDesc->nUsage & ~SIR_GL_BUFFER_USES ) != 0 ||
 	     ( pDesc->nAlignmentBytes != 0 && ( pDesc->nAlignmentBytes & ( pDesc->nAlignmentBytes - 1 ) ) != 0 ) ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
@@ -62,37 +64,35 @@ sirGraphicsResult_t sirGLCreateNativeBuffer( const sirGLBufferDispatch_t *pAPI, 
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
 	// Never attribute a previously queued GL error to a new allocation.
-	if ( pAPI->pGetError() != SIR_GL_NO_ERROR ) {
+	if ( pAPI->glGetError() != SIR_GL_NO_ERROR ) {
 		return SIR_GRAPHICS_DRIVER_ERROR;
 	}
 	uint32_t nName = 0;
-	pAPI->pCreateBuffers( 1, &nName );
-	const uint32_t nCreateError = pAPI->pGetError();
+	pAPI->glCreateBuffers( 1, &nName );
+	const uint32_t nCreateError = pAPI->glGetError();
+	SIRGLScopedName<sirGLBufferDispatch_t, sirGLDeleteNativeBuffer> nameGuard( pAPI );
+	nameGuard.adopt( nName );
 	if ( nCreateError != SIR_GL_NO_ERROR || nName == 0 ) {
-		if ( nName != 0 ) {
-			pAPI->pDeleteBuffers( 1, &nName );
-		}
 		return sirGLMapError( nCreateError );
 	}
-	pAPI->pNamedBufferStorage( nName, ( intptr_t )pDesc->nSizeBytes, nullptr, 0 );
-	const uint32_t nStorageError = pAPI->pGetError();
+	pAPI->glNamedBufferStorage( nName, ( intptr_t )pDesc->nSizeBytes, nullptr, 0 );
+	const uint32_t nStorageError = pAPI->glGetError();
 	if ( nStorageError != SIR_GL_NO_ERROR ) {
-		pAPI->pDeleteBuffers( 1, &nName );
 		return sirGLMapError( nStorageError );
 	}
-	*pName = nName;
+	*pName = nameGuard.release();
 	return SIR_GRAPHICS_SUCCESS;
 }
 
 sirGraphicsResult_t sirGLDeleteNativeBuffer( const sirGLBufferDispatch_t *pAPI, uint32_t nName ) noexcept
 {
-	if ( pAPI == nullptr || pAPI->pDeleteBuffers == nullptr || pAPI->pGetError == nullptr || nName == 0 ) {
+	if ( pAPI == nullptr || pAPI->glDeleteBuffers == nullptr || pAPI->glGetError == nullptr || nName == 0 ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	if ( pAPI->pGetError() != SIR_GL_NO_ERROR ) {
+	if ( pAPI->glGetError() != SIR_GL_NO_ERROR ) {
 		return SIR_GRAPHICS_DRIVER_ERROR;
 	}
-	pAPI->pDeleteBuffers( 1, &nName );
-	const uint32_t nError = pAPI->pGetError();
+	pAPI->glDeleteBuffers( 1, &nName );
+	const uint32_t nError = pAPI->glGetError();
 	return nError == SIR_GL_NO_ERROR ? SIR_GRAPHICS_SUCCESS : sirGLMapError( nError );
 }

@@ -29,13 +29,13 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 typedef struct sirGLTextureDispatch_s
 {
-	void ( *pCreateTextures )( uint32_t nTarget, int32_t nCount, uint32_t *pNames );
-	void ( *pGenTextures )( int32_t nCount, uint32_t *pNames );
-	void ( *pTextureView )( uint32_t nName, uint32_t nTarget, uint32_t nParent, uint32_t nFormat, uint32_t nBaseMip, uint32_t nMipLevels,
-	                        uint32_t nBaseLayer, uint32_t nLayers );
-	void ( *pTextureStorage2D )( uint32_t nName, int32_t nLevels, uint32_t nInternalFormat, int32_t nWidth, int32_t nHeight );
-	void ( *pDeleteTextures )( int32_t nCount, const uint32_t *pNames );
-	uint32_t ( *pGetError )( void );
+	void ( *glCreateTextures )( uint32_t nTarget, int32_t nCount, uint32_t *pNames );
+	void ( *glGenTextures )( int32_t nCount, uint32_t *pNames );
+	void ( *glTextureView )( uint32_t nName, uint32_t nTarget, uint32_t nParent, uint32_t nFormat, uint32_t nBaseMip, uint32_t nMipLevels,
+	                         uint32_t nBaseLayer, uint32_t nLayers );
+	void ( *glTextureStorage2D )( uint32_t nName, int32_t nLevels, uint32_t nInternalFormat, int32_t nWidth, int32_t nHeight );
+	void ( *glDeleteTextures )( int32_t nCount, const uint32_t *pNames );
+	uint32_t ( *glGetError )( void );
 } sirGLTextureDispatch_t;
 
 typedef struct sirGLNativeTexture_s

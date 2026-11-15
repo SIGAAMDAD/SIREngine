@@ -29,13 +29,13 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 typedef struct sirGLFramebufferDispatch_s
 {
-	void ( *pCreateFramebuffers )( int32_t nCount, uint32_t *pNames );
-	void ( *pDeleteFramebuffers )( int32_t nCount, const uint32_t *pNames );
-	void ( *pNamedFramebufferTexture )( uint32_t nFramebuffer, uint32_t nAttachment, uint32_t nTexture, int32_t nLevel );
-	uint32_t ( *pCheckNamedFramebufferStatus )( uint32_t nFramebuffer, uint32_t nTarget );
-	void ( *pNamedFramebufferDrawBuffer )( uint32_t nFramebuffer, uint32_t nMode );
-	void ( *pNamedFramebufferReadBuffer )( uint32_t nFramebuffer, uint32_t nMode );
-	uint32_t ( *pGetError )( void );
+	void ( *glCreateFramebuffers )( int32_t nCount, uint32_t *pNames );
+	void ( *glDeleteFramebuffers )( int32_t nCount, const uint32_t *pNames );
+	void ( *glNamedFramebufferTexture )( uint32_t nFramebuffer, uint32_t nAttachment, uint32_t nTexture, int32_t nLevel );
+	uint32_t ( *glCheckNamedFramebufferStatus )( uint32_t nFramebuffer, uint32_t nTarget );
+	void ( *glNamedFramebufferDrawBuffer )( uint32_t nFramebuffer, uint32_t nMode );
+	void ( *glNamedFramebufferReadBuffer )( uint32_t nFramebuffer, uint32_t nMode );
+	uint32_t ( *glGetError )( void );
 } sirGLFramebufferDispatch_t;
 
 typedef struct sirGLFramebufferDesc_s

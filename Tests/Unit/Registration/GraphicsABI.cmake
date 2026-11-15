@@ -103,6 +103,10 @@ if(SIR_WITH_GOOGLETEST)
 endif()
 
 if(SIR_WITH_OPENGL)
+    add_executable(SIRGL46ScopedOwnershipTests Renderer/OpenGL/SIRGLScopedOwnershipTests.cpp)
+    target_link_libraries(SIRGL46ScopedOwnershipTests PRIVATE SIR::Graphics)
+    sir_configure_owned_target(SIRGL46ScopedOwnershipTests)
+    add_test(NAME renderer.opengl46.scoped-ownership COMMAND SIRGL46ScopedOwnershipTests)
     add_executable(SIRGL46FramebufferCacheTests
         Renderer/OpenGL/SIRGLFramebufferCacheTests.cpp
         "${PROJECT_SOURCE_DIR}/Source/Renderer/Drivers/OpenGL/SIRGLFramebufferCache.cpp")

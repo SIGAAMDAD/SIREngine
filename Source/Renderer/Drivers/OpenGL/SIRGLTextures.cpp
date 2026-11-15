@@ -14,6 +14,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Renderer/Drivers/OpenGL/SIRGLTextures.h>
+#include <Renderer/Drivers/OpenGL/SIRGLScopedOwnership.h>
 #include <stdint.h>
 
 static constexpr uint32_t SIR_GL_TEX_NO_ERROR = 0;
@@ -47,12 +48,12 @@ sirGraphicsResult_t sirGLLoadTextureDispatch( sirGLProcedureLookup_t pLookup, vo
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
 	sirGLTextureDispatch_t result = {};
-	result.pCreateTextures = ( decltype( result.pCreateTextures ) )pCreate;
-	result.pGenTextures = ( decltype( result.pGenTextures ) )pGen;
-	result.pTextureView = ( decltype( result.pTextureView ) )pView;
-	result.pTextureStorage2D = ( decltype( result.pTextureStorage2D ) )pStorage;
-	result.pDeleteTextures = ( decltype( result.pDeleteTextures ) )pDelete;
-	result.pGetError = ( decltype( result.pGetError ) )pError;
+	result.glCreateTextures = ( decltype( result.glCreateTextures ) )pCreate;
+	result.glGenTextures = ( decltype( result.glGenTextures ) )pGen;
+	result.glTextureView = ( decltype( result.glTextureView ) )pView;
+	result.glTextureStorage2D = ( decltype( result.glTextureStorage2D ) )pStorage;
+	result.glDeleteTextures = ( decltype( result.glDeleteTextures ) )pDelete;
+	result.glGetError = ( decltype( result.glGetError ) )pError;
 	*pAPI = result;
 	return SIR_GRAPHICS_SUCCESS;
 }
@@ -120,73 +121,69 @@ sirGraphicsResult_t sirGLCreateNativeTexture2D( const sirGLTextureDispatch_t *pA
                                                 sirGLNativeTexture_t *pTexture ) noexcept
 {
 	if ( pAPI == nullptr || pDesc == nullptr || pTexture == nullptr || pTexture->nRequestedBytes == 0 || pTexture->nInternalFormat == 0 ||
-	     pAPI->pCreateTextures == nullptr || pAPI->pTextureStorage2D == nullptr || pAPI->pDeleteTextures == nullptr ||
-	     pAPI->pGetError == nullptr ) {
+	     pAPI->glCreateTextures == nullptr || pAPI->glTextureStorage2D == nullptr || pAPI->glDeleteTextures == nullptr ||
+	     pAPI->glGetError == nullptr ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	if ( pAPI->pGetError() != SIR_GL_TEX_NO_ERROR ) {
+	if ( pAPI->glGetError() != SIR_GL_TEX_NO_ERROR ) {
 		return SIR_GRAPHICS_DRIVER_ERROR;
 	}
 	uint32_t nName = 0;
-	pAPI->pCreateTextures( SIR_GL_TEXTURE_2D, 1, &nName );
-	const uint32_t nCreateError = pAPI->pGetError();
+	pAPI->glCreateTextures( SIR_GL_TEXTURE_2D, 1, &nName );
+	const uint32_t nCreateError = pAPI->glGetError();
+	SIRGLScopedName<sirGLTextureDispatch_t, sirGLDeleteNativeTexture> nameGuard( pAPI );
+	nameGuard.adopt( nName );
 	if ( nCreateError != SIR_GL_TEX_NO_ERROR || nName == 0 ) {
-		if ( nName != 0 ) {
-			pAPI->pDeleteTextures( 1, &nName );
-		}
 		return sirGLTextureError( nCreateError );
 	}
-	pAPI->pTextureStorage2D( nName, ( int32_t )pDesc->nMipLevels, pTexture->nInternalFormat, ( int32_t )pDesc->nWidth,
-	                         ( int32_t )pDesc->nHeight );
-	const uint32_t nStorageError = pAPI->pGetError();
+	pAPI->glTextureStorage2D( nName, ( int32_t )pDesc->nMipLevels, pTexture->nInternalFormat, ( int32_t )pDesc->nWidth,
+	                          ( int32_t )pDesc->nHeight );
+	const uint32_t nStorageError = pAPI->glGetError();
 	if ( nStorageError != SIR_GL_TEX_NO_ERROR ) {
-		pAPI->pDeleteTextures( 1, &nName );
 		return sirGLTextureError( nStorageError );
 	}
-	pTexture->nName = nName;
+	pTexture->nName = nameGuard.release();
 	return SIR_GRAPHICS_SUCCESS;
 }
 
 sirGraphicsResult_t sirGLCreateNativeTextureView( const sirGLTextureDispatch_t *pAPI, const sirGLTextureViewCreateInfo_t *pInfo,
                                                   uint32_t *pName ) noexcept
 {
-	if ( pAPI == nullptr || pInfo == nullptr || pName == nullptr || pAPI->pGenTextures == nullptr || pAPI->pTextureView == nullptr ||
-	     pAPI->pDeleteTextures == nullptr || pAPI->pGetError == nullptr || pInfo->nParentName == 0 || pInfo->nInternalFormat == 0 ||
+	if ( pAPI == nullptr || pInfo == nullptr || pName == nullptr || pAPI->glGenTextures == nullptr || pAPI->glTextureView == nullptr ||
+	     pAPI->glDeleteTextures == nullptr || pAPI->glGetError == nullptr || pInfo->nParentName == 0 || pInfo->nInternalFormat == 0 ||
 	     pInfo->nMipLevels == 0 ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	if ( pAPI->pGetError() != SIR_GL_TEX_NO_ERROR ) {
+	if ( pAPI->glGetError() != SIR_GL_TEX_NO_ERROR ) {
 		return SIR_GRAPHICS_DRIVER_ERROR;
 	}
 	uint32_t nName = 0;
 	// GL requires an unbound glGenTextures name, not a DSA-created texture object.
-	pAPI->pGenTextures( 1, &nName );
-	const uint32_t nGenError = pAPI->pGetError();
+	pAPI->glGenTextures( 1, &nName );
+	const uint32_t nGenError = pAPI->glGetError();
+	SIRGLScopedName<sirGLTextureDispatch_t, sirGLDeleteNativeTexture> viewGuard( pAPI );
+	viewGuard.adopt( nName );
 	if ( nGenError != SIR_GL_TEX_NO_ERROR || nName == 0 ) {
-		if ( nName != 0 ) {
-			pAPI->pDeleteTextures( 1, &nName );
-		}
 		return sirGLTextureError( nGenError );
 	}
-	pAPI->pTextureView( nName, SIR_GL_TEXTURE_2D, pInfo->nParentName, pInfo->nInternalFormat, pInfo->nBaseMip, pInfo->nMipLevels, 0, 1 );
-	const uint32_t nViewError = pAPI->pGetError();
+	pAPI->glTextureView( nName, SIR_GL_TEXTURE_2D, pInfo->nParentName, pInfo->nInternalFormat, pInfo->nBaseMip, pInfo->nMipLevels, 0, 1 );
+	const uint32_t nViewError = pAPI->glGetError();
 	if ( nViewError != SIR_GL_TEX_NO_ERROR ) {
-		pAPI->pDeleteTextures( 1, &nName );
 		return sirGLTextureError( nViewError );
 	}
-	*pName = nName;
+	*pName = viewGuard.release();
 	return SIR_GRAPHICS_SUCCESS;
 }
 
 sirGraphicsResult_t sirGLDeleteNativeTexture( const sirGLTextureDispatch_t *pAPI, uint32_t nName ) noexcept
 {
-	if ( pAPI == nullptr || pAPI->pDeleteTextures == nullptr || pAPI->pGetError == nullptr || nName == 0 ) {
+	if ( pAPI == nullptr || pAPI->glDeleteTextures == nullptr || pAPI->glGetError == nullptr || nName == 0 ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	if ( pAPI->pGetError() != SIR_GL_TEX_NO_ERROR ) {
+	if ( pAPI->glGetError() != SIR_GL_TEX_NO_ERROR ) {
 		return SIR_GRAPHICS_DRIVER_ERROR;
 	}
-	pAPI->pDeleteTextures( 1, &nName );
-	const uint32_t nError = pAPI->pGetError();
+	pAPI->glDeleteTextures( 1, &nName );
+	const uint32_t nError = pAPI->glGetError();
 	return nError == SIR_GL_TEX_NO_ERROR ? SIR_GRAPHICS_SUCCESS : sirGLTextureError( nError );
 }

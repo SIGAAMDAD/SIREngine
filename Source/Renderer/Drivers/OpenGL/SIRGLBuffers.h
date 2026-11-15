@@ -29,10 +29,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 typedef struct sirGLBufferDispatch_s
 {
-	void ( *pCreateBuffers )( int32_t nCount, uint32_t *pNames );
-	void ( *pNamedBufferStorage )( uint32_t nName, intptr_t nBytes, const void *pData, uint32_t nFlags );
-	void ( *pDeleteBuffers )( int32_t nCount, const uint32_t *pNames );
-	uint32_t ( *pGetError )( void );
+	void ( *glCreateBuffers )( int32_t nCount, uint32_t *pNames );
+	void ( *glNamedBufferStorage )( uint32_t nName, intptr_t nBytes, const void *pData, uint32_t nFlags );
+	void ( *glDeleteBuffers )( int32_t nCount, const uint32_t *pNames );
+	uint32_t ( *glGetError )( void );
 } sirGLBufferDispatch_t;
 
 sirGraphicsResult_t sirGLLoadBufferDispatch( sirGLProcedureLookup_t pLookup, void *pContext, sirGLBufferDispatch_t *pAPI ) noexcept;

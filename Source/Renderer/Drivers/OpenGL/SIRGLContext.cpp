@@ -16,6 +16,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Renderer/Drivers/OpenGL/SIRGLContext.h>
 #include <Renderer/Drivers/OpenGL/SIRGLFunctionLoader.h>
 #include <string.h>
+#include <new>
 
 #if defined( _WIN32 )
 #include <windows.h>
@@ -73,11 +74,15 @@ static constexpr sirEGLInt_t SIR_EGL_EXTENSIONS = 0x3055;
 typedef const uint8_t *( *sirGLGetString_t )( uint32_t nName );
 typedef void ( *sirGLGetIntegerv_t )( uint32_t nName, int32_t *pValue );
 
-typedef struct sirGLNativeContext_s
+struct sirGLNativeContext_s final
 {
+	sirGLNativeContext_s( void ) noexcept = default;
+	~sirGLNativeContext_s( void ) noexcept;
+	sirGLNativeContext_s( const sirGLNativeContext_s& ) = delete;
+	sirGLNativeContext_s& operator=( const sirGLNativeContext_s& ) = delete;
 	sirGraphicsABIHost_t host;
-	sirGLGetString_t pGetString;
-	sirGLGetIntegerv_t pGetInteger;
+	sirGLGetString_t glGetString;
+	sirGLGetIntegerv_t glGetIntegerv;
 #if defined( _WIN32 )
 	DWORD nOwnerThread;
 	HMODULE pLibrary;
@@ -91,14 +96,14 @@ typedef struct sirGLNativeContext_s
 	sirEGLDisplay_t pDisplay;
 	sirEGLSurface_t pSurface;
 	sirEGLContext_t pRenderContext;
-	sirEGLMakeCurrent_t pMakeCurrent;
-	sirEGLDestroyContext_t pDestroyContext;
-	sirEGLDestroySurface_t pDestroySurface;
-	sirEGLTerminate_t pTerminate;
-	sirEGLGetCurrentContext_t pGetCurrentContext;
-	sirEGLGetProcAddress_t pGetProcAddress;
+	sirEGLMakeCurrent_t eglMakeCurrent;
+	sirEGLDestroyContext_t eglDestroyContext;
+	sirEGLDestroySurface_t eglDestroySurface;
+	sirEGLTerminate_t eglTerminate;
+	sirEGLGetCurrentContext_t eglGetCurrentContext;
+	sirEGLGetProcAddress_t eglGetProcAddress;
 #endif
-} sirGLNativeContext_t;
+};
 
 void *sirGLResolveNativeProcedure( void *pUserData, const char *pszName ) noexcept
 {
@@ -112,7 +117,7 @@ void *sirGLResolveNativeProcedure( void *pUserData, const char *pszName ) noexce
 		pAddress = ( void * )GetProcAddress( pContext->pLibrary, pszName );
 	}
 #else
-	void *pAddress = pContext->pGetProcAddress != nullptr ? pContext->pGetProcAddress( pszName ) : nullptr;
+	void *pAddress = pContext->eglGetProcAddress != nullptr ? pContext->eglGetProcAddress( pszName ) : nullptr;
 	if ( !sirGLIsUsableProcedure( pAddress ) && pContext->pLibraryGL != nullptr ) {
 		pAddress = dlsym( pContext->pLibraryGL, pszName );
 	}
@@ -147,8 +152,8 @@ static void sirGLCopyString( char *pszOutput, size_t nCapacity, const uint8_t *p
 
 sirGraphicsResult_t sirGLReadNativeProbe( sirGLNativeContext_t *pContext, sirGLProbe_t *pProbe ) noexcept
 {
-	if ( pContext == nullptr || pProbe == nullptr || !sirGLContextOwnsThread( pContext ) || pContext->pGetString == nullptr ||
-	     pContext->pGetInteger == nullptr ) {
+	if ( pContext == nullptr || pProbe == nullptr || !sirGLContextOwnsThread( pContext ) || pContext->glGetString == nullptr ||
+	     pContext->glGetIntegerv == nullptr ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 #if defined( _WIN32 )
@@ -156,30 +161,30 @@ sirGraphicsResult_t sirGLReadNativeProbe( sirGLNativeContext_t *pContext, sirGLP
 		return SIR_GRAPHICS_DEVICE_LOST;
 	}
 #else
-	if ( pContext->pGetCurrentContext == nullptr || pContext->pGetCurrentContext() != pContext->pRenderContext ) {
+	if ( pContext->eglGetCurrentContext == nullptr || pContext->eglGetCurrentContext() != pContext->pRenderContext ) {
 		return SIR_GRAPHICS_DEVICE_LOST;
 	}
 #endif
 	sirGLProbe_t probe = {};
 	int32_t nValue = 0;
-	pContext->pGetInteger( 0x821B, &nValue ); // GL_MAJOR_VERSION
+	pContext->glGetIntegerv( 0x821B, &nValue ); // GL_MAJOR_VERSION
 	probe.nMajor = nValue > 0 ? ( uint32_t )nValue : 0;
-	pContext->pGetInteger( 0x821C, &nValue ); // GL_MINOR_VERSION
+	pContext->glGetIntegerv( 0x821C, &nValue ); // GL_MINOR_VERSION
 	probe.nMinor = nValue > 0 ? ( uint32_t )nValue : 0;
-	pContext->pGetInteger( 0x9126, &nValue ); // GL_CONTEXT_PROFILE_MASK
+	pContext->glGetIntegerv( 0x9126, &nValue ); // GL_CONTEXT_PROFILE_MASK
 	probe.nCoreProfileMask = ( uint32_t )nValue;
-	pContext->pGetInteger( 0x0D33, &nValue ); // GL_MAX_TEXTURE_SIZE
+	pContext->glGetIntegerv( 0x0D33, &nValue ); // GL_MAX_TEXTURE_SIZE
 	probe.nMaximumTextureSize = nValue > 0 ? ( uint32_t )nValue : 0;
-	pContext->pGetInteger( 0x8CDF, &nValue ); // GL_MAX_COLOR_ATTACHMENTS
+	pContext->glGetIntegerv( 0x8CDF, &nValue ); // GL_MAX_COLOR_ATTACHMENTS
 	probe.nMaximumColorAttachments = nValue > 0 ? ( uint32_t )nValue : 0;
-	pContext->pGetInteger( 0x8A2F, &nValue ); // GL_MAX_UNIFORM_BUFFER_BINDINGS
+	pContext->glGetIntegerv( 0x8A2F, &nValue ); // GL_MAX_UNIFORM_BUFFER_BINDINGS
 	probe.nMaximumUniformBindings = nValue > 0 ? ( uint32_t )nValue : 0;
-	pContext->pGetInteger( 0x90DD, &nValue ); // GL_MAX_SHADER_STORAGE_BUFFER_BINDINGS
+	pContext->glGetIntegerv( 0x90DD, &nValue ); // GL_MAX_SHADER_STORAGE_BUFFER_BINDINGS
 	probe.nMaximumStorageBindings = nValue > 0 ? ( uint32_t )nValue : 0;
-	pContext->pGetInteger( 0x8D57, &nValue ); // GL_MAX_SAMPLES
+	pContext->glGetIntegerv( 0x8D57, &nValue ); // GL_MAX_SAMPLES
 	probe.nMaximumSamples = nValue > 0 ? ( uint32_t )nValue : 0;
-	sirGLCopyString( probe.szVendor, sizeof( probe.szVendor ), pContext->pGetString( 0x1F00 ) );
-	sirGLCopyString( probe.szRenderer, sizeof( probe.szRenderer ), pContext->pGetString( 0x1F01 ) );
+	sirGLCopyString( probe.szVendor, sizeof( probe.szVendor ), pContext->glGetString( 0x1F00 ) );
+	sirGLCopyString( probe.szRenderer, sizeof( probe.szRenderer ), pContext->glGetString( 0x1F01 ) );
 	*pProbe = probe;
 	return SIR_GRAPHICS_SUCCESS;
 }
@@ -245,9 +250,9 @@ static bool sirGLInitWindows( sirGLNativeContext_t *pContext ) noexcept
 		return false;
 	}
 	pContext->pRenderContext = pCore;
-	pContext->pGetString = ( sirGLGetString_t )GetProcAddress( pContext->pLibrary, "glGetString" );
-	pContext->pGetInteger = ( sirGLGetIntegerv_t )GetProcAddress( pContext->pLibrary, "glGetIntegerv" );
-	return pContext->pGetString != nullptr && pContext->pGetInteger != nullptr;
+	pContext->glGetString = ( sirGLGetString_t )GetProcAddress( pContext->pLibrary, "glGetString" );
+	pContext->glGetIntegerv = ( sirGLGetIntegerv_t )GetProcAddress( pContext->pLibrary, "glGetIntegerv" );
+	return pContext->glGetString != nullptr && pContext->glGetIntegerv != nullptr;
 }
 #else
 static bool sirGLInitLinux( sirGLNativeContext_t *pContext ) noexcept
@@ -258,7 +263,7 @@ static bool sirGLInitLinux( sirGLNativeContext_t *pContext ) noexcept
 		return false;
 	}
 	const sirEGLGetProcAddress_t pProc = ( sirEGLGetProcAddress_t )dlsym( pContext->pLibraryEGL, "eglGetProcAddress" );
-	pContext->pGetProcAddress = pProc;
+	pContext->eglGetProcAddress = pProc;
 	const sirEGLGetDisplay_t pGetDisplay = ( sirEGLGetDisplay_t )dlsym( pContext->pLibraryEGL, "eglGetDisplay" );
 	const sirEGLQueryString_t pQueryString = ( sirEGLQueryString_t )dlsym( pContext->pLibraryEGL, "eglQueryString" );
 	const sirEGLInitialize_t pInitialize = ( sirEGLInitialize_t )dlsym( pContext->pLibraryEGL, "eglInitialize" );
@@ -266,15 +271,15 @@ static bool sirGLInitLinux( sirGLNativeContext_t *pContext ) noexcept
 	const sirEGLBindAPI_t pBind = ( sirEGLBindAPI_t )dlsym( pContext->pLibraryEGL, "eglBindAPI" );
 	const sirEGLCreatePbufferSurface_t pPbuffer = ( sirEGLCreatePbufferSurface_t )dlsym( pContext->pLibraryEGL, "eglCreatePbufferSurface" );
 	const sirEGLCreateContext_t pCreate = ( sirEGLCreateContext_t )dlsym( pContext->pLibraryEGL, "eglCreateContext" );
-	pContext->pMakeCurrent = ( sirEGLMakeCurrent_t )dlsym( pContext->pLibraryEGL, "eglMakeCurrent" );
-	pContext->pDestroyContext = ( sirEGLDestroyContext_t )dlsym( pContext->pLibraryEGL, "eglDestroyContext" );
-	pContext->pDestroySurface = ( sirEGLDestroySurface_t )dlsym( pContext->pLibraryEGL, "eglDestroySurface" );
-	pContext->pTerminate = ( sirEGLTerminate_t )dlsym( pContext->pLibraryEGL, "eglTerminate" );
-	pContext->pGetCurrentContext = ( sirEGLGetCurrentContext_t )dlsym( pContext->pLibraryEGL, "eglGetCurrentContext" );
+	pContext->eglMakeCurrent = ( sirEGLMakeCurrent_t )dlsym( pContext->pLibraryEGL, "eglMakeCurrent" );
+	pContext->eglDestroyContext = ( sirEGLDestroyContext_t )dlsym( pContext->pLibraryEGL, "eglDestroyContext" );
+	pContext->eglDestroySurface = ( sirEGLDestroySurface_t )dlsym( pContext->pLibraryEGL, "eglDestroySurface" );
+	pContext->eglTerminate = ( sirEGLTerminate_t )dlsym( pContext->pLibraryEGL, "eglTerminate" );
+	pContext->eglGetCurrentContext = ( sirEGLGetCurrentContext_t )dlsym( pContext->pLibraryEGL, "eglGetCurrentContext" );
 	if ( pProc == nullptr || pGetDisplay == nullptr || pQueryString == nullptr || pInitialize == nullptr || pChoose == nullptr ||
-	     pBind == nullptr || pPbuffer == nullptr || pCreate == nullptr || pContext->pMakeCurrent == nullptr ||
-	     pContext->pDestroyContext == nullptr || pContext->pDestroySurface == nullptr || pContext->pTerminate == nullptr ||
-	     pContext->pGetCurrentContext == nullptr ) {
+	     pBind == nullptr || pPbuffer == nullptr || pCreate == nullptr || pContext->eglMakeCurrent == nullptr ||
+	     pContext->eglDestroyContext == nullptr || pContext->eglDestroySurface == nullptr || pContext->eglTerminate == nullptr ||
+	     pContext->eglGetCurrentContext == nullptr ) {
 		return false;
 	}
 	const char *pszExtensions = pQueryString( nullptr, SIR_EGL_EXTENSIONS );
@@ -314,18 +319,18 @@ static bool sirGLInitLinux( sirGLNativeContext_t *pContext ) noexcept
 	                                  SIR_EGL_CORE_PROFILE,  SIR_EGL_NONE };
 	pContext->pRenderContext = pCreate( pContext->pDisplay, pConfig, nullptr, szContext );
 	if ( pContext->pSurface == nullptr || pContext->pRenderContext == nullptr ||
-	     !pContext->pMakeCurrent( pContext->pDisplay, pContext->pSurface, pContext->pSurface, pContext->pRenderContext ) ) {
+	     !pContext->eglMakeCurrent( pContext->pDisplay, pContext->pSurface, pContext->pSurface, pContext->pRenderContext ) ) {
 		return false;
 	}
-	pContext->pGetString = ( sirGLGetString_t )dlsym( pContext->pLibraryGL, "glGetString" );
-	pContext->pGetInteger = ( sirGLGetIntegerv_t )dlsym( pContext->pLibraryGL, "glGetIntegerv" );
-	if ( pContext->pGetString == nullptr ) {
-		pContext->pGetString = ( sirGLGetString_t )pProc( "glGetString" );
+	pContext->glGetString = ( sirGLGetString_t )dlsym( pContext->pLibraryGL, "glGetString" );
+	pContext->glGetIntegerv = ( sirGLGetIntegerv_t )dlsym( pContext->pLibraryGL, "glGetIntegerv" );
+	if ( pContext->glGetString == nullptr ) {
+		pContext->glGetString = ( sirGLGetString_t )pProc( "glGetString" );
 	}
-	if ( pContext->pGetInteger == nullptr ) {
-		pContext->pGetInteger = ( sirGLGetIntegerv_t )pProc( "glGetIntegerv" );
+	if ( pContext->glGetIntegerv == nullptr ) {
+		pContext->glGetIntegerv = ( sirGLGetIntegerv_t )pProc( "glGetIntegerv" );
 	}
-	return pContext->pGetString != nullptr && pContext->pGetInteger != nullptr;
+	return pContext->glGetString != nullptr && pContext->glGetIntegerv != nullptr;
 }
 #endif
 
@@ -340,8 +345,7 @@ sirGraphicsResult_t sirGLCreateNativeContext( const sirGraphicsABIHost_t *pHost,
 	if ( pMemory == nullptr ) {
 		return SIR_GRAPHICS_OUT_OF_MEMORY;
 	}
-	sirGLNativeContext_t *pContext = ( sirGLNativeContext_t * )pMemory;
-	memset( pContext, 0, sizeof( *pContext ) );
+	sirGLNativeContext_t *pContext = new ( pMemory ) sirGLNativeContext_t{};
 	pContext->host = *pHost;
 #if defined( _WIN32 )
 	pContext->nOwnerThread = GetCurrentThreadId();
@@ -358,49 +362,50 @@ sirGraphicsResult_t sirGLCreateNativeContext( const sirGraphicsABIHost_t *pHost,
 	return SIR_GRAPHICS_SUCCESS;
 }
 
+sirGLNativeContext_s::~sirGLNativeContext_s( void ) noexcept
+{
+#if defined( _WIN32 )
+	if ( this->pRenderContext != nullptr ) {
+		wglMakeCurrent( nullptr, nullptr );
+		wglDeleteContext( this->pRenderContext );
+	}
+	if ( this->pDC != nullptr && this->pWindow != nullptr ) {
+		ReleaseDC( this->pWindow, this->pDC );
+	}
+	if ( this->pWindow != nullptr ) {
+		DestroyWindow( this->pWindow );
+	}
+	if ( this->pLibrary != nullptr ) {
+		FreeLibrary( this->pLibrary );
+	}
+#else
+	if ( this->pDisplay != nullptr && this->eglMakeCurrent != nullptr ) {
+		this->eglMakeCurrent( this->pDisplay, nullptr, nullptr, nullptr );
+	}
+	if ( this->pRenderContext != nullptr && this->eglDestroyContext != nullptr ) {
+		this->eglDestroyContext( this->pDisplay, this->pRenderContext );
+	}
+	if ( this->pSurface != nullptr && this->eglDestroySurface != nullptr ) {
+		this->eglDestroySurface( this->pDisplay, this->pSurface );
+	}
+	if ( this->pDisplay != nullptr && this->eglTerminate != nullptr ) {
+		this->eglTerminate( this->pDisplay );
+	}
+	if ( this->pLibraryGL != nullptr ) {
+		dlclose( this->pLibraryGL );
+	}
+	if ( this->pLibraryEGL != nullptr ) {
+		dlclose( this->pLibraryEGL );
+	}
+#endif
+}
+
 void sirGLDestroyNativeContext( sirGLNativeContext_t *pContext ) noexcept
 {
-	if ( pContext == nullptr ) {
-		return;
-	}
-	// Destruction must run on the owning thread while the native context is current.
-	if ( !sirGLContextOwnsThread( pContext ) ) {
+	if ( pContext == nullptr || !sirGLContextOwnsThread( pContext ) ) {
 		return;
 	}
 	const sirGraphicsABIHost_t host = pContext->host;
-#if defined( _WIN32 )
-	if ( pContext->pRenderContext != nullptr ) {
-		wglMakeCurrent( nullptr, nullptr );
-		wglDeleteContext( pContext->pRenderContext );
-	}
-	if ( pContext->pDC != nullptr && pContext->pWindow != nullptr ) {
-		ReleaseDC( pContext->pWindow, pContext->pDC );
-	}
-	if ( pContext->pWindow != nullptr ) {
-		DestroyWindow( pContext->pWindow );
-	}
-	if ( pContext->pLibrary != nullptr ) {
-		FreeLibrary( pContext->pLibrary );
-	}
-#else
-	if ( pContext->pDisplay != nullptr && pContext->pMakeCurrent != nullptr ) {
-		pContext->pMakeCurrent( pContext->pDisplay, nullptr, nullptr, nullptr );
-	}
-	if ( pContext->pRenderContext != nullptr && pContext->pDestroyContext != nullptr ) {
-		pContext->pDestroyContext( pContext->pDisplay, pContext->pRenderContext );
-	}
-	if ( pContext->pSurface != nullptr && pContext->pDestroySurface != nullptr ) {
-		pContext->pDestroySurface( pContext->pDisplay, pContext->pSurface );
-	}
-	if ( pContext->pDisplay != nullptr && pContext->pTerminate != nullptr ) {
-		pContext->pTerminate( pContext->pDisplay );
-	}
-	if ( pContext->pLibraryGL != nullptr ) {
-		dlclose( pContext->pLibraryGL );
-	}
-	if ( pContext->pLibraryEGL != nullptr ) {
-		dlclose( pContext->pLibraryEGL );
-	}
-#endif
+	pContext->~sirGLNativeContext_s();
 	host.pFree( host.pContext, pContext );
 }

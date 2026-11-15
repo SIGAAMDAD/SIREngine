@@ -34,8 +34,8 @@ sirGraphicsResult_t sirGLLoadFormatDispatch( sirGLProcedureLookup_t pLookup, voi
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
 	sirGLFormatDispatch_t result = {};
-	result.pGetInternalformativ = ( decltype( result.pGetInternalformativ ) )pQuery;
-	result.pGetError = ( decltype( result.pGetError ) )pError;
+	result.glGetInternalformativ = ( decltype( result.glGetInternalformativ ) )pQuery;
+	result.glGetError = ( decltype( result.glGetError ) )pError;
 	*pAPI = result;
 	return SIR_GRAPHICS_SUCCESS;
 }
@@ -43,7 +43,7 @@ sirGraphicsResult_t sirGLLoadFormatDispatch( sirGLProcedureLookup_t pLookup, voi
 sirGraphicsResult_t sirGLQueryNativeFormat( const sirGLFormatDispatch_t *pAPI, sirGraphicsABIFormat_t *pFormat ) noexcept
 {
 	if ( pAPI == nullptr || pFormat == nullptr || pFormat->nSize < sizeof( *pFormat ) || pFormat->nReserved != 0 ||
-	     pAPI->pGetInternalformativ == nullptr || pAPI->pGetError == nullptr ) {
+	     pAPI->glGetInternalformativ == nullptr || pAPI->glGetError == nullptr ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	uint32_t nInternalFormat = 0;
@@ -63,12 +63,12 @@ sirGraphicsResult_t sirGLQueryNativeFormat( const sirGLFormatDispatch_t *pAPI, s
 	default:
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
-	if ( pAPI->pGetError() != SIR_GL_FORMAT_NO_ERROR ) {
+	if ( pAPI->glGetError() != SIR_GL_FORMAT_NO_ERROR ) {
 		return SIR_GRAPHICS_DRIVER_ERROR;
 	}
 	int32_t nSupported = 0;
-	pAPI->pGetInternalformativ( SIR_GL_FORMAT_TEXTURE_2D, nInternalFormat, SIR_GL_FORMAT_INTERNALFORMAT_SUPPORTED, 1, &nSupported );
-	if ( pAPI->pGetError() != SIR_GL_FORMAT_NO_ERROR ) {
+	pAPI->glGetInternalformativ( SIR_GL_FORMAT_TEXTURE_2D, nInternalFormat, SIR_GL_FORMAT_INTERNALFORMAT_SUPPORTED, 1, &nSupported );
+	if ( pAPI->glGetError() != SIR_GL_FORMAT_NO_ERROR ) {
 		return SIR_GRAPHICS_DRIVER_ERROR;
 	}
 	if ( nSupported != 1 ) {

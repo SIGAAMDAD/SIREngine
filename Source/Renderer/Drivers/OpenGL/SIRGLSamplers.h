@@ -29,11 +29,11 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 typedef struct sirGLSamplerDispatch_s
 {
-	void ( *pCreateSamplers )( int32_t nCount, uint32_t *pNames );
-	void ( *pDeleteSamplers )( int32_t nCount, const uint32_t *pNames );
-	void ( *pSamplerParameteri )( uint32_t nName, uint32_t nParameter, int32_t nValue );
-	void ( *pSamplerParameterf )( uint32_t nName, uint32_t nParameter, float fValue );
-	uint32_t ( *pGetError )( void );
+	void ( *glCreateSamplers )( int32_t nCount, uint32_t *pNames );
+	void ( *glDeleteSamplers )( int32_t nCount, const uint32_t *pNames );
+	void ( *glSamplerParameteri )( uint32_t nName, uint32_t nParameter, int32_t nValue );
+	void ( *glSamplerParameterf )( uint32_t nName, uint32_t nParameter, float fValue );
+	uint32_t ( *glGetError )( void );
 } sirGLSamplerDispatch_t;
 
 sirGraphicsResult_t sirGLLoadSamplerDispatch( sirGLProcedureLookup_t pLookup, void *pContext, sirGLSamplerDispatch_t *pAPI ) noexcept;

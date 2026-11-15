@@ -22,6 +22,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Renderer/Drivers/OpenGL/SIRGLHandlePool.h>
 #include <Renderer/Drivers/OpenGL/SIRGLSamplers.h>
 #include <Renderer/Drivers/OpenGL/SIRGLTextures.h>
+#include <Renderer/Drivers/OpenGL/SIRGLScopedOwnership.h>
 #include <atomic>
 #include <new>
 #include <string.h>
@@ -32,14 +33,34 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #define SIR_GL_EXPORT __attribute__( ( visibility( "default" ) ) )
 #endif
 
-typedef struct sirGLDriverState_s
+struct sirGLDriverState_s final
 {
+	sirGLDriverState_s( void ) noexcept = default;
+	sirGLDriverState_s( const sirGLDriverState_s& ) = delete;
+	sirGLDriverState_s& operator=( const sirGLDriverState_s& ) = delete;
 	sirGraphicsABIHost_t host;
 	std::atomic<uint32_t> nLiveDevices;
-} sirGLDriverState_t;
+};
+using sirGLDriverState_t = sirGLDriverState_s;
 
-typedef struct sirGLDevice_s
+struct sirGLDevice_s final
 {
+	sirGLDevice_s( void ) noexcept = default;
+	sirGLDevice_s( const sirGLDevice_s& ) = delete;
+	sirGLDevice_s& operator=( const sirGLDevice_s& ) = delete;
+	~sirGLDevice_s( void ) noexcept
+	{
+		// The public shutdown rejects live handles. During failed creation there are no published handles.
+		if ( pContext != nullptr && sirGLContextOwnsThread( pContext ) ) {
+			if ( framebufferCache.pSlots != nullptr ) {
+				( void )sirGLFramebufferCacheShutdown( &framebufferCache );
+			}
+			if ( handles.pSlots != nullptr ) {
+				( void )sirGLHandlePoolShutdown( &handles );
+			}
+			sirGLDestroyNativeContext( pContext );
+		}
+	}
 	sirGLDriverState_t *pDriver;
 	sirGLNativeContext_t *pContext;
 	sirGLProbe_t probe;
@@ -54,7 +75,8 @@ typedef struct sirGLDevice_s
 	uint64_t nPeakResourceBytes;
 	uint32_t nGeneration;
 	uint64_t nResidentBudgetBytes;
-} sirGLDevice_t;
+};
+using sirGLDevice_t = sirGLDevice_s;
 
 static std::atomic<uint32_t> s_nGLDeviceGeneration( 1 );
 
@@ -73,11 +95,11 @@ static uint32_t sirGLAdapterCount( void *pDriver, uint32_t *pCount ) noexcept
 	if ( nStatus != SIR_GRAPHICS_SUCCESS ) {
 		return SIR_GRAPHICS_SUCCESS; // No admissible local GL46 context is an empty adapter list.
 	}
+	SIRGLScopedContext contextGuard( pContext );
 	sirGLProbe_t probe = {};
 	if ( sirGLReadNativeProbe( pContext, &probe ) == SIR_GRAPHICS_SUCCESS && sirGLValidateCore46( &probe ) == SIR_GRAPHICS_SUCCESS ) {
 		*pCount = 1;
 	}
-	sirGLDestroyNativeContext( pContext );
 	return SIR_GRAPHICS_SUCCESS;
 }
 
@@ -92,12 +114,12 @@ static uint32_t sirGLQueryAdapter( void *pDriver, sirGraphicsABIAdapter_t *pAdap
 	if ( nResult != SIR_GRAPHICS_SUCCESS ) {
 		return nResult;
 	}
+	SIRGLScopedContext contextGuard( pContext );
 	sirGLProbe_t probe = {};
 	uint32_t nStatus = sirGLReadNativeProbe( pContext, &probe );
 	if ( nStatus == SIR_GRAPHICS_SUCCESS ) {
 		nStatus = sirGLBuildAdapter( &probe, pAdapter );
 	}
-	sirGLDestroyNativeContext( pContext );
 	return nStatus;
 }
 
@@ -203,11 +225,13 @@ static uint32_t sirGLCreateBuffer( void *pDevice, const sirGraphicsBufferDesc_t 
 	native.nName = nName;
 	native.eType = SIR_GRAPHICS_HANDLE_BUFFER;
 	native.nRequestedBytes = pDesc->nSizeBytes;
+	SIRGLScopedName<sirGLBufferDispatch_t, sirGLDeleteNativeBuffer> nameGuard( &pState->buffers );
+	nameGuard.adopt( nName );
 	nStatus = sirGLHandlePoolInsert( &pState->handles, &native, pHandle );
 	if ( nStatus != SIR_GRAPHICS_SUCCESS ) {
-		( void )sirGLDeleteNativeBuffer( &pState->buffers, nName );
 		return nStatus;
 	}
+	( void )nameGuard.release();
 	pState->nCommittedResourceBytes += pDesc->nSizeBytes;
 	if ( pState->nCommittedResourceBytes > pState->nPeakResourceBytes ) {
 		pState->nPeakResourceBytes = pState->nCommittedResourceBytes;
@@ -262,11 +286,13 @@ static uint32_t sirGLCreateTexture( void *pDevice, const sirGraphicsTextureDesc_
 	native.eFormat = pDesc->eFormat;
 	native.nMipLevels = pDesc->nMipLevels;
 	native.nUsage = pDesc->nUsage;
+	SIRGLScopedName<sirGLTextureDispatch_t, sirGLDeleteNativeTexture> nameGuard( &pState->textures );
+	nameGuard.adopt( texture.nName );
 	nStatus = sirGLHandlePoolInsert( &pState->handles, &native, pHandle );
 	if ( nStatus != SIR_GRAPHICS_SUCCESS ) {
-		( void )sirGLDeleteNativeTexture( &pState->textures, texture.nName );
 		return nStatus;
 	}
+	( void )nameGuard.release();
 	pState->nCommittedResourceBytes += texture.nRequestedBytes;
 	if ( pState->nCommittedResourceBytes > pState->nPeakResourceBytes ) {
 		pState->nPeakResourceBytes = pState->nCommittedResourceBytes;
@@ -316,9 +342,11 @@ static uint32_t sirGLCreateView( void *pDevice, const sirGraphicsViewDesc_t *pDe
 	native.nName = nName;
 	native.eType = SIR_GRAPHICS_HANDLE_VIEW;
 	native.hParent = pDesc->hResource;
+	SIRGLScopedName<sirGLTextureDispatch_t, sirGLDeleteNativeTexture> nameGuard( &pState->textures );
+	nameGuard.adopt( nName );
 	nStatus = sirGLHandlePoolInsert( &pState->handles, &native, pHandle );
-	if ( nStatus != SIR_GRAPHICS_SUCCESS ) {
-		( void )sirGLDeleteNativeTexture( &pState->textures, nName );
+	if ( nStatus == SIR_GRAPHICS_SUCCESS ) {
+		( void )nameGuard.release();
 	}
 	return nStatus;
 }
@@ -346,9 +374,11 @@ static uint32_t sirGLCreateSampler( void *pDevice, const sirGraphicsSamplerDesc_
 	sirGLNativeResource_t native = {};
 	native.nName = nName;
 	native.eType = SIR_GRAPHICS_HANDLE_SAMPLER;
+	SIRGLScopedName<sirGLSamplerDispatch_t, sirGLDeleteNativeSampler> nameGuard( &pState->samplers );
+	nameGuard.adopt( nName );
 	nStatus = sirGLHandlePoolInsert( &pState->handles, &native, pHandle );
-	if ( nStatus != SIR_GRAPHICS_SUCCESS ) {
-		( void )sirGLDeleteNativeSampler( &pState->samplers, nName );
+	if ( nStatus == SIR_GRAPHICS_SUCCESS ) {
+		( void )nameGuard.release();
 	}
 	return nStatus;
 }
@@ -524,6 +554,7 @@ static uint32_t sirGLCreateDevice( void *pDriver, const sirGraphicsABIDeviceRequ
 	if ( nStatus != SIR_GRAPHICS_SUCCESS ) {
 		return nStatus;
 	}
+	SIRGLScopedContext contextGuard( pContext );
 	sirGLProbe_t probe = {};
 	nStatus = sirGLReadNativeProbe( pContext, &probe );
 	if ( nStatus == SIR_GRAPHICS_SUCCESS ) {
@@ -537,32 +568,27 @@ static uint32_t sirGLCreateDevice( void *pDriver, const sirGraphicsABIDeviceRequ
 		}
 	}
 	if ( nStatus != SIR_GRAPHICS_SUCCESS ) {
-		sirGLDestroyNativeContext( pContext );
 		return nStatus;
 	}
 	void *pMemory = pState->host.pAllocate( pState->host.pContext, sizeof( sirGLDevice_t ), alignof( sirGLDevice_t ) );
 	if ( pMemory == nullptr ) {
-		sirGLDestroyNativeContext( pContext );
 		return SIR_GRAPHICS_OUT_OF_MEMORY;
 	}
 	const uint32_t nGeneration = s_nGLDeviceGeneration.fetch_add( 1, std::memory_order_relaxed );
 	if ( nGeneration == 0 ) {
 		pState->host.pFree( pState->host.pContext, pMemory );
-		sirGLDestroyNativeContext( pContext );
 		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
 	}
-	sirGLDevice_t *pNew = ( sirGLDevice_t * )pMemory;
-	*pNew = {};
+	sirGLDevice_t *pNew = new ( pMemory ) sirGLDevice_t{};
+	SIRGLScopedHostObject<sirGLDevice_t> deviceGuard( &pState->host, pNew );
 	pNew->pDriver = pState;
-	pNew->pContext = pContext;
+	pNew->pContext = contextGuard.release();
 	pNew->probe = probe;
 	pNew->nGeneration = nGeneration;
 	pNew->nResidentBudgetBytes = pRequest->nResidentBudgetBytes;
 	// Native GL objects will be stored here without per-object CPU allocations.
 	nStatus = sirGLHandlePoolInit( &pNew->handles, &pState->host, nGeneration, 1024 );
 	if ( nStatus != SIR_GRAPHICS_SUCCESS ) {
-		pState->host.pFree( pState->host.pContext, pNew );
-		sirGLDestroyNativeContext( pContext );
 		return nStatus;
 	}
 	nStatus = sirGLLoadBufferDispatch( sirGLResolveNativeProcedure, pContext, &pNew->buffers );
@@ -587,9 +613,6 @@ static uint32_t sirGLCreateDevice( void *pDriver, const sirGraphicsABIDeviceRequ
 		nStatus = sirGLFramebufferCacheInit( &pNew->framebufferCache, &cacheConfig );
 	}
 	if ( nStatus != SIR_GRAPHICS_SUCCESS ) {
-		( void )sirGLHandlePoolShutdown( &pNew->handles );
-		pState->host.pFree( pState->host.pContext, pNew );
-		sirGLDestroyNativeContext( pContext );
 		return nStatus;
 	}
 
@@ -622,6 +645,7 @@ static uint32_t sirGLCreateDevice( void *pDriver, const sirGraphicsABIDeviceRequ
 	result.pPresent = sirGLPresent;
 	result.pShutdown = sirGLShutdown;
 	pState->nLiveDevices.fetch_add( 1, std::memory_order_relaxed );
+	( void )deviceGuard.release();
 	*pDevice = result;
 	return SIR_GRAPHICS_SUCCESS;
 }
@@ -641,6 +665,7 @@ static uint32_t sirGLDestroyDevice( void *pDriver, sirGraphicsABIDevice_t *pDevi
 		return nStatus;
 	}
 	pState->nLiveDevices.fetch_sub( 1, std::memory_order_relaxed );
+	pNative->~sirGLDevice_t();
 	pState->host.pFree( pState->host.pContext, pNative );
 	*pDevice = {};
 	return SIR_GRAPHICS_SUCCESS;
