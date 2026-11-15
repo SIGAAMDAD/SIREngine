@@ -63,6 +63,16 @@ bool SIRWindowDriverX11::setEventSink( sirWindowX11EventSink_t pSink, void *pCon
 	return true;
 }
 
+bool SIRWindowDriverX11::setDisplayLostSink( sirWindowX11DisplayLostSink_t pSink, void *pContext ) noexcept
+{
+	if ( pSink != nullptr && pContext == nullptr ) {
+		return false;
+	}
+	m_pDisplayLostSink = pSink;
+	m_pDisplayLostContext = pContext;
+	return true;
+}
+
 SIRWindowDriverX11::~SIRWindowDriverX11( void ) noexcept
 {
 	shutdown();
@@ -146,6 +156,11 @@ void SIRWindowDriverX11::markServerLost( void ) noexcept
 		return;
 	}
 	m_bServerLost = true;
+	// The native input consumer still borrows XIC/cursor/display objects.
+	// It must abandon them before teardown can touch the dead Display.
+	if ( m_pDisplayLostSink != nullptr ) {
+		m_pDisplayLostSink( m_pDisplayLostContext );
+	}
 	for ( uint32_t i = 0; i < SIR_WINDOW_MAX_WINDOWS; ++i ) {
 		if ( m_hWindows[i] != 0 ) {
 			m_nLostNative[i] = m_hWindows[i];
@@ -566,6 +581,12 @@ void SIRWindowDriverX11::shutdown( void ) noexcept
 	m_nProtocols = 0;
 	m_nRootWindow = 0;
 	m_nRandrEventBase = -1;
+	m_nServerWidth = 0;
+	m_nServerHeight = 0;
+	m_pSink = nullptr;
+	m_pSinkContext = nullptr;
+	m_pDisplayLostSink = nullptr;
+	m_pDisplayLostContext = nullptr;
 	m_bServerLost = false;
 	if ( m_bHandlerRegistered ) {
 		SIRScopedLock<SIRMutex> lock( s_X11IOHandlerMutex );

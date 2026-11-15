@@ -78,6 +78,8 @@ private:
 
 	sirWin32Slot_t m_Slots[SIR_WINDOW_MAX_WINDOWS] = {};
 	sirWindowBackendEvent_t m_Events[SIR_WINDOW_EVENT_CAPACITY] = {};
+	// Fixed latest-state recovery when transient native messages exhaust the ring.
+	sirWindowBackendEvent_t m_DeferredEvents[SIR_WINDOW_MAX_WINDOWS][6] = {};
 	uint32_t m_nEventRead = 0;
 	uint32_t m_nEventWrite = 0;
 	uint32_t m_nEventCount = 0;

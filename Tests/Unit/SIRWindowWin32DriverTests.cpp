@@ -281,10 +281,76 @@ static bool sirTestConcurrentWin32WindowClassOwners( void ) noexcept
 	return true;
 }
 
+typedef struct sirWin32RetirementEvents_s
+{
+	uint32_t nRetiredDpi;
+} sirWin32RetirementEvents_t;
+
+static void sirCheckWin32RetirementEvent( void *pContext, const sirWindowBackendEvent_t& event ) noexcept
+{
+	sirWin32RetirementEvents_t *pEvents = ( sirWin32RetirementEvents_t * )pContext;
+	if ( event.eKind == SIR_WINDOW_EVENT_DPI_CHANGED && event.nWidth == 333 ) {
+		++pEvents->nRetiredDpi;
+	}
+}
+
+static bool sirTestRetiredWindowEventsCannotAliasNewSlot( void ) noexcept
+{
+	SIRWindowDriverWin32 driver;
+	if ( driver.initialize() != SIR_WINDOW_OK ) {
+		return false;
+	}
+	sirWindowNativeView_t previous = {}, replacement = {};
+	if ( driver.createWindow( { "old-owner", 640, 480 }, 0, &previous ) != SIR_WINDOW_OK ) {
+		return false;
+	}
+	( void )SendMessageW( ( HWND )previous.nNativeWindow, WM_DPICHANGED, MAKEWPARAM( 333, 333 ), 0 );
+	if ( driver.destroyWindow( 0 ) != SIR_WINDOW_OK ||
+	     driver.createWindow( { "new-owner", 640, 480 }, 0, &replacement ) != SIR_WINDOW_OK ) {
+		return false;
+	}
+	sirWin32RetirementEvents_t events = {};
+	const sirWindowResult_t eResult = driver.pumpEvents( 256, sirCheckWin32RetirementEvent, &events );
+	const bool bSucceeded = eResult == SIR_WINDOW_OK && events.nRetiredDpi == 0 && driver.destroyWindow( 0 ) == SIR_WINDOW_OK;
+	driver.shutdown();
+	return bSucceeded;
+}
+
+static bool sirTestWin32OverflowPreservesLastNativeState( void ) noexcept
+{
+	SIRWindowDriverWin32 driver;
+	SIRWindowSystem windows( driver );
+	if ( windows.initialize() != SIR_SYSTEM_OK ) {
+		return false;
+	}
+	sirWindowHandle_t hWindow = {};
+	if ( windows.createWindow( { "native-message-overflow", 640, 480 }, &hWindow ) != SIR_WINDOW_OK ) {
+		return false;
+	}
+	sirWindowNativeLease_t lease = {};
+	sirWindowNativeView_t view = {};
+	if ( windows.acquireNativeLease( hWindow, &lease, &view ) != SIR_WINDOW_OK ) {
+		return false;
+	}
+	for ( uint32_t i = 0; i < SIR_WINDOW_EVENT_CAPACITY + 8; ++i ) {
+		( void )SendMessageW( ( HWND )view.nNativeWindow, i & 1 ? WM_SETFOCUS : WM_KILLFOCUS, 0, 0 );
+	}
+	( void )SendMessageW( ( HWND )view.nNativeWindow, WM_SIZE, SIZE_MINIMIZED, 0 );
+	( void )SendMessageW( ( HWND )view.nNativeWindow, WM_SIZE, SIZE_RESTORED, MAKELPARAM( 777, 555 ) );
+	const sirWindowResult_t ePump = windows.pumpEvents( 256 );
+	sirWindowSnapshot_t snapshot = {};
+	const bool bValid = ePump == SIR_WINDOW_EVENTS_LOST && windows.querySnapshot( hWindow, &snapshot ) == SIR_WINDOW_OK &&
+	                    snapshot.nWidth == 777 && snapshot.nHeight == 555 && !snapshot.bMinimized && snapshot.bReady;
+	const bool bRetired = windows.releaseNativeLease( lease ) == SIR_WINDOW_OK && windows.destroyWindow( hWindow ) == SIR_WINDOW_OK &&
+	                      windows.shutdown() == SIR_SYSTEM_OK;
+	return bValid && bRetired;
+}
+
 int main( void )
 {
 	if ( !sirTestConcurrentWin32WindowClassOwners() || !sirTestWin32BoundedNativeEvents() || !sirTestWin32MultiwindowInputRouting() ||
-	     !sirTestFullscreenRoundTrip() || !sirTestWindowClassRetirementOrder() || !sirTestWindowStateCannotBeSwallowedByInput() ) {
+	     !sirTestFullscreenRoundTrip() || !sirTestWindowClassRetirementOrder() || !sirTestWindowStateCannotBeSwallowedByInput() ||
+	     !sirTestRetiredWindowEventsCannotAliasNewSlot() || !sirTestWin32OverflowPreservesLastNativeState() ) {
 		fputs( "SIRWindowWin32DriverTests FAIL\n", stderr );
 		return 1;
 	}

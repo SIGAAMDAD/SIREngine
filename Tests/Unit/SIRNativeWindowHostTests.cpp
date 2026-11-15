@@ -14,6 +14,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Core/Platform/Window/SIRNativeWindowHost.h>
+#include <Core/Platform/Window/SIRWindowSystem.h>
+#include <Core/SIRApplication.h>
 #include <stdio.h>
 
 class SIRNativeWindowHostTestDriver final : public SIRWindowDriver
@@ -30,8 +32,8 @@ public:
 	sirWindowResult_t createWindow( const sirWindowCreateDesc_t& desc, uint32_t nSlot, sirWindowNativeView_t *pView ) noexcept override
 	{
 		++m_nCreates;
-		if ( m_bFailCreate || ( m_nFailCreateOn != 0 && m_nCreates == m_nFailCreateOn ) || desc.nWidth == 0 ||
-	     desc.nHeight == 0 || pView == nullptr || nSlot >= SIR_WINDOW_MAX_WINDOWS ) {
+		if ( m_bFailCreate || ( m_nFailCreateOn != 0 && m_nCreates == m_nFailCreateOn ) || desc.nWidth == 0 || desc.nHeight == 0 ||
+		     pView == nullptr || nSlot >= SIR_WINDOW_MAX_WINDOWS ) {
 			return SIR_WINDOW_NATIVE_FAILURE;
 		}
 		m_bAlive[nSlot] = true;
@@ -92,8 +94,43 @@ protected:
 private:
 };
 
+static bool sirTestApplicationRetainsNativeWindowLeases( void ) noexcept
+{
+	SIRNativeWindowHostTestDriver driver;
+	SIRWindowSystem windows( driver );
+	SIRApplication application;
+	if ( !application.registerSystem( &windows ) || !application.initialize() ) {
+		return false;
+	}
+	sirWindowHandle_t first = {}, second = {};
+	const sirWindowCreateDesc_t desc = { "Application lifetime", 640, 360 };
+	if ( windows.createWindow( desc, &first ) != SIR_WINDOW_OK || windows.createWindow( desc, &second ) != SIR_WINDOW_OK ) {
+		return false;
+	}
+	sirWindowNativeView_t view = {};
+	sirWindowNativeLease_t lease = {};
+	if ( windows.acquireNativeLease( first, &lease, &view ) != SIR_WINDOW_OK || lease.nToken == 0 ) {
+		return false;
+	}
+	// The application must not retire the native driver while a borrowed
+	// presentation surface can still reference either native window.
+	if ( application.shutdown() != SIR_SYSTEM_BUSY || driver.m_nShutdowns != 0 || driver.m_nDestroys != 0 ||
+	     application.getState() != SIR_APP_STOPPING || windows.destroyWindow( first ) != SIR_WINDOW_BUSY ) {
+		return false;
+	}
+	if ( windows.releaseNativeLease( lease ) != SIR_WINDOW_OK || windows.destroyWindow( first ) != SIR_WINDOW_OK ||
+	     windows.destroyWindow( second ) != SIR_WINDOW_OK || application.shutdown() != SIR_SYSTEM_OK ) {
+		return false;
+	}
+	return driver.m_nShutdowns == 1 && driver.m_nDestroys == 2 && application.getState() == SIR_APP_STOPPED && !application.tick();
+}
+
 int main( void )
 {
+	if ( !sirTestApplicationRetainsNativeWindowLeases() ) {
+		fputs( "Application lease lifetime integration FAIL\n", stderr );
+		return 1;
+	}
 	SIRNativeWindowHostTestDriver successful;
 	if ( sirRunWindowHostWithDriver( successful, { "SIREngine Editor", 1280, 720 } ) != 0 || successful.m_nInitializes != 1 ||
 	     successful.m_nCreates != 1 || successful.m_nDestroys != 1 || successful.m_nPumps != 2 || successful.m_nShutdowns != 1 ) {
@@ -103,8 +140,8 @@ int main( void )
 
 	sirWindowCreateDesc_t multi[] = { { "primary", 800, 450 }, { "auxiliary", 640, 360 } };
 	SIRNativeWindowHostTestDriver multiple;
-	if ( sirRunWindowHostsWithDriver( multiple, multi, 2 ) != 0 || multiple.m_nCreates != 2 ||
-	     multiple.m_nDestroys != 2 || multiple.m_nPumps != 3 || multiple.m_nShutdowns != 1 ) {
+	if ( sirRunWindowHostsWithDriver( multiple, multi, 2 ) != 0 || multiple.m_nCreates != 2 || multiple.m_nDestroys != 2 ||
+	     multiple.m_nPumps != 3 || multiple.m_nShutdowns != 1 ) {
 		fputs( "Native multiwindow lifecycle FAIL\n", stderr );
 		return 1;
 	}
@@ -114,13 +151,12 @@ int main( void )
 	}
 	SIRNativeWindowHostTestDriver partialCreate;
 	partialCreate.m_nFailCreateOn = 2;
-	if ( sirRunWindowHostsWithDriver( partialCreate, multi, 2 ) == 0 || partialCreate.m_nCreates != 2 ||
-	     partialCreate.m_nDestroys != 1 || partialCreate.m_nShutdowns != 1 ) {
+	if ( sirRunWindowHostsWithDriver( partialCreate, multi, 2 ) == 0 || partialCreate.m_nCreates != 2 || partialCreate.m_nDestroys != 1 ||
+	     partialCreate.m_nShutdowns != 1 ) {
 		return 1;
 	}
 	SIRNativeWindowHostTestDriver invalidCount;
-	if ( sirRunWindowHostsWithDriver( invalidCount, multi, SIR_WINDOW_MAX_WINDOWS + 1 ) == 0 ||
-	     invalidCount.m_nInitializes != 0 ) {
+	if ( sirRunWindowHostsWithDriver( invalidCount, multi, SIR_WINDOW_MAX_WINDOWS + 1 ) == 0 || invalidCount.m_nInitializes != 0 ) {
 		return 1;
 	}
 
@@ -137,6 +173,37 @@ int main( void )
 	if ( sirRunWindowHostWithDriver( createFailure, { "SIREngine Editor", 1280, 720 } ) == 0 || createFailure.m_nShutdowns != 1 ||
 	     createFailure.m_nDestroys != 0 ) {
 		fputs( "Editor native window: create failure FAIL\n", stderr );
+		return 1;
+	}
+
+	// Fallback is permitted only when the primary fails initialization.
+	SIRNativeWindowHostTestDriver rejectedPrimary;
+	rejectedPrimary.m_bFailInit = true;
+	SIRNativeWindowHostTestDriver fallback;
+	SIRWindowDriverStartupFallback selected( rejectedPrimary, fallback );
+	if ( sirRunWindowHostWithDriver( selected, { "fallback", 640, 480 } ) != 0 || rejectedPrimary.m_nInitializes != 1 ||
+	     rejectedPrimary.m_nShutdowns != 1 || rejectedPrimary.m_nCreates != 0 || fallback.m_nInitializes != 1 || fallback.m_nCreates != 1 ||
+	     fallback.m_nDestroys != 1 || fallback.m_nShutdowns != 1 ) {
+		fputs( "Native backend startup fallback FAIL\n", stderr );
+		return 1;
+	}
+	SIRNativeWindowHostTestDriver failedAfterInit;
+	failedAfterInit.m_bFailCreate = true;
+	SIRNativeWindowHostTestDriver shouldNotStart;
+	SIRWindowDriverStartupFallback noRuntimeFallback( failedAfterInit, shouldNotStart );
+	if ( sirRunWindowHostWithDriver( noRuntimeFallback, { "no-runtime-switch", 640, 480 } ) == 0 || failedAfterInit.m_nCreates != 1 ||
+	     shouldNotStart.m_nInitializes != 0 ) {
+		fputs( "Native backend switched after window creation failure\n", stderr );
+		return 1;
+	}
+	SIRNativeWindowHostTestDriver unusablePrimary;
+	SIRNativeWindowHostTestDriver unusableFallback;
+	unusablePrimary.m_bFailInit = true;
+	unusableFallback.m_bFailInit = true;
+	SIRWindowDriverStartupFallback noBackend( unusablePrimary, unusableFallback );
+	if ( sirRunWindowHostWithDriver( noBackend, { "no-backend", 640, 480 } ) == 0 || unusablePrimary.m_nInitializes != 1 ||
+	     unusableFallback.m_nInitializes != 1 || unusablePrimary.m_nShutdowns != 1 || unusableFallback.m_nShutdowns != 1 ) {
+		fputs( "Native backend double initialization failure FAIL\n", stderr );
 		return 1;
 	}
 

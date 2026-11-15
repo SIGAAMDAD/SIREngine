@@ -134,6 +134,10 @@ private:
 	sirWaylandWindowSlot_t m_Slots[SIR_WINDOW_MAX_WINDOWS] = {};
 	sirWaylandOutput_t m_Outputs[SIR_WAYLAND_MAX_OUTPUTS] = {};
 	sirWindowBackendEvent_t m_Events[SIR_WINDOW_EVENT_CAPACITY] = {};
+	// Per-slot recovery events survive an exhausted transient-event ring.
+	sirWindowBackendEvent_t m_DeferredReady[SIR_WINDOW_MAX_WINDOWS] = {};
+	sirWindowBackendEvent_t m_DeferredDpi[SIR_WINDOW_MAX_WINDOWS] = {};
+	sirWindowBackendEvent_t m_DeferredResize[SIR_WINDOW_MAX_WINDOWS] = {};
 	uint32_t m_nEventRead = 0;
 	uint32_t m_nEventWrite = 0;
 	uint32_t m_nEventCount = 0;

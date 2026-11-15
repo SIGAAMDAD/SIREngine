@@ -79,10 +79,19 @@ static void sirDispatchX11Input( const XEvent& event, void *pContext ) noexcept
 	SIRX11InputBridge *pInput = ( SIRX11InputBridge * )pContext;
 	pInput->processEvent( event );
 }
+static void sirDispatchX11DisplayLost( void *pContext ) noexcept
+{
+	( ( SIRX11InputBridge * )pContext )->onDisplayLost();
+}
 #endif
 #endif
 
 #if defined( SIR_INPUT_WAYLAND_AVAILABLE ) && !defined( _WIN32 )
+enum sirWaylandInputStartupStatus_t
+{
+	SIR_WAYLAND_INPUT_STARTUP_UNAVAILABLE = 3
+};
+
 typedef struct sirWaylandInputPumpContext_s
 {
 	SIRWindowSystem *pWindows;
@@ -119,10 +128,14 @@ static int sirRunWaylandInputWindow( bool bMultiwindow )
 		return 1;
 	}
 	SIRApplication app;
-	if ( !app.attachInput( input ) || !app.registerSystem( &windows ) || !app.attachWindowPump( sirPumpWaylandInputWindows, &context ) ||
-	     !app.initialize() ) {
+	if ( !app.attachInput( input ) || !app.registerSystem( &windows ) || !app.attachWindowPump( sirPumpWaylandInputWindows, &context ) ) {
 		( void )app.shutdown();
 		return 1;
+	}
+	if ( !app.initialize() ) {
+		// A stale WAYLAND_DISPLAY must not disable an otherwise usable native X11 session.
+		( void )app.shutdown();
+		return SIR_WAYLAND_INPUT_STARTUP_UNAVAILABLE;
 	}
 	sirWindowHandle_t handles[2] = {};
 	sirWindowNativeLease_t leases[2] = {};
@@ -211,7 +224,14 @@ static int sirRunNativeInputWindow( bool bMultiwindow )
 #if defined( SIR_INPUT_WAYLAND_AVAILABLE ) && !defined( _WIN32 )
 	const char *pszWaylandDisplay = getenv( "WAYLAND_DISPLAY" );
 	if ( pszWaylandDisplay != nullptr && pszWaylandDisplay[0] != 0 ) {
-		return sirRunWaylandInputWindow( bMultiwindow );
+		const int nWaylandResult = sirRunWaylandInputWindow( bMultiwindow );
+#if defined( SIR_WINDOW_X11_AVAILABLE )
+		if ( nWaylandResult != SIR_WAYLAND_INPUT_STARTUP_UNAVAILABLE ) {
+			return nWaylandResult;
+		}
+#else
+		return nWaylandResult;
+#endif
 	}
 #endif
 
@@ -300,8 +320,10 @@ static int sirRunNativeInputWindow( bool bMultiwindow )
 	}
 #endif
 #else
-	if ( !driver.setEventSink( sirDispatchX11Input, &bridge ) || !input.attach( nativeControllers ) ) {
+	if ( !driver.setEventSink( sirDispatchX11Input, &bridge ) || !driver.setDisplayLostSink( sirDispatchX11DisplayLost, &bridge ) ||
+	     !input.attach( nativeControllers ) ) {
 		( void )driver.setEventSink( nullptr, nullptr );
+		( void )driver.setDisplayLostSink( nullptr, nullptr );
 		bridge.unbind();
 		( void )windows.releaseNativeLease( lease );
 		( void )windows.destroyWindow( hWindow );
@@ -362,6 +384,7 @@ static int sirRunNativeInputWindow( bool bMultiwindow )
 	( void )driver.setMessageSink( nullptr, nullptr );
 #else
 	( void )driver.setEventSink( nullptr, nullptr );
+	( void )driver.setDisplayLostSink( nullptr, nullptr );
 #endif
 	bridge.unbind();
 	while ( nCreated != 0 ) {

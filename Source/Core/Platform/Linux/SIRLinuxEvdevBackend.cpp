@@ -28,7 +28,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <unistd.h>
 
 SIRLinuxEvdevBackend::SIRLinuxEvdevBackend( void ) noexcept
-    : m_Slots{}, m_Profiles(), m_bProfilesFrozen( false ), m_szDirectory{}, m_nWatchFd( -1 ), m_nWatch( -1 )
+    : m_Slots{}, m_Profiles(), m_bProfilesFrozen( false ), m_szDirectory{}, m_nWatchFd( -1 ), m_nWatch( -1 ), m_nWatchRetryFrames( 0 )
 {
 	for ( uint32_t i = 0; i < SIR_INPUT_EVDEV_CAPACITY; ++i ) {
 		m_Slots[i].nFd = -1;
@@ -368,14 +368,18 @@ bool SIRLinuxEvdevBackend::discover( SIRInputService& service, const char *pszDi
 	if ( m_nWatchFd < 0 ) {
 		m_nWatchFd = inotify_init1( IN_NONBLOCK | IN_CLOEXEC );
 		if ( m_nWatchFd >= 0 ) {
-			m_nWatch = inotify_add_watch( m_nWatchFd, pszDir, IN_CREATE | IN_MOVED_TO | IN_DELETE | IN_MOVED_FROM );
+			m_nWatch = inotify_add_watch( m_nWatchFd, pszDir,
+			                              IN_CREATE | IN_MOVED_TO | IN_DELETE | IN_MOVED_FROM | IN_DELETE_SELF | IN_MOVE_SELF );
 			if ( m_nWatch < 0 ) {
 				close( m_nWatchFd );
 				m_nWatchFd = -1;
 			}
 		}
 	}
-	memcpy( m_szDirectory, pszDir, strlen( pszDir ) + 1 );
+	if ( pszDir != m_szDirectory ) {
+		memcpy( m_szDirectory, pszDir, strlen( pszDir ) + 1 );
+	}
+	m_nWatchRetryFrames = 0;
 	DIR *pDir = opendir( pszDir );
 	if ( pDir == nullptr ) {
 		return false;
@@ -489,6 +493,13 @@ void SIRLinuxEvdevBackend::closeDevice( SIRInputService& service, sirInputEvdevS
 void SIRLinuxEvdevBackend::pollHotplug( SIRInputService& service ) noexcept
 {
 	if ( m_nWatchFd < 0 ) {
+		if ( m_szDirectory[0] == 0 ) {
+			return;
+		}
+		if ( ++m_nWatchRetryFrames >= 60 ) {
+			m_nWatchRetryFrames = 0;
+			( void )discover( service, m_szDirectory );
+		}
 		return;
 	}
 	alignas( inotify_event ) char szEvents[4096];
@@ -504,8 +515,18 @@ void SIRLinuxEvdevBackend::pollHotplug( SIRInputService& service ) noexcept
 			if ( nStep > ( size_t )nRead - nOffset ) {
 				break;
 			}
+			if ( ( pEvent->mask & ( IN_IGNORED | IN_DELETE_SELF | IN_MOVE_SELF ) ) != 0 ) {
+				for ( uint32_t i = 0; i < SIR_INPUT_EVDEV_CAPACITY; ++i ) {
+					closeDevice( service, m_Slots[i] );
+				}
+				close( m_nWatchFd );
+				m_nWatchFd = -1;
+				m_nWatch = -1;
+				m_nWatchRetryFrames = 0;
+				return;
+			}
 			if ( ( pEvent->mask & IN_Q_OVERFLOW ) != 0 ) {
-				discover( service, m_szDirectory );
+				( void )discover( service, m_szDirectory );
 			}
 			if ( pEvent->len > 5 && strncmp( pEvent->name, "event", 5 ) == 0 ) {
 				char szPath[512];
@@ -685,4 +706,5 @@ void SIRLinuxEvdevBackend::stop( SIRInputService& service ) noexcept
 	}
 	m_nWatchFd = m_nWatch = -1;
 	m_szDirectory[0] = '\0';
+	m_nWatchRetryFrames = 0;
 }

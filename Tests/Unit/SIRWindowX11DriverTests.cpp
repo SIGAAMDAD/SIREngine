@@ -14,6 +14,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 #include <Core/Platform/Window/Linux/SIRWindowDriverX11.h>
 #include <Core/Platform/Window/SIRWindowSystem.h>
+#include <Core/Platform/Linux/SIRX11InputBridge.h>
 #include <X11/Xatom.h>
 #include <X11/Xlib.h>
 #include <assert.h>
@@ -36,10 +37,19 @@ static void sirCountX11Event( const XEvent& event, void *pContext ) noexcept
 	}
 }
 
+static void sirMarkX11DisplayLost( void *pContext ) noexcept
+{
+	( ( SIRX11InputBridge * )pContext )->onDisplayLost();
+}
+
 static bool sirTestX11ServerSocketLoss( void ) noexcept
 {
 	SIRWindowDriverX11 driver;
 	SIRWindowSystem windows( driver );
+	sirX11SinkCount_t oldSink = {};
+	if ( !driver.setEventSink( sirCountX11Event, &oldSink ) ) {
+		return false;
+	}
 	if ( windows.initialize() != SIR_SYSTEM_OK ) {
 		return false;
 	}
@@ -52,27 +62,55 @@ static bool sirTestX11ServerSocketLoss( void ) noexcept
 	if ( windows.acquireNativeLease( hWindow, &lease, &native ) != SIR_WINDOW_OK ) {
 		return false;
 	}
+	// Keep a live native input consumer during transport loss. All XIC and
+	// pointer-capture cleanup must avoid sending requests to the dead Xlib
+	// connection, and disconnected devices cannot survive the next frame.
+	SIRInputService input;
+	SIRLinuxX11Backend backend;
+	SIRX11InputBridge bridge;
+	if ( !bridge.bind( input, backend, native ) || !driver.setDisplayLostSink( sirMarkX11DisplayLost, &bridge ) || !input.begin( 1 ) ||
+	     !bridge.beginFrame() || !input.publish() || input.activeDeviceCount() != 2 ) {
+		return false;
+	}
 	// Close only this client's socket. Xvfb continues to service other
 	// clients, so a replacement display must still be reopenable.
 	Display *pDisplay = ( Display * )native.nDisplayOrInstance;
 	if ( pDisplay == nullptr || shutdown( ConnectionNumber( pDisplay ), SHUT_RDWR ) != 0 ) {
 		return false;
 	}
+	if ( !input.begin( 2 ) ) {
+		return false;
+	}
 	const sirWindowResult_t ePump = windows.pumpEvents( 32 );
+	if ( bridge.isBound() || input.activeDeviceCount() != 0 || !input.publish() ) {
+		return false;
+	}
+	// Unbind remains idempotent after the native connection has disappeared.
+	bridge.unbind();
 	sirWindowSnapshot_t snapshot = {};
 	if ( ePump != SIR_WINDOW_NATIVE_FAILURE || windows.querySnapshot( hWindow, &snapshot ) != SIR_WINDOW_OK || !snapshot.bCloseRequested ||
 	     snapshot.bReady || windows.releaseNativeLease( lease ) != SIR_WINDOW_OK || windows.destroyWindow( hWindow ) != SIR_WINDOW_OK ||
 	     windows.shutdown() != SIR_SYSTEM_OK ) {
 		return false;
 	}
-	SIRWindowDriverX11 replacement;
-	SIRWindowSystem newWindows( replacement );
-	if ( newWindows.initialize() != SIR_SYSTEM_OK ) {
+	// The lost session's raw-input callback belongs to its retired input
+	// consumer and must not be invoked when the same driver is reopened.
+	input.shutdown();
+	const uint32_t nOldSinkCount = oldSink.nEvents;
+	SIRWindowSystem reopened( driver );
+	if ( reopened.initialize() != SIR_SYSTEM_OK ) {
 		return false;
 	}
 	sirWindowHandle_t fresh = {};
-	if ( newWindows.createWindow( { "new-client", 320, 200 }, &fresh ) != SIR_WINDOW_OK ||
-	     newWindows.destroyWindow( fresh ) != SIR_WINDOW_OK || newWindows.shutdown() != SIR_SYSTEM_OK ) {
+	if ( reopened.createWindow( { "new-client", 320, 200 }, &fresh ) != SIR_WINDOW_OK ) {
+		return false;
+	}
+	for ( uint32_t i = 0; i < 8; ++i ) {
+		if ( reopened.pumpEvents( 32 ) != SIR_WINDOW_OK ) {
+			return false;
+		}
+	}
+	if ( oldSink.nEvents != nOldSinkCount || reopened.destroyWindow( fresh ) != SIR_WINDOW_OK || reopened.shutdown() != SIR_SYSTEM_OK ) {
 		return false;
 	}
 	return true;

@@ -155,6 +155,22 @@ sirWindowResult_t SIRWindowDriverWin32::destroyWindow( uint32_t nSlot ) noexcept
 			return SIR_WINDOW_NATIVE_FAILURE;
 		}
 	}
+	// WM_SIZE/WM_DPICHANGED can be queued synchronously during DestroyWindow.
+	// They must never be replayed against a new HWND in this recycled slot.
+	const uint32_t nOriginal = m_nEventCount;
+	uint32_t nRetained = 0;
+	for ( uint32_t i = 0; i < nOriginal; ++i ) {
+		const sirWindowBackendEvent_t event = m_Events[( m_nEventRead + i ) % SIR_WINDOW_EVENT_CAPACITY];
+		if ( event.nSlot != nSlot ) {
+			m_Events[( m_nEventRead + nRetained ) % SIR_WINDOW_EVENT_CAPACITY] = event;
+			++nRetained;
+		}
+	}
+	m_nEventCount = nRetained;
+	m_nEventWrite = ( m_nEventRead + nRetained ) % SIR_WINDOW_EVENT_CAPACITY;
+	for ( uint32_t i = 0; i < 6; ++i ) {
+		m_DeferredEvents[nSlot][i] = {};
+	}
 	slot = {};
 	m_bClosePending[nSlot] = false;
 	m_bLostPending[nSlot] = false;
@@ -282,6 +298,35 @@ void SIRWindowDriverWin32::queueEvent( uint32_t nSlot, sirWindowEventKind_t eKin
 		}
 	}
 	if ( m_nEventCount == SIR_WINDOW_EVENT_CAPACITY ) {
+		uint32_t nGroup = 6;
+		switch ( eKind ) {
+		case SIR_WINDOW_EVENT_RESIZED:
+			nGroup = 0;
+			break;
+		case SIR_WINDOW_EVENT_DPI_CHANGED:
+			nGroup = 1;
+			break;
+		case SIR_WINDOW_EVENT_DISPLAY_CHANGED:
+			nGroup = 2;
+			break;
+		case SIR_WINDOW_EVENT_SHOWN:
+		case SIR_WINDOW_EVENT_HIDDEN:
+			nGroup = 3;
+			break;
+		case SIR_WINDOW_EVENT_MINIMIZED:
+		case SIR_WINDOW_EVENT_RESTORED:
+			nGroup = 4;
+			break;
+		case SIR_WINDOW_EVENT_FOCUS_GAINED:
+		case SIR_WINDOW_EVENT_FOCUS_LOST:
+			nGroup = 5;
+			break;
+		default:
+			break;
+		}
+		if ( nGroup < 6 ) {
+			m_DeferredEvents[nSlot][nGroup] = { nSlot, ( uintptr_t )m_Slots[nSlot].hWindow, eKind, nWidth, nHeight };
+		}
 		m_bOverflow = true;
 		return;
 	}
@@ -350,7 +395,7 @@ LRESULT CALLBACK SIRWindowDriverWin32::windowProc( HWND hWindow, UINT nMessage, 
 			// Input may consume text and pointer decisions, never the native
 			// window state above. Foreground raw input and native teardown
 			// must still reach DefWindowProcW for OS-owned cleanup.
-			if ( result.bHandled && nMessage != WM_NCDESTROY &&
+			if ( result.bHandled && nMessage != WM_DESTROY && nMessage != WM_NCDESTROY &&
 			     !( nMessage == WM_INPUT && GET_RAWINPUT_CODE_WPARAM( nWParam ) == RIM_INPUT ) ) {
 				return ( LRESULT )result.nResult;
 			}
@@ -405,6 +450,19 @@ sirWindowResult_t SIRWindowDriverWin32::pumpEvents( uint32_t nBudget, sirWindowD
 		--m_nEventCount;
 		++nDelivered;
 	}
+	// Replay the last native state after older queued transitions. Ordering
+	// resize before restore ensures restored snapshots use the final extent.
+	for ( uint32_t i = 0; i < SIR_WINDOW_MAX_WINDOWS && nDelivered < nBudget; ++i ) {
+		for ( uint32_t j = 0; j < 6 && nDelivered < nBudget; ++j ) {
+			if ( m_DeferredEvents[i][j].eKind == 0 ) {
+				continue;
+			}
+			const sirWindowBackendEvent_t event = m_DeferredEvents[i][j];
+			m_DeferredEvents[i][j] = {};
+			pCallback( pContext, event );
+			++nDelivered;
+		}
+	}
 	const bool bLost = m_bOverflow;
 	m_bOverflow = false;
 	return bLost ? SIR_WINDOW_EVENTS_LOST : SIR_WINDOW_OK;
@@ -443,5 +501,8 @@ void SIRWindowDriverWin32::shutdown( void ) noexcept
 		m_bClosePending[i] = false;
 		m_bLostPending[i] = false;
 		m_nLostNativeWindow[i] = 0;
+		for ( uint32_t j = 0; j < 6; ++j ) {
+			m_DeferredEvents[i][j] = {};
+		}
 	}
 }

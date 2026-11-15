@@ -96,6 +96,7 @@ private:
 	char m_szDirectory[512];
 	int m_nWatchFd;
 	int m_nWatch;
+	uint32_t m_nWatchRetryFrames;
 };
 
 #endif // __SIRENGINE_SIRLINUXEVDEVBACKEND_H__

@@ -547,6 +547,20 @@ static void sirCollectWaylandEvent( void *pContext, const sirWindowBackendEvent_
 	}
 }
 
+typedef struct sirWaylandOverflowEvents_s
+{
+	sirWindowBackendEvent_t events[SIR_WINDOW_EVENT_CAPACITY + 16];
+	uint32_t nCount;
+} sirWaylandOverflowEvents_t;
+
+static void sirCollectWaylandOverflowEvent( void *pContext, const sirWindowBackendEvent_t& event ) noexcept
+{
+	sirWaylandOverflowEvents_t *pEvents = ( sirWaylandOverflowEvents_t * )pContext;
+	if ( pEvents->nCount < SIR_WINDOW_EVENT_CAPACITY + 16 ) {
+		pEvents->events[pEvents->nCount++] = event;
+	}
+}
+
 static uint32_t s_nSeatLossCallbacks = 0;
 static void sirOnWaylandSeatLost( void *pContext ) noexcept
 {
@@ -697,7 +711,10 @@ static bool sirTestDisplayLossDiscardsQueuedReady( void ) noexcept
 	s_nCreated = 0;
 	s_nDisplayFd = -1;
 	SIRWindowDriverWayland driver;
-	if ( driver.initialize() != SIR_WINDOW_OK ) {
+	uint32_t nSeatLossCount = 0;
+	uint32_t nPointerLossCount = 0;
+	if ( !driver.setSeatLostSink( sirOnWaylandSeatLost, &nSeatLossCount ) ||
+	     !driver.setPointerProtocolLostSink( sirOnWaylandSeatLost, &nPointerLossCount ) || driver.initialize() != SIR_WINDOW_OK ) {
 		return false;
 	}
 	sirWindowNativeView_t first = {}, second = {};
@@ -710,6 +727,7 @@ static bool sirTestDisplayLossDiscardsQueuedReady( void ) noexcept
 	s_pSurfaceListener[0]->configure( s_pSurfaceContext[0], &s_XdgSurfaces[0], 1001 );
 	s_pSurfaceListener[1]->configure( s_pSurfaceContext[1], &s_XdgSurfaces[1], 1002 );
 	s_pRegistryListener->global_remove( s_pRegistryContext, &s_Registry, 11 );
+	const bool bCancelledInput = nSeatLossCount == 1 && nPointerLossCount == 1;
 	sirWaylandTestEvents_t events = {};
 	const sirWindowResult_t a = driver.pumpEvents( 1, sirCollectWaylandEvent, &events );
 	const sirWindowResult_t b = driver.pumpEvents( 1, sirCollectWaylandEvent, &events );
@@ -719,6 +737,53 @@ static bool sirTestDisplayLossDiscardsQueuedReady( void ) noexcept
 	                    events.events[1].eKind == SIR_WINDOW_EVENT_LOST && events.events[1].nSlot == 1;
 	assert( events.nCount == 2 ); // Buffered READY must never escape after compositor loss.
 	driver.shutdown();
+	return bValid && bCancelledInput && nSeatLossCount == 1 && nPointerLossCount == 1;
+}
+
+static bool sirTestOverflowRetainsInitialConfigureAndLatestSize( void ) noexcept
+{
+	s_nCreated = 0;
+	s_nDisplayFd = -1;
+	s_bOldProtocol = false;
+	s_bOfferFractional = false;
+	SIRWindowDriverWayland driver;
+	if ( driver.initialize() != SIR_WINDOW_OK ) {
+		return false;
+	}
+	sirWindowNativeView_t first = {}, second = {};
+	if ( driver.createWindow( { "scale-churn", 640, 480 }, 0, &first ) != SIR_WINDOW_OK ||
+	     driver.createWindow( { "configured-under-overflow", 320, 240 }, 1, &second ) != SIR_WINDOW_OK ) {
+		return false;
+	}
+	s_pSurfaceListener[0]->configure( s_pSurfaceContext[0], &s_XdgSurfaces[0], 101 );
+	s_pNativeSurfaceListeners[0]->enter( s_pNativeSurfaceContexts[0], &s_Surfaces[0], &s_Output );
+	for ( uint32_t i = 0; i < SIR_WINDOW_EVENT_CAPACITY; ++i ) {
+		s_pOutputListener->scale( s_pOutputContext, &s_Output, ( i & 1 ) != 0 ? 1 : 2 );
+	}
+	// The ring is full. Initial readiness and the final extent must still
+	// reach the owner after the overflow has been reported.
+	s_pSurfaceListener[1]->configure( s_pSurfaceContext[1], &s_XdgSurfaces[1], 201 );
+	s_pToplevelListener[0]->configure( s_pToplevelContext[0], &s_Toplevels[0], 733, 511, nullptr );
+	s_pSurfaceListener[0]->configure( s_pSurfaceContext[0], &s_XdgSurfaces[0], 202 );
+	sirWaylandOverflowEvents_t events = {};
+	const sirWindowResult_t eResult = driver.pumpEvents( SIR_WINDOW_EVENT_CAPACITY + 16, sirCollectWaylandOverflowEvent, &events );
+	uint32_t nSecondReady = 0;
+	uint32_t nLastWidth = 0;
+	uint32_t nLastHeight = 0;
+	for ( uint32_t i = 0; i < events.nCount; ++i ) {
+		if ( events.events[i].nSlot == 1 && events.events[i].eKind == SIR_WINDOW_EVENT_READY ) {
+			++nSecondReady;
+		}
+		if ( events.events[i].nSlot == 0 && events.events[i].eKind == SIR_WINDOW_EVENT_RESIZED ) {
+			nLastWidth = events.events[i].nWidth;
+			nLastHeight = events.events[i].nHeight;
+		}
+	}
+	const bool bValid = eResult == SIR_WINDOW_EVENTS_LOST && nSecondReady == 1 && nLastWidth == 733 && nLastHeight == 511;
+	( void )driver.destroyWindow( 1 );
+	( void )driver.destroyWindow( 0 );
+	driver.shutdown();
+	s_bOfferFractional = true;
 	return bValid;
 }
 
@@ -1018,6 +1083,10 @@ int main( void )
 	}
 	if ( !sirTestDisplayLossDiscardsQueuedReady() ) {
 		fputs( "Wayland queued native readiness escaped compositor-loss terminal state\n", stderr );
+		return 1;
+	}
+	if ( !sirTestOverflowRetainsInitialConfigureAndLatestSize() ) {
+		fputs( "Wayland configure/extent overflow recovery failed\n", stderr );
 		return 1;
 	}
 	if ( !sirTestCompositorHangup() ) {

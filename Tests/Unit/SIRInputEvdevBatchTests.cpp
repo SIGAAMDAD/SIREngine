@@ -23,6 +23,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/stat.h>
 
 static int s_nWatchedFd = -1;
 static uint32_t s_nReadCalls = 0;
@@ -161,6 +162,11 @@ public:
 	static void pollHotplug( SIRLinuxEvdevBackend& backend, SIRInputService& service ) noexcept
 	{
 		backend.pollHotplug( service );
+	}
+
+	static bool watchActive( const SIRLinuxEvdevBackend& backend ) noexcept
+	{
+		return backend.m_nWatchFd >= 0 && backend.m_nWatch >= 0;
 	}
 
 	static sirInputDeviceId_t firstDevice( const SIRLinuxEvdevBackend& backend ) noexcept
@@ -814,12 +820,48 @@ static bool testAtomicAnalogResynchronization( void ) noexcept
 	return bValid;
 }
 
+static bool testHotplugDirectoryRecovery( void ) noexcept
+{
+	char szDirectory[] = "/tmp/sir-evdev-rewatch-XXXXXX";
+	if ( mkdtemp( szDirectory ) == nullptr || rmdir( szDirectory ) != 0 ) {
+		return false;
+	}
+	SIRInputService service;
+	SIRLinuxEvdevBackend backend;
+	if ( !service.attach( backend ) || !service.begin( 1 ) ) {
+		return false;
+	}
+	const bool bMissingDirectory = !backend.discover( service, szDirectory );
+	bool bValid = bMissingDirectory && !SIRInputEvdevBatchTestPeer::watchActive( backend ) && mkdir( szDirectory, 0700 ) == 0;
+	for ( uint32_t i = 0; bValid && i < 120; ++i ) {
+		backend.sample( service );
+	}
+	bValid = bValid && SIRInputEvdevBatchTestPeer::watchActive( backend );
+	if ( bValid ) {
+		bValid = rmdir( szDirectory ) == 0;
+		for ( uint32_t i = 0; i < 4; ++i ) {
+			backend.sample( service );
+		}
+		bValid = bValid && !SIRInputEvdevBatchTestPeer::watchActive( backend );
+	}
+	if ( bValid ) {
+		bValid = mkdir( szDirectory, 0700 ) == 0;
+		for ( uint32_t i = 0; i < 120; ++i ) {
+			backend.sample( service );
+		}
+		bValid = bValid && SIRInputEvdevBatchTestPeer::watchActive( backend );
+	}
+	service.shutdown();
+	( void )rmdir( szDirectory );
+	return bValid;
+}
+
 int main( void )
 {
 	if ( !testBatchedReports() || !testPartialReportAcrossReads() || !testMappingAndQueueBoundaries() || !testDiscoveryAndOpenFailures() ||
 	     !testDesyncAndReadFailureLifecycle() || !testAxisHatAndRumbleErrors() || !testEmulatedControllerOpenAndRumble() ||
 	     !testEmulatedHotplugLifecycle() || !testInterruptBudgetAndRetry() || !testFailedDesyncRequeryRecovery() ||
-	     !testAtomicAnalogResynchronization() ) {
+	     !testAtomicAnalogResynchronization() || !testHotplugDirectoryRecovery() ) {
 		fprintf( stderr, "SIRInputEvdevBatchTests FAIL\n" );
 		return 1;
 	}

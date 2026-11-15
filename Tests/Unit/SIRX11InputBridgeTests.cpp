@@ -17,6 +17,22 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Core/Platform/Linux/SIRX11InputBridge.h>
 #include <X11/Xlib.h>
 #include <stdio.h>
+static uint32_t s_nCursorUnhideCount = 0;
+static uint32_t s_nCursorHideCount = 0;
+static Window s_hLastCursorHideWindow = 0;
+extern "C" int __real_XDefineCursor( Display *pDisplay, Window hWindow, Cursor hCursor );
+extern "C" int __wrap_XDefineCursor( Display *pDisplay, Window hWindow, Cursor hCursor )
+{
+	++s_nCursorHideCount;
+	s_hLastCursorHideWindow = hWindow;
+	return __real_XDefineCursor( pDisplay, hWindow, hCursor );
+}
+extern "C" int __real_XUndefineCursor( Display *pDisplay, Window hWindow );
+extern "C" int __wrap_XUndefineCursor( Display *pDisplay, Window hWindow )
+{
+	++s_nCursorUnhideCount;
+	return __real_XUndefineCursor( pDisplay, hWindow );
+}
 
 static void sirBridgeDispatchEvent( const XEvent& event, void *pContext ) noexcept
 {
@@ -85,13 +101,34 @@ int main( void )
 	bridge.processEvent( key );
 	XEvent secondFocus = focus;
 	secondFocus.xfocus.window = ( Window )secondView.nNativeWindow;
+	// Cursor capture follows the physical seat, never sticks to a former
+	// focused native window when its FocusOut event is missing.
+	if ( !bridge.setCursorMode( SIR_INPUT_CURSOR_HIDDEN ) ) {
+		return 14;
+	}
+	const uint32_t nUnhiddenBeforeFocus = s_nCursorUnhideCount;
+	const uint32_t nHiddenBeforeFocus = s_nCursorHideCount;
 	bridge.processEvent( secondFocus );
-	if ( input.activeDeviceCount() != 2 ) {
+	if ( s_nCursorUnhideCount <= nUnhiddenBeforeFocus || s_nCursorHideCount <= nHiddenBeforeFocus ||
+	     s_hLastCursorHideWindow != ( Window )secondView.nNativeWindow || bridge.cursorMode() != SIR_INPUT_CURSOR_HIDDEN ||
+	     input.activeDeviceCount() != 2 ) {
 		return 9;
 	}
 	key.xkey.window = ( Window )secondView.nNativeWindow;
 	key.xkey.keycode = 41;
 	bridge.processEvent( key );
+	// Keyboard, pointer buttons, and wheel events must use the same
+	// physical devices as the focus changes between native windows.
+	XEvent pointer = {};
+	pointer.xbutton.type = ButtonPress;
+	pointer.xbutton.window = ( Window )secondView.nNativeWindow;
+	pointer.xbutton.button = Button1;
+	bridge.processEvent( pointer );
+	pointer.xbutton.type = ButtonRelease;
+	bridge.processEvent( pointer );
+	pointer.xbutton.type = ButtonPress;
+	pointer.xbutton.button = Button4;
+	bridge.processEvent( pointer );
 	// Remove the *focused* second window, then verify the backend retargets
 	// the surviving first window without reconnecting physical devices.
 	if ( !bridge.unregisterWindow( secondView.nNativeWindow ) || bridge.unregisterWindow( secondView.nNativeWindow ) ||
@@ -99,9 +136,18 @@ int main( void )
 		return 10;
 	}
 	bridge.processEvent( focus );
+	if ( !bridge.setCursorMode( SIR_INPUT_CURSOR_FREE ) ) {
+		return 15;
+	}
 	key.xkey.window = ( Window )view.nNativeWindow;
 	key.xkey.keycode = 43;
 	bridge.processEvent( key );
+	pointer.xbutton.window = ( Window )view.nNativeWindow;
+	pointer.xbutton.button = Button3;
+	bridge.processEvent( pointer );
+	pointer.xbutton.window = ( Window )( secondView.nNativeWindow );
+	pointer.xbutton.button = Button1;
+	bridge.processEvent( pointer ); // Retired window must not receive input.
 	input.sample();
 	if ( !input.publish() ) {
 		return 7;
@@ -109,10 +155,22 @@ int main( void )
 	const sirInputFrame_t *pFrame = input.frame();
 	bool bSawSecondKey = false;
 	bool bSawSurvivingKey = false;
+	bool bSawSecondButton = false;
+	bool bSawSurvivingButton = false;
+	bool bSawWheel = false;
 	uint32_t nResyncEvents = 0;
 	for ( uint32_t i = 0; i < pFrame->nCount; ++i ) {
 		if ( pFrame->events[i].eSignal == SIR_INPUT_RESYNC ) {
 			++nResyncEvents;
+		}
+		if ( pFrame->events[i].eSignal == SIR_INPUT_BUTTON && pFrame->events[i].nControl == 0 && pFrame->events[i].nValue == 1 ) {
+			bSawSecondButton = true;
+		}
+		if ( pFrame->events[i].eSignal == SIR_INPUT_BUTTON && pFrame->events[i].nControl == 1 && pFrame->events[i].nValue == 1 ) {
+			bSawSurvivingButton = true;
+		}
+		if ( pFrame->events[i].eSignal == SIR_INPUT_WHEEL && pFrame->events[i].nValue == 120 ) {
+			bSawWheel = true;
 		}
 		if ( pFrame->events[i].eSignal == SIR_INPUT_BUTTON && pFrame->events[i].nControl == 41 && pFrame->events[i].nValue == 1 ) {
 			bSawSecondKey = true;
@@ -121,7 +179,8 @@ int main( void )
 			bSawSurvivingKey = true;
 		}
 	}
-	if ( !bSawSecondKey || !bSawSurvivingKey || nResyncEvents < 4 ) {
+	if ( !bSawSecondKey || !bSawSurvivingKey || !bSawSecondButton || !bSawSurvivingButton || !bSawWheel || nResyncEvents < 4 ||
+	     input.activeDeviceCount() != 2 ) {
 		return 11;
 	}
 	( void )driver.setEventSink( nullptr, nullptr );

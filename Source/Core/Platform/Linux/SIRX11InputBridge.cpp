@@ -167,7 +167,9 @@ bool SIRX11InputBridge::setCursorMode( sirInputCursorMode_t eMode ) noexcept
 			return false;
 		}
 	}
-	if ( eMode == SIR_INPUT_CURSOR_FREE ) {
+	// Cursor visibility belongs to the focused window. Unfocused windows
+	// must never retain an invisible cursor or hold a pointer grab.
+	if ( eMode == SIR_INPUT_CURSOR_FREE || !m_bFocused ) {
 		XUndefineCursor( pDisplay, hWindow );
 	} else {
 		XDefineCursor( pDisplay, hWindow, ( Cursor )m_nInvisibleCursor );
@@ -246,6 +248,15 @@ void SIRX11InputBridge::processEvent( const XEvent& event ) noexcept
 		if ( m_bAttached && !m_pBackend->focusWindow( input, event.xany.window ) ) {
 			return;
 		}
+		// FocusIn may arrive without the former window's FocusOut. Release
+		// its grab/hidden cursor before transferring the physical seat.
+		if ( m_bCursorCaptured ) {
+			XUngrabPointer( m_pDisplay, CurrentTime );
+			m_bCursorCaptured = false;
+		}
+		if ( m_eCursorMode != SIR_INPUT_CURSOR_FREE && m_hWindow != 0 ) {
+			XUndefineCursor( m_pDisplay, m_hWindow );
+		}
 		if ( m_hInputContext != nullptr ) {
 			XUnsetICFocus( m_hInputContext );
 		}
@@ -268,7 +279,7 @@ void SIRX11InputBridge::processEvent( const XEvent& event ) noexcept
 				XUnsetICFocus( ( XIC )m_hInputContext );
 			}
 		}
-		if ( m_eCursorMode == SIR_INPUT_CURSOR_CAPTURED ) {
+		if ( m_eCursorMode != SIR_INPUT_CURSOR_FREE ) {
 			( void )setCursorMode( m_eCursorMode );
 		}
 	}
@@ -290,6 +301,21 @@ void SIRX11InputBridge::processEvent( const XEvent& event ) noexcept
 	( void )pX11->processEvent( input, event );
 }
 
+void SIRX11InputBridge::onDisplayLost( void ) noexcept
+{
+	// Xlib objects cannot be destroyed through a failed Display socket.
+	// Surrender the borrowed handles and disconnect input without X requests.
+	m_pDisplay = nullptr;
+	m_hInputMethod = nullptr;
+	m_hInputContext = nullptr;
+	m_nInvisibleCursor = 0;
+	for ( uint32_t i = 0; i < m_nWindowCount; ++i ) {
+		m_hRegisteredContexts[i] = nullptr;
+	}
+	m_bCursorCaptured = false;
+	unbind();
+}
+
 void SIRX11InputBridge::unbind( void ) noexcept
 {
 	if ( m_pInput == nullptr ) {
@@ -297,21 +323,21 @@ void SIRX11InputBridge::unbind( void ) noexcept
 	}
 	m_pInput->text().setFocused( false );
 	m_pInput->setHapticsPaused( true );
-	if ( m_bCursorCaptured ) {
+	if ( m_pDisplay != nullptr && m_bCursorCaptured ) {
 		XUngrabPointer( m_pDisplay, CurrentTime );
 	}
-	if ( m_nInvisibleCursor != 0 ) {
+	if ( m_pDisplay != nullptr && m_nInvisibleCursor != 0 ) {
 		XFreeCursor( m_pDisplay, ( Cursor )m_nInvisibleCursor );
 	}
 	for ( uint32_t i = 0; i < m_nWindowCount; ++i ) {
-		if ( m_hRegisteredContexts[i] != nullptr ) {
+		if ( m_pDisplay != nullptr && m_hRegisteredContexts[i] != nullptr ) {
 			XDestroyIC( m_hRegisteredContexts[i] );
 		}
 		m_hRegisteredContexts[i] = nullptr;
 		m_hRegisteredWindows[i] = 0;
 	}
 	m_nWindowCount = 0;
-	if ( m_hInputMethod != nullptr ) {
+	if ( m_pDisplay != nullptr && m_hInputMethod != nullptr ) {
 		XCloseIM( m_hInputMethod );
 	}
 	m_pBackend->stop( *m_pInput );

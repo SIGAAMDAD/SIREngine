@@ -43,6 +43,7 @@ public:
 	void setTextEnabled( bool bEnabled ) noexcept;
 	void processEvent( const XEvent& event ) noexcept;
 	void unbind( void ) noexcept;
+	void onDisplayLost( void ) noexcept;
 
 protected:
 private:

@@ -27,6 +27,76 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <stdlib.h>
 #include <stdio.h>
 
+SIRWindowDriverStartupFallback::SIRWindowDriverStartupFallback( SIRWindowDriver& preferred, SIRWindowDriver& fallback ) noexcept
+    : m_pPreferred( &preferred ), m_pFallback( &fallback )
+{
+}
+
+SIRWindowDriverStartupFallback::~SIRWindowDriverStartupFallback( void ) noexcept
+{
+	shutdown();
+}
+
+sirWindowResult_t SIRWindowDriverStartupFallback::initialize( void ) noexcept
+{
+	if ( m_pActive != nullptr ) {
+		return SIR_WINDOW_BUSY;
+	}
+	if ( m_pPreferred == m_pFallback ) {
+		return SIR_WINDOW_INVALID_ARGUMENT;
+	}
+
+	const sirWindowResult_t ePreferred = m_pPreferred->initialize();
+	if ( ePreferred == SIR_WINDOW_OK ) {
+		m_pActive = m_pPreferred;
+		return SIR_WINDOW_OK;
+	}
+	if ( ePreferred == SIR_WINDOW_BUSY ) {
+		return SIR_WINDOW_BUSY;
+	}
+	m_pPreferred->shutdown();
+
+	const sirWindowResult_t eFallback = m_pFallback->initialize();
+	if ( eFallback == SIR_WINDOW_OK ) {
+		m_pActive = m_pFallback;
+		return SIR_WINDOW_OK;
+	}
+	if ( eFallback != SIR_WINDOW_BUSY ) {
+		m_pFallback->shutdown();
+	}
+	return eFallback;
+}
+
+sirWindowResult_t SIRWindowDriverStartupFallback::createWindow( const sirWindowCreateDesc_t& desc, uint32_t nSlot,
+                                                                sirWindowNativeView_t *pView ) noexcept
+{
+	return m_pActive != nullptr ? m_pActive->createWindow( desc, nSlot, pView ) : SIR_WINDOW_STOPPED;
+}
+
+sirWindowResult_t SIRWindowDriverStartupFallback::destroyWindow( uint32_t nSlot ) noexcept
+{
+	return m_pActive != nullptr ? m_pActive->destroyWindow( nSlot ) : SIR_WINDOW_STOPPED;
+}
+
+sirWindowResult_t SIRWindowDriverStartupFallback::mutateWindow( uint32_t nSlot, const sirWindowMutation_t& mutation ) noexcept
+{
+	return m_pActive != nullptr ? m_pActive->mutateWindow( nSlot, mutation ) : SIR_WINDOW_STOPPED;
+}
+
+sirWindowResult_t SIRWindowDriverStartupFallback::pumpEvents( uint32_t nBudget, sirWindowDriverEventFn_t pCallback,
+                                                              void *pContext ) noexcept
+{
+	return m_pActive != nullptr ? m_pActive->pumpEvents( nBudget, pCallback, pContext ) : SIR_WINDOW_STOPPED;
+}
+
+void SIRWindowDriverStartupFallback::shutdown( void ) noexcept
+{
+	if ( m_pActive != nullptr ) {
+		m_pActive->shutdown();
+		m_pActive = nullptr;
+	}
+}
+
 static bool sirNativeWindowHostPump( void *pContext )
 {
 	SIRWindowSystem *pWindows = ( SIRWindowSystem * )pContext;
@@ -97,15 +167,18 @@ int sirRunWindowHostWithDriver( SIRWindowDriver& driver, const sirWindowCreateDe
 
 int sirRunNativeWindowHosts( const sirWindowCreateDesc_t *pDescs, uint32_t nWindows ) noexcept
 {
-#if defined( SIR_WINDOW_WAYLAND_AVAILABLE )
-	const char *pszWaylandDisplay = getenv( "WAYLAND_DISPLAY" );
-	if ( pszWaylandDisplay != nullptr && pszWaylandDisplay[0] != 0 ) {
-		SIRWindowDriverWayland driver;
-		return sirRunWindowHostsWithDriver( driver, pDescs, nWindows );
-	}
-#endif
 #if defined( _WIN32 )
 	SIRWindowDriverWin32 driver;
+	return sirRunWindowHostsWithDriver( driver, pDescs, nWindows );
+#elif defined( SIR_WINDOW_WAYLAND_AVAILABLE ) && defined( SIR_WINDOW_X11_AVAILABLE )
+	SIRWindowDriverWayland wayland;
+	SIRWindowDriverX11 x11;
+	const char *pszWaylandDisplay = getenv( "WAYLAND_DISPLAY" );
+	if ( pszWaylandDisplay != nullptr && pszWaylandDisplay[0] != '\0' ) {
+		SIRWindowDriverStartupFallback driver( wayland, x11 );
+		return sirRunWindowHostsWithDriver( driver, pDescs, nWindows );
+	}
+	SIRWindowDriverStartupFallback driver( x11, wayland );
 	return sirRunWindowHostsWithDriver( driver, pDescs, nWindows );
 #elif defined( SIR_WINDOW_X11_AVAILABLE )
 	SIRWindowDriverX11 driver;

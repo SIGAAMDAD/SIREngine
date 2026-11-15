@@ -371,6 +371,20 @@ void SIRWindowDriverWayland::queueEvent( uint32_t nSlot, sirWindowEventKind_t eK
 		}
 	}
 	if ( m_nEventCount == SIR_WINDOW_EVENT_CAPACITY ) {
+		// Keep one latest state-bearing event of each kind per window, so
+		// configure readiness and framebuffer dimensions cannot be lost
+		// behind a burst of output-scale or resize notifications.
+		sirWindowBackendEvent_t *pDeferred = nullptr;
+		if ( eKind == SIR_WINDOW_EVENT_READY ) {
+			pDeferred = &m_DeferredReady[nSlot];
+		} else if ( eKind == SIR_WINDOW_EVENT_DPI_CHANGED ) {
+			pDeferred = &m_DeferredDpi[nSlot];
+		} else if ( eKind == SIR_WINDOW_EVENT_RESIZED ) {
+			pDeferred = &m_DeferredResize[nSlot];
+		}
+		if ( pDeferred != nullptr ) {
+			*pDeferred = { nSlot, ( uintptr_t )m_Slots[nSlot].pSurface, eKind, nWidth, nHeight };
+		}
 		m_bOverflow = true;
 		return;
 	}
@@ -385,6 +399,24 @@ void SIRWindowDriverWayland::loseDisplay( void ) noexcept
 		return;
 	}
 	m_bLost = true;
+
+	// Input's borrowed seat and pointer objects are invalid immediately on
+	// compositor loss. Notify once, before the next input sampling window.
+	const sirWaylandPointerProtocolLostFn_t pPointerSink = m_pPointerProtocolLostSink;
+	void *pPointerContext = m_pPointerProtocolLostContext;
+	m_pPointerProtocolLostSink = nullptr;
+	m_pPointerProtocolLostContext = nullptr;
+	if ( pPointerSink != nullptr ) {
+		pPointerSink( pPointerContext );
+	}
+	const sirWaylandSeatLostFn_t pSeatSink = m_pSeatLostSink;
+	void *pSeatContext = m_pSeatLostContext;
+	m_pSeatLostSink = nullptr;
+	m_pSeatLostContext = nullptr;
+	if ( pSeatSink != nullptr ) {
+		pSeatSink( pSeatContext );
+	}
+
 	// The display connection is terminal. Buffered READY/RESIZED/DPI events
 	// refer to native surfaces that can no longer be presented. Publish only
 	// the reserved per-slot LOST notifications, even if the ring was full.
@@ -393,6 +425,9 @@ void SIRWindowDriverWayland::loseDisplay( void ) noexcept
 	m_nEventCount = 0;
 	m_bOverflow = false;
 	for ( uint32_t i = 0; i < SIR_WINDOW_MAX_WINDOWS; ++i ) {
+		m_DeferredReady[i] = {};
+		m_DeferredDpi[i] = {};
+		m_DeferredResize[i] = {};
 		if ( m_Slots[i].pSurface != nullptr ) {
 			m_Slots[i].bLostPending = true;
 			m_Slots[i].bClosePending = false;
@@ -542,6 +577,9 @@ sirWindowResult_t SIRWindowDriverWayland::destroyWindow( uint32_t nSlot ) noexce
 	}
 	m_nEventCount = nRetained;
 	m_nEventWrite = ( m_nEventRead + nRetained ) % SIR_WINDOW_EVENT_CAPACITY;
+	m_DeferredReady[nSlot] = {};
+	m_DeferredDpi[nSlot] = {};
+	m_DeferredResize[nSlot] = {};
 	slot = {};
 	return SIR_WINDOW_OK;
 }
@@ -622,11 +660,36 @@ sirWindowResult_t SIRWindowDriverWayland::pumpEvents( uint32_t nBudget, sirWindo
 		}
 	}
 	uint32_t nDelivered = 0;
+	// Initial configure is a lifetime transition. Publish it before any
+	// subsequent resize already queued for the same window.
+	for ( uint32_t i = 0; i < SIR_WINDOW_MAX_WINDOWS && nDelivered < nBudget; ++i ) {
+		if ( m_DeferredReady[i].eKind != SIR_WINDOW_EVENT_READY ) {
+			continue;
+		}
+		const sirWindowBackendEvent_t ready = m_DeferredReady[i];
+		m_DeferredReady[i] = {};
+		pCallback( pContext, ready );
+		++nDelivered;
+	}
 	while ( m_nEventCount != 0 && nDelivered < nBudget ) {
 		pCallback( pContext, m_Events[m_nEventRead] );
 		m_nEventRead = ( m_nEventRead + 1 ) % SIR_WINDOW_EVENT_CAPACITY;
 		--m_nEventCount;
 		++nDelivered;
+	}
+	for ( uint32_t i = 0; i < SIR_WINDOW_MAX_WINDOWS && nDelivered < nBudget; ++i ) {
+		if ( m_DeferredDpi[i].eKind == SIR_WINDOW_EVENT_DPI_CHANGED ) {
+			const sirWindowBackendEvent_t dpi = m_DeferredDpi[i];
+			m_DeferredDpi[i] = {};
+			pCallback( pContext, dpi );
+			++nDelivered;
+		}
+		if ( m_DeferredResize[i].eKind == SIR_WINDOW_EVENT_RESIZED && nDelivered < nBudget ) {
+			const sirWindowBackendEvent_t resized = m_DeferredResize[i];
+			m_DeferredResize[i] = {};
+			pCallback( pContext, resized );
+			++nDelivered;
+		}
 	}
 	for ( uint32_t i = 0; i < SIR_WINDOW_MAX_WINDOWS; ++i ) {
 		sirWaylandWindowSlot_t& slot = m_Slots[i];
@@ -670,7 +733,11 @@ void SIRWindowDriverWayland::shutdown( void ) noexcept
 	}
 	for ( uint32_t i = 0; i < SIR_WAYLAND_MAX_OUTPUTS; ++i ) {
 		if ( m_Outputs[i].pOutput != nullptr ) {
-			wl_output_destroy( m_Outputs[i].pOutput );
+			if ( m_bLost ) {
+				wl_proxy_destroy( ( wl_proxy * )m_Outputs[i].pOutput );
+			} else {
+				wl_output_destroy( m_Outputs[i].pOutput );
+			}
 			m_Outputs[i] = {};
 		}
 	}
@@ -691,7 +758,9 @@ void SIRWindowDriverWayland::shutdown( void ) noexcept
 	}
 #endif
 	if ( m_pSeat != nullptr ) {
-		if ( !m_bLost && wl_proxy_get_version( ( wl_proxy * )m_pSeat ) >= 5 ) {
+		if ( m_bLost ) {
+			wl_proxy_destroy( ( wl_proxy * )m_pSeat );
+		} else if ( wl_proxy_get_version( ( wl_proxy * )m_pSeat ) >= 5 ) {
 			wl_seat_release( m_pSeat );
 		} else {
 			wl_seat_destroy( m_pSeat );
@@ -699,10 +768,18 @@ void SIRWindowDriverWayland::shutdown( void ) noexcept
 	}
 #ifdef SIR_WAYLAND_POINTER_PROTOCOLS_AVAILABLE
 	if ( m_pPointerConstraints != nullptr ) {
-		zwp_pointer_constraints_v1_destroy( m_pPointerConstraints );
+		if ( m_bLost ) {
+			wl_proxy_destroy( ( wl_proxy * )m_pPointerConstraints );
+		} else {
+			zwp_pointer_constraints_v1_destroy( m_pPointerConstraints );
+		}
 	}
 	if ( m_pRelativePointerManager != nullptr ) {
-		zwp_relative_pointer_manager_v1_destroy( m_pRelativePointerManager );
+		if ( m_bLost ) {
+			wl_proxy_destroy( ( wl_proxy * )m_pRelativePointerManager );
+		} else {
+			zwp_relative_pointer_manager_v1_destroy( m_pRelativePointerManager );
+		}
 	}
 #endif
 	if ( m_pBase != nullptr ) {
@@ -736,6 +813,11 @@ void SIRWindowDriverWayland::shutdown( void ) noexcept
 	m_nEventRead = 0;
 	m_nEventWrite = 0;
 	m_nEventCount = 0;
+	for ( uint32_t i = 0; i < SIR_WINDOW_MAX_WINDOWS; ++i ) {
+		m_DeferredReady[i] = {};
+		m_DeferredDpi[i] = {};
+		m_DeferredResize[i] = {};
+	}
 	m_nCompositorGlobal = 0;
 	m_nShellGlobal = 0;
 	m_bLost = false;
