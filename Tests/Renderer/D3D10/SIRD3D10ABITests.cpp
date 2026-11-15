@@ -32,6 +32,7 @@ static void sirD3D10Require( bool bCondition ) noexcept
 static uint32_t s_nAllocations = 0;
 static uint32_t s_nReleases = 0;
 static bool s_bFailAllocation = false;
+static bool s_bReturnMisaligned = false;
 
 static void *sirD3D10TestAllocate( void *pContext, uint64_t nBytes, uint64_t nAlignment ) noexcept
 {
@@ -40,9 +41,12 @@ static void *sirD3D10TestAllocate( void *pContext, uint64_t nBytes, uint64_t nAl
 	if ( s_bFailAllocation ) {
 		return nullptr;
 	}
-	void *pMemory = malloc( ( size_t )nBytes );
+	void *pMemory = malloc( ( size_t )nBytes + ( s_bReturnMisaligned ? 1U : 0U ) );
 	if ( pMemory != nullptr ) {
 		++s_nAllocations;
+		if ( s_bReturnMisaligned ) {
+			return ( ( uint8_t * )pMemory ) + 1;
+		}
 	}
 	return pMemory;
 }
@@ -52,7 +56,17 @@ static void sirD3D10TestFree( void *pContext, void *pMemory ) noexcept
 	( void )pContext;
 	sirD3D10Require( pMemory != nullptr );
 	++s_nReleases;
+	if ( s_bReturnMisaligned ) {
+		pMemory = ( ( uint8_t * )pMemory ) - 1;
+	}
 	free( pMemory );
+}
+
+static void sirD3D10UnexpectedFree( void *pContext, void *pMemory ) noexcept
+{
+	( void )pContext;
+	( void )pMemory;
+	abort();
 }
 
 static void sirD3D10TestLog( void *pContext, uint32_t nSeverity, const char *pszMessage ) noexcept
@@ -96,6 +110,11 @@ int main( void )
 	s_bFailAllocation = false;
 	sirD3D10Require( s_nAllocations == 0 );
 
+	s_bReturnMisaligned = true;
+	sirD3D10Require( SIRGetGraphicsDriverABI( 1, 0, &host, &driver ) == SIR_GRAPHICS_DRIVER_ERROR );
+	sirD3D10Require( s_nAllocations == 1 && s_nReleases == 1 );
+	s_bReturnMisaligned = false;
+
 	struct
 	{
 		sirGraphicsABIDriver_t driver;
@@ -108,7 +127,7 @@ int main( void )
 	sirD3D10Require( result.driver.nBackend == SIR_GRAPHICS_BACKEND_D3D10 );
 	sirD3D10Require( result.driver.nMajor == 1 && result.driver.nMinor == 0 );
 	sirD3D10Require( sirGraphicsValidateABIDriver( &result.driver ) == SIR_GRAPHICS_SUCCESS );
-	sirD3D10Require( s_nAllocations == 1 );
+	sirD3D10Require( s_nAllocations == 2 && s_nReleases == 1 );
 
 	uint32_t nAdapters = 99;
 	sirD3D10Require( result.driver.pAdapterCount( result.driver.pDriver, &nAdapters ) == SIR_GRAPHICS_SUCCESS );
@@ -135,7 +154,21 @@ int main( void )
 	sirD3D10Require( result.driver.pCreateDevice( result.driver.pDriver, &request, &device ) == SIR_GRAPHICS_INVALID_ARGUMENT );
 	sirD3D10Require( result.driver.pDestroyDevice( result.driver.pDriver, nullptr ) == SIR_GRAPHICS_INVALID_ARGUMENT );
 
+	// The state holds its own copy of the validated host callbacks.
+	host.pFree = sirD3D10UnexpectedFree;
 	result.driver.pReleaseDriver( result.driver.pDriver );
+	host.pFree = sirD3D10TestFree;
+	result.driver.pReleaseDriver( nullptr );
 	sirD3D10Require( s_nAllocations == s_nReleases );
+
+	// Repeated load/unload does not grow the host allocation count.
+	for ( uint32_t iIteration = 0; iIteration < 64; ++iIteration ) {
+		sirGraphicsABIDriver_t current = {};
+		current.nSize = sizeof( current );
+		sirD3D10Require( sirGraphicsNegotiateDriverABI( SIRGetGraphicsDriverABI, &host, &current ) == SIR_GRAPHICS_SUCCESS );
+		sirD3D10Require( s_nAllocations == s_nReleases + 1 );
+		current.pReleaseDriver( current.pDriver );
+		sirD3D10Require( s_nAllocations == s_nReleases );
+	}
 	return 0;
 }
