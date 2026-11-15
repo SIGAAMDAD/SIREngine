@@ -33,6 +33,7 @@ typedef struct sirDerivedRepresentationSlot_s
 	SIRResourcePinHandle pin;
 	sirProviderCompletionSet_t retirement;
 	uint32_t nGeneration;
+	uint32_t nConsumerLeases;
 	bool bOccupied;
 	bool bRetiring;
 	bool bNativeReleased;
@@ -56,7 +57,7 @@ static bool sameDerivedKey( const SIRDerivedResourceKey& rA, const SIRDerivedRes
 
 SIRResourceDerivedRegistry::SIRResourceDerivedRegistry( SIRResourceGraph& rGraph, const SIRResourceDerivedConfig& rConfig ) noexcept
     : m_pGraph( &rGraph ), m_Config( rConfig ), m_OwnerThread( std::this_thread::get_id() ), m_pProviders( nullptr ),
-      m_pRepresentations( nullptr ), m_Stats{}, m_nTrackedBytes( 0 ), m_bReady( false )
+      m_pRepresentations( nullptr ), m_Stats{}, m_nTrackedBytes( 0 ), m_nLastPhysicalBackingId( 0 ), m_bReady( false )
 {
 	if ( !rGraph.isReady() || !rConfig.allocator.m_pfnAllocate || !rConfig.allocator.m_pfnFree || !rConfig.nMaxProviders ||
 	     !rConfig.nMaxRepresentations || !rConfig.nMaxTrackedBytes ) {
@@ -165,6 +166,24 @@ SIRResourceResult SIRResourceDerivedRegistry::registerProvider( uint32_t nProvid
 	return SIR_RESOURCE_RESULT_OUT_OF_BUDGET;
 }
 
+SIRResourceResult SIRResourceDerivedRegistry::unregisterProvider( uint32_t nProviderId ) noexcept
+{
+	if ( !isWriterThread() )
+		return SIR_RESOURCE_RESULT_WRITER_VIOLATION;
+	if ( !m_bReady || nProviderId == 0 )
+		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
+	const int32_t iProvider = findProvider( nProviderId );
+	if ( iProvider < 0 )
+		return SIR_RESOURCE_RESULT_INVALID_HANDLE;
+	for ( uint32_t i = 0; i < m_Config.nMaxRepresentations; ++i ) {
+		if ( m_pRepresentations[i].bOccupied && m_pRepresentations[i].registration.m_Key.m_nProviderId == nProviderId )
+			return SIR_RESOURCE_RESULT_BUSY;
+	}
+	m_pProviders[iProvider] = {};
+	--m_Stats.nRegisteredProviders;
+	return SIR_RESOURCE_RESULT_SUCCESS;
+}
+
 SIRResourceResult SIRResourceDerivedRegistry::registerRepresentation( const SIRResourceReadScope& rScope, const SIRResourceView& rSource,
                                                                       const SIRDerivedResourceRegistration& rRegistration,
                                                                       SIRDerivedResourceHandle *pHandle ) noexcept
@@ -176,6 +195,10 @@ SIRResourceResult SIRResourceDerivedRegistry::registerRepresentation( const SIRR
 	     !rRegistration.m_Key.m_nRepresentationId || rRegistration.m_Key.m_nReserved || rRegistration.m_Key.m_Resource.m_nReserved ) {
 		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
 	}
+	if ( rRegistration.m_bCanonicalSource != 0 &&
+	     ( rRegistration.m_nPhysicalBackingId != 0 || rRegistration.m_nDeviceGeneration == 0 || rRegistration.m_nDeviceIdentity == 0 ) ) {
+		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
+	}
 	const SIRDerivedResourceAccounting& rAccounting = rRegistration.m_Accounting;
 	if ( rAccounting.m_eSpace > SIR_MEMORY_SPACE_EXTERNAL || rAccounting.m_nCommittedBytes == 0 ||
 	     rAccounting.m_nResidentBytes > rAccounting.m_nCommittedBytes ||
@@ -184,6 +207,10 @@ SIRResourceResult SIRResourceDerivedRegistry::registerRepresentation( const SIRR
 	}
 	const int32_t iProvider = findProvider( rRegistration.m_Key.m_nProviderId );
 	if ( iProvider < 0 ) {
+		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
+	}
+	if ( rRegistration.m_bCanonicalSource != 0 &&
+	     m_pProviders[iProvider].completed.nProviderGeneration != rRegistration.m_nDeviceGeneration ) {
 		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
 	}
 	SIRResourceInfo sourceInfo = {};
@@ -207,14 +234,23 @@ SIRResourceResult SIRResourceDerivedRegistry::registerRepresentation( const SIRR
 			}
 			continue;
 		}
+		if ( rRegistration.m_bCanonicalSource != 0 && rSlot.registration.m_bCanonicalSource != 0 &&
+		     sameDerivedHandle( rSlot.registration.m_Key.m_Resource, rRegistration.m_Key.m_Resource ) &&
+		     rSlot.registration.m_Key.m_nRevision == rRegistration.m_Key.m_nRevision &&
+		     rSlot.registration.m_nDeviceGeneration == rRegistration.m_nDeviceGeneration &&
+		     rSlot.registration.m_nDeviceIdentity == rRegistration.m_nDeviceIdentity ) {
+			return SIR_RESOURCE_RESULT_BUSY;
+		}
 		if ( sameDerivedKey( rSlot.registration.m_Key, rRegistration.m_Key ) ||
 		     ( rSlot.registration.m_Key.m_nProviderId == rRegistration.m_Key.m_nProviderId &&
-		       rSlot.registration.m_nNativeToken == rRegistration.m_nNativeToken ) ) {
+		       rSlot.registration.m_nNativeToken == rRegistration.m_nNativeToken ) ||
+		     ( rRegistration.m_nPhysicalBackingId != 0 && rSlot.registration.m_nPhysicalBackingId == rRegistration.m_nPhysicalBackingId &&
+		       rSlot.registration.m_nDeviceGeneration == rRegistration.m_nDeviceGeneration ) ) {
 			// A given provider's native allocation must only be counted once.
 			return SIR_RESOURCE_RESULT_BUSY;
 		}
 	}
-	if ( iFree == UINT32_MAX ) {
+	if ( iFree == UINT32_MAX || ( rRegistration.m_bCanonicalSource != 0 && m_nLastPhysicalBackingId == UINT64_MAX ) ) {
 		return SIR_RESOURCE_RESULT_OUT_OF_BUDGET;
 	}
 	SIRResourcePinHandle pin = {};
@@ -224,8 +260,12 @@ SIRResourceResult SIRResourceDerivedRegistry::registerRepresentation( const SIRR
 	}
 	sirDerivedRepresentationSlot_t& rSlot = m_pRepresentations[iFree];
 	rSlot.registration = rRegistration;
+	if ( rRegistration.m_bCanonicalSource != 0 ) {
+		rSlot.registration.m_nPhysicalBackingId = ++m_nLastPhysicalBackingId;
+	}
 	rSlot.pin = pin;
 	rSlot.retirement = {};
+	rSlot.nConsumerLeases = 0;
 	rSlot.bOccupied = true;
 	rSlot.bRetiring = false;
 	rSlot.bNativeReleased = false;
@@ -251,7 +291,14 @@ SIRResourceResult SIRResourceDerivedRegistry::collectProvider( uint32_t iProvide
 			continue;
 		}
 		if ( !rSlot.bNativeReleased ) {
-			if ( !rProvider.callbacks.pfnReleaseNative( rProvider.callbacks.pContext, rSlot.registration.m_nNativeToken ) ) {
+			const SIRDerivedResourceRegistration& registered = rSlot.registration;
+			bool bReleased = false;
+			if ( registered.m_pfnReleaseNative != nullptr ) {
+				bReleased = registered.m_pfnReleaseNative( registered.m_pReleaseContext, registered.m_nNativeToken );
+			} else {
+				bReleased = rProvider.callbacks.pfnReleaseNative( rProvider.callbacks.pContext, registered.m_nNativeToken );
+			}
+			if ( !bReleased ) {
 				bBusy = true;
 				continue;
 			}
@@ -268,12 +315,87 @@ SIRResourceResult SIRResourceDerivedRegistry::collectProvider( uint32_t iProvide
 		m_nTrackedBytes -= nCommitted;
 		--m_Stats.nLiveRepresentations;
 		--m_Stats.nPendingRetirements;
+		rSlot.nConsumerLeases = 0;
 		rSlot.bOccupied = false;
 		rSlot.bRetiring = false;
 		rSlot.bNativeReleased = false;
 		rSlot.nGeneration = nextDerivedGeneration( rSlot.nGeneration );
 	}
 	return bBusy ? SIR_RESOURCE_RESULT_BUSY : SIR_RESOURCE_RESULT_SUCCESS;
+}
+
+SIRResourceResult SIRResourceDerivedRegistry::acquireRepresentation( const SIRDerivedResourceKey& key,
+                                                                     SIRDerivedResourceLease *pLease ) noexcept
+{
+	if ( !isWriterThread() )
+		return SIR_RESOURCE_RESULT_WRITER_VIOLATION;
+	if ( !m_bReady || pLease == nullptr || key.m_nRevision == 0 || key.m_nProviderId == 0 )
+		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
+	for ( uint32_t iSlot = 0; iSlot < m_Config.nMaxRepresentations; ++iSlot ) {
+		sirDerivedRepresentationSlot_t& slot = m_pRepresentations[iSlot];
+		if ( !slot.bOccupied || slot.bRetiring || !sameDerivedKey( slot.registration.m_Key, key ) )
+			continue;
+		if ( slot.nConsumerLeases == UINT32_MAX )
+			return SIR_RESOURCE_RESULT_OUT_OF_BUDGET;
+		++slot.nConsumerLeases;
+		const SIRDerivedResourceRegistration& registration = slot.registration;
+		*pLease = { { iSlot, slot.nGeneration },
+		            registration.m_nPhysicalBackingId != 0 ? registration.m_nPhysicalBackingId : registration.m_nNativeToken,
+		            registration.m_nNativeToken,
+		            registration.m_Key.m_nRevision,
+		            registration.m_nDeviceGeneration,
+		            registration.m_nDeviceIdentity };
+		return SIR_RESOURCE_RESULT_SUCCESS;
+	}
+	return SIR_RESOURCE_RESULT_INVALID_HANDLE;
+}
+
+SIRResourceResult SIRResourceDerivedRegistry::acquireCanonicalRepresentation( SIRResourceHandle hSource, uint64_t nSourceRevision,
+                                                                              const sirDerivedDeviceIdentity_t& device,
+                                                                              SIRDerivedResourceLease *pLease ) noexcept
+{
+	if ( !isWriterThread() ) {
+		return SIR_RESOURCE_RESULT_WRITER_VIOLATION;
+	}
+	if ( !m_bReady || pLease == nullptr || nSourceRevision == 0 || device.nGeneration == 0 || device.nDeviceId == 0 ) {
+		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
+	}
+	for ( uint32_t iSlot = 0; iSlot < m_Config.nMaxRepresentations; ++iSlot ) {
+		sirDerivedRepresentationSlot_t& slot = m_pRepresentations[iSlot];
+		const SIRDerivedResourceRegistration& registration = slot.registration;
+		if ( !slot.bOccupied || slot.bRetiring || registration.m_bCanonicalSource == 0 ||
+		     !sameDerivedHandle( registration.m_Key.m_Resource, hSource ) || registration.m_Key.m_nRevision != nSourceRevision ||
+		     registration.m_nDeviceGeneration != device.nGeneration || registration.m_nDeviceIdentity != device.nDeviceId ) {
+			continue;
+		}
+		if ( slot.nConsumerLeases == UINT32_MAX ) {
+			return SIR_RESOURCE_RESULT_OUT_OF_BUDGET;
+		}
+		++slot.nConsumerLeases;
+		*pLease = { { iSlot, slot.nGeneration }, registration.m_nPhysicalBackingId,
+		            registration.m_nNativeToken, nSourceRevision,
+		            device.nGeneration,          device.nDeviceId };
+		return SIR_RESOURCE_RESULT_SUCCESS;
+	}
+	return SIR_RESOURCE_RESULT_INVALID_HANDLE;
+}
+
+SIRResourceResult SIRResourceDerivedRegistry::releaseRepresentation( const SIRDerivedResourceLease& lease ) noexcept
+{
+	if ( !isWriterThread() )
+		return SIR_RESOURCE_RESULT_WRITER_VIOLATION;
+	if ( !m_bReady || lease.hRepresentation.m_nSlot >= m_Config.nMaxRepresentations )
+		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
+	sirDerivedRepresentationSlot_t& slot = m_pRepresentations[lease.hRepresentation.m_nSlot];
+	const SIRDerivedResourceRegistration& registration = slot.registration;
+	const uint64_t nPhysicalId = registration.m_nPhysicalBackingId != 0 ? registration.m_nPhysicalBackingId : registration.m_nNativeToken;
+	if ( !slot.bOccupied || slot.nGeneration != lease.hRepresentation.m_nGeneration || slot.nConsumerLeases == 0 ||
+	     nPhysicalId != lease.nPhysicalBackingId || registration.m_nNativeToken != lease.nNativeToken ||
+	     registration.m_Key.m_nRevision != lease.nSourceRevision || registration.m_nDeviceGeneration != lease.nDeviceGeneration ||
+	     registration.m_nDeviceIdentity != lease.nDeviceIdentity )
+		return SIR_RESOURCE_RESULT_INVALID_HANDLE;
+	--slot.nConsumerLeases;
+	return SIR_RESOURCE_RESULT_SUCCESS;
 }
 
 SIRResourceResult SIRResourceDerivedRegistry::retireRepresentation( SIRDerivedResourceHandle hRepresentation,
@@ -289,7 +411,7 @@ SIRResourceResult SIRResourceDerivedRegistry::retireRepresentation( SIRDerivedRe
 	if ( !rSlot.bOccupied || rSlot.nGeneration != hRepresentation.m_nGeneration ) {
 		return SIR_RESOURCE_RESULT_INVALID_HANDLE;
 	}
-	if ( rSlot.bRetiring ) {
+	if ( rSlot.bRetiring || rSlot.nConsumerLeases != 0 ) {
 		return SIR_RESOURCE_RESULT_BUSY;
 	}
 	const int32_t iProvider = findProvider( rSlot.registration.m_Key.m_nProviderId );
@@ -340,6 +462,22 @@ SIRResourceResult SIRResourceDerivedRegistry::updateProviderCompletion( const si
 		}
 	}
 	return collectProvider( ( uint32_t )iProvider );
+}
+
+SIRResourceResult SIRResourceDerivedRegistry::getPhysicalBackingId( SIRDerivedResourceHandle hRepresentation, uint64_t *pId ) const noexcept
+{
+	if ( !isWriterThread() ) {
+		return SIR_RESOURCE_RESULT_WRITER_VIOLATION;
+	}
+	if ( !m_bReady || pId == nullptr || hRepresentation.m_nSlot >= m_Config.nMaxRepresentations ) {
+		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
+	}
+	const sirDerivedRepresentationSlot_t& slot = m_pRepresentations[hRepresentation.m_nSlot];
+	if ( !slot.bOccupied || slot.nGeneration != hRepresentation.m_nGeneration || slot.registration.m_bCanonicalSource == 0 ) {
+		return SIR_RESOURCE_RESULT_INVALID_HANDLE;
+	}
+	*pId = slot.registration.m_nPhysicalBackingId;
+	return SIR_RESOURCE_RESULT_SUCCESS;
 }
 
 SIRResourceResult SIRResourceDerivedRegistry::getAccounting( SIRDerivedResourceHandle hRepresentation,

@@ -98,11 +98,12 @@ int main()
 	sirMeshPackCluster_t clusters[2] = {};
 	clusters[0] = { 0, 0, 3, 1, 4, sizeof( rootPayload ) - 4, 0.5f };
 	clusters[1] = { 1, 1, 3, 1, 4, sizeof( leafPayload ) - 4, 0.0f };
-	sirMeshPackCollision_t collision = { 1, SIR_MESH_PACK_COLLISION_SOURCE_FLAGS, 3, 3, 3, 9 };
-	sirMeshPackDesc_t desc = { { 123, 9, 1, 0 }, groups, clusters, pages, &collision, 2, 2, 2, 1, 3, 1 };
+	sirMeshPackCollision_t collision = { 1, SIR_MESH_PACK_COLLISION_SOURCE_FLAGS, 3, 3, 3, 4, 9, 1, 1 };
+	sirMeshPackSurface_t semantic = { 0, 11, 12, 13, 14, 0 };
+	sirMeshPackDesc_t desc = { { 123, 9, 1, 0 }, groups, clusters, pages, &collision, &semantic, 2, 2, 2, 1, 1, 3, 1 };
 	uint8_t buffer[1024] = {};
 	const uint64_t bytes = SIRMeshPackSchema::requiredBytes( desc );
-	TEST( bytes == 128 + 2 * 48 + 2 * 48 + 2 * 48 + 48 );
+	TEST( bytes == 128 + 2 * 48 + 2 * 48 + 2 * 48 + 48 + SIR_MESH_PACK_SURFACE_BYTES );
 	TEST( SIRMeshPackSchema::write( desc, buffer, bytes ) == SIR_MESH_PACK_OK );
 	SIRMeshPackSchema reader;
 	TEST( reader.open( buffer, bytes ) == SIR_MESH_PACK_OK );
@@ -114,8 +115,11 @@ int main()
 	    { 288, 1000, 8 },       // cluster 1 exceeds decoded page
 	    { 380, 1, 4 },          // page 1 repeats page 0 SIRPack chunk identity
 	    { 440, 10, 8 },         // collision revision disagrees with mesh
+	    { 436, 7, 4 },          // static BVH chunk identity is mismatched
+	    { 448, 0, 4 },          // zero static BVH nodes
+	    { 452, 2, 4 },          // BVH permutation count mismatches topology
 	    { 64, 0, 8 },           // group table offset is corrupt
-	    { 120, 1, 4 },          // reserved header bits
+	    { 120, 2, 4 },          // corrupt surface-count table boundary
 	    { 40, 0xffffffffU, 4 }, // overflowing/truncated record table
 	};
 	for ( const sirMeshPackMutation_t& mutation : mutations ) {
@@ -123,13 +127,18 @@ int main()
 	}
 	TEST( reader.open( buffer, bytes ) == SIR_MESH_PACK_OK );
 	TEST( reader.getKey().nRevision == 9 );
+	TEST( reader.getSurfaceCount() == 1 );
+	sirMeshPackSurface_t resolved = {};
+	TEST( reader.surfaceForMaterial( 0, &resolved ) == SIR_MESH_PACK_OK );
+	TEST( resolved.nCollisionProxyId == 12 && resolved.nAcousticMaterialId == 13 && resolved.nNavigationAreaId == 14 );
+	TEST( reader.surfaceForMaterial( 1, &resolved ) == SIR_MESH_PACK_INVALID_ARGUMENT );
 	sirPackResource_t resource = {};
 	resource.key = { 123, 103, 1 };
 	resource.nRevision = 9;
 	resource.nFormatId = SIR_MESH_PACK_FORMAT_ID;
 	resource.nSchemaVersion = SIR_MESH_PACK_VERSION;
 	resource.nKind = SIR_RESOURCE_KIND_GEOMETRY;
-	resource.nChunkCount = 4;
+	resource.nChunkCount = 5;
 	TEST( reader.validateResource( resource ) == SIR_MESH_PACK_OK );
 	++resource.nRevision;
 	TEST( reader.validateResource( resource ) == SIR_MESH_PACK_INVALID_FORMAT );
@@ -145,7 +154,7 @@ int main()
 	resource.nFormatId = SIR_MESH_PACK_FORMAT_ID;
 	resource.nChunkCount = 3;
 	TEST( reader.validateResource( resource ) == SIR_MESH_PACK_INVALID_FORMAT );
-	resource.nChunkCount = 4;
+	resource.nChunkCount = 5;
 	sirPackChunk_t packedChunk = {};
 	packedChunk.nChunkId = 0;
 	packedChunk.nDecodedBytes = bytes;
@@ -171,7 +180,12 @@ int main()
 	TEST( reader.validateChunk( 3, packedChunk ) == SIR_MESH_PACK_OK );
 	packedChunk.nDecodedBytes = 67;
 	TEST( reader.validateChunk( 3, packedChunk ) == SIR_MESH_PACK_INVALID_FORMAT );
-	TEST( reader.validateChunk( 4, packedChunk ) == SIR_MESH_PACK_INVALID_ARGUMENT );
+	packedChunk.nChunkId = 4;
+	packedChunk.nDecodedBytes = 76;
+	TEST( reader.validateChunk( 4, packedChunk ) == SIR_MESH_PACK_OK );
+	packedChunk.nDecodedBytes = 75;
+	TEST( reader.validateChunk( 4, packedChunk ) == SIR_MESH_PACK_INVALID_FORMAT );
+	TEST( reader.validateChunk( 5, packedChunk ) == SIR_MESH_PACK_INVALID_ARGUMENT );
 	sirMeshPackGroup_t recovered = {};
 	TEST( reader.groupAt( 1, &recovered ) == SIR_MESH_PACK_OK && recovered.nParent == 0 );
 	TEST( reader.verifyPage( 0, rootPayload, sizeof( rootPayload ) ) == SIR_MESH_PACK_OK );
@@ -220,7 +234,7 @@ int main()
 	sirPackWrite32( collisionBytes + 52, 0 );
 	sirPackWrite32( collisionBytes + 56, 1 );
 	sirPackWrite32( collisionBytes + 60, 2 );
-	sirPackWrite32( collisionBytes + 64, 18 );
+	sirPackWrite32( collisionBytes + 64, 0 );
 	TEST( reader.verifyCollision( 0, collisionBytes, sizeof( collisionBytes ) ) == SIR_MESH_PACK_OK );
 	sirPackWrite32( collisionBytes + 44, 0 );
 	TEST( reader.verifyCollision( 0, collisionBytes, sizeof( collisionBytes ) ) == SIR_MESH_PACK_INVALID_FORMAT );
@@ -232,6 +246,26 @@ int main()
 	TEST( reader.verifyCollision( 0, collisionBytes, sizeof( collisionBytes ) ) == SIR_MESH_PACK_INVALID_FORMAT );
 	collisionBytes[56] = 1;
 	TEST( reader.verifyCollision( 0, collisionBytes, sizeof( collisionBytes ) - 1 ) == SIR_MESH_PACK_TRUNCATED );
+	uint8_t bvhBytes[76] = {};
+	sirPackWrite32( bvhBytes, SIR_MESH_PACK_BVH_FORMAT_ID );
+	sirPackWrite16( bvhBytes + 4, SIR_MESH_PACK_BVH_VERSION );
+	sirPackWrite16( bvhBytes + 6, SIR_MESH_PACK_BVH_HEADER_BYTES );
+	sirPackWrite32( bvhBytes + 8, SIR_PACK_ENDIAN_MARKER );
+	sirPackWrite32( bvhBytes + 12, 1 );
+	sirPackWrite32( bvhBytes + 16, 1 );
+	sirPackWrite32( bvhBytes + 44, 0x3f800000U );
+	sirPackWrite32( bvhBytes + 48, 0x3f800000U );
+	sirPackWrite32( bvhBytes + 56, UINT32_MAX );
+	sirPackWrite32( bvhBytes + 60, UINT32_MAX );
+	sirPackWrite32( bvhBytes + 68, 1 );
+	TEST( reader.verifyBVH( 0, bvhBytes, sizeof( bvhBytes ) ) == SIR_MESH_PACK_OK );
+	sirPackWrite32( bvhBytes + 72, 1 );
+	TEST( reader.verifyBVH( 0, bvhBytes, sizeof( bvhBytes ) ) == SIR_MESH_PACK_INVALID_FORMAT );
+	sirPackWrite32( bvhBytes + 72, 0 );
+	sirPackWrite32( bvhBytes + 32, 0x7fc00000U );
+	TEST( reader.verifyBVH( 0, bvhBytes, sizeof( bvhBytes ) ) == SIR_MESH_PACK_INVALID_FORMAT );
+	sirPackWrite32( bvhBytes + 32, 0 );
+	TEST( reader.verifyBVH( 0, bvhBytes, sizeof( bvhBytes ) - 1 ) == SIR_MESH_PACK_TRUNCATED );
 	pages[1].nParent = 1;
 	TEST( SIRMeshPackSchema::write( desc, buffer, bytes ) == SIR_MESH_PACK_INVALID_FORMAT );
 	pages[1].nParent = 0;

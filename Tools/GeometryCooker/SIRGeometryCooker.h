@@ -32,6 +32,11 @@ typedef struct sirGeometryCookMaterial_s
 	uint32_t nFirstIndex;
 	uint32_t nIndexCount;
 	uint32_t nMaterialId;
+	uint32_t nSurfaceId;
+	uint32_t nCollisionProxyId;
+	uint32_t nAcousticMaterialId;
+	uint32_t nNavigationAreaId;
+	uint32_t nFlags;
 } sirGeometryCookMaterial_t;
 
 typedef struct sirGeometryCookInput_s

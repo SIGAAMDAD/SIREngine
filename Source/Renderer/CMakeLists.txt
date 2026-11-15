@@ -2,6 +2,8 @@ include("${CMAKE_CURRENT_LIST_DIR}/../../Build/CMake/SIRBuildTreeGuard.cmake")
 # Shared, platform-independent rendering ABI. Always compiled, even when no
 # native driver is enabled, so backends cannot silently fork its contracts.
 add_library(SIRGraphics STATIC
+    VirtualGeometry/SIRVGNativePages.cpp
+    VirtualGeometry/SIRVGPhysicalBacking.cpp
     Graph/SIRFrameGraph.cpp
     Graph/SIRFrameGraphTransient.cpp
     SIRShaderPipeline.cpp
@@ -26,7 +28,7 @@ target_include_directories(SIRGraphics PUBLIC
     "${PROJECT_SOURCE_DIR}/Source"
     "${PROJECT_SOURCE_DIR}/Build/CMake")
 target_compile_features(SIRGraphics PUBLIC cxx_std_17)
-target_link_libraries(SIRGraphics PUBLIC SIR::Core SIR::Resources)
+target_link_libraries(SIRGraphics PUBLIC SIR::Core SIR::Resources SIR::VGFrameCompiler SIR::VGPageDirectory SIR::MeshPackSchema SIR::Streaming)
 sir_configure_owned_target(SIRGraphics)
 
 add_subdirectory(VirtualTexturing)

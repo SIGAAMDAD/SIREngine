@@ -153,10 +153,12 @@ static bool testGrid( void )
 	CHECK( resource.nRevision == input.key.nRevision && resource.nFormatId == SIR_MESH_PACK_FORMAT_ID );
 	CHECK( mesh.validateResource( resource ) == SIR_MESH_PACK_OK );
 	CHECK( resource.nSchemaVersion == SIR_MESH_PACK_VERSION && resource.nKind == SIR_RESOURCE_KIND_GEOMETRY );
-	CHECK( resource.nChunkCount == cooked.pages.size() + 2 );
+	CHECK( resource.nChunkCount == cooked.pages.size() + 3 );
 	sirMeshPackCollision_t collision = {};
 	CHECK( mesh.collisionAt( 0, &collision ) == SIR_MESH_PACK_OK );
 	CHECK( collision.nFlags == SIR_MESH_PACK_COLLISION_SOURCE_FLAGS );
+	CHECK( collision.nBVHChunkId == collision.nChunkId + 1 );
+	CHECK( collision.nBVHNodeCount > 0 && collision.nBVHOrderCount == input.nIndexCount / 3 );
 	for ( uint32_t i = 0; i < resource.nChunkCount; ++i ) {
 		sirPackChunk_t chunk = {};
 		CHECK( catalog.chunkAt( i, &chunk ) == SIR_PACK_OK );
@@ -166,6 +168,18 @@ static bool testGrid( void )
 		CHECK( catalog.verifyDecodedChunk( i, cooked.shard.data() + chunk.nOffset, chunk.nEncodedBytes ) == SIR_PACK_OK );
 		if ( i == collision.nChunkId ) {
 			CHECK( mesh.verifyCollision( 0, cooked.shard.data() + chunk.nOffset, chunk.nEncodedBytes ) == SIR_MESH_PACK_OK );
+		} else if ( i == collision.nBVHChunkId ) {
+			CHECK( mesh.verifyBVH( 0, cooked.shard.data() + chunk.nOffset, chunk.nEncodedBytes ) == SIR_MESH_PACK_OK );
+			// A syntactically forward-only DAG can still alias a subtree and
+			// orphan the original child. A legitimate BVH is one complete tree.
+			if ( collision.nBVHNodeCount >= 7 ) {
+				std::vector<uint8_t> forged( cooked.shard.begin() + chunk.nOffset,
+				                             cooked.shard.begin() + chunk.nOffset + chunk.nEncodedBytes );
+				const uint32_t nRootRight = sirPackRead32( forged.data() + SIR_MESH_PACK_BVH_HEADER_BYTES + 28 );
+				CHECK( nRootRight > 2 && nRootRight < collision.nBVHNodeCount );
+				sirPackWrite32( forged.data() + SIR_MESH_PACK_BVH_HEADER_BYTES + SIR_MESH_PACK_BVH_NODE_BYTES + 28, nRootRight );
+				CHECK( mesh.verifyBVH( 0, forged.data(), forged.size() ) == SIR_MESH_PACK_INVALID_FORMAT );
+			}
 		}
 	}
 	sirGeometryCookOutput_t repeat;

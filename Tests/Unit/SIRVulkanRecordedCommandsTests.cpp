@@ -37,7 +37,7 @@ int main( void )
 	image.nLayers = 1;
 	image.nUsage =
 	    VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT;
-	sirVulkanRecordedCommand_t commands[SIR_VULKAN_COPY_BATCH_CAPACITY + 1] = {};
+	sirVulkanRecordedCommand_t commands[SIR_VULKAN_GRAPHICS_BATCH_CAPACITY + 1] = {};
 	commands[0].eKind = SIR_VULKAN_RECORDED_BUFFER_COPY;
 	commands[0].bufferCopy = { &source, &staging, 0, 0, 256 };
 	commands[1].eKind = SIR_VULKAN_RECORDED_TEXTURE_COPY;
@@ -67,7 +67,7 @@ int main( void )
 	}
 	if ( sirVulkanValidateRecordedCommands( nullptr, 5 ) != SIR_VULKAN_INVALID_ARGUMENT ||
 	     sirVulkanValidateRecordedCommands( commands, 0 ) != SIR_VULKAN_INVALID_ARGUMENT ||
-	     sirVulkanValidateRecordedCommands( commands, SIR_VULKAN_COPY_BATCH_CAPACITY + 1 ) != SIR_VULKAN_INVALID_ARGUMENT ) {
+	     sirVulkanValidateRecordedCommands( commands, SIR_VULKAN_GRAPHICS_BATCH_CAPACITY + 1 ) != SIR_VULKAN_INVALID_ARGUMENT ) {
 		return 3;
 	}
 	if ( sirVulkanValidateRecordedCommands( &commands[4], 1 ) != SIR_VULKAN_INVALID_ARGUMENT ||
@@ -215,7 +215,7 @@ int main( void )
 	     !sirVulkanRecordedNeedsBufferBarrier( hazards, 2 ) || !sirVulkanRecordedNeedsBufferBarrier( hazards, 3 ) ||
 	     sirVulkanRecordedNeedsBufferBarrier( hazards, 4 ) || !sirVulkanRecordedNeedsBufferBarrier( hazards, 5 ) ||
 	     sirVulkanRecordedNeedsBufferBarrier( hazards, 6 ) || sirVulkanRecordedNeedsBufferBarrier( nullptr, 1 ) ||
-	     sirVulkanRecordedNeedsBufferBarrier( hazards, SIR_VULKAN_COPY_BATCH_CAPACITY ) ) {
+	     sirVulkanRecordedNeedsBufferBarrier( hazards, SIR_VULKAN_GRAPHICS_BATCH_CAPACITY ) ) {
 		return 22;
 	}
 	// Native buffer barriers are needed for overlapping byte ranges only.

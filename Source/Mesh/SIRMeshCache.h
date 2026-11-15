@@ -66,6 +66,14 @@ typedef struct sirMeshGeometrySource_s
 	uint32_t nIndexCount;
 	void *pSourcePin;
 	void ( *pfnReleaseSourcePin )( void *pSourcePin ) noexcept;
+	// Optional immutable canonical BVH and material payloads, owned by the
+	// exact same GRDG source revision as the vertices and triangle indices.
+	const void *pStaticBVH;
+	uint64_t nStaticBVHBytes;
+	const uint32_t *pBVHTriangleOrder;
+	uint32_t nBVHTriangleOrderCount;
+	const uint32_t *pSurfaceMaterials;
+	uint32_t nSurfaceMaterialCount;
 } sirMeshGeometrySource_t;
 
 typedef struct sirMeshGeometryRead_s
@@ -75,9 +83,17 @@ typedef struct sirMeshGeometryRead_s
 	uint32_t nVertexCount;
 	uint32_t nIndexCount;
 	sirMeshKey_t key;
+	const void *pStaticBVH;
+	uint64_t nStaticBVHBytes;
+	const uint32_t *pBVHTriangleOrder;
+	uint32_t nBVHTriangleOrderCount;
+	const uint32_t *pSurfaceMaterials;
+	uint32_t nSurfaceMaterialCount;
 } sirMeshGeometryRead_t;
 
 typedef struct sirMeshCacheSlot_s sirMeshCacheSlot_t;
+struct sirMeshGRDGSourceRequest_s;
+struct sirMeshGRDGSourceLease_s;
 
 // Sole writer of logical slot/generation/borrow metadata. A source pin is
 // transferred on successful insertion, and released exactly once after all
@@ -102,6 +118,13 @@ public:
 
 	sirMeshResult_t initialize( void *pStorage, uint64_t nStorageBytes, uint32_t nCapacity ) noexcept;
 	sirMeshResult_t insert( const sirMeshGeometrySource_t *pSource, sirMeshHandle_t *pHandle ) noexcept;
+	// Native resource binding: GRDG is the sole provider of the canonical
+	// source bytes and its pin lifetime. Defined only in GRDG integration.
+	sirMeshResult_t insertGRDGResource( const sirMeshGRDGSourceRequest_s& request, sirMeshGRDGSourceLease_s *pLease,
+	                                    sirMeshHandle_t *pHandle ) noexcept;
+	// Explicit GRDG lease retirement is separate from CPU-only callback pins.
+	// Release is refused while the source slot or any reader is still alive.
+	sirMeshResult_t releaseGRDGResource( sirMeshGRDGSourceLease_s *pLease ) noexcept;
 	sirMeshResult_t find( const sirMeshKey_t *pKey, sirMeshHandle_t *pHandle ) const noexcept;
 	sirMeshResult_t acquire( sirMeshHandle_t handle, sirMeshGeometryRead_t *pRead ) noexcept;
 	sirMeshResult_t release( sirMeshHandle_t handle ) noexcept;
@@ -112,6 +135,7 @@ protected:
 private:
 	bool isValidHandle( sirMeshHandle_t handle ) const noexcept;
 	void finalizeSlot( uint32_t iSlot ) noexcept;
+	sirMeshResult_t insertImpl( const sirMeshGeometrySource_t *pSource, sirMeshHandle_t *pHandle, bool bExternalLease ) noexcept;
 
 	sirMeshCacheSlot_t *m_pSlots;
 	uint32_t m_nCapacity;

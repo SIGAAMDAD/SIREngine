@@ -302,8 +302,40 @@ typedef struct sirDerivedResourceRegistration_s
 	SIRDerivedResourceKey m_Key;
 	SIRDerivedResourceAccounting m_Accounting;
 	uint64_t m_nNativeToken;
+	// Issued by Resources for this real physical allocation, and verified
+	// against the single provider-native object on the owning device.
+	uint64_t m_nPhysicalBackingId;
+	uint32_t m_nDeviceGeneration;
+	// Stable identity of the native device object, independent of generation
+	// and of the provider that is borrowing this backing.
+	uint64_t m_nDeviceIdentity;
+	// Exactly one canonical native allocation for each source/revision/device.
+	uint32_t m_bCanonicalSource;
+	// Optional per-allocation native retire ownership. Provider completion
+	// remains device-scoped; release may target one specific resource owner.
+	void *m_pReleaseContext;
+	bool ( *m_pfnReleaseNative )( void *pContext, uint64_t nNativeToken ) noexcept;
 } sirDerivedResourceRegistration_t;
 typedef sirDerivedResourceRegistration_t SIRDerivedResourceRegistration;
+
+// A counted reference to the exact native device allocation. Consumers never
+// register or account an equivalent copy of the same GPU backing.
+typedef struct sirDerivedDeviceIdentity_s
+{
+	uint64_t nDeviceId;
+	uint32_t nGeneration;
+} sirDerivedDeviceIdentity_t;
+
+typedef struct sirDerivedResourceLease_s
+{
+	SIRDerivedResourceHandle hRepresentation;
+	uint64_t nPhysicalBackingId;
+	uint64_t nNativeToken;
+	uint64_t nSourceRevision;
+	uint32_t nDeviceGeneration;
+	uint64_t nDeviceIdentity;
+} sirDerivedResourceLease_t;
+typedef sirDerivedResourceLease_t SIRDerivedResourceLease;
 
 // Release is invoked only after every required provider lane completion
 // from the matching provider generation has been observed. Return true only once native storage
@@ -355,6 +387,7 @@ private:
 	sirDerivedRepresentationSlot_t *m_pRepresentations;
 	SIRResourceDerivedStats m_Stats;
 	uint64_t m_nTrackedBytes;
+	uint64_t m_nLastPhysicalBackingId;
 	bool m_bReady;
 
 	bool isWriterThread( void ) const noexcept;
@@ -373,11 +406,19 @@ public:
 	SIRResourceResult registerProvider( uint32_t nProviderId, const SIRDerivedProviderCallbacks& rCallbacks ) noexcept;
 	SIRResourceResult registerProvider( uint32_t nProviderId, uint32_t nProviderGeneration, uint32_t nLaneCount,
 	                                    const SIRDerivedProviderCallbacks& rCallbacks ) noexcept;
+	SIRResourceResult unregisterProvider( uint32_t nProviderId ) noexcept;
 	SIRResourceResult registerRepresentation( const SIRResourceReadScope& rScope, const SIRResourceView& rSource,
 	                                          const SIRDerivedResourceRegistration& rRegistration,
 	                                          SIRDerivedResourceHandle *pHandle ) noexcept;
+	SIRResourceResult acquireRepresentation( const SIRDerivedResourceKey& key, SIRDerivedResourceLease *pLease ) noexcept;
+	SIRResourceResult acquireCanonicalRepresentation( SIRResourceHandle hSource, uint64_t nSourceRevision,
+	                                                  const sirDerivedDeviceIdentity_t& device, SIRDerivedResourceLease *pLease ) noexcept;
+	SIRResourceResult releaseRepresentation( const SIRDerivedResourceLease& lease ) noexcept;
 	SIRResourceResult retireRepresentation( SIRDerivedResourceHandle hRepresentation, const sirProviderCompletionSet_t& required ) noexcept;
 	SIRResourceResult updateProviderCompletion( const sirProviderCompletionSet_t& observed ) noexcept;
+	// Physical backing IDs are issued exclusively by Resources, not guessed
+	// by individual Vulkan, D3D12, physics or renderer consumers.
+	SIRResourceResult getPhysicalBackingId( SIRDerivedResourceHandle hRepresentation, uint64_t *pId ) const noexcept;
 	SIRResourceResult getAccounting( SIRDerivedResourceHandle hRepresentation, SIRDerivedResourceAccounting *pAccounting ) const noexcept;
 	SIRResourceResult getStats( SIRResourceDerivedStats *pStats ) const noexcept;
 };

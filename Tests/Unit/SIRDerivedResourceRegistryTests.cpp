@@ -541,6 +541,122 @@ static void testProviderMultilaneGenerationRetirement( void )
 	REQUIRE( allocator.nLive.load() == 0 );
 }
 
+static void testCanonicalDeviceBackingDeduplication( void )
+{
+	sirDerivedTestAllocator_t allocator = {};
+	{
+		SIRResourceGraph graph( graphConfig( allocator ) );
+		REQUIRE( graph.isReady() );
+		SIRResourceGraphWriter *pWriter = graph.getWriter();
+		REQUIRE( pWriter != nullptr );
+		SIRResourceHandle source = publishSource( *pWriter, 935 );
+		SIRResourceDerivedRegistry registry( graph, derivedConfig( allocator ) );
+		REQUIRE( registry.isReady() );
+		sirDerivedTestProvider_t renderer = {};
+		sirDerivedTestProvider_t physics = {};
+		REQUIRE( registry.registerProvider( 7, { &renderer, releaseNative } ) == SIR_RESOURCE_RESULT_SUCCESS );
+		REQUIRE( registry.registerProvider( 9, { &physics, releaseNative } ) == SIR_RESOURCE_RESULT_SUCCESS );
+		SIRDerivedResourceHandle hNative = {};
+		{
+			SIRResourceReadScope scope( graph );
+			SIRResourceView view;
+			REQUIRE( graph.resolve( scope, source, &view ) == SIR_RESOURCE_RESULT_SUCCESS );
+			SIRDerivedResourceRegistration first = derived( source, 1, 7, 1, 120, 64 );
+			first.m_nPhysicalBackingId = 0;
+			first.m_nDeviceGeneration = 1;
+			first.m_nDeviceIdentity = 77;
+			first.m_bCanonicalSource = 1;
+			REQUIRE( registry.registerRepresentation( scope, view, first, &hNative ) == SIR_RESOURCE_RESULT_SUCCESS );
+			uint64_t nOwnerId = 0;
+			REQUIRE( registry.getPhysicalBackingId( hNative, &nOwnerId ) == SIR_RESOURCE_RESULT_SUCCESS );
+			REQUIRE( nOwnerId != 0 );
+			SIRDerivedResourceRegistration duplicate = derived( source, 1, 9, 1, 121, 64 );
+			duplicate.m_nPhysicalBackingId = 0;
+			duplicate.m_nDeviceGeneration = 1;
+			duplicate.m_nDeviceIdentity = 77;
+			duplicate.m_bCanonicalSource = 1;
+			SIRDerivedResourceHandle hDuplicate = {};
+			REQUIRE( registry.registerRepresentation( scope, view, duplicate, &hDuplicate ) == SIR_RESOURCE_RESULT_BUSY );
+			SIRDerivedResourceLease physicsLease = {};
+			SIRDerivedResourceLease rendererLease = {};
+			REQUIRE( registry.acquireCanonicalRepresentation( source, 1, { 77, 1 }, &physicsLease ) == SIR_RESOURCE_RESULT_SUCCESS );
+			REQUIRE( registry.acquireCanonicalRepresentation( source, 1, { 77, 1 }, &rendererLease ) == SIR_RESOURCE_RESULT_SUCCESS );
+			REQUIRE( physicsLease.nPhysicalBackingId == rendererLease.nPhysicalBackingId );
+			REQUIRE( physicsLease.nPhysicalBackingId == nOwnerId );
+			REQUIRE( registry.acquireCanonicalRepresentation( source, 1, { 77, 4 }, &rendererLease ) ==
+			         SIR_RESOURCE_RESULT_INVALID_HANDLE );
+			REQUIRE( registry.retireRepresentation( hNative, derivedCompletion( 7, 1 ) ) == SIR_RESOURCE_RESULT_BUSY );
+			REQUIRE( registry.releaseRepresentation( physicsLease ) == SIR_RESOURCE_RESULT_SUCCESS );
+			REQUIRE( registry.retireRepresentation( hNative, derivedCompletion( 7, 1 ) ) == SIR_RESOURCE_RESULT_BUSY );
+			REQUIRE( registry.releaseRepresentation( rendererLease ) == SIR_RESOURCE_RESULT_SUCCESS );
+			REQUIRE( registry.releaseRepresentation( rendererLease ) == SIR_RESOURCE_RESULT_INVALID_HANDLE );
+			REQUIRE( registry.retireRepresentation( hNative, derivedCompletion( 7, 1 ) ) == SIR_RESOURCE_RESULT_SUCCESS );
+			REQUIRE( registry.updateProviderCompletion( derivedCompletion( 7, 1 ) ) == SIR_RESOURCE_RESULT_SUCCESS );
+			REQUIRE( renderer.nReleased == 1 && physics.nReleased == 0 );
+			REQUIRE( registry.acquireCanonicalRepresentation( source, 1, { 77, 1 }, &rendererLease ) ==
+			         SIR_RESOURCE_RESULT_INVALID_HANDLE );
+			REQUIRE( registry.registerRepresentation( scope, view, duplicate, &hDuplicate ) == SIR_RESOURCE_RESULT_SUCCESS );
+			REQUIRE( registry.retireRepresentation( hDuplicate, derivedCompletion( 9, 1 ) ) == SIR_RESOURCE_RESULT_SUCCESS );
+			REQUIRE( registry.updateProviderCompletion( derivedCompletion( 9, 1 ) ) == SIR_RESOURCE_RESULT_SUCCESS );
+			REQUIRE( physics.nReleased == 1 );
+		}
+	}
+	REQUIRE( allocator.nLive.load() == 0 );
+}
+
+static void testSharedProviderOwnsIndependentNativeReleases( void )
+{
+	sirDerivedTestAllocator_t allocator = {};
+	{
+		SIRResourceGraph graph( graphConfig( allocator ) );
+		REQUIRE( graph.isReady() );
+		SIRResourceGraphWriter *pWriter = graph.getWriter();
+		REQUIRE( pWriter != nullptr );
+		const SIRResourceHandle sourceA = publishSource( *pWriter, 936 );
+		const SIRResourceHandle sourceB = publishSource( *pWriter, 937 );
+		SIRResourceDerivedRegistry registry( graph, derivedConfig( allocator ) );
+		REQUIRE( registry.isReady() );
+		sirDerivedTestProvider_t fallback = {};
+		sirDerivedTestProvider_t nativeA = {};
+		sirDerivedTestProvider_t nativeB = {};
+		REQUIRE( registry.registerProvider( 7, { &fallback, releaseNative } ) == SIR_RESOURCE_RESULT_SUCCESS );
+		SIRDerivedResourceHandle hA = {};
+		SIRDerivedResourceHandle hB = {};
+		{
+			SIRResourceReadScope scope( graph );
+			SIRResourceView a, b;
+			REQUIRE( graph.resolve( scope, sourceA, &a ) == SIR_RESOURCE_RESULT_SUCCESS );
+			REQUIRE( graph.resolve( scope, sourceB, &b ) == SIR_RESOURCE_RESULT_SUCCESS );
+			SIRDerivedResourceRegistration first = derived( sourceA, 1, 7, 1, 1201, 40 );
+			first.m_nPhysicalBackingId = 0;
+			first.m_nDeviceGeneration = 1;
+			first.m_nDeviceIdentity = 77;
+			first.m_bCanonicalSource = 1;
+			first.m_pReleaseContext = &nativeA;
+			first.m_pfnReleaseNative = releaseNative;
+			SIRDerivedResourceRegistration second = derived( sourceB, 1, 7, 1, 1202, 40 );
+			second.m_nPhysicalBackingId = 0;
+			second.m_nDeviceGeneration = 1;
+			second.m_nDeviceIdentity = 77;
+			second.m_bCanonicalSource = 1;
+			second.m_pReleaseContext = &nativeB;
+			second.m_pfnReleaseNative = releaseNative;
+			REQUIRE( registry.registerRepresentation( scope, a, first, &hA ) == SIR_RESOURCE_RESULT_SUCCESS );
+			REQUIRE( registry.registerRepresentation( scope, b, second, &hB ) == SIR_RESOURCE_RESULT_SUCCESS );
+			REQUIRE( registry.retireRepresentation( hA, derivedCompletion( 7, 4 ) ) == SIR_RESOURCE_RESULT_SUCCESS );
+			REQUIRE( registry.retireRepresentation( hB, derivedCompletion( 7, 5 ) ) == SIR_RESOURCE_RESULT_SUCCESS );
+			REQUIRE( registry.updateProviderCompletion( derivedCompletion( 7, 4 ) ) == SIR_RESOURCE_RESULT_SUCCESS );
+			REQUIRE( nativeA.nReleased == 1 && nativeA.nLastToken == 1201 );
+			REQUIRE( nativeB.nReleased == 0 && fallback.nReleased == 0 );
+			REQUIRE( registry.updateProviderCompletion( derivedCompletion( 7, 5 ) ) == SIR_RESOURCE_RESULT_SUCCESS );
+			REQUIRE( nativeB.nReleased == 1 && nativeB.nLastToken == 1202 );
+			REQUIRE( fallback.nReleased == 0 );
+			REQUIRE( registry.unregisterProvider( 7 ) == SIR_RESOURCE_RESULT_SUCCESS );
+		}
+	}
+	REQUIRE( allocator.nLive.load() == 0 );
+}
+
 int main( void )
 {
 	testProviderLifetimeAndPhysicalAccounting();
@@ -549,6 +665,8 @@ int main( void )
 	testInvalidInputsAndCapacity();
 	testProviderPinCapacityAndReclaim();
 	testProviderMultilaneGenerationRetirement();
+	testCanonicalDeviceBackingDeduplication();
+	testSharedProviderOwnsIndependentNativeReleases();
 	puts( "PASS: derived provider accounting, retirement fences, pins and ABA protection" );
 	return 0;
 }

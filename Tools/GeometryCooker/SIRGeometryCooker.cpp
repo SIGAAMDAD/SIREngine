@@ -13,6 +13,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 #include <Tools/GeometryCooker/SIRGeometryCooker.h>
+#include <Tools/GeometryCooker/SIRGeometryBVHCooker.h>
 #include <Tools/GeometryCooker/SIRDisplacementCooker.h>
 #include <Tools/SIRPackCooker/SIRPackCooker.h>
 #include <Tools/SIRPackCooker/SIRPackShippingGuard.h>
@@ -559,12 +560,39 @@ sirPackResult_t SIRGeometryCooker::cookShipping( const sirGeometryCookInput_t& i
 			collisionRecord.nChunkId = ( uint32_t )pages.size() + 1;
 			collisionRecord.nRevision = in.key.nRevision;
 		}
+		std::vector<uint8_t> sharedBVH;
+		if ( in.bCookCollision ) {
+			uint32_t nNodeCount = 0;
+			if ( !SIRGeometryBVHCooker::cook( in, &sharedBVH, &nNodeCount ) )
+				return SIR_PACK_INVALID_FORMAT;
+			collisionRecord.nBVHChunkId = ( uint32_t )pages.size() + 2;
+			collisionRecord.nBVHNodeCount = nNodeCount;
+			collisionRecord.nBVHOrderCount = in.nIndexCount / 3;
+		}
+		std::vector<sirMeshPackSurface_t> surfaces;
+		surfaces.reserve( in.nMaterialCount );
+		for ( uint32_t i = 0; i < in.nMaterialCount; ++i ) {
+			const sirGeometryCookMaterial_t& material = in.pMaterials[i];
+			const uint32_t nFallbackId = material.nMaterialId == UINT32_MAX ? 1 : material.nMaterialId + 1;
+			surfaces.push_back( { material.nMaterialId, material.nSurfaceId != 0 ? material.nSurfaceId : nFallbackId,
+			                      material.nCollisionProxyId != 0 ? material.nCollisionProxyId : nFallbackId,
+			                      material.nAcousticMaterialId != 0 ? material.nAcousticMaterialId : nFallbackId,
+			                      material.nNavigationAreaId != 0 ? material.nNavigationAreaId : nFallbackId, material.nFlags } );
+		}
+		std::sort( surfaces.begin(), surfaces.end(),
+		           []( const sirMeshPackSurface_t& a, const sirMeshPackSurface_t& b ) { return a.nMaterialId < b.nMaterialId; } );
+		for ( uint32_t i = 1; i < surfaces.size(); ++i ) {
+			if ( surfaces[i - 1].nMaterialId == surfaces[i].nMaterialId )
+				return SIR_PACK_INVALID_FORMAT;
+		}
 		sirMeshPackDesc_t desc = {};
 		desc.key = in.key;
 		desc.pGroups = groups.data();
 		desc.pClusters = clusters.data();
 		desc.pPages = pages.data();
 		desc.pCollisions = in.bCookCollision ? &collisionRecord : nullptr;
+		desc.pSurfaces = surfaces.data();
+		desc.nSurfaces = ( uint32_t )surfaces.size();
 		desc.nGroups = ( uint32_t )groups.size();
 		desc.nClusters = ( uint32_t )clusters.size();
 		desc.nPages = ( uint32_t )pages.size();
@@ -578,14 +606,17 @@ sirPackResult_t SIRGeometryCooker::cookShipping( const sirGeometryCookInput_t& i
 		if ( view.open( manifest.data(), manifest.size() ) != SIR_MESH_PACK_OK )
 			return SIR_PACK_INVALID_FORMAT;
 		// SIRPack chunk 0 contains the manifest, chunks 1..N correspond to
-		// stable page ids, and the optional final chunk carries collision.
+		// stable page ids; the optional last two chunks carry the one canonical
+		// mesh/collision/material payload and the shared static BVH, respectively.
 		std::vector<sirPackCookChunk_t> chunks;
-		chunks.reserve( payloads.size() + 2 );
+		chunks.reserve( payloads.size() + 3 );
 		chunks.push_back( { 0, 0, manifest.data(), manifest.size(), 16 } );
 		for ( uint32_t i = 0; i < payloads.size(); ++i )
 			chunks.push_back( { i + 1, 0, payloads[i].data(), payloads[i].size(), 16 } );
-		if ( in.bCookCollision )
+		if ( in.bCookCollision ) {
 			chunks.push_back( { ( uint32_t )chunks.size(), 0, collision.data(), collision.size(), 16 } );
+			chunks.push_back( { ( uint32_t )chunks.size(), 0, sharedBVH.data(), sharedBVH.size(), 16 } );
+		}
 		sirPackCookResource_t resource = {};
 		resource.key = { in.key.nAssetId, in.nResourceTypeId, in.key.nVariant };
 		resource.nRevision = in.key.nRevision;

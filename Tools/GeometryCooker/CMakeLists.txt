@@ -12,11 +12,11 @@ if(NOT SIR_WITH_MESHOPTIMIZER)
     return()
 endif()
 
-add_library(SIRGeometryCooker STATIC SIRGeometryCooker.cpp)
+add_library(SIRGeometryCooker STATIC SIRGeometryCooker.cpp SIRGeometryBVHCooker.cpp)
 add_library(SIR::GeometryCooker ALIAS SIRGeometryCooker)
 target_include_directories(SIRGeometryCooker PUBLIC "${PROJECT_SOURCE_DIR}" "${PROJECT_SOURCE_DIR}/Source")
 target_compile_features(SIRGeometryCooker PUBLIC cxx_std_17)
-target_link_libraries(SIRGeometryCooker PUBLIC SIR::MeshPackSchema SIR::PackCooker SIR::MeshOptimizer SIR::DisplacementCooker)
+target_link_libraries(SIRGeometryCooker PUBLIC SIR::MeshPackSchema SIR::PackCooker SIR::MeshOptimizer SIR::DisplacementCooker SIR::MeshCollisionBVH)
 sir_configure_owned_target(SIRGeometryCooker)
 
 add_executable(sir-geometry-cooker SIRGeometryCookerCLI.cpp)

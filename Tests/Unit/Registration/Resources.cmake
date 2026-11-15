@@ -100,7 +100,7 @@ add_test(NAME resources.sirpack.shipping-source-guard COMMAND SIRPackShippingGua
 sir_configure_owned_target(SIRPackShippingGuardTests)
 
 add_executable(SIRMeshGRDGSourceTests SIRMeshGRDGSourceTests.cpp)
-target_link_libraries(SIRMeshGRDGSourceTests PRIVATE SIR::MeshGRDGSource SIR::MeshCollisionSource)
+target_link_libraries(SIRMeshGRDGSourceTests PRIVATE SIR::MeshGRDGIntegration SIR::MeshCollisionSource SIR::CommonGeometryQueries)
 add_test(NAME mesh.grdg.canonical-source-lifetime COMMAND SIRMeshGRDGSourceTests)
 sir_configure_owned_target(SIRMeshGRDGSourceTests)
 
@@ -155,3 +155,24 @@ add_executable(SIRWorldMeshQueryTests SIRWorldMeshQueryTests.cpp)
 target_link_libraries(SIRWorldMeshQueryTests PRIVATE SIR::WorldMeshQuery)
 add_test(NAME world.mesh.instances-and-queries COMMAND SIRWorldMeshQueryTests)
 sir_configure_owned_target(SIRWorldMeshQueryTests)
+
+if(TARGET SIRGeometryCooker)
+    add_executable(SIRVGFrameCompilerTests SIRVGFrameCompilerTests.cpp)
+    target_include_directories(SIRVGFrameCompilerTests PRIVATE "${PROJECT_SOURCE_DIR}")
+    target_link_libraries(SIRVGFrameCompilerTests PRIVATE SIR::VGFrameCompiler SIR::GeometryCooker)
+    add_test(NAME mesh.vg.complete-cut-residency COMMAND SIRVGFrameCompilerTests)
+    sir_configure_owned_target(SIRVGFrameCompilerTests)
+endif()
+
+add_executable(SIRCommonGeometryQueriesTests SIRCommonGeometryQueriesTests.cpp)
+target_link_libraries(SIRCommonGeometryQueriesTests PRIVATE SIR::CommonGeometryQueries SIR::MeshCache)
+add_test(NAME mesh.bvh.one-canonical-read COMMAND SIRCommonGeometryQueriesTests)
+sir_configure_owned_target(SIRCommonGeometryQueriesTests)
+
+if(TARGET SIRGeometryCooker)
+    add_executable(SIRCookedGeometryGRDGTests SIRCookedGeometryGRDGTests.cpp)
+    target_include_directories(SIRCookedGeometryGRDGTests PRIVATE "${PROJECT_SOURCE_DIR}")
+    target_link_libraries(SIRCookedGeometryGRDGTests PRIVATE SIR::GeometryCooker SIR::MeshGRDGIntegration SIR::CommonGeometryQueries)
+    add_test(NAME mesh.grdg.cooked-four-consumers COMMAND SIRCookedGeometryGRDGTests)
+    sir_configure_owned_target(SIRCookedGeometryGRDGTests)
+endif()

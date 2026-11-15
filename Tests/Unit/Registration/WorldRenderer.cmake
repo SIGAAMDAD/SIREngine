@@ -26,3 +26,11 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/WorldPartitionTests.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/StreamingReconcileTests.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/StreamingProviderBridgeTests.cmake)
 
+
+if(TARGET SIRGeometryCooker)
+    add_executable(SIRVGNativePagesTests SIRVGNativePagesTests.cpp)
+    target_include_directories(SIRVGNativePagesTests PRIVATE "${PROJECT_SOURCE_DIR}")
+    target_link_libraries(SIRVGNativePagesTests PRIVATE SIR::Graphics SIR::GeometryCooker SIR::VGCPUPageViews)
+    add_test(NAME mesh.vg.native-page-copy-draw COMMAND SIRVGNativePagesTests)
+    sir_configure_owned_target(SIRVGNativePagesTests)
+endif()

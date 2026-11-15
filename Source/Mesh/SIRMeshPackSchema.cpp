@@ -97,7 +97,32 @@ static void sirMeshPackWriteCollision( uint8_t *p, const sirMeshPackCollision_t&
 	sirPackWrite32( p + 8, c.nVertexCount );
 	sirPackWrite32( p + 12, c.nIndexCount );
 	sirPackWrite32( p + 16, c.nChunkId );
+	sirPackWrite32( p + 20, c.nBVHChunkId );
 	sirPackWrite64( p + 24, c.nRevision );
+	sirPackWrite32( p + 32, c.nBVHNodeCount );
+	sirPackWrite32( p + 36, c.nBVHOrderCount );
+}
+
+static void sirMeshPackWriteSurface( uint8_t *p, const sirMeshPackSurface_t& surface ) noexcept
+{
+	sirPackWrite32( p, surface.nMaterialId );
+	sirPackWrite32( p + 4, surface.nSurfaceId );
+	sirPackWrite32( p + 8, surface.nCollisionProxyId );
+	sirPackWrite32( p + 12, surface.nAcousticMaterialId );
+	sirPackWrite32( p + 16, surface.nNavigationAreaId );
+	sirPackWrite32( p + 20, surface.nFlags );
+}
+
+static sirMeshPackSurface_t sirMeshPackReadSurface( const uint8_t *p ) noexcept
+{
+	sirMeshPackSurface_t surface = {};
+	surface.nMaterialId = sirPackRead32( p );
+	surface.nSurfaceId = sirPackRead32( p + 4 );
+	surface.nCollisionProxyId = sirPackRead32( p + 8 );
+	surface.nAcousticMaterialId = sirPackRead32( p + 12 );
+	surface.nNavigationAreaId = sirPackRead32( p + 16 );
+	surface.nFlags = sirPackRead32( p + 20 );
+	return surface;
 }
 
 static sirMeshPackGroup_t sirMeshPackReadGroup( const uint8_t *p ) noexcept
@@ -145,12 +170,15 @@ static sirMeshPackCollision_t sirMeshPackReadCollision( const uint8_t *p ) noexc
 	c.nVertexCount = sirPackRead32( p + 8 );
 	c.nIndexCount = sirPackRead32( p + 12 );
 	c.nChunkId = sirPackRead32( p + 16 );
+	c.nBVHChunkId = sirPackRead32( p + 20 );
 	c.nRevision = sirPackRead64( p + 24 );
+	c.nBVHNodeCount = sirPackRead32( p + 32 );
+	c.nBVHOrderCount = sirPackRead32( p + 36 );
 	return c;
 }
 
 SIRMeshPackSchema::SIRMeshPackSchema( void ) noexcept
-    : m_pBytes( nullptr ), m_nBytes( 0 ), m_Key{}, m_nGroups( 0 ), m_nClusters( 0 ), m_nPages( 0 ), m_nCollisions( 0 )
+    : m_pBytes( nullptr ), m_nBytes( 0 ), m_Key{}, m_nGroups( 0 ), m_nClusters( 0 ), m_nPages( 0 ), m_nCollisions( 0 ), m_nSurfaces( 0 )
 {
 }
 
@@ -174,20 +202,27 @@ uint32_t SIRMeshPackSchema::getPageCount( void ) const noexcept
 {
 	return m_nPages;
 }
+uint32_t SIRMeshPackSchema::getSurfaceCount( void ) const noexcept
+{
+	return m_nSurfaces;
+}
 
 uint64_t SIRMeshPackSchema::requiredBytes( const sirMeshPackDesc_t& d ) noexcept
 {
 	if ( !sirMeshPackValidCounts( d.nGroups, d.nClusters, d.nPages, d.nCollisions ) )
 		return 0;
-	return sirMeshPackTableOffset( d.nGroups, d.nClusters, d.nPages, 3 ) + ( uint64_t )d.nCollisions * SIR_MESH_PACK_COLLISION_BYTES;
+	if ( d.nSurfaces > SIR_MESH_PACK_MAX_RECORDS )
+		return 0;
+	return sirMeshPackTableOffset( d.nGroups, d.nClusters, d.nPages, 3 ) + ( uint64_t )d.nCollisions * SIR_MESH_PACK_COLLISION_BYTES +
+	       ( uint64_t )d.nSurfaces * SIR_MESH_PACK_SURFACE_BYTES;
 }
 
 sirMeshPackResult_t SIRMeshPackSchema::write( const sirMeshPackDesc_t& d, uint8_t *pBytes, uint64_t nCapacity ) noexcept
 {
 	const uint64_t nBytes = requiredBytes( d );
 	if ( pBytes == nullptr || d.pGroups == nullptr || d.pClusters == nullptr || d.pPages == nullptr ||
-	     ( d.nCollisions && d.pCollisions == nullptr ) || d.key.nAssetId == 0 || d.key.nRevision == 0 || d.key.nReserved != 0 ||
-	     d.nVertexCount == 0 || d.nTriangleCount == 0 || nBytes == 0 )
+	     ( d.nCollisions && d.pCollisions == nullptr ) || ( d.nSurfaces && d.pSurfaces == nullptr ) || d.key.nAssetId == 0 ||
+	     d.key.nRevision == 0 || d.key.nReserved != 0 || d.nVertexCount == 0 || d.nTriangleCount == 0 || nBytes == 0 )
 		return SIR_MESH_PACK_INVALID_ARGUMENT;
 	if ( nCapacity < nBytes )
 		return SIR_MESH_PACK_OUT_OF_CAPACITY;
@@ -206,6 +241,7 @@ sirMeshPackResult_t SIRMeshPackSchema::write( const sirMeshPackDesc_t& d, uint8_
 	sirPackWrite32( pBytes + 52, d.nCollisions );
 	sirPackWrite32( pBytes + 56, d.nVertexCount );
 	sirPackWrite32( pBytes + 60, d.nTriangleCount );
+	sirPackWrite32( pBytes + 120, d.nSurfaces );
 	for ( uint32_t t = 0; t < 3; ++t )
 		sirPackWrite64( pBytes + 64 + 8 * t, sirMeshPackTableOffset( d.nGroups, d.nClusters, d.nPages, t ) );
 	for ( uint32_t i = 0; i < d.nGroups; ++i )
@@ -224,6 +260,10 @@ sirMeshPackResult_t SIRMeshPackSchema::write( const sirMeshPackDesc_t& d, uint8_
 		sirMeshPackWriteCollision( pBytes + sirMeshPackTableOffset( d.nGroups, d.nClusters, d.nPages, 3 ) +
 		                               ( uint64_t )i * SIR_MESH_PACK_COLLISION_BYTES,
 		                           d.pCollisions[i] );
+	const uint64_t nSurfaceOffset =
+	    sirMeshPackTableOffset( d.nGroups, d.nClusters, d.nPages, 3 ) + ( uint64_t )d.nCollisions * SIR_MESH_PACK_COLLISION_BYTES;
+	for ( uint32_t i = 0; i < d.nSurfaces; ++i )
+		sirMeshPackWriteSurface( pBytes + nSurfaceOffset + ( uint64_t )i * SIR_MESH_PACK_SURFACE_BYTES, d.pSurfaces[i] );
 	sirMeshPackDigest( pBytes, nBytes, pBytes + 88 );
 	SIRMeshPackSchema view;
 	return view.open( pBytes, nBytes );
@@ -238,6 +278,7 @@ void SIRMeshPackSchema::reset( void ) noexcept
 	m_nClusters = 0;
 	m_nPages = 0;
 	m_nCollisions = 0;
+	m_nSurfaces = 0;
 }
 
 sirMeshPackResult_t SIRMeshPackSchema::open( const void *pData, uint64_t nBytes ) noexcept
@@ -259,6 +300,7 @@ sirMeshPackResult_t SIRMeshPackSchema::open( const void *pData, uint64_t nBytes 
 	d.nClusters = sirPackRead32( p + 44 );
 	d.nPages = sirPackRead32( p + 48 );
 	d.nCollisions = sirPackRead32( p + 52 );
+	d.nSurfaces = sirPackRead32( p + 120 );
 	d.nVertexCount = sirPackRead32( p + 56 );
 	d.nTriangleCount = sirPackRead32( p + 60 );
 	const uint64_t nRequired = requiredBytes( d );
@@ -268,7 +310,7 @@ sirMeshPackResult_t SIRMeshPackSchema::open( const void *pData, uint64_t nBytes 
 		return SIR_MESH_PACK_TRUNCATED;
 	if ( nBytes != nRequired )
 		return SIR_MESH_PACK_INVALID_FORMAT;
-	for ( uint32_t j = 120; j < 128; ++j )
+	for ( uint32_t j = 124; j < 128; ++j )
 		if ( p[j] != 0 )
 			return SIR_MESH_PACK_INVALID_FORMAT;
 	for ( uint32_t t = 0; t < 3; ++t )
@@ -368,18 +410,29 @@ sirMeshPackResult_t SIRMeshPackSchema::open( const void *pData, uint64_t nBytes 
 		                                                           ( uint64_t )i * SIR_MESH_PACK_COLLISION_BYTES );
 		const uint8_t *pCollisionWire =
 		    p + sirMeshPackTableOffset( d.nGroups, d.nClusters, d.nPages, 3 ) + ( uint64_t )i * SIR_MESH_PACK_COLLISION_BYTES;
-		for ( uint32_t j = 20; j < 24; ++j )
-			if ( pCollisionWire[j] != 0 )
-				return SIR_MESH_PACK_INVALID_FORMAT;
-		for ( uint32_t j = 32; j < SIR_MESH_PACK_COLLISION_BYTES; ++j )
+		for ( uint32_t j = 40; j < SIR_MESH_PACK_COLLISION_BYTES; ++j )
 			if ( pCollisionWire[j] != 0 )
 				return SIR_MESH_PACK_INVALID_FORMAT;
 		if ( c.nRevision != d.key.nRevision || c.nFlags != SIR_MESH_PACK_COLLISION_SOURCE_FLAGS || c.nChunkId != d.nPages + i + 1 ||
-		     c.nVertexCount == 0 || c.nIndexCount == 0 || c.nIndexCount % 3 ||
+		     c.nBVHChunkId != 1ULL + d.nPages + d.nCollisions + i || c.nBVHNodeCount == 0 ||
+		     c.nBVHNodeCount > 2ULL * ( c.nIndexCount / 3 ) || c.nBVHOrderCount != c.nIndexCount / 3 || c.nVertexCount == 0 ||
+		     c.nIndexCount == 0 || c.nIndexCount % 3 ||
 		     ( i && c.nProfile <= sirMeshPackReadCollision( p + sirMeshPackTableOffset( d.nGroups, d.nClusters, d.nPages, 3 ) +
 		                                                    ( uint64_t )( i - 1 ) * SIR_MESH_PACK_COLLISION_BYTES )
 		                              .nProfile ) )
 			return SIR_MESH_PACK_INVALID_FORMAT;
+	}
+	const uint64_t nSurfaceOffset =
+	    sirMeshPackTableOffset( d.nGroups, d.nClusters, d.nPages, 3 ) + ( uint64_t )d.nCollisions * SIR_MESH_PACK_COLLISION_BYTES;
+	uint32_t nPreviousMaterial = 0;
+	for ( uint32_t i = 0; i < d.nSurfaces; ++i ) {
+		const uint8_t *pEntry = p + nSurfaceOffset + ( uint64_t )i * SIR_MESH_PACK_SURFACE_BYTES;
+		const sirMeshPackSurface_t surface = sirMeshPackReadSurface( pEntry );
+		if ( ( i != 0 && surface.nMaterialId <= nPreviousMaterial ) || surface.nSurfaceId == 0 || surface.nCollisionProxyId == 0 ||
+		     surface.nAcousticMaterialId == 0 || surface.nNavigationAreaId == 0 || sirPackRead32( pEntry + 24 ) != 0 ||
+		     sirPackRead32( pEntry + 28 ) != 0 )
+			return SIR_MESH_PACK_INVALID_FORMAT;
+		nPreviousMaterial = surface.nMaterialId;
 	}
 	m_pBytes = p;
 	m_nBytes = nBytes;
@@ -388,6 +441,7 @@ sirMeshPackResult_t SIRMeshPackSchema::open( const void *pData, uint64_t nBytes 
 	m_nClusters = d.nClusters;
 	m_nPages = d.nPages;
 	m_nCollisions = d.nCollisions;
+	m_nSurfaces = d.nSurfaces;
 	return SIR_MESH_PACK_OK;
 }
 
@@ -423,6 +477,38 @@ sirMeshPackResult_t SIRMeshPackSchema::collisionAt( uint32_t i, sirMeshPackColli
 	                               ( uint64_t )i * SIR_MESH_PACK_COLLISION_BYTES );
 	return SIR_MESH_PACK_OK;
 }
+sirMeshPackResult_t SIRMeshPackSchema::surfaceAt( uint32_t i, sirMeshPackSurface_t *pSurface ) const noexcept
+{
+	if ( !isOpen() || pSurface == nullptr || i >= m_nSurfaces )
+		return SIR_MESH_PACK_INVALID_ARGUMENT;
+	const uint64_t nOffset =
+	    sirMeshPackTableOffset( m_nGroups, m_nClusters, m_nPages, 3 ) + ( uint64_t )m_nCollisions * SIR_MESH_PACK_COLLISION_BYTES;
+	*pSurface = sirMeshPackReadSurface( m_pBytes + nOffset + ( uint64_t )i * SIR_MESH_PACK_SURFACE_BYTES );
+	return SIR_MESH_PACK_OK;
+}
+
+sirMeshPackResult_t SIRMeshPackSchema::surfaceForMaterial( uint32_t nMaterialId, sirMeshPackSurface_t *pSurface ) const noexcept
+{
+	if ( !isOpen() || pSurface == nullptr )
+		return SIR_MESH_PACK_INVALID_ARGUMENT;
+	uint32_t nLow = 0;
+	uint32_t nHigh = m_nSurfaces;
+	while ( nLow < nHigh ) {
+		const uint32_t nMid = nLow + ( nHigh - nLow ) / 2;
+		sirMeshPackSurface_t candidate = {};
+		( void )surfaceAt( nMid, &candidate );
+		if ( candidate.nMaterialId < nMaterialId )
+			nLow = nMid + 1;
+		else
+			nHigh = nMid;
+	}
+	sirMeshPackSurface_t candidate = {};
+	if ( nLow >= m_nSurfaces || surfaceAt( nLow, &candidate ) != SIR_MESH_PACK_OK || candidate.nMaterialId != nMaterialId )
+		return SIR_MESH_PACK_INVALID_ARGUMENT;
+	*pSurface = candidate;
+	return SIR_MESH_PACK_OK;
+}
+
 sirMeshPackResult_t SIRMeshPackSchema::validateResource( const sirPackResource_t& resource ) const noexcept
 {
 	if ( !isOpen() )
@@ -431,14 +517,14 @@ sirMeshPackResult_t SIRMeshPackSchema::validateResource( const sirPackResource_t
 	     resource.nRevision != m_Key.nRevision )
 		return SIR_MESH_PACK_INVALID_FORMAT;
 	if ( resource.nFormatId != SIR_MESH_PACK_FORMAT_ID || resource.nSchemaVersion != SIR_MESH_PACK_VERSION ||
-	     resource.nKind != SIR_RESOURCE_KIND_GEOMETRY || resource.nChunkCount != 1ULL + m_nPages + m_nCollisions )
+	     resource.nKind != SIR_RESOURCE_KIND_GEOMETRY || resource.nChunkCount != 1ULL + m_nPages + 2ULL * m_nCollisions )
 		return SIR_MESH_PACK_INVALID_FORMAT;
 	return SIR_MESH_PACK_OK;
 }
 
 sirMeshPackResult_t SIRMeshPackSchema::validateChunk( uint32_t iLogicalChunk, const sirPackChunk_t& chunk ) const noexcept
 {
-	if ( !isOpen() || iLogicalChunk >= 1ULL + m_nPages + m_nCollisions )
+	if ( !isOpen() || iLogicalChunk >= 1ULL + m_nPages + 2ULL * m_nCollisions )
 		return SIR_MESH_PACK_INVALID_ARGUMENT;
 	if ( chunk.nChunkId != iLogicalChunk || chunk.nDecodedBytes == 0 )
 		return SIR_MESH_PACK_INVALID_FORMAT;
@@ -452,12 +538,20 @@ sirMeshPackResult_t SIRMeshPackSchema::validateChunk( uint32_t iLogicalChunk, co
 		if ( pageAt( iLogicalChunk - 1, &page ) != SIR_MESH_PACK_OK || chunk.nDecodedBytes != page.nByteCount ||
 		     memcmp( chunk.szDigest, page.szDigest, sizeof( page.szDigest ) ) != 0 )
 			return SIR_MESH_PACK_BAD_DIGEST;
-	} else {
+	} else if ( iLogicalChunk <= m_nPages + m_nCollisions ) {
 		sirMeshPackCollision_t collision = {};
 		if ( collisionAt( iLogicalChunk - m_nPages - 1, &collision ) != SIR_MESH_PACK_OK )
 			return SIR_MESH_PACK_INVALID_FORMAT;
 		const uint64_t nExpected =
 		    16ULL + 12ULL * collision.nVertexCount + 4ULL * collision.nIndexCount + 4ULL * ( collision.nIndexCount / 3 );
+		if ( chunk.nDecodedBytes != nExpected )
+			return SIR_MESH_PACK_INVALID_FORMAT;
+	} else {
+		sirMeshPackCollision_t collision = {};
+		if ( collisionAt( iLogicalChunk - m_nPages - m_nCollisions - 1, &collision ) != SIR_MESH_PACK_OK )
+			return SIR_MESH_PACK_INVALID_FORMAT;
+		const uint64_t nExpected = SIR_MESH_PACK_BVH_HEADER_BYTES + ( uint64_t )collision.nBVHNodeCount * SIR_MESH_PACK_BVH_NODE_BYTES +
+		                           ( uint64_t )collision.nBVHOrderCount * sizeof( uint32_t );
 		if ( chunk.nDecodedBytes != nExpected )
 			return SIR_MESH_PACK_INVALID_FORMAT;
 	}
@@ -565,6 +659,12 @@ sirMeshPackResult_t SIRMeshPackSchema::verifyCollision( uint32_t iCollision, con
 		const double nz = ex * fy - ey * fx;
 		if ( nx * nx + ny * ny + nz * nz < 1.0e-20 )
 			return SIR_MESH_PACK_INVALID_FORMAT;
+		if ( m_nSurfaces != 0 ) {
+			const uint64_t nMaterialOffset = nIndexOffset + 4ULL * c.nIndexCount + 4ULL * ( i / 3 );
+			sirMeshPackSurface_t surface = {};
+			if ( surfaceForMaterial( sirPackRead32( p + nMaterialOffset ), &surface ) != SIR_MESH_PACK_OK )
+				return SIR_MESH_PACK_INVALID_FORMAT;
+		}
 	}
 	return SIR_MESH_PACK_OK;
 }
@@ -612,5 +712,152 @@ sirMeshPackResult_t SIRMeshPackSchema::decodeVertex( const sirMeshPackVertexQuer
 	decoded.szUV[0] = sirMeshPackBitsFloat( sirPackRead32( pPacked + 16 ) );
 	decoded.szUV[1] = sirMeshPackBitsFloat( sirPackRead32( pPacked + 20 ) );
 	*pVertex = decoded;
+	return SIR_MESH_PACK_OK;
+}
+
+// Cooked page payloads use meshlet-local u8 indices. Conversion is performed
+// once per uploaded page, after a single full page digest and bounds check.
+sirMeshPackResult_t SIRMeshPackSchema::getDecodedPageCounts( uint32_t nPage, uint32_t *pVertices, uint32_t *pIndices ) const noexcept
+{
+	if ( pVertices == nullptr || pIndices == nullptr )
+		return SIR_MESH_PACK_INVALID_ARGUMENT;
+	sirMeshPackPage_t page = {};
+	if ( pageAt( nPage, &page ) != SIR_MESH_PACK_OK )
+		return SIR_MESH_PACK_INVALID_ARGUMENT;
+	uint64_t nVertices = 0;
+	uint64_t nIndices = 0;
+	for ( uint32_t i = 0; i < page.nClusterCount; ++i ) {
+		sirMeshPackCluster_t cluster = {};
+		if ( clusterAt( page.nFirstCluster + i, &cluster ) != SIR_MESH_PACK_OK )
+			return SIR_MESH_PACK_INVALID_FORMAT;
+		nVertices += cluster.nVertexCount;
+		nIndices += ( uint64_t )cluster.nTriangleCount * 3;
+		if ( nVertices > UINT32_MAX || nIndices > UINT32_MAX )
+			return SIR_MESH_PACK_OUT_OF_CAPACITY;
+	}
+	*pVertices = ( uint32_t )nVertices;
+	*pIndices = ( uint32_t )nIndices;
+	return SIR_MESH_PACK_OK;
+}
+
+sirMeshPackResult_t SIRMeshPackSchema::decodePage( const sirMeshPackPageDecode_t& decode ) const noexcept
+{
+	if ( decode.pVertices == nullptr || decode.pIndices == nullptr )
+		return SIR_MESH_PACK_INVALID_ARGUMENT;
+	const sirMeshPackResult_t eVerified = verifyPage( decode.nPage, decode.pPackedBytes, decode.nPackedBytes );
+	if ( eVerified != SIR_MESH_PACK_OK )
+		return eVerified;
+	uint32_t nVertices = 0;
+	uint32_t nIndices = 0;
+	if ( getDecodedPageCounts( decode.nPage, &nVertices, &nIndices ) != SIR_MESH_PACK_OK || nVertices > decode.nVertexCapacity ||
+	     nIndices > decode.nIndexCapacity )
+		return SIR_MESH_PACK_OUT_OF_CAPACITY;
+	sirMeshPackPage_t page = {};
+	if ( pageAt( decode.nPage, &page ) != SIR_MESH_PACK_OK )
+		return SIR_MESH_PACK_INVALID_FORMAT;
+	const uint8_t *pPayload = ( const uint8_t * )decode.pPackedBytes;
+	uint32_t nVertexCursor = 0;
+	uint32_t nIndexCursor = 0;
+	for ( uint32_t i = 0; i < page.nClusterCount; ++i ) {
+		sirMeshPackCluster_t cluster = {};
+		if ( clusterAt( page.nFirstCluster + i, &cluster ) != SIR_MESH_PACK_OK )
+			return SIR_MESH_PACK_INVALID_FORMAT;
+		const uint8_t *pCluster = pPayload + cluster.nByteOffset;
+		const uint8_t *pIndexData = pCluster + 32 + ( uint64_t )cluster.nVertexCount * 24;
+		for ( uint32_t v = 0; v < cluster.nVertexCount; ++v ) {
+			const uint8_t *pPacked = pCluster + 32 + ( uint64_t )v * 24;
+			sirMeshPackVertex_t& vertex = decode.pVertices[nVertexCursor + v];
+			for ( uint32_t axis = 0; axis < 3; ++axis ) {
+				const float fMinimum = sirMeshPackBitsFloat( sirPackRead32( pCluster + 8 + axis * 4 ) );
+				const float fMaximum = sirMeshPackBitsFloat( sirPackRead32( pCluster + 20 + axis * 4 ) );
+				vertex.szPosition[axis] = fMinimum + ( fMaximum - fMinimum ) * ( ( float )sirPackRead16( pPacked + axis * 2 ) / 65535.0f );
+			}
+			sirMeshPackDecodeOct( pPacked + 6, vertex.szNormal );
+			sirMeshPackDecodeOct( pPacked + 10, vertex.szTangent );
+			vertex.szTangent[3] = pPacked[14] == 0xff ? -1.0f : 1.0f;
+			vertex.szUV[0] = sirMeshPackBitsFloat( sirPackRead32( pPacked + 16 ) );
+			vertex.szUV[1] = sirMeshPackBitsFloat( sirPackRead32( pPacked + 20 ) );
+		}
+		const uint32_t nCount = cluster.nTriangleCount * 3;
+		for ( uint32_t j = 0; j < nCount; ++j ) {
+			if ( pIndexData[j] >= cluster.nVertexCount )
+				return SIR_MESH_PACK_INVALID_FORMAT;
+			decode.pIndices[nIndexCursor + j] = pIndexData[j];
+		}
+		nVertexCursor += cluster.nVertexCount;
+		nIndexCursor += nCount;
+	}
+	return SIR_MESH_PACK_OK;
+}
+
+sirMeshPackResult_t SIRMeshPackSchema::verifyBVH( uint32_t iCollision, const void *pBytes, uint64_t nBytes ) const noexcept
+{
+	sirMeshPackCollision_t c = {};
+	if ( collisionAt( iCollision, &c ) != SIR_MESH_PACK_OK || pBytes == nullptr )
+		return SIR_MESH_PACK_INVALID_ARGUMENT;
+	const uint64_t nRequired = SIR_MESH_PACK_BVH_HEADER_BYTES + ( uint64_t )c.nBVHNodeCount * SIR_MESH_PACK_BVH_NODE_BYTES +
+	                           ( uint64_t )c.nBVHOrderCount * sizeof( uint32_t );
+	if ( nBytes < nRequired )
+		return SIR_MESH_PACK_TRUNCATED;
+	if ( nBytes != nRequired )
+		return SIR_MESH_PACK_INVALID_FORMAT;
+	const uint8_t *p = ( const uint8_t * )pBytes;
+	if ( sirPackRead32( p ) != SIR_MESH_PACK_BVH_FORMAT_ID || sirPackRead16( p + 4 ) != SIR_MESH_PACK_BVH_VERSION ||
+	     sirPackRead16( p + 6 ) != SIR_MESH_PACK_BVH_HEADER_BYTES || sirPackRead32( p + 8 ) != SIR_PACK_ENDIAN_MARKER ||
+	     sirPackRead32( p + 12 ) != c.nBVHNodeCount || sirPackRead32( p + 16 ) != c.nBVHOrderCount || sirPackRead32( p + 20 ) != 0 ||
+	     sirPackRead64( p + 24 ) != 0 )
+		return SIR_MESH_PACK_INVALID_FORMAT;
+	uint32_t nNextTriangle = 0;
+	uint64_t nInternalChildren = 0;
+	for ( uint32_t i = 0; i < c.nBVHNodeCount; ++i ) {
+		const uint8_t *pNode = p + SIR_MESH_PACK_BVH_HEADER_BYTES + ( uint64_t )i * SIR_MESH_PACK_BVH_NODE_BYTES;
+		for ( uint32_t axis = 0; axis < 3; ++axis ) {
+			const float fMin = sirMeshPackBitsFloat( sirPackRead32( pNode + 4 * axis ) );
+			const float fMax = sirMeshPackBitsFloat( sirPackRead32( pNode + 12 + 4 * axis ) );
+			if ( !std::isfinite( fMin ) || !std::isfinite( fMax ) || fMin > fMax )
+				return SIR_MESH_PACK_INVALID_FORMAT;
+		}
+		const uint32_t nLeft = sirPackRead32( pNode + 24 );
+		const uint32_t nRight = sirPackRead32( pNode + 28 );
+		const uint32_t nFirst = sirPackRead32( pNode + 32 );
+		const uint32_t nCount = sirPackRead32( pNode + 36 );
+		if ( nCount == 0 ) {
+			if ( nLeft <= i || nLeft >= c.nBVHNodeCount || nRight <= nLeft || nRight >= c.nBVHNodeCount || nLeft != i + 1 )
+				return SIR_MESH_PACK_INVALID_FORMAT;
+			nInternalChildren += 2;
+		} else {
+			if ( nLeft != UINT32_MAX || nRight != UINT32_MAX || nFirst != nNextTriangle || nCount > c.nBVHOrderCount - nNextTriangle )
+				return SIR_MESH_PACK_INVALID_FORMAT;
+			nNextTriangle += nCount;
+		}
+	}
+	if ( nInternalChildren != c.nBVHNodeCount - 1 || nNextTriangle != c.nBVHOrderCount )
+		return SIR_MESH_PACK_INVALID_FORMAT;
+	// Acyclic forward edges and matching edge counts are insufficient: two
+	// parents can reference one child while another valid node is orphaned.
+	// The cooked BVH is serialized depth-first; verify that exact visit order
+	// using bounded local scratch and reject deeper malformed hierarchies.
+	uint32_t nodeStack[64] = { 0 };
+	uint32_t nStackCount = 1;
+	uint32_t nExpectedNode = 0;
+	while ( nStackCount != 0 ) {
+		const uint32_t nNode = nodeStack[--nStackCount];
+		if ( nNode != nExpectedNode++ )
+			return SIR_MESH_PACK_INVALID_FORMAT;
+		const uint8_t *pNode = p + SIR_MESH_PACK_BVH_HEADER_BYTES + ( uint64_t )nNode * SIR_MESH_PACK_BVH_NODE_BYTES;
+		if ( sirPackRead32( pNode + 36 ) == 0 ) {
+			if ( nStackCount > 62 )
+				return SIR_MESH_PACK_INVALID_FORMAT;
+			nodeStack[nStackCount++] = sirPackRead32( pNode + 28 );
+			nodeStack[nStackCount++] = sirPackRead32( pNode + 24 );
+		}
+	}
+	if ( nExpectedNode != c.nBVHNodeCount )
+		return SIR_MESH_PACK_INVALID_FORMAT;
+	const uint8_t *pOrder = p + SIR_MESH_PACK_BVH_HEADER_BYTES + ( uint64_t )c.nBVHNodeCount * SIR_MESH_PACK_BVH_NODE_BYTES;
+	for ( uint32_t i = 0; i < c.nBVHOrderCount; ++i ) {
+		if ( sirPackRead32( pOrder + ( uint64_t )i * sizeof( uint32_t ) ) >= c.nBVHOrderCount )
+			return SIR_MESH_PACK_INVALID_FORMAT;
+	}
 	return SIR_MESH_PACK_OK;
 }

@@ -73,7 +73,7 @@ static bool sameMeshKey( const sirMeshKey_t *pA, const sirMeshKey_t *pB ) noexce
 	return pA->nAssetId == pB->nAssetId && pA->nRevision == pB->nRevision && pA->nVariant == pB->nVariant && pA->nReserved == pB->nReserved;
 }
 
-static bool validateMeshSource( const sirMeshGeometrySource_t *pSource ) noexcept
+static bool validateMeshSource( const sirMeshGeometrySource_t *pSource, bool bExternalLease ) noexcept
 {
 	if ( pSource->key.nAssetId == 0 || pSource->key.nRevision == 0 || pSource->key.nReserved != 0 ) {
 		return false;
@@ -84,10 +84,11 @@ static bool validateMeshSource( const sirMeshGeometrySource_t *pSource ) noexcep
 	if ( pSource->pTriangleIndices == nullptr ) {
 		return false;
 	}
-	if ( pSource->pSourcePin == nullptr ) {
-		return false;
-	}
-	if ( pSource->pfnReleaseSourcePin == nullptr ) {
+	if ( bExternalLease ) {
+		if ( pSource->pSourcePin != nullptr || pSource->pfnReleaseSourcePin != nullptr ) {
+			return false;
+		}
+	} else if ( pSource->pSourcePin == nullptr || pSource->pfnReleaseSourcePin == nullptr ) {
 		return false;
 	}
 	if ( pSource->nVertexCount == 0 || pSource->nIndexCount == 0 || ( pSource->nIndexCount % 3U ) != 0 ) {
@@ -110,6 +111,24 @@ static bool validateMeshSource( const sirMeshGeometrySource_t *pSource ) noexcep
 		}
 	}
 
+	// Canonical query metadata is optional in the standalone cache, but any
+	// supplied BVH must carry its own triangle permutation and material IDs.
+	if ( pSource->pStaticBVH != nullptr ) {
+		const uint32_t nTriangles = pSource->nIndexCount / 3;
+		if ( pSource->nStaticBVHBytes == 0 || pSource->nStaticBVHBytes % 40 != 0 || pSource->pBVHTriangleOrder == nullptr ||
+		     pSource->nBVHTriangleOrderCount != nTriangles || pSource->pSurfaceMaterials == nullptr ||
+		     pSource->nSurfaceMaterialCount != nTriangles )
+			return false;
+		for ( uint32_t i = 0; i < nTriangles; ++i ) {
+			if ( pSource->pBVHTriangleOrder[i] >= nTriangles )
+				return false;
+		}
+	} else if ( pSource->nStaticBVHBytes != 0 || pSource->pBVHTriangleOrder != nullptr || pSource->nBVHTriangleOrderCount != 0 ) {
+		return false;
+	}
+	if ( pSource->pSurfaceMaterials == nullptr ? pSource->nSurfaceMaterialCount != 0
+	                                           : pSource->nSurfaceMaterialCount != pSource->nIndexCount / 3 )
+		return false;
 	return true;
 }
 
@@ -187,6 +206,11 @@ bool SIRMeshCache::isValidHandle( sirMeshHandle_t handle ) const noexcept
 
 sirMeshResult_t SIRMeshCache::insert( const sirMeshGeometrySource_t *pSource, sirMeshHandle_t *pHandle ) noexcept
 {
+	return insertImpl( pSource, pHandle, false );
+}
+
+sirMeshResult_t SIRMeshCache::insertImpl( const sirMeshGeometrySource_t *pSource, sirMeshHandle_t *pHandle, bool bExternalLease ) noexcept
+{
 	if ( !m_bReady ) {
 		return SIR_MESH_NOT_READY;
 	}
@@ -196,7 +220,7 @@ sirMeshResult_t SIRMeshCache::insert( const sirMeshGeometrySource_t *pSource, si
 	if ( pSource == nullptr ) {
 		return SIR_MESH_INVALID_ARGUMENT;
 	}
-	if ( !validateMeshSource( pSource ) ) {
+	if ( !validateMeshSource( pSource, bExternalLease ) ) {
 		return SIR_MESH_INVALID_ARGUMENT;
 	}
 
@@ -275,8 +299,17 @@ sirMeshResult_t SIRMeshCache::acquire( sirMeshHandle_t handle, sirMeshGeometryRe
 
 	++pSlot->nBorrows;
 	++m_nBorrowCount;
-	*pRead = { pSlot->source.pPositionsXYZ, pSlot->source.pTriangleIndices, pSlot->source.nVertexCount, pSlot->source.nIndexCount,
-	           pSlot->source.key };
+	*pRead = { pSlot->source.pPositionsXYZ,
+	           pSlot->source.pTriangleIndices,
+	           pSlot->source.nVertexCount,
+	           pSlot->source.nIndexCount,
+	           pSlot->source.key,
+	           pSlot->source.pStaticBVH,
+	           pSlot->source.nStaticBVHBytes,
+	           pSlot->source.pBVHTriangleOrder,
+	           pSlot->source.nBVHTriangleOrderCount,
+	           pSlot->source.pSurfaceMaterials,
+	           pSlot->source.nSurfaceMaterialCount };
 	return SIR_MESH_OK;
 }
 
@@ -289,8 +322,12 @@ void SIRMeshCache::finalizeSlot( uint32_t iSlot ) noexcept
 	void ( *pRelease )( void * ) noexcept = pSlot->source.pfnReleaseSourcePin;
 	*pSlot = {};
 	--m_nResidentCount;
-	// Source ownership is released only after the slot cannot be resolved.
-	pRelease( pPin );
+	// Standalone sources retain their existing exactly-once callback lifetime.
+	// Native GRDG sources use an explicit provider lease closed by their owner;
+	// no callback or provider bridge is retained in the cache slot.
+	if ( pRelease != nullptr ) {
+		pRelease( pPin );
+	}
 }
 
 sirMeshResult_t SIRMeshCache::release( sirMeshHandle_t handle ) noexcept

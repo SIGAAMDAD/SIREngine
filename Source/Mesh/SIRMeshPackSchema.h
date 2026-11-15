@@ -26,10 +26,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Mesh/SIRMeshCache.h>
 #include <Resources/SIRPackFormat.h>
 
-// SIRG V1 is one immutable SIRPack GEOMETRY resource: chunk 0 is this
+// SIRG V3 is one immutable SIRPack GEOMETRY resource: chunk 0 is this
 // manifest; chunks 1..N hold page payloads. Chunk IDs are stable within a
 // revision. The runtime never stores a native shape, device handle or pointer.
-static constexpr uint16_t SIR_MESH_PACK_VERSION = 1;
+static constexpr uint16_t SIR_MESH_PACK_VERSION = 3;
 static constexpr uint32_t SIR_MESH_PACK_FORMAT_ID = 0x47524953U; // 'SIRG' as LE
 static constexpr uint32_t SIR_MESH_PACK_MAX_RECORDS = 1048576;
 static constexpr uint32_t SIR_MESH_PACK_NO_PARENT = 0xffffffffU;
@@ -43,6 +43,11 @@ static constexpr uint64_t SIR_MESH_PACK_GROUP_BYTES = 48;
 static constexpr uint64_t SIR_MESH_PACK_CLUSTER_BYTES = 48;
 static constexpr uint64_t SIR_MESH_PACK_PAGE_BYTES = 48;
 static constexpr uint64_t SIR_MESH_PACK_COLLISION_BYTES = 48;
+static constexpr uint64_t SIR_MESH_PACK_SURFACE_BYTES = 32;
+static constexpr uint32_t SIR_MESH_PACK_BVH_FORMAT_ID = 0x42524953U; // 'SIRB' LE
+static constexpr uint16_t SIR_MESH_PACK_BVH_VERSION = 1;
+static constexpr uint64_t SIR_MESH_PACK_BVH_HEADER_BYTES = 32;
+static constexpr uint64_t SIR_MESH_PACK_BVH_NODE_BYTES = 40;
 
 typedef enum sirMeshPackResult_e : uint8_t
 {
@@ -96,8 +101,23 @@ typedef struct sirMeshPackCollision_s
 	uint32_t nVertexCount;
 	uint32_t nIndexCount;
 	uint32_t nChunkId;
+	uint32_t nBVHChunkId;
 	uint64_t nRevision;
+	uint32_t nBVHNodeCount;
+	uint32_t nBVHOrderCount;
 } sirMeshPackCollision_t;
+
+// One canonical semantic entry per distinct material. Physics, audio,
+// navigation, AI and rendering all resolve stable IDs from the same manifest.
+typedef struct sirMeshPackSurface_s
+{
+	uint32_t nMaterialId;
+	uint32_t nSurfaceId;
+	uint32_t nCollisionProxyId;
+	uint32_t nAcousticMaterialId;
+	uint32_t nNavigationAreaId;
+	uint32_t nFlags;
+} sirMeshPackSurface_t;
 
 typedef struct sirMeshPackVertex_s
 {
@@ -116,6 +136,19 @@ typedef struct sirMeshPackVertexQuery_s
 	uint32_t nVertex;
 } sirMeshPackVertexQuery_t;
 
+// One verified page is decoded directly into caller-owned upload storage.
+// No duplicate long-lived mesh or material payload is allocated.
+typedef struct sirMeshPackPageDecode_s
+{
+	const void *pPackedBytes;
+	uint64_t nPackedBytes;
+	uint32_t nPage;
+	sirMeshPackVertex_t *pVertices;
+	uint32_t *pIndices;
+	uint32_t nVertexCapacity;
+	uint32_t nIndexCapacity;
+} sirMeshPackPageDecode_t;
+
 typedef struct sirMeshPackDesc_s
 {
 	sirMeshKey_t key;
@@ -123,10 +156,12 @@ typedef struct sirMeshPackDesc_s
 	const sirMeshPackCluster_t *pClusters;
 	const sirMeshPackPage_t *pPages;
 	const sirMeshPackCollision_t *pCollisions;
+	const sirMeshPackSurface_t *pSurfaces;
 	uint32_t nGroups;
 	uint32_t nClusters;
 	uint32_t nPages;
 	uint32_t nCollisions;
+	uint32_t nSurfaces;
 	uint32_t nVertexCount;
 	uint32_t nTriangleCount;
 } sirMeshPackDesc_t;
@@ -143,6 +178,7 @@ public:
 	uint32_t getGroupCount( void ) const noexcept;
 	uint32_t getClusterCount( void ) const noexcept;
 	uint32_t getPageCount( void ) const noexcept;
+	uint32_t getSurfaceCount( void ) const noexcept;
 
 	static uint64_t requiredBytes( const sirMeshPackDesc_t& desc ) noexcept;
 	static sirMeshPackResult_t write( const sirMeshPackDesc_t& desc, uint8_t *pBytes, uint64_t nCapacity ) noexcept;
@@ -152,13 +188,18 @@ public:
 	sirMeshPackResult_t clusterAt( uint32_t iCluster, sirMeshPackCluster_t *pCluster ) const noexcept;
 	sirMeshPackResult_t pageAt( uint32_t iPage, sirMeshPackPage_t *pPage ) const noexcept;
 	sirMeshPackResult_t collisionAt( uint32_t iCollision, sirMeshPackCollision_t *pCollision ) const noexcept;
+	sirMeshPackResult_t surfaceAt( uint32_t iSurface, sirMeshPackSurface_t *pSurface ) const noexcept;
+	sirMeshPackResult_t surfaceForMaterial( uint32_t nMaterialId, sirMeshPackSurface_t *pSurface ) const noexcept;
 	// Bind an opened immutable manifest to its canonical SIRPack resource
 	// and check each logical chunk without allocating or publishing state.
 	sirMeshPackResult_t validateResource( const sirPackResource_t& resource ) const noexcept;
 	sirMeshPackResult_t validateChunk( uint32_t iLogicalChunk, const sirPackChunk_t& chunk ) const noexcept;
 	sirMeshPackResult_t verifyPage( uint32_t iPage, const void *pBytes, uint64_t nBytes ) const noexcept;
 	sirMeshPackResult_t verifyCollision( uint32_t iCollision, const void *pBytes, uint64_t nBytes ) const noexcept;
+	sirMeshPackResult_t verifyBVH( uint32_t iCollision, const void *pBytes, uint64_t nBytes ) const noexcept;
 	sirMeshPackResult_t decodeVertex( const sirMeshPackVertexQuery_t& query, sirMeshPackVertex_t *pVertex ) const noexcept;
+	sirMeshPackResult_t decodePage( const sirMeshPackPageDecode_t& decode ) const noexcept;
+	sirMeshPackResult_t getDecodedPageCounts( uint32_t nPage, uint32_t *pVertices, uint32_t *pIndices ) const noexcept;
 
 protected:
 private:
@@ -169,6 +210,7 @@ private:
 	uint32_t m_nClusters;
 	uint32_t m_nPages;
 	uint32_t m_nCollisions;
+	uint32_t m_nSurfaces;
 };
 
 #endif // __SIRENGINE_SIRMESHPACKSCHEMA_H__
