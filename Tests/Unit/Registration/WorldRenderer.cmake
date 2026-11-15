@@ -15,7 +15,18 @@ endforeach()
 add_executable(SIRVirtualTexturePortTests SIRVirtualTexturePortTests.cpp)
 target_link_libraries(SIRVirtualTexturePortTests PRIVATE SIR::Graphics)
 add_test(NAME renderer.virtual-texturing.terrain3d-v1 COMMAND SIRVirtualTexturePortTests)
+if(SIR_VT_ZSTD_INCLUDE_DIR AND SIR_VT_ZSTD_LIBRARY)
+    target_include_directories(SIRVirtualTexturePortTests PRIVATE "${SIR_VT_ZSTD_INCLUDE_DIR}")
+    target_compile_definitions(SIRVirtualTexturePortTests PRIVATE SIR_VT_TEST_ZSTD=1)
+endif()
 sir_configure_owned_target(SIRVirtualTexturePortTests)
+
+# Native donor V1 cooker, reference encoder, and shipping-only package roundtrip.
+add_executable(SIRTerrain3DDonorCookerTests SIRTerrain3DDonorCookerTests.cpp)
+target_include_directories(SIRTerrain3DDonorCookerTests PRIVATE "${PROJECT_SOURCE_DIR}/Source/Renderer/VirtualTexturing/Terrain3D/src")
+target_link_libraries(SIRTerrain3DDonorCookerTests PRIVATE SIR::Graphics SIR::Terrain)
+add_test(NAME renderer.virtual-texturing.donor.cooker COMMAND SIRTerrain3DDonorCookerTests)
+sir_configure_owned_target(SIRTerrain3DDonorCookerTests)
 
 # Native Hi-Z reference and command validation.
 include(${CMAKE_CURRENT_SOURCE_DIR}/HIZFoundationTests.cmake)

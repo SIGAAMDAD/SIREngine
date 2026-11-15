@@ -6,7 +6,7 @@
 #include "Terrain3DTypes.h"
 
 #include "data/formats/terrain_3d_vt_pack_format.h"
-#include "rendering/rd/vt/streaming/terrain_3d_vt_residency.h"
+#include "rendering/rd/vt/core/terrain_3d_vt_contract.h"
 
 #include <stddef.h>
 #include <stdint.h>
@@ -14,11 +14,20 @@
 typedef void *( *t3dVTPackRuntimeAllocateFn_t )( void *pUser, size_t nBytes, size_t nAlignment );
 typedef void ( *t3dVTPackRuntimeFreeFn_t )( void *pUser, void *pMemory );
 
+typedef struct t3dVTPackRuntimeFileRequest_s
+{
+	const char *pszPath;
+	uint64_t nPackageOffset;
+	uint64_t nPackageBytes;
+} t3dVTPackRuntimeFileRequest_t;
+
 void t3d_vt_pack_runtime_clear( t3dVTPackRuntimeStorage_t& rStorage );
 // Transfers the single owned package block into an empty destination, without allocation.
 bool t3d_vt_pack_runtime_transfer( t3dVTPackRuntimeStorage_t& rDestination, t3dVTPackRuntimeStorage_t& rSource );
-bool t3d_vt_pack_runtime_open_file_cold( const godot::String& rPath, const t3dVTPackRuntimeAllocator_t& rAllocator,
+bool t3d_vt_pack_runtime_open_file_cold( const char *pszPath, const t3dVTPackRuntimeAllocator_t& rAllocator,
                                          t3dVTPackRuntimeStorage_t& rStorage );
+bool t3d_vt_pack_runtime_open_range_cold( const t3dVTPackRuntimeFileRequest_t& request, const t3dVTPackRuntimeAllocator_t& rAllocator,
+                                          t3dVTPackRuntimeStorage_t& rStorage );
 bool t3d_vt_pack_runtime_open_cold( const void *pPackage, uint64_t nPackageBytes, const t3dVTPackRuntimeAllocator_t& rAllocator,
                                     t3dVTPackRuntimeStorage_t& rStorage );
 void t3d_vt_pack_runtime_release_cold( const t3dVTPackRuntimeAllocator_t& rAllocator, t3dVTPackRuntimeStorage_t& rStorage );

@@ -1,97 +1,63 @@
+// Copyright (c) 2023-2026 Cory Petkovsek, Roope Palmroos, and Contributors.
+// Native SIREngine Platform file boundary for the original Terrain3D composed
+// sidecar publication algorithm. Sidecar bytes and validation are unchanged.
+
 #include "authoring/vt/io/terrain_3d_composed_surface_sidecar_writer.h"
 #include "data/runtime/terrain_3d_composed_surface_sidecar.h"
-#include <stdio.h>
+
+#include <Core/Platform/SIRPlatformFile.h>
+
 #include <string>
-#if defined( _WIN32 )
-#include <windows.h>
-#include <io.h>
-static bool t3d_comp_surf_write_utf8_to_wide( const char *pUtf8, std::wstring& out )
+#include <string.h>
+
+static bool t3d_comp_surf_identical_published_sidecar( const char *pszDestination, const uint8_t *pBytes, uint64_t nBytes )
 {
-	if ( !pUtf8 || !pUtf8[0] )
+	SIRPlatformFile existing;
+	if ( existing.open( pszDestination, SIR_FILE_OPEN_READ ) != SIR_FILE_OK ) {
 		return false;
-	const int length = MultiByteToWideChar( CP_UTF8, MB_ERR_INVALID_CHARS, pUtf8, -1, nullptr, 0 );
-	if ( length < 2 )
+	}
+	uint64_t fileBytes = 0u;
+	if ( existing.getSize( &fileBytes ) != SIR_FILE_OK || fileBytes != nBytes ) {
 		return false;
-	out.resize( size_t( length ) );
-	if ( MultiByteToWideChar( CP_UTF8, MB_ERR_INVALID_CHARS, pUtf8, -1, &out[0], length ) != length )
-		return false;
-	out.resize( size_t( length - 1 ) );
+	}
+	uint8_t scratch[16384];
+	uint64_t offset = 0u;
+	while ( offset < nBytes ) {
+		const uint64_t remaining = nBytes - offset;
+		const uint64_t blockBytes = remaining < sizeof( scratch ) ? remaining : sizeof( scratch );
+		uint64_t transferred = 0u;
+		if ( existing.readAt( offset, scratch, blockBytes, &transferred ) != SIR_FILE_OK || transferred != blockBytes ||
+		     memcmp( scratch, pBytes + offset, ( size_t )blockBytes ) != 0 ) {
+			return false;
+		}
+		offset += blockBytes;
+	}
 	return true;
 }
-#else
-#include <unistd.h>
-#endif
 
-bool t3d_comp_surf_write_sidecar_cold( const char *pDestination, const uint8_t *pBytes, const uint64_t nBytes )
+bool t3d_comp_surf_write_sidecar_cold( const char *pszDestination, const uint8_t *pBytes, uint64_t nBytes )
 {
-	if ( !pDestination || !pDestination[0] || !pBytes || nBytes > SIZE_MAX ||
-	     !t3d_comp_surf_validate_sidecar_bytes( pBytes, size_t( nBytes ), true ) )
+	if ( pszDestination == nullptr || pszDestination[0] == '\0' || pBytes == nullptr || nBytes > SIZE_MAX ||
+	     !t3d_comp_surf_validate_sidecar_bytes( pBytes, ( size_t )nBytes, true ) ) {
 		return false;
-	// Identical validated cold sidecars perform zero writes, preserving file
-	// timestamps and avoiding a needless synchronous disk flush on no-op bakes.
-	// Compare in bounded chunks rather than loading a second full sidecar.
-#if defined( _WIN32 )
-	std::wstring wide_dest;
-	if ( !t3d_comp_surf_write_utf8_to_wide( pDestination, wide_dest ) )
-		return false;
-	FILE *pExisting = _wfopen( wide_dest.c_str(), L"rb" );
-#else
-	FILE *pExisting = fopen( pDestination, "rb" );
-#endif
-	if ( pExisting ) {
-		uint8_t scratch[16384];
-		uint64_t offset = 0u;
-		bool identical = true;
-		while ( offset < nBytes ) {
-			const size_t block = size_t( ( nBytes - offset ) < sizeof( scratch ) ? ( nBytes - offset ) : sizeof( scratch ) );
-			if ( fread( scratch, 1u, block, pExisting ) != block || memcmp( scratch, pBytes + offset, block ) != 0 ) {
-				identical = false;
-				break;
-			}
-			offset += block;
-		}
-		if ( identical )
-			identical = fgetc( pExisting ) == EOF && !ferror( pExisting );
-		fclose( pExisting );
-		if ( identical )
-			return true;
 	}
-	const std::string temporary = std::string( pDestination ) + ".t3sc.tmp";
-#if defined( _WIN32 )
-	std::wstring wide_temp;
-	if ( !t3d_comp_surf_write_utf8_to_wide( temporary.c_str(), wide_temp ) )
-		return false;
-	FILE *pFile = _wfopen( wide_temp.c_str(), L"wb" );
-#else
-	FILE *pFile = fopen( temporary.c_str(), "wb" );
-#endif
-	if ( !pFile )
-		return false;
-	bool ok = fwrite( pBytes, 1u, size_t( nBytes ), pFile ) == size_t( nBytes );
-	if ( ok )
-		ok = fflush( pFile ) == 0;
-#if defined( _WIN32 )
-	if ( ok )
-		ok = _commit( _fileno( pFile ) ) == 0;
-#else
-	if ( ok )
-		ok = fsync( fileno( pFile ) ) == 0;
-#endif
-	if ( fclose( pFile ) != 0 )
-		ok = false;
-	if ( ok ) {
-#if defined( _WIN32 )
-		ok = MoveFileExW( wide_temp.c_str(), wide_dest.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH ) != 0;
-#else
-		ok = rename( temporary.c_str(), pDestination ) == 0;
-#endif
+	// Byte-identical rewrites are a no-op; this preserves native publication
+	// timestamps and avoids flushing an unchanged sidecar to disk.
+	if ( t3d_comp_surf_identical_published_sidecar( pszDestination, pBytes, nBytes ) ) {
+		return true;
 	}
-	if ( !ok ) {
-#if defined( _WIN32 )
-		_wremove( wide_temp.c_str() );
-#else
-		remove( temporary.c_str() );
-#endif
+	const std::string temporary = std::string( pszDestination ) + ".t3sc.tmp";
+	SIRPlatformFile staging;
+	if ( staging.open( temporary.c_str(), SIR_FILE_OPEN_WRITE | SIR_FILE_OPEN_CREATE | SIR_FILE_OPEN_EXCLUSIVE ) != SIR_FILE_OK ) {
+		return false;
 	}
-	return ok;
+	uint64_t transferred = 0u;
+	const bool written =
+	    staging.writeAt( 0u, pBytes, nBytes, &transferred ) == SIR_FILE_OK && transferred == nBytes && staging.flush() == SIR_FILE_OK;
+	const bool closed = staging.close() == SIR_FILE_OK;
+	if ( !written || !closed || SIRPlatformFile::renameReplace( temporary.c_str(), pszDestination ) != SIR_FILE_OK ) {
+		SIRPlatformFile::remove( temporary.c_str() );
+		return false;
+	}
+	return true;
 }

@@ -358,15 +358,16 @@ static bool t3d_vt_pack_validate_quality_views( const TSource& rSource )
 }
 
 template <typename TSource>
-static bool t3d_vt_pack_validate_records( const TSource& rSource )
+static bool t3d_vt_pack_validate_records( const TSource& rSource, const bool bRequirePayloadData )
 {
 	if ( rSource.m_pAllocations == NULL || rSource.m_nAllocationCount == 0u || rSource.m_pAllocationKeys == NULL ||
 	     rSource.m_pChannelAllocations == NULL || rSource.m_nAllocationCount > UINT32_MAX / T3D_VT_LOGICAL_CHANNEL_COUNT ||
 	     rSource.m_nChannelAllocationCount != rSource.m_nAllocationCount * T3D_VT_LOGICAL_CHANNEL_COUNT ||
 	     ( rSource.m_nPageCount != 0u && rSource.m_pPages == NULL ) || rSource.m_pPayloads == NULL || rSource.m_nPayloadCount == 0u ||
 	     rSource.m_pClusters == NULL || rSource.m_nClusterCount == 0u || rSource.m_pTails == NULL || rSource.m_nTailCount == 0u ||
-	     rSource.m_pQualityViews == NULL || rSource.m_nQualityViewCount == 0u || rSource.m_pPayloadData == NULL ||
-	     rSource.m_nPayloadDataBytes == 0u || !t3d_vt_pack_format_map_valid( rSource ) ) {
+	     rSource.m_pQualityViews == NULL || rSource.m_nQualityViewCount == 0u ||
+	     ( bRequirePayloadData && rSource.m_pPayloadData == NULL ) || rSource.m_nPayloadDataBytes == 0u ||
+	     !t3d_vt_pack_format_map_valid( rSource ) ) {
 		return false;
 	}
 
@@ -377,7 +378,7 @@ static bool t3d_vt_pack_validate_records( const TSource& rSource )
 
 bool t3d_vt_pack_validate_source( const t3dVTSerializedPackSource_t& rSource )
 {
-	return t3d_vt_pack_validate_records( rSource );
+	return t3d_vt_pack_validate_records( rSource, true );
 }
 
 static bool t3d_vt_pack_open_view_impl( const void *pPackage, const uint64_t nAvailableBytes, const uint64_t nPackageBytes,
@@ -482,7 +483,7 @@ static bool t3d_vt_pack_open_view_impl( const void *pPackage, const uint64_t nAv
 	rView.m_nFormatFamilyCount = Header.m_nFormatFamilyCount;
 	rView.m_nPayloadDataBytes = Header.m_nPayloadDataBytes;
 
-	if ( !t3d_vt_pack_validate_records( rView ) ||
+	if ( !t3d_vt_pack_validate_records( rView, !bMetadataOnly ) ||
 	     pHeader->m_nFullySupportedProfileMask != t3d_vt_pack_fully_supported_mask_impl( rView ) ) {
 		rView = t3dVTPackBaselineView_t{};
 		return false;

@@ -5,6 +5,7 @@
 #include "core/utility/terrain_3d_checked_math.h"
 #include "rendering/rd/vt/io/terrain_3d_vt_file_source.h"
 #include <new>
+#include <Core/Platform/SIRPlatformFile.h>
 
 #include <limits.h>
 #include <string.h>
@@ -90,7 +91,7 @@ static bool t3d_vt_pack_runtime_open_cold( const void *const pPackage, const uin
 	t3dVTPackBaselineView_t SourceView;
 	if ( !( bMetadataOnly ? t3d_vt_pack_open_metadata_view( pPackage, nPackageBytes, pFileSource->nFileBytes, SourceView )
 	                      : t3d_vt_pack_open_baseline_view( pPackage, nPackageBytes, SourceView ) ) ||
-	     !t3d_vt_pack_runtime_raw_clusters_only( SourceView ) ) {
+	     !( bMetadataOnly || t3d_vt_pack_runtime_raw_clusters_only( SourceView ) ) ) {
 		return false;
 	}
 	const t3dVTPackHeader_t& Header = *SourceView.m_pHeader;
@@ -137,7 +138,7 @@ static bool t3d_vt_pack_runtime_open_cold( const void *const pPackage, const uin
 	if ( !( bMetadataOnly
 	            ? t3d_vt_pack_open_metadata_view( Candidate.pPackageBytes, nPackageBytes, Header.m_nPackageBytes, Candidate.PackViewV1 )
 				: t3d_vt_pack_open_baseline_view( Candidate.pPackageBytes, nPackageBytes, Candidate.PackViewV1 ) ) ||
-	     !t3d_vt_pack_runtime_raw_clusters_only( Candidate.PackViewV1 ) ) {
+	     !( bMetadataOnly || t3d_vt_pack_runtime_raw_clusters_only( Candidate.PackViewV1 ) ) ) {
 		rAllocator.pFree( rAllocator.pUser, pBlock );
 		return false;
 	}
@@ -285,7 +286,7 @@ static bool t3d_vt_pack_runtime_open_cold( const void *const pPackage, const uin
 	for ( uint32_t iPayload = 0u; iPayload < Header.m_nPayloadCount; ++iPayload ) {
 		const t3dVTPackPayloadRecord_t& Payload = Candidate.PackViewV1.m_pPayloads[iPayload];
 		const t3dVTPackClusterRecord_t& Cluster = Candidate.PackViewV1.m_pClusters[Payload.m_nClusterId];
-		if ( Cluster.m_nCodec != T3D_VT_PACK_CODEC_NONE || Payload.m_nClusterOffset > Cluster.m_nDecodedBytes ||
+		if ( ( !bMetadataOnly && Cluster.m_nCodec != T3D_VT_PACK_CODEC_NONE ) || Payload.m_nClusterOffset > Cluster.m_nDecodedBytes ||
 		     Payload.m_nDecodedBytes > Cluster.m_nDecodedBytes - Payload.m_nClusterOffset ) {
 			rAllocator.pFree( rAllocator.pUser, pBlock );
 			return false;
@@ -432,24 +433,68 @@ bool t3d_vt_pack_runtime_open_cold( const void *const pPackage, const uint64_t n
 	return t3d_vt_pack_runtime_open_cold( pPackage, nPackageBytes, rAllocator, rStorage, false, NULL );
 }
 
-bool t3d_vt_pack_runtime_open_file_cold( const godot::String& rPath, const t3dVTPackRuntimeAllocator_t& rAllocator,
+bool t3d_vt_pack_runtime_open_file_cold( const char *pszPath, const t3dVTPackRuntimeAllocator_t& rAllocator,
                                          t3dVTPackRuntimeStorage_t& rStorage )
 {
-	if ( rStorage.pOwnedBlock != NULL ) {
+	return t3d_vt_pack_runtime_open_range_cold( { pszPath, 0u, UINT64_MAX }, rAllocator, rStorage );
+}
+
+bool t3d_vt_pack_runtime_open_range_cold( const t3dVTPackRuntimeFileRequest_t& request, const t3dVTPackRuntimeAllocator_t& rAllocator,
+                                          t3dVTPackRuntimeStorage_t& rStorage )
+{
+	uint64_t nPackageBytes = request.nPackageBytes;
+	if ( request.pszPath == NULL || *request.pszPath == '\0' || rStorage.pOwnedBlock != NULL || rAllocator.pAllocate == NULL ||
+	     rAllocator.pFree == NULL ) {
 		return false;
 	}
-	t3dVTFileSource_s *const pSource = new ( std::nothrow ) t3dVTFileSource_s();
-	if ( pSource == NULL ) {
+	SIRPlatformFile file;
+	if ( file.open( request.pszPath, SIR_FILE_OPEN_READ ) != SIR_FILE_OK ) {
 		return false;
 	}
-	godot::PackedByteArray metadata;
-	if ( !t3d_vt_file_source_open_cold( rPath, *pSource, metadata, false ) ||
-	     !t3d_vt_pack_runtime_open_cold( metadata.ptr(), ( uint64_t )metadata.size(), rAllocator, rStorage, true, pSource ) ) {
+	t3dVTPackHeader_t header{};
+	uint64_t nFileBytes = 0u, nRead = 0u;
+	const bool bLength = file.getSize( &nFileBytes ) == SIR_FILE_OK && request.nPackageOffset <= nFileBytes &&
+	                     ( nPackageBytes == UINT64_MAX || nPackageBytes <= nFileBytes - request.nPackageOffset );
+	if ( bLength && nPackageBytes == UINT64_MAX )
+		nPackageBytes = nFileBytes - request.nPackageOffset;
+	const bool bHeader = bLength && nPackageBytes >= T3D_VT_PACK_HEADER_BYTES &&
+	                     file.readAt( request.nPackageOffset, &header, sizeof( header ), &nRead ) == SIR_FILE_OK &&
+	                     nRead == sizeof( header ) && header.m_nMagic == T3D_VT_FILE_MAGIC &&
+	                     header.m_nVersion == T3D_VT_FILE_FORMAT_VERSION && header.m_nPackageBytes == nPackageBytes &&
+	                     header.m_nPayloadDataOffset >= T3D_VT_PACK_HEADER_BYTES && header.m_nPayloadDataOffset <= nPackageBytes &&
+	                     header.m_nPayloadDataOffset <= 256u * 1024u * 1024u;
+	file.close();
+	if ( !bHeader || header.m_nPayloadDataOffset > SIZE_MAX ) {
+		return false;
+	}
+	uint8_t *const pMetadata = ( uint8_t * )rAllocator.pAllocate( rAllocator.pUser, ( size_t )header.m_nPayloadDataOffset, 64u );
+	void *const pSourceMemory = rAllocator.pAllocate( rAllocator.pUser, sizeof( t3dVTFileSource_s ), alignof( t3dVTFileSource_s ) );
+	if ( pMetadata == NULL || pSourceMemory == NULL ) {
+		if ( pMetadata != NULL )
+			rAllocator.pFree( rAllocator.pUser, pMetadata );
+		if ( pSourceMemory != NULL )
+			rAllocator.pFree( rAllocator.pUser, pSourceMemory );
+		return false;
+	}
+	t3dVTFileSource_s *const pSource = new ( pSourceMemory ) t3dVTFileSource_s();
+	uint64_t nMetadataBytes = 0u;
+	bool bOpened = t3d_vt_file_source_open_cold(
+	                   { { request.pszPath, request.nPackageOffset, nPackageBytes, true }, pMetadata, header.m_nPayloadDataOffset },
+	                   *pSource, nMetadataBytes ) &&
+	               t3d_vt_pack_runtime_open_cold( pMetadata, nMetadataBytes, rAllocator, rStorage, true, pSource );
+	if ( bOpened && !t3d_vt_file_source_bind_metadata( *pSource, rStorage.pPackageBytes, nMetadataBytes, rAllocator ) ) {
+		t3d_vt_pack_runtime_release_cold( rAllocator, rStorage );
+		bOpened = false;
+		// release_cold destroyed and freed pSource.
+		return false;
+	}
+	rAllocator.pFree( rAllocator.pUser, pMetadata );
+	if ( !bOpened ) {
 		t3d_vt_file_source_close( *pSource );
-		delete pSource;
-		return false;
+		pSource->~t3dVTFileSource_s();
+		rAllocator.pFree( rAllocator.pUser, pSourceMemory );
 	}
-	return true;
+	return bOpened;
 }
 
 void t3d_vt_pack_runtime_release_cold( const t3dVTPackRuntimeAllocator_t& rAllocator, t3dVTPackRuntimeStorage_t& rStorage )
@@ -459,7 +504,8 @@ void t3d_vt_pack_runtime_release_cold( const t3dVTPackRuntimeAllocator_t& rAlloc
 	}
 	if ( rStorage.pFileSource != NULL ) {
 		t3d_vt_file_source_close( *rStorage.pFileSource );
-		delete rStorage.pFileSource;
+		rStorage.pFileSource->~t3dVTFileSource_s();
+		rAllocator.pFree( rAllocator.pUser, rStorage.pFileSource );
 	}
 	t3d_vt_pack_runtime_clear( rStorage );
 }
@@ -519,8 +565,9 @@ bool t3d_vt_pack_runtime_copy_tail_mip_chain( const t3dVTDatabaseView_t& rDataba
 		return false;
 	}
 	const t3dVTRuntimePayloadRecord_t& Payload = rDatabase.pRuntimePayloads[nPayloadId];
-	if ( Payload.nChannel != nChannel || Payload.nOffset > rDatabase.pHeader->nPayloadDataBytes ||
-	     Payload.nBytes > rDatabase.pHeader->nPayloadDataBytes - Payload.nOffset ) {
+	if ( Payload.nChannel != nChannel ||
+	     ( rDatabase.pFileSource == NULL && ( Payload.nOffset > rDatabase.pHeader->nPayloadDataBytes ||
+	                                          Payload.nBytes > rDatabase.pHeader->nPayloadDataBytes - Payload.nOffset ) ) ) {
 		return false;
 	}
 
@@ -553,8 +600,8 @@ bool t3d_vt_pack_runtime_copy_tail_mip_chain( const t3dVTDatabaseView_t& rDataba
 	const uint8_t *pSource = rDatabase.pPayloadData != NULL ? rDatabase.pPayloadData + Payload.nOffset : scratch;
 	if ( rDatabase.pPayloadData == NULL ) {
 		if ( Payload.nBytes > sizeof( scratch ) ||
-		     !t3d_vt_file_source_read_payload( *const_cast<t3dVTFileSource_s *>( rDatabase.pFileSource ), Payload.nOffset, scratch,
-		                                       ( uint32_t )Payload.nBytes ) ||
+		     !t3d_vt_file_source_read_decoded_payload( *const_cast<t3dVTFileSource_s *>( rDatabase.pFileSource ), nPayloadId, scratch,
+		                                               ( uint32_t )sizeof( scratch ) ) ||
 		     t3d_vt_pack_checksum32( scratch, Payload.nBytes ) != Payload.nChecksum ) {
 			return false;
 		}
