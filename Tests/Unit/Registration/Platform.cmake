@@ -78,3 +78,38 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     sir_configure_owned_target(SIRPlatformClockProcessFaultTests)
 endif()
 
+
+# One native window owner, generation-checked renderer borrows, and event-pump lifecycle.
+add_executable(SIRWindowSystemTests SIRWindowSystemTests.cpp)
+target_link_libraries(SIRWindowSystemTests PRIVATE SIR::Core SIR::Graphics)
+add_test(NAME core.window.registry-leases COMMAND SIRWindowSystemTests)
+sir_configure_owned_target(SIRWindowSystemTests)
+
+add_executable(SIRApplicationWindowTests SIRApplicationWindowTests.cpp)
+target_link_libraries(SIRApplicationWindowTests PRIVATE SIR::Core)
+add_test(NAME core.application.unconditional-window-pump COMMAND SIRApplicationWindowTests)
+sir_configure_owned_target(SIRApplicationWindowTests)
+
+add_test(NAME launcher.headless-frames COMMAND SIREngine --headless --frames 5)
+add_test(NAME launcher.headless-bad-frames COMMAND SIREngine --headless --frames nope)
+set_tests_properties(launcher.headless-bad-frames PROPERTIES WILL_FAIL TRUE)
+
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    find_package(X11 QUIET)
+endif()
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND X11_FOUND)
+    add_executable(SIRWindowX11SystemTests SIRWindowX11SystemTests.cpp)
+    target_link_libraries(SIRWindowX11SystemTests PRIVATE SIR::Core SIR::Graphics X11::X11)
+    find_program(SIR_XVFB_RUN_EXECUTABLE NAMES xvfb-run)
+    if(SIR_XVFB_RUN_EXECUTABLE)
+        add_test(NAME core.window.x11-native COMMAND "${SIR_XVFB_RUN_EXECUTABLE}" -a "$<TARGET_FILE:SIRWindowX11SystemTests>")
+        add_test(NAME launcher.x11-native-frames COMMAND "${SIR_XVFB_RUN_EXECUTABLE}" -a "$<TARGET_FILE:SIREngine>" --frames 5)
+        set_tests_properties(core.window.x11-native launcher.x11-native-frames PROPERTIES TIMEOUT 30 RESOURCE_LOCK sir_xvfb)
+    endif()
+    sir_configure_owned_target(SIRWindowX11SystemTests)
+endif()
+
+add_executable(SIRWindowServiceTests SIRWindowServiceTests.cpp)
+target_link_libraries(SIRWindowServiceTests PRIVATE SIR::Core)
+add_test(NAME core.window.application-service-order COMMAND SIRWindowServiceTests)
+sir_configure_owned_target(SIRWindowServiceTests)

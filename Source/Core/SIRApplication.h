@@ -28,8 +28,23 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Core/Systems/SIREngineSystem.h>
 #include <Core/Platform/Input/SIRInputService.h>
 
-// The native window owner dispatches events only between input begin/publish.
+// Legacy input-attached pump is preserved for existing Input tests.
+// The window owner uses a single unconditional pump, including headless/no-input applications.
 typedef bool ( *sirAppInputPump_t )( SIRInputService& input, void *pContext );
+typedef enum sirAppWindowPumpResult_e : uint8_t
+{
+	SIR_APP_WINDOW_CONTINUE = 0,
+	SIR_APP_WINDOW_STOP = 1,
+	SIR_APP_WINDOW_ERROR = 2
+} sirAppWindowPumpResult_t;
+typedef sirAppWindowPumpResult_t ( *sirAppWindowPump_t )( void *pContext );
+
+typedef enum sirAppRunResult_e : uint8_t
+{
+	SIR_APP_RUN_OK = 0,
+	SIR_APP_RUN_STOPPED = 1,
+	SIR_APP_RUN_ERROR = 2
+} sirAppRunResult_t;
 
 constexpr uint32_t SIR_APPLICATION_MAX_SYSTEMS = 16;
 
@@ -62,6 +77,8 @@ public:
 	const sirInputFrame_t *getInputFrame( void ) const noexcept;
 
 	bool attachInput( SIRInputService& input, sirAppInputPump_t pPump = nullptr, void *pContext = nullptr ) noexcept;
+	bool attachWindowPump( sirAppWindowPump_t pPump, void *pContext = nullptr ) noexcept;
+	sirAppWindowPumpResult_t getWindowPumpResult( void ) const noexcept;
 	bool registerSystem( SIREngineSystem *pSystem ) noexcept;
 	// Both systems must already be registered. Duplicate/self dependencies are rejected;
 	// cycles are rejected before any system is initialized.
@@ -69,6 +86,7 @@ public:
 	bool initialize( void ) noexcept;
 	bool tick( float fDeltaSeconds = 0.0f ) noexcept;
 	bool tickTimed( void ) noexcept;
+	sirAppRunResult_t run( uint64_t nMaxFrames = 0 ) noexcept;
 	bool fixedTick( float fFixedDeltaSeconds ) noexcept;
 	sirSystemResult_t shutdown( void ) noexcept;
 
@@ -92,6 +110,9 @@ private:
 	SIRInputService *m_pInput;
 	sirAppInputPump_t m_pInputPump;
 	void *m_pInputPumpContext;
+	sirAppWindowPump_t m_pWindowPump;
+	void *m_pWindowPumpContext;
+	sirAppWindowPumpResult_t m_eWindowPumpResult;
 
 	uint32_t findSystemIndex( const SIREngineSystem *pSystem ) const noexcept;
 	bool resolveInitializationOrder( void ) noexcept;

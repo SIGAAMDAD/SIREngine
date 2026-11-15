@@ -20,6 +20,8 @@ set(SIR_CORE_PLATFORM_COMMON
     Input/SIRInputControllerProfiles.cpp
     Input/SIRInputFrameState.cpp
     Input/SIRInputService.cpp
+    Window/SIRWindowSystem.cpp
+    Window/SIRWindowService.cpp
 )
 
 if(WIN32)
@@ -37,6 +39,7 @@ if(WIN32)
         Windows/SIRPlatformTimeWindows.cpp
         Windows/SIRPlatformProcessWindows.cpp
         Input/Windows/SIRInputWindowWindows.cpp
+        Window/SIRWin32WindowDriver.cpp
         Input/Windows/SIRWindowsRawBackend.cpp
         Input/Windows/SIRWindowsRawDecode.cpp
         Input/Windows/SIRWindowsXInputBackend.cpp
@@ -109,7 +112,7 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     if(SIR_WITH_X11_INPUT)
         find_package(X11 QUIET)
         if(X11_FOUND)
-            list(APPEND SIR_CORE_PLATFORM_OS Input/Linux/SIRLinuxX11Backend.cpp Input/Linux/SIRInputWindowX11.cpp)
+            list(APPEND SIR_CORE_PLATFORM_OS Input/Linux/SIRLinuxX11Backend.cpp Input/Linux/SIRInputWindowX11.cpp Window/SIRX11WindowDriver.cpp)
             target_link_libraries(SIRCore PRIVATE X11::X11)
             target_compile_definitions(SIRCore PUBLIC SIR_INPUT_X11_AVAILABLE=1)
             if(X11_Xi_FOUND AND TARGET X11::Xi)

@@ -5,7 +5,8 @@ SIRApplication::SIRApplication( void ) noexcept
     : m_eState( SIR_APP_UNINITIALIZED ), m_nTicks( 0 ), m_nLastFrameTimestampNs( 0 ), m_fFrameDeltaSeconds( 0.0f ),
       m_dElapsedSeconds( 0.0 ), m_nSystemCount( 0 ), m_nInitializedSystems( 0 ), m_eInitializationResult( SIR_SYSTEM_OK ),
       m_pFailedSystem( nullptr ), m_bShutdownInProgress( false ), m_bFrameDispatchInProgress( false ), m_EventRegistry(),
-      m_pInput( nullptr ), m_pInputPump( nullptr ), m_pInputPumpContext( nullptr )
+      m_pInput( nullptr ), m_pInputPump( nullptr ), m_pInputPumpContext( nullptr ), m_pWindowPump( nullptr ),
+      m_pWindowPumpContext( nullptr ), m_eWindowPumpResult( SIR_APP_WINDOW_CONTINUE )
 {
 }
 
@@ -44,7 +45,7 @@ bool SIRApplication::resolveInitializationOrder( void ) noexcept
 
 bool SIRApplication::attachInput( SIRInputService& input, sirAppInputPump_t pPump, void *pContext ) noexcept
 {
-	if ( m_eState != SIR_APP_UNINITIALIZED || m_pInput != nullptr ) {
+	if ( m_eState != SIR_APP_UNINITIALIZED || m_pInput != nullptr || ( pPump != nullptr && m_pWindowPump != nullptr ) ) {
 		return false;
 	}
 
@@ -52,6 +53,21 @@ bool SIRApplication::attachInput( SIRInputService& input, sirAppInputPump_t pPum
 	m_pInputPump = pPump;
 	m_pInputPumpContext = pContext;
 	return true;
+}
+
+bool SIRApplication::attachWindowPump( sirAppWindowPump_t pPump, void *pContext ) noexcept
+{
+	if ( m_eState != SIR_APP_UNINITIALIZED || pPump == nullptr || m_pWindowPump != nullptr || m_pInputPump != nullptr ) {
+		return false;
+	}
+	m_pWindowPump = pPump;
+	m_pWindowPumpContext = pContext;
+	return true;
+}
+
+sirAppWindowPumpResult_t SIRApplication::getWindowPumpResult( void ) const noexcept
+{
+	return m_eWindowPumpResult;
 }
 
 bool SIRApplication::registerSystem( SIREngineSystem *pSystem ) noexcept
@@ -99,6 +115,7 @@ bool SIRApplication::initialize( void ) noexcept
 
 	m_eInitializationResult = SIR_SYSTEM_OK;
 	m_pFailedSystem = nullptr;
+	m_eWindowPumpResult = SIR_APP_WINDOW_CONTINUE;
 	if ( !resolveInitializationOrder() ) {
 		m_eInitializationResult = SIR_SYSTEM_ERROR;
 		m_eState = SIR_APP_STOPPING;
@@ -139,24 +156,31 @@ bool SIRApplication::tick( float fDeltaSeconds ) noexcept
 bool SIRApplication::tickFrame( float fDeltaSeconds ) noexcept
 {
 	const uint64_t nNextTick = m_nTicks + 1;
+	if ( m_pInput != nullptr && !m_pInput->begin( nNextTick ) ) {
+		return false;
+	}
+
+	// The window OS event pump runs exactly once even without InputService.
+	// When input exists, its native events are collected between begin/publish.
+	m_eWindowPumpResult = SIR_APP_WINDOW_CONTINUE;
+	if ( m_pWindowPump != nullptr ) {
+		m_eWindowPumpResult = m_pWindowPump( m_pWindowPumpContext );
+	} else if ( m_pInput != nullptr && m_pInputPump != nullptr && !m_pInputPump( *m_pInput, m_pInputPumpContext ) ) {
+		m_eWindowPumpResult = SIR_APP_WINDOW_STOP;
+	}
+
+	if ( m_eState != SIR_APP_READY ) {
+		return false;
+	}
 	if ( m_pInput != nullptr ) {
-		if ( !m_pInput->begin( nNextTick ) ) {
-			return false;
-		}
-		const bool bPumped = m_pInputPump == nullptr || m_pInputPump( *m_pInput, m_pInputPumpContext );
-		if ( m_eState != SIR_APP_READY || m_pInput == nullptr ) {
-			return false;
-		}
 		m_pInput->sample();
-		if ( !m_pInput->publish() ) {
-			if ( !m_pInput->recover() || !m_pInput->publish() ) {
-				return false;
-			}
-		}
-		if ( !bPumped ) {
-			m_nTicks = nNextTick;
+		if ( !m_pInput->publish() && ( !m_pInput->recover() || !m_pInput->publish() ) ) {
 			return false;
 		}
+	}
+	if ( m_eWindowPumpResult != SIR_APP_WINDOW_CONTINUE ) {
+		m_nTicks = nNextTick;
+		return false;
 	}
 
 	for ( uint32_t iOrder = 0; iOrder < m_nInitializedSystems; ++iOrder ) {
@@ -190,6 +214,21 @@ bool SIRApplication::tickTimed( void ) noexcept
 
 	m_nLastFrameTimestampNs = nNowNs;
 	return true;
+}
+
+sirAppRunResult_t SIRApplication::run( uint64_t nMaxFrames ) noexcept
+{
+	if ( m_eState != SIR_APP_READY || m_bFrameDispatchInProgress || ( nMaxFrames == 0 && m_pWindowPump == nullptr ) ) {
+		return SIR_APP_RUN_ERROR;
+	}
+	uint64_t nFrame = 0;
+	while ( nMaxFrames == 0 || nFrame < nMaxFrames ) {
+		if ( !tickTimed() ) {
+			return m_eWindowPumpResult == SIR_APP_WINDOW_STOP ? SIR_APP_RUN_STOPPED : SIR_APP_RUN_ERROR;
+		}
+		++nFrame;
+	}
+	return SIR_APP_RUN_OK;
 }
 
 bool SIRApplication::fixedTick( float fFixedDeltaSeconds ) noexcept
@@ -242,6 +281,8 @@ sirSystemResult_t SIRApplication::shutdown( void ) noexcept
 	}
 	m_pInputPump = nullptr;
 	m_pInputPumpContext = nullptr;
+	m_pWindowPump = nullptr;
+	m_pWindowPumpContext = nullptr;
 	m_EventRegistry.clear();
 	m_eState = SIR_APP_STOPPED;
 	m_bShutdownInProgress = false;

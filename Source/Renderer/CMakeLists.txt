@@ -21,7 +21,8 @@ add_library(SIRGraphics STATIC
     SIRGraphicsPipelineBridge.cpp
     SIRGraphicsRegistry.cpp
     SIRSharedGPUBackingOwner.cpp
-    SIRGraphicsValidation.cpp)
+    SIRGraphicsValidation.cpp
+    SIRGraphicsWindowBridge.cpp)
 add_library(SIR::Graphics ALIAS SIRGraphics)
 target_include_directories(SIRGraphics PUBLIC
     "${PROJECT_SOURCE_DIR}/Source"

@@ -1,13 +1,18 @@
 #include <Core/SIRApplication.h>
-#include <Core/Platform/Input/SIRInputWindow.h>
+#include <Core/Platform/Window/SIRWindowSystem.h>
+#include <Core/Platform/Window/SIRWindowService.h>
 #include <Core/Platform/Input/SIRInputService.h>
+#include <Core/Platform/Input/SIRInputBackend.h>
+#include <Core/Platform/SIRPlatformTime.h>
 #if defined( _WIN32 )
+#include <Core/Platform/Window/SIRNativeWindowDrivers.h>
 #include <Core/Platform/Input/Windows/SIRWindowsRawBackend.h>
 #include <Core/Platform/Input/Windows/SIRWindowsXInputBackend.h>
 #if defined( SIR_INPUT_GAMEINPUT_AVAILABLE )
 #include <Core/Platform/Input/Windows/SIRWindowsGameInputBackend.h>
 #endif
 #elif defined( SIR_INPUT_X11_AVAILABLE )
+#include <Core/Platform/Window/SIRNativeWindowDrivers.h>
 #include <Core/Platform/Input/Linux/SIRLinuxX11Backend.h>
 #include <Core/Platform/Input/Linux/SIRLinuxEvdevBackend.h>
 #endif
@@ -16,69 +21,108 @@
 #include <stdlib.h>
 #include <string.h>
 #include <locale.h>
+#include <limits.h>
 
-#if defined( _WIN32 ) || defined( SIR_INPUT_X11_AVAILABLE )
-typedef struct sirInputNativePumpContext_s
+typedef struct sirNativeWindowPumpContext_s
 {
-	SIRInputWindow *pWindow;
+	SIRWindowService *pWindowService;
 #if defined( SIR_INPUT_X11_AVAILABLE ) && !defined( _WIN32 )
-	SIRLinuxEvdevBackend *pEvdev;
+	SIRInputService *pInput;
+	SIRLinuxEvdevBackend *pControllers;
 	bool bDiscoveryAttempted;
-
 #endif
-} sirInputNativePumpContext_t;
+} sirNativeWindowPumpContext_t;
 
-static bool sirPumpInputWindow( SIRInputService& input, void *pContext )
+static sirAppWindowPumpResult_t sirPumpNativeWindows( void *pContext )
 {
-	sirInputNativePumpContext_t *pPump = ( sirInputNativePumpContext_t * )pContext;
+	sirNativeWindowPumpContext_t *pPump = ( sirNativeWindowPumpContext_t * )pContext;
 #if defined( SIR_INPUT_X11_AVAILABLE ) && !defined( _WIN32 )
 	if ( !pPump->bDiscoveryAttempted ) {
 		pPump->bDiscoveryAttempted = true;
-		( void )pPump->pEvdev->discover( input );
+		( void )pPump->pControllers->discover( *pPump->pInput );
 	}
 #endif
-	return pPump->pWindow->pump( input );
+	const sirWindowResult_t eResult = pPump->pWindowService->pump();
+	if ( eResult != SIR_WINDOW_OK && eResult != SIR_WINDOW_BUSY ) {
+		return SIR_APP_WINDOW_ERROR;
+	}
+	return pPump->pWindowService->hasLiveWindows() ? SIR_APP_WINDOW_CONTINUE : SIR_APP_WINDOW_STOP;
 }
-#endif
 
-static int sirRunNativeInputWindow( void )
+static bool sirParseFrameCount( const char *pszValue, uint64_t *pFrames ) noexcept
+{
+	if ( pszValue == nullptr || *pszValue == '\0' || pFrames == nullptr ) {
+		return false;
+	}
+	uint64_t nFrames = 0;
+	for ( const char *pChar = pszValue; *pChar != '\0'; ++pChar ) {
+		if ( *pChar < '0' || *pChar > '9' ) {
+			return false;
+		}
+		const uint64_t nDigit = ( uint64_t )( *pChar - '0' );
+		if ( nFrames > ( UINT64_MAX - nDigit ) / 10 ) {
+			return false;
+		}
+		nFrames = nFrames * 10 + nDigit;
+	}
+	if ( nFrames == 0 ) {
+		return false;
+	}
+	*pFrames = nFrames;
+	return true;
+}
+
+static int sirRunHeadless( uint64_t nMaxFrames ) noexcept
+{
+	SIRApplication application;
+	if ( nMaxFrames == 0 || !application.initialize() ) {
+		return 1;
+	}
+	const sirAppRunResult_t eRun = application.run( nMaxFrames );
+	const sirSystemResult_t eShutdown = application.shutdown();
+	return eRun == SIR_APP_RUN_OK && eShutdown == SIR_SYSTEM_OK ? 0 : 1;
+}
+
+static int sirRunNativeWindow( uint64_t nMaxFrames ) noexcept
 {
 #if defined( _WIN32 ) || defined( SIR_INPUT_X11_AVAILABLE )
 	SIRInputService input;
-	SIRInputWindow window;
 #if defined( _WIN32 )
+	SIRWin32WindowDriver driver;
+	SIRWindowSystem windows;
 	SIRWindowsRawBackend desktop;
 	SIRWindowsXInputBackend legacyController;
 #if defined( SIR_INPUT_GAMEINPUT_AVAILABLE )
 	SIRWindowsGameInputBackend modernController;
 #endif
 #else
+	SIRX11WindowDriver driver;
+	SIRWindowSystem windows;
 	SIRLinuxX11Backend desktop;
 	SIRLinuxEvdevBackend nativeControllers;
 	( void )setlocale( LC_CTYPE, "" );
 	const char *pszCookedProfiles = getenv( "SIR_INPUT_CONTROLLER_PROFILE_DB" );
-	if ( pszCookedProfiles != nullptr && pszCookedProfiles[0] != 0 && !nativeControllers.loadCookedProfilesFile( pszCookedProfiles ) ) {
+	if ( pszCookedProfiles != nullptr && pszCookedProfiles[0] != '\0' && !nativeControllers.loadCookedProfilesFile( pszCookedProfiles ) ) {
 		fputs( "Unable to load cooked controller profiles\n", stderr );
 		return 1;
 	}
 #endif
-	if ( !window.open( input, desktop ) ) {
-		fputs( "Unable to start native input window\n", stderr );
+
+	const sirWindowDesc_t desc = { "SIREngine", 1280, 720, true };
+	SIRWindowService windowService( windows, driver, desc, &input );
+	if ( !windowService.setDesktopBackend( desktop ) ) {
 		return 1;
 	}
 
 #if defined( _WIN32 )
-	// Only one Windows controller API is active at a time. This prevents the
-	// same physical XInput-compatible pad from producing duplicate events.
 #if defined( SIR_INPUT_GAMEINPUT_AVAILABLE )
 	const bool bModern = modernController.initialize();
-	if ( bModern && !input.attach( modernController ) ) {
-		modernController.stop( input );
-		window.close();
-		input.shutdown();
-		return 1;
-	}
-	if ( !bModern && legacyController.initialize() ) {
+	if ( bModern ) {
+		if ( !input.attach( modernController ) ) {
+			input.shutdown();
+			return 1;
+		}
+	} else if ( legacyController.initialize() ) {
 		( void )input.attach( legacyController );
 	}
 #else
@@ -88,67 +132,67 @@ static int sirRunNativeInputWindow( void )
 #endif
 #else
 	if ( !input.attach( nativeControllers ) ) {
-		window.close();
 		input.shutdown();
 		return 1;
 	}
 #endif
 
-	sirInputNativePumpContext_t context = {};
-	context.pWindow = &window;
-#if defined( SIR_INPUT_X11_AVAILABLE ) && !defined( _WIN32 )
-	context.pEvdev = &nativeControllers;
-#endif
-
-	window.setTextEnabled( true );
 	SIRApplication application;
-	if ( !application.attachInput( input, sirPumpInputWindow, &context ) || !application.initialize() ) {
-		window.close();
+	sirNativeWindowPumpContext_t context = {};
+	context.pWindowService = &windowService;
+#if defined( SIR_INPUT_X11_AVAILABLE ) && !defined( _WIN32 )
+	context.pControllers = &nativeControllers;
+	context.pInput = &input;
+#endif
+	const bool bRegistered = application.registerSystem( &windowService ) && application.attachInput( input ) &&
+	                         application.attachWindowPump( sirPumpNativeWindows, &context );
+	if ( !bRegistered || !application.initialize() ) {
+		( void )application.shutdown();
 		input.shutdown();
 		return 1;
 	}
-
-	while ( window.isOpen() ) {
-		if ( !application.tick() ) {
-			break;
-		}
-	}
-	application.shutdown();
-	window.close();
-	return 0;
+	const sirAppRunResult_t eRun = application.run( nMaxFrames );
+	const sirSystemResult_t eShutdown = application.shutdown();
+	return eRun != SIR_APP_RUN_ERROR && eShutdown == SIR_SYSTEM_OK ? 0 : 1;
 #else
-	fputs( "Native input window backend unavailable on this build\n", stderr );
+	( void )nMaxFrames;
+	fputs( "Native window backend unavailable on this build\n", stderr );
 	return 1;
 #endif
 }
 
 int main( int nArgs, char **pszArgs )
 {
-	if ( nArgs > 1 ) {
-		if ( strcmp( pszArgs[1], "--version" ) == 0 ) {
+	bool bHeadless = false;
+	uint64_t nFrames = 0;
+	for ( int iArg = 1; iArg < nArgs; ++iArg ) {
+		if ( strcmp( pszArgs[iArg], "--version" ) == 0 && nArgs == 2 ) {
 			puts( "SIREngine native foundation " SIR_VERSION );
 			return 0;
 		}
-
-		if ( strcmp( pszArgs[1], "--help" ) == 0 ) {
-			puts( "Usage: SIREngine [--version|--help|--input-window]" );
+		if ( strcmp( pszArgs[iArg], "--help" ) == 0 && nArgs == 2 ) {
+			puts( "Usage: SIREngine [--version|--help|--headless --frames N|--frames N|--input-window]" );
 			return 0;
 		}
-
-		if ( strcmp( pszArgs[1], "--input-window" ) == 0 ) {
-			return sirRunNativeInputWindow();
+		if ( strcmp( pszArgs[iArg], "--headless" ) == 0 ) {
+			bHeadless = true;
+			continue;
 		}
-
+		if ( strcmp( pszArgs[iArg], "--input-window" ) == 0 ) {
+			continue;
+		}
+		if ( strcmp( pszArgs[iArg], "--frames" ) == 0 && iArg + 1 < nArgs && nFrames == 0 ) {
+			if ( !sirParseFrameCount( pszArgs[++iArg], &nFrames ) ) {
+				fputs( "Invalid frame count\n", stderr );
+				return 2;
+			}
+			continue;
+		}
 		fputs( "Unknown option\n", stderr );
 		return 2;
 	}
-
-	SIRApplication application;
-	if ( !application.initialize() ) {
-		return 1;
+	if ( bHeadless ) {
+		return sirRunHeadless( nFrames );
 	}
-
-	const bool bTicked = application.tick();
-	application.shutdown();
-	return bTicked ? 0 : 1;
+	return sirRunNativeWindow( nFrames );
 }
