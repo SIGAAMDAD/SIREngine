@@ -25,8 +25,8 @@ static bool sirVTReadFull( const SIRPlatformFile& file, uint64_t nOffset, void *
 }
 
 SIRVirtualTexturePackFileSource::SIRVirtualTexturePackFileSource( void ) noexcept
-    : m_File(), m_nFileBytes( 0 ), m_nPayloadOffset( 0 ), m_nPayloadBytes( 0 ), m_nReadCount( 0 ), m_nPackageGeneration( 0 ),
-      m_nPackageSignature( 0 )
+    : m_File(), m_nFileBytes( 0 ), m_nContainerOffset( 0 ), m_nPayloadOffset( 0 ), m_nPayloadBytes( 0 ), m_nReadCount( 0 ),
+      m_nPackageGeneration( 0 ), m_nPackageSignature( 0 )
 {
 }
 
@@ -66,6 +66,7 @@ void SIRVirtualTexturePackFileSource::close( void ) noexcept
 		m_File.close();
 	}
 	m_nFileBytes = 0;
+	m_nContainerOffset = 0;
 	m_nPayloadOffset = 0;
 	m_nPayloadBytes = 0;
 	m_nReadCount = 0;
@@ -76,25 +77,38 @@ void SIRVirtualTexturePackFileSource::close( void ) noexcept
 bool SIRVirtualTexturePackFileSource::open( const char *pszPath, const sirVirtualTexturePackMetadataBuffer_t& buffer, bool bStrictHash,
                                             sirVirtualTexturePackView_t *pView ) noexcept
 {
+	return openRange( { pszPath, 0u, UINT64_MAX, bStrictHash }, buffer, pView );
+}
+
+bool SIRVirtualTexturePackFileSource::openRange( const sirVirtualTexturePackRange_t& range,
+                                                 const sirVirtualTexturePackMetadataBuffer_t& buffer,
+                                                 sirVirtualTexturePackView_t *pView ) noexcept
+{
 	close();
 	if ( pView != nullptr ) {
 		*pView = {};
 	}
-	if ( pView == nullptr || pszPath == nullptr || *pszPath == '\0' || buffer.pBytes == nullptr ||
-	     buffer.nCapacity < SIR_VT_PACK_HEADER_BYTES || m_File.open( pszPath, SIR_FILE_OPEN_READ ) != SIR_FILE_OK ) {
+	if ( pView == nullptr || range.pszPath == nullptr || *range.pszPath == '\0' || buffer.pBytes == nullptr ||
+	     buffer.nCapacity < SIR_VT_PACK_HEADER_BYTES || m_File.open( range.pszPath, SIR_FILE_OPEN_READ ) != SIR_FILE_OK ) {
 		return false;
 	}
 	bool bSuccess = false;
 	do {
-		uint64_t nLength = 0;
-		if ( m_File.getSize( &nLength ) != SIR_FILE_OK || nLength < SIR_VT_PACK_HEADER_BYTES || nLength > INT64_MAX ) {
+		uint64_t nContainerLength = 0;
+		if ( m_File.getSize( &nContainerLength ) != SIR_FILE_OK || nContainerLength > INT64_MAX ||
+		     range.nPackageOffset > nContainerLength ) {
+			break;
+		}
+		const uint64_t nAvailable = nContainerLength - range.nPackageOffset;
+		const uint64_t nLength = range.nPackageBytes == UINT64_MAX ? nAvailable : range.nPackageBytes;
+		if ( nLength < SIR_VT_PACK_HEADER_BYTES || nLength > nAvailable ) {
 			break;
 		}
 		sirVirtualTexturePackHeader_t header = {};
-		if ( !sirVTReadFull( m_File, 0, &header, sizeof( header ) ) || header.nPackageBytes != nLength ||
+		if ( !sirVTReadFull( m_File, range.nPackageOffset, &header, sizeof( header ) ) || header.nPackageBytes != nLength ||
 		     header.nPayloadDataOffset < SIR_VT_PACK_HEADER_BYTES || header.nPayloadDataOffset > nLength ||
 		     header.nPayloadDataOffset > 256U * 1024U * 1024U || header.nPayloadDataOffset > buffer.nCapacity ||
-		     !sirVTReadFull( m_File, 0, buffer.pBytes, header.nPayloadDataOffset ) ) {
+		     !sirVTReadFull( m_File, range.nPackageOffset, buffer.pBytes, header.nPayloadDataOffset ) ) {
 			break;
 		}
 		sirVirtualTexturePackView_t candidate = {};
@@ -102,13 +116,13 @@ bool SIRVirtualTexturePackFileSource::open( const char *pszPath, const sirVirtua
 		if ( !sirVTPackOpenValidated( input, &candidate ) ) {
 			break;
 		}
-		if ( bStrictHash ) {
+		if ( range.bStrictHash ) {
 			uint8_t szScratch[16384] = {};
 			uint64_t nHash = UINT64_C( 1469598103934665603 );
 			for ( uint64_t nOffset = SIR_VT_PACK_HEADER_BYTES; nOffset < nLength; ) {
 				const uint64_t nRemaining = nLength - nOffset;
 				const uint64_t nChunk = nRemaining < sizeof( szScratch ) ? nRemaining : sizeof( szScratch );
-				if ( !sirVTReadFull( m_File, nOffset, szScratch, nChunk ) ) {
+				if ( !sirVTReadFull( m_File, range.nPackageOffset + nOffset, szScratch, nChunk ) ) {
 					nHash = 0;
 					break;
 				}
@@ -121,6 +135,7 @@ bool SIRVirtualTexturePackFileSource::open( const char *pszPath, const sirVirtua
 				break;
 			}
 		}
+		m_nContainerOffset = range.nPackageOffset;
 		m_nFileBytes = nLength;
 		m_nPayloadOffset = candidate.header.nPayloadDataOffset;
 		m_nPayloadBytes = candidate.header.nPayloadDataBytes;
@@ -138,10 +153,12 @@ bool SIRVirtualTexturePackFileSource::open( const char *pszPath, const sirVirtua
 bool SIRVirtualTexturePackFileSource::readPayload( uint64_t nOffset, void *pDestination, uint32_t nBytes ) noexcept
 {
 	if ( !m_File.isOpen() || pDestination == nullptr || nBytes == 0 || nOffset > m_nPayloadBytes || nBytes > m_nPayloadBytes - nOffset ||
-	     m_nPayloadOffset > ( uint64_t )INT64_MAX - nOffset || nBytes > ( uint64_t )INT64_MAX - m_nPayloadOffset - nOffset ) {
+	     m_nContainerOffset > ( uint64_t )INT64_MAX - m_nPayloadOffset ||
+	     m_nPayloadOffset + m_nContainerOffset > ( uint64_t )INT64_MAX - nOffset ||
+	     nBytes > ( uint64_t )INT64_MAX - m_nContainerOffset - m_nPayloadOffset - nOffset ) {
 		return false;
 	}
-	if ( !sirVTReadFull( m_File, m_nPayloadOffset + nOffset, pDestination, nBytes ) ) {
+	if ( !sirVTReadFull( m_File, m_nContainerOffset + m_nPayloadOffset + nOffset, pDestination, nBytes ) ) {
 		return false;
 	}
 	++m_nReadCount;

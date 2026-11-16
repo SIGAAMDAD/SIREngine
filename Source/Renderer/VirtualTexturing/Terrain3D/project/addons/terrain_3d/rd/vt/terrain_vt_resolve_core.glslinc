@@ -1,0 +1,205 @@
+#ifndef TERRAIN3D_VT_RESOLVE_CORE_GLSL
+#define TERRAIN3D_VT_RESOLVE_CORE_GLSL
+
+#ifndef T3D_VT_RESOLVE_ALLOCATION
+#error "terrain_vt_resolve_core.glslinc requires T3D_VT_RESOLVE_ALLOCATION(index)"
+#endif
+#ifndef T3D_VT_RESOLVE_PAGE_ENTRY
+#error "terrain_vt_resolve_core.glslinc requires T3D_VT_RESOLVE_PAGE_ENTRY(index)"
+#endif
+#ifndef T3D_VT_RESOLVE_TAIL_ENTRY
+#error "terrain_vt_resolve_core.glslinc requires T3D_VT_RESOLVE_TAIL_ENTRY(index)"
+#endif
+
+bool t3d_vt_resolve_tail_core_loaded(
+T3DVTAllocation allocation, uint allocationCount, uint requestedMip, uint fallbackDepth,
+T3DVTTailMetadata tail, inout T3DVTResolveResult result)
+{
+	if (allocation.tailIndex == T3D_VT_INVALID_TAIL || allocation.tailIndex >= allocationCount)
+	{
+		return false;
+	}
+	uint allocationMipCount = min(t3d_vt_allocation_mip_count(allocation), T3D_VT_MAX_MIPS);
+	uint tailFirstMip = t3d_vt_tail_first_mip(tail);
+	uint tailMipCount = t3d_vt_tail_mip_count(tail);
+	if (tail.generation != allocation.generation || t3d_vt_tail_width(tail) == 0u || t3d_vt_tail_height(tail) == 0u || tailMipCount == 0u
+	|| tailFirstMip >= allocationMipCount || tailMipCount > allocationMipCount - tailFirstMip)
+	{
+		return false;
+	}
+	result.tailIndex = allocation.tailIndex;
+	uint tailLastMip = tailFirstMip + tailMipCount - 1u;
+	t3d_vt_resolve_set_resolved_mip(result, clamp(requestedMip, tailFirstMip, tailLastMip));
+	t3d_vt_resolve_set_fallback_flags(result, fallbackDepth, T3D_VT_RESOLVE_TAIL);
+	return true;
+}
+
+bool t3d_vt_resolve_tail_core(
+T3DVTAllocation allocation, uint allocationCount, uint requestedMip, uint fallbackDepth, inout T3DVTResolveResult result)
+{
+	if (allocation.tailIndex == T3D_VT_INVALID_TAIL || allocation.tailIndex >= allocationCount)
+		return false;
+	return t3d_vt_resolve_tail_core_loaded(allocation, allocationCount, requestedMip, fallbackDepth,
+	T3D_VT_RESOLVE_TAIL_ENTRY(allocation.tailIndex), result);
+}
+
+T3DVTResolveResult t3d_vt_resolve_invalid_result(uint allocationId, uint requestedPage, uint requestedMip)
+{
+	T3DVTResolveResult invalid;
+	invalid.allocation = allocationId;
+	invalid.requestedPage = requestedPage;
+	invalid.resolvedPage = T3D_VT_INVALID_PAGE;
+	invalid.physicalSlot = T3D_VT_INVALID_SLOT;
+	invalid.tailIndex = T3D_VT_INVALID_TAIL;
+	invalid.packedRequestedResolvedMip = 0u;
+	invalid.packedFallbackDepthFlags = 0u;
+	invalid.reserved = 0u;
+	t3d_vt_resolve_set_requested_mip(invalid, requestedMip);
+	return invalid;
+}
+
+bool t3d_vt_resolve_page_core_loaded(
+uint allocationId, uint requestedPage, uint requestedMip, uint allocationCount, uint pageCount,
+T3DVTAllocation allocation, out T3DVTResolveResult result)
+{
+	result = t3d_vt_resolve_invalid_result(allocationId, requestedPage, requestedMip);
+	if (allocationId >= allocationCount || requestedPage >= pageCount)
+		return false;
+	uint allocationMipCount = min(t3d_vt_allocation_mip_count(allocation), T3D_VT_MAX_MIPS);
+	if (!t3d_vt_allocation_quality_enabled(allocation) || allocation.pageCount == 0u || allocationMipCount == 0u || requestedMip >= allocationMipCount || allocation.baseVirtualPage >= pageCount
+	|| allocation.pageCount > pageCount - allocation.baseVirtualPage)
+	{
+		return false;
+	}
+	uint allocationEnd = allocation.baseVirtualPage + allocation.pageCount;
+	if (requestedPage < allocation.baseVirtualPage || requestedPage >= allocationEnd)
+	{
+		return false;
+	}
+
+	// Tail metadata is static for the allocation. Mips owned by the compact tail
+	// never need an ancestor walk at all.
+	if (allocation.tailIndex != T3D_VT_INVALID_TAIL && allocation.tailIndex < allocationCount)
+	{
+		T3DVTTailMetadata tail = T3D_VT_RESOLVE_TAIL_ENTRY(allocation.tailIndex);
+		uint tailFirstMip = t3d_vt_tail_first_mip(tail);
+		if (tail.generation == allocation.generation && requestedMip >= tailFirstMip && tailFirstMip < allocationMipCount)
+		{
+			return t3d_vt_resolve_tail_core_loaded(allocation, allocationCount, requestedMip, 0u, tail, result);
+		}
+	}
+
+#if defined(T3D_VT_RESIDENT_ANCESTOR_HINTS) && T3D_VT_RESIDENT_ANCESTOR_HINTS && defined(T3D_VT_RESOLVE_HINT)
+	// The common case is a directly resident page. Reuse this single read
+	// for both the resident fast path and the bounded fallback walk. Avoid
+	// touching the hint buffer when no ancestor lookup is required.
+	T3DVTPageEntry requestedEntry = T3D_VT_RESOLVE_PAGE_ENTRY(requestedPage);
+	uint requestedFlags = t3d_vt_page_flags(requestedEntry);
+	if ((requestedFlags & T3D_VT_PAGE_VALID) == 0u ||
+	requestedEntry.generation != allocation.generation) return false;
+	if ((requestedFlags & T3D_VT_PAGE_RESIDENT) != 0u &&
+	requestedEntry.physicalSlot != T3D_VT_INVALID_SLOT)
+	{
+		result.resolvedPage = requestedPage;
+		result.physicalSlot = requestedEntry.physicalSlot;
+		t3d_vt_resolve_set_resolved_mip(result, t3d_vt_page_resolved_mip(requestedEntry));
+		t3d_vt_resolve_set_fallback_flags(result, 0u, T3D_VT_RESOLVE_PHYSICAL);
+		return true;
+	}
+	// The hint header is invalidated before page-table publication. On a
+	// stale or incomplete hint, the original bounded ancestor walk remains.
+	// Stale or incomplete records fall back to the exact bounded parent walk.
+	T3DVTAncestorHint hintHeader = T3D_VT_RESOLVE_HINT(0u);
+	if (hintHeader.resolvedPage == T3D_VT_HINT_ENABLED &&
+	requestedPage < hintHeader.generation)
+	{
+		T3DVTAncestorHint hint = T3D_VT_RESOLVE_HINT(requestedPage + 1u);
+		uint packed = hint.packedMipDepthFlags;
+		uint depth = (packed >> 16u) & 0xffu;
+		if (hint.generation == allocation.generation &&
+		(packed & 0xffu) == requestedMip &&
+		((packed >> 24u) & T3D_VT_HINT_RECORD_PHYSICAL) != 0u &&
+		depth < min(T3D_VT_ANCESTOR_PROBE_CAP, allocationMipCount - requestedMip) &&
+		hint.resolvedPage >= allocation.baseVirtualPage && hint.resolvedPage < allocationEnd &&
+		hint.resolvedPage < pageCount)
+		{
+			T3DVTPageEntry resolvedEntry = depth == 0u ? requestedEntry : T3D_VT_RESOLVE_PAGE_ENTRY(hint.resolvedPage);
+			if (resolvedEntry.generation == allocation.generation &&
+			(t3d_vt_page_flags(resolvedEntry) & (T3D_VT_PAGE_VALID | T3D_VT_PAGE_RESIDENT)) ==
+			(T3D_VT_PAGE_VALID | T3D_VT_PAGE_RESIDENT) &&
+			resolvedEntry.physicalSlot == hint.physicalSlot &&
+			t3d_vt_page_resolved_mip(resolvedEntry) == ((packed >> 8u) & 0xffu) &&
+			hint.physicalSlot != T3D_VT_INVALID_SLOT)
+			{
+				result.resolvedPage = hint.resolvedPage;
+				result.physicalSlot = hint.physicalSlot;
+				t3d_vt_resolve_set_resolved_mip(result, (packed >> 8u) & 0xffu);
+				t3d_vt_resolve_set_fallback_flags(result, depth,
+				T3D_VT_RESOLVE_PHYSICAL | (depth != 0u ? T3D_VT_RESOLVE_ANCESTOR : 0u));
+				return true;
+			}
+		}
+	}
+#endif
+
+	uint page = requestedPage;
+	uint fallbackDepth = 0u;
+	// There cannot be more useful ancestors than remaining allocation mips.
+	uint probeCap = min(T3D_VT_ANCESTOR_PROBE_CAP, allocationMipCount - requestedMip);
+	for (uint probe = 0u; probe < probeCap; ++probe)
+	{
+		if (page < allocation.baseVirtualPage || page >= allocationEnd || page >= pageCount)
+		{
+			return false;
+		}
+#if defined(T3D_VT_RESIDENT_ANCESTOR_HINTS) && T3D_VT_RESIDENT_ANCESTOR_HINTS && defined(T3D_VT_RESOLVE_HINT)
+		T3DVTPageEntry entry = probe == 0u ? requestedEntry : T3D_VT_RESOLVE_PAGE_ENTRY(page);
+#else
+		T3DVTPageEntry entry = T3D_VT_RESOLVE_PAGE_ENTRY(page);
+#endif
+		uint flags = t3d_vt_page_flags(entry);
+		if ((flags & T3D_VT_PAGE_VALID) == 0u || entry.generation != allocation.generation)
+		{
+			return false;
+		}
+		if ((flags & T3D_VT_PAGE_RESIDENT) != 0u && entry.physicalSlot != T3D_VT_INVALID_SLOT)
+		{
+			uint resolveFlags = T3D_VT_RESOLVE_PHYSICAL;
+			if (fallbackDepth != 0u)
+			{
+				resolveFlags |= T3D_VT_RESOLVE_ANCESTOR;
+			}
+			result.resolvedPage = page;
+			result.physicalSlot = entry.physicalSlot;
+			t3d_vt_resolve_set_resolved_mip(result, t3d_vt_page_resolved_mip(entry));
+			t3d_vt_resolve_set_fallback_flags(result, fallbackDepth, resolveFlags);
+			return true;
+		}
+		// Root/tail-fallback pages are explicit terminal metadata. Do not perform
+		// another dependent page-table read once the chain has reached one.
+		if ((flags & T3D_VT_PAGE_TAIL_FALLBACK) != 0u || entry.parentPage == T3D_VT_INVALID_PAGE)
+		{
+			return t3d_vt_resolve_tail_core(allocation, allocationCount, requestedMip, fallbackDepth, result);
+		}
+		page = entry.parentPage;
+		fallbackDepth = min(fallbackDepth + 1u, 0xffffu);
+	}
+	return t3d_vt_resolve_tail_core(allocation, allocationCount, requestedMip, fallbackDepth, result);
+}
+
+// P03: callers that have already loaded and generation-checked allocation
+// metadata pass it to the loaded resolver. Independent callers keep this ABI.
+bool t3d_vt_resolve_page_core(
+uint allocationId, uint requestedPage, uint requestedMip, uint allocationCount, uint pageCount, out T3DVTResolveResult result)
+{
+	if (allocationId >= allocationCount || requestedPage >= pageCount)
+	{
+		result = t3d_vt_resolve_invalid_result(allocationId, requestedPage, requestedMip);
+		return false;
+	}
+	T3DVTAllocation allocation = T3D_VT_RESOLVE_ALLOCATION(allocationId);
+	return t3d_vt_resolve_page_core_loaded(
+	allocationId, requestedPage, requestedMip, allocationCount, pageCount, allocation, result);
+}
+
+#endif

@@ -15,7 +15,18 @@ endforeach()
 add_executable(SIRVirtualTexturePortTests SIRVirtualTexturePortTests.cpp)
 target_link_libraries(SIRVirtualTexturePortTests PRIVATE SIR::Graphics)
 add_test(NAME renderer.virtual-texturing.terrain3d-v1 COMMAND SIRVirtualTexturePortTests)
+if(SIR_VT_ZSTD_INCLUDE_DIR AND SIR_VT_ZSTD_LIBRARY)
+    target_include_directories(SIRVirtualTexturePortTests PRIVATE "${SIR_VT_ZSTD_INCLUDE_DIR}")
+    target_compile_definitions(SIRVirtualTexturePortTests PRIVATE SIR_VT_TEST_ZSTD=1)
+endif()
 sir_configure_owned_target(SIRVirtualTexturePortTests)
+
+# Native donor V1 cooker, reference encoder, and shipping-only package roundtrip.
+add_executable(SIRTerrain3DDonorCookerTests SIRTerrain3DDonorCookerTests.cpp)
+target_include_directories(SIRTerrain3DDonorCookerTests PRIVATE "${PROJECT_SOURCE_DIR}/Source/Renderer/VirtualTexturing/Terrain3D/src")
+target_link_libraries(SIRTerrain3DDonorCookerTests PRIVATE SIR::Graphics SIR::Terrain)
+add_test(NAME renderer.virtual-texturing.donor.cooker COMMAND SIRTerrain3DDonorCookerTests)
+sir_configure_owned_target(SIRTerrain3DDonorCookerTests)
 
 # Native Hi-Z reference and command validation.
 include(${CMAKE_CURRENT_SOURCE_DIR}/HIZFoundationTests.cmake)
@@ -26,3 +37,43 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/WorldPartitionTests.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/StreamingReconcileTests.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/StreamingProviderBridgeTests.cmake)
 
+
+# Direct upstream Terrain3D tests and source, preserved without algorithm rewrites.
+set(sirVTDonorRoot "${PROJECT_SOURCE_DIR}/Source/Renderer/VirtualTexturing/Terrain3D/src")
+foreach(sirVTDonorTest IN ITEMS test_vt_feedback_reducer test_vt_feedback_multi)
+    add_executable(${sirVTDonorTest} "${sirVTDonorRoot}/diagnostics/tests/${sirVTDonorTest}.cpp")
+    target_include_directories(${sirVTDonorTest} PRIVATE "${sirVTDonorRoot}")
+    target_link_libraries(${sirVTDonorTest} PRIVATE SIR::Graphics)
+    add_test(NAME renderer.virtual-texturing.donor.${sirVTDonorTest} COMMAND ${sirVTDonorTest})
+    sir_configure_owned_target(${sirVTDonorTest})
+endforeach()
+add_executable(SIRTerrain3DDonorSpatialDemandTests SIRTerrain3DDonorSpatialDemandTests.cpp)
+target_include_directories(SIRTerrain3DDonorSpatialDemandTests PRIVATE "${sirVTDonorRoot}")
+target_link_libraries(SIRTerrain3DDonorSpatialDemandTests PRIVATE SIR::Graphics)
+add_test(NAME renderer.virtual-texturing.donor.spatial-demand COMMAND SIRTerrain3DDonorSpatialDemandTests)
+sir_configure_owned_target(SIRTerrain3DDonorSpatialDemandTests)
+
+add_executable(SIRTerrain3DDonorVisibilityAggregationTests SIRTerrain3DDonorVisibilityAggregationTests.cpp)
+target_include_directories(SIRTerrain3DDonorVisibilityAggregationTests PRIVATE "${sirVTDonorRoot}")
+target_link_libraries(SIRTerrain3DDonorVisibilityAggregationTests PRIVATE SIR::Graphics)
+add_test(NAME renderer.virtual-texturing.donor.visibility-aggregation COMMAND SIRTerrain3DDonorVisibilityAggregationTests)
+sir_configure_owned_target(SIRTerrain3DDonorVisibilityAggregationTests)
+
+# Unmodified Terrain3D input, feedback-pair and compact-tail contracts.
+foreach(sirVTDonorTest IN ITEMS
+        test_vt_feedback_epoch
+        test_vt_upload_preflight
+        test_vt_feedback_params
+        test_vt_feedback_parity
+        test_vt_feedback_shadow)
+    add_executable(${sirVTDonorTest} "${sirVTDonorRoot}/diagnostics/tests/${sirVTDonorTest}.cpp")
+    target_include_directories(${sirVTDonorTest} PRIVATE "${sirVTDonorRoot}")
+    target_link_libraries(${sirVTDonorTest} PRIVATE SIR::Graphics)
+    add_test(NAME renderer.virtual-texturing.donor.${sirVTDonorTest} COMMAND ${sirVTDonorTest})
+    sir_configure_owned_target(${sirVTDonorTest})
+endforeach()
+add_executable(SIRTerrain3DDonorTailLayoutTests "${sirVTDonorRoot}/diagnostics/tests/superterrain/residency/test_tail_layout.cpp")
+target_include_directories(SIRTerrain3DDonorTailLayoutTests PRIVATE "${sirVTDonorRoot}")
+target_link_libraries(SIRTerrain3DDonorTailLayoutTests PRIVATE SIR::Graphics)
+add_test(NAME renderer.virtual-texturing.donor.compact-tail COMMAND SIRTerrain3DDonorTailLayoutTests)
+sir_configure_owned_target(SIRTerrain3DDonorTailLayoutTests)

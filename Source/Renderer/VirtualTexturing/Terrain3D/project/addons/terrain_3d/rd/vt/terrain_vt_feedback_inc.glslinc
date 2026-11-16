@@ -1,0 +1,526 @@
+#ifndef TERRAIN3D_VT_FEEDBACK_INC_GLSL
+#define TERRAIN3D_VT_FEEDBACK_INC_GLSL
+
+#ifndef TERRAIN3D_VT_COMMON_INC_GLSL
+#error "terrain_vt_feedback_inc.glslinc requires terrain_vt_common_inc.glslinc to be included directly by the shader stage root"
+#endif
+
+// SH-B frozen shared feedback include contract.
+//
+// Raster consumers own the feedback feature switch and define
+// T3D_VT_DECLARE_FRAGMENT_BINDINGS only while this include is expanded. When
+// that declaration macro is absent, this include publishes helpers only and no
+// descriptor set. Consumer-owned adapter guards stay at their call sites so a
+// missing terrain/instance/World adapter fails deterministically without
+// changing this shared descriptor ABI. Compute predictors declare their request
+// buffers themselves and consume the same helper path.
+//
+// The exact consumer feature-switch/adapters and disabled case are frozen in
+// validation/shaders/WG_B_SHARED_MACRO_BINDING_TABLE_2026-09-12.md.
+#define T3D_VT_FEEDBACK_INCLUDE_CONTRACT_VERSION 2u
+
+#ifdef T3D_VT_DECLARE_FRAGMENT_BINDINGS
+layout(set = 3, binding = 0, std430) readonly buffer VtFragmentAllocationBuffer
+{
+	T3DVTAllocation values[];
+}
+vt_allocations;
+layout(set = 3, binding = 1, std430) readonly buffer VtFragmentPageTableBuffer
+{
+	T3DVTPageEntry entries[];
+}
+vt_page_table;
+#ifndef T3D_VT_COARSE_FEEDBACK
+#error "Fragment feedback producer must use the versioned coarse-grid ABI"
+#endif
+layout(set = 3, binding = 2, std430) buffer VtFragmentGridBuffer
+{
+	uint words[];
+}
+vt_feedback_grid;
+layout(set = 3, binding = 3, std430) buffer VtFragmentCounterBuffer
+{
+	uint words[];
+}
+vt_request_counters;
+layout(set = 3, binding = 4, std140) uniform VtFragmentFeedbackParams
+{
+	uvec4 limits; // hash capacity, allocation count, page count, flags
+	uvec4 predictedTerrain; // x: 32 material-layer coverage bits; yzw reserved
+}
+vt_fragment_feedback;
+#endif
+
+bool t3d_vt_m1_request_resolved_at_mip(uint virtual_page, uint wanted_mip, uint page_count)
+{
+	if (virtual_page >= page_count)
+	{
+		return false;
+	}
+	T3DVTPageEntry entry = vt_page_table.entries[virtual_page];
+	uint flags = t3d_vt_page_flags(entry);
+	return (flags & T3D_VT_PAGE_VALID) != 0u && (flags & T3D_VT_PAGE_RESIDENT) != 0u && entry.physicalSlot != T3D_VT_INVALID_SLOT
+	&& t3d_vt_page_resolved_mip(entry) <= wanted_mip;
+}
+
+#ifndef T3D_VT_REQUEST_RESOLVED_AT_MIP
+#define T3D_VT_REQUEST_RESOLVED_AT_MIP(virtual_page, wanted_mip, page_count)                                                               \
+t3d_vt_m1_request_resolved_at_mip((virtual_page), (wanted_mip), (page_count))
+#endif
+
+bool t3d_vt_request_page_resolved(uint virtual_page, uint wanted_mip, uint page_count)
+{
+	if (virtual_page >= page_count)
+	{
+		return false;
+	}
+
+	// The macro is the single M1 seam. It must delegate to WG-A's final
+	// t3d_vt_resolve_page()/sampling contract; no fallback walk belongs here.
+	return T3D_VT_REQUEST_RESOLVED_AT_MIP(virtual_page, wanted_mip, page_count);
+}
+
+// P05: one invocation can submit the same virtual page to the same coarse
+// feedback cell repeatedly (for example, the same material at adjacent corners).
+// Consecutive identical writes have the same last-writer result for this fragment.
+// Keep other pages and all resident-page observations; never globally suppress
+// page popularity. The per-invocation state does not change the 4-slot SSBO ABI.
+// Off by default until actual streaming/temporal residency parity has been
+// captured. Coarse feedback is lossy: skipping a repeated write can alter the
+// winner when fragments compete for one grid cell. Enable only for A/B trials.
+#if defined(T3D_VT_DECLARE_FRAGMENT_BINDINGS) && defined(T3D_VT_FEEDBACK_DEDUP_EXPERIMENT) && T3D_VT_FEEDBACK_DEDUP_EXPERIMENT
+uint t3d_vt_feedback_previous_page = 0xffffffffu;
+uint t3d_vt_feedback_previous_index = 0xffffffffu;
+#endif
+
+// P31a: Cache the coarse cell address once per fragment invocation. A terrain
+// fragment may request several distinct pages through its base/overlay inputs;
+// each request retains the original store and inter-fragment collision policy.
+// The cached state is invocation-local (never shared between fragments).
+// This removes repeated viewport scaling, division, bounds checks and UBO
+// decoding without suppressing a different page request or changing grid ABI.
+// A compile-time fallback supports compiler/device A/B comparison.
+#ifndef T3D_VT_FEEDBACK_CELL_CACHE
+#define T3D_VT_FEEDBACK_CELL_CACHE 1
+#endif
+
+#if T3D_VT_FEEDBACK_CELL_CACHE
+bool t3d_vt_feedback_cell_checked = false;
+bool t3d_vt_feedback_cell_valid = false;
+uint t3d_vt_feedback_cell_index = 0u;
+#endif
+
+bool t3d_vt_feedback_cell_address(out uint index)
+{
+#if T3D_VT_FEEDBACK_CELL_CACHE
+	if (t3d_vt_feedback_cell_checked)
+	{
+		index = t3d_vt_feedback_cell_index;
+		return t3d_vt_feedback_cell_valid;
+	}
+	t3d_vt_feedback_cell_checked = true;
+#endif
+	uint width = vt_fragment_feedback.limits.x;
+	uint height = vt_fragment_feedback.predictedTerrain.y & 0xffffu;
+	uint viewport_width = vt_fragment_feedback.predictedTerrain.y >> 16u;
+	uint viewport_height = vt_fragment_feedback.predictedTerrain.z >> 16u;
+	uint slot = vt_fragment_feedback.predictedTerrain.z & 0xffffu;
+	uint slot_stride = vt_fragment_feedback.predictedTerrain.w;
+	index = 0u;
+	if (width == 0u || height == 0u || viewport_width == 0u || viewport_height == 0u || slot >= 4u ||
+	slot_stride < 10u + width * height ||
+	(vt_fragment_feedback.limits.w & T3D_VT_FRAGMENT_FEEDBACK_ENABLED) == 0u) return false;
+	uvec2 pixel = uvec2(gl_FragCoord.xy);
+	if (pixel.x >= viewport_width || pixel.y >= viewport_height)
+		return false;
+	uint x = min(uint(floor(float(pixel.x) * float(width) / float(viewport_width))), width - 1u);
+	uint y = min(uint(floor(float(pixel.y) * float(height) / float(viewport_height))), height - 1u);
+	index = slot * slot_stride + 10u + y * width + x;
+#if T3D_VT_FEEDBACK_CELL_CACHE
+	t3d_vt_feedback_cell_index = index;
+	t3d_vt_feedback_cell_valid = true;
+#endif
+	return true;
+}
+
+bool t3d_vt_feedback_grid_write(uint virtual_page, uint wanted_mip, uint priority, uint producer_mask, uint hash_capacity)
+{
+	if (virtual_page >= vt_fragment_feedback.limits.z || virtual_page == 0xffffffffu)
+		return false;
+	uint index;
+	if (!t3d_vt_feedback_cell_address(index))
+		return false;
+#if defined(T3D_VT_DECLARE_FRAGMENT_BINDINGS) && defined(T3D_VT_FEEDBACK_DEDUP_EXPERIMENT) && T3D_VT_FEEDBACK_DEDUP_EXPERIMENT
+	if (virtual_page == t3d_vt_feedback_previous_page && index == t3d_vt_feedback_previous_index)
+	return true;
+	t3d_vt_feedback_previous_page = virtual_page;
+	t3d_vt_feedback_previous_index = index;
+#endif
+	vt_feedback_grid.words[index] = virtual_page;
+	return true;
+}
+bool t3d_vt_request_page_if_missing(
+uint virtual_page, uint wanted_mip, uint priority, uint producer_mask, uint hash_capacity, uint page_count)
+{
+	if (virtual_page >= page_count)
+		return false;
+	return t3d_vt_feedback_grid_write(virtual_page, wanted_mip, priority, producer_mask, hash_capacity);
+}
+
+int t3d_vt_prediction_category_mip_bias(uint category)
+{
+	if (category == T3D_VT_PREDICTION_CATEGORY_CLUTTER)
+	{
+		return 2;
+	}
+	if (category == T3D_VT_PREDICTION_CATEGORY_GROUND_COVER)
+	{
+		return 1;
+	}
+	if (category == T3D_VT_PREDICTION_CATEGORY_OCCLUDER)
+	{
+		return 0;
+	}
+	if (category == T3D_VT_PREDICTION_CATEGORY_TERRAIN)
+	{
+		return -1;
+	}
+	return 0;
+}
+
+uint t3d_vt_prediction_apply_mip_bias(uint mip, uint mip_count, int bias)
+{
+	int biased = int(mip) + bias;
+	return uint(clamp(biased, 0, int(max(mip_count, 1u) - 1u)));
+}
+
+uint t3d_vt_prediction_select_mip(
+T3DVTAllocation allocation, float world_diameter, float projected_pixels, float texel_density, uint geometry_lod, uint category)
+{
+	uint mip_count = t3d_vt_allocation_mip_count(allocation);
+	uint base_mip = min(t3d_vt_allocation_quality_base_mip(allocation), max(mip_count, 1u) - 1u);
+	if (mip_count == 0u || !t3d_vt_allocation_quality_enabled(allocation))
+		return base_mip;
+	uint quality_mip_count = mip_count - base_mip;
+	float virtual_extent = float(max(t3d_vt_prediction_mip_extent(t3d_vt_allocation_mip0_width(allocation), base_mip),
+	t3d_vt_prediction_mip_extent(t3d_vt_allocation_mip0_height(allocation), base_mip)) * T3D_VT_PAGE_INTERIOR);
+	float source_texels = max(1.0, texel_density * max(world_diameter, 0.001) * virtual_extent);
+	float pixel_ratio = max(1.0, source_texels / max(projected_pixels, 1.0));
+	uint mip = uint(clamp(floor(log2(pixel_ratio)), 0.0, float(quality_mip_count - 1u)));
+	int geometry_bias = int(min(geometry_lod, 6u) >> 1u);
+	return base_mip + t3d_vt_prediction_apply_mip_bias(mip, quality_mip_count, geometry_bias + t3d_vt_prediction_category_mip_bias(category));
+}
+
+void t3d_vt_prediction_request_allocation(uint allocation_id,
+vec2 uv_min_input,
+vec2 uv_max_input,
+float world_diameter,
+float projected_pixels,
+float texel_density,
+uint geometry_lod,
+uint category,
+uint priority,
+uint producer_mask,
+bool overlay,
+uint hash_capacity,
+uint allocation_count,
+uint page_count)
+{
+	if (allocation_id == T3D_VT_INVALID_ALLOCATION || allocation_id >= allocation_count)
+	{
+		return;
+	}
+
+	T3DVTAllocation allocation = vt_allocations.values[allocation_id];
+	uint mip_count = t3d_vt_allocation_mip_count(allocation);
+	uint mip0_width = t3d_vt_allocation_mip0_width(allocation);
+	uint mip0_height = t3d_vt_allocation_mip0_height(allocation);
+	if (allocation.pageCount == 0u || mip_count == 0u || mip0_width == 0u || mip0_height == 0u || !t3d_vt_allocation_quality_enabled(allocation))
+	{
+		return;
+	}
+
+	uint mip = t3d_vt_prediction_select_mip(allocation, world_diameter, projected_pixels, texel_density, geometry_lod, category);
+	vec2 uv_min = min(uv_min_input, uv_max_input);
+	vec2 uv_max = max(uv_min_input, uv_max_input);
+
+	for (;;)
+	{
+		uint width = t3d_vt_prediction_mip_extent(mip0_width, mip);
+		uint height = t3d_vt_prediction_mip_extent(mip0_height, mip);
+		bool full_u = uv_min.x < 0.0 || uv_max.x > 1.0 || (uv_max.x - uv_min.x) >= 1.0;
+		bool full_v = uv_min.y < 0.0 || uv_max.y > 1.0 || (uv_max.y - uv_min.y) >= 1.0;
+		vec2 lo = clamp(uv_min, vec2(0.0), vec2(1.0));
+		vec2 hi = clamp(uv_max, vec2(0.0), vec2(1.0));
+		uint min_x = full_u ? 0u : min(uint(floor(lo.x * float(width))), width - 1u);
+		uint max_x = full_u ? width - 1u : min(uint(floor(hi.x * float(width))), width - 1u);
+		uint min_y = full_v ? 0u : min(uint(floor(lo.y * float(height))), height - 1u);
+		uint max_y = full_v ? height - 1u : min(uint(floor(hi.y * float(height))), height - 1u);
+		uint page_span = (max_x - min_x + 1u) * (max_y - min_y + 1u);
+
+		if (page_span > T3D_VT_REQUEST_RECT_PAGE_CAP && mip + 1u < mip_count)
+		{
+			++mip;
+			continue;
+		}
+
+		uint base_page = t3d_vt_prediction_mip_base(allocation, mip);
+		uint emitted = 0u;
+		for (uint y = min_y; y <= max_y && emitted < T3D_VT_REQUEST_RECT_PAGE_CAP; ++y)
+		{
+			for (uint x = min_x; x <= max_x && emitted < T3D_VT_REQUEST_RECT_PAGE_CAP; ++x)
+			{
+				uint page = base_page + y * width + x;
+				if (page < allocation.baseVirtualPage + allocation.pageCount)
+				{
+					t3d_vt_request_page_if_missing(page, mip, priority, producer_mask, hash_capacity, page_count);
+					++emitted;
+				}
+			}
+		}
+		return;
+	}
+}
+
+#ifdef T3D_VT_DECLARE_FRAGMENT_BINDINGS
+// A P03-cooked, mapped camera-cell footprint replaces this material's reactive
+// fragment demand for three frames. Every fourth frame the CPU clears the bit
+// and restores the exact miss-repair producer as a corrective sampling pass.
+// World meshes never consult this bitset and retain unconditional miss repair.
+bool t3d_vt_terrain_feedback_needed(uint material_id)
+{
+	return material_id >= 32u ||
+	(vt_fragment_feedback.predictedTerrain.x & (1u << material_id)) == 0u;
+}
+T3DVTContinuousLod t3d_vt_fragment_filter_lod(T3DVTAllocation allocation,
+vec2 uv_ddx,
+vec2 uv_ddy,
+float lod_bias,
+bool anisotropic,
+bool trilinear)
+{
+	uint mip_count = t3d_vt_allocation_mip_count(allocation);
+	uint base_mip = min(t3d_vt_allocation_quality_base_mip(allocation), max(mip_count, 1u) - 1u);
+	vec2 virtual_texels = t3d_vt_filter_base_texels(allocation, base_mip);
+	return t3d_vt_filter_continuous_lod(
+	uv_ddx, uv_ddy, virtual_texels, base_mip, mip_count, lod_bias, anisotropic, trilinear);
+}
+
+float t3d_vt_fragment_select_lod(T3DVTAllocation allocation,
+vec2 uv_ddx,
+vec2 uv_ddy,
+float lod_bias,
+bool anisotropic)
+{
+	if (t3d_vt_allocation_mip_count(allocation) == 0u || !t3d_vt_allocation_quality_enabled(allocation))
+	{
+		return float(t3d_vt_allocation_quality_base_mip(allocation));
+	}
+	return t3d_vt_fragment_filter_lod(allocation, uv_ddx, uv_ddy, lod_bias, anisotropic, true).lod;
+}
+
+uint t3d_vt_fragment_select_mip(T3DVTAllocation allocation, vec2 uv_ddx, vec2 uv_ddy, float lod_bias)
+{
+	return uint(floor(t3d_vt_fragment_select_lod(allocation, uv_ddx, uv_ddy, lod_bias, false)));
+}
+
+bool t3d_vt_fragment_logical_page(uint allocation_id,
+vec2 uv,
+vec2 uv_ddx,
+vec2 uv_ddy,
+float lod_bias,
+bool repeat_uv,
+uint allocation_count,
+uint page_count,
+out uint virtual_page,
+out uint wanted_mip)
+{
+	virtual_page = T3D_VT_INVALID_PAGE;
+	wanted_mip = 0u;
+	if (allocation_id == T3D_VT_INVALID_ALLOCATION || allocation_id >= allocation_count)
+	{
+		return false;
+	}
+
+	T3DVTAllocation allocation = vt_allocations.values[allocation_id];
+	uint mip_count = t3d_vt_allocation_mip_count(allocation);
+	uint mip0_width = t3d_vt_allocation_mip0_width(allocation);
+	uint mip0_height = t3d_vt_allocation_mip0_height(allocation);
+	if (allocation.pageCount == 0u || mip_count == 0u || mip0_width == 0u || mip0_height == 0u || !t3d_vt_allocation_quality_enabled(allocation))
+	{
+		return false;
+	}
+
+	wanted_mip = t3d_vt_fragment_select_mip(allocation, uv_ddx, uv_ddy, lod_bias);
+	uint width = t3d_vt_prediction_mip_extent(mip0_width, wanted_mip);
+	uint height = t3d_vt_prediction_mip_extent(mip0_height, wanted_mip);
+	vec2 page_uv = repeat_uv ? fract(uv) : clamp(uv, vec2(0.0), vec2(0.99999994));
+	uint page_x = min(uint(floor(page_uv.x * float(width))), width - 1u);
+	uint page_y = min(uint(floor(page_uv.y * float(height))), height - 1u);
+	uint page = t3d_vt_prediction_mip_base(allocation, wanted_mip) + page_y * width + page_x;
+	if (page < allocation.baseVirtualPage || page >= page_count)
+	{
+		return false;
+	}
+	uint relative_page = page - allocation.baseVirtualPage;
+	if (relative_page >= allocation.pageCount)
+	{
+		return false;
+	}
+
+	virtual_page = page;
+	return true;
+}
+
+bool t3d_vt_fragment_logical_page_at_mip(T3DVTAllocation allocation,
+vec2 uv,
+uint wanted_mip,
+bool repeat_uv,
+uint page_count,
+out uint virtual_page)
+{
+	virtual_page = T3D_VT_INVALID_PAGE;
+	uint mip_count = t3d_vt_allocation_mip_count(allocation);
+	uint mip0_width = t3d_vt_allocation_mip0_width(allocation);
+	uint mip0_height = t3d_vt_allocation_mip0_height(allocation);
+	if (allocation.pageCount == 0u || mip_count == 0u || wanted_mip >= mip_count || mip0_width == 0u || mip0_height == 0u
+	|| !t3d_vt_allocation_quality_enabled(allocation)) return false;
+	uint width = t3d_vt_prediction_mip_extent(mip0_width, wanted_mip);
+	uint height = t3d_vt_prediction_mip_extent(mip0_height, wanted_mip);
+	vec2 page_uv = repeat_uv ? fract(uv) : clamp(uv, vec2(0.0), vec2(0.99999994));
+	uint page_x = min(uint(floor(page_uv.x * float(width))), width - 1u);
+	uint page_y = min(uint(floor(page_uv.y * float(height))), height - 1u);
+	uint page = t3d_vt_prediction_mip_base(allocation, wanted_mip) + page_y * width + page_x;
+	if (page < allocation.baseVirtualPage || page >= page_count || page - allocation.baseVirtualPage >= allocation.pageCount)
+		return false;
+	virtual_page = page;
+	return true;
+}
+
+bool t3d_vt_fragment_request_allocation_filtered(uint allocation_id,
+vec2 uv,
+vec2 uv_ddx,
+vec2 uv_ddy,
+float lod_bias,
+uint priority,
+bool repeat_uv,
+bool anisotropic,
+bool trilinear)
+{
+	if ((vt_fragment_feedback.limits.w & T3D_VT_FRAGMENT_FEEDBACK_ENABLED) == 0u
+	|| allocation_id == T3D_VT_INVALID_ALLOCATION || allocation_id >= vt_fragment_feedback.limits.y) return false;
+
+	T3DVTAllocation allocation = vt_allocations.values[allocation_id];
+	uint mip_count = t3d_vt_allocation_mip_count(allocation);
+	if (mip_count == 0u || !t3d_vt_allocation_quality_enabled(allocation))
+		return false;
+	T3DVTContinuousLod filter_lod =
+	t3d_vt_fragment_filter_lod(allocation, uv_ddx, uv_ddy, lod_bias, anisotropic, trilinear);
+	// Runtime memory containment: fragment feedback owns one residency demand
+	// per material sample. Sampling may still blend two resolved virtual levels,
+	// but forcing both into a 256-page-set cache creates permanent eviction and
+	// upload churn at mip transitions. Prefer the dominant trilinear level; the
+	// resolver supplies an already-resident ancestor/tail for the secondary level.
+	uint requested_mip = filter_lod.mip0;
+	if (trilinear && filter_lod.mip1 != filter_lod.mip0 && filter_lod.fraction >= 0.5)
+	{
+		requested_mip = filter_lod.mip1;
+	}
+	uint requested_page;
+	if (!t3d_vt_fragment_logical_page_at_mip(allocation, uv, requested_mip, repeat_uv,
+	vt_fragment_feedback.limits.z, requested_page))
+	{
+		return false;
+	}
+	return t3d_vt_request_page_if_missing(requested_page,
+	requested_mip,
+	priority,
+	T3D_VT_REQUEST_PRODUCER_FRAGMENT,
+	vt_fragment_feedback.limits.x,
+	vt_fragment_feedback.limits.z);
+}
+
+bool t3d_vt_fragment_request_allocation_filtered(uint allocation_id,
+vec2 uv,
+vec2 uv_ddx,
+vec2 uv_ddy,
+float lod_bias,
+uint priority,
+bool repeat_uv,
+bool nearest,
+bool anisotropic,
+bool trilinear)
+{
+	return t3d_vt_fragment_request_allocation_filtered(
+	allocation_id, uv, uv_ddx, uv_ddy, lod_bias, priority, repeat_uv, anisotropic && !nearest, trilinear && !nearest);
+}
+
+bool t3d_vt_fragment_request_allocation(
+uint allocation_id, vec2 uv, vec2 uv_ddx, vec2 uv_ddy, float lod_bias, uint priority, bool repeat_uv)
+{
+	if ((vt_fragment_feedback.limits.w & T3D_VT_FRAGMENT_FEEDBACK_ENABLED) == 0u)
+	{
+		return false;
+	}
+
+	uint virtual_page;
+	uint wanted_mip;
+	if (!t3d_vt_fragment_logical_page(allocation_id,
+	uv,
+	uv_ddx,
+	uv_ddy,
+	lod_bias,
+	repeat_uv,
+	vt_fragment_feedback.limits.y,
+	vt_fragment_feedback.limits.z,
+	virtual_page,
+	wanted_mip))
+	{
+		return false;
+	}
+
+	return t3d_vt_request_page_if_missing(
+	virtual_page, wanted_mip, priority, T3D_VT_REQUEST_PRODUCER_FRAGMENT, vt_fragment_feedback.limits.x, vt_fragment_feedback.limits.z);
+}
+
+// Request one runtime channel allocation. V1 consumers request their sampled
+// siblings explicitly because each channel has independent page residency.
+bool t3d_vt_fragment_request_material_page_set(uint page_set_allocation,
+vec2 uv,
+vec2 uv_ddx,
+vec2 uv_ddy,
+float lod_bias,
+uint priority,
+bool repeat_uv,
+uint filter_mode)
+{
+	bool mipmapped = t3d_vt_filter_mode_uses_mipmaps(filter_mode);
+	return t3d_vt_fragment_request_allocation_filtered(page_set_allocation, uv,
+	mipmapped ? uv_ddx : vec2(0.0), mipmapped ? uv_ddy : vec2(0.0), mipmapped ? lod_bias : 0.0, priority, repeat_uv,
+	t3d_vt_filter_mode_is_anisotropic(filter_mode), t3d_vt_filter_mode_is_trilinear(filter_mode));
+}
+
+// Clutter opacity is Albedo.A. The albedo allocation owns its alpha pages.
+// Derive the same virtual mip pair as the material sample policy.
+bool t3d_vt_fragment_request_albedo_alpha_if_missing(uint allocation_id,
+vec2 uv,
+vec2 uv_ddx,
+vec2 uv_ddy,
+float lod_bias,
+uint priority,
+bool repeat_uv,
+uint filter_mode)
+{
+	bool mipmapped = t3d_vt_filter_mode_uses_mipmaps(filter_mode);
+	return t3d_vt_fragment_request_allocation_filtered(allocation_id, uv,
+	mipmapped ? uv_ddx : vec2(0.0), mipmapped ? uv_ddy : vec2(0.0), mipmapped ? lod_bias : 0.0, priority, repeat_uv,
+	t3d_vt_filter_mode_is_anisotropic(filter_mode), t3d_vt_filter_mode_is_trilinear(filter_mode));
+}
+bool t3d_vt_fragment_request_surface_a_if_missing(uint allocation_id, vec2 uv, vec2 uv_ddx, vec2 uv_ddy,
+float lod_bias, uint priority, bool repeat_uv, uint filter_mode)
+{
+	return t3d_vt_fragment_request_albedo_alpha_if_missing(allocation_id, uv, uv_ddx, uv_ddy, lod_bias, priority, repeat_uv, filter_mode);
+}
+#endif
+
+#endif // TERRAIN3D_VT_FEEDBACK_INC_GLSL

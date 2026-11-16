@@ -136,6 +136,20 @@ static void signPack( std::vector<uint8_t>& bytes )
 	memcpy( bytes.data(), &header, sizeof( header ) );
 }
 
+// Terrain3D cooker's identity includes the encoded payload's physical format
+// and byte count, in addition to the raw encoded bytes.
+static uint64_t packedPayloadIdentity( const uint8_t *pBytes, uint32_t nBytes, uint32_t nFormat )
+{
+	uint64_t hash = sirVTPackHash64( pBytes, nBytes );
+	for ( uint32_t i = 0u; i < 8u; ++i ) {
+		hash = ( hash ^ ( uint8_t )( ( uint64_t )nFormat >> ( i * 8u ) ) ) * UINT64_C( 1099511628211 );
+	}
+	for ( uint32_t i = 0u; i < 8u; ++i ) {
+		hash = ( hash ^ ( uint8_t )( ( uint64_t )nBytes >> ( i * 8u ) ) ) * UINT64_C( 1099511628211 );
+	}
+	return hash;
+}
+
 static std::vector<uint8_t> makeValidPack( void )
 {
 	sirVirtualTexturePackHeader_t header = {};
@@ -226,10 +240,11 @@ static std::vector<uint8_t> makeValidPack( void )
 	payload.nCodec = 0;
 	payload.nFlags = 1;
 	payload.nChecksum = sirVTPackChecksum32( bytes.data() + header.nPayloadDataOffset, header.nPayloadDataBytes );
-	payload.nContentSignature = sirVTPackHash64( bytes.data() + header.nPayloadDataOffset, header.nPayloadDataBytes );
+	payload.nContentSignature =
+	    packedPayloadIdentity( bytes.data() + header.nPayloadDataOffset, ( uint32_t )header.nPayloadDataBytes, payload.nFormat );
 	putRecord( bytes, header.nPayloadDirectoryOffset, payload );
 	sirVirtualTexturePackClusterRecord_t cluster = {};
-	cluster.nContentSignature = payload.nContentSignature;
+	cluster.nContentSignature = sirVTPackHash64( bytes.data() + header.nPayloadDataOffset, header.nPayloadDataBytes );
 	cluster.nStoredBytes = header.nPayloadDataBytes;
 	cluster.nDecodedBytes = header.nPayloadDataBytes;
 	cluster.nFirstPayload = 0;

@@ -1,0 +1,85 @@
+#ifndef TERRAIN3D_MATERIAL_VT_CONTRACT_GLSLINC
+#define TERRAIN3D_MATERIAL_VT_CONTRACT_GLSLINC
+
+#ifndef TERRAIN3D_VT_COMMON_INC_GLSL
+#error "terrain_material_vt_contract.glslinc requires vt/terrain_vt_common_inc.glslinc at the shader stage root"
+#endif
+
+// SHD-01: single descriptor contract for the shared terrain material/VT
+// evaluator. These bindings are also frozen in
+// rendering/rd/shaders/terrain_3d_rd_material_vt_contract.h.
+// WORLD owns set 0 for geometry and uses set 1 for VT; clipmap uses set 0.
+#define T3D_MATERIAL_VT_CONTRACT_VERSION 1u
+#if defined(T3D_WORLD_RASTER_EMBEDDED)
+#define T3D_TERRAIN_VT_DESCRIPTOR_SET 1
+#define T3D_TERRAIN_VT_ALLOCATION_BINDING 1
+#define T3D_TERRAIN_VT_PAGE_TABLE_BINDING 2
+#define T3D_TERRAIN_VT_ALBEDO_BINDING 3
+#define T3D_TERRAIN_VT_NORMAL_BINDING 4
+#define T3D_TERRAIN_VT_SURFACE_BINDING 5
+#define T3D_TERRAIN_VT_HEIGHT_BINDING 6
+#define T3D_TERRAIN_VT_TAIL_METADATA_BINDING 7
+#define T3D_TERRAIN_VT_ALBEDO_TAIL_BINDING 8
+#define T3D_TERRAIN_VT_NORMAL_TAIL_BINDING 9
+#define T3D_TERRAIN_VT_SURFACE_TAIL_BINDING 10
+#define T3D_TERRAIN_VT_HEIGHT_TAIL_BINDING 11
+#define T3D_TERRAIN_VT_MIP_LAYOUT_BINDING 12
+#define T3D_TERRAIN_VT_HINT_BINDING 17
+#define T3D_TERRAIN_VT_HEIGHT16_BINDING 18
+#define T3D_TERRAIN_VT_HEIGHT16_TAIL_BINDING 19
+#define T3D_CS_DESCRIPTOR_SET 1
+#define T3D_CS_PAGE_TABLE_BINDING 13
+#define T3D_CS_ALBEDO_BINDING 14
+#define T3D_CS_NORMAL_BINDING 15
+#define T3D_CS_SURFACE_BINDING 16
+#else
+#define T3D_TERRAIN_VT_DESCRIPTOR_SET 0
+#define T3D_TERRAIN_VT_ALLOCATION_BINDING 26
+#define T3D_TERRAIN_VT_PAGE_TABLE_BINDING 27
+#define T3D_TERRAIN_VT_ALBEDO_BINDING 28
+#define T3D_TERRAIN_VT_NORMAL_BINDING 29
+#define T3D_TERRAIN_VT_SURFACE_BINDING 30
+#define T3D_TERRAIN_VT_HEIGHT_BINDING 31
+#define T3D_TERRAIN_VT_TAIL_METADATA_BINDING 32
+#define T3D_TERRAIN_VT_ALBEDO_TAIL_BINDING 33
+#define T3D_TERRAIN_VT_NORMAL_TAIL_BINDING 34
+#define T3D_TERRAIN_VT_SURFACE_TAIL_BINDING 35
+#define T3D_TERRAIN_VT_HEIGHT_TAIL_BINDING 36
+#define T3D_TERRAIN_VT_MIP_LAYOUT_BINDING 37
+#define T3D_TERRAIN_VT_HINT_BINDING 43
+#define T3D_TERRAIN_VT_HEIGHT16_BINDING 44
+#define T3D_TERRAIN_VT_HEIGHT16_TAIL_BINDING 45
+#define T3D_CS_DESCRIPTOR_SET 0
+#define T3D_CS_PAGE_TABLE_BINDING 39
+#define T3D_CS_ALBEDO_BINDING 40
+#define T3D_CS_NORMAL_BINDING 41
+#define T3D_CS_SURFACE_BINDING 42
+#endif
+
+// SHD-02: shipping terrain shares the adaptive-control and prepared-mip
+// evaluator across color, feedback, compact, one-sun and depth variants.
+// Alternate material modes continue to be resolved from authored tier data.
+// Hint-buffer presence changes the descriptor ABI, not the material algorithm.
+#if !defined(T3D_WORLD_RASTER_EMBEDDED) && !defined(T3D_UCMP_EDITOR)
+#ifndef T3D_CONTROL_FILTER_CLASS
+#define T3D_CONTROL_FILTER_CLASS 3
+#endif
+#ifndef T3D_CONTROL_ACTIVE_CORNER_FETCH
+#define T3D_CONTROL_ACTIVE_CORNER_FETCH 1
+#endif
+#ifndef T3D_PREPARED_MIP_BIAS
+#define T3D_PREPARED_MIP_BIAS 1
+#endif
+#endif
+
+// One resident-page and tail fallback contract for near/middle/far and WORLD.
+// The shader-root's native/compact/feedback pass defines determine I/O and
+// legal resource declarations; material and VT evaluation are shared.
+// SHD-02 will integrate the current control-adaptive and hint/bias trials.
+bool t3d_vt_resolve_page_core(
+uint allocationId, uint requestedPage, uint requestedMip, uint allocationCount, uint pageCount, out T3DVTResolveResult result);
+bool t3d_vt_resolve_page_core_loaded(
+uint allocationId, uint requestedPage, uint requestedMip, uint allocationCount, uint pageCount,
+T3DVTAllocation allocation, out T3DVTResolveResult result);
+
+#endif

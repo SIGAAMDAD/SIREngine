@@ -39,6 +39,20 @@ static bool sirVTClusterOverlaps( const sirVirtualTextureClusterBuffers_t& buffe
 	return nInput < nOutput + nDecoded && nOutput < nInput + nStored;
 }
 
+// The original donor de-duplicates encoded payloads by (bytes, physical format,
+// decoded byte count). This signature is not the raw-byte FNV hash.
+static uint64_t sirVTEncodedPayloadSignature( const uint8_t *pEncoded, uint32_t nBytes, uint32_t nFormat ) noexcept
+{
+	uint64_t nHash = sirVTPackHash64( pEncoded, nBytes );
+	for ( uint32_t i = 0u; i < 8u; ++i ) {
+		nHash = ( nHash ^ ( uint8_t )( ( uint64_t )nFormat >> ( i * 8u ) ) ) * UINT64_C( 1099511628211 );
+	}
+	for ( uint32_t i = 0u; i < 8u; ++i ) {
+		nHash = ( nHash ^ ( uint8_t )( ( uint64_t )nBytes >> ( i * 8u ) ) ) * UINT64_C( 1099511628211 );
+	}
+	return nHash;
+}
+
 static bool sirVTVerifyDecodedCluster( const sirVirtualTexturePackView_t& view, const sirVirtualTexturePackClusterRecord_t& cluster,
                                        const uint8_t *pDecoded ) noexcept
 {
@@ -50,7 +64,7 @@ static bool sirVTVerifyDecodedCluster( const sirVirtualTexturePackView_t& view, 
 		}
 		const uint8_t *pTile = pDecoded + payload.nClusterOffset;
 		if ( payload.nChecksum != sirVTPackChecksum32( pTile, payload.nDecodedBytes ) ||
-		     payload.nContentSignature != sirVTPackHash64( pTile, payload.nDecodedBytes ) ) {
+		     payload.nContentSignature != sirVTEncodedPayloadSignature( pTile, payload.nDecodedBytes, payload.nFormat ) ) {
 			return false;
 		}
 	}

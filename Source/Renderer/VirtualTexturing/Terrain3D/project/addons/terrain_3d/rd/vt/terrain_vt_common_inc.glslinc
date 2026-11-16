@@ -1,0 +1,545 @@
+#ifndef TERRAIN3D_VT_COMMON_INC_GLSL
+#define TERRAIN3D_VT_COMMON_INC_GLSL
+
+// Shared Terrain3D VT V1 GPU ABI. 16-bit CPU field pairs are intentionally
+// exposed as packed uints so std430 does not require 16-bit storage support.
+#define T3D_VT_FILE_VERSION 1u
+#define T3D_VT_PAGE_INTERIOR 128u
+#define T3D_VT_PAGE_GUTTER 4u
+#define T3D_VT_PHYSICAL_TILE 136u
+#define T3D_VT_MAX_ANISOTROPY 4u
+#define T3D_VT_CHANNEL_COUNT 5u
+#define T3D_VT_CHANNEL_MASK_ALL ((1u << T3D_VT_CHANNEL_COUNT) - 1u)
+#define T3D_VT_INVALID_PAGE 0xffffffffu
+#define T3D_VT_INVALID_SLOT 0xffffffffu
+#define T3D_VT_INVALID_ALLOCATION 0xffffffffu
+#define T3D_VT_INVALID_TAIL 0xffffffffu
+#define T3D_VT_MAX_MIPS 16u
+#define T3D_VT_ANCESTOR_PROBE_CAP 16u
+#define T3D_VT_TAIL_TILE 16u
+#define T3D_VT_TAIL_ATLAS_WIDTH 2048u
+#define T3D_VT_TAIL_TILES_PER_ROW (T3D_VT_TAIL_ATLAS_WIDTH / T3D_VT_TAIL_TILE)
+
+// P21/P22 fixed request hash contract. These values mirror
+// src/rendering/rd/vt/core/terrain_3d_vt_contract.h.
+#define T3D_VT_REQUEST_HASH_EMPTY_KEY 0xffffffffu
+#define T3D_VT_REQUEST_HASH_PROBE_COUNT 8u
+#define T3D_VT_REQUEST_HASH_SLOTS_PER_REQUEST 2u
+#define T3D_VT_REQUEST_RECT_PAGE_CAP 16u
+#define T3D_VT_REQUEST_COUNTER_WORDS 16u
+
+#define T3D_VT_REQUEST_PRODUCER_VISIBLE (1u << 0u)
+#define T3D_VT_REQUEST_PRODUCER_FUTURE (1u << 1u)
+#define T3D_VT_REQUEST_PRODUCER_FRAGMENT (1u << 2u)
+
+#define T3D_VT_FRAGMENT_FEEDBACK_ENABLED (1u << 0u)
+#define T3D_VT_FRAGMENT_PRIORITY_COLOR 49152u
+#define T3D_VT_FRAGMENT_PRIORITY_TERRAIN 53248u
+#define T3D_VT_FRAGMENT_PRIORITY_ALPHA_SCISSOR 57344u
+
+#define T3D_VT_PREDICTION_CATEGORY_CLUTTER 0u
+#define T3D_VT_PREDICTION_CATEGORY_GROUND_COVER 1u
+#define T3D_VT_PREDICTION_CATEGORY_OCCLUDER 2u
+#define T3D_VT_PREDICTION_CATEGORY_TERRAIN 3u
+
+#define T3D_VT_COUNTER_COMPACTED_REQUEST_COUNT 0u
+#define T3D_VT_COUNTER_RAW_ATTEMPT_COUNT 1u
+#define T3D_VT_COUNTER_UNIQUE_ACCEPTED_COUNT 2u
+#define T3D_VT_COUNTER_SAME_KEY_MERGE_COUNT 3u
+#define T3D_VT_COUNTER_PROBE_OVERFLOW_COUNT 4u
+#define T3D_VT_COUNTER_REQUEST_LIST_OVERFLOW_COUNT 5u
+#define T3D_VT_COUNTER_VISIBLE_PREDICTION_COUNT 6u
+#define T3D_VT_COUNTER_FUTURE_PREDICTION_COUNT 7u
+#define T3D_VT_COUNTER_MIP_COARSEN_COUNT 8u
+#define T3D_VT_COUNTER_BASE_ALLOCATION_COUNT 9u
+#define T3D_VT_COUNTER_OVERLAY_ALLOCATION_COUNT 10u
+#define T3D_VT_COUNTER_FRAGMENT_MISS_COUNT 11u
+#define T3D_VT_COUNTER_FRAME_ID 12u
+#define T3D_VT_COUNTER_GENERATION 13u
+#define T3D_VT_COUNTER_HASH_CAPACITY 14u
+#define T3D_VT_COUNTER_REQUEST_CAPACITY 15u
+#define T3D_TERRAIN_MEGAVT_ALLOCATION_CAPACITY 1024u
+
+#define T3D_VT_MATERIAL_METALLIC_SHIFT 0u
+#define T3D_VT_MATERIAL_ROUGHNESS_SHIFT 8u
+#define T3D_VT_MATERIAL_AO_SHIFT 16u
+#define T3D_VT_MATERIAL_ALPHA_SCISSOR_SHIFT 24u
+#define T3D_VT_MATERIAL_UNORM8_MASK 0xffu
+#define T3D_VT_MATERIAL_NORMAL_SCALE_MASK 0xffffu
+#define T3D_VT_MATERIAL_SURFACE_LAYOUT_SHIFT 16u
+#define T3D_VT_MATERIAL_SURFACE_LAYOUT_MASK (0x7u << T3D_VT_MATERIAL_SURFACE_LAYOUT_SHIFT)
+#define T3D_VT_MATERIAL_FILTER_SHIFT 19u
+#define T3D_VT_MATERIAL_FILTER_MASK (0x7u << T3D_VT_MATERIAL_FILTER_SHIFT)
+#define T3D_VT_MATERIAL_EMISSION_FORMAT_RGB9E5 1u
+
+#define T3D_VT_NEUTRAL_ALBEDO_R8 255u
+#define T3D_VT_NEUTRAL_ALBEDO_G8 255u
+#define T3D_VT_NEUTRAL_ALBEDO_B8 255u
+#define T3D_VT_NEUTRAL_ALBEDO_A8 255u
+#define T3D_VT_NEUTRAL_NORMAL_X8 128u
+#define T3D_VT_NEUTRAL_NORMAL_Y8 128u
+#define T3D_VT_NEUTRAL_SURFACE_AO8 255u
+#define T3D_VT_NEUTRAL_SURFACE_ROUGHNESS8 255u
+#define T3D_VT_NEUTRAL_SURFACE_METALLIC8 255u
+#define T3D_VT_NEUTRAL_SURFACE_ALPHA8 255u
+#define T3D_VT_NEUTRAL_HEIGHT8 128u
+
+#define T3D_VT_CHANNEL_ALBEDO 0u
+#define T3D_VT_CHANNEL_NORMAL 1u
+#define T3D_VT_CHANNEL_SURFACE 2u
+#define T3D_VT_CHANNEL_HEIGHT 3u
+#define T3D_VT_CHANNEL_HEIGHT16 4u
+
+#define T3D_VT_FORMAT_ALBEDO_BC1_SRGB 0u
+#define T3D_VT_FORMAT_NORMAL_BC5_UNORM 1u
+#define T3D_VT_FORMAT_SURFACE_BC7_UNORM 2u
+#define T3D_VT_FORMAT_HEIGHT_R8_UNORM 3u
+
+// Sparse VT V1 logical channels are independent from physical format families.
+#define T3D_VT_LOGICAL_CHANNEL_ALBEDO 0u
+#define T3D_VT_LOGICAL_CHANNEL_PBR 1u
+#define T3D_VT_LOGICAL_CHANNEL_HEIGHT 2u
+#define T3D_VT_LOGICAL_CHANNEL_NORMAL 3u
+#define T3D_VT_LOGICAL_CHANNEL_ORM 4u
+#define T3D_VT_LOGICAL_CHANNEL_RESERVED_5 5u
+#define T3D_VT_LOGICAL_CHANNEL_COUNT 6u
+
+#define T3D_VT_PHYSICAL_FORMAT_BC1_UNORM 0u
+#define T3D_VT_PHYSICAL_FORMAT_BC7_UNORM 1u
+#define T3D_VT_PHYSICAL_FORMAT_BC5_UNORM 2u
+#define T3D_VT_PHYSICAL_FORMAT_R8_UNORM 3u
+#define T3D_VT_PHYSICAL_FORMAT_R16_UNORM 4u
+#define T3D_VT_PHYSICAL_FORMAT_COUNT 5u
+#define T3D_VT_V1_PHYSICAL_FAMILY_SHIFT 29u
+#define T3D_VT_V1_PHYSICAL_FAMILY_MASK 0xe0000000u
+#define T3D_VT_V1_PHYSICAL_SLOT_MASK 0x1fffffffu
+
+uint t3d_vt_v1_physical_family(uint packedAddress)
+{
+	return (packedAddress & T3D_VT_V1_PHYSICAL_FAMILY_MASK) >> T3D_VT_V1_PHYSICAL_FAMILY_SHIFT;
+}
+
+uint t3d_vt_v1_physical_slot(uint packedAddress)
+{
+	return packedAddress & T3D_VT_V1_PHYSICAL_SLOT_MASK;
+}
+
+vec3 t3d_vt_srgb_to_linear_rgb(vec3 value)
+{
+	bvec3 low = lessThanEqual(value, vec3(0.04045));
+	vec3 lowValue = value / 12.92;
+	vec3 highValue = pow((value + vec3(0.055)) / 1.055, vec3(2.4));
+	return mix(highValue, lowValue, low);
+}
+
+vec4 t3d_vt_decode_srgb_albedo(vec4 value)
+{
+	value.rgb = t3d_vt_srgb_to_linear_rgb(value.rgb);
+	return value;
+}
+
+#define T3D_VT_SAMPLER_LINEAR_REPEAT 0u
+#define T3D_VT_SAMPLER_LINEAR_CLAMP 1u
+#define T3D_VT_SAMPLER_NEAREST_REPEAT 2u
+#define T3D_VT_SAMPLER_NEAREST_CLAMP 3u
+
+#define T3D_VT_FILTER_NEAREST 0u
+#define T3D_VT_FILTER_LINEAR 1u
+#define T3D_VT_FILTER_NEAREST_MIPMAP 2u
+#define T3D_VT_FILTER_LINEAR_MIPMAP 3u
+#define T3D_VT_FILTER_NEAREST_MIPMAP_ANISOTROPIC 4u
+#define T3D_VT_FILTER_LINEAR_MIPMAP_ANISOTROPIC 5u
+
+#define T3D_VT_ALLOCATION_MATERIAL_UV (1u << 0u)
+#define T3D_VT_ALLOCATION_MEGATEXTURE (1u << 1u)
+#define T3D_VT_ALLOCATION_REPEAT (1u << 2u)
+#define T3D_VT_ALLOCATION_CLAMP (1u << 3u)
+#define T3D_VT_ALLOCATION_HAS_ALPHA (1u << 4u)
+#define T3D_VT_ALLOCATION_HAS_HEIGHT (1u << 5u)
+#define T3D_VT_ALLOCATION_PINNED (1u << 6u)
+#define T3D_VT_ALLOCATION_SHIPPING_IMMUTABLE (1u << 7u)
+#define T3D_VT_ALLOCATION_EDITOR_DYNAMIC (1u << 8u)
+#define T3D_VT_ALLOCATION_QUALITY_BASE_MIP_SHIFT 9u
+#define T3D_VT_ALLOCATION_QUALITY_BASE_MIP_MASK (0x0fu << T3D_VT_ALLOCATION_QUALITY_BASE_MIP_SHIFT)
+#define T3D_VT_ALLOCATION_QUALITY_DISABLED (1u << 13u)
+
+#define T3D_VT_PAGE_VALID (1u << 0u)
+#define T3D_VT_PAGE_RESIDENT (1u << 1u)
+#define T3D_VT_PAGE_PINNED (1u << 2u)
+#define T3D_VT_PAGE_NEUTRAL (1u << 3u)
+#define T3D_VT_PAGE_ROOT (1u << 4u)
+#define T3D_VT_PAGE_TAIL_FALLBACK (1u << 5u)
+
+#define T3D_VT_RESOLVE_PHYSICAL (1u << 0u)
+#define T3D_VT_RESOLVE_ANCESTOR (1u << 1u)
+#define T3D_VT_RESOLVE_TAIL (1u << 2u)
+
+#define T3D_VT_MATERIAL_ALPHA_SCISSOR (1u << 0u)
+#define T3D_VT_MATERIAL_FOLIAGE (1u << 1u)
+#define T3D_VT_MATERIAL_CAST_SHADOWS (1u << 2u)
+#define T3D_VT_MATERIAL_RECEIVE_SHADOWS (1u << 3u)
+#define T3D_VT_MATERIAL_TWO_SIDED (1u << 4u)
+#define T3D_VT_MATERIAL_UNSHADED (1u << 5u)
+#define T3D_VT_MATERIAL_VERTEX_COLOR (1u << 6u)
+#define T3D_VT_MATERIAL_VERTEX_COLOR_SRGB (1u << 7u)
+#define T3D_VT_MATERIAL_NORMAL_MAPPING (1u << 8u)
+#define T3D_VT_MATERIAL_AO_ENABLED (1u << 9u)
+#define T3D_VT_MATERIAL_HAS_HEIGHT (1u << 10u)
+#define T3D_VT_MATERIAL_HAS_ALPHA (1u << 11u)
+#define T3D_VT_MATERIAL_DIRECT_ORM (1u << 12u)
+#define T3D_VT_MATERIAL_ALBEDO_SATURATION (1u << 13u)
+#define T3D_VT_MATERIAL_STYLIZED_SUN (1u << 14u)
+#define T3D_VT_MATERIAL_V1_LAYOUT (1u << 15u)
+#define T3D_VT_MATERIAL_HAS_SURFACE_TEXTURE (1u << 16u)
+#define T3D_VT_MATERIAL_SURFACE_TEXTURE_KNOWN (1u << 17u)
+
+bool t3d_vt_material_has_surface_texture(uint flags)
+{
+	return (flags & T3D_VT_MATERIAL_HAS_SURFACE_TEXTURE) != 0u
+	|| (flags & T3D_VT_MATERIAL_SURFACE_TEXTURE_KNOWN) == 0u;
+}
+#define T3D_VT_V1_RUNTIME_CHANNELS_PER_ALLOCATION 3u
+
+struct T3DVTAllocation
+{
+	uint baseVirtualPage;
+	uint pageCount;
+	uint packedMip0Extent;
+	uint packedMipCountFlags;
+	uint tailIndex;
+	uint generation;
+	uint contentId;
+	uint reserved;
+};
+
+struct T3DVTPageEntry
+{
+	uint physicalSlot;
+	uint parentPage;
+	uint generation;
+	uint packedResolvedMipFlags;
+};
+
+// Optional BR20, 16-byte std430 record. Entry zero is a validity/epoch header.
+struct T3DVTAncestorHint
+{
+	uint resolvedPage;
+	uint physicalSlot;
+	uint generation;
+	uint packedMipDepthFlags;
+};
+#define T3D_VT_HINT_RECORD_PHYSICAL 1u
+#define T3D_VT_HINT_ENABLED 0x54334831u
+
+// GPU-only P02 table: allocationId * T3D_VT_MAX_MIPS + mip.
+// packedExtent stores width in the low 16 bits and height in the high 16 bits.
+struct T3DVTMipLayout
+{
+	uint baseVirtualPage;
+	uint packedExtent;
+};
+
+struct T3DVTTailMetadata
+{
+	uint atlasX;
+	uint atlasY;
+	uint packedExtent;
+	uint packedMipRange;
+	uint generation;
+	uint channelMask;
+	uint contentId;
+	uint flags;
+};
+
+struct T3DVTPhysicalSlot
+{
+	uint virtualPage;
+	uint generation;
+	uint lastVisibleFrame;
+	uint lastRequestedFrame;
+	uint packedFlagsClockAge;
+	uint packedPinCountRetireFrame;
+	uint payloadId;
+	uint reserved;
+};
+
+struct T3DVTRequest
+{
+	uint virtualPage;
+	uint packedWantedMipPriority;
+};
+
+struct T3DVTResolveResult
+{
+	uint allocation;
+	uint requestedPage;
+	uint resolvedPage;
+	uint physicalSlot;
+	uint tailIndex;
+	uint packedRequestedResolvedMip;
+	uint packedFallbackDepthFlags;
+	uint reserved;
+};
+
+struct T3DVTRequestHashEntry
+{
+	uint virtualPage;
+	uint wantedMip;
+	uint priority;
+	uint producerMask;
+};
+
+struct T3DVTPredictionMetadata
+{
+	vec4 worldSphere;
+	vec4 uvBounds;
+	uvec4 ids;
+	vec2 densityScale;
+	uint packedLodCategoryBias;
+	uint flags;
+};
+
+struct T3DRenderingMaterialGpu
+{
+	uint vtAllocation;
+	uint overlayVtAllocation;
+	uint flags;
+	uint packedScalars0;
+	vec4 baseColor;
+	vec4 uvScaleBias;
+	uint packedEmission;
+	uint packedScalars1;
+	uint samplerClass;
+	uint reserved;
+};
+
+uint t3d_vt_allocation_mip0_width(T3DVTAllocation allocation)
+{
+	return allocation.packedMip0Extent & 0xffffu;
+}
+
+uint t3d_vt_allocation_mip0_height(T3DVTAllocation allocation)
+{
+	return allocation.packedMip0Extent >> 16u;
+}
+
+uint t3d_vt_allocation_mip_count(T3DVTAllocation allocation)
+{
+	return allocation.packedMipCountFlags & 0xffffu;
+}
+
+uint t3d_vt_allocation_flags(T3DVTAllocation allocation)
+{
+	return allocation.packedMipCountFlags >> 16u;
+}
+
+uint t3d_vt_allocation_quality_base_mip(T3DVTAllocation allocation)
+{
+	return (t3d_vt_allocation_flags(allocation) & T3D_VT_ALLOCATION_QUALITY_BASE_MIP_MASK) >> T3D_VT_ALLOCATION_QUALITY_BASE_MIP_SHIFT;
+}
+
+bool t3d_vt_allocation_quality_enabled(T3DVTAllocation allocation)
+{
+	return (t3d_vt_allocation_flags(allocation) & T3D_VT_ALLOCATION_QUALITY_DISABLED) == 0u;
+}
+
+// WG-F P16: pure prediction/address helpers shared by raster feedback and the
+// production World predictor. This file owns no descriptors and performs
+// no residency mutation.
+
+struct T3DVTPredictionRect
+{
+	uint mip;
+	uint width;
+	uint height;
+	uint min_x;
+	uint max_x;
+	uint min_y;
+	uint max_y;
+	uint page_span;
+	uint relative_mip_base;
+};
+
+uint t3d_vt_request_hash_seed(uint virtual_page)
+{
+	uint mixed = virtual_page * 2654435761u;
+	mixed ^= mixed >> 16u;
+	mixed *= 2246822519u;
+	mixed ^= mixed >> 13u;
+	return mixed;
+}
+
+uint t3d_vt_request_hash_linear_seed(uint virtual_page)
+{
+	return virtual_page * 2654435761u;
+}
+
+uint t3d_vt_request_hash_slot_from_seed(uint hash_seed, uint probe, uint hash_capacity)
+{
+	return (hash_seed + probe) % hash_capacity;
+}
+
+// The tail atlas stores each mip at max(first_width >> mip, 1) texels
+// along X. Summing the truncated widths by popcount avoids a bounded
+// dynamic loop in both the color and filtering paths. Caller supplies a
+// nonzero width and a delta bounded by T3D_VT_MAX_MIPS - 1.
+uint t3d_vt_tail_mip_offset(uint first_width, uint tail_delta)
+{
+	uint remaining = first_width >> tail_delta;
+	uint bits = uint(findMSB(first_width)) + 1u;
+	uint excess = tail_delta > bits ? tail_delta - bits : 0u;
+	return 2u * (first_width - remaining) - uint(bitCount(first_width)) + uint(bitCount(remaining)) + excess;
+}
+
+// Ceil-dividing by two repeatedly, without a per-level integer loop.
+// Prediction callers clamp mip to the allocation's <=16-mip range.
+uint t3d_vt_prediction_mip_extent(uint extent, uint mip)
+{
+	uint safe_extent = max(extent, 1u);
+	return ((safe_extent - 1u) >> mip) + 1u;
+}
+
+uint t3d_vt_prediction_relative_mip_base(T3DVTAllocation allocation, uint mip)
+{
+	uint page = 0u;
+	uint width = t3d_vt_allocation_mip0_width(allocation);
+	uint height = t3d_vt_allocation_mip0_height(allocation);
+	for (uint level = 0u; level < mip; ++level)
+	{
+		page += width * height;
+		width = width > 1u ? (width + 1u) >> 1u : 1u;
+		height = height > 1u ? (height + 1u) >> 1u : 1u;
+	}
+	return page;
+}
+
+uint t3d_vt_prediction_mip_base(T3DVTAllocation allocation, uint mip)
+{
+	return allocation.baseVirtualPage + t3d_vt_prediction_relative_mip_base(allocation, mip);
+}
+
+bool t3d_vt_prediction_page_set_sibling(
+uint allocation_a_id, T3DVTAllocation a, uint allocation_b_id, T3DVTAllocation b)
+{
+	// V1 runtime expands each canonical logical allocation into a fixed three-slot
+	// channel group. Integer group identity is collision-free; matching layout
+	// fields prove that one mip/rectangle derivation is valid for both siblings.
+	return allocation_a_id / T3D_VT_V1_RUNTIME_CHANNELS_PER_ALLOCATION
+	== allocation_b_id / T3D_VT_V1_RUNTIME_CHANNELS_PER_ALLOCATION
+	&& a.pageCount == b.pageCount && a.packedMip0Extent == b.packedMip0Extent
+	&& a.packedMipCountFlags == b.packedMipCountFlags && a.generation == b.generation
+	&& a.contentId == b.contentId;
+}
+
+T3DVTPredictionRect t3d_vt_prediction_rect(T3DVTAllocation allocation, uint mip, vec2 uv_min_input, vec2 uv_max_input)
+{
+	T3DVTPredictionRect rect;
+	rect.mip = mip;
+	rect.width = t3d_vt_prediction_mip_extent(t3d_vt_allocation_mip0_width(allocation), mip);
+	rect.height = t3d_vt_prediction_mip_extent(t3d_vt_allocation_mip0_height(allocation), mip);
+	vec2 uv_min = min(uv_min_input, uv_max_input);
+	vec2 uv_max = max(uv_min_input, uv_max_input);
+	bool full_u = uv_min.x < 0.0 || uv_max.x > 1.0 || (uv_max.x - uv_min.x) >= 1.0;
+	bool full_v = uv_min.y < 0.0 || uv_max.y > 1.0 || (uv_max.y - uv_min.y) >= 1.0;
+	vec2 lo = clamp(uv_min, vec2(0.0), vec2(1.0));
+	vec2 hi = clamp(uv_max, vec2(0.0), vec2(1.0));
+	rect.min_x = full_u ? 0u : min(uint(floor(lo.x * float(rect.width))), rect.width - 1u);
+	rect.max_x = full_u ? rect.width - 1u : min(uint(floor(hi.x * float(rect.width))), rect.width - 1u);
+	rect.min_y = full_v ? 0u : min(uint(floor(lo.y * float(rect.height))), rect.height - 1u);
+	rect.max_y = full_v ? rect.height - 1u : min(uint(floor(hi.y * float(rect.height))), rect.height - 1u);
+	rect.page_span = (rect.max_x - rect.min_x + 1u) * (rect.max_y - rect.min_y + 1u);
+	rect.relative_mip_base = t3d_vt_prediction_relative_mip_base(allocation, mip);
+	return rect;
+}
+
+uint t3d_vt_page_resolved_mip(T3DVTPageEntry page)
+{
+	return page.packedResolvedMipFlags & 0xffffu;
+}
+
+uint t3d_vt_page_flags(T3DVTPageEntry page)
+{
+	return page.packedResolvedMipFlags >> 16u;
+}
+
+uint t3d_vt_mip_layout_width(T3DVTMipLayout mipLayout)
+{
+	return mipLayout.packedExtent & 0xffffu;
+}
+
+uint t3d_vt_mip_layout_height(T3DVTMipLayout mipLayout)
+{
+	return mipLayout.packedExtent >> 16u;
+}
+
+uint t3d_vt_mip_layout_index(uint allocationId, uint mip)
+{
+	return allocationId * T3D_VT_MAX_MIPS + mip;
+}
+
+uint t3d_vt_request_wanted_mip(T3DVTRequest request)
+{
+	return request.packedWantedMipPriority & 0xffffu;
+}
+
+uint t3d_vt_request_priority(T3DVTRequest request)
+{
+	return request.packedWantedMipPriority >> 16u;
+}
+
+uint t3d_vt_tail_width(T3DVTTailMetadata tail)
+{
+	return tail.packedExtent & 0xffffu;
+}
+
+uint t3d_vt_tail_height(T3DVTTailMetadata tail)
+{
+	return tail.packedExtent >> 16u;
+}
+
+uint t3d_vt_tail_first_mip(T3DVTTailMetadata tail)
+{
+	return tail.packedMipRange & 0xffffu;
+}
+
+uint t3d_vt_tail_mip_count(T3DVTTailMetadata tail)
+{
+	return tail.packedMipRange >> 16u;
+}
+
+uint t3d_vt_resolve_fallback_depth(T3DVTResolveResult result)
+{
+	return result.packedFallbackDepthFlags & 0xffffu;
+}
+
+uint t3d_vt_resolve_flags(T3DVTResolveResult result)
+{
+	return result.packedFallbackDepthFlags >> 16u;
+}
+
+uint t3d_vt_resolve_requested_mip(T3DVTResolveResult result)
+{
+	return result.packedRequestedResolvedMip & 0xffffu;
+}
+
+uint t3d_vt_resolve_resolved_mip(T3DVTResolveResult result)
+{
+	return result.packedRequestedResolvedMip >> 16u;
+}
+
+void t3d_vt_resolve_set_requested_mip(inout T3DVTResolveResult result, uint mip)
+{
+	result.packedRequestedResolvedMip = (result.packedRequestedResolvedMip & 0xffff0000u) | min(mip, 0xffffu);
+}
+
+void t3d_vt_resolve_set_resolved_mip(inout T3DVTResolveResult result, uint mip)
+{
+	result.packedRequestedResolvedMip = (result.packedRequestedResolvedMip & 0x0000ffffu) | (min(mip, 0xffffu) << 16u);
+}
+
+void t3d_vt_resolve_set_fallback_flags(inout T3DVTResolveResult result, uint fallbackDepth, uint flags)
+{
+	result.packedFallbackDepthFlags = min(fallbackDepth, 0xffffu) | (min(flags, 0xffffu) << 16u);
+}
+
+#endif // TERRAIN3D_VT_COMMON_INC_GLSL

@@ -34,6 +34,14 @@ typedef struct sirVirtualTexturePackMetadataBuffer_s
 	uint64_t nCapacity;
 } sirVirtualTexturePackMetadataBuffer_t;
 
+typedef struct sirVirtualTexturePackRange_s
+{
+	const char *pszPath;
+	uint64_t nPackageOffset;
+	uint64_t nPackageBytes;
+	bool bStrictHash;
+} sirVirtualTexturePackRange_t;
+
 // Native Terrain3D Sparse V1 file source, without Godot FileAccess or heap
 // payload staging. Metadata remains caller-owned; the file remains open for
 // bounded payload reads. Same file must remain immutable while in use.
@@ -51,6 +59,9 @@ public:
 
 	bool open( const char *pszPath, const sirVirtualTexturePackMetadataBuffer_t& buffer, bool bStrictHash,
 	           sirVirtualTexturePackView_t *pView ) noexcept;
+	// Catalog-selected immutable byte interval within an existing SIRPack file.
+	bool openRange( const sirVirtualTexturePackRange_t& range, const sirVirtualTexturePackMetadataBuffer_t& buffer,
+	                sirVirtualTexturePackView_t *pView ) noexcept;
 	bool readPayload( uint64_t nOffset, void *pDestination, uint32_t nBytes ) noexcept;
 	bool readCluster( const sirVirtualTexturePackView_t& view, uint32_t nClusterId, const sirVirtualTextureClusterBuffers_t& buffers,
 	                  const sirVirtualTextureClusterCodec_t *pCodec ) noexcept;
@@ -60,6 +71,7 @@ protected:
 private:
 	SIRPlatformFile m_File;
 	uint64_t m_nFileBytes;
+	uint64_t m_nContainerOffset;
 	uint64_t m_nPayloadOffset;
 	uint64_t m_nPayloadBytes;
 	uint64_t m_nReadCount;

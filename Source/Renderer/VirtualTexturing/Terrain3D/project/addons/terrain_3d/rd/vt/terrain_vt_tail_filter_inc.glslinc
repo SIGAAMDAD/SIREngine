@@ -1,0 +1,121 @@
+#ifndef TERRAIN3D_VT_TAIL_FILTER_INC_GLSL
+#define TERRAIN3D_VT_TAIL_FILTER_INC_GLSL
+
+#ifndef TERRAIN3D_VT_COMMON_INC_GLSL
+#error "terrain_vt_tail_filter_inc.glslinc requires terrain_vt_common_inc.glslinc"
+#endif
+#ifndef TERRAIN3D_VT_FILTER_MATH_INC_GLSL
+#error "terrain_vt_tail_filter_inc.glslinc requires terrain_vt_filter_math_inc.glslinc"
+#endif
+
+// P07/P09 bounded manual filtering. The packed compact tail is a single-mip
+// atlas, so hardware textureGrad() cannot be allowed to walk across adjacent
+// horizontal virtual submips. We instead keep the selected virtual mip fixed
+// and integrate up to four linear samples inside a half-texel-safe rectangle.
+struct T3DVTBoundedFilterPlan
+{
+	vec2 atlas_extent;
+	vec2 safe_min_texel;
+	vec2 safe_max_texel;
+	vec2 center_texel;
+	vec2 major_dir;
+	float span_texels;
+	uint tap_count;
+	uint nearest;
+};
+
+T3DVTBoundedFilterPlan t3d_vt_bounded_filter_plan(vec2 center_texel,
+vec2 safe_min_texel,
+vec2 safe_max_texel,
+vec2 atlas_extent,
+vec2 ddx_uv,
+vec2 ddy_uv,
+vec2 virtual_texels,
+bool nearest,
+bool anisotropic)
+{
+	T3DVTBoundedFilterPlan plan;
+	plan.atlas_extent = max(atlas_extent, vec2(1.0));
+	plan.safe_min_texel = min(safe_min_texel, safe_max_texel);
+	plan.safe_max_texel = max(safe_min_texel, safe_max_texel);
+	plan.center_texel = clamp(center_texel, plan.safe_min_texel, plan.safe_max_texel);
+	plan.major_dir = vec2(1.0, 0.0);
+	plan.span_texels = 0.0;
+	plan.tap_count = 1u;
+	plan.nearest = nearest ? 1u : 0u;
+
+	if (nearest)
+	{
+		plan.center_texel = clamp(floor(plan.center_texel) + vec2(0.5), plan.safe_min_texel, plan.safe_max_texel);
+	}
+	if (!anisotropic)
+		return plan;
+
+	T3DVTFilterFootprintAxes axes = t3d_vt_filter_footprint_axes(ddx_uv, ddy_uv, max(virtual_texels, vec2(1.0)));
+	float filtered_minor = max(axes.minor, axes.major / float(T3D_VT_MAX_ANISOTROPY));
+	float ratio = clamp(axes.major / max(filtered_minor, 1.0e-6), 1.0, float(T3D_VT_MAX_ANISOTROPY));
+	plan.major_dir = axes.major_dir;
+	plan.tap_count = ratio > 2.5 ? 4u : (ratio > 1.25 ? 2u : 1u);
+	// The virtual LOD already reduced the minor footprint toward one texel.
+	// Integrate only the residual major-axis extent, capped to the 4:1 policy.
+	plan.span_texels = min(max(axes.major - max(filtered_minor, 1.0), 0.0),
+	float(T3D_VT_MAX_ANISOTROPY - 1u));
+	if (plan.span_texels <= 1.0e-5)
+		plan.tap_count = 1u;
+	return plan;
+}
+
+vec2 t3d_vt_bounded_filter_tap_uv(T3DVTBoundedFilterPlan plan, uint tap_index)
+{
+	uint tap_count = max(plan.tap_count, 1u);
+	uint clamped_index = min(tap_index, tap_count - 1u);
+	float centered = (float(clamped_index) + 0.5) / float(tap_count) - 0.5;
+	vec2 texel = plan.center_texel + plan.major_dir * (centered * plan.span_texels);
+	if (plan.nearest != 0u)
+		texel = floor(texel) + vec2(0.5);
+	texel = clamp(texel, plan.safe_min_texel, plan.safe_max_texel);
+	return texel / plan.atlas_extent;
+}
+
+T3DVTBoundedFilterPlan t3d_vt_tail_filter_plan(T3DVTTailMetadata tail,
+uint resolved_mip,
+vec2 wrapped_uv,
+vec2 ddx_uv,
+vec2 ddy_uv,
+ivec2 atlas_size,
+bool nearest,
+bool anisotropic)
+{
+	uint tail_first_mip = t3d_vt_tail_first_mip(tail);
+	uint tail_mip_count = max(t3d_vt_tail_mip_count(tail), 1u);
+	uint tail_delta = min(resolved_mip >= tail_first_mip ? resolved_mip - tail_first_mip : 0u, tail_mip_count - 1u);
+	uint first_width = max(t3d_vt_tail_width(tail), 1u);
+	uint first_height = max(t3d_vt_tail_height(tail), 1u);
+	uint mip_x = t3d_vt_tail_mip_offset(first_width, tail_delta);
+	vec2 extent = vec2(float(max(first_width >> tail_delta, 1u)), float(max(first_height >> tail_delta, 1u)));
+	vec2 origin = vec2(float(tail.atlasX + mip_x), float(tail.atlasY));
+	vec2 safe_min = origin + vec2(0.5);
+	vec2 safe_max = origin + extent - vec2(0.5);
+	vec2 center = origin + vec2(0.5) + wrapped_uv * max(extent - vec2(1.0), vec2(0.0));
+	return t3d_vt_bounded_filter_plan(center, safe_min, safe_max,
+	vec2(float(max(atlas_size.x, 1)), float(max(atlas_size.y, 1))),
+	ddx_uv, ddy_uv, extent, nearest, anisotropic);
+}
+
+T3DVTBoundedFilterPlan t3d_vt_physical_filter_plan(vec2 tile_uv,
+vec2 ddx_uv,
+vec2 ddy_uv,
+uint resolved_packed_extent,
+bool nearest,
+bool anisotropic)
+{
+	uint pages_x = max(resolved_packed_extent & 0xffffu, 1u);
+	uint pages_y = max(resolved_packed_extent >> 16u, 1u);
+	vec2 virtual_texels = vec2(float(pages_x * T3D_VT_PAGE_INTERIOR), float(pages_y * T3D_VT_PAGE_INTERIOR));
+	vec2 atlas_extent = vec2(float(T3D_VT_PHYSICAL_TILE));
+	vec2 center = tile_uv * atlas_extent;
+	return t3d_vt_bounded_filter_plan(center, vec2(0.5), atlas_extent - vec2(0.5), atlas_extent,
+	ddx_uv, ddy_uv, virtual_texels, nearest, anisotropic);
+}
+
+#endif // TERRAIN3D_VT_TAIL_FILTER_INC_GLSL
