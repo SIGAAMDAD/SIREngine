@@ -211,6 +211,10 @@ int main()
 	buffer[7] ^= 1;
 	TEST( reader.open( buffer, bytes ) == SIR_MESH_PACK_INVALID_FORMAT );
 	buffer[7] ^= 1;
+	TEST( sirPackRead16( buffer + 4 ) == 1 );
+	buffer[4] = 3; // Retired pre-v1 draft geometry schema is not accepted.
+	TEST( reader.open( buffer, bytes ) == SIR_MESH_PACK_UNSUPPORTED_VERSION );
+	buffer[4] = 1;
 	buffer[4] += 1;
 	TEST( reader.open( buffer, bytes ) == SIR_MESH_PACK_UNSUPPORTED_VERSION );
 	buffer[4] -= 1;
