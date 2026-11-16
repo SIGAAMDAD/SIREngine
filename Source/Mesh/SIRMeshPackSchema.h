@@ -26,10 +26,10 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Mesh/SIRMeshCache.h>
 #include <Resources/SIRPackFormat.h>
 
-// SIRG V3 is one immutable SIRPack GEOMETRY resource: chunk 0 is this
+// SIRG V1 is one immutable SIRPack GEOMETRY resource: chunk 0 is this
 // manifest; chunks 1..N hold page payloads. Chunk IDs are stable within a
 // revision. The runtime never stores a native shape, device handle or pointer.
-static constexpr uint16_t SIR_MESH_PACK_VERSION = 3;
+static constexpr uint16_t SIR_MESH_PACK_VERSION = 1;
 static constexpr uint32_t SIR_MESH_PACK_FORMAT_ID = 0x47524953U; // 'SIRG' as LE
 static constexpr uint32_t SIR_MESH_PACK_MAX_RECORDS = 1048576;
 static constexpr uint32_t SIR_MESH_PACK_NO_PARENT = 0xffffffffU;
