@@ -151,3 +151,63 @@
 [submodule "ThirdParty/GoogleBenchmark"]
 	path = ThirdParty/GoogleBenchmark
 	url = https://github.com/google/benchmark.git
+[submodule "ThirdParty/ADLX"]
+	path = ThirdParty/ADLX
+	url = https://github.com/GPUOpen-LibrariesAndSDKs/ADLX.git
+[submodule "ThirdParty/AGS"]
+	path = ThirdParty/AGS
+	url = https://github.com/GPUOpen-LibrariesAndSDKs/AGS_SDK.git
+[submodule "ThirdParty/AntiLag2"]
+	path = ThirdParty/AntiLag2
+	url = https://github.com/GPUOpen-LibrariesAndSDKs/AntiLag2-SDK.git
+[submodule "ThirdParty/DGF"]
+	path = ThirdParty/DGF
+	url = https://github.com/GPUOpen-LibrariesAndSDKs/DGF-SDK.git
+[submodule "ThirdParty/HIPRT"]
+	path = ThirdParty/HIPRT
+	url = https://github.com/GPUOpen-LibrariesAndSDKs/HIPRT.git
+[submodule "ThirdParty/RadeonRays"]
+	path = ThirdParty/RadeonRays
+	url = https://github.com/GPUOpen-LibrariesAndSDKs/RadeonRays_SDK.git
+[submodule "ThirdParty/NRD"]
+	path = ThirdParty/NRD
+	url = https://github.com/NVIDIA-RTX/NRD.git
+[submodule "ThirdParty/NRI"]
+	path = ThirdParty/NRI
+	url = https://github.com/NVIDIA-RTX/NRI.git
+[submodule "ThirdParty/NVRHI"]
+	path = ThirdParty/NVRHI
+	url = https://github.com/NVIDIA-RTX/NVRHI.git
+[submodule "ThirdParty/OMM"]
+	path = ThirdParty/OMM
+	url = https://github.com/NVIDIA-RTX/OMM.git
+[submodule "ThirdParty/RTXCR"]
+	path = ThirdParty/RTXCR
+	url = https://github.com/NVIDIA-RTX/RTXCR.git
+[submodule "ThirdParty/RTXDI"]
+	path = ThirdParty/RTXDI
+	url = https://github.com/NVIDIA-RTX/RTXDI.git
+[submodule "ThirdParty/RTXGI"]
+	path = ThirdParty/RTXGI
+	url = https://github.com/NVIDIA-RTX/RTXGI.git
+[submodule "ThirdParty/RTXMG"]
+	path = ThirdParty/RTXMG
+	url = https://github.com/NVIDIA-RTX/RTXMG.git
+[submodule "ThirdParty/RTXMU"]
+	path = ThirdParty/RTXMU
+	url = https://github.com/NVIDIA-RTX/RTXMU.git
+[submodule "ThirdParty/RTXNS"]
+	path = ThirdParty/RTXNS
+	url = https://github.com/NVIDIA-RTX/RTXNS.git
+[submodule "ThirdParty/RTXNTC"]
+	path = ThirdParty/RTXNTC
+	url = https://github.com/NVIDIA-RTX/RTXNTC.git
+[submodule "ThirdParty/RTXPT"]
+	path = ThirdParty/RTXPT
+	url = https://github.com/NVIDIA-RTX/RTXPT.git
+[submodule "ThirdParty/RTXTF"]
+	path = ThirdParty/RTXTF
+	url = https://github.com/NVIDIA-RTX/RTXTF.git
+[submodule "ThirdParty/RTXTS"]
+	path = ThirdParty/RTXTS
+	url = https://github.com/NVIDIA-RTX/RTXTS.git

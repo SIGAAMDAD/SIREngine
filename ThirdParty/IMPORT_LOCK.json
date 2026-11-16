@@ -310,6 +310,146 @@
       "sha": "0b9b49cf4a2c9229fc052d6716e1528b2f23e91a",
       "ref": "master",
       "category": "diagnostics"
+    },
+    {
+      "path": "ThirdParty/ADLX",
+      "url": "https://github.com/GPUOpen-LibrariesAndSDKs/ADLX.git",
+      "sha": "32b5a740d42295c5dfe9026b9f52683da0f3af91",
+      "ref": "main",
+      "category": "graphics"
+    },
+    {
+      "path": "ThirdParty/AGS",
+      "url": "https://github.com/GPUOpen-LibrariesAndSDKs/AGS_SDK.git",
+      "sha": "086c47ed8e427199510887230718cd7c086f9702",
+      "ref": "master",
+      "category": "graphics"
+    },
+    {
+      "path": "ThirdParty/AntiLag2",
+      "url": "https://github.com/GPUOpen-LibrariesAndSDKs/AntiLag2-SDK.git",
+      "sha": "390aa4a8c8655d0ae6e90079db2c85e103a96da3",
+      "ref": "main",
+      "category": "latency"
+    },
+    {
+      "path": "ThirdParty/DGF",
+      "url": "https://github.com/GPUOpen-LibrariesAndSDKs/DGF-SDK.git",
+      "sha": "d97e46493b92d7b2e4445f740fc9dcc7ff53aff3",
+      "ref": "main",
+      "category": "geometry"
+    },
+    {
+      "path": "ThirdParty/HIPRT",
+      "url": "https://github.com/GPUOpen-LibrariesAndSDKs/HIPRT.git",
+      "sha": "0629d08568fff39f9a36bf9ee800fc7bac5bb096",
+      "ref": "main",
+      "category": "raytracing"
+    },
+    {
+      "path": "ThirdParty/RadeonRays",
+      "url": "https://github.com/GPUOpen-LibrariesAndSDKs/RadeonRays_SDK.git",
+      "sha": "c8890b96b1f976bedd2cd280cc170dff5d655e0a",
+      "ref": "master",
+      "category": "raytracing"
+    },
+    {
+      "path": "ThirdParty/NRD",
+      "url": "https://github.com/NVIDIA-RTX/NRD.git",
+      "sha": "90dea8bd91ec6b58d0f90cb6adf53c7da613b82c",
+      "ref": "master",
+      "category": "denoising"
+    },
+    {
+      "path": "ThirdParty/NRI",
+      "url": "https://github.com/NVIDIA-RTX/NRI.git",
+      "sha": "cb3ab322b64ae5bfe8587154a6ef3b1459fdd415",
+      "ref": "main",
+      "category": "graphics"
+    },
+    {
+      "path": "ThirdParty/NVRHI",
+      "url": "https://github.com/NVIDIA-RTX/NVRHI.git",
+      "sha": "bf0bbd9b666a7297492beb1999a4ddc0dfded143",
+      "ref": "main",
+      "category": "graphics"
+    },
+    {
+      "path": "ThirdParty/OMM",
+      "url": "https://github.com/NVIDIA-RTX/OMM.git",
+      "sha": "c687a3fd1ca8255f7b32009bbd4f904e9321423f",
+      "ref": "main",
+      "category": "geometry"
+    },
+    {
+      "path": "ThirdParty/RTXCR",
+      "url": "https://github.com/NVIDIA-RTX/RTXCR.git",
+      "sha": "9db7dd36cb322f67f0a4ceb1cb30ba503fd0bd86",
+      "ref": "main",
+      "category": "rendering"
+    },
+    {
+      "path": "ThirdParty/RTXDI",
+      "url": "https://github.com/NVIDIA-RTX/RTXDI.git",
+      "sha": "fdbd9b36dc55827b67a03f926e78cfad9b1c1c57",
+      "ref": "main",
+      "category": "lighting"
+    },
+    {
+      "path": "ThirdParty/RTXGI",
+      "url": "https://github.com/NVIDIA-RTX/RTXGI.git",
+      "sha": "04372d7f91bb3a0444f9fd95d3f34381ea4e3b39",
+      "ref": "main",
+      "category": "lighting"
+    },
+    {
+      "path": "ThirdParty/RTXMG",
+      "url": "https://github.com/NVIDIA-RTX/RTXMG.git",
+      "sha": "5895f731f0f39c496333bb67cc62e3a25b8c9b57",
+      "ref": "main",
+      "category": "geometry"
+    },
+    {
+      "path": "ThirdParty/RTXMU",
+      "url": "https://github.com/NVIDIA-RTX/RTXMU.git",
+      "sha": "3167d8187144d0cedbbe77e60e92a1d6147d9500",
+      "ref": "main",
+      "category": "memory"
+    },
+    {
+      "path": "ThirdParty/RTXNS",
+      "url": "https://github.com/NVIDIA-RTX/RTXNS.git",
+      "sha": "f309ae68677a67060cc6ded2d0af925a3931435f",
+      "ref": "main",
+      "category": "neural"
+    },
+    {
+      "path": "ThirdParty/RTXNTC",
+      "url": "https://github.com/NVIDIA-RTX/RTXNTC.git",
+      "sha": "8311b54b4ae6ff54e488799f18ffd12b40e7742d",
+      "ref": "main",
+      "category": "textures"
+    },
+    {
+      "path": "ThirdParty/RTXPT",
+      "url": "https://github.com/NVIDIA-RTX/RTXPT.git",
+      "sha": "303b408ab81790a5051abd7573830b7a4112eb8e",
+      "ref": "main",
+      "category": "raytracing"
+    },
+    {
+      "path": "ThirdParty/RTXTF",
+      "url": "https://github.com/NVIDIA-RTX/RTXTF.git",
+      "sha": "992678902cbe95ef520e84153d60ad97eb124e54",
+      "ref": "main",
+      "category": "textures"
+    },
+    {
+      "path": "ThirdParty/RTXTS",
+      "url": "https://github.com/NVIDIA-RTX/RTXTS.git",
+      "sha": "dea7c6bfd170f540ec77cbb668b3a614f544a60f",
+      "ref": "main",
+      "category": "streaming"
     }
   ],
   "external_sdks": [
@@ -320,5 +460,7 @@
     }
   ],
   "source_loader_policy": "Engine-owned OpenGL and Vulkan entrypoint loaders; no glad/volk dependency",
-  "source_commit": "5d5beee72b845c1efcc2f9757b42039cd97df4bd"
+  "source_commit": "5d5beee72b845c1efcc2f9757b42039cd97df4bd",
+  "sdk_extension_base_commit": "c73d4eeda179135e2af5d6ea938ec284cbbb3fb9",
+  "sdk_extension_count": 20
 }

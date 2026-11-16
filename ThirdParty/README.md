@@ -28,6 +28,11 @@ Vendor source lives under `ThirdParty/` as **pinned Git submodules**, not copied
 | Media codecs | `libogg`, `libvorbis`, `Opus` |
 | Storage | `SQLite` |
 | Diagnostics | `libbacktrace` |
+| NVIDIA graphics interfaces | `NRI`, `NVRHI` |
+| NVIDIA RTX rendering, geometry and lighting | `NRD`, `OMM`, `RTXCR`, `RTXDI`, `RTXGI`, `RTXMG`, `RTXMU`, `RTXNS`, `RTXNTC`, `RTXPT`, `RTXTF`, `RTXTS` |
+| AMD GPU, geometry, ray tracing and latency | `ADLX`, `AGS`, `AntiLag2`, `DGF`, `HIPRT`, `RadeonRays` |
+
+AGS shader intrinsics are included in the `AGS` submodule (`AGS_SDK`), not duplicated as a second SDK. Existing `XeSS` and `FidelityFX` gitlinks remain unchanged. Source import alone does not enable SDK integration or vendor-specific features.
 
 ## Source acquisition
 

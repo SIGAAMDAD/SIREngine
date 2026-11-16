@@ -57,7 +57,7 @@ Normal push/PR builds compile the minimal SIREngine foundation without requiring
 
 ## Additional pinned third-party source imports
 
-The [`ThirdParty/IMPORT_LOCK.json`](../ThirdParty/IMPORT_LOCK.json) manifest records **44 new pinned source gitlinks** and their verified upstream commit SHAs. `.gitmodules` registers the corresponding fetch URLs. These are source acquisitions only: there are **no new always-on CMake targets**, successful vendor builds, runtime adapters, or performance claims in this change.
+The [`ThirdParty/IMPORT_LOCK.json`](../ThirdParty/IMPORT_LOCK.json) manifest records **64 pinned source gitlinks**, including **20 graphics SDK additions** and their verified upstream commit SHAs. `.gitmodules` registers the corresponding fetch URLs. These are source acquisitions only: there are **no new always-on CMake targets**, successful vendor builds, runtime adapters, or performance claims in this change.
 
 ```sh
 git submodule update --init --recursive
@@ -71,3 +71,7 @@ git submodule update --init --recursive
 - Steamworks is obtained separately through Valve and is not vendored.
 - OpenGL and Vulkan function loading remain engine-owned: do not add GLAD or volk.
 - Shipping any enabled dependency requires its own build/link/runtime and licensing acceptance, including transitive codec libraries or SDK components.
+
+### Additional GPU SDK source imports (2026-11-15)
+
+`ThirdParty/` now pins NVIDIA NRI, NVRHI, NRD, OMM, RTXCR, RTXDI, RTXGI, RTXMG, RTXMU, RTXNS, RTXNTC, RTXPT, RTXTF and RTXTS; AMD ADLX, AGS_SDK, AntiLag2-SDK, DGF-SDK, HIPRT and RadeonRays_SDK. The `AGS` checkout includes AGS shader intrinsics. `XeSS` and `FidelityFX` were already pinned and are intentionally unchanged. These sources are not automatically compiled or linked by the default engine build; any enabled provider requires a separately validated target, runtime capability checks and per-SDK license acceptance. Exact upstream commit SHA, branch and URL for each import are recorded in `ThirdParty/IMPORT_LOCK.json`.

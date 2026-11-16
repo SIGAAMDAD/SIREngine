@@ -19,3 +19,7 @@ The root [LICENSE](LICENSE) is the Mozilla Public License 2.0 for SIREngine-owne
 The newly registered open-source and public SDK source repositories are enumerated in [`ThirdParty/IMPORT_LOCK.json`](ThirdParty/IMPORT_LOCK.json). They retain their upstream license terms, notices, and authored source trees inside the individual submodules. In particular, Zstandard permits a BSD license choice distinct from its GPL alternative, and no GPL licensing is applied to SIREngine by this import.
 
 Public repository availability does not grant unrestricted redistribution of every bundled binary/SDK. Review the vendor licenses for XeSS, Streamline, FidelityFX and other platform/tooling SDKs before packaging them in an engine release. Steamworks is a separate licensed SDK and has not been committed.
+
+## Graphics and GPU SDK additions (2026-11-15)
+
+Additional upstream source links are pinned in `ThirdParty/IMPORT_LOCK.json`: NVIDIA `NRI`, `NVRHI`, `NRD`, `OMM`, `RTXCR`, `RTXDI`, `RTXGI`, `RTXMG`, `RTXMU`, `RTXNS`, `RTXNTC`, `RTXPT`, `RTXTF`, `RTXTS`; AMD `ADLX`, `AGS`, `AntiLag2`, `DGF`, `HIPRT`, `RadeonRays`. The AMD AGS shader intrinsics are part of `AGS_SDK`. Existing XeSS and FidelityFX pins are preserved. Each vendor SDK retains its upstream license, component-level notices and redistribution terms; importing a gitlink does not assert that binaries can be redistributed or that SIREngine's native integration is complete.
