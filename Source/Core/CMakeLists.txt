@@ -11,16 +11,333 @@ else()
     target_compile_options(SIRCore PRIVATE -Wall -Wextra -Wpedantic)
 endif()
 
-add_subdirectory(Input)
-add_subdirectory(Platform)
+block(SCOPE_FOR VARIABLES)
+# -- Core/Input --
+# Logical input services belong to Core independent of the native OS providers.
+target_sources(SIRCore PRIVATE
+    ${PROJECT_SOURCE_DIR}/Source/Core/Input/SIRInputActions.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Core/Input/SIRInputBackend.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Core/Input/SIRInputControllerProfiles.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Core/Input/SIRInputDeviceRegistry.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Core/Input/SIRInputFrameState.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Core/Input/SIRInputHaptics.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Core/Input/SIRInputHistory.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Core/Input/SIRInputReplay.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Core/Input/SIRInputService.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Core/Input/SIRInputText.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Core/Input/SIRInputUIDispatch.cpp
+)
+endblock()
+block(SCOPE_FOR VARIABLES)
+# -- Core/Platform --
+# Native OS services belong to the Core library and share its lifecycle.
+set(SIR_CORE_PLATFORM_COMMON
+    ${PROJECT_SOURCE_DIR}/Source/Core/Platform/SIRPlatformUtils.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Core/Platform/SIRPlatformNativeWindow.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Window/SIRWindowSystem.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Window/SIRNativeWindowHost.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Window/Headless/SIRWindowDriverHeadless.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Core/Platform/SIRVirtualMemory.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Core/Platform/SIRCPUInfo.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Core/Platform/SIRThread.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Core/Platform/SIRSync.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Core/Platform/SIRAtomic.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Core/Platform/SIRPlatformRootDirectory.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Core/Platform/SIRPlatformAtomicFile.cpp
+)
+
+if(WIN32)
+    set(SIR_CORE_PLATFORM_OS
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/SIRPlatformFileWindows.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/SIRPlatformContextWindows.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/SIRPlatformRootDirectoryWindows.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/SIRPlatformFileMappingWindows.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/SIRPlatformPipeWindows.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/SIRSemaphoreWindows.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/SIRVirtualMemoryWindows.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/SIRPlatformMemoryWindows.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/SIRCPUInfoWindows.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/SIRSystemInfoWindows.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/SIRDynamicLibraryWindows.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/SIRPlatformTimeWindows.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/SIRPlatformProcessWindows.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Window/Windows/SIRWindowDriverWin32.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Window/Windows/SIRWGLBootstrapWindow.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/SIRWin32InputBridge.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/SIRWindowsRawBackend.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/SIRWindowsRawDecode.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/SIRWindowsXInputBackend.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/SIRChildProcessWindows.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/SIRFileLockWindows.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/SIRPlatformFileSystemWindows.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/SIRPlatformThreadControlWindows.cpp
+    )
+    # GameInput is first-party Windows controller I/O. The runtime is loaded
+    # from the OS, while its v1 SDK header is an explicitly pinned build input.
+    if(SIR_WITH_GAMEINPUT)
+        find_path(SIR_GAMEINPUT_INCLUDE_DIR NAMES ${PROJECT_SOURCE_DIR}/Source/Core/Platform/GameInput.h HINTS "$ENV{SIR_GAMEINPUT_SDK_INCLUDE}")
+        if(SIR_GAMEINPUT_INCLUDE_DIR)
+            # Some Windows SDKs expose a different, incompatible GameInput.h.
+            # Compile the actual v1 symbols before enabling the native backend.
+            include(CheckCXXSourceCompiles)
+            include(CMakePushCheckState)
+            cmake_push_check_state(RESET)
+            set(CMAKE_REQUIRED_INCLUDES "${SIR_GAMEINPUT_INCLUDE_DIR}")
+            unset(SIR_GAMEINPUT_SDK_IS_V1 CACHE)
+            check_cxx_source_compiles([=[
+                #include <Windows.h>
+                #include <GameInput.h>
+                #if !defined(GAMEINPUT_API_VERSION) || GAMEINPUT_API_VERSION != 1
+                    #error SIREngine requires the GameInput v1 SDK
+                #endif
+                static_assert(GameInput::v1::GameInputGamepadA == 0x00000004);
+                int main() { return 0; }
+            ]=] SIR_GAMEINPUT_SDK_IS_V1)
+            cmake_pop_check_state()
+        endif()
+        if(SIR_GAMEINPUT_INCLUDE_DIR AND SIR_GAMEINPUT_SDK_IS_V1)
+            list(APPEND SIR_CORE_PLATFORM_OS
+                ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/SIRWindowsGameInputBackend.cpp
+                ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Windows/SIRWindowsGameInputCodec.cpp)
+            target_include_directories(SIRCore PRIVATE "${SIR_GAMEINPUT_INCLUDE_DIR}")
+            target_compile_definitions(SIRCore PUBLIC SIR_INPUT_GAMEINPUT_AVAILABLE=1)
+        elseif(SIR_REQUIRE_GAMEINPUT_SDK)
+            message(FATAL_ERROR "GameInput v1 SDK required but the selected ${PROJECT_SOURCE_DIR}/Source/Core/Platform/GameInput.h is missing or incompatible")
+        elseif(SIR_GAMEINPUT_INCLUDE_DIR)
+            message(STATUS "${PROJECT_SOURCE_DIR}/Source/Core/Platform/GameInput.h is not the v1 SDK; native GameInput disabled (XInput fallback remains available)")
+        endif()
+    elseif(SIR_REQUIRE_GAMEINPUT_SDK)
+        message(FATAL_ERROR "SIR_REQUIRE_GAMEINPUT_SDK requires SIR_WITH_GAMEINPUT=ON")
+    endif()
+    target_link_libraries(SIRCore PRIVATE psapi user32 imm32)
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    set(SIR_CORE_PLATFORM_OS
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/SIRPlatformFileLinux.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/SIRPlatformContextLinux.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/SIRPlatformRootDirectoryLinux.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/SIRPlatformFileMappingLinux.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/SIRPlatformPipeLinux.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/SIRSemaphoreLinux.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/SIRVirtualMemoryLinux.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/SIRPlatformMemoryLinux.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/SIRCPUInfoLinux.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/SIRSystemInfoLinux.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/SIRDynamicLibraryLinux.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/SIRPlatformTimeLinux.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/SIRPlatformProcessLinux.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/SIRLinuxEvdevBackend.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/SIRChildProcessLinux.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/SIRFileLockLinux.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/SIRPlatformFileSystemLinux.cpp
+        ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/SIRPlatformThreadControlLinux.cpp
+    )
+    if(SIR_WITH_WAYLAND_WINDOW)
+        find_package(PkgConfig QUIET)
+        if(PkgConfig_FOUND)
+            pkg_check_modules(SIR_WAYLAND_CLIENT QUIET IMPORTED_TARGET wayland-client)
+            pkg_get_variable(SIR_WAYLAND_PROTOCOL_DATA wayland-protocols pkgdatadir)
+        endif()
+        find_program(SIR_WAYLAND_SCANNER NAMES wayland-scanner)
+        set(SIR_XDG_SHELL_PROTOCOL "${SIR_WAYLAND_PROTOCOL_DATA}/stable/xdg-shell/xdg-shell.xml")
+        set(SIR_POINTER_CONSTRAINTS_PROTOCOL "${SIR_WAYLAND_PROTOCOL_DATA}/unstable/pointer-constraints/pointer-constraints-unstable-v1.xml")
+        set(SIR_RELATIVE_POINTER_PROTOCOL "${SIR_WAYLAND_PROTOCOL_DATA}/unstable/relative-pointer/relative-pointer-unstable-v1.xml")
+        set(SIR_FRACTIONAL_SCALE_PROTOCOL "${SIR_WAYLAND_PROTOCOL_DATA}/staging/fractional-scale/fractional-scale-v1.xml")
+        set(SIR_VIEWPORTER_PROTOCOL "${SIR_WAYLAND_PROTOCOL_DATA}/stable/viewporter/viewporter.xml")
+        if(SIR_WAYLAND_CLIENT_FOUND AND SIR_WAYLAND_SCANNER AND EXISTS "${SIR_XDG_SHELL_PROTOCOL}")
+            set(SIR_WAYLAND_GENERATED "${PROJECT_BINARY_DIR}/Source/Core/Platform/WaylandGenerated")
+            set(SIR_WAYLAND_PROTOCOL_H "${SIR_WAYLAND_GENERATED}/xdg-shell-client-protocol.h")
+            set(SIR_WAYLAND_PROTOCOL_C "${SIR_WAYLAND_GENERATED}/xdg-shell-protocol.c")
+            file(MAKE_DIRECTORY "${SIR_WAYLAND_GENERATED}")
+            add_custom_command(
+                OUTPUT "${SIR_WAYLAND_PROTOCOL_H}" "${SIR_WAYLAND_PROTOCOL_C}"
+                COMMAND "${SIR_WAYLAND_SCANNER}" client-header "${SIR_XDG_SHELL_PROTOCOL}" "${SIR_WAYLAND_PROTOCOL_H}"
+                COMMAND "${SIR_WAYLAND_SCANNER}" private-code "${SIR_XDG_SHELL_PROTOCOL}" "${SIR_WAYLAND_PROTOCOL_C}"
+                DEPENDS "${SIR_XDG_SHELL_PROTOCOL}"
+                VERBATIM)
+            set(SIR_WAYLAND_POINTER_GENERATED)
+            if(EXISTS "${SIR_POINTER_CONSTRAINTS_PROTOCOL}" AND EXISTS "${SIR_RELATIVE_POINTER_PROTOCOL}")
+                set(SIR_POINTER_CONSTRAINTS_H "${SIR_WAYLAND_GENERATED}/pointer-constraints-unstable-v1-client-protocol.h")
+                set(SIR_POINTER_CONSTRAINTS_C "${SIR_WAYLAND_GENERATED}/pointer-constraints-unstable-v1-protocol.c")
+                set(SIR_RELATIVE_POINTER_H "${SIR_WAYLAND_GENERATED}/relative-pointer-unstable-v1-client-protocol.h")
+                set(SIR_RELATIVE_POINTER_C "${SIR_WAYLAND_GENERATED}/relative-pointer-unstable-v1-protocol.c")
+                add_custom_command(
+                    OUTPUT "${SIR_POINTER_CONSTRAINTS_H}" "${SIR_POINTER_CONSTRAINTS_C}"
+                           "${SIR_RELATIVE_POINTER_H}" "${SIR_RELATIVE_POINTER_C}"
+                    COMMAND "${SIR_WAYLAND_SCANNER}" client-header "${SIR_POINTER_CONSTRAINTS_PROTOCOL}" "${SIR_POINTER_CONSTRAINTS_H}"
+                    COMMAND "${SIR_WAYLAND_SCANNER}" private-code "${SIR_POINTER_CONSTRAINTS_PROTOCOL}" "${SIR_POINTER_CONSTRAINTS_C}"
+                    COMMAND "${SIR_WAYLAND_SCANNER}" client-header "${SIR_RELATIVE_POINTER_PROTOCOL}" "${SIR_RELATIVE_POINTER_H}"
+                    COMMAND "${SIR_WAYLAND_SCANNER}" private-code "${SIR_RELATIVE_POINTER_PROTOCOL}" "${SIR_RELATIVE_POINTER_C}"
+                    DEPENDS "${SIR_POINTER_CONSTRAINTS_PROTOCOL}" "${SIR_RELATIVE_POINTER_PROTOCOL}"
+                    VERBATIM)
+                set(SIR_WAYLAND_POINTER_GENERATED "${SIR_POINTER_CONSTRAINTS_H}" "${SIR_POINTER_CONSTRAINTS_C}"
+                    "${SIR_RELATIVE_POINTER_H}" "${SIR_RELATIVE_POINTER_C}")
+                target_compile_definitions(SIRCore PRIVATE SIR_WAYLAND_POINTER_PROTOCOLS_AVAILABLE=1)
+            endif()
+            set(SIR_WAYLAND_FRACTIONAL_GENERATED)
+            if(EXISTS "${SIR_FRACTIONAL_SCALE_PROTOCOL}" AND EXISTS "${SIR_VIEWPORTER_PROTOCOL}")
+                set(SIR_FRACTIONAL_H "${SIR_WAYLAND_GENERATED}/fractional-scale-v1-client-protocol.h")
+                set(SIR_FRACTIONAL_C "${SIR_WAYLAND_GENERATED}/fractional-scale-v1-protocol.c")
+                set(SIR_VIEWPORTER_H "${SIR_WAYLAND_GENERATED}/viewporter-client-protocol.h")
+                set(SIR_VIEWPORTER_C "${SIR_WAYLAND_GENERATED}/viewporter-protocol.c")
+                add_custom_command(
+                    OUTPUT "${SIR_FRACTIONAL_H}" "${SIR_FRACTIONAL_C}" "${SIR_VIEWPORTER_H}" "${SIR_VIEWPORTER_C}"
+                    COMMAND "${SIR_WAYLAND_SCANNER}" client-header "${SIR_FRACTIONAL_SCALE_PROTOCOL}" "${SIR_FRACTIONAL_H}"
+                    COMMAND "${SIR_WAYLAND_SCANNER}" private-code "${SIR_FRACTIONAL_SCALE_PROTOCOL}" "${SIR_FRACTIONAL_C}"
+                    COMMAND "${SIR_WAYLAND_SCANNER}" client-header "${SIR_VIEWPORTER_PROTOCOL}" "${SIR_VIEWPORTER_H}"
+                    COMMAND "${SIR_WAYLAND_SCANNER}" private-code "${SIR_VIEWPORTER_PROTOCOL}" "${SIR_VIEWPORTER_C}"
+                    DEPENDS "${SIR_FRACTIONAL_SCALE_PROTOCOL}" "${SIR_VIEWPORTER_PROTOCOL}"
+                    VERBATIM)
+                set(SIR_WAYLAND_FRACTIONAL_GENERATED "${SIR_FRACTIONAL_H}" "${SIR_FRACTIONAL_C}"
+                    "${SIR_VIEWPORTER_H}" "${SIR_VIEWPORTER_C}")
+                target_compile_definitions(SIRCore PRIVATE SIR_WAYLAND_FRACTIONAL_SCALE_AVAILABLE=1)
+            endif()
+            add_custom_target(SIRWindowWaylandProtocol DEPENDS "${SIR_WAYLAND_PROTOCOL_H}" "${SIR_WAYLAND_PROTOCOL_C}"
+                ${SIR_WAYLAND_POINTER_GENERATED} ${SIR_WAYLAND_FRACTIONAL_GENERATED})
+            add_dependencies(SIRCore SIRWindowWaylandProtocol)
+            list(APPEND SIR_CORE_PLATFORM_OS
+                ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Window/Linux/SIRWindowDriverWayland.cpp
+                "${SIR_WAYLAND_PROTOCOL_C}"
+                ${SIR_WAYLAND_POINTER_GENERATED}
+                ${SIR_WAYLAND_FRACTIONAL_GENERATED})
+            target_include_directories(SIRCore PRIVATE "${SIR_WAYLAND_GENERATED}")
+            target_link_libraries(SIRCore PRIVATE PkgConfig::SIR_WAYLAND_CLIENT)
+            target_compile_definitions(SIRCore PUBLIC SIR_WINDOW_WAYLAND_AVAILABLE=1)
+            if(SIR_WITH_WAYLAND_INPUT)
+                pkg_check_modules(SIR_WAYLAND_XKB QUIET IMPORTED_TARGET xkbcommon)
+                if(SIR_WAYLAND_XKB_FOUND)
+                    list(APPEND SIR_CORE_PLATFORM_OS ${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/SIRWaylandInputBridge.cpp)
+                    target_link_libraries(SIRCore PRIVATE PkgConfig::SIR_WAYLAND_XKB)
+                    target_compile_definitions(SIRCore PUBLIC SIR_INPUT_WAYLAND_AVAILABLE=1)
+                    target_compile_definitions(SIRCore PRIVATE SIR_WAYLAND_XKB_AVAILABLE=1)
+                elseif(SIR_REQUIRE_WAYLAND_INPUT)
+                    message(FATAL_ERROR "Native Wayland input requires xkbcommon and Wayland client development packages")
+                else()
+                    message(STATUS "Wayland seat input unavailable: missing xkbcommon development package")
+                endif()
+            elseif(SIR_REQUIRE_WAYLAND_INPUT)
+                message(FATAL_ERROR "SIR_REQUIRE_WAYLAND_INPUT requires SIR_WITH_WAYLAND_INPUT=ON")
+            endif()
+        elseif(SIR_REQUIRE_WAYLAND_WINDOW OR SIR_REQUIRE_WAYLAND_INPUT)
+            message(FATAL_ERROR "Native Wayland input/window requires wayland-client, wayland-scanner and wayland-protocols xdg-shell")
+        else()
+            message(STATUS "Native Wayland window backend unavailable; X11/headless remain separately selectable")
+        endif()
+    elseif(SIR_REQUIRE_WAYLAND_WINDOW)
+        message(FATAL_ERROR "SIR_REQUIRE_WAYLAND_WINDOW requires SIR_WITH_WAYLAND_WINDOW=ON")
+    elseif(SIR_REQUIRE_WAYLAND_INPUT)
+        message(FATAL_ERROR "SIR_REQUIRE_WAYLAND_INPUT requires SIR_WITH_WAYLAND_WINDOW=ON")
+    endif()
+    if(SIR_WITH_X11_INPUT AND NOT SIR_WITH_X11_WINDOW)
+        message(FATAL_ERROR "SIR_WITH_X11_INPUT requires SIR_WITH_X11_WINDOW=ON")
+    endif()
+    if(SIR_WITH_X11_WINDOW OR SIR_WITH_X11_INPUT)
+        find_package(X11 QUIET)
+        if(X11_FOUND)
+            if(SIR_WITH_X11_WINDOW)
+                list(APPEND SIR_CORE_PLATFORM_OS
+                    "${PROJECT_SOURCE_DIR}/Source/Core/Platform/Window/Linux/SIRWindowDriverX11.cpp")
+                target_compile_definitions(SIRCore PUBLIC SIR_WINDOW_X11_AVAILABLE=1)
+                if(X11_Xrandr_FOUND AND TARGET X11::Xrandr)
+                    target_link_libraries(SIRCore PRIVATE X11::Xrandr)
+                    target_compile_definitions(SIRCore PRIVATE SIR_WINDOW_XRANDR_AVAILABLE=1)
+                endif()
+            endif()
+            if(SIR_WITH_X11_INPUT)
+                list(APPEND SIR_CORE_PLATFORM_OS
+                    "${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/SIRLinuxX11Backend.cpp"
+                    "${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/SIRX11InputBridge.cpp")
+                target_compile_definitions(SIRCore PUBLIC SIR_INPUT_X11_AVAILABLE=1)
+                if(X11_Xi_FOUND AND TARGET X11::Xi)
+                    target_link_libraries(SIRCore PRIVATE X11::Xi)
+                    target_compile_definitions(SIRCore PUBLIC SIR_INPUT_XINPUT2_AVAILABLE=1)
+                endif()
+            endif()
+            target_link_libraries(SIRCore PRIVATE X11::X11)
+        endif()
+    endif()
+else()
+    message(FATAL_ERROR "SIRCore platform services currently support Windows and Linux")
+endif()
+
+target_sources(SIRCore PRIVATE ${SIR_CORE_PLATFORM_COMMON} ${SIR_CORE_PLATFORM_OS})
+if(CMAKE_DL_LIBS)
+    target_link_libraries(SIRCore PRIVATE "${CMAKE_DL_LIBS}")
+endif()
+find_package(Threads REQUIRED)
+target_link_libraries(SIRCore PRIVATE Threads::Threads)
+endblock()
 target_sources(SIRCore PRIVATE Memory/SIRMemoryManager.cpp Objects/SIRObjectRegistry.cpp)
-add_subdirectory(Memory)
-add_subdirectory(Events)
-add_subdirectory(Config)
-add_subdirectory(Strings)
-add_subdirectory(Registration)
-add_subdirectory(CVars)
-add_subdirectory(Console)
-add_subdirectory(Jobs)
-add_subdirectory(VFS)
+block(SCOPE_FOR VARIABLES)
+# -- Core/Memory --
+# Framework allocator implementations are subordinate to the SIR memory page authority.
+# The existing SIRMemoryManager.cpp remains owned by Source/Core/CMakeLists.txt.
+target_sources(SIRCore PRIVATE
+    ${PROJECT_SOURCE_DIR}/Source/Core/Memory/SIRAllocationRouter.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Core/Memory/SIRBitmapAllocator.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Core/Memory/SIRBuddyAllocator.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Core/Memory/SIRCacheAllocator.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Core/Memory/SIRCompactBucketAllocator.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Core/Memory/SIRFrameAllocator.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Core/Memory/SIRFreeListAllocator.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Core/Memory/SIRGeneralHeap.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Core/Memory/SIRHandleHeap.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Core/Memory/SIRHighLowAllocator.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Core/Memory/SIRHeapBlock.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Core/Memory/SIRJobScratchAllocator.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Core/Memory/SIRLinearAllocator.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Core/Memory/SIRMediumPageAllocator.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Core/Memory/SIRMemoryColdPageStager.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Core/Memory/SIRMemoryLayoutPlanner.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Core/Memory/SIRMemoryPressureCoordinator.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Core/Memory/SIRPageRunAllocator.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Core/Memory/SIRPoolAllocator.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Core/Memory/SIRReclaimableSizeClassAllocator.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Core/Memory/SIRRingAllocator.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Core/Memory/SIRSharedMemoryPool.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Core/Memory/SIRSizeClassAllocator.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Core/Memory/SIRSlabAllocator.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Core/Memory/SIRTLSFAllocator.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Core/Memory/SIRThreadLocalAllocator.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Core/Memory/SIRVirtualStackAllocator.cpp
+)
+endblock()
+block(SCOPE_FOR VARIABLES)
+# -- Core/Events --
+target_sources(SIRCore PRIVATE
+    ${PROJECT_SOURCE_DIR}/Source/Core/Events/SIREventRegistry.cpp
+)
+endblock()
+block(SCOPE_FOR VARIABLES)
+# -- Core/Config --
+target_sources(SIRCore PRIVATE
+    ${PROJECT_SOURCE_DIR}/Source/Core/Config/SIRConfigBudget.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Core/Config/Formats/Delimited/SIRDelimited.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Core/Config/Formats/INI/SIRIni.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Core/Config/SIRConfigAtomicFile.cpp)
+endblock()
+block(SCOPE_FOR VARIABLES)
+# -- Core/Strings --
+target_sources(SIRCore PRIVATE ${PROJECT_SOURCE_DIR}/Source/Core/Strings/SIRStringPool.cpp)
+endblock()
+block(SCOPE_FOR VARIABLES)
+# -- Core/Registration --
+target_sources(SIRCore PRIVATE ${PROJECT_SOURCE_DIR}/Source/Core/Registration/SIRRegistrationTypes.cpp ${PROJECT_SOURCE_DIR}/Source/Core/Registration/SIRRegistrationStringBridge.cpp ${PROJECT_SOURCE_DIR}/Source/Core/Registration/SIRRegistrationCatalog.cpp)
+endblock()
+block(SCOPE_FOR VARIABLES)
+# -- Core/CVars --
+target_sources(SIRCore PRIVATE ${PROJECT_SOURCE_DIR}/Source/Core/CVars/SIRCVarRegistry.cpp ${PROJECT_SOURCE_DIR}/Source/Core/CVars/SIRCVarValueCodec.cpp ${PROJECT_SOURCE_DIR}/Source/Core/CVars/SIRCVarConfigAdapter.cpp)
+endblock()
+block(SCOPE_FOR VARIABLES)
+# -- Core/Console --
+target_sources(SIRCore PRIVATE ${PROJECT_SOURCE_DIR}/Source/Core/Console/SIRConsoleService.cpp ${PROJECT_SOURCE_DIR}/Source/Core/Console/SIRConsoleConfigAdapter.cpp ${PROJECT_SOURCE_DIR}/Source/Core/Console/SIRConsoleSystem.cpp)
+endblock()
+block(SCOPE_FOR VARIABLES)
+# -- Core/Jobs --
+# Core-owned, bounded CPU task execution foundation.
+target_sources(SIRCore PRIVATE ${PROJECT_SOURCE_DIR}/Source/Core/Jobs/SIRTaskScheduler.cpp ${PROJECT_SOURCE_DIR}/Source/Core/Jobs/SIRTaskGraph.cpp ${PROJECT_SOURCE_DIR}/Source/Core/Jobs/SIRTaskFenceTracker.cpp)
+endblock()
+block(SCOPE_FOR VARIABLES)
+# -- Core/VFS --
+target_sources(SIRCore PRIVATE ${PROJECT_SOURCE_DIR}/Source/Core/VFS/SIRVFSPath.cpp ${PROJECT_SOURCE_DIR}/Source/Core/VFS/SIRVFSMountTable.cpp ${PROJECT_SOURCE_DIR}/Source/Core/VFS/SIRVFSOverlayResolver.cpp ${PROJECT_SOURCE_DIR}/Source/Core/VFS/SIRVFSFileHandleTable.cpp ${PROJECT_SOURCE_DIR}/Source/Core/VFS/SIRVFSDirectorySource.cpp)
+endblock()
 sir_configure_owned_target(SIRCore)

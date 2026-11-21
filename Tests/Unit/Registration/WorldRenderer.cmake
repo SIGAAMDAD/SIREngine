@@ -1,30 +1,30 @@
 # Native shader contract, material schema, GRDG source and pipeline fixtures.
-add_executable(SIRShaderPipelineTests SIRShaderPipelineTests.cpp)
+add_executable(SIRShaderPipelineTests ${PROJECT_SOURCE_DIR}/Tests/Unit/SIRShaderPipelineTests.cpp)
 target_link_libraries(SIRShaderPipelineTests PRIVATE SIR::Graphics)
 add_test(NAME renderer.shader.pipeline COMMAND SIRShaderPipelineTests)
 sir_configure_owned_target(SIRShaderPipelineTests)
 
 foreach(sirShaderUnit IN ITEMS SIRShaderContractsTests SIRShaderMaterialManifestTests SIRShaderGRDGTests)
-    add_executable(${sirShaderUnit} Shaders/${sirShaderUnit}.cpp)
+    add_executable(${sirShaderUnit} ${PROJECT_SOURCE_DIR}/Tests/Unit/Shaders/${sirShaderUnit}.cpp)
     target_link_libraries(${sirShaderUnit} PRIVATE SIR::Graphics)
     add_test(NAME renderer.shader.${sirShaderUnit} COMMAND ${sirShaderUnit})
     sir_configure_owned_target(${sirShaderUnit})
 endforeach()
 
 # Terrain3D Sparse VT V1 package contract and reference decoder.
-add_executable(SIRVirtualTexturePortTests SIRVirtualTexturePortTests.cpp)
+add_executable(SIRVirtualTexturePortTests ${PROJECT_SOURCE_DIR}/Tests/Unit/SIRVirtualTexturePortTests.cpp)
 target_link_libraries(SIRVirtualTexturePortTests PRIVATE SIR::Graphics)
 add_test(NAME renderer.virtual-texturing.terrain3d-v1 COMMAND SIRVirtualTexturePortTests)
 sir_configure_owned_target(SIRVirtualTexturePortTests)
 
 # Native Hi-Z reference and command validation.
-include(${CMAKE_CURRENT_SOURCE_DIR}/HIZFoundationTests.cmake)
+include(${PROJECT_SOURCE_DIR}/Tests/Unit/HIZFoundationTests.cmake)
 
-include(${CMAKE_CURRENT_SOURCE_DIR}/WorldHLODTests.cmake)
-include(${CMAKE_CURRENT_SOURCE_DIR}/StreamingTests.cmake)
-include(${CMAKE_CURRENT_SOURCE_DIR}/WorldPartitionTests.cmake)
-include(${CMAKE_CURRENT_SOURCE_DIR}/StreamingReconcileTests.cmake)
-include(${CMAKE_CURRENT_SOURCE_DIR}/StreamingProviderBridgeTests.cmake)
+include(${PROJECT_SOURCE_DIR}/Tests/Unit/WorldHLODTests.cmake)
+include(${PROJECT_SOURCE_DIR}/Tests/Unit/StreamingTests.cmake)
+include(${PROJECT_SOURCE_DIR}/Tests/Unit/WorldPartitionTests.cmake)
+include(${PROJECT_SOURCE_DIR}/Tests/Unit/StreamingReconcileTests.cmake)
+include(${PROJECT_SOURCE_DIR}/Tests/Unit/StreamingProviderBridgeTests.cmake)
 
 
 # Direct upstream Terrain3D tests and source, preserved without algorithm rewrites.
@@ -36,13 +36,13 @@ foreach(sirVTDonorTest IN ITEMS test_vt_feedback_reducer test_vt_feedback_multi)
     add_test(NAME renderer.virtual-texturing.donor.${sirVTDonorTest} COMMAND ${sirVTDonorTest})
     sir_configure_owned_target(${sirVTDonorTest})
 endforeach()
-add_executable(SIRTerrain3DDonorSpatialDemandTests SIRTerrain3DDonorSpatialDemandTests.cpp)
+add_executable(SIRTerrain3DDonorSpatialDemandTests ${PROJECT_SOURCE_DIR}/Tests/Unit/SIRTerrain3DDonorSpatialDemandTests.cpp)
 target_include_directories(SIRTerrain3DDonorSpatialDemandTests PRIVATE "${sirVTDonorRoot}")
 target_link_libraries(SIRTerrain3DDonorSpatialDemandTests PRIVATE SIR::Graphics)
 add_test(NAME renderer.virtual-texturing.donor.spatial-demand COMMAND SIRTerrain3DDonorSpatialDemandTests)
 sir_configure_owned_target(SIRTerrain3DDonorSpatialDemandTests)
 
-add_executable(SIRTerrain3DDonorVisibilityAggregationTests SIRTerrain3DDonorVisibilityAggregationTests.cpp)
+add_executable(SIRTerrain3DDonorVisibilityAggregationTests ${PROJECT_SOURCE_DIR}/Tests/Unit/SIRTerrain3DDonorVisibilityAggregationTests.cpp)
 target_include_directories(SIRTerrain3DDonorVisibilityAggregationTests PRIVATE "${sirVTDonorRoot}")
 target_link_libraries(SIRTerrain3DDonorVisibilityAggregationTests PRIVATE SIR::Graphics)
 add_test(NAME renderer.virtual-texturing.donor.visibility-aggregation COMMAND SIRTerrain3DDonorVisibilityAggregationTests)

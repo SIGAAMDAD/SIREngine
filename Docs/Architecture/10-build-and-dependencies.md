@@ -6,10 +6,10 @@
 
 - Root `CMakeLists.txt` defines SIREngine's native C++17 build and CPack packaging.
 - `Source/Core/` builds the portable `SIRCore` static library, with declarations and definitions colocated.
-- `Source/Main.cpp` is the bootstrap `SIREngine` executable entrypoint; `Source/CMakeLists.txt` declares its native target.
+- `Source/Main.cpp` is the bootstrap `SIREngine` executable entrypoint; the root `CMakeLists.txt` declares its native target.
 - `Source/Terrain/` is the built-in terrain subsystem, including `Source/Terrain/Editor/` for terrain-specific authoring. Actual terrain implementation will join the native build with milestone 3.
-- `Tests/Unit/` contains lifecycle, launcher and optional GoogleTest cases registered with CTest. `Tests/Benchmarks/` contains native CPU microbenchmarks enabled for profiling.
-- `Build/CMake/` owns dependency resolution, formatting, hygiene and build-tool options.
+- `Tests/CMakeLists.txt` owns every full-engine test/benchmark target and CTest registration; test sources remain under `Tests/Unit/`, `Tests/Benchmarks/` and `Tests/Dependencies/`.
+- One `CMakeLists.txt` per major system owns the complete system target/source list. `Source/Core/CMakeLists.txt` and `Source/Renderer/CMakeLists.txt` also own their platform and graphics-driver source/target configuration, respectively. `Tools/CMakeLists.txt` owns all cooker executables and libraries. `Build/CMake/` retains reusable dependency, formatting and build-tool helpers.
 - `ThirdParty/` contains pinned source dependencies (EASTL, EABase, EAAssert, OpenAL Soft and meshoptimizer) plus documentation for separately installed FMOD and Mono SDKs. Wwise remains optional.
 
 CMake **4.4.5** is the supported configuration entrypoint, with C++17 compiler extensions disabled. FASTBuild **1.20** is the primary compilation backend for the supplied presets, with incremental dependency tracking and a compiler artifact cache. Ninja is available through the tooling preset for Clang compilation databases. The native build does not invoke SCons or Python.
@@ -29,7 +29,7 @@ ctest --preset release
 cmake --build --preset release --target package
 ```
 
-Windows and Linux use the same developer presets. Other configurations include `debug`, `profile`, `release-ipo`, `bulk`, `asan`, `ubsan` and Ninja `tooling`; platform availability varies by compiler. macOS remains a later platform gate.
+Windows and Linux use the same developer presets; unsupported macOS preview presets are omitted until the native platform exists. Other configurations include `debug`, `profile`, `release-ipo`, `bulk`, `asan`, `ubsan` and Ninja `tooling`; platform availability varies by compiler. macOS remains a later platform gate.
 
 ## CI/CD
 

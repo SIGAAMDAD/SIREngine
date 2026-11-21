@@ -17,7 +17,7 @@
 #if defined( SIR_INPUT_GAMEINPUT_AVAILABLE )
 #include <Core/Platform/Windows/SIRWindowsGameInputBackend.h>
 #endif
-#elif defined( SIR_WINDOW_X11_AVAILABLE )
+#elif defined( SIR_INPUT_X11_AVAILABLE )
 #include <Core/Platform/Window/Linux/SIRWindowDriverX11.h>
 #include <Core/Platform/Linux/SIRX11InputBridge.h>
 #include <Core/Platform/Linux/SIRLinuxEvdevBackend.h>
@@ -28,14 +28,14 @@
 #include <string.h>
 #include <locale.h>
 
-#if defined( _WIN32 ) || defined( SIR_WINDOW_X11_AVAILABLE )
+#if defined( _WIN32 ) || defined( SIR_INPUT_X11_AVAILABLE )
 typedef struct sirNativeWindowPumpContext_s
 {
 	SIRWindowSystem *pWindows;
 #if defined( _WIN32 )
 	SIRWin32InputBridge *pWinInput;
 #endif
-#if defined( SIR_WINDOW_X11_AVAILABLE ) && !defined( _WIN32 )
+#if defined( SIR_INPUT_X11_AVAILABLE ) && !defined( _WIN32 )
 	SIRLinuxEvdevBackend *pEvdev;
 	SIRX11InputBridge *pBridge;
 	SIRInputService *pInput;
@@ -46,7 +46,7 @@ typedef struct sirNativeWindowPumpContext_s
 static sirAppWindowPumpResult_t sirPumpNativeWindows( void *pContext )
 {
 	sirNativeWindowPumpContext_t *pPump = ( sirNativeWindowPumpContext_t * )pContext;
-#if defined( SIR_WINDOW_X11_AVAILABLE ) && !defined( _WIN32 )
+#if defined( SIR_INPUT_X11_AVAILABLE ) && !defined( _WIN32 )
 	if ( pPump->pBridge != nullptr && !pPump->pBridge->beginFrame() ) {
 		return SIR_APP_WINDOW_ERROR;
 	}
@@ -220,7 +220,7 @@ static int sirRunNativeInputWindow( bool bMultiwindow, uint64_t nMaxFrames )
 	}
 #endif
 
-#if defined( _WIN32 ) || defined( SIR_WINDOW_X11_AVAILABLE )
+#if defined( _WIN32 ) || defined( SIR_INPUT_X11_AVAILABLE )
 	SIRInputService input;
 #if defined( _WIN32 )
 	SIRWindowDriverWin32 driver;
@@ -248,7 +248,7 @@ static int sirRunNativeInputWindow( bool bMultiwindow, uint64_t nMaxFrames )
 #if defined( _WIN32 )
 	context.pWinInput = &bridge;
 #endif
-#if defined( SIR_WINDOW_X11_AVAILABLE ) && !defined( _WIN32 )
+#if defined( SIR_INPUT_X11_AVAILABLE ) && !defined( _WIN32 )
 	context.pInput = &input;
 	context.pEvdev = &nativeControllers;
 	context.pBridge = &bridge;

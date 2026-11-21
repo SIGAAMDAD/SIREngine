@@ -2,7 +2,7 @@
 if(NOT DEFINED SIR_GEOMETRY_COOKER OR NOT EXISTS "${SIR_GEOMETRY_COOKER}")
     message(FATAL_ERROR "Geometry cooker executable missing")
 endif()
-set(work "${CMAKE_CURRENT_BINARY_DIR}/displacement-cli")
+set(work "${PROJECT_BINARY_DIR}/Tests/Unit/displacement-cli")
 file(MAKE_DIRECTORY "${work}")
 set(image "${work}/height.pgm")
 file(COPY_FILE "${SIR_DISPLACEMENT_IMAGE}" "${image}")

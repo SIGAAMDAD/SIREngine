@@ -1,6 +1,6 @@
 if(SIR_WITH_GOOGLETEST)
     string(TOLOWER "${CMAKE_SYSTEM_NAME}" sirGTestHost)
-    add_executable(SIREventGoogleTests SIREventGoogleTests.cpp SIREventOptimizationGoogleTests.cpp SIREventFurtherOptimizationGoogleTests.cpp)
+    add_executable(SIREventGoogleTests ${PROJECT_SOURCE_DIR}/Tests/Unit/SIREventGoogleTests.cpp ${PROJECT_SOURCE_DIR}/Tests/Unit/SIREventOptimizationGoogleTests.cpp ${PROJECT_SOURCE_DIR}/Tests/Unit/SIREventFurtherOptimizationGoogleTests.cpp)
     target_compile_features(SIREventGoogleTests PRIVATE cxx_std_17)
     target_link_libraries(SIREventGoogleTests PRIVATE SIR::Core gtest_main)
     sir_configure_owned_target(SIREventGoogleTests)
@@ -10,14 +10,14 @@ if(SIR_WITH_GOOGLETEST)
 endif()
 
 # Standalone registration, capacity, invalid-handle and lifecycle coverage.
-add_executable(SIREventRegistryStandaloneTests SIREventRegistryStandaloneTests.cpp)
+add_executable(SIREventRegistryStandaloneTests ${PROJECT_SOURCE_DIR}/Tests/Unit/SIREventRegistryStandaloneTests.cpp)
 target_link_libraries(SIREventRegistryStandaloneTests PRIVATE SIR::Core)
 add_test(NAME core.events.registry-standalone COMMAND SIREventRegistryStandaloneTests)
 sir_configure_owned_target(SIREventRegistryStandaloneTests)
 
 # Independent allocation smoke without the GoogleTest runtime. Counts C++
 # operator new/new[] after initialization across core event hot paths.
-add_executable(SIREventNoAllocationTests SIREventNoAllocationTests.cpp)
+add_executable(SIREventNoAllocationTests ${PROJECT_SOURCE_DIR}/Tests/Unit/SIREventNoAllocationTests.cpp)
 target_link_libraries(SIREventNoAllocationTests PRIVATE SIR::Core)
 add_test(NAME core.events.no-allocations COMMAND SIREventNoAllocationTests)
 sir_configure_owned_target(SIREventNoAllocationTests)

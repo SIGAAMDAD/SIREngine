@@ -6,9 +6,7 @@ get_filename_component(_sir_repository_root "${CMAKE_CURRENT_LIST_DIR}/../.." RE
 file(REAL_PATH "${CMAKE_SOURCE_DIR}" _sir_configure_source)
 file(REAL_PATH "${CMAKE_BINARY_DIR}" _sir_configure_binary)
 
-set(_sir_mesh_standalone "${_sir_repository_root}/Tests/Standalone/MeshCache")
-if(NOT _sir_configure_source STREQUAL _sir_repository_root AND
-   NOT _sir_configure_source STREQUAL _sir_mesh_standalone)
+if(NOT _sir_configure_source STREQUAL _sir_repository_root)
     message(FATAL_ERROR
         "Configure SIREngine from its repository root (cmake --preset dev). "
         "Source subdirectories are not independently configurable projects.")

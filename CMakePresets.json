@@ -91,15 +91,6 @@
       }
     },
     {
-      "name": "macos-preview",
-      "inherits": "dev",
-      "condition": {
-        "type": "equals",
-        "lhs": "${hostSystemName}",
-        "rhs": "Darwin"
-      }
-    },
-    {
       "name": "vs2022",
       "displayName": "Visual Studio 2022 x64 (out-of-source)",
       "generator": "Visual Studio 17 2022",
@@ -202,13 +193,6 @@
       ]
     },
     {
-      "name": "macos-preview",
-      "configurePreset": "macos-preview",
-      "nativeToolOptions": [
-        "-cache"
-      ]
-    },
-    {
       "name": "vs2022",
       "configurePreset": "vs2022",
       "configuration": "Debug"
@@ -275,13 +259,6 @@
     {
       "name": "ubsan",
       "configurePreset": "ubsan",
-      "output": {
-        "outputOnFailure": true
-      }
-    },
-    {
-      "name": "macos-preview",
-      "configurePreset": "macos-preview",
       "output": {
         "outputOnFailure": true
       }

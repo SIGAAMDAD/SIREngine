@@ -1,22 +1,22 @@
-add_executable(SIRStreamingCoordinatorTests SIRStreamingCoordinatorTests.cpp)
+add_executable(SIRStreamingCoordinatorTests ${PROJECT_SOURCE_DIR}/Tests/Unit/SIRStreamingCoordinatorTests.cpp)
 target_link_libraries(SIRStreamingCoordinatorTests PRIVATE SIR::Streaming)
 add_test(NAME streaming.coordinator.lifecycle COMMAND SIRStreamingCoordinatorTests)
 sir_configure_owned_target(SIRStreamingCoordinatorTests)
 
 # Negative and lifecycle assertions for the actual streaming coordinator.
-add_executable(SIRStreamingCoordinatorCoverageTests SIRStreamingCoordinatorCoverageTests.cpp)
+add_executable(SIRStreamingCoordinatorCoverageTests ${PROJECT_SOURCE_DIR}/Tests/Unit/SIRStreamingCoordinatorCoverageTests.cpp)
 target_link_libraries(SIRStreamingCoordinatorCoverageTests PRIVATE SIR::Streaming)
 add_test(NAME streaming.coordinator.coverage-boundaries COMMAND SIRStreamingCoordinatorCoverageTests)
 sir_configure_owned_target(SIRStreamingCoordinatorCoverageTests)
 
 # Priority-first admission and pinned-capacity regression coverage.
-add_executable(SIRStreamingAdmissionPriorityTests SIRStreamingAdmissionPriorityTests.cpp)
+add_executable(SIRStreamingAdmissionPriorityTests ${PROJECT_SOURCE_DIR}/Tests/Unit/SIRStreamingAdmissionPriorityTests.cpp)
 target_link_libraries(SIRStreamingAdmissionPriorityTests PRIVATE SIR::Streaming)
 add_test(NAME streaming.admission.priority COMMAND SIRStreamingAdmissionPriorityTests)
 sir_configure_owned_target(SIRStreamingAdmissionPriorityTests)
 
 # Invalid contract and lifecycle precondition regression coverage.
-add_executable(SIRStreamingValidationTests SIRStreamingValidationTests.cpp)
+add_executable(SIRStreamingValidationTests ${PROJECT_SOURCE_DIR}/Tests/Unit/SIRStreamingValidationTests.cpp)
 target_link_libraries(SIRStreamingValidationTests PRIVATE SIR::Streaming)
 add_test(NAME streaming.validation.contracts COMMAND SIRStreamingValidationTests)
 sir_configure_owned_target(SIRStreamingValidationTests)

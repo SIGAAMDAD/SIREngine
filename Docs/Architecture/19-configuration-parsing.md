@@ -105,7 +105,7 @@ Expat's `XML_Memory_Handling_Suite` callbacks have no user context. The adapter 
 
 ## Integration and readiness
 
-Registration path: `Source/Core/Config/CMakeLists.txt` contributes first-party sources to `SIRCore`; `Source/Core/CMakeLists.txt` adds `add_subdirectory(Config)` once the code exists. Vendor backends are private, pinned and optionally toggled in CMake; no Python/SCons build requirement. Tests join `Tests/Unit/CMakeLists.txt` and benchmark registration joins the actual `Tests/Benchmarks/CMakeLists.txt`. Windows/Linux CI/CTest, ASan/UBSan where available, Clang AST style checks and pinned formatter apply to implemented C++, not to this documentation-only commit.
+Registration path: `Source/Core/CMakeLists.txt` directly owns the first-party config parser sources in `SIRCore`, including sources under `Source/Core/Config/`. No nested Core build scripts or folder-level target authors are used. Vendor backends remain private, pinned and opt-in. All full-engine CTest/benchmark registrations belong to `Tests/CMakeLists.txt`. Windows/Linux CI/CTest, ASan/UBSan where available, Clang AST style checks and pinned formatter apply to implemented C++, not to this documentation-only commit.
 
 Implementation dependency and acceptance plan: [IMPLEMENTATION.md](../Plans/ConfigParsing/IMPLEMENTATION.md). Callable API and lifetime contracts: [API.md](../Plans/ConfigParsing/API.md). Test matrix: [ACCEPTANCE.md](../Plans/ConfigParsing/ACCEPTANCE.md).
 

@@ -1,4 +1,4 @@
-add_executable(SIRStreamingProviderBridgeTests SIRStreamingProviderBridgeTests.cpp)
+add_executable(SIRStreamingProviderBridgeTests ${PROJECT_SOURCE_DIR}/Tests/Unit/SIRStreamingProviderBridgeTests.cpp)
 target_link_libraries(SIRStreamingProviderBridgeTests PRIVATE SIR::World)
 add_test(NAME streaming.provider.bridge COMMAND SIRStreamingProviderBridgeTests)
 sir_configure_owned_target(SIRStreamingProviderBridgeTests)

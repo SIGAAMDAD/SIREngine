@@ -1,9 +1,0 @@
-add_executable(SIRAnimationCookSmokeTests SIRAnimationCookSmoke.cpp)
-target_link_libraries(SIRAnimationCookSmokeTests PRIVATE SIR::AnimationCook)
-add_test(NAME ANM01_CookSmoke COMMAND SIRAnimationCookSmokeTests)
-sir_configure_owned_target(SIRAnimationCookSmokeTests)
-
-add_executable(SIRAnimationCookTests SIRAnimationCookTests.cpp)
-target_link_libraries(SIRAnimationCookTests PRIVATE SIR::AnimationCook)
-add_test(NAME ANM01_CookRegression COMMAND SIRAnimationCookTests)
-sir_configure_owned_target(SIRAnimationCookTests)

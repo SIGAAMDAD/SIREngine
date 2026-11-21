@@ -2,7 +2,7 @@
 
 ## Regression coverage
 
-The native CTest executables are registered in `Tests/Unit/CMakeLists.txt`:
+The native CTest executables are registered through `Tests/CMakeLists.txt` and its unit-registration helpers:
 
 | Test | Scope |
 | --- | --- |
@@ -46,7 +46,7 @@ All cases use the engine's Google Benchmark target `SIRCoreBenchmarks` and outpu
 ```sh
 cmake --preset profile -DSIR_WITH_GOOGLE_BENCHMARK=ON -DSIR_BUILD_BENCHMARKS=ON
 cmake --build --preset profile
-# Locate the binary in out/<platform>/profile/Tests/Benchmarks/ for the configured host.
+# Locate the binary in out/<platform>/profile/Tests/ for the configured host.
 # Run with a stable CPU governor, no competing build, and comparable host configuration:
 SIRCoreBenchmarks --benchmark_filter='SIRBenchmark(Worker|Concurrent|Fence|Task)' \
   --benchmark_min_time=0.1s --benchmark_repetitions=7 \
