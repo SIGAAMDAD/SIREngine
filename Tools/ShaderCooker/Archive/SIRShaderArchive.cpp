@@ -14,6 +14,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Tools/ShaderCooker/Archive/SIRShaderArchive.h>
+#include <Tools/ShaderCooker/Recipes/SIRFixedRecipeCooker.h>
 
 #include <string.h>
 
@@ -81,7 +82,18 @@ static bool sirArchiveStageValid( uint32_t nMask ) noexcept
 
 static bool sirArchiveFormatValid( uint32_t nFormat ) noexcept
 {
-	return nFormat >= SIR_GRAPHICS_SHADER_DXIL && nFormat <= SIR_GRAPHICS_SHADER_DXBC;
+	return nFormat >= SIR_GRAPHICS_SHADER_DXIL && nFormat <= SIR_GRAPHICS_SHADER_D3D_LEGACY_TOKENS;
+}
+
+static bool sirArchiveLegacyTokensValid( const uint8_t *pBytes, uint32_t nBytes, uint32_t nStage ) noexcept
+{
+	if ( nBytes < 8 || nBytes % 4 != 0 || ( nStage != SIR_GRAPHICS_STAGE_VERTEX && nStage != SIR_GRAPHICS_STAGE_FRAGMENT ) ) {
+		return false;
+	}
+	const uint32_t nKind = ( uint32_t )pBytes[2] | ( ( uint32_t )pBytes[3] << 8 );
+	const uint32_t nExpected = nStage == SIR_GRAPHICS_STAGE_VERTEX ? 0xfffe : 0xffff;
+	return nKind == nExpected && pBytes[1] >= 1 && pBytes[1] <= 3 && pBytes[nBytes - 4] == 0xff && pBytes[nBytes - 3] == 0xff &&
+	       pBytes[nBytes - 2] == 0 && pBytes[nBytes - 1] == 0;
 }
 
 static bool sirArchiveHeaderValid( const uint8_t *pBytes, uint64_t nCount ) noexcept
@@ -123,8 +135,13 @@ sirShaderCookResult_t sirShaderArchiveBuild( const sirShaderArchiveBuildDesc_t& 
 	uint32_t nUnique = 0;
 	for ( uint32_t iStage = 0; iStage < nCount; ++iStage ) {
 		const sirShaderArchiveStageInput_t& stage = desc.pEntries[iStage];
-		if ( !sirArchiveFormatValid( stage.eFormat ) || !sirArchiveStageValid( stage.nStageMask ) || stage.nEntryPointHash == 0 ||
-		     stage.pBytes == nullptr || stage.nByteCount == 0 ) {
+		if ( !sirArchiveFormatValid( stage.eFormat ) ||
+		     ( stage.eFormat == SIR_GRAPHICS_SHADER_FIXED_FUNCTION ? stage.nStageMask != 0 : !sirArchiveStageValid( stage.nStageMask ) ) ||
+		     stage.nEntryPointHash == 0 || stage.pBytes == nullptr || stage.nByteCount == 0 ||
+		     ( stage.eFormat == SIR_GRAPHICS_SHADER_FIXED_FUNCTION &&
+		       sirShaderFixedValidate( stage.pBytes, stage.nByteCount ) != SIR_SHADER_COOK_OK ) ||
+		     ( stage.eFormat == SIR_GRAPHICS_SHADER_D3D_LEGACY_TOKENS &&
+		       !sirArchiveLegacyTokensValid( stage.pBytes, stage.nByteCount, stage.nStageMask ) ) ) {
 			return SIR_SHADER_COOK_INVALID_ARGUMENT;
 		}
 		// Reject impossible payload lengths before accessing caller-provided bytes.
@@ -222,7 +239,9 @@ sirShaderCookResult_t sirShaderArchiveValidate( const void *pArchive, uint64_t n
 		     nOffset != nCursor || nLength > nBytes - nCursor ) {
 			return SIR_SHADER_COOK_INVALID_ARGUMENT;
 		}
-		if ( sirArchiveRead64( pRecord + 16 ) != sirArchiveHashBytes( pData + nOffset, nLength ) ) {
+		if ( sirArchiveRead64( pRecord + 16 ) != sirArchiveHashBytes( pData + nOffset, nLength ) ||
+		     ( sirArchiveRead32( pRecord ) == SIR_GRAPHICS_SHADER_FIXED_FUNCTION &&
+		       sirShaderFixedValidate( pData + nOffset, nLength ) != SIR_SHADER_COOK_OK ) ) {
 			return SIR_SHADER_COOK_INVALID_ARGUMENT;
 		}
 		// Two physical records with identical format and bytes violate content addressing.
@@ -243,13 +262,18 @@ sirShaderCookResult_t sirShaderArchiveValidate( const void *pArchive, uint64_t n
 	for ( uint32_t iEntry = 0; iEntry < nEntries; ++iEntry ) {
 		const uint8_t *pEntry = pData + SIR_SHADER_ARCHIVE_HEADER_BYTES + iEntry * SIR_SHADER_ARCHIVE_ENTRY_BYTES;
 		const uint32_t iUnique = sirArchiveRead32( pEntry + 16 );
-		if ( !sirArchiveStageValid( sirArchiveRead32( pEntry + 4 ) ) || sirArchiveRead64( pEntry + 8 ) == 0 ||
-		     sirArchiveRead32( pEntry + 20 ) != 0 || iUnique >= nUnique ) {
+		if ( ( sirArchiveRead32( pEntry ) == SIR_GRAPHICS_SHADER_FIXED_FUNCTION
+		           ? sirArchiveRead32( pEntry + 4 ) != 0
+				   : !sirArchiveStageValid( sirArchiveRead32( pEntry + 4 ) ) ) ||
+		     sirArchiveRead64( pEntry + 8 ) == 0 || sirArchiveRead32( pEntry + 20 ) != 0 || iUnique >= nUnique ) {
 			return SIR_SHADER_COOK_INVALID_ARGUMENT;
 		}
 		const uint8_t *pUnique = pData + nUniqueStart + iUnique * SIR_SHADER_ARCHIVE_UNIQUE_BYTES;
 		if ( sirArchiveRead32( pEntry ) != sirArchiveRead32( pUnique ) ||
-		     sirArchiveRead64( pEntry + 24 ) != sirArchiveRead64( pUnique + 16 ) ) {
+		     sirArchiveRead64( pEntry + 24 ) != sirArchiveRead64( pUnique + 16 ) ||
+		     ( sirArchiveRead32( pEntry ) == SIR_GRAPHICS_SHADER_D3D_LEGACY_TOKENS &&
+		       !sirArchiveLegacyTokensValid( pData + sirArchiveRead32( pUnique + 4 ), sirArchiveRead32( pUnique + 8 ),
+		                                     sirArchiveRead32( pEntry + 4 ) ) ) ) {
 			return SIR_SHADER_COOK_INVALID_ARGUMENT;
 		}
 		szReferenced[iUnique] = true;

@@ -31,6 +31,20 @@ static bool sirGraphicsABIShaderIsEmpty( const sirGraphicsABIShaderCode_t *pShad
 	return pShader->pBytes == nullptr && pShader->nByteCount == 0 && pShader->nContentHash == 0;
 }
 
+static bool sirGraphicsABILegacyTokensValid( const sirGraphicsABIShaderCode_t *pShader ) noexcept
+{
+	if ( pShader->pBytes == nullptr || pShader->nByteCount < 8 || pShader->nByteCount % 4 != 0 || pShader->nByteCount > ( 64ULL << 20 ) ) {
+		return false;
+	}
+	const uint8_t *pBytes = ( const uint8_t * )pShader->pBytes;
+	const uint32_t nKind = ( uint32_t )pBytes[2] | ( ( uint32_t )pBytes[3] << 8 );
+	if ( ( nKind != 0xfffe && nKind != 0xffff ) || pBytes[1] == 0 || pBytes[1] > 3 ) {
+		return false;
+	}
+	const uint64_t iEnd = pShader->nByteCount - 4;
+	return pBytes[iEnd] == 0xff && pBytes[iEnd + 1] == 0xff && pBytes[iEnd + 2] == 0 && pBytes[iEnd + 3] == 0;
+}
+
 static bool sirGraphicsABIShaderIsSupported( const sirGraphicsABIShaderCode_t *pShader, uint32_t nFormatMask ) noexcept
 {
 	if ( pShader->nSize != sizeof( sirGraphicsABIShaderCode_t ) || pShader->pBytes == nullptr ) {
@@ -47,10 +61,11 @@ static bool sirGraphicsABIShaderIsWellFormed( const sirGraphicsABIShaderCode_t *
 	if ( pShader->nSize < sizeof( sirGraphicsABIShaderCode_t ) || pShader->pBytes == nullptr ) {
 		return false;
 	}
-	if ( pShader->nFormat < SIR_GRAPHICS_SHADER_DXIL || pShader->nFormat > SIR_GRAPHICS_SHADER_DXBC ) {
+	if ( pShader->nFormat < SIR_GRAPHICS_SHADER_DXIL || pShader->nFormat > SIR_GRAPHICS_SHADER_D3D_LEGACY_TOKENS ) {
 		return false;
 	}
-	return pShader->nByteCount >= 4;
+	return pShader->nFormat == SIR_GRAPHICS_SHADER_D3D_LEGACY_TOKENS ? sirGraphicsABILegacyTokensValid( pShader )
+	                                                                 : pShader->nByteCount >= 4;
 }
 
 // Pure descriptor validity: runs before capability discovery so malformed
@@ -164,7 +179,7 @@ sirGraphicsABIResult_t sirGraphicsValidateABIPipelineModelCaps( const sirGraphic
 	}
 	const uint32_t nQueueMask = ( 1U << SIR_GRAPHICS_QUEUE_COUNT ) - 1U;
 	const uint32_t nShaderStageMask = ( SIR_GRAPHICS_STAGE_TASK << 1 ) - 1U;
-	const uint32_t nShaderFormatMask = ( 1U << ( SIR_GRAPHICS_SHADER_FIXED_FUNCTION - 1 ) ) - 1U;
+	const uint32_t nShaderFormatMask = ( 1U << SIR_GRAPHICS_SHADER_D3D_LEGACY_TOKENS ) - 1U;
 	const uint32_t nFixedFeatures = ( SIR_GRAPHICS_FIXED_TEXCOORD_GEN << 1 ) - 1U;
 	const uint32_t nFixedOperations = ( 1U << ( SIR_GRAPHICS_FIXED_OP_DOT3 + 1 ) ) - 1U;
 	const uint32_t nFogModes = ( 1U << ( SIR_GRAPHICS_FIXED_FOG_EXP2 + 1 ) ) - 1U;
@@ -361,8 +376,18 @@ static sirGraphicsABIResult_t sirGraphicsValidateABIPipelineShaders( const sirGr
 	if ( !sirGraphicsABIShaderIsSupported( &pPipeline->vertexShader, pCaps->nShaderFormatMask ) ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
 	}
+	if ( pPipeline->vertexShader.nFormat == SIR_GRAPHICS_SHADER_D3D_LEGACY_TOKENS &&
+	     ( ( ( const uint8_t * )pPipeline->vertexShader.pBytes )[3] != 0xff ||
+	       ( ( const uint8_t * )pPipeline->vertexShader.pBytes )[2] != 0xfe ) ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
+	}
 	if ( !sirGraphicsABIShaderIsSupported( &pPipeline->pixelShader, pCaps->nShaderFormatMask ) ) {
 		return SIR_GRAPHICS_UNSUPPORTED;
+	}
+	if ( pPipeline->pixelShader.nFormat == SIR_GRAPHICS_SHADER_D3D_LEGACY_TOKENS &&
+	     ( ( ( const uint8_t * )pPipeline->pixelShader.pBytes )[3] != 0xff ||
+	       ( ( const uint8_t * )pPipeline->pixelShader.pBytes )[2] != 0xff ) ) {
+		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
 	if ( pPipeline->vertexShader.nFormat != pPipeline->pixelShader.nFormat ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;

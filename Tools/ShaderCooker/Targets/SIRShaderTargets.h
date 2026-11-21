@@ -26,8 +26,25 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Tools/ShaderCooker/Frontend/SIRShaderFrontend.h>
 
-// GL and legacy D3D have explicit recipe versions but require separate
-// offline cross-compilation and cannot silently receive DXIL/SPIR-V bytes.
+// Target identity includes the genuine offline compiler API. GL requires
+// a separately qualified cross-compiler and cannot silently receive DXBC.
+typedef enum sirShaderCompiler_e : uint32_t
+{
+	SIR_SHADER_COMPILER_DXC = 1,
+	SIR_SHADER_COMPILER_FXC = 2
+} sirShaderCompiler_t;
+
+typedef struct sirShaderCookTarget_s
+{
+	sirGraphicsPipelineModel_t eModel;
+	sirGraphicsShaderFormat_t eFormat;
+	sirShaderCompiler_t eCompiler;
+	std::string sProfile;
+	bool bSpirv;
+} sirShaderCookTarget_t;
+
+sirShaderCookResult_t sirShaderCookResolveTargetInfo( sirGraphicsBackend_t eBackend, uint32_t nStage,
+                                                      sirShaderCookTarget_t *pTarget ) noexcept;
 sirShaderCookResult_t sirShaderCookResolveTarget( sirGraphicsBackend_t eBackend, uint32_t nStage, std::string *pProfile, bool *pSpirv );
 
 #endif // __SIRENGINE_SIRSHADERTARGETS_H__

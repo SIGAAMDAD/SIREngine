@@ -362,7 +362,7 @@ static bool testStructuralMatrix( void ) noexcept
 	test.vertexShader.nFormat = 0;
 	CHECK_STRUCTURE( SIR_GRAPHICS_INVALID_ARGUMENT, "structure shader format underflow" );
 	test = base;
-	test.vertexShader.nFormat = SIR_GRAPHICS_SHADER_DXBC + 1;
+	test.vertexShader.nFormat = SIR_GRAPHICS_SHADER_D3D_LEGACY_TOKENS + 1;
 	CHECK_STRUCTURE( SIR_GRAPHICS_INVALID_ARGUMENT, "structure shader format overflow" );
 	test = base;
 	test.pixelShader.pBytes = nullptr;

@@ -36,6 +36,29 @@ file(READ "${SIR_BIN}" SIR_DXIL_BINARY HEX)
 if(NOT SIR_DXIL_RESULT EQUAL 0 OR NOT SIR_DXIL_BINARY MATCHES "^44584243")
     message(FATAL_ERROR "ShaderCooker did not invoke DXIL target")
 endif()
+foreach(SIR_BACKEND d3d11 d3d10 d3d9 d3d8)
+    execute_process(COMMAND "${SIR_COOKER}" --root "${SIR_FIXTURES}" --source valid.hlsl --entry main
+        --backend "${SIR_BACKEND}" --stage vertex --compiler "${SIR_MOCK_COMPILER}" --output "${SIR_BIN}"
+        RESULT_VARIABLE SIR_FXC_RESULT ERROR_VARIABLE SIR_FXC_ERROR)
+    if(NOT SIR_FXC_RESULT EQUAL 0)
+        message(FATAL_ERROR "${SIR_BACKEND} FXC cook failed: ${SIR_FXC_ERROR}")
+    endif()
+    file(READ "${SIR_BIN}" SIR_FXC_BINARY HEX)
+    file(READ "${SIR_BIN}.manifest" SIR_FXC_MANIFEST)
+    if(SIR_BACKEND STREQUAL "d3d9" OR SIR_BACKEND STREQUAL "d3d8")
+        if(NOT SIR_FXC_BINARY MATCHES "^(0003|0101)feff" OR NOT SIR_FXC_BINARY MATCHES "ffff0000$")
+            message(FATAL_ERROR "Legacy shader token bytes invalid for ${SIR_BACKEND}")
+        endif()
+        if(NOT SIR_FXC_MANIFEST MATCHES "FORMAT=6")
+            message(FATAL_ERROR "Missing legacy token manifest identity")
+        endif()
+    else()
+        if(NOT SIR_FXC_BINARY MATCHES "^44584243" OR NOT SIR_FXC_MANIFEST MATCHES "FORMAT=4")
+            message(FATAL_ERROR "Missing DXBC artifact for ${SIR_BACKEND}")
+        endif()
+    endif()
+endforeach()
+
 execute_process(
     COMMAND "${SIR_COOKER}" --root "${SIR_FIXTURES}" --source valid.hlsl --entry main
         --backend opengl --stage compute --compiler "${SIR_MOCK_COMPILER}"

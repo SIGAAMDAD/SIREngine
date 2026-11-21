@@ -14,6 +14,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 
 #include <Tools/ShaderCooker/Frontend/SIRShaderFrontend.h>
+#include <Tools/ShaderCooker/Targets/SIRShaderTargets.h>
 
 #include <array>
 #include <cstdio>
@@ -84,35 +85,37 @@ static int sirCookRunCompiler( const std::vector<std::string>& szArguments )
 #endif
 }
 
-static bool sirCookValidateBinary( const std::filesystem::path& sBinary, bool bSpirv, const std::string& sProfile, uint32_t nStage )
+static bool sirCookValidateBinary( const std::filesystem::path& sBinary, sirGraphicsShaderFormat_t eFormat, const std::string& sProfile )
 {
-	const bool bD3D9 = sProfile.size() == 6 && sProfile[3] != '6';
 	std::error_code eError;
 	const uintmax_t nBytes = std::filesystem::file_size( sBinary, eError );
-	if ( eError || nBytes < ( bD3D9 ? 8U : 32U ) || nBytes > ( bD3D9 ? ( 1U << 20 ) : ( 64U << 20 ) ) ||
-	     ( ( bSpirv || bD3D9 ) && nBytes % 4 != 0 ) ) {
+	if ( eError || nBytes < ( eFormat == SIR_GRAPHICS_SHADER_D3D_LEGACY_TOKENS ? 8U : 32U ) || nBytes > ( 64U << 20 ) ||
+	     ( ( eFormat == SIR_GRAPHICS_SHADER_SPIRV || eFormat == SIR_GRAPHICS_SHADER_D3D_LEGACY_TOKENS ) && nBytes % 4 != 0 ) ) {
 		return false;
 	}
 	std::ifstream stream( sBinary, std::ios::binary );
 	char szMagic[4] = {};
 	stream.read( szMagic, sizeof( szMagic ) );
-	if ( !stream ) {
+	if ( !stream.good() ) {
 		return false;
 	}
-	if ( !bD3D9 ) {
-		return bSpirv ? std::memcmp( szMagic, "\x03\x02\x23\x07", 4 ) == 0 : std::memcmp( szMagic, "DXBC", 4 ) == 0;
+	if ( eFormat == SIR_GRAPHICS_SHADER_SPIRV ) {
+		return std::memcmp( szMagic, "\x03\x02\x23\x07", 4 ) == 0;
 	}
-	const uint32_t nFirst = ( uint32_t )( unsigned char )szMagic[0] | ( ( uint32_t )( unsigned char )szMagic[1] << 8 ) |
-	                        ( ( uint32_t )( unsigned char )szMagic[2] << 16 ) | ( ( uint32_t )( unsigned char )szMagic[3] << 24 );
-	const uint32_t nExpected = nStage == SIR_GRAPHICS_STAGE_VERTEX ? 0xfffe0000U : 0xffff0000U;
-	if ( ( nFirst & 0xffff0000U ) != nExpected || ( nFirst & 0xffU ) != 0 ||
-	     ( ( nFirst >> 8 ) & 0xffU ) != ( uint32_t )( sProfile[3] - '0' ) ) {
-		return false;
+	if ( eFormat == SIR_GRAPHICS_SHADER_D3D_LEGACY_TOKENS ) {
+		const uint32_t nVersion = ( uint32_t )( uint8_t )szMagic[0] | ( ( uint32_t )( uint8_t )szMagic[1] << 8 ) |
+		                          ( ( uint32_t )( uint8_t )szMagic[2] << 16 ) | ( ( uint32_t )( uint8_t )szMagic[3] << 24 );
+		const uint32_t nStagePrefix = sProfile.rfind( "vs_", 0 ) == 0 ? 0xfffe : 0xffff;
+		if ( sProfile.size() != 6 || ( nVersion >> 16 ) != nStagePrefix || ( ( nVersion >> 8 ) & 0xffU ) != uint32_t( sProfile[3] - '0' ) ||
+		     ( nVersion & 0xffU ) != uint32_t( sProfile[5] - '0' ) ) {
+			return false;
+		}
+		char szEnd[4] = {};
+		stream.seekg( ( std::streamoff )nBytes - 4 );
+		stream.read( szEnd, 4 );
+		return stream.good() && std::memcmp( szEnd, "\xff\xff\x00\x00", 4 ) == 0;
 	}
-	stream.seekg( ( std::streamoff )nBytes - 4 );
-	char szEnd[4] = {};
-	stream.read( szEnd, sizeof( szEnd ) );
-	return stream.good() && ( unsigned char )szEnd[0] == 0xff && ( unsigned char )szEnd[1] == 0xff && szEnd[2] == 0 && szEnd[3] == 0;
+	return ( eFormat == SIR_GRAPHICS_SHADER_DXBC || eFormat == SIR_GRAPHICS_SHADER_DXIL ) && std::memcmp( szMagic, "DXBC", 4 ) == 0;
 }
 
 static bool sirCookParseCommand( int nArgs, const char *const *pszArgs, sirShaderCookRequest_t *pRequest, std::filesystem::path *pCompiler,
@@ -137,7 +140,10 @@ static bool sirCookParseCommand( int nArgs, const char *const *pszArgs, sirShade
 		} else if ( sFlag == "--backend" ) {
 			pRequest->eBackend = sValue == "vulkan"  ? SIR_GRAPHICS_BACKEND_VULKAN
 			                     : sValue == "d3d12" ? SIR_GRAPHICS_BACKEND_D3D12
+			                     : sValue == "d3d11" ? SIR_GRAPHICS_BACKEND_D3D11
+			                     : sValue == "d3d10" ? SIR_GRAPHICS_BACKEND_D3D10
 			                     : sValue == "d3d9"  ? SIR_GRAPHICS_BACKEND_D3D9
+			                     : sValue == "d3d8"  ? SIR_GRAPHICS_BACKEND_D3D8
 			                                         : SIR_GRAPHICS_BACKEND_AUTO;
 		} else if ( sFlag == "--shader-model" ) {
 			if ( sValue != "2" && sValue != "3" ) {
@@ -174,9 +180,10 @@ int main( int nArgs, const char *const *pszArgs )
 	std::filesystem::path sCompiler;
 	std::filesystem::path sOutput;
 	if ( !sirCookParseCommand( nArgs, pszArgs, &request, &sCompiler, &sOutput ) ) {
-		std::fprintf( stderr, "Usage: SIRShaderCooker --root dir --source relative.hlsl --entry name --backend vulkan|d3d12|d3d9 "
-		                      "--stage compute|vertex|fragment|geometry|hull|domain|mesh|task --compiler /abs/path/dxc-or-fxc "
-		                      "--output file [--shader-model 2|3] [--define NAME=VALUE]\n" );
+		std::fprintf( stderr,
+		              "Usage: SIRShaderCooker --root dir --source relative.hlsl --entry name --backend vulkan|d3d12|d3d11|d3d10|d3d9|d3d8 "
+		              "--stage compute|vertex|fragment|geometry|hull|domain|mesh|task --compiler /abs/path/dxc-or-fxc "
+		              "--output file [--shader-model 2|3] [--define NAME=VALUE]\n" );
 		return 2;
 	}
 	std::error_code eError;
@@ -214,19 +221,27 @@ int main( int nArgs, const char *const *pszArgs )
 			return 5;
 		}
 	}
-	const bool bD3D9 = request.eBackend == SIR_GRAPHICS_BACKEND_D3D9;
-	std::vector<std::string> szArgs =
-	    bD3D9 ? std::vector<std::string>{ sCompiler.string(),   "/nologo", "/O3",           "/T", manifest.sProfile, "/E",
-		                                  manifest.sEntryPoint, "/Fo",     sOutput.string() }
-		      : std::vector<std::string>{ sCompiler.string(),   "-nologo", "-HV",           "2021", "-O3", "-T", manifest.sProfile, "-E",
-		                                  manifest.sEntryPoint, "-Fo",     sOutput.string() };
-	if ( manifest.bSpirv ) {
-		szArgs.push_back( "-spirv" );
-		szArgs.push_back( "-fspv-target-env=vulkan1.3" );
-	}
-	for ( const sirShaderCookDefine_t& definition : manifest.szDefines ) {
-		szArgs.push_back( bD3D9 ? "/D" : "-D" );
-		szArgs.push_back( definition.sName + "=" + definition.sValue );
+	std::vector<std::string> szArgs;
+	if ( manifest.nCompilerKind == SIR_SHADER_COMPILER_DXC ) {
+		szArgs = { sCompiler.string(),   "-nologo", "-HV",           "2021", "-O3", "-T", manifest.sProfile, "-E",
+		           manifest.sEntryPoint, "-Fo",     sOutput.string() };
+		if ( manifest.bSpirv ) {
+			szArgs.push_back( "-spirv" );
+			szArgs.push_back( "-fspv-target-env=vulkan1.3" );
+		}
+		for ( const sirShaderCookDefine_t& definition : manifest.szDefines ) {
+			szArgs.push_back( "-D" );
+			szArgs.push_back( definition.sName + "=" + definition.sValue );
+		}
+	} else if ( manifest.nCompilerKind == SIR_SHADER_COMPILER_FXC ) {
+		szArgs = { sCompiler.string(), "/nologo", "/O3", "/T", manifest.sProfile, "/E", manifest.sEntryPoint, "/Fo", sOutput.string() };
+		for ( const sirShaderCookDefine_t& definition : manifest.szDefines ) {
+			szArgs.push_back( "/D" );
+			szArgs.push_back( definition.sName + "=" + definition.sValue );
+		}
+	} else {
+		std::filesystem::remove( sInput, eError );
+		return 4;
 	}
 	szArgs.push_back( sInput.string() );
 	const int nCompilerResult = sirCookRunCompiler( szArgs );
@@ -237,7 +252,7 @@ int main( int nArgs, const char *const *pszArgs )
 		return 6;
 	}
 	const uint64_t nBinaryHash = sirCookFileFingerprint( sOutput );
-	if ( nBinaryHash == 0 || !sirCookValidateBinary( sOutput, manifest.bSpirv, manifest.sProfile, request.nStage ) ) {
+	if ( nBinaryHash == 0 || !sirCookValidateBinary( sOutput, manifest.eFormat, manifest.sProfile ) ) {
 		std::filesystem::remove( sOutput, eError );
 		std::fprintf( stderr, "ShaderCooker: offline compiler did not emit a valid target binary\n" );
 		return 7;
@@ -245,11 +260,15 @@ int main( int nArgs, const char *const *pszArgs )
 	std::ofstream meta( sManifest, std::ios::binary | std::ios::trunc );
 	meta << "SIR_SHADER_COOK_RECIPE=1\n"
 	     << "BACKEND=" << ( uint32_t )request.eBackend << '\n'
+	     << "MODEL=" << ( uint32_t )manifest.eModel << '\n'
+	     << "FORMAT=" << ( uint32_t )manifest.eFormat << '\n'
+	     << "COMPILER_KIND=" << manifest.nCompilerKind << '\n'
 	     << "PROFILE=" << manifest.sProfile << '\n'
 	     << "BINARY_FORMAT="
-	     << ( bD3D9             ? "D3D9_TOKENS"
-	          : manifest.bSpirv ? "SPIRV"
-	                            : "DXBC" )
+	     << ( manifest.eFormat == SIR_GRAPHICS_SHADER_D3D_LEGACY_TOKENS ? "D3D9_TOKENS"
+	          : manifest.eFormat == SIR_GRAPHICS_SHADER_SPIRV           ? "SPIRV"
+	          : manifest.eFormat == SIR_GRAPHICS_SHADER_DXIL            ? "DXIL"
+	                                                                    : "DXBC" )
 	     << '\n'
 	     << "ENTRY=" << manifest.sEntryPoint << '\n'
 	     << "SOURCE=" << manifest.nSourceHash << '\n'

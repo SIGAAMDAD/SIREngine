@@ -22,6 +22,9 @@ add_library(SIRGraphics STATIC
     SIRGraphicsDriverABI.cpp
     SIRWindowSurfaceAdapter.cpp
     SIRWindowABISurface.cpp
+    SIRGraphicsModernRHI.cpp
+    SIRGraphicsEraRHI.cpp
+    SIRModernFrameGraphExecution.cpp
     SIRGraphicsModule.cpp
     SIRGraphicsPipelineABI.cpp
     SIRGraphicsPipelineBridge.cpp

@@ -463,25 +463,26 @@ sirShaderCookResult_t sirShaderCookPreprocess( const sirShaderCookRequest_t& req
 		*pDiagnostic = "invalid entry path, entry point or define count";
 		return SIR_SHADER_COOK_INVALID_ARGUMENT;
 	}
-	bool bSpirv = false;
-	const sirShaderCookResult_t eTarget = sirShaderCookResolveTarget( request.eBackend, request.nStage, &pManifest->sProfile, &bSpirv );
+	sirShaderCookTarget_t target = {};
+	const sirShaderCookResult_t eTarget = sirShaderCookResolveTargetInfo( request.eBackend, request.nStage, &target );
 	if ( eTarget != SIR_SHADER_COOK_OK ) {
 		*pDiagnostic = "shader target or stage is unsupported";
 		return eTarget;
 	}
-	if ( request.eBackend == SIR_GRAPHICS_BACKEND_D3D9 ) {
-		if ( request.nShaderMajor != 0 && request.nShaderMajor != 2 && request.nShaderMajor != 3 ) {
-			*pDiagnostic = "D3D9 supports only shader models 2 or 3";
+	// Preserve the Wave 4 D3D9 SM2/SM3 override while using the
+	// shared graphics-era target metadata for all backends.
+	if ( request.nShaderMajor != 0 ) {
+		if ( request.eBackend != SIR_GRAPHICS_BACKEND_D3D9 || ( request.nShaderMajor != 2 && request.nShaderMajor != 3 ) ) {
+			*pDiagnostic = "shader model override unsupported for this backend";
 			return SIR_SHADER_COOK_UNSUPPORTED;
 		}
-		if ( request.nShaderMajor == 2 ) {
-			pManifest->sProfile[3] = '2';
-		}
-	} else if ( request.nShaderMajor != 0 ) {
-		*pDiagnostic = "shader model override unsupported for this backend";
-		return SIR_SHADER_COOK_UNSUPPORTED;
+		target.sProfile[3] = char( '0' + request.nShaderMajor );
 	}
-	pManifest->bSpirv = bSpirv;
+	pManifest->bSpirv = target.bSpirv;
+	pManifest->sProfile = target.sProfile;
+	pManifest->eModel = target.eModel;
+	pManifest->eFormat = target.eFormat;
+	pManifest->nCompilerKind = target.eCompiler;
 	pManifest->nRecipeVersion = SIR_COOK_RECIPE_VERSION;
 	pManifest->sEntryPoint = request.sEntryPoint;
 	pManifest->szDefines = request.szDefines;
