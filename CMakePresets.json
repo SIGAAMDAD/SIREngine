@@ -153,6 +153,44 @@
       "cacheVariables": {
         "SIR_CXX_STANDARD": "17"
       }
+    },
+    {
+      "name": "standards-clang23",
+      "displayName": "SIREngine Clang 23.1.5 standards qualification",
+      "inherits": "tooling",
+      "binaryDir": "${sourceDir}/out/${hostSystemName}/standards-clang23",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      },
+      "cacheVariables": {
+        "SIR_CXX_STANDARD": "23",
+        "SIR_STRICT_WARNINGS": "ON",
+        "CMAKE_C_COMPILER": "clang-23",
+        "CMAKE_CXX_COMPILER": "clang++-23",
+        "CMAKE_CXX_SCAN_FOR_MODULES": "OFF",
+        "SIR_BUILD_TESTS": "ON"
+      }
+    },
+    {
+      "name": "standards-cxx17",
+      "displayName": "SIREngine C++17 fallback standards qualification",
+      "inherits": "tooling-cxx17",
+      "binaryDir": "${sourceDir}/out/${hostSystemName}/standards-cxx17",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      },
+      "cacheVariables": {
+        "SIR_CXX_STANDARD": "17",
+        "SIR_STRICT_WARNINGS": "ON",
+        "CMAKE_C_COMPILER": "clang-23",
+        "CMAKE_CXX_COMPILER": "clang++-23",
+        "CMAKE_CXX_SCAN_FOR_MODULES": "OFF",
+        "SIR_BUILD_TESTS": "ON"
+      }
     }
   ],
   "buildPresets": [
@@ -235,6 +273,14 @@
     {
       "name": "tooling-cxx17",
       "configurePreset": "tooling-cxx17"
+    },
+    {
+      "name": "standards-clang23",
+      "configurePreset": "standards-clang23"
+    },
+    {
+      "name": "standards-cxx17",
+      "configurePreset": "standards-cxx17"
     }
   ],
   "testPresets": [
@@ -506,6 +552,20 @@
     {
       "name": "tooling-cxx17",
       "configurePreset": "tooling-cxx17",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "standards-clang23",
+      "configurePreset": "standards-clang23",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "standards-cxx17",
+      "configurePreset": "standards-cxx17",
       "output": {
         "outputOnFailure": true
       }

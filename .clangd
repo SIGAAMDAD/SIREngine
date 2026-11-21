@@ -1,10 +1,63 @@
-# CMake tooling preset creates out/<hostSystemName>/tooling/compile_commands.json.
-# Link/copy that database to the repository root for cross-platform ancestor lookup.
+# SIREngine clangd workspace policy (LLVM/clangd 23).
+# Run: cmake --preset tooling
+# Then: cmake --build --preset tooling --target sir-clangd-db
+# Compilation flags are taken from the real CMake database. Never force -std,
+# -target, GCC include paths, or Clang driver mode: MSVC/clang-cl and Linux
+# Clang/GCC builds each need their own authentic flags.
 CompileFlags:
   CompilationDatabase: Ancestors
+  BuiltinHeaders: Clangd
+
 Index:
   Background: Build
+  StandardLibrary: true
+
+Style:
+  # Do not suggest "using std::..." or "using eastl::..." code actions.
+  FullyQualifiedNamespaces: [std, eastl]
+  AngledHeaders: ['^Core/', '^EASTL/', '^ThirdParty/']
+
+Diagnostics:
+  # Keep all compiler diagnostics. .clang-tidy is the single check registry.
+  ClangTidy:
+    FastCheckFilter: Loose
+  UnusedIncludes: Strict
+  # Detect direct dependency omissions (first-party headers should be standalone).
+  MissingIncludes: Strict
+  Includes:
+    # Every first-party header explicitly includes this engine PCH by policy.
+    IgnoreHeader: ['(^|/)Core/SIRPCH\.h$']
+    # Umbrella-style vendor/SDK headers are not independently analyzable.
+    AnalyzeAngledIncludes: false
+
+Completion:
+  AllScopes: true
+  ArgumentLists: FullPlaceholders
+  HeaderInsertion: IWYU
+  CodePatterns: All
+  MacroFilter: ExactPrefix
+
+InlayHints:
+  Enabled: true
+  ParameterNames: true
+  DeducedTypes: true
+  Designators: true
+  BlockEnd: false
+  DefaultArguments: false
+  TypeNameLimit: 40
+
+Hover:
+  ShowAKA: true
+  MacroContentsLimit: 2048
+
+---
+# Do not index or run first-party style checks on vendored/generated sources.
+If:
+  PathMatch: '(^|.*/)(ThirdParty|External|Vendor|out|build)/.*'
+Index:
+  Background: Skip
 Diagnostics:
   ClangTidy:
-    # clangd reads root .clang-tidy; no competing check list is maintained here.
-    Add: []
+    Remove: '*'
+  UnusedIncludes: None
+  MissingIncludes: None

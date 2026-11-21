@@ -1,0 +1,10 @@
+include("${CMAKE_CURRENT_LIST_DIR}/../../Build/CMake/SIRBuildTreeGuard.cmake")
+add_library(SIRRegistrationCookerLib STATIC SIRRegistrationCooker.cpp ${PROJECT_SOURCE_DIR}/Tools/StringCatalogCooker/SIRStringCatalogCooker.cpp)
+target_include_directories(SIRRegistrationCookerLib PUBLIC "${PROJECT_SOURCE_DIR}" "${PROJECT_SOURCE_DIR}/Source" "${PROJECT_SOURCE_DIR}/Build/CMake")
+target_link_libraries(SIRRegistrationCookerLib PUBLIC SIR::Core)
+target_compile_features(SIRRegistrationCookerLib PUBLIC cxx_std_17)
+sir_configure_owned_target(SIRRegistrationCookerLib)
+
+add_executable(SIRRegistrationCooker SIRRegistrationCookerMain.cpp)
+target_link_libraries(SIRRegistrationCooker PRIVATE SIRRegistrationCookerLib)
+sir_configure_owned_target(SIRRegistrationCooker)

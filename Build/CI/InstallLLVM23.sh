@@ -17,6 +17,8 @@ verify_exact() {
     clang++-23 --version | grep -F '23.1.5'
     llvm-cov-23 --version | grep -F '23.1.5'
     llvm-profdata-23 --version | grep -F '23.1.5'
+    clang-format --version | grep -F '23.1.5'
+    clang-tidy --version | grep -F '23.1.5'
 }
 
 if [[ "$mode" == pr ]]; then
@@ -46,9 +48,13 @@ fi
 if command -v clang++-23 >/dev/null 2>&1 &&
    command -v llvm-cov-23 >/dev/null 2>&1 &&
    command -v llvm-profdata-23 >/dev/null 2>&1 &&
+   command -v clang-format >/dev/null 2>&1 &&
+   command -v clang-tidy >/dev/null 2>&1 &&
    clang++-23 --version | grep -Fq '23.1.5' &&
    llvm-cov-23 --version | grep -Fq '23.1.5' &&
-   llvm-profdata-23 --version | grep -Fq '23.1.5'; then
+   llvm-profdata-23 --version | grep -Fq '23.1.5' &&
+   clang-format --version | grep -Fq '23.1.5' &&
+   clang-tidy --version | grep -Fq '23.1.5'; then
     verify_exact
     exit 0
 fi
@@ -74,13 +80,15 @@ tar --use-compress-program='zstd --long=30' -xf "$archive" -C "$root/unpack"
 bin="$(find "$root/unpack" -path '*/bin/clang++' -print -quit)"
 test -n "$bin"
 bin="$(dirname "$bin")"
-for tool in clang clang++ llvm-cov llvm-profdata; do
+for tool in clang clang++ llvm-cov llvm-profdata clang-format clang-tidy; do
     test -x "$bin/$tool"
 done
 ln -sf "$bin/clang" "$root/toolbin/clang-23"
 ln -sf "$bin/clang++" "$root/toolbin/clang++-23"
 ln -sf "$bin/llvm-cov" "$root/toolbin/llvm-cov-23"
 ln -sf "$bin/llvm-profdata" "$root/toolbin/llvm-profdata-23"
+ln -sf "$bin/clang-format" "$root/toolbin/clang-format"
+ln -sf "$bin/clang-tidy" "$root/toolbin/clang-tidy"
 printf '%s\n' "$root/toolbin" >> "$GITHUB_PATH"
 export PATH="$root/toolbin:$PATH"
 verify_exact

@@ -13,7 +13,7 @@ import json
 import os
 from pathlib import Path
 import re
-import shlex
+from compdb import analysis_command, command_arguments
 import subprocess
 import sys
 
@@ -354,25 +354,9 @@ def source_from_compdb(entry, root):
 
 
 def run_ast(clang, file, argv, cwd, timeout, max_bytes):
-    # Retain all authentic compilation flags; suppress only output/dependency emission.
-    args = list(argv)
-    if not args:
-        raise ValueError("empty compilation command")
-    args[0] = clang
-    cleaned = []
-    i = 0
-    while i < len(args):
-        arg = args[i]
-        if arg in ("-o", "-MF", "-MT", "-MQ", "-MJ"):
-            i += 2
-            continue
-        if arg in ("-c", "-MD", "-MMD", "-MP", "-MG") or arg.startswith("-o") and len(arg) > 2:
-            i += 1
-            continue
-        cleaned.append(arg)
-        i += 1
-    cleaned += ["-fsyntax-only", "-Xclang", "-ast-dump=json"]
-    proc = subprocess.run(cleaned, cwd=cwd, capture_output=True, timeout=timeout)
+    # Real build argv, with only artifact/dependency flags stripped.
+    cmd = analysis_command(clang, argv, file)
+    proc = subprocess.run(cmd, cwd=cwd, capture_output=True, timeout=timeout)
     if len(proc.stdout) > max_bytes:
         raise ValueError("AST exceeded configured maximum output bytes")
     if proc.returncode:
@@ -404,7 +388,7 @@ def main():
         entries = []
         for entry in data:
             file = source_from_compdb(entry, root)
-            command = entry.get("arguments") or shlex.split(entry["command"])
+            command = command_arguments(entry)
             directory = Path(entry["directory"]).resolve()
             entries.append((file, command, directory))
     dedup = set()

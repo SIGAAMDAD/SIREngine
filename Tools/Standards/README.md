@@ -1,4 +1,4 @@
-# SIREngine Clang 23 enforcement (levels 1 and 2)
+# SIREngine Clang 23 standards enforcement (levels 1, 2 and 3)
 
 ## Files
 
@@ -49,3 +49,32 @@ The tool checks exact rule-specific markers. Unannotated code is rejected.
 Clang AST checks enforce syntax, declaration layout, constructor/member policies, forbidden APIs, and header conventions. They do not prove that operator new/delete really routes to SIREngine's allocation manager, ownership semantics, smart-pointer correctness, performance preferences (SoA/specialized containers), proper fallback feature semantics, or cross-module ABI compatibility. Those require source/link/runtime evidence. The `readability-function-cognitive-complexity` check is an approximation, not exact cyclomatic complexity; exact cyclomatic complexity requires a separate CFG metric. This tooling does not claim those unimplemented gates.
 
 First-party `Source/`, `Tests/`, and `Tools/` are in scope; vendor and generated directories are excluded. An existing codebase with violations will fail until remediated. No source rewriting is bundled.
+
+## Level 3 — Required build/CI gates
+
+`Build/CMake/SIRStandards.cmake` registers `sir-format-check`,
+`sir-tidy-check`, `sir-policy-check`, `sir-header-check`,
+`sir-policy-regression-check`, `sir-standards-check`, and the separate
+`sir-compatibility-check`. The standards workflow runs these from the
+`standards-clang23` CMake preset and qualifies the C++17 fallback from
+`standards-cxx17`. The reusable standards workflow is a required dependency of
+`ci.yml`'s `sir/required` job. `Docs/Standards/ClangEnforcement.md` contains
+the complete commands and qualification boundaries.
+
+Only configuration and standards tooling are delivered; this package does not
+rewrite legacy engine source to satisfy the stricter policy.
+
+## Cross-platform development (LLVM 23.1.5)
+
+Use `cmake --build --preset tooling --target sir-clangd-db` to expose an
+**authentic** CMake compile database at the repo root. The same `.clangd` file
+works with Linux Clang/GCC and Windows clang-cl/MSVC commands. Do not add
+`-std`, Windows SDK paths, or Linux system include paths to `.clangd`.
+
+On Windows, use a Developer PowerShell with Visual Studio/Windows SDK enabled;
+configure Ninja with `-DCMAKE_CXX_COMPILER=clang-cl`. The custom AST and header
+checks recognize MSVC-style compile-command arguments and select clang-cl
+driver parsing. The Git pre-commit hook delegates to a Python implementation
+and does not call Linux-only shell scripts.
+
+See `Docs/Standards/ClangEnforcement.md` for commands and CI validation scope.

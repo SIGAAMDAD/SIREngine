@@ -1,0 +1,258 @@
+{
+  "name": "SIREngine VS Code Agent Suite",
+  "date": "2026-11-20",
+  "scope": "Copilot harness workspace instructions, agents, skills and validation",
+  "counts": {
+    "agents": 9,
+    "instructions": 14,
+    "skills": 9,
+    "files_excluding_manifest": 49
+  },
+  "entries": [
+    {
+      "path": ".github/agents/sir-architect.agent.md",
+      "sha256": "461816fd3c6f57db3407d3df86cb1f336d136f2e05f24ad7b9d9ffbb6c5ead57",
+      "bytes": 894
+    },
+    {
+      "path": ".github/agents/sir-build-engineer.agent.md",
+      "sha256": "05a9b309cb7e2ac993d8d234462e9321e96829af62dc0f2d30a1d3f533ac4dc8",
+      "bytes": 786
+    },
+    {
+      "path": ".github/agents/sir-director.agent.md",
+      "sha256": "bba2bee348357f9b9c5e404537e560e716c395f1da2e83223370d75035d1230c",
+      "bytes": 1881
+    },
+    {
+      "path": ".github/agents/sir-documentarian.agent.md",
+      "sha256": "7fab8d3c871ddbf628a80d80d8951088fa42710812712206e5efd8128e223050",
+      "bytes": 646
+    },
+    {
+      "path": ".github/agents/sir-implementer.agent.md",
+      "sha256": "b6dc6eaec0ef797911940ca0f5b491d7fb722ff66ac4d7260e116b847a2e1988",
+      "bytes": 1074
+    },
+    {
+      "path": ".github/agents/sir-integration-engineer.agent.md",
+      "sha256": "8176b4db6997b0c987768b5b57d64fb34b14da2ff9fd00e629630e860cff6256",
+      "bytes": 764
+    },
+    {
+      "path": ".github/agents/sir-performance-auditor.agent.md",
+      "sha256": "ee7943f5c1f9aa3afa41c1cc0817c82393ae009b7b1c84d204207935f8848f52",
+      "bytes": 803
+    },
+    {
+      "path": ".github/agents/sir-researcher.agent.md",
+      "sha256": "b7e924a1cbf50537c0dbc9972a732168063b11e97ad8b98fb79fb86d44cd491b",
+      "bytes": 785
+    },
+    {
+      "path": ".github/agents/sir-verifier.agent.md",
+      "sha256": "d162dbcf563c55b60a16a02b3329ced57d8e9f05e1904b443edd01b85b06ebf2",
+      "bytes": 933
+    },
+    {
+      "path": ".github/instructions/audio.instructions.md",
+      "sha256": "39639e0201f5d9135930938be95dc31ef685e406a58d3795816930ed31b3f2cf",
+      "bytes": 677
+    },
+    {
+      "path": ".github/instructions/build.instructions.md",
+      "sha256": "4b088a43bc0014f448b13ff8e357675397f357319ea628d546679c5a2e25f6d4",
+      "bytes": 1273
+    },
+    {
+      "path": ".github/instructions/cpp-style.instructions.md",
+      "sha256": "19f19c4e033c0829a904860bb9cc8c894390be4975e1523b50f390bcb7bbefe7",
+      "bytes": 2542
+    },
+    {
+      "path": ".github/instructions/cpp-types.instructions.md",
+      "sha256": "ea51ae3b1cb85079fed02a2f415c11e123853439e01ee0580d5571b76d4473a4",
+      "bytes": 1650
+    },
+    {
+      "path": ".github/instructions/docs.instructions.md",
+      "sha256": "9a865744b9be6ba75d8a7e017c3c7f7506b1e5516e37d0cb9e7952ae4a6ca16b",
+      "bytes": 828
+    },
+    {
+      "path": ".github/instructions/editor-scripting.instructions.md",
+      "sha256": "ef122075bce2686a803c948c7a85a41c3ec3b66e98eea7f4614c87148beb5e75",
+      "bytes": 883
+    },
+    {
+      "path": ".github/instructions/memory.instructions.md",
+      "sha256": "8efcf47d9ea25e9ce1a1443ae14cf5a66bebe5763661bae8a014d8781d4bda2b",
+      "bytes": 1648
+    },
+    {
+      "path": ".github/instructions/platform.instructions.md",
+      "sha256": "4770954bbc473f8541e17dd92c457abb9865470e87c42266c4253e864a66f0b0",
+      "bytes": 957
+    },
+    {
+      "path": ".github/instructions/registration.instructions.md",
+      "sha256": "e1bee3ae799c03c93f69e207bf37bf909f70281a576a388f87e5b64adc03197d",
+      "bytes": 883
+    },
+    {
+      "path": ".github/instructions/rendering.instructions.md",
+      "sha256": "d7e91b23cdb0b2e62b63abe9e7700cc05945a91a787fd0741a353cf31a1b7ddb",
+      "bytes": 1319
+    },
+    {
+      "path": ".github/instructions/resource-cooking.instructions.md",
+      "sha256": "f232b5f472205394aecf8c7a74b0c60498b3d92c5c12eee2bf03e27f5c5f667c",
+      "bytes": 762
+    },
+    {
+      "path": ".github/instructions/tests.instructions.md",
+      "sha256": "560fa4c7070bfbaf5aa20c5f74d0ef0963fd939353b4f566c6d748e9765dd5fd",
+      "bytes": 1286
+    },
+    {
+      "path": ".github/instructions/threading.instructions.md",
+      "sha256": "d3fdf21822b5aa836fea0193d5f615992fe29da34fa74ba68abebd500cb3ca55",
+      "bytes": 1241
+    },
+    {
+      "path": ".github/instructions/world-streaming.instructions.md",
+      "sha256": "560411fa67c6f1f07738047cdb24429addd999e93804a0dd9cee1288e062a2cb",
+      "bytes": 756
+    },
+    {
+      "path": ".github/skills/sir-architecture-plan/SKILL.md",
+      "sha256": "594137fd0cf8929107dcdde47b58426b189cd5e1d4bc9dda06779d3d14630c63",
+      "bytes": 1058
+    },
+    {
+      "path": ".github/skills/sir-complete-issue/SKILL.md",
+      "sha256": "e41e8168d7537e4fcfc7f017d232c45640bfe982de89f289907fc15b82d1543e",
+      "bytes": 1556
+    },
+    {
+      "path": ".github/skills/sir-document/SKILL.md",
+      "sha256": "abb40235e38a7dec22fd7a247a735168f7f66d5acdff1e5f9c023e4bf5ed03ab",
+      "bytes": 646
+    },
+    {
+      "path": ".github/skills/sir-implement/SKILL.md",
+      "sha256": "5bded25c9c3d686ed80a4e8166cd8a600d06ee91153a99a85bfea229a839cfda",
+      "bytes": 1009
+    },
+    {
+      "path": ".github/skills/sir-integration/SKILL.md",
+      "sha256": "18d5abaa585d1fa2a1f3e1dd2d2096f26f507957246ce076dec9faae90e816b2",
+      "bytes": 867
+    },
+    {
+      "path": ".github/skills/sir-investigate/SKILL.md",
+      "sha256": "8c0cd378a01312ade4334de658ed760676fcb450a504e24ab88e6f4f539769b8",
+      "bytes": 919
+    },
+    {
+      "path": ".github/skills/sir-profile/SKILL.md",
+      "sha256": "5fbc7115a6cab5036bab7abf9d6344b1c44d503d4d8bfedcd339ba32a639017e",
+      "bytes": 885
+    },
+    {
+      "path": ".github/skills/sir-refactor/SKILL.md",
+      "sha256": "cf767a654307a0bd08321c6df0d5f342c9acb9825deb48dd3b3a4915eeca3adc",
+      "bytes": 952
+    },
+    {
+      "path": ".github/skills/sir-verify/SKILL.md",
+      "sha256": "e81700ce0b6bc545cc18c968f25aeb72dfef3094d08ca04a8feccf1dca59719f",
+      "bytes": 1070
+    },
+    {
+      "path": ".vscode/settings.agent-suite.example.json",
+      "sha256": "8aa0b270843cabbf10f408245c6fcf628cdfcb4a0ef658c2c36ec31fcddc41ba",
+      "bytes": 94
+    },
+    {
+      "path": "AGENTS.md",
+      "sha256": "edc752842d4abfa08d90404d2f47dbb18df71a6b5ae88d71df7f5cf3fac9ccd8",
+      "bytes": 5625
+    },
+    {
+      "path": "Docs/Agents/CompactPrompts.md",
+      "sha256": "dd726bdff1fbc467dbabe1ac7a8f565361f3052c8296e5c2dad4b3dee6e4293a",
+      "bytes": 976
+    },
+    {
+      "path": "Docs/Agents/ContextCache.md",
+      "sha256": "2ac6dd9f5cd31daa7f30253f9848954d177fd52c76a6f1d5c813ff8aa8c17c03",
+      "bytes": 1458
+    },
+    {
+      "path": "Docs/Agents/Delegation.md",
+      "sha256": "541407b606360a2869e70f49a0512a19f8f6cb3dd86200a9b8ede791098d86ea",
+      "bytes": 1246
+    },
+    {
+      "path": "Docs/Agents/Installation.md",
+      "sha256": "6255d498b78656394c7574a8508c6af2f14c6cb3fff31ae962966547fb0bd63a",
+      "bytes": 2957
+    },
+    {
+      "path": "Docs/Agents/Models.md",
+      "sha256": "b5b93f66ee226fafeda049417a42abd06af9bbe5b7f27a189e5090f1cc70801b",
+      "bytes": 1858
+    },
+    {
+      "path": "Docs/Agents/Operations.md",
+      "sha256": "56ed51db837e37a25e1886a0b249ae9e22a2a480f9e321110d8fe907d0b688de",
+      "bytes": 1989
+    },
+    {
+      "path": "Docs/Agents/PolicyDelta.md",
+      "sha256": "55aec4455b6f49ff1ed914568f2902d475b060b4fd0c4d3d67a88d03a5419a21",
+      "bytes": 2260
+    },
+    {
+      "path": "Docs/Agents/README.md",
+      "sha256": "baa9544b9ec9e33222a029dcb814e0a443c634a486382c0d524159c2c56d9a4f",
+      "bytes": 2367
+    },
+    {
+      "path": "Docs/Agents/Receipts.md",
+      "sha256": "fe0f6065b574e4de98c1d6f71484b72f8aeb511e699b3843aa561e55a25786c5",
+      "bytes": 1035
+    },
+    {
+      "path": "Docs/Agents/SourceMap.md",
+      "sha256": "435433381c0cfaaf52a8085cfdc719c56ae595b57defee41c834721e2824d786",
+      "bytes": 1117
+    },
+    {
+      "path": "Docs/Agents/ValidationResults.md",
+      "sha256": "5dbd53012d7da1989fa290a44572c3b59131824f0644bba2f48542ef7aa141c3",
+      "bytes": 857
+    },
+    {
+      "path": "Docs/Agents/Verification.md",
+      "sha256": "2ca95ee63213c056669136eb0df0d95931dd1f2102ae29ce0b5a50119f58c3d5",
+      "bytes": 2334
+    },
+    {
+      "path": "Tools/AgentConfig/README.md",
+      "sha256": "5d6176818934a01dcb66a2a0e572fadff18777125fc8b3632faec913f8d49255",
+      "bytes": 504
+    },
+    {
+      "path": "Tools/AgentConfig/TESTING.md",
+      "sha256": "6375e86d6f640230a194cf30e28613c491ad137d9d732f0ff73980b771b968c4",
+      "bytes": 597
+    },
+    {
+      "path": "Tools/AgentConfig/validate_suite.py",
+      "sha256": "652400aa57dbb36ec46b6cf3f19a2e1b2364de717edba8a78ad8c93bb3d93615",
+      "bytes": 8228
+    }
+  ]
+}

@@ -1,0 +1,122 @@
+name: SIREngine standards qualification
+on:
+  workflow_call:
+permissions:
+  contents: read
+jobs:
+  llvm23:
+    name: Clang 23 / full standards
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-build-tools
+        with:
+          install-fastbuild: 'false'
+      - name: Install qualification LLVM 23.1.5
+        env:
+          SIR_LLVM_MODE: qualification
+        run: bash Build/CI/InstallLLVM23.sh
+      - name: Verify Clang tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          clang++-23 --version | grep -F '23.1.5'
+          clang-format --version | grep -F '23.1.5'
+          clang-tidy --version | grep -F '23.1.5'
+      - name: Configure Clang 23 compilation database
+        shell: bash
+        run: |
+          cmake --preset standards-clang23
+          test -s out/Linux/standards-clang23/compile_commands.json
+      - name: Run mandatory standards gates
+        shell: bash
+        run: cmake --build --preset standards-clang23 --target sir-standards-check
+      - name: Build primary C++23 configuration
+        shell: bash
+        run: cmake --build --preset standards-clang23 --parallel 2
+      - name: Test primary C++23 configuration
+        shell: bash
+        run: ctest --preset standards-clang23 --no-tests=error --output-on-failure
+
+  fallback17:
+    name: Clang 23 / C++17 fallback qualification
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-build-tools
+        with:
+          install-fastbuild: 'false'
+      - name: Install LLVM 23 for fallback qualification
+        env:
+          SIR_LLVM_MODE: qualification
+        run: bash Build/CI/InstallLLVM23.sh
+      - name: Configure fallback C++17
+        shell: bash
+        run: cmake --preset standards-cxx17
+      - name: Build fallback C++17
+        shell: bash
+        run: cmake --build --preset standards-cxx17 --parallel 2
+      - name: Test fallback C++17
+        shell: bash
+        run: ctest --preset standards-cxx17 --no-tests=error --output-on-failure
+
+  windows:
+    name: Windows x64 / clang-cl standards and fallback
+    runs-on: windows-2022
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: ./.github/actions/setup-build-tools
+        with:
+          install-fastbuild: 'false'
+      - name: Install and verify LLVM 23.1.5 (Windows)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $installer = Join-Path $env:RUNNER_TEMP 'LLVM-23.1.5-win64.msi'
+          $uri = 'https://github.com/llvm/llvm-project/releases/download/llvmorg-23.1.5/LLVM-23.1.5-win64.msi'
+          Invoke-WebRequest -Uri $uri -OutFile $installer
+          gh attestation verify $installer --repo llvm/llvm-project
+          $process = Start-Process msiexec.exe -ArgumentList @('/i', ('"' + $installer + '"'), '/qn', '/norestart') -Wait -PassThru
+          if ($process.ExitCode -ne 0) { throw "LLVM installation failed: $($process.ExitCode)" }
+          $bin = Join-Path $env:ProgramFiles 'LLVM\bin'
+          if (-not (Test-Path (Join-Path $bin 'clang-cl.exe'))) { throw 'clang-cl missing after LLVM install' }
+          $bin | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+      - name: Verify tools and Windows policy fixtures
+        shell: pwsh
+        run: |
+          clang-cl --version
+          clang-format --version
+          clang-tidy --version
+          python Tools/Standards/run_checks.py --repo . --mode regression --clang clang.exe --clang-format clang-format.exe
+      - name: Configure Windows clang-cl compilation database
+        shell: pwsh
+        run: |
+          cmake --preset tooling -DCMAKE_CXX_COMPILER=clang-cl -DSIR_CXX_STANDARD=23
+          if (-not (Test-Path 'out/Windows/tooling/compile_commands.json')) { throw 'Missing Windows compile database' }
+      - name: Windows mandatory standards gates
+        shell: pwsh
+        run: cmake --build --preset tooling --target sir-standards-check
+      - name: Compile and test Windows C++23
+        shell: pwsh
+        run: |
+          cmake --build --preset tooling --parallel 2
+          ctest --test-dir out/Windows/tooling --no-tests=error --output-on-failure
+      - name: Compile and test Windows C++17 fallback
+        shell: pwsh
+        run: |
+          cmake --preset tooling-cxx17 -DCMAKE_CXX_COMPILER=clang-cl
+          cmake --build --preset tooling-cxx17 --parallel 2
+          ctest --test-dir out/Windows/tooling-cxx17 --no-tests=error --output-on-failure

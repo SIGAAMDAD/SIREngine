@@ -76,6 +76,8 @@ endif()
 
 add_subdirectory(Tools/ShaderCooker)
 
+include(Build/CMake/SIRStandards.cmake)
+
 include(GNUInstallDirs)
 install(TARGETS SIREngine RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
 set(CPACK_PACKAGE_NAME "SIREngine")
