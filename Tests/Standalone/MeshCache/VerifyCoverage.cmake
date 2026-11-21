@@ -1,4 +1,4 @@
-# The standalone harness runs all eight real CTest fixtures before this verifier.
+# The standalone harness runs all nine real CTest fixtures before this verifier.
 # Require every source-based coverage metric on both CPU mesh-owned TUs.
 foreach(sirSetting IN ITEMS SIR_MESH_BUILD_DIR SIR_MESH_COVERAGE_DIR SIR_MESH_LLVM_PROFDATA SIR_MESH_LLVM_COV)
     if(NOT DEFINED ${sirSetting} OR "${${sirSetting}}" STREQUAL "")
@@ -8,8 +8,8 @@ endforeach()
 
 file(GLOB sirProfiles "${SIR_MESH_COVERAGE_DIR}/mesh-*.profraw")
 list(LENGTH sirProfiles sirProfileCount)
-if(sirProfileCount LESS 8)
-    message(FATAL_ERROR "Expected coverage profiles from eight independent mesh tests, found ${sirProfileCount}")
+if(sirProfileCount LESS 9)
+    message(FATAL_ERROR "Expected coverage profiles from nine independent mesh tests, found ${sirProfileCount}")
 endif()
 
 set(sirProfdata "${SIR_MESH_COVERAGE_DIR}/combined.profdata")
@@ -27,7 +27,7 @@ if(CMAKE_HOST_WIN32)
 endif()
 set(sirExportArgs -summary-only "-instr-profile=${sirProfdata}")
 foreach(sirExecutable IN ITEMS SIRMeshCacheStateTests SIRMeshCacheEdgeTests
-        SIRMeshCacheGenerationTests SIRMeshCacheBorrowLimitTests SIRMeshCacheAllocationTests SIRMeshCacheOwnerLimitTests
+        SIRMeshCacheGenerationTests SIRMeshCacheBorrowLimitTests SIRMeshCacheAllocationTests SIRMeshCacheOwnerLimitTests SIRMeshCacheOwnerConcurrencyTests
         SIRVGFramePlanTests)
     list(APPEND sirExportArgs "-object=${SIR_MESH_BUILD_DIR}/${sirExecutable}${sirExecutableSuffix}")
 endforeach()

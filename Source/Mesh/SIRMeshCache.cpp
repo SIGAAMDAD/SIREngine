@@ -21,28 +21,21 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <new>
 #include <stdint.h>
 
-// The stand-alone generation-exhaustion fixture seeds near UINT32_MAX.
-// Ordinary engine builds always start at zero.
+// These preprocessor inputs are isolated to dedicated boundary-test builds.
 #ifdef SIR_MESH_TEST_GENERATION_SEED
-static constexpr uint32_t SIR_MESH_INITIAL_GENERATION = SIR_MESH_TEST_GENERATION_SEED;
+#define SIR_MESH_INITIAL_GENERATION SIR_MESH_TEST_GENERATION_SEED
 #else
-static constexpr uint32_t SIR_MESH_INITIAL_GENERATION = 0;
+#define SIR_MESH_INITIAL_GENERATION 0U
 #endif
-
-// Standalone boundary tests use a reduced limit to verify counter saturation.
-// The shipping build always retains the full uint32_t borrow range.
 #ifdef SIR_MESH_TEST_MAX_BORROWS
-static constexpr uint32_t SIR_MESH_MAX_BORROWS = SIR_MESH_TEST_MAX_BORROWS;
+#define SIR_MESH_MAX_BORROWS SIR_MESH_TEST_MAX_BORROWS
 #else
-static constexpr uint32_t SIR_MESH_MAX_BORROWS = UINT32_MAX;
+#define SIR_MESH_MAX_BORROWS UINT32_MAX
 #endif
-
-// Each cache initialization receives a unique, nonzero owner ID within this linked MeshCache implementation.
-// Saturate rather than recycle IDs so a foreign/stale handle never aliases.
 #ifdef SIR_MESH_TEST_OWNER_ID_SEED
-static constexpr uint64_t SIR_MESH_INITIAL_OWNER_ID = SIR_MESH_TEST_OWNER_ID_SEED;
+#define SIR_MESH_INITIAL_OWNER_ID SIR_MESH_TEST_OWNER_ID_SEED
 #else
-static constexpr uint64_t SIR_MESH_INITIAL_OWNER_ID = 1;
+#define SIR_MESH_INITIAL_OWNER_ID 1ULL
 #endif
 static SIRAtomic<uint64_t> s_nNextMeshCacheOwnerId( SIR_MESH_INITIAL_OWNER_ID );
 
@@ -51,6 +44,10 @@ static uint64_t allocateMeshCacheOwnerId( void ) noexcept
 	// Allocate the per-initialization identity through the engine atomic,
 	// with no STL synchronization or hot-path locks. Never recycle identifiers.
 	uint64_t nCandidate = s_nNextMeshCacheOwnerId.load( SIR_MEMORY_ORDER_RELAXED );
+#ifdef SIR_MESH_TEST_FORCE_CAS_RETRY
+	// Force one failed compare/exchange in the scoped concurrency fixture.
+	nCandidate += 0x100000000ULL;
+#endif
 	while ( nCandidate != UINT64_MAX ) {
 		if ( s_nNextMeshCacheOwnerId.compareExchangeWeak( nCandidate, nCandidate + 1, SIR_MEMORY_ORDER_ACQUIRE_RELEASE ) ) {
 			return nCandidate;
@@ -80,8 +77,16 @@ static bool validateMeshSource( const sirMeshGeometrySource_t *pSource ) noexcep
 	if ( pSource->key.nAssetId == 0 || pSource->key.nRevision == 0 || pSource->key.nReserved != 0 ) {
 		return false;
 	}
-	if ( pSource->pPositionsXYZ == nullptr || pSource->pTriangleIndices == nullptr || pSource->pSourcePin == nullptr ||
-	     pSource->pfnReleaseSourcePin == nullptr ) {
+	if ( pSource->pPositionsXYZ == nullptr ) {
+		return false;
+	}
+	if ( pSource->pTriangleIndices == nullptr ) {
+		return false;
+	}
+	if ( pSource->pSourcePin == nullptr ) {
+		return false;
+	}
+	if ( pSource->pfnReleaseSourcePin == nullptr ) {
 		return false;
 	}
 	if ( pSource->nVertexCount == 0 || pSource->nIndexCount == 0 || ( pSource->nIndexCount % 3U ) != 0 ) {
@@ -189,7 +194,13 @@ sirMeshResult_t SIRMeshCache::insert( const sirMeshGeometrySource_t *pSource, si
 	if ( !m_bReady ) {
 		return SIR_MESH_NOT_READY;
 	}
-	if ( pHandle == nullptr || pSource == nullptr || !validateMeshSource( pSource ) ) {
+	if ( pHandle == nullptr ) {
+		return SIR_MESH_INVALID_ARGUMENT;
+	}
+	if ( pSource == nullptr ) {
+		return SIR_MESH_INVALID_ARGUMENT;
+	}
+	if ( !validateMeshSource( pSource ) ) {
 		return SIR_MESH_INVALID_ARGUMENT;
 	}
 
@@ -288,11 +299,11 @@ void SIRMeshCache::finalizeSlot( uint32_t iSlot ) noexcept
 	assert( pSlot->bOccupied && pSlot->nBorrows == 0 );
 
 	void *pPin = pSlot->source.pSourcePin;
-	void ( *pfnRelease )( void * ) noexcept = pSlot->source.pfnReleaseSourcePin;
+	void ( *pRelease )( void * ) noexcept = pSlot->source.pfnReleaseSourcePin;
 	*pSlot = {};
 	--m_nResidentCount;
 	// Source ownership is released only after the slot cannot be resolved.
-	pfnRelease( pPin );
+	pRelease( pPin );
 }
 
 sirMeshResult_t SIRMeshCache::release( sirMeshHandle_t handle ) noexcept

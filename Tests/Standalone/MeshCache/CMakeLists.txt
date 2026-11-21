@@ -61,6 +61,19 @@ target_compile_definitions(SIRMeshCacheOwnerLimitTests PRIVATE SIR_MESH_TEST_OWN
 target_compile_options(SIRMeshCacheOwnerLimitTests PRIVATE -Wall -Wextra -Wpedantic -Werror)
 add_test(NAME mesh.cache.owner-id-limit COMMAND SIRMeshCacheOwnerLimitTests)
 
+# Concurrent owner identity must remain unique across independent SIRThread users.
+add_executable(SIRMeshCacheOwnerConcurrencyTests
+    "${CMAKE_CURRENT_LIST_DIR}/../../Unit/SIRMeshCacheOwnerConcurrencyTests.cpp"
+    "${SIR_MESH_SOURCE_ROOT}/Mesh/SIRMeshCache.cpp"
+    "${SIR_MESH_SOURCE_ROOT}/Core/Platform/SIRThread.cpp")
+target_include_directories(SIRMeshCacheOwnerConcurrencyTests PRIVATE "${SIR_MESH_SOURCE_ROOT}" "${SIR_MESH_BUILD_ROOT}")
+# Force one stale expected CAS per initialization only in this isolated fixture.
+target_compile_definitions(SIRMeshCacheOwnerConcurrencyTests PRIVATE SIR_MESH_TEST_FORCE_CAS_RETRY=1)
+target_compile_options(SIRMeshCacheOwnerConcurrencyTests PRIVATE -Wall -Wextra -Wpedantic -Werror)
+find_package(Threads REQUIRED)
+target_link_libraries(SIRMeshCacheOwnerConcurrencyTests PRIVATE Threads::Threads)
+add_test(NAME mesh.cache.owner-concurrency COMMAND SIRMeshCacheOwnerConcurrencyTests)
+
 # Explicit opt-in source-based coverage admission for the standalone CPU cache.
 # Only this standalone harness is instrumented; production engine targets are not.
 option(SIR_MESH_ENABLE_COVERAGE "Enable LLVM coverage verification for the standalone mesh cache" OFF)
@@ -75,7 +88,7 @@ if(SIR_MESH_ENABLE_COVERAGE)
     find_program(SIR_MESH_LLVM_PROFDATA NAMES llvm-profdata REQUIRED)
     find_program(SIR_MESH_LLVM_COV NAMES llvm-cov REQUIRED)
     foreach(sirTarget IN ITEMS SIRMeshCache SIRMeshCacheTests SIRMeshCacheStateTests SIRMeshCacheEdgeTests
-            SIRMeshCacheGenerationTests SIRMeshCacheBorrowLimitTests SIRMeshCacheAllocationTests SIRMeshCacheOwnerLimitTests)
+            SIRMeshCacheGenerationTests SIRMeshCacheBorrowLimitTests SIRMeshCacheAllocationTests SIRMeshCacheOwnerLimitTests SIRMeshCacheOwnerConcurrencyTests)
         target_compile_options(${sirTarget} PRIVATE -fprofile-instr-generate -fcoverage-mapping)
         if(NOT sirTarget STREQUAL "SIRMeshCache")
             target_link_options(${sirTarget} PRIVATE -fprofile-instr-generate)
@@ -96,7 +109,7 @@ if(SIR_MESH_ENABLE_COVERAGE)
                 -P "${CMAKE_CURRENT_LIST_DIR}/VerifyCoverage.cmake"
         DEPENDS SIRMeshCacheTests SIRMeshCacheStateTests SIRMeshCacheEdgeTests
                 SIRMeshCacheGenerationTests SIRMeshCacheBorrowLimitTests SIRMeshCacheAllocationTests
-                SIRMeshCacheOwnerLimitTests SIRVGFramePlanTests
+                SIRMeshCacheOwnerLimitTests SIRMeshCacheOwnerConcurrencyTests SIRVGFramePlanTests
         USES_TERMINAL
         COMMENT "Run all real CPU mesh tests and require 100% production-source line/branch/function coverage")
 endif()
@@ -114,3 +127,32 @@ if(SIR_MESH_ENABLE_COVERAGE)
     target_compile_options(SIRVGFramePlanTests PRIVATE -fprofile-instr-generate -fcoverage-mapping)
     target_link_options(SIRVGFramePlanTests PRIVATE -fprofile-instr-generate)
 endif()
+
+# Direct cross-system contract verification without GRDG/driver implementations.
+add_library(SIRVGContracts STATIC "${SIR_MESH_SOURCE_ROOT}/Mesh/SIRVGContracts.cpp")
+target_include_directories(SIRVGContracts PUBLIC "${SIR_MESH_SOURCE_ROOT}" "${SIR_MESH_BUILD_ROOT}")
+target_compile_options(SIRVGContracts PRIVATE -Wall -Wextra -Wpedantic -Werror)
+add_executable(SIRVGContractsTests "${CMAKE_CURRENT_LIST_DIR}/../../Unit/SIRVGContractsTests.cpp")
+target_link_libraries(SIRVGContractsTests PRIVATE SIRVGContracts)
+target_compile_options(SIRVGContractsTests PRIVATE -Wall -Wextra -Wpedantic -Werror)
+add_test(NAME mesh.vg.contracts COMMAND SIRVGContractsTests)
+
+add_library(SIRMeshPackSchema STATIC
+    "${SIR_MESH_SOURCE_ROOT}/Mesh/SIRMeshPackSchema.cpp"
+    "${SIR_MESH_SOURCE_ROOT}/Resources/SIRPackFormat.cpp")
+target_include_directories(SIRMeshPackSchema PUBLIC "${SIR_MESH_SOURCE_ROOT}" "${SIR_MESH_BUILD_ROOT}")
+target_compile_options(SIRMeshPackSchema PRIVATE -Wall -Wextra -Wpedantic -Werror)
+add_executable(SIRMeshPackSchemaTests "${CMAKE_CURRENT_LIST_DIR}/../../Unit/SIRMeshPackSchemaTests.cpp")
+target_link_libraries(SIRMeshPackSchemaTests PRIVATE SIRMeshPackSchema)
+target_compile_options(SIRMeshPackSchemaTests PRIVATE -Wall -Wextra -Wpedantic -Werror)
+add_test(NAME mesh.sirpack.schema COMMAND SIRMeshPackSchemaTests)
+
+# Authoring-only adaptive displacement is independently linkable without
+# meshoptimizer, a graphics device or engine runtime state.
+add_executable(SIRDisplacementCookerTests
+    "${CMAKE_CURRENT_LIST_DIR}/../../../Tools/GeometryCooker/SIRDisplacementCooker.cpp"
+    "${SIR_MESH_SOURCE_ROOT}/Resources/SIRPackFormat.cpp"
+    "${CMAKE_CURRENT_LIST_DIR}/../../Unit/SIRDisplacementCookerTests.cpp")
+target_include_directories(SIRDisplacementCookerTests PRIVATE "${SIR_MESH_SOURCE_ROOT}" "${SIR_MESH_BUILD_ROOT}" "${CMAKE_CURRENT_LIST_DIR}/../../..")
+target_compile_options(SIRDisplacementCookerTests PRIVATE -Wall -Wextra -Wpedantic -Werror)
+add_test(NAME mesh.geometry.displacement-bake COMMAND SIRDisplacementCookerTests)

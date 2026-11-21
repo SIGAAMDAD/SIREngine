@@ -15,3 +15,14 @@ target_include_directories(SIRWorld PUBLIC
 target_compile_features(SIRWorld PUBLIC cxx_std_17)
 target_link_libraries(SIRWorld PUBLIC SIR::Streaming)
 sir_configure_owned_target(SIRWorld)
+
+# Independent world-space query consumer. Each instance owns one existing
+# collision-source lease; BVH nodes remain a derived CPU cache, not GRDG data.
+add_library(SIRWorldMeshQuery STATIC Queries/SIRWorldMeshQuery.cpp)
+add_library(SIR::WorldMeshQuery ALIAS SIRWorldMeshQuery)
+target_include_directories(SIRWorldMeshQuery PUBLIC
+    "${PROJECT_SOURCE_DIR}/Source"
+    "${PROJECT_SOURCE_DIR}/Build/CMake")
+target_compile_features(SIRWorldMeshQuery PUBLIC cxx_std_17)
+target_link_libraries(SIRWorldMeshQuery PUBLIC SIR::MeshCollisionBVH)
+sir_configure_owned_target(SIRWorldMeshQuery)
