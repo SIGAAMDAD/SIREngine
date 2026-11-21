@@ -60,11 +60,13 @@ struct SIRGraphSlot
 	std::atomic<SIRPublishedResourceRecord *> m_pPublished;
 	uint32_t m_nNextGeneration;
 	uint32_t m_nVisitedStamp;
+	uint32_t m_nStrongReferences; // Protected by m_PinMutex.
 	uint32_t m_iReverseHead;
 	uint64_t m_nInvalidationSequence;
 
 	SIRGraphSlot( void ) noexcept
-	    : m_pPublished( nullptr ), m_nNextGeneration( 1 ), m_nVisitedStamp( 0 ), m_iReverseHead( UINT32_MAX ), m_nInvalidationSequence( 0 )
+	    : m_pPublished( nullptr ), m_nNextGeneration( 1 ), m_nVisitedStamp( 0 ), m_nStrongReferences( 0 ), m_iReverseHead( UINT32_MAX ),
+	      m_nInvalidationSequence( 0 )
 	{
 	}
 };
@@ -248,6 +250,9 @@ SIRResourceGraph::~SIRResourceGraph( void ) noexcept
 	}
 	if ( m_pSlots && m_bReady ) {
 		for ( uint32_t iSlot = 0; iSlot < m_Config.m_nMaxResources; ++iSlot ) {
+			if ( m_pSlots[iSlot].m_nStrongReferences != 0 ) {
+				abort();
+			}
 			SIRPublishedResourceRecord *pRecord = m_pSlots[iSlot].m_pPublished.load( std::memory_order_seq_cst );
 			if ( pRecord ) {
 				destroyRecord( pRecord );
@@ -1379,6 +1384,10 @@ SIRResourceResult SIRResourceGraphWriter::retire( SIRResourceHandle hResource ) 
 	if ( eResult != SIR_RESOURCE_RESULT_SUCCESS ) {
 		return eResult;
 	}
+	std::lock_guard<SIRResourceGraphPinMutex> referenceLock( m_pGraph->m_PinMutex );
+	if ( m_pGraph->m_pSlots[hResource.m_nSlot].m_nStrongReferences != 0 ) {
+		return SIR_RESOURCE_RESULT_BUSY;
+	}
 	if ( !m_pGraph->m_KeyIndex.erase( pRecord->m_Info.m_Key ) ) {
 		return SIR_RESOURCE_RESULT_FAILED;
 	}
@@ -1526,6 +1535,53 @@ SIRResourceResult SIRResourceGraph::pinForProvider( const SIRResourceReadScope& 
 		return SIR_RESOURCE_RESULT_SUCCESS;
 	}
 	return SIR_RESOURCE_RESULT_OUT_OF_BUDGET;
+}
+
+// Every registry reference is protected by the same mutex as retirement.
+// A zero reference count does not evict payloads: streaming owns residency.
+SIRResourceResult SIRResourceGraph::acquireReference( SIRResourceHandle hResource, SIRResourceKind eKind ) noexcept
+{
+	if ( !m_bReady || hResource.m_nSlot >= m_Config.m_nMaxResources ) {
+		return SIR_RESOURCE_RESULT_INVALID_HANDLE;
+	}
+	std::lock_guard<SIRResourceGraphPinMutex> referenceLock( m_PinMutex );
+	SIRGraphSlot& rSlot = m_pSlots[hResource.m_nSlot];
+	SIRPublishedResourceRecord *pRecord = rSlot.m_pPublished.load( std::memory_order_seq_cst );
+	if ( pRecord == nullptr || !validHandle( pRecord->m_Handle, hResource ) ) {
+		return SIR_RESOURCE_RESULT_INVALID_HANDLE;
+	}
+	if ( pRecord->m_Info.m_eKind != eKind ) {
+		return SIR_RESOURCE_RESULT_TYPE_MISMATCH;
+	}
+	if ( rSlot.m_nStrongReferences == UINT32_MAX ) {
+		return SIR_RESOURCE_RESULT_OUT_OF_BUDGET;
+	}
+	++rSlot.m_nStrongReferences;
+	return SIR_RESOURCE_RESULT_SUCCESS;
+}
+
+void SIRResourceGraph::releaseReference( SIRResourceHandle hResource ) noexcept
+{
+	if ( !m_bReady || hResource.m_nSlot >= m_Config.m_nMaxResources ) {
+		abort();
+	}
+	std::lock_guard<SIRResourceGraphPinMutex> referenceLock( m_PinMutex );
+	SIRGraphSlot& rSlot = m_pSlots[hResource.m_nSlot];
+	SIRPublishedResourceRecord *pRecord = rSlot.m_pPublished.load( std::memory_order_seq_cst );
+	if ( pRecord == nullptr || !validHandle( pRecord->m_Handle, hResource ) || rSlot.m_nStrongReferences == 0 ) {
+		abort();
+	}
+	--rSlot.m_nStrongReferences;
+}
+
+bool SIRResourceGraph::isReferenceAlive( SIRResourceHandle hResource ) const noexcept
+{
+	if ( !m_bReady || hResource.m_nSlot >= m_Config.m_nMaxResources ) {
+		return false;
+	}
+	std::lock_guard<SIRResourceGraphPinMutex> referenceLock( m_PinMutex );
+	const SIRPublishedResourceRecord *pRecord = m_pSlots[hResource.m_nSlot].m_pPublished.load( std::memory_order_seq_cst );
+	return pRecord != nullptr && validHandle( pRecord->m_Handle, hResource );
 }
 
 SIRResourceResult SIRResourceGraph::releaseProviderPin( SIRResourcePinHandle hPin ) const noexcept

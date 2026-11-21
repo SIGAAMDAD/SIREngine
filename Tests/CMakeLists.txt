@@ -435,3 +435,12 @@ if(WIN32)
 endif()
 sir_configure_owned_target(SIRCoreBenchmarks)
 endif()
+
+# Optimized smart pointer family, allocator ownership, and GRDG lifetime contracts.
+foreach(sirPointerTest IN ITEMS SIRSmartPointerTests SIREngineAllocationPtrTests SIRPointerOptimizationTests SIRPointerFamilyTests)
+    add_executable(${sirPointerTest} "${PROJECT_SOURCE_DIR}/Tests/Unit/${sirPointerTest}.cpp")
+    target_link_libraries(${sirPointerTest} PRIVATE SIR::Core SIR::Resources)
+    sir_configure_owned_target(${sirPointerTest})
+    add_test(NAME ${sirPointerTest} COMMAND ${sirPointerTest})
+    set_tests_properties(${sirPointerTest} PROPERTIES LABELS "gate:pr;unit;memory" TIMEOUT 60)
+endforeach()

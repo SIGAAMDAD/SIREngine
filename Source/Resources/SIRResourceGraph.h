@@ -281,6 +281,9 @@ public:
 	                                     SIRResourceView *pChild ) const noexcept;
 	SIRResourceResult pinForProvider( const SIRResourceReadScope& rScope, const SIRResourceView& rView, uint32_t nProviderId,
 	                                  SIRResourcePinHandle *pPin ) const noexcept;
+	SIRResourceResult acquireReference( SIRResourceHandle hResource, SIRResourceKind eKind ) noexcept;
+	void releaseReference( SIRResourceHandle hResource ) noexcept;
+	bool isReferenceAlive( SIRResourceHandle hResource ) const noexcept;
 	SIRResourceResult releaseProviderPin( SIRResourcePinHandle hPin ) const noexcept;
 
 	friend class SIRResourceGraphWriter;

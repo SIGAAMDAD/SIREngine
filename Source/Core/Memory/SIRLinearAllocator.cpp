@@ -22,7 +22,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <limits>
 
 SIRLinearAllocator::SIRLinearAllocator( void )
-    : m_pSegment( nullptr ), m_nUsedBytes( 0 ), m_nCommittedPrefixBytes( 0 ), m_nCapacity( 0 ), m_nCommitIncrementBytes( 0 )
+    : m_pSegment( nullptr ), m_nUsedBytes( 0 ), m_nLifetimeGeneration( 1 ), m_nCommittedPrefixBytes( 0 ), m_nCapacity( 0 ),
+      m_nCommitIncrementBytes( 0 )
 {
 }
 
@@ -138,13 +139,20 @@ bool SIRLinearAllocator::rewind( uint64_t nMark )
 	if ( m_pSegment == nullptr || nMark > m_nUsedBytes ) {
 		return false;
 	}
+	if ( nMark != m_nUsedBytes ) {
+		if ( m_nLifetimeGeneration == UINT64_MAX ) {
+			return false;
+		}
+		++m_nLifetimeGeneration;
+	}
+
 	m_nUsedBytes = nMark;
 	return true;
 }
 
 bool SIRLinearAllocator::reset( bool bDecommit )
 {
-	if ( m_pSegment == nullptr ) {
+	if ( m_pSegment == nullptr || ( m_nUsedBytes != 0 && m_nLifetimeGeneration == UINT64_MAX ) ) {
 		return false;
 	}
 
@@ -157,16 +165,20 @@ bool SIRLinearAllocator::reset( bool bDecommit )
 		m_nCommittedPrefixBytes = 0;
 	}
 
+	if ( m_nUsedBytes != 0 ) {
+		++m_nLifetimeGeneration;
+	}
 	m_nUsedBytes = 0;
 	return true;
 }
 
 bool SIRLinearAllocator::shutdown( void )
 {
-	if ( m_pSegment == nullptr || m_nUsedBytes != 0 || !trimTo( 0 ) ) {
+	if ( m_pSegment == nullptr || m_nUsedBytes != 0 || m_nLifetimeGeneration == UINT64_MAX || !trimTo( 0 ) ) {
 		return false;
 	}
 
+	++m_nLifetimeGeneration;
 	m_pSegment = nullptr;
 	m_nUsedBytes = 0;
 	m_nCommittedPrefixBytes = 0;
@@ -199,6 +211,11 @@ bool SIRLinearAllocator::trimTo( uint64_t nKeepBytes )
 
 	m_nCommittedPrefixBytes = nKeepAligned;
 	return true;
+}
+
+uint64_t SIRLinearAllocator::getLifetimeGeneration( void ) const
+{
+	return m_nLifetimeGeneration;
 }
 
 uint64_t SIRLinearAllocator::getUsedBytes( void ) const

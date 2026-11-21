@@ -48,6 +48,7 @@ public:
 	bool shutdown( void );
 	bool trimTo( uint64_t nKeepBytes );
 
+	uint64_t getLifetimeGeneration( void ) const;
 	uint64_t getUsedBytes( void ) const;
 	uint64_t getCommittedPrefixBytes( void ) const;
 	uint64_t getCapacity( void ) const;
@@ -56,6 +57,7 @@ public:
 private:
 	SIRMemorySegment *m_pSegment;
 	uint64_t m_nUsedBytes;
+	uint64_t m_nLifetimeGeneration;
 	uint64_t m_nCommittedPrefixBytes;
 	uint64_t m_nCapacity;
 	uint64_t m_nCommitIncrementBytes;

@@ -1,5 +1,5 @@
 include("${CMAKE_CURRENT_LIST_DIR}/../../Build/CMake/SIRBuildTreeGuard.cmake")
-add_library(SIRResources STATIC SIRResourceGraph.cpp SIRResourceGraphSync.cpp SIRResourceMemoryAdapter.cpp SIRResourceDerivedRegistry.cpp SIRResourceFileLoad.cpp)
+add_library(SIRResources STATIC SIRResourceGraph.cpp SIRResourceGraphSync.cpp SIRResourceReference.cpp SIRResourcePinPtr.cpp SIRResourceMemoryAdapter.cpp SIRResourceDerivedRegistry.cpp SIRResourceFileLoad.cpp)
 add_library(SIR::Resources ALIAS SIRResources)
 find_package(Threads REQUIRED)
 target_link_libraries(SIRResources PUBLIC SIR::Core Threads::Threads)

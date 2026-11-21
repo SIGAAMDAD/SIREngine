@@ -65,6 +65,7 @@ public:
 	bool trimIdleRetaining( uint64_t nWarmBytes );
 	bool shutdown( void );
 
+	uint64_t getLifetimeGeneration( void ) const;
 	uint32_t getSlotCount( void ) const;
 	uint64_t getCurrentEpoch( void ) const;
 	uint64_t getLastCompletedEpoch( void ) const;
@@ -75,6 +76,7 @@ private:
 
 	sirFrameSlot_t *m_pSlots;
 	uint64_t m_nLastEpoch;
+	uint64_t m_nLifetimeGeneration;
 	uint64_t m_nCompletedEpoch;
 	uint32_t m_nSlotCount;
 	uint32_t m_nActiveSlot;

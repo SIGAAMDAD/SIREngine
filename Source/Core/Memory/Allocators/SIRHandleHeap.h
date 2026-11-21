@@ -92,6 +92,7 @@ public:
 	bool trimUnusedPages( void );
 	bool shutdown( void );
 
+	uint64_t getLifetimeGeneration( void ) const;
 	uint32_t getLiveCount( void ) const;
 	uint32_t getLargestFreeRange( void ) const;
 	uint32_t getCommittedBytes( void ) const;
@@ -163,6 +164,7 @@ private:
 	uint32_t m_nNextHandle;
 	uint32_t m_nFreeHandleHead;
 	uint32_t m_nLiveCount;
+	uint64_t m_nLifetimeGeneration;
 	uint32_t m_nExtentCapacity;
 	uint32_t m_nNextExtent;
 	uint32_t m_nFreeExtentHead;

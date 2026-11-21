@@ -25,8 +25,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 SIRHandleHeap::SIRHandleHeap( void )
     : m_pSegment( nullptr ), m_pBase( nullptr ), m_pHandles( nullptr ), m_pCold( nullptr ), m_pExtents( nullptr ), m_nCapacity( 0 ),
       m_nCommitted( 0 ), m_nHighWater( 0 ), m_nMaxHandles( 0 ), m_nNextHandle( 0 ), m_nFreeHandleHead( SIR_HANDLE_NONE ), m_nLiveCount( 0 ),
-      m_nExtentCapacity( 0 ), m_nNextExtent( 0 ), m_nFreeExtentHead( SIR_HANDLE_NONE ), m_nAddressRoot( SIR_HANDLE_NONE ),
-      m_nSizeRoot( SIR_HANDLE_NONE )
+      m_nLifetimeGeneration( 1 ), m_nExtentCapacity( 0 ), m_nNextExtent( 0 ), m_nFreeExtentHead( SIR_HANDLE_NONE ),
+      m_nAddressRoot( SIR_HANDLE_NONE ), m_nSizeRoot( SIR_HANDLE_NONE )
 {
 }
 
@@ -59,6 +59,15 @@ bool SIRHandleHeap::init( SIRMemorySegment *pSegment, uint32_t nMaxHandles )
 		pHandles[i].nGeneration = 1;
 		pHandles[i].nStatePin = 0;
 	}
+	m_nCommitted = 0;
+	m_nHighWater = 0;
+	m_nNextHandle = 0;
+	m_nFreeHandleHead = SIR_HANDLE_NONE;
+	m_nLiveCount = 0;
+	m_nNextExtent = 0;
+	m_nFreeExtentHead = SIR_HANDLE_NONE;
+	m_nAddressRoot = SIR_HANDLE_NONE;
+	m_nSizeRoot = SIR_HANDLE_NONE;
 	m_pSegment = pSegment;
 	m_pBase = ( ( uint8_t * )( pSegment->getBase() ) );
 	m_pHandles = pHandles;
@@ -751,15 +760,21 @@ bool SIRHandleHeap::trimUnusedPages( void )
 
 bool SIRHandleHeap::shutdown( void )
 {
-	if ( m_pSegment == nullptr || m_nLiveCount != 0 || !trimUnusedPages() ) {
+	if ( m_pSegment == nullptr || m_nLiveCount != 0 || m_nLifetimeGeneration == UINT64_MAX || !trimUnusedPages() ) {
 		return false;
 	}
+	++m_nLifetimeGeneration;
 	m_pSegment = nullptr;
 	m_pBase = nullptr;
 	m_pHandles = nullptr;
 	m_pCold = nullptr;
 	m_pExtents = nullptr;
 	return true;
+}
+
+uint64_t SIRHandleHeap::getLifetimeGeneration( void ) const
+{
+	return m_nLifetimeGeneration;
 }
 
 uint32_t SIRHandleHeap::getLiveCount( void ) const

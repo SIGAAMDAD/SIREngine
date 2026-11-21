@@ -25,7 +25,8 @@ sirFrameSlot_s::sirFrameSlot_s( void ) : nEpoch( 0 ), bInFlight( false )
 }
 
 SIRFrameAllocator::SIRFrameAllocator( void )
-    : m_pSlots( nullptr ), m_nLastEpoch( 0 ), m_nCompletedEpoch( 0 ), m_nSlotCount( 0 ), m_nActiveSlot( SIR_FRAME_INVALID_SLOT )
+    : m_pSlots( nullptr ), m_nLastEpoch( 0 ), m_nLifetimeGeneration( 1 ), m_nCompletedEpoch( 0 ), m_nSlotCount( 0 ),
+      m_nActiveSlot( SIR_FRAME_INVALID_SLOT )
 {
 }
 
@@ -202,7 +203,7 @@ bool SIRFrameAllocator::trimIdleRetaining( uint64_t nWarmBytes )
 
 bool SIRFrameAllocator::shutdown( void )
 {
-	if ( m_pSlots == nullptr || m_nActiveSlot != SIR_FRAME_INVALID_SLOT ) {
+	if ( m_pSlots == nullptr || m_nActiveSlot != SIR_FRAME_INVALID_SLOT || m_nLifetimeGeneration == UINT64_MAX ) {
 		return false;
 	}
 	for ( uint32_t i = 0; i < m_nSlotCount; ++i ) {
@@ -218,12 +219,18 @@ bool SIRFrameAllocator::shutdown( void )
 	for ( uint32_t i = 0; i < m_nSlotCount; ++i ) {
 		m_pSlots[i].~sirFrameSlot_t();
 	}
+	++m_nLifetimeGeneration;
 	m_pSlots = nullptr;
 	m_nSlotCount = 0;
 	m_nLastEpoch = 0;
 	m_nCompletedEpoch = 0;
 	m_nActiveSlot = SIR_FRAME_INVALID_SLOT;
 	return true;
+}
+
+uint64_t SIRFrameAllocator::getLifetimeGeneration( void ) const
+{
+	return m_nLifetimeGeneration;
 }
 
 uint32_t SIRFrameAllocator::getSlotCount( void ) const

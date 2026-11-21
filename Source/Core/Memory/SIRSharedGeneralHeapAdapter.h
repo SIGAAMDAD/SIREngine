@@ -1,0 +1,52 @@
+/*
+===========================================================================
+SIREngine MPLv2 Source Code
+Copyright (C) 2023-2027 Noah Van Til
+
+This Source Code Form is subject to the terms of the Mozilla Public
+License, v2. If a copy of the MPL was not distributed with this
+file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+This software is provided "as is", without warranty of any kind,
+express or implied, including but not limited to the warranties
+of merchantability, fitness for a particular purpose and noninfringement.
+===========================================================================
+*/
+
+#ifndef SIRENGINE_SIRSHAREDGENERALHEAPADAPTER_H
+#define SIRENGINE_SIRSHAREDGENERALHEAPADAPTER_H
+
+#include <Core/SIRPCH.h>
+
+// clang-format off
+#ifdef SIR_PRAGMA_ONCE_SUPPORTED
+	#pragma once
+#endif
+// clang-format on
+
+#include <Core/Memory/SIRSharedPtr.h>
+#include <Core/Memory/SIRGeneralHeap.h>
+
+// The heap must remain initialized until the last weak control-block owner
+// releases its claim. Heap allocation failure returns an empty shared pointer.
+class SIRSharedGeneralHeapAdapter
+{
+public:
+	SIRSharedGeneralHeapAdapter( void ) = delete;
+	static sirSharedAllocationCallbacks_t getCallbacks( SIRGeneralHeap& rHeap ) noexcept
+	{
+		return sirSharedAllocationCallbacks_t{ &rHeap, allocate, deallocate };
+	}
+
+private:
+	static void *allocate( void *pContext, size_t nBytes, size_t nAlignment ) noexcept
+	{
+		return ( ( SIRGeneralHeap * )pContext )->allocAligned( nBytes, nAlignment );
+	}
+	static void deallocate( void *pContext, void *pMemory ) noexcept
+	{
+		( ( SIRGeneralHeap * )pContext )->free( pMemory );
+	}
+};
+
+#endif // SIRENGINE_SIRSHAREDGENERALHEAPADAPTER_H
