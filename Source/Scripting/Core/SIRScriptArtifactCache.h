@@ -25,7 +25,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // clang-format on
 
 #include <Scripting/Core/SIRScriptCodeManager.h>
-#include <thread>
+#include <Core/Platform/SIRThread.h>
 
 // SHA-256 of a canonical, versioned build recipe: source/dependencies, schema,
 // frontend/compiler version, platform ABI, target CPU and optimizer switches.
@@ -77,7 +77,7 @@ private:
 
 	char m_szRoot[MAX_PATH_BYTES];
 	uint64_t m_nMaximumArtifactBytes;
-	const std::thread::id m_OwnerThread;
+	const sirThreadId_t m_OwnerThread;
 };
 
 #endif // __SIRENGINE_SIRSCRIPTARTIFACTCACHE_H__

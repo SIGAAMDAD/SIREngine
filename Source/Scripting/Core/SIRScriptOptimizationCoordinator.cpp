@@ -16,7 +16,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Scripting/Core/SIRScriptOptimizationCoordinator.h>
 
 SIRScriptOptimizationCoordinator::SIRScriptOptimizationCoordinator( void ) noexcept
-    : m_Transport{}, m_pSource( nullptr ), m_pManager( nullptr ), m_OwnerThread( std::this_thread::get_id() ), m_nNextJobId( 0 ),
+    : m_Transport{}, m_pSource( nullptr ), m_pManager( nullptr ), m_OwnerThread( SIRThread::currentThreadId() ), m_nNextJobId( 0 ),
       m_nNextSequence( 0 ), m_szJobs{}, m_bConfigured( false ), m_bRunning( false ), m_bInCallback( false )
 {
 }
@@ -34,7 +34,7 @@ uint32_t SIRScriptOptimizationCoordinator::nextGeneration( uint32_t nGeneration 
 
 bool SIRScriptOptimizationCoordinator::isOwnerThread( void ) const noexcept
 {
-	return std::this_thread::get_id() == m_OwnerThread;
+	return SIRThread::isCurrentThread( m_OwnerThread );
 }
 
 int32_t SIRScriptOptimizationCoordinator::resolve( sirScriptOptimizationJobHandle_t handle ) const noexcept

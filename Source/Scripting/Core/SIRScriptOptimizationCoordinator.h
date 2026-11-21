@@ -26,7 +26,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Scripting/Core/SIRScriptOptimizationProtocol.h>
 #include <Scripting/Core/SIRScriptCachedProgramSource.h>
-#include <thread>
+#include <Core/Platform/SIRThread.h>
 
 // Transport owns its process and full-framed IPC. Each receive returns either
 // one complete 200-byte reply, BUSY for no reply, or a terminal error. Sending
@@ -129,7 +129,7 @@ private:
 	sirScriptOptimizationTransportAPI_t m_Transport;
 	SIRScriptCachedProgramSource *m_pSource;
 	SIRScriptCodeManager *m_pManager;
-	const std::thread::id m_OwnerThread;
+	const sirThreadId_t m_OwnerThread;
 	uint64_t m_nNextJobId;
 	uint64_t m_nNextSequence;
 	sirScriptOptimizationJobSlot_t m_szJobs[MAX_JOBS];

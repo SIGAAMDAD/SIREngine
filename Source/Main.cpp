@@ -1,6 +1,7 @@
 #include <Core/SIRApplication.h>
 #include <Core/Platform/Window/SIRWindowSystem.h>
 #include <Core/Platform/Window/SIRWindowService.h>
+#include <Scripting/Core/SIRScriptServer.h>
 #include <Core/Platform/Input/SIRInputService.h>
 #include <Core/Platform/Input/SIRInputBackend.h>
 #include <Core/Platform/SIRPlatformTime.h>
@@ -161,6 +162,18 @@ static int sirRunNativeWindow( uint64_t nMaxFrames ) noexcept
 #endif
 }
 
+// Verify that the native engine executable links and initializes scripting.
+static int sirRunNativeScriptingSmoke( void )
+{
+	SIRScriptServer scripting;
+	if ( scripting.bindings().publish() != SIR_SCRIPT_OK ) {
+		fputs( "Scripting binding publication failed\n", stderr );
+		return 1;
+	}
+	puts( "Sir Scroll native scripting ready" );
+	return 0;
+}
+
 int main( int nArgs, char **pszArgs )
 {
 	bool bHeadless = false;
@@ -171,8 +184,11 @@ int main( int nArgs, char **pszArgs )
 			return 0;
 		}
 		if ( strcmp( pszArgs[iArg], "--help" ) == 0 && nArgs == 2 ) {
-			puts( "Usage: SIREngine [--version|--help|--headless --frames N|--frames N|--input-window]" );
+			puts( "Usage: SIREngine [--version|--help|--scripting-smoke|--headless --frames N|--frames N|--input-window]" );
 			return 0;
+		}
+		if ( strcmp( pszArgs[iArg], "--scripting-smoke" ) == 0 && nArgs == 2 ) {
+			return sirRunNativeScriptingSmoke();
 		}
 		if ( strcmp( pszArgs[iArg], "--headless" ) == 0 ) {
 			bHeadless = true;

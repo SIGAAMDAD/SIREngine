@@ -26,7 +26,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Scripting/Core/SIRScriptArtifactCache.h>
 #include <Scripting/Core/SIRScriptScheduler.h>
-#include <thread>
+#include <Core/Platform/SIRThread.h>
 
 typedef struct sirScriptCachedEntryHandle_s
 {
@@ -97,7 +97,7 @@ private:
 
 	SIRScriptArtifactCache *m_pCache;
 	sirScriptPayloadAllocatorAPI_t m_Allocator;
-	const std::thread::id m_OwnerThread;
+	const sirThreadId_t m_OwnerThread;
 	uint64_t m_nMaximumResidentBytes;
 	uint64_t m_nResidentBytes;
 	uint64_t m_nPeakResidentBytes;

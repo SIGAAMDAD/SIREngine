@@ -26,7 +26,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Scripting/Core/SIRScriptIngress.h>
 #include <Scripting/Core/SIRScriptScheduler.h>
 
-#include <thread>
+#include <Core/Platform/SIRThread.h>
 
 typedef struct sirScriptBackendSlot_s
 {
@@ -137,7 +137,7 @@ private:
 
 	const SIRScriptBindingRegistry *m_pRegistry;
 	sirScriptProgramSourceAPI_t m_ProgramSource;
-	const std::thread::id m_OwnerThread;
+	const sirThreadId_t m_OwnerThread;
 	SIRScriptScheduler m_Scheduler;
 	SIRScriptIngress m_Ingress;
 	sirScriptBackendSlot_t m_szBackends[MAX_BACKENDS];

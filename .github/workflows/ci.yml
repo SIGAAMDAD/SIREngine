@@ -22,7 +22,7 @@ jobs:
           persist-credentials: false
       - name: Check changed C++ formatting
         env:
-          SIR_FORMAT_BASE: ${{ github.event.before }}
+          SIR_FORMAT_BASE: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before }}
         run: |
           python3 -m pip install --disable-pip-version-check clang-format==23.1.5
           bash Build/Scripts/FormatAll.sh --ci

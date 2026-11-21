@@ -17,8 +17,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <string.h>
 
 SIRScriptCachedProgramSource::SIRScriptCachedProgramSource( void ) noexcept
-    : m_pCache( nullptr ), m_Allocator{}, m_OwnerThread( std::this_thread::get_id() ), m_nMaximumResidentBytes( 0 ), m_nResidentBytes( 0 ),
-      m_nPeakResidentBytes( 0 ), m_szEntries{}, m_szLeases{}, m_bInAllocator( false )
+    : m_pCache( nullptr ), m_Allocator{}, m_OwnerThread( SIRThread::currentThreadId() ), m_nMaximumResidentBytes( 0 ),
+      m_nResidentBytes( 0 ), m_nPeakResidentBytes( 0 ), m_szEntries{}, m_szLeases{}, m_bInAllocator( false )
 {
 }
 
@@ -29,7 +29,7 @@ SIRScriptCachedProgramSource::~SIRScriptCachedProgramSource( void ) noexcept
 
 bool SIRScriptCachedProgramSource::isOwnerThread( void ) const noexcept
 {
-	return std::this_thread::get_id() == m_OwnerThread;
+	return SIRThread::isCurrentThread( m_OwnerThread );
 }
 
 uint32_t SIRScriptCachedProgramSource::nextGeneration( uint32_t nGeneration ) noexcept

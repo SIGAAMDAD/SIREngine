@@ -30,6 +30,34 @@ typedef enum sirTestPhase_e : uint8_t
 	SIR_TEST_PHASE_RUNNING = 1
 } sirTestPhase_t;
 
+typedef struct sirThreadIdentityProbe_s
+{
+	sirThreadId_t hOwner;
+	SIRAtomic<bool> bCrossThreadValidated;
+} sirThreadIdentityProbe_t;
+
+static void sirCheckThreadIdentity( void *pContext )
+{
+	sirThreadIdentityProbe_t *pProbe = ( sirThreadIdentityProbe_t * )pContext;
+	pProbe->bCrossThreadValidated.store( !SIRThread::isCurrentThread( pProbe->hOwner ), SIR_MEMORY_ORDER_RELEASE );
+}
+
+static bool testEngineThreadIdentity( void )
+{
+	const sirThreadId_t hOwner = SIRThread::currentThreadId();
+	if ( !SIRThread::isCurrentThread( hOwner ) ) {
+		return false;
+	}
+	sirThreadIdentityProbe_t probe{};
+	probe.hOwner = hOwner;
+	probe.bCrossThreadValidated.store( false, SIR_MEMORY_ORDER_RELAXED );
+	SIRThread worker;
+	if ( !worker.start( &sirCheckThreadIdentity, &probe ) || !worker.join() ) {
+		return false;
+	}
+	return probe.bCrossThreadValidated.load( SIR_MEMORY_ORDER_ACQUIRE ) && SIRThread::isCurrentThread( hOwner );
+}
+
 static bool testAtomicOrders( void )
 {
 	static_assert( SIRAtomic<uint64_t>::isAlwaysLockFree(), "64-bit lock free atomic is required" );
@@ -196,8 +224,8 @@ static bool testConcurrentSpinLock( void )
 
 int main( void )
 {
-	if ( !testAtomicOrders() || !testScopedLock() || !testReleaseAcquirePublication() || !testConcurrentAtomic() ||
-	     !testConcurrentSpinLock() ) {
+	if ( !testEngineThreadIdentity() || !testAtomicOrders() || !testScopedLock() || !testReleaseAcquirePublication() ||
+	     !testConcurrentAtomic() || !testConcurrentSpinLock() ) {
 		fputs( "SIRThreadingPrimitiveTests failed\n", stderr );
 		return 1;
 	}

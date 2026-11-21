@@ -25,7 +25,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // clang-format on
 
 #include <Scripting/Core/SIRScriptOptimizationProtocol.h>
-#include <thread>
+#include <Core/Platform/SIRThread.h>
 
 typedef struct sirScriptOptimizerInputBuffers_s
 {
@@ -72,7 +72,7 @@ private:
 	char m_szRoot[MAX_PATH_BYTES];
 	uint64_t m_nMaximumInputBytes;
 	uint64_t m_nMaximumRecipeBytes;
-	const std::thread::id m_OwnerThread;
+	const sirThreadId_t m_OwnerThread;
 };
 
 #endif // __SIRENGINE_SIRSCRIPTOPTIMIZERINPUTSTORE_H__

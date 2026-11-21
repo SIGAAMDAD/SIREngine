@@ -37,6 +37,12 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #error "SIREngine threads require a Windows or Linux backend"
 #endif
 
+#if defined( _WIN32 )
+typedef DWORD sirThreadId_t;
+#else
+typedef pthread_t sirThreadId_t;
+#endif
+
 // Thread object must outlive its callback. Destruction joins the worker.
 class SIRThread
 {
@@ -52,6 +58,9 @@ public:
 	bool join( void ) noexcept;
 	bool isJoinable( void ) const noexcept;
 	bool isAlive( void ) const noexcept;
+	bool cancelSynchronousIo( void ) noexcept;
+	static sirThreadId_t currentThreadId( void ) noexcept;
+	static bool isCurrentThread( sirThreadId_t hThread ) noexcept;
 
 private:
 #if defined( _WIN32 )

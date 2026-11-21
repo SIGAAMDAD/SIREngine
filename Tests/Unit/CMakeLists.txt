@@ -10,3 +10,8 @@ include("${CMAKE_CURRENT_LIST_DIR}/Registration/Console.cmake")
 include("${CMAKE_CURRENT_LIST_DIR}/Registration/InputAudio.cmake")
 include("${CMAKE_CURRENT_LIST_DIR}/Registration/Scripting.cmake")
 include("${CMAKE_CURRENT_LIST_DIR}/Registration/Editor.cmake")
+
+# Animation cooker and deterministic CPU sampling qualification.
+add_subdirectory(AnimationContracts)
+add_subdirectory(AnimationCook)
+add_subdirectory(AnimationSampling)

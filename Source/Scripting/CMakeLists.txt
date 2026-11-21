@@ -31,6 +31,9 @@ add_library(SIRScripting STATIC
     Language/SIRLangDiagnostics.cpp
     Language/SIRLangCookRecipe.cpp
 )
+# Validate canonical translation-unit identities before generating build rules.
+include("${CMAKE_CURRENT_LIST_DIR}/SIRCheckUniqueSources.cmake")
+sir_check_unique_scripting_sources(SIRScripting)
 find_package(Threads REQUIRED)
 add_library(SIR::Scripting ALIAS SIRScripting)
 target_link_libraries(SIRScripting PUBLIC SIR::Core Threads::Threads)

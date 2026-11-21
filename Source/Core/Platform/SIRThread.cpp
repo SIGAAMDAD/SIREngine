@@ -99,6 +99,33 @@ bool SIRThread::isAlive( void ) const noexcept
 	return m_bAlive.load( std::memory_order_acquire );
 }
 
+sirThreadId_t SIRThread::currentThreadId( void ) noexcept
+{
+#if defined( _WIN32 )
+	return GetCurrentThreadId();
+#else
+	return pthread_self();
+#endif
+}
+
+bool SIRThread::isCurrentThread( sirThreadId_t hThread ) noexcept
+{
+#if defined( _WIN32 )
+	return GetCurrentThreadId() == hThread;
+#else
+	return pthread_equal( pthread_self(), hThread ) != 0;
+#endif
+}
+
+bool SIRThread::cancelSynchronousIo( void ) noexcept
+{
+#if defined( _WIN32 )
+	return m_bJoinable && m_hThread != nullptr && ( CancelSynchronousIo( m_hThread ) != 0 || GetLastError() == ERROR_NOT_FOUND );
+#else
+	return false;
+#endif
+}
+
 #if defined( _WIN32 )
 DWORD WINAPI SIRThread::threadEntry( LPVOID pUserData )
 #else

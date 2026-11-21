@@ -149,9 +149,54 @@ static bool testLexerInvalidSource( void ) noexcept
 	return false;
 }
 
+static bool testTamperedSyntaxSpans( void ) noexcept
+{
+	static constexpr uint8_t szSource[] = "0123456789";
+	sirLangToken_t szTokens[3] = {};
+	szTokens[1].nOffset = 2;
+	szTokens[1].nLength = 1;
+	szTokens[2].nOffset = 7;
+	szTokens[2].nLength = 2;
+	sirLangSyntaxNode_t szNodes[2] = {};
+	szNodes[1].eKind = SIR_LANG_SYNTAX_NAME;
+	szNodes[1].nStartToken = 1;
+	szNodes[1].nEndToken = 3;
+	sirLangSyntaxTree_t tree = {};
+	tree.source = { szSource, 10 };
+	tree.pTokens = szTokens;
+	tree.nTokenCount = 3;
+	tree.pNodes = szNodes;
+	tree.nNodeCount = 2;
+	tree.nRoot = 0;
+	sirLangSourceSpan_t span = { 100, 200 };
+	SIR_TEST_CHECK( SIRLangSyntaxSpan( &tree, 1, &span ) );
+	SIR_TEST_CHECK( span.nOffset == 2 && span.nLength == 7 );
+
+	// Uint32 overflow previously wrapped the ending offset back into the source.
+	szTokens[2].nOffset = UINT32_MAX;
+	szTokens[2].nLength = 5;
+	span = { 100, 200 };
+	SIR_TEST_CHECK( !SIRLangSyntaxSpan( &tree, 1, &span ) );
+	SIR_TEST_CHECK( span.nOffset == 100 && span.nLength == 200 );
+
+	szTokens[2].nOffset = 8;
+	szTokens[2].nLength = 3;
+	SIR_TEST_CHECK( !SIRLangSyntaxSpan( &tree, 1, &span ) );
+	szTokens[2].nOffset = 1;
+	szTokens[2].nLength = 2;
+	SIR_TEST_CHECK( !SIRLangSyntaxSpan( &tree, 1, &span ) );
+
+	// Zero-length nodes must also validate the starting token offset.
+	szNodes[1].nEndToken = 1;
+	szTokens[1].nOffset = 11;
+	SIR_TEST_CHECK( !SIRLangSyntaxSpan( &tree, 1, &span ) );
+	SIR_TEST_CHECK( span.nOffset == 100 && span.nLength == 200 );
+	return true;
+}
+
 int main( void )
 {
-	if ( !testMutatedGrammarInputs() || !testLexerInvalidSource() ) {
+	if ( !testMutatedGrammarInputs() || !testLexerInvalidSource() || !testTamperedSyntaxSpans() ) {
 		return 1;
 	}
 	puts( "SIRLang parser adversarial regressions: PASS" );

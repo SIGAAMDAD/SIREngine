@@ -25,11 +25,11 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // clang-format on
 
 #include <Scripting/Core/SIRScriptOptimizationCoordinator.h>
-#include <atomic>
+#include <Core/Platform/SIRAtomic.h>
 #include <chrono>
-#include <condition_variable>
-#include <mutex>
-#include <thread>
+#include <Core/Platform/SIRSync.h>
+
+#include <Core/Platform/SIRThread.h>
 
 // Paths and arguments are copied at configuration time. The host owns
 // executable and cache-input staging; no shell is involved in launching.
@@ -80,18 +80,20 @@ private:
 	void closePipes( void ) noexcept;
 	bool writeFrame( const uint8_t *pData, uint32_t nBytes ) noexcept;
 	bool readFrame( uint8_t *pData, uint32_t nBytes ) noexcept;
+	static void writerEntry( void *pUserData ) noexcept;
+	static void readerEntry( void *pUserData ) noexcept;
 	void writerMain( void ) noexcept;
 	void readerMain( void ) noexcept;
 	void failTransport( void ) noexcept;
 
 	sirScriptOptimizerProcessConfig_t m_Config;
-	const std::thread::id m_OwnerThread;
-	std::thread m_Writer;
-	std::thread m_Reader;
-	std::mutex m_Mutex;
-	std::condition_variable m_CV;
-	std::atomic<bool> m_bStopping;
-	std::atomic<bool> m_bFailed;
+	const sirThreadId_t m_OwnerThread;
+	SIRThread m_Writer;
+	SIRThread m_Reader;
+	SIRMutex m_Mutex;
+	SIRConditionVariable m_CV;
+	SIRAtomic<bool> m_bStopping;
+	SIRAtomic<bool> m_bFailed;
 	std::chrono::steady_clock::time_point m_LastActivity;
 	uint8_t m_szRequests[SIR_SCRIPT_OPT_MAX_QUEUED_FRAMES][SIRScriptOptimizationProtocol::REQUEST_BYTES];
 	uint8_t m_szReplies[SIR_SCRIPT_OPT_MAX_QUEUED_FRAMES][SIRScriptOptimizationProtocol::REPLY_BYTES];

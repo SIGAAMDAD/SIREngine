@@ -16,8 +16,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Scripting/Core/SIRScriptCodeManager.h>
 
 SIRScriptCodeManager::SIRScriptCodeManager( const SIRScriptBindingRegistry *pRegistry ) noexcept
-    : m_pRegistry( pRegistry ), m_OwnerThread( std::this_thread::get_id() ), m_Provider{}, m_nTargetId( 0 ), m_szArtifacts{}, m_szLeases{},
-      m_bInProvider( false )
+    : m_pRegistry( pRegistry ), m_OwnerThread( SIRThread::currentThreadId() ), m_Provider{}, m_nTargetId( 0 ), m_szArtifacts{},
+      m_szLeases{}, m_bInProvider( false )
 {
 }
 
@@ -29,7 +29,7 @@ SIRScriptCodeManager::~SIRScriptCodeManager( void ) noexcept
 
 bool SIRScriptCodeManager::isOwnerThread( void ) const noexcept
 {
-	return std::this_thread::get_id() == m_OwnerThread;
+	return SIRThread::isCurrentThread( m_OwnerThread );
 }
 
 uint32_t SIRScriptCodeManager::nextGeneration( uint32_t nGeneration ) noexcept

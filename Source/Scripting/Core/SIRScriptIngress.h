@@ -25,7 +25,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // clang-format on
 
 #include <Scripting/Core/SIRScriptScheduler.h>
-#include <atomic>
+#include <Core/Platform/SIRAtomic.h>
 
 // Payload ownership transfers by value; no producer-owned pointer survives
 // submission. Event type validation is the caller's responsibility.
@@ -39,7 +39,7 @@ typedef struct sirScriptIngressPacket_s
 
 typedef struct sirScriptIngressSlot_s
 {
-	std::atomic<uint64_t> nSequence;
+	SIRAtomic<uint64_t> nSequence;
 	sirScriptIngressPacket_t packet;
 } sirScriptIngressSlot_t;
 
@@ -67,14 +67,14 @@ private:
 	typedef struct sirScriptIngressQueue_s
 	{
 		alignas( 64 ) uint64_t nHead;
-		alignas( 64 ) std::atomic<uint64_t> nTail;
-		std::atomic<uint32_t> nCount;
+		alignas( 64 ) SIRAtomic<uint64_t> nTail;
+		SIRAtomic<uint32_t> nCount;
 		sirScriptIngressSlot_t szSlots[CAPACITY];
 	} sirScriptIngressQueue_t;
 
 	sirScriptIngressQueue_t m_szQueues[SIR_SCRIPT_PHASE_COUNT];
-	std::atomic<uint32_t> m_nActiveProducers;
-	std::atomic<bool> m_bClosed;
+	SIRAtomic<uint32_t> m_nActiveProducers;
+	SIRAtomic<bool> m_bClosed;
 };
 
 #endif // __SIRENGINE_SIRSCRIPTINGRESS_H__

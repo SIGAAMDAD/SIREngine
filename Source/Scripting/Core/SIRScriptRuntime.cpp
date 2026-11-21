@@ -20,7 +20,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <string.h>
 
 SIRScriptRuntime::SIRScriptRuntime( const SIRScriptBindingRegistry *pRegistry ) noexcept
-    : m_pRegistry( pRegistry ), m_ProgramSource{}, m_OwnerThread( std::this_thread::get_id() ), m_bDispatching( false ),
+    : m_pRegistry( pRegistry ), m_ProgramSource{}, m_OwnerThread( SIRThread::currentThreadId() ), m_bDispatching( false ),
       m_bCallingBackend( false ), m_bPumping( false ), m_bShuttingDown( false )
 {
 	memset( m_szBackends, 0, sizeof( m_szBackends ) );
@@ -31,7 +31,7 @@ SIRScriptRuntime::SIRScriptRuntime( const SIRScriptBindingRegistry *pRegistry ) 
 
 bool SIRScriptRuntime::isOwnerThread( void ) const noexcept
 {
-	return std::this_thread::get_id() == m_OwnerThread;
+	return SIRThread::isCurrentThread( m_OwnerThread );
 }
 
 bool SIRScriptRuntime::validFrame( const void *pData, uint32_t nBytes, uint32_t nAlignment ) noexcept

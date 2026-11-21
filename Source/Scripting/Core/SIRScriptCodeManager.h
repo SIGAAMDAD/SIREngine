@@ -25,7 +25,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // clang-format on
 
 #include <Scripting/Core/SIRScriptBindingRegistry.h>
-#include <thread>
+#include <Core/Platform/SIRThread.h>
 
 // An externally produced artifact. The build fingerprint is an opaque cache
 // identity, NOT an integrity proof; the resource provider validates its bytes.
@@ -111,7 +111,7 @@ private:
 	void destroySlot( uint32_t iSlot ) noexcept;
 
 	const SIRScriptBindingRegistry *m_pRegistry;
-	const std::thread::id m_OwnerThread;
+	const sirThreadId_t m_OwnerThread;
 	sirScriptProgramSourceAPI_t m_Provider;
 	uint64_t m_nTargetId;
 	sirScriptCodeSlot_t m_szArtifacts[MAX_ARTIFACTS];

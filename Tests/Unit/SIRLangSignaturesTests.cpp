@@ -479,7 +479,11 @@ static void sirLangTestLiteralKinds( void ) noexcept
 		if ( s_pszValues[iCase][0] == '\'' ) {
 			fixture.szTokens[14].eKind = SIR_LANG_TOKEN_STRING;
 		}
-		assert( sirLangRunFixture( &fixture ) == SIR_LANG_SIGNATURE_ARGUMENT_TYPE );
+		const sirLangSignatureError_t eExpected = iCase == 0 ? SIR_LANG_SIGNATURE_OK : SIR_LANG_SIGNATURE_ARGUMENT_TYPE;
+		assert( sirLangRunFixture( &fixture ) == eExpected );
+		if ( iCase == 0 ) {
+			assert( fixture.szTypes[fixture.iArgument].eValue == SIR_LANG_VALUE_U16 );
+		}
 	}
 }
 

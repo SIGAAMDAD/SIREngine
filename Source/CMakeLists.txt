@@ -10,9 +10,10 @@ add_subdirectory(UI)
 add_subdirectory(Editor)
 add_subdirectory(Audio)
 add_subdirectory(Scripting)
+add_subdirectory(Animation)
 
 add_executable(SIREngine Main.cpp)
-target_link_libraries(SIREngine PRIVATE SIR::Core SIR::Resources SIR::Graphics)
+target_link_libraries(SIREngine PRIVATE SIR::Core SIR::Resources SIR::Graphics SIR::Scripting)
 target_compile_definitions(SIREngine PRIVATE SIR_VERSION="${PROJECT_VERSION}")
 
 sir_configure_owned_target(SIREngine)
