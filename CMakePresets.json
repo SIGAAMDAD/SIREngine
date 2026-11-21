@@ -12,12 +12,12 @@
       "generator": "FASTBuild",
       "binaryDir": "${sourceDir}/out/${hostSystemName}/${presetName}",
       "cacheVariables": {
-        "CMAKE_CXX_STANDARD": "17",
         "CMAKE_FASTBUILD_CACHE_PATH": "${sourceDir}/.cache/fastbuild",
         "SIR_BUILD_TESTS": "ON",
         "SIR_ENABLE_UNITY": "OFF",
         "SIR_ENABLE_PCH": "OFF",
-        "SIR_ENABLE_IPO": "OFF"
+        "SIR_ENABLE_IPO": "OFF",
+        "SIR_CXX_STANDARD": "AUTO"
       }
     },
     {
@@ -91,6 +91,15 @@
       }
     },
     {
+      "name": "macos-preview",
+      "inherits": "dev",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      }
+    },
+    {
       "name": "vs2022",
       "displayName": "Visual Studio 2022 x64 (out-of-source)",
       "generator": "Visual Studio 17 2022",
@@ -102,8 +111,8 @@
         "rhs": "Windows"
       },
       "cacheVariables": {
-        "CMAKE_CXX_STANDARD": "17",
-        "SIR_BUILD_TESTS": "ON"
+        "SIR_BUILD_TESTS": "ON",
+        "SIR_CXX_STANDARD": "AUTO"
       }
     },
     {
@@ -114,7 +123,8 @@
         "CMAKE_BUILD_TYPE": "Debug",
         "SIR_FAST_ITERATION": "ON",
         "SIR_ENABLE_UNITY": "OFF",
-        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "SIR_CXX_STANDARD": "AUTO"
       }
     },
     {
@@ -131,7 +141,17 @@
         "CMAKE_SHARED_LINKER_FLAGS": "-fprofile-instr-generate",
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
         "SIR_BUILD_TESTS": "ON",
-        "SIR_WITH_GOOGLETEST": "ON"
+        "SIR_WITH_GOOGLETEST": "ON",
+        "SIR_CXX_STANDARD": "AUTO"
+      }
+    },
+    {
+      "name": "tooling-cxx17",
+      "displayName": "SIREngine C++17 compatibility qualification",
+      "inherits": "tooling",
+      "binaryDir": "${sourceDir}/out/${hostSystemName}/tooling-cxx17",
+      "cacheVariables": {
+        "SIR_CXX_STANDARD": "17"
       }
     }
   ],
@@ -193,6 +213,13 @@
       ]
     },
     {
+      "name": "macos-preview",
+      "configurePreset": "macos-preview",
+      "nativeToolOptions": [
+        "-cache"
+      ]
+    },
+    {
       "name": "vs2022",
       "configurePreset": "vs2022",
       "configuration": "Debug"
@@ -204,6 +231,10 @@
     {
       "name": "coverage-llvm23",
       "configurePreset": "coverage-llvm23"
+    },
+    {
+      "name": "tooling-cxx17",
+      "configurePreset": "tooling-cxx17"
     }
   ],
   "testPresets": [
@@ -259,6 +290,13 @@
     {
       "name": "ubsan",
       "configurePreset": "ubsan",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "macos-preview",
+      "configurePreset": "macos-preview",
       "output": {
         "outputOnFailure": true
       }
@@ -461,6 +499,13 @@
           "label": "^kind:unit$"
         }
       },
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "tooling-cxx17",
+      "configurePreset": "tooling-cxx17",
       "output": {
         "outputOnFailure": true
       }

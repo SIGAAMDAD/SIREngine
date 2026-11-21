@@ -1,0 +1,48 @@
+# LLVM 23.1.5. Only first-party code is qualified under this policy.
+Checks: >-
+  -*,
+  bugprone-*,
+  clang-analyzer-*,
+  performance-*,
+  misc-const-correctness,
+  modernize-use-equals-delete,
+  modernize-use-nullptr,
+  modernize-use-override,
+  cppcoreguidelines-pro-type-const-cast,
+  cppcoreguidelines-pro-type-cstyle-cast,
+  readability-function-cognitive-complexity,
+  readability-function-size,
+  readability-identifier-naming,
+  -bugprone-reserved-identifier,
+  -bugprone-easily-swappable-parameters,
+  -performance-enum-size,
+  -performance-use-std-move,
+  -performance-trivially-destructible
+WarningsAsErrors: >-
+  cppcoreguidelines-pro-type-const-cast,
+  cppcoreguidelines-pro-type-cstyle-cast,
+  readability-identifier-naming,
+  modernize-use-override,
+  modernize-use-equals-delete
+HeaderFilterRegex: '.*[/\\](Source|Tests|Tools)[/\\].*'
+ExcludeHeaderFilterRegex: '(^|[/\\])(ThirdParty|Vendor|External|out)[/\\]'
+FormatStyle: file
+CheckOptions:
+  readability-identifier-naming.ClassCase: CamelCase
+  readability-identifier-naming.ClassPrefix: 'SIR'
+  readability-identifier-naming.StructIgnoredRegexp: ".*"
+  readability-identifier-naming.EnumCase: CamelCase
+  readability-identifier-naming.EnumPrefix: 'sir'
+  readability-identifier-naming.EnumConstantCase: UPPER_CASE
+  readability-identifier-naming.EnumConstantPrefix: 'SIR_'
+  readability-identifier-naming.PrivateMemberPrefix: 'm_'
+  readability-identifier-naming.ProtectedMemberPrefix: 'm_'
+  readability-identifier-naming.TemplateTypeParameterCase: CamelCase
+  readability-identifier-naming.TemplateTypeParameterPrefix: 'T'
+  readability-identifier-naming.TemplateNonTypeParameterCase: camelBack
+  cppcoreguidelines-pro-type-const-cast.StrictMode: true
+  readability-function-cognitive-complexity.Threshold: 34
+  readability-function-size.ParameterThreshold: 4
+  misc-const-correctness.AnalyzeValues: true
+  misc-const-correctness.WarnPointersAsValues: false
+  misc-const-correctness.TransformPointersAsValues: false

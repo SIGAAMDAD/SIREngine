@@ -1,0 +1,10 @@
+# CMake tooling preset creates out/<hostSystemName>/tooling/compile_commands.json.
+# Link/copy that database to the repository root for cross-platform ancestor lookup.
+CompileFlags:
+  CompilationDatabase: Ancestors
+Index:
+  Background: Build
+Diagnostics:
+  ClangTidy:
+    # clangd reads root .clang-tidy; no competing check list is maintained here.
+    Add: []

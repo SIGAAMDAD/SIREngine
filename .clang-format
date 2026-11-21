@@ -1,36 +1,84 @@
-# SIREngine-owned source only. The pinned Godot fork retains its own style.
+# SIREngine first-party C++ only. LLVM 23.1.5; independently owned vendor style is unchanged.
 BasedOnStyle: LLVM
 Language: Cpp
-Standard: c++17
+Standard: c++23
 ColumnLimit: 140
 UseTab: ForIndentation
 IndentWidth: 4
-AccessModifierOffset: -4
 TabWidth: 4
+ContinuationIndentWidth: 4
+AccessModifierOffset: -4
+IndentAccessModifiers: false
+IndentCaseLabels: false
+IndentCaseBlocks: false
+IndentGotoLabels: false
+IndentPPDirectives: None
+PPIndentWidth: 4
 BreakBeforeBraces: Custom
 BraceWrapping:
+  AfterCaseLabel: false
   AfterClass: true
+  AfterControlStatement: Never
   AfterEnum: true
   AfterFunction: true
   AfterNamespace: true
   AfterStruct: true
   AfterUnion: true
+  AfterExternBlock: true
   BeforeCatch: false
   BeforeElse: false
-  AfterControlStatement: Never
+  BeforeLambdaBody: false
+  BeforeWhile: false
+AllowShortBlocksOnASingleLine: Never
+AllowShortCaseLabelsOnASingleLine: false
 AllowShortFunctionsOnASingleLine: None
 AllowShortIfStatementsOnASingleLine: Never
 AllowShortLoopsOnASingleLine: false
 AlwaysBreakTemplateDeclarations: Yes
-FixNamespaceComments: false
+AlwaysBreakBeforeMultilineStrings: false
+BinPackArguments: false
+BinPackParameters: false
+BreakBeforeBinaryOperators: None
+BreakBeforeTernaryOperators: true
+BreakConstructorInitializers: BeforeColon
+ConstructorInitializerIndentWidth: 4
+PackConstructorInitializers: Never
+AlignConsecutiveAssignments:
+  Enabled: false
+AlignConsecutiveDeclarations:
+  Enabled: false
+AlignConsecutiveBitFields:
+  Enabled: false
+AlignTrailingComments:
+  Kind: Never
+AlignOperands: Align
+AlignEscapedNewlines: DontAlign
+AlignArrayOfStructures: None
+AlignConsecutiveMacros:
+  Enabled: false
+PointerAlignment: Right
+ReferenceAlignment: Left
+DerivePointerAlignment: false
 SpaceBeforeParens: ControlStatements
 SpacesInParens: Custom
 SpacesInParensOptions:
   InConditionalStatements: true
   InCStyleCasts: true
   Other: true
-PointerAlignment: Right
-ReferenceAlignment: Left
-DerivePointerAlignment: false
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeCpp11BracedList: false
+SpaceInEmptyBlock: false
+SpacesInContainerLiterals: false
+SpacesInSquareBrackets: false
+SpacesBeforeTrailingComments: 1
+Cpp11BracedListStyle: true
 SortIncludes: Never
-IndentCaseLabels: false
+IncludeBlocks: Preserve
+ReflowComments: false
+FixNamespaceComments: false
+SeparateDefinitionBlocks: Always
+KeepEmptyLines:
+  AtEndOfFile: false
+  AtStartOfBlock: false
+  AtStartOfFile: false
+MaxEmptyLinesToKeep: 1
