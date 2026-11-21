@@ -16,7 +16,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #ifndef __SIRENGINE_SIRAPPLICATION_H__
 #define __SIRENGINE_SIRAPPLICATION_H__
 
-#include <SIRPCH.hpp>
+#include <Core/SIRPCH.h>
 
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -27,6 +27,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Core/Events/SIREventRegistry.h>
 #include <Core/Systems/SIREngineSystem.h>
 #include <Core/Input/SIRInputService.h>
+#include <Core/Scheduling/SIRSimulationSchedule.h>
+#include <Core/Scheduling/SIRTimelineCoordinator.h>
 
 // Legacy input-attached pump is preserved for existing Input tests.
 // The window owner uses a single unconditional pump, including headless/no-input applications.
@@ -47,6 +49,8 @@ typedef enum sirAppRunResult_e : uint8_t
 } sirAppRunResult_t;
 
 constexpr uint32_t SIR_APPLICATION_MAX_SYSTEMS = 16;
+constexpr uint32_t SIR_APPLICATION_MAX_SYSTEM_ACCESSES = 8;
+constexpr uint32_t SIR_APPLICATION_MAX_SYSTEM_EDGES = SIR_APPLICATION_MAX_SYSTEMS * SIR_APPLICATION_MAX_SYSTEMS;
 
 typedef enum sirAppState_e : uint8_t
 {
@@ -56,6 +60,21 @@ typedef enum sirAppState_e : uint8_t
 	SIR_APP_STARTING = 3,
 	SIR_APP_STOPPING = 4
 } sirAppState_t;
+
+typedef enum sirAppScheduledState_e : uint8_t
+{
+	SIR_APP_SCHEDULE_IDLE = 0,
+	SIR_APP_SCHEDULE_PENDING = 1,
+	SIR_APP_SCHEDULE_SUCCEEDED = 2,
+	SIR_APP_SCHEDULE_FAILED = 3
+} sirAppScheduledState_t;
+
+typedef struct sirAppScheduledContext_s
+{
+	SIREngineSystem *pSystem;
+	float fDeltaSeconds;
+	bool bFixed;
+} sirAppScheduledContext_t;
 
 // Registered systems are borrowed and must outlive application shutdown.
 // Dependencies are declared after registration, without allocating memory.
@@ -79,6 +98,19 @@ public:
 	bool attachInput( SIRInputService& input, sirAppInputPump_t pPump = nullptr, void *pContext = nullptr ) noexcept;
 	bool attachWindowPump( sirAppWindowPump_t pPump, void *pContext = nullptr ) noexcept;
 	sirAppWindowPumpResult_t getWindowPumpResult( void ) const noexcept;
+	bool attachTimeline( SIRTimelineCoordinator& timeline ) noexcept;
+	bool attachTaskSchedule( SIRSimulationSchedule& schedule ) noexcept;
+	// Opted-in systems declare their complete hazards. Unconfigured systems
+	// remain ordered against every registered system in a scheduled phase.
+	bool configureScheduledSystem( uint32_t iSystem, sirTaskExecutor_t eExecutor, const sirTaskGraphAccess_t *pAccesses,
+	                               uint32_t nAccesses ) noexcept;
+	bool configureScheduledPriority( uint32_t iSystem, sirTaskPriority_t ePriority ) noexcept;
+	bool addScheduledDependency( uint32_t iBefore, uint32_t iAfter ) noexcept;
+	// Nonblocking submitted phase. MAIN and zero-worker CPU tasks may be pumped
+	// from pollScheduledTick; provider-affine callbacks run on their own owner.
+	bool beginScheduledTick( float fDeltaSeconds, bool bFixed ) noexcept;
+	sirAppScheduledState_t pollScheduledTick( void ) noexcept;
+	bool cancelScheduledTick( void ) noexcept;
 	bool registerSystem( SIREngineSystem *pSystem ) noexcept;
 	// Both systems must already be registered. Duplicate/self dependencies are rejected;
 	// cycles are rejected before any system is initialized.
@@ -92,6 +124,11 @@ public:
 
 protected:
 private:
+	static sirTaskResult_t scheduledUpdateEntry( void *pContext, sirTaskHandle_t task ) noexcept;
+	bool publishScheduledInput( uint64_t nNextTick, bool *pbPumped ) noexcept;
+	bool openTimelineFrame( float fDeltaSeconds ) noexcept;
+	bool finishTimelineFrame( void ) noexcept;
+
 	sirAppState_t m_eState;
 	uint64_t m_nTicks;
 	uint64_t m_nLastFrameTimestampNs;
@@ -113,6 +150,21 @@ private:
 	sirAppWindowPump_t m_pWindowPump;
 	void *m_pWindowPumpContext;
 	sirAppWindowPumpResult_t m_eWindowPumpResult;
+	SIRTimelineCoordinator *m_pTimeline;
+	SIRSimulationSchedule *m_pSchedule;
+	sirTaskExecutor_t m_szSystemExecutors[SIR_APPLICATION_MAX_SYSTEMS] = {};
+	sirTaskPriority_t m_szSystemPriorities[SIR_APPLICATION_MAX_SYSTEMS] = {};
+	bool m_szSystemConfigured[SIR_APPLICATION_MAX_SYSTEMS] = {};
+	uint32_t m_szSystemAccessCounts[SIR_APPLICATION_MAX_SYSTEMS] = {};
+	sirTaskGraphAccess_t m_szSystemAccesses[SIR_APPLICATION_MAX_SYSTEMS][SIR_APPLICATION_MAX_SYSTEM_ACCESSES] = {};
+	sirAppScheduledContext_t m_szScheduledContexts[SIR_APPLICATION_MAX_SYSTEMS] = {};
+	sirSimulationPassDesc_t m_szScheduledPasses[SIR_APPLICATION_MAX_SYSTEMS] = {};
+	sirTaskGraphEdge_t m_szScheduledEdges[SIR_APPLICATION_MAX_SYSTEM_EDGES * 3] = {};
+	sirTaskGraphEdge_t m_szExplicitEdges[SIR_APPLICATION_MAX_SYSTEM_EDGES] = {};
+	uint32_t m_nExplicitEdges = 0;
+	float m_fScheduledDeltaSeconds;
+	bool m_bScheduledFixed;
+	bool m_bScheduledActive;
 
 	uint32_t findSystemIndex( const SIREngineSystem *pSystem ) const noexcept;
 	bool resolveInitializationOrder( void ) noexcept;

@@ -16,7 +16,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #ifndef __SIRENGINE_SIRRAWSTORAGE_H__
 #define __SIRENGINE_SIRRAWSTORAGE_H__
 
-#include <SIRPCH.hpp>
+#include <Core/SIRPCH.h>
 
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -26,6 +26,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Core/Containers/SIRContainerResult.h>
 #include <limits.h>
+#include <string.h>
 #include <new>
 #include <type_traits>
 #include <utility>
@@ -82,6 +83,37 @@ public:
 		return SIR_CONTAINER_OK;
 	}
 
+	static bool tryExpandInPlace( const sirContainerAllocatorCapabilities_t *pCapabilities, void *pMemory, size_t nOldBytes,
+	                              size_t nRequestedBytes, size_t nAlignment, size_t *pActualBytes ) noexcept
+	{
+		if ( pActualBytes == nullptr || pMemory == nullptr || pCapabilities == nullptr || pCapabilities->pfnTryExpandInPlace == nullptr ||
+		     nRequestedBytes < nOldBytes ) {
+			return false;
+		}
+		size_t nActual = 0;
+		if ( !pCapabilities->pfnTryExpandInPlace( pCapabilities->pContext, pMemory, nOldBytes, nRequestedBytes, nAlignment, &nActual ) ||
+		     nActual < nRequestedBytes ) {
+			return false;
+		}
+		*pActualBytes = nActual;
+		return true;
+	}
+
+	static bool tryGetUsableSize( const sirContainerAllocatorCapabilities_t *pCapabilities, const void *pMemory, size_t nRequestedBytes,
+	                              size_t nAlignment, size_t *pActualBytes ) noexcept
+	{
+		if ( pActualBytes == nullptr || pMemory == nullptr || pCapabilities == nullptr || pCapabilities->pfnGetUsableSize == nullptr ) {
+			return false;
+		}
+		size_t nActual = 0;
+		if ( !pCapabilities->pfnGetUsableSize( pCapabilities->pContext, pMemory, nRequestedBytes, nAlignment, &nActual ) ||
+		     nActual < nRequestedBytes ) {
+			return false;
+		}
+		*pActualBytes = nActual;
+		return true;
+	}
+
 	static void deallocate( const sirContainerAllocator_t *pAllocator, void *pMemory, size_t nBytes, size_t nAlignment ) noexcept
 	{
 		if ( pMemory != nullptr ) {
@@ -90,12 +122,43 @@ public:
 	}
 };
 
+// A custom bytewise relocation contract must be separately verified for its
+// object lifetime and destructor behavior. The default is deliberately narrow.
+template <typename T>
+struct SIRRelocationTraits
+{
+	static constexpr bool CAN_BYTE_RELOCATE = std::is_trivially_copyable<T>::value;
+};
+
 // The relocation path provides the strong failure guarantee for reserve.
 template <typename T>
 class SIRLifetimeOps
 {
 public:
-	static constexpr bool CAN_RELOCATE = std::is_nothrow_move_constructible<T>::value || std::is_copy_constructible<T>::value;
+	static constexpr bool CAN_RELOCATE =
+	    SIRRelocationTraits<T>::CAN_BYTE_RELOCATE || std::is_nothrow_move_constructible<T>::value || std::is_copy_constructible<T>::value;
+
+	static constexpr bool DESTROY_SOURCE_AFTER_RELOCATE = !SIRRelocationTraits<T>::CAN_BYTE_RELOCATE;
+
+	static void destroySourceAfterRelocate( T *pData, uint32_t nCount ) noexcept
+	{
+		if constexpr ( DESTROY_SOURCE_AFTER_RELOCATE ) {
+			destroy( pData, nCount );
+		}
+	}
+
+	static void copyConstructRange( T *pDestination, const T *pSource, uint32_t nCount )
+	{
+		uint32_t nConstructed = 0;
+		try {
+			for ( ; nConstructed < nCount; ++nConstructed ) {
+				new ( pDestination + nConstructed ) T( pSource[nConstructed] );
+			}
+		} catch ( ... ) {
+			destroy( pDestination, nConstructed );
+			throw;
+		}
+	}
 
 	static void destroy( T *pData, uint32_t nCount ) noexcept
 	{
@@ -107,6 +170,12 @@ public:
 	static void relocate( T *pDestination, T *pSource, uint32_t nCount )
 	{
 		static_assert( CAN_RELOCATE, "Transactional relocation requires nothrow move construction or copy construction" );
+		if constexpr ( SIRRelocationTraits<T>::CAN_BYTE_RELOCATE ) {
+			if ( nCount != 0 ) {
+				memcpy( pDestination, pSource, ( size_t )nCount * sizeof( T ) );
+			}
+			return;
+		}
 		uint32_t nConstructed = 0;
 		try {
 			for ( ; nConstructed < nCount; ++nConstructed ) {

@@ -16,7 +16,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #ifndef __SIRENGINE_SIRPRIORITYQUEUE_H__
 #define __SIRENGINE_SIRPRIORITYQUEUE_H__
 
-#include <SIRPCH.hpp>
+#include <Core/SIRPCH.h>
 
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -134,6 +134,34 @@ public:
 			siftUp( m_values.getSize() - 1 );
 		}
 		return eResult;
+	}
+
+	// Construct a replacement heap in linear time after reserving its storage.
+	// The original heap remains untouched if allocation or copying fails.
+	sirContainerResult_t tryBuild( const T *pItems, uint32_t nCount )
+	{
+		static_assert( std::is_copy_constructible<T>::value, "Bulk build requires copy constructible values" );
+		if ( pItems == nullptr && nCount != 0 ) {
+			return SIR_CONTAINER_INVALID_ARGUMENT;
+		}
+
+		SIRPriorityQueue<T, Compare> staged( m_values.getAllocator(), m_compare );
+		sirContainerResult_t eResult = staged.tryReserve( nCount );
+		if ( eResult != SIR_CONTAINER_OK ) {
+			return eResult;
+		}
+		for ( uint32_t iItem = 0; iItem < nCount; ++iItem ) {
+			eResult = staged.m_values.tryEmplaceBack( pItems[iItem] );
+			if ( eResult != SIR_CONTAINER_OK ) {
+				return eResult;
+			}
+		}
+		for ( uint32_t iNode = nCount / 2; iNode != 0; --iNode ) {
+			staged.siftDown( iNode - 1 );
+		}
+
+		m_values = std::move( staged.m_values );
+		return SIR_CONTAINER_OK;
 	}
 
 	sirContainerResult_t tryPop( void ) noexcept

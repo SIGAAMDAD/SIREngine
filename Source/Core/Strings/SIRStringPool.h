@@ -15,7 +15,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #ifndef __SIRENGINE_SIRSTRINGPOOL_H__
 #define __SIRENGINE_SIRSTRINGPOOL_H__
 
-#include <SIRPCH.hpp>
+#include <Core/SIRPCH.h>
 #include <Core/Containers/SIRContainerResult.h>
 #include <Core/Platform/SIRSync.h>
 #include <atomic>

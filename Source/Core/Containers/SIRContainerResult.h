@@ -18,7 +18,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #ifndef __SIRENGINE_SIRCONTAINERRESULT_H__
 #define __SIRENGINE_SIRCONTAINERRESULT_H__
 
-#include <SIRPCH.hpp>
+#include <Core/SIRPCH.h>
 
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -48,6 +48,18 @@ typedef struct sirContainerAllocator_s
 	uint32_t nDomainId;
 	uint32_t nOwnerTag;
 } sirContainerAllocator_t;
+
+// Optional allocator extension. Never changes sirContainerAllocator_t layout.
+// The extension and its callback context must outlive each call.
+// Successful expansion preserves the address and contents of the allocation.
+typedef struct sirContainerAllocatorCapabilities_s
+{
+	void *pContext;
+	bool ( *pfnTryExpandInPlace )( void *pContext, void *pMemory, size_t nOldBytes, size_t nRequestedBytes, size_t nAlignment,
+	                               size_t *pActualBytes ) noexcept;
+	bool ( *pfnGetUsableSize )( void *pContext, const void *pMemory, size_t nRequestedBytes, size_t nAlignment,
+	                            size_t *pActualBytes ) noexcept;
+} sirContainerAllocatorCapabilities_t;
 
 typedef struct sirContainerFootprint_s
 {

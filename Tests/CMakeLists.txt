@@ -373,6 +373,40 @@ if(SIR_BUILD_TESTS)
     endif()
 endif()
 
+# Imported container and synchronization acceptance, registered before label classification.
+foreach(sirTest IN ITEMS
+    SIRGenericOptimizationLoopTests
+    SIRAdvancedOptimizationTests
+    SIRAdvancedNextOptimizationTests
+    SIRAdvancedContainerTests
+    SIRVectorSpecializationTests)
+    add_executable(${sirTest} "${PROJECT_SOURCE_DIR}/Tests/Unit/${sirTest}.cpp")
+    target_link_libraries(${sirTest} PRIVATE SIR::Core)
+    sir_configure_owned_target(${sirTest})
+    add_test(NAME "core.containers.${sirTest}" COMMAND ${sirTest})
+endforeach()
+add_executable(SIRGRDGVectorViewTests "${PROJECT_SOURCE_DIR}/Tests/Unit/SIRGRDGVectorViewTests.cpp")
+target_link_libraries(SIRGRDGVectorViewTests PRIVATE SIR::Resources)
+sir_configure_owned_target(SIRGRDGVectorViewTests)
+add_test(NAME resources.grdg.vector-views COMMAND SIRGRDGVectorViewTests)
+add_executable(SIRAdvancedSyncTests "${PROJECT_SOURCE_DIR}/Tests/Unit/SIRAdvancedSyncTests.cpp")
+target_link_libraries(SIRAdvancedSyncTests PRIVATE SIR::Core)
+sir_configure_owned_target(SIRAdvancedSyncTests)
+add_test(NAME core.platform.advanced-sync COMMAND SIRAdvancedSyncTests)
+add_executable(SIRFrameSchedulingTests "${PROJECT_SOURCE_DIR}/Tests/Unit/SIRFrameSchedulingTests.cpp")
+target_link_libraries(SIRFrameSchedulingTests PRIVATE SIR::Core)
+sir_configure_owned_target(SIRFrameSchedulingTests)
+add_test(NAME core.scheduling.versioned-foundation COMMAND SIRFrameSchedulingTests)
+
+add_executable(SIRResourceGraphSyncDonorTests "${PROJECT_SOURCE_DIR}/Tests/Unit/SIRResourceGraphSyncTests.cpp")
+target_link_libraries(SIRResourceGraphSyncDonorTests PRIVATE SIR::Resources)
+sir_configure_owned_target(SIRResourceGraphSyncDonorTests)
+add_test(NAME resources.grdg.dedicated-sync-donor COMMAND SIRResourceGraphSyncDonorTests)
+
+add_executable(SIRResourceGraphSyncStandaloneTests "${PROJECT_SOURCE_DIR}/Tests/Unit/SIRResourceGraphSyncStandaloneTests.cpp")
+target_link_libraries(SIRResourceGraphSyncStandaloneTests PRIVATE SIR::Resources)
+sir_configure_owned_target(SIRResourceGraphSyncStandaloneTests)
+add_test(NAME resources.grdg.dedicated-sync COMMAND SIRResourceGraphSyncStandaloneTests)
 include("${PROJECT_SOURCE_DIR}/Build/CMake/SIRTestRegistration.cmake")
 sir_classify_tests("${PROJECT_SOURCE_DIR}")
 include("${PROJECT_SOURCE_DIR}/Build/CMake/SIRQualificationScopes.cmake")

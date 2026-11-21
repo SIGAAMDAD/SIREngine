@@ -17,7 +17,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #define __SIRENGINE_SIRCONSOLESERVICE_H__
 
 #include <Core/CVars/SIRCVarRegistry.h>
-#include <SIRPCH.hpp>
+#include <Core/SIRPCH.h>
 #include <atomic>
 #include <thread>
 

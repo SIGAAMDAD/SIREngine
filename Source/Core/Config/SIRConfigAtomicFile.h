@@ -16,7 +16,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #ifndef __SIRENGINE_SIRCONFIGATOMICFILE_H__
 #define __SIRENGINE_SIRCONFIGATOMICFILE_H__
 
-#include <SIRPCH.hpp>
+#include <Core/SIRPCH.h>
 #include <Core/Config/SIRConfigTypes.h>
 #include <Core/Platform/SIRPlatformFile.h>
 

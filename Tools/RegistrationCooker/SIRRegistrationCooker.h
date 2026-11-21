@@ -16,7 +16,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #ifndef __SIRENGINE_SIRREGISTRATIONCOOKER_H__
 #define __SIRENGINE_SIRREGISTRATIONCOOKER_H__
 
-#include <SIRPCH.hpp>
+#include <Core/SIRPCH.h>
 #include <Core/Registration/SIRRegistrationCatalog.h>
 #include <string>
 #include <vector>

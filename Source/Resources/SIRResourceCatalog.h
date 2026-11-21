@@ -16,7 +16,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #ifndef __SIRENGINE_SIRRESOURCECATALOG_H__
 #define __SIRENGINE_SIRRESOURCECATALOG_H__
 
-#include <SIRPCH.hpp>
+#include <Core/SIRPCH.h>
 
 typedef enum sirResourceCatalogResult_e : uint8_t
 {

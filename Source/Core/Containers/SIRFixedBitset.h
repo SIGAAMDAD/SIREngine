@@ -16,7 +16,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #ifndef __SIRENGINE_SIRFIXEDBITSET_H__
 #define __SIRENGINE_SIRFIXEDBITSET_H__
 
-#include <SIRPCH.hpp>
+#include <Core/SIRPCH.h>
 
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -75,6 +75,20 @@ public:
 			}
 		}
 		return UINT32_MAX;
+	}
+
+	// Enumerate only populated bit positions, in ascending order. The callback
+	// may read this bitset but must not structurally modify it during traversal.
+	template <typename Visitor>
+	void forEachSetBit( Visitor&& visitor ) const
+	{
+		for ( uint32_t iWord = 0; iWord < ( ( ( uint64_t )N + 63 ) / 64 ); ++iWord ) {
+			uint64_t nBits = m_szWords[iWord];
+			while ( nBits != 0 ) {
+				visitor( iWord * 64 + SIRBitWords::firstBit( nBits ) );
+				nBits &= nBits - 1;
+			}
+		}
 	}
 
 	void clear( void ) noexcept

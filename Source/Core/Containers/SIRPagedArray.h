@@ -16,7 +16,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #ifndef __SIRENGINE_SIRPAGEDARRAY_H__
 #define __SIRENGINE_SIRPAGEDARRAY_H__
 
-#include <SIRPCH.hpp>
+#include <Core/SIRPCH.h>
 
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -25,6 +25,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // clang-format on
 
 #include <Core/Containers/SIRVector.h>
+#include <Core/Containers/SIRReadOnlyVectorView.h>
 #include <new>
 #include <utility>
 
@@ -55,6 +56,27 @@ public:
 	uint32_t getSize( void ) const noexcept
 	{
 		return m_nSize;
+	}
+	SIRReadOnlyVectorView<T> getPageView( uint32_t iPage ) const noexcept
+	{
+		if ( iPage >= m_pages.getSize() || ( uint64_t )iPage * PAGE_ELEMENTS >= m_nSize ) {
+			return {};
+		}
+		const uint32_t nRemaining = m_nSize - iPage * PAGE_ELEMENTS;
+		return { m_pages[iPage], nRemaining < PAGE_ELEMENTS ? nRemaining : PAGE_ELEMENTS };
+	}
+	sirContainerResult_t tryAppendRange( const T *pValues, uint32_t nCount )
+	{
+		if ( nCount > UINT32_MAX - m_nSize || ( nCount != 0 && pValues == nullptr ) ) {
+			return SIR_CONTAINER_INVALID_ARGUMENT;
+		}
+		for ( uint32_t i = 0; i < nCount; ++i ) {
+			const sirContainerResult_t eResult = tryEmplaceBack( pValues[i] );
+			if ( eResult != SIR_CONTAINER_OK ) {
+				return eResult;
+			}
+		}
+		return SIR_CONTAINER_OK;
 	}
 	uint32_t getPageCount( void ) const noexcept
 	{
@@ -101,6 +123,36 @@ public:
 		new ( pSlot ) T( std::forward<Args>( args )... );
 		++m_nSize;
 		return SIR_CONTAINER_OK;
+	}
+
+	// Traverse one page at a time to avoid a directory lookup and index
+	// division per element. Callbacks must not mutate the array structure.
+	template <typename Visitor>
+	void forEach( Visitor&& visitor )
+	{
+		uint32_t nRemaining = m_nSize;
+		for ( uint32_t iPage = 0; nRemaining != 0; ++iPage ) {
+			const uint32_t nInPage = nRemaining < PAGE_ELEMENTS ? nRemaining : PAGE_ELEMENTS;
+			T *pPage = m_pages[iPage];
+			for ( uint32_t iElement = 0; iElement < nInPage; ++iElement ) {
+				visitor( pPage[iElement] );
+			}
+			nRemaining -= nInPage;
+		}
+	}
+
+	template <typename Visitor>
+	void forEach( Visitor&& visitor ) const
+	{
+		uint32_t nRemaining = m_nSize;
+		for ( uint32_t iPage = 0; nRemaining != 0; ++iPage ) {
+			const uint32_t nInPage = nRemaining < PAGE_ELEMENTS ? nRemaining : PAGE_ELEMENTS;
+			const T *pPage = m_pages[iPage];
+			for ( uint32_t iElement = 0; iElement < nInPage; ++iElement ) {
+				visitor( pPage[iElement] );
+			}
+			nRemaining -= nInPage;
+		}
 	}
 
 	sirContainerResult_t tryPopBack( void ) noexcept

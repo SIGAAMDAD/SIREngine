@@ -137,8 +137,7 @@ SIRResourceGraphWriter::SIRResourceGraphWriter( SIRResourceGraph& rGraph ) noexc
 }
 
 SIRResourceGraph::SIRResourceGraph( const SIRResourceGraphConfig& rConfig ) noexcept
-    : m_Config( rConfig ), m_Writer( *this ), m_OwnerThread( std::this_thread::get_id() ), m_nActiveReaders( 0 ),
-      m_pReaderEpochs( nullptr ), m_nPublicationEpoch( 1 ), m_nMaxReaders( 0 ),
+    : m_Config( rConfig ), m_Writer( *this ), m_Sync(), m_pReaderEpochs( nullptr ), m_nMaxReaders( 0 ),
       m_KeyIndexAllocator{ this, allocateKeyIndex, releaseKeyIndex, rConfig.m_nMetadataDomain, 0x47524447U },
       m_KeyIndex( &m_KeyIndexAllocator ), m_pSlots( nullptr ), m_pStaging( nullptr ), m_pProviderPins( nullptr ),
       m_pReverseEdges( nullptr ), m_pReadKeyIndex( nullptr ), m_nReadKeyIndexCapacity( 0 ), m_pReverseBuckets( nullptr ),
@@ -223,13 +222,14 @@ SIRResourceGraph::SIRResourceGraph( const SIRResourceGraphConfig& rConfig ) noex
 	if ( m_KeyIndex.tryReserve( m_Config.m_nMaxResources ) != SIR_CONTAINER_OK ) {
 		return;
 	}
+	m_Sync.configure( m_pReaderEpochs, m_nMaxReaders );
 	m_bReady = true;
 }
 
 SIRResourceGraph::~SIRResourceGraph( void ) noexcept
 {
 	// Destruction with live scopes or pins is a caller lifetime violation.
-	if ( m_nActiveReaders.load( std::memory_order_seq_cst ) != 0 ) {
+	if ( !m_Sync.readersQuiescent() ) {
 		abort();
 	}
 	if ( m_pReaderEpochs != nullptr && m_bReady ) {
@@ -340,7 +340,7 @@ void SIRResourceGraph::release( void *pData, uint64_t nSize, uint32_t nAlignment
 
 bool SIRResourceGraph::isWriterThread( void ) const noexcept
 {
-	return m_bReady && std::this_thread::get_id() == m_OwnerThread;
+	return m_bReady && m_Sync.isWriterThread();
 }
 
 bool SIRResourceGraph::isReady( void ) const noexcept
@@ -356,9 +356,9 @@ SIRResourceGraphWriter *SIRResourceGraph::getWriter( void ) noexcept
 SIRResourceGraphStats SIRResourceGraph::getStats( void ) const noexcept
 {
 	SIRResourceGraphStats result = {};
-	result.m_nActiveReaders = m_nActiveReaders.load( std::memory_order_seq_cst );
+	result.m_nActiveReaders = m_Sync.countActiveReaders();
 	result.nMaxReaders = m_nMaxReaders;
-	result.nPublicationEpoch = m_nPublicationEpoch.load( std::memory_order_seq_cst );
+	result.nPublicationEpoch = m_Sync.currentEpoch();
 	if ( !isWriterThread() ) {
 		return result;
 	}
@@ -447,7 +447,7 @@ void SIRResourceGraph::destroyRecord( SIRPublishedResourceRecord *pRecord ) noex
 void SIRResourceGraph::pushRetired( SIRPublishedResourceRecord *pRecord ) noexcept
 {
 	if ( pRecord ) {
-		pRecord->nRetireEpoch = m_nPublicationEpoch.load( std::memory_order_seq_cst );
+		pRecord->nRetireEpoch = m_Sync.currentEpoch();
 		pRecord->m_pRetiredNext = m_pRetired;
 		m_pRetired = pRecord;
 		++m_nRetiredRecords;
@@ -456,7 +456,11 @@ void SIRResourceGraph::pushRetired( SIRPublishedResourceRecord *pRecord ) noexce
 
 void SIRResourceGraph::publishRecord( uint32_t iSlot, SIRPublishedResourceRecord *pRecord ) noexcept
 {
-	const uint64_t nEpoch = m_nPublicationEpoch.load( std::memory_order_seq_cst );
+	// Publication must occur inside the caller's writer transaction.
+	if ( !m_Sync.isWriteActive() ) {
+		abort();
+	}
+	const uint64_t nEpoch = m_Sync.currentEpoch();
 	if ( nEpoch >= UINT64_MAX - 1 ) {
 		abort();
 	}
@@ -471,7 +475,7 @@ void SIRResourceGraph::publishRecord( uint32_t iSlot, SIRPublishedResourceRecord
 	}
 	// The new epoch becomes visible only after both published pointers and
 	// the reader-side key index have stopped exposing the retired record.
-	m_nPublicationEpoch.store( nEpoch + 1, std::memory_order_seq_cst );
+	m_Sync.advanceEpoch( nEpoch );
 }
 
 void SIRResourceGraph::updateReadKeyIndex( const SIRPublishedResourceRecord *pPrior, const SIRPublishedResourceRecord *pPublished ) noexcept
@@ -629,6 +633,10 @@ SIRResourceResult SIRResourceGraphWriter::collectDependents( const SIRResourceKe
                                                              uint32_t *pTotal ) noexcept
 {
 	if ( !m_pGraph->isWriterThread() ) {
+		return SIR_RESOURCE_RESULT_WRITER_VIOLATION;
+	}
+	SIRResourceGraphWriteGuard writeGuard( m_pGraph->m_Sync );
+	if ( !writeGuard.isActive() ) {
 		return SIR_RESOURCE_RESULT_WRITER_VIOLATION;
 	}
 	if ( !rTarget.m_nTypeId || !pTotal || ( nCapacity != 0 && pHandles == nullptr ) ) {
@@ -897,6 +905,10 @@ SIRResourceResult SIRResourceGraphWriter::request( const SIRResourceKey& rKey, S
 	if ( !m_pGraph->isWriterThread() ) {
 		return SIR_RESOURCE_RESULT_WRITER_VIOLATION;
 	}
+	SIRResourceGraphWriteGuard writeGuard( m_pGraph->m_Sync );
+	if ( !writeGuard.isActive() ) {
+		return SIR_RESOURCE_RESULT_WRITER_VIOLATION;
+	}
 	if ( !pHandle || !rKey.m_nTypeId ) {
 		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
 	}
@@ -931,6 +943,10 @@ SIRResourceResult SIRResourceGraphWriter::allocateStaging( uint64_t nSize, uint3
                                                            SIRResourceStagingHandle *pHandle, SIRResourceMutableBytes *pBytes ) noexcept
 {
 	if ( !m_pGraph->isWriterThread() ) {
+		return SIR_RESOURCE_RESULT_WRITER_VIOLATION;
+	}
+	SIRResourceGraphWriteGuard writeGuard( m_pGraph->m_Sync );
+	if ( !writeGuard.isActive() ) {
 		return SIR_RESOURCE_RESULT_WRITER_VIOLATION;
 	}
 	if ( !pHandle || !pBytes || !nSize || !isPowerOfTwo( nAlignment ) ) {
@@ -969,6 +985,10 @@ void SIRResourceGraph::releaseStagingSlot( uint32_t iSlot ) noexcept
 SIRResourceResult SIRResourceGraphWriter::cancelStaging( SIRResourceStagingHandle hStaging ) noexcept
 {
 	if ( !m_pGraph->isWriterThread() ) {
+		return SIR_RESOURCE_RESULT_WRITER_VIOLATION;
+	}
+	SIRResourceGraphWriteGuard writeGuard( m_pGraph->m_Sync );
+	if ( !writeGuard.isActive() ) {
 		return SIR_RESOURCE_RESULT_WRITER_VIOLATION;
 	}
 	if ( hStaging.m_nSlot >= m_pGraph->m_Config.m_nMaxStaging ) {
@@ -1183,6 +1203,10 @@ SIRResourceResult SIRResourceGraphWriter::publish( const SIRResourcePublication&
 	if ( !m_pGraph->isWriterThread() ) {
 		return SIR_RESOURCE_RESULT_WRITER_VIOLATION;
 	}
+	SIRResourceGraphWriteGuard writeGuard( m_pGraph->m_Sync );
+	if ( !writeGuard.isActive() ) {
+		return SIR_RESOURCE_RESULT_WRITER_VIOLATION;
+	}
 	if ( !pHandle || !rPublication.m_Key.m_nTypeId || !rPublication.m_nSchemaVersion ||
 	     rPublication.m_eKind > SIR_RESOURCE_KIND_COMPOSITION || ( rPublication.m_nChunkCount && !rPublication.m_pChunks ) ||
 	     ( rPublication.m_nDependencyCount && !rPublication.m_pDependencies ) ) {
@@ -1292,6 +1316,10 @@ SIRResourceResult SIRResourceGraphWriter::evictChunk( SIRResourceHandle hResourc
 	if ( !m_pGraph->isWriterThread() ) {
 		return SIR_RESOURCE_RESULT_WRITER_VIOLATION;
 	}
+	SIRResourceGraphWriteGuard writeGuard( m_pGraph->m_Sync );
+	if ( !writeGuard.isActive() ) {
+		return SIR_RESOURCE_RESULT_WRITER_VIOLATION;
+	}
 	SIRPublishedResourceRecord *pCurrent = nullptr;
 	SIRResourceResult eResult = m_pGraph->checkHandle( hResource, &pCurrent );
 	if ( eResult != SIR_RESOURCE_RESULT_SUCCESS ) {
@@ -1317,6 +1345,10 @@ SIRResourceResult SIRResourceGraphWriter::markFailed( SIRResourceHandle hResourc
 	if ( !m_pGraph->isWriterThread() ) {
 		return SIR_RESOURCE_RESULT_WRITER_VIOLATION;
 	}
+	SIRResourceGraphWriteGuard writeGuard( m_pGraph->m_Sync );
+	if ( !writeGuard.isActive() ) {
+		return SIR_RESOURCE_RESULT_WRITER_VIOLATION;
+	}
 	SIRPublishedResourceRecord *pCurrent = nullptr;
 	SIRResourceResult eResult = m_pGraph->checkHandle( hResource, &pCurrent );
 	if ( eResult != SIR_RESOURCE_RESULT_SUCCESS ) {
@@ -1338,6 +1370,10 @@ SIRResourceResult SIRResourceGraphWriter::retire( SIRResourceHandle hResource ) 
 	if ( !m_pGraph->isWriterThread() ) {
 		return SIR_RESOURCE_RESULT_WRITER_VIOLATION;
 	}
+	SIRResourceGraphWriteGuard writeGuard( m_pGraph->m_Sync );
+	if ( !writeGuard.isActive() ) {
+		return SIR_RESOURCE_RESULT_WRITER_VIOLATION;
+	}
 	SIRPublishedResourceRecord *pRecord = nullptr;
 	SIRResourceResult eResult = m_pGraph->checkHandle( hResource, &pRecord );
 	if ( eResult != SIR_RESOURCE_RESULT_SUCCESS ) {
@@ -1357,18 +1393,8 @@ uint32_t SIRResourceGraph::collectRetiredInternal( uint32_t nMaxRecords ) noexce
 	if ( !nMaxRecords ) {
 		return 0;
 	}
-	std::lock_guard<std::mutex> pinLock( m_PinMutex );
-	uint64_t nOldestReaderEpoch = UINT64_MAX;
-	for ( uint32_t iReader = 0; iReader < m_nMaxReaders; ++iReader ) {
-		const uint64_t nReaderEpoch = m_pReaderEpochs[iReader].load( std::memory_order_seq_cst );
-		if ( nReaderEpoch == UINT64_MAX ) {
-			// A scope is entering and has not stabilized its publication epoch.
-			return 0;
-		}
-		if ( nReaderEpoch != 0 && nReaderEpoch < nOldestReaderEpoch ) {
-			nOldestReaderEpoch = nReaderEpoch;
-		}
-	}
+	std::lock_guard<SIRResourceGraphPinMutex> pinLock( m_PinMutex );
+	const uint64_t nOldestReaderEpoch = m_Sync.oldestProtectedEpoch();
 	uint32_t nCollected = 0;
 	uint32_t nVisited = 0;
 	SIRPublishedResourceRecord **pLink = &m_pRetired;
@@ -1389,7 +1415,11 @@ uint32_t SIRResourceGraph::collectRetiredInternal( uint32_t nMaxRecords ) noexce
 
 uint32_t SIRResourceGraphWriter::collectRetired( uint32_t nMaxRecords ) noexcept
 {
-	return m_pGraph->isWriterThread() ? m_pGraph->collectRetiredInternal( nMaxRecords ) : 0;
+	if ( !m_pGraph->isWriterThread() ) {
+		return 0;
+	}
+	SIRResourceGraphWriteGuard writeGuard( m_pGraph->m_Sync );
+	return writeGuard.isActive() ? m_pGraph->collectRetiredInternal( nMaxRecords ) : 0;
 }
 
 SIRResourceReadScope::SIRResourceReadScope( const SIRResourceGraph& rGraph ) noexcept
@@ -1398,37 +1428,16 @@ SIRResourceReadScope::SIRResourceReadScope( const SIRResourceGraph& rGraph ) noe
 	if ( m_pGraph == nullptr ) {
 		return;
 	}
-	for ( uint32_t iReader = 0; iReader < m_pGraph->m_nMaxReaders; ++iReader ) {
-		uint64_t nVacant = 0;
-		if ( !m_pGraph->m_pReaderEpochs[iReader].compare_exchange_strong( nVacant, UINT64_MAX, std::memory_order_seq_cst ) ) {
-			continue;
-		}
-		// Claim first, then announce an epoch. If the writer advances while
-		// we enter, retry until a stable epoch is announced. The reserved
-		// sentinel prevents collection during this transition.
-		for ( ;; ) {
-			const uint64_t nEpoch = m_pGraph->m_nPublicationEpoch.load( std::memory_order_seq_cst );
-			m_pGraph->m_pReaderEpochs[iReader].store( nEpoch, std::memory_order_seq_cst );
-			if ( nEpoch == m_pGraph->m_nPublicationEpoch.load( std::memory_order_seq_cst ) ) {
-				break;
-			}
-			m_pGraph->m_pReaderEpochs[iReader].store( UINT64_MAX, std::memory_order_seq_cst );
-		}
-		m_nReaderToken = ( uint64_t )iReader + 1;
-		m_pGraph->m_nActiveReaders.fetch_add( 1, std::memory_order_seq_cst );
-		return;
+	m_nReaderToken = m_pGraph->m_Sync.enterRead();
+	if ( m_nReaderToken == 0 ) {
+		m_pGraph = nullptr;
 	}
-	// The fixed reader scope table is full. Callers already validate
-	// isActive() before dereferencing resources or using borrowed views.
-	m_pGraph = nullptr;
 }
 
 SIRResourceReadScope::~SIRResourceReadScope( void ) noexcept
 {
 	if ( m_nReaderToken != 0 ) {
-		const uint32_t iReader = ( uint32_t )( m_nReaderToken - 1 );
-		m_pGraph->m_pReaderEpochs[iReader].store( 0, std::memory_order_seq_cst );
-		m_pGraph->m_nActiveReaders.fetch_sub( 1, std::memory_order_seq_cst );
+		m_pGraph->m_Sync.leaveRead( m_nReaderToken );
 	}
 }
 
@@ -1503,7 +1512,7 @@ SIRResourceResult SIRResourceGraph::pinForProvider( const SIRResourceReadScope& 
 	if ( !pPin || !nProviderId || !rScope.isActive() || rScope.m_pGraph != this || rView.m_pScope != &rScope || !rView.isValid() ) {
 		return SIR_RESOURCE_RESULT_INVALID_ARGUMENT;
 	}
-	std::lock_guard<std::mutex> pinLock( m_PinMutex );
+	std::lock_guard<SIRResourceGraphPinMutex> pinLock( m_PinMutex );
 	for ( uint32_t iPin = 0; iPin < m_Config.m_nMaxProviderPins; ++iPin ) {
 		SIRProviderPinSlot& rPin = m_pProviderPins[iPin];
 		if ( rPin.m_pRecord ) {
@@ -1524,7 +1533,7 @@ SIRResourceResult SIRResourceGraph::releaseProviderPin( SIRResourcePinHandle hPi
 	if ( hPin.m_nSlot >= m_Config.m_nMaxProviderPins || !m_bReady ) {
 		return SIR_RESOURCE_RESULT_INVALID_HANDLE;
 	}
-	std::lock_guard<std::mutex> pinLock( m_PinMutex );
+	std::lock_guard<SIRResourceGraphPinMutex> pinLock( m_PinMutex );
 	SIRProviderPinSlot& rPin = m_pProviderPins[hPin.m_nSlot];
 	if ( !rPin.m_pRecord || rPin.m_nGeneration != hPin.m_nGeneration ) {
 		return SIR_RESOURCE_RESULT_INVALID_HANDLE;
@@ -1547,6 +1556,11 @@ SIRResourceView::SIRResourceView( const SIRResourceReadScope *pScope, const SIRP
 bool SIRResourceView::isValid( void ) const noexcept
 {
 	return m_pScope && m_pScope->isActive() && m_pRecord;
+}
+
+bool SIRResourceView::belongsToScope( const SIRResourceReadScope& rScope ) const noexcept
+{
+	return m_pScope == &rScope && isValid();
 }
 
 SIRResourceKind SIRResourceView::getKind( void ) const noexcept

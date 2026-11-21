@@ -16,7 +16,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #ifndef __SIRENGINE_SIRREGISTRATIONSTRINGBRIDGE_H__
 #define __SIRENGINE_SIRREGISTRATIONSTRINGBRIDGE_H__
 
-#include <SIRPCH.hpp>
+#include <Core/SIRPCH.h>
 #include <Core/Registration/SIRRegistrationTypes.h>
 #include <Core/Strings/SIRStringPool.h>
 

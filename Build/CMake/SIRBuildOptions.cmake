@@ -33,7 +33,7 @@ function(sir_configure_owned_target sirTarget)
     endif()
     if(SIR_ENABLE_PCH)
         target_precompile_headers(${sirTarget} PRIVATE
-            "${PROJECT_SOURCE_DIR}/Build/CMake/SIRPCH.hpp")
+            "${PROJECT_SOURCE_DIR}/Source/Core/SIRPCH.h")
     endif()
     if(SIR_ENABLE_IPO)
         set_property(TARGET ${sirTarget} PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)

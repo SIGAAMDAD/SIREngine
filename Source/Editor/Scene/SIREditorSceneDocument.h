@@ -16,7 +16,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #ifndef __SIRENGINE_SIREDITORSCENEDOCUMENT_H__
 #define __SIRENGINE_SIREDITORSCENEDOCUMENT_H__
 
-#include <SIRPCH.hpp>
+#include <Core/SIRPCH.h>
 #include <Core/Objects/SIRObjectRegistry.h>
 
 // clang-format off

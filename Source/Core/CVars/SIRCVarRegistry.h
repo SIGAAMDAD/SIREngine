@@ -17,7 +17,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #define __SIRENGINE_SIRCVARREGISTRY_H__
 
 #include <Core/Registration/SIRRegistrationCatalog.h>
-#include <SIRPCH.hpp>
+#include <Core/SIRPCH.h>
 #include <thread>
 
 // clang-format off

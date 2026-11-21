@@ -18,7 +18,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #ifndef __SIRENGINE_SIRRINGBUFFER_H__
 #define __SIRENGINE_SIRRINGBUFFER_H__
 
-#include <SIRPCH.hpp>
+#include <Core/SIRPCH.h>
 
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -28,6 +28,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Core/Containers/SIRRawStorage.h>
 #include <new>
+#include <type_traits>
 #include <utility>
 
 // Bounded, single-threaded FIFO. Full insertion fails without overwriting live elements.
@@ -40,6 +41,18 @@ private:
 	uint32_t m_nCapacity = 0;
 	uint32_t m_iHead = 0;
 	const sirContainerAllocator_t *m_pAllocator;
+
+	bool overlapsStorage( const T *pItems, uint32_t nCount ) const noexcept
+	{
+		const uintptr_t nStorage = ( uintptr_t )m_pData;
+		const uintptr_t nInput = ( uintptr_t )pItems;
+		const uint64_t nStorageBytes = ( uint64_t )m_nCapacity * sizeof( T );
+		const uint64_t nInputBytes = ( uint64_t )nCount * sizeof( T );
+		if ( nInput >= nStorage ) {
+			return nInput - nStorage < nStorageBytes;
+		}
+		return nStorage - nInput < nInputBytes;
+	}
 
 	uint32_t wrapIndex( uint64_t iIndex ) const noexcept
 	{
@@ -159,6 +172,67 @@ public:
 	sirContainerResult_t tryPushBack( T&& value )
 	{
 		return tryEmplaceBack( std::move( value ) );
+	}
+
+	// Batched API for trivially copyable elements. The entire operation either
+	// succeeds or leaves the ring unchanged. Source/destination aliasing with
+	// this ring's backing allocation is rejected before any modification.
+	sirContainerResult_t tryPushBackMany( const T *pItems, uint32_t nCount ) noexcept
+	{
+		static_assert( std::is_trivially_copyable<T>::value, "Bulk push requires trivially copyable elements" );
+		if ( nCount == 0 ) {
+			return SIR_CONTAINER_OK;
+		}
+		if ( pItems == nullptr || m_nCapacity == 0 ) {
+			return SIR_CONTAINER_INVALID_ARGUMENT;
+		}
+		if ( nCount > m_nCapacity - m_nSize ) {
+			return SIR_CONTAINER_FULL;
+		}
+		if ( overlapsStorage( pItems, nCount ) ) {
+			return SIR_CONTAINER_INVALID_ARGUMENT;
+		}
+
+		const uint32_t iTail = wrapIndex( ( uint64_t )m_iHead + m_nSize );
+		const uint32_t nFirst = nCount < m_nCapacity - iTail ? nCount : m_nCapacity - iTail;
+		for ( uint32_t iIndex = 0; iIndex < nFirst; ++iIndex ) {
+			new ( m_pData + iTail + iIndex ) T( pItems[iIndex] );
+		}
+		for ( uint32_t iIndex = nFirst; iIndex < nCount; ++iIndex ) {
+			new ( m_pData + iIndex - nFirst ) T( pItems[iIndex] );
+		}
+		m_nSize += nCount;
+		return SIR_CONTAINER_OK;
+	}
+
+	sirContainerResult_t tryPopFrontMany( T *pOutput, uint32_t nCount ) noexcept
+	{
+		static_assert( std::is_trivially_copyable<T>::value, "Bulk pop requires trivially copyable elements" );
+		if ( nCount == 0 ) {
+			return SIR_CONTAINER_OK;
+		}
+		if ( pOutput == nullptr ) {
+			return SIR_CONTAINER_INVALID_ARGUMENT;
+		}
+		if ( nCount > m_nSize ) {
+			return SIR_CONTAINER_EMPTY;
+		}
+		if ( overlapsStorage( pOutput, nCount ) ) {
+			return SIR_CONTAINER_INVALID_ARGUMENT;
+		}
+
+		const uint32_t nFirst = nCount < m_nCapacity - m_iHead ? nCount : m_nCapacity - m_iHead;
+		for ( uint32_t iIndex = 0; iIndex < nFirst; ++iIndex ) {
+			pOutput[iIndex] = m_pData[m_iHead + iIndex];
+			m_pData[m_iHead + iIndex].~T();
+		}
+		for ( uint32_t iIndex = nFirst; iIndex < nCount; ++iIndex ) {
+			pOutput[iIndex] = m_pData[iIndex - nFirst];
+			m_pData[iIndex - nFirst].~T();
+		}
+		m_iHead = wrapIndex( ( uint64_t )m_iHead + nCount );
+		m_nSize -= nCount;
+		return SIR_CONTAINER_OK;
 	}
 
 	sirContainerResult_t tryPopFront( void ) noexcept

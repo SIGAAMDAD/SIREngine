@@ -16,7 +16,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #ifndef __SIRENGINE_SIRQUEUE_H__
 #define __SIRENGINE_SIRQUEUE_H__
 
-#include <SIRPCH.hpp>
+#include <Core/SIRPCH.h>
 
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -70,6 +70,14 @@ public:
 	sirContainerResult_t tryPush( T&& value )
 	{
 		return m_ring.tryPushBack( std::move( value ) );
+	}
+	sirContainerResult_t tryPushMany( const T *pItems, uint32_t nCount ) noexcept
+	{
+		return m_ring.tryPushBackMany( pItems, nCount );
+	}
+	sirContainerResult_t tryPopMany( T *pOutput, uint32_t nCount ) noexcept
+	{
+		return m_ring.tryPopFrontMany( pOutput, nCount );
 	}
 	sirContainerResult_t tryPop( void ) noexcept
 	{

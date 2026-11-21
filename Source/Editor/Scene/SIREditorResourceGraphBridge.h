@@ -10,7 +10,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 */
 #ifndef __SIRENGINE_SIREDITORRESOURCEGRAPHBRIDGE_H__
 #define __SIRENGINE_SIREDITORRESOURCEGRAPHBRIDGE_H__
-#include <SIRPCH.hpp>
+#include <Core/SIRPCH.h>
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
     #pragma once

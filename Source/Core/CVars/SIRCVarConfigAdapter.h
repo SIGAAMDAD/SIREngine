@@ -16,7 +16,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #ifndef __SIRENGINE_SIRCVARCONFIGADAPTER_H__
 #define __SIRENGINE_SIRCVARCONFIGADAPTER_H__
 
-#include <SIRPCH.hpp>
+#include <Core/SIRPCH.h>
 #include <Core/Config/Formats/INI/SIRIni.h>
 #include <Core/CVars/SIRCVarRegistry.h>
 

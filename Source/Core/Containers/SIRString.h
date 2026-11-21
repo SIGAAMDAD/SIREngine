@@ -16,7 +16,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #ifndef __SIRENGINE_SIRSTRING_H__
 #define __SIRENGINE_SIRSTRING_H__
 
-#include <SIRPCH.hpp>
+#include <Core/SIRPCH.h>
 
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -172,6 +172,34 @@ public:
 	sirContainerFootprint_t getFootprint( void ) const noexcept
 	{
 		return { INLINE_CAPACITY, isInline() ? 0u : m_nCapacity, 0, 0, ( uint64_t )m_nLength + 1 };
+	}
+
+	// Single-byte append stages the input before growth so even a byte borrowed
+	// from this string remains valid when the backing allocation moves.
+	sirContainerResult_t tryAppendChar( char nValue )
+	{
+		if ( ( uint64_t )m_nLength + 2 > UINT32_MAX ) {
+			return SIR_CONTAINER_SIZE_OVERFLOW;
+		}
+
+		const uint32_t nRequired = m_nLength + 2;
+		if ( nRequired > m_nCapacity ) {
+			uint32_t nGrowth = 0;
+			sirContainerResult_t eResult = SIRVectorStorage::calculateGrowth( m_nCapacity, nRequired, &nGrowth );
+			if ( eResult != SIR_CONTAINER_OK ) {
+				return eResult;
+			}
+			eResult = tryReserveBytes( nGrowth );
+			if ( eResult != SIR_CONTAINER_OK ) {
+				return eResult;
+			}
+		}
+
+		char *pDestination = data();
+		pDestination[m_nLength] = nValue;
+		++m_nLength;
+		pDestination[m_nLength] = '\0';
+		return SIR_CONTAINER_OK;
 	}
 
 	sirContainerResult_t tryAppendBytes( const char *pBytes, uint32_t nBytes )

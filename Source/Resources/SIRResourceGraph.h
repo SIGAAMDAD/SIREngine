@@ -16,7 +16,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #ifndef __SIRENGINE_SIRRESOURCEGRAPH_H__
 #define __SIRENGINE_SIRRESOURCEGRAPH_H__
 
-#include <SIRPCH.hpp>
+#include <Core/SIRPCH.h>
 #include <Resources/SIRProviderCompletion.h>
 
 // clang-format off
@@ -26,6 +26,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // clang-format on
 
 #include "SIRResourceViews.h"
+#include "SIRResourceGraphSync.h"
 #include <Core/Containers/SIRFlatHashMap.h>
 #include <Core/Jobs/SIRTaskGraph.h>
 
@@ -197,14 +198,12 @@ class SIRResourceGraph
 private:
 	SIRResourceGraphConfig m_Config;
 	SIRResourceGraphWriter m_Writer;
-	std::thread::id m_OwnerThread;
-	mutable std::atomic<uint32_t> m_nActiveReaders;
+	SIRResourceGraphSync m_Sync;
 	// Slot value 0 is vacant; UINT64_MAX reserves a slot during entry.
 	// Published epochs protect older immutable records from reclamation.
 	mutable std::atomic<uint64_t> *m_pReaderEpochs;
-	std::atomic<uint64_t> m_nPublicationEpoch;
 	uint32_t m_nMaxReaders;
-	mutable std::mutex m_PinMutex;
+	mutable SIRResourceGraphPinMutex m_PinMutex;
 	sirContainerAllocator_t m_KeyIndexAllocator;
 	SIRFlatHashMap<SIRResourceKey, uint32_t, SIRResourceKeyHash, SIRResourceKeyEqual> m_KeyIndex;
 	SIRGraphSlot *m_pSlots;

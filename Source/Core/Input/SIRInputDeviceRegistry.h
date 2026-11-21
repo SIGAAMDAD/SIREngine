@@ -16,7 +16,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #ifndef __SIRENGINE_SIRINPUTDEVICEREGISTRY_H__
 #define __SIRENGINE_SIRINPUTDEVICEREGISTRY_H__
 
-#include <SIRPCH.hpp>
+#include <Core/SIRPCH.h>
 
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
 #pragma once

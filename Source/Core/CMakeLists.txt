@@ -1,5 +1,5 @@
 include("${CMAKE_CURRENT_LIST_DIR}/../../Build/CMake/SIRBuildTreeGuard.cmake")
-add_library(SIRCore STATIC SIRApplication.cpp Systems/SIREngineSystem.cpp)
+add_library(SIRCore STATIC SIRApplication.cpp SIRApplicationScheduling.cpp Systems/SIREngineSystem.cpp)
 add_library(SIR::Core ALIAS SIRCore)
 target_include_directories(SIRCore PUBLIC
     "${PROJECT_SOURCE_DIR}/Source"
@@ -41,6 +41,7 @@ set(SIR_CORE_PLATFORM_COMMON
     ${PROJECT_SOURCE_DIR}/Source/Core/Platform/SIRCPUInfo.cpp
     ${PROJECT_SOURCE_DIR}/Source/Core/Platform/SIRThread.cpp
     ${PROJECT_SOURCE_DIR}/Source/Core/Platform/SIRSync.cpp
+    ${PROJECT_SOURCE_DIR}/Source/Core/Platform/SIRSyncAdvanced.cpp
     ${PROJECT_SOURCE_DIR}/Source/Core/Platform/SIRAtomic.cpp
     ${PROJECT_SOURCE_DIR}/Source/Core/Platform/SIRPlatformRootDirectory.cpp
     ${PROJECT_SOURCE_DIR}/Source/Core/Platform/SIRPlatformAtomicFile.cpp
@@ -341,3 +342,6 @@ block(SCOPE_FOR VARIABLES)
 target_sources(SIRCore PRIVATE ${PROJECT_SOURCE_DIR}/Source/Core/VFS/SIRVFSPath.cpp ${PROJECT_SOURCE_DIR}/Source/Core/VFS/SIRVFSMountTable.cpp ${PROJECT_SOURCE_DIR}/Source/Core/VFS/SIRVFSOverlayResolver.cpp ${PROJECT_SOURCE_DIR}/Source/Core/VFS/SIRVFSFileHandleTable.cpp ${PROJECT_SOURCE_DIR}/Source/Core/VFS/SIRVFSDirectorySource.cpp)
 endblock()
 sir_configure_owned_target(SIRCore)
+
+# Versioned scheduling -- retains the canonical application and window pump.
+target_sources(SIRCore PRIVATE Scheduling/SIRSimulationSchedule.cpp Scheduling/SIRTimelineCoordinator.cpp)

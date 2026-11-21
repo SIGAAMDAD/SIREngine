@@ -16,7 +16,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #ifndef __SIRENGINE_SIRSTATICVECTOR_H__
 #define __SIRENGINE_SIRSTATICVECTOR_H__
 
-#include <SIRPCH.hpp>
+#include <Core/SIRPCH.h>
 
 // clang-format off
 #ifdef SIR_PRAGMA_ONCE_SUPPORTED
@@ -25,6 +25,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // clang-format on
 
 #include <Core/Containers/SIRVectorStorage.h>
+#include <Core/Containers/SIRReadOnlyVectorView.h>
+#include <Core/Containers/SIRWriteOnlyVectorView.h>
 #include <assert.h>
 #include <new>
 #include <type_traits>
@@ -58,6 +60,14 @@ public:
 	SIRStaticVector( SIRStaticVector&& ) = delete;
 	SIRStaticVector& operator=( SIRStaticVector&& ) = delete;
 
+	SIRReadOnlyVectorView<T> getReadOnlyView( void ) const noexcept
+	{
+		return { data(), m_nSize };
+	}
+	SIRWriteOnlyVectorView<T> getWriteOnlyView( void ) noexcept
+	{
+		return { data(), m_nSize };
+	}
 	uint32_t getSize( void ) const noexcept
 	{
 		return m_nSize;

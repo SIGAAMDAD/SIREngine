@@ -6,7 +6,8 @@ SIRApplication::SIRApplication( void ) noexcept
       m_dElapsedSeconds( 0.0 ), m_nSystemCount( 0 ), m_nInitializedSystems( 0 ), m_eInitializationResult( SIR_SYSTEM_OK ),
       m_pFailedSystem( nullptr ), m_bShutdownInProgress( false ), m_bFrameDispatchInProgress( false ), m_EventRegistry(),
       m_pInput( nullptr ), m_pInputPump( nullptr ), m_pInputPumpContext( nullptr ), m_pWindowPump( nullptr ),
-      m_pWindowPumpContext( nullptr ), m_eWindowPumpResult( SIR_APP_WINDOW_CONTINUE )
+      m_pWindowPumpContext( nullptr ), m_eWindowPumpResult( SIR_APP_WINDOW_CONTINUE ), m_pTimeline( nullptr ), m_pSchedule( nullptr ),
+      m_nExplicitEdges( 0 ), m_fScheduledDeltaSeconds( 0.0f ), m_bScheduledFixed( false ), m_bScheduledActive( false )
 {
 }
 
@@ -83,6 +84,7 @@ bool SIRApplication::registerSystem( SIREngineSystem *pSystem ) noexcept
 	}
 
 	m_szSystems[m_nSystemCount] = pSystem;
+	m_szSystemPriorities[m_nSystemCount] = SIR_TASK_PRIORITY_NORMAL;
 	++m_nSystemCount;
 	return true;
 }
@@ -144,7 +146,7 @@ bool SIRApplication::initialize( void ) noexcept
 
 bool SIRApplication::tick( float fDeltaSeconds ) noexcept
 {
-	if ( m_eState != SIR_APP_READY || m_bFrameDispatchInProgress ) {
+	if ( m_eState != SIR_APP_READY || m_bFrameDispatchInProgress || m_bScheduledActive ) {
 		return false;
 	}
 	m_bFrameDispatchInProgress = true;
@@ -234,7 +236,7 @@ sirAppRunResult_t SIRApplication::run( uint64_t nMaxFrames ) noexcept
 
 bool SIRApplication::fixedTick( float fFixedDeltaSeconds ) noexcept
 {
-	if ( m_eState != SIR_APP_READY || m_bFrameDispatchInProgress ) {
+	if ( m_eState != SIR_APP_READY || m_bFrameDispatchInProgress || m_bScheduledActive ) {
 		return false;
 	}
 
@@ -253,7 +255,7 @@ bool SIRApplication::fixedTick( float fFixedDeltaSeconds ) noexcept
 
 sirSystemResult_t SIRApplication::shutdown( void ) noexcept
 {
-	if ( m_bShutdownInProgress || m_bFrameDispatchInProgress ) {
+	if ( m_bShutdownInProgress || m_bFrameDispatchInProgress || m_bScheduledActive ) {
 		return SIR_SYSTEM_BUSY;
 	}
 	if ( m_eState == SIR_APP_UNINITIALIZED || m_eState == SIR_APP_STOPPED ) {

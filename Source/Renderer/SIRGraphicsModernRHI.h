@@ -14,7 +14,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 #include <Renderer/SIRGraphicsDriverABI.h>
 #include <Renderer/SIRRenderingDevice.h>
-#include <SIRPCH.hpp>
+#include <Core/SIRPCH.h>
 
 // A borrowed, pre-cooked execution plan. Its arrays and native handles must
 // remain alive until command recording finishes; submitted resources remain
