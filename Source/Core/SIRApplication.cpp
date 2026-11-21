@@ -7,7 +7,7 @@ SIRApplication::SIRApplication( void ) noexcept
       m_pFailedSystem( nullptr ), m_bShutdownInProgress( false ), m_bFrameDispatchInProgress( false ), m_EventRegistry(),
       m_pInput( nullptr ), m_pInputPump( nullptr ), m_pInputPumpContext( nullptr ), m_pWindowPump( nullptr ),
       m_pWindowPumpContext( nullptr ), m_eWindowPumpResult( SIR_APP_WINDOW_CONTINUE ), m_pTimeline( nullptr ), m_pSchedule( nullptr ),
-      m_nExplicitEdges( 0 ), m_fScheduledDeltaSeconds( 0.0f ), m_bScheduledFixed( false ), m_bScheduledActive( false )
+      m_fScheduledDeltaSeconds( 0.0f ), m_bScheduledFixed( false ), m_bScheduledActive( false )
 {
 }
 

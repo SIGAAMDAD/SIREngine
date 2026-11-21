@@ -29,6 +29,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Core/Input/SIRInputService.h>
 #include <Core/Scheduling/SIRSimulationSchedule.h>
 #include <Core/Scheduling/SIRTimelineCoordinator.h>
+#include <Core/Containers/SIRStaticVector.h>
 
 // Legacy input-attached pump is preserved for existing Input tests.
 // The window owner uses a single unconditional pump, including headless/no-input applications.
@@ -160,8 +161,8 @@ private:
 	sirAppScheduledContext_t m_szScheduledContexts[SIR_APPLICATION_MAX_SYSTEMS] = {};
 	sirSimulationPassDesc_t m_szScheduledPasses[SIR_APPLICATION_MAX_SYSTEMS] = {};
 	sirTaskGraphEdge_t m_szScheduledEdges[SIR_APPLICATION_MAX_SYSTEM_EDGES * 3] = {};
-	sirTaskGraphEdge_t m_szExplicitEdges[SIR_APPLICATION_MAX_SYSTEM_EDGES] = {};
-	uint32_t m_nExplicitEdges = 0;
+	// Bounded, append-only dependencies. Size is owned by the container.
+	SIRStaticVector<sirTaskGraphEdge_t, SIR_APPLICATION_MAX_SYSTEM_EDGES> m_ExplicitEdges;
 	float m_fScheduledDeltaSeconds;
 	bool m_bScheduledFixed;
 	bool m_bScheduledActive;

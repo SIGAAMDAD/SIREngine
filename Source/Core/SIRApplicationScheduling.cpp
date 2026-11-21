@@ -62,12 +62,10 @@ bool SIRApplication::configureScheduledPriority( uint32_t iSystem, sirTaskPriori
 bool SIRApplication::addScheduledDependency( uint32_t iBefore, uint32_t iAfter ) noexcept
 {
 	if ( m_eState != SIR_APP_UNINITIALIZED || iBefore >= m_nSystemCount || iAfter >= m_nSystemCount || iBefore == iAfter ||
-	     m_nExplicitEdges == SIR_APPLICATION_MAX_SYSTEM_EDGES ) {
+	     m_ExplicitEdges.getSize() == m_ExplicitEdges.getCapacity() ) {
 		return false;
 	}
-	m_szExplicitEdges[m_nExplicitEdges] = { iBefore, iAfter };
-	++m_nExplicitEdges;
-	return true;
+	return m_ExplicitEdges.tryEmplaceBack( sirTaskGraphEdge_t{ iBefore, iAfter } ) == SIR_CONTAINER_OK;
 }
 
 bool SIRApplication::publishScheduledInput( uint64_t nNextTick, bool *pbPumped ) noexcept
@@ -188,8 +186,8 @@ bool SIRApplication::beginScheduledTick( float fDeltaSeconds, bool bFixed ) noex
 			}
 		}
 	}
-	for ( uint32_t iEdge = 0; iEdge < m_nExplicitEdges; ++iEdge ) {
-		const sirTaskGraphEdge_t& edge = m_szExplicitEdges[iEdge];
+	for ( uint32_t iEdge = 0; iEdge < m_ExplicitEdges.getSize(); ++iEdge ) {
+		const sirTaskGraphEdge_t& edge = m_ExplicitEdges[iEdge];
 		m_szScheduledEdges[nEdges++] = { szPassForSystem[edge.nBefore], szPassForSystem[edge.nAfter] };
 	}
 	if ( !m_pSchedule->begin( m_szScheduledPasses, m_nInitializedSystems, m_szScheduledEdges, nEdges ) ) {

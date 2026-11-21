@@ -4,6 +4,7 @@
 #include <Core/Events/SIRSPSCEventRing.h>
 #include <Core/Events/SIRStaticEvent.h>
 #include <Core/Events/SIREventStream.h>
+#include <Core/Events/SIREventScheduler.h>
 #include <Core/Events/SIREventTimingWheel.h>
 #include <atomic>
 #include <new>
@@ -102,6 +103,33 @@ int main( void )
 		if ( !wheel.schedule( &nSum, sirEventNoAllocSum, nValue, n, 1, 0, handle ) || wheel.pump( n + 1 ) != 1 )
 			return 9;
 		staticEvent.publish( nValue );
+	}
+	// General-range timer heap now uses a bounded, inline SIRStaticVector.
+	// Exercise full admission, indexed cancellation, ordering, and reuse.
+	{
+		SIREventScheduler<uint32_t, 4> scheduler;
+		sirEventScheduleHandle_t szHandles[4] = {};
+		const uint64_t nPreviousSum = nSum;
+		for ( uint32_t iTimer = 0; iTimer < 4; ++iTimer ) {
+			if ( !scheduler.schedule( &nSum, sirEventNoAllocSum, iTimer + 1, 100, iTimer + 1, 0, szHandles[iTimer] ) ) {
+				return 10;
+			}
+		}
+		sirEventScheduleHandle_t rejected = {};
+		if ( scheduler.pendingCount() != 4 || scheduler.schedule( &nSum, sirEventNoAllocSum, 5, 100, 5, 0, rejected ) ) {
+			return 11;
+		}
+		if ( !scheduler.cancel( szHandles[2] ) || scheduler.pendingCount() != 3 ) {
+			return 12;
+		}
+		if ( scheduler.pump( 101 ) != 1 || scheduler.pump( 102 ) != 1 || scheduler.pump( 104 ) != 1 || scheduler.pendingCount() != 0 ||
+		     nSum != nPreviousSum + 7 ) {
+			return 13;
+		}
+		if ( !scheduler.schedule( &nSum, sirEventNoAllocSum, 9, 200, 1, 0, rejected ) || scheduler.cancel( szHandles[2] ) ||
+		     scheduler.pump( 201 ) != 1 || scheduler.pendingCount() != 0 ) {
+			return 14;
+		}
 	}
 	s_nResult = nSum;
 	const uint64_t nAfter = s_nAllocations.load( std::memory_order_relaxed );

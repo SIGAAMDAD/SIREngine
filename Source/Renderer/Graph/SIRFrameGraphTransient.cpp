@@ -96,8 +96,8 @@ sirGraphicsResult_t SIRFrameGraph::planTransients( const sirFrameGraphCompiled_t
 			return SIR_GRAPHICS_INVALID_ARGUMENT;
 		}
 	}
-	for ( uint32_t iOutput = 0; iOutput < m_nOutputCount; ++iOutput ) {
-		szExported[m_szOutputs[iOutput].nResource] = 1;
+	for ( uint32_t iOutput = 0; iOutput < m_Outputs.getSize(); ++iOutput ) {
+		szExported[m_Outputs[iOutput].nResource] = 1;
 	}
 	for ( uint32_t iDesc = 0; iDesc < input.nDescCount; ++iDesc ) {
 		const sirFrameGraphTransientDesc_t& desc = input.pDescs[iDesc];

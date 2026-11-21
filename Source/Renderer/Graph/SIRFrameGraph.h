@@ -24,6 +24,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Renderer/SIRGraphicsTypes.h>
 #include <Renderer/SIRSharedGPUBackingOwner.h>
+#include <Core/Containers/SIRStaticVector.h>
+#include <Core/Containers/SIRFixedBitset.h>
 
 // One semantic frame product per view/eye/quality/epoch; zero means unkeyed
 // transient scratch, not an authoritative scene product.
@@ -223,15 +225,20 @@ private:
 	sirFrameGraphResource_t m_szResources[SIR_FRAMEGRAPH_MAX_RESOURCES] = {};
 	sirFrameGraphPass_t m_szPasses[SIR_FRAMEGRAPH_MAX_PASSES] = {};
 	sirFrameGraphAccess_t m_szAccesses[SIR_FRAMEGRAPH_MAX_ACCESSES] = {};
-	sirFrameGraphSharedRead_t m_szSharedByteAccesses[SIR_FRAMEGRAPH_MAX_ACCESSES] = {};
-	sirNativeGPUBufferLease_t m_szSharedReadLeases[SIR_FRAMEGRAPH_MAX_ACCESSES] = {};
-	uint32_t m_nSharedByteAccessCount = 0;
-	uint8_t m_szExplicitEdges[SIR_FRAMEGRAPH_MAX_PASSES * SIR_FRAMEGRAPH_MAX_PASSES] = {};
-	sirFrameGraphOutput_t m_szOutputs[SIR_FRAMEGRAPH_MAX_OUTPUTS] = {};
+	struct SharedReadLease
+	{
+		sirFrameGraphSharedRead_t read;
+		sirNativeGPUBufferLease_t lease;
+	};
+	// One append owns both the compiled read descriptor and its validation lease.
+	SIRStaticVector<SharedReadLease, SIR_FRAMEGRAPH_MAX_ACCESSES> m_SharedReads;
+	// Dense pass-ID index, packed to one bit per explicit dependency.
+	SIRFixedBitset<SIR_FRAMEGRAPH_MAX_PASSES * SIR_FRAMEGRAPH_MAX_PASSES> m_ExplicitEdges;
+	// No heap allocation; outputs have bounded append-only lifetime per graph revision.
+	SIRStaticVector<sirFrameGraphOutput_t, SIR_FRAMEGRAPH_MAX_OUTPUTS> m_Outputs;
 	uint64_t m_nRevision = 1;
 	uint64_t m_nIdentity = 0;
 	const SIRSharedGPUBackingOwner *m_pSharedOwner = nullptr;
-	uint32_t m_nOutputCount = 0;
 	bool m_bCullingEnabled = false;
 	uint32_t m_nResourceCount = 0;
 	uint32_t m_nPassCount = 0;

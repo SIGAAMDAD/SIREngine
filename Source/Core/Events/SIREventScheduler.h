@@ -26,6 +26,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 // clang-format on
 
 #include <Core/Events/SIREventTypes.h>
+#include <Core/Containers/SIRStaticVector.h>
 #include <stdint.h>
 #include <type_traits>
 
@@ -62,7 +63,7 @@ public:
 	static_assert( Capacity > 0, "Scheduler needs slots" );
 	static_assert( std::is_trivially_copyable<TPayload>::value, "Scheduler payloads must be POD" );
 
-	SIREventScheduler( void ) noexcept : m_nFreeHead( 1 ), m_nCount( 0 ), m_nSequence( 1 ), m_bPumping( false )
+	SIREventScheduler( void ) noexcept : m_nFreeHead( 1 ), m_nSequence( 1 ), m_bPumping( false )
 	{
 		for ( uint32_t i = 1; i <= Capacity; ++i ) {
 			m_Slots[i].nNextFree = i == Capacity ? 0 : i + 1;
@@ -126,8 +127,8 @@ public:
 		}
 		m_bPumping = true;
 		uint32_t nDelivered = 0;
-		while ( m_nCount != 0 && nDelivered < nBudget ) {
-			const uint32_t nIndex = m_nHeap[0];
+		while ( m_Heap.getSize() != 0 && nDelivered < nBudget ) {
+			const uint32_t nIndex = m_Heap[0];
 			sirEventSchedulerSlot_s<TPayload>& slot = m_Slots[nIndex];
 			if ( slot.nDue > nNow ) {
 				break;
@@ -171,7 +172,7 @@ public:
 				m_Slots[i].nState = SIR_EVENT_TIMER_CANCELLED;
 			}
 		}
-		m_nCount = 0;
+		m_Heap.clear();
 		m_nFreeHead = 0;
 		for ( uint32_t i = Capacity; i > 0; --i ) {
 			if ( m_Slots[i].nState == SIR_EVENT_TIMER_FREE ) {
@@ -182,7 +183,7 @@ public:
 	}
 	uint32_t pendingCount( void ) const noexcept
 	{
-		return m_nCount;
+		return m_Heap.getSize();
 	}
 
 private:
@@ -194,10 +195,10 @@ private:
 	}
 	void swapHeap( uint32_t nA, uint32_t nB ) noexcept
 	{
-		const uint32_t nX = m_nHeap[nA];
-		const uint32_t nY = m_nHeap[nB];
-		m_nHeap[nA] = nY;
-		m_nHeap[nB] = nX;
+		const uint32_t nX = m_Heap[nA];
+		const uint32_t nY = m_Heap[nB];
+		m_Heap[nA] = nY;
+		m_Heap[nB] = nX;
 		m_Slots[nX].nHeapIndex = nB;
 		m_Slots[nY].nHeapIndex = nA;
 	}
@@ -205,7 +206,7 @@ private:
 	{
 		while ( nPosition != 0 ) {
 			const uint32_t nParent = ( nPosition - 1 ) / 2;
-			if ( !less( m_nHeap[nPosition], m_nHeap[nParent] ) ) {
+			if ( !less( m_Heap[nPosition], m_Heap[nParent] ) ) {
 				break;
 			}
 			swapHeap( nPosition, nParent );
@@ -216,12 +217,12 @@ private:
 	{
 		for ( ;; ) {
 			const uint32_t nLeft = nPosition * 2 + 1;
-			if ( nLeft >= m_nCount ) {
+			if ( nLeft >= m_Heap.getSize() ) {
 				break;
 			}
 			const uint32_t nRight = nLeft + 1;
-			const uint32_t nMin = nRight < m_nCount && less( m_nHeap[nRight], m_nHeap[nLeft] ) ? nRight : nLeft;
-			if ( !less( m_nHeap[nMin], m_nHeap[nPosition] ) ) {
+			const uint32_t nMin = nRight < m_Heap.getSize() && less( m_Heap[nRight], m_Heap[nLeft] ) ? nRight : nLeft;
+			if ( !less( m_Heap[nMin], m_Heap[nPosition] ) ) {
 				break;
 			}
 			swapHeap( nPosition, nMin );
@@ -230,18 +231,22 @@ private:
 	}
 	void heapPush( uint32_t nIndex ) noexcept
 	{
-		const uint32_t nPosition = m_nCount++;
-		m_nHeap[nPosition] = nIndex;
+		// Free-list admission guarantees that the bounded heap has space.
+		const uint32_t nPosition = m_Heap.getSize();
+		const sirContainerResult_t eResult = m_Heap.tryPushBack( nIndex );
+		assert( eResult == SIR_CONTAINER_OK );
+		( void )eResult;
 		m_Slots[nIndex].nHeapIndex = nPosition;
 		siftUp( nPosition );
 	}
 	void heapRemove( uint32_t nPosition ) noexcept
 	{
-		const uint32_t nLast = m_nHeap[--m_nCount];
-		if ( nPosition != m_nCount ) {
-			m_nHeap[nPosition] = nLast;
+		const uint32_t nLast = m_Heap[m_Heap.getSize() - 1];
+		( void )m_Heap.tryPopBack();
+		if ( nPosition != m_Heap.getSize() ) {
+			m_Heap[nPosition] = nLast;
 			m_Slots[nLast].nHeapIndex = nPosition;
-			if ( nPosition != 0 && less( m_nHeap[nPosition], m_nHeap[( nPosition - 1 ) / 2] ) ) {
+			if ( nPosition != 0 && less( m_Heap[nPosition], m_Heap[( nPosition - 1 ) / 2] ) ) {
 				siftUp( nPosition );
 			} else {
 				siftDown( nPosition );
@@ -260,9 +265,9 @@ private:
 	}
 
 	sirEventSchedulerSlot_s<TPayload> m_Slots[Capacity + 1];
-	uint32_t m_nHeap[Capacity]{};
+	// Packed heap positions; slot IDs remain stable in m_Slots.
+	SIRStaticVector<uint32_t, Capacity> m_Heap;
 	uint32_t m_nFreeHead;
-	uint32_t m_nCount;
 	uint64_t m_nSequence;
 	bool m_bPumping;
 };

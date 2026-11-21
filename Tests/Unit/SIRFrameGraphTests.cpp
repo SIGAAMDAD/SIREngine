@@ -814,6 +814,55 @@ static bool testUniqueFrameProducts( void ) noexcept
 	return graph.addResource( depth, &nResource ) == SIR_GRAPHICS_SUCCESS && nResource == 0;
 }
 
+// Bounded graph collections must retain capacity and reset semantics after
+// migrating the output list and dependency adjacency to SIR containers.
+static bool testContainerAdoptionBoundaries( void ) noexcept
+{
+	SIRFrameGraph graph;
+	uint32_t nResource = 0;
+	if ( graph.addResource( makeTransient(), &nResource ) != SIR_GRAPHICS_SUCCESS ) {
+		return false;
+	}
+	const sirFrameGraphOutput_t output = { nResource, 0, 1, 0, 1 };
+	for ( uint32_t iOutput = 0; iOutput < SIR_FRAMEGRAPH_MAX_OUTPUTS; ++iOutput ) {
+		if ( graph.addOutput( output ) != SIR_GRAPHICS_SUCCESS ) {
+			return false;
+		}
+	}
+	if ( graph.addOutput( output ) != SIR_GRAPHICS_CAPACITY_EXCEEDED ) {
+		return false;
+	}
+	graph.reset();
+	if ( graph.addResource( makeTransient(), &nResource ) != SIR_GRAPHICS_SUCCESS || graph.addOutput( output ) != SIR_GRAPHICS_SUCCESS ) {
+		return false;
+	}
+	graph.reset();
+	for ( uint32_t iPass = 0; iPass < SIR_FRAMEGRAPH_MAX_PASSES; ++iPass ) {
+		uint32_t nPass = 0;
+		const sirFrameGraphPass_t pass = { SIR_GRAPHICS_QUEUE_DIRECT, 0, iPass == SIR_FRAMEGRAPH_MAX_PASSES - 1 };
+		if ( graph.addPass( pass, &nPass ) != SIR_GRAPHICS_SUCCESS || nPass != iPass ) {
+			return false;
+		}
+	}
+	if ( graph.addDependency( 0, SIR_FRAMEGRAPH_MAX_PASSES - 1 ) != SIR_GRAPHICS_SUCCESS ) {
+		return false;
+	}
+	graph.setCullingEnabled( true );
+	sirFrameGraphCompiled_t compiled = {};
+	if ( graph.compile( makeCaps(), &compiled ) != SIR_GRAPHICS_SUCCESS || compiled.nPassCount != 2 || compiled.nDependencyCount != 1 ||
+	     compiled.szPassOrder[0] != 0 || compiled.szPassOrder[1] != SIR_FRAMEGRAPH_MAX_PASSES - 1 ) {
+		return false;
+	}
+	graph.reset();
+	uint32_t nFirst = 0;
+	uint32_t nLast = 0;
+	const sirFrameGraphPass_t root = { SIR_GRAPHICS_QUEUE_DIRECT, 0, false };
+	const sirFrameGraphPass_t sideEffect = { SIR_GRAPHICS_QUEUE_DIRECT, 0, true };
+	return graph.addPass( root, &nFirst ) == SIR_GRAPHICS_SUCCESS && graph.addPass( sideEffect, &nLast ) == SIR_GRAPHICS_SUCCESS &&
+	       graph.compile( makeCaps(), &compiled ) == SIR_GRAPHICS_SUCCESS && compiled.nPassCount == 1 && compiled.nDependencyCount == 0 &&
+	       compiled.szPassOrder[0] == nLast;
+}
+
 typedef struct sirFrameGraphTestCase_s
 {
 	const char *pszName;
@@ -843,7 +892,8 @@ int main( void )
 	                                            { "record dependency order", testRecordEnforcesDependencies },
 	                                            { "placement reuse", testPlacementReuseRejectsStalePlan },
 	                                            { "live split write union", testLiveSplitWriteUnion },
-	                                            { "unique frame products", testUniqueFrameProducts } };
+	                                            { "unique frame products", testUniqueFrameProducts },
+	                                            { "container bounds/reset", testContainerAdoptionBoundaries } };
 	for ( uint32_t iCase = 0; iCase < sizeof( szCases ) / sizeof( szCases[0] ); ++iCase ) {
 		if ( !szCases[iCase].pTest() ) {
 			fprintf( stderr, "FrameGraph regression failed: %s\n", szCases[iCase].pszName );

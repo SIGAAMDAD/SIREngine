@@ -19,6 +19,16 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 static SIRAtomic<uint64_t> s_nNextGraphIdentity{ 1 };
 
+// Expand only explicit dependency bits into the compiler-owned dense adjacency scratch.
+struct sirFrameGraphDenseEdgeWriter_t
+{
+	uint8_t *pEdges;
+	void operator()( uint32_t iEdge ) const noexcept
+	{
+		pEdges[iEdge] = 1;
+	}
+};
+
 SIRFrameGraph::SIRFrameGraph( const SIRSharedGPUBackingOwner *pSharedOwner ) noexcept : m_pSharedOwner( pSharedOwner )
 {
 	m_nIdentity = s_nNextGraphIdentity.fetchAdd( 1, SIR_MEMORY_ORDER_RELAXED );
@@ -52,10 +62,10 @@ void SIRFrameGraph::reset( void ) noexcept
 	m_nPassCount = 0;
 	m_nResourceCount = 0;
 	m_nAccessCount = 0;
-	m_nSharedByteAccessCount = 0;
-	m_nOutputCount = 0;
+	m_SharedReads.clear();
+	m_Outputs.clear();
 	++m_nRevision;
-	memset( m_szExplicitEdges, 0, sizeof( m_szExplicitEdges ) );
+	m_ExplicitEdges.clear();
 }
 
 bool SIRFrameGraph::isWritableState( sirGraphicsState_t eState ) noexcept
@@ -264,7 +274,7 @@ sirGraphicsResult_t SIRFrameGraph::addSharedBufferRead( uint32_t nPass, uint32_t
 {
 	if ( nPass >= m_nPassCount || nResource >= m_nResourceCount || !nBytes || !rLease.view.bReadOnly ||
 		 !rLease.view.nCompletionProviderId || !rLease.view.nBorrowGeneration || !isReadableState( eState ) ||
-		 m_nSharedByteAccessCount >= SIR_FRAMEGRAPH_MAX_ACCESSES || nOffsetBytes < rLease.view.nOffset || nBytes > rLease.view.nBytes ||
+		 m_SharedReads.getSize() == m_SharedReads.getCapacity() || nOffsetBytes < rLease.view.nOffset || nBytes > rLease.view.nBytes ||
 		 nOffsetBytes - rLease.view.nOffset > rLease.view.nBytes - nBytes ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
@@ -283,17 +293,14 @@ sirGraphicsResult_t SIRFrameGraph::addSharedBufferRead( uint32_t nPass, uint32_t
 	if ( eAdded != SIR_GRAPHICS_SUCCESS ) {
 		return eAdded;
 	}
-	m_szSharedReadLeases[m_nSharedByteAccessCount] = rLease;
-	m_szSharedByteAccesses[m_nSharedByteAccessCount++] = { nPass,
-														   nResource,
-														   rLease.view.nConsumerId,
-														   rLease.view.nCompletionProviderId,
-														   rLease.view.nBorrowSlot,
-														   rLease.view.nBorrowGeneration,
-														   rLease.view.nPhysicalBackingId,
-														   rLease.view.nNativeResourceToken,
-														   nOffsetBytes,
-														   nBytes };
+	const SharedReadLease entry = { { nPass, nResource, rLease.view.nConsumerId, rLease.view.nCompletionProviderId, rLease.view.nBorrowSlot,
+									  rLease.view.nBorrowGeneration, rLease.view.nPhysicalBackingId, rLease.view.nNativeResourceToken,
+									  nOffsetBytes, nBytes },
+									rLease };
+	// The capacity check precedes access registration, so this append is infallible.
+	const sirContainerResult_t eResult = m_SharedReads.tryPushBack( entry );
+	assert( eResult == SIR_CONTAINER_OK );
+	( void )eResult;
 	return SIR_GRAPHICS_SUCCESS;
 }
 
@@ -378,7 +385,7 @@ sirGraphicsResult_t SIRFrameGraph::addDependency( uint32_t nBefore, uint32_t nAf
 	if ( nBefore >= m_nPassCount || nAfter >= m_nPassCount || nBefore == nAfter ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	m_szExplicitEdges[nBefore * SIR_FRAMEGRAPH_MAX_PASSES + nAfter] = 1;
+	( void )m_ExplicitEdges.trySet( nBefore * SIR_FRAMEGRAPH_MAX_PASSES + nAfter, true );
 	++m_nRevision;
 	return SIR_GRAPHICS_SUCCESS;
 }
@@ -395,10 +402,12 @@ sirGraphicsResult_t SIRFrameGraph::addOutput( const sirFrameGraphOutput_t& outpu
 	if ( output.nBaseLayer >= resource.nArrayLayers || output.nLayerCount > resource.nArrayLayers - output.nBaseLayer ) {
 		return SIR_GRAPHICS_INVALID_ARGUMENT;
 	}
-	if ( m_nOutputCount >= SIR_FRAMEGRAPH_MAX_OUTPUTS ) {
+	if ( m_Outputs.getSize() == m_Outputs.getCapacity() ) {
 		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
 	}
-	m_szOutputs[m_nOutputCount++] = output;
+	if ( m_Outputs.tryPushBack( output ) != SIR_CONTAINER_OK ) {
+		return SIR_GRAPHICS_CAPACITY_EXCEEDED;
+	}
 	++m_nRevision;
 	return SIR_GRAPHICS_SUCCESS;
 }
@@ -468,8 +477,8 @@ sirGraphicsResult_t SIRFrameGraph::findLivePasses( uint8_t *pLive ) const noexce
 			pLive[iPass] = 1;
 		}
 	}
-	for ( uint32_t iOutput = 0; iOutput < m_nOutputCount; ++iOutput ) {
-		const sirFrameGraphOutput_t& output = m_szOutputs[iOutput];
+	for ( uint32_t iOutput = 0; iOutput < m_Outputs.getSize(); ++iOutput ) {
+		const sirFrameGraphOutput_t& output = m_Outputs[iOutput];
 		sirFrameGraphAccess_t target = {};
 		target.nResource = output.nResource;
 		target.nBaseMip = output.nBaseMip;
@@ -495,7 +504,7 @@ sirGraphicsResult_t SIRFrameGraph::findLivePasses( uint8_t *pLive ) const noexce
 			szVisited[iPass] = 1;
 			bChanged = true;
 			for ( uint32_t iPredecessor = 0; iPredecessor < m_nPassCount; ++iPredecessor ) {
-				if ( m_szExplicitEdges[iPredecessor * SIR_FRAMEGRAPH_MAX_PASSES + iPass] ) {
+				if ( m_ExplicitEdges.test( iPredecessor * SIR_FRAMEGRAPH_MAX_PASSES + iPass ) ) {
 					pLive[iPredecessor] = 1;
 				}
 			}
@@ -554,8 +563,8 @@ sirGraphicsResult_t SIRFrameGraph::validateCapabilities( const sirGraphicsCapabi
 		for ( uint32_t iAccess = 0; iAccess < m_nAccessCount; ++iAccess ) {
 			bUsed = bUsed || ( m_szAccesses[iAccess].nResource == iResource && pLive[m_szAccesses[iAccess].nPass] );
 		}
-		for ( uint32_t iOutput = 0; iOutput < m_nOutputCount; ++iOutput ) {
-			bUsed = bUsed || m_szOutputs[iOutput].nResource == iResource;
+		for ( uint32_t iOutput = 0; iOutput < m_Outputs.getSize(); ++iOutput ) {
+			bUsed = bUsed || m_Outputs[iOutput].nResource == iResource;
 		}
 		if ( bUsed && resource.bImported && resource.hImported.nDeviceGeneration != caps.nDeviceGeneration ) {
 			return SIR_GRAPHICS_INVALID_HANDLE;
@@ -807,7 +816,7 @@ sirGraphicsResult_t SIRFrameGraph::compile( const sirGraphicsCapabilities_t& cap
 	}
 
 	uint8_t szEdges[SIR_FRAMEGRAPH_MAX_PASSES * SIR_FRAMEGRAPH_MAX_PASSES] = {};
-	memcpy( szEdges, m_szExplicitEdges, sizeof( szEdges ) );
+	m_ExplicitEdges.forEachSetBit( sirFrameGraphDenseEdgeWriter_t{ szEdges } );
 	const sirGraphicsResult_t eTransitionResult = buildTransitions( szEdges, szLive, &staged );
 	if ( eTransitionResult != SIR_GRAPHICS_SUCCESS ) {
 		return eTransitionResult;
@@ -820,8 +829,8 @@ sirGraphicsResult_t SIRFrameGraph::compile( const sirGraphicsCapabilities_t& cap
 	calculateLifetimes( &staged );
 	// Export only live pass borrows. Callers must release each retained provider
 	// lease against that provider's real completion set after GPU submission.
-	for ( uint32_t iRead = 0; iRead < m_nSharedByteAccessCount; ++iRead ) {
-		const sirFrameGraphSharedRead_t& read = m_szSharedByteAccesses[iRead];
+	for ( uint32_t iRead = 0; iRead < m_SharedReads.getSize(); ++iRead ) {
+		const sirFrameGraphSharedRead_t& read = m_SharedReads[iRead].read;
 		if ( szLive[read.nPass] ) {
 			staged.szSharedReads[staged.nSharedReadCount++] = read;
 		}
@@ -880,11 +889,11 @@ sirGraphicsResult_t SIRFrameGraph::record( const sirFrameGraphCompiled_t& compil
 
 	// A compiled plan contains metadata, not ownership. Confirm every live
 	// GRDG borrow is still issued before executing any recording callback.
-	for ( uint32_t iRead = 0; iRead < m_nSharedByteAccessCount; ++iRead ) {
-		if ( !compiled.szLivePasses[m_szSharedByteAccesses[iRead].nPass] ) {
+	for ( uint32_t iRead = 0; iRead < m_SharedReads.getSize(); ++iRead ) {
+		if ( !compiled.szLivePasses[m_SharedReads[iRead].read.nPass] ) {
 			continue;
 		}
-		if ( !m_pSharedOwner || m_pSharedOwner->validateBufferLease( m_szSharedReadLeases[iRead] ) != SIR_RESOURCE_RESULT_SUCCESS ) {
+		if ( !m_pSharedOwner || m_pSharedOwner->validateBufferLease( m_SharedReads[iRead].lease ) != SIR_RESOURCE_RESULT_SUCCESS ) {
 			return SIR_GRAPHICS_INVALID_HANDLE;
 		}
 	}
