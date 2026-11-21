@@ -164,9 +164,17 @@ static int32_t testStudioDeviceLossCallback( void *pUserData, void *, void *pOwn
 	return 0;
 }
 
+static int32_t fakeQueryOutputDevice( void *pUserData, void *, int32_t *pDriver, uint64_t *pPhysicalId ) noexcept
+{
+	( void )pUserData;
+	*pDriver = 0;
+	*pPhysicalId = UINT64_C( 0xAA55 );
+	return 0;
+}
+
 static sirFMODNativeOps_t makeStudioOps( sirFMODBankFixture_t *pFixture ) noexcept
 {
-	return { 2,
+	return { 3,
 	         0x00020400,
 	         pFixture,
 	         testStudioCreate,
@@ -174,6 +182,7 @@ static sirFMODNativeOps_t makeStudioOps( sirFMODBankFixture_t *pFixture ) noexce
 	         testStudioVersion,
 	         testStudioDrivers,
 	         testStudioDriver,
+	         fakeQueryOutputDevice,
 	         testStudioNoSound,
 	         testStudioInitialize,
 	         testStudioUpdate,

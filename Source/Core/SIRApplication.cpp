@@ -156,9 +156,7 @@ bool SIRApplication::tick( float fDeltaSeconds ) noexcept
 bool SIRApplication::tickFrame( float fDeltaSeconds ) noexcept
 {
 	const uint64_t nNextTick = m_nTicks + 1;
-	if ( m_pInput != nullptr && !m_pInput->begin( nNextTick ) ) {
-		return false;
-	}
+	const bool bInputBegun = m_pInput == nullptr || m_pInput->begin( nNextTick );
 
 	// The window OS event pump runs exactly once even without InputService.
 	// When input exists, its native events are collected between begin/publish.
@@ -170,6 +168,9 @@ bool SIRApplication::tickFrame( float fDeltaSeconds ) noexcept
 	}
 
 	if ( m_eState != SIR_APP_READY ) {
+		return false;
+	}
+	if ( !bInputBegun ) {
 		return false;
 	}
 	if ( m_pInput != nullptr ) {

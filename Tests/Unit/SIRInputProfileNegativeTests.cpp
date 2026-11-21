@@ -13,7 +13,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#include <Core/Platform/Input/SIRInputControllerProfiles.h>
+#include <Core/Input/SIRInputControllerProfiles.h>
 #include <stdio.h>
 #include <string.h>
 

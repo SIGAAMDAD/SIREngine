@@ -13,7 +13,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#include <Core/Platform/Input/Windows/SIRWindowsGameInputCodec.h>
+#include <Core/Platform/Windows/SIRWindowsGameInputCodec.h>
 #include <stdio.h>
 #include <string.h>
 

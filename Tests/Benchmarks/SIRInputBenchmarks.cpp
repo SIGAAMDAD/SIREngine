@@ -13,8 +13,8 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#include <Core/Platform/Input/SIRInputControllerProfiles.h>
-#include <Core/Platform/Input/SIRInputService.h>
+#include <Core/Input/SIRInputControllerProfiles.h>
+#include <Core/Input/SIRInputService.h>
 #include <benchmark/benchmark.h>
 
 class SIRBenchmarkInputBackend final : public SIRInputBackend

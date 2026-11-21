@@ -81,6 +81,10 @@ sirAudioResult_t SIRAudioSystem::initialize( const sirAudioSystemConfig_t& confi
 		shutdown();
 		return SIR_AUDIO_CAPACITY;
 	}
+	if ( !sirPlatformCaptureContext( &m_Platform ) ) {
+		shutdown();
+		return SIR_AUDIO_BACKEND_ERROR;
+	}
 	m_Backend = backend;
 	m_pBackendContext = pBackendContext;
 	const sirAudioBackendConfig_t backendConfig = { config.nMaxPlaying, config.nCompletionCapacity };
@@ -95,6 +99,11 @@ sirAudioResult_t SIRAudioSystem::initialize( const sirAudioSystemConfig_t& confi
 	m_nNextSequence.store( 1, SIR_MEMORY_ORDER_RELAXED );
 	m_bInitialized = true;
 	return SIR_AUDIO_OK;
+}
+
+const sirPlatformContext_t& SIRAudioSystem::platformContext( void ) const noexcept
+{
+	return m_Platform;
 }
 
 void SIRAudioSystem::setLifecycleCallback( sirAudioLifecycleCallback_t callback ) noexcept
@@ -117,6 +126,7 @@ void SIRAudioSystem::shutdown( void ) noexcept
 	m_nResourceEpoch = 0;
 	m_bInitialized = false;
 	m_nEpoch = 0;
+	m_Platform = {};
 	m_Commands.shutdown();
 	m_CriticalCommands.shutdown();
 	if ( m_pEmitters != nullptr ) {

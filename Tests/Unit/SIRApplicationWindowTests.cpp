@@ -1,6 +1,6 @@
 #include <Core/SIRApplication.h>
-#include <Core/Platform/Input/SIRInputService.h>
-#include <Core/Platform/Input/SIRInputBackend.h>
+#include <Core/Input/SIRInputService.h>
+#include <Core/Input/SIRInputBackend.h>
 #include <stdio.h>
 
 class SIRWindowAppTestInput final : public SIRInputBackend

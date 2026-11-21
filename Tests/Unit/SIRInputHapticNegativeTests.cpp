@@ -13,7 +13,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#include <Core/Platform/Input/SIRInputHaptics.h>
+#include <Core/Input/SIRInputHaptics.h>
 #include <stdio.h>
 
 typedef struct sirInputHapticTestSink_s

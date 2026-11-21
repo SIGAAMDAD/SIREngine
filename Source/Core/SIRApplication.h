@@ -26,7 +26,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 
 #include <Core/Events/SIREventRegistry.h>
 #include <Core/Systems/SIREngineSystem.h>
-#include <Core/Platform/Input/SIRInputService.h>
+#include <Core/Input/SIRInputService.h>
 
 // Legacy input-attached pump is preserved for existing Input tests.
 // The window owner uses a single unconditional pump, including headless/no-input applications.

@@ -23,6 +23,9 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <windows.h>
 #else
 #include <dlfcn.h>
+#ifdef SIR_GL_TEST_X11_AVAILABLE
+#include <X11/Xlib.h>
+#endif
 #endif
 
 #ifndef SIR_TEST_GL46_MODULE_PATH
@@ -61,6 +64,148 @@ static void sirGLTestCheck( bool bGood, const char *pszCase )
 		++s_nFailures;
 	}
 }
+
+static void sirGLTestWindowPresentation( sirGraphicsABIDriver_t *pDriver, const sirGraphicsABINativeSurface_t& native )
+{
+	if ( pDriver == nullptr ) {
+		return;
+	}
+	sirGraphicsABIDeviceRequest_t request = {};
+	request.nSize = sizeof( request );
+	request.nHeadless = 0;
+	request.nAllowSoftware = 1;
+	request.nFramesInFlight = 1;
+	request.nResidentBudgetBytes = 64 * 1024 * 1024;
+	request.nRequiredFeatures = SIR_GRAPHICS_FEATURE_PRESENT;
+	sirGraphicsABIDevice_t device = {};
+	device.nSize = sizeof( device );
+	const uint32_t nCreate = pDriver->pCreateDevice( pDriver->pDriver, &request, &device );
+	sirGLTestCheck( nCreate == SIR_GRAPHICS_SUCCESS, "windowed GL46 device admission" );
+	if ( nCreate == SIR_GRAPHICS_SUCCESS ) {
+		sirGraphicsABICapabilities_t caps = {};
+		caps.nSize = sizeof( caps );
+		const uint32_t nCaps = device.pQueryCapabilities( device.pDevice, &caps );
+		sirGLTestCheck( nCaps == SIR_GRAPHICS_SUCCESS &&
+		                    ( caps.nEnabledFeatures & ( SIR_GRAPHICS_FEATURE_GRAPHICS | SIR_GRAPHICS_FEATURE_PRESENT ) ) ==
+		                        ( SIR_GRAPHICS_FEATURE_GRAPHICS | SIR_GRAPHICS_FEATURE_PRESENT ) &&
+		                    sirGraphicsValidateABICapabilities( &caps ) == SIR_GRAPHICS_ABI_SUCCESS,
+		                "windowed GL capabilities accepted by canonical graphics ABI" );
+		const sirGraphicsABIPresentDesc_t present = { sizeof( present ),         320, 200, 1, SIR_GRAPHICS_FORMAT_RGBA8_UNORM,
+		                                              SIR_GRAPHICS_PRESENT_FIFO, 0,   0 };
+		sirGraphicsHandle_t hSurface = {};
+		const uint32_t nSurface = device.pCreateSurface( device.pDevice, &native, &present, &hSurface );
+		sirGLTestCheck( nSurface == SIR_GRAPHICS_SUCCESS, "real EGL-X11 drawable created" );
+		if ( nSurface == SIR_GRAPHICS_SUCCESS ) {
+			sirGraphicsSurfaceImage_t acquired = {};
+			sirGLTestCheck( device.pAcquireSurfaceImage( device.pDevice, hSurface, &acquired ) == SIR_GRAPHICS_SUCCESS &&
+			                    acquired.hImage.eType == SIR_GRAPHICS_HANDLE_TEXTURE && acquired.nAcquisitionId != 0,
+			                "native GL texture acquired" );
+			if ( acquired.nAcquisitionId != 0 ) {
+				sirGLTestCheck( device.pRetireResource( device.pDevice, acquired.hImage, nullptr ) == SIR_GRAPHICS_BUSY,
+				                "surface retains ownership of acquired GPU image" );
+				const sirGraphicsCompletion_t unsubmitted = { acquired.hImage.nDeviceGeneration, SIR_GRAPHICS_QUEUE_DIRECT, 1 };
+				sirGLTestCheck( device.pPresent( device.pDevice, &acquired, &unsubmitted ) == SIR_GRAPHICS_INVALID_ARGUMENT,
+				                "unsubmitted acquired image cannot present" );
+				sirGraphicsABICommandList_t commands = {};
+				commands.nSize = sizeof( commands );
+				sirGLTestCheck( device.pAcquireCommands( device.pDevice, SIR_GRAPHICS_QUEUE_DIRECT, &commands ) == SIR_GRAPHICS_SUCCESS,
+				                "native GL DIRECT command list" );
+				if ( commands.pCommands != nullptr ) {
+					const sirGraphicsABIColorAttachment_t color = { acquired.hImage, { 0.15f, 0.2f, 0.35f, 1.0f }, 1, 1 };
+					const sirGraphicsABIRenderPass_t pass = { sizeof( pass ), 1, &color, {}, 1.0f, 0, 0, 0 };
+					sirGLTestCheck( commands.pReset( commands.pCommands ) == SIR_GRAPHICS_SUCCESS &&
+					                    commands.pBeginRenderPass( commands.pCommands, &pass ) == SIR_GRAPHICS_SUCCESS &&
+					                    commands.pEndRenderPass( commands.pCommands ) == SIR_GRAPHICS_SUCCESS &&
+					                    commands.pClose( commands.pCommands ) == SIR_GRAPHICS_SUCCESS,
+					                "GL render target clear pass encoded and closed" );
+					const void *const pBatchCommands[] = { commands.pCommands };
+					sirGraphicsABISubmission_t submit = {};
+					submit.nSize = sizeof( submit );
+					submit.nCommandListCount = 1;
+					submit.ppCommandLists = pBatchCommands;
+					submit.nAcquisitionCount = 1;
+					submit.pAcquisitions = &acquired;
+					sirGraphicsCompletion_t done = {};
+					sirGLTestCheck( device.pSubmit( device.pDevice, SIR_GRAPHICS_QUEUE_DIRECT, &submit, &done ) == SIR_GRAPHICS_SUCCESS &&
+					                    done.nDeviceGeneration != 0 && done.nValue != 0,
+					                "native glFinish direct submission" );
+					if ( done.nValue != 0 ) {
+						sirGLTestCheck( device.pPresent( device.pDevice, &acquired, &done ) == SIR_GRAPHICS_SUCCESS,
+						                "real EGL swap presentation" );
+						sirGLTestCheck( device.pPresent( device.pDevice, &acquired, &done ) == SIR_GRAPHICS_INVALID_HANDLE,
+						                "double present rejected" );
+					}
+				}
+			}
+			sirGraphicsABIPresentDesc_t resized = present;
+			resized.nWidth = 256;
+			resized.nHeight = 160;
+			sirGLTestCheck( device.pResizeSurface( device.pDevice, hSurface, &native, &resized ) == SIR_GRAPHICS_SUCCESS,
+			                "native GL drawable resize" );
+			sirGLTestCheck( device.pRetireResource( device.pDevice, hSurface, nullptr ) == SIR_GRAPHICS_SUCCESS,
+			                "native EGL surface and image retired" );
+			sirGLTestCheck( device.pRetireResource( device.pDevice, hSurface, nullptr ) == SIR_GRAPHICS_INVALID_HANDLE,
+			                "stale EGL surface rejected" );
+		}
+		sirGLTestCheck( pDriver->pDestroyDevice( pDriver->pDriver, &device ) == SIR_GRAPHICS_SUCCESS,
+		                "GL device destroyed after native present" );
+	}
+}
+
+#ifdef SIR_GL_TEST_X11_AVAILABLE
+static void sirGLTestX11Presentation( sirGraphicsABIDriver_t *pDriver )
+{
+	if ( pDriver == nullptr ) {
+		return;
+	}
+	Display *pDisplay = XOpenDisplay( nullptr );
+	if ( pDisplay == nullptr ) {
+		return;
+	}
+	const Window hWindow = XCreateSimpleWindow( pDisplay, DefaultRootWindow( pDisplay ), 0, 0, 320, 200, 0, 0, 0 );
+	if ( hWindow == 0 ) {
+		XCloseDisplay( pDisplay );
+		return;
+	}
+	XMapWindow( pDisplay, hWindow );
+	XSync( pDisplay, False );
+	const sirGraphicsABINativeSurface_t native = { sizeof( native ), SIR_GRAPHICS_SURFACE_X11, ( void * )( uintptr_t )hWindow, pDisplay,
+	                                               1 };
+	sirGLTestWindowPresentation( pDriver, native );
+	XDestroyWindow( pDisplay, hWindow );
+	XCloseDisplay( pDisplay );
+}
+#endif
+
+#if defined( _WIN32 )
+static void sirGLTestWin32Presentation( sirGraphicsABIDriver_t *pDriver )
+{
+	const HINSTANCE hInstance = GetModuleHandleW( nullptr );
+	const wchar_t *pszClassName = L"SIREngineGL46PresentTest";
+	WNDCLASSW cls = {};
+	cls.style = CS_OWNDC;
+	cls.lpfnWndProc = DefWindowProcW;
+	cls.hInstance = hInstance;
+	cls.lpszClassName = pszClassName;
+	if ( RegisterClassW( &cls ) == 0 ) {
+		sirGLTestCheck( false, "register Win32 native GL presentation window" );
+		return;
+	}
+	const HWND hWindow = CreateWindowExW( 0, pszClassName, L"SIR GL presentation", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, 320,
+	                                      200, nullptr, nullptr, hInstance, nullptr );
+	if ( hWindow == nullptr ) {
+		sirGLTestCheck( false, "create Win32 native GL presentation window" );
+		( void )UnregisterClassW( pszClassName, hInstance );
+		return;
+	}
+	ShowWindow( hWindow, SW_SHOW );
+	const sirGraphicsABINativeSurface_t native = { sizeof( native ), SIR_GRAPHICS_SURFACE_WIN32, ( void * )hWindow, ( void * )hInstance,
+	                                               1 };
+	sirGLTestWindowPresentation( pDriver, native );
+	( void )DestroyWindow( hWindow );
+	( void )UnregisterClassW( pszClassName, hInstance );
+}
+#endif
 
 int main( void )
 {
@@ -132,7 +277,8 @@ int main( void )
 			format.nSize = sizeof( format );
 			format.nFormat = SIR_GRAPHICS_FORMAT_RGBA8_UNORM;
 			sirGLTestCheck( device.pQueryFormat( device.pDevice, &format ) == SIR_GRAPHICS_SUCCESS &&
-			                    format.nOptimalFeatures == SIR_GRAPHICS_ABI_FORMAT_SAMPLED && format.nSampleCountMask == 1,
+			                    ( format.nOptimalFeatures & SIR_GRAPHICS_ABI_FORMAT_SAMPLED ) != 0 &&
+			                    ( format.nOptimalFeatures & SIR_GRAPHICS_ABI_FORMAT_COLOR_ATTACHMENT ) != 0 && format.nSampleCountMask == 1,
 			                "native RGBA8 format admitted without unimplemented capabilities" );
 			format = {};
 			format.nSize = sizeof( format );
@@ -231,6 +377,16 @@ int main( void )
 	} else {
 		printf( "OpenGL 4.6 native GPU context unavailable here; ABI negatives verified\n" );
 	}
+#ifdef SIR_GL_TEST_X11_AVAILABLE
+	if ( nAdapters == 1 ) {
+		sirGLTestX11Presentation( &driver );
+	}
+#endif
+#if defined( _WIN32 )
+	if ( nAdapters == 1 ) {
+		sirGLTestWin32Presentation( &driver );
+	}
+#endif
 	driver.pReleaseDriver( driver.pDriver );
 	sirGLTestCheck( s_nOutstanding == 0, "all native allocations released" );
 #if defined( _WIN32 )

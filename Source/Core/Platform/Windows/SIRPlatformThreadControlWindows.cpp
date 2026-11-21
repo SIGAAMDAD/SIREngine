@@ -26,6 +26,11 @@ static sirThreadControlResult_t sirWindowsThreadError( DWORD nError ) noexcept
 	                                                                           : SIR_THREAD_CONTROL_OS_ERROR;
 }
 
+uint64_t SIRPlatformThreadControl::getCurrentThreadId( void ) noexcept
+{
+	return ( uint64_t )GetCurrentThreadId();
+}
+
 sirThreadControlResult_t SIRPlatformThreadControl::setCurrentName( const char *pszName ) noexcept
 {
 	if ( pszName == nullptr || pszName[0] == '\0' ) {

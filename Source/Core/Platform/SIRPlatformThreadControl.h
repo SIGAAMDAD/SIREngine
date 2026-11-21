@@ -57,6 +57,8 @@ public:
 	SIRPlatformThreadControl( void ) = delete;
 	~SIRPlatformThreadControl( void ) = delete;
 
+	// Opaque OS thread identity, stable for the lifetime of the calling thread.
+	static uint64_t getCurrentThreadId( void ) noexcept;
 	static sirThreadControlResult_t setCurrentName( const char *pszName ) noexcept;
 	static sirThreadControlResult_t getCurrentName( char *pszName, uint32_t nCapacity ) noexcept;
 	static sirThreadControlResult_t setCurrentAffinity( const sirThreadAffinity_t& rAffinity ) noexcept;

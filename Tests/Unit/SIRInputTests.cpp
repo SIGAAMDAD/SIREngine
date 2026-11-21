@@ -13,17 +13,17 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#include <Core/Platform/Input/SIRInputService.h>
-#include <Core/Platform/Input/SIRInputControllerProfiles.h>
+#include <Core/Input/SIRInputService.h>
+#include <Core/Input/SIRInputControllerProfiles.h>
 #include <Core/Platform/SIRPlatformTime.h>
 #if defined( __linux__ )
-#include <Core/Platform/Input/Linux/SIRLinuxEvdevBackend.h>
+#include <Core/Platform/Linux/SIRLinuxEvdevBackend.h>
 #include <linux/input.h>
 #include <stdlib.h>
 #include <unistd.h>
 #endif
 #if defined( SIR_INPUT_X11_AVAILABLE )
-#include <Core/Platform/Input/Linux/SIRLinuxX11Backend.h>
+#include <Core/Platform/Linux/SIRLinuxX11Backend.h>
 #endif
 #include <stdio.h>
 
@@ -74,6 +74,12 @@ static bool testOwnershipAndGeneration( void )
 	     input.pairUser( first, 8 ) ) {
 		return false;
 	}
+	sirPlatformDeviceIdentity_t native = {};
+	if ( input.platformContext().nAbiVersion != SIR_PLATFORM_CONTEXT_ABI_VERSION || !input.describePlatformDevice( first, &native ) ||
+	     native.nNativeId != 15 || native.nPhysicalId != 777 || native.nBackendId != ( SIR_PLATFORM_DEVICE_INPUT_BASE | SIR_INPUT_TEST ) ||
+	     native.nGeneration != first.nGeneration || input.describePlatformDevice( first, nullptr ) ) {
+		return false;
+	}
 	sirInputDeviceDescriptor_t d = {};
 	if ( !input.describe( first, &d ) || d.nUserId != 3 || d.key.nPhysicalId != 777 || !input.findDevice( SIR_INPUT_TEST, 15, &d.id ) ) {
 		return false;
@@ -81,7 +87,8 @@ static bool testOwnershipAndGeneration( void )
 	sirInputDeviceId_t other = {};
 	if ( input.connect( { 777, 99, SIR_INPUT_TEST, SIR_INPUT_CONTROLLER }, &other ) || !input.disconnect( SIR_INPUT_TEST, first ) ||
 	     input.describe( first, &d ) || !input.connect( key, &other ) || other.nSlot != first.nSlot ||
-	     other.nGeneration == first.nGeneration ) {
+	     other.nGeneration == first.nGeneration || input.describePlatformDevice( first, &native ) ||
+	     !input.describePlatformDevice( other, &native ) || native.nGeneration != other.nGeneration ) {
 		return false;
 	}
 	input.sample();

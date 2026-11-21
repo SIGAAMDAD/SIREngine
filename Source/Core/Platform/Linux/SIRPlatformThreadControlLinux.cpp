@@ -38,6 +38,11 @@ static sirThreadControlResult_t sirThreadResultFromErrno( int nError ) noexcept
 	return nError == EINVAL ? SIR_THREAD_CONTROL_INVALID_ARGUMENT : SIR_THREAD_CONTROL_OS_ERROR;
 }
 
+uint64_t SIRPlatformThreadControl::getCurrentThreadId( void ) noexcept
+{
+	return ( uint64_t )syscall( SYS_gettid );
+}
+
 sirThreadControlResult_t SIRPlatformThreadControl::setCurrentName( const char *pszName ) noexcept
 {
 	if ( pszName == nullptr || pszName[0] == '\0' ) {

@@ -11,6 +11,7 @@ else()
     target_compile_options(SIRCore PRIVATE -Wall -Wextra -Wpedantic)
 endif()
 
+add_subdirectory(Input)
 add_subdirectory(Platform)
 target_sources(SIRCore PRIVATE Memory/SIRMemoryManager.cpp Objects/SIRObjectRegistry.cpp)
 add_subdirectory(Memory)

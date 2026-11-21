@@ -4,6 +4,10 @@ include("${CMAKE_CURRENT_LIST_DIR}/../../Build/CMake/SIRBuildTreeGuard.cmake")
 add_library(SIRGraphics STATIC
     Graph/SIRFrameGraph.cpp
     Graph/SIRFrameGraphTransient.cpp
+    Graph/SIRFrameGraphSubmission.cpp
+    Graph/SIRFrameGraphCompletion.cpp
+    Graph/SIRFrameGraphNative.cpp
+    Graph/SIRFrameGraphDeviceBridge.cpp
     SIRShaderPipeline.cpp
     Shaders/SIRShaderContracts.cpp
     Shaders/SIRShaderMaterial.cpp
@@ -16,13 +20,14 @@ add_library(SIRGraphics STATIC
     Visibility/SIRHiZCommands.cpp
     Visibility/SIRHiZBindings.cpp
     SIRGraphicsDriverABI.cpp
+    SIRWindowSurfaceAdapter.cpp
+    SIRWindowABISurface.cpp
     SIRGraphicsModule.cpp
     SIRGraphicsPipelineABI.cpp
     SIRGraphicsPipelineBridge.cpp
     SIRGraphicsRegistry.cpp
     SIRSharedGPUBackingOwner.cpp
-    SIRGraphicsValidation.cpp
-    SIRGraphicsWindowBridge.cpp)
+    SIRGraphicsValidation.cpp)
 add_library(SIR::Graphics ALIAS SIRGraphics)
 target_include_directories(SIRGraphics PUBLIC
     "${PROJECT_SOURCE_DIR}/Source"

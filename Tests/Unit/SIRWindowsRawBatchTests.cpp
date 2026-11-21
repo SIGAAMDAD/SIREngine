@@ -13,9 +13,9 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 
-#include <Core/Platform/Input/Windows/SIRWindowsRawDecode.h>
-#include <Core/Platform/Input/Windows/SIRWindowsRawBackend.h>
-#include <Core/Platform/Input/SIRInputService.h>
+#include <Core/Platform/Windows/SIRWindowsRawDecode.h>
+#include <Core/Platform/Windows/SIRWindowsRawBackend.h>
+#include <Core/Input/SIRInputService.h>
 #include <stdio.h>
 
 static bool testKeyboardTransitions( void )

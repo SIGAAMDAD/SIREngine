@@ -72,6 +72,17 @@ set_tests_properties(
     renderer.graphics.negative-matrix
     PROPERTIES LABELS "graphics-abi;cpu;conformance" TIMEOUT 90)
 
+# GPU surface owns the native window lease until backend retirement succeeds.
+# Compile the real production adapter/surface against a fault-injected ABI shim.
+add_executable(SIRWindowABISurfaceTests
+    SIRWindowABISurfaceTests.cpp
+    "${PROJECT_SOURCE_DIR}/Source/Renderer/SIRWindowABISurface.cpp"
+    "${PROJECT_SOURCE_DIR}/Source/Renderer/SIRWindowSurfaceAdapter.cpp")
+target_link_libraries(SIRWindowABISurfaceTests PRIVATE SIR::Core)
+add_test(NAME renderer.window.abi-lease COMMAND SIRWindowABISurfaceTests)
+set_tests_properties(renderer.window.abi-lease PROPERTIES LABELS "graphics-abi;window;cpu;integration" TIMEOUT 60)
+sir_configure_owned_target(SIRWindowABISurfaceTests)
+
 if(SIR_WITH_GOOGLETEST)
     string(TOLOWER "${CMAKE_SYSTEM_NAME}" sirGTestHost)
     include(GoogleTest)
@@ -158,6 +169,10 @@ if(SIR_WITH_OPENGL)
     target_link_libraries(SIRGL46ModuleTests PRIVATE SIR::Graphics Threads::Threads "${CMAKE_DL_LIBS}")
     target_compile_definitions(SIRGL46ModuleTests PRIVATE SIR_TEST_GL46_MODULE_PATH="$<TARGET_FILE:SIRGL46Driver>")
     add_dependencies(SIRGL46ModuleTests SIRGL46Driver)
+    if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND X11_FOUND AND TARGET X11::X11)
+        target_link_libraries(SIRGL46ModuleTests PRIVATE X11::X11)
+        target_compile_definitions(SIRGL46ModuleTests PRIVATE SIR_GL_TEST_X11_AVAILABLE=1)
+    endif()
     sir_configure_owned_target(SIRGL46ModuleTests)
     add_test(NAME renderer.opengl46.module COMMAND SIRGL46ModuleTests)
 endif()

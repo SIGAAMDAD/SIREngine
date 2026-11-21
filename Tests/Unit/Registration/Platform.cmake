@@ -79,37 +79,98 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 endif()
 
 
-# One native window owner, generation-checked renderer borrows, and event-pump lifecycle.
+# The original OpenGL/WGL hidden native HWND lifecycle now belongs to Core/Platform.
+if(WIN32)
+    add_executable(SIRWGLBootstrapWindowTests SIRWGLBootstrapWindowTests.cpp)
+    target_link_libraries(SIRWGLBootstrapWindowTests PRIVATE SIR::Core)
+    add_test(NAME core.platform.window.wgl-bootstrap COMMAND SIRWGLBootstrapWindowTests)
+    set_tests_properties(core.platform.window.wgl-bootstrap PROPERTIES LABELS "core;platform;window;wgl;integration" TIMEOUT 60)
+    sir_configure_owned_target(SIRWGLBootstrapWindowTests)
+endif()
+
+# Moved editor host lifecycle test: the shared native host is owned by Core.
+add_executable(SIRNativeWindowHostTests SIRNativeWindowHostTests.cpp)
+target_link_libraries(SIRNativeWindowHostTests PRIVATE SIR::Core)
+add_test(NAME core.platform.window.native-host COMMAND SIRNativeWindowHostTests)
+set_tests_properties(core.platform.window.native-host PROPERTIES LABELS "core;platform;window;integration" TIMEOUT 60)
+sir_configure_owned_target(SIRNativeWindowHostTests)
+
+# Window system registry and headless negative-path acceptance.
 add_executable(SIRWindowSystemTests SIRWindowSystemTests.cpp)
-target_link_libraries(SIRWindowSystemTests PRIVATE SIR::Core SIR::Graphics)
-add_test(NAME core.window.registry-leases COMMAND SIRWindowSystemTests)
+target_link_libraries(SIRWindowSystemTests PRIVATE SIR::Core)
+add_test(NAME core.platform.window.system COMMAND SIRWindowSystemTests)
+set_tests_properties(core.platform.window.system PROPERTIES LABELS "core;platform;window" TIMEOUT 60)
 sir_configure_owned_target(SIRWindowSystemTests)
 
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND SIR_WITH_X11_INPUT)
+    find_package(X11 QUIET)
+endif()
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND SIR_WITH_X11_INPUT AND X11_FOUND)
+    find_program(SIR_WINDOW_XVFB_RUN NAMES xvfb-run)
+    if(SIR_WINDOW_XVFB_RUN)
+        add_executable(SIRWindowX11DriverTests SIRWindowX11DriverTests.cpp)
+        target_link_libraries(SIRWindowX11DriverTests PRIVATE SIR::Core X11::X11)
+        add_test(NAME core.platform.window.x11-native COMMAND "${SIR_WINDOW_XVFB_RUN}" -a "$<TARGET_FILE:SIRWindowX11DriverTests>")
+        set_tests_properties(core.platform.window.x11-native PROPERTIES LABELS "core;platform;window;x11;integration" TIMEOUT 60)
+        sir_configure_owned_target(SIRWindowX11DriverTests)
+    endif()
+endif()
+
+# Native Win32 class ownership and two-driver lifecycle regression.
+if(WIN32)
+    add_executable(SIRWindowWin32DriverTests SIRWindowWin32DriverTests.cpp)
+    target_link_libraries(SIRWindowWin32DriverTests PRIVATE SIR::Core)
+    add_test(NAME core.platform.window.win32-native COMMAND SIRWindowWin32DriverTests)
+    set_tests_properties(core.platform.window.win32-native PROPERTIES LABELS "core;platform;window;win32;integration" TIMEOUT 60)
+    sir_configure_owned_target(SIRWindowWin32DriverTests)
+endif()
+
+# Renderer-side pinned native window lease adapter.
+add_executable(SIRWindowSurfaceAdapterTests SIRWindowSurfaceAdapterTests.cpp)
+target_link_libraries(SIRWindowSurfaceAdapterTests PRIVATE SIR::Graphics)
+add_test(NAME core.platform.window.surface-bridge COMMAND SIRWindowSurfaceAdapterTests)
+set_tests_properties(core.platform.window.surface-bridge PROPERTIES LABELS "core;platform;window;renderer" TIMEOUT 60)
+sir_configure_owned_target(SIRWindowSurfaceAdapterTests)
+
+# One native event pump routes X11 keyboard/text events to the input backend.
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND SIR_WITH_X11_INPUT AND X11_FOUND)
+    find_program(SIR_INPUT_BRIDGE_XVFB NAMES xvfb-run)
+    if(SIR_INPUT_BRIDGE_XVFB)
+        add_executable(SIRX11InputBridgeTests SIRX11InputBridgeTests.cpp)
+        target_link_libraries(SIRX11InputBridgeTests PRIVATE SIR::Core X11::X11)
+        add_test(NAME core.platform.window.x11-input-bridge COMMAND "${SIR_INPUT_BRIDGE_XVFB}" -a "$<TARGET_FILE:SIRX11InputBridgeTests>")
+        set_tests_properties(core.platform.window.x11-input-bridge PROPERTIES LABELS "core;platform;input;x11;integration" TIMEOUT 60)
+        sir_configure_owned_target(SIRX11InputBridgeTests)
+    endif()
+endif()
+
+# Shared platform PODs and native-window borrowed view contracts.
+add_executable(SIRPlatformContextTests SIRPlatformContextTests.cpp)
+target_link_libraries(SIRPlatformContextTests PRIVATE SIR::Core)
+add_test(NAME core.platform.native-context COMMAND SIRPlatformContextTests)
+set_tests_properties(core.platform.native-context PROPERTIES LABELS "core;platform;input;audio;renderer;abi" TIMEOUT 60)
+sir_configure_owned_target(SIRPlatformContextTests)
+
+# Compile the actual Wayland driver against a deterministic fake compositor.
+# This test does not require the optional Wayland development packages.
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    add_executable(SIRWaylandWindowDriverProtocolTests
+        SIRWaylandWindowDriverProtocolTests.cpp
+        "${PROJECT_SOURCE_DIR}/Source/Core/Platform/Window/Linux/SIRWindowDriverWayland.cpp"
+        "${PROJECT_SOURCE_DIR}/Source/Core/Platform/Linux/SIRWaylandInputBridge.cpp")
+    target_include_directories(SIRWaylandWindowDriverProtocolTests BEFORE PRIVATE
+        "${PROJECT_SOURCE_DIR}/Tests/Unit/Fixtures/Wayland")
+    target_link_libraries(SIRWaylandWindowDriverProtocolTests PRIVATE SIR::Core)
+    target_compile_definitions(SIRWaylandWindowDriverProtocolTests PRIVATE
+        SIR_WAYLAND_POINTER_PROTOCOLS_AVAILABLE=1 SIR_WAYLAND_XKB_AVAILABLE=1
+        SIR_WAYLAND_FRACTIONAL_SCALE_AVAILABLE=1)
+    add_test(NAME core.platform.window.wayland-protocol COMMAND SIRWaylandWindowDriverProtocolTests)
+    set_tests_properties(core.platform.window.wayland-protocol PROPERTIES LABELS "core;platform;window;wayland;protocol" TIMEOUT 60)
+    sir_configure_owned_target(SIRWaylandWindowDriverProtocolTests)
+endif()
+
+# Application window-pump ordering and tri-state status regression retained from develop.
 add_executable(SIRApplicationWindowTests SIRApplicationWindowTests.cpp)
 target_link_libraries(SIRApplicationWindowTests PRIVATE SIR::Core)
 add_test(NAME core.application.unconditional-window-pump COMMAND SIRApplicationWindowTests)
 sir_configure_owned_target(SIRApplicationWindowTests)
-
-add_test(NAME launcher.headless-frames COMMAND SIREngine --headless --frames 5)
-add_test(NAME launcher.headless-bad-frames COMMAND SIREngine --headless --frames nope)
-set_tests_properties(launcher.headless-bad-frames PROPERTIES WILL_FAIL TRUE)
-
-if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    find_package(X11 QUIET)
-endif()
-if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND X11_FOUND)
-    add_executable(SIRWindowX11SystemTests SIRWindowX11SystemTests.cpp)
-    target_link_libraries(SIRWindowX11SystemTests PRIVATE SIR::Core SIR::Graphics X11::X11)
-    find_program(SIR_XVFB_RUN_EXECUTABLE NAMES xvfb-run)
-    if(SIR_XVFB_RUN_EXECUTABLE)
-        add_test(NAME core.window.x11-native COMMAND "${SIR_XVFB_RUN_EXECUTABLE}" -a "$<TARGET_FILE:SIRWindowX11SystemTests>")
-        add_test(NAME launcher.x11-native-frames COMMAND "${SIR_XVFB_RUN_EXECUTABLE}" -a "$<TARGET_FILE:SIREngine>" --frames 5)
-        set_tests_properties(core.window.x11-native launcher.x11-native-frames PROPERTIES TIMEOUT 30 RESOURCE_LOCK sir_xvfb)
-    endif()
-    sir_configure_owned_target(SIRWindowX11SystemTests)
-endif()
-
-add_executable(SIRWindowServiceTests SIRWindowServiceTests.cpp)
-target_link_libraries(SIRWindowServiceTests PRIVATE SIR::Core)
-add_test(NAME core.window.application-service-order COMMAND SIRWindowServiceTests)
-sir_configure_owned_target(SIRWindowServiceTests)
