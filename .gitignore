@@ -1,6 +1,6 @@
 /out/
-/build/
 _build/
+build/CMakeFiles
 /cmake-build-*/
 /CMakeFiles/
 /CMakeCache.txt

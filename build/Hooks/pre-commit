@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Activate once per clone: git config --local core.hooksPath Build/Hooks
+set -euo pipefail
+root="$(git rev-parse --show-toplevel)"
+exec "$root/Build/Scripts/FormatAll.sh" --pre-commit
