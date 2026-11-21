@@ -13,7 +13,20 @@ of merchantability, fitness for a particular purpose and noninfringement.
 ===========================================================================
 */
 #include <Renderer/SIRWindowABISurface.h>
+#include <Renderer/SIRGraphicsDriverABI.h>
+#include <assert.h>
+#include <stddef.h>
 #include <stdio.h>
+
+// Window service changes must never silently modify the existing public
+// graphics native-surface ABI, binary version, or presentation descriptor.
+static_assert( SIR_GRAPHICS_DRIVER_ABI_MAJOR == 1U && SIR_GRAPHICS_DRIVER_ABI_MINOR == 0U, "Graphics ABI v1 must stay frozen" );
+static_assert( sizeof( sirGraphicsNativeSurface_t ) == 32, "Graphics native surface layout changed" );
+static_assert( sizeof( sirGraphicsABINativeSurface_t ) == 32, "Graphics ABI native surface layout changed" );
+static_assert( offsetof( sirGraphicsABINativeSurface_t, nWindowGeneration ) == 24, "Graphics ABI generation layout changed" );
+static_assert( sizeof( sirGraphicsABIPresentDesc_t ) == 32, "Graphics ABI present layout changed" );
+static_assert( sizeof( sirWindowHandle_t ) == 16, "Window handle identity layout changed" );
+static_assert( sizeof( sirWindowNativeLease_t ) == 24, "Window lease identity layout changed" );
 
 static bool s_bFailCreate = false;
 static bool s_bFailResize = false;

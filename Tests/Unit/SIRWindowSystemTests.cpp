@@ -14,9 +14,23 @@ of merchantability, fitness for a particular purpose and noninfringement.
 */
 #include <Core/Platform/Window/Headless/SIRWindowDriverHeadless.h>
 #include <Core/Platform/Window/SIRWindowSystem.h>
+#include <assert.h>
 #include <stdio.h>
 #include <string.h>
 #include <Core/Platform/SIRThread.h>
+
+typedef struct sirWindowWrongLaneCallbackContext_s
+{
+	sirWindowDriverEventFn_t pCallback;
+	void *pUserData;
+	sirWindowBackendEvent_t event;
+} sirWindowWrongLaneCallbackContext_t;
+
+static void sirWindowInvokeForeignCallback( void *pUserData )
+{
+	sirWindowWrongLaneCallbackContext_t *pInvocation = ( sirWindowWrongLaneCallbackContext_t * )pUserData;
+	pInvocation->pCallback( pInvocation->pUserData, pInvocation->event );
+}
 
 class SIRWindowTestDriver final : public SIRWindowDriver
 {
@@ -26,11 +40,15 @@ public:
 
 	sirWindowResult_t initialize( void ) noexcept override
 	{
+		if ( m_bRunning ) {
+			return SIR_WINDOW_BUSY;
+		}
+		// Simulate a backend that acquires its OS session before setup fails.
+		m_bRunning = true;
 		if ( m_bFailInitialize ) {
 			m_bFailInitialize = false;
 			return SIR_WINDOW_NATIVE_FAILURE;
 		}
-		m_bRunning = true;
 		return SIR_WINDOW_OK;
 	}
 	sirWindowResult_t createWindow( const sirWindowCreateDesc_t& desc, uint32_t nSlot, sirWindowNativeView_t *pView ) noexcept override
@@ -40,6 +58,9 @@ public:
 			return SIR_WINDOW_NATIVE_FAILURE;
 		}
 		m_bAlive[nSlot] = true;
+		if ( desc.pszTitle != nullptr ) {
+			( void )snprintf( m_szCreatedTitle, sizeof( m_szCreatedTitle ), "%s", desc.pszTitle );
+		}
 		*pView = { m_ePlatform, nSlot + 1, 0x1234, 0 };
 		return SIR_WINDOW_OK;
 	}
@@ -73,7 +94,15 @@ public:
 		}
 		const uint32_t nCount = m_nPending < nBudget ? m_nPending : nBudget;
 		for ( uint32_t i = 0; i < nCount; ++i ) {
-			pCallback( pContext, m_Pending[i] );
+			if ( m_bDispatchOnForeignThread ) {
+				sirWindowWrongLaneCallbackContext_t callback = { pCallback, pContext, m_Pending[i] };
+				SIRThread worker;
+				if ( !worker.start( sirWindowInvokeForeignCallback, &callback ) || !worker.join() ) {
+					return SIR_WINDOW_NATIVE_FAILURE;
+				}
+			} else {
+				pCallback( pContext, m_Pending[i] );
+			}
 		}
 		m_nPending -= nCount;
 		for ( uint32_t i = 0; i < m_nPending; ++i ) {
@@ -83,6 +112,7 @@ public:
 	}
 	void shutdown( void ) noexcept override
 	{
+		++m_nShutdowns;
 		m_bRunning = false;
 	}
 	void queueEvent( sirWindowBackendEvent_t event ) noexcept
@@ -92,8 +122,11 @@ public:
 		}
 	}
 	uint32_t m_nMutations = 0;
+	uint32_t m_nShutdowns = 0;
 	char m_szLastTitle[128] = {};
+	char m_szCreatedTitle[SIR_WINDOW_TITLE_CAPACITY] = {};
 	bool m_bFailInitialize = false;
+	bool m_bDispatchOnForeignThread = false;
 	sirWindowPlatform_t m_ePlatform = SIR_WINDOW_PLATFORM_X11;
 
 protected:
@@ -234,6 +267,91 @@ static bool sirTestQueuedOwnerMutations( void ) noexcept
 	return true;
 }
 
+static bool sirTestForeignDriverCallbacksCannotPublish( void ) noexcept
+{
+	SIRWindowTestDriver driver;
+	SIRWindowSystem system( driver );
+	if ( system.initialize() != SIR_SYSTEM_OK ) {
+		return false;
+	}
+	sirWindowHandle_t hWindow = {};
+	if ( system.createWindow( { "driver-owner", 640, 480 }, &hWindow ) != SIR_WINDOW_OK ) {
+		return false;
+	}
+	sirWindowEvent_t events[4] = {};
+	sirWindowEventRead_t read = { 0, events, 4, 0, false };
+	if ( system.readEvents( &read ) != SIR_WINDOW_OK || read.nCount != 2 ) {
+		return false;
+	}
+	const uint64_t nCursor = read.nAfterSequence;
+	driver.m_bDispatchOnForeignThread = true;
+	driver.queueEvent( { hWindow.nSlot, hWindow.nSlot + 1, SIR_WINDOW_EVENT_RESIZED, 777, 555 } );
+	if ( system.pumpEvents( 1 ) != SIR_WINDOW_WRONG_THREAD ) {
+		return false;
+	}
+	sirWindowSnapshot_t snapshot = {};
+	read.nCount = 0;
+	if ( system.querySnapshot( hWindow, &snapshot ) != SIR_WINDOW_OK || snapshot.nWidth != 640 || snapshot.nHeight != 480 ||
+	     system.readEvents( &read ) != SIR_WINDOW_OK || read.nCount != 0 || read.nAfterSequence != nCursor ) {
+		return false;
+	}
+	assert( snapshot.nWidth == 640 ); // Foreign OS dispatch cannot mutate native window state.
+	driver.m_bDispatchOnForeignThread = false;
+	driver.queueEvent( { hWindow.nSlot, hWindow.nSlot + 1, SIR_WINDOW_EVENT_RESIZED, 777, 555 } );
+	if ( system.pumpEvents( 1 ) != SIR_WINDOW_OK || system.querySnapshot( hWindow, &snapshot ) != SIR_WINDOW_OK || snapshot.nWidth != 777 ||
+	     snapshot.nHeight != 555 || system.destroyWindow( hWindow ) != SIR_WINDOW_OK || system.shutdown() != SIR_SYSTEM_OK ) {
+		return false;
+	}
+	return true;
+}
+
+static bool sirTestBoundedUtf8WindowTitles( void ) noexcept
+{
+	SIRWindowTestDriver driver;
+	SIRWindowSystem windows( driver );
+	if ( windows.initialize() != SIR_SYSTEM_OK ) {
+		return false;
+	}
+	char szNoNul[SIR_WINDOW_TITLE_CAPACITY];
+	memset( szNoNul, 'X', sizeof( szNoNul ) );
+	sirWindowHandle_t hWindow = {};
+	if ( windows.createWindow( { szNoNul, 640, 480, 0 }, &hWindow ) != SIR_WINDOW_INVALID_ARGUMENT ||
+	     windows.createWindow( { szNoNul, 640, 480, SIR_WINDOW_TITLE_CAPACITY }, &hWindow ) != SIR_WINDOW_INVALID_ARGUMENT ) {
+		return false;
+	}
+	// Explicit byte lengths must accept a valid UTF-8 buffer with no NUL.
+	const char szJapanese[] = { 'E', ( char )0xE6, ( char )0x97, ( char )0xA5 };
+	if ( windows.createWindow( { szJapanese, 640, 480, sizeof( szJapanese ) }, &hWindow ) != SIR_WINDOW_OK ||
+	     strcmp( driver.m_szCreatedTitle, "E\xE6\x97\xA5" ) != 0 || windows.destroyWindow( hWindow ) != SIR_WINDOW_OK ) {
+		return false;
+	}
+	const char szOverlong[] = { ( char )0xC0, ( char )0xAF, 0 };
+	const char szSurrogate[] = { ( char )0xED, ( char )0xA0, ( char )0x80, 0 };
+	const char szTruncated[] = { ( char )0xF0, ( char )0x9F, 0 };
+	const char szTooLarge[] = { ( char )0xF4, ( char )0x90, ( char )0x80, ( char )0x80, 0 };
+	if ( windows.createWindow( { szOverlong, 100, 100 }, &hWindow ) != SIR_WINDOW_INVALID_ARGUMENT ||
+	     windows.createWindow( { szSurrogate, 100, 100 }, &hWindow ) != SIR_WINDOW_INVALID_ARGUMENT ||
+	     windows.createWindow( { szTruncated, 100, 100 }, &hWindow ) != SIR_WINDOW_INVALID_ARGUMENT ||
+	     windows.createWindow( { szTooLarge, 100, 100 }, &hWindow ) != SIR_WINDOW_INVALID_ARGUMENT ) {
+		return false;
+	}
+	if ( windows.createWindow( { "valid", 100, 100 }, &hWindow ) != SIR_WINDOW_OK ) {
+		return false;
+	}
+	const sirWindowMutation_t invalid = { SIR_WINDOW_MUTATION_TITLE, szOverlong, 0, 0 };
+	const sirWindowMutation_t valid = { SIR_WINDOW_MUTATION_TITLE, "A\xC3\xA9", 0, 0 };
+	uint64_t nTicket = 0;
+	if ( windows.mutateWindow( hWindow, invalid ) != SIR_WINDOW_INVALID_ARGUMENT ||
+	     windows.queueMutation( hWindow, invalid, &nTicket ) != SIR_WINDOW_INVALID_ARGUMENT ||
+	     windows.mutateWindow( hWindow, valid ) != SIR_WINDOW_OK || strcmp( driver.m_szLastTitle, "A\xC3\xA9" ) != 0 ||
+	     windows.queueMutation( hWindow, valid, &nTicket ) != SIR_WINDOW_OK || windows.pumpEvents( 1 ) != SIR_WINDOW_OK ||
+	     strcmp( driver.m_szLastTitle, "A\xC3\xA9" ) != 0 ) {
+		return false;
+	}
+	assert( strcmp( driver.m_szLastTitle, "A\xC3\xA9" ) == 0 );
+	return windows.destroyWindow( hWindow ) == SIR_WINDOW_OK && windows.shutdown() == SIR_SYSTEM_OK;
+}
+
 static bool sirTestHeadless( void ) noexcept
 {
 	SIRWindowDriverHeadless driver;
@@ -255,7 +373,11 @@ static bool sirTestHandlesLeasesAndEvents( void ) noexcept
 	SIRWindowTestDriver driver;
 	driver.m_bFailInitialize = true;
 	SIRWindowSystem system( driver );
-	if ( system.initialize() != SIR_SYSTEM_ERROR || system.initialize() != SIR_SYSTEM_OK ) {
+	if ( system.initialize() != SIR_SYSTEM_ERROR ) {
+		return false;
+	}
+	assert( driver.m_nShutdowns == 1 ); // Partial native initialization must be rolled back.
+	if ( system.initialize() != SIR_SYSTEM_OK ) {
 		return false;
 	}
 	const sirWindowCreateDesc_t desc = { "window", 800, 450 };
@@ -417,6 +539,51 @@ static bool sirTestEventOverflow( void ) noexcept
 	return true;
 }
 
+static bool sirTestTerminalNativeLoss( void ) noexcept
+{
+	SIRWindowTestDriver driver;
+	SIRWindowSystem system( driver );
+	if ( system.initialize() != SIR_SYSTEM_OK ) {
+		return false;
+	}
+	sirWindowHandle_t hWindow = {};
+	if ( system.createWindow( { "lost-native", 640, 480 }, &hWindow ) != SIR_WINDOW_OK ) {
+		return false;
+	}
+	sirWindowSnapshot_t before = {};
+	sirWindowNativeView_t view = {};
+	sirWindowNativeLease_t lease = {};
+	if ( system.querySnapshot( hWindow, &before ) != SIR_WINDOW_OK || before.nWindowGeneration == 0 ||
+	     system.acquireNativeLease( hWindow, &lease, &view ) != SIR_WINDOW_OK ) {
+		return false;
+	}
+	// Native destruction can arrive before the renderer retires the GPU
+	// surface. Previously the published snapshot retained a stale identity.
+	driver.queueEvent( { hWindow.nSlot, view.nNativeWindow, SIR_WINDOW_EVENT_LOST, 0, 0 } );
+	if ( system.pumpEvents( 1 ) != SIR_WINDOW_OK ) {
+		return false;
+	}
+	sirWindowSnapshot_t after = {};
+	if ( system.querySnapshot( hWindow, &after ) != SIR_WINDOW_OK || after.nWindowGeneration != 0 || after.bReady || after.bVisible ||
+	     !after.bCloseRequested || after.nMetricsRevision != before.nMetricsRevision + 1 ||
+	     system.acquireNativeLease( hWindow, &lease, &view ) != SIR_WINDOW_NOT_READY ||
+	     system.destroyWindow( hWindow ) != SIR_WINDOW_BUSY ) {
+		return false;
+	}
+	// A delayed event from the lost OS handle must not restore readiness.
+	driver.queueEvent( { hWindow.nSlot, view.nNativeWindow, SIR_WINDOW_EVENT_READY, 640, 480 } );
+	if ( system.pumpEvents( 1 ) != SIR_WINDOW_OK || system.querySnapshot( hWindow, &after ) != SIR_WINDOW_OK ||
+	     after.nWindowGeneration != 0 || after.bReady ) {
+		return false;
+	}
+	assert( after.nWindowGeneration == 0 ); // Terminal native loss invalidates the renderer-facing identity.
+	if ( system.releaseNativeLease( lease ) != SIR_WINDOW_OK || system.destroyWindow( hWindow ) != SIR_WINDOW_OK ||
+	     system.shutdown() != SIR_SYSTEM_OK ) {
+		return false;
+	}
+	return true;
+}
+
 static bool sirTestWaylandInitialConfigure( void ) noexcept
 {
 	SIRWindowTestDriver driver;
@@ -456,7 +623,8 @@ static bool sirTestWaylandInitialConfigure( void ) noexcept
 int main( void )
 {
 	if ( !sirTestHeadless() || !sirTestHandlesLeasesAndEvents() || !sirTestEventOverflow() || !sirTestWaylandInitialConfigure() ||
-	     !sirTestQueuedOwnerMutations() ) {
+	     !sirTestQueuedOwnerMutations() || !sirTestTerminalNativeLoss() || !sirTestForeignDriverCallbacksCannotPublish() ||
+	     !sirTestBoundedUtf8WindowTitles() ) {
 		fputs( "SIRWindowSystemTests FAIL\n", stderr );
 		return 1;
 	}

@@ -315,13 +315,6 @@ LRESULT CALLBACK SIRWindowDriverWin32::windowProc( HWND hWindow, UINT nMessage, 
 		if ( nMessage == WM_NCDESTROY ) {
 			SetWindowLongPtrW( hWindow, GWLP_USERDATA, 0 );
 		}
-		if ( pDriver->m_pSink != nullptr ) {
-			const sirWindowWin32Message_t message = { ( uintptr_t )hWindow, nMessage, ( uintptr_t )nWParam, ( intptr_t )nLParam };
-			const sirWindowWin32Dispatch_t result = pDriver->m_pSink( message, pDriver->m_pSinkContext );
-			if ( result.bHandled ) {
-				return ( LRESULT )result.nResult;
-			}
-		}
 		if ( nMessage == WM_SHOWWINDOW ) {
 			pDriver->queueEvent( pSlot->nIndex, nWParam ? SIR_WINDOW_EVENT_SHOWN : SIR_WINDOW_EVENT_HIDDEN, 0, 0 );
 		} else if ( nMessage == WM_SIZE ) {
@@ -350,6 +343,17 @@ LRESULT CALLBACK SIRWindowDriverWin32::windowProc( HWND hWindow, UINT nMessage, 
 			pDriver->queueEvent( pSlot->nIndex, SIR_WINDOW_EVENT_FOCUS_GAINED, 0, 0 );
 		} else if ( nMessage == WM_KILLFOCUS ) {
 			pDriver->queueEvent( pSlot->nIndex, SIR_WINDOW_EVENT_FOCUS_LOST, 0, 0 );
+		}
+		if ( pDriver->m_pSink != nullptr ) {
+			const sirWindowWin32Message_t message = { ( uintptr_t )hWindow, nMessage, ( uintptr_t )nWParam, ( intptr_t )nLParam };
+			const sirWindowWin32Dispatch_t result = pDriver->m_pSink( message, pDriver->m_pSinkContext );
+			// Input may consume text and pointer decisions, never the native
+			// window state above. Foreground raw input and native teardown
+			// must still reach DefWindowProcW for OS-owned cleanup.
+			if ( result.bHandled && nMessage != WM_NCDESTROY &&
+			     !( nMessage == WM_INPUT && GET_RAWINPUT_CODE_WPARAM( nWParam ) == RIM_INPUT ) ) {
+				return ( LRESULT )result.nResult;
+			}
 		}
 	}
 	return DefWindowProcW( hWindow, nMessage, nWParam, nLParam );

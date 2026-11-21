@@ -16,6 +16,7 @@ of merchantability, fitness for a particular purpose and noninfringement.
 #include <Core/SIRApplication.h>
 #include <Core/Input/SIRInputBackend.h>
 #include <Core/Input/SIRInputService.h>
+#include <assert.h>
 #include <stdio.h>
 
 class SIRApplicationMockInput final : public SIRInputBackend
@@ -60,23 +61,26 @@ public:
 typedef struct sirInputAppTestContext_s
 {
 	SIRApplicationMockInput *pBackend;
+	SIRInputService *pInput;
 	uint32_t nPumps;
 	bool bReject;
 } sirInputAppTestContext_t;
 
-static bool sirApplicationInputPump( SIRInputService& input, void *pContext )
+static sirAppWindowPumpResult_t sirApplicationInputPump( void *pContext )
 {
 	sirInputAppTestContext_t *pTest = ( sirInputAppTestContext_t * )pContext;
+	SIRInputService& input = *pTest->pInput;
 	++pTest->nPumps;
 	if ( pTest->nPumps == 1 ) {
-		return input.connect( { 0, 99, SIR_INPUT_TEST, SIR_INPUT_KEYBOARD }, &pTest->pBackend->m_hDevice );
+		return input.connect( { 0, 99, SIR_INPUT_TEST, SIR_INPUT_KEYBOARD }, &pTest->pBackend->m_hDevice ) ? SIR_APP_WINDOW_CONTINUE
+		                                                                                                   : SIR_APP_WINDOW_ERROR;
 	}
 
 	const sirInputControlChange_t change = { SIR_INPUT_BUTTON, 38, pTest->nPumps == 2 ? 1 : 0 };
 	if ( !input.emitControls( SIR_INPUT_TEST, pTest->pBackend->m_hDevice, &change, 1 ) ) {
-		return false;
+		return SIR_APP_WINDOW_ERROR;
 	}
-	return !pTest->bReject;
+	return pTest->bReject ? SIR_APP_WINDOW_STOP : SIR_APP_WINDOW_CONTINUE;
 }
 
 static bool sirTestApplicationInputLifecycle( void )
@@ -84,9 +88,10 @@ static bool sirTestApplicationInputLifecycle( void )
 	SIRInputService input;
 	SIRApplicationMockInput backend;
 	SIRApplication application;
-	sirInputAppTestContext_t context = { &backend, 0, false };
-	if ( !input.attach( backend ) || !application.attachInput( input, sirApplicationInputPump, &context ) ||
-	     application.attachInput( input ) || application.getInputFrame() != nullptr ) {
+	sirInputAppTestContext_t context = { &backend, &input, 0, false };
+	if ( !input.attach( backend ) || !application.attachInput( input ) || application.attachInput( input ) ||
+	     !application.attachWindowPump( sirApplicationInputPump, &context ) ||
+	     application.attachWindowPump( sirApplicationInputPump, &context ) || application.getInputFrame() != nullptr ) {
 		return false;
 	}
 
@@ -136,6 +141,64 @@ static bool sirTestHeadlessApplicationStillWorks( void )
 	return application.getState() == SIR_APP_STOPPED;
 }
 
+typedef struct sirNoInputWindowPumpContext_s
+{
+	uint32_t nPumps;
+	bool bReject;
+} sirNoInputWindowPumpContext_t;
+
+static sirAppWindowPumpResult_t sirApplicationNoInputWindowPump( void *pContext )
+{
+	sirNoInputWindowPumpContext_t *pTest = ( sirNoInputWindowPumpContext_t * )pContext;
+	++pTest->nPumps;
+	return pTest->bReject ? SIR_APP_WINDOW_STOP : SIR_APP_WINDOW_CONTINUE;
+}
+
+static bool sirTestWindowPumpWithoutInput( void ) noexcept
+{
+	SIRApplication application;
+	sirNoInputWindowPumpContext_t context = { 0, false };
+	if ( application.attachWindowPump( nullptr, &context ) || !application.attachWindowPump( sirApplicationNoInputWindowPump, &context ) ||
+	     application.attachWindowPump( sirApplicationNoInputWindowPump, &context ) ) {
+		return false;
+	}
+	if ( !application.initialize() || application.attachWindowPump( sirApplicationNoInputWindowPump, &context ) || !application.tick() ||
+	     context.nPumps != 1 || application.getTickCount() != 1 ) {
+		return false;
+	}
+	context.bReject = true;
+	if ( application.tick() || context.nPumps != 2 || application.getTickCount() != 2 ) {
+		return false;
+	}
+	( void )application.shutdown();
+	return application.getState() == SIR_APP_STOPPED && !application.tick();
+}
+
+// Native OS dispatch cannot be gated by the optional input collector's
+// readiness: a failed input begin still leaves the window owner pump alive.
+static bool sirTestWindowPumpAfterInputFailure( void ) noexcept
+{
+	SIRInputService input;
+	SIRApplicationMockInput backend;
+	SIRApplication app;
+	sirNoInputWindowPumpContext_t context = { 0, false };
+	if ( !input.attach( backend ) || !app.attachInput( input ) || !app.attachWindowPump( sirApplicationNoInputWindowPump, &context ) ||
+	     !app.initialize() ) {
+		return false;
+	}
+	// A stopped input service must not prevent native close/resize events.
+	input.shutdown();
+	if ( app.tick() || context.nPumps != 1 || app.getTickCount() != 0 || backend.m_nSamples != 0 ) {
+		return false;
+	}
+	assert( context.nPumps == 1 ); // The native pump survives failed input begin.
+	context.bReject = true;
+	if ( app.tick() || context.nPumps != 2 || app.getTickCount() != 0 ) {
+		return false;
+	}
+	return app.shutdown() == SIR_SYSTEM_OK && app.getState() == SIR_APP_STOPPED;
+}
+
 typedef struct sirInputReentrantPumpContext_s
 {
 	SIRApplication *pApplication;
@@ -168,7 +231,8 @@ static bool sirTestShutdownDuringInputPump( void )
 
 int main( void )
 {
-	if ( !sirTestHeadlessApplicationStillWorks() || !sirTestApplicationInputLifecycle() || !sirTestShutdownDuringInputPump() ) {
+	if ( !sirTestHeadlessApplicationStillWorks() || !sirTestApplicationInputLifecycle() || !sirTestWindowPumpWithoutInput() ||
+	     !sirTestWindowPumpAfterInputFailure() || !sirTestShutdownDuringInputPump() ) {
 		fputs( "SIRApplicationInputTests FAILED\n", stderr );
 		return 1;
 	}

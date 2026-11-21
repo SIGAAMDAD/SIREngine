@@ -385,9 +385,17 @@ void SIRWindowDriverWayland::loseDisplay( void ) noexcept
 		return;
 	}
 	m_bLost = true;
+	// The display connection is terminal. Buffered READY/RESIZED/DPI events
+	// refer to native surfaces that can no longer be presented. Publish only
+	// the reserved per-slot LOST notifications, even if the ring was full.
+	m_nEventRead = 0;
+	m_nEventWrite = 0;
+	m_nEventCount = 0;
+	m_bOverflow = false;
 	for ( uint32_t i = 0; i < SIR_WINDOW_MAX_WINDOWS; ++i ) {
 		if ( m_Slots[i].pSurface != nullptr ) {
 			m_Slots[i].bLostPending = true;
+			m_Slots[i].bClosePending = false;
 		}
 	}
 }

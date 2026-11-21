@@ -49,7 +49,7 @@ typedef struct sirWindowLeaseEntry_s
 // Completed tickets remain queryable until consumed; abandoned tickets
 // explicitly exhaust the bounded table rather than overwriting an outcome.
 constexpr uint32_t SIR_WINDOW_REQUEST_CAPACITY = 32;
-constexpr uint32_t SIR_WINDOW_REQUEST_TITLE_CAPACITY = 128;
+constexpr uint32_t SIR_WINDOW_REQUEST_TITLE_CAPACITY = SIR_WINDOW_TITLE_CAPACITY;
 typedef struct sirWindowRequestEntry_s
 {
 	sirWindowHandle_t hWindow;
@@ -116,6 +116,7 @@ private:
 	uint64_t m_nEventSequence;
 	uint64_t m_nLeaseSerial;
 	uint64_t m_nNativeGeneration;
+	SIRAtomic<bool> m_bForeignThreadEvent;
 	bool m_bInitialized;
 };
 #endif // __SIRENGINE_SIRWINDOWSYSTEM_H__

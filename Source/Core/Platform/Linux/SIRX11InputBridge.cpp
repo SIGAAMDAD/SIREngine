@@ -231,8 +231,10 @@ void SIRX11InputBridge::processEvent( const XEvent& event ) noexcept
 		( void )unregisterWindow( ( uintptr_t )event.xany.window );
 		return;
 	}
-	// A surviving window may focus during the same collection tick that
-	// unregistered the former focus. Retarget the native seat immediately.
+	// When a focused window is unregistered during an input collection tick,
+	// the surviving window can receive FocusIn before the next beginFrame.
+	// Retarget the one physical X11 seat before decoding that event instead
+	// of dropping its input against the retired native window.
 	if ( event.type == FocusIn && m_bDeferredRetarget && m_bAttached ) {
 		if ( !m_pBackend->focusWindow( input, event.xany.window ) ) {
 			return;

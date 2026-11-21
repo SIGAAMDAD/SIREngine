@@ -76,6 +76,8 @@ sirWindowResult_t SIRWindowDriverX11::initialize( void ) noexcept
 	Display *pDisplay = nullptr;
 	for ( uint32_t nAttempt = 0; nAttempt < 10; ++nAttempt ) {
 		pDisplay = XOpenDisplay( nullptr );
+		// Some X servers reset new connections while reaping a recently
+		// disconnected client. Only transient ECONNRESET is retried.
 		if ( pDisplay != nullptr || errno != ECONNRESET ) {
 			break;
 		}
