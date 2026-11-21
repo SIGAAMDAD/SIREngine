@@ -1,0 +1,73 @@
+#include <Editor/Host/SIREditorObjectInspector.h>
+#include <assert.h>
+#include <stdio.h>
+int main( void )
+{
+	sirObjectTypeDescriptor_t types[3] = {};
+	sirObjectPropertyDescriptor_t props[3] = {};
+	SIRObjectRegistry registry;
+	assert( registry.initialize( types, 3, props, 3 ) == SIR_OBJECT_OK );
+	assert( registry.registerType( { 1, 0, 11 } ) == SIR_OBJECT_OK );
+	assert( registry.registerType( { 2, 1, 22 } ) == SIR_OBJECT_OK );
+	assert( registry.registerProperty( { 7, 1, 77, SIR_PROPERTY_UINT64, {} } ) == SIR_OBJECT_OK );
+	assert( registry.registerProperty( { 8, 2, 88, SIR_PROPERTY_BOOL, {} } ) == SIR_OBJECT_OK );
+	assert( registry.seal() == SIR_OBJECT_OK );
+	sirEditorNode_t nodes[4] = {}, staging[4] = {};
+	sirEditorMutation_t pending[4] = {};
+	sirEditorDelta_t pd[4] = {}, hd[16] = {};
+	sirEditorHistoryFrame_t frames[4] = {};
+	sirEditorIndexEntry_t index[8] = {};
+	sirEditorProperty_t properties[4] = {}, pstaging[4] = {};
+	sirEditorPropertyMutation_t pproperties[4] = {};
+	sirEditorPropertyDelta_t ppd[8] = {}, phd[16] = {};
+	sirEditorDocumentStorage_t storage = {};
+	storage.pNodes = nodes;
+	storage.pStaging = staging;
+	storage.pPending = pending;
+	storage.pPendingDeltas = pd;
+	storage.pHistoryDeltas = hd;
+	storage.pHistoryFrames = frames;
+	storage.pIndex = index;
+	storage.nNodeCapacity = 4;
+	storage.nPendingCapacity = 4;
+	storage.nDeltaCapacity = 16;
+	storage.nFrameCapacity = 4;
+	storage.nIndexCapacity = 8;
+	storage.pProperties = properties;
+	storage.pPropertyStaging = pstaging;
+	storage.pPendingProperties = pproperties;
+	storage.pPendingPropertyDeltas = ppd;
+	storage.pHistoryPropertyDeltas = phd;
+	storage.nPropertyCapacity = 4;
+	storage.nPendingPropertyCapacity = 4;
+	storage.nPropertyDeltaCapacity = 16;
+	SIREditorSceneDocument document;
+	assert( document.initialize( storage ) == SIR_EDITOR_OK );
+	assert( document.setPropertyRegistry( &registry ) == SIR_EDITOR_OK );
+	assert( document.beginEdit( document.getRevision() ) == SIR_EDITOR_OK );
+	assert( document.queueUpsert( { 42, 0, 2, 0, 0, 0 } ) == SIR_EDITOR_OK );
+	assert( document.commitEdit() == SIR_EDITOR_OK );
+	SIREditorObjectInspector inspector;
+	assert( inspector.initialize( &document, &registry ) == SIR_EDITOR_OK );
+	uint32_t nEntries = 0;
+	assert( inspector.inspect( 42, nullptr, 0, &nEntries ) == SIR_EDITOR_OUT_OF_CAPACITY );
+	assert( nEntries == 2 );
+	sirEditorInspectorEntry_t entries[2] = {};
+	assert( inspector.inspect( 42, entries, 2, &nEntries ) == SIR_EDITOR_OK );
+	assert( entries[0].nPropertyId == 7 && entries[1].nPropertyId == 8 );
+	assert( !entries[0].bHasValue && !entries[1].bHasValue );
+	assert( document.beginEdit( document.getRevision() ) == SIR_EDITOR_OK );
+	sirEditorProperty_t property = {};
+	property.nNodeId = 42;
+	property.nPropertyId = 7;
+	property.value.eKind = SIR_PROPERTY_UINT64;
+	property.value.nPayload = 123;
+	assert( document.queueSetProperty( property ) == SIR_EDITOR_OK );
+	assert( document.commitEdit() == SIR_EDITOR_OK );
+	assert( inspector.inspect( 42, entries, 2, &nEntries ) == SIR_EDITOR_OK );
+	assert( entries[0].bHasValue && entries[0].value.nPayload == 123 );
+	inspector.shutdown();
+	document.shutdown();
+	puts( "PASS: editor native inherited object inspection" );
+	return 0;
+}

@@ -22,6 +22,8 @@ static bool sirEditorHostCountTags( const char *pSource, size_t nBytes, uint32_t
 {
 	uint32_t nNodes = 0;
 	uint32_t nResources = 0;
+	bool bQuoted = false;
+	bool bEscape = false;
 	const char *pCursor = pSource;
 	const char *pEnd = pSource + nBytes;
 	while ( pCursor < pEnd ) {
@@ -29,17 +31,35 @@ static bool sirEditorHostCountTags( const char *pSource, size_t nBytes, uint32_t
 		if ( pLineEnd == nullptr ) {
 			pLineEnd = pEnd;
 		}
-		if ( sirEditorHostHasTag( pCursor, pLineEnd, "[node" ) ) {
-			if ( nNodes == UINT32_MAX ) {
-				return false;
+		const char *pFirst = pCursor;
+		while ( pFirst < pLineEnd && ( *pFirst == ' ' || *pFirst == '\t' || *pFirst == '\r' ) ) {
+			++pFirst;
+		}
+		if ( !bQuoted && pFirst < pLineEnd && *pFirst == '[' ) {
+			if ( sirEditorHostHasTag( pFirst, pLineEnd, "[node" ) ) {
+				if ( nNodes == UINT32_MAX ) {
+					return false;
+				}
+				++nNodes;
+			} else if ( sirEditorHostHasTag( pFirst, pLineEnd, "[ext_resource" ) ||
+			            sirEditorHostHasTag( pFirst, pLineEnd, "[sub_resource" ) ) {
+				if ( nResources == UINT32_MAX ) {
+					return false;
+				}
+				++nResources;
 			}
-			++nNodes;
-		} else if ( sirEditorHostHasTag( pCursor, pLineEnd, "[ext_resource" ) ||
-		            sirEditorHostHasTag( pCursor, pLineEnd, "[sub_resource" ) ) {
-			if ( nResources == UINT32_MAX ) {
-				return false;
+		} else if ( pFirst < pLineEnd && ( bQuoted || ( *pFirst != '#' && *pFirst != ';' ) ) ) {
+			for ( const char *pChar = pCursor; pChar < pLineEnd; ++pChar ) {
+				if ( bEscape ) {
+					bEscape = false;
+				} else if ( bQuoted && *pChar == '\\' ) {
+					bEscape = true;
+				} else if ( !bQuoted && ( *pChar == '#' || *pChar == ';' ) ) {
+					break;
+				} else if ( *pChar == '"' ) {
+					bQuoted = !bQuoted;
+				}
 			}
-			++nResources;
 		}
 		pCursor = pLineEnd == pEnd ? pEnd : pLineEnd + 1;
 	}
@@ -324,6 +344,20 @@ sirEditorWorkspaceResult_t SIREditorSceneWorkspace::openTextFile( const char *ps
 		return SIR_EDITOR_WORKSPACE_FILE_IO;
 	}
 	return finishOpen( nReadBytes );
+}
+
+sirEditorCatalogBuildResult_t SIREditorSceneWorkspace::buildResourceCatalog( const sirEditorCatalogBuildRequest_t& request ) const noexcept
+{
+	if ( !m_bOpen ) {
+		return SIR_EDITOR_CATALOG_INVALID_SOURCE;
+	}
+	// Bind the canonical importer to the open workspace's validated indexes.
+	// The catalog owns only caller-supplied storage and immutable identities.
+	sirEditorCatalogBuildRequest_t bound = request;
+	bound.pSourceIndex = &m_Resources;
+	bound.pReferences = m_pResourceReferences;
+	bound.nReferenceCount = m_nResourceReferenceCount;
+	return sirEditorBuildResourceCatalog( bound );
 }
 
 void SIREditorSceneWorkspace::close( void ) noexcept

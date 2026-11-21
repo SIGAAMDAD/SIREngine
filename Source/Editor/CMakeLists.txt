@@ -5,17 +5,25 @@ add_library(SIREditorAuthoring STATIC
     Scene/SIREditorTextScene.cpp
     Scene/SIREditorTextProperties.cpp
     Scene/SIREditorTextWriter.cpp
+    Scene/SIREditorComplexWriter.cpp
     Scene/SIREditorScalarCodec.cpp
     Scene/SIREditorScalarBinding.cpp
     Scene/SIREditorResourceReferences.cpp
+    Scene/SIREditorCatalogBridge.cpp
+    Scene/SIREditorResourceCatalogKeys.cpp
+    Scene/SIREditorResourceGraphBridge.cpp
     Scene/SIREditorFileSave.cpp
+    Widgets/SIREditorDockLayout.cpp
     Widgets/SIREditorVirtualList.cpp
     Widgets/SIREditorHierarchyModel.cpp
-    Host/SIREditorSceneWorkspace.cpp)
+    Host/SIREditorSceneWorkspace.cpp
+    Host/SIREditorApplication.cpp
+    Host/SIREditorWorkflow.cpp
+    Host/SIREditorObjectInspector.cpp)
 add_library(SIR::EditorAuthoring ALIAS SIREditorAuthoring)
 target_compile_features(SIREditorAuthoring PUBLIC cxx_std_17)
 target_include_directories(SIREditorAuthoring PUBLIC "${PROJECT_SOURCE_DIR}/Source" "${PROJECT_SOURCE_DIR}/Build/CMake")
-target_link_libraries(SIREditorAuthoring PUBLIC SIR::Core)
+target_link_libraries(SIREditorAuthoring PUBLIC SIR::Core SIR::Resources)
 sir_configure_owned_target(SIREditorAuthoring)
 
 # Native SIREditor process; the graphical UI subsystem will be linked here.

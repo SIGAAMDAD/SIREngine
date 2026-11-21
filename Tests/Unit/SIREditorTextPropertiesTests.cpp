@@ -1,4 +1,5 @@
 #include <Editor/Scene/SIREditorTextProperties.h>
+#include <Editor/Scene/SIREditorTextWriter.h>
 #include <Editor/Host/SIREditorSceneWorkspace.h>
 
 #include <Core/Memory/SIRMemoryManager.h>
@@ -134,11 +135,58 @@ static void sirEditorTestPropertiesCRLF( void )
 	assert( szProperties[0].nValueLength == 1 && szProperties[1].nValueLength == 1 );
 }
 
+static void sirEditorTestCommentPreservingValues( void )
+{
+	const char szSource[] = "[gd_scene format=3]\n"
+	                        "[node name=\"Root\" type=\"Node\"]\n"
+	                        "health = 12 # retain original comment\n"
+	                        "enabled = true ; retain second comment\n"
+	                        "label = \"#literal; not a comment\" # retain text comment\n"
+	                        "items = [1, # ] } unmatched delimiters in a comment\n"
+	                        "  2] # preserve array suffix\n";
+	sirEditorTextSceneNode_t nodes[1] = {};
+	char szPaths[256] = {};
+	sirEditorTextSceneIndex_t scene = {};
+	scene.storage.pNodes = nodes;
+	scene.storage.pszPaths = szPaths;
+	scene.storage.nNodeCapacity = 1;
+	scene.storage.nPathCapacity = sizeof( szPaths );
+	assert( sirEditorScanTextScene( szSource, sizeof( szSource ) - 1, &scene ) == SIR_EDITOR_TEXT_OK );
+	sirEditorTextProperty_t properties[4] = {};
+	sirEditorTextPropertyIndex_t index = { properties, 4, 0, 0 };
+	assert( sirEditorScanNodeTextProperties( szSource, sizeof( szSource ) - 1, scene, &index ) == SIR_EDITOR_PROPERTY_OK );
+	assert( index.nCount == 4 );
+	assert( properties[0].nValueLength == 2 );
+	assert( memcmp( szSource + properties[0].nValueOffset, "12", 2 ) == 0 );
+	assert( properties[1].nValueLength == 4 );
+	assert( memcmp( szSource + properties[1].nValueOffset, "true", 4 ) == 0 );
+	assert( properties[2].nValueLength == strlen( "\"#literal; not a comment\"" ) );
+	assert( memcmp( szSource + properties[3].nValueOffset, "[1, #", 5 ) == 0 );
+	const sirEditorTextEdit_t edits[] = { { 0, "55", 2 }, { 1, "false", 5 } };
+	size_t nBytes = 0;
+	assert( sirEditorWriteScalarPatches( szSource, sizeof( szSource ) - 1, index, edits, 2, nullptr, 0, &nBytes ) == SIR_EDITOR_WRITE_OK );
+	char szOutput[512] = {};
+	assert( sirEditorWriteScalarPatches( szSource, sizeof( szSource ) - 1, index, edits, 2, szOutput, sizeof( szOutput ), &nBytes ) ==
+	        SIR_EDITOR_WRITE_OK );
+	assert( strstr( szOutput, "health = 55 # retain original comment\n" ) != nullptr );
+	assert( strstr( szOutput, "enabled = false ; retain second comment\n" ) != nullptr );
+	assert( strstr( szOutput, "label = \"#literal; not a comment\" # retain text comment\n" ) != nullptr );
+	assert( strstr( szOutput, "  2] # preserve array suffix\n" ) != nullptr );
+	assert( sirEditorScanNodeTextProperties( szOutput, nBytes, scene, &index ) == SIR_EDITOR_PROPERTY_OK );
+	assert( index.nCount == 4 );
+	const char szOnlyComment[] = "[gd_scene format=3]\n[node name=\"Root\" type=\"Node\"]\n"
+	                             "value = # missing value\n";
+	assert( sirEditorScanNodeTextProperties( szOnlyComment, sizeof( szOnlyComment ) - 1, scene, &index ) ==
+	        SIR_EDITOR_PROPERTY_MALFORMED_VALUE );
+	assert( index.nCount == 0 && index.nErrorLine != 0 );
+}
+
 int main( void )
 {
 	sirEditorTestPropertiesFixture();
 	sirEditorTestPropertiesSynthetic();
 	sirEditorTestPropertiesCRLF();
+	sirEditorTestCommentPreservingValues();
 	puts( "PASS: native editor source-backed property inspector index" );
 	return 0;
 }

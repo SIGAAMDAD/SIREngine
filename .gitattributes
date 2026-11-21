@@ -17,3 +17,6 @@ CMakeLists.txt text eol=lf
 *.zip binary
 *.glb binary
 Tests/Fixtures/Editor/*.tscn text eol=lf
+
+# Preserve the original Terrain3D donor file byte-for-byte (upstream CRLF).
+Source/Renderer/VirtualTexturing/Terrain3D/src/rendering/rd/vt/runtime/terrain_3d_terrain_megavt.cpp -text

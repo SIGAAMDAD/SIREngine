@@ -6,4 +6,7 @@ target_sources(SIRGraphics PRIVATE
     SIRVirtualTexturePackReader.cpp
     SIRVirtualTexturePackFileSource.cpp
     SIRVirtualTexturePackWriter.cpp
-    SIRVirtualTextureClusterDecode.cpp)
+    SIRVirtualTextureClusterDecode.cpp
+    Terrain3D/src/rendering/rd/vt/streaming/terrain_3d_vt_spatial_demand.cpp
+    Terrain3D/src/authoring/vt/visibility/terrain_3d_vt_visibility_aggregator.cpp)
+target_include_directories(SIRGraphics PRIVATE "${CMAKE_CURRENT_LIST_DIR}/Terrain3D/src")
